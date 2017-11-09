@@ -716,7 +716,8 @@ deliveryCallback(rd_kafka_t __attribute__((unused)) *rk,
 		}
 		STATSCOUNTER_INC(ctrKafkaFail, mutCtrKafkaFail);
 	} else {
-		DBGPRINTF("omkafka: kafka delivery SUCCESS on msg '%.*s'\n", (int)(rkmessage->len-1), (char*)rkmessage->payload);
+		DBGPRINTF("omkafka: kafka delivery SUCCESS on msg '%.*s'\n", (int)(rkmessage->len-1),
+				(char*)rkmessage->payload);
 	}
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -751,12 +752,12 @@ do_rd_kafka_destroy(instanceData *const __restrict__ pData)
 				/* Flush all remaining kafka messages (rd_kafka_poll is called inside) */
 				const int flushStatus = rd_kafka_flush(pData->rk, 5000);
 				if (flushStatus != RD_KAFKA_RESP_ERR_NO_ERROR) /* TODO: Handle unsend messages here! */ {
-					errmsg.LogError(0, RS_RET_KAFKA_ERROR,
-						"omkafka: onDestroy Failed to send remaing '%d' "
-						"messages to topic '%s' on shutdown with error: '%s'",
-						queuedCount,
-						rd_kafka_topic_name(pData->pTopic),
-						rd_kafka_err2str(flushStatus));
+					errmsg.LogError(0, RS_RET_KAFKA_ERROR, "omkafka: onDestroy "
+							"Failed to send remaing '%d' messages to "
+							"topic '%s' on shutdown with error: '%s'",
+							queuedCount,
+							rd_kafka_topic_name(pData->pTopic),
+							rd_kafka_err2str(flushStatus));
 				} else {
 					DBGPRINTF("omkafka: onDestroyflushed remaining '%d' messages "
 						"to kafka topic '%s'\n", queuedCount,
@@ -1101,12 +1102,14 @@ loadFailedMsgs(instanceData *const __restrict__ pData)
 			pStrTabPos = index((char*)puStr, '\t');
 			if (pStrTabPos != NULL) {
 				DBGPRINTF("omkafka: loadFailedMsgs successfully loaded msg '%s' for topic '%.*s':%d\n",
-					pStrTabPos+1, (int)(pStrTabPos-(char*)puStr), (char*)puStr, (int)(pStrTabPos-(char*)puStr));
+					pStrTabPos+1, (int)(pStrTabPos-(char*)puStr), (char*)puStr,
+					(int)(pStrTabPos-(char*)puStr));
 
 				/* Create new Listitem */
 				CHKmalloc(fmsgEntry = malloc(sizeof(struct s_failedmsg_entry)));
 				fmsgEntry->payload = (uchar*)strdup(pStrTabPos+1); /* Copy after TAB */
-				fmsgEntry->topicname = (uchar*)strndup((char*)puStr, (int)(pStrTabPos-(char*)puStr)); /* copy until TAB */
+				fmsgEntry->topicname = (uchar*)strndup((char*)puStr, (int)(pStrTabPos-(char*)puStr));
+				/* copy until TAB */
 
 				/* Insert at the head. */
 				LIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
@@ -1299,7 +1302,8 @@ CODESTARTdoAction
 				/* Create new Listitem */
 				CHKmalloc(fmsgEntry = malloc(sizeof(struct s_failedmsg_entry)));
 				fmsgEntry->payload = (uchar*)strdup((char*)ppString[0]);
-				fmsgEntry->topicname = (uchar*)strdup( pData->dynaTopic ? (char*)ppString[2] : (char*)pData->topic);
+				fmsgEntry->topicname = (uchar*)strdup( pData->dynaTopic ? (char*)ppString[2] :
+							(char*)pData->topic);
 
 				/* Insert at the head. */
 				LIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
@@ -1521,7 +1525,8 @@ CODESTARTmodExit
 	pthread_mutex_unlock(&closeTimeoutMut);
 	pthread_mutex_destroy(&closeTimeoutMut);
 	if (rd_kafka_wait_destroyed(timeout) != 0) {
-		DBGPRINTF("omkafka: couldn't close all resources gracefully. %d threads still remain.\n", rd_kafka_thread_cnt());
+		DBGPRINTF("omkafka: couldn't close all resources gracefully. %d threads still remain.\n",
+			rd_kafka_thread_cnt());
 	}
 finalize_it:
 ENDmodExit

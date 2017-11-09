@@ -384,7 +384,8 @@ killSubprocessOnTimeout(void *_subpTimeOut_p) {
 								"(%ld ms) preparing to force-kill.", subpTimeOut->timeout_ms);
 				if (syscall(SYS_tgkill, getpid(), subpTimeOut->waiter_tid, SIGINT) != 0) {
 					errmsg.LogError(errno, RS_RET_SYS_ERR, "omprog: couldn't interrupt thread(%d) "
-									"which was waiting to reap child-process.", subpTimeOut->waiter_tid);
+									"which was waiting to reap child-process.",
+									subpTimeOut->waiter_tid);
 				}
 			}
 		}
@@ -894,7 +895,8 @@ CODESTARTnewActInst
 				if (c[iCnt] == ' ') {
 					/* Split binary name from parameters */
 					estrBinary = es_newStrFromSubStr ( pvals[i].val.d.estr, 0, iCnt );
-					estrParams = es_newStrFromSubStr ( pvals[i].val.d.estr, iCnt+1, es_strlen(pvals[i].val.d.estr));
+					estrParams = es_newStrFromSubStr ( pvals[i].val.d.estr, iCnt+1,
+							es_strlen(pvals[i].val.d.estr));
 					break;
 				}
 				iCnt++;
@@ -912,7 +914,8 @@ CODESTARTnewActInst
 
 				/* Count parameters if set */
 				c = es_getBufAddr(estrParams); /* Reset to beginning */
-				pData->iParams = 2; /* Set default to 2, first parameter for binary and second parameter at least from config*/
+				pData->iParams = 2; /* Set default to 2, first parameter for binary
+						and second parameter at least from config*/
 				iCnt = 0;
 				while(iCnt < es_strlen(estrParams) ) {
 					if (c[iCnt] == ' ' && c[iCnt-1] != '\\')
@@ -922,7 +925,8 @@ CODESTARTnewActInst
 				DBGPRINTF("omprog: iParams = '%d'\n", pData->iParams);
 
 				/* Create argv Array */
-				CHKmalloc(pData->aParams = malloc( (pData->iParams+1) * sizeof(char*))); /* One more for first param */
+				CHKmalloc(pData->aParams = malloc( (pData->iParams+1) * sizeof(char*)));
+				/* One more for first param */
 
 				/* Second Loop, create parameter array*/
 				c = es_getBufAddr(estrParams); /* Reset to beginning */

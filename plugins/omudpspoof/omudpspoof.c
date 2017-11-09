@@ -497,13 +497,15 @@ UDPSend(wrkrInstanceData_t *pWrkrData, uchar *pszSourcename, char *msg, size_t l
 				pWrkrData->libnet_handle,		/* libnet handle */
 				ip);				/* libnet id */
 			if (ip == -1) {
-				DBGPRINTF("omudpspoof: can't build IP fragment header: %s\n", libnet_geterror(pWrkrData->libnet_handle));
+				DBGPRINTF("omudpspoof: can't build IP fragment header: %s\n",
+					libnet_geterror(pWrkrData->libnet_handle));
 			}
 			/* Write it to the wire. */
 			lsent = libnet_write(pWrkrData->libnet_handle);
 			if(lsent != (int) (LIBNET_IPV4_H+pktLen)) {
 				DBGPRINTF("omudpspoof: fragment write error len %d, sent %d: %s\n",
-					  (int) (LIBNET_IPV4_H+LIBNET_UDP_H+len), lsent, libnet_geterror(pWrkrData->libnet_handle));
+					  (int) (LIBNET_IPV4_H+LIBNET_UDP_H+len), lsent,
+						libnet_geterror(pWrkrData->libnet_handle));
 				bSendSuccess = RSFALSE;
 				continue;
 			}

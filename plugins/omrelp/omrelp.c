@@ -154,7 +154,8 @@ omrelp_dbgprintf(const char *fmt, ...)
 {
 	va_list ap;
 	char pszWriteBuf[32*1024+1]; //this function has to be able to
-					//generate a buffer longer than that of r_dbgprintf, so r_dbgprintf can properly truncate
+					/*generate a buffer longer than that of r_dbgprintf, so
+					r_dbgprintf can properly truncate*/
 	if(!(Debug && debugging_on)) {
 		return;
 	}

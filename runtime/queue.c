@@ -1645,7 +1645,8 @@ DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch)
 			localRet = doEnqSingleObj(pThis, eFLOWCTL_NO_DELAY, MsgAddRef(pMsg));
 			++nEnqueued;
 			if(localRet != RS_RET_OK) {
-				DBGPRINTF("DeleteProcessedBatch: error %d re-enqueuing unprocessed data element - discarded\n", localRet);
+				DBGPRINTF("DeleteProcessedBatch: error %d re-enqueuing unprocessed "
+						"data element - discarded\n", localRet);
 			}
 		}
 		msgDestruct(&pMsg);
@@ -1881,7 +1882,8 @@ RateLimiter(qqueue_t *pThis)
 				; /* do not delay */
 			} else {
 				if(iHrCurr < pThis->iDeqtWinFromHr) {
-					iDelay = (pThis->iDeqtWinFromHr - iHrCurr - 1) * 3600; /* -1 as we are already in the hour */
+					iDelay = (pThis->iDeqtWinFromHr - iHrCurr - 1) * 3600;
+						/* -1 as we are already in the hour */
 					iDelay += (60 - m.tm_min) * 60;
 					iDelay += 60 - m.tm_sec;
 				} else {
@@ -2068,10 +2070,12 @@ ConsumerDA(qqueue_t *pThis, wti_t *pWti)
 		if(iRet != RS_RET_OK) {
 			if(iRet == RS_RET_ERR_QUEUE_EMERGENCY) {
 				/* Queue emergency error occured */
-				DBGOPRINT((obj_t*) pThis, "ConsumerDA:qqueueEnqMsg caught RS_RET_ERR_QUEUE_EMERGENCY, aborting loop.\n");
+				DBGOPRINT((obj_t*) pThis, "ConsumerDA:qqueueEnqMsg caught RS_RET_ERR_QUEUE_EMERGENCY,"
+						"aborting loop.\n");
 				FINALIZE;
 			} else {
-				DBGOPRINT((obj_t*) pThis, "ConsumerDA:qqueueEnqMsg item (%d) returned with error state: '%d'\n", i, iRet);
+				DBGOPRINT((obj_t*) pThis, "ConsumerDA:qqueueEnqMsg item (%d) returned "
+						"with error state: '%d'\n", i, iRet);
 			}
 		}
 		pWti->batch.eltState[i] = BATCH_STATE_COMM; /* commited to other queue! */
@@ -2888,9 +2892,10 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg)
 	      	  && pThis->tVars.disk.sizeOnDisk > pThis->sizeOnDiskMax)) {
 		STATSCOUNTER_INC(pThis->ctrFull, pThis->mutCtrFull);
 		if(pThis->toEnq == 0 || pThis->bEnqOnly) {
-			DBGOPRINT((obj_t*) pThis, "doEnqSingleObject: queue FULL - configured for immediate discarding QueueSize=%d "
-				"MaxQueueSize=%d sizeOnDisk=%lld sizeOnDiskMax=%lld\n", pThis->iQueueSize, pThis->iMaxQueueSize,
-				pThis->tVars.disk.sizeOnDisk, pThis->sizeOnDiskMax); 
+			DBGOPRINT((obj_t*) pThis, "doEnqSingleObject: queue FULL - configured for immediate "
+					"discarding QueueSize=%d MaxQueueSize=%d sizeOnDisk=%lld "
+					"sizeOnDiskMax=%lld\n", pThis->iQueueSize, pThis->iMaxQueueSize,
+					pThis->tVars.disk.sizeOnDisk, pThis->sizeOnDiskMax); 
 			STATSCOUNTER_INC(pThis->ctrFDscrd, pThis->mutCtrFDscrd);
 			msgDestruct(&pMsg);
 			ABORT_FINALIZE(RS_RET_QUEUE_FULL);

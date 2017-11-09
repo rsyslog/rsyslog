@@ -132,9 +132,10 @@ int main(int argc, char *argv[])
 			if(edLen != (int) strlen(edBuf)) {
 				if (bAnticipateTruncation == 1) {
 					if (edLen < (int) strlen(edBuf)) {
-						printf("extra data length specified %d, but actually is %ld in record %d"
-							   " (truncation was anticipated, but payload should have been smaller than data-length, not larger)\n",
-							   edLen, (long) strlen(edBuf), i);
+						 printf("extra data length specified %d, but actually is %ld in"
+							" record %d (truncation was anticipated, but payload should"
+							" have been smaller than data-length, not larger)\n",
+							edLen, (long) strlen(edBuf), i);
 						exit(1);
 					}
 				} else {
@@ -195,14 +196,17 @@ int main(int argc, char *argv[])
 					if(edLen != (int) strlen(edBuf)) {
 						if (bAnticipateTruncation == 1) {
 							if (edLen < (int) strlen(edBuf)) {
-								printf("extra data length specified %d, but actually is %ld in record %d"
-									   " (truncation was anticipated, but payload should have been smaller than data-length, not larger)\n",
-									   edLen, (long) strlen(edBuf), i);
+								 printf("extra data length specified %d, but "
+									"actually is %ld in record %d (truncation was"
+									" anticipated, but payload should have been "
+									"smaller than data-length, not larger)\n",
+									edLen, (long) strlen(edBuf), i);
 								exit(1);
 							}
 						} else {
-							printf("extra data length specified %d, but actually is %ld in record %d\n",
-								   edLen, (long) strlen(edBuf), i);
+							 printf("extra data length specified %d, but actually "
+								"is %ld in record %d\n",
+								edLen, (long) strlen(edBuf), i);
 							exit(1);
 						}
 					}

@@ -460,7 +460,8 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 				ret = select(fdSess + 1, pFds, NULL, NULL, &tv);
 			} while (ret < 0 && errno == EINTR);
 			if (ret < 0) {
-				errmsg.LogError(0, RS_RET_ERR, "TCP session %p from %s will be closed, error ignored\n", pSess, (char *)pszPeer);
+				errmsg.LogError(0, RS_RET_ERR, "TCP session %p from %s will be "
+						"closed, error ignored\n", pSess, (char *)pszPeer);
 				ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
 			} else if (ret == 0) {
 				dbgprintf("GSS-API Reverting to plain TCP\n");
@@ -523,7 +524,8 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 		sess_flags = &pGSess->gss_flags;
 		do {
 			if (gssutil.recv_token(fdSess, &recv_tok) <= 0) {
-				errmsg.LogError(0, NO_ERRCODE, "TCP session %p from %s will be closed, error ignored\n", pSess, (char *)pszPeer);
+				errmsg.LogError(0, NO_ERRCODE, "TCP session %p from %s will be "
+						"closed, error ignored\n", pSess, (char *)pszPeer);
 				ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
 			}
 			maj_stat = gss_accept_sec_context(&acc_sec_min_stat, context, gss_server_creds,
@@ -555,7 +557,8 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 			if (send_tok.length != 0) {
 				if(gssutil.send_token(fdSess, &send_tok) < 0) {
 					gss_release_buffer(&min_stat, &send_tok);
-					errmsg.LogError(0, NO_ERRCODE, "TCP session %p from %s will be closed, error ignored\n", pSess, (char *)pszPeer);
+					errmsg.LogError(0, NO_ERRCODE, "TCP session %p from %s will be "
+							"closed, error ignored\n", pSess, (char *)pszPeer);
 					if (*context != GSS_C_NO_CONTEXT)
 						gss_delete_sec_context(&min_stat, context, GSS_C_NO_BUFFER);
 					ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes

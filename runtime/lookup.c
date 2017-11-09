@@ -513,7 +513,8 @@ build_SparseArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar* n
 			assert(canonicalValueRef != NULL);
 			pThis->table.sprsArr->entries[i].interned_val_ref = canonicalValueRef;
 		}
-		qsort(pThis->table.sprsArr->entries, pThis->nmemb, sizeof(lookup_sparseArray_tab_entry_t), qs_arrcmp_sprsArrtab);
+		qsort(pThis->table.sprsArr->entries, pThis->nmemb, sizeof(lookup_sparseArray_tab_entry_t),
+				qs_arrcmp_sprsArrtab);
 	}
 		
 	pThis->lookup = lookupKey_sprsArr;
@@ -615,7 +616,8 @@ lookupBuildTable_v1(lookup_t *pThis, struct json_object *jroot, const uchar* nam
 		pThis->type = STRING_LOOKUP_TABLE;
 		CHKiRet(build_StringTable(pThis, jtab, name));
 	} else {
-		errmsg.LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' uses unupported type: '%s'", name, table_type);
+		errmsg.LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' uses unupported "
+				"type: '%s'", name, table_type);
 		ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 	}
 finalize_it:
@@ -641,7 +643,8 @@ lookupBuildTable(lookup_t *pThis, struct json_object *jroot, const uchar* name)
 	if (version == 1) {
 		CHKiRet(lookupBuildTable_v1(pThis, jroot, name));
 	} else {
-		errmsg.LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' uses unsupported version: %d", name, version);
+		errmsg.LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' uses unsupported "
+				"version: %d", name, version);
 		ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 	}
 

@@ -642,7 +642,8 @@ doZipFinish(wrkrInstanceData_t *pWrkrData)
 	pWrkrData->zstrm.avail_in = 0;
 	/* run deflate() on buffer until everything has been compressed */
 	do {
-		DBGPRINTF("in deflate() loop, avail_in %d, total_in %ld\n", pWrkrData->zstrm.avail_in, pWrkrData->zstrm.total_in);
+		DBGPRINTF("in deflate() loop, avail_in %d, total_in %ld\n", pWrkrData->zstrm.avail_in,
+			pWrkrData->zstrm.total_in);
 		pWrkrData->zstrm.avail_out = sizeof(zipBuf);
 		pWrkrData->zstrm.next_out = zipBuf;
 		zRet = deflate(&pWrkrData->zstrm, Z_FINISH);    /* no bad return value */

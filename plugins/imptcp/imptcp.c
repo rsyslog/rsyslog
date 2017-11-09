@@ -1167,7 +1167,8 @@ DataRcvdCompressed(ptcpsess_t *pThis, char *buf, size_t len)
 	pThis->zstrm.avail_in = len;
 	/* run inflate() on buffer until everything has been uncompressed */
 	do {
-		DBGPRINTF("imptcp: in inflate() loop, avail_in %d, total_in %ld\n", pThis->zstrm.avail_in, pThis->zstrm.total_in);
+		DBGPRINTF("imptcp: in inflate() loop, avail_in %d, total_in %ld\n",
+			pThis->zstrm.avail_in, pThis->zstrm.total_in);
 		pThis->zstrm.avail_out = sizeof(zipBuf);
 		pThis->zstrm.next_out = zipBuf;
 		zRet = inflate(&pThis->zstrm, Z_SYNC_FLUSH);    /* no bad return value */
