@@ -163,18 +163,18 @@ following action, only. The next and all other actions will be
 in "direct" mode (no real queue) if not explicitely specified otherwise.
 
 -  **$ActionQueueCheckpointInterval** <number>
--  **$ActionQueueDequeueBatchSize** <number> [default 16]
+-  **$ActionQueueDequeueBatchSize** <number> [default 128]
 -  **$ActionQueueDequeueSlowdown** <number> [number is timeout in
    *micro*\ seconds (1000000us is 1sec!), default 0 (no delay). Simple
    rate-limiting!]
--  **$ActionQueueDiscardMark** <number> [default 9750]
--  **$ActionQueueDiscardSeverity** <number> [\*numerical\* severity! default
-   4 (warning)]
+-  **$ActionQueueDiscardMark** <number> [default 80% of queue size]
+-  **$ActionQueueDiscardSeverity** <number> [\*numerical\* severity! default 
+   8 (nothing discarded)]
 -  **$ActionQueueFileName** <name>
--  **$ActionQueueHighWaterMark** <number> [default 8000]
+-  **$ActionQueueHighWaterMark** <number> [default 90% of queue size]
 -  **$ActionQueueImmediateShutdown** [on/**off**]
 -  **$ActionQueueSize** <number>
--  **$ActionQueueLowWaterMark** <number> [default 2000]
+-  **$ActionQueueLowWaterMark** <number> [default 70% of queue size]
 -  **$ActionQueueMaxFileSize** <size\_nbr>, default 1m
 -  **$ActionQueueTimeoutActionCompletion** <number> [number is timeout in ms
    (1000ms is 1sec!), default 1000, 0 means immediate!]
