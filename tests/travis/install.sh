@@ -15,8 +15,8 @@ if [ "$DISTRIB_CODENAME" == "trusty" ] || [ "$DISTRIB_CODENAME" == "precise" ]; 
 	(cd libmaxminddb-${WANT_MAXMIND} ; ./configure --prefix=/usr CC=gcc CFLAGS="-Wall -Wextra -g -pipe -std=gnu99"  > /dev/null ; sudo make install &> /dev/null)
 	
 	SAVE_CFLAGS=$CFLAGS
-	CFLAGS="-std=c99"
-	sudo apt-get install -qq libssl-dev
+	CFLAGS=""
+	sudo apt-get install -qq libssl-dev libsasl2-dev
 	wget https://github.com/mongodb/mongo-c-driver/releases/download/1.8.1/mongo-c-driver-1.8.1.tar.gz
 	tar -xzf mongo-c-driver-1.8.1.tar.gz
 	cd mongo-c-driver-1.8.1/
