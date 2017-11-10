@@ -290,6 +290,8 @@ endif
 
 if HAVE_VALGRIND
 TESTS +=  \
+	mmexternal-SegFault-vg.sh \
+	mmexternal-SegFault-empty-jroot-vg.sh \
 	internal-errmsg-memleak.sh \
 	rscript_set_memleak-vg.sh \
 	no-parser-vg.sh \
@@ -719,6 +721,9 @@ EXTRA_DIST= \
 	glbl_setenv_err.sh \
 	glbl_setenv_err_too_long.sh \
 	glbl_setenv.sh \
+	mmexternal-SegFault-vg.sh \
+	mmexternal-SegFault-empty-jroot-vg.sh \
+	testsuites/mmexternal-SegFault-mm-python.py \
 	nested-call-shutdown.sh \
 	1.rstest 2.rstest 3.rstest err1.rstest \
 	invalid_nested_include.sh \
