@@ -221,17 +221,19 @@ dynstats_rebuildSurvivorTable(dynstats_bucket_t *b) {
 	b->ctrs = NULL;
 finalize_it:
 	if (iRet != RS_RET_OK) {
-		errmsg.LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to evict TTL-expired metrics of dyn-stats "
-"bucket named: %s", b->name);
+		LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to evict "
+			"TTL-expired metrics of dyn-stats bucket named: %s", b->name);
 		if (new_table == NULL) {
-			errmsg.LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to initialize hash-table for "
-			"dyn-stats bucket named: %s", b->name);
+			LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to "
+				"initialize hash-table for dyn-stats bucket named: %s", b->name);
 		} else {
+			assert(0); /* "can" not happen -- triggers Coverity CID 184307:
 			hashtable_destroy(new_table, 0);
+			We keep this as guard should code above change in the future */
 		}
 		if (b->table == NULL) {
 			if (survivor_table == NULL) {
-				errmsg.LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to initialize "
+				LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to initialize "
 				"ttl-survivor hash-table for dyn-stats bucket named: %s", b->name);
 			} else {
 				hashtable_destroy(survivor_table, 0);

@@ -322,18 +322,13 @@ finalize_it:
 
 static rsRetVal
 addContextForReporting(json_object *to, const uchar* field_name, const uchar* value) {
-	json_object *v = NULL;
+	json_object *v;
 	DEFiRet;
 
 	CHKmalloc(v = json_object_new_string((const char*) value));
 
 	json_object_object_add(to, (const char*) field_name, v);
 finalize_it:
-	if (iRet != RS_RET_OK) {
-		if (v != NULL) {
-			json_object_put(v);
-		}
-	}
 	RETiRet;
 }
 
