@@ -42,6 +42,7 @@
 #include <netdb.h>
 #include <libestr.h>
 #include <json.h>
+#include <json_object_private.h>
 #ifdef HAVE_MALLOC_H
 #  include <malloc.h>
 #endif
@@ -996,6 +997,7 @@ CODESTARTobjDestruct(msg)
 			rsCStrDestruct(&pThis->pCSPROCID);
 		if(pThis->pCSMSGID != NULL)
 			rsCStrDestruct(&pThis->pCSMSGID);
+DBGPRINTF("DDDD: msgDestruct %p, json %p\n", pThis, pThis->json);
 		if(pThis->json != NULL)
 			json_object_put(pThis->json);
 		if(pThis->localvars != NULL)
@@ -4548,7 +4550,9 @@ MsgSetPropsViaJSON(smsg_t *__restrict__ const pMsg, const uchar *__restrict__ co
 	tokener = json_tokener_new();
 
 	json = json_tokener_parse_ex(tokener, (char*)jsonstr, ustrlen(jsonstr));
+DBGPRINTF("DDDD: tokener returned json %p\n", json);
 	if(Debug) {
+		// TODO: real error message?
 		errMsg = NULL;
 		if(json == NULL) {
 			enum json_tokener_error err;
@@ -4579,22 +4583,27 @@ finalize_it:
 
 /* Used by MsgSetPropsViaJSON to set properties.
  * The same as MsgSetPropsViaJSON only that a json object is given and not a string
+ * The json object is handed over to this function. It is used and destructed when
+ * done. Thus the caller is not permitted to use it when we return.
  */
-rsRetVal
-MsgSetPropsViaJSON_Object(smsg_t *__restrict__ const pMsg, struct json_object *json)
+rsRetVal ATTR_NONNULL(1)
+MsgSetPropsViaJSON_Object(smsg_t *__restrict__ const pMsg, struct json_object *const json)
 {
 	DEFiRet;
+DBGPRINTF("DDDD: MsgSetPropsViaJSON_Object enter json %p\n", json);
 	if(json == NULL || !json_object_is_type(json, json_type_object)) {
 		ABORT_FINALIZE(RS_RET_JSON_UNUSABLE);
 	}
 	struct json_object_iterator it = json_object_iter_begin(json);
 	struct json_object_iterator itEnd = json_object_iter_end(json);
 	while (!json_object_iter_equal(&it, &itEnd)) {
+		struct json_object *child = json_object_iter_peek_value(&it);
 		msgSetPropViaJSON(pMsg, json_object_iter_peek_name(&it),
-			json_object_iter_peek_value(&it), 0);
+			child, 0);
+DBGPRINTF("DDDD: MsgSetPropsViaJSON_Object iter child %p, refcount %d\n", child, child->_ref_count);
 		json_object_iter_next(&it);
 	}
-	json_object_put(json);
+	json_object_put(json); // übergeordneter OK, child muss refcount == 1 haben, offensichtlich
 
 finalize_it:
 	RETiRet;
@@ -4723,15 +4732,16 @@ jsonMerge(struct json_object *existing, struct json_object *json)
 	struct json_object_iterator it = json_object_iter_begin(json);
 	struct json_object_iterator itEnd = json_object_iter_end(json);
 	while (!json_object_iter_equal(&it, &itEnd)) {
+		struct json_object *jj = json_object_get(json_object_iter_peek_value(&it));
 		json_object_object_add(existing, json_object_iter_peek_name(&it),
-			json_object_get(json_object_iter_peek_value(&it)));
+			jj);
 		json_object_iter_next(&it);
 	}
 	/* note: json-c does ref counting. We added all descandants refcounts
 	 * in the loop above. So when we now free(_put) the root object, only
 	 * root gets freed().
 	 */
-	json_object_put(json);
+//	json_object_put(json);
 	RETiRet;
 }
 
@@ -4786,10 +4796,13 @@ msgAddJSON(smsg_t * const pM, uchar *name, struct json_object *json, int force_r
 	}
 
 	if(name[1] == '\0') { /* full tree? */
-		if(*jroot == NULL)
-			*jroot = json;
-		else
+		if(*jroot == NULL) {
+			//*jroot = json; // only case without refcount increment
+			DBGPRINTF("DDDD: root null, just set to new val %p\n", json);
+			*jroot = json_object_get(json);
+		} else {
 			CHKiRet(jsonMerge(*jroot, json));
+		}
 	} else {
 		if(*jroot == NULL) {
 			/* now we need a root obj */

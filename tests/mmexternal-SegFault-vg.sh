@@ -6,18 +6,23 @@
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/mmexternal/.libs/mmexternal")
 input(type="imtcp" port="13514")
+#set $!x = "a";
 
-template(name="outfmt" type="string" string="-%msg%-\n")
+template(name="outfmt" type="string" string="-%$!%-\n")
 
-action(type="mmexternal" interface.input="fulljson" binary="testsuites/mmexternal-SegFault-mm-python.py")
-action(type="omfile" template="outfmt" file="rsyslog.out.log")
+if $msg contains "msgnum:" then {
+	action(type="mmexternal" interface.input="fulljson"
+		binary="testsuites/mmexternal-SegFault-mm-python.py")
+	action(type="omfile" template="outfmt" file="rsyslog.out.log")
+}
 '
-. $srcdir/diag.sh startup
+. $srcdir/diag.sh startup-vg
 . $srcdir/diag.sh tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag:msgnum:1\""
 . $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+. $srcdir/diag.sh wait-shutdown-vg
+. $srcdir/diag.sh check-exit-vg
 
-echo '' | cmp rsyslog.out.log
+echo '-{ "sometag": "somevalue" }-' | cmp rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
   cat rsyslog.out.log
