@@ -20,7 +20,7 @@ if [ "$DISTRIB_CODENAME" == "trusty" ] || [ "$DISTRIB_CODENAME" == "precise" ]; 
 	wget https://github.com/mongodb/mongo-c-driver/releases/download/1.8.1/mongo-c-driver-1.8.1.tar.gz
 	tar -xzf mongo-c-driver-1.8.1.tar.gz
 	cd mongo-c-driver-1.8.1/
-	./configure --prefix=/usr --libdir=/usr/lib64 --enable-ssl --disable-automatic-init-and-cleanup
+	./configure --enable-ssl --disable-automatic-init-and-cleanup
 	make -j
 	sudo make install
 	cd -
