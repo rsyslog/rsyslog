@@ -1348,7 +1348,10 @@ qqueueShutdownWorkers(qqueue_t *const pThis)
 
 	CHKiRet(tryShutdownWorkersWithinQueueTimeout(pThis));
 
-	if(getPhysicalQueueSize(pThis) > 0) {
+	pthread_mutex_lock(pThis->mut);
+	const int physQueueSize = getPhysicalQueueSize(pThis);
+	pthread_mutex_unlock(pThis->mut);
+	if(physQueueSize > 0) {
 		CHKiRet(tryShutdownWorkersWithinActionTimeout(pThis));
 	}
 
