@@ -46,7 +46,6 @@ MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("mmanon")
 
 
-DEFobjCurrIf(errmsg);
 DEF_OMOD_STATIC_DATA
 
 /* config variables */
@@ -1320,7 +1319,7 @@ BEGINparseSelectorAct
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(strncmp((char*) p, ":mmanon:", sizeof(":mmanon:") - 1)) {
-		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
+		LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
 			"mmanon supports only v6+ config format, use: "
 			"action(type=\"mmanon\" ...)");
 	}
@@ -1331,7 +1330,6 @@ ENDparseSelectorAct
 
 BEGINmodExit
 CODESTARTmodExit
-	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -1350,5 +1348,4 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	DBGPRINTF("mmanon: module compiled with rsyslog version %s.\n", VERSION);
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDmodInit
