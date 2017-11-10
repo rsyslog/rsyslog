@@ -1793,7 +1793,7 @@ AC_ARG_ENABLE(ommongodb,
         [enable_ommongodb=no]
 )
 if test "x$enable_ommongodb" = "xyes"; then
-	PKG_CHECK_MODULES(LIBMONGOC, libmongoc-1.0)
+	PKG_CHECK_MODULES([LIBMONGOC], [libmongoc],,)
 fi
 AM_CONDITIONAL(ENABLE_OMMONGODB, test x$enable_ommongodb = xyes)
 # end of mongodb code
