@@ -1,9 +1,9 @@
 # this installs some components that we cannot install any other way
 source /etc/lsb-release
 # the following packages are not yet available via travis package
-sudo apt-get install -qq faketime libdbd-mysql libmongoc-dev autoconf-archive
+sudo apt-get install -qq faketime libdbd-mysql autoconf-archive
 if [ "x$GROK" == "xYES" ]; then sudo apt-get install -qq libgrok1 libgrok-dev ; fi
-sudo apt-get install -qq --force-yes libestr-dev librelp-dev libfastjson-dev liblogging-stdlog-dev libksi1 libksi1-dev \
+sudo apt-get install -qq --force-yes libmongo-client-dev libestr-dev librelp-dev libfastjson-dev liblogging-stdlog-dev libksi1 libksi1-dev \
 	liblognorm-dev \
 	libcurl4-gnutls-dev
 sudo apt-get install -qq python-docutils
@@ -13,9 +13,24 @@ if [ "$DISTRIB_CODENAME" == "trusty" ] || [ "$DISTRIB_CODENAME" == "precise" ]; 
 	WANT_MAXMIND=1.2.0
 	curl -Ls https://github.com/maxmind/libmaxminddb/releases/download/${WANT_MAXMIND}/libmaxminddb-${WANT_MAXMIND}.tar.gz | tar -xz
 	(cd libmaxminddb-${WANT_MAXMIND} ; ./configure --prefix=/usr CC=gcc CFLAGS="-Wall -Wextra -g -pipe -std=gnu99"  > /dev/null ; sudo make install &> /dev/null)
+	
+	SAVE_CFLAGS=$CFLAGS
+	CFLAGS=""
+	SAVE_CC=$CC
+	CC="gcc"
+	sudo apt-get install -qq libssl-dev libsasl2-dev
+	wget https://github.com/mongodb/mongo-c-driver/releases/download/1.8.1/mongo-c-driver-1.8.1.tar.gz
+	tar -xzf mongo-c-driver-1.8.1.tar.gz
+	cd mongo-c-driver-1.8.1/
+	./configure --enable-ssl --disable-automatic-init-and-cleanup
+	make -j
+	sudo make install
+	cd -
+	CC=$SAVE_CC
+	CFLAGS=$SAVE_CFLAGS
 	set +x
 else
-	sudo apt-get install -qq libmaxminddb-dev
+	sudo apt-get install -qq libmaxminddb-dev libmongoc-dev
 fi
 
 # As travis has no xenial images, we always need to install librdkafka from source
