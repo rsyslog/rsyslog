@@ -320,6 +320,10 @@ endif # HAVE_VALGRIND
 if ENABLE_IMJOURNAL
 TESTS +=  \
 	imjournal-basic.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	imjournal-basic-vg.sh
+endif
 endif
 
 if ENABLE_OMJOURNAL
@@ -969,6 +973,7 @@ EXTRA_DIST= \
 	testsuites/now-utc.conf \
 	faketime_common.sh \
 	imjournal-basic.sh \
+	imjournal-basic-vg.sh \
 	omjournal-abort-template.sh \
 	omjournal-abort-no-template.sh \
 	omjournal-basic-template.sh \
