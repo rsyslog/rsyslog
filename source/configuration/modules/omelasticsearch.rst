@@ -83,7 +83,7 @@ Action Parameters
 .. _pipelineName:
 
 -  **pipelineName**
-   The `ingest node <https://www.elastic.co/guide/en/elasticsearch/reference/5.5/ingest.html>`_ 
+   The `ingest node <https://www.elastic.co/guide/en/elasticsearch/reference/current/ingest.html>`_ 
    pipeline name to be inclued in the request. This allows pre processing 
    of events bevor indexing them. By default, events are not send to a pipeline.
 
