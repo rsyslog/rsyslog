@@ -655,6 +655,9 @@ AC_ARG_ENABLE(usertools,
          esac],
         [enable_usertools=no]
 )
+if test "x$enable_usertools" = "xyes"; then
+	PKG_CHECK_MODULES(LIBMONGO_CLIENT, libmongo-client >= 0.1.4)
+fi
 AM_CONDITIONAL(ENABLE_USERTOOLS, test x$enable_usertools = xyes)
 
 
