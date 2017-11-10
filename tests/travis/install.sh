@@ -18,8 +18,8 @@ if [ "$DISTRIB_CODENAME" == "trusty" ] || [ "$DISTRIB_CODENAME" == "precise" ]; 
 	CFLAGS="-std=c99"
 	sudo apt-get install -qq libssl-dev
 	wget https://github.com/mongodb/mongo-c-driver/releases/download/1.8.1/mongo-c-driver-1.8.1.tar.gz
-	tar -xzf mongo-c-driver-1.1.5.tar.gz
-	cd mongo-c-driver-1.1.5/
+	tar -xzf mongo-c-driver-1.8.1.tar.gz
+	cd mongo-c-driver-1.8.1/
 	./configure --prefix=/usr --libdir=/usr/lib64 --enable-ssl --disable-automatic-init-and-cleanup
 	make
 	sudo make install
