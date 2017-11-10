@@ -756,6 +756,7 @@ TESTS += sndrcv_relp.sh \
 if ENABLE_GNUTLS
 TESTS += \
          sndrcv_relp_tls.sh \
+         sndrcv_relp_tls_prio.sh \
          relp_tls_certificate_not_found.sh
 endif
 endif
@@ -1430,6 +1431,9 @@ EXTRA_DIST= \
 	sndrcv_relp_rebind.sh \
 	testsuites/sndrcv_relp_rebind_sender.conf \
 	testsuites/sndrcv_relp_rebind_rcvr.conf \
+	sndrcv_relp_tls_prio.sh \
+	testsuites/sndrcv_relp_tls_prio_sender.conf \
+	testsuites/sndrcv_relp_tls_prio_rcvr.conf \
 	sndrcv_relp_tls.sh \
 	testsuites/sndrcv_relp_tls_sender.conf \
 	testsuites/sndrcv_relp_tls_rcvr.conf \
