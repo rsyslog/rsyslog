@@ -21,8 +21,9 @@ if [ "$DISTRIB_CODENAME" == "trusty" ] || [ "$DISTRIB_CODENAME" == "precise" ]; 
 	tar -xzf mongo-c-driver-1.8.1.tar.gz
 	cd mongo-c-driver-1.8.1/
 	./configure --prefix=/usr --libdir=/usr/lib64 --enable-ssl --disable-automatic-init-and-cleanup
-	make
+	make -j
 	sudo make install
+	cd -
 	CFLAGS=$SAVE_CFLAGS
 	set +x
 else
