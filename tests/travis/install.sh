@@ -16,6 +16,8 @@ if [ "$DISTRIB_CODENAME" == "trusty" ] || [ "$DISTRIB_CODENAME" == "precise" ]; 
 	
 	SAVE_CFLAGS=$CFLAGS
 	CFLAGS=""
+	SAVE_CC=$CC
+	CC="gcc"
 	sudo apt-get install -qq libssl-dev libsasl2-dev
 	wget https://github.com/mongodb/mongo-c-driver/releases/download/1.8.1/mongo-c-driver-1.8.1.tar.gz
 	tar -xzf mongo-c-driver-1.8.1.tar.gz
@@ -24,6 +26,7 @@ if [ "$DISTRIB_CODENAME" == "trusty" ] || [ "$DISTRIB_CODENAME" == "precise" ]; 
 	make -j
 	sudo make install
 	cd -
+	CC=$SAVE_CC
 	CFLAGS=$SAVE_CFLAGS
 	set +x
 else
