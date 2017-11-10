@@ -125,8 +125,9 @@ static int wrkrRunning;
 /* add new listener port to listener port list
  * rgerhards, 2009-05-21
  */
-static rsRetVal
-addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram, uchar *pszAddr)
+static rsRetVal ATTR_NONNULL(1, 2)
+addNewLstnPort(tcpsrv_t *const pThis, const uchar *const pszPort,
+	const int bSuppOctetFram, const uchar *const pszAddr)
 {
 	tcpLstnPortList_t *pEntry;
 	uchar statname[64];
@@ -135,22 +136,13 @@ addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram, uchar *pszAd
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
 	/* create entry */
-	CHKmalloc(pEntry = MALLOC(sizeof(tcpLstnPortList_t)));
-	if((pEntry->pszPort = ustrdup(pszPort)) == NULL) {
-		DBGPRINTF("tcpsrv/addNewLstnPort: OOM in strdup()\n");
-		free(pEntry);
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	}
+	CHKmalloc(pEntry = (tcpLstnPortList_t*)calloc(1, sizeof(tcpLstnPortList_t)));
+	CHKmalloc(pEntry->pszPort = ustrdup(pszPort));
 
         pEntry->pszAddr = NULL;
         /* only if a bind adress is defined copy it in struct */
         if (pszAddr != NULL) {
-		if((pEntry->pszAddr = ustrdup(pszAddr)) == NULL) {
-			DBGPRINTF("tcpsrv/addNewLstnPort: OOM in strdup() 2\n");
-			free(pEntry->pszPort);
-			free(pEntry);
-			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-		}
+		CHKmalloc(pEntry->pszAddr = ustrdup(pszAddr));
 	}
 
 	strcpy((char*)pEntry->dfltTZ, (char*)pThis->dfltTZ);
@@ -164,25 +156,43 @@ addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram, uchar *pszAd
 	CHKiRet(prop.SetString(pEntry->pInputName, pThis->pszInputName, ustrlen(pThis->pszInputName)));
 	CHKiRet(prop.ConstructFinalize(pEntry->pInputName));
 
-	/* and add to list */
-	pEntry->pNext = pThis->pLstnPorts;
-	pThis->pLstnPorts = pEntry;
-
 	/* support statistics gathering */
+	CHKiRet(ratelimitNew(&pEntry->ratelimiter, "tcperver", NULL));
+	ratelimitSetLinuxLike(pEntry->ratelimiter, pThis->ratelimitInterval, pThis->ratelimitBurst);
+	ratelimitSetThreadSafe(pEntry->ratelimiter);
+
 	CHKiRet(statsobj.Construct(&(pEntry->stats)));
 	snprintf((char*)statname, sizeof(statname), "%s(%s)", pThis->pszInputName, pszPort);
 	statname[sizeof(statname)-1] = '\0'; /* just to be on the save side... */
 	CHKiRet(statsobj.SetName(pEntry->stats, statname));
 	CHKiRet(statsobj.SetOrigin(pEntry->stats, pThis->pszOrigin));
-	CHKiRet(ratelimitNew(&pEntry->ratelimiter, "tcperver", NULL));
-	ratelimitSetLinuxLike(pEntry->ratelimiter, pThis->ratelimitInterval, pThis->ratelimitBurst);
-	ratelimitSetThreadSafe(pEntry->ratelimiter);
 	STATSCOUNTER_INIT(pEntry->ctrSubmit, pEntry->mutCtrSubmit);
 	CHKiRet(statsobj.AddCounter(pEntry->stats, UCHAR_CONSTANT("submitted"),
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pEntry->ctrSubmit)));
 	CHKiRet(statsobj.ConstructFinalize(pEntry->stats));
 
+	/* all OK - add to list */
+	pEntry->pNext = pThis->pLstnPorts;
+	pThis->pLstnPorts = pEntry;
+
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pEntry != NULL) {
+			free(pEntry->pszAddr);
+			free(pEntry->pszPort);
+			if(pEntry->pInputName != NULL) {
+				prop.Destruct(&pEntry->pInputName);
+			}
+			if(pEntry->ratelimiter != NULL) {
+				ratelimitDestruct(pEntry->ratelimiter);
+			}
+			if(pEntry->stats != NULL) {
+				statsobj.Destruct(&pEntry->stats);
+			}
+			free(pEntry);
+		}
+	}
+
 	RETiRet;
 }
 
@@ -292,7 +302,8 @@ TCPSessGetNxtSess(tcpsrv_t *pThis, int iCurr)
  * unless the subsystem is reinitialized.
  * rgerhards, 2007-06-21
  */
-static void deinit_tcp_listener(tcpsrv_t *pThis)
+static void ATTR_NONNULL()
+deinit_tcp_listener(tcpsrv_t *const pThis)
 {
 	int i;
 	tcpLstnPortList_t *pEntry;
@@ -1565,7 +1576,9 @@ stopWorkerPool(void)
 {
 	int i;
 	for(i = 0 ; i < wrkrMax ; ++i) {
+		pthread_mutex_lock(&wrkrMut);
 		pthread_cond_signal(&wrkrInfo[i].run); /* awake wrkr if not running */
+		pthread_mutex_unlock(&wrkrMut);
 		pthread_join(wrkrInfo[i].tid, NULL);
 		DBGPRINTF("tcpsrv: info: worker %d was called %llu times\n", i, wrkrInfo[i].numCalled);
 		pthread_cond_destroy(&wrkrInfo[i].run);

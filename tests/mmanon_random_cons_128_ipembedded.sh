@@ -11,18 +11,18 @@ module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="13514" ruleset="testing")
 
 ruleset(name="testing") {
-	action(type="mmanon" ipv6.anonmode="random-consistent" ipv6.bits="128")
+	action(type="mmanon" ipv6.enable="off" ipv4.enable="off" embeddedipv4.anonmode="random-consistent" embeddedipv4.bits="128")
 	action(type="omfile" dynafile="filename" template="outfmt")
 }'
 
 echo 'Since this test tests randomization, there is a theoretical possibility of it failing even if rsyslog works correctly. Therefore, if the test unexpectedly fails try restarting it.'
 . $srcdir/diag.sh startup
-. $srcdir/diag.sh tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 file1 33:45:DDD::4
-<129>Mar 10 01:00:00 172.20.245.8 file2 ::
-<129>Mar 10 01:00:00 172.20.245.8 file6 ::
-<129>Mar 10 01:00:00 172.20.245.8 file3 72:8374:adc7:47FF::43:0:1AFE
-<129>Mar 10 01:00:00 172.20.245.8 file4 FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF
-<129>Mar 10 01:00:00 172.20.245.8 file5 72:8374:adc7:47FF::43:0:1AFE\""
+. $srcdir/diag.sh tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 file1 33:45:DDD::4.123.123.3
+<129>Mar 10 01:00:00 172.20.245.8 file2 ::0.0.0.0
+<129>Mar 10 01:00:00 172.20.245.8 file6 ::0.0.0.0
+<129>Mar 10 01:00:00 172.20.245.8 file3 72:8374:adc7:47FF::43:0.34.225.1
+<129>Mar 10 01:00:00 172.20.245.8 file4 FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:255.255.255.255
+<129>Mar 10 01:00:00 172.20.245.8 file5 72:8374:adc7:47FF::43:0.34.225.1\""
 
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown

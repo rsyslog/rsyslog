@@ -159,8 +159,11 @@ int ProtectedQueue_waitForItem(ProtectedQueue* this, void** item, uint64_t timeo
 			}
 		} else
 			pthread_cond_wait(&this->condition, &this->mutex);
-		if (this->bStop)
+
+		if (this->bStop) {
+			pthread_mutex_unlock(&this->mutex);
 			return 0;
+		}
 	}
 
 	if (RingBuffer_count(this->workItems) != 0 && item != NULL)

@@ -1,5 +1,12 @@
 ------------------------------------------------------------------------------
 Version 8.31.0 [v8-stable] 2017-11-28
+- mmanon: add support for IPv6 adresses with embedded IPv4 address
+  While this format is uncommon, it may still be present in logs and as
+  such should be supported. It is configurable via individual settings,
+  though. Especially the number of bits to anonymize may be desired to
+  be different than in pure IPv6.
+- rainerscript: add parse_time() function
+  Thanks to Stephen Workman for implementing this.
 - omprog: added error handling and transaction support for external plugins
   This permits much better integration of external output modules.
   Special thanks to Joan Sala for providing this work!
@@ -15,6 +22,11 @@ Version 8.31.0 [v8-stable] 2017-11-28
   keep a simple lock ... unlock scheme within the function. That is
   easier to follow for both humans as well as static analyzers.
   Also removes Coverity scan CID 185419
+- msg variable bugfix: potential segfault on variable access
+  A segfault is likely to happen if during processing a variable with
+  more than one path component is accessed (e.g. $!path!var) and NO
+  variables oft hat kind (local, message, global) are defined at all.
+  closes https://github.com/rsyslog/rsyslog/issues/1920
 - omfwd bugfix: generate error message on connection failure
 - imtcp bugfix: "streamdriver.mode" parameter could not be set to 0
 - imjournal bugfix: module was defunctional
@@ -26,8 +38,17 @@ Version 8.31.0 [v8-stable] 2017-11-28
   handle inside a global variable.
   see also https://github.com/rsyslog/rsyslog/issues/1895
   closes https://github.com/rsyslog/rsyslog/issues/1897
+- imjournal: refactor error handling, fix error messages
+  imjournal did not try to recover from errors and used the error state
+  returned by journal functions incorrectly, resulting in misleading
+  error messages. Fixed this and also increased the number of error
+  messages so that it now is easier to diagnose problems with this module.
+  Also a little bit of internal brush-up.
+- omkafka: fix file handle leak, which could occur when local buffering
+  of messages was needed
 - [io]mgssapi: fix build problems (regression from 8.30.0)
 - [io]czmq: fix build problems on some platforms (namely gcc 7, clang 5)
+- tcpsrv bugfix: potential hang during shutdown
 - imczmq bugfix: segfault
   happened in a call to
     371: zcert_destroy(&serverCert) called from rcvData().
