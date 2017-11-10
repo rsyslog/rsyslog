@@ -6,7 +6,7 @@
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/mmexternal/.libs/mmexternal")
 input(type="imtcp" port="13514")
-#set $!x = "a";
+set $!x = "a";
 
 template(name="outfmt" type="string" string="-%$!%-\n")
 

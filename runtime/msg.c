@@ -4590,7 +4590,7 @@ rsRetVal ATTR_NONNULL(1)
 MsgSetPropsViaJSON_Object(smsg_t *__restrict__ const pMsg, struct json_object *const json)
 {
 	DEFiRet;
-DBGPRINTF("DDDD: MsgSetPropsViaJSON_Object enter json %p\n", json);
+DBGPRINTF("DDDD: MsgSetPropsViaJSON_Object enter json %p: %s\n", json, fjson_object_to_json_string(json));
 	if(json == NULL || !json_object_is_type(json, json_type_object)) {
 		ABORT_FINALIZE(RS_RET_JSON_UNUSABLE);
 	}
@@ -4598,11 +4598,14 @@ DBGPRINTF("DDDD: MsgSetPropsViaJSON_Object enter json %p\n", json);
 	struct json_object_iterator itEnd = json_object_iter_end(json);
 	while (!json_object_iter_equal(&it, &itEnd)) {
 		struct json_object *child = json_object_iter_peek_value(&it);
+		json_object_get(child);
+DBGPRINTF("DDDD: MsgSetPropsViaJSON_Object iter child %p, refcount %d\n", child, child->_ref_count);
 		msgSetPropViaJSON(pMsg, json_object_iter_peek_name(&it),
 			child, 0);
-DBGPRINTF("DDDD: MsgSetPropsViaJSON_Object iter child %p, refcount %d\n", child, child->_ref_count);
 		json_object_iter_next(&it);
 	}
+
+DBGPRINTF("DDDD: MsgSetPropsViaJSON_Object do put for json %p\n", json);
 	json_object_put(json); // übergeordneter OK, child muss refcount == 1 haben, offensichtlich
 
 finalize_it:
@@ -4733,6 +4736,7 @@ jsonMerge(struct json_object *existing, struct json_object *json)
 	struct json_object_iterator itEnd = json_object_iter_end(json);
 	while (!json_object_iter_equal(&it, &itEnd)) {
 		struct json_object *jj = json_object_get(json_object_iter_peek_value(&it));
+DBGPRINTF("jsonMerge added ref for %p\n", jj);
 		json_object_object_add(existing, json_object_iter_peek_name(&it),
 			jj);
 		json_object_iter_next(&it);
@@ -4741,7 +4745,9 @@ jsonMerge(struct json_object *existing, struct json_object *json)
 	 * in the loop above. So when we now free(_put) the root object, only
 	 * root gets freed().
 	 */
-//	json_object_put(json);
+DBGPRINTF("jsonMerge do put for %p\n", json);
+	json_object_put(json);
+DBGPRINTF("jsonMerge done put for %p\n", json);
 	RETiRet;
 }
 
@@ -4773,7 +4779,7 @@ finalize_it:
 	RETiRet;
 }
 
-rsRetVal
+rsRetVal ATTR_NONNULL()
 msgAddJSON(smsg_t * const pM, uchar *name, struct json_object *json, int force_reset, int sharedReference)
 {
 	/* TODO: error checks! This is a quick&dirty PoC! */
@@ -4783,6 +4789,7 @@ msgAddJSON(smsg_t * const pM, uchar *name, struct json_object *json, int force_r
 	uchar *leaf;
 	pthread_mutex_t *mut = NULL;
 	DEFiRet;
+DBGPRINTF("msgAddJSON: %s\n", fjson_object_to_json_string(json));
 
 	CHKiRet(getJSONRootAndMutexByVarChar(pM, name[0], &jroot, &mut));
 	pthread_mutex_lock(mut);
@@ -4796,13 +4803,20 @@ msgAddJSON(smsg_t * const pM, uchar *name, struct json_object *json, int force_r
 	}
 
 	if(name[1] == '\0') { /* full tree? */
+#if 1
 		if(*jroot == NULL) {
-			//*jroot = json; // only case without refcount increment
+			*jroot = json; // only case without refcount increment
 			DBGPRINTF("DDDD: root null, just set to new val %p\n", json);
-			*jroot = json_object_get(json);
+			//*jroot = json_object_get(json);
 		} else {
 			CHKiRet(jsonMerge(*jroot, json));
 		}
+#else
+		if(*jroot == NULL) {
+			*jroot = json_object_new_object();
+		}
+		CHKiRet(jsonMerge(*jroot, json));
+#endif
 	} else {
 		if(*jroot == NULL) {
 			/* now we need a root obj */
