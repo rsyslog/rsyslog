@@ -27,6 +27,28 @@ Version 8.31.0 [v8-stable] 2017-11-28
   more than one path component is accessed (e.g. $!path!var) and NO
   variables oft hat kind (local, message, global) are defined at all.
   closes https://github.com/rsyslog/rsyslog/issues/1920
+- ratelimiting bugfix: data race in Linux-like ratelimiter
+  access to the Linux-like ratelimiter was not properly synchronized, and
+  the system rate-limiter was not using it in any case.
+  This could lead to the rate-limit settings not being properly
+  respected, but no "hard error".
+- core/wrkr threads bugfix: race condition
+  During e.g. shutdown it could happen that a worker thread was started
+  and immediately be requested to terminate. In such situations there was
+  a race the prevented proper initialization. This could lead to follow-on
+  problems.
+  We believe (but could not proof) that this also could lead to a hang of
+  the termination process. Thus we claim to close an issue tracker down
+  here below, but are not 100% certain it really closes it (we hope for
+  user feedback on this). In any case, the thread debuger showed invalid
+  operations and this has been fixed, so it is useful in any case.
+  closes https://github.com/rsyslog/rsyslog/issues/1959
+- core/wtp: potential hang during shutdown
+  when the wtp worker is cancelled in the final stage of shutting down
+  while the mutex is locked and there is one worker left, the system
+  will hang. The reason is that the cancelled thread could not free the
+  mutex that the other needs in order to shut down orderly.
+  Deteced with clang thread sanitizer.
 - omfwd bugfix: generate error message on connection failure
 - imtcp bugfix: "streamdriver.mode" parameter could not be set to 0
 - imjournal bugfix: module was defunctional
@@ -168,6 +190,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
   * harden tests against hanging previous instances
   * re-enable RELP tests on Solaris
   * added basic test for imjournal
+  * added threading tests via valgrind's helgrind tool
 - CI: improved test coverage on FreeBSD
 - build: make compile warning-free under gcc 7
 ------------------------------------------------------------------------------
