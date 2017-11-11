@@ -1034,7 +1034,12 @@ findIPv6(struct ipv6_int* num, char* address, wrkrInstanceData_t *const pWrkrDat
 		char* hashString;
 		CHKmalloc(hashString = strdup(address));
 
-		hashtable_insert(hash, hashKey, hashString);
+		if(!hashtable_insert(hash, hashKey, hashString)) {
+			DBGPRINTF("hashtable error: insert to %s-table failed",
+				useEmbedded ? "embedded ipv4" : "ipv6");
+			free(hashString);
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
 		hashKey = NULL;
 	}
 finalize_it:
