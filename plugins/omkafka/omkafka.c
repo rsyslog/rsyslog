@@ -351,9 +351,8 @@ prepareTopic(instanceData *__restrict__ const pData, const uchar *__restrict__ c
  * if it does not exist, create a new one, or if we are currently using it
  * as of the last message, keep using it.
  *
- * important: topic is returned read-locked, user must unlock it after using it.
- *
  * must be called with read(rkLock)
+ * must be called with mutDynCache locked
  */
 static rsRetVal
 prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict__ const newTopicName,
@@ -370,8 +369,6 @@ prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict_
 	DEFiRet;
 	ASSERT(pData != NULL);
 	ASSERT(newTopicName != NULL);
-
-	pthread_mutex_lock(&pData->mutDynCache);
 
 	pCache = pData->dynCache;
 	/* first check, if we still have the current topic */
@@ -400,7 +397,8 @@ prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict_
 				/* we found our element! */
 				entry = pCache[i];
 				pData->iCurrElt = i;
-				pCache[i]->clkTickAccessed = getClockTopicAccess(); /* update "timestamp" for LRU */
+				/* update "timestamp" for LRU */
+				pCache[i]->clkTickAccessed = getClockTopicAccess();
 				FINALIZE;
 			}
 			/* did not find it - so lets keep track of the counters for LRU */
@@ -441,7 +439,8 @@ prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict_
 	localRet = createTopic(pData, newTopicName, &tmpTopic);
 
 	if(localRet != RS_RET_OK) {
-		errmsg.LogError(0, localRet, "Could not open dynamic topic '%s' [state %d] - discarding message",
+		errmsg.LogError(0, localRet, "Could not open dynamic topic '%s' "
+			"[state %d] - discarding message",
 		newTopicName, localRet);
 		ABORT_FINALIZE(localRet);
 	}
@@ -458,16 +457,13 @@ prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict_
 
 finalize_it:
 	if (iRet == RS_RET_OK && entry != NULL) {
-		pthread_rwlock_rdlock(&entry->lock);
-	}
-	pthread_mutex_unlock(&pData->mutDynCache);
-	if (iRet == RS_RET_OK && entry != NULL) {
 		*topic = entry->pTopic;
 		*lock = &entry->lock;
 	} else {
 		*topic = NULL;
 		*lock = NULL;
 	}
+	assert(!(entry == NULL && iRet == RS_RET_OK));
 	RETiRet;
 }
 
@@ -555,11 +551,19 @@ writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
 	int msg_enqueue_status = 0;
 #endif
 
-	DBGPRINTF("omkafka: trying to send: key:'%s', msg:'%s', timestamp:'%s'\n", pData->key, msg, msgTimestamp);
+	DBGPRINTF("omkafka: trying to send: key:'%s', msg:'%s', timestamp:'%s'\n",
+		pData->key, msg, msgTimestamp);
 
 	if(pData->dynaTopic) {
 		DBGPRINTF("omkafka: topic to insert to: %s\n", topic);
-		CHKiRet(prepareDynTopic(pData, topic, &rkt, &dynTopicLock));
+		/* ensure locking happens all inside this function */
+		pthread_mutex_lock(&pData->mutDynCache);
+		const rsRetVal localRet = prepareDynTopic(pData, topic, &rkt, &dynTopicLock);
+		if (localRet == RS_RET_OK && dynTopicLock != NULL) {
+			pthread_rwlock_rdlock(dynTopicLock);
+		}
+		pthread_mutex_unlock(&pData->mutDynCache);
+		CHKiRet(localRet);
 	} else {
 		rkt = pData->pTopic;
 	}
