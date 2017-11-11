@@ -1874,7 +1874,7 @@ finalize_it:
 }
 
 /* Add a new template via the v6 config system.  */
-rsRetVal
+rsRetVal ATTR_NONNULL()
 tplProcessCnf(struct cnfobj *o)
 {
 	struct template *pTpl = NULL;
@@ -1895,6 +1895,10 @@ tplProcessCnf(struct cnfobj *o)
 	DEFiRet;
 
 	pvals = nvlstGetParams(o->nvlst, &pblk, NULL);
+	if(pvals == NULL) {
+		parser_errmsg("error processing template config parameters");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
 	cnfparamsPrint(&pblk, pvals);
 	
 	for(i = 0 ; i < pblk.nParams ; ++i) {
