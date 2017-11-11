@@ -38,6 +38,7 @@
 #valgrind="valgrind --tool=helgrind --log-fd=1 --suppressions=linux_localtime_r.supp --gen-suppressions=all"
 #valgrind="valgrind --tool=exp-ptrcheck --log-fd=1"
 #set -o xtrace
+export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction stdout"
 #export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 #export RSYSLOG_DEBUGLOG="log"
 TB_TIMEOUT_STARTSTOP=1200 # timeout for start/stop rsyslogd in tenths (!) of a second 1200 => 2 min

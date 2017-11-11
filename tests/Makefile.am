@@ -291,6 +291,7 @@ endif
 if HAVE_VALGRIND
 TESTS +=  \
 	internal-errmsg-memleak.sh \
+	mmexternal-SegFault-vg.sh \
 	rscript_set_memleak-vg.sh \
 	no-parser-vg.sh \
 	discard-rptdmsg-vg.sh \
@@ -706,6 +707,7 @@ test_files = testbench.h runtime-dummy.c
 
 EXTRA_DIST= \
 	internal-errmsg-memleak.sh \
+	mmexternal-SegFault-vg.sh \
 	empty-hostname.sh \
 	hostname-getaddrinfo-fail.sh \
 	hostname-with-slash-pmrfc5424.sh \
