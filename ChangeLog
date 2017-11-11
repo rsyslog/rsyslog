@@ -32,6 +32,11 @@ Version 8.31.0 [v8-stable] 2017-11-28
   the system rate-limiter was not using it in any case.
   This could lead to the rate-limit settings not being properly
   respected, but no "hard error".
+- core/json var subsystem bugfix: segfault in MsgSetPropsViaJSON
+  Invalid libfastjson API use lead to double-free. This was most importantly
+  triggerred by mmexternal (but could potentially be triggered by other
+  uses as well)
+  closes https://github.com/rsyslog/rsyslog/issues/1822
 - core/wrkr threads bugfix: race condition
   During e.g. shutdown it could happen that a worker thread was started
   and immediately be requested to terminate. In such situations there was
