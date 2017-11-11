@@ -32,6 +32,10 @@ Version 8.31.0 [v8-stable] 2017-11-28
   the system rate-limiter was not using it in any case.
   This could lead to the rate-limit settings not being properly
   respected, but no "hard error".
+- core/template bugfix: potential NULL pointer access at config load
+  could happen if the config was loaded and the parameters could not properly
+  be processed. If so, this occured only during the startup phase.
+  Detected by Coverity scan, CID 185318
 - core/json var subsystem bugfix: segfault in MsgSetPropsViaJSON
   Invalid libfastjson API use lead to double-free. This was most importantly
   triggerred by mmexternal (but could potentially be triggered by other
