@@ -1488,7 +1488,7 @@ initAll(int argc, char **argv)
 			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 			 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] start",
 			 (int) glblGetOurPid());
-		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
+		//logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
 	}
 
 	if(!rsconfNeedDropPriv(ourConf)) {

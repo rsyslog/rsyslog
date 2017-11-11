@@ -4,7 +4,7 @@
 uname
 if [ `uname` = "FreeBSD" ] ; then
    echo "This test currently does not work on FreeBSD."
-   exit 77
+#   exit 77
 fi
 
 . $srcdir/diag.sh init
@@ -33,7 +33,7 @@ action(type="omfile" file="rsyslog2.out.log")'
 echo ' 1.1.x.x
  0.0.x.x
  172.0.xxx.xxx
- 111.1.x.x.' | cmp rsyslog.out.log
+ 111.1.x.x.' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
   cat rsyslog.out.log

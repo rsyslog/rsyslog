@@ -34,6 +34,7 @@ TESTS = $(TESTRUNS)
 #TESTS = $(TESTRUNS) cfg.sh
 
 TESTS +=  \
+	mmexternal-SegFault.sh \
 	empty-hostname.sh \
 	hostname-getaddrinfo-fail.sh \
 	prop-programname.sh \

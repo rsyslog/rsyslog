@@ -40,7 +40,7 @@
 #set -o xtrace
 #export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 #export RSYSLOG_DEBUGLOG="log"
-TB_TIMEOUT_STARTSTOP=1200 # timeout for start/stop rsyslogd in tenths (!) of a second 1200 => 2 min
+TB_TIMEOUT_STARTSTOP=100 #1200 # timeout for start/stop rsyslogd in tenths (!) of a second 1200 => 2 min
 
 #START: ext kafka config
 dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.10/zookeeper-3.4.10.tar.gz
