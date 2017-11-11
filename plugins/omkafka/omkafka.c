@@ -626,9 +626,9 @@ writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
 	DBGPRINTF("omkafka: rd_kafka_produce\n");
 	/* Using old kafka produce API */
 	msg_enqueue_status = rd_kafka_produce(rkt, partition, RD_KAFKA_MSG_F_COPY,
-										  msg, strlen((char*)msg), pData->key,
-										  pData->key == NULL ? 0 : strlen((char*)pData->key),
-										  NULL);
+				  msg, strlen((char*)msg), pData->key,
+				  pData->key == NULL ? 0 : strlen((char*)pData->key),
+				  NULL);
 	if(msg_enqueue_status == -1) {
 		/* Put into kafka queue, again if configured! */
 		if (pData->bResubmitOnFailure) {
@@ -750,21 +750,24 @@ do_rd_kafka_destroy(instanceData *const __restrict__ pData)
 			queuedCount = rd_kafka_outq_len(pData->rk);
 			if (queuedCount > 0) {
 				/* Flush all remaining kafka messages (rd_kafka_poll is called inside) */
-                const int flushStatus = rd_kafka_flush(pData->rk, 5000);
+				const int flushStatus = rd_kafka_flush(pData->rk, 5000);
 				if (flushStatus != RD_KAFKA_RESP_ERR_NO_ERROR) /* TODO: Handle unsend messages here! */ {
 					errmsg.LogError(0, RS_RET_KAFKA_ERROR,
-						"omkafka: onDestroy Failed to send remaing '%d' messages to topic '%s' on shutdown with error: '%s'",
+						"omkafka: onDestroy Failed to send remaing '%d' "
+						"messages to topic '%s' on shutdown with error: '%s'",
 						queuedCount,
 						rd_kafka_topic_name(pData->pTopic),
 						rd_kafka_err2str(flushStatus));
 				} else {
-					DBGPRINTF("omkafka: onDestroyflushed remaining '%d' messages to kafka topic '%s'\n",
-							  queuedCount, rd_kafka_topic_name(pData->pTopic));
+					DBGPRINTF("omkafka: onDestroyflushed remaining '%d' messages "
+						"to kafka topic '%s'\n", queuedCount,
+						rd_kafka_topic_name(pData->pTopic));
 
 				/* Trigger callbacks a last time before shutdown */
 				const int callbacksCalled = rd_kafka_poll(pData->rk, 0); /* call callbacks */
-				DBGPRINTF("omkafka: onDestroy kafka outqueue length: %d, callbacks called %d\n",
-						  rd_kafka_outq_len(pData->rk), callbacksCalled);
+				DBGPRINTF("omkafka: onDestroy kafka outqueue length: %d, "
+					"callbacks called %d\n", rd_kafka_outq_len(pData->rk),
+					callbacksCalled);
 				}
 			} else {
 				break;
@@ -811,10 +814,11 @@ errorCallback(rd_kafka_t __attribute__((unused)) *rk,
 		err == RD_KAFKA_RESP_ERR__AUTHENTICATION) {
 		/* Broker transport error, we need to disable the action for now!*/
 		pData->bIsSuspended = 1;
-		DBGPRINTF("omkafka: kafka error handled, action will be suspended: %d,'%s'\n", err, rd_kafka_err2str(err));
+		DBGPRINTF("omkafka: kafka error handled, action will be suspended: %d,'%s'\n",
+			err, rd_kafka_err2str(err));
 	} else {
-		errmsg.LogError(0, RS_RET_KAFKA_ERROR,
-			"omkafka: kafka error message: %d,'%s','%s'", err, rd_kafka_err2str(err), reason);
+		errmsg.LogError(0, RS_RET_KAFKA_ERROR, "omkafka: kafka error message: %d,'%s','%s'",
+			err, rd_kafka_err2str(err), reason);
 	}
 }
 
@@ -948,8 +952,8 @@ finalize_it:
 		/* Parameter Error's cannot be resumed, so we need to disable the action */
 		if (iRet == RS_RET_PARAM_ERROR) {
 			iRet = RS_RET_DISABLE_ACTION;
-			errmsg.LogError(0, iRet,
-				"omkafka: action will be disabled due invalid kafka configuration parameters\n");
+			errmsg.LogError(0, iRet, "omkafka: action will be disabled due invalid "
+				"kafka configuration parameters\n");
 		}
 
 	}
@@ -970,12 +974,15 @@ checkFailedMessages(instanceData *const __restrict__ pData)
 		/* Put back into kafka! */
 		iRet = writeKafka(pData, (uchar*) fmsgEntry->payload, NULL, fmsgEntry->topicname);
 		if(iRet != RS_RET_OK) {
-			DBGPRINTF("omkafka: failed to delivery failed msg '%.*s' with status %d. - suspending AGAIN!\n",
-				(int)(strlen((char*)fmsgEntry->payload)-1), (char*)fmsgEntry->payload, iRet);
+			DBGPRINTF("omkafka: failed to delivery failed msg '%.*s' with status %d. "
+				"- suspending AGAIN!\n",
+				(int)(strlen((char*)fmsgEntry->payload)-1),
+				(char*)fmsgEntry->payload, iRet);
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		} else {
 			DBGPRINTF("omkafka: successfully delivered failed msg '%.*s'.\n",
-				(int)(strlen((char*)fmsgEntry->payload)-1), (char*)fmsgEntry->payload);
+				(int)(strlen((char*)fmsgEntry->payload)-1),
+				(char*)fmsgEntry->payload);
 			LIST_REMOVE(fmsgEntry, entries);
 			free(fmsgEntry);
 		}
