@@ -4590,8 +4590,10 @@ MsgSetPropsViaJSON_Object(smsg_t *__restrict__ const pMsg, struct json_object *j
 	struct json_object_iterator it = json_object_iter_begin(json);
 	struct json_object_iterator itEnd = json_object_iter_end(json);
 	while (!json_object_iter_equal(&it, &itEnd)) {
+		struct json_object *child = json_object_iter_peek_value(&it);
+		json_object_get(child);
 		msgSetPropViaJSON(pMsg, json_object_iter_peek_name(&it),
-			json_object_iter_peek_value(&it), 0);
+			child, 0);
 		json_object_iter_next(&it);
 	}
 	json_object_put(json);
