@@ -354,7 +354,7 @@ prepareTopic(instanceData *__restrict__ const pData, const uchar *__restrict__ c
  * must be called with read(rkLock)
  * must be called with mutDynCache locked
  */
-static rsRetVal
+static rsRetVal ATTR_NONNULL()
 prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict__ const newTopicName,
 				rd_kafka_topic_t** topic, pthread_rwlock_t** lock)
 {
@@ -431,7 +431,8 @@ prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict_
 	}
 	/* we need to allocate memory for the cache structure */
 	if(pCache[iFirstFree] == NULL) {
-		CHKmalloc(pCache[iFirstFree] = (dynaTopicCacheEntry*) calloc(1, sizeof(dynaTopicCacheEntry)));
+		CHKmalloc(pCache[iFirstFree] =
+			(dynaTopicCacheEntry*) calloc(1, sizeof(dynaTopicCacheEntry)));
 		CHKiRet(pthread_rwlock_init(&pCache[iFirstFree]->lock, NULL));
 	}
 
@@ -456,14 +457,10 @@ prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict_
 	DBGPRINTF("Added new entry %d for topic cache, topic '%s'.\n", iFirstFree, newTopicName);
 
 finalize_it:
-	if (iRet == RS_RET_OK && entry != NULL) {
+	if (iRet == RS_RET_OK) {
 		*topic = entry->pTopic;
 		*lock = &entry->lock;
-	} else {
-		*topic = NULL;
-		*lock = NULL;
 	}
-	assert(!(entry == NULL && iRet == RS_RET_OK));
 	RETiRet;
 }
 
@@ -559,7 +556,7 @@ writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
 		/* ensure locking happens all inside this function */
 		pthread_mutex_lock(&pData->mutDynCache);
 		const rsRetVal localRet = prepareDynTopic(pData, topic, &rkt, &dynTopicLock);
-		if (localRet == RS_RET_OK && dynTopicLock != NULL) {
+		if (localRet == RS_RET_OK) {
 			pthread_rwlock_rdlock(dynTopicLock);
 		}
 		pthread_mutex_unlock(&pData->mutDynCache);
@@ -570,7 +567,7 @@ writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
 
 #if RD_KAFKA_VERSION >= 0x00090400
 	if (msgTimestamp == NULL) {
-		/* Resubmitted items don't have a timestamp :/*/
+		/* Resubmitted items don't have a timestamp */
 		ttMsgTimestamp = time(NULL);
 	} else {
 		ttMsgTimestamp = atoi((char*)msgTimestamp); /* Convert timestamp into int */
@@ -602,7 +599,7 @@ writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
 		/* Put into kafka queue, again if configured! */
 		if (pData->bResubmitOnFailure) {
 			DBGPRINTF("omkafka: Failed to produce to topic '%s' (rd_kafka_producev)"
-			"partition %d: '%d/%s' - adding MSG '%s' to failed for RETRY!\n",
+				"partition %d: '%d/%s' - adding MSG '%s' to failed for RETRY!\n",
 				rd_kafka_topic_name(rkt), partition, msg_kafka_response,
 				rd_kafka_err2str(msg_kafka_response), msg);
 
@@ -615,10 +612,10 @@ writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
 			LIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
 		} else {
 			errmsg.LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
-			"omkafka: Failed to produce to topic '%s' (rd_kafka_producev)"
-			"partition %d: %d/%s\n",
-			rd_kafka_topic_name(rkt), partition, msg_kafka_response,
-			rd_kafka_err2str(msg_kafka_response));
+				"omkafka: Failed to produce to topic '%s' (rd_kafka_producev)"
+				"partition %d: %d/%s\n",
+				rd_kafka_topic_name(rkt), partition, msg_kafka_response,
+				rd_kafka_err2str(msg_kafka_response));
 		}
 	}
 #else
@@ -646,10 +643,10 @@ writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
 			LIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
 		} else {
 			errmsg.LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
-			"omkafka: Failed to produce to topic '%s' (rd_kafka_produce) "
-			"partition %d: %d/%s\n",
-			rd_kafka_topic_name(rkt), partition, rd_kafka_last_error(),
-			rd_kafka_err2str(rd_kafka_last_error()));
+				"omkafka: Failed to produce to topic '%s' (rd_kafka_produce) "
+				"partition %d: %d/%s\n",
+				rd_kafka_topic_name(rkt), partition, rd_kafka_last_error(),
+				rd_kafka_err2str(rd_kafka_last_error()));
 		}
 	}
 #endif
@@ -678,7 +675,7 @@ finalize_it:
 	if(iRet != RS_RET_OK) {
 		iRet = RS_RET_SUSPENDED;
 	}
-    STATSCOUNTER_SETMAX_NOMUT(ctrQueueSize, rd_kafka_outq_len(pData->rk));
+	STATSCOUNTER_SETMAX_NOMUT(ctrQueueSize, rd_kafka_outq_len(pData->rk));
 	STATSCOUNTER_INC(ctrTopicSubmit, mutCtrTopicSubmit);
 	RETiRet;
 }
