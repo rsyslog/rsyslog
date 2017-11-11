@@ -467,6 +467,10 @@ TESTS +=  \
 	es-basic-errfile-popul.sh \
 	es-bulk-errfile-empty.sh \
 	es-bulk-errfile-popul.sh 
+if HAVE_VALGRIND
+TESTS += \
+	es-basic-vgthread.sh
+endif
 if ENABLE_IMFILE
 TESTS +=  \
 	es-bulk-errfile-popul-def-format.sh \
@@ -684,7 +688,8 @@ if HAVE_VALGRIND
 TESTS += \
 	imfile-basic-vg.sh \
 	imfile-endregex-vg.sh \
-	imfile-readmode2-vg.sh
+	imfile-readmode2-vg.sh \
+	imfile-basic-vgthread.sh
 endif
 endif
 
@@ -692,7 +697,7 @@ if ENABLE_OMTCL
 TESTS += \
 	 omtcl.sh
 endif
-
+ 
 endif # if ENABLE_TESTBENCH
 
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
@@ -1047,6 +1052,7 @@ EXTRA_DIST= \
 	testsuites/incltest_dir_wildcard.conf \
 	testsuites/incltest.d/include.conf \
 	es-basic.sh \
+	es-basic-vgthread.sh \
 	testsuites/es-basic.conf \
 	es-basic-bulk.sh \
 	testsuites/es-basic-bulk.conf \
@@ -1311,6 +1317,7 @@ EXTRA_DIST= \
 	imfile-fileNotFoundError-parameter.sh \
 	imfile-error-not-repeated.sh \
 	imfile-basic-vg.sh \
+	imfile-basic-vgthread.sh \
 	testsuites/imfile-basic.conf \
 	imfile-endregex-timeout-none-polling.sh \
 	imfile-endregex-timeout-polling.sh \
@@ -1614,6 +1621,7 @@ EXTRA_DIST= \
 	testsuites/imptcp_nonProcessingPoller.conf \
 	libmaxmindb.supp \
 	travis/trusty.supp \
+	linux_localtime_r.supp \
 	json_var_case.sh \
 	testsuites/json_var_case.conf \
 	cfg.sh \

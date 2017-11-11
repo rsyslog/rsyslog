@@ -131,13 +131,17 @@ tellLostCnt(ratelimit_t *ratelimit)
  * This implementation is NOT THREAD-SAFE and must not 
  * be called concurrently.
  */
-static int
+static int ATTR_NONNULL()
 withinRatelimit(ratelimit_t *__restrict__ const ratelimit,
 	time_t tt,
 	const char*const appname)
 {
 	int ret;
 	uchar msgbuf[1024];
+
+	if(ratelimit->bThreadSafe) {
+		pthread_mutex_lock(&ratelimit->mut);
+	}
 
 	if(ratelimit->interval == 0) {
 		ret = 1;
@@ -181,6 +185,9 @@ withinRatelimit(ratelimit_t *__restrict__ const ratelimit,
 	}
 
 finalize_it:
+	if(ratelimit->bThreadSafe) {
+		pthread_mutex_unlock(&ratelimit->mut);
+	}
 	return ret;
 }
 
