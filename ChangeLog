@@ -138,11 +138,43 @@ Version 8.31.0 [v8-stable] 2017-11-28
   be issued (as there are no more workers). So then we can destruct
   the rulesets in any order.
   closes https://github.com/rsyslog/rsyslog/issues/1122
+- core/action bugfix: potential misadressing when processing hard errors
+  For batches that did fail in an output module, the rsyslog core
+  tries to find offending messages that generate hard (non-recoverable)
+  errors. During this process, the action templates for each message
+  are copied into a temporary buffer. That copy was invalidly sized,
+  actually copying only the first template string. As such, outputs
+  that requested more template strings AND had erros in batch submission
+  received uninitialized pointers. This could lead to all sorts of
+  problems.
+  see also https://github.com/rsyslog/rsyslog/issues/1885
+  closes https://github.com/rsyslog/rsyslog/issues/1906
 - template object bugfix: NULL pointer access on invalid parameters
   could happen only during startup
   Detected by Coverity scan, CID 185376
 - omjournal bugfix: NULL pointer access on invalid parameters
   could happen only during startup
+- omelasticsearch bugfix: abort on unavailable ES server
+  Depending on the state of unavailability (libcurl return code),
+  omelasticsearch tries to process a NULL return message, what
+  leads to a segfault.
+  This fixes the problem and introduces better error handling and
+  better error messages.
+  see also https://github.com/rsyslog/rsyslog/issues/1885
+- omelasticsearch: fix memory leak and potential misadressing
+  Commit 96b5fce introduced regressions, leading to potential misadressing
+  and a very probable memory leak. This commit fixes the issues and
+  hardens the module to better detect some error cases in the
+  future.
+  It also adds valgrind-based testbench tests which ensure that no
+  pointer errors exist. If they had been in place, the regressions
+  would never have been undetected.
+  Note that commit 96b5fce was introduced in 8.23.0 on Nov, 15th 2016.
+  Many thanks to Yaroslav Bo for alerting me on the root problem and
+  providing a very good analysis and guidance.
+  see also https://github.com/rsyslog/rsyslog/issues/1906
+  see also https://github.com/rsyslog/rsyslog/issues/1964
+  closes https://github.com/rsyslog/rsyslog/issues/1962
 - omelasticsearch bugfix: output from libcurl to stdout
   omelasticsearch made libcurl output messages to stdout. This
   commit fixes that. It also automatically enables libcurl verbose
