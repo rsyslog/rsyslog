@@ -102,7 +102,8 @@ lookupNew(lookup_ref_t **ppThis)
 	initialized++; /*4*/
 	pThis->do_reload = pThis->do_stop = 0;
 	pThis->reload_on_hup = 1; /*DO reload on HUP (default)*/
-	CHKiConcCtrl(pthread_create(&pThis->reloader, &pThis->reloader_thd_attr, lookupTableReloader, pThis));
+	CHKiConcCtrl(pthread_create(&pThis->reloader, &pThis->reloader_thd_attr,
+		lookupTableReloader, pThis));
 	initialized++; /*5*/
 
 	pThis->next = NULL;
@@ -118,9 +119,15 @@ lookupNew(lookup_ref_t **ppThis)
 	*ppThis = pThis;
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		errmsg.LogError(errno, iRet, "a lookup table could not be initialized: failed at init-step %d "
-		"(please enable debug logs for details)", initialized);
+		errmsg.LogError(errno, iRet, "a lookup table could not be initialized: "
+			"failed at init-step %d (please enable debug logs for details)",
+			initialized);
+		/* Can not happen with current code, but might occur in the future when
+		 * an error-condition as added after step 5. If we leave it in, Coverity
+		 * scan complains. So we comment it out but do not remove the code.
+		 * Triggered by CID 185426
 		if (initialized > 4) lookupStopReloader(pThis);
+		*/
 		if (initialized > 3) pthread_attr_destroy(&pThis->reloader_thd_attr);
 		if (initialized > 2) pthread_cond_destroy(&pThis->run_reloader);
 		if (initialized > 1) pthread_mutex_destroy(&pThis->reloader_mut);
