@@ -1038,7 +1038,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* check if a non-standard template is to be applied */
 	if(*(p-1) == ';')
 		--p;
-	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, 0, (uchar*) "RSYSLOG_FileFormat"));
+	iRet = cflineParseTemplateName(&p, *ppOMSR, 0, 0, (uchar*) "RSYSLOG_FileFormat");
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -1056,8 +1056,7 @@ BEGINmodExit
 CODESTARTmodExit
 	free(cs.szBinary);
 	cs.szBinary = NULL;
-	CHKiRet(objRelease(errmsg, CORE_COMPONENT));
-finalize_it:
+	iRet = objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
