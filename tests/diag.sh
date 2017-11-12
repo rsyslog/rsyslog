@@ -393,7 +393,7 @@ case $1 in
 		if [ "$?" -ne "0" ]; then
 		  echo "error during tcpflood! see rsyslog.out.log.save for what was written"
 		  cp rsyslog.out.log rsyslog.out.log.save
-		  . $srcdir/diag.sh error-exit 1
+		  . $srcdir/diag.sh error-exit 1 stacktrace
 		fi
 		;;
    'injectmsg') # inject messages via our inject interface (imdiag)
