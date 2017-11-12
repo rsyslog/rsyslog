@@ -1,7 +1,7 @@
 /* lookup.c
  * Support for lookup tables in RainerScript.
  *
- * Copyright 2013-2016 Adiscon GmbH.
+ * Copyright 2013-2017 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -131,8 +131,10 @@ finalize_it:
 	RETiRet;
 }
 
-static void
-freeStubValueForReloadFailure(lookup_ref_t *pThis) {/*must be called with reloader_mut acquired*/
+/*must be called with reloader_mut acquired*/
+static void ATTR_NONNULL()
+freeStubValueForReloadFailure(lookup_ref_t *const pThis)
+{
 	if (pThis->stub_value_for_reload_failure != NULL) {
 		free(pThis->stub_value_for_reload_failure);
 		pThis->stub_value_for_reload_failure = NULL;
@@ -646,7 +648,7 @@ finalize_it:
  * load. The function returns either a pointer to the requested
  * table or NULL, if not found.
  */
-lookup_ref_t *
+lookup_ref_t * ATTR_NONNULL()
 lookupFindTable(uchar *name)
 {
 	lookup_ref_t *curr;
@@ -740,8 +742,8 @@ lookupIsReloadPending(lookup_ref_t *pThis) {
 	return reload_pending;
 }
 
-rsRetVal
-lookupReload(lookup_ref_t *pThis, const uchar *stub_val_if_reload_fails)
+rsRetVal ATTR_NONNULL(1)
+lookupReload(lookup_ref_t *const pThis, const uchar *const stub_val_if_reload_fails)
 {
 	uint8_t locked = 0;
 	uint8_t duplicated_stub_value = 0;
@@ -758,8 +760,8 @@ lookupReload(lookup_ref_t *pThis, const uchar *stub_val_if_reload_fails)
 		pThis->do_reload = 1;
 		pthread_cond_signal(&pThis->run_reloader);
 	} else {
-		errmsg.LogError(lock_errno, RS_RET_INTERNAL_ERROR, "attempt to trigger reload of lookup table '%s' "
-		"failed (not stubbing)", pThis->name);
+		errmsg.LogError(lock_errno, RS_RET_INTERNAL_ERROR, "attempt to trigger "
+			"reload of lookup table '%s' failed (not stubbing)", pThis->name);
 		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
 		/* we can choose to stub the table here, but it'll hurt because
 		   the table reloader may take time to complete the reload
@@ -778,7 +780,7 @@ finalize_it:
 	RETiRet;
 }
 
-static rsRetVal
+static rsRetVal ATTR_NONNULL()
 lookupDoReload(lookup_ref_t *pThis)
 {
 	DEFiRet;
