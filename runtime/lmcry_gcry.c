@@ -241,12 +241,11 @@ OnFileOpen(void *pT, uchar *fn, void *pGF, char openMode)
 	DEFiRet;
 	DBGPRINTF("lmcry_gcry: open file '%s', mode '%c'\n", fn, openMode);
 
-	CHKiRet(rsgcryInitCrypt(pThis->ctx, pgf, fn, openMode));
-finalize_it:
-	/* TODO: enable this error message (need to cleanup loop first ;))
-	errmsg.LogError(0, iRet, "Encryption Provider"
-		"Error: cannot open .encinfo file - disabling log file");
-	*/
+	iRet = rsgcryInitCrypt(pThis->ctx, pgf, fn, openMode);
+	if(iRet != RS_RET_OK) {
+		errmsg.LogError(0, iRet, "Encryption Provider"
+			"Error: cannot open .encinfo file - disabling log file");
+	}
 	RETiRet;
 }
 
