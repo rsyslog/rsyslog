@@ -863,13 +863,11 @@ lookupKey(lookup_ref_t *pThis, lookup_key_t key)
  * for "reasonable" lookup tables (and "unreasonably" large ones
  * will probably have other issues as well...).
  */
-static rsRetVal
-lookupReadFile(lookup_t *pThis, const uchar *name, const uchar *filename)
+static rsRetVal ATTR_NONNULL()
+lookupReadFile(lookup_t *const pThis, const uchar *const name, const uchar *const filename)
 {
 	struct json_tokener *tokener = NULL;
 	struct json_object *json = NULL;
-	int eno;
-	char errStr[1024];
 	char *iobuf = NULL;
 	int fd = -1;
 	ssize_t nread;
@@ -878,30 +876,24 @@ lookupReadFile(lookup_t *pThis, const uchar *name, const uchar *filename)
 
 
 	if(stat((char*)filename, &sb) == -1) {
-		eno = errno;
-		errmsg.LogError(0, RS_RET_FILE_NOT_FOUND,
-			"lookup table file '%s' stat failed: %s",
-			filename, rs_strerror_r(eno, errStr, sizeof(errStr)));
+		errmsg.LogError(errno, RS_RET_FILE_NOT_FOUND,
+			"lookup table file '%s' stat failed", filename);
 		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 	}
 
 	CHKmalloc(iobuf = malloc(sb.st_size));
 
 	if((fd = open((const char*) filename, O_RDONLY)) == -1) {
-		eno = errno;
-		errmsg.LogError(0, RS_RET_FILE_NOT_FOUND,
-			"lookup table file '%s' could not be opened: %s",
-			filename, rs_strerror_r(eno, errStr, sizeof(errStr)));
+		errmsg.LogError(errno, RS_RET_FILE_NOT_FOUND,
+			"lookup table file '%s' could not be opened", filename);
 		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 	}
 
 	tokener = json_tokener_new();
 	nread = read(fd, iobuf, sb.st_size);
 	if(nread != (ssize_t) sb.st_size) {
-		eno = errno;
-		errmsg.LogError(0, RS_RET_READ_ERR,
-			"lookup table file '%s' read error: %s",
-			filename, rs_strerror_r(eno, errStr, sizeof(errStr)));
+		errmsg.LogError(errno, RS_RET_READ_ERR,
+			"lookup table file '%s' read error", filename);
 		ABORT_FINALIZE(RS_RET_READ_ERR);
 	}
 
