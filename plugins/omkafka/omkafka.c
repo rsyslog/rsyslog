@@ -541,6 +541,7 @@ writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
 	rd_kafka_topic_t *rkt = NULL;
 	pthread_rwlock_t *dynTopicLock = NULL;
 	failedmsg_entry* fmsgEntry;
+	int topic_mut_locked = 0;
 #if RD_KAFKA_VERSION >= 0x00090400
 	rd_kafka_resp_err_t msg_kafka_response;
 	int64_t ttMsgTimestamp;
@@ -558,6 +559,7 @@ writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
 		const rsRetVal localRet = prepareDynTopic(pData, topic, &rkt, &dynTopicLock);
 		if (localRet == RS_RET_OK) {
 			pthread_rwlock_rdlock(dynTopicLock);
+			topic_mut_locked = 1;
 		}
 		pthread_mutex_unlock(&pData->mutDynCache);
 		CHKiRet(localRet);
@@ -652,9 +654,6 @@ writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
 #endif
 
 	const int callbacksCalled = rd_kafka_poll(pData->rk, 0); /* call callbacks */
-	if (pData->dynaTopic) {
-		pthread_rwlock_unlock(dynTopicLock);/* dynamic topic can't be used beyond this pt */
-	}
 	DBGPRINTF("omkafka: writeKafka kafka outqueue length: %d, callbacks called %d\n",
 			  rd_kafka_outq_len(pData->rk), callbacksCalled);
 
@@ -671,6 +670,9 @@ writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
 	}
 
 finalize_it:
+	if(topic_mut_locked) {
+		pthread_rwlock_unlock(dynTopicLock);
+	}
 	DBGPRINTF("omkafka: writeKafka returned %d\n", iRet);
 	if(iRet != RS_RET_OK) {
 		iRet = RS_RET_SUSPENDED;
