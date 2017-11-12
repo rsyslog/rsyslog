@@ -115,10 +115,27 @@ struct obj_s {	/* the dummy struct that each derived class can be casted to */
 		} \
 		ASSERT((unsigned) ((obj_t*)(pObj))->iObjCooCKiE == (unsigned) 0xBADEFEE); \
 		} while(0)
+	/* now the same for pointers to "regular" objects (like wrkrInstanceData) */
+#	define PTR_ASSERT_DEF unsigned int _Assert_type;
+#	define PTR_ASSERT_SET_TYPE(_ptr, _type) _ptr->_Assert_type = _type
+#	define PTR_ASSERT_CHK(_ptr, _type) do { \
+		assert(_ptr != NULL); \
+		if(_ptr->_Assert_type != _type) {\
+			dbgprintf("%s:%d PTR_ASSERT_CHECK failure: invalid pointer type %x, " \
+				"expected %x\n", __FILE__, __LINE__, _ptr->_Assert_type, _type); \
+			fprintf(stderr, "%s:%d PTR_ASSERT_CHECK failure: invalid pointer type %x, " \
+				"expected %x\n", __FILE__, __LINE__, _ptr->_Assert_type, _type); \
+			assert(_ptr->_Assert_type == _type); \
+		} \
+	} while(0)
 #else /* non-debug mode, no checks but much faster */
 #	define BEGINobjInstance obj_t objData
 #	define ISOBJ_TYPE_assert(pObj, objType)
 #	define ISOBJ_assert(pObj)
+
+#	define PTR_ASSERT_DEF
+#	define PTR_ASSERT_SET_TYPE(_ptr, _type)
+#	define PTR_ASSERT_CHK(_ptr, _type)
 #endif
 
 /* a set method for *very simple* object accesses. Note that this does
