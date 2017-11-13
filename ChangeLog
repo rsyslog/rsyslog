@@ -75,6 +75,14 @@ Version 8.31.0 [v8-stable] 2017-11-28
   error messages. Fixed this and also increased the number of error
   messages so that it now is easier to diagnose problems with this module.
   Also a little bit of internal brush-up.
+- omkafka bugfix: potential hang condition
+  omkafka did not release a mutex under some error conditions (most
+  notably out of memory on specific alloc calls). This lead to a hang
+  during actively processing messages or during shutdown (at latest).
+  This could happen only if dynamic topics were configured.
+  Detected by Coverity Scan, CID  185781 (originally 185721, detected
+  as a different issue by Coverity after code refactoring done in regard
+  to 185721 -- then the problem became more obvious).
 - omkafka: fix file handle leak, which could occur when local buffering
   of messages was needed
 - [io]mgssapi: fix build problems (regression from 8.30.0)
