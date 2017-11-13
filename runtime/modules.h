@@ -201,7 +201,7 @@ PROTOTYPEObj(module);
  */
 rsRetVal modulesProcessCnf(struct cnfobj *o);
 uchar *modGetName(modInfo_t *pThis);
-rsRetVal addModToCnfList(cfgmodules_etry_t **pNew, cfgmodules_etry_t *pLast);
+rsRetVal ATTR_NONNULL(1) addModToCnfList(cfgmodules_etry_t **pNew, cfgmodules_etry_t *pLast);
 rsRetVal readyModForCnf(modInfo_t *pThis, cfgmodules_etry_t **ppNew, cfgmodules_etry_t **ppLast);
 void modDoHUP(void);
 
