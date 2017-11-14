@@ -348,6 +348,7 @@ CODESTARTdoAction
 
 	int gai_err, mmdb_err;
 	MMDB_lookup_result_s result = MMDB_lookup_string(&pWrkrData->mmdb, pszValue, &gai_err, &mmdb_err);
+	assert(memcmp(&result.entry.mmdb, &pWrkrData->mmdb, sizeof(pWrkrData->mmdb)) == 0);// TODO: remove: we use private knowledge!
 
 	if (0 != gai_err) {
 		dbgprintf("Error from call to getaddrinfo for %s - %s\n", pszValue, gai_strerror(gai_err));
@@ -358,6 +359,7 @@ CODESTARTdoAction
 		ABORT_FINALIZE(RS_RET_OK);
 	}
 
+	assert(memcmp(&result.entry.mmdb, &pWrkrData->mmdb, sizeof(pWrkrData->mmdb)) == 0);// TODO: remove: we use private knowledge!
 	int status  = MMDB_get_entry_data_list(&result.entry, &entry_data_list);
 
 	if (MMDB_SUCCESS != status) {
