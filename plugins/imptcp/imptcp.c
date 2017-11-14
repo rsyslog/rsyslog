@@ -1642,13 +1642,15 @@ static void
 startWorkerPool(void)
 {
 	int i;
+	pthread_mutex_lock(&io_q.mut); /* locking to keep Coverity happy */
 	wrkrRunning = 0;
+	pthread_mutex_unlock(&io_q.mut);
 	DBGPRINTF("imptcp: starting worker pool, %d workers\n", runModConf->wrkrMax);
-    wrkrInfo = calloc(runModConf->wrkrMax, sizeof(struct wrkrInfo_s));
-    if (wrkrInfo == NULL) {
-        DBGPRINTF("imptcp: worker-info array allocation failed.\n");
-        return;
-    }
+	wrkrInfo = calloc(runModConf->wrkrMax, sizeof(struct wrkrInfo_s));
+	if (wrkrInfo == NULL) {
+		LogError(errno, RS_RET_OUT_OF_MEMORY, "imptcp: worker-info array allocation failed.");
+		return;
+	}
 	for(i = 0 ; i < runModConf->wrkrMax ; ++i) {
 		/* init worker info structure! */
 		wrkrInfo[i].numCalled = 0;

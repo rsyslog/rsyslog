@@ -316,7 +316,8 @@ waitMainQEmpty(tcps_sess_t *pSess)
 
 	while(1) {
 		processImInternal();
-		if(iOverallQueueSize == 0)
+		const unsigned OverallQueueSize = PREFER_FETCH_32BIT(iOverallQueueSize);
+		if(OverallQueueSize == 0)
 			++nempty;
 		else
 			nempty = 0;
@@ -325,7 +326,7 @@ waitMainQEmpty(tcps_sess_t *pSess)
 		if(iPrint++ % 500 == 0)
 			DBGPRINTF("imdiag sleeping, wait queues drain, "
 				"curr size %d, nempty %d\n",
-				iOverallQueueSize, nempty);
+				OverallQueueSize, nempty);
 		srSleep(0,100000);/* wait a little bit */
 	}
 
@@ -356,12 +357,13 @@ finalize_it:
 }
 
 static void
-imdiag_statsReadCallback(statsobj_t __attribute__((unused)) *ignore_stats,
-						   void __attribute__((unused)) *ignore_ctx) {
+imdiag_statsReadCallback(statsobj_t __attribute__((unused)) *const ignore_stats,
+	void __attribute__((unused)) *const ignore_ctx)
+{
 	long long waitStartTimeMs = currentTimeMills();
 	sem_wait(&statsReportingBlocker);
 	long delta = currentTimeMills() - waitStartTimeMs;
-	if (ATOMIC_DEC_AND_FETCH(&allowOnlyOnce, &mutAllowOnlyOnce) < 0) {
+	if ((int)ATOMIC_DEC_AND_FETCH(&allowOnlyOnce, &mutAllowOnlyOnce) < 0) {
 		sem_post(&statsReportingBlocker);
 	} else {
 		errmsg.LogError(0, RS_RET_OK, "imdiag(stats-read-callback): current stats-reporting "

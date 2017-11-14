@@ -25,36 +25,36 @@ echo 'Since this test tests randomization, there is a theoretical possibility of
 
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
-echo ' 33:45:DDD::4' | cmp rsyslog.out.file1.log >/dev/null
-if [ $? -eq 0 ]; then
+echo ' 33:45:DDD::4' | cmp - rsyslog.out.file1.log >/dev/null
+if [ ! $? -eq 1 ]; then
   echo "invalidly equal ip-address generated, rsyslog.out.file1.log is:"
   cat rsyslog.out.file1.log
   . $srcdir/diag.sh error-exit  1
 fi;
 
-echo ' ::' | cmp rsyslog.out.file2.log >/dev/null
-if [ $? -eq 0 ]; then
+echo ' ::' | cmp - rsyslog.out.file2.log >/dev/null
+if [ ! $? -eq 1 ]; then
   echo "invalidly equal ip-address generated, rsyslog.out.file2.log is:"
   cat rsyslog.out.file2.log
   . $srcdir/diag.sh error-exit  1
 fi;
 
-echo ' 72:8374:adc7:47FF::43:0:1AFE' | cmp rsyslog.out.file3.log  >/dev/null
-if [ $? -eq 0 ]; then
+echo ' 72:8374:adc7:47FF::43:0:1AFE' | cmp - rsyslog.out.file3.log  >/dev/null
+if [ ! $? -eq 1 ]; then
   echo "invalidly equal ip-address generated, rsyslog.out.file3.log is:"
   cat rsyslog.out.file3.log
   . $srcdir/diag.sh error-exit  1
 fi;
 
-echo ' FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF' | cmp rsyslog.out.file4.log >/dev/null
-if [ $? -eq 0 ]; then
+echo ' FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF' | cmp - rsyslog.out.file4.log >/dev/null
+if [ ! $? -eq 1 ]; then
   echo "invalidly equal ip-address generated, rsyslog.out.file4.log is:"
   cat rsyslog.out.file4.log
   . $srcdir/diag.sh error-exit  1
 fi;
 
 cmp rsyslog.out.file3.log rsyslog.out.file5.log >/dev/null
-if [ $? -eq 0 ]; then
+if [ ! $? -eq 1 ]; then
   echo "invalidly equal ip-addresses generated, rsyslog.out.file3.log and rsyslog.out.file5.log are:"
   cat rsyslog.out.file3.log
   cat rsyslog.out.file5.log

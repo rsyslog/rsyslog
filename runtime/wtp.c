@@ -149,6 +149,9 @@ finalize_it:
 BEGINobjDestruct(wtp) /* be sure to specify the object type also in END and CODESTART macros! */
 	int i;
 CODESTARTobjDestruct(wtp)
+	d_pthread_mutex_lock(&pThis->mutWtp); /* make sure nobody is still using the mutex */
+	assert(pThis->iCurNumWrkThrd == 0);
+
 	/* destruct workers */
 	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i)
 		wtiDestruct(&pThis->pWrkr[i]);
@@ -157,6 +160,7 @@ CODESTARTobjDestruct(wtp)
 	pThis->pWrkr = NULL;
 
 	/* actual destruction */
+	d_pthread_mutex_unlock(&pThis->mutWtp);
 	pthread_cond_destroy(&pThis->condThrdTrm);
 	pthread_cond_destroy(&pThis->condThrdInitDone);
 	pthread_mutex_destroy(&pThis->mutWtp);
@@ -227,7 +231,7 @@ finalize_it:
  * shut down any worker.
  * rgerhards, 2008-01-14
  */
-rsRetVal
+rsRetVal ATTR_NONNULL()
 wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout)
 {
 	DEFiRet;
@@ -256,7 +260,8 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 			   ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
 
 		if(d_pthread_cond_timedwait(&pThis->condThrdTrm, &pThis->mutWtp, ptTimeout) != 0) {
-			DBGPRINTF("%s: timeout waiting on worker thread termination\n", wtpGetDbgHdr(pThis));
+			DBGPRINTF("%s: timeout waiting on worker thread termination\n",
+				wtpGetDbgHdr(pThis));
 			bTimedOut = 1;	/* we exit the loop on timeout */
 		}
 
@@ -317,14 +322,16 @@ wtpWrkrExecCleanup(wti_t *pWti)
 	wtiSetState(pWti, WRKTHRD_STOPPED);
 	ATOMIC_DEC(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
 
+	/* note: numWorkersNow is only for message generation, so we do not try
+	 * hard to get it 100% accurate (as curently done, it is not).
+	 */
+	const int numWorkersNow = ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
 	DBGPRINTF("%s: Worker thread %lx, terminated, num workers now %d\n",
-		wtpGetDbgHdr(pThis), (unsigned long) pWti,
-		ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
-	if(ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd) > 0) {
+		wtpGetDbgHdr(pThis), (unsigned long) pWti, numWorkersNow);
+	if(numWorkersNow > 0) {
 		LogMsg(0, RS_RET_OPERATION_STATUS, LOG_INFO,
 			"%s: worker thread %lx terminated, now %d active worker threads",
-			wtpGetDbgHdr(pThis), (unsigned long) pWti,
-			ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
+			wtpGetDbgHdr(pThis), (unsigned long) pWti, numWorkersNow);
 	}
 
 	ENDfunc
@@ -381,21 +388,11 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	pThis = pWti->pWtp;
 	ISOBJ_TYPE_assert(pThis, wtp);
 
-	/* block all signals */
+	/* block all signals except SIGTTIN and SIGSEGV */
 	sigfillset(&sigSet);
+	sigdelset(&sigSet, SIGTTIN);
+	sigdelset(&sigSet, SIGSEGV);
 	pthread_sigmask(SIG_BLOCK, &sigSet, NULL);
-
-	/* but ignore SIGTTN, which we (ab)use to signal the thread to shutdown -- rgerhards, 2009-07-20 */
-	sigemptyset(&sigSet);
-	sigaddset(&sigSet, SIGTTIN);
-	pthread_sigmask(SIG_UNBLOCK, &sigSet, NULL);
-
-#ifdef _AIX /*AIXPORT unblock SIGSEGV so that the process core dumps on segmentation fault */
-	sigemptyset(&sigSet);
-	sigaddset(&sigSet, SIGSEGV);
-	pthread_sigmask(SIG_UNBLOCK, &sigSet, NULL);
-#endif /*AIXPORT*/
-
 
 #	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
 	/* set thread name - we ignore if the call fails, has no harsh consequences... */
@@ -407,16 +404,18 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	dbgOutputTID((char*)thrdName);
 #	endif
 
-	pthread_cleanup_push(wtpWrkrExecCancelCleanup, pWti);
-
         /* let the parent know we're done with initialization */
         d_pthread_mutex_lock(&pThis->mutWtp);
+	wtiSetState(pWti, WRKTHRD_RUNNING);
         pthread_cond_broadcast(&pThis->condThrdInitDone);
         d_pthread_mutex_unlock(&pThis->mutWtp);
+
+	pthread_cleanup_push(wtpWrkrExecCancelCleanup, pWti);
 
 	wtiWorker(pWti);
 	pthread_cleanup_pop(0);
         d_pthread_mutex_lock(&pThis->mutWtp);
+	pthread_cleanup_push(mutexCancelCleanup, &pThis->mutWtp);
 	wtpWrkrExecCleanup(pWti);
 
 	ENDfunc
@@ -425,7 +424,7 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	 * segfault. So we need to do the broadcast as actually the last action in our processing
 	 */
 	pthread_cond_broadcast(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
-        d_pthread_mutex_unlock(&pThis->mutWtp);
+	pthread_cleanup_pop(1); /* unlock mutex */
 	pthread_exit(0);
 }
 #if !defined(_AIX)
@@ -461,8 +460,8 @@ wtpStartWrkr(wtp_t *pThis)
 	}
 
 	pWti = pThis->pWrkr[i];
-	wtiSetState(pWti, WRKTHRD_RUNNING);
-	iState = pthread_create(&(pWti->thrdID), &pThis->attrThrd, wtpWorker, (void*) pWti);
+	wtiSetState(pWti, WRKTHRD_INITIALIZING);
+	iState = pthread_create(&(pWti->thrdID), &pThis->attrThrd,wtpWorker, (void*) pWti);
 	ATOMIC_INC(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd); /* we got one more! */
 
 	DBGPRINTF("%s: started with state %d, num workers now %d\n",
@@ -472,7 +471,9 @@ wtpStartWrkr(wtp_t *pThis)
         /* wait for the new thread to initialize its signal mask and
          * cancelation cleanup handler before proceeding
          */
-        d_pthread_cond_wait(&pThis->condThrdInitDone, &pThis->mutWtp);
+	do {
+		d_pthread_cond_wait(&pThis->condThrdInitDone, &pThis->mutWtp);
+	} while(wtiGetState(pWti) != WRKTHRD_RUNNING);
 
 finalize_it:
 	d_pthread_mutex_unlock(&pThis->mutWtp);
@@ -597,6 +598,3 @@ BEGINObjClassInit(wtp, 1, OBJ_IS_CORE_MODULE)
 	/* request objects we use */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 ENDObjClassInit(wtp)
-
-/* vi:set ai:
- */

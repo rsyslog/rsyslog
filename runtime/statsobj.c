@@ -255,8 +255,7 @@ addCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8
 {
 	ctr_t *ctr;
 	DEFiRet;
-	CHKiRet(addManagedCounter(pThis, ctrName, ctrType, flags, pCtr, &ctr, 1));
-finalize_it:
+	iRet = addManagedCounter(pThis, ctrName, ctrType, flags, pCtr, &ctr, 1);
 	RETiRet;
 }
 
@@ -322,18 +321,13 @@ finalize_it:
 
 static rsRetVal
 addContextForReporting(json_object *to, const uchar* field_name, const uchar* value) {
-	json_object *v = NULL;
+	json_object *v;
 	DEFiRet;
 
 	CHKmalloc(v = json_object_new_string((const char*) value));
 
 	json_object_object_add(to, (const char*) field_name, v);
 finalize_it:
-	if (iRet != RS_RET_OK) {
-		if (v != NULL) {
-			json_object_put(v);
-		}
-	}
 	RETiRet;
 }
 
@@ -485,7 +479,7 @@ getSenderStats(rsRetVal(*cb)(void*, const char*),
 	statsFmtType_t fmt,
 	const int8_t bResetCtrs)
 {
-	struct hashtable_itr *itr;
+	struct hashtable_itr *itr = NULL;
 	struct sender_stats *stat;
 	char fmtbuf[2048];
 
@@ -517,6 +511,7 @@ getSenderStats(rsRetVal(*cb)(void*, const char*),
 		} while (hashtable_iterator_advance(itr));
 	}
 
+	free(itr);
 	pthread_mutex_unlock(&mutSenders);
 }
 
@@ -643,7 +638,7 @@ destructUnlinkedCounters(ctr_t *ctr) {
 void
 checkGoneAwaySenders(const time_t tCurr)
 {
-	struct hashtable_itr *itr;
+	struct hashtable_itr *itr = NULL;
 	struct sender_stats *stat;
 	const time_t rqdLast = tCurr - glblSenderStatsTimeout;
 	struct tm tm;
@@ -675,6 +670,7 @@ checkGoneAwaySenders(const time_t tCurr)
 	}
 
 	pthread_mutex_unlock(&mutSenders);
+	free(itr);
 }
 
 /* destructor for the statsobj object */

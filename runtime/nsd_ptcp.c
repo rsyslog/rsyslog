@@ -548,7 +548,6 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		 */
 		CHKiRet(pNS->Drvr.Construct(&pNewNsd));
 		CHKiRet(pNS->Drvr.SetSock(pNewNsd, sock));
-		sock = -1;
 		CHKiRet(pNS->Drvr.SetMode(pNewNsd, netstrms.GetDrvrMode(pNS)));
 		CHKiRet(pNS->Drvr.SetAuthMode(pNewNsd, netstrms.GetDrvrAuthMode(pNS)));
 		CHKiRet(pNS->Drvr.SetPermPeers(pNewNsd, netstrms.GetDrvrPermPeers(pNS)));
@@ -558,6 +557,10 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		pNewNsd = NULL;
 		CHKiRet(fAddLstn(pUsr, pNewStrm));
 		pNewStrm = NULL;
+		/* sock has been handed over by SetSock() above, so invalidate it here
+		 * coverity scan falsely identifies this as ressource leak
+		 */
+		sock = -1;
 		++numSocks;
 	}
 
@@ -571,12 +574,13 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 	}
 
 finalize_it:
+	if(sock != -1) {
+		close(sock);
+	}
 	if(res != NULL)
 		freeaddrinfo(res);
 
 	if(iRet != RS_RET_OK) {
-		if(sock != -1)
-			close(sock);
 		if(pNewStrm != NULL)
 			netstrm.Destruct(&pNewStrm);
 		if(pNewNsd != NULL)

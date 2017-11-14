@@ -433,8 +433,10 @@ gcryCtxNew(void)
 {
 	gcryctx ctx;
 	ctx = calloc(1, sizeof(struct gcryctx_s));
-	ctx->algo = GCRY_CIPHER_AES128;
-	ctx->mode = GCRY_CIPHER_MODE_CBC;
+	if(ctx != NULL) {
+		ctx->algo = GCRY_CIPHER_AES128;
+		ctx->mode = GCRY_CIPHER_MODE_CBC;
+	}
 	return ctx;
 }
 

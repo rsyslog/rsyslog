@@ -6,7 +6,7 @@
  *
  * File begun on 2009-04-01 by RGerhards
  *
- * Copyright 2009-2015 Adiscon GmbH.
+ * Copyright 2009-2017 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -293,7 +293,11 @@ openPipe(wrkrInstanceData_t *pWrkrData)
 		/* set our fd to be non-blocking */
 		flags = fcntl(pWrkrData->fdPipeErr, F_GETFL);
 		flags |= O_NONBLOCK;
-		fcntl(pWrkrData->fdPipeErr, F_SETFL, flags);
+		if(fcntl(pWrkrData->fdPipeErr, F_SETFL, flags) == -1) {
+			LogError(errno, RS_RET_ERR, "omprog: set pipe fd to "
+				"nonblocking failed");
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
 	}
 
 	pWrkrData->bIsRunning = 1;
@@ -394,15 +398,19 @@ setupSubprocessTimeout(subprocess_timeout_desc_t *subpTimeOut, long timeout_ms)
 {
 	int attr_initialized = 0, mutex_initialized = 0, cond_initialized = 0;
 	DEFiRet;
+
 	CHKiConcCtrl(pthread_attr_init(&subpTimeOut->thd_attr));
 	attr_initialized = 1;
 	CHKiConcCtrl(pthread_mutex_init(&subpTimeOut->lock, NULL));
 	mutex_initialized = 1;
 	CHKiConcCtrl(pthread_cond_init(&subpTimeOut->cond, NULL));
 	cond_initialized = 1;
+	/* mutex look to keep Coverity scan happen - not really necessary */
+	pthread_mutex_lock(&subpTimeOut->lock);
 	subpTimeOut->timeout_armed = 1;
 	subpTimeOut->waiter_tid = syscall(SYS_gettid);
 	subpTimeOut->timeout_ms = timeout_ms;
+	pthread_mutex_unlock(&subpTimeOut->lock);
 	CHKiRet(timeoutComp(&subpTimeOut->timeout, timeout_ms));
 	CHKiConcCtrl(pthread_create(&subpTimeOut->thd, &subpTimeOut->thd_attr, killSubprocessOnTimeout, subpTimeOut));
 finalize_it:
@@ -1030,7 +1038,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* check if a non-standard template is to be applied */
 	if(*(p-1) == ';')
 		--p;
-	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, 0, (uchar*) "RSYSLOG_FileFormat"));
+	iRet = cflineParseTemplateName(&p, *ppOMSR, 0, 0, (uchar*) "RSYSLOG_FileFormat");
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -1048,8 +1056,7 @@ BEGINmodExit
 CODESTARTmodExit
 	free(cs.szBinary);
 	cs.szBinary = NULL;
-	CHKiRet(objRelease(errmsg, CORE_COMPONENT));
-finalize_it:
+	iRet = objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 

@@ -28,29 +28,29 @@ echo 'Since this test tests randomization, there is a theoretical possibility of
 
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
-echo ' 1.1.1.8' | cmp rsyslog.out.file1.log >/dev/null
-if [ $? -eq 0 ]; then
+echo ' 1.1.1.8' | cmp - rsyslog.out.file1.log >/dev/null
+if [ ! $? -eq 1 ]; then
   echo "invalidly equal ip-address generated, rsyslog.out.file1.log is:"
   cat rsyslog.out.file1.log
   . $srcdir/diag.sh error-exit  1
 fi;
 
-echo ' 0.0.0.0' | cmp rsyslog.out.file2.log >/dev/null
-if [ $? -eq 0 ]; then
+echo ' 0.0.0.0' | cmp - rsyslog.out.file2.log >/dev/null
+if [ ! $? -eq 1 ]; then
   echo "invalidly equal ip-address generated, rsyslog.out.file2.log is:"
   cat rsyslog.out.file2.log
   . $srcdir/diag.sh error-exit  1
 fi;
 
-echo ' 172.0.234.255' | cmp rsyslog.out.file4.log  >/dev/null
-if [ $? -eq 0 ]; then
+echo ' 172.0.234.255' | cmp - rsyslog.out.file4.log  >/dev/null
+if [ ! $? -eq 1 ]; then
   echo "invalidly equal ip-address generated, rsyslog.out.file4.log is:"
   cat rsyslog.out.file4.log
   . $srcdir/diag.sh error-exit  1
 fi;
 
-echo ' 111.1.1.8.' | cmp rsyslog.out.file7.log >/dev/null
-if [ $? -eq 0 ]; then
+echo ' 111.1.1.8.' | cmp - rsyslog.out.file7.log >/dev/null
+if [ ! $? -eq 1 ]; then
   echo "invalidly equal ip-address generated, rsyslog.out.file7.log is:"
   cat rsyslog.out.file7.log
   . $srcdir/diag.sh error-exit  1
@@ -81,7 +81,7 @@ if [ ! $? -eq 0 ]; then
 fi;
 
 cmp rsyslog.out.file4.log rsyslog.out.file5.log >/dev/null
-if [ $? -eq 0 ]; then
+if [ ! $? -eq 1 ]; then
   echo "invalidly equal ip-addresses generated, rsyslog.out.file4.log and rsyslog.out.file5.log are:"
   cat rsyslog.out.file4.log
   cat rsyslog.out.file5.log

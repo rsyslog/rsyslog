@@ -1,7 +1,7 @@
 /* This is the template processing code of rsyslog.
  * begun 2004-11-17 rgerhards
  *
- * Copyright 2004-2016 Rainer Gerhards and Adiscon
+ * Copyright 2004-2017 Rainer Gerhards and Adiscon
  *
  * This file is part of rsyslog.
  *
@@ -178,8 +178,6 @@ tplToString(struct template *__restrict__ const pTpl,
 		if(iLenVal >= (rs_size_t)iparam->lenBuf) /* we reserve one char for the final \0! */
 			CHKiRet(ExtendBuf(iparam, iLenVal + 1));
 		memcpy(iparam->param, pVal, iLenVal+1);
-		if(bMustBeFreed)
-			free(pVal);
 		FINALIZE;
 	}
 	
@@ -228,8 +226,10 @@ tplToString(struct template *__restrict__ const pTpl,
 			iBuf += iLenVal;
 		}
 
-		if(bMustBeFreed)
+		if(bMustBeFreed) {
 			free(pVal);
+			bMustBeFreed = 0;
+		}
 
 		pTpe = pTpe->pNext;
 	}
@@ -246,6 +246,11 @@ tplToString(struct template *__restrict__ const pTpl,
 	iparam->lenStr = iBuf;
 	
 finalize_it:
+	if(bMustBeFreed) {
+		free(pVal);
+		bMustBeFreed = 0;
+	}
+
 	RETiRet;
 }
 
@@ -387,7 +392,8 @@ tplToJSON(struct template *pTpl, smsg_t *pMsg, struct json_object **pjson, struc
 			}
 		}
 	}
-	*pjson = (iRet == RS_RET_OK) ? json : NULL;
+	assert(iRet == RS_RET_OK);
+	*pjson = json;
 
 finalize_it:
 	RETiRet;
@@ -1425,6 +1431,10 @@ createConstantTpe(struct template *pTpl, struct cnfobj *o)
 
 	/* pull params */
 	pvals = nvlstGetParams(o->nvlst, &pblkConstant, NULL);
+	if(pvals == NULL) {
+		parser_errmsg("error processing template parameters");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
 	cnfparamsPrint(&pblkConstant, pvals);
 	
 	for(i = 0 ; i < pblkConstant.nParams ; ++i) {
@@ -1498,6 +1508,10 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 
 	/* pull params */
 	pvals = nvlstGetParams(o->nvlst, &pblkProperty, NULL);
+	if(pvals == NULL) {
+		parser_errmsg("error processing template entry config parameters");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
 	cnfparamsPrint(&pblkProperty, pvals);
 	
 	for(i = 0 ; i < pblkProperty.nParams ; ++i) {
@@ -1860,7 +1874,7 @@ finalize_it:
 }
 
 /* Add a new template via the v6 config system.  */
-rsRetVal
+rsRetVal ATTR_NONNULL()
 tplProcessCnf(struct cnfobj *o)
 {
 	struct template *pTpl = NULL;
@@ -1881,6 +1895,10 @@ tplProcessCnf(struct cnfobj *o)
 	DEFiRet;
 
 	pvals = nvlstGetParams(o->nvlst, &pblk, NULL);
+	if(pvals == NULL) {
+		parser_errmsg("error processing template config parameters");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
 	cnfparamsPrint(&pblk, pvals);
 	
 	for(i = 0 ; i < pblk.nParams ; ++i) {

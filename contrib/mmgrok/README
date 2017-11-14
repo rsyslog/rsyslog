@@ -4,7 +4,7 @@ Using hundreds of grok patterns from logstash-patterns-core.
 
 Build
 
-This plugin requires json-c, glib2, and grok packages.
+This plugin requires libfastjson (always present in rsyslog core), glib2, and grok packages.
 
 If you use RH/CentOS/Fedora, you'll have to build grok rpms by yourself as follow:
 

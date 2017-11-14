@@ -127,8 +127,7 @@ netstrmsConstructFinalize(netstrms_t *pThis)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrms);
-	CHKiRet(loadDrvr(pThis));
-finalize_it:
+	iRet = loadDrvr(pThis);
 	RETiRet;
 }
 

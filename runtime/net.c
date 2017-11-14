@@ -618,6 +618,7 @@ clearAllowedSenders(uchar *pszType)
 static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedSenders **ppLast,
 		     		 struct NetAddr *iAllow, uint8_t iSignificantBits)
 {
+	struct addrinfo *restmp = NULL;
 	DEFiRet;
 
 	assert(ppRoot != NULL);
@@ -679,7 +680,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 			/* single host - in this case, we pull its IP addresses from DNS
 			* and add IP-based ACLs.
 			*/
-			struct addrinfo hints, *res, *restmp;
+			struct addrinfo hints, *res;
 			struct NetAddr allowIP;
 			
 			memset (&hints, 0, sizeof (struct addrinfo));
@@ -703,7 +704,8 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 				}
 			}
 			
-			for (restmp = res ; res != NULL ; res = res->ai_next) {
+			restmp = res;
+			for ( ; res != NULL ; res = res->ai_next) {
 				switch (res->ai_family) {
 				case AF_INET: /* add IPv4 */
 					iSignificantBits = 32;
@@ -764,7 +766,6 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 					break;
 				}
 			}
-			freeaddrinfo (restmp);
 		} else {
 			/* wildcards in hostname - we need to add a text-based ACL.
 			 * For this, we already have everything ready and just need
@@ -775,6 +776,9 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 	}
 
 finalize_it:
+	if(restmp != NULL) {
+		freeaddrinfo (restmp);
+	}
 	RETiRet;
 }
 

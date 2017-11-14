@@ -444,7 +444,13 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 	/* if we have a signature provider, we must make sure that the crypto
 	 * state files are opened and proper close processing happens. */
 	if(pThis->cryprov != NULL && pThis->fd == -1) {
-		strmOpenFile(pThis);
+		const rsRetVal localRet = strmOpenFile(pThis);
+		if(localRet != RS_RET_OK) {
+			LogError(0, localRet, "could not open file %s, this "
+				"may result in problems with encryption - "
+				"unfortunately, we cannot do anything against "
+				"this.", pThis->pszCurrFName);
+		}
 	}
 
 	/* the file may already be closed (or never have opened), so guard
@@ -865,7 +871,12 @@ finalize_it:
 		if(*ppCStr != NULL) {
 			if(cstrLen(*ppCStr) > 0) {
 			/* we may have an empty string in an unsuccesfull poll or after restart! */
-				rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr);
+				if(rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr) != RS_RET_OK) {
+					/* we cannot do anything against this, but we can at least
+					 * ensure we do not have any follow-on errors.
+					 */
+					 pThis->prevLineSegment = NULL;
+				}
 			}
 			cstrDestruct(ppCStr);
 		}
@@ -996,19 +1007,23 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, const sbool bEs
 
 finalize_it:
 	*strtOffs = pThis->strtOffs;
+	if(thisLine != NULL) {
+		cstrDestruct(&thisLine);
+	}
 	if(iRet == RS_RET_OK) {
 		pThis->strtOffs = pThis->iCurrOffs; /* we are at begin of next line */
 	} else {
 		if(   pThis->readTimeout
 		   && (pThis->prevMsgSegment != NULL)
 		   && (tCurr > pThis->lastRead + pThis->readTimeout)) {
-			CHKiRet(rsCStrConstructFromCStr(ppCStr, pThis->prevMsgSegment));
-			cstrDestruct(&pThis->prevMsgSegment);
-			pThis->lastRead = tCurr;
-			pThis->strtOffs = pThis->iCurrOffs; /* we are at begin of next line */
-			dbgprintf("stream: generated msg based on timeout: %s\n", cstrGetSzStrNoNULL(*ppCStr));
-				FINALIZE;
-			iRet = RS_RET_OK;
+			if(rsCStrConstructFromCStr(ppCStr, pThis->prevMsgSegment) == RS_RET_OK) {
+				cstrDestruct(&pThis->prevMsgSegment);
+				pThis->lastRead = tCurr;
+				pThis->strtOffs = pThis->iCurrOffs; /* we are at begin of next line */
+				dbgprintf("stream: generated msg based on timeout: %s\n",
+					cstrGetSzStrNoNULL(*ppCStr));
+				iRet = RS_RET_OK;
+			}
 		}
 	}
         RETiRet;

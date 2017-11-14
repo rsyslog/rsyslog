@@ -244,6 +244,7 @@ TESTS +=  \
 	rscript_num2ipv4.sh \
 	rscript_trim.sh \
 	rscript_format_time.sh \
+	rscript_parse_time.sh \
 	mmanon_random_32_ipv4.sh \
 	mmanon_random_cons_32_ipv4.sh \
 	mmanon_recognize_ipv4.sh \
@@ -261,6 +262,8 @@ TESTS +=  \
 	mmanon_recognize_ipv6.sh \
 	mmanon_zero_64_ipv6.sh \
 	mmanon_both_modes_compatible.sh \
+	mmanon_recognize_ipembedded.sh \
+	mmanon_random_cons_128_ipembedded.sh \
 	empty-prop-comparison.sh \
 	rs_optimizer_pri.sh \
 	cee_simple.sh \
@@ -287,6 +290,8 @@ endif
 
 if HAVE_VALGRIND
 TESTS +=  \
+	mmexternal-SegFault-vg.sh \
+	mmexternal-SegFault-empty-jroot-vg.sh \
 	internal-errmsg-memleak.sh \
 	rscript_set_memleak-vg.sh \
 	no-parser-vg.sh \
@@ -317,6 +322,10 @@ endif # HAVE_VALGRIND
 if ENABLE_IMJOURNAL
 TESTS +=  \
 	imjournal-basic.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	imjournal-basic-vg.sh
+endif
 endif
 
 if ENABLE_OMJOURNAL
@@ -460,12 +469,22 @@ TESTS +=  \
 	es-basic-errfile-popul.sh \
 	es-bulk-errfile-empty.sh \
 	es-bulk-errfile-popul.sh 
+if HAVE_VALGRIND
+TESTS += \
+	es-basic-vgthread.sh
+endif
 if ENABLE_IMFILE
 TESTS +=  \
 	es-bulk-errfile-popul-def-format.sh \
 	es-bulk-errfile-popul-erronly.sh \
 	es-bulk-errfile-popul-erronly-interleaved.sh \
 	es-bulk-errfile-popul-def-interleaved.sh
+endif
+if HAVE_VALGRIND
+TESTS +=  \
+	es-basic-vg.sh \
+	es-basic-bulk-vg.sh \
+	es-basic-ha-vg.sh
 endif
 endif
 
@@ -677,7 +696,8 @@ if HAVE_VALGRIND
 TESTS += \
 	imfile-basic-vg.sh \
 	imfile-endregex-vg.sh \
-	imfile-readmode2-vg.sh
+	imfile-readmode2-vg.sh \
+	imfile-basic-vgthread.sh
 endif
 endif
 
@@ -685,7 +705,7 @@ if ENABLE_OMTCL
 TESTS += \
 	 omtcl.sh
 endif
-
+ 
 endif # if ENABLE_TESTBENCH
 
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
@@ -712,6 +732,9 @@ EXTRA_DIST= \
 	glbl_setenv_err.sh \
 	glbl_setenv_err_too_long.sh \
 	glbl_setenv.sh \
+	mmexternal-SegFault-vg.sh \
+	mmexternal-SegFault-empty-jroot-vg.sh \
+	testsuites/mmexternal-SegFault-mm-python.py \
 	nested-call-shutdown.sh \
 	1.rstest 2.rstest 3.rstest err1.rstest \
 	invalid_nested_include.sh \
@@ -858,6 +881,8 @@ EXTRA_DIST= \
 	rscript_num2ipv4.sh \
 	rscript_trim.sh \
 	rscript_format_time.sh \
+	rscript_parse_time.sh \
+	rscript_parse_time_get-ts.py \
 	mmanon_random_32_ipv4.sh \
 	mmanon_random_cons_32_ipv4.sh \
 	mmanon_recognize_ipv4.sh \
@@ -875,6 +900,8 @@ EXTRA_DIST= \
 	mmanon_recognize_ipv6.sh \
 	mmanon_zero_64_ipv6.sh \
 	mmanon_both_modes_compatible.sh \
+	mmanon_recognize_ipembedded.sh \
+	mmanon_random_cons_128_ipembedded.sh \
 	testsuites/rscript_ne_var.conf \
 	rscript_eq.sh \
 	testsuites/rscript_eq.conf \
@@ -962,6 +989,7 @@ EXTRA_DIST= \
 	testsuites/now-utc.conf \
 	faketime_common.sh \
 	imjournal-basic.sh \
+	imjournal-basic-vg.sh \
 	omjournal-abort-template.sh \
 	omjournal-abort-no-template.sh \
 	omjournal-basic-template.sh \
@@ -1035,6 +1063,7 @@ EXTRA_DIST= \
 	testsuites/incltest_dir_wildcard.conf \
 	testsuites/incltest.d/include.conf \
 	es-basic.sh \
+	es-basic-vgthread.sh \
 	testsuites/es-basic.conf \
 	es-basic-bulk.sh \
 	testsuites/es-basic-bulk.conf \
@@ -1054,6 +1083,9 @@ EXTRA_DIST= \
 	testsuites/es-bulk-errfile-popul-erronly-interleaved.conf \
 	es-bulk-errfile-popul-def-interleaved.sh \
 	testsuites/es-bulk-errfile-popul-def-interleaved.conf \
+	es-basic-vg.sh \
+	es-basic-bulk-vg.sh \
+	es-basic-ha-vg.sh \
 	linkedlistqueue.sh \
 	testsuites/linkedlistqueue.conf \
 	da-mainmsg-q.sh \
@@ -1299,6 +1331,7 @@ EXTRA_DIST= \
 	imfile-fileNotFoundError-parameter.sh \
 	imfile-error-not-repeated.sh \
 	imfile-basic-vg.sh \
+	imfile-basic-vgthread.sh \
 	testsuites/imfile-basic.conf \
 	imfile-endregex-timeout-none-polling.sh \
 	imfile-endregex-timeout-polling.sh \
@@ -1602,6 +1635,7 @@ EXTRA_DIST= \
 	testsuites/imptcp_nonProcessingPoller.conf \
 	libmaxmindb.supp \
 	travis/trusty.supp \
+	linux_localtime_r.supp \
 	json_var_case.sh \
 	testsuites/json_var_case.conf \
 	cfg.sh \

@@ -808,6 +808,7 @@ ENDnewActInst
 
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
+    /* coverity [dead_code] - keep framework happy */
     ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
