@@ -591,7 +591,8 @@ endif
 if ENABLE_GNUTLS
 TESTS +=  \
 	imtcp_conndrop_tls.sh \
-	sndrcv_tls_anon.sh \
+	sndrcv_tls_anon_hostname.sh \
+	sndrcv_tls_anon_ipv4.sh \
 	sndrcv_tls_priorityString.sh \
 	imtcp-tls-basic.sh \
 	sndrcv_tls_anon_rebind.sh
@@ -1643,9 +1644,15 @@ EXTRA_DIST= \
 	sndrcv_tls_anon_rebind.sh \
 	testsuites/sndrcv_tls_anon_rebind_sender.conf \
 	testsuites/sndrcv_tls_anon_rebind_rcvr.conf \
-	sndrcv_tls_anon.sh \
-	testsuites/sndrcv_tls_anon_sender.conf \
-	testsuites/sndrcv_tls_anon_rcvr.conf \
+	sndrcv_tls_anon_hostname.sh \
+	testsuites/sndrcv_tls_anon_hostname_sender.conf \
+	testsuites/sndrcv_tls_anon_hostname_rcvr.conf \
+	sndrcv_tls_anon_ipv4.sh \
+	testsuites/sndrcv_tls_anon_ipv4_sender.conf \
+	testsuites/sndrcv_tls_anon_ipv4_rcvr.conf \
+	sndrcv_tls_anon_ipv6.sh \
+	testsuites/sndrcv_tls_anon_ipv6_sender.conf \
+	testsuites/sndrcv_tls_anon_ipv6_rcvr.conf \
 	sndrcv_tls_priorityString.sh \
 	testsuites/sndrcv_tls_priorityString_sender.conf \
 	testsuites/sndrcv_tls_priorityString_rcvr.conf \

@@ -1,5 +1,7 @@
 patch*
 *~
+*.iml
+.idea
 .tar.gz
 .deps
 .libs
