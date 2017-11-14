@@ -114,6 +114,11 @@ Version 8.31.0 [v8-stable] 2017-11-28
   When udp listener cannot be created, an error message containing
   the ip-address and port is put out.
   closes https://github.com/rsyslog/rsyslog/issues/1899
+- omrelp bugfix: incorrect error handling
+  if librelp with TLS but without Authentication was included, librelp
+  did not emit the correct error message due to invalid error code
+  check. It also did not err-out but instead suspended itself.
+  Detected by Coverity scan, CID 185362
 - [io]mrelp bugfix: segfault on startup if configured cert not readable
   When the certificate file specified in the omrelp/imrelp configuration
   can't be accessed, e.g. because it doesn't exist or you don't have
@@ -249,6 +254,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
   * added basic test for imjournal
   * added threading tests via valgrind's helgrind tool
 - CI: improved test coverage on FreeBSD
+- Travis: clang static analyzer 5.0 now run over all source files
 - build: make compile warning-free under gcc 7
 ------------------------------------------------------------------------------
 Version 8.30.0 [v8-stable] 2017-10-17
