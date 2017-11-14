@@ -1439,7 +1439,11 @@ create_udp_socket(uchar *hostname,
 				 * it to the max permitted value. So we do our error check a bit
 				 * differently by querying the size below.
 				 */
-				setsockopt(*s, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf));
+				if(setsockopt(*s, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf)) != 0) {
+					/* keep Coverity happy */
+					DBGPRINTF("setsockopt in %s:%d failed - this is expected and "
+						"handled at later stages\n", __FILE__, __LINE__);
+				}
 			}
 			optlen = sizeof(actrcvbuf);
 			if(getsockopt(*s, SOL_SOCKET, SO_RCVBUF, &actrcvbuf, &optlen) == 0) {
