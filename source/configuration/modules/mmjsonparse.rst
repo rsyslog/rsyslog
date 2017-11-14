@@ -30,15 +30,33 @@ the format requirements.
 Action Parameters
 ~~~~~~~~~~~~~~~~~
 
-- **cookie** [string] defaults to "@cee:"
+.. function:: cookie <string>
 
-  Permits to set the cookie that must be present in front of the
-  JSON part of the message.
+   **Default**: "@cee:"
 
-  Most importantly, this can be set to the empty string ("") in order
-  to not require any cookie. In this case, leading spaces are permitted
-  in front of the JSON. No non-whitespace characters are permitted
-  after the JSON. If such is required, mmnormalize must be used.
+   Permits to set the cookie that must be present in front of the
+   JSON part of the message.
+
+   Most importantly, this can be set to the empty string ("") in order
+   to not require any cookie. In this case, leading spaces are permitted
+   in front of the JSON. No non-whitespace characters are permitted
+   after the JSON. If such is required, mmnormalize must be used.
+
+.. function:: useRawMsg <boolean>
+
+   **Default**: off
+
+   Specifies if the raw message should be used for normalization (on)
+   or just the MSG part of the message (off).
+
+.. function:: container <word>
+
+   **Default**: $!
+
+   Specifies the JSON container (path) under which parsed elements should be
+   placed. By default, all parsed properties are merged into root of
+   message properties. You can place them under a subtree, instead. You
+   can place them in local variables, also, by setting path="$.".
 
 Check parsing result
 ~~~~~~~~~~~~~~~~~~~~
