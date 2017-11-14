@@ -544,8 +544,10 @@ finalize_it:
 	RETiRet;
 }
 
-static rsRetVal
-execReloadLookupTable(struct cnfstmt *stmt) {
+static rsRetVal ATTR_NONNULL()
+execReloadLookupTable(struct cnfstmt *stmt)
+{
+	assert(stmt != NULL);
 	lookup_ref_t *t;
 	DEFiRet;
 	t = stmt->d.s_reload_lookup_table.table;
@@ -553,7 +555,7 @@ execReloadLookupTable(struct cnfstmt *stmt) {
 		ABORT_FINALIZE(RS_RET_NONE);
 	}
 	
-	CHKiRet(lookupReload(t, stmt->d.s_reload_lookup_table.stub_value));
+	iRet = lookupReload(t, stmt->d.s_reload_lookup_table.stub_value);
 	/* Note that reload dispatched above is performed asynchronously,
 	   on a different thread. So rsRetVal it returns means it was triggered
 	   successfully, and not that it was reloaded successfully. */
@@ -568,8 +570,8 @@ finalize_it:
  * better suited here.
  * rgerhards, 2012-09-04
  */
-static rsRetVal
-scriptExec(struct cnfstmt *root, smsg_t *pMsg, wti_t *pWti)
+static rsRetVal ATTR_NONNULL(2, 3)
+scriptExec(struct cnfstmt *const root, smsg_t *const pMsg, wti_t *const pWti)
 {
 	struct cnfstmt *stmt;
 	DEFiRet;
