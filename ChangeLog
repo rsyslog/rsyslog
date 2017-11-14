@@ -22,6 +22,10 @@ Version 8.31.0 [v8-stable] 2017-11-28
   keep a simple lock ... unlock scheme within the function. That is
   easier to follow for both humans as well as static analyzers.
   Also removes Coverity scan CID 185419
+- TCP syslog: support SNI when connecting as a client
+  This is done if a hostname is configured and turned off if an IP is used.
+  Thanks to Art O Cathain for the patch.
+  see also https://github.com/rsyslog/rsyslog/pull/1393
 - msg variable bugfix: potential segfault on variable access
   A segfault is likely to happen if during processing a variable with
   more than one path component is accessed (e.g. $!path!var) and NO
