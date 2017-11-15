@@ -53,7 +53,6 @@
 #endif
 /* static data */
 DEFobjCurrIf(obj)
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(strgen)
 
 /* tables for interfacing with the v6 config system */
@@ -813,35 +812,35 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 			pTpe->data.field.options.bFixedWidth = 1;
 		 } else if(!strcmp((char*)Buf, "csv")) {
 			if(hasFormat(pTpe)) {
-				errmsg.LogError(0, NO_ERRCODE, "error: can only specify "
+				LogError(0, NO_ERRCODE, "error: can only specify "
 					"one option out of (json, jsonf, jsonr, jsonfr, csv) - csv ignored");
 			} else {
 				pTpe->data.field.options.bCSV = 1;
 			}
 		 } else if(!strcmp((char*)Buf, "json")) {
 			if(hasFormat(pTpe)) {
-				errmsg.LogError(0, NO_ERRCODE, "error: can only specify "
+				LogError(0, NO_ERRCODE, "error: can only specify "
 					"one option out of (json, jsonf, jsonr, jsonfr, csv) - json ignored");
 			} else {
 				pTpe->data.field.options.bJSON = 1;
 			}
 		 } else if(!strcmp((char*)Buf, "jsonf")) {
 			if(hasFormat(pTpe)) {
-				errmsg.LogError(0, NO_ERRCODE, "error: can only specify "
+				LogError(0, NO_ERRCODE, "error: can only specify "
 					"one option out of (json, jsonf, jsonr, jsonfr, csv) - jsonf ignored");
 			} else {
 				pTpe->data.field.options.bJSONf = 1;
 			}
 		 } else if(!strcmp((char*)Buf, "jsonr")) {
 			if(hasFormat(pTpe)) {
-				errmsg.LogError(0, NO_ERRCODE, "error: can only specify "
+				LogError(0, NO_ERRCODE, "error: can only specify "
 					"one option out of (json, jsonf, jsonr, jsonfr, csv) - jsonr ignored");
 			} else {
 				pTpe->data.field.options.bJSONr = 1;
 			}
 		 } else if(!strcmp((char*)Buf, "jsonfr")) {
 			if(hasFormat(pTpe)) {
-				errmsg.LogError(0, NO_ERRCODE, "error: can only specify "
+				LogError(0, NO_ERRCODE, "error: can only specify "
 					"one option out of (json, jsonf, jsonr, jsonfr, csv) - jsonfr ignored");
 			} else {
 				pTpe->data.field.options.bJSONfr = 1;
@@ -849,7 +848,7 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 		 } else if(!strcmp((char*)Buf, "mandatory-field")) {
 			 pTpe->data.field.options.bMandatory = 1;
 		 } else {
-			errmsg.LogError(0, NO_ERRCODE, "template error: invalid field option '%s' "
+			LogError(0, NO_ERRCODE, "template error: invalid field option '%s' "
 				"specified - ignored", Buf);
 		 }
 	}
@@ -916,7 +915,7 @@ do_Parameter(uchar **pp, struct template *pTpl)
 					pTpe->data.field.typeRegex = TPL_REGEX_ERE;
 					p += 3; /* eat indicator sequence */
 				} else {
-					errmsg.LogError(0, NO_ERRCODE, "error: invalid regular expression "
+					LogError(0, NO_ERRCODE, "error: invalid regular expression "
 							"type, rest of line %s", (char*) p);
 				}
 			}
@@ -959,7 +958,7 @@ do_Parameter(uchar **pp, struct template *pTpl)
 					  * comma itself is already part of the next field.
 					  */
 				} else {
-					errmsg.LogError(0, NO_ERRCODE, "template %s error: invalid regular "
+					LogError(0, NO_ERRCODE, "template %s error: invalid regular "
 						"expression type, rest of line %s",
 						pTpl->pszName, (char*) p);
 				}
@@ -981,7 +980,7 @@ do_Parameter(uchar **pp, struct template *pTpl)
 			if(*p != ':') {
 				/* There is something more than an R , this is invalid ! */
 				/* Complain on extra characters */
-				errmsg.LogError(0, NO_ERRCODE, "error: invalid character in frompos "
+				LogError(0, NO_ERRCODE, "error: invalid character in frompos "
 						"after \"R\", property: '%%%s'", (char*) *pp);
 			} else {
 				pTpe->data.field.has_regex = 1;
@@ -1010,7 +1009,7 @@ do_Parameter(uchar **pp, struct template *pTpl)
 					pTpe->data.field.has_fields = 1;
 					if(!isdigit((int)*p)) {
 						/* complain and use default */
-						errmsg.LogError(0, NO_ERRCODE, "error: invalid character in "
+						LogError(0, NO_ERRCODE, "error: invalid character in "
 "frompos after \"F,\", property: '%%%s' - using 9 (HT) as field delimiter",
 						    (char*) *pp);
 						pTpe->data.field.field_delim = 9;
@@ -1019,7 +1018,7 @@ do_Parameter(uchar **pp, struct template *pTpl)
 						while(isdigit((int)*p))
 							iNum = iNum * 10 + *p++ - '0';
 						if(iNum < 0 || iNum > 255) {
-							errmsg.LogError(0, NO_ERRCODE, "error: non-USASCII delimiter "
+							LogError(0, NO_ERRCODE, "error: non-USASCII delimiter "
 "character value %d in template - using 9 (HT) as substitute", iNum);
 							pTpe->data.field.field_delim = 9;
 						} else {
@@ -1049,7 +1048,7 @@ do_Parameter(uchar **pp, struct template *pTpl)
 					/* invalid character after F, so we need to reject
 					 * this.
 					 */
-					errmsg.LogError(0, NO_ERRCODE, "error: invalid character in frompos "
+					LogError(0, NO_ERRCODE, "error: invalid character in frompos "
 						"after \"F\", property: '%%%s'", (char*) *pp);
 				}
 			} else {
@@ -1117,7 +1116,7 @@ do_Parameter(uchar **pp, struct template *pTpl)
 						  iRetLocal);
 					if(bFirstRegexpErrmsg) { /* prevent flood of messages, maybe even an endless loop! */
 						bFirstRegexpErrmsg = 0;
-						errmsg.LogError(0, NO_ERRCODE, "regexp library could not be loaded (error %d), "
+						LogError(0, NO_ERRCODE, "regexp library could not be loaded (error %d), "
 								"regexp ignored", iRetLocal);
 					}
 					pTpe->data.field.has_regex = 2;
@@ -1324,7 +1323,7 @@ struct template *tplAddLine(rsconf_t *conf, const char* pName, uchar** ppRestOfC
 		*ppRestOfConfLine = p + 1;
 		localRet = tplAddTplMod(pTpl, ppRestOfConfLine);
 		if(localRet != RS_RET_OK) {
-			errmsg.LogError(0, localRet, "Template '%s': error %d defining template via strgen module",
+			LogError(0, localRet, "Template '%s': error %d defining template via strgen module",
 					pTpl->pszName, localRet);
 			/* we simply make the template defunct in this case by setting
 			 * its name to a zero-string. We do not free it, as this would
@@ -1561,7 +1560,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 				re_type = TPL_REGEX_ERE;
 			} else {
 				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
-				errmsg.LogError(0, RS_RET_ERR, "invalid regex.type '%s' for property",
+				LogError(0, RS_RET_ERR, "invalid regex.type '%s' for property",
 					typeStr);
 				free(typeStr);
 				ABORT_FINALIZE(RS_RET_ERR);
@@ -1578,7 +1577,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 				re_nomatchType = TPL_REGEX_NOMATCH_USE_ZERO;
 			} else {
 				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
-				errmsg.LogError(0, RS_RET_ERR, "invalid format type '%s' for property",
+				LogError(0, RS_RET_ERR, "invalid format type '%s' for property",
 					typeStr);
 				free(typeStr);
 				ABORT_FINALIZE(RS_RET_ERR);
@@ -1603,7 +1602,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 				formatType = F_JSONFR;
 			} else {
 				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
-				errmsg.LogError(0, RS_RET_ERR, "invalid format type '%s' for property",
+				LogError(0, RS_RET_ERR, "invalid format type '%s' for property",
 					typeStr);
 				free(typeStr);
 				ABORT_FINALIZE(RS_RET_ERR);
@@ -1618,7 +1617,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 				controlchr = CC_DROP;
 			} else {
 				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
-				errmsg.LogError(0, RS_RET_ERR, "invalid controlcharacter mode '%s' for property",
+				LogError(0, RS_RET_ERR, "invalid controlcharacter mode '%s' for property",
 					typeStr);
 				free(typeStr);
 				ABORT_FINALIZE(RS_RET_ERR);
@@ -1631,7 +1630,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 				secpath = SP_REPLACE;
 			} else {
 				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
-				errmsg.LogError(0, RS_RET_ERR, "invalid securepath mode '%s' for property",
+				LogError(0, RS_RET_ERR, "invalid securepath mode '%s' for property",
 					typeStr);
 				free(typeStr);
 				ABORT_FINALIZE(RS_RET_ERR);
@@ -1644,7 +1643,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 				caseconv = tplCaseConvUpper;
 			} else {
 				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
-				errmsg.LogError(0, RS_RET_ERR, "invalid caseconversion type '%s' for property",
+				LogError(0, RS_RET_ERR, "invalid caseconversion type '%s' for property",
 					typeStr);
 				free(typeStr);
 				ABORT_FINALIZE(RS_RET_ERR);
@@ -1698,7 +1697,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 				datefmt = tplFmtWeek;
 			} else {
 				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
-				errmsg.LogError(0, RS_RET_ERR, "invalid date format '%s' for property",
+				LogError(0, RS_RET_ERR, "invalid date format '%s' for property",
 					typeStr);
 				free(typeStr);
 				ABORT_FINALIZE(RS_RET_ERR);
@@ -1726,19 +1725,19 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		frompos = 0;
 	if(bPosRelativeToEnd) {
 		if(topos > frompos) {
-			errmsg.LogError(0, RS_RET_ERR, "position.to=%d is higher than postion.from=%d "
+			LogError(0, RS_RET_ERR, "position.to=%d is higher than postion.from=%d "
 					"in 'relativeToEnd' mode\n", topos, frompos);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	} else {
 		if(topos < frompos) {
-			errmsg.LogError(0, RS_RET_ERR, "position.to=%d is lower than postion.from=%d\n",
+			LogError(0, RS_RET_ERR, "position.to=%d is lower than postion.from=%d\n",
 				topos, frompos);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	}
 	if(fieldnum != -1 && re_expr != NULL) {
-		errmsg.LogError(0, RS_RET_ERR, "both field extraction and regex extraction "
+		LogError(0, RS_RET_ERR, "both field extraction and regex extraction "
 				"specified - this is not possible, remove one");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
@@ -1826,7 +1825,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 			int iOptions;
 			iOptions = (pTpe->data.field.typeRegex == TPL_REGEX_ERE) ? REG_EXTENDED : 0;
 			if(regexp.regcomp(&(pTpe->data.field.re), (char*) re_expr, iOptions) != 0) {
-				errmsg.LogError(0, NO_ERRCODE, "error compiling regex '%s'", re_expr);
+				LogError(0, NO_ERRCODE, "error compiling regex '%s'", re_expr);
 				pTpe->data.field.has_regex = 2;
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
@@ -1834,7 +1833,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 			/* regexp object could not be loaded */
 			if(bFirstRegexpErrmsg) { /* prevent flood of messages, maybe even an endless loop! */
 				bFirstRegexpErrmsg = 0;
-				errmsg.LogError(0, NO_ERRCODE, "regexp library could not be loaded (error %d), "
+				LogError(0, NO_ERRCODE, "regexp library could not be loaded (error %d), "
 						"regexp ignored", iRetLocal);
 			}
 			pTpe->data.field.has_regex = 2;
@@ -1923,7 +1922,7 @@ tplProcessCnf(struct cnfobj *o)
 				tplType = T_SUBTREE;
 			} else {
 				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
-				errmsg.LogError(0, RS_RET_ERR, "invalid template type '%s'",
+				LogError(0, RS_RET_ERR, "invalid template type '%s'",
 					typeStr);
 				free(typeStr);
 				ABORT_FINALIZE(RS_RET_ERR);
@@ -1934,7 +1933,7 @@ tplProcessCnf(struct cnfobj *o)
 			uchar *st_str = es_getBufAddr(pvals[i].val.d.estr);
 			if(st_str[0] != '$' || st_str[1] != '!') {
 				char *cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-				errmsg.LogError(0, RS_RET_ERR, "invalid subtree "
+				LogError(0, RS_RET_ERR, "invalid subtree "
 					"parameter, variable must start with '$!' but "
 					"var name is '%s'", cstr);
 				free(cstr);
@@ -1975,52 +1974,52 @@ tplProcessCnf(struct cnfobj *o)
 	/* do config sanity checks */
 	if(tplStr  == NULL) {
 		if(tplType == T_STRING) {
-			errmsg.LogError(0, RS_RET_ERR, "template '%s' of type string needs "
+			LogError(0, RS_RET_ERR, "template '%s' of type string needs "
 				"string parameter", name);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	} else {
 		if(tplType != T_STRING) {
-			errmsg.LogError(0, RS_RET_ERR, "template '%s' is not a string "
+			LogError(0, RS_RET_ERR, "template '%s' is not a string "
 				"template but has a string specified - ignored", name);
 		}
 	}
 
 	if(plugin  == NULL) {
 		if(tplType == T_PLUGIN) {
-			errmsg.LogError(0, RS_RET_ERR, "template '%s' of type plugin needs "
+			LogError(0, RS_RET_ERR, "template '%s' of type plugin needs "
 				"plugin parameter", name);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	} else {
 		if(tplType != T_PLUGIN) {
-			errmsg.LogError(0, RS_RET_ERR, "template '%s' is not a plugin "
+			LogError(0, RS_RET_ERR, "template '%s' is not a plugin "
 				"template but has a plugin specified - ignored", name);
 		}
 	}
 
 	if(!bHaveSubtree) {
 		if(tplType == T_SUBTREE) {
-			errmsg.LogError(0, RS_RET_ERR, "template '%s' of type subtree needs "
+			LogError(0, RS_RET_ERR, "template '%s' of type subtree needs "
 				"subtree parameter", name);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	} else {
 		if(tplType != T_SUBTREE) {
-			errmsg.LogError(0, RS_RET_ERR, "template '%s' is not a subtree "
+			LogError(0, RS_RET_ERR, "template '%s' is not a subtree "
 				"template but has a subtree specified - ignored", name);
 		}
 	}
 
 	if(o->subobjs  == NULL) {
 		if(tplType == T_LIST) {
-			errmsg.LogError(0, RS_RET_ERR, "template '%s' of type list has "
+			LogError(0, RS_RET_ERR, "template '%s' of type list has "
 				"has no parameters specified", name);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	} else {
 		if(tplType != T_LIST) {
-			errmsg.LogError(0, RS_RET_ERR, "template '%s' is not a list "
+			LogError(0, RS_RET_ERR, "template '%s' is not a list "
 				"template but has parameters specified - ignored", name);
 		}
 	}
@@ -2030,7 +2029,7 @@ tplProcessCnf(struct cnfobj *o)
 	if(o_stdsql) ++numopts;
 	if(o_json) ++numopts;
 	if(numopts > 1) {
-		errmsg.LogError(0, RS_RET_ERR, "template '%s' has multiple incompatible "
+		LogError(0, RS_RET_ERR, "template '%s' has multiple incompatible "
 			"options of sql, stdsql or json specified", name);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
@@ -2061,7 +2060,7 @@ tplProcessCnf(struct cnfobj *o)
 			/* TODO: the use of tplAddTplMod() can be improved! */
 			localRet = tplAddTplMod(pTpl, &p);
 			if(localRet != RS_RET_OK) {
-				errmsg.LogError(0, localRet, "template '%s': error %d "
+				LogError(0, localRet, "template '%s': error %d "
 						"defining template via plugin (strgen) module",
 						pTpl->pszName, localRet);
 				ABORT_FINALIZE(localRet);
@@ -2394,7 +2393,6 @@ rsRetVal templateInit(void)
 {
 	DEFiRet;
 	CHKiRet(objGetObjInterface(&obj));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(strgen, CORE_COMPONENT));
 
 finalize_it:
