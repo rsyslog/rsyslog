@@ -1068,7 +1068,8 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 		if(ttCert == -1)
 			ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
 		else if(ttCert > ttNow) {
-			errmsg.LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "not permitted to talk to peer: certificate %d not yet active", i);
+			errmsg.LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "not permitted to talk to peer: "
+					"certificate %d not yet active", i);
 			gtlsGetCertInfo(pThis, &pStr);
 			errmsg.LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
 			cstrDestruct(&pStr);

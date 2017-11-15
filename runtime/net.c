@@ -699,7 +699,8 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 				        iRet = AddAllowedSenderEntry(ppRoot, ppLast, iAllow, iSignificantBits);
 					FINALIZE;
 				} else {
-				        errmsg.LogError(0, NO_ERRCODE, "Hostname \"%s\" WON\'T be added to ACL.", iAllow->addr.HostWildcard);
+				        errmsg.LogError(0, NO_ERRCODE, "Hostname \"%s\" WON\'T be added to ACL.",
+							iAllow->addr.HostWildcard);
 				        ABORT_FINALIZE(RS_RET_NOENTRY);
 				}
 			}
@@ -1482,7 +1483,8 @@ create_udp_socket(uchar *hostname,
 						errmsg.LogError(errno, NO_ERRCODE, "bind with IP_FREEBIND");
 					} else {
 						if (ipfreebind >= IPFREEBIND_ENABLED_WITH_LOG)
-							errmsg.LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "bound address %s IP free", hostname);
+							errmsg.LogMsg(0, RS_RET_OK_WARN, LOG_WARNING,
+								"bound address %s IP free", hostname);
 						continue;
 					}
 				}

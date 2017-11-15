@@ -1384,11 +1384,13 @@ int rsgt_ConvertSigFile(FILE *oldsigfp, FILE *newsigfp, int verbose)
 				case 0x0901:
 					/* Convert tlvrecord Header */
 					if (rec.tlvtype == 0x0900) {
-						typconv = ((0x00 /*flags*/ | 0x80 /* NEW RSGT_FLAG_TLV16_RUNTIME*/) << 8) | 0x0902;
+						typconv = ((0x00 /*flags*/ | 0x80 /* NEW RSGT_FLAG_TLV16_RUNTIME
+							*/) << 8) | 0x0902;
 						rec.hdr[0] = typconv >> 8; 
 						rec.hdr[1] = typconv & 0xff; 
 					} else if (rec.tlvtype == 0x0901) {
-						typconv = ((0x00 /*flags*/ | 0x80 /* NEW RSGT_FLAG_TLV16_RUNTIME*/) << 8) | 0x0903;
+						typconv = ((0x00 /*flags*/ | 0x80 /* NEW RSGT_FLAG_TLV16_RUNTIME
+							*/) << 8) | 0x0903;
 						rec.hdr[0] = typconv >> 8; 
 						rec.hdr[1] = typconv & 0xff; 
 					}
@@ -1446,7 +1448,9 @@ int rsgt_ConvertSigFile(FILE *oldsigfp, FILE *newsigfp, int verbose)
 						goto donedecode;
 					}
 					bh->lastHash.len = subrec.tlvlen - 1;
-					if((bh->lastHash.data = (uint8_t*)malloc(bh->lastHash.len)) == NULL) {r=RSGTE_OOM;goto donedecode;}
+					if((bh->lastHash.data = (uint8_t*)malloc(bh->lastHash.len)) == NULL) {
+						r=RSGTE_OOM;goto donedecode;
+					}
 					memcpy(bh->lastHash.data, subrec.data+1, subrec.tlvlen-1);
 
 					/* Debug verification output */
@@ -1454,7 +1458,10 @@ int rsgt_ConvertSigFile(FILE *oldsigfp, FILE *newsigfp, int verbose)
 
 					/* Check OLD encoded COUNT */
 					CHKrDecode(rsgt_tlvDecodeSUBREC(&rec, &strtidx, &subrec));
-					if(!(subrec.tlvtype == 0x03 && subrec.tlvlen <= 8)) { r = RSGTE_INVLTYP; goto donedecode; }
+					if(!(subrec.tlvtype == 0x03 && subrec.tlvlen <= 8)) {
+						r = RSGTE_INVLTYP;
+						goto donedecode;
+					}
 					bs->recCount = 0;
 					for(i = 0 ; i < subrec.tlvlen ; ++i) {
 						bs->recCount = (bs->recCount << 8) + subrec.data[i];
@@ -1465,7 +1472,9 @@ int rsgt_ConvertSigFile(FILE *oldsigfp, FILE *newsigfp, int verbose)
 					if(!(subrec.tlvtype == 0x0906)) { r = RSGTE_INVLTYP; goto donedecode; }
 					bs->sig.der.len = subrec.tlvlen;
 					bs->sigID = SIGID_RFC3161;
-					if((bs->sig.der.data = (uint8_t*)malloc(bs->sig.der.len)) == NULL) {r=RSGTE_OOM;goto donedecode;}
+					if((bs->sig.der.data = (uint8_t*)malloc(bs->sig.der.len)) == NULL) {
+						r=RSGTE_OOM;goto donedecode;
+					}
 					memcpy(bs->sig.der.data, subrec.data, bs->sig.der.len);
 
 					/* Debug output */
@@ -1491,7 +1500,8 @@ int rsgt_ConvertSigFile(FILE *oldsigfp, FILE *newsigfp, int verbose)
 					CHKrDecode(rsgt_tlvfileAddOctet(newsigfp, hashIdentifier(bh->hashID)));
 					/* block-iv */
 					CHKrDecode(rsgt_tlv8Write(newsigfp, 0x00, 0x02, hashOutputLengthOctets(bh->hashID)));
-					CHKrDecode(rsgt_tlvfileAddOctetString(newsigfp, bh->iv, hashOutputLengthOctets(bh->hashID)));
+					CHKrDecode(rsgt_tlvfileAddOctetString(newsigfp, bh->iv,
+						hashOutputLengthOctets(bh->hashID)));
 					/* last-hash */
 					CHKrDecode(rsgt_tlv8Write(newsigfp, 0x00, 0x03, bh->lastHash.len + 1));
 					CHKrDecode(rsgt_tlvfileAddOctet(newsigfp, bh->lastHash.hashID));

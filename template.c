@@ -916,8 +916,8 @@ do_Parameter(uchar **pp, struct template *pTpl)
 					pTpe->data.field.typeRegex = TPL_REGEX_ERE;
 					p += 3; /* eat indicator sequence */
 				} else {
-					errmsg.LogError(0, NO_ERRCODE, "error: invalid regular expression type, rest of line %s",
-				               (char*) p);
+					errmsg.LogError(0, NO_ERRCODE, "error: invalid regular expression "
+							"type, rest of line %s", (char*) p);
 				}
 			}
 
@@ -959,8 +959,9 @@ do_Parameter(uchar **pp, struct template *pTpl)
 					  * comma itself is already part of the next field.
 					  */
 				} else {
-					errmsg.LogError(0, NO_ERRCODE, "template %s error: invalid regular expression type, rest of line %s",
-				               pTpl->pszName, (char*) p);
+					errmsg.LogError(0, NO_ERRCODE, "template %s error: invalid regular "
+						"expression type, rest of line %s",
+						pTpl->pszName, (char*) p);
 				}
 			}
 
@@ -980,8 +981,8 @@ do_Parameter(uchar **pp, struct template *pTpl)
 			if(*p != ':') {
 				/* There is something more than an R , this is invalid ! */
 				/* Complain on extra characters */
-				errmsg.LogError(0, NO_ERRCODE, "error: invalid character in frompos after \"R\", property: '%%%s'",
-				    (char*) *pp);
+				errmsg.LogError(0, NO_ERRCODE, "error: invalid character in frompos "
+						"after \"R\", property: '%%%s'", (char*) *pp);
 			} else {
 				pTpe->data.field.has_regex = 1;
 				dbgprintf("we have a regexp and use match #%d, submatch #%d\n",
@@ -1036,8 +1037,10 @@ do_Parameter(uchar **pp, struct template *pTpl)
 									iNum = iNum * 10 + *p++ - '0';
 								pTpe->data.field.iFromPos = iNum;
 							} else if(*p != ':') {
-								parser_errmsg("error: invalid character '%c' in frompos after \"F,\", property: '%s' "
-									      "be sure to use DECIMAL character codes!", *p, (char*) *pp);
+								parser_errmsg("error: invalid character "
+								"'%c' in frompos after \"F,\", property: '%s' "
+								"be sure to use DECIMAL character "
+								"codes!", *p, (char*) *pp);
 								ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
 							}
 						}
@@ -1046,8 +1049,8 @@ do_Parameter(uchar **pp, struct template *pTpl)
 					/* invalid character after F, so we need to reject
 					 * this.
 					 */
-					errmsg.LogError(0, NO_ERRCODE, "error: invalid character in frompos after \"F\", property: '%%%s'",
-					    (char*) *pp);
+					errmsg.LogError(0, NO_ERRCODE, "error: invalid character in frompos "
+						"after \"F\", property: '%%%s'", (char*) *pp);
 				}
 			} else {
 				/* we now have a simple offset in frompos (the previously "normal" case) */
@@ -1101,7 +1104,8 @@ do_Parameter(uchar **pp, struct template *pTpl)
 					int iOptions;
 					iOptions = (pTpe->data.field.typeRegex == TPL_REGEX_ERE) ? REG_EXTENDED : 0;
 					int errcode;
-					if((errcode = regexp.regcomp(&(pTpe->data.field.re), (char*) regex_char, iOptions) != 0)) {
+					if((errcode = regexp.regcomp(&(pTpe->data.field.re),
+						(char*) regex_char, iOptions) != 0)) {
 						char errbuff[512];
 						regexp.regerror(errcode, &(pTpe->data.field.re), errbuff, sizeof(errbuff));
 						DBGPRINTF("Template.c: Error in regular expression: %s\n", errbuff);
@@ -1657,7 +1661,8 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 				datefmt = tplFmtPgSQLDate;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"rfc3164", sizeof("rfc3164")-1)) {
 				datefmt = tplFmtRFC3164Date;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"rfc3164-buggyday", sizeof("rfc3164-buggyday")-1)) {
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"rfc3164-buggyday",
+				sizeof("rfc3164-buggyday")-1)) {
 				datefmt = tplFmtRFC3164BuggyDate;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"rfc3339", sizeof("rfc3339")-1)) {
 				datefmt = tplFmtRFC3339Date;
@@ -1721,8 +1726,8 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		frompos = 0;
 	if(bPosRelativeToEnd) {
 		if(topos > frompos) {
-			errmsg.LogError(0, RS_RET_ERR, "position.to=%d is higher than postion.from=%d in 'relativeToEnd' mode\n",
-				topos, frompos);
+			errmsg.LogError(0, RS_RET_ERR, "position.to=%d is higher than postion.from=%d "
+					"in 'relativeToEnd' mode\n", topos, frompos);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	} else {

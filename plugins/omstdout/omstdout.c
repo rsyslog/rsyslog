@@ -57,7 +57,8 @@ DEF_OMOD_STATIC_DATA
 
 typedef struct _instanceData {
 	int bUseArrayInterface;		/* uses action use array instead of string template interface? */
-	int bEnsureLFEnding;		/* ensure that a linefeed is written at the end of EACH record (test aid for nettester) */
+	int bEnsureLFEnding;		/* ensure that a linefeed is written at the end of EACH
+					record (test aid for nettester) */
 } instanceData;
 
 typedef struct wrkrInstanceData {

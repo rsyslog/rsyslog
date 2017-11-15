@@ -797,7 +797,8 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,fjson_object **p
 		if(ctx->statusCheckOnly)
 		{
 			if(itemStatus) {
-				DBGPRINTF("omelasticsearch: error in elasticsearch reply: item %d, status is %d\n", i, fjson_object_get_int(ok));
+				DBGPRINTF("omelasticsearch: error in elasticsearch reply: item %d, "
+					"status is %d\n", i, fjson_object_get_int(ok));
 				DBGPRINTF("omelasticsearch: status check found error.\n");
 				ABORT_FINALIZE(RS_RET_DATAFAIL);
 			}

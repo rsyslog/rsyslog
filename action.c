@@ -983,7 +983,8 @@ prepareDoActionParams(action_t * __restrict__ const pAction,
 				CHKiRet(tplToJSON(pAction->ppTpl[i], pMsg, &json, ttNow));
 				pWrkrInfo->p.nontx.actParams[i].param = (void*) json;
 				break;
-			default:dbgprintf("software bug/error: unknown pAction->peParamPassing[%d] %d in prepareDoActionParams\n",
+			default:dbgprintf("software bug/error: unknown "
+				"pAction->peParamPassing[%d] %d in prepareDoActionParams\n",
 					  i, (int) pAction->peParamPassing[i]);
 				break;
 			}
@@ -1941,8 +1942,9 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 			if(   (iTplOpts & OMSR_RQD_TPL_OPT_SQL)
 			   && (pAction->ppTpl[i]->optFormatEscape == 0)) {
 				errno = 0;
-				LogError(0, RS_RET_RQD_TPLOPT_MISSING, "Action disabled. To use this action, you have to specify "
-					"the SQL or stdSQL option in your template!\n");
+				LogError(0, RS_RET_RQD_TPLOPT_MISSING, "Action disabled."
+						" To use this action, you have to specify "
+						"the SQL or stdSQL option in your template!\n");
 				ABORT_FINALIZE(RS_RET_RQD_TPLOPT_MISSING);
 			}
 		}

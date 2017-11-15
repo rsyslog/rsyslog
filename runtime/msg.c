@@ -966,7 +966,8 @@ CODESTARTobjDestruct(msg)
 # 	endif
 	if(currRefCount == 0)
 	{
-		/* DEV Debugging Only! dbgprintf("msgDestruct\t0x%lx, RefCount now 0, doing DESTROY\n", (unsigned long)pThis); */
+		/* DEV Debugging Only! dbgprintf("msgDestruct\t0x%lx, RefCount now 0,
+			doing DESTROY\n", (unsigned long)pThis); */
 		if(pThis->pszRawMsg != pThis->szRawMsg)
 			free(pThis->pszRawMsg);
 		freeTAG(pThis);
@@ -3879,7 +3880,8 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 				 */
 				while(!bFound) {
 					int iREstat;
-					iREstat = regexp.regexec(&pTpe->data.field.re, (char*)(pRes + iOffs), nmatch, pmatch, 0);
+					iREstat = regexp.regexec(&pTpe->data.field.re, (char*)(pRes + iOffs),
+								nmatch, pmatch, 0);
 					dbgprintf("regexec return is %d\n", iREstat);
 					if(iREstat == 0) {
 						if(pmatch[0].rm_so == -1) {
@@ -3929,7 +3931,8 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 							if(pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_DFLTSTR) {
 								bufLen = sizeof("**NO MATCH**") - 1;
 								pRes = UCHAR_CONSTANT("**NO MATCH**");
-							} else if(pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_ZERO) {
+							} else if(pTpe->data.field.nomatchAction ==
+								TPL_REGEX_NOMATCH_USE_ZERO) {
 								bufLen = 1;
 								pRes = UCHAR_CONSTANT("0");
 							} else {

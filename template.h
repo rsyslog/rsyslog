@@ -98,7 +98,8 @@ struct templateEntry {
 			enum tlpRegexNoMatchType {
 				TPL_REGEX_NOMATCH_USE_DFLTSTR = 0, /* use the (old style) default "**NO MATCH**" string */
 				TPL_REGEX_NOMATCH_USE_BLANK = 1, /* use a blank string */
-				TPL_REGEX_NOMATCH_USE_WHOLE_FIELD = 2, /* use the full field contents that we were searching in*/
+				TPL_REGEX_NOMATCH_USE_WHOLE_FIELD = 2, /* use the full field contents
+									that we were searching in*/
 				TPL_REGEX_NOMATCH_USE_ZERO = 3 /* use  0 (useful for numerical values) */
 			}  nomatchAction;	/**< what to do if we do not have a match? */
 			

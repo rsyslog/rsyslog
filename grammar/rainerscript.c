@@ -1816,7 +1816,8 @@ ipv42num(char *str)
 			}
 			startblank = 0;
 			if(prevdot == 1){
-				DBGPRINTF("rainerscript: (ipv42num) error: wrong IP-Address format (two dots after one another)\n");
+				DBGPRINTF("rainerscript: (ipv42num) error: wrong IP-Address format "
+					"(two dots after one another)\n");
 				goto done;
 			}
 			prevdot = 1;
@@ -3532,8 +3533,9 @@ cnfstmtNewReloadLookupTable(struct cnffparamlst *fparams)
 		case 2:
 			param = fparams->next;
 			if (param->expr->nodetype != 'S') {
-				parser_errmsg("statement ignored: reload_lookup_table(table_name, optional:stub_value_in_case_reload_fails) "
-							  "expects a litteral string for second argument\n");
+				parser_errmsg("statement ignored: reload_lookup_table(table_name, "
+					"optional:stub_value_in_case_reload_fails) "
+					"expects a litteral string for second argument\n");
 				failed = 1;
 			}
 			if ((cnfstmt->d.s_reload_lookup_table.stub_value =
@@ -3546,8 +3548,9 @@ cnfstmtNewReloadLookupTable(struct cnffparamlst *fparams)
 		case 1:
 			param = fparams;
 			if (param->expr->nodetype != 'S') {
-				parser_errmsg("statement ignored: reload_lookup_table(table_name, optional:stub_value_in_case_reload_fails) "
-							  "expects a litteral string for first argument\n");
+				parser_errmsg("statement ignored: reload_lookup_table(table_name, "
+					"optional:stub_value_in_case_reload_fails) "
+				 	"expects a litteral string for first argument\n");
 				failed = 1;
 			}
 			if ((cnfstmt->d.s_reload_lookup_table.table_name =
@@ -3558,8 +3561,9 @@ cnfstmtNewReloadLookupTable(struct cnffparamlst *fparams)
 			}
 			break;
 		default:
-			parser_errmsg("statement ignored: reload_lookup_table(table_name, optional:stub_value_in_case_reload_fails) "
-						  "expected 1 or 2 arguments, but found '%d'\n", nParams);
+			parser_errmsg("statement ignored: reload_lookup_table(table_name, optional:"
+				"stub_value_in_case_reload_fails) "
+				"expected 1 or 2 arguments, but found '%d'\n", nParams);
 			failed = 1;
 		}
 	}
@@ -4283,7 +4287,7 @@ static const char* const numInWords[] = {"zero", "one", "two", "three", "four", 
 	if(nParams != expectedParams) {										\
 		parser_errmsg(errMsg, name, numInWords[expectedParams], nParams); \
 		return CNFFUNC_INVALID;											\
-	}																	\
+	}	\
 	return funcId
 
 

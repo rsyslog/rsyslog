@@ -218,7 +218,8 @@ dbgFuncDBGetMutexInfo(dbgFuncDB_t *pFuncDB, pthread_mutex_t *pmut)
 	pthread_t ourThrd = pthread_self();
 
 	for(i = 0 ; i < SIZE_FUNCDB_MUTEX_TABLE(pFuncDB) ; ++i) {
-		if(pFuncDB->mutInfo[i].pmut == pmut && pFuncDB->mutInfo[i].lockLn != -1 && pFuncDB->mutInfo[i].thrd == ourThrd) {
+		if(pFuncDB->mutInfo[i].pmut == pmut && pFuncDB->mutInfo[i].lockLn != -1 &&
+			pFuncDB->mutInfo[i].thrd == ourThrd) {
 			iFound = i;
 			break;
 		}
@@ -425,7 +426,8 @@ static dbgMutLog_t *dbgMutLogFindFromBack(pthread_mutex_t *pmut, dbgMutLog_t *pL
 	if(pLast == NULL)
 		pLog = dbgMutLogListLast;
 	else
-		pLog = pLast->pPrev; /* if we get the last processed one, we need to go one before it, else its an endless loop */
+		pLog = pLast->pPrev; /* if we get the last processed one, we need to go one before
+					it, else its an endless loop */
 
 	while(pLog != NULL) {
 		if(pLog->mut == pmut) {
@@ -879,7 +881,8 @@ do_dbgprint(uchar *pszObjName, char *pszMsg, const char *pszFileName, size_t len
 		offsWriteBuf += lenWriteBuf;
 		/* print object name header if we have an object */
 		if(pszObjName != NULL) {
-			lenWriteBuf = snprintf(pszWriteBuf + offsWriteBuf, sizeof(pszWriteBuf) - offsWriteBuf, "%s: ", pszObjName);
+			lenWriteBuf = snprintf(pszWriteBuf + offsWriteBuf, sizeof(pszWriteBuf) - offsWriteBuf,
+					"%s: ", pszObjName);
 			offsWriteBuf += lenWriteBuf;
 		}
 		lenWriteBuf = snprintf(pszWriteBuf + offsWriteBuf, sizeof(pszWriteBuf) - offsWriteBuf, "%s: ", pszFileName);
@@ -1065,7 +1068,8 @@ int dbgEntrFunc(dbgFuncDB_t **ppFuncDB, const char *file, const char *func, int 
 		 * yet see any need to handle these questions, so duplicaton seems to be the right
 		 * thing to do. -- rgerhards, 2008-03-10
 		 */
-		/* dbgprintf("%s:%d:%s: called first time, initializing FuncDB\n", pFuncDB->file, pFuncDB->line, pFuncDB->func); */
+		/* dbgprintf("%s:%d:%s: called first time, initializing FuncDB\n", pFuncDB->file,
+			pFuncDB->line, pFuncDB->func); */
 		/* get a new funcDB and add it to the list (all of this is protected by the mutex) */
 		pthread_mutex_lock(&mutFuncDBList);
 		if((pFuncDBListEntry = calloc(1, sizeof(dbgFuncDBListEntry_t))) == NULL) {
@@ -1162,7 +1166,8 @@ void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore, int iRet)
 	}
 	pThrd->stackPtr = iStackPtrRestore;
 	if(pThrd->stackPtr < 0) {
-		dbgprintf("Stack pointer for thread %lx below 0 - resetting (some RETiRet still wrong!)\n", (long) pthread_self());
+		dbgprintf("Stack pointer for thread %lx below 0 - resetting (some RETiRet still wrong!)\n",
+			(long) pthread_self());
 		pThrd->stackPtr = 0;
 	}
 }

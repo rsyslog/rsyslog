@@ -956,7 +956,8 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 				 * datestamp or not .. and advance the parse pointer accordingly.
 				 */
 				if (datetime.ParseTIMESTAMP3339(&dummyTS, &parse, &lenMsg) != RS_RET_OK) {
-					datetime.ParseTIMESTAMP3164(&dummyTS, &parse, &lenMsg, NO_PARSE3164_TZSTRING, NO_PERMIT_YEAR_AFTER_TIME);
+					datetime.ParseTIMESTAMP3164(&dummyTS, &parse, &lenMsg,
+					NO_PARSE3164_TZSTRING, NO_PERMIT_YEAR_AFTER_TIME);
 				}
 			} else {
 				if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &parse, &lenMsg) != RS_RET_OK &&
