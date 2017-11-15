@@ -60,7 +60,7 @@ DEFobjCurrIf(strm)
 DEFobjCurrIf(statsobj)
 
 statsobj_t *kafkaStats;
-int ctrQueueSize;
+STATSCOUNTER_DEF(ctrQueueSize, mutCtrQueueSize);
 STATSCOUNTER_DEF(ctrTopicSubmit, mutCtrTopicSubmit);
 STATSCOUNTER_DEF(ctrKafkaFail, mutCtrKafkaFail);
 STATSCOUNTER_DEF(ctrCacheMiss, mutCtrCacheMiss);
@@ -677,7 +677,7 @@ finalize_it:
 	if(iRet != RS_RET_OK) {
 		iRet = RS_RET_SUSPENDED;
 	}
-	STATSCOUNTER_SETMAX_NOMUT(ctrQueueSize, rd_kafka_outq_len(pData->rk));
+	STATSCOUNTER_SETMAX_NOMUT(ctrQueueSize, (unsigned) rd_kafka_outq_len(pData->rk));
 	STATSCOUNTER_INC(ctrTopicSubmit, mutCtrTopicSubmit);
 	RETiRet;
 }
@@ -1562,9 +1562,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 	STATSCOUNTER_INIT(ctrTopicSubmit, mutCtrTopicSubmit);
 	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"submitted",
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrTopicSubmit));
-    ctrQueueSize = 0;
-    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"maxoutqsize",
-        ctrType_Int, CTR_FLAG_NONE, &ctrQueueSize));
+	STATSCOUNTER_INIT(ctrQueueSize, mutCtrQueueSize);
+	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"maxoutqsize",
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrQueueSize));
 	STATSCOUNTER_INIT(ctrKafkaFail, mutCtrKafkaFail);
 	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"failures",
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaFail));
