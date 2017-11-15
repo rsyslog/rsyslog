@@ -18,7 +18,6 @@ addons:
     - pkg-config
     - libtool
     - autoconf
-    #- autoconf-archive
     - autotools-dev
     - gdb
     - valgrind
@@ -38,6 +37,7 @@ addons:
     - openjdk-7-jdk
     - wget
     - libkrb5-dev
+    #- autoconf-archive
     #- libgrok1
     #- libgrok-dev
     #- faketime
@@ -92,6 +92,11 @@ matrix:
        compiler: "gcc"
        dist: trusty
        env: DEBUGLESS="YES", CFLAGS="-g -O2 -std=c99 -Werror -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -Wno-unused-function"
+
+     - os: linux
+       compiler: "gcc"
+       dist: trusty
+       env: DO_COVERITY="YES",CRON="YES"
 
 services:
   - elasticsearch
