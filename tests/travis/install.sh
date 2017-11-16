@@ -12,7 +12,8 @@ if [ "$DISTRIB_CODENAME" == "trusty" ] || [ "$DISTRIB_CODENAME" == "precise" ]; 
 	set -ex
 	WANT_MAXMIND=1.2.0
 	curl -Ls https://github.com/maxmind/libmaxminddb/releases/download/${WANT_MAXMIND}/libmaxminddb-${WANT_MAXMIND}.tar.gz | tar -xz
-	(cd libmaxminddb-${WANT_MAXMIND} ; ./configure --prefix=/usr CC=gcc CFLAGS="-Wall -Wextra -g -pipe -std=gnu99"  > /dev/null ; sudo make install &> /dev/null)
+	(cd libmaxminddb-${WANT_MAXMIND} ; ./configure --prefix=/usr CC=gcc CFLAGS="-Wall -Wextra -g -pipe -std=gnu99"  > /dev/null ; make -j2  >/dev/null ; sudo make install > /dev/null)
+	rm -rf libmaxminddb-${WANT_MAXMIND} # get rid of source, e.g. for line length check
 	set +x
 else
 	sudo apt-get install -qq libmaxminddb-dev
@@ -22,7 +23,8 @@ fi
 if [ "x$KAFKA" == "xYES" ]; then 
 	sudo apt-get install -qq liblz4-dev
 	git clone https://github.com/edenhill/librdkafka
-	(unset CFLAGS; cd librdkafka ; ./configure --prefix=/usr --CFLAGS="-g" > /dev/null ; make  > /dev/null ; sudo make install > /dev/null)
+	(unset CFLAGS; cd librdkafka ; ./configure --prefix=/usr --CFLAGS="-g" > /dev/null ; make -j2  > /dev/null ; sudo make install > /dev/null)
+	rm -rf librdkafka # get rid of source, e.g. for line length check
 fi
 #if [ "x$KAFKA" == "xYES" ]; then sudo apt-get install -qq librdkafka-dev ; fi
 
