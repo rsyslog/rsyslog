@@ -10,15 +10,21 @@ compiler:
 
 services: mysql
 
+env:
+  global:
+    secure: DsTuVAZg5omWT652Xnz/ZG20nJ5ShdTDXPQA01HscUhjAzcuMYsCPp889QoLip+3O5yYH6/oH2WprQA6ZQQMt+7idNRo6ennu7tPQiHEBm/lK2Yq1W6r6tOb1zmSalbIVWV2cGTdKOOuHAatgmp/L70WjOlCrtLvPT+JQ9AkzLU=
+
 addons:
   apt:
+    sources:
+    - sourceline: 'deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_14.04/ ./'
+      key_url: 'http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_12.04/Release.key'
     packages:
     - build-essential
     - automake
     - pkg-config
     - libtool
     - autoconf
-    #- autoconf-archive
     - autotools-dev
     - gdb
     - valgrind
@@ -38,6 +44,9 @@ addons:
     - openjdk-7-jdk
     - wget
     - libkrb5-dev
+    - libsodium-dev
+    - libczmq-dev
+    #- autoconf-archive
     #- libgrok1
     #- libgrok-dev
     #- faketime
@@ -49,7 +58,6 @@ matrix:
      - compiler: "gcc"
      - compiler: "clang"
   include:
-       # test for OS X
      - os: osx
        compiler: "clang"
        env: CFLAGS="-g "
@@ -92,6 +100,11 @@ matrix:
        compiler: "gcc"
        dist: trusty
        env: DEBUGLESS="YES", CFLAGS="-g -O2 -std=c99 -Werror -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -Wno-unused-function"
+
+     - os: linux
+       compiler: "gcc"
+       dist: trusty
+       env: DO_COVERITY="YES",DO_CRON="YES", KAFKA="YES", GROK="YES"
 
 services:
   - elasticsearch
