@@ -65,6 +65,7 @@
 	 * sure to use these macros only if that really does not matter!
 	 */
 #	define PREFER_ATOMIC_INC(data) ((void) __sync_fetch_and_add(&(data), 1))
+#	define PREFER_FETCH_32BIT(data) ((unsigned) __sync_fetch_and_and(&(data), 0xffffffff))
 #else
 	/* note that we gained parctical proof that theoretical problems DO occur
 	 * if we do not properly address them. See this blog post for details:
@@ -186,6 +187,7 @@
 #	define DESTROY_ATOMIC_HELPER_MUT(x) pthread_mutex_destroy(&(x));
 
 #	define PREFER_ATOMIC_INC(data) ((void) ++data)
+#	define PREFER_FETCH_32BIT(data) ((unsigned) (data))
 
 #endif
 

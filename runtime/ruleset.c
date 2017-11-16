@@ -375,7 +375,12 @@ callForeachObject(struct cnfstmt *stmt, json_object *arr, smsg_t *pMsg, wti_t *p
 finalize_it:
 	if (keys != NULL) free(keys);
 	if (entry != NULL) json_object_put(entry);
-	if (key != NULL) json_object_put(key);
+	/* "fix" Coverity scan issue CID 185393: key currently can NOT be NULL
+	 * However, instead of just removing the
+	 *   if (key != NULL) json_object_put(key);
+	 * we put an assertion in its place.
+	 */
+	assert(key == NULL);
 	
 	RETiRet;
 }

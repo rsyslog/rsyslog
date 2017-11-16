@@ -392,7 +392,8 @@ tplToJSON(struct template *pTpl, smsg_t *pMsg, struct json_object **pjson, struc
 			}
 		}
 	}
-	*pjson = (iRet == RS_RET_OK) ? json : NULL;
+	assert(iRet == RS_RET_OK);
+	*pjson = json;
 
 finalize_it:
 	RETiRet;

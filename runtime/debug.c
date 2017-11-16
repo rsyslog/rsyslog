@@ -902,16 +902,22 @@ do_dbgprint(uchar *pszObjName, char *pszMsg, const char *pszFileName, size_t len
 	bWasNL = (pszMsg[lenMsg - 1] == '\n') ? 1 : 0;
 }
 
-#if !defined(_AIX)
-#pragma GCC diagnostic ignored "-Wunknown-pragmas"
-#pragma GCC diagnostic ignored "-Wempty-body"
-#pragma GCC diagnostic ignored "-Wclobbered"
-#endif
+static void
+dbgprintfWithCancelHdlr(uchar *const pszObjName, char *pszMsg,
+	const char *pszFileName, const size_t lenMsg)
+{
+	pthread_mutex_lock(&mutdbgprint);
+	pthread_cleanup_push(dbgMutexCancelCleanupHdlr, &mutdbgprint);
+	do_dbgprint(pszObjName, pszMsg, pszFileName, lenMsg);
+	pthread_cleanup_pop(1);
+}
 /* write the debug message. This is a helper to dbgprintf and dbgoprint which
  * contains common code. added 2008-09-26 rgerhards
+ * Note: We need to split the function due to the bad nature of POSIX
+ * cancel cleanup handlers.
  */
 static void DBGL_UNUSED
-dbgprint(obj_t *pObj, char *pszMsg, const char *pszFileName, size_t lenMsg)
+dbgprint(obj_t *pObj, char *pszMsg, const char *pszFileName, const size_t lenMsg)
 {
 	uchar *pszObjName = NULL;
 
@@ -925,17 +931,8 @@ dbgprint(obj_t *pObj, char *pszMsg, const char *pszFileName, size_t lenMsg)
 		pszObjName = obj.GetName(pObj);
 	}
 
-	pthread_mutex_lock(&mutdbgprint);
-	pthread_cleanup_push(dbgMutexCancelCleanupHdlr, &mutdbgprint);
-
-	do_dbgprint(pszObjName, pszMsg, pszFileName, lenMsg);
-
-	pthread_cleanup_pop(1);
+	dbgprintfWithCancelHdlr(pszObjName, pszMsg, pszFileName, lenMsg);
 }
-#if !defined(_AIX)
-#pragma GCC diagnostic warning "-Wempty-body"
-#pragma GCC diagnostic warning "-Wclobbered"
-#endif 
 
 static int DBGL_UNUSED
 checkDbgFile(const char *srcname)

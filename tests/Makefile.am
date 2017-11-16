@@ -244,6 +244,7 @@ TESTS +=  \
 	rscript_num2ipv4.sh \
 	rscript_trim.sh \
 	rscript_format_time.sh \
+	rscript_parse_time.sh \
 	mmanon_random_32_ipv4.sh \
 	mmanon_random_cons_32_ipv4.sh \
 	mmanon_recognize_ipv4.sh \
@@ -261,6 +262,8 @@ TESTS +=  \
 	mmanon_recognize_ipv6.sh \
 	mmanon_zero_64_ipv6.sh \
 	mmanon_both_modes_compatible.sh \
+	mmanon_recognize_ipembedded.sh \
+	mmanon_random_cons_128_ipembedded.sh \
 	empty-prop-comparison.sh \
 	rs_optimizer_pri.sh \
 	cee_simple.sh \
@@ -858,6 +861,8 @@ EXTRA_DIST= \
 	rscript_num2ipv4.sh \
 	rscript_trim.sh \
 	rscript_format_time.sh \
+	rscript_parse_time.sh \
+	rscript_parse_time_get-ts.py \
 	mmanon_random_32_ipv4.sh \
 	mmanon_random_cons_32_ipv4.sh \
 	mmanon_recognize_ipv4.sh \
@@ -875,6 +880,8 @@ EXTRA_DIST= \
 	mmanon_recognize_ipv6.sh \
 	mmanon_zero_64_ipv6.sh \
 	mmanon_both_modes_compatible.sh \
+	mmanon_recognize_ipembedded.sh \
+	mmanon_random_cons_128_ipembedded.sh \
 	testsuites/rscript_ne_var.conf \
 	rscript_eq.sh \
 	testsuites/rscript_eq.conf \

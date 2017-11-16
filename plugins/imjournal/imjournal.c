@@ -3,7 +3,7 @@
  * To test under Linux:
  * emmit log message into systemd journal
  *
- * Copyright (C) 2008-2016 Adiscon GmbH
+ * Copyright (C) 2008-2017 Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -62,7 +62,6 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(parser)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(net)
-DEFobjCurrIf(errmsg)
 
 struct modConfData_s {
 	int bIgnPrevMsg;
@@ -119,15 +118,17 @@ static rsRetVal persistJournalState(void);
 static rsRetVal loadJournalState(void);
 
 static rsRetVal openJournal(void) {
+	int r;
 	DEFiRet;
 
-	if (sd_journal_open(&j, SD_JOURNAL_LOCAL_ONLY) < 0)
+	if ((r = sd_journal_open(&j, SD_JOURNAL_LOCAL_ONLY)) < 0) {
+		LogError(-r, RS_RET_IO_ERROR, "imjournal: sd_journal_open() failed");
 		iRet = RS_RET_IO_ERROR;
+	}
 	RETiRet;
 }
 
 static void closeJournal(void) {
-
 	if (cs.stateFile) { /* can't persist without a state file */
 		persistJournalState();
 	}
@@ -285,18 +286,19 @@ readjournal(void)
 		if (length == 10) {
 			severity = ((char *)get)[9] - '0';
 			if (severity < 0 || 7 < severity) {
-				dbgprintf("The value of the 'PRIORITY' field is "
-					"out of bounds: %d, resetting\n", severity);
+				LogError(0, RS_RET_ERR, "imjournal: the value of the 'PRIORITY' field is "
+					"out of bounds: %d, resetting", severity);
 				severity = cs.iDfltSeverity;
 			}
 		} else {
-			dbgprintf("The value of the 'PRIORITY' field has an "
+			LogError(0, RS_RET_ERR, "The value of the 'PRIORITY' field has an "
 				"unexpected length: %zu\n", length);
 		}
 	}
 
 	/* Get syslog facility */
 	if (sd_journal_get_data(j, "SYSLOG_FACILITY", &get, &length) >= 0) {
+		// Note: the journal frequently contains invalid facilities!
 		if (length == 17 || length == 18) {
 			facility = ((char *)get)[16] - '0';
 			if (length == 18) {
@@ -304,13 +306,13 @@ readjournal(void)
 				facility += ((char *)get)[17] - '0';
 			}
 			if (facility < 0 || 23 < facility) {
-				dbgprintf("The value of the 'FACILITY' field is "
+				DBGPRINTF("The value of the 'FACILITY' field is "
 					"out of bounds: %d, resetting\n", facility);
 				facility = cs.iDfltFacility;
 			}
 		} else {
-			dbgprintf("The value of the 'FACILITY' field has an "
-				"unexpected length: %zu\n", length);
+			DBGPRINTF("The value of the 'FACILITY' field has an "
+				"unexpected length: %zu value: '%s'\n", length, (const char*)get);
 		}
 	}
 
@@ -369,7 +371,7 @@ readjournal(void)
 
 		/* ... but we know better than to trust the specs */
 		if (equal_sign == NULL) {
-			errmsg.LogError(0, RS_RET_ERR, "SD_JOURNAL_FOREACH_DATA()"
+			LogError(0, RS_RET_ERR, "SD_JOURNAL_FOREACH_DATA()"
 				"returned a malformed field (has no '='): '%s'", (char*)get);
 			continue; /* skip the entry */
 		}
@@ -404,10 +406,8 @@ readjournal(void)
 	enqMsg((uchar *)message, (uchar *) sys_iden_help, facility, severity, &tv, json, 0);
 
 finalize_it:
-	if (sys_iden_help != NULL)
-		free(sys_iden_help);
-	if (message != NULL)
-		free(message);
+	free(sys_iden_help);
+	free(message);
 	RETiRet;
 }
 
@@ -415,7 +415,7 @@ finalize_it:
 /* This function gets journal cursor and saves it into state file
  */
 static rsRetVal
-persistJournalState (void)
+persistJournalState(void)
 {
 	DEFiRet;
 	FILE *sf; /* state file */
@@ -438,24 +438,18 @@ persistJournalState (void)
 			free(cursor);
                        /* change the name of the file to the configured one */
                        if (iRet == RS_RET_OK && rename(tmp_sf, cs.stateFile) == -1) {
-                               char errStr[256];
-                               rs_strerror_r(errno, errStr, sizeof(errStr));
+                               LogError(errno, iRet, "imjournal: rename() failed: "
+                                       "for new path: '%s'", cs.stateFile);
                                iRet = RS_RET_IO_ERROR;
-                               errmsg.LogError(0, iRet, "rename() failed: "
-                                       "'%s', new path: '%s'\n", errStr, cs.stateFile);
                        }
 
 		} else {
-			char errStr[256];
-			rs_strerror_r(errno, errStr, sizeof(errStr));
-			errmsg.LogError(0, RS_RET_FOPEN_FAILURE, "fopen() failed: "
-				"'%s', path: '%s'\n", errStr, tmp_sf);
+			LogError(errno, RS_RET_FOPEN_FAILURE, "imjournal: fopen() failed "
+				"for path: '%s'", tmp_sf);
 			iRet = RS_RET_FOPEN_FAILURE;
 		}
 	} else {
-		char errStr[256];
-		rs_strerror_r(-(ret), errStr, sizeof(errStr));
-		errmsg.LogError(0, RS_RET_ERR, "sd_journal_get_cursor() failed: '%s'\n", errStr);
+		LogError(-ret, RS_RET_ERR, "imjournal: sd_journal_get_cursor() failed");
 		iRet = RS_RET_ERR;
 	}
 	RETiRet;
@@ -474,6 +468,7 @@ pollJournal(void)
 {
 	DEFiRet;
 	struct pollfd pollfd;
+	int err; // journal error code to process
 	int pr = 0;
 #ifdef NEW_JOURNAL
 	int jr = 0;
@@ -493,11 +488,7 @@ pollJournal(void)
 			 */
 		ABORT_FINALIZE(RS_RET_OK);
 		} else {
-			char errStr[256];
-
-			rs_strerror_r(errno, errStr, sizeof(errStr));
-			LogError(0, RS_RET_ERR,
-				"poll() failed: '%s'", errStr);
+			LogError(errno, RS_RET_ERR, "imjournal: poll() failed");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	}
@@ -505,6 +496,7 @@ pollJournal(void)
 	assert(pr == 1);
 
 	pr = sd_journal_process(j);
+	err = pr;
 	if (pr < 0) {
 #else
 	jr = sd_journal_process(j);
@@ -516,25 +508,16 @@ pollJournal(void)
 		closeJournal();
 		cs.stateFile = tmp;
 
-		iRet = openJournal();
-		if (iRet != RS_RET_OK) {
-			char errStr[256];
-			rs_strerror_r(errno, errStr, sizeof(errStr));
-			LogError(0, RS_RET_IO_ERROR,
-				"sd_journal_open() failed: '%s'", errStr);
-			ABORT_FINALIZE(RS_RET_ERR);
-		}
+		CHKiRet(openJournal());
 
 		if(cs.stateFile != NULL){
-			iRet = loadJournalState();
+			iRet = loadJournalState(); // TODO: CHECK
 		}
 		LogMsg(0, RS_RET_OK, LOG_NOTICE, "imjournal: journal reloaded...");
 	} else if (jr < 0) {
+		err = jr;
 #endif
-		char errStr[256];
-		rs_strerror_r(errno, errStr, sizeof(errStr));
-		LogError(0, RS_RET_ERR,
-			"sd_journal_process() failed: '%s'", errStr);
+		LogError(err, RS_RET_ERR, "imjournal: sd_journal_process() failed");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -546,22 +529,17 @@ finalize_it:
 static rsRetVal
 skipOldMessages(void)
 {
+	int r;
 	DEFiRet;
 
-	if (sd_journal_seek_tail(j) < 0) {
-		char errStr[256];
-
-		rs_strerror_r(errno, errStr, sizeof(errStr));
-		errmsg.LogError(0, RS_RET_ERR,
-			"sd_journal_seek_tail() failed: '%s'", errStr);
+	if ((r = sd_journal_seek_tail(j)) < 0) {
+		LogError(-r, RS_RET_ERR,
+			"imjournal: sd_journal_seek_tail() failed");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	if (sd_journal_previous(j) < 0) {
-		char errStr[256];
-
-		rs_strerror_r(errno, errStr, sizeof(errStr));
-		errmsg.LogError(0, RS_RET_ERR,
-			"sd_journal_previous() failed: '%s'", errStr);
+	if ((r = sd_journal_previous(j)) < 0) {
+		LogError(-r, RS_RET_ERR,
+			"imjournal: sd_journal_previous() failed");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -575,12 +553,13 @@ static rsRetVal
 loadJournalState(void)
 {
 	DEFiRet;
+	int r;
 
 	if (cs.stateFile[0] != '/') {
 		char *new_stateFile;
 
 		if (-1 == asprintf(&new_stateFile, "%s/%s", (char *)glbl.GetWorkDir(), cs.stateFile)) {
-			errmsg.LogError(0, RS_RET_OUT_OF_MEMORY, "imjournal: asprintf failed\n");
+			LogError(0, RS_RET_OUT_OF_MEMORY, "imjournal: asprintf failed\n");
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		}
 		free (cs.stateFile);
@@ -596,7 +575,7 @@ loadJournalState(void)
 
 			if (fscanf(r_sf, "%128s\n", readCursor) != EOF) {
 				if (sd_journal_seek_cursor(j, readCursor) != 0) {
-					errmsg.LogError(0, RS_RET_ERR, "imjournal: "
+					LogError(0, RS_RET_ERR, "imjournal: "
 						"couldn't seek to cursor `%s'\n", readCursor);
 					iRet = RS_RET_ERR;
 				} else {
@@ -613,18 +592,18 @@ loadJournalState(void)
 					* but if cursor has been intentionally compromised it could stop logging even
 					* with persistent journal.
 					* */
-					if (sd_journal_get_cursor(j, &tmp_cursor) < 0) {
-						errmsg.LogError(0, RS_RET_IO_ERROR, "imjournal: "
+					if ((r = sd_journal_get_cursor(j, &tmp_cursor)) < 0) {
+						LogError(-r, RS_RET_IO_ERROR, "imjournal: "
 						"loaded invalid cursor, seeking to the head of journal\n");
-						if (sd_journal_seek_head(j) < 0) {
-							errmsg.LogError(0, RS_RET_ERR, "imjournal: "
+						if ((r = sd_journal_seek_head(j)) < 0) {
+							LogError(-r, RS_RET_ERR, "imjournal: "
 							"sd_journal_seek_head() failed, when cursor is invalid\n");
 							iRet = RS_RET_ERR;
 						}
 					}
 				}
 			} else {
-				errmsg.LogError(0, RS_RET_IO_ERROR, "imjournal: "
+				LogError(0, RS_RET_IO_ERROR, "imjournal: "
 					"fscanf on state file `%s' failed\n", cs.stateFile);
 				iRet = RS_RET_IO_ERROR;
 			}
@@ -634,14 +613,14 @@ loadJournalState(void)
                         if (iRet != RS_RET_OK && cs.bIgnoreNonValidStatefile) {
                                 /* ignore state file errors */
                                 iRet = RS_RET_OK;
-                                errmsg.LogError(0, NO_ERRCODE,
+                                LogError(0, NO_ERRCODE,
                                         "imjournal: ignoring invalid state file");
                                 if (cs.bIgnorePrevious) {
                                         skipOldMessages();
                                 }
                         }
 		} else {
-			errmsg.LogError(0, RS_RET_FOPEN_FAILURE, "imjournal: "
+			LogError(0, RS_RET_FOPEN_FAILURE, "imjournal: "
 					"open on state file `%s' failed\n", cs.stateFile);
 		}
 	} else if (cs.bIgnorePrevious) {
@@ -653,6 +632,16 @@ loadJournalState(void)
 finalize_it:
 	RETiRet;
 }
+
+static void
+tryRecover(void) {
+	LogMsg(0, RS_RET_OK, LOG_INFO, "imjournal: trying to recover from unexpected "
+		"journal error");
+	closeJournal();
+	srSleep(10, 0);	// do not hammer machine with too-frequent retries
+	openJournal();
+}
+
 
 BEGINrunInput
 	int count = 0;
@@ -676,8 +665,8 @@ CODESTARTrunInput
 	if (cs.bUseJnlPID != -1) {
 		free(cs.usePid);
 		cs.usePid = strdup("system");
-		errmsg.LogError(0, RS_RET_DEPRECATED,
-		"\"usepidfromsystem\" is depricated, use \"usepid\" instead");
+		LogError(0, RS_RET_DEPRECATED,
+			"\"usepidfromsystem\" is depricated, use \"usepid\" instead");
 	}
 
 
@@ -691,8 +680,8 @@ CODESTARTrunInput
 		pidFieldName = "SYSLOG_PID";
 		bPidFallBack = 1;
 		if (cs.usePid && (strcmp(cs.usePid, "both") != 0)) {
-			errmsg.LogError(0, RS_RET_OK, "option \"usepid\""
-			" should contain one of system|syslog|both and no '%s'",cs.usePid);
+			LogError(0, RS_RET_OK, "option \"usepid\""
+				" should contain one of system|syslog|both and no '%s'",cs.usePid);
 		}
 	}
 
@@ -704,21 +693,23 @@ CODESTARTrunInput
 
 		r = sd_journal_next(j);
 		if (r < 0) {
-			char errStr[256];
-
-			rs_strerror_r(errno, errStr, sizeof(errStr));
-			errmsg.LogError(0, RS_RET_ERR,
-				"sd_journal_next() failed: '%s'", errStr);
-			ABORT_FINALIZE(RS_RET_ERR);
+			LogError(-r, RS_RET_ERR, "imjournal: sd_journal_next() failed");
+			tryRecover();
+			continue;
 		}
 
 		if (r == 0) {
 			/* No new messages, wait for activity. */
-			CHKiRet(pollJournal());
+			if(pollJournal() != RS_RET_OK) {
+				tryRecover();
+			}
 			continue;
 		}
 
-		CHKiRet(readjournal());
+		if(readjournal() != RS_RET_OK) {
+			tryRecover();
+			continue;
+		}
 		if (cs.stateFile) { /* can't persist without a state file */
 			/* TODO: This could use some finer metric. */
 			count++;
@@ -797,7 +788,6 @@ CODESTARTmodExit
 	objRelease(datetime, CORE_COMPONENT);
 	objRelease(parser, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
-	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -807,7 +797,7 @@ BEGINsetModCnf
 CODESTARTsetModCnf
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if (pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
 				"config parameters [module(...)]");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -885,7 +875,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(parser, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(net, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* we need to create the inputName property (only once during our lifetime) */
 	CHKiRet(prop.CreateStringProp(&pInputName, UCHAR_CONSTANT("imjournal"), sizeof("imjournal") - 1));

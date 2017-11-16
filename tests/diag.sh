@@ -43,10 +43,10 @@
 TB_TIMEOUT_STARTSTOP=1200 # timeout for start/stop rsyslogd in tenths (!) of a second 1200 => 2 min
 
 #START: ext kafka config
-dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.8/zookeeper-3.4.8.tar.gz
+dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.10/zookeeper-3.4.10.tar.gz
 dep_kafka_url=http://www-us.apache.org/dist/kafka/0.10.2.1/kafka_2.12-0.10.2.1.tgz
 dep_cache_dir=$(readlink -f $srcdir/.dep_cache)
-dep_zk_cached_file=$dep_cache_dir/zookeeper-3.4.8.tar.gz
+dep_zk_cached_file=$dep_cache_dir/zookeeper-3.4.10.tar.gz
 dep_kafka_cached_file=$dep_cache_dir/kafka_2.12-0.10.2.1.tgz
 dep_kafka_dir_xform_pattern='s#^[^/]\+#kafka#g'
 dep_zk_dir_xform_pattern='s#^[^/]\+#zk#g'
@@ -611,21 +611,39 @@ case $1 in
 		    exit 77
 		fi
 		;;
-	 'download-kafka')
+   'download-kafka')
 		if [ ! -d $dep_cache_dir ]; then
-				echo "Creating dependency cache dir"
-				mkdir $dep_cache_dir
+			echo "Creating dependency cache dir"
+			mkdir $dep_cache_dir
 		fi
 		if [ ! -f $dep_zk_cached_file ]; then
-				echo "Downloading zookeeper"
-				wget -q $dep_zk_url -O $dep_zk_cached_file
+			echo "Downloading zookeeper"
+			wget -q $dep_zk_url -O $dep_zk_cached_file
+			if [ $? -ne 0 ]
+			then
+				echo error during wget, retry:
+				wget $dep_zk_url -O $dep_zk_cached_file
+				if [ $? -ne 0 ]
+				then
+					. $srcdir/diag.sh error-exit 1
+				fi
+			fi
 		fi
 		if [ ! -f $dep_kafka_cached_file ]; then
-				echo "Downloading kafka"
-				wget -q $dep_kafka_url -O $dep_kafka_cached_file
+			echo "Downloading kafka"
+			wget -q $dep_kafka_url -O $dep_kafka_cached_file
+			if [ $? -ne 0 ]
+			then
+				echo error during wget, retry:
+				wget $dep_kafka_url -O $dep_kafka_cached_file
+				if [ $? -ne 0 ]
+				then
+					. $srcdir/diag.sh error-exit 1
+				fi
+			fi
 		fi
 		;;
-	 'start-zookeeper')
+    'start-zookeeper')
 		if [ "x$2" == "x" ]; then
 			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
 			dep_work_tk_config="zoo.cfg"
@@ -821,12 +839,15 @@ case $1 in
 				echo trying to analyze core for main rsyslogd binary
 				echo note: this may not be the correct file, check it
 				CORE=`ls core*`
-				echo "set pagination off" >gdb.in
-				echo "core $CORE" >>gdb.in
+				#echo "set pagination off" >gdb.in
+				#echo "core $CORE" >>gdb.in
+				echo "bt" >> gdb.in
+				echo "echo === THREAD INFO ===" >> gdb.in
 				echo "info thread" >> gdb.in
+				echo "echo === thread apply all bt full ===" >> gdb.in
 				echo "thread apply all bt full" >> gdb.in
 				echo "q" >> gdb.in
-				gdb ../tools/rsyslogd < gdb.in
+				gdb ../tools/rsyslogd $CORE -batch -x gdb.in
 				CORE=
 				rm gdb.in
 			fi

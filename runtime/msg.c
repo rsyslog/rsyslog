@@ -3134,6 +3134,9 @@ msgGetJSONPropJSONorString(smsg_t * const pMsg, msgPropDescr_t *pProp, struct js
 		*pjson = *jroot;
 		FINALIZE;
 	}
+	if(*jroot == NULL) {
+		ABORT_FINALIZE(RS_RET_NOT_FOUND);
+	}
 	leaf = jsonPathGetLeaf(pProp->name, pProp->nameLen);
 	CHKiRet(jsonPathFindParent(*jroot, pProp->name, leaf, &parent, 1));
 	if(jsonVarExtract(parent, (char*)leaf, pjson) == FALSE) {
@@ -4675,8 +4678,9 @@ jsonPathFindNext(struct json_object *root, uchar *namestart, uchar **name, uchar
 		namebuf[i] = *p;
 	if(i > 0) {
 		namebuf[i] = '\0';
-		if(jsonVarExtract(root, (char*)namebuf, &json) == FALSE)
+		if(jsonVarExtract(root, (char*)namebuf, &json) == FALSE) {
 			json = NULL;
+		}
 	} else
 		json = root;
 	if(json == NULL) {
