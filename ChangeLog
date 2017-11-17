@@ -83,6 +83,8 @@ Version 8.31.0 [v8-stable] 2017-11-28
   error messages. Fixed this and also increased the number of error
   messages so that it now is easier to diagnose problems with this module.
   Also a little bit of internal brush-up.
+- omkafka bugfix: statistics counter maxoutqsize could not be reset
+  Thanks to github user flisky for the patch.
 - omkafka bugfix: potential hang condition
   omkafka did not release a mutex under some error conditions (most
   notably out of memory on specific alloc calls). This lead to a hang
