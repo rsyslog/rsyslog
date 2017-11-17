@@ -43,7 +43,7 @@
 #ifdef HAVE_SYS_STAT_H
 #	include <sys/stat.h>
 #endif
-#ifdef OS_SOLARIS
+#if defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE)
 #include <port.h>
 #include <sys/port.h>
 #endif
@@ -146,7 +146,7 @@ typedef struct lstn_s {
 	uchar* movedfrom_statefile;
 	__u32 movedfrom_cookie;
 #endif
-#ifdef OS_SOLARIS
+#if defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE)
 	struct fileinfo *pfinf;
 	sbool bPortAssociated;
 #endif
@@ -285,7 +285,7 @@ static int ino_fd;	/* fd for inotify calls */
 
 #endif /* #if HAVE_INOTIFY_INIT -------------------------------------------------- */
 
-#ifdef OS_SOLARIS
+#if defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE)
 struct fileinfo {
 	struct file_obj fobj;
 	int events;
@@ -1153,7 +1153,7 @@ addListner(instanceConf_t *inst)
 	pThis->movedfrom_statefile = NULL;
 	pThis->movedfrom_cookie = 0;
 #endif
-#ifdef OS_SOLARIS
+#if defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE)
 	pThis->pfinf = NULL;
 	pThis->bPortAssociated = 0;
 #endif
@@ -1288,7 +1288,7 @@ BEGINsetModCnf
 	int i;
 CODESTARTsetModCnf
 	/* new style config has different default! */
-#ifdef OS_SOLARIS	/* use FEN on Solaris! */
+#if defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE) /* use FEN on Solaris! */
 	loadModConf->opMode = OPMODE_FEN;
 #else
 	loadModConf->opMode = OPMODE_INOTIFY;
@@ -1319,7 +1319,7 @@ CODESTARTsetModCnf
 			if(!es_strconstcmp(pvals[i].val.d.estr, "polling"))
 				loadModConf->opMode = OPMODE_POLLING;
 			else if(!es_strconstcmp(pvals[i].val.d.estr, "inotify")) {
-#ifdef OS_SOLARIS	/* use FEN on Solaris! */
+#if defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE) /* use FEN on Solaris! */
 				loadModConf->opMode = OPMODE_FEN;
 				DBGPRINTF("imfile: inotify mode configured, but only FEN"
 				  "is available on OS SOLARIS. Switching to FEN Mode automatically\n");
@@ -1781,14 +1781,12 @@ in_setupDirWatch(const int dirIdx)
 				if (psztmp != NULL) {
 					*psztmp = '\0';
 				} else {
-					DBGPRINTF("imfile: in_setupDirWatch: unexpected error #2 "
-						"creating truncated directorynamefor '%s'\n",
+					DBGPRINTF("imfile: in_setupDirWatch: unexpected error #2 creating truncated directorynamefor '%s'\n",
 						dirs[dirIdx].dirName);
 					goto done;
 				}
 			} else {
-				DBGPRINTF("imfile: in_setupDirWatch: unexpected error #1 creating "
-					"truncated directorynamefor '%s'\n",
+				DBGPRINTF("imfile: in_setupDirWatch: unexpected error #1 creating truncated directorynamefor '%s'\n",
 					dirs[dirIdx].dirName);
 				goto done;
 			}
@@ -1920,7 +1918,7 @@ lstnDup(lstn_t **ppExisting, uchar *const __restrict__ newname, uchar *const __r
 	pThis->movedfrom_statefile = NULL;
 	pThis->movedfrom_cookie = 0;
 #endif
-#ifdef OS_SOLARIS
+#if defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE)
 	pThis->pfinf = NULL;
 	pThis->bPortAssociated = 0;
 #endif
@@ -2020,8 +2018,7 @@ in_setupFileWatchStatic(lstn_t *pLstn)
 	} else {
 		/* Duplicate static object as well, otherwise the configobject could be deleted later! */
 		if(lstnDup(&pLstn, pLstn->pszBaseName, NULL) != RS_RET_OK) {
-			DBGPRINTF("imfile: in_setupFileWatchStatic failed to duplicate listener for '%s'\n",
-				pLstn->pszFileName);
+			DBGPRINTF("imfile: in_setupFileWatchStatic failed to duplicate listener for '%s'\n", pLstn->pszFileName);
 			goto done;
 		}
 		startLstnFile(pLstn);
@@ -2112,14 +2109,13 @@ in_handleDirGetFullDir(char* pszoutput, char* pszrootdir, char* pszsubdir)
 			if (psztmp != NULL) {
 				*psztmp = '\0';
 			} else {
-				DBGPRINTF("imfile: in_handleDirGetFullDir: unexpected error #2 "
-					"creating truncated directoryname for '%s'\n",
+				DBGPRINTF("imfile: in_handleDirGetFullDir: unexpected error #2 creating truncated directoryname for '%s'\n",
 					dirnametrunc);
 				goto done;
 			}
 		} else {
-			DBGPRINTF("imfile: in_handleDirGetFullDir: unexpected error #1 creating "
-				"truncated directoryname for '%s'\n", dirnametrunc);
+			DBGPRINTF("imfile: in_handleDirGetFullDir: unexpected error #1 creating truncated directoryname for '%s'\n",
+				dirnametrunc);
 			goto done;
 		}
 	}
@@ -2232,8 +2228,7 @@ in_handleDirEventFileCREATE(struct inotify_event *ev, const int dirIdx)
 							dirIdxFinal = i; /* Have to correct directory index for listnr dupl
 												in in_setupFileWatchDynamic */
 
-							DBGPRINTF("imfile: Found matching directory for "
-								"file '%s' in dir '%s' (Idx=%d)\n",
+							DBGPRINTF("imfile: Found matching directory for file '%s' in dir '%s' (Idx=%d)\n",
 								ev->name, dirs[dirIdxFinal].dirName, dirIdxFinal);
 							break;
 						}
@@ -2243,15 +2238,12 @@ in_handleDirEventFileCREATE(struct inotify_event *ev, const int dirIdx)
 
 					if(ftIdx == -1) {
 						DBGPRINTF("imfile: file '%s' not associated with dir '%s' and also no "
-							"matching wildcard directory found\n",
-							ev->name, dirs[dirIdxFinal].dirName);
+							"matching wildcard directory found\n", ev->name, dirs[dirIdxFinal].dirName);
 						goto done;
 					}
 					else {
-						DBGPRINTF("imfile: file '%s' not associated with dir '%s', "
-							"using dirIndex %d instead\n",
-							ev->name, (pszDir == NULL) ? dirs[dirIdxFinal].dirName : pszDir,
-							dirIdxFinal);
+						DBGPRINTF("imfile: file '%s' not associated with dir '%s', using dirIndex %d instead\n",
+							ev->name, (pszDir == NULL) ? dirs[dirIdxFinal].dirName : pszDir, dirIdxFinal);
 					}
 				} else {
 					DBGPRINTF("imfile: file '%s' not associated with dir '%s'\n",
@@ -2270,8 +2262,7 @@ in_handleDirEventFileCREATE(struct inotify_event *ev, const int dirIdx)
 		if(ev->mask & IN_MOVED_TO) {
 			if (pLstn->movedfrom_statefile != NULL && pLstn->movedfrom_cookie == ev->cookie) {
 				/* We need to prepar fullfn before we can generate statefilename */
-				snprintf(fullfn, MAXFNAME, "%s/%s",
-				(pszDir == NULL) ? dirs[dirIdxFinal].dirName : pszDir, (uchar*)ev->name);
+				snprintf(fullfn, MAXFNAME, "%s/%s", (pszDir == NULL) ? dirs[dirIdxFinal].dirName : pszDir, (uchar*)ev->name);
 				getStateFileName(NULL, statefile_new, sizeof(statefile_new), (uchar*)fullfn);
 				getFullStateFileName(statefile_new, statefilefull_new, sizeof(statefilefull_new));
 				getFullStateFileName(pLstn->movedfrom_statefile, statefilefull_old, sizeof(statefilefull_old));
@@ -2286,8 +2277,7 @@ in_handleDirEventFileCREATE(struct inotify_event *ev, const int dirIdx)
 					errmsg.LogError(0, RS_RET_ERR, "imfile: could not rename statefile "
 						"'%s' into '%s' with error: %s", statefilefull_old, statefilefull_new, errStr);
 				} else {
-					DBGPRINTF("imfile: statefile '%s' renamed into '%s'\n", statefilefull_old,
-						statefilefull_new);
+					DBGPRINTF("imfile: statefile '%s' renamed into '%s'\n", statefilefull_old, statefilefull_new);
 				}
 
 				/* Free statefile memory */
@@ -2295,8 +2285,7 @@ in_handleDirEventFileCREATE(struct inotify_event *ev, const int dirIdx)
 				pLstn->movedfrom_statefile = NULL;
 				pLstn->movedfrom_cookie = 0;
 			} else {
-					DBGPRINTF("imfile: IN_MOVED_TO either unknown cookie '%d' we "
-						"expected '%d' or missing statefile '%s'\n",
+					DBGPRINTF("imfile: IN_MOVED_TO either unknown cookie '%d' we expected '%d' or missing statefile '%s'\n",
 						pLstn->movedfrom_cookie, ev->cookie, pLstn->movedfrom_statefile);
 			}
 		}
@@ -2564,7 +2553,7 @@ do_inotify(void)
 
 
 /* --- Monitor files in FEN mode (OS_SOLARIS)*/
-#ifdef OS_SOLARIS
+#if defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE) /* use FEN on Solaris! */
 static void
 fen_printevent(int event, char *pname)
 {
