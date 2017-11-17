@@ -361,12 +361,22 @@ struct db_cursor* launch_query(struct queryopt *opt, struct select_doc *s_doc,
 	struct db_cursor *out;
 
 	out = malloc (sizeof(struct db_cursor));
+#if MONGOC_CHECK_VERSION (1, 5, 0)
+	const bson_t *opts = BCON_NEW (
+		"skip", BCON_INT32 (opt->e_skip),
+		"limit", BCON_INT32 (opt->e_ret)
+	);
+	out->cursor = mongoc_collection_find_with_opts (db_coll->collection,
+							qu_doc->query, opts,
+							NULL);
+#else
 	out->cursor = mongoc_collection_find (db_coll->collection,
 					      MONGOC_QUERY_NONE,
 					      (uint32_t)opt->e_skip,
 					      (uint32_t)opt->e_ret, 0,
 					      qu_doc->query, s_doc->select,
 					      NULL);
+#endif
 	if (!out->cursor)
 	{
 	 	perror ("mongo_sync_cmd_query()");
