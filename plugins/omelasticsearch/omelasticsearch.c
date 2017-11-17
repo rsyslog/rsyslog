@@ -171,7 +171,7 @@ static struct cnfparamblk actpblk =
 	  actpdescr
 	};
 
-static rsRetVal curlSetup(wrkrInstanceData_t *pWrkrData, instanceData *pData);
+static rsRetVal curlSetup(wrkrInstanceData_t *pWrkrData);
 
 BEGINcreateInstance
 CODESTARTcreateInstance
@@ -196,7 +196,7 @@ CODESTARTcreateWrkrInstance
 			pData->bulkmode = 0; /* at least it works */
 		}
 	}
-	CHKiRet(curlSetup(pWrkrData, pWrkrData->pData));
+	CHKiRet(curlSetup(pWrkrData));
 finalize_it:
 ENDcreateWrkrInstance
 
@@ -1331,51 +1331,49 @@ finalize_it:
 }
 
 static void ATTR_NONNULL()
-curlCheckConnSetup(wrkrInstanceData_t *const pWrkrData)
+curlSetupCommon(wrkrInstanceData_t *const pWrkrData, CURL *const handle)
 {
 	PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
-	CURL *const handle = pWrkrData->curlCheckConnHandle;
 	curl_easy_setopt(handle, CURLOPT_HTTPHEADER, pWrkrData->curlHeader);
 	curl_easy_setopt(handle, CURLOPT_NOSIGNAL, TRUE);
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, curlResult);
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, pWrkrData);
-
-	curl_easy_setopt(handle, CURLOPT_TIMEOUT_MS, pWrkrData->pData->healthCheckTimeout);
-
 	if(pWrkrData->pData->allowUnsignedCerts)
 		curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, FALSE);
-
+	if(pWrkrData->pData->authBuf != NULL) {
+		curl_easy_setopt(handle, CURLOPT_USERPWD, pWrkrData->pData->authBuf);
+		curl_easy_setopt(handle, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
+	}
 	/* uncomment for in-dept debuggung:
 	curl_easy_setopt(handle, CURLOPT_VERBOSE, TRUE); */
 }
 
-static void ATTR_NONNULL(1)
-curlPostSetup(wrkrInstanceData_t *const pWrkrData, uchar*const  authBuf)
+static void ATTR_NONNULL()
+curlCheckConnSetup(wrkrInstanceData_t *const pWrkrData)
 {
 	PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
-	CURL *const handle = pWrkrData->curlPostHandle;
-	curl_easy_setopt(handle, CURLOPT_HTTPHEADER, pWrkrData->curlHeader);
-	curl_easy_setopt(handle, CURLOPT_NOSIGNAL, TRUE);
-	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, curlResult);
-	curl_easy_setopt(handle, CURLOPT_WRITEDATA, pWrkrData);
+	curlSetupCommon(pWrkrData, pWrkrData->curlCheckConnHandle);
+	curl_easy_setopt(pWrkrData->curlCheckConnHandle,
+		CURLOPT_TIMEOUT_MS, pWrkrData->pData->healthCheckTimeout);
+}
 
-	curl_easy_setopt(handle, CURLOPT_POST, 1);
-
-	if(authBuf != NULL) {
-		curl_easy_setopt(handle, CURLOPT_USERPWD, authBuf);
-		curl_easy_setopt(handle, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
-	}
+static void ATTR_NONNULL(1)
+curlPostSetup(wrkrInstanceData_t *const pWrkrData)
+{
+	PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
+	curlSetupCommon(pWrkrData, pWrkrData->curlPostHandle);
+	curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_POST, 1);
 }
 
 #define CONTENT_JSON "Content-Type: application/json; charset=utf-8"
 
 static rsRetVal ATTR_NONNULL()
-curlSetup(wrkrInstanceData_t *const pWrkrData, instanceData *pData)
+curlSetup(wrkrInstanceData_t *const pWrkrData)
 {
 	DEFiRet;
 	pWrkrData->curlHeader = curl_slist_append(NULL, CONTENT_JSON);
 	CHKmalloc(pWrkrData->curlPostHandle = curl_easy_init());;
-	curlPostSetup(pWrkrData, pData->authBuf);
+	curlPostSetup(pWrkrData);
 
 	CHKmalloc(pWrkrData->curlCheckConnHandle = curl_easy_init());
 	curlCheckConnSetup(pWrkrData);
