@@ -340,7 +340,8 @@ CODESTARTparse2
 		*p2parse = ' ';
 		p2parse++;
 		lenMsg--;
-		lenMsg -= (pInst->tabLength-1); /* size of tab goes from tabLength to 1, so shorten the message by the difference */
+		lenMsg -= (pInst->tabLength-1); /* size of tab goes from tabLength to 1, so shorten
+						the message by the difference */
 		memmove(p2parse, p2parse+(pInst->tabLength-1), lenMsg); /* move the message portion up to overwrite the tab */ 
 		*(p2parse + lenMsg)	= '\0';
 		pMsg->iLenRawMsg -= (pInst->tabLength-1);
@@ -391,7 +392,8 @@ CODESTARTparse2
 		*p2parse = ' ';
 		p2parse++;
 		lenMsg--;
-		lenMsg -= (pInst->tabLength-1); /* size of tab goes from tabLength to 1, so shorten the message by the difference */
+		lenMsg -= (pInst->tabLength-1); /* size of tab goes from tabLength to 1, so shorten
+						the message by the difference */
 		memmove(p2parse, p2parse+(pInst->tabLength-1), lenMsg); /* move the message portion up to overwrite the tab */ 
 		*(p2parse + lenMsg) = '\0';
 		pMsg->iLenRawMsg -= (pInst->tabLength-1);

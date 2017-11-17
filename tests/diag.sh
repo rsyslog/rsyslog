@@ -35,7 +35,7 @@
 #valgrind="valgrind --leak-check=full --show-leak-kinds=all --malloc-fill=ff --free-fill=fe --log-fd=1"
 
 #valgrind="valgrind --tool=drd --log-fd=1"
-#valgrind="valgrind --tool=helgrind --log-fd=1"
+#valgrind="valgrind --tool=helgrind --log-fd=1 --suppressions=linux_localtime_r.supp --gen-suppressions=all"
 #valgrind="valgrind --tool=exp-ptrcheck --log-fd=1"
 #set -o xtrace
 #export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
@@ -233,6 +233,27 @@ case $1 in
    	$srcdir/msleep $2
 		;;
 
+   'startup-vgthread-waitpid-only') # same as startup-vgthread, BUT we do NOT wait on the startup message!
+		if [ "x$2" == "x" ]; then
+		    CONF_FILE="testconf.conf"
+		    echo $CONF_FILE is:
+		    cat -n $CONF_FILE
+		else
+		    CONF_FILE="$srcdir/testsuites/$2"
+		fi
+		if [ ! -f $CONF_FILE ]; then
+		    echo "ERROR: config file '$CONF_FILE' not found!"
+		    exit 1
+		fi
+		valgrind $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --tool=helgrind --log-fd=1 --error-exitcode=10 --suppressions=linux_localtime_r.supp --gen-suppressions=all ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
+		. $srcdir/diag.sh wait-startup-pid $3
+		;;
+   'startup-vgthread') # start rsyslogd with default params under valgrind thread debugger control.
+   		# $2 is the config file name to use
+		# returns only after successful startup, $3 is the instance (blank or 2!)
+		. $srcdir/diag.sh startup-vgthread-waitpid-only $2 $3
+		. $srcdir/diag.sh wait-startup $3
+		;;
    'wait-startup-pid') # wait for rsyslogd startup, PID only ($2 is the instance)
 		i=0
 		while test ! -f rsyslog$2.pid; do
@@ -372,7 +393,7 @@ case $1 in
 		if [ "$?" -ne "0" ]; then
 		  echo "error during tcpflood! see rsyslog.out.log.save for what was written"
 		  cp rsyslog.out.log rsyslog.out.log.save
-		  . $srcdir/diag.sh error-exit 1
+		  . $srcdir/diag.sh error-exit 1 stacktrace
 		fi
 		;;
    'injectmsg') # inject messages via our inject interface (imdiag)

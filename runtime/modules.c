@@ -434,14 +434,12 @@ abortCnfUse(cfgmodules_etry_t **pNew)
  * The module pointer is handed over to this function. It is no
  * longer available to caller one we are called.
  */
-rsRetVal
-addModToCnfList(cfgmodules_etry_t **pNew, cfgmodules_etry_t *pLast)
+rsRetVal ATTR_NONNULL(1)
+addModToCnfList(cfgmodules_etry_t **const pNew, cfgmodules_etry_t *const pLast)
 {
 	DEFiRet;
 	assert(*pNew != NULL);
 
-	if(pNew == NULL)
-		ABORT_FINALIZE(RS_RET_ERR);
 	if(loadConf == NULL) {
 		abortCnfUse(pNew);
 		FINALIZE; /* we are in an early init state */
@@ -455,8 +453,7 @@ addModToCnfList(cfgmodules_etry_t **pNew, cfgmodules_etry_t *pLast)
 	}
 
 finalize_it:
-	if(pNew != NULL)
-		*pNew = NULL;
+	*pNew = NULL;
 	RETiRet;
 }
 

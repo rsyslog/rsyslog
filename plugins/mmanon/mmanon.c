@@ -46,7 +46,6 @@ MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("mmanon")
 
 
-DEFobjCurrIf(errmsg);
 DEF_OMOD_STATIC_DATA
 
 /* config variables */
@@ -269,11 +268,13 @@ CODESTARTnewActInst
 				pData->ipv4.bits = (int8_t) pvals[i].val.d.n;
 			} else {
 				pData->ipv4.bits = 32;
-				parser_errmsg("warning: invalid number of ipv4.bits (%d), corrected to 32", (int) pvals[i].val.d.n);
+				parser_errmsg("warning: invalid number of ipv4.bits (%d), corrected "
+				"to 32", (int) pvals[i].val.d.n);
 			}
 		} else if(!strcmp(actpblk.descr[i].name, "ipv4.enable")) {
 			pData->ipv4.enable = (int) pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "ipv4.replacechar") || !strcmp(actpblk.descr[i].name, "replacementchar")) {
+		} else if(!strcmp(actpblk.descr[i].name, "ipv4.replacechar") || !strcmp(actpblk.descr[i].name,
+			"replacementchar")) {
 			uchar* tmp = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
 			pData->ipv4.replaceChar = tmp[0];
 			free(tmp);
@@ -284,7 +285,8 @@ CODESTARTnewActInst
 				pData->ipv6.bits = (uint8_t) pvals[i].val.d.n;
 			} else {
 				pData->ipv6.bits = 128;
-				parser_errmsg("warning: invalid number of ipv6.bits (%d), corrected to 128", (int) pvals[i].val.d.n);
+				parser_errmsg("warning: invalid number of ipv6.bits (%d), corrected "
+				"to 128", (int) pvals[i].val.d.n);
 			}
 		} else if(!strcmp(actpblk.descr[i].name, "ipv6.anonmode")) {
 			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"zero",
@@ -298,7 +300,8 @@ CODESTARTnewActInst
 				pData->ipv6.anonmode = RANDOMINT;
 				pData->ipv6.randConsis = 1;
 			} else {
-				parser_errmsg("mmanon: configuration error, unknown option for ipv6.anonmode, will use \"zero\"\n");
+				parser_errmsg("mmanon: configuration error, unknown option for "
+				"ipv6.anonmode, will use \"zero\"\n");
 			}
 		} else if(!strcmp(actpblk.descr[i].name, "embeddedipv4.enable")) {
 			pData->embeddedIPv4.enable = (int) pvals[i].val.d.n;
@@ -307,7 +310,8 @@ CODESTARTnewActInst
 				pData->embeddedIPv4.bits = (uint8_t) pvals[i].val.d.n;
 			} else {
 				pData->embeddedIPv4.bits = 128;
-				parser_errmsg("warning: invalid number of embeddedipv4.bits (%d), corrected to 128", (int) pvals[i].val.d.n);
+				parser_errmsg("warning: invalid number of embeddedipv4.bits (%d), "
+					"corrected to 128", (int) pvals[i].val.d.n);
 			}
 		} else if(!strcmp(actpblk.descr[i].name, "embeddedipv4.anonmode")) {
 			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"zero",
@@ -321,7 +325,8 @@ CODESTARTnewActInst
 				pData->embeddedIPv4.anonmode = RANDOMINT;
 				pData->embeddedIPv4.randConsis = 1;
 			} else {
-				parser_errmsg("mmanon: configuration error, unknown option for ipv6.anonmode, will use \"zero\"\n");
+				parser_errmsg("mmanon: configuration error, unknown option for ipv6.anonmode, "
+				"will use \"zero\"\n");
 			}
 		} else {
 			parser_errmsg("mmanon: program error, non-handled "
@@ -626,7 +631,8 @@ code_int(unsigned ip, wrkrInstanceData_t *pWrkrData){
 	case RANDOMINT:
 		shiftIP_subst = ((shiftIP_subst>>(pWrkrData->pData->ipv4.bits))<<(pWrkrData->pData->ipv4.bits));
 		// multiply the random number between 0 and 1 with a mask of (2^n)-1:
-		random = (unsigned)((rand_r(&(pWrkrData->randstatus))/(double)RAND_MAX)*((1ull<<(pWrkrData->pData->ipv4.bits))-1));
+		random = (unsigned)((rand_r(&(pWrkrData->randstatus))/(double)RAND_MAX)*
+			((1ull<<(pWrkrData->pData->ipv4.bits))-1));
 		return (unsigned)shiftIP_subst + random;
 	case SIMPLE:  //can't happen, since this case is caught at the start of anonipv4()
 	default:
@@ -1035,7 +1041,12 @@ findIPv6(struct ipv6_int* num, char* address, wrkrInstanceData_t *const pWrkrDat
 		char* hashString;
 		CHKmalloc(hashString = strdup(address));
 
-		hashtable_insert(hash, hashKey, hashString);
+		if(!hashtable_insert(hash, hashKey, hashString)) {
+			DBGPRINTF("hashtable error: insert to %s-table failed",
+				useEmbedded ? "embedded ipv4" : "ipv6");
+			free(hashString);
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
 		hashKey = NULL;
 	}
 finalize_it:
@@ -1320,7 +1331,7 @@ BEGINparseSelectorAct
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(strncmp((char*) p, ":mmanon:", sizeof(":mmanon:") - 1)) {
-		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
+		LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
 			"mmanon supports only v6+ config format, use: "
 			"action(type=\"mmanon\" ...)");
 	}
@@ -1331,7 +1342,6 @@ ENDparseSelectorAct
 
 BEGINmodExit
 CODESTARTmodExit
-	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -1350,5 +1360,4 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	DBGPRINTF("mmanon: module compiled with rsyslog version %s.\n", VERSION);
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDmodInit

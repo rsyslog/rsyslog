@@ -8,16 +8,39 @@ set -e  # abort on first failure
 echo "DISTRIB_CODENAME: $DISTRIB_CODENAME"
 echo "CLANG:            $CLANG"
 
+echo "****************************** BEGIN ACTUAL SCRIPT STEP ******************************"
+source tests/travis/install.sh
+source /etc/lsb-release
+
+# first handle cron builds (most importantly Coverity)
+
+#if [ "$DO_COVERITY" == "YES" ]; then
+#	source tests/travis/run-cron.sh
+#exit
+#fi
+
+# cron job?
+if [ "$TRAVIS_EVENT_TYPE" == "cron" ]; then
+	if [ "$DO_CRON" == "YES" ]; then
+		source tests/travis/run-cron.sh
+	fi
+	exit
+fi
+if [ "$DO_CRON" == "YES" ]; then
+	echo cron job not executed under non-cron run
+	exit 0 # this must not run under PRs
+fi
+
 # first check code style. We do this only when STAT_AN is enabled,
 # so that we do not do it in each and every run. While once is sufficient,
 # STAT_AN for now gives us sufficient runtime reduction.
 if [ "x$STAT_AN" == "xYES" ] ; then CI/check_line_length.sh ; fi
 
 
-echo "****************************** BEGIN ACTUAL SCRIPT STEP ******************************"
-source tests/travis/install.sh
-source /etc/lsb-release
-
+#
+# ACTUAL MAIN CI PART OF THE SCRIPT
+# This is to be executed for each PR
+#
 
 # we turn off leak sanitizer at this time because it reports some
 # pretty irrelevant problems in startup code. In the longer term,
@@ -70,10 +93,4 @@ then
 fi
 
 if [ "x$STAT_AN" == "xYES" ] ; then make clean; CFLAGS="-O2 -std=c99"; ./configure $CONFIG_FLAGS ; fi
-if [ "x$STAT_AN" == "xYES" ] ; then cd compat; $SCAN_BUILD --use-cc $CC --status-bugs make -j && cd .. ; fi
-# we now build those components that we know to need some more work
-# they will not be included in the later static analyzer run. But by
-# explicitely listing the modules which do not work, we automatically
-# get new modules/files covered.
-if [ "x$STAT_AN" == "xYES" ] ; then cd runtime; make - lmnet_la-net.lo libgcry_la-libgcry.lo ; cd .. ;  fi
 if [ "x$STAT_AN" == "xYES" ] ; then $SCAN_BUILD --use-cc $CC --status-bugs make -j ; fi

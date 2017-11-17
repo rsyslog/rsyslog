@@ -182,8 +182,9 @@ eiCheckFiletype(gcryfile gf)
 	DEFiRet;
 
 	if(gf->fd == -1) {
-		bNeedClose = 1;
 		CHKiRet(eiOpenRead(gf));
+		assert(gf->fd != -1); /* cannot happen after successful return */
+		bNeedClose = 1;
 	}
 
 	if(Debug) memset(hdrBuf, 0, sizeof(hdrBuf)); /* for dbgprintf below! */

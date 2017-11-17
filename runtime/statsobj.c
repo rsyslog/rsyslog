@@ -255,8 +255,7 @@ addCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8
 {
 	ctr_t *ctr;
 	DEFiRet;
-	CHKiRet(addManagedCounter(pThis, ctrName, ctrType, flags, pCtr, &ctr, 1));
-finalize_it:
+	iRet = addManagedCounter(pThis, ctrName, ctrType, flags, pCtr, &ctr, 1);
 	RETiRet;
 }
 

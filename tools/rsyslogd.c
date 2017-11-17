@@ -548,8 +548,8 @@ rsyslogd_InitStdRatelimiters(void)
 {
 	DEFiRet;
 	CHKiRet(ratelimitNew(&dflt_ratelimiter, "rsyslogd", "dflt"));
-	/* TODO: add linux-type limiting capability */
 	CHKiRet(ratelimitNew(&internalMsg_ratelimiter, "rsyslogd", "internal_messages"));
+	ratelimitSetThreadSafe(internalMsg_ratelimiter);
 	ratelimitSetLinuxLike(internalMsg_ratelimiter, glblIntMsgRateLimitItv, glblIntMsgRateLimitBurst);
 	/* TODO: make internalMsg ratelimit settings configurable */
 finalize_it:
@@ -723,17 +723,20 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
 		/* ... set some properties ... */
 	#	define setQPROP(func, directive, data) \
 		CHKiRet_Hdlr(func(*ppQueue, data)) { \
-			errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
+			errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, " \
+			"running with default setting", iRet); \
 		}
 	#	define setQPROPstr(func, directive, data) \
 		CHKiRet_Hdlr(func(*ppQueue, data, (data == NULL)? 0 : strlen((char*) data))) { \
-			errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
+			errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, " \
+			"running with default setting", iRet); \
 		}
 
 		if(ourConf->globals.mainQ.pszMainMsgQFName != NULL) {
 			/* check if the queue file name is unique, else emit an error */
 			for(qfn = queuefilenames ; qfn != NULL ; qfn = qfn->next) {
-				dbgprintf("check queue file name '%s' vs '%s'\n", qfn->name, ourConf->globals.mainQ.pszMainMsgQFName );
+				dbgprintf("check queue file name '%s' vs '%s'\n", qfn->name,
+					ourConf->globals.mainQ.pszMainMsgQFName );
 				if(!ustrcmp(qfn->name, ourConf->globals.mainQ.pszMainMsgQFName)) {
 					snprintf((char*)qfrenamebuf, sizeof(qfrenamebuf), "%d-%s-%s",
 						 ++qfn_renamenum, ourConf->globals.mainQ.pszMainMsgQFName,  
@@ -1714,22 +1717,27 @@ wait_timeout(void)
 			switch(srcpacket.subreq.action)
 			{
 				case START:
-					dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support this option.\n",sizeof(struct srcrep));
+					dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support this option.\n",
+							sizeof(struct srcrep));
 				break;
 				case STOP:
 					if (srcpacket.subreq.object == SUBSYSTEM) {
 						dosrcpacket(SRC_OK,NULL,sizeof(struct srcrep));
-						(void) snprintf(buf, sizeof(buf) / sizeof(char), " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
-							"\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"]" " exiting due to stopsrc.",
+						(void) snprintf(buf, sizeof(buf) / sizeof(char), " [origin "
+							"software=\"rsyslogd\" " "swVersion=\"" VERSION \
+							"\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"]"
+							" exiting due to stopsrc.",
 							(int) glblGetOurPid());
 						errno = 0;
 						logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
 						return ;
 					} else
-						dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support this option.\n",sizeof(struct srcrep));
+						dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support "
+								"this option.\n",sizeof(struct srcrep));
 				break;
 				case REFRESH:
-					dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support this option.\n", sizeof(struct srcrep));
+					dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support this "
+								"option.\n", sizeof(struct srcrep));
 				break;
 				default:
 					dosrcpacket(SRC_SUBICMD,NULL,sizeof(struct srcrep));

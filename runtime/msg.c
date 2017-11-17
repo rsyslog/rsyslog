@@ -966,7 +966,8 @@ CODESTARTobjDestruct(msg)
 # 	endif
 	if(currRefCount == 0)
 	{
-		/* DEV Debugging Only! dbgprintf("msgDestruct\t0x%lx, RefCount now 0, doing DESTROY\n", (unsigned long)pThis); */
+		/* DEV Debugging Only! dbgprintf("msgDestruct\t0x%lx, RefCount now 0,
+			doing DESTROY\n", (unsigned long)pThis); */
 		if(pThis->pszRawMsg != pThis->szRawMsg)
 			free(pThis->pszRawMsg);
 		freeTAG(pThis);
@@ -3879,7 +3880,8 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 				 */
 				while(!bFound) {
 					int iREstat;
-					iREstat = regexp.regexec(&pTpe->data.field.re, (char*)(pRes + iOffs), nmatch, pmatch, 0);
+					iREstat = regexp.regexec(&pTpe->data.field.re, (char*)(pRes + iOffs),
+								nmatch, pmatch, 0);
 					dbgprintf("regexec return is %d\n", iREstat);
 					if(iREstat == 0) {
 						if(pmatch[0].rm_so == -1) {
@@ -3929,7 +3931,8 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 							if(pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_DFLTSTR) {
 								bufLen = sizeof("**NO MATCH**") - 1;
 								pRes = UCHAR_CONSTANT("**NO MATCH**");
-							} else if(pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_ZERO) {
+							} else if(pTpe->data.field.nomatchAction ==
+								TPL_REGEX_NOMATCH_USE_ZERO) {
 								bufLen = 1;
 								pRes = UCHAR_CONSTANT("0");
 							} else {
@@ -4590,8 +4593,10 @@ MsgSetPropsViaJSON_Object(smsg_t *__restrict__ const pMsg, struct json_object *j
 	struct json_object_iterator it = json_object_iter_begin(json);
 	struct json_object_iterator itEnd = json_object_iter_end(json);
 	while (!json_object_iter_equal(&it, &itEnd)) {
+		struct json_object *child = json_object_iter_peek_value(&it);
+		json_object_get(child);
 		msgSetPropViaJSON(pMsg, json_object_iter_peek_name(&it),
-			json_object_iter_peek_value(&it), 0);
+			child, 0);
 		json_object_iter_next(&it);
 	}
 	json_object_put(json);

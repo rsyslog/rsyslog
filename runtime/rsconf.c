@@ -1281,8 +1281,8 @@ validateConf(void)
 	if(ourConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DISK) {
 		errno = 0;	/* for logerror! */
 		if(glbl.GetWorkDir() == NULL) {
-			errmsg.LogError(0, NO_ERRCODE, "No $WorkDirectory specified - can not run main message queue in 'disk' mode. "
-				 "Using 'FixedArray' instead.\n");
+			errmsg.LogError(0, NO_ERRCODE, "No $WorkDirectory specified - can not run main "
+					"message queue in 'disk' mode. Using 'FixedArray' instead.\n");
 			ourConf->globals.mainQ.MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
 		}
 		if(ourConf->globals.mainQ.pszMainMsgQFName == NULL) {

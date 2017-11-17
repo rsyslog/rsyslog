@@ -339,7 +339,8 @@ decrypt(const char *name)
 			goto err;
 	}
 
-	doDecrypt(logfp, eifp, stdout);
+	if((r = doDecrypt(logfp, eifp, stdout)) != 0)
+		goto err;
 
 	fclose(logfp); logfp = NULL;
 	fclose(eifp); eifp = NULL;

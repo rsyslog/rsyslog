@@ -1,7 +1,7 @@
 /* lookup.c
  * Support for lookup tables in RainerScript.
  *
- * Copyright 2013-2016 Adiscon GmbH.
+ * Copyright 2013-2017 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -102,7 +102,8 @@ lookupNew(lookup_ref_t **ppThis)
 	initialized++; /*4*/
 	pThis->do_reload = pThis->do_stop = 0;
 	pThis->reload_on_hup = 1; /*DO reload on HUP (default)*/
-	CHKiConcCtrl(pthread_create(&pThis->reloader, &pThis->reloader_thd_attr, lookupTableReloader, pThis));
+	CHKiConcCtrl(pthread_create(&pThis->reloader, &pThis->reloader_thd_attr,
+		lookupTableReloader, pThis));
 	initialized++; /*5*/
 
 	pThis->next = NULL;
@@ -118,9 +119,15 @@ lookupNew(lookup_ref_t **ppThis)
 	*ppThis = pThis;
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		errmsg.LogError(errno, iRet, "a lookup table could not be initialized: failed at init-step %d "
-		"(please enable debug logs for details)", initialized);
+		errmsg.LogError(errno, iRet, "a lookup table could not be initialized: "
+			"failed at init-step %d (please enable debug logs for details)",
+			initialized);
+		/* Can not happen with current code, but might occur in the future when
+		 * an error-condition as added after step 5. If we leave it in, Coverity
+		 * scan complains. So we comment it out but do not remove the code.
+		 * Triggered by CID 185426
 		if (initialized > 4) lookupStopReloader(pThis);
+		*/
 		if (initialized > 3) pthread_attr_destroy(&pThis->reloader_thd_attr);
 		if (initialized > 2) pthread_cond_destroy(&pThis->run_reloader);
 		if (initialized > 1) pthread_mutex_destroy(&pThis->reloader_mut);
@@ -131,8 +138,10 @@ finalize_it:
 	RETiRet;
 }
 
-static void
-freeStubValueForReloadFailure(lookup_ref_t *pThis) {/*must be called with reloader_mut acquired*/
+/*must be called with reloader_mut acquired*/
+static void ATTR_NONNULL()
+freeStubValueForReloadFailure(lookup_ref_t *const pThis)
+{
 	if (pThis->stub_value_for_reload_failure != NULL) {
 		free(pThis->stub_value_for_reload_failure);
 		pThis->stub_value_for_reload_failure = NULL;
@@ -504,7 +513,8 @@ build_SparseArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar* n
 			assert(canonicalValueRef != NULL);
 			pThis->table.sprsArr->entries[i].interned_val_ref = canonicalValueRef;
 		}
-		qsort(pThis->table.sprsArr->entries, pThis->nmemb, sizeof(lookup_sparseArray_tab_entry_t), qs_arrcmp_sprsArrtab);
+		qsort(pThis->table.sprsArr->entries, pThis->nmemb, sizeof(lookup_sparseArray_tab_entry_t),
+				qs_arrcmp_sprsArrtab);
 	}
 		
 	pThis->lookup = lookupKey_sprsArr;
@@ -606,7 +616,8 @@ lookupBuildTable_v1(lookup_t *pThis, struct json_object *jroot, const uchar* nam
 		pThis->type = STRING_LOOKUP_TABLE;
 		CHKiRet(build_StringTable(pThis, jtab, name));
 	} else {
-		errmsg.LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' uses unupported type: '%s'", name, table_type);
+		errmsg.LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' uses unupported "
+				"type: '%s'", name, table_type);
 		ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 	}
 finalize_it:
@@ -632,7 +643,8 @@ lookupBuildTable(lookup_t *pThis, struct json_object *jroot, const uchar* name)
 	if (version == 1) {
 		CHKiRet(lookupBuildTable_v1(pThis, jroot, name));
 	} else {
-		errmsg.LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' uses unsupported version: %d", name, version);
+		errmsg.LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' uses unsupported "
+				"version: %d", name, version);
 		ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 	}
 
@@ -646,7 +658,7 @@ finalize_it:
  * load. The function returns either a pointer to the requested
  * table or NULL, if not found.
  */
-lookup_ref_t *
+lookup_ref_t * ATTR_NONNULL()
 lookupFindTable(uchar *name)
 {
 	lookup_ref_t *curr;
@@ -740,8 +752,8 @@ lookupIsReloadPending(lookup_ref_t *pThis) {
 	return reload_pending;
 }
 
-rsRetVal
-lookupReload(lookup_ref_t *pThis, const uchar *stub_val_if_reload_fails)
+rsRetVal ATTR_NONNULL(1)
+lookupReload(lookup_ref_t *const pThis, const uchar *const stub_val_if_reload_fails)
 {
 	uint8_t locked = 0;
 	uint8_t duplicated_stub_value = 0;
@@ -758,8 +770,8 @@ lookupReload(lookup_ref_t *pThis, const uchar *stub_val_if_reload_fails)
 		pThis->do_reload = 1;
 		pthread_cond_signal(&pThis->run_reloader);
 	} else {
-		errmsg.LogError(lock_errno, RS_RET_INTERNAL_ERROR, "attempt to trigger reload of lookup table '%s' "
-		"failed (not stubbing)", pThis->name);
+		errmsg.LogError(lock_errno, RS_RET_INTERNAL_ERROR, "attempt to trigger "
+			"reload of lookup table '%s' failed (not stubbing)", pThis->name);
 		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
 		/* we can choose to stub the table here, but it'll hurt because
 		   the table reloader may take time to complete the reload
@@ -778,7 +790,7 @@ finalize_it:
 	RETiRet;
 }
 
-static rsRetVal
+static rsRetVal ATTR_NONNULL()
 lookupDoReload(lookup_ref_t *pThis)
 {
 	DEFiRet;
@@ -861,13 +873,11 @@ lookupKey(lookup_ref_t *pThis, lookup_key_t key)
  * for "reasonable" lookup tables (and "unreasonably" large ones
  * will probably have other issues as well...).
  */
-static rsRetVal
-lookupReadFile(lookup_t *pThis, const uchar *name, const uchar *filename)
+static rsRetVal ATTR_NONNULL()
+lookupReadFile(lookup_t *const pThis, const uchar *const name, const uchar *const filename)
 {
 	struct json_tokener *tokener = NULL;
 	struct json_object *json = NULL;
-	int eno;
-	char errStr[1024];
 	char *iobuf = NULL;
 	int fd = -1;
 	ssize_t nread;
@@ -876,30 +886,24 @@ lookupReadFile(lookup_t *pThis, const uchar *name, const uchar *filename)
 
 
 	if(stat((char*)filename, &sb) == -1) {
-		eno = errno;
-		errmsg.LogError(0, RS_RET_FILE_NOT_FOUND,
-			"lookup table file '%s' stat failed: %s",
-			filename, rs_strerror_r(eno, errStr, sizeof(errStr)));
+		errmsg.LogError(errno, RS_RET_FILE_NOT_FOUND,
+			"lookup table file '%s' stat failed", filename);
 		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 	}
 
 	CHKmalloc(iobuf = malloc(sb.st_size));
 
 	if((fd = open((const char*) filename, O_RDONLY)) == -1) {
-		eno = errno;
-		errmsg.LogError(0, RS_RET_FILE_NOT_FOUND,
-			"lookup table file '%s' could not be opened: %s",
-			filename, rs_strerror_r(eno, errStr, sizeof(errStr)));
+		errmsg.LogError(errno, RS_RET_FILE_NOT_FOUND,
+			"lookup table file '%s' could not be opened", filename);
 		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 	}
 
 	tokener = json_tokener_new();
 	nread = read(fd, iobuf, sb.st_size);
 	if(nread != (ssize_t) sb.st_size) {
-		eno = errno;
-		errmsg.LogError(0, RS_RET_READ_ERR,
-			"lookup table file '%s' read error: %s",
-			filename, rs_strerror_r(eno, errStr, sizeof(errStr)));
+		errmsg.LogError(errno, RS_RET_READ_ERR,
+			"lookup table file '%s' read error", filename);
 		ABORT_FINALIZE(RS_RET_READ_ERR);
 	}
 

@@ -154,7 +154,8 @@ omrelp_dbgprintf(const char *fmt, ...)
 {
 	va_list ap;
 	char pszWriteBuf[32*1024+1]; //this function has to be able to
-					//generate a buffer longer than that of r_dbgprintf, so r_dbgprintf can properly truncate
+					/*generate a buffer longer than that of r_dbgprintf, so
+					r_dbgprintf can properly truncate*/
 	if(!(Debug && debugging_on)) {
 		return;
 	}
@@ -453,7 +454,8 @@ ENDdbgPrintInstInfo
 /* try to connect to server
  * rgerhards, 2008-03-21
  */
-static rsRetVal doConnect(wrkrInstanceData_t *pWrkrData)
+static rsRetVal ATTR_NONNULL()
+doConnect(wrkrInstanceData_t *const pWrkrData)
 {
 	DEFiRet;
 
@@ -469,17 +471,17 @@ static rsRetVal doConnect(wrkrInstanceData_t *pWrkrData)
 	if(iRet == RELP_RET_OK) {
 		pWrkrData->bIsConnected = 1;
 	} else if(iRet == RELP_RET_ERR_NO_TLS) {
-		errmsg.LogError(0, RS_RET_RELP_NO_TLS, "omrelp: Could not connect, librelp does NOT "
+		errmsg.LogError(0, iRet, "omrelp: Could not connect, librelp does NOT "
 				"does not support TLS (most probably GnuTLS lib "
 				"is too old)!");
-		ABORT_FINALIZE(RS_RET_RELP_NO_TLS);
-	} else if(iRet == RELP_RET_ERR_NO_TLS) {
-		errmsg.LogError(0, RS_RET_RELP_NO_TLS_AUTH,
+		FINALIZE;
+	} else if(iRet == RELP_RET_ERR_NO_TLS_AUTH) {
+		errmsg.LogError(0, iRet,
 				"omrelp: could not activate relp TLS with "
 				"authentication, librelp does not support it "
 				"(most probably GnuTLS lib is too old)! "
 				"Note: anonymous TLS is probably supported.");
-		ABORT_FINALIZE(RS_RET_RELP_NO_TLS_AUTH);
+		FINALIZE;
 	} else {
 		pWrkrData->bIsConnected = 0;
 		iRet = RS_RET_SUSPENDED;

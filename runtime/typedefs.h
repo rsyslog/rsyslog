@@ -155,7 +155,8 @@ typedef int socklen_t;
 
 typedef struct epoll_event epoll_event_t;
 
-typedef char sbool;		/* (small bool) I intentionally use char, to keep it slim so that many fit into the CPU cache! */
+typedef char sbool;		/* (small bool) I intentionally use char, to keep it slim so that
+				many fit into the CPU cache! */
 
 /* settings for flow control
  * TODO: is there a better place for them? -- rgerhards, 2008-03-14

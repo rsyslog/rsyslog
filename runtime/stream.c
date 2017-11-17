@@ -796,7 +796,8 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
 						finished=1;
 					} else {
 						if(bEscapeLF) {
-							CHKiRet(rsCStrAppendStrWithLen(*ppCStr, (uchar*)"#012", sizeof("#012")-1));
+							CHKiRet(rsCStrAppendStrWithLen(*ppCStr, (uchar*)"#012",
+							sizeof("#012")-1));
 						} else {
 							CHKiRet(cstrAppendChar(*ppCStr, c));
 						}
@@ -804,7 +805,8 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
 						pThis->bPrevWasNL = 1;
 					}
 				} else {
-					finished=1;  /* this is a blank line, a \n with nothing since the last complete record */
+					finished=1;  /* this is a blank line, a \n with nothing since
+							the last complete record */
 				}
 			}
 		}
@@ -820,7 +822,8 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
                				CHKiRet(cstrAppendChar(*ppCStr, c));
                				CHKiRet(strmReadChar(pThis, &c));
 				} else {
-					finished=1;  /* this is a blank line, a \n with nothing since the last complete record */
+					finished=1;  /* this is a blank line, a \n with nothing since the
+							last complete record */
 				}
 			} else {
 				if(pThis->bPrevWasNL) {
@@ -840,7 +843,8 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
 					if(c == '\n') {
 						pThis->bPrevWasNL = 1;
 						if(bEscapeLF) {
-							CHKiRet(rsCStrAppendStrWithLen(*ppCStr, (uchar*)"#012", sizeof("#012")-1));
+							CHKiRet(rsCStrAppendStrWithLen(*ppCStr, (uchar*)"#012",
+							sizeof("#012")-1));
 						} else {
 							CHKiRet(cstrAppendChar(*ppCStr, c));
 						}
@@ -982,19 +986,24 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, const sbool bEs
 							}
 							finished = 1;
 							*ppCStr = pThis->prevMsgSegment;
-							CHKiRet(rsCStrConstructFromszStr(&pThis->prevMsgSegment, thisLine->pBuf+len));
+							CHKiRet(rsCStrConstructFromszStr(&pThis->prevMsgSegment,
+								thisLine->pBuf+len));
 							if(discardTruncatedMsg == 1) {
 								pThis->ignoringMsg = 1;
 							}
 							if(msgDiscardingError == 1) {
 								if(discardTruncatedMsg == 1) {
-									errmsg.LogError(0, RS_RET_ERR, "imfile error: message received is "
-											"larger than max msg size; rest of message "
-											"will not be processed");
+									errmsg.LogError(0, RS_RET_ERR,
+									"imfile error: message received is "
+									"larger than max msg size; "
+									"rest of message will not be "
+									"processed");
 								} else {
-									errmsg.LogError(0, RS_RET_ERR, "imfile error: message received is "
-											"larger than max msg size; message will be "
-											"split and processed as another message");
+									errmsg.LogError(0, RS_RET_ERR,
+									"imfile error: message received is "
+									"larger than max msg size; message "
+									"will be split and processed as "
+									"another message");
 								}
 							}
 						}

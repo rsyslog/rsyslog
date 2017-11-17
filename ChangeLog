@@ -7,6 +7,10 @@ Version 8.31.0 [v8-stable] 2017-11-28
   be different than in pure IPv6.
 - rainerscript: add parse_time() function
   Thanks to Stephen Workman for implementing this.
+- omelasticsearch: add pipeline support
+  supports static and dynamic ElasticSearch pipeline parameter.
+  closes https://github.com/rsyslog/rsyslog/issues/1411
+  Thanks to github users scibi and WaeCo for the implementation.
 - omprog: added error handling and transaction support for external plugins
   This permits much better integration of external output modules.
   Special thanks to Joan Sala for providing this work!
@@ -22,11 +26,46 @@ Version 8.31.0 [v8-stable] 2017-11-28
   keep a simple lock ... unlock scheme within the function. That is
   easier to follow for both humans as well as static analyzers.
   Also removes Coverity scan CID 185419
+- TCP syslog: support SNI when connecting as a client
+  This is done if a hostname is configured and turned off if an IP is used.
+  Thanks to Art O Cathain for the patch.
+  see also https://github.com/rsyslog/rsyslog/pull/1393
 - msg variable bugfix: potential segfault on variable access
   A segfault is likely to happen if during processing a variable with
   more than one path component is accessed (e.g. $!path!var) and NO
   variables oft hat kind (local, message, global) are defined at all.
   closes https://github.com/rsyslog/rsyslog/issues/1920
+- ratelimiting bugfix: data race in Linux-like ratelimiter
+  access to the Linux-like ratelimiter was not properly synchronized, and
+  the system rate-limiter was not using it in any case.
+  This could lead to the rate-limit settings not being properly
+  respected, but no "hard error".
+- core/template bugfix: potential NULL pointer access at config load
+  could happen if the config was loaded and the parameters could not properly
+  be processed. If so, this occured only during the startup phase.
+  Detected by Coverity scan, CID 185318
+- core/json var subsystem bugfix: segfault in MsgSetPropsViaJSON
+  Invalid libfastjson API use lead to double-free. This was most importantly
+  triggerred by mmexternal (but could potentially be triggered by other
+  uses as well)
+  closes https://github.com/rsyslog/rsyslog/issues/1822
+- core/wrkr threads bugfix: race condition
+  During e.g. shutdown it could happen that a worker thread was started
+  and immediately be requested to terminate. In such situations there was
+  a race the prevented proper initialization. This could lead to follow-on
+  problems.
+  We believe (but could not proof) that this also could lead to a hang of
+  the termination process. Thus we claim to close an issue tracker down
+  here below, but are not 100% certain it really closes it (we hope for
+  user feedback on this). In any case, the thread debuger showed invalid
+  operations and this has been fixed, so it is useful in any case.
+  closes https://github.com/rsyslog/rsyslog/issues/1959
+- core/wtp: potential hang during shutdown
+  when the wtp worker is cancelled in the final stage of shutting down
+  while the mutex is locked and there is one worker left, the system
+  will hang. The reason is that the cancelled thread could not free the
+  mutex that the other needs in order to shut down orderly.
+  Deteced with clang thread sanitizer.
 - omfwd bugfix: generate error message on connection failure
 - imtcp bugfix: "streamdriver.mode" parameter could not be set to 0
 - imjournal bugfix: module was defunctional
@@ -44,11 +83,20 @@ Version 8.31.0 [v8-stable] 2017-11-28
   error messages. Fixed this and also increased the number of error
   messages so that it now is easier to diagnose problems with this module.
   Also a little bit of internal brush-up.
+- omkafka bugfix: potential hang condition
+  omkafka did not release a mutex under some error conditions (most
+  notably out of memory on specific alloc calls). This lead to a hang
+  during actively processing messages or during shutdown (at latest).
+  This could happen only if dynamic topics were configured.
+  Detected by Coverity Scan, CID  185781 (originally 185721, detected
+  as a different issue by Coverity after code refactoring done in regard
+  to 185721 -- then the problem became more obvious).
 - omkafka: fix file handle leak, which could occur when local buffering
   of messages was needed
 - [io]mgssapi: fix build problems (regression from 8.30.0)
 - [io]czmq: fix build problems on some platforms (namely gcc 7, clang 5)
 - tcpsrv bugfix: potential hang during shutdown
+- queue bugfix: potential hang during shutdown
 - imczmq bugfix: segfault
   happened in a call to
     371: zcert_destroy(&serverCert) called from rcvData().
@@ -66,6 +114,11 @@ Version 8.31.0 [v8-stable] 2017-11-28
   When udp listener cannot be created, an error message containing
   the ip-address and port is put out.
   closes https://github.com/rsyslog/rsyslog/issues/1899
+- omrelp bugfix: incorrect error handling
+  if librelp with TLS but without Authentication was included, librelp
+  did not emit the correct error message due to invalid error code
+  check. It also did not err-out but instead suspended itself.
+  Detected by Coverity scan, CID 185362
 - [io]mrelp bugfix: segfault on startup if configured cert not readable
   When the certificate file specified in the omrelp/imrelp configuration
   can't be accessed, e.g. because it doesn't exist or you don't have
@@ -106,11 +159,43 @@ Version 8.31.0 [v8-stable] 2017-11-28
   be issued (as there are no more workers). So then we can destruct
   the rulesets in any order.
   closes https://github.com/rsyslog/rsyslog/issues/1122
+- core/action bugfix: potential misadressing when processing hard errors
+  For batches that did fail in an output module, the rsyslog core
+  tries to find offending messages that generate hard (non-recoverable)
+  errors. During this process, the action templates for each message
+  are copied into a temporary buffer. That copy was invalidly sized,
+  actually copying only the first template string. As such, outputs
+  that requested more template strings AND had erros in batch submission
+  received uninitialized pointers. This could lead to all sorts of
+  problems.
+  see also https://github.com/rsyslog/rsyslog/issues/1885
+  closes https://github.com/rsyslog/rsyslog/issues/1906
 - template object bugfix: NULL pointer access on invalid parameters
   could happen only during startup
   Detected by Coverity scan, CID 185376
 - omjournal bugfix: NULL pointer access on invalid parameters
   could happen only during startup
+- omelasticsearch bugfix: abort on unavailable ES server
+  Depending on the state of unavailability (libcurl return code),
+  omelasticsearch tries to process a NULL return message, what
+  leads to a segfault.
+  This fixes the problem and introduces better error handling and
+  better error messages.
+  see also https://github.com/rsyslog/rsyslog/issues/1885
+- omelasticsearch: fix memory leak and potential misadressing
+  Commit 96b5fce introduced regressions, leading to potential misadressing
+  and a very probable memory leak. This commit fixes the issues and
+  hardens the module to better detect some error cases in the
+  future.
+  It also adds valgrind-based testbench tests which ensure that no
+  pointer errors exist. If they had been in place, the regressions
+  would never have been undetected.
+  Note that commit 96b5fce was introduced in 8.23.0 on Nov, 15th 2016.
+  Many thanks to Yaroslav Bo for alerting me on the root problem and
+  providing a very good analysis and guidance.
+  see also https://github.com/rsyslog/rsyslog/issues/1906
+  see also https://github.com/rsyslog/rsyslog/issues/1964
+  closes https://github.com/rsyslog/rsyslog/issues/1962
 - omelasticsearch bugfix: output from libcurl to stdout
   omelasticsearch made libcurl output messages to stdout. This
   commit fixes that. It also automatically enables libcurl verbose
@@ -167,7 +252,9 @@ Version 8.31.0 [v8-stable] 2017-11-28
   * harden tests against hanging previous instances
   * re-enable RELP tests on Solaris
   * added basic test for imjournal
+  * added threading tests via valgrind's helgrind tool
 - CI: improved test coverage on FreeBSD
+- Travis: clang static analyzer 5.0 now run over all source files
 - build: make compile warning-free under gcc 7
 ------------------------------------------------------------------------------
 Version 8.30.0 [v8-stable] 2017-10-17

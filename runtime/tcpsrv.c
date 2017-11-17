@@ -507,7 +507,8 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 		DBGPRINTF("%s is not an allowed sender\n", fromHostFQDN);
 		if(glbl.GetOption_DisallowWarning()) {
 			errno = 0;
-			errmsg.LogError(0, RS_RET_HOST_NOT_PERMITTED, "TCP message from disallowed sender %s discarded", fromHostFQDN);
+			errmsg.LogError(0, RS_RET_HOST_NOT_PERMITTED, "TCP message from disallowed "
+					"sender %s discarded", fromHostFQDN);
 		}
 		ABORT_FINALIZE(RS_RET_HOST_NOT_PERMITTED);
 	}
@@ -958,8 +959,10 @@ Run(tcpsrv_t *pThis)
 				(pThis->pszInputName == NULL) ? (uchar*)"*UNSET*" : pThis->pszInputName, localRet);
 				bFailed = TRUE; 
 			} else {
-				DBGPRINTF("tcpsrv listener (inputname: '%s') still failing to process incoming connection with error %d\n",
-					(pThis->pszInputName == NULL) ? (uchar*)"*UNSET*" : pThis->pszInputName, localRet);
+				DBGPRINTF("tcpsrv listener (inputname: '%s') still failing to process "
+						"incoming connection with error %d\n",
+						(pThis->pszInputName == NULL) ? (uchar*)"*UNSET*" :
+						pThis->pszInputName, localRet);
 			}
 			/* Sleep 20ms */
 			srSleep(0,20000); 

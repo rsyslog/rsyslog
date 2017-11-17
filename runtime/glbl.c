@@ -1220,8 +1220,10 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "debug.logfile")) {
 			if(pszAltDbgFileName == NULL) {
 				pszAltDbgFileName = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
-				if((altdbg = open(pszAltDbgFileName, O_WRONLY|O_CREAT|O_TRUNC|O_NOCTTY|O_CLOEXEC, S_IRUSR|S_IWUSR)) == -1) {
-					errmsg.LogError(0, RS_RET_ERR, "debug log file '%s' could not be opened", pszAltDbgFileName);
+				if((altdbg = open(pszAltDbgFileName, O_WRONLY|O_CREAT|O_TRUNC|O_NOCTTY
+				|O_CLOEXEC, S_IRUSR|S_IWUSR)) == -1) {
+					errmsg.LogError(0, RS_RET_ERR, "debug log file '%s' could not be opened",
+							pszAltDbgFileName);
 				}
 			}
 			errmsg.LogError(0, RS_RET_OK, "debug log file is '%s', fd %d", pszAltDbgFileName, altdbg);
