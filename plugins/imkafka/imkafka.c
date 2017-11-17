@@ -442,7 +442,7 @@ addConsumer(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst
 	DEFiRet;
 	rd_kafka_resp_err_t err;
 
-	rd_kafka_topic_partition_list_t *topics;
+	rd_kafka_topic_partition_list_t *topics = NULL;
 	DBGPRINTF("imkafka: creating kafka consumer on %s/%s/%s\n",
 		inst->topic,
 		inst->consumergroup,
@@ -471,6 +471,8 @@ addConsumer(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst
 		inst->bIsSubscribed = 1;
 	}
 finalize_it:
+	if(topics != NULL)
+		rd_kafka_topic_partition_list_destroy(topics);
 	RETiRet;
 }
 
