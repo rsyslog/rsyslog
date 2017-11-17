@@ -114,7 +114,7 @@ typedef struct s_dynaTopicCacheEntry dynaTopicCacheEntry;
 struct s_failedmsg_entry {
 	uchar* payload;
 	uchar* topicname;
-	LIST_ENTRY(s_failedmsg_entry) entries;	/*	List. */
+	SLIST_ENTRY(s_failedmsg_entry) entries;	/*	List. */
 } ;
 typedef struct s_failedmsg_entry failedmsg_entry;
 
@@ -154,10 +154,7 @@ typedef struct _instanceData {
 	pthread_rwlock_t rkLock;
 	rd_kafka_t *rk;
 	int closeTimeout;
-	/*List objects */
-	LIST_HEAD(failedmsg_listhead, s_failedmsg_entry) failedmsg_head;
-//	struct failedmsg_listhead *failedmsg_headp;	/*	List head pointer */
-
+	SLIST_HEAD(failedmsg_listhead, s_failedmsg_entry) failedmsg_head;
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -638,7 +635,7 @@ writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
 				rd_kafka_err2str(msg_kafka_response), msg);
 			CHKmalloc(fmsgEntry = failedmsg_entry_construct((char*) msg, strlen((char*)msg),
 				rd_kafka_topic_name(rkt)));
-			LIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
+			SLIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
 		} else {
 			errmsg.LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
 				"omkafka: Failed to produce to topic '%s' (rd_kafka_producev)"
@@ -663,7 +660,7 @@ writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
 				rd_kafka_topic_name(rkt), partition, rd_kafka_last_error(),
 			CHKmalloc(fmsgEntry = failedmsg_entry_construct((char*) msg, strlen((char*)msg),
 				rd_kafka_topic_name(rkt)));
-			LIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
+			SLIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
 		} else {
 			errmsg.LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
 				"omkafka: Failed to produce to topic '%s' (rd_kafka_produce) "
@@ -722,7 +719,7 @@ deliveryCallback(rd_kafka_t __attribute__((unused)) *rk,
 				(int)(rkmessage->key_len), (char*)rkmessage->key);
 			CHKmalloc(fmsgEntry = failedmsg_entry_construct(rkmessage->payload, rkmessage->len,
 				rd_kafka_topic_name(rkmessage->rkt)));
-			LIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
+			SLIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
 		} else {
 			DBGPRINTF("omkafka: kafka delivery FAIL on Topic '%s', msg '%.*s', key '%.*s'\n",
 				rd_kafka_topic_name(rkmessage->rkt),
@@ -985,7 +982,9 @@ checkFailedMessages(instanceData *const __restrict__ pData)
 	DEFiRet;
 
 	/* Loop through failed messages, reprocess them first! */
-	while ((fmsgEntry = LIST_FIRST(&pData->failedmsg_head)) != NULL) {
+	while (!SLIST_EMPTY(&pData->failedmsg_head)) {
+		fmsgEntry = SLIST_FIRST(&pData->failedmsg_head);
+		assert(fmsgEntry != NULL);
 		/* Put back into kafka! */
 		iRet = writeKafka(pData, (uchar*) fmsgEntry->payload, NULL, fmsgEntry->topicname);
 		if(iRet != RS_RET_OK) {
@@ -999,9 +998,8 @@ checkFailedMessages(instanceData *const __restrict__ pData)
 			DBGPRINTF("omkafka: successfully delivered failed msg '%.*s'.\n",
 				(int)(strlen((char*)fmsgEntry->payload)-1),
 				(char*)fmsgEntry->payload);
-			LIST_REMOVE(fmsgEntry, entries);
+			SLIST_REMOVE_HEAD(&pData->failedmsg_head, entries);
 			failedmsg_entry_destruct(fmsgEntry);
-			fmsgEntry = NULL;
 		}
 	}
 
@@ -1020,7 +1018,7 @@ persistFailedMsgs(instanceData *const __restrict__ pData)
 	int fdMsgFile = -1;
 	ssize_t nwritten;
 
-	failedmsg_entry* fmsgEntry = LIST_FIRST(&pData->failedmsg_head);
+	failedmsg_entry* fmsgEntry = SLIST_FIRST(&pData->failedmsg_head);
 	if (fmsgEntry != NULL) {
 		fdMsgFile = open((char*)pData->failedMsgFile,
 					O_WRONLY|O_CREAT|O_APPEND|O_LARGEFILE|O_CLOEXEC,
@@ -1044,7 +1042,7 @@ persistFailedMsgs(instanceData *const __restrict__ pData)
 					(int)(strlen((char*)fmsgEntry->payload)-1), fmsgEntry->payload, fmsgEntry->topicname);
 			}
 			failedmsg_entry_destruct(fmsgEntry);
-			fmsgEntry = LIST_NEXT(fmsgEntry, entries);
+			fmsgEntry = SLIST_NEXT(fmsgEntry, entries);
 		}
 	} else {
 		DBGPRINTF("omkafka: persistFailedMsgs: We do not need to persist failed messages.\n");
@@ -1119,7 +1117,7 @@ loadFailedMsgs(instanceData *const __restrict__ pData)
 				*pStrTabPos = '\0'; /* split string into two */
 				CHKmalloc(fmsgEntry = failedmsg_entry_construct(pStrTabPos+1,
 					strlen(pStrTabPos+1), (char*)puStr));
-				LIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
+				SLIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
 			} else {
 				LogError(0, RS_RET_ERR, "omkafka: loadFailedMsgs droping invalid msg found: %s\n",
 					(char*)rsCStrGetSzStrNoNULL(pCStr));
@@ -1179,7 +1177,7 @@ CODESTARTcreateInstance
 	pData->bResubmitOnFailure = 0;
 	pData->bKeepFailedMessages = 0;
 	pData->failedMsgFile = NULL;
-	LIST_INIT(&pData->failedmsg_head);
+	SLIST_INIT(&pData->failedmsg_head);
 	CHKiRet(pthread_mutex_init(&pData->mutErrFile, NULL));
 	CHKiRet(pthread_rwlock_init(&pData->rkLock, NULL));
 	CHKiRet(pthread_mutex_init(&pData->mutDynCache, NULL));
@@ -1218,13 +1216,13 @@ CODESTARTfreeInstance
 	pthread_rwlock_unlock(&pData->rkLock);
 
 	/* Delete Linked List for failed msgs */
-	fmsgEntry1 = LIST_FIRST(&pData->failedmsg_head);
+	fmsgEntry1 = SLIST_FIRST(&pData->failedmsg_head);
 	while (fmsgEntry1 != NULL)	{
-		fmsgEntry2 = LIST_NEXT(fmsgEntry1, entries);
+		fmsgEntry2 = SLIST_NEXT(fmsgEntry1, entries);
 		failedmsg_entry_destruct(fmsgEntry1);
 		fmsgEntry1 = fmsgEntry2;
 	}
-	LIST_INIT(&pData->failedmsg_head);
+	SLIST_INIT(&pData->failedmsg_head);
 	/* Free other mem */
 	free(pData->errorFile);
 	free(pData->failedMsgFile);
@@ -1305,7 +1303,7 @@ CODESTARTdoAction
 				CHKmalloc(fmsgEntry = failedmsg_entry_construct((char*)ppString[0],
 					strlen((char*)ppString[0]),
 					(char*) (pData->dynaTopic ? ppString[2] : pData->topic)));
-				LIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
+				SLIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
 			}
 			pthread_rwlock_unlock(&pData->rkLock);
 			ABORT_FINALIZE(iRet);
