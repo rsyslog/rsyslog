@@ -648,6 +648,7 @@ CODESTARTfreeCnf
 			free((void*)inst->confParams[i].name);
 			free((void*)inst->confParams[i].val);
 		}
+		free((void*)inst->confParams);
 		del = inst;
 		inst = inst->next;
 		free(del);
