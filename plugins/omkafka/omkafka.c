@@ -739,53 +739,54 @@ do_rd_kafka_destroy(instanceData *const __restrict__ pData)
 {
 	if (pData->rk == NULL) {
 		DBGPRINTF("omkafka: onDestroy can't close, handle wasn't open\n");
-	} else {
-		int queuedCount = rd_kafka_outq_len(pData->rk);
-		DBGPRINTF("omkafka: onDestroy closing - items left in outqueue: %d\n", queuedCount);
-
-		struct timespec tOut;
-		timeoutComp(&tOut, pData->closeTimeout);
-
-		while (timeoutVal(&tOut) > 0) {
-			queuedCount = rd_kafka_outq_len(pData->rk);
-			if (queuedCount > 0) {
-				/* Flush all remaining kafka messages (rd_kafka_poll is called inside) */
-				const int flushStatus = rd_kafka_flush(pData->rk, 5000);
-				if (flushStatus != RD_KAFKA_RESP_ERR_NO_ERROR) /* TODO: Handle unsend messages here! */ {
-					errmsg.LogError(0, RS_RET_KAFKA_ERROR, "omkafka: onDestroy "
-							"Failed to send remaing '%d' messages to "
-							"topic '%s' on shutdown with error: '%s'",
-							queuedCount,
-							rd_kafka_topic_name(pData->pTopic),
-							rd_kafka_err2str(flushStatus));
-				} else {
-					DBGPRINTF("omkafka: onDestroyflushed remaining '%d' messages "
-						"to kafka topic '%s'\n", queuedCount,
-						rd_kafka_topic_name(pData->pTopic));
-
-				/* Trigger callbacks a last time before shutdown */
-				const int callbacksCalled = rd_kafka_poll(pData->rk, 0); /* call callbacks */
-				DBGPRINTF("omkafka: onDestroy kafka outqueue length: %d, "
-					"callbacks called %d\n", rd_kafka_outq_len(pData->rk),
-					callbacksCalled);
-				}
-			} else {
-				break;
-			}
-		}
-		if (queuedCount > 0) {
-			DBGPRINTF("omkafka: queue-drain for close timed-out took too long, "
-					 "items left in outqueue: %d\n",
-					 rd_kafka_outq_len(pData->rk));
-		}
-		if (pData->dynaTopic) {
-			dynaTopicFreeCacheEntries(pData);
-		} else {
-			closeTopic(pData);
-		}
-		rd_kafka_destroy(pData->rk);
-		pData->rk = NULL;
+		goto done;
 	}
+	int queuedCount = rd_kafka_outq_len(pData->rk);
+	DBGPRINTF("omkafka: onDestroy closing - items left in outqueue: %d\n", queuedCount);
+
+	struct timespec tOut;
+	timeoutComp(&tOut, pData->closeTimeout);
+
+	while (timeoutVal(&tOut) > 0) {
+		queuedCount = rd_kafka_outq_len(pData->rk);
+		if (queuedCount > 0) {
+			/* Flush all remaining kafka messages (rd_kafka_poll is called inside) */
+			const int flushStatus = rd_kafka_flush(pData->rk, 5000);
+			if (flushStatus != RD_KAFKA_RESP_ERR_NO_ERROR) /* TODO: Handle unsend messages here! */ {
+				errmsg.LogError(0, RS_RET_KAFKA_ERROR, "omkafka: onDestroy "
+						"Failed to send remaing '%d' messages to "
+						"topic '%s' on shutdown with error: '%s'",
+						queuedCount,
+						rd_kafka_topic_name(pData->pTopic),
+						rd_kafka_err2str(flushStatus));
+			} else {
+				DBGPRINTF("omkafka: onDestroyflushed remaining '%d' messages "
+					"to kafka topic '%s'\n", queuedCount,
+					rd_kafka_topic_name(pData->pTopic));
+
+			/* Trigger callbacks a last time before shutdown */
+			const int callbacksCalled = rd_kafka_poll(pData->rk, 0); /* call callbacks */
+			DBGPRINTF("omkafka: onDestroy kafka outqueue length: %d, "
+				"callbacks called %d\n", rd_kafka_outq_len(pData->rk),
+				callbacksCalled);
+			}
+		} else {
+			break;
+		}
+	}
+	if (queuedCount > 0) {
+		DBGPRINTF("omkafka: queue-drain for close timed-out took too long, "
+				 "items left in outqueue: %d\n",
+				 rd_kafka_outq_len(pData->rk));
+	}
+	if (pData->dynaTopic) {
+		dynaTopicFreeCacheEntries(pData);
+	} else {
+		closeTopic(pData);
+	}
+	rd_kafka_destroy(pData->rk);
+	pData->rk = NULL;
+done:	return;
 }
 
 /* should be called with write(rkLock) */
@@ -970,7 +971,7 @@ checkFailedMessages(instanceData *const __restrict__ pData)
 	/* Loop through failed messages, reprocess them first! */
 	while (!LIST_EMPTY(&pData->failedmsg_head)) {
 		fmsgEntry = LIST_FIRST(&pData->failedmsg_head);
-		assert(fmsgEntry == NULL); /* Avoids false positives in CLANG*/
+		//assert(fmsgEntry == NULL); /* Avoids false positives in CLANG*/
 		/* Put back into kafka! */
 		iRet = writeKafka(pData, (uchar*) fmsgEntry->payload, NULL, fmsgEntry->topicname);
 		if(iRet != RS_RET_OK) {
