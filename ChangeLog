@@ -175,6 +175,10 @@ Version 8.31.0 [v8-stable] 2017-11-28
   Detected by Coverity scan, CID 185376
 - omjournal bugfix: NULL pointer access on invalid parameters
   could happen only during startup
+- omelasticsearch bugfix: configured credentials not used during health check
+  Authentication credentials were not applied during health check,
+  permission to use unsigned CERTS was not applied to regular data post.
+  closes https://github.com/rsyslog/rsyslog/issues/1949
 - omelasticsearch bugfix: abort on unavailable ES server
   Depending on the state of unavailability (libcurl return code),
   omelasticsearch tries to process a NULL return message, what
