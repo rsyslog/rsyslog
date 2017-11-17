@@ -354,7 +354,8 @@ void free_cursor(struct db_cursor *db_c)
 	free(db_c);
 }
 
-struct db_cursor* launch_query(struct queryopt *opt, struct select_doc *s_doc,
+struct db_cursor* launch_query(struct queryopt *opt,
+			       __attribute__((unused)) struct select_doc *s_doc,
 				struct query_doc *qu_doc,
 				struct db_collection *db_coll)
 {
