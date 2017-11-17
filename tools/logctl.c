@@ -262,7 +262,7 @@ struct query_doc* create_query(struct queryopt *opt)
 	qu_doc = malloc(sizeof(struct query_doc));
 	qu_doc->query = bson_new ();
 	
-	query = bson_new ();
+	query_what = bson_new ();
     	bson_init(query_what);
     	bson_append_document_begin(qu_doc->query, "$query", 6, query_what);
 	if (opt->bsever == 1)
@@ -356,15 +356,17 @@ void free_cursor(struct db_cursor *db_c)
 
 struct db_cursor* launch_query(struct queryopt *opt, struct select_doc *s_doc,
 				struct query_doc *qu_doc,
-				struct db_connect *db_conn,
 				struct db_collection *db_coll)
 {
 	struct db_cursor *out;
 
-	out = malloc (sizeof(struct output));
-	out->cursor = mongoc_collection_find (db_coll->collection, 0,
-					      opt->e_skip, opt->e_ret, 0,
-					      qu_doc->query, s_doc->select);
+	out = malloc (sizeof(struct db_cursor));
+	out->cursor = mongoc_collection_find (db_coll->collection,
+					      MONGOC_QUERY_NONE,
+					      (uint32_t)opt->e_skip,
+					      (uint32_t)opt->e_ret, 0,
+					      qu_doc->query, s_doc->select,
+					      NULL);
 	if (!out->cursor)
 	{
 	 	perror ("mongo_sync_cmd_query()");
@@ -427,7 +429,7 @@ int main (int argc, char *argv[])
 	s_doc = create_select();
 	db_conn = create_conn();				// create connection
 	db_coll = get_collection (db_conn);			// Get the collection to perform query on
-	db_c = launch_query(&opt, s_doc, qu_doc, db_conn, db_coll);	// launch the query and get the related cursor
+	db_c = launch_query(&opt, s_doc, qu_doc, db_coll);	// launch the query and get the related cursor
 
 	res = malloc (sizeof(struct results));
 	while (cursor_next(db_c, res))				// Increment the cursor and get data at moved cursor
