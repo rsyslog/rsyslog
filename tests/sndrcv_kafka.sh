@@ -53,3 +53,6 @@ echo \[sndrcv_kafka_fail.sh\]: stop kafka instance
 
 # STOP ZOOKEEPER in any case
 . $srcdir/diag.sh stop-zookeeper
+
+echo success
+. $srcdir/diag.sh exit
