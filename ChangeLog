@@ -26,6 +26,10 @@ Version 8.31.0 [v8-stable] 2017-11-28
   keep a simple lock ... unlock scheme within the function. That is
   easier to follow for both humans as well as static analyzers.
   Also removes Coverity scan CID 185419
+- omkafka: improve error reporting
+- omkafka: slight speedup do to refactoring of LIST class
+  double-linked list was used for temporarily undeliverable message tracking
+  where singly-linked list was sufficient. Changed that.
 - TCP syslog: support SNI when connecting as a client
   This is done if a hostname is configured and turned off if an IP is used.
   Thanks to Art O Cathain for the patch.
@@ -83,18 +87,44 @@ Version 8.31.0 [v8-stable] 2017-11-28
   error messages. Fixed this and also increased the number of error
   messages so that it now is easier to diagnose problems with this module.
   Also a little bit of internal brush-up.
-- omkafka bugfix: statistics counter maxoutqsize could not be reset
-  Thanks to github user flisky for the patch.
-- omkafka bugfix: potential hang condition
-  omkafka did not release a mutex under some error conditions (most
-  notably out of memory on specific alloc calls). This lead to a hang
-  during actively processing messages or during shutdown (at latest).
-  This could happen only if dynamic topics were configured.
-  Detected by Coverity Scan, CID  185781 (originally 185721, detected
-  as a different issue by Coverity after code refactoring done in regard
-  to 185721 -- then the problem became more obvious).
-- omkafka: fix file handle leak, which could occur when local buffering
-  of messages was needed
+- omkafka bugfixes
+  * statistics counter maxoutqsize could not be reset
+    Thanks to github user flisky for the patch.
+  * potential hang condition
+    omkafka did not release a mutex under some error conditions (most
+    notably out of memory on specific alloc calls). This lead to a hang
+    during actively processing messages or during shutdown (at latest).
+    This could happen only if dynamic topics were configured.
+    Detected by Coverity Scan, CID  185781 (originally 185721, detected
+    as a different issue by Coverity after code refactoring done in regard
+    to 185721 -- then the problem became more obvious).
+  * file handle leak, which could occur when local buffering
+    of messages was needed
+  * invalid load of failedmsg file on startup if disabled
+    error "rsyslogd: omkafka: could not load failed messages from "
+    "file (null) error -2027 - failed messages will not be resend."
+    occurs because, depite `keepFailedMessages="off"` as a default,
+    omkafka still tries to check for and load a `(none)` file which
+    triggers an IO error of sorts according to the 2027 link above.
+    Obviously, it probably shouldn't try load the file if
+    `keepFailedMessages` is not enabled.
+    Thanks to github user JPvRiel for a very good error report and
+    analysis.
+    closes https://github.com/rsyslog/rsyslog/issues/1765
+  * considerable memory leak
+    Whenever a message could (temporarily) not be delivered to kafka,
+    a non-trivial amount of memory was leaked. This could sum up to
+    quite a big memory leak.
+    fixes https://github.com/rsyslog/rsyslog/issues/1991
+  * some small memory leaks fixed
+    most of them cosmetic or a few bytes statically (not growing as
+    omkafka was used) -- thus we do not mention each one explicitely.
+    For more details, see git commit log or this pull request:
+    https://github.com/rsyslog/rsyslog/pull/2051
+- kafka bugfix: problem on invalid kafka configuration values
+  omkafka ended up in an endless loop and high cpu.
+  imkafka tried to subscribe to a not connected kafka server.
+  closes https://github.com/rsyslog/rsyslog/issues/1806
 - [io]mgssapi: fix build problems (regression from 8.30.0)
 - [io]czmq: fix build problems on some platforms (namely gcc 7, clang 5)
 - tcpsrv bugfix: potential hang during shutdown
@@ -411,21 +441,6 @@ Version 8.30.0 [v8-stable] 2017-10-17
   The predicate check was incorrect.
   closes https://github.com/rsyslog/rsyslog/issues/170 (kind of)
 - omrelp bugfix:  segfault when rebindinterval parameter is used
-- omkafka bugfix: invalid load of failedmsg file on startup if disabled
-  error "rsyslogd: omkafka: could not load failed messages from "
-  "file (null) error -2027 - failed messages will not be resend."
-  occurs because, depite `keepFailedMessages="off"` as a default,
-  omkafka still tries to check for and load a `(none)` file which
-  triggers an IO error of sorts according to the 2027 link above.
-  Obviously, it probably shouldn't try load the file if
-  `keepFailedMessages` is not enabled.
-  Thanks to github user JPvRiel for a very good error report and
-  analysis.
-  closes https://github.com/rsyslog/rsyslog/issues/1765
-- kafka bugfix: problem on invalid kafka configuration values
-  omkafka ended up in an endless loop and high cpu.
-  imkafka tried to subscribe to a not connected kafka server.
-  closes https://github.com/rsyslog/rsyslog/issues/1806
 - imudp bugfix: UDP oversize message not properly handled
   When a message larger than supported by the UDP stack is to be sent,
   EMSGSIZE is returned, but not specifically handled. That in turn
