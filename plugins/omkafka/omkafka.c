@@ -1070,14 +1070,13 @@ loadFailedMsgs(instanceData *const __restrict__ pData)
 	/* check if the file exists */
 	if(stat((char*) pData->failedMsgFile, &stat_buf) == -1) {
 		if(errno == ENOENT) {
-			DBGPRINTF("omkafka: loadFailedMsgs failed messages file %s wasn't found, continue startup\n",
-				pData->failedMsgFile);
+			DBGPRINTF("omkafka: loadFailedMsgs failed messages file %s wasn't found, "
+				"continue startup\n", pData->failedMsgFile);
 			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 		} else {
 			char errStr[1024];
 			rs_strerror_r(errno, errStr, sizeof(errStr));
-			DBGPRINTF("omkafka: loadFailedMsgs failed messages file %s could not be opened with error %s\n",
-				pData->failedMsgFile, errStr);
+			DBGPRINTF("omkafka: loadFailedMsgs failed messages file %s could not "						"be opened with error %s\n", pData->failedMsgFile, errStr);
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
 	} else {
@@ -1101,7 +1100,8 @@ loadFailedMsgs(instanceData *const __restrict__ pData)
 
 			pStrTabPos = index((char*)puStr, '\t');
 			if (pStrTabPos != NULL) {
-				DBGPRINTF("omkafka: loadFailedMsgs successfully loaded msg '%s' for topic '%.*s':%d\n",
+				DBGPRINTF("omkafka: loadFailedMsgs successfully loaded msg '%s' for "
+					"topic '%.*s':%d\n",
 					pStrTabPos+1, (int)(pStrTabPos-(char*)puStr), (char*)puStr,
 					(int)(pStrTabPos-(char*)puStr));
 
@@ -1135,12 +1135,11 @@ finalize_it:
 		}
 	} else {
 		DBGPRINTF("omkafka: loadFailedMsgs unlinking '%s'\n", (char*)pData->failedMsgFile);
-		if(	stat((char*) pData->failedMsgFile, &stat_buf) == 0 && /* Delete file if still exists! */
-			unlink((char*)pData->failedMsgFile) != 0) {
-			char errStr[1024];
-			rs_strerror_r(errno, errStr, sizeof(errStr));
-			errmsg.LogError(0, RS_RET_ERR, "omkafka: loadFailedMsgs failed to remove "
-				"file \"%s\": %s", (char*)pData->failedMsgFile, errStr);
+		/* Delete file if still exists! */
+		const int r = unlink((char*)pData->failedMsgFile);
+		if(r != 0 && r != ENOENT) {
+			LogError(errno, RS_RET_ERR, "omkafka: loadFailedMsgs failed to remove "
+				"file \"%s\"", (char*)pData->failedMsgFile);
 		}
 	}
 
