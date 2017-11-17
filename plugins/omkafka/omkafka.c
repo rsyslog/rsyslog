@@ -1235,11 +1235,12 @@ CODESTARTfreeInstance
 		free((void*) pData->confParams[i].name);
 		free((void*) pData->confParams[i].val);
 	}
+	free(pData->confParams);
 	for(int i = 0 ; i < pData->nTopicConfParams ; ++i) {
 		free((void*) pData->topicConfParams[i].name);
 		free((void*) pData->topicConfParams[i].val);
 	}
-
+	free(pData->topicConfParams);
 	pthread_rwlock_destroy(&pData->rkLock);
 	pthread_mutex_destroy(&pData->mutErrFile);
 	pthread_mutex_destroy(&pData->mutDynCache);
