@@ -1485,13 +1485,15 @@ create_udp_socket(uchar *hostname,
 						if (ipfreebind >= IPFREEBIND_ENABLED_WITH_LOG)
 							errmsg.LogMsg(0, RS_RET_OK_WARN, LOG_WARNING,
 								"bound address %s IP free", hostname);
-						continue;
+						goto bindsuccess;
 					}
 				}
 				close(*s);
 				*s = -1;
 				continue;
 			}
+bindsuccess:
+			;
 		}
 
                 (*socks)++;
