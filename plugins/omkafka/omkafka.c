@@ -220,6 +220,13 @@ d_free_topic(rd_kafka_topic_t **topic)
 	}
 }
 
+static void ATTR_NONNULL(1)
+failedmsg_entry_destruct(failedmsg_entry *const __restrict__ fmsgEntry) {
+	free(fmsgEntry->payload);
+	free(fmsgEntry->topicname);
+	free(fmsgEntry);
+}
+
 /* destroy topic item */
 /* must be called with write(rkLock) */
 static void
@@ -984,7 +991,7 @@ checkFailedMessages(instanceData *const __restrict__ pData)
 				(int)(strlen((char*)fmsgEntry->payload)-1),
 				(char*)fmsgEntry->payload);
 			LIST_REMOVE(fmsgEntry, entries);
-			free(fmsgEntry);
+			failedmsg_entry_destruct(fmsgEntry);
 			fmsgEntry = NULL;
 		}
 	}
@@ -1209,9 +1216,7 @@ CODESTARTfreeInstance
 	fmsgEntry1 = LIST_FIRST(&pData->failedmsg_head);
 	while (fmsgEntry1 != NULL)	{
 		fmsgEntry2 = LIST_NEXT(fmsgEntry1, entries);
-		free(fmsgEntry1->payload);
-		free(fmsgEntry1->topicname);
-		free(fmsgEntry1);
+		failedmsg_entry_destruct(fmsgEntry1);
 		fmsgEntry1 = fmsgEntry2;
 	}
 	LIST_INIT(&pData->failedmsg_head);
