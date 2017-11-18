@@ -3108,8 +3108,13 @@ qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst)
 {
 	int i;
 	struct cnfparamvals *pvals;
+	DEFiRet;
 
 	pvals = nvlstGetParams(lst, &pblk, NULL);
+	if(pvals == NULL) {
+		parser_errmsg("error processing queue config parameters");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
 	if(Debug) {
 		dbgprintf("queue param blk:\n");
 		cnfparamsPrint(&pblk, pvals);
@@ -3207,7 +3212,8 @@ qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst)
 	}
 
 	cnfparamvalsDestruct(pvals, &pblk);
-	return RS_RET_OK;
+finalize_it:
+	RETiRet;
 }
 
 
