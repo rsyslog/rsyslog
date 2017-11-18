@@ -129,6 +129,11 @@ Version 8.31.0 [v8-stable] 2017-11-28
 - [io]czmq: fix build problems on some platforms (namely gcc 7, clang 5)
 - tcpsrv bugfix: potential hang during shutdown
 - queue bugfix: potential hang during shutdown
+- queue bugfix: NULL pointer dereference during config processing
+  If the queue parameters were incorrectly given, a NULL pointer derefernce
+  could happen during config parsing. Once post that stage, no problem could
+  occur.
+  Detected by Coverity scan, CID 185339
 - imczmq bugfix: segfault
   happened in a call to
     371: zcert_destroy(&serverCert) called from rcvData().
