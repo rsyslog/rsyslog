@@ -177,11 +177,11 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "errorfile", eCmdHdlrGetWord, 0 },
 	{ "key", eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
-	{ "closeTimeout", eCmdHdlrPositiveInt, 0 },
-	{ "reopenOnHup", eCmdHdlrBinary, 0 },
-	{ "resubmitOnFailure", eCmdHdlrBinary, 0 },	/* Resubmit message into kafaj queue on failure */
-	{ "keepFailedMessages", eCmdHdlrBinary, 0 },
-	{ "failedMsgFile", eCmdHdlrGetWord, 0 }
+	{ "closetimeout", eCmdHdlrPositiveInt, 0 },
+	{ "reopenonhup", eCmdHdlrBinary, 0 },
+	{ "resubmitonfailure", eCmdHdlrBinary, 0 },	/* Resubmit message into kafaj queue on failure */
+	{ "keepfailedmessages", eCmdHdlrBinary, 0 },
+	{ "failedmsgfile", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -1388,7 +1388,7 @@ CODESTARTnewActInst
 			pData->dynaTopic = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "dynatopic.cachesize")) {
 			pData->iDynaTopicCacheSize = pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "closeTimeout")) {
+		} else if(!strcmp(actpblk.descr[i].name, "closetimeout")) {
 			pData->closeTimeout = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "partitions.auto")) {
 			pData->autoPartition = pvals[i].val.d.n;
@@ -1435,13 +1435,13 @@ CODESTARTnewActInst
 			pData->key = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "reopenOnHup")) {
+		} else if(!strcmp(actpblk.descr[i].name, "reopenonhup")) {
 			pData->bReopenOnHup = pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "resubmitOnFailure")) {
+		} else if(!strcmp(actpblk.descr[i].name, "resubmitonfailure")) {
 			pData->bResubmitOnFailure = pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "keepFailedMessages")) {
+		} else if(!strcmp(actpblk.descr[i].name, "keepfailedmessages")) {
 			pData->bKeepFailedMessages = pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "failedMsgFile")) {
+		} else if(!strcmp(actpblk.descr[i].name, "failedmsgfile")) {
 			pData->failedMsgFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			dbgprintf("omkafka: program error, non-handled param '%s'\n", actpblk.descr[i].name);
