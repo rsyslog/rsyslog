@@ -1490,7 +1490,7 @@ create_udp_socket(uchar *hostname,
 							break;
 						}
 					}
-					/* FALLTHRU */
+					/* FALLTHROUGH */
 				default:
 					close(*s);
 					*s = -1;
