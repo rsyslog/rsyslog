@@ -136,7 +136,7 @@ Input Parameters
    This option accept the following numbers:
 
    -  0 (IPFREEBIND_DISABLED) - does not enable the IP_FREEBIND option on the
-   UDP socket. If the *bind()* call fails with *EADDRNOTAVAIL* reason,
+   UDP socket. If the *bind()* call fails because of the *EADDRNOTAVAIL* error,
    the socket initialization fails.
 
    -  1 (IPFREEBIND_ENABLED_NO_LOG) - silently enables the IP_FREEBIND socket
