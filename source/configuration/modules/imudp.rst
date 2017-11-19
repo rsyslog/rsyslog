@@ -128,22 +128,24 @@ Input Parameters
 
 .. function::  ipfreebind <number>
 
-   *Default: 2 (IPFREEBIND_ENABLED_WITH_LOG)*
+   *Available since: 8.18.0*
+
+   *Default: 2*
 
    Manages the IP_FREEBIND option on the UDP socket, which allows binding it to
-   an IP address that is nonlocal or not (yet) associated to a network interface.
+   an IP address that is nonlocal or not (yet) associated to any network interface.
    
-   The parameter accepts the following numbers:
+   The parameter accepts the following values:
 
-   -  0 (IPFREEBIND_DISABLED) - does not enable the IP_FREEBIND option on the
-   UDP socket. If the *bind()* call fails because of the *EADDRNOTAVAIL* error,
-   the socket initialization fails.
+   -  0 - does not enable the IP_FREEBIND option on the
+      UDP socket. If the *bind()* call fails because of *EADDRNOTAVAIL* error,
+      socket initialization fails.
 
-   -  1 (IPFREEBIND_ENABLED_NO_LOG) - silently enables the IP_FREEBIND socket
-   option if it is required to successfully bind the socket to a nonlocal address.
+   -  1 - silently enables the IP_FREEBIND socket
+      option if it is required to successfully bind the socket to a nonlocal address.
 
-   -  2 (IPFREEBIND_ENABLED_WITH_LOG) - enables the IP_FREEBIND socket option and
-   warns when it is used to successfully bind the socket to a nonlocal address.
+   -  2 - enables the IP_FREEBIND socket option and
+      warns when it is used to successfully bind the socket to a nonlocal address.
    
 .. function::  Device <device>
 
