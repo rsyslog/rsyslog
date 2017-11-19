@@ -1282,11 +1282,14 @@ BEGINdoAction
 CODESTARTdoAction
 	failedmsg_entry* fmsgEntry;
 	instanceData *const pData = pWrkrData->pData;
+	int need_unlock = 0;
+
 	if (! pData->bIsOpen)
 		CHKiRet(setupKafkaHandle(pData, 0));
 
 	/* Lock here to prevent msg loss */
 	pthread_rwlock_rdlock(&pData->rkLock);
+	need_unlock = 1;
 
 	/* We need to trigger callbacks first in order to suspend the Action properly on failure */
 	const int callbacksCalled = rd_kafka_poll(pData->rk, 0); /* call callbacks */
@@ -1308,7 +1311,6 @@ CODESTARTdoAction
 					(char*) (pData->dynaTopic ? ppString[2] : pData->topic)));
 				SLIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
 			}
-			pthread_rwlock_unlock(&pData->rkLock);
 			ABORT_FINALIZE(iRet);
 		}
 	}
@@ -1316,8 +1318,11 @@ CODESTARTdoAction
 	/* support dynamic topic */
 	iRet = writeKafka(pData, ppString[0], ppString[1], pData->dynaTopic ? ppString[2] : pData->topic);
 
-	pthread_rwlock_unlock(&pData->rkLock);
 finalize_it:
+	if(need_unlock) {
+		pthread_rwlock_unlock(&pData->rkLock);
+	}
+
 	if(iRet != RS_RET_OK) {
 		DBGPRINTF("omkafka: doAction failed with status %d\n", iRet);
 	}
