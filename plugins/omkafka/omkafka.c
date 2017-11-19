@@ -1018,35 +1018,39 @@ persistFailedMsgs(instanceData *const __restrict__ pData)
 	int fdMsgFile = -1;
 	ssize_t nwritten;
 
-	failedmsg_entry* fmsgEntry = SLIST_FIRST(&pData->failedmsg_head);
-	if (fmsgEntry != NULL) {
-		fdMsgFile = open((char*)pData->failedMsgFile,
-					O_WRONLY|O_CREAT|O_APPEND|O_LARGEFILE|O_CLOEXEC,
-					S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP);
-		if(fdMsgFile == -1) {
-			LogError(errno, RS_RET_ERR, "omkafka: persistFailedMsgs error opening failed msg file");
-			ABORT_FINALIZE(RS_RET_ERR);
-		}
-
-		while (fmsgEntry != NULL)	{
-			nwritten = write(fdMsgFile, fmsgEntry->topicname, ustrlen(fmsgEntry->topicname) );
-			if(nwritten != -1)
-				write(fdMsgFile, "\t", 1);
-			if(nwritten != -1)
-				nwritten = write(fdMsgFile, fmsgEntry->payload, ustrlen(fmsgEntry->payload) );
-			if(nwritten == -1) {
-				LogError(errno, RS_RET_ERR, "omkafka: persistFailedMsgs error writing failed msg file");
-				ABORT_FINALIZE(RS_RET_ERR);
-			} else {
-				DBGPRINTF("omkafka: persistFailedMsgs successfully written loaded msg '%.*s' for topic '%s'\n",
-					(int)(strlen((char*)fmsgEntry->payload)-1), fmsgEntry->payload, fmsgEntry->topicname);
-			}
-			failedmsg_entry_destruct(fmsgEntry);
-			fmsgEntry = SLIST_NEXT(fmsgEntry, entries);
-		}
-	} else {
+	if(SLIST_EMPTY(&pData->failedmsg_head)) {
 		DBGPRINTF("omkafka: persistFailedMsgs: We do not need to persist failed messages.\n");
+		FINALIZE;
 	}
+
+	fdMsgFile = open((char*)pData->failedMsgFile,
+				O_WRONLY|O_CREAT|O_APPEND|O_LARGEFILE|O_CLOEXEC,
+				S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP);
+	if(fdMsgFile == -1) {
+		LogError(errno, RS_RET_ERR, "omkafka: persistFailedMsgs error opening failed msg file %s",
+			pData->failedMsgFile);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	while (!SLIST_EMPTY(&pData->failedmsg_head)) {
+		failedmsg_entry* fmsgEntry = SLIST_FIRST(&pData->failedmsg_head);
+		assert(fmsgEntry != NULL);
+		nwritten = write(fdMsgFile, fmsgEntry->topicname, ustrlen(fmsgEntry->topicname) );
+		if(nwritten != -1)
+			write(fdMsgFile, "\t", 1);
+		if(nwritten != -1)
+			nwritten = write(fdMsgFile, fmsgEntry->payload, ustrlen(fmsgEntry->payload) );
+		if(nwritten == -1) {
+			LogError(errno, RS_RET_ERR, "omkafka: persistFailedMsgs error writing failed msg file");
+			ABORT_FINALIZE(RS_RET_ERR);
+		} else {
+			DBGPRINTF("omkafka: persistFailedMsgs successfully written loaded msg '%.*s' for topic '%s'\n",
+				(int)(strlen((char*)fmsgEntry->payload)-1), fmsgEntry->payload, fmsgEntry->topicname);
+		}
+		SLIST_REMOVE_HEAD(&pData->failedmsg_head, entries);
+		failedmsg_entry_destruct(fmsgEntry);
+	}
+
 finalize_it:
 	if(fdMsgFile != -1) {
 		close(fdMsgFile);
@@ -1056,7 +1060,6 @@ finalize_it:
 			"file %s - failed messages will be lost.",
 			(char*)pData->failedMsgFile);
 	}
-
 	RETiRet;
 }
 
@@ -1279,11 +1282,14 @@ BEGINdoAction
 CODESTARTdoAction
 	failedmsg_entry* fmsgEntry;
 	instanceData *const pData = pWrkrData->pData;
+	int need_unlock = 0;
+
 	if (! pData->bIsOpen)
 		CHKiRet(setupKafkaHandle(pData, 0));
 
 	/* Lock here to prevent msg loss */
 	pthread_rwlock_rdlock(&pData->rkLock);
+	need_unlock = 1;
 
 	/* We need to trigger callbacks first in order to suspend the Action properly on failure */
 	const int callbacksCalled = rd_kafka_poll(pData->rk, 0); /* call callbacks */
@@ -1305,7 +1311,6 @@ CODESTARTdoAction
 					(char*) (pData->dynaTopic ? ppString[2] : pData->topic)));
 				SLIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
 			}
-			pthread_rwlock_unlock(&pData->rkLock);
 			ABORT_FINALIZE(iRet);
 		}
 	}
@@ -1313,8 +1318,11 @@ CODESTARTdoAction
 	/* support dynamic topic */
 	iRet = writeKafka(pData, ppString[0], ppString[1], pData->dynaTopic ? ppString[2] : pData->topic);
 
-	pthread_rwlock_unlock(&pData->rkLock);
 finalize_it:
+	if(need_unlock) {
+		pthread_rwlock_unlock(&pData->rkLock);
+	}
+
 	if(iRet != RS_RET_OK) {
 		DBGPRINTF("omkafka: doAction failed with status %d\n", iRet);
 	}
