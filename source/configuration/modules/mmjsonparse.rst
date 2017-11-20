@@ -14,6 +14,12 @@ follow the CEE/lumberjack spec. The so-called "CEE cookie" is checked
 and, if present, the JSON-encoded structured message content is parsed.
 The properties are then available as original message properties.
 
+As a convenience, mmjsonparse will produce a valid CEE/lumberjack log
+message if passed a message without the CCE cookie.  A JSON structure
+will be created and the "msg" field will be the only field and it will
+contain the message. Note that in this case, mmjsonparse will
+nonetheless return that the JSON parsing has failed.
+
 The "CEE cookie" is the character squence "@cee:" which must prepend the
 actual JSON. Note that the JSON must be valid and MUST NOT be followed
 by any non-JSON message. If either of these conditions is not true,
