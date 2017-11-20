@@ -1814,7 +1814,12 @@ strmMultiFileSeek(strm_t *pThis, unsigned int FNum, off64_t offs, off64_t *bytes
 		CHKiRet(genFileName(&pThis->pszCurrFName, pThis->pszDir, pThis->lenDir,
 				    pThis->pszFName, pThis->lenFName, pThis->iCurrFNum,
 				    pThis->iFileNumDigits));
-		stat((char*)pThis->pszCurrFName, &statBuf);
+		if(stat((char*)pThis->pszCurrFName, &statBuf) != 0) {
+			LogError(errno, RS_RET_IO_ERROR, "unexpected error doing a stat() "
+				"on file %s - further malfunctions may happen",
+				pThis->pszCurrFName);
+			ABORT_FINALIZE(RS_RET_IO_ERROR);
+		}
 		*bytesDel = statBuf.st_size;
 		DBGPRINTF("strmMultiFileSeek: detected new filenum, was %u, new %u, "
 			  "deleting '%s' (%lld bytes)\n", pThis->iCurrFNum, FNum,
