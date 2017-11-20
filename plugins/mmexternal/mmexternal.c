@@ -2,7 +2,7 @@
  * This core plugin is an interface module to message modification
  * modules written in languages other than C.
  *
- * Copyright 2014-2016 by Rainer Gerhards
+ * Copyright 2014-2017 by Rainer Gerhards
  *
  * This file is part of rsyslog.
  *
@@ -268,6 +268,10 @@ processProgramReply(wrkrInstanceData_t *__restrict__ const pWrkrData, smsg_t *co
 /* execute the child process (must be called in child context
  * after fork).
  */
+/* dummy vars to store "dup()" results - keeps Coverity happy */
+static int dummy_stdin;
+static int dummy_stdout;
+static int dummy_stderr;
 static void __attribute__((noreturn))
 execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdOutErr)
 {
@@ -278,16 +282,16 @@ execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdOutErr)
 	char *newenviron[] = { NULL };
 
 	fclose(stdin);
-	if(dup(fdStdin) == -1) {
+	if((dummy_stdin = dup(fdStdin)) == -1) {
 		DBGPRINTF("mmexternal: dup() stdin failed\n");
 	}
 	close(1);
-	if(dup(fdStdOutErr) == -1) {
+	if((dummy_stdout = dup(fdStdOutErr)) == -1) {
 		DBGPRINTF("mmexternal: dup() stdout failed\n");
 	}
 	/* todo: different pipe for stderr? */
 	close(2);
-	if(dup(fdStdOutErr) == -1) {
+	if((dummy_stderr = dup(fdStdOutErr)) == -1) {
 		DBGPRINTF("mmexternal: dup() stderr failed\n");
 	}
 
