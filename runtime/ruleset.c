@@ -570,11 +570,12 @@ finalize_it:
  * better suited here.
  * rgerhards, 2012-09-04
  */
-static rsRetVal ATTR_NONNULL(2, 3)
+static rsRetVal ATTR_NONNULL() // must actually be: ATTR_NONNULL(2, 3)
 scriptExec(struct cnfstmt *const root, smsg_t *const pMsg, wti_t *const pWti)
 {
 	struct cnfstmt *stmt;
 	DEFiRet;
+	assert(root != NULL);
 
 	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
 		if(*pWti->pbShutdownImmediate) {
