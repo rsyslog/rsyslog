@@ -521,8 +521,8 @@ startupSrv(ptcpsrv_t *pSrv)
 				/* it is debatable if PF_INET with EAFNOSUPPORT should
 				 * also be ignored...
 				 */
-				continue;
 			}
+                        continue;
 		}
 
 		if(r->ai_family == AF_INET6) {
