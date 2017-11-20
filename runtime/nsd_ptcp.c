@@ -449,11 +449,12 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 	for(r = res; r != NULL ; r = r->ai_next) {
                sock = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
         	if(sock < 0) {
-			if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT))
+			if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT)) {
 				dbgprintf("error %d creating tcp listen socket", errno);
 				/* it is debatable if PF_INET with EAFNOSUPPORT should
 				 * also be ignored...
 				 */
+			}
                         continue;
                 }
 
