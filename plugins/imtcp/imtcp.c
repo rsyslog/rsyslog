@@ -638,7 +638,7 @@ CODESTARTactivateCnfPrePrivDrop
 	}
 	if(pOurTcpsrv == NULL)
 		ABORT_FINALIZE(RS_RET_NO_RUN);
-	CHKiRet(tcpsrv.ConstructFinalize(pOurTcpsrv));
+	iRet = tcpsrv.ConstructFinalize(pOurTcpsrv);
 finalize_it:
 ENDactivateCnfPrePrivDrop
 

@@ -1220,6 +1220,10 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "debug.logfile")) {
 			if(pszAltDbgFileName == NULL) {
 				pszAltDbgFileName = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+				/* can actually happen if debug system also opened altdbg */
+				if(altdbg != -1) {
+					close(altdbg);
+				}
 				if((altdbg = open(pszAltDbgFileName, O_WRONLY|O_CREAT|O_TRUNC|O_NOCTTY
 				|O_CLOEXEC, S_IRUSR|S_IWUSR)) == -1) {
 					errmsg.LogError(0, RS_RET_ERR, "debug log file '%s' could not be opened",

@@ -554,7 +554,7 @@ CODESTARTnewInpInst
 		inst->topic,
 		inst->consumergroup);
 
-	CHKiRet(checkInstance(inst));
+	iRet = checkInstance(inst);
 finalize_it:
 CODE_STD_FINALIZERnewInpInst
 	cnfparamvalsDestruct(pvals, &inppblk);

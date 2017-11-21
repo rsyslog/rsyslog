@@ -692,7 +692,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			"mmexternal supports only v6+ config format, use: "
 			"action(type=\"mmexternal\" binary=...)");
 	}
-	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
+	iRet = RS_RET_CONFLINE_UNPROCESSED;
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -701,8 +701,7 @@ BEGINmodExit
 CODESTARTmodExit
 	free(cs.szBinary);
 	cs.szBinary = NULL;
-	CHKiRet(objRelease(errmsg, CORE_COMPONENT));
-finalize_it:
+	iRet = objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
