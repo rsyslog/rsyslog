@@ -367,6 +367,11 @@ TESTS += \
 #	sndrcv_kafka_multi.sh
 #	sndrcv_kafka_fail.sh
 #	sndrcv_kafka_failresume.sh
+if HAVE_VALGRIND
+TESTS += \
+	sndrcv_kafka-vg-sender.sh \
+	sndrcv_kafka-vg-rcvr.sh
+endif
 endif
 endif
 endif
@@ -1455,6 +1460,8 @@ EXTRA_DIST= \
 	mysql-actq-mt-withpause-vg.sh \
 	testsuites/mysql-actq-mt.conf \
 	sndrcv_kafka.sh \
+	sndrcv_kafka-vg-sender.sh \
+	sndrcv_kafka-vg-rcvr.sh \
 	sndrcv_kafka_multi.sh \
 	sndrcv_kafka_fail.sh \
 	sndrcv_kafka_failresume.sh \
@@ -1637,6 +1644,7 @@ EXTRA_DIST= \
 	libmaxmindb.supp \
 	travis/trusty.supp \
 	linux_localtime_r.supp \
+	librdkafka-bugs.supp \
 	json_var_case.sh \
 	testsuites/json_var_case.conf \
 	cfg.sh \

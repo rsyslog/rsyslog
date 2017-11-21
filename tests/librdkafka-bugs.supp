@@ -1,0 +1,20 @@
+{
+   potential_librdkafka_bug
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:calloc
+   fun:rd_calloc
+   fun:rd_kafka_op_new0
+   fun:rd_kafka_q_op_err
+   fun:rd_kafka_fetch_reply_handle
+   fun:rd_kafka_broker_fetch_reply
+   fun:rd_kafka_buf_callback
+   fun:rd_kafka_req_response
+   fun:rd_kafka_recv
+   fun:rd_kafka_transport_io_event
+   fun:rd_kafka_broker_serve
+   fun:rd_kafka_broker_consumer_serve
+   fun:rd_kafka_broker_thread_main
+   fun:_thrd_wrapper_function
+   fun:start_thread
+}
