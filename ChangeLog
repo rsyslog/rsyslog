@@ -1,5 +1,12 @@
 ------------------------------------------------------------------------------
 Version 8.31.0 [v8-stable] 2017-11-28
+- remove systemd embedded code, use libsystemd instead
+  Since the early days rsyslog used the orginal systemd embedded
+  interface code. This version now uses libsystemd where available.
+  If we do not find libsystemd, we assume the system does not use
+  systemd, which is a safe assumption nowadays. This ensures we use the
+  fresh interface code and also removes bloat from our project.
+  closes https://github.com/rsyslog/rsyslog/issues/1933
 - mmanon: add support for IPv6 adresses with embedded IPv4 address
   While this format is uncommon, it may still be present in logs and as
   such should be supported. It is configurable via individual settings,
