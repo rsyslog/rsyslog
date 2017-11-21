@@ -29,6 +29,8 @@ Version 8.31.0 [v8-stable] 2017-11-28
   to follow. Most importantly, now an as simple as possible locking paradigm
   of lock ... unlock within the function. Hopefully easier to understand
   both for humans and static code analyzers.
+- core: refactored creation of UDP sockets
+  was very old, hard to follow code; streamlined that a bit
 - core/dnscache: refactor locking
   keep a simple lock ... unlock scheme within the function. That is
   easier to follow for both humans as well as static analyzers.
