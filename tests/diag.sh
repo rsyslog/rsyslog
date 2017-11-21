@@ -43,10 +43,10 @@
 TB_TIMEOUT_STARTSTOP=1200 # timeout for start/stop rsyslogd in tenths (!) of a second 1200 => 2 min
 
 #START: ext kafka config
+dep_cache_dir=$(readlink -f $srcdir/.dep_cache)
 dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.10/zookeeper-3.4.10.tar.gz
 dep_zk_cached_file=$dep_cache_dir/zookeeper-3.4.10.tar.gz
 dep_kafka_url=http://www-us.apache.org/dist/kafka/0.10.2.1/kafka_2.12-0.10.2.1.tgz
-dep_cache_dir=$(readlink -f $srcdir/.dep_cache)
 if [ -z "$ES_DOWNLOAD" ]; then
 	dep_es_url=https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.3.tar.gz
 	dep_es_cached_file=$dep_cache_dir/elasticsearch-5.6.3.tar.gz
@@ -789,7 +789,7 @@ case $1 in
 			fi
 		fi
 		;;
-	 'start-elasticsearch') # $2, if set, is the number of additional ES instances
+	 'prepare-elasticsearch') # $2, if set, is the number of additional ES instances
 		# Heap Size (limit to 128MB for testbench! defaults is way to HIGH)
 		export ES_JAVA_OPTS="-Xms128m -Xmx128m"
 
@@ -829,34 +829,43 @@ case $1 in
 				mkdir -p $dep_work_dir/es/logs
 				mkdir -p $dep_work_dir/es/tmp
 		fi
+		echo ElasticSearch prepared for use in test.
+		;;
+	 'start-elasticsearch') # $2, if set, is the number of additional ES instances
+		# Heap Size (limit to 128MB for testbench! defaults is way to HIGH)
+		export ES_JAVA_OPTS="-Xms128m -Xmx128m"
 
+		if [ "x$2" == "x" ]; then
+			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+			dep_work_es_config="es.yml"
+			dep_work_es_pidfile="es.pid"
+		else
+			dep_work_dir=$(readlink -f $srcdir/$2)
+			dep_work_es_config="es$2.yml"
+			dep_work_es_pidfile="es$2.pid"
+		fi
 		echo "Starting ElasticSearch instance $2"
-		(	
-			cd $srcdir 
-			# THIS IS THE ACTUAL START of ES
-			$dep_work_dir/es/bin/elasticsearch -p $dep_work_es_pidfile -d
-			./msleep 2000
-			#$dep_work_dir/es/bin/elasticsearch & #> es_output.log
-			#echo $! > $dep_work_es_pidfile
-			echo "Starting instance $2 started with PID" `cat $dep_work_es_pidfile`
+		cd $srcdir 
+		# THIS IS THE ACTUAL START of ES
+		$dep_work_dir/es/bin/elasticsearch -p $dep_work_es_pidfile -d
+		./msleep 2000
+		echo "Starting instance $2 started with PID" `cat $dep_work_es_pidfile`
 
-			# Wait for startup with hardcoded timeout
-			timeoutend=30
-			timeseconds=0
-			# Loop until elasticsearch port is reachable or until
-			# timeout is reached!
-			until [ "`curl --silent --show-error --connect-timeout 1 http://localhost:19200 | grep 'rsyslog-testbench'`" != "" ]; do
-				echo "--- waiting for startup: 1 ( $timeseconds ) seconds"
-				./msleep 1000
-				let "timeseconds = $timeseconds + 1"
+		# Wait for startup with hardcoded timeout
+		timeoutend=30
+		timeseconds=0
+		# Loop until elasticsearch port is reachable or until
+		# timeout is reached!
+		until [ "`curl --silent --show-error --connect-timeout 1 http://localhost:19200 | grep 'rsyslog-testbench'`" != "" ]; do
+			echo "--- waiting for startup: 1 ( $timeseconds ) seconds"
+			./msleep 1000
+			let "timeseconds = $timeseconds + 1"
 
-				if [ "$timeseconds" -gt "$timeoutend" ]; then 
-					echo "--- TIMEOUT ( $timeseconds ) reached!!!"
-					break
-				fi
-			done
-			exit; 
-		)
+			if [ "$timeseconds" -gt "$timeoutend" ]; then 
+				echo "--- TIMEOUT ( $timeseconds ) reached!!!"
+		                . $srcdir/diag.sh error-exit 1
+			fi
+		done
 		./msleep 2000
 		;;
 	 'dump-kafka-serverlog')
@@ -922,6 +931,15 @@ case $1 in
 		if [ -e $dep_work_es_pidfile ]; then
 			(cd $srcdir && kill $(cat $dep_work_es_pidfile) )
 			. $srcdir/diag.sh wait-pid-termination $dep_work_es_pidfile
+		fi
+		;;
+	 'cleanup-elasticsearch')
+		if [ "x$2" == "x" ]; then
+			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+			dep_work_es_pidfile="es.pid"
+		else
+			dep_work_dir=$(readlink -f $srcdir/$2)
+			dep_work_es_pidfile="es$2.pid"
 		fi
 		rm -f $dep_work_es_pidfile
 		rm -rf $dep_work_dir/es
