@@ -738,8 +738,7 @@ CODESTARTcreateWrkrInstance
 	pWrkrData->fdOutputFile = -1;
 	pWrkrData->bIsRunning = 0;
 
-	CHKiRet(startChild(pWrkrData));
-finalize_it:
+	iRet = startChild(pWrkrData);
 ENDcreateWrkrInstance
 
 

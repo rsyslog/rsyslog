@@ -4768,10 +4768,7 @@ rmLeadingSpace(char *s)
 rsRetVal
 initRainerscript(void)
 {
-	DEFiRet;
-	CHKiRet(objGetObjInterface(&obj));
-finalize_it:
-	RETiRet;
+	return objGetObjInterface(&obj);
 }
 
 /* we need a function to check for octal digits */

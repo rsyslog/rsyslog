@@ -63,7 +63,6 @@ ENDobjConstruct(netstrm)
 /* destructor for the netstrm object */
 BEGINobjDestruct(netstrm) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(netstrm)
-//printf("destruct driver data %p\n", pThis->pDrvrData);
 	if(pThis->pDrvrData != NULL)
 		iRet = pThis->Drvr.Destruct(&pThis->pDrvrData);
 ENDobjDestruct(netstrm)
@@ -73,11 +72,8 @@ ENDobjDestruct(netstrm)
 static rsRetVal
 netstrmConstructFinalize(netstrm_t *pThis)
 {
-	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
-	CHKiRet(pThis->Drvr.Construct(&pThis->pDrvrData));
-finalize_it:
-	RETiRet;
+	return pThis->Drvr.Construct(&pThis->pDrvrData);
 }
 
 /* abort a connection. This is much like Destruct(), but tries

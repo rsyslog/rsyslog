@@ -247,8 +247,7 @@ doInjectNumericSuffixMsg(int iNum, ratelimit_t *ratelimiter)
 	DEFiRet;
 	snprintf((char*)szMsg, sizeof(szMsg)/sizeof(uchar),
              "<167>Mar  1 01:00:00 172.20.245.8 tag msgnum:%8.8d:", iNum);
-	CHKiRet(doInjectMsg(szMsg, ratelimiter));
-finalize_it:
+	iRet = doInjectMsg(szMsg, ratelimiter);
 	RETiRet;
 }
 
