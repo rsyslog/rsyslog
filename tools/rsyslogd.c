@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <unistd.h>
 #ifdef HAVE_LIBLOGGING_STDLOG
 #  include <liblogging/stdlog.h>
 #else
@@ -38,8 +39,9 @@
 #else
 #	include <sys/errno.h>
 #endif
-#include <unistd.h>
-#include "sd-daemon.h"
+#ifdef HAVE_LIBSYSTEMD
+#	include <systemd/sd-daemon.h>
+#endif
 
 #include "wti.h"
 #include "ratelimit.h"
@@ -343,6 +345,7 @@ prepareBackground(const int parentPipeFD)
 
 	int beginClose = 3;
 
+#ifdef HAVE_LIBSYSTEMD
 	/* running under systemd? Then we must make sure we "forward" any
 	 * fds passed by it (adjust the pid).
 	 */
@@ -363,6 +366,7 @@ prepareBackground(const int parentPipeFD)
 			}
 		}
 	}
+#endif
 
 	/* close unnecessary open files */
 	const int endClose = getdtablesize();
@@ -1929,7 +1933,9 @@ main(int argc, char **argv)
 		bProcessInternalMessages = 1;
 	dbgClassInit();
 	initAll(argc, argv);
+#ifdef HAVE_LIBSYSTEMD
 	sd_notify(0, "READY=1");
+#endif
 	DBGPRINTF("----RSYSLOGD INITIALIZED\n");
 
 	mainloop();
