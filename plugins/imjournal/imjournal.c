@@ -554,10 +554,10 @@ loadJournalState(void)
 {
 	DEFiRet;
 	int r;
+	FILE *r_sf;
 
 	if (cs.stateFile[0] != '/') {
 		char *new_stateFile;
-
 		if (-1 == asprintf(&new_stateFile, "%s/%s", (char *)glbl.GetWorkDir(), cs.stateFile)) {
 			LogError(0, RS_RET_OUT_OF_MEMORY, "imjournal: asprintf failed\n");
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -566,69 +566,65 @@ loadJournalState(void)
 		cs.stateFile = new_stateFile;
 	}
 
-	/* if state file exists, set cursor to appropriate position */
-	if (access(cs.stateFile, F_OK|R_OK) != -1) {
-		FILE *r_sf;
 
-		if ((r_sf = fopen(cs.stateFile, "rb")) != NULL) {
-			char readCursor[128 + 1];
-
-			if (fscanf(r_sf, "%128s\n", readCursor) != EOF) {
-				if (sd_journal_seek_cursor(j, readCursor) != 0) {
-					LogError(0, RS_RET_ERR, "imjournal: "
-						"couldn't seek to cursor `%s'\n", readCursor);
-					iRet = RS_RET_ERR;
-				} else {
-					char * tmp_cursor = NULL;
-					sd_journal_next(j);
-					/*
-					* This is resolving the situation when system is after reboot and boot_id doesn't match
-					* so cursor pointing into "future".
-					* Usually sd_journal_next jump to head of journal due to journal aproximation,
-					* but when system time goes backwards and cursor is still 
-					  invalid, rsyslog stops logging.
-					* We use sd_journal_get_cursor to validate our cursor.
-					* When cursor is invalid we are trying to jump to the head of journal
-					* This problem with time should not affect persistent journal,
-					* but if cursor has been intentionally compromised it could stop logging even
-					* with persistent journal.
-					* */
-					if ((r = sd_journal_get_cursor(j, &tmp_cursor)) < 0) {
-						LogError(-r, RS_RET_IO_ERROR, "imjournal: "
-						"loaded invalid cursor, seeking to the head of journal\n");
-						if ((r = sd_journal_seek_head(j)) < 0) {
-							LogError(-r, RS_RET_ERR, "imjournal: "
-							"sd_journal_seek_head() failed, when cursor is invalid\n");
-							iRet = RS_RET_ERR;
-						}
+	if ((r_sf = fopen(cs.stateFile, "rb")) != NULL) {
+		char readCursor[128 + 1];
+		if (fscanf(r_sf, "%128s\n", readCursor) != EOF) {
+			if (sd_journal_seek_cursor(j, readCursor) != 0) {
+				LogError(0, RS_RET_ERR, "imjournal: "
+					"couldn't seek to cursor `%s'\n", readCursor);
+				iRet = RS_RET_ERR;
+			} else {
+				char * tmp_cursor = NULL;
+				sd_journal_next(j);
+				/*
+				* This is resolving the situation when system is after reboot and boot_id doesn't match
+				* so cursor pointing into "future".
+				* Usually sd_journal_next jump to head of journal due to journal aproximation,
+				* but when system time goes backwards and cursor is still 
+				  invalid, rsyslog stops logging.
+				* We use sd_journal_get_cursor to validate our cursor.
+				* When cursor is invalid we are trying to jump to the head of journal
+				* This problem with time should not affect persistent journal,
+				* but if cursor has been intentionally compromised it could stop logging even
+				* with persistent journal.
+				* */
+				if ((r = sd_journal_get_cursor(j, &tmp_cursor)) < 0) {
+					LogError(-r, RS_RET_IO_ERROR, "imjournal: "
+					"loaded invalid cursor, seeking to the head of journal\n");
+					if ((r = sd_journal_seek_head(j)) < 0) {
+						LogError(-r, RS_RET_ERR, "imjournal: "
+						"sd_journal_seek_head() failed, when cursor is invalid\n");
+						iRet = RS_RET_ERR;
 					}
 				}
-			} else {
-				LogError(0, RS_RET_IO_ERROR, "imjournal: "
-					"fscanf on state file `%s' failed\n", cs.stateFile);
-				iRet = RS_RET_IO_ERROR;
 			}
-
-			fclose(r_sf);
-
-                        if (iRet != RS_RET_OK && cs.bIgnoreNonValidStatefile) {
-                                /* ignore state file errors */
-                                iRet = RS_RET_OK;
-                                LogError(0, NO_ERRCODE,
-                                        "imjournal: ignoring invalid state file");
-                                if (cs.bIgnorePrevious) {
-                                        skipOldMessages();
-                                }
-                        }
 		} else {
-			LogError(0, RS_RET_FOPEN_FAILURE, "imjournal: "
-					"open on state file `%s' failed\n", cs.stateFile);
+			LogError(0, RS_RET_IO_ERROR, "imjournal: "
+				"fscanf on state file `%s' failed\n", cs.stateFile);
+			iRet = RS_RET_IO_ERROR;
 		}
-	} else if (cs.bIgnorePrevious) {
-		/* Seek to the very end of the journal and ignore all
-		 * older messages. */
-		skipOldMessages();
-	} 
+
+		fclose(r_sf);
+
+		if (iRet != RS_RET_OK && cs.bIgnoreNonValidStatefile) {
+			/* ignore state file errors */
+			iRet = RS_RET_OK;
+			LogError(0, NO_ERRCODE, "imjournal: ignoring invalid state file %s",
+				cs.stateFile);
+			if (cs.bIgnorePrevious) {
+				skipOldMessages();
+			}
+		}
+	} else {
+		LogError(0, RS_RET_FOPEN_FAILURE, "imjournal: "
+				"open on state file `%s' failed\n", cs.stateFile);
+		if (cs.bIgnorePrevious) {
+			/* Seek to the very end of the journal and ignore all
+			 * older messages. */
+			skipOldMessages();
+		}
+	}
 
 finalize_it:
 	RETiRet;
