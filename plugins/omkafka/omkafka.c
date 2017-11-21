@@ -797,7 +797,19 @@ do_rd_kafka_destroy(instanceData *const __restrict__ pData)
 	} else {
 		closeTopic(pData);
 	}
+
+	/* Final destroy of kafka!*/
 	rd_kafka_destroy(pData->rk);
+
+# if RD_KAFKA_VERSION < 0x00090001
+	/* Wait for kafka being destroyed in old API */
+	if (rd_kafka_wait_destroyed(10000) < 0)	{
+		DBGPRINTF("omkafka: error, rd_kafka_destroy did not finish after grace timeout (10s)!\n");
+	} else {
+		DBGPRINTF("omkafka: rd_kafka_destroy successfully finished\n");
+	}
+# endif
+
 	pData->rk = NULL;
 done:	return;
 }
@@ -922,7 +934,7 @@ openKafka(instanceData *const __restrict__ pData)
 	}
 
 # if RD_KAFKA_VERSION < 0x00090001
-	rd_kafka_set_logger(pData->rk, kafkaLogger);
+	rd_kafka_conf_set_log_cb(pData->rk, kafkaLogger);
 # endif
 	DBGPRINTF("omkafka setting brokers: '%s'n", pData->brokers);
 	if((nBrokers = rd_kafka_brokers_add(pData->rk, (char*)pData->brokers)) == 0) {
@@ -1555,8 +1567,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	INIT_ATOMIC_HELPER_MUT(mutClock);
 
-	DBGPRINTF("omkafka %s using librdkafka version %s\n",
-	          VERSION, rd_kafka_version_str());
+	DBGPRINTF("omkafka %s using librdkafka version %s, 0x%x\n",
+	          VERSION, rd_kafka_version_str(), rd_kafka_version());
 	CHKiRet(statsobj.Construct(&kafkaStats));
 	CHKiRet(statsobj.SetName(kafkaStats, (uchar *)"omkafka"));
 	CHKiRet(statsobj.SetOrigin(kafkaStats, (uchar*)"omkafka"));

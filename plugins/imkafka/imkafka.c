@@ -90,7 +90,6 @@ struct instanceConf_s {
 	int bIsConnected;
 	rd_kafka_conf_t *conf;
 	rd_kafka_t *rk;
-	rd_kafka_topic_t *rkt;
 	rd_kafka_topic_conf_t *topic_conf;
 	int partition;
 	int bIsSubscribed;
@@ -319,9 +318,13 @@ checkInstance(instanceConf_t *const inst)
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	}
 
-# if RD_KAFKA_VERSION >= 0x00090001
-	rd_kafka_conf_set_log_cb(inst->conf, kafkaLogger);
-# endif
+#ifdef DEBUG
+	/* enable kafka debug output */
+	if(	rd_kafka_conf_set(inst->conf, "debug", RD_KAFKA_DEBUG_CONTEXTS,
+		kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
+		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+	}
+#endif
 
 	/* Set custom configuration parameters */
 	for(int i = 0 ; i < inst->nConfParams ; ++i) {
@@ -390,6 +393,10 @@ checkInstance(instanceConf_t *const inst)
 		/* Callback called on partition assignment changes */
 //TODO needed?!		rd_kafka_conf_set_rebalance_cb(inst->conf, rebalance_cb);
 	}
+
+	# if RD_KAFKA_VERSION >= 0x00090001
+		rd_kafka_conf_set_log_cb(inst->conf, kafkaLogger);
+	# endif
 
 	/* Create Kafka Consumer */
 	inst->rk = rd_kafka_new(RD_KAFKA_CONSUMER, inst->conf,
@@ -721,8 +728,27 @@ CODESTARTafterRun
 			inst->topic,
 			inst->consumergroup,
 			inst->brokers);
-		/* Destroy handle */
+
+		/* 1) Close the consumer, committing final offsets, etc. */
+		rd_kafka_consumer_close(inst->rk);
+
+		/* 2) Destroy handle object */
 		rd_kafka_destroy(inst->rk);
+
+		DBGPRINTF("imkafka: afterRun stopped consuming %s/%s/%s\n",
+			inst->topic,
+			inst->consumergroup,
+			inst->brokers);
+
+# if RD_KAFKA_VERSION < 0x00090001
+	/* Wait for kafka being destroyed in old API */
+	if (rd_kafka_wait_destroyed(10000) < 0)	{
+		DBGPRINTF("imkafka: error, rd_kafka_destroy did not finish after grace timeout (10s)!\n");
+	} else {
+		DBGPRINTF("imkafka: rd_kafka_destroy successfully finished\n");
+	}
+# endif
+
 	}
 ENDafterRun
 
