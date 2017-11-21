@@ -32,6 +32,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <pthread.h>
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
@@ -48,6 +49,8 @@ MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("mmdblookup")
 
+
+static pthread_mutex_t mut_mmdblookup = PTHREAD_MUTEX_INITIALIZER;
 
 DEFobjCurrIf(errmsg);
 DEF_OMOD_STATIC_DATA
@@ -336,6 +339,9 @@ CODESTARTdoAction
 	rsRetVal localRet = msgGetJSONPropJSON(pMsg, &pProp, &keyjson);
 	msgPropDescrDestruct(&pProp);
 
+	/* it looks like maxmindb is not fully thread-safe */
+	pthread_mutex_lock(&mut_mmdblookup);
+
 	if (localRet != RS_RET_OK) {
 		/* key not found in the message. nothing to do */
 		ABORT_FINALIZE(RS_RET_OK);
@@ -409,6 +415,7 @@ finalize_it:
 	json_object_put(keyjson);
 	if(total_json != NULL)
 		json_object_put(total_json);
+	pthread_mutex_unlock(&mut_mmdblookup);
 ENDdoAction
 
 
