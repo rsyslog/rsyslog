@@ -310,6 +310,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
   * re-enable RELP tests on Solaris
   * added basic test for imjournal
   * added threading tests via valgrind's helgrind tool
+  * added valgrind test for kafka modules
 - CI: improved test coverage on FreeBSD
 - Travis: clang static analyzer 5.0 now run over all source files
 - build: make compile warning-free under gcc 7
