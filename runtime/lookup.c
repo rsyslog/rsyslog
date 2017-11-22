@@ -700,21 +700,21 @@ finalize_it:
 	if (iRet != RS_RET_OK) {
 		if (stub_val == NULL) {
 			errmsg.LogError(0, RS_RET_INTERNAL_ERROR,
-							"lookup table '%s' could not be reloaded from file '%s'",
-							pThis->name, pThis->filename);
+					"lookup table '%s' could not be reloaded from file '%s'",
+					pThis->name, pThis->filename);
 		} else {
 			errmsg.LogError(0, RS_RET_INTERNAL_ERROR,
-							"lookup table '%s' could not be stubbed with value '%s'",
-							pThis->name, stub_val);
+					"lookup table '%s' could not be stubbed with value '%s'",
+					pThis->name, stub_val);
 		}
 		lookupDestruct(newlu);
 	} else {
 		if (stub_val == NULL) {
 			errmsg.LogError(0, RS_RET_OK, "lookup table '%s' reloaded from file '%s'",
-							pThis->name, pThis->filename);
+					pThis->name, pThis->filename);
 		} else {
 			errmsg.LogError(0, RS_RET_OK, "lookup table '%s' stubbed with value '%s'",
-							pThis->name, stub_val);
+					pThis->name, stub_val);
 		}
 		lookupDestruct(oldlu);
 	}
@@ -733,11 +733,11 @@ lookupDoStub(lookup_ref_t *pThis, const uchar* stub_val)
 	pthread_rwlock_unlock(&pThis->rwlock);
 	if (! already_stubbed) {
 		errmsg.LogError(0, RS_RET_OK, "stubbing lookup table '%s' with value '%s'",
-						pThis->name, stub_val);
+			pThis->name, stub_val);
 		CHKiRet(lookupReloadOrStub(pThis, stub_val));
 	} else {
 		errmsg.LogError(0, RS_RET_OK, "lookup table '%s' is already stubbed with value '%s'",
-						pThis->name, stub_val);
+			pThis->name, stub_val);
 	}
 finalize_it:
 	RETiRet;
@@ -752,6 +752,7 @@ lookupIsReloadPending(lookup_ref_t *pThis) {
 	return reload_pending;
 }
 
+/* note: stub_val_if_reload_fails may or may not be NULL */
 rsRetVal ATTR_NONNULL(1)
 lookupReload(lookup_ref_t *const pThis, const uchar *const stub_val_if_reload_fails)
 {
@@ -759,6 +760,7 @@ lookupReload(lookup_ref_t *const pThis, const uchar *const stub_val_if_reload_fa
 	uint8_t duplicated_stub_value = 0;
 	int lock_errno = 0;
 	DEFiRet;
+	assert(pThis != NULL);
 	if ((lock_errno = pthread_mutex_trylock(&pThis->reloader_mut)) == 0) {
 		locked = 1;
 		/*so it doesn't leak memory in situation where 2 reload requests are issued back to back*/
