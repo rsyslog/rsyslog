@@ -3218,7 +3218,7 @@ cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
 		doIndent(indent); dbgprintf("UNSET %s\n",
 				  stmt->d.s_unset.varname);
 		break;
-    case S_RELOAD_LOOKUP_TABLE:
+	case S_RELOAD_LOOKUP_TABLE:
 		doIndent(indent);
 		dbgprintf("RELOAD_LOOKUP_TABLE table(%s) (stub with '%s' on error)",
 			stmt->d.s_reload_lookup_table.table_name,
