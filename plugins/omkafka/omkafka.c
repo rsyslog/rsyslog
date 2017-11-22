@@ -1517,7 +1517,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
 			"omkafka supports only RainerScript config format, use: "
 			"action(type=\"omkafka\" ...parameters...)");
-	ABORT_FINALIZE(RS_RET_LEGA_ACT_NOT_SUPPORTED);
+	iRet = RS_RET_LEGA_ACT_NOT_SUPPORTED;
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
