@@ -97,6 +97,11 @@ Version 8.31.0 [v8-stable] 2017-11-28
   error messages. Fixed this and also increased the number of error
   messages so that it now is easier to diagnose problems with this module.
   Also a little bit of internal brush-up.
+ -mmdblookup bugfix: fix potential segfault due to threading issues
+  libmaxminddb seems to have issues when running under multiple threads. As
+  a first measure, we prevent mmdblookup now from running on more than one
+  thread concurrently.
+  see also: https://github.com/rsyslog/rsyslog/issues/1885#issuecomment-344882616
 - omkafka bugfixes
   * statistics counter maxoutqsize could not be reset
     Thanks to github user flisky for the patch.
