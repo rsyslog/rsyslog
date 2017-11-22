@@ -35,6 +35,13 @@
 /* check return state of operation and abort, if non-OK */
 #define CHKr(code) if((r = code) != 0) goto done
 
+/* check the return value of a ksi api call and log a message in case of error */
+#define CHECK_KSI_API(code, context, msg) if((res = code) != 0) do { \
+	reportKSIAPIErr(context, NULL, msg, res); \
+	goto cleanup; \
+	} while (0)
+
+
 typedef enum LOGSIG_SyncMode_en {
 	/** The block hashes and ksi signatures in one file */
 	LOGSIG_ASYNCHRONOUS = 0x00,
@@ -61,6 +68,7 @@ struct rsksictx_s {
 	KSI_CTX *ksi_ctx;	/* libksi's context object */
 	KSI_DataHasher *hasher;
 	KSI_HashAlgorithm hashAlg;
+	KSI_HashAlgorithm hmacAlg;
 	uint8_t bKeepRecordHashes;
 	uint8_t bKeepTreeHashes;
 	uint64_t blockLevelLimit;
@@ -82,6 +90,8 @@ struct rsksictx_s {
 	bool thread_started;
 	uint8_t disabled; /* permits to disable the plugin --> set to 1 */
 	ksifile ksi;
+	bool debug;
+	uint64_t max_requests;
 	void (*errFunc)(void *, unsigned char*);
 	void (*logFunc)(void *, unsigned char*);
 	void *usrptr; /* for error function */
@@ -172,12 +182,12 @@ struct rsksistatefile {
 #define rsksiSetDirGID(ctx, val) ((ctx)->dirGID = val)
 #define rsksiSetCreateMode(ctx, val) ((ctx)->fCreateMode= val)
 #define rsksiSetDirCreateMode(ctx, val) ((ctx)->fDirCreateMode = val)
-
+#define rsksiSetDebug(ctx, val) ((ctx)->debug = val)
 
 int rsksiSetAggregator(rsksictx ctx, char *uri, char *loginid, char *key);
 int rsksiSetHashFunction(rsksictx ctx, char *algName);
-int rsksiInit(char *usragent);
-void rsksiExit(void);
+int rsksiSetHmacFunction(rsksictx ctx, char *algName);
+int rsksiInitModule(rsksictx ctx);
 rsksictx rsksiCtxNew(void);
 void rsksisetErrFunc(rsksictx ctx, void (*func)(void*, unsigned char *), void *usrptr);
 void rsksisetLogFunc(rsksictx ctx, void (*func)(void*, unsigned char *), void *usrptr);

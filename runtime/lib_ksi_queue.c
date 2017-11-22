@@ -73,6 +73,15 @@ size_t RingBuffer_count(RingBuffer* this) {
 	return this->count;
 }
 
+bool RingBuffer_getItem(RingBuffer* this, size_t index, void** item) {
+	if (this->count == 0 || index >= this->count)
+		return false;
+
+	*item = this->buffer[(this->head + index) % this->size];
+	return true;
+}
+
+
 ProtectedQueue* ProtectedQueue_new(size_t queueSize) {
 	ProtectedQueue *p = calloc(1, sizeof (ProtectedQueue));
 	if (!p)
@@ -89,6 +98,7 @@ void ProtectedQueue_free(ProtectedQueue* this) {
 	pthread_cond_destroy(&this->condition);
 	this->bStop = true;
 	RingBuffer_free(this->workItems);
+	free(this);
 }
 
 /// Signal stop. All threads waiting in FetchItme will be returned false from FetchItem
@@ -139,6 +149,14 @@ size_t ProtectedQueue_popFrontBatch(ProtectedQueue* this, void** items, size_t b
 	return i;
 }
 
+bool ProtectedQueue_getItem(ProtectedQueue* this, size_t index, void** item) {
+	bool ret=false;
+	pthread_mutex_lock(&this->mutex);
+	ret=RingBuffer_getItem(this->workItems, index, item);
+	pthread_mutex_unlock(&this->mutex);
+	return ret;
+}
+
 /* Waits for a new work item or timeout (if specified). Returns 0 in case of exit
    condition, 1 if item became available and ETIMEDOUT in case of timeout. */
 int ProtectedQueue_waitForItem(ProtectedQueue* this, void** item, uint64_t timeout) {
@@ -151,16 +169,16 @@ int ProtectedQueue_waitForItem(ProtectedQueue* this, void** item, uint64_t timeo
 		ts.tv_nsec += (timeout % 1000LL)*1000LL;
 	}
 
-	while (RingBuffer_count(this->workItems) == 0) {
-		if (timeout) {
-			if (pthread_cond_timedwait(&this->condition, &this->mutex, &ts) == ETIMEDOUT) {
-				pthread_mutex_unlock(&this->mutex);
-				return ETIMEDOUT;
-			}
-		} else
-			pthread_cond_wait(&this->condition, &this->mutex);
-		if (this->bStop)
-			return 0;
+	if (timeout) {
+		if (pthread_cond_timedwait(&this->condition, &this->mutex, &ts) == ETIMEDOUT) {
+			pthread_mutex_unlock(&this->mutex);
+			return ETIMEDOUT;
+		}
+	} else
+		pthread_cond_wait(&this->condition, &this->mutex);
+	if (this->bStop) {
+		pthread_mutex_unlock(&this->mutex);
+		return 0;
 	}
 
 	if (RingBuffer_count(this->workItems) != 0 && item != NULL)
