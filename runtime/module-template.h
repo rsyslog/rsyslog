@@ -349,7 +349,7 @@ static rsRetVal parseSelectorAct(uchar **pp, void **ppModData, omodStringRequest
 	CHKiRet(OMSRconstruct(ppOMSR, NumStrReqEntries));
 
 #define CODE_STD_FINALIZERparseSelectorAct \
-finalize_it:\
+finalize_it: ATTR_UNUSED; /* semi-colon needed according to gcc doc! */\
 	if(iRet == RS_RET_OK || iRet == RS_RET_OK_WARN || iRet == RS_RET_SUSPENDED) {\
 		*ppModData = pData;\
 		*pp = p;\
