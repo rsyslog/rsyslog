@@ -893,7 +893,7 @@ openKafka(instanceData *const __restrict__ pData)
 
 #ifdef DEBUG
 	/* enable kafka debug output */
-	if(	rd_kafka_conf_set(conf, "debug", RD_KAFKA_DEBUG_CONTEXTS,
+	if(rd_kafka_conf_set(conf, "debug", RD_KAFKA_DEBUG_CONTEXTS,
 		errstr, sizeof(errstr)) != RD_KAFKA_CONF_OK) {
 		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 	}
@@ -903,16 +903,14 @@ openKafka(instanceData *const __restrict__ pData)
 		DBGPRINTF("omkafka: setting custom configuration parameter: %s:%s\n",
 			pData->confParams[i].name,
 			pData->confParams[i].val);
-		if(rd_kafka_conf_set(conf,
-				     pData->confParams[i].name,
-				     pData->confParams[i].val,
-				     errstr, sizeof(errstr))
+		if(rd_kafka_conf_set(conf, pData->confParams[i].name,
+			pData->confParams[i].val, errstr, sizeof(errstr))
 	 	   != RD_KAFKA_CONF_OK) {
 			if(pData->bReportErrs) {
 				errmsg.LogError(0, RS_RET_PARAM_ERROR, "error in kafka "
-						"parameter '%s=%s': %s",
-						pData->confParams[i].name,
-						pData->confParams[i].val, errstr);
+					"parameter '%s=%s': %s",
+					pData->confParams[i].name,
+					pData->confParams[i].val, errstr);
 			}
 			ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 		}
@@ -920,22 +918,21 @@ openKafka(instanceData *const __restrict__ pData)
 	rd_kafka_conf_set_opaque(conf, (void *) pData);
 	rd_kafka_conf_set_dr_msg_cb(conf, deliveryCallback);
 	rd_kafka_conf_set_error_cb(conf, errorCallback);
-# if RD_KAFKA_VERSION >= 0x00090001
+#	if RD_KAFKA_VERSION >= 0x00090001
 	rd_kafka_conf_set_log_cb(conf, kafkaLogger);
-# endif
+#	endif
 
 	char kafkaErrMsg[1024];
-	pData->rk = rd_kafka_new(RD_KAFKA_PRODUCER, conf,
-				     kafkaErrMsg, sizeof(kafkaErrMsg));
+	pData->rk = rd_kafka_new(RD_KAFKA_PRODUCER, conf, kafkaErrMsg, sizeof(kafkaErrMsg));
 	if(pData->rk == NULL) {
 		errmsg.LogError(0, RS_RET_KAFKA_ERROR,
 			"omkafka: error creating kafka handle: %s\n", kafkaErrMsg);
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	}
 
-# if RD_KAFKA_VERSION < 0x00090001
+#	if RD_KAFKA_VERSION < 0x00090001
 	rd_kafka_conf_set_log_cb(pData->rk, kafkaLogger);
-# endif
+#	endif
 	DBGPRINTF("omkafka setting brokers: '%s'n", pData->brokers);
 	if((nBrokers = rd_kafka_brokers_add(pData->rk, (char*)pData->brokers)) == 0) {
 		errmsg.LogError(0, RS_RET_KAFKA_NO_VALID_BROKERS,
@@ -1433,9 +1430,8 @@ CODESTARTnewActInst
 			                                      pvals[i].val.d.ar->nmemb ));
 			for(int j = 0 ; j <  pvals[i].val.d.ar->nmemb ; ++j) {
 				char *cstr = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-				CHKiRet(processKafkaParam(cstr,
-							&pData->confParams[j].name,
-							&pData->confParams[j].val));
+				CHKiRet(processKafkaParam(cstr, &pData->confParams[j].name,
+					&pData->confParams[j].val));
 				free(cstr);
 			}
 		} else if(!strcmp(actpblk.descr[i].name, "topicconfparam")) {
@@ -1444,9 +1440,8 @@ CODESTARTnewActInst
 			                                      pvals[i].val.d.ar->nmemb ));
 			for(int j = 0 ; j <  pvals[i].val.d.ar->nmemb ; ++j) {
 				char *cstr = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-				CHKiRet(processKafkaParam(cstr,
-							&pData->topicConfParams[j].name,
-							&pData->topicConfParams[j].val));
+				CHKiRet(processKafkaParam(cstr, &pData->topicConfParams[j].name,
+					&pData->topicConfParams[j].val));
 				free(cstr);
 			}
 		} else if(!strcmp(actpblk.descr[i].name, "errorfile")) {
@@ -1475,10 +1470,10 @@ CODESTARTnewActInst
 	}
 
 	if(pData->dynaTopic && pData->topic == NULL) {
-        errmsg.LogError(0, RS_RET_CONFIG_ERROR,
-            "omkafka: requested dynamic topic, but no "
-            "name for topic template given - action definition invalid");
-        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+		errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+			"omkafka: requested dynamic topic, but no "
+			"name for topic template given - action definition invalid");
+		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 
 	iNumTpls = 2;
@@ -1490,14 +1485,13 @@ CODESTARTnewActInst
 
 	CHKiRet(OMSRsetEntry(*ppOMSR, 1, (uchar*)strdup(" KAFKA_TimeStamp"),
 						OMSR_NO_RQD_TPL_OPTS));
-
 	if(pData->dynaTopic) {
-        CHKiRet(OMSRsetEntry(*ppOMSR, 2, ustrdup(pData->topic),
-            OMSR_NO_RQD_TPL_OPTS));
-        CHKmalloc(pData->dynCache = (dynaTopicCacheEntry**)
+		CHKiRet(OMSRsetEntry(*ppOMSR, 2, ustrdup(pData->topic), OMSR_NO_RQD_TPL_OPTS));
+		CHKmalloc(pData->dynCache = (dynaTopicCacheEntry**)
 			calloc(pData->iDynaTopicCacheSize, sizeof(dynaTopicCacheEntry*)));
-        pData->iCurrElt = -1;
+		pData->iCurrElt = -1;
 	}
+
 	pthread_mutex_lock(&closeTimeoutMut);
 	if (closeTimeout < pData->closeTimeout) {
 		closeTimeout = pData->closeTimeout;
