@@ -835,9 +835,8 @@ writeFile(instanceData *__restrict__ const pData,
 		pData->nInactive = 0;
 	}
 
-	CHKiRet(doWrite(pData,
-		 	actParam(pParam, pData->iNumTpls, iMsg, 0).param,
-		 	actParam(pParam, pData->iNumTpls, iMsg, 0).lenStr));
+	iRet = doWrite(pData, actParam(pParam, pData->iNumTpls, iMsg, 0).param,
+		actParam(pParam, pData->iNumTpls, iMsg, 0).lenStr);
 
 finalize_it:
 	RETiRet;
