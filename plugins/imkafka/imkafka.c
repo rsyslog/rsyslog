@@ -318,13 +318,13 @@ checkInstance(instanceConf_t *const inst)
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	}
 
-#ifdef DEBUG
+#	ifdef DEBUG
 	/* enable kafka debug output */
-	if(	rd_kafka_conf_set(inst->conf, "debug", RD_KAFKA_DEBUG_CONTEXTS,
+	if(rd_kafka_conf_set(inst->conf, "debug", RD_KAFKA_DEBUG_CONTEXTS,
 		kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
 		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 	}
-#endif
+#	endif
 
 	/* Set custom configuration parameters */
 	for(int i = 0 ; i < inst->nConfParams ; ++i) {
@@ -425,8 +425,10 @@ checkInstance(instanceConf_t *const inst)
 	inst->bIsConnected = 1;
 
 finalize_it:
-	errmsg.LogError(0, RS_RET_KAFKA_NO_VALID_BROKERS,
-		"imkafka: no valid brokers specified: %s\n", inst->brokers);
+	if(iRet != RS_RET_OK) {
+		errmsg.LogError(0, RS_RET_KAFKA_NO_VALID_BROKERS,
+			"imkafka: no valid brokers specified: %s\n", inst->brokers);
+	}
 
 	RETiRet;
 }
