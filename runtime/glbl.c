@@ -1278,6 +1278,7 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "errormessagestostderr.maxnumber")) {
 		        loadConf->globals.maxErrMsgToStderr = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "debug.files")) {
+			free(glblDbgFiles); /* "fix" Coverity false positive */
 			glblDbgFilesNum = cnfparamvals[i].val.d.ar->nmemb;
 			glblDbgFiles = (char**) malloc(cnfparamvals[i].val.d.ar->nmemb * sizeof(char*));
 			for(int j = 0 ; j <  cnfparamvals[i].val.d.ar->nmemb ; ++j) {
