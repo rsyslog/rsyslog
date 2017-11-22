@@ -282,7 +282,6 @@ static wd_map_t *wdmap = NULL;
 static int nWdmap;
 static int allocMaxWdmap;
 static int ino_fd;	/* fd for inotify calls */
-
 #endif /* #if HAVE_INOTIFY_INIT -------------------------------------------------- */
 
 #if defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE)
@@ -346,7 +345,9 @@ static struct cnfparamblk inppblk =
 #ifdef HAVE_INOTIFY_INIT
 /* support for inotify mode */
 
-#if 0 /* enable if you need this for debugging */
+
+#if ULTRA_DEBUG == 1
+/* if ultra debugging enabled */
 static void
 dbg_wdmapPrint(char *msg)
 {
@@ -1554,7 +1555,9 @@ fileTableSearchNoWildcard(fileTable_t *const __restrict__ tab, uchar *const __re
 {
 	int f;
 	uchar *baseName = NULL;
+#if ULTRA_DEBUG == 1
 	/* UNCOMMENT FOR DEBUG fileTableDisplay(tab); */
+#endif
 	for(f = 0 ; f < tab->currMax ; ++f) {
 		baseName = tab->listeners[f].pLstn->pszBaseName;
 		if (strcmp((const char*)baseName, (const char*)fn) == 0)
@@ -1572,7 +1575,9 @@ fileTableAddFile(fileTable_t *const __restrict__ tab, lstn_t *const __restrict__
 {
 	int j;
 	DEFiRet;
+#if ULTRA_DEBUG == 1
 	/* UNCOMMENT FOR DEBUG fileTableDisplay(tab); */
+#endif
 	for(j = 0 ; j < tab->currMax && tab->listeners[j].pLstn != pLstn ; ++j)
 		; /* just scan */
 	if(j < tab->currMax) {
@@ -1747,7 +1752,9 @@ dirsAddFile(lstn_t *__restrict__ pLstn, const int bActive)
 	CHKiRet(fileTableAddFile((bActive ? &dir->active : &dir->configured), pLstn));
 	DBGPRINTF("imfile: associated file [%s] to directory %d[%s], Active = %d\n",
 		pLstn->pszFileName, dirIdx, dir->dirName, bActive);
+#if ULTRA_DEBUG == 1
 /* UNCOMMENT FOR DEBUG fileTableDisplay(bActive ? &dir->active : &dir->configured); */
+#endif
 finalize_it:
 	RETiRet;
 }
@@ -2559,92 +2566,135 @@ fen_printevent(int event, char *pname)
 {
 	DBGPRINTF("imfile: fen_printevent: %s", pname);
 	if (event & FILE_ACCESS) {
-		DBGPRINTF(" FILE_ACCESS\n");
+		DBGPRINTF(" FILE_ACCESS");
 	}
 	if (event & FILE_MODIFIED) {
-		DBGPRINTF(" FILE_MODIFIED\n");
+		DBGPRINTF(" FILE_MODIFIED");
 	}
 	if (event & FILE_ATTRIB) {
-		DBGPRINTF(" FILE_ATTRIB\n");
+		DBGPRINTF(" FILE_ATTRIB");
 	}
 	if (event & FILE_DELETE) {
-		DBGPRINTF(" FILE_DELETE\n");
+		DBGPRINTF(" FILE_DELETE");
 	}
 	if (event & FILE_RENAME_TO) {
-		DBGPRINTF(" FILE_RENAME_TO\n");
+		DBGPRINTF(" FILE_RENAME_TO");
 	}
 	if (event & FILE_RENAME_FROM) {
-		DBGPRINTF(" FILE_RENAME_FROM\n");
+		DBGPRINTF(" FILE_RENAME_FROM");
 	}
 	if (event & UNMOUNTED) {
-		DBGPRINTF(" UNMOUNTED\n");
+		DBGPRINTF(" UNMOUNTED");
 	}
 	if (event & MOUNTEDOVER) {
-		DBGPRINTF(" MOUNTEDOVER\n");
+		DBGPRINTF(" MOUNTEDOVER");
 	}
-	printf("\n");
+	DBGPRINTF("\n");
 }
 
+#if false
+/* function not used yet, will be needed for wildcards later */
 static rsRetVal
-fen_processEvent(lstn_t *pLstn, int revents)
+fen_monitorDirectory(lstn_t *pLstn)
 {
 	struct file_obj *fobjp = &pLstn->pfinf->fobj;
 	int port = pLstn->pfinf->port;
 	struct stat statFile;
 	DEFiRet;
 
-	DBGPRINTF("imfile: fen_processEvent: %s\n", fobjp->fo_name);
+	DBGPRINTF("imfile: fen_monitorDirectory: %s\n", fobjp->fo_name);
 
-	/* Port needs to be reassociated */
-	pLstn->bPortAssociated = 0;
-
-	/* Get File Stats */
-	if (!(revents & FILE_EXCEPTION) && stat(fobjp->fo_name, &statFile) == -1) {
-		DBGPRINTF("imfile: fen_processEvent: Failed to stat file "
-			": %s - errno %d\n", fobjp->fo_name, errno);
+	/* Get Dir Stats */
+	if (stat(fobjp->fo_name, &statFile) == 0 && S_ISDIR(statFile.st_mode)) {
+		DBGPRINTF("imfile: fen_monitorDirectory: %s is a valid directory, associate port\n"
+			, fobjp->fo_name, errno);
+	} else {
+		DBGPRINTF("imfile: fen_monitorDirectory: Failed to stat directory: %s - errno %d\n"
+			, fobjp->fo_name, errno);
 		ABORT_FINALIZE(RS_RET_FILE_NO_STAT);
-	}
-
-	/*
-	* Add what ever processing that needs to be done
-	* here. Process received events.
-	*/
-	if (revents) {
-		fen_printevent(revents, fobjp->fo_name);
-
-		/* File has been modified, trigger a pollFile */
-		if (revents & FILE_MODIFIED) {
-			pollFile(pLstn, NULL);
-		}
-
-		/* If exception, no need to re-register. */
-		if (revents & FILE_EXCEPTION) {
-			free(pLstn->pfinf->fobj.fo_name);
-			free(pLstn->pfinf);
-			pLstn->pfinf = NULL;
-			ABORT_FINALIZE(RS_RET_SYS_ERR);
-		}
 	}
 
 	/* Register file event */
 	fobjp->fo_atime = statFile.st_atim;
 	fobjp->fo_mtime = statFile.st_mtim;
 	fobjp->fo_ctime = statFile.st_ctim;
-	DBGPRINTF("imfile: fen_processEvent: associate port for %s\n", fobjp->fo_name);
 	if (port_associate(port, PORT_SOURCE_FILE, (uintptr_t)fobjp,
 				pLstn->pfinf->events, (void *)pLstn) == -1) {
 		/* Add error processing as required, file may have been deleted/moved. */
-		errmsg.LogError(1, RS_RET_SYS_ERR, "imfile: fen_processEvent: Failed to register file "
-			": %s - errno %d\n", fobjp->fo_name, errno);
-		free(pLstn->pfinf->fobj.fo_name);
-		free(pLstn->pfinf);
-		pLstn->pfinf = NULL;
+		errmsg.LogError(1, RS_RET_SYS_ERR, "imfile: fen_monitorDirectory: Failed to register directory: "
+			"%s - errno %d\n", fobjp->fo_name, errno);
 		ABORT_FINALIZE(RS_RET_SYS_ERR);
 	} else {
 		/* Port successfull listening now*/
 		pLstn->bPortAssociated = 1;
 	}
+finalize_it:
+	RETiRet;
 
+}
+#endif
+
+static rsRetVal
+fen_processEvent(port_event_t* pportEvent, lstn_t *pLstn, int revents)
+{
+	struct file_obj *fobjp = (pportEvent == NULL ? &pLstn->pfinf->fobj : (struct file_obj*) pportEvent->portev_object);
+	int port = pLstn->pfinf->port;
+	struct stat statFile;
+	DEFiRet;
+
+	DBGPRINTF("imfile: fen_processEvent: %s (%s)\n", fobjp->fo_name, (pportEvent == NULL ? "NULL" : "EVENT"));
+
+	/* Port needs to be reassociated */
+	pLstn->bPortAssociated = 0;
+
+	if (revents) {
+		fen_printevent(revents, fobjp->fo_name);
+	}
+
+	/* Compare filename first */
+	if (strcmp(fobjp->fo_name, (const char*)pLstn->pszFileName) == 0){
+		DBGPRINTF("imfile: fen_processEvent: matching file found: %s %s\n", fobjp->fo_name);
+
+		/* Get File Stats */
+		if (!(revents & FILE_EXCEPTION) && stat(fobjp->fo_name, &statFile) == -1) {
+			DBGPRINTF("imfile: fen_processEvent: Failed to stat file "
+				": %s - errno %d\n", fobjp->fo_name, errno);
+			ABORT_FINALIZE(RS_RET_FILE_NO_STAT);
+		}
+
+		/*
+		* Add what ever processing that needs to be done
+		* here. Process received events.
+		*/
+		if (revents) {
+			/* File has been modified, trigger a pollFile */
+			if (revents & FILE_MODIFIED) {
+				pollFile(pLstn, NULL);
+			}
+
+			/* If exception, no need to re-register. */
+			if (revents & FILE_EXCEPTION) {
+				ABORT_FINALIZE(RS_RET_SYS_ERR);
+			}
+		}
+	}
+
+	/* Register file event */
+	pLstn->pfinf->fobj.fo_atime = statFile.st_atim;
+	pLstn->pfinf->fobj.fo_mtime = statFile.st_mtim;
+	pLstn->pfinf->fobj.fo_ctime = statFile.st_ctim;
+
+	DBGPRINTF("imfile: fen_processEvent: associate port for %s\n", pLstn->pfinf->fobj.fo_name);
+	if (port_associate(port, PORT_SOURCE_FILE, (uintptr_t)&pLstn->pfinf->fobj,
+				pLstn->pfinf->events, (void *)pLstn) == -1) {
+		/* Add error processing as required, file may have been deleted/moved. */
+		errmsg.LogError(1, RS_RET_SYS_ERR, "imfile: fen_processEvent: Failed to register file "
+			": %s - errno %d\n", fobjp->fo_name, errno);
+		ABORT_FINALIZE(RS_RET_SYS_ERR);
+	} else {
+		/* Port successfull listening now*/
+		pLstn->bPortAssociated = 1;
+	}
 finalize_it:
 	RETiRet;
 }
@@ -2658,6 +2708,7 @@ do_fen(void)
 	struct timespec timeout;
 	lstn_t *pLstn;	/* Listener helper*/
 	DEFiRet;
+	rsRetVal iRetTmp = RS_RET_OK;
 
 	/* Set port timeout to 1 second. We need to checkfor unmonitored files during meantime */
 	timeout.tv_sec = 1;
@@ -2665,8 +2716,8 @@ do_fen(void)
 
 	/* create port instance */
 	if ((port = port_create()) == -1) {
-		errmsg.LogError(1, RS_RET_INOTIFY_INIT_FAILED, "imfile: do_fen: Init port failed ");
-		return RS_RET_INOTIFY_INIT_FAILED;
+		errmsg.LogError(1, RS_RET_FEN_INIT_FAILED, "imfile: do_fen: Init port failed ");
+		return RS_RET_FEN_INIT_FAILED;
 	}
 
 	/* Loop through all configured listeners */
@@ -2675,17 +2726,18 @@ do_fen(void)
 			// Create FileInfo struct
 			pLstn->pfinf = malloc(sizeof(struct fileinfo));
 			if (pLstn->pfinf == NULL) {
-				errmsg.LogError(1, RS_RET_INOTIFY_INIT_FAILED, "imfile: do_fen: alloc memory "
+				errmsg.LogError(1, RS_RET_FEN_INIT_FAILED, "imfile: do_fen: alloc memory "
 					"for fileinfo failed ");
-				ABORT_FINALIZE(RS_RET_INOTIFY_INIT_FAILED);
+				ABORT_FINALIZE(RS_RET_FEN_INIT_FAILED);
 			}
 
+			DBGPRINTF("imfile: do_fen: process '%s' in '%s'\n", pLstn->pszBaseName, pLstn->pszDirName);
 			if ((pLstn->pfinf->fobj.fo_name = strdup((char*)pLstn->pszFileName)) == NULL) {
-				errmsg.LogError(1, RS_RET_INOTIFY_INIT_FAILED, "imfile: do_fen: alloc memory "
+				errmsg.LogError(1, RS_RET_FEN_INIT_FAILED, "imfile: do_fen: alloc memory "
 					"for strdup failed ");
 				free(pLstn->pfinf);
 				pLstn->pfinf = NULL;
-				ABORT_FINALIZE(RS_RET_INOTIFY_INIT_FAILED);
+				ABORT_FINALIZE(RS_RET_FEN_INIT_FAILED);
 			}
 
 			/* Event types to watch. */
@@ -2693,7 +2745,10 @@ do_fen(void)
 			pLstn->pfinf->port = port;
 
 			/* Call file events event handler */
-			fen_processEvent(pLstn, pLstn->pfinf->events);
+			if ( (iRetTmp = fen_processEvent(NULL, pLstn, pLstn->pfinf->events)) != RS_RET_OK) {
+				errmsg.LogError(0, NO_ERRCODE, "imfile: error %d with fen API,"
+						" ignoring file '%s': No such file or directory", iRetTmp, pLstn->pszFileName);
+			};
 		}
 	}
 
@@ -2710,7 +2765,7 @@ do_fen(void)
 			switch (portEvent.portev_source) {
 				case PORT_SOURCE_FILE:
 					/* Call file events event handler */
-					fen_processEvent((lstn_t*)portEvent.portev_user, portEvent.portev_events);
+					fen_processEvent(&portEvent, (lstn_t*)portEvent.portev_user, portEvent.portev_events);
 					break;
 				default:
 					errmsg.LogError(1, RS_RET_SYS_ERR, "imfile: do_fen: Event from unexpected source "
@@ -2722,7 +2777,7 @@ do_fen(void)
 		for(pLstn = runModConf->pRootLstn ; pLstn != NULL ; pLstn = pLstn->next) {
 			if (pLstn->bPortAssociated == 0){
 				/* Check if file exists now */
-				fen_processEvent(pLstn, pLstn->pfinf->events);
+				fen_processEvent(NULL, pLstn, pLstn->pfinf->events);
 			}
 		}
 		DBGPRINTF("imfile: do_fen: loop end... \n");
@@ -2735,6 +2790,14 @@ finalize_it:
 	* with the port.
 	*/
 	close(port);
+
+	/* Free memory now */
+	for(pLstn = runModConf->pRootLstn ; pLstn != NULL ; pLstn = pLstn->next) {
+		free(pLstn->pfinf->fobj.fo_name);
+		free(pLstn->pfinf);
+		pLstn->pfinf = NULL;
+	}
+
 	RETiRet;
 }
 #else /* #if OS_SOLARIS */

@@ -1006,6 +1006,29 @@ case $1 in
 
 		(cd $dep_work_dir/kafka && ./bin/kafka-console-consumer.sh --timeout-ms 2000 --from-beginning --zookeeper localhost:$dep_work_port/kafka --topic $2 > $dep_kafka_log_dump)
 		;;
+	'check-inotify') # Check for inotify/fen support 
+		if [ -n "$(find /usr/include -name 'inotify.h' -print -quit)" ]; then
+			echo [inotify mode]
+		elif [ -n "$(find /usr/include/sys/ -name 'port.h' -print -quit)" ]; then
+			cat /usr/include/sys/port.h | grep -qF "PORT_SOURCE_FILE" 
+			if [ "$?" -ne "0" ]; then
+				echo [port.h found but FEN API not implemented , skipping...]
+				exit 77 # FEN API not available, skip this test
+			fi
+			echo [fen mode]
+		else
+			echo [inotify/fen not supported, skipping...]
+			exit 77 # no inotify available, skip this test
+		fi
+		;;
+	'check-inotify-only') # Check for ONLY inotify support 
+		if [ -n "$(find /usr/include -name 'inotify.h' -print -quit)" ]; then
+			echo [inotify mode]
+		else
+			echo [inotify not supported, skipping...]
+			exit 77 # no inotify available, skip this test
+		fi
+		;;
 	'error-exit') # this is called if we had an error and need to abort. Here, we
                 # try to gather as much information as possible. That's most important
 		# for systems like Travis-CI where we cannot debug on the machine itself.
