@@ -808,8 +808,8 @@ ENDnewActInst
 
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
-    /* coverity [dead_code] - keep framework happy */
-    ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
+	iRet = RS_RET_CONFLINE_UNPROCESSED;
+	goto finalize_it; /* keep compiler happy (else we get "unused label" error) */
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
