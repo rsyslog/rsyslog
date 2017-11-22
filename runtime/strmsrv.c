@@ -127,8 +127,7 @@ doRcvData(strms_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd, int
 	assert(piLenRcvd != NULL);
 
 	*piLenRcvd = lenBuf;
-	CHKiRet(netstrm.Rcv(pSess->pStrm, (uchar*) buf, piLenRcvd, oserr));
-finalize_it:
+	iRet = netstrm.Rcv(pSess->pStrm, (uchar*) buf, piLenRcvd, oserr);
 	RETiRet;
 }
 

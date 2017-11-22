@@ -196,8 +196,7 @@ CODESTARTcreateWrkrInstance
 			pData->bulkmode = 0; /* at least it works */
 		}
 	}
-	CHKiRet(curlSetup(pWrkrData));
-finalize_it:
+	iRet = curlSetup(pWrkrData);
 ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature

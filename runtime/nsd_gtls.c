@@ -1432,13 +1432,10 @@ finalize_it:
 static rsRetVal
 CheckConnection(nsd_t __attribute__((unused)) *pNsd)
 {
-	DEFiRet;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
-	CHKiRet(nsd_ptcp.CheckConnection(pThis->pTcp));
-finalize_it:
-	RETiRet;
+	return nsd_ptcp.CheckConnection(pThis->pTcp);
 }
 
 
