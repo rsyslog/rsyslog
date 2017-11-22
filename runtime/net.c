@@ -1436,8 +1436,7 @@ create_single_udp_socket(int *const s, /* socket */
 					if (ipfreebind >= IPFREEBIND_ENABLED_WITH_LOG)
 						errmsg.LogMsg(0, RS_RET_OK_WARN, LOG_WARNING,
 							"bound address %s IP free", hostname);
-					//FINALIZE; TODO: activate this (issue 2040) BUT ensure first
-					// that the option is actually configurable
+					FINALIZE;
 				}
 			}
 			ABORT_FINALIZE(RS_RET_ERR);
