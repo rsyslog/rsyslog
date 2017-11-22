@@ -1468,8 +1468,11 @@ CODESTARTnewActInst
 		}
 	}
 
-	if(pData->brokers == NULL)
+	if(pData->brokers == NULL) {
 		CHKmalloc(pData->brokers = strdup("localhost:9092"));
+		LogMsg(0, NO_ERRCODE, LOG_INFO, "imkafka: \"broker\" parameter not specified "
+			"using default of localhost:9092 -- this may not be what you want!");
+	}
 
 	if(pData->dynaTopic && pData->topic == NULL) {
         errmsg.LogError(0, RS_RET_CONFIG_ERROR,
