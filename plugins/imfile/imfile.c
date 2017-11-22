@@ -1229,7 +1229,7 @@ CODESTARTnewInpInst
 	}
 	if(inst->readTimeout != 0)
 		loadModConf->haveReadTimeouts = 1;
-	CHKiRet(checkInstance(inst));
+	iRet = checkInstance(inst);
 finalize_it:
 CODE_STD_FINALIZERnewInpInst
 	cnfparamvalsDestruct(pvals, &inppblk);

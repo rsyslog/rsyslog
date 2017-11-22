@@ -246,8 +246,7 @@ BEGINdoAction_NoStrings
 CODESTARTdoAction
 	lenMsg = getMSGLen(pMsg);
 	msg = getMSG(pMsg);
-	CHKiRet(parse_fields(pWrkrData->pData, pMsg, msg, lenMsg));
-finalize_it:
+	iRet = parse_fields(pWrkrData->pData, pMsg, msg, lenMsg);
 ENDdoAction
 
 
