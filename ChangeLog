@@ -35,6 +35,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
   keep a simple lock ... unlock scheme within the function. That is
   easier to follow for both humans as well as static analyzers.
   Also removes Coverity scan CID 185419
+- imkafka: improve error reporting and cleanup refactoring
 - omkafka: improve error reporting
 - omkafka: slight speedup do to refactoring of LIST class
   double-linked list was used for temporarily undeliverable message tracking
