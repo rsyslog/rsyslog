@@ -1446,8 +1446,10 @@ create_single_udp_socket(int *const s, /* socket */
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		close(*s);
-		*s = -1;
+		if(*s != -1) {
+			close(*s);
+			*s = -1;
+		}
 	}
 	RETiRet;
 }
