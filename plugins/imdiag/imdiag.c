@@ -124,14 +124,14 @@ doOpenLstnSocks(tcpsrv_t *pSrv)
 
 
 static rsRetVal
-doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd)
+doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd, int *oserr)
 {
 	DEFiRet;
 	assert(pSess != NULL);
 	assert(piLenRcvd != NULL);
 
 	*piLenRcvd = lenBuf;
-	CHKiRet(netstrm.Rcv(pSess->pStrm, (uchar*) buf, piLenRcvd));
+	CHKiRet(netstrm.Rcv(pSess->pStrm, (uchar*) buf, piLenRcvd, oserr));
 finalize_it:
 	RETiRet;
 }
@@ -247,8 +247,7 @@ doInjectNumericSuffixMsg(int iNum, ratelimit_t *ratelimiter)
 	DEFiRet;
 	snprintf((char*)szMsg, sizeof(szMsg)/sizeof(uchar),
              "<167>Mar  1 01:00:00 172.20.245.8 tag msgnum:%8.8d:", iNum);
-	CHKiRet(doInjectMsg(szMsg, ratelimiter));
-finalize_it:
+	iRet = doInjectMsg(szMsg, ratelimiter);
 	RETiRet;
 }
 
@@ -316,7 +315,8 @@ waitMainQEmpty(tcps_sess_t *pSess)
 
 	while(1) {
 		processImInternal();
-		if(iOverallQueueSize == 0)
+		const unsigned OverallQueueSize = PREFER_FETCH_32BIT(iOverallQueueSize);
+		if(OverallQueueSize == 0)
 			++nempty;
 		else
 			nempty = 0;
@@ -325,7 +325,7 @@ waitMainQEmpty(tcps_sess_t *pSess)
 		if(iPrint++ % 500 == 0)
 			DBGPRINTF("imdiag sleeping, wait queues drain, "
 				"curr size %d, nempty %d\n",
-				iOverallQueueSize, nempty);
+				OverallQueueSize, nempty);
 		srSleep(0,100000);/* wait a little bit */
 	}
 
@@ -356,12 +356,13 @@ finalize_it:
 }
 
 static void
-imdiag_statsReadCallback(statsobj_t __attribute__((unused)) *ignore_stats,
-						   void __attribute__((unused)) *ignore_ctx) {
+imdiag_statsReadCallback(statsobj_t __attribute__((unused)) *const ignore_stats,
+	void __attribute__((unused)) *const ignore_ctx)
+{
 	long long waitStartTimeMs = currentTimeMills();
 	sem_wait(&statsReportingBlocker);
 	long delta = currentTimeMills() - waitStartTimeMs;
-	if (ATOMIC_DEC_AND_FETCH(&allowOnlyOnce, &mutAllowOnlyOnce) < 0) {
+	if ((int)ATOMIC_DEC_AND_FETCH(&allowOnlyOnce, &mutAllowOnlyOnce) < 0) {
 		sem_post(&statsReportingBlocker);
 	} else {
 		errmsg.LogError(0, RS_RET_OK, "imdiag(stats-read-callback): current stats-reporting "

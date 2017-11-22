@@ -1,6 +1,13 @@
 #!/bin/bash
 # added 2015-11-13 by singh.janmejay
 # This file is part of the rsyslog project, released under ASL 2.0
+
+uname
+if [ `uname` = "FreeBSD" ] ; then
+   echo "This test currently does not work on FreeBSD."
+   exit 77
+fi
+
 echo ===============================================================================
 echo \[dynstats-vg.sh\]: test for gathering stats over dynamic metric names with valgrind
 . $srcdir/diag.sh init

@@ -3,7 +3,7 @@
  * because it was either written from scratch by me (rgerhards) or
  * contributors who agreed to ASL 2.0.
  *
- * Copyright 2004-2016 Rainer Gerhards and Adiscon
+ * Copyright 2004-2017 Rainer Gerhards and Adiscon
  *
  * This file is part of rsyslog.
  *
@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <unistd.h>
 #ifdef HAVE_LIBLOGGING_STDLOG
 #  include <liblogging/stdlog.h>
 #else
@@ -38,8 +39,9 @@
 #else
 #	include <sys/errno.h>
 #endif
-#include <unistd.h>
-#include "sd-daemon.h"
+#ifdef HAVE_LIBSYSTEMD
+#	include <systemd/sd-daemon.h>
+#endif
 
 #include "wti.h"
 #include "ratelimit.h"
@@ -343,6 +345,7 @@ prepareBackground(const int parentPipeFD)
 
 	int beginClose = 3;
 
+#ifdef HAVE_LIBSYSTEMD
 	/* running under systemd? Then we must make sure we "forward" any
 	 * fds passed by it (adjust the pid).
 	 */
@@ -363,6 +366,7 @@ prepareBackground(const int parentPipeFD)
 			}
 		}
 	}
+#endif
 
 	/* close unnecessary open files */
 	const int endClose = getdtablesize();
@@ -548,9 +552,9 @@ rsyslogd_InitStdRatelimiters(void)
 {
 	DEFiRet;
 	CHKiRet(ratelimitNew(&dflt_ratelimiter, "rsyslogd", "dflt"));
-	/* TODO: add linux-type limiting capability */
 	CHKiRet(ratelimitNew(&internalMsg_ratelimiter, "rsyslogd", "internal_messages"));
-	ratelimitSetLinuxLike(internalMsg_ratelimiter, 5, 500);
+	ratelimitSetThreadSafe(internalMsg_ratelimiter);
+	ratelimitSetLinuxLike(internalMsg_ratelimiter, glblIntMsgRateLimitItv, glblIntMsgRateLimitBurst);
 	/* TODO: make internalMsg ratelimit settings configurable */
 finalize_it:
 	RETiRet;
@@ -636,8 +640,6 @@ preprocessBatch(batch_t *pBatch, int *pbShutdownImmediate) {
 	prop_t *ip;
 	prop_t *fqdn;
 	prop_t *localName;
-	prop_t *propFromHost = NULL;
-	prop_t *propFromHostIP = NULL;
 	int bIsPermitted;
 	smsg_t *pMsg;
 	int i;
@@ -672,10 +674,6 @@ preprocessBatch(batch_t *pBatch, int *pbShutdownImmediate) {
 	}
 
 finalize_it:
-	if(propFromHost != NULL)
-		prop.Destruct(&propFromHost);
-	if(propFromHostIP != NULL)
-		prop.Destruct(&propFromHostIP);
 	RETiRet;
 }
 
@@ -729,17 +727,20 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
 		/* ... set some properties ... */
 	#	define setQPROP(func, directive, data) \
 		CHKiRet_Hdlr(func(*ppQueue, data)) { \
-			errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
+			errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, " \
+			"running with default setting", iRet); \
 		}
 	#	define setQPROPstr(func, directive, data) \
 		CHKiRet_Hdlr(func(*ppQueue, data, (data == NULL)? 0 : strlen((char*) data))) { \
-			errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
+			errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, " \
+			"running with default setting", iRet); \
 		}
 
 		if(ourConf->globals.mainQ.pszMainMsgQFName != NULL) {
 			/* check if the queue file name is unique, else emit an error */
 			for(qfn = queuefilenames ; qfn != NULL ; qfn = qfn->next) {
-				dbgprintf("check queue file name '%s' vs '%s'\n", qfn->name, ourConf->globals.mainQ.pszMainMsgQFName );
+				dbgprintf("check queue file name '%s' vs '%s'\n", qfn->name,
+					ourConf->globals.mainQ.pszMainMsgQFName );
 				if(!ustrcmp(qfn->name, ourConf->globals.mainQ.pszMainMsgQFName)) {
 					snprintf((char*)qfrenamebuf, sizeof(qfrenamebuf), "%d-%s-%s",
 						 ++qfn_renamenum, ourConf->globals.mainQ.pszMainMsgQFName,  
@@ -933,9 +934,31 @@ logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg, int fla
 	 * permits us to process unmodified config files which otherwise contain a
 	 * supressor statement.
 	 */
-	if(((Debug == DEBUG_FULL || !doFork) && ourConf->globals.bErrMsgToStderr) || iConfigVerify) {
+	int emit_to_stderr = (ourConf == NULL) ? 1 : ourConf->globals.bErrMsgToStderr;
+	int emit_supress_msg = 0;
+	if(Debug == DEBUG_FULL || !doFork) {
+		emit_to_stderr = 1;
+	}
+	if(ourConf != NULL && ourConf->globals.maxErrMsgToStderr != -1) {
+		if(emit_to_stderr && ourConf->globals.maxErrMsgToStderr != -1 && ourConf->globals.maxErrMsgToStderr) {
+			--ourConf->globals.maxErrMsgToStderr;
+			if(ourConf->globals.maxErrMsgToStderr == 0)
+				emit_supress_msg = 1;
+		} else {
+			emit_to_stderr = 0;
+		}
+	}
+	if(emit_to_stderr || iConfigVerify) {
 		if(pri2sev(pri) == LOG_ERR)
-			fprintf(stderr, "rsyslogd: %s\n", (bufModMsg == NULL) ? (char*)msg : bufModMsg);
+			fprintf(stderr, "rsyslogd: %s\n",
+				(bufModMsg == NULL) ? (char*)msg : bufModMsg);
+	}
+	if(emit_supress_msg) {
+		fprintf(stderr, "rsyslogd: configured max number of error messages "
+			"to stderr reached, further messages will not be output\n"
+			"Consider adjusting\n"
+			"    global(errorMessagesToStderr.maxNumber=\"xx\")\n"
+			"if you want more.\n");
 	}
 
 finalize_it:
@@ -1176,6 +1199,10 @@ initAll(int argc, char **argv)
 	int parentPipeFD = 0; /* fd of pipe to parent, if auto-backgrounding */
 	DEFiRet;
 
+	/* prepare internal signaling */
+	hdlr_enable(SIGTTIN, hdlr_sigttin_ou);
+	hdlr_enable(SIGTTOU, hdlr_sigttin_ou);
+
 	/* first, parse the command line options. We do not carry out any actual work, just
 	 * see what we should do. This relieves us from certain anomalies and we can process
 	 * the parameters down below in the correct order. For example, we must know the
@@ -1249,18 +1276,17 @@ initAll(int argc, char **argv)
 
 	/* doing some core initializations */
 
-	/* get our host and domain names - we need to do this early as we may emit
-	 * error log messages, which need the correct hostname. -- rgerhards, 2008-04-04
-	 */
-	queryLocalHostname();
-
-	/* initialize the objects */
 	if((iRet = modInitIminternal()) != RS_RET_OK) {
 		fprintf(stderr, "fatal error: could not initialize errbuf object (error code %d).\n",
 			iRet);
 		exit(1); /* "good" exit, leaving at init for fatal error */
 	}
 
+	/* get our host and domain names - we need to do this early as we may emit
+	 * error log messages, which need the correct hostname. -- rgerhards, 2008-04-04
+	 * But we need to have imInternal up first!
+	 */
+	queryLocalHostname();
 
 	/* END core initializations - we now come back to carrying out command line options*/
 
@@ -1453,8 +1479,6 @@ initAll(int argc, char **argv)
 		hdlr_enable(SIGQUIT, SIG_IGN);
 	}
 	hdlr_enable(SIGTERM, rsyslogdDoDie);
-	hdlr_enable(SIGTTIN, hdlr_sigttin_ou);
-	hdlr_enable(SIGTTOU, hdlr_sigttin_ou);
 	hdlr_enable(SIGCHLD, hdlr_sigchld);
 	hdlr_enable(SIGHUP, hdlr_sighup);
 
@@ -1534,11 +1558,15 @@ processImInternal(void)
  * function for new plugins. -- rgerhards, 2009-10-12
  */
 rsRetVal
-parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int flags, flowControl_t flowCtlType,
-	prop_t *pInputName, struct syslogTime *stTime, time_t ttGenTime, ruleset_t *pRuleset)
+parseAndSubmitMessage(const uchar *const hname, const uchar *const hnameIP, const uchar *const msg,
+	const int len, const int flags, const flowControl_t flowCtlType,
+	prop_t *const pInputName,
+	const struct syslogTime *const stTime,
+	const time_t ttGenTime,
+	ruleset_t *const pRuleset)
 {
 	prop_t *pProp = NULL;
-	smsg_t *pMsg;
+	smsg_t *pMsg = NULL;
 	DEFiRet;
 
 	/* we now create our own message object and submit it to the queue */
@@ -1561,6 +1589,12 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int fla
 	CHKiRet(submitMsg2(pMsg));
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		DBGPRINTF("parseAndSubmitMessage() error, discarding msg: %s\n", msg);
+		if(pMsg != NULL) {
+			msgDestruct(&pMsg);
+		}
+	}
 	RETiRet;
 }
 
@@ -1604,6 +1638,7 @@ doHUP(void)
 
 	queryLocalHostname(); /* re-read our name */
 	ruleset.IterateAllActions(ourConf, doHUPActions, NULL);
+	modDoHUP();
 	lookupDoHUP();
 }
 
@@ -1686,22 +1721,27 @@ wait_timeout(void)
 			switch(srcpacket.subreq.action)
 			{
 				case START:
-					dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support this option.\n",sizeof(struct srcrep));
+					dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support this option.\n",
+							sizeof(struct srcrep));
 				break;
 				case STOP:
 					if (srcpacket.subreq.object == SUBSYSTEM) {
 						dosrcpacket(SRC_OK,NULL,sizeof(struct srcrep));
-						(void) snprintf(buf, sizeof(buf) / sizeof(char), " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
-							"\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"]" " exiting due to stopsrc.",
+						(void) snprintf(buf, sizeof(buf) / sizeof(char), " [origin "
+							"software=\"rsyslogd\" " "swVersion=\"" VERSION \
+							"\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"]"
+							" exiting due to stopsrc.",
 							(int) glblGetOurPid());
 						errno = 0;
 						logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
 						return ;
 					} else
-						dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support this option.\n",sizeof(struct srcrep));
+						dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support "
+								"this option.\n",sizeof(struct srcrep));
 				break;
 				case REFRESH:
-					dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support this option.\n", sizeof(struct srcrep));
+					dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support this "
+								"option.\n", sizeof(struct srcrep));
 				break;
 				default:
 					dosrcpacket(SRC_SUBICMD,NULL,sizeof(struct srcrep));
@@ -1734,7 +1774,7 @@ mainloop(void)
 				child = waitpid(-1, NULL, WNOHANG);
 				DBGPRINTF("rsyslogd: mainloop waitpid (with-no-hang) returned %u\n", (unsigned) child);
 				if (child != -1 && child != 0) {
-					errmsg.LogError(0, RS_RET_OK, "Child %d has terminated, reaped "
+					LogMsg(0, RS_RET_OK, LOG_INFO, "Child %d has terminated, reaped "
 						"by main-loop.", (unsigned) child);
 				}
 			} while(child > 0);
@@ -1866,11 +1906,10 @@ int
 main(int argc, char **argv)
 {
 #if defined(_AIX)
-	/* AIXPORT : start
-	* SRC support : fd 0 (stdin) must be the SRC socket
-	* startup.  fd 0 is duped to a new descriptor so that stdin can be used
-	* internally by rsyslogd.
-	*/
+	/* SRC support : fd 0 (stdin) must be the SRC socket
+	 * startup.  fd 0 is duped to a new descriptor so that stdin can be used
+	 * internally by rsyslogd.
+	 */
 
 	strncpy(progname,argv[0], sizeof(progname)-1);
 	addrsz = sizeof(srcaddr);
@@ -1879,22 +1918,25 @@ main(int argc, char **argv)
 		src_exists = FALSE;
 	}
 	if (src_exists) 
-		if(dup2(0, SRC_FD) == -1)
-		{
+		if(dup2(0, SRC_FD) == -1) {
 			fprintf(stderr, "%s: dup2 failed exiting now...\n", progname);
 			/* In the unlikely event of dup2 failing we exit */
 			exit(-1);
 		}
 #endif
-	/* AIXPORT : src end */
-	/* use faster hash function inside json lib */
-	json_global_set_string_hash(JSON_C_STR_HASH_PERLLIKE);
+
+	/* disable case-sensitive comparisons in variable subsystem: */
+	fjson_global_do_case_sensitive_comparison(0);
+
 	const char *const log_dflt = getenv("RSYSLOG_DFLT_LOG_INTERNAL");
 	if(log_dflt != NULL && !strcmp(log_dflt, "1"))
 		bProcessInternalMessages = 1;
 	dbgClassInit();
 	initAll(argc, argv);
+#ifdef HAVE_LIBSYSTEMD
 	sd_notify(0, "READY=1");
+#endif
+	DBGPRINTF("----RSYSLOGD INITIALIZED\n");
 
 	mainloop();
 	deinitAll();

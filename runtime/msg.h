@@ -163,7 +163,7 @@ struct msg {
  */
 PROTOTYPEObjClassInit(msg);
 rsRetVal msgConstruct(smsg_t **ppThis);
-rsRetVal msgConstructWithTime(smsg_t **ppThis, struct syslogTime *stTime, time_t ttGenTime);
+rsRetVal msgConstructWithTime(smsg_t **ppThis, const struct syslogTime *stTime, const time_t ttGenTime);
 rsRetVal msgConstructForDeserializer(smsg_t **ppThis);
 rsRetVal msgConstructFinalizer(smsg_t *pThis);
 rsRetVal msgDestruct(smsg_t **ppM);
@@ -203,9 +203,11 @@ int getPRIi(const smsg_t * const pM);
 void getRawMsg(smsg_t *pM, uchar **pBuf, int *piLen);
 rsRetVal msgAddJSON(smsg_t *pM, uchar *name, struct json_object *json, int force_reset, int sharedReference);
 rsRetVal msgAddMetadata(smsg_t *msg, uchar *metaname, uchar *metaval);
+rsRetVal msgAddMultiMetadata(smsg_t *msg, const uchar **metaname, const uchar **metaval, const int count);
 rsRetVal MsgGetSeverity(smsg_t *pThis, int *piSeverity);
 rsRetVal MsgDeserialize(smsg_t *pMsg, strm_t *pStrm);
 rsRetVal MsgSetPropsViaJSON(smsg_t *__restrict__ const pMsg, const uchar *__restrict__ const json);
+rsRetVal MsgSetPropsViaJSON_Object(smsg_t *__restrict__ const pMsg, struct json_object *json);
 const uchar* msgGetJSONMESG(smsg_t *__restrict__ const pMsg);
 
 /* TODO: remove these five (so far used in action.c) */

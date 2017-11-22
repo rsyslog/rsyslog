@@ -102,7 +102,6 @@
 #include "parser.h"
 #include "unicode-helper.h"
 #include "dnscache.h"
-#include "sd-daemon.h"
 #include "ratelimit.h"
 
 /* forward defintions from rsyslogd.c (ASL 2.0 code) */

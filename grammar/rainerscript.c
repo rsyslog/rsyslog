@@ -35,6 +35,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <libestr.h>
+#include <time.h>
 #include "rsyslog.h"
 #include "rainerscript.h"
 #include "conf.h"
@@ -45,12 +46,14 @@
 #include "queue.h"
 #include "srUtils.h"
 #include "regexp.h"
+#include "datetime.h"
 #include "obj.h"
 #include "modules.h"
 #include "ruleset.h"
 #include "msg.h"
 #include "wti.h"
 #include "unicode-helper.h"
+#include "errmsg.h"
 
 #if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wswitch-enum"
@@ -58,6 +61,7 @@
 
 DEFobjCurrIf(obj)
 DEFobjCurrIf(regexp)
+DEFobjCurrIf(datetime)
 
 struct cnfexpr* cnfexprOptimize(struct cnfexpr *expr);
 static void cnfstmtOptimizePRIFilt(struct cnfstmt *stmt);
@@ -254,7 +258,6 @@ DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
 	iRet = parsDelimCStr(pPars, &pCSPropName, ',', 1, 1, 1);
 	if(iRet != RS_RET_OK) {
 		parser_errmsg("error %d parsing filter property", iRet);
-		rsParsDestruct(pPars);
 		FINALIZE;
 	}
 	CHKiRet(msgPropDescrFill(&stmt->d.s_propfilt.prop, cstrGetSzStrNoNULL(pCSPropName),
@@ -264,7 +267,6 @@ DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
 	iRet = parsDelimCStr(pPars, &pCSCompOp, ',', 1, 1, 1);
 	if(iRet != RS_RET_OK) {
 		parser_errmsg("error %d compare operation property - ignoring selector", iRet);
-		rsParsDestruct(pPars);
 		FINALIZE;
 	}
 
@@ -309,7 +311,6 @@ DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
 		iRet = parsQuotedCStr(pPars, &stmt->d.s_propfilt.pCSCompValue);
 		if(iRet != RS_RET_OK) {
 			parser_errmsg("error %d compare value property", iRet);
-			rsParsDestruct(pPars);
 			FINALIZE;
 		}
 	}
@@ -837,8 +838,13 @@ doGetGID(struct nvlst *valnode, struct cnfparamdescr *param,
 	char stringBuf[2048]; /* 2048 has been proven to be large enough */
 
 	cstr = es_str2cstr(valnode->val.d.estr, NULL);
-	getgrnam_r(cstr, &wrkBuf, stringBuf, sizeof(stringBuf), &resultBuf);
+	const int e = getgrnam_r(cstr, &wrkBuf, stringBuf,
+		sizeof(stringBuf), &resultBuf);
 	if(resultBuf == NULL) {
+		if(e != 0) {
+			LogError(e, RS_RET_ERR, "parameter '%s': error to "
+				"obtaining group id for '%s'", param->name, cstr);
+		}
 		parser_errmsg("parameter '%s': ID for group %s could not "
 		  "be found", param->name, cstr);
 		r = 0;
@@ -1720,6 +1726,46 @@ doRandomGen(struct svar *__restrict__ const sourceVal) {
 	return x % max;
 }
 
+static es_str_t*
+lTrim(char *str)
+{
+	int len = strlen(str);
+	int i;
+	es_str_t *estr = NULL;
+
+	for(i = 0; i < len; i++) {
+		if(str[i] != ' ') {
+			break;
+		}
+	}
+
+	if(i != (len - 1)) {
+		estr = es_newStrFromCStr(str + i, strlen(str) - i);
+	}
+
+	return(estr);
+}
+
+static es_str_t*
+rTrim(char *str)
+{
+	int len = strlen(str);
+	int i;
+	es_str_t *estr = NULL;
+
+	for(i = (len - 1); i > -1; i--) {
+		if(str[i] != ' ') {
+			break;
+		}
+	}
+
+	if(i != 0) {
+		estr = es_newStrFromCStr(str, (i + 1));
+	}
+
+	return(estr);
+}
+
 
 static long long
 ipv42num(char *str)
@@ -1770,7 +1816,8 @@ ipv42num(char *str)
 			}
 			startblank = 0;
 			if(prevdot == 1){
-				DBGPRINTF("rainerscript: (ipv42num) error: wrong IP-Address format (two dots after one another)\n");
+				DBGPRINTF("rainerscript: (ipv42num) error: wrong IP-Address format "
+					"(two dots after one another)\n");
 				goto done;
 			}
 			prevdot = 1;
@@ -1827,6 +1874,28 @@ done:
 	return(estr);
 }
 
+/*
+ * Uses the given (current) year/month to decide which year
+ * the incoming month likely belongs in.
+ *
+ * cy - Current Year (actual)
+ * cm - Current Month (actual)
+ * im - "Incoming" Month
+ */
+static int
+estimateYear(int cy, int cm, int im) {
+	im += 12;
+
+	if ((im - cm) == 1) {
+		if (cm == 12 && im == 13)
+			return cy + 1;
+	}
+
+	if ((im - cm) > 13)
+		return cy - 1;
+
+	return cy;
+}
 
 /* Perform a function call. This has been moved out of cnfExprEval in order
  * to keep the code small and easier to maintain.
@@ -1898,6 +1967,24 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 		ret->d.estr = num2ipv4(&r[0]);
 		ret->datatype = 'S';
 		varFreeMembers(&r[0]);
+		break;
+	case CNFFUNC_LTRIM:
+		cnfexprEval(func->expr[0], &r[0], usrptr);
+		str = (char*)var2CString(&r[0], &bMustFree);
+		ret->datatype = 'S';
+		ret->d.estr = lTrim(str);
+		varFreeMembers(&r[0]);
+		if(bMustFree)
+			free(str);
+		break;
+	case CNFFUNC_RTRIM:
+		cnfexprEval(func->expr[0], &r[0], usrptr);
+		str = (char*)var2CString(&r[0], &bMustFree);
+		ret->datatype = 'S';
+		ret->d.estr = rTrim(str);
+		varFreeMembers(&r[0]);
+		if(bMustFree)
+			free(str);
 		break;
 	case CNFFUNC_GETENV:
 		/* note: the optimizer shall have replaced calls to getenv()
@@ -2064,6 +2151,93 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 		if(bMustFree) free(str);
 		varFreeMembers(&r[1]);
 		break;
+	case CNFFUNC_FORMAT_TIME: {
+		long long unixtime;
+		const int resMax = 64;
+		char   result[resMax];
+		char  *formatstr = NULL;
+
+		cnfexprEval(func->expr[0], &r[0], usrptr);
+		cnfexprEval(func->expr[1], &r[1], usrptr);
+
+		unixtime = var2Number(&r[0], &retval);
+
+		// Make sure that the timestamp we got can fit into
+		// time_t on older systems.
+		if (sizeof(time_t) == sizeof(int)) {
+			if (unixtime < INT_MIN || unixtime > INT_MAX) {
+				LogMsg(
+					0, RS_RET_VAL_OUT_OF_RANGE, LOG_WARNING, 
+					"Timestamp value %lld is out of range for this system (time_t is 32bits)!\n", unixtime
+				);
+				retval = 0;
+			}
+		}
+
+		// We want the string form too so we can return it as the
+		// default if we run into problems parsing the number.
+		str = (char*) var2CString(&r[0], &bMustFree);
+		formatstr = (char*) es_str2cstr(r[1].d.estr, NULL);
+
+		ret->datatype = 'S';
+
+		if (objUse(datetime, CORE_COMPONENT) != RS_RET_OK) {
+			ret->d.estr = es_newStr(0);
+		} else {
+			if (!retval || datetime.formatUnixTimeFromTime_t(unixtime, formatstr, result, resMax) == -1) {
+				strncpy(result, str, resMax);
+				result[resMax - 1] = '\0';
+			}
+			ret->d.estr = es_newStrFromCStr(result, strlen(result));
+		}
+
+		if (bMustFree) free(str);
+		free(formatstr);
+
+		varFreeMembers(&r[0]);
+		varFreeMembers(&r[1]);
+		
+		break;
+	}
+	case CNFFUNC_PARSE_TIME: {
+		cnfexprEval(func->expr[0], &r[0], usrptr);
+
+		str = (char*) var2CString(&r[0], &bMustFree);
+
+		ret->datatype = 'N';
+		ret->d.n = 0;
+
+		if (objUse(datetime, CORE_COMPONENT) == RS_RET_OK) {
+			struct syslogTime s;
+			int len = strlen(str);
+			uchar *pszTS = (uchar*) str;
+
+			memset(&s, 0, sizeof(struct syslogTime));
+
+			// Attempt to parse the date/time string
+			if (datetime.ParseTIMESTAMP3339(&s, (uchar**) &pszTS, &len) == RS_RET_OK) {
+				ret->d.n = datetime.syslogTime2time_t(&s);
+			} else if (datetime.ParseTIMESTAMP3164(&s, (uchar**) &pszTS, &len,
+						NO_PARSE3164_TZSTRING, NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
+
+				time_t t = time(NULL);
+				struct tm tm;
+
+				// Get the current UTC date
+				gmtime_r(&t, &tm);
+
+				// Since properly formatted RFC 3164 timestamps do not have a YEAR
+				// specified, we have to assume one that seems reasonable - SW.
+				s.year = estimateYear(tm.tm_year + 1900, tm.tm_mon + 1, s.month);
+
+				ret->d.n = datetime.syslogTime2time_t(&s);
+			}
+		}
+
+		if(bMustFree) free(str);
+		varFreeMembers(&r[0]);
+		break;
+	}
 	default:
 		if(Debug) {
 			char *fname = es_str2cstr(func->fname, NULL);
@@ -2092,6 +2266,7 @@ evalVar(struct cnfvar *__restrict__ const var, void *__restrict__ const usrptr,
 	   var->prop.id == PROP_GLOBAL_VAR   ) {
 		localRet = msgGetJSONPropJSONorString((smsg_t*)usrptr, &var->prop, &json, &cstr);
 		if(json != NULL) {
+			assert(cstr == NULL);
 			ret->datatype = 'J';
 			ret->d.json = (localRet == RS_RET_OK) ? json : NULL;
 			DBGPRINTF("rainerscript: (json) var %d:%s: '%s'\n",
@@ -3025,8 +3200,7 @@ cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
 		}
 		break;
 	case S_FOREACH:
-		doIndent(indent); dbgprintf("FOREACH %s IN\n",
-									stmt->d.s_foreach.iter->var);
+		doIndent(indent); dbgprintf("FOREACH %s IN\n", stmt->d.s_foreach.iter->var);
 		cnfexprPrint(stmt->d.s_foreach.iter->collection, indent+1);
 		if(subtree) {
 			doIndent(indent); dbgprintf("DO\n");
@@ -3044,10 +3218,11 @@ cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
 		doIndent(indent); dbgprintf("UNSET %s\n",
 				  stmt->d.s_unset.varname);
 		break;
-    case S_RELOAD_LOOKUP_TABLE:
-		doIndent(indent); dbgprintf("RELOAD_LOOKUP_TABLE table(%s) (stub with '%s' on error)",
-									stmt->d.s_reload_lookup_table.table_name,
-									stmt->d.s_reload_lookup_table.stub_value);
+	case S_RELOAD_LOOKUP_TABLE:
+		doIndent(indent);
+		dbgprintf("RELOAD_LOOKUP_TABLE table(%s) (stub with '%s' on error)",
+			stmt->d.s_reload_lookup_table.table_name,
+			stmt->d.s_reload_lookup_table.stub_value);
 		break;
 	case S_PRIFILT:
 		doIndent(indent); dbgprintf("PRIFILT '%s'\n", stmt->printable);
@@ -3259,13 +3434,14 @@ cnfstmtDestruct(struct cnfstmt *stmt)
 			cstrDestruct(&stmt->d.s_propfilt.pCSCompValue);
 		cnfstmtDestructLst(stmt->d.s_propfilt.t_then);
 		break;
-    case S_RELOAD_LOOKUP_TABLE:
-        if (stmt->d.s_reload_lookup_table.table_name != NULL) {
-			free(stmt->d.s_reload_lookup_table.table_name);
-        }
-        if (stmt->d.s_reload_lookup_table.stub_value != NULL) {
-			free(stmt->d.s_reload_lookup_table.stub_value);
-        }
+	case S_RELOAD_LOOKUP_TABLE:
+		if (stmt->d.s_reload_lookup_table.table_name != NULL) {
+				free(stmt->d.s_reload_lookup_table.table_name);
+		}
+		if (stmt->d.s_reload_lookup_table.stub_value != NULL) {
+				free(stmt->d.s_reload_lookup_table.stub_value);
+		}
+		break;
 	default:
 		DBGPRINTF("error: unknown stmt type during destruct %u\n",
 			(unsigned) stmt->nodetype);
@@ -3357,8 +3533,9 @@ cnfstmtNewReloadLookupTable(struct cnffparamlst *fparams)
 		case 2:
 			param = fparams->next;
 			if (param->expr->nodetype != 'S') {
-				parser_errmsg("statement ignored: reload_lookup_table(table_name, optional:stub_value_in_case_reload_fails) "
-							  "expects a litteral string for second argument\n");
+				parser_errmsg("statement ignored: reload_lookup_table(table_name, "
+					"optional:stub_value_in_case_reload_fails) "
+					"expects a litteral string for second argument\n");
 				failed = 1;
 			}
 			if ((cnfstmt->d.s_reload_lookup_table.stub_value =
@@ -3367,11 +3544,13 @@ cnfstmtNewReloadLookupTable(struct cnffparamlst *fparams)
 				"failed to allocate memory for lookup-table stub-value\n");
 				failed = 1;
 			}
+			CASE_FALLTHROUGH
 		case 1:
 			param = fparams;
 			if (param->expr->nodetype != 'S') {
-				parser_errmsg("statement ignored: reload_lookup_table(table_name, optional:stub_value_in_case_reload_fails) "
-							  "expects a litteral string for first argument\n");
+				parser_errmsg("statement ignored: reload_lookup_table(table_name, "
+					"optional:stub_value_in_case_reload_fails) "
+				 	"expects a litteral string for first argument\n");
 				failed = 1;
 			}
 			if ((cnfstmt->d.s_reload_lookup_table.table_name =
@@ -3382,8 +3561,9 @@ cnfstmtNewReloadLookupTable(struct cnffparamlst *fparams)
 			}
 			break;
 		default:
-			parser_errmsg("statement ignored: reload_lookup_table(table_name, optional:stub_value_in_case_reload_fails) "
-						  "expected 1 or 2 arguments, but found '%d'\n", nParams);
+			parser_errmsg("statement ignored: reload_lookup_table(table_name, optional:"
+				"stub_value_in_case_reload_fails) "
+				"expected 1 or 2 arguments, but found '%d'\n", nParams);
 			failed = 1;
 		}
 	}
@@ -4107,7 +4287,7 @@ static const char* const numInWords[] = {"zero", "one", "two", "three", "four", 
 	if(nParams != expectedParams) {										\
 		parser_errmsg(errMsg, name, numInWords[expectedParams], nParams); \
 		return CNFFUNC_INVALID;											\
-	}																	\
+	}	\
 	return funcId
 
 
@@ -4132,6 +4312,10 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 		GENERATE_FUNC("getenv", 1, CNFFUNC_GETENV);
 	} else if(FUNC_NAME("num2ipv4")) {
 		GENERATE_FUNC("num2ipv4", 1, CNFFUNC_NUM2IPV4);
+	} else if(FUNC_NAME("ltrim")) {
+		GENERATE_FUNC("ltrim", 1, CNFFUNC_LTRIM);
+	} else if(FUNC_NAME("rtrim")) {
+		GENERATE_FUNC("rtrim", 1, CNFFUNC_RTRIM);
 	} else if(FUNC_NAME("tolower")) {
 		GENERATE_FUNC("tolower", 1, CNFFUNC_TOLOWER);
 	} else if(FUNC_NAME("cstr")) {
@@ -4168,6 +4352,10 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 			"but is %d.");
 	} else if(FUNC_NAME("random")) {
 		GENERATE_FUNC("random", 1, CNFFUNC_RANDOM);
+	} else if(FUNC_NAME("format_time")) {
+		GENERATE_FUNC("format_time", 2, CNFFUNC_FORMAT_TIME);
+	} else if(FUNC_NAME("parse_time")) {
+		GENERATE_FUNC("parse_time", 1, CNFFUNC_PARSE_TIME);
 	} else {
 		return CNFFUNC_INVALID;
 	}
@@ -4580,10 +4768,7 @@ rmLeadingSpace(char *s)
 rsRetVal
 initRainerscript(void)
 {
-	DEFiRet;
-	CHKiRet(objGetObjInterface(&obj));
-finalize_it:
-	RETiRet;
+	return objGetObjInterface(&obj);
 }
 
 /* we need a function to check for octal digits */

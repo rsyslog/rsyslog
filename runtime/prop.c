@@ -133,7 +133,13 @@ propConstructFinalize(prop_t __attribute__((unused)) *pThis)
  */
 static rsRetVal AddRef(prop_t *pThis)
 {
+	if(pThis == NULL)  {
+		DBGPRINTF("prop/AddRef is passed a NULL ptr - ignoring it "
+			"- further problems may occur\n");
+		FINALIZE;
+	}
 	ATOMIC_INC(&pThis->iRefCount, &pThis->mutRefCount);
+finalize_it:
 	return RS_RET_OK;
 }
 

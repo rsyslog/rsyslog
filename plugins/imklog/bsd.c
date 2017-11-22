@@ -144,13 +144,13 @@ submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf)
 	tp = &tv;
 
 done:
-	Syslog(pri, buf, tp);
+	Syslog(pModConf, pri, buf, tp);
 }
 #else	/* now comes the BSD "code" (just a shim) */
 static void
 submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf)
 {
-	Syslog(pri, buf, NULL);
+	Syslog(pModConf, pri, buf, NULL);
 }
 #endif	/* #ifdef LINUX */
 

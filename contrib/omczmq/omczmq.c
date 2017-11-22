@@ -42,7 +42,6 @@ MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("omczmq")
 
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 
 static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 
@@ -120,10 +119,10 @@ static struct cnfparamblk actpblk = {
 
 static rsRetVal initCZMQ(instanceData* pData) {
 	DEFiRet;
-    putenv("ZSYS_SIGHANDLER=false");
+	putenv((char*)"ZSYS_SIGHANDLER=false");
 	pData->sock = zsock_new(pData->sockType);
 	if(!pData->sock) {
-		errmsg.LogError(0, RS_RET_NO_ERRCODE,
+		LogError(0, RS_RET_NO_ERRCODE,
 				"omczmq: new socket failed for endpoints: %s",
 				pData->sockEndpoints);
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
@@ -143,7 +142,7 @@ static rsRetVal initCZMQ(instanceData* pData) {
 		if (!strcmp(runModConf->authType, "CURVESERVER")) {
 			zcert_t *serverCert = zcert_load(runModConf->serverCertPath);
 			if(!serverCert) {
-				errmsg.LogError(0, NO_ERRCODE, "could not load cert %s",
+				LogError(0, NO_ERRCODE, "could not load cert %s",
 					runModConf->serverCertPath);
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
@@ -155,7 +154,7 @@ static rsRetVal initCZMQ(instanceData* pData) {
 		else if(!strcmp(runModConf->authType, "CURVECLIENT")) {
 			zcert_t *serverCert = zcert_load(runModConf->serverCertPath);
 			if(!serverCert) {
-				errmsg.LogError(0, NO_ERRCODE, "could not load cert %s",
+				LogError(0, NO_ERRCODE, "could not load cert %s",
 					runModConf->serverCertPath);
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
@@ -165,7 +164,7 @@ static rsRetVal initCZMQ(instanceData* pData) {
 			
 			zcert_t *clientCert = zcert_load(runModConf->clientCertPath);
 			if(!clientCert) {
-				errmsg.LogError(0, NO_ERRCODE, "could not load cert %s",
+				LogError(0, NO_ERRCODE, "could not load cert %s",
 					runModConf->clientCertPath);
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
@@ -196,7 +195,7 @@ static rsRetVal initCZMQ(instanceData* pData) {
 
 	int rc = zsock_attach(pData->sock, pData->sockEndpoints, pData->serverish);
 	if(rc == -1) {
-		errmsg.LogError(0, NO_ERRCODE, "zsock_attach to %s failed",
+		LogError(0, NO_ERRCODE, "zsock_attach to %s failed",
 				pData->sockEndpoints);
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
@@ -205,7 +204,7 @@ finalize_it:
 	RETiRet;
 }
 
-rsRetVal outputCZMQ(uchar** ppString, instanceData* pData) {
+static rsRetVal outputCZMQ(uchar** ppString, instanceData* pData) {
 	DEFiRet;
 
 	if(NULL == pData->sock) {
@@ -402,7 +401,7 @@ BEGINsetModCnf
 CODESTARTsetModCnf
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if (pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module");
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
@@ -427,7 +426,7 @@ CODESTARTsetModCnf
 			DBGPRINTF("omczmq: clientCertPath set to %s\n", runModConf->clientCertPath);
 		}
 		else {
-			errmsg.LogError(0, RS_RET_INVALID_PARAMS, 
+			LogError(0, RS_RET_INVALID_PARAMS, 
 						"omczmq: config error, unknown "
 						"param %s in setModCnf\n", 
 						modpblk.descr[i].name);
@@ -547,7 +546,7 @@ CODESTARTnewActInst
 				free(stringType);
 			}
 			else{
-				errmsg.LogError(0, RS_RET_OUT_OF_MEMORY,
+				LogError(0, RS_RET_OUT_OF_MEMORY,
 						"omczmq: out of memory");
 				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 			}
@@ -563,7 +562,7 @@ CODESTARTnewActInst
 			char *topics_org = topics;
 			char topic[256];
 			if(topics == NULL){
-				errmsg.LogError(0, RS_RET_OUT_OF_MEMORY,
+				LogError(0, RS_RET_OUT_OF_MEMORY,
 					"out of memory");
 				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 			}
@@ -586,7 +585,7 @@ CODESTARTnewActInst
 
 		}
 		else {
-			errmsg.LogError(0, NO_ERRCODE,
+			LogError(0, NO_ERRCODE,
 					"omczmq: config error - '%s' is not a valid option",
 					actpblk.descr[i].name);
 			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
@@ -626,7 +625,7 @@ CODESTARTparseSelectorAct
 	CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	if(!strncmp((char*) p, ":omczmq:", sizeof(":omczmq:") - 1)) { 
-		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
+		LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
 			"omczmq supports only v6 config format, use: "
 			"action(type=\"omczmq\" serverport=...)");
 	}
@@ -658,7 +657,6 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
 	DBGPRINTF("omczmq: module compiled with rsyslog version %s.\n", VERSION);
 

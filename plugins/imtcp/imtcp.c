@@ -4,7 +4,7 @@
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c,
  * which at the time of the rsyslog fork was BSD-licensed)
  *
- * Copyright 2007-2015 Adiscon GmbH.
+ * Copyright 2007-2017 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -101,6 +101,7 @@ static struct configSettings_s {
 	int bDisableLFDelim;
 	int discardTruncatedMsg;
 	int bUseFlowControl;
+	uchar *gnutlsPriorityString;
 	uchar *pszStrmDrvrAuthMode;
 	uchar *pszInputName;
 	uchar *pszBindRuleset;
@@ -139,6 +140,7 @@ struct modConfData_s {
 	int iKeepAliveProbes;
 	int iKeepAliveTime;
 	sbool bEmitMsgOnClose; /* emit an informational message on close by remote peer */
+	uchar *gnutlsPriorityString;
 	uchar *pszStrmDrvrName; /* stream driver to use */
 	uchar *pszStrmDrvrAuthMode; /* authentication mode to use */
 	struct cnfarray *permittedPeers;
@@ -160,14 +162,15 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "maxsessions", eCmdHdlrPositiveInt, 0 },
 	{ "maxlistners", eCmdHdlrPositiveInt, 0 },
 	{ "maxlisteners", eCmdHdlrPositiveInt, 0 },
-	{ "streamdriver.mode", eCmdHdlrPositiveInt, 0 },
+	{ "streamdriver.mode", eCmdHdlrNonNegInt, 0 },
 	{ "streamdriver.authmode", eCmdHdlrString, 0 },
 	{ "streamdriver.name", eCmdHdlrString, 0 },
 	{ "permittedpeer", eCmdHdlrArray, 0 },
 	{ "keepalive", eCmdHdlrBinary, 0 },
 	{ "keepalive.probes", eCmdHdlrPositiveInt, 0 },
 	{ "keepalive.time", eCmdHdlrPositiveInt, 0 },
-	{ "keepalive.interval", eCmdHdlrPositiveInt, 0 }
+	{ "keepalive.interval", eCmdHdlrPositiveInt, 0 },
+	{ "gnutlsprioritystring", eCmdHdlrString, 0 }
 };
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -216,14 +219,14 @@ doOpenLstnSocks(tcpsrv_t *pSrv)
 
 
 static rsRetVal
-doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd)
+doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd, int *const oserr)
 {
 	DEFiRet;
 	assert(pSess != NULL);
 	assert(piLenRcvd != NULL);
 
 	*piLenRcvd = lenBuf;
-	CHKiRet(netstrm.Rcv(pSess->pStrm, (uchar*) buf, piLenRcvd));
+	CHKiRet(netstrm.Rcv(pSess->pStrm, (uchar*) buf, piLenRcvd, oserr));
 finalize_it:
 	RETiRet;
 }
@@ -357,6 +360,7 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 		CHKiRet(tcpsrv.SetKeepAliveIntvl(pOurTcpsrv, modConf->iKeepAliveIntvl));
 		CHKiRet(tcpsrv.SetKeepAliveProbes(pOurTcpsrv, modConf->iKeepAliveProbes));
 		CHKiRet(tcpsrv.SetKeepAliveTime(pOurTcpsrv, modConf->iKeepAliveTime));
+		CHKiRet(tcpsrv.SetGnutlsPriorityString(pOurTcpsrv, modConf->gnutlsPriorityString));
 		CHKiRet(tcpsrv.SetSessMax(pOurTcpsrv, modConf->iTCPSessMax));
 		CHKiRet(tcpsrv.SetLstnMax(pOurTcpsrv, modConf->iTCPLstnMax));
 		CHKiRet(tcpsrv.SetDrvrMode(pOurTcpsrv, modConf->iStrmDrvrMode));
@@ -469,6 +473,7 @@ CODESTARTbeginCnfLoad
 	loadModConf->maxFrameSize = 200000;
 	loadModConf->bDisableLFDelim = 0;
 	loadModConf->discardTruncatedMsg = 0;
+	loadModConf->gnutlsPriorityString = NULL;
 	loadModConf->pszStrmDrvrName = NULL;
 	loadModConf->pszStrmDrvrAuthMode = NULL;
 	loadModConf->permittedPeers = NULL;
@@ -533,6 +538,8 @@ CODESTARTsetModCnf
 			loadModConf->iKeepAliveTime = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "keepalive.interval")) {
 			loadModConf->iKeepAliveIntvl = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "gnutlsprioritystring")) {
+			loadModConf->gnutlsPriorityString = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.mode")) {
 			loadModConf->iStrmDrvrMode = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.authmode")) {
@@ -627,11 +634,11 @@ CODESTARTactivateCnfPrePrivDrop
 		}
 	}
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
-		addListner(pModConf, inst);
+		addListner(runModConf, inst);
 	}
 	if(pOurTcpsrv == NULL)
 		ABORT_FINALIZE(RS_RET_NO_RUN);
-	CHKiRet(tcpsrv.ConstructFinalize(pOurTcpsrv));
+	iRet = tcpsrv.ConstructFinalize(pOurTcpsrv);
 finalize_it:
 ENDactivateCnfPrePrivDrop
 

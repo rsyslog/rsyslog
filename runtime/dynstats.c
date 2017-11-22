@@ -139,37 +139,49 @@ dynstats_addBucketMetrics(dynstats_buckets_t *bkts, dynstats_bucket_t *b, const 
 	ustrncpy(metric_suffix, suffix_litteral, DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH);
 	STATSCOUNTER_INIT(b->ctrOpsOverflow, b->mutCtrOpsOverflow);
 	CHKiRet(statsobj.AddManagedCounter(bkts->global_stats, metric_name_buff, ctrType_IntCtr,
-									   CTR_FLAG_RESETTABLE, &(b->ctrOpsOverflow), &b->pOpsOverflowCtr, 1));
+									   CTR_FLAG_RESETTABLE,
+										&(b->ctrOpsOverflow),
+										&b->pOpsOverflowCtr, 1));
 
 	suffix_litteral = UCHAR_CONSTANT("new_metric_add");
 	ustrncpy(metric_suffix, suffix_litteral, DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH);
 	STATSCOUNTER_INIT(b->ctrNewMetricAdd, b->mutCtrNewMetricAdd);
 	CHKiRet(statsobj.AddManagedCounter(bkts->global_stats, metric_name_buff, ctrType_IntCtr,
-									   CTR_FLAG_RESETTABLE, &(b->ctrNewMetricAdd), &b->pNewMetricAddCtr, 1));
+									   CTR_FLAG_RESETTABLE,
+										&(b->ctrNewMetricAdd),
+										&b->pNewMetricAddCtr, 1));
 
 	suffix_litteral = UCHAR_CONSTANT("no_metric");
 	ustrncpy(metric_suffix, suffix_litteral, DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH);
 	STATSCOUNTER_INIT(b->ctrNoMetric, b->mutCtrNoMetric);
 	CHKiRet(statsobj.AddManagedCounter(bkts->global_stats, metric_name_buff, ctrType_IntCtr,
-									   CTR_FLAG_RESETTABLE, &(b->ctrNoMetric), &b->pNoMetricCtr, 1));
+									   CTR_FLAG_RESETTABLE,
+										&(b->ctrNoMetric),
+										&b->pNoMetricCtr, 1));
 
 	suffix_litteral = UCHAR_CONSTANT("metrics_purged");
 	ustrncpy(metric_suffix, suffix_litteral, DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH);
 	STATSCOUNTER_INIT(b->ctrMetricsPurged, b->mutCtrMetricsPurged);
 	CHKiRet(statsobj.AddManagedCounter(bkts->global_stats, metric_name_buff, ctrType_IntCtr,
-									   CTR_FLAG_RESETTABLE, &(b->ctrMetricsPurged), &b->pMetricsPurgedCtr, 1));
+									   CTR_FLAG_RESETTABLE,
+										&(b->ctrMetricsPurged),
+										&b->pMetricsPurgedCtr, 1));
 
 	suffix_litteral = UCHAR_CONSTANT("ops_ignored");
 	ustrncpy(metric_suffix, suffix_litteral, DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH);
 	STATSCOUNTER_INIT(b->ctrOpsIgnored, b->mutCtrOpsIgnored);
 	CHKiRet(statsobj.AddManagedCounter(bkts->global_stats, metric_name_buff, ctrType_IntCtr,
-									   CTR_FLAG_RESETTABLE, &(b->ctrOpsIgnored), &b->pOpsIgnoredCtr, 1));
+									   CTR_FLAG_RESETTABLE,
+										&(b->ctrOpsIgnored),
+										&b->pOpsIgnoredCtr, 1));
 
 	suffix_litteral = UCHAR_CONSTANT("purge_triggered");
 	ustrncpy(metric_suffix, suffix_litteral, DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH);
 	STATSCOUNTER_INIT(b->ctrPurgeTriggered, b->mutCtrPurgeTriggered);
 	CHKiRet(statsobj.AddManagedCounter(bkts->global_stats, metric_name_buff, ctrType_IntCtr,
-									   CTR_FLAG_RESETTABLE, &(b->ctrPurgeTriggered), &b->pPurgeTriggeredCtr, 1));
+									   CTR_FLAG_RESETTABLE,
+										&(b->ctrPurgeTriggered),
+										&b->pPurgeTriggeredCtr, 1));
 
 finalize_it:
 	free(metric_name_buff);
@@ -221,17 +233,19 @@ dynstats_rebuildSurvivorTable(dynstats_bucket_t *b) {
 	b->ctrs = NULL;
 finalize_it:
 	if (iRet != RS_RET_OK) {
-		errmsg.LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to evict TTL-expired metrics of dyn-stats "
-"bucket named: %s", b->name);
+		LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to evict "
+			"TTL-expired metrics of dyn-stats bucket named: %s", b->name);
 		if (new_table == NULL) {
-			errmsg.LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to initialize hash-table for "
-			"dyn-stats bucket named: %s", b->name);
+			LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to "
+				"initialize hash-table for dyn-stats bucket named: %s", b->name);
 		} else {
+			assert(0); /* "can" not happen -- triggers Coverity CID 184307:
 			hashtable_destroy(new_table, 0);
+			We keep this as guard should code above change in the future */
 		}
 		if (b->table == NULL) {
 			if (survivor_table == NULL) {
-				errmsg.LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to initialize "
+				LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to initialize "
 				"ttl-survivor hash-table for dyn-stats bucket named: %s", b->name);
 			} else {
 				hashtable_destroy(survivor_table, 0);

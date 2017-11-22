@@ -6,7 +6,7 @@
  *
  * File begun on 2009-03-19 by RGerhards
  *
- * Copyright 2009-2013 Adiscon GmbH.
+ * Copyright 2009-2017 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -57,7 +57,8 @@ DEF_OMOD_STATIC_DATA
 
 typedef struct _instanceData {
 	int bUseArrayInterface;		/* uses action use array instead of string template interface? */
-	int bEnsureLFEnding;		/* ensure that a linefeed is written at the end of EACH record (test aid for nettester) */
+	int bEnsureLFEnding;		/* ensure that a linefeed is written at the end of EACH
+					record (test aid for nettester) */
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -136,11 +137,11 @@ CODESTARTdoAction
 		 */
 		iParam = 0;
 		iBuf = 0;
-		while(szParams[iParam] != NULL) {
+		while(szParams[iParam] != NULL && iBuf < (int)sizeof(szBuf)-1) {
 			if(iParam > 0)
 				szBuf[iBuf++] = ','; /* all but first need a delimiter */
 			iParamVal = 0;
-			while(szParams[iParam][iParamVal] != '\0' && iBuf < (int) sizeof(szBuf)) {
+			while(szParams[iParam][iParamVal] != '\0' && iBuf < (int) sizeof(szBuf)-1) {
 				szBuf[iBuf++] = szParams[iParam][iParamVal++];
 			}
 			++iParam;

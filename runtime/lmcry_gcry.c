@@ -2,7 +2,7 @@
  *
  * An implementation of the cryprov interface for libgcrypt.
  * 
- * Copyright 2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2013-2017 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -26,11 +26,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 #include "module-template.h"
 #include "glbl.h"
 #include "errmsg.h"
 #include "cryprov.h"
+#include "parserif.h"
 #include "libgcry.h"
 #include "lmcry_gcry.h"
 
@@ -82,7 +84,8 @@ errfunc(__attribute__((unused)) void *usrptr, uchar *emsg)
 /* Standard-Constructor
  */
 BEGINobjConstruct(lmcry_gcry)
-	pThis->ctx = gcryCtxNew();
+	CHKmalloc(pThis->ctx = gcryCtxNew());
+finalize_it:
 ENDobjConstruct(lmcry_gcry)
 
 
@@ -116,6 +119,10 @@ SetCnfParam(void *pT, struct nvlst *lst, int paramType)
 	pblk = (paramType == CRYPROV_PARAMTYPE_REGULAR ) ?  &pblkRegular : &pblkQueue;
 	nKeys = 0;
 	pvals = nvlstGetParams(lst, pblk, NULL);
+	if(pvals == NULL) {
+		parser_errmsg("error crypto provider gcryconfig parameters]");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
 	if(Debug) {
 		dbgprintf("param blk in lmcry_gcry:\n");
 		cnfparamsPrint(pblk, pvals);
@@ -175,8 +182,8 @@ SetCnfParam(void *pT, struct nvlst *lst, int paramType)
 	if(keyfile != NULL) {
 		r = gcryGetKeyFromFile((char*)keyfile, (char**)&key, &keylen);
 		if(r != 0) {
-			errmsg.LogError(0, RS_RET_ERR, "error %d reading keyfile %s\n",
-				r, keyfile);
+			errmsg.LogError(errno, RS_RET_ERR, "error reading keyfile %s",
+				keyfile);
 			ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 		}
 	}
@@ -197,24 +204,14 @@ SetCnfParam(void *pT, struct nvlst *lst, int paramType)
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
 
-	cnfparamvalsDestruct(pvals, pblk);
-
 finalize_it:
-    if (key != NULL)
-        free(key);
-    
-    if (keyfile != NULL)
-        free(keyfile);
-    
-    if (algo != NULL)
-        free(algo);
-    
-    if (keyprogram != NULL)
-        free(keyprogram);
-    
-    if (mode != NULL)
-        free(mode);
-    
+	free(key);
+	free(keyfile);
+	free(algo);
+	free(keyprogram);
+	free(mode);
+	if(pvals != NULL)
+		cnfparamvalsDestruct(pvals, pblk);
 	RETiRet;
 }
 
@@ -244,12 +241,11 @@ OnFileOpen(void *pT, uchar *fn, void *pGF, char openMode)
 	DEFiRet;
 	DBGPRINTF("lmcry_gcry: open file '%s', mode '%c'\n", fn, openMode);
 
-	CHKiRet(rsgcryInitCrypt(pThis->ctx, pgf, fn, openMode));
-finalize_it:
-	/* TODO: enable this error message (need to cleanup loop first ;))
-	errmsg.LogError(0, iRet, "Encryption Provider"
-		"Error: cannot open .encinfo file - disabling log file");
-	*/
+	iRet = rsgcryInitCrypt(pThis->ctx, pgf, fn, openMode);
+	if(iRet != RS_RET_OK) {
+		errmsg.LogError(0, iRet, "Encryption Provider"
+			"Error: cannot open .encinfo file - disabling log file");
+	}
 	RETiRet;
 }
 

@@ -148,7 +148,8 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
 	void (*PrintAllowedSenders)(int iListToPrint);
 	void (*clearAllowedSenders)(uchar*);
 	void (*debugListenInfo)(int fd, char *type);
-	int *(*create_udp_socket)(uchar *hostname, uchar *LogPort, int bIsServer, int rcvbuf, int ipfreebind, char *device);
+	int *(*create_udp_socket)(uchar *hostname, uchar *LogPort, int bIsServer, int rcvbuf, int sndbuf,
+		int ipfreebind, char *device);
 	void (*closeUDPListenSockets)(int *finet);
 	int (*isAllowedSender)(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost); /* deprecated! */
 	rsRetVal (*getLocalHostname)(uchar**);
@@ -156,7 +157,7 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
 	/* permitted peer handling should be replaced by something better (see comments above) */
 	rsRetVal (*AddPermittedPeer)(permittedPeers_t **ppRootPeer, uchar *pszID);
 	rsRetVal (*DestructPermittedPeers)(permittedPeers_t **ppRootPeer);
-	rsRetVal (*PermittedPeerWildcardMatch)(permittedPeers_t *pPeer, uchar *pszNameToMatch, int *pbIsMatching);
+	rsRetVal (*PermittedPeerWildcardMatch)(permittedPeers_t *pPeer, const uchar *pszNameToMatch, int *pbIsMatching);
 	/* v5 interface additions */
 	int (*CmpHost)(struct sockaddr_storage *, struct sockaddr_storage*, size_t);
 	/* v6 interface additions - 2009-11-16 */

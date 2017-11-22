@@ -7,6 +7,7 @@ cd local_env
 pwd
 git clone git://github.com/rsyslog/libfastjson
 cd libfastjson
+git log -2
 autoreconf -fvi
 ./configure --prefix=$PWD_HOME/local_env/install
 gmake

@@ -531,15 +531,21 @@ getStateFileName(lstn_t *const __restrict__ pLstn,
 
 
 /* enqueue the read file line as a message. The provided string is
- * not freed - thuis must be done by the caller.
+ * not freed - this must be done by the caller.
  */
+#define MAX_OFFSET_REPRESENTATION_NUM_BYTES 20
 static rsRetVal enqLine(lstn_t *const __restrict__ pLstn,
-			cstr_t *const __restrict__ cstrLine)
+			cstr_t *const __restrict__ cstrLine,
+			const int64 strtOffs)
 {
 	DEFiRet;
 	smsg_t *pMsg;
+	uchar file_offset[MAX_OFFSET_REPRESENTATION_NUM_BYTES+1];
+	const uchar *metadata_names[2] = {(uchar *)"filename",(uchar *)"fileoffset"} ;
+	const uchar *metadata_values[2] ;
+	const size_t msgLen = cstrLen(cstrLine);
 
-	if(rsCStrLen(cstrLine) == 0) {
+	if(msgLen == 0) {
 		/* we do not process empty lines */
 		FINALIZE;
 	}
@@ -548,25 +554,28 @@ static rsRetVal enqLine(lstn_t *const __restrict__ pLstn,
 	MsgSetFlowControlType(pMsg, eFLOWCTL_FULL_DELAY);
 	MsgSetInputName(pMsg, pInputName);
 	if (pLstn->addCeeTag) {
-		size_t msgLen = cstrLen(cstrLine);
-		const char *const ceeToken = "@cee:";
-		size_t ceeMsgSize = msgLen + strlen(ceeToken) +1;
+		/* Make sure we account for terminating null byte */
+		size_t ceeMsgSize = msgLen + CONST_LEN_CEE_COOKIE + 1;
 		char *ceeMsg;
 		CHKmalloc(ceeMsg = MALLOC(ceeMsgSize));
-		strcpy(ceeMsg, ceeToken);
+		strcpy(ceeMsg, CONST_CEE_COOKIE);
 		strcat(ceeMsg, (char*)rsCStrGetSzStrNoNULL(cstrLine));
 		MsgSetRawMsg(pMsg, ceeMsg, ceeMsgSize);
 		free(ceeMsg);
 	} else {
-		MsgSetRawMsg(pMsg, (char*)rsCStrGetSzStrNoNULL(cstrLine), cstrLen(cstrLine));
+		MsgSetRawMsg(pMsg, (char*)rsCStrGetSzStrNoNULL(cstrLine), msgLen);
 	}
 	MsgSetMSGoffs(pMsg, 0);	/* we do not have a header... */
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetTAG(pMsg, pLstn->pszTag, pLstn->lenTag);
 	msgSetPRI(pMsg, pLstn->iFacility | pLstn->iSeverity);
 	MsgSetRuleset(pMsg, pLstn->pRuleset);
-	if(pLstn->addMetadata)
-		msgAddMetadata(pMsg, (uchar*)"filename", pLstn->pszFileName);
+	if(pLstn->addMetadata) {
+		metadata_values[0] = pLstn->pszFileName;
+		snprintf((char *)file_offset,MAX_OFFSET_REPRESENTATION_NUM_BYTES+1, "%lld", strtOffs);
+		metadata_values[1] = file_offset ;
+		msgAddMultiMetadata(pMsg, metadata_names, metadata_values ,2);
+	}
 	ratelimitAddMsg(pLstn->ratelimiter, &pLstn->multiSub, pMsg);
 finalize_it:
 	RETiRet;
@@ -721,20 +730,13 @@ static void pollFileCancelCleanup(void *pArg)
 }
 
 
-/* poll a file, need to check file rollover etc. open file if not open */
-#if !defined(_AIX)
-#pragma GCC diagnostic ignored "-Wempty-body"
-#endif
-static rsRetVal
-pollFile(lstn_t *pLstn, int *pbHadFileData)
+/* pollFile needs to be split due to the unfortunate pthread_cancel_push() macros. */
+static rsRetVal ATTR_NONNULL(1, 3)
+pollFileReal(lstn_t *pLstn, int *pbHadFileData, cstr_t **pCStr)
 {
-	cstr_t *pCStr = NULL;
+	int64 strtOffs;
 	DEFiRet;
 
-	/* Note: we must do pthread_cleanup_push() immediately, because the POXIS macros
-	 * otherwise do not work if I include the _cleanup_pop() inside an if... -- rgerhards, 2008-08-14
-	 */
-	pthread_cleanup_push(pollFileCancelCleanup, &pCStr);
 	int nProcessed = 0;
 	if(pLstn->pStrm == NULL) {
 		CHKiRet(openFile(pLstn)); /* open file */
@@ -745,17 +747,18 @@ pollFile(lstn_t *pLstn, int *pbHadFileData)
 		if(pLstn->maxLinesAtOnce != 0 && nProcessed >= pLstn->maxLinesAtOnce)
 			break;
 		if(pLstn->startRegex == NULL) {
-			CHKiRet(strm.ReadLine(pLstn->pStrm, &pCStr, pLstn->readMode, pLstn->escapeLF, pLstn->trimLineOverBytes));
+			CHKiRet(strm.ReadLine(pLstn->pStrm, pCStr, pLstn->readMode, pLstn->escapeLF,
+				pLstn->trimLineOverBytes, &strtOffs));
 		} else {
-			CHKiRet(strmReadMultiLine(pLstn->pStrm, &pCStr, &pLstn->end_preg,
-				pLstn->escapeLF, pLstn->discardTruncatedMsg, pLstn->msgDiscardingError));
+			CHKiRet(strmReadMultiLine(pLstn->pStrm, pCStr, &pLstn->end_preg,
+				pLstn->escapeLF, pLstn->discardTruncatedMsg, pLstn->msgDiscardingError, &strtOffs));
 		}
 		++nProcessed;
 		if(pbHadFileData != NULL)
 			*pbHadFileData = 1; /* this is just a flag, so set it and forget it */
-		CHKiRet(enqLine(pLstn, pCStr)); /* process line */
-		rsCStrDestruct(&pCStr); /* discard string (must be done by us!) */
-		if(pLstn->iPersistStateInterval > 0 && pLstn->nRecords++ >= pLstn->iPersistStateInterval) {
+		CHKiRet(enqLine(pLstn, *pCStr, strtOffs)); /* process line */
+		rsCStrDestruct(pCStr); /* discard string (must be done by us!) */
+		if(pLstn->iPersistStateInterval > 0 && ++pLstn->nRecords >= pLstn->iPersistStateInterval) {
 			persistStrmState(pLstn);
 			pLstn->nRecords = 0;
 		}
@@ -763,17 +766,28 @@ pollFile(lstn_t *pLstn, int *pbHadFileData)
 
 finalize_it:
 	multiSubmitFlush(&pLstn->multiSub);
-	pthread_cleanup_pop(0);
 
-	if(pCStr != NULL) {
-		rsCStrDestruct(&pCStr);
+	if(*pCStr != NULL) {
+		rsCStrDestruct(pCStr);
 	}
 
 	RETiRet;
 }
-#if !defined(_AIX)
-#pragma GCC diagnostic warning "-Wempty-body"
-#endif
+
+/* poll a file, need to check file rollover etc. open file if not open */
+static rsRetVal ATTR_NONNULL(1)
+pollFile(lstn_t *pLstn, int *pbHadFileData)
+{
+	cstr_t *pCStr = NULL;
+	DEFiRet;
+	/* Note: we must do pthread_cleanup_push() immediately, because the POXIS macros
+	 * otherwise do not work if I include the _cleanup_pop() inside an if... -- rgerhards, 2008-08-14
+	 */
+	pthread_cleanup_push(pollFileCancelCleanup, &pCStr);
+	iRet = pollFileReal(pLstn, pbHadFileData, &pCStr);
+	pthread_cleanup_pop(0);
+	RETiRet;
+}
 
 
 /* create input instance, set default parameters, and
@@ -1053,6 +1067,9 @@ addListner(instanceConf_t *inst)
 	sbool hasWildcard;
 
 	hasWildcard = containsGlobWildcard((char*)inst->pszFileBaseName);
+	DBGPRINTF("imfile: addListner file '%s', wildcard detected: %s\n",
+		  inst->pszFileBaseName, (hasWildcard ? "TRUE" : "FALSE"));
+
 	if(hasWildcard) {
 		if(runModConf->opMode == OPMODE_POLLING) {
 			errmsg.LogError(0, RS_RET_IMFILE_WILDCARD,
@@ -1212,7 +1229,7 @@ CODESTARTnewInpInst
 	}
 	if(inst->readTimeout != 0)
 		loadModConf->haveReadTimeouts = 1;
-	CHKiRet(checkInstance(inst));
+	iRet = checkInstance(inst);
 finalize_it:
 CODE_STD_FINALIZERnewInpInst
 	cnfparamvalsDestruct(pvals, &inppblk);
@@ -1716,6 +1733,8 @@ in_setupDirWatch(const int dirIdx)
 		memcpy(dirnametrunc, dirs[dirIdx].dirName, dirnamelen); /* Copy mem */
 
 		hasWildcard = containsGlobWildcard(dirnametrunc);
+		DBGPRINTF("imfile: in_setupDirWatch dir '%s', wildcard detected: %s\n",
+			  dirnametrunc, (hasWildcard ? "TRUE" : "FALSE"));
 		if(hasWildcard) {
 			/* Set NULL Byte to FIRST wildcard occurrence */
 			psztmp = strchr(dirnametrunc, '*');
@@ -1727,12 +1746,14 @@ in_setupDirWatch(const int dirIdx)
 				if (psztmp != NULL) {
 					*psztmp = '\0';
 				} else {
-					DBGPRINTF("imfile: in_setupDirWatch: unexpected error #2 creating truncated directorynamefor '%s'\n",
+					DBGPRINTF("imfile: in_setupDirWatch: unexpected error #2 "
+						"creating truncated directorynamefor '%s'\n",
 						dirs[dirIdx].dirName);
 					goto done;
 				}
 			} else {
-				DBGPRINTF("imfile: in_setupDirWatch: unexpected error #1 creating truncated directorynamefor '%s'\n",
+				DBGPRINTF("imfile: in_setupDirWatch: unexpected error #1 creating "
+					"truncated directorynamefor '%s'\n",
 					dirs[dirIdx].dirName);
 				goto done;
 			}
@@ -1928,11 +1949,15 @@ done:	return;
 static void
 in_setupFileWatchStatic(lstn_t *pLstn)
 {
+	sbool hasWildcard;
+
 	DBGPRINTF("imfile: adding file '%s' to configured table\n",
 		  pLstn->pszFileName);
 	dirsAddFile(pLstn, CONFIGURED_FILE);
 
-	if(pLstn->hasWildcard) {
+	/* perform wildcard check on static files manually */
+	hasWildcard = containsGlobWildcard((char*)pLstn->pszFileName);
+	if(hasWildcard) {
 		DBGPRINTF("imfile: file '%s' has wildcard, doing initial "
 			  "expansion\n", pLstn->pszFileName);
 		glob_t files;
@@ -1955,7 +1980,8 @@ in_setupFileWatchStatic(lstn_t *pLstn)
 	} else {
 		/* Duplicate static object as well, otherwise the configobject could be deleted later! */
 		if(lstnDup(&pLstn, pLstn->pszBaseName, NULL) != RS_RET_OK) {
-			DBGPRINTF("imfile: in_setupFileWatchStatic failed to duplicate listener for '%s'\n", pLstn->pszFileName);
+			DBGPRINTF("imfile: in_setupFileWatchStatic failed to duplicate listener for '%s'\n",
+				pLstn->pszFileName);
 			goto done;
 		}
 		startLstnFile(pLstn);
@@ -2046,13 +2072,14 @@ in_handleDirGetFullDir(char* pszoutput, char* pszrootdir, char* pszsubdir)
 			if (psztmp != NULL) {
 				*psztmp = '\0';
 			} else {
-				DBGPRINTF("imfile: in_handleDirGetFullDir: unexpected error #2 creating truncated directoryname for '%s'\n",
+				DBGPRINTF("imfile: in_handleDirGetFullDir: unexpected error #2 "
+					"creating truncated directoryname for '%s'\n",
 					dirnametrunc);
 				goto done;
 			}
 		} else {
-			DBGPRINTF("imfile: in_handleDirGetFullDir: unexpected error #1 creating truncated directoryname for '%s'\n",
-				dirnametrunc);
+			DBGPRINTF("imfile: in_handleDirGetFullDir: unexpected error #1 creating "
+				"truncated directoryname for '%s'\n", dirnametrunc);
 			goto done;
 		}
 	}
@@ -2165,7 +2192,8 @@ in_handleDirEventFileCREATE(struct inotify_event *ev, const int dirIdx)
 							dirIdxFinal = i; /* Have to correct directory index for listnr dupl
 												in in_setupFileWatchDynamic */
 
-							DBGPRINTF("imfile: Found matching directory for file '%s' in dir '%s' (Idx=%d)\n",
+							DBGPRINTF("imfile: Found matching directory for "
+								"file '%s' in dir '%s' (Idx=%d)\n",
 								ev->name, dirs[dirIdxFinal].dirName, dirIdxFinal);
 							break;
 						}
@@ -2175,12 +2203,15 @@ in_handleDirEventFileCREATE(struct inotify_event *ev, const int dirIdx)
 
 					if(ftIdx == -1) {
 						DBGPRINTF("imfile: file '%s' not associated with dir '%s' and also no "
-							"matching wildcard directory found\n", ev->name, dirs[dirIdxFinal].dirName);
+							"matching wildcard directory found\n",
+							ev->name, dirs[dirIdxFinal].dirName);
 						goto done;
 					}
 					else {
-						DBGPRINTF("imfile: file '%s' not associated with dir '%s', using dirIndex %d instead\n",
-							ev->name, (pszDir == NULL) ? dirs[dirIdxFinal].dirName : pszDir, dirIdxFinal);
+						DBGPRINTF("imfile: file '%s' not associated with dir '%s', "
+							"using dirIndex %d instead\n",
+							ev->name, (pszDir == NULL) ? dirs[dirIdxFinal].dirName : pszDir,
+							dirIdxFinal);
 					}
 				} else {
 					DBGPRINTF("imfile: file '%s' not associated with dir '%s'\n",
@@ -2199,7 +2230,8 @@ in_handleDirEventFileCREATE(struct inotify_event *ev, const int dirIdx)
 		if(ev->mask & IN_MOVED_TO) {
 			if (pLstn->movedfrom_statefile != NULL && pLstn->movedfrom_cookie == ev->cookie) {
 				/* We need to prepar fullfn before we can generate statefilename */
-				snprintf(fullfn, MAXFNAME, "%s/%s", (pszDir == NULL) ? dirs[dirIdxFinal].dirName : pszDir, (uchar*)ev->name);
+				snprintf(fullfn, MAXFNAME, "%s/%s",
+				(pszDir == NULL) ? dirs[dirIdxFinal].dirName : pszDir, (uchar*)ev->name);
 				getStateFileName(NULL, statefile_new, sizeof(statefile_new), (uchar*)fullfn);
 				getFullStateFileName(statefile_new, statefilefull_new, sizeof(statefilefull_new));
 				getFullStateFileName(pLstn->movedfrom_statefile, statefilefull_old, sizeof(statefilefull_old));
@@ -2214,7 +2246,8 @@ in_handleDirEventFileCREATE(struct inotify_event *ev, const int dirIdx)
 					errmsg.LogError(0, RS_RET_ERR, "imfile: could not rename statefile "
 						"'%s' into '%s' with error: %s", statefilefull_old, statefilefull_new, errStr);
 				} else {
-					DBGPRINTF("imfile: statefile '%s' renamed into '%s'\n", statefilefull_old, statefilefull_new);
+					DBGPRINTF("imfile: statefile '%s' renamed into '%s'\n", statefilefull_old,
+						statefilefull_new);
 				}
 
 				/* Free statefile memory */
@@ -2222,7 +2255,8 @@ in_handleDirEventFileCREATE(struct inotify_event *ev, const int dirIdx)
 				pLstn->movedfrom_statefile = NULL;
 				pLstn->movedfrom_cookie = 0;
 			} else {
-					DBGPRINTF("imfile: IN_MOVED_TO either unknown cookie '%d' we expected '%d' or missing statefile '%s'\n",
+					DBGPRINTF("imfile: IN_MOVED_TO either unknown cookie '%d' we "
+						"expected '%d' or missing statefile '%s'\n",
 						pLstn->movedfrom_cookie, ev->cookie, pLstn->movedfrom_statefile);
 			}
 		}

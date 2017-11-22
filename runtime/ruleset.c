@@ -375,7 +375,12 @@ callForeachObject(struct cnfstmt *stmt, json_object *arr, smsg_t *pMsg, wti_t *p
 finalize_it:
 	if (keys != NULL) free(keys);
 	if (entry != NULL) json_object_put(entry);
-	if (key != NULL) json_object_put(key);
+	/* "fix" Coverity scan issue CID 185393: key currently can NOT be NULL
+	 * However, instead of just removing the
+	 *   if (key != NULL) json_object_put(key);
+	 * we put an assertion in its place.
+	 */
+	assert(key == NULL);
 	
 	RETiRet;
 }
@@ -539,8 +544,10 @@ finalize_it:
 	RETiRet;
 }
 
-static rsRetVal
-execReloadLookupTable(struct cnfstmt *stmt) {
+static rsRetVal ATTR_NONNULL()
+execReloadLookupTable(struct cnfstmt *stmt)
+{
+	assert(stmt != NULL);
 	lookup_ref_t *t;
 	DEFiRet;
 	t = stmt->d.s_reload_lookup_table.table;
@@ -548,7 +555,7 @@ execReloadLookupTable(struct cnfstmt *stmt) {
 		ABORT_FINALIZE(RS_RET_NONE);
 	}
 	
-	CHKiRet(lookupReload(t, stmt->d.s_reload_lookup_table.stub_value));
+	iRet = lookupReload(t, stmt->d.s_reload_lookup_table.stub_value);
 	/* Note that reload dispatched above is performed asynchronously,
 	   on a different thread. So rsRetVal it returns means it was triggered
 	   successfully, and not that it was reloaded successfully. */
@@ -563,8 +570,8 @@ finalize_it:
  * better suited here.
  * rgerhards, 2012-09-04
  */
-static rsRetVal
-scriptExec(struct cnfstmt *root, smsg_t *pMsg, wti_t *pWti)
+static rsRetVal ATTR_NONNULL(2, 3)
+scriptExec(struct cnfstmt *const root, smsg_t *const pMsg, wti_t *const pWti)
 {
 	struct cnfstmt *stmt;
 	DEFiRet;
@@ -826,6 +833,19 @@ CODESTARTobjDestruct(ruleset)
 ENDobjDestruct(ruleset)
 
 
+/* helper for Destructor, shut down queue workers */
+DEFFUNC_llExecFunc(doShutdownQueueWorkers)
+{
+	DEFiRet;
+	ruleset_t *const pThis = (ruleset_t*) pData;
+	DBGPRINTF("shutting down queue workers for ruleset %p, name %s, queue %p\n",
+		pThis, pThis->pszName, pThis->pQueue);
+	ISOBJ_TYPE_assert(pThis, ruleset);
+	if(pThis->pQueue != NULL) {
+		qqueueShutdownWorkers(pThis->pQueue);
+	}
+	RETiRet;
+}
 /* destruct ALL rule sets that reside in the system. This must
  * be callable before unloading this module as the module may
  * not be unloaded before unload of the actions is required. This is
@@ -836,6 +856,15 @@ static rsRetVal
 destructAllActions(rsconf_t *conf)
 {
 	DEFiRet;
+
+DBGPRINTF("rulesetDestructAllActions\n");
+	/* we first need to stop all queue workers, else we
+	 * may run into trouble with "call" statements calling
+	 * into then-destroyed rulesets.
+	 * see: https://github.com/rsyslog/rsyslog/issues/1122
+	 */
+DBGPRINTF("RRRRRR: rsconfDestruct - queue shutdown\n");
+	llExecFunc(&(conf->rulesets.llRulesets), doShutdownQueueWorkers, NULL);
 
 	CHKiRet(llDestroy(&(conf->rulesets.llRulesets)));
 	CHKiRet(llInit(&(conf->rulesets.llRulesets), rulesetDestructForLinkedList, rulesetKeyDestruct, strcasecmp));

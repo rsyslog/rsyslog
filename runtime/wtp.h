@@ -26,9 +26,13 @@
 #include "obj.h"
 #include "atomic.h"
 
-/* states for worker threads. */
-#define WRKTHRD_STOPPED  RSFALSE
-#define WRKTHRD_RUNNING  RSTRUE
+/* states for worker threads.
+ * important: they need to be increasing with all previous state bits
+ * set. That is because we can only atomically or a value!
+ */
+#define WRKTHRD_STOPPED  	0
+#define WRKTHRD_INITIALIZING	1
+#define WRKTHRD_RUNNING		3
 
 
 /* possible states of a worker thread pool */

@@ -1,4 +1,7 @@
+patch*
 *~
+*.iml
+.idea
 .tar.gz
 .deps
 .libs
@@ -80,3 +83,6 @@ tests/uxsockrcvr
 tests/xlate.lkp_tbl
 tests/xlate_1.lkp_tbl
 tests/xlate_array.lkp_tbl
+.vscode/
+*.sw*
+clang_output_*

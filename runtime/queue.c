@@ -305,7 +305,7 @@ qqueueDbgPrint(qqueue_t *pThis)
 static inline int
 getPhysicalQueueSize(qqueue_t *pThis)
 {
-	return pThis->iQueueSize;
+	return (int) PREFER_FETCH_32BIT(pThis->iQueueSize);
 }
 
 
@@ -1336,8 +1336,8 @@ cancelWorkers(qqueue_t *pThis)
  * longer, because we no longer can persist the queue in parallel to waiting
  * on worker timeouts.
  */
-static rsRetVal
-ShutdownWorkers(qqueue_t *pThis)
+rsRetVal
+qqueueShutdownWorkers(qqueue_t *const pThis)
 {
 	DEFiRet;
 
@@ -1348,7 +1348,10 @@ ShutdownWorkers(qqueue_t *pThis)
 
 	CHKiRet(tryShutdownWorkersWithinQueueTimeout(pThis));
 
-	if(getPhysicalQueueSize(pThis) > 0) {
+	pthread_mutex_lock(pThis->mut);
+	const int physQueueSize = getPhysicalQueueSize(pThis);
+	pthread_mutex_unlock(pThis->mut);
+	if(physQueueSize > 0) {
 		CHKiRet(tryShutdownWorkersWithinActionTimeout(pThis));
 	}
 
@@ -1642,7 +1645,8 @@ DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch)
 			localRet = doEnqSingleObj(pThis, eFLOWCTL_NO_DELAY, MsgAddRef(pMsg));
 			++nEnqueued;
 			if(localRet != RS_RET_OK) {
-				DBGPRINTF("DeleteProcessedBatch: error %d re-enqueuing unprocessed data element - discarded\n", localRet);
+				DBGPRINTF("DeleteProcessedBatch: error %d re-enqueuing unprocessed "
+						"data element - discarded\n", localRet);
 			}
 		}
 		msgDestruct(&pMsg);
@@ -1878,7 +1882,8 @@ RateLimiter(qqueue_t *pThis)
 				; /* do not delay */
 			} else {
 				if(iHrCurr < pThis->iDeqtWinFromHr) {
-					iDelay = (pThis->iDeqtWinFromHr - iHrCurr - 1) * 3600; /* -1 as we are already in the hour */
+					iDelay = (pThis->iDeqtWinFromHr - iHrCurr - 1) * 3600;
+						/* -1 as we are already in the hour */
 					iDelay += (60 - m.tm_min) * 60;
 					iDelay += 60 - m.tm_sec;
 				} else {
@@ -2065,10 +2070,12 @@ ConsumerDA(qqueue_t *pThis, wti_t *pWti)
 		if(iRet != RS_RET_OK) {
 			if(iRet == RS_RET_ERR_QUEUE_EMERGENCY) {
 				/* Queue emergency error occured */
-				DBGOPRINT((obj_t*) pThis, "ConsumerDA:qqueueEnqMsg caught RS_RET_ERR_QUEUE_EMERGENCY, aborting loop.\n");
+				DBGOPRINT((obj_t*) pThis, "ConsumerDA:qqueueEnqMsg caught RS_RET_ERR_QUEUE_EMERGENCY,"
+						"aborting loop.\n");
 				FINALIZE;
 			} else {
-				DBGOPRINT((obj_t*) pThis, "ConsumerDA:qqueueEnqMsg item (%d) returned with error state: '%d'\n", i, iRet);
+				DBGOPRINT((obj_t*) pThis, "ConsumerDA:qqueueEnqMsg item (%d) returned "
+						"with error state: '%d'\n", i, iRet);
 			}
 		}
 		pWti->batch.eltState[i] = BATCH_STATE_COMM; /* commited to other queue! */
@@ -2296,7 +2303,9 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 			LogMsg(0, RS_RET_CONF_WRN_FULLDLY_BELOW_HIGHWTR, LOG_WARNING,
 					"queue \"%s\": queue.fullDelayMark "
 					"is set below high water mark. This will result in DA mode "
-					" NOT being activated for full delayable messages",
+					" NOT being activated for full delayable messages: In many "
+					"cases this is a configuration error, please check if this "
+					"is really what you want",
 					obj.GetName((obj_t*) pThis));
 		}
 	}
@@ -2653,7 +2662,7 @@ CODESTARTobjDestruct(qqueue)
 		 */
 		if(pThis->qType != QUEUETYPE_DIRECT && !pThis->bEnqOnly && pThis->pqParent == NULL
 		   && pThis->pWtpReg != NULL)
-			ShutdownWorkers(pThis);
+			qqueueShutdownWorkers(pThis);
 
 		if(pThis->bIsDA && getPhysicalQueueSize(pThis) > 0 && pThis->bSaveOnShutdown) {
 			CHKiRet(DoSaveOnShutdown(pThis));
@@ -2883,9 +2892,10 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg)
 	      	  && pThis->tVars.disk.sizeOnDisk > pThis->sizeOnDiskMax)) {
 		STATSCOUNTER_INC(pThis->ctrFull, pThis->mutCtrFull);
 		if(pThis->toEnq == 0 || pThis->bEnqOnly) {
-			DBGOPRINT((obj_t*) pThis, "doEnqSingleObject: queue FULL - configured for immediate discarding QueueSize=%d "
-				"MaxQueueSize=%d sizeOnDisk=%lld sizeOnDiskMax=%lld\n", pThis->iQueueSize, pThis->iMaxQueueSize,
-				pThis->tVars.disk.sizeOnDisk, pThis->sizeOnDiskMax); 
+			DBGOPRINT((obj_t*) pThis, "doEnqSingleObject: queue FULL - configured for immediate "
+					"discarding QueueSize=%d MaxQueueSize=%d sizeOnDisk=%lld "
+					"sizeOnDiskMax=%lld\n", pThis->iQueueSize, pThis->iMaxQueueSize,
+					pThis->tVars.disk.sizeOnDisk, pThis->sizeOnDiskMax); 
 			STATSCOUNTER_INC(pThis->ctrFDscrd, pThis->mutCtrFDscrd);
 			msgDestruct(&pMsg);
 			ABORT_FINALIZE(RS_RET_QUEUE_FULL);
@@ -3098,8 +3108,13 @@ qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst)
 {
 	int i;
 	struct cnfparamvals *pvals;
+	DEFiRet;
 
 	pvals = nvlstGetParams(lst, &pblk, NULL);
+	if(pvals == NULL) {
+		parser_errmsg("error processing queue config parameters");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
 	if(Debug) {
 		dbgprintf("queue param blk:\n");
 		cnfparamsPrint(&pblk, pvals);
@@ -3197,7 +3212,8 @@ qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst)
 	}
 
 	cnfparamvalsDestruct(pvals, &pblk);
-	return RS_RET_OK;
+finalize_it:
+	RETiRet;
 }
 
 

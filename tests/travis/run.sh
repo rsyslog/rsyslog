@@ -5,12 +5,42 @@ set -v  # we want to see the execution steps
 set -e  # abort on first failure
 #set -x  # debug aid
 
+echo "DISTRIB_CODENAME: $DISTRIB_CODENAME"
+echo "CLANG:            $CLANG"
+
 echo "****************************** BEGIN ACTUAL SCRIPT STEP ******************************"
 source tests/travis/install.sh
 source /etc/lsb-release
 
-echo "DISTRIB_CODENAME: $DISTRIB_CODENAME"
-echo "CLANG:            $CLANG"
+# first handle cron builds (most importantly Coverity)
+
+#if [ "$DO_COVERITY" == "YES" ]; then
+#	source tests/travis/run-cron.sh
+#exit
+#fi
+
+# cron job?
+if [ "$TRAVIS_EVENT_TYPE" == "cron" ]; then
+	if [ "$DO_CRON" == "YES" ]; then
+		source tests/travis/run-cron.sh
+	fi
+	exit
+fi
+if [ "$DO_CRON" == "YES" ]; then
+	echo cron job not executed under non-cron run
+	exit 0 # this must not run under PRs
+fi
+
+# first check code style. We do this only when STAT_AN is enabled,
+# so that we do not do it in each and every run. While once is sufficient,
+# STAT_AN for now gives us sufficient runtime reduction.
+if [ "x$STAT_AN" == "xYES" ] ; then CI/check_line_length.sh ; fi
+
+
+#
+# ACTUAL MAIN CI PART OF THE SCRIPT
+# This is to be executed for each PR
+#
 
 # we turn off leak sanitizer at this time because it reports some
 # pretty irrelevant problems in startup code. In the longer term,
@@ -28,7 +58,7 @@ if [ "$MERGE" == "YES" ]; then
     set -e
 fi
 
-if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then SCAN_BUILD="scan-build-3.6"; else SCAN_BUILD="scan-build"; fi
+if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then SCAN_BUILD="scan-build-5.0"; CC=clang-5.0; else SCAN_BUILD="scan-build"; fi
 if [ "x$BUILD_FROM_TARBALL" == "xYES" ]; then autoreconf -fvi && ./configure && make dist && mv *.tar.gz rsyslog.tar.gz && mkdir unpack && cd unpack && tar xzf ../rsyslog.tar.gz && ls -ld rsyslog* && cd rsyslog* ; fi
 pwd
 autoreconf --force --verbose --install
@@ -39,7 +69,7 @@ if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then export CC="
 $CC -v
 env
 if [ "$DISTRIB_CODENAME" != "precise" ]; then AMQP1="--enable-omamqp1"; fi
-export CONFIG_FLAGS="--prefix=/opt/rsyslog --build=x86_64-pc-linux-gnu --host=x86_64-pc-linux-gnu --mandir=/usr/share/man --infodir=/usr/share/info --datadir=/usr/share --sysconfdir=/etc --localstatedir=/var/lib --disable-dependency-tracking --enable-silent-rules --libdir=/usr/lib64 --docdir=/usr/share/doc/rsyslog --disable-generate-man-pages --enable-testbench --enable-imdiag --enable-imfile --enable-impstats --enable-mmrm1stspace --enable-imptcp --enable-mmanon --enable-mmaudit --enable-mmfields --enable-mmjsonparse --enable-mmpstrucdata --enable-mmsequence --enable-mmutf8fix --enable-mail --enable-omprog --enable-omruleset --enable-omstdout --enable-omuxsock --enable-pmaixforwardedfrom --enable-pmciscoios --enable-pmcisconames --enable-pmlastmsg --enable-pmsnare --enable-libgcrypt --enable-mmnormalize --disable-omudpspoof --enable-relp --disable-snmp --disable-mmsnmptrapd --enable-gnutls --enable-mysql --enable-mysql-tests --enable-usertools --enable-gt-ksi --enable-libdbi --enable-pgsql --enable-omhttpfs --enable-elasticsearch --enable-valgrind --enable-ommongodb --enable-omrelp-default-port=13515 --enable-omtcl --enable-mmdblookup $JOURNAL_OPT $HIREDIS_OPT $ENABLE_KAFKA $NO_VALGRIND $GROK $ES_TEST_CONFIGURE_OPT $CONFIGURE_FLAGS $AMQP1"
+export CONFIG_FLAGS="--prefix=/opt/rsyslog --build=x86_64-pc-linux-gnu --host=x86_64-pc-linux-gnu --mandir=/usr/share/man --infodir=/usr/share/info --datadir=/usr/share --sysconfdir=/etc --localstatedir=/var/lib --disable-dependency-tracking --enable-silent-rules --libdir=/usr/lib64 --docdir=/usr/share/doc/rsyslog --disable-generate-man-pages --enable-testbench --enable-imdiag --enable-imfile --enable-impstats --enable-mmrm1stspace --enable-imptcp --enable-mmanon --enable-mmaudit --enable-mmfields --enable-mmjsonparse --enable-mmpstrucdata --enable-mmsequence --enable-mmutf8fix --enable-mail --enable-omprog --enable-omruleset --enable-omstdout --enable-omuxsock --enable-pmaixforwardedfrom --enable-pmciscoios --enable-pmcisconames --enable-pmlastmsg --enable-pmsnare --enable-libgcrypt --enable-mmnormalize --disable-omudpspoof --enable-relp --disable-snmp --disable-mmsnmptrapd --enable-gnutls --enable-mysql --enable-mysql-tests --enable-usertools --enable-gt-ksi --enable-libdbi --enable-pgsql --enable-omhttpfs --enable-elasticsearch --enable-valgrind --enable-ommongodb --enable-omrelp-default-port=13515 --enable-omtcl --enable-mmdblookup --enable-gssapi-krb5 --enable-mmcount --enable-omczmq / --enable-imczmq $JOURNAL_OPT $HIREDIS_OPT $ENABLE_KAFKA $ENABLE_DEBUGLESS $NO_VALGRIND $GROK $ES_TEST_CONFIGURE_OPT $CONFIGURE_FLAGS $AMQP1"
 ./configure  $CONFIG_FLAGS
 export USE_AUTO_DEBUG="off" # set to "on" to enable this for travis
 make -j
@@ -63,10 +93,4 @@ then
 fi
 
 if [ "x$STAT_AN" == "xYES" ] ; then make clean; CFLAGS="-O2 -std=c99"; ./configure $CONFIG_FLAGS ; fi
-if [ "x$STAT_AN" == "xYES" ] ; then cd compat; $SCAN_BUILD --status-bugs make -j && cd .. ; fi
-# we now build those components that we know to need some more work
-# they will not be included in the later static analyzer run. But by
-# explicitely listing the modules which do not work, we automatically
-# get new modules/files covered.
-if [ "x$STAT_AN" == "xYES" ] ; then cd runtime; make - lmnet_la-net.lo libgcry_la-libgcry.lo ; cd .. ;  fi
-if [ "x$STAT_AN" == "xYES" ] ; then $SCAN_BUILD --status-bugs make -j ; fi
+if [ "x$STAT_AN" == "xYES" ] ; then $SCAN_BUILD --use-cc $CC --status-bugs make -j ; fi

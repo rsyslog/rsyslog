@@ -114,6 +114,10 @@ CODESTARTobjDestruct(netstrms)
 		free(pThis->pBaseDrvrName);
 		pThis->pBaseDrvrName = NULL;
 	}
+	if(pThis->gnutlsPriorityString != NULL) {
+		free(pThis->gnutlsPriorityString);
+		pThis->gnutlsPriorityString = NULL;
+	}
 ENDobjDestruct(netstrms)
 
 
@@ -123,8 +127,7 @@ netstrmsConstructFinalize(netstrms_t *pThis)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrms);
-	CHKiRet(loadDrvr(pThis));
-finalize_it:
+	iRet = loadDrvr(pThis);
 	RETiRet;
 }
 
@@ -194,6 +197,31 @@ GetDrvrAuthMode(netstrms_t *pThis)
 {
 	ISOBJ_TYPE_assert(pThis, netstrms);
 	return pThis->pszDrvrAuthMode;
+}
+
+
+/* Set the priorityString for GnuTLS
+ * PascalWithopf 2017-08-16
+ */
+static rsRetVal
+SetDrvrGnutlsPriorityString(netstrms_t *pThis, uchar *iVal)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	CHKmalloc(pThis->gnutlsPriorityString = (uchar*)strdup((char*)iVal));
+finalize_it:
+	RETiRet;
+}
+
+
+/* return the priorityString for GnuTLS
+ * PascalWithopf, 2017-08-16
+ */
+static uchar*
+GetDrvrGnutlsPriorityString(netstrms_t *pThis)
+{
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	return pThis->gnutlsPriorityString;
 }
 
 
@@ -273,6 +301,8 @@ CODESTARTobjQueryInterface(netstrms)
 	pIf->GetDrvrMode = GetDrvrMode;
 	pIf->SetDrvrAuthMode = SetDrvrAuthMode;
 	pIf->GetDrvrAuthMode = GetDrvrAuthMode;
+	pIf->SetDrvrGnutlsPriorityString = SetDrvrGnutlsPriorityString;
+	pIf->GetDrvrGnutlsPriorityString = GetDrvrGnutlsPriorityString;
 	pIf->SetDrvrPermPeers = SetDrvrPermPeers;
 	pIf->GetDrvrPermPeers = GetDrvrPermPeers;
 finalize_it:

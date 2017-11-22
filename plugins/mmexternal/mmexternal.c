@@ -2,7 +2,7 @@
  * This core plugin is an interface module to message modification
  * modules written in languages other than C.
  *
- * Copyright 2014-2016 by Rainer Gerhards
+ * Copyright 2014-2017 by Rainer Gerhards
  *
  * This file is part of rsyslog.
  *
@@ -268,6 +268,10 @@ processProgramReply(wrkrInstanceData_t *__restrict__ const pWrkrData, smsg_t *co
 /* execute the child process (must be called in child context
  * after fork).
  */
+/* dummy vars to store "dup()" results - keeps Coverity happy */
+static int dummy_stdin;
+static int dummy_stdout;
+static int dummy_stderr;
 static void __attribute__((noreturn))
 execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdOutErr)
 {
@@ -278,16 +282,16 @@ execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdOutErr)
 	char *newenviron[] = { NULL };
 
 	fclose(stdin);
-	if(dup(fdStdin) == -1) {
+	if((dummy_stdin = dup(fdStdin)) == -1) {
 		DBGPRINTF("mmexternal: dup() stdin failed\n");
 	}
 	close(1);
-	if(dup(fdStdOutErr) == -1) {
+	if((dummy_stdout = dup(fdStdOutErr)) == -1) {
 		DBGPRINTF("mmexternal: dup() stdout failed\n");
 	}
 	/* todo: different pipe for stderr? */
 	close(2);
-	if(dup(fdStdOutErr) == -1) {
+	if((dummy_stderr = dup(fdStdOutErr)) == -1) {
 		DBGPRINTF("mmexternal: dup() stderr failed\n");
 	}
 
@@ -506,8 +510,7 @@ finalize_it:
 	/* we need to free json input strings, only. All others point to memory
 	 * inside the msg object, which is destroyed when the msg is destroyed.
 	 */
-	if(pWrkrData->pData->inputProp == INPUT_JSON)
-		free((void*)inputstr);
+	free((void*)inputstr);
 	RETiRet;
 }
 
@@ -578,7 +581,8 @@ CODESTARTnewActInst
 				if (c[iCnt] == ' ') {
 					/* Split binary name from parameters */
 					estrBinary = es_newStrFromSubStr ( pvals[i].val.d.estr, 0, iCnt );
-					estrParams = es_newStrFromSubStr ( pvals[i].val.d.estr, iCnt+1, es_strlen(pvals[i].val.d.estr));
+					estrParams = es_newStrFromSubStr ( pvals[i].val.d.estr, iCnt+1,
+							es_strlen(pvals[i].val.d.estr));
 					break;
 				}
 				iCnt++;
@@ -596,7 +600,8 @@ CODESTARTnewActInst
 				
 				/* Count parameters if set */
 				c = es_getBufAddr(estrParams); /* Reset to beginning */
-				pData->iParams = 2; /* Set default to 2, first parameter for binary and second parameter at least from config*/
+				pData->iParams = 2; /* Set default to 2, first parameter for binary
+							and second parameter at least from config*/
 				iCnt = 0;
 				while(iCnt < es_strlen(estrParams) ) {
 					if (c[iCnt] == ' ' && c[iCnt-1] != '\\')
@@ -606,7 +611,8 @@ CODESTARTnewActInst
 				DBGPRINTF("mmexternal: iParams = '%d'\n", pData->iParams);
 
 				/* Create argv Array */
-				CHKmalloc(pData->aParams = malloc( (pData->iParams+1) * sizeof(char*))); /* One more for first param */ 
+				CHKmalloc(pData->aParams = malloc( (pData->iParams+1) * sizeof(char*)));
+				/* One more for first param */ 
 
 				/* Second Loop, create parameter array*/
 				c = es_getBufAddr(estrParams); /* Reset to beginning */
@@ -686,7 +692,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			"mmexternal supports only v6+ config format, use: "
 			"action(type=\"mmexternal\" binary=...)");
 	}
-	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
+	iRet = RS_RET_CONFLINE_UNPROCESSED;
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -695,8 +701,7 @@ BEGINmodExit
 CODESTARTmodExit
 	free(cs.szBinary);
 	cs.szBinary = NULL;
-	CHKiRet(objRelease(errmsg, CORE_COMPONENT));
-finalize_it:
+	iRet = objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 

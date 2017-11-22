@@ -882,14 +882,16 @@ verifyKSI(const char *name, char *errbuf, char *sigfname, char *oldsigfname, cha
 			/* Verify if records were found */
 			if (bs->recCount <= 0) {
 				r = RSGTE_INVLD_RECCNT; 
-				if(verbose) fprintf(stderr, "verifyKSI:\t\t\t Either signature block or hash chains are missing.\n");
+				if(verbose) fprintf(stderr, "verifyKSI:\t\t\t Either signature "
+						"block or hash chains are missing.\n");
 				goto done;
 			}
 
 			/* Init Minimal KSI Helper */
 			rsksi_vrfyBlkInit(ksi, bh, 1, 0);
 
-			if(debug) printf("debug: verifyKSI:\t\t\t Verifying %lld hashchains ... \n", (long long unsigned) bs->recCount);
+			if(debug) printf("debug: verifyKSI:\t\t\t Verifying %lld hashchains ... \n",
+					(long long unsigned) bs->recCount);
 
 			/* Set new MAXLINE */
 			iMaxLine = iCurrentLine + bs->recCount; 
@@ -923,7 +925,8 @@ if (debug) printf("debug: verifyKSI:\t\t\t NEXT IN LOOP .\n");
 
 				/* we need to preserve the first line (record) of each block for error-reporting purposes */
 				rsksi_errctxFrstRecInBlk(&ectx, lineRec);
-				if (debug) printf("debug: verifyKSI:\t\t\t Processing line '%d': %.64s... \n", iCurrentLine, lineRec); 
+				if (debug) printf("debug: verifyKSI:\t\t\t Processing line '%d': %.64s... \n",
+						iCurrentLine, lineRec); 
 
 				/* Verify logline record against hash chain */
 				if ((r = rsksi_vrfy_nextHashChain(ksi, bs, sigfp, (unsigned char*)lineRec, ssread,
@@ -1212,7 +1215,8 @@ extractKSI(const char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *si
 		r = RSGTE_IO;
 		goto done;
 	} else {
-		if (debug) printf("debug: extractKSI:\t\t\t Output logfile %s opened with mode: '%s'\n", outputfile, writeMode); 
+		if (debug) printf("debug: extractKSI:\t\t\t Output logfile %s opened with mode: '%s'\n",
+				outputfile, writeMode); 
 	}
 
 	/* Open output signaturefile for extracted signatures */
@@ -1223,7 +1227,8 @@ extractKSI(const char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *si
 		r = RSGTE_IO;
 		goto done;
 	} else {
-		if (debug) printf("debug: extractKSI:\t\t\t Output sigfile %s opened with mode: '%s'\n", newsigfname, writeMode); 
+		if (debug) printf("debug: extractKSI:\t\t\t Output sigfile %s opened with mode: '%s'\n",
+				newsigfname, writeMode); 
 		/* write KSI fileheader */
 		if (writeMode[0] == 'w') {
 			if(fwrite("RECSIG11", 8, 1, newsigfp) != 1) {
@@ -1310,7 +1315,8 @@ if (debug) printf("debug: extractKSI:\t\t\t line '%d': %.64s...\n", iLineCurrent
 
 			/* Extract line if correct one */
 			if (iLineCurrent == iLineSearch) {
-				if (debug) printf("debug: extractKSI:\t\t\t Extracted line '%d': %.64s...\n", iLineSearch, lineRec); 
+				if (debug) printf("debug: extractKSI:\t\t\t Extracted line '%d': %.64s...\n",
+						iLineSearch, lineRec); 
 				
 				/* Write logline into output */
 				if( (fwrite(lineRec, ssread, 1, newlogfp) != 1) /*|| 
@@ -1401,7 +1407,8 @@ if (debug) printf("debug: extractKSI:\t\t\t line '%d': %.64s...\n", iLineCurrent
 				if (bBlockSigWritten == 1) {
 					/* We need additional Block Finish handling! */				
 					if((r = verifySigblkFinishChain(ksi, hashchain, &ksiRootHash, &ectx)) != 0) {
-						fprintf(stderr, "extractKSI:\t\t\t error %d while finishing BLOCK signature\n", r);
+						fprintf(stderr, "extractKSI:\t\t\t error %d while "
+							"finishing BLOCK signature\n", r);
 						goto done;
 					}
 				} else {
@@ -1623,7 +1630,8 @@ verifyKSI:
 	/* puburl is mandatory for KSI now! */
 	if (strlen(rsksi_read_puburl) <= 0) {
 		iSuccess = RSGTE_CONFIG_ERROR; 
-		sprintf(errbuf, "ERROR, missing --publications-server parameter is mandatory when verifying KSI signatures.\n"); 
+		sprintf(errbuf, "ERROR, missing --publications-server parameter is mandatory when verifying "
+				"KSI signatures.\n"); 
 		goto done; /* abort */
 	}
 	iSuccess = verifyKSI(name, errbuf, sigfname, oldsigfname, nsigfname, logfp, sigfp, nsigfp); 
@@ -1700,7 +1708,8 @@ extractKSI:
 	/* puburl is mandatory for KSI now! */
 	if (strlen(rsksi_read_puburl) <= 0) {
 		iSuccess = RSGTE_CONFIG_ERROR; 
-		sprintf(errbuf, "ERROR, missing --publications-server parameter is mandatory when extracting KSI signatures.\n"); 
+		sprintf(errbuf, "ERROR, missing --publications-server parameter is mandatory when extracting "
+				"KSI signatures.\n"); 
 		goto done; /* abort */
 	} 
 	iSuccess = extractKSI(name, errbuf, sigfname, logfp, sigfp); 

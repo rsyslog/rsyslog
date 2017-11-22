@@ -220,7 +220,7 @@ rsRetVal imklogLogIntMsg(syslog_pri_t priority, const char *fmt, ...)
  * time to use.
  * rgerhards, 2008-04-14
  */
-rsRetVal Syslog(syslog_pri_t priority, uchar *pMsg, struct timeval *tp)
+rsRetVal Syslog(modConfData_t *pModConf, syslog_pri_t priority, uchar *pMsg, struct timeval *tp)
 {
 	syslog_pri_t pri;
 	int bPRISet = 0;
@@ -249,7 +249,7 @@ rsRetVal Syslog(syslog_pri_t priority, uchar *pMsg, struct timeval *tp)
 	/* if we don't get the pri, we use whatever we were supplied */
 
 	/* ignore non-kernel messages if not permitted */
-	if(cs.bPermitNonKernel == 0 && pri2fac(priority) != LOG_KERN)
+	if(pModConf->bPermitNonKernel == 0 && pri2fac(priority) != LOG_KERN)
 		FINALIZE; /* silently ignore */
 
 	iRet = enqMsg((uchar*)pMsg, (uchar*) "kernel:", priority, tp);

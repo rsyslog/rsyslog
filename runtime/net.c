@@ -62,6 +62,7 @@
 #include "net.h"
 #include "dnscache.h"
 #include "prop.h"
+#include "errmsg.h"
 
 #ifdef OS_SOLARIS
 #include <arpa/nameser_compat.h>
@@ -380,11 +381,12 @@ finalize_it:
  * *pbIsMatching is set to 0 if there is no match and something else otherwise.
  * rgerhards, 2008-05-27 */
 static rsRetVal
-PermittedPeerWildcardMatch(permittedPeers_t *pPeer, uchar *pszNameToMatch, int *pbIsMatching)
+PermittedPeerWildcardMatch(permittedPeers_t *const pPeer,
+	const uchar *pszNameToMatch,
+	int *const pbIsMatching)
 {
-	permittedPeerWildcard_t *pWildcard;
-	uchar *pC;
-	uchar *pStart; /* start of current domain component */
+	const permittedPeerWildcard_t *pWildcard;
+	const uchar *pC;
 	size_t iWildcard, iName; /* work indexes for backward comparisons */
 	DEFiRet;
 
@@ -412,7 +414,7 @@ PermittedPeerWildcardMatch(permittedPeers_t *pPeer, uchar *pszNameToMatch, int *
 			*pbIsMatching = 0;
 			FINALIZE;
 		}
-		pStart = pC;
+		const uchar *const pStart = pC; /* start of current domain component */
 		while(*pC != '\0' && *pC != '.') {
 			++pC;
 		}
@@ -435,10 +437,13 @@ PermittedPeerWildcardMatch(permittedPeers_t *pPeer, uchar *pszNameToMatch, int *
 				iName = (size_t) (pC - pStart) - pWildcard->lenDomainPart;
 				iWildcard = 0;
 				while(iWildcard < pWildcard->lenDomainPart) {
+					// I give up, I see now way to remove false positive -- rgerhards, 2017-10-23
+					#ifndef __clang_analyzer__
 					if(pWildcard->pszDomainPart[iWildcard] != pStart[iName]) {
 						*pbIsMatching = 0;
 						FINALIZE;
 					}
+					#endif
 					++iName;
 					++iWildcard;
 				}
@@ -613,6 +618,7 @@ clearAllowedSenders(uchar *pszType)
 static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedSenders **ppLast,
 		     		 struct NetAddr *iAllow, uint8_t iSignificantBits)
 {
+	struct addrinfo *restmp = NULL;
 	DEFiRet;
 
 	assert(ppRoot != NULL);
@@ -674,7 +680,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 			/* single host - in this case, we pull its IP addresses from DNS
 			* and add IP-based ACLs.
 			*/
-			struct addrinfo hints, *res, *restmp;
+			struct addrinfo hints, *res;
 			struct NetAddr allowIP;
 			
 			memset (&hints, 0, sizeof (struct addrinfo));
@@ -693,12 +699,14 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 				        iRet = AddAllowedSenderEntry(ppRoot, ppLast, iAllow, iSignificantBits);
 					FINALIZE;
 				} else {
-				        errmsg.LogError(0, NO_ERRCODE, "Hostname \"%s\" WON\'T be added to ACL.", iAllow->addr.HostWildcard);
+				        errmsg.LogError(0, NO_ERRCODE, "Hostname \"%s\" WON\'T be added to ACL.",
+							iAllow->addr.HostWildcard);
 				        ABORT_FINALIZE(RS_RET_NOENTRY);
 				}
 			}
 			
-			for (restmp = res ; res != NULL ; res = res->ai_next) {
+			restmp = res;
+			for ( ; res != NULL ; res = res->ai_next) {
 				switch (res->ai_family) {
 				case AF_INET: /* add IPv4 */
 					iSignificantBits = 32;
@@ -759,7 +767,6 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 					break;
 				}
 			}
-			freeaddrinfo (restmp);
 		} else {
 			/* wildcards in hostname - we need to add a text-based ACL.
 			 * For this, we already have everything ready and just need
@@ -770,6 +777,9 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 	}
 
 finalize_it:
+	if(restmp != NULL) {
+		freeaddrinfo (restmp);
+	}
 	RETiRet;
 }
 
@@ -1193,8 +1203,9 @@ getLocalHostname(uchar **ppName)
 			/* If we get one of errors above, network is probably
 			 * not working yet, so we fall back to local hostname below
 			 */
-			dbgprintf("getaddrinfo: %s\n", gai_strerror(error));
-			ABORT_FINALIZE(RS_RET_IO_ERROR);
+			LogError(0, RS_RET_ERR, "getaddrinfo failed obtaining local "
+				"hostname - using '%s' instead; error: %s",
+				hnbuf, gai_strerror(error));
 		}
 		if (res != NULL) {
 			/* When AI_CANONNAME is set first member of res linked-list */
@@ -1241,23 +1252,230 @@ closeUDPListenSockets(int *pSockArr)
 }
 
 
+/* create a single UDP socket and bail out if an error occurs.
+ * This is called from a loop inside create_udp_socket which
+ * iterates through potentially multiple sockets. NOT to be
+ * used elsewhere.
+ */
+static rsRetVal ATTR_NONNULL(1, 2)
+create_single_udp_socket(int *const s, /* socket */
+	struct addrinfo *const r,
+	const uchar *const hostname,
+	const int bIsServer,
+	const int rcvbuf,
+	const int sndbuf,
+	const int ipfreebind,
+	const char *const device
+	)
+{
+        const int on = 1;
+	int sockflags;
+	int actrcvbuf;
+	int actsndbuf;
+	socklen_t optlen;
+	char errStr[1024];
+	DEFiRet;
+
+	assert(r != NULL); // does NOT work with -O2 or higher due to ATTR_NONNULL!
+	assert(s != NULL);
+
+#	if defined (_AIX)
+	/* AIXPORT : socktype will be SOCK_DGRAM, as set in hints before */
+	*s = socket(r->ai_family, SOCK_DGRAM, r->ai_protocol);
+#	else
+	*s = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
+#	endif
+	if (*s < 0) {
+		if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT)) {
+			errmsg.LogError(errno, NO_ERRCODE, "create_udp_socket(), socket");
+			/* it is debateble if PF_INET with EAFNOSUPPORT should
+			 * also be ignored...
+			 */
+		}
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+#	ifdef IPV6_V6ONLY
+	if (r->ai_family == AF_INET6) {
+		int ion = 1;
+		if (setsockopt(*s, IPPROTO_IPV6, IPV6_V6ONLY,
+		      (char *)&ion, sizeof (ion)) < 0) {
+			errmsg.LogError(errno, RS_RET_ERR, "error creating UDP socket - setsockopt");
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+	}
+#	endif
+
+	if(device) {
+#		if defined(SO_BINDTODEVICE)
+		if(setsockopt(*s, SOL_SOCKET, SO_BINDTODEVICE, device, strlen(device) + 1) < 0)
+#		endif
+		{
+			errmsg.LogError(errno, RS_RET_ERR, "create UDP socket bound to device failed");
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+	}
+
+	if(setsockopt(*s, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on)) < 0 ) {
+		errmsg.LogError(errno, RS_RET_ERR, "create UDP socket failed to set REUSEADDR");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	/* We need to enable BSD compatibility. Otherwise an attacker
+	 * could flood our log files by sending us tons of ICMP errors.
+	 */
+	/* AIXPORT : SO_BSDCOMPAT socket option is depricated, and its usage
+	* has been discontinued on most unixes, AIX does not support this option,
+	* hence avoid the call.
+	*/
+#	if !defined(OS_BSD) && !defined(__hpux)  && !defined(_AIX)
+	if (should_use_so_bsdcompat()) {
+		if (setsockopt(*s, SOL_SOCKET, SO_BSDCOMPAT, (char *) &on, sizeof(on)) < 0) {
+			errmsg.LogError(errno, RS_RET_ERR, "create UDP socket failed to set BSDCOMPAT");
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+	}
+#	endif
+	if(bIsServer) {
+		DBGPRINTF("net.c: trying to set server socket %d to non-blocking mode\n", *s);
+		if ((sockflags = fcntl(*s, F_GETFL)) != -1) {
+			sockflags |= O_NONBLOCK;
+			/* SETFL could fail too, so get it caught by the subsequent
+			 * error check.
+			 */
+			sockflags = fcntl(*s, F_SETFL, sockflags);
+		}
+		if (sockflags == -1) {
+			LogError(errno, RS_RET_ERR, "net.c: socket %d fcntl(O_NONBLOCK)", *s);
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+	}
+
+	if(sndbuf != 0) {
+#		if defined(SO_SNDBUFFORCE)
+		if(setsockopt(*s, SOL_SOCKET, SO_SNDBUFFORCE, &sndbuf, sizeof(sndbuf)) < 0)
+#		endif
+		{
+			/* if we fail, try to do it the regular way. Experiments show that at 
+			 * least some platforms do not return an error here, but silently set
+			 * it to the max permitted value. So we do our error check a bit
+			 * differently by querying the size below.
+			 */
+			if(setsockopt(*s, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf)) != 0) {
+				/* keep Coverity happy */
+				DBGPRINTF("setsockopt in %s:%d failed - this is expected and "
+					"handled at later stages\n", __FILE__, __LINE__);
+			}
+		}
+		/* report socket buffer sizes */
+		optlen = sizeof(actsndbuf);
+		if(getsockopt(*s, SOL_SOCKET, SO_SNDBUF, &actsndbuf, &optlen) == 0) {
+			LogMsg(0, NO_ERRCODE, LOG_INFO,
+				"socket %d, actual os socket sndbuf size is %d", *s, actsndbuf);
+			if(sndbuf != 0 && actsndbuf/2 != sndbuf) {
+				errmsg.LogError(errno, NO_ERRCODE,
+					"could not set os socket sndbuf size %d for socket %d, "
+					"value now is %d", sndbuf, *s, actsndbuf/2);
+			}
+		} else {
+			DBGPRINTF("could not obtain os socket rcvbuf size for socket %d: %s\n",
+				*s, rs_strerror_r(errno, errStr, sizeof(errStr)));
+		}
+	}
+
+	if(rcvbuf != 0) {
+#		if defined(SO_RCVBUFFORCE)
+		if(setsockopt(*s, SOL_SOCKET, SO_RCVBUFFORCE, &rcvbuf, sizeof(rcvbuf)) < 0)
+#		endif
+		{
+			/* if we fail, try to do it the regular way. Experiments show that at 
+			 * least some platforms do not return an error here, but silently set
+			 * it to the max permitted value. So we do our error check a bit
+			 * differently by querying the size below.
+			 */
+			if(setsockopt(*s, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf)) != 0) {
+				/* keep Coverity happy */
+				DBGPRINTF("setsockopt in %s:%d failed - this is expected and "
+					"handled at later stages\n", __FILE__, __LINE__);
+			}
+		}
+		optlen = sizeof(actrcvbuf);
+		if(getsockopt(*s, SOL_SOCKET, SO_RCVBUF, &actrcvbuf, &optlen) == 0) {
+			LogMsg(0, NO_ERRCODE, LOG_INFO,
+				"socket %d, actual os socket rcvbuf size %d\n", *s, actrcvbuf);
+			if(rcvbuf != 0 && actrcvbuf/2 != rcvbuf) {
+				errmsg.LogError(errno, NO_ERRCODE,
+					"cannot set os socket rcvbuf size %d for socket %d, value now is %d",
+					rcvbuf, *s, actrcvbuf/2);
+			}
+		} else {
+			DBGPRINTF("could not obtain os socket rcvbuf size for socket %d: %s\n",
+				*s, rs_strerror_r(errno, errStr, sizeof(errStr)));
+		}
+	}
+
+	if(bIsServer) {
+		/* rgerhards, 2007-06-22: if we run on a kernel that does not support
+		 * the IPV6_V6ONLY socket option, we need to use a work-around. On such
+		 * systems the IPv6 socket does also accept IPv4 sockets. So an IPv4
+		 * socket can not listen on the same port as an IPv6 socket. The only
+		 * workaround is to ignore the "socket in use" error. This is what we
+		 * do if we have to.
+		 */
+		if(     (bind(*s, r->ai_addr, r->ai_addrlen) < 0)
+#		ifndef IPV6_V6ONLY
+		     && (errno != EADDRINUSE)
+#		endif
+		   ) {
+			if (errno == EADDRNOTAVAIL && ipfreebind != IPFREEBIND_DISABLED) {
+				if (setsockopt(*s, IPPROTO_IP, IP_FREEBIND, &on, sizeof(on)) < 0) {
+					errmsg.LogError(errno, RS_RET_ERR, "setsockopt(IP_FREEBIND)");
+				} else if (bind(*s, r->ai_addr, r->ai_addrlen) < 0) {
+					errmsg.LogError(errno, RS_RET_ERR, "bind with IP_FREEBIND");
+				} else {
+					if (ipfreebind >= IPFREEBIND_ENABLED_WITH_LOG)
+						errmsg.LogMsg(0, RS_RET_OK_WARN, LOG_WARNING,
+							"bound address %s IP free", hostname);
+					FINALIZE;
+				}
+			}
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+	}
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(*s != -1) {
+			close(*s);
+			*s = -1;
+		}
+	}
+	RETiRet;
+}
+
 /* creates the UDP listen sockets
  * hostname and/or pszPort may be NULL, but not both!
  * bIsServer indicates if a server socket should be created
  * 1 - server, 0 - client
- * param rcvbuf indicates desired rcvbuf size; 0 means OS default
+ * Note: server sockets are created in non-blocking mode, client ones
+ * are blocking.
+ * param rcvbuf indicates desired rcvbuf size; 0 means OS default,
+ * similar for sndbuf.
  */
 static int *
-create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, int ipfreebind, char *device)
+create_udp_socket(uchar *hostname,
+	uchar *pszPort,
+	const int bIsServer,
+	const int rcvbuf,
+	const int sndbuf,
+	const int ipfreebind,
+	char *device)
 {
         struct addrinfo hints, *res, *r;
-        int error, maxs, *s, *socks, on = 1;
-	int sockflags;
-	int actrcvbuf;
-	socklen_t optlen;
-	char errStr[1024];
+        int error, maxs, *s, *socks;
+	rsRetVal localRet;
 
-	assert(!((pszPort == NULL) && (hostname == NULL)));
+	assert(!((pszPort == NULL) && (hostname == NULL))); /* one of them must be non-NULL */
         memset(&hints, 0, sizeof(hints));
 	if(bIsServer)
 		hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
@@ -1265,12 +1483,12 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
 		hints.ai_flags = AI_NUMERICSERV;
         hints.ai_family = glbl.GetDefPFFamily();
         hints.ai_socktype = SOCK_DGRAM;
- #if defined (_AIX)
-/* AIXPORT : SOCK_DGRAM has the protocol IPPROTO_UDP 
- *           getaddrinfo needs this hint on AIX
- */
+#	if defined (_AIX)
+	/* AIXPORT : SOCK_DGRAM has the protocol IPPROTO_UDP
+	 *           getaddrinfo needs this hint on AIX
+	 */
         hints.ai_protocol = IPPROTO_UDP;
-#endif
+#	endif
         error = getaddrinfo((char*) hostname, (char*) pszPort, &hints, &res);
         if(error) {
                errmsg.LogError(0, NO_ERRCODE, "%s",  gai_strerror(error));
@@ -1283,171 +1501,21 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
 		/* EMPTY */;
         socks = MALLOC((maxs+1) * sizeof(int));
         if (socks == NULL) {
-		errmsg.LogError(0, NO_ERRCODE, "couldn't allocate memory for UDP sockets, suspending UDP "
-		"message reception");
-               freeaddrinfo(res);
-               return NULL;
+		errmsg.LogError(0, RS_RET_OUT_OF_MEMORY, "couldn't allocate memory for UDP "
+			"sockets, suspending UDP message reception");
+		freeaddrinfo(res);
+		return NULL;
         }
 
         *socks = 0;   /* num of sockets counter at start of array */
         s = socks + 1;
 	for (r = res; r != NULL ; r = r->ai_next) {
-#if defined (_AIX)
-/* AIXPORT : socktype will be SOCK_DGRAM, as set in hints above */
-               *s = socket(r->ai_family, SOCK_DGRAM, r->ai_protocol);
-#else
-               *s = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
-#endif
-        	if (*s < 0) {
-			if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT))
-				errmsg.LogError(errno, NO_ERRCODE, "create_udp_socket(), socket");
-				/* it is debateble if PF_INET with EAFNOSUPPORT should
-				 * also be ignored...
-				 */
-                        continue;
-                }
-
-#		ifdef IPV6_V6ONLY
-                if (r->ai_family == AF_INET6) {
-                	int ion = 1;
-			if (setsockopt(*s, IPPROTO_IPV6, IPV6_V6ONLY,
-			      (char *)&ion, sizeof (ion)) < 0) {
-			errmsg.LogError(errno, NO_ERRCODE, "setsockopt");
-			close(*s);
-			*s = -1;
-			continue;
-                	}
-                }
-#		endif
-
-		if(device) {
-#			if defined(SO_BINDTODEVICE)
-			if(setsockopt(*s, SOL_SOCKET, SO_BINDTODEVICE, device, strlen(device) + 1) < 0)
-#			endif
-			{
-				errmsg.LogError(errno, NO_ERRCODE, "setsockopt(SO_BINDTODEVICE)");
-                                close(*s);
-				*s = -1;
-				continue;
-			}
+		localRet = create_single_udp_socket(s, r, hostname, bIsServer, rcvbuf,
+			sndbuf, ipfreebind, device);
+		if(localRet == RS_RET_OK) {
+			(*socks)++;
+			s++;
 		}
-
-		/* if we have an error, we "just" suspend that socket. Eventually
-		 * other sockets will work. At the end of this function, we check
-		 * if we managed to open at least one socket. If not, we'll write
-		 * a "inet suspended" message and declare failure. Else we use
-		 * what we could obtain.
-		 * rgerhards, 2007-06-22
-		 */
-       		if (setsockopt(*s, SOL_SOCKET, SO_REUSEADDR,
-			       (char *) &on, sizeof(on)) < 0 ) {
-			errmsg.LogError(errno, NO_ERRCODE, "setsockopt(REUSEADDR)");
-                        close(*s);
-			*s = -1;
-			continue;
-		}
-
-		/* We need to enable BSD compatibility. Otherwise an attacker
-		 * could flood our log files by sending us tons of ICMP errors.
-		 */
-/* AIXPORT : SO_BSDCOMPAT socket option is depricated , and its usage has been discontinued
-             on most unixes, AIX does not support this option , hence avoid the call.
-*/
-#if !defined(OS_BSD) && !defined(__hpux)  && !defined(_AIX)
-		if (should_use_so_bsdcompat()) {
-			if (setsockopt(*s, SOL_SOCKET, SO_BSDCOMPAT,
-					(char *) &on, sizeof(on)) < 0) {
-				errmsg.LogError(errno, NO_ERRCODE, "setsockopt(BSDCOMPAT)");
-                                close(*s);
-				*s = -1;
-				continue;
-			}
-		}
-#endif
-		/* We must not block on the network socket, in case a packet
-		 * gets lost between select and recv, otherwise the process
-		 * will stall until the timeout, and other processes trying to
-		 * log will also stall.
-		 * Patch vom Colin Phipps <cph@cph.demon.co.uk> to the original
-		 * sysklogd source. Applied to rsyslogd on 2005-10-19.
-		 */
-		if ((sockflags = fcntl(*s, F_GETFL)) != -1) {
-			sockflags |= O_NONBLOCK;
-			/* SETFL could fail too, so get it caught by the subsequent
-			 * error check.
-			 */
-			sockflags = fcntl(*s, F_SETFL, sockflags);
-		}
-		if (sockflags == -1) {
-			errmsg.LogError(errno, NO_ERRCODE, "fcntl(O_NONBLOCK)");
-                        close(*s);
-			*s = -1;
-			continue;
-		}
-
-		if(rcvbuf != 0) {
-#			if defined(SO_RCVBUFFORCE)
-			if(setsockopt(*s, SOL_SOCKET, SO_RCVBUFFORCE, &rcvbuf, sizeof(rcvbuf)) < 0)
-#			endif
-			{
-				/* if we fail, try to do it the regular way. Experiments show that at 
-				 * least some platforms do not return an error here, but silently set
-				 * it to the max permitted value. So we do our error check a bit
-				 * differently by querying the size below.
-				 */
-				setsockopt(*s, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf));
-			}
-		}
-
-		if(Debug || rcvbuf != 0) {
-			optlen = sizeof(actrcvbuf);
-			if(getsockopt(*s, SOL_SOCKET, SO_RCVBUF, &actrcvbuf, &optlen) == 0) {
-				dbgprintf("socket %d, actual os socket rcvbuf size %d\n", *s, actrcvbuf);
-				if(rcvbuf != 0 && actrcvbuf/2 != rcvbuf) {
-					errmsg.LogError(errno, NO_ERRCODE,
-						"cannot set os socket rcvbuf size %d for socket %d, value now is %d",
-						rcvbuf, *s, actrcvbuf/2);
-				}
-			} else {
-				dbgprintf("could not obtain os socket rcvbuf size for socket %d: %s\n",
-					*s, rs_strerror_r(errno, errStr, sizeof(errStr)));
-			}
-		}
-
-		if(bIsServer) {
-
-			/* rgerhards, 2007-06-22: if we run on a kernel that does not support
-			 * the IPV6_V6ONLY socket option, we need to use a work-around. On such
-			 * systems the IPv6 socket does also accept IPv4 sockets. So an IPv4
-			 * socket can not listen on the same port as an IPv6 socket. The only
-			 * workaround is to ignore the "socket in use" error. This is what we
-			 * do if we have to.
-			 */
-			if(     (bind(*s, r->ai_addr, r->ai_addrlen) < 0)
-	#		ifndef IPV6_V6ONLY
-			     && (errno != EADDRINUSE)
-	#		endif
-			   ) {
-				if (errno == EADDRNOTAVAIL && ipfreebind != IPFREEBIND_DISABLED) {
-					if (setsockopt(*s, IPPROTO_IP, IP_FREEBIND, &on, sizeof(on)) < 0) {
-						errmsg.LogError(errno, NO_ERRCODE, "setsockopt(IP_FREEBIND)");
-					}
-					else if (bind(*s, r->ai_addr, r->ai_addrlen) < 0) {
-						errmsg.LogError(errno, NO_ERRCODE, "bind with IP_FREEBIND");
-					} else {
-						if (ipfreebind >= IPFREEBIND_ENABLED_WITH_LOG)
-							errmsg.LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "bound address %s IP free", hostname);
-						continue;
-					}
-				}
-				close(*s);
-				*s = -1;
-				continue;
-			}
-		}
-
-                (*socks)++;
-                s++;
 	}
 
         if(res != NULL)
@@ -1458,9 +1526,9 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
 		 	"- this may or may not be an error indication.\n", *socks, maxs);
 
         if(*socks == 0) {
-		errmsg.LogError(0, NO_ERRCODE, "No UDP listen socket could successfully be initialized, "
-			 "message reception via UDP disabled.\n");
-		/* we do NOT need to free any sockets, because there were none... */
+		errmsg.LogError(0, NO_ERRCODE, "No UDP socket could successfully be initialized, "
+			 "some functionality may be disabled.\n");
+		/* we do NOT need to close any sockets, because there were none... */
         	free(socks);
 		return(NULL);
 	}

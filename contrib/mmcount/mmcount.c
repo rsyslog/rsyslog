@@ -221,14 +221,14 @@ CODESTARTtryResume
 ENDtryResume
 
 static int *
-getCounter(struct hashtable *ht, char *str) {
+getCounter(struct hashtable *ht, const char *str) {
 	unsigned int key;
 	int *pCounter;
 	unsigned int *pKey;
 
 	/* we dont store str as key, instead we store hash of the str
 	   as key to reduce memory usage */
-	key = hash_from_string(str);
+	key = hash_from_string((char*)str);
 	pCounter = hashtable_search(ht, &key);
 	if(pCounter) {
 		return pCounter;
@@ -258,17 +258,16 @@ getCounter(struct hashtable *ht, char *str) {
 	return pCounter;
 }
 
-BEGINdoAction
-	smsg_t *pMsg;
+BEGINdoAction_NoStrings
+	smsg_t **ppMsg = (smsg_t **) pMsgData;
+	smsg_t *pMsg = ppMsg[0];
 	char *appname;
 	struct json_object *json = NULL;
-	es_str_t *estr = NULL;
 	struct json_object *keyjson = NULL;
-	char *pszValue;
+	const char *pszValue;
 	int *pCounter;
 	instanceData *const pData = pWrkrData->pData;
 CODESTARTdoAction
-	pMsg = (smsg_t*) ppString[0];
 	appname = getAPPNAME(pMsg, LOCK_MUTEX);
 
 	pthread_mutex_lock(&pData->mut);
@@ -320,9 +319,6 @@ CODESTARTdoAction
 	}
 finalize_it:
 	pthread_mutex_unlock(&pData->mut);
-	if(estr) {
-		es_deleteStr(estr);
-	}
 
 	if(json) {
 		msgAddJSON(pMsg, (uchar *)JSON_COUNT_NAME, json, 0, 0);

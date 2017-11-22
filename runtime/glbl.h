@@ -116,6 +116,11 @@ extern int glblSenderStatsTimeout;
 extern int glblSenderKeepTrack;
 extern int glblUnloadModules;
 extern short janitorInterval;
+extern int glblIntMsgRateLimitItv;
+extern int glblIntMsgRateLimitBurst;
+extern char** glblDbgFiles;
+extern size_t glblDbgFilesNum;
+extern int glblDbgWhitelist;
 
 #define glblGetOurPid() glbl_ourpid
 #define glblSetOurPid(pid) { glbl_ourpid = (pid); }
@@ -130,5 +135,6 @@ const uchar * glblGetWorkDirRaw(void);
 tzinfo_t* glblFindTimezoneInfo(char *id);
 int GetGnuTLSLoglevel(void);
 int glblGetMaxLine(void);
+int bs_arrcmp_glblDbgFiles(const void *s1, const void *s2);
 
 #endif /* #ifndef GLBL_H_INCLUDED */

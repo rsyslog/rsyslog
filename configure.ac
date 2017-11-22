@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[8.29.0.master],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[8.31.0.master],[rsyslog@lists.adiscon.com])
 
 # AIXPORT START: Detect the underlying OS
 unamestr=$(uname)
@@ -75,7 +75,7 @@ PKG_PROG_PKG_CONFIG
 # modules we require
 PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.9)
 
-PKG_CHECK_MODULES([LIBFASTJSON], [libfastjson >= 0.99.3],,)
+PKG_CHECK_MODULES([LIBFASTJSON], [libfastjson >= 0.99.7],,)
 
 AC_DEFINE_UNQUOTED([PLATFORM_ID], ["${host}"], [platform id for display purposes])
 # we don't mind if we don't have the lsb_release utility. But if we have, it's
@@ -284,6 +284,12 @@ case "${enable_largefile}" in
   *) enable_largefile="yes" ;;
 esac
 
+# do we have libsystemd?
+PKG_CHECK_MODULES([LIBSYSTEMD], [libsystemd],
+	[ AC_DEFINE(HAVE_LIBSYSTEMD, 1, [libsystemd present]) ],
+	[ AC_MSG_NOTICE([libsystemd not present - disabling systemd support]) ]
+	])
+
 # Regular expressions
 AC_ARG_ENABLE(regexp,
         [AS_HELP_STRING([--enable-regexp],[Enable regular expressions support @<:@default=yes@:>@])],
@@ -460,8 +466,10 @@ AC_ARG_ENABLE(imjournal,
         [enable_imjournal="no"]
 )
 if test "x$enable_imjournal" = "xyes"; then
-	PKG_CHECK_MODULES([LIBSYSTEMD_JOURNAL], [libsystemd >= 209] ,, [
-	    PKG_CHECK_MODULES([LIBSYSTEMD_JOURNAL], [libsystemd-journal >= 197])
+	PKG_CHECK_MODULES([LIBSYSTEMD_JOURNAL], [libsystemd >= 234] , [AC_DEFINE(NEW_JOURNAL, 1, [new systemd present])] , [
+	    PKG_CHECK_MODULES([LIBSYSTEMD_JOURNAL], [libsystemd >= 209] , , [
+	        PKG_CHECK_MODULES([LIBSYSTEMD_JOURNAL], [libsystemd-journal >= 197])
+	    ])
 	])
 fi
 AM_CONDITIONAL(ENABLE_IMJOURNAL, test x$enable_imjournal = xyes)
@@ -924,7 +932,7 @@ if test "x$enable_rsyslogrt" = "xyes"; then
   RSRT_LIBS1="\$(top_builddir)/runtime/librsyslog.la"
 fi
 AM_CONDITIONAL(ENABLE_RSYSLOGRT, test x$enable_rsyslogrt = xyes)
-RSRT_CFLAGS="\$(RSRT_CFLAGS1) \$(LIBESTR_CFLAGS) \$(LIBFASTJSON_CFLAGS)"
+RSRT_CFLAGS="\$(RSRT_CFLAGS1) \$(LIBESTR_CFLAGS) \$(LIBFASTJSON_CFLAGS) \$(LIBSYSTEMD_CFLAGS)"
 if test "$GCC" = "yes"; then
   RSRT_CFLAGS="$RSRT_CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
   if $CC -Werror=implicit-function-declaration -x c -c /dev/null -o /dev/null 2>/dev/null; then
@@ -938,7 +946,7 @@ if test "$GCC" = "yes"; then
   fi
 fi
 RSRT_CFLAGS="$RSRT_CFLAGS $WARN_CFLAGS"
-RSRT_LIBS="\$(RSRT_LIBS1) \$(LIBESTR_LIBS) \$(LIBFASTJSON_LIBS)"
+RSRT_LIBS="\$(RSRT_LIBS1) \$(LIBESTR_LIBS) \$(LIBFASTJSON_LIBS) \$(LIBSYSTEMD_LIBS)"
 AC_SUBST(RSRT_CFLAGS1)
 AC_SUBST(RSRT_LIBS1)
 AC_SUBST(RSRT_CFLAGS)
@@ -1346,13 +1354,6 @@ if test "x${IP}" = "xno"; then
 fi
 AM_CONDITIONAL(ENABLE_IP, test "x${IP}" = "xyes")
 
-AM_CONDITIONAL(ENABLE_TESTBENCH, test x$enable_testbench = xyes)
-if test "x$enable_testbench" = "xyes"; then
-	if test "x$enable_imdiag" != "xyes"; then
-		AC_MSG_ERROR("--enable-testbench requires --enable-imdiag")
-	fi
-fi
-
 
 # valgrind-testbench
 AC_ARG_WITH([valgrind_testbench],
@@ -1483,6 +1484,17 @@ AC_ARG_ENABLE(omstdout,
 )
 AM_CONDITIONAL(ENABLE_OMSTDOUT, test x$enable_omstdout = xyes)
 
+AM_CONDITIONAL(ENABLE_TESTBENCH, test x$enable_testbench = xyes)
+if test "x$enable_testbench" = "xyes"; then
+	if test "x$enable_imdiag" != "xyes"; then
+		AC_MSG_ERROR("--enable-testbench requires --enable-imdiag")
+	fi
+	if test "x$enable_omstdout" != "xyes"; then
+		AC_MSG_ERROR("--enable-testbench requires --enable-omstdout")
+	fi
+fi
+
+
 # settings for omjournal
 AC_ARG_ENABLE(omjournal,
         [AS_HELP_STRING([--enable-omjournal],[Compiles omjournal @<:@default=no@:>@])],
@@ -1551,6 +1563,19 @@ AC_ARG_ENABLE(pmnull,
         [enable_pmnull=no]
 )
 AM_CONDITIONAL(ENABLE_PMNULL, test x$enable_pmnull = xyes)
+
+
+# settings for pmnormalize
+AC_ARG_ENABLE(pmnormalize,
+        [AS_HELP_STRING([--enable-pmnormalize],[Compiles normalizer parser module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_pmnormalize="yes" ;;
+          no) enable_pmnormalize="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pmnormalize) ;;
+         esac],
+        [enable_pmnormalize=no]
+)
+AM_CONDITIONAL(ENABLE_PMNORMALIZE, test x$enable_pmnormalize = xyes)
 
 
 # settings for pmaixforwardedfrom
@@ -2055,6 +2080,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omjournal/Makefile \
 		plugins/pmciscoios/Makefile \
 		plugins/pmnull/Makefile \
+		plugins/pmnormalize/Makefile \
 		plugins/omruleset/Makefile \
 		plugins/omuxsock/Makefile \
 		plugins/imfile/Makefile \
@@ -2122,9 +2148,7 @@ echo "    Log file signing support:                 $enable_guardtime"
 echo "    Log file signing support via KSI LS12:    $enable_ksi_ls12"
 echo "    Log file encryption support:              $enable_libgcrypt"
 echo "    anonymization support enabled:            $enable_mmanon"
-echo "    mmrm1stspace module enabled:              $enable_mmrm1stspace"
 echo "    message counting support enabled:         $enable_mmcount"
-echo "    mmfields enabled:                         $enable_mmfields"
 echo "    liblogging-stdlog support enabled:        $enable_liblogging_stdlog"
 echo "    kafka static linking enabled:             $enable_kafka_static"
 echo
@@ -2164,6 +2188,7 @@ echo "    pmlastmsg module will be compiled:        $enable_pmlastmsg"
 echo "    pmcisconames module will be compiled:     $enable_pmcisconames"
 echo "    pmciscoios module will be compiled:       $enable_pmciscoios"
 echo "    pmnull module will be compiled:           $enable_pmnull"
+echo "    pmnormalize module will be compiled:      $enable_pmnormalize"
 echo "    pmaixforwardedfrom module w.be compiled:  $enable_pmaixforwardedfrom"
 echo "    pmsnare module will be compiled:          $enable_pmsnare"
 echo "    pmpanngfw module will be compiled:        $enable_pmpanngfw"
@@ -2179,6 +2204,8 @@ echo "    mmrfc5424addhmac enabled:                 $enable_mmrfc5424addhmac"
 echo "    mmpstrucdata enabled:                     $enable_mmpstrucdata"
 echo "    mmsequence enabled:                       $enable_mmsequence"
 echo "    mmdblookup enabled:                       $enable_mmdblookup"
+echo "    mmfields enabled:                         $enable_mmfields"
+echo "    mmrm1stspace module enabled:              $enable_mmrm1stspace"
 echo
 echo "---{ database support }---"
 echo "    MySql support enabled:                    $enable_mysql"

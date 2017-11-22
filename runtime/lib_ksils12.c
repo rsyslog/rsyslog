@@ -620,7 +620,7 @@ seedIVKSI(ksifile ksi)
 	 * will always work...).  -- TODO -- rgerhards, 2013-03-06
 	 */
 	if ((fd = open(rnd_device, O_RDONLY)) >= 0) {
-		if(read(fd, ksi->IV, hashlen) > 0) {}; /* keep compiler happy */
+		if(read(fd, ksi->IV, hashlen) == hashlen) {}; /* keep compiler happy */
 		close(fd);
 	}
 }
@@ -1533,7 +1533,7 @@ void *signer_thread(void *arg) {
 		/* Handle other types of work items */
 		if (ProtectedQueue_popFront(ctx->signer_queue, (void**) &item) != 0) {
 			if (item->type == QITEM_CLOSE_FILE) {
-				if(ksiFile)
+				if (ksiFile)
 					fclose(ksiFile);
 				ksiFile = NULL;
 				debug_report(ctx, "debug: sig-thread closing file %p", ksiFile);

@@ -285,7 +285,8 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 		dbi_conn_set_option(pData->conn, "host",     (char*) pData->host);
 		dbi_conn_set_option(pData->conn, "username", (char*) pData->usrName);
 
-		/* libdbi-driver-sqlite(2/3) requires to provide sqlite3_db dir which is absolute path, where database file lives,
+		/* libdbi-driver-sqlite(2/3) requires to provide sqlite3_db dir which is absolute
+		   path, where database file lives,
 		 * and dbname, which is database file name itself. So in order to keep the config API unchanged,
 		 * we split the dbname to path and filename. 
 		 */

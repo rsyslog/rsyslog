@@ -60,7 +60,7 @@ DEFobjCurrIf(strm)
 DEFobjCurrIf(statsobj)
 
 statsobj_t *kafkaStats;
-int ctrQueueSize;
+STATSCOUNTER_DEF(ctrQueueSize, mutCtrQueueSize);
 STATSCOUNTER_DEF(ctrTopicSubmit, mutCtrTopicSubmit);
 STATSCOUNTER_DEF(ctrKafkaFail, mutCtrKafkaFail);
 STATSCOUNTER_DEF(ctrCacheMiss, mutCtrCacheMiss);
@@ -114,7 +114,7 @@ typedef struct s_dynaTopicCacheEntry dynaTopicCacheEntry;
 struct s_failedmsg_entry {
 	uchar* payload;
 	uchar* topicname;
-	LIST_ENTRY(s_failedmsg_entry) entries;	/*	List. */
+	SLIST_ENTRY(s_failedmsg_entry) entries;	/*	List. */
 } ;
 typedef struct s_failedmsg_entry failedmsg_entry;
 
@@ -154,10 +154,7 @@ typedef struct _instanceData {
 	pthread_rwlock_t rkLock;
 	rd_kafka_t *rk;
 	int closeTimeout;
-	/*List objects */
-	LIST_HEAD(failedmsg_listhead, s_failedmsg_entry) failedmsg_head;
-//	struct failedmsg_listhead *failedmsg_headp;	/*	List head pointer */
-
+	SLIST_HEAD(failedmsg_listhead, s_failedmsg_entry) failedmsg_head;
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -180,11 +177,11 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "errorfile", eCmdHdlrGetWord, 0 },
 	{ "key", eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
-	{ "closeTimeout", eCmdHdlrPositiveInt, 0 },
-	{ "reopenOnHup", eCmdHdlrBinary, 0 },
-	{ "resubmitOnFailure", eCmdHdlrBinary, 0 },	/* Resubmit message into kafaj queue on failure */
-	{ "keepFailedMessages", eCmdHdlrBinary, 0 },
-	{ "failedMsgFile", eCmdHdlrGetWord, 0 }
+	{ "closetimeout", eCmdHdlrPositiveInt, 0 },
+	{ "reopenonhup", eCmdHdlrBinary, 0 },
+	{ "resubmitonfailure", eCmdHdlrBinary, 0 },	/* Resubmit message into kafaj queue on failure */
+	{ "keepfailedmessages", eCmdHdlrBinary, 0 },
+	{ "failedmsgfile", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -218,6 +215,38 @@ d_free_topic(rd_kafka_topic_t **topic)
 		rd_kafka_topic_destroy(*topic);
 		*topic = NULL;
 	}
+}
+
+static void ATTR_NONNULL(1)
+failedmsg_entry_destruct(failedmsg_entry *const __restrict__ fmsgEntry) {
+	free(fmsgEntry->payload);
+	free(fmsgEntry->topicname);
+	free(fmsgEntry);
+}
+
+/* note: we need the length of message as we need to deal with
+ * non-NUL terminated strings under some circumstances.
+ */
+static failedmsg_entry * ATTR_NONNULL()
+failedmsg_entry_construct(const char *const msg, const size_t msglen, const char *const topicname)
+{
+	failedmsg_entry *etry = NULL;
+
+	if((etry = malloc(sizeof(struct s_failedmsg_entry))) == NULL) {
+		return NULL;
+	}
+	if((etry->payload = (uchar*)malloc(msglen+1)) == NULL) {
+		free(etry);
+		return NULL;
+	}
+	memcpy(etry->payload, msg, msglen);
+	etry->payload[msglen] = '\0';
+	if((etry->topicname = (uchar*)strdup(topicname)) == NULL) {
+		free(etry->payload);
+		free(etry);
+		return NULL;
+	}
+	return etry;
 }
 
 /* destroy topic item */
@@ -338,8 +367,7 @@ static rsRetVal
 prepareTopic(instanceData *__restrict__ const pData, const uchar *__restrict__ const newTopicName)
 {
 	DEFiRet;
-	CHKiRet(createTopic(pData, newTopicName, &pData->pTopic));
-finalize_it:
+	iRet = createTopic(pData, newTopicName, &pData->pTopic);
 	if(iRet != RS_RET_OK) {
 		if(pData->pTopic != NULL) {
 			closeTopic(pData);
@@ -352,11 +380,10 @@ finalize_it:
  * if it does not exist, create a new one, or if we are currently using it
  * as of the last message, keep using it.
  *
- * important: topic is returned read-locked, user must unlock it after using it.
- *
  * must be called with read(rkLock)
+ * must be called with mutDynCache locked
  */
-static rsRetVal
+static rsRetVal ATTR_NONNULL()
 prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict__ const newTopicName,
 				rd_kafka_topic_t** topic, pthread_rwlock_t** lock)
 {
@@ -371,8 +398,6 @@ prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict_
 	DEFiRet;
 	ASSERT(pData != NULL);
 	ASSERT(newTopicName != NULL);
-
-	pthread_mutex_lock(&pData->mutDynCache);
 
 	pCache = pData->dynCache;
 	/* first check, if we still have the current topic */
@@ -401,7 +426,8 @@ prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict_
 				/* we found our element! */
 				entry = pCache[i];
 				pData->iCurrElt = i;
-				pCache[i]->clkTickAccessed = getClockTopicAccess(); /* update "timestamp" for LRU */
+				/* update "timestamp" for LRU */
+				pCache[i]->clkTickAccessed = getClockTopicAccess();
 				FINALIZE;
 			}
 			/* did not find it - so lets keep track of the counters for LRU */
@@ -434,7 +460,8 @@ prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict_
 	}
 	/* we need to allocate memory for the cache structure */
 	if(pCache[iFirstFree] == NULL) {
-		CHKmalloc(pCache[iFirstFree] = (dynaTopicCacheEntry*) calloc(1, sizeof(dynaTopicCacheEntry)));
+		CHKmalloc(pCache[iFirstFree] =
+			(dynaTopicCacheEntry*) calloc(1, sizeof(dynaTopicCacheEntry)));
 		CHKiRet(pthread_rwlock_init(&pCache[iFirstFree]->lock, NULL));
 	}
 
@@ -442,7 +469,8 @@ prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict_
 	localRet = createTopic(pData, newTopicName, &tmpTopic);
 
 	if(localRet != RS_RET_OK) {
-		errmsg.LogError(0, localRet, "Could not open dynamic topic '%s' [state %d] - discarding message",
+		errmsg.LogError(0, localRet, "Could not open dynamic topic '%s' "
+			"[state %d] - discarding message",
 		newTopicName, localRet);
 		ABORT_FINALIZE(localRet);
 	}
@@ -458,16 +486,9 @@ prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict_
 	DBGPRINTF("Added new entry %d for topic cache, topic '%s'.\n", iFirstFree, newTopicName);
 
 finalize_it:
-	if (iRet == RS_RET_OK && entry != NULL) {
-		pthread_rwlock_rdlock(&entry->lock);
-	}
-	pthread_mutex_unlock(&pData->mutDynCache);
-	if (iRet == RS_RET_OK && entry != NULL) {
+	if (iRet == RS_RET_OK) {
 		*topic = entry->pTopic;
 		*lock = &entry->lock;
-	} else {
-		*topic = NULL;
-		*lock = NULL;
 	}
 	RETiRet;
 }
@@ -549,6 +570,7 @@ writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
 	rd_kafka_topic_t *rkt = NULL;
 	pthread_rwlock_t *dynTopicLock = NULL;
 	failedmsg_entry* fmsgEntry;
+	int topic_mut_locked = 0;
 #if RD_KAFKA_VERSION >= 0x00090400
 	rd_kafka_resp_err_t msg_kafka_response;
 	int64_t ttMsgTimestamp;
@@ -556,18 +578,27 @@ writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
 	int msg_enqueue_status = 0;
 #endif
 
-	DBGPRINTF("omkafka: trying to send: key:'%s', msg:'%s', timestamp:'%s'\n", pData->key, msg, msgTimestamp);
+	DBGPRINTF("omkafka: trying to send: key:'%s', msg:'%s', timestamp:'%s'\n",
+		pData->key, msg, msgTimestamp);
 
 	if(pData->dynaTopic) {
 		DBGPRINTF("omkafka: topic to insert to: %s\n", topic);
-		CHKiRet(prepareDynTopic(pData, topic, &rkt, &dynTopicLock));
+		/* ensure locking happens all inside this function */
+		pthread_mutex_lock(&pData->mutDynCache);
+		const rsRetVal localRet = prepareDynTopic(pData, topic, &rkt, &dynTopicLock);
+		if (localRet == RS_RET_OK) {
+			pthread_rwlock_rdlock(dynTopicLock);
+			topic_mut_locked = 1;
+		}
+		pthread_mutex_unlock(&pData->mutDynCache);
+		CHKiRet(localRet);
 	} else {
 		rkt = pData->pTopic;
 	}
 
 #if RD_KAFKA_VERSION >= 0x00090400
 	if (msgTimestamp == NULL) {
-		/* Resubmitted items don't have a timestamp :/*/
+		/* Resubmitted items don't have a timestamp */
 		ttMsgTimestamp = time(NULL);
 	} else {
 		ttMsgTimestamp = atoi((char*)msgTimestamp); /* Convert timestamp into int */
@@ -599,23 +630,18 @@ writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
 		/* Put into kafka queue, again if configured! */
 		if (pData->bResubmitOnFailure) {
 			DBGPRINTF("omkafka: Failed to produce to topic '%s' (rd_kafka_producev)"
-			"partition %d: '%d/%s' - adding MSG '%s' to failed for RETRY!\n",
+				"partition %d: '%d/%s' - adding MSG '%s' to failed for RETRY!\n",
 				rd_kafka_topic_name(rkt), partition, msg_kafka_response,
 				rd_kafka_err2str(msg_kafka_response), msg);
-
-			/* Create new Listitem */
-			CHKmalloc(fmsgEntry = malloc(sizeof(struct s_failedmsg_entry)));
-			fmsgEntry->payload = (uchar*)strdup((char*)msg);
-			fmsgEntry->topicname = (uchar*)strdup(rd_kafka_topic_name(rkt));
-
-			/* Insert at the head. */
-			LIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
+			CHKmalloc(fmsgEntry = failedmsg_entry_construct((char*) msg, strlen((char*)msg),
+				rd_kafka_topic_name(rkt)));
+			SLIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
 		} else {
 			errmsg.LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
-			"omkafka: Failed to produce to topic '%s' (rd_kafka_producev)"
-			"partition %d: %d/%s\n",
-			rd_kafka_topic_name(rkt), partition, msg_kafka_response,
-			rd_kafka_err2str(msg_kafka_response));
+				"omkafka: Failed to produce to topic '%s' (rd_kafka_producev)"
+				"partition %d: %d/%s\n",
+				rd_kafka_topic_name(rkt), partition, msg_kafka_response,
+				rd_kafka_err2str(msg_kafka_response));
 		}
 	}
 #else
@@ -623,38 +649,29 @@ writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
 	DBGPRINTF("omkafka: rd_kafka_produce\n");
 	/* Using old kafka produce API */
 	msg_enqueue_status = rd_kafka_produce(rkt, partition, RD_KAFKA_MSG_F_COPY,
-										  msg, strlen((char*)msg), pData->key,
-										  pData->key == NULL ? 0 : strlen((char*)pData->key),
-										  NULL);
+				  msg, strlen((char*)msg), pData->key,
+				  pData->key == NULL ? 0 : strlen((char*)pData->key),
+				  NULL);
 	if(msg_enqueue_status == -1) {
 		/* Put into kafka queue, again if configured! */
 		if (pData->bResubmitOnFailure) {
 			DBGPRINTF("omkafka: Failed to produce to topic '%s' (rd_kafka_produce)"
-			"partition %d: '%d/%s' - adding MSG '%s' to failed for RETRY!\n",
+				"partition %d: '%d/%s' - adding MSG '%s' to failed for RETRY!\n",
 				rd_kafka_topic_name(rkt), partition, rd_kafka_last_error(),
-				rd_kafka_err2str(rd_kafka_last_error()), msg);
-
-			/* Create new Listitem */
-			CHKmalloc(fmsgEntry = malloc(sizeof(struct s_failedmsg_entry)));
-			fmsgEntry->payload = (uchar*)strdup((char*)msg);
-			fmsgEntry->topicname = (uchar*)strdup(rd_kafka_topic_name(rkt));
-
-			/* Insert at the head. */
-			LIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
+			CHKmalloc(fmsgEntry = failedmsg_entry_construct((char*) msg, strlen((char*)msg),
+				rd_kafka_topic_name(rkt)));
+			SLIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
 		} else {
 			errmsg.LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
-			"omkafka: Failed to produce to topic '%s' (rd_kafka_produce) "
-			"partition %d: %d/%s\n",
-			rd_kafka_topic_name(rkt), partition, rd_kafka_last_error(),
-			rd_kafka_err2str(rd_kafka_last_error()));
+				"omkafka: Failed to produce to topic '%s' (rd_kafka_produce) "
+				"partition %d: %d/%s\n",
+				rd_kafka_topic_name(rkt), partition, rd_kafka_last_error(),
+				rd_kafka_err2str(rd_kafka_last_error()));
 		}
 	}
 #endif
 
 	const int callbacksCalled = rd_kafka_poll(pData->rk, 0); /* call callbacks */
-	if (pData->dynaTopic) {
-		pthread_rwlock_unlock(dynTopicLock);/* dynamic topic can't be used beyond this pt */
-	}
 	DBGPRINTF("omkafka: writeKafka kafka outqueue length: %d, callbacks called %d\n",
 			  rd_kafka_outq_len(pData->rk), callbacksCalled);
 
@@ -671,11 +688,14 @@ writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
 	}
 
 finalize_it:
+	if(topic_mut_locked) {
+		pthread_rwlock_unlock(dynTopicLock);
+	}
 	DBGPRINTF("omkafka: writeKafka returned %d\n", iRet);
 	if(iRet != RS_RET_OK) {
 		iRet = RS_RET_SUSPENDED;
 	}
-    STATSCOUNTER_SETMAX_NOMUT(ctrQueueSize, rd_kafka_outq_len(pData->rk));
+	STATSCOUNTER_SETMAX_NOMUT(ctrQueueSize, (unsigned) rd_kafka_outq_len(pData->rk));
 	STATSCOUNTER_INC(ctrTopicSubmit, mutCtrTopicSubmit);
 	RETiRet;
 }
@@ -697,14 +717,9 @@ deliveryCallback(rd_kafka_t __attribute__((unused)) *rk,
 				rd_kafka_topic_name(rkmessage->rkt),
 				(int)(rkmessage->len-1), (char*)rkmessage->payload,
 				(int)(rkmessage->key_len), (char*)rkmessage->key);
-
-			/* Create new Listitem */
-			CHKmalloc(fmsgEntry = malloc(sizeof(struct s_failedmsg_entry)));
-			fmsgEntry->payload = (uchar*)strndup(rkmessage->payload, rkmessage->len);
-			fmsgEntry->topicname = (uchar*)strdup(rd_kafka_topic_name(rkmessage->rkt));
-
-			/* Insert at the head. */
-			LIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
+			CHKmalloc(fmsgEntry = failedmsg_entry_construct(rkmessage->payload, rkmessage->len,
+				rd_kafka_topic_name(rkmessage->rkt)));
+			SLIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
 		} else {
 			DBGPRINTF("omkafka: kafka delivery FAIL on Topic '%s', msg '%.*s', key '%.*s'\n",
 				rd_kafka_topic_name(rkmessage->rkt),
@@ -714,7 +729,8 @@ deliveryCallback(rd_kafka_t __attribute__((unused)) *rk,
 		}
 		STATSCOUNTER_INC(ctrKafkaFail, mutCtrKafkaFail);
 	} else {
-		DBGPRINTF("omkafka: kafka delivery SUCCESS on msg '%.*s'\n", (int)(rkmessage->len-1), (char*)rkmessage->payload);
+		DBGPRINTF("omkafka: kafka delivery SUCCESS on msg '%.*s'\n", (int)(rkmessage->len-1),
+				(char*)rkmessage->payload);
 	}
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -736,50 +752,66 @@ do_rd_kafka_destroy(instanceData *const __restrict__ pData)
 {
 	if (pData->rk == NULL) {
 		DBGPRINTF("omkafka: onDestroy can't close, handle wasn't open\n");
-	} else {
-		int queuedCount = rd_kafka_outq_len(pData->rk);
-		DBGPRINTF("omkafka: onDestroy closing - items left in outqueue: %d\n", queuedCount);
+		goto done;
+	}
+	int queuedCount = rd_kafka_outq_len(pData->rk);
+	DBGPRINTF("omkafka: onDestroy closing - items left in outqueue: %d\n", queuedCount);
 
-		struct timespec tOut;
-		timeoutComp(&tOut, pData->closeTimeout);
+	struct timespec tOut;
+	timeoutComp(&tOut, pData->closeTimeout);
 
-		while (timeoutVal(&tOut) > 0) {
-			queuedCount = rd_kafka_outq_len(pData->rk);
-			if (queuedCount > 0) {
-				/* Flush all remaining kafka messages (rd_kafka_poll is called inside) */
-                const int flushStatus = rd_kafka_flush(pData->rk, 5000);
-				if (flushStatus != RD_KAFKA_RESP_ERR_NO_ERROR) /* TODO: Handle unsend messages here! */ {
-					errmsg.LogError(0, RS_RET_KAFKA_ERROR,
-						"omkafka: onDestroy Failed to send remaing '%d' messages to topic '%s' on shutdown with error: '%s'",
+	while (timeoutVal(&tOut) > 0) {
+		queuedCount = rd_kafka_outq_len(pData->rk);
+		if (queuedCount > 0) {
+			/* Flush all remaining kafka messages (rd_kafka_poll is called inside) */
+			const int flushStatus = rd_kafka_flush(pData->rk, 5000);
+			if (flushStatus != RD_KAFKA_RESP_ERR_NO_ERROR) /* TODO: Handle unsend messages here! */ {
+				errmsg.LogError(0, RS_RET_KAFKA_ERROR, "omkafka: onDestroy "
+						"Failed to send remaing '%d' messages to "
+						"topic '%s' on shutdown with error: '%s'",
 						queuedCount,
 						rd_kafka_topic_name(pData->pTopic),
 						rd_kafka_err2str(flushStatus));
-				} else {
-					DBGPRINTF("omkafka: onDestroyflushed remaining '%d' messages to kafka topic '%s'\n",
-							  queuedCount, rd_kafka_topic_name(pData->pTopic));
-
-				/* Trigger callbacks a last time before shutdown */
-				const int callbacksCalled = rd_kafka_poll(pData->rk, 0); /* call callbacks */
-				DBGPRINTF("omkafka: onDestroy kafka outqueue length: %d, callbacks called %d\n",
-						  rd_kafka_outq_len(pData->rk), callbacksCalled);
-				}
 			} else {
-				break;
+				DBGPRINTF("omkafka: onDestroyflushed remaining '%d' messages "
+					"to kafka topic '%s'\n", queuedCount,
+					rd_kafka_topic_name(pData->pTopic));
+
+			/* Trigger callbacks a last time before shutdown */
+			const int callbacksCalled = rd_kafka_poll(pData->rk, 0); /* call callbacks */
+			DBGPRINTF("omkafka: onDestroy kafka outqueue length: %d, "
+				"callbacks called %d\n", rd_kafka_outq_len(pData->rk),
+				callbacksCalled);
 			}
-		}
-		if (queuedCount > 0) {
-			DBGPRINTF("omkafka: queue-drain for close timed-out took too long, "
-					 "items left in outqueue: %d\n",
-					 rd_kafka_outq_len(pData->rk));
-		}
-		if (pData->dynaTopic) {
-			dynaTopicFreeCacheEntries(pData);
 		} else {
-			closeTopic(pData);
+			break;
 		}
-		rd_kafka_destroy(pData->rk);
-		pData->rk = NULL;
 	}
+	if (queuedCount > 0) {
+		DBGPRINTF("omkafka: queue-drain for close timed-out took too long, "
+				 "items left in outqueue: %d\n",
+				 rd_kafka_outq_len(pData->rk));
+	}
+	if (pData->dynaTopic) {
+		dynaTopicFreeCacheEntries(pData);
+	} else {
+		closeTopic(pData);
+	}
+
+	/* Final destroy of kafka!*/
+	rd_kafka_destroy(pData->rk);
+
+# if RD_KAFKA_VERSION < 0x00090001
+	/* Wait for kafka being destroyed in old API */
+	if (rd_kafka_wait_destroyed(10000) < 0)	{
+		DBGPRINTF("omkafka: error, rd_kafka_destroy did not finish after grace timeout (10s)!\n");
+	} else {
+		DBGPRINTF("omkafka: rd_kafka_destroy successfully finished\n");
+	}
+# endif
+
+	pData->rk = NULL;
+done:	return;
 }
 
 /* should be called with write(rkLock) */
@@ -808,10 +840,11 @@ errorCallback(rd_kafka_t __attribute__((unused)) *rk,
 		err == RD_KAFKA_RESP_ERR__AUTHENTICATION) {
 		/* Broker transport error, we need to disable the action for now!*/
 		pData->bIsSuspended = 1;
-		DBGPRINTF("omkafka: kafka error handled, action will be suspended: %d,'%s'\n", err, rd_kafka_err2str(err));
+		DBGPRINTF("omkafka: kafka error handled, action will be suspended: %d,'%s'\n",
+			err, rd_kafka_err2str(err));
 	} else {
-		errmsg.LogError(0, RS_RET_KAFKA_ERROR,
-			"omkafka: kafka error message: %d,'%s','%s'", err, rd_kafka_err2str(err), reason);
+		errmsg.LogError(0, RS_RET_KAFKA_ERROR, "omkafka: kafka error message: %d,'%s','%s'",
+			err, rd_kafka_err2str(err), reason);
 	}
 }
 
@@ -901,7 +934,7 @@ openKafka(instanceData *const __restrict__ pData)
 	}
 
 # if RD_KAFKA_VERSION < 0x00090001
-	rd_kafka_set_logger(pData->rk, kafkaLogger);
+	rd_kafka_conf_set_log_cb(pData->rk, kafkaLogger);
 # endif
 	DBGPRINTF("omkafka setting brokers: '%s'n", pData->brokers);
 	if((nBrokers = rd_kafka_brokers_add(pData->rk, (char*)pData->brokers)) == 0) {
@@ -941,6 +974,14 @@ finalize_it:
 		if (pData->rk != NULL) {
 			closeKafka(pData);
 		}
+
+		/* Parameter Error's cannot be resumed, so we need to disable the action */
+		if (iRet == RS_RET_PARAM_ERROR) {
+			iRet = RS_RET_DISABLE_ACTION;
+			errmsg.LogError(0, iRet, "omkafka: action will be disabled due invalid "
+				"kafka configuration parameters\n");
+		}
+
 	}
 	pthread_rwlock_unlock(&pData->rkLock);
 	RETiRet;
@@ -953,19 +994,24 @@ checkFailedMessages(instanceData *const __restrict__ pData)
 	DEFiRet;
 
 	/* Loop through failed messages, reprocess them first! */
-	while (!LIST_EMPTY(&pData->failedmsg_head)) {
-		fmsgEntry = LIST_FIRST(&pData->failedmsg_head);
+	while (!SLIST_EMPTY(&pData->failedmsg_head)) {
+		fmsgEntry = SLIST_FIRST(&pData->failedmsg_head);
+		assert(fmsgEntry != NULL);
 		/* Put back into kafka! */
 		iRet = writeKafka(pData, (uchar*) fmsgEntry->payload, NULL, fmsgEntry->topicname);
 		if(iRet != RS_RET_OK) {
-			DBGPRINTF("omkafka: failed to delivery failed msg '%.*s' with status %d. - suspending AGAIN!\n",
-				(int)(strlen((char*)fmsgEntry->payload)-1), (char*)fmsgEntry->payload, iRet);
+			// TODO: LogError???
+			DBGPRINTF("omkafka: failed to delivery failed msg '%.*s' with status %d. "
+				"- suspending AGAIN!\n",
+				(int)(strlen((char*)fmsgEntry->payload)-1),
+				(char*)fmsgEntry->payload, iRet);
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		} else {
 			DBGPRINTF("omkafka: successfully delivered failed msg '%.*s'.\n",
-				(int)(strlen((char*)fmsgEntry->payload)-1), (char*)fmsgEntry->payload);
-			LIST_REMOVE(fmsgEntry, entries);
-			free(fmsgEntry);
+				(int)(strlen((char*)fmsgEntry->payload)-1),
+				(char*)fmsgEntry->payload);
+			SLIST_REMOVE_HEAD(&pData->failedmsg_head, entries);
+			failedmsg_entry_destruct(fmsgEntry);
 		}
 	}
 
@@ -974,52 +1020,51 @@ finalize_it:
 }
 
 /* This function persists failed messages into a data file, so they can
- * Be resend on next startup.
+ * be resend on next startup.
  * alorbach, 2017-06-02
  */
-static rsRetVal
+static rsRetVal ATTR_NONNULL(1)
 persistFailedMsgs(instanceData *const __restrict__ pData)
 {
 	DEFiRet;
 	int fdMsgFile = -1;
 	ssize_t nwritten;
 
-	/*	Clear Failed Msg List */
-	failedmsg_entry* fmsgEntry;
-
-	fmsgEntry	= LIST_FIRST(&pData->failedmsg_head);
-	if (fmsgEntry != NULL) {
-		fdMsgFile = open((char*)pData->failedMsgFile,
-					O_WRONLY|O_CREAT|O_APPEND|O_LARGEFILE|O_CLOEXEC,
-					S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP);
-		if(fdMsgFile == -1) {
-			char errStr[1024];
-			rs_strerror_r(errno, errStr, sizeof(errStr));
-			DBGPRINTF("omkafka: persistFailedMsgs error opening failed msg file: %s\n", errStr);
-			ABORT_FINALIZE(RS_RET_ERR);
-		}
-
-		/* Loop through failed messages, reprocess them first! */
-		while (fmsgEntry != NULL)	{
-			/* Put into into kafka! */
-			write(fdMsgFile, fmsgEntry->topicname, ustrlen(fmsgEntry->topicname) );
-			write(fdMsgFile, "\t", 1);
-			nwritten = write(fdMsgFile, fmsgEntry->payload, ustrlen(fmsgEntry->payload) );
-			if(nwritten == -1) {
-				DBGPRINTF("omkafka: persistFailedMsgs error %d writing failed msg file\n", errno);
-				ABORT_FINALIZE(RS_RET_ERR);
-			} else {
-				DBGPRINTF("omkafka: persistFailedMsgs successfully written loaded msg '%.*s' for topic '%s'\n",
-					(int)(strlen((char*)fmsgEntry->payload)-1), fmsgEntry->payload, fmsgEntry->topicname);
-			}
-			/* Get next item */
-			fmsgEntry = LIST_NEXT(fmsgEntry, entries);
-		}
-	} else {
-		DBGPRINTF("omkafka: persistFailedMsgs We do not need to persist failed messages.\n");
+	if(SLIST_EMPTY(&pData->failedmsg_head)) {
+		DBGPRINTF("omkafka: persistFailedMsgs: We do not need to persist failed messages.\n");
+		FINALIZE;
 	}
-finalize_it:
+
+	fdMsgFile = open((char*)pData->failedMsgFile,
+				O_WRONLY|O_CREAT|O_APPEND|O_LARGEFILE|O_CLOEXEC,
+				S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP);
 	if(fdMsgFile == -1) {
+		LogError(errno, RS_RET_ERR, "omkafka: persistFailedMsgs error opening failed msg file %s",
+			pData->failedMsgFile);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	while (!SLIST_EMPTY(&pData->failedmsg_head)) {
+		failedmsg_entry* fmsgEntry = SLIST_FIRST(&pData->failedmsg_head);
+		assert(fmsgEntry != NULL);
+		nwritten = write(fdMsgFile, fmsgEntry->topicname, ustrlen(fmsgEntry->topicname) );
+		if(nwritten != -1)
+			write(fdMsgFile, "\t", 1);
+		if(nwritten != -1)
+			nwritten = write(fdMsgFile, fmsgEntry->payload, ustrlen(fmsgEntry->payload) );
+		if(nwritten == -1) {
+			LogError(errno, RS_RET_ERR, "omkafka: persistFailedMsgs error writing failed msg file");
+			ABORT_FINALIZE(RS_RET_ERR);
+		} else {
+			DBGPRINTF("omkafka: persistFailedMsgs successfully written loaded msg '%.*s' for topic '%s'\n",
+				(int)(strlen((char*)fmsgEntry->payload)-1), fmsgEntry->payload, fmsgEntry->topicname);
+		}
+		SLIST_REMOVE_HEAD(&pData->failedmsg_head, entries);
+		failedmsg_entry_destruct(fmsgEntry);
+	}
+
+finalize_it:
+	if(fdMsgFile != -1) {
 		close(fdMsgFile);
 	}
 	if(iRet != RS_RET_OK) {
@@ -1027,7 +1072,6 @@ finalize_it:
 			"file %s - failed messages will be lost.",
 			(char*)pData->failedMsgFile);
 	}
-
 	RETiRet;
 }
 
@@ -1046,17 +1090,19 @@ loadFailedMsgs(instanceData *const __restrict__ pData)
 	uchar *puStr;
 	char *pStrTabPos;
 
+	assert(pData->failedMsgFile != NULL);
+
 	/* check if the file exists */
 	if(stat((char*) pData->failedMsgFile, &stat_buf) == -1) {
 		if(errno == ENOENT) {
-			DBGPRINTF("omkafka: loadFailedMsgs failed messages file %s wasn't found, continue startup\n",
-				pData->failedMsgFile);
+			DBGPRINTF("omkafka: loadFailedMsgs failed messages file %s wasn't found, "
+				"continue startup\n", pData->failedMsgFile);
 			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 		} else {
 			char errStr[1024];
 			rs_strerror_r(errno, errStr, sizeof(errStr));
-			DBGPRINTF("omkafka: loadFailedMsgs failed messages file %s could not be opened with error %s\n",
-				pData->failedMsgFile, errStr);
+			DBGPRINTF("omkafka: loadFailedMsgs failed messages file %s could not "
+				"be opened with error %s\n", pData->failedMsgFile, errStr);
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
 	} else {
@@ -1071,27 +1117,24 @@ loadFailedMsgs(instanceData *const __restrict__ pData)
 	CHKiRet(strm.SetFName(pstrmFMSG, pData->failedMsgFile, ustrlen(pData->failedMsgFile)));
 	CHKiRet(strm.ConstructFinalize(pstrmFMSG));
 
-	while(strm.ReadLine(pstrmFMSG, &pCStr, 0, 0, 0) == RS_RET_OK) {
+	while(strm.ReadLine(pstrmFMSG, &pCStr, 0, 0, 0, NULL) == RS_RET_OK) {
 		if(rsCStrLen(pCStr) == 0) {
 			/* we do not process empty lines */
 			DBGPRINTF("omkafka: loadFailedMsgs msg was empty!");
 		} else {
 			puStr = rsCStrGetSzStrNoNULL(pCStr);
-
 			pStrTabPos = index((char*)puStr, '\t');
 			if (pStrTabPos != NULL) {
-				DBGPRINTF("omkafka: loadFailedMsgs successfully loaded msg '%s' for topic '%.*s':%d\n",
-					pStrTabPos+1, (int)(pStrTabPos-(char*)puStr), (char*)puStr, (int)(pStrTabPos-(char*)puStr));
-
-				/* Create new Listitem */
-				CHKmalloc(fmsgEntry = malloc(sizeof(struct s_failedmsg_entry)));
-				fmsgEntry->payload = (uchar*)strdup(pStrTabPos+1); /* Copy after TAB */
-				fmsgEntry->topicname = (uchar*)strndup((char*)puStr, (int)(pStrTabPos-(char*)puStr)); /* copy until TAB */
-
-				/* Insert at the head. */
-				LIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
+				DBGPRINTF("omkafka: loadFailedMsgs successfully loaded msg '%s' for "
+					"topic '%.*s':%d\n",
+					pStrTabPos+1, (int)(pStrTabPos-(char*)puStr), (char*)puStr,
+					(int)(pStrTabPos-(char*)puStr));
+				*pStrTabPos = '\0'; /* split string into two */
+				CHKmalloc(fmsgEntry = failedmsg_entry_construct(pStrTabPos+1,
+					strlen(pStrTabPos+1), (char*)puStr));
+				SLIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
 			} else {
-				DBGPRINTF("omkafka: loadFailedMsgs invalid msg found: %s\n",
+				LogError(0, RS_RET_ERR, "omkafka: loadFailedMsgs droping invalid msg found: %s\n",
 					(char*)rsCStrGetSzStrNoNULL(pCStr));
 			}
 		}
@@ -1112,11 +1155,11 @@ finalize_it:
 		}
 	} else {
 		DBGPRINTF("omkafka: loadFailedMsgs unlinking '%s'\n", (char*)pData->failedMsgFile);
-		if(unlink((char*)pData->failedMsgFile) != 0) {
-			char errStr[1024];
-			rs_strerror_r(errno, errStr, sizeof(errStr));
-			errmsg.LogError(0, RS_RET_ERR, "omkafka: loadFailedMsgs failed to remove "
-				"file \"%s\": %s", (char*)pData->failedMsgFile, errStr);
+		/* Delete file if still exists! */
+		const int r = unlink((char*)pData->failedMsgFile);
+		if(r != 0 && r != ENOENT) {
+			LogError(errno, RS_RET_ERR, "omkafka: loadFailedMsgs failed to remove "
+				"file \"%s\"", (char*)pData->failedMsgFile);
 		}
 	}
 
@@ -1149,7 +1192,7 @@ CODESTARTcreateInstance
 	pData->bResubmitOnFailure = 0;
 	pData->bKeepFailedMessages = 0;
 	pData->failedMsgFile = NULL;
-	LIST_INIT(&pData->failedmsg_head);
+	SLIST_INIT(&pData->failedmsg_head);
 	CHKiRet(pthread_mutex_init(&pData->mutErrFile, NULL));
 	CHKiRet(pthread_rwlock_init(&pData->rkLock, NULL));
 	CHKiRet(pthread_mutex_init(&pData->mutDynCache, NULL));
@@ -1172,7 +1215,6 @@ CODESTARTfreeInstance
 	/* Helpers for Failed Msg List */
 	failedmsg_entry* fmsgEntry1;
 	failedmsg_entry* fmsgEntry2;
-	/* Close error file */
 	if(pData->fdErrFile != -1)
 		close(pData->fdErrFile);
 	/* Closing Kafka first! */
@@ -1189,15 +1231,13 @@ CODESTARTfreeInstance
 	pthread_rwlock_unlock(&pData->rkLock);
 
 	/* Delete Linked List for failed msgs */
-	fmsgEntry1	= LIST_FIRST(&pData->failedmsg_head);
+	fmsgEntry1 = SLIST_FIRST(&pData->failedmsg_head);
 	while (fmsgEntry1 != NULL)	{
-		fmsgEntry2	= LIST_NEXT(fmsgEntry1,	entries);
-		free(fmsgEntry1->payload);
-		free(fmsgEntry1->topicname);
-		free(fmsgEntry1);
-		fmsgEntry1	= fmsgEntry2;
+		fmsgEntry2 = SLIST_NEXT(fmsgEntry1, entries);
+		failedmsg_entry_destruct(fmsgEntry1);
+		fmsgEntry1 = fmsgEntry2;
 	}
-	LIST_INIT(&pData->failedmsg_head);
+	SLIST_INIT(&pData->failedmsg_head);
 	/* Free other mem */
 	free(pData->errorFile);
 	free(pData->failedMsgFile);
@@ -1208,11 +1248,12 @@ CODESTARTfreeInstance
 		free((void*) pData->confParams[i].name);
 		free((void*) pData->confParams[i].val);
 	}
+	free(pData->confParams);
 	for(int i = 0 ; i < pData->nTopicConfParams ; ++i) {
 		free((void*) pData->topicConfParams[i].name);
 		free((void*) pData->topicConfParams[i].val);
 	}
-
+	free(pData->topicConfParams);
 	pthread_rwlock_destroy(&pData->rkLock);
 	pthread_mutex_destroy(&pData->mutErrFile);
 	pthread_mutex_destroy(&pData->mutDynCache);
@@ -1253,16 +1294,19 @@ BEGINdoAction
 CODESTARTdoAction
 	failedmsg_entry* fmsgEntry;
 	instanceData *const pData = pWrkrData->pData;
+	int need_unlock = 0;
+
 	if (! pData->bIsOpen)
 		CHKiRet(setupKafkaHandle(pData, 0));
 
 	/* Lock here to prevent msg loss */
 	pthread_rwlock_rdlock(&pData->rkLock);
+	need_unlock = 1;
 
 	/* We need to trigger callbacks first in order to suspend the Action properly on failure */
 	const int callbacksCalled = rd_kafka_poll(pData->rk, 0); /* call callbacks */
 	DBGPRINTF("omkafka: doAction kafka outqueue length: %d, callbacks called %d\n",
-			  rd_kafka_outq_len(pData->rk), callbacksCalled);
+		rd_kafka_outq_len(pData->rk), callbacksCalled);
 
 	/* Reprocess failed messages! */
 	if (pData->bResubmitOnFailure) {
@@ -1274,18 +1318,11 @@ CODESTARTdoAction
 				DBGPRINTF("omkafka: also adding MSG '%.*s' for topic '%s' to failed for RETRY!\n",
 					(int)(strlen((char*)ppString[0])-1), ppString[0],
 					pData->dynaTopic ? ppString[2] : pData->topic);
-
-				/* Create new Listitem */
-				CHKmalloc(fmsgEntry = malloc(sizeof(struct s_failedmsg_entry)));
-				fmsgEntry->payload = (uchar*)strdup((char*)ppString[0]);
-				fmsgEntry->topicname = (uchar*)strdup( pData->dynaTopic ? (char*)ppString[2] : (char*)pData->topic);
-
-				/* Insert at the head. */
-				LIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
+				CHKmalloc(fmsgEntry = failedmsg_entry_construct((char*)ppString[0],
+					strlen((char*)ppString[0]),
+					(char*) (pData->dynaTopic ? ppString[2] : pData->topic)));
+				SLIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
 			}
-			/* Unlock now */
-			pthread_rwlock_unlock(&pData->rkLock);
-
 			ABORT_FINALIZE(iRet);
 		}
 	}
@@ -1293,9 +1330,11 @@ CODESTARTdoAction
 	/* support dynamic topic */
 	iRet = writeKafka(pData, ppString[0], ppString[1], pData->dynaTopic ? ppString[2] : pData->topic);
 
-	/* Unlock now */
-	pthread_rwlock_unlock(&pData->rkLock);
 finalize_it:
+	if(need_unlock) {
+		pthread_rwlock_unlock(&pData->rkLock);
+	}
+
 	if(iRet != RS_RET_OK) {
 		DBGPRINTF("omkafka: doAction failed with status %d\n", iRet);
 	}
@@ -1303,8 +1342,6 @@ finalize_it:
 	/* Suspend Action if broker problems were reported in error callback */
 	if (pData->bIsSuspended) {
 		DBGPRINTF("omkafka: doAction broker failure detected, suspending action\n");
-
-		/* Suspend Action now */
 		iRet = RS_RET_SUSPENDED;
 	}
 ENDdoAction
@@ -1371,7 +1408,7 @@ CODESTARTnewActInst
 			pData->dynaTopic = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "dynatopic.cachesize")) {
 			pData->iDynaTopicCacheSize = pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "closeTimeout")) {
+		} else if(!strcmp(actpblk.descr[i].name, "closetimeout")) {
 			pData->closeTimeout = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "partitions.auto")) {
 			pData->autoPartition = pvals[i].val.d.n;
@@ -1418,13 +1455,13 @@ CODESTARTnewActInst
 			pData->key = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "reopenOnHup")) {
+		} else if(!strcmp(actpblk.descr[i].name, "reopenonhup")) {
 			pData->bReopenOnHup = pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "resubmitOnFailure")) {
+		} else if(!strcmp(actpblk.descr[i].name, "resubmitonfailure")) {
 			pData->bResubmitOnFailure = pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "keepFailedMessages")) {
+		} else if(!strcmp(actpblk.descr[i].name, "keepfailedmessages")) {
 			pData->bKeepFailedMessages = pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "failedMsgFile")) {
+		} else if(!strcmp(actpblk.descr[i].name, "failedmsgfile")) {
 			pData->failedMsgFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			dbgprintf("omkafka: program error, non-handled param '%s'\n", actpblk.descr[i].name);
@@ -1464,8 +1501,10 @@ CODESTARTnewActInst
 	}
 	pthread_mutex_unlock(&closeTimeoutMut);
 
-	/* Load failed messages here, do NOT check for IRET!*/
-	loadFailedMsgs(pData);
+	/* Load failed messages here (If enabled), do NOT check for IRET!*/
+	if (pData->bKeepFailedMessages && pData->failedMsgFile != NULL) {
+		loadFailedMsgs(pData);
+	}
 
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
@@ -1498,7 +1537,8 @@ CODESTARTmodExit
 	pthread_mutex_unlock(&closeTimeoutMut);
 	pthread_mutex_destroy(&closeTimeoutMut);
 	if (rd_kafka_wait_destroyed(timeout) != 0) {
-		DBGPRINTF("omkafka: couldn't close all resources gracefully. %d threads still remain.\n", rd_kafka_thread_cnt());
+		DBGPRINTF("omkafka: couldn't close all resources gracefully. %d threads still remain.\n",
+			rd_kafka_thread_cnt());
 	}
 finalize_it:
 ENDmodExit
@@ -1527,17 +1567,17 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	INIT_ATOMIC_HELPER_MUT(mutClock);
 
-	DBGPRINTF("omkafka %s using librdkafka version %s\n",
-	          VERSION, rd_kafka_version_str());
+	DBGPRINTF("omkafka %s using librdkafka version %s, 0x%x\n",
+	          VERSION, rd_kafka_version_str(), rd_kafka_version());
 	CHKiRet(statsobj.Construct(&kafkaStats));
 	CHKiRet(statsobj.SetName(kafkaStats, (uchar *)"omkafka"));
 	CHKiRet(statsobj.SetOrigin(kafkaStats, (uchar*)"omkafka"));
 	STATSCOUNTER_INIT(ctrTopicSubmit, mutCtrTopicSubmit);
 	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"submitted",
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrTopicSubmit));
-    ctrQueueSize = 0;
-    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"maxoutqsize",
-        ctrType_Int, CTR_FLAG_NONE, &ctrQueueSize));
+	STATSCOUNTER_INIT(ctrQueueSize, mutCtrQueueSize);
+	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"maxoutqsize",
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrQueueSize));
 	STATSCOUNTER_INIT(ctrKafkaFail, mutCtrKafkaFail);
 	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"failures",
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaFail));

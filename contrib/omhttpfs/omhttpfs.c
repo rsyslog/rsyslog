@@ -808,7 +808,7 @@ ENDnewActInst
 
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
-    ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
+	iRet = RS_RET_CONFLINE_UNPROCESSED;
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 

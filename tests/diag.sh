@@ -35,7 +35,7 @@
 #valgrind="valgrind --leak-check=full --show-leak-kinds=all --malloc-fill=ff --free-fill=fe --log-fd=1"
 
 #valgrind="valgrind --tool=drd --log-fd=1"
-#valgrind="valgrind --tool=helgrind --log-fd=1"
+#valgrind="valgrind --tool=helgrind --log-fd=1 --suppressions=linux_localtime_r.supp --gen-suppressions=all"
 #valgrind="valgrind --tool=exp-ptrcheck --log-fd=1"
 #set -o xtrace
 #export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
@@ -43,11 +43,11 @@
 TB_TIMEOUT_STARTSTOP=1200 # timeout for start/stop rsyslogd in tenths (!) of a second 1200 => 2 min
 
 #START: ext kafka config
-dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.8/zookeeper-3.4.8.tar.gz
-dep_kafka_url=http://www-us.apache.org/dist/kafka/0.9.0.1/kafka_2.11-0.9.0.1.tgz
+dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.10/zookeeper-3.4.10.tar.gz
+dep_kafka_url=http://www-us.apache.org/dist/kafka/0.10.2.1/kafka_2.12-0.10.2.1.tgz
 dep_cache_dir=$(readlink -f $srcdir/.dep_cache)
-dep_zk_cached_file=$dep_cache_dir/zookeeper-3.4.8.tar.gz
-dep_kafka_cached_file=$dep_cache_dir/kafka_2.11-0.9.0.1.tgz
+dep_zk_cached_file=$dep_cache_dir/zookeeper-3.4.10.tar.gz
+dep_kafka_cached_file=$dep_cache_dir/kafka_2.12-0.10.2.1.tgz
 dep_kafka_dir_xform_pattern='s#^[^/]\+#kafka#g'
 dep_zk_dir_xform_pattern='s#^[^/]\+#zk#g'
 dep_kafka_log_dump=$(readlink -f $srcdir/rsyslog.out.kafka.log)
@@ -61,6 +61,25 @@ dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
 
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
+		# for (solaris) load debugging, uncomment next 2 lines:
+		#export LD_DEBUG=all
+		#ldd ../tools/rsyslogd
+
+		# environment debug
+		#find / -name "librelp.so*"
+		#ps -ef |grep syslog
+		#netstat -a | grep LISTEN
+
+		# cleanup of hanging instances from previous runs
+		# practice has shown this is pretty useful!
+		for pid in $(ps -eo pid,args|grep '/tools/[r]syslogd' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
+		do
+			echo "ERROR: left-over previous instance $pid, killing it"
+			ps -fp $pid
+			kill -9 $pid
+		done
+		# end cleanup
+
 		if [ -z $RS_SORTCMD ]; then
 			RS_SORTCMD=sort
 		fi  
@@ -188,7 +207,7 @@ case $1 in
 		    echo "ERROR: config file '$CONF_FILE' not found!"
 		    exit 1
 		fi
-		valgrind $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
+		valgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --gen-suppressions=all --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
 		. $srcdir/diag.sh wait-startup-pid $3
 		;;
    'startup-vg') # start rsyslogd with default params under valgrind control. $2 is the config file name to use
@@ -206,7 +225,7 @@ case $1 in
 		    echo "ERROR: config file '$srcdir/testsuites/$2' not found!"
 		    exit 1
 		fi
-		valgrind $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=no ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
+		valgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=no ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
 		. $srcdir/diag.sh wait-startup $3
 		echo startup-vg still running
 		;;
@@ -214,6 +233,27 @@ case $1 in
    	$srcdir/msleep $2
 		;;
 
+   'startup-vgthread-waitpid-only') # same as startup-vgthread, BUT we do NOT wait on the startup message!
+		if [ "x$2" == "x" ]; then
+		    CONF_FILE="testconf.conf"
+		    echo $CONF_FILE is:
+		    cat -n $CONF_FILE
+		else
+		    CONF_FILE="$srcdir/testsuites/$2"
+		fi
+		if [ ! -f $CONF_FILE ]; then
+		    echo "ERROR: config file '$CONF_FILE' not found!"
+		    exit 1
+		fi
+		valgrind --tool=helgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --suppressions=linux_localtime_r.supp --gen-suppressions=all ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
+		. $srcdir/diag.sh wait-startup-pid $3
+		;;
+   'startup-vgthread') # start rsyslogd with default params under valgrind thread debugger control.
+   		# $2 is the config file name to use
+		# returns only after successful startup, $3 is the instance (blank or 2!)
+		. $srcdir/diag.sh startup-vgthread-waitpid-only $2 $3
+		. $srcdir/diag.sh wait-startup $3
+		;;
    'wait-startup-pid') # wait for rsyslogd startup, PID only ($2 is the instance)
 		i=0
 		while test ! -f rsyslog$2.pid; do
@@ -353,7 +393,7 @@ case $1 in
 		if [ "$?" -ne "0" ]; then
 		  echo "error during tcpflood! see rsyslog.out.log.save for what was written"
 		  cp rsyslog.out.log rsyslog.out.log.save
-		  . $srcdir/diag.sh error-exit 1
+		  . $srcdir/diag.sh error-exit 1 stacktrace
 		fi
 		;;
    'injectmsg') # inject messages via our inject interface (imdiag)
@@ -369,9 +409,10 @@ case $1 in
    'check-mainq-spool') # check if mainqueue spool files exist, if not abort (we just check .qi).
 		echo There must exist some files now:
 		ls -l test-spool
+		echo .qi file:
+		cat test-spool/mainq.qi
 		if test ! -f test-spool/mainq.qi; then
 		  echo "error: mainq.qi does not exist where expected to do so!"
-		  ls -l test-spool
 		  . $srcdir/diag.sh error-exit 1
 		fi
 		;;
@@ -410,7 +451,7 @@ case $1 in
 		./chkseq -fwork -s$2 -e$3 $4 $5 $6 $7
 		if [ "$?" -ne "0" ]; then
 		  echo "sequence error detected"
-		  . $srcdir/diag.sh error-exit 1
+		  . $srcdir/diag.sh error-exit 1 
 		fi
 		;;
    'seq-check2') # do the usual sequence check to see if everything was properly received. This is
@@ -441,6 +482,8 @@ case $1 in
 		    echo content-check-with-count success, \"$2\" occured $3 times
 		else
 		    echo content-check-with-count failed, expected \"$2\" to occure $3 times, but found it $count times
+		    echo file rsyslog.out.log content is:
+		    cat rsyslog.out.log
 		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;
@@ -482,6 +525,17 @@ case $1 in
 				./msleep 10
 		done
 		echo "dyn-stats reset for bucket ${3} registered"
+		;;
+   'content-check')
+		# this does a content check which permits regex
+		grep "$2" $3
+		if [ "$?" -ne "0" ]; then
+		    echo "----------------------------------------------------------------------"
+		    echo content-check failed to find "'$2'" inside "'$3'"
+		    echo "file contents:"
+		    cat $3
+		    . $srcdir/diag.sh error-exit 1
+		fi
 		;;
    'custom-content-check') 
 		cat $3 | grep -qF "$2"
@@ -578,21 +632,39 @@ case $1 in
 		    exit 77
 		fi
 		;;
-	 'download-kafka')
+   'download-kafka')
 		if [ ! -d $dep_cache_dir ]; then
-				echo "Creating dependency cache dir"
-				mkdir $dep_cache_dir
+			echo "Creating dependency cache dir"
+			mkdir $dep_cache_dir
 		fi
 		if [ ! -f $dep_zk_cached_file ]; then
-				echo "Downloading zookeeper"
+			echo "Downloading zookeeper"
+			wget -q $dep_zk_url -O $dep_zk_cached_file
+			if [ $? -ne 0 ]
+			then
+				echo error during wget, retry:
 				wget $dep_zk_url -O $dep_zk_cached_file
+				if [ $? -ne 0 ]
+				then
+					. $srcdir/diag.sh error-exit 1
+				fi
+			fi
 		fi
 		if [ ! -f $dep_kafka_cached_file ]; then
-				echo "Downloading kafka"
+			echo "Downloading kafka"
+			wget -q $dep_kafka_url -O $dep_kafka_cached_file
+			if [ $? -ne 0 ]
+			then
+				echo error during wget, retry:
 				wget $dep_kafka_url -O $dep_kafka_cached_file
+				if [ $? -ne 0 ]
+				then
+					. $srcdir/diag.sh error-exit 1
+				fi
+			fi
 		fi
 		;;
-	 'start-zookeeper')
+    'start-zookeeper')
 		if [ "x$2" == "x" ]; then
 			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
 			dep_work_tk_config="zoo.cfg"
@@ -663,6 +735,33 @@ case $1 in
 				. $srcdir/diag.sh error-exit 77
 			fi
 		fi
+		;;
+	 'dump-kafka-serverlog')
+		if [ "x$2" == "x" ]; then
+			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+		else
+			dep_work_dir=$(readlink -f $srcdir/$2)
+		fi
+		if [ ! -d $dep_work_dir/kafka ]; then
+			echo "Kafka work-dir $dep_work_dir/kafka does not exist, no kafka debuglog"
+		else
+			echo "Dumping server.log from Kafka instance $2"
+			echo "========================================="
+			cat $dep_work_dir/kafka/logs/server.log
+			echo "========================================="
+		fi
+		;;
+		
+	 'dump-zookeeper-serverlog')
+		if [ "x$2" == "x" ]; then
+			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+		else
+			dep_work_dir=$(readlink -f $srcdir/$2)
+		fi
+		echo "Dumping zookeeper.out from Zookeeper instance $2"
+		echo "========================================="
+		cat $dep_work_dir/zk/zookeeper.out
+		echo "========================================="
 		;;
 	 'stop-kafka')
 		if [ "x$2" == "x" ]; then
@@ -751,7 +850,7 @@ case $1 in
 
 		(cd $dep_work_dir/kafka && ./bin/kafka-console-consumer.sh --timeout-ms 2000 --from-beginning --zookeeper localhost:$dep_work_port/kafka --topic $2 > $dep_kafka_log_dump)
 		;;
-   'error-exit') # this is called if we had an error and need to abort. Here, we
+	'error-exit') # this is called if we had an error and need to abort. Here, we
                 # try to gather as much information as possible. That's most important
 		# for systems like Travis-CI where we cannot debug on the machine itself.
 		# our $2 is the to-be-used exit code. if $3 is "stacktrace", call gdb.
@@ -761,12 +860,15 @@ case $1 in
 				echo trying to analyze core for main rsyslogd binary
 				echo note: this may not be the correct file, check it
 				CORE=`ls core*`
-				echo "set pagination off" >gdb.in
-				echo "core $CORE" >>gdb.in
+				#echo "set pagination off" >gdb.in
+				#echo "core $CORE" >>gdb.in
+				echo "bt" >> gdb.in
+				echo "echo === THREAD INFO ===" >> gdb.in
 				echo "info thread" >> gdb.in
+				echo "echo === thread apply all bt full ===" >> gdb.in
 				echo "thread apply all bt full" >> gdb.in
 				echo "q" >> gdb.in
-				gdb ../tools/rsyslogd < gdb.in
+				gdb ../tools/rsyslogd $CORE -batch -x gdb.in
 				CORE=
 				rm gdb.in
 			fi
@@ -786,6 +888,13 @@ case $1 in
 			./msleep 4000
 			RSYSLOG_DEBUG=$RSYSLOG_DEBUG_SAVE
 			rm IN_AUTO_DEBUG
+		fi
+		# Extended debug output for dependencies started by testbench
+		if [[ "$EXTRA_EXITCHECK" == 'dumpkafkalogs' ]]; then
+			# Dump Zookeeper log
+			. $srcdir/diag.sh dump-zookeeper-serverlog
+			# Dump Kafka log
+			. $srcdir/diag.sh dump-kafka-serverlog
 		fi
 		exit $2
 		;;

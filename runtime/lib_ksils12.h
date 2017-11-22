@@ -110,7 +110,8 @@ struct ksifile_s {
 	/* end mirrored properties */
 	uint8_t disabled; /* permits to disable this file --> set to 1 */
 	uint8_t *IV; /* initial value for blinding masks */
-	unsigned char lastLeaf[KSI_MAX_IMPRINT_LEN]; /* last leaf hash (maybe of previous block)		--> preserve on term */
+	unsigned char lastLeaf[KSI_MAX_IMPRINT_LEN]; /* last leaf hash (maybe of previous block)
+							--> preserve on term */
 	unsigned char *blockfilename;
 	unsigned char *ksifilename;
 	unsigned char *statefilename;

@@ -43,7 +43,6 @@ MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("imczmq");
 
 DEF_IMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(ruleset)
@@ -138,13 +137,13 @@ static rsRetVal addListener(instanceConf_t* iconf){
 	DEFiRet;
 	
 	DBGPRINTF("imczmq: addListener called..\n");	
-	struct listener_t* pData;
+	struct listener_t* pData = NULL;
 	CHKmalloc(pData=(struct listener_t*)MALLOC(sizeof(struct listener_t)));
 	pData->ruleset = iconf->pBindRuleset;
 
 	pData->sock = zsock_new(iconf->sockType);
 	if(!pData->sock) {
-		errmsg.LogError(0, RS_RET_NO_ERRCODE,
+		LogError(0, RS_RET_NO_ERRCODE,
 				"imczmq: new socket failed for endpoints: %s",
 				iconf->sockEndpoints);
 		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
@@ -157,7 +156,7 @@ static rsRetVal addListener(instanceConf_t* iconf){
 			DBGPRINTF("imczmq: we are a CURVESERVER\n");	
 			zcert_t *serverCert = zcert_load(runModConf->serverCertPath);
 			if(!serverCert) {
-				errmsg.LogError(0, NO_ERRCODE, "could not load cert %s",
+				LogError(0, NO_ERRCODE, "could not load cert %s",
 					runModConf->serverCertPath);
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
@@ -170,7 +169,7 @@ static rsRetVal addListener(instanceConf_t* iconf){
 			DBGPRINTF("imczmq: we are a CURVECLIENT\n");	
 			zcert_t *serverCert = zcert_load(runModConf->serverCertPath);
 			if(!serverCert) {
-				errmsg.LogError(0, NO_ERRCODE, "could not load cert %s",
+				LogError(0, NO_ERRCODE, "could not load cert %s",
 					runModConf->serverCertPath);
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
@@ -180,7 +179,7 @@ static rsRetVal addListener(instanceConf_t* iconf){
 			
 			zcert_t *clientCert = zcert_load(runModConf->clientCertPath);
 			if(!clientCert) {
-				errmsg.LogError(0, NO_ERRCODE, "could not load cert %s",
+				LogError(0, NO_ERRCODE, "could not load cert %s",
 					runModConf->clientCertPath);
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
@@ -233,7 +232,7 @@ static rsRetVal addListener(instanceConf_t* iconf){
 			else if(iconf->sockType == ZMQ_DISH) {
 				int rc = zsock_join (pData->sock, topic);
 				if(rc != 0) {
-					errmsg.LogError(0, NO_ERRCODE, "could not join group %s", topic);
+					LogError(0, NO_ERRCODE, "could not join group %s", topic);
 					ABORT_FINALIZE(RS_RET_ERR);
 				}
 			}
@@ -248,7 +247,7 @@ static rsRetVal addListener(instanceConf_t* iconf){
 	int rc = zsock_attach(pData->sock, (const char*)iconf->sockEndpoints,
 			iconf->serverish);
 	if (rc == -1) {
-		errmsg.LogError(0, NO_ERRCODE, "zsock_attach to %s failed",
+		LogError(0, NO_ERRCODE, "zsock_attach to %s failed",
 				iconf->sockEndpoints);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
@@ -257,26 +256,28 @@ static rsRetVal addListener(instanceConf_t* iconf){
 
 	rc = zlist_append(listenerList, (void *)pData);
 	if(rc != 0) {
-		errmsg.LogError(0, NO_ERRCODE, "could not append listener");
+		LogError(0, NO_ERRCODE, "could not append listener");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		free(pData);
+	}
 	RETiRet;
 }
 
-static rsRetVal rcvData(){
+static rsRetVal rcvData(void){
 	DEFiRet;
 	
 	if(!listenerList) {
 		listenerList = zlist_new();
 		if(!listenerList) {
-			errmsg.LogError(0, NO_ERRCODE, "could not allocate list");
+			LogError(0, NO_ERRCODE, "could not allocate list");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	}
 
-	zactor_t *authActor;
-	zcert_t *serverCert;
+	zactor_t *authActor = NULL;
 
 	if(runModConf->authenticator == 1) {
 		authActor = zactor_new(zauth, NULL);
@@ -291,7 +292,7 @@ static rsRetVal rcvData(){
 	
 	zpoller_t *poller = zpoller_new(NULL);
 	if(!poller) {
-		errmsg.LogError(0, NO_ERRCODE, "could not create poller");
+		LogError(0, NO_ERRCODE, "could not create poller");
 			ABORT_FINALIZE(RS_RET_ERR);
 	}
 	DBGPRINTF("imczmq: created poller\n");
@@ -300,7 +301,7 @@ static rsRetVal rcvData(){
 
 	pData = zlist_first(listenerList);
 	if(!pData) {
-		errmsg.LogError(0, NO_ERRCODE, "imczmq: no listeners were "
+		LogError(0, NO_ERRCODE, "imczmq: no listeners were "
 						"started, input not activated.\n");
 		ABORT_FINALIZE(RS_RET_NO_RUN);
 	}
@@ -308,7 +309,7 @@ static rsRetVal rcvData(){
 	while(pData) {
 		int rc = zpoller_add(poller, pData->sock);
 		if(rc != 0) {
-			errmsg.LogError(0, NO_ERRCODE, "imczmq: could not add "
+			LogError(0, NO_ERRCODE, "imczmq: could not add "
 						"socket to poller, input not activated.\n");
 			ABORT_FINALIZE(RS_RET_NO_RUN);
 		}
@@ -365,15 +366,12 @@ finalize_it:
 	}
 	zlist_destroy(&listenerList);
 	zactor_destroy(&authActor);
-	zcert_destroy(&serverCert);
 	RETiRet;
 }
 
 BEGINrunInput
 CODESTARTrunInput
-	CHKiRet(rcvData());
-finalize_it:
-	RETiRet;
+	iRet = rcvData();
 ENDrunInput
 
 
@@ -400,7 +398,6 @@ ENDafterRun
 
 BEGINmodExit
 CODESTARTmodExit
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
@@ -432,7 +429,7 @@ BEGINsetModCnf
 CODESTARTsetModCnf
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(NULL == pvals) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS,
+		LogError(0, RS_RET_MISSING_CNFPARAMS,
 				"imczmq: error processing module "
 				"config parameters ['module(...)']");
 
@@ -456,7 +453,7 @@ CODESTARTsetModCnf
 			runModConf->clientCertPath = es_str2cstr(pvals[i].val.d.estr, NULL);
 		}
 		else {
-			errmsg.LogError(0, RS_RET_INVALID_PARAMS, 
+			LogError(0, RS_RET_INVALID_PARAMS, 
 						"imczmq: config error, unknown "
 						"param %s in setModCnf\n", 
 						modpblk.descr[i].name);
@@ -483,7 +480,7 @@ ENDendCnfLoad
 static inline void
 std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst)
 {
-	errmsg.LogError(0, NO_ERRCODE,
+	LogError(0, NO_ERRCODE,
 			"imczmq: ruleset '%s' for socket %s not found - "
 			"using default ruleset instead", inst->pszBindRuleset,
 			inst->sockEndpoints);
@@ -502,7 +499,7 @@ ENDcheckCnf
 BEGINactivateCnfPrePrivDrop
 CODESTARTactivateCnfPrePrivDrop
 	runModConf = pModConf;
-	putenv("ZSYS_SIGHANDLER=false");
+	putenv((char*)"ZSYS_SIGHANDLER=false");
 ENDactivateCnfPrePrivDrop
 
 
@@ -537,7 +534,7 @@ CODESTARTnewInpInst
 	
 	pvals = nvlstGetParams(lst, &inppblk, NULL);
 	if(NULL==pvals) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS,
+		LogError(0, RS_RET_MISSING_CNFPARAMS,
 						"imczmq: required parameters are missing\n");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -566,7 +563,7 @@ CODESTARTnewInpInst
 		else if(!strcmp(inppblk.descr[i].name, "socktype")){
 			char *stringType = es_str2cstr(pvals[i].val.d.estr, NULL);
 			if( NULL == stringType ){
-				errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+				LogError(0, RS_RET_CONFIG_ERROR,
 					"imczmq: '%s' is invalid sockType", stringType);
 				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 			}
@@ -599,7 +596,7 @@ CODESTARTnewInpInst
 
 		} 
 		else {
-			errmsg.LogError(0, NO_ERRCODE,
+			LogError(0, NO_ERRCODE,
 					"imczmq: program error, non-handled "
 					"param '%s'\n", inppblk.descr[i].name);
 		}
@@ -625,7 +622,6 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));

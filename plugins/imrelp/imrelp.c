@@ -166,6 +166,31 @@ static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config para
 
 /* ------------------------------ callbacks ------------------------------ */
 
+#if !defined(_AIX)
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+#endif
+static void __attribute__((format(printf, 1, 2)))
+imrelp_dbgprintf(const char *fmt, ...)
+{
+	va_list ap;
+	char pszWriteBuf[32*1024+1]; //this function has to be able to
+					/*generate a buffer longer than that of r_dbgprintf, so
+					r_dbgprintf can properly truncate*/
+
+	if(!(Debug && debugging_on)) {
+		return;
+	}
+
+	va_start(ap, fmt);
+	vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
+	va_end(ap);
+	r_dbgprintf("imrelp.c", "%s", pszWriteBuf);
+}
+#if !defined(_AIX)
+#pragma GCC diagnostic warning "-Wformat-nonliteral"
+#endif
+
+
 static void
 onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
 {
@@ -300,7 +325,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	if(pNewVal == NULL || *pNewVal == '\0') {
 		errmsg.LogError(0, NO_ERRCODE, "imrelp: port number must be specified, listener ignored");
 	}
-	if((pNewVal == NULL) || (pNewVal == '\0')) {
+	if((pNewVal == NULL) || (*pNewVal == '\0')) {
 		inst->pszBindPort = NULL;
 	} else {
 		CHKmalloc(inst->pszBindPort = ustrdup(pNewVal));
@@ -327,7 +352,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	DEFiRet;
 	if(pRelpEngine == NULL) {
 		CHKiRet(relpEngineConstruct(&pRelpEngine));
-		CHKiRet(relpEngineSetDbgprint(pRelpEngine, (void (*)(char *, ...))dbgprintf));
+		CHKiRet(relpEngineSetDbgprint(pRelpEngine, (void (*)(char *, ...))imrelp_dbgprintf));
 		CHKiRet(relpEngineSetFamily(pRelpEngine, glbl.GetDefPFFamily()));
 		CHKiRet(relpEngineSetEnableCmd(pRelpEngine, (uchar*) "syslog", eRelpCmdState_Required));
 		CHKiRet(relpEngineSetSyslogRcv2(pRelpEngine, onSyslogRcv));
@@ -490,8 +515,9 @@ CODESTARTnewInpInst
 				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
 				"error: certificate file %s couldn't be accessed: %s\n",
 				inst->caCertFile, errStr);
+			} else {
+				fclose(fp);
 			}
-			fclose(fp);
 		} else if(!strcmp(inppblk.descr[i].name, "tls.mycert")) {
 			inst->myCertFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			fp = fopen((const char*)inst->myCertFile, "r");
@@ -501,8 +527,9 @@ CODESTARTnewInpInst
 				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
 				"error: certificate file %s couldn't be accessed: %s\n",
 				inst->myCertFile, errStr);
+			} else {
+				fclose(fp);
 			}
-			fclose(fp);
 		} else if(!strcmp(inppblk.descr[i].name, "tls.myprivkey")) {
 			inst->myPrivKeyFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			fp = fopen((const char*)inst->myPrivKeyFile, "r");
@@ -512,8 +539,9 @@ CODESTARTnewInpInst
 				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
 				"error: certificate file %s couldn't be accessed: %s\n",
 				inst->myPrivKeyFile, errStr);
+			} else {
+				fclose(fp);
 			}
-			fclose(fp);
 		} else if(!strcmp(inppblk.descr[i].name, "tls.permittedpeer")) {
 			inst->permittedPeers.nmemb = pvals[i].val.d.ar->nmemb;
 			CHKmalloc(inst->permittedPeers.name =

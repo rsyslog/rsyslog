@@ -124,12 +124,12 @@ readFile(uchar *pszFile, gnutls_datum_t *pBuf)
 	pBuf->data = NULL;
 
 	if((fd = open((char*)pszFile, O_RDONLY)) == -1) {
-		errmsg.LogError(0, RS_RET_FILE_NOT_FOUND, "can not read file '%s'", pszFile);
+		errmsg.LogError(errno, RS_RET_FILE_NOT_FOUND, "can not read file '%s'", pszFile);
 		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 	}
 
 	if(fstat(fd, &stat_st) == -1) {
-		errmsg.LogError(0, RS_RET_FILE_NO_STAT, "can not stat file '%s'", pszFile);
+		errmsg.LogError(errno, RS_RET_FILE_NO_STAT, "can not stat file '%s'", pszFile);
 		ABORT_FINALIZE(RS_RET_FILE_NO_STAT);
 	}
 
@@ -273,7 +273,7 @@ gtlsClientCertCallback(gnutls_session_t session,
  * rgerhards, 2008-05-21
  */
 static rsRetVal
-gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
+gtlsGetCertInfo(nsd_gtls_t *const pThis, cstr_t **ppStr)
 {
 	uchar szBufA[1024];
 	uchar *szBuf = szBufA;
@@ -650,7 +650,7 @@ gtlsInitSession(nsd_gtls_t *pThis)
 	pThis->bIsInitiator = 0;
 
 	/* avoid calling all the priority functions, since the defaults are adequate. */
-	CHKgnutls(gnutls_set_default_priority(session));
+
 	CHKgnutls(gnutls_credentials_set(session, GNUTLS_CRD_CERTIFICATE, xcred));
 
 	/* request client certificate if any.  */
@@ -1009,7 +1009,7 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 	DEFiRet;
 	const char *pszErrCause;
 	int gnuRet;
-	cstr_t *pStr;
+	cstr_t *pStr = NULL;
 	unsigned stateCert;
 	const gnutls_datum_t *cert_list;
 	unsigned cert_list_size = 0;
@@ -1068,7 +1068,8 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 		if(ttCert == -1)
 			ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
 		else if(ttCert > ttNow) {
-			errmsg.LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "not permitted to talk to peer: certificate %d not yet active", i);
+			errmsg.LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "not permitted to talk to peer: "
+					"certificate %d not yet active", i);
 			gtlsGetCertInfo(pThis, &pStr);
 			errmsg.LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
 			cstrDestruct(&pStr);
@@ -1240,7 +1241,6 @@ finalize_it:
 	RETiRet;
 }
 
-
 /* Set the authentication mode. For us, the following is supported:
  * anon - no certificate checks whatsoever (discouraged, but supported)
  * x509/certvalid - (just) check certificate validity
@@ -1299,6 +1299,20 @@ SetPermPeers(nsd_t *pNsd, permittedPeers_t *pPermPeers)
 	pThis->pPermPeers = pPermPeers;
 
 finalize_it:
+	RETiRet;
+}
+
+/* gnutls priority string
+ * PascalWithopf 2017-08-16
+ */
+static rsRetVal
+SetGnutlsPriorityString(nsd_t *pNsd, uchar *gnutlsPriorityString)
+{
+	DEFiRet;
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	pThis->gnutlsPriorityString = gnutlsPriorityString;
 	RETiRet;
 }
 
@@ -1418,13 +1432,10 @@ finalize_it:
 static rsRetVal
 CheckConnection(nsd_t __attribute__((unused)) *pNsd)
 {
-	DEFiRet;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
-	CHKiRet(nsd_ptcp.CheckConnection(pThis->pTcp));
-finalize_it:
-	RETiRet;
+	return nsd_ptcp.CheckConnection(pThis->pTcp);
 }
 
 
@@ -1480,6 +1491,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	int gnuRet;
 	nsd_gtls_t *pNew = NULL;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+	const char *error_position;
 
 	ISOBJ_TYPE_assert((pThis), nsd_gtls);
 	CHKiRet(nsd_gtlsConstruct(&pNew)); // TODO: prevent construct/destruct!
@@ -1497,6 +1509,19 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	gtlsSetTransportPtr(pNew, ((nsd_ptcp_t*) (pNew->pTcp))->sock);
 	pNew->authMode = pThis->authMode;
 	pNew->pPermPeers = pThis->pPermPeers;
+	pNew->gnutlsPriorityString = pThis->gnutlsPriorityString;
+	/* here is the priorityString set */
+	if(pNew->gnutlsPriorityString != NULL) {
+		if(gnutls_priority_set_direct(pNew->sess,
+					(const char*) pNew->gnutlsPriorityString,
+					&error_position)==GNUTLS_E_INVALID_REQUEST) {
+			errmsg.LogError(0, RS_RET_GNUTLS_ERR, "Syntax Error in"
+					" Priority String: \"%s\"\n", error_position);
+		}
+	} else {
+		/* Use default priorities */
+		CHKgnutls(gnutls_set_default_priority(pNew->sess));
+	}
 
 	/* we now do the handshake. This is a bit complicated, because we are 
 	 * on non-blocking sockets. Usually, the handshake will not complete
@@ -1553,7 +1578,7 @@ finalize_it:
  * buffer. -- rgerhards, 2008-06-23
  */
 static rsRetVal
-Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
+Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr)
 {
 	DEFiRet;
 	ssize_t iBytesCopy; /* how many bytes are to be copied to the client buffer? */
@@ -1564,7 +1589,7 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 		ABORT_FINALIZE(RS_RET_CONNECTION_ABORTREQ);
 
 	if(pThis->iMode == 0) {
-		CHKiRet(nsd_ptcp.Rcv(pThis->pTcp, pBuf, pLenBuf));
+		CHKiRet(nsd_ptcp.Rcv(pThis->pTcp, pBuf, pLenBuf, oserr));
 		FINALIZE;
 	}
 
@@ -1592,6 +1617,7 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 	}
 
 	if(pThis->lenRcvBuf == 0) { /* EOS */
+		*oserr = errno;
 		ABORT_FINALIZE(RS_RET_CLOSED);
 	}
 
@@ -1678,6 +1704,32 @@ EnableKeepAlive(nsd_t *pNsd)
 	return nsd_ptcp.EnableKeepAlive(pThis->pTcp);
 }
 
+
+/*
+ * SNI should not be used if the hostname is a bare IP address
+ */
+static int
+SetServerNameIfPresent(nsd_gtls_t *pThis, uchar *host) {
+	struct sockaddr_in sa;
+	struct sockaddr_in6 sa6;
+
+	int inet_pton_ret = inet_pton(AF_INET, CHAR_CONVERT(host), &(sa.sin_addr));
+
+	if (inet_pton_ret == 0) { // host wasn't a bare IPv4 address: try IPv6
+		inet_pton_ret = inet_pton(AF_INET6, CHAR_CONVERT(host), &(sa6.sin6_addr));
+	}
+
+	switch(inet_pton_ret) {
+		case 1: // host is a valid IP address: don't use SNI
+			return 0;
+		case 0: // host isn't a valid IP address: assume it's a domain name, use SNI
+			return gnutls_server_name_set(pThis->sess, GNUTLS_NAME_DNS, host, ustrlen(host));
+		default: // unexpected error
+			return -1;
+	}
+
+}
+
 /* open a connection to a remote host (server). With GnuTLS, we always
  * open a plain tcp socket and then, if in TLS mode, do a handshake on it.
  * rgerhards, 2008-03-19
@@ -1690,6 +1742,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	int sock;
 	int gnuRet;
+	const char *error_position;
 #	ifdef HAVE_GNUTLS_CERTIFICATE_TYPE_SET_PRIORITY
 	static const int cert_type_priority[2] = { GNUTLS_CRT_X509, 0 };
 #	endif
@@ -1709,6 +1762,8 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	pThis->bHaveSess = 1;
 	pThis->bIsInitiator = 1;
 
+	CHKgnutls(SetServerNameIfPresent(pThis, host));
+
 	/* in the client case, we need to set a callback that ensures our certificate
 	 * will be presented to the server even if it is not signed by one of the server's
 	 * trusted roots. This is necessary to support fingerprint authentication.
@@ -1726,8 +1781,19 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 		FINALIZE; /* we have an error case! */
 	}
 
-	/* Use default priorities */
-	CHKgnutls(gnutls_set_default_priority(pThis->sess));
+	/*priority string setzen*/
+	if(pThis->gnutlsPriorityString != NULL) {
+		if(gnutls_priority_set_direct(pThis->sess,
+					(const char*) pThis->gnutlsPriorityString,
+					&error_position)==GNUTLS_E_INVALID_REQUEST) {
+			errmsg.LogError(0, RS_RET_GNUTLS_ERR, "Syntax Error in"
+					" Priority String: \"%s\"\n", error_position);
+		}
+	} else {
+		/* Use default priorities */
+		CHKgnutls(gnutls_set_default_priority(pThis->sess));
+	}
+
 #	ifdef HAVE_GNUTLS_CERTIFICATE_TYPE_SET_PRIORITY
 	/* The gnutls_certificate_type_set_priority function is deprecated
 	 * and not available in recent GnuTLS versions. However, there is no
@@ -1811,6 +1877,7 @@ CODESTARTobjQueryInterface(nsd_gtls)
 	pIf->SetKeepAliveIntvl = SetKeepAliveIntvl;
 	pIf->SetKeepAliveProbes = SetKeepAliveProbes;
 	pIf->SetKeepAliveTime = SetKeepAliveTime;
+	pIf->SetGnutlsPriorityString = SetGnutlsPriorityString;
 finalize_it:
 ENDobjQueryInterface(nsd_gtls)
 

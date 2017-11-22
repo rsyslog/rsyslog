@@ -13,6 +13,8 @@
  *    message is permitted to be lost.
  * -T anticipate truncation (which means specified payload length may be
  *    more than actual payload (which may have been truncated)
+ * -i increment between messages (default: 1). Can be used for tests which
+ *    intentionally leave consistent gaps in the message numbering.
  *
  * Part of the testbench for rsyslog.
  *
@@ -56,19 +58,23 @@ int main(int argc, char *argv[])
 	int opt;
 	int lostok = 0; /* how many messages are OK to be lost? */
 	int nDups = 0;
+	int increment = 1;
 	int reachedEOF;
 	int edLen;	/* length of extra data */
 	static char edBuf[500*1024]; /* buffer for extra data (pretty large to be on the save side...) */
 	static char ioBuf[sizeof(edBuf)+1024];
 	char *file = NULL;
 
-	while((opt = getopt(argc, argv, "e:f:ds:vm:ET")) != EOF) {
+	while((opt = getopt(argc, argv, "i:e:f:ds:vm:ET")) != EOF) {
 		switch((char)opt) {
 		case 'f':
 			file = optarg;
 			break;
 		case 'd':
 			dupsPermitted = 1;
+			break;
+		case 'i':
+			increment = atoi(optarg);
 			break;
 		case 'e':
 			end = atoi(optarg);
@@ -116,7 +122,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	for(i = start ; i < end+1 ; ++i) {
+	for(i = start ; i < end+1 ; i += increment) {
 		if(bHaveExtraData) {
 			if(fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
 				scanfOK = 0;
@@ -126,9 +132,10 @@ int main(int argc, char *argv[])
 			if(edLen != (int) strlen(edBuf)) {
 				if (bAnticipateTruncation == 1) {
 					if (edLen < (int) strlen(edBuf)) {
-						printf("extra data length specified %d, but actually is %ld in record %d"
-							   " (truncation was anticipated, but payload should have been smaller than data-length, not larger)\n",
-							   edLen, (long) strlen(edBuf), i);
+						 printf("extra data length specified %d, but actually is %ld in"
+							" record %d (truncation was anticipated, but payload should"
+							" have been smaller than data-length, not larger)\n",
+							edLen, (long) strlen(edBuf), i);
 						exit(1);
 					}
 				} else {
@@ -189,14 +196,17 @@ int main(int argc, char *argv[])
 					if(edLen != (int) strlen(edBuf)) {
 						if (bAnticipateTruncation == 1) {
 							if (edLen < (int) strlen(edBuf)) {
-								printf("extra data length specified %d, but actually is %ld in record %d"
-									   " (truncation was anticipated, but payload should have been smaller than data-length, not larger)\n",
-									   edLen, (long) strlen(edBuf), i);
+								 printf("extra data length specified %d, but "
+									"actually is %ld in record %d (truncation was"
+									" anticipated, but payload should have been "
+									"smaller than data-length, not larger)\n",
+									edLen, (long) strlen(edBuf), i);
 								exit(1);
 							}
 						} else {
-							printf("extra data length specified %d, but actually is %ld in record %d\n",
-								   edLen, (long) strlen(edBuf), i);
+							 printf("extra data length specified %d, but actually "
+								"is %ld in record %d\n",
+								edLen, (long) strlen(edBuf), i);
 							exit(1);
 						}
 					}

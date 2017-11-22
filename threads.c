@@ -40,6 +40,7 @@
 #include "linkedlist.h"
 #include "threads.h"
 #include "srUtils.h"
+#include "errmsg.h"
 #include "unicode-helper.h"
 
 /* linked list of currently-known threads */
@@ -181,10 +182,11 @@ rsRetVal thrdTerminateAll(void)
  * function call has just "normal", non-threading semantics.
  * rgerhards, 2007-12-17
  */
-static void* thrdStarter(void *arg)
+static ATTR_NORETURN void*
+thrdStarter(void *const arg)
 {
 	DEFiRet;
-	thrdInfo_t *pThis = (thrdInfo_t*) arg;
+	thrdInfo_t *const pThis = (thrdInfo_t*) arg;
 #	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
 	uchar thrdName[32] = "in:";
 #	endif
@@ -204,29 +206,25 @@ static void* thrdStarter(void *arg)
 	}
 #	endif
 
-	/* block all signals */
+	/* block all signals except SIGTTIN and SIGSEGV */
 	sigset_t sigSet;
 	sigfillset(&sigSet);
+	sigdelset(&sigSet, SIGTTIN);
+	sigdelset(&sigSet, SIGSEGV);
 	pthread_sigmask(SIG_BLOCK, &sigSet, NULL);
 
-	/* but ignore SIGTTN, which we (ab)use to signal the thread to shutdown -- rgerhards, 2009-07-20 */
-	sigemptyset(&sigSet);
-	sigaddset(&sigSet, SIGTTIN);
-	pthread_sigmask(SIG_UNBLOCK, &sigSet, NULL);
-
-	/* AIXPORT unblock SIGSEGV so that the process core dumps on segmentation fault */
-	sigemptyset(&sigSet);
-	sigaddset(&sigSet, SIGSEGV);
-	pthread_sigmask(SIG_UNBLOCK, &sigSet, NULL);
-	/* AIXPORT */
 	/* setup complete, we are now ready to execute the user code. We will not
 	 * regain control until the user code is finished, in which case we terminate
 	 * the thread.
 	 */
 	iRet = pThis->pUsrThrdMain(pThis);
 
-	dbgprintf("thrdStarter: usrThrdMain %s - 0x%lx returned with iRet %d, exiting now.\n",
-		  pThis->name, (unsigned long) pThis->thrdID, iRet);
+	if(iRet == RS_RET_OK) {
+		dbgprintf("thrdStarter: usrThrdMain %s - 0x%lx returned with iRet %d, exiting now.\n",
+			  pThis->name, (unsigned long) pThis->thrdID, iRet);
+	} else {
+		LogError(0, iRet, "main thread of %s terminated abnormally", pThis->name);
+	}
 
 	/* signal master control that we exit (we do the mutex lock mostly to
 	 * keep the thread debugger happer, it would not really be necessary with

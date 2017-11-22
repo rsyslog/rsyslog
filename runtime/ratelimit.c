@@ -131,11 +131,17 @@ tellLostCnt(ratelimit_t *ratelimit)
  * This implementation is NOT THREAD-SAFE and must not 
  * be called concurrently.
  */
-static int
-withinRatelimit(ratelimit_t *ratelimit, time_t tt, char* appname)
+static int ATTR_NONNULL()
+withinRatelimit(ratelimit_t *__restrict__ const ratelimit,
+	time_t tt,
+	const char*const appname)
 {
 	int ret;
 	uchar msgbuf[1024];
+
+	if(ratelimit->bThreadSafe) {
+		pthread_mutex_lock(&ratelimit->mut);
+	}
 
 	if(ratelimit->interval == 0) {
 		ret = 1;
@@ -171,14 +177,17 @@ withinRatelimit(ratelimit_t *ratelimit, time_t tt, char* appname)
 		ratelimit->missed++;
 		if(ratelimit->missed == 1) {
 			snprintf((char*)msgbuf, sizeof(msgbuf),
-                     "%s from <%s>: begin to drop messages due to rate-limiting",
-                 ratelimit->name, appname);
+				"%s from <%s>: begin to drop messages due to rate-limiting",
+				ratelimit->name, appname);
 			logmsgInternal(RS_RET_RATE_LIMITED, LOG_SYSLOG|LOG_INFO, msgbuf, 0);
 		}
 		ret = 0;
 	}
 
 finalize_it:
+	if(ratelimit->bThreadSafe) {
+		pthread_mutex_unlock(&ratelimit->mut);
+	}
 	return ret;
 }
 
@@ -198,7 +207,7 @@ finalize_it:
  * message before the original message.
  */
 rsRetVal
-ratelimitMsg(ratelimit_t *ratelimit, smsg_t *pMsg, smsg_t **ppRepMsg)
+ratelimitMsg(ratelimit_t *__restrict__ const ratelimit, smsg_t *pMsg, smsg_t **ppRepMsg)
 {
 	DEFiRet;
 	rsRetVal localRet;
@@ -215,9 +224,10 @@ ratelimitMsg(ratelimit_t *ratelimit, smsg_t *pMsg, smsg_t **ppRepMsg)
 	/* Only the messages having severity level at or below the
 	 * treshold (the value is >=) are subject to ratelimiting. */
 	if(ratelimit->interval && (pMsg->iSeverity >= ratelimit->severity)) {
-        char namebuf[512]; /* 256 for FGDN adn 256 for APPNAME should be enough */
-        snprintf(namebuf, sizeof namebuf, "%s:%s", getHOSTNAME(pMsg), getAPPNAME(pMsg, 0));
-        if(withinRatelimit(ratelimit, pMsg->ttGenTime, namebuf) == 0) {
+		char namebuf[512]; /* 256 for FGDN adn 256 for APPNAME should be enough */
+		snprintf(namebuf, sizeof namebuf, "%s:%s", getHOSTNAME(pMsg),
+			getAPPNAME(pMsg, 0));
+		if(withinRatelimit(ratelimit, pMsg->ttGenTime, namebuf) == 0) {
 			msgDestruct(&pMsg);
 			ABORT_FINALIZE(RS_RET_DISCARDMSG);
 		}
@@ -228,7 +238,7 @@ ratelimitMsg(ratelimit_t *ratelimit, smsg_t *pMsg, smsg_t **ppRepMsg)
 finalize_it:
 	if(Debug) {
 		if(iRet == RS_RET_DISCARDMSG)
-			dbgprintf("message discarded by ratelimiting\n");
+			DBGPRINTF("message discarded by ratelimiting\n");
 	}
 	RETiRet;
 }

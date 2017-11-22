@@ -145,6 +145,31 @@ ENDinitConfVars
  * if it is unspecified. So far, we use 514 as default (what probably
  * is not a really bright idea, but kept for backward compatibility).
  */
+
+#if !defined(_AIX)
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+#endif
+static void __attribute__((format(printf, 1, 2)))
+omrelp_dbgprintf(const char *fmt, ...)
+{
+	va_list ap;
+	char pszWriteBuf[32*1024+1]; //this function has to be able to
+					/*generate a buffer longer than that of r_dbgprintf, so
+					r_dbgprintf can properly truncate*/
+	if(!(Debug && debugging_on)) {
+		return;
+	}
+
+	va_start(ap, fmt);
+	vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
+	va_end(ap);
+	r_dbgprintf("omrelp.c", "%s", pszWriteBuf);
+}
+#if !defined(_AIX)
+#pragma GCC diagnostic warning "-Wformat-nonliteral"
+#endif
+
+
 static uchar *getRelpPt(instanceData *pData)
 {
 	assert(pData != NULL);
@@ -354,8 +379,9 @@ CODESTARTnewActInst
 				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
 				"error: certificate file %s couldn't be accessed: %s\n",
 				pData->caCertFile, errStr);
+			} else {
+				fclose(fp);
 			}
-			fclose(fp);
 		} else if(!strcmp(actpblk.descr[i].name, "tls.mycert")) {
 			pData->myCertFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			fp = fopen((const char*)pData->myCertFile, "r");
@@ -365,8 +391,9 @@ CODESTARTnewActInst
 				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
 				"error: certificate file %s couldn't be accessed: %s\n",
 				pData->myCertFile, errStr);
+			} else {
+				fclose(fp);
 			}
-			fclose(fp);
 		} else if(!strcmp(actpblk.descr[i].name, "tls.myprivkey")) {
 			pData->myPrivKeyFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			fp = fopen((const char*)pData->myPrivKeyFile, "r");
@@ -376,8 +403,9 @@ CODESTARTnewActInst
 				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
 				"error: certificate file %s couldn't be accessed: %s\n",
 				pData->myPrivKeyFile, errStr);
+			} else {
+				fclose(fp);
 			}
-			fclose(fp);
 		} else if(!strcmp(actpblk.descr[i].name, "tls.authmode")) {
 			pData->authmode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "tls.permittedpeer")) {
@@ -426,7 +454,8 @@ ENDdbgPrintInstInfo
 /* try to connect to server
  * rgerhards, 2008-03-21
  */
-static rsRetVal doConnect(wrkrInstanceData_t *pWrkrData)
+static rsRetVal ATTR_NONNULL()
+doConnect(wrkrInstanceData_t *const pWrkrData)
 {
 	DEFiRet;
 
@@ -442,17 +471,17 @@ static rsRetVal doConnect(wrkrInstanceData_t *pWrkrData)
 	if(iRet == RELP_RET_OK) {
 		pWrkrData->bIsConnected = 1;
 	} else if(iRet == RELP_RET_ERR_NO_TLS) {
-		errmsg.LogError(0, RS_RET_RELP_NO_TLS, "omrelp: Could not connect, librelp does NOT "
+		errmsg.LogError(0, iRet, "omrelp: Could not connect, librelp does NOT "
 				"does not support TLS (most probably GnuTLS lib "
 				"is too old)!");
-		ABORT_FINALIZE(RS_RET_RELP_NO_TLS);
-	} else if(iRet == RELP_RET_ERR_NO_TLS) {
-		errmsg.LogError(0, RS_RET_RELP_NO_TLS_AUTH,
+		FINALIZE;
+	} else if(iRet == RELP_RET_ERR_NO_TLS_AUTH) {
+		errmsg.LogError(0, iRet,
 				"omrelp: could not activate relp TLS with "
 				"authentication, librelp does not support it "
 				"(most probably GnuTLS lib is too old)! "
 				"Note: anonymous TLS is probably supported.");
-		ABORT_FINALIZE(RS_RET_RELP_NO_TLS_AUTH);
+		FINALIZE;
 	} else {
 		pWrkrData->bIsConnected = 0;
 		iRet = RS_RET_SUSPENDED;
@@ -542,8 +571,10 @@ ENDdoAction
 
 BEGINendTransaction
 CODESTARTendTransaction
-	dbgprintf("omrelp: endTransaction\n");
-	relpCltHintBurstEnd(pWrkrData->pRelpClt);
+	DBGPRINTF("omrelp: endTransaction, connected %d\n", pWrkrData->bIsConnected);
+	if(pWrkrData->bIsConnected) {
+		relpCltHintBurstEnd(pWrkrData->pRelpClt);
+	}
 ENDendTransaction
 
 BEGINparseSelectorAct
@@ -654,7 +685,7 @@ INITLegCnfVars
 CODEmodInit_QueryRegCFSLineHdlr
 	/* create our relp engine */
 	CHKiRet(relpEngineConstruct(&pRelpEngine));
-	CHKiRet(relpEngineSetDbgprint(pRelpEngine, (void (*)(char *, ...))dbgprintf));
+	CHKiRet(relpEngineSetDbgprint(pRelpEngine, (void (*)(char *, ...))omrelp_dbgprintf));
 	CHKiRet(relpEngineSetOnAuthErr(pRelpEngine, onAuthErr));
 	CHKiRet(relpEngineSetOnGenericErr(pRelpEngine, onGenericErr));
 	CHKiRet(relpEngineSetOnErr(pRelpEngine, onErr));

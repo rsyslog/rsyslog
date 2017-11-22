@@ -120,15 +120,14 @@ doOpenLstnSocks(strmsrv_t *pSrv)
 
 
 static rsRetVal
-doRcvData(strms_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd)
+doRcvData(strms_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd, int *const oserr)
 {
 	DEFiRet;
 	assert(pSess != NULL);
 	assert(piLenRcvd != NULL);
 
 	*piLenRcvd = lenBuf;
-	CHKiRet(netstrm.Rcv(pSess->pStrm, (uchar*) buf, piLenRcvd));
-finalize_it:
+	iRet = netstrm.Rcv(pSess->pStrm, (uchar*) buf, piLenRcvd, oserr);
 	RETiRet;
 }
 
@@ -470,7 +469,8 @@ SessAccept(strmsrv_t *pThis, strmLstnPortList_t *pLstnInfo, strms_sess_t **ppSes
 		dbgprintf("%s is not an allowed sender\n", fromHostFQDN);
 		if(glbl.GetOption_DisallowWarning()) {
 			errno = 0;
-			errmsg.LogError(0, RS_RET_HOST_NOT_PERMITTED, "STRM message from disallowed sender %s discarded", fromHostFQDN);
+			errmsg.LogError(0, RS_RET_HOST_NOT_PERMITTED, "STRM message from disallowed "
+					"sender %s discarded", fromHostFQDN);
 		}
 		ABORT_FINALIZE(RS_RET_HOST_NOT_PERMITTED);
 	}
@@ -536,6 +536,7 @@ Run(strmsrv_t *pThis)
 	nssel_t *pSel;
 	ssize_t iRcvd;
 	rsRetVal localRet;
+	int oserr;
 
 	ISOBJ_TYPE_assert(pThis, strmsrv);
 
@@ -584,14 +585,15 @@ Run(strmsrv_t *pThis)
 				dbgprintf("netstream %p with new data\n", pThis->pSessions[iSTRMSess]->pStrm);
 
 				/* Receive message */
-				iRet = pThis->pRcvData(pThis->pSessions[iSTRMSess], buf, sizeof(buf), &iRcvd);
+				iRet = pThis->pRcvData(pThis->pSessions[iSTRMSess], buf, sizeof(buf), &iRcvd, &oserr);
 				switch(iRet) {
 				case RS_RET_CLOSED:
 					pThis->pOnRegularClose(pThis->pSessions[iSTRMSess]);
 					strms_sess.Destruct(&pThis->pSessions[iSTRMSess]);
 					break;
 				case RS_RET_RETRY:
-					/* we simply ignore retry - this is not an error, but we also have not received anything */
+					/* we simply ignore retry - this is not an error, but we also
+					have not received anything */
 					break;
 				case RS_RET_OK:
 					/* valid data received, process it! */
@@ -607,9 +609,8 @@ Run(strmsrv_t *pThis)
 					}
 					break;
 				default:
-					errno = 0;
-					errmsg.LogError(0, iRet, "netstream session %p will be closed due to error\n",
-							pThis->pSessions[iSTRMSess]->pStrm);
+					LogError(oserr, iRet, "netstream session %p will be closed due to error\n",
+						pThis->pSessions[iSTRMSess]->pStrm);
 					pThis->pOnErrClose(pThis->pSessions[iSTRMSess]);
 					strms_sess.Destruct(&pThis->pSessions[iSTRMSess]);
 					break;

@@ -1,6 +1,12 @@
 #!/bin/bash
 # addd 2016-05-13 by RGerhards, released under ASL 2.0
 
+uname
+if [ `uname` = "FreeBSD" ] ; then
+   echo "This test currently does not work on FreeBSD."
+   exit 77
+fi
+
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '

@@ -58,7 +58,9 @@ static int optionForce = 0;
  * in order to satisfy the needs of the common code.
  */
 int Debug = 0;
-void dbgprintf(const char *fmt __attribute__((unused)), ...) {};
+#ifndef DEBUGLESS
+void r_dbgprintf(const char *srcname __attribute__((unused)), const char *fmt __attribute__((unused)), ...) {};
+#endif
 void srSleep(int a __attribute__((unused)), int b __attribute__((unused)));
 /* prototype (avoid compiler warning) */
 void srSleep(int a __attribute__((unused)), int b __attribute__((unused))) {};
@@ -337,7 +339,8 @@ decrypt(const char *name)
 			goto err;
 	}
 
-	doDecrypt(logfp, eifp, stdout);
+	if((r = doDecrypt(logfp, eifp, stdout)) != 0)
+		goto err;
 
 	fclose(logfp); logfp = NULL;
 	fclose(eifp); eifp = NULL;
@@ -345,6 +348,8 @@ decrypt(const char *name)
 
 err:
 	fprintf(stderr, "error %d processing file %s\n", r, name);
+	if(eifp != NULL)
+		fclose(eifp);
 	if(logfp != NULL)
 		fclose(logfp);
 }
@@ -377,12 +382,11 @@ write_keyfile(char *fn)
 }
 
 static void
-getKeyFromFile(char *fn)
+getKeyFromFile(const char *fn)
 {
-	int r;
-	r = gcryGetKeyFromFile(fn, &cry_key, &cry_keylen);
+	const int r = gcryGetKeyFromFile(fn, &cry_key, &cry_keylen);
 	if(r != 0) {
-		fprintf(stderr, "Error %d reading key from file '%s'\n", r, fn);
+		perror(fn);
 		exit(1);
 	}
 }
@@ -400,7 +404,7 @@ getRandomKey(void)
 	 * unavailability of /dev/urandom is just a theoretic thing, it
 	 * will always work...).  -- TODO -- rgerhards, 2013-03-06
 	 */
-	if((fd = open("/dev/urandom", O_RDONLY)) > 0) {
+	if((fd = open("/dev/urandom", O_RDONLY)) >= 0) {
 		if(read(fd, cry_key, randomKeyLen)) {}; /* keep compiler happy */
 		close(fd);
 	}

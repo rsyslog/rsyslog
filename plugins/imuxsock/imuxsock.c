@@ -38,6 +38,9 @@
 #include <sys/stat.h>
 #include <sys/un.h>
 #include <sys/socket.h>
+#ifdef HAVE_LIBSYSTEMD
+#	include <systemd/sd-daemon.h>
+#endif
 #include "dirty.h"
 #include "cfsysline.h"
 #include "unicode-helper.h"
@@ -52,7 +55,6 @@
 #include "debug.h"
 #include "ruleset.h"
 #include "unlimited_select.h"
-#include "sd-daemon.h"
 #include "statsobj.h"
 #include "datetime.h"
 #include "hashtable.h"
@@ -499,6 +501,7 @@ createLogSocket(lstn_t *pLstn)
 		makeFileParentDirs((uchar*)pLstn->sockName, ustrlen(pLstn->sockName), 0755, -1, -1, 0);
 	}
 	strncpy(sunx.sun_path, (char*)pLstn->sockName, sizeof(sunx.sun_path));
+	sunx.sun_path[sizeof(sunx.sun_path)-1] = '\0';
 	pLstn->fd = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if(pLstn->fd < 0 || bind(pLstn->fd, (struct sockaddr *) &sunx, SUN_LEN(&sunx)) < 0 ||
 	    chmod((char*)pLstn->sockName, 0666) < 0) {
@@ -527,6 +530,7 @@ openLogSocket(lstn_t *pLstn)
 
 	pLstn->fd = -1;
 
+#ifdef HAVE_LIBSYSTEMD
 	if (sd_fds > 0) {
                /* Check if the current socket is a systemd activated one.
 	        * If so, just use it.
@@ -549,9 +553,11 @@ openLogSocket(lstn_t *pLstn)
 			 */
 		}
 	}
+#endif
 
 	if (pLstn->fd == -1) {
 		CHKiRet(createLogSocket(pLstn));
+		assert(pLstn->fd != -1); /* else createLogSocket() should have failed! */
 	}
 
 #	ifdef HAVE_SCM_CREDENTIALS
@@ -954,7 +960,8 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 				 * datestamp or not .. and advance the parse pointer accordingly.
 				 */
 				if (datetime.ParseTIMESTAMP3339(&dummyTS, &parse, &lenMsg) != RS_RET_OK) {
-					datetime.ParseTIMESTAMP3164(&dummyTS, &parse, &lenMsg, NO_PARSE3164_TZSTRING, NO_PERMIT_YEAR_AFTER_TIME);
+					datetime.ParseTIMESTAMP3164(&dummyTS, &parse, &lenMsg,
+					NO_PARSE3164_TZSTRING, NO_PERMIT_YEAR_AFTER_TIME);
 				}
 			} else {
 				if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &parse, &lenMsg) != RS_RET_OK &&
@@ -1115,22 +1122,25 @@ finalize_it:
 static rsRetVal
 activateListeners(void)
 {
-	register int i;
 	int actSocks;
+	int i;
 	DEFiRet;
 
 	/* Initialize the system socket only if it's in use */
 	if(startIndexUxLocalSockets == 0) {
 		/* first apply some config settings */
 		listeners[0].sockName = UCHAR_CONSTANT(_PATH_LOG);
-		if(runModConf->pLogSockName != NULL)
+		if(runModConf->pLogSockName != NULL) {
 			listeners[0].sockName = runModConf->pLogSockName;
+		}
+#ifdef HAVE_LIBSYSTEMD
 		else if(sd_booted()) {
 			struct stat st;
 			if(stat(SYSTEMD_PATH_LOG, &st) != -1 && S_ISSOCK(st.st_mode)) {
 				listeners[0].sockName = (uchar*) SYSTEMD_PATH_LOG;
 			}
 		}
+#endif
 		if(runModConf->ratelimitIntervalSysSock > 0) {
 			if((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
 				/* in this case, we simply turn of rate-limiting */
@@ -1169,11 +1179,13 @@ activateListeners(void)
 		ratelimitSetSeverity(listeners[0].dflt_ratelimiter,listeners[0].ratelimitSev);
 	}
 
+#ifdef HAVE_LIBSYSTEMD
 	sd_fds = sd_listen_fds(0);
 	if(sd_fds < 0) {
 		errmsg.LogError(-sd_fds, NO_ERRCODE, "imuxsock: Failed to acquire systemd socket");
 		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 	}
+#endif
 
 	/* initialize and return if will run or not */
 	actSocks = 0;
@@ -1186,7 +1198,8 @@ activateListeners(void)
 	}
 
 	if(actSocks == 0) {
-		errmsg.LogError(0, NO_ERRCODE, "imuxsock does not run because we could not aquire any socket\n");
+		errmsg.LogError(0, RS_RET_ERR, "imuxsock does not run because we could not "
+			"aquire any socket\n");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -1557,9 +1570,12 @@ CODESTARTafterRun
 			 * Do not unlink it -- we will get same socket (node) from systemd
 			 * e.g. on restart again.
 			 */
-			if (sd_fds > 0 &&
-			    listeners[i].fd >= SD_LISTEN_FDS_START &&
-			    listeners[i].fd <  SD_LISTEN_FDS_START + sd_fds)
+			if (sd_fds > 0
+#			ifdef HAVE_LIBSYSTEMD
+			    && listeners[i].fd >= SD_LISTEN_FDS_START &&
+			       listeners[i].fd <  SD_LISTEN_FDS_START + sd_fds
+#			endif
+			   )
 				continue;
 
 			if(listeners[i].bUnlink) {

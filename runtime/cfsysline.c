@@ -971,7 +971,6 @@ rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p)
 	uchar *pHdlrP; /* the handler's private p (else we could only call one handler) */
 	int bWasOnceOK; /* was the result of an handler at least once RS_RET_OK? */
 	uchar *pOKp = NULL; /* returned conf line pointer when it was OK */
-	int bHadScopingErr = 0; /* set if a scoping error occured */
 
 	iRet = llFind(&llCmdList, (void *) pCmdName, (void*) &pCmd);
 
@@ -1012,10 +1011,6 @@ rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p)
 
 	if(iRetLL != RS_RET_END_OF_LINKEDLIST)
 		iRet = iRetLL;
-
-	if(bHadScopingErr) {
-		iRet = RS_RET_CONF_INVLD_SCOPE;
-	}
 
 finalize_it:
 	RETiRet;

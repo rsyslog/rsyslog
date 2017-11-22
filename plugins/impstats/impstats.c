@@ -1,7 +1,7 @@
 /* impstats.c
  * A module to periodically output statistics gathered by rsyslog.
  *
- * Copyright 2010-2016 Adiscon GmbH.
+ * Copyright 2010-2017 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -36,6 +36,10 @@
 #include <errno.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#ifdef OS_LINUX
+#include <sys/types.h>
+#include <dirent.h>
+#endif
 
 #include "dirty.h"
 #include "cfsysline.h"
@@ -117,6 +121,9 @@ static struct cnfparamblk modpblk =
 
 
 /* resource use stats counters */
+#ifdef OS_LINUX
+static int st_openfiles;
+#endif
 static intctr_t st_ru_utime;
 static intctr_t st_ru_stime;
 static int st_ru_maxrss;
@@ -127,6 +134,8 @@ static int st_ru_oublock;
 static int st_ru_nvcsw;
 static int st_ru_nivcsw;
 static statsobj_t *statsobj_resources;
+
+static pthread_mutex_t hup_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 BEGINmodExit
 CODESTARTmodExit
@@ -145,6 +154,35 @@ CODESTARTisCompatibleWithFeature
 	if(eFeat == sFEATURENonCancelInputTermination)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
+
+
+#ifdef OS_LINUX
+/* count number of open files (linux specific) */
+static void
+countOpenFiles(void)
+{
+	char proc_path[MAXFNAME];
+	DIR *dp;
+	struct dirent *files;
+
+	st_openfiles = 0;
+	snprintf(proc_path, sizeof(proc_path), "/proc/%d/fd", glblGetOurPid());
+	if((dp = opendir(proc_path)) == NULL) {
+		LogError(errno, RS_RET_ERR, "impstats: error reading %s\n", proc_path);
+		goto done;
+	}
+	while((files=readdir(dp)) != NULL) {
+		if(!strcmp(files->d_name, ".") || !strcmp(files->d_name, ".."))
+			continue;
+		st_openfiles++;
+	}
+	closedir(dp);
+
+done:
+	return;
+}
+#endif
+
 
 static void
 initConfigSettings(void)
@@ -198,13 +236,20 @@ doLogToFile(const char *ln, const size_t lenLn)
 	time_t t;
 	char timebuf[32];
 
+	pthread_mutex_lock(&hup_mutex);
+
 	if(lenLn == 0)
 		goto done;
+
 	if(runModConf->logfd == -1) {
 		runModConf->logfd = open(runModConf->logfile, O_WRONLY|O_CREAT|O_APPEND|O_CLOEXEC, S_IRUSR|S_IWUSR);
 		if(runModConf->logfd == -1) {
-			dbgprintf("error opening stats file %s\n", runModConf->logfile);
+			DBGPRINTF("impstats: error opening stats file %s\n",
+				runModConf->logfile);
 			goto done;
+		} else {
+			DBGPRINTF("impstats: opened stats file %s\n",
+				runModConf->logfile);
 		}
 	}
 
@@ -226,7 +271,9 @@ doLogToFile(const char *ln, const size_t lenLn)
 			dbgprintf("error writing stats file %s, nwritten %lld, expected %lld\n",
 				  runModConf->logfile, (long long) nwritten, (long long) nexpect);
 	}
-done:	return;
+done:
+	pthread_mutex_unlock(&hup_mutex);
+	return;
 }
 
 
@@ -269,6 +316,9 @@ generateStatsMsgs(void)
 		dbgprintf("impstats: getrusage() failed with error %d, zeroing out\n", errno);
 		memset(&ru, 0, sizeof(ru));
 	}
+#	ifdef OS_LINUX
+	countOpenFiles();
+#	endif
 	st_ru_utime = ru.ru_utime.tv_sec * 1000000 + ru.ru_utime.tv_usec;
 	st_ru_stime = ru.ru_stime.tv_sec * 1000000 + ru.ru_stime.tv_usec;
 	st_ru_maxrss = ru.ru_maxrss;
@@ -412,6 +462,27 @@ finalize_it:
 	RETiRet;
 }
 
+
+/* to use HUP, we need to have an instanceData type, as this was
+ * originally designed for actions. However, we do not, and cannot,
+ * use the content. The core will always provide a NULL pointer.
+ */
+typedef struct _instanceData {
+	int dummy;
+} instanceData;
+BEGINdoHUP
+CODESTARTdoHUP
+	DBGPRINTF("impstats: received HUP\n")
+	pthread_mutex_lock(&hup_mutex);
+	if(runModConf->logfd != -1) {
+		DBGPRINTF("impstats: closing log file due to HUP\n");
+		close(runModConf->logfd);
+		runModConf->logfd = -1;
+	}
+	pthread_mutex_unlock(&hup_mutex);
+ENDdoHUP
+
+
 BEGINcheckCnf
 CODESTARTcheckCnf
 	if(pModConf->iStatsInterval == 0) {
@@ -457,6 +528,10 @@ CODESTARTactivateCnf
 		ctrType_Int, CTR_FLAG_NONE, &st_ru_nvcsw));
 	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("nivcsw"),
 		ctrType_Int, CTR_FLAG_NONE, &st_ru_nivcsw));
+#	ifdef OS_LINUX
+	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("openfiles"),
+		ctrType_Int, CTR_FLAG_NONE, &st_openfiles));
+#	endif
 	CHKiRet(statsobj.ConstructFinalize(statsobj_resources));
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -511,6 +586,7 @@ CODEqueryEtryPt_STD_IMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODEqueryEtryPt_doHUP
 ENDqueryEtryPt
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)

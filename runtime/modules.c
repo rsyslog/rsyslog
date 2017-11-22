@@ -434,14 +434,12 @@ abortCnfUse(cfgmodules_etry_t **pNew)
  * The module pointer is handed over to this function. It is no
  * longer available to caller one we are called.
  */
-rsRetVal
-addModToCnfList(cfgmodules_etry_t **pNew, cfgmodules_etry_t *pLast)
+rsRetVal ATTR_NONNULL(1)
+addModToCnfList(cfgmodules_etry_t **const pNew, cfgmodules_etry_t *const pLast)
 {
 	DEFiRet;
 	assert(*pNew != NULL);
 
-	if(pNew == NULL)
-		ABORT_FINALIZE(RS_RET_ERR);
 	if(loadConf == NULL) {
 		abortCnfUse(pNew);
 		FINALIZE; /* we are in an early init state */
@@ -455,8 +453,7 @@ addModToCnfList(cfgmodules_etry_t **pNew, cfgmodules_etry_t *pLast)
 	}
 
 finalize_it:
-	if(pNew != NULL)
-		*pNew = NULL;
+	*pNew = NULL;
 	RETiRet;
 }
 
@@ -663,6 +660,10 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			} else if(localRet != RS_RET_OK) {
 				ABORT_FINALIZE(localRet);
 			}
+			localRet = (*pNew->modQueryEtryPt)((uchar*)"doHUP", &pNew->doHUP);
+			if(localRet != RS_RET_OK && localRet != RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
+				ABORT_FINALIZE(localRet);
+
 			break;
 		case eMOD_OUT:
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"freeInstance", &pNew->freeInstance));
@@ -941,6 +942,25 @@ static void modPrintList(void)
 			break;
 		}
 		dbgprintf("\n");
+		pMod = GetNxt(pMod); /* done, go next */
+	}
+}
+
+
+/* HUP all modules that support it - except for actions, which
+ * need (and have) specialised HUP handling.
+ */
+void
+modDoHUP(void)
+{
+	modInfo_t *pMod;
+
+	pMod = GetNxt(NULL);
+	while(pMod != NULL) {
+		if(pMod->eType != eMOD_OUT && pMod->doHUP != NULL) {
+			DBGPRINTF("HUPing module %s\n", (char*) modGetName(pMod));
+			pMod->doHUP(NULL);
+		}
 		pMod = GetNxt(pMod); /* done, go next */
 	}
 }

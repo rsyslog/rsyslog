@@ -51,6 +51,7 @@
 #include "statsobj.h"
 #include "cfsysline.h"
 #include "unicode-helper.h"
+#include "obj-types.h"
 
 #ifndef O_LARGEFILE
 #  define O_LARGEFILE 0
@@ -75,9 +76,12 @@ STATSCOUNTER_DEF(indexESFail, mutIndexESFail)
 
 #	define META_STRT "{\"index\":{\"_index\": \""
 #	define META_TYPE "\",\"_type\":\""
+#       define META_PIPELINE "\",\"pipeline\":\""
 #	define META_PARENT "\",\"_parent\":\""
 #	define META_ID "\", \"_id\":\""
 #	define META_END  "\"}}\n"
+
+#define WRKR_DATA_TYPE_ES 0xBADF0001
 
 /* REST API for elasticsearch hits this URL:
  * http://<hostName>:<restPort>/<searchIndex>/<searchType>
@@ -95,6 +99,7 @@ typedef struct _instanceData {
 	uchar *authBuf;
 	uchar *searchIndex;
 	uchar *searchType;
+	uchar *pipelineName;
 	uchar *parent;
 	uchar *tplName;
 	uchar *timeout;
@@ -106,6 +111,7 @@ typedef struct _instanceData {
 	sbool dynSrchType;
 	sbool dynParent;
 	sbool dynBulkId;
+	sbool dynPipelineName;
 	sbool bulkmode;
 	size_t maxbytes;
 	sbool useHttps;
@@ -113,6 +119,7 @@ typedef struct _instanceData {
 } instanceData;
 
 typedef struct wrkrInstanceData {
+	PTR_ASSERT_DEF
 	instanceData *pData;
 	int serverIndex;
 	int replyLen;
@@ -139,6 +146,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "pwd", eCmdHdlrGetWord, 0 },
 	{ "searchindex", eCmdHdlrGetWord, 0 },
 	{ "searchtype", eCmdHdlrGetWord, 0 },
+	{ "pipelinename", eCmdHdlrGetWord, 0 },
 	{ "parent", eCmdHdlrGetWord, 0 },
 	{ "dynsearchindex", eCmdHdlrBinary, 0 },
 	{ "dynsearchtype", eCmdHdlrBinary, 0 },
@@ -146,13 +154,14 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "bulkmode", eCmdHdlrBinary, 0 },
 	{ "maxbytes", eCmdHdlrSize, 0 },
 	{ "asyncrepl", eCmdHdlrGoneAway, 0 },
-        { "usehttps", eCmdHdlrBinary, 0 },
+	{ "usehttps", eCmdHdlrBinary, 0 },
 	{ "timeout", eCmdHdlrGetWord, 0 },
 	{ "errorfile", eCmdHdlrGetWord, 0 },
 	{ "erroronly", eCmdHdlrBinary, 0 },
 	{ "interleaved", eCmdHdlrBinary, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
 	{ "dynbulkid", eCmdHdlrBinary, 0 },
+	{ "dynpipelinename", eCmdHdlrBinary, 0 },
 	{ "bulkid", eCmdHdlrGetWord, 0 },
 	{ "allowunsignedcerts", eCmdHdlrBinary, 0 }
 };
@@ -162,7 +171,7 @@ static struct cnfparamblk actpblk =
 	  actpdescr
 	};
 
-static rsRetVal curlSetup(wrkrInstanceData_t *pWrkrData, instanceData *pData);
+static rsRetVal curlSetup(wrkrInstanceData_t *pWrkrData);
 
 BEGINcreateInstance
 CODESTARTcreateInstance
@@ -172,6 +181,7 @@ ENDcreateInstance
 
 BEGINcreateWrkrInstance
 CODESTARTcreateWrkrInstance
+	PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
 	pWrkrData->curlHeader = NULL;
 	pWrkrData->curlPostHandle = NULL;
 	pWrkrData->curlCheckConnHandle = NULL;
@@ -186,8 +196,7 @@ CODESTARTcreateWrkrInstance
 			pData->bulkmode = 0; /* at least it works */
 		}
 	}
-	CHKiRet(curlSetup(pWrkrData, pWrkrData->pData));
-finalize_it:
+	iRet = curlSetup(pWrkrData);
 ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
@@ -211,6 +220,7 @@ CODESTARTfreeInstance
 		free(pData->authBuf);
 	free(pData->searchIndex);
 	free(pData->searchType);
+	free(pData->pipelineName);
 	free(pData->parent);
 	free(pData->tplName);
 	free(pData->timeout);
@@ -254,7 +264,9 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tuid='%s'\n", pData->uid == NULL ? (uchar*)"(not configured)" : pData->uid);
 	dbgprintf("\tpwd=(%sconfigured)\n", pData->pwd == NULL ? "not " : "");
 	dbgprintf("\tsearch index='%s'\n", pData->searchIndex);
-	dbgprintf("\tsearch index='%s'\n", pData->searchType);
+	dbgprintf("\tsearch type='%s'\n", pData->searchType);
+	dbgprintf("\tpipeline name='%s'\n", pData->pipelineName);
+	dbgprintf("\tdynamic pipeline name=%d\n", pData->dynPipelineName);
 	dbgprintf("\tparent='%s'\n", pData->parent);
 	dbgprintf("\ttimeout='%s'\n", pData->timeout);
 	dbgprintf("\tdynamic search index=%d\n", pData->dynSrchIdx);
@@ -272,6 +284,26 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tbulkid='%s'\n", pData->bulkId);
 ENDdbgPrintInstInfo
 
+
+/* elasticsearch POST result string ... useful for debugging */
+static size_t
+curlResult(void *ptr, size_t size, size_t nmemb, void *userdata)
+{
+	char *p = (char *)ptr;
+	wrkrInstanceData_t *pWrkrData = (wrkrInstanceData_t*) userdata;
+	char *buf;
+	size_t newlen;
+	PTR_ASSERT_CHK(pWrkrData, WRKR_DATA_TYPE_ES);
+	newlen = pWrkrData->replyLen + size*nmemb;
+	if((buf = realloc(pWrkrData->reply, newlen + 1)) == NULL) {
+		LogError(errno, RS_RET_ERR, "omelasticsearch: realloc failed in curlResult");
+		return 0; /* abort due to failure */
+	}
+	memcpy(buf+pWrkrData->replyLen, p, size*nmemb);
+	pWrkrData->replyLen = newlen;
+	pWrkrData->reply = buf;
+	return size*nmemb;
+}
 
 /* Build basic URL part, which includes hostname and port as follows:
  * http://hostname:port/ based on a server param
@@ -336,8 +368,13 @@ incrementServerIndex(wrkrInstanceData_t *pWrkrData)
 	pWrkrData->serverIndex = (pWrkrData->serverIndex + 1) % pWrkrData->pData->numServers;
 }
 
-static rsRetVal
-checkConn(wrkrInstanceData_t *pWrkrData)
+
+/* checks if connection to ES can be established; also iterates over
+ * potential servers to support high availability (HA) feature. If it
+ * needs to switch server, will record new one in curl handle.
+ */
+static rsRetVal ATTR_NONNULL()
+checkConn(wrkrInstanceData_t *const pWrkrData)
 {
 #	define HEALTH_URI "_cat/health"
 	CURL *curl;
@@ -349,6 +386,8 @@ checkConn(wrkrInstanceData_t *pWrkrData)
 	int r;
 	DEFiRet;
 
+	pWrkrData->reply = NULL;
+	pWrkrData->replyLen = 0;
 	curl = pWrkrData->curlCheckConnHandle;
 	urlBuf = es_newStr(256);
 	if (urlBuf == NULL) {
@@ -369,25 +408,30 @@ checkConn(wrkrInstanceData_t *pWrkrData)
 		}
 
 		curl_easy_setopt(curl, CURLOPT_URL, healthUrl);
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlResult);
 		res = curl_easy_perform(curl);
 		free(healthUrl);
 
 		if (res == CURLE_OK) {
-			DBGPRINTF("omelasticsearch: checkConn(%s) completed with success on attempt %d\n", serverUrl, i);
+			DBGPRINTF("omelasticsearch: checkConn %s completed with success "
+				"on attempt %d\n", serverUrl, i);
 			ABORT_FINALIZE(RS_RET_OK);
 		}
 
-		DBGPRINTF("omelasticsearch: checkConn(%s) failed on attempt %d: %s\n", serverUrl, i, curl_easy_strerror(res));
+		DBGPRINTF("omelasticsearch: checkConn %s failed on attempt %d: %s\n",
+			serverUrl, i, curl_easy_strerror(res));
 		STATSCOUNTER_INC(checkConnFail, mutCheckConnFail);
 		incrementServerIndex(pWrkrData);
 	}
 
-	DBGPRINTF("omelasticsearch: checkConn() failed after %d attempts.\n", i);
+	DBGPRINTF("omelasticsearch: checkConn failed after %d attempts.\n", i);
 	ABORT_FINALIZE(RS_RET_SUSPENDED);
 
 finalize_it:
 	if(urlBuf != NULL)
 		es_deleteStr(urlBuf);
+	free(pWrkrData->reply);
+	pWrkrData->reply = NULL; /* don't leave dangling pointer */
 	RETiRet;
 }
 
@@ -400,93 +444,62 @@ ENDtryResume
 
 
 /* get the current index and type for this message */
-static void
-getIndexTypeAndParent(instanceData *pData, uchar **tpls,
-		      uchar **srchIndex, uchar **srchType, uchar **parent,
-		      uchar **bulkId)
+static void ATTR_NONNULL(1)
+getIndexTypeAndParent(const instanceData *const pData, uchar **const tpls,
+		      uchar **const srchIndex, uchar **const srchType, uchar **const parent,
+		      uchar **const bulkId, uchar **const pipelineName)
 {
+	*srchIndex = pData->searchIndex;
+	*parent = pData->parent;
+	*srchType = pData->searchType;
+	*bulkId = pData->bulkId;
+	*pipelineName = pData->pipelineName;
 	if(tpls == NULL) {
-		*srchIndex = pData->searchIndex;
-		*parent = pData->parent;
-		*srchType = pData->searchType;
-		*bulkId = NULL;
 		goto done;
 	}
 
+	int iNumTpls = 1;
 	if(pData->dynSrchIdx) {
-		*srchIndex = tpls[1];
-		if(pData->dynSrchType) {
-			*srchType = tpls[2];
-			if(pData->dynParent) {
-				*parent = tpls[3];
-				if(pData->dynBulkId) {
-					*bulkId = tpls[4];
-				}
-			} else {
-				*parent = pData->parent;
-				if(pData->dynBulkId) {
-					*bulkId = tpls[3];
-				}
-			}
-		} else  {
-			*srchType = pData->searchType;
-			if(pData->dynParent) {
-				*parent = tpls[2];
-				if(pData->dynBulkId) {
-					*bulkId = tpls[3];
-				}
-			} else {
-				*parent = pData->parent;
-				if(pData->dynBulkId) {
-					*bulkId = tpls[2];
-				}
-			}
-		}
-	} else {
-		*srchIndex = pData->searchIndex;
-		if(pData->dynSrchType) {
-			*srchType = tpls[1];
-			if(pData->dynParent) {
-				*parent = tpls[2];
-				if(pData->dynBulkId) {
-					*bulkId = tpls[3];
-				}
-			} else {
-				*parent = pData->parent;
-				if(pData->dynBulkId) {
-					*bulkId = tpls[2];
-				}
-			}
-		} else  {
-			*srchType = pData->searchType;
-			if(pData->dynParent) {
-				*parent = tpls[1];
-				if(pData->dynBulkId) {
-					*bulkId = tpls[2];
-				}
-			} else {
-				*parent = pData->parent;
-				if(pData->dynBulkId) {
-					*bulkId = tpls[1];
-				}
-			}
-		}
+		*srchIndex = tpls[iNumTpls];
+		++iNumTpls;
 	}
-done:	return;
+	if(pData->dynSrchType) {
+		*srchType = tpls[iNumTpls];
+		++iNumTpls;
+	}
+	if(pData->dynParent) {
+		*parent = tpls[iNumTpls];
+		++iNumTpls;
+	}
+	if(pData->dynBulkId) {
+		*bulkId = tpls[iNumTpls];
+		++iNumTpls;
+	}
+	if(pData->dynPipelineName) {
+		*pipelineName = tpls[iNumTpls];
+		++iNumTpls;
+	}
+
+done:
+	assert(srchIndex != NULL);
+	assert(srchType != NULL);
+	return;
 }
 
 
-static rsRetVal
-setPostURL(wrkrInstanceData_t *pWrkrData, instanceData *pData, uchar **tpls)
+static rsRetVal ATTR_NONNULL(1)
+setPostURL(wrkrInstanceData_t *const pWrkrData, uchar **const tpls)
 {
-	uchar *searchIndex = 0;
+	uchar *searchIndex = NULL;
 	uchar *searchType;
+	uchar *pipelineName;
 	uchar *parent;
 	uchar *bulkId;
 	char* baseUrl;
 	es_str_t *url;
 	int r;
 	DEFiRet;
+	instanceData *const pData = pWrkrData->pData;
 	char separator;
 	const int bulkmode = pData->bulkmode;
 
@@ -497,17 +510,23 @@ setPostURL(wrkrInstanceData_t *pWrkrData, instanceData *pData, uchar **tpls)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
+	separator = '?';
+
 	if(bulkmode) {
 		r = es_addBuf(&url, "_bulk", sizeof("_bulk")-1);
 		parent = NULL;
 	} else {
-		getIndexTypeAndParent(pData, tpls, &searchIndex, &searchType, &parent, &bulkId);
+		getIndexTypeAndParent(pData, tpls, &searchIndex, &searchType, &parent, &bulkId, &pipelineName);
 		r = es_addBuf(&url, (char*)searchIndex, ustrlen(searchIndex));
 		if(r == 0) r = es_addChar(&url, '/');
 		if(r == 0) r = es_addBuf(&url, (char*)searchType, ustrlen(searchType));
+		if(pipelineName != NULL) {
+			if(r == 0) r = es_addChar(&url, separator);
+			if(r == 0) r = es_addBuf(&url, "pipeline=", sizeof("pipeline=")-1);
+			if(r == 0) r = es_addBuf(&url, (char*)pipelineName, ustrlen(pipelineName));
+			separator = '&';
+		}
 	}
-
-	separator = '?';
 
 	if(pData->timeout != NULL) {
 		if(r == 0) r = es_addChar(&url, separator);
@@ -540,16 +559,23 @@ finalize_it:
  * the batched request to elasticsearch
  */
 static size_t
-computeMessageSize(wrkrInstanceData_t *pWrkrData, uchar *message, uchar **tpls)
+computeMessageSize(const wrkrInstanceData_t *const pWrkrData,
+	const uchar *const message,
+	uchar **const tpls)
 {
 	size_t r = sizeof(META_STRT)-1 + sizeof(META_TYPE)-1 + sizeof(META_END)-1 + sizeof("\n")-1;
 
-	uchar *searchIndex = 0;
+	uchar *searchIndex = NULL;
 	uchar *searchType;
 	uchar *parent = NULL;
 	uchar *bulkId = NULL;
+	uchar *pipelineName;
 
-	getIndexTypeAndParent(pWrkrData->pData, tpls, &searchIndex, &searchType, &parent, &bulkId);
+	getIndexTypeAndParent(pWrkrData->pData, tpls, &searchIndex, &searchType, &parent, &bulkId, &pipelineName);
+DBGPRINTF("computeMessageSize: message %p, searchIndex %p, searchType%p\n", message, searchIndex, searchType);
+DBGPRINTF("computeMessageSize: searchType %s\n", searchType);
+DBGPRINTF("computeMessageSize: searchIndex %s\n", searchIndex);
+DBGPRINTF("computeMessageSize: message %s\n", message);
 	r += ustrlen((char *)message) + ustrlen(searchIndex) + ustrlen(searchType);
 
 	if(parent != NULL) {
@@ -557,6 +583,9 @@ computeMessageSize(wrkrInstanceData_t *pWrkrData, uchar *message, uchar **tpls)
 	}
 	if(bulkId != NULL) {
 		r += sizeof(META_ID)-1 + ustrlen(bulkId);
+	}
+	if(pipelineName != NULL) {
+		r += sizeof(META_PIPELINE)-1 + ustrlen(pipelineName);
 	}
 
 	return r;
@@ -572,13 +601,14 @@ buildBatch(wrkrInstanceData_t *pWrkrData, uchar *message, uchar **tpls)
 {
 	int length = strlen((char *)message);
 	int r;
-	uchar *searchIndex = 0;
+	uchar *searchIndex = NULL;
 	uchar *searchType;
 	uchar *parent = NULL;
 	uchar *bulkId = NULL;
+	uchar *pipelineName;
 	DEFiRet;
 
-	getIndexTypeAndParent(pWrkrData->pData, tpls, &searchIndex, &searchType, &parent, &bulkId);
+	getIndexTypeAndParent(pWrkrData->pData, tpls, &searchIndex, &searchType, &parent, &bulkId, &pipelineName);
 	r = es_addBuf(&pWrkrData->batch.data, META_STRT, sizeof(META_STRT)-1);
 	if(r == 0) r = es_addBuf(&pWrkrData->batch.data, (char*)searchIndex,
 				 ustrlen(searchIndex));
@@ -588,6 +618,10 @@ buildBatch(wrkrInstanceData_t *pWrkrData, uchar *message, uchar **tpls)
 	if(parent != NULL) {
 		if(r == 0) r = es_addBuf(&pWrkrData->batch.data, META_PARENT, sizeof(META_PARENT)-1);
 		if(r == 0) r = es_addBuf(&pWrkrData->batch.data, (char*)parent, ustrlen(parent));
+	}
+	if(pipelineName != NULL) {
+		if(r == 0) r = es_addBuf(&pWrkrData->batch.data, META_PIPELINE, sizeof(META_PIPELINE)-1);
+		if(r == 0) r = es_addBuf(&pWrkrData->batch.data, (char*)pipelineName, ustrlen(pipelineName));
 	}
 	if(bulkId != NULL) {
 		if(r == 0) r = es_addBuf(&pWrkrData->batch.data, META_ID, sizeof(META_ID)-1);
@@ -746,9 +780,12 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,fjson_object **p
 		}
 		fjson_object_object_get_ex(item, "create", &result);
 		if(result == NULL || !fjson_object_is_type(result, fjson_type_object)) {
-			DBGPRINTF("omelasticsearch: error in elasticsearch reply: "
-				  "cannot obtain 'result' item for #%d\n", i);
-			ABORT_FINALIZE(RS_RET_DATAFAIL);
+			fjson_object_object_get_ex(item, "index", &result);
+			if(result == NULL || !fjson_object_is_type(result, fjson_type_object)) {
+				DBGPRINTF("omelasticsearch: error in elasticsearch reply: "
+					  "cannot obtain 'result' item for #%d\n", i);
+				ABORT_FINALIZE(RS_RET_DATAFAIL);
+			}
 		}
 
 		fjson_object_object_get_ex(result, "status", &ok);
@@ -759,7 +796,8 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,fjson_object **p
 		if(ctx->statusCheckOnly)
 		{
 			if(itemStatus) {
-				DBGPRINTF("omelasticsearch: error in elasticsearch reply: item %d, status is %d\n", i, fjson_object_get_int(ok));
+				DBGPRINTF("omelasticsearch: error in elasticsearch reply: item %d, "
+					"status is %d\n", i, fjson_object_get_int(ok));
 				DBGPRINTF("omelasticsearch: status check found error.\n");
 				ABORT_FINALIZE(RS_RET_DATAFAIL);
 			}
@@ -1039,7 +1077,7 @@ writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, fjson_object 
 			DBGPRINTF("omelasticsearch: error creating file content.\n");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
-		rendered = (char*)fjson_object_to_json_string(ctx.errRoot);
+		rendered = strdup((char*)fjson_object_to_json_string(ctx.errRoot));
 	}
 
 
@@ -1069,6 +1107,7 @@ writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, fjson_object 
 finalize_it:
 	if(bMutLocked)
 		pthread_mutex_unlock(&pData->mutErrFile);
+	free(rendered);
 	fjson_object_put(ctx.errRoot);
 	RETiRet;
 }
@@ -1131,53 +1170,66 @@ finalize_it:
 	RETiRet;
 }
 
-static void
-initializeBatch(wrkrInstanceData_t *pWrkrData) {
+static void ATTR_NONNULL()
+initializeBatch(wrkrInstanceData_t *pWrkrData)
+{
 	es_emptyStr(pWrkrData->batch.data);
 	pWrkrData->batch.nmemb = 0;
 }
 
-static rsRetVal
-curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls, int nmsgs)
+static rsRetVal ATTR_NONNULL(1, 2)
+curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls, const int nmsgs)
 {
 	CURLcode code;
-	CURL *curl = pWrkrData->curlPostHandle;
+	CURL *const curl = pWrkrData->curlPostHandle;
+	char errbuf[CURL_ERROR_SIZE] = "";
 	DEFiRet;
+
+	PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
 
 	pWrkrData->reply = NULL;
 	pWrkrData->replyLen = 0;
 
-	CHKiRet(checkConn(pWrkrData));
-	CHKiRet(setPostURL(pWrkrData, pWrkrData->pData, tpls));
+	if(pWrkrData->pData->numServers > 1) {
+		/* needs to be called to support ES HA feature */
+		CHKiRet(checkConn(pWrkrData));
+	}
+	CHKiRet(setPostURL(pWrkrData, tpls));
 
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, pWrkrData);
+	pWrkrData->reply = NULL;
+	pWrkrData->replyLen = 0;
+
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, (char *)message);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, msglen);
+	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
 	code = curl_easy_perform(curl);
-	if (   code == CURLE_COULDNT_RESOLVE_HOST
-	    || code == CURLE_COULDNT_RESOLVE_PROXY
-	    || code == CURLE_COULDNT_CONNECT
-	    || code == CURLE_WRITE_ERROR
-	   ) {
+	DBGPRINTF("curl returned %lld\n", (long long) code);
+	if (code != CURLE_OK && code != CURLE_HTTP_RETURNED_ERROR) {
 		STATSCOUNTER_INC(indexHTTPReqFail, mutIndexHTTPReqFail);
 		indexHTTPFail += nmsgs;
-		DBGPRINTF("omelasticsearch: we are suspending ourselfs due "
-			  "to failure %lld of curl_easy_perform()\n",
-			  (long long) code);
+		LogError(0, RS_RET_SUSPENDED,
+			"omelasticsearch: we are suspending ourselfs due "
+			"to server failure %lld: %s", (long long) code, errbuf);
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
-	DBGPRINTF("omelasticsearch: pWrkrData replyLen = '%d'\n", pWrkrData->replyLen);
-	if(pWrkrData->replyLen > 0) {
-		pWrkrData->reply[pWrkrData->replyLen] = '\0';
-		/* Append 0 Byte if replyLen is above 0 - byte has been reserved in malloc */
+	if(pWrkrData->reply == NULL) {
+		DBGPRINTF("omelasticsearch: pWrkrData reply==NULL, replyLen = '%d'\n",
+			pWrkrData->replyLen);
+	} else {
+		DBGPRINTF("omelasticsearch: pWrkrData replyLen = '%d'\n", pWrkrData->replyLen);
+		if(pWrkrData->replyLen > 0) {
+			pWrkrData->reply[pWrkrData->replyLen] = '\0';
+			/* Append 0 Byte if replyLen is above 0 - byte has been reserved in malloc */
+		}
+		DBGPRINTF("omelasticsearch: pWrkrData reply: '%s'\n", pWrkrData->reply);
+		CHKiRet(checkResult(pWrkrData, message));
 	}
-	DBGPRINTF("omelasticsearch: pWrkrData reply: '%s'\n", pWrkrData->reply);
 
-	CHKiRet(checkResult(pWrkrData, message));
 finalize_it:
 	incrementServerIndex(pWrkrData);
 	free(pWrkrData->reply);
+	pWrkrData->reply = NULL; /* don't leave dangling pointer */
 	RETiRet;
 }
 
@@ -1212,20 +1264,23 @@ CODESTARTdoAction
 	STATSCOUNTER_INC(indexSubmit, mutIndexSubmit);
 
 	if(pWrkrData->pData->bulkmode) {
-		size_t nBytes = computeMessageSize(pWrkrData, ppString[0], ppString);
+		const size_t nBytes = computeMessageSize(pWrkrData, ppString[0], ppString);
 
-		/* If max bytes is set and this next message will put us over the limit, submit the current buffer and reset */
-		if (pWrkrData->pData->maxbytes > 0 && es_strlen(pWrkrData->batch.data) + nBytes > pWrkrData->pData->maxbytes ) {
-			dbgprintf("omelasticsearch: maxbytes limit reached, submitting partial batch of %d "
-			"elements.\n", pWrkrData->batch.nmemb);
+		/* If max bytes is set and this next message will put us over the limit,
+		* submit the current buffer and reset */
+		if(pWrkrData->pData->maxbytes > 0
+			&& es_strlen(pWrkrData->batch.data) + nBytes > pWrkrData->pData->maxbytes ) {
+			dbgprintf("omelasticsearch: maxbytes limit reached, submitting partial "
+			"batch of %d elements.\n", pWrkrData->batch.nmemb);
 			CHKiRet(submitBatch(pWrkrData));
 			initializeBatch(pWrkrData);
 		}
 		CHKiRet(buildBatch(pWrkrData, ppString[0], ppString));
 
-		/* If there is only one item in the batch, all previous items have been submitted or this is the first item
-		   for this transaction. Return previous committed so that all items leading up to the current (exclusive)
-		   are not replayed should a failure occur anywhere else in the transaction. */
+		/* If there is only one item in the batch, all previous items have been
+	 	 * submitted or this is the first item for this transaction. Return previous
+		 * committed so that all items leading up to the current (exclusive)
+		 * are not replayed should a failure occur anywhere else in the transaction. */
 		iRet = pWrkrData->batch.nmemb == 1 ? RS_RET_PREVIOUS_COMMITTED : RS_RET_DEFER_COMMIT;
 	} else {
 		CHKiRet(curlPost(pWrkrData, ppString[0], strlen((char*)ppString[0]),
@@ -1241,30 +1296,11 @@ CODESTARTendTransaction
 	if (pWrkrData->batch.data != NULL && pWrkrData->batch.nmemb > 0) {
 		CHKiRet(submitBatch(pWrkrData));
 	} else {
-		dbgprintf("omelasticsearch: endTransaction, pWrkrData->batch.data is NULL, nothing to send. \n");
+		dbgprintf("omelasticsearch: endTransaction, pWrkrData->batch.data is NULL, "
+			"nothing to send. \n");
 	}
 finalize_it:
 ENDendTransaction
-
-/* elasticsearch POST result string ... useful for debugging */
-static size_t
-curlResult(void *ptr, size_t size, size_t nmemb, void *userdata)
-{
-	char *p = (char *)ptr;
-	wrkrInstanceData_t *pWrkrData = (wrkrInstanceData_t*) userdata;
-	char *buf;
-	size_t newlen;
-
-	newlen = pWrkrData->replyLen + size*nmemb;
-	if((buf = realloc(pWrkrData->reply, newlen + 1)) == NULL) {
-		DBGPRINTF("omelasticsearch: realloc failed in curlResult\n");
-		return 0; /* abort due to failure */
-	}
-	memcpy(buf+pWrkrData->replyLen, p, size*nmemb);
-	pWrkrData->replyLen = newlen;
-	pWrkrData->reply = buf;
-	return size*nmemb;
-}
 
 static rsRetVal
 computeAuthHeader(char* uid, char* pwd, uchar** authBuf) {
@@ -1293,59 +1329,64 @@ finalize_it:
 	RETiRet;
 }
 
-static void
-curlCheckConnSetup(CURL *handle, HEADER *header, long timeout, sbool allowUnsignedCerts)
+static void ATTR_NONNULL()
+curlSetupCommon(wrkrInstanceData_t *const pWrkrData, CURL *const handle)
 {
-	curl_easy_setopt(handle, CURLOPT_HTTPHEADER, header);
-	curl_easy_setopt(handle, CURLOPT_NOBODY, TRUE);
-	curl_easy_setopt(handle, CURLOPT_TIMEOUT_MS, timeout);
+	PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
+	curl_easy_setopt(handle, CURLOPT_HTTPHEADER, pWrkrData->curlHeader);
 	curl_easy_setopt(handle, CURLOPT_NOSIGNAL, TRUE);
-
-	if(allowUnsignedCerts)
-		curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, FALSE);
-
-	/* Only enable for debugging
-	curl_easy_setopt(curl, CURLOPT_VERBOSE, TRUE); */
-}
-
-static void
-curlPostSetup(CURL *handle, HEADER *header, uchar* authBuf)
-{
-	curl_easy_setopt(handle, CURLOPT_HTTPHEADER, header);
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, curlResult);
-	curl_easy_setopt(handle, CURLOPT_POST, 1);
-	curl_easy_setopt(handle, CURLOPT_NOSIGNAL, TRUE);
-
-	if(authBuf != NULL) {
-		curl_easy_setopt(handle, CURLOPT_USERPWD, authBuf);
+	curl_easy_setopt(handle, CURLOPT_WRITEDATA, pWrkrData);
+	if(pWrkrData->pData->allowUnsignedCerts)
+		curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, FALSE);
+	if(pWrkrData->pData->authBuf != NULL) {
+		curl_easy_setopt(handle, CURLOPT_USERPWD, pWrkrData->pData->authBuf);
 		curl_easy_setopt(handle, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
 	}
+	/* uncomment for in-dept debuggung:
+	curl_easy_setopt(handle, CURLOPT_VERBOSE, TRUE); */
 }
 
-static rsRetVal
-curlSetup(wrkrInstanceData_t *pWrkrData, instanceData *pData)
+static void ATTR_NONNULL()
+curlCheckConnSetup(wrkrInstanceData_t *const pWrkrData)
 {
-	pWrkrData->curlHeader = curl_slist_append(NULL, "Content-Type: text/json; charset=utf-8");
-	pWrkrData->curlPostHandle = curl_easy_init();
-	if (pWrkrData->curlPostHandle == NULL) {
-		return RS_RET_OBJ_CREATION_FAILED;
-	}
-	curlPostSetup(pWrkrData->curlPostHandle, pWrkrData->curlHeader, pData->authBuf);
+	PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
+	curlSetupCommon(pWrkrData, pWrkrData->curlCheckConnHandle);
+	curl_easy_setopt(pWrkrData->curlCheckConnHandle,
+		CURLOPT_TIMEOUT_MS, pWrkrData->pData->healthCheckTimeout);
+}
 
-	pWrkrData->curlCheckConnHandle = curl_easy_init();
-	if (pWrkrData->curlCheckConnHandle == NULL) {
+static void ATTR_NONNULL(1)
+curlPostSetup(wrkrInstanceData_t *const pWrkrData)
+{
+	PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
+	curlSetupCommon(pWrkrData, pWrkrData->curlPostHandle);
+	curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_POST, 1);
+}
+
+#define CONTENT_JSON "Content-Type: application/json; charset=utf-8"
+
+static rsRetVal ATTR_NONNULL()
+curlSetup(wrkrInstanceData_t *const pWrkrData)
+{
+	DEFiRet;
+	pWrkrData->curlHeader = curl_slist_append(NULL, CONTENT_JSON);
+	CHKmalloc(pWrkrData->curlPostHandle = curl_easy_init());;
+	curlPostSetup(pWrkrData);
+
+	CHKmalloc(pWrkrData->curlCheckConnHandle = curl_easy_init());
+	curlCheckConnSetup(pWrkrData);
+
+finalize_it:
+	if(iRet != RS_RET_OK && pWrkrData->curlPostHandle != NULL) {
 		curl_easy_cleanup(pWrkrData->curlPostHandle);
 		pWrkrData->curlPostHandle = NULL;
-		return RS_RET_OBJ_CREATION_FAILED;
 	}
-	curlCheckConnSetup(pWrkrData->curlCheckConnHandle, pWrkrData->curlHeader,
-		pData->healthCheckTimeout, pData->allowUnsignedCerts);
-
-	return RS_RET_OK;
+	RETiRet;
 }
 
-static void
-setInstParamDefaults(instanceData *pData)
+static void ATTR_NONNULL()
+setInstParamDefaults(instanceData *const pData)
 {
 	pData->serverBaseUrls = NULL;
 	pData->defaultPort = 9200;
@@ -1355,6 +1396,8 @@ setInstParamDefaults(instanceData *pData)
 	pData->authBuf = NULL;
 	pData->searchIndex = NULL;
 	pData->searchType = NULL;
+	pData->pipelineName = NULL;
+	pData->dynPipelineName = 0;
 	pData->parent = NULL;
 	pData->timeout = NULL;
 	pData->dynSrchIdx = 0;
@@ -1393,9 +1436,9 @@ CODESTARTnewActInst
 			servers = pvals[i].val.d.ar;
 		} else if(!strcmp(actpblk.descr[i].name, "errorfile")) {
 			pData->errorFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		}else if(!strcmp(actpblk.descr[i].name, "erroronly")) {
+		} else if(!strcmp(actpblk.descr[i].name, "erroronly")) {
 			pData->errorOnly = pvals[i].val.d.n;
-		}else if(!strcmp(actpblk.descr[i].name, "interleaved")) {
+		} else if(!strcmp(actpblk.descr[i].name, "interleaved")) {
 			pData->interleaved = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "serverport")) {
 			pData->defaultPort = (int) pvals[i].val.d.n;
@@ -1409,6 +1452,10 @@ CODESTARTnewActInst
 			pData->searchIndex = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "searchtype")) {
 			pData->searchType = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "pipelinename")) {
+			pData->pipelineName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "dynpipelinename")) {
+			pData->dynPipelineName = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "parent")) {
 			pData->parent = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "dynsearchindex")) {
@@ -1469,6 +1516,12 @@ CODESTARTnewActInst
 			"name for bulkid template given - action definition invalid");
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
+	if(pData->dynPipelineName && pData->pipelineName == NULL) {
+		errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+			"omelasticsearch: requested dynamic pipeline name, but no "
+			"name for pipelineName template given - action definition invalid");
+		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+	}
 
 	if (pData->uid != NULL)
 		CHKiRet(computeAuthHeader((char*) pData->uid, (char*) pData->pwd, &pData->authBuf));
@@ -1478,6 +1531,7 @@ CODESTARTnewActInst
 	if(pData->dynSrchType) ++iNumTpls;
 	if(pData->dynParent) ++iNumTpls;
 	if(pData->dynBulkId) ++iNumTpls;
+	if(pData->dynPipelineName) ++iNumTpls;
 	DBGPRINTF("omelasticsearch: requesting %d templates\n", iNumTpls);
 	CODE_STD_STRING_REQUESTnewActInst(iNumTpls)
 
@@ -1490,73 +1544,33 @@ CODESTARTnewActInst
 	 * it will always be string 1. Type may be 1 or 2, depending on whether search
 	 * index is dynamic as well. Rule needs to be followed throughout the module.
 	 */
+	iNumTpls = 1;
 	if(pData->dynSrchIdx) {
-		CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->searchIndex),
+		CHKiRet(OMSRsetEntry(*ppOMSR, iNumTpls, ustrdup(pData->searchIndex),
 			OMSR_NO_RQD_TPL_OPTS));
-		if(pData->dynSrchType) {
-			CHKiRet(OMSRsetEntry(*ppOMSR, 2, ustrdup(pData->searchType),
-				OMSR_NO_RQD_TPL_OPTS));
-			if(pData->dynParent) {
-				CHKiRet(OMSRsetEntry(*ppOMSR, 3, ustrdup(pData->parent),
-					OMSR_NO_RQD_TPL_OPTS));
-				if(pData->dynBulkId) {
-					CHKiRet(OMSRsetEntry(*ppOMSR, 4, ustrdup(pData->bulkId),
-						OMSR_NO_RQD_TPL_OPTS));
-				}
-			} else {
-				if(pData->dynBulkId) {
-					CHKiRet(OMSRsetEntry(*ppOMSR, 3, ustrdup(pData->bulkId),
-						OMSR_NO_RQD_TPL_OPTS));
-				}
-			}
-		} else {
-			if(pData->dynParent) {
-				CHKiRet(OMSRsetEntry(*ppOMSR, 2, ustrdup(pData->parent),
-					OMSR_NO_RQD_TPL_OPTS));
-				if(pData->dynBulkId) {
-					CHKiRet(OMSRsetEntry(*ppOMSR, 3, ustrdup(pData->bulkId),
-						OMSR_NO_RQD_TPL_OPTS));
-				}
-			} else {
-				if(pData->dynBulkId) {
-					CHKiRet(OMSRsetEntry(*ppOMSR, 2, ustrdup(pData->bulkId),
-						OMSR_NO_RQD_TPL_OPTS));
-				}
-			}
-		}
-	} else {
-		if(pData->dynSrchType) {
-			CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->searchType),
-				OMSR_NO_RQD_TPL_OPTS));
-			if(pData->dynParent) {
-				CHKiRet(OMSRsetEntry(*ppOMSR, 2, ustrdup(pData->parent),
-					OMSR_NO_RQD_TPL_OPTS));
-                if(pData->dynBulkId) {
-                    CHKiRet(OMSRsetEntry(*ppOMSR, 3, ustrdup(pData->bulkId),
-                        OMSR_NO_RQD_TPL_OPTS));
-                }
-			} else {
-				if(pData->dynBulkId) {
-					CHKiRet(OMSRsetEntry(*ppOMSR, 2, ustrdup(pData->bulkId),
-						OMSR_NO_RQD_TPL_OPTS));
-				}
-			}
-		} else {
-			if(pData->dynParent) {
-				CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->parent),
-					OMSR_NO_RQD_TPL_OPTS));
-                if(pData->dynBulkId) {
-                    CHKiRet(OMSRsetEntry(*ppOMSR, 2, ustrdup(pData->bulkId),
-                        OMSR_NO_RQD_TPL_OPTS));
-                }
-			} else {
-				if(pData->dynBulkId) {
-					CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->bulkId),
-						OMSR_NO_RQD_TPL_OPTS));
-				}
-            }
-		}
+		++iNumTpls;
 	}
+	if(pData->dynSrchType) {
+		CHKiRet(OMSRsetEntry(*ppOMSR, iNumTpls, ustrdup(pData->searchType),
+			OMSR_NO_RQD_TPL_OPTS));
+		++iNumTpls;
+	}
+	if(pData->dynParent) {
+		CHKiRet(OMSRsetEntry(*ppOMSR, iNumTpls, ustrdup(pData->parent),
+			OMSR_NO_RQD_TPL_OPTS));
+		++iNumTpls;
+	}
+	if(pData->dynBulkId) {
+		CHKiRet(OMSRsetEntry(*ppOMSR, iNumTpls, ustrdup(pData->bulkId),
+			OMSR_NO_RQD_TPL_OPTS));
+		++iNumTpls;
+	}
+	if(pData->dynPipelineName) {
+		CHKiRet(OMSRsetEntry(*ppOMSR, iNumTpls, ustrdup(pData->pipelineName),
+			OMSR_NO_RQD_TPL_OPTS));
+		++iNumTpls;
+	}
+
 
 	if (servers != NULL) {
 		pData->numServers = servers->nmemb;
@@ -1599,6 +1613,7 @@ CODESTARTnewActInst
 		pData->searchIndex = (uchar*) strdup("system");
 	if(pData->searchType == NULL)
 		pData->searchType = (uchar*) strdup("events");
+
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
 	if (serverParam)

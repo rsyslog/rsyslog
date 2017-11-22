@@ -27,14 +27,7 @@
  * limitations under the License.
  */
 %{
-#if !defined(_AIX)
-/* shut off warnings that we can't change anyhow */
-#pragma GCC diagnostic ignored "-Wpragmas"
-#pragma GCC diagnostic ignored "-Wincompatible-pointer-types-discards-qualifiers"
-#pragma GCC diagnostic ignored "-Wredundant-decls"
-#pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
-#pragma GCC diagnostic ignored "-Wswitch-default"
-#endif
+#define IN_GRAMMAR_Y /* tell parserif.h not to redefine things! */
 
 #include "config.h"
 #include <stdio.h>

@@ -76,7 +76,7 @@ wtiGetDbgHdr(wti_t *pThis)
 /* return the current worker processing state. For the sake of
  * simplicity, we do not use the iRet interface. -- rgerhards, 2009-07-17
  */
-sbool
+int ATTR_NONNULL()
 wtiGetState(wti_t *pThis)
 {
 	return ATOMIC_FETCH_32BIT(&pThis->bIsRunning, &pThis->mutIsRunning);
@@ -86,7 +86,7 @@ wtiGetState(wti_t *pThis)
 /* Set this thread to "always running" state (can not be unset)
  * rgerhards, 2009-07-20
  */
-rsRetVal
+rsRetVal ATTR_NONNULL()
 wtiSetAlwaysRunning(wti_t *pThis)
 {
 	ISOBJ_TYPE_assert(pThis, wti);
@@ -98,14 +98,14 @@ wtiSetAlwaysRunning(wti_t *pThis)
  * use for wtp, but we need to have it per thread instance (thus it
  * is inside wti). -- rgerhards, 2009-07-17
  */
-rsRetVal
-wtiSetState(wti_t *pThis, sbool bNewVal)
+rsRetVal ATTR_NONNULL()
+wtiSetState(wti_t *pThis, const int newVal)
 {
 	ISOBJ_TYPE_assert(pThis, wti);
-	if(bNewVal) {
-		ATOMIC_STORE_1_TO_INT(&pThis->bIsRunning, &pThis->mutIsRunning);
-	} else {
+	if(newVal == WRKTHRD_STOPPED) {
 		ATOMIC_STORE_0_TO_INT(&pThis->bIsRunning, &pThis->mutIsRunning);
+	} else {
+		ATOMIC_OR_INT_TO_INT(&pThis->bIsRunning, &pThis->mutIsRunning, newVal);
 	}
 	return RS_RET_OK;
 }
@@ -233,7 +233,7 @@ wtiConstructFinalize(wti_t *pThis)
 		  wtiGetDbgHdr(pThis), iActionNbr);
 
 	/* initialize our thread instance descriptor (no concurrency here) */
-	pThis->bIsRunning = RSFALSE; 
+	pThis->bIsRunning = WRKTHRD_STOPPED;
 
 	/* must use calloc as we need zero-init */
 	CHKmalloc(pThis->actWrkrInfo = calloc(iActionNbr, sizeof(actWrkrInfo_t)));

@@ -1,7 +1,7 @@
 /* gss-misc.c
  * This is a miscellaneous helper class for gss-api features.
  *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2017 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -171,7 +171,7 @@ static int write_all(int fd, char *buf, unsigned int nbyte)
 static int recv_token(int s, gss_buffer_t tok)
 {
 	int ret;
-	unsigned char lenbuf[4];
+	unsigned char lenbuf[4] = "xxx"; // initialized to make clang static analyzer happy
 	unsigned int len;
 
 	ret = read_all(s, (char *) lenbuf, 4);

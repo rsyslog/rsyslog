@@ -52,7 +52,6 @@
 
 /* static data */
 DEFobjStaticHelpers
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(netstrms)
 
 
@@ -64,7 +63,6 @@ ENDobjConstruct(netstrm)
 /* destructor for the netstrm object */
 BEGINobjDestruct(netstrm) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(netstrm)
-//printf("destruct driver data %p\n", pThis->pDrvrData);
 	if(pThis->pDrvrData != NULL)
 		iRet = pThis->Drvr.Destruct(&pThis->pDrvrData);
 ENDobjDestruct(netstrm)
@@ -74,11 +72,8 @@ ENDobjDestruct(netstrm)
 static rsRetVal
 netstrmConstructFinalize(netstrm_t *pThis)
 {
-	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
-	CHKiRet(pThis->Drvr.Construct(&pThis->pDrvrData));
-finalize_it:
-	RETiRet;
+	return pThis->Drvr.Construct(&pThis->pDrvrData);
 }
 
 /* abort a connection. This is much like Destruct(), but tries
@@ -162,16 +157,15 @@ finalize_it:
  * never blocks, not even when called on a blocking socket. That is important
  * for client sockets, which are set to block during send, but should not
  * block when trying to read data. If *pLenBuf is -1, an error occured and
- * errno holds the exact error cause.
+ * oserr holds the exact error cause.
  * rgerhards, 2008-03-17
  */
 static rsRetVal
-Rcv(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf)
+Rcv(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf, int *const oserr)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
-//printf("Rcv %p\n", pThis);
-	iRet = pThis->Drvr.Rcv(pThis->pDrvrData, pBuf, pLenBuf);
+	iRet = pThis->Drvr.Rcv(pThis->pDrvrData, pBuf, pLenBuf, oserr);
 	RETiRet;
 }
 
@@ -277,6 +271,16 @@ SetKeepAliveIntvl(netstrm_t *pThis, int keepAliveIntvl)
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
 	iRet = pThis->Drvr.SetKeepAliveIntvl(pThis->pDrvrData, keepAliveIntvl);
+	RETiRet;
+}
+
+/* gnutls priority string */
+static rsRetVal
+SetGnutlsPriorityString(netstrm_t *pThis, uchar *gnutlsPriorityString)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	iRet = pThis->Drvr.SetGnutlsPriorityString(pThis->pDrvrData, gnutlsPriorityString);
 	RETiRet;
 }
 
@@ -387,6 +391,7 @@ CODESTARTobjQueryInterface(netstrm)
 	pIf->SetKeepAliveProbes = SetKeepAliveProbes;
 	pIf->SetKeepAliveTime = SetKeepAliveTime;
 	pIf->SetKeepAliveIntvl = SetKeepAliveIntvl;
+	pIf->SetGnutlsPriorityString = SetGnutlsPriorityString;
 finalize_it:
 ENDobjQueryInterface(netstrm)
 
@@ -396,7 +401,6 @@ ENDobjQueryInterface(netstrm)
 BEGINObjClassExit(netstrm, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
 CODESTARTObjClassExit(netstrm)
 	/* release objects we no longer need */
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(netstrms, DONT_LOAD_LIB);
 ENDObjClassExit(netstrm)
 
@@ -407,7 +411,6 @@ ENDObjClassExit(netstrm)
  */
 BEGINAbstractObjClassInit(netstrm, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* set our own handlers */
 ENDObjClassInit(netstrm)

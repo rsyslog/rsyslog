@@ -90,7 +90,6 @@ struct instanceConf_s {
 	int bIsConnected;
 	rd_kafka_conf_t *conf;
 	rd_kafka_t *rk;
-	rd_kafka_topic_t *rkt;
 	rd_kafka_topic_conf_t *topic_conf;
 	int partition;
 	int bIsSubscribed;
@@ -201,59 +200,53 @@ finalize_it:
 static void msgConsume (instanceConf_t *inst) {
 	rd_kafka_message_t *rkmessage = NULL;
 
-	do {
-		/* Consume single message */
+	do { /* Consume messages */
 		rkmessage = rd_kafka_consumer_poll(inst->rk, 1000); /* Block for 1000 ms max */
-
-		if (rkmessage) {
-			if (rkmessage->err) {
-				if (rkmessage->err == RD_KAFKA_RESP_ERR__PARTITION_EOF) {
-					DBGPRINTF("imkafka: Consumer reached end of topic \"%s\" [%"PRId32"]"
-					"message queue offset %"PRId64"\n",
-						rd_kafka_topic_name(rkmessage->rkt),
-						rkmessage->partition,
-						rkmessage->offset);
-					/* Stop the loop */
-					return;
-				}
-				if (rkmessage->rkt) {
-					DBGPRINTF("imkafka: Consumer error for topic \"%s\" [%"PRId32"]"
-					"message queue offset %"PRId64": %s\n",
-						rd_kafka_topic_name(rkmessage->rkt),
-						rkmessage->partition,
-						rkmessage->offset,
-						rd_kafka_message_errstr(rkmessage));
-				} else {
-					DBGPRINTF("imkafka: Consumer error for topic \"%s\": \"%s\"\n",
-						rd_kafka_err2str(rkmessage->err),
-						rd_kafka_message_errstr(rkmessage));
-				}
-/*TODO: Output Error */
-				return;
-			}
-
-			/* VERBOSE */
-			DBGPRINTF("imkafka: msgConsume Loop on %s/%s/%s: [%"PRId32"], "
-						"offset %"PRId64", %zd bytes):\n",
-						rd_kafka_topic_name(rkmessage->rkt) /*inst->topic*/,
-						inst->consumergroup,
-						inst->brokers,
-						rkmessage->partition,
-						rkmessage->offset,
-						rkmessage->len);
-
-			/* Output Key and msg */
-			enqMsg(inst, rkmessage);
-
-			/* Free mem from kafka msg*/
-			rd_kafka_message_destroy(rkmessage);
-		} else {
+		if(rkmessage == NULL) {
 			DBGPRINTF("imkafka: msgConsume EMPTY Loop on %s/%s/%s\n",
-				inst->topic,
-				inst->consumergroup,
-				inst->brokers);
+				inst->topic, inst->consumergroup, inst->brokers);
+			goto done;
 		}
-	} while (rkmessage);
+
+		if (rkmessage->err) {
+			if (rkmessage->err == RD_KAFKA_RESP_ERR__PARTITION_EOF) {
+				LogError(0, RS_RET_KAFKA_ERROR, "imkafka: Consumer "
+					"reached end of topic \"%s\" [%"PRId32"]"
+					"message queue offset %"PRId64"\n",
+					rd_kafka_topic_name(rkmessage->rkt),
+					rkmessage->partition,
+					rkmessage->offset);
+				goto done;
+			}
+			if (rkmessage->rkt) {
+				LogError(0, RS_RET_KAFKA_ERROR,
+				"imkafka: Consumer error for topic \"%s\" [%"PRId32"]"
+				"message queue offset %"PRId64": %s\n",
+					rd_kafka_topic_name(rkmessage->rkt),
+					rkmessage->partition,
+					rkmessage->offset,
+					rd_kafka_message_errstr(rkmessage));
+			} else {
+				LogError(0, RS_RET_KAFKA_ERROR,
+					"imkafka: Consumer error for topic \"%s\": \"%s\"\n",
+					rd_kafka_err2str(rkmessage->err),
+					rd_kafka_message_errstr(rkmessage));
+			}
+			goto done;
+		}
+
+		DBGPRINTF("imkafka: msgConsume Loop on %s/%s/%s: [%"PRId32"], "
+					"offset %"PRId64", %zd bytes):\n",
+					rd_kafka_topic_name(rkmessage->rkt) /*inst->topic*/,
+					inst->consumergroup,
+					inst->brokers,
+					rkmessage->partition,
+					rkmessage->offset,
+					rkmessage->len);
+		enqMsg(inst, rkmessage);
+		rd_kafka_message_destroy(rkmessage);
+	} while(1); /* loop broken inside */
+done:	return;
 }
 
 
@@ -301,8 +294,8 @@ finalize_it:
 
 /* this function checks instance parameters and does some required pre-processing
  */
-static rsRetVal
-checkInstance(instanceConf_t *inst)
+static rsRetVal ATTR_NONNULL()
+checkInstance(instanceConf_t *const inst)
 {
 	DEFiRet;
 	int nBrokers;
@@ -319,25 +312,29 @@ checkInstance(instanceConf_t *inst)
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	}
 
-# if RD_KAFKA_VERSION >= 0x00090001
-	rd_kafka_conf_set_log_cb(inst->conf, kafkaLogger);
-# endif
+#	ifdef DEBUG
+	/* enable kafka debug output */
+	if(rd_kafka_conf_set(inst->conf, "debug", RD_KAFKA_DEBUG_CONTEXTS,
+		kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
+		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+	}
+#	endif
 
 	/* Set custom configuration parameters */
 	for(int i = 0 ; i < inst->nConfParams ; ++i) {
+		assert(inst->confParams+i != NULL); /* invariant: nConfParams MUST exist! */
 		DBGPRINTF("imkafka: setting custom configuration parameter: %s:%s\n",
 			inst->confParams[i].name,
 			inst->confParams[i].val);
 		if(rd_kafka_conf_set(inst->conf,
-				     inst->confParams[i].name,
-				     inst->confParams[i].val,
-				     kafkaErrMsg, sizeof(kafkaErrMsg))
-	 	   != RD_KAFKA_CONF_OK) {
+			inst->confParams[i].name,
+			inst->confParams[i].val,
+			kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
 			if(inst->bReportErrs) {
 				errmsg.LogError(0, RS_RET_PARAM_ERROR, "imkafka: error in kafka "
-						"parameter '%s=%s': %s",
-						inst->confParams[i].name,
-						inst->confParams[i].val, kafkaErrMsg);
+					"parameter '%s=%s': %s",
+					inst->confParams[i].name,
+					inst->confParams[i].val, kafkaErrMsg);
 			}
 			ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 		}
@@ -350,49 +347,47 @@ checkInstance(instanceConf_t *inst)
 	if (inst->consumergroup != NULL) {
 		DBGPRINTF("imkafka: setting consumergroup: '%s'\n", inst->consumergroup);
 		if (rd_kafka_conf_set(inst->conf, "group.id", (char*) inst->consumergroup,
-							  kafkaErrMsg, sizeof(kafkaErrMsg)) !=
-			RD_KAFKA_CONF_OK) {
-				if(inst->bReportErrs) {
-					errmsg.LogError(0, RS_RET_KAFKA_ERROR,
-						"imkafka: error assigning consumergroup %s to kafka config: %s\n",
-						inst->consumergroup,
-						kafkaErrMsg);
-				}
-				ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
+			kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
+			if(inst->bReportErrs) {
+				errmsg.LogError(0, RS_RET_KAFKA_ERROR,
+					"imkafka: error assigning consumergroup %s to "
+					"kafka config: %s\n", inst->consumergroup,
+					kafkaErrMsg);
+			}
+			ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 		}
 
 
 		/* Set default for auto offset reset */
 		if (rd_kafka_topic_conf_set(inst->topic_conf, "auto.offset.reset",
-									"smallest",
-									kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
-				if(inst->bReportErrs) {
-					errmsg.LogError(0, RS_RET_KAFKA_ERROR,
-						"imkafka: error setting kafka auto.offset.reset on %s: %s\n",
-						inst->consumergroup,
-						kafkaErrMsg);
-				}
-				ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
+			"smallest", kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
+			if(inst->bReportErrs) {
+				errmsg.LogError(0, RS_RET_KAFKA_ERROR,
+					"imkafka: error setting kafka auto.offset.reset on %s: %s\n",
+					inst->consumergroup,
+					kafkaErrMsg);
+			}
+			ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 		}
 		/* Consumer groups always use broker based offset storage */
 		if (rd_kafka_topic_conf_set(inst->topic_conf, "offset.store.method",
-									"broker",
-									kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
-				if(inst->bReportErrs) {
-					errmsg.LogError(0, RS_RET_KAFKA_ERROR,
-						"imkafka: error setting kafka offset.store.method on %s: %s\n",
-						inst->consumergroup,
-						kafkaErrMsg);
-				}
-				ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
+			"broker", kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
+			if(inst->bReportErrs) {
+				errmsg.LogError(0, RS_RET_KAFKA_ERROR,
+					"imkafka: error setting kafka offset.store.method on %s: %s\n",
+					inst->consumergroup,
+					kafkaErrMsg);
+			}
+			ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 		}
 
 		/* Set default topic config for pattern-matched topics. */
 		rd_kafka_conf_set_default_topic_conf(inst->conf, inst->topic_conf);
-
-		/* Callback called on partition assignment changes */
-//TODO needed?!		rd_kafka_conf_set_rebalance_cb(inst->conf, rebalance_cb);
 	}
+
+	#if RD_KAFKA_VERSION >= 0x00090001
+		rd_kafka_conf_set_log_cb(inst->conf, kafkaLogger);
+	#endif
 
 	/* Create Kafka Consumer */
 	inst->rk = rd_kafka_new(RD_KAFKA_CONSUMER, inst->conf,
@@ -404,9 +399,9 @@ checkInstance(instanceConf_t *inst)
 		}
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	}
-# if RD_KAFKA_VERSION < 0x00090001
-	rd_kafka_set_logger(inst->rk, kafkaLogger);
-# endif
+	#if RD_KAFKA_VERSION < 0x00090001
+		rd_kafka_set_logger(inst->rk, kafkaLogger);
+	#endif
 
    	DBGPRINTF("imkafka: setting brokers: '%s'\n", inst->brokers);
 	if((nBrokers = rd_kafka_brokers_add(inst->rk, (char*)inst->brokers)) == 0) {
@@ -421,6 +416,11 @@ checkInstance(instanceConf_t *inst)
 	inst->bIsConnected = 1;
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		errmsg.LogError(0, RS_RET_KAFKA_NO_VALID_BROKERS,
+			"imkafka: no valid brokers specified: %s\n", inst->brokers);
+	}
+
 	RETiRet;
 }
 
@@ -436,17 +436,17 @@ std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, insta
 }
 
 
-static rsRetVal
+static rsRetVal ATTR_NONNULL(2)
 addConsumer(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 {
 	DEFiRet;
 	rd_kafka_resp_err_t err;
 
-	rd_kafka_topic_partition_list_t *topics;
+	assert(inst != NULL);
+
+	rd_kafka_topic_partition_list_t *topics = NULL;
 	DBGPRINTF("imkafka: creating kafka consumer on %s/%s/%s\n",
-		inst->topic,
-		inst->consumergroup,
-		inst->brokers);
+		inst->topic, inst->consumergroup, inst->brokers);
 
 	/* Redirect rd_kafka_poll() to consumer_poll() */
 	rd_kafka_poll_set_consumer(inst->rk);
@@ -454,27 +454,26 @@ addConsumer(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst
 	topics = rd_kafka_topic_partition_list_new(1);
 	rd_kafka_topic_partition_list_add(topics, (const char*)inst->topic, inst->partition);
 	DBGPRINTF("imkafka: Created topics(%d) for %s)\n",
-		topics->cnt,
-		inst->topic);
+		topics->cnt, inst->topic);
 	if ((err = rd_kafka_subscribe(inst->rk, topics))) {
 		/* Subscription failed */
 		inst->bIsSubscribed = 0;
-		DBGPRINTF("imkafka: Failed to start consuming topics: %s\n", rd_kafka_err2str(err));
-/* TODO: Output Error */
-		ABORT_FINALIZE(RS_RET_ERR);
+		LogError(0, RS_RET_KAFKA_ERROR, "imkafka: Failed to start consuming "
+			"topics: %s\n", rd_kafka_err2str(err));
+		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	} else {
 		DBGPRINTF("imkafka: Successfully subscribed to %s/%s/%s\n",
-			inst->topic,
-			inst->consumergroup,
-			inst->brokers);
+			inst->topic, inst->consumergroup, inst->brokers);
 		/* Subscription is working */
 		inst->bIsSubscribed = 1;
 	}
 finalize_it:
+	if(topics != NULL)
+		rd_kafka_topic_partition_list_destroy(topics);
 	RETiRet;
 }
 
-static rsRetVal
+static rsRetVal ATTR_NONNULL()
 processKafkaParam(char *const param,
 	const char **const name,
 	const char **const paramval)
@@ -528,8 +527,8 @@ CODESTARTnewInpInst
 			es_deleteStr(es);
 		} else if(!strcmp(inppblk.descr[i].name, "confparam")) {
 			inst->nConfParams = pvals[i].val.d.ar->nmemb;
-			CHKmalloc(inst->confParams = malloc(sizeof(struct kafka_params)*pvals[i].val.d.ar->nmemb));
-			for(int j = 0; j < pvals[i].val.d.ar->nmemb; j++) {
+			CHKmalloc(inst->confParams = malloc(sizeof(struct kafka_params)*inst->nConfParams));
+			for(int j = 0; j < inst->nConfParams; j++) {
 				char *cstr = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
 				CHKiRet(processKafkaParam(cstr, &inst->confParams[j].name,
 								&inst->confParams[j].val));
@@ -548,11 +547,9 @@ CODESTARTnewInpInst
 	}
 
 	DBGPRINTF("imkafka: newInpIns brokers=%s, topic=%s, consumergroup=%s\n",
-		inst->brokers,
-		inst->topic,
-		inst->consumergroup);
+		inst->brokers, inst->topic, inst->consumergroup);
 
-	CHKiRet(checkInstance(inst));
+	iRet = checkInstance(inst);
 finalize_it:
 CODE_STD_FINALIZERnewInpInst
 	cnfparamvalsDestruct(pvals, &inppblk);
@@ -648,6 +645,7 @@ CODESTARTfreeCnf
 			free((void*)inst->confParams[i].name);
 			free((void*)inst->confParams[i].val);
 		}
+		free((void*)inst->confParams);
 		del = inst;
 		inst = inst->next;
 		free(del);
@@ -671,11 +669,11 @@ CODESTARTrunInput
 			if(glbl.GetGlobalInputTermState() == 1)
 				break; /* terminate input! */
 
-			if(inst->bIsSubscribed == 0 ) {
+			// Try to add consumer only if connected! */
+			if(inst->bIsConnected == 1 && inst->bIsSubscribed == 0 ) {
 				addConsumer(runModConf, inst);
 			}
 			if(inst->bIsSubscribed == 1 ) {
-				/* Try to consume available messages from kafka */
 				msgConsume(inst);
 			}
 		}
@@ -714,11 +712,27 @@ CODESTARTafterRun
 	instanceConf_t *inst;
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
 		DBGPRINTF("imkafka: afterRun stop consuming %s/%s/%s\n",
-			inst->topic,
-			inst->consumergroup,
-			inst->brokers);
-		/* Destroy handle */
+			inst->topic, inst->consumergroup, inst->brokers);
+
+		/* 1) Close the consumer, committing final offsets, etc. */
+		rd_kafka_consumer_close(inst->rk);
+
+		/* 2) Destroy handle object */
 		rd_kafka_destroy(inst->rk);
+
+		DBGPRINTF("imkafka: afterRun stopped consuming %s/%s/%s\n",
+			inst->topic, inst->consumergroup, inst->brokers);
+
+#	if RD_KAFKA_VERSION < 0x00090001
+	/* Wait for kafka being destroyed in old API */
+	if (rd_kafka_wait_destroyed(10000) < 0)	{
+		DBGPRINTF("imkafka: error, rd_kafka_destroy did not finish after grace "
+			"timeout (10s)!\n");
+	} else {
+		DBGPRINTF("imkafka: rd_kafka_destroy successfully finished\n");
+	}
+#	endif
+
 	}
 ENDafterRun
 
@@ -754,7 +768,7 @@ ENDqueryEtryPt
 
 BEGINmodInit()
 CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
 	/* request objects we use */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
@@ -762,11 +776,5 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
-
 	DBGPRINTF("imkafka: version %s initializing\n", VERSION);
-
 ENDmodInit
-
-
-/* vim:set ai:
- */

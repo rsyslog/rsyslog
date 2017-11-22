@@ -169,7 +169,8 @@ die_on_amqp_error(amqp_rpc_reply_t x, char const *context)
 			break;
 			}
 		default:
-			errmsg.LogError(0, RS_RET_ERR, "omrabbitmq: %s: unknown server error, method id 0x%08X\n", context, x.reply.id);
+			errmsg.LogError(0, RS_RET_ERR, "omrabbitmq: %s: unknown server error, method "
+					"id 0x%08X\n", context, x.reply.id);
 			break;
 		}
 		break;
@@ -466,7 +467,8 @@ CODESTARTnewActInst
 	}
 
 	if (pData->vhost == NULL) {
-		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module disabled: parameter virtual_host must be specified");
+		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module disabled: parameter "
+					"virtual_host must be specified");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
 
@@ -486,7 +488,8 @@ CODESTARTnewActInst
 	}
 
 	if (pData->routing_key == NULL) {
-		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module disabled: parameter routing_key must be specified");
+		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module disabled: parameter "
+					"routing_key must be specified");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
  
