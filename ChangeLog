@@ -12,6 +12,18 @@ Version 8.31.0 [v8-stable] 2017-11-28
   such should be supported. It is configurable via individual settings,
   though. Especially the number of bits to anonymize may be desired to
   be different than in pure IPv6.
+- ommongodb: big refactoring, more or less a feature-enhanced rewrite
+  New features are :
+  * Handle TLS connexion to mongodb
+  * Handle MongoDB Replicasets
+  * Added the 'ssl_ca' and 'ssl_cert' directives to configure tls connexion
+  * Added 'uristr' directive to configure the connection uri in the form
+    of 'mongodb://...'
+  Now uses the official mongo-c-driver library instead of the deprecated
+  mongo-client library
+  Special thanks to Hugo Soszynski and Jérémie Jourdin for there hard work
+  to make this a reality!
+  See also: https://github.com/rsyslog/rsyslog/pull/1917
 - rainerscript: add parse_time() function
   Thanks to Stephen Workman for implementing this.
 - omelasticsearch: add pipeline support
@@ -36,6 +48,10 @@ Version 8.31.0 [v8-stable] 2017-11-28
   easier to follow for both humans as well as static analyzers.
   Also removes Coverity scan CID 185419
 - imkafka: improve error reporting and cleanup refactoring
+- imkafka bugfix: segfault if "broker" parameter is not specified
+  Now emits warning message instead and uses hardcoded default
+  (which usually matches where the kafka broker can be found).
+  fixes https://github.com/rsyslog/rsyslog/issues/2085
 - omkafka: improve error reporting
 - omkafka: slight speedup do to refactoring of LIST class
   double-linked list was used for temporarily undeliverable message tracking
