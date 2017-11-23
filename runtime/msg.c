@@ -474,13 +474,22 @@ static void MsgSetRcvFromWithoutAddRef(smsg_t *pThis, prop_t *new)
 
 
 /* rgerhards 2012-04-18: set associated ruleset (by ruleset name)
- * If ruleset cannot be found, no update is done.
+ * pRuleset pointer inside msg is updated. If ruleset cannot be found,
+ * no update is done and an error message emitted.
  */
-static void
-MsgSetRulesetByName(smsg_t * const pMsg, cstr_t *rulesetName)
+static void ATTR_NONNULL()
+MsgSetRulesetByName(smsg_t * const pMsg, cstr_t *const rulesetName)
 {
-	/* coverity[checked_return] */ // KEEP TOGETHER WITH NEXT LINE!
-	rulesetGetRuleset(runConf, &(pMsg->pRuleset), rsCStrGetSzStrNoNULL(rulesetName));
+	uchar *const rs_name = rsCStrGetSzStrNoNULL(rulesetName);
+	const rsRetVal localRet =
+		 rulesetGetRuleset(runConf, &(pMsg->pRuleset), rs_name);
+
+	if(localRet != RS_RET_OK) {
+		LogError(0, localRet, "msg: ruleset '%s' could not be found and could not "
+			"be assgined to message object. This possibly leads to the message "
+			"being processed incorrectly. We cannot do anything against this, but "
+			"wanted to let you know.", rs_name);
+	}
 }
 
 /* do a DNS reverse resolution, if not already done, reflect status
