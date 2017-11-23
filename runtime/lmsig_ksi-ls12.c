@@ -47,6 +47,7 @@ static struct cnfparamdescr cnfpdescr[] = {
 	{ "sig.aggregator.url", eCmdHdlrGetWord, CNFPARAM_REQUIRED},
 	{ "sig.aggregator.user", eCmdHdlrGetWord, CNFPARAM_REQUIRED},
 	{ "sig.aggregator.key", eCmdHdlrGetWord, CNFPARAM_REQUIRED},
+	{ "sig.aggregator.hmacAlg", eCmdHdlrGetWord, 0 },
 	{ "sig.block.levelLimit", eCmdHdlrSize, CNFPARAM_REQUIRED},
 	{ "sig.block.timeLimit", eCmdHdlrInt, 0},
 	{ "sig.keeprecordhashes", eCmdHdlrBinary, 0 },
@@ -54,6 +55,7 @@ static struct cnfparamdescr cnfpdescr[] = {
 	{ "sig.fileformat", eCmdHdlrString, 0},
 	{ "sig.syncmode", eCmdHdlrString, 0},
 	{ "sig.randomsource", eCmdHdlrString, 0},
+	{ "sig.debug", eCmdHdlrInt, 0},
 	{ "dirowner", eCmdHdlrUID, 0}, /* legacy: dirowner */
 	{ "dirownernum", eCmdHdlrInt, 0 }, /* legacy: dirownernum */
 	{ "dirgroup", eCmdHdlrGID, 0 }, /* legacy: dirgroup */
@@ -119,7 +121,8 @@ ENDobjDestruct(lmsig_ksi_ls12)
 static rsRetVal
 SetCnfParam(void *pT, struct nvlst *lst)
 {
-	char *ag_uri = NULL, *ag_loginid = NULL, *ag_key = NULL, *hash=NULL;
+	char *ag_uri = NULL, *ag_loginid = NULL, *ag_key = NULL;
+	char *hash=NULL, *hmac = NULL;
 	lmsig_ksi_ls12_t *pThis = (lmsig_ksi_ls12_t*) pT;
 	int i;
 	uchar *cstr;
@@ -147,6 +150,8 @@ SetCnfParam(void *pT, struct nvlst *lst)
 			ag_loginid = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if (!strcmp(pblk.descr[i].name, "sig.aggregator.key")) {
 			ag_key = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(pblk.descr[i].name, "sig.aggregator.hmacAlg")) {
+			hmac = (char*) es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if (!strcmp(pblk.descr[i].name, "sig.block.levelLimit")) {
 			if (pvals[i].val.d.n < 2) {
 				errmsg.LogError(0, RS_RET_ERR, "sig.block.levelLimit "
@@ -177,6 +182,8 @@ SetCnfParam(void *pT, struct nvlst *lst)
 			cstr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
 			rsksiSetRandomSource(pThis->ctx, (char*) cstr);
 			free(cstr);
+		} else if (!strcmp(pblk.descr[i].name, "sig.debug")) {
+			rsksiSetDebug(pThis->ctx, pvals[i].val.d.n);
 		} else if (!strcmp(pblk.descr[i].name, "dirowner")) {
 			rsksiSetDirUID(pThis->ctx, pvals[i].val.d.n);
 		} else if (!strcmp(pblk.descr[i].name, "dirownernum")) {
@@ -204,6 +211,9 @@ SetCnfParam(void *pT, struct nvlst *lst)
 	}
 
 	if(rsksiSetHashFunction(pThis->ctx, hash ? hash : (char*) "SHA2-256") != KSI_OK)
+		goto finalize_it;
+
+	if(rsksiSetHmacFunction(pThis->ctx, hmac ? hmac : (char*) "SHA2-256") != KSI_OK)
 		goto finalize_it;
 
 	if(rsksiSetAggregator(pThis->ctx, ag_uri, ag_loginid, ag_key) != KSI_OK)
