@@ -80,7 +80,7 @@ static struct configSettings_s {
 struct instanceConf_s {
 	uchar *topic;
 	uchar *consumergroup;
-	uchar *brokers;
+	char *brokers;
 	int64_t offset;
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	uchar *pszBindRuleset;		/* default name of Ruleset to bind to */
@@ -523,7 +523,7 @@ CODESTARTnewInpInst
 				es_addStr(&es, pvals[i].val.d.ar->arr[j]);
 				bNeedComma = 1;
 			}
-			inst->brokers = (uchar*)es_str2cstr(es, NULL);
+			inst->brokers = es_str2cstr(es, NULL);
 			es_deleteStr(es);
 		} else if(!strcmp(inppblk.descr[i].name, "confparam")) {
 			inst->nConfParams = pvals[i].val.d.ar->nmemb;
@@ -544,6 +544,12 @@ CODESTARTnewInpInst
 			dbgprintf("imkafka: program error, non-handled "
 			  "param '%s'\n", inppblk.descr[i].name);
 		}
+	}
+
+	if(inst->brokers == NULL) {
+		CHKmalloc(inst->brokers = strdup("localhost:9092"));
+		LogMsg(0, NO_ERRCODE, LOG_INFO, "imkafka: \"broker\" parameter not specified "
+			"using default of localhost:9092 -- this may not be what you want!");
 	}
 
 	DBGPRINTF("imkafka: newInpIns brokers=%s, topic=%s, consumergroup=%s\n",
