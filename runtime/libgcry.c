@@ -606,7 +606,7 @@ readIV(gcryfile gf, uchar **iv)
 		CHKiRet(eiCheckFiletype(gf));
 	}
 	*iv = malloc(gf->blkLength); /* do NOT zero-out! */
-	CHKiRet(eiGetIV(gf, *iv, (size_t) gf->blkLength));
+	iRet = eiGetIV(gf, *iv, (size_t) gf->blkLength);
 finalize_it:
 	RETiRet;
 }
