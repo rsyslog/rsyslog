@@ -1293,7 +1293,7 @@ signing_failed:
 		KSI_free(der);
 }
 
-bool save_response(rsksictx ctx, FILE* outfile, QueueItem *item) {
+static bool save_response(rsksictx ctx, FILE* outfile, QueueItem *item) {
 	bool ret = false;
 	KSI_Signature *sig = NULL;
 	unsigned char *raw = NULL;
