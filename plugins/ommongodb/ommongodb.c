@@ -4,11 +4,12 @@
  * mongodb C interface is crap. Obtain the library here:
  * https://github.com/algernon/libmongo-client
  *
+ * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
+ *
  * Copyright 2017 Jeremie Jourdin and Hugo Soszynski and aDvens
  * Remove deprecated libmongo-client and use libmongoc (mongo-c-driver)
  * This new library handle TLS and replicaset
  *
- * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *

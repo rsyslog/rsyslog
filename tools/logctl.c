@@ -4,6 +4,8 @@
  *
  * Copyright 2012 Ulrike Gerhards and Adiscon GmbH.
  *
+ * Copyright 2017 Hugo Soszynski and aDvens
+ *
  * long		short	
 
  * level	l	read records with level x
