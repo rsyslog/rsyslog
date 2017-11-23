@@ -53,18 +53,18 @@
 
 #define N 80
 
-static struct option long_options[] = 
-{ 
-	{"level", required_argument, NULL, 'l'}, 
-    	{"severity", required_argument, NULL, 's'}, 
+static struct option long_options[] =
+{
+	{"level", required_argument, NULL, 'l'},
+    	{"severity", required_argument, NULL, 's'},
     	{"ret", required_argument, NULL, 'r'},
     	{"skip", required_argument, NULL, 'k'},
     	{"sys", required_argument, NULL, 'y'},
    	{"msg", required_argument, NULL, 'm'},
     	{"datef", required_argument, NULL, 'f'},
     	{"dateu", required_argument, NULL, 'u'},
-    	{NULL, 0, NULL, 0} 
-}; 
+    	{NULL, 0, NULL, 0}
+};
 
 struct queryopt
 {
@@ -88,7 +88,7 @@ struct queryopt
 };
 
 struct ofields
-{	
+{
 	const char *msg;
 	const char *syslog_tag;
 	const char *prog;
@@ -107,7 +107,7 @@ struct select_doc
 };
 
 struct db_connect
-{	
+{
 	mongoc_client_t *conn;
 };
 
@@ -116,29 +116,28 @@ struct db_collection
 	mongoc_collection_t *collection;
 };
 
-struct db_cursor 
+struct db_cursor
 {
 	mongoc_cursor_t *cursor;
 };
 
-struct results 
+struct results
 {
 	const bson_t *result;
 };
 
 
 
-void formater(struct ofields *fields)
+static void formater(struct ofields *fields)
 {
 	time_t rtime;
 	rtime = (time_t) (fields->date_r / 1000);
 	char str[N];
 	strftime(str, N, "%b %d %H:%M:%S", gmtime(&rtime));
  	printf("%s  %s %s %s\n", str, fields->prog, fields->syslog_tag, fields->msg);
-
 }
 
-struct ofields* get_data(struct results *res)
+static struct ofields* get_data(struct results *res)
 {
 	struct ofields *fields;
 	const char *msg;
@@ -184,62 +183,62 @@ struct ofields* get_data(struct results *res)
 	return fields;
 }
 
-void getoptions(int argc, char *argv[], struct queryopt *opt)
+static void getoptions(int argc, char *argv[], struct queryopt *opt)
 {
 	int iarg;
 	while ((iarg = getopt_long(argc, argv, "l:s:r:k:y:f:u:m:", long_options, NULL)) != -1)
-	{ 
-    	// check to see if a single character or long option came through 
-   	switch (iarg) 
-    		{ 
-		 // short option 's' 
+	{
+    	// check to see if a single character or long option came through
+   	switch (iarg)
+    		{
+		 // short option 's'
          		case 's': 
 			opt->bsever = 1;
 			opt->e_sever = atoi(optarg);
             		break; 
-		// short option 'r' 
-         		case 'r': 
+		// short option 'r'
+         		case 'r':
 			opt->bret = 1;
 			opt->e_ret = atoi(optarg);
-			break; 
+			break;
 		// short option 'f' : date from
-         		case 'f': 
+         		case 'f':
 			opt->bdate = 1;
 			opt->bdatef = 1;
 			opt->e_date = optarg;
-	             	break; 
+	             	break;
 		// short option 'u': date until
          		case 'u': 
 			opt->bdate = 1;
 			opt->bdateu = 1;
 			opt->e_dateu = optarg;
-             		break; 
-		// short option 'k' 
-         		case 'k': 
+             		break;
+		// short option 'k'
+         		case 'k':
 			opt->bskip = 1;
 			opt->e_skip = atoi(optarg);
-			break; 
-         	// short option 'l' 
-         		case 'l': 
-		 	opt->blevel = 1; 
-            	 	opt->e_level = optarg; 
-		 	break; 
-	 	// short option 'm' 
-         		case 'm': 
-			opt->bmsg = 1; 
-            	 	opt->e_msg = optarg; 
-		 	break; 
-		// short option 'y' 
-         		case 'y': 
-		 	opt->bsys = 1; 
-            	 	opt->e_sys = optarg; 
-		 	break; 
+			break;
+         	// short option 'l'
+         		case 'l':
+		 	opt->blevel = 1;
+            	 	opt->e_level = optarg;
+		 	break;
+	 	// short option 'm'
+         		case 'm':
+			opt->bmsg = 1;
+            	 	opt->e_msg = optarg;
+		 	break;
+		// short option 'y'
+         		case 'y':
+		 	opt->bsys = 1;
+            	 	opt->e_sys = optarg;
+		 	break;
     		}  				// end switch iarg
 	} 					// end while
 	
 }						// end void getoptions
 
-struct select_doc* create_select()
+static struct select_doc* create_select()
 // BSON object indicating the fields to return
 {
 	struct select_doc *s_doc;
@@ -252,7 +251,7 @@ struct select_doc* create_select()
 	return s_doc;
 } 
 
-struct query_doc* create_query(struct queryopt *opt)
+static struct query_doc* create_query(struct queryopt *opt)
 {
 	struct query_doc *qu_doc;
 	bson_t  *query_what, *order_what, *msg_what, *date_what;
@@ -328,7 +327,7 @@ struct query_doc* create_query(struct queryopt *opt)
 	return qu_doc;
 } 
 
-struct db_connect* create_conn()
+static struct db_connect* create_conn()
 {
 	struct db_connect *db_conn;
 	db_conn = malloc (sizeof(struct db_connect));
@@ -340,24 +339,24 @@ struct db_connect* create_conn()
     		exit (1);
    	}
 	return db_conn;
-} 
+}
 
-void close_conn(struct db_connect *db_conn)
+static void close_conn(struct db_connect *db_conn)
 {
 	mongoc_client_destroy (db_conn->conn);
 	free(db_conn);
 }
 
-void free_cursor(struct db_cursor *db_c)
+static void free_cursor(struct db_cursor *db_c)
 {
 	mongoc_cursor_destroy (db_c->cursor);
 	free(db_c);
 }
 
-struct db_cursor* launch_query(struct queryopt *opt,
-			       __attribute__((unused)) struct select_doc *s_doc,
-				struct query_doc *qu_doc,
-				struct db_collection *db_coll)
+static struct db_cursor* launch_query(struct queryopt *opt,
+				      __attribute__((unused)) struct select_doc *s_doc,
+				      struct query_doc *qu_doc,
+				      struct db_collection *db_coll)
 {
 	struct db_cursor *out;
 
@@ -387,14 +386,14 @@ struct db_cursor* launch_query(struct queryopt *opt,
 	return out;
 }
 
-int cursor_next (struct db_cursor *db_c, struct results* res)
+static int cursor_next (struct db_cursor *db_c, struct results* res)
 {
 	if (mongoc_cursor_next (db_c->cursor, &res->result))
 		return true;
 	return false;
 }
 
-struct db_collection* get_collection(struct db_connect* db_conn)
+static struct db_collection* get_collection(struct db_connect* db_conn)
 {
 	struct db_collection* coll;
 
@@ -404,7 +403,7 @@ struct db_collection* get_collection(struct db_connect* db_conn)
 	return coll;
 }
 
-void release_collection(struct db_collection* db_coll)
+static void release_collection(struct db_collection* db_coll)
 {
 	mongoc_collection_destroy (db_coll->collection);
 	free (db_coll);
