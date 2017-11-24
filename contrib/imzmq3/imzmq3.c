@@ -871,6 +871,9 @@ CODEmodInit_QueryRegCFSLineHdlr
     CHKiRet(objUse(glbl, CORE_COMPONENT));
     CHKiRet(objUse(prop, CORE_COMPONENT));
     CHKiRet(objUse(ruleset, CORE_COMPONENT));
+    LogError(0, RS_RET_DEPRECATED, "note: imzmq3 module is deprecated and will "
+	"be removed soon. Do no longer use it, switch to imczmq. See "
+	"https://github.com/rsyslog/rsyslog/issues/2103 for details.");
 ENDmodInit
 
 

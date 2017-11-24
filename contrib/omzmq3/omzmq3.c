@@ -486,6 +486,9 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* only supports rsyslog 6 configs */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	LogError(0, RS_RET_DEPRECATED, "note: omzmq3 module is deprecated and will "
+		"be removed soon. Do no longer use it, switch to imczmq. See "
+		"https://github.com/rsyslog/rsyslog/issues/2103 for details.");
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
 	DBGPRINTF("omzmq3: module compiled with rsyslog version %s.\n", VERSION);
 
