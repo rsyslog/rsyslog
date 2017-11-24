@@ -126,6 +126,27 @@ Input Parameters
 
    Array of ports: Port=["514","515","10514","..."]
 
+.. function::  ipfreebind <number>
+
+   *Available since: 8.18.0*
+
+   *Default: 2*
+
+   Manages the IP_FREEBIND option on the UDP socket, which allows binding it to
+   an IP address that is nonlocal or not (yet) associated to any network interface.
+   
+   The parameter accepts the following values:
+
+   -  0 - does not enable the IP_FREEBIND option on the
+      UDP socket. If the *bind()* call fails because of *EADDRNOTAVAIL* error,
+      socket initialization fails.
+
+   -  1 - silently enables the IP_FREEBIND socket
+      option if it is required to successfully bind the socket to a nonlocal address.
+
+   -  2 - enables the IP_FREEBIND socket option and
+      warns when it is used to successfully bind the socket to a nonlocal address.
+   
 .. function::  Device <device>
 
    *Default: none*
