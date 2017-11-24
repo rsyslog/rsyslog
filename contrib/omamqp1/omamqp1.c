@@ -542,7 +542,7 @@ static void _abort_command(protocolState_t *ps)
     switch (ipc->command) {
     case COMMAND_SEND:
       dbgprintf("omamqp1: aborted the message send in progress\n");
-      // fallthrough:
+      CASE_FALLTHROUGH
     case COMMAND_IS_READY:
       ipc->result = RS_RET_SUSPENDED;
       ipc->command = COMMAND_DONE;
