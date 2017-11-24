@@ -28,6 +28,8 @@ if test "$unamestr" = "AIX"; then
 fi
 # AIXPORT END
 
+# change to the one below if Travis has a timeout
+#AM_INIT_AUTOMAKE([subdir-objects serial-tests])
 AM_INIT_AUTOMAKE([subdir-objects])
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])

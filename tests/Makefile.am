@@ -466,6 +466,7 @@ endif
 if ENABLE_ELASTICSEARCH_TESTS
 TESTS +=  \
 	es-basic.sh \
+	es-basic-es6.0.sh \
 	es-basic-server.sh \
 	es-basic-ha.sh \
 	es-basic-bulk.sh \
@@ -1068,6 +1069,7 @@ EXTRA_DIST= \
 	incltest_dir_wildcard.sh \
 	testsuites/incltest_dir_wildcard.conf \
 	testsuites/incltest.d/include.conf \
+	es-basic-es6.0.sh \
 	es-basic.sh \
 	es-basic-vgthread.sh \
 	testsuites/es-basic.conf \
