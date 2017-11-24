@@ -1193,6 +1193,14 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	if(tlsKeyFile != NULL || tlsCertFile != NULL) {
+		if(transport != TP_TLS) {
+			printf("error: TLS certificates were specified, but TLS is NOT enabled: "
+					"To enable TLS use parameter -Ttls\n");
+			exit(1);
+		}
+	}
+
 	if(transport == TP_TLS) {
 		initTLS();
 	} else if(transport == TP_RELP_PLAIN) {
