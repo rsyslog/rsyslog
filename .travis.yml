@@ -46,6 +46,9 @@ addons:
     - libkrb5-dev
     - libsodium-dev
     - libczmq-dev
+    - libhiredis.dev
+    # for gcc-7:
+    #- binutils-2.26
     #- autoconf-archive
     #- libgrok1
     #- libgrok-dev
@@ -100,6 +103,12 @@ matrix:
        compiler: "gcc"
        dist: trusty
        env: DEBUGLESS="YES", CFLAGS="-g -O2 -std=c99 -Werror -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -Wno-unused-function"
+
+     # next is experimental, we may merge it with some other compile-only test
+     - os: linux
+       compiler: "gcc"
+       env: KAFKA="YES", GCC="NEWEST"
+       dist: trusty
 
      - os: linux
        compiler: "gcc"
