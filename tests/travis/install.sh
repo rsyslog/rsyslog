@@ -1,7 +1,7 @@
 # this installs some components that we cannot install any other way
 source /etc/lsb-release
 # the following packages are not yet available via travis package
-sudo apt-get install -qq faketime libdbd-mysql autoconf-archive
+sudo apt-get install -qq faketime libdbd-mysql 
 
 # update autoconf-archive (no good enough packets available)
 # this one built by whissi
@@ -22,7 +22,7 @@ sudo apt-get install -qq python-docutils
 if [ "$DISTRIB_CODENAME" == "trusty" ] || [ "$DISTRIB_CODENAME" == "precise" ]; then
 	WANT_MAXMIND=1.2.0
 	curl -Ls https://github.com/maxmind/libmaxminddb/releases/download/${WANT_MAXMIND}/libmaxminddb-${WANT_MAXMIND}.tar.gz | tar -xz
-	(cd libmaxminddb-${WANT_MAXMIND} ; ./configure --prefix=/usr CC=gcc CFLAGS="-Wall -Wextra -g -pipe -std=gnu99"  > /dev/null ; make -j2  >/dev/null ; sudo make install > /dev/null)
+	(cd libmaxminddb-${WANT_MAXMIND} ; ./configure --prefix=/usr CC=gcc CFLAGS="-Wall -Wextra -g -pipe -std=gnu99"  > /dev/null ; make -j2  &>/dev/null ; sudo make install > /dev/null)
 	rm -rf libmaxminddb-${WANT_MAXMIND} # get rid of source, e.g. for line length check
 	
 	SAVE_CFLAGS=$CFLAGS

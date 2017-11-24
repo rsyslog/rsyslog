@@ -105,7 +105,7 @@ matrix:
      # next is experimental, we may merge it with some other compile-only test
      - os: linux
        compiler: "gcc"
-       env: GCC="NEWEST", KAFKA="YES", GROK="YES", CFLAGS="-g -O2 -Werror -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
+       env: GCC="NEWEST", KAFKA="YES", GROK="YES", CFLAGS="-g"
        dist: trusty
 
      - os: linux
