@@ -572,10 +572,6 @@ computeMessageSize(const wrkrInstanceData_t *const pWrkrData,
 	uchar *pipelineName;
 
 	getIndexTypeAndParent(pWrkrData->pData, tpls, &searchIndex, &searchType, &parent, &bulkId, &pipelineName);
-DBGPRINTF("computeMessageSize: message %p, searchIndex %p, searchType%p\n", message, searchIndex, searchType);
-DBGPRINTF("computeMessageSize: searchType %s\n", searchType);
-DBGPRINTF("computeMessageSize: searchIndex %s\n", searchIndex);
-DBGPRINTF("computeMessageSize: message %s\n", message);
 	r += ustrlen((char *)message) + ustrlen(searchIndex) + ustrlen(searchType);
 
 	if(parent != NULL) {
