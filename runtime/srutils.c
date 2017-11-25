@@ -42,6 +42,7 @@
 #include <sys/wait.h>
 #include <ctype.h>
 #include <inttypes.h>
+#include <fcntl.h>
 #include "srUtils.h"
 #include "obj.h"
 #include "errmsg.h"
@@ -691,7 +692,7 @@ containsGlobWildcard(char *str)
 	return 0;
 }
 
-void seedRandomNumber(void)
+static void seedRandomInsecureNumber(void)
 {
 	struct timespec t;
 	timeoutComp(&t, 0);
@@ -699,10 +700,48 @@ void seedRandomNumber(void)
 	srandom((unsigned int) x);
 }
 
-long int randomNumber(void)
+static long int randomInsecureNumber(void)
 {
 	return random();
 }
+
+#ifdef OS_LINUX
+static int fdURandom = -1;
+void seedRandomNumber(void)
+{
+	fdURandom = open("/dev/urandom", O_RDONLY);
+	if(fdURandom == -1) {
+		LogError(errno, RS_RET_IO_ERROR, "failed to seed random number generation,"
+			" will use fallback (open urandom failed)");
+		seedRandomInsecureNumber();
+	}
+}
+
+long int randomNumber(void)
+{
+	long int ret;
+	if(fdURandom >= 0) {
+		if(read(fdURandom, &ret, sizeof(long int)) == -1) {
+			LogError(errno, RS_RET_IO_ERROR, "failed to generate random number, will"
+				" use fallback (read urandom failed)");
+			ret = randomInsecureNumber();
+		}
+	} else {
+		ret = randomInsecureNumber();
+	}
+	return ret;
+}
+#else
+void seedRandomNumber(void)
+{
+	seedRandomInsecureNumber();
+}
+
+long int randomNumber(void)
+{
+	return randomInsecureNumber();
+}
+#endif
 
 /* vim:set ai:
  */
