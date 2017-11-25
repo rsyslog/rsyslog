@@ -63,13 +63,13 @@ static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
  * structs to describe sockets
  */
 struct socket_type {
-    char*  name;
+    const char*  name;
     int    type;
 };
 
 /* more overkill, but seems nice to be consistent. */
 struct socket_action {
-    char* name;
+    const char* name;
     int   action;
 };
 
@@ -164,7 +164,7 @@ static struct cnfparamblk actpblk = {
 /* get the name of a socket type, return the ZMQ_XXX type
    or -1 if not a supported type (see above) 
 */
-int getSocketType(char* name) {
+static int getSocketType(char* name) {
     int type = -1;
     uint i;
     for(i=0; i<sizeof(types)/sizeof(struct socket_type); ++i) {
@@ -260,7 +260,7 @@ static rsRetVal initZMQ(instanceData* pData) {
     RETiRet;
 }
 
-rsRetVal writeZMQ(uchar* msg, instanceData* pData) {
+static rsRetVal writeZMQ(uchar* msg, instanceData* pData) {
 	DEFiRet;
 
     /* initialize if necessary */
@@ -486,6 +486,9 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* only supports rsyslog 6 configs */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	LogError(0, RS_RET_DEPRECATED, "note: omzmq3 module is deprecated and will "
+		"be removed soon. Do no longer use it, switch to imczmq. See "
+		"https://github.com/rsyslog/rsyslog/issues/2103 for details.");
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
 	DBGPRINTF("omzmq3: module compiled with rsyslog version %s.\n", VERSION);
 

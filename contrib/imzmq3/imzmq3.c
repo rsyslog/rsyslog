@@ -69,13 +69,13 @@ DEFobjCurrIf(ruleset)
  * structs to describe sockets
  */
 typedef struct _socket_type {
-    char*  name;
+    const char*  name;
     int    type;
 } socket_type;
 
 /* more overkill, but seems nice to be consistent.*/
 typedef struct _socket_action {
-    char* name;
+    const char* name;
     int   action;
 } socket_action;
 
@@ -339,7 +339,7 @@ static rsRetVal validateConfig(instanceConf_t* info) {
     return RS_RET_OK;
 }
 
-static rsRetVal createContext() {
+static rsRetVal createContext(void) {
     if (s_context == NULL) {
         DBGPRINTF("imzmq3: creating zctx...");
         zsys_handler_set(NULL);
@@ -871,6 +871,9 @@ CODEmodInit_QueryRegCFSLineHdlr
     CHKiRet(objUse(glbl, CORE_COMPONENT));
     CHKiRet(objUse(prop, CORE_COMPONENT));
     CHKiRet(objUse(ruleset, CORE_COMPONENT));
+    LogError(0, RS_RET_DEPRECATED, "note: imzmq3 module is deprecated and will "
+	"be removed soon. Do no longer use it, switch to imczmq. See "
+	"https://github.com/rsyslog/rsyslog/issues/2103 for details.");
 ENDmodInit
 
 
