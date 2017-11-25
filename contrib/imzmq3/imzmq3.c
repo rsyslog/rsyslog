@@ -69,13 +69,13 @@ DEFobjCurrIf(ruleset)
  * structs to describe sockets
  */
 typedef struct _socket_type {
-    char*  name;
+    const char*  name;
     int    type;
 } socket_type;
 
 /* more overkill, but seems nice to be consistent.*/
 typedef struct _socket_action {
-    char* name;
+    const char* name;
     int   action;
 } socket_action;
 
@@ -339,7 +339,7 @@ static rsRetVal validateConfig(instanceConf_t* info) {
     return RS_RET_OK;
 }
 
-static rsRetVal createContext() {
+static rsRetVal createContext(void) {
     if (s_context == NULL) {
         DBGPRINTF("imzmq3: creating zctx...");
         zsys_handler_set(NULL);
