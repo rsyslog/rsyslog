@@ -1,7 +1,7 @@
 # this installs some components that we cannot install any other way
 source /etc/lsb-release
 # the following packages are not yet available via travis package
-sudo apt-get install -qq faketime libdbd-mysql 
+sudo apt-get install -qq faketime libdbd-mysql autoconf-archive
 
 # update autoconf-archive (no good enough packets available)
 # this one built by whissi
@@ -10,7 +10,7 @@ if [ $? -ne 0 ]; then
 	echo Download autoconf-archive failed!
 	exit 1
 fi
-sudo dpkg -i autoconf-archive_20170928-1adiscon1_all.deb
+#sudo dpkg -i autoconf-archive_20170928-1adiscon1_all.deb
 rm autoconf-archive_20170928-1adiscon1_all.deb
 
 if [ "x$GROK" == "xYES" ]; then sudo apt-get install -qq libgrok1 libgrok-dev ; fi
