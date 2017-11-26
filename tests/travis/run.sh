@@ -73,11 +73,12 @@ export CONFIG_FLAGS="--prefix=/opt/rsyslog --build=x86_64-pc-linux-gnu --host=x8
 	--enable-mmcount \
 	--enable-gssapi-krb5=no \
 	--enable-omhiredis \
-	--enable-imzmq3 --enable-omzmq3 \
 	--enable-imczmq --enable-omczmq \
 	--enable-usertools=no \
 	$JOURNAL_OPT $HIREDIS_OPT $ENABLE_KAFKA $ENABLE_DEBUGLESS $NO_VALGRIND \
 	$GROK $ES_TEST_CONFIGURE_OPT $CONFIGURE_FLAGS $AMQP1"
+# Note: [io]mzmq3 cannot be built any longer, according to Brian Knox they require an
+# outdated version of the client lib. So we do not bother any longer about them.
 ./configure  $CONFIG_FLAGS
 export USE_AUTO_DEBUG="off" # set to "on" to enable this for travis
 make -j
