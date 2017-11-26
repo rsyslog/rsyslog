@@ -195,6 +195,10 @@ uchar *srUtilStrDup(uchar *pOld, size_t len)
  * the creation fails in the similar way, we return an error on that second
  * try because otherwise we would potentially run into an endless loop.
  * loop. -- rgerhards, 2010-03-25
+ * The likeliest scenario for a prolonged contest of creating the parent directiories
+ * is within our process space. This can happen with a high probability when two
+ * threads, that want to start logging to files within same directory tree, are
+ * started close to each other. We should fix what we can. -- nipakoo, 2017-11-25
  */
 int makeFileParentDirs(const uchar *const szFile, size_t lenFile, mode_t mode,
 		       uid_t uid, gid_t gid, int bFailOnChownFail)
@@ -204,6 +208,7 @@ int makeFileParentDirs(const uchar *const szFile, size_t lenFile, mode_t mode,
         size_t len;
 	int iTry = 0;
 	int bErr = 0;
+	static pthread_mutex_t mutParentDir = PTHREAD_MUTEX_INITIALIZER;
 
 	assert(szFile != NULL);
 	assert(lenFile > 0);
@@ -217,6 +222,7 @@ int makeFileParentDirs(const uchar *const szFile, size_t lenFile, mode_t mode,
 			/* temporarily terminate string, create dir and go on */
                         *p = '\0';
 			iTry = 0;
+			pthread_mutex_lock(&mutParentDir);
 again:
                         if(access((char*)pszWork, F_OK)) {
                                 if(mkdir((char*)pszWork, mode) == 0) {
@@ -246,9 +252,11 @@ again:
 					int eSave = errno;
 					free(pszWork);
 					errno = eSave;
+					pthread_mutex_unlock(&mutParentDir);
 					return -1;
 				}
 			}
+			pthread_mutex_unlock(&mutParentDir);
                         *p = '/';
                 }
 	free(pszWork);
