@@ -1046,7 +1046,7 @@ persistFailedMsgs(instanceData *const __restrict__ pData)
 		assert(fmsgEntry != NULL);
 		nwritten = write(fdMsgFile, fmsgEntry->topicname, ustrlen(fmsgEntry->topicname) );
 		if(nwritten != -1)
-			write(fdMsgFile, "\t", 1);
+			nwritten = write(fdMsgFile, "\t", 1);
 		if(nwritten != -1)
 			nwritten = write(fdMsgFile, fmsgEntry->payload, ustrlen(fmsgEntry->payload) );
 		if(nwritten == -1) {
