@@ -195,6 +195,12 @@ Version 8.31.0 [v8-stable] 2017-11-28
   everyone meant it should still be handled via suspension. See
   github tracker below for more details.
   closes https://github.com/rsyslog/rsyslog/issues/1832
+- omfile bugfix: race during directory creation can lead to loop
+  There was a race where two threads were competing for directory creation
+  which could lead to none succeeding and a flood of error message like this
+  "error during config processing: omfile: creating parent directories for
+  file". This has been solved.
+  Thanks to Niko Kortström for the patch.
 - imudp: improve error reporting
   When udp listener cannot be created, an error message containing
   the ip-address and port is put out.
