@@ -1,5 +1,7 @@
 ------------------------------------------------------------------------------
 Version 8.31.0 [v8-stable] 2017-11-28
+- NEW BUILD DEPENDENCY: ommongodb now requires libmongo-c
+  instead of deprecated libmongo-client.
 - remove systemd embedded code, use libsystemd instead
   Since the early days rsyslog used the orginal systemd embedded
   interface code. This version now uses libsystemd where available.
@@ -51,6 +53,8 @@ Version 8.31.0 [v8-stable] 2017-11-28
   keep a simple lock ... unlock scheme within the function. That is
   easier to follow for both humans as well as static analyzers.
   Also removes Coverity scan CID 185419
+- rainerscript: use crypto-grade random number generator for random() function
+  We now use /dev/urandom if available. If not, we fall back to the weak PRNG.
 - imkafka: improve error reporting and cleanup refactoring
 - imkafka bugfix: segfault if "broker" parameter is not specified
   Now emits warning message instead and uses hardcoded default
