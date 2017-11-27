@@ -429,7 +429,8 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 	allowedMethods = pGSrv->allowedMethods;
 	if(allowedMethods & ALLOWEDMETHOD_GSS) {
 		int ret = 0;
-		CHKmalloc(buf = (char*) MALLOC(glbl.GetMaxLine() + 1));
+		const size_t bufsize = glbl.GetMaxLine();
+		CHKmalloc(buf = (char*) MALLOC(bufsize + 1));
 
                 prop.GetString(pSess->fromHostIP, &pszPeer, &lenPeer);
                 
@@ -464,7 +465,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 			}
 
 			do {
-				ret = recv(fdSess, buf, sizeof (buf), MSG_PEEK);
+				ret = recv(fdSess, buf, bufsize, MSG_PEEK);
 			} while (ret < 0 && errno == EINTR);
 			if (ret <= 0) {
 				if (ret == 0) {
@@ -486,7 +487,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 				 */
 				srSleep(1, 0);
 				do {
-					ret = recv(fdSess, buf, sizeof (buf), MSG_PEEK);
+					ret = recv(fdSess, buf, bufsize, MSG_PEEK);
 				} while (ret < 0 && errno == EINTR);
 				if (ret <= 0) {
 					if (ret == 0) {
