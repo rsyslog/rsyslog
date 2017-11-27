@@ -269,7 +269,6 @@ CODESTARTendTransaction
 	}
 
 finalize_it:
-	RETiRet;
 ENDendTransaction
 
 /* set defaults. note server is set to NULL 

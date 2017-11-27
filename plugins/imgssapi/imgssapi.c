@@ -326,17 +326,11 @@ addGSSListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	RETiRet;
 }
 
-/* I suppress the following function from clang static analyzer,
- * as it most probably has a false positive. Maybe someone with
- * better understanding might try to fix this warning:
- * imgssapi.c:363:5: warning: Potential leak of memory pointed to by 'pGSrv'
- */
-#ifndef __clang_analyzer__
 static rsRetVal
 actGSSListener(uchar *port)
 {
 	DEFiRet;
-	gsssrv_t *pGSrv;
+	gsssrv_t *pGSrv = NULL;
 
 	if(pOurTcpsrv == NULL) {
 		/* first create/init the gsssrv "object" */
@@ -370,10 +364,10 @@ finalize_it:
 		errmsg.LogError(0, NO_ERRCODE, "error %d trying to add listener", iRet);
 		if(pOurTcpsrv != NULL)
 			tcpsrv.Destruct(&pOurTcpsrv);
+		free(pGSrv);
 	}
 	RETiRet;
 }
-#endif // #ifndef __clang_analyzer__
 
 
 /* returns 0 if all went OK, -1 if it failed */
@@ -435,7 +429,8 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 	allowedMethods = pGSrv->allowedMethods;
 	if(allowedMethods & ALLOWEDMETHOD_GSS) {
 		int ret = 0;
-		CHKmalloc(buf = (char*) MALLOC(glbl.GetMaxLine() + 1));
+		const size_t bufsize = glbl.GetMaxLine();
+		CHKmalloc(buf = (char*) MALLOC(bufsize + 1));
 
                 prop.GetString(pSess->fromHostIP, &pszPeer, &lenPeer);
                 
@@ -470,7 +465,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 			}
 
 			do {
-				ret = recv(fdSess, buf, sizeof (buf), MSG_PEEK);
+				ret = recv(fdSess, buf, bufsize, MSG_PEEK);
 			} while (ret < 0 && errno == EINTR);
 			if (ret <= 0) {
 				if (ret == 0) {
@@ -492,7 +487,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 				 */
 				srSleep(1, 0);
 				do {
-					ret = recv(fdSess, buf, sizeof (buf), MSG_PEEK);
+					ret = recv(fdSess, buf, bufsize, MSG_PEEK);
 				} while (ret < 0 && errno == EINTR);
 				if (ret <= 0) {
 					if (ret == 0) {
