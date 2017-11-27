@@ -353,6 +353,8 @@ Version 8.31.0 [v8-stable] 2017-11-28
     a) different ElasticSearch versions
     b) independently from OS-installed version
     This also sets base to enable more elaboreate ES tests
+  * further relaxed timing of dynstats tests, as they tend to create
+    false positives on slow machines
 - CI: improved test coverage on FreeBSD
 - Travis: clang static analyzer 5.0 now run over all source files
 - build: make compile warning-free under gcc 7
