@@ -46,7 +46,7 @@ addons:
     - libkrb5-dev
     - libsodium-dev
     - libczmq-dev
-    - libhiredis.dev
+    - libnet1-dev
     #- autoconf-archive
     #- libgrok1
     #- libgrok-dev
@@ -62,7 +62,7 @@ matrix:
      - os: osx
        compiler: "clang"
        env: CFLAGS="-g "
-       #env: CFLAGS="-g -std=c99 -Werror -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
+       #env: CFLAGS="-g -std=c99 -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
        # note: -Werror makes ./configure.sh not properly detect functions
        # like strndup() on Ubuntu 12.04. So we enable it on trusty builds
        # only. The first build with gcc actually only has the purpose of
@@ -71,17 +71,17 @@ matrix:
        # need to find out some time why this is).
      - os: linux
        compiler: "gcc"
-       env: KAFKA="YES", CFLAGS="-g -std=c99 -Werror -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
+       env: KAFKA="YES", CFLAGS="-g -std=c99 -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
        dist: trusty
      - os: linux
        compiler: "clang"
-       env: STAT_AN="YES", GROK="YES", KAFKA="YES", CFLAGS="-g -O2 -std=c99 -Werror -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -Wno-unused-function"
+       env: STAT_AN="YES", GROK="YES", KAFKA="YES", CFLAGS="-g -O2 -std=c99 -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -Wno-unused-function"
        # note: we currently need -Wno-unused-function until we fix inline
        # functions (C99 semantics are really ugly...)
        dist: trusty
      - os: linux
        compiler: "clang"
-       env: MERGE="YES", STAT_AN="YES", CHECK="YES", GROK="YES", KAFKA="YES", CFLAGS="-g -O2 -std=c99 -Werror -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -Wno-unused-function"
+       env: MERGE="YES", STAT_AN="YES", CHECK="YES", GROK="YES", KAFKA="YES", CFLAGS="-g -O2 -std=c99 -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -Wno-unused-function"
        # note: we currently need -Wno-unused-function until we fix inline
        # functions (C99 semantics are really ugly...)
        dist: trusty
@@ -100,7 +100,7 @@ matrix:
      - os: linux
        compiler: "gcc"
        dist: trusty
-       env: DEBUGLESS="YES", CFLAGS="-g -O2 -std=c99 -Werror -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -Wno-unused-function"
+       env: DEBUGLESS="YES", CFLAGS="-g -O2 -std=c99 -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -Wno-unused-function"
 
      # next is experimental, we may merge it with some other compile-only test
      - os: linux
