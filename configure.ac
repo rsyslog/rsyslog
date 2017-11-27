@@ -290,7 +290,7 @@ esac
 PKG_CHECK_MODULES([LIBSYSTEMD], [libsystemd],
 	[ AC_DEFINE(HAVE_LIBSYSTEMD, 1, [libsystemd present]) ],
 	[ AC_MSG_NOTICE([libsystemd not present - disabling systemd support]) ]
-	])
+)
 
 # Regular expressions
 AC_ARG_ENABLE(regexp,
@@ -2002,7 +2002,6 @@ AM_CONDITIONAL(ENABLE_OMTCL, test x$enable_omtcl = xyes)
 # END TCL SUPPORT
 
 # man pages
-AC_CHECKING([if required man pages already exist])
 have_to_generate_man_pages="no"
 git_src_have_to_generate_man_pages="yes" # default to use when building from git source
 AC_ARG_ENABLE(generate-man-pages,
@@ -2035,7 +2034,7 @@ AM_CONDITIONAL(ENABLE_DISTCHECK_WORKAROUND, test x$enable_distcheck_workaround =
 if test "x$in_git_src" = "xyes"; then
         AC_MSG_NOTICE([Running from git source])
 
-        have_to_generate_man_pages=git_src_have_to_generate_man_pages
+        have_to_generate_man_pages=$git_src_have_to_generate_man_pages
 
         if test "x$LEX" != "xflex"; then
                 AC_MSG_ERROR([flex program is needed to build rsyslog, please install flex.])
