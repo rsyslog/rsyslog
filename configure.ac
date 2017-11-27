@@ -2002,7 +2002,6 @@ AM_CONDITIONAL(ENABLE_OMTCL, test x$enable_omtcl = xyes)
 # END TCL SUPPORT
 
 # man pages
-AC_CHECKING([if required man pages already exist])
 have_to_generate_man_pages="no"
 git_src_have_to_generate_man_pages="yes" # default to use when building from git source
 AC_ARG_ENABLE(generate-man-pages,
