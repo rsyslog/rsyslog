@@ -200,15 +200,14 @@ uchar *srUtilStrDup(uchar *pOld, size_t len)
  * threads, that want to start logging to files within same directory tree, are
  * started close to each other. We should fix what we can. -- nipakoo, 2017-11-25
  */
-int makeFileParentDirs(const uchar *const szFile, size_t lenFile, mode_t mode,
-		       uid_t uid, gid_t gid, int bFailOnChownFail)
+static int real_makeFileParentDirs(const uchar *const szFile, const size_t lenFile, const mode_t mode,
+	const uid_t uid, const gid_t gid, const int bFailOnChownFail)
 {
         uchar *p;
         uchar *pszWork;
         size_t len;
 	int iTry = 0;
 	int bErr = 0;
-	static pthread_mutex_t mutParentDir = PTHREAD_MUTEX_INITIALIZER;
 
 	assert(szFile != NULL);
 	assert(lenFile > 0);
@@ -222,7 +221,6 @@ int makeFileParentDirs(const uchar *const szFile, size_t lenFile, mode_t mode,
 			/* temporarily terminate string, create dir and go on */
                         *p = '\0';
 			iTry = 0;
-			pthread_mutex_lock(&mutParentDir);
 again:
                         if(access((char*)pszWork, F_OK)) {
                                 if(mkdir((char*)pszWork, mode) == 0) {
@@ -252,15 +250,28 @@ again:
 					int eSave = errno;
 					free(pszWork);
 					errno = eSave;
-					pthread_mutex_unlock(&mutParentDir);
 					return -1;
 				}
 			}
-			pthread_mutex_unlock(&mutParentDir);
                         *p = '/';
                 }
 	free(pszWork);
 	return 0;
+}
+/* note: this small function is the stub for the brain-dead POSIX cancel handling */
+int makeFileParentDirs(const uchar *const szFile, const size_t lenFile, const mode_t mode,
+		       const uid_t uid, const gid_t gid, const int bFailOnChownFail)
+{
+	static pthread_mutex_t mutParentDir = PTHREAD_MUTEX_INITIALIZER;
+	int r;	/* needs to be declared OUTSIDE of pthread_cleanup... macros! */
+	pthread_mutex_lock(&mutParentDir);
+	pthread_cleanup_push(mutexCancelCleanup, &mutParentDir);
+
+	r = real_makeFileParentDirs(szFile, lenFile, mode, uid, gid, bFailOnChownFail);
+
+	pthread_mutex_unlock(&mutParentDir);
+	pthread_cleanup_pop(0);
+	return r;
 }
 
 
