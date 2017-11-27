@@ -326,17 +326,11 @@ addGSSListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	RETiRet;
 }
 
-/* I suppress the following function from clang static analyzer,
- * as it most probably has a false positive. Maybe someone with
- * better understanding might try to fix this warning:
- * imgssapi.c:363:5: warning: Potential leak of memory pointed to by 'pGSrv'
- */
-#ifndef __clang_analyzer__
 static rsRetVal
 actGSSListener(uchar *port)
 {
 	DEFiRet;
-	gsssrv_t *pGSrv;
+	gsssrv_t *pGSrv = NULL;
 
 	if(pOurTcpsrv == NULL) {
 		/* first create/init the gsssrv "object" */
@@ -370,10 +364,10 @@ finalize_it:
 		errmsg.LogError(0, NO_ERRCODE, "error %d trying to add listener", iRet);
 		if(pOurTcpsrv != NULL)
 			tcpsrv.Destruct(&pOurTcpsrv);
+		free(pGSrv);
 	}
 	RETiRet;
 }
-#endif // #ifndef __clang_analyzer__
 
 
 /* returns 0 if all went OK, -1 if it failed */
