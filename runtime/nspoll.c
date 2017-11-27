@@ -36,6 +36,7 @@
 #include "module-template.h"
 #include "netstrm.h"
 #include "nspoll.h"
+#include "errmsg.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -60,12 +61,18 @@ loadDrvr(nspoll_t *pThis)
 	DEFiRet;
 	uchar *pBaseDrvrName;
 	uchar szDrvrName[48]; /* 48 shall be large enough */
+	assert(pThis != NULL);
 
 	pBaseDrvrName = pThis->pBaseDrvrName;
 	if(pBaseDrvrName == NULL) /* if no drvr name is set, use system default */
 		pBaseDrvrName = glbl.GetDfltNetstrmDrvr();
-	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsdpoll_%s", pBaseDrvrName) == sizeof(szDrvrName))
+	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsdpoll_%s", pBaseDrvrName)
+		== sizeof(szDrvrName)) {
+		szDrvrName[sizeof(szDrvrName)-1] = '\0';
+		LogError(0, RS_RET_DRVRNAME_TOO_LONG, "nspoll could not load driver, name is "
+			"too long. Begins with: '%s'", szDrvrName);
 		ABORT_FINALIZE(RS_RET_DRVRNAME_TOO_LONG);
+	}
 	CHKmalloc(pThis->pDrvrName = (uchar*) strdup((char*)szDrvrName));
 
 	pThis->Drvr.ifVersion = nsdCURR_IF_VERSION;
@@ -80,6 +87,10 @@ loadDrvr(nspoll_t *pThis)
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pThis->pDrvrName != NULL) {
+			LogError(0, iRet, "nspoll could not load driver, base name "
+				"is '%s', full name along the lines of '%s'",
+				pThis->pBaseDrvrName,
+				pThis->pDrvrName == NULL ? "(unset)" : (char*)pThis->pDrvrName);
 			free(pThis->pDrvrName);
 			pThis->pDrvrName = NULL;
 		}
