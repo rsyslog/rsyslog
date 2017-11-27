@@ -290,7 +290,7 @@ esac
 PKG_CHECK_MODULES([LIBSYSTEMD], [libsystemd],
 	[ AC_DEFINE(HAVE_LIBSYSTEMD, 1, [libsystemd present]) ],
 	[ AC_MSG_NOTICE([libsystemd not present - disabling systemd support]) ]
-	])
+)
 
 # Regular expressions
 AC_ARG_ENABLE(regexp,
