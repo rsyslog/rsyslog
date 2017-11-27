@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#!/usr/bin/env python
 
 """A message modification plugin to anonymize credit card numbers.
 
