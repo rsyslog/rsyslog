@@ -2,7 +2,7 @@
  *
  * Module begun 2011-07-01 by Rainer Gerhards
  *
- * Copyright 2011-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2011-2017 Rainer Gerhards and Others.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -36,6 +36,7 @@
 #include <sys/types.h>
 #include <libestr.h>
 #include <time.h>
+#include <curl/curl.h>
 #include "rsyslog.h"
 #include "rainerscript.h"
 #include "conf.h"
@@ -67,6 +68,11 @@ struct cnfexpr* cnfexprOptimize(struct cnfexpr *expr);
 static void cnfstmtOptimizePRIFilt(struct cnfstmt *stmt);
 static void cnfarrayPrint(struct cnfarray *ar, int indent);
 struct cnffunc * cnffuncNew_prifilt(int fac);
+
+struct curl_funcData {
+	const char *reply;
+	size_t replyLen;
+};
 
 /* debug support: convert token to a human-readable string. Note that
  * this function only supports a single thread due to a static buffer.
@@ -1890,7 +1896,8 @@ num2ipv4(struct svar *__restrict__ const sourceVal) {
 		goto done;
 	}
 	if(num < 0 || num > 4294967295) {
-		DBGPRINTF("rainerscript: (num2ipv4) invalid number(too big/negative); does not represent IPv4 address\n");
+		DBGPRINTF("rainerscript: (num2ipv4) invalid number(too big/negative); does "
+			"not represent IPv4 address\n");
 		len = snprintf(str, 16, "-1");
 		goto done;
 	}
@@ -1898,12 +1905,89 @@ num2ipv4(struct svar *__restrict__ const sourceVal) {
 		numip[i] = num % 256;
 		num = num / 256;
 	}
-	DBGPRINTF("rainerscript: (num2ipv4) Numbers: 1:'%d' 2:'%d' 3:'%d' 4:'%d'\n", numip[0], numip[1], numip[2], numip[3]);
+	DBGPRINTF("rainerscript: (num2ipv4) Numbers: 1:'%d' 2:'%d' 3:'%d' 4:'%d'\n",
+		numip[0], numip[1], numip[2], numip[3]);
 	len = snprintf(str, 16, "%d.%d.%d.%d", numip[3], numip[2], numip[1], numip[0]);
 done:
 	DBGPRINTF("rainerscript: (num2ipv4) ipv4-Address: %s, lengh: %zu\n", str, len);
 	estr = es_newStrFromCStr(str, len);
 	return(estr);
+}
+
+/* curl callback for doFunc_http_request */
+static size_t
+curlResult(void *ptr, size_t size, size_t nmemb, void *userdata)
+{
+	char *buf;
+	size_t newlen;
+	struct cnffunc *const func = (struct cnffunc *) userdata;
+	assert(func != NULL);
+	struct curl_funcData *const curlData = (struct curl_funcData*) func->funcdata;
+	assert(curlData != NULL);
+
+	if(ptr == NULL) {
+		LogError(0, RS_RET_ERR, "internal error: libcurl provided ptr=NULL");
+		return 0;
+	}
+
+	newlen = curlData->replyLen + size*nmemb;
+	if((buf = realloc((void*)curlData->reply, newlen + 1)) == NULL) {
+		LogError(errno, RS_RET_ERR, "rainerscript: realloc failed in curlResult");
+		return 0; /* abort due to failure */
+	}
+	memcpy(buf+curlData->replyLen, (char*)ptr, size*nmemb);
+	curlData->replyLen = newlen;
+	curlData->reply = buf;
+	return size*nmemb;
+}
+
+static rsRetVal ATTR_NONNULL(1,2,3)
+doFunc_http_request(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	const char *const url)
+{
+	int resultSet = 0;
+	CURL *handle = NULL;
+	CURLcode res;
+	assert(func != NULL);
+	struct curl_funcData *const curlData = (struct curl_funcData*) func->funcdata;
+	assert(curlData != NULL);
+	DEFiRet;
+
+
+	CHKmalloc(handle = curl_easy_init());
+	curl_easy_setopt(handle, CURLOPT_NOSIGNAL, TRUE);
+	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, curlResult);
+	curl_easy_setopt(handle, CURLOPT_WRITEDATA, func);
+
+	curl_easy_setopt(handle, CURLOPT_URL, url);
+	res = curl_easy_perform(handle);
+	if(res != CURLE_OK) {
+		LogError(0, RS_RET_IO_ERROR,
+			"rainerscript: http_request to failed, URL: '%s', error %s",
+			url, curl_easy_strerror(res));
+		ABORT_FINALIZE(RS_RET_OK);
+	}
+
+
+	CHKmalloc(ret->d.estr = es_newStrFromCStr(curlData->reply, curlData->replyLen));
+	ret->datatype = 'S';
+	resultSet = 1;
+
+finalize_it:
+	free((void*)curlData->reply);
+	curlData->reply = NULL;
+	curlData->replyLen = 0;
+
+	if(handle != NULL) {
+		curl_easy_cleanup(handle);
+	}
+	if(!resultSet) {
+		/* provide dummy value */
+		ret->d.n = 0;
+		ret->datatype = 'N';
+	}
+	RETiRet;
 }
 
 /*
@@ -2304,15 +2388,24 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 		if(bMustFree) free(str);
 		if(bMustFree2) free(str2);
 		break;
+	case CNFFUNC_HTTP_REQUEST:
+		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
+		str = (char*) var2CString(&r[0], &bMustFree);
+		doFunc_http_request(func, ret, str);
+		if(bMustFree) free(str);
+		varFreeMembers(&r[0]);
+		break;
 	default:
 		if(Debug) {
 			char *fname = es_str2cstr(func->fname, NULL);
-			dbgprintf("rainerscript: invalid function id %u (name '%s')\n",
-				  (unsigned) func->fID, fname);
+			LogError(0, RS_RET_INTERNAL_ERROR,
+				"rainerscript: internal error: invalid function id %u (name '%s')\n",
+				(unsigned) func->fID, fname);
 			free(fname);
 		}
 		ret->datatype = 'N';
 		ret->d.n = 0;
+		break;
 	}
 }
 
@@ -2956,6 +3049,11 @@ cnffuncDestruct(struct cnffunc *func)
 		case CNFFUNC_RE_EXTRACT:
 			if(func->funcdata != NULL)
 				regexp.regfree(func->funcdata);
+			break;
+		case CNFFUNC_HTTP_REQUEST:
+			if(func->funcdata != NULL) {
+				free((void*) ((struct curl_funcData*)func->funcdata)->reply);
+			}
 			break;
 		default:break;
 	}
@@ -4432,6 +4530,8 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 		GENERATE_FUNC("script_error", 0, CNFFUNC_SCRIPT_ERROR);
 	} else if(FUNC_NAME("previous_action_suspended")) {
 		GENERATE_FUNC("previous_action_suspended", 0, CNFFUNC_PREVIOUS_ACTION_SUSPENDED);
+	} else if(FUNC_NAME("http_request")) {
+		GENERATE_FUNC("http_request", 1, CNFFUNC_HTTP_REQUEST);
 	} else {
 		return CNFFUNC_INVALID;
 	}
@@ -4513,6 +4613,24 @@ finalize_it:
 	free(tplName);
 	RETiRet;
 }
+
+static rsRetVal ATTR_NONNULL(1)
+initFunc_http_request(struct cnffunc *const func)
+{
+	DEFiRet;
+
+	func->destructable_funcdata = 1;
+	CHKmalloc(func->funcdata = calloc(1, sizeof(struct curl_funcData)));
+	if(func->nParams != 1) {
+		parser_errmsg("rsyslog logic error in line %d of file %s\n",
+			__LINE__, __FILE__);
+		FINALIZE;
+	}
+
+finalize_it:
+	RETiRet;
+}
+
 
 
 static rsRetVal
@@ -4657,6 +4775,9 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 				break;
 			case CNFFUNC_DYN_INC:
 				initFunc_dyn_stats(func);
+				break;
+			case CNFFUNC_HTTP_REQUEST:
+				initFunc_http_request(func);
 				break;
 			default:break;
 		}
