@@ -49,7 +49,7 @@ def do_test(expr, val):
 
     # Print a message identifying the failing "test"
     if result != val:
-        print "Error: %s. Expected %4d, got %4d!" % (expr, val, result)
+        print("Error: %s. Expected %4d, got %4d!" % (expr, val, result))
         err += 1
 
 # Use a sliding 12-month window (offset by one month)
@@ -114,7 +114,7 @@ def get_total_seconds(dt):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print "Invalid number of arguments!"
+        print("Invalid number of arguments!")
         sys.exit(1)
 
     if sys.argv[1] == "selftest":
@@ -149,4 +149,4 @@ if __name__ == "__main__":
     calculated_datetime = datetime.strptime("%s %d" % (incoming_datetime, estimated_year), "%b %d %H:%M:%S %Y")
 
     # Convert the datetime object to a UNIX timestamp by subtracting it from the epoch
-    print int( get_total_seconds(calculated_datetime - datetime(1970,1,1)) )
+    print(int( get_total_seconds(calculated_datetime - datetime(1970,1,1)) ))
