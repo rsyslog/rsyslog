@@ -15,7 +15,7 @@ and, if present, the JSON-encoded structured message content is parsed.
 The properties are then available as original message properties.
 
 As a convenience, mmjsonparse will produce a valid CEE/lumberjack log
-message if passed a message without the CCE cookie.  A JSON structure
+message if passed a message without the CEE cookie.  A JSON structure
 will be created and the "msg" field will be the only field and it will
 contain the message. Note that in this case, mmjsonparse will
 nonetheless return that the JSON parsing has failed.
