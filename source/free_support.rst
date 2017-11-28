@@ -8,7 +8,7 @@ see our** `troubleshooting guide <troubleshooting/index.html>`_ **to get started
 
 Every now and then I receive private mail with support questions. I
 appreciate any feedback, but I must limit my resources so that I can
-help driver a great logging system forward.
+help drive a great logging system forward.
 
 To do so, I have decided not to reply to unsolicited support emails, at
 least not with a solution (but rather a link to this page ;)). I hope
@@ -52,5 +52,5 @@ exchange debug logs.
 
 I hope you now understand the free support options and the reasoning for
 them. I hope I haven't offended you with my words - this is not my
-intension. I just needed to make clear why there are some limits on my
+intention. I just needed to make clear why there are some limits on my
 responsiveness. Happy logging!

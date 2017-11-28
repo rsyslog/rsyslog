@@ -11,9 +11,15 @@ This module provides native support for logging to MongoDB.
 
 **Action Parameters**:
 
--  **server**
+-  **uristr**
+   MongoDB connexion string, as defined by the MongoDB String URI Format (See: https://docs.mongodb.com/manual/reference/connection-string/). If uristr is defined, following directives will be ignored: server, serverport, uid, pwd.
+-  **ssl_cert**
+   Absolute path to the X509 certificate you want to use for TLS client authentication. This is optional.
+-  **ssl_ca**
+   Absolute path to the trusted X509 CA certificate that signed the mongoDB server certificate. This is optional.
+-  **server** (deprecated, use "uristr" instead)
    Name or address of the MongoDB server
--  **serverport**
+-  **serverport** (deprecated, use "uristr" instead)
    Permits to select a non-standard port for the MongoDB server. The
    default is 0, which means the system default port is used. There is
    no need to specify this parameter unless you know the server is
@@ -22,12 +28,13 @@ This module provides native support for logging to MongoDB.
    Database to use
 -  **collection**
    Collection to use
--  **uid**
+-  **uid** (deprecated, use "uristr" instead)
    logon userid used to connect to server. Must have proper permissions.
--  **pwd**
+-  **pwd** (decrecated, use "uristr" instead)
    the user's password
 -  **template**
    Template to use when submitting messages.
+
 
 Note rsyslog contains a canned default template to write to the MongoDB.
 It will be used automatically if no other template is specified to be
@@ -59,7 +66,8 @@ field "level" contains the rsyslog property "syslogpriority-text".
 
 The following sample writes all syslog messages to the database "syslog"
 and into the collection "log" on mongoserver.example.com. The server is
-being accessed under the account of "user" with password "pwd".
+being accessed under the account of "user" with password "pwd". Please note
+that this syntax is deprecated by the "uristr" directive, as shown below.
 
 ::
 
@@ -67,6 +75,18 @@ being accessed under the account of "user" with password "pwd".
   action(type="ommongodb"
          server="mongoserver.example.com" db="syslog" collection="log"
          uid="user" pwd="pwd")
+
+
+Another sample that uses the new "uristr" directives to connect to a TLS mongoDB server with TLS and client authentication.
+
+::
+
+   module(load="ommongodb")
+   action(type="ommongodb" 
+         uristr="mongodb://vulture:9091,vulture2:9091/?replicaset=Vulture&ssl=true" 
+         ssl_cert="/var/db/mongodb/mongod.pem" 
+         ssl_ca="/var/db/mongodb/ca.pem" 
+         db="logs" collection="syslog")
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.

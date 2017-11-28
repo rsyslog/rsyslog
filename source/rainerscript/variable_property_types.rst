@@ -14,7 +14,7 @@ properties (e.g. the "$!" all JSON property does not contain them).
 
 Only message json (CEE/Lumberjack) properties can be modified by the
 **set**, **unset** and **reset** statements, not any other message property. Obviously,
-local variables are also modifieable.
+local variables are also modifiable.
 
 Message JSON property names start with "$!" where the bang character
 represents the root.
@@ -37,7 +37,7 @@ Check the following usage examples to understand how these statements behave:
 
 **set**
 -------
-sets the value of a local-variable or json property, but the addressed
+sets the value of a local-variable or json property, but if the addressed
 variable already contains a value its behaviour differs as follows:
 
 **merges** the value if both existing and new value are objects, 
@@ -96,7 +96,7 @@ originally contained or if it was even set. Eg.
    set $.y!two = "val_2";
    set $.z!var = $.x;
    # results in $. = { "x": { "one": "val_1" }, "y": { "two": "val_2" }, "z": { "var": { "one": "val_1" } } }
-   # 'set' or 'reset' can be used interchangably above(3 lines), they both have the same behaviour, as variable doesn't have an existing value
+   # 'set' or 'reset' can be used interchangeably above(3 lines), they both have the same behaviour, as variable doesn't have an existing value
 
    reset $.z!var = $.y;
    # results in $. = { "x": { "one": "val_1" }, "y": { "two": "val_2" }, "z": { "var": { "two": "val_2" } } }

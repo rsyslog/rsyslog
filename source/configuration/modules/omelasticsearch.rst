@@ -80,6 +80,20 @@ Action Parameters
    `rsyslog template <http://www.rsyslog.com/doc/rsyslog_conf_templates.html>`_
    for searchType_, instead of a static string.
 
+.. _pipelineName:
+
+-  **pipelineName**
+   The `ingest node <https://www.elastic.co/guide/en/elasticsearch/reference/current/ingest.html>`_ 
+   pipeline name to be inclued in the request. This allows pre processing 
+   of events bevor indexing them. By default, events are not send to a pipeline.
+
+.. _dynPipelineName:
+
+-  **dynPipelineName** <on/**off**>
+   Like dynSearchIndex_, it allows you to specify a
+   `rsyslog template <http://www.rsyslog.com/doc/rsyslog_conf_templates.html>`_
+   for pipelineName_, instead of a static string.
+
 .. _asyncrepl:
 
 -  **asyncrepl**\ <on/**off**>

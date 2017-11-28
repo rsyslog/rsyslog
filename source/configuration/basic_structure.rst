@@ -11,7 +11,7 @@ the rsyslog objects.
 Quick overview of message flow and objects
 ------------------------------------------
 Messages enter rsyslog with the help of input modules. Then, they are
-passed to ruleset, where rules are conditionally applied. When a rule
+passed to a ruleset, where rules are conditionally applied. When a rule
 matches, the message is transferred to an action, which then does 
 something to the message, e.g. writes it to a file, database or
 forwards it to a remote host.

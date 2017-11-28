@@ -121,7 +121,7 @@ field(str, delim, matchnbr)
 
    Note that when a single character is specified as string
    ``field($msg, ",", 3)`` a string-based extraction is done, which is
-   more performance intense than the equivalent single-character
+   more performance intensive than the equivalent single-character
    ``field($msg, 44 ,3)`` extraction. Eg.
 
 ::
@@ -272,3 +272,42 @@ it produces the original value:
 ::
 
    foo
+
+parse_time(timestamp)
+---------------------------------------
+
+   Converts an RFC 3164 or RFC 3339 formatted date/time string to a UNIX timestamp
+   (an integer value representing the number of seconds since the UNIX epoch:
+   1970-01-01T00:00:0Z).
+
+   If the input to the function is not a properly formatted RFC 3164 or RFC 3339
+   date/time string, or cannot be parsed, ``0`` is returned.
+
+   * **Note**: This function does not support unusual RFC 3164 dates/times that
+     contain year or time zone information.
+
+   * **Note**: Fractional seconds (if present) in RFC 3339 date/time strings will 
+     be discarded.
+
+
+::
+
+   parse_time("Oct  5 01:10:11") # Assumes the current year (2017, in this example)
+
+produces
+
+::
+
+   1507165811
+
+and
+
+::
+
+   parse_time("2017-10-05T01:10:11+04:00")
+
+produces
+
+::
+
+   1507151411

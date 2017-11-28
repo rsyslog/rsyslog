@@ -44,7 +44,7 @@ See Also
 Metadata
 ........
 The imfile module supports message metadata. It supports the following
-data items
+data items:
 
 - filename 
 
@@ -52,6 +52,14 @@ data items
   useful when using wildcards inside file monitors, because it then
   is the only way to know which file the message originated from.
   The value can be accessed using the %$!metadata!filename% property.
+
+- fileoffset 
+
+  Offset of the file in bytes at the time the message was read. The
+  offset reported is from the **start** of the line.
+  This information can be useful when recreating multi-line files
+  that may have been accessed or transmitted non-sequentially.
+  The value can be accessed using the %$!metadata!fileoffset% property.
 
 Metadata is only present if enabled. By default it is enabled for
 input() statements that contain wildcards. For all others, it is

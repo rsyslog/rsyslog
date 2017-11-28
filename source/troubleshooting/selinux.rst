@@ -8,7 +8,7 @@ what it is supposed to do, so there is nothing bad about it.
 If you suspect that some issues stems back to SELinux configuration,
 do the following:
 
-* *temporarily* disabling SELinux
+* *temporarily* disable SELinux
 * restart rsyslog
 * retry the operation
 

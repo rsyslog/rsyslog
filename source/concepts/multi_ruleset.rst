@@ -59,7 +59,7 @@ discard action is executed. Note that with multiple rulesets no longer
 **all** rsyslog.conf rules are executed but **only** those that are
 contained within the specific ruleset.
 
-Inputs must explicitly bind to rulesets. If they don't do, the default
+Inputs must explicitly bind to rulesets. If they don't, the default
 ruleset is bound.
 
 This brings up the next question:
@@ -71,7 +71,7 @@ This term is used in the same sense as "to bind an IP address to an
 interface": it means that a specific input, or part of an input (like a
 tcp listener) will use a specific ruleset to "pass its messages to". So
 when a new message arrives, it will be processed via the bound ruleset.
-Rule from all other rulesets are irrelevant and will never be processed.
+Rules from all other rulesets are irrelevant and will never be processed.
 
 This makes multiple rulesets very handy to process local and remote
 message via separate means: bind the respective receivers to different
@@ -84,7 +84,7 @@ Binding to rulesets is input-specific. For imtcp, this is done via the
 
     input(type="imptcp" port="514" ruleset="rulesetname");
 
-directive. Note that "name" must be the name of a ruleset that is
+directive. Note that "rulesetname" must be the name of a ruleset that is
 already defined at the time the bind directive is given. There are many
 ways to make sure this happens, but I personally think that it is best
 to define all rule sets at the top of rsyslog.conf and define the inputs
@@ -147,7 +147,7 @@ Note that in RainerScript format specifying any "queue.\*" can cause the
 creation of a dedicated queue and as such asynchronous processing. This is
 because queue parameters cannot be specified without a queue. Note, though,
 that the actual creation is **guaranteed** only if "queue.type" is specified
-as above. So if you intentionally want to assing a separate queue to the
+as above. So if you intentionally want to assign a separate queue to the
 ruleset, do so as shown above.
 
 Examples
@@ -183,13 +183,13 @@ discards it:
 
     # ... module loading ...
     # process remote messages
-    if $fromhost-ip == '192.168.152.137' then {
+    if $fromhost-ip == '192.0.2.1' then {
             action(type="omfile" file="/var/log/remotefile02")
             stop
         }
 
 
-    # only messages not from 192.0.21 make it past this point
+    # only messages not from 192.0.2.1 make it past this point
 
     # The authpriv file has restricted access.
     authpriv.*                            /var/log/secure

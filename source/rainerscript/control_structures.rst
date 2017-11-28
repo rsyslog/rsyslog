@@ -4,7 +4,7 @@ Control Structures
 Control structures in RainerScript are similar in semantics to a lot 
 of other mainstream languages such as C, Java, Javascript, Ruby, 
 Bash etc.
-So this section assumes the reader is familier with semantics of such 
+So this section assumes the reader is familiar with semantics of such 
 structures, and goes about describing RainerScript implementation in 
 usage-example form rather than by formal-definition and 
 detailed semantics documentation.
@@ -16,7 +16,7 @@ if
 ::
 
    if ($msg contains "important") then {
-      if ( $. foo != "" ) then set $.foo = $.bar & $.baz;
+      if ( $.foo != "" ) then set $.foo = $.bar & $.baz;
       action(type="omfile" file="/var/log/important.log" template="outfmt")
    }
 
