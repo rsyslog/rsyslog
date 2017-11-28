@@ -227,19 +227,19 @@ lookupSeverityCode(instanceData *pData, uchar *sever)
 }
 
 
-BEGINdoAction
+BEGINdoAction_NoStrings
+	smsg_t **ppMsg = (smsg_t **) pMsgData;
+	smsg_t *pMsg = ppMsg[0];
 	int lenTAG;
 	int lenSever;
 	int lenHost;
 	int sevCode;
-	smsg_t *pMsg;
 	uchar *pszTag;
 	uchar pszSever[512];
 	uchar pszHost[512];
 	instanceData *pData;
 CODESTARTdoAction
 	pData = pWrkrData->pData;
-	pMsg = (smsg_t*) ppString[0];
 	getTAG(pMsg, &pszTag, &lenTAG);
 	if(strncmp((char*)pszTag, (char*)pData->pszTagID, pData->lenTagID)) {
 		DBGPRINTF("tag '%s' not matching, mmsnmptrapd ignoring this message\n",
