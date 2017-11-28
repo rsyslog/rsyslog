@@ -115,9 +115,9 @@ extern int altdbg;	/* and the handle for alternate debug output */
 /* macros */
 #ifdef DEBUGLESS
 #	define DBGL_UNUSED __attribute__((__unused__))
-	inline void r_dbgoprint(const char DBGL_UNUSED *srcname, obj_t DBGL_UNUSED *pObj,
+	static inline void r_dbgoprint(const char DBGL_UNUSED *srcname, obj_t DBGL_UNUSED *pObj,
 	                         const char DBGL_UNUSED *fmt, ...) {}
-	inline void r_dbgprintf(const char DBGL_UNUSED *srcname, const char DBGL_UNUSED *fmt, ...) {}
+	static inline void r_dbgprintf(const char DBGL_UNUSED *srcname, const char DBGL_UNUSED *fmt, ...) {}
 #else
 #	define DBGL_UNUSED
 	void r_dbgoprint(const char *srcname, obj_t *pObj, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
