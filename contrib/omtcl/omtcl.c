@@ -25,6 +25,9 @@
  */
 #include "config.h"
 #include "rsyslog.h"
+/* work around gcc-7 build problems - acceptable for contributed module */
+#pragma GCC diagnostic ignored "-Wundef"
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
