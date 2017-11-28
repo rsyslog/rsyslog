@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#!/usr/bin/env python
 
 """Plugin to push metrics from logs to SPM Custom Metrics:
    https://sematext.atlassian.net/wiki/display/PUBSPM/Custom+Metrics

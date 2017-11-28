@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#!/usr/bin/env python
 
 """A skeleton for a python rsyslog output plugin
    Copyright (C) 2014 by Adiscon GmbH

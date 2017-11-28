@@ -1395,7 +1395,7 @@ static bool process_requests_async(rsksictx ctx, KSI_CTX *ksi_ctx, KSI_AsyncServ
 		CHECK_KSI_API(KSI_AggregationReq_setRequestLevel(req, level), ctx, "KSI_AggregationReq_setRequestLevel");
 		CHECK_KSI_API(KSI_AsyncAggregationHandle_new(ksi_ctx, req, &reqHandle), ctx, "KSI_AsyncAggregationHandle_new");
 		CHECK_KSI_API(KSI_AsyncHandle_setRequestCtx(reqHandle, (void*)item, NULL), ctx, "KSI_AsyncRequest_setRequestContext");
-		state = KSI_AsyncService_addRequest(as, reqHandle); /* this can fail because of throttling */
+		res = KSI_AsyncService_addRequest(as, reqHandle); /* this can fail because of throttling */
 
 		if (res == KSI_OK) {
 			debug_report(ctx, "debug: sent: %u", i);
@@ -1537,8 +1537,8 @@ void *signer_thread(void *arg) {
 				if (ksiFile) {
 					debug_report(ctx, "debug: sig-thread closing file %p", ksiFile);
 					fclose(ksiFile);
+					ksiFile = NULL;
 				}
-				ksiFile = NULL;
 			} else if (item->type == QITEM_NEW_FILE) {
 				debug_report(ctx, "debug: sig-thread opening new file %p", item->arg);
 				ksiFile = (FILE*) item->arg;
