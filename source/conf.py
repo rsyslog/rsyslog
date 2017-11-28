@@ -44,7 +44,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'rsyslog'
-copyright = u'2008-2017, Rainer Gerhards and Adiscon'
+copyright = u'2008-2017, Rainer Gerhards and Others'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
