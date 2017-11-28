@@ -7,7 +7,7 @@
  *
  * File begun on 2011-05-05 by RGerhards
  *
- * Copyright 2011 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2011-2017 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -340,8 +340,8 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	/* finally build the instance */
 	if(cs.pszTagName == NULL) {
-		pData->pszTagName = (uchar*) strdup("snmptrapd:");
-		pData->pszTagID = (uchar*) strdup("snmptrapd/");
+		CHKmalloc(pData->pszTagName = (uchar*) strdup("snmptrapd:"));
+		CHKmalloc(pData->pszTagID = (uchar*) strdup("snmptrapd/"));
 	} else {
 		int lenTag = ustrlen(cs.pszTagName);
 		/* new tag value (with colon at the end) */
