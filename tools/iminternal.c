@@ -62,20 +62,9 @@ static rsRetVal iminternalDestruct(iminternal_t *pThis)
 static rsRetVal iminternalConstruct(iminternal_t **ppThis)
 {
 	DEFiRet;
-	iminternal_t *pThis;
-
-	if((pThis = (iminternal_t*) calloc(1, sizeof(iminternal_t))) == NULL) {
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	if((*ppThis = (iminternal_t*) calloc(1, sizeof(iminternal_t))) == NULL) {
+		iRet = RS_RET_OUT_OF_MEMORY;
 	}
-
-finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pThis != NULL)
-			iminternalDestruct(pThis);
-	}
-
-	*ppThis = pThis;
-
 	RETiRet;
 }
 
