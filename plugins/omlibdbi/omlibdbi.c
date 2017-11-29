@@ -581,7 +581,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		CHKmalloc(pData->pwd = (uchar*) strdup((char*)cs.pwd));
 	if(cs.dbiDrvrDir != NULL)
 		CHKmalloc(loadModConf->dbiDrvrDir = (uchar*) strdup((char*)cs.dbiDrvrDir));
-	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, getDfltTpl()));
+	iRet = cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, getDfltTpl());
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
