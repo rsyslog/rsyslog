@@ -7,7 +7,7 @@
  *
  * File begun on 2011-05-05 by RGerhards
  *
- * Copyright 2011 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2011-2017 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -187,23 +187,22 @@ getSubstring(uchar **psrc, uchar delim, uchar *dst, int lenDst)
  * dst, lenDst (receive buffer) must be given. lenDst is
  * max length on entry and actual length on exit.
  */
-static int
-getTagComponent(uchar *tag, uchar *dst, int *lenDst)
+static int ATTR_NONNULL()
+getTagComponent(uchar *tag, uchar *const dst, int *const lenDst)
 {
 	int end = *lenDst - 1; /* -1 for NUL-char! */
 	int i;
 
 	i = 0;
-	if(tag[i] != '/')
-		goto done;
-	++tag;
-	while(i < end && tag[i] != '\0' && tag[i] != ' ' && tag[i] != '/') {
-		dst[i] = tag[i];
-		++i;
+	if(tag[i] == '/') {
+		++tag;
+		while(i < end && tag[i] != '\0' && tag[i] != ' ' && tag[i] != '/') {
+			dst[i] = tag[i];
+			++i;
+		}
 	}
 	dst[i] = '\0';
 	*lenDst = i;
-done:
 	return i;
 }
 
@@ -227,19 +226,19 @@ lookupSeverityCode(instanceData *pData, uchar *sever)
 }
 
 
-BEGINdoAction
+BEGINdoAction_NoStrings
+	smsg_t **ppMsg = (smsg_t **) pMsgData;
+	smsg_t *pMsg = ppMsg[0];
 	int lenTAG;
 	int lenSever;
 	int lenHost;
 	int sevCode;
-	smsg_t *pMsg;
 	uchar *pszTag;
 	uchar pszSever[512];
 	uchar pszHost[512];
 	instanceData *pData;
 CODESTARTdoAction
 	pData = pWrkrData->pData;
-	pMsg = (smsg_t*) ppString[0];
 	getTAG(pMsg, &pszTag, &lenTAG);
 	if(strncmp((char*)pszTag, (char*)pData->pszTagID, pData->lenTagID)) {
 		DBGPRINTF("tag '%s' not matching, mmsnmptrapd ignoring this message\n",
@@ -253,7 +252,7 @@ CODESTARTdoAction
 	getTagComponent(pszTag+pData->lenTagID+lenSever, pszHost, &lenHost);
 	DBGPRINTF("mmsnmptrapd: sever '%s'(%d), host '%s'(%d)\n", pszSever, lenSever, pszHost,lenHost);
 
-	if(pszHost[lenHost-1] == ':') {
+	if(lenHost > 0 && pszHost[lenHost-1] == ':') {
 		pszHost[lenHost-1] = '\0';
 		--lenHost;
 	}
@@ -270,8 +269,8 @@ ENDdoAction
 /* Build the severity mapping table based on user-provided configuration
  * settings.
  */
-static rsRetVal
-buildSeverityMapping(instanceData *pData)
+static rsRetVal ATTR_NONNULL()
+buildSeverityMapping(instanceData *const pData)
 {
 	uchar pszSev[512];
 	uchar pszSevCode[512];
@@ -305,14 +304,14 @@ buildSeverityMapping(instanceData *pData)
 		/* we enqueue at the top, so the two lines below do all we need! */
 		node->next = pData->severMap;
 		pData->severMap = node;
+		node = NULL;
 		DBGPRINTF("mmsnmptrapd: severity string '%s' mapped to code %d\n",
 			  pszSev, sevCode);
 	}
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(node != NULL)
-			free(node);
+		free(node);
 	}
 	RETiRet;
 }
@@ -340,8 +339,8 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	/* finally build the instance */
 	if(cs.pszTagName == NULL) {
-		pData->pszTagName = (uchar*) strdup("snmptrapd:");
-		pData->pszTagID = (uchar*) strdup("snmptrapd/");
+		CHKmalloc(pData->pszTagName = (uchar*) strdup("snmptrapd:"));
+		CHKmalloc(pData->pszTagID = (uchar*) strdup("snmptrapd/"));
 	} else {
 		int lenTag = ustrlen(cs.pszTagName);
 		/* new tag value (with colon at the end) */

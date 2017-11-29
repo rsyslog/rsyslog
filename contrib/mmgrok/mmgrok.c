@@ -189,7 +189,7 @@ BEGINtryResume
 CODESTARTtryResume
 ENDtryResume
         
-static inline grok_t *CreateGrok()
+static inline grok_t *CreateGrok(void)
 {
     grok_t  *grok = grok_new();
     if(grok == NULL){
@@ -270,7 +270,7 @@ parse_result_store(const grok_match_t gm,instanceData *pData)
                     type_len = pname_len - key_len -1;
                     sprintf(type,"%.*s",type_len,type);
                 }
-                else{type = "null";}
+                else{type = (char*)"null";}
                 /* store parse result into list */
                 result->key = key;
                 result->key_len = key_len;

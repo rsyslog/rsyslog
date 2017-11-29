@@ -10,7 +10,7 @@ if [ $? -ne 0 ]; then
 	echo Download autoconf-archive failed!
 	exit 1
 fi
-#sudo dpkg -i autoconf-archive_20170928-1adiscon1_all.deb
+sudo dpkg -i autoconf-archive_20170928-1adiscon1_all.deb
 rm autoconf-archive_20170928-1adiscon1_all.deb
 
 if [ "x$GROK" == "xYES" ]; then sudo apt-get install -qq libgrok1 libgrok-dev ; fi

@@ -61,6 +61,9 @@
 #include <proton/version.h>
 
 
+/* work-around issues in this contributed module */
+#pragma GCC diagnostic ignored "-Wswitch-enum"
+
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("omamqp1")
