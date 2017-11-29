@@ -642,9 +642,9 @@ BEGINcreateWrkrInstance
 CODESTARTcreateWrkrInstance
     DBGPRINTF("omhttpfs: createWrkrInstance\n");
     pWrkrData->curl = NULL;
-    CHKiRet(httpfs_init_curl(pWrkrData, pWrkrData->pData));
-finalize_it:
-    DBGPRINTF("omhttpfs: createWrkrInstance,pData %p/%p, pWrkrData %p\n", pData, pWrkrData->pData, pWrkrData);
+    iRet = httpfs_init_curl(pWrkrData, pWrkrData->pData);
+    DBGPRINTF("omhttpfs: createWrkrInstance,pData %p/%p, pWrkrData %p\n",
+	pData, pWrkrData->pData, pWrkrData);
 ENDcreateWrkrInstance
 
 
