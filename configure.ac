@@ -286,12 +286,6 @@ case "${enable_largefile}" in
   *) enable_largefile="yes" ;;
 esac
 
-# do we have libsystemd?
-PKG_CHECK_MODULES([LIBSYSTEMD], [libsystemd],
-	[ AC_DEFINE(HAVE_LIBSYSTEMD, 1, [libsystemd present]) ],
-	[ AC_MSG_NOTICE([libsystemd not present - disabling systemd support]) ]
-)
-
 # Regular expressions
 AC_ARG_ENABLE(regexp,
         [AS_HELP_STRING([--enable-regexp],[Enable regular expressions support @<:@default=yes@:>@])],
@@ -475,6 +469,35 @@ if test "x$enable_imjournal" = "xyes"; then
 	])
 fi
 AM_CONDITIONAL(ENABLE_IMJOURNAL, test x$enable_imjournal = xyes)
+
+# use libsystemd
+AC_ARG_ENABLE(libsystemd,
+        [AS_HELP_STRING([--enable-libsystemd],[Enable libsystemd mode @<:@default=auto@:>@])],
+        [case "${enableval}" in
+          yes) enable_libsystemd="yes" ;;
+           no) enable_libsystemd="no" ;;
+         auto) enable_libsystemd="auto" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-libsystemd) ;;
+         esac],
+        [enable_libsystemd="auto"]
+)
+if test "$enable_libsystemd" = "yes"; then
+	PKG_CHECK_MODULES([LIBSYSTEMD], [libsystemd],
+		[ AC_DEFINE(HAVE_LIBSYSTEMD, 1, [libsystemd present]) ]
+	)
+fi
+if test "$enable_libsystemd" = "auto"; then
+	PKG_CHECK_MODULES([LIBSYSTEMD], [libsystemd],
+		[ AC_DEFINE(HAVE_LIBSYSTEMD, 1, [libsystemd present])
+		  AC_MSG_NOTICE([--enable-libsystemd in auto mode])
+		  enable_libsystemd="yes"
+		],
+		[ AC_MSG_WARN([libsystemd not present - disabling systemd support])
+		  enable_libsystemd="no"
+		]
+	)
+	AC_MSG_NOTICE([--enable-libsystemd in auto mode, enable-libsystemd is set to ${enable_libsystemd}])
+fi
 
 # inet
 AC_ARG_ENABLE(inet,
@@ -2151,6 +2174,7 @@ echo "    Log file encryption support:              $enable_libgcrypt"
 echo "    anonymization support enabled:            $enable_mmanon"
 echo "    message counting support enabled:         $enable_mmcount"
 echo "    liblogging-stdlog support enabled:        $enable_liblogging_stdlog"
+echo "    libsystemd enabled:                       $enable_libsystemd"
 echo "    kafka static linking enabled:             $enable_kafka_static"
 echo
 echo "---{ input plugins }---"
