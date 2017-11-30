@@ -1,5 +1,11 @@
 ------------------------------------------------------------------------------
 Version 8.32.0 [v8-stable] 2018-01-09
+- added --enable-libsystemd configure option to enforce use of libsystemd
+  so we can fail the build on platforms where this is required
+- fixed a couple of build issues with gcc-7 (in less frequently used modules)
+- mmsnmptrapd bugfix: potential misadressing
+  This only occured in situations when the system was totally out of memory.
+- pmnormalize bugfix: remove unsave "strcat" implementation
 ------------------------------------------------------------------------------
 Version 8.31.0 [v8-stable] 2017-11-28
 - NEW BUILD DEPENDENCY: ommongodb now requires libmongo-c
