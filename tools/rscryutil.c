@@ -405,7 +405,10 @@ getRandomKey(void)
 	 * will always work...).  -- TODO -- rgerhards, 2013-03-06
 	 */
 	if((fd = open("/dev/urandom", O_RDONLY)) >= 0) {
-		if(read(fd, cry_key, randomKeyLen)) {}; /* keep compiler happy */
+		if(read(fd, cry_key, randomKeyLen) != randomKeyLen) {
+			fprintf(stderr, "warning: could not read sufficient data "
+				"from /dev/urandom - key may be weak\n");
+		};
 		close(fd);
 	}
 }
