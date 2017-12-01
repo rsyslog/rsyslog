@@ -125,3 +125,10 @@ the PR.
 Note to developers
 ------------------
 Please address pull requests against the master branch.
+
+
+Testbench coding Tips
+---------------------
+- the "cmp" command requires two parameters to work reliably accross multiple
+  platforms. Using "cmp - file" make you compare stdin, as in:
+  echo "test" | cmp - rsyslog.out.log
