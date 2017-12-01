@@ -1,5 +1,8 @@
 ------------------------------------------------------------------------------
 Version 8.32.0 [v8-stable] 2018-01-09
+- imfile: added support for Solaris File Event notification
+  improves performance under Solaris; current implementation does not yet
+  support wildcards (will follow as a separae project)
 - added --enable-libsystemd configure option to enforce use of libsystemd
   so we can fail the build on platforms where this is required
 - fixed a couple of build issues with gcc-7 (in less frequently used modules)
