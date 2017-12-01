@@ -3,12 +3,8 @@
 # This test mimics the test imfile-readmode2.sh, but works via
 # endmsg.regex. It's kind of a base test for the regex functionality.
 echo ======================================================================
-# Check if inotify header exist
-if [ -n "$(find /usr/include -name 'inotify.h' -print -quit)" ]; then
-	echo [imfile-endregex.sh]
-else
-	exit 77 # no inotify available, skip this test
-fi
+echo [imfile-endregex.sh]
+. $srcdir/diag.sh check-inotify
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup imfile-endregex.conf
 

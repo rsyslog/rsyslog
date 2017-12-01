@@ -1413,6 +1413,22 @@ AC_ARG_ENABLE(imfile,
          esac],
         [enable_imfile=no]
 )
+if test "x$enable_imfile" = "xyes"; then
+	AC_CHECK_FUNCS(port_create,,)
+	AC_MSG_CHECKING(for Solaris File Events Notification API support)
+	AC_TRY_COMPILE([
+		#include <port.h>
+		#include <sys/port.h>
+		], [
+		return PORT_SOURCE_FILE;
+		]
+		,
+		AC_DEFINE(HAVE_PORT_SOURCE_FILE, 1, [Enable FEN support for imfile])
+		AC_MSG_RESULT(yes)
+		,
+		AC_MSG_RESULT(no)
+	)
+fi
 AM_CONDITIONAL(ENABLE_IMFILE, test x$enable_imfile = xyes)
 
 
