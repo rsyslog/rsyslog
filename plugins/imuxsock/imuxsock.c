@@ -164,7 +164,7 @@ typedef struct lstn_s {
 static lstn_t *listeners;
 
 static prop_t *pLocalHostIP = NULL;	/* there is only one global IP for all internally-generated messages */
-static prop_t *pInputName = NULL;	/* our inputName currently is always "imudp", and this will hold it */
+static prop_t *pInputName = NULL;	/* our inputName currently is always "imuxsock", and this will hold it */
 static int startIndexUxLocalSockets; /* process fd from that index on (used to
  				   * suppress local logging. rgerhards 2005-08-01
 				   * read-only after startup
