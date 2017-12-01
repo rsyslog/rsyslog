@@ -887,19 +887,19 @@ lookupReadFile(lookup_t *const pThis, const uchar *const name, const uchar *cons
 	DEFiRet;
 
 
-	if(stat((char*)filename, &sb) == -1) {
+	if((fd = open((const char*) filename, O_RDONLY)) == -1) {
+		errmsg.LogError(errno, RS_RET_FILE_NOT_FOUND,
+			"lookup table file '%s' could not be opened", filename);
+		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
+	}
+
+	if(fstat(fd, &sb) == -1) {
 		errmsg.LogError(errno, RS_RET_FILE_NOT_FOUND,
 			"lookup table file '%s' stat failed", filename);
 		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 	}
 
 	CHKmalloc(iobuf = malloc(sb.st_size));
-
-	if((fd = open((const char*) filename, O_RDONLY)) == -1) {
-		errmsg.LogError(errno, RS_RET_FILE_NOT_FOUND,
-			"lookup table file '%s' could not be opened", filename);
-		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
-	}
 
 	tokener = json_tokener_new();
 	nread = read(fd, iobuf, sb.st_size);
