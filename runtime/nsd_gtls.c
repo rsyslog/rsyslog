@@ -76,6 +76,17 @@ static int bGlblSrvrInitDone = 0;	/**< 0 - server global init not yet done, 1 - 
 static pthread_mutex_t mutGtlsStrerror;
 /*< a mutex protecting the potentially non-reentrant gtlStrerror() function */
 
+/* a macro to abort if GnuTLS error is not acceptable. We split this off from
+ * CHKgnutls() to avoid some Coverity report in cases where we know GnuTLS
+ * failed. Note: gnuRet must already be set accordingly!
+ */
+#define ABORTgnutls { \
+		uchar *pErr = gtlsStrerror(gnuRet); \
+		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n", \
+	gnuRet, __FILE__, __LINE__, pErr); \
+		free(pErr); \
+		ABORT_FINALIZE(RS_RET_GNUTLS_ERR); \
+}
 /* a macro to check GnuTLS calls against unexpected errors */
 #define CHKgnutls(x) { \
 	gnuRet = (x); \
@@ -83,11 +94,7 @@ static pthread_mutex_t mutGtlsStrerror;
 		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "error reading file - a common cause is that the file  does not exist"); \
 		ABORT_FINALIZE(RS_RET_GNUTLS_ERR); \
 	} else if(gnuRet != 0) { \
-		uchar *pErr = gtlsStrerror(gnuRet); \
-		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n", \
-	gnuRet, __FILE__, __LINE__, pErr); \
-		free(pErr); \
-		ABORT_FINALIZE(RS_RET_GNUTLS_ERR); \
+		ABORTgnutls; \
 	} \
 }
 
@@ -534,8 +541,8 @@ gtlsRecordRecv(nsd_gtls_t *pThis)
 		dbgprintf("GnuTLS receive requires a retry (this most probably is OK and no error condition)\n");
 		ABORT_FINALIZE(RS_RET_RETRY);
 	} else {
-		int gnuRet; /* TODO: build a specific function for GnuTLS error reporting */
-		CHKgnutls(lenRcvd); /* this will abort the function */
+		int gnuRet = lenRcvd;
+		ABORTgnutls;
 	}
 
 finalize_it:
