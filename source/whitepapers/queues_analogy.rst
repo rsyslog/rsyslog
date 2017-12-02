@@ -4,8 +4,8 @@ Turning Lanes and Rsyslog Queues
 If there is a single object absolutely vital to understanding the way
 rsyslog works, this object is queues. Queues offer a variety of
 services, including support for multithreading. While there is elaborate
-in-depth documentation on the ins and outs of `rsyslog
-queues <queues.html>`_, some of the concepts are hard to grasp even for
+in-depth documentation on the ins and outs of :doc:`rsyslog queues
+<../concepts/queues>`, some of the concepts are hard to grasp even for
 experienced people. I think this is because rsyslog uses a very high
 layer of abstraction which includes things that look quite unnatural,
 like queues that do **not** actually queue...
@@ -359,7 +359,6 @@ to the threading model. Transitioning between actual disk-assisted mode
 and pure-in-memory-mode (which is done automatically when needed) is
 also far from trivial and a real joy for an implementer to work on ;).
 
-If you have not done so before, it may be worth reading the `rsyslog
-queue user's guide, <queues.html>`_ which most importantly lists all the
-knobs you can turn to tweak queue operation.
-
+If you have not done so before, it may be worth reading
+:doc:`Understanding rsyslog Queues <../concepts/queues>`, which most
+importantly lists all the knobs you can turn to tweak queue operation.
