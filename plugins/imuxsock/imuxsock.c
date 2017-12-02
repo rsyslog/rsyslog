@@ -542,7 +542,8 @@ openLogSocket(lstn_t *pLstn)
 				/* ok, it matches -- just use as is */
 				pLstn->fd = fd;
 
-				DBGPRINTF("imuxsock: Acquired UNIX socket '%s' (fd %d) from systemd.\n",
+				LogMsg(0, NO_ERRCODE, LOG_INFO,
+					"imuxsock: Acquired UNIX socket '%s' (fd %d) from systemd.\n",
 					pLstn->sockName, pLstn->fd);
 				break;
 			}
@@ -1755,5 +1756,3 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(statsobj.ConstructFinalize(modStats));
 
 ENDmodInit
-/* vim:set ai:
- */
