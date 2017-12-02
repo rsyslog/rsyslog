@@ -84,9 +84,17 @@ itself are flat and cannot be nested. Note that there exists statements
 that permit rulesets to call into each other, but all rulesets are in
 the same flat top-level space.
 
-Note that a ruleset has an associated queue object. In most cases,
-it needs not to be configured as a real queue (not one in direct mode)
-is only required in special cases.
+Note that a ruleset has an associated queue object which (by default)
+operates in direct mode. As a reminder, direct queues do not queue or
+buffer any of the queue elements. In most cases this is sufficient,
+but if the ruleset is bound to an input or is used to run
+multiple actions independently (e.g., forwarding messages to two
+destinations), then you should configure the associated queue object
+as a real queue.
+
+See the :doc:`Understanding rsyslog Queues <../concepts/queues>` or
+:doc:`Turning Lanes and Rsyslog Queues <../whitepapers/queues_analogy>` docs
+for more information.
 
 Hierarchical Elements
 ---------------------
