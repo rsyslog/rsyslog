@@ -74,10 +74,11 @@ set $!str!b20 = ltrim(rtrim(" te st "));
 template(name="outfmt" type="string" string="%!str%\n")
 local4.* action(type="omfile" file="rsyslog.out.log" template="outfmt")
 '
-. $srcdir/diag.sh startup
+. $srcdir/diag.sh startup-vg
 . $srcdir/diag.sh tcpflood -m1 -y
 . $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+. $srcdir/diag.sh wait-shutdown-vg
+. $srcdir/diag.sh check-exit-vg
 echo '{ "l1": "", "l2": "test", "l3": "test", "l4": "test   ", "l5": "test   ", "l6": "test", "l7": "test ", "l8": "", "l9": "te st", "l10": "te st", "l11": "a", "l12": "a ", "r1": "", "r2": "test", "r3": "   test", "r4": "test", "r5": "   test", "r6": " test", "r7": "test", "r8": "", "r9": "te st", "r10": "te st", "r11": " a", "r12": "a", "b1": "", "b2": "test", "b3": "test", "b4": "te st", "b5": "", "b6": "test", "b7": "test", "b8": "te st", "b9": "test", "b10": "te st", "b11": "test", "b12": "test", "b13": "test", "b14": "te st", "b15": "test", "b16": "te st", "b17": "test", "b18": "test", "b19": "test", "b20": "te st" }' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid function output detected, rsyslog.out.log is:"

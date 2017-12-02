@@ -316,7 +316,8 @@ TESTS +=  \
 	lookup_table_rscript_reload-vg.sh \
 	lookup_table_rscript_reload_without_stub-vg.sh \
 	multiple_lookup_tables-vg.sh \
-	fac_local0-vg.sh
+	fac_local0-vg.sh \
+	rscript_trim-vg.sh
 endif # HAVE_VALGRIND
 
 if ENABLE_IMJOURNAL
@@ -1592,6 +1593,7 @@ EXTRA_DIST= \
 	lookup_table_rscript_reload_without_stub.sh \
 	lookup_table_rscript_reload-vg.sh \
 	lookup_table_rscript_reload_without_stub-vg.sh \
+	rscript_trim-vg.sh \
 	testsuites/lookup_table.conf \
 	testsuites/lookup_table_no_hup_reload.conf \
 	testsuites/lookup_table_reload_stub.conf \
