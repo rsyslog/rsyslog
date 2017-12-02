@@ -8,6 +8,11 @@ set -e  # abort on first failure
 echo "DISTRIB_CODENAME: $DISTRIB_CODENAME"
 echo "CLANG:            $CLANG"
 
+sudo apt-get install virtualbox vagrant -y 
+sudo vagrant init centos:7
+sudo vagrant up
+exit
+
 echo "****************************** BEGIN ACTUAL SCRIPT STEP ******************************"
 source tests/travis/install.sh
 source /etc/lsb-release
