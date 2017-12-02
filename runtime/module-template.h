@@ -368,6 +368,13 @@ finalize_it: ATTR_UNUSED; /* semi-colon needed according to gcc doc! */\
 	RETiRet;\
 }
 
+/* a special replacement macro for modules that do not support legacy config at all */
+#define NO_LEGACY_CONF_parseSelectorAct \
+static rsRetVal parseSelectorAct(uchar **pp ATTR_UNUSED, void **ppModData ATTR_UNUSED, \
+	omodStringRequest_t **ppOMSR ATTR_UNUSED)\
+{\
+	return RS_RET_LEGA_ACT_NOT_SUPPORTED;\
+}
 
 /* newActInst()
  * Extra comments:

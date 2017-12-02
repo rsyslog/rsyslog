@@ -806,18 +806,7 @@ CODE_STD_FINALIZERnewActInst
 ENDnewActInst
 
 
-BEGINparseSelectorAct
-CODESTARTparseSelectorAct
-	/* first check if this config line is actually for us */
-	if(strncmp((char*) p, ":omhttpfs:", sizeof(":omhttpfs:") - 1)) {
-		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-	}
-	LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
-		"omhttpfs supports only RainerScript config format, use: "
-		"action(type=\"omhttpfs\" ...parameters...)");
-	iRet = RS_RET_LEGA_ACT_NOT_SUPPORTED;
-CODE_STD_FINALIZERparseSelectorAct
-ENDparseSelectorAct
+NO_LEGACY_CONF_parseSelectorAct
 
 
 /**
