@@ -1,12 +1,5 @@
 #!/bin/bash
 # add 2017-02-09 by Jan Gerhards, released under ASL 2.0
-
-uname
-if [ `uname` = "FreeBSD" ] ; then
-   echo "This test currently does not work on FreeBSD."
-   exit 77
-fi
-
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
@@ -43,7 +36,7 @@ local4.* action(type="omfile" file="rsyslog.out.log" template="outfmt")
 . $srcdir/diag.sh tcpflood -m1 -y
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
-echo '{ "v1": 0, "v2": 1, "v3": 256, "v4": 65536, "v5": 16777216, "v6": 135, "v7": 16843009, "v8": 3777036554, "v9": 2885681153, "v10": 4294967295, "v11": 16778029, "v12": 1, "v13": 1, "e1": -1, "e2": -1, "e3": -1, "e4": -1, "e5": -1, "e6": -1, "e7": -1 }' | cmp rsyslog.out.log
+echo '{ "v1": 0, "v2": 1, "v3": 256, "v4": 65536, "v5": 16777216, "v6": 135, "v7": 16843009, "v8": 3777036554, "v9": 2885681153, "v10": 4294967295, "v11": 16778029, "v12": 1, "v13": 1, "e1": -1, "e2": -1, "e3": -1, "e4": -1, "e5": -1, "e6": -1, "e7": -1 }' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid function output detected, rsyslog.out.log is:"
   cat rsyslog.out.log

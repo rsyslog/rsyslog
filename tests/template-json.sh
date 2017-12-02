@@ -1,20 +1,5 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
-
-uname
-if [ `uname` = "FreeBSD" ] ; then
-   echo "This test currently does not work on FreeBSD."
-   exit 77
-fi
-
-echo ======================================================================
-
-uname
-if [ `uname` = "SunOS" ] ; then
-   echo "Solaris: FIX ME JSON"
-   exit 77
-fi
-
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
@@ -35,7 +20,7 @@ template(name="json" type="list" option.json="on") {
 . $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 . $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
 
-echo '{"backslash":"a \\ \"b\" c / d"}' | cmp rsyslog.out.log
+printf '{"backslash":"a \\\\ \\"b\\" c / d"}\n' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid JSON generated, rsyslog.out.log is:"
   cat rsyslog.out.log

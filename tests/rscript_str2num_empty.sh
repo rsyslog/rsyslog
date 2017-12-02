@@ -15,7 +15,7 @@ local4.* action(type="omfile" file="rsyslog.out.log" template="outfmt")
 . $srcdir/diag.sh tcpflood -m1 -y
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
-echo '{ "v1": 1 }' | cmp rsyslog.out.log
+echo '{ "v1": 1 }' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid function output detected, rsyslog.out.log is:"
   cat rsyslog.out.log
