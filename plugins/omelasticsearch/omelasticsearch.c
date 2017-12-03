@@ -1617,18 +1617,6 @@ CODE_STD_FINALIZERnewActInst
 ENDnewActInst
 
 
-BEGINparseSelectorAct
-CODESTARTparseSelectorAct
-CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	if(!strncmp((char*) p, ":omelasticsearch:", sizeof(":omelasticsearch:") - 1)) {
-		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
-			"omelasticsearch supports only v6 config format, use: "
-			"action(type=\"omelasticsearch\" server=...)");
-	}
-	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-CODE_STD_FINALIZERparseSelectorAct
-ENDparseSelectorAct
-
 BEGINdoHUP
 CODESTARTdoHUP
 	if(pData->fdErrFile != -1) {
@@ -1645,6 +1633,8 @@ CODESTARTmodExit
 	objRelease(errmsg, CORE_COMPONENT);
         objRelease(statsobj, CORE_COMPONENT);
 ENDmodExit
+
+NO_LEGACY_CONF_parseSelectorAct
 
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
