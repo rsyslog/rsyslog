@@ -3,12 +3,18 @@ Version 8.32.0 [v8-stable] 2018-01-09
 - imfile: added support for Solaris File Event notification
   improves performance under Solaris; current implementation does not yet
   support wildcards (will follow as a separae project)
+- imuxsock: improved status reporting: socket name received from systemd
+  Providing an indication of what we got from systemd facilitates problem
+  analysis.
 - added --enable-libsystemd configure option to enforce use of libsystemd
   so we can fail the build on platforms where this is required
 - fixed a couple of build issues with gcc-7 (in less frequently used modules)
 - mmsnmptrapd bugfix: potential misadressing
   This only occured in situations when the system was totally out of memory.
 - pmnormalize bugfix: remove unsave "strcat" implementation
+- rainerscript bugfix: ltrim() and rtrim function misadressing
+  This could lead to a segfault and was triggerred by certain input data
+  schemes. For example, a ltrim(" a") could lead to the fault.
 ------------------------------------------------------------------------------
 Version 8.31.0 [v8-stable] 2017-11-28
 - NEW BUILD DEPENDENCY: ommongodb now requires libmongo-c
