@@ -1729,7 +1729,7 @@ doRandomGen(struct svar *__restrict__ const sourceVal) {
 static es_str_t*
 lTrim(char *str)
 {
-	int len = strlen(str);
+	const int len = strlen(str);
 	int i;
 	es_str_t *estr = NULL;
 
@@ -1739,9 +1739,7 @@ lTrim(char *str)
 		}
 	}
 
-	if(i != (len - 1)) {
-		estr = es_newStrFromCStr(str + i, strlen(str) - i);
-	}
+	estr = es_newStrFromCStr(str + i, len - i);
 
 	return(estr);
 }
@@ -1753,14 +1751,16 @@ rTrim(char *str)
 	int i;
 	es_str_t *estr = NULL;
 
-	for(i = (len - 1); i > -1; i--) {
+	for(i = (len - 1); i > 0; i--) {
 		if(str[i] != ' ') {
 			break;
 		}
 	}
 
-	if(i != 0) {
+	if(i > 0 || str[0] != ' ') {
 		estr = es_newStrFromCStr(str, (i + 1));
+	} else {
+		estr = es_newStr(1);
 	}
 
 	return(estr);
