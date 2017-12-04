@@ -350,25 +350,13 @@ finalize_it:
 ENDdoAction
 
 
-BEGINparseSelectorAct
-CODESTARTparseSelectorAct
-CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	if(strncmp((char*) p, ":mmpstrucdata:", sizeof(":mmpstrucdata:") - 1)) {
-		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
-			"mmpstrucdata supports only v6+ config format, use: "
-			"action(type=\"mmpstrucdata\" ...)");
-	}
-	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-CODE_STD_FINALIZERparseSelectorAct
-ENDparseSelectorAct
-
-
 BEGINmodExit
 CODESTARTmodExit
 	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
+NO_LEGACY_CONF_parseSelectorAct
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
@@ -378,11 +366,10 @@ CODEqueryEtryPt_STD_CONF2_QUERIES
 ENDqueryEtryPt
 
 
-
 BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	DBGPRINTF("mmpstrucdata: module compiled with rsyslog version %s.\n", VERSION);
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	iRet = objUse(errmsg, CORE_COMPONENT);
 ENDmodInit
