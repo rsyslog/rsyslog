@@ -448,17 +448,7 @@ CODESTARTnewActInst
     cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
-BEGINparseSelectorAct
-CODESTARTparseSelectorAct
-	/* tell the engine we only want one template string */
-	CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	if(!strncmp((char*) p, ":omzmq3:", sizeof(":omzmq3:") - 1)) 
-		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
-			"omzmq3 supports only v6 config format, use: "
-			"action(type=\"omzmq3\" serverport=...)");
-	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-	CODE_STD_FINALIZERparseSelectorAct
-ENDparseSelectorAct
+NO_LEGACY_CONF_parseSelectorAct
 
 BEGINinitConfVars /* (re)set config variables to defaults */
 CODESTARTinitConfVars
