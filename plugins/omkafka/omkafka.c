@@ -1507,20 +1507,6 @@ CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
-BEGINparseSelectorAct
-CODESTARTparseSelectorAct
-CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	/* first check if this config line is actually for us */
-	if(strncmp((char*) p, ":omkafka:", sizeof(":omkafka:") - 1)) {
-		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-	}
-	errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
-			"omkafka supports only RainerScript config format, use: "
-			"action(type=\"omkafka\" ...parameters...)");
-	iRet = RS_RET_LEGA_ACT_NOT_SUPPORTED;
-CODE_STD_FINALIZERparseSelectorAct
-ENDparseSelectorAct
-
 
 BEGINmodExit
 CODESTARTmodExit
@@ -1541,6 +1527,7 @@ finalize_it:
 ENDmodExit
 
 
+NO_LEGACY_CONF_parseSelectorAct
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
