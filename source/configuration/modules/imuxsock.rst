@@ -271,8 +271,7 @@ The following sample is a configuration where rsyslogd reads the openssh
 log messages via a separate socket, but this socket is created on a
 temporary file system. As rsyslogd starts up before the sshd daemon, it needs
 to create the socket directories, because it otherwise can not open the
-socket and thus not listen to openssh messages. Note that it is vital
-not to place any other socket between the CreatePath and the Socket.
+socket and thus not listen to openssh messages.
 
 ::
 
