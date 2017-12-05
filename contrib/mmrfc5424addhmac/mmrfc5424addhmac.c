@@ -355,17 +355,7 @@ CODESTARTdoAction
 ENDdoAction
 
 
-BEGINparseSelectorAct
-CODESTARTparseSelectorAct
-CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	if(strncmp((char*) p, ":mmrfc5424addhmac:", sizeof(":mmrfc5424addhmac:") - 1)) {
-		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
-			"mmrfc5424addhmac supports only v6+ config format, use: "
-			"action(type=\"mmrfc5424addhmac\" ...)");
-	}
-	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-CODE_STD_FINALIZERparseSelectorAct
-ENDparseSelectorAct
+NO_LEGACY_CONF_parseSelectorAct
 
 
 BEGINmodExit

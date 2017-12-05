@@ -1579,6 +1579,4 @@ CODEmodInit_QueryRegCFSLineHdlr
 	DBGPRINTF("omkafka: Add KAFKA_TimeStamp to template system ONCE\n");
 	pTmp = (uchar*) KAFKA_TimeStamp;
 	tplAddLine(ourConf, " KAFKA_TimeStamp", &pTmp);
-
-CODEmodInit_QueryRegCFSLineHdlr
 ENDmodInit
