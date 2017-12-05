@@ -40,15 +40,15 @@ To turn off rate limiting, set the interval to zero.
 
 **Unix log sockets can be flow-controlled.** That is, if processing
 queues fill up, the unix socket reader is blocked for a short while.
-This may be useful to prevent overruning the queues (which may cause
+This may be useful to prevent overrunning the queues (which may cause
 excessive disk-io where it actually would not be needed). However,
 flow-controlling a log socket (and especially the system log socket) can
 lead to a very unresponsive system. As such, flow control is disabled by
-default. That means any log records are places as quickly as possible
+default. That means any log records are placed as quickly as possible
 into the processing queues. If you would like to have flow control, you
 need to enable it via the SysSock.FlowControl and FlowControl config
-directives. Just make sure you thought about the implications. Note that
-for many systems, turning on flow control does not hurt.
+directives. Just make sure you have thought about the implications. Note
+that for many systems, turning on flow control does not hurt.
 
 Starting with rsyslog 5.9.4, `trusted syslog
 properties <http://www.rsyslog.com/what-are-trusted-properties/>`_ are
@@ -130,7 +130,7 @@ Input Parameters
    being added.
 -  **IgnoreOwnMessages** [**on**/off] (available since 7.3.7)
    Ignore messages that originated from the same instance of rsyslogd.
-   There usually is no reason to receive messages from ourselfs. This
+   There usually is no reason to receive messages from ourselves. This
    setting is vital when writing messages to the Linux journal. See
    `omjournal <omjournal.html>`_ module documentation for a more
    in-depth description.
@@ -269,7 +269,7 @@ two jails, and assigns different hostnames to each of the jails:
 
 The following sample is a configuration where rsyslogd reads the openssh
 log messages via a separate socket, but this socket is created on a
-temporary file system. As rsyslogd starts up before the sshd, it needs
+temporary file system. As rsyslogd starts up before the sshd daemon, it needs
 to create the socket directories, because it otherwise can not open the
 socket and thus not listen to openssh messages. Note that it is vital
 not to place any other socket between the CreatePath and the Socket.
@@ -389,7 +389,7 @@ two jails, and assigns different hostnames to each of the jails:
 
 The following sample is a configuration where rsyslogd reads the openssh
 log messages via a separate socket, but this socket is created on a
-temporary file system. As rsyslogd starts up before the sshd, it needs
+temporary file system. As rsyslogd starts up before the sshd daemon, it needs
 to create the socket directories, because it otherwise can not open the
 socket and thus not listen to openssh messages. Note that it is vital
 not to place any other socket between the
