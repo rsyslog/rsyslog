@@ -2,7 +2,7 @@
 Version 8.32.0 [v8-stable] 2018-01-09
 - imfile: added support for Solaris File Event notification
   improves performance under Solaris; current implementation does not yet
-  support wildcards (will follow as a separae project)
+  support wildcards (will follow as a separate project)
 - imuxsock: improved status reporting: socket name received from systemd
   Providing an indication of what we got from systemd facilitates problem
   analysis.
