@@ -63,7 +63,11 @@ void r_dbgprintf(const char *srcname __attribute__((unused)), const char *fmt __
 #endif
 void srSleep(int a __attribute__((unused)), int b __attribute__((unused)));
 /* prototype (avoid compiler warning) */
-void srSleep(int a __attribute__((unused)), int b __attribute__((unused))) {};
+void srSleep(int a __attribute__((unused)), int b __attribute__((unused))) {}
+/* this is not really needed by any of our code */
+long randomNumber(void);
+/* prototype (avoid compiler warning) */
+long randomNumber(void) {return 0l;}
 /* this is not really needed by any of our code */
 
 /* rectype/value must be EIF_MAX_*_LEN+1 long!
