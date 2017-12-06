@@ -8,7 +8,11 @@ compiler:
   - gcc
   - clang
 
-services: mysql
+services:
+  - elasticsearch
+  - mysql
+  - postgresql
+
 
 env:
   global:
@@ -112,9 +116,6 @@ matrix:
        compiler: "gcc"
        dist: trusty
        env: DO_COVERITY="YES",DO_CRON="YES", KAFKA="YES", GROK="YES"
-
-services:
-  - elasticsearch
 
 before_install:
   - if [ "$TRAVIS_OS_NAME" == "linux" ] && [ "${AD_PPA}x" == "x" ] ; then AD_PPA="v8-stable"; fi
