@@ -552,38 +552,21 @@ finalize_it:
 	RETiRet;
 }
 
-/* As of some Linux and security expert I spoke to, /dev/urandom
- * provides very strong random numbers, even if it runs out of
- * entropy. As far as he knew, this is save for all applications
- * (and he had good proof that I currently am not permitted to
- * reproduce). -- rgerhards, 2013-03-04
+/* We use random numbers to initiate the IV. Rsyslog runtime will ensure
+ * we get a sufficiently large number.
  */
 static void
 seedIV(gcryfile gf, uchar **iv)
 {
-	int fd;
+	long rndnum = 0; /* keep compiler happy -- this value is always overriden */
 
-	#ifdef __clang_analyzer__
-	*iv = calloc(1, gf->blkLength); /* do NOT use this code! */
-	/* this execution branch is only present to prevent a
-	 * "garbagge value used" warning by the static analyzer.
-	 * In fact, that is exactly what we want to and need to
-	 * use. Using calloc here keeps that analyzer happy, but would
-	 * cause a security issue if used in practice.
-	 */
-	#else
-	*iv = malloc(gf->blkLength); /* do NOT zero-out! */
-	#endif
-	/* if we cannot obtain data from /dev/urandom, we use whatever
-	 * is present at the current memory location as random data. Of
-	 * course, this is very weak and we should consider a different
-	 * option, especially when not running under Linux (for Linux,
-	 * unavailability of /dev/urandom is just a theoretic thing, it
-	 * will always work...).  -- TODO -- rgerhards, 2013-03-06
-	 */
-	if((fd = open("/dev/urandom", O_RDONLY)) >= 0) {
-		if(read(fd, *iv, gf->blkLength)) {}; /* keep compiler happy */
-		close(fd);
+	*iv = calloc(1, gf->blkLength);
+	for(size_t i = 0 ; i < gf->blkLength; ++i) {
+		const int shift = (i % 4) * 8;
+		if(shift == 0) { /* need new random data? */
+			rndnum = randomNumber();
+		}
+		(*iv)[i] = 0xff & ((rndnum & (0xff << shift)) >> shift);
 	}
 }
 
