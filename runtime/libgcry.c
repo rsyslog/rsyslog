@@ -555,12 +555,13 @@ finalize_it:
 /* We use random numbers to initiate the IV. Rsyslog runtime will ensure
  * we get a sufficiently large number.
  */
-static void
+static rsRetVal
 seedIV(gcryfile gf, uchar **iv)
 {
 	long rndnum = 0; /* keep compiler happy -- this value is always overriden */
+	DEFiRet;
 
-	*iv = calloc(1, gf->blkLength);
+	CHKmalloc(*iv = calloc(1, gf->blkLength));
 	for(size_t i = 0 ; i < gf->blkLength; ++i) {
 		const int shift = (i % 4) * 8;
 		if(shift == 0) { /* need new random data? */
@@ -568,6 +569,8 @@ seedIV(gcryfile gf, uchar **iv)
 		}
 		(*iv)[i] = 0xff & ((rndnum & (0xff << shift)) >> shift);
 	}
+finalize_it:
+	RETiRet;
 }
 
 static rsRetVal
@@ -651,7 +654,7 @@ rsgcryBlkBegin(gcryfile gf)
 		readIV(gf, &iv);
 		readBlkEnd(gf);
 	} else {
-		seedIV(gf, &iv);
+		CHKiRet(seedIV(gf, &iv));
 	}
 
 	gcryError = gcry_cipher_setiv(gf->chd, iv, gf->blkLength);
