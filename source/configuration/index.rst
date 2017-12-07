@@ -12,6 +12,7 @@ Note that **configurations can be built interactively** via the online
    :maxdepth: 2
 
    conf_formats
+   sysklogd_format
    basic_structure
    templates
    properties

@@ -4,7 +4,7 @@ Configuration Formats
 Rsyslog has evolved over several decades. For this reason it supports three
 different configuration formats ("languages"):
 
--  **sysklogd** - this is the plain old syslog.conf format, in use since
+-  :doc:`sysklogd <sysklogd_format>` - this is the plain old syslog.conf format, in use since
    the early days of system logging. It is taught everywhere and
    still pretty useful for simple use cases. Note that some few
    constructs are no longer supported because they are incompatible with
@@ -25,7 +25,7 @@ Which Format should I Use?
 Rsyslog supports all three formats concurrently, so you can pick either
 sysklogd or RainerScript format.
 
-In general it is recommended to use RainerScript format. Advantages are:
+**It is recommended to use RainerScript format.** Advantages are:
 
 - statements are self-contained; all parameters are given at exactly the
   place where they belong to
@@ -50,3 +50,8 @@ distributions use this format in their default rsyslog.conf.
 **Do not use rsyslog legacy format. It will make your life miserable.**
 The legacy format is primarily supported in order not to break existing
 configurations.
+
+.. toctree::
+   :maxdepth: 2
+
+   sysklogd_format
