@@ -22,10 +22,10 @@ queued operations and the ability to filter on any message part.
 Manual
 ------
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    
-   configuration/index
    installation/index
+   configuration/index
    troubleshooting/index
    faq/index
    concepts/index
