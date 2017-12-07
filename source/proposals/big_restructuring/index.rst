@@ -10,5 +10,6 @@ current documentation available, just organized differently.
     cookbook/index
     reference/index
     contributing/index
+    documentation_review.rst
 
 

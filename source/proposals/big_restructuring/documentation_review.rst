@@ -77,7 +77,7 @@ Initial Summary
 Proposed Documentation Structure
 --------------------------------
 
-.. toctree::
+ toctree::
 
     new_documentation/index
 
