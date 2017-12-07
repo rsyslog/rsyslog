@@ -11,6 +11,19 @@ Version 8.32.0 [v8-stable] 2018-01-09
 - fixed a couple of build issues with gcc-7 (in less frequently used modules)
 - mmsnmptrapd bugfix: potential misadressing
   This only occured in situations when the system was totally out of memory.
+- dnscache bugfix: entries were cached based on IP AND port number
+  That  hash key which is used to find out already cached dns entry gets
+  incorrectly computed from the whole sockaddr_storage
+  (sockaddr_in/sockaddr_in6) structure including a sin_port (which doesn't
+  have a static value) instead of only an address, thus creating redundant
+  dns cache entries/consuming more space. This lead to potentially high memory
+  usage and ineffectiveness of the case. It could be considered a memory leak.
+  Thanks to Martin Osvald for the patch.
+  see also: https://github.com/rsyslog/rsyslog/pull/2160
+- omkafka bugfix: fixed memory leak
+  a memory leak occurred when librdkafka communicated error/status information
+  to omkafka. this seems to happen relatively frequently, so this leak
+  could be pretty problematic.
 - pmnormalize bugfix: remove unsave "strcat" implementation
 - rainerscript bugfix: ltrim() and rtrim function misadressing
   This could lead to a segfault and was triggerred by certain input data
