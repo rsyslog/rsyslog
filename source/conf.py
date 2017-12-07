@@ -45,6 +45,7 @@ master_doc = 'index'
 # General information about the project.
 project = u'rsyslog'
 copyright = u'2008-2017, Rainer Gerhards and Others'
+author = u'Rainer Gerhards and Others'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -249,3 +250,13 @@ texinfo_documents = [
 
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 # texinfo_show_urls = 'footnote'
+
+
+# -- Options for epub output ---------------------------------------------------
+
+epub_theme = 'epub'
+epub_basename = 'rsyslog'
+epub_author = u'Rainer Gerhards and Others'
+epub_contributor = u'Rsyslog Community'
+epub_publisher = 'http://www.rsyslog.com/'
+epub_description = u'Documentation for the rsyslog project'
