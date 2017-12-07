@@ -458,14 +458,17 @@ callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, smsg_t *__restrict
 	int i_iov;
 	char errStr[1024];
 	struct iovec iov[2];
+	int bFreeInputstr = 1; /* we must only free if it does not point to msg-obj mem! */
 	const uchar *inputstr = NULL; /* string to be processed by external program */
 	DEFiRet;
 	
 	if(pWrkrData->pData->inputProp == INPUT_MSG) {
 		inputstr = getMSG(pMsg);
 		lenWrite = getMSGLen(pMsg);
+		bFreeInputstr = 0;
 	} else if(pWrkrData->pData->inputProp == INPUT_RAWMSG) {
 		getRawMsg(pMsg, (uchar**)&inputstr, &lenWrite);
+		bFreeInputstr = 0;
 	} else  {
 		inputstr = msgGetJSONMESG(pMsg);
 		lenWrite = strlen((const char*)inputstr);
@@ -510,7 +513,9 @@ finalize_it:
 	/* we need to free json input strings, only. All others point to memory
 	 * inside the msg object, which is destroyed when the msg is destroyed.
 	 */
-	free((void*)inputstr);
+	if(bFreeInputstr) {
+		free((void*)inputstr);
+	}
 	RETiRet;
 }
 
