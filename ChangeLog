@@ -9,6 +9,14 @@ Version 8.32.0 [v8-stable] 2018-01-09
 - added --enable-libsystemd configure option to enforce use of libsystemd
   so we can fail the build on platforms where this is required
 - fixed a couple of build issues with gcc-7 (in less frequently used modules)
+- fixed a couple of build issues on the arm platform (actually raspbian)
+- omprog bugfix: argv[0] not set when using binary without arguments
+  When using the omprog plugin with a binary without arguments, argv[0] (the
+  name of the binary) is not set, causing binaries that depend on this value
+  being set to crash or misbehave.
+  This patch also mildly refactors omprog argv[] creations, albeit some more
+  refactoring would be useful.
+  closes https://github.com/rsyslog/rsyslog/issues/1858
 - mmsnmptrapd bugfix: potential misadressing
   This only occured in situations when the system was totally out of memory.
 - dnscache bugfix: entries were cached based on IP AND port number
@@ -28,6 +36,8 @@ Version 8.32.0 [v8-stable] 2018-01-09
 - rainerscript bugfix: ltrim() and rtrim function misadressing
   This could lead to a segfault and was triggerred by certain input data
   schemes. For example, a ltrim(" a") could lead to the fault.
+- CI testing
+  - ARM (via Raspberry PI) added to CI system
 ------------------------------------------------------------------------------
 Version 8.31.0 [v8-stable] 2017-11-28
 - NEW BUILD DEPENDENCY: ommongodb now requires libmongo-c
