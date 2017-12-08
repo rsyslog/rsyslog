@@ -206,8 +206,6 @@ static int real_makeFileParentDirs(const uchar *const szFile, const size_t lenFi
         uchar *p;
         uchar *pszWork;
         size_t len;
-	int iTry = 0;
-	int bErr = 0;
 
 	assert(szFile != NULL);
 	assert(lenFile > 0);
@@ -220,38 +218,29 @@ static int real_makeFileParentDirs(const uchar *const szFile, const size_t lenFi
                 if(*p == '/') {
 			/* temporarily terminate string, create dir and go on */
                         *p = '\0';
-			iTry = 0;
-again:
-                        if(access((char*)pszWork, F_OK)) {
-                                if(mkdir((char*)pszWork, mode) == 0) {
-					if(uid != (uid_t) -1 || gid != (gid_t) -1) {
-						/* we need to set owner/group */
-						if(chown((char*)pszWork, uid, gid) != 0) {
-							char errStr[1024]; /* buffer for strerr() */
-							rs_strerror_r(errno, errStr, sizeof(errStr));
-							LogError(0, RS_RET_DIR_CHOWN_ERROR,
-								"chown for directory '%s' failed: %s",
-								pszWork, errStr);
-							if(bFailOnChownFail)
-								bErr = 1;
-							/* silently ignore if configured
-							 * to do so.
-							 */
+			int bErr = 0;
+			if(mkdir((char*)pszWork, mode) == 0) {
+				if(uid != (uid_t) -1 || gid != (gid_t) -1) {
+					/* we need to set owner/group */
+					if(chown((char*)pszWork, uid, gid) != 0) {
+						LogError(errno, RS_RET_DIR_CHOWN_ERROR,
+							"chown for directory '%s' failed", pszWork);
+						if(bFailOnChownFail) {
+							/* ignore if configured to do so */
+							bErr = 1;
 						}
 					}
-				} else {
-					if(errno == EEXIST && iTry == 0) {
-						iTry = 1;
-						goto again;
-						}
-					bErr = 1;
 				}
-				if(bErr) {
-					int eSave = errno;
-					free(pszWork);
-					errno = eSave;
-					return -1;
-				}
+			} else if(errno != EEXIST) {
+				/* EEXIST is ok, means this component exists */
+				bErr = 1;
+			}
+
+			if(bErr) {
+				int eSave = errno;
+				free(pszWork);
+				errno = eSave;
+				return -1;
 			}
                         *p = '/';
                 }
