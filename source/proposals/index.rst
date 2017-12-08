@@ -6,3 +6,4 @@ Proposals
    
    version_naming
    lookup_tables
+   big_restructuring/index

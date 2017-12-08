@@ -11,6 +11,8 @@ Note that **configurations can be built interactively** via the online
 .. toctree::
    :maxdepth: 2
 
+   conf_formats
+   sysklogd_format
    basic_structure
    templates
    properties
