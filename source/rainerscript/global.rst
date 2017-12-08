@@ -172,7 +172,7 @@ The following parameters can be set:
   first slash. If this setting is changed to "on", slashes are
   permitted and will not terminate programname parsing.
   
-  - **parser.permitSlashInProgramName** [on/off] available in 8.25.0+
+- **parser.permitSlashInProgramName** [on/off] available in 8.25.0+
 
   **Default:** off
 
