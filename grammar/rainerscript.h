@@ -180,40 +180,40 @@ struct cnfexpr {
 	unsigned nodetype;
 	struct cnfexpr *l;
 	struct cnfexpr *r;
-};
+} __attribute__((aligned (8)));
 
 struct cnfitr {
     char* var;
     struct cnfexpr* collection;
-};
+} __attribute__((aligned (8)));
 
 struct cnfnumval {
 	unsigned nodetype;
 	long long val;
-};
+} __attribute__((aligned (8)));
 
 struct cnfstringval {
 	unsigned nodetype;
 	es_str_t *estr;
-};
+} __attribute__((aligned (8)));
 
 struct cnfvar {
 	unsigned nodetype;
 	char *name;
 	msgPropDescr_t prop;
-};
+} __attribute__((aligned (8)));
 
 struct cnfarray {
 	unsigned nodetype;
 	int nmemb;
 	es_str_t **arr;
-};
+} __attribute__((aligned (8)));
 
 struct cnffparamlst {
 	unsigned nodetype; /* P */
 	struct cnffparamlst *next;
 	struct cnfexpr *expr;
-};
+} __attribute__((aligned (8)));
 
 enum cnffuncid {
 	CNFFUNC_INVALID = 0, /**< defunct entry, do not use (should normally not be present) */
@@ -249,7 +249,7 @@ struct cnffunc {
 	void *funcdata;	/* global data for function-specific use (e.g. compiled regex) */
 	uint8_t destructable_funcdata;
 	struct cnfexpr *expr[];
-};
+} __attribute__((aligned (8)));
 
 /* future extensions
 struct x {

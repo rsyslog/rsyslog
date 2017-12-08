@@ -287,7 +287,7 @@ ParseTIMESTAMP3339(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr)
 	int secfrac;	/* fractional seconds (must be 32 bit!) */
 	int secfracPrecision;
 	char OffsetMode;	/* UTC offset + or - */
-	char OffsetHour;	/* UTC offset in hours */
+	int OffsetHour;	/* UTC offset in hours */
 	int OffsetMinute;	/* UTC offset in minutes */
 	int lenStr;
 	/* end variables to temporarily hold time information while we parse */
