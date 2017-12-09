@@ -9,7 +9,7 @@
  * (and in the web doc set on http://www.rsyslog.com/doc). Be sure to read it
  * if you are getting aquainted to the object.
  *
- * Copyright 2008-2016 Adiscon GmbH.
+ * Copyright 2008-2017 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *

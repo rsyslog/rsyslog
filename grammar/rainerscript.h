@@ -238,7 +238,8 @@ enum cnffuncid {
 	CNFFUNC_LTRIM,
 	CNFFUNC_RTRIM,
 	CNFFUNC_FORMAT_TIME,
-	CNFFUNC_PARSE_TIME
+	CNFFUNC_PARSE_TIME,
+	CNFFUNC_SCRIPT_ERROR
 };
 
 struct cnffunc {
@@ -295,6 +296,9 @@ struct funcData_prifilt {
 	uchar pmask[LOG_NFACILITIES+1];	/* priority mask */
 };
 
+/* script errno-like interface error codes: */
+#define RS_SCRIPT_EOK		0
+#define RS_SCRIPT_EINVAL	1
 
 int cnfParseBuffer(char *buf, unsigned lenBuf);
 void readConfFile(FILE *fp, es_str_t **str);
@@ -313,9 +317,9 @@ void cnfobjDestruct(struct cnfobj *o);
 void cnfobjPrint(struct cnfobj *o);
 struct cnfexpr* cnfexprNew(unsigned nodetype, struct cnfexpr *l, struct cnfexpr *r);
 void cnfexprPrint(struct cnfexpr *expr, int indent);
-void cnfexprEval(const struct cnfexpr *const expr, struct svar *ret, void *pusr);
-int cnfexprEvalBool(struct cnfexpr *expr, void *usrptr);
-struct json_object* cnfexprEvalCollection(struct cnfexpr * const expr, void * const usrptr);
+void cnfexprEval(const struct cnfexpr *const expr, struct svar *ret, void *pusr, wti_t *pWti);
+int cnfexprEvalBool(struct cnfexpr *expr, void *usrptr, wti_t *pWti);
+struct json_object* cnfexprEvalCollection(struct cnfexpr * const expr, void * const usrptr, wti_t *pWti);
 void cnfexprDestruct(struct cnfexpr *expr);
 struct cnfnumval* cnfnumvalNew(long long val);
 struct cnfstringval* cnfstringvalNew(es_str_t *estr);
