@@ -216,7 +216,7 @@ parseSD_NAME(uchar *sdbuf, int lenbuf, int *curridx, uchar *namebuf)
 		if(   sdbuf[i] == '=' || sdbuf[i] == '"'
 		   || sdbuf[i] == ']' || sdbuf[i] == ' ')
 			break;
-		namebuf[j] = tolower(sdbuf[i]);
+		namebuf[j] = sdbuf[i];
 		++i;
 	}
 	namebuf[j] = '\0';

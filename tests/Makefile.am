@@ -497,7 +497,8 @@ endif
 
 if ENABLE_MMPSTRUCDATA
 TESTS +=  \
-	mmpstrucdata.sh
+	mmpstrucdata.sh \
+	mmpstrucdata-case.sh
 if HAVE_VALGRIND
 TESTS +=  \
 	mmpstrucdata-vg.sh \
@@ -1481,8 +1482,10 @@ EXTRA_DIST= \
 	testsuites/zoo.dep_wrk2.cfg \
 	testsuites/zoo.dep_wrk3.cfg \
 	mmpstrucdata.sh \
+	mmpstrucdata-case.sh \
 	mmpstrucdata-vg.sh \
 	testsuites/mmpstrucdata.conf \
+	testsuites/mmpstrucdata-case.conf \
 	mmpstrucdata-invalid-vg.sh \
 	testsuites/mmpstrucdata-invalid.conf \
 	libdbi-basic-vg.sh \
