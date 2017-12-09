@@ -1648,7 +1648,6 @@ EXTRA_DIST= \
 	libmaxmindb.supp \
 	travis/trusty.supp \
 	linux_localtime_r.supp \
-	librdkafka-bugs.supp \
 	json_var_case.sh \
 	testsuites/json_var_case.conf \
 	cfg.sh \
