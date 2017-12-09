@@ -37,6 +37,15 @@ Version 8.32.0 [v8-stable] 2018-01-09
   so we can fail the build on platforms where this is required
 - fixed a couple of build issues with gcc-7 (in less frequently used modules)
 - fixed a couple of build issues on the arm platform (actually raspbian)
+- imudp bugfix: potential segfault in ratelimiting
+  The rate-limiter inside imudp was not set to be thread safe, but was
+  used across multiple threads. This worked in default configuration,
+  but failed when RepeatedMsgReduction was set to "on".
+  Note that it in general is a bug to use a rate-limiter in
+  non-threadsafe mode across multiple threads. This also causes invalid
+  rate limiting counts in the default case.
+  closes https://github.com/rsyslog/rsyslog/issues/441
+  fixes https://github.com/rsyslog/rsyslog/issues/2132
 - omprog bugfix: argv[0] not set when using binary without arguments
   When using the omprog plugin with a binary without arguments, argv[0] (the
   name of the binary) is not set, causing binaries that depend on this value
