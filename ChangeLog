@@ -1,11 +1,38 @@
 ------------------------------------------------------------------------------
 Version 8.32.0 [v8-stable] 2018-01-09
+- ompgsql: considerable enhancements
+  The PostgreSQL output module was woefully out-of-date the following
+  list is changes made to update the module to current Rsyslog standards.
+    * allow for v6 configuration syntax
+    * configurable ports
+    * support transactional interface
+    * push db connection into workers (libpq is threadsafe)
+    * enable module testing on travis
+    * ensure configuration syntax backwards compatibility
+    * formatting around postgres core templating
+    * use new test conventions
+    * add new configuration syntax test
+    * add valgrind tests for new and old syntax
+    * add threading tests
+    * add action queue long running tests
+    * add action queue valgrind test
+  Thanks to Dan Molik for contributing this great enhancement!
 - imfile: added support for Solaris File Event notification
   improves performance under Solaris; current implementation does not yet
   support wildcards (will follow as a separate project)
 - imuxsock: improved status reporting: socket name received from systemd
   Providing an indication of what we got from systemd facilitates problem
   analysis.
+- RainerScript: add function script_error() and error-reporting support
+  This permits script functions that could fail to report errors back, so
+  that the user can handle them if desired. We use an errno-style of
+  interface. That means script_error() needs to be called after functions
+  that supports it. It will return either 0 (all OK) or something else
+  (an error condition).
+  The commit also modifies the parse_time() function to use the new
+  interface. First of all, this is useful for users, and secondly we
+  needed a capability to craft a testbench test.
+  closes https://github.com/rsyslog/rsyslog/issues/1978
 - added --enable-libsystemd configure option to enforce use of libsystemd
   so we can fail the build on platforms where this is required
 - fixed a couple of build issues with gcc-7 (in less frequently used modules)
