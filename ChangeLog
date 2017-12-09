@@ -17,6 +17,9 @@ Version 8.32.0 [v8-stable] 2018-01-09
   This patch also mildly refactors omprog argv[] creations, albeit some more
   refactoring would be useful.
   closes https://github.com/rsyslog/rsyslog/issues/1858
+- parent directory creation function refactored
+  This should not cause any change of behavior, but is worth noting in case
+  we see a regression not caught by the CI system.
 - mmsnmptrapd bugfix: potential misadressing
   This only occured in situations when the system was totally out of memory.
 - dnscache bugfix: entries were cached based on IP AND port number
