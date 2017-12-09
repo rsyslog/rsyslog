@@ -1,24 +1,120 @@
-ompgsql: PostgreSQL Database Output Module
-==========================================
+.. index:: ! ompgsql
 
-**Module Name:** ompgsql
+PostgreSQL Database Output Module (ompgsql)
+===========================================
 
-**Author:** Rainer Gerhards
-<rgerhards@adiscon.com>
+================  ==========================================================================
+**Module Name:**  ompgsql
+**Author:**       `Rainer Gerhards <rgerhards@adiscon.com>`_ `Dan Molik <dan@danmolik.com>`_
+**Available:**    8.32+
+================  ==========================================================================
 
 **Description**:
 
 This module provides native support for logging to PostgreSQL databases. It's an alternative (with potentially superior performance) to the more generic
 `omlibdbi <omlibdbi.html>`_ module.
 
-**Configuration Directives**:
 
-ompgsql uses the "old style" configuration, with everything on the action line itself
+Input parameters
+****************
+
+-  **server** - default: none, required: true
+
+   The hostname or address of the PostgreSQL server.
+
+-  **port, serverport** - default: 5432 (PostgreSQL default)
+
+   The IP port of the PostgreSQL server.
+
+-  **db** - default: none, required: true
+
+   The multi-tenant database name to `INSERT` rows into.
+
+-  **user, uid** - default: postgres
+
+   The username to connect to the PostgreSQL server with.
+
+-  **pass, pwd** - default: postgres
+
+   The password to connect to the PostgreSQL server with.
+
+-  **template** - default none, required: false
+
+   The template name to use to `INSERT` rows into the database with. Valid SQL
+   syntax is required, as the module does not perform any insertion statement
+   checking.
+
+
+Examples
+********
+
+A Basic Example using the internal PostgreSQL template::
+
+  # load module
+  module(load="ompgsql")
+
+  action(type="ompgsql" server="localhost"
+         user="rsyslog" pass="test1234"
+         db="syslog")
+
+A Templated example::
+
+  template(name="sql-syslog" type="list" option.sql="on") {
+    constant(value="INSERT INTO SystemEvents (message, timereported) values ('")
+    property(name="msg")
+    constant(value="','")
+    property(name="timereported" dateformat="pgsql" date.inUTC="on")
+    constant(value="')")
+  }
+
+  # load module
+  module(load="ompgsql")
+
+  action(type="ompgsql" server="localhost"
+         user="rsyslog" pass="test1234"
+         db="syslog"
+         template="sql-syslog" )
+
+An action queue and templated example::
+
+  template(name="sql-syslog" type="list" option.sql="on") {
+    constant(value="INSERT INTO SystemEvents (message, timereported) values ('")
+    property(name="msg")
+    constant(value="','")
+    property(name="timereported" dateformat="pgsql" date.inUTC="on")
+    constant(value="')")
+  }
+
+  # load module
+  module(load="ompgsql")
+
+  action(type="ompgsql" server="localhost"
+         user="rsyslog" pass="test1234"
+         db="syslog"
+         template="sql-syslog" 
+         queue.size="10000" queue.type="linkedList"
+         queue.workerthreads="5"
+         queue.workerthreadMinimumMessages="500"
+         queue.timeoutWorkerthreadShutdown="1000"
+         queue.timeoutEnqueue="10000")
+
+
+Building
+********
+
+To compile Rsyslog with PostgreSQL support you will need to:
+
+* install *libpq* and *libpq-dev* packages, check your package manager for the correct name.
+* set *--enable-pgsql* switch on configure.
+
+
+Legacy
+******
 
 **Action parameters**
 
 **:ompgsql:database-server,database-name,database-userid,database-password**
-   
+
 All parameters should be filled in for a successful connect.
 
 Note rsyslog contains a canned default template to write to the Postgres
