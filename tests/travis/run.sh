@@ -112,7 +112,7 @@ export CONFIG_FLAGS="$CONFIGURE_FLAGS \
 	--enable-mysql --enable-mysql-tests \
 	--enable-gt-ksi \
 	--enable-libdbi \
-	--enable-pgsql \
+	--enable-pgsql --enable-pgsql-tests \
 	--enable-omhttpfs \
 	--enable-elasticsearch \
 	--enable-valgrind \

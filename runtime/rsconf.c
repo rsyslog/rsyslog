@@ -1252,12 +1252,12 @@ initLegacyConf(void)
 	tplAddLine(ourConf, " StdDBFmt", &pTmp);
 	pTmp = template_SysklogdFileFormat;
 	tplAddLine(ourConf, "RSYSLOG_SysklogdFileFormat", &pTmp);
-        pTmp = template_StdPgSQLFmt;
-        tplAddLine(ourConf, " StdPgSQLFmt", &pTmp);
-        pTmp = template_StdJSONFmt;
-        tplAddLine(ourConf, " StdJSONFmt", &pTmp);
-        pTmp = template_spoofadr;
-        tplLastStaticInit(ourConf, tplAddLine(ourConf, "RSYSLOG_omudpspoofDfltSourceTpl", &pTmp));
+	pTmp = template_StdPgSQLFmt;
+	tplAddLine(ourConf, " StdPgSQLFmt", &pTmp);
+	pTmp = template_StdJSONFmt;
+	tplAddLine(ourConf, " StdJSONFmt", &pTmp);
+	pTmp = template_spoofadr;
+	tplLastStaticInit(ourConf, tplAddLine(ourConf, "RSYSLOG_omudpspoofDfltSourceTpl", &pTmp));
 
 finalize_it:
 	RETiRet;

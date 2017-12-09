@@ -382,7 +382,20 @@ if ENABLE_PGSQL
 if ENABLE_PGSQL_TESTS
 TESTS += \
 	pgsql-basic.sh \
-	pgsql-template.sh
+	pgsql-basic-cnf6.sh \
+	pgsql-basic-threads-cnf6.sh \
+	pgsql-template.sh \
+	pgsql-template-cnf6.sh \
+	pgsql-actq-mt-withpause.sh \
+	pgsql-template-threads-cnf6.sh
+if HAVE_VALGRIND
+TESTS += \
+	pgsql-basic-vg.sh \
+	pgsql-template-vg.sh \
+	pgsql-basic-cnf6-vg.sh \
+	pgsql-template-cnf6-vg.sh \
+	pgsql-actq-mt-withpause-vg.sh
+endif
 endif
 endif
 
