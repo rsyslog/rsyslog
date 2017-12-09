@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2017 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -331,6 +331,7 @@ addListner(instanceConf_t *inst)
 			CHKiRet(prop.ConstructFinalize(newlcnfinfo->pInputName));
 			ratelimitSetLinuxLike(newlcnfinfo->ratelimiter, inst->ratelimitInterval,
 					      inst->ratelimitBurst);
+			ratelimitSetThreadSafe(newlcnfinfo->ratelimiter);
 			/* support statistics gathering */
 			CHKiRet(statsobj.Construct(&(newlcnfinfo->stats)));
 			CHKiRet(statsobj.SetName(newlcnfinfo->stats, dispname));
