@@ -55,7 +55,6 @@ MODULE_CNFNAME("omkafka")
  */
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(datetime)
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(strm)
 DEFobjCurrIf(statsobj)
 
@@ -326,7 +325,7 @@ rd_kafka_topic_t** topic) {
 	*topic = NULL;
 
 	if(topicconf == NULL) {
-		errmsg.LogError(0, RS_RET_KAFKA_ERROR,
+		LogError(0, RS_RET_KAFKA_ERROR,
 						"omkafka: error creating kafka topic conf obj: %s\n",
 						rd_kafka_err2str(rd_kafka_last_error()));
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
@@ -341,7 +340,7 @@ rd_kafka_topic_t** topic) {
 								   errstr, sizeof(errstr))
 		   != RD_KAFKA_CONF_OK) {
 			if(pData->bReportErrs) {
-				errmsg.LogError(0, RS_RET_PARAM_ERROR, "error in kafka "
+				LogError(0, RS_RET_PARAM_ERROR, "error in kafka "
 								"topic conf parameter '%s=%s': %s",
 								pData->topicConfParams[i].name,
 								pData->topicConfParams[i].val, errstr);
@@ -351,7 +350,7 @@ rd_kafka_topic_t** topic) {
 	}
 	rkt = rd_kafka_topic_new(pData->rk, (char *)newTopicName, topicconf);
 	if(rkt == NULL) {
-		errmsg.LogError(0, RS_RET_KAFKA_ERROR,
+		LogError(0, RS_RET_KAFKA_ERROR,
 						"omkafka: error creating kafka topic: %s\n",
 						rd_kafka_err2str(rd_kafka_last_error()));
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
@@ -469,7 +468,7 @@ prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict_
 	localRet = createTopic(pData, newTopicName, &tmpTopic);
 
 	if(localRet != RS_RET_OK) {
-		errmsg.LogError(0, localRet, "Could not open dynamic topic '%s' "
+		LogError(0, localRet, "Could not open dynamic topic '%s' "
 			"[state %d] - discarding message",
 		newTopicName, localRet);
 		ABORT_FINALIZE(localRet);
@@ -637,7 +636,7 @@ writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
 				rd_kafka_topic_name(rkt)));
 			SLIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
 		} else {
-			errmsg.LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
+			LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
 				"omkafka: Failed to produce to topic '%s' (rd_kafka_producev)"
 				"partition %d: %d/%s\n",
 				rd_kafka_topic_name(rkt), partition, msg_kafka_response,
@@ -662,7 +661,7 @@ writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
 				rd_kafka_topic_name(rkt)));
 			SLIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
 		} else {
-			errmsg.LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
+			LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
 				"omkafka: Failed to produce to topic '%s' (rd_kafka_produce) "
 				"partition %d: %d/%s\n",
 				rd_kafka_topic_name(rkt), partition, rd_kafka_last_error(),
@@ -766,7 +765,7 @@ do_rd_kafka_destroy(instanceData *const __restrict__ pData)
 			/* Flush all remaining kafka messages (rd_kafka_poll is called inside) */
 			const int flushStatus = rd_kafka_flush(pData->rk, 5000);
 			if (flushStatus != RD_KAFKA_RESP_ERR_NO_ERROR) /* TODO: Handle unsend messages here! */ {
-				errmsg.LogError(0, RS_RET_KAFKA_ERROR, "omkafka: onDestroy "
+				LogError(0, RS_RET_KAFKA_ERROR, "omkafka: onDestroy "
 						"Failed to send remaing '%d' messages to "
 						"topic '%s' on shutdown with error: '%s'",
 						queuedCount,
@@ -843,7 +842,7 @@ errorCallback(rd_kafka_t __attribute__((unused)) *rk,
 		DBGPRINTF("omkafka: kafka error handled, action will be suspended: %d,'%s'\n",
 			err, rd_kafka_err2str(err));
 	} else {
-		errmsg.LogError(0, RS_RET_KAFKA_ERROR, "omkafka: kafka error message: %d,'%s','%s'",
+		LogError(0, RS_RET_KAFKA_ERROR, "omkafka: kafka error message: %d,'%s','%s'",
 			err, rd_kafka_err2str(err), reason);
 	}
 }
@@ -885,7 +884,7 @@ openKafka(instanceData *const __restrict__ pData)
 	/* main conf */
 	rd_kafka_conf_t *const conf = rd_kafka_conf_new();
 	if(conf == NULL) {
-		errmsg.LogError(0, RS_RET_KAFKA_ERROR,
+		LogError(0, RS_RET_KAFKA_ERROR,
 			"omkafka: error creating kafka conf obj: %s\n",
 			rd_kafka_err2str(rd_kafka_last_error()));
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
@@ -907,7 +906,7 @@ openKafka(instanceData *const __restrict__ pData)
 			pData->confParams[i].val, errstr, sizeof(errstr))
 	 	   != RD_KAFKA_CONF_OK) {
 			if(pData->bReportErrs) {
-				errmsg.LogError(0, RS_RET_PARAM_ERROR, "error in kafka "
+				LogError(0, RS_RET_PARAM_ERROR, "error in kafka "
 					"parameter '%s=%s': %s",
 					pData->confParams[i].name,
 					pData->confParams[i].val, errstr);
@@ -925,7 +924,7 @@ openKafka(instanceData *const __restrict__ pData)
 	char kafkaErrMsg[1024];
 	pData->rk = rd_kafka_new(RD_KAFKA_PRODUCER, conf, kafkaErrMsg, sizeof(kafkaErrMsg));
 	if(pData->rk == NULL) {
-		errmsg.LogError(0, RS_RET_KAFKA_ERROR,
+		LogError(0, RS_RET_KAFKA_ERROR,
 			"omkafka: error creating kafka handle: %s\n", kafkaErrMsg);
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	}
@@ -935,7 +934,7 @@ openKafka(instanceData *const __restrict__ pData)
 #	endif
 	DBGPRINTF("omkafka setting brokers: '%s'n", pData->brokers);
 	if((nBrokers = rd_kafka_brokers_add(pData->rk, (char*)pData->brokers)) == 0) {
-		errmsg.LogError(0, RS_RET_KAFKA_NO_VALID_BROKERS,
+		LogError(0, RS_RET_KAFKA_NO_VALID_BROKERS,
 			"omkafka: no valid brokers specified: %s\n", pData->brokers);
 		ABORT_FINALIZE(RS_RET_KAFKA_NO_VALID_BROKERS);
 	}
@@ -975,7 +974,7 @@ finalize_it:
 		/* Parameter Error's cannot be resumed, so we need to disable the action */
 		if (iRet == RS_RET_PARAM_ERROR) {
 			iRet = RS_RET_DISABLE_ACTION;
-			errmsg.LogError(0, iRet, "omkafka: action will be disabled due invalid "
+			LogError(0, iRet, "omkafka: action will be disabled due invalid "
 				"kafka configuration parameters\n");
 		}
 
@@ -1065,7 +1064,7 @@ finalize_it:
 		close(fdMsgFile);
 	}
 	if(iRet != RS_RET_OK) {
-		errmsg.LogError(0, iRet, "omkafka: could not persist failed messages "
+		LogError(0, iRet, "omkafka: could not persist failed messages "
 			"file %s - failed messages will be lost.",
 			(char*)pData->failedMsgFile);
 	}
@@ -1146,7 +1145,7 @@ finalize_it:
 	if(iRet != RS_RET_OK) {
 		/* We ignore FILE NOT FOUND here */
 		if (iRet != RS_RET_FILE_NOT_FOUND) {
-			errmsg.LogError(0, iRet, "omkafka: could not load failed messages "
+			LogError(0, iRet, "omkafka: could not load failed messages "
 			"from file %s error %d - failed messages will not be resend.",
 			(char*)pData->failedMsgFile, iRet);
 		}
@@ -1372,7 +1371,7 @@ processKafkaParam(char *const param,
 	DEFiRet;
 	char *val = strstr(param, "=");
 	if(val == NULL) {
-		errmsg.LogError(0, RS_RET_PARAM_ERROR, "missing equal sign in "
+		LogError(0, RS_RET_PARAM_ERROR, "missing equal sign in "
 				"parameter '%s'", param);
 		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 	}
@@ -1470,7 +1469,7 @@ CODESTARTnewActInst
 	}
 
 	if(pData->dynaTopic && pData->topic == NULL) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+		LogError(0, RS_RET_CONFIG_ERROR,
 			"omkafka: requested dynamic topic, but no "
 			"name for topic template given - action definition invalid");
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
@@ -1511,7 +1510,6 @@ ENDnewActInst
 BEGINmodExit
 CODESTARTmodExit
 	statsobj.Destruct(&kafkaStats);
-	CHKiRet(objRelease(errmsg, CORE_COMPONENT));
 	CHKiRet(objRelease(statsobj, CORE_COMPONENT));
 	DESTROY_ATOMIC_HELPER_MUT(mutClock);
 
@@ -1545,7 +1543,6 @@ INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(strm, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 
