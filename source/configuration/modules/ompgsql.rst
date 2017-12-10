@@ -5,7 +5,7 @@ PostgreSQL Database Output Module (ompgsql)
 
 ================  ==========================================================================
 **Module Name:**  ompgsql
-**Author:**       `Rainer Gerhards <rgerhards@adiscon.com>`_ `Dan Molik <dan@danmolik.com>`_
+**Author:**       `Rainer Gerhards <rgerhards@adiscon.com>`__ and `Dan Molik <dan@danmolik.com>`__
 **Available:**    8.32+
 ================  ==========================================================================
 
