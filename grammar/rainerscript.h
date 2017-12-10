@@ -219,6 +219,7 @@ enum cnffuncid {
 	CNFFUNC_INVALID = 0, /**< defunct entry, do not use (should normally not be present) */
 	CNFFUNC_NAME = 1,   /**< use name to call function (for future use) */
 	CNFFUNC_STRLEN,
+	CNFFUNC_SUBSTRING,
 	CNFFUNC_GETENV,
 	CNFFUNC_TOLOWER,
 	CNFFUNC_CSTR,

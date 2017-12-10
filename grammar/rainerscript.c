@@ -2071,6 +2071,20 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 	case CNFFUNC_EXEC_TEMPLATE:
 		doFunc_exec_template(func, ret, (smsg_t*) usrptr);
 		break;
+	case CNFFUNC_SUBSTRING:
+		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
+		cnfexprEval(func->expr[1], &r[1], usrptr, pWti);
+		cnfexprEval(func->expr[2], &r[2], usrptr, pWti);
+		es_str_t *es = var2String(&r[0], &bMustFree);
+		const int start = var2Number(&r[1], NULL);
+		const int subStrLen = var2Number(&r[2], NULL);
+		ret->datatype = 'S';
+		ret->d.estr = es_newStrFromSubStr(es, (es_size_t)start, (es_size_t)subStrLen);
+		if(bMustFree) es_deleteStr(es);
+		varFreeMembers(&r[0]);
+		varFreeMembers(&r[1]);
+		varFreeMembers(&r[2]);
+		break;
 	case CNFFUNC_FIELD:
 		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
 		cnfexprEval(func->expr[1], &r[1], usrptr, pWti);
@@ -4317,6 +4331,8 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 		GENERATE_FUNC("getenv", 1, CNFFUNC_GETENV);
 	} else if(FUNC_NAME("num2ipv4")) {
 		GENERATE_FUNC("num2ipv4", 1, CNFFUNC_NUM2IPV4);
+	} else if(FUNC_NAME("substring")) {
+		GENERATE_FUNC("substring", 3, CNFFUNC_SUBSTRING);
 	} else if(FUNC_NAME("ltrim")) {
 		GENERATE_FUNC("ltrim", 1, CNFFUNC_LTRIM);
 	} else if(FUNC_NAME("rtrim")) {

@@ -243,6 +243,7 @@ TESTS +=  \
 	rscript_ne_var.sh \
 	rscript_num2ipv4.sh \
 	rscript_trim.sh \
+	rscript_substring.sh \
 	rscript_format_time.sh \
 	rscript_parse_time.sh \
 	rscript_script_error.sh \
@@ -902,6 +903,7 @@ EXTRA_DIST= \
 	rscript_ne_var.sh \
 	rscript_num2ipv4.sh \
 	rscript_trim.sh \
+	rscript_substring.sh \
 	rscript_format_time.sh \
 	rscript_parse_time.sh \
 	rscript_parse_time_get-ts.py \
