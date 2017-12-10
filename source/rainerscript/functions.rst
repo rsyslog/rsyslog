@@ -211,16 +211,29 @@ ipv42num
    function results in an error and returns -1.
 
 ltrim
---------
+-----
 
    Removes any spaces at the start of a given string. Input is a string, output
    is the same string starting with the first non-space character.
 
 rtrim
---------
+-----
 
    Removes any spaces at the end of a given string. Input is a string, output
    is the same string ending with the last non-space character.
+
+script_error
+------------
+
+  Returns the error state of functions that support it. C-Developers note that this
+  is similar to ``errno`` under Linux. The error state corresponds to the function
+  immediatly called before. The next function call overrides it.
+
+  Right now, the value 0 means that that the previous functions succeeded, any other
+  value that it failed. In the future, we may have more fine-grain error codes.
+
+  Function descriptions mention if a function supports error state information. If not,
+  the function call will always set ``script_error()`` to 0.
 
 format_time(unix_timestamp, format_str)
 ---------------------------------------
@@ -281,7 +294,8 @@ parse_time(timestamp)
    1970-01-01T00:00:0Z).
 
    If the input to the function is not a properly formatted RFC 3164 or RFC 3339
-   date/time string, or cannot be parsed, ``0`` is returned.
+   date/time string, or cannot be parsed, ``0`` is returned and ``script_error()``
+   will be set to error state.
 
    * **Note**: This function does not support unusual RFC 3164 dates/times that
      contain year or time zone information.
