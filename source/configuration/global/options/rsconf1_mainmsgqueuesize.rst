@@ -1,14 +1,14 @@
 $MainMsgQueueSize
 -----------------
 
-**Type:** global configuration directive
+**Type:** global configuration parameter
 
 **Default:** 50000 (v8.30.0) - may change
 
 **Description:**
 
 This allows to specify the maximum size of the message queue. This
-directive is only available when rsyslogd has been compiled with
+parameter is only available when rsyslogd has been compiled with
 multithreading support. In this mode, receiver and output modules are
 de-coupled via an in-memory queue. This queue buffers messages when the
 output modules are not capable to process them as fast as they are

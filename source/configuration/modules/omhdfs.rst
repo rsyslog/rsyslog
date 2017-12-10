@@ -12,7 +12,9 @@ omhdfs: Hadoop Filesystem Output Module
 This module supports writing message into files on Hadoop's HDFS file
 system.
 
-**Configuration Directives**:
+**Parameters**:
+
+Note: parameter names are case-insensitive.
 
 -  **$OMHDFSFileName** [name]
     The name of the file to which the output data shall be written.
@@ -30,8 +32,8 @@ system.
 Building omhdfs is a challenge because we could not yet find out how to
 integrate Java properly into the autotools build process. The issue is
 that HDFS is written in Java and libhdfs uses JNI to talk to it. That
-requires that various system-specific environment options and pathes be
-set correctly. At this point, we leave this to the user. If someone know
+requires that various system-specific environment options and paths be
+set correctly. At this point, we leave this to the user. If someone knows
 how to do it better, please drop us a line!
 
 -  In order to build, you need to set these environment variables BEFORE

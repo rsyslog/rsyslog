@@ -36,7 +36,7 @@ following types are used:
   nor permitted (the quotes would become part of the word).
 
 - **character**
-  
+
   A single (printable) character. Must **not** be quoted.
 
 - **boolean**

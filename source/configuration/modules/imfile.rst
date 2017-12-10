@@ -1,7 +1,7 @@
 imfile: Text File Input Module
 ==============================
 
-.. index:: ! imfile 
+.. index:: ! imfile
 
 ===========================  ===========================================================================
 **Module Name:**             **imfile**
@@ -46,14 +46,14 @@ Metadata
 The imfile module supports message metadata. It supports the following
 data items:
 
-- filename 
+- filename
 
   Name of the file where the message originated from. This is most
   useful when using wildcards inside file monitors, because it then
   is the only way to know which file the message originated from.
   The value can be accessed using the %$!metadata!filename% property.
 
-- fileoffset 
+- fileoffset
 
   Offset of the file in bytes at the time the message was read. The
   offset reported is from the **start** of the line.
@@ -104,7 +104,9 @@ parts of that file.
 Module Parameters
 -----------------
 
-.. index:: 
+Note: parameter names are case-insensitive.
+
+.. index::
    single: imfile; mode
 .. function:: mode ["inotify"/"polling"]
 
@@ -118,7 +120,7 @@ Module Parameters
   suggested that users turn on "polling" mode only if they experience
   strange problems in inotify mode. In theory, there should never be a
   reason to enable "polling" mode and later versions will most probably
-  remove it. 
+  remove it.
 
   Note: if a legacy "$ModLoad" statement is used, the default is *polling*.
   This default was kept to prevent problems with old configurations. It
@@ -157,7 +159,7 @@ Module Parameters
   effect should be neglectible, except if a very large number of files is being
   monitored.
 
-.. index:: 
+.. index::
    single: imfile; PollingInterval
 .. function:: PollingInterval seconds
 
@@ -165,10 +167,10 @@ Module Parameters
 
    This setting specifies how often files are to be
    polled for new data. For obvious reasons, it has effect only if
-   imfile is running in polling mode. 
+   imfile is running in polling mode.
    The time specified is in seconds. During each
    polling interval, all files are processed in a round-robin fashion.
-   
+
    A short poll interval provides more rapid message forwarding, but
    requires more system resources. While it is possible, we stongly
    recommend not to set the polling interval to 0 seconds. That will
@@ -184,7 +186,9 @@ Module Parameters
 Input Parameters
 ----------------
 
-.. index:: 
+Note: parameter names are case-insensitive.
+
+.. index::
    single: imfile; File
 .. function:: File [/path/to/file]
 
@@ -193,7 +197,7 @@ Input Parameters
    macros or templates). Note that wildcards are supported at the file
    name level (see **WildCards** below for more details).
 
-.. index:: 
+.. index::
    single: imfile; Tag
 .. function:: Tag [tag:]
 
@@ -202,7 +206,7 @@ Input Parameters
    you would like to see the colon after the tag, you need to specify it
    here (like 'tag="myTagValue:"').
 
-.. index:: 
+.. index::
    single: imfile; Facility
 .. function:: Facility [facility]
 
@@ -210,7 +214,7 @@ Input Parameters
    in textual form (e.g. "local0", "local1", ...) or as numbers (e.g.
    16 for "local0"). Textual form is suggested. Default  is "local0".
 
-.. index:: 
+.. index::
    single: imfile; Severity
 .. function:: Severity [syslogSeverity]
 
@@ -218,7 +222,7 @@ Input Parameters
    in textual   form (e.g. "info", "warning", ...) or as numbers (e.g. 6
    for "info"). Textual form is suggested. Default is "notice".
 
-.. index:: 
+.. index::
    single: imfile; PersistStateInterval
 .. function:: PersistStateInterval [lines]
 
@@ -232,7 +236,7 @@ Input Parameters
    especially when set to a low value. Frequently writing the state file
    is very time consuming.
 
-.. index:: 
+.. index::
    single: imfile; startmsg.regex
 .. function:: startmsg.regex [POSIX ERE regex]
 
@@ -276,7 +280,7 @@ Input Parameters
   monitored.
 
 
-.. index:: 
+.. index::
    single: imfile; readMode
 .. function:: readMode [mode]
 
@@ -295,7 +299,7 @@ Input Parameters
    2 - indented (new log messages start at the beginning of a line. If a
    line starts with a space or tab "\t" it is part of the log message before it)
 
-.. index:: 
+.. index::
    single: imfile; escapeLF
 .. function:: escapeLF [on/off] (requires v7.5.3+)
 
@@ -309,9 +313,9 @@ Input Parameters
    carefully with all associated tools. Please note that if you intend
    to use plain TCP syslog with embedded LF characters, you need to
    enable octet-counted framing.
-   For more details, see Rainer's blog posting on imfile LF escaping. 
+   For more details, see Rainer's blog posting on imfile LF escaping.
 
-.. index:: 
+.. index::
    single: imfile; MaxLinesAtOnce
 .. function:: MaxLinesAtOnce [number]
 
@@ -331,7 +335,7 @@ Input Parameters
    distribution of events when multiple busy files are monitored. For
    *polling* mode, the **default** is 10240.
 
-.. index:: 
+.. index::
    single: imfile; MaxSubmitAtOnce
 .. function:: MaxSubmitAtOnce [number]
 
@@ -342,7 +346,7 @@ Input Parameters
    you do not know what this doc here talks about, this is a good
    indication that you should NOT modify the default.
 
-.. index:: 
+.. index::
    single: imfile;  deleteStateOnFileDelete
 .. function:: deleteStateOnFileDelete [on/off] (requires v8.5.0+)
 
@@ -368,9 +372,9 @@ Input Parameters
    In general, this parameter should only by set if the users
    knows exactly why this is required.
 
-.. index:: 
+.. index::
    single: imfile;  Ruleset
-.. function:: Ruleset <ruleset> 
+.. function:: Ruleset <ruleset>
 
    Binds the listener to a specific :doc:`ruleset <../../concepts/multi_ruleset>`.
 
@@ -429,10 +433,10 @@ Input Parameters
    **Default: off**
 
    This is used to tell rsyslog to seek to the end/tail of input files
-   (discard old logs) **at its first start(freshStart)** and process only new 
+   (discard old logs) **at its first start(freshStart)** and process only new
    log messages.
-   
-   When deploy rsyslog to a large number of servers, we may only care about 
+
+   When deploy rsyslog to a large number of servers, we may only care about
    new log messages generated after the deployment. set **freshstartTail**
    to **on** will discard old logs. Otherwise, there may be vast useless
    message burst on the remote central log receiver
@@ -474,9 +478,9 @@ WildCards
 * /var/log/\*/\*.log **works**. *
 
 
-  All matching files in all matching subfolders will work. 
-  Note that this may derease performance in imfile depending on how 
-  many directories and files are being watched dynamically. 
+  All matching files in all matching subfolders will work.
+  Note that this may derease performance in imfile depending on how
+  many directories and files are being watched dynamically.
 
 
 
@@ -499,18 +503,18 @@ defaults instead.
 
 ::
 
-  module(load="imfile" PollingInterval="10") #needs to be done just once 
+  module(load="imfile" PollingInterval="10") #needs to be done just once
 
-  # File 1 
-  input(type="imfile" 
-        File="/path/to/file1" 
+  # File 1
+  input(type="imfile"
+        File="/path/to/file1"
         Tag="tag1"
-        Severity="error" 
-        Facility="local7") 
+        Severity="error"
+        Facility="local7")
 
   # File 2
-  input(type="imfile" 
-        File="/path/to/file2" 
+  input(type="imfile"
+        File="/path/to/file2"
         Tag="tag2")
 
   # ... and so on ... #
@@ -521,19 +525,19 @@ Legacy Configuration
 Note: in order to preserve compatibility with previous versions, the LF escaping
 in multi-line messages is turned off for legacy-configured file monitors
 (the "escapeLF" input parameter). This can cause serious problems. So it is highly
-suggested that new deployments use the new :ref:`input() <cfgobj_input>` configuration 
-object and keep LF escaping turned on. 
+suggested that new deployments use the new :ref:`input() <cfgobj_input>` configuration
+object and keep LF escaping turned on.
 
 Legacy Configuration Directives
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. index:: 
+.. index::
    single: imfile; $InputFileName
 .. function:: $InputFileName /path/to/file
 
    equivalent to "file"
 
-.. index:: 
+.. index::
    single: imfile; $InputFileTag
 .. function:: $InputFileTag tag:
 
@@ -541,60 +545,60 @@ Legacy Configuration Directives
    you would like to see the colon after the tag, you need to specify it
    here (as shown above).
 
-.. index:: 
+.. index::
    single: imfile; $InputFileStateFile
 .. function:: $InputFileStateFile name-of-state-file
 
    equivalent to: "StateFile"
 
-.. index:: 
+.. index::
    single: imfile; $InputFileFacility
 .. function:: $InputFileFacility facility
 
    equivalent to: "Facility"
 
-.. index:: 
+.. index::
    single: imfile; $InputFileSeverity
 .. function:: $InputFileSeverity severity
 
    equivalent to: "Severity"
 
-.. index:: 
+.. index::
    single: imfile; $InputRunFileMonitor
 .. function:: $InputRunFileMonitor
 
    This **activates** the current monitor. It has no parameters. If you
    forget this directive, no file monitoring will take place.
 
-.. index:: 
+.. index::
    single: imfile; $InputFilePollInterval
 
 .. function:: $InputFilePollInterval seconds
 
    equivalent to: "PollingInterval"
 
-.. index:: 
+.. index::
    single: imfile; $InputFilePersistStateInterval
 
 .. function:: $InputFilePersistStateInterval lines
 
    equivalent to: "PersistStateInterval"
 
-.. index:: 
+.. index::
    single: imfile; $InputFileReadMode
 
 .. function:: $InputFileReadMode mode
 
    equivalent to: "ReadMode"
 
-.. index:: 
+.. index::
    single: imfile; $InputFileMaxLinesAtOnce
 
 .. function:: $InputFileMaxLinesAtOnce number
 
    equivalent to: "MaxLinesAtOnce"
 
-.. index:: 
+.. index::
    single: imfile; $InputFileBindRuleset
 
 .. function:: $InputFileBindRuleset ruleset
@@ -612,22 +616,22 @@ defaults instead.
 
 ::
 
-  $ModLoad imfile # needs to be done just once 
-  # File 1 
-  $InputFileName /path/to/file1 
-  $InputFileTag tag1: 
+  $ModLoad imfile # needs to be done just once
+  # File 1
+  $InputFileName /path/to/file1
+  $InputFileTag tag1:
   $InputFileStateFile stat-file1
 
-  $InputFileSeverity error 
-  $InputFileFacility local7 
+  $InputFileSeverity error
+  $InputFileFacility local7
   $InputRunFileMonitor
-  
-  # File 2 
-  $InputFileName /path/to/file2 
+
+  # File 2
+  $InputFileName /path/to/file2
   $InputFileTag tag2:
 
-  $InputFileStateFile stat-file2 
-  $InputRunFileMonitor 
+  $InputFileStateFile stat-file2
+  $InputRunFileMonitor
   # ... and so on ...
   # check for new lines every 10 seconds
   $InputFilePollInterval 10

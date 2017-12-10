@@ -14,11 +14,13 @@ Configuration Parameters
 Module Parameters
 ^^^^^^^^^^^^^^^^^
 
+Note: parameter names are case-insensitive.
+
 .. function:: AddtlFrameDelimiter <Delimiter>
 
    This directive permits to specify an additional frame delimiter for
    Multiple receivers may be configured by specifying $InputTCPServerRun
-   multiple times. This is available since version 4.3.1, earlier 
+   multiple times. This is available since version 4.3.1, earlier
    versions do NOT support it.
 
 .. function:: DisableLFDelimiter on/off
@@ -113,7 +115,7 @@ Module Parameters
 
    *Default is 200*
 
-   Sets the maximum number of sessions supported. This must be set 
+   Sets the maximum number of sessions supported. This must be set
    before the first $InputTCPServerRun directive
 
 .. function:: StreamDriver.Name <string>
@@ -173,6 +175,8 @@ Module Parameters
 Input Parameters
 ^^^^^^^^^^^^^^^^
 
+Note: parameter names are case-insensitive.
+
 .. function:: Port <port>
 
    Starts a TCP server on selected port
@@ -192,7 +196,7 @@ Input Parameters
    received from.
 
 .. function:: Ruleset <ruleset>
-   
+
    Binds the listener to a specific :doc:`ruleset <../../concepts/multi_ruleset>`.
 
 .. function:: SupportOctetCountedFraming on/off
@@ -200,21 +204,21 @@ Input Parameters
    *Default is on*
 
    If set to "on", the legacy octed-counted framing (similar to RFC5425
-   framing) is activated. This should be left unchanged until you know 
-   very well what you do. It may be useful to turn it off, if you know 
-   this framing is not used and some senders emit multi-line messages 
+   framing) is activated. This should be left unchanged until you know
+   very well what you do. It may be useful to turn it off, if you know
+   this framing is not used and some senders emit multi-line messages
    into the message stream.
 
 .. function:: RateLimit.Interval [number]
 
-   Specifies the rate-limiting interval in seconds. Default value is 0, 
+   Specifies the rate-limiting interval in seconds. Default value is 0,
    which turns off rate limiting. Set it to a number of seconds (5
    recommended) to activate rate-limiting.
 
 .. function:: RateLimit.Burst [number]
 
-   Specifies the rate-limiting burst in number of messages. Default is 
-   10,000. 
+   Specifies the rate-limiting burst in number of messages. Default is
+   10,000.
 
 Statistic Counter
 -----------------

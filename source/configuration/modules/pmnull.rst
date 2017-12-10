@@ -11,6 +11,8 @@ process certain known-not-syslog messages.
 Parser Parameters
 -----------------
 
+Note: parameter names are case-insensitive.
+
 .. function:: tag <string>
 
    **Default**: Empty ("")

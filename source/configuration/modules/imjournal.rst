@@ -38,9 +38,11 @@ for most use cases. If insufficient, use the parameters described below
 to adjust the permitted volume. **It is strongly recommended to use this
 plugin only if there is hard need to do so.**
 
-**Configuration Directives**:
+**Configuration Parameters**:
 
-**Module Directives**
+**Module Parameters**
+
+Note: parameter names are case-insensitive.
 
 -  **PersistStateInterval** number-of-messages
 
@@ -99,7 +101,7 @@ plugin only if there is hard need to do so.**
 
 -  **usepidfromsystem** [**off**/on]
 
-   Retrieves the trusted systemd parameter, _PID, instead of the user 
+   Retrieves the trusted systemd parameter, _PID, instead of the user
    systemd parameter, SYSLOG_PID, which is the default.
    This option override the "usepid" option.
    This is now deprecated. It is better to use usepid="syslog" instead.
@@ -119,7 +121,7 @@ plugin only if there is hard need to do so.**
       message is parsed without PID number.
 
 -  **IgnoreNonValidStatefile** [**on**/off]
-   
+
    When a corrupted statefile is read imjournal ignores the statefile and continues
    with logging from the beginning of the journal (from its end if IgnorePreviousMessages
    is on). After PersistStateInterval or when rsyslog is stopped invalid statefile
@@ -156,7 +158,9 @@ saving them into /var/log/ceelog.
   action(type="mmjsonparse")
   action(type="omfile" file="/var/log/ceelog" template="CEETemplate")
 
-**Legacy Configuration Directives**:
+**Legacy Configuration Parameters**:
+
+Note: parameter names are case-insensitive.
 
 -  **$imjournalPersistStateInterval**
 

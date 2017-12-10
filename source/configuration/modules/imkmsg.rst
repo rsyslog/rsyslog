@@ -20,7 +20,9 @@ Log messages are parsed as necessary into rsyslog msg\_t structure.
 Continuation lines are parsed as json key/value pairs and added into
 rsyslog's message json representation.
 
-**Configuration Directives**:
+**Configuration Parameters**:
+
+Note: parameter names are case-insensitive.
 
 This module has no configuration directives.
 

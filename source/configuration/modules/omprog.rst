@@ -46,7 +46,7 @@ when we execute a binary, we need to fork, and we do not have
 full access to rsyslog's usual error-reporting capabilities after the
 fork. As the actual execution must happen after the fork, we cannot
 use the default error logger to emit the error message. As such,
-we use ``syslog()``. In most cases, there is no real difference 
+we use ``syslog()``. In most cases, there is no real difference
 between both methods. However, if you run multiple rsyslog instances,
 the messae shows up in that instance that processes the default
 log socket, which may be different from the one where the error occured.
@@ -56,12 +56,16 @@ not work as expected.
 
 **Module Parameters**:
 
+Note: parameter names are case-insensitive.
+
 -  **Template**\ [templateName]
     sets a new default template for file actions.
 
  
 
 **Action Parameters**:
+
+Note: parameter names are case-insensitive.
 
 -  **binary**
    Mostly equivalent to the "binary" action parameter, but must contain

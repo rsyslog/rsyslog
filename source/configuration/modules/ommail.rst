@@ -1,7 +1,7 @@
 ommail: Mail Output Module
 ==========================
 
-.. index:: ! imudp 
+.. index:: ! imudp
 
 
 ===========================  ===========================================================================
@@ -37,7 +37,7 @@ parameter to limit the amount of mails that potentially be
 generated. With it, mails are sent at most in a <seconds> interval. This
 may be your life safer. And remember that an hour has 3,600 seconds, so
 if you would like to receive mails at most once every two hours, include
-a 
+a
 
 ::
 
@@ -49,6 +49,8 @@ Configuration Parameters
 ------------------------
 Configuration parameters are supported starting with v8.5.0. Earlier
 v7 and v8 versions did only support legacy parameters.
+
+Note: parameter names are case-insensitive.
 
 Action Parameters
 ^^^^^^^^^^^^^^^^^
@@ -214,7 +216,7 @@ constant subject line, so no subject template is required:
 	     action.execonlyonceeveryinterval="21600")
   }
 
-Legacy Configuration Directives
+Legacy Configuration Parameters
 -------------------------------
 
 Note that the legacy configuration parameters do **not** affect
@@ -229,8 +231,8 @@ in the
 object.
 
 Read about :ref:`the importance of order in legacy configuration<legacy-action-order>`
-to understand how to use these configuration directives.
-**Legacy directives should NOT be used when writing new configuration files.**
+to understand how to use these configuration parameters.
+**Legacy parameters should NOT be used when writing new configuration files.**
 
 
 -  $ActionMailSMTPServer

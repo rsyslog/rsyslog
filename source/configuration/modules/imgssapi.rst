@@ -18,8 +18,10 @@ instead.
 
    gssapi
 
-Configuration Directives
+Configuration Parameters
 ------------------------
+
+Note: parameter names are case-insensitive.
 
 .. function:: $InputGSSServerRun <port>
 

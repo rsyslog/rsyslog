@@ -34,11 +34,15 @@ have been replaced by an IPv4 address. (see also: RFC4291, 2.2.3) 
 
 **Module Configuration Parameters**:
 
+Note: parameter names are case-insensitive.
+
 Currently none.
 
  
 
 **Action Confguration Parameters**:
+
+Note: parameter names are case-insensitive.
 
 Parameters starting with 'IPv4.' will configure IPv4 anonymization,
 while 'IPv6.' parameters do the same for IPv6 anonymization.

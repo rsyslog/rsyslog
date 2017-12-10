@@ -8,8 +8,10 @@ actual protocol handling.
 
 **Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
 
-Configuration Directives
+Parameters
 ------------------------
+
+Note: parameter names are case-insensitive.
 
 .. function:: $Input3195ListenPort <port>
 

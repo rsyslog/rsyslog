@@ -1,7 +1,7 @@
 Actions
 =======
 
-.. index:: ! action 
+.. index:: ! action
 .. _cfgobj_input:
 
 The Action object describe what is to be done with a message. They are
@@ -21,6 +21,8 @@ The action object has different parameters:
 
 General Action Parameters
 -------------------------
+
+Note: parameter names are case-insensitive.
 
 -  **name** word
 

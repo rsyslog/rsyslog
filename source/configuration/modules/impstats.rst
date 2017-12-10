@@ -29,24 +29,26 @@ right, but it is expected to be a good aid in starting to understand and
 gain information from the pstats logs.
 
 The rsyslog website has an overview of available `rsyslog
-statistic counters <http://rsyslog.com/rsyslog-statistic-counter/>`_. 
+statistic counters <http://rsyslog.com/rsyslog-statistic-counter/>`_.
 When browsing this page, please be sure to take note of which rsyslog
-version is required to provide a specific counter. Counters are 
+version is required to provide a specific counter. Counters are
 continuously being added, and older versions do not support everything.
 
 
-Configuration Directives
+Configuration Parameters
 ------------------------
 
-The configuration directives for this module are designed for tailoring
+The configuration parameters for this module are designed for tailoring
 the method and process for outputting the rsyslog statistics to file.
 
 Module Configuration Parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Note: parameter names are case-insensitive.
+
 This module supports module parameters, only.
 
-.. function:: interval\ [seconds] 
+.. function:: interval\ [seconds]
 
    *Default 300 [5minutes]*
 
@@ -95,14 +97,14 @@ This module supports module parameters, only.
    support for structured formats (note the "cee" is actually "project
    lumberjack" logging).
 
-    
+
    The json-elasticsearch format supports the broken ElasticSearch
    JSON implementation.  ES 2.0 no longer supports valid JSON and
    disallows dots inside names.  The "json-elasticsearch" format
    option replaces those dots by the bang ("!") character. So
    "discarded.full" becomes "discarded!full".
    This option is available starting with 8.16.0.
-    
+
 .. function:: log.syslog\ on/off
 
    *Defaults to on*
@@ -206,8 +208,10 @@ maintained:
 -  **nivcsw**
 -  **openfiles** number of file handles used by rsyslog; includes actual files, sockets and others
 
-Legacy Configuration Directives
+Legacy Configuration Parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Note: parameter names are case-insensitive.
 
 A limited set of parameters can also be set via the legacy configuration
 syntax. Note that this is intended as an upward compatibility layer, so
@@ -238,11 +242,11 @@ in 10 minute intervals:
 
 ::
 
-  module(load="impstats" 
-         interval="600" 
+  module(load="impstats"
+         interval="600"
          severity="7")
-  
-  # to actually gather the data: 
+
+  # to actually gather the data:
   syslog.=debug /var/log/rsyslog-stats
 
 In the next sample, the default interval of 5 minutes is used. However,

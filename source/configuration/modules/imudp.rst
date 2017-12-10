@@ -1,7 +1,7 @@
 imudp: UDP Syslog Input Module
 ==============================
 
-.. index:: ! imudp 
+.. index:: ! imudp
 
 ===========================  ===========================================================================
 **Module Name:**             **imudp**
@@ -19,10 +19,14 @@ need to be modified as well. Also, SELinux may need additional rules.
 Configuration Parameters
 ------------------------
 
+Note: parameter names are case-insensitive.
+
 .. index:: imudp; module parameters
 
 Module Parameters
 ^^^^^^^^^^^^^^^^^
+
+Note: parameter names are case-insensitive.
 
 .. function::  TimeRequery <nbr-of-times>
 
@@ -111,7 +115,7 @@ Input Parameters
    Local IP address (or name) the UDP server should bind to. Use \"*"
    to bind to all of the machine's addresses.
 
-.. index:: 
+.. index::
    single: imudp; port (input parameter)
 .. function::  Port <port>
 
@@ -134,7 +138,7 @@ Input Parameters
 
    Manages the IP_FREEBIND option on the UDP socket, which allows binding it to
    an IP address that is nonlocal or not (yet) associated to any network interface.
-   
+
    The parameter accepts the following values:
 
    -  0 - does not enable the IP_FREEBIND option on the
@@ -146,7 +150,7 @@ Input Parameters
 
    -  2 - enables the IP_FREEBIND socket option and
       warns when it is used to successfully bind the socket to a nonlocal address.
-   
+
 .. function::  Device <device>
 
    *Default: none*
@@ -163,7 +167,7 @@ Input Parameters
    Binds the listener to a specific :doc:`ruleset <../../concepts/multi_ruleset>`.
 
 .. function::  RateLimit.Interval [number]
-   
+
    *Available since: 7.3.1*
 
    *Default: 0*
@@ -382,7 +386,7 @@ Directive                              Equivalent Parameter Requires
 $UDPServerTimeRequery <nbr-of-times>   *TimeRequery*
 $IMUDPSchedulingPolicy <rr/fifo/other> *SchedulingPolicy*   4.7.4+, 5.7.3+, 6.1.3+
 $IMUDPSchedulingPriority <number>      *SchedulingPriority* 4.7.4+, 5.7.3+, 6.1.3+
-$UDPServerAddress <IP>                 Address              
+$UDPServerAddress <IP>                 Address
 $UDPServerRun <port>                   Port
 $InputUDPServerBindRuleset <ruleset>   Ruleset              5.3.2+
 ====================================== ==================== =======================

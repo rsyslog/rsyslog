@@ -14,6 +14,8 @@ services.
 
 **Configuration Parameters**:
 
+Note: parameter names are case-insensitive.
+
 Signature providers are loaded by omfile, when the provider is selected
 in its "sig.providerName" parameter. Parameters for the provider are
 given in the omfile action instance line.

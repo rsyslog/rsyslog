@@ -1,4 +1,4 @@
-omrelp: RELP Output Module 
+omrelp: RELP Output Module
 ==========================
 
 **Module Name:    omrelp**
@@ -21,6 +21,8 @@ imrelp (it provides the core relp protocol implementation).
 This module supports RainerScript configuration starting with rsyslog
 7.3.10. For older versions, legacy configuration directives must be
 used.
+
+Note: parameter names are case-insensitive.
 
 -  **target** (mandatory)
    The target server to connect to.
@@ -85,7 +87,7 @@ used.
    this:
 
    ::
-   
+
      tls.permittedPeer=["SHA1:...1", "SHA1:....2"]
 
    To specify just a single peer, you can either specify the string

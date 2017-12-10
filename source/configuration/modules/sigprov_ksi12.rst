@@ -45,6 +45,8 @@ Currently the log signing is only supported by the file output module, thus the 
 
 Mandatory parameters (no default value defined):
 
+Note: parameter names are case-insensitive.
+
 - **sig.provider** specifies the signature provider; in case of ``rsyslog-ksi-ls12`` package this is ``"ksi_ls12"``.
 - **sig.block.levelLimit** defines the maximum level of the root of the local aggregation tree per one block.
 - **sig.aggregator.url** defines the endpoint of the KSI signing service in KSI Gateway. Supported URI schemes are:
@@ -57,6 +59,8 @@ Mandatory parameters (no default value defined):
 - **sig.aggregator.key** specifies the key for the login name.
 
 Optional parameters (if not defined, default value is used):
+
+Note: parameter names are case-insensitive.
 
 - **sig.syncmode** defines the signing mode: ``"sync"`` (default) or ``"async"``.
 - **sig.hashFunction** defines the hash function to be used for hashing, default is ``"SHA2-256"``.

@@ -41,11 +41,17 @@ comma-delimited list of values as shown here:
 
 Module Parameters
 ^^^^^^^^^^^^^^^^^
+
+Note: parameter names are case-insensitive.
+
 Currently none.
 
 
 Action Parameters
 ^^^^^^^^^^^^^^^^^
+
+Note: parameter names are case-insensitive.
+
 .. function::  broker <Array>
 
    *Default: "localhost:9092"*

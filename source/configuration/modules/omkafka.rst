@@ -15,11 +15,17 @@ Configuration Parameters
 
 Module Parameters
 ^^^^^^^^^^^^^^^^^
+
+Note: parameter names are case-insensitive.
+
 Currently none.
 
 
 Action Parameters
 ^^^^^^^^^^^^^^^^^
+
+Note: parameter names are case-insensitive.
+
 Note that omkafka supports some *Array*-type parameters. While the parameter
 name can only be set once, it is possible to set multiple values with that
 single parameter.
@@ -115,7 +121,7 @@ comma-delimited list of values as shown here:
    for this action.
 
 .. function::  errorFile [filename]
-   
+
    *Default: none*
 
    If set, messages that could not be sent and caused an error
@@ -175,7 +181,7 @@ comma-delimited list of values as shown here:
 
    *Available since: 8.28.0*
 
-   If enabled, failed messages will be resubmit automatically when kafka is able to send 
+   If enabled, failed messages will be resubmit automatically when kafka is able to send
    messages again. To prevent message loss, this option should be enabled.
 
 .. function::  keepFailedMessages [boolean]
@@ -184,9 +190,9 @@ comma-delimited list of values as shown here:
 
    *Available since: 8.28.0*
 
-   If enabled, failed messages will be saved and loaded on shutdown/startup and resend after startup if 
+   If enabled, failed messages will be saved and loaded on shutdown/startup and resend after startup if
    the kafka server is able to receive messages again. This setting requires resubmitOnFailure to be enabled as well.
-   
+
 .. function::  failedMsgFile [filename]
 
    *Default: none*

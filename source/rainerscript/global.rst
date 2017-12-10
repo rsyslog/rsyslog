@@ -4,7 +4,8 @@ global() configuration object
 The global configuration object permits to set global parameters. Note
 that each parameter can only be set once and cannot be re-set
 thereafter. If a parameter is set multiple times, the behaviour is
-unpredictable.
+unpredictable. As with other configuration objects, parameters for this
+object are case-insensitive.
 
 The following parameters can be set:
 
@@ -51,22 +52,22 @@ The following parameters can be set:
   **This parameter only has an effect if general debugging is enabled.**
 
 - **processInternalMessages** binary (on/off)
-  
+
   This tells rsyslog if it shall process internal messages itself. The
-  default mode of operations ("off") makes rsyslog send messages to the 
-  system log sink (and if it is the only instance, receive them back from there). 
+  default mode of operations ("off") makes rsyslog send messages to the
+  system log sink (and if it is the only instance, receive them back from there).
   This also works with systemd journal and will make rsyslog messages show up in the
-  systemd status control information. 
-  
+  systemd status control information.
+
   If this (instance) of rsyslog is not the main instance and there is another
   main logging system, rsyslog internal messages will be inserted into
-  the main instance's syslog stream. In this case, setting to ("on") will 
+  the main instance's syslog stream. In this case, setting to ("on") will
   let you receive the internal messages in the instance they originate from.
-  
-  Note that earlier versions of rsyslog worked the opposite way. More 
-  information about the change can be found in `rsyslog-error-reporting-improved <http://www.rsyslog.com/rsyslog-error-reporting-improved>`_. 
-  
-  
+
+  Note that earlier versions of rsyslog worked the opposite way. More
+  information about the change can be found in `rsyslog-error-reporting-improved <http://www.rsyslog.com/rsyslog-error-reporting-improved>`_.
+
+
 
 - **stdlog.channelspec**
 
@@ -125,13 +126,13 @@ The following parameters can be set:
   performance reasons. If DNS fails during that process, the hostname
   is added as wildcard text, which results in proper, but somewhat
   slower operation once DNS is up again.
-  
+
   The default is "off".
 
 - **net.aclResolveHostname** available in 8.6.0+
-  
+
   If "off", do not resolve hostnames to IP addresses during ACL processing.
-  
+
   The default is "on".
 
 - **net.enableDNS** [on/off] available in 8.6.0+
@@ -139,7 +140,7 @@ The following parameters can be set:
   **Default:** on
 
   Can be used to turn DNS name resolution on or off.
-  
+
 - **net.permitACLWarning** [on/off] available in 8.6.0+
 
   **Default:** on
@@ -171,18 +172,18 @@ The following parameters can be set:
   syslogtag. In those cases, the programname is truncated at the
   first slash. If this setting is changed to "on", slashes are
   permitted and will not terminate programname parsing.
-  
+
 - **parser.permitSlashInProgramName** [on/off] available in 8.25.0+
 
   **Default:** off
 
-  This controls whether slashes in the static part of the tag are 
-  permitted or not. If this setting is off, a value of 
-  "app/foo[1234]" in the tag will result in a programname of "app". 
-  If an application stores an absolute path name like 
+  This controls whether slashes in the static part of the tag are
+  permitted or not. If this setting is off, a value of
+  "app/foo[1234]" in the tag will result in a programname of "app".
+  If an application stores an absolute path name like
   "/app/foo[1234]", the programname property will become empty ("").
   If you need to actually store slashes as part of the programname,
-  this setting should be changed to "on" to permit this. Then, a 
+  this setting should be changed to "on" to permit this. Then, a
   syslogtag of "/app/foo[1234]" will result in programname being
   "/app/foo".
 
