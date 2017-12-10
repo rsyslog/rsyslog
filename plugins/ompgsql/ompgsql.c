@@ -363,8 +363,8 @@ setInstParamDefaults(instanceData *pData)
 	pData->trans_commit  = 100;
 	pData->trans_age     = 60;
 	pData->port          = 5432;
-	strncpy(pData->user, "postgres", strlen("postgres"));
-	strncpy(pData->pass, "postgres", strlen("postgres"));
+	strncpy(pData->user, "postgres", sizeof(pData->user));
+	strncpy(pData->pass, "postgres", sizeof(pData->pass));
 }
 
 BEGINnewActInst
