@@ -140,7 +140,6 @@ TESTS +=  \
 	sndrcv.sh \
 	sndrcv_failover.sh \
 	sndrcv_gzip.sh \
-	sndrcv_udp.sh \
 	sndrcv_udp_nonstdpt.sh \
 	sndrcv_udp_nonstdpt_v6.sh \
 	imudp_thread_hang.sh \
@@ -195,10 +194,6 @@ TESTS +=  \
 	imuxsock_logger_syssock.sh \
 	imuxsock_traillf_syssock.sh \
 	imuxsock_ccmiddle_syssock.sh \
-	imuxsock_logger_root.sh \
-	imuxsock_traillf_root.sh \
-	imuxsock_ccmiddle_root.sh \
-	imklog_permitnonkernelfacility_root.sh \
 	discard-rptdmsg.sh \
 	discard-allmark.sh \
 	discard.sh \
@@ -284,15 +279,9 @@ TESTS +=  \
 	lookup_table_rscript_reload_without_stub.sh \
 	multiple_lookup_tables.sh
 
-if ENABLE_IP
-TESTS += \
-	tcp_forwarding_ns_tpl.sh
-endif
-
 if HAVE_VALGRIND
 TESTS +=  \
 	mmexternal-SegFault-vg.sh \
-	mmexternal-SegFault-empty-jroot-vg.sh \
 	internal-errmsg-memleak.sh \
 	rscript_set_memleak-vg.sh \
 	no-parser-vg.sh \
@@ -320,6 +309,25 @@ TESTS +=  \
 	fac_local0-vg.sh \
 	rscript_trim-vg.sh
 endif # HAVE_VALGRIND
+
+if ENABLE_ROOT_TESTS
+TESTS +=  \
+	sndrcv_udp.sh \
+	imuxsock_logger_root.sh \
+	imuxsock_traillf_root.sh \
+	imuxsock_ccmiddle_root.sh \
+	imklog_permitnonkernelfacility_root.sh
+if ENABLE_IP
+TESTS += tcp_forwarding_ns_tpl.sh
+endif
+if ENABLE_RELP
+TESTS += sndrcv_relp_dflt_pt.sh
+endif
+if HAVE_VALGRIND
+TESTS +=  \
+	mmexternal-SegFault-empty-jroot-vg.sh
+endif
+endif
 
 if ENABLE_IMJOURNAL
 TESTS +=  \
@@ -635,7 +643,6 @@ endif
 if ENABLE_RELP
 TESTS += sndrcv_relp.sh \
 	 sndrcv_relp_rebind.sh \
-         sndrcv_relp_dflt_pt.sh \
 	 imrelp-basic.sh \
 	 imrelp-manyconn.sh
 if ENABLE_GNUTLS
