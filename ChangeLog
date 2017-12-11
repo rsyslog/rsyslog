@@ -23,6 +23,12 @@ Version 8.32.0 [v8-stable] 2018-01-09
 - imuxsock: improved status reporting: socket name received from systemd
   Providing an indication of what we got from systemd facilitates problem
   analysis.
+- RainerScript: add function previous_is_suspended()
+  This function returns a boolean indicating if the previous action is
+  suspended (0 - no, 1 - yes). This is useful if arbitrary processing
+  (other than calling actions) should be made depending on that state.
+  A prime example for this is probably calling a ruleset.
+  closes https://github.com/rsyslog/rsyslog/issues/1939
 - RainerScript: add function script_error() and error-reporting support
   This permits script functions that could fail to report errors back, so
   that the user can handle them if desired. We use an errno-style of
