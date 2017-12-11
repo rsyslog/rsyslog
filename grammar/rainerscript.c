@@ -2241,6 +2241,11 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 		ret->d.n = wtiGetScriptErrno(pWti);
 		DBGPRINTF("script_error() is %d\n", (int) ret->d.n);
 		break;
+	case CNFFUNC_PREVIOUS_ACTION_SUSPENDED:
+		ret->datatype = 'N';
+		ret->d.n = wtiGetPrevWasSuspended(pWti);
+		DBGPRINTF("previous_action_suspended() is %d\n", (int) ret->d.n);
+		break;
 	default:
 		if(Debug) {
 			char *fname = es_str2cstr(func->fname, NULL);
@@ -4363,6 +4368,8 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 		GENERATE_FUNC("parse_time", 1, CNFFUNC_PARSE_TIME);
 	} else if(FUNC_NAME("script_error")) {
 		GENERATE_FUNC("script_error", 0, CNFFUNC_SCRIPT_ERROR);
+	} else if(FUNC_NAME("previous_action_suspended")) {
+		GENERATE_FUNC("previous_action_suspended", 0, CNFFUNC_PREVIOUS_ACTION_SUSPENDED);
 	} else {
 		return CNFFUNC_INVALID;
 	}

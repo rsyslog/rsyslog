@@ -118,6 +118,13 @@ PROTOTYPEpropSetMeth(wti, pWtp, wtp_t*);
 #define wtiInitIParam(piparams) (memset((piparams), 0, sizeof(actWrkrIParams_t)))
 
 static inline uint8_t ATTR_UNUSED ATTR_NONNULL(1)
+wtiGetPrevWasSuspended(const wti_t * const pWti)
+{
+	assert(pWti != NULL);
+	return pWti->execState.bPrevWasSuspended;
+}
+
+static inline uint8_t ATTR_UNUSED ATTR_NONNULL(1)
 wtiGetScriptErrno(const wti_t * const pWti)
 {
 	assert(pWti != NULL);
