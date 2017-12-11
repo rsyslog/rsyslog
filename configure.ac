@@ -343,6 +343,20 @@ fi
 AM_CONDITIONAL(ENABLE_GSSAPI, test x$enable_gssapi_krb5 = xyes)
 
 
+# shall the testbench try to run test that require root permissions?
+# This is uncommon. Test skip if run under non-root, but that pollutes the
+# testbench result. So the default is not to do that.
+AC_ARG_ENABLE(root_tests,
+        [AS_HELP_STRING([--enable-root-tests],[enable root tests in testbench @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_root_tests="yes" ;;
+          no) enable_root_tests="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-root-tests) ;;
+         esac],
+        [enable_root_tests=no]
+)
+AM_CONDITIONAL(ENABLE_ROOT_TESTS, test x$enable_root_tests = xyes)
+
 # multithreading via pthreads
 if test "$os_type" != "solaris"
 then
