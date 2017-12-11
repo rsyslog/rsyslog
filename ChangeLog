@@ -23,6 +23,13 @@ Version 8.32.0 [v8-stable] 2018-01-09
 - imuxsock: improved status reporting: socket name received from systemd
   Providing an indication of what we got from systemd facilitates problem
   analysis.
+- build system: added new testbench configure switches
+  now --enable-testbench1 and --enable-testbench2 exists which permit
+  to enable/disable parts of the testbench. By default, both are on
+  when --enable-testbench is given. For full testbench coverage, both
+  options must be given. These options are necessary because under
+  Travis we hit the max runtime for tests and needed to split tests
+  over multiple incarnations.
 - RainerScript: add function previous_is_suspended()
   This function returns a boolean indicating if the previous action is
   suspended (0 - no, 1 - yes). This is useful if arbitrary processing
