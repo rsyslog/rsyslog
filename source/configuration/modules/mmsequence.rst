@@ -32,6 +32,8 @@ called just as an action. The number generated is stored in a variable.
 
 **Action Parameters**:
 
+Note: parameter names are case-insensitive.
+
 -  **mode** "random" or "instance" or "key"
 
    Specifies mode of the action. In "random" mode, the module generates
@@ -146,7 +148,9 @@ called just as an action. The number generated is stored in a variable.
                 key=""
             )
 
-**Legacy Configuration Directives**:
+**Legacy Configuration Parameters**:
+
+Note: parameter names are case-insensitive.
 
 Not supported.
 

@@ -7,30 +7,32 @@ omhiredis: Redis Output Module
 
 **Description**
 
-This module provides native support for writing to Redis, 
+This module provides native support for writing to Redis,
 using the hiredis client library.
 
 **Action Parameters**
+
+Note: parameter names are case-insensitive.
 
 - **server**
   Name or address of the Redis server
 
 - **serverport**
   Port of the Redis server if the server is not listening on the default port.
-  
+
 - **serverpassword**
-  Password to support authenticated redis database server to push messages 
-  across networks and datacenters. Parameter is optional if not provided 
+  Password to support authenticated redis database server to push messages
+  across networks and datacenters. Parameter is optional if not provided
   AUTH command wont be sent to the server.
 
 - **mode**
   Mode to run the output action in: "queue" or "publish". If not supplied, the
-  original "template" mode is used. Note due to a config parsing bug in 8.13, 
+  original "template" mode is used. Note due to a config parsing bug in 8.13,
   explicitly setting this to "template" mode will result in a config parsing
   error.
 
 - **template**
-  Template is required if using "template" mode. 
+  Template is required if using "template" mode.
 
 - **key**
   Key is required if using "publish" or "queue" mode.
@@ -65,7 +67,7 @@ is meaningless.
 Here's an example redis-cli session where we HGETALL the counts:
 
 ::
-  > redis-cli 
+  > redis-cli
   127.0.0.1:6379> HGETALL progcount
   1) "rsyslogd"
   2) "35"
@@ -92,12 +94,12 @@ the plugin will default to the RSYSLOG_ForwardFormat template.
 Here's an example redis-cli session where we RPOP from the queue:
 
 ::
-  > redis-cli 
+  > redis-cli
   127.0.0.1:6379> RPOP my_queue
 
   "<46>2015-09-17T10:54:50.080252-04:00 myhost rsyslogd: [origin software=\"rsyslogd\" swVersion=\"8.13.0.master\" x-pid=\"6452\" x-info=\"http://www.rsyslog.com\"] start"
 
-  127.0.0.1:6379> 
+  127.0.0.1:6379>
 
 *Mode: publish*
 
@@ -119,7 +121,7 @@ will default to the RSYSLOG_ForwardFormat template.
 Here's an example redis-cli session where we SUBSCRIBE to the topic:
 
 ::
-  > redis-cli 
+  > redis-cli
 
   127.0.0.1:6379> subscribe my_channel
 

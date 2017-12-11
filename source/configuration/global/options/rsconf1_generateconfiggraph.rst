@@ -1,7 +1,7 @@
 $GenerateConfigGraph
 --------------------
 
-**Type:** global configuration directive
+**Type:** global configuration parameter
 
 **Default:**
 
@@ -9,19 +9,19 @@ $GenerateConfigGraph
 
 **Description:**
 
-**This directive is currently not supported. We had to disable it when
+**This parameter is currently not supported. We had to disable it when
 we improved the rule engine. It is considerable effort to re-enable it.
 On the other hand, we are about to add a new config system, which will
 make yet another config graph method necessary. As such we have decided
 to currently disable this functionality and re-introduce it when the new
 config system has been instantiated.**
 
-This directive permits to create (hopefully) good-looking visualizations
+This parameter permits to create (hopefully) good-looking visualizations
 of rsyslogd's configuration. It does not affect rsyslog operation. If
-the directive is specified multiple times, all but the last are ignored.
+the parameter is specified multiple times, all but the last are ignored.
 If it is specified, a graph is created. This happens both during a
 regular startup as well a config check run. It is recommended to include
-this directive only for documentation purposes and remove it from a
+this parameter only for documentation purposes and remove it from a
 production configuration.
 
 The graph is not drawn by rsyslog itself. Instead, it uses the great
@@ -43,7 +43,7 @@ so is rather easy:
    to use friendly names with. If you do this, keep the names short.
 #. run rsyslog at least once (either in regular or configuration check
    mode)
-#. remember to remove the $GenerateConfigGraph directive when you no
+#. remember to remove the $GenerateConfigGraph parameter when you no
    longer need it (or comment it out)
 #. change your working directory to where you place the dot file
 #. if you would like to edit the rsyslog-generated file, now is the time
@@ -95,7 +95,7 @@ commented-out last forwarding action activated:
    :alt: rsyslog configuration graph for a default fedora rsyslog.conf
 
    rsyslog configuration graph for a default fedora rsyslog.conf
-   
+
 This is the typical structure for a simple rsyslog configuration. There
 are a couple of actions, each guarded by a filter. Messages run from top
 to bottom and control branches whenever a filter evaluates to true. As
@@ -111,7 +111,7 @@ complex):
 
 .. figure:: rsyslog_confgraph_complex.png
    :align: center
-   :alt: 
+   :alt:
 
 Here, we have a user-defined discard action. You can immediately see
 this because processing branches after the first "builtin-file" action.

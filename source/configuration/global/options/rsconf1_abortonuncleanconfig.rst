@@ -1,9 +1,9 @@
-`rsyslog.conf configuration directive <rsyslog_conf_global.html>`_
+`rsyslog.conf configuration parameter <rsyslog_conf_global.html>`_
 
 $AbortOnUncleanConfig
 ----------------------
 
-**Type:** global configuration directive
+**Type:** global configuration parameter
 
 **Parameter Values:** boolean (on/off, yes/no)
 
@@ -13,7 +13,7 @@ $AbortOnUncleanConfig
 
 **Description:**
 
-This directive permits to prevent rsyslog from running when the
+This parameter permits to prevent rsyslog from running when the
 configuration file is not clean. "Not Clean" means there are errors or
 some other annoyances that rsyslgod reports on startup. This is a
 user-requested feature to have a strict startup mode. Note that with the
@@ -31,7 +31,7 @@ will not be able to send logs, what in the ultimate result could result
 in a system hang on those systems. Also, the local system may hang when
 the local log socket has become full and is not read. There exist many
 such scenarios. As such, it is strongly recommended not to turn on this
-directive.
+parameter.
 
 [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 

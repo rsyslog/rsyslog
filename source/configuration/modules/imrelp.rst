@@ -26,6 +26,8 @@ Clients send messages to the RELP server via omrelp.
 Module Parameters
 ^^^^^^^^^^^^^^^^^
 
+Note: parameter names are case-insensitive.
+
 .. function:: Ruleset <name>
    (requires v7.5.0+)
 
@@ -34,6 +36,8 @@ Module Parameters
 
 Input Parameters
 ^^^^^^^^^^^^^^^^
+
+Note: parameter names are case-insensitive.
 
 .. function:: Port <port>
 
@@ -95,10 +99,10 @@ Input Parameters
    and keep them in sync with GnuTLS - this is even impossible when
    custom GnuTLS changes are made...).
 
-.. function:: tls.permittedPeer 
+.. function:: tls.permittedPeer
 
-   Peer Places access restrictions on this listener. Only peers which 
-   have been listed in this parameter may connect. The validation bases 
+   Peer Places access restrictions on this listener. Only peers which
+   have been listed in this parameter may connect. The validation bases
    on the certificate the remote peer presents.
 
    The *peer* parameter lists permitted certificate fingerprints. Note
@@ -113,11 +117,11 @@ Input Parameters
    ::
 
      tls.permittedPeer=["SHA1:...1", "SHA1:....2"]
-   
+
    To specify just a single peer, you can either specify the string
    directly or enclose it in braces.
 
-.. function:: tls.authMode <mode> 
+.. function:: tls.authMode <mode>
 
    Sets the mode used for mutual authentication.
 
@@ -152,7 +156,7 @@ Input Parameters
    exactly know what you are doing.
 
 .. function:: KeepAlive on/off
-   
+
    enable of disable keep-alive packets at the tcp socket layer. The
    default is to disable them.
 
@@ -214,11 +218,13 @@ This sets up a RELP server on port 20514 with a max message size of 10,000 bytes
 
 ::
 
-  module(load="imrelp") # needs to be done just once 
+  module(load="imrelp") # needs to be done just once
   input(type="imrelp" port="20514" maxDataSize="10k")
 
-Legacy Configuration Directives
+Legacy Configuration Parameters
 -------------------------------
+
+Note: parameter names are case-insensitive.
 
 -  InputRELPServerBindRuleset <name> (available in 6.3.6+) equivalent
    to: RuleSet

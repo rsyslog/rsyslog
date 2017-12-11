@@ -1,7 +1,7 @@
 $GssMode
 --------
 
-**Type:** global configuration directive
+**Type:** global configuration parameter
 
 **Default:** encryption
 

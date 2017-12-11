@@ -15,17 +15,19 @@ This module provides native support for logging to
 Action Parameters
 -----------------
 
+Note: parameter names are case-insensitive.
+
 .. _server:
 
 -  **server** [ ``http://`` | ``https://`` |  ] <*hostname* | *ip*> [ ``:`` <*port*> ]
-   An array of Elasticsearch servers in the specified format. If no scheme is specified, 
-   it will be chosen according to usehttps_. If no port is specified, 
-   serverport_ will be used. Defaults to "localhost". 
+   An array of Elasticsearch servers in the specified format. If no scheme is specified,
+   it will be chosen according to usehttps_. If no port is specified,
+   serverport_ will be used. Defaults to "localhost".
 
    Requests to Elasticsearch will be load-balanced between all servers in round-robin fashion.
 
 ::
-  
+
   Examples:
        server="localhost:9200"
        server=["elasticsearch1", "elasticsearch2"]
@@ -33,14 +35,14 @@ Action Parameters
 .. _serverport:
 
 -  **serverport**
-   Default HTTP port to use to connect to Elasticsearch if none is specified 
+   Default HTTP port to use to connect to Elasticsearch if none is specified
    on a server_. Defaults to 9200
 
 .. _healthchecktimeout:
 
 -  **healthchecktimeout**
-   Specifies the number of milliseconds to wait for a successful health check on a server_. 
-   Before trying to submit events to Elasticsearch, rsyslog will execute an *HTTP HEAD* to 
+   Specifies the number of milliseconds to wait for a successful health check on a server_.
+   Before trying to submit events to Elasticsearch, rsyslog will execute an *HTTP HEAD* to
    ``/_cat/health`` and expect an *HTTP OK* within this timeframe. Defaults to 3500.
 
    *Note, the health check is verifying connectivity only, not the state of the Elasticsearch cluster.*
@@ -83,8 +85,8 @@ Action Parameters
 .. _pipelineName:
 
 -  **pipelineName**
-   The `ingest node <https://www.elastic.co/guide/en/elasticsearch/reference/current/ingest.html>`_ 
-   pipeline name to be inclued in the request. This allows pre processing 
+   The `ingest node <https://www.elastic.co/guide/en/elasticsearch/reference/current/ingest.html>`_
+   pipeline name to be inclued in the request. This allows pre processing
    of events bevor indexing them. By default, events are not send to a pipeline.
 
 .. _dynPipelineName:
@@ -151,7 +153,7 @@ readability):
    Set it to "on" and it will use Elasticsearch's `Bulk
    API <http://www.elasticsearch.org/guide/reference/api/bulk.html>`_ to
    send multiple logs in the same request. The maximum number of logs
-   sent in a single bulk request depends on your maxbytes_  
+   sent in a single bulk request depends on your maxbytes_
    and queue settings -
    usually limited by the `dequeue batch
    size <http://www.rsyslog.com/doc/node35.html>`_. More information
@@ -162,13 +164,13 @@ readability):
 
 -  **maxbytes** *(since v8.23.0)*
    When shipping logs with bulkmode_ **on**, maxbytes specifies the maximum
-   size of the request body sent to Elasticsearch. Logs are batched until 
+   size of the request body sent to Elasticsearch. Logs are batched until
    either the buffer reaches maxbytes or the the `dequeue batch
    size <http://www.rsyslog.com/doc/node35.html>`_ is reached. In order to
    ensure Elasticsearch does not reject requests due to content length, verify
-   this value is set accoring to the `http.max_content_length 
+   this value is set accoring to the `http.max_content_length
    <https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-http.html>`_
-   setting in Elasticsearch. Defaults to 100m. 
+   setting in Elasticsearch. Defaults to 100m.
 
 .. _parent:
 

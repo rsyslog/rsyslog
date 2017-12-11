@@ -22,9 +22,11 @@ This module is an alternative to omhdfs via `Hadoop HDFS over HTTP <http://hadoo
 
 Legacy config **NOT** supported.
 
+Note: parameter names are case-insensitive.
+
 -  **host**
     HttpFS server host. Default: *127.0.0.1*
-   
+
 -  **port**
     HttpFS server port. Default: *14000*
 
@@ -38,8 +40,8 @@ Legacy config **NOT** supported.
     File to write, or a template name.
 
 -  **isdynfile** \ <on/**off**>
-    Turn this on if your **file** is a template name. 
- 
+    Turn this on if your **file** is a template name.
+
     See examples below.
 
 -  **template**

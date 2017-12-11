@@ -29,9 +29,11 @@ contain a PRI, then none or some spaces and then the exact text
 (case-insensitive) "last message repeated n times" where n must be an
 integer. All other messages are left untouched.
 
-**Configuration Directives**:
+**Configuration Parameters**:
 
-There do not currently exist any configuration directives for this
+Note: parameter names are case-insensitive.
+
+There do not currently exist any configuration parameters for this
 module.
 
 **Examples:**

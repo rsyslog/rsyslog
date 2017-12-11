@@ -1,13 +1,13 @@
 $omfileForceChown
 -----------------
 
-**Type:** global configuration directive
+**Type:** global configuration parameter
 
 **Parameter Values:** boolean (on/off, yes/no)
 
 **Available:** 4.7.0+, 5.3.0-5.8.x, **NOT** available in 5.9.x or higher
 
-**Note: this directive has been removed and is no longer available. The
+**Note: this parameter has been removed and is no longer available. The
 documentation is currently being retained for historical reaons.**
 Expect it to go away at some later stage as well.
 
@@ -28,13 +28,13 @@ to be removed. See Caveats section below for the important implications.
 
 **Caveats:**
 
-This directive tries to fix a problem that actually is outside the scope
+This parameter tries to fix a problem that actually is outside the scope
 of rsyslog. As such, there are a couple of restrictions and situations
 in which it will not work. **Users are strongly encouraged to fix their
-system instead of turning this directive on** - it should only be used
+system instead of turning this parameter on** - it should only be used
 as a last resort.
 
-At least in the following scenario, this directive will fail expectedly:
+At least in the following scenario, this parameter will fail expectedly:
 
 It does not address the situation that someone changes the ownership
 \*after\* rsyslogd has started. Let's, for example, consider a log
@@ -53,12 +53,12 @@ rotation script.
 -  file open fails
 
 Please note that once the privilege drop code is refactored, this
-directive will no longer work, because then privileges will be dropped
+parameter will no longer work, because then privileges will be dropped
 before any action is performed, and thus we will no longer be able to
 chown files that do not belong to the user rsyslogd is configured to run
 under.
 
-So **expect the directive to go away**. It will not be removed in
+So **expect the parameter to go away**. It will not be removed in
 version 4, but may disappear at any time for any version greater than 4.
 
 **Sample:**

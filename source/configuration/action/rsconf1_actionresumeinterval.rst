@@ -1,7 +1,7 @@
 $ActionResumeInterval
 ---------------------
 
-**Type:** global configuration directive
+**Type:** global configuration parameter
 
 **Default:** 30
 
@@ -22,7 +22,7 @@ after the 10th try, it by default is 60 and after the 100th try it is
 
 **Sample:**
 
-$ActionResumeInterval 30 
+$ActionResumeInterval 30
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.

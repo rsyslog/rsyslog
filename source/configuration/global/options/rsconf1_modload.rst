@@ -1,7 +1,7 @@
 $ModLoad
 --------
 
-**Type:** global configuration directive
+**Type:** global configuration parameter
 
 **Default:**
 
@@ -15,7 +15,7 @@ lines that reference it.
 
 Modules must be present in the system default destination for rsyslog
 modules. You can also set the directory via the
-`$ModDir <rsconf1_moddir.html>`_ directive.
+`$ModDir <rsconf1_moddir.html>`_ parameter.
 
 If a full path name is specified, the module is loaded from that path.
 The default module directory is ignored in that case.

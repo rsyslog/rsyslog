@@ -1,6 +1,8 @@
 configuration objects
 =====================
 
+Note: configuration object parameters are case-insensitive.
+
 action()
 --------
 

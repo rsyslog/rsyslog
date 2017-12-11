@@ -1,7 +1,7 @@
 $ControlCharacterEscapePrefix
 -----------------------------
 
-**Type:** global configuration directive
+**Type:** global configuration parameter
 
 **Default:** \\
 
@@ -15,7 +15,7 @@ suggested by Internet-Draft syslog-protocol.
 
 **IMPORTANT**: do not use the ' character. This is reserved and will
 most probably be used in the future as a character delimiter. For the
-same reason, the syntax of this directive will probably change in future
+same reason, the syntax of this parameter will probably change in future
 releases.
 
 **Sample:**

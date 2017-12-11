@@ -1,13 +1,13 @@
 $UMASK
 ------
 
-**Type:** global configuration directive
+**Type:** global configuration parameter
 
 **Default:**
 
 **Description:**
 
-The $umask directive allows to specify the rsyslogd processes' umask. If
+The $umask parameter allows to specify the rsyslogd processes' umask. If
 not specified, the system-provided default is used. The value given must
 always be a 4-digit octal number, with the initial digit being zero.
 

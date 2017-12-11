@@ -53,15 +53,17 @@ plugin (as omlibdbi is). So in short, you probably save you a lot of
 headache if you make sure you have at least libdbi version 0.8.3 on your
 system.
 
-**Configuration Directives**:
+**Configuration Parameters**:
+
+Note: configuration parameter names are case-insensitive.
 
 -  **$ActionLibdbiDriverDirectory** /path/to/dbd/drivers
 
    This is a global setting. It points libdbi to its driver directory.
    Usually, you do not need to set it. If you installed libdbi-driver's
    at a non-standard location, you may need to specify the directory
-   here. If you are unsure, do not use this configuration directive.
-   Usually, everything works just fine.\ 
+   here. If you are unsure, do not use this configuration parameter.
+   Usually, everything works just fine.\
 -  **$ActionLibdbiDriver** drivername
 
    Name of the dbidriver to use, see libdbi-drivers documentation. As a

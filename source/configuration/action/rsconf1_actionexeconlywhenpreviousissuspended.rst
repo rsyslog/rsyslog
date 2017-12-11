@@ -1,15 +1,15 @@
 $ActionExecOnlyWhenPreviousIsSuspended
 --------------------------------------
 
-**Type:** global configuration directive
+**Type:** global configuration parameter
 
 **Default:** off
 
 **Description:**
 
-This directive allows to specify if actions should always be executed
+This parameter allows to specify if actions should always be executed
 ("off," the default) or only if the previous action is suspended ("on").
-This directive works hand-in-hand with the multiple actions per selector
+This parameter works hand-in-hand with the multiple actions per selector
 feature. It can be used, for example, to create rules that automatically
 switch destination servers or databases to a (set of) backup(s), if the
 primary server fails. Note that this feature depends on proper
@@ -33,7 +33,7 @@ undesired results (but you can try it if you like).
 
 **Sample:**
 
-\*.\* @@primary-syslog.example.com $ActionExecOnlyWhenPreviousIsSuspended on &   @@secondary-1-syslog.example.com    # & is used to have more than one action for &   @@secondary-2-syslog.example.com    # the same selector - the mult-action feature &   /var/log/localbuffer $ActionExecOnlyWhenPreviousIsSuspended off # to re-set it for the next selector 
+\*.\* @@primary-syslog.example.com $ActionExecOnlyWhenPreviousIsSuspended on &   @@secondary-1-syslog.example.com    # & is used to have more than one action for &   @@secondary-2-syslog.example.com    # the same selector - the mult-action feature &   /var/log/localbuffer $ActionExecOnlyWhenPreviousIsSuspended off # to re-set it for the next selector
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.

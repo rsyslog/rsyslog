@@ -1,7 +1,7 @@
 $GssForwardServiceName
 ----------------------
 
-**Type:** global configuration directive
+**Type:** global configuration parameter
 
 **Default:** host
 

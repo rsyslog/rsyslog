@@ -1,7 +1,7 @@
 timezone
 ========
 
-.. index:: ! timezone 
+.. index:: ! timezone
 .. _cfgobj_input:
 
 The ``timezone`` object, as its name suggests, describes timezones.
@@ -13,6 +13,9 @@ an UTC offset for a given timezone ID.
 Each timestamp object adds the zone definition to a global table
 with timezone information. Duplicate IDs are forbidden, but the
 same offset may be used with multiple IDs.
+
+As with other configuration objects, parameters for this
+object are case-insensitive.
 
 
 Parameters
@@ -27,7 +30,7 @@ Parameters
    use different, often non-standard, names and so it is important to use
    the actual ids that messages contain. For multiple devices, this may
    mean that you may need to include multiple definitions, each one with a
-   different id, for the same time zone. For example, it is seen that 
+   different id, for the same time zone. For example, it is seen that
    some devices report "CEST" for central European daylight savings time
    while others report "METDST" for it.
 

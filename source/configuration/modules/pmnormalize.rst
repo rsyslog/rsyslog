@@ -15,6 +15,8 @@ properties for further use.
 Action Parameters
 ~~~~~~~~~~~~~~~~~
 
+Note: parameter names are case-insensitive.
+
 .. function:: rulebase <word>
 
    Specifies which rulebase file is to use. If there are multiple

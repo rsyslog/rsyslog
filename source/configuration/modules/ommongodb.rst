@@ -11,6 +11,8 @@ This module provides native support for logging to MongoDB.
 
 **Action Parameters**:
 
+Note: parameter names are case-insensitive.
+
 -  **uristr**
    MongoDB connexion string, as defined by the MongoDB String URI Format (See: https://docs.mongodb.com/manual/reference/connection-string/). If uristr is defined, following directives will be ignored: server, serverport, uid, pwd.
 -  **ssl_cert**
@@ -82,10 +84,10 @@ Another sample that uses the new "uristr" directives to connect to a TLS mongoDB
 ::
 
    module(load="ommongodb")
-   action(type="ommongodb" 
-         uristr="mongodb://vulture:9091,vulture2:9091/?replicaset=Vulture&ssl=true" 
-         ssl_cert="/var/db/mongodb/mongod.pem" 
-         ssl_ca="/var/db/mongodb/ca.pem" 
+   action(type="ommongodb"
+         uristr="mongodb://vulture:9091,vulture2:9091/?replicaset=Vulture&ssl=true"
+         ssl_cert="/var/db/mongodb/mongod.pem"
+         ssl_ca="/var/db/mongodb/ca.pem"
          db="logs" collection="syslog")
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_

@@ -14,8 +14,10 @@ but rsyslog will continue to run.
 
 **Author:** \ Rainer Gerhards <rgerhards@adiscon.com>
 
-Configuration Directives
+Configuration Parameters
 ------------------------
+
+Note: parameter names are case-insensitive.
 
 | functions:: $IMSolarisLogSocketName <name>
 

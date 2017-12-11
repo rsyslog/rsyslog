@@ -36,6 +36,8 @@ the format requirements.
 Action Parameters
 ~~~~~~~~~~~~~~~~~
 
+Note: parameter names are case-insensitive.
+
 .. function:: cookie <string>
 
    **Default**: "@cee:"
@@ -94,5 +96,5 @@ To permit parsing messages without cookie, use this action statement::
 
 The same in legacy format::
 
-  $ModLoad mmjsonparse 
+  $ModLoad mmjsonparse
   *.* :mmjsonparse:

@@ -47,11 +47,15 @@ this ruleset.
 
 **Module Configuration Parameters**:
 
+Note: parameter names are case-insensitive.
+
 Currently none.
 
  
 
 **Action Confguration Parameters**:
+
+Note: parameter names are case-insensitive.
 
 -  **mode** - **utf-8**/controlcharacters
 

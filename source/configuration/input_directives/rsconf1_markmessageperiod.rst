@@ -15,7 +15,7 @@ the immark input module.
 So far, there is only one mark message process and any subsequent
 $MarkMessagePeriod overwrites the previous.
 
-**This directive is only available after the immark input module has
+**This parameter is only available after the immark input module has
 been loaded.**
 
 **Sample:**
