@@ -1373,6 +1373,35 @@ AC_ARG_ENABLE(testbench,
         [enable_testbench=no]
 )
 
+# under Travis, we have a ~50 minute max runtime per VM. So we permit to
+# split the testbench in multiple runs, which we can place into different
+# VMs. It's not perfect, but it works...
+AC_ARG_ENABLE(testbench1,
+        [AS_HELP_STRING([--enable-testbench1],[testbench1 enabled @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_testbench1="yes" ;;
+          no) enable_testbench1="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-testbench1) ;;
+         esac],
+        [enable_testbench1=yes]
+)
+
+# under Travis, we have a ~50 minute max runtime per VM. So we permit to
+# split the testbench in multiple runs, which we can place into different
+# VMs. It's not perfect, but it works...
+AC_ARG_ENABLE(testbench2,
+        [AS_HELP_STRING([--enable-testbench2],[testbench2 enabled @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_testbench2="yes" ;;
+          no) enable_testbench2="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-testbench2) ;;
+         esac],
+        [enable_testbench2=yes]
+)
+
+AM_CONDITIONAL(ENABLE_TESTBENCH1, test "x${enable_testbench1}" = "xyes")
+AM_CONDITIONAL(ENABLE_TESTBENCH2, test "x${enable_testbench2}" = "xyes")
+
 AC_CHECK_PROG(IP, [ip], [yes], [no])
 if test "x${IP}" = "xno"; then
 	AC_MSG_NOTICE([Will not check network namespace functionality as 'ip' (part of iproute2) is not available.])
@@ -2263,6 +2292,8 @@ echo "    SNMP support enabled:                     $enable_snmp"
 echo
 echo "---{ debugging support }---"
 echo "    Testbench enabled:                        $enable_testbench"
+echo "    Testbench1 enabled:                       $enable_testbench1"
+echo "    Testbench2 enabled:                       $enable_testbench2"
 echo "    Extended Testbench enabled:               $enable_extended_tests"
 echo "    MySQL Tests enabled:                      $enable_mysql_tests"
 echo "    PostgreSQL Tests enabled:                 $enable_pgsql_tests"

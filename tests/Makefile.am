@@ -34,7 +34,10 @@ TESTS = $(TESTRUNS)
 #TESTS = $(TESTRUNS) cfg.sh
 
 TESTS +=  \
-	empty-hostname.sh \
+	empty-hostname.sh 
+
+if ENABLE_TESTBENCH1
+TESTS +=  \
 	hostname-getaddrinfo-fail.sh \
 	prop-programname.sh \
 	prop-programname-with-slashes.sh \
@@ -209,7 +212,11 @@ TESTS +=  \
 	failover-rptd.sh \
 	failover-no-rptd.sh \
 	failover-no-basic.sh \
-	rcvr_fail_restore.sh \
+	rcvr_fail_restore.sh
+endif
+
+if ENABLE_TESTBENCH2
+TESTS +=  \
 	rscript_contains.sh \
 	rscript_ipv42num.sh \
 	rscript_field.sh \
@@ -284,6 +291,7 @@ TESTS +=  \
 	lookup_table_rscript_reload.sh \
 	lookup_table_rscript_reload_without_stub.sh \
 	multiple_lookup_tables.sh
+endif
 
 if ENABLE_IP
 TESTS += \

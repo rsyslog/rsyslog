@@ -70,6 +70,7 @@ $CC -v
 
 if [ "$DISTRIB_CODENAME" != "precise" ]; then AMQP1="--enable-omamqp1"; fi
 export CONFIG_FLAGS="$CONFIGURE_FLAGS \
+	$EXTRA_CONFIGURE \
 	$JOURNAL_OPT \
 	$HIREDIS_OPT \
 	$ENABLE_KAFKA \
