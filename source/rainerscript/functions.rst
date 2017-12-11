@@ -222,6 +222,12 @@ rtrim
    Removes any spaces at the end of a given string. Input is a string, output
    is the same string ending with the last non-space character.
 
+substring(str, start, subStringLength)
+--------------------------------------
+
+   Creates a substring from str. The substring begins at start and is
+   at most subStringLength characters long.
+
 script_error
 ------------
 
