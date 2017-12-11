@@ -18,27 +18,39 @@ This module provides native support for logging to PostgreSQL databases. It's an
 Input parameters
 ****************
 
--  **server** - default: none, required: true
+.. function:: server <word,IP>
+
+   **Default**: none **Required**: true
 
    The hostname or address of the PostgreSQL server.
 
--  **port, serverport** - default: 5432 (PostgreSQL default)
+.. function:: port, serverport <int>
+
+   **Default**: 5432 (PostgreSQL default)
 
    The IP port of the PostgreSQL server.
 
--  **db** - default: none, required: true
+.. function:: db <word>
+
+   **Default**: none **Required** true
 
    The multi-tenant database name to `INSERT` rows into.
 
--  **user, uid** - default: postgres
+.. function:: user, uid <word>
+
+   **Default**: postgres
 
    The username to connect to the PostgreSQL server with.
 
--  **pass, pwd** - default: postgres
+.. function:: pass, pwd <word>
+
+   **Default**: postgres
 
    The password to connect to the PostgreSQL server with.
 
--  **template** - default none, required: false
+.. function:: template <word>
+
+   **Default**: none **Required**: false
 
    The template name to use to `INSERT` rows into the database with. Valid SQL
    syntax is required, as the module does not perform any insertion statement
@@ -142,8 +154,8 @@ creating your own custom template:
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
 
-Copyright © 2008-2014 by `Rainer
-Gerhards <http://www.gerhards.net/rainer>`_ and
+Copyright © 2008-2017 by `Rainer
+Gerhards <http://www.gerhards.net/rainer>`_, `Dan Molik <https://danmolik.com>`_, and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
 3 or higher.
 
