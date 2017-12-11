@@ -13,6 +13,7 @@
 
 import datetime
 import os
+import re
 import subprocess
 import sys
 
@@ -67,12 +68,23 @@ project = u'rsyslog'
 copyright = u'2008-2017, Rainer Gerhards and Others'
 author = u'Rainer Gerhards and Others'
 
+# Generate the current stable version number from the latest git tag
+git_tag_output = subprocess.check_output(['git', 'tag', '--list', "v*"]).decode("utf-8").strip()
+git_tag_list = re.sub('[A-Za-z]', '', git_tag_output).split('\n')
+git_tag_list.sort(key=lambda s: map(int, s.split('.')))
+git_tag_latest = git_tag_list[-1]
+
+
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
 # The short X.Y version.
-version = '8.32'
+current_version = git_tag_latest[:-2]
+
+# Break apart 'x.y' value, increment y and then concatenate into 'x.y' again
+version = "{}.{}".format(int(current_version[:1]), int(current_version[-2:]) + 1)
+
 
 DATE = datetime.date.today()
 TODAY = DATE.strftime('%Y%m%d')
