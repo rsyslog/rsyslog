@@ -12,7 +12,7 @@ Quick overview of message flow and objects
 ------------------------------------------
 Messages enter rsyslog with the help of input modules. Then, they are
 passed to a ruleset, where rules are conditionally applied. When a rule
-matches, the message is transferred to an action, which then does 
+matches, the message is transferred to an action, which then does
 something to the message, e.g. writes it to a file, database or
 forwards it to a remote host.
 
@@ -47,7 +47,7 @@ Processing Principles
 - all rules are **always** fully evaluated, no matter if a filter matches
   or not (so we do **not** stop at the first match). If message processing
   shall stop, the "discard" action (represented by the tilde character or the
-  stop command) must explicitly be executed. If discard is executed, 
+  stop command) must explicitly be executed. If discard is executed,
   message processing immediately stops, without evaluating any further rules.
 
 - an action list contains one or many actions
@@ -64,7 +64,7 @@ Processing Principles
 - if legacy format is used (see below), $Action... directives **must** be
   specified in front of the action they are intended to configure
 
-- some config directives automatically refer to their previous values 
+- some config directives automatically refer to their previous values
   after being applied, others not. See the respective doc for details. Be
   warned that this is currently not always properly documented.
 
@@ -96,15 +96,17 @@ concurrently:
    constructs are no longer supported because they are incompatible with
    newer features. These are mentioned in the compatibility docs.
 -  **legacy rsyslog** - these are statements that begin with a dollar
-   sign. They set some configuration parameters and modify e.g. the way
-   actions operate. This is the only format supported in pre-v6 versions
-   of rsyslog. It is still fully supported in v6 and above. Note that
-   some plugins and features may still only be available through legacy
-   format (because plugins need to be explicitly upgraded to use the
-   new style format, and this hasn't happened to all plugins).
+   sign. They set some (case-insensitive) configuration parameters and
+   modify e.g. the way actions operate. This is the only format supported
+   in pre-v6 versions of rsyslog. It is still fully supported in v6 and
+   above. Note that some plugins and features may still only be available
+   through legacy format (because plugins need to be explicitly upgraded
+   to use the new style format, and this hasn't happened to all plugins).
 -  **RainerScript** - the new style format. This is the best and most
-   precise format to be used for more complex cases. The rest of this
-   page assumes RainerScript based rsyslog.conf.
+   precise format to be used for more complex cases. As with the legacy
+   format, RainerScript parameters are also case-insensitive.
+   The rest of this page assumes RainerScript based rsyslog.conf.
+
 
 The rsyslog.conf files consists of statements. For old style (sysklogd &
 legacy rsyslog), lines do matter. For new style (RainerScript) line
@@ -172,9 +174,9 @@ Flow Control Statements
 Flow control is provided by:
 
 - :doc:`Control Structures <../rainerscript/control_structures>`
-  
+
 - :doc:`Filter Conditions <filters>`
-  
+
 
 Data Manipulation Statements
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -15,7 +15,9 @@ instances. The counterpart to omuxsock is `imuxsock <imuxsock.html>`_.
 Note that the template used together with omuxsock must be suitable to
 be processed by the receiver.
 
-**Configuration Directives**:
+**Configuration Parameters**:
+
+Note: parameter names are case-insensitive.
 
 -  **$OMUxSockSocket**
    Name of the socket to send data to. This has no default and **must**
@@ -35,7 +37,7 @@ The following sample writes all messages to the "/tmp/socksample"
 socket.
 
 ::
-  
+
   $ModLoad omuxsock
   $OMUxSockSocket /tmp/socksample
   *.* :omuxsock:

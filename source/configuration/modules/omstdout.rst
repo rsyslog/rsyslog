@@ -16,7 +16,9 @@ the quality of this module as we do not expect it to be used in real
 deployments. If you do, please drop us a note so that we can enhance
 its priority!
 
-**Configuration Directives**:
+**Configuration parameters**:
+
+Note: configuration directive names are case-insensitive.
 
 -  **$ActionOMStdoutArrayInterface** [on\|**off**
    This setting instructs omstdout to use the alternate array based

@@ -27,7 +27,7 @@ time-critical:
 -  smtradfile - the traditional syslog file format
 -  smfwd - the traditional syslog (network) forwarding format
 
-Note that when you replace these defaults be some custom strings, you
+Note that when you replace these defaults with some custom strings, you
 will loose some performance (around 5%). For typical systems, this is
 not really relevant. But for a high-performance systems, it may be very
 relevant. To solve that issue, create a new string generator module for

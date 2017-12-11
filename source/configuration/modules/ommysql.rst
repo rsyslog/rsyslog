@@ -12,32 +12,34 @@ This module provides native support for logging to MySQL databases. It
 offers superior performance over the more generic
 `omlibdbi <omlibdbi.html>`_ module.
 
-**Configuration Directives**:
+**Configuration parameters**:
+
+Note: configuration parameter names are case-insensitive.
 
 ommysql mostly uses the "old style" configuration, with almost
 everything on the action line itself. A few newer features are being
-migrated to the new style-config directive configuration system.
+migrated to the new style-config parameter configuration system.
 
 -  **$ActionOmmysqlServerPort <port>**
 
    Permits to select a non-standard port for the MySQL server. The
    default is 0, which means the system default port is used. There is
-   no need to specify this directive unless you know the server is
+   no need to specify this parameter unless you know the server is
    running on a non-standard listen port.
 -  **$OmMySQLConfigFile <file name>**
 
    Permits the selection of an optional MySQL Client Library
    configuration file (my.cnf) for extended configuration functionality.
-   The use of this configuration directive is necessary only if you have
+   The use of this configuration parameter is necessary only if you have
    a non-standard environment or if fine-grained control over the
    database connection is desired.
 -  **$OmMySQLConfigSection <string>**
 
    Permits the selection of the section within the configuration file
-   specified by the **$OmMySQLConfigFile** directive.
+   specified by the **$OmMySQLConfigFile** parameter.
    This will likely only be used where the database administrator
    provides a single configuration file with multiple profiles.
-   This configuration directive is ignored unless **$OmMySQLConfigFile**
+   This configuration parameter is ignored unless **$OmMySQLConfigFile**
    is also used in the rsyslog configration file.
    If omitted, the MySQL Client Library default of "client" will be
    used.

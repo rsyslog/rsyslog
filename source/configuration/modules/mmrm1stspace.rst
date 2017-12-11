@@ -10,6 +10,8 @@ if it is a space.
 Configuration Parameters
 ------------------------
 
+Note: parameter names are case-insensitive.
+
 Currently none.
 
 Examples

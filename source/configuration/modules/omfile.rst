@@ -21,9 +21,11 @@ specify module parameters, use
 
    module(load="builtin:omfile" ...parameters...)
 
-Note that legacy directives **do not** affect new-style RainerScript configuration
+Note that legacy parameters **do not** affect new-style RainerScript configuration
 objects. See :doc:`basic configuration structure doc <../basic_structure>` to
 learn about different configuration languages in use by rsyslog.
+
+Note: parameter names are case-insensitive.
 
 General Notes
 ^^^^^^^^^^^^^
@@ -38,6 +40,8 @@ is fine.
 
 Module Parameters
 ^^^^^^^^^^^^^^^^^
+
+Note: parameter names are case-insensitive.
 
 .. function::  template [templateName]
 
@@ -469,7 +473,7 @@ The following properties are maintained for each dynafile:
    to inactivity. Note that if no "closeTimeout" is specified for the action,
    this counter always is zero. A high or low number in itself doesn’t mean
    anything good or bad. It totally depends on the use case, so no general
-   advise can be given. 
+   advise can be given.
 
 Caveats/Known Bugs
 ------------------
@@ -507,8 +511,10 @@ The following command writes all syslog messages into a file.
   action(type="omfile" dirCreateMode="0700" FileCreateMode="0644"
          File="/var/log/messages")
 
-Legacy Configuration Directives
+Legacy Configuration Parameters
 -------------------------------
+
+Note: parameter names are case-insensitive.
 
 Note that the legacy configuration parameters do **not** affect
 new-style action definitions via the action() object. This is
@@ -522,8 +528,8 @@ in the
 object.
 
 Read about :ref:`the importance of order in legacy configuration<legacy-action-order>`
-to understand how to use these configuration directives.
-**Legacy directives should NOT be used when writing new configuration files.**
+to understand how to use these configuration parameters.
+**Legacy parameters should NOT be used when writing new configuration files.**
 
 -  **$DynaFileCacheSize**
    equivalent to the "dynaFileCacheSize" parameter

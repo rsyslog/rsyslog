@@ -30,6 +30,8 @@ dots (.) are ignored. This may lead to "incorrect" timestamps being logged.
 Parser Parameters
 -----------------
 
+Note: parameter names are case-insensitive.
+
 .. function::  present.origin <boolean>
 
    **Default**: off
@@ -40,7 +42,7 @@ Parser Parameters
    or not (at least not with reasonable performance). As such, the parser
    must be provided with that information. If the origin is present,
    its value is stored inside the HOSTNAME message property.
-   
+
    .. function::  present.xr <boolean>
 
    **Default**: off
@@ -132,7 +134,7 @@ The following sample demonstrates how to handle Cisco IOS and IOSXR formats
    ruleset(name="ios" parser="rsyslog.ciscoios") {
        call common
    }
-   
+
    parser(name="custom.ciscoios.withXr" type="pmciscoios"
           present.xr="on")
    ruleset(name="iosxr" parser="custom.ciscoios.withXr"] {

@@ -17,6 +17,8 @@ source ports.
 Module Parameters
 -----------------
 
+Note: parameter names are case-insensitive.
+
 -  **template** <templatename>
 
    This setting instructs omudpspoof to use a template different from
@@ -25,6 +27,8 @@ Module Parameters
 
 Action Parameters
 -----------------
+
+Note: parameter names are case-insensitive.
 
 -  **target** <hostname> or <ip>
 

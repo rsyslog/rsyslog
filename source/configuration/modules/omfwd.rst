@@ -21,6 +21,8 @@ documentation <http://www.rsyslog.com/how-to-obtain-a-specific-doc-version/>`_.
 Module Parameters
 -----------------
 
+Note: parameter names are case-insensitive.
+
 -  **Template** [templateName]
 
    sets a non-standard default template for this module.
@@ -28,6 +30,8 @@ Module Parameters
 
 Action Parameters
 -----------------
+
+Note: parameter names are case-insensitive.
 
 -  **Target** string
 
@@ -220,13 +224,13 @@ Action Parameters
 -  **StreamDriverAuthMode** string
 
    authentication mode to use with the stream driver. Note that this
-   directive requires TLS netstream drivers. For all others, it will be
+   parameter requires TLS netstream drivers. For all others, it will be
    ignored. (driver-specific).
 
 -  **StreamDriverPermittedPeers** string
 
    accepted fingerprint (SHA1) or name of remote peer. Note that this
-   directive requires TLS netstream drivers. For all others, it will be
+   parameter requires TLS netstream drivers. For all others, it will be
    ignored. (driver-specific)
 
 -  **ResendLastMSGOnReconnect** on/off
@@ -293,7 +297,7 @@ Action Parameters
    defaults. If this parameter is NULL, the default settings are used. More
    information about priority Strings
    `here <https://gnutls.org/manual/html_node/Priority-Strings.html>`_.
- 
+
 See Also
 --------
 
@@ -325,15 +329,17 @@ syslogs to remote servers in different namespaces specify them as separate actio
   action(type="omfwd" Target="192.168.2.24" Port="10514" Protocol="tcp" NetworkNamespace="ns_eth0.1")
   action(type="omfwd" Target="192.168.3.38" Port="10514" Protocol="tcp" NetworkNamespace="ns_eth0.2")
 
-Legacy Configuration Directives
+Legacy Configuration Parameters
 -------------------------------
+
+Note: parameter names are case-insensitive.
 
 -  **$ActionForwardDefaultTemplateName**\ string [templatename]
    sets a new default template for UDP and plain TCP forwarding action
 -  **$ActionSendTCPRebindInterval**\ integer
    instructs the TCP send action to close and re-open the connection to
    the remote host every nbr of messages sent. Zero, the default, means
-   that no such processing is done. This directive is useful for use
+   that no such processing is done. This parameter is useful for use
    with load-balancers. Note that there is some performance overhead
    associated with it, so it is advisable to not too often "rebind" the
    connection (what "too often" actually means depends on your
@@ -342,18 +348,18 @@ Legacy Configuration Directives
 -  **$ActionSendUDPRebindInterval**\ integer
    instructs the UDP send action to rebind the send socket every nbr of
    messages sent. Zero, the default, means that no rebind is done. This
-   directive is useful for use with load-balancers.
+   parameter is useful for use with load-balancers.
 -  **$ActionSendStreamDriver**\ <driver basename>
    just like $DefaultNetstreamDriver, but for the specific action
 -  **$ActionSendStreamDriverMode**\ <mode> [default 0]
    mode to use with the stream driver (driver-specific)
 -  **$ActionSendStreamDriverAuthMode**\ <mode>
    authentication mode to use with the stream driver. Note that this
-   directive requires TLS netstream drivers. For all others, it will be
+   parameter requires TLS netstream drivers. For all others, it will be
    ignored. (driver-specific))
 -  **$ActionSendStreamDriverPermittedPeers**\ <ID>
    accepted fingerprint (SHA1) or name of remote peer. Note that this
-   directive requires TLS netstream drivers. For all others, it will be
+   parameter requires TLS netstream drivers. For all others, it will be
    ignored. (driver-specific)
 -  **$ActionSendResendLastMsgOnReconnect**\ on/off [default off]
    specifies if the last message is to be resend when a connecition
@@ -363,7 +369,7 @@ Legacy Configuration Directives
    Resets all configuration variables to their default value. Any
    settings made will not be applied to configuration lines following
    the $ResetConfigVariables. This is a good method to make sure no
-   side-effects exists from previous directives. This directive has no
+   side-effects exists from previous directives. This parameter has no
    parameters.
 
 Legacy Sample

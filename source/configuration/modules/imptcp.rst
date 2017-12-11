@@ -27,6 +27,8 @@ subset of the parameters are supported.
 Module Parameters
 ^^^^^^^^^^^^^^^^^
 
+Note: parameter names are case-insensitive.
+
 These parameters can be used with the "module()" statement. They apply
 globaly to all inputs defined by the module.
 
@@ -59,6 +61,8 @@ globaly to all inputs defined by the module.
 
 Input Parameters
 ^^^^^^^^^^^^^^^^
+
+Note: parameter names are case-insensitive.
 
 These parameters can be used with the "input()" statement. They apply to
 the input they are specified with.
@@ -262,9 +266,9 @@ the input they are specified with.
 
    *Default is 0, which turns off rate limiting*
 
-   Specifies the rate-limiting interval in seconds. Set it to a number 
+   Specifies the rate-limiting interval in seconds. Set it to a number
    of seconds (5 recommended) to activate rate-limiting.
-   
+
 .. function:: RateLimit.Burst [number]
 
    *Default is 10,000*
@@ -318,7 +322,7 @@ This sets up a TCP server on port 514:
 
 ::
 
-  module(load="imptcp") # needs to be done just once 
+  module(load="imptcp") # needs to be done just once
   input(type="imptcp" port="514")
 
 This creates a listener that listens on the local loopback
@@ -326,7 +330,7 @@ interface, only.
 
 ::
 
-  module(load="imptcp") # needs to be done just once 
+  module(load="imptcp") # needs to be done just once
   input(type="imptcp" port="514" address="127.0.0.1")
 
 Create a unix domain socket:
@@ -399,6 +403,6 @@ This sets up a TCP server on port 514:
 
 ::
 
-  $ModLoad imptcp # needs to be done just once 
+  $ModLoad imptcp # needs to be done just once
   $InputPTCPServerRun 514
 

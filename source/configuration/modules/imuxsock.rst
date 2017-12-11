@@ -68,6 +68,8 @@ Configuration Parameters
 Global Parameters
 ^^^^^^^^^^^^^^^^^
 
+Note: parameter names are case-insensitive.
+
 -  **SysSock.IgnoreTimestamp** [**on**/off]
    Ignore timestamps included in the messages, applies to messages
    received via the system log socket.
@@ -121,6 +123,8 @@ Global Parameters
 
 Input Parameters
 ^^^^^^^^^^^^^^^^
+
+Note: parameter names are case-insensitive.
 
 -  **ruleset** [name]
    Binds specified ruleset to this input. If not set, the default
@@ -290,8 +294,10 @@ The following sample is used activate message annotation and thus
 trusted properties on the system log socket. module(load="imuxsock" #
 needs to be done just once SysSock.Annotate="on")
 
-Legacy Configuration Directives
+Legacy Configuration Parameters
 -------------------------------
+
+Note: parameter names are case-insensitive.
 
 **Legacy directives should NOT be used when writing new configuration files.**
 

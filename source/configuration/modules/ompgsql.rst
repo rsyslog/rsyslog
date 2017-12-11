@@ -18,6 +18,8 @@ This module provides native support for logging to PostgreSQL databases. It's an
 Input parameters
 ****************
 
+Note: configuration parameter names are case-insensitive.
+
 .. function:: server <word,IP>
 
    **Default**: none **Required**: true
@@ -125,6 +127,8 @@ Legacy
 
 **Action parameters**
 
+Note: parameter names are case-insensitive.
+
 **:ompgsql:database-server,database-name,database-userid,database-password**
 
 All parameters should be filled in for a successful connect.
@@ -158,4 +162,3 @@ Copyright © 2008-2017 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_, `Dan Molik <https://danmolik.com>`_, and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
 3 or higher.
-

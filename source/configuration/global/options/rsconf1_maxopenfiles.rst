@@ -3,7 +3,7 @@ $MaxOpenFiles
 
 **Available Since:** 4.3.0
 
-**Type:** global configuration directive
+**Type:** global configuration parameter
 
 **Default:** *operating system default*
 

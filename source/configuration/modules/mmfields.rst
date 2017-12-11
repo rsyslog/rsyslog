@@ -41,11 +41,15 @@ conditionally used depending on some prerequisites.
 
 **Module Configuration Parameters**:
 
+Note: parameter names are case-insensitive.
+
 Currently none.
 
  
 
 **Action Configuration Parameters**:
+
+Note: parameter names are case-insensitive.
 
 -  **separator** - separatorChar (default ',')
    This is the character used to separate fields. Currently, only a
@@ -72,7 +76,7 @@ Currently none.
 This is a very simple use case where each message is parsed. The default
 separator character of comma is being used.
 
-:: 
+::
 
   module(load="mmfields")
   template(name="ftpl"

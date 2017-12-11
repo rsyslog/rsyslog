@@ -18,6 +18,8 @@ For details on the interface specification, see rsyslog's source in the
 
 **Action Parameters**:
 
+Note: parameter names are case-insensitive.
+
 -  **binary**
 
    The name of the external message modification plugin to be called. This
@@ -31,7 +33,7 @@ For details on the interface specification, see rsyslog's source in the
   expectations. Check the external plugin documentation for what needs to be used.
 
 - **output**
-  
+
   This is a debug aid. If set, this is a filename where the plugins output
   is logged. Note that the output is also being processed as usual by rsyslog.
   Setting this parameter thus gives insight into the internal processing

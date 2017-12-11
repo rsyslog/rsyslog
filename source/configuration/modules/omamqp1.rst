@@ -40,6 +40,8 @@ The output plugin has been tested against the following messaging systems:
 
 **Action Parameters**
 
+Note: parameter names are case-insensitive.
+
 -  **host**
    *(Required)* The address of the message bus in *host[:port]* format.
    The port defaults to 5672 if absent. Examples: *"localhost"*,

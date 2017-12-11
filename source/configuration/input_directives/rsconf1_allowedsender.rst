@@ -1,7 +1,7 @@
 $AllowedSender
 --------------
 
-**Type:** input configuration directive
+**Type:** input configuration parameter
 
 **Default:** all allowed
 
@@ -27,7 +27,7 @@ them is:
 
   $AllowedSender <type>, ip[/bits], ip[/bits]
 
-"$AllowedSender" is the directive - it must be written exactly as shown
+"$AllowedSender" is the parameter - it must be written exactly as shown
 and the $ must start at the first column of the line. "<type>" is either "UDP"
 or "TCP" (or "GSS", if this is enabled during compilation).
 It must immediately be followed by the comma, else you will
@@ -35,7 +35,7 @@ receive an error message. "ip[/bits]" is a machine or network ip address
 as in "192.0.2.0/24" or "127.0.0.1". If the "/bits" part is omitted, a
 single host is assumed (32 bits or mask 255.255.255.255). "/0" is not
 allowed, because that would match any sending system. If you intend to
-do that, just remove all $AllowedSender directives. If more than 32 bits
+do that, just remove all $AllowedSender parameters. If more than 32 bits
 are requested with IPv4, they are adjusted to 32. For IPv6, the limit is
 128 for obvious reasons. Hostnames, with and without wildcards, may also
 be provided. If so, the result of revers DNS resolution is used for
@@ -70,7 +70,7 @@ to stick with hard-coded IP addresses wherever possible.
   $AllowedSender UDP, 127.0.0.1, 192.0.2.0/24, [::1]/128, *.example.net, somehost.example.com
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.  
+project.
 Copyright © 2007-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 2 or higher.

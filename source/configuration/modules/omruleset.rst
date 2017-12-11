@@ -60,7 +60,9 @@ before using omruleset!**
 -  if you use multiple levels of ruleset nesting, double check for
    endless loops - the rsyslog engine does not detect these
 
-**Configuration Directives**:
+**Configuration Parameters**:
+
+Note: parameter names are case-insensitive.
 
 -  **$ActionOmrulesetRulesetName** ruleset-to-submit-to
    This directive specifies the name of the ruleset that the message
@@ -131,7 +133,7 @@ one.
   mail.* /path/to/mailerr.log
   kernel.* /path/to/kernelerr.log
   auth.* /path/to/autherr.log
-  
+
   #switch back to default ruleset
   $ruleset RSYSLOG_DefaultRuleset
 
@@ -140,7 +142,7 @@ one.
   $ActionOmrulesetRulesetName nested
   :msg, contains, "error" :omruleset:
   #end first action
-  
+
   # begin second action - as an example we can do anything else in
   # this processing. Note that these actions are processed concurrently
   # to the ruleset "nested"

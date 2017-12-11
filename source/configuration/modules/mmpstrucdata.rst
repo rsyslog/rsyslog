@@ -10,16 +10,20 @@ RFC5424 structured data parsing module (mmpstrucdata)
 **Description**:
 
 The mmpstrucdata parses the structured data of `RFC5424 <https://tools.ietf.org/html/rfc5424>`_ into the message json variable tree. The data parsed, if available, is stored under "jsonRoot!rfc5424-sd!...". Please note that only RFC5424 messages will be processed.
- 
-The difference of RFC5424 is in the message layout: the SYSLOG-MSG part only contains the structured-data part instead of the normal message part. Further down you can find a example of a structured-data part. 
+
+The difference of RFC5424 is in the message layout: the SYSLOG-MSG part only contains the structured-data part instead of the normal message part. Further down you can find a example of a structured-data part.
 
 **Module Configuration Parameters**:
+
+Note: parameter names are case-insensitive.
 
 Currently none.
 
  
 
 **Action Confguration Parameters**:
+
+Note: parameter names are case-insensitive.
 
 -  **jsonRoot** - default "!"
     Specifies into which json container the data shall be parsed to.
@@ -41,7 +45,7 @@ Currently none.
 
 **Samples:**
 
-Below you can find a structured data part of a random message which has three parameters. 
+Below you can find a structured data part of a random message which has three parameters.
 
 ::
 

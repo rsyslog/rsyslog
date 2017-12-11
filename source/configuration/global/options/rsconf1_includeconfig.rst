@@ -1,14 +1,14 @@
 $IncludeConfig
 --------------
 
-**Type:** global configuration directive
+**Type:** global configuration parameter
 
 **Default:**
 
 **Description:**
 
-This directive allows to include other files into the main configuration
-file. As soon as an IncludeConfig directive is found, the contents of
+This parameter allows to include other files into the main configuration
+file. As soon as an IncludeConfig parameter is found, the contents of
 the new file is processed. IncludeConfigs can be nested. Please note
 that from a logical point of view the files are merged. Thus, if the
 include modifies some parameters (e.g. $DynaFileChacheSize), these new

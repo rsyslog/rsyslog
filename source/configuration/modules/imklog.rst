@@ -6,8 +6,10 @@ engine.
 
 **Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
 
-Configuration Directives
+Configuration Parameters
 ------------------------
+
+Note: parameter names are case-insensitive.
 
 .. function:: $KLogInternalMsgFacility <facility>
 
@@ -55,32 +57,32 @@ Configuration Directives
 
 .. function:: $klogUseSyscallInterface on/off
 
-   Linux only, ignored on other platforms (but may be specified). 
+   Linux only, ignored on other platforms (but may be specified).
    Defaults to off.
 
 .. function:: $klogSymbolsTwice on/off
 
-   Linux only, ignored on other platforms (but may be specified). 
+   Linux only, ignored on other platforms (but may be specified).
    Defaults to off.
 
 .. function:: $klogParseKernelTimestamp on/off
 
-   If enabled and the kernel creates a timestamp for its log messages, 
-   this timestamp will be parsed and converted into regular message time 
-   instead to use the receive time of the kernel message (as in 5.8.x 
-   and before). Default is 'off' to prevent parsing the kernel timestamp, 
-   because the clock used by the kernel to create the timestamps is not 
-   supposed to be as accurate as the monotonic clock required to convert 
-   it. Depending on the hardware and kernel, it can result in message 
-   time differences between kernel and system messages which occurred at 
+   If enabled and the kernel creates a timestamp for its log messages,
+   this timestamp will be parsed and converted into regular message time
+   instead to use the receive time of the kernel message (as in 5.8.x
+   and before). Default is 'off' to prevent parsing the kernel timestamp,
+   because the clock used by the kernel to create the timestamps is not
+   supposed to be as accurate as the monotonic clock required to convert
+   it. Depending on the hardware and kernel, it can result in message
+   time differences between kernel and system messages which occurred at
    same time.
 
 .. function:: $klogKeepKernelTimestamp on/off
 
-   If enabled, this option causes to keep the [timestamp] provided by 
-   the kernel at the begin of in each message rather than to remove it, 
-   when it could be parsed and converted into local time for use as 
-   regular message time. Only used, when $klogParseKernelTimestamp is 
+   If enabled, this option causes to keep the [timestamp] provided by
+   the kernel at the begin of in each message rather than to remove it,
+   when it could be parsed and converted into local time for use as
+   regular message time. Only used, when $klogParseKernelTimestamp is
    on.
 
 Caveats/Known Bugs

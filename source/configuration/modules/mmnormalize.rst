@@ -34,17 +34,21 @@ same message.
 Module Parameters
 ~~~~~~~~~~~~~~~~~
 
+Note: parameter names are case-insensitive.
+
 .. function:: allow_regex <boolean>
 
    **Default**: off
 
    Specifies if regex field-type should be allowed. Regex field-type has
-   significantly higher computational overhead compared to other fields, 
-   so it should be avoided when another field-type can achieve the desired 
+   significantly higher computational overhead compared to other fields,
+   so it should be avoided when another field-type can achieve the desired
    effect. Needs to be "on" for regex field-type to work.
 
 Action Parameters
 ~~~~~~~~~~~~~~~~~
+
+Note: parameter names are case-insensitive.
 
 .. function:: ruleBase <word>
 
@@ -88,11 +92,13 @@ Action Parameters
    Please note that **useRawMsg** overrides this parameter, so if **useRawMsg**
    is set, **variable** will be ignored and raw message will be used.
 
-   
 
 
-Legacy Configuration Directives
+
+Legacy Configuration Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Note: parameter names are case-insensitive.
 
 -  $mmnormalizeRuleBase <rulebase-file> - equivalent to the "ruleBase"
    parameter.
@@ -145,9 +151,9 @@ The strings from **rule** are put together and are equal to a rulebase with the 
 
   module(load="mmnormalize")
   module(load="imtcp")
-  
+
   input(type="imtcp" port="10514" ruleset="outp")
-  
+
   ruleset(name="outp") {
   	action(type="mmnormalize" rule=["rule=:%host:word% %tag:char-to:\\x3a%: no longer listening on %ip:ipv4%#%port:number%", "rule=:%host:word% %ip:ipv4% user was logged out"])
   	action(type="omfile" File="/tmp/output")

@@ -23,7 +23,9 @@ package installed.
 
  
 
-**Configuration Directives**:
+**Configuration parameters**:
+
+Note: configuration parameter names are case-insensitive.
 
 -  **$actionsnmptransport**\ (This parameter is optional, the default
    value is "udp")
@@ -34,8 +36,8 @@ package installed.
    udp, tcp, udp6, tcp6, icmp, icmp6 ...
 
    Example: ``$actionsnmptransport udp``
- 
- 
+
+
 -  **$actionsnmptarget**
 
    This can be a hostname or ip address, and is our snmp target host.
@@ -43,16 +45,16 @@ package installed.
    will be send.
 
    Example: ``$actionsnmptarget server.domain.xxx``
- 
- 
+
+
 -  **$actionsnmptargetport** (This parameter is optional, the default
    value is "162")
 
    The port which will be used, common values are port 162 or 161.
 
    Example: ``$actionsnmptargetport 162``
- 
- 
+
+
 -  **$actionsnmpversion** (This parameter is optional, the default
    value is "1")
 
@@ -60,18 +62,18 @@ package installed.
    0 means SNMPv1 will be used.
    1 means SNMPv2c will be used.
    Any other value will default to 1.
-   
+
    Example: ``$actionsnmpversion 1``
- 
- 
+
+
 -  **$actionsnmpcommunity** (This parameter is optional, the default
    value is "public")
 
    This sets the used SNMP Community.
 
    Example: ``$actionsnmpcommunity public``
- 
- 
+
+
 -  **$actionsnmptrapoid** (This parameter is optional, the default
    value is "1.3.6.1.4.1.19406.1.2.1" which means
    "ADISCON-MONITORWARE-MIB::syslogtrap")
@@ -92,8 +94,8 @@ package installed.
    Example: ``$actionsnmptrapoid 1.3.6.1.4.1.19406.1.2.1``
    If you have this MIBS installed, you can also configured with the
    OID Name: ``$actionsnmptrapoid ADISCON-MONITORWARE-MIB::syslogtrap``
- 
- 
+
+
 -  **$actionsnmpsyslogmessageoid** (This parameter is optional, the
    default value is "1.3.6.1.4.1.19406.1.1.2.1" which means
    "ADISCON-MONITORWARE-MIB::syslogMsg")
@@ -111,8 +113,8 @@ package installed.
    If you have this MIBS installed, you can also configured with the
    OID Name: ``$actionsnmpsyslogmessageoid``
    ADISCON-MONITORWARE-MIB::syslogMsg
- 
- 
+
+
 -  **$actionsnmpenterpriseoid** (This parameter is optional, the
    default value is "1.3.6.1.4.1.3.1.1" which means
    "enterprises.cmu.1.1")
@@ -123,8 +125,8 @@ package installed.
    effect if **SNMPv2** is used.
 
    Example: ``$actionsnmpenterpriseoid 1.3.6.1.4.1.3.1.1``
- 
- 
+
+
 -  **$actionsnmpspecifictype** (This parameter is optional, the default
    value is "0")
 
@@ -132,8 +134,8 @@ package installed.
    used for **SNMPv1** only. It has no effect if **SNMPv2** is used.
 
    Example: ``$actionsnmpspecifictype 0``
- 
- 
+
+
 -  **$actionsnmptraptype** (This parameter is optional, the default
    value is "6" which means SNMP\_TRAP\_ENTERPRISESPECIFIC)
 
