@@ -235,6 +235,29 @@ script_error
   Function descriptions mention if a function supports error state information. If not,
   the function call will always set ``script_error()`` to 0.
 
+previous_action_suspended
+-------------------------
+  This boolenan function returns 1 (true) if the previous action is suspended,
+  0 (false) otherwise. It can be used to initiate action that shall happen if
+  a function failed. Please note that an action failure may not be immediately
+  detected, so the function return value is a bit fuzzy. It is guaranteed, however
+  that a suspension will be detected with the next batch of messages that is
+  being processed.
+
+Use
+...
+
+  If, for example, you want to execute a rule set in case of failure of an
+  action, do this::
+
+   ruleset(name="output_writer") {
+       action(type="omfile" file="rsyslog.log")
+   }
+
+   action(type="omfwd" protocol="tcp" target="10.1.1.1")
+   if previous_action_suspended() then
+          call output_writer
+
 format_time(unix_timestamp, format_str)
 ---------------------------------------
    **NOTE: this is EXPERIMENTAL code** - it may be removed or altered in
