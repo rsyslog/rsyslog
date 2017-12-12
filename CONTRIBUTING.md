@@ -1,5 +1,5 @@
-How to Contribute
-=================
+# How to Contribute
+
 Rsyslog is a real open source project and open to contributions.
 By contributing, you help improve the state of logging as well as improve
 your own professional profile. Contributing is easy, and there are options
@@ -21,8 +21,7 @@ These are many ways to contribute to the project:
 
 This list is not conclusive. There for sure are many more ways to contribute and if you find one, just let us know. We are very open to new suggestions and like to try out new things.
 
-When to submit Pull Requests?
------------------------------
+## When to submit Pull Requests?
 
 It is OK to submit PRs that are not yet fully ready for merging. You want to
 do this in order to get early CI system coverage for your patch. However,
@@ -43,8 +42,8 @@ Travis covers about 95% of all essential testing. So we highly recommend
 that you use Travis to do initial checks on your work and create the PR
 only after this looks good. That saves both you and us some time.
 
-Requirements for patches
-------------------------
+## Requirements for patches
+
 In order to ensure good code quality, after applying the path the code must
 
 - no legacy configuration statements ($someSetting) must be added,
@@ -56,8 +55,7 @@ In order to ensure good code quality, after applying the path the code must
   * testbench tests
   * doc additions in the rsyslog-doc sister project
 
-Testbench Coverage
-..................
+### Testbench Coverage
 
 If you fix a bug that is not detected by the current testbench, it is
 appreciated if you also add testbench test to make sure the problem does
@@ -68,8 +66,7 @@ helps to speed up merging. If there is no testbench test added, the
 core rsyslog developers will try to add one based on the patch. That
 means merging needs to wait until we have time to do this.
 
-Compiler Diagnostics
-....................
+### Compiler Diagnostics
 
 Note that both warning messages and static analyzer warnings may be false
 positives. We have decided to accept that fate and work around it (e.g. by
@@ -85,8 +82,7 @@ can fix the root cause, we would appreciate help. But, again, this is a
 last resort which should normally not be used.
 
 
-Continuous Integration Testing
-.............................
+### Continuous Integration Testing
 
 All patches are run though our continuous integration system, which ensures
 no regressions are inside the code as well as rsyslog project policies are
@@ -122,13 +118,13 @@ test fails but no other, chances are good that there is an inter-PR issue.
 If this happens, it is suggested to rebase to git master branch and update
 the PR.
 
-Note to developers
-------------------
+## Note to developers
+
 Please address pull requests against the master branch.
 
 
-Testbench coding Tips
----------------------
+## Testbench coding Tips
+
 - the "cmp" command requires two parameters to work reliably accross multiple
   platforms. Using "cmp - file" make you compare stdin, as in:
   echo "test" | cmp - rsyslog.out.log
