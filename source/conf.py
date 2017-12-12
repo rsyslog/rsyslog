@@ -57,6 +57,8 @@ rst_prolog = """
 
 .. |FormatsObsoleteOldName| replace:: ``legacy``
 .. |FormatsObsoleteNewName| replace:: ``obsolete legacy``
+
+.. |FmtObsoleteDescription| replace:: ``Obsolete Format Equivalents``
 """
 
 # The master toctree document.
