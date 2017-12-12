@@ -1,12 +1,5 @@
 #!/bin/bash
 # addd 2016-07-11 by RGerhards, released under ASL 2.0
-
-uname
-if [ `uname` = "FreeBSD" ] ; then
-   echo "This test currently does not work on FreeBSD."
-   exit 77
-fi
-
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
@@ -23,7 +16,7 @@ echo '<167>Mar  6 16:57:54 hostname1/hostname2 test: msgnum:0' > rsyslog.input
 . $srcdir/diag.sh tcpflood -B -I rsyslog.input
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
-echo "hostname1/hostname2" | cmp rsyslog.out.log
+echo "hostname1/hostname2" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid hostname generated, rsyslog.out.log is:"
   cat rsyslog.out.log

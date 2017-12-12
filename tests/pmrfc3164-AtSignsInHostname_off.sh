@@ -27,7 +27,7 @@ ruleset(name="customparser" parser="custom.rfc3164") {
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
 echo '-Hostname1-tag:- msgnum:1-
--Hostname3-tag:-msgnum:3-' | cmp rsyslog.out.log
+-Hostname3-tag:-msgnum:3-' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
   cat rsyslog.out.log

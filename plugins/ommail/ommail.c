@@ -817,7 +817,7 @@ CODESTARTparseSelectorAct
 	pData->bEnableBody = cs.bEnableBody;
 
 	/* process template */
-	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) "RSYSLOG_FileFormat"));
+	iRet = cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) "RSYSLOG_FileFormat");
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 

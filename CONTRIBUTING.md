@@ -38,7 +38,7 @@ the PR thereafter. This prevents unnecessary cluttering of the open PR list.
 We will take the liberty to close such PRs if they are left open for more
 than a day or two.
 
-Please note, though, that the rsyslog repro is fully set up to use Travis CI.
+Please note, though, that the rsyslog repo is fully set up to use Travis CI.
 Travis covers about 95% of all essential testing. So we highly recommend
 that you use Travis to do initial checks on your work and create the PR
 only after this looks good. That saves both you and us some time.
@@ -47,7 +47,7 @@ Requirements for patches
 ------------------------
 In order to ensure good code quality, after applying the path the code must
 
-- no legacy configration statements ($someSetting) must be added,
+- no legacy configuration statements ($someSetting) must be added,
   all configuration must be in v6+ style (RainerScript)
 - compile cleanly without WARNING messages under both gcc and clang
 - pass clang static analyzer without any report
@@ -80,20 +80,20 @@ As a last resort, compiler warnings can be turned off via
 directives. This should really only be done if there is no other known
 way around it. If so, it should be applied to a single function, only and
 not to full source file. Be sure to re-enable the warning after the function
-in question. We have done this in some few cases ourselfs, and if someone
+in question. We have done this in some few cases ourselves, and if someone
 can fix the root cause, we would appreciate help. But, again, this is a
 last resort which should normally not be used.
 
 
-Continous Integration Testing
+Continuous Integration Testing
 .............................
 
-All patches are run though our continous integration system, which ensures
+All patches are run though our continuous integration system, which ensures
 no regressions are inside the code as well as rsyslog project policies are
-followed (as far as we can check in an automatted way).
+followed (as far as we can check in an automated way).
 
 For pull requests submitted via github, these two conditions are 
-verified automatically. See the PR for potential failueres. For patches
+verified automatically. See the PR for potential failures. For patches
 submitted otherwise, they will be verified semi-manually.
 
 Also, patches are requested to not break the testbench. Unfortunately, the
@@ -107,7 +107,7 @@ contact you.
 All PRs will be tested on a variety of systems, with the help of both Travis
 CI and buildbot. The core goal of this multi-platform testing is to find
 issues that surface only on some systems (e.g. 32bit related issues, etc).
-We continously strive to update the CI system coverage. If you can provide
+We continuously strive to update the CI system coverage. If you can provide
 a buildbot slave for a not-yet-supported test platform, please let us know.
 We will gladly add it.
 
@@ -124,4 +124,11 @@ the PR.
 
 Note to developers
 ------------------
-Please adress pull requests against the master branch.
+Please address pull requests against the master branch.
+
+
+Testbench coding Tips
+---------------------
+- the "cmp" command requires two parameters to work reliably accross multiple
+  platforms. Using "cmp - file" make you compare stdin, as in:
+  echo "test" | cmp - rsyslog.out.log

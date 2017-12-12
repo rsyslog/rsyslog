@@ -540,6 +540,11 @@ printVersion(void)
 #else
 	printf("\tuuid support:\t\t\t\tNo\n");
 #endif
+#ifdef HAVE_LIBSYSTEMD
+	printf("\tsystemd support:\t\t\tYes\n");
+#else
+	printf("\tsystemd support:\t\t\tNo\n");
+#endif
 	/* we keep the following message to so that users don't need
 	 * to wonder.
 	 */
@@ -1935,6 +1940,7 @@ main(int argc, char **argv)
 	initAll(argc, argv);
 #ifdef HAVE_LIBSYSTEMD
 	sd_notify(0, "READY=1");
+	dbgprintf("done signaling to systemd that we are ready!\n");
 #endif
 	DBGPRINTF("----RSYSLOGD INITIALIZED\n");
 

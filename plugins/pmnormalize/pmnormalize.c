@@ -154,9 +154,6 @@ ENDfreeParserInst
 BEGINnewParserInst
 	struct cnfparamvals *pvals = NULL;
 	int i;
-	char *buffer;
-	char *tStr;
-	int size = 0;
 CODESTARTnewParserInst
 	DBGPRINTF("newParserInst (pmnormalize)\n");
 
@@ -183,27 +180,17 @@ CODESTARTnewParserInst
 		} else if(!strcmp(parserpblk.descr[i].name, "rulebase")) {
 			inst->rulebase = (char *) es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(parserpblk.descr[i].name, "rule")) {
+			es_str_t *rules;
+			CHKmalloc(rules = es_newStr(128));
 			for(int j=0; j < pvals[i].val.d.ar->nmemb; ++j) {
-				tStr = (char*)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-				size += strlen(tStr);
-				free(tStr);
+				CHKiRet(es_addStr(&rules, pvals[i].val.d.ar->arr[j]));
+				CHKiRet(es_addChar(&rules, '\n'));
 			}
-			buffer = malloc(size + pvals[i].val.d.ar->nmemb + 1);
-			tStr = (char*)es_str2cstr(pvals[i].val.d.ar->arr[0], NULL);
-			strcpy(buffer, tStr);
-			free(tStr);
-			strcat(buffer, "\n");
-			for(int j=1; j < pvals[i].val.d.ar->nmemb; ++j) {
-				tStr = (char*)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-				strcat(buffer, tStr);
-				free(tStr);
-				strcat(buffer, "\n");
-			}
-			strcat(buffer, "\0");
-			inst->rule = buffer;
+			inst->rule = (char*)es_str2cstr(rules, NULL);
 		} else {
-                        dbgprintf("pmnormalize: program error, non-handled "
-                          "param '%s'\n", parserpblk.descr[i].name);
+                        LogError(0, RS_RET_INTERNAL_ERROR ,
+				"pmnormalize: program error, non-handled param '%s'",
+				parserpblk.descr[i].name);
                 }
 	}
 	if(!inst->rulebase && !inst->rule) {

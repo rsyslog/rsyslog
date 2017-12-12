@@ -34,6 +34,7 @@
 #include "srUtils.h"
 #if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wsign-compare"
+#pragma GCC diagnostic ignored "-Wmissing-noreturn"
 #endif
 }
 

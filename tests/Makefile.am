@@ -34,7 +34,10 @@ TESTS = $(TESTRUNS)
 #TESTS = $(TESTRUNS) cfg.sh
 
 TESTS +=  \
-	empty-hostname.sh \
+	empty-hostname.sh 
+
+if ENABLE_TESTBENCH1
+TESTS +=  \
 	hostname-getaddrinfo-fail.sh \
 	prop-programname.sh \
 	prop-programname-with-slashes.sh \
@@ -140,7 +143,6 @@ TESTS +=  \
 	sndrcv.sh \
 	sndrcv_failover.sh \
 	sndrcv_gzip.sh \
-	sndrcv_udp.sh \
 	sndrcv_udp_nonstdpt.sh \
 	sndrcv_udp_nonstdpt_v6.sh \
 	imudp_thread_hang.sh \
@@ -195,10 +197,6 @@ TESTS +=  \
 	imuxsock_logger_syssock.sh \
 	imuxsock_traillf_syssock.sh \
 	imuxsock_ccmiddle_syssock.sh \
-	imuxsock_logger_root.sh \
-	imuxsock_traillf_root.sh \
-	imuxsock_ccmiddle_root.sh \
-	imklog_permitnonkernelfacility_root.sh \
 	discard-rptdmsg.sh \
 	discard-allmark.sh \
 	discard.sh \
@@ -209,7 +207,11 @@ TESTS +=  \
 	failover-rptd.sh \
 	failover-no-rptd.sh \
 	failover-no-basic.sh \
-	rcvr_fail_restore.sh \
+	rcvr_fail_restore.sh
+endif
+
+if ENABLE_TESTBENCH2
+TESTS +=  \
 	rscript_contains.sh \
 	rscript_ipv42num.sh \
 	rscript_field.sh \
@@ -243,8 +245,12 @@ TESTS +=  \
 	rscript_ne_var.sh \
 	rscript_num2ipv4.sh \
 	rscript_trim.sh \
+	rscript_substring.sh \
 	rscript_format_time.sh \
 	rscript_parse_time.sh \
+	rscript_script_error.sh \
+	rscript_parse_json.sh \
+	rscript_previous_action_suspended.sh \
 	mmanon_random_32_ipv4.sh \
 	mmanon_random_cons_32_ipv4.sh \
 	mmanon_recognize_ipv4.sh \
@@ -282,16 +288,11 @@ TESTS +=  \
 	lookup_table_rscript_reload.sh \
 	lookup_table_rscript_reload_without_stub.sh \
 	multiple_lookup_tables.sh
-
-if ENABLE_IP
-TESTS += \
-	tcp_forwarding_ns_tpl.sh
 endif
 
 if HAVE_VALGRIND
 TESTS +=  \
 	mmexternal-SegFault-vg.sh \
-	mmexternal-SegFault-empty-jroot-vg.sh \
 	internal-errmsg-memleak.sh \
 	rscript_set_memleak-vg.sh \
 	no-parser-vg.sh \
@@ -316,8 +317,28 @@ TESTS +=  \
 	lookup_table_rscript_reload-vg.sh \
 	lookup_table_rscript_reload_without_stub-vg.sh \
 	multiple_lookup_tables-vg.sh \
-	fac_local0-vg.sh
+	fac_local0-vg.sh \
+	rscript_trim-vg.sh
 endif # HAVE_VALGRIND
+
+if ENABLE_ROOT_TESTS
+TESTS +=  \
+	sndrcv_udp.sh \
+	imuxsock_logger_root.sh \
+	imuxsock_traillf_root.sh \
+	imuxsock_ccmiddle_root.sh \
+	imklog_permitnonkernelfacility_root.sh
+if ENABLE_IP
+TESTS += tcp_forwarding_ns_tpl.sh
+endif
+if ENABLE_RELP
+TESTS += sndrcv_relp_dflt_pt.sh
+endif
+if HAVE_VALGRIND
+TESTS +=  \
+	mmexternal-SegFault-empty-jroot-vg.sh
+endif
+endif
 
 if ENABLE_IMJOURNAL
 TESTS +=  \
@@ -380,7 +401,20 @@ if ENABLE_PGSQL
 if ENABLE_PGSQL_TESTS
 TESTS += \
 	pgsql-basic.sh \
-	pgsql-template.sh
+	pgsql-basic-cnf6.sh \
+	pgsql-basic-threads-cnf6.sh \
+	pgsql-template.sh \
+	pgsql-template-cnf6.sh \
+	pgsql-actq-mt-withpause.sh \
+	pgsql-template-threads-cnf6.sh
+if HAVE_VALGRIND
+TESTS += \
+	pgsql-basic-vg.sh \
+	pgsql-template-vg.sh \
+	pgsql-basic-cnf6-vg.sh \
+	pgsql-template-cnf6-vg.sh \
+	pgsql-actq-mt-withpause-vg.sh
+endif
 endif
 endif
 
@@ -620,7 +654,6 @@ endif
 if ENABLE_RELP
 TESTS += sndrcv_relp.sh \
 	 sndrcv_relp_rebind.sh \
-         sndrcv_relp_dflt_pt.sh \
 	 imrelp-basic.sh \
 	 imrelp-manyconn.sh
 if ENABLE_GNUTLS
@@ -887,9 +920,13 @@ EXTRA_DIST= \
 	rscript_ne_var.sh \
 	rscript_num2ipv4.sh \
 	rscript_trim.sh \
+	rscript_substring.sh \
 	rscript_format_time.sh \
 	rscript_parse_time.sh \
 	rscript_parse_time_get-ts.py \
+	rscript_script_error.sh \
+	rscript_parse_json.sh \
+	rscript_previous_action_suspended.sh \
 	mmanon_random_32_ipv4.sh \
 	mmanon_random_cons_32_ipv4.sh \
 	mmanon_recognize_ipv4.sh \
@@ -1592,6 +1629,7 @@ EXTRA_DIST= \
 	lookup_table_rscript_reload_without_stub.sh \
 	lookup_table_rscript_reload-vg.sh \
 	lookup_table_rscript_reload_without_stub-vg.sh \
+	rscript_trim-vg.sh \
 	testsuites/lookup_table.conf \
 	testsuites/lookup_table_no_hup_reload.conf \
 	testsuites/lookup_table_reload_stub.conf \
@@ -1646,7 +1684,6 @@ EXTRA_DIST= \
 	libmaxmindb.supp \
 	travis/trusty.supp \
 	linux_localtime_r.supp \
-	librdkafka-bugs.supp \
 	json_var_case.sh \
 	testsuites/json_var_case.conf \
 	cfg.sh \

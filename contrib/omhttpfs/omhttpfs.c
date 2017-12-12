@@ -642,9 +642,9 @@ BEGINcreateWrkrInstance
 CODESTARTcreateWrkrInstance
     DBGPRINTF("omhttpfs: createWrkrInstance\n");
     pWrkrData->curl = NULL;
-    CHKiRet(httpfs_init_curl(pWrkrData, pWrkrData->pData));
-finalize_it:
-    DBGPRINTF("omhttpfs: createWrkrInstance,pData %p/%p, pWrkrData %p\n", pData, pWrkrData->pData, pWrkrData);
+    iRet = httpfs_init_curl(pWrkrData, pWrkrData->pData);
+    DBGPRINTF("omhttpfs: createWrkrInstance,pData %p/%p, pWrkrData %p\n",
+	pData, pWrkrData->pData, pWrkrData);
 ENDcreateWrkrInstance
 
 
@@ -799,18 +799,14 @@ CODESTARTnewActInst
     }
 
     tplToUse = ustrdup((pData->tplName == NULL) ? (uchar* ) "RSYSLOG_FileFormat" : pData->tplName);
-    CHKiRet(OMSRsetEntry(*ppOMSR, 0, tplToUse, OMSR_NO_RQD_TPL_OPTS));
+    iRet = OMSRsetEntry(*ppOMSR, 0, tplToUse, OMSR_NO_RQD_TPL_OPTS);
 
 CODE_STD_FINALIZERnewActInst
     cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
-BEGINparseSelectorAct
-CODESTARTparseSelectorAct
-	iRet = RS_RET_CONFLINE_UNPROCESSED;
-CODE_STD_FINALIZERparseSelectorAct
-ENDparseSelectorAct
+NO_LEGACY_CONF_parseSelectorAct
 
 
 /**

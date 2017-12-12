@@ -30,7 +30,7 @@
 #pragma GCC diagnostic ignored "-Wredundant-decls" // TODO: remove!
 #pragma GCC diagnostic ignored "-Wstrict-prototypes" // TODO: remove!
 #pragma GCC diagnostic ignored "-Wswitch-default" // TODO: remove!
-#endif 
+#endif
 #include <pthread.h>
 #include "typedefs.h"
 
@@ -213,6 +213,7 @@ operation not carried out */
 	RS_RET_INVALID_IP = -3007,	/**< invalid ip found where valid was expected */
 	RS_RET_OBJ_CREATION_FAILED = - 3008, /**< the creation of an object failed (no details available) */
 	RS_RET_INOTIFY_INIT_FAILED = - 3009, /**< the initialization of an inotify instance failed (no details available) */
+	RS_RET_FEN_INIT_FAILED = - 3010, /**< the initialization of a fen instance failed (no details available) */
 	RS_RET_PARAM_ERROR = -1000,	/**< invalid parameter in call to function */
 	RS_RET_MISSING_INTERFACE = -1001,/**< interface version mismatch, required missing */
 	RS_RET_INVALID_CORE_INTERFACE = -1002,/**< interface provided by host invalid, can not be used */

@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * Copyright 2007-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2017 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -431,7 +431,7 @@ CODESTARTdoAction
 		 */
 		if(pData->compressionLevel && (l > CONF_MIN_SIZE_FOR_COMPRESS)) {
 			Bytef *out;
-			uLongf destLen = sizeof(out) / sizeof(Bytef);
+			uLongf destLen = iMaxLine + iMaxLine/100 +12; /* recommended value from zlib doc */
 			uLong srcLen = l;
 			int ret;
 			/* TODO: optimize malloc sequence? -- rgerhards, 2008-09-02 */

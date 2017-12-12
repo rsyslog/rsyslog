@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#!/usr/bin/env python
 
 """A simple plugin to connect rsyslog to SOLR
 

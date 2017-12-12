@@ -21,7 +21,7 @@ echo "<115>Mar 10 01:00:00 172.20.245.8 tag: msgnum:1"
 sleep 2
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
-echo 'Mar 10 01:00:00 172.20.245.8 tag: msgnum:1: -115-' | cmp rsyslog.out.log
+echo 'Mar 10 01:00:00 172.20.245.8 tag: msgnum:1: -115-' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
   cat rsyslog.out.log

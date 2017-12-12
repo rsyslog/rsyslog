@@ -164,7 +164,7 @@ typedef struct lstn_s {
 static lstn_t *listeners;
 
 static prop_t *pLocalHostIP = NULL;	/* there is only one global IP for all internally-generated messages */
-static prop_t *pInputName = NULL;	/* our inputName currently is always "imudp", and this will hold it */
+static prop_t *pInputName = NULL;	/* our inputName currently is always "imuxsock", and this will hold it */
 static int startIndexUxLocalSockets; /* process fd from that index on (used to
  				   * suppress local logging. rgerhards 2005-08-01
 				   * read-only after startup
@@ -542,7 +542,8 @@ openLogSocket(lstn_t *pLstn)
 				/* ok, it matches -- just use as is */
 				pLstn->fd = fd;
 
-				DBGPRINTF("imuxsock: Acquired UNIX socket '%s' (fd %d) from systemd.\n",
+				LogMsg(0, NO_ERRCODE, LOG_INFO,
+					"imuxsock: Acquired UNIX socket '%s' (fd %d) from systemd.\n",
 					pLstn->sockName, pLstn->fd);
 				break;
 			}
@@ -1755,5 +1756,3 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(statsobj.ConstructFinalize(modStats));
 
 ENDmodInit
-/* vim:set ai:
- */

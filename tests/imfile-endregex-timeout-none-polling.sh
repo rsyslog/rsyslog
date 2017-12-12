@@ -1,13 +1,6 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 echo ======================================================================
-
-uname
-if [ `uname` = "FreeBSD" ] ; then
-   echo "This test currently does not work on FreeBSD."
-   exit 77
-fi
-
 if [ `uname` = "SunOS" ] ; then
    echo "Solaris: FIX ME"
    exit 77
@@ -55,7 +48,7 @@ echo 'END OF TEST' >> rsyslog.input
 . $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 . $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
 
-echo 'HEADER msgnum:0\\n msgnum:1\\n msgnum:2\\n msgnum:3' | cmp rsyslog.out.log
+echo 'HEADER msgnum:0\\n msgnum:1\\n msgnum:2\\n msgnum:3' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid multiline message generated, rsyslog.out.log is:"
   cat rsyslog.out.log

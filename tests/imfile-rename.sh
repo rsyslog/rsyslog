@@ -2,20 +2,8 @@
 # This is part of the rsyslog testbench, licensed under GPLv3
 export TESTMESSAGES=10000
 export TESTMESSAGESFULL=19999
-
 echo [imfile-rename.sh]
-
-uname
-if [ `uname` = "FreeBSD" ] ; then
-   echo "This test currently does not work on FreeBSD."
-   exit 77
-fi
-
-if [ `uname` = "SunOS" ] ; then
-   echo "Solaris does not support inotify."
-   exit 77
-fi
-
+. $srcdir/diag.sh check-inotify-only
 . $srcdir/diag.sh init
 
 # generate input file first. 

@@ -620,24 +620,11 @@ CODESTARTnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
-BEGINparseSelectorAct
-CODESTARTparseSelectorAct
-	CODE_STD_STRING_REQUESTparseSelectorAct(1)
-
-	if(!strncmp((char*) p, ":omczmq:", sizeof(":omczmq:") - 1)) { 
-		LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
-			"omczmq supports only v6 config format, use: "
-			"action(type=\"omczmq\" serverport=...)");
-	}
-
-	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-	CODE_STD_FINALIZERparseSelectorAct
-ENDparseSelectorAct
-
 BEGINinitConfVars
 CODESTARTinitConfVars
 ENDinitConfVars
 
+NO_LEGACY_CONF_parseSelectorAct
 
 BEGINmodExit
 CODESTARTmodExit

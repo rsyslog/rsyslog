@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[8.31.0.master],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[8.32.0.master],[rsyslog@lists.adiscon.com])
 
 # AIXPORT START: Detect the underlying OS
 unamestr=$(uname)
@@ -286,12 +286,6 @@ case "${enable_largefile}" in
   *) enable_largefile="yes" ;;
 esac
 
-# do we have libsystemd?
-PKG_CHECK_MODULES([LIBSYSTEMD], [libsystemd],
-	[ AC_DEFINE(HAVE_LIBSYSTEMD, 1, [libsystemd present]) ],
-	[ AC_MSG_NOTICE([libsystemd not present - disabling systemd support]) ]
-	])
-
 # Regular expressions
 AC_ARG_ENABLE(regexp,
         [AS_HELP_STRING([--enable-regexp],[Enable regular expressions support @<:@default=yes@:>@])],
@@ -348,6 +342,20 @@ if test $enable_gssapi_krb5 = yes; then
 fi
 AM_CONDITIONAL(ENABLE_GSSAPI, test x$enable_gssapi_krb5 = xyes)
 
+
+# shall the testbench try to run test that require root permissions?
+# This is uncommon. Test skip if run under non-root, but that pollutes the
+# testbench result. So the default is not to do that.
+AC_ARG_ENABLE(root_tests,
+        [AS_HELP_STRING([--enable-root-tests],[enable root tests in testbench @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_root_tests="yes" ;;
+          no) enable_root_tests="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-root-tests) ;;
+         esac],
+        [enable_root_tests=no]
+)
+AM_CONDITIONAL(ENABLE_ROOT_TESTS, test x$enable_root_tests = xyes)
 
 # multithreading via pthreads
 if test "$os_type" != "solaris"
@@ -475,6 +483,35 @@ if test "x$enable_imjournal" = "xyes"; then
 	])
 fi
 AM_CONDITIONAL(ENABLE_IMJOURNAL, test x$enable_imjournal = xyes)
+
+# use libsystemd
+AC_ARG_ENABLE(libsystemd,
+        [AS_HELP_STRING([--enable-libsystemd],[Enable libsystemd mode @<:@default=auto@:>@])],
+        [case "${enableval}" in
+          yes) enable_libsystemd="yes" ;;
+           no) enable_libsystemd="no" ;;
+         auto) enable_libsystemd="auto" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-libsystemd) ;;
+         esac],
+        [enable_libsystemd="auto"]
+)
+if test "$enable_libsystemd" = "yes"; then
+	PKG_CHECK_MODULES([LIBSYSTEMD], [libsystemd],
+		[ AC_DEFINE(HAVE_LIBSYSTEMD, 1, [libsystemd present]) ]
+	)
+fi
+if test "$enable_libsystemd" = "auto"; then
+	PKG_CHECK_MODULES([LIBSYSTEMD], [libsystemd],
+		[ AC_DEFINE(HAVE_LIBSYSTEMD, 1, [libsystemd present])
+		  AC_MSG_NOTICE([--enable-libsystemd in auto mode])
+		  enable_libsystemd="yes"
+		],
+		[ AC_MSG_WARN([libsystemd not present - disabling systemd support])
+		  enable_libsystemd="no"
+		]
+	)
+	AC_MSG_NOTICE([--enable-libsystemd in auto mode, enable-libsystemd is set to ${enable_libsystemd}])
+fi
 
 # inet
 AC_ARG_ENABLE(inet,
@@ -1350,6 +1387,35 @@ AC_ARG_ENABLE(testbench,
         [enable_testbench=no]
 )
 
+# under Travis, we have a ~50 minute max runtime per VM. So we permit to
+# split the testbench in multiple runs, which we can place into different
+# VMs. It's not perfect, but it works...
+AC_ARG_ENABLE(testbench1,
+        [AS_HELP_STRING([--enable-testbench1],[testbench1 enabled @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_testbench1="yes" ;;
+          no) enable_testbench1="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-testbench1) ;;
+         esac],
+        [enable_testbench1=yes]
+)
+
+# under Travis, we have a ~50 minute max runtime per VM. So we permit to
+# split the testbench in multiple runs, which we can place into different
+# VMs. It's not perfect, but it works...
+AC_ARG_ENABLE(testbench2,
+        [AS_HELP_STRING([--enable-testbench2],[testbench2 enabled @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_testbench2="yes" ;;
+          no) enable_testbench2="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-testbench2) ;;
+         esac],
+        [enable_testbench2=yes]
+)
+
+AM_CONDITIONAL(ENABLE_TESTBENCH1, test "x${enable_testbench1}" = "xyes")
+AM_CONDITIONAL(ENABLE_TESTBENCH2, test "x${enable_testbench2}" = "xyes")
+
 AC_CHECK_PROG(IP, [ip], [yes], [no])
 if test "x${IP}" = "xno"; then
 	AC_MSG_NOTICE([Will not check network namespace functionality as 'ip' (part of iproute2) is not available.])
@@ -1390,6 +1456,22 @@ AC_ARG_ENABLE(imfile,
          esac],
         [enable_imfile=no]
 )
+if test "x$enable_imfile" = "xyes"; then
+	AC_CHECK_FUNCS(port_create,,)
+	AC_MSG_CHECKING(for Solaris File Events Notification API support)
+	AC_TRY_COMPILE([
+		#include <port.h>
+		#include <sys/port.h>
+		], [
+		return PORT_SOURCE_FILE;
+		]
+		,
+		AC_DEFINE(HAVE_PORT_SOURCE_FILE, 1, [Enable FEN support for imfile])
+		AC_MSG_RESULT(yes)
+		,
+		AC_MSG_RESULT(no)
+	)
+fi
 AM_CONDITIONAL(ENABLE_IMFILE, test x$enable_imfile = xyes)
 
 
@@ -2002,7 +2084,6 @@ AM_CONDITIONAL(ENABLE_OMTCL, test x$enable_omtcl = xyes)
 # END TCL SUPPORT
 
 # man pages
-AC_CHECKING([if required man pages already exist])
 have_to_generate_man_pages="no"
 git_src_have_to_generate_man_pages="yes" # default to use when building from git source
 AC_ARG_ENABLE(generate-man-pages,
@@ -2035,7 +2116,7 @@ AM_CONDITIONAL(ENABLE_DISTCHECK_WORKAROUND, test x$enable_distcheck_workaround =
 if test "x$in_git_src" = "xyes"; then
         AC_MSG_NOTICE([Running from git source])
 
-        have_to_generate_man_pages=git_src_have_to_generate_man_pages
+        have_to_generate_man_pages=$git_src_have_to_generate_man_pages
 
         if test "x$LEX" != "xflex"; then
                 AC_MSG_ERROR([flex program is needed to build rsyslog, please install flex.])
@@ -2152,6 +2233,7 @@ echo "    Log file encryption support:              $enable_libgcrypt"
 echo "    anonymization support enabled:            $enable_mmanon"
 echo "    message counting support enabled:         $enable_mmcount"
 echo "    liblogging-stdlog support enabled:        $enable_liblogging_stdlog"
+echo "    libsystemd enabled:                       $enable_libsystemd"
 echo "    kafka static linking enabled:             $enable_kafka_static"
 echo
 echo "---{ input plugins }---"
@@ -2224,6 +2306,8 @@ echo "    SNMP support enabled:                     $enable_snmp"
 echo
 echo "---{ debugging support }---"
 echo "    Testbench enabled:                        $enable_testbench"
+echo "    Testbench1 enabled:                       $enable_testbench1"
+echo "    Testbench2 enabled:                       $enable_testbench2"
 echo "    Extended Testbench enabled:               $enable_extended_tests"
 echo "    MySQL Tests enabled:                      $enable_mysql_tests"
 echo "    PostgreSQL Tests enabled:                 $enable_pgsql_tests"

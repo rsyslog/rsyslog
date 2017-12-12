@@ -1,5 +1,101 @@
 ------------------------------------------------------------------------------
+Version 8.32.0 [v8-stable] 2018-01-09
+- ompgsql: considerable enhancements
+  The PostgreSQL output module was woefully out-of-date the following
+  list is changes made to update the module to current Rsyslog standards.
+    * allow for v6 configuration syntax
+    * configurable ports
+    * support transactional interface
+    * push db connection into workers (libpq is threadsafe)
+    * enable module testing on travis
+    * ensure configuration syntax backwards compatibility
+    * formatting around postgres core templating
+    * use new test conventions
+    * add new configuration syntax test
+    * add valgrind tests for new and old syntax
+    * add threading tests
+    * add action queue long running tests
+    * add action queue valgrind test
+  Thanks to Dan Molik for contributing this great enhancement!
+- imfile: added support for Solaris File Event notification
+  improves performance under Solaris; current implementation does not yet
+  support wildcards (will follow as a separate project)
+- imuxsock: improved status reporting: socket name received from systemd
+  Providing an indication of what we got from systemd facilitates problem
+  analysis.
+- build system: added new testbench configure switches
+  now --enable-testbench1 and --enable-testbench2 exists which permit
+  to enable/disable parts of the testbench. By default, both are on
+  when --enable-testbench is given. For full testbench coverage, both
+  options must be given. These options are necessary because under
+  Travis we hit the max runtime for tests and needed to split tests
+  over multiple incarnations.
+- RainerScript: add function parse_json()
+- RainerScript: add function substring()
+- RainerScript: add function previous_is_suspended()
+  This function returns a boolean indicating if the previous action is
+  suspended (0 - no, 1 - yes). This is useful if arbitrary processing
+  (other than calling actions) should be made depending on that state.
+  A prime example for this is probably calling a ruleset.
+  closes https://github.com/rsyslog/rsyslog/issues/1939
+- RainerScript: add function script_error() and error-reporting support
+  This permits script functions that could fail to report errors back, so
+  that the user can handle them if desired. We use an errno-style of
+  interface. That means script_error() needs to be called after functions
+  that supports it. It will return either 0 (all OK) or something else
+  (an error condition).
+  The commit also modifies the parse_time() function to use the new
+  interface. First of all, this is useful for users, and secondly we
+  needed a capability to craft a testbench test.
+  closes https://github.com/rsyslog/rsyslog/issues/1978
+- added --enable-libsystemd configure option to enforce use of libsystemd
+  so we can fail the build on platforms where this is required
+- fixed a couple of build issues with gcc-7 (in less frequently used modules)
+- fixed a couple of build issues on the arm platform (actually raspbian)
+- imudp bugfix: potential segfault in ratelimiting
+  The rate-limiter inside imudp was not set to be thread safe, but was
+  used across multiple threads. This worked in default configuration,
+  but failed when RepeatedMsgReduction was set to "on".
+  Note that it in general is a bug to use a rate-limiter in
+  non-threadsafe mode across multiple threads. This also causes invalid
+  rate limiting counts in the default case.
+  closes https://github.com/rsyslog/rsyslog/issues/441
+  fixes https://github.com/rsyslog/rsyslog/issues/2132
+- omprog bugfix: argv[0] not set when using binary without arguments
+  When using the omprog plugin with a binary without arguments, argv[0] (the
+  name of the binary) is not set, causing binaries that depend on this value
+  being set to crash or misbehave.
+  This patch also mildly refactors omprog argv[] creations, albeit some more
+  refactoring would be useful.
+  closes https://github.com/rsyslog/rsyslog/issues/1858
+- parent directory creation function refactored
+  This should not cause any change of behavior, but is worth noting in case
+  we see a regression not caught by the CI system.
+- mmsnmptrapd bugfix: potential misadressing
+  This only occured in situations when the system was totally out of memory.
+- dnscache bugfix: entries were cached based on IP AND port number
+  That  hash key which is used to find out already cached dns entry gets
+  incorrectly computed from the whole sockaddr_storage
+  (sockaddr_in/sockaddr_in6) structure including a sin_port (which doesn't
+  have a static value) instead of only an address, thus creating redundant
+  dns cache entries/consuming more space. This lead to potentially high memory
+  usage and ineffectiveness of the case. It could be considered a memory leak.
+  Thanks to Martin Osvald for the patch.
+  see also: https://github.com/rsyslog/rsyslog/pull/2160
+- omkafka bugfix: fixed memory leak
+  a memory leak occurred when librdkafka communicated error/status information
+  to omkafka. this seems to happen relatively frequently, so this leak
+  could be pretty problematic.
+- pmnormalize bugfix: remove unsave "strcat" implementation
+- rainerscript bugfix: ltrim() and rtrim function misadressing
+  This could lead to a segfault and was triggerred by certain input data
+  schemes. For example, a ltrim(" a") could lead to the fault.
+- CI testing
+  - ARM (via Raspberry PI) added to CI system
+------------------------------------------------------------------------------
 Version 8.31.0 [v8-stable] 2017-11-28
+- NEW BUILD DEPENDENCY: ommongodb now requires libmongo-c
+  instead of deprecated libmongo-client.
 - remove systemd embedded code, use libsystemd instead
   Since the early days rsyslog used the orginal systemd embedded
   interface code. This version now uses libsystemd where available.
@@ -34,6 +130,9 @@ Version 8.31.0 [v8-stable] 2017-11-28
 - omprog: added error handling and transaction support for external plugins
   This permits much better integration of external output modules.
   Special thanks to Joan Sala for providing this work!
+- imzmq3/omzmq3: marked as deprecated, modules will be remove in v8.41
+  see also: https://github.com/rsyslog/rsyslog/issues/2100
+- imzmq3/omzmq3: fixed build issues with gcc-7
 - core: emit error message on abnormal input thread termination
   This indicates a serious issue of which the user should be notified.
   Was not done so far and caused grief when troubleshooting issues.
@@ -48,6 +147,8 @@ Version 8.31.0 [v8-stable] 2017-11-28
   keep a simple lock ... unlock scheme within the function. That is
   easier to follow for both humans as well as static analyzers.
   Also removes Coverity scan CID 185419
+- rainerscript: use crypto-grade random number generator for random() function
+  We now use /dev/urandom if available. If not, we fall back to the weak PRNG.
 - imkafka: improve error reporting and cleanup refactoring
 - imkafka bugfix: segfault if "broker" parameter is not specified
   Now emits warning message instead and uses hardcoded default
@@ -188,6 +289,12 @@ Version 8.31.0 [v8-stable] 2017-11-28
   everyone meant it should still be handled via suspension. See
   github tracker below for more details.
   closes https://github.com/rsyslog/rsyslog/issues/1832
+- omfile bugfix: race during directory creation can lead to loop
+  There was a race where two threads were competing for directory creation
+  which could lead to none succeeding and a flood of error message like this
+  "error during config processing: omfile: creating parent directories for
+  file". This has been solved.
+  Thanks to Niko Kortström for the patch.
 - imudp: improve error reporting
   When udp listener cannot be created, an error message containing
   the ip-address and port is put out.
@@ -340,6 +447,8 @@ Version 8.31.0 [v8-stable] 2017-11-28
     a) different ElasticSearch versions
     b) independently from OS-installed version
     This also sets base to enable more elaboreate ES tests
+  * further relaxed timing of dynstats tests, as they tend to create
+    false positives on slow machines
 - CI: improved test coverage on FreeBSD
 - Travis: clang static analyzer 5.0 now run over all source files
 - build: make compile warning-free under gcc 7

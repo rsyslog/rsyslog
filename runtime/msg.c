@@ -843,11 +843,11 @@ msgBaseConstruct(smsg_t **ppThis)
 	pM->pszRcvdAt3164 = NULL;
 	pM->pszRcvdAt3339 = NULL;
 	pM->pszRcvdAt_MySQL = NULL;
-        pM->pszRcvdAt_PgSQL = NULL;
+	pM->pszRcvdAt_PgSQL = NULL;
 	pM->pszTIMESTAMP3164 = NULL;
 	pM->pszTIMESTAMP3339 = NULL;
 	pM->pszTIMESTAMP_MySQL = NULL;
-        pM->pszTIMESTAMP_PgSQL = NULL;
+	pM->pszTIMESTAMP_PgSQL = NULL;
 	pM->pszStrucData = NULL;
 	pM->pCSAPPNAME = NULL;
 	pM->pCSPROCID = NULL;
@@ -1777,17 +1777,17 @@ getTimeReported(smsg_t * const pM, enum tplFormatTypes eFmt)
 		}
 		MsgUnlock(pM);
 		return(pM->pszTIMESTAMP_MySQL);
-        case tplFmtPgSQLDate:
-                MsgLock(pM);
-                if(pM->pszTIMESTAMP_PgSQL == NULL) {
-                        if((pM->pszTIMESTAMP_PgSQL = MALLOC(21)) == NULL) {
-                                MsgUnlock(pM);
-                                return "";
-                        }
-                        datetime.formatTimestampToPgSQL(&pM->tTIMESTAMP, pM->pszTIMESTAMP_PgSQL);
-                }
-                MsgUnlock(pM);
-                return(pM->pszTIMESTAMP_PgSQL);
+	case tplFmtPgSQLDate:
+		MsgLock(pM);
+		if(pM->pszTIMESTAMP_PgSQL == NULL) {
+			if((pM->pszTIMESTAMP_PgSQL = MALLOC(21)) == NULL) {
+				MsgUnlock(pM);
+				return "";
+			}
+			datetime.formatTimestampToPgSQL(&pM->tTIMESTAMP, pM->pszTIMESTAMP_PgSQL);
+		}
+		MsgUnlock(pM);
+		return(pM->pszTIMESTAMP_PgSQL);
 	case tplFmtRFC3339Date:
 		MsgLock(pM);
 		if(pM->pszTIMESTAMP3339 == NULL) {
@@ -1871,11 +1871,11 @@ static const char *getTimeUTC(struct syslogTime *const __restrict__ pTmIn,
 			datetime.formatTimestampToMySQL(pTm, retbuf);
 		}
 		break;
-        case tplFmtPgSQLDate:
+	case tplFmtPgSQLDate:
 		if((retbuf = MALLOC(21)) != NULL) {
-                        datetime.formatTimestampToPgSQL(pTm, retbuf);
-                }
-                break;
+			datetime.formatTimestampToPgSQL(pTm, retbuf);
+		}
+		break;
 	case tplFmtRFC3164Date:
 	case tplFmtRFC3164BuggyDate:
 		if((retbuf = MALLOC(16)) != NULL) {
@@ -1983,17 +1983,17 @@ getTimeGenerated(smsg_t *const __restrict__ pM,
 		}
 		MsgUnlock(pM);
 		return(pM->pszRcvdAt_MySQL);
-        case tplFmtPgSQLDate:
-                MsgLock(pM);
-                if(pM->pszRcvdAt_PgSQL == NULL) {
-                        if((pM->pszRcvdAt_PgSQL = MALLOC(21)) == NULL) {
-                                MsgUnlock(pM);
-                                return "";
-                        }
-                        datetime.formatTimestampToPgSQL(pTm, pM->pszRcvdAt_PgSQL);
-                }
-                MsgUnlock(pM);
-                return(pM->pszRcvdAt_PgSQL);
+	case tplFmtPgSQLDate:
+		MsgLock(pM);
+		if(pM->pszRcvdAt_PgSQL == NULL) {
+			if((pM->pszRcvdAt_PgSQL = MALLOC(21)) == NULL) {
+				MsgUnlock(pM);
+				return "";
+			}
+			datetime.formatTimestampToPgSQL(pTm, pM->pszRcvdAt_PgSQL);
+		}
+		MsgUnlock(pM);
+		return(pM->pszRcvdAt_PgSQL);
 	case tplFmtRFC3164Date:
 	case tplFmtRFC3164BuggyDate:
 		MsgLock(pM);

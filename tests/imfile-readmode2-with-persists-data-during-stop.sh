@@ -1,12 +1,8 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 echo ======================================================================
-# Check if inotify header exist
-if [ -n "$(find /usr/include -name 'inotify.h' -print -quit)" ]; then
-	echo [imfile-readmode2-with-persists-data-during-stop.sh]
-else
-	exit 77 # no inotify available, skip this test
-fi
+echo [imfile-readmode2-with-persists-data-during-stop.sh]
+. $srcdir/diag.sh check-inotify
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup imfile-readmode2-with-persists-data-during-stop.conf
 

@@ -244,9 +244,16 @@ static void msgConsume (instanceConf_t *inst) {
 					rkmessage->offset,
 					rkmessage->len);
 		enqMsg(inst, rkmessage);
+		/* Destroy message and continue */
 		rd_kafka_message_destroy(rkmessage);
+		rkmessage = NULL;
 	} while(1); /* loop broken inside */
-done:	return;
+done:
+	/* Destroy message in case rkmessage->err was set */
+	if(rkmessage != NULL) {
+		rd_kafka_message_destroy(rkmessage);
+	}
+	return;
 }
 
 

@@ -55,6 +55,7 @@
 #include "module-template.h"
 #include "conf.h"
 #include "cfsysline.h"
+#include "srUtils.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -177,11 +178,7 @@ static rsRetVal doSleep(instanceData *pData)
 static rsRetVal doRandFail(void)
 {
 	DEFiRet;
-	/* coverity[dc.weak_crypto]
-	 * this is NOT used for security purposes,
-	 * so weak PRNG is OK - rgerhards, 2017-10-30
-	 */
-	if((rand() >> 4) < (RAND_MAX >> 5)) { /* rougly same probability */
+	if((randomNumber() >> 4) < (RAND_MAX >> 5)) { /* rougly same probability */
 		iRet = RS_RET_OK;
 		dbgprintf("omtesting randfail: succeeded this time\n");
 	} else {

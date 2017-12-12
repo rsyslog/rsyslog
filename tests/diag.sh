@@ -40,7 +40,8 @@
 #set -o xtrace
 #export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 #export RSYSLOG_DEBUGLOG="log"
-TB_TIMEOUT_STARTSTOP=1200 # timeout for start/stop rsyslogd in tenths (!) of a second 1200 => 2 min
+TB_TIMEOUT_STARTSTOP=400 # timeout for start/stop rsyslogd in tenths (!) of a second 400 => 40 sec
+# note that 40sec for the startup should be sufficient even on very slow machines. we changed this from 2min on 2017-12-12
 
 #START: ext kafka config
 dep_cache_dir=$(readlink -f $srcdir/.dep_cache)
@@ -1005,6 +1006,29 @@ case $1 in
 		fi
 
 		(cd $dep_work_dir/kafka && ./bin/kafka-console-consumer.sh --timeout-ms 2000 --from-beginning --zookeeper localhost:$dep_work_port/kafka --topic $2 > $dep_kafka_log_dump)
+		;;
+	'check-inotify') # Check for inotify/fen support 
+		if [ -n "$(find /usr/include -name 'inotify.h' -print -quit)" ]; then
+			echo [inotify mode]
+		elif [ -n "$(find /usr/include/sys/ -name 'port.h' -print -quit)" ]; then
+			cat /usr/include/sys/port.h | grep -qF "PORT_SOURCE_FILE" 
+			if [ "$?" -ne "0" ]; then
+				echo [port.h found but FEN API not implemented , skipping...]
+				exit 77 # FEN API not available, skip this test
+			fi
+			echo [fen mode]
+		else
+			echo [inotify/fen not supported, skipping...]
+			exit 77 # no inotify available, skip this test
+		fi
+		;;
+	'check-inotify-only') # Check for ONLY inotify support 
+		if [ -n "$(find /usr/include -name 'inotify.h' -print -quit)" ]; then
+			echo [inotify mode]
+		else
+			echo [inotify not supported, skipping...]
+			exit 77 # no inotify available, skip this test
+		fi
 		;;
 	'error-exit') # this is called if we had an error and need to abort. Here, we
                 # try to gather as much information as possible. That's most important
