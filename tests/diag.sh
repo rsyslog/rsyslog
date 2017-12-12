@@ -40,7 +40,8 @@
 #set -o xtrace
 #export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 #export RSYSLOG_DEBUGLOG="log"
-TB_TIMEOUT_STARTSTOP=1200 # timeout for start/stop rsyslogd in tenths (!) of a second 1200 => 2 min
+TB_TIMEOUT_STARTSTOP=400 # timeout for start/stop rsyslogd in tenths (!) of a second 400 => 40 sec
+# note that 40sec for the startup should be sufficient even on very slow machines. we changed this from 2min on 2017-12-12
 
 #START: ext kafka config
 dep_cache_dir=$(readlink -f $srcdir/.dep_cache)
