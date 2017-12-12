@@ -249,6 +249,7 @@ TESTS +=  \
 	rscript_format_time.sh \
 	rscript_parse_time.sh \
 	rscript_script_error.sh \
+	rscript_parse_json.sh \
 	rscript_previous_action_suspended.sh \
 	mmanon_random_32_ipv4.sh \
 	mmanon_random_cons_32_ipv4.sh \
@@ -924,6 +925,7 @@ EXTRA_DIST= \
 	rscript_parse_time.sh \
 	rscript_parse_time_get-ts.py \
 	rscript_script_error.sh \
+	rscript_parse_json.sh \
 	rscript_previous_action_suspended.sh \
 	mmanon_random_32_ipv4.sh \
 	mmanon_random_cons_32_ipv4.sh \

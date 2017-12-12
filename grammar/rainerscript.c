@@ -1677,6 +1677,38 @@ doFuncReplace(struct svar *__restrict__ const operandVal, struct svar *__restric
     return res;
 }
 
+
+static int ATTR_NONNULL()
+doFunc_parse_json(const char *__restrict__ const jsontext,
+	const char *__restrict__ const container,
+	smsg_t *const pMsg,
+	wti_t *pWti)
+{
+	int ret;
+	assert(jsontext != NULL);
+	assert(container != NULL);
+	assert(pMsg != NULL);
+
+	struct json_tokener *const tokener = json_tokener_new();
+	if(tokener == NULL) {
+		ret = 1;
+		goto finalize_it;
+	}
+	struct json_object *const json = json_tokener_parse_ex(tokener, jsontext, strlen(jsontext));
+	if(json == NULL) {
+		ret = RS_SCRIPT_EINVAL;
+	} else {
+		size_t off = (*container == '$') ? 1 : 0;
+		msgAddJSON(pMsg, (uchar*)container+off, json, 0, 0);
+		ret = RS_SCRIPT_EOK;
+	}
+	wtiSetScriptErrno(pWti, ret);
+	json_tokener_free(tokener);
+finalize_it:
+	return ret;
+}
+
+
 static es_str_t*
 doFuncWrap(struct svar *__restrict__ const sourceVal, struct svar *__restrict__ const wrapperVal,
 	struct svar *__restrict__ const escaperVal) {
@@ -1907,8 +1939,10 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 {
 	char *envvar;
 	int bMustFree;
+	int bMustFree2;
 	es_str_t *estr;
 	char *str;
+	char *str2;
 	uchar *resStr;
 	int retval;
 	struct svar r[CNFFUNC_MAX_ARGS];
@@ -2259,6 +2293,16 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 		ret->datatype = 'N';
 		ret->d.n = wtiGetPrevWasSuspended(pWti);
 		DBGPRINTF("previous_action_suspended() is %d\n", (int) ret->d.n);
+		break;
+	case CNFFUNC_PARSE_JSON:
+		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
+		cnfexprEval(func->expr[1], &r[1], usrptr, pWti);
+		str = (char*) var2CString(&r[0], &bMustFree);
+		str2 = (char*) var2CString(&r[1], &bMustFree2);
+		ret->datatype = 'N';
+		ret->d.n = doFunc_parse_json(str, str2, (smsg_t*) usrptr, pWti);
+		if(bMustFree) free(str);
+		if(bMustFree2) free(str2);
 		break;
 	default:
 		if(Debug) {
@@ -4382,6 +4426,8 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 		GENERATE_FUNC("format_time", 2, CNFFUNC_FORMAT_TIME);
 	} else if(FUNC_NAME("parse_time")) {
 		GENERATE_FUNC("parse_time", 1, CNFFUNC_PARSE_TIME);
+	} else if(FUNC_NAME("parse_json")) {
+		GENERATE_FUNC("parse_json", 2, CNFFUNC_PARSE_JSON);
 	} else if(FUNC_NAME("script_error")) {
 		GENERATE_FUNC("script_error", 0, CNFFUNC_SCRIPT_ERROR);
 	} else if(FUNC_NAME("previous_action_suspended")) {
