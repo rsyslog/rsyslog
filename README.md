@@ -67,7 +67,7 @@ later steps are identical, so those steps have been covered in one place.
 #### Windows and Linux
 
 1. Install `sphinx` package locally instead of system-wide
-    1. `pip install --user sphinx`    
+    1. `pip install sphinx`    
 1. Checkout stable branch from Git repo
     1. `git clone https://github.com/rsyslog/rsyslog-doc.git`
     1. `cd rsyslog-doc`
