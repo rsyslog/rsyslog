@@ -68,12 +68,16 @@ later steps are identical, so those steps have been covered in one place.
 
 1. Install `sphinx` package locally instead of system-wide
     1. `pip install sphinx`    
-1. Checkout stable branch from Git repo
+1. Clone the official Git repo
     1. `git clone https://github.com/rsyslog/rsyslog-doc.git`
+1. Checkout either the current stable or development (aka, "master") branch
     1. `cd rsyslog-doc`
-    1. `git checkout v8-stable`
-
-**Note**: If you have previously cloned the repo and checked out the `v8-stable` branch, run `git pull` to update it with new changes before continuing.
+    1. `git checkout BRANCH_NAME_HERE`
+        - Choose the `v8-stable` branch for coverage of features currently
+          available in the latest stable release
+        - Choose the `master` branch for coverage of upcoming features and fixes
+1. Optional: If you have previously cloned the repo, run `git pull` to update it
+   with new changes before continuing.
 
 ### Generate documentation
 
