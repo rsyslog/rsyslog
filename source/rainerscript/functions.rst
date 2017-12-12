@@ -309,6 +309,15 @@ it produces the original value:
 
    foo
 
+parse_json(string, container)
+-----------------------------
+
+   Parses the json string ``string`` and places the resulting json object
+   into ``container`` where container can be any valid rsyslog variable.
+   Returns 0 on success and something otherwise if ``string`` does **not**
+   contain valid json.
+
+
 parse_time(timestamp)
 ---------------------------------------
 
