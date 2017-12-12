@@ -49,14 +49,9 @@ source_suffix = '.rst'
 rst_prolog = """
 .. |PRODUCT| replace:: ``Rsyslog``
 
-.. |FormatsBasicOldName| replace:: ``sysklogd``
-.. |FormatsBasicNewName| replace:: ``basic``
-
-.. |FormatsAdvancedOldName| replace:: ``RainerScript``
-.. |FormatsAdvancedNewName| replace:: ``advanced``
-
-.. |FormatsObsoleteOldName| replace:: ``legacy``
-.. |FormatsObsoleteNewName| replace:: ``obsolete legacy``
+.. |FmtBasicName| replace:: ``basic``
+.. |FmtAdvancedName| replace:: ``advanced``
+.. |FmtObsoleteName| replace:: ``obsolete legacy``
 
 .. |FmtObsoleteDescription| replace:: ``Obsolete Format Equivalents``
 """
