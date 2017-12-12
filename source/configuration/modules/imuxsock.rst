@@ -62,6 +62,14 @@ properties at the end. For these reasons, the feature is **not enabled
 by default**. If you want to use it, you must turn it on (via
 SysSock.Annotate and Annotate).
 
+Note that on systems with **systemd journal**, the journal often interferes
+with the system log socket. Imuxsock can still be used in this setup
+and provides superior performance over :doc:`imjournal <imjournal>`, the
+alternative journal input module. It must be noted, however, that the
+journal tends to drop messages when it becomes busy instead of forwarding
+them to the system log socket. This is because the journal uses an async
+log socket interface for forwarding instead of the traditional synchronous one.
+
 Configuration Parameters
 ------------------------
 
@@ -83,6 +91,11 @@ Note: parameter names are case-insensitive.
    log socket. This is most useful if you run multiple instances of
    rsyslogd where only one shall handle the system log socket.
 -  **SysSock.Name** <name-of-socket>
+   This is the name of the system log socket, traditionally ``/dev/log``.
+   This socket is created upon rsyslog startup and deleted upon shutdown,
+   according to traditional syslogd behavior.
+
+   Please also be sure to read the special notes for systemd systems below!
 -  **SysSock.FlowControl** [on/**off**] - specifies if flow control
    should be applied to the system log socket.
 -  **SysSock.UsePIDFromSystem** [on/**off**] - specifies if the pid
@@ -120,6 +133,33 @@ Note: parameter names are case-insensitive.
 -  **sysSock.parseHostname** (available since 8.9.0)
    The equivalent of the "parseHostname" input parameter for the
    system socket.
+
+**Note: when running under systemd, the "sysSock." parameters are often ignored.**
+If rsyslog is configured with systemd suppor, these rules apply:
+
+* **sysSock.sockName** defaults to
+  ``/run/systemd/journal/syslog`` if and only if
+
+  1) that path exists,
+  2) the system actually was booted under systemd, and
+  3) this path actually is a socket.
+
+  Otherwise, the regular default applies. If sysSock.sockName is explicitely
+  set, the provided value is used.
+
+* to support systemd (not the journal) socket activation, rsyslog obtains the log
+  socket from systemd if systemd is configured to actually provide them. In this
+  case, rsyslog will neither create the log socket upon startup nor delete it
+  upon shutdown. It will also ignore the value set for **sysSock.sockName**.
+
+Rsyslog should by default be configured for systemd support on all platforms that
+usually run systemd (which means most Linux distributions, but not, for example,
+Solaris).
+
+With systemd journal socket forwarding, some of the "sysSock." parameters might not
+work or might not work as expected. This is depending on the actual systemd journal
+version and configuration. If you run in a problem in this regard, be first to check
+systemd and systemd journal configuration first.
 
 Input Parameters
 ^^^^^^^^^^^^^^^^
@@ -294,8 +334,8 @@ The following sample is used activate message annotation and thus
 trusted properties on the system log socket. module(load="imuxsock" #
 needs to be done just once SysSock.Annotate="on")
 
-Legacy Configuration Parameters
--------------------------------
+|FmtObsoleteDescription|
+------------------------
 
 Note: parameter names are case-insensitive.
 
@@ -421,9 +461,3 @@ trusted properties on the system log socket.
 
   $ModLoad imuxsock # needs to be done just once
   $SystemLogSocketAnnotate on
-
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-Copyright © 2008-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_ and
-`Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
-3 or higher.
