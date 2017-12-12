@@ -30,6 +30,7 @@ Version 8.32.0 [v8-stable] 2018-01-09
   options must be given. These options are necessary because under
   Travis we hit the max runtime for tests and needed to split tests
   over multiple incarnations.
+- RainerScript: add function substring()
 - RainerScript: add function previous_is_suspended()
   This function returns a boolean indicating if the previous action is
   suspended (0 - no, 1 - yes). This is useful if arbitrary processing
