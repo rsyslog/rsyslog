@@ -331,24 +331,21 @@ rd_kafka_topic_t** topic) {
 
 	if(topicconf == NULL) {
 		LogError(0, RS_RET_KAFKA_ERROR,
-						"omkafka: error creating kafka topic conf obj: %s\n",
-						rd_kafka_err2str(rd_kafka_last_error()));
+			"omkafka: error creating kafka topic conf obj: %s\n",
+			rd_kafka_err2str(rd_kafka_last_error()));
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	}
 	for(int i = 0 ; i < pData->nTopicConfParams ; ++i) {
 		DBGPRINTF("omkafka: setting custom topic configuration parameter: %s:%s\n",
 			pData->topicConfParams[i].name,
 			pData->topicConfParams[i].val);
-		if(rd_kafka_topic_conf_set(topicconf,
-								   pData->topicConfParams[i].name,
-								   pData->topicConfParams[i].val,
-								   errstr, sizeof(errstr))
-		   != RD_KAFKA_CONF_OK) {
+		if(rd_kafka_topic_conf_set(topicconf, pData->topicConfParams[i].name,
+		   pData->topicConfParams[i].val, errstr, sizeof(errstr)) != RD_KAFKA_CONF_OK) {
 			if(pData->bReportErrs) {
 				LogError(0, RS_RET_PARAM_ERROR, "error in kafka "
-								"topic conf parameter '%s=%s': %s",
-								pData->topicConfParams[i].name,
-								pData->topicConfParams[i].val, errstr);
+					"topic conf parameter '%s=%s': %s",
+					pData->topicConfParams[i].name,
+					pData->topicConfParams[i].val, errstr);
 			}
 			ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 		}
@@ -356,8 +353,8 @@ rd_kafka_topic_t** topic) {
 	rkt = rd_kafka_topic_new(pData->rk, (char *)newTopicName, topicconf);
 	if(rkt == NULL) {
 		LogError(0, RS_RET_KAFKA_ERROR,
-						"omkafka: error creating kafka topic: %s\n",
-						rd_kafka_err2str(rd_kafka_last_error()));
+			"omkafka: error creating kafka topic: %s\n",
+			rd_kafka_err2str(rd_kafka_last_error()));
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	}
 	*topic = rkt;
@@ -566,8 +563,9 @@ finalize_it:
 }
 
 /* must be called with read(rkLock) */
-static rsRetVal
-writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
+static rsRetVal ATTR_NONNULL(1, 2)
+writeKafka(instanceData *const pData, uchar *const msg,
+	uchar *const msgTimestamp, uchar *const topic)
 {
 	DEFiRet;
 	const int partition = getPartition(pData);
@@ -659,9 +657,10 @@ writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
 	if(msg_enqueue_status == -1) {
 		/* Put into kafka queue, again if configured! */
 		if (pData->bResubmitOnFailure) {
-			DBGPRINTF("omkafka: Failed to produce to topic '%s' (rd_kafka_produce)"
+		   	DBGPRINTF("omkafka: Failed to produce to topic '%s' (rd_kafka_produce)"
 				"partition %d: '%d/%s' - adding MSG '%s' to failed for RETRY!\n",
 				rd_kafka_topic_name(rkt), partition, rd_kafka_last_error(),
+				rd_kafka_err2str(rd_kafka_errno2err(errno)), msg);
 			CHKmalloc(fmsgEntry = failedmsg_entry_construct((char*) msg, strlen((char*)msg),
 				rd_kafka_topic_name(rkt)));
 			SLIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
@@ -734,7 +733,7 @@ deliveryCallback(rd_kafka_t __attribute__((unused)) *rk,
 		STATSCOUNTER_INC(ctrKafkaFail, mutCtrKafkaFail);
 	} else {
 		DBGPRINTF("omkafka: kafka delivery SUCCESS on msg '%.*s'\n", (int)(rkmessage->len-1),
-				(char*)rkmessage->payload);
+			(char*)rkmessage->payload);
 	}
 finalize_it:
 	if(iRet != RS_RET_OK) {
