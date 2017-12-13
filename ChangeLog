@@ -17,6 +17,17 @@ Version 8.32.0 [v8-stable] 2018-01-09
     * add action queue long running tests
     * add action queue valgrind test
   Thanks to Dan Molik for contributing this great enhancement!
+- pmrfc3164: support for headerless messages
+  pmrfc3164 now detects if the first non-SP, non-HT character is either
+  '{' or '[' and if so assume that no header (TAG, HOSTNAME, DATE) is
+  given. If so, it uses defaults for these values. The full message is
+  used as the MSG part in that case. Note that an initial PRI may still
+  be specified.
+  This follows the trend to send JSON messages via syslog without any
+  header. We use default header values in this case.
+  This right now is a bit experimental; we may roll it back if
+  problems show up in practice.
+  closes https://github.com/rsyslog/rsyslog/issues/2030
 - imfile: added support for Solaris File Event notification
   improves performance under Solaris; current implementation does not yet
   support wildcards (will follow as a separate project)
