@@ -616,21 +616,6 @@ AC_ARG_ENABLE(debug_symbols,
 )
 
 
-# runtime instrumentation
-AC_ARG_ENABLE(rtinst,
-        [AS_HELP_STRING([--enable-rtinst],[Enable runtime instrumentation mode @<:@default=no@:>@])],
-        [case "${enableval}" in
-         yes) enable_rtinst="yes" ;;
-          no) enable_rtinst="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-rtinst) ;;
-         esac],
-        [enable_rtinst="no"]
-)
-if test "$enable_rtinst" = "yes"; then
-        AC_DEFINE(RTINST, 1, [Defined if runtime instrumentation mode is enabled.])
-fi
-
-
 # total debugless: highest performance, but no way at all to enable debug 
 # logging
 AC_ARG_ENABLE(debugless,
@@ -2313,7 +2298,6 @@ echo "    MySQL Tests enabled:                      $enable_mysql_tests"
 echo "    PostgreSQL Tests enabled:                 $enable_pgsql_tests"
 echo "    Kafka Tests enabled:                      $enable_kafka_tests"
 echo "    Debug mode enabled:                       $enable_debug"
-echo "    Runtime Instrumentation enabled:          $enable_rtinst"
 echo "    (total) debugless mode enabled:           $enable_debugless"
 echo "    Diagnostic tools enabled:                 $enable_diagtools"
 echo "    End-User tools enabled:                   $enable_usertools"

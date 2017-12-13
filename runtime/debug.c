@@ -636,21 +636,6 @@ dbgFuncDB_t *pFuncDB, int ln, int iStackPtr)
 /* ------------------------- end mutex tracking code ------------------------- */ 
 
 
-/* ------------------------- malloc/free tracking code ------------------------- */ 
-
-/* wrapper for free() */
-void dbgFree(void *pMem, dbgFuncDB_t *pFuncDB, int ln, int iStackPtr)
-{
-	dbgRecordExecLocation(iStackPtr, ln);
-	if(bLogAllocFree) {
-		dbgprintf("%s:%d:%s: free %p\n", pFuncDB->file, ln, pFuncDB->func, (void*) pMem);
-	}
-	free(pMem);
-}
-
-
-/* ------------------------- end malloc/free tracking code ------------------------- */ 
-
 /* ------------------------- thread tracking code ------------------------- */ 
 
 /* get ptr to call stack - if none exists, create a new stack
@@ -1306,20 +1291,6 @@ dbgPrintNameIsInList(const uchar *pName, dbgPrintName_t *pRoot)
 	}
 
 	return bFound;
-}
-
-
-/* this is a special version of malloc that fills the alloced memory with
- * HIGHVALUE, as this helps to identify bugs. -- rgerhards, 2009-10-22
- */
-void *
-dbgmalloc(size_t size)
-{
-	void *pRet;
-	pRet = malloc(size);
-	if(pRet != NULL)
-		memset(pRet, 0xff, size);
-	return pRet;
 }
 
 
