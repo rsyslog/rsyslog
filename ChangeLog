@@ -17,6 +17,9 @@ Version 8.32.0 [v8-stable] 2018-01-09
     * add action queue long running tests
     * add action queue valgrind test
   Thanks to Dan Molik for contributing this great enhancement!
+- build system: removed --enable-rtinst configure option
+  This was a historic debugging option which has been superseeded by
+  newer tools like valgrind, helgrind, ASAN, TSAN, etc...
 - pmrfc3164: support for headerless messages
   pmrfc3164 now detects if the first non-SP, non-HT character is either
   '{' or '[' and if so assume that no header (TAG, HOSTNAME, DATE) is
