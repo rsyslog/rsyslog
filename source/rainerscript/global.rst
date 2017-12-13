@@ -84,8 +84,11 @@ The following parameters can be set:
 
 - **maxMessageSize**
 
-  The maximum message size rsyslog can process. Default is 8K. Anything
-  above the maximum size will be truncated.
+  Configures the maximum message size allowed for all inputs. Default is 8K.
+  Anything above the maximum size will be truncated.
+
+  Note: some modules provide separate parameters that allow overriding this
+  setting (e.g., :doc:`imrelp's MaxDataSize parameter <../../configuration/modules/imrelp>`).
 
 .. _global_janitorInterval:
 

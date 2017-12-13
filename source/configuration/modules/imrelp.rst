@@ -57,7 +57,7 @@ Note: parameter names are case-insensitive.
 
 .. function:: MaxDataSize <size_nbr>
 
-   *Default is the global message size*
+   *Default is value of* :doc:`global(maxMessageSize) <../../rainerscript/global>` *parameter*
 
    Sets the max message size (in bytes) that can be received. Any messages above this size
    will be rejected causing the relp client to reconnect and retry.
