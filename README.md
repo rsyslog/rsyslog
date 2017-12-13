@@ -30,7 +30,7 @@ that is what is shown here.
   into a dedicated environment instead of installing alongside packages that
   were installed system-wide or to the user's home directory with the `--user`
   flag. If you wish to install the `sphinx` package and all dependent packages
-  for all users of the system, then uou will need to run the package
+  for all users of the system, then you will need to run the package
   installation commands as an elevated user account (e.g., `sudo`, `su` or
   with administrator rights on a Windows system).
 
@@ -66,7 +66,7 @@ later steps are identical, so those steps have been covered in one place.
 
 #### Windows and Linux
 
-1. Install `sphinx` package locally instead of system-wide
+1. Install `sphinx` package in our new virtual environment instead of system-wide
     1. `pip install sphinx`    
 1. Clone the official Git repo
     1. `git clone https://github.com/rsyslog/rsyslog-doc.git`
