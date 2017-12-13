@@ -55,6 +55,11 @@
 
 #define N 80
 
+/* we need this to avoid issues with older versions of libbson */
+#ifndef AIX
+#pragma GCC diagnostic ignored "-Wexpansion-to-defined"
+#endif
+
 static struct option long_options[] =
 {
 	{"level", required_argument, NULL, 'l'},
