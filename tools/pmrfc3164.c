@@ -197,7 +197,7 @@ CODESTARTparse
 	 * by spaces or tabs followed '{' or '['.
 	 */
 	i = 0;
-	while(i < lenMsg && (p2parse[i] == ' ' || p2parse[i] == ' ')) {
+	while(i < lenMsg && (p2parse[i] == ' ' || p2parse[i] == '\t')) {
 		++i;
 	}
 	if(i < lenMsg && (p2parse[i] == '{' || p2parse[i] == '[')) {
