@@ -1508,21 +1508,24 @@ void *signer_thread(void *arg) {
 		if (ProtectedQueue_count(ctx->signer_queue) == 0)
 			continue;
 
-		if(as != NULL) {
-			/* in case of asynchronous service check for pending/unsent requests */
-			ret = process_requests_async(ctx, ksi_ctx, as, ksiFile);
-			if(!ret) {
-				// probably fatal error, disable signing, error should be already reported
-				ctx->disabled = true;
-				goto cleanup;
+		/* process signing requests only if there is an open signature file */
+		if(ksiFile != NULL) {
+			if(as != NULL) {
+				/* in case of asynchronous service check for pending/unsent requests */
+				ret = process_requests_async(ctx, ksi_ctx, as, ksiFile);
+				if(!ret) {
+					// probably fatal error, disable signing, error should be already reported
+					ctx->disabled = true;
+					goto cleanup;
+				}
 			}
-		}
-		else {
-			/* drain all consecutive signature requests from the queue and add
-			 * the last one to aggregation request */
-			if (ProtectedQueue_peekFront(ctx->signer_queue, (void**) &item)
-				&& item->type == QITEM_SIGNATURE_REQUEST) {
-				process_requests(ctx, ksi_ctx, ksiFile);
+			else {
+				/* drain all consecutive signature requests from the queue and add
+				 * the last one to aggregation request */
+				if (ProtectedQueue_peekFront(ctx->signer_queue, (void**) &item)
+					&& item->type == QITEM_SIGNATURE_REQUEST) {
+					process_requests(ctx, ksi_ctx, ksiFile);
+				}
 			}
 		}
 
