@@ -68,7 +68,7 @@ author = u'Rainer Gerhards and Others'
 # Generate the current stable version number from the latest git tag
 git_tag_output = subprocess.check_output(['git', 'tag', '--list', "v*"]).decode("utf-8").strip()
 git_tag_list = re.sub('[A-Za-z]', '', git_tag_output).split('\n')
-git_tag_list.sort(key=lambda s: map(int, s.split('.')))
+git_tag_list.sort(key=lambda s: [int(u) for u in s.split('.')])
 git_tag_latest = git_tag_list[-1]
 
 
