@@ -703,7 +703,7 @@ int rsCStrSzStrCmp(cstr_t *pCS1, uchar *psz, size_t iLenSz)
 		else
 			return strncmp((char*)pCS1->pBuf, (char*)psz, iLenSz);
 	else
-		return pCS1->iStrLen - iLenSz;
+		return (ssize_t) pCS1->iStrLen - (ssize_t) iLenSz;
 }
 
 
