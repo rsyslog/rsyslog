@@ -70,16 +70,13 @@ State Files
 ...........
 Rsyslog must keep track of which parts of the monitored file
 are already processed. This is done in so-called "state files" that
-are created in the rsyslog working directory. These files are read
-on startup to resume monitoring after a shutdown.
+are created in the rsyslog working directory and are read on startup to
+resume monitoring after a shutdown. The location of the rsyslog
+working directory is configurable via the ``global(workDirectory)``
+|FmtAdvancedName| format parameter.
 
 **Note**: The ``PersistStateInterval`` parameter must be set, otherwise state
 files will NOT be created.
-
-The location of the rsyslog working directory is configurable via the
-``$WorkDirectory`` |FmtObsoleteName| format (limited to |FmtObsoleteName|
-format directives only) or the ``global(workDirectory)`` |FmtAdvancedName|
-format parameter (|FmtAdvancedName| format parameters only).
 
 To avoid problems with duplicate state files, rsyslog automatically
 generates state file names according to the following scheme:
