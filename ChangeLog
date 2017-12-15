@@ -80,6 +80,16 @@ Version 8.32.0 [v8-stable] 2018-01-09
   rate limiting counts in the default case.
   closes https://github.com/rsyslog/rsyslog/issues/441
   fixes https://github.com/rsyslog/rsyslog/issues/2132
+- core bugfix: undefined behavior due to integer overflow
+  when searching strings, we may have an (unsigned) interger overflow
+  which can lead to misadressing.
+  Detected by clang ubsan.
+- bugfix: potential segfault on startup
+  timezone info table was "sorted" even though it may be NULL. There is
+  no practical case known where this lead to an actual abort, but in
+  theory it would be possible. If so, it would happen immediately on
+  startup.
+  Detected by clang ubsan.
 - omprog bugfix: argv[0] not set when using binary without arguments
   When using the omprog plugin with a binary without arguments, argv[0] (the
   name of the binary) is not set, causing binaries that depend on this value
