@@ -73,7 +73,13 @@ create_hashtable(unsigned int minsize,
 }
 
 /*****************************************************************************/
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wunknown-attributes"
+#endif
 unsigned int
+#if defined(__clang__)
+__attribute__((no_sanitize("unsigned-integer-overflow")))
+#endif
 hash(struct hashtable *h, void *k)
 {
     /* Aim to protect against poor hash functions by adding logic here

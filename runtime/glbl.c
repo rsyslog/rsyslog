@@ -1117,7 +1117,9 @@ glblDoneLoadCnf(void)
 	DEFiRet;
 	CHKiRet(objUse(net, CORE_COMPONENT));
 
-	qsort(tzinfos, ntzinfos, sizeof(tzinfo_t), qs_arrcmp_tzinfo);
+	if(ntzinfos > 0) {
+		qsort(tzinfos, ntzinfos, sizeof(tzinfo_t), qs_arrcmp_tzinfo);
+	}
 	DBGPRINTF("Timezone information table (%d entries):\n", ntzinfos);
 	displayTzinfos();
 

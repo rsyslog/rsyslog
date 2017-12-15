@@ -43,6 +43,7 @@
 #include "srUtils.h"
 #include "regexp.h"
 #include "errmsg.h"
+#include "unicode-helper.h"
 
 
 /* ################################################################# *
@@ -711,10 +712,12 @@ int rsCStrSzStrCmp(cstr_t *pCS1, uchar *psz, size_t iLenSz)
  * returned. Both parameters MUST be given (NULL is not allowed).
  * rgerhards 2005-09-19
  */
-int rsCStrLocateInSzStr(cstr_t *pThis, uchar *sz)
+int ATTR_NONNULL(1, 2)
+rsCStrLocateInSzStr(cstr_t *const pThis, uchar *const sz)
 {
-	int i;
-	int iMax;
+	size_t i;
+	size_t iMax;
+	size_t len_sz = ustrlen(sz);
 	int bFound;
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 	assert(sz != NULL);
@@ -726,7 +729,7 @@ int rsCStrLocateInSzStr(cstr_t *pThis, uchar *sz)
 	 * the to-be-located string must be able to be present in the 
 	 * searched string (it needs its size ;)).
 	 */
-	iMax = strlen((char*)sz) - pThis->iStrLen;
+	iMax = (pThis->iStrLen >= len_sz) ? 0 : len_sz - pThis->iStrLen;
 
 	bFound = 0;
 	i = 0;
@@ -742,7 +745,7 @@ int rsCStrLocateInSzStr(cstr_t *pThis, uchar *sz)
 			++i; /* on to the next try */
 	}
 
-	return(bFound ? i : -1);
+	return(bFound ? (int) i : -1);
 }
 
 
