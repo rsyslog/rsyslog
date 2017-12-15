@@ -69,9 +69,17 @@ disabled by default. It can explicitly be turned on or off via the
 State Files
 ...........
 Rsyslog must keep track of which parts of the monitored file
-are already processed. This is done in so-called "state files".
-These files are always created in the rsyslog working directory
-(configurable via $WorkDirectory).
+are already processed. This is done in so-called "state files" that
+are created in the rsyslog working directory. These files are read
+on startup to resume monitoring after a shutdown.
+
+**Note**: The ``PersistStateInterval`` parameter must be set, otherwise state
+files will NOT be created.
+
+The location of the rsyslog working directory is configurable via the
+``$WorkDirectory`` |FmtObsoleteName| format (limited to |FmtObsoleteName|
+format directives only) or the ``global(workDirectory)`` |FmtAdvancedName|
+format parameter (|FmtAdvancedName| format parameters only).
 
 To avoid problems with duplicate state files, rsyslog automatically
 generates state file names according to the following scheme:
@@ -155,8 +163,8 @@ Note: parameter names are case-insensitive.
   seconds.
 
   Note that timeGranularity has some performance implication. The more frequently
-  timeout processing is triggerred, the more processing time is needed. This
-  effect should be neglectible, except if a very large number of files is being
+  timeout processing is triggered, the more processing time is needed. This
+  effect should be negligible, except if a very large number of files is being
   monitored.
 
 .. index::
@@ -172,7 +180,7 @@ Note: parameter names are case-insensitive.
    polling interval, all files are processed in a round-robin fashion.
 
    A short poll interval provides more rapid message forwarding, but
-   requires more system resources. While it is possible, we stongly
+   requires more system resources. While it is possible, we strongly
    recommend not to set the polling interval to 0 seconds. That will
    make rsyslogd become a CPU hog, taking up considerable resources. It
    is supported, however, for the few very unusual situations where this
@@ -235,6 +243,8 @@ Note: parameter names are case-insensitive.
    (like power fail). Note that this setting affects imfile performance,
    especially when set to a low value. Frequently writing the state file
    is very time consuming.
+
+   **Note: If this parameter is not set, state files are not created.**
 
 .. index::
    single: imfile; startmsg.regex
@@ -396,7 +406,7 @@ Note: parameter names are case-insensitive.
 
    **Default: unset**
 
-   **This paramater is deprecated.** It still is accepted, but should
+   **This parameter is deprecated.** It still is accepted, but should
    no longer be used for newly created configurations.
 
    This is the name of this file's state file. This parameter should
@@ -471,7 +481,7 @@ WildCards
 
 
 **Since Version: 8.25.0**
-  Wildcards are supported in filename and pathes which means these samples will work:
+  Wildcards are supported in filename and paths which means these samples will work:
 
 * /var/log/\*.log **works**. *
 * /var/log/\*/syslog.log **works**. *
@@ -479,7 +489,7 @@ WildCards
 
 
   All matching files in all matching subfolders will work.
-  Note that this may derease performance in imfile depending on how
+  Note that this may decrease performance in imfile depending on how
   many directories and files are being watched dynamically.
 
 
