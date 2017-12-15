@@ -451,6 +451,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 		ABORT_FINALIZE(RS_RET_RELP_ERR);
 	}
 
+	DBGPRINTF("imrelp: max data size %zd\n", inst->maxDataSize);
 	resetConfigVariables(NULL,NULL);
 
 finalize_it:

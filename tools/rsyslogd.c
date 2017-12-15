@@ -1942,6 +1942,7 @@ main(int argc, char **argv)
 	sd_notify(0, "READY=1");
 	dbgprintf("done signaling to systemd that we are ready!\n");
 #endif
+	DBGPRINTF("max message size: %d\n", glblGetMaxLine());
 	DBGPRINTF("----RSYSLOGD INITIALIZED\n");
 
 	mainloop();
