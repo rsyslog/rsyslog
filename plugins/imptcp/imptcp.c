@@ -806,6 +806,10 @@ AcceptConnReq(ptcplstn_t *const pLstn, int *const newSock, prop_t **peerName, pr
 			    "on listen socket %d", pLstn->sock);
 		ABORT_FINALIZE(RS_RET_ACCEPT_ERR);
 	}
+	if(addrlen == 0) {
+		LogError(errno, RS_RET_ACCEPT_ERR, "AcceptConnReq could not obtain "
+			    "remote peer identification on listen socket %d", pLstn->sock);
+	}
 
 	if(pLstn->pSrv->bKeepAlive)
 		EnableKeepAlive(pLstn, iNewSock);/* we ignore errors, best to do! */
