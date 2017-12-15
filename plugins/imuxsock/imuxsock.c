@@ -503,16 +503,23 @@ createLogSocket(lstn_t *pLstn)
 	strncpy(sunx.sun_path, (char*)pLstn->sockName, sizeof(sunx.sun_path));
 	sunx.sun_path[sizeof(sunx.sun_path)-1] = '\0';
 	pLstn->fd = socket(AF_UNIX, SOCK_DGRAM, 0);
-	if(pLstn->fd < 0 || bind(pLstn->fd, (struct sockaddr *) &sunx, SUN_LEN(&sunx)) < 0 ||
-	    chmod((char*)pLstn->sockName, 0666) < 0) {
-		errmsg.LogError(errno, NO_ERRCODE, "cannot create '%s'", pLstn->sockName);
-		DBGPRINTF("cannot create %s (%d).\n", pLstn->sockName, errno);
-		if(pLstn->fd != -1)
-			close(pLstn->fd);
-		pLstn->fd = -1;
+	if(pLstn->fd < 0 ) {
+		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
+	}
+	if(bind(pLstn->fd, (struct sockaddr *) &sunx, SUN_LEN(&sunx)) < 0) {
+		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
+	}
+	if(chmod((char*)pLstn->sockName, 0666) < 0) {
 		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 	}
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		LogError(errno, iRet, "cannot create '%s'", pLstn->sockName);
+		if(pLstn->fd != -1) {
+			close(pLstn->fd);
+			pLstn->fd = -1;
+		}
+	}
 	RETiRet;
 }
 

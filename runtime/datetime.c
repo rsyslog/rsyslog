@@ -235,7 +235,8 @@ getTime(time_t *ttSeconds)
 
 
 /**
- * Parse a 32 bit integer number from a string.
+ * Parse a 32 bit integer number from a string. We do not permit
+ * integer overruns, this the guard against INT_MAX.
  *
  * \param ppsz Pointer to the Pointer to the string being parsed. It
  *             must be positioned at the first digit. Will be updated 
@@ -253,7 +254,7 @@ srSLMGParseInt32(uchar** ppsz, int *pLenStr)
 	register int i;
 
 	i = 0;
-	while(*pLenStr > 0 && **ppsz >= '0' && **ppsz <= '9') {
+	while(*pLenStr > 0 && **ppsz >= '0' && **ppsz <= '9' && i < INT_MAX/10-1) {
 		i = i * 10 + **ppsz - '0';
 		++(*ppsz);
 		--(*pLenStr);
@@ -305,8 +306,10 @@ ParseTIMESTAMP3339(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr)
 	 * with the current state of affairs, we would never run into this code
 	 * here because at postion 11, there is no "T" in such cases ;)
 	 */
-	if(lenStr == 0 || *pszTS++ != '-')
+	if(lenStr == 0 || *pszTS++ != '-' || year < 0 || year >= 2100) {
+		DBGPRINTF("ParseTIMESTAMP3339: invalid year: %d, pszTS: '%c'\n", year, *pszTS);
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+	}
 	--lenStr;
 	month = srSLMGParseInt32(&pszTS, &lenStr);
 	if(month < 1 || month > 12)
