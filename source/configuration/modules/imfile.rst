@@ -399,17 +399,6 @@ Note: parameter names are case-insensitive.
    This is used to turn on or off the addition of the "@cee:" cookie to the
    message object.
 
-.. function:: stateFile [name-of-state-file]
-
-   **Default: unset**
-
-   **This parameter is deprecated.** It still is accepted, but should
-   no longer be used for newly created configurations.
-
-   This is the name of this file's state file. This parameter should
-   usually **not** be used. Check the section on "State Files" above
-   for more details.
-
 .. index::
    single: imfile; reopenOnTruncate
 .. function:: reopenOnTruncate [on/off] (requires v8.16.0+)
@@ -526,17 +515,17 @@ defaults instead.
 
   # ... and so on ... #
 
-Legacy Configuration
---------------------
+|FmtObsoleteName| Configuration
+-------------------------------
 
 Note: in order to preserve compatibility with previous versions, the LF escaping
 in multi-line messages is turned off for legacy-configured file monitors
-(the "escapeLF" input parameter). This can cause serious problems. So it is highly
-suggested that new deployments use the new :ref:`input() <cfgobj_input>` configuration
-object and keep LF escaping turned on.
+(the "escapeLF" input parameter). Because this can cause serious problems, it is
+highly suggested that new deployments use the new :ref:`input() <cfgobj_input>`
+configuration object and keep LF escaping turned on.
 
-Legacy Configuration Directives
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+|FmtObsoleteDescription|
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. index::
    single: imfile; $InputFileName
@@ -612,8 +601,8 @@ Legacy Configuration Directives
 
    Equivalent to: Ruleset
 
-Legacy Example
-^^^^^^^^^^^^^^
+|FmtObsoleteName| Example
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The following sample monitors two files. If you need just one, remove
 the second one. If you need more, add them according to the sample ;).
@@ -642,3 +631,18 @@ defaults instead.
   # ... and so on ...
   # check for new lines every 10 seconds
   $InputFilePollInterval 10
+
+
+Deprecated parameters
+.....................
+
+**Note:** While these parameters are still accepted, they should no longer be
+used for newly created configurations.
+
+.. function:: stateFile [name-of-state-file]
+
+   **Default: unset**
+
+   This is the name of this file's state file. This parameter should
+   usually **not** be used. Check the section on "State Files" above
+   for more details.
