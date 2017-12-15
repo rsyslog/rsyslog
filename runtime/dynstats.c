@@ -510,7 +510,7 @@ dynstats_addNewCtr(dynstats_bucket_t *b, const uchar* metric, uint8_t doInitialI
 	created = 0;
 	ctr = NULL;
 
-	if (ATOMIC_FETCH_32BIT(&b->metricCount, &b->mutMetricCount) >= b->maxCardinality) {
+	if ((unsigned) ATOMIC_FETCH_32BIT(&b->metricCount, &b->mutMetricCount) >= b->maxCardinality) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	

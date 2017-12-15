@@ -46,7 +46,7 @@
 #	define ATOMIC_INC_AND_FETCH_unsigned(data, phlpmut) __sync_fetch_and_add(data, 1)
 #	define ATOMIC_DEC(data, phlpmut) ((void) __sync_sub_and_fetch(data, 1))
 #	define ATOMIC_DEC_AND_FETCH(data, phlpmut) __sync_sub_and_fetch(data, 1)
-#	define ATOMIC_FETCH_32BIT(data, phlpmut) ((unsigned) __sync_fetch_and_and(data, 0xffffffff))
+#	define ATOMIC_FETCH_32BIT(data, phlpmut) ((int) __sync_fetch_and_and(data, 0xffffffff))
 #	define ATOMIC_STORE_1_TO_32BIT(data) __sync_lock_test_and_set(&(data), 1)
 #	define ATOMIC_STORE_0_TO_INT(data, phlpmut) __sync_fetch_and_and(data, 0)
 #	define ATOMIC_STORE_1_TO_INT(data, phlpmut) __sync_fetch_and_or(data, 1)
