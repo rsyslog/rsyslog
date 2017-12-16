@@ -6,6 +6,12 @@ welcome.
 For a simple sample, see rtinit.c, which does a simple
 init/deinit check of the runtime system.
 
+Test Naming
+===========
+
+Test that use valgrind shall end in "-vg.sh".
+Test that use valgrind's helgrind thread debugger shall end in "-vgthread.sh".
+
 Setting up Test Environments
 ============================
 

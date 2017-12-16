@@ -294,7 +294,7 @@ endif
 if HAVE_VALGRIND
 TESTS +=  \
 	mmexternal-SegFault-vg.sh \
-	internal-errmsg-memleak.sh \
+	internal-errmsg-memleak-vg.sh \
 	rscript_set_memleak-vg.sh \
 	no-parser-vg.sh \
 	discard-rptdmsg-vg.sh \
@@ -308,7 +308,7 @@ TESTS +=  \
 	udp-msgreduc-orgmsg-vg.sh \
 	tcp-msgreduc-vg.sh \
 	rscript_field-vg.sh \
-	unused_lookup_table.sh \
+	unused_lookup_table-vg.sh \
 	lookup_table-vg.sh \
 	lookup_table_no_hup_reload-vg.sh \
 	array_lookup_table-vg.sh \
@@ -754,7 +754,7 @@ DISTCLEANFILES=rsyslog.pid
 test_files = testbench.h runtime-dummy.c
 
 EXTRA_DIST= \
-	internal-errmsg-memleak.sh \
+	internal-errmsg-memleak-vg.sh \
 	empty-hostname.sh \
 	hostname-getaddrinfo-fail.sh \
 	hostname-with-slash-pmrfc5424.sh \
@@ -1638,7 +1638,7 @@ EXTRA_DIST= \
 	testsuites/lookup_table_reload.conf \
 	testsuites/xlate.lkp_tbl \
 	testsuites/xlate_more.lkp_tbl \
-	unused_lookup_table.sh \
+	unused_lookup_table-vg.sh \
 	lookup_table-vg.sh \
 	testsuites/unused_lookup_table.conf \
 	array_lookup_table.sh \
