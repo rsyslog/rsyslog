@@ -241,7 +241,6 @@ Caveats/Known Bugs
    listeners, not specific ones. This issue is resolved in the
    non-Legacy configuration format.
 
-**Sample:**
 
 Legacy Sample
 -------------
