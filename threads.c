@@ -77,9 +77,12 @@ static rsRetVal thrdDestruct(thrdInfo_t *pThis)
 	DEFiRet;
 	assert(pThis != NULL);
 
+	pthread_mutex_lock(&pThis->mutThrd);
 	if(pThis->bIsActive == 1) {
+		pthread_mutex_unlock(&pThis->mutThrd);
 		thrdTerminate(pThis);
 	} else {
+		pthread_mutex_unlock(&pThis->mutThrd);
 		pthread_join(pThis->thrdID, NULL);
 	}
 
@@ -120,8 +123,8 @@ thrdTerminateNonCancel(thrdInfo_t *pThis)
 		pthread_kill(pThis->thrdID, SIGTTIN);
 		ret = d_pthread_cond_timedwait(&pThis->condThrdTerm, &pThis->mutThrd, &tTimeout);
 		if(ret == ETIMEDOUT) {
-			DBGPRINTF("input thread term: timeout expired waiting on thread %s termination - canceling\n",
-				pThis->name);
+			DBGPRINTF("input thread term: timeout expired waiting on thread %s "
+				"termination - canceling\n", pThis->name);
 			pthread_cancel(pThis->thrdID);
 			break;
 		} else if(ret != 0) {
