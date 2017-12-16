@@ -1372,6 +1372,20 @@ AC_ARG_ENABLE(testbench,
         [enable_testbench=no]
 )
 
+# Add a capability to turn off libfaketime tests. Unfortunately, libfaketime
+# becomes more and more problematic in newer versions and causes aborts
+# on some platforms. This provides the ability to turn it off. In the
+# longer term, we should consider writing our own replacement.
+AC_ARG_ENABLE(libfaketime,
+        [AS_HELP_STRING([--enable-libfaketime],[testbench1 enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_libfaketime="yes" ;;
+          no) enable_libfaketime="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-libfaketime) ;;
+         esac],
+        [enable_libfaketime=no]
+)
+
 # under Travis, we have a ~50 minute max runtime per VM. So we permit to
 # split the testbench in multiple runs, which we can place into different
 # VMs. It's not perfect, but it works...
@@ -1384,6 +1398,7 @@ AC_ARG_ENABLE(testbench1,
          esac],
         [enable_testbench1=yes]
 )
+AM_CONDITIONAL(ENABLE_LIBFAKETIME, test "x${enable_libfaketime}" = "xyes")
 
 # under Travis, we have a ~50 minute max runtime per VM. So we permit to
 # split the testbench in multiple runs, which we can place into different
@@ -2293,6 +2308,7 @@ echo "---{ debugging support }---"
 echo "    Testbench enabled:                        $enable_testbench"
 echo "    Testbench1 enabled:                       $enable_testbench1"
 echo "    Testbench2 enabled:                       $enable_testbench2"
+echo "    Testbench libfaketime tests enabled:      $enable_libfaketime"
 echo "    Extended Testbench enabled:               $enable_extended_tests"
 echo "    MySQL Tests enabled:                      $enable_mysql_tests"
 echo "    PostgreSQL Tests enabled:                 $enable_pgsql_tests"
