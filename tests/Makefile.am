@@ -87,19 +87,6 @@ TESTS +=  \
 	fac_invld4_rfc5424.sh \
 	compresssp.sh \
 	compresssp-stringtpl.sh \
-	now_family_utc.sh \
-	now-utc.sh \
-	now-utc-ymd.sh \
-	now-utc-casecmp.sh \
-	timegenerated-ymd.sh \
-	timegenerated-uxtimestamp.sh \
-	timegenerated-uxtimestamp-invld.sh \
-	timegenerated-dateordinal.sh \
-	timegenerated-dateordinal-invld.sh \
-	timegenerated-utc.sh \
-	timegenerated-utc-legacy.sh \
-	timereported-utc.sh \
-	timereported-utc-legacy.sh \
 	rawmsg-after-pri.sh \
 	rfc5424parser.sh \
 	pmrfc3164-msgFirstSpace.sh \
@@ -209,6 +196,22 @@ TESTS +=  \
 	failover-no-rptd.sh \
 	failover-no-basic.sh \
 	rcvr_fail_restore.sh
+if ENABLE_LIBFAKETIME
+TESTS +=  \
+	now_family_utc.sh \
+	now-utc.sh \
+	now-utc-ymd.sh \
+	now-utc-casecmp.sh \
+	timegenerated-ymd.sh \
+	timegenerated-uxtimestamp.sh \
+	timegenerated-uxtimestamp-invld.sh \
+	timegenerated-dateordinal.sh \
+	timegenerated-dateordinal-invld.sh \
+	timegenerated-utc.sh \
+	timegenerated-utc-legacy.sh \
+	timereported-utc.sh \
+	timereported-utc-legacy.sh
+endif
 endif
 
 if ENABLE_TESTBENCH2
