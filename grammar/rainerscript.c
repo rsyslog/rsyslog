@@ -2368,6 +2368,79 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 		varFreeMembers(&r[0]);
 		break;
 	}
+	case CNFFUNC_IS_TIME: {
+		char *fmt = NULL;
+
+		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
+		str = (char*) var2CString(&r[0], &bMustFree);
+
+		// Check if the optional 2nd parameter was provided
+		if(func->nParams == 2) {
+			cnfexprEval(func->expr[1], &r[1], usrptr, pWti);
+			fmt = (char*) var2CString(&r[1], &bMustFree2);
+		}
+
+		ret->datatype = 'N';
+		ret->d.n = 0;
+		wtiSetScriptErrno(pWti, RS_SCRIPT_EOK);
+
+		if (objUse(datetime, CORE_COMPONENT) == RS_RET_OK) {
+			struct syslogTime s;
+			int len = strlen(str);
+			uchar *pszTS = (uchar*) str;
+
+			int numFormats  = 3;
+			const char *formats[] = { "date-rfc3339", "date-rfc3164", "date-unix" };
+			char **pf = (char *[]) { NULL };
+			char **p  = (char **) formats;
+
+			// Check if a format specifier was explicitly provided
+			if (fmt != NULL) {
+				numFormats = 1;
+				*pf = fmt;
+				p = pf;
+			}
+
+			// Enumerate format specifier options, looking for the first match
+			for (int i = 0; i < numFormats; i++) {
+				char *f = p[i];
+
+				if (strcmp(f, "date-rfc3339") == 0) {
+					if (datetime.ParseTIMESTAMP3339(&s, (uchar**) &pszTS, &len) == RS_RET_OK) {
+						DBGPRINTF("is_time: RFC3339 format found.\n");
+						ret->d.n = 1;
+						break;
+					}
+				} else if (strcmp(f, "date-rfc3164") == 0) {
+					if (datetime.ParseTIMESTAMP3164(&s, (uchar**) &pszTS, &len,
+						NO_PARSE3164_TZSTRING, NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
+						DBGPRINTF("is_time: RFC3164 format found.\n");
+						ret->d.n = 1;
+						break;
+					}
+				} else if (strcmp(f, "date-unix") == 0) {
+					var2Number(&r[0], &retval);
+					if (retval) {
+						DBGPRINTF("is_time: UNIX format found.\n");
+						ret->d.n = 1;
+						break;
+					}
+				} else {
+					DBGPRINTF("is_time: %s is not a valid date/time format specifier!\n", f);
+					break;
+				}
+			}
+		}
+
+		// If not a valid date/time string, set 'errno'
+		if (ret->d.n == 0) wtiSetScriptErrno(pWti, RS_SCRIPT_EINVAL);
+
+		if(bMustFree) free(str);
+		if(bMustFree2) free(fmt);
+		varFreeMembers(&r[0]);
+		if(func->nParams == 2) varFreeMembers(&r[1]);
+		break;
+	}
 	case CNFFUNC_SCRIPT_ERROR:
 		ret->datatype = 'N';
 		ret->d.n = wtiGetScriptErrno(pWti);
@@ -4524,6 +4597,12 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 		GENERATE_FUNC("format_time", 2, CNFFUNC_FORMAT_TIME);
 	} else if(FUNC_NAME("parse_time")) {
 		GENERATE_FUNC("parse_time", 1, CNFFUNC_PARSE_TIME);
+	} else if(FUNC_NAME("is_time")) {
+		GENERATE_FUNC_WITH_NARG_RANGE("is_time", 1, 2, CNFFUNC_IS_TIME,
+			"number of parameters for %s() must either be "
+			"one (time_string) or"
+			"two (time_string, explicit_expected_format)"
+			"but is %d.");
 	} else if(FUNC_NAME("parse_json")) {
 		GENERATE_FUNC("parse_json", 2, CNFFUNC_PARSE_JSON);
 	} else if(FUNC_NAME("script_error")) {
