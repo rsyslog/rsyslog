@@ -211,6 +211,13 @@ TESTS +=  \
 	timegenerated-utc-legacy.sh \
 	timereported-utc.sh \
 	timereported-utc-legacy.sh
+if ENABLE_MMNORMALIZE
+TESTS += \
+	mmnormalize_processing_test1.sh \
+	mmnormalize_processing_test2.sh \
+	mmnormalize_processing_test3.sh \
+	mmnormalize_processing_test4.sh
+endif
 endif
 endif
 
@@ -567,11 +574,7 @@ if ENABLE_MMNORMALIZE
 TESTS += msgvar-concurrency-array.sh \
 	msgvar-concurrency-array-event.tags.sh \
 	mmnormalize_rule_from_string.sh \
-	mmnormalize_rule_from_array.sh \
-	mmnormalize_processing_test1.sh \
-	mmnormalize_processing_test2.sh \
-	mmnormalize_processing_test3.sh \
-	mmnormalize_processing_test4.sh
+	mmnormalize_rule_from_array.sh
 
 if ENABLE_IMPTCP
 TESTS +=  \
