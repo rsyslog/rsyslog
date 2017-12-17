@@ -348,7 +348,7 @@ CODESTARTnewActInst
 			}
 			if (pData->tplName == NULL) {
 				dbgprintf("omhiredis: using default RSYSLOG_ForwardFormat template\n");
-				pData->tplName = (uchar*)"RSYSLOG_ForwardFormat";
+				CHKmalloc(pData->tplName = ustrdup("RSYSLOG_ForwardFormat"));
 			}
 			break;
 		case OMHIREDIS_MODE_TEMPLATE:
