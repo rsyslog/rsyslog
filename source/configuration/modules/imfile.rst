@@ -69,9 +69,14 @@ disabled by default. It can explicitly be turned on or off via the
 State Files
 ...........
 Rsyslog must keep track of which parts of the monitored file
-are already processed. This is done in so-called "state files".
-These files are always created in the rsyslog working directory
-(configurable via $WorkDirectory).
+are already processed. This is done in so-called "state files" that
+are created in the rsyslog working directory and are read on startup to
+resume monitoring after a shutdown. The location of the rsyslog
+working directory is configurable via the ``global(workDirectory)``
+|FmtAdvancedName| format parameter.
+
+**Note**: The ``PersistStateInterval`` parameter must be set, otherwise state
+files will NOT be created.
 
 To avoid problems with duplicate state files, rsyslog automatically
 generates state file names according to the following scheme:
@@ -86,7 +91,7 @@ being monitored. The corresponding state file will be named
 ``imfile-state:-var-log-applog``.
 
 Note that it is possible to set a fixed state file name via the
-deprecated "stateFile" parameter. It is suggested to avoid this, as
+deprecated ``stateFile`` parameter. It is suggested to avoid this, as
 the user must take care of name clashes. Most importantly, if
 "stateFile" is set for file monitors with wildcards, the **same**
 state file is used for all occurrences of these files. In short,
@@ -95,11 +100,11 @@ rsyslog tries to detect these cases and emit warning messages.
 However, the detection simply checks for the presence of "*"
 and as such it will not cover more complex cases.
 
-Note that when $WorkDirectory is not set or
-set to a non-writable location, the state file **will not be generated**.
-In those cases, the file content will always be completely re-sent by
-imfile, because the module does not know that it already processed
-parts of that file.
+Note that when the ``global(workDirectory)`` |FmtAdvancedName| format
+parameter is not set or set to a non-writable location, the state file
+**will not be generated**. In those cases, the file content will always
+be completely re-sent by imfile, because the module does not know that it
+already processed parts of that file.
 
 Module Parameters
 -----------------
@@ -155,8 +160,8 @@ Note: parameter names are case-insensitive.
   seconds.
 
   Note that timeGranularity has some performance implication. The more frequently
-  timeout processing is triggerred, the more processing time is needed. This
-  effect should be neglectible, except if a very large number of files is being
+  timeout processing is triggered, the more processing time is needed. This
+  effect should be negligible, except if a very large number of files is being
   monitored.
 
 .. index::
@@ -172,7 +177,7 @@ Note: parameter names are case-insensitive.
    polling interval, all files are processed in a round-robin fashion.
 
    A short poll interval provides more rapid message forwarding, but
-   requires more system resources. While it is possible, we stongly
+   requires more system resources. While it is possible, we strongly
    recommend not to set the polling interval to 0 seconds. That will
    make rsyslogd become a CPU hog, taking up considerable resources. It
    is supported, however, for the few very unusual situations where this
@@ -235,6 +240,8 @@ Note: parameter names are case-insensitive.
    (like power fail). Note that this setting affects imfile performance,
    especially when set to a low value. Frequently writing the state file
    is very time consuming.
+
+   **Note: If this parameter is not set, state files are not created.**
 
 .. index::
    single: imfile; startmsg.regex
@@ -392,17 +399,6 @@ Note: parameter names are case-insensitive.
    This is used to turn on or off the addition of the "@cee:" cookie to the
    message object.
 
-.. function:: stateFile [name-of-state-file]
-
-   **Default: unset**
-
-   **This paramater is deprecated.** It still is accepted, but should
-   no longer be used for newly created configurations.
-
-   This is the name of this file's state file. This parameter should
-   usually **not** be used. Check the section on "State Files" above
-   for more details.
-
 .. index::
    single: imfile; reopenOnTruncate
 .. function:: reopenOnTruncate [on/off] (requires v8.16.0+)
@@ -471,7 +467,7 @@ WildCards
 
 
 **Since Version: 8.25.0**
-  Wildcards are supported in filename and pathes which means these samples will work:
+  Wildcards are supported in filename and paths which means these samples will work:
 
 * /var/log/\*.log **works**. *
 * /var/log/\*/syslog.log **works**. *
@@ -479,7 +475,7 @@ WildCards
 
 
   All matching files in all matching subfolders will work.
-  Note that this may derease performance in imfile depending on how
+  Note that this may decrease performance in imfile depending on how
   many directories and files are being watched dynamically.
 
 
@@ -519,17 +515,17 @@ defaults instead.
 
   # ... and so on ... #
 
-Legacy Configuration
---------------------
+|FmtObsoleteName| Configuration
+-------------------------------
 
 Note: in order to preserve compatibility with previous versions, the LF escaping
 in multi-line messages is turned off for legacy-configured file monitors
-(the "escapeLF" input parameter). This can cause serious problems. So it is highly
-suggested that new deployments use the new :ref:`input() <cfgobj_input>` configuration
-object and keep LF escaping turned on.
+(the "escapeLF" input parameter). Because this can cause serious problems, it is
+highly suggested that new deployments use the new :ref:`input() <cfgobj_input>`
+configuration object and keep LF escaping turned on.
 
-Legacy Configuration Directives
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+|FmtObsoleteDescription|
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. index::
    single: imfile; $InputFileName
@@ -605,8 +601,8 @@ Legacy Configuration Directives
 
    Equivalent to: Ruleset
 
-Legacy Example
-^^^^^^^^^^^^^^
+|FmtObsoleteName| Example
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The following sample monitors two files. If you need just one, remove
 the second one. If you need more, add them according to the sample ;).
@@ -635,3 +631,18 @@ defaults instead.
   # ... and so on ...
   # check for new lines every 10 seconds
   $InputFilePollInterval 10
+
+
+Deprecated parameters
+.....................
+
+**Note:** While these parameters are still accepted, they should no longer be
+used for newly created configurations.
+
+.. function:: stateFile [name-of-state-file]
+
+   **Default: unset**
+
+   This is the name of this file's state file. This parameter should
+   usually **not** be used. Check the section on "State Files" above
+   for more details.
