@@ -14,10 +14,10 @@ to rsyslog.com.
 If you are new to rst and Sphinx, see the Sphinx documentation to get started:
 http://www.sphinx-doc.org/en/stable/contents.html
 
-## Instructions
+## Building the documentation
 
-These assume default installs of Python for Windows and Linux. Because the
-[Sphinx project recommends using Python 2.7](http://www.sphinx-doc.org/en/stable/install.html),
+These directions assume default installs of Python for Windows and Linux.
+Because the [Sphinx project recommends using Python 2.7](http://www.sphinx-doc.org/en/stable/install.html),
 that is what is shown here.
 
 ### Assumptions
