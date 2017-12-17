@@ -354,3 +354,11 @@ The following parameters can be set:
   "on", which very often led to user confusion. There normally should be no
   need to switch it back to "on", except for the case to be mentioned.
   This is also the reason why we switched the default.
+
+- **dynafile.donotsuspend** [boolean (on/off)] available 8.32.0+
+
+  **Default:** on
+
+  This permits SUSPENDing dynafile actions. Traditionally, SUSPEND mode was
+  never entered for dynafiles as it would have blocked overall processing
+  flow. Default is not to suspend (and thus block).
