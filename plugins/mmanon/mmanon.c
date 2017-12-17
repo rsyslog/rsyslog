@@ -781,7 +781,7 @@ anonipv4(wrkrInstanceData_t *pWrkrData, uchar **msg, int *pLenMsg, int *idx, int
 		*hasChanged = 1;
 
 		if(caddresslen != strlen(address)) {
-			*pLenMsg = *pLenMsg + (caddresslen - strlen(address));
+			*pLenMsg = *pLenMsg + ((int)caddresslen - (int)strlen(address));
 			*msg = (uchar*) malloc(*pLenMsg);
 			memcpy(*msg, msgcpy, *idx);
 		}
@@ -1078,12 +1078,12 @@ anonipv6(wrkrInstanceData_t *pWrkrData, uchar **msg, int *pLenMsg, int *idx, int
 	int offset = *idx;
 	char address[40];
 	uchar* msgcpy = *msg;
-	unsigned caddresslen;
+	size_t caddresslen;
 	size_t oldLen = *pLenMsg;
 
 	int syn = syntax_ipv6(*msg + offset, *pLenMsg - offset, &iplen);
 	if(syn) {
-		assert(iplen < sizeof(address));
+		assert(iplen < sizeof(address));  //has to be < instead of <= since address includes space for a '\0'
 		getip(*msg + offset, iplen, address);
 		offset += iplen;
 		process_IPv6(address, pWrkrData, iplen);
@@ -1092,7 +1092,7 @@ anonipv6(wrkrInstanceData_t *pWrkrData, uchar **msg, int *pLenMsg, int *idx, int
 		*hasChanged = 1;
 
 		if(caddresslen != iplen) {
-			*pLenMsg = *pLenMsg + (caddresslen - iplen);
+			*pLenMsg = *pLenMsg + ((int)caddresslen - (int)iplen);
 			*msg = (uchar*) malloc(*pLenMsg);
 			memcpy(*msg, msgcpy, *idx);
 		}
