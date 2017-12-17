@@ -73,8 +73,8 @@ Property-Based Filters
 
 Property-based filters are unique to rsyslogd. They allow to filter on
 any property, like HOSTNAME, syslogtag and msg. A list of all
-currently-supported properties can be found in the `property replacer
-documentation <property_replacer.html>`_ (but keep in mind that only the
+currently-supported properties can be found in the :doc:`property replacer
+documentation <property_replacer>` (but keep in mind that only the
 properties, not the replacer is supported). With this filter, each
 properties can be checked against a specified value, using a specified
 compare operation.
@@ -217,8 +217,8 @@ of a new line. They have this format:
   if expr then action-part-of-selector-line
 
 "if" and "then" are fixed keywords that mus be present. "expr" is a
-(potentially quite complex) expression. So the `expression
-documentation <../rainerscript/expressions.html>`_ for details.
+(potentially quite complex) expression. So the :doc:`expression
+documentation <../rainerscript/expressions>` for details.
 "action-part-of-selector-line" is an action, just as you know it (e.g.
 "/var/log/logfile" to write to that file).
 
