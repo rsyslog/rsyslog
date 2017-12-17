@@ -91,7 +91,7 @@ being monitored. The corresponding state file will be named
 ``imfile-state:-var-log-applog``.
 
 Note that it is possible to set a fixed state file name via the
-deprecated "stateFile" parameter. It is suggested to avoid this, as
+deprecated ``stateFile`` parameter. It is suggested to avoid this, as
 the user must take care of name clashes. Most importantly, if
 "stateFile" is set for file monitors with wildcards, the **same**
 state file is used for all occurrences of these files. In short,
@@ -100,11 +100,11 @@ rsyslog tries to detect these cases and emit warning messages.
 However, the detection simply checks for the presence of "*"
 and as such it will not cover more complex cases.
 
-Note that when $WorkDirectory is not set or
-set to a non-writable location, the state file **will not be generated**.
-In those cases, the file content will always be completely re-sent by
-imfile, because the module does not know that it already processed
-parts of that file.
+Note that when the ``global(workDirectory)`` |FmtAdvancedName| format
+parameter is not set or set to a non-writable location, the state file
+**will not be generated**. In those cases, the file content will always
+be completely re-sent by imfile, because the module does not know that it
+already processed parts of that file.
 
 Module Parameters
 -----------------
