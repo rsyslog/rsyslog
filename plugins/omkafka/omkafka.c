@@ -25,6 +25,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -74,6 +75,10 @@ struct kafka_params {
 	const char *name;
 	const char *val;
 };
+
+#ifndef O_LARGEFILE
+#define O_LARGEFILE 0
+#endif
 
 #if HAVE_ATOMIC_BUILTINS64
 static uint64 clockTopicAccess = 0;
