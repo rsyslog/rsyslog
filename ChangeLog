@@ -1,5 +1,7 @@
 ------------------------------------------------------------------------------
 Version 8.32.0 [v8-stable] 2018-01-09
+- NEW BUILD REQUIREMENT: libcurl is now needed for rsyslog core
+  due to new script function http_request()
 - ompgsql: considerable enhancements
   The PostgreSQL output module was woefully out-of-date the following
   list is changes made to update the module to current Rsyslog standards.
@@ -63,6 +65,7 @@ Version 8.32.0 [v8-stable] 2018-01-09
   all valgrind tests now end in -vg.sh
 - RainerScript: add function parse_json()
 - RainerScript: add function substring()
+- RainerScript: add function http_request()
 - RainerScript: add function previous_is_suspended()
   This function returns a boolean indicating if the previous action is
   suspended (0 - no, 1 - yes). This is useful if arbitrary processing
