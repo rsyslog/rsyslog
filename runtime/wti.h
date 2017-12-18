@@ -117,24 +117,14 @@ PROTOTYPEpropSetMeth(wti, pWtp, wtp_t*);
 #define incActionNbrResRtry(pWti, pAction) ((pWti)->actWrkrInfo[(pAction)->iActionNbr].iNbrResRtry++)
 #define wtiInitIParam(piparams) (memset((piparams), 0, sizeof(actWrkrIParams_t)))
 
+#define wtiGetScriptErrno(pWti) ((pWti)->execState.script_errno)
+#define wtiSetScriptErrno(pWti, newval) (pWti)->execState.script_errno = (newval)
+
 static inline uint8_t ATTR_UNUSED ATTR_NONNULL(1)
 wtiGetPrevWasSuspended(const wti_t * const pWti)
 {
 	assert(pWti != NULL);
 	return pWti->execState.bPrevWasSuspended;
-}
-
-static inline uint8_t ATTR_UNUSED ATTR_NONNULL(1)
-wtiGetScriptErrno(const wti_t * const pWti)
-{
-	assert(pWti != NULL);
-	return pWti->execState.script_errno;
-}
-static inline void ATTR_UNUSED ATTR_NONNULL(1)
-wtiSetScriptErrno(wti_t * const pWti, uint8_t newval)
-{
-	assert(pWti != NULL);
-	pWti->execState.script_errno = newval;
 }
 
 static inline void __attribute__((unused))
