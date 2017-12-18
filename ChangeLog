@@ -102,6 +102,7 @@ Version 8.32.0 [v8-stable] 2018-01-09
   theory it would be possible. If so, it would happen immediately on
   startup.
   Detected by clang ubsan.
+- omhiredis bugfix: rsyslog segfault on startup if no template is specified
 - omprog bugfix: argv[0] not set when using binary without arguments
   When using the omprog plugin with a binary without arguments, argv[0] (the
   name of the binary) is not set, causing binaries that depend on this value
