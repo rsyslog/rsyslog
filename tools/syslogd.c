@@ -58,15 +58,19 @@
 #include <time.h>
 #include <assert.h>
 
-#ifdef OS_SOLARIS
+#if defined(OS_SOLARIS) || defined(OS_BSD)
 #	include <errno.h>
+#else
+#	include <sys/errno.h>
+#endif
+
+#ifdef OS_SOLARIS
 #	include <fcntl.h>
 #	include <stropts.h>
 #	include <sys/termios.h>
 #	include <sys/types.h>
 #else
 #	include <libgen.h>
-#	include <sys/errno.h>
 #endif
 
 #include <sys/ioctl.h>
