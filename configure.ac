@@ -438,6 +438,8 @@ if test "$rsyslog_have_pthread_setschedparam" = "yes" -a "$rsyslog_have_sched_h"
 fi
 
 
+PKG_CHECK_MODULES([CURL], [libcurl])
+
 # klog
 AC_ARG_ENABLE(klog,
         [AS_HELP_STRING([--enable-klog],[Integrated klog functionality @<:@default=yes@:>@])],

@@ -224,6 +224,7 @@ endif
 if ENABLE_TESTBENCH2
 TESTS +=  \
 	rscript_contains.sh \
+	rscript_http_request.sh \
 	rscript_ipv42num.sh \
 	rscript_field.sh \
 	rscript_stop.sh \
@@ -306,6 +307,7 @@ TESTS +=  \
 	mmexternal-SegFault-vg.sh \
 	internal-errmsg-memleak-vg.sh \
 	rscript_set_memleak-vg.sh \
+	rscript_http_request-vg.sh \
 	no-parser-vg.sh \
 	discard-rptdmsg-vg.sh \
 	discard-allmark-vg.sh \
@@ -895,6 +897,8 @@ EXTRA_DIST= \
 	testsuites/diskqueue.conf \
 	arrayqueue.sh \
 	testsuites/arrayqueue.conf \
+	rscript_http_request.sh \
+	rscript_http_request-vg.sh \
 	rscript_contains.sh \
 	testsuites/rscript_contains.conf \
 	rscript_ipv42num.sh \
