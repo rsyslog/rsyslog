@@ -1297,7 +1297,7 @@ str2num(es_str_t *s, int *bSuccess)
 	}
 	if(c[0] == '-') {
 		neg = -1;
-		i = -1;
+		i = 1;
 	} else {
 		neg = 1;
 		i = 0;
