@@ -977,10 +977,12 @@ lookupTableDefProcessCnf(struct cnfobj *o)
 	strcpy(reloader_thd_name, reloader_prefix);
 	strcpy(reloader_thd_name + strlen(reloader_prefix), (char*) lu->name);
 	reloader_thd_name[thd_name_len - 1] = '\0';
-  #ifndef __APPLE__
-     pthread_setname_np(lu->reloader, reloader_thd_name);
-  #else
+  #if defined(__NetBSD__)
+     pthread_setname_np(lu->reloader, "%s", reloader_thd_name);
+  #elif defined(__APPLE__)
      pthread_setname_np(reloader_thd_name); // must check
+  #else
+     pthread_setname_np(lu->reloader, reloader_thd_name);
   #endif
 #endif
 	CHKiRet(lookupReadFile(lu->self, lu->name, lu->filename));
