@@ -4531,7 +4531,13 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 	} else if(FUNC_NAME("previous_action_suspended")) {
 		GENERATE_FUNC("previous_action_suspended", 0, CNFFUNC_PREVIOUS_ACTION_SUSPENDED);
 	} else if(FUNC_NAME("http_request")) {
+#		if defined(HAVE_LIBCURL)
 		GENERATE_FUNC("http_request", 1, CNFFUNC_HTTP_REQUEST);
+#		else
+		parser_errmsg("function http_request() not available, rsyslog build "
+			"without libcurl support -- disabling function");
+		return CNFFUNC_INVALID;
+#		endif
 	} else {
 		return CNFFUNC_INVALID;
 	}
