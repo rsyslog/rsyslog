@@ -5,7 +5,7 @@
  *
  * Work originally begun on 2008-02-01 by Rainer Gerhards
  *
- * Copyright 2008-2016 Adiscon GmbH.
+ * Copyright 2008-2017 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -897,8 +897,6 @@ checkInstance(instanceConf_t *inst)
 	int i;
 	struct stat sb;
 	int r;
-	int eno;
-	char errStr[512];
 	sbool hasWildcard;
 	DEFiRet;
 
@@ -940,10 +938,7 @@ checkInstance(instanceConf_t *inst)
 
 	r = stat(dirn, &sb);
 	if(r != 0)  {
-		eno = errno;
-		rs_strerror_r(eno, errStr, sizeof(errStr));
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imfile warning: directory '%s': %s",
-				dirn, errStr);
+		errmsg.LogError(errno, RS_RET_CONFIG_ERROR, "imfile warning: directory '%s'", dirn);
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 	if(!S_ISDIR(sb.st_mode)) {
@@ -1836,12 +1831,12 @@ startLstnFile(lstn_t *const __restrict__ pLstn)
 	rsRetVal localRet;
 	const int wd = inotify_add_watch(ino_fd, (char*)pLstn->pszFileName, IN_MODIFY);
 	if(wd < 0) {
-		char errStr[512];
-		rs_strerror_r(errno, errStr, sizeof(errStr));
 		if(pLstn->fileNotFoundError) {
-			errmsg.LogError(0, NO_ERRCODE, "imfile: error with inotify API,"
-					" ignoring file '%s': %s ", pLstn->pszFileName, errStr);
+			errmsg.LogError(errno, NO_ERRCODE, "imfile: error with inotify API,"
+					" ignoring file '%s'", pLstn->pszFileName);
 		} else {
+			char errStr[512];
+			rs_strerror_r(errno, errStr, sizeof(errStr));
 			DBGPRINTF("imfile: could not create file table entry for '%s' - "
 				  "not processing it now: %s\n", pLstn->pszFileName, errStr);
 		}
@@ -2164,10 +2159,8 @@ in_removeFile(const int dirIdx, lstn_t *const __restrict__ pLstn, const sbool bR
 	if(bDoRMState) {
 		DBGPRINTF("imfile: unlinking '%s'\n", toDel);
 		if(unlink((char*)toDel) != 0) {
-			char errStr[1024];
-			rs_strerror_r(errno, errStr, sizeof(errStr));
-			errmsg.LogError(0, RS_RET_ERR, "imfile: could not remove state "
-				"file \"%s\": %s", toDel, errStr);
+			errmsg.LogError(errno, RS_RET_ERR, "imfile: could not remove state "
+				"file '%s'", toDel);
 		}
 	}
 
@@ -2279,10 +2272,8 @@ in_handleDirEventFileCREATE(struct inotify_event *ev, const int dirIdx)
 
 //				openStateFileAndMigrate(pLstn, &statefilefull_old[0], &statefilefull_new[0]);
 				if(rename((char*) &statefilefull_old, (char*) &statefilefull_new) != 0) {
-					char errStr[1024];
-					rs_strerror_r(errno, errStr, sizeof(errStr));
-					errmsg.LogError(0, RS_RET_ERR, "imfile: could not rename statefile "
-						"'%s' into '%s' with error: %s", statefilefull_old, statefilefull_new, errStr);
+					errmsg.LogError(errno, RS_RET_ERR, "imfile: could not rename statefile "
+						"'%s' into '%s'", statefilefull_old, statefilefull_new);
 				} else {
 					DBGPRINTF("imfile: statefile '%s' renamed into '%s'\n", statefilefull_old, statefilefull_new);
 				}
