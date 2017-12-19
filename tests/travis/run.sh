@@ -121,10 +121,10 @@ export CONFIG_FLAGS="$CONFIGURE_FLAGS \
 	--enable-omtcl \
 	--enable-mmdblookup \
 	--enable-mmcount \
-	--enable-gssapi-krb5=no \
+	--enable-gssapi-krb5 \
 	--enable-omhiredis \
 	--enable-imczmq --enable-omczmq \
-	--enable-usertools=no \
+	--enable-usertools \
 	--enable-pmnull \
 	--enable-pmnormalize"
 # Note: [io]mzmq3 cannot be built any longer, according to Brian Knox they require an
