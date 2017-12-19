@@ -676,6 +676,10 @@ EnableKeepAlive(nsd_t *pNsd)
 	socklen_t optlen;
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
+#	if defined(__FreeBSD__) || defined(__NetBSD__) ||  \
+          defined(__OpenBSD__) || defined(__DragonflyBSD__)
+#	define SOL_TCP IPPROTO_TCP
+#	endif
 
 	optval = 1;
 	optlen = sizeof(optval);

@@ -31,7 +31,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
-#if defined(_AIX) || defined(__FreeBSD__) || defined(__APPLE__) 
+#if defined(_AIX) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFlyBSD__) || defined(__APPLE__)
 #include <sys/wait.h>
 #else
 #include <wait.h>
