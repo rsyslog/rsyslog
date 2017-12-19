@@ -1990,6 +1990,79 @@ finalize_it:
 	RETiRet;
 }
 
+static int ATTR_NONNULL(1,3,4)
+doFunc_is_time(const char *__restrict__ const str,
+	const char *__restrict__ const fmt,
+	struct svar *__restrict__ const r,
+	wti_t *pWti) {
+
+	assert(str != NULL);
+	assert(r != NULL);
+	assert(pWti != NULL);
+
+	int ret = 0;
+
+	wtiSetScriptErrno(pWti, RS_SCRIPT_EOK);
+
+	if (objUse(datetime, CORE_COMPONENT) == RS_RET_OK) {
+		struct syslogTime s;
+		int len = strlen(str);
+		uchar *pszTS = (uchar*) str;
+
+		int numFormats  = 3;
+		dateTimeFormat_t formats[] = { DATE_RFC3164, DATE_RFC3339, DATE_UNIX };
+		dateTimeFormat_t pf[] = { DATE_INVALID };
+		dateTimeFormat_t *p  = formats;
+
+		// Check if a format specifier was explicitly provided
+		if (fmt != NULL) {
+			numFormats = 1;
+			*pf = getDateTimeFormatFromStr(fmt);
+			p = pf;
+		}
+
+		// Enumerate format specifier options, looking for the first match
+		for (int i = 0; i < numFormats; i++) {
+			dateTimeFormat_t f = p[i];
+
+			if (f == DATE_RFC3339) {
+				if (datetime.ParseTIMESTAMP3339(&s, (uchar**) &pszTS, &len) == RS_RET_OK) {
+					DBGPRINTF("is_time: RFC3339 format found.\n");
+					ret = 1;
+					break;
+				}
+			} else if (f == DATE_RFC3164) {
+				if (datetime.ParseTIMESTAMP3164(&s, (uchar**) &pszTS, &len,
+					NO_PARSE3164_TZSTRING, NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
+					DBGPRINTF("is_time: RFC3164 format found.\n");
+					ret = 1;
+					break;
+				}
+			} else if (f == DATE_UNIX) {
+				int result;
+				var2Number(r, &result);
+				
+				if (result) {
+					DBGPRINTF("is_time: UNIX format found.\n");
+					ret = 1;
+					break;
+				}
+			} else {
+				DBGPRINTF("is_time: %s is not a valid date/time format specifier!\n", fmt);
+				break;
+			}
+		}
+	}
+
+	// If not a valid date/time string, set 'errno'
+	if (ret == 0) {
+		DBGPRINTF("is_time: Invalid date-time string: %s.\n", str);
+		wtiSetScriptErrno(pWti, RS_SCRIPT_EINVAL);
+	}
+
+	return ret;
+}
+
 /*
  * Uses the given (current) year/month to decide which year
  * the incoming month likely belongs in.
@@ -2374,6 +2447,8 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
 		str = (char*) var2CString(&r[0], &bMustFree);
 
+		bMustFree2 = 0;
+
 		// Check if the optional 2nd parameter was provided
 		if(func->nParams == 2) {
 			cnfexprEval(func->expr[1], &r[1], usrptr, pWti);
@@ -2381,59 +2456,7 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 		}
 
 		ret->datatype = 'N';
-		ret->d.n = 0;
-		wtiSetScriptErrno(pWti, RS_SCRIPT_EOK);
-
-		if (objUse(datetime, CORE_COMPONENT) == RS_RET_OK) {
-			struct syslogTime s;
-			int len = strlen(str);
-			uchar *pszTS = (uchar*) str;
-
-			int numFormats  = 3;
-			const char *formats[] = { "date-rfc3339", "date-rfc3164", "date-unix" };
-			char **pf = (char *[]) { NULL };
-			char **p  = (char **) formats;
-
-			// Check if a format specifier was explicitly provided
-			if (fmt != NULL) {
-				numFormats = 1;
-				*pf = fmt;
-				p = pf;
-			}
-
-			// Enumerate format specifier options, looking for the first match
-			for (int i = 0; i < numFormats; i++) {
-				char *f = p[i];
-
-				if (strcmp(f, "date-rfc3339") == 0) {
-					if (datetime.ParseTIMESTAMP3339(&s, (uchar**) &pszTS, &len) == RS_RET_OK) {
-						DBGPRINTF("is_time: RFC3339 format found.\n");
-						ret->d.n = 1;
-						break;
-					}
-				} else if (strcmp(f, "date-rfc3164") == 0) {
-					if (datetime.ParseTIMESTAMP3164(&s, (uchar**) &pszTS, &len,
-						NO_PARSE3164_TZSTRING, NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
-						DBGPRINTF("is_time: RFC3164 format found.\n");
-						ret->d.n = 1;
-						break;
-					}
-				} else if (strcmp(f, "date-unix") == 0) {
-					var2Number(&r[0], &retval);
-					if (retval) {
-						DBGPRINTF("is_time: UNIX format found.\n");
-						ret->d.n = 1;
-						break;
-					}
-				} else {
-					DBGPRINTF("is_time: %s is not a valid date/time format specifier!\n", f);
-					break;
-				}
-			}
-		}
-
-		// If not a valid date/time string, set 'errno'
-		if (ret->d.n == 0) wtiSetScriptErrno(pWti, RS_SCRIPT_EINVAL);
+		ret->d.n = doFunc_is_time(str, fmt, &r[0], pWti);
 
 		if(bMustFree) free(str);
 		if(bMustFree2) free(fmt);
