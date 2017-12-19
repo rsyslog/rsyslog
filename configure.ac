@@ -1310,22 +1310,6 @@ AC_ARG_ENABLE(omrelp-default-port,
 )
 
 
-# GuardTime support
-AC_ARG_ENABLE(guardtime,
-        [AS_HELP_STRING([--enable-guardtime],[Enable log file signing support (via GuardTime) @<:@default=no@:>@])],
-        [case "${enableval}" in
-         yes) enable_guardtime="yes" ;;
-          no) enable_guardtime="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-guardtime) ;;
-         esac],
-        [enable_guardtime=no]
-)
-if test "x$enable_guardtime" = "xyes"; then
-	PKG_CHECK_MODULES(GUARDTIME, libgt >= 0.3.1)
-fi
-AM_CONDITIONAL(ENABLE_GUARDTIME, test x$enable_guardtime = xyes)
-
-
 
 # GuardTime KSI LOGSIG 12 support
 AC_ARG_ENABLE(ksi-ls12,
@@ -2243,7 +2227,6 @@ echo "    rsyslogd will be built:                   $enable_rsyslogd"
 echo "    have to generate man pages:               $have_to_generate_man_pages"
 echo "    Unlimited select() support enabled:       $enable_unlimited_select"
 echo "    uuid support enabled:                     $enable_uuid"
-echo "    Log file signing support:                 $enable_guardtime"
 echo "    Log file signing support via KSI LS12:    $enable_ksi_ls12"
 echo "    Log file encryption support:              $enable_libgcrypt"
 echo "    anonymization support enabled:            $enable_mmanon"

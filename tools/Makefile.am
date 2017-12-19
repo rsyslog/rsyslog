@@ -62,7 +62,6 @@ rsyslogd_LDFLAGS = -export-dynamic
 endif
 
 EXTRA_DIST = $(man_MANS) \
-	rsgtutil.rst \
 	rscryutil.rst \
 	recover_qi.pl
 
@@ -82,21 +81,6 @@ bin_PROGRAMS += logctl
 logctl_SOURCES = logctl.c
 logctl_CPPFLAGS = $(RSRT_CFLAGS) $(PTHREADS_CFLAGS) $(LIBMONGOC_CFLAGS)
 logctl_LDADD = $(LIBMONGOC_LIBS)
-endif
-if ENABLE_GUARDTIME
-bin_PROGRAMS += rsgtutil
-rsgtutil = rsgtutil.c
-rsgtutil_CPPFLAGS = $(RSRT_CFLAGS) $(GUARDTIME_CFLAGS) -DENABLEGT
-rsgtutil_LDADD = ../runtime/librsgt.la $(GUARDTIME_LIBS)
-if ENABLE_GENERATE_MAN_PAGES
-RSTMANFILE = rsgtutil.rst
-rsgtutil.1: $(RSTMANFILE)
-	$(AM_V_GEN) $(RST2MAN) $(RSTMANFILE) $@
-man1_MANS += rsgtutil.1
-CLEANFILES += rsgtutil.1
-EXTRA_DIST+= rsgtutil.1
-endif
-else
 endif
 if ENABLE_LIBGCRYPT
 bin_PROGRAMS += rscryutil
