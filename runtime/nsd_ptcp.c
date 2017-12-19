@@ -676,10 +676,6 @@ EnableKeepAlive(nsd_t *pNsd)
 	socklen_t optlen;
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
-#	if defined(__FreeBSD__) || defined(__NetBSD__) ||  \
-          defined(__OpenBSD__) || defined(__DragonflyBSD__)
-#	define SOL_TCP IPPROTO_TCP
-#	endif
 
 	optval = 1;
 	optlen = sizeof(optval);
@@ -689,11 +685,11 @@ EnableKeepAlive(nsd_t *pNsd)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
-#	if defined(SOL_TCP) && defined(TCP_KEEPCNT)
+#	if defined(IPPROTO_TCP) && defined(TCP_KEEPCNT)
 	if(pThis->iKeepAliveProbes > 0) {
 		optval = pThis->iKeepAliveProbes;
 		optlen = sizeof(optval);
-		ret = setsockopt(pThis->sock, SOL_TCP, TCP_KEEPCNT, &optval, optlen);
+		ret = setsockopt(pThis->sock, IPPROTO_TCP, TCP_KEEPCNT, &optval, optlen);
 	} else {
 		ret = 0;
 	}
@@ -704,11 +700,11 @@ EnableKeepAlive(nsd_t *pNsd)
 		LogError(ret, NO_ERRCODE, "imptcp cannot set keepalive probes - ignored");
 	}
 
-#	if defined(SOL_TCP) && defined(TCP_KEEPCNT)
+#	if defined(IPPROTO_TCP) && defined(TCP_KEEPIDLE)
 	if(pThis->iKeepAliveTime > 0) {
 		optval = pThis->iKeepAliveTime;
 		optlen = sizeof(optval);
-		ret = setsockopt(pThis->sock, SOL_TCP, TCP_KEEPIDLE, &optval, optlen);
+		ret = setsockopt(pThis->sock, IPPROTO_TCP, TCP_KEEPIDLE, &optval, optlen);
 	} else {
 		ret = 0;
 	}
@@ -719,11 +715,11 @@ EnableKeepAlive(nsd_t *pNsd)
 		LogError(ret, NO_ERRCODE, "imptcp cannot set keepalive time - ignored");
 	}
 
-#	if defined(SOL_TCP) && defined(TCP_KEEPCNT)
+#	if defined(IPPROTO_TCP) && defined(TCP_KEEPCNT)
 	if(pThis->iKeepAliveIntvl > 0) {
 		optval = pThis->iKeepAliveIntvl;
 		optlen = sizeof(optval);
-		ret = setsockopt(pThis->sock, SOL_TCP, TCP_KEEPINTVL, &optval, optlen);
+		ret = setsockopt(pThis->sock, IPPROTO_TCP, TCP_KEEPINTVL, &optval, optlen);
 	} else {
 		ret = 0;
 	}
