@@ -93,6 +93,7 @@ static int bDropMalPTRMsgs = 0;/* Drop messages which have malicious PTR records
 static int option_DisallowWarning = 1;	/* complain if message from disallowed sender is received */
 static int bDisableDNS = 0; /* don't look up IP addresses of remote messages */
 static prop_t *propLocalIPIF = NULL;/* IP address to report for the local host (default is 127.0.0.1) */
+static int propLocalIPIF_set = 0;	/* is propLocalIPIF already set? */
 static prop_t *propLocalHostName = NULL;/* our hostname as FQDN - read-only after startup */
 static prop_t *propLocalHostNameToDelete = NULL;/* see GenerateLocalHostName function hdr comment! */
 static uchar *LocalHostName = NULL;/* our hostname  - read-only after startup, except HUP */
@@ -298,6 +299,9 @@ static rsRetVal
 storeLocalHostIPIF(uchar *myIP)
 {
 	DEFiRet;
+	if(propLocalIPIF != NULL) {
+		CHKiRet(prop.Destruct(&propLocalIPIF));
+	}
 	CHKiRet(prop.Construct(&propLocalIPIF));
 	CHKiRet(prop.SetString(propLocalIPIF, myIP, ustrlen(myIP)));
 	CHKiRet(prop.ConstructFinalize(propLocalIPIF));
@@ -322,7 +326,7 @@ setLocalHostIPIF(void __attribute__((unused)) *pVal, uchar *pNewVal)
 
 	CHKiRet(objUse(net, CORE_COMPONENT));
 
-	if(propLocalIPIF != NULL) {
+	if(propLocalIPIF_set) {
 		errmsg.LogError(0, RS_RET_ERR, "$LocalHostIPIF is already set "
 				"and cannot be reset; place it at TOP OF rsyslog.conf!");
 		ABORT_FINALIZE(RS_RET_ERR);
@@ -502,8 +506,7 @@ getDefPFFamily(void)
 static prop_t*
 GetLocalHostIP(void)
 {
-	if(propLocalIPIF == NULL)
-		storeLocalHostIPIF((uchar*)"127.0.0.1");
+	assert(propLocalIPIF != NULL);
 	return(propLocalIPIF);
 }
 
@@ -1315,6 +1318,9 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
+	/* intialize properties */
+	storeLocalHostIPIF((uchar*)"127.0.0.1");
+
 	/* config handlers are never unregistered and need not be - we are always loaded ;) */
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugfile", 0, eCmdHdlrGetWord, setDebugFile, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"debuglevel", 0, eCmdHdlrInt, setDebugLevel, NULL, NULL));
@@ -1374,8 +1380,3 @@ BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
 		prop.Destruct(&propLocalHostNameToDelete);
 	DESTROY_ATOMIC_HELPER_MUT(mutTerminateInputs);
 ENDObjClassExit(glbl)
-
-void glblProcessCnf(struct cnfobj *o);
-
-/* vi:set ai:
- */
