@@ -1,23 +1,10 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under GPLv3
-echo [imfile-wildcards-multi.sh]
-
-uname
-if [ `uname` = "FreeBSD" ] ; then
-   echo "This test currently does not work on FreeBSD."
-   exit 77
-fi
-
-if [ `uname` = "SunOS" ] ; then
-   echo "Solaris does not support inotify."
-   exit 77
-fi
-
-
 export IMFILEINPUTFILES="10"
 export IMFILEINPUTFILESSTEPS="5"
 export IMFILEINPUTFILESALL=$(($IMFILEINPUTFILES * $IMFILEINPUTFILESSTEPS))
-
+echo [imfile-wildcards-multi.sh]
+. $srcdir/diag.sh check-inotify
 . $srcdir/diag.sh init
 # generate input files first. Note that rsyslog processes it as
 # soon as it start up (so the file should exist at that point).
@@ -34,17 +21,20 @@ do
 	for i in `seq 1 $IMFILEINPUTFILES`;
 	do
 		mkdir rsyslog.input.dir$i
-		./msleep 25
+		./msleep 50
 		mkdir rsyslog.input.dir$i/dir$i
-		./msleep 25
+		./msleep 50
 		./inputfilegen -m 1 > rsyslog.input.dir$i/dir$i/file.logfile
+		./msleep 100
 	done
 	ls -d rsyslog.input.*
 
 	# Delete all but first!
 	for i in `seq 1 $IMFILEINPUTFILES`;
 	do
-		rm -r rsyslog.input.dir$i
+		rm -rf rsyslog.input.dir$i/dir$i/file.logfile
+		./msleep 100
+		rm -rf rsyslog.input.dir$i
 	done
 done
 

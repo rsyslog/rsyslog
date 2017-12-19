@@ -2,7 +2,7 @@
 # This is part of the rsyslog testbench, licensed under GPLv3
 export IMFILEINPUTFILES="10"
 echo [imfile-wildcards.sh]
-. $srcdir/diag.sh check-inotify-only
+. $srcdir/diag.sh check-inotify
 . $srcdir/diag.sh init
 # generate input files first. Note that rsyslog processes it as
 # soon as it start up (so the file should exist at that point).
@@ -19,6 +19,8 @@ for i in `seq 2 $IMFILEINPUTFILES`;
 do
 	cp $imfilebefore rsyslog.input.$i.log
 	imfilebefore="rsyslog.input.$i.log"
+	# Wait little for correct timing
+	./msleep 50
 done
 ./inputfilegen -m 3 > rsyslog.input.$((IMFILEINPUTFILES + 1)).log
 ls -l rsyslog.input.*
