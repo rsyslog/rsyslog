@@ -669,7 +669,7 @@ openFileWithStateFile(lstn_t *const __restrict__ pLstn)
 		if (pLstn->masterLstn != NULL) {
 			/* StateFile was migrated from a filemove.
 				We need to correct the stream Filename and continue */
-			pLstn->pStrm->pszFName = (uchar*) strdup((char*)pLstn->pszFileName);
+			CHKmalloc(pLstn->pStrm->pszFName = ustrdup(pLstn->pszFileName));
 			DBGPRINTF("statefile was migrated from a file rename for '%s'\n", pLstn->pszFileName);
 		} else {
 			errmsg.LogError(0, RS_RET_STATEFILE_WRONG_FNAME, "imfile: state file '%s' "
@@ -935,8 +935,8 @@ checkInstance(instanceConf_t *inst)
 
 	DBGPRINTF("checking instance for directory [%s]\n", dirn);
 
-	CHKmalloc(inst->pszFileBaseName = (uchar*) strdup((char*)basen));
-	CHKmalloc(inst->pszDirName = (uchar*) strdup(dirn));
+	CHKmalloc(inst->pszFileBaseName = ustrdup(basen));
+	CHKmalloc(inst->pszDirName = ustrdup(dirn));
 
 	if(dirn[0] == '\0') {
 		dirn[0] = '/';
@@ -991,9 +991,13 @@ addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	} else {
 		CHKmalloc(inst->pszBindRuleset = ustrdup(cs.pszBindRuleset));
 	}
-	inst->pszFileName = (uchar*) strdup((char*) cs.pszFileName);
-	inst->pszTag = (uchar*) strdup((char*) cs.pszFileTag);
-	inst->pszStateFile = cs.pszStateFile == NULL ? NULL : (uchar*) strdup((char*) cs.pszStateFile);
+	CHKmalloc(inst->pszFileName = ustrdup((char*) cs.pszFileName));
+	CHKmalloc(inst->pszTag = ustrdup((char*) cs.pszFileTag));
+	if(cs.pszStateFile == NULL) {
+		inst->pszStateFile = NULL;
+	} else {
+		CHKmalloc(inst->pszStateFile = ustrdup(cs.pszStateFile));
+	}
 	inst->iSeverity = cs.iSeverity;
 	inst->iFacility = cs.iFacility;
 	if(cs.maxLinesAtOnce) {
@@ -1124,12 +1128,16 @@ addListner(instanceConf_t *inst)
 
 	CHKiRet(lstnAdd(&pThis));
 	pThis->hasWildcard = hasWildcard;
-	pThis->pszFileName = (uchar*) strdup((char*) inst->pszFileName);
-	pThis->pszDirName = inst->pszDirName; /* use memory from inst! */
-	pThis->pszBaseName = (uchar*)strdup((char*)inst->pszFileBaseName); /* be consistent with expanded wildcards! */
-	pThis->pszTag = (uchar*) strdup((char*) inst->pszTag);
+	pThis->pszDirName = inst->pszDirName;
+	CHKmalloc(pThis->pszFileName = ustrdup(inst->pszFileName));
+	CHKmalloc(pThis->pszBaseName = ustrdup(inst->pszFileBaseName)); /* be consistent with expanded wildcards! */
+	CHKmalloc(pThis->pszTag = ustrdup(inst->pszTag));
 	pThis->lenTag = ustrlen(pThis->pszTag);
-	pThis->pszStateFile = inst->pszStateFile == NULL ? NULL : (uchar*) strdup((char*) inst->pszStateFile);
+	if(inst->pszStateFile == NULL) {
+		pThis->pszStateFile = NULL;
+	} else {
+		pThis->pszStateFile = ustrdup(inst->pszStateFile);
+	}
 
 	CHKiRet(ratelimitNew(&pThis->ratelimiter, "imfile", (char*)inst->pszFileName));
 	CHKmalloc(pThis->multiSub.ppMsgs = MALLOC(inst->nMultiSub * sizeof(smsg_t *)));
@@ -1695,7 +1703,7 @@ dirsAdd(uchar *dirName, int* piIndex)
 	}
 
 	/* if we reach this point, there is space in the file table for the new entry */
-	CHKmalloc(dirs[newindex].dirName = (uchar*)strdup((char*)dirName)); /* Get a copy of the string !*/
+	CHKmalloc(dirs[newindex].dirName = ustrdup(dirName)); /* Get a copy of the string !*/
 	dirs[newindex].dirNameBfWildCard = NULL;
 	dirs[newindex].bDirType = DIR_CONFIGURED; /* Default to configured! */
 	CHKiRet(fileTableInit(&dirs[newindex].active, INIT_FILE_IN_DIR_TAB_SIZE));
@@ -1707,7 +1715,7 @@ dirsAdd(uchar *dirName, int* piIndex)
 		DBGPRINTF("dirsAdd detected wildcard in dir '%s'\n", dirName);
 
 		/* Get copy of dirname */
-		CHKmalloc(dirs[newindex].dirNameBfWildCard = (uchar*)strdup((char*)dirName));
+		CHKmalloc(dirs[newindex].dirNameBfWildCard = ustrdup(dirName));
 
 		/* Set NULL Byte to FIRST wildcard occurrence */
 		psztmp = strchr((char*)dirs[newindex].dirNameBfWildCard, '*');
@@ -1860,16 +1868,20 @@ lstnDup(lstn_t **ppExisting, uchar *const __restrict__ newname, uchar *const __r
 	if (newdirname == NULL) {
 		pThis->pszDirName = existing->pszDirName; /* read-only */
 	} else {
-		CHKmalloc(pThis->pszDirName = (uchar*)strdup((char*)newdirname));
+		CHKmalloc(pThis->pszDirName = ustrdup(newdirname));
 	}
-	CHKmalloc(pThis->pszBaseName = (uchar*)strdup((char*)newname));
+	CHKmalloc(pThis->pszBaseName = ustrdup(newname));
 	if(asprintf((char**)&pThis->pszFileName, "%s/%s", (char*)pThis->pszDirName, (char*)newname) == -1) {
 		DBGPRINTF("lstnDup: asprintf failed, malfunction can happen\n");
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
-	CHKmalloc(pThis->pszTag = (uchar*) strdup((char*) existing->pszTag));
+	CHKmalloc(pThis->pszTag = ustrdup(existing->pszTag));
 	pThis->lenTag = ustrlen(pThis->pszTag);
-	pThis->pszStateFile = existing->pszStateFile == NULL ? NULL : (uchar*) strdup((char*) existing->pszStateFile);
+	if(existing->pszStateFile == NULL) {
+		pThis->pszStateFile = NULL;
+	} else {
+		CHKmalloc(pThis->pszStateFile = ustrdup(existing->pszStateFile));
+	}
 
 	CHKiRet(ratelimitNew(&pThis->ratelimiter, "imfile", (char*)pThis->pszFileName));
 	pThis->multiSub.maxElem = existing->multiSub.maxElem;
@@ -2522,7 +2534,7 @@ in_processEvent(struct inotify_event *ev)
 				}
 
 				/* Store statefile name for later MOVED_TO event along with COOKIE */
-				pLstn->masterLstn->movedfrom_statefile = (uchar*)strdup((char*) getStateFileName(pLstn,
+				pLstn->masterLstn->movedfrom_statefile = ustrdup(getStateFileName(pLstn,
 					statefile, sizeof(statefile), NULL) );
 				pLstn->masterLstn->movedfrom_cookie = ev->cookie;
 
@@ -2913,7 +2925,7 @@ fen_DirSearchFiles(lstn_t *pLstn, int dirIdx)
 					ABORT_FINALIZE(RS_RET_IO_ERROR);
 				}
 				/* Event types to watch. */
-				pLstnNew->pfinf->events = FILE_MODIFIED; /* not needed/working |FILE_DELETE|FILE_RENAME_TO|FILE_RENAME_FROM;*/
+				pLstnNew->pfinf->events = FILE_MODIFIED;
 				pLstnNew->pfinf->port = glport;
 
 				/* Add Listener to configured dirs tab */
