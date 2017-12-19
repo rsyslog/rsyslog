@@ -50,7 +50,6 @@ MODULE_CNFNAME("omhttpfs")
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(datetime)
 
@@ -169,7 +168,7 @@ httpfs_init_curl(wrkrInstanceData_t *pWrkrData, instanceData *pData)
         }
     } else {
 	    /* LOG */
-        errmsg.LogError(0, RS_RET_OBJ_CREATION_FAILED, "omhttpfs: failed to init cURL\n");
+        LogError(0, RS_RET_OBJ_CREATION_FAILED, "omhttpfs: failed to init cURL\n");
 
         return RS_RET_OBJ_CREATION_FAILED;
     }
@@ -386,7 +385,7 @@ httpfs_curl_result_callback(void *contents, size_t size, size_t nmemb, void *use
             pWrkrData->reply[pWrkrData->replyLen] = '\0'; \
         } \
     } else { \
-	errmsg.LogError(0, RS_RET_ERR, "CURL request fail, code=%d, error string=%s\n", res, curl_easy_strerror(res)); \
+	LogError(0, RS_RET_ERR, "CURL request fail, code=%d, error string=%s\n", res, curl_easy_strerror(res)); \
         return -1; \
     }
 
@@ -779,7 +778,7 @@ CODESTARTnewActInst
 	 * request via pblk that file is a mandatory parameter. However, this is
 	 * also a guard against something going really wrong...
 	 */
-        errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "omhttpfs: file is not set "
+        LogError(0, RS_RET_INTERNAL_ERROR, "omhttpfs: file is not set "
 		"[this should not be possible]\n");
 	ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
     }
@@ -820,8 +819,7 @@ CODESTARTmodExit
     /* release what we no longer need */
     objRelease(datetime, CORE_COMPONENT);
     objRelease(glbl, CORE_COMPONENT);
-    objRelease(errmsg, CORE_COMPONENT);
-
+ 
 ENDmodExit
 
 /**
@@ -845,12 +843,11 @@ INITLegCnfVars
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
     /* tell which objects we need */
-    CHKiRet(objUse(errmsg, CORE_COMPONENT));
     CHKiRet(objUse(glbl, CORE_COMPONENT));
     CHKiRet(objUse(datetime, CORE_COMPONENT));
 
     if (curl_global_init(CURL_GLOBAL_ALL) != 0) {
-        errmsg.LogError(0, RS_RET_OBJ_CREATION_FAILED, "CURL fail. -httpfs module init failed");
+        LogError(0, RS_RET_OBJ_CREATION_FAILED, "CURL fail. -httpfs module init failed");
         ABORT_FINALIZE(RS_RET_OBJ_CREATION_FAILED);
     }
 
