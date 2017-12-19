@@ -130,6 +130,8 @@ Version 8.32.0 [v8-stable] 2018-01-09
   This only occured in situations when the system was totally out of memory.
 - omkafka bugfix: build fails with older versions of librdkafka
   closes https://github.com/rsyslog/rsyslog/issues/2168
+- omgssapi bugfix: fix compiler warnings with gcc-7
+  closes https://github.com/rsyslog/rsyslog/issues/2097
 - dnscache bugfix: entries were cached based on IP AND port number
   That  hash key which is used to find out already cached dns entry gets
   incorrectly computed from the whole sockaddr_storage
