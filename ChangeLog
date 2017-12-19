@@ -40,9 +40,9 @@ Version 8.32.0 [v8-stable] 2018-01-09
   * Made the logctl usertool use a homogeneous coding style.
   Thanks to Hugo Soszynski for contributing this work (as well as
   suggesting some workarounds related to libmongoc/libbson).
-- imfile: added support for Solaris File Event notification
-  improves performance under Solaris; current implementation does not yet
-  support wildcards (will follow as a separate project)
+- imfile: added support for Solaris File Event notification (FEN)
+  also improves performance under Solaris, with FEN imfile provides
+  features equivalent to inotify mode
 - imuxsock: improved status reporting: socket name received from systemd
   Providing an indication of what we got from systemd facilitates problem
   analysis.
@@ -101,6 +101,10 @@ Version 8.32.0 [v8-stable] 2018-01-09
   closes https://github.com/rsyslog/rsyslog/issues/441
   fixes https://github.com/rsyslog/rsyslog/issues/2132
 - script bugfix: improper string-to-number conversion for negative numbers
+- core bugfix: filename length limitation of 199 bytes
+  file names (including path names) longer than 199 bytes could not be
+  handled at many places. This has now been uplifted to 4KiB after careful
+  review for the largest size supported among all relevant platforms.
 - core bugfix: undefined behavior due to integer overflow
   when searching strings, we may have an (unsigned) interger overflow
   which can lead to misadressing.
@@ -124,6 +128,8 @@ Version 8.32.0 [v8-stable] 2018-01-09
   we see a regression not caught by the CI system.
 - mmsnmptrapd bugfix: potential misadressing
   This only occured in situations when the system was totally out of memory.
+- omkafka bugfix: build fails with older versions of librdkafka
+  closes https://github.com/rsyslog/rsyslog/issues/2168
 - dnscache bugfix: entries were cached based on IP AND port number
   That  hash key which is used to find out already cached dns entry gets
   incorrectly computed from the whole sockaddr_storage
@@ -137,6 +143,9 @@ Version 8.32.0 [v8-stable] 2018-01-09
   a memory leak occurred when librdkafka communicated error/status information
   to omkafka. this seems to happen relatively frequently, so this leak
   could be pretty problematic.
+- mmdblookup bugfix: replace thread-unsafe strtok() by thread-safe counterpart
+  Many thanks to Will Storey (github user @horgh) for mentioning this and
+  his phantastic help in debugging this rsyslog problem!
 - pmnormalize bugfix: remove unsave "strcat" implementation
 - rainerscript bugfix: ltrim() and rtrim function misadressing
   This could lead to a segfault and was triggerred by certain input data
@@ -146,6 +155,9 @@ Version 8.32.0 [v8-stable] 2018-01-09
 - cleanup: remove obsolete pre-KSI GuardTime signature interface
   this is no longer functional starting Jan 2018 as it reached end of life
   closes https://github.com/rsyslog/rsyslog/issues/2128
+- cleanup: obsolete defintion SOL_TCP replaced by newer IPPROTO_TCP
+  this should not have any effect at all except better portability, but is
+  worth mentioning in the ChangeLog nevertheless.
 ------------------------------------------------------------------------------
 Version 8.31.0 [v8-stable] 2017-11-28
 - NEW BUILD DEPENDENCY: ommongodb now requires libmongo-c
