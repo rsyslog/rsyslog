@@ -2845,6 +2845,7 @@ rsRetVal
 fen_DirSearchFiles(lstn_t *pLstn, int dirIdx)
 {
 	struct file_obj *fobjp = NULL;	/* Helper object */
+	rsRetVal localRet;
 	int ftIdx;
 	int result;
 	glob_t files;
@@ -2890,10 +2891,11 @@ fen_DirSearchFiles(lstn_t *pLstn, int dirIdx)
 
 				/* duplicate listener firs */
 				pLstnNew = pLstn;
-				if(lstnDup(&pLstnNew, basefilename, dirs[dirIdx].dirName) != RS_RET_OK) {
-					DBGPRINTF("fen_DirSearchFiles failed to duplicate listener for '%s'\n",
-						pLstn->pszFileName);
-					ABORT_FINALIZE(RS_RET_IO_ERROR);
+				localRet = lstnDup(&pLstnNew, basefilename, dirs[dirIdx].dirName);
+				if(localRet != RS_RET_OK) {
+					DBGPRINTF("fen_DirSearchFiles failed to duplicate listener for '%s' "
+						"with iRet %d\n", localRet, pLstn->pszFileName);
+					ABORT_FINALIZE(localRet);
 				}
 
 				// Create FileInfo struct
