@@ -723,10 +723,6 @@ EnableKeepAlive(ptcplstn_t *pLstn, int sock)
 	int optval;
 	socklen_t optlen;
 	DEFiRet;
-#      if defined(__FreeBSD__) || defined(__NetBSD__) ||  \
-          defined(__OpenBSD__) || defined(__DragonflyBSD__)
-#      define SOL_TCP IPPROTO_TCP
-#      endif
 
 	optval = 1;
 	optlen = sizeof(optval);
@@ -740,7 +736,7 @@ EnableKeepAlive(ptcplstn_t *pLstn, int sock)
 	if(pLstn->pSrv->iKeepAliveProbes > 0) {
 		optval = pLstn->pSrv->iKeepAliveProbes;
 		optlen = sizeof(optval);
-		ret = setsockopt(sock, SOL_TCP, TCP_KEEPCNT, &optval, optlen);
+		ret = setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, &optval, optlen);
 	} else {
 		ret = 0;
 	}
@@ -755,7 +751,7 @@ EnableKeepAlive(ptcplstn_t *pLstn, int sock)
 	if(pLstn->pSrv->iKeepAliveTime > 0) {
 		optval = pLstn->pSrv->iKeepAliveTime;
 		optlen = sizeof(optval);
-		ret = setsockopt(sock, SOL_TCP, TCP_KEEPIDLE, &optval, optlen);
+		ret = setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE, &optval, optlen);
 	} else {
 		ret = 0;
 	}
@@ -770,7 +766,7 @@ EnableKeepAlive(ptcplstn_t *pLstn, int sock)
 	if(pLstn->pSrv->iKeepAliveIntvl > 0) {
 		optval = pLstn->pSrv->iKeepAliveIntvl;
 		optlen = sizeof(optval);
-		ret = setsockopt(sock, SOL_TCP, TCP_KEEPINTVL, &optval, optlen);
+		ret = setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL, &optval, optlen);
 	} else {
 		ret = 0;
 	}
