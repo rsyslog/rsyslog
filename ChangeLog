@@ -1,7 +1,9 @@
 ------------------------------------------------------------------------------
 Version 8.32.0 [v8-stable] 2018-01-09
 - NEW BUILD REQUIREMENT: libcurl is now needed for rsyslog core
-  due to new script function http_request()
+  due to new script function http_request(). This can be turned off by the
+  new configure option --disable-libcurl. If so, http_request() is not
+  available.
 - ompgsql: considerable enhancements
   The PostgreSQL output module was woefully out-of-date the following
   list is changes made to update the module to current Rsyslog standards.
@@ -72,6 +74,9 @@ Version 8.32.0 [v8-stable] 2018-01-09
   (other than calling actions) should be made depending on that state.
   A prime example for this is probably calling a ruleset.
   closes https://github.com/rsyslog/rsyslog/issues/1939
+- Patches from BSD projects have been imported
+  ... as far as they still apply. Some patches that patched BSD-specific
+  code were broadened to be more generic.
 - RainerScript: add function script_error() and error-reporting support
   This permits script functions that could fail to report errors back, so
   that the user can handle them if desired. We use an errno-style of
@@ -95,6 +100,7 @@ Version 8.32.0 [v8-stable] 2018-01-09
   rate limiting counts in the default case.
   closes https://github.com/rsyslog/rsyslog/issues/441
   fixes https://github.com/rsyslog/rsyslog/issues/2132
+- script bugfix: improper string-to-number conversion for negative numbers
 - core bugfix: undefined behavior due to integer overflow
   when searching strings, we may have an (unsigned) interger overflow
   which can lead to misadressing.
