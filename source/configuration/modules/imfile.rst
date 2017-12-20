@@ -106,7 +106,7 @@ Module Parameters
 
 .. index:: 
    single: imfile; mode
-.. function:: mode ["inotify"/"polling"]
+.. function:: mode ["inotify"/"polling"/"fen"]
 
    *Default: "inotify"*
 
@@ -123,6 +123,13 @@ Module Parameters
   Note: if a legacy "$ModLoad" statement is used, the default is *polling*.
   This default was kept to prevent problems with old configurations. It
   might change in the future.
+
+   *Available since: 8.32.0*
+
+  On Solaris, the FEN API is used instead of INOTIFY. You can set the mode
+  to fen or inotify (which is automatically mapped to fen on Solaris OS).
+  Please note that the FEN is limited compared to INOTIFY. Deep wildcard
+  matches may not work because of the API limits for now.
 
 .. index::
    single: imfile; readtimeout
