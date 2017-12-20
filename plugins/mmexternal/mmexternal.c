@@ -267,32 +267,33 @@ processProgramReply(wrkrInstanceData_t *__restrict__ const pWrkrData, smsg_t *co
 
 /* execute the child process (must be called in child context
  * after fork).
+ * Note: all output will go to std[err/out] of the **child**, so
+ * rsyslog will never see it except as script output. Do NOT
+ * use dbgprintf() or LogError() and friends.
  */
 /* dummy vars to store "dup()" results - keeps Coverity happy */
 static int dummy_stdin;
 static int dummy_stdout;
 static int dummy_stderr;
 static void __attribute__((noreturn))
-execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdOutErr)
+execBinary(wrkrInstanceData_t *pWrkrData, const int fdStdin, const int fdStdOutErr)
 {
-	int i, iRet;
+	int i;
 	struct sigaction sigAct;
 	sigset_t set;
-	char errStr[1024];
 	char *newenviron[] = { NULL };
 
-	fclose(stdin);
+	close(0);
 	if((dummy_stdin = dup(fdStdin)) == -1) {
-		DBGPRINTF("mmexternal: dup() stdin failed\n");
+		perror("mmexternal: dup() stdin failed\n");
 	}
 	close(1);
 	if((dummy_stdout = dup(fdStdOutErr)) == -1) {
-		DBGPRINTF("mmexternal: dup() stdout failed\n");
+		perror("mmexternal: dup() stdout failed\n");
 	}
-	/* todo: different pipe for stderr? */
 	close(2);
 	if((dummy_stderr = dup(fdStdOutErr)) == -1) {
-		DBGPRINTF("mmexternal: dup() stderr failed\n");
+		perror("mmexternal: dup() stderr failed\n");
 	}
 
 	/* we close all file handles as we fork soon
@@ -320,18 +321,21 @@ execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdOutErr)
 	alarm(0);
 
 	/* finally exec child */
-	iRet = execve((char*)pWrkrData->pData->szBinary, pWrkrData->pData->aParams, newenviron);
-	if(iRet == -1) {
-		/* Note: this will go to stderr of the **child**, so rsyslog will never
-		 * see it except when stdout is captured. If we use the plugin interface,
-		 * we can use this to convey a proper status back!
-		 */
-		rs_strerror_r(errno, errStr, sizeof(errStr));
-		fprintf(stderr, "mmexternal: failed to execute binary '%s': %s\n",
-			  pWrkrData->pData->szBinary, errStr);
+	execve((char*)pWrkrData->pData->szBinary, pWrkrData->pData->aParams, newenviron);
+
+	/* we should never reach this point, but if we do, we complain and terminate */
+	char errstr[1024];
+	char errbuf[2048];
+	rs_strerror_r(errno, errstr, sizeof(errstr));
+	errstr[sizeof(errstr)-1] = '\0';
+	const size_t lenbuf = snprintf(errbuf, sizeof(errbuf),
+		"mmexternal: failed to execute binary '%s': %s\n",
+		  pWrkrData->pData->szBinary, errstr);
+	errbuf[sizeof(errbuf)-1] = '\0';
+	if(write(2, errbuf, lenbuf) != (ssize_t) lenbuf) {
+		/* just keep static analyzers happy... */
+		exit(2);
 	}
-	
-	/* we should never reach this point, but if we do, we terminate */
 	exit(1);
 }
 
