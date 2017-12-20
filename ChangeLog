@@ -109,6 +109,13 @@ Version 8.32.0 [v8-stable] 2018-01-09
   when searching strings, we may have an (unsigned) interger overflow
   which can lead to misadressing.
   Detected by clang ubsan.
+- core bugfix: race on LocalHostIP property during startup
+  The way the default was set could lead to a race if e.g. two internal
+  messages were emitted at startup when the property was not yet set. This
+  has been seen to happen in practice. It had no bad effect except a very
+  small stationary memory leak, but made using thread analyzers unreliable
+  (as it was rightfully detected as a problem).
+  closes https://github.com/rsyslog/rsyslog/issues/2012
 - bugfix: potential segfault on startup
   timezone info table was "sorted" even though it may be NULL. There is
   no practical case known where this lead to an actual abort, but in
