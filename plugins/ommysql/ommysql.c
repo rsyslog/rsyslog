@@ -455,7 +455,8 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * Retries make no sense. 
 	 */
 	if (iMySQLPropErr) { 
-		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "Trouble with MySQL connection properties. -MySQL logging disabled");
+		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "Trouble with MySQL connection properties. "
+				"-MySQL logging disabled");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	} else {
 		pData->dbsrvPort = (unsigned) cs.iSrvPort;	/* set configured port */

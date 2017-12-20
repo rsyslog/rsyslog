@@ -336,7 +336,8 @@ static void queueDrain(qqueue_t *pThis)
 	ASSERT(pThis != NULL);
 
 	BEGINfunc
-	DBGOPRINT((obj_t*) pThis, "queue (type %d) will lose %d messages, destroying...\n", pThis->qType, pThis->iQueueSize);
+	DBGOPRINT((obj_t*) pThis, "queue (type %d) will lose %d messages, destroying...\n",
+		pThis->qType, pThis->iQueueSize);
 	/* iQueueSize is not decremented by qDel(), so we need to do it ourselves */
 	while(ATOMIC_DEC_AND_FETCH(&pThis->iQueueSize, &pThis->mutQueueSize) > 0) {
 		pThis->qDeq(pThis, &pMsg);
@@ -1300,7 +1301,8 @@ cancelWorkers(qqueue_t *pThis)
 	/* ... and now the DA queue, if it exists (should always be after the primary one) */
 	if(pThis->pqDA != NULL) {
 		DBGOPRINT((obj_t*) pThis, "checking to see if we need to cancel any worker threads of the DA queue\n");
-		iRetLocal = wtpCancelAll(pThis->pqDA->pWtpReg); /* returns immediately if all threads already have terminated */
+		iRetLocal = wtpCancelAll(pThis->pqDA->pWtpReg);
+		/* returns immediately if all threads already have terminated */
 		if(iRetLocal != RS_RET_OK) {
 			DBGOPRINT((obj_t*) pThis, "unexpected iRet state %d trying to cancel DA queue worker "
 				  "threads, continuing, but results are unpredictable\n", iRetLocal);
@@ -1549,8 +1551,8 @@ DoDeleteBatchFromQStore(qqueue_t *pThis, int nElem)
 		 */
 		 if(bytesDel != 0) {
 			pThis->tVars.disk.sizeOnDisk -= bytesDel;
-			DBGOPRINT((obj_t*) pThis, "doDeleteBatch: a %lld octet file has been deleted, now %lld octets disk "
-					"space used\n", (long long) bytesDel, pThis->tVars.disk.sizeOnDisk);
+			DBGOPRINT((obj_t*) pThis, "doDeleteBatch: a %lld octet file has been deleted, now %lld "
+				"octets disk space used\n", (long long) bytesDel, pThis->tVars.disk.sizeOnDisk);
 			/* awake possibly waiting enq process */
 			pthread_cond_signal(&pThis->notFull); /* we hold the mutex while we are in here! */
 		}
@@ -2642,8 +2644,8 @@ DoSaveOnShutdown(qqueue_t *pThis)
 	DBGOPRINT((obj_t*) pThis, "end queue persistence run, iRet %d, queue size log %d, phys %d\n",
 		  iRetLocal, getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
 	if(iRetLocal != RS_RET_OK) {
-		DBGOPRINT((obj_t*) pThis, "unexpected iRet state %d after trying to shut down primary queue in disk save mode, "
-			  "continuing, but results are unpredictable\n", iRetLocal);
+		DBGOPRINT((obj_t*) pThis, "unexpected iRet state %d after trying to shut down primary "
+			"queue in disk save mode, continuing, but results are unpredictable\n", iRetLocal);
 	}
 
 	RETiRet;
@@ -2900,9 +2902,11 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg)
 			msgDestruct(&pMsg);
 			ABORT_FINALIZE(RS_RET_QUEUE_FULL);
 		} else {
-			DBGOPRINT((obj_t*) pThis, "doEnqSingleObject: queue FULL - waiting %dms to drain.\n", pThis->toEnq);
+			DBGOPRINT((obj_t*) pThis, "doEnqSingleObject: queue FULL - waiting %dms to drain.\n",
+				pThis->toEnq);
 			if(glbl.GetGlobalInputTermState()) {
-				DBGOPRINT((obj_t*) pThis, "doEnqSingleObject: queue FULL, discard due to FORCE_TERM.\n");
+				DBGOPRINT((obj_t*) pThis, "doEnqSingleObject: queue FULL, discard due to "
+					"FORCE_TERM.\n");
 				ABORT_FINALIZE(RS_RET_FORCE_TERM);
 			}
 			timeoutComp(&t, pThis->toEnq);

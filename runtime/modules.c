@@ -682,7 +682,8 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			if(localRet != RS_RET_OK && localRet != RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
 				ABORT_FINALIZE(localRet);
 
-			localRet = (*pNew->modQueryEtryPt)((uchar*)"SetShutdownImmdtPtr", &pNew->mod.om.SetShutdownImmdtPtr);
+			localRet = (*pNew->modQueryEtryPt)((uchar*)"SetShutdownImmdtPtr",
+				&pNew->mod.om.SetShutdownImmdtPtr);
 			if(localRet != RS_RET_OK && localRet != RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
 				ABORT_FINALIZE(localRet);
 

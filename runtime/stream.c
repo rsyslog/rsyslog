@@ -690,7 +690,8 @@ static rsRetVal strmReadChar(strm_t *pThis, uchar *pC)
 	ASSERT(pThis != NULL);
 	ASSERT(pC != NULL);
 
-	/* DEV debug only: DBGOPRINT((obj_t*) pThis, "strmRead index %zd, max %zd\n", pThis->iBufPtr, pThis->iBufPtrMax); */
+	/* DEV debug only: DBGOPRINT((obj_t*) pThis, "strmRead index %zd, max %zd\n", pThis->iBufPtr,
+	pThis->iBufPtrMax); */
 	if(pThis->iUngetC != -1) {	/* do we have an "unread" char that we need to provide? */
 		*pC = pThis->iUngetC;
 		++pThis->iCurrOffs; /* one more octet read */
@@ -792,7 +793,8 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
 			} else {
 				if ((((*ppCStr)->iStrLen) > 0) ){
 					if(pThis->bPrevWasNL) {
-						rsCStrTruncate(*ppCStr, (bEscapeLF) ? 4 : 1); /* remove the prior newline */
+						rsCStrTruncate(*ppCStr, (bEscapeLF) ? 4 : 1);
+						/* remove the prior newline */
 						finished=1;
 					} else {
 						if(bEscapeLF) {

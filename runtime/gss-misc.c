@@ -219,7 +219,8 @@ static int send_token(int s, gss_buffer_t tok)
 	unsigned int len;
 
 	if (tok->length > 0xffffffffUL)
-		abort();  /* TODO: we need to reconsider this, abort() is not really a solution - degrade, but keep running */
+		abort();  /* TODO: we need to reconsider this, abort() is not really
+				a solution - degrade, but keep running */
 	len = htonl(tok->length);
 	lenbuf[0] = (len >> 24) & 0xff;
 	lenbuf[1] = (len >> 16) & 0xff;

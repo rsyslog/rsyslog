@@ -108,10 +108,12 @@ key_equals_fn(void *key1, void *key2)
 		return 0;
 	 switch (((struct sockaddr *)key1)->sa_family) {
 		case AF_INET:
-			RetVal = !memcmp(&((struct sockaddr_in *)key1)->sin_addr, &((struct sockaddr_in *)key2)->sin_addr, sizeof (struct in_addr));
+			RetVal = !memcmp(&((struct sockaddr_in *)key1)->sin_addr,
+			&((struct sockaddr_in *)key2)->sin_addr, sizeof (struct in_addr));
 			break;
 		case AF_INET6:
-			RetVal = !memcmp(&((struct sockaddr_in6 *)key1)->sin6_addr, &((struct sockaddr_in6 *)key2)->sin6_addr, sizeof (struct in6_addr));
+			RetVal = !memcmp(&((struct sockaddr_in6 *)key1)->sin6_addr,
+			&((struct sockaddr_in6 *)key2)->sin6_addr, sizeof (struct in6_addr));
 			break;
 	}
 

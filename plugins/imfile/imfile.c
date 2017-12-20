@@ -977,11 +977,13 @@ addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	DEFiRet;
 
 	if(cs.pszFileName == NULL) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imfile error: no file name given, file monitor can not be created");
+		errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imfile error: no file name given, file monitor can "
+					"not be created");
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 	if(cs.pszFileTag == NULL) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imfile error: no tag value given, file monitor can not be created");
+		errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imfile error: no tag value given, file monitor can "
+					"not be created");
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 
@@ -1960,13 +1962,13 @@ in_setupDirWatch(const int dirIdx)
 				if (psztmp != NULL) {
 					*psztmp = '\0';
 				} else {
-					DBGPRINTF("in_setupDirWatch: unexpected error #2 creating truncated directorynamefor '%s'\n",
-						dirs[dirIdx].dirName);
+					DBGPRINTF("in_setupDirWatch: unexpected error #2 creating truncated "
+						"directorynamefor '%s'\n", dirs[dirIdx].dirName);
 					goto done;
 				}
 			} else {
-				DBGPRINTF("in_setupDirWatch: unexpected error #1 creating truncated directorynamefor '%s'\n",
-					dirs[dirIdx].dirName);
+				DBGPRINTF("in_setupDirWatch: unexpected error #1 creating truncated directorynamefor"
+					" '%s'\n", dirs[dirIdx].dirName);
 				goto done;
 			}
 
@@ -2217,13 +2219,13 @@ in_handleDirGetFullDir(char* pszoutput, char* pszrootdir, char* pszsubdir)
 			if (psztmp != NULL) {
 				*psztmp = '\0';
 			} else {
-				DBGPRINTF("in_handleDirGetFullDir: unexpected error #2 creating truncated directoryname for '%s'\n",
-					dirnametrunc);
+				DBGPRINTF("in_handleDirGetFullDir: unexpected error #2 creating truncated "
+					"directoryname for '%s'\n", dirnametrunc);
 				goto done;
 			}
 		} else {
-			DBGPRINTF("in_handleDirGetFullDir: unexpected error #1 creating truncated directoryname for '%s'\n",
-				dirnametrunc);
+			DBGPRINTF("in_handleDirGetFullDir: unexpected error #1 creating truncated directoryname for"
+					" '%s'\n", dirnametrunc);
 			goto done;
 		}
 	}
@@ -2331,11 +2333,12 @@ in_handleDirEventFileCREATE(struct inotify_event *ev, const int dirIdx)
 						ftIdx = fileTableSearch(&dirs[i].configured, (uchar*)ev->name);
 						if(ftIdx != -1) {
 							/* Found matching directory! */
-							dirIdxFinal = i; /* Have to correct directory index for listnr dupl
-												in in_setupFileWatchDynamic */
+							dirIdxFinal = i; /* Have to correct directory index for
+							listnr dupl in in_setupFileWatchDynamic */
 
-							DBGPRINTF("Found matching directory for file '%s' in dir '%s' (Idx=%d)\n",
-								ev->name, dirs[dirIdxFinal].dirName, dirIdxFinal);
+							DBGPRINTF("Found matching directory for file '%s' in "
+								"dir '%s' (Idx=%d)\n", ev->name,
+								dirs[dirIdxFinal].dirName, dirIdxFinal);
 							break;
 						}
 					}
@@ -2344,12 +2347,14 @@ in_handleDirEventFileCREATE(struct inotify_event *ev, const int dirIdx)
 
 					if(ftIdx == -1) {
 						DBGPRINTF("file '%s' not associated with dir '%s' and also no "
-							"matching wildcard directory found\n", ev->name, dirs[dirIdxFinal].dirName);
+							"matching wildcard directory found\n", ev->name,
+							dirs[dirIdxFinal].dirName);
 						goto done;
 					}
 					else {
-						DBGPRINTF("file '%s' not associated with dir '%s', using dirIndex %d instead\n",
-							ev->name, (pszDir == NULL) ? dirs[dirIdxFinal].dirName : pszDir, dirIdxFinal);
+						DBGPRINTF("file '%s' not associated with dir '%s', using "
+							"dirIndex %d instead\n", ev->name, (pszDir == NULL)
+							? dirs[dirIdxFinal].dirName : pszDir, dirIdxFinal);
 					}
 				} else {
 					DBGPRINTF("file '%s' not associated with dir '%s'\n",
@@ -2368,10 +2373,12 @@ in_handleDirEventFileCREATE(struct inotify_event *ev, const int dirIdx)
 		if(ev->mask & IN_MOVED_TO) {
 			if (pLstn->movedfrom_statefile != NULL && pLstn->movedfrom_cookie == ev->cookie) {
 				/* We need to prepar fullfn before we can generate statefilename */
-				snprintf(fullfn, MAXFNAME, "%s/%s", (pszDir == NULL) ? dirs[dirIdxFinal].dirName : pszDir, (uchar*)ev->name);
+				snprintf(fullfn, MAXFNAME, "%s/%s", (pszDir == NULL) ? dirs[dirIdxFinal].dirName
+					: pszDir, (uchar*)ev->name);
 				getStateFileName(NULL, statefile_new, sizeof(statefile_new), (uchar*)fullfn);
 				getFullStateFileName(statefile_new, statefilefull_new, sizeof(statefilefull_new));
-				getFullStateFileName(pLstn->movedfrom_statefile, statefilefull_old, sizeof(statefilefull_old));
+				getFullStateFileName(pLstn->movedfrom_statefile, statefilefull_old,
+					sizeof(statefilefull_old));
 
 				DBGPRINTF("old statefile '%s' needs to be moved to '%s' first!\n",
 				statefilefull_old, statefilefull_new);
@@ -2381,7 +2388,8 @@ in_handleDirEventFileCREATE(struct inotify_event *ev, const int dirIdx)
 					errmsg.LogError(errno, RS_RET_ERR, "imfile: could not rename statefile "
 						"'%s' into '%s'", statefilefull_old, statefilefull_new);
 				} else {
-					DBGPRINTF("statefile '%s' renamed into '%s'\n", statefilefull_old, statefilefull_new);
+					DBGPRINTF("statefile '%s' renamed into '%s'\n", statefilefull_old,
+						statefilefull_new);
 				}
 
 				/* Free statefile memory */
@@ -2389,8 +2397,9 @@ in_handleDirEventFileCREATE(struct inotify_event *ev, const int dirIdx)
 				pLstn->movedfrom_statefile = NULL;
 				pLstn->movedfrom_cookie = 0;
 			} else {
-					DBGPRINTF("IN_MOVED_TO either unknown cookie '%d' we expected '%d' or missing statefile '%s'\n",
-						pLstn->movedfrom_cookie, ev->cookie, pLstn->movedfrom_statefile);
+					DBGPRINTF("IN_MOVED_TO either unknown cookie '%d' we expected '%d' or "
+						"missing statefile '%s'\n", pLstn->movedfrom_cookie,
+						ev->cookie, pLstn->movedfrom_statefile);
 			}
 		}
 
@@ -2890,14 +2899,16 @@ fen_DirSearchFiles(lstn_t *pLstn, int dirIdx)
 			if (dirIdx == -1) {
 				/* Add dir to table and create watch */
 				CHKiRet(dirsAdd(basedir, &dirIdx));
-				DBGPRINTF("fen_DirSearchFiles adding new dir '%s' to dirs table idx %d\n", basedir, dirIdx);
+				DBGPRINTF("fen_DirSearchFiles adding new dir '%s' to dirs table idx %d\n",
+					basedir, dirIdx);
 //				fen_processEventDir(NULL, dirIdx, 0); /* Monitor child directory as well */
 			}
 
 			/* Search for file index here */
 			ftIdx = fileTableSearchNoWildcard(&dirs[dirIdx].active, (uchar*)basefilename);
 			if(ftIdx >= 0) {
-				DBGPRINTF("fen_DirSearchFiles file '%s' idx %d already being monitored ... \n", file, ftIdx);
+				DBGPRINTF("fen_DirSearchFiles file '%s' idx %d already being monitored ... \n",
+					file, ftIdx);
 			} else {
 				DBGPRINTF("fen_DirSearchFiles setup new monitor for dynamic file '%s' \n", file);
 
@@ -2969,14 +2980,16 @@ fen_processEventDir(struct file_obj* fobjp, int dirIdx, int revents)
 	if (revents) {
 		fen_printevent(revents);
 		DBGPRINTF("\n");
-		DBGPRINTF("fen_processEventDir DIR EVENTS needs to be processed for '%s'('%s')\n", fobjp->fo_name, dirs[dirIdx].dirName);
+		DBGPRINTF("fen_processEventDir DIR EVENTS needs to be processed for '%s'('%s')\n",
+			fobjp->fo_name, dirs[dirIdx].dirName);
 
 		/* a file was modified */
 		if (revents & FILE_MODIFIED) {
 			/* LOOP through configured Listeners */
 			for(iListIdx = 0; iListIdx < dirs[dirIdx].configured.currMax; iListIdx++) {
 				hasWildcard = (	dirs[dirIdx].hasWildcard ||
-						dirs[dirIdx].configured.listeners[iListIdx].pLstn->hasWildcard ? TRUE : FALSE);
+						dirs[dirIdx].configured.listeners[iListIdx].pLstn->hasWildcard
+							? TRUE : FALSE);
 				if (hasWildcard == 1){
 					/* Handle Wildcard files */
 					fen_DirSearchFiles(	dirs[dirIdx].configured.listeners[iListIdx].pLstn,
@@ -2989,7 +3002,8 @@ fen_processEventDir(struct file_obj* fobjp, int dirIdx, int revents)
 						/* Need to check if listener file was created! */
 						fen_processEventFile(NULL,
 							dirs[dirIdx].configured.listeners[iListIdx].pLstn,
-							FILE_MODIFIED /*dirs[dirIdx].configured.listeners[iListIdx].pLstn->pfinf->events*/,
+							FILE_MODIFIED
+						/*dirs[dirIdx].configured.listeners[iListIdx].pLstn->pfinf->events*/,
 							dirIdx);
 					} else {
 						DBGPRINTF("fen_processEventDir Listener for %s already associated\n",
@@ -3114,7 +3128,8 @@ do_fen(void)
 			}
 
 			/* Event types to watch. */
-			pLstn->pfinf->events = FILE_MODIFIED; /* Not needed/working |FILE_DELETE|FILE_RENAME_TO|FILE_RENAME_FROM;*/
+			pLstn->pfinf->events = FILE_MODIFIED;
+			/* Not needed/working |FILE_DELETE|FILE_RENAME_TO|FILE_RENAME_FROM;*/
 			pLstn->pfinf->port = glport;
 		}
 
@@ -3142,7 +3157,8 @@ do_fen(void)
 
 					/* Check if we habe a DIR or FILE */
 					if (stat(fobjp->fo_name, &statFile) == 0 && S_ISDIR(statFile.st_mode)) {
-						fen_processEventDir(fobjp, (int)portEvent.portev_user, portEvent.portev_events);
+						fen_processEventDir(fobjp, (int)portEvent.portev_user,
+							portEvent.portev_events);
 					} else {
 						/* Call file events event handler */
 						fen_processEventFile(fobjp, (lstn_t*)portEvent.portev_user,

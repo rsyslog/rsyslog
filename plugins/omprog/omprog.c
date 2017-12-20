@@ -379,9 +379,11 @@ killSubprocessOnTimeout(void *_subpTimeOut_p) {
 	if (pthread_mutex_lock(&subpTimeOut->lock) == 0) {
 		while (subpTimeOut->timeout_armed) {
 			int ret = pthread_cond_timedwait(&subpTimeOut->cond, &subpTimeOut->lock, &subpTimeOut->timeout);
-			if (subpTimeOut->timeout_armed && ((ret == ETIMEDOUT) || (timeoutVal(&subpTimeOut->timeout) == 0))) {
-				errmsg.LogError(0, RS_RET_CONC_CTRL_ERR, "omprog: child-process wasn't reaped within timeout "
-								"(%ld ms) preparing to force-kill.", subpTimeOut->timeout_ms);
+			if (subpTimeOut->timeout_armed && ((ret == ETIMEDOUT) || (timeoutVal(&subpTimeOut->timeout)
+				== 0))) {
+				errmsg.LogError(0, RS_RET_CONC_CTRL_ERR, "omprog: child-process wasn't "
+					"reaped within timeout (%ld ms) preparing to force-kill.",
+					subpTimeOut->timeout_ms);
 				if (syscall(SYS_tgkill, getpid(), subpTimeOut->waiter_tid, SIGINT) != 0) {
 					errmsg.LogError(errno, RS_RET_SYS_ERR, "omprog: couldn't interrupt thread(%d) "
 									"which was waiting to reap child-process.",

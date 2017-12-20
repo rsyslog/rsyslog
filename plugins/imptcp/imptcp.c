@@ -1048,9 +1048,10 @@ processDataRcvd(ptcpsess_t *const __restrict__ pThis,
 					pThis->inputState = eAtStrtFram;
 				}
 			} else {
-				/* IMPORTANT: here we copy the actual frame content to the message - for BOTH framing modes!
-				 * If we have a message that is larger than the max msg size, we truncate it. This is the best
-				 * we can do in light of what the engine supports. -- rgerhards, 2008-03-14
+				/* IMPORTANT: here we copy the actual frame content to the message - for BOTH
+				 * framing modes! If we have a message that is larger than the max msg size,
+				 * we truncate it. This is the best we can do in light of what the engine supports.
+				 * -- rgerhards, 2008-03-14
 				 */
 				if(pThis->iMsg < iMaxLine) {
 					*(pThis->pMsg + pThis->iMsg++) = c;
@@ -1864,7 +1865,8 @@ destroyIoQ(void)
 	while (!STAILQ_EMPTY(&io_q.q)) {
 		n = STAILQ_FIRST(&io_q.q);
 		STAILQ_REMOVE_HEAD(&io_q.q, link);
-		errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "imptcp: discarded enqueued io-work to allow shutdown - ignored");
+		errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "imptcp: discarded enqueued io-work to allow shutdown "
+								"- ignored");
 		free(n);
 	}
 	io_q.sz = 0;

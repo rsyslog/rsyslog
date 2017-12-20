@@ -545,7 +545,8 @@ TCPSendBufUncompressed(wrkrInstanceData_t *pWrkrData, uchar *buf, unsigned len)
 	ssize_t lenSend;
 
 	alreadySent = 0;
-	CHKiRet(netstrm.CheckConnection(pWrkrData->pNetstrm)); /* hack for plain tcp syslog - see ptcp driver for details */
+	CHKiRet(netstrm.CheckConnection(pWrkrData->pNetstrm));
+	/* hack for plain tcp syslog - see ptcp driver for details */
 
 	while(alreadySent != len) {
 		lenSend = len - alreadySent;

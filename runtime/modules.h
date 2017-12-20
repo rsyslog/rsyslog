@@ -173,7 +173,8 @@ BEGINinterface(module) /* name must also be changed in ENDinterface macro! */
 	cfgmodules_etry_t *(*GetNxtCnfType)(rsconf_t *cnf, cfgmodules_etry_t *pThis, eModType_t rqtdType);
 	uchar *(*GetName)(modInfo_t *pThis);
 	uchar *(*GetStateName)(modInfo_t *pThis);
-	rsRetVal (*Use)(const char *srcFile, modInfo_t *pThis);	/**< must be called before a module is used (ref counting) */
+	rsRetVal (*Use)(const char *srcFile, modInfo_t *pThis);
+	/**< must be called before a module is used (ref counting) */
 	rsRetVal (*Release)(const char *srcFile, modInfo_t **ppThis);	/**< release a module (ref counting) */
 	void (*PrintList)(void);
 	rsRetVal (*UnloadAndDestructAll)(eModLinkType_t modLinkTypesToUnload);

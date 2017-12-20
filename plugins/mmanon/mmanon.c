@@ -261,7 +261,8 @@ CODESTARTnewActInst
 				pData->ipv4.mode = RANDOMINT;
 				pData->ipv4.randConsis = 1;
 			} else {
-				parser_errmsg("mmanon: configuration error, unknown option for ipv4.mode, will use \"zero\"\n");
+				parser_errmsg("mmanon: configuration error, unknown option for ipv4.mode, "
+					"will use \"zero\"\n");
 			}
 		} else if(!strcmp(actpblk.descr[i].name, "ipv4.bits")) {
 			if((int8_t) pvals[i].val.d.n <= 32) {

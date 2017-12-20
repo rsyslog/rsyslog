@@ -760,8 +760,8 @@ runInputModules(void)
 	node = module.GetNxtCnfType(runConf, NULL, eMOD_IN);
 	while(node != NULL) {
 		if(node->canRun) {
-			bNeedsCancel = (node->pMod->isCompatibleWithFeature(sFEATURENonCancelInputTermination) == RS_RET_OK) ?
-				       0 : 1;
+			bNeedsCancel = (node->pMod->isCompatibleWithFeature(sFEATURENonCancelInputTermination)
+			== RS_RET_OK) ? 0 : 1;
 			DBGPRINTF("running module %s with config %p, term mode: %s\n", node->pMod->pszName, node,
 				  bNeedsCancel ? "cancel" : "cooperative/SIGTTIN");
 			thrdCreate(node->pMod->mod.im.runInput, node->pMod->mod.im.afterRun, bNeedsCancel,
@@ -1286,8 +1286,8 @@ validateConf(void)
 			ourConf->globals.mainQ.MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
 		}
 		if(ourConf->globals.mainQ.pszMainMsgQFName == NULL) {
-			errmsg.LogError(0, NO_ERRCODE, "No $MainMsgQueueFileName specified - can not run main message queue in "
-				 "'disk' mode. Using 'FixedArray' instead.\n");
+			errmsg.LogError(0, NO_ERRCODE, "No $MainMsgQueueFileName specified - can not run main "
+				"message queue in 'disk' mode. Using 'FixedArray' instead.\n");
 			ourConf->globals.mainQ.MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
 		}
 	}

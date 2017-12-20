@@ -433,7 +433,8 @@ create_tcp_socket(tcpsrv_t *pThis)
 		 * session table, so we can not continue. We need to free all
 		 * we have assigned so far, because we can not really use it...
 		 */
-		errmsg.LogError(0, RS_RET_ERR, "Could not initialize TCP session table, suspending TCP message reception.");
+		errmsg.LogError(0, RS_RET_ERR, "Could not initialize TCP session table, suspending TCP "
+				"message reception.");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -825,7 +826,8 @@ RunSelect(tcpsrv_t *pThis, nsd_epworkset_t workset[], size_t sizeWorkset)
 			CHKiRet(nssel.IsReady(pSel, pThis->ppLstn[i], NSDSEL_RD, &bIsReady, &nfds));
 			if(bIsReady) {
 				workset[iWorkset].id = i;
-				workset[iWorkset].pUsr = (void*) pThis->ppLstn; /* this is a flag to indicate listen sock */
+				workset[iWorkset].pUsr = (void*) pThis->ppLstn;
+				/* this is a flag to indicate listen sock */
 				++iWorkset;
 				if(iWorkset >= (int) sizeWorkset) {
 					processWorkset(pThis, NULL, iWorkset, workset);

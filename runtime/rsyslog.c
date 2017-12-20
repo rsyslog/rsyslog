@@ -238,7 +238,8 @@ rsrtExit(void)
 		propClassExit();
 		statsobjClassExit();
 
-		objClassExit(); /* *THIS* *MUST/SHOULD?* always be the first class initilizer being called (except debug)! */
+		objClassExit(); /* *THIS* *MUST/SHOULD?* always be the first class initilizer being
+				called (except debug)! */
 	}
 
 	--iRefCount;

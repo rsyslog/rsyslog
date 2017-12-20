@@ -1112,12 +1112,13 @@ do_Parameter(uchar **pp, struct template *pTpl)
 					}
 				} else {
 					/* regexp object could not be loaded */
-					dbgprintf("error %d trying to load regexp library - this may be desired and thus OK",
-						  iRetLocal);
-					if(bFirstRegexpErrmsg) { /* prevent flood of messages, maybe even an endless loop! */
+					dbgprintf("error %d trying to load regexp library - this may be desired "
+					"and thus OK", iRetLocal);
+					if(bFirstRegexpErrmsg) {
+					/* prevent flood of messages, maybe even an endless loop! */
 						bFirstRegexpErrmsg = 0;
-						LogError(0, NO_ERRCODE, "regexp library could not be loaded (error %d), "
-								"regexp ignored", iRetLocal);
+						LogError(0, NO_ERRCODE, "regexp library could not be loaded "
+							"(error %d), regexp ignored", iRetLocal);
 					}
 					pTpe->data.field.has_regex = 2;
 				}
@@ -1689,7 +1690,8 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 				datefmt = tplFmtTZOffsHour;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"tzoffsmin", sizeof("tzoffsmin")-1)) {
 				datefmt = tplFmtTZOffsMin;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"tzoffsdirection", sizeof("tzoffsdirection")-1)) {
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"tzoffsdirection",
+				sizeof("tzoffsdirection")-1)) {
 				datefmt = tplFmtTZOffsDirection;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"ordinal", sizeof("ordinal")-1)) {
 				datefmt = tplFmtOrdinal;

@@ -2459,7 +2459,8 @@ tryEmulateTAG(smsg_t * const pM, sbool bLockMutex)
 	if(msgGetProtocolVersion(pM) == 1) {
 		if(!strcmp(getPROCID(pM, MUTEX_ALREADY_LOCKED), "-")) {
 			/* no process ID, use APP-NAME only */
-			MsgSetTAG(pM, (uchar*) getAPPNAME(pM, MUTEX_ALREADY_LOCKED), getAPPNAMELen(pM, MUTEX_ALREADY_LOCKED));
+			MsgSetTAG(pM, (uchar*) getAPPNAME(pM, MUTEX_ALREADY_LOCKED),
+					getAPPNAMELen(pM, MUTEX_ALREADY_LOCKED));
 		} else {
 			/* now we can try to emulate */
 			lenTAG = snprintf((char*)bufTAG, CONF_TAG_MAXSIZE, "%s[%s]",
@@ -3937,7 +3938,8 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 								free(pRes);
 								*pbMustBeFreed = 0;
 							}
-							if(pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_DFLTSTR) {
+							if(pTpe->data.field.nomatchAction ==
+							TPL_REGEX_NOMATCH_USE_DFLTSTR) {
 								bufLen = sizeof("**NO MATCH**") - 1;
 								pRes = UCHAR_CONSTANT("**NO MATCH**");
 							} else if(pTpe->data.field.nomatchAction ==

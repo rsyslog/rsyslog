@@ -1926,7 +1926,8 @@ rsksi_vrfy_nextHashChain(ksifile ksi, block_sig_t *bs, FILE *sigfp, unsigned cha
 				ectx->computedHash = NULL, ectx->fileHash = NULL;
 				goto done;
 			} else {
-				if(rsksi_read_showVerified) printf("Successfully compared line hash against record hash\n"); 
+				if(rsksi_read_showVerified) printf("Successfully compared line hash against "
+					"record hash\n"); 
 			}
 			bCheckLineHash = 1; 
 		}
@@ -2109,8 +2110,9 @@ verifySigblkFinish(ksifile ksi, KSI_DataHash **pRoot)
 	r = 0;
 done:
 	ksi->bInBlk = 0;
-	if (rsksi_read_debug && root != NULL) outputKSIHash(stdout, "debug: verifySigblkFinish:\t\t Root hash: \t", root, 1);
-return r;
+	if (rsksi_read_debug && root != NULL) outputKSIHash(stdout, "debug: verifySigblkFinish:\t\t Root hash: \t",
+	root, 1);
+		return r;
 }
 
 /* helper for rsksi_extendSig: */
@@ -2412,7 +2414,9 @@ int rsksi_ConvertSigFile(FILE *oldsigfp, FILE *newsigfp, int verbose)
 						r = RSGTE_INVLTYP;
 						goto donedecode;
 					}
-					if((bh->iv = (uint8_t*)malloc(subrec.tlvlen)) == NULL) {r=RSGTE_OOM;goto donedecode;}
+					if((bh->iv = (uint8_t*)malloc(subrec.tlvlen)) == NULL) {
+						r=RSGTE_OOM;goto donedecode;
+					}
 					memcpy(bh->iv, subrec.data, subrec.tlvlen);
 
 					/* Check OLD encoded LAST HASH */
@@ -2481,7 +2485,8 @@ int rsksi_ConvertSigFile(FILE *oldsigfp, FILE *newsigfp, int verbose)
 					/* last-hash */
 					CHKrDecode(rsksi_tlv8Write(newsigfp, 0x00, 0x03, bh->lastHash.len + 1));
 					CHKrDecode(rsksi_tlvfileAddOctet(newsigfp, bh->lastHash.hashID));
-					CHKrDecode(rsksi_tlvfileAddOctetString(newsigfp, bh->lastHash.data, bh->lastHash.len));
+					CHKrDecode(rsksi_tlvfileAddOctetString(newsigfp, bh->lastHash.data,
+						bh->lastHash.len));
 
 					/* Create Block Signature */
 					tlvlenRecords = rsksi_tlvGetInt64OctetSize(bs->recCount);
@@ -2495,7 +2500,8 @@ int rsksi_ConvertSigFile(FILE *oldsigfp, FILE *newsigfp, int verbose)
 					CHKrDecode(rsksi_tlvfileAddInt64(newsigfp, bs->recCount));
 					/* open-ksi */
 					CHKrDecode(rsksi_tlv16Write(newsigfp, 0x00, 0x905, bs->sig.der.len));
-					CHKrDecode(rsksi_tlvfileAddOctetString(newsigfp, bs->sig.der.data, bs->sig.der.len));
+					CHKrDecode(rsksi_tlvfileAddOctetString(newsigfp, bs->sig.der.data,
+					bs->sig.der.len));
 
 donedecode:
 					/* Set back to OLD default */
@@ -2603,8 +2609,8 @@ int rsksi_WriteHashChain(FILE *newsigfp, block_hashchain_t *hashchain, int verbo
 		hashchain->hashsteps[j]->sib_hash.len));
 
 		if(rsksi_read_debug) {
-			printf("debug: rsksi_WriteHashChain:\t\t WRITE Chain:\t\tTlvlen=%d, %s Direction, level_corr=%lld\n", 
-				tlvlen, 
+			printf("debug: rsksi_WriteHashChain:\t\t WRITE Chain:\t\tTlvlen=%d, %s Direction, "
+				"level_corr=%lld\n", tlvlen, 
 				(hashchain->hashsteps[j]->direction == 0x02) ? "LEFT" : "RIGHT" , 
 				(long long unsigned) hashchain->hashsteps[j]->level_corr);
 			outputHash(stdout, "debug: rsksi_WriteHashChain:\t\t Chain Hash: \t\t",

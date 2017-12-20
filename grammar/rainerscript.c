@@ -2301,7 +2301,8 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 			if (unixtime < INT_MIN || unixtime > INT_MAX) {
 				LogMsg(
 					0, RS_RET_VAL_OUT_OF_RANGE, LOG_WARNING, 
-					"Timestamp value %lld is out of range for this system (time_t is 32bits)!\n", unixtime
+					"Timestamp value %lld is out of range for this system (time_t is "
+					"32bits)!\n", unixtime
 				);
 				retval = 0;
 			}
