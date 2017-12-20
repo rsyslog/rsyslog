@@ -131,7 +131,6 @@ execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdout, int fdStder
 	sigset_t set;
 	char errStr[1024];
 	char *newenviron[] = { NULL };
-	char *emptyArgv[] = { NULL };
 
 	if(dup2(fdStdin, STDIN_FILENO) == -1) {
 		DBGPRINTF("omprog: dup() stdin failed\n");
@@ -193,9 +192,6 @@ execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdout, int fdStder
 	alarm(0);
 
 	/* finally exec child */
-	if(pWrkrData->pData->aParams==NULL){
-		pWrkrData->pData->aParams=emptyArgv;
-	}
 	iRet = execve((char*)pWrkrData->pData->szBinary, pWrkrData->pData->aParams, newenviron);
 	if(iRet == -1) {
 		/* Note: this will go to stdout of the **child**, so rsyslog will never
@@ -231,14 +227,21 @@ openPipe(wrkrInstanceData_t *pWrkrData)
 		ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
 	}
 	if(pipe(pipeStdout) == -1) {
+		close(pipeStdin[0]); close(pipeStdin[1]);
 		ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
 	}
 	if(pipe(pipeStderr) == -1) {
+		close(pipeStdin[0]); close(pipeStdin[1]);
+		close(pipeStdout[0]); close(pipeStdout[1]);
 		ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
 	}
 
 	DBGPRINTF("omprog: executing program '%s' with '%d' parameters\n",
 		  pWrkrData->pData->szBinary, pWrkrData->pData->iParams);
+
+	/* final sanity check */
+	assert(pWrkrData->pData->szBinary != NULL);
+	assert(pWrkrData->pData->aParams != NULL);
 
 	/* NO OUTPUT AFTER FORK! */
 
