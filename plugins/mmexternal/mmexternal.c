@@ -271,10 +271,6 @@ processProgramReply(wrkrInstanceData_t *__restrict__ const pWrkrData, smsg_t *co
  * rsyslog will never see it except as script output. Do NOT
  * use dbgprintf() or LogError() and friends.
  */
-/* dummy vars to store "dup()" results - keeps Coverity happy */
-static int dummy_stdin;
-static int dummy_stdout;
-static int dummy_stderr;
 static void __attribute__((noreturn))
 execBinary(wrkrInstanceData_t *pWrkrData, const int fdStdin, const int fdStdOutErr)
 {
@@ -283,16 +279,13 @@ execBinary(wrkrInstanceData_t *pWrkrData, const int fdStdin, const int fdStdOutE
 	sigset_t set;
 	char *newenviron[] = { NULL };
 
-	close(0);
-	if((dummy_stdin = dup(fdStdin)) == -1) {
+	if(dup2(fdStdin, STDIN_FILENO) == -1) {
 		perror("mmexternal: dup() stdin failed\n");
 	}
-	close(1);
-	if((dummy_stdout = dup(fdStdOutErr)) == -1) {
+	if(dup2(fdStdOutErr, STDOUT_FILENO) == -1) {
 		perror("mmexternal: dup() stdout failed\n");
 	}
-	close(2);
-	if((dummy_stderr = dup(fdStdOutErr)) == -1) {
+	if(dup2(fdStdOutErr, STDERR_FILENO) == -1) {
 		perror("mmexternal: dup() stderr failed\n");
 	}
 
