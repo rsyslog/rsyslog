@@ -322,12 +322,12 @@ execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdOutErr)
 	/* finally exec child */
 	iRet = execve((char*)pWrkrData->pData->szBinary, pWrkrData->pData->aParams, newenviron);
 	if(iRet == -1) {
-		/* Note: this will go to stdout of the **child**, so rsyslog will never
+		/* Note: this will go to stderr of the **child**, so rsyslog will never
 		 * see it except when stdout is captured. If we use the plugin interface,
 		 * we can use this to convey a proper status back!
 		 */
 		rs_strerror_r(errno, errStr, sizeof(errStr));
-		DBGPRINTF("mmexternal: failed to execute binary '%s': %s\n",
+		fprintf(stderr, "mmexternal: failed to execute binary '%s': %s\n",
 			  pWrkrData->pData->szBinary, errStr);
 	}
 	
