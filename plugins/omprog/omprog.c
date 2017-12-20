@@ -861,92 +861,6 @@ setInstParamDefaults(instanceData *pData)
 }
 
 
-/* process "binary" parameter, most importantly split it into argv[] */
-static rsRetVal ATTR_NONNULL(1,2)
-processParam_binary(instanceData *const pData, es_str_t *const param_binary)
-{
-	es_size_t iCnt;
-	es_size_t iStr;
-	int iPrm;
-	es_str_t *estrParams = NULL;
-	es_str_t *estrBinary = param_binary;
-	es_str_t *estrTmp = NULL;
-	uchar *c;
-	int bInQuotes;
-	DEFiRet;
-	assert(pData != NULL);
-	assert(param_binary != NULL);
-
-	/* Search for end of binary name */
-	c = es_getBufAddr(param_binary);
-	iCnt = 0;
-	while(iCnt < es_strlen(param_binary) ) {
-		if (c[iCnt] == ' ') {
-			/* Split binary name from parameters */
-			estrBinary = es_newStrFromSubStr( param_binary, 0, iCnt);
-			estrParams = es_newStrFromSubStr( param_binary, iCnt+1,
-					es_strlen(param_binary));
-			break;
-		}
-		iCnt++;
-	}
-	pData->szBinary = (uchar*)es_str2cstr(estrBinary, NULL);
-	DBGPRINTF("omprog: szBinary = '%s'\n", pData->szBinary);
-
-	pData->iParams = 2; /* we always have argv[0], and NULL-terminator for array */
-	/* count size of argv[] */
-	if (estrParams != NULL) {
-		if(Debug) {
-			char *params = es_str2cstr(estrParams, NULL);
-			dbgprintf("omprog: szParams = '%s'\n", params);
-			free(params);
-		}
-		c = es_getBufAddr(estrParams);
-		assert(c[iCnt] != ' '); /* cannot be at this stage! */
-		for(iCnt = 0 ; iCnt < es_strlen(estrParams) ; ++iCnt) {
-			if (c[iCnt] == ' ' && c[iCnt-1] != '\\')
-				 pData->iParams++;
-		}
-	}
-	DBGPRINTF("omprog: iParams = '%d'\n", pData->iParams);
-
-	/* create argv[] */
-	CHKmalloc(pData->aParams = malloc( (pData->iParams) * sizeof(char*)));
-	iPrm = 0;
-	bInQuotes = FALSE;
-	/* Set first parameter to binary */
-	pData->aParams[iPrm] = strdup((char*)pData->szBinary);
-	iPrm++;
-	if (estrParams != NULL) {
-		iCnt = iStr = 0;
-		c = es_getBufAddr(estrParams); /* Reset to beginning */
-		while(iCnt < es_strlen(estrParams) ) {
-			if ( c[iCnt] == ' ' && !bInQuotes ) {
-				estrTmp = es_newStrFromSubStr( estrParams, iStr, iCnt-iStr);
-			} else if ( iCnt+1 >= es_strlen(estrParams) ) {
-				estrTmp = es_newStrFromSubStr( estrParams, iStr, iCnt-iStr+1);
-			} else if (c[iCnt] == '"') {
-				bInQuotes = !bInQuotes;
-			}
-
-			if ( estrTmp != NULL ) {
-				pData->aParams[iPrm] = es_str2cstr(estrTmp, NULL);
-				iStr = iCnt+1; /* Set new start */
-				DBGPRINTF("omprog: Param (%d): '%s'\n", iPrm, pData->aParams[iPrm]);
-				es_deleteStr( estrTmp );
-				estrTmp = NULL;
-				iPrm++;
-			}
-			iCnt++;
-		}
-	}
-	pData->aParams[iPrm] = NULL; /* NULL per argv[] convention */
-	
-finalize_it:
-	RETiRet;
-}
-
-
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
@@ -963,7 +877,8 @@ CODESTARTnewActInst
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(actpblk.descr[i].name, "binary")) {
-			CHKiRet(processParam_binary(pData, pvals[i].val.d.estr));
+			CHKiRet(split_binary_parameters(&pData->szBinary, &pData->aParams, &pData->iParams,
+				pvals[i].val.d.estr));
 		} else if(!strcmp(actpblk.descr[i].name, "confirmMessages")) {
 			pData->bConfirmMessages = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "useTransactions")) {
