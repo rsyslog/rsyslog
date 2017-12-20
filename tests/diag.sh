@@ -211,6 +211,9 @@ case $1 in
 		. $srcdir/diag.sh wait-startup $3
 		;;
    'startup-vg-waitpid-only') # same as startup-vg, BUT we do NOT wait on the startup message!
+		if [ "x$RS_TESTBENCH_LEAK_CHECK" == "x" ]; then
+		    RS_TESTBENCH_LEAK_CHECK=full
+		fi
 		if [ "x$2" == "x" ]; then
 		    CONF_FILE="testconf.conf"
 		    echo $CONF_FILE is:
@@ -222,7 +225,7 @@ case $1 in
 		    echo "ERROR: config file '$CONF_FILE' not found!"
 		    exit 1
 		fi
-		valgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --gen-suppressions=all --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
+		valgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --gen-suppressions=all --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=$RS_TESTBENCH_LEAK_CHECK ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
 		. $srcdir/diag.sh wait-startup-pid $3
 		;;
    'startup-vg') # start rsyslogd with default params under valgrind control. $2 is the config file name to use
@@ -236,11 +239,8 @@ case $1 in
 		# that) we don't can influence and where we cannot provide suppressions as
 		# they are platform-dependent. In that case, we can't test for leak checks
 		# (obviously), but we can check for access violations, what still is useful.
-		if [ ! -f $srcdir/testsuites/$2 ]; then
-		    echo "ERROR: config file '$srcdir/testsuites/$2' not found!"
-		    exit 1
-		fi
-		valgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=no ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
+		RS_TESTBENCH_LEAK_CHECK=no
+		. $srcdir/diag.sh startup-vg-waitpid-only $2 $3
 		. $srcdir/diag.sh wait-startup $3
 		echo startup-vg still running
 		;;
