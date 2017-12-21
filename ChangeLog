@@ -159,14 +159,16 @@ Version 8.32.0 [v8-stable] 2018-01-09
 - rainerscript bugfix: ltrim() and rtrim function misadressing
   This could lead to a segfault and was triggerred by certain input data
   schemes. For example, a ltrim(" a") could lead to the fault.
-- CI testing
-  - ARM (via Raspberry PI) added to CI system
 - cleanup: remove obsolete pre-KSI GuardTime signature interface
   this is no longer functional starting Jan 2018 as it reached end of life
   closes https://github.com/rsyslog/rsyslog/issues/2128
 - cleanup: obsolete defintion SOL_TCP replaced by newer IPPROTO_TCP
   this should not have any effect at all except better portability, but is
   worth mentioning in the ChangeLog nevertheless.
+- CI testing
+  - ARM (via Raspberry PI) added to CI system
+  - Debian 9 added to CI system
+  - omgssapi and usertools components are now also tested in Travis
 ------------------------------------------------------------------------------
 Version 8.31.0 [v8-stable] 2017-11-28
 - NEW BUILD DEPENDENCY: ommongodb now requires libmongo-c
