@@ -1010,7 +1010,15 @@ checkFailedMessages(instanceData *const __restrict__ pData)
 			DBGPRINTF("omkafka: successfully delivered failed msg '%.*s'.\n",
 				(int)(strlen((char*)fmsgEntry->payload)-1),
 				(char*)fmsgEntry->payload);
-			SLIST_REMOVE_HEAD(&pData->failedmsg_head, entries);
+			/* Note: we can use SLIST even though it is o(n), because the element
+			 * in question is always either the root or the next element and
+			 * SLIST_REMOVE iterates only until the element to be deleted is found.
+			 * We cannot use SLIST_REMOVE_HEAD() as new elements may have been
+			 * added in the delivery callback!
+			 * TODO: sounds like bad logic -- why do we add and remove, just simply
+			 * keep it in queue?
+			 */
+			SLIST_REMOVE(&pData->failedmsg_head, fmsgEntry, s_failedmsg_entry, entries);
 			failedmsg_entry_destruct(fmsgEntry);
 		}
 	}
