@@ -306,6 +306,7 @@ endif
 if HAVE_VALGRIND
 TESTS +=  \
 	mmexternal-SegFault-vg.sh \
+	mmexternal-InvldProg-vg.sh \
 	internal-errmsg-memleak-vg.sh \
 	rscript_set_memleak-vg.sh \
 	rscript_http_request-vg.sh \
@@ -786,6 +787,7 @@ EXTRA_DIST= \
 	mmexternal-SegFault-vg.sh \
 	mmexternal-SegFault-empty-jroot-vg.sh \
 	testsuites/mmexternal-SegFault-mm-python.py \
+	mmexternal-InvldProg-vg.sh \
 	nested-call-shutdown.sh \
 	1.rstest 2.rstest 3.rstest err1.rstest \
 	invalid_nested_include.sh \
