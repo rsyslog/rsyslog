@@ -399,7 +399,8 @@ create_strm_socket(strmsrv_t *pThis)
 		 * session table, so we can not continue. We need to free all
 		 * we have assigned so far, because we can not really use it...
 		 */
-		errmsg.LogError(0, RS_RET_ERR, "Could not initialize STRM session table, suspending STRM message reception.");
+		errmsg.LogError(0, RS_RET_ERR, "Could not initialize STRM session table, suspending STRM "
+				"message reception.");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 

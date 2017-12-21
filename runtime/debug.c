@@ -862,7 +862,8 @@ do_dbgprint(uchar *pszObjName, char *pszMsg, const char *pszFileName, size_t len
 			offsWriteBuf += lenWriteBuf;
 		}
 
-		lenWriteBuf = snprintf(pszWriteBuf + offsWriteBuf, sizeof(pszWriteBuf) - offsWriteBuf, "%s: ", pszThrdName);
+		lenWriteBuf = snprintf(pszWriteBuf + offsWriteBuf, sizeof(pszWriteBuf) - offsWriteBuf,
+				"%s: ", pszThrdName);
 		offsWriteBuf += lenWriteBuf;
 		/* print object name header if we have an object */
 		if(pszObjName != NULL) {
@@ -870,7 +871,8 @@ do_dbgprint(uchar *pszObjName, char *pszMsg, const char *pszFileName, size_t len
 					"%s: ", pszObjName);
 			offsWriteBuf += lenWriteBuf;
 		}
-		lenWriteBuf = snprintf(pszWriteBuf + offsWriteBuf, sizeof(pszWriteBuf) - offsWriteBuf, "%s: ", pszFileName);
+		lenWriteBuf = snprintf(pszWriteBuf + offsWriteBuf, sizeof(pszWriteBuf) - offsWriteBuf,
+			"%s: ", pszFileName);
 		offsWriteBuf += lenWriteBuf;
 	}
 #endif
@@ -1319,8 +1321,8 @@ dbgGetRuntimeOptions(void)
 		while(dbgGetRTOptNamVal(&pszOpts, &optname, &optval)) {
 			if(!strcasecmp((char*)optname, "help")) {
 				fprintf(stderr,
-					"rsyslogd " VERSION " runtime debug support - help requested, rsyslog terminates\n\n"
-					"environment variables:\n"
+					"rsyslogd " VERSION " runtime debug support - help requested, "
+					"rsyslog terminates\n\nenvironment variables:\n"
 					"addional logfile: export RSYSLOG_DEBUGFILE=\"/path/to/file\"\n"
 					"to set: export RSYSLOG_DEBUG=\"cmd cmd cmd\"\n\n"
 					"Commands are (all case-insensitive):\n"
@@ -1370,16 +1372,16 @@ dbgGetRuntimeOptions(void)
 				bOutputTidToStderr = 1;
 			} else if(!strcasecmp((char*)optname, "filetrace")) {
 				if(*optval == '\0') {
-					fprintf(stderr, "rsyslogd " VERSION " error: logfile debug option requires filename, "
-						"e.g. \"logfile=debug.c\"\n");
+					fprintf(stderr, "rsyslogd " VERSION " error: logfile debug option requires "
+					"filename, e.g. \"logfile=debug.c\"\n");
 					exit(1);
 				} else {
 					/* create new entry and add it to list */
 					dbgPrintNameAdd(optval, &printNameFileRoot);
 				}
 			} else {
-				fprintf(stderr, "rsyslogd " VERSION " error: invalid debug option '%s', value '%s' - ignored\n",
-					optval, optname);
+				fprintf(stderr, "rsyslogd " VERSION " error: invalid debug option '%s', "
+					"value '%s' - ignored\n", optval, optname);
 			}
 		}
 	}
@@ -1448,8 +1450,10 @@ rsRetVal dbgClassInit(void)
 
 	if(pszAltDbgFileName != NULL) {
 		/* we have a secondary file, so let's open it) */
-		if((altdbg = open(pszAltDbgFileName, O_WRONLY|O_CREAT|O_TRUNC|O_NOCTTY|O_CLOEXEC, S_IRUSR|S_IWUSR)) == -1) {
-			fprintf(stderr, "alternate debug file could not be opened, ignoring. Error: %s\n", strerror(errno));
+		if((altdbg = open(pszAltDbgFileName, O_WRONLY|O_CREAT|O_TRUNC|O_NOCTTY|O_CLOEXEC, S_IRUSR|S_IWUSR))
+		== -1) {
+			fprintf(stderr, "alternate debug file could not be opened, ignoring. Error: %s\n",
+				strerror(errno));
 		}
 	}
 

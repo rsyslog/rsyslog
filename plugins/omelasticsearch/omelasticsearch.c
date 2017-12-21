@@ -1589,7 +1589,8 @@ CODESTARTnewActInst
 			if (serverParam[serverParamLastChar] == '/') {
 				serverParam[serverParamLastChar] = '\0';
 			}
-			CHKiRet(computeBaseUrl(serverParam, pData->defaultPort, pData->useHttps, pData->serverBaseUrls + i));
+			CHKiRet(computeBaseUrl(serverParam, pData->defaultPort, pData->useHttps,
+				pData->serverBaseUrls + i));
 			free(serverParam);
 			serverParam = NULL;
 		}

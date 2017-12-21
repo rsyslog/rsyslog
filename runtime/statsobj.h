@@ -108,8 +108,10 @@ BEGINinterface(statsobj) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetReportingNamespace)(statsobj_t *pThis, uchar *ns);
 	void (*SetStatsObjFlags)(statsobj_t *pThis, int flags);
 	//rsRetVal (*GetStatsLine)(statsobj_t *pThis, cstr_t **ppcstr);
-	rsRetVal (*GetAllStatsLines)(rsRetVal(*cb)(void*, const char*), void *usrptr, statsFmtType_t fmt, int8_t bResetCtr);
-	rsRetVal (*AddCounter)(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr);
+	rsRetVal (*GetAllStatsLines)(rsRetVal(*cb)(void*, const char*), void *usrptr, statsFmtType_t fmt,
+		int8_t bResetCtr);
+	rsRetVal (*AddCounter)(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags,
+		void *pCtr);
 	rsRetVal (*AddManagedCounter)(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags,
 	void *pCtr, ctr_t **ref, int8_t linked);
 	void (*AddPreCreatedCtr)(statsobj_t *pThis, ctr_t *ctr);

@@ -719,7 +719,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	statsobj.SetStatsObjFlags(diagStats, STATSOBJ_FLAG_DO_PREPEND);
 	STATSCOUNTER_INIT(potentialArtificialDelayMs, mutPotentialArtificialDelayMs);
 	CHKiRet(statsobj.AddCounter(diagStats, UCHAR_CONSTANT("potentialTotalArtificialDelayInMs"),
-								ctrType_IntCtr, CTR_FLAG_NONE, &potentialArtificialDelayMs));
+						ctrType_IntCtr, CTR_FLAG_NONE, &potentialArtificialDelayMs));
 	STATSCOUNTER_INIT(actualArtificialDelayMs, mutActualArtificialDelayMs);
 	CHKiRet(statsobj.AddCounter(diagStats, UCHAR_CONSTANT("actualTotalArtificialDelayInMs"),
 							ctrType_IntCtr, CTR_FLAG_NONE, &actualArtificialDelayMs));

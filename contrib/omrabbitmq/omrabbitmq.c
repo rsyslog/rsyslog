@@ -478,12 +478,14 @@ CODESTARTnewActInst
 	}
 
 	if (pData->password == NULL) {
-		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module disabled: parameter password must be specified");
+		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module disabled: parameter password "
+				"must be specified");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
 
 	if (pData->exchange == NULL) {
-		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module disabled: parameter exchange must be specified");
+		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module disabled: parameter exchange "
+				"must be specified");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
 

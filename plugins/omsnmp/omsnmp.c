@@ -524,7 +524,8 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	dbgprintf("SpecificType: %d\n", pData->iSpecificType);
 
 	/* process template */
-	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) "RSYSLOG_TraditionalForwardFormat"));
+	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
+		(uchar*) "RSYSLOG_TraditionalForwardFormat"));
 
 	/* Init NetSNMP library and read in MIB database */
 	init_snmp("rsyslog");

@@ -91,7 +91,8 @@ static pthread_mutex_t mutGtlsStrerror;
 #define CHKgnutls(x) { \
 	gnuRet = (x); \
 	if(gnuRet == GNUTLS_E_FILE_ERROR) { \
-		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "error reading file - a common cause is that the file  does not exist"); \
+		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "error reading file - a common cause is that the " \
+			"file  does not exist"); \
 		ABORT_FINALIZE(RS_RET_GNUTLS_ERR); \
 	} else if(gnuRet != 0) { \
 		ABORTgnutls; \
@@ -1087,7 +1088,8 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 		if(ttCert == -1)
 			ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
 		else if(ttCert < ttNow) {
-			errmsg.LogError(0, RS_RET_CERT_EXPIRED, "not permitted to talk to peer: certificate %d expired", i);
+			errmsg.LogError(0, RS_RET_CERT_EXPIRED, "not permitted to talk to peer: certificate"
+				" %d expired", i);
 			gtlsGetCertInfo(pThis, &pStr);
 			errmsg.LogError(0, RS_RET_CERT_EXPIRED, "invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
 			cstrDestruct(&pStr);

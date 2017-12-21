@@ -793,7 +793,8 @@ modInfo_t __attribute__((unused)) *pModInfo)\
 #define CODESTARTmodInit \
 	assert(pHostQueryEtryPt != NULL);\
 	iRet = pHostQueryEtryPt((uchar*)"objGetObjInterface", &pObjGetObjInterface); \
-	if((iRet != RS_RET_OK) || (pQueryEtryPt == NULL) || (ipIFVersProvided == NULL) || (pObjGetObjInterface == NULL)) { \
+	if((iRet != RS_RET_OK) || (pQueryEtryPt == NULL) || (ipIFVersProvided == NULL) || \
+		(pObjGetObjInterface == NULL)) { \
 		ENDfunc \
 		return (iRet == RS_RET_OK) ? RS_RET_PARAM_ERROR : iRet; \
 	} \

@@ -566,7 +566,8 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 		if (maj_stat != GSS_S_COMPLETE) {
 			gssutil.display_status((char*)"displaying name", maj_stat, min_stat);
                 } else {
-			dbgprintf("GSS-API Accepted connection from peer %s: %s\n", (char *)pszPeer, (char*) recv_tok.value);
+			dbgprintf("GSS-API Accepted connection from peer %s: %s\n", (char *)pszPeer,
+				(char*) recv_tok.value);
                 }
 		gss_release_name(&min_stat, &client);
 		gss_release_buffer(&min_stat, &recv_tok);

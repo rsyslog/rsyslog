@@ -726,8 +726,8 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 						
 						iSignificantBits = 32;
 						allowIP.flags = 0;
-						if((allowIP.addr.NetAddr = (struct sockaddr *) MALLOC(sizeof(struct sockaddr)))
-						    == NULL) {
+						if((allowIP.addr.NetAddr = (struct sockaddr *)
+						MALLOC(sizeof(struct sockaddr))) == NULL) {
 							ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 						}
 						SIN(allowIP.addr.NetAddr)->sin_family = AF_INET;
@@ -1567,7 +1567,8 @@ static int CmpHost(struct sockaddr_storage *s1, struct sockaddr_storage* s2, siz
 		}
 	} else if(((struct sockaddr*) s1)->sa_family == AF_INET6) {
 		/* IPv6 addresses are always 16 octets long */
-		ret = memcmp(((struct sockaddr_in6 *)s1)->sin6_addr.s6_addr, ((struct sockaddr_in6*)s2)->sin6_addr.s6_addr, 16);
+		ret = memcmp(((struct sockaddr_in6 *)s1)->sin6_addr.s6_addr,
+			((struct sockaddr_in6*)s2)->sin6_addr.s6_addr, 16);
 	} else {
 		ret = memcmp(s1, s2, socklen);
 	}

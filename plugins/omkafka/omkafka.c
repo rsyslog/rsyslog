@@ -1275,7 +1275,8 @@ BEGINtryResume
 CODESTARTtryResume
 	CHKiRet(setupKafkaHandle(pWrkrData->pData, 0));
 
-	if ((iKafkaRet = rd_kafka_metadata(pWrkrData->pData->rk, 0, NULL, &metadata, 1000)) != RD_KAFKA_RESP_ERR_NO_ERROR) {
+	if ((iKafkaRet = rd_kafka_metadata(pWrkrData->pData->rk, 0, NULL, &metadata, 1000))
+			!= RD_KAFKA_RESP_ERR_NO_ERROR) {
 		DBGPRINTF("omkafka: tryResume failed, brokers down %d,%s\n", iKafkaRet, rd_kafka_err2str(iKafkaRet));
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	} else {

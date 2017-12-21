@@ -212,16 +212,19 @@ operation not carried out */
 	RS_RET_NO_MORE_DATA = -3006,	/**< insufficient data, e.g. end of string during parsing */
 	RS_RET_INVALID_IP = -3007,	/**< invalid ip found where valid was expected */
 	RS_RET_OBJ_CREATION_FAILED = - 3008, /**< the creation of an object failed (no details available) */
-	RS_RET_INOTIFY_INIT_FAILED = - 3009, /**< the initialization of an inotify instance failed (no details available) */
+	RS_RET_INOTIFY_INIT_FAILED = - 3009,
+	/**< the initialization of an inotify instance failed (no details available) */
 	RS_RET_FEN_INIT_FAILED = - 3010, /**< the initialization of a fen instance failed (no details available) */
 	RS_RET_PARAM_ERROR = -1000,	/**< invalid parameter in call to function */
 	RS_RET_MISSING_INTERFACE = -1001,/**< interface version mismatch, required missing */
 	RS_RET_INVALID_CORE_INTERFACE = -1002,/**< interface provided by host invalid, can not be used */
 	RS_RET_ENTRY_POINT_NOT_FOUND = -1003,/**< a requested entry point was not found */
 	RS_RET_MODULE_ENTRY_POINT_NOT_FOUND = -1004,/**< a entry point requested from a module was not present in it */
-	RS_RET_OBJ_NOT_AVAILABLE = -1005,/**< something could not be completed because the required object is not available*/
+	RS_RET_OBJ_NOT_AVAILABLE = -1005,
+	/**< something could not be completed because the required object is not available*/
 	RS_RET_LOAD_ERROR = -1006,/**< we had an error loading the object/interface and can not continue */
-	RS_RET_MODULE_STILL_REFERENCED = -1007,/**< module could not be unloaded because it still is referenced by someone */
+	RS_RET_MODULE_STILL_REFERENCED = -1007,
+	/**< module could not be unloaded because it still is referenced by someone */
 	RS_RET_OBJ_UNKNOWN = -1008,/**< object is unknown where required */
 	RS_RET_OBJ_NOT_REGISTERED = -1009,/**< tried to unregister an object that is not registered */
 	/* return states for config file processing */
