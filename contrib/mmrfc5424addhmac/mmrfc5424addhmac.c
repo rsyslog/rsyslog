@@ -67,7 +67,6 @@ MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("mmrfc5424addhmac")
 
 
-DEFobjCurrIf(errmsg);
 DEF_OMOD_STATIC_DATA
 
 /* config variables */
@@ -184,7 +183,7 @@ CODESTARTnewActInst
 			ciphername = es_str2cstr(pvals[i].val.d.estr, NULL);
 			pData->algo = EVP_get_digestbyname(ciphername);
 			if(pData->algo == NULL) {
-				errmsg.LogError(0, RS_RET_CRY_INVLD_ALGO,
+				LogError(0, RS_RET_CRY_INVLD_ALGO,
 					"hashFunction '%s' unknown to openssl - "
 					"cannot continue", ciphername);
 				free(ciphername);
@@ -360,7 +359,6 @@ NO_LEGACY_CONF_parseSelectorAct
 
 BEGINmodExit
 CODESTARTmodExit
-	objRelease(errmsg, CORE_COMPONENT);
 	EVP_cleanup();
 ENDmodExit
 
@@ -381,5 +379,4 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	DBGPRINTF("mmrfc5424addhmac: module compiled with rsyslog version %s.\n", VERSION);
 	OpenSSL_add_all_digests();
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDmodInit
