@@ -462,7 +462,8 @@ CODESTARTnewActInst
 	}
 
 	if (pData->host == NULL) {
-		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module disabled: parameter host must be specified");
+		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module disabled: parameter host must be "
+			"specified");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
 
@@ -473,7 +474,8 @@ CODESTARTnewActInst
 	}
 
 	if (pData->user == NULL) {
-		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module disabled: parameter user must be specified");
+		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module disabled: parameter user "
+			"must be specified");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
 

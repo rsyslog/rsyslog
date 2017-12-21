@@ -155,7 +155,8 @@ typedef struct configSettings_s {
 	int iActionQHighWtrMark;			/* high water mark for disk-assisted queues */
 	int iActionQLowWtrMark;				/* low water mark for disk-assisted queues */
 	int iActionQDiscardMark;			/* begin to discard messages */
-	int iActionQDiscardSeverity;			/* by default, discard nothing to prevent unintentional loss */
+	int iActionQDiscardSeverity;
+	/* by default, discard nothing to prevent unintentional loss */
 	int iActionQueueNumWorkers;			/* number of worker threads for the mm queue above */
 	uchar *pszActionQFName;				/* prefix for the main message queue file */
 	int64 iActionQueMaxFileSize;
@@ -1919,7 +1920,8 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 	if(pAction->iNumTpls > 0) {
 		/* we first need to create the template arrays */
 		CHKmalloc(pAction->ppTpl = (struct template **)calloc(pAction->iNumTpls, sizeof(struct template *)));
-		CHKmalloc(pAction->peParamPassing = (paramPassing_t*)calloc(pAction->iNumTpls, sizeof(paramPassing_t)));
+		CHKmalloc(pAction->peParamPassing = (paramPassing_t*)calloc(pAction->iNumTpls,
+			sizeof(paramPassing_t)));
 	}
 	
 	pAction->bUsesMsgPassingMode = 0;

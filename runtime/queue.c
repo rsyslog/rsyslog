@@ -653,7 +653,8 @@ static rsRetVal qAddLinkedList(qqueue_t *pThis, smsg_t* pMsg)
 	pEntry->pMsg = pMsg;
 
 	if(pThis->tVars.linklist.pDelRoot == NULL) {
-		pThis->tVars.linklist.pDelRoot = pThis->tVars.linklist.pDeqRoot = pThis->tVars.linklist.pLast = pEntry;
+		pThis->tVars.linklist.pDelRoot = pThis->tVars.linklist.pDeqRoot = pThis->tVars.linklist.pLast
+		= pEntry;
 	} else {
 		pThis->tVars.linklist.pLast->pNext = pEntry;
 		pThis->tVars.linklist.pLast = pEntry;
@@ -1241,8 +1242,9 @@ tryShutdownWorkersWithinActionTimeout(qqueue_t *pThis)
 		DBGOPRINT((obj_t*) pThis, "immediate shutdown timed out on primary queue (this is acceptable and "
 			  "triggers cancellation)\n");
 	} else if(iRetLocal != RS_RET_OK) {
-		DBGOPRINT((obj_t*) pThis, "unexpected iRet state %d after trying immediate shutdown of the primary queue "
-			  "in disk save mode. Continuing, but results are unpredictable\n", iRetLocal);
+		DBGOPRINT((obj_t*) pThis, "unexpected iRet state %d after trying immediate shutdown of "
+			"the primary queue in disk save mode. Continuing, but results are unpredictable\n",
+			iRetLocal);
 	}
 
 	if(pThis->pqDA != NULL) {
@@ -1253,8 +1255,9 @@ tryShutdownWorkersWithinActionTimeout(qqueue_t *pThis)
 			DBGOPRINT((obj_t*) pThis, "immediate shutdown timed out on DA queue (this is acceptable "
 				  "and triggers cancellation)\n");
 		} else if(iRetLocal != RS_RET_OK) {
-			DBGOPRINT((obj_t*) pThis, "unexpected iRet state %d after trying immediate shutdown of the DA "
-				  "queue in disk save mode. Continuing, but results are unpredictable\n", iRetLocal);
+			DBGOPRINT((obj_t*) pThis, "unexpected iRet state %d after trying immediate shutdown "
+				"of the DA queue in disk save mode. Continuing, but results are unpredictable\n",
+				iRetLocal);
 		}
 
 		/* and now we need to terminate the DA worker itself. We always grant it a 100ms timeout,
@@ -1300,7 +1303,8 @@ cancelWorkers(qqueue_t *pThis)
 
 	/* ... and now the DA queue, if it exists (should always be after the primary one) */
 	if(pThis->pqDA != NULL) {
-		DBGOPRINT((obj_t*) pThis, "checking to see if we need to cancel any worker threads of the DA queue\n");
+		DBGOPRINT((obj_t*) pThis, "checking to see if we need to cancel any worker threads of "
+			"the DA queue\n");
 		iRetLocal = wtpCancelAll(pThis->pqDA->pWtpReg);
 		/* returns immediately if all threads already have terminated */
 		if(iRetLocal != RS_RET_OK) {
@@ -2854,8 +2858,8 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg)
 			 * In any case, this was the old code (if we do the TODO):
 			 * pthread_cond_wait(&pThis->belowFullDlyWtrMrk, pThis->mut);
 			 */
-			DBGOPRINT((obj_t*) pThis, "doEnqSingleObject: FullDelay mark reached for full delayable message "
-				   "- blocking, queue size is %d.\n", pThis->iQueueSize);
+			DBGOPRINT((obj_t*) pThis, "doEnqSingleObject: FullDelay mark reached for full "
+				"delayable message - blocking, queue size is %d.\n", pThis->iQueueSize);
 			timeoutComp(&t, 1000);
 			err = pthread_cond_timedwait(&pThis->belowLightDlyWtrMrk, pThis->mut, &t);
 			if(err != 0 && err != ETIMEDOUT) {

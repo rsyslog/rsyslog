@@ -140,5 +140,6 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 
-	dbgprintf("rsyslog standard (network) forward format strgen init called, compiled with version %s\n", VERSION);
+	dbgprintf("rsyslog standard (network) forward format strgen init called, compiled with version"
+		" %s\n", VERSION);
 ENDmodInit

@@ -50,7 +50,8 @@ struct strmsrv_s {
 	strmLstnPortList_t **ppLstnPort; /**< pointer to relevant listen port description */
 	int iSessMax;		/**< max number of sessions supported */
 	strmLstnPortList_t *pLstnPorts;	/**< head pointer for listen ports */
-	int addtlFrameDelim;	/**< additional frame delimiter for plain STRM syslog framing (e.g. to handle NetScreen) */
+	int addtlFrameDelim;
+	/**< additional frame delimiter for plain STRM syslog framing (e.g. to handle NetScreen) */
 	strms_sess_t **pSessions;/**< array of all of our sessions */
 	void *pUsr;		/**< a user-settable pointer (provides extensibility for "derived classes")*/
 	/* callbacks */

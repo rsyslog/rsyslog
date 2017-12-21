@@ -350,7 +350,8 @@ CODESTARTparse2
 		snaremessage -= (pInst->tabLength-1);
 	} else {
 		/* The first separator is not a tab. Look for a syslog Snare message. Example:
-		 * <14>May 17 02:25:10 syslog.lab.home MSWinEventLog     1    Security  606129    Wed May 17 02:25:10 2017
+		 * <14>May 17 02:25:10 syslog.lab.home MSWinEventLog     1    Security  606129
+			Wed May 17 02:25:10 2017
 		 */
 
 		/* go back to the beginning of the message */

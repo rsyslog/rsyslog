@@ -811,7 +811,8 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,fjson_object **p
 			if(response==NULL)
 			{
 				free(request);/*as its has been assigned.*/
-				DBGPRINTF("omelasticsearch: Error getting fjson_object_to_string_ext. Cannot continue\n");
+				DBGPRINTF("omelasticsearch: Error getting fjson_object_to_string_ext. Cannot "
+					"continue\n");
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 
@@ -849,14 +850,16 @@ getDataErrorOnly(context *ctx,int itemStatus,char *request,char *response)
 
 		if(!fjson_object_object_get_ex(ctx->errRoot, "reply", &onlyErrorResponses))
 		{
-			DBGPRINTF("omelasticsearch: Failed to get reply json array. Invalid context. Cannot continue\n");
+			DBGPRINTF("omelasticsearch: Failed to get reply json array. Invalid context. Cannot "
+				"continue\n");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 		fjson_object_array_add(onlyErrorResponses, fjson_object_new_string(response));
 
 		if(!fjson_object_object_get_ex(ctx->errRoot, "request", &onlyErrorRequests))
 		{
-			DBGPRINTF("omelasticsearch: Failed to get request json array. Invalid context. Cannot continue\n");
+			DBGPRINTF("omelasticsearch: Failed to get request json array. Invalid context. Cannot "
+				"continue\n");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 

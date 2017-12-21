@@ -617,7 +617,8 @@ int main(int argc, char *argv[], char *envp[])
 			verbose = 1;
 			break;
 		default:fprintf(stderr, "Invalid call of nettester, invalid option '%c'.\n", opt);
-			fprintf(stderr, "Usage: nettester -d -ttestsuite-name -iudp|tcp [-pport] [-ccustomConfFile] \n");
+			fprintf(stderr, "Usage: nettester -d -ttestsuite-name -iudp|tcp [-pport] "
+				"[-ccustomConfFile] \n");
 			exit(1);
 		}
 	}

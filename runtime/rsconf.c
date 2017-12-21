@@ -970,7 +970,8 @@ static rsRetVal setMainMsgQueType(void __attribute__((unused)) *pVal, uchar *psz
 		loadConf->globals.mainQ.MainMsgQueType = QUEUETYPE_DIRECT;
 		DBGPRINTF("main message queue type set to DIRECT (no queueing at all)\n");
 	} else {
-		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "unknown mainmessagequeuetype parameter: %s", (char *) pszType);
+		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "unknown mainmessagequeuetype parameter: %s",
+			(char *) pszType);
 		iRet = RS_RET_INVALID_PARAMS;
 	}
 	free(pszType); /* no longer needed */
@@ -998,8 +999,8 @@ static rsRetVal setMaxFiles(void __attribute__((unused)) *pVal, int iFiles)
 	if(setrlimit(RLIMIT_NOFILE, &maxFiles) < 0) {
 		/* NOTE: under valgrind, we seem to be unable to extend the size! */
 		rs_strerror_r(errno, errStr, sizeof(errStr));
-		errmsg.LogError(0, RS_RET_ERR_RLIM_NOFILE, "could not set process file limit to %d: %s [kernel max %ld]",
-				iFiles, errStr, (long) maxFiles.rlim_max);
+		errmsg.LogError(0, RS_RET_ERR_RLIM_NOFILE, "could not set process file limit to %d: %s "
+			"[kernel max %ld]", iFiles, errStr, (long) maxFiles.rlim_max);
 		ABORT_FINALIZE(RS_RET_ERR_RLIM_NOFILE);
 	}
 #ifdef USE_UNLIMITED_SELECT

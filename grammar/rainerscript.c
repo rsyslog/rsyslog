@@ -1748,7 +1748,8 @@ doRandomGen(struct svar *__restrict__ const sourceVal) {
 	int success = 0;
 	long long max = var2Number(sourceVal, &success);
 	if (! success) {
-		DBGPRINTF("rainerscript: random(max) didn't get a valid 'max' limit, defaulting random-number value to 0");
+		DBGPRINTF("rainerscript: random(max) didn't get a valid 'max' limit, defaulting random-number "
+			"value to 0");
 		return 0;
 	}
 	if(max == 0) {
@@ -1829,7 +1830,8 @@ ipv42num(char *str)
 		case '8':
 		case '9':
 			if(endblank == 1){
-				DBGPRINTF("rainerscript: (ipv42num) error: wrong IP-Address format (invalid space(1))\n");
+				DBGPRINTF("rainerscript: (ipv42num) error: wrong IP-Address format "
+					"(invalid space(1))\n");
 				goto done;
 			}
 			prevdot = 0;
@@ -1849,7 +1851,8 @@ ipv42num(char *str)
 			}
 		case '.':
 			if(endblank == 1){
-				DBGPRINTF("rainerscript: (ipv42num) error: wrong IP-Address format (inalid space(2))\n");
+				DBGPRINTF("rainerscript: (ipv42num) error: wrong IP-Address format "
+					"(inalid space(2))\n");
 				goto done;
 			}
 			startblank = 0;
@@ -1861,7 +1864,8 @@ ipv42num(char *str)
 			prevdot = 1;
 			cyc++;
 			if(cyc > 3){
-				DBGPRINTF("rainerscript: (ipv42num) error: wrong IP-Address format (too many dots)\n");
+				DBGPRINTF("rainerscript: (ipv42num) error: wrong IP-Address format "
+					"(too many dots)\n");
 				goto done;
 			}
 			break;
@@ -4340,7 +4344,8 @@ done:	return;
 
 static void
 cnfstmtOptimizeReloadLookupTable(struct cnfstmt *stmt) {
-	if((stmt->d.s_reload_lookup_table.table = lookupFindTable(stmt->d.s_reload_lookup_table.table_name)) == NULL) {
+	if((stmt->d.s_reload_lookup_table.table = lookupFindTable(stmt->d.s_reload_lookup_table.table_name))
+	== NULL) {
 		parser_errmsg("lookup table '%s' not found\n", stmt->d.s_reload_lookup_table.table_name);
 	}
 }
@@ -4453,13 +4458,13 @@ static const char* const numInWords[] = {"zero", "one", "two", "three", "four", 
 #define GENERATE_FUNC_WITH_ERR_MSG(name, expectedParams, funcId, errMsg) \
 	if(nParams != expectedParams) {										\
 		parser_errmsg(errMsg, name, numInWords[expectedParams], nParams); \
-		return CNFFUNC_INVALID;											\
+		return CNFFUNC_INVALID; \
 	}	\
 	return funcId
 
 
 #define GENERATE_FUNC(name, expectedParams, func_id)					\
-	GENERATE_FUNC_WITH_ERR_MSG(											\
+	GENERATE_FUNC_WITH_ERR_MSG( \
 		name, expectedParams, func_id,									\
 		"number of parameters for %s() must be %s but is %d.")
 

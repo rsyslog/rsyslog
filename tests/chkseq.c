@@ -191,7 +191,8 @@ int main(int argc, char *argv[])
 					if(fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
 						scanfOK = 0;
 					} else {
-						scanfOK = sscanf(ioBuf, "%d,%d,%s\n", &val, &edLen, edBuf) == 3 ? 1 : 0;
+						scanfOK = sscanf(ioBuf, "%d,%d,%s\n", &val,
+							&edLen, edBuf) == 3 ? 1 : 0;
 					}
 					if(edLen != (int) strlen(edBuf)) {
 						if (bAnticipateTruncation == 1) {

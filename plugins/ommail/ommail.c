@@ -518,7 +518,8 @@ readResponseLn(wrkrInstanceData_t *pWrkrData, char *pLn, size_t lenLn, size_t *c
 		if(i < (lenLn - 1)) /* if line is too long, we simply discard the rest */
 			pLn[i++] = c;
 	} while(1);
-	DBGPRINTF("smtp server response: %s\n", pLn); /* do not remove, this is helpful in troubleshooting SMTP probs! */
+	DBGPRINTF("smtp server response: %s\n", pLn);
+	/* do not remove, this is helpful in troubleshooting SMTP probs! */
 
 finalize_it:
 	pLn[i] = '\0';
@@ -599,7 +600,8 @@ sendSMTP(wrkrInstanceData_t *pWrkrData, uchar *body, uchar *subject)
 	CHKiRet(readResponse(pWrkrData, &iState, 220));
 
 	CHKiRet(Send(pWrkrData->md.smtp.sock, "HELO ", 5));
-	CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)glbl.GetLocalHostName(), strlen((char*)glbl.GetLocalHostName())));
+	CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)glbl.GetLocalHostName(),
+		strlen((char*)glbl.GetLocalHostName())));
 	CHKiRet(Send(pWrkrData->md.smtp.sock, "\r\n", sizeof("\r\n") - 1));
 	CHKiRet(readResponse(pWrkrData, &iState, 250));
 

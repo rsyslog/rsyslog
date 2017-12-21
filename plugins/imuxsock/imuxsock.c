@@ -1166,8 +1166,8 @@ activateListeners(void)
 		if(runModConf->ratelimitIntervalSysSock > 0) {
 			if((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
 				/* in this case, we simply turn of rate-limiting */
-				errmsg.LogError(0, NO_ERRCODE, "imuxsock: turning off rate limiting because we could not "
-					  "create hash table\n");
+				errmsg.LogError(0, NO_ERRCODE, "imuxsock: turning off rate limiting because "
+					"we could not create hash table\n");
 				runModConf->ratelimitIntervalSysSock = 0;
 			}
 		} else {

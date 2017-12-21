@@ -137,7 +137,8 @@ CODESTARTrunInput
 		 * return after SIGUSR1.
 		 */
 		if((iRet = srAPIRunListener(pAPI)) != SR_RET_OK) {
-			errmsg.LogError(0, NO_ERRCODE, "error %d running liblogging listener - im3195 is defunct", iRet);
+			errmsg.LogError(0, NO_ERRCODE, "error %d running liblogging listener - im3195 "
+				"is defunct", iRet);
 			FINALIZE; /* this causes im3195 to become defunct; TODO: recovery handling */
 		}
 	}

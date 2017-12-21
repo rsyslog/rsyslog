@@ -599,7 +599,8 @@ propNameToID(uchar *pName, propid_t *pPropID)
 		*pPropID = PROP_SYSLOGFACILITY_TEXT;
 	} else if(!strcasecmp((char*) pName, "syslogseverity") || !strcasecmp((char*) pName, "syslogpriority")) {
 		*pPropID = PROP_SYSLOGSEVERITY;
-	} else if(!strcasecmp((char*) pName, "syslogseverity-text") || !strcasecmp((char*) pName, "syslogpriority-text")) {
+	} else if(!strcasecmp((char*) pName, "syslogseverity-text") ||
+	!strcasecmp((char*) pName, "syslogpriority-text")) {
 		*pPropID = PROP_SYSLOGSEVERITY_TEXT;
 	} else if(!strcasecmp((char*) pName, "timegenerated")) {
 		*pPropID = PROP_TIMEGENERATED;
@@ -1356,7 +1357,8 @@ MsgDeserialize(smsg_t * const pMsg, strm_t *pStrm)
 		CHKiRet(objDeserializeProperty(pVar, pStrm));
 	}
 	if(isProp("pszRcvFromIP")) {
-		MsgSetRcvFromIPStr(pMsg, rsCStrGetSzStrNoNULL(pVar->val.pStr), rsCStrLen(pVar->val.pStr), &propRcvFromIP);
+		MsgSetRcvFromIPStr(pMsg, rsCStrGetSzStrNoNULL(pVar->val.pStr), rsCStrLen(pVar->val.pStr),
+			&propRcvFromIP);
 		prop.Destruct(&propRcvFromIP);
 		reinitVar(pVar);
 		CHKiRet(objDeserializeProperty(pVar, pStrm));
@@ -3895,14 +3897,16 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 					dbgprintf("regexec return is %d\n", iREstat);
 					if(iREstat == 0) {
 						if(pmatch[0].rm_so == -1) {
-							dbgprintf("oops ... start offset of successful regexec is -1\n");
+							dbgprintf("oops ... start offset of successful "
+								"regexec is -1\n");
 							break;
 						}
 						if(iTry == pTpe->data.field.iMatchToUse) {
 							bFound = 1;
 						} else {
-							dbgprintf("regex found at offset %d, new offset %d, tries %d\n",
-								  iOffs, (int) (iOffs + pmatch[0].rm_eo), iTry);
+							dbgprintf("regex found at offset %d, new offset %d, "
+								"tries %d\n", iOffs,
+								(int) (iOffs + pmatch[0].rm_eo), iTry);
 							iOffs += pmatch[0].rm_eo;
 							++iTry;
 						}
@@ -3921,7 +3925,8 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 						if(pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_DFLTSTR) {
 							bufLen = sizeof("**NO MATCH**") - 1;
 							pRes = UCHAR_CONSTANT("**NO MATCH**");
-						} else if(pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_ZERO) {
+						} else if(pTpe->data.field.nomatchAction ==
+						TPL_REGEX_NOMATCH_USE_ZERO) {
 							bufLen = 1;
 							pRes = UCHAR_CONSTANT("0");
 						} else {
@@ -3933,7 +3938,8 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 					/* Match- but did it match the one we wanted? */
 					/* we got no match! */
 					if(pmatch[pTpe->data.field.iSubMatchToUse].rm_so == -1) {
-						if(pTpe->data.field.nomatchAction != TPL_REGEX_NOMATCH_USE_WHOLE_FIELD) {
+						if(pTpe->data.field.nomatchAction !=
+						TPL_REGEX_NOMATCH_USE_WHOLE_FIELD) {
 							if (*pbMustBeFreed == 1) {
 								free(pRes);
 								*pbMustBeFreed = 0;
@@ -3967,7 +3973,8 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 					}
 
 					/* Lets copy the matched substring to the buffer */
-					memcpy(pB, pRes + iOffs +  pmatch[pTpe->data.field.iSubMatchToUse].rm_so, iLenBuf);
+					memcpy(pB, pRes + iOffs +  pmatch[pTpe->data.field.iSubMatchToUse].rm_so,
+						iLenBuf);
 					bufLen = iLenBuf;
 					pB[iLenBuf] = '\0';/* terminate string, did not happen before */
 

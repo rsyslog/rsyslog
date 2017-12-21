@@ -122,7 +122,8 @@ really an AIX log, but has a similar preamble */
 		++p2parse;
 	}
 	if (lenMsg && *p2parse != ':') {
-	DBGPRINTF("not a AIX message forwarded from mangled log but similar enough that the preamble has been removed\n");
+	DBGPRINTF("not a AIX message forwarded from mangled log but similar enough that the preamble has "
+		"been removed\n");
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
 	/* bump the message portion up by one character to overwrite the extra : */

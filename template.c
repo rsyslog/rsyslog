@@ -1106,7 +1106,8 @@ do_Parameter(uchar **pp, struct template *pTpl)
 					if((errcode = regexp.regcomp(&(pTpe->data.field.re),
 						(char*) regex_char, iOptions) != 0)) {
 						char errbuff[512];
-						regexp.regerror(errcode, &(pTpe->data.field.re), errbuff, sizeof(errbuff));
+						regexp.regerror(errcode, &(pTpe->data.field.re),
+							errbuff, sizeof(errbuff));
 						DBGPRINTF("Template.c: Error in regular expression: %s\n", errbuff);
 						pTpe->data.field.has_regex = 2;
 					}
@@ -1666,7 +1667,8 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 				datefmt = tplFmtRFC3164BuggyDate;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"rfc3339", sizeof("rfc3339")-1)) {
 				datefmt = tplFmtRFC3339Date;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"unixtimestamp", sizeof("unixtimestamp")-1)) {
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"unixtimestamp",
+			sizeof("unixtimestamp")-1)) {
 				datefmt = tplFmtUnixDate;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"subseconds", sizeof("subseconds")-1)) {
 				datefmt = tplFmtSecFrac;
