@@ -35,12 +35,13 @@ Note: parameter names are case-insensitive.
    Linux only, ignored on other platforms (but may be specified).
    Defaults to off.
 
-.. function:: $klogLocalIPIF [interface name]
+.. function:: $klogLocalIPIF
 
-   If provided, the IP of the specified interface (e.g. "eth0") shall be
-   used as fromhost-ip for imklog-originating messages. If this
-   directive is not given OR the interface cannot be found (or has no IP
-   address), the default of "127.0.0.1" is used.
+   This directive is no longer supported. Instead, use the global
+
+   $localHostIPIF
+
+   directive instead.
 
 .. function:: $klogConsoleLogLevel <number>
 
