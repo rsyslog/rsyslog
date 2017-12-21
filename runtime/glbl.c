@@ -83,7 +83,6 @@ static uchar *pszWorkDir = NULL;
 #ifdef HAVE_LIBLOGGING_STDLOG
 static uchar *stdlog_chanspec = NULL;
 #endif
-static int bOptimizeUniProc = 1;	/* enable uniprocessor optimizations */
 static int bParseHOSTNAMEandTAG = 1;	/* parser modification (based on startup params!) */
 static int bPreserveFQDN = 0;		/* should FQDNs always be preserved? */
 static int iMaxLine = 8096;		/* maximum length of a syslog message */
@@ -242,7 +241,6 @@ static dataType Get##nameFunc(void) \
 	return(nameVar); \
 }
 
-SIMP_PROP(OptimizeUniProc, bOptimizeUniProc, int)
 SIMP_PROP(PreserveFQDN, bPreserveFQDN, int)
 SIMP_PROP(mainqCnfObj, mainqCnfObj, struct cnfobj *)
 SIMP_PROP(DropMalPTRMsgs, bDropMalPTRMsgs, int)
@@ -756,7 +754,6 @@ CODESTARTobjQueryInterface(glbl)
 #define SIMP_PROP(name) \
 	pIf->Get##name = Get##name; \
 	pIf->Set##name = Set##name;
-	SIMP_PROP(OptimizeUniProc);
 	SIMP_PROP(PreserveFQDN);
 	SIMP_PROP(DropMalPTRMsgs);
 	SIMP_PROP(mainqCnfObj);
@@ -801,7 +798,6 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	free(pszWorkDir);
 	pszWorkDir = NULL;
 	bDropMalPTRMsgs = 0;
-	bOptimizeUniProc = 1;
 	bPreserveFQDN = 0;
 	iMaxLine = 8192;
 	cCCEscapeChar = '#';
@@ -1337,8 +1333,7 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	&pszDfltNetstrmDrvrCertFile, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"localhostname", 0, eCmdHdlrGetWord, NULL, &LocalHostNameOverride, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"localhostipif", 0, eCmdHdlrGetWord, setLocalHostIPIF, NULL, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"optimizeforuniprocessor", 0, eCmdHdlrBinary, NULL,
-	&bOptimizeUniProc, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"optimizeforuniprocessor", 0, eCmdHdlrGoneAway, NULL, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"preservefqdn", 0, eCmdHdlrBinary, NULL, &bPreserveFQDN, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize, legacySetMaxMessageSize, NULL, NULL));
 
