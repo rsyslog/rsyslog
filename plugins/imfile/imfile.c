@@ -2807,11 +2807,11 @@ fen_processEventFile(struct file_obj* fobjp, lstn_t *pLstn, int revents, int dir
 
 		/* Get File Stats */
 		if (!(revents & FILE_EXCEPTION) && stat(fobjp->fo_name, &statFile) == -1) {
-			/* logerror or debug print? needs to be discussed in #2249
-			errmsg.LogError(errno, RS_RET_FILE_NO_STAT, "fen_processEventFile: Failed to stat file: %s"
-				, fobjp->fo_name);*/
+			const int errno_save = errno;
 			DBGPRINTF("fen_processEventFile: Failed to stat file: %s - errno %d\n",
 				fobjp->fo_name, errno);
+			LogError(errno_save, RS_RET_FILE_NO_STAT, "imfile: file '%s' not found when "
+				"receiving notification event", fobjp->fo_name);
 			ABORT_FINALIZE(RS_RET_FILE_NO_STAT);
 		}
 
