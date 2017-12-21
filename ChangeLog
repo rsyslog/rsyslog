@@ -35,6 +35,13 @@ Version 8.32.0 [v8-stable] 2018-01-09
   This right now is a bit experimental; we may roll it back if
   problems show up in practice.
   closes https://github.com/rsyslog/rsyslog/issues/2030
+- mmexternal improvements
+  * better error reporting if to-be-executed script cannot be executed
+  * some general cleanup
+  * better redirection of stdin/out/err for the executed script
+  * bugfix: argv[0] of the script was missing if command line parameters
+    were not specified
+- omprog: refactored, code shared with mmexternal moved to common object
 - logctl tool: refactor to support newer rsyslog standards
   * Made the logctl usertool ISO C90 compliant.
   * Made the logctl usertool use a homogeneous coding style.
