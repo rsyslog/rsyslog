@@ -55,6 +55,8 @@
 /* we need this to avoid issues with older versions of libbson */
 #ifndef AIX
 #pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wunknown-attributes"
 #pragma GCC diagnostic ignored "-Wexpansion-to-defined"
 #endif
 #include <mongoc.h>
