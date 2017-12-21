@@ -271,7 +271,8 @@ static rsRetVal sendMsg(instanceData *pData, char *msg, size_t len)
 	}
 
 	if(pData->sock != INVLD_SOCK) {
-		lenSent = sendto(pData->sock, msg, len, 0, (const struct sockaddr *)&pData->addr, sizeof(pData->addr));
+		lenSent = sendto(pData->sock, msg, len, 0, (const struct sockaddr *)&pData->addr,
+			sizeof(pData->addr));
 		if(lenSent != len) {
 			int eno = errno;
 			char errStr[1024];
@@ -445,7 +446,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
-	CHKiRet(regCfSysLineHdlr((uchar *)"omuxsockdefaulttemplate", 0, eCmdHdlrGetWord, setLegacyDfltTpl, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"omuxsockdefaulttemplate", 0, eCmdHdlrGetWord, setLegacyDfltTpl,
+		NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"omuxsocksocket", 0, eCmdHdlrGetWord, NULL, &cs.sockName, NULL));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables,
 	NULL, STD_LOADABLE_MODULE_ID));

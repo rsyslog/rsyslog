@@ -599,8 +599,8 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 		if(pThis->bEmitMsgOnClose) {
 			errno = 0;
 			prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
-			errmsg.LogError(0, RS_RET_PEER_CLOSED_CONN, "Netstream session %p closed by remote peer %s.\n",
-					(*ppSess)->pStrm, pszPeer);
+			errmsg.LogError(0, RS_RET_PEER_CLOSED_CONN, "Netstream session %p closed by remote "
+				"peer %s.\n", (*ppSess)->pStrm, pszPeer);
 		}
 		CHKiRet(closeSess(pThis, ppSess, pPoll));
 		break;
@@ -844,7 +844,8 @@ RunSelect(tcpsrv_t *pThis, nsd_epworkset_t workset[], size_t sizeWorkset)
 		while(nfds && iTCPSess != -1) {
 			if(glbl.GetGlobalInputTermState() == 1)
 				ABORT_FINALIZE(RS_RET_FORCE_TERM);
-			localRet = nssel.IsReady(pSel, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD, &bIsReady, &nfds);
+			localRet = nssel.IsReady(pSel, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD,
+				&bIsReady, &nfds);
 			if(bIsReady || localRet != RS_RET_OK) {
 				workset[iWorkset].id = iTCPSess;
 				workset[iWorkset].pUsr = (void*) pThis->pSessions[iTCPSess];

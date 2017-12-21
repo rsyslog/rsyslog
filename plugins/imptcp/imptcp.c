@@ -1187,7 +1187,8 @@ DataRcvdCompressed(ptcpsess_t *pThis, char *buf, size_t len)
 		}
 	} while (pThis->zstrm.avail_out == 0);
 
-	dbgprintf("end of DataRcvCompress, sizes: in %lld, out %llu\n", (long long) len, (long long unsigned) outtotal);
+	dbgprintf("end of DataRcvCompress, sizes: in %lld, out %llu\n", (long long) len,
+		(long long unsigned) outtotal);
 finalize_it:
 	RETiRet;
 }
@@ -1408,7 +1409,8 @@ doZipFinish(ptcpsess_t *pSess)
 		outavail = sizeof(zipBuf) - pSess->zstrm.avail_out;
 		if(outavail != 0) {
 			pSess->pLstn->rcvdDecompressed += outavail;
-			CHKiRet(DataRcvdUncompressed(pSess, (char*)zipBuf, outavail, &stTime, 0)); // TODO: query time!
+			CHKiRet(DataRcvdUncompressed(pSess, (char*)zipBuf, outavail, &stTime, 0));
+		// TODO: query time!
 		}
 	} while (pSess->zstrm.avail_out == 0);
 

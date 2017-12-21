@@ -196,7 +196,8 @@ static rsRetVal writeHiredis(uchar* key, uchar *message, wrkrInstanceData_t *pWr
 			rc = redisAppendCommand(pWrkrData->conn, "PUBLISH %s %s", key, (char*)message);
 			break;
 		default:
-			dbgprintf("omhiredis: mode %d is invalid something is really wrong\n", pWrkrData->pData->mode);
+			dbgprintf("omhiredis: mode %d is invalid something is really wrong\n",
+				pWrkrData->pData->mode);
 			ABORT_FINALIZE(RS_RET_ERR);
 	}
 

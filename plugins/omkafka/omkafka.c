@@ -1056,8 +1056,9 @@ persistFailedMsgs(instanceData *const __restrict__ pData)
 			LogError(errno, RS_RET_ERR, "omkafka: persistFailedMsgs error writing failed msg file");
 			ABORT_FINALIZE(RS_RET_ERR);
 		} else {
-			DBGPRINTF("omkafka: persistFailedMsgs successfully written loaded msg '%.*s' for topic '%s'\n",
-				(int)(strlen((char*)fmsgEntry->payload)-1), fmsgEntry->payload, fmsgEntry->topicname);
+			DBGPRINTF("omkafka: persistFailedMsgs successfully written loaded msg '%.*s' for "
+				"topic '%s'\n", (int)(strlen((char*)fmsgEntry->payload)-1),
+				fmsgEntry->payload, fmsgEntry->topicname);
 		}
 		SLIST_REMOVE_HEAD(&pData->failedmsg_head, entries);
 		failedmsg_entry_destruct(fmsgEntry);

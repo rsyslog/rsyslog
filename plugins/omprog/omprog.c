@@ -381,16 +381,17 @@ killSubprocessOnTimeout(void *_subpTimeOut_p) {
 	subprocess_timeout_desc_t *subpTimeOut = (subprocess_timeout_desc_t *) _subpTimeOut_p;
 	if (pthread_mutex_lock(&subpTimeOut->lock) == 0) {
 		while (subpTimeOut->timeout_armed) {
-			int ret = pthread_cond_timedwait(&subpTimeOut->cond, &subpTimeOut->lock, &subpTimeOut->timeout);
+			int ret = pthread_cond_timedwait(&subpTimeOut->cond, &subpTimeOut->lock,
+				&subpTimeOut->timeout);
 			if (subpTimeOut->timeout_armed && ((ret == ETIMEDOUT) || (timeoutVal(&subpTimeOut->timeout)
 				== 0))) {
 				errmsg.LogError(0, RS_RET_CONC_CTRL_ERR, "omprog: child-process wasn't "
 					"reaped within timeout (%ld ms) preparing to force-kill.",
 					subpTimeOut->timeout_ms);
 				if (syscall(SYS_tgkill, getpid(), subpTimeOut->waiter_tid, SIGINT) != 0) {
-					errmsg.LogError(errno, RS_RET_SYS_ERR, "omprog: couldn't interrupt thread(%d) "
-									"which was waiting to reap child-process.",
-									subpTimeOut->waiter_tid);
+					errmsg.LogError(errno, RS_RET_SYS_ERR, "omprog: couldn't interrupt "
+						"thread(%d) which was waiting to reap child-process.",
+						subpTimeOut->waiter_tid);
 				}
 			}
 		}
@@ -480,7 +481,8 @@ waitForChild(wrkrInstanceData_t *pWrkrData, long timeout_ms)
 	if(ret != pWrkrData->pid) {
 		if (errno == ECHILD) {
 			errmsg.LogError(errno, RS_RET_OK_WARN, "Child %d doesn't seem to exist, "
-							"hence couldn't be reaped (reaped by main-loop?)", pWrkrData->pid);
+							"hence couldn't be reaped (reaped by main-loop?)",
+			pWrkrData->pid);
 		} else {
 			errmsg.LogError(errno, RS_RET_SYS_ERR, "Cleanup failed for child %d", pWrkrData->pid);
 		}

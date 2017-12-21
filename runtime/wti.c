@@ -152,7 +152,8 @@ wtiCancelThrd(wti_t *pThis)
 	if(wtiGetState(pThis)) {
 		/* we first try the cooperative "cancel" interface */
 		pthread_kill(pThis->thrdID, SIGTTIN);
-		DBGPRINTF("sent SIGTTIN to worker thread %p, giving it a chance to terminate\n", (void *) pThis->thrdID);
+		DBGPRINTF("sent SIGTTIN to worker thread %p, giving it a chance to terminate\n",
+			(void *) pThis->thrdID);
 		srSleep(0, 10000);
 	}
 
@@ -368,8 +369,8 @@ wtiWorker(wti_t *__restrict__ const pThis)
 			break;	/* end of loop */
 		} else if(localRet == RS_RET_IDLE) {
 			if(terminateRet == RS_RET_TERMINATE_WHEN_IDLE || bInactivityTOOccured) {
-				DBGOPRINT((obj_t*) pThis, "terminating worker terminateRet=%d, bInactivityTOOccured=%d\n",
-					  terminateRet, bInactivityTOOccured);
+				DBGOPRINT((obj_t*) pThis, "terminating worker terminateRet=%d, "
+					"bInactivityTOOccured=%d\n", terminateRet, bInactivityTOOccured);
 				break;	/* end of loop */
 			}
 			doIdleProcessing(pThis, pWtp, &bInactivityTOOccured);

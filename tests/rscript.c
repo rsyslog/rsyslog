@@ -107,7 +107,8 @@ PerformTest(cstr_t *pstrIn, rsRetVal iRetExpected, cstr_t *pstrOut)
 		printf("error: compiled program different from expected result!\n");
 		printf("generated vmprg (%d bytes):\n%s\n",
 			(int)strlen((char*)rsCStrGetSzStr(pstrPrg)), rsCStrGetSzStr(pstrPrg));
-		printf("expected (%d bytes):\n%s\n", (int)strlen((char*)rsCStrGetSzStr(pstrOut)), rsCStrGetSzStr(pstrOut));
+		printf("expected (%d bytes):\n%s\n", (int)strlen((char*)rsCStrGetSzStr(pstrOut)),
+			rsCStrGetSzStr(pstrOut));
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 

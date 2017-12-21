@@ -187,7 +187,8 @@ static void dbgFuncDBPrint(dbgFuncDB_t *pFuncDB)
 	assert(pFuncDB != NULL);
 	assert(pFuncDB->magic == dbgFUNCDB_MAGIC);
 	/* make output suitable for sorting on invocation count */
-	dbgprintf("%10.10ld times called: %s:%d:%s\n", pFuncDB->nTimesCalled, pFuncDB->file, pFuncDB->line, pFuncDB->func);
+	dbgprintf("%10.10ld times called: %s:%d:%s\n", pFuncDB->nTimesCalled, pFuncDB->file, pFuncDB->line,
+		pFuncDB->func);
 }
 
 
@@ -242,9 +243,9 @@ dbgFuncDBPrintActiveMutexes(dbgFuncDB_t *pFuncDB, const char *pszHdrText, pthrea
 	for(i = 0 ; i < SIZE_FUNCDB_MUTEX_TABLE(pFuncDB) ; ++i) {
 		if(pFuncDB->mutInfo[i].lockLn != -1 && (thrd == 0 || thrd == pFuncDB->mutInfo[i].thrd)) {
 			dbgGetThrdName(pszThrdName, sizeof(pszThrdName), pFuncDB->mutInfo[i].thrd, 1);
-			dbgprintf("%s:%d:%s:invocation %ld: %s %p[%d/%s]\n", pFuncDB->file, pFuncDB->line, pFuncDB->func,
-				  pFuncDB->mutInfo[i].lInvocation, pszHdrText, (void*)pFuncDB->mutInfo[i].pmut, i,
-				  pszThrdName);
+			dbgprintf("%s:%d:%s:invocation %ld: %s %p[%d/%s]\n", pFuncDB->file, pFuncDB->line,
+				pFuncDB->func, pFuncDB->mutInfo[i].lInvocation, pszHdrText,
+				(void*)pFuncDB->mutInfo[i].pmut, i, pszThrdName);
 		}
 	}
 }
@@ -472,7 +473,8 @@ dbgMutexPreLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int ln)
 		pszHolder = "[NONE]";
 	else {
 		dbgGetThrdName(pszHolderThrdName, sizeof(pszHolderThrdName), pHolder->thrd, 1);
-		snprintf(pszBuf, sizeof(pszBuf), "%s:%d [%s]", pHolder->pFuncDB->file, pHolder->lockLn, pszHolderThrdName);
+		snprintf(pszBuf, sizeof(pszBuf), "%s:%d [%s]", pHolder->pFuncDB->file,
+			pHolder->lockLn, pszHolderThrdName);
 		pszHolder = pszBuf;
 	}
 
@@ -744,7 +746,8 @@ static void dbgCallStackPrint(dbgThrdInfo_t *pThrd)
 	dbgprintf("\n");
 	dbgprintf("Recorded Call Order for Thread '%s':\n", pszThrdName);
 	for(i = 0 ; i < pThrd->stackPtr ; i++) {
-		dbgprintf("%d: %s:%d:%s:\n", i, pThrd->callStack[i]->file, pThrd->lastLine[i], pThrd->callStack[i]->func);
+		dbgprintf("%d: %s:%d:%s:\n", i, pThrd->callStack[i]->file, pThrd->lastLine[i],
+			pThrd->callStack[i]->func);
 	}
 	dbgprintf("maximum number of nested calls for this thread: %d.\n", pThrd->stackPtrMax);
 	dbgprintf("NOTE: not all calls may have been recorded, code does not currently guarantee that!\n");
@@ -1146,7 +1149,8 @@ void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore, int iRet)
 	if(bLogFuncFlow && dbgPrintNameIsInList((const uchar*)pFuncDB->file, printNameFileRoot)) {
 		if(strcmp(pFuncDB->file, "stringbuf.c")) {	/* TODO: make configurable */
 			if(iRet == RS_RET_NO_IRET)
-				dbgprintf("%s:%d: %s: exit: (no iRet)\n", pFuncDB->file, pFuncDB->line, pFuncDB->func);
+				dbgprintf("%s:%d: %s: exit: (no iRet)\n", pFuncDB->file, pFuncDB->line,
+					pFuncDB->func);
 			else 
 				dbgprintf("%s:%d: %s: exit: %d\n", pFuncDB->file, pFuncDB->line, pFuncDB->func, iRet);
 		}

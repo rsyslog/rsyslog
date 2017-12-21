@@ -835,7 +835,8 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
 						pThis->bPrevWasNL = 0;
 					} else {
 						/* clean things up by putting the character we just read back into
-						 * the input buffer and removing the LF character that is currently at the
+						 * the input buffer and removing the LF character that is
+						 * currently at the
 						 * end of the output string */
 						CHKiRet(strmUnreadChar(pThis, c));
 						rsCStrTruncate(*ppCStr, (bEscapeLF) ? 4 : 1);
@@ -978,13 +979,15 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, const sbool bEs
 					int currLineLen = cstrLen(thisLine);
 					if(currLineLen > 0) {
 						int len;
-						if((len = cstrLen(pThis->prevMsgSegment) + currLineLen) < maxMsgSize) {
+						if((len = cstrLen(pThis->prevMsgSegment) + currLineLen) <
+						maxMsgSize) {
 							CHKiRet(cstrAppendCStr(pThis->prevMsgSegment, thisLine));
 							/* we could do this faster, but for now keep it simple */
 						} else {
 							len = currLineLen-(len-maxMsgSize);
 							for(int z=0; z<len; z++) {
-								cstrAppendChar(pThis->prevMsgSegment, thisLine->pBuf[z]);
+								cstrAppendChar(pThis->prevMsgSegment,
+								thisLine->pBuf[z]);
 							}
 							finished = 1;
 							*ppCStr = pThis->prevMsgSegment;
@@ -1097,8 +1100,8 @@ static rsRetVal strmConstructFinalize(strm_t *pThis)
 			char errStr[1024];
 			int err = errno;
 			rs_strerror_r(err, errStr, sizeof(errStr));
-			DBGPRINTF("error %d opening directory file for fsync() use - fsync for directory disabled: %s\n",
-				   errno, errStr);
+			DBGPRINTF("error %d opening directory file for fsync() use - fsync for directory "
+				"disabled: %s\n", errno, errStr);
 		}
 	}
 
@@ -1479,8 +1482,8 @@ asyncWriterThread(void *pPtr)
 					if(err != ETIMEDOUT) {
 						char errStr[1024];
 						rs_strerror_r(err, errStr, sizeof(errStr));
-						DBGPRINTF("stream async writer timeout with error (%d): %s - ignoring\n",
-							   err, errStr);
+						DBGPRINTF("stream async writer timeout with error (%d): %s - "
+							"ignoring\n", err, errStr);
 					}
 				}
 			} else {
@@ -1688,7 +1691,8 @@ doZipFinish(strm_t *pThis)
 	pThis->zstrm.avail_in = 0;
 	/* run deflate() on buffer until everything has been compressed */
 	do {
-		DBGPRINTF("in deflate() loop, avail_in %d, total_in %ld\n", pThis->zstrm.avail_in, pThis->zstrm.total_in);
+		DBGPRINTF("in deflate() loop, avail_in %d, total_in %ld\n", pThis->zstrm.avail_in,
+			pThis->zstrm.total_in);
 		pThis->zstrm.avail_out = pThis->sIOBufSize;
 		pThis->zstrm.next_out = pThis->pZipBuf;
 		zRet = zlibw.Deflate(&pThis->zstrm, Z_FINISH);    /* no bad return value */

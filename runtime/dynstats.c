@@ -220,7 +220,8 @@ dynstats_rebuildSurvivorTable(dynstats_bucket_t *b) {
 	
 	htab_sz = (size_t) (DYNSTATS_HASHTABLE_SIZE_OVERPROVISIONING * b->maxCardinality + 1);
 	if (b->table == NULL) {
-		CHKmalloc(survivor_table = create_hashtable(htab_sz, hash_from_string, key_equals_string, no_op_free));
+		CHKmalloc(survivor_table = create_hashtable(htab_sz, hash_from_string, key_equals_string,
+			no_op_free));
 	}
 	CHKmalloc(new_table = create_hashtable(htab_sz, hash_from_string, key_equals_string, no_op_free));
 	statsobj.UnlinkAllCounters(b->stats);

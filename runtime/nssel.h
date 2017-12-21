@@ -41,7 +41,8 @@ BEGINinterface(nssel) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Destruct)(nssel_t **ppThis);
 	rsRetVal (*Add)(nssel_t *pThis, netstrm_t *pStrm, nsdsel_waitOp_t waitOp);
 	rsRetVal (*Wait)(nssel_t *pThis, int *pNumReady);
-	rsRetVal (*IsReady)(nssel_t *pThis, netstrm_t *pStrm, nsdsel_waitOp_t waitOp, int *pbIsReady, int *piNumReady);
+	rsRetVal (*IsReady)(nssel_t *pThis, netstrm_t *pStrm, nsdsel_waitOp_t waitOp, int *pbIsReady,
+		int *piNumReady);
 	/* v2 - 2013-09-17 by rgerhards */
 	rsRetVal (*SetDrvrName)(nssel_t *pThis, uchar *name);
 ENDinterface(nssel)

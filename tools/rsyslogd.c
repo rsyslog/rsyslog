@@ -752,7 +752,8 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
 						 (pszQueueName == NULL) ? "NONAME" : (char*)pszQueueName);
 					qfname = ustrdup(qfrenamebuf);
 					errmsg.LogError(0, NO_ERRCODE, "Error: queue file name '%s' already in use "
-						" - using '%s' instead", ourConf->globals.mainQ.pszMainMsgQFName, qfname);
+						" - using '%s' instead", ourConf->globals.mainQ.pszMainMsgQFName,
+						qfname);
 					break;
 				}
 			}
@@ -1524,7 +1525,8 @@ finalize_it:
 		exit(0);
 	} else if(iRet != RS_RET_OK) {
 		fprintf(stderr, "rsyslogd: run failed with error %d (see rsyslog.h "
-				"or try http://www.rsyslog.com/e/%d to learn what that number means)\n", iRet, iRet*-1);
+				"or try http://www.rsyslog.com/e/%d to learn what that number means)\n",
+				iRet, iRet*-1);
 		exit(1);
 	}
 
@@ -1777,7 +1779,8 @@ mainloop(void)
 			pid_t child;
 			do {
 				child = waitpid(-1, NULL, WNOHANG);
-				DBGPRINTF("rsyslogd: mainloop waitpid (with-no-hang) returned %u\n", (unsigned) child);
+				DBGPRINTF("rsyslogd: mainloop waitpid (with-no-hang) returned %u\n",
+					(unsigned) child);
 				if (child != -1 && child != 0) {
 					LogMsg(0, RS_RET_OK, LOG_INFO, "Child %d has terminated, reaped "
 						"by main-loop.", (unsigned) child);
@@ -1880,7 +1883,8 @@ deinitAll(void)
 	 * modules. As such, they are not yet cleared.  */
 	unregCfSysLineHdlrs();
 
-	/*dbgPrintAllDebugInfo(); / * this is the last spot where this can be done - below output modules are unloaded! */
+	/*dbgPrintAllDebugInfo();
+	/ * this is the last spot where this can be done - below output modules are unloaded! */
 
 	parserClassExit();
 	rsconfClassExit();
