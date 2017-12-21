@@ -211,7 +211,8 @@ static void msgConsume (instanceConf_t *inst) {
 
 		if (rkmessage->err) {
 			if (rkmessage->err == RD_KAFKA_RESP_ERR__PARTITION_EOF) {
-				LogError(0, RS_RET_KAFKA_ERROR, "imkafka: Consumer "
+				/* not an error, just a regular status! */
+				DBGPRINTF("imkafka: Consumer "
 					"reached end of topic \"%s\" [%"PRId32"]"
 					"message queue offset %"PRId64"\n",
 					rd_kafka_topic_name(rkmessage->rkt),
