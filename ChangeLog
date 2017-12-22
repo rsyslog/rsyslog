@@ -84,6 +84,8 @@ Version 8.32.0 [v8-stable] 2018-01-09
 - Patches from BSD projects have been imported
   ... as far as they still apply. Some patches that patched BSD-specific
   code were broadened to be more generic.
+- rainerscript: add is_time() function
+  Thanks to Stephen Workman for implementing this.
 - RainerScript: add function script_error() and error-reporting support
   This permits script functions that could fail to report errors back, so
   that the user can handle them if desired. We use an errno-style of
@@ -147,6 +149,15 @@ Version 8.32.0 [v8-stable] 2018-01-09
   we see a regression not caught by the CI system.
 - mmsnmptrapd bugfix: potential misadressing
   This only occured in situations when the system was totally out of memory.
+- omkafka bugfix: potential misadressing
+  The failed message list is improperly cleaned. This is a regression
+  from recent commit 4eae19e089b5a83da679fe29398c6b2c10003793, which
+  was introduced in 8.31.0.
+  This problem is more likely to happen under heavy load or bad
+  connectivity, when the local librdkafka queue overruns or message
+  delivery times out.
+  closes https://github.com/rsyslog/rsyslog/issues/2184
+  closes https://github.com/rsyslog/rsyslog/issues/2067
 - omkafka bugfix: build fails with older versions of librdkafka
   closes https://github.com/rsyslog/rsyslog/issues/2168
 - omgssapi bugfix: fix compiler warnings with gcc-7
