@@ -1994,6 +1994,79 @@ finalize_it:
 	RETiRet;
 }
 
+static int ATTR_NONNULL(1,3,4)
+doFunc_is_time(const char *__restrict__ const str,
+	const char *__restrict__ const fmt,
+	struct svar *__restrict__ const r,
+	wti_t *pWti) {
+
+	assert(str != NULL);
+	assert(r != NULL);
+	assert(pWti != NULL);
+
+	int ret = 0;
+
+	wtiSetScriptErrno(pWti, RS_SCRIPT_EOK);
+
+	if (objUse(datetime, CORE_COMPONENT) == RS_RET_OK) {
+		struct syslogTime s;
+		int len = strlen(str);
+		uchar *pszTS = (uchar*) str;
+
+		int numFormats  = 3;
+		dateTimeFormat_t formats[] = { DATE_RFC3164, DATE_RFC3339, DATE_UNIX };
+		dateTimeFormat_t pf[] = { DATE_INVALID };
+		dateTimeFormat_t *p  = formats;
+
+		// Check if a format specifier was explicitly provided
+		if (fmt != NULL) {
+			numFormats = 1;
+			*pf = getDateTimeFormatFromStr(fmt);
+			p = pf;
+		}
+
+		// Enumerate format specifier options, looking for the first match
+		for (int i = 0; i < numFormats; i++) {
+			dateTimeFormat_t f = p[i];
+
+			if (f == DATE_RFC3339) {
+				if (datetime.ParseTIMESTAMP3339(&s, (uchar**) &pszTS, &len) == RS_RET_OK) {
+					DBGPRINTF("is_time: RFC3339 format found.\n");
+					ret = 1;
+					break;
+				}
+			} else if (f == DATE_RFC3164) {
+				if (datetime.ParseTIMESTAMP3164(&s, (uchar**) &pszTS, &len,
+					NO_PARSE3164_TZSTRING, NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
+					DBGPRINTF("is_time: RFC3164 format found.\n");
+					ret = 1;
+					break;
+				}
+			} else if (f == DATE_UNIX) {
+				int result;
+				var2Number(r, &result);
+				
+				if (result) {
+					DBGPRINTF("is_time: UNIX format found.\n");
+					ret = 1;
+					break;
+				}
+			} else {
+				DBGPRINTF("is_time: %s is not a valid date/time format specifier!\n", fmt);
+				break;
+			}
+		}
+	}
+
+	// If not a valid date/time string, set 'errno'
+	if (ret == 0) {
+		DBGPRINTF("is_time: Invalid date-time string: %s.\n", str);
+		wtiSetScriptErrno(pWti, RS_SCRIPT_EINVAL);
+	}
+
+	return ret;
+}
+
 /*
  * Uses the given (current) year/month to decide which year
  * the incoming month likely belongs in.
@@ -2371,6 +2444,29 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 
 		if(bMustFree) free(str);
 		varFreeMembers(&r[0]);
+		break;
+	}
+	case CNFFUNC_IS_TIME: {
+		char *fmt = NULL;
+
+		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
+		str = (char*) var2CString(&r[0], &bMustFree);
+
+		bMustFree2 = 0;
+
+		// Check if the optional 2nd parameter was provided
+		if(func->nParams == 2) {
+			cnfexprEval(func->expr[1], &r[1], usrptr, pWti);
+			fmt = (char*) var2CString(&r[1], &bMustFree2);
+		}
+
+		ret->datatype = 'N';
+		ret->d.n = doFunc_is_time(str, fmt, &r[0], pWti);
+
+		if(bMustFree) free(str);
+		if(bMustFree2) free(fmt);
+		varFreeMembers(&r[0]);
+		if(func->nParams == 2) varFreeMembers(&r[1]);
 		break;
 	}
 	case CNFFUNC_SCRIPT_ERROR:
@@ -4530,6 +4626,12 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 		GENERATE_FUNC("format_time", 2, CNFFUNC_FORMAT_TIME);
 	} else if(FUNC_NAME("parse_time")) {
 		GENERATE_FUNC("parse_time", 1, CNFFUNC_PARSE_TIME);
+	} else if(FUNC_NAME("is_time")) {
+		GENERATE_FUNC_WITH_NARG_RANGE("is_time", 1, 2, CNFFUNC_IS_TIME,
+			"number of parameters for %s() must either be "
+			"one (time_string) or"
+			"two (time_string, explicit_expected_format)"
+			"but is %d.");
 	} else if(FUNC_NAME("parse_json")) {
 		GENERATE_FUNC("parse_json", 2, CNFFUNC_PARSE_JSON);
 	} else if(FUNC_NAME("script_error")) {

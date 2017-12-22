@@ -29,6 +29,12 @@ typedef struct datetime_s {
     	char dummy;
 } datetime_t;
 
+typedef enum {
+	DATE_INVALID = -1,
+	DATE_RFC3164 =  0,
+	DATE_RFC3339 =  1,
+	DATE_UNIX    =  2,
+} dateTimeFormat_t;
 
 /* interfaces */
 BEGINinterface(datetime) /* name must also be changed in ENDinterface macro! */
@@ -88,5 +94,6 @@ int getOrdinal(struct syslogTime *ts);
 int getWeek(struct syslogTime *ts);
 void timeConvertToUTC(const struct syslogTime *const __restrict__ local, struct syslogTime *const __restrict__ utc);
 time_t getTime(time_t *ttSeconds);
+dateTimeFormat_t getDateTimeFormatFromStr(const char * const __restrict__ s);
 
 #endif /* #ifndef INCLUDED_DATETIME_H */

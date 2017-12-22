@@ -218,6 +218,18 @@ getTime(time_t *ttSeconds)
 	return tp.tv_sec;
 }
 
+dateTimeFormat_t getDateTimeFormatFromStr(const char * const __restrict__ s) {
+	assert(s != NULL);
+
+	if (strcmp(s, "date-rfc3164") == 0)
+		return DATE_RFC3164;
+	if (strcmp(s, "date-rfc3339") == 0)
+		return DATE_RFC3339;
+	if (strcmp(s, "date-unix") == 0)
+		return DATE_UNIX;
+
+	return DATE_INVALID;
+}
 
 /*******************************************************************
  * BEGIN CODE-LIBLOGGING                                           *
