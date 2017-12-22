@@ -9,17 +9,15 @@ echo "DISTRIB_CODENAME: $DISTRIB_CODENAME"
 echo "CLANG:            $CLANG"
 
 echo "****************************** BEGIN ACTUAL SCRIPT STEP ******************************"
+# check code style. We do this only when DEBUGLESS is enabled,
+# so that we do not do it in each and every run. While once is sufficient,
+# STAT_AN for now gives us sufficient runtime reduction.
+if [ "x$DEBUGLESS" == "xYES" ] ; then source CI/check_line_length.sh ; fi
+
 source tests/travis/install.sh
 source /etc/lsb-release
 
-# first handle cron builds (most importantly Coverity)
-
-#if [ "$DO_COVERITY" == "YES" ]; then
-#	source tests/travis/run-cron.sh
-#exit
-#fi
-
-# cron job?
+# handle cron builds (most importantly Coverity)
 if [ "$TRAVIS_EVENT_TYPE" == "cron" ]; then
 	if [ "$DO_CRON" == "YES" ]; then
 		source tests/travis/run-cron.sh
@@ -30,12 +28,6 @@ if [ "$DO_CRON" == "YES" ]; then
 	echo cron job not executed under non-cron run
 	exit 0 # this must not run under PRs
 fi
-
-# first check code style. We do this only when STAT_AN is enabled,
-# so that we do not do it in each and every run. While once is sufficient,
-# STAT_AN for now gives us sufficient runtime reduction.
-if [ "x$STAT_AN" == "xYES" ] ; then CI/check_line_length.sh ; fi
-
 
 #
 # ACTUAL MAIN CI PART OF THE SCRIPT
