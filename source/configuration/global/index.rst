@@ -82,11 +82,9 @@ True Global Directives
    is large enough to get a good idea which message was repeated but it
    is not necessarily large enough for the whole message. (Introduced
    with 4.1.5). Once set, it affects all following actions.
--  **$OptimizeForUniprocessor** [on/**off**] - turns on optimizatons
-   which lead to better performance on uniprocessors. If you run on
-   multicore-machiens, turning this off lessens CPU load. The default
-   may change as uniprocessor systems become less common. [available
-   since 4.1.0]
+-  **$OptimizeForUniprocessor** - This directive is no longer supported.
+   While present in versions prior to 8.32.0, the directive had no effect
+   for many years. Attempts to use the directive now results in a warning.
 -  **$PreserveFQDN** [on/**off**) - if set to off (legacy default to remain
    compatible to sysklogd), the domain part from a name that is within
    the same domain as the receiving system is stripped. If set to on,
