@@ -9,4 +9,6 @@
 - platform: [e.g. Ubuntu 16.04]
 - for configuration questions/issues, include rsyslog.conf:
 
-*Note: rsyslog doc is available at http://www.rsyslog.com/doc*
+*Note: rsyslog documentation is available here*:
+  [pre-release](http://www.rsyslog.com/doc/master/),
+  [current stable release](http://www.rsyslog.com/doc/v8-stable/)
