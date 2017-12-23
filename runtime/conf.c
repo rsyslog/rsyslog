@@ -223,7 +223,8 @@ cfsysline(uchar *p)
 	ASSERT(p != NULL);
 	errno = 0;
 	if(getSubString(&p, (char*) szCmd, sizeof(szCmd), ' ')  != 0) {
-		errmsg.LogError(0, RS_RET_NOT_FOUND, "Invalid $-configline - could not extract command - line ignored\n");
+		errmsg.LogError(0, RS_RET_NOT_FOUND, "Invalid $-configline "
+			"- could not extract command - line ignored\n");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 

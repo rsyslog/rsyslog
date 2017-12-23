@@ -1303,7 +1303,8 @@ static bool save_response(rsksictx ctx, FILE* outfile, QueueItem *item) {
 	int res = KSI_OK;
 
 	if(item->respHandle != NULL && item->ksi_status == KSI_OK) {
-		CHECK_KSI_API(KSI_AsyncHandle_getSignature(item->respHandle, &sig), ctx, "KSI_AsyncHandle_getSignature");
+		CHECK_KSI_API(KSI_AsyncHandle_getSignature(item->respHandle, &sig), ctx,
+			"KSI_AsyncHandle_getSignature");
 		CHECK_KSI_API(KSI_Signature_serialize(sig, &raw, &raw_len), ctx,
 			"KSI_Signature_serialize");
 		tlvWriteKSISigLS12(outfile, item->intarg1, raw, raw_len);
@@ -1396,8 +1397,10 @@ static bool process_requests_async(rsksictx ctx, KSI_CTX *ksi_ctx, KSI_AsyncServ
 		CHECK_KSI_API(KSI_AggregationReq_setRequestHash((KSI_AggregationReq*)req,
 			KSI_DataHash_ref((KSI_DataHash*)item->arg)), ctx,
 			"KSI_AggregationReq_setRequestHash");
-		CHECK_KSI_API(KSI_Integer_new(ksi_ctx, item->intarg2, &level), ctx, "KSI_Integer_new");
-		CHECK_KSI_API(KSI_AggregationReq_setRequestLevel(req, level), ctx, "KSI_AggregationReq_setRequestLevel");
+		CHECK_KSI_API(KSI_Integer_new(ksi_ctx, item->intarg2, &level), ctx,
+			"KSI_Integer_new");
+		CHECK_KSI_API(KSI_AggregationReq_setRequestLevel(req, level), ctx,
+			"KSI_AggregationReq_setRequestLevel");
 		CHECK_KSI_API(KSI_AsyncAggregationHandle_new(ksi_ctx, req, &reqHandle), ctx,
 			"KSI_AsyncAggregationHandle_new");
 		CHECK_KSI_API(KSI_AsyncHandle_setRequestCtx(reqHandle, (void*)item, NULL), ctx,
@@ -1496,12 +1499,14 @@ void *signer_thread(void *arg) {
 				KSI_AsyncService_free(as);
 			as=NULL;
 		} else {
-			res = KSI_AsyncService_setOption(as, KSI_ASYNC_OPT_MAX_REQUEST_COUNT, (void*) (ctx->max_requests));
+			res = KSI_AsyncService_setOption(as, KSI_ASYNC_OPT_MAX_REQUEST_COUNT,
+				(void*) (ctx->max_requests));
 			if (res != KSI_OK)
 				reportKSIAPIErr(ctx, NULL, "KSI_AsyncService_setOption(max_request)", res);
 
 			/* ingoring the possible error here */
-			KSI_AsyncService_setOption(as, KSI_ASYNC_OPT_REQUEST_CACHE_SIZE, (void*) (ctx->max_requests * 5));
+			KSI_AsyncService_setOption(as, KSI_ASYNC_OPT_REQUEST_CACHE_SIZE,
+				(void*) (ctx->max_requests * 5));
 		}
 	}
 

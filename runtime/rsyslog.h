@@ -80,26 +80,26 @@ extern int src_exists;
 #define CONF_PROP_BUFSIZE		16	/* should be close to sizeof(ptr) or lighly above it */
 #define CONF_IPARAMS_BUFSIZE		16	/* initial size of iparams array in wti (is automatically extended) */
 #define	CONF_MIN_SIZE_FOR_COMPRESS	60 	/* config param: minimum message size to try compression. The smaller
-						 * the message, the less likely is any compression gain. We check for
-						 * gain before we submit the message. But to do so we still need to
-						 * do the (costly) compress() call. The following setting sets a size
-						 * for which no call to compress() is done at all. This may result in
-						 * a few more bytes being transmited but better overall performance.
-						 * Note: I have not yet checked the minimum UDP packet size. It might be
-						 * that we do not save anything by compressing very small messages, because
-						 * UDP might need to pad ;)
-						 * rgerhards, 2006-11-30
-						 */
+	 * the message, the less likely is any compression gain. We check for
+	 * gain before we submit the message. But to do so we still need to
+	 * do the (costly) compress() call. The following setting sets a size
+	 * for which no call to compress() is done at all. This may result in
+	 * a few more bytes being transmited but better overall performance.
+	 * Note: I have not yet checked the minimum UDP packet size. It might be
+	 * that we do not save anything by compressing very small messages, because
+	 * UDP might need to pad ;)
+	 * rgerhards, 2006-11-30
+	 */
 
 #define CONF_OMOD_NUMSTRINGS_MAXSIZE	5	/* cache for pointers to output module buffer pointers. All
-						 * rsyslog-provided plugins do NOT need more than five buffers. If
-						 * more are needed (future developments, third-parties), rsyslog
-						 * must be recompiled with a larger parameter. Hardcoding this
-						 * saves us some overhead, both in runtime in code complexity. As
-						 * it is doubtful if ever more than 3 parameters are needed, the
-						 * approach taken here is considered appropriate.
-						 * rgerhards, 2010-06-24
-						 */
+	 * rsyslog-provided plugins do NOT need more than five buffers. If
+	 * more are needed (future developments, third-parties), rsyslog
+	 * must be recompiled with a larger parameter. Hardcoding this
+	 * saves us some overhead, both in runtime in code complexity. As
+	 * it is doubtful if ever more than 3 parameters are needed, the
+	 * approach taken here is considered appropriate.
+	 * rgerhards, 2010-06-24
+	 */
 #define CONF_NUM_MULTISUB		1024	/* default number of messages per multisub structure */
 
 /* ############################################################# *
@@ -164,8 +164,8 @@ extern int src_exists;
 static inline syslog_pri_t __attribute__((unused))
 pri2fac(const syslog_pri_t pri)
 {
-       unsigned fac = pri >> 3;
-       return (fac > 23) ? LOG_FAC_INVLD : fac;
+	unsigned fac = pri >> 3;
+	return (fac > 23) ? LOG_FAC_INVLD : fac;
 }
 #define pri2sev(pri) ((pri) & 0x07)
 
@@ -368,7 +368,8 @@ operation not carried out */
 	RS_RET_HOST_NOT_SPECIFIED = -2151, /**< (target) host was not specified where it was needed */
 	RS_RET_ERR_LIBNET_INIT = -2152, /**< error initializing libnet, e.g. because not running as root */
 	RS_RET_FORCE_TERM = -2153,	/**< thread was forced to terminate by bShallShutdown, a state, not an error */
-	RS_RET_RULES_QUEUE_EXISTS = -2154,/**< we were instructed to create a new ruleset queue, but one already exists */
+	RS_RET_RULES_QUEUE_EXISTS = -2154,/**< we were instructed to create a new
+					   ruleset queue, but one already exists */
 	RS_RET_NO_CURR_RULESET = -2155,/**< no current ruleset exists (but one is required) */
 	RS_RET_NO_MSG_PASSING = -2156,
 /*< output module interface parameter passing mode "MSG" is not available but required */

@@ -448,7 +448,8 @@ PermittedPeerWildcardMatch(permittedPeers_t *const pPeer,
 				break;
 			case PEER_WILDCARD_AT_END:
 				if(   pWildcard->lenDomainPart > (size_t) (pC - pStart)
-				   || strncmp((char*)pStart, (char*)pWildcard->pszDomainPart, pWildcard->lenDomainPart)) {
+				   || strncmp((char*)pStart, (char*)pWildcard->pszDomainPart,
+				   	pWildcard->lenDomainPart)) {
 					*pbIsMatching = 0;
 					FINALIZE;
 				}
@@ -983,7 +984,8 @@ MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr *pFrom, const char
 				struct in6_addr *ip6 = &(SIN6(pFrom))->sin6_addr;
 				struct in_addr  *net = &(SIN(pAllow->addr.NetAddr))->sin_addr;
 				
-				if ((ip6->s6_addr32[3] & (u_int32_t) htonl((0xffffffff << (32 - bits)))) == net->s_addr &&
+				if ((ip6->s6_addr32[3] & (u_int32_t)
+					htonl((0xffffffff << (32 - bits)))) == net->s_addr &&
 #if BYTE_ORDER == LITTLE_ENDIAN
 				    (ip6->s6_addr32[2] == (u_int32_t)0xffff0000) &&
 #else
