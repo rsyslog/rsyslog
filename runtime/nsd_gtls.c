@@ -1032,7 +1032,8 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 	cert_list = gnutls_certificate_get_peers(pThis->sess, &cert_list_size);
 	if(cert_list_size < 1) {
 		errno = 0;
-		errmsg.LogError(0, RS_RET_TLS_NO_CERT, "peer did not provide a certificate, not permitted to talk to it");
+		errmsg.LogError(0, RS_RET_TLS_NO_CERT,
+			"peer did not provide a certificate, not permitted to talk to it");
 		ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
 	}
 
@@ -1079,7 +1080,8 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 			errmsg.LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "not permitted to talk to peer: "
 					"certificate %d not yet active", i);
 			gtlsGetCertInfo(pThis, &pStr);
-			errmsg.LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
+			errmsg.LogError(0, RS_RET_CERT_NOT_YET_ACTIVE,
+				"invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
 			cstrDestruct(&pStr);
 			ABORT_FINALIZE(RS_RET_CERT_NOT_YET_ACTIVE);
 		}
@@ -1539,7 +1541,8 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	gnuRet = gnutls_handshake(pNew->sess);
 	if(gnuRet == GNUTLS_E_AGAIN || gnuRet == GNUTLS_E_INTERRUPTED) {
 		pNew->rtryCall = gtlsRtry_handshake;
-		dbgprintf("GnuTLS handshake does not complete immediately - setting to retry (this is OK and normal)\n");
+		dbgprintf("GnuTLS handshake does not complete immediately - "
+			"setting to retry (this is OK and normal)\n");
 	} else if(gnuRet == 0) {
 		/* we got a handshake, now check authorization */
 		CHKiRet(gtlsChkPeerAuth(pNew));
