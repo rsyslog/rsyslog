@@ -23,8 +23,8 @@ Note that the performance toll is not large -- but if you expect a very
 high message rate with tenthousands of messages per second, you will
 notice a difference.
 
-This module should be loaded first inside `rsyslog's parser
-chain <messageparser.html>`_. It processes all those messages that
+This module should be loaded first inside :doc:`rsyslog's parser
+chain </concepts/messageparser>`. It processes all those messages that
 contain a PRI, then none or some spaces and then the exact text
 (case-insensitive) "last message repeated n times" where n must be an
 integer. All other messages are left untouched.
@@ -39,8 +39,8 @@ module.
 **Examples:**
 
 This example is the typical use case, where some systems emit malformed
-"repeated msg" messages. Other than that, the default RFC5424 and
-RFC3164 parsers should be used. Note that when a parser is specified,
+"repeated msg" messages. Other than that, the default :rfc:`5424` and
+:rfc:`3164` parsers should be used. Note that when a parser is specified,
 the default parser chain is removed, so we need to specify all three
 parsers. We use this together with the default ruleset.
 
@@ -63,10 +63,3 @@ parsers. We use this together with the default ruleset.
 **Caveats/Known Bugs:**
 
 currently none
-
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-
-Copyright © 2010-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 3 or higher.
