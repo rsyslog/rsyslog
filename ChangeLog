@@ -149,6 +149,9 @@ Version 8.32.0 [v8-stable] 2018-01-09
   we see a regression not caught by the CI system.
 - mmsnmptrapd bugfix: potential misadressing
   This only occured in situations when the system was totally out of memory.
+- imkafka bugfix: do not emit error message on regular state
+  This was misunderstood as an error state and could spam the system
+  log considerably. Regression from 8.31.0.
 - omkafka bugfix: potential misadressing
   The failed message list is improperly cleaned. This is a regression
   from recent commit 4eae19e089b5a83da679fe29398c6b2c10003793, which
