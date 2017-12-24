@@ -1285,7 +1285,7 @@ anonEmbedded(wrkrInstanceData_t *pWrkrData, uchar **msg, int *pLenMsg, int *idx,
 		*hasChanged = 1;
 
 		if(caddresslen != iplen) {
-			*pLenMsg = *pLenMsg + (caddresslen - iplen);
+			*pLenMsg = *pLenMsg + ((int)caddresslen - (int)iplen);
 			*msg = (uchar*) malloc(*pLenMsg);
 			memcpy(*msg, msgcpy, *idx);
 		}
