@@ -72,7 +72,6 @@ MODULE_CNFNAME("imfile")
 
 /* Module static data */
 DEF_IMOD_STATIC_DATA	/* must be present, starts static data */
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(strm)
 DEFobjCurrIf(prop)
@@ -673,7 +672,7 @@ openFileWithStateFile(lstn_t *const __restrict__ pLstn)
 			CHKmalloc(pLstn->pStrm->pszFName = ustrdup(pLstn->pszFileName));
 			DBGPRINTF("statefile was migrated from a file rename for '%s'\n", pLstn->pszFileName);
 		} else {
-			errmsg.LogError(0, RS_RET_STATEFILE_WRONG_FNAME, "imfile: state file '%s' "
+			LogError(0, RS_RET_STATEFILE_WRONG_FNAME, "imfile: state file '%s' "
 					"contains file name '%s', but is used for file '%s'. State "
 					"file deleted, starting from begin of file.",
 					pszSFNam, pLstn->pStrm->pszFName, pLstn->pszFileName);
@@ -926,7 +925,7 @@ checkInstance(instanceConf_t *inst)
 
 	i = getBasename(basen, inst->pszFileName);
 	if (i == -1) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imfile: file path '%s' does not include a "
+		LogError(0, RS_RET_CONFIG_ERROR, "imfile: file path '%s' does not include a "
 			"basename component", inst->pszFileName);
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
@@ -956,11 +955,11 @@ checkInstance(instanceConf_t *inst)
 
 	r = stat(dirn, &sb);
 	if(r != 0)  {
-		errmsg.LogError(errno, RS_RET_CONFIG_ERROR, "imfile warning: directory '%s'", dirn);
+		LogError(errno, RS_RET_CONFIG_ERROR, "imfile warning: directory '%s'", dirn);
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 	if(!S_ISDIR(sb.st_mode)) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imfile warning: configured directory "
+		LogError(0, RS_RET_CONFIG_ERROR, "imfile warning: configured directory "
 				"'%s' is NOT a directory", dirn);
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
@@ -978,12 +977,12 @@ addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	DEFiRet;
 
 	if(cs.pszFileName == NULL) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imfile error: no file name given, file monitor can "
+		LogError(0, RS_RET_CONFIG_ERROR, "imfile error: no file name given, file monitor can "
 					"not be created");
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 	if(cs.pszFileTag == NULL) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imfile error: no tag value given, file monitor can "
+		LogError(0, RS_RET_CONFIG_ERROR, "imfile error: no tag value given, file monitor can "
 					"not be created");
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
@@ -1005,7 +1004,7 @@ addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->iFacility = cs.iFacility;
 	if(cs.maxLinesAtOnce) {
 		if(loadModConf->opMode == OPMODE_INOTIFY) {
-			errmsg.LogError(0, RS_RET_PARAM_NOT_PERMITTED,
+			LogError(0, RS_RET_PARAM_NOT_PERMITTED,
 				"parameter \"maxLinesAtOnce\" not "
 				"permited in inotify mode - ignored");
 		} else {
@@ -1115,13 +1114,13 @@ addListner(instanceConf_t *inst)
 
 	if(hasWildcard) {
 		if(runModConf->opMode == OPMODE_POLLING) {
-			errmsg.LogError(0, RS_RET_IMFILE_WILDCARD,
+			LogError(0, RS_RET_IMFILE_WILDCARD,
 				"imfile: The to-be-monitored file \"%s\" contains "
 				"wildcards. This is not supported in "
 				"polling mode.", inst->pszFileName);
 			ABORT_FINALIZE(RS_RET_IMFILE_WILDCARD);
 		} else if(inst->pszStateFile != NULL) {
-			errmsg.LogError(0, RS_RET_IMFILE_WILDCARD,
+			LogError(0, RS_RET_IMFILE_WILDCARD,
 				"imfile: warning: it looks like to-be-monitored "
 				"file \"%s\" contains wildcards. This usually "
 				"does not work well with specifying a state file.",
@@ -1254,7 +1253,7 @@ CODESTARTnewInpInst
 		} else if(!strcmp(inppblk.descr[i].name, "maxlinesatonce")) {
 			if(   loadModConf->opMode == OPMODE_INOTIFY
 			   && pvals[i].val.d.n > 0) {
-				errmsg.LogError(0, RS_RET_PARAM_NOT_PERMITTED,
+				LogError(0, RS_RET_PARAM_NOT_PERMITTED,
 					"parameter \"maxLinesAtOnce\" not "
 					"permited in inotify mode - ignored");
 			} else {
@@ -1274,7 +1273,7 @@ CODESTARTnewInpInst
 		}
 	}
 	if(inst->readMode != 0 &&  inst->startRegex != NULL) {
-		errmsg.LogError(0, RS_RET_PARAM_NOT_PERMITTED,
+		LogError(0, RS_RET_PARAM_NOT_PERMITTED,
 			"readMode and startmsg.regex cannot be set "
 			"at the same time --- remove one of them");
 			ABORT_FINALIZE(RS_RET_PARAM_NOT_PERMITTED);
@@ -1325,7 +1324,7 @@ CODESTARTsetModCnf
 #endif
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "imfile: error processing module "
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "imfile: error processing module "
 				"config parameters [module(...)]");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -1360,7 +1359,7 @@ CODESTARTsetModCnf
 				loadModConf->opMode = OPMODE_FEN;
 			else {
 				char *cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-				errmsg.LogError(0, RS_RET_PARAM_ERROR, "imfile: unknown "
+				LogError(0, RS_RET_PARAM_ERROR, "imfile: unknown "
 					"mode '%s'", cstr);
 				free(cstr);
 			}
@@ -1407,7 +1406,7 @@ CODESTARTcheckCnf
 		std_checkRuleset(pModConf, inst);
 	}
 	if(pModConf->root == NULL) {
-		errmsg.LogError(0, RS_RET_NO_LISTNERS,
+		LogError(0, RS_RET_NO_LISTNERS,
 				"imfile: no files configured to be monitored - "
 				"no input will be gathered");
 		iRet = RS_RET_NO_LISTNERS;
@@ -1431,7 +1430,7 @@ CODESTARTactivateCnf
 
 	/* if we could not set up any listeners, there is no point in running... */
 	if(runModConf->pRootLstn == 0) {
-		errmsg.LogError(0, NO_ERRCODE, "imfile: no file monitors could be started, "
+		LogError(0, NO_ERRCODE, "imfile: no file monitors could be started, "
 				"input not activated.\n");
 		ABORT_FINALIZE(RS_RET_NO_RUN);
 	}
@@ -1620,7 +1619,7 @@ fileTableAddFile(fileTable_t *const __restrict__ tab, lstn_t *const __restrict__
 		const int newMax = 2 * tab->allocMax;
 		dirInfoFiles_t *newListenerTab = realloc(tab->listeners, newMax * sizeof(dirInfoFiles_t));
 		if(newListenerTab == NULL) {
-			errmsg.LogError(0, RS_RET_OUT_OF_MEMORY,
+			LogError(0, RS_RET_OUT_OF_MEMORY,
 					"cannot alloc memory to map directory/file relationship "
 					"for '%s' - ignoring", pLstn->pszFileName);
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -1695,7 +1694,7 @@ dirsAdd(uchar *dirName, int* piIndex)
 		newMax = 2 * allocMaxDirs;
 		newDirTab = realloc(dirs, newMax * sizeof(dirInfo_t));
 		if(newDirTab == NULL) {
-			errmsg.LogError(0, RS_RET_OUT_OF_MEMORY,
+			LogError(0, RS_RET_OUT_OF_MEMORY,
 					"dirsAdd cannot alloc memory to monitor directory '%s' - ignoring",
 					dirName);
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -1730,12 +1729,12 @@ dirsAdd(uchar *dirName, int* piIndex)
 			if (psztmp != NULL) {
 				*psztmp = '\0';
 			} else {
-				errmsg.LogError(0, RS_RET_SYS_ERR , "imfile: dirsAdd unexpected error #1 "
+				LogError(0, RS_RET_SYS_ERR , "imfile: dirsAdd unexpected error #1 "
 					"for dir '%s' ", dirName);
 				ABORT_FINALIZE(RS_RET_SYS_ERR);
 			}
 		} else {
-			errmsg.LogError(0, RS_RET_SYS_ERR , "imfile: dirsAdd unexpected error #2 "
+			LogError(0, RS_RET_SYS_ERR , "imfile: dirsAdd unexpected error #2 "
 				"for dir '%s' ", dirName);
 			ABORT_FINALIZE(RS_RET_SYS_ERR);
 		}
@@ -1747,14 +1746,14 @@ dirsAdd(uchar *dirName, int* piIndex)
 	// Create FileInfo struct
 	dirs[newindex].pfinf = malloc(sizeof(struct fileinfo));
 	if (dirs[newindex].pfinf == NULL) {
-		errmsg.LogError(0, RS_RET_OUT_OF_MEMORY, "imfile: dirsAdd alloc memory "
+		LogError(0, RS_RET_OUT_OF_MEMORY, "imfile: dirsAdd alloc memory "
 			"for fileinfo failed ");
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	/* Use parent dir on Wildcard pathes */
 	if (dirs[newindex].hasWildcard) {
 		if ((dirs[newindex].pfinf->fobj.fo_name = strdup((char*)dirs[newindex].dirNameBfWildCard)) == NULL) {
-			errmsg.LogError(0, RS_RET_OUT_OF_MEMORY, "imfile: dirsAdd alloc memory "
+			LogError(0, RS_RET_OUT_OF_MEMORY, "imfile: dirsAdd alloc memory "
 				"for strdup failed ");
 			free(dirs[newindex].pfinf);
 			dirs[newindex].pfinf = NULL;
@@ -1763,7 +1762,7 @@ dirsAdd(uchar *dirName, int* piIndex)
 
 	} else {
 		if ((dirs[newindex].pfinf->fobj.fo_name = strdup((char*)dirs[newindex].dirName)) == NULL) {
-			errmsg.LogError(0, RS_RET_OUT_OF_MEMORY, "imfile: dirsAdd alloc memory "
+			LogError(0, RS_RET_OUT_OF_MEMORY, "imfile: dirsAdd alloc memory "
 				"for strdup failed ");
 			free(dirs[newindex].pfinf);
 			dirs[newindex].pfinf = NULL;
@@ -1838,7 +1837,7 @@ dirsAddFile(lstn_t *__restrict__ pLstn, const int bActive)
 
 	dirIdx = dirsFindDir(pLstn->pszDirName);
 	if(dirIdx == -1) {
-		errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "imfile: could not find "
+		LogError(0, RS_RET_INTERNAL_ERROR, "imfile: could not find "
 			"directory '%s' in dirs array - ignoring",
 			pLstn->pszDirName);
 		FINALIZE;
@@ -2012,7 +2011,7 @@ startLstnFile(lstn_t *const __restrict__ pLstn)
 	const int wd = inotify_add_watch(ino_fd, (char*)pLstn->pszFileName, IN_MODIFY);
 	if(wd < 0) {
 		if(pLstn->fileNotFoundError) {
-			errmsg.LogError(errno, NO_ERRCODE, "imfile: error with inotify API,"
+			LogError(errno, NO_ERRCODE, "imfile: error with inotify API,"
 					" ignoring file '%s'", pLstn->pszFileName);
 		} else {
 			char errStr[512];
@@ -2024,7 +2023,7 @@ startLstnFile(lstn_t *const __restrict__ pLstn)
 	}
 	if((localRet = wdmapAdd(wd, -1, pLstn)) != RS_RET_OK) {
 		if(pLstn->fileNotFoundError) {
-			errmsg.LogError(0, NO_ERRCODE, "imfile: internal error: error %d adding file "
+			LogError(0, NO_ERRCODE, "imfile: internal error: error %d adding file "
 					"to wdmap, ignoring file '%s'\n", localRet, pLstn->pszFileName);
 		} else {
 			DBGPRINTF("error %d adding file to wdmap, ignoring\n", localRet);
@@ -2268,7 +2267,7 @@ in_removeFile(const int dirIdx, lstn_t *const __restrict__ pLstn, const sbool bR
 	if(bDoRMState) {
 		DBGPRINTF("unlinking '%s'\n", toDel);
 		if(unlink((char*)toDel) != 0) {
-			errmsg.LogError(errno, RS_RET_ERR, "imfile: could not remove state "
+			LogError(errno, RS_RET_ERR, "imfile: could not remove state "
 				"file '%s'", toDel);
 		}
 	}
@@ -2386,7 +2385,7 @@ in_handleDirEventFileCREATE(struct inotify_event *ev, const int dirIdx)
 
 //				openStateFileAndMigrate(pLstn, &statefilefull_old[0], &statefilefull_new[0]);
 				if(rename((char*) &statefilefull_old, (char*) &statefilefull_new) != 0) {
-					errmsg.LogError(errno, RS_RET_ERR, "imfile: could not rename statefile "
+					LogError(errno, RS_RET_ERR, "imfile: could not rename statefile "
 						"'%s' into '%s'", statefilefull_old, statefilefull_new);
 				} else {
 					DBGPRINTF("statefile '%s' renamed into '%s'\n", statefilefull_old,
@@ -2606,7 +2605,7 @@ do_inotify(void)
 	CHKiRet(dirsInit());
 	ino_fd = inotify_init();
 	if(ino_fd < 0) {
-		errmsg.LogError(errno, RS_RET_INOTIFY_INIT_FAILED, "imfile: Init inotify "
+		LogError(errno, RS_RET_INOTIFY_INIT_FAILED, "imfile: Init inotify "
 			"instance failed ");
 		return RS_RET_INOTIFY_INIT_FAILED;
 	}
@@ -2662,7 +2661,7 @@ finalize_it:
 static rsRetVal
 do_inotify(void)
 {
-	errmsg.LogError(0, RS_RET_NOT_IMPLEMENTED, "imfile: mode set to inotify, but the "
+	LogError(0, RS_RET_NOT_IMPLEMENTED, "imfile: mode set to inotify, but the "
 			"platform does not support inotify");
 	return RS_RET_NOT_IMPLEMENTED;
 }
@@ -2716,7 +2715,7 @@ fen_removeFile(lstn_t *pLstn)
 	dirIdx = dirsFindDir(pLstn->pszDirName);
 	if (dirIdx == -1) {
 		/* Add error processing as required, file may have been deleted/moved. */
-		errmsg.LogError(errno, RS_RET_SYS_ERR, "fen_removeFile: Failed to remove file, "
+		LogError(errno, RS_RET_SYS_ERR, "fen_removeFile: Failed to remove file, "
 			"unknown directory index for dir '%s'\n", pLstn->pszDirName);
 		ABORT_FINALIZE(RS_RET_SYS_ERR);
 	}
@@ -2747,7 +2746,7 @@ fen_removeFile(lstn_t *pLstn)
 	if(bDoRMState) {
 		DBGPRINTF("fen_removeFile unlinking '%s'\n", toDel);
 		if((stat((const char*) toDel, &statFile) == 0) && unlink((char*)toDel) != 0) {
-			errmsg.LogError(errno, RS_RET_ERR, "fen_removeFile: could not remove state "
+			LogError(errno, RS_RET_ERR, "fen_removeFile: could not remove state "
 				"file \"%s\": %s", toDel);
 		}
 	}
@@ -2850,7 +2849,7 @@ fen_processEventFile(struct file_obj* fobjp, lstn_t *pLstn, int revents, int dir
 	if (port_associate(glport, PORT_SOURCE_FILE, (uintptr_t)fobjp,
 				pLstn->pfinf->events, (void *)pLstn) == -1) {
 		/* Add error processing as required, file may have been deleted/moved. */
-		errmsg.LogError(errno, RS_RET_SYS_ERR, "fen_processEventFile: Failed to associated port for file "
+		LogError(errno, RS_RET_SYS_ERR, "fen_processEventFile: Failed to associated port for file "
 			": %s - errno %d\n", fobjp->fo_name, errno);
 		ABORT_FINALIZE(RS_RET_SYS_ERR);
 	} else {
@@ -2926,12 +2925,12 @@ fen_DirSearchFiles(lstn_t *pLstn, int dirIdx)
 				// Create FileInfo struct
 				pLstnNew->pfinf = malloc(sizeof(struct fileinfo));
 				if (pLstnNew->pfinf == NULL) {
-					errmsg.LogError(errno, RS_RET_IO_ERROR, "fen_DirSearchFiles alloc memory "
+					LogError(errno, RS_RET_IO_ERROR, "fen_DirSearchFiles alloc memory "
 						"for fileinfo failed ");
 					ABORT_FINALIZE(RS_RET_IO_ERROR);
 				}
 				if ((pLstnNew->pfinf->fobj.fo_name = strdup((char*)pLstnNew->pszFileName)) == NULL) {
-					errmsg.LogError(errno, RS_RET_IO_ERROR, "fen_DirSearchFiles alloc memory "
+					LogError(errno, RS_RET_IO_ERROR, "fen_DirSearchFiles alloc memory "
 						"for strdup failed ");
 					free(pLstnNew->pfinf);
 					pLstnNew->pfinf = NULL;
@@ -3036,7 +3035,7 @@ fen_processEventDir(struct file_obj* fobjp, int dirIdx, int revents)
 	if (port_associate(glport, PORT_SOURCE_FILE, (uintptr_t)fobjp, dirs[dirIdx].pfinf->events,
 		(void *)dirIdx) == -1) {
 		/* Add error processing as required, file may have been deleted/moved. */
-		errmsg.LogError(errno, RS_RET_SYS_ERR, "fen_processEventDir: Failed to associated port "
+		LogError(errno, RS_RET_SYS_ERR, "fen_processEventDir: Failed to associated port "
 			"for directory: '%s'('%s') - errno %d\n", fobjp->fo_name, dirs[dirIdx].dirName, errno);
 		ABORT_FINALIZE(RS_RET_SYS_ERR);
 	} else {
@@ -3104,7 +3103,7 @@ do_fen(void)
 
 	/* create port instance */
 	if ((glport = port_create()) == -1) {
-		errmsg.LogError(errno, RS_RET_FEN_INIT_FAILED, "do_fen INIT Port failed ");
+		LogError(errno, RS_RET_FEN_INIT_FAILED, "do_fen INIT Port failed ");
 		return RS_RET_FEN_INIT_FAILED;
 	}
 
@@ -3118,12 +3117,12 @@ do_fen(void)
 			// Create FileInfo struct
 			pLstn->pfinf = malloc(sizeof(struct fileinfo));
 			if (pLstn->pfinf == NULL) {
-				errmsg.LogError(errno, RS_RET_FEN_INIT_FAILED, "do_fen: alloc memory "
+				LogError(errno, RS_RET_FEN_INIT_FAILED, "do_fen: alloc memory "
 					"for fileinfo failed ");
 				ABORT_FINALIZE(RS_RET_FEN_INIT_FAILED);
 			}
 			if ((pLstn->pfinf->fobj.fo_name = strdup((char*)pLstn->pszFileName)) == NULL) {
-				errmsg.LogError(errno, RS_RET_FEN_INIT_FAILED, "do_fen: alloc memory "
+				LogError(errno, RS_RET_FEN_INIT_FAILED, "do_fen: alloc memory "
 					"for strdup failed ");
 				free(pLstn->pfinf);
 				pLstn->pfinf = NULL;
@@ -3170,7 +3169,7 @@ do_fen(void)
 					}
 					break;
 				default:
-					errmsg.LogError(errno, RS_RET_SYS_ERR, "do_fen: Event from unexpected source "
+					LogError(errno, RS_RET_SYS_ERR, "do_fen: Event from unexpected source "
 						": %d\n", portEvent.portev_source);
 			}
 		}
@@ -3199,7 +3198,7 @@ finalize_it:
 static rsRetVal
 do_fen(void)
 {
-	errmsg.LogError(0, RS_RET_NOT_IMPLEMENTED, "do_fen: mode set to fen, but the "
+	LogError(0, RS_RET_NOT_IMPLEMENTED, "do_fen: mode set to fen, but the "
 			"platform does not support fen");
 	return RS_RET_NOT_IMPLEMENTED;
 }
@@ -3224,7 +3223,7 @@ CODESTARTrunInput
 	else if(runModConf->opMode == OPMODE_FEN)
 		iRet = do_fen();
 	else {
-		errmsg.LogError(0, RS_RET_NOT_IMPLEMENTED, "imfile: unknown mode %d set",
+		LogError(0, RS_RET_NOT_IMPLEMENTED, "imfile: unknown mode %d set",
 			runModConf->opMode);
 		return RS_RET_NOT_IMPLEMENTED;
 	}
@@ -3285,7 +3284,7 @@ finalize_it:
 		strm.Destruct(&psSF);
 
 	if(iRet != RS_RET_OK) {
-		errmsg.LogError(0, iRet, "imfile: could not persist state "
+		LogError(0, iRet, "imfile: could not persist state "
 				"file %s - data may be repeated on next "
 				"startup. Is WorkDirectory set?",
 				statefn);
@@ -3325,7 +3324,6 @@ CODESTARTmodExit
 	/* release objects we used */
 	objRelease(strm, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
 
@@ -3397,7 +3395,7 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 static inline void
 std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst)
 {
-	errmsg.LogError(0, NO_ERRCODE, "imfile: ruleset '%s' for %s not found - "
+	LogError(0, NO_ERRCODE, "imfile: ruleset '%s' for %s not found - "
 			"using default ruleset instead", inst->pszBindRuleset,
 			inst->pszFileName);
 }
@@ -3414,7 +3412,6 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(strm, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
