@@ -1884,6 +1884,23 @@ done:
 	return(value);
 }
 
+static es_str_t*
+int2Hex(struct svar *__restrict__ const sourceVal) {
+	int success = 0;
+	char str[18];
+	long long num = var2Number(sourceVal, &success);
+	es_str_t* estr = NULL;
+	if (!success) {
+		DBGPRINTF("rainerscript: (int2hex) couldn't access number\n");
+		estr = es_newStrFromCStr("NAN", strlen("NAN"));
+		goto done;
+	}
+
+	snprintf(str, 18, "%llx", num);
+	estr = es_newStrFromCStr(str, strlen(str));
+done:
+	return(estr);
+}
 
 static es_str_t*
 num2ipv4(struct svar *__restrict__ const sourceVal) {
@@ -2161,6 +2178,12 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 	case CNFFUNC_NUM2IPV4:
 		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
 		ret->d.estr = num2ipv4(&r[0]);
+		ret->datatype = 'S';
+		varFreeMembers(&r[0]);
+		break;
+	case CNFFUNC_INT2HEX:
+		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
+		ret->d.estr = int2Hex(&r[0]);
 		ret->datatype = 'S';
 		varFreeMembers(&r[0]);
 		break;
@@ -4580,6 +4603,8 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 		GENERATE_FUNC("getenv", 1, CNFFUNC_GETENV);
 	} else if(FUNC_NAME("num2ipv4")) {
 		GENERATE_FUNC("num2ipv4", 1, CNFFUNC_NUM2IPV4);
+	} else if(FUNC_NAME("int2hex")) {
+		GENERATE_FUNC("int2hex", 1, CNFFUNC_INT2HEX);
 	} else if(FUNC_NAME("substring")) {
 		GENERATE_FUNC("substring", 3, CNFFUNC_SUBSTRING);
 	} else if(FUNC_NAME("ltrim")) {

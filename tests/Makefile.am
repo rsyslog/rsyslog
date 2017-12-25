@@ -256,6 +256,7 @@ TESTS +=  \
 	rscript_ne.sh \
 	rscript_ne_var.sh \
 	rscript_num2ipv4.sh \
+	rscript_int2Hex.sh \
 	rscript_trim.sh \
 	rscript_substring.sh \
 	rscript_format_time.sh \
@@ -935,6 +936,7 @@ EXTRA_DIST= \
 	testsuites/rscript_ne.conf \
 	rscript_ne_var.sh \
 	rscript_num2ipv4.sh \
+	rscript_int2Hex.sh \
 	rscript_trim.sh \
 	rscript_substring.sh \
 	rscript_format_time.sh \
