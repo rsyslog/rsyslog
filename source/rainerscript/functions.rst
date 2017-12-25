@@ -228,6 +228,11 @@ substring(str, start, subStringLength)
    Creates a substring from str. The substring begins at start and is
    at most subStringLength characters long.
 
+int2hex(num)
+------------
+
+   returns a hexadecimal number string of a given positive integer num.
+
 script_error
 ------------
 
