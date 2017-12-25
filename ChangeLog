@@ -84,6 +84,7 @@ Version 8.32.0 [v8-stable] 2018-01-09
 - Patches from BSD projects have been imported
   ... as far as they still apply. Some patches that patched BSD-specific
   code were broadened to be more generic.
+- rainerscript: add int2hex() function
 - rainerscript: add is_time() function
   Thanks to Stephen Workman for implementing this.
 - RainerScript: add function script_error() and error-reporting support
