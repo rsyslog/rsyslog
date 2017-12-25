@@ -177,14 +177,6 @@ forwarding system. To verify, you can type "logger test" or a similar
 server log file. If you dig out your sniffer, you should see that the
 traffic on the wire is actually protected.
 
-Limitations
-~~~~~~~~~~~
-
-The RELP transport can currently not be protected by TLS. A work-around
-is to use stunnel. TLS support for RELP will be added once plain TCP
-syslog has sufficiently matured and there either is some time left to do
-this or we find a sponsor ;).
-
 Certificates
 ------------
 
@@ -339,18 +331,3 @@ Revision History
    Initial Version created
 -  2008-05-26 \* `Rainer Gerhards`_ \*
    added information about certificates
-
-Copyright
----------
-
-Copyright (c) 2008-2014 `Rainer Gerhards`_ and
-`Adiscon <http://www.adiscon.com/en/>`_.
-
-Permission is granted to copy, distribute and/or modify this document
-under the terms of the GNU Free Documentation License, Version 1.2 or
-any later version published by the Free Software Foundation; with no
-Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts. A
-copy of the license can be viewed at
-`http://www.gnu.org/copyleft/fdl.html <http://www.gnu.org/copyleft/fdl.html>`_.
-
-[`rsyslog site <http://www.rsyslog.com/>`_\ ]
