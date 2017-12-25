@@ -301,8 +301,13 @@ static es_str_t*
 lookupKey_str(lookup_t *pThis, lookup_key_t key) {
 	lookup_string_tab_entry_t *entry;
 	const char *r;
-	entry = bsearch(key.k_str, pThis->table.str->entries, pThis->nmemb, sizeof(lookup_string_tab_entry_t),
-	bs_arrcmp_strtab);
+	if(pThis->nmemb == 0) {
+		entry = NULL;
+	} else {
+		assert(pThis->table.str->entries);
+		entry = bsearch(key.k_str, pThis->table.str->entries, pThis->nmemb,
+			sizeof(lookup_string_tab_entry_t), bs_arrcmp_strtab);
+	}
 	if(entry == NULL) {
 		r = defaultVal(pThis);
 	} else {
