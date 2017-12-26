@@ -537,11 +537,11 @@ getFullStateFileName(uchar* pszstatefile, uchar* pszout, int ilenout)
  * Note: the buffer is not necessarily populated ... always ONLY use the
  * RETURN VALUE!
  */
-static uchar *
+static uchar * ATTR_NONNULL(2)
 getStateFileName(lstn_t *const __restrict__ pLstn,
 	 	 uchar *const __restrict__ buf,
 		 const size_t lenbuf,
-		 uchar *pszFileName)
+		 const uchar *pszFileName)
 {
 	uchar *ret;
 
@@ -620,7 +620,7 @@ finalize_it:
 /* try to open a file which has a state file. If the state file does not
  * exist or cannot be read, an error is returned.
  */
-static rsRetVal
+static rsRetVal ATTR_NONNULL(1)
 openFileWithStateFile(lstn_t *const __restrict__ pLstn)
 {
 	DEFiRet;
@@ -828,8 +828,8 @@ pollFile(lstn_t *pLstn, int *pbHadFileData)
 /* create input instance, set default parameters, and
  * add it to the list of instances.
  */
-static rsRetVal
-createInstance(instanceConf_t **pinst)
+static rsRetVal ATTR_NONNULL(1)
+createInstance(instanceConf_t **const pinst)
 {
 	instanceConf_t *inst;
 	DEFiRet;
@@ -877,7 +877,7 @@ finalize_it:
 /* the basen(ame) buffer must be of size MAXFNAME
  * returns the index of the slash in front of basename
  */
-static int
+static int ATTR_NONNULL()
 getBasename(uchar *const __restrict__ basen, uchar *const __restrict__ path)
 {
 	int i;
@@ -906,7 +906,7 @@ getBasename(uchar *const __restrict__ basen, uchar *const __restrict__ path)
  * (e.g. split filename in path and actual name)
  * Note: we do NOT use dirname()/basename() as they have portability problems.
  */
-static rsRetVal
+static rsRetVal ATTR_NONNULL()
 checkInstance(instanceConf_t *inst)
 {
 	char dirn[MAXFNAME];
@@ -1037,8 +1037,8 @@ finalize_it:
  * it does NOT initialize any data members except for the list
  * pointers themselves.
  */
-static rsRetVal
-lstnAdd(lstn_t **newLstn)
+static rsRetVal ATTR_NONNULL()
+lstnAdd(lstn_t **const newLstn)
 {
 	lstn_t *pLstn;
 	DEFiRet;
@@ -1060,7 +1060,7 @@ finalize_it:
 }
 
 /* delete a listener object */
-static void
+static void ATTR_NONNULL(1)
 lstnDel(lstn_t *pLstn)
 {
 	DBGPRINTF("lstnDel called for %s\n", pLstn->pszFileName);
@@ -1101,8 +1101,8 @@ lstnDel(lstn_t *pLstn)
  * It also does some late stage error checking on the config
  * and reports issues it finds.
  */
-static rsRetVal
-addListner(instanceConf_t *inst)
+static rsRetVal ATTR_NONNULL(1)
+addListner(instanceConf_t *const inst)
 {
 	DEFiRet;
 	lstn_t *pThis;
@@ -1507,7 +1507,7 @@ doPolling(void)
 /* the basedir buffer must be of size MAXFNAME
  * returns the index of the last slash before the basename
  */
-static int
+static int ATTR_NONNULL()
 getBasedir(uchar *const __restrict__ basedir, uchar *const __restrict__ path)
 {
 	int i;
@@ -1533,7 +1533,7 @@ getBasedir(uchar *const __restrict__ basedir, uchar *const __restrict__ path)
 	}
 }
 
-static rsRetVal
+static rsRetVal ATTR_NONNULL()
 fileTableInit(fileTable_t *const __restrict__ tab, const int nelem)
 {
 	DEFiRet;
@@ -1545,7 +1545,7 @@ finalize_it:
 }
 
 #if ULTRA_DEBUG == 1
-static void
+static void ATTR_NONNULL()
 fileTableDisplay(fileTable_t *tab)
 {
 	int f;
@@ -1559,14 +1559,14 @@ fileTableDisplay(fileTable_t *tab)
 }
 #endif
 
-static int
+static int ATTR_NONNULL()
 fileTableSearch(fileTable_t *const __restrict__ tab, uchar *const __restrict__ fn)
 {
 	int f;
 	uchar *baseName = NULL;
-#if ULTRA_DEBUG == 1
-	fileTableDisplay(tab);
-#endif
+	#if ULTRA_DEBUG == 1
+		fileTableDisplay(tab);
+	#endif
 	for(f = 0 ; f < tab->currMax ; ++f) {
 		baseName = tab->listeners[f].pLstn->pszBaseName;
 		if(!fnmatch((char*)baseName, (char*)fn, FNM_PATHNAME | FNM_PERIOD))
@@ -1578,14 +1578,11 @@ fileTableSearch(fileTable_t *const __restrict__ tab, uchar *const __restrict__ f
 	return f;
 }
 
-static int
+static int ATTR_NONNULL()
 fileTableSearchNoWildcard(fileTable_t *const __restrict__ tab, uchar *const __restrict__ fn)
 {
 	int f;
 	uchar *baseName = NULL;
-#if ULTRA_DEBUG == 1
-	/* UNCOMMENT FOR DEBUG fileTableDisplay(tab); */
-#endif
 	for(f = 0 ; f < tab->currMax ; ++f) {
 		baseName = tab->listeners[f].pLstn->pszBaseName;
 		if (strcmp((const char*)baseName, (const char*)fn) == 0)
@@ -1598,14 +1595,11 @@ fileTableSearchNoWildcard(fileTable_t *const __restrict__ tab, uchar *const __re
 }
 
 /* add file to file table */
-static rsRetVal
+static rsRetVal ATTR_NONNULL()
 fileTableAddFile(fileTable_t *const __restrict__ tab, lstn_t *const __restrict__ pLstn)
 {
 	int j;
 	DEFiRet;
-#if ULTRA_DEBUG == 1
-	/* UNCOMMENT FOR DEBUG fileTableDisplay(tab); */
-#endif
 	for(j = 0 ; j < tab->currMax && tab->listeners[j].pLstn != pLstn ; ++j)
 		; /* just scan */
 	if(j < tab->currMax) {
@@ -1637,7 +1631,7 @@ finalize_it:
 }
 
 /* delete a file from file table */
-static rsRetVal
+static rsRetVal ATTR_NONNULL()
 fileTableDelFile(fileTable_t *const __restrict__ tab, lstn_t *const __restrict__ pLstn)
 {
 	int j;
@@ -1664,7 +1658,7 @@ finalize_it:
 }
 /* add entry to dirs array */
 static rsRetVal
-dirsAdd(uchar *dirName, int* piIndex)
+dirsAdd(const uchar *const dirName, int *const piIndex)
 {
 	sbool sbAdded;
 	int newMax;
@@ -1788,7 +1782,7 @@ finalize_it:
 /* checks if a dir name is already inside the dirs array. If so, returns
  * its index. If not present, -1 is returned.
  */
-static int
+static int ATTR_NONNULL(1)
 dirsFindDir(uchar *dir)
 {
 	int i, iFind;
@@ -1828,7 +1822,7 @@ finalize_it:
  * fIdx is index into file table, all other information is pulled from that table.
  * bActive is 1 if the file is to be added to active set, else zero
  */
-static rsRetVal
+static rsRetVal ATTR_NONNULL(1)
 dirsAddFile(lstn_t *__restrict__ pLstn, const int bActive)
 {
 	int dirIdx;
@@ -1858,8 +1852,10 @@ finalize_it:
  * be monitored due to wildcard detection. Returns the new pLstn in
  * the ppExisting parameter.
  */
-static rsRetVal
-lstnDup(lstn_t **ppExisting, uchar *const __restrict__ newname, uchar *const __restrict__ newdirname)
+static rsRetVal ATTR_NONNULL(1, 2)
+lstnDup(lstn_t ** ppExisting,
+	const uchar *const __restrict__ newname,
+	const uchar *const __restrict__ newdirname)
 {
 	DEFiRet;
 	lstn_t *const existing = *ppExisting;
@@ -1873,7 +1869,8 @@ lstnDup(lstn_t **ppExisting, uchar *const __restrict__ newname, uchar *const __r
 		CHKmalloc(pThis->pszDirName = ustrdup(newdirname));
 	}
 	CHKmalloc(pThis->pszBaseName = ustrdup(newname));
-	if(asprintf((char**)&pThis->pszFileName, "%s/%s", (char*)pThis->pszDirName, (char*)newname) == -1) {
+	if(asprintf((char**)&pThis->pszFileName, "%s/%s",
+		(char*)pThis->pszDirName, (char*)newname) == -1) {
 		DBGPRINTF("lstnDup: asprintf failed, malfunction can happen\n");
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
@@ -2009,7 +2006,7 @@ done:	return;
  * Note: newFileName is NULL for configured files, and non-NULL for dynamically
  * detected files (e.g. wildcards!)
  */
-static void
+static void ATTR_NONNULL(1)
 startLstnFile(lstn_t *const __restrict__ pLstn)
 {
 	rsRetVal localRet;
@@ -2046,8 +2043,9 @@ done:	return;
  * needs to be processed, and we won't get an event for that as notifications
  * happen only for things after the watch has been activated.
  */
-static void
-in_setupFileWatchDynamic(lstn_t *pLstn, uchar *const __restrict__ newBaseName,
+static void ATTR_NONNULL(1)
+in_setupFileWatchDynamic(lstn_t *pLstn,
+	uchar *const __restrict__ newBaseName,
 	uchar *const __restrict__ newFileName)
 {
 	char fullfn[MAXFNAME];
@@ -2098,7 +2096,7 @@ done:	return;
  * needs to be processed, and we won't get an event for that as notifications
  * happen only for things after the watch has been activated.
  */
-static void
+static void ATTR_NONNULL(1)
 in_setupFileWatchStatic(lstn_t *pLstn)
 {
 	sbool hasWildcard;
@@ -2131,7 +2129,8 @@ in_setupFileWatchStatic(lstn_t *pLstn)
 			globfree(&files);
 		}
 	} else {
-		/* Duplicate static object as well, otherwise the configobject could be deleted later! */
+		/* Duplicate static object as well, otherwise the configobject
+		 * could be deleted later! */
 		if(lstnDup(&pLstn, pLstn->pszBaseName, NULL) != RS_RET_OK) {
 			DBGPRINTF("in_setupFileWatchStatic failed to duplicate listener for '%s'\n",
 				pLstn->pszFileName);
@@ -2159,7 +2158,7 @@ in_setupInitialWatches(void)
 	}
 }
 
-static void
+static void ATTR_NONNULL(1)
 in_dbg_showEv(struct inotify_event *ev)
 {
 	if(ev->mask & IN_IGNORED) {
@@ -2196,7 +2195,7 @@ in_dbg_showEv(struct inotify_event *ev)
 }
 
 /* Helper function to get fullpath when handling inotify dir events */
-static void
+static void ATTR_NONNULL()
 in_handleDirGetFullDir(char* pszoutput, char* pszrootdir, char* pszsubdir)
 {
 	sbool hasWildcard;
@@ -2244,7 +2243,7 @@ done:	return;
  * the file from our internal structures. Remember that a different inode
  * with the same name may already be in processing.
  */
-static void
+static void ATTR_NONNULL(2)
 in_removeFile(const int dirIdx, lstn_t *const __restrict__ pLstn, const sbool bRemoveStateFile)
 {
 	uchar statefile[MAXFNAME];
@@ -2279,7 +2278,7 @@ in_removeFile(const int dirIdx, lstn_t *const __restrict__ pLstn, const sbool bR
 	wdmapDel(wd);
 }
 
-static void
+static void ATTR_NONNULL(1)
 in_handleDirEventDirCREATE(struct inotify_event *ev, const int dirIdx)
 {
 	char fulldn[MAXFNAME];
@@ -2301,7 +2300,7 @@ in_handleDirEventDirCREATE(struct inotify_event *ev, const int dirIdx)
 	}
 }
 
-static void
+static void ATTR_NONNULL(1)
 in_handleDirEventFileCREATE(struct inotify_event *ev, const int dirIdx)
 {
 	int i;
@@ -2418,7 +2417,7 @@ done:	return;
  * it, and trying to process a *deleted* file really makes no sense
  * (remeber we don't have it open, so it actually *is gone*).
  */
-static void
+static void ATTR_NONNULL(1)
 in_handleDirEventFileDELETE(struct inotify_event *const ev, const int dirIdx)
 {
 	const int ftIdx = fileTableSearch(&dirs[dirIdx].active, (uchar*)ev->name);
@@ -2445,7 +2444,7 @@ in_removeDir(const int dirIdx)
 	wdmapDel(wd);
 }
 
-static void
+static void ATTR_NONNULL(1)
 in_handleDirEventDirDELETE(struct inotify_event *const ev, const int dirIdx)
 {
 	char fulldn[MAXFNAME];
@@ -2475,7 +2474,7 @@ in_handleDirEventDirDELETE(struct inotify_event *const ev, const int dirIdx)
 	}
 }
 
-static void
+static void ATTR_NONNULL(1)
 in_handleDirEvent(struct inotify_event *const ev, const int dirIdx)
 {
 	DBGPRINTF("in_handleDirEvent dir event for (Idx %d)%s (mask %x)\n",
@@ -2506,7 +2505,7 @@ in_handleDirEvent(struct inotify_event *const ev, const int dirIdx)
 }
 
 
-static void
+static void ATTR_NONNULL(1, 2)
 in_handleFileEvent(struct inotify_event *ev, const wd_map_t *const etry)
 {
 	if(ev->mask & IN_MODIFY) {
@@ -2517,7 +2516,7 @@ in_handleFileEvent(struct inotify_event *ev, const wd_map_t *const etry)
 	}
 }
 
-static void
+static void ATTR_NONNULL(1)
 in_processEvent(struct inotify_event *ev)
 {
 	wd_map_t *etry;
@@ -2707,7 +2706,7 @@ fen_printevent(int event)
 	}
 }
 
-static rsRetVal
+static rsRetVal ATTR_NONNULL(1)
 fen_removeFile(lstn_t *pLstn)
 {
 	struct stat statFile;
@@ -2728,7 +2727,7 @@ fen_removeFile(lstn_t *pLstn)
 		ABORT_FINALIZE(RS_RET_SYS_ERR);
 	}
 
-	if(	pLstn->bRMStateOnDel) {
+	if(pLstn->bRMStateOnDel) {
 		statefn = getStateFileName(pLstn, statefile, sizeof(statefile), NULL);
 		/* Get full path and file name */
 		getFullStateFileName(statefn, toDel, sizeof(toDel));
@@ -2977,7 +2976,8 @@ fen_processEventDir(struct file_obj* fobjp, int dirIdx, int revents)
 	sbool hasWildcard;
 	DEFiRet;
 
-	DBGPRINTF("fen_processEventDir '%s' (Configured %d)", dirs[dirIdx].dirName, dirs[dirIdx].configured.currMax);
+	DBGPRINTF("fen_processEventDir '%s' (Configured %d)", dirs[dirIdx].dirName,
+		dirs[dirIdx].configured.currMax);
 
 	// Use FileObj from dirinfo if NULL
 	if (fobjp== NULL)
@@ -3335,7 +3335,7 @@ CODESTARTmodExit
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
 
-#if defined(HAVE_INOTIFY_INIT) || (defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE))
+#	if defined(HAVE_INOTIFY_INIT) || (defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE))
 	int i;
 	/* we use these vars only in inotify mode */
 	if(dirs != NULL) {
@@ -3344,16 +3344,16 @@ CODESTARTmodExit
 			free(dirs[i].dirName);
 			if (dirs[i].dirNameBfWildCard != NULL)
 				free(dirs[i].dirNameBfWildCard);
-#if defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE)
-			free(dirs[i].pfinf->fobj.fo_name);
-			free(dirs[i].pfinf);
-#endif
+#			if defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE)
+				free(dirs[i].pfinf->fobj.fo_name);
+				free(dirs[i].pfinf);
+#			endif
 		}
 		free(dirs->active.listeners);
 		free(dirs->configured.listeners);
 		free(dirs);
 	}
-#endif /* #if defined(HAVE_INOTIFY_INIT) || (defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE)) --- */
+#	endif /* #if defined(HAVE_INOTIFY_INIT) || (defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE)) --- */
 
 #ifdef HAVE_INOTIFY_INIT
 	free(wdmap);
