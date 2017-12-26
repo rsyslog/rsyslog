@@ -1942,11 +1942,13 @@ in_setupDirWatch(const int dirIdx)
 	int dirnamelen = 0;
 	char* psztmp;
 
-	wd = inotify_add_watch(ino_fd, (char*)dirs[dirIdx].dirName, IN_CREATE|IN_DELETE|IN_MOVED_FROM|IN_MOVED_TO);
+	wd = inotify_add_watch(ino_fd, (char*)dirs[dirIdx].dirName,
+		IN_CREATE|IN_DELETE|IN_MOVED_FROM|IN_MOVED_TO);
 	if(wd < 0) {
-		/* check for wildcard in directoryname, if last character is a wildcard we remove it and try again! */
+		/* check for wildcard in directoryname, if last character is a wildcard
+		 * we remove it and try again! */
 		dirnamelen = ustrlen(dirs[dirIdx].dirName);
-		memcpy(dirnametrunc, dirs[dirIdx].dirName, dirnamelen); /* Copy mem */
+		memcpy(dirnametrunc, dirs[dirIdx].dirName, dirnamelen);
 
 		hasWildcard = containsGlobWildcard(dirnametrunc);
 		DBGPRINTF("in_setupDirWatch dir '%s', wildcard detected: %s\n",
@@ -1956,24 +1958,27 @@ in_setupDirWatch(const int dirIdx)
 			psztmp = strchr(dirnametrunc, '*');
 			if (psztmp != NULL) {
 				*psztmp = '\0';
-				/*	Now set NULL Byte on last directory delimiter occurrence,
-				*	This makes sure that we have the current base path to create a watch for! */
+				/* Now set NULL Byte on last directory delimiter occurrence,
+				 * This makes sure that we have the current base path to create
+				 * a watch for! */
 				psztmp = strrchr(dirnametrunc, '/');
 				if (psztmp != NULL) {
 					*psztmp = '\0';
 				} else {
-					DBGPRINTF("in_setupDirWatch: unexpected error #2 creating truncated "
-						"directorynamefor '%s'\n", dirs[dirIdx].dirName);
+					DBGPRINTF("in_setupDirWatch: unexpected error #2 creating "
+						"truncated directorynamefor '%s'\n",
+						dirs[dirIdx].dirName);
 					goto done;
 				}
 			} else {
-				DBGPRINTF("in_setupDirWatch: unexpected error #1 creating truncated directorynamefor"
-					" '%s'\n", dirs[dirIdx].dirName);
+				DBGPRINTF("in_setupDirWatch: unexpected error #1 creating "
+					"truncated directorynamefor '%s'\n", dirs[dirIdx].dirName);
 				goto done;
 			}
 
 			/* Try to add inotify watch again */
-			wd = inotify_add_watch(ino_fd, dirnametrunc, IN_CREATE|IN_DELETE|IN_MOVED_FROM|IN_MOVED_TO);
+			wd = inotify_add_watch(ino_fd, dirnametrunc,
+				IN_CREATE|IN_DELETE|IN_MOVED_FROM|IN_MOVED_TO);
 			if(wd < 0) {
 				DBGPRINTF("in_setupDirWatch: Found wildcard in directory '%s', "
 					"could not create dir watch for '%s' with error %d\n",
@@ -1985,8 +1990,8 @@ in_setupDirWatch(const int dirIdx)
 					dirs[dirIdx].dirName, dirnametrunc);
 			}
 		} else {
-			DBGPRINTF("in_setupDirWatch: could not create dir watch for '%s' with error %d\n",
-				dirs[dirIdx].dirName, errno);
+			DBGPRINTF("in_setupDirWatch: could not create dir watch for '%s' with "
+				"error %d\n", dirs[dirIdx].dirName, errno);
 			goto done;
 		}
 	}
@@ -2042,7 +2047,8 @@ done:	return;
  * happen only for things after the watch has been activated.
  */
 static void
-in_setupFileWatchDynamic(lstn_t *pLstn, uchar *const __restrict__ newBaseName, uchar *const __restrict__ newFileName)
+in_setupFileWatchDynamic(lstn_t *pLstn, uchar *const __restrict__ newBaseName,
+	uchar *const __restrict__ newFileName)
 {
 	char fullfn[MAXFNAME];
 	struct stat fileInfo;
@@ -2118,8 +2124,8 @@ in_setupFileWatchStatic(lstn_t *pLstn)
 					continue;/* we cannot process subdirs! */
 
 				getBasename(basen, file);
-				DBGPRINTF("in_setupFileWatchStatic setup dynamic watch for '%s : %s' \n",
-					basen, file);
+				DBGPRINTF("in_setupFileWatchStatic setup dynamic watch "
+					"for '%s : %s' \n", basen, file);
 				in_setupFileWatchDynamic(pLstn, basen, file);
 			}
 			globfree(&files);
@@ -2189,9 +2195,7 @@ in_dbg_showEv(struct inotify_event *ev)
 	 }
 }
 
-/*
-*	Helper function to get fullpath when handling inotify dir events
-*/
+/* Helper function to get fullpath when handling inotify dir events */
 static void
 in_handleDirGetFullDir(char* pszoutput, char* pszrootdir, char* pszsubdir)
 {
@@ -2202,7 +2206,8 @@ in_handleDirGetFullDir(char* pszoutput, char* pszrootdir, char* pszsubdir)
 
 	DBGPRINTF("in_handleDirGetFullDir root='%s' sub='%s' \n", pszrootdir, pszsubdir);
 
-	/* check for wildcard in directoryname, if last character is a wildcard we remove it and try again! */
+	/* check for wildcard in directoryname, if last character is a wildcard we remove
+	* it and try again! */
 	dirnamelen = ustrlen(pszrootdir);
 	memcpy(dirnametrunc, pszrootdir, dirnamelen); /* Copy mem */
 	dirnametrunc[dirnamelen] = '\0'; /* Terminate copied string */
@@ -2213,19 +2218,19 @@ in_handleDirGetFullDir(char* pszoutput, char* pszrootdir, char* pszsubdir)
 		psztmp = strchr(dirnametrunc, '*');
 		if (psztmp != NULL) {
 			*psztmp = '\0';
-			/*	Now set NULL Byte on last directory delimiter occurrence,
-			*	This makes sure that we have the current base path to create a watch for! */
+			/* Now set NULL Byte on last directory delimiter occurrence,
+			* This makes sure that we have the current base path to create a watch for! */
 			psztmp = strrchr(dirnametrunc, '/');
 			if (psztmp != NULL) {
 				*psztmp = '\0';
 			} else {
-				DBGPRINTF("in_handleDirGetFullDir: unexpected error #2 creating truncated "
-					"directoryname for '%s'\n", dirnametrunc);
+				DBGPRINTF("in_handleDirGetFullDir: unexpected error #2 creating "
+					"truncated directoryname for '%s'\n", dirnametrunc);
 				goto done;
 			}
 		} else {
-			DBGPRINTF("in_handleDirGetFullDir: unexpected error #1 creating truncated directoryname for"
-					" '%s'\n", dirnametrunc);
+			DBGPRINTF("in_handleDirGetFullDir: unexpected error #1 creating truncated "
+				"directoryname for '%s'\n", dirnametrunc);
 			goto done;
 		}
 	}
@@ -2248,10 +2253,8 @@ in_removeFile(const int dirIdx, lstn_t *const __restrict__ pLstn, const sbool bR
 	int wd;
 	uchar *statefn;
 
-	DBGPRINTF("remove listener '%s', dirIdx %d\n",
-			pLstn->pszFileName, dirIdx);
-	if(		bRemoveStateFile == TRUE &&
-			pLstn->bRMStateOnDel) {
+	DBGPRINTF("remove listener '%s', dirIdx %d\n", pLstn->pszFileName, dirIdx);
+	if(bRemoveStateFile == TRUE && pLstn->bRMStateOnDel) {
 		statefn = getStateFileName(pLstn, statefile, sizeof(statefile), NULL);
 		/* Get full path and file name */
 		getFullStateFileName(statefn, toDel, sizeof(toDel));
@@ -2260,7 +2263,7 @@ in_removeFile(const int dirIdx, lstn_t *const __restrict__ pLstn, const sbool bR
 		bDoRMState = 0;
 	}
 	pollFile(pLstn, NULL); /* one final try to gather data */
-	/*	delete listener data */
+	/* delete listener data */
 	DBGPRINTF("DELETING listener data for '%s' - '%s'\n", pLstn->pszBaseName, pLstn->pszFileName);
 	lstnDel(pLstn);
 	fileTableDelFile(&dirs[dirIdx].active, pLstn);
@@ -2475,22 +2478,27 @@ in_handleDirEventDirDELETE(struct inotify_event *const ev, const int dirIdx)
 static void
 in_handleDirEvent(struct inotify_event *const ev, const int dirIdx)
 {
-	DBGPRINTF("in_handleDirEvent dir event for (Idx %d)%s (mask %x)\n", dirIdx, dirs[dirIdx].dirName, ev->mask);
+	DBGPRINTF("in_handleDirEvent dir event for (Idx %d)%s (mask %x)\n",
+		dirIdx, dirs[dirIdx].dirName, ev->mask);
 	if((ev->mask & IN_CREATE)) {
-		if((ev->mask & IN_ISDIR) || (ev->mask & IN_MOVED_TO)) /* VERIFY: does IN_MOVED_TO make sense here ? */
+		/* TODO: does IN_MOVED_TO make sense here ? */
+		if((ev->mask & IN_ISDIR) || (ev->mask & IN_MOVED_TO)) {
 			in_handleDirEventDirCREATE(ev, dirIdx); /* Create new Dir */
-		else
+		} else {
 			in_handleDirEventFileCREATE(ev, dirIdx); /* Create new File */
+		}
 	} else if((ev->mask & IN_DELETE)) {
-		if((ev->mask & IN_ISDIR))
-			in_handleDirEventDirDELETE(ev, dirIdx);		/* Create new Dir */
-		else
-			in_handleDirEventFileDELETE(ev, dirIdx);	/* Delete File from dir filetable */
+		if((ev->mask & IN_ISDIR)) {
+			in_handleDirEventDirDELETE(ev, dirIdx);	/* Create new Dir */
+		} else {
+			in_handleDirEventFileDELETE(ev, dirIdx);/* Delete File from dir filetable */
+		}
 	} else if((ev->mask & IN_MOVED_TO)) {
-		if((ev->mask & IN_ISDIR))
+		if((ev->mask & IN_ISDIR)) {
 			in_handleDirEventDirCREATE(ev, dirIdx); /* Create new Dir */
-		else
+		} else {
 			in_handleDirEventFileCREATE(ev, dirIdx); /* Create new File */
+		}
 	} else {
 		DBGPRINTF("got non-expected inotify event:\n");
 		in_dbg_showEv(ev);
@@ -3449,5 +3457,3 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
-/* vim:set ai:
- */
