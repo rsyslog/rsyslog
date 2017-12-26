@@ -1177,15 +1177,15 @@ addListner(instanceConf_t *const inst)
 	pThis->pStrm = NULL;
 	pThis->prevLineSegment = NULL;
 	pThis->masterLstn = NULL; /* we *are* a master! */
-#ifdef HAVE_INOTIFY_INIT
-	/* Init Moved Files variables (Used for MOVED_TO/MOVED_FROM)*/
-	pThis->movedfrom_statefile = NULL;
-	pThis->movedfrom_cookie = 0;
-#endif
-#if defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE)
-	pThis->pfinf = NULL;
-	pThis->bPortAssociated = 0;
-#endif
+	#ifdef HAVE_INOTIFY_INIT
+		/* Init Moved Files variables (Used for MOVED_TO/MOVED_FROM)*/
+		pThis->movedfrom_statefile = NULL;
+		pThis->movedfrom_cookie = 0;
+	#endif
+	#if defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE)
+		pThis->pfinf = NULL;
+		pThis->bPortAssociated = 0;
+	#endif
 
 finalize_it:
 	RETiRet;
@@ -1656,6 +1656,7 @@ fileTableDelFile(fileTable_t *const __restrict__ tab, lstn_t *const __restrict__
 finalize_it:
 	RETiRet;
 }
+
 /* add entry to dirs array */
 static rsRetVal
 dirsAdd(const uchar *const dirName, int *const piIndex)
@@ -1667,6 +1668,7 @@ dirsAdd(const uchar *const dirName, int *const piIndex)
 	char* psztmp;
 	DEFiRet;
 
+	dbgprintf("dirsAdd: add '%s'\n", dirName);
 	/* Set new index to last dir by default, then search for a free spot in dirs array */
 	newindex = currMaxDirs;
 	sbAdded = TRUE;
@@ -1708,6 +1710,8 @@ dirsAdd(const uchar *const dirName, int *const piIndex)
 	/* check for wildcard in directoryname, if last character is a wildcard we remove it and try again! */
 	dirs[newindex].hasWildcard = containsGlobWildcard((char*)dirName);
 	if (dirs[newindex].hasWildcard) {
+		// TODO: wildcard is not necessarily in last char!!!
+		// TODO: BUG: we have many more wildcards that "*" - so this check is invalid
 		DBGPRINTF("dirsAdd detected wildcard in dir '%s'\n", dirName);
 
 		/* Get copy of dirname */
@@ -1783,18 +1787,18 @@ finalize_it:
  * its index. If not present, -1 is returned.
  */
 static int ATTR_NONNULL(1)
-dirsFindDir(uchar *dir)
+dirsFindDir(const uchar *const dir)
 {
-	int i, iFind;
-	iFind = -1;
+	int i;
+	int iFind = -1;
 
-	/* Try to find directory using for() */
 	for(i = 0 ; i < currMaxDirs ; ++i) {
 		if (dirs[i].dirName != NULL && ustrcmp(dir, dirs[i].dirName) == 0) {
 			iFind = i;
 			break;
 		}
 	}
+	DBGPRINTF("dirsFindDir: '%s' - idx %d\n", dir, iFind);
 	return iFind;
 }
 
@@ -1804,6 +1808,7 @@ dirsInit(void)
 	instanceConf_t *inst;
 	DEFiRet;
 
+DBGPRINTF("dirsInit\n");
 	free(dirs);
 	CHKmalloc(dirs = malloc(sizeof(dirInfo_t) * INIT_FILE_TAB_SIZE));
 	allocMaxDirs = INIT_FILE_TAB_SIZE;
@@ -1841,9 +1846,9 @@ dirsAddFile(lstn_t *__restrict__ pLstn, const int bActive)
 	CHKiRet(fileTableAddFile((bActive ? &dir->active : &dir->configured), pLstn));
 	DBGPRINTF("associated file [%s] to directory %d[%s], Active = %d\n",
 		pLstn->pszFileName, dirIdx, dir->dirName, bActive);
-#if ULTRA_DEBUG == 1
-/* UNCOMMENT FOR DEBUG fileTableDisplay(bActive ? &dir->active : &dir->configured); */
-#endif
+	#if ULTRA_DEBUG == 1
+	/* UNCOMMENT FOR DEBUG fileTableDisplay(bActive ? &dir->active : &dir->configured); */
+	#endif
 finalize_it:
 	RETiRet;
 }
@@ -2146,10 +2151,12 @@ static void
 in_setupInitialWatches(void)
 {
 	int i;
+	DBGPRINTF("setting up initial directory watches\n");
 	for(i = 0 ; i < currMaxDirs ; ++i) {
 		in_setupDirWatch(i);
 	}
 	lstn_t *pLstn;
+	DBGPRINTF("setting up initial listener watches\n");
 	for(pLstn = runModConf->pRootLstn ; pLstn != NULL ; pLstn = pLstn->next) {
 		if(pLstn->masterLstn == NULL) {
 			/* we process only static (master) entries */
@@ -2161,82 +2168,50 @@ in_setupInitialWatches(void)
 static void ATTR_NONNULL(1)
 in_dbg_showEv(struct inotify_event *ev)
 {
+	if(!Debug)
+		return;
 	if(ev->mask & IN_IGNORED) {
-		DBGPRINTF("INOTIFY event: watch was REMOVED\n");
+		dbgprintf("INOTIFY event: watch was REMOVED\n");
 	} else if(ev->mask & IN_MODIFY) {
-		DBGPRINTF("INOTIFY event: watch was MODIFID\n");
+		dbgprintf("INOTIFY event: watch was MODIFID\n");
 	} else if(ev->mask & IN_ACCESS) {
-		DBGPRINTF("INOTIFY event: watch IN_ACCESS\n");
+		dbgprintf("INOTIFY event: watch IN_ACCESS\n");
 	} else if(ev->mask & IN_ATTRIB) {
-		DBGPRINTF("INOTIFY event: watch IN_ATTRIB\n");
+		dbgprintf("INOTIFY event: watch IN_ATTRIB\n");
 	} else if(ev->mask & IN_CLOSE_WRITE) {
-		DBGPRINTF("INOTIFY event: watch IN_CLOSE_WRITE\n");
+		dbgprintf("INOTIFY event: watch IN_CLOSE_WRITE\n");
 	} else if(ev->mask & IN_CLOSE_NOWRITE) {
-		DBGPRINTF("INOTIFY event: watch IN_CLOSE_NOWRITE\n");
+		dbgprintf("INOTIFY event: watch IN_CLOSE_NOWRITE\n");
 	} else if(ev->mask & IN_CREATE) {
-		DBGPRINTF("INOTIFY event: file was CREATED: %s\n", ev->name);
+		dbgprintf("INOTIFY event: file was CREATED: %s\n", ev->name);
 	} else if(ev->mask & IN_DELETE) {
-		DBGPRINTF("INOTIFY event: watch IN_DELETE\n");
+		dbgprintf("INOTIFY event: watch IN_DELETE\n");
 	} else if(ev->mask & IN_DELETE_SELF) {
-		DBGPRINTF("INOTIFY event: watch IN_DELETE_SELF\n");
+		dbgprintf("INOTIFY event: watch IN_DELETE_SELF\n");
 	} else if(ev->mask & IN_MOVE_SELF) {
-		DBGPRINTF("INOTIFY event: watch IN_MOVE_SELF\n");
+		dbgprintf("INOTIFY event: watch IN_MOVE_SELF\n");
 	} else if(ev->mask & IN_MOVED_FROM) {
-		DBGPRINTF("INOTIFY event: watch IN_MOVED_FROM\n");
+		dbgprintf("INOTIFY event: watch IN_MOVED_FROM\n");
 	} else if(ev->mask & IN_MOVED_TO) {
-		DBGPRINTF("INOTIFY event: watch IN_MOVED_TO\n");
+		dbgprintf("INOTIFY event: watch IN_MOVED_TO\n");
 	} else if(ev->mask & IN_OPEN) {
-		DBGPRINTF("INOTIFY event: watch IN_OPEN\n");
+		dbgprintf("INOTIFY event: watch IN_OPEN\n");
 	} else if(ev->mask & IN_ISDIR) {
-		DBGPRINTF("INOTIFY event: watch IN_ISDIR\n");
+		dbgprintf("INOTIFY event: watch IN_ISDIR\n");
 	} else {
-		DBGPRINTF("INOTIFY event: unknown mask code %8.8x\n", ev->mask);
+		dbgprintf("INOTIFY event: unknown mask code %8.8x\n", ev->mask);
 	 }
 }
 
 /* Helper function to get fullpath when handling inotify dir events */
 static void ATTR_NONNULL()
-in_handleDirGetFullDir(char* pszoutput, char* pszrootdir, char* pszsubdir)
+in_handleDirGetFullDir(char *const pszoutput, const int dirIdx, const char *const pszsubdir)
 {
-	sbool hasWildcard;
-	char dirnametrunc[MAXFNAME];
-	int dirnamelen = 0;
-	char* psztmp;
-
-	DBGPRINTF("in_handleDirGetFullDir root='%s' sub='%s' \n", pszrootdir, pszsubdir);
-
-	/* check for wildcard in directoryname, if last character is a wildcard we remove
-	* it and try again! */
-	dirnamelen = ustrlen(pszrootdir);
-	memcpy(dirnametrunc, pszrootdir, dirnamelen); /* Copy mem */
-	dirnametrunc[dirnamelen] = '\0'; /* Terminate copied string */
-
-	hasWildcard = containsGlobWildcard(dirnametrunc);
-	if(hasWildcard) {
-		/* Set NULL Byte to FIRST wildcard occurrence */
-		psztmp = strchr(dirnametrunc, '*');
-		if (psztmp != NULL) {
-			*psztmp = '\0';
-			/* Now set NULL Byte on last directory delimiter occurrence,
-			* This makes sure that we have the current base path to create a watch for! */
-			psztmp = strrchr(dirnametrunc, '/');
-			if (psztmp != NULL) {
-				*psztmp = '\0';
-			} else {
-				DBGPRINTF("in_handleDirGetFullDir: unexpected error #2 creating "
-					"truncated directoryname for '%s'\n", dirnametrunc);
-				goto done;
-			}
-		} else {
-			DBGPRINTF("in_handleDirGetFullDir: unexpected error #1 creating truncated "
-				"directoryname for '%s'\n", dirnametrunc);
-			goto done;
-		}
-	}
-
-	/* Combine directory and new subdir */
-	snprintf(pszoutput, MAXFNAME, "%s/%s", dirnametrunc, pszsubdir);
-done:	return;
+	assert(dirIdx >= 0);
+	DBGPRINTF("in_handleDirGetFullDir root='%s' sub='%s' \n", dirs[dirIdx].dirName, pszsubdir);
+	snprintf(pszoutput, MAXFNAME, "%s/%s",
+		(dirs[dirIdx].hasWildcard) ? dirs[dirIdx].dirNameBfWildCard :  dirs[dirIdx].dirName,
+		pszsubdir);
 }
 
 /* inotify told us that a file's wd was closed. We now need to remove
@@ -2285,7 +2260,7 @@ in_handleDirEventDirCREATE(struct inotify_event *ev, const int dirIdx)
 	int newdiridx;
 
 	/* Combine to Full Path first */
-	in_handleDirGetFullDir(fulldn, (char*)dirs[dirIdx].dirName, (char*)ev->name);
+	in_handleDirGetFullDir(fulldn, dirIdx, (char*)ev->name);
 
 	/* Search for existing entry first! */
 	newdiridx = dirsFindDir( (uchar*)fulldn );
@@ -2450,7 +2425,7 @@ in_handleDirEventDirDELETE(struct inotify_event *const ev, const int dirIdx)
 	char fulldn[MAXFNAME];
 	int finddiridx;
 
-	in_handleDirGetFullDir(fulldn, (char*)dirs[dirIdx].dirName, (char*)ev->name);
+	in_handleDirGetFullDir(fulldn, dirIdx, (char*)ev->name);
 
 	/* Search for existing entry first! */
 	finddiridx = dirsFindDir( (uchar*)fulldn );
@@ -2608,8 +2583,11 @@ do_inotify(void)
 	int currev;
 	DEFiRet;
 
+dbgprintf("pre wdmapinit\n");
 	CHKiRet(wdmapInit());
+dbgprintf("pre dirsinit\n");
 	CHKiRet(dirsInit());
+dbgprintf("pre inotify_init\n");
 	ino_fd = inotify_init();
 	if(ino_fd < 0) {
 		LogError(errno, RS_RET_INOTIFY_INIT_FAILED, "imfile: Init inotify "
@@ -2617,7 +2595,9 @@ do_inotify(void)
 		return RS_RET_INOTIFY_INIT_FAILED;
 	}
 	DBGPRINTF("inotify fd %d\n", ino_fd);
+dbgprintf("pre setuInitialWatches\n");
 	in_setupInitialWatches();
+dbgprintf("post setuInitialWatches\n");
 
 	while(glbl.GetGlobalInputTermState() == 0) {
 		if(runModConf->haveReadTimeouts) {
@@ -2632,22 +2612,28 @@ do_inotify(void)
 				in_do_timeout_processing();
 				continue;
 			} else if (r == -1) {
-				char errStr[1024];
-				rs_strerror_r(errno, errStr, sizeof(errStr));
-				DBGPRINTF("%s:%d: unexpected error during poll timeout wait: %s\n",
-					__FILE__, __LINE__, errStr);
-				ABORT_FINALIZE(RS_RET_IO_ERROR);
+				LogError(errno, RS_RET_INTERNAL_ERROR,
+					"%s:%d: unexpected error during poll timeout wait",
+					__FILE__, __LINE__);
+				/* we do not abort, as this would render the whole input defunct */
+				continue;
 			} else if(r != 1) {
-				DBGPRINTF("%s:%d: ERROR: poll returned %d, but we had only one fd!\n",
+				LogError(errno, RS_RET_INTERNAL_ERROR,
+					"%s:%d: ERROR: poll returned more fds (%d) than given to it (1)",
 					__FILE__, __LINE__, r);
-				ABORT_FINALIZE(RS_RET_IO_ERROR);
+				/* we do not abort, as this would render the whole input defunct */
+				continue;
 			}
 		}
 		rd = read(ino_fd, iobuf, sizeof(iobuf));
-		if(rd < 0 && Debug) {
-			char errStr[1024];
-			rs_strerror_r(errno, errStr, sizeof(errStr));
-			DBGPRINTF("error during inotify: %s\n", errStr);
+		if(rd == -1 && errno == EINTR) {
+			/* This might have been our termination signal! */
+			DBGPRINTF("EINTR received during inotify, restarting poll\n");
+			continue;
+		}
+		if(rd < 0) {
+			LogError(errno, RS_RET_IO_ERROR, "imfile: error during inotify - ignored");
+			continue;
 		}
 		currev = 0;
 		while(currev < rd) {
