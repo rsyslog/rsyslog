@@ -202,7 +202,7 @@ lookupDestruct(lookup_t *pThis) {
 	uint32_t i;
 
 	if (pThis == NULL) return;
-	
+
 	if (pThis->type == STRING_LOOKUP_TABLE) {
 		destructTable_str(pThis);
 	} else if (pThis->type == ARRAY_LOOKUP_TABLE) {
@@ -212,7 +212,7 @@ lookupDestruct(lookup_t *pThis) {
 	} else if (pThis->type == STUBBED_LOOKUP_TABLE) {
 		/*nothing to be done*/
 	}
-	
+
 	for (i = 0; i < pThis->interned_val_count; i++) {
 		free(pThis->interned_vals[i]);
 	}
@@ -334,13 +334,17 @@ static es_str_t*
 lookupKey_arr(lookup_t *pThis, lookup_key_t key) {
 	const char *r;
 	uint32_t uint_key = key.k_uint;
-	uint32_t idx = uint_key - pThis->table.arr->first_key;
-
-	if (idx >= pThis->nmemb) {
+	if ((pThis->nmemb == 0) || (uint_key < pThis->table.arr->first_key)) {
 		r = defaultVal(pThis);
 	} else {
-		r = (char*) pThis->table.arr->interned_val_refs[uint_key - pThis->table.arr->first_key];
+		uint32_t idx = uint_key - pThis->table.arr->first_key;
+		if (idx >= pThis->nmemb) {
+			r = defaultVal(pThis);
+		} else {
+		    r = (char*) pThis->table.arr->interned_val_refs[idx];
+		}
 	}
+
 	return es_newStrFromCStr(r, strlen(r));
 }
 
@@ -382,8 +386,13 @@ static es_str_t*
 lookupKey_sprsArr(lookup_t *pThis, lookup_key_t key) {
 	lookup_sparseArray_tab_entry_t *entry;
 	const char *r;
-	entry = bsearch_lte(&key.k_uint, pThis->table.sprsArr->entries, pThis->nmemb,
-	sizeof(lookup_sparseArray_tab_entry_t), bs_arrcmp_sprsArrtab);
+	if (pThis->nmemb == 0) {
+		entry = NULL;
+	} else {
+		entry = bsearch_lte(&key.k_uint, pThis->table.sprsArr->entries, pThis->nmemb,
+			sizeof(lookup_sparseArray_tab_entry_t), bs_arrcmp_sprsArrtab);
+	}
+
 	if(entry == NULL) {
 		r = defaultVal(pThis);
 	} else {
@@ -405,7 +414,7 @@ build_StringTable(lookup_t *pThis, struct json_object *jtab, const uchar* name) 
 	struct json_object *jrow, *jindex, *jvalue;
 	uchar *value, *canonicalValueRef;
 	DEFiRet;
-	
+
 	pThis->table.str = NULL;
 	CHKmalloc(pThis->table.str = calloc(1, sizeof(lookup_string_tab_t)));
 	if (pThis->nmemb > 0) {
@@ -441,7 +450,7 @@ build_StringTable(lookup_t *pThis, struct json_object *jtab, const uchar* name) 
 		}
 		qsort(pThis->table.str->entries, pThis->nmemb, sizeof(lookup_string_tab_entry_t), qs_arrcmp_strtab);
 	}
-		
+
 	pThis->lookup = lookupKey_str;
 	pThis->key_type = LOOKUP_KEY_TYPE_STRING;
 finalize_it:
@@ -459,7 +468,7 @@ build_ArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar *name) {
 	DEFiRet;
 
 	prev_index_set = 0;
-	
+
 	pThis->table.arr = NULL;
 	CHKmalloc(pThis->table.arr = calloc(1, sizeof(lookup_array_tab_t)));
 	if (pThis->nmemb > 0) {
@@ -497,7 +506,7 @@ build_ArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar *name) {
 			pThis->table.arr->interned_val_refs[i] = canonicalValueRef;
 		}
 	}
-		
+
 	pThis->lookup = lookupKey_arr;
 	pThis->key_type = LOOKUP_KEY_TYPE_UINT;
 
@@ -512,7 +521,7 @@ build_SparseArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar* n
 	struct json_object *jrow, *jindex, *jvalue;
 	uchar *value, *canonicalValueRef;
 	DEFiRet;
-	
+
 	pThis->table.str = NULL;
 	CHKmalloc(pThis->table.sprsArr = calloc(1, sizeof(lookup_sparseArray_tab_t)));
 	if (pThis->nmemb > 0) {
@@ -535,10 +544,10 @@ build_SparseArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar* n
 		qsort(pThis->table.sprsArr->entries, pThis->nmemb, sizeof(lookup_sparseArray_tab_entry_t),
 				qs_arrcmp_sprsArrtab);
 	}
-		
+
 	pThis->lookup = lookupKey_sprsArr;
 	pThis->key_type = LOOKUP_KEY_TYPE_UINT;
-	
+
 finalize_it:
 	RETiRet;
 }
@@ -546,12 +555,12 @@ finalize_it:
 static rsRetVal
 lookupBuildStubbedTable(lookup_t *pThis, const uchar* stub_val) {
 	DEFiRet;
-	
+
 	CHKmalloc(pThis->nomatch = ustrdup(stub_val));
 	pThis->lookup = lookupKey_stub;
 	pThis->type = STUBBED_LOOKUP_TABLE;
 	pThis->key_type = LOOKUP_KEY_TYPE_NONE;
-	
+
 finalize_it:
 	RETiRet;
 }
@@ -641,7 +650,7 @@ lookupBuildTable_v1(lookup_t *pThis, struct json_object *jroot, const uchar* nam
 	}
 finalize_it:
 	if (all_values != NULL) free(all_values);
-	RETiRet;	
+	RETiRet;
 }
 
 static rsRetVal
@@ -703,7 +712,7 @@ lookupReloadOrStub(lookup_ref_t *pThis, const uchar* stub_val) {
 
 	oldlu = pThis->self;
 	newlu = NULL;
-	
+
 	DBGPRINTF("reload requested for lookup table '%s'\n", pThis->name);
 	CHKmalloc(newlu = calloc(1, sizeof(lookup_t)));
 	if (stub_val == NULL) {
@@ -871,7 +880,7 @@ lookupPendingReloadCount(void)
 
 /* returns either a pointer to the value (read only!) or NULL
  * if either the key could not be found or an error occured.
- * Note that an estr_t object is returned. The caller is 
+ * Note that an estr_t object is returned. The caller is
  * responsible for freeing it.
  */
 es_str_t *
@@ -973,7 +982,7 @@ lookupTableDefProcessCnf(struct cnfobj *o)
 	}
 	DBGPRINTF("lookupTableDefProcessCnf params:\n");
 	cnfparamsPrint(&modpblk, pvals);
-	
+
 	CHKiRet(lookupNew(&lu));
 
 	for(i = 0 ; i < modpblk.nParams ; ++i) {

@@ -37,7 +37,7 @@ struct lookup_tables_s {
 };
 
 struct lookup_array_tab_s {
-	int first_key;
+	uint32_t first_key;
 	uchar **interned_val_refs;
 };
 
