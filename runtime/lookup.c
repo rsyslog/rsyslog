@@ -45,7 +45,6 @@
 
 /* definitions for objects we access */
 DEFobjStaticHelpers
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 
 /* forward definitions */
@@ -119,7 +118,7 @@ lookupNew(lookup_ref_t **ppThis)
 	*ppThis = pThis;
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		errmsg.LogError(errno, iRet, "a lookup table could not be initialized: "
+		LogError(errno, iRet, "a lookup table could not be initialized: "
 			"failed at init-step %d (please enable debug logs for details)",
 			initialized);
 		/* Can not happen with current code, but might occur in the future when
@@ -396,7 +395,7 @@ lookupKey_sprsArr(lookup_t *pThis, lookup_key_t key) {
 /* builders for different table-types */
 
 #define NO_INDEX_ERROR(type, name)				\
-	errmsg.LogError(0, RS_RET_INVALID_VALUE, "'%s' lookup table named: '%s' has record(s) without 'index' "\
+	LogError(0, RS_RET_INVALID_VALUE, "'%s' lookup table named: '%s' has record(s) without 'index' "\
 "field", type, name); \
 	ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 
@@ -486,7 +485,7 @@ build_ArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar *name) {
 				pThis->table.arr->first_key = index;
 			} else {
 				if (index != ++prev_index) {
-					errmsg.LogError(0, RS_RET_INVALID_VALUE, "'array' lookup table name: '%s' "
+					LogError(0, RS_RET_INVALID_VALUE, "'array' lookup table name: '%s' "
 					"has non-contiguous members between index '%d' and '%d'",
 									name, prev_index, index);
 					ABORT_FINALIZE(RS_RET_INVALID_VALUE);
@@ -574,7 +573,7 @@ lookupBuildTable_v1(lookup_t *pThis, struct json_object *jroot, const uchar* nam
 	jtype = json_object_object_get(jroot, "type");
 	jtab = json_object_object_get(jroot, "table");
 	if (jtab == NULL || !json_object_is_type(jtab, json_type_array)) {
-		errmsg.LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' has invalid table definition", name);
+		LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' has invalid table definition", name);
 		ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 	}
 	pThis->nmemb = json_object_array_length(jtab);
@@ -590,7 +589,7 @@ lookupBuildTable_v1(lookup_t *pThis, struct json_object *jroot, const uchar* nam
 		jrow = json_object_array_get_idx(jtab, i);
 		jvalue = json_object_object_get(jrow, "value");
 		if (jvalue == NULL || json_object_is_type(jvalue, json_type_null)) {
-			errmsg.LogError(0, RS_RET_INVALID_VALUE, "'%s' lookup table named: '%s' has record(s) "
+			LogError(0, RS_RET_INVALID_VALUE, "'%s' lookup table named: '%s' has record(s) "
 			"without 'value' field", table_type, name);
 			ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 		}
@@ -636,7 +635,7 @@ lookupBuildTable_v1(lookup_t *pThis, struct json_object *jroot, const uchar* nam
 		pThis->type = STRING_LOOKUP_TABLE;
 		CHKiRet(build_StringTable(pThis, jtab, name));
 	} else {
-		errmsg.LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' uses unupported "
+		LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' uses unupported "
 				"type: '%s'", name, table_type);
 		ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 	}
@@ -657,13 +656,13 @@ lookupBuildTable(lookup_t *pThis, struct json_object *jroot, const uchar* name)
 	if (jversion != NULL && !json_object_is_type(jversion, json_type_null)) {
 		version = json_object_get_int(jversion);
 	} else {
-		errmsg.LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' doesn't specify version "
+		LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' doesn't specify version "
 		"(will use default value: %d)", name, version);
 	}
 	if (version == 1) {
 		CHKiRet(lookupBuildTable_v1(pThis, jroot, name));
 	} else {
-		errmsg.LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' uses unsupported "
+		LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' uses unsupported "
 				"version: %d", name, version);
 		ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 	}
@@ -719,21 +718,21 @@ lookupReloadOrStub(lookup_ref_t *pThis, const uchar* stub_val) {
 finalize_it:
 	if (iRet != RS_RET_OK) {
 		if (stub_val == NULL) {
-			errmsg.LogError(0, RS_RET_INTERNAL_ERROR,
+			LogError(0, RS_RET_INTERNAL_ERROR,
 					"lookup table '%s' could not be reloaded from file '%s'",
 					pThis->name, pThis->filename);
 		} else {
-			errmsg.LogError(0, RS_RET_INTERNAL_ERROR,
+			LogError(0, RS_RET_INTERNAL_ERROR,
 					"lookup table '%s' could not be stubbed with value '%s'",
 					pThis->name, stub_val);
 		}
 		lookupDestruct(newlu);
 	} else {
 		if (stub_val == NULL) {
-			errmsg.LogError(0, RS_RET_OK, "lookup table '%s' reloaded from file '%s'",
+			LogError(0, RS_RET_OK, "lookup table '%s' reloaded from file '%s'",
 					pThis->name, pThis->filename);
 		} else {
-			errmsg.LogError(0, RS_RET_OK, "lookup table '%s' stubbed with value '%s'",
+			LogError(0, RS_RET_OK, "lookup table '%s' stubbed with value '%s'",
 					pThis->name, stub_val);
 		}
 		lookupDestruct(oldlu);
@@ -752,11 +751,11 @@ lookupDoStub(lookup_ref_t *pThis, const uchar* stub_val)
 		already_stubbed = 1;
 	pthread_rwlock_unlock(&pThis->rwlock);
 	if (! already_stubbed) {
-		errmsg.LogError(0, RS_RET_OK, "stubbing lookup table '%s' with value '%s'",
+		LogError(0, RS_RET_OK, "stubbing lookup table '%s' with value '%s'",
 			pThis->name, stub_val);
 		CHKiRet(lookupReloadOrStub(pThis, stub_val));
 	} else {
-		errmsg.LogError(0, RS_RET_OK, "lookup table '%s' is already stubbed with value '%s'",
+		LogError(0, RS_RET_OK, "lookup table '%s' is already stubbed with value '%s'",
 			pThis->name, stub_val);
 	}
 finalize_it:
@@ -792,7 +791,7 @@ lookupReload(lookup_ref_t *const pThis, const uchar *const stub_val_if_reload_fa
 		pThis->do_reload = 1;
 		pthread_cond_signal(&pThis->run_reloader);
 	} else {
-		errmsg.LogError(lock_errno, RS_RET_INTERNAL_ERROR, "attempt to trigger "
+		LogError(lock_errno, RS_RET_INTERNAL_ERROR, "attempt to trigger "
 			"reload of lookup table '%s' failed (not stubbing)", pThis->name);
 		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
 		/* we can choose to stub the table here, but it'll hurt because
@@ -908,13 +907,13 @@ lookupReadFile(lookup_t *const pThis, const uchar *const name, const uchar *cons
 
 
 	if((fd = open((const char*) filename, O_RDONLY)) == -1) {
-		errmsg.LogError(errno, RS_RET_FILE_NOT_FOUND,
+		LogError(errno, RS_RET_FILE_NOT_FOUND,
 			"lookup table file '%s' could not be opened", filename);
 		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 	}
 
 	if(fstat(fd, &sb) == -1) {
-		errmsg.LogError(errno, RS_RET_FILE_NOT_FOUND,
+		LogError(errno, RS_RET_FILE_NOT_FOUND,
 			"lookup table file '%s' stat failed", filename);
 		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 	}
@@ -924,14 +923,14 @@ lookupReadFile(lookup_t *const pThis, const uchar *const name, const uchar *cons
 	tokener = json_tokener_new();
 	nread = read(fd, iobuf, sb.st_size);
 	if(nread != (ssize_t) sb.st_size) {
-		errmsg.LogError(errno, RS_RET_READ_ERR,
+		LogError(errno, RS_RET_READ_ERR,
 			"lookup table file '%s' read error", filename);
 		ABORT_FINALIZE(RS_RET_READ_ERR);
 	}
 
 	json = json_tokener_parse_ex(tokener, iobuf, sb.st_size);
 	if(json == NULL) {
-		errmsg.LogError(0, RS_RET_JSON_PARSE_ERR,
+		LogError(0, RS_RET_JSON_PARSE_ERR,
 			"lookup table file '%s' json parsing error",
 			filename);
 		ABORT_FINALIZE(RS_RET_JSON_PARSE_ERR);
@@ -1026,7 +1025,6 @@ void
 lookupClassExit(void)
 {
 	objRelease(glbl, CORE_COMPONENT);
-	objRelease(errmsg, CORE_COMPONENT);
 }
 
 rsRetVal
@@ -1035,7 +1033,6 @@ lookupClassInit(void)
 	DEFiRet;
 	CHKiRet(objGetObjInterface(&obj));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 finalize_it:
 	RETiRet;
 }
