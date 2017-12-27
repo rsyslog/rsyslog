@@ -1,9 +1,14 @@
 ------------------------------------------------------------------------------
 Version 8.32.0 [v8-stable] 2018-01-09
-- NEW BUILD REQUIREMENT: libcurl is now needed for rsyslog core
-  due to new script function http_request(). This can be turned off by the
-  new configure option --disable-libcurl. If so, http_request() is not
-  available.
+- NEW BUILD REQUIREMENTs:
+  - libczmq > 4 is now required for omczmq
+    This was actually required for quite some while, but not properly checked
+    during configure run. If the lib was older, build failed. Now configure
+    detects this and emits the appropiate error message.
+  - libcurl is now needed for rsyslog core
+    due to new script function http_request(). This can be turned off by the
+    new configure option --disable-libcurl. If so, http_request() is not
+    available.
 - ompgsql: considerable enhancements
   The PostgreSQL output module was woefully out-of-date the following
   list is changes made to update the module to current Rsyslog standards.
@@ -199,6 +204,7 @@ Version 8.32.0 [v8-stable] 2018-01-09
 - cleanup: obsolete defintion SOL_TCP replaced by newer IPPROTO_TCP
   this should not have any effect at all except better portability, but is
   worth mentioning in the ChangeLog nevertheless.
+- lookup tables: fixed undefined behavior detected by UBSan
 - CI testing
   - ARM (via Raspberry PI) added to CI system
   - Debian 9 added to CI system
