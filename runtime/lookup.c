@@ -237,7 +237,7 @@ lookupDestroyCnf(void)
 		luref_next = luref->next;
 		lookupRefDestruct(luref);
 		luref = luref_next;
-	}	
+	}
 }
 
 /* comparison function for qsort() */
@@ -256,13 +256,23 @@ qs_arrcmp_ustrs(const void *s1, const void *s2)
 static int
 qs_arrcmp_uint32_index_val(const void *s1, const void *s2)
 {
-	return ((uint32_index_val_t*)s1)->index - ((uint32_index_val_t*)s2)->index;
+	uint32_t first_value = ((uint32_index_val_t*)s1)->index;
+	uint32_t second_value = ((uint32_index_val_t*)s2)->index;
+	if (first_value < second_value) {
+		return -1;
+	}
+	return first_value - second_value;
 }
 
 static int
 qs_arrcmp_sprsArrtab(const void *s1, const void *s2)
 {
-	return ((lookup_sparseArray_tab_entry_t*)s1)->key - ((lookup_sparseArray_tab_entry_t*)s2)->key;
+	uint32_t first_value = ((lookup_sparseArray_tab_entry_t*)s1)->key;
+	uint32_t second_value = ((lookup_sparseArray_tab_entry_t*)s2)->key;
+	if (first_value < second_value) {
+		return -1;
+	}
+	return first_value - second_value;
 }
 
 /* comparison function for bsearch() and string array compare
@@ -283,7 +293,12 @@ bs_arrcmp_str(const void *s1, const void *s2)
 static int
 bs_arrcmp_sprsArrtab(const void *s1, const void *s2)
 {
-	return *(uint32_t*)s1 - ((lookup_sparseArray_tab_entry_t*)s2)->key;
+	uint32_t key = *(uint32_t*)s1;
+	uint32_t array_member_value = ((lookup_sparseArray_tab_entry_t*)s2)->key;
+	if (key < array_member_value) {
+		return -1;
+	}
+	return key - array_member_value;
 }
 
 static inline const char*
