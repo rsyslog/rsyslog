@@ -416,7 +416,7 @@ checkInstance(instanceConf_t *const inst)
 	if((nBrokers = rd_kafka_brokers_add(inst->rk, (char*)inst->brokers)) == 0) {
 		if(inst->bReportErrs) {
 			errmsg.LogError(0, RS_RET_KAFKA_NO_VALID_BROKERS,
-				"imkafka: no valid brokers specified: %s\n", inst->brokers);
+				"imkafka: no valid brokers specified: %s", inst->brokers);
 		}
 		ABORT_FINALIZE(RS_RET_KAFKA_NO_VALID_BROKERS);
 	}
@@ -426,8 +426,15 @@ checkInstance(instanceConf_t *const inst)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		errmsg.LogError(0, RS_RET_KAFKA_NO_VALID_BROKERS,
-			"imkafka: no valid brokers specified: %s\n", inst->brokers);
+		if(inst->rk == NULL) {
+			if(inst->conf != NULL) {
+				rd_kafka_conf_destroy(inst->conf);
+				inst->conf = NULL;
+			}
+		} else { /* inst->rk != NULL ! */
+			rd_kafka_destroy(inst->rk);
+			inst->rk = NULL;
+		}
 	}
 
 	RETiRet;
@@ -672,17 +679,35 @@ ENDfreeCnf
 /* This function is called to gather input.
  */
 BEGINrunInput
+	instanceConf_t *inst;
 CODESTARTrunInput
 	DBGPRINTF("imkafka: runInput loop started ...\n");
+	int activeListeners = 0;
+	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
+		if(inst->rk != NULL) {
+			++activeListeners;
+		}
+	}
+
+	if(activeListeners == 0) {
+		LogError(0, RS_RET_ERR, "imkafka: no active inputs, input does "
+			"not run - there should have been additional error "
+			"messages given previously");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
 
 	/* Start endless consumer loop - it is terminated when the thread is
 	 * signalled to do so. This, however, is handled by the framework.
 	 */
 	do {
-		instanceConf_t *inst;
 		for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
 			if(glbl.GetGlobalInputTermState() == 1)
 				break; /* terminate input! */
+
+			if(inst->rk == NULL) {
+				continue;
+			}
 
 			// Try to add consumer only if connected! */
 			if(inst->bIsConnected == 1 && inst->bIsSubscribed == 0 ) {
@@ -703,6 +728,7 @@ CODESTARTrunInput
 	} while(glbl.GetGlobalInputTermState() == 0);
 
 	DBGPRINTF("imkafka: terminating upon request of rsyslog core\n");
+finalize_it:
 ENDrunInput
 
 
