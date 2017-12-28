@@ -1785,11 +1785,11 @@ sessActivity(ptcpsess_t *pSess, int *continue_polling)
 				bEmitOnClose = 1;
 			}
 			*continue_polling = 0;
-			CHKiRet(closeSess(pSess)); /* close may emit more messages in strmzip mode! */
 			if(bEmitOnClose) {
 				errmsg.LogError(0, RS_RET_PEER_CLOSED_CONN, "imptcp session %d closed by "
 					  	"remote peer %s.", remsock, peerName);
 			}
+			CHKiRet(closeSess(pSess)); /* close may emit more messages in strmzip mode! */
 			break;
 		} else {
 			if(errno == EAGAIN || errno == EWOULDBLOCK)
