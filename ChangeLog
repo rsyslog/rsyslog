@@ -120,6 +120,10 @@ Version 8.32.0 [v8-stable] 2018-01-09
   rate limiting counts in the default case.
   closes https://github.com/rsyslog/rsyslog/issues/441
   fixes https://github.com/rsyslog/rsyslog/issues/2132
+- imptcp bugfix: access to free'ed memory
+  When notifyconnectionclose was on, a string buffer was accessed immediately
+  after it was freed (as part of the connection close operation).
+  Detected by LLVM ASAN.
 - script bugfix: improper string-to-number conversion for negative numbers
 - core bugfix: filename length limitation of 199 bytes
   file names (including path names) longer than 199 bytes could not be
