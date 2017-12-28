@@ -500,7 +500,7 @@ static rsRetVal discardLogSockets(void)
 #endif
 static rsRetVal
 #if defined(__clang__)
-__attribute__((no_sanitize("null")))
+__attribute__((no_sanitize("undefined")))
 #endif
 createLogSocket(lstn_t *pLstn)
 {
