@@ -92,7 +92,6 @@ DEFobjCurrIf(conf)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(ruleset)
 DEFobjCurrIf(tcps_sess)
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(net)
 DEFobjCurrIf(netstrms)
 DEFobjCurrIf(netstrm)
@@ -220,7 +219,7 @@ configureTCPListen(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram, uchar *p
 	if(i >= 0 && i <= 65535) {
 		CHKiRet(addNewLstnPort(pThis, pszPort, bSuppOctetFram, pszAddr));
 	} else {
-		errmsg.LogError(0, NO_ERRCODE, "Invalid TCP listen port %s - ignored.\n", pszPort);
+		LogError(0, NO_ERRCODE, "Invalid TCP listen port %s - ignored.\n", pszPort);
 	}
 
 finalize_it:
@@ -418,7 +417,7 @@ create_tcp_socket(tcpsrv_t *pThis)
 	while(pEntry != NULL) {
 		localRet = initTCPListener(pThis, pEntry);
 		if(localRet != RS_RET_OK) {
-			errmsg.LogError(0, localRet, "Could not create tcp listener, ignoring port "
+			LogError(0, localRet, "Could not create tcp listener, ignoring port "
 			"%s bind-address %s.", pEntry->pszPort,
 			(pEntry->pszAddr == NULL) ? "(null)" : (const char*)pEntry->pszAddr);
 		}
@@ -433,7 +432,7 @@ create_tcp_socket(tcpsrv_t *pThis)
 		 * session table, so we can not continue. We need to free all
 		 * we have assigned so far, because we can not really use it...
 		 */
-		errmsg.LogError(0, RS_RET_ERR, "Could not initialize TCP session table, suspending TCP "
+		LogError(0, RS_RET_ERR, "Could not initialize TCP session table, suspending TCP "
 				"message reception.");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
@@ -473,7 +472,7 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 	iSess = TCPSessTblFindFreeSpot(pThis);
 	if(iSess == -1) {
 		errno = 0;
-		errmsg.LogError(0, RS_RET_MAX_SESS_REACHED, "too many tcp sessions - dropping incoming request");
+		LogError(0, RS_RET_MAX_SESS_REACHED, "too many tcp sessions - dropping incoming request");
 		ABORT_FINALIZE(RS_RET_MAX_SESS_REACHED);
 	}
 
@@ -508,7 +507,7 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 		DBGPRINTF("%s is not an allowed sender\n", fromHostFQDN);
 		if(glbl.GetOption_DisallowWarning()) {
 			errno = 0;
-			errmsg.LogError(0, RS_RET_HOST_NOT_PERMITTED, "TCP message from disallowed "
+			LogError(0, RS_RET_HOST_NOT_PERMITTED, "TCP message from disallowed "
 					"sender %s discarded", fromHostFQDN);
 		}
 		ABORT_FINALIZE(RS_RET_HOST_NOT_PERMITTED);
@@ -599,7 +598,7 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 		if(pThis->bEmitMsgOnClose) {
 			errno = 0;
 			prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
-			errmsg.LogError(0, RS_RET_PEER_CLOSED_CONN, "Netstream session %p closed by remote "
+			LogError(0, RS_RET_PEER_CLOSED_CONN, "Netstream session %p closed by remote "
 				"peer %s.\n", (*ppSess)->pStrm, pszPeer);
 		}
 		CHKiRet(closeSess(pThis, ppSess, pPoll));
@@ -621,7 +620,7 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 		break;
 	default:
 		prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
-		errmsg.LogError(oserr, iRet, "netstream session %p from %s will be closed due to error",
+		LogError(oserr, iRet, "netstream session %p from %s will be closed due to error",
 				(*ppSess)->pStrm, pszPeer);
 		CHKiRet(closeSess(pThis, ppSess, pPoll));
 		break;
@@ -957,7 +956,7 @@ Run(tcpsrv_t *pThis)
 		localRet = processWorkset(pThis, pPoll, numEntries, workset);
 		if(localRet != RS_RET_OK) {
 			if (bFailed == FALSE) {
-				errmsg.LogError(0, localRet, "tcpsrv listener (inputname: '%s') failed "
+				LogError(0, localRet, "tcpsrv listener (inputname: '%s') failed "
 				"to processed incoming connection with error %d",
 				(pThis->pszInputName == NULL) ? (uchar*)"*UNSET*" : pThis->pszInputName, localRet);
 				bFailed = TRUE; 
@@ -1034,7 +1033,7 @@ finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pThis->pNS != NULL)
 			netstrms.Destruct(&pThis->pNS);
-		errmsg.LogError(0, iRet, "tcpsrv could not create listener (inputname: '%s')",
+		LogError(0, iRet, "tcpsrv could not create listener (inputname: '%s')",
 				(pThis->pszInputName == NULL) ? (uchar*)"*UNSET*" : pThis->pszInputName);
 	}
 	RETiRet;
@@ -1509,7 +1508,6 @@ CODESTARTObjClassExit(tcpsrv)
 	objRelease(statsobj, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(netstrms, DONT_LOAD_LIB);
 	objRelease(nssel, DONT_LOAD_LIB);
 	objRelease(netstrm, LM_NETSTRMS_FILENAME);
@@ -1523,7 +1521,6 @@ ENDObjClassExit(tcpsrv)
  */
 BEGINObjClassInit(tcpsrv, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE class also in END MACRO! */
 	/* request objects we use */
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 	CHKiRet(objUse(netstrms, LM_NETSTRMS_FILENAME));
 	CHKiRet(objUse(netstrm, DONT_LOAD_LIB));
@@ -1568,7 +1565,7 @@ startWorkerPool(void)
 			char errStr[1024];
 			wrkrInfo[i].enabled = 0;
 			rs_strerror_r(errno, errStr, sizeof(errStr));
-			errmsg.LogError(0, NO_ERRCODE, "tcpsrv error creating thread %d: "
+			LogError(0, NO_ERRCODE, "tcpsrv error creating thread %d: "
 			                "%s", i, errStr);
 		}
 	}
