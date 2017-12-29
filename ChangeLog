@@ -165,6 +165,15 @@ Version 8.32.0 [v8-stable] 2018-01-09
   we see a regression not caught by the CI system.
 - mmsnmptrapd bugfix: potential misadressing
   This only occured in situations when the system was totally out of memory.
+- imkafka: fix potential small ressource leak
+  If rdkafka handle cannot fully populated, cleanup is added. Previously, we
+  could leak a handle if e.g. no brokers were avaiable. Note that this was
+  a cosmetic leak, as proper processing is not possible in any case and the
+  leak is once per listener, so not growing. But we now also ensure that
+  proper error reporting and handling is done in any case. Previously, we
+  may have some misleading error messages if the defunct kafka handle was
+  used.
+  closes https://github.com/rsyslog/rsyslog/issues/2084
 - imkafka bugfix: do not emit error message on regular state
   This was misunderstood as an error state and could spam the system
   log considerably. Regression from 8.31.0.
