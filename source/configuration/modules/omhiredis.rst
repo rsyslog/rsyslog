@@ -37,6 +37,9 @@ Note: parameter names are case-insensitive.
 - **key**
   Key is required if using "publish" or "queue" mode.
 
+- **userpush**
+  if set to on, use RPUSH instead of LPUSH, if not set or off, use LPUSH.
+
 
 **Examples**
 
