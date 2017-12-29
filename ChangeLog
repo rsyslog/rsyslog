@@ -9,6 +9,12 @@ Version 8.32.0 [v8-stable] 2018-01-09
     due to new script function http_request(). This can be turned off by the
     new configure option --disable-libcurl. If so, http_request() is not
     available.
+- rsyslogd: add capability to specify that no pid file shall be written
+  Command line option -iNONE provides this capability. This utilizes the
+  pre-existing -i option, but uses the special name "NONE" to turn of the
+  pid file check feature. Turning off is useful for systems where this no
+  longer is needed (e.g. systemd based).
+  closes https://github.com/rsyslog/rsyslog/issues/2143
 - ompgsql: considerable enhancements
   The PostgreSQL output module was woefully out-of-date the following
   list is changes made to update the module to current Rsyslog standards.
