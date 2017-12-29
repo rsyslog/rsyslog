@@ -161,6 +161,7 @@ int bFinished = 0;	/* used by termination signal handler, read-only except there
  			 * termination.
 			 */
 const char *PidFile = PATH_PIDFILE;
+#define NO_PIDFILE "NONE"
 int iConfigVerify = 0;	/* is this just a config verify run? */
 rsconf_t *ourConf = NULL;	/* our config object */
 int MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
@@ -246,6 +247,10 @@ writePidFile(void)
 	int  pidfile_namelen = 0;
 #endif
 
+	if(!strcmp(PidFile, NO_PIDFILE)) {
+		FINALIZE;
+	}
+
 #ifndef _AIX
 	if(asprintf((char **)&tmpPidFile, "%s.tmp", PidFile) == -1) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -298,6 +303,12 @@ checkStartupOK(void)
 	DEFiRet;
 
 	DBGPRINTF("rsyslogd: checking if startup is ok, pidfile '%s'.\n", PidFile);
+
+	if(!strcmp(PidFile, NO_PIDFILE)) {
+		dbgprintf("no pid file shall be written, skipping check\n");
+		FINALIZE;
+	}
+
 	if((fp = fopen((char*) PidFile, "r")) == NULL)
 		FINALIZE; /* all well, no pid file yet */
 
@@ -1903,7 +1914,9 @@ deinitAll(void)
 	dbgClassExit();
 
 	/* NO CODE HERE - dbgClassExit() must be the last thing before exit()! */
-	unlink(PidFile);
+	if(!strcmp(PidFile, NO_PIDFILE)) {
+		unlink(PidFile);
+	}
 }
 
 /* This is the main entry point into rsyslogd. This must be a function in its own

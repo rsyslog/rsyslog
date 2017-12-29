@@ -94,7 +94,8 @@ which is the default.
 .BI "\-i " "pid file"
 Specify an alternative pid file instead of the default one.
 This option must be used if multiple instances of rsyslogd should
-run on a single machine.
+run on a single machine. To disable writing a pid file, use
+the reserved name "NONE" (all upper case!), so "-iNONE".
 .TP
 .B "\-n"
 Avoid auto-backgrounding.  This is needed especially if the
