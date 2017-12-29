@@ -1709,13 +1709,12 @@ dirsAdd(const uchar *const dirName, int *const piIndex)
 
 	/* check for wildcard in directoryname, if last character is a wildcard we remove it and try again! */
 	dirs[newindex].hasWildcard = containsGlobWildcard((char*)dirName);
+	CHKmalloc(dirs[newindex].dirNameBfWildCard = ustrdup(dirName));
+
 	if (dirs[newindex].hasWildcard) {
 		// TODO: wildcard is not necessarily in last char!!!
 		// TODO: BUG: we have many more wildcards that "*" - so this check is invalid
 		DBGPRINTF("dirsAdd detected wildcard in dir '%s'\n", dirName);
-
-		/* Get copy of dirname */
-		CHKmalloc(dirs[newindex].dirNameBfWildCard = ustrdup(dirName));
 
 		/* Set NULL Byte to FIRST wildcard occurrence */
 		psztmp = strchr((char*)dirs[newindex].dirNameBfWildCard, '*');
@@ -1919,15 +1918,14 @@ lstnDup(lstn_t ** ppExisting,
 	pThis->pStrm = NULL;
 	pThis->prevLineSegment = NULL;
 	pThis->masterLstn = existing;
-#ifdef HAVE_INOTIFY_INIT
-	pThis->movedfrom_statefile = NULL;
-	pThis->movedfrom_cookie = 0;
-#endif
-#if defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE)
-	pThis->pfinf = NULL;
-	pThis->bPortAssociated = 0;
-#endif
-
+	#ifdef HAVE_INOTIFY_INIT
+		pThis->movedfrom_statefile = NULL;
+		pThis->movedfrom_cookie = 0;
+	#endif
+	#if defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE)
+		pThis->pfinf = NULL;
+		pThis->bPortAssociated = 0;
+	#endif
 	*ppExisting = pThis;
 finalize_it:
 	RETiRet;
@@ -1938,68 +1936,16 @@ finalize_it:
 static void
 in_setupDirWatch(const int dirIdx)
 {
-	int wd;
-	sbool hasWildcard;
-	char dirnametrunc[MAXFNAME];
-	int dirnamelen = 0;
-	char* psztmp;
-
-	wd = inotify_add_watch(ino_fd, (char*)dirs[dirIdx].dirName,
+	const int wd = inotify_add_watch(ino_fd, (char*)dirs[dirIdx].dirNameBfWildCard,
 		IN_CREATE|IN_DELETE|IN_MOVED_FROM|IN_MOVED_TO);
 	if(wd < 0) {
-		/* check for wildcard in directoryname, if last character is a wildcard
-		 * we remove it and try again! */
-		dirnamelen = ustrlen(dirs[dirIdx].dirName);
-		memcpy(dirnametrunc, dirs[dirIdx].dirName, dirnamelen);
-
-		hasWildcard = containsGlobWildcard(dirnametrunc);
-		DBGPRINTF("in_setupDirWatch dir '%s', wildcard detected: %s\n",
-			  dirnametrunc, (hasWildcard ? "TRUE" : "FALSE"));
-		if(hasWildcard) {
-			/* Set NULL Byte to FIRST wildcard occurrence */
-			psztmp = strchr(dirnametrunc, '*');
-			if (psztmp != NULL) {
-				*psztmp = '\0';
-				/* Now set NULL Byte on last directory delimiter occurrence,
-				 * This makes sure that we have the current base path to create
-				 * a watch for! */
-				psztmp = strrchr(dirnametrunc, '/');
-				if (psztmp != NULL) {
-					*psztmp = '\0';
-				} else {
-					DBGPRINTF("in_setupDirWatch: unexpected error #2 creating "
-						"truncated directorynamefor '%s'\n",
-						dirs[dirIdx].dirName);
-					goto done;
-				}
-			} else {
-				DBGPRINTF("in_setupDirWatch: unexpected error #1 creating "
-					"truncated directorynamefor '%s'\n", dirs[dirIdx].dirName);
-				goto done;
-			}
-
-			/* Try to add inotify watch again */
-			wd = inotify_add_watch(ino_fd, dirnametrunc,
-				IN_CREATE|IN_DELETE|IN_MOVED_FROM|IN_MOVED_TO);
-			if(wd < 0) {
-				DBGPRINTF("in_setupDirWatch: Found wildcard in directory '%s', "
-					"could not create dir watch for '%s' with error %d\n",
-					dirs[dirIdx].dirName, dirnametrunc, errno);
-				goto done;
-			} else {
-				DBGPRINTF("in_setupDirWatch: Found wildcard in directory '%s', "
-					"creating watch for base path '%s' instead! \n",
-					dirs[dirIdx].dirName, dirnametrunc);
-			}
-		} else {
-			DBGPRINTF("in_setupDirWatch: could not create dir watch for '%s' with "
-				"error %d\n", dirs[dirIdx].dirName, errno);
-			goto done;
-		}
+		LogError(errno, RS_RET_IO_ERROR, "imfile: cannot watch directory '%s'",
+			dirs[dirIdx].dirNameBfWildCard);
+		goto done;
 	}
 	wdmapAdd(wd, dirIdx, NULL);
 	DBGPRINTF("in_setupDirWatch: watch %d added for dir %s(Idx=%d)\n", wd,
-		(dirnamelen == 0) ? (char*) dirs[dirIdx].dirName : (char*) dirnametrunc, dirIdx);
+		(char*) dirs[dirIdx].dirNameBfWildCard, dirIdx);
 done:	return;
 }
 
@@ -2060,7 +2006,6 @@ in_setupFileWatchDynamic(lstn_t *pLstn,
 	int idirindex;
 
 	if (newFileName == NULL) {
-		/* Combine directory and filename */
 		snprintf(fullfn, MAXFNAME, "%s/%s", pLstn->pszDirName, newBaseName);
 	} else {
 		/* Get BaseDir from filename! */
@@ -2209,9 +2154,7 @@ in_handleDirGetFullDir(char *const pszoutput, const int dirIdx, const char *cons
 {
 	assert(dirIdx >= 0);
 	DBGPRINTF("in_handleDirGetFullDir root='%s' sub='%s' \n", dirs[dirIdx].dirName, pszsubdir);
-	snprintf(pszoutput, MAXFNAME, "%s/%s",
-		(dirs[dirIdx].hasWildcard) ? dirs[dirIdx].dirNameBfWildCard :  dirs[dirIdx].dirName,
-		pszsubdir);
+	snprintf(pszoutput, MAXFNAME, "%s/%s", dirs[dirIdx].dirNameBfWildCard, pszsubdir);
 }
 
 /* inotify told us that a file's wd was closed. We now need to remove
@@ -2276,7 +2219,7 @@ in_handleDirEventDirCREATE(struct inotify_event *ev, const int dirIdx)
 }
 
 static void ATTR_NONNULL(1)
-in_handleDirEventFileCREATE(struct inotify_event *ev, const int dirIdx)
+in_handleDirEventFileCREATE(struct inotify_event *const ev, const int dirIdx)
 {
 	int i;
 	lstn_t *pLstn = NULL;
@@ -2756,8 +2699,7 @@ fen_removeDir(int dirIdx)
 
 	/* Delete dir from dirs array! */
 	free(dirs[dirIdx].dirName);
-	if (dirs[dirIdx].dirNameBfWildCard != NULL)
-		free(dirs[dirIdx].dirNameBfWildCard);
+	free(dirs[dirIdx].dirNameBfWildCard);
 	free(dirs[dirIdx].active.listeners);
 	free(dirs[dirIdx].configured.listeners);
 	dirs[dirIdx].dirName = NULL;
@@ -3328,8 +3270,7 @@ CODESTARTmodExit
 		/* Free dirNames */
 		for(i = 0 ; i < currMaxDirs ; ++i) {
 			free(dirs[i].dirName);
-			if (dirs[i].dirNameBfWildCard != NULL)
-				free(dirs[i].dirNameBfWildCard);
+			free(dirs[i].dirNameBfWildCard);
 #			if defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE)
 				free(dirs[i].pfinf->fobj.fo_name);
 				free(dirs[i].pfinf);
