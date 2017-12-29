@@ -917,7 +917,7 @@ case $1 in
 		else
 			dep_work_dir=$(readlink -f $srcdir/$2)
 		fi
-		(cd $dep_work_dir/zk && ./bin/zkServer.sh stop)
+		(cd $dep_work_dir/zk &> /dev/null && ./bin/zkServer.sh stop)
 		./msleep 2000
 		rm -rf $dep_work_dir/zk
 		;;
