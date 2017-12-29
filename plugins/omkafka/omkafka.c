@@ -160,6 +160,7 @@ typedef struct _instanceData {
 	int bIsOpen;
 	int bIsSuspended;	/* when broker fail, we need to suspend the action */
 	pthread_rwlock_t rkLock;
+	pthread_mutex_t mut_doAction; /* make sure one wrkr instance max in parallel */
 	rd_kafka_t *rk;
 	int closeTimeout;
 	SLIST_HEAD(failedmsg_listhead, s_failedmsg_entry) failedmsg_head;
@@ -1209,6 +1210,7 @@ CODESTARTcreateInstance
 	pData->bKeepFailedMessages = 0;
 	pData->failedMsgFile = NULL;
 	SLIST_INIT(&pData->failedmsg_head);
+	CHKiRet(pthread_mutex_init(&pData->mut_doAction, NULL));
 	CHKiRet(pthread_mutex_init(&pData->mutErrFile, NULL));
 	CHKiRet(pthread_rwlock_init(&pData->rkLock, NULL));
 	CHKiRet(pthread_mutex_init(&pData->mutDynCache, NULL));
@@ -1271,6 +1273,7 @@ CODESTARTfreeInstance
 	}
 	free(pData->topicConfParams);
 	pthread_rwlock_destroy(&pData->rkLock);
+	pthread_mutex_destroy(&pData->mut_doAction);
 	pthread_mutex_destroy(&pData->mutErrFile);
 	pthread_mutex_destroy(&pData->mutDynCache);
 ENDfreeInstance
@@ -1289,6 +1292,7 @@ BEGINtryResume
 	int iKafkaRet;
 	const struct rd_kafka_metadata *metadata;
 CODESTARTtryResume
+	pthread_mutex_lock(&pWrkrData->pData->mut_doAction); /* see doAction header comment! */
 	CHKiRet(setupKafkaHandle(pWrkrData->pData, 0));
 
 	if ((iKafkaRet = rd_kafka_metadata(pWrkrData->pData->rk, 0, NULL, &metadata, 1000))
@@ -1304,15 +1308,30 @@ CODESTARTtryResume
 	}
 
 finalize_it:
+	pthread_mutex_unlock(&pWrkrData->pData->mut_doAction); /* see doAction header comment! */
 	DBGPRINTF("omkafka: tryResume returned %d\n", iRet);
 ENDtryResume
 
+
+/* IMPORTANT NOTE on multithreading:
+ * librdkafka creates background threads itself. So omkafka basically needs to move
+ * memory buffers over to librdkafka, which then does the heavy hauling. As such, we
+ * think that it is best to run max one wrkr instance of omkafka -- otherwise we just
+ * get additional locking (contention) overhead without any real gain. As such,
+ * we use a global mutex for doAction which ensures only one worker can be active
+ * at any given time. That mutex is also used to guard utility functions (like
+ * tryResume) which may also be accessed by multiple workers in parallel.
+ * Note: shall this method be changed, the kafka connection/suspension handling needs
+ * to be refactored. The current code assumes that all workers share state information
+ * including librdkafka handles.
+ */
 BEGINdoAction
 CODESTARTdoAction
 	failedmsg_entry* fmsgEntry;
 	instanceData *const pData = pWrkrData->pData;
 	int need_unlock = 0;
 
+	pthread_mutex_lock(&pData->mut_doAction);
 	if (! pData->bIsOpen)
 		CHKiRet(setupKafkaHandle(pData, 0));
 
@@ -1361,6 +1380,7 @@ finalize_it:
 		DBGPRINTF("omkafka: doAction broker failure detected, suspending action\n");
 		iRet = RS_RET_SUSPENDED;
 	}
+	pthread_mutex_unlock(&pData->mut_doAction); /* must be after last pData access! */
 ENDdoAction
 
 
