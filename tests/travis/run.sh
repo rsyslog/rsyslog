@@ -10,8 +10,7 @@ echo "CLANG:            $CLANG"
 
 echo "****************************** BEGIN ACTUAL SCRIPT STEP ******************************"
 # check code style. We do this only when DEBUGLESS is enabled,
-# so that we do not do it in each and every run. While once is sufficient,
-# STAT_AN for now gives us sufficient runtime reduction.
+# so that we do not do it in each and every run.
 if [ "x$DEBUGLESS" == "xYES" ] ; then source CI/check_line_length.sh ; fi
 
 source tests/travis/install.sh

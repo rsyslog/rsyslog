@@ -73,13 +73,13 @@ matrix:
        dist: trusty
      - os: linux
        compiler: "clang"
-       env: STAT_AN="NOT_OK_YES", GROK="YES", KAFKA="YES", CFLAGS="-g -O2 -std=c99 -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -Wno-unused-function"
+       env: STAT_AN="YES", GROK="YES", KAFKA="YES", CFLAGS="-g -O2 -std=c99 -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -Wno-unused-function"
        # note: we currently need -Wno-unused-function until we fix inline
        # functions (C99 semantics are really ugly...)
        dist: trusty
      - os: linux
        compiler: "clang"
-       env: MERGE="YES", STAT_AN="NOT_OK_YES", CHECK="YES", GROK="YES", KAFKA="YES", CFLAGS="-g -O2 -std=c99 -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -Wno-unused-function"
+       env: MERGE="YES", STAT_AN="YES", CHECK="YES", GROK="YES", KAFKA="YES", CFLAGS="-g -O2 -std=c99 -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -Wno-unused-function"
        # note: we currently need -Wno-unused-function until we fix inline
        # functions (C99 semantics are really ugly...)
        dist: trusty
