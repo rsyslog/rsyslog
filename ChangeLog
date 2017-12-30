@@ -133,6 +133,12 @@ Version 8.32.0 [v8-stable] 2018-01-09
   after it was freed (as part of the connection close operation).
   Detected by LLVM ASAN.
 - script bugfix: improper string-to-number conversion for negative numbers
+- core bugfix: auto commit of actions improperly handled
+  The internal state variable bHadAutoCommit was handled in thread-unsafe way
+  and most probably caused (hard to see) issues when action instances were
+  run on multiple worker threads. It looks like the state variable was
+  forgotten to move over to worker state when action workers were introduced.
+  closes https://github.com/rsyslog/rsyslog/issues/2046
 - core bugfix: filename length limitation of 199 bytes
   file names (including path names) longer than 199 bytes could not be
   handled at many places. This has now been uplifted to 4KiB after careful
