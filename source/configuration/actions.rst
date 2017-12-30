@@ -560,9 +560,3 @@ each given action. The default template is specific to each action. For
 a description of what a template is and what you can do with it, see the
 :doc:`template<templates>` documentation.
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-Copyright © 2008-2014 by `Rainer
-Gerhards <http://www.gerhards.net/rainer>`_ and
-`Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
-2 or higher.

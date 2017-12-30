@@ -45,6 +45,3 @@ supports IPv4, only. Currently, there are no plans to update either
 rsyslog to another RFC 3195 stack or update liblogging. There is simply
 no demand for 3195 solutions.
 
-Last Updated: 2007-07-02
-Copyright © 2007 by Rainer Gerhards, released under the GNU GPL V2 or
-later.

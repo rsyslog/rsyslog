@@ -30,10 +30,3 @@ Note: parameter names are case-insensitive.
    it each module's documentation. For example, the
    :doc:`UDP syslog input <modules/imudp>` is named "imudp".
 
-
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-Copyright © 2008-2014 by `Rainer
-Gerhards <http://www.gerhards.net/rainer>`_ and
-`Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
-2 or higher.

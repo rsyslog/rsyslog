@@ -161,16 +161,3 @@ Revision History
    Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_ \*
    initial version created
 
-Copyright
----------
-
-Copyright (c) 2007 `Rainer
-Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_ and
-`Adiscon <http://www.adiscon.com/en/>`_.
-
-Permission is granted to copy, distribute and/or modify this document
-under the terms of the GNU Free Documentation License, Version 1.2 or
-any later version published by the Free Software Foundation; with no
-Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts. A
-copy of the license can be viewed at
-`http://www.gnu.org/copyleft/fdl.html <http://www.gnu.org/copyleft/fdl.html>`_.

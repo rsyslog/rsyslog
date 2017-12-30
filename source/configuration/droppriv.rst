@@ -49,8 +49,3 @@ wiki <http://wiki.rsyslog.com/index.php/Security#Dropping_Privileges>`_.
    instead of a name is specified. Thus, privilege drop will always
    happen.
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 3 or higher.

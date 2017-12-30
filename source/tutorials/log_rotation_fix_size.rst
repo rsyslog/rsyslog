@@ -58,9 +58,3 @@ size of 50 MB. So we can say we have successfully configured a log
 rotation which satisfies our requirement. We keep the logs at a
 fixed-size level of 100 MB.
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-
-Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 2 or higher.

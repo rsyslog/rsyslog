@@ -66,9 +66,3 @@ The next sample defines some common timezones:
   timezone(id="PST" offset="-08:00")
   timezone(id="PDT" offset="-07:00")
 
-
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-Copyright © 2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_ and
-`Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
-2 or higher.

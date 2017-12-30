@@ -90,8 +90,3 @@ Another sample that uses the new "uristr" directives to connect to a TLS mongoDB
          ssl_ca="/var/db/mongodb/ca.pem"
          db="logs" collection="syslog")
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-Copyright © 2008-2014 by `Rainer
-Gerhards <http://www.gerhards.net/rainer>`_ and
-`Adiscon <http://www.adiscon.com/>`_. Released under the ASL 2.0.

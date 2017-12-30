@@ -74,6 +74,3 @@ See Also
 --------
 imptcp, imtcp, imudp, ruleset()
 
-Copyright
----------
-Copyright (c) 2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_

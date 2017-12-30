@@ -34,9 +34,3 @@ For some reason, this settings seems not to work on all platforms. If
 you experience problems, please let us know so that we can (hopefully)
 narrow down the issue.
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-
-Copyright © 2009 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 3 or higher.

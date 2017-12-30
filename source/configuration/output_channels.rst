@@ -59,9 +59,3 @@ files larger 2gb, but obviously only on file systems and operating
 system versions that do so. So it can still make sense to enforce a 2gb
 file size limit.
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-
-Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 2 or higher.

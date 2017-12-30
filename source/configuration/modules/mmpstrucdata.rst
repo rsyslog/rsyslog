@@ -90,8 +90,3 @@ As you can seem, you can address each of the individual items. Note that
 the case of the RFC5424 parameter names has been converted to lower
 case.
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-Copyright © 2013 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 3 or higher.
