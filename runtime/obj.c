@@ -1073,8 +1073,8 @@ finalize_it:
  * is returned.
  * rgerhards, 2008-01-30
  */
-static uchar *
-GetName(obj_t *pThis)
+uchar * ATTR_NONNULL()
+objGetName(obj_t *const pThis)
 {
 	uchar *ret;
 	uchar szName[128];
@@ -1349,7 +1349,7 @@ CODESTARTobjQueryInterface(obj)
 	pIf->Deserialize = Deserialize;
 	pIf->DeserializePropBag = DeserializePropBag;
 	pIf->SetName = SetName;
-	pIf->GetName = GetName;
+	pIf->GetName = objGetName;
 finalize_it:
 ENDobjQueryInterface(obj)
 

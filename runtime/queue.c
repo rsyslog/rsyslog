@@ -12,7 +12,7 @@
  * function names - this makes it really hard to read and does not provide much
  * benefit, at least I (now) think so...
  *
- * Copyright 2008-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2017 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -55,6 +55,7 @@
 #include "wtp.h"
 #include "wti.h"
 #include "msg.h"
+#include "obj.h"
 #include "atomic.h"
 #include "errmsg.h"
 #include "datetime.h"
@@ -1179,7 +1180,9 @@ tryShutdownWorkersWithinQueueTimeout(qqueue_t *pThis)
 	DBGOPRINT((obj_t*) pThis, "trying shutdown of regular workers\n");
 	iRetLocal = wtpShutdownAll(pThis->pWtpReg, wtpState_SHUTDOWN, &tTimeout);
 	if(iRetLocal == RS_RET_TIMED_OUT) {
-		DBGOPRINT((obj_t*) pThis, "regular shutdown timed out on primary queue (this is OK)\n");
+		LogMsg(0, RS_RET_TIMED_OUT, LOG_INFO,
+			"%s: regular shutdown timed out on primary queue (this is OK)",
+			objGetName((obj_t*) pThis));
 	} else {
 		DBGOPRINT((obj_t*) pThis, "regular queue workers shut down.\n");
 	}
@@ -1194,7 +1197,9 @@ tryShutdownWorkersWithinQueueTimeout(qqueue_t *pThis)
 		DBGOPRINT((obj_t*) pThis, "trying shutdown of regular worker of DA queue\n");
 		iRetLocal = wtpShutdownAll(pThis->pqDA->pWtpReg, wtpState_SHUTDOWN, &tTimeout);
 		if(iRetLocal == RS_RET_TIMED_OUT) {
-			DBGOPRINT((obj_t*) pThis, "shutdown timed out on DA queue worker (this is OK)\n");
+			LogMsg(0, RS_RET_TIMED_OUT, LOG_INFO,
+				"%s: regular shutdown timed out on DA queue (this is OK)",
+				objGetName((obj_t*) pThis));
 		} else {
 			DBGOPRINT((obj_t*) pThis, "DA queue worker shut down.\n");
 		}
@@ -1239,12 +1244,14 @@ tryShutdownWorkersWithinActionTimeout(qqueue_t *pThis)
 	DBGOPRINT((obj_t*) pThis, "trying immediate shutdown of regular workers (if any)\n");
 	iRetLocal = wtpShutdownAll(pThis->pWtpReg, wtpState_SHUTDOWN_IMMEDIATE, &tTimeout);
 	if(iRetLocal == RS_RET_TIMED_OUT) {
-		DBGOPRINT((obj_t*) pThis, "immediate shutdown timed out on primary queue (this is acceptable and "
-			  "triggers cancellation)\n");
+		LogMsg(0, RS_RET_TIMED_OUT, LOG_INFO,
+			"%s: immediate shutdown timed out on primary queue (this is acceptable and "
+			  "triggers cancellation)", objGetName((obj_t*) pThis));
 	} else if(iRetLocal != RS_RET_OK) {
-		DBGOPRINT((obj_t*) pThis, "unexpected iRet state %d after trying immediate shutdown of "
-			"the primary queue in disk save mode. Continuing, but results are unpredictable\n",
-			iRetLocal);
+		LogMsg(0, iRetLocal, LOG_WARNING,
+			"%s: potential internal error: unexpected return state after trying "
+			"immediate shutdown of the primary queue in disk save mode. "
+			"Continuing, but results are unpredictable", objGetName((obj_t*) pThis));
 	}
 
 	if(pThis->pqDA != NULL) {
@@ -1252,12 +1259,14 @@ tryShutdownWorkersWithinActionTimeout(qqueue_t *pThis)
 		DBGOPRINT((obj_t*) pThis, "trying immediate shutdown of DA queue workers\n");
 		iRetLocal = wtpShutdownAll(pThis->pqDA->pWtpReg, wtpState_SHUTDOWN_IMMEDIATE, &tTimeout);
 		if(iRetLocal == RS_RET_TIMED_OUT) {
-			DBGOPRINT((obj_t*) pThis, "immediate shutdown timed out on DA queue (this is acceptable "
-				  "and triggers cancellation)\n");
+			LogMsg(0, RS_RET_TIMED_OUT, LOG_INFO,
+				"%s: immediate shutdown timed out on DA queue (this is acceptable and "
+				  "triggers cancellation)", objGetName((obj_t*) pThis));
 		} else if(iRetLocal != RS_RET_OK) {
-			DBGOPRINT((obj_t*) pThis, "unexpected iRet state %d after trying immediate shutdown "
-				"of the DA queue in disk save mode. Continuing, but results are unpredictable\n",
-				iRetLocal);
+			LogMsg(0, iRetLocal, LOG_WARNING,
+				"%s: potential internal error: unexpected return state after trying "
+				"immediate shutdown of the DA queue in disk save mode. "
+				"Continuing, but results are unpredictable", objGetName((obj_t*) pThis));
 		}
 
 		/* and now we need to terminate the DA worker itself. We always grant it a 100ms timeout,
@@ -1269,8 +1278,10 @@ tryShutdownWorkersWithinActionTimeout(qqueue_t *pThis)
 		DBGOPRINT((obj_t*) pThis, "trying regular shutdown of main queue DA worker pool\n");
 		iRetLocal = wtpShutdownAll(pThis->pWtpDA, wtpState_SHUTDOWN_IMMEDIATE, &tTimeout);
 		if(iRetLocal == RS_RET_TIMED_OUT) {
-			DBGOPRINT((obj_t*) pThis, "shutdown timed out on main queue DA worker pool "
-					          "(this is not good, but probably OK)\n");
+			LogMsg(0, iRetLocal, LOG_WARNING,
+				"%s: shutdown timed out on main queue DA worker pool "
+				"(this is not good, but possibly OK)", 
+				objGetName((obj_t*) pThis));
 		} else {
 			DBGOPRINT((obj_t*) pThis, "main queue DA worker pool shut down.\n");
 		}
@@ -1295,6 +1306,9 @@ cancelWorkers(qqueue_t *pThis)
 	 * long-running and cancelling is the only way to get rid of it.
 	 */
 	DBGOPRINT((obj_t*) pThis, "checking to see if we need to cancel any worker threads of the primary queue\n");
+	LogMsg(0, RS_RET_TIMED_OUT, LOG_WARNING,
+		"%s: initiatinig worker thread cancellation - might cause unexpected results",
+		objGetName((obj_t*) pThis));
 	iRetLocal = wtpCancelAll(pThis->pWtpReg); /* returns immediately if all threads already have terminated */
 	if(iRetLocal != RS_RET_OK) {
 		DBGOPRINT((obj_t*) pThis, "unexpected iRet state %d trying to cancel primary queue worker "
