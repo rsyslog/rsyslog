@@ -68,7 +68,7 @@ if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then sudo add-ap
 sudo bash -c "echo \"deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-5.0 main\" > /etc/apt/sources.list.d/llvm.list" &&\
 wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add - &&\
 sudo apt-get update -yy  &&\
-sudo apt-get install clang-5.0; fi
+sudo apt-get install clang-5.0 clang-tools-5.0; fi
 
 if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then CLANG_PKG="clang-5.0"; SCAN_BUILD="scan-build-5.0"; else CLANG_PKG="clang"; SCAN_BUILD="scan-build"; fi
 if [ "$CC" == "clang" ]; then export NO_VALGRIND="--without-valgrind-testbench"; fi
