@@ -179,6 +179,23 @@ Version 8.32.0 [v8-stable] 2018-01-09
 - imkafka bugfix: do not emit error message on regular state
   This was misunderstood as an error state and could spam the system
   log considerably. Regression from 8.31.0.
+- omkafka bugfix: potential message duplication
+  If a message that already failed in librdkafka was resubmitted and that
+  resubmit also failed, it got duplicated.
+- omkafka: fix multithreading
+  omkafka has several issue if multiple worker instances are used. This commit
+  actually make the module use a single worker thread at max. Reasoning:
+  Librdkafka creates background threads itself. So omkafka basically needs to move
+  memory buffers over to librdkafka, which then does the heavy hauling. As such, we
+  think that it is best to run max one wrkr instance of omkafka -- otherwise we just
+  get additional locking (contention) overhead without any real gain. As such,
+  we use a global mutex for doAction which ensures only one worker can be active
+  at any given time. That mutex is also used to guard utility functions (like
+  tryResume) which may also be accessed by multiple workers in parallel.
+  Note: shall this method be changed, the kafka connection/suspension handling needs
+  to be refactored. The current code assumes that all workers share state information
+  including librdkafka handles.
+  closes https://github.com/rsyslog/rsyslog/issues/2313
 - omkafka bugfix: potential misadressing
   The failed message list is improperly cleaned. This is a regression
   from recent commit 4eae19e089b5a83da679fe29398c6b2c10003793, which
