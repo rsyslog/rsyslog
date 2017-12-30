@@ -66,6 +66,7 @@ typedef struct _instanceData {
 	int mode; /* mode constant */
 	uchar *key; /* key for QUEUE and PUBLISH modes */
 	sbool dynaKey; /* Should we treat the key as a template? */
+	sbool useRPush; /* Should we use RPUSH instead of LPUSH? */
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -81,7 +82,8 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "template", eCmdHdlrGetWord, 0 },
 	{ "mode", eCmdHdlrGetWord, 0 },
 	{ "key", eCmdHdlrGetWord, 0 },
-	{ "dynakey", eCmdHdlrBinary, 0 }
+	{ "dynakey", eCmdHdlrBinary, 0 },
+	{ "userpush", eCmdHdlrBinary, 0 },
 };
 
 static struct cnfparamblk actpblk = {
@@ -190,7 +192,9 @@ static rsRetVal writeHiredis(uchar* key, uchar *message, wrkrInstanceData_t *pWr
 			rc = redisAppendCommand(pWrkrData->conn, (char*)message);
 			break;
 		case OMHIREDIS_MODE_QUEUE:
-			rc = redisAppendCommand(pWrkrData->conn, "LPUSH %s %s", key, (char*)message);
+			rc = redisAppendCommand(pWrkrData->conn,
+				pWrkrData->pData->useRPush ? "RPUSH %s %s" : "LPUSH %s %s",
+				key, (char*)message);
 			break;
 		case OMHIREDIS_MODE_PUBLISH:
 			rc = redisAppendCommand(pWrkrData->conn, "PUBLISH %s %s", key, (char*)message);
@@ -286,6 +290,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->mode = OMHIREDIS_MODE_TEMPLATE;
 	pData->modeDescription = (char *)"template";
 	pData->key = NULL;
+	pData->useRPush = 0;
 }
 
 /* here is where the work to set up a new instance
@@ -317,6 +322,8 @@ CODESTARTnewActInst
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "dynakey")) {
 			pData->dynaKey = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "userpush")) {
+			pData->useRPush = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "mode")) {
 			pData->modeDescription = es_str2cstr(pvals[i].val.d.estr, NULL);
 			if (!strcmp(pData->modeDescription, "template")) {
