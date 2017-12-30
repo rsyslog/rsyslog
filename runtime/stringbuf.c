@@ -67,6 +67,9 @@ cstrConstruct(cstr_t **const ppThis)
 
 	CHKmalloc(pThis = (cstr_t*) malloc(sizeof(cstr_t)));
 	rsSETOBJTYPE(pThis, OIDrsCStr);
+	#ifndef NDEBUG
+	pThis->isFinalized = 0;
+	#endif
 	pThis->pBuf = NULL;
 	pThis->iBufSize = 0;
 	pThis->iStrLen = 0;
@@ -400,12 +403,8 @@ uchar*
 cstrGetSzStrNoNULL(cstr_t *const __restrict__ pThis)
 {
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
-
-	if(pThis->pBuf == NULL)
-		return (uchar*) "";
-
-	pThis->pBuf[pThis->iStrLen] = '\0'; /* space for this is reserved */
-	return(pThis->pBuf);
+	assert(pThis->isFinalized);
+	return (pThis->pBuf == NULL) ? (uchar*) "" : pThis->pBuf;
 }
 
 
@@ -433,6 +432,7 @@ rsRetVal cstrConvSzStrAndDestruct(cstr_t **ppThis, uchar **ppSz, int bRetNULL)
 
 	assert(ppThis != NULL);
 	pThis = *ppThis;
+	assert(pThis->isFinalized);
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 	assert(ppSz != NULL);
 	assert(bRetNULL == 0 || bRetNULL == 1);

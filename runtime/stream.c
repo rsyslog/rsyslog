@@ -761,6 +761,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
 
 	/* append previous message to current message if necessary */
 	if(pThis->prevLineSegment != NULL) {
+		cstrFinalize(pThis->prevLineSegment);
 		dbgprintf("readLine: have previous line segment: '%s'\n",
 			rsCStrGetSzStrNoNULL(pThis->prevLineSegment));
 		CHKiRet(cstrAppendCStr(*ppCStr, pThis->prevLineSegment));
@@ -1026,11 +1027,13 @@ finalize_it:
 	}
 	if(iRet == RS_RET_OK) {
 		pThis->strtOffs = pThis->iCurrOffs; /* we are at begin of next line */
+		cstrFinalize(*ppCStr);
 	} else {
 		if(   pThis->readTimeout
 		   && (pThis->prevMsgSegment != NULL)
 		   && (tCurr > pThis->lastRead + pThis->readTimeout)) {
 			if(rsCStrConstructFromCStr(ppCStr, pThis->prevMsgSegment) == RS_RET_OK) {
+				cstrFinalize(*ppCStr);
 				cstrDestruct(&pThis->prevMsgSegment);
 				pThis->lastRead = tCurr;
 				pThis->strtOffs = pThis->iCurrOffs; /* we are at begin of next line */
