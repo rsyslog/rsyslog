@@ -18,13 +18,13 @@ echo \[sndrcv_kafka.sh\]: Create kafka/zookeeper instance and static topic
 echo \[sndrcv_kafka.sh\]: Give Kafka some time to process topic create ...
 sleep 5
 
-echo \[sndrcv_kafka.sh\]: Starting receiver instance [omkafka]
+echo \[sndrcv_kafka.sh\]: Starting receiver instance [imkafka]
 export RSYSLOG_DEBUGLOG="log"
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup sndrcv_kafka_rcvr.conf 
 . $srcdir/diag.sh wait-startup
 
-echo \[sndrcv_kafka.sh\]: Starting sender instance [imkafka]
+echo \[sndrcv_kafka.sh\]: Starting sender instance [omkafka]
 export RSYSLOG_DEBUGLOG="log2"
 . $srcdir/diag.sh startup sndrcv_kafka_sender.conf 2
 . $srcdir/diag.sh wait-startup 2
@@ -35,14 +35,14 @@ echo \[sndrcv_kafka.sh\]: Inject messages into rsyslog sender instance
 echo \[sndrcv_kafka.sh\]: Sleep to give rsyslog instances time to process data ...
 sleep 5
 
-echo \[sndrcv_kafka.sh\]: Stopping sender instance [imkafka]
+echo \[sndrcv_kafka.sh\]: Stopping sender instance [omkafka]
 . $srcdir/diag.sh shutdown-when-empty 2
 . $srcdir/diag.sh wait-shutdown 2
 
 echo \[sndrcv_kafka.sh\]: Sleep to give rsyslog receiver time to receive data ...
 sleep 5
 
-echo \[sndrcv_kafka.sh\]: Stopping receiver instance [omkafka]
+echo \[sndrcv_kafka.sh\]: Stopping receiver instance [imkafka]
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
 
