@@ -47,7 +47,6 @@ struct action_s {
 	/* should all mark msgs be written (not matter how recent the action was executed)? */
 	sbool	bReportSuspension;/* should suspension (and reactivation) of the action reported */
 	sbool	bReportSuspensionCont;
-	sbool	bHadAutoCommit;	/* did an auto-commit happen during doAction()? */
 	sbool	bDisabled;
 	sbool	isTransactional;
 	sbool	bCopyMsg;

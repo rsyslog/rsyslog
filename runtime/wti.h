@@ -47,6 +47,7 @@ typedef struct actWrkrInfo {
 	uint16_t uResumeOKinRow;/* number of times in a row that resume said OK with an
 				   immediate failure following */
 	int	iNbrResRtry;	/* number of retries since last suspend */
+	sbool	bHadAutoCommit;	/* did an auto-commit happen during doAction()? */
 	struct {
 		unsigned actState : 3;
 	} flags;

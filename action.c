@@ -615,8 +615,8 @@ static rsRetVal getReturnCode(action_t * const pThis, wti_t * const pWti)
 			iRet = RS_RET_OK;
 			break;
 		case ACT_STATE_ITX:
-			if(pThis->bHadAutoCommit) {
-				pThis->bHadAutoCommit = 0; /* auto-reset */
+			if(pWti->actWrkrInfo[pThis->iActionNbr].bHadAutoCommit) {
+				pWti->actWrkrInfo[pThis->iActionNbr].bHadAutoCommit = 0; /* auto-reset */
 				iRet = RS_RET_PREVIOUS_COMMITTED;
 			} else {
 				iRet = RS_RET_DEFER_COMMIT;
@@ -1069,7 +1069,7 @@ handleActionExecResult(action_t *__restrict__ const pThis,
 			break;
 		case RS_RET_PREVIOUS_COMMITTED:
 			/* action state remains the same, but we had a commit. */
-			pThis->bHadAutoCommit = 1;
+			pWti->actWrkrInfo[pThis->iActionNbr].bHadAutoCommit = 1;
 			actionSetActionWorked(pThis, pWti); /* we had a successful call! */
 			break;
 		case RS_RET_DISABLE_ACTION:
@@ -1109,7 +1109,7 @@ actionCallDoAction(action_t *__restrict__ const pThis,
 	DBGPRINTF("entering actionCalldoAction(), state: %s, actionNbr %d\n",
 		  getActStateName(pThis, pWti), pThis->iActionNbr);
 
-	pThis->bHadAutoCommit = 0;
+	pWti->actWrkrInfo[pThis->iActionNbr].bHadAutoCommit = 0;
 	/* for this interface, we need to emulate the old style way
 	 * of parameter passing.
 	 */
