@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 Version 8.32.0 [v8-stable] 2018-01-09
 - NEW BUILD REQUIREMENTs:
-  - libczmq > 4 is now required for omczmq
+  - libczmq >= 3.0.2 is now required for omczmq
     This was actually required for quite some while, but not properly checked
     during configure run. If the lib was older, build failed. Now configure
     detects this and emits the appropiate error message.
