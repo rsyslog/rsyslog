@@ -1,11 +1,11 @@
 ------------------------------------------------------------------------------
 Version 8.32.0 [v8-stable] 2018-01-09
 - NEW BUILD REQUIREMENTs:
-  - libczmq > 4 is now required for omczmq
+  * libczmq > 4 is now required for omczmq
     This was actually required for quite some while, but not properly checked
     during configure run. If the lib was older, build failed. Now configure
     detects this and emits the appropiate error message.
-  - libcurl is now needed for rsyslog core
+  * libcurl is now needed for rsyslog core
     due to new script function http_request(). This can be turned off by the
     new configure option --disable-libcurl. If so, http_request() is not
     available.
@@ -46,6 +46,8 @@ Version 8.32.0 [v8-stable] 2018-01-09
   This right now is a bit experimental; we may roll it back if
   problems show up in practice.
   closes https://github.com/rsyslog/rsyslog/issues/2030
+- omhiredis: add option to use RPUSH instead of LPUSH
+  see also https://github.com/rsyslog/rsyslog/issues/1625
 - mmexternal improvements
   * better error reporting if to-be-executed script cannot be executed
   * some general cleanup
