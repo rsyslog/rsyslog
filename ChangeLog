@@ -117,6 +117,10 @@ Version 8.32.0 [v8-stable] 2018-01-09
   plumbing is now removed. If someone tries to use the option, an
   error message is generated.
   closes https://github.com/rsyslog/rsyslog/issues/2280
+- core/queue: emit better status messages at rsyslog shutdown
+  this helps to diagnose issue - unfortunately we need more work to ensure
+  that the messages always make it to the user. This is a start and
+  hopefully useful at least for the testbench, possibly more.
 - fixed a couple of build issues with gcc-7 (in less frequently used modules)
 - fixed a couple of build issues on the arm platform (actually raspbian)
 - imudp bugfix: potential segfault in ratelimiting
