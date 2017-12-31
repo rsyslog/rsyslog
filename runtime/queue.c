@@ -1142,8 +1142,8 @@ qqueueDeq(qqueue_t *pThis, smsg_t **ppMsg)
  * and DA queue to try complete processing.
  * rgerhards, 2009-10-14
  */
-static rsRetVal
-tryShutdownWorkersWithinQueueTimeout(qqueue_t *pThis)
+static rsRetVal ATTR_NONNULL(1)
+tryShutdownWorkersWithinQueueTimeout(qqueue_t *const pThis)
 {
 	struct timespec tTimeout;
 	rsRetVal iRetLocal;
@@ -1181,8 +1181,8 @@ tryShutdownWorkersWithinQueueTimeout(qqueue_t *pThis)
 	iRetLocal = wtpShutdownAll(pThis->pWtpReg, wtpState_SHUTDOWN, &tTimeout);
 	if(iRetLocal == RS_RET_TIMED_OUT) {
 		LogMsg(0, RS_RET_TIMED_OUT, LOG_INFO,
-			"%s: regular shutdown timed out on primary queue (this is OK)",
-			objGetName((obj_t*) pThis));
+			"%s: regular queue shutdown timed out on primary queue (this is OK, timeout was %d)",
+			objGetName((obj_t*) pThis), pThis->toQShutdown);
 	} else {
 		DBGOPRINT((obj_t*) pThis, "regular queue workers shut down.\n");
 	}
@@ -1198,8 +1198,8 @@ tryShutdownWorkersWithinQueueTimeout(qqueue_t *pThis)
 		iRetLocal = wtpShutdownAll(pThis->pqDA->pWtpReg, wtpState_SHUTDOWN, &tTimeout);
 		if(iRetLocal == RS_RET_TIMED_OUT) {
 			LogMsg(0, RS_RET_TIMED_OUT, LOG_INFO,
-				"%s: regular shutdown timed out on DA queue (this is OK)",
-				objGetName((obj_t*) pThis));
+				"%s: regular queue shutdown timed out on DA queue (this is OK, "
+				"timeout was %d)", objGetName((obj_t*) pThis), pThis->toQShutdown);
 		} else {
 			DBGOPRINT((obj_t*) pThis, "DA queue worker shut down.\n");
 		}
@@ -1306,10 +1306,8 @@ cancelWorkers(qqueue_t *pThis)
 	 * long-running and cancelling is the only way to get rid of it.
 	 */
 	DBGOPRINT((obj_t*) pThis, "checking to see if we need to cancel any worker threads of the primary queue\n");
-	LogMsg(0, RS_RET_TIMED_OUT, LOG_WARNING,
-		"%s: initiatinig worker thread cancellation - might cause unexpected results",
-		objGetName((obj_t*) pThis));
-	iRetLocal = wtpCancelAll(pThis->pWtpReg); /* returns immediately if all threads already have terminated */
+	iRetLocal = wtpCancelAll(pThis->pWtpReg, objGetName((obj_t*) pThis));
+		/* ^-- returns immediately if all threads already have terminated */
 	if(iRetLocal != RS_RET_OK) {
 		DBGOPRINT((obj_t*) pThis, "unexpected iRet state %d trying to cancel primary queue worker "
 			  "threads, continuing, but results are unpredictable\n", iRetLocal);
@@ -1319,7 +1317,7 @@ cancelWorkers(qqueue_t *pThis)
 	if(pThis->pqDA != NULL) {
 		DBGOPRINT((obj_t*) pThis, "checking to see if we need to cancel any worker threads of "
 			"the DA queue\n");
-		iRetLocal = wtpCancelAll(pThis->pqDA->pWtpReg);
+		iRetLocal = wtpCancelAll(pThis->pqDA->pWtpReg, objGetName((obj_t*) pThis));
 		/* returns immediately if all threads already have terminated */
 		if(iRetLocal != RS_RET_OK) {
 			DBGOPRINT((obj_t*) pThis, "unexpected iRet state %d trying to cancel DA queue worker "
@@ -1332,7 +1330,8 @@ cancelWorkers(qqueue_t *pThis)
 		 * done when *no* worker is running. So time for a shutdown... -- rgerhards, 2009-05-28
 		 */
 		DBGOPRINT((obj_t*) pThis, "checking to see if main queue DA worker pool needs to be cancelled\n");
-		wtpCancelAll(pThis->pWtpDA); /* returns immediately if all threads already have terminated */
+		wtpCancelAll(pThis->pWtpDA, objGetName((obj_t*) pThis));
+			/* returns immediately if all threads already have terminated */
 	}
 
 	RETiRet;

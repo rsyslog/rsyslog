@@ -286,8 +286,8 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 /* Unconditionally cancel all running worker threads.
  * rgerhards, 2008-01-14
  */
-rsRetVal
-wtpCancelAll(wtp_t *pThis)
+rsRetVal ATTR_NONNULL()
+wtpCancelAll(wtp_t *pThis, const uchar *const cancelobj)
 {
 	DEFiRet;
 	int i;
@@ -296,7 +296,7 @@ wtpCancelAll(wtp_t *pThis)
 
 	/* go through all workers and cancel those that are active */
 	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
-		wtiCancelThrd(pThis->pWrkr[i]);
+		wtiCancelThrd(pThis->pWrkr[i], cancelobj);
 	}
 
 	RETiRet;

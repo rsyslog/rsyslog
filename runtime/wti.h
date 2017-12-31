@@ -95,7 +95,7 @@ rsRetVal wtiConstructFinalize(wti_t * const pThis);
 rsRetVal wtiDestruct(wti_t **ppThis);
 rsRetVal wtiWorker(wti_t * const pThis);
 rsRetVal wtiSetDbgHdr(wti_t * const pThis, uchar *pszMsg, size_t lenMsg);
-rsRetVal wtiCancelThrd(wti_t * const pThis);
+rsRetVal wtiCancelThrd(wti_t * const pThis, const uchar *const cancelobj);
 rsRetVal wtiSetAlwaysRunning(wti_t * const pThis);
 rsRetVal wtiSetState(wti_t * const pThis, int bNew);
 rsRetVal wtiWakeupThrd(wti_t * const pThis);
