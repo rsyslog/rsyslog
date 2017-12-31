@@ -114,7 +114,7 @@ case $1 in
 		rm -f rsyslog.input rsyslog.empty rsyslog.input.* imfile-state* omkafka-failed.data
 		rm -f testconf.conf HOSTNAME
 		rm -f rsyslog.errorfile tmp.qi
-		rm -f core.* vgcore.*
+		rm -f core.* vgcore.* core*
 		# Note: rsyslog.action.*.include must NOT be deleted, as it
 		# is used to setup some parameters BEFORE calling init. This
 		# happens in chained test scripts. Delete on exit is fine,
@@ -1034,6 +1034,20 @@ case $1 in
                 # try to gather as much information as possible. That's most important
 		# for systems like Travis-CI where we cannot debug on the machine itself.
 		# our $2 is the to-be-used exit code. if $3 is "stacktrace", call gdb.
+		if [ -e core* ]
+		then
+			echo trying to obtain crash location info
+			echo note: this may not be the correct file, check it
+			CORE=`ls core*`
+			echo "bt" >> gdb.in
+			echo "q" >> gdb.in
+			gdb ../tools/rsyslogd $CORE -batch -x gdb.in
+			CORE=
+			rm gdb.in
+		else
+			echo no core file found, cannot provide additional info
+			ls -l core*
+		fi
 		if [[ "$3" == 'stacktrace' || ( ! -e IN_AUTO_DEBUG &&  "$USE_AUTO_DEBUG" == 'on' ) ]]; then
 			if [ -e core* ]
 			then
