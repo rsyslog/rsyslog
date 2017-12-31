@@ -124,6 +124,7 @@ rsRetVal (*fFixup)(obj_t*,void*), void *pUsr, rsRetVal (*objConstruct)(), rsRetV
 rsRetVal (*objDeserialize)());
 rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm);
 rsRetVal objDeserializeDummy(obj_t *pObj, strm_t *pStrm);
+uchar *objGetName(obj_t *pThis);
 
 
 /* the following definition is only for "friends" */
