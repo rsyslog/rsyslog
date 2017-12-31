@@ -579,9 +579,3 @@ The following command writes all syslog messages into a file.
   $FileCreateMode 0644
   *.* /var/log/messages
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-Copyright © 2008-2014 by `Rainer
-Gerhards <http://www.gerhards.net/rainer>`_ and
-`Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
-3 or higher.

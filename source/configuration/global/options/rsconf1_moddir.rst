@@ -18,9 +18,3 @@ the path name with a slash, else module loads will fail.
 
 ``$ModDir /usr/rsyslog/libs/  # note the trailing slash!``
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-
-Copyright © 2007 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 2 or higher.

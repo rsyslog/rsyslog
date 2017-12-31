@@ -328,8 +328,3 @@ The following sample does the following:
            action.resumeretrycount="-1")
 
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-Copyright © 2008-2016 by `Rainer
-Gerhards <http://www.gerhards.net/rainer>`_ and
-`Adiscon <http://www.adiscon.com/>`_. Released under the ASL 2.0.

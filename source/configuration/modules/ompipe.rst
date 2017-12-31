@@ -45,8 +45,3 @@ The following command sends all syslog messages to a remote server via TCP port 
         $ModLoad ompipe
         *.* |/var/log/pipe
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-Copyright © 2008-2014 by `Rainer
-Gerhards <http://www.gerhards.net/rainer>`_ and
-`Adiscon <http://www.adiscon.com/>`_. Released under the ASL 2.0.

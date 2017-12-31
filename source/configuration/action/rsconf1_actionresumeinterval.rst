@@ -24,9 +24,3 @@ after the 10th try, it by default is 60 and after the 100th try it is
 
 $ActionResumeInterval 30
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-
-Copyright © 2007 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 2 or higher.

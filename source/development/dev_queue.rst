@@ -297,19 +297,3 @@ destruction - this is what enables us to persist the disk queue!
 After that point, left over queue resources (mutexes, dynamic memory,
 ...) are freed and the queue object is actually destructed.
 
-
-
-Copyright
-~~~~~~~~~
-
-Copyright (c) 2008-2014 `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/en/>`_.
-
-Permission is granted to copy, distribute and/or modify this document
-under the terms of the GNU Free Documentation License, Version 1.2 or
-any later version published by the Free Software Foundation; with no
-Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts. A
-copy of the license can be viewed at
-`http://www.gnu.org/copyleft/fdl.html <http://www.gnu.org/copyleft/fdl.html>`_.
-
-

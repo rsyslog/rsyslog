@@ -614,8 +614,3 @@ See Also
 -  `How to separate log files by host name of the sending
    device <http://www.rsyslog.com/article60/>`_
 
-
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_ project.
-Copyright © 2008-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 2 or higher.

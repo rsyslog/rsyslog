@@ -264,18 +264,3 @@ Revision History
    Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_  \*
    revamped doc to match current state.
 
-Copyright
-~~~~~~~~~
-
-Permission is granted to copy, distribute and/or modify this document
-under the terms of the GNU Free Documentation License, Version 1.2 or
-any later version published by the Free Software Foundation; with no
-Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts. A
-copy of the license can be viewed at
-`http://www.gnu.org/copyleft/fdl.html <http://www.gnu.org/copyleft/fdl.html>`_.
-
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-Copyright © 2005-2008 by `Rainer Gerhards`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 1.2 or higher.

@@ -24,9 +24,3 @@ The default module directory is ignored in that case.
 
 ``$ModLoad ommysql # load MySQL functionality $ModLoad /rsyslog/modules/ompgsql.so # load the postgres module via absolute path``
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-
-Copyright © 2007 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 2 or higher.

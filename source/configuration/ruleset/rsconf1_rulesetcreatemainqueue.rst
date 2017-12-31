@@ -89,8 +89,3 @@ the *ruleset()* object in RainerScript config language if you intend
 to use ruleset queues. The configuration is much more straightforward in
 that language and less error-prone.
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-Copyright © 2009-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 2 or higher.

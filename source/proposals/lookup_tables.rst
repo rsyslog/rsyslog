@@ -238,8 +238,3 @@ To preserve space and, more important, increase cache hit performance,
 equal data values are only stored once, no matter how often a lookup
 index points to them.
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-Copyright © 2013-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 3 or higher.

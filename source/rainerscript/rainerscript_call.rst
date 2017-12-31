@@ -41,8 +41,3 @@ related links
 -  `Blog posting announcing "call" statement (with
    sample) <http://blog.gerhards.net/2012/10/how-to-use-rsyslogs-ruleset-and-call.html>`_
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-Copyright © 2013-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 2 or higher.

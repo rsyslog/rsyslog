@@ -245,9 +245,3 @@ disable IPv4 aonymization. This example will lead to only IPv6 addresses anonymi
   action(type="mmanon" ipv4.enable="off" ipv6.anonmode="random-consistent")
   action(type="omfile" file="/path/to/anon.log")
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-Copyright © 2008-2013 by `Rainer
-Gerhards <http://www.gerhards.net/rainer>`_ and
-`Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
-3 or higher.

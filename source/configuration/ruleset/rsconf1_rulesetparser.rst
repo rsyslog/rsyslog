@@ -125,9 +125,3 @@ Note the positions of the directives. With the current config language,
 **sequence of statements is very important**. This is ugly, but
 unfortunately the way it currently works.
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-
-Copyright © 2009 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 2 or higher.

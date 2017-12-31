@@ -212,8 +212,3 @@ This rule forwards all messages that contain the word "error" in the msg
 part to the server "errorServer". Forwarding is via UDP. Please note the
 colon in fron
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-Copyright © 2008-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 2 or higher.

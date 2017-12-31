@@ -162,9 +162,3 @@ putting it into production, ensuring you have a suffciently large probe
 of the traffic run over it. If problems arise, the `rsyslog debug
 log <troubleshoot.html>`_ is your friend.
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-
-Copyright © 2009-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 3 or higher.

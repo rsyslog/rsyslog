@@ -315,11 +315,3 @@ Revision History
 -  2010-01-29 \* Marc Schiffbauer \* added some PostgreSQL stuff, made
    wording more database generic, fixed some typos
 
-Copyright
----------
-
-Copyright (c) 2005-2010 `Rainer
-Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_, Marc
-Schiffbauer and `Adiscon <http://www.adiscon.com/en/>`_.
-
-

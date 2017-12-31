@@ -155,10 +155,3 @@ creating your own custom template:
   $template mytemplate,"insert into SystemEvents (Message) values ('%msg%')",STDSQL
   :ompgsql:database-server,database-name,database-userid,database-password;mytemplate
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-
-Copyright © 2008-2017 by `Rainer
-Gerhards <http://www.gerhards.net/rainer>`_, `Dan Molik <https://danmolik.com>`_, and
-`Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
-3 or higher.

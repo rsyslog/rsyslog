@@ -228,8 +228,3 @@ previously, results are obviously different. However, that should not create any
 real problems, because it is hard to envision why someone should have done that
 (why write "\n" when you can also write "n"?).
 
-Copyright
----------
-Copyright (C) 2011-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_ and
-`Adiscon <http://www.adiscon.com>`_.
-Released under the GNU GPL version 2 or higher.

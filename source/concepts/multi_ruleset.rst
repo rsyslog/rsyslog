@@ -318,8 +318,3 @@ See Also
    
    ../historical/multi_ruleset_legacy_format_samples
    
-This documentation is part of the `rsyslog`_
-project.
-Copyright © 2009-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 3 or higher.

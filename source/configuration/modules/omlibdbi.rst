@@ -126,9 +126,3 @@ empty passwords, just remove the $ActionLibdbiPassword line).
   mysqlserver.example.com $ActionLibdbiUserName user $ActionLibdbiPassword
   pwd $ActionLibdbiDBName syslog\_db \*.\* :omlibdbi:
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-
-Copyright © 2008-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 3 or higher.

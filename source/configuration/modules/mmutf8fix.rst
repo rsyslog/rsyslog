@@ -110,8 +110,3 @@ This is mostly the same as the previous sample, but uses
   module(load="mmutf8fix") if $fromhost-ip == "10.0.0.1" then
   action(type="mmutf8fix" mode="controlcharacters") # all other actions here...
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-Copyright © 2013-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 3 or higher.

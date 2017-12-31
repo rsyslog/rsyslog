@@ -198,9 +198,3 @@ Some additional documentation contributed by Ronny Egner:
             *.*                     :omoracle:;TestStmt
         (you guess it: username = password = database = "syslog".... see $rsyslogd_source/plugins/omoracle/omoracle.c for me info)
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-Copyright © 2008-2014 by `Rainer
-Gerhards <http://www.gerhards.net/rainer>`_ and
-`Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
-3 or higher.
