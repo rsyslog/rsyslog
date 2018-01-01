@@ -40,6 +40,7 @@
 #include "rsyslog.h"
 #include "stringbuf.h"
 #include "srUtils.h"
+#include "errmsg.h"
 #include "wtp.h"
 #include "wti.h"
 #include "obj.h"
@@ -141,15 +142,16 @@ wtiWakeupThrd(wti_t *pThis)
  * kind of non-optimal wait is considered preferable over using condition variables.
  * rgerhards, 2008-02-26
  */
-rsRetVal
-wtiCancelThrd(wti_t *pThis)
+rsRetVal ATTR_NONNULL()
+wtiCancelThrd(wti_t *pThis, const uchar *const cancelobj)
 {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, wti);
 
-
 	if(wtiGetState(pThis)) {
+		LogMsg(0, RS_RET_ERR, LOG_WARNING, "%s: need to do cooperative cancellation "
+			"- some data may be lost, increase timeout?", cancelobj);
 		/* we first try the cooperative "cancel" interface */
 		pthread_kill(pThis->thrdID, SIGTTIN);
 		DBGPRINTF("sent SIGTTIN to worker thread %p, giving it a chance to terminate\n",
@@ -158,6 +160,7 @@ wtiCancelThrd(wti_t *pThis)
 	}
 
 	if(wtiGetState(pThis)) {
+		LogMsg(0, RS_RET_ERR, LOG_WARNING, "%s: need to do hard cancellation", cancelobj);
 		DBGPRINTF("cooperative worker termination failed, using cancellation...\n");
 		DBGOPRINT((obj_t*) pThis, "canceling worker thread\n");
 		pthread_cancel(pThis->thrdID);
