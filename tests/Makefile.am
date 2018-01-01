@@ -224,6 +224,7 @@ endif
 if ENABLE_TESTBENCH2
 TESTS +=  \
 	rscript_contains.sh \
+	rscript_bare_var_root.sh \
 	rscript_http_request.sh \
 	rscript_ipv42num.sh \
 	rscript_field.sh \
@@ -912,6 +913,7 @@ EXTRA_DIST= \
 	testsuites/arrayqueue.conf \
 	rscript_http_request.sh \
 	rscript_http_request-vg.sh \
+	rscript_bare_var_root.sh \
 	rscript_contains.sh \
 	testsuites/rscript_contains.conf \
 	rscript_ipv42num.sh \
