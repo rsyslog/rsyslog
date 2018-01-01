@@ -543,9 +543,8 @@ writeDataError(instanceData *const pData,
 					O_WRONLY|O_CREAT|O_APPEND|O_LARGEFILE|O_CLOEXEC,
 					S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP);
 		if(pData->fdErrFile == -1) {
-			char errStr[1024];
-			rs_strerror_r(errno, errStr, sizeof(errStr));
-			DBGPRINTF("omkafka: error opening error file: %s\n", errStr);
+			LogError(errno, RS_RET_ERR, "omkafka: error opening error file %s",
+				pData->errorFile);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	}
@@ -555,8 +554,9 @@ writeDataError(instanceData *const pData,
 	 */
 	const ssize_t nwritten = writev(pData->fdErrFile, iov, sizeof(iov)/sizeof(struct iovec));
 	if(nwritten != (ssize_t) iov[0].iov_len + 1) {
-		DBGPRINTF("omkafka: error %d writing error file, write returns %lld\n",
-			  errno, (long long) nwritten);
+		LogError(errno, RS_RET_ERR,
+			"omkafka: error writing error file, write returns %lld\n",
+			(long long) nwritten);
 	}
 
 finalize_it:
@@ -732,7 +732,8 @@ deliveryCallback(rd_kafka_t __attribute__((unused)) *rk,
 				rd_kafka_topic_name(rkmessage->rkt)));
 			SLIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
 		} else {
-			DBGPRINTF("omkafka: kafka delivery FAIL on Topic '%s', msg '%.*s', key '%.*s'\n",
+			LogError(0, RS_RET_ERR,
+				"omkafka: kafka delivery FAIL on Topic '%s', msg '%.*s', key '%.*s'\n",
 				rd_kafka_topic_name(rkmessage->rkt),
 				(int)(rkmessage->len-1), (char*)rkmessage->payload,
 				(int)(rkmessage->key_len), (char*)rkmessage->key);
@@ -799,9 +800,10 @@ do_rd_kafka_destroy(instanceData *const __restrict__ pData)
 		}
 	}
 	if (queuedCount > 0) {
-		DBGPRINTF("omkafka: queue-drain for close timed-out took too long, "
-				 "items left in outqueue: %d\n",
-				 rd_kafka_outq_len(pData->rk));
+		LogMsg(0, RS_RET_ERR, LOG_WARNING,
+				"omkafka: queue-drain for close timed-out took too long, "
+				"items left in outqueue: %d -- this may indicate data loss",
+				rd_kafka_outq_len(pData->rk));
 	}
 	if (pData->dynaTopic) {
 		dynaTopicFreeCacheEntries(pData);
@@ -815,7 +817,7 @@ do_rd_kafka_destroy(instanceData *const __restrict__ pData)
 # if RD_KAFKA_VERSION < 0x00090001
 	/* Wait for kafka being destroyed in old API */
 	if (rd_kafka_wait_destroyed(10000) < 0)	{
-		DBGPRINTF("omkafka: error, rd_kafka_destroy did not finish after grace timeout (10s)!\n");
+		LogError(0, RS_RET_ER, "omkafka: rd_kafka_destroy did not finish after grace timeout (10s)!");
 	} else {
 		DBGPRINTF("omkafka: rd_kafka_destroy successfully finished\n");
 	}
@@ -851,7 +853,8 @@ errorCallback(rd_kafka_t __attribute__((unused)) *rk,
 		err == RD_KAFKA_RESP_ERR__AUTHENTICATION) {
 		/* Broker transport error, we need to disable the action for now!*/
 		pData->bIsSuspended = 1;
-		DBGPRINTF("omkafka: kafka error handled, action will be suspended: %d,'%s'\n",
+		LogMsg(0, RS_RET_KAFKA_ERROR, LOG_WARNING,
+			"omkafka: action will suspended due to kafka error %d: %s",
 			err, rd_kafka_err2str(err));
 	} else {
 		LogError(0, RS_RET_KAFKA_ERROR, "omkafka: kafka error message: %d,'%s','%s'",
@@ -1008,9 +1011,9 @@ checkFailedMessages(instanceData *const __restrict__ pData)
 		/* Put back into kafka! */
 		iRet = writeKafka(pData, (uchar*) fmsgEntry->payload, NULL, fmsgEntry->topicname, NO_RESUBMIT);
 		if(iRet != RS_RET_OK) {
-			// TODO: LogError???
-			DBGPRINTF("omkafka: failed to delivery failed msg '%.*s' with status %d. "
-				"- suspending AGAIN!\n",
+			LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
+				"omkafka: failed to deliver failed msg '%.*s' with status %d. "
+				"- suspending AGAIN!",
 				(int)(strlen((char*)fmsgEntry->payload)-1),
 				(char*)fmsgEntry->payload, iRet);
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
@@ -1116,10 +1119,9 @@ loadFailedMsgs(instanceData *const __restrict__ pData)
 				"continue startup\n", pData->failedMsgFile);
 			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 		} else {
-			char errStr[1024];
-			rs_strerror_r(errno, errStr, sizeof(errStr));
-			DBGPRINTF("omkafka: loadFailedMsgs failed messages file %s could not "
-				"be opened with error %s\n", pData->failedMsgFile, errStr);
+			LogError(errno, RS_RET_IO_ERROR, 
+				"omkafka: loadFailedMsgs could not open failed messages file %s",
+				pData->failedMsgFile);
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
 	} else {
@@ -1151,7 +1153,7 @@ loadFailedMsgs(instanceData *const __restrict__ pData)
 					strlen(pStrTabPos+1), (char*)puStr));
 				SLIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
 			} else {
-				LogError(0, RS_RET_ERR, "omkafka: loadFailedMsgs droping invalid msg found: %s\n",
+				LogError(0, RS_RET_ERR, "omkafka: loadFailedMsgs droping invalid msg found: %s",
 					(char*)rsCStrGetSzStrNoNULL(pCStr));
 			}
 		}
@@ -1499,7 +1501,8 @@ CODESTARTnewActInst
 		} else if(!strcmp(actpblk.descr[i].name, "failedmsgfile")) {
 			pData->failedMsgFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
-			dbgprintf("omkafka: program error, non-handled param '%s'\n", actpblk.descr[i].name);
+			LogError(0, RS_RET_INTERNAL_ERROR,
+				"omkafka: program error, non-handled param '%s'\n", actpblk.descr[i].name);
 		}
 	}
 
@@ -1559,8 +1562,9 @@ CODESTARTmodExit
 	pthread_mutex_unlock(&closeTimeoutMut);
 	pthread_mutex_destroy(&closeTimeoutMut);
 	if (rd_kafka_wait_destroyed(timeout) != 0) {
-		DBGPRINTF("omkafka: couldn't close all resources gracefully. %d threads still remain.\n",
-			rd_kafka_thread_cnt());
+		LogMsg(0, RS_RET_OK, LOG_WARNING,
+			"omkafka: could not terminate librdkafka gracefully, "
+			"%d threads still remain.\n", rd_kafka_thread_cnt());
 	}
 finalize_it:
 ENDmodExit
