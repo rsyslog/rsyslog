@@ -1068,6 +1068,7 @@ ENDobjDestruct(msg)
 			msgDestruct(&pNew);\
 			return NULL;\
 		}\
+		cstrFinalize(pNew->pCS##name); \
 	}
 /* Constructs a message object by duplicating another one.
  * Returns NULL if duplication failed. We do not need to lock the
@@ -2183,7 +2184,8 @@ rsRetVal MsgSetAPPNAME(smsg_t *__restrict__ const pMsg, const char* pszAPPNAME)
 		CHKiRet(rsCStrConstruct(&pMsg->pCSAPPNAME));
 	}
 	/* if we reach this point, we have the object */
-	iRet = rsCStrSetSzStr(pMsg->pCSAPPNAME, (uchar*) pszAPPNAME);
+	CHKiRet(rsCStrSetSzStr(pMsg->pCSAPPNAME, (uchar*) pszAPPNAME));
+	cstrFinalize(pMsg->pCSAPPNAME);
 
 finalize_it:
 	RETiRet;
