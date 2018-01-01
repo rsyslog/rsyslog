@@ -7,7 +7,7 @@
  * of the "old" message code without any modifications. However, it
  * helps to have things at the right place one we go to the meat of it.
  *
- * Copyright 2007-2017 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -3144,7 +3144,6 @@ msgGetJSONPropJSONorString(smsg_t * const pMsg, msgPropDescr_t *pProp, struct js
 
 	CHKiRet(getJSONRootAndMutex(pMsg, pProp->id, &jroot, &mut));
 	pthread_mutex_lock(mut);
-
 	if(!strcmp((char*)pProp->name, "!")) {
 		*pjson = *jroot;
 		FINALIZE;
