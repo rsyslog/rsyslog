@@ -2,7 +2,7 @@
  *
  * Module begun 2011-07-01 by Rainer Gerhards
  *
- * Copyright 2011-2017 Rainer Gerhards and Others.
+ * Copyright 2011-2018 Rainer Gerhards and Others.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -2556,11 +2556,11 @@ evalVar(struct cnfvar *__restrict__ const var, void *__restrict__ const usrptr,
 				var->prop.id, var->prop.name,
 			  (ret->d.json == NULL) ? "" : json_object_get_string(ret->d.json));
 		} else { /* we have a string */
-			ret->datatype = 'S';
-			ret->d.estr = (localRet == RS_RET_OK) ?
-					  es_newStrFromCStr((char*) cstr, strlen((char*) cstr))
-					: es_newStr(1);
 			DBGPRINTF("rainerscript: (json/string) var %d: '%s'\n", var->prop.id, cstr);
+			ret->datatype = 'S';
+			ret->d.estr = (localRet != RS_RET_OK || cstr == NULL) ?
+					  es_newStr(1)
+					: es_newStrFromCStr((char*) cstr, strlen((char*) cstr));
 			free(cstr);
 		}
 	} else {
