@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h for more specifics!
  *
  * Copyright 2011 Nathan Scott.
- * Copyright 2009-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -1008,8 +1008,10 @@ initializeErrorInterleavedConext(wrkrInstanceData_t *pWrkrData,context *ctx){
  * Note: we open the file but never close it before exit. If it
  * needs to be closed, HUP must be sent.
  */
-static rsRetVal
-writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, fjson_object **pReplyRoot, uchar *reqmsg)
+static rsRetVal ATTR_NONNULL()
+writeDataError(wrkrInstanceData_t *const pWrkrData,
+	instanceData *const pData, fjson_object **const pReplyRoot,
+	uchar *const reqmsg)
 {
 	char *rendered = NULL;
 	size_t toWrite;
@@ -1029,54 +1031,45 @@ writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, fjson_object 
 	pthread_mutex_lock(&pData->mutErrFile);
 	bMutLocked = 1;
 
-	DBGPRINTF("omelasticsearch: error file mode: erroronly='%d' errorInterleaved='%d'\n", pData->errorOnly,
-	pData->interleaved);
+	DBGPRINTF("omelasticsearch: error file mode: erroronly='%d' errorInterleaved='%d'\n",
+		pData->errorOnly, pData->interleaved);
 
 	if(pData->interleaved ==0 && pData->errorOnly ==0)/*default write*/
 	{
-		if(getDataErrorDefault(pWrkrData,pReplyRoot,reqmsg,&rendered) != RS_RET_OK) {
+		if(getDataErrorDefault(pWrkrData,pReplyRoot, reqmsg, &rendered) != RS_RET_OK) {
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
-	}
-	else
-	{
+	} else {
 		/*get correct context.*/
 		if(pData->interleaved && pData->errorOnly)
 		{
-			if(initializeErrorInterleavedConext(pWrkrData,&ctx) != RS_RET_OK) {
+			if(initializeErrorInterleavedConext(pWrkrData, &ctx) != RS_RET_OK) {
 				DBGPRINTF("omelasticsearch: error initializing error interleaved context.\n");
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 
-		}
-		else if(pData->errorOnly)
-		{
-
-			if(initializeErrorOnlyConext(pWrkrData,&ctx) != RS_RET_OK) {
+		} else if(pData->errorOnly) {
+			if(initializeErrorOnlyConext(pWrkrData, &ctx) != RS_RET_OK) {
 
 				DBGPRINTF("omelasticsearch: error initializing error only context.\n");
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
-		}
-		else if(pData->interleaved)
-		{
-			if(initializeInterleavedConext(pWrkrData,&ctx) != RS_RET_OK) {
+		} else if(pData->interleaved) {
+			if(initializeInterleavedConext(pWrkrData, &ctx) != RS_RET_OK) {
 				DBGPRINTF("omelasticsearch: error initializing error interleaved context.\n");
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
-		}
-		else
-		{
+		} else {
 			DBGPRINTF("omelasticsearch: None of the modes match file write. No data to write.\n");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 
 		/*execute context*/
-		if(parseRequestAndResponseForContext(pWrkrData,pReplyRoot,reqmsg,&ctx)!= RS_RET_OK) {
+		if(parseRequestAndResponseForContext(pWrkrData, pReplyRoot, reqmsg, &ctx)!= RS_RET_OK) {
 			DBGPRINTF("omelasticsearch: error creating file content.\n");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
-		rendered = strdup((char*)fjson_object_to_json_string(ctx.errRoot));
+		CHKmalloc(rendered = strdup((char*)fjson_object_to_json_string(ctx.errRoot)));
 	}
 
 
@@ -1103,7 +1096,6 @@ writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, fjson_object 
 		DBGPRINTF("omelasticsearch: error %d writing error file, write returns %lld\n",
 			  errno, (long long) wrRet);
 	}
-
 
 finalize_it:
 	if(bMutLocked)
