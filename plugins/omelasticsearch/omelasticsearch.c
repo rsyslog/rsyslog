@@ -786,7 +786,7 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,fjson_object **p
 
 		fjson_object_object_get_ex(result, "status", &ok);
 		itemStatus = checkReplyStatus(ok);
-		
+
 		char *request =0;
 		char *response =0;
 		if(ctx->statusCheckOnly)
@@ -1095,7 +1095,9 @@ writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, fjson_object 
 	 * things way to much.
 	 */
 	DBGPRINTF("omelasticsearch: error record: '%s'\n", rendered);
-	toWrite = strlen(rendered);
+	toWrite = strlen(rendered) + 1;
+	rendered = realloc(rendered, toWrite);
+	strcat(rendered, "\n");
 	wrRet = write(pData->fdErrFile, rendered, toWrite);
 	if(wrRet != (ssize_t) toWrite) {
 		DBGPRINTF("omelasticsearch: error %d writing error file, write returns %lld\n",
