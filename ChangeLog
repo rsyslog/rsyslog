@@ -203,6 +203,16 @@ Version 8.32.0 [v8-stable] 2018-01-09
 - imkafka bugfix: do not emit error message on regular state
   This was misunderstood as an error state and could spam the system
   log considerably. Regression from 8.31.0.
+- omkafka: expose operational status to user where useful
+  omkafka emits many useful operational status messages only to the debug
+  log. After careful review, we have exposed many of these as user error
+  and warning message (ex: librdkafka queue full, so user knows why we
+  suspend the plugin temporarily). This may have made the module too
+  chatty. If so, one can always filter out messages via configuration. And
+  if we really went overboard, we can undo those parts with the next
+  release. So it's better to give a bit more than less, as this definitely
+  eases troubleshooting for users.
+  closes https://github.com/rsyslog/rsyslog/pull/2334
 - omkafka bugfix: potential message duplication
   If a message that already failed in librdkafka was resubmitted and that
   resubmit also failed, it got duplicated.
