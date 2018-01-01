@@ -123,6 +123,13 @@ Version 8.32.0 [v8-stable] 2018-01-09
   hopefully useful at least for the testbench, possibly more.
 - fixed a couple of build issues with gcc-7 (in less frequently used modules)
 - fixed a couple of build issues on the arm platform (actually raspbian)
+- impstats: fix invalid counter definitions for getrusage() reporting 
+  some of the counters were defined as  int (32 bit) vs. intctr_t (64 bit).
+  On some platforms "long" seems to be 64bit, and getrusage() provides
+  what we store as int via long. So this caused truncation and/or overflow.
+  This had undefined effects. Most often, everything worked fine
+  for values smaller than 2^31 but sometimes we got negative values.
+  closes https://github.com/rsyslog/rsyslog/issues/1517
 - imudp bugfix: potential segfault in ratelimiting
   The rate-limiter inside imudp was not set to be thread safe, but was
   used across multiple threads. This worked in default configuration,
