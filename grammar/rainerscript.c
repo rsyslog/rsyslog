@@ -1636,47 +1636,51 @@ doFuncReplace(struct svar *__restrict__ const operandVal, struct svar *__restric
     uchar *replaceWith = es_getBufAddr(replaceWithStr);
     uint lfind = es_strlen(findStr);
     uint lReplaceWith = es_strlen(replaceWithStr);
-    uint size = 0;
+    uint lSrc = es_strlen(str);
+    uint lDst = 0;
     uchar* src_buff = es_getBufAddr(str);
     uint i, j;
-    for(i = j = 0; i <= es_strlen(str); i++, size++) {
+    for(i = j = 0; i <= lSrc; i++, lDst++) {
         if (j == lfind) {
-            size = size - lfind + lReplaceWith;
+            lDst = lDst - lfind + lReplaceWith;
             j = 0;
         }
-		if (i == es_strlen(str)) break;
+		if (i == lSrc) break;
 		if (src_buff[i] == find[j]) {
 			j++;
 		} else if (j > 0) {
 			i -= (j - 1);
-			size -= (j - 1);
+			lDst -= (j - 1);
 			j = 0;
 		}
     }
-    es_str_t *res = es_newStr(size);
+    es_str_t *res = es_newStr(lDst);
     unsigned char* dest = es_getBufAddr(res);
     uint k, s;
-    for(i = j = k = s = 0; i <= es_strlen(str); i++, s++) {
+    for(i = j = s = 0; i <= lSrc; i++, s++) {
         if (j == lfind) {
-            for (k = 0; k < lReplaceWith; k++) {
-                dest[s - j + k] = replaceWith[k];
+			s -= j;
+            for (k = 0; k < lReplaceWith; k++, s++) {
+                dest[s] = replaceWith[k];
             }
-            s = s - j + lReplaceWith;
             j = 0;
         }
-		if (i == es_strlen(str)) break;
+		if (i == lSrc) break;
 		if (src_buff[i] == find[j]) {
 			j++;
 		} else {
 			if (j > 0) {
-				i -= j;
-				s -= j;
+                for (k = 0; k < j; k++) dest[s - k] = src_buff[i - k];
 				j = 0;
+			} else {
+                dest[s] = src_buff[i];
 			}
-			dest[s] = src_buff[i];
 		}
     }
-    res->lenStr = size;
+    if (j > 0) {
+		for (k = 0; k < j; k++) dest[s - k] = src_buff[i - k];
+    }
+    res->lenStr = lDst;
     if(freeOperand) es_deleteStr(str);
     if(freeFind) es_deleteStr(findStr);
     if(freeReplacement) es_deleteStr(replaceWithStr);
