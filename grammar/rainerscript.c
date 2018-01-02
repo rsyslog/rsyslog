@@ -504,7 +504,7 @@ objlstAdd(struct objlst *root, struct cnfobj *o)
 {
 	struct objlst *l;
 	struct objlst *newl;
-	
+
 	newl = objlstNew(o);
 	if(root == 0) {
 		root = newl;
@@ -521,7 +521,7 @@ struct cnfstmt*
 scriptAddStmt(struct cnfstmt *root, struct cnfstmt *s)
 {
 	struct cnfstmt *l;
-	
+
 	if(root == NULL) {
 		root = s;
 	} else { /* find last, linear search ok, as only during config phase */
@@ -693,7 +693,7 @@ nvlstChkUnused(struct nvlst *lst)
 		if(!lst->bUsed) {
 			cstr = es_str2cstr(lst->name, NULL);
 			parser_errmsg("parameter '%s' not known -- "
-			  "typo in config file?", 
+			  "typo in config file?",
 			  cstr);
 			free(cstr);
 		}
@@ -1120,7 +1120,7 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 			  params->version, CNFPARAMBLK_VERSION);
 		return NULL;
 	}
-	
+
 	if(vals == NULL) {
 		bValsWasNULL = 1;
 		if((vals = calloc(params->nParams,
@@ -1164,7 +1164,7 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 }
 
 
-/* check if at least one cnfparamval is actually set 
+/* check if at least one cnfparamval is actually set
  * returns 1 if so, 0 otherwise
  */
 int
@@ -1428,7 +1428,7 @@ doExtractFieldByChar(uchar *str, uchar delim, const int matchnbr, uchar **resstr
 		}
 	}
 	DBGPRINTF("field() field requested %d, field found %d\n", matchnbr, iCurrFld);
-	
+
 	if(iCurrFld == matchnbr) {
 		/* field found, now extract it */
 		/* first of all, we need to find the end */
@@ -1480,14 +1480,14 @@ doExtractFieldByStr(uchar *str, char *delim, const rs_size_t lenDelim, const int
 		}
 	}
 	DBGPRINTF("field() field requested %d, field found %d\n", matchnbr, iCurrFld);
-	
+
 	if(iCurrFld == matchnbr) {
 		/* field found, now extract it */
 		/* first of all, we need to find the end */
 		pFldEnd = (uchar*) strstr((char*)pFld, delim);
 		if(pFldEnd == NULL) {
 			iLen = strlen((char*) pFld);
-		} else { /* found delmiter!  Note that pFldEnd *is* already on 
+		} else { /* found delmiter!  Note that pFldEnd *is* already on
 			  * the first delmi char, we don't need that. */
 			iLen = pFldEnd - pFld;
 		}
@@ -2062,7 +2062,7 @@ doFunc_is_time(const char *__restrict__ const str,
 			} else if (f == DATE_UNIX) {
 				int result;
 				var2Number(r, &result);
-				
+
 				if (result) {
 					DBGPRINTF("is_time: UNIX format found.\n");
 					ret = 1;
@@ -2400,7 +2400,7 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 		if (sizeof(time_t) == sizeof(int)) {
 			if (unixtime < INT_MIN || unixtime > INT_MAX) {
 				LogMsg(
-					0, RS_RET_VAL_OUT_OF_RANGE, LOG_WARNING, 
+					0, RS_RET_VAL_OUT_OF_RANGE, LOG_WARNING,
 					"Timestamp value %lld is out of range for this system (time_t is "
 					"32bits)!\n", unixtime
 				);
@@ -2430,7 +2430,7 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 
 		varFreeMembers(&r[0]);
 		varFreeMembers(&r[1]);
-		
+
 		break;
 	}
 	case CNFFUNC_PARSE_TIME: {
@@ -3054,7 +3054,7 @@ cnfexprEval(const struct cnfexpr *__restrict__ const expr,
 			cnfexprEval(expr->r, &r, usrptr, pWti);
 			if(var2Number(&r, &convok_r))
 				ret->d.n = 1ll;
-			else 
+			else
 				ret->d.n = 0ll;
 			varFreeMembers(&r);
 		}
@@ -3067,7 +3067,7 @@ cnfexprEval(const struct cnfexpr *__restrict__ const expr,
 			cnfexprEval(expr->r, &r, usrptr, pWti);
 			if(var2Number(&r, &convok_r))
 				ret->d.n = 1ll;
-			else 
+			else
 				ret->d.n = 0ll;
 			varFreeMembers(&r);
 		} else {
@@ -3222,7 +3222,7 @@ cnfexprDestruct(struct cnfexpr *__restrict__ const expr)
 		cnfexprDestruct(expr->l);
 		cnfexprDestruct(expr->r);
 		break;
-	case NOT: 
+	case NOT:
 	case 'M': /* unary */
 		cnfexprDestruct(expr->r);
 		break;
@@ -3447,7 +3447,7 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		break;
 	}
 }
-/* print only the given stmt 
+/* print only the given stmt
  * if "subtree" equals 1, the full statement subtree is printed, else
  * really only the statement.
  */
@@ -3939,7 +3939,7 @@ cnfstmtNewAct(struct nvlst *lst)
 	struct cnfstmt* cnfstmt;
 	char namebuf[256];
 	rsRetVal localRet;
-	if((cnfstmt = cnfstmtNew(S_ACT)) == NULL) 
+	if((cnfstmt = cnfstmtNew(S_ACT)) == NULL)
 		goto done;
 	localRet = actionNewInst(lst, &cnfstmt->d.act);
 	if(localRet == RS_RET_OK_WARN) {
@@ -3965,7 +3965,7 @@ cnfstmtNewLegaAct(char *actline)
 {
 	struct cnfstmt* cnfstmt;
 	rsRetVal localRet;
-	if((cnfstmt = cnfstmtNew(S_ACT)) == NULL) 
+	if((cnfstmt = cnfstmtNew(S_ACT)) == NULL)
 		goto done;
 	cnfstmt->printable = (uchar*)strdup((char*)actline);
 	localRet = cflineDoAction(loadConf, (uchar**)&actline, &cnfstmt->d.act);
@@ -3984,7 +3984,7 @@ done:	return cnfstmt;
 
 /* returns 1 if the two expressions are constants, 0 otherwise
  * if both are constants, the expression subtrees are destructed
- * (this is an aid for constant folding optimizing) 
+ * (this is an aid for constant folding optimizing)
  */
 static int
 getConstNumber(struct cnfexpr *expr, long long *l, long long *r)
@@ -4121,7 +4121,7 @@ finalize_it:
 }
 
 /* optimize a comparison with a variable as left-hand operand
- * NOTE: Currently support CMP_EQ, CMP_NE only and code NEEDS 
+ * NOTE: Currently support CMP_EQ, CMP_NE only and code NEEDS
  *       TO BE CHANGED fgr other comparisons!
  */
 static struct cnfexpr*
@@ -4337,7 +4337,7 @@ removeNOPs(struct cnfstmt *root)
 {
 	struct cnfstmt *stmt, *toDel, *prevstmt = NULL;
 	struct cnfstmt *newRoot = NULL;
-	
+
 	if(root == NULL) goto done;
 	stmt = root;
 	while(stmt != NULL) {
@@ -4701,7 +4701,7 @@ initFunc_re_match(struct cnffunc *func)
 	func->funcdata = re;
 
 	regex = es_str2cstr(((struct cnfstringval*) func->expr[1])->estr, NULL);
-	
+
 	if((localRet = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
 		int errcode;
 		if((errcode = regexp.regcomp(re, (char*) regex, REG_EXTENDED) != 0)) {
@@ -5063,7 +5063,7 @@ cnfparamvalsDestruct(const struct cnfparamvals *paramvals, const struct cnfparam
 	free((void*)paramvals);
 }
 
-/* find the index (or -1!) for a config param by name. This is used to 
+/* find the index (or -1!) for a config param by name. This is used to
  * address the parameter array. Of course, we could use with static
  * indices, but that would create some extra bug potential. So we
  * resort to names. As we do this only during the initial config parsing
