@@ -9,8 +9,9 @@ echo \[rscript_replace_complex.sh\]: a more complex test for replace script-func
 echo doing shutdown
 . $srcdir/diag.sh shutdown-when-empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown 
+. $srcdir/diag.sh wait-shutdown
 . $srcdir/diag.sh content-check "try to replace rsyslog and syrsyslog with rrsyslog"
 . $srcdir/diag.sh content-check "try to replace hello_world in hello_worldlo and helhello_world with hello_world_world"
 . $srcdir/diag.sh content-check "try to FBB in FBB_quux and quux_FBB with FBB"
+. $srcdir/diag.sh content-check "in the end of msg; try to not lose as_longer_this_string_as_more_probability_to_catch_the_bu"
 . $srcdir/diag.sh exit
