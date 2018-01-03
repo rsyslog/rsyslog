@@ -45,7 +45,6 @@
 
 /* static data */
 DEFobjCurrIf(obj)
-DEFobjCurrIf(errmsg)
 
 linkedList_t llCmdList; /* this is NOT a pointer - no typo here ;) */
 
@@ -69,7 +68,7 @@ static rsRetVal doGetChar(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *
 
 	/* if we are not at a '\0', we have our new char - no validity checks here... */
 	if(**pp == '\0') {
-		errmsg.LogError(0, RS_RET_NOT_FOUND, "No character available");
+		LogError(0, RS_RET_NOT_FOUND, "No character available");
 		iRet = RS_RET_NOT_FOUND;
 	} else {
 		if(pSetHdlr == NULL) {
@@ -133,7 +132,7 @@ static rsRetVal parseIntVal(uchar **pp, int64 *pVal)
 
 	if(!isdigit((int) *p)) {
 		errno = 0;
-		errmsg.LogError(0, RS_RET_INVALID_INT, "invalid number");
+		LogError(0, RS_RET_INVALID_INT, "invalid number");
 		ABORT_FINALIZE(RS_RET_INVALID_INT);
 	}
 
@@ -223,7 +222,7 @@ static rsRetVal doGetInt(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	CHKiRet(doGetSize(pp, NULL,&i));
 	p = *pp;
 	if(i > 2147483648ll) { /*2^31*/
-		errmsg.LogError(0, RS_RET_INVALID_VALUE, 
+		LogError(0, RS_RET_INVALID_VALUE, 
 		         "value %lld too large for integer argument.", i);
 		ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 	}
@@ -275,7 +274,7 @@ static rsRetVal doFileCreateMode(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t),
 	     && (*(p+1) && *(p+1) >= '0' && *(p+1) <= '7')
 	     && (*(p+2) && *(p+2) >= '0' && *(p+2) <= '7')
 	     && (*(p+3) && *(p+3) >= '0' && *(p+3) <= '7')  )  ) {
-		errmsg.LogError(0, RS_RET_INVALID_VALUE, "value must be octal (e.g 0644).");
+		LogError(0, RS_RET_INVALID_VALUE, "value must be octal (e.g 0644).");
 		ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 	}
 
@@ -320,7 +319,7 @@ static int doParseOnOffOption(uchar **pp)
 	skipWhiteSpace(pp); /* skip over any whitespace */
 
 	if(getSubString(pp, (char*) szOpt, sizeof(szOpt), ' ')  != 0) {
-		errmsg.LogError(0, NO_ERRCODE, "Invalid $-configline - could not extract on/off option");
+		LogError(0, NO_ERRCODE, "Invalid $-configline - could not extract on/off option");
 		return -1;
 	}
 	
@@ -329,7 +328,7 @@ static int doParseOnOffOption(uchar **pp)
 	} else if(!strcmp((char*)szOpt, "off")) {
 		return 0;
 	} else {
-		errmsg.LogError(0, NO_ERRCODE, "Option value must be on or off, but is '%s'", (char*)pOptStart);
+		LogError(0, NO_ERRCODE, "Option value must be on or off, but is '%s'", (char*)pOptStart);
 		return -1;
 	}
 }
@@ -352,7 +351,7 @@ static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	assert(*pp != NULL);
 
 	if(getSubString(pp, (char*) szName, sizeof(szName), ' ')  != 0) {
-		errmsg.LogError(0, RS_RET_NOT_FOUND, "could not extract group name");
+		LogError(0, RS_RET_NOT_FOUND, "could not extract group name");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
@@ -368,10 +367,10 @@ static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 
 	if(pgBuf == NULL) {
 		if (err != 0) {
-			errmsg.LogError(err, RS_RET_NOT_FOUND, "Query for group '%s' resulted in an error",
+			LogError(err, RS_RET_NOT_FOUND, "Query for group '%s' resulted in an error",
 				szName);
 		} else {
-			errmsg.LogError(0, RS_RET_NOT_FOUND, "ID for group '%s' could not be found", szName);
+			LogError(0, RS_RET_NOT_FOUND, "ID for group '%s' could not be found", szName);
 		}
 		iRet = RS_RET_NOT_FOUND;
 	} else {
@@ -408,14 +407,14 @@ static rsRetVal doGetUID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	assert(*pp != NULL);
 
 	if(getSubString(pp, (char*) szName, sizeof(szName), ' ')  != 0) {
-		errmsg.LogError(0, RS_RET_NOT_FOUND, "could not extract user name");
+		LogError(0, RS_RET_NOT_FOUND, "could not extract user name");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
 	getpwnam_r((char*)szName, &pwBuf, stringBuf, sizeof(stringBuf), &ppwBuf);
 
 	if(ppwBuf == NULL) {
-		errmsg.LogError(0, RS_RET_NOT_FOUND, "ID for user '%s' could not be found or error", (char*)szName);
+		LogError(0, RS_RET_NOT_FOUND, "ID for user '%s' could not be found or error", (char*)szName);
 		iRet = RS_RET_NOT_FOUND;
 	} else {
 		if(pSetHdlr == NULL) {
@@ -606,7 +605,7 @@ doGoneAway(__attribute__((unused)) uchar **pp,
 	   __attribute__((unused)) rsRetVal (*pSetHdlr)(void*, int),
 	   __attribute__((unused)) void *pVal)
 {
-	errmsg.LogError(0, RS_RET_CMD_GONE_AWAY, "config directive is no longer supported -- ignored");
+	LogError(0, RS_RET_CMD_GONE_AWAY, "config directive is no longer supported -- ignored");
 	return RS_RET_CMD_GONE_AWAY;
 }
 
@@ -975,7 +974,7 @@ rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p)
 	iRet = llFind(&llCmdList, (void *) pCmdName, (void*) &pCmd);
 
 	if(iRet == RS_RET_NOT_FOUND) {
-		errmsg.LogError(0, RS_RET_NOT_FOUND, "invalid or yet-unknown config file command '%s' - "
+		LogError(0, RS_RET_NOT_FOUND, "invalid or yet-unknown config file command '%s' - "
 			"have you forgotten to load a module?", pCmdName);
 	}
 
@@ -994,7 +993,7 @@ rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p)
 		 */
 		pHdlrP = *p;
 		if(pCmdHdlr->permitted != NULL && !*(pCmdHdlr->permitted)) {
-			errmsg.LogError(0, RS_RET_PARAM_NOT_PERMITTED, "command '%s' is currently not "
+			LogError(0, RS_RET_PARAM_NOT_PERMITTED, "command '%s' is currently not "
 				"permitted - did you already set it via a RainerScript command (v6+ config)?",
 				pCmdName);
 			ABORT_FINALIZE(RS_RET_PARAM_NOT_PERMITTED);
@@ -1052,7 +1051,6 @@ cfsyslineInit(void)
 {
 	DEFiRet;
 	CHKiRet(objGetObjInterface(&obj));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	CHKiRet(llInit(&llCmdList, cslcDestruct, cslcKeyDestruct, strcasecmp));
 
