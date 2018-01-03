@@ -16,7 +16,9 @@ do
 done
 
 # Start rsyslog now before adding more files
-. $srcdir/diag.sh startup imfile-wildcards-dirs-multi2.conf
+. $srcdir/diag.sh startup imfile-wildcards-dirs-multi3.conf
+# sleep a little to give rsyslog a chance to begin processing
+sleep 2
 
 for j in `seq 1 $IMFILEINPUTFILESSTEPS`;
 do
@@ -26,7 +28,8 @@ do
 		echo "Make rsyslog.input.dir$i/dir$j/testdir"
 		mkdir rsyslog.input.dir$i/dir$j
 		mkdir rsyslog.input.dir$i/dir$j/testdir
-		./inputfilegen -m 1 > rsyslog.input.dir$i/dir$j/testdir/file.logfile
+		mkdir rsyslog.input.dir$i/dir$j/testdir/subdir$j
+		./inputfilegen -m 1 > rsyslog.input.dir$i/dir$j/testdir/subdir$j/file.logfile
 	done
 	ls -d rsyslog.input.*
 
@@ -37,8 +40,8 @@ do
 	# Delete all but first!
 	for i in `seq 1 $IMFILEINPUTFILES`;
 	do
-		rm -rf rsyslog.input.dir$i/dir$j/testdir/file.logfile
-		rm -rr rsyslog.input.dir$i/dir$j
+		rm -rf rsyslog.input.dir$i/dir$j/testdir/subdir$j/file.logfile
+		rm -rf rsyslog.input.dir$i/dir$j
 	done
 done
 

@@ -740,17 +740,17 @@ TESTS += \
 	imfile-endregex-timeout-with-shutdown-polling.sh \
 	imfile-persist-state-1.sh \
 	imfile-wildcards.sh \
+	imfile-wildcards-dirs.sh \
 	imfile-wildcards-dirs2.sh \
 	imfile-rename.sh
 
-# we TEMPORARILY disable these tests to permit "normal" CI runs
-# because we know they sometimes fail due to a confirmed bug
-# inside imfile:
-# https://github.com/rsyslog/rsyslog/issues/2271
-# rgerhards, 2017-12-30
-#	imfile-wildcards-dirs.sh \
+# TEMPORARILY disable some imfile tests because refactoring 
+# is needed to get them to work 100% all the time.
+# alorbach, 2018-01-05
 #	imfile-wildcards-dirs-multi.sh \
 #	imfile-wildcards-dirs-multi2.sh \
+#	imfile-wildcards-dirs-multi3.sh \
+#	imfile-wildcards-dirs-multi4.sh \
 #
 
 if HAVE_VALGRIND
@@ -1419,12 +1419,16 @@ EXTRA_DIST= \
 	imfile-wildcards-dirs2.sh \
 	imfile-wildcards-dirs-multi.sh \
 	imfile-wildcards-dirs-multi2.sh \
+	imfile-wildcards-dirs-multi3.sh \
+	imfile-wildcards-dirs-multi4.sh \
 	imfile-rename.sh \
 	testsuites/imfile-wildcards.conf \
 	testsuites/imfile-wildcards-simple.conf \
 	testsuites/imfile-wildcards-dirs.conf \
 	testsuites/imfile-wildcards-dirs-multi.conf \
 	testsuites/imfile-wildcards-dirs-multi2.conf \
+	testsuites/imfile-wildcards-dirs-multi3.conf \
+	testsuites/imfile-wildcards-dirs-multi4.conf \
 	dynfile_invld_async.sh \
 	dynfile_invld_sync.sh \
 	dynfile_cachemiss.sh \

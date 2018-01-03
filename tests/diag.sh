@@ -544,15 +544,38 @@ case $1 in
 		fi
 		;;
    'content-check-with-count') 
-		count=$(cat rsyslog.out.log | grep -F "$2" | wc -l)
-		if [ "x$count" == "x$3" ]; then
-		    echo content-check-with-count success, \"$2\" occured $3 times
+		# content check variables for Timeout
+		if [ "x$4" == "x" ]; then
+			timeoutend=1
 		else
-		    echo content-check-with-count failed, expected \"$2\" to occure $3 times, but found it $count times
-		    echo file rsyslog.out.log content is:
-		    cat rsyslog.out.log
-		    . $srcdir/diag.sh error-exit 1
+			timeoutend=$4
 		fi
+		timecounter=0
+
+		while [  $timecounter -lt $timeoutend ]; do
+#			echo content-check-with-count loop $timecounter
+			let timecounter=timecounter+1
+
+			count=$(cat rsyslog.out.log | grep -F "$2" | wc -l)
+
+			if [ "x$count" == "x$3" ]; then
+				echo content-check-with-count success, \"$2\" occured $3 times
+				break
+			else
+				if [ "x$timecounter" == "x$timeoutend" ]; then
+					. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd
+					. $srcdir/diag.sh wait-shutdown	# Shutdown rsyslog instance on error 
+
+					echo content-check-with-count failed, expected \"$2\" to occure $3 times, but found it $count times
+					echo file rsyslog.out.log content is:
+					cat rsyslog.out.log
+					. $srcdir/diag.sh error-exit 1
+				else
+					echo content-check-with-count failed, trying again ...
+					./msleep 1000
+				fi
+			fi
+		done
 		;;
 	 'block-stats-flush')
 		echo blocking stats flush
