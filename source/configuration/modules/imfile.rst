@@ -172,6 +172,19 @@ Note: parameter names are case-insensitive.
   monitored.
 
 .. index::
+   single: imfile; sortFiles
+.. function:: sortFiles [on/off]
+
+   *Default: off*
+
+   *Available since: 8.32.0*
+
+   If this parameter is set to on, the files will be processed in sorted order, else
+   not. However, due to the inherent asynchronicity of the whole operations involved
+   in tracking files, it is not possible to guarantee this sorted order, as it also
+   depends on operation mode and OS timing.
+
+.. index::
    single: imfile; PollingInterval
 .. function:: PollingInterval seconds
 
