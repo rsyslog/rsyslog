@@ -1914,7 +1914,7 @@ deinitAll(void)
 	dbgClassExit();
 
 	/* NO CODE HERE - dbgClassExit() must be the last thing before exit()! */
-	if(!strcmp(PidFile, NO_PIDFILE)) {
+	if(strcmp(PidFile, NO_PIDFILE)) {
 		unlink(PidFile);
 	}
 }
