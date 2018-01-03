@@ -740,7 +740,6 @@ TESTS += \
 	imfile-endregex-timeout-with-shutdown-polling.sh \
 	imfile-persist-state-1.sh \
 	imfile-wildcards.sh \
-	imfile-wildcards-dirs.sh \
 	imfile-wildcards-dirs2.sh \
 	imfile-rename.sh
 
@@ -749,6 +748,7 @@ TESTS += \
 # inside imfile:
 # https://github.com/rsyslog/rsyslog/issues/2271
 # rgerhards, 2017-12-30
+#	imfile-wildcards-dirs.sh \
 #	imfile-wildcards-dirs-multi.sh \
 #	imfile-wildcards-dirs-multi2.sh \
 #
