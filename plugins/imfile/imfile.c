@@ -126,7 +126,7 @@ typedef struct lstn_s {
 	strm_t *pStrm;	/* its stream (NULL if not assigned) */
 	sbool bRMStateOnDel;
 	sbool hasWildcard;
-	uint8_t readMode;	/* which mode to use in ReadMulteLine call? */
+	uint8_t readMode;	/* which mode to use in ReadMultiLine call? */
 	uchar *startRegex;	/* regex that signifies end of message (NULL if unset) */
 	sbool discardTruncatedMsg;
 	sbool msgDiscardingError;
@@ -588,7 +588,7 @@ static rsRetVal enqLine(lstn_t *const __restrict__ pLstn,
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetFlowControlType(pMsg, eFLOWCTL_FULL_DELAY);
 	MsgSetInputName(pMsg, pInputName);
-	if (pLstn->addCeeTag) {
+	if(pLstn->addCeeTag) {
 		/* Make sure we account for terminating null byte */
 		size_t ceeMsgSize = msgLen + CONST_LEN_CEE_COOKIE + 1;
 		char *ceeMsg;
@@ -607,9 +607,9 @@ static rsRetVal enqLine(lstn_t *const __restrict__ pLstn,
 	MsgSetRuleset(pMsg, pLstn->pRuleset);
 	if(pLstn->addMetadata) {
 		metadata_values[0] = pLstn->pszFileName;
-		snprintf((char *)file_offset,MAX_OFFSET_REPRESENTATION_NUM_BYTES+1, "%lld", strtOffs);
-		metadata_values[1] = file_offset ;
-		msgAddMultiMetadata(pMsg, metadata_names, metadata_values ,2);
+		snprintf((char *)file_offset, MAX_OFFSET_REPRESENTATION_NUM_BYTES+1, "%lld", strtOffs);
+		metadata_values[1] = file_offset;
+		msgAddMultiMetadata(pMsg, metadata_names, metadata_values, 2);
 	}
 	ratelimitAddMsg(pLstn->ratelimiter, &pLstn->multiSub, pMsg);
 finalize_it:
@@ -731,7 +731,7 @@ finalize_it:
 }
 
 /* try to open a file. This involves checking if there is a status file and,
- * if so, reading it in. Processing continues from the last know location.
+ * if so, reading it in. Processing continues from the last known location.
  */
 static rsRetVal
 openFile(lstn_t *const __restrict__ pLstn)
@@ -815,7 +815,7 @@ pollFile(lstn_t *pLstn, int *pbHadFileData)
 {
 	cstr_t *pCStr = NULL;
 	DEFiRet;
-	/* Note: we must do pthread_cleanup_push() immediately, because the POXIS macros
+	/* Note: we must do pthread_cleanup_push() immediately, because the POSIX macros
 	 * otherwise do not work if I include the _cleanup_pop() inside an if... -- rgerhards, 2008-08-14
 	 */
 	pthread_cleanup_push(pollFileCancelCleanup, &pCStr);
