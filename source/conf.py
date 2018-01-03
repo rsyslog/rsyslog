@@ -30,7 +30,7 @@ sys.path.insert(0, os.path.abspath('_ext'))
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['edit_on_github']
+extensions = ['edit_on_github', 'sphinx.ext.todo']
 edit_on_github_project = 'rsyslog/rsyslog-doc'
 edit_on_github_branch = 'master'
 
@@ -136,6 +136,13 @@ pygments_style = 'sphinx'
 
 # Warn about all references where the target cannot be found. Default is False.
 nitpicky = True
+
+# If true, `todo` and `todoList` produce output, else they produce nothing.
+todo_include_todos = True
+
+# If this is True, todo emits a warning for each TODO entries. The default
+# is False.
+todo_emit_warnings = True
 
 # -- Options for HTML output ---------------------------------------------------
 
