@@ -43,6 +43,26 @@
 TB_TIMEOUT_STARTSTOP=400 # timeout for start/stop rsyslogd in tenths (!) of a second 400 => 40 sec
 # note that 40sec for the startup should be sufficient even on very slow machines. we changed this from 2min on 2017-12-12
 
+function rsyslog_testbench_test_url_access() {
+    local missing_requirements=
+    if ! hash curl 2>/dev/null ; then
+        missing_requirements="'curl' is missing in PATH; Make sure you have cURL installed! Skipping test ..."
+    fi
+
+    if [ -n "${missing_requirements}" ]; then
+        echo ${missing_requirements}
+        exit 77
+    fi
+
+    local http_endpoint="$1"
+    if ! curl --fail --max-time 30 "${http_endpoint}" 1>/dev/null 2>&1; then
+        echo "HTTP endpont '${http_endpoint}' isn't reachable. Skipping test ..."
+        exit 77
+    else
+        echo "HTTP endpoint '${http_endoint}' is reachable! Starting test ..."
+    fi
+}
+
 #START: ext kafka config
 dep_cache_dir=$(readlink -f $srcdir/.dep_cache)
 dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.10/zookeeper-3.4.10.tar.gz
@@ -114,7 +134,7 @@ case $1 in
 		rm -f rsyslog.input rsyslog.empty rsyslog.input.* imfile-state* omkafka-failed.data
 		rm -f testconf.conf HOSTNAME
 		rm -f rsyslog.errorfile tmp.qi
-		rm -f core.* vgcore.* core*
+		rm -f core.* vghttp://www.rsyslog.com/testbench/echo-get.phpcore.* core*
 		# Note: rsyslog.action.*.include must NOT be deleted, as it
 		# is used to setup some parameters BEFORE calling init. This
 		# happens in chained test scripts. Delete on exit is fine,
@@ -164,6 +184,9 @@ case $1 in
 		rm -f HOSTNAME imfile-state:.-rsyslog.input
 		unset TCPFLOOD_EXTRA_OPTS
 		echo  -------------------------------------------------------------------------------
+		;;
+   'check-url-access')   # check if we can access the URL - will exit 77 when not OK
+		rsyslog_testbench_test_url_access $2
 		;;
    'es-init')   # initialize local Elasticsearch *testbench* instance for the next
                 # test. NOTE: do NOT put anything useful on that instance!

@@ -1,13 +1,7 @@
 #!/bin/bash
 # add 2017-12-01 by Rainer Gerhards, released under ASL 2.0
-
-uname
-#if [ `uname` = "FreeBSD" ] ; then
-#   echo "This test currently does not work on FreeBSD."
-#   exit 77
-#fi
-
 . $srcdir/diag.sh init
+. $srcdir/diag.sh check-url-access http://www.rsyslog.com/testbench/echo-get.php
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
 module(load="../plugins/imtcp/.libs/imtcp")
@@ -22,7 +16,6 @@ if $msg contains "msgnum:" then {
 	set $!reply = http_request($.url);
 	action(type="omfile" file="rsyslog.out.log" template="outfmt")
 }
-
 '
 . $srcdir/diag.sh startup-vg
 . $srcdir/diag.sh tcpflood -m10
