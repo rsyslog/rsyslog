@@ -63,6 +63,8 @@ Version 8.32.0 [v8-stable] 2018-01-09
 - imfile: added support for Solaris File Event notification (FEN)
   also improves performance under Solaris, with FEN imfile provides
   features equivalent to inotify mode
+- imfile: added new module parameter "sortFiles"
+  This permits to process newly created files in sorted order.
 - imuxsock: improved status reporting: socket name received from systemd
   Providing an indication of what we got from systemd facilitates problem
   analysis.
