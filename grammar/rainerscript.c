@@ -4875,6 +4875,7 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 	struct cnffparamlst *param, *toDel;
 	unsigned short i;
 	unsigned short nParams;
+	char *cstr;
 
 	/* we first need to find out how many params we have */
 	nParams = 0;
@@ -4888,6 +4889,14 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 		func->funcdata = NULL;
 		func->destructable_funcdata = 1;
 		func->fID = funcName2ID(fname, nParams);
+
+		/* parse error if we have an unknown function */
+		if (func->fID == CNFFUNC_INVALID) {
+			cstr = es_str2cstr(fname, NULL);
+			parser_errmsg("Invalid function %s", cstr);
+			free(cstr);
+		}
+
 		/* shuffle params over to array (access speed!) */
 		param = paramlst;
 		for(i = 0 ; i < nParams ; ++i) {
