@@ -153,6 +153,6 @@ To understand queue parameters, read
    in ms (1000ms is 1sec!), default 60000 (1 minute)]
 -  **$MainMsgQueueType** [**FixedArray**/LinkedList/Direct/Disk]
 -  **$MainMsgQueueSaveOnShutdown**  [on/**off**]
--  **$MainMsgQueueWorkerThreads** <number>, num worker threads, default 1,
+-  **$MainMsgQueueWorkerThreads** <number>, num worker threads, default 2,
    recommended 1
 -  **$MainMsgQueueWorkerThreadMinumumMessages** <number>, default queue size/number of workers
