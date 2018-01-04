@@ -215,6 +215,7 @@ struct modConfData_s {
 	lstn_t *pTailLstn;
 	uint8_t opMode;
 	sbool configSetViaV2Method;
+	sbool sortFiles;
 	sbool haveReadTimeouts;	/* use special processing if read timeouts exist */
 };
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
@@ -316,6 +317,7 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "pollinginterval", eCmdHdlrPositiveInt, 0 },
 	{ "readtimeout", eCmdHdlrPositiveInt, 0 },
 	{ "timeoutgranularity", eCmdHdlrPositiveInt, 0 },
+	{ "sortfiles", eCmdHdlrBinary, 0 },
 	{ "mode", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk modpblk =
@@ -1297,6 +1299,7 @@ CODESTARTbeginCnfLoad
 	loadModConf->readTimeout = 0; /* default: no timeout */
 	loadModConf->timeoutGranularity = 1000; /* default: 1 second */
 	loadModConf->haveReadTimeouts = 0; /* default: no timeout */
+	loadModConf->sortFiles = GLOB_NOSORT;
 	bLegacyCnfModGlobalsPermitted = 1;
 	/* init legacy config vars */
 	cs.pszFileName = NULL;
@@ -1344,6 +1347,8 @@ CODESTARTsetModCnf
 		} else if(!strcmp(modpblk.descr[i].name, "timeoutgranularity")) {
 			/* note: we need ms, thus "* 1000" */
 			loadModConf->timeoutGranularity = (int) pvals[i].val.d.n * 1000;
+		} else if(!strcmp(modpblk.descr[i].name, "sortfiles")) {
+			loadModConf->sortFiles = ((sbool) pvals[i].val.d.n) ? 0 : GLOB_NOSORT;
 		} else if(!strcmp(modpblk.descr[i].name, "mode")) {
 			if(!es_strconstcmp(pvals[i].val.d.estr, "polling"))
 				loadModConf->opMode = OPMODE_POLLING;
@@ -2062,7 +2067,7 @@ in_setupFileWatchStatic(lstn_t *pLstn)
 			  "expansion\n", pLstn->pszFileName);
 		glob_t files;
 		const int ret = glob((char*)pLstn->pszFileName,
-					GLOB_MARK|GLOB_NOSORT|GLOB_BRACE, NULL, &files);
+					GLOB_MARK|runModConf->sortFiles|GLOB_BRACE, NULL, &files);
 		if(ret == 0) {
 			for(unsigned i = 0 ; i < files.gl_pathc ; i++) {
 				uchar basen[MAXFNAME];
@@ -2814,7 +2819,7 @@ fen_DirSearchFiles(lstn_t *pLstn, int dirIdx)
 
 	DBGPRINTF("fen_DirSearchFiles search for dynamic files with pattern '%s' \n", pLstn->pszFileName);
 	result = glob(	(char*)pLstn->pszFileName,
-			GLOB_MARK|GLOB_NOSORT|GLOB_BRACE,
+			GLOB_MARK|runModConf->sortFiles|GLOB_BRACE,
 			NULL, &files);
 	if(result == 0) {
 		DBGPRINTF("fen_DirSearchFiles found %d matches with pattern '%s' \n", files.gl_pathc,
