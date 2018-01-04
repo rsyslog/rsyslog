@@ -99,6 +99,9 @@ Version 8.32.0 [v8-stable] 2018-01-09
 - Patches from BSD projects have been imported
   ... as far as they still apply. Some patches that patched BSD-specific
   code were broadened to be more generic.
+- script bugfix: invalid function names were silently ignored
+  no error message was produced
+  thanks to Matt Ezell for providing the patch.
 - rainerscript: add int2hex() function
 - rainerscript: add is_time() function
   Thanks to Stephen Workman for implementing this.
