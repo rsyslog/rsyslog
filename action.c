@@ -63,7 +63,7 @@
  * beast.
  * rgerhards, 2011-06-15
  *
- * Copyright 2007-2017 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -92,6 +92,10 @@
 #include <strings.h>
 #include <time.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 #ifdef _AIX
 #include <pthread.h>
 #endif 
@@ -120,6 +124,10 @@
 #endif
 #if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wswitch-enum"
+#endif
+
+#ifndef O_LARGEFILE
+#define O_LARGEFILE 0
 #endif
 
 #define NO_TIME_PROVIDED 0 /* indicate we do not provide any cached time */
@@ -191,6 +199,7 @@ int bActionReportSuspensionCont = 0;
 static struct cnfparamdescr cnfparamdescr[] = {
 	{ "name", eCmdHdlrGetWord, 0 }, /* legacy: actionname */
 	{ "type", eCmdHdlrString, CNFPARAM_REQUIRED }, /* legacy: actionname */
+	{ "action.errorfile", eCmdHdlrString, 0 },
 	{ "action.writeallmarkmessages", eCmdHdlrBinary, 0 }, /* legacy: actionwriteallmarkmessages */
 	{ "action.execonlyeverynthtime", eCmdHdlrInt, 0 }, /* legacy: actionexeconlyeverynthtime */
 	{ "action.execonlyeverynthtimetimeout", eCmdHdlrInt, 0 }, /* legacy: actionexeconlyeverynthtimetimeout */
@@ -341,8 +350,12 @@ rsRetVal actionDestruct(action_t * const pThis)
 	if(pThis->pModData != NULL)
 		pThis->pMod->freeInstance(pThis->pModData);
 
+	if(pThis->fdErrFile != -1)
+		close(pThis->fdErrFile);
+	pthread_mutex_destroy(&pThis->mutErrFile);
 	pthread_mutex_destroy(&pThis->mutAction);
 	pthread_mutex_destroy(&pThis->mutWrkrDataTable);
+	free((void*)pThis->pszErrFile);
 	d_free(pThis->pszName);
 	d_free(pThis->ppTpl);
 	d_free(pThis->peParamPassing);
@@ -383,6 +396,8 @@ rsRetVal actionConstruct(action_t **ppThis)
 	pThis->iResumeInterval = 30;
 	pThis->iResumeRetryCount = 0;
 	pThis->pszName = NULL;
+	pThis->pszErrFile = NULL;
+	pThis->fdErrFile = -1;
 	pThis->bWriteAllMarkMsgs = 1;
 	pThis->iExecEveryNthOccur = 0;
 	pThis->iExecEveryNthOccurTO = 0;
@@ -396,6 +411,7 @@ rsRetVal actionConstruct(action_t **ppThis)
 	pThis->bCopyMsg = 0;
 	pThis->tLastOccur = datetime.GetTime(NULL);	/* done once per action on startup only */
 	pThis->iActionNbr = iActionNbr;
+	pthread_mutex_init(&pThis->mutErrFile, NULL);
 	pthread_mutex_init(&pThis->mutAction, NULL);
 	pthread_mutex_init(&pThis->mutWrkrDataTable, NULL);
 	INIT_ATOMIC_HELPER_MUT(pThis->mutCAS);
@@ -1204,7 +1220,7 @@ finalize_it:
 
 
 /* Commit try committing (do not handle retry processing and such) */
-static rsRetVal
+static rsRetVal ATTR_NONNULL()
 actionTryCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti,
 	actWrkrIParams_t *__restrict__ const iparams, const int nparams)
 {
@@ -1252,22 +1268,74 @@ finalize_it:
 }
 
 /* If a transcation failed, we write the error file (if configured).
- * TODO: implement
  */
-static void
-actionWriteErrorFile(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
+static void ATTR_NONNULL()
+actionWriteErrorFile(action_t *__restrict__ const pThis, const rsRetVal ret,
+	actWrkrIParams_t *__restrict__ const iparams, const int nparams)
 {
-	unsigned i;
-	actWrkrInfo_t *const wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
-	const unsigned nMsgs = wrkrInfo->p.tx.currIParam;
+	fjson_object *etry=NULL;
+	int bNeedUnlock = 0;
 
-	DBGPRINTF("action %d commit failed, writing %u messages to error file\n",
-		pThis->iActionNbr, nMsgs);
-	for(i = 0 ; i < nMsgs ; ++i) {
-		// TODO: get actual param count!
-		dbgprintf("msg %d: '%s'\n", i,
-			actParam(wrkrInfo->p.tx.iparams, 1, i, 0).param);
+	if(pThis->pszErrFile == NULL) {
+		DBGPRINTF("action %s: commit failed, no error file set, silently "
+			"discarding %d messages\n", pThis->pszName, nparams);
+		goto done;
 	}
+
+	DBGPRINTF("action %d commit failed, writing %u messages (%d tpls) to error file\n",
+		pThis->iActionNbr, nparams, pThis->iNumTpls);
+
+	pthread_mutex_lock(&pThis->mutErrFile);
+	bNeedUnlock = 1;
+
+	if(pThis->fdErrFile == -1) {
+		pThis->fdErrFile = open(pThis->pszErrFile,
+					O_WRONLY|O_CREAT|O_APPEND|O_LARGEFILE|O_CLOEXEC,
+					S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP);
+		if(pThis->fdErrFile == -1) {
+			LogError(errno, RS_RET_ERR, "action %s: error opening error file %s",
+				pThis->pszName, pThis->pszErrFile);
+			goto done;
+		}
+	}
+
+	for(int i = 0 ; i < nparams ; ++i) {
+		if((etry = fjson_object_new_object()) == NULL)
+			goto done;
+		fjson_object_object_add(etry, "action", fjson_object_new_string((char*)pThis->pszName));
+		fjson_object_object_add(etry, "status", fjson_object_new_int(ret));
+		for(int j = 0 ; j < pThis->iNumTpls ; ++j) {
+			char tplname[20];
+			snprintf(tplname, sizeof(tplname), "template%d", j);
+			tplname[sizeof(tplname)-1] = '\0';
+			fjson_object_object_add(etry, tplname,
+				fjson_object_new_string((char*)actParam(iparams, 1, i, j).param));
+		}
+
+		char *const rendered = strdup((char*)fjson_object_to_json_string(etry));
+		if(rendered == NULL)
+			goto done;
+		const size_t toWrite = strlen(rendered) + 1;
+		/* note: we use the '\0' inside the string to store a LF - we do not
+		 * otherwise need it and it safes us a copy/realloc.
+		 */
+		rendered[toWrite-1] = '\n'; /* NO LONGER A STRING! */
+		const ssize_t wrRet = write(pThis->fdErrFile, rendered, toWrite);
+		if(wrRet != (ssize_t) toWrite) {
+			LogError(errno, RS_RET_IO_ERROR,
+				"action %s: error writing errorFile %s, write returned %lld",
+				pThis->pszName, pThis->pszErrFile, (long long) wrRet);
+		}
+
+		fjson_object_put(etry);
+		etry = NULL;
+	}
+done:
+	if(bNeedUnlock) {
+		pthread_mutex_unlock(&pThis->mutErrFile);
+	}
+	fjson_object_put(etry);
+	return;
 }
 
 
@@ -1291,6 +1359,8 @@ actionTryRemoveHardErrorsFromBatch(action_t *__restrict__ const pThis, wti_t *__
 			memcpy(new_iparams + *new_nMsgs, &oneParamSet,
 				sizeof(actWrkrIParams_t) * pThis->iNumTpls);
 			++(*new_nMsgs);
+		} else if(ret != RS_RET_OK) {
+			actionWriteErrorFile(pThis, ret, oneParamSet, 1);
 		}
 	}
 	RETiRet;
@@ -1301,7 +1371,7 @@ actionTryRemoveHardErrorsFromBatch(action_t *__restrict__ const pThis, wti_t *__
  * as it looks like there is no ultimate consumer of this code.
  * rgerhards, 2013-11-06
  */
-static rsRetVal
+static rsRetVal ATTR_NONNULL()
 actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 {
 	actWrkrInfo_t *const wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
@@ -1320,13 +1390,6 @@ actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 	}
 	DBGPRINTF("actionCommit[%s]: processing...\n", pThis->pszName);
 
-/* even more TODO:
-	This is the place where retry processing needs to go in. If the action
-	permanently fails, we should - as a new feature - add the capability to
-	write an error file. This is already done be omelasticsearch, and IMHO
-	pretty useful.
-	rgerhards, 2013-11-04
- */
  	/* we now do one try at commiting the whole batch. Usually, this will
 	 * succeed. If so, we are happy and done. If not, we dig into the details
 	 * of finding out if we have a non-temporary error and try to handle this
@@ -1383,7 +1446,7 @@ actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 			if(iRet == RS_RET_FORCE_TERM) {
 				ABORT_FINALIZE(RS_RET_FORCE_TERM);
 			} else if(iRet != RS_RET_OK) {
-				actionWriteErrorFile(pThis, pWti);
+				actionWriteErrorFile(pThis, iRet, iparams, nMsgs);
 				bDone = 1;
 			}
 			continue;
@@ -1407,7 +1470,7 @@ finalize_it:
 }
 
 /* Commit all active transactions in *DIRECT mode* */
-void
+void ATTR_NONNULL()
 actionCommitAllDirect(wti_t *__restrict__ const pWti)
 {
 	int i;
@@ -1836,6 +1899,8 @@ actionApplyCnfParam(action_t * const pAction, struct cnfparamvals * const pvals)
 			pAction->pszName = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(pblk.descr[i].name, "type")) {
 			continue; /* this is handled seperately during module select! */
+		} else if(!strcmp(pblk.descr[i].name, "action.errorfile")) {
+			pAction->pszErrFile = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(pblk.descr[i].name, "action.writeallmarkmessages")) {
 			pAction->bWriteAllMarkMsgs = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "action.execonlyeverynthtime")) {

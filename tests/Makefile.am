@@ -442,7 +442,8 @@ TESTS +=  \
 	mysql-asyn.sh \
 	mysql-actq-mt.sh \
 	mysql-actq-mt-withpause.sh \
-	action-tx-single-processing.sh
+	action-tx-single-processing.sh \
+	action-tx-errfile.sh
 if HAVE_VALGRIND
 TESTS +=  \
 	mysql-basic-vg.sh \
@@ -1315,7 +1316,8 @@ EXTRA_DIST= \
 	sndrcv_gzip.sh \
 	testsuites/sndrcv_gzip_sender.conf \
 	testsuites/sndrcv_gzip_rcvr.conf \
-	./action-tx-single-processing.sh \
+	action-tx-single-processing.sh \
+	action-tx-errfile.sh \
 	pipeaction.sh \
 	testsuites/pipeaction.conf \
 	omprog-cleanup.sh \
