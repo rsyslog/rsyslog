@@ -1161,7 +1161,7 @@ syntax_embedded(const uchar *const __restrict__ buf,
 			}
 			lastSep = 1;
 		} else if (numLen == -2) {  //'.'
-			if (lastSep || (ipParts <= 1 && !hadAbbrev)) {
+			if (lastSep || (ipParts == 0 && hadAbbrev) || (ipParts <= 6 && !hadAbbrev)) {
 				isIP = 0;
 				goto done;
 			}
