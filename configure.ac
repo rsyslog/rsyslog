@@ -1138,6 +1138,7 @@ AC_ARG_ENABLE(mmgrok,
         [enable_mmgrok=no]
 )
 if test "x$enable_mmgrok" = "xyes"; then
+        AC_CHECK_HEADERS([grok.h])
 	GLIB_CFLAGS="$(pkg-config --cflags glib-2.0)"
 	GLIB_LIBS="$(pkg-config --libs glib-2.0)"
 fi
