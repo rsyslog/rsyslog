@@ -9,20 +9,13 @@ echo [imfile-wildcards-dirs.sh]
 
 # Start rsyslog now before adding more files
 . $srcdir/diag.sh startup imfile-wildcards-dirs.conf
-# sleep a little to give rsyslog a chance to begin processing
-sleep 1
 
 for i in `seq 1 $IMFILEINPUTFILES`;
 do
 	mkdir rsyslog.input.dir$i
 	./inputfilegen -m 1 > rsyslog.input.dir$i/file.logfile
 done
-# wait for imfile to process
-./msleep 250 
 ls -d rsyslog.input.*
-
-# sleep a little to give rsyslog a chance for processing
-sleep 1
 
 . $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 . $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!

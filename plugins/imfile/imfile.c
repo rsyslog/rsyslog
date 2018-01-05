@@ -254,8 +254,9 @@ struct dirInfo_s {
 	sbool hasWildcard;
 /* TODO: check if following property are inotify only?*/
 	int bDirType;		/* Configured or dynamic */
-	fileTable_t active; /* associated active files */
+	fileTable_t active;	/* associated active files */
 	fileTable_t configured; /* associated configured files */
+	int rdiridx;		/* Root diridx helper property */
 #if defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE)
 	struct fileinfo *pfinf;
 	sbool bPortAssociated;
@@ -388,6 +389,26 @@ wdmapInit(void)
 	nWdmap = 0;
 finalize_it:
 	RETiRet;
+}
+
+/* looks up a wdmap entry by filename and returns it's index if found
+ * or -1 if not found.
+ */
+static int
+wdmapLookupFilename(uchar *pszFileName)
+{
+	int i = 0;
+	int wd = -1;
+	/* Loop through */
+	for(i = 0 ; i < nWdmap; ++i) {
+		if (	wdmap[i].pLstn != NULL &&
+			strcmp((const char*)wdmap[i].pLstn->pszFileName, (const char*)pszFileName) == 0){
+			/* Found matching wd */
+			wd = wdmap[i].wd;
+		}
+	}
+
+	return wd;
 }
 
 /* looks up a wdmap entry by pLstn pointer and returns it's index if found
@@ -1716,6 +1737,10 @@ dirsAdd(const uchar *const dirName, int *const piIndex)
 	dirs[newindex].hasWildcard = containsGlobWildcard((char*)dirName);
 	CHKmalloc(dirs[newindex].dirNameBfWildCard = ustrdup(dirName));
 
+	/* Default rootidx always -1 */
+	dirs[newindex].rdiridx = -1;
+
+	/* Extrac checking for wildcard mode */
 	if (dirs[newindex].hasWildcard) {
 		// TODO: wildcard is not necessarily in last char!!!
 		// TODO: BUG: we have many more wildcards that "*" - so this check is invalid
@@ -1966,6 +1991,7 @@ static void ATTR_NONNULL(1)
 startLstnFile(lstn_t *const __restrict__ pLstn)
 {
 	rsRetVal localRet;
+	DBGPRINTF("startLstnFile for file '%s'\n", pLstn->pszFileName);
 	const int wd = inotify_add_watch(ino_fd, (char*)pLstn->pszFileName, IN_MODIFY);
 	if(wd < 0) {
 		if(pLstn->fileNotFoundError) {
@@ -1980,7 +2006,8 @@ startLstnFile(lstn_t *const __restrict__ pLstn)
 		goto done;
 	}
 	if((localRet = wdmapAdd(wd, -1, pLstn)) != RS_RET_OK) {
-		if(pLstn->fileNotFoundError) {
+		if(	localRet != RS_RET_FILE_ALREADY_IN_TABLE &&
+			pLstn->fileNotFoundError) {
 			LogError(0, NO_ERRCODE, "imfile: internal error: error %d adding file "
 					"to wdmap, ignoring file '%s'\n", localRet, pLstn->pszFileName);
 		} else {
@@ -2046,6 +2073,43 @@ in_setupFileWatchDynamic(lstn_t *pLstn,
 done:	return;
 }
 
+/* Search for matching files using glob.
+ * Create Dynamic Watch for each found file
+ */
+static void
+in_setupFileWatchGlobSearch(lstn_t *pLstn)
+{
+	int wd;
+
+	DBGPRINTF("in_setupFileWatchGlobSearch file '%s' has wildcard, doing initial expansion\n",
+		pLstn->pszFileName);
+	glob_t files;
+	const int ret = glob((char*)pLstn->pszFileName,
+				GLOB_MARK|GLOB_NOSORT|GLOB_BRACE, NULL, &files);
+	if(ret == 0) {
+		for(unsigned i = 0 ; i < files.gl_pathc ; i++) {
+			uchar basen[MAXFNAME];
+			uchar *const file = (uchar*)files.gl_pathv[i];
+
+			if(file[strlen((char*)file)-1] == '/')
+				continue;/* we cannot process subdirs! */
+
+			/* search for existing watched files !*/
+			wd = wdmapLookupFilename(file);
+			if(wd >= 0) {
+				DBGPRINTF("in_setupFileWatchGlobSearch '%s' already watched in wd %d\n",
+					file, wd);
+			} else {
+				getBasename(basen, file);
+				DBGPRINTF("in_setupFileWatchGlobSearch setup dynamic watch "
+					"for '%s : %s' \n", basen, file);
+				in_setupFileWatchDynamic(pLstn, basen, file);
+			}
+		}
+		globfree(&files);
+	}
+}
+
 /* Setup a new file watch for static (configured) files.
  * Note: we need to try to read this file, as it may already contain data this
  * needs to be processed, and we won't get an event for that as notifications
@@ -2063,26 +2127,8 @@ in_setupFileWatchStatic(lstn_t *pLstn)
 	/* perform wildcard check on static files manually */
 	hasWildcard = containsGlobWildcard((char*)pLstn->pszFileName);
 	if(hasWildcard) {
-		DBGPRINTF("in_setupFileWatchStatic file '%s' has wildcard, doing initial "
-			  "expansion\n", pLstn->pszFileName);
-		glob_t files;
-		const int ret = glob((char*)pLstn->pszFileName,
-					GLOB_MARK|runModConf->sortFiles|GLOB_BRACE, NULL, &files);
-		if(ret == 0) {
-			for(unsigned i = 0 ; i < files.gl_pathc ; i++) {
-				uchar basen[MAXFNAME];
-				uchar *const file = (uchar*)files.gl_pathv[i];
-
-				if(file[strlen((char*)file)-1] == '/')
-					continue;/* we cannot process subdirs! */
-
-				getBasename(basen, file);
-				DBGPRINTF("in_setupFileWatchStatic setup dynamic watch "
-					"for '%s : %s' \n", basen, file);
-				in_setupFileWatchDynamic(pLstn, basen, file);
-			}
-			globfree(&files);
-		}
+		/* search for matching files */
+		in_setupFileWatchGlobSearch(pLstn);
 	} else {
 		/* Duplicate static object as well, otherwise the configobject
 		 * could be deleted later! */
@@ -2206,6 +2252,8 @@ in_handleDirEventDirCREATE(struct inotify_event *ev, const int dirIdx)
 {
 	char fulldn[MAXFNAME];
 	int newdiridx;
+	int iListIdx;
+	sbool hasWildcard;
 
 	/* Combine to Full Path first */
 	in_handleDirGetFullDir(fulldn, dirIdx, (char*)ev->name);
@@ -2214,10 +2262,31 @@ in_handleDirEventDirCREATE(struct inotify_event *ev, const int dirIdx)
 	newdiridx = dirsFindDir( (uchar*)fulldn );
 	if(newdiridx == -1) {
 		/* Add dir to table and create watch */
-		DBGPRINTF("Adding new dir '%s' to dirs table \n", fulldn);
+		DBGPRINTF("in_handleDirEventDirCREATE Adding new dir '%s' to dirs table \n", fulldn);
 		dirsAdd((uchar*)fulldn, &newdiridx);
 		dirs[newdiridx].bDirType = DIR_DYNAMIC; /* Set to DYNAMIC directory! */
 		in_setupDirWatch(newdiridx);
+		/* Set propper root index for newdiridx */
+		dirs[newdiridx].rdiridx = (dirs[dirIdx].rdiridx != -1 ? dirs[dirIdx].rdiridx : dirIdx);
+
+		DBGPRINTF("in_handleDirEventDirCREATE wdentry dirIdx=%d, rdirIdx=%d, dirIdxName=%s, dir=%s)\n",
+			dirIdx, dirs[newdiridx].rdiridx, dirs[dirIdx].dirName, fulldn);
+		if (dirs[dirs[newdiridx].rdiridx].configured.currMax > 0) {
+			DBGPRINTF("in_handleDirEventDirCREATE found configured listeners\n");
+
+			/* Loop through configured Listeners and scan for dynamic files */
+			for(iListIdx = 0; iListIdx < dirs[dirs[newdiridx].rdiridx].configured.currMax; iListIdx++) {
+				hasWildcard = (	dirs[dirs[newdiridx].rdiridx].hasWildcard ||
+					dirs[dirs[newdiridx].rdiridx].configured.listeners[iListIdx].pLstn->hasWildcard
+						? TRUE : FALSE);
+				if (hasWildcard == 1){
+					DBGPRINTF("in_handleDirEventDirCREATE configured listener has Wildcard\n");
+					/* search for matching files */
+					in_setupFileWatchGlobSearch(
+						dirs[dirs[newdiridx].rdiridx].configured.listeners[iListIdx].pLstn);
+				}
+			}
+		}
 	} else {
 		DBGPRINTF("dir '%s' already exists in dirs table (Idx %d)\n", fulldn, newdiridx);
 	}
@@ -2801,7 +2870,7 @@ finalize_it:
 	RETiRet;
 }
 
-/* function not used yet, will be needed for wildcards later */
+/* Helper function to find matching files for listener */
 rsRetVal
 fen_DirSearchFiles(lstn_t *pLstn, int dirIdx)
 {
