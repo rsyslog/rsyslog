@@ -148,7 +148,39 @@ Version 8.32.0 [v8-stable] 2018-01-09
   When notifyconnectionclose was on, a string buffer was accessed immediately
   after it was freed (as part of the connection close operation).
   Detected by LLVM ASAN.
+- mmanon bugfix: fix wrong ipv6 embedded recognition
+  mmanon recognized IPv6 with embedded IPv4 that have too few (16 bit) fields.
+  example: 13:abd:45:0.0.0.0
+  closes https://github.com/rsyslog/rsyslog/issues/2357
+- imfile bugfix: not detecting files in directory when wildcards are used.
+  When directories and files are created at the same time,
+  imfile may missed subdirs or file if the machine is on high load.
+  The handling has been enhanced to scan newly created directories ALWAYS for
+  matching files.
+  fixes https://github.com/rsyslog/rsyslog/issues/2271
+  However there still exist problems with multilevel directory configurations.
+  Details are discussed in https://github.com/rsyslog/rsyslog/issues/2354
+  Fixes for the remaining issues are expected for 8.33.0.
 - script bugfix: improper string-to-number conversion for negative numbers
+- core/action bugfix: 100% CPU utilization on suspension of output module
+    Triggering condition:
+    * output module using the legacy transaction interface
+      (e.g. omelasticsearch, omlibdbi)
+    * output module needs to suspend itself
+  In these cases, rsyslog enters a busy loop trying to resolve the
+  suspend condition. The bug is rooted in rsyslog core action code.
+  This patch fixes it by inserting a 1-second sleep during calls
+  to the resume handler.
+  Note: we cannot sleep exactly as long as tryResume needs. This
+  would require larger refactoring, which probably is not worth for
+  the legacy interface. The current solution is almost as good, as
+  the one second sleep has very little overhead on a real system.
+  Thus we have choosen that approach.
+  This patch now also ensures that failed messages are properly
+  handled and do not cause eternal hang.
+  closes https://github.com/rsyslog/rsyslog/issues/2113
+- core/variables bugfix: bare $! cannot be used in set statement
+  fixes https://github.com/rsyslog/rsyslog/issues/326
 - core bugfix: auto commit of actions improperly handled
   The internal state variable bHadAutoCommit was handled in thread-unsafe way
   and most probably caused (hard to see) issues when action instances were
