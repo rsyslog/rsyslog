@@ -1189,11 +1189,19 @@ doTransaction(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti
 			 */
 			iRet = actionProcessMessage(pThis,
 				&actParam(iparams, pThis->iNumTpls, i, 0), pWti);
-			if(iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED &&
-			   iRet != RS_RET_OK)
-				--i; /* we need to re-submit */
 			DBGPRINTF("doTransaction: action %d, processing msg %d, result %d\n",
 			   pThis->iActionNbr, i,iRet);
+			if(iRet == RS_RET_SUSPENDED) {
+				--i; /* we need to re-submit */
+				/* note: we are suspended and need to retry. In order not to
+				 * hammer the CPU, we now do a voluntarly wait of 1 second.
+				 * The rest will be handled by the standard retry handler.
+				 */
+				srSleep(1, 0);
+			} else if(iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED &&
+			   iRet != RS_RET_OK) {
+				FINALIZE; /* let upper peer handle the error condition! */
+			}
 		}
 	}
 finalize_it:
@@ -1335,6 +1343,7 @@ actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 	 * do no real harm. - rgerhards, 2017-10-06
 	 */
 	iRet = actionTryCommit(pThis, pWti, wrkrInfo->p.tx.iparams, wrkrInfo->p.tx.currIParam);
+DBGPRINTF("actionCommit[%s]: return actionTryCommit %d\n", pThis->pszName, iRet);
 	if(iRet == RS_RET_OK) {
 		FINALIZE;
 	}
