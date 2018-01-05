@@ -448,6 +448,13 @@ abbr, acronym {
     cursor: help;
 }
 
+/* Add extra space between parameter sections */
+div.section {
+    margin-top: 30px;
+}
+
+
+
 /* -- code displays --------------------------------------------------------- */
 
 pre {
