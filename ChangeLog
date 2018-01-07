@@ -1,6 +1,7 @@
 ------------------------------------------------------------------------------
 Version 8.32.0 [v8-stable] 2018-01-09
 - NEW BUILD REQUIREMENTs:
+  * libfastjson 0.99.8 is now required; older versions lead to bugs in rsyslog
   * libczmq >= 3.0.2 is now required for omczmq
     This was actually required for quite some while, but not properly checked
     during configure run. If the lib was older, build failed. Now configure
@@ -115,6 +116,7 @@ Version 8.32.0 [v8-stable] 2018-01-09
   interface. First of all, this is useful for users, and secondly we
   needed a capability to craft a testbench test.
   closes https://github.com/rsyslog/rsyslog/issues/1978
+- testbench: fixed build problem of testbench tools under Alpine Linux
 - added --enable-libsystemd configure option to enforce use of libsystemd
   so we can fail the build on platforms where this is required
 - core/glbl: remove long-unused option $optimizeforuniprocessor
@@ -318,6 +320,7 @@ Version 8.32.0 [v8-stable] 2018-01-09
   - ARM (via Raspberry PI) added to CI system
   - Debian 9 added to CI system
   - omgssapi and usertools components are now also tested in Travis
+  - test coverage on BSD has been enhanced
 ------------------------------------------------------------------------------
 Version 8.31.0 [v8-stable] 2017-11-28
 - NEW BUILD DEPENDENCY: ommongodb now requires libmongo-c
