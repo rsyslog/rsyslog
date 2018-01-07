@@ -144,6 +144,9 @@ todo_include_todos = True
 # is False.
 todo_emit_warnings = True
 
+# Supress "unknown mimetype for ..." warnings
+suppress_warnings = ['epub.unknown_project_files']
+
 # -- Options for HTML output ---------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
