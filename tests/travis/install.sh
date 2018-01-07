@@ -1,7 +1,7 @@
 # this installs some components that we cannot install any other way
 source /etc/lsb-release
 # the following packages are not yet available via travis package
-sudo apt-get install -qq faketime libdbd-mysql autoconf-archive
+sudo apt-get install -qq faketime libdbd-mysql
 
 # update autoconf-archive (no good enough packets available)
 # this one built by whissi
