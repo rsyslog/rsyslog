@@ -170,7 +170,7 @@ AC_CHECK_HEADERS([malloc.h],[],[],[
      #endif
   ]
 ])
-AC_CHECK_HEADERS([fcntl.h locale.h netdb.h netinet/in.h paths.h stddef.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/stat.h sys/inotify.h unistd.h utmp.h utmpx.h sys/epoll.h sys/prctl.h])
+AC_CHECK_HEADERS([fcntl.h locale.h netdb.h netinet/in.h paths.h stddef.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/stat.h sys/inotify.h unistd.h utmp.h utmpx.h sys/epoll.h sys/prctl.h sys/select.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
