@@ -26,7 +26,7 @@ sys.path.insert(0, os.path.abspath('_ext'))
 # -- General configuration -----------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
-#needs_sphinx = '1.0'
+needs_sphinx = '1.5.1'
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
@@ -143,6 +143,9 @@ todo_include_todos = True
 # If this is True, todo emits a warning for each TODO entries. The default
 # is False.
 todo_emit_warnings = True
+
+# Supress "unknown mimetype for ..." warnings
+suppress_warnings = ['epub.unknown_project_files']
 
 # -- Options for HTML output ---------------------------------------------------
 
