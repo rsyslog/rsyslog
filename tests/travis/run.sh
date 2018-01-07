@@ -5,6 +5,16 @@ set -v  # we want to see the execution steps
 set -e  # abort on first failure
 #set -x  # debug aid
 
+echo RUN is $RUN
+pwd
+ls -l tests/travis
+
+if [ "x$RUN" != "x" ]; then
+	echo "using defined run script: $RUN"
+	source tests/travis/$RUN
+	exit $?
+fi
+
 echo "DISTRIB_CODENAME: $DISTRIB_CODENAME"
 echo "CLANG:            $CLANG"
 
