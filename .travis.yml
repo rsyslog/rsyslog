@@ -61,6 +61,10 @@ matrix:
        services: docker
        env: RUN="docker-alpine.sh"
 
+     - os: linux
+       services: docker
+       env: RUN="docker-ubuntu-devel.sh"
+
 #     - os: osx
 #       compiler: "clang"
 #       env: CFLAGS="-g "
