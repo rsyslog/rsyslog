@@ -65,6 +65,20 @@ Note: parameter names are case-insensitive.
    This directive will timeout previous messages seen if they are older
    than 20 minutes. In the example above, the count would now be always
    1 and consequently no rule would ever be triggered.
+
+-  **action.errorfile** string
+
+   When an action is executed, some messages may permanently fail.
+   Depending on configuration, this could for example be caused by an
+   offline target or exceptionally non-numerical data inside a
+   numerical database field. If action.errorfile is specified, those
+   messages are written to the specified file. If it is not specified
+   (the default), messages are silently discarded.
+
+   The error file format is JSON. It contains the failed messages as
+   provided to the action in question, the action name as well as
+   the rsyslog status code roughly explaining why it failed.
+
 -  **action.execOnlyOnceEveryInterval** integer
    Execute action only if the last execute is at last seconds in the
    past (more info in ommail, but may be used with any action)
