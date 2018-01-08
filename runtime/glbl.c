@@ -127,6 +127,7 @@ int glblIntMsgRateLimitBurst = 500;
 char** glblDbgFiles = NULL;
 size_t glblDbgFilesNum = 0;
 int glblDbgWhitelist = 1;
+int glblPermitCtlC = 0;
 
 pid_t glbl_ourpid;
 #ifndef HAVE_ATOMIC_BUILTINS
@@ -185,6 +186,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "internalmsg.ratelimit.interval", eCmdHdlrPositiveInt, 0 },
 	{ "internalmsg.ratelimit.burst", eCmdHdlrPositiveInt, 0 },
 	{ "errormessagestostderr.maxnumber", eCmdHdlrPositiveInt, 0 },
+	{ "shutdown.enable.ctl-c", eCmdHdlrBinary, 0 },
 	{ "debug.files", eCmdHdlrArray, 0 },
 	{ "debug.whitelist", eCmdHdlrBinary, 0 }
 };
@@ -1290,6 +1292,8 @@ glblDoneLoadCnf(void)
 		        glblDbgWhitelist = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "umask")) {
 		        loadConf->globals.umask = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "shutdown.enable.ctl-c")) {
+		        glblPermitCtlC = (int) cnfparamvals[i].val.d.n;
 		} else {
 			dbgprintf("glblDoneLoadCnf: program error, non-handled "
 			  "param '%s'\n", paramblk.descr[i].name);

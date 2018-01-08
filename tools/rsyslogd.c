@@ -1486,7 +1486,7 @@ initAll(int argc, char **argv)
 
 	hdlr_enable(SIGPIPE, SIG_IGN);
 	hdlr_enable(SIGXFSZ, SIG_IGN);
-	if(Debug) {
+	if(Debug || glblPermitCtlC) {
 		hdlr_enable(SIGUSR1, rsyslogdDebugSwitch);
 		hdlr_enable(SIGINT,  rsyslogdDoDie);
 		hdlr_enable(SIGQUIT, rsyslogdDoDie);
