@@ -64,6 +64,9 @@ Version 8.32.0 [v8-stable] 2018-01-09
 - imfile: added support for Solaris File Event notification (FEN)
   also improves performance under Solaris, with FEN imfile provides
   features equivalent to inotify mode
+- core/action: new parameter "action.errorfile"
+  permits to write failed messages to an "error file" so that they
+  can be reviewed and potentially be reprocessed
 - imfile: added new module parameter "sortFiles"
   This permits to process newly created files in sorted order.
 - imuxsock: improved status reporting: socket name received from systemd
@@ -76,6 +79,10 @@ Version 8.32.0 [v8-stable] 2018-01-09
   options must be given. These options are necessary because under
   Travis we hit the max runtime for tests and needed to split tests
   over multiple incarnations.
+- mmpstrucdata: new parameter "sd_name.lowercase"
+  to permit preserving case for structured data identifiers
+  Special thanks to github user alanrobson for the intial commit that
+  preseves case (on which we based other work).
 - omfile: add module-global option "dynafile.donotsuspend"
   this permits to enable SUSPENDing dynafile actions. Traditionally,
   SUSPEND mode was never entered for dynafiles as it would have blocked
