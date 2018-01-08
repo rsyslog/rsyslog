@@ -11,10 +11,12 @@ The action object has different parameters:
 
 -  those that apply to all actions and are action specific. These are
    documented below.
+
 -  parameters for the action queue. While they also apply to all
    parameters, they are queue-specific, not action-specific (they are
    the same that are used in rulesets, for example). The are documented
    separately under :doc:`queue parameters <../rainerscript/queue_parameters>`.
+
 -  action-specific parameters. These are specific to a certain type of
    actions. They are documented by the :doc:`output modules<modules/idx_output>`
    in question.
@@ -32,9 +34,12 @@ Note: parameter names are case-insensitive.
    Actions are sequentially numbered from 1 to n.
 
 -  **type** string
+
    Mandatory parameter for every action. The name of the module that
    should be used.
+
 -  **action.writeAllMarkMessages** *on*/off
+
    This setting tells if mark messages are always written ("on", the
    default) or only if the action was not recently executed ("off"). By
    default, recently means within the past 20 minutes. If this setting
@@ -43,13 +48,17 @@ Note: parameter names are case-insensitive.
    used as a kind of heartbeat. This mode also enables faster processing
    inside the rule engine. So it should be set to "off" only when there
    is a good reason to do so.
+
 -  **action.execOnlyEveryNthTime** integer
+
    If configured, the next action will only be executed every n-th time.
    For example, if configured to 3, the first two messages that go into
    the action will be dropped, the 3rd will actually cause the action to
    execute, the 4th and 5th will be dropped, the 6th executed under the
    action, ... and so on.
+
 -  **action.execOnlyEveryNthTimeout** integer
+
    Has a meaning only if Action.ExecOnlyEveryNthTime is also configured
    for the same action. If so, the timeout setting specifies after which
    period the counting of "previous actions" expires and a new action
@@ -65,10 +74,27 @@ Note: parameter names are case-insensitive.
    This directive will timeout previous messages seen if they are older
    than 20 minutes. In the example above, the count would now be always
    1 and consequently no rule would ever be triggered.
+
+-  **action.errorfile** string
+
+   When an action is executed, some messages may permanently fail.
+   Depending on configuration, this could for example be caused by an
+   offline target or exceptionally non-numerical data inside a
+   numerical database field. If action.errorfile is specified, those
+   messages are written to the specified file. If it is not specified
+   (the default), messages are silently discarded.
+
+   The error file format is JSON. It contains the failed messages as
+   provided to the action in question, the action name as well as
+   the rsyslog status code roughly explaining why it failed.
+
 -  **action.execOnlyOnceEveryInterval** integer
+
    Execute action only if the last execute is at last seconds in the
    past (more info in ommail, but may be used with any action)
+
 -  **action.execOnlyWhenPreviousIsSuspended** on/off
+
    This directive allows to specify if actions should always be executed
    ("off," the default) or only if the previous action is suspended
    ("on"). This directive works hand-in-hand with the multiple actions
@@ -83,7 +109,9 @@ Note: parameter names are case-insensitive.
    execOnlyWhenPreviousIsSpuspended
    preciseness <http://www.rsyslog.com/action-execonlywhenpreviousissuspended-preciseness/>`_
    FAQ article.
+
 -  **action.repeatedmsgcontainsoriginalmsg** on/off
+
    "last message repeated n times" messages, if generated, have a
    different format that contains the message that is being repeated.
    Note that only the first "n" characters are included, with n to be at
@@ -92,9 +120,16 @@ Note: parameter names are case-insensitive.
    n is large enough to get a good idea which message was repeated but
    it is not necessarily large enough for the whole message. (Introduced
    with 4.1.5).
+
 -  **action.resumeRetryCount** integer
+
    [default 0, -1 means eternal]
+
+   Sets how often an action is retried before it is considered to have
+   failed. Failed actions discard messages.
+
 -  **action.resumeInterval** integer
+
    Sets the ActionResumeInterval for the action. The interval provided
    is always in seconds. Thus, multiply by 60 if you need minutes and
    3,600 if you need hours (not recommended). When an action is
@@ -106,20 +141,26 @@ Note: parameter names are case-insensitive.
    actual interval is (numRetries / 10 + 1) \* Action.ResumeInterval. so
    after the 10th try, it by default is 60 and after the 100th try it is
    330.
+
 - **action.reportSuspension** on/off
+
   Configures rsyslog to report suspension and reactivation
   of the action. This is useful to note which actions have
   problems (e.g. connecting to a remote system) and when.
   The default for this setting is the equally-named global
   parameter.
+
 - **action.reportSuspensionContinuation** on/off
+
   Configures rsyslog to report continuation of action suspension.
   This emits new messages whenever an action is to be retried, but
   continues to fail. If set to "on", *action.reportSuspension* is
   also automatically set to "on".
   The default for this setting is the equally-named global
   parameter.
+
 - **action.copyMsg** on/*off*
+
   Configures action to *copy* the message if *on*. Defaults to
   *off* (which is how actions have worked traditionally), which
   causes queue to refer to the original message object, with
