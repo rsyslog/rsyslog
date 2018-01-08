@@ -31,7 +31,7 @@ sphinx-build -D version="$version" -D release="$release" -b $format source build
 
 [ ! -e ./$docfile ] || rm -rf ./$docfile
 
-tar -czf $docfile build source LICENSE README.md build.sh || {
+tar -czf $docfile build source LICENSE README.md || {
 	echo "Failed to create rsyslog-doc.tar.gz tarball..."
 	exit 1
 }
