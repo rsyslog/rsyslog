@@ -1,1 +1,1 @@
-select substring(Message,9,8) from SystemEvents;
+SELECT substring(Message,9,8) FROM systemevents;

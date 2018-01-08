@@ -38,7 +38,8 @@ typedef nsd_if_t nsd_gtls_if_t; /* we just *implement* this interface */
 struct nsd_gtls_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	nsd_t *pTcp;		/**< our aggregated nsd_ptcp data */
-	uchar *pszConnectHost;	/**< hostname used for connect - may be used to authenticate peer if no other name given */
+	uchar *pszConnectHost;	/**< hostname used for connect - may be used to
+					authenticate peer if no other name given */
 	int iMode;		/* 0 - plain tcp, 1 - TLS */
 	int bAbortConn;		/* if set, abort conncection (fatal error had happened) */
 	enum { 
@@ -50,8 +51,10 @@ struct nsd_gtls_s {
 	gtlsRtryCall_t rtryCall;/**< what must we retry? */
 	int bIsInitiator;	/**< 0 if socket is the server end (listener), 1 if it is the initiator */
 	gnutls_session_t sess;
-	int bHaveSess;		/* as we don't know exactly which gnutls_session values are invalid, we use this one
-				   to flag whether or not we are in a session (same as -1 for a socket meaning no sess) */
+	int bHaveSess;		/* as we don't know exactly which gnutls_session values
+					are invalid, we use this one to flag whether or
+					not we are in a session (same as -1 for a socket
+					meaning no sess) */
 	int bReportAuthErr;	/* only the first auth error is to be reported, this var triggers it. Initially, it is
 				 * set to 1 and changed to 0 after the first report. It is changed back to 1 after
 				 * one successful authentication. */
@@ -62,7 +65,8 @@ struct nsd_gtls_s {
 	short	bOurCertIsInit;	/**< 1 if our certificate is initialized and must be deinit on destruction */
 	short	bOurKeyIsInit;	/**< 1 if our private key is initialized and must be deinit on destruction */
 	char *pszRcvBuf;
-	int lenRcvBuf;		/**< -1: empty, 0: connection closed, 1..NSD_GTLS_MAX_RCVBUF-1: data of that size present */
+	int lenRcvBuf;
+	/**< -1: empty, 0: connection closed, 1..NSD_GTLS_MAX_RCVBUF-1: data of that size present */
 	int ptrRcvBuf;		/**< offset for next recv operation if 0 < lenRcvBuf < NSD_GTLS_MAX_RCVBUF */
 };
 

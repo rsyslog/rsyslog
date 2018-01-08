@@ -1,8 +1,10 @@
 #!/bin/bash
 # added 2017-05-03 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
-export TESTMESSAGES=10000
-export EXTRA_EXITCHECK=dumpkafkalogs
+export TESTMESSAGES=100000
+# enable the EXTRA_EXITCHECK only if really needed - otherwise spams the test log
+# too much
+#export EXTRA_EXITCHECK=dumpkafkalogs
 . $srcdir/diag.sh download-kafka
 . $srcdir/diag.sh stop-zookeeper
 . $srcdir/diag.sh stop-kafka

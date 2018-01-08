@@ -58,7 +58,6 @@ MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("mmsequence")
 
 
-DEFobjCurrIf(errmsg);
 DEF_OMOD_STATIC_DATA
 
 /* config variables */
@@ -195,7 +194,7 @@ CODESTARTnewActInst
 				pData->mode = mmSequencePerKey;
 			} else {
 				cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-				errmsg.LogError(0, RS_RET_INVLD_MODE,
+				LogError(0, RS_RET_INVLD_MODE,
 					"mmsequence: invalid mode '%s' - ignored",
 					cstr);
 				free(cstr);
@@ -221,12 +220,12 @@ CODESTARTnewActInst
 		if(!strcmp(actpblk.descr[i].name, "var")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
 			if (strlen(cstr) < 3) {
-				errmsg.LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
+				LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
 						"mmsequence: valid variable name should be at least "
 						"3 symbols long, got %s",	cstr);
 				free(cstr);
 			} else if (cstr[0] != '$') {
-				errmsg.LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
+				LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
 						"mmsequence: valid variable name should start with $,"
 						"got %s", cstr);
 				free(cstr);
@@ -260,7 +259,7 @@ CODESTARTnewActInst
 		pthread_mutex_unlock(&ght_mutex);
 		break;
 	default:
-		errmsg.LogError(0, RS_RET_INVLD_MODE,
+		LogError(0, RS_RET_INVLD_MODE,
 				"mmsequence: this mode is not currently implemented");
 	}
 
@@ -337,7 +336,7 @@ CODESTARTdoAction
 			val = pData->value;
 			pthread_mutex_unlock(&inst_mutex);
 		} else {
-			errmsg.LogError(0, RS_RET_ERR,
+			LogError(0, RS_RET_ERR,
 					"mmsequence: mutex lock has failed!");
 		}
 		break;
@@ -353,50 +352,39 @@ CODESTARTdoAction
 				}
 				val = *pCounter;
 			} else {
-				errmsg.LogError(0, RS_RET_NOT_FOUND,
+				LogError(0, RS_RET_NOT_FOUND,
 						"mmsequence: unable to fetch the counter from hash");
 			}
 			pthread_mutex_unlock(&ght_mutex);
 		} else {
-			errmsg.LogError(0, RS_RET_ERR,
+			LogError(0, RS_RET_ERR,
 					"mmsequence: mutex lock has failed!");
 		}
 		
 		break;
 	default:
-		errmsg.LogError(0, RS_RET_NOT_IMPLEMENTED,
+		LogError(0, RS_RET_NOT_IMPLEMENTED,
 				"mmsequence: this mode is not currently implemented");
 	}
 
 	/* finalize_it: */
 	json = json_object_new_int(val);
 	if (json == NULL) {
-		errmsg.LogError(0, RS_RET_OBJ_CREATION_FAILED,
+		LogError(0, RS_RET_OBJ_CREATION_FAILED,
 				"mmsequence: unable to create JSON");
 	} else if (RS_RET_OK != msgAddJSON(pMsg, (uchar *)pData->pszVar + 1, json, 0, 0)) {
-		errmsg.LogError(0, RS_RET_OBJ_CREATION_FAILED,
+		LogError(0, RS_RET_OBJ_CREATION_FAILED,
 				"mmsequence: unable to pass out the value");
 		json_object_put(json);
 	}
 ENDdoAction
 
 
-BEGINparseSelectorAct
-CODESTARTparseSelectorAct
-CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	if(strncmp((char*) p, ":mmsequence:", sizeof(":mmsequence:") - 1)) {
-		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
-			"mmsequence supports only v6+ config format, use: "
-			"action(type=\"mmsequence\" ...)");
-	}
-	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-CODE_STD_FINALIZERparseSelectorAct
-ENDparseSelectorAct
+NO_LEGACY_CONF_parseSelectorAct
 
 
 BEGINmodExit
 CODESTARTmodExit
-	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -415,5 +403,4 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	DBGPRINTF("mmsequence: module compiled with rsyslog version %s.\n", VERSION);
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDmodInit

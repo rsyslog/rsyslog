@@ -206,8 +206,6 @@ static int real_makeFileParentDirs(const uchar *const szFile, const size_t lenFi
         uchar *p;
         uchar *pszWork;
         size_t len;
-	int iTry = 0;
-	int bErr = 0;
 
 	assert(szFile != NULL);
 	assert(lenFile > 0);
@@ -220,38 +218,29 @@ static int real_makeFileParentDirs(const uchar *const szFile, const size_t lenFi
                 if(*p == '/') {
 			/* temporarily terminate string, create dir and go on */
                         *p = '\0';
-			iTry = 0;
-again:
-                        if(access((char*)pszWork, F_OK)) {
-                                if(mkdir((char*)pszWork, mode) == 0) {
-					if(uid != (uid_t) -1 || gid != (gid_t) -1) {
-						/* we need to set owner/group */
-						if(chown((char*)pszWork, uid, gid) != 0) {
-							char errStr[1024]; /* buffer for strerr() */
-							rs_strerror_r(errno, errStr, sizeof(errStr));
-							LogError(0, RS_RET_DIR_CHOWN_ERROR,
-								"chown for directory '%s' failed: %s",
-								pszWork, errStr);
-							if(bFailOnChownFail)
-								bErr = 1;
-							/* silently ignore if configured
-							 * to do so.
-							 */
+			int bErr = 0;
+			if(mkdir((char*)pszWork, mode) == 0) {
+				if(uid != (uid_t) -1 || gid != (gid_t) -1) {
+					/* we need to set owner/group */
+					if(chown((char*)pszWork, uid, gid) != 0) {
+						LogError(errno, RS_RET_DIR_CHOWN_ERROR,
+							"chown for directory '%s' failed", pszWork);
+						if(bFailOnChownFail) {
+							/* ignore if configured to do so */
+							bErr = 1;
 						}
 					}
-				} else {
-					if(errno == EEXIST && iTry == 0) {
-						iTry = 1;
-						goto again;
-						}
-					bErr = 1;
 				}
-				if(bErr) {
-					int eSave = errno;
-					free(pszWork);
-					errno = eSave;
-					return -1;
-				}
+			} else if(errno != EEXIST) {
+				/* EEXIST is ok, means this component exists */
+				bErr = 1;
+			}
+
+			if(bErr) {
+				int eSave = errno;
+				free(pszWork);
+				errno = eSave;
+				return -1;
 			}
                         *p = '/';
                 }
@@ -762,5 +751,92 @@ long int randomNumber(void)
 }
 #endif
 
-/* vim:set ai:
+
+/* process "binary" parameters where this is needed to execute
+ * programs (namely mmexternal and omprog).
+ * Most importantly, split them into argv[] and get the binary name
  */
+rsRetVal ATTR_NONNULL()
+split_binary_parameters(uchar **const szBinary, char ***const __restrict__ aParams,
+	int *const iParams, es_str_t *const param_binary)
+{
+	es_size_t iCnt;
+	es_size_t iStr;
+	int iPrm;
+	es_str_t *estrParams = NULL;
+	es_str_t *estrBinary = param_binary;
+	es_str_t *estrTmp = NULL;
+	uchar *c;
+	int bInQuotes;
+	DEFiRet;
+	assert(iParams != NULL);
+	assert(param_binary != NULL);
+
+	/* Search for end of binary name */
+	c = es_getBufAddr(param_binary);
+	iCnt = 0;
+	while(iCnt < es_strlen(param_binary) ) {
+		if (c[iCnt] == ' ') {
+			/* Split binary name from parameters */
+			estrBinary = es_newStrFromSubStr( param_binary, 0, iCnt);
+			estrParams = es_newStrFromSubStr( param_binary, iCnt+1,
+					es_strlen(param_binary));
+			break;
+		}
+		iCnt++;
+	}
+	*szBinary = (uchar*)es_str2cstr(estrBinary, NULL);
+	DBGPRINTF("szBinary = '%s'\n", *szBinary);
+
+	*iParams = 2; /* we always have argv[0], and NULL-terminator for array */
+	/* count size of argv[] */
+	if (estrParams != NULL) {
+		if(Debug) {
+			char *params = es_str2cstr(estrParams, NULL);
+			dbgprintf("szParams = '%s'\n", params);
+			free(params);
+		}
+		c = es_getBufAddr(estrParams);
+		assert(c[iCnt] != ' '); /* cannot be at this stage! */
+		for(iCnt = 0 ; iCnt < es_strlen(estrParams) ; ++iCnt) {
+			if (c[iCnt] == ' ' && c[iCnt-1] != '\\')
+				 (*iParams)++;
+		}
+	}
+	DBGPRINTF("iParams = '%d'\n", *iParams);
+
+	/* create argv[] */
+	CHKmalloc(*aParams = malloc(*iParams * sizeof(char*)));
+	iPrm = 0;
+	bInQuotes = FALSE;
+	/* Set first parameter to binary */
+	(*aParams)[iPrm] = strdup((char*)*szBinary);
+	iPrm++;
+	if (estrParams != NULL) {
+		iCnt = iStr = 0;
+		c = es_getBufAddr(estrParams); /* Reset to beginning */
+		while(iCnt < es_strlen(estrParams) ) {
+			if ( c[iCnt] == ' ' && !bInQuotes ) {
+				estrTmp = es_newStrFromSubStr( estrParams, iStr, iCnt-iStr);
+			} else if ( iCnt+1 >= es_strlen(estrParams) ) {
+				estrTmp = es_newStrFromSubStr( estrParams, iStr, iCnt-iStr+1);
+			} else if (c[iCnt] == '"') {
+				bInQuotes = !bInQuotes;
+			}
+
+			if ( estrTmp != NULL ) {
+				(*aParams)[iPrm] = es_str2cstr(estrTmp, NULL);
+				iStr = iCnt+1; /* Set new start */
+				DBGPRINTF("Param (%d): '%s'\n", iPrm, (*aParams)[iPrm]);
+				es_deleteStr( estrTmp );
+				estrTmp = NULL;
+				iPrm++;
+			}
+			iCnt++;
+		}
+	}
+	(*aParams)[iPrm] = NULL; /* NULL per argv[] convention */
+
+finalize_it:
+	RETiRet;
+}

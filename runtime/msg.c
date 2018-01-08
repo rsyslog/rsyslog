@@ -7,7 +7,7 @@
  * of the "old" message code without any modifications. However, it
  * helps to have things at the right place one we go to the meat of it.
  *
- * Copyright 2007-2017 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -599,7 +599,8 @@ propNameToID(uchar *pName, propid_t *pPropID)
 		*pPropID = PROP_SYSLOGFACILITY_TEXT;
 	} else if(!strcasecmp((char*) pName, "syslogseverity") || !strcasecmp((char*) pName, "syslogpriority")) {
 		*pPropID = PROP_SYSLOGSEVERITY;
-	} else if(!strcasecmp((char*) pName, "syslogseverity-text") || !strcasecmp((char*) pName, "syslogpriority-text")) {
+	} else if(!strcasecmp((char*) pName, "syslogseverity-text") ||
+	!strcasecmp((char*) pName, "syslogpriority-text")) {
 		*pPropID = PROP_SYSLOGSEVERITY_TEXT;
 	} else if(!strcasecmp((char*) pName, "timegenerated")) {
 		*pPropID = PROP_TIMEGENERATED;
@@ -843,11 +844,11 @@ msgBaseConstruct(smsg_t **ppThis)
 	pM->pszRcvdAt3164 = NULL;
 	pM->pszRcvdAt3339 = NULL;
 	pM->pszRcvdAt_MySQL = NULL;
-        pM->pszRcvdAt_PgSQL = NULL;
+	pM->pszRcvdAt_PgSQL = NULL;
 	pM->pszTIMESTAMP3164 = NULL;
 	pM->pszTIMESTAMP3339 = NULL;
 	pM->pszTIMESTAMP_MySQL = NULL;
-        pM->pszTIMESTAMP_PgSQL = NULL;
+	pM->pszTIMESTAMP_PgSQL = NULL;
 	pM->pszStrucData = NULL;
 	pM->pCSAPPNAME = NULL;
 	pM->pCSPROCID = NULL;
@@ -1067,6 +1068,7 @@ ENDobjDestruct(msg)
 			msgDestruct(&pNew);\
 			return NULL;\
 		}\
+		cstrFinalize(pNew->pCS##name); \
 	}
 /* Constructs a message object by duplicating another one.
  * Returns NULL if duplication failed. We do not need to lock the
@@ -1356,7 +1358,8 @@ MsgDeserialize(smsg_t * const pMsg, strm_t *pStrm)
 		CHKiRet(objDeserializeProperty(pVar, pStrm));
 	}
 	if(isProp("pszRcvFromIP")) {
-		MsgSetRcvFromIPStr(pMsg, rsCStrGetSzStrNoNULL(pVar->val.pStr), rsCStrLen(pVar->val.pStr), &propRcvFromIP);
+		MsgSetRcvFromIPStr(pMsg, rsCStrGetSzStrNoNULL(pVar->val.pStr), rsCStrLen(pVar->val.pStr),
+			&propRcvFromIP);
 		prop.Destruct(&propRcvFromIP);
 		reinitVar(pVar);
 		CHKiRet(objDeserializeProperty(pVar, pStrm));
@@ -1777,17 +1780,17 @@ getTimeReported(smsg_t * const pM, enum tplFormatTypes eFmt)
 		}
 		MsgUnlock(pM);
 		return(pM->pszTIMESTAMP_MySQL);
-        case tplFmtPgSQLDate:
-                MsgLock(pM);
-                if(pM->pszTIMESTAMP_PgSQL == NULL) {
-                        if((pM->pszTIMESTAMP_PgSQL = MALLOC(21)) == NULL) {
-                                MsgUnlock(pM);
-                                return "";
-                        }
-                        datetime.formatTimestampToPgSQL(&pM->tTIMESTAMP, pM->pszTIMESTAMP_PgSQL);
-                }
-                MsgUnlock(pM);
-                return(pM->pszTIMESTAMP_PgSQL);
+	case tplFmtPgSQLDate:
+		MsgLock(pM);
+		if(pM->pszTIMESTAMP_PgSQL == NULL) {
+			if((pM->pszTIMESTAMP_PgSQL = MALLOC(21)) == NULL) {
+				MsgUnlock(pM);
+				return "";
+			}
+			datetime.formatTimestampToPgSQL(&pM->tTIMESTAMP, pM->pszTIMESTAMP_PgSQL);
+		}
+		MsgUnlock(pM);
+		return(pM->pszTIMESTAMP_PgSQL);
 	case tplFmtRFC3339Date:
 		MsgLock(pM);
 		if(pM->pszTIMESTAMP3339 == NULL) {
@@ -1871,11 +1874,11 @@ static const char *getTimeUTC(struct syslogTime *const __restrict__ pTmIn,
 			datetime.formatTimestampToMySQL(pTm, retbuf);
 		}
 		break;
-        case tplFmtPgSQLDate:
+	case tplFmtPgSQLDate:
 		if((retbuf = MALLOC(21)) != NULL) {
-                        datetime.formatTimestampToPgSQL(pTm, retbuf);
-                }
-                break;
+			datetime.formatTimestampToPgSQL(pTm, retbuf);
+		}
+		break;
 	case tplFmtRFC3164Date:
 	case tplFmtRFC3164BuggyDate:
 		if((retbuf = MALLOC(16)) != NULL) {
@@ -1983,17 +1986,17 @@ getTimeGenerated(smsg_t *const __restrict__ pM,
 		}
 		MsgUnlock(pM);
 		return(pM->pszRcvdAt_MySQL);
-        case tplFmtPgSQLDate:
-                MsgLock(pM);
-                if(pM->pszRcvdAt_PgSQL == NULL) {
-                        if((pM->pszRcvdAt_PgSQL = MALLOC(21)) == NULL) {
-                                MsgUnlock(pM);
-                                return "";
-                        }
-                        datetime.formatTimestampToPgSQL(pTm, pM->pszRcvdAt_PgSQL);
-                }
-                MsgUnlock(pM);
-                return(pM->pszRcvdAt_PgSQL);
+	case tplFmtPgSQLDate:
+		MsgLock(pM);
+		if(pM->pszRcvdAt_PgSQL == NULL) {
+			if((pM->pszRcvdAt_PgSQL = MALLOC(21)) == NULL) {
+				MsgUnlock(pM);
+				return "";
+			}
+			datetime.formatTimestampToPgSQL(pTm, pM->pszRcvdAt_PgSQL);
+		}
+		MsgUnlock(pM);
+		return(pM->pszRcvdAt_PgSQL);
 	case tplFmtRFC3164Date:
 	case tplFmtRFC3164BuggyDate:
 		MsgLock(pM);
@@ -2181,7 +2184,8 @@ rsRetVal MsgSetAPPNAME(smsg_t *__restrict__ const pMsg, const char* pszAPPNAME)
 		CHKiRet(rsCStrConstruct(&pMsg->pCSAPPNAME));
 	}
 	/* if we reach this point, we have the object */
-	iRet = rsCStrSetSzStr(pMsg->pCSAPPNAME, (uchar*) pszAPPNAME);
+	CHKiRet(rsCStrSetSzStr(pMsg->pCSAPPNAME, (uchar*) pszAPPNAME));
+	cstrFinalize(pMsg->pCSAPPNAME);
 
 finalize_it:
 	RETiRet;
@@ -2459,7 +2463,8 @@ tryEmulateTAG(smsg_t * const pM, sbool bLockMutex)
 	if(msgGetProtocolVersion(pM) == 1) {
 		if(!strcmp(getPROCID(pM, MUTEX_ALREADY_LOCKED), "-")) {
 			/* no process ID, use APP-NAME only */
-			MsgSetTAG(pM, (uchar*) getAPPNAME(pM, MUTEX_ALREADY_LOCKED), getAPPNAMELen(pM, MUTEX_ALREADY_LOCKED));
+			MsgSetTAG(pM, (uchar*) getAPPNAME(pM, MUTEX_ALREADY_LOCKED),
+					getAPPNAMELen(pM, MUTEX_ALREADY_LOCKED));
 		} else {
 			/* now we can try to emulate */
 			lenTAG = snprintf((char*)bufTAG, CONF_TAG_MAXSIZE, "%s[%s]",
@@ -3139,7 +3144,6 @@ msgGetJSONPropJSONorString(smsg_t * const pMsg, msgPropDescr_t *pProp, struct js
 
 	CHKiRet(getJSONRootAndMutex(pMsg, pProp->id, &jroot, &mut));
 	pthread_mutex_lock(mut);
-
 	if(!strcmp((char*)pProp->name, "!")) {
 		*pjson = *jroot;
 		FINALIZE;
@@ -3894,14 +3898,16 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 					dbgprintf("regexec return is %d\n", iREstat);
 					if(iREstat == 0) {
 						if(pmatch[0].rm_so == -1) {
-							dbgprintf("oops ... start offset of successful regexec is -1\n");
+							dbgprintf("oops ... start offset of successful "
+								"regexec is -1\n");
 							break;
 						}
 						if(iTry == pTpe->data.field.iMatchToUse) {
 							bFound = 1;
 						} else {
-							dbgprintf("regex found at offset %d, new offset %d, tries %d\n",
-								  iOffs, (int) (iOffs + pmatch[0].rm_eo), iTry);
+							dbgprintf("regex found at offset %d, new offset %d, "
+								"tries %d\n", iOffs,
+								(int) (iOffs + pmatch[0].rm_eo), iTry);
 							iOffs += pmatch[0].rm_eo;
 							++iTry;
 						}
@@ -3920,7 +3926,8 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 						if(pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_DFLTSTR) {
 							bufLen = sizeof("**NO MATCH**") - 1;
 							pRes = UCHAR_CONSTANT("**NO MATCH**");
-						} else if(pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_ZERO) {
+						} else if(pTpe->data.field.nomatchAction ==
+						TPL_REGEX_NOMATCH_USE_ZERO) {
 							bufLen = 1;
 							pRes = UCHAR_CONSTANT("0");
 						} else {
@@ -3932,12 +3939,14 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 					/* Match- but did it match the one we wanted? */
 					/* we got no match! */
 					if(pmatch[pTpe->data.field.iSubMatchToUse].rm_so == -1) {
-						if(pTpe->data.field.nomatchAction != TPL_REGEX_NOMATCH_USE_WHOLE_FIELD) {
+						if(pTpe->data.field.nomatchAction !=
+						TPL_REGEX_NOMATCH_USE_WHOLE_FIELD) {
 							if (*pbMustBeFreed == 1) {
 								free(pRes);
 								*pbMustBeFreed = 0;
 							}
-							if(pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_DFLTSTR) {
+							if(pTpe->data.field.nomatchAction ==
+							TPL_REGEX_NOMATCH_USE_DFLTSTR) {
 								bufLen = sizeof("**NO MATCH**") - 1;
 								pRes = UCHAR_CONSTANT("**NO MATCH**");
 							} else if(pTpe->data.field.nomatchAction ==
@@ -3965,7 +3974,8 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 					}
 
 					/* Lets copy the matched substring to the buffer */
-					memcpy(pB, pRes + iOffs +  pmatch[pTpe->data.field.iSubMatchToUse].rm_so, iLenBuf);
+					memcpy(pB, pRes + iOffs +  pmatch[pTpe->data.field.iSubMatchToUse].rm_so,
+						iLenBuf);
 					bufLen = iLenBuf;
 					pB[iLenBuf] = '\0';/* terminate string, did not happen before */
 

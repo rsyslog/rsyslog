@@ -539,8 +539,9 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 					dbgprintf("GSS-API Reverting to plain TCP from %s\n", (char *)pszPeer);
 					dbgprintf("tcp session socket with new data: #%d\n", fdSess);
 					if(tcps_sess.DataRcvd(pSess, buf, ret) != RS_RET_OK) {
-						errmsg.LogError(0, NO_ERRCODE, "Tearing down TCP Session %p from %s - see "
-							    "previous messages for reason(s)\n", pSess, (char *)pszPeer);
+						errmsg.LogError(0, NO_ERRCODE, "Tearing down TCP "
+							"Session %p from %s - see previous messages "
+							"for reason(s)\n", pSess, (char *)pszPeer);
 						ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
 					}
 					pGSess->allowedMethods = ALLOWEDMETHOD_TCP;
@@ -566,7 +567,8 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 		if (maj_stat != GSS_S_COMPLETE) {
 			gssutil.display_status((char*)"displaying name", maj_stat, min_stat);
                 } else {
-			dbgprintf("GSS-API Accepted connection from peer %s: %s\n", (char *)pszPeer, (char*) recv_tok.value);
+			dbgprintf("GSS-API Accepted connection from peer %s: %s\n", (char *)pszPeer,
+				(char*) recv_tok.value);
                 }
 		gss_release_name(&min_stat, &client);
 		gss_release_buffer(&min_stat, &recv_tok);

@@ -736,7 +736,7 @@ EnableKeepAlive(ptcplstn_t *pLstn, int sock)
 	if(pLstn->pSrv->iKeepAliveProbes > 0) {
 		optval = pLstn->pSrv->iKeepAliveProbes;
 		optlen = sizeof(optval);
-		ret = setsockopt(sock, SOL_TCP, TCP_KEEPCNT, &optval, optlen);
+		ret = setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, &optval, optlen);
 	} else {
 		ret = 0;
 	}
@@ -751,7 +751,7 @@ EnableKeepAlive(ptcplstn_t *pLstn, int sock)
 	if(pLstn->pSrv->iKeepAliveTime > 0) {
 		optval = pLstn->pSrv->iKeepAliveTime;
 		optlen = sizeof(optval);
-		ret = setsockopt(sock, SOL_TCP, TCP_KEEPIDLE, &optval, optlen);
+		ret = setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE, &optval, optlen);
 	} else {
 		ret = 0;
 	}
@@ -766,7 +766,7 @@ EnableKeepAlive(ptcplstn_t *pLstn, int sock)
 	if(pLstn->pSrv->iKeepAliveIntvl > 0) {
 		optval = pLstn->pSrv->iKeepAliveIntvl;
 		optlen = sizeof(optval);
-		ret = setsockopt(sock, SOL_TCP, TCP_KEEPINTVL, &optval, optlen);
+		ret = setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL, &optval, optlen);
 	} else {
 		ret = 0;
 	}
@@ -805,6 +805,10 @@ AcceptConnReq(ptcplstn_t *const pLstn, int *const newSock, prop_t **peerName, pr
 		LogError(errno, RS_RET_ACCEPT_ERR, "error accepting connection "
 			    "on listen socket %d", pLstn->sock);
 		ABORT_FINALIZE(RS_RET_ACCEPT_ERR);
+	}
+	if(addrlen == 0) {
+		LogError(errno, RS_RET_ACCEPT_ERR, "AcceptConnReq could not obtain "
+			    "remote peer identification on listen socket %d", pLstn->sock);
 	}
 
 	if(pLstn->pSrv->bKeepAlive)
@@ -1044,9 +1048,10 @@ processDataRcvd(ptcpsess_t *const __restrict__ pThis,
 					pThis->inputState = eAtStrtFram;
 				}
 			} else {
-				/* IMPORTANT: here we copy the actual frame content to the message - for BOTH framing modes!
-				 * If we have a message that is larger than the max msg size, we truncate it. This is the best
-				 * we can do in light of what the engine supports. -- rgerhards, 2008-03-14
+				/* IMPORTANT: here we copy the actual frame content to the message - for BOTH
+				 * framing modes! If we have a message that is larger than the max msg size,
+				 * we truncate it. This is the best we can do in light of what the engine supports.
+				 * -- rgerhards, 2008-03-14
 				 */
 				if(pThis->iMsg < iMaxLine) {
 					*(pThis->pMsg + pThis->iMsg++) = c;
@@ -1182,7 +1187,8 @@ DataRcvdCompressed(ptcpsess_t *pThis, char *buf, size_t len)
 		}
 	} while (pThis->zstrm.avail_out == 0);
 
-	dbgprintf("end of DataRcvCompress, sizes: in %lld, out %llu\n", (long long) len, (long long unsigned) outtotal);
+	dbgprintf("end of DataRcvCompress, sizes: in %lld, out %llu\n", (long long) len,
+		(long long unsigned) outtotal);
 finalize_it:
 	RETiRet;
 }
@@ -1403,7 +1409,8 @@ doZipFinish(ptcpsess_t *pSess)
 		outavail = sizeof(zipBuf) - pSess->zstrm.avail_out;
 		if(outavail != 0) {
 			pSess->pLstn->rcvdDecompressed += outavail;
-			CHKiRet(DataRcvdUncompressed(pSess, (char*)zipBuf, outavail, &stTime, 0)); // TODO: query time!
+			CHKiRet(DataRcvdUncompressed(pSess, (char*)zipBuf, outavail, &stTime, 0));
+		// TODO: query time!
 		}
 	} while (pSess->zstrm.avail_out == 0);
 
@@ -1778,11 +1785,11 @@ sessActivity(ptcpsess_t *pSess, int *continue_polling)
 				bEmitOnClose = 1;
 			}
 			*continue_polling = 0;
-			CHKiRet(closeSess(pSess)); /* close may emit more messages in strmzip mode! */
 			if(bEmitOnClose) {
 				errmsg.LogError(0, RS_RET_PEER_CLOSED_CONN, "imptcp session %d closed by "
 					  	"remote peer %s.", remsock, peerName);
 			}
+			CHKiRet(closeSess(pSess)); /* close may emit more messages in strmzip mode! */
 			break;
 		} else {
 			if(errno == EAGAIN || errno == EWOULDBLOCK)
@@ -1860,7 +1867,8 @@ destroyIoQ(void)
 	while (!STAILQ_EMPTY(&io_q.q)) {
 		n = STAILQ_FIRST(&io_q.q);
 		STAILQ_REMOVE_HEAD(&io_q.q, link);
-		errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "imptcp: discarded enqueued io-work to allow shutdown - ignored");
+		errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "imptcp: discarded enqueued io-work to allow shutdown "
+								"- ignored");
 		free(n);
 	}
 	io_q.sz = 0;

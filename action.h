@@ -4,7 +4,7 @@
  * File begun on 2007-08-06 by RGerhards (extracted from syslogd.c, which
  * was under BSD license at the time of rsyslog fork)
  *
- * Copyright 2007-2013 Adiscon GmbH.
+ * Copyright 2007-2018 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -43,10 +43,10 @@ struct action_s {
 	time_t	tLastExec;	/* time this action was last executed */
 	int	iActionNbr;	/* this action's number (ID) */
 	sbool	bExecWhenPrevSusp;/* execute only when previous action is suspended? */
-	sbool	bWriteAllMarkMsgs;/* should all mark msgs be written (not matter how recent the action was executed)? */
+	sbool	bWriteAllMarkMsgs;
+	/* should all mark msgs be written (not matter how recent the action was executed)? */
 	sbool	bReportSuspension;/* should suspension (and reactivation) of the action reported */
 	sbool	bReportSuspensionCont;
-	sbool	bHadAutoCommit;	/* did an auto-commit happen during doAction()? */
 	sbool	bDisabled;
 	sbool	isTransactional;
 	sbool	bCopyMsg;
@@ -73,6 +73,10 @@ struct action_s {
 	pthread_mutex_t mutAction; /* primary action mutex */
 	uchar *pszName;		/* action name */
 	DEF_ATOMIC_HELPER_MUT(mutCAS)
+	/* error file */
+	const char *pszErrFile;
+	int fdErrFile;
+	pthread_mutex_t mutErrFile;
 	/* for per-worker HUP processing */
 	pthread_mutex_t mutWrkrDataTable; /* protects table structures */
 	void **wrkrDataTable;

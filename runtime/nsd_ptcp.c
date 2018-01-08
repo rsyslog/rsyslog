@@ -59,7 +59,6 @@ MODULE_TYPE_NOKEEP
 
 /* static data */
 DEFobjStaticHelpers
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
 DEFobjCurrIf(netstrms)
@@ -143,7 +142,7 @@ SetMode(nsd_t __attribute__((unused)) *pNsd, int mode)
 {
 	DEFiRet;
 	if(mode != 0) {
-		errmsg.LogError(0, RS_RET_INVALID_DRVR_MODE, "error: driver mode %d not supported by "
+		LogError(0, RS_RET_INVALID_DRVR_MODE, "error: driver mode %d not supported by "
 				"ptcp netstream driver", mode);
 		ABORT_FINALIZE(RS_RET_INVALID_DRVR_MODE);
 	}
@@ -166,7 +165,7 @@ SetAuthMode(nsd_t __attribute__((unused)) *pNsd, uchar *mode)
 {
 	DEFiRet;
 	if(mode != NULL && strcasecmp((char*)mode, "anon")) {
-		errmsg.LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: authentication mode '%s' not supported by "
+		LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: authentication mode '%s' not supported by "
 				"ptcp netstream driver", mode);
 		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
 	}
@@ -183,7 +182,7 @@ SetGnutlsPriorityString(nsd_t __attribute__((unused)) *pNsd, uchar *iVal)
 {
 	DEFiRet;
 	if(iVal != NULL) {
-		errmsg.LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: "
+		LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: "
 		"gnutlsPriorityString '%s' not supported by ptcp netstream "
 		"driver", iVal);
 		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
@@ -203,7 +202,7 @@ SetPermPeers(nsd_t __attribute__((unused)) *pNsd, permittedPeers_t __attribute__
 	DEFiRet;
 
 	if(pPermPeers != NULL) {
-		errmsg.LogError(0, RS_RET_VALUE_NOT_IN_THIS_MODE, "authentication not supported by ptcp netstream driver");
+		LogError(0, RS_RET_VALUE_NOT_IN_THIS_MODE, "authentication not supported by ptcp netstream driver");
 		ABORT_FINALIZE(RS_RET_VALUE_NOT_IN_THIS_MODE);
 	}
 
@@ -503,7 +502,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		if(net.should_use_so_bsdcompat()) {
 			if (setsockopt(sock, SOL_SOCKET, SO_BSDCOMPAT,
 					(char *) &on, sizeof(on)) < 0) {
-				errmsg.LogError(errno, NO_ERRCODE, "TCP setsockopt(BSDCOMPAT)");
+				LogError(errno, NO_ERRCODE, "TCP setsockopt(BSDCOMPAT)");
                                 close(sock);
 				sock = -1;
 				continue;
@@ -686,11 +685,11 @@ EnableKeepAlive(nsd_t *pNsd)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
-#	if defined(SOL_TCP) && defined(TCP_KEEPCNT)
+#	if defined(IPPROTO_TCP) && defined(TCP_KEEPCNT)
 	if(pThis->iKeepAliveProbes > 0) {
 		optval = pThis->iKeepAliveProbes;
 		optlen = sizeof(optval);
-		ret = setsockopt(pThis->sock, SOL_TCP, TCP_KEEPCNT, &optval, optlen);
+		ret = setsockopt(pThis->sock, IPPROTO_TCP, TCP_KEEPCNT, &optval, optlen);
 	} else {
 		ret = 0;
 	}
@@ -698,14 +697,14 @@ EnableKeepAlive(nsd_t *pNsd)
 	ret = -1;
 #	endif
 	if(ret < 0) {
-		errmsg.LogError(ret, NO_ERRCODE, "imptcp cannot set keepalive probes - ignored");
+		LogError(ret, NO_ERRCODE, "imptcp cannot set keepalive probes - ignored");
 	}
 
-#	if defined(SOL_TCP) && defined(TCP_KEEPCNT)
+#	if defined(IPPROTO_TCP) && defined(TCP_KEEPIDLE)
 	if(pThis->iKeepAliveTime > 0) {
 		optval = pThis->iKeepAliveTime;
 		optlen = sizeof(optval);
-		ret = setsockopt(pThis->sock, SOL_TCP, TCP_KEEPIDLE, &optval, optlen);
+		ret = setsockopt(pThis->sock, IPPROTO_TCP, TCP_KEEPIDLE, &optval, optlen);
 	} else {
 		ret = 0;
 	}
@@ -713,14 +712,14 @@ EnableKeepAlive(nsd_t *pNsd)
 	ret = -1;
 #	endif
 	if(ret < 0) {
-		errmsg.LogError(ret, NO_ERRCODE, "imptcp cannot set keepalive time - ignored");
+		LogError(ret, NO_ERRCODE, "imptcp cannot set keepalive time - ignored");
 	}
 
-#	if defined(SOL_TCP) && defined(TCP_KEEPCNT)
+#	if defined(IPPROTO_TCP) && defined(TCP_KEEPCNT)
 	if(pThis->iKeepAliveIntvl > 0) {
 		optval = pThis->iKeepAliveIntvl;
 		optlen = sizeof(optval);
-		ret = setsockopt(pThis->sock, SOL_TCP, TCP_KEEPINTVL, &optval, optlen);
+		ret = setsockopt(pThis->sock, IPPROTO_TCP, TCP_KEEPINTVL, &optval, optlen);
 	} else {
 		ret = 0;
 	}
@@ -728,7 +727,7 @@ EnableKeepAlive(nsd_t *pNsd)
 	ret = -1;
 #	endif
 	if(ret < 0) {
-		errmsg.LogError(errno, NO_ERRCODE, "imptcp cannot set keepalive intvl - ignored");
+		LogError(errno, NO_ERRCODE, "imptcp cannot set keepalive intvl - ignored");
 	}
 
 	dbgprintf("KEEPALIVE enabled for socket %d\n", pThis->sock);
@@ -910,7 +909,6 @@ CODESTARTObjClassExit(nsd_ptcp)
 	objRelease(net, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(netstrm, DONT_LOAD_LIB);
 	objRelease(netstrms, LM_NETSTRMS_FILENAME);
 ENDObjClassExit(nsd_ptcp)
@@ -922,7 +920,6 @@ ENDObjClassExit(nsd_ptcp)
  */
 BEGINObjClassInit(nsd_ptcp, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
 	/* request objects we use */
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(net, CORE_COMPONENT));

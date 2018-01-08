@@ -80,7 +80,8 @@ struct tcpsrv_s {
 	uchar dfltTZ[8];	/**< default TZ if none in timestamp; '\0' =No Default */
 	tcpLstnPortList_t *pLstnPorts;	/**< head pointer for listen ports */
 
-	int addtlFrameDelim;	/**< additional frame delimiter for plain TCP syslog framing (e.g. to handle NetScreen) */
+	int addtlFrameDelim;	/**< additional frame delimiter for plain TCP syslog
+					framing (e.g. to handle NetScreen) */
 	int maxFrameSize;	/**< max frame size for octet counted*/
 	int bDisableLFDelim;	/**< if 1, standard LF frame delimiter is disabled (*very dangerous*) */
 	int discardTruncatedMsg;/**< discard msg part that has been truncated*/
@@ -147,7 +148,8 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	/* added v5 */
 	rsRetVal (*SetSessMax)(tcpsrv_t *pThis, int iMaxSess);	/* 2009-04-09 */
 	/* added v6 */
-	rsRetVal (*SetOnMsgReceive)(tcpsrv_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar*, int)); /* 2009-05-24 */
+	rsRetVal (*SetOnMsgReceive)(tcpsrv_t *pThis,
+		rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar*, int)); /* 2009-05-24 */
 	rsRetVal (*SetRuleset)(tcpsrv_t *pThis, ruleset_t*); /* 2009-06-12 */
 	/* added v7 (accidently named v8!) */
 	rsRetVal (*SetLstnMax)(tcpsrv_t *pThis, int iMaxLstn);	/* 2009-08-17 */

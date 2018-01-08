@@ -74,7 +74,6 @@ DEFobjStaticHelpers
 DEFobjCurrIf(ruleset)
 DEFobjCurrIf(module)
 DEFobjCurrIf(conf)
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(parser)
 DEFobjCurrIf(datetime)
@@ -320,7 +319,7 @@ parserProcessCnf(struct cnfobj *o)
 	paramIdx = cnfparamGetIdx(&parserpblk, "name");
 	parserName = (uchar*)es_str2cstr(pvals[paramIdx].val.d.estr, NULL);
 	if(parser.FindParser(&myparser, parserName) != RS_RET_PARSER_NOT_FOUND) {
-		errmsg.LogError(0, RS_RET_PARSER_NAME_EXISTS,
+		LogError(0, RS_RET_PARSER_NAME_EXISTS,
 			"parser module name '%s' already exists", cnfModName);
 		ABORT_FINALIZE(RS_RET_PARSER_NAME_EXISTS);
 	}
@@ -328,11 +327,11 @@ parserProcessCnf(struct cnfobj *o)
 	paramIdx = cnfparamGetIdx(&parserpblk, "type");
 	cnfModName = (uchar*)es_str2cstr(pvals[paramIdx].val.d.estr, NULL);
 	if((pMod = module.FindWithCnfName(loadConf, cnfModName, eMOD_PARSER)) == NULL) {
-		errmsg.LogError(0, RS_RET_MOD_UNKNOWN, "parser module name '%s' is unknown", cnfModName);
+		LogError(0, RS_RET_MOD_UNKNOWN, "parser module name '%s' is unknown", cnfModName);
 		ABORT_FINALIZE(RS_RET_MOD_UNKNOWN);
 	}
 	if(pMod->mod.pm.newParserInst == NULL) {
-		errmsg.LogError(0, RS_RET_MOD_NO_PARSER_STMT,
+		LogError(0, RS_RET_MOD_NO_PARSER_STMT,
 				"parser module '%s' does not support parser() statement", cnfModName);
 		ABORT_FINALIZE(RS_RET_MOD_NO_INPUT_STMT);
 	}
@@ -367,11 +366,11 @@ inputProcessCnf(struct cnfobj *o)
 	typeIdx = cnfparamGetIdx(&inppblk, "type");
 	cnfModName = (uchar*)es_str2cstr(pvals[typeIdx].val.d.estr, NULL);
 	if((pMod = module.FindWithCnfName(loadConf, cnfModName, eMOD_IN)) == NULL) {
-		errmsg.LogError(0, RS_RET_MOD_UNKNOWN, "input module name '%s' is unknown", cnfModName);
+		LogError(0, RS_RET_MOD_UNKNOWN, "input module name '%s' is unknown", cnfModName);
 		ABORT_FINALIZE(RS_RET_MOD_UNKNOWN);
 	}
 	if(pMod->mod.im.newInpInst == NULL) {
-		errmsg.LogError(0, RS_RET_MOD_NO_INPUT_STMT,
+		LogError(0, RS_RET_MOD_NO_INPUT_STMT,
 				"input module '%s' does not support input() statement", cnfModName);
 		ABORT_FINALIZE(RS_RET_MOD_NO_INPUT_STMT);
 	}
@@ -394,7 +393,7 @@ parser_warnmsg(const char *fmt, ...)
 	va_start(ap, fmt);
 	if(vsnprintf(errBuf, sizeof(errBuf), fmt, ap) == sizeof(errBuf))
 		errBuf[sizeof(errBuf)-1] = '\0';
-	errmsg.LogMsg(0, RS_RET_CONF_PARSE_WARNING, LOG_WARNING,
+	LogMsg(0, RS_RET_CONF_PARSE_WARNING, LOG_WARNING,
 			"warning during parsing file %s, on or before line %d: %s",
 			cnfcurrfn, yylineno, errBuf);
 	va_end(ap);
@@ -410,10 +409,10 @@ parser_errmsg(const char *fmt, ...)
 	if(vsnprintf(errBuf, sizeof(errBuf), fmt, ap) == sizeof(errBuf))
 		errBuf[sizeof(errBuf)-1] = '\0';
 	if(cnfcurrfn == NULL) {
-		errmsg.LogError(0, RS_RET_CONF_PARSE_ERROR,
+		LogError(0, RS_RET_CONF_PARSE_ERROR,
 				"error during config processing: %s", errBuf);
 	} else {
-		errmsg.LogError(0, RS_RET_CONF_PARSE_ERROR,
+		LogError(0, RS_RET_CONF_PARSE_ERROR,
 				"error during parsing file %s, on or before line %d: %s",
 				cnfcurrfn, yylineno, errBuf);
 	}
@@ -502,7 +501,7 @@ void cnfDoCfsysline(char *ln)
 void cnfDoBSDTag(char *ln)
 {
 	DBGPRINTF("cnf:global:BSD tag: %s\n", ln);
-	errmsg.LogError(0, RS_RET_BSD_BLOCKS_UNSUPPORTED,
+	LogError(0, RS_RET_BSD_BLOCKS_UNSUPPORTED,
 			"BSD-style blocks are no longer supported in rsyslog, "
 			"see http://www.rsyslog.com/g/BSD for details and a "
 			"solution (Block '%s')", ln);
@@ -512,7 +511,7 @@ void cnfDoBSDTag(char *ln)
 void cnfDoBSDHost(char *ln)
 {
 	DBGPRINTF("cnf:global:BSD host: %s\n", ln);
-	errmsg.LogError(0, RS_RET_BSD_BLOCKS_UNSUPPORTED,
+	LogError(0, RS_RET_BSD_BLOCKS_UNSUPPORTED,
 			"BSD-style blocks are no longer supported in rsyslog, "
 			"see http://www.rsyslog.com/g/BSD for details and a "
 			"solution (Block '%s')", ln);
@@ -536,7 +535,7 @@ rsRetVal doDropPrivGid(void)
 		res = setgroups(0, NULL); /* remove all supplemental group IDs */
 		if(res) {
 			rs_strerror_r(errno, (char*)szBuf, sizeof(szBuf));
-			errmsg.LogError(0, RS_RET_ERR_DROP_PRIV,
+			LogError(0, RS_RET_ERR_DROP_PRIV,
 					"could not remove supplemental group IDs: %s", szBuf);
 			ABORT_FINALIZE(RS_RET_ERR_DROP_PRIV);
 		}
@@ -545,7 +544,7 @@ rsRetVal doDropPrivGid(void)
 	res = setgid(ourConf->globals.gidDropPriv);
 	if(res) {
 		rs_strerror_r(errno, (char*)szBuf, sizeof(szBuf));
-		errmsg.LogError(0, RS_RET_ERR_DROP_PRIV,
+		LogError(0, RS_RET_ERR_DROP_PRIV,
 				"could not set requested group id: %s", szBuf);
 		ABORT_FINALIZE(RS_RET_ERR_DROP_PRIV);
 	}
@@ -580,7 +579,7 @@ static void doDropPrivUid(int iUid)
 		DBGPRINTF("initgroups(%s, %d): %d\n", pw->pw_name, gid, res);
 	} else {
 		rs_strerror_r(errno, (char*)szBuf, sizeof(szBuf));
-		errmsg.LogError(0, NO_ERRCODE,
+		LogError(0, NO_ERRCODE,
 				"could not get username for userid %d: %s",
 				iUid, szBuf);
 	}
@@ -705,7 +704,7 @@ tellModulesActivateConfigPrePrivDrop(void)
 				  runConf, node->pMod->pszName);
 			localRet = node->pMod->activateCnfPrePrivDrop(node->modCnf);
 			if(localRet != RS_RET_OK) {
-				errmsg.LogError(0, localRet, "activation of module %s failed",
+				LogError(0, localRet, "activation of module %s failed",
 						node->pMod->pszName);
 			node->canActivate = 0; /* in a sense, could not activate... */
 			}
@@ -734,7 +733,7 @@ tellModulesActivateConfig(void)
 				  runConf, node->pMod->pszName);
 			localRet = node->pMod->activateCnf(node->modCnf);
 			if(localRet != RS_RET_OK) {
-				errmsg.LogError(0, localRet, "activation of module %s failed",
+				LogError(0, localRet, "activation of module %s failed",
 						node->pMod->pszName);
 			node->canActivate = 0; /* in a sense, could not activate... */
 			}
@@ -760,8 +759,8 @@ runInputModules(void)
 	node = module.GetNxtCnfType(runConf, NULL, eMOD_IN);
 	while(node != NULL) {
 		if(node->canRun) {
-			bNeedsCancel = (node->pMod->isCompatibleWithFeature(sFEATURENonCancelInputTermination) == RS_RET_OK) ?
-				       0 : 1;
+			bNeedsCancel = (node->pMod->isCompatibleWithFeature(sFEATURENonCancelInputTermination)
+			== RS_RET_OK) ? 0 : 1;
 			DBGPRINTF("running module %s with config %p, term mode: %s\n", node->pMod->pszName, node,
 				  bNeedsCancel ? "cancel" : "cooperative/SIGTTIN");
 			thrdCreate(node->pMod->mod.im.runInput, node->pMod->mod.im.afterRun, bNeedsCancel,
@@ -970,7 +969,8 @@ static rsRetVal setMainMsgQueType(void __attribute__((unused)) *pVal, uchar *psz
 		loadConf->globals.mainQ.MainMsgQueType = QUEUETYPE_DIRECT;
 		DBGPRINTF("main message queue type set to DIRECT (no queueing at all)\n");
 	} else {
-		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "unknown mainmessagequeuetype parameter: %s", (char *) pszType);
+		LogError(0, RS_RET_INVALID_PARAMS, "unknown mainmessagequeuetype parameter: %s",
+			(char *) pszType);
 		iRet = RS_RET_INVALID_PARAMS;
 	}
 	free(pszType); /* no longer needed */
@@ -998,8 +998,8 @@ static rsRetVal setMaxFiles(void __attribute__((unused)) *pVal, int iFiles)
 	if(setrlimit(RLIMIT_NOFILE, &maxFiles) < 0) {
 		/* NOTE: under valgrind, we seem to be unable to extend the size! */
 		rs_strerror_r(errno, errStr, sizeof(errStr));
-		errmsg.LogError(0, RS_RET_ERR_RLIM_NOFILE, "could not set process file limit to %d: %s [kernel max %ld]",
-				iFiles, errStr, (long) maxFiles.rlim_max);
+		LogError(0, RS_RET_ERR_RLIM_NOFILE, "could not set process file limit to %d: %s "
+			"[kernel max %ld]", iFiles, errStr, (long) maxFiles.rlim_max);
 		ABORT_FINALIZE(RS_RET_ERR_RLIM_NOFILE);
 	}
 #ifdef USE_UNLIMITED_SELECT
@@ -1252,12 +1252,12 @@ initLegacyConf(void)
 	tplAddLine(ourConf, " StdDBFmt", &pTmp);
 	pTmp = template_SysklogdFileFormat;
 	tplAddLine(ourConf, "RSYSLOG_SysklogdFileFormat", &pTmp);
-        pTmp = template_StdPgSQLFmt;
-        tplAddLine(ourConf, " StdPgSQLFmt", &pTmp);
-        pTmp = template_StdJSONFmt;
-        tplAddLine(ourConf, " StdJSONFmt", &pTmp);
-        pTmp = template_spoofadr;
-        tplLastStaticInit(ourConf, tplAddLine(ourConf, "RSYSLOG_omudpspoofDfltSourceTpl", &pTmp));
+	pTmp = template_StdPgSQLFmt;
+	tplAddLine(ourConf, " StdPgSQLFmt", &pTmp);
+	pTmp = template_StdJSONFmt;
+	tplAddLine(ourConf, " StdJSONFmt", &pTmp);
+	pTmp = template_spoofadr;
+	tplLastStaticInit(ourConf, tplAddLine(ourConf, "RSYSLOG_omudpspoofDfltSourceTpl", &pTmp));
 
 finalize_it:
 	RETiRet;
@@ -1274,20 +1274,20 @@ validateConf(void)
 
 	/* some checks */
 	if(ourConf->globals.mainQ.iMainMsgQueueNumWorkers < 1) {
-		errmsg.LogError(0, NO_ERRCODE, "$MainMsgQueueNumWorkers must be at least 1! Set to 1.\n");
+		LogError(0, NO_ERRCODE, "$MainMsgQueueNumWorkers must be at least 1! Set to 1.\n");
 		ourConf->globals.mainQ.iMainMsgQueueNumWorkers = 1;
 	}
 
 	if(ourConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DISK) {
 		errno = 0;	/* for logerror! */
 		if(glbl.GetWorkDir() == NULL) {
-			errmsg.LogError(0, NO_ERRCODE, "No $WorkDirectory specified - can not run main "
+			LogError(0, NO_ERRCODE, "No $WorkDirectory specified - can not run main "
 					"message queue in 'disk' mode. Using 'FixedArray' instead.\n");
 			ourConf->globals.mainQ.MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
 		}
 		if(ourConf->globals.mainQ.pszMainMsgQFName == NULL) {
-			errmsg.LogError(0, NO_ERRCODE, "No $MainMsgQueueFileName specified - can not run main message queue in "
-				 "'disk' mode. Using 'FixedArray' instead.\n");
+			LogError(0, NO_ERRCODE, "No $MainMsgQueueFileName specified - can not run main "
+				"message queue in 'disk' mode. Using 'FixedArray' instead.\n");
 			ourConf->globals.mainQ.MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
 		}
 	}
@@ -1323,20 +1323,20 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 	}
 
 	if(r == 1) {
-		errmsg.LogError(0, RS_RET_CONF_PARSE_ERROR,
+		LogError(0, RS_RET_CONF_PARSE_ERROR,
 				"CONFIG ERROR: could not interpret master "
 				"config file '%s'.", confFile);
 		ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
 	} else if(r == 2) { /* file not found? */
 		char err[1024];
 		rs_strerror_r(errno, err, sizeof(err));
-		errmsg.LogError(0, RS_RET_CONF_FILE_NOT_FOUND,
+		LogError(0, RS_RET_CONF_FILE_NOT_FOUND,
 			        "could not open config file '%s': %s",
 			        confFile, err);
 		ABORT_FINALIZE(RS_RET_CONF_FILE_NOT_FOUND);
 	} else if(iNbrActions == 0 &&
 		!(iConfigVerify & CONF_VERIFY_PARTIAL_CONF)) {
-		errmsg.LogError(0, RS_RET_NO_ACTIONS, "CONFIG ERROR: there are no "
+		LogError(0, RS_RET_NO_ACTIONS, "CONFIG ERROR: there are no "
 				"active actions configured. Inputs will "
 			 	"run, but no output whatsoever is created.");
 		ABORT_FINALIZE(RS_RET_NO_ACTIONS);
@@ -1402,7 +1402,6 @@ BEGINObjClassInit(rsconf, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 	CHKiRet(objUse(module, CORE_COMPONENT));
 	CHKiRet(objUse(conf, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(parser, CORE_COMPONENT));
@@ -1419,7 +1418,6 @@ BEGINObjClassExit(rsconf, OBJ_IS_CORE_MODULE) /* class, version */
 	objRelease(ruleset, CORE_COMPONENT);
 	objRelease(module, CORE_COMPONENT);
 	objRelease(conf, CORE_COMPONENT);
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
 	objRelease(parser, CORE_COMPONENT);

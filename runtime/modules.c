@@ -670,8 +670,10 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"dbgPrintInstInfo", &pNew->dbgPrintInstInfo));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"parseSelectorAct", &pNew->mod.om.parseSelectorAct));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"tryResume", &pNew->tryResume));
-			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"createWrkrInstance", &pNew->mod.om.createWrkrInstance));
-			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"freeWrkrInstance", &pNew->mod.om.freeWrkrInstance));
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"createWrkrInstance",
+				&pNew->mod.om.createWrkrInstance));
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"freeWrkrInstance",
+				&pNew->mod.om.freeWrkrInstance));
 
 			/* try load optional interfaces */
 			localRet = (*pNew->modQueryEtryPt)((uchar*)"doHUP", &pNew->doHUP);
@@ -682,7 +684,8 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			if(localRet != RS_RET_OK && localRet != RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
 				ABORT_FINALIZE(localRet);
 
-			localRet = (*pNew->modQueryEtryPt)((uchar*)"SetShutdownImmdtPtr", &pNew->mod.om.SetShutdownImmdtPtr);
+			localRet = (*pNew->modQueryEtryPt)((uchar*)"SetShutdownImmdtPtr",
+				&pNew->mod.om.SetShutdownImmdtPtr);
 			if(localRet != RS_RET_OK && localRet != RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
 				ABORT_FINALIZE(localRet);
 
@@ -914,12 +917,13 @@ static void modPrintList(void)
 								   NULL :  pMod->mod.om.beginTransaction));
 			dbgprintf("\tEndTransaction:     %p\n",
 			((pMod->mod.om.endTransaction == (rsRetVal (*)(void*))dummyEndTransaction) ?
-								   NULL :  pMod->mod.om.endTransaction));
+				NULL :  pMod->mod.om.endTransaction));
 #else
-			dbgprintf("\tBeginTransaction:   %p\n", ((pMod->mod.om.beginTransaction == dummyBeginTransaction) ?
-								   NULL :  pMod->mod.om.beginTransaction));
+			dbgprintf("\tBeginTransaction:   %p\n",
+				((pMod->mod.om.beginTransaction == dummyBeginTransaction) ?
+				NULL :  pMod->mod.om.beginTransaction));
 			dbgprintf("\tEndTransaction:     %p\n", ((pMod->mod.om.endTransaction == dummyEndTransaction) ?
-								   NULL :  pMod->mod.om.endTransaction));
+				NULL :  pMod->mod.om.endTransaction));
 #endif
 			break;
 		case eMOD_IN:

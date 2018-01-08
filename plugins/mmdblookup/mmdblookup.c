@@ -50,8 +50,6 @@ MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("mmdblookup")
 
 
-static pthread_mutex_t mut_mmdblookup = PTHREAD_MUTEX_INITIALIZER;
-
 DEFobjCurrIf(errmsg);
 DEF_OMOD_STATIC_DATA
 
@@ -339,9 +337,6 @@ CODESTARTdoAction
 	rsRetVal localRet = msgGetJSONPropJSON(pMsg, &pProp, &keyjson);
 	msgPropDescrDestruct(&pProp);
 
-	/* it looks like maxmindb is not fully thread-safe */
-	pthread_mutex_lock(&mut_mmdblookup);
-
 	if (localRet != RS_RET_OK) {
 		/* key not found in the message. nothing to do */
 		ABORT_FINALIZE(RS_RET_OK);
@@ -389,6 +384,7 @@ CODESTARTdoAction
 
 	/* extract and amend fields (to message) as configured */
 	for (int i = 0 ; i <  pData->fieldList.nmemb; ++i) {
+		char *strtok_save;
 		char buf[(strlen((char *)(pData->fieldList.name[i])))+1];
 		strcpy(buf, (char *)pData->fieldList.name[i]);
 
@@ -398,11 +394,11 @@ CODESTARTdoAction
 		const char *SEP = "!";
 
 		/* find lowest level JSON object */
-		char *s = strtok(buf, SEP);
+		char *s = strtok_r(buf, SEP, &strtok_save);
 		for (; s != NULL; j++) {
 			json_object_object_get_ex(temp_json, s, &sub_obj);
 			temp_json = sub_obj;
-			s = strtok(NULL, SEP);
+			s = strtok_r(NULL, SEP, &strtok_save);
 		}
 		/* temp_json now contains the value we want to have, so set it */
 		json_object_get(temp_json);
@@ -415,21 +411,10 @@ finalize_it:
 	json_object_put(keyjson);
 	if(total_json != NULL)
 		json_object_put(total_json);
-	pthread_mutex_unlock(&mut_mmdblookup);
 ENDdoAction
 
 
-BEGINparseSelectorAct
-CODESTARTparseSelectorAct
-CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	if (strncmp((char*) p, ":mmdblookup:", sizeof(":mmdblookup:") - 1)) {
-		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
-			"mmdblookup supports only v6+ config format, use: "
-			"action(type=\"mmdblookup\" ...)");
-	}
-	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-CODE_STD_FINALIZERparseSelectorAct
-ENDparseSelectorAct
+NO_LEGACY_CONF_parseSelectorAct
 
 
 BEGINmodExit

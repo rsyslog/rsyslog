@@ -131,7 +131,6 @@ execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdout, int fdStder
 	sigset_t set;
 	char errStr[1024];
 	char *newenviron[] = { NULL };
-	char *emptyArgv[] = { NULL };
 
 	if(dup2(fdStdin, STDIN_FILENO) == -1) {
 		DBGPRINTF("omprog: dup() stdin failed\n");
@@ -193,9 +192,6 @@ execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdout, int fdStder
 	alarm(0);
 
 	/* finally exec child */
-	if(pWrkrData->pData->aParams==NULL){
-		pWrkrData->pData->aParams=emptyArgv;
-	}
 	iRet = execve((char*)pWrkrData->pData->szBinary, pWrkrData->pData->aParams, newenviron);
 	if(iRet == -1) {
 		/* Note: this will go to stdout of the **child**, so rsyslog will never
@@ -231,14 +227,21 @@ openPipe(wrkrInstanceData_t *pWrkrData)
 		ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
 	}
 	if(pipe(pipeStdout) == -1) {
+		close(pipeStdin[0]); close(pipeStdin[1]);
 		ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
 	}
 	if(pipe(pipeStderr) == -1) {
+		close(pipeStdin[0]); close(pipeStdin[1]);
+		close(pipeStdout[0]); close(pipeStdout[1]);
 		ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
 	}
 
 	DBGPRINTF("omprog: executing program '%s' with '%d' parameters\n",
 		  pWrkrData->pData->szBinary, pWrkrData->pData->iParams);
+
+	/* final sanity check */
+	assert(pWrkrData->pData->szBinary != NULL);
+	assert(pWrkrData->pData->aParams != NULL);
 
 	/* NO OUTPUT AFTER FORK! */
 
@@ -378,14 +381,17 @@ killSubprocessOnTimeout(void *_subpTimeOut_p) {
 	subprocess_timeout_desc_t *subpTimeOut = (subprocess_timeout_desc_t *) _subpTimeOut_p;
 	if (pthread_mutex_lock(&subpTimeOut->lock) == 0) {
 		while (subpTimeOut->timeout_armed) {
-			int ret = pthread_cond_timedwait(&subpTimeOut->cond, &subpTimeOut->lock, &subpTimeOut->timeout);
-			if (subpTimeOut->timeout_armed && ((ret == ETIMEDOUT) || (timeoutVal(&subpTimeOut->timeout) == 0))) {
-				errmsg.LogError(0, RS_RET_CONC_CTRL_ERR, "omprog: child-process wasn't reaped within timeout "
-								"(%ld ms) preparing to force-kill.", subpTimeOut->timeout_ms);
+			int ret = pthread_cond_timedwait(&subpTimeOut->cond, &subpTimeOut->lock,
+				&subpTimeOut->timeout);
+			if (subpTimeOut->timeout_armed && ((ret == ETIMEDOUT) || (timeoutVal(&subpTimeOut->timeout)
+				== 0))) {
+				errmsg.LogError(0, RS_RET_CONC_CTRL_ERR, "omprog: child-process wasn't "
+					"reaped within timeout (%ld ms) preparing to force-kill.",
+					subpTimeOut->timeout_ms);
 				if (syscall(SYS_tgkill, getpid(), subpTimeOut->waiter_tid, SIGINT) != 0) {
-					errmsg.LogError(errno, RS_RET_SYS_ERR, "omprog: couldn't interrupt thread(%d) "
-									"which was waiting to reap child-process.",
-									subpTimeOut->waiter_tid);
+					errmsg.LogError(errno, RS_RET_SYS_ERR, "omprog: couldn't interrupt "
+						"thread(%d) which was waiting to reap child-process.",
+						subpTimeOut->waiter_tid);
 				}
 			}
 		}
@@ -475,7 +481,8 @@ waitForChild(wrkrInstanceData_t *pWrkrData, long timeout_ms)
 	if(ret != pWrkrData->pid) {
 		if (errno == ECHILD) {
 			errmsg.LogError(errno, RS_RET_OK_WARN, "Child %d doesn't seem to exist, "
-							"hence couldn't be reaped (reaped by main-loop?)", pWrkrData->pid);
+							"hence couldn't be reaped (reaped by main-loop?)",
+			pWrkrData->pid);
 		} else {
 			errmsg.LogError(errno, RS_RET_SYS_ERR, "Cleanup failed for child %d", pWrkrData->pid);
 		}
@@ -860,17 +867,10 @@ setInstParamDefaults(instanceData *pData)
 	pData->outputFileName = NULL;
 }
 
+
 BEGINnewActInst
 	struct cnfparamvals *pvals;
-	sbool bInQuotes;
 	int i;
-	int iPrm;
-	unsigned char *c;
-	es_size_t iCnt;
-	es_size_t iStr;
-	es_str_t *estrBinary;
-	es_str_t *estrParams;
-	es_str_t *estrTmp;
 CODESTARTnewActInst
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -884,87 +884,8 @@ CODESTARTnewActInst
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(actpblk.descr[i].name, "binary")) {
-			estrBinary = pvals[i].val.d.estr;
-			estrParams = NULL;
-
-			/* Search for space */
-			c = es_getBufAddr(pvals[i].val.d.estr);
-			iCnt = 0;
-			while(iCnt < es_strlen(pvals[i].val.d.estr) ) {
-				if (c[iCnt] == ' ') {
-					/* Split binary name from parameters */
-					estrBinary = es_newStrFromSubStr ( pvals[i].val.d.estr, 0, iCnt );
-					estrParams = es_newStrFromSubStr ( pvals[i].val.d.estr, iCnt+1,
-							es_strlen(pvals[i].val.d.estr));
-					break;
-				}
-				iCnt++;
-			}
-			/* Assign binary and params */
-			pData->szBinary = (uchar*)es_str2cstr(estrBinary, NULL);
-			DBGPRINTF("omprog: szBinary = '%s'\n", pData->szBinary);
-			/* Check for Params! */
-			if (estrParams != NULL) {
-				if(Debug) {
-					char *params = es_str2cstr(estrParams, NULL);
-					dbgprintf("omprog: szParams = '%s'\n", params);
-					free(params);
-				}
-
-				/* Count parameters if set */
-				c = es_getBufAddr(estrParams); /* Reset to beginning */
-				pData->iParams = 2; /* Set default to 2, first parameter for binary
-						and second parameter at least from config*/
-				iCnt = 0;
-				while(iCnt < es_strlen(estrParams) ) {
-					if (c[iCnt] == ' ' && c[iCnt-1] != '\\')
-						 pData->iParams++;
-					iCnt++;
-				}
-				DBGPRINTF("omprog: iParams = '%d'\n", pData->iParams);
-
-				/* Create argv Array */
-				CHKmalloc(pData->aParams = malloc( (pData->iParams+1) * sizeof(char*)));
-				/* One more for first param */
-
-				/* Second Loop, create parameter array*/
-				c = es_getBufAddr(estrParams); /* Reset to beginning */
-				iCnt = iStr = iPrm = 0;
-				estrTmp = NULL;
-				bInQuotes = FALSE;
-				/* Set first parameter to binary */
-				pData->aParams[iPrm] = strdup((char*)pData->szBinary);
-				DBGPRINTF("omprog: Param (%d): '%s'\n", iPrm, pData->aParams[iPrm]);
-				iPrm++;
-				while(iCnt < es_strlen(estrParams) ) {
-					if ( c[iCnt] == ' ' && !bInQuotes ) {
-						/* Copy into Param Array! */
-						estrTmp = es_newStrFromSubStr( estrParams, iStr, iCnt-iStr);
-					}
-					else if ( iCnt+1 >= es_strlen(estrParams) ) {
-						/* Copy rest of string into Param Array! */
-						estrTmp = es_newStrFromSubStr( estrParams, iStr, iCnt-iStr+1);
-					}
-					else if (c[iCnt] == '"') {
-						/* switch inQuotes Mode */
-						bInQuotes = !bInQuotes;
-					}
-
-					if ( estrTmp != NULL ) {
-						pData->aParams[iPrm] = es_str2cstr(estrTmp, NULL);
-						iStr = iCnt+1; /* Set new start */
-						DBGPRINTF("omprog: Param (%d): '%s'\n", iPrm, pData->aParams[iPrm]);
-						es_deleteStr( estrTmp );
-						estrTmp = NULL;
-						iPrm++;
-					}
-
-					/*Next char*/
-					iCnt++;
-				}
-				/* NULL last parameter! */
-				pData->aParams[iPrm] = NULL;
-			}
+			CHKiRet(split_binary_parameters(&pData->szBinary, &pData->aParams, &pData->iParams,
+				pvals[i].val.d.estr));
 		} else if(!strcmp(actpblk.descr[i].name, "confirmMessages")) {
 			pData->bConfirmMessages = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "useTransactions")) {

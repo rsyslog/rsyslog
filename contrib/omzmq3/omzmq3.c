@@ -48,7 +48,6 @@ MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("omzmq3")
 
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 
 static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 
@@ -193,7 +192,7 @@ static int getSocketAction(char* name) {
  * associated socket
  */
 static void closeZMQ(instanceData* pData) {
-    errmsg.LogError(0, NO_ERRCODE, "closeZMQ called");
+    LogError(0, NO_ERRCODE, "closeZMQ called");
     if(s_context && pData->socket) {
         if(pData->socket != NULL) {
             zsocket_destroy(s_context, pData->socket);
@@ -214,7 +213,7 @@ static rsRetVal initZMQ(instanceData* pData) {
     
     pData->socket = zsocket_new(s_context, pData->type);
     if (NULL == pData->socket) {
-        errmsg.LogError(0, RS_RET_NO_ERRCODE,
+        LogError(0, RS_RET_NO_ERRCODE,
                         "omzmq3: zsocket_new failed for %s: %s",
                         pData->description, zmq_strerror(errno));
         ABORT_FINALIZE(RS_RET_NO_ERRCODE);
@@ -243,14 +242,14 @@ static rsRetVal initZMQ(instanceData* pData) {
         /* bind asserts, so no need to test return val here
            which isn't the greatest api -- oh well */
         if(-1 == zsocket_bind(pData->socket, "%s", (char*)pData->description)) {
-            errmsg.LogError(0, RS_RET_NO_ERRCODE, "omzmq3: bind failed for %s: %s",
+            LogError(0, RS_RET_NO_ERRCODE, "omzmq3: bind failed for %s: %s",
                             pData->description, zmq_strerror(errno));
             ABORT_FINALIZE(RS_RET_NO_ERRCODE);
         }
         DBGPRINTF("omzmq3: bind to %s successful\n",pData->description);
     } else {
         if(-1 == zsocket_connect(pData->socket, "%s", (char*)pData->description)) {
-            errmsg.LogError(0, RS_RET_NO_ERRCODE, "omzmq3: connect failed for %s: %s", 
+            LogError(0, RS_RET_NO_ERRCODE, "omzmq3: connect failed for %s: %s", 
                             pData->description, zmq_strerror(errno));
             ABORT_FINALIZE(RS_RET_NO_ERRCODE);
         }
@@ -272,7 +271,7 @@ static rsRetVal writeZMQ(uchar* msg, instanceData* pData) {
     
     /* whine if things went wrong */
     if (result == -1) {
-        errmsg.LogError(0, NO_ERRCODE, "omzmq3: send of %s failed: %s", msg, zmq_strerror(errno));
+        LogError(0, NO_ERRCODE, "omzmq3: send of %s failed: %s", msg, zmq_strerror(errno));
         ABORT_FINALIZE(RS_RET_ERR);
     }
  finalize_it:
@@ -421,7 +420,7 @@ CODESTARTnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "globalWorkerThreads")) {
             s_workerThreads = (int) pvals[i].val.d.n;
         } else {
-            errmsg.LogError(0, NO_ERRCODE, "omzmq3: program error, non-handled "
+            LogError(0, NO_ERRCODE, "omzmq3: program error, non-handled "
                             "param '%s'\n", actpblk.descr[i].name);
         }
     }
@@ -432,15 +431,15 @@ CODESTARTnewActInst
         CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)pData->tplName, OMSR_NO_RQD_TPL_OPTS));
     }
     if (NULL == pData->description) {
-        errmsg.LogError(0, RS_RET_CONFIG_ERROR, "omzmq3: you didn't enter a description");
+        LogError(0, RS_RET_CONFIG_ERROR, "omzmq3: you didn't enter a description");
         ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
     }
     if (pData->type == -1) {
-        errmsg.LogError(0, RS_RET_CONFIG_ERROR, "omzmq3: unknown socket type.");
+        LogError(0, RS_RET_CONFIG_ERROR, "omzmq3: unknown socket type.");
         ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
     }
     if (pData->action == -1) {
-        errmsg.LogError(0, RS_RET_CONFIG_ERROR, "omzmq3: unknown socket action");
+        LogError(0, RS_RET_CONFIG_ERROR, "omzmq3: unknown socket action");
         ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
     }
 
@@ -448,17 +447,7 @@ CODESTARTnewActInst
     cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
-BEGINparseSelectorAct
-CODESTARTparseSelectorAct
-	/* tell the engine we only want one template string */
-	CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	if(!strncmp((char*) p, ":omzmq3:", sizeof(":omzmq3:") - 1)) 
-		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
-			"omzmq3 supports only v6 config format, use: "
-			"action(type=\"omzmq3\" serverport=...)");
-	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-	CODE_STD_FINALIZERparseSelectorAct
-ENDparseSelectorAct
+NO_LEGACY_CONF_parseSelectorAct
 
 BEGINinitConfVars /* (re)set config variables to defaults */
 CODESTARTinitConfVars
@@ -485,7 +474,6 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* only supports rsyslog 6 configs */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	LogError(0, RS_RET_DEPRECATED, "note: omzmq3 module is deprecated and will "
 		"be removed soon. Do no longer use it, switch to imczmq. See "
 		"https://github.com/rsyslog/rsyslog/issues/2103 for details.");

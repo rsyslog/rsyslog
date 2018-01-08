@@ -79,22 +79,45 @@ static prop_t *staticErrValue;
 static unsigned int
 hash_from_key_fn(void *k) 
 {
-    int len;
-    uchar *rkey = (uchar*) k; /* we treat this as opaque bytes */
-    unsigned hashval = 1;
+	int len = 0;
+	uchar *rkey; /* we treat this as opaque bytes */
+	unsigned hashval = 1;
 
-    len = SALEN((struct sockaddr*)k);
-    while(len--)
-        hashval = hashval * 33 + *rkey++;
+	switch (((struct sockaddr *)k)->sa_family) {
+		case AF_INET:
+			len = sizeof (struct in_addr);
+			rkey = (uchar*) &(((struct sockaddr_in *)k)->sin_addr);
+			break;
+		case AF_INET6:
+			len = sizeof (struct in6_addr);
+			rkey = (uchar*) &(((struct sockaddr_in6 *)k)->sin6_addr);
+			break;
+	}
+	while(len--)
+		hashval = hashval * 33 + *rkey++;
 
-    return hashval;
+	return hashval;
 }
 
 static int
 key_equals_fn(void *key1, void *key2)
 {
-	return (SALEN((struct sockaddr*)key1) == SALEN((struct sockaddr*) key2) 
-		   && !memcmp(key1, key2, SALEN((struct sockaddr*) key1)));
+	int RetVal = 0;
+
+	if (((struct sockaddr *)key1)->sa_family != ((struct sockaddr *)key2)->sa_family)
+		return 0;
+	 switch (((struct sockaddr *)key1)->sa_family) {
+		case AF_INET:
+			RetVal = !memcmp(&((struct sockaddr_in *)key1)->sin_addr,
+			&((struct sockaddr_in *)key2)->sin_addr, sizeof (struct in_addr));
+			break;
+		case AF_INET6:
+			RetVal = !memcmp(&((struct sockaddr_in6 *)key1)->sin6_addr,
+			&((struct sockaddr_in6 *)key2)->sin6_addr, sizeof (struct in6_addr));
+			break;
+	}
+
+	return RetVal;
 }
 
 /* destruct a cache entry.

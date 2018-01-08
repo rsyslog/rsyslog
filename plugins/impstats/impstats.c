@@ -30,9 +30,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/uio.h>
-#if defined(__FreeBSD__)
 #include <sys/stat.h>
-#endif
 #include <errno.h>
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -126,13 +124,13 @@ static int st_openfiles;
 #endif
 static intctr_t st_ru_utime;
 static intctr_t st_ru_stime;
-static int st_ru_maxrss;
-static int st_ru_minflt;
-static int st_ru_majflt;
-static int st_ru_inblock;
-static int st_ru_oublock;
-static int st_ru_nvcsw;
-static int st_ru_nivcsw;
+static intctr_t st_ru_maxrss;
+static intctr_t st_ru_minflt;
+static intctr_t st_ru_majflt;
+static intctr_t st_ru_inblock;
+static intctr_t st_ru_oublock;
+static intctr_t st_ru_nvcsw;
+static intctr_t st_ru_nivcsw;
 static statsobj_t *statsobj_resources;
 
 static pthread_mutex_t hup_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -515,19 +513,19 @@ CODESTARTactivateCnf
 	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("stime"),
 		ctrType_IntCtr, CTR_FLAG_NONE, &st_ru_stime));
 	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("maxrss"),
-		ctrType_Int, CTR_FLAG_NONE, &st_ru_maxrss));
+		ctrType_IntCtr, CTR_FLAG_NONE, &st_ru_maxrss));
 	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("minflt"),
-		ctrType_Int, CTR_FLAG_NONE, &st_ru_minflt));
+		ctrType_IntCtr, CTR_FLAG_NONE, &st_ru_minflt));
 	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("majflt"),
-		ctrType_Int, CTR_FLAG_NONE, &st_ru_majflt));
+		ctrType_IntCtr, CTR_FLAG_NONE, &st_ru_majflt));
 	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("inblock"),
-		ctrType_Int, CTR_FLAG_NONE, &st_ru_inblock));
+		ctrType_IntCtr, CTR_FLAG_NONE, &st_ru_inblock));
 	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("oublock"),
-		ctrType_Int, CTR_FLAG_NONE, &st_ru_oublock));
+		ctrType_IntCtr, CTR_FLAG_NONE, &st_ru_oublock));
 	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("nvcsw"),
-		ctrType_Int, CTR_FLAG_NONE, &st_ru_nvcsw));
+		ctrType_IntCtr, CTR_FLAG_NONE, &st_ru_nvcsw));
 	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("nivcsw"),
-		ctrType_Int, CTR_FLAG_NONE, &st_ru_nivcsw));
+		ctrType_IntCtr, CTR_FLAG_NONE, &st_ru_nivcsw));
 #	ifdef OS_LINUX
 	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("openfiles"),
 		ctrType_Int, CTR_FLAG_NONE, &st_openfiles));

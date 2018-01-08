@@ -99,6 +99,8 @@ void seedRandomNumber(void);
 #define MAX_RANDOM_NUMBER RAND_MAX
 long int randomNumber(void);
 long long currentTimeMills(void);
+rsRetVal ATTR_NONNULL() split_binary_parameters(uchar **const szBinary,
+	char ***const aParams, int *const iParams, es_str_t *const param_binary);
 
 /* mutex operations */
 /* some useful constants */

@@ -1,6 +1,6 @@
 /* Definition of the worker thread instance (wti) class.
  *
- * Copyright 2008-2013 Adiscon GmbH.
+ * Copyright 2008-2017 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -47,6 +47,7 @@ typedef struct actWrkrInfo {
 	uint16_t uResumeOKinRow;/* number of times in a row that resume said OK with an
 				   immediate failure following */
 	int	iNbrResRtry;	/* number of retries since last suspend */
+	sbool	bHadAutoCommit;	/* did an auto-commit happen during doAction()? */
 	struct {
 		unsigned actState : 3;
 	} flags;
@@ -78,6 +79,7 @@ struct wti_s {
 	pthread_cond_t pcondBusy; /* condition to wake up the worker, protected by pmutUsr in wtp */
 	DEF_ATOMIC_HELPER_MUT(mutIsRunning)
 	struct {
+		uint8_t	script_errno; /* errno-type interface for RainerScript functions */
 		uint8_t bPrevWasSuspended;
 		uint8_t bDoAutoCommit; /* do a commit after each message
 		                        * this is usually set for batches with 0 element, but may
@@ -93,7 +95,7 @@ rsRetVal wtiConstructFinalize(wti_t * const pThis);
 rsRetVal wtiDestruct(wti_t **ppThis);
 rsRetVal wtiWorker(wti_t * const pThis);
 rsRetVal wtiSetDbgHdr(wti_t * const pThis, uchar *pszMsg, size_t lenMsg);
-rsRetVal wtiCancelThrd(wti_t * const pThis);
+rsRetVal wtiCancelThrd(wti_t * const pThis, const uchar *const cancelobj);
 rsRetVal wtiSetAlwaysRunning(wti_t * const pThis);
 rsRetVal wtiSetState(wti_t * const pThis, int bNew);
 rsRetVal wtiWakeupThrd(wti_t * const pThis);
@@ -116,12 +118,24 @@ PROTOTYPEpropSetMeth(wti, pWtp, wtp_t*);
 #define incActionNbrResRtry(pWti, pAction) ((pWti)->actWrkrInfo[(pAction)->iActionNbr].iNbrResRtry++)
 #define wtiInitIParam(piparams) (memset((piparams), 0, sizeof(actWrkrIParams_t)))
 
+#define wtiGetScriptErrno(pWti) ((pWti)->execState.script_errno)
+#define wtiSetScriptErrno(pWti, newval) (pWti)->execState.script_errno = (newval)
+
+static inline uint8_t ATTR_UNUSED ATTR_NONNULL(1)
+wtiGetPrevWasSuspended(const wti_t * const pWti)
+{
+	assert(pWti != NULL);
+	return pWti->execState.bPrevWasSuspended;
+}
+
 static inline void __attribute__((unused))
 wtiResetExecState(wti_t * const pWti, batch_t * const pBatch)
 {
+	wtiSetScriptErrno(pWti, 0);
 	pWti->execState.bPrevWasSuspended = 0;
 	pWti->execState.bDoAutoCommit = (batchNumMsgs(pBatch) == 1);
 }
+
 
 rsRetVal wtiNewIParam(wti_t *const pWti, action_t *const pAction, actWrkrIParams_t **piparams);
 #endif /* #ifndef WTI_H_INCLUDED */

@@ -220,7 +220,8 @@ dynstats_rebuildSurvivorTable(dynstats_bucket_t *b) {
 	
 	htab_sz = (size_t) (DYNSTATS_HASHTABLE_SIZE_OVERPROVISIONING * b->maxCardinality + 1);
 	if (b->table == NULL) {
-		CHKmalloc(survivor_table = create_hashtable(htab_sz, hash_from_string, key_equals_string, no_op_free));
+		CHKmalloc(survivor_table = create_hashtable(htab_sz, hash_from_string, key_equals_string,
+			no_op_free));
 	}
 	CHKmalloc(new_table = create_hashtable(htab_sz, hash_from_string, key_equals_string, no_op_free));
 	statsobj.UnlinkAllCounters(b->stats);
@@ -486,8 +487,8 @@ dynstats_createCtr(dynstats_bucket_t *b, const uchar* metric, dynstats_ctr_t **c
 	CHKmalloc((*ctr)->metric = ustrdup(metric));
 	STATSCOUNTER_INIT((*ctr)->ctr, (*ctr)->mutCtr);
 	CHKiRet(statsobj.AddManagedCounter(b->stats, metric, ctrType_IntCtr,
-									   b->resettable ? CTR_FLAG_MUST_RESET : CTR_FLAG_NONE,
-									   &(*ctr)->ctr, &(*ctr)->pCtr, 0));
+				b->resettable ? CTR_FLAG_MUST_RESET : CTR_FLAG_NONE,
+				&(*ctr)->ctr, &(*ctr)->pCtr, 0));
 finalize_it:
 	if (iRet != RS_RET_OK) {
 		if ((*ctr) != NULL) {
@@ -510,7 +511,7 @@ dynstats_addNewCtr(dynstats_bucket_t *b, const uchar* metric, uint8_t doInitialI
 	created = 0;
 	ctr = NULL;
 
-	if (ATOMIC_FETCH_32BIT(&b->metricCount, &b->mutMetricCount) >= b->maxCardinality) {
+	if ((unsigned) ATOMIC_FETCH_32BIT(&b->metricCount, &b->mutMetricCount) >= b->maxCardinality) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	

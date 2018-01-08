@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h for more specifics!
  *
  * Copyright 2011 Nathan Scott.
- * Copyright 2009-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -191,8 +191,9 @@ CODESTARTcreateWrkrInstance
 		pWrkrData->batch.currTpl1 = NULL;
 		pWrkrData->batch.currTpl2 = NULL;
 		if((pWrkrData->batch.data = es_newStr(1024)) == NULL) {
-			DBGPRINTF("omelasticsearch: error creating batch string "
-			          "turned off bulk mode\n");
+			LogError(0, RS_RET_OUT_OF_MEMORY,
+				"omelasticsearch: error creating batch string "
+			        "turned off bulk mode\n");
 			pData->bulkmode = 0; /* at least it works */
 		}
 	}
@@ -328,7 +329,8 @@ computeBaseUrl(const char*const serverParam,
 
 	es_str_t *urlBuf = es_newStr(256);
 	if (urlBuf == NULL) {
-		DBGPRINTF("omelasticsearch: failed to allocate es_str urlBuf in computeBaseUrl\n");
+		LogError(0, RS_RET_OUT_OF_MEMORY,
+		"omelasticsearch: failed to allocate es_str urlBuf in computeBaseUrl");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -352,7 +354,8 @@ computeBaseUrl(const char*const serverParam,
 	if (r == 0) *baseUrl = (uchar*) es_str2cstr(urlBuf, NULL);
 
 	if (r != 0 || baseUrl == NULL) {
-		DBGPRINTF("omelasticsearch: error occurred computing baseUrl from server %s\n", serverParam);
+		LogError(0, RS_RET_ERR,
+			"omelasticsearch: error occurred computing baseUrl from server %s", serverParam);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 finalize_it:
@@ -391,7 +394,8 @@ checkConn(wrkrInstanceData_t *const pWrkrData)
 	curl = pWrkrData->curlCheckConnHandle;
 	urlBuf = es_newStr(256);
 	if (urlBuf == NULL) {
-		DBGPRINTF("omelasticsearch: unable to allocate buffer for health check uri.\n");
+		LogError(0, RS_RET_OUT_OF_MEMORY,
+			"omelasticsearch: unable to allocate buffer for health check uri.");
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
@@ -403,7 +407,8 @@ checkConn(wrkrInstanceData_t *const pWrkrData)
 		if(r == 0) r = es_addBuf(&urlBuf, HEALTH_URI, sizeof(HEALTH_URI)-1);
 		if(r == 0) healthUrl = es_str2cstr(urlBuf, NULL);
 		if(r != 0 || healthUrl == NULL) {
-			DBGPRINTF("omelasticsearch: unable to allocate buffer for health check uri.\n");
+			LogError(0, RS_RET_OUT_OF_MEMORY,
+				"omelasticsearch: unable to allocate buffer for health check uri.");
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 
@@ -424,7 +429,8 @@ checkConn(wrkrInstanceData_t *const pWrkrData)
 		incrementServerIndex(pWrkrData);
 	}
 
-	DBGPRINTF("omelasticsearch: checkConn failed after %d attempts.\n", i);
+	LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
+		"omelasticsearch: checkConn failed after %d attempts.", i);
 	ABORT_FINALIZE(RS_RET_SUSPENDED);
 
 finalize_it:
@@ -506,7 +512,8 @@ setPostURL(wrkrInstanceData_t *const pWrkrData, uchar **const tpls)
 	baseUrl = (char*)pData->serverBaseUrls[pWrkrData->serverIndex];
 	url = es_newStrFromCStr(baseUrl, strlen(baseUrl));
 	if (url == NULL) {
-		DBGPRINTF("omelasticsearch: error allocating new estr for POST url.\n");
+		LogError(0, RS_RET_OUT_OF_MEMORY,
+			"omelasticsearch: error allocating new estr for POST url.");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -627,7 +634,8 @@ buildBatch(wrkrInstanceData_t *pWrkrData, uchar *message, uchar **tpls)
 	if(r == 0) r = es_addBuf(&pWrkrData->batch.data, (char*)message, length);
 	if(r == 0) r = es_addBuf(&pWrkrData->batch.data, "\n", sizeof("\n")-1);
 	if(r != 0) {
-		DBGPRINTF("omelasticsearch: growing batch failed with code %d\n", r);
+		LogError(0, RS_RET_ERR,
+			"omelasticsearch: growing batch failed with code %d", r);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	++pWrkrData->batch.nmemb;
@@ -750,9 +758,10 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,fjson_object **p
 
 	/*iterate over items*/
 	if(!fjson_object_object_get_ex(replyRoot, "items", &items)) {
-		DBGPRINTF("omelasticsearch: error in elasticsearch reply: "
-			  "bulkmode insert does not return array, reply is: %s\n",
-			  pWrkrData->reply);
+		LogError(0, RS_RET_DATAFAIL,
+			"omelasticsearch: error in elasticsearch reply: "
+			"bulkmode insert does not return array, reply is: %s",
+			pWrkrData->reply);
 		ABORT_FINALIZE(RS_RET_DATAFAIL);
 	}
 
@@ -770,27 +779,28 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,fjson_object **p
 		int itemStatus=0;
 		item = fjson_object_array_get_idx(items, i);
 		if(item == NULL)  {
-			DBGPRINTF("omelasticsearch: error in elasticsearch reply: "
-				  "cannot obtain reply array item %d\n", i);
+			LogError(0, RS_RET_DATAFAIL,
+				"omelasticsearch: error in elasticsearch reply: "
+				"cannot obtain reply array item %d", i);
 			ABORT_FINALIZE(RS_RET_DATAFAIL);
 		}
 		fjson_object_object_get_ex(item, "create", &result);
 		if(result == NULL || !fjson_object_is_type(result, fjson_type_object)) {
 			fjson_object_object_get_ex(item, "index", &result);
 			if(result == NULL || !fjson_object_is_type(result, fjson_type_object)) {
-				DBGPRINTF("omelasticsearch: error in elasticsearch reply: "
-					  "cannot obtain 'result' item for #%d\n", i);
+				LogError(0, RS_RET_DATAFAIL,
+					"omelasticsearch: error in elasticsearch reply: "
+					"cannot obtain 'result' item for #%d", i);
 				ABORT_FINALIZE(RS_RET_DATAFAIL);
 			}
 		}
 
 		fjson_object_object_get_ex(result, "status", &ok);
 		itemStatus = checkReplyStatus(ok);
-		
+
 		char *request =0;
 		char *response =0;
-		if(ctx->statusCheckOnly)
-		{
+		if(ctx->statusCheckOnly) {
 			if(itemStatus) {
 				DBGPRINTF("omelasticsearch: error in elasticsearch reply: item %d, "
 					"status is %d\n", i, fjson_object_get_int(ok));
@@ -798,20 +808,17 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,fjson_object **p
 				ABORT_FINALIZE(RS_RET_DATAFAIL);
 			}
 
-		}
-		else
-		{
-			if(getSingleRequest(lastReqRead,&request,&lastReqRead) != RS_RET_OK)
-			{
+		} else {
+			if(getSingleRequest(lastReqRead,&request,&lastReqRead) != RS_RET_OK) {
 				DBGPRINTF("omelasticsearch: Couldn't get post request\n");
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 			response = (char*)fjson_object_to_json_string_ext(result, FJSON_TO_STRING_PLAIN);
 
-			if(response==NULL)
-			{
+			if(response==NULL) {
 				free(request);/*as its has been assigned.*/
-				DBGPRINTF("omelasticsearch: Error getting fjson_object_to_string_ext. Cannot continue\n");
+				DBGPRINTF("omelasticsearch: Error getting fjson_object_to_string_ext. Cannot "
+					"continue\n");
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 
@@ -821,18 +828,15 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,fjson_object **p
 			/*free memory in any case*/
 			free(request);
 
-			if(ret != RS_RET_OK)
-			{
+			if(ret != RS_RET_OK) {
 				DBGPRINTF("omelasticsearch: Error in preparing errorfileContent. Cannot continue\n");
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
-
 		}
-
 	}
 
-	finalize_it:
-		RETiRet;
+finalize_it:
+	RETiRet;
 }
 
 /*
@@ -842,21 +846,20 @@ static rsRetVal
 getDataErrorOnly(context *ctx,int itemStatus,char *request,char *response)
 {
 	DEFiRet;
-	if(itemStatus)
-	{
+	if(itemStatus) {
 		fjson_object *onlyErrorResponses =NULL;
 		fjson_object *onlyErrorRequests=NULL;
 
-		if(!fjson_object_object_get_ex(ctx->errRoot, "reply", &onlyErrorResponses))
-		{
-			DBGPRINTF("omelasticsearch: Failed to get reply json array. Invalid context. Cannot continue\n");
+		if(!fjson_object_object_get_ex(ctx->errRoot, "reply", &onlyErrorResponses)) {
+			DBGPRINTF("omelasticsearch: Failed to get reply json array. Invalid context. Cannot "
+				"continue\n");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 		fjson_object_array_add(onlyErrorResponses, fjson_object_new_string(response));
 
-		if(!fjson_object_object_get_ex(ctx->errRoot, "request", &onlyErrorRequests))
-		{
-			DBGPRINTF("omelasticsearch: Failed to get request json array. Invalid context. Cannot continue\n");
+		if(!fjson_object_object_get_ex(ctx->errRoot, "request", &onlyErrorRequests)) {
+			DBGPRINTF("omelasticsearch: Failed to get request json array. Invalid context. Cannot "
+				"continue\n");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 
@@ -864,8 +867,8 @@ getDataErrorOnly(context *ctx,int itemStatus,char *request,char *response)
 
 	}
 
-	finalize_it:
-		RETiRet;
+finalize_it:
+	RETiRet;
 }
 
 /*
@@ -880,8 +883,7 @@ getDataInterleaved(context *ctx,
 {
 	DEFiRet;
 	fjson_object *interleaved =NULL;
-	if(!fjson_object_object_get_ex(ctx->errRoot, "response", &interleaved))
-	{
+	if(!fjson_object_object_get_ex(ctx->errRoot, "response", &interleaved)) {
 		DBGPRINTF("omelasticsearch: Failed to get response json array. Invalid context. Cannot continue\n");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
@@ -1005,14 +1007,15 @@ initializeErrorInterleavedConext(wrkrInstanceData_t *pWrkrData,context *ctx){
  * Note: we open the file but never close it before exit. If it
  * needs to be closed, HUP must be sent.
  */
-static rsRetVal
-writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, fjson_object **pReplyRoot, uchar *reqmsg)
+static rsRetVal ATTR_NONNULL()
+writeDataError(wrkrInstanceData_t *const pWrkrData,
+	instanceData *const pData, fjson_object **const pReplyRoot,
+	uchar *const reqmsg)
 {
 	char *rendered = NULL;
 	size_t toWrite;
 	ssize_t wrRet;
 	sbool bMutLocked = 0;
-	char errStr[1024];
 	context ctx;
 	ctx.errRoot=0;
 	DEFiRet;
@@ -1026,54 +1029,45 @@ writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, fjson_object 
 	pthread_mutex_lock(&pData->mutErrFile);
 	bMutLocked = 1;
 
-	DBGPRINTF("omelasticsearch: error file mode: erroronly='%d' errorInterleaved='%d'\n", pData->errorOnly,
-	pData->interleaved);
+	DBGPRINTF("omelasticsearch: error file mode: erroronly='%d' errorInterleaved='%d'\n",
+		pData->errorOnly, pData->interleaved);
 
 	if(pData->interleaved ==0 && pData->errorOnly ==0)/*default write*/
 	{
-		if(getDataErrorDefault(pWrkrData,pReplyRoot,reqmsg,&rendered) != RS_RET_OK) {
+		if(getDataErrorDefault(pWrkrData,pReplyRoot, reqmsg, &rendered) != RS_RET_OK) {
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
-	}
-	else
-	{
+	} else {
 		/*get correct context.*/
 		if(pData->interleaved && pData->errorOnly)
 		{
-			if(initializeErrorInterleavedConext(pWrkrData,&ctx) != RS_RET_OK) {
+			if(initializeErrorInterleavedConext(pWrkrData, &ctx) != RS_RET_OK) {
 				DBGPRINTF("omelasticsearch: error initializing error interleaved context.\n");
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 
-		}
-		else if(pData->errorOnly)
-		{
-
-			if(initializeErrorOnlyConext(pWrkrData,&ctx) != RS_RET_OK) {
+		} else if(pData->errorOnly) {
+			if(initializeErrorOnlyConext(pWrkrData, &ctx) != RS_RET_OK) {
 
 				DBGPRINTF("omelasticsearch: error initializing error only context.\n");
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
-		}
-		else if(pData->interleaved)
-		{
-			if(initializeInterleavedConext(pWrkrData,&ctx) != RS_RET_OK) {
+		} else if(pData->interleaved) {
+			if(initializeInterleavedConext(pWrkrData, &ctx) != RS_RET_OK) {
 				DBGPRINTF("omelasticsearch: error initializing error interleaved context.\n");
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
-		}
-		else
-		{
+		} else {
 			DBGPRINTF("omelasticsearch: None of the modes match file write. No data to write.\n");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 
 		/*execute context*/
-		if(parseRequestAndResponseForContext(pWrkrData,pReplyRoot,reqmsg,&ctx)!= RS_RET_OK) {
+		if(parseRequestAndResponseForContext(pWrkrData, pReplyRoot, reqmsg, &ctx)!= RS_RET_OK) {
 			DBGPRINTF("omelasticsearch: error creating file content.\n");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
-		rendered = strdup((char*)fjson_object_to_json_string(ctx.errRoot));
+		CHKmalloc(rendered = strdup((char*)fjson_object_to_json_string(ctx.errRoot)));
 	}
 
 
@@ -1082,8 +1076,8 @@ writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, fjson_object 
 					O_WRONLY|O_CREAT|O_APPEND|O_LARGEFILE|O_CLOEXEC,
 					S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP);
 		if(pData->fdErrFile == -1) {
-			rs_strerror_r(errno, errStr, sizeof(errStr));
-			DBGPRINTF("omelasticsearch: error opening error file: %s\n", errStr);
+			LogError(errno, RS_RET_ERR, "omelasticsearch: error opening error file %s",
+				pData->errorFile);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	}
@@ -1092,13 +1086,17 @@ writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, fjson_object 
 	 * things way to much.
 	 */
 	DBGPRINTF("omelasticsearch: error record: '%s'\n", rendered);
-	toWrite = strlen(rendered);
+	toWrite = strlen(rendered) + 1;
+	/* Note: we overwrite the '\0' terminator with '\n' -- so we avoid
+	 * caling malloc() -- write() does NOT need '\0'!
+	 */
+	rendered[toWrite-1] = '\n'; /* NO LONGER A STRING! */
 	wrRet = write(pData->fdErrFile, rendered, toWrite);
 	if(wrRet != (ssize_t) toWrite) {
-		DBGPRINTF("omelasticsearch: error %d writing error file, write returns %lld\n",
-			  errno, (long long) wrRet);
+		LogError(errno, RS_RET_IO_ERROR,
+			"omelasticsearch: error writing error file %s, write returned %lld",
+			pData->errorFile, (long long) wrRet);
 	}
-
 
 finalize_it:
 	if(bMutLocked)
@@ -1116,8 +1114,7 @@ checkResultBulkmode(wrkrInstanceData_t *pWrkrData, fjson_object *root)
 	context ctx;
 	ctx.statusCheckOnly=1;
 	ctx.errRoot = 0;
-	if(parseRequestAndResponseForContext(pWrkrData,&root,0,&ctx)!= RS_RET_OK)
-	{
+	if(parseRequestAndResponseForContext(pWrkrData,&root,0,&ctx)!= RS_RET_OK) {
 		DBGPRINTF("omelasticsearch: error found in elasticsearch reply\n");
 		ABORT_FINALIZE(RS_RET_DATAFAIL);
 	}
@@ -1136,7 +1133,8 @@ checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg)
 
 	root = fjson_tokener_parse(pWrkrData->reply);
 	if(root == NULL) {
-		DBGPRINTF("omelasticsearch: could not parse JSON result \n");
+		LogMsg(0, RS_RET_ERR, LOG_WARNING,
+			"omelasticsearch: could not parse JSON result");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -1302,10 +1300,11 @@ static rsRetVal
 computeAuthHeader(char* uid, char* pwd, uchar** authBuf) {
 	int r;
 	DEFiRet;
-	es_str_t* auth = es_newStr(1024);
 
+	es_str_t* auth = es_newStr(1024);
 	if (auth == NULL) {
-		DBGPRINTF("omelasticsearch: failed to allocate es_str auth for auth header construction\n");
+		LogError(0, RS_RET_OUT_OF_MEMORY,
+			"omelasticsearch: failed to allocate es_str auth for auth header construction");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -1477,8 +1476,8 @@ CODESTARTnewActInst
 		} else if(!strcmp(actpblk.descr[i].name, "bulkid")) {
 			pData->bulkId = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
-			dbgprintf("omelasticsearch: program error, non-handled "
-			  "param '%s'\n", actpblk.descr[i].name);
+			LogError(0, RS_RET_INTERNAL_ERROR, "omelasticsearch: program error, "
+				"non-handled param '%s'", actpblk.descr[i].name);
 		}
 	}
 
@@ -1589,12 +1588,14 @@ CODESTARTnewActInst
 			if (serverParam[serverParamLastChar] == '/') {
 				serverParam[serverParamLastChar] = '\0';
 			}
-			CHKiRet(computeBaseUrl(serverParam, pData->defaultPort, pData->useHttps, pData->serverBaseUrls + i));
+			CHKiRet(computeBaseUrl(serverParam, pData->defaultPort, pData->useHttps,
+				pData->serverBaseUrls + i));
 			free(serverParam);
 			serverParam = NULL;
 		}
 	} else {
-		dbgprintf("omelasticsearch: No servers specified, using localhost\n");
+		LogMsg(0, RS_RET_OK, LOG_WARNING,
+			"omelasticsearch: No servers specified, using localhost");
 		pData->numServers = 1;
 		pData->serverBaseUrls = malloc(sizeof(uchar*));
 		if (pData->serverBaseUrls == NULL) {
@@ -1617,18 +1618,6 @@ CODE_STD_FINALIZERnewActInst
 ENDnewActInst
 
 
-BEGINparseSelectorAct
-CODESTARTparseSelectorAct
-CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	if(!strncmp((char*) p, ":omelasticsearch:", sizeof(":omelasticsearch:") - 1)) {
-		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
-			"omelasticsearch supports only v6 config format, use: "
-			"action(type=\"omelasticsearch\" server=...)");
-	}
-	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-CODE_STD_FINALIZERparseSelectorAct
-ENDparseSelectorAct
-
 BEGINdoHUP
 CODESTARTdoHUP
 	if(pData->fdErrFile != -1) {
@@ -1645,6 +1634,8 @@ CODESTARTmodExit
 	objRelease(errmsg, CORE_COMPONENT);
         objRelease(statsobj, CORE_COMPONENT);
 ENDmodExit
+
+NO_LEGACY_CONF_parseSelectorAct
 
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt

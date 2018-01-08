@@ -76,18 +76,26 @@ static int bGlblSrvrInitDone = 0;	/**< 0 - server global init not yet done, 1 - 
 static pthread_mutex_t mutGtlsStrerror;
 /*< a mutex protecting the potentially non-reentrant gtlStrerror() function */
 
-/* a macro to check GnuTLS calls against unexpected errors */
-#define CHKgnutls(x) { \
-	gnuRet = (x); \
-	if(gnuRet == GNUTLS_E_FILE_ERROR) { \
-		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "error reading file - a common cause is that the file  does not exist"); \
-		ABORT_FINALIZE(RS_RET_GNUTLS_ERR); \
-	} else if(gnuRet != 0) { \
+/* a macro to abort if GnuTLS error is not acceptable. We split this off from
+ * CHKgnutls() to avoid some Coverity report in cases where we know GnuTLS
+ * failed. Note: gnuRet must already be set accordingly!
+ */
+#define ABORTgnutls { \
 		uchar *pErr = gtlsStrerror(gnuRet); \
 		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n", \
 	gnuRet, __FILE__, __LINE__, pErr); \
 		free(pErr); \
 		ABORT_FINALIZE(RS_RET_GNUTLS_ERR); \
+}
+/* a macro to check GnuTLS calls against unexpected errors */
+#define CHKgnutls(x) { \
+	gnuRet = (x); \
+	if(gnuRet == GNUTLS_E_FILE_ERROR) { \
+		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "error reading file - a common cause is that the " \
+			"file  does not exist"); \
+		ABORT_FINALIZE(RS_RET_GNUTLS_ERR); \
+	} else if(gnuRet != 0) { \
+		ABORTgnutls; \
 	} \
 }
 
@@ -534,8 +542,8 @@ gtlsRecordRecv(nsd_gtls_t *pThis)
 		dbgprintf("GnuTLS receive requires a retry (this most probably is OK and no error condition)\n");
 		ABORT_FINALIZE(RS_RET_RETRY);
 	} else {
-		int gnuRet; /* TODO: build a specific function for GnuTLS error reporting */
-		CHKgnutls(lenRcvd); /* this will abort the function */
+		int gnuRet = lenRcvd;
+		ABORTgnutls;
 	}
 
 finalize_it:
@@ -1024,7 +1032,8 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 	cert_list = gnutls_certificate_get_peers(pThis->sess, &cert_list_size);
 	if(cert_list_size < 1) {
 		errno = 0;
-		errmsg.LogError(0, RS_RET_TLS_NO_CERT, "peer did not provide a certificate, not permitted to talk to it");
+		errmsg.LogError(0, RS_RET_TLS_NO_CERT,
+			"peer did not provide a certificate, not permitted to talk to it");
 		ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
 	}
 
@@ -1071,7 +1080,8 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 			errmsg.LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "not permitted to talk to peer: "
 					"certificate %d not yet active", i);
 			gtlsGetCertInfo(pThis, &pStr);
-			errmsg.LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
+			errmsg.LogError(0, RS_RET_CERT_NOT_YET_ACTIVE,
+				"invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
 			cstrDestruct(&pStr);
 			ABORT_FINALIZE(RS_RET_CERT_NOT_YET_ACTIVE);
 		}
@@ -1080,7 +1090,8 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 		if(ttCert == -1)
 			ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
 		else if(ttCert < ttNow) {
-			errmsg.LogError(0, RS_RET_CERT_EXPIRED, "not permitted to talk to peer: certificate %d expired", i);
+			errmsg.LogError(0, RS_RET_CERT_EXPIRED, "not permitted to talk to peer: certificate"
+				" %d expired", i);
 			gtlsGetCertInfo(pThis, &pStr);
 			errmsg.LogError(0, RS_RET_CERT_EXPIRED, "invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
 			cstrDestruct(&pStr);
@@ -1530,7 +1541,8 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	gnuRet = gnutls_handshake(pNew->sess);
 	if(gnuRet == GNUTLS_E_AGAIN || gnuRet == GNUTLS_E_INTERRUPTED) {
 		pNew->rtryCall = gtlsRtry_handshake;
-		dbgprintf("GnuTLS handshake does not complete immediately - setting to retry (this is OK and normal)\n");
+		dbgprintf("GnuTLS handshake does not complete immediately - "
+			"setting to retry (this is OK and normal)\n");
 	} else if(gnuRet == 0) {
 		/* we got a handshake, now check authorization */
 		CHKiRet(gtlsChkPeerAuth(pNew));

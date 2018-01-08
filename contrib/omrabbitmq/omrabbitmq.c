@@ -54,7 +54,6 @@ MODULE_CNFNAME("omrabbitmq")
  * internal structures
  */
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 
 static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 
@@ -120,7 +119,7 @@ die_on_error(int x, char const *context)
 
 	if (x < 0) {
 		const char *errstr = amqp_error_string2(-x);
-		errmsg.LogError(0, RS_RET_ERR, "omrabbitmq: %s: %s", context, errstr);
+		LogError(0, RS_RET_ERR, "omrabbitmq: %s: %s", context, errstr);
 
 		retVal = 1; // true
 	}
@@ -143,18 +142,18 @@ die_on_amqp_error(amqp_rpc_reply_t x, char const *context)
 		break;
 
 	case AMQP_RESPONSE_NONE:
-		errmsg.LogError(0, RS_RET_ERR, "omrabbitmq: %s: missing RPC reply type!", context);
+		LogError(0, RS_RET_ERR, "omrabbitmq: %s: missing RPC reply type!", context);
 		break;
 
 	case AMQP_RESPONSE_LIBRARY_EXCEPTION:
-		errmsg.LogError(0, RS_RET_ERR, "omrabbitmq: %s: %s", context, amqp_error_string2(x.library_error));
+		LogError(0, RS_RET_ERR, "omrabbitmq: %s: %s", context, amqp_error_string2(x.library_error));
 		break;
 
 	case AMQP_RESPONSE_SERVER_EXCEPTION:
 		switch (x.reply.id) {
 		case AMQP_CONNECTION_CLOSE_METHOD: {
 			amqp_connection_close_t *m = (amqp_connection_close_t *) x.reply.decoded;
-			errmsg.LogError(0, RS_RET_ERR, "omrabbitmq: %s: server connection error %d, message: %.*s",
+			LogError(0, RS_RET_ERR, "omrabbitmq: %s: server connection error %d, message: %.*s",
 				context,
 				m->reply_code,
 				(int) m->reply_text.len, (char *) m->reply_text.bytes);
@@ -162,14 +161,14 @@ die_on_amqp_error(amqp_rpc_reply_t x, char const *context)
 			}
 		case AMQP_CHANNEL_CLOSE_METHOD: {
 			amqp_channel_close_t *m = (amqp_channel_close_t *) x.reply.decoded;
-			errmsg.LogError(0, RS_RET_ERR, "omrabbitmq: %s: server channel error %d, message: %.*s",
+			LogError(0, RS_RET_ERR, "omrabbitmq: %s: server channel error %d, message: %.*s",
 				context,
 				m->reply_code,
 				(int) m->reply_text.len, (char *) m->reply_text.bytes);
 			break;
 			}
 		default:
-			errmsg.LogError(0, RS_RET_ERR, "omrabbitmq: %s: unknown server error, method "
+			LogError(0, RS_RET_ERR, "omrabbitmq: %s: unknown server error, method "
 					"id 0x%08X\n", context, x.reply.id);
 			break;
 		}
@@ -217,7 +216,7 @@ initRabbitMQ(instanceData *pData)
 
 	asocket = amqp_tcp_socket_new(pData->conn);
 	if (!asocket) {
-		errmsg.LogError(0, RS_RET_ERR, "omrabbitmq: Error allocating tcp socket");
+		LogError(0, RS_RET_ERR, "omrabbitmq: Error allocating tcp socket");
 
 		pData->conn = NULL;
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
@@ -462,33 +461,37 @@ CODESTARTnewActInst
 	}
 
 	if (pData->host == NULL) {
-		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module disabled: parameter host must be specified");
+		LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module disabled: parameter host must be "
+			"specified");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
 
 	if (pData->vhost == NULL) {
-		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module disabled: parameter "
+		LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module disabled: parameter "
 					"virtual_host must be specified");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
 
 	if (pData->user == NULL) {
-		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module disabled: parameter user must be specified");
+		LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module disabled: parameter user "
+			"must be specified");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
 
 	if (pData->password == NULL) {
-		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module disabled: parameter password must be specified");
+		LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module disabled: parameter password "
+				"must be specified");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
 
 	if (pData->exchange == NULL) {
-		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module disabled: parameter exchange must be specified");
+		LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module disabled: parameter exchange "
+				"must be specified");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
 
 	if (pData->routing_key == NULL) {
-		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module disabled: parameter "
+		LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module disabled: parameter "
 					"routing_key must be specified");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
@@ -509,22 +512,11 @@ CODE_STD_FINALIZERnewActInst
 ENDnewActInst
 
 
-BEGINparseSelectorAct
-CODESTARTparseSelectorAct
-	CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	if(!strncmp((char*) p, ":omrabbitmq:", sizeof(":omrabbitmq:") - 1)) {
-		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
-			"omrabbitmq supports only v6 config format, use: "
-			"action(type=\"omrabbitmq\" host=...)");
-	}
-	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-CODE_STD_FINALIZERparseSelectorAct
-ENDparseSelectorAct
+NO_LEGACY_CONF_parseSelectorAct
 
 
 BEGINmodExit
 CODESTARTmodExit
-	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -540,5 +532,4 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDmodInit

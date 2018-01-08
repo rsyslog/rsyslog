@@ -63,7 +63,11 @@ void r_dbgprintf(const char *srcname __attribute__((unused)), const char *fmt __
 #endif
 void srSleep(int a __attribute__((unused)), int b __attribute__((unused)));
 /* prototype (avoid compiler warning) */
-void srSleep(int a __attribute__((unused)), int b __attribute__((unused))) {};
+void srSleep(int a __attribute__((unused)), int b __attribute__((unused))) {}
+/* this is not really needed by any of our code */
+long randomNumber(void);
+/* prototype (avoid compiler warning) */
+long randomNumber(void) {return 0l;}
 /* this is not really needed by any of our code */
 
 /* rectype/value must be EIF_MAX_*_LEN+1 long!
@@ -405,7 +409,10 @@ getRandomKey(void)
 	 * will always work...).  -- TODO -- rgerhards, 2013-03-06
 	 */
 	if((fd = open("/dev/urandom", O_RDONLY)) >= 0) {
-		if(read(fd, cry_key, randomKeyLen)) {}; /* keep compiler happy */
+		if(read(fd, cry_key, randomKeyLen) != randomKeyLen) {
+			fprintf(stderr, "warning: could not read sufficient data "
+				"from /dev/urandom - key may be weak\n");
+		};
 		close(fd);
 	}
 }

@@ -83,7 +83,6 @@ static uchar *pszWorkDir = NULL;
 #ifdef HAVE_LIBLOGGING_STDLOG
 static uchar *stdlog_chanspec = NULL;
 #endif
-static int bOptimizeUniProc = 1;	/* enable uniprocessor optimizations */
 static int bParseHOSTNAMEandTAG = 1;	/* parser modification (based on startup params!) */
 static int bPreserveFQDN = 0;		/* should FQDNs always be preserved? */
 static int iMaxLine = 8096;		/* maximum length of a syslog message */
@@ -93,6 +92,7 @@ static int bDropMalPTRMsgs = 0;/* Drop messages which have malicious PTR records
 static int option_DisallowWarning = 1;	/* complain if message from disallowed sender is received */
 static int bDisableDNS = 0; /* don't look up IP addresses of remote messages */
 static prop_t *propLocalIPIF = NULL;/* IP address to report for the local host (default is 127.0.0.1) */
+static int propLocalIPIF_set = 0;	/* is propLocalIPIF already set? */
 static prop_t *propLocalHostName = NULL;/* our hostname as FQDN - read-only after startup */
 static prop_t *propLocalHostNameToDelete = NULL;/* see GenerateLocalHostName function hdr comment! */
 static uchar *LocalHostName = NULL;/* our hostname  - read-only after startup, except HUP */
@@ -241,7 +241,6 @@ static dataType Get##nameFunc(void) \
 	return(nameVar); \
 }
 
-SIMP_PROP(OptimizeUniProc, bOptimizeUniProc, int)
 SIMP_PROP(PreserveFQDN, bPreserveFQDN, int)
 SIMP_PROP(mainqCnfObj, mainqCnfObj, struct cnfobj *)
 SIMP_PROP(DropMalPTRMsgs, bDropMalPTRMsgs, int)
@@ -298,6 +297,9 @@ static rsRetVal
 storeLocalHostIPIF(uchar *myIP)
 {
 	DEFiRet;
+	if(propLocalIPIF != NULL) {
+		CHKiRet(prop.Destruct(&propLocalIPIF));
+	}
 	CHKiRet(prop.Construct(&propLocalIPIF));
 	CHKiRet(prop.SetString(propLocalIPIF, myIP, ustrlen(myIP)));
 	CHKiRet(prop.ConstructFinalize(propLocalIPIF));
@@ -322,7 +324,7 @@ setLocalHostIPIF(void __attribute__((unused)) *pVal, uchar *pNewVal)
 
 	CHKiRet(objUse(net, CORE_COMPONENT));
 
-	if(propLocalIPIF != NULL) {
+	if(propLocalIPIF_set) {
 		errmsg.LogError(0, RS_RET_ERR, "$LocalHostIPIF is already set "
 				"and cannot be reset; place it at TOP OF rsyslog.conf!");
 		ABORT_FINALIZE(RS_RET_ERR);
@@ -502,8 +504,7 @@ getDefPFFamily(void)
 static prop_t*
 GetLocalHostIP(void)
 {
-	if(propLocalIPIF == NULL)
-		storeLocalHostIPIF((uchar*)"127.0.0.1");
+	assert(propLocalIPIF != NULL);
 	return(propLocalIPIF);
 }
 
@@ -753,7 +754,6 @@ CODESTARTobjQueryInterface(glbl)
 #define SIMP_PROP(name) \
 	pIf->Get##name = Get##name; \
 	pIf->Set##name = Set##name;
-	SIMP_PROP(OptimizeUniProc);
 	SIMP_PROP(PreserveFQDN);
 	SIMP_PROP(DropMalPTRMsgs);
 	SIMP_PROP(mainqCnfObj);
@@ -798,7 +798,6 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	free(pszWorkDir);
 	pszWorkDir = NULL;
 	bDropMalPTRMsgs = 0;
-	bOptimizeUniProc = 1;
 	bPreserveFQDN = 0;
 	iMaxLine = 8192;
 	cCCEscapeChar = '#';
@@ -1117,7 +1116,9 @@ glblDoneLoadCnf(void)
 	DEFiRet;
 	CHKiRet(objUse(net, CORE_COMPONENT));
 
-	qsort(tzinfos, ntzinfos, sizeof(tzinfo_t), qs_arrcmp_tzinfo);
+	if(ntzinfos > 0) {
+		qsort(tzinfos, ntzinfos, sizeof(tzinfo_t), qs_arrcmp_tzinfo);
+	}
 	DBGPRINTF("Timezone information table (%d entries):\n", ntzinfos);
 	displayTzinfos();
 
@@ -1313,6 +1314,9 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
+	/* intialize properties */
+	storeLocalHostIPIF((uchar*)"127.0.0.1");
+
 	/* config handlers are never unregistered and need not be - we are always loaded ;) */
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugfile", 0, eCmdHdlrGetWord, setDebugFile, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"debuglevel", 0, eCmdHdlrInt, setDebugLevel, NULL, NULL));
@@ -1329,8 +1333,7 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	&pszDfltNetstrmDrvrCertFile, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"localhostname", 0, eCmdHdlrGetWord, NULL, &LocalHostNameOverride, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"localhostipif", 0, eCmdHdlrGetWord, setLocalHostIPIF, NULL, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"optimizeforuniprocessor", 0, eCmdHdlrBinary, NULL,
-	&bOptimizeUniProc, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"optimizeforuniprocessor", 0, eCmdHdlrGoneAway, NULL, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"preservefqdn", 0, eCmdHdlrBinary, NULL, &bPreserveFQDN, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize, legacySetMaxMessageSize, NULL, NULL));
 
@@ -1372,8 +1375,3 @@ BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
 		prop.Destruct(&propLocalHostNameToDelete);
 	DESTROY_ATOMIC_HELPER_MUT(mutTerminateInputs);
 ENDObjClassExit(glbl)
-
-void glblProcessCnf(struct cnfobj *o);
-
-/* vi:set ai:
- */

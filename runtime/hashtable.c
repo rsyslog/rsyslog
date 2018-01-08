@@ -73,7 +73,13 @@ create_hashtable(unsigned int minsize,
 }
 
 /*****************************************************************************/
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wunknown-attributes"
+#endif
 unsigned int
+#if defined(__clang__)
+__attribute__((no_sanitize("unsigned-integer-overflow")))
+#endif
 hash(struct hashtable *h, void *k)
 {
     /* Aim to protect against poor hash functions by adding logic here
@@ -274,7 +280,13 @@ hashtable_destroy(struct hashtable *h, int free_values)
 /* one provided by Aaaron Wiebe based on perl's hashing algorithm 
  * (so probably pretty generic). Not for excessively large strings!
  */
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wunknown-attributes"
+#endif
 unsigned __attribute__((nonnull(1))) int
+#if defined(__clang__)
+__attribute__((no_sanitize("unsigned-integer-overflow")))
+#endif
 hash_from_string(void *k) 
 {
     char *rkey = (char*) k;

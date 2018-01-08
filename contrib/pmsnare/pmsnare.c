@@ -342,14 +342,16 @@ CODESTARTparse2
 		lenMsg--;
 		lenMsg -= (pInst->tabLength-1); /* size of tab goes from tabLength to 1, so shorten
 						the message by the difference */
-		memmove(p2parse, p2parse+(pInst->tabLength-1), lenMsg); /* move the message portion up to overwrite the tab */ 
+		memmove(p2parse, p2parse+(pInst->tabLength-1), lenMsg);
+		/* move the message portion up to overwrite the tab */ 
 		*(p2parse + lenMsg)	= '\0';
 		pMsg->iLenRawMsg -= (pInst->tabLength-1);
 		pMsg->iLenMSG -= (pInst->tabLength-1);
 		snaremessage -= (pInst->tabLength-1);
 	} else {
 		/* The first separator is not a tab. Look for a syslog Snare message. Example:
-		 * <14>May 17 02:25:10 syslog.lab.home MSWinEventLog     1    Security  606129    Wed May 17 02:25:10 2017
+		 * <14>May 17 02:25:10 syslog.lab.home MSWinEventLog     1    Security  606129
+			Wed May 17 02:25:10 2017
 		 */
 
 		/* go back to the beginning of the message */
@@ -394,7 +396,8 @@ CODESTARTparse2
 		lenMsg--;
 		lenMsg -= (pInst->tabLength-1); /* size of tab goes from tabLength to 1, so shorten
 						the message by the difference */
-		memmove(p2parse, p2parse+(pInst->tabLength-1), lenMsg); /* move the message portion up to overwrite the tab */ 
+		memmove(p2parse, p2parse+(pInst->tabLength-1), lenMsg);
+		/* move the message portion up to overwrite the tab */ 
 		*(p2parse + lenMsg) = '\0';
 		pMsg->iLenRawMsg -= (pInst->tabLength-1);
 		pMsg->iLenMSG -= (pInst->tabLength-1);

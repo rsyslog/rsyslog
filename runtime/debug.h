@@ -115,9 +115,9 @@ extern int altdbg;	/* and the handle for alternate debug output */
 /* macros */
 #ifdef DEBUGLESS
 #	define DBGL_UNUSED __attribute__((__unused__))
-	inline void r_dbgoprint(const char DBGL_UNUSED *srcname, obj_t DBGL_UNUSED *pObj,
+	static inline void r_dbgoprint(const char DBGL_UNUSED *srcname, obj_t DBGL_UNUSED *pObj,
 	                         const char DBGL_UNUSED *fmt, ...) {}
-	inline void r_dbgprintf(const char DBGL_UNUSED *srcname, const char DBGL_UNUSED *fmt, ...) {}
+	static inline void r_dbgprintf(const char DBGL_UNUSED *srcname, const char DBGL_UNUSED *fmt, ...) {}
 #else
 #	define DBGL_UNUSED
 	void r_dbgoprint(const char *srcname, obj_t *pObj, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
@@ -129,30 +129,14 @@ extern int altdbg;	/* and the handle for alternate debug output */
 #define dbgprintf(...) r_dbgprintf(__FILE__, __VA_ARGS__)
 #define dbgoprint(...) r_dbgoprint(__FILE__, __VA_ARGS__)
 
-#ifdef RTINST
-#define BEGINfunc static dbgFuncDB_t *pdbgFuncDB;
-	int dbgCALLStaCK_POP_POINT = dbgEntrFunc(&pdbgFuncDB, __FILE__, __func__, __LINE__);
-#	define ENDfunc dbgExitFunc(pdbgFuncDB, dbgCALLStaCK_POP_POINT, RS_RET_NO_IRET);
-#	define ENDfuncIRet dbgExitFunc(pdbgFuncDB, dbgCALLStaCK_POP_POINT, iRet);
-#	define ASSERT(x) assert(x)
-#else
-#	define BEGINfunc
-#	define ENDfunc
-#	define ENDfuncIRet
-#	define ASSERT(x)
-#endif
-#ifdef RTINST
-#define RUNLOG dbgSetExecLocation(dbgCALLStaCK_POP_POINT, __LINE__);
-	dbgprintf("%s:%d: %s: log point\n", __FILE__, __LINE__, __func__);
-#define RUNLOG_VAR(fmt, x) dbgSetExecLocation(dbgCALLStaCK_POP_POINT, __LINE__);\
-	 		          dbgprintf("%s:%d: %s: var '%s'[%s]: " fmt "\n", __FILE__, __LINE__, __func__, #x, fmt, x)
-#	define RUNLOG_STR(str)    dbgSetExecLocation(dbgCALLStaCK_POP_POINT, __LINE__);\
-				  dbgprintf("%s:%d: %s: %s\n", __FILE__, __LINE__, __func__, str)
-#else
-#	define RUNLOG
-#	define RUNLOG_VAR(fmt, x)
-#	define RUNLOG_STR(str)
-#endif
+/* things originally introduced for now remove rtinst */
+#define BEGINfunc
+#define ENDfunc
+#define ENDfuncIRet
+#define ASSERT(x) assert(x)
+#define RUNLOG
+#define RUNLOG_VAR(fmt, x)
+#define RUNLOG_STR(str)
 
 #ifdef MEMCHECK
 #	define MALLOC(x) dbgmalloc(x)
@@ -160,28 +144,16 @@ extern int altdbg;	/* and the handle for alternate debug output */
 #	define MALLOC(x) malloc(x)
 #endif
 
-/* mutex operations */
 #define MUTOP_LOCKWAIT		1
 #define MUTOP_LOCK		2
 #define MUTOP_UNLOCK		3
 #define MUTOP_TRYLOCK		4
 
-
-/* debug aides */
-#ifdef RTINST
-#define d_pthread_mutex_lock(x)      dbgMutexLock(x, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
-#define d_pthread_mutex_trylock(x)   dbgMutexTryLock(x, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
-#define d_pthread_mutex_unlock(x)    dbgMutexUnlock(x, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
-#define d_pthread_cond_wait(cond, mut)   dbgCondWait(cond, mut, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
-#define d_pthread_cond_timedwait(cond, mut, to)   dbgCondTimedWait(cond, mut, to, \
-	pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
-#define d_free(x)      dbgFree(x, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
-#else
+/* things originally introduced for now removed rtinst */
 #define d_pthread_mutex_lock(x)     pthread_mutex_lock(x)
 #define d_pthread_mutex_trylock(x)  pthread_mutex_trylock(x)
 #define d_pthread_mutex_unlock(x)   pthread_mutex_unlock(x)
 #define d_pthread_cond_wait(cond, mut)   pthread_cond_wait(cond, mut)
 #define d_pthread_cond_timedwait(cond, mut, to)   pthread_cond_timedwait(cond, mut, to)
 #define d_free(x)      free(x)
-#endif
 #endif /* #ifndef DEBUG_H_INCLUDED */

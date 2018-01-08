@@ -218,12 +218,14 @@ finalize_it:
 	RETiRet;
 }
 
-static rsRetVal
-execSet(struct cnfstmt *stmt, smsg_t *pMsg)
+static rsRetVal ATTR_NONNULL()
+execSet(const struct cnfstmt *const stmt,
+	smsg_t *const pMsg,
+	wti_t *const __restrict__ pWti)
 {
 	struct svar result;
 	DEFiRet;
-	cnfexprEval(stmt->d.s_set.expr, &result, pMsg);
+	cnfexprEval(stmt->d.s_set.expr, &result, pMsg, pWti);
 	msgSetJSONFromVar(pMsg, stmt->d.s_set.varname, &result, stmt->d.s_set.force_reset);
 	varDelete(&result);
 	RETiRet;
@@ -249,7 +251,7 @@ execCallIndirect(struct cnfstmt *const __restrict__ stmt,
 
 	assert(stmt->d.s_call_ind.expr != NULL);
 
-	cnfexprEval(stmt->d.s_call_ind.expr, &result, pMsg);
+	cnfexprEval(stmt->d.s_call_ind.expr, &result, pMsg, pWti);
 	uchar *const rsName = (uchar*) var2CString(&result, &bMustFree);
 	const rsRetVal localRet = rulesetGetRuleset(loadConf, &pRuleset, rsName);
 	if(localRet != RS_RET_OK) {
@@ -301,11 +303,11 @@ finalize_it:
 }
 
 static rsRetVal
-execIf(struct cnfstmt *stmt, smsg_t *pMsg, wti_t *pWti)
+execIf(struct cnfstmt *const stmt, smsg_t *const pMsg, wti_t *const pWti)
 {
 	sbool bRet;
 	DEFiRet;
-	bRet = cnfexprEvalBool(stmt->d.s_if.expr, pMsg);
+	bRet = cnfexprEvalBool(stmt->d.s_if.expr, pMsg, pWti);
 	DBGPRINTF("if condition result is %d\n", bRet);
 	if(bRet) {
 		if(stmt->d.s_if.t_then != NULL)
@@ -385,14 +387,14 @@ finalize_it:
 	RETiRet;
 }
 
-static rsRetVal
-execForeach(struct cnfstmt *stmt, smsg_t *pMsg, wti_t *pWti)
+static rsRetVal ATTR_NONNULL()
+execForeach(struct cnfstmt *const stmt, smsg_t *const pMsg, wti_t *const pWti)
 {
 	json_object *arr = NULL;
 	DEFiRet;
 
 	/* arr can either be an array or an associative-array (obj) */
-	arr = cnfexprEvalCollection(stmt->d.s_foreach.iter->collection, pMsg);
+	arr = cnfexprEvalCollection(stmt->d.s_foreach.iter->collection, pMsg, pWti);
 	
 	if (arr == NULL) {
 		DBGPRINTF("foreach loop skipped, as object to iterate upon is empty\n");
@@ -595,7 +597,7 @@ scriptExec(struct cnfstmt *const root, smsg_t *const pMsg, wti_t *const pWti)
 			CHKiRet(execAct(stmt, pMsg, pWti));
 			break;
 		case S_SET:
-			CHKiRet(execSet(stmt, pMsg));
+			CHKiRet(execSet(stmt, pMsg, pWti));
 			break;
 		case S_UNSET:
 			CHKiRet(execUnset(stmt, pMsg));
@@ -618,7 +620,7 @@ scriptExec(struct cnfstmt *const root, smsg_t *const pMsg, wti_t *const pWti)
 		case S_PROPFILT:
 			CHKiRet(execPROPFILT(stmt, pMsg, pWti));
 			break;
-        case S_RELOAD_LOOKUP_TABLE:
+		case S_RELOAD_LOOKUP_TABLE:
 			CHKiRet(execReloadLookupTable(stmt));
 			break;
 		default:
@@ -1161,7 +1163,8 @@ BEGINObjClassInit(ruleset, 1, OBJ_IS_CORE_MODULE) /* class, version */
 
 	/* config file handlers */
 	CHKiRet(regCfSysLineHdlr((uchar *)"rulesetparser", 0, eCmdHdlrGetWord, rulesetAddParser, NULL, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"rulesetcreatemainqueue", 0, eCmdHdlrBinary, rulesetCreateQueue, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"rulesetcreatemainqueue", 0, eCmdHdlrBinary, rulesetCreateQueue,
+		NULL, NULL));
 ENDObjClassInit(ruleset)
 
 /* vi:set ai:

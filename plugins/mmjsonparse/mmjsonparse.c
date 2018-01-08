@@ -315,7 +315,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* we call the function below because we need to call it via our interface definition. However,
 	 * the format specified (if any) is always ignored.
 	 */
-	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_TPL_AS_MSG, (uchar*) "RSYSLOG_FileFormat"));
+	iRet = cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_TPL_AS_MSG, (uchar*) "RSYSLOG_FileFormat");
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 

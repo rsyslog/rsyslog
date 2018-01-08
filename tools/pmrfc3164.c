@@ -6,7 +6,7 @@
  *
  * File begun on 2009-11-04 by RGerhards
  *
- * Copyright 2007-2015 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2017 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -42,8 +42,6 @@
 #include "parser.h"
 #include "datetime.h"
 #include "unicode-helper.h"
-#ifdef _AIX
-#endif
 MODULE_TYPE_PARSER
 MODULE_TYPE_NOKEEP
 PARSER_NAME("rsyslog.rfc3164")
@@ -182,15 +180,30 @@ BEGINparse2
 	uchar bufParseTAG[CONF_TAG_MAXSIZE];
 	uchar bufParseHOSTNAME[CONF_HOSTNAME_MAXSIZE];
 CODESTARTparse
-	DBGPRINTF("Message will now be parsed by the legacy syslog parser (one size fits all... ;)).\n");
 	assert(pMsg != NULL);
 	assert(pMsg->pszRawMsg != NULL);
 	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI;
+	DBGPRINTF("Message will now be parsed by the legacy syslog parser (offAfterPRI=%d, lenMsg=%d.\n",
+		pMsg->offAfterPRI, lenMsg);
 	/* note: offAfterPRI is already the number of PRI chars (do not add one!) */
 	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
 	setProtocolVersion(pMsg, MSG_LEGACY_PROTOCOL);
-	if(pMsg->iFacility == (LOG_INVLD>>3))
-		FINALIZE; /* don't parse out from invalid messages! */
+	if(pMsg->iFacility == (LOG_INVLD>>3)) {
+		DBGPRINTF("facility LOG_INVLD, do not parse\n");
+		FINALIZE;
+	}
+
+	/* now check if we have a completely headerless message. This is indicated
+	 * by spaces or tabs followed '{' or '['.
+	 */
+	i = 0;
+	while(i < lenMsg && (p2parse[i] == ' ' || p2parse[i] == '\t')) {
+		++i;
+	}
+	if(i < lenMsg && (p2parse[i] == '{' || p2parse[i] == '[')) {
+		DBGPRINTF("msg seems to be headerless, treating it as such\n");
+		FINALIZE;
+	}
 
 
 	/* Check to see if msg contains a timestamp. We start by assuming
@@ -201,8 +214,8 @@ CODESTARTparse
 	 */
 	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg) == RS_RET_OK) {
 		/* we are done - parse pointer is moved by ParseTIMESTAMP3339 */;
-	} else if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg, NO_PARSE3164_TZSTRING,
-	pInst->bDetectYearAfterTimestamp) == RS_RET_OK) {
+	} else if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg,
+		NO_PARSE3164_TZSTRING, pInst->bDetectYearAfterTimestamp) == RS_RET_OK) {
 		if(pMsg->dfltTZ[0] != '\0')
 			applyDfltTZ(&pMsg->tTIMESTAMP, pMsg->dfltTZ);
 		/* we are done - parse pointer is moved by ParseTIMESTAMP3164 */;
@@ -210,8 +223,8 @@ CODESTARTparse
 	/* try to see if it is slighly malformed - HP procurve seems to do that sometimes */
 		++p2parse;	/* move over space */
 		--lenMsg;
-		if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg, NO_PARSE3164_TZSTRING,
-		pInst->bDetectYearAfterTimestamp) == RS_RET_OK) {
+		if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg,
+			NO_PARSE3164_TZSTRING, pInst->bDetectYearAfterTimestamp) == RS_RET_OK) {
 			/* indeed, we got it! */
 			/* we are done - parse pointer is moved by ParseTIMESTAMP3164 */;
 		} else {/* parse pointer needs to be restored, as we moved it off-by-one
@@ -361,8 +374,7 @@ CODESTARTparse
 
 finalize_it:
 	if (pInst->bRemoveMsgFirstSpace && *p2parse == ' ') {
-		/* Bypass first space found in MSG part
-		 */
+		/* Bypass first space found in MSG part */
 	        p2parse++;
 	        lenMsg--;
 	}

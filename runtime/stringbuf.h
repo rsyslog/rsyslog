@@ -36,6 +36,7 @@ typedef struct cstr_s
 {	
 #ifndef	NDEBUG
 	rsObjID OID;		/**< object ID */
+	sbool isFinalized;
 #endif
 	uchar *pBuf;		/**< pointer to the string buffer, may be NULL if string is empty */
 	size_t iBufSize;	/**< current maximum size of the string buffer */
@@ -70,10 +71,18 @@ rsRetVal cstrAppendChar(cstr_t *pThis, const uchar c);
  * but before that data is used.
  * rgerhards, 2009-06-16
  */
+#ifdef NDEBUG
 #define cstrFinalize(pThis) { \
 	if((pThis)->iStrLen > 0) \
 		(pThis)->pBuf[(pThis)->iStrLen] = '\0'; /* space is always reserved for this */ \
 }
+#else
+#define cstrFinalize(pThis) { \
+	if((pThis)->iStrLen > 0) \
+		(pThis)->pBuf[(pThis)->iStrLen] = '\0'; /* space is always reserved for this */ \
+	(pThis)->isFinalized = 1; \
+}
+#endif
 
 
 /**

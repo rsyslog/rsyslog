@@ -76,7 +76,6 @@
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(module)
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(net)
 DEFobjCurrIf(ruleset)
 
@@ -108,7 +107,7 @@ doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 
 	skipWhiteSpace(pp); /* skip over any whitespace */
 	if(getSubString(pp, (char*) szName, sizeof(szName), ' ')  != 0) {
-		errmsg.LogError(0, RS_RET_NOT_FOUND, "could not extract module name");
+		LogError(0, RS_RET_NOT_FOUND, "could not extract module name");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 	skipWhiteSpace(pp); /* skip over any whitespace */
@@ -169,7 +168,7 @@ doNameLine(uchar **pp, void* pVal)
 	eDir = (enum eDirective) pVal;	/* this time, it actually is NOT a pointer! */
 
 	if(getSubString(&p, szName, sizeof(szName), ',')  != 0) {
-		errmsg.LogError(0, RS_RET_NOT_FOUND, "Invalid config line: could not extract name - line ignored");
+		LogError(0, RS_RET_NOT_FOUND, "Invalid config line: could not extract name - line ignored");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 	ltrim(szName);
@@ -223,7 +222,8 @@ cfsysline(uchar *p)
 	ASSERT(p != NULL);
 	errno = 0;
 	if(getSubString(&p, (char*) szCmd, sizeof(szCmd), ' ')  != 0) {
-		errmsg.LogError(0, RS_RET_NOT_FOUND, "Invalid $-configline - could not extract command - line ignored\n");
+		LogError(0, RS_RET_NOT_FOUND, "Invalid $-configline "
+			"- could not extract command - line ignored\n");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
@@ -241,7 +241,7 @@ cfsysline(uchar *p)
 	skipWhiteSpace(&p);
 
 	if(*p && *p != '#') { /* we have a non-whitespace, so let's complain */
-		errmsg.LogError(0, NO_ERRCODE, 
+		LogError(0, NO_ERRCODE, 
 		         "error: extra characters in config line ignored: '%s'", p);
 	}
 
@@ -274,7 +274,7 @@ rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEn
 	if(*p == ';')
 		++p; /* eat it */
 	else if(*p != '\0' && *p != '#') {
-		errmsg.LogError(0, RS_RET_ERR, "invalid character in selector line - ';template' expected");
+		LogError(0, RS_RET_ERR, "invalid character in selector line - ';template' expected");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -405,7 +405,7 @@ rsRetVal DecodePRIFilter(uchar *pline, uchar pmask[])
 
 		if (pri < 0) {
 			snprintf((char*) xbuf, sizeof(xbuf), "unknown priority name \"%s\"", buf);
-			errmsg.LogError(0, RS_RET_ERR, "%s", xbuf);
+			LogError(0, RS_RET_ERR, "%s", xbuf);
 			return RS_RET_ERR;
 		}
 
@@ -448,7 +448,7 @@ rsRetVal DecodePRIFilter(uchar *pline, uchar pmask[])
 				if (i < 0) {
 
 					snprintf((char*) xbuf, sizeof(xbuf), "unknown facility name \"%s\"", buf);
-					errmsg.LogError(0, RS_RET_ERR, "%s", xbuf);
+					LogError(0, RS_RET_ERR, "%s", xbuf);
 					return RS_RET_ERR;
 				}
 
@@ -611,7 +611,6 @@ CODESTARTObjClassExit(conf)
 
 	/* release objects we no longer need */
 	objRelease(module, CORE_COMPONENT);
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(net, LM_NET_FILENAME);
 	objRelease(ruleset, CORE_COMPONENT);
 ENDObjClassExit(conf)
@@ -624,7 +623,6 @@ ENDObjClassExit(conf)
 BEGINAbstractObjClassInit(conf, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE class also in END MACRO! */
 	/* request objects we use */
 	CHKiRet(objUse(module, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME)); /* TODO: make this dependcy go away! */
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 

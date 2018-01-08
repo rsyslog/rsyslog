@@ -696,11 +696,13 @@ rsksiInitModule(rsksictx ctx) {
 			tmpInt = KSI_Integer_getUInt64(ksi_int);
 			report(ctx, "KSI gateway has reported a max level value of %lu", tmpInt);
 			if(ctx->blockLevelLimit > tmpInt) {
-				report(ctx, "Decreasing the configured block level limit from %lu to %lu reported by KSI gateway", ctx->blockLevelLimit, tmpInt);
+				report(ctx, "Decreasing the configured block level limit from %lu to %lu "
+				"reported by KSI gateway", ctx->blockLevelLimit, tmpInt);
 				ctx->blockLevelLimit=tmpInt;
 			}
 			else if(tmpInt < 2) {
-				report(ctx, "KSI gateway has reported an invalid level limit value (%lu), plugin disabled", tmpInt);
+				report(ctx, "KSI gateway has reported an invalid level limit value (%lu), "
+					"plugin disabled", tmpInt);
 				ctx->disabled = true;
 				res = KSI_INVALID_ARGUMENT;
 				goto done;
@@ -1301,7 +1303,8 @@ static bool save_response(rsksictx ctx, FILE* outfile, QueueItem *item) {
 	int res = KSI_OK;
 
 	if(item->respHandle != NULL && item->ksi_status == KSI_OK) {
-		CHECK_KSI_API(KSI_AsyncHandle_getSignature(item->respHandle, &sig), ctx, "KSI_AsyncHandle_getSignature");
+		CHECK_KSI_API(KSI_AsyncHandle_getSignature(item->respHandle, &sig), ctx,
+			"KSI_AsyncHandle_getSignature");
 		CHECK_KSI_API(KSI_Signature_serialize(sig, &raw, &raw_len), ctx,
 			"KSI_Signature_serialize");
 		tlvWriteKSISigLS12(outfile, item->intarg1, raw, raw_len);
@@ -1351,7 +1354,8 @@ static bool process_requests_async(rsksictx ctx, KSI_CTX *ksi_ctx, KSI_AsyncServ
 		state = KSI_ASYNC_STATE_UNDEFINED;
 
 		CHECK_KSI_API(KSI_AsyncHandle_getState(respHandle, &state), ctx, "KSI_AsyncHandle_getState");
-		CHECK_KSI_API(KSI_AsyncHandle_getRequestCtx(respHandle, (const void**)&item), ctx, "KSI_AsyncHandle_getRequestCtx");
+		CHECK_KSI_API(KSI_AsyncHandle_getRequestCtx(respHandle, (const void**)&item), ctx,
+			"KSI_AsyncHandle_getRequestCtx");
 
 		if(item == NULL) { /* must never happen */
 			reportErr(ctx, "KSI_AsyncHandle_getRequestCtx returned NULL as context");
@@ -1390,11 +1394,17 @@ static bool process_requests_async(rsksictx ctx, KSI_CTX *ksi_ctx, KSI_AsyncServ
 		debug_report(ctx, "debug: sending: %u", i);
 
 		CHECK_KSI_API(KSI_AggregationReq_new(ksi_ctx, &req), ctx, "KSI_AggregationReq_new");
-		CHECK_KSI_API(KSI_AggregationReq_setRequestHash((KSI_AggregationReq*)req, KSI_DataHash_ref((KSI_DataHash*)item->arg)), ctx, "KSI_AggregationReq_setRequestHash");
-		CHECK_KSI_API(KSI_Integer_new(ksi_ctx, item->intarg2, &level), ctx, "KSI_Integer_new");
-		CHECK_KSI_API(KSI_AggregationReq_setRequestLevel(req, level), ctx, "KSI_AggregationReq_setRequestLevel");
-		CHECK_KSI_API(KSI_AsyncAggregationHandle_new(ksi_ctx, req, &reqHandle), ctx, "KSI_AsyncAggregationHandle_new");
-		CHECK_KSI_API(KSI_AsyncHandle_setRequestCtx(reqHandle, (void*)item, NULL), ctx, "KSI_AsyncRequest_setRequestContext");
+		CHECK_KSI_API(KSI_AggregationReq_setRequestHash((KSI_AggregationReq*)req,
+			KSI_DataHash_ref((KSI_DataHash*)item->arg)), ctx,
+			"KSI_AggregationReq_setRequestHash");
+		CHECK_KSI_API(KSI_Integer_new(ksi_ctx, item->intarg2, &level), ctx,
+			"KSI_Integer_new");
+		CHECK_KSI_API(KSI_AggregationReq_setRequestLevel(req, level), ctx,
+			"KSI_AggregationReq_setRequestLevel");
+		CHECK_KSI_API(KSI_AsyncAggregationHandle_new(ksi_ctx, req, &reqHandle), ctx,
+			"KSI_AsyncAggregationHandle_new");
+		CHECK_KSI_API(KSI_AsyncHandle_setRequestCtx(reqHandle, (void*)item, NULL), ctx,
+			"KSI_AsyncRequest_setRequestContext");
 		res = KSI_AsyncService_addRequest(as, reqHandle); /* this can fail because of throttling */
 
 		if (res == KSI_OK) {
@@ -1452,7 +1462,8 @@ static bool process_requests_async(rsksictx ctx, KSI_CTX *ksi_ctx, KSI_AsyncServ
 
 cleanup:
 	KSI_AsyncService_getPendingCount(as, &p);
-	debug_report(ctx, "debug: leaving, pending: %zu, q. size %zu, ret: %d", p, ProtectedQueue_count(ctx->signer_queue), ret);
+	debug_report(ctx, "debug: leaving, pending: %zu, q. size %zu, ret: %d", p,
+		ProtectedQueue_count(ctx->signer_queue), ret);
 	return ret;
 }
 
@@ -1471,8 +1482,10 @@ void *signer_thread(void *arg) {
 	debug_report(ctx, "debug: Starting signer thread");
 
 	CHECK_KSI_API(KSI_CTX_new(&ksi_ctx), ctx, "KSI_CTX_new");
-	CHECK_KSI_API(KSI_CTX_setAggregator(ksi_ctx, ctx->aggregatorUri, ctx->aggregatorId, ctx->aggregatorKey), ctx, "KSI_CTX_setAggregator");
-	CHECK_KSI_API(KSI_CTX_setOption(ksi_ctx, KSI_OPT_AGGR_HMAC_ALGORITHM, (void*)((size_t)ctx->hmacAlg)), ctx, "KSI_CTX_setOption");
+	CHECK_KSI_API(KSI_CTX_setAggregator(ksi_ctx, ctx->aggregatorUri, ctx->aggregatorId, ctx->aggregatorKey),
+		ctx, "KSI_CTX_setAggregator");
+	CHECK_KSI_API(KSI_CTX_setOption(ksi_ctx, KSI_OPT_AGGR_HMAC_ALGORITHM, (void*)((size_t)ctx->hmacAlg)),
+		ctx, "KSI_CTX_setOption");
 
 	res = KSI_SigningAsyncService_new(ksi_ctx, &as);
 	if (res != KSI_OK) {
@@ -1486,12 +1499,14 @@ void *signer_thread(void *arg) {
 				KSI_AsyncService_free(as);
 			as=NULL;
 		} else {
-			res = KSI_AsyncService_setOption(as, KSI_ASYNC_OPT_MAX_REQUEST_COUNT, (void*) (ctx->max_requests));
+			res = KSI_AsyncService_setOption(as, KSI_ASYNC_OPT_MAX_REQUEST_COUNT,
+				(void*) (ctx->max_requests));
 			if (res != KSI_OK)
 				reportKSIAPIErr(ctx, NULL, "KSI_AsyncService_setOption(max_request)", res);
 
 			/* ingoring the possible error here */
-			KSI_AsyncService_setOption(as, KSI_ASYNC_OPT_REQUEST_CACHE_SIZE, (void*) (ctx->max_requests * 5));
+			KSI_AsyncService_setOption(as, KSI_ASYNC_OPT_REQUEST_CACHE_SIZE,
+				(void*) (ctx->max_requests * 5));
 		}
 	}
 
@@ -1508,21 +1523,24 @@ void *signer_thread(void *arg) {
 		if (ProtectedQueue_count(ctx->signer_queue) == 0)
 			continue;
 
-		if(as != NULL) {
-			/* in case of asynchronous service check for pending/unsent requests */
-			ret = process_requests_async(ctx, ksi_ctx, as, ksiFile);
-			if(!ret) {
-				// probably fatal error, disable signing, error should be already reported
-				ctx->disabled = true;
-				goto cleanup;
+		/* process signing requests only if there is an open signature file */
+		if(ksiFile != NULL) {
+			if(as != NULL) {
+				/* in case of asynchronous service check for pending/unsent requests */
+				ret = process_requests_async(ctx, ksi_ctx, as, ksiFile);
+				if(!ret) {
+					// probably fatal error, disable signing, error should be already reported
+					ctx->disabled = true;
+					goto cleanup;
+				}
 			}
-		}
-		else {
-			/* drain all consecutive signature requests from the queue and add
-			 * the last one to aggregation request */
-			if (ProtectedQueue_peekFront(ctx->signer_queue, (void**) &item)
-				&& item->type == QITEM_SIGNATURE_REQUEST) {
-				process_requests(ctx, ksi_ctx, ksiFile);
+			else {
+				/* drain all consecutive signature requests from the queue and add
+				 * the last one to aggregation request */
+				if (ProtectedQueue_peekFront(ctx->signer_queue, (void**) &item)
+					&& item->type == QITEM_SIGNATURE_REQUEST) {
+					process_requests(ctx, ksi_ctx, ksiFile);
+				}
 			}
 		}
 

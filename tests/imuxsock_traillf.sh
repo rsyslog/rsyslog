@@ -15,7 +15,11 @@ fi
 . $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
 cmp rsyslog.out.log $srcdir/resultdata/imuxsock_traillf.log
 if [ ! $? -eq 0 ]; then
-  echo "imuxsock_traillf_root.sh failed"
-  exit 1
+  echo "imuxsock_traillf.sh failed"
+  echo contents of rsyslog.out.log:
+  echo \"`cat rsyslog.out.log`\"
+  echo expected:
+  echo \"`cat $srcdir/resultdata/imuxsock_traillf.log`\"
+  . $srcdir/diag.sh error-exit 1
 fi;
 . $srcdir/diag.sh exit

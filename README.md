@@ -1,5 +1,8 @@
 Rsyslog - what is it?
 =====================
+
+[![Help Contribute to Open Source](https://www.codetriage.com/rsyslog/rsyslog/badges/users.svg)](https://www.codetriage.com/rsyslog/rsyslog)
+
 Rsyslog is a **r**ocket-fast **sys**tem for **log** processing.
 
 It offers high-performance, great security features and a modular design.
@@ -79,7 +82,7 @@ apt-get update && apt-get install -y build-essential pkg-config libestr-dev libf
 
 Aditional packages for other modules:
 ```
-libdbi-dev libmysqlclient-dev postgresql-client libpq-dev libnet-dev librdkafka-dev libgrok-dev libgrok1 libgrok-dev libpcre3-dev libtokyocabinet-dev libglib2.0-dev libmongo-client-dev  
+libdbi-dev libmysqlclient-dev postgresql-client libpq-dev libnet-dev librdkafka-dev libgrok-dev libgrok1 libgrok-dev libpcre3-dev libtokyocabinet-dev libglib2.0-dev libmongo-client-dev
 ```
 
 For KSI, from the Adiscon PPA:
@@ -142,7 +145,7 @@ Project Philosophy
 We are an open source project in all aspects and very open to outside feedback
 and contribution. We base our work on standards and try to solve all real-world
 needs (of course, we occasionally fail tackling actually all needs ;)). While
-the project is primarily sponsored by Adiscon, technical development is 
+the project is primarily sponsored by Adiscon, technical development is
 independent from company goals and most decisions are solely based on mailing
 list discussion results. There is an active community around rsyslog.
 

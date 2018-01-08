@@ -229,7 +229,8 @@ omsnmp_initSession(wrkrInstanceData_t *pWrkrData)
 	
 	/* Set SNMP Community */
 	if (session.version == SNMP_VERSION_1 || session.version == SNMP_VERSION_2c) {	
-		session.community = (unsigned char *) pData->szCommunity == NULL ? (uchar*)"public" : pData->szCommunity;
+		session.community = (unsigned char *) pData->szCommunity
+			== NULL ? (uchar*)"public" : pData->szCommunity;
 		session.community_len = strlen((char*) session.community);
 	}
 
@@ -274,8 +275,8 @@ static rsRetVal omsnmp_sendsnmp(wrkrInstanceData_t *pWrkrData, uchar *psz)
 		pdu = snmp_pdu_create(SNMP_MSG_TRAP);
 
 		/* Set enterprise */
-		if(!snmp_parse_oid(pData->szEnterpriseOID == NULL ? "1.3.6.1.4.1.3.1.1" : (char*)pData->szEnterpriseOID,
-				   enterpriseoid, &enterpriseoidlen )) {
+		if(!snmp_parse_oid(pData->szEnterpriseOID == NULL ? "1.3.6.1.4.1.3.1.1" :
+			(char*)pData->szEnterpriseOID, enterpriseoid, &enterpriseoidlen )) {
 			strErr = snmp_api_errstring(snmp_errno);
 			errmsg.LogError(0, RS_RET_DISABLE_ACTION, "omsnmp_sendsnmp: Parsing EnterpriseOID "
 					"failed '%s' with error '%s' \n", pData->szSyslogMessageOID, strErr);
@@ -524,7 +525,8 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	dbgprintf("SpecificType: %d\n", pData->iSpecificType);
 
 	/* process template */
-	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) "RSYSLOG_TraditionalForwardFormat"));
+	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
+		(uchar*) "RSYSLOG_TraditionalForwardFormat"));
 
 	/* Init NetSNMP library and read in MIB database */
 	init_snmp("rsyslog");

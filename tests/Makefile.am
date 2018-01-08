@@ -34,7 +34,10 @@ TESTS = $(TESTRUNS)
 #TESTS = $(TESTRUNS) cfg.sh
 
 TESTS +=  \
-	empty-hostname.sh \
+	empty-hostname.sh 
+
+if ENABLE_TESTBENCH1
+TESTS +=  \
 	hostname-getaddrinfo-fail.sh \
 	prop-programname.sh \
 	prop-programname-with-slashes.sh \
@@ -84,19 +87,6 @@ TESTS +=  \
 	fac_invld4_rfc5424.sh \
 	compresssp.sh \
 	compresssp-stringtpl.sh \
-	now_family_utc.sh \
-	now-utc.sh \
-	now-utc-ymd.sh \
-	now-utc-casecmp.sh \
-	timegenerated-ymd.sh \
-	timegenerated-uxtimestamp.sh \
-	timegenerated-uxtimestamp-invld.sh \
-	timegenerated-dateordinal.sh \
-	timegenerated-dateordinal-invld.sh \
-	timegenerated-utc.sh \
-	timegenerated-utc-legacy.sh \
-	timereported-utc.sh \
-	timereported-utc-legacy.sh \
 	rawmsg-after-pri.sh \
 	rfc5424parser.sh \
 	pmrfc3164-msgFirstSpace.sh \
@@ -104,6 +94,7 @@ TESTS +=  \
 	pmrfc3164-AtSignsInHostname_off.sh \
 	pmrfc3164-tagEndingByColon.sh \
 	pmrfc3164-defaultTag.sh \
+	pmrfc3164-json.sh \
 	tcp_forwarding_tpl.sh \
 	tcp_forwarding_dflt_tpl.sh \
 	tcp_forwarding_retries.sh \
@@ -140,7 +131,6 @@ TESTS +=  \
 	sndrcv.sh \
 	sndrcv_failover.sh \
 	sndrcv_gzip.sh \
-	sndrcv_udp.sh \
 	sndrcv_udp_nonstdpt.sh \
 	sndrcv_udp_nonstdpt_v6.sh \
 	imudp_thread_hang.sh \
@@ -195,10 +185,6 @@ TESTS +=  \
 	imuxsock_logger_syssock.sh \
 	imuxsock_traillf_syssock.sh \
 	imuxsock_ccmiddle_syssock.sh \
-	imuxsock_logger_root.sh \
-	imuxsock_traillf_root.sh \
-	imuxsock_ccmiddle_root.sh \
-	imklog_permitnonkernelfacility_root.sh \
 	discard-rptdmsg.sh \
 	discard-allmark.sh \
 	discard.sh \
@@ -209,8 +195,38 @@ TESTS +=  \
 	failover-rptd.sh \
 	failover-no-rptd.sh \
 	failover-no-basic.sh \
-	rcvr_fail_restore.sh \
+	rcvr_fail_restore.sh
+if ENABLE_LIBFAKETIME
+TESTS +=  \
+	now_family_utc.sh \
+	now-utc.sh \
+	now-utc-ymd.sh \
+	now-utc-casecmp.sh \
+	timegenerated-ymd.sh \
+	timegenerated-uxtimestamp.sh \
+	timegenerated-uxtimestamp-invld.sh \
+	timegenerated-dateordinal.sh \
+	timegenerated-dateordinal-invld.sh \
+	timegenerated-utc.sh \
+	timegenerated-utc-legacy.sh \
+	timereported-utc.sh \
+	timereported-utc-legacy.sh
+if ENABLE_MMNORMALIZE
+TESTS += \
+	mmnormalize_processing_test1.sh \
+	mmnormalize_processing_test2.sh \
+	mmnormalize_processing_test3.sh \
+	mmnormalize_processing_test4.sh
+endif
+endif
+endif
+
+if ENABLE_TESTBENCH2
+TESTS +=  \
 	rscript_contains.sh \
+	rscript_bare_var_root.sh \
+	rscript_bare_var_root-empty.sh \
+	rscript_http_request.sh \
 	rscript_ipv42num.sh \
 	rscript_field.sh \
 	rscript_stop.sh \
@@ -242,9 +258,16 @@ TESTS +=  \
 	rscript_ne.sh \
 	rscript_ne_var.sh \
 	rscript_num2ipv4.sh \
+	rscript_int2Hex.sh \
 	rscript_trim.sh \
+	rscript_substring.sh \
 	rscript_format_time.sh \
 	rscript_parse_time.sh \
+	rscript_is_time.sh \
+	rscript_script_error.sh \
+	rscript_parse_json.sh \
+	rscript_previous_action_suspended.sh \
+	rscript_str2num_negative.sh \
 	mmanon_random_32_ipv4.sh \
 	mmanon_random_cons_32_ipv4.sh \
 	mmanon_recognize_ipv4.sh \
@@ -282,18 +305,15 @@ TESTS +=  \
 	lookup_table_rscript_reload.sh \
 	lookup_table_rscript_reload_without_stub.sh \
 	multiple_lookup_tables.sh
-
-if ENABLE_IP
-TESTS += \
-	tcp_forwarding_ns_tpl.sh
 endif
 
 if HAVE_VALGRIND
 TESTS +=  \
 	mmexternal-SegFault-vg.sh \
-	mmexternal-SegFault-empty-jroot-vg.sh \
-	internal-errmsg-memleak.sh \
+	mmexternal-InvldProg-vg.sh \
+	internal-errmsg-memleak-vg.sh \
 	rscript_set_memleak-vg.sh \
+	rscript_http_request-vg.sh \
 	no-parser-vg.sh \
 	discard-rptdmsg-vg.sh \
 	discard-allmark-vg.sh \
@@ -306,7 +326,7 @@ TESTS +=  \
 	udp-msgreduc-orgmsg-vg.sh \
 	tcp-msgreduc-vg.sh \
 	rscript_field-vg.sh \
-	unused_lookup_table.sh \
+	unused_lookup_table-vg.sh \
 	lookup_table-vg.sh \
 	lookup_table_no_hup_reload-vg.sh \
 	array_lookup_table-vg.sh \
@@ -316,8 +336,28 @@ TESTS +=  \
 	lookup_table_rscript_reload-vg.sh \
 	lookup_table_rscript_reload_without_stub-vg.sh \
 	multiple_lookup_tables-vg.sh \
-	fac_local0-vg.sh
+	fac_local0-vg.sh \
+	rscript_trim-vg.sh
 endif # HAVE_VALGRIND
+
+if ENABLE_ROOT_TESTS
+TESTS +=  \
+	sndrcv_udp.sh \
+	imuxsock_logger_root.sh \
+	imuxsock_traillf_root.sh \
+	imuxsock_ccmiddle_root.sh \
+	imklog_permitnonkernelfacility_root.sh
+if ENABLE_IP
+TESTS += tcp_forwarding_ns_tpl.sh
+endif
+if ENABLE_RELP
+TESTS += sndrcv_relp_dflt_pt.sh
+endif
+if HAVE_VALGRIND
+TESTS +=  \
+	mmexternal-SegFault-empty-jroot-vg.sh
+endif
+endif
 
 if ENABLE_IMJOURNAL
 TESTS +=  \
@@ -380,7 +420,20 @@ if ENABLE_PGSQL
 if ENABLE_PGSQL_TESTS
 TESTS += \
 	pgsql-basic.sh \
-	pgsql-template.sh
+	pgsql-basic-cnf6.sh \
+	pgsql-basic-threads-cnf6.sh \
+	pgsql-template.sh \
+	pgsql-template-cnf6.sh \
+	pgsql-actq-mt-withpause.sh \
+	pgsql-template-threads-cnf6.sh
+if HAVE_VALGRIND
+TESTS += \
+	pgsql-basic-vg.sh \
+	pgsql-template-vg.sh \
+	pgsql-basic-cnf6-vg.sh \
+	pgsql-template-cnf6-vg.sh \
+	pgsql-actq-mt-withpause-vg.sh
+endif
 endif
 endif
 
@@ -391,7 +444,8 @@ TESTS +=  \
 	mysql-asyn.sh \
 	mysql-actq-mt.sh \
 	mysql-actq-mt-withpause.sh \
-	action-tx-single-processing.sh
+	action-tx-single-processing.sh \
+	action-tx-errfile.sh
 if HAVE_VALGRIND
 TESTS +=  \
 	mysql-basic-vg.sh \
@@ -496,7 +550,8 @@ endif
 
 if ENABLE_MMPSTRUCDATA
 TESTS +=  \
-	mmpstrucdata.sh
+	mmpstrucdata.sh \
+	mmpstrucdata-case.sh
 if HAVE_VALGRIND
 TESTS +=  \
 	mmpstrucdata-vg.sh \
@@ -529,11 +584,7 @@ if ENABLE_MMNORMALIZE
 TESTS += msgvar-concurrency-array.sh \
 	msgvar-concurrency-array-event.tags.sh \
 	mmnormalize_rule_from_string.sh \
-	mmnormalize_rule_from_array.sh \
-	mmnormalize_processing_test1.sh \
-	mmnormalize_processing_test2.sh \
-	mmnormalize_processing_test3.sh \
-	mmnormalize_processing_test4.sh
+	mmnormalize_rule_from_array.sh
 
 if ENABLE_IMPTCP
 TESTS +=  \
@@ -620,7 +671,6 @@ endif
 if ENABLE_RELP
 TESTS += sndrcv_relp.sh \
 	 sndrcv_relp_rebind.sh \
-         sndrcv_relp_dflt_pt.sh \
 	 imrelp-basic.sh \
 	 imrelp-manyconn.sh
 if ENABLE_GNUTLS
@@ -696,9 +746,17 @@ TESTS += \
 	imfile-wildcards.sh \
 	imfile-wildcards-dirs.sh \
 	imfile-wildcards-dirs2.sh \
-	imfile-wildcards-dirs-multi.sh \
-	imfile-wildcards-dirs-multi2.sh \
 	imfile-rename.sh
+
+# TEMPORARILY disable some imfile tests because refactoring 
+# is needed to get them to work 100% all the time.
+# alorbach, 2018-01-05
+#	imfile-wildcards-dirs-multi.sh \
+#	imfile-wildcards-dirs-multi2.sh \
+#	imfile-wildcards-dirs-multi3.sh \
+#	imfile-wildcards-dirs-multi4.sh \
+#
+
 if HAVE_VALGRIND
 TESTS += \
 	imfile-basic-vg.sh \
@@ -720,7 +778,7 @@ DISTCLEANFILES=rsyslog.pid
 test_files = testbench.h runtime-dummy.c
 
 EXTRA_DIST= \
-	internal-errmsg-memleak.sh \
+	internal-errmsg-memleak-vg.sh \
 	empty-hostname.sh \
 	hostname-getaddrinfo-fail.sh \
 	hostname-with-slash-pmrfc5424.sh \
@@ -730,6 +788,7 @@ EXTRA_DIST= \
 	pmrfc3164-AtSignsInHostname_off.sh \
 	pmrfc3164-tagEndingByColon.sh \
 	pmrfc3164-defaultTag.sh \
+	pmrfc3164-json.sh \
 	hostname-with-slash-dflt-invld.sh \
 	hostname-with-slash-dflt-slash-valid.sh \
 	glbl-umask.sh \
@@ -742,6 +801,7 @@ EXTRA_DIST= \
 	mmexternal-SegFault-vg.sh \
 	mmexternal-SegFault-empty-jroot-vg.sh \
 	testsuites/mmexternal-SegFault-mm-python.py \
+	mmexternal-InvldProg-vg.sh \
 	nested-call-shutdown.sh \
 	1.rstest 2.rstest 3.rstest err1.rstest \
 	invalid_nested_include.sh \
@@ -854,6 +914,10 @@ EXTRA_DIST= \
 	testsuites/diskqueue.conf \
 	arrayqueue.sh \
 	testsuites/arrayqueue.conf \
+	rscript_http_request.sh \
+	rscript_http_request-vg.sh \
+	rscript_bare_var_root.sh \
+	rscript_bare_var_root-empty.sh \
 	rscript_contains.sh \
 	testsuites/rscript_contains.conf \
 	rscript_ipv42num.sh \
@@ -886,10 +950,17 @@ EXTRA_DIST= \
 	testsuites/rscript_ne.conf \
 	rscript_ne_var.sh \
 	rscript_num2ipv4.sh \
+	rscript_int2Hex.sh \
 	rscript_trim.sh \
+	rscript_substring.sh \
 	rscript_format_time.sh \
 	rscript_parse_time.sh \
 	rscript_parse_time_get-ts.py \
+	rscript_is_time.sh \
+	rscript_script_error.sh \
+	rscript_parse_json.sh \
+	rscript_previous_action_suspended.sh \
+	rscript_str2num_negative.sh \
 	mmanon_random_32_ipv4.sh \
 	mmanon_random_cons_32_ipv4.sh \
 	mmanon_recognize_ipv4.sh \
@@ -1250,7 +1321,8 @@ EXTRA_DIST= \
 	sndrcv_gzip.sh \
 	testsuites/sndrcv_gzip_sender.conf \
 	testsuites/sndrcv_gzip_rcvr.conf \
-	./action-tx-single-processing.sh \
+	action-tx-single-processing.sh \
+	action-tx-errfile.sh \
 	pipeaction.sh \
 	testsuites/pipeaction.conf \
 	omprog-cleanup.sh \
@@ -1354,12 +1426,16 @@ EXTRA_DIST= \
 	imfile-wildcards-dirs2.sh \
 	imfile-wildcards-dirs-multi.sh \
 	imfile-wildcards-dirs-multi2.sh \
+	imfile-wildcards-dirs-multi3.sh \
+	imfile-wildcards-dirs-multi4.sh \
 	imfile-rename.sh \
 	testsuites/imfile-wildcards.conf \
 	testsuites/imfile-wildcards-simple.conf \
 	testsuites/imfile-wildcards-dirs.conf \
 	testsuites/imfile-wildcards-dirs-multi.conf \
 	testsuites/imfile-wildcards-dirs-multi2.conf \
+	testsuites/imfile-wildcards-dirs-multi3.conf \
+	testsuites/imfile-wildcards-dirs-multi4.conf \
 	dynfile_invld_async.sh \
 	dynfile_invld_sync.sh \
 	dynfile_cachemiss.sh \
@@ -1480,8 +1556,10 @@ EXTRA_DIST= \
 	testsuites/zoo.dep_wrk2.cfg \
 	testsuites/zoo.dep_wrk3.cfg \
 	mmpstrucdata.sh \
+	mmpstrucdata-case.sh \
 	mmpstrucdata-vg.sh \
 	testsuites/mmpstrucdata.conf \
+	testsuites/mmpstrucdata-case.conf \
 	mmpstrucdata-invalid-vg.sh \
 	testsuites/mmpstrucdata-invalid.conf \
 	libdbi-basic-vg.sh \
@@ -1592,13 +1670,14 @@ EXTRA_DIST= \
 	lookup_table_rscript_reload_without_stub.sh \
 	lookup_table_rscript_reload-vg.sh \
 	lookup_table_rscript_reload_without_stub-vg.sh \
+	rscript_trim-vg.sh \
 	testsuites/lookup_table.conf \
 	testsuites/lookup_table_no_hup_reload.conf \
 	testsuites/lookup_table_reload_stub.conf \
 	testsuites/lookup_table_reload.conf \
 	testsuites/xlate.lkp_tbl \
 	testsuites/xlate_more.lkp_tbl \
-	unused_lookup_table.sh \
+	unused_lookup_table-vg.sh \
 	lookup_table-vg.sh \
 	testsuites/unused_lookup_table.conf \
 	array_lookup_table.sh \
@@ -1646,7 +1725,6 @@ EXTRA_DIST= \
 	libmaxmindb.supp \
 	travis/trusty.supp \
 	linux_localtime_r.supp \
-	librdkafka-bugs.supp \
 	json_var_case.sh \
 	testsuites/json_var_case.conf \
 	cfg.sh \

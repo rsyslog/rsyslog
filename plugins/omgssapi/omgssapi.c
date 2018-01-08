@@ -110,7 +110,8 @@ static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
  * We may change the implementation to try to lookup the port
  * if it is unspecified. So far, we use the IANA default auf 514.
  */
-static char *getFwdSyslogPt(instanceData *pData)
+static const char *
+getFwdSyslogPt(instanceData *pData)
 {
 	assert(pData != NULL);
 	if(pData->port == NULL)
@@ -153,7 +154,7 @@ CODESTARTfreeInstance
 	if (pData->gss_context != GSS_C_NO_CONTEXT) {
 		maj_stat = gss_delete_sec_context(&min_stat, &pData->gss_context, GSS_C_NO_BUFFER);
 		if (maj_stat != GSS_S_COMPLETE)
-			gssutil.display_status("deleting context", maj_stat, min_stat);
+			gssutil.display_status((char*)"deleting context", maj_stat, min_stat);
 	}
 	/* this is meant to be done when module is unloaded,
 	   but since this module is static...
@@ -195,7 +196,7 @@ static rsRetVal TCPSendGSSInit(void *pvData)
 {
 	DEFiRet;
 	int s = -1;
-	char *base;
+	const char *base;
 	OM_uint32 maj_stat, min_stat, init_sec_min_stat, *sess_flags, ret_flags;
 	gss_buffer_desc out_tok, in_tok;
 	gss_buffer_t tok_ptr;
@@ -227,7 +228,7 @@ static rsRetVal TCPSendGSSInit(void *pvData)
 	out_tok.length = 0;
 
 	if (maj_stat != GSS_S_COMPLETE) {
-		gssutil.display_status("parsing name", maj_stat, min_stat);
+		gssutil.display_status((char*)"parsing name", maj_stat, min_stat);
 		goto fail;
 	}
 
@@ -251,7 +252,7 @@ static rsRetVal TCPSendGSSInit(void *pvData)
 
 		if (maj_stat != GSS_S_COMPLETE
 		    && maj_stat != GSS_S_CONTINUE_NEEDED) {
-			gssutil.display_status("initializing context", maj_stat, init_sec_min_stat);
+			gssutil.display_status((char*)"initializing context", maj_stat, init_sec_min_stat);
 			goto fail;
 		}
 
@@ -320,7 +321,7 @@ static rsRetVal TCPSendGSSSend(void *pvData, char *msg, size_t len)
 	maj_stat = gss_wrap(&min_stat, *context, (cs.gss_mode == GSSMODE_ENC) ? 1 : 0, GSS_C_QOP_DEFAULT,
 			    &in_buf, NULL, &out_buf);
 	if (maj_stat != GSS_S_COMPLETE) {
-		gssutil.display_status("wrapping message", maj_stat, min_stat);
+		gssutil.display_status((char*)"wrapping message", maj_stat, min_stat);
 		goto fail;
 	}
 	
@@ -544,7 +545,8 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 				/* no further options settable */
 				tcp_framing = TCP_FRAMING_OCTET_COUNTING;
 			} else { /* invalid option! Just skip it... */
-				errmsg.LogError(0, NO_ERRCODE, "Invalid option %c in forwarding action - ignoring.", *p);
+				errmsg.LogError(0, NO_ERRCODE, "Invalid option %c in forwarding action - "
+					"ignoring.", *p);
 				++p; /* eat invalid option */
 			}
 			/* the option processing is done. We now do a generic skip

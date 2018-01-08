@@ -690,7 +690,8 @@ static rsRetVal strmReadChar(strm_t *pThis, uchar *pC)
 	ASSERT(pThis != NULL);
 	ASSERT(pC != NULL);
 
-	/* DEV debug only: DBGOPRINT((obj_t*) pThis, "strmRead index %zd, max %zd\n", pThis->iBufPtr, pThis->iBufPtrMax); */
+	/* DEV debug only: DBGOPRINT((obj_t*) pThis, "strmRead index %zd, max %zd\n", pThis->iBufPtr,
+	pThis->iBufPtrMax); */
 	if(pThis->iUngetC != -1) {	/* do we have an "unread" char that we need to provide? */
 		*pC = pThis->iUngetC;
 		++pThis->iCurrOffs; /* one more octet read */
@@ -760,6 +761,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
 
 	/* append previous message to current message if necessary */
 	if(pThis->prevLineSegment != NULL) {
+		cstrFinalize(pThis->prevLineSegment);
 		dbgprintf("readLine: have previous line segment: '%s'\n",
 			rsCStrGetSzStrNoNULL(pThis->prevLineSegment));
 		CHKiRet(cstrAppendCStr(*ppCStr, pThis->prevLineSegment));
@@ -792,7 +794,8 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
 			} else {
 				if ((((*ppCStr)->iStrLen) > 0) ){
 					if(pThis->bPrevWasNL) {
-						rsCStrTruncate(*ppCStr, (bEscapeLF) ? 4 : 1); /* remove the prior newline */
+						rsCStrTruncate(*ppCStr, (bEscapeLF) ? 4 : 1);
+						/* remove the prior newline */
 						finished=1;
 					} else {
 						if(bEscapeLF) {
@@ -833,7 +836,8 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
 						pThis->bPrevWasNL = 0;
 					} else {
 						/* clean things up by putting the character we just read back into
-						 * the input buffer and removing the LF character that is currently at the
+						 * the input buffer and removing the LF character that is
+						 * currently at the
 						 * end of the output string */
 						CHKiRet(strmUnreadChar(pThis, c));
 						rsCStrTruncate(*ppCStr, (bEscapeLF) ? 4 : 1);
@@ -976,13 +980,15 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, const sbool bEs
 					int currLineLen = cstrLen(thisLine);
 					if(currLineLen > 0) {
 						int len;
-						if((len = cstrLen(pThis->prevMsgSegment) + currLineLen) < maxMsgSize) {
+						if((len = cstrLen(pThis->prevMsgSegment) + currLineLen) <
+						maxMsgSize) {
 							CHKiRet(cstrAppendCStr(pThis->prevMsgSegment, thisLine));
 							/* we could do this faster, but for now keep it simple */
 						} else {
 							len = currLineLen-(len-maxMsgSize);
 							for(int z=0; z<len; z++) {
-								cstrAppendChar(pThis->prevMsgSegment, thisLine->pBuf[z]);
+								cstrAppendChar(pThis->prevMsgSegment,
+								thisLine->pBuf[z]);
 							}
 							finished = 1;
 							*ppCStr = pThis->prevMsgSegment;
@@ -1021,11 +1027,13 @@ finalize_it:
 	}
 	if(iRet == RS_RET_OK) {
 		pThis->strtOffs = pThis->iCurrOffs; /* we are at begin of next line */
+		cstrFinalize(*ppCStr);
 	} else {
 		if(   pThis->readTimeout
 		   && (pThis->prevMsgSegment != NULL)
 		   && (tCurr > pThis->lastRead + pThis->readTimeout)) {
 			if(rsCStrConstructFromCStr(ppCStr, pThis->prevMsgSegment) == RS_RET_OK) {
+				cstrFinalize(*ppCStr);
 				cstrDestruct(&pThis->prevMsgSegment);
 				pThis->lastRead = tCurr;
 				pThis->strtOffs = pThis->iCurrOffs; /* we are at begin of next line */
@@ -1095,8 +1103,8 @@ static rsRetVal strmConstructFinalize(strm_t *pThis)
 			char errStr[1024];
 			int err = errno;
 			rs_strerror_r(err, errStr, sizeof(errStr));
-			DBGPRINTF("error %d opening directory file for fsync() use - fsync for directory disabled: %s\n",
-				   errno, errStr);
+			DBGPRINTF("error %d opening directory file for fsync() use - fsync for directory "
+				"disabled: %s\n", errno, errStr);
 		}
 	}
 
@@ -1477,8 +1485,8 @@ asyncWriterThread(void *pPtr)
 					if(err != ETIMEDOUT) {
 						char errStr[1024];
 						rs_strerror_r(err, errStr, sizeof(errStr));
-						DBGPRINTF("stream async writer timeout with error (%d): %s - ignoring\n",
-							   err, errStr);
+						DBGPRINTF("stream async writer timeout with error (%d): %s - "
+							"ignoring\n", err, errStr);
 					}
 				}
 			} else {
@@ -1686,7 +1694,8 @@ doZipFinish(strm_t *pThis)
 	pThis->zstrm.avail_in = 0;
 	/* run deflate() on buffer until everything has been compressed */
 	do {
-		DBGPRINTF("in deflate() loop, avail_in %d, total_in %ld\n", pThis->zstrm.avail_in, pThis->zstrm.total_in);
+		DBGPRINTF("in deflate() loop, avail_in %d, total_in %ld\n", pThis->zstrm.avail_in,
+			pThis->zstrm.total_in);
 		pThis->zstrm.avail_out = pThis->sIOBufSize;
 		pThis->zstrm.next_out = pThis->pZipBuf;
 		zRet = zlibw.Deflate(&pThis->zstrm, Z_FINISH);    /* no bad return value */

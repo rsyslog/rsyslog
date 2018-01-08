@@ -45,7 +45,6 @@
 
 /* definitions for objects we access */
 DEFobjStaticHelpers
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 
 /* forward definitions */
@@ -119,7 +118,7 @@ lookupNew(lookup_ref_t **ppThis)
 	*ppThis = pThis;
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		errmsg.LogError(errno, iRet, "a lookup table could not be initialized: "
+		LogError(errno, iRet, "a lookup table could not be initialized: "
 			"failed at init-step %d (please enable debug logs for details)",
 			initialized);
 		/* Can not happen with current code, but might occur in the future when
@@ -203,7 +202,7 @@ lookupDestruct(lookup_t *pThis) {
 	uint32_t i;
 
 	if (pThis == NULL) return;
-	
+
 	if (pThis->type == STRING_LOOKUP_TABLE) {
 		destructTable_str(pThis);
 	} else if (pThis->type == ARRAY_LOOKUP_TABLE) {
@@ -213,7 +212,7 @@ lookupDestruct(lookup_t *pThis) {
 	} else if (pThis->type == STUBBED_LOOKUP_TABLE) {
 		/*nothing to be done*/
 	}
-	
+
 	for (i = 0; i < pThis->interned_val_count; i++) {
 		free(pThis->interned_vals[i]);
 	}
@@ -237,7 +236,7 @@ lookupDestroyCnf(void)
 		luref_next = luref->next;
 		lookupRefDestruct(luref);
 		luref = luref_next;
-	}	
+	}
 }
 
 /* comparison function for qsort() */
@@ -256,13 +255,23 @@ qs_arrcmp_ustrs(const void *s1, const void *s2)
 static int
 qs_arrcmp_uint32_index_val(const void *s1, const void *s2)
 {
-	return ((uint32_index_val_t*)s1)->index - ((uint32_index_val_t*)s2)->index;
+	uint32_t first_value = ((uint32_index_val_t*)s1)->index;
+	uint32_t second_value = ((uint32_index_val_t*)s2)->index;
+	if (first_value < second_value) {
+		return -1;
+	}
+	return first_value - second_value;
 }
 
 static int
 qs_arrcmp_sprsArrtab(const void *s1, const void *s2)
 {
-	return ((lookup_sparseArray_tab_entry_t*)s1)->key - ((lookup_sparseArray_tab_entry_t*)s2)->key;
+	uint32_t first_value = ((lookup_sparseArray_tab_entry_t*)s1)->key;
+	uint32_t second_value = ((lookup_sparseArray_tab_entry_t*)s2)->key;
+	if (first_value < second_value) {
+		return -1;
+	}
+	return first_value - second_value;
 }
 
 /* comparison function for bsearch() and string array compare
@@ -283,7 +292,12 @@ bs_arrcmp_str(const void *s1, const void *s2)
 static int
 bs_arrcmp_sprsArrtab(const void *s1, const void *s2)
 {
-	return *(uint32_t*)s1 - ((lookup_sparseArray_tab_entry_t*)s2)->key;
+	uint32_t key = *(uint32_t*)s1;
+	uint32_t array_member_value = ((lookup_sparseArray_tab_entry_t*)s2)->key;
+	if (key < array_member_value) {
+		return -1;
+	}
+	return key - array_member_value;
 }
 
 static inline const char*
@@ -301,8 +315,13 @@ static es_str_t*
 lookupKey_str(lookup_t *pThis, lookup_key_t key) {
 	lookup_string_tab_entry_t *entry;
 	const char *r;
-	entry = bsearch(key.k_str, pThis->table.str->entries, pThis->nmemb, sizeof(lookup_string_tab_entry_t),
-	bs_arrcmp_strtab);
+	if(pThis->nmemb == 0) {
+		entry = NULL;
+	} else {
+		assert(pThis->table.str->entries);
+		entry = bsearch(key.k_str, pThis->table.str->entries, pThis->nmemb,
+			sizeof(lookup_string_tab_entry_t), bs_arrcmp_strtab);
+	}
 	if(entry == NULL) {
 		r = defaultVal(pThis);
 	} else {
@@ -315,13 +334,17 @@ static es_str_t*
 lookupKey_arr(lookup_t *pThis, lookup_key_t key) {
 	const char *r;
 	uint32_t uint_key = key.k_uint;
-	uint32_t idx = uint_key - pThis->table.arr->first_key;
-
-	if (idx >= pThis->nmemb) {
+	if ((pThis->nmemb == 0) || (uint_key < pThis->table.arr->first_key)) {
 		r = defaultVal(pThis);
 	} else {
-		r = (char*) pThis->table.arr->interned_val_refs[uint_key - pThis->table.arr->first_key];
+		uint32_t idx = uint_key - pThis->table.arr->first_key;
+		if (idx >= pThis->nmemb) {
+			r = defaultVal(pThis);
+		} else {
+		    r = (char*) pThis->table.arr->interned_val_refs[idx];
+		}
 	}
+
 	return es_newStrFromCStr(r, strlen(r));
 }
 
@@ -363,8 +386,13 @@ static es_str_t*
 lookupKey_sprsArr(lookup_t *pThis, lookup_key_t key) {
 	lookup_sparseArray_tab_entry_t *entry;
 	const char *r;
-	entry = bsearch_lte(&key.k_uint, pThis->table.sprsArr->entries, pThis->nmemb,
-	sizeof(lookup_sparseArray_tab_entry_t), bs_arrcmp_sprsArrtab);
+	if (pThis->nmemb == 0) {
+		entry = NULL;
+	} else {
+		entry = bsearch_lte(&key.k_uint, pThis->table.sprsArr->entries, pThis->nmemb,
+			sizeof(lookup_sparseArray_tab_entry_t), bs_arrcmp_sprsArrtab);
+	}
+
 	if(entry == NULL) {
 		r = defaultVal(pThis);
 	} else {
@@ -376,7 +404,7 @@ lookupKey_sprsArr(lookup_t *pThis, lookup_key_t key) {
 /* builders for different table-types */
 
 #define NO_INDEX_ERROR(type, name)				\
-	errmsg.LogError(0, RS_RET_INVALID_VALUE, "'%s' lookup table named: '%s' has record(s) without 'index' "\
+	LogError(0, RS_RET_INVALID_VALUE, "'%s' lookup table named: '%s' has record(s) without 'index' "\
 "field", type, name); \
 	ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 
@@ -386,7 +414,7 @@ build_StringTable(lookup_t *pThis, struct json_object *jtab, const uchar* name) 
 	struct json_object *jrow, *jindex, *jvalue;
 	uchar *value, *canonicalValueRef;
 	DEFiRet;
-	
+
 	pThis->table.str = NULL;
 	CHKmalloc(pThis->table.str = calloc(1, sizeof(lookup_string_tab_t)));
 	if (pThis->nmemb > 0) {
@@ -422,7 +450,7 @@ build_StringTable(lookup_t *pThis, struct json_object *jtab, const uchar* name) 
 		}
 		qsort(pThis->table.str->entries, pThis->nmemb, sizeof(lookup_string_tab_entry_t), qs_arrcmp_strtab);
 	}
-		
+
 	pThis->lookup = lookupKey_str;
 	pThis->key_type = LOOKUP_KEY_TYPE_STRING;
 finalize_it:
@@ -440,7 +468,7 @@ build_ArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar *name) {
 	DEFiRet;
 
 	prev_index_set = 0;
-	
+
 	pThis->table.arr = NULL;
 	CHKmalloc(pThis->table.arr = calloc(1, sizeof(lookup_array_tab_t)));
 	if (pThis->nmemb > 0) {
@@ -466,7 +494,7 @@ build_ArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar *name) {
 				pThis->table.arr->first_key = index;
 			} else {
 				if (index != ++prev_index) {
-					errmsg.LogError(0, RS_RET_INVALID_VALUE, "'array' lookup table name: '%s' "
+					LogError(0, RS_RET_INVALID_VALUE, "'array' lookup table name: '%s' "
 					"has non-contiguous members between index '%d' and '%d'",
 									name, prev_index, index);
 					ABORT_FINALIZE(RS_RET_INVALID_VALUE);
@@ -478,7 +506,7 @@ build_ArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar *name) {
 			pThis->table.arr->interned_val_refs[i] = canonicalValueRef;
 		}
 	}
-		
+
 	pThis->lookup = lookupKey_arr;
 	pThis->key_type = LOOKUP_KEY_TYPE_UINT;
 
@@ -493,7 +521,7 @@ build_SparseArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar* n
 	struct json_object *jrow, *jindex, *jvalue;
 	uchar *value, *canonicalValueRef;
 	DEFiRet;
-	
+
 	pThis->table.str = NULL;
 	CHKmalloc(pThis->table.sprsArr = calloc(1, sizeof(lookup_sparseArray_tab_t)));
 	if (pThis->nmemb > 0) {
@@ -516,10 +544,10 @@ build_SparseArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar* n
 		qsort(pThis->table.sprsArr->entries, pThis->nmemb, sizeof(lookup_sparseArray_tab_entry_t),
 				qs_arrcmp_sprsArrtab);
 	}
-		
+
 	pThis->lookup = lookupKey_sprsArr;
 	pThis->key_type = LOOKUP_KEY_TYPE_UINT;
-	
+
 finalize_it:
 	RETiRet;
 }
@@ -527,12 +555,12 @@ finalize_it:
 static rsRetVal
 lookupBuildStubbedTable(lookup_t *pThis, const uchar* stub_val) {
 	DEFiRet;
-	
+
 	CHKmalloc(pThis->nomatch = ustrdup(stub_val));
 	pThis->lookup = lookupKey_stub;
 	pThis->type = STUBBED_LOOKUP_TABLE;
 	pThis->key_type = LOOKUP_KEY_TYPE_NONE;
-	
+
 finalize_it:
 	RETiRet;
 }
@@ -554,7 +582,7 @@ lookupBuildTable_v1(lookup_t *pThis, struct json_object *jroot, const uchar* nam
 	jtype = json_object_object_get(jroot, "type");
 	jtab = json_object_object_get(jroot, "table");
 	if (jtab == NULL || !json_object_is_type(jtab, json_type_array)) {
-		errmsg.LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' has invalid table definition", name);
+		LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' has invalid table definition", name);
 		ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 	}
 	pThis->nmemb = json_object_array_length(jtab);
@@ -570,7 +598,7 @@ lookupBuildTable_v1(lookup_t *pThis, struct json_object *jroot, const uchar* nam
 		jrow = json_object_array_get_idx(jtab, i);
 		jvalue = json_object_object_get(jrow, "value");
 		if (jvalue == NULL || json_object_is_type(jvalue, json_type_null)) {
-			errmsg.LogError(0, RS_RET_INVALID_VALUE, "'%s' lookup table named: '%s' has record(s) "
+			LogError(0, RS_RET_INVALID_VALUE, "'%s' lookup table named: '%s' has record(s) "
 			"without 'value' field", table_type, name);
 			ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 		}
@@ -616,13 +644,13 @@ lookupBuildTable_v1(lookup_t *pThis, struct json_object *jroot, const uchar* nam
 		pThis->type = STRING_LOOKUP_TABLE;
 		CHKiRet(build_StringTable(pThis, jtab, name));
 	} else {
-		errmsg.LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' uses unupported "
+		LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' uses unupported "
 				"type: '%s'", name, table_type);
 		ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 	}
 finalize_it:
 	if (all_values != NULL) free(all_values);
-	RETiRet;	
+	RETiRet;
 }
 
 static rsRetVal
@@ -637,13 +665,13 @@ lookupBuildTable(lookup_t *pThis, struct json_object *jroot, const uchar* name)
 	if (jversion != NULL && !json_object_is_type(jversion, json_type_null)) {
 		version = json_object_get_int(jversion);
 	} else {
-		errmsg.LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' doesn't specify version "
+		LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' doesn't specify version "
 		"(will use default value: %d)", name, version);
 	}
 	if (version == 1) {
 		CHKiRet(lookupBuildTable_v1(pThis, jroot, name));
 	} else {
-		errmsg.LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' uses unsupported "
+		LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' uses unsupported "
 				"version: %d", name, version);
 		ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 	}
@@ -684,7 +712,7 @@ lookupReloadOrStub(lookup_ref_t *pThis, const uchar* stub_val) {
 
 	oldlu = pThis->self;
 	newlu = NULL;
-	
+
 	DBGPRINTF("reload requested for lookup table '%s'\n", pThis->name);
 	CHKmalloc(newlu = calloc(1, sizeof(lookup_t)));
 	if (stub_val == NULL) {
@@ -699,21 +727,21 @@ lookupReloadOrStub(lookup_ref_t *pThis, const uchar* stub_val) {
 finalize_it:
 	if (iRet != RS_RET_OK) {
 		if (stub_val == NULL) {
-			errmsg.LogError(0, RS_RET_INTERNAL_ERROR,
+			LogError(0, RS_RET_INTERNAL_ERROR,
 					"lookup table '%s' could not be reloaded from file '%s'",
 					pThis->name, pThis->filename);
 		} else {
-			errmsg.LogError(0, RS_RET_INTERNAL_ERROR,
+			LogError(0, RS_RET_INTERNAL_ERROR,
 					"lookup table '%s' could not be stubbed with value '%s'",
 					pThis->name, stub_val);
 		}
 		lookupDestruct(newlu);
 	} else {
 		if (stub_val == NULL) {
-			errmsg.LogError(0, RS_RET_OK, "lookup table '%s' reloaded from file '%s'",
+			LogError(0, RS_RET_OK, "lookup table '%s' reloaded from file '%s'",
 					pThis->name, pThis->filename);
 		} else {
-			errmsg.LogError(0, RS_RET_OK, "lookup table '%s' stubbed with value '%s'",
+			LogError(0, RS_RET_OK, "lookup table '%s' stubbed with value '%s'",
 					pThis->name, stub_val);
 		}
 		lookupDestruct(oldlu);
@@ -732,11 +760,11 @@ lookupDoStub(lookup_ref_t *pThis, const uchar* stub_val)
 		already_stubbed = 1;
 	pthread_rwlock_unlock(&pThis->rwlock);
 	if (! already_stubbed) {
-		errmsg.LogError(0, RS_RET_OK, "stubbing lookup table '%s' with value '%s'",
+		LogError(0, RS_RET_OK, "stubbing lookup table '%s' with value '%s'",
 			pThis->name, stub_val);
 		CHKiRet(lookupReloadOrStub(pThis, stub_val));
 	} else {
-		errmsg.LogError(0, RS_RET_OK, "lookup table '%s' is already stubbed with value '%s'",
+		LogError(0, RS_RET_OK, "lookup table '%s' is already stubbed with value '%s'",
 			pThis->name, stub_val);
 	}
 finalize_it:
@@ -772,7 +800,7 @@ lookupReload(lookup_ref_t *const pThis, const uchar *const stub_val_if_reload_fa
 		pThis->do_reload = 1;
 		pthread_cond_signal(&pThis->run_reloader);
 	} else {
-		errmsg.LogError(lock_errno, RS_RET_INTERNAL_ERROR, "attempt to trigger "
+		LogError(lock_errno, RS_RET_INTERNAL_ERROR, "attempt to trigger "
 			"reload of lookup table '%s' failed (not stubbing)", pThis->name);
 		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
 		/* we can choose to stub the table here, but it'll hurt because
@@ -852,7 +880,7 @@ lookupPendingReloadCount(void)
 
 /* returns either a pointer to the value (read only!) or NULL
  * if either the key could not be found or an error occured.
- * Note that an estr_t object is returned. The caller is 
+ * Note that an estr_t object is returned. The caller is
  * responsible for freeing it.
  */
 es_str_t *
@@ -887,31 +915,31 @@ lookupReadFile(lookup_t *const pThis, const uchar *const name, const uchar *cons
 	DEFiRet;
 
 
-	if(stat((char*)filename, &sb) == -1) {
-		errmsg.LogError(errno, RS_RET_FILE_NOT_FOUND,
+	if((fd = open((const char*) filename, O_RDONLY)) == -1) {
+		LogError(errno, RS_RET_FILE_NOT_FOUND,
+			"lookup table file '%s' could not be opened", filename);
+		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
+	}
+
+	if(fstat(fd, &sb) == -1) {
+		LogError(errno, RS_RET_FILE_NOT_FOUND,
 			"lookup table file '%s' stat failed", filename);
 		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 	}
 
 	CHKmalloc(iobuf = malloc(sb.st_size));
 
-	if((fd = open((const char*) filename, O_RDONLY)) == -1) {
-		errmsg.LogError(errno, RS_RET_FILE_NOT_FOUND,
-			"lookup table file '%s' could not be opened", filename);
-		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
-	}
-
 	tokener = json_tokener_new();
 	nread = read(fd, iobuf, sb.st_size);
 	if(nread != (ssize_t) sb.st_size) {
-		errmsg.LogError(errno, RS_RET_READ_ERR,
+		LogError(errno, RS_RET_READ_ERR,
 			"lookup table file '%s' read error", filename);
 		ABORT_FINALIZE(RS_RET_READ_ERR);
 	}
 
 	json = json_tokener_parse_ex(tokener, iobuf, sb.st_size);
 	if(json == NULL) {
-		errmsg.LogError(0, RS_RET_JSON_PARSE_ERR,
+		LogError(0, RS_RET_JSON_PARSE_ERR,
 			"lookup table file '%s' json parsing error",
 			filename);
 		ABORT_FINALIZE(RS_RET_JSON_PARSE_ERR);
@@ -954,7 +982,7 @@ lookupTableDefProcessCnf(struct cnfobj *o)
 	}
 	DBGPRINTF("lookupTableDefProcessCnf params:\n");
 	cnfparamsPrint(&modpblk, pvals);
-	
+
 	CHKiRet(lookupNew(&lu));
 
 	for(i = 0 ; i < modpblk.nParams ; ++i) {
@@ -977,10 +1005,12 @@ lookupTableDefProcessCnf(struct cnfobj *o)
 	strcpy(reloader_thd_name, reloader_prefix);
 	strcpy(reloader_thd_name + strlen(reloader_prefix), (char*) lu->name);
 	reloader_thd_name[thd_name_len - 1] = '\0';
-  #ifndef __APPLE__
-     pthread_setname_np(lu->reloader, reloader_thd_name);
-  #else
+  #if defined(__NetBSD__)
+     pthread_setname_np(lu->reloader, "%s", reloader_thd_name);
+  #elif defined(__APPLE__)
      pthread_setname_np(reloader_thd_name); // must check
+  #else
+     pthread_setname_np(lu->reloader, reloader_thd_name);
   #endif
 #endif
 	CHKiRet(lookupReadFile(lu->self, lu->name, lu->filename));
@@ -1004,7 +1034,6 @@ void
 lookupClassExit(void)
 {
 	objRelease(glbl, CORE_COMPONENT);
-	objRelease(errmsg, CORE_COMPONENT);
 }
 
 rsRetVal
@@ -1013,7 +1042,6 @@ lookupClassInit(void)
 	DEFiRet;
 	CHKiRet(objGetObjInterface(&obj));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 finalize_it:
 	RETiRet;
 }

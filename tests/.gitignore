@@ -5,6 +5,8 @@ mangle_qi
 .dep_cache
 .dep_wrk
 .loop_monitor
-rsyslog.pid.save
-rsyslog2.pid.save
 rsyslog.out.compare
+*.pid
+*.pid.save
+*.started
+test-spool/*

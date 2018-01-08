@@ -1106,18 +1106,20 @@ do_Parameter(uchar **pp, struct template *pTpl)
 					if((errcode = regexp.regcomp(&(pTpe->data.field.re),
 						(char*) regex_char, iOptions) != 0)) {
 						char errbuff[512];
-						regexp.regerror(errcode, &(pTpe->data.field.re), errbuff, sizeof(errbuff));
+						regexp.regerror(errcode, &(pTpe->data.field.re),
+							errbuff, sizeof(errbuff));
 						DBGPRINTF("Template.c: Error in regular expression: %s\n", errbuff);
 						pTpe->data.field.has_regex = 2;
 					}
 				} else {
 					/* regexp object could not be loaded */
-					dbgprintf("error %d trying to load regexp library - this may be desired and thus OK",
-						  iRetLocal);
-					if(bFirstRegexpErrmsg) { /* prevent flood of messages, maybe even an endless loop! */
+					dbgprintf("error %d trying to load regexp library - this may be desired "
+					"and thus OK", iRetLocal);
+					if(bFirstRegexpErrmsg) {
+					/* prevent flood of messages, maybe even an endless loop! */
 						bFirstRegexpErrmsg = 0;
-						LogError(0, NO_ERRCODE, "regexp library could not be loaded (error %d), "
-								"regexp ignored", iRetLocal);
+						LogError(0, NO_ERRCODE, "regexp library could not be loaded "
+							"(error %d), regexp ignored", iRetLocal);
 					}
 					pTpe->data.field.has_regex = 2;
 				}
@@ -1665,7 +1667,8 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 				datefmt = tplFmtRFC3164BuggyDate;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"rfc3339", sizeof("rfc3339")-1)) {
 				datefmt = tplFmtRFC3339Date;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"unixtimestamp", sizeof("unixtimestamp")-1)) {
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"unixtimestamp",
+			sizeof("unixtimestamp")-1)) {
 				datefmt = tplFmtUnixDate;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"subseconds", sizeof("subseconds")-1)) {
 				datefmt = tplFmtSecFrac;
@@ -1689,7 +1692,8 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 				datefmt = tplFmtTZOffsHour;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"tzoffsmin", sizeof("tzoffsmin")-1)) {
 				datefmt = tplFmtTZOffsMin;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"tzoffsdirection", sizeof("tzoffsdirection")-1)) {
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"tzoffsdirection",
+				sizeof("tzoffsdirection")-1)) {
 				datefmt = tplFmtTZOffsDirection;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"ordinal", sizeof("ordinal")-1)) {
 				datefmt = tplFmtOrdinal;

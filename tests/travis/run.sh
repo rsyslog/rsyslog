@@ -9,17 +9,14 @@ echo "DISTRIB_CODENAME: $DISTRIB_CODENAME"
 echo "CLANG:            $CLANG"
 
 echo "****************************** BEGIN ACTUAL SCRIPT STEP ******************************"
+# check code style. We do this only when DEBUGLESS is enabled,
+# so that we do not do it in each and every run.
+if [ "x$DEBUGLESS" == "xYES" ] ; then source CI/check_line_length.sh ; fi
+
 source tests/travis/install.sh
 source /etc/lsb-release
 
-# first handle cron builds (most importantly Coverity)
-
-#if [ "$DO_COVERITY" == "YES" ]; then
-#	source tests/travis/run-cron.sh
-#exit
-#fi
-
-# cron job?
+# handle cron builds (most importantly Coverity)
 if [ "$TRAVIS_EVENT_TYPE" == "cron" ]; then
 	if [ "$DO_CRON" == "YES" ]; then
 		source tests/travis/run-cron.sh
@@ -30,12 +27,6 @@ if [ "$DO_CRON" == "YES" ]; then
 	echo cron job not executed under non-cron run
 	exit 0 # this must not run under PRs
 fi
-
-# first check code style. We do this only when STAT_AN is enabled,
-# so that we do not do it in each and every run. While once is sufficient,
-# STAT_AN for now gives us sufficient runtime reduction.
-if [ "x$STAT_AN" == "xYES" ] ; then CI/check_line_length.sh ; fi
-
 
 #
 # ACTUAL MAIN CI PART OF THE SCRIPT
@@ -69,14 +60,64 @@ if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then export CC="
 $CC -v
 
 if [ "$DISTRIB_CODENAME" != "precise" ]; then AMQP1="--enable-omamqp1"; fi
-export CONFIG_FLAGS="--prefix=/opt/rsyslog --build=x86_64-pc-linux-gnu --host=x86_64-pc-linux-gnu --mandir=/usr/share/man --infodir=/usr/share/info --datadir=/usr/share --sysconfdir=/etc --localstatedir=/var/lib --disable-dependency-tracking --enable-silent-rules --libdir=/usr/lib64 --docdir=/usr/share/doc/rsyslog --disable-generate-man-pages --enable-testbench --enable-imdiag --enable-imfile --enable-impstats --enable-mmrm1stspace --enable-imptcp --enable-mmanon --enable-mmaudit --enable-mmfields --enable-mmjsonparse --enable-mmpstrucdata --enable-mmsequence --enable-mmutf8fix --enable-mail --enable-omprog --enable-omruleset --enable-omstdout --enable-omuxsock --enable-pmaixforwardedfrom --enable-pmciscoios --enable-pmcisconames --enable-pmlastmsg --enable-pmsnare --enable-libgcrypt --enable-mmnormalize --disable-omudpspoof --enable-relp --enable-snmp --disable-mmsnmptrapd --enable-gnutls --enable-mysql --enable-mysql-tests --enable-gt-ksi --enable-libdbi --enable-pgsql --enable-omhttpfs --enable-elasticsearch --enable-valgrind --enable-ommongodb --enable-omrelp-default-port=13515 --enable-omtcl --enable-mmdblookup \
+export CONFIG_FLAGS="$CONFIGURE_FLAGS \
+	$EXTRA_CONFIGURE \
+	$JOURNAL_OPT \
+	$HIREDIS_OPT \
+	$ENABLE_KAFKA \
+	$ENABLE_DEBUGLESS \
+	$NO_VALGRIND \
+	$GROK \
+	$ES_TEST_CONFIGURE_OPT \
+	$AMQP1 \
+	--disable-generate-man-pages \
+	--enable-testbench \
+	--enable-imdiag \
+	--enable-imfile \
+	--enable-impstats \
+	--enable-mmrm1stspace \
+	--enable-imptcp \
+	--enable-mmanon \
+	--enable-mmaudit \
+	--enable-mmfields \
+	--enable-mmjsonparse \
+	--enable-mmpstrucdata \
+	--enable-mmsequence \
+	--enable-mmutf8fix \
+	--enable-mail \
+	--enable-omprog \
+	--enable-omruleset \
+	--enable-omstdout \
+	--enable-omuxsock \
+	--enable-pmaixforwardedfrom \
+	--enable-pmciscoios \
+	--enable-pmcisconames \
+	--enable-pmlastmsg \
+	--enable-pmsnare \
+	--enable-libgcrypt \
+	--enable-mmnormalize \
+	--enable-omudpspoof \
+	--enable-relp --enable-omrelp-default-port=13515 \
+	--enable-snmp \
+	--enable-mmsnmptrapd \
+	--enable-gnutls \
+	--enable-mysql --enable-mysql-tests \
+	--enable-gt-ksi \
+	--enable-libdbi \
+	--enable-pgsql --enable-pgsql-tests \
+	--enable-omhttpfs \
+	--enable-elasticsearch \
+	--enable-valgrind \
+	--enable-ommongodb \
+	--enable-omtcl \
+	--enable-mmdblookup \
 	--enable-mmcount \
-	--enable-gssapi-krb5=no \
+	--enable-gssapi-krb5 \
 	--enable-omhiredis \
 	--enable-imczmq --enable-omczmq \
-	--enable-usertools=no \
-	$JOURNAL_OPT $HIREDIS_OPT $ENABLE_KAFKA $ENABLE_DEBUGLESS $NO_VALGRIND \
-	$GROK $ES_TEST_CONFIGURE_OPT $CONFIGURE_FLAGS $AMQP1"
+	--enable-usertools \
+	--enable-pmnull \
+	--enable-pmnormalize"
 # Note: [io]mzmq3 cannot be built any longer, according to Brian Knox they require an
 # outdated version of the client lib. So we do not bother any longer about them.
 ./configure  $CONFIG_FLAGS
@@ -101,5 +142,5 @@ then
     make distcheck
 fi
 
-if [ "x$STAT_AN" == "xYES" ] ; then make clean; CFLAGS="-O2 -std=c99"; ./configure $CONFIG_FLAGS ; fi
+if [ "x$STAT_AN" == "xYES" ] ; then make clean; CFLAGS="-O2"; ./configure $CONFIG_FLAGS ; fi
 if [ "x$STAT_AN" == "xYES" ] ; then $SCAN_BUILD --use-cc $CC --status-bugs make -j ; fi

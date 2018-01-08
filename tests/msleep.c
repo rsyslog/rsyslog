@@ -31,6 +31,9 @@
 #else
 #include <time.h>
 #endif
+#if defined(HAVE_SYS_SELECT_H)
+#include <sys/select.h>
+#endif
 
 int main(int argc, char *argv[])
 {

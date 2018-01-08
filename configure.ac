@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[8.31.0],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[8.32.0],[rsyslog@lists.adiscon.com])
 
 # AIXPORT START: Detect the underlying OS
 unamestr=$(uname)
@@ -77,7 +77,7 @@ PKG_PROG_PKG_CONFIG
 # modules we require
 PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.9)
 
-PKG_CHECK_MODULES([LIBFASTJSON], [libfastjson >= 0.99.7],,)
+PKG_CHECK_MODULES([LIBFASTJSON], [libfastjson >= 0.99.8],,)
 
 AC_DEFINE_UNQUOTED([PLATFORM_ID], ["${host}"], [platform id for display purposes])
 # we don't mind if we don't have the lsb_release utility. But if we have, it's
@@ -170,7 +170,7 @@ AC_CHECK_HEADERS([malloc.h],[],[],[
      #endif
   ]
 ])
-AC_CHECK_HEADERS([fcntl.h locale.h netdb.h netinet/in.h paths.h stddef.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/stat.h sys/inotify.h unistd.h utmp.h utmpx.h sys/epoll.h sys/prctl.h])
+AC_CHECK_HEADERS([fcntl.h locale.h netdb.h netinet/in.h paths.h stddef.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/stat.h sys/inotify.h unistd.h utmp.h utmpx.h sys/epoll.h sys/prctl.h sys/select.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -286,12 +286,6 @@ case "${enable_largefile}" in
   *) enable_largefile="yes" ;;
 esac
 
-# do we have libsystemd?
-PKG_CHECK_MODULES([LIBSYSTEMD], [libsystemd],
-	[ AC_DEFINE(HAVE_LIBSYSTEMD, 1, [libsystemd present]) ],
-	[ AC_MSG_NOTICE([libsystemd not present - disabling systemd support]) ]
-)
-
 # Regular expressions
 AC_ARG_ENABLE(regexp,
         [AS_HELP_STRING([--enable-regexp],[Enable regular expressions support @<:@default=yes@:>@])],
@@ -348,6 +342,20 @@ if test $enable_gssapi_krb5 = yes; then
 fi
 AM_CONDITIONAL(ENABLE_GSSAPI, test x$enable_gssapi_krb5 = xyes)
 
+
+# shall the testbench try to run test that require root permissions?
+# This is uncommon. Test skip if run under non-root, but that pollutes the
+# testbench result. So the default is not to do that.
+AC_ARG_ENABLE(root_tests,
+        [AS_HELP_STRING([--enable-root-tests],[enable root tests in testbench @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_root_tests="yes" ;;
+          no) enable_root_tests="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-root-tests) ;;
+         esac],
+        [enable_root_tests=no]
+)
+AM_CONDITIONAL(ENABLE_ROOT_TESTS, test x$enable_root_tests = xyes)
 
 # multithreading via pthreads
 if test "$os_type" != "solaris"
@@ -430,6 +438,22 @@ if test "$rsyslog_have_pthread_setschedparam" = "yes" -a "$rsyslog_have_sched_h"
 fi
 
 
+# use libcurl?
+AC_ARG_ENABLE(libcurl,
+        [AS_HELP_STRING([--enable-libcurl],[Enable libcurl mode @<:@default=yes@:>@])],
+        [case "${enableval}" in
+          yes) enable_libcurl="yes" ;;
+           no) enable_libcurl="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-libcurl) ;;
+         esac],
+        [enable_libcurl="yes"]
+)
+if test "$enable_libcurl" = "yes"; then
+	PKG_CHECK_MODULES([CURL], [libcurl], 
+		[ AC_DEFINE(HAVE_LIBCURL, 1, [libcurl present]) ]
+	)
+fi
+
 # klog
 AC_ARG_ENABLE(klog,
         [AS_HELP_STRING([--enable-klog],[Integrated klog functionality @<:@default=yes@:>@])],
@@ -475,6 +499,35 @@ if test "x$enable_imjournal" = "xyes"; then
 	])
 fi
 AM_CONDITIONAL(ENABLE_IMJOURNAL, test x$enable_imjournal = xyes)
+
+# use libsystemd
+AC_ARG_ENABLE(libsystemd,
+        [AS_HELP_STRING([--enable-libsystemd],[Enable libsystemd mode @<:@default=auto@:>@])],
+        [case "${enableval}" in
+          yes) enable_libsystemd="yes" ;;
+           no) enable_libsystemd="no" ;;
+         auto) enable_libsystemd="auto" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-libsystemd) ;;
+         esac],
+        [enable_libsystemd="auto"]
+)
+if test "$enable_libsystemd" = "yes"; then
+	PKG_CHECK_MODULES([LIBSYSTEMD], [libsystemd],
+		[ AC_DEFINE(HAVE_LIBSYSTEMD, 1, [libsystemd present]) ]
+	)
+fi
+if test "$enable_libsystemd" = "auto"; then
+	PKG_CHECK_MODULES([LIBSYSTEMD], [libsystemd],
+		[ AC_DEFINE(HAVE_LIBSYSTEMD, 1, [libsystemd present])
+		  AC_MSG_NOTICE([--enable-libsystemd in auto mode])
+		  enable_libsystemd="yes"
+		],
+		[ AC_MSG_WARN([libsystemd not present - disabling systemd support])
+		  enable_libsystemd="no"
+		]
+	)
+	AC_MSG_NOTICE([--enable-libsystemd in auto mode, enable-libsystemd is set to ${enable_libsystemd}])
+fi
 
 # inet
 AC_ARG_ENABLE(inet,
@@ -577,21 +630,6 @@ AC_ARG_ENABLE(debug_symbols,
          esac],
         [enable_debug_symbols="yes"]
 )
-
-
-# runtime instrumentation
-AC_ARG_ENABLE(rtinst,
-        [AS_HELP_STRING([--enable-rtinst],[Enable runtime instrumentation mode @<:@default=no@:>@])],
-        [case "${enableval}" in
-         yes) enable_rtinst="yes" ;;
-          no) enable_rtinst="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-rtinst) ;;
-         esac],
-        [enable_rtinst="no"]
-)
-if test "$enable_rtinst" = "yes"; then
-        AC_DEFINE(RTINST, 1, [Defined if runtime instrumentation mode is enabled.])
-fi
 
 
 # total debugless: highest performance, but no way at all to enable debug 
@@ -1100,6 +1138,7 @@ AC_ARG_ENABLE(mmgrok,
         [enable_mmgrok=no]
 )
 if test "x$enable_mmgrok" = "xyes"; then
+        AC_CHECK_HEADERS([grok.h])
 	GLIB_CFLAGS="$(pkg-config --cflags glib-2.0)"
 	GLIB_LIBS="$(pkg-config --libs glib-2.0)"
 fi
@@ -1272,22 +1311,6 @@ AC_ARG_ENABLE(omrelp-default-port,
 )
 
 
-# GuardTime support
-AC_ARG_ENABLE(guardtime,
-        [AS_HELP_STRING([--enable-guardtime],[Enable log file signing support (via GuardTime) @<:@default=no@:>@])],
-        [case "${enableval}" in
-         yes) enable_guardtime="yes" ;;
-          no) enable_guardtime="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-guardtime) ;;
-         esac],
-        [enable_guardtime=no]
-)
-if test "x$enable_guardtime" = "xyes"; then
-	PKG_CHECK_MODULES(GUARDTIME, libgt >= 0.3.1)
-fi
-AM_CONDITIONAL(ENABLE_GUARDTIME, test x$enable_guardtime = xyes)
-
-
 
 # GuardTime KSI LOGSIG 12 support
 AC_ARG_ENABLE(ksi-ls12,
@@ -1350,6 +1373,50 @@ AC_ARG_ENABLE(testbench,
         [enable_testbench=no]
 )
 
+# Add a capability to turn off libfaketime tests. Unfortunately, libfaketime
+# becomes more and more problematic in newer versions and causes aborts
+# on some platforms. This provides the ability to turn it off. In the
+# longer term, we should consider writing our own replacement.
+AC_ARG_ENABLE(libfaketime,
+        [AS_HELP_STRING([--enable-libfaketime],[testbench1 enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_libfaketime="yes" ;;
+          no) enable_libfaketime="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-libfaketime) ;;
+         esac],
+        [enable_libfaketime=no]
+)
+
+# under Travis, we have a ~50 minute max runtime per VM. So we permit to
+# split the testbench in multiple runs, which we can place into different
+# VMs. It's not perfect, but it works...
+AC_ARG_ENABLE(testbench1,
+        [AS_HELP_STRING([--enable-testbench1],[testbench1 enabled @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_testbench1="yes" ;;
+          no) enable_testbench1="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-testbench1) ;;
+         esac],
+        [enable_testbench1=yes]
+)
+AM_CONDITIONAL(ENABLE_LIBFAKETIME, test "x${enable_libfaketime}" = "xyes")
+
+# under Travis, we have a ~50 minute max runtime per VM. So we permit to
+# split the testbench in multiple runs, which we can place into different
+# VMs. It's not perfect, but it works...
+AC_ARG_ENABLE(testbench2,
+        [AS_HELP_STRING([--enable-testbench2],[testbench2 enabled @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_testbench2="yes" ;;
+          no) enable_testbench2="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-testbench2) ;;
+         esac],
+        [enable_testbench2=yes]
+)
+
+AM_CONDITIONAL(ENABLE_TESTBENCH1, test "x${enable_testbench1}" = "xyes")
+AM_CONDITIONAL(ENABLE_TESTBENCH2, test "x${enable_testbench2}" = "xyes")
+
 AC_CHECK_PROG(IP, [ip], [yes], [no])
 if test "x${IP}" = "xno"; then
 	AC_MSG_NOTICE([Will not check network namespace functionality as 'ip' (part of iproute2) is not available.])
@@ -1390,6 +1457,22 @@ AC_ARG_ENABLE(imfile,
          esac],
         [enable_imfile=no]
 )
+if test "x$enable_imfile" = "xyes"; then
+	AC_CHECK_FUNCS(port_create,,)
+	AC_MSG_CHECKING(for Solaris File Events Notification API support)
+	AC_TRY_COMPILE([
+		#include <port.h>
+		#include <sys/port.h>
+		], [
+		return PORT_SOURCE_FILE;
+		]
+		,
+		AC_DEFINE(HAVE_PORT_SOURCE_FILE, 1, [Enable FEN support for imfile])
+		AC_MSG_RESULT(yes)
+		,
+		AC_MSG_RESULT(no)
+	)
+fi
 AM_CONDITIONAL(ENABLE_IMFILE, test x$enable_imfile = xyes)
 
 
@@ -1868,7 +1951,7 @@ AC_ARG_ENABLE(omczmq,
         [enable_omczmq=no]
 )
 if test "x$enable_omczmq" = "xyes"; then
-   PKG_CHECK_MODULES(CZMQ, libczmq >= 3.0.0)
+   PKG_CHECK_MODULES(CZMQ, libczmq >= 3.0.2)
 fi
 AM_CONDITIONAL(ENABLE_OMCZMQ, test x$enable_omczmq = xyes)
 
@@ -2145,12 +2228,13 @@ echo "    rsyslogd will be built:                   $enable_rsyslogd"
 echo "    have to generate man pages:               $have_to_generate_man_pages"
 echo "    Unlimited select() support enabled:       $enable_unlimited_select"
 echo "    uuid support enabled:                     $enable_uuid"
-echo "    Log file signing support:                 $enable_guardtime"
 echo "    Log file signing support via KSI LS12:    $enable_ksi_ls12"
 echo "    Log file encryption support:              $enable_libgcrypt"
 echo "    anonymization support enabled:            $enable_mmanon"
 echo "    message counting support enabled:         $enable_mmcount"
 echo "    liblogging-stdlog support enabled:        $enable_liblogging_stdlog"
+echo "    libsystemd enabled:                       $enable_libsystemd"
+echo "    libcurl enabled:                          $enable_libcurl"
 echo "    kafka static linking enabled:             $enable_kafka_static"
 echo
 echo "---{ input plugins }---"
@@ -2223,12 +2307,14 @@ echo "    SNMP support enabled:                     $enable_snmp"
 echo
 echo "---{ debugging support }---"
 echo "    Testbench enabled:                        $enable_testbench"
+echo "    Testbench1 enabled:                       $enable_testbench1"
+echo "    Testbench2 enabled:                       $enable_testbench2"
+echo "    Testbench libfaketime tests enabled:      $enable_libfaketime"
 echo "    Extended Testbench enabled:               $enable_extended_tests"
 echo "    MySQL Tests enabled:                      $enable_mysql_tests"
 echo "    PostgreSQL Tests enabled:                 $enable_pgsql_tests"
 echo "    Kafka Tests enabled:                      $enable_kafka_tests"
 echo "    Debug mode enabled:                       $enable_debug"
-echo "    Runtime Instrumentation enabled:          $enable_rtinst"
 echo "    (total) debugless mode enabled:           $enable_debugless"
 echo "    Diagnostic tools enabled:                 $enable_diagtools"
 echo "    End-User tools enabled:                   $enable_usertools"

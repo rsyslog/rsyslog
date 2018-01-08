@@ -25,6 +25,9 @@
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
+#ifdef __sun
+#define _XPG4_2
+#endif
 #include "config.h"
 #include "rsyslog.h"
 #include <stdlib.h>
@@ -164,7 +167,7 @@ typedef struct lstn_s {
 static lstn_t *listeners;
 
 static prop_t *pLocalHostIP = NULL;	/* there is only one global IP for all internally-generated messages */
-static prop_t *pInputName = NULL;	/* our inputName currently is always "imudp", and this will hold it */
+static prop_t *pInputName = NULL;	/* our inputName currently is always "imuxsock", and this will hold it */
 static int startIndexUxLocalSockets; /* process fd from that index on (used to
  				   * suppress local logging. rgerhards 2005-08-01
 				   * read-only after startup
@@ -487,7 +490,18 @@ static rsRetVal discardLogSockets(void)
 
 /* used to create a log socket if NOT passed in via systemd. 
  */
+/* note: the linux SUN_LEN macro uses a sizeof based on a NULL pointer. This
+ * triggers UBSan warning. As such, we turn that warning off for the fuction.
+ * As it is OS-provided, there is no way to solve it ourselves. The problem
+ * may also exist on other platforms, we have just noticed it on Linux.
+ */
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wunknown-attributes"
+#endif
 static rsRetVal
+#if defined(__clang__)
+__attribute__((no_sanitize("undefined")))
+#endif
 createLogSocket(lstn_t *pLstn)
 {
 	struct sockaddr_un sunx;
@@ -503,16 +517,23 @@ createLogSocket(lstn_t *pLstn)
 	strncpy(sunx.sun_path, (char*)pLstn->sockName, sizeof(sunx.sun_path));
 	sunx.sun_path[sizeof(sunx.sun_path)-1] = '\0';
 	pLstn->fd = socket(AF_UNIX, SOCK_DGRAM, 0);
-	if(pLstn->fd < 0 || bind(pLstn->fd, (struct sockaddr *) &sunx, SUN_LEN(&sunx)) < 0 ||
-	    chmod((char*)pLstn->sockName, 0666) < 0) {
-		errmsg.LogError(errno, NO_ERRCODE, "cannot create '%s'", pLstn->sockName);
-		DBGPRINTF("cannot create %s (%d).\n", pLstn->sockName, errno);
-		if(pLstn->fd != -1)
-			close(pLstn->fd);
-		pLstn->fd = -1;
+	if(pLstn->fd < 0 ) {
+		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
+	}
+	if(bind(pLstn->fd, (struct sockaddr *) &sunx, SUN_LEN(&sunx)) < 0) {
+		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
+	}
+	if(chmod((char*)pLstn->sockName, 0666) < 0) {
 		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 	}
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		LogError(errno, iRet, "cannot create '%s'", pLstn->sockName);
+		if(pLstn->fd != -1) {
+			close(pLstn->fd);
+			pLstn->fd = -1;
+		}
+	}
 	RETiRet;
 }
 
@@ -542,7 +563,8 @@ openLogSocket(lstn_t *pLstn)
 				/* ok, it matches -- just use as is */
 				pLstn->fd = fd;
 
-				DBGPRINTF("imuxsock: Acquired UNIX socket '%s' (fd %d) from systemd.\n",
+				LogMsg(0, NO_ERRCODE, LOG_INFO,
+					"imuxsock: Acquired UNIX socket '%s' (fd %d) from systemd.\n",
 					pLstn->sockName, pLstn->fd);
 				break;
 			}
@@ -1144,8 +1166,8 @@ activateListeners(void)
 		if(runModConf->ratelimitIntervalSysSock > 0) {
 			if((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
 				/* in this case, we simply turn of rate-limiting */
-				errmsg.LogError(0, NO_ERRCODE, "imuxsock: turning off rate limiting because we could not "
-					  "create hash table\n");
+				errmsg.LogError(0, NO_ERRCODE, "imuxsock: turning off rate limiting because "
+					"we could not create hash table\n");
 				runModConf->ratelimitIntervalSysSock = 0;
 			}
 		} else {
@@ -1755,5 +1777,3 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(statsobj.ConstructFinalize(modStats));
 
 ENDmodInit
-/* vim:set ai:
- */

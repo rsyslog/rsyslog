@@ -2,7 +2,7 @@
  * Parse all fields of the message into structured data inside the
  * JSON tree.
  *
- * Copyright 2013-2017 Adiscon GmbH.
+ * Copyright 2013-2018 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -51,6 +51,7 @@ DEF_OMOD_STATIC_DATA
 
 typedef struct _instanceData {
 	uchar *jsonRoot;	/**< container where to store fields */
+	int lowercase_SD_ID;
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -67,7 +68,8 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current ex
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-	{ "jsonroot", eCmdHdlrString, 0 }
+	{ "jsonroot", eCmdHdlrString, 0 },
+	{ "sd_name.lowercase", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -127,6 +129,7 @@ static inline void
 setInstParamDefaults(instanceData *pData)
 {
 	pData->jsonRoot = NULL;
+	pData->lowercase_SD_ID = 1;
 }
 
 BEGINnewActInst
@@ -148,9 +151,12 @@ CODESTARTnewActInst
 			continue;
 		if(!strcmp(actpblk.descr[i].name, "jsonroot")) {
 			pData->jsonRoot = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "sd_name.lowercase")) {
+			pData->lowercase_SD_ID = pvals[i].val.d.n;
 		} else {
-			dbgprintf("mmpstrucdata: program error, non-handled "
-			  "param '%s'\n", actpblk.descr[i].name);
+			LogError(0, RS_RET_INTERNAL_ERROR,
+				"mmpstrucdata: internal program error, non-handled "
+				"param '%s'\n", actpblk.descr[i].name);
 		}
 	}
 	if(pData->jsonRoot == NULL) {
@@ -206,8 +212,8 @@ parsePARAM_VALUE(uchar *sdbuf, int lenbuf, int *curridx, uchar *fieldbuf)
 }
 
 
-static rsRetVal
-parseSD_NAME(uchar *sdbuf, int lenbuf, int *curridx, uchar *namebuf)
+static rsRetVal ATTR_NONNULL()
+parseSD_NAME(instanceData *const pData, uchar *sdbuf, int lenbuf, int *curridx, uchar *namebuf)
 {
 	int i, j;
 	DEFiRet;
@@ -216,7 +222,7 @@ parseSD_NAME(uchar *sdbuf, int lenbuf, int *curridx, uchar *namebuf)
 		if(   sdbuf[i] == '=' || sdbuf[i] == '"'
 		   || sdbuf[i] == ']' || sdbuf[i] == ' ')
 			break;
-		namebuf[j] = tolower(sdbuf[i]);
+		namebuf[j] = pData->lowercase_SD_ID ? tolower(sdbuf[i]) : sdbuf[i];
 		++i;
 	}
 	namebuf[j] = '\0';
@@ -225,8 +231,8 @@ parseSD_NAME(uchar *sdbuf, int lenbuf, int *curridx, uchar *namebuf)
 }
 
 
-static rsRetVal
-parseSD_PARAM(uchar *sdbuf, int lenbuf, int *curridx, struct json_object *jroot)
+static rsRetVal ATTR_NONNULL()
+parseSD_PARAM(instanceData *const pData, uchar *sdbuf, int lenbuf, int *curridx, struct json_object *jroot)
 {
 	int i;
 	uchar pName[33];
@@ -235,7 +241,7 @@ parseSD_PARAM(uchar *sdbuf, int lenbuf, int *curridx, struct json_object *jroot)
 	DEFiRet;
 	
 	i = *curridx;
-	CHKiRet(parseSD_NAME(sdbuf, lenbuf, &i, pName));
+	CHKiRet(parseSD_NAME(pData, sdbuf, lenbuf, &i, pName));
 	if(sdbuf[i] != '=') {
 		ABORT_FINALIZE(RS_RET_STRUC_DATA_INVLD);
 	}
@@ -259,8 +265,8 @@ finalize_it:
 }
 
 
-static rsRetVal
-parseSD_ELEMENT(uchar *sdbuf, int lenbuf, int *curridx, struct json_object *jroot)
+static rsRetVal ATTR_NONNULL()
+parseSD_ELEMENT(instanceData *const pData, uchar *sdbuf, int lenbuf, int *curridx, struct json_object *jroot)
 {
 	int i;
 	uchar sd_id[33];
@@ -273,7 +279,7 @@ parseSD_ELEMENT(uchar *sdbuf, int lenbuf, int *curridx, struct json_object *jroo
 	}
 	++i; /* eat '[' */
 
-	CHKiRet(parseSD_NAME(sdbuf, lenbuf, &i, sd_id));
+	CHKiRet(parseSD_NAME(pData, sdbuf, lenbuf, &i, sd_id));
 	json =  json_object_new_object();
 
 	while(i < lenbuf) {
@@ -285,7 +291,7 @@ parseSD_ELEMENT(uchar *sdbuf, int lenbuf, int *curridx, struct json_object *jroo
 		++i;
 		while(i < lenbuf && sdbuf[i] == ' ')
 			++i;
-		CHKiRet(parseSD_PARAM(sdbuf, lenbuf, &i, json));
+		CHKiRet(parseSD_PARAM(pData, sdbuf, lenbuf, &i, json));
 	}
 
 	if(sdbuf[i] != ']') {
@@ -302,8 +308,8 @@ finalize_it:
 	RETiRet;
 }
 
-static rsRetVal
-parse_sd(instanceData *pData, smsg_t *pMsg)
+static rsRetVal ATTR_NONNULL()
+parse_sd(instanceData *const pData, smsg_t *const pMsg)
 {
 	struct json_object *json, *jroot;
 	uchar *sdbuf;
@@ -317,7 +323,7 @@ parse_sd(instanceData *pData, smsg_t *pMsg)
 	}
 	MsgGetStructuredData(pMsg, &sdbuf,&lenbuf);
 	while(i < lenbuf) {
-		CHKiRet(parseSD_ELEMENT(sdbuf, lenbuf, &i, json));
+		CHKiRet(parseSD_ELEMENT(pData, sdbuf, lenbuf, &i, json));
 	}
 
 	jroot =  json_object_new_object();
@@ -350,25 +356,13 @@ finalize_it:
 ENDdoAction
 
 
-BEGINparseSelectorAct
-CODESTARTparseSelectorAct
-CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	if(strncmp((char*) p, ":mmpstrucdata:", sizeof(":mmpstrucdata:") - 1)) {
-		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
-			"mmpstrucdata supports only v6+ config format, use: "
-			"action(type=\"mmpstrucdata\" ...)");
-	}
-	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-CODE_STD_FINALIZERparseSelectorAct
-ENDparseSelectorAct
-
-
 BEGINmodExit
 CODESTARTmodExit
 	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
+NO_LEGACY_CONF_parseSelectorAct
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
@@ -378,11 +372,10 @@ CODEqueryEtryPt_STD_CONF2_QUERIES
 ENDqueryEtryPt
 
 
-
 BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	DBGPRINTF("mmpstrucdata: module compiled with rsyslog version %s.\n", VERSION);
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	iRet = objUse(errmsg, CORE_COMPONENT);
 ENDmodInit

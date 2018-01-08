@@ -4,7 +4,7 @@
  *
  * File begun on 2007-07-13 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2014 Adiscon GmbH.
+ * Copyright 2007-2017 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -38,7 +38,7 @@
 # define UNAMESZ	8	/* length of a login name */
 #endif
 #define MAXUNAMES	20	/* maximum number of user names */
-#define MAXFNAME	200	/* max file pathname length */
+#define MAXFNAME	4096	/* max file pathname length */
 
 #define	_DB_MAXDBLEN	128	/* maximum number of db */
 #define _DB_MAXUNAMELEN	128	/* maximum number of user name */

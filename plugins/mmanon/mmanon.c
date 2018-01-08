@@ -261,7 +261,8 @@ CODESTARTnewActInst
 				pData->ipv4.mode = RANDOMINT;
 				pData->ipv4.randConsis = 1;
 			} else {
-				parser_errmsg("mmanon: configuration error, unknown option for ipv4.mode, will use \"zero\"\n");
+				parser_errmsg("mmanon: configuration error, unknown option for ipv4.mode, "
+					"will use \"zero\"\n");
 			}
 		} else if(!strcmp(actpblk.descr[i].name, "ipv4.bits")) {
 			if((int8_t) pvals[i].val.d.n <= 32) {
@@ -781,7 +782,7 @@ anonipv4(wrkrInstanceData_t *pWrkrData, uchar **msg, int *pLenMsg, int *idx, int
 		*hasChanged = 1;
 
 		if(caddresslen != strlen(address)) {
-			*pLenMsg = *pLenMsg + (caddresslen - strlen(address));
+			*pLenMsg = *pLenMsg + ((int)caddresslen - (int)strlen(address));
 			*msg = (uchar*) malloc(*pLenMsg);
 			memcpy(*msg, msgcpy, *idx);
 		}
@@ -959,7 +960,8 @@ num2ipv6 (struct ipv6_int* ip, char* address)
 		i--;
 	}
 
-	snprintf(address, 40, "%x:%x:%x:%x:%x:%x:%x:%x", num[0], num[1], num[2], num[3], num[4], num[5], num[6], num[7]);
+	snprintf(address, 40, "%x:%x:%x:%x:%x:%x:%x:%x", num[0], num[1], num[2], num[3], num[4], num[5],
+		num[6], num[7]);
 }
 
 
@@ -1078,12 +1080,12 @@ anonipv6(wrkrInstanceData_t *pWrkrData, uchar **msg, int *pLenMsg, int *idx, int
 	int offset = *idx;
 	char address[40];
 	uchar* msgcpy = *msg;
-	unsigned caddresslen;
+	size_t caddresslen;
 	size_t oldLen = *pLenMsg;
 
 	int syn = syntax_ipv6(*msg + offset, *pLenMsg - offset, &iplen);
 	if(syn) {
-		assert(iplen < sizeof(address));
+		assert(iplen < sizeof(address));  //has to be < instead of <= since address includes space for a '\0'
 		getip(*msg + offset, iplen, address);
 		offset += iplen;
 		process_IPv6(address, pWrkrData, iplen);
@@ -1092,7 +1094,7 @@ anonipv6(wrkrInstanceData_t *pWrkrData, uchar **msg, int *pLenMsg, int *idx, int
 		*hasChanged = 1;
 
 		if(caddresslen != iplen) {
-			*pLenMsg = *pLenMsg + (caddresslen - iplen);
+			*pLenMsg = *pLenMsg + ((int)caddresslen - (int)iplen);
 			*msg = (uchar*) malloc(*pLenMsg);
 			memcpy(*msg, msgcpy, *idx);
 		}
@@ -1159,7 +1161,7 @@ syntax_embedded(const uchar *const __restrict__ buf,
 			}
 			lastSep = 1;
 		} else if (numLen == -2) {  //'.'
-			if (lastSep || (ipParts <= 1 && !hadAbbrev)) {
+			if (lastSep || (ipParts == 0 && hadAbbrev) || (ipParts <= 6 && !hadAbbrev)) {
 				isIP = 0;
 				goto done;
 			}
@@ -1283,7 +1285,7 @@ anonEmbedded(wrkrInstanceData_t *pWrkrData, uchar **msg, int *pLenMsg, int *idx,
 		*hasChanged = 1;
 
 		if(caddresslen != iplen) {
-			*pLenMsg = *pLenMsg + (caddresslen - iplen);
+			*pLenMsg = *pLenMsg + ((int)caddresslen - (int)iplen);
 			*msg = (uchar*) malloc(*pLenMsg);
 			memcpy(*msg, msgcpy, *idx);
 		}
@@ -1327,17 +1329,7 @@ CODESTARTdoAction
 ENDdoAction
 
 
-BEGINparseSelectorAct
-CODESTARTparseSelectorAct
-CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	if(strncmp((char*) p, ":mmanon:", sizeof(":mmanon:") - 1)) {
-		LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
-			"mmanon supports only v6+ config format, use: "
-			"action(type=\"mmanon\" ...)");
-	}
-	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-CODE_STD_FINALIZERparseSelectorAct
-ENDparseSelectorAct
+NO_LEGACY_CONF_parseSelectorAct
 
 
 BEGINmodExit

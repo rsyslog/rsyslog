@@ -12,7 +12,7 @@
  * function names - this makes it really hard to read and does not provide much
  * benefit, at least I (now) think so...
  *
- * Copyright 2008-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2017 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -55,6 +55,7 @@
 #include "wtp.h"
 #include "wti.h"
 #include "msg.h"
+#include "obj.h"
 #include "atomic.h"
 #include "errmsg.h"
 #include "datetime.h"
@@ -336,7 +337,8 @@ static void queueDrain(qqueue_t *pThis)
 	ASSERT(pThis != NULL);
 
 	BEGINfunc
-	DBGOPRINT((obj_t*) pThis, "queue (type %d) will lose %d messages, destroying...\n", pThis->qType, pThis->iQueueSize);
+	DBGOPRINT((obj_t*) pThis, "queue (type %d) will lose %d messages, destroying...\n",
+		pThis->qType, pThis->iQueueSize);
 	/* iQueueSize is not decremented by qDel(), so we need to do it ourselves */
 	while(ATOMIC_DEC_AND_FETCH(&pThis->iQueueSize, &pThis->mutQueueSize) > 0) {
 		pThis->qDeq(pThis, &pMsg);
@@ -652,7 +654,8 @@ static rsRetVal qAddLinkedList(qqueue_t *pThis, smsg_t* pMsg)
 	pEntry->pMsg = pMsg;
 
 	if(pThis->tVars.linklist.pDelRoot == NULL) {
-		pThis->tVars.linklist.pDelRoot = pThis->tVars.linklist.pDeqRoot = pThis->tVars.linklist.pLast = pEntry;
+		pThis->tVars.linklist.pDelRoot = pThis->tVars.linklist.pDeqRoot = pThis->tVars.linklist.pLast
+		= pEntry;
 	} else {
 		pThis->tVars.linklist.pLast->pNext = pEntry;
 		pThis->tVars.linklist.pLast = pEntry;
@@ -1139,8 +1142,8 @@ qqueueDeq(qqueue_t *pThis, smsg_t **ppMsg)
  * and DA queue to try complete processing.
  * rgerhards, 2009-10-14
  */
-static rsRetVal
-tryShutdownWorkersWithinQueueTimeout(qqueue_t *pThis)
+static rsRetVal ATTR_NONNULL(1)
+tryShutdownWorkersWithinQueueTimeout(qqueue_t *const pThis)
 {
 	struct timespec tTimeout;
 	rsRetVal iRetLocal;
@@ -1177,7 +1180,9 @@ tryShutdownWorkersWithinQueueTimeout(qqueue_t *pThis)
 	DBGOPRINT((obj_t*) pThis, "trying shutdown of regular workers\n");
 	iRetLocal = wtpShutdownAll(pThis->pWtpReg, wtpState_SHUTDOWN, &tTimeout);
 	if(iRetLocal == RS_RET_TIMED_OUT) {
-		DBGOPRINT((obj_t*) pThis, "regular shutdown timed out on primary queue (this is OK)\n");
+		LogMsg(0, RS_RET_TIMED_OUT, LOG_INFO,
+			"%s: regular queue shutdown timed out on primary queue (this is OK, timeout was %d)",
+			objGetName((obj_t*) pThis), pThis->toQShutdown);
 	} else {
 		DBGOPRINT((obj_t*) pThis, "regular queue workers shut down.\n");
 	}
@@ -1192,7 +1197,9 @@ tryShutdownWorkersWithinQueueTimeout(qqueue_t *pThis)
 		DBGOPRINT((obj_t*) pThis, "trying shutdown of regular worker of DA queue\n");
 		iRetLocal = wtpShutdownAll(pThis->pqDA->pWtpReg, wtpState_SHUTDOWN, &tTimeout);
 		if(iRetLocal == RS_RET_TIMED_OUT) {
-			DBGOPRINT((obj_t*) pThis, "shutdown timed out on DA queue worker (this is OK)\n");
+			LogMsg(0, RS_RET_TIMED_OUT, LOG_INFO,
+				"%s: regular queue shutdown timed out on DA queue (this is OK, "
+				"timeout was %d)", objGetName((obj_t*) pThis), pThis->toQShutdown);
 		} else {
 			DBGOPRINT((obj_t*) pThis, "DA queue worker shut down.\n");
 		}
@@ -1237,11 +1244,14 @@ tryShutdownWorkersWithinActionTimeout(qqueue_t *pThis)
 	DBGOPRINT((obj_t*) pThis, "trying immediate shutdown of regular workers (if any)\n");
 	iRetLocal = wtpShutdownAll(pThis->pWtpReg, wtpState_SHUTDOWN_IMMEDIATE, &tTimeout);
 	if(iRetLocal == RS_RET_TIMED_OUT) {
-		DBGOPRINT((obj_t*) pThis, "immediate shutdown timed out on primary queue (this is acceptable and "
-			  "triggers cancellation)\n");
+		LogMsg(0, RS_RET_TIMED_OUT, LOG_INFO,
+			"%s: immediate shutdown timed out on primary queue (this is acceptable and "
+			  "triggers cancellation)", objGetName((obj_t*) pThis));
 	} else if(iRetLocal != RS_RET_OK) {
-		DBGOPRINT((obj_t*) pThis, "unexpected iRet state %d after trying immediate shutdown of the primary queue "
-			  "in disk save mode. Continuing, but results are unpredictable\n", iRetLocal);
+		LogMsg(0, iRetLocal, LOG_WARNING,
+			"%s: potential internal error: unexpected return state after trying "
+			"immediate shutdown of the primary queue in disk save mode. "
+			"Continuing, but results are unpredictable", objGetName((obj_t*) pThis));
 	}
 
 	if(pThis->pqDA != NULL) {
@@ -1249,11 +1259,14 @@ tryShutdownWorkersWithinActionTimeout(qqueue_t *pThis)
 		DBGOPRINT((obj_t*) pThis, "trying immediate shutdown of DA queue workers\n");
 		iRetLocal = wtpShutdownAll(pThis->pqDA->pWtpReg, wtpState_SHUTDOWN_IMMEDIATE, &tTimeout);
 		if(iRetLocal == RS_RET_TIMED_OUT) {
-			DBGOPRINT((obj_t*) pThis, "immediate shutdown timed out on DA queue (this is acceptable "
-				  "and triggers cancellation)\n");
+			LogMsg(0, RS_RET_TIMED_OUT, LOG_INFO,
+				"%s: immediate shutdown timed out on DA queue (this is acceptable and "
+				  "triggers cancellation)", objGetName((obj_t*) pThis));
 		} else if(iRetLocal != RS_RET_OK) {
-			DBGOPRINT((obj_t*) pThis, "unexpected iRet state %d after trying immediate shutdown of the DA "
-				  "queue in disk save mode. Continuing, but results are unpredictable\n", iRetLocal);
+			LogMsg(0, iRetLocal, LOG_WARNING,
+				"%s: potential internal error: unexpected return state after trying "
+				"immediate shutdown of the DA queue in disk save mode. "
+				"Continuing, but results are unpredictable", objGetName((obj_t*) pThis));
 		}
 
 		/* and now we need to terminate the DA worker itself. We always grant it a 100ms timeout,
@@ -1265,8 +1278,10 @@ tryShutdownWorkersWithinActionTimeout(qqueue_t *pThis)
 		DBGOPRINT((obj_t*) pThis, "trying regular shutdown of main queue DA worker pool\n");
 		iRetLocal = wtpShutdownAll(pThis->pWtpDA, wtpState_SHUTDOWN_IMMEDIATE, &tTimeout);
 		if(iRetLocal == RS_RET_TIMED_OUT) {
-			DBGOPRINT((obj_t*) pThis, "shutdown timed out on main queue DA worker pool "
-					          "(this is not good, but probably OK)\n");
+			LogMsg(0, iRetLocal, LOG_WARNING,
+				"%s: shutdown timed out on main queue DA worker pool "
+				"(this is not good, but possibly OK)", 
+				objGetName((obj_t*) pThis));
 		} else {
 			DBGOPRINT((obj_t*) pThis, "main queue DA worker pool shut down.\n");
 		}
@@ -1291,7 +1306,8 @@ cancelWorkers(qqueue_t *pThis)
 	 * long-running and cancelling is the only way to get rid of it.
 	 */
 	DBGOPRINT((obj_t*) pThis, "checking to see if we need to cancel any worker threads of the primary queue\n");
-	iRetLocal = wtpCancelAll(pThis->pWtpReg); /* returns immediately if all threads already have terminated */
+	iRetLocal = wtpCancelAll(pThis->pWtpReg, objGetName((obj_t*) pThis));
+		/* ^-- returns immediately if all threads already have terminated */
 	if(iRetLocal != RS_RET_OK) {
 		DBGOPRINT((obj_t*) pThis, "unexpected iRet state %d trying to cancel primary queue worker "
 			  "threads, continuing, but results are unpredictable\n", iRetLocal);
@@ -1299,8 +1315,10 @@ cancelWorkers(qqueue_t *pThis)
 
 	/* ... and now the DA queue, if it exists (should always be after the primary one) */
 	if(pThis->pqDA != NULL) {
-		DBGOPRINT((obj_t*) pThis, "checking to see if we need to cancel any worker threads of the DA queue\n");
-		iRetLocal = wtpCancelAll(pThis->pqDA->pWtpReg); /* returns immediately if all threads already have terminated */
+		DBGOPRINT((obj_t*) pThis, "checking to see if we need to cancel any worker threads of "
+			"the DA queue\n");
+		iRetLocal = wtpCancelAll(pThis->pqDA->pWtpReg, objGetName((obj_t*) pThis));
+		/* returns immediately if all threads already have terminated */
 		if(iRetLocal != RS_RET_OK) {
 			DBGOPRINT((obj_t*) pThis, "unexpected iRet state %d trying to cancel DA queue worker "
 				  "threads, continuing, but results are unpredictable\n", iRetLocal);
@@ -1312,7 +1330,8 @@ cancelWorkers(qqueue_t *pThis)
 		 * done when *no* worker is running. So time for a shutdown... -- rgerhards, 2009-05-28
 		 */
 		DBGOPRINT((obj_t*) pThis, "checking to see if main queue DA worker pool needs to be cancelled\n");
-		wtpCancelAll(pThis->pWtpDA); /* returns immediately if all threads already have terminated */
+		wtpCancelAll(pThis->pWtpDA, objGetName((obj_t*) pThis));
+			/* returns immediately if all threads already have terminated */
 	}
 
 	RETiRet;
@@ -1549,8 +1568,8 @@ DoDeleteBatchFromQStore(qqueue_t *pThis, int nElem)
 		 */
 		 if(bytesDel != 0) {
 			pThis->tVars.disk.sizeOnDisk -= bytesDel;
-			DBGOPRINT((obj_t*) pThis, "doDeleteBatch: a %lld octet file has been deleted, now %lld octets disk "
-					"space used\n", (long long) bytesDel, pThis->tVars.disk.sizeOnDisk);
+			DBGOPRINT((obj_t*) pThis, "doDeleteBatch: a %lld octet file has been deleted, now %lld "
+				"octets disk space used\n", (long long) bytesDel, pThis->tVars.disk.sizeOnDisk);
 			/* awake possibly waiting enq process */
 			pthread_cond_signal(&pThis->notFull); /* we hold the mutex while we are in here! */
 		}
@@ -2642,8 +2661,8 @@ DoSaveOnShutdown(qqueue_t *pThis)
 	DBGOPRINT((obj_t*) pThis, "end queue persistence run, iRet %d, queue size log %d, phys %d\n",
 		  iRetLocal, getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
 	if(iRetLocal != RS_RET_OK) {
-		DBGOPRINT((obj_t*) pThis, "unexpected iRet state %d after trying to shut down primary queue in disk save mode, "
-			  "continuing, but results are unpredictable\n", iRetLocal);
+		DBGOPRINT((obj_t*) pThis, "unexpected iRet state %d after trying to shut down primary "
+			"queue in disk save mode, continuing, but results are unpredictable\n", iRetLocal);
 	}
 
 	RETiRet;
@@ -2852,8 +2871,8 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg)
 			 * In any case, this was the old code (if we do the TODO):
 			 * pthread_cond_wait(&pThis->belowFullDlyWtrMrk, pThis->mut);
 			 */
-			DBGOPRINT((obj_t*) pThis, "doEnqSingleObject: FullDelay mark reached for full delayable message "
-				   "- blocking, queue size is %d.\n", pThis->iQueueSize);
+			DBGOPRINT((obj_t*) pThis, "doEnqSingleObject: FullDelay mark reached for full "
+				"delayable message - blocking, queue size is %d.\n", pThis->iQueueSize);
 			timeoutComp(&t, 1000);
 			err = pthread_cond_timedwait(&pThis->belowLightDlyWtrMrk, pThis->mut, &t);
 			if(err != 0 && err != ETIMEDOUT) {
@@ -2900,9 +2919,11 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg)
 			msgDestruct(&pMsg);
 			ABORT_FINALIZE(RS_RET_QUEUE_FULL);
 		} else {
-			DBGOPRINT((obj_t*) pThis, "doEnqSingleObject: queue FULL - waiting %dms to drain.\n", pThis->toEnq);
+			DBGOPRINT((obj_t*) pThis, "doEnqSingleObject: queue FULL - waiting %dms to drain.\n",
+				pThis->toEnq);
 			if(glbl.GetGlobalInputTermState()) {
-				DBGOPRINT((obj_t*) pThis, "doEnqSingleObject: queue FULL, discard due to FORCE_TERM.\n");
+				DBGOPRINT((obj_t*) pThis, "doEnqSingleObject: queue FULL, discard due to "
+					"FORCE_TERM.\n");
 				ABORT_FINALIZE(RS_RET_FORCE_TERM);
 			}
 			timeoutComp(&t, pThis->toEnq);

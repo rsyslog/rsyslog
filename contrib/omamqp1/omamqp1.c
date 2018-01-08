@@ -61,6 +61,9 @@
 #include <proton/version.h>
 
 
+/* work-around issues in this contributed module */
+#pragma GCC diagnostic ignored "-Wswitch-enum"
+
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("omamqp1")
@@ -363,20 +366,7 @@ CODE_STD_FINALIZERnewActInst
 ENDnewActInst
 
 
-BEGINparseSelectorAct
-CODESTARTparseSelectorAct
-{
-    CODE_STD_STRING_REQUESTparseSelectorAct(1);
-    if (strncmp((char*) p, ":omamqp1:", sizeof(":omamqp1:") - 1)) {
-        errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
-                        "omamqp1 only supports the V6 configuration format."
-                        " Example:\n"
-                        " action(type=\"omamqp1.py\" host=<address[:port]> target=<TARGET> ...)");
-        ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-    }
-}
-CODE_STD_FINALIZERparseSelectorAct
-ENDparseSelectorAct
+NO_LEGACY_CONF_parseSelectorAct
 
 
 BEGINmodExit

@@ -84,7 +84,7 @@ rsRetVal wtpProcessThrdChanges(wtp_t *pThis);
 rsRetVal wtpChkStopWrkr(wtp_t *pThis, int bLockUsrMutex);
 rsRetVal wtpSetState(wtp_t *pThis, wtpState_t iNewState);
 rsRetVal wtpWakeupAllWrkr(wtp_t *pThis);
-rsRetVal wtpCancelAll(wtp_t *pThis);
+rsRetVal wtpCancelAll(wtp_t *pThis, const uchar *const cancelobj);
 rsRetVal wtpSetDbgHdr(wtp_t *pThis, uchar *pszMsg, size_t lenMsg);
 rsRetVal wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout);
 PROTOTYPEObjClassInit(wtp);

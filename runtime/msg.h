@@ -59,7 +59,8 @@
  */
 struct msg {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-	flowControl_t flowCtlType; /**< type of flow control we can apply, for enqueueing, needs not to be persisted because
+	flowControl_t flowCtlType;
+	/**< type of flow control we can apply, for enqueueing, needs not to be persisted because
 				        once data has entered the queue, this property is no longer needed. */
 	pthread_mutex_t mut;
 	int	iRefCount;	/* reference counter (0 = unused) */
@@ -81,11 +82,11 @@ struct msg {
 	char *pszRcvdAt3164;	/* time as RFC3164 formatted string (always 15 charcters) */
 	char *pszRcvdAt3339;	/* time as RFC3164 formatted string (32 charcters at most) */
 	char *pszRcvdAt_MySQL;	/* rcvdAt as MySQL formatted string (always 14 charcters) */
-        char *pszRcvdAt_PgSQL;  /* rcvdAt as PgSQL formatted string (always 21 characters) */
+	char *pszRcvdAt_PgSQL;  /* rcvdAt as PgSQL formatted string (always 21 characters) */
 	char *pszTIMESTAMP3164;	/* TIMESTAMP as RFC3164 formatted string (always 15 charcters) */
 	char *pszTIMESTAMP3339;	/* TIMESTAMP as RFC3339 formatted string (32 charcters at most) */
 	char *pszTIMESTAMP_MySQL;/* TIMESTAMP as MySQL formatted string (always 14 charcters) */
-        char *pszTIMESTAMP_PgSQL;/* TIMESTAMP as PgSQL formatted string (always 21 characters) */
+	char *pszTIMESTAMP_PgSQL;/* TIMESTAMP as PgSQL formatted string (always 21 characters) */
 	uchar *pszStrucData;    /* STRUCTURED-DATA */
 	uint16_t lenStrucData;	/* (cached) length of STRUCTURED-DATA */
 	cstr_t *pCSAPPNAME;	/* APP-NAME */
@@ -111,7 +112,8 @@ struct msg {
 	struct json_object *json;
 	struct json_object *localvars;
 	/* some fixed-size buffers to save malloc()/free() for frequently used fields (from the default templates) */
-	uchar szRawMsg[CONF_RAWMSG_BUFSIZE];	/* most messages are small, and these are stored here (without malloc/free!) */
+	uchar szRawMsg[CONF_RAWMSG_BUFSIZE];
+	/* most messages are small, and these are stored here (without malloc/free!) */
 	uchar szHOSTNAME[CONF_HOSTNAME_BUFSIZE];
 	union {
 		uchar	*ptr;	/* pointer to progname value */
@@ -123,8 +125,10 @@ struct msg {
 	} TAG;
 	char pszTimestamp3164[CONST_LEN_TIMESTAMP_3164 + 1];
 	char pszTimestamp3339[CONST_LEN_TIMESTAMP_3339 + 1];
-	char pszTIMESTAMP_SecFrac[7]; /* Note: a pointer is 64 bits/8 char, so this is actually fewer than a pointer! */
-	char pszRcvdAt_SecFrac[7];	     /* same as above. Both are fractional seconds for their respective timestamp */
+	char pszTIMESTAMP_SecFrac[7];
+	/* Note: a pointer is 64 bits/8 char, so this is actually fewer than a pointer! */
+	char pszRcvdAt_SecFrac[7];
+	/* same as above. Both are fractional seconds for their respective timestamp */
 	char pszTIMESTAMP_Unix[12]; /* almost as small as a pointer! */
 	char pszRcvdAt_Unix[12];
 	char dfltTZ[8];	    /* 7 chars max, less overhead than ptr! */

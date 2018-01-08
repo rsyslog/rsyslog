@@ -1,18 +1,8 @@
 #!/bin/bash
 # added 2016-11-02 by rgerhards
 # This is part of the rsyslog testbench, licensed under ASL 2.0
-
-uname
-if [ `uname` = "FreeBSD" ] ; then
-   echo "This test currently does not work on FreeBSD."
-   exit 77
-fi
-
-if [ `uname` = "SunOS" ] ; then
-   echo "Solaris does not support inotify."
-   exit 77
-fi
-
+echo [imfile-persist-state-1.sh]
+. $srcdir/diag.sh check-inotify
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '

@@ -37,13 +37,19 @@
 #include <signal.h>
 #include <stdint.h>
 #include <time.h>
+#include <json.h>
+/* we need this to avoid issues with older versions of libbson */
+#ifndef AIX
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"
 #pragma GCC diagnostic ignored "-Wunknown-attributes"
+#pragma GCC diagnostic ignored "-Wexpansion-to-defined"
+#endif
 #include <mongoc.h>
 #include <bson.h>
+#ifndef AIX
 #pragma GCC diagnostic pop
-#include <json.h>
+#endif
 
 #include "rsyslog.h"
 #include "conf.h"
@@ -673,17 +679,7 @@ CODE_STD_FINALIZERnewActInst
 ENDnewActInst
 
 
-BEGINparseSelectorAct
-CODESTARTparseSelectorAct
-CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	if(!strncmp((char*) p, ":ommongodb:", sizeof(":ommongodb:") - 1)) {
-		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
-			"ommongodb supports only v6 config format, use: "
-			"action(type=\"ommongodb\" server=...)");
-	}
-	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-CODE_STD_FINALIZERparseSelectorAct
-ENDparseSelectorAct
+NO_LEGACY_CONF_parseSelectorAct
 
 
 BEGINmodExit

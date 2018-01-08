@@ -34,7 +34,7 @@
 #else
 #  include <syslog.h>
 #endif
-#ifdef OS_SOLARIS
+#if defined(OS_SOLARIS) || defined(OS_BSD)
 #	include <errno.h>
 #else
 #	include <sys/errno.h>
@@ -161,6 +161,7 @@ int bFinished = 0;	/* used by termination signal handler, read-only except there
  			 * termination.
 			 */
 const char *PidFile = PATH_PIDFILE;
+#define NO_PIDFILE "NONE"
 int iConfigVerify = 0;	/* is this just a config verify run? */
 rsconf_t *ourConf = NULL;	/* our config object */
 int MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
@@ -246,6 +247,10 @@ writePidFile(void)
 	int  pidfile_namelen = 0;
 #endif
 
+	if(!strcmp(PidFile, NO_PIDFILE)) {
+		FINALIZE;
+	}
+
 #ifndef _AIX
 	if(asprintf((char **)&tmpPidFile, "%s.tmp", PidFile) == -1) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -298,6 +303,12 @@ checkStartupOK(void)
 	DEFiRet;
 
 	DBGPRINTF("rsyslogd: checking if startup is ok, pidfile '%s'.\n", PidFile);
+
+	if(!strcmp(PidFile, NO_PIDFILE)) {
+		dbgprintf("no pid file shall be written, skipping check\n");
+		FINALIZE;
+	}
+
 	if((fp = fopen((char*) PidFile, "r")) == NULL)
 		FINALIZE; /* all well, no pid file yet */
 
@@ -540,6 +551,11 @@ printVersion(void)
 #else
 	printf("\tuuid support:\t\t\t\tNo\n");
 #endif
+#ifdef HAVE_LIBSYSTEMD
+	printf("\tsystemd support:\t\t\tYes\n");
+#else
+	printf("\tsystemd support:\t\t\tNo\n");
+#endif
 	/* we keep the following message to so that users don't need
 	 * to wonder.
 	 */
@@ -747,7 +763,8 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
 						 (pszQueueName == NULL) ? "NONAME" : (char*)pszQueueName);
 					qfname = ustrdup(qfrenamebuf);
 					errmsg.LogError(0, NO_ERRCODE, "Error: queue file name '%s' already in use "
-						" - using '%s' instead", ourConf->globals.mainQ.pszMainMsgQFName, qfname);
+						" - using '%s' instead", ourConf->globals.mainQ.pszMainMsgQFName,
+						qfname);
 					break;
 				}
 			}
@@ -1519,7 +1536,8 @@ finalize_it:
 		exit(0);
 	} else if(iRet != RS_RET_OK) {
 		fprintf(stderr, "rsyslogd: run failed with error %d (see rsyslog.h "
-				"or try http://www.rsyslog.com/e/%d to learn what that number means)\n", iRet, iRet*-1);
+				"or try http://www.rsyslog.com/e/%d to learn what that number means)\n",
+				iRet, iRet*-1);
 		exit(1);
 	}
 
@@ -1772,7 +1790,8 @@ mainloop(void)
 			pid_t child;
 			do {
 				child = waitpid(-1, NULL, WNOHANG);
-				DBGPRINTF("rsyslogd: mainloop waitpid (with-no-hang) returned %u\n", (unsigned) child);
+				DBGPRINTF("rsyslogd: mainloop waitpid (with-no-hang) returned %u\n",
+					(unsigned) child);
 				if (child != -1 && child != 0) {
 					LogMsg(0, RS_RET_OK, LOG_INFO, "Child %d has terminated, reaped "
 						"by main-loop.", (unsigned) child);
@@ -1875,7 +1894,8 @@ deinitAll(void)
 	 * modules. As such, they are not yet cleared.  */
 	unregCfSysLineHdlrs();
 
-	/*dbgPrintAllDebugInfo(); / * this is the last spot where this can be done - below output modules are unloaded! */
+	/*dbgPrintAllDebugInfo();
+	/ * this is the last spot where this can be done - below output modules are unloaded! */
 
 	parserClassExit();
 	rsconfClassExit();
@@ -1894,7 +1914,9 @@ deinitAll(void)
 	dbgClassExit();
 
 	/* NO CODE HERE - dbgClassExit() must be the last thing before exit()! */
-	unlink(PidFile);
+	if(strcmp(PidFile, NO_PIDFILE)) {
+		unlink(PidFile);
+	}
 }
 
 /* This is the main entry point into rsyslogd. This must be a function in its own
@@ -1935,7 +1957,9 @@ main(int argc, char **argv)
 	initAll(argc, argv);
 #ifdef HAVE_LIBSYSTEMD
 	sd_notify(0, "READY=1");
+	dbgprintf("done signaling to systemd that we are ready!\n");
 #endif
+	DBGPRINTF("max message size: %d\n", glblGetMaxLine());
 	DBGPRINTF("----RSYSLOGD INITIALIZED\n");
 
 	mainloop();

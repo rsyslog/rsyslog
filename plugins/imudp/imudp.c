@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2017 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -331,6 +331,7 @@ addListner(instanceConf_t *inst)
 			CHKiRet(prop.ConstructFinalize(newlcnfinfo->pInputName));
 			ratelimitSetLinuxLike(newlcnfinfo->ratelimiter, inst->ratelimitInterval,
 					      inst->ratelimitBurst);
+			ratelimitSetThreadSafe(newlcnfinfo->ratelimiter);
 			/* support statistics gathering */
 			CHKiRet(statsobj.Construct(&(newlcnfinfo->stats)));
 			CHKiRet(statsobj.SetName(newlcnfinfo->stats, dispname));
@@ -437,7 +438,8 @@ processPacket(struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *p
 		*pbIsPermitted = 1; /* no check -> everything permitted */
 	}
 
-	DBGPRINTF("recv(%d,%d),acl:%d,msg:%.*s\n", lstn->sock, (int) lenRcvBuf, *pbIsPermitted, (int)lenRcvBuf, rcvBuf);
+	DBGPRINTF("recv(%d,%d),acl:%d,msg:%.*s\n", lstn->sock, (int) lenRcvBuf, *pbIsPermitted,
+			(int)lenRcvBuf, rcvBuf);
 
 	if(*pbIsPermitted != 0)  {
 		/* we now create our own message object and submit it to the queue */
@@ -526,7 +528,8 @@ int *pbIsPermitted)
 				DBGPRINTF("INET socket error: %d = %s.\n", errno, errStr);
 				errmsg.LogError(errno, NO_ERRCODE, "imudp: error receiving on socket: %s", errStr);
 			}
-			ABORT_FINALIZE(RS_RET_ERR); // this most often is NOT an error, state is not checked by caller!
+			ABORT_FINALIZE(RS_RET_ERR);
+			// this most often is NOT an error, state is not checked by caller!
 		}
 
 		if((runModConf->iTimeRequery == 0) || (iNbrTimeUsed++ % runModConf->iTimeRequery) == 0) {
@@ -535,9 +538,10 @@ int *pbIsPermitted)
 
 		pWrkr->ctrMsgsRcvd += nelem;
 		for(i = 0 ; i < nelem ; ++i) {
-			processPacket(lstn, frominetPrev, pbIsPermitted, pWrkr->recvmsg_mmh[i].msg_hdr.msg_iov->iov_base,
-				      pWrkr->recvmsg_mmh[i].msg_len, &stTime, ttGenTime, &(pWrkr->frominet[i]),
-				      pWrkr->recvmsg_mmh[i].msg_hdr.msg_namelen, &multiSub);
+			processPacket(lstn, frominetPrev, pbIsPermitted,
+				pWrkr->recvmsg_mmh[i].msg_hdr.msg_iov->iov_base,
+				pWrkr->recvmsg_mmh[i].msg_len, &stTime, ttGenTime, &(pWrkr->frominet[i]),
+				pWrkr->recvmsg_mmh[i].msg_hdr.msg_namelen, &multiSub);
 		}
 	}
 
@@ -599,7 +603,8 @@ int *pbIsPermitted)
 				DBGPRINTF("INET socket error: %d = %s.\n", errno, errStr);
 				errmsg.LogError(errno, NO_ERRCODE, "imudp: error receiving on socket: %s", errStr);
 			}
-			ABORT_FINALIZE(RS_RET_ERR); // this most often is NOT an error, state is not checked by caller!
+			ABORT_FINALIZE(RS_RET_ERR);
+			// this most often is NOT an error, state is not checked by caller!
 		}
 
 		++pWrkr->ctrMsgsRcvd;

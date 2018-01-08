@@ -15,7 +15,7 @@
  *
  * \author  Rainer Gerhards <rgerhards@adiscon.com>
  *
- * Copyright (C) 2003-2012 Adiscon GmbH.
+ * Copyright (C) 2003-2018 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -52,7 +52,6 @@
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
-MODULE_CNFNAME("im3195")
 
 /* Module static data */
 DEF_IMOD_STATIC_DATA
@@ -86,7 +85,8 @@ static prop_t *pInputName = NULL;
  * best solution, but real-world experience might tell us a
  * different truth ;)
  */
-void OnReceive(srAPIObj __attribute__((unused)) *pMyAPI, srSLMGObj* pSLMG)
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+static void OnReceive(srAPIObj __attribute__((unused)) *pMyAPI, srSLMGObj* pSLMG)
 {
 	uchar *pszRawMsg;
 	uchar *fromHost = (uchar*) "[unset]"; /* TODO: get hostname */
@@ -136,8 +136,9 @@ CODESTARTrunInput
 		/* now move the listener to running state. Control will only
 		 * return after SIGUSR1.
 		 */
-		if((iRet = srAPIRunListener(pAPI)) != SR_RET_OK) {
-			errmsg.LogError(0, NO_ERRCODE, "error %d running liblogging listener - im3195 is defunct", iRet);
+		if((iRet = (rsRetVal) srAPIRunListener(pAPI)) != RS_RET_OK) {
+			errmsg.LogError(0, NO_ERRCODE, "error %d running liblogging listener - im3195 "
+				"is defunct", iRet);
 			FINALIZE; /* this causes im3195 to become defunct; TODO: recovery handling */
 		}
 	}
@@ -152,12 +153,12 @@ CODESTARTwillRun
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
-	if((iRet = srAPISetOption(pAPI, srOPTION_BEEP_LISTENPORT, listenPort)) != SR_RET_OK) {
+	if((iRet = (rsRetVal) srAPISetOption(pAPI, srOPTION_BEEP_LISTENPORT, listenPort)) != RS_RET_OK) {
 		errmsg.LogError(0, NO_ERRCODE, "error %d setting liblogging listen port - im3195 is defunct", iRet);
 		FINALIZE;
 	}
 
-	if((iRet = srAPISetupListener(pAPI, OnReceive)) != SR_RET_OK) {
+	if((iRet = (rsRetVal) srAPISetupListener(pAPI, OnReceive)) != RS_RET_OK) {
 		errmsg.LogError(0, NO_ERRCODE, "error %d setting up liblogging listener - im3195 is defunct", iRet);
 		FINALIZE;
 	}
@@ -214,5 +215,3 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(prop.ConstructFinalize(pInputName));
 
 ENDmodInit
-/* vim:set ai:
- */

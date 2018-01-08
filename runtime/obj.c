@@ -303,7 +303,8 @@ SerializeProp(strm_t *pStrm, uchar *pszPropName, propType_t propType, void *pUsr
 	ISOBJ_TYPE_assert(pStrm, strm);
 	assert(pszPropName != NULL);
 
-	/*dbgprintf("objSerializeProp: strm %p, propName '%s', type %d, pUsr %p\n", pStrm, pszPropName, propType, pUsr);*/
+	/*dbgprintf("objSerializeProp: strm %p, propName '%s', type %d, pUsr %p\n",
+		pStrm, pszPropName, propType, pUsr);*/
 	/* if we have no user pointer, there is no need to write this property.
 	 * TODO: think if that's the righ point of view
 	 * rgerhards, 2008-01-06
@@ -1072,8 +1073,8 @@ finalize_it:
  * is returned.
  * rgerhards, 2008-01-30
  */
-static uchar *
-GetName(obj_t *pThis)
+uchar * ATTR_NONNULL()
+objGetName(obj_t *const pThis)
 {
 	uchar *ret;
 	uchar szName[128];
@@ -1348,7 +1349,7 @@ CODESTARTobjQueryInterface(obj)
 	pIf->Deserialize = Deserialize;
 	pIf->DeserializePropBag = DeserializePropBag;
 	pIf->SetName = SetName;
-	pIf->GetName = GetName;
+	pIf->GetName = objGetName;
 finalize_it:
 ENDobjQueryInterface(obj)
 

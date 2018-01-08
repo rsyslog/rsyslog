@@ -64,7 +64,8 @@ typedef enum {	/* IDs of base methods supported by all objects - used for jump t
  */
 struct interface_s {
 	int ifVersion;	/* must be set to version requested */ 
-	int ifIsLoaded; /* is the interface loaded? (0-no, 1-yes, 2-load failed; if not 1, functions can NOT be called! */
+	int ifIsLoaded;
+	/* is the interface loaded? (0-no, 1-yes, 2-load failed; if not 1, functions can NOT be called! */
 };
 
 

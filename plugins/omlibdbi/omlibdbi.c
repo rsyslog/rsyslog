@@ -563,7 +563,8 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	CHKiRet(createInstance(&pData));
 	/* no create the instance based on what we currently have */
 	if(cs.drvrName == NULL) {
-		errmsg.LogError(0, RS_RET_NO_DRIVERNAME, "omlibdbi: no db driver name given - action can not be created");
+		errmsg.LogError(0, RS_RET_NO_DRIVERNAME, "omlibdbi: no db driver name given - action can not "
+				"be created");
 		ABORT_FINALIZE(RS_RET_NO_DRIVERNAME);
 	}
 
@@ -581,7 +582,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		CHKmalloc(pData->pwd = (uchar*) strdup((char*)cs.pwd));
 	if(cs.dbiDrvrDir != NULL)
 		CHKmalloc(loadModConf->dbiDrvrDir = (uchar*) strdup((char*)cs.dbiDrvrDir));
-	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, getDfltTpl()));
+	iRet = cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, getDfltTpl());
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 

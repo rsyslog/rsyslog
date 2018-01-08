@@ -180,45 +180,46 @@ struct cnfexpr {
 	unsigned nodetype;
 	struct cnfexpr *l;
 	struct cnfexpr *r;
-};
+} __attribute__((aligned (8)));
 
 struct cnfitr {
     char* var;
     struct cnfexpr* collection;
-};
+} __attribute__((aligned (8)));
 
 struct cnfnumval {
 	unsigned nodetype;
 	long long val;
-};
+} __attribute__((aligned (8)));
 
 struct cnfstringval {
 	unsigned nodetype;
 	es_str_t *estr;
-};
+} __attribute__((aligned (8)));
 
 struct cnfvar {
 	unsigned nodetype;
 	char *name;
 	msgPropDescr_t prop;
-};
+} __attribute__((aligned (8)));
 
 struct cnfarray {
 	unsigned nodetype;
 	int nmemb;
 	es_str_t **arr;
-};
+} __attribute__((aligned (8)));
 
 struct cnffparamlst {
 	unsigned nodetype; /* P */
 	struct cnffparamlst *next;
 	struct cnfexpr *expr;
-};
+} __attribute__((aligned (8)));
 
 enum cnffuncid {
 	CNFFUNC_INVALID = 0, /**< defunct entry, do not use (should normally not be present) */
 	CNFFUNC_NAME = 1,   /**< use name to call function (for future use) */
 	CNFFUNC_STRLEN,
+	CNFFUNC_SUBSTRING,
 	CNFFUNC_GETENV,
 	CNFFUNC_TOLOWER,
 	CNFFUNC_CSTR,
@@ -235,10 +236,16 @@ enum cnffuncid {
 	CNFFUNC_DYN_INC,
 	CNFFUNC_IPV42NUM,
 	CNFFUNC_NUM2IPV4,
+	CNFFUNC_INT2HEX,
 	CNFFUNC_LTRIM,
 	CNFFUNC_RTRIM,
 	CNFFUNC_FORMAT_TIME,
-	CNFFUNC_PARSE_TIME
+	CNFFUNC_PARSE_TIME,
+	CNFFUNC_PARSE_JSON,
+	CNFFUNC_PREVIOUS_ACTION_SUSPENDED,
+	CNFFUNC_SCRIPT_ERROR,
+	CNFFUNC_HTTP_REQUEST,
+	CNFFUNC_IS_TIME
 };
 
 struct cnffunc {
@@ -249,7 +256,7 @@ struct cnffunc {
 	void *funcdata;	/* global data for function-specific use (e.g. compiled regex) */
 	uint8_t destructable_funcdata;
 	struct cnfexpr *expr[];
-};
+} __attribute__((aligned (8)));
 
 /* future extensions
 struct x {
@@ -295,6 +302,9 @@ struct funcData_prifilt {
 	uchar pmask[LOG_NFACILITIES+1];	/* priority mask */
 };
 
+/* script errno-like interface error codes: */
+#define RS_SCRIPT_EOK		0
+#define RS_SCRIPT_EINVAL	1
 
 int cnfParseBuffer(char *buf, unsigned lenBuf);
 void readConfFile(FILE *fp, es_str_t **str);
@@ -313,9 +323,9 @@ void cnfobjDestruct(struct cnfobj *o);
 void cnfobjPrint(struct cnfobj *o);
 struct cnfexpr* cnfexprNew(unsigned nodetype, struct cnfexpr *l, struct cnfexpr *r);
 void cnfexprPrint(struct cnfexpr *expr, int indent);
-void cnfexprEval(const struct cnfexpr *const expr, struct svar *ret, void *pusr);
-int cnfexprEvalBool(struct cnfexpr *expr, void *usrptr);
-struct json_object* cnfexprEvalCollection(struct cnfexpr * const expr, void * const usrptr);
+void cnfexprEval(const struct cnfexpr *const expr, struct svar *ret, void *pusr, wti_t *pWti);
+int cnfexprEvalBool(struct cnfexpr *expr, void *usrptr, wti_t *pWti);
+struct json_object* cnfexprEvalCollection(struct cnfexpr * const expr, void * const usrptr, wti_t *pWti);
 void cnfexprDestruct(struct cnfexpr *expr);
 struct cnfnumval* cnfnumvalNew(long long val);
 struct cnfstringval* cnfstringvalNew(es_str_t *estr);

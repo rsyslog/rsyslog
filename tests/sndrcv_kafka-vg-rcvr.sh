@@ -1,11 +1,10 @@
 #!/bin/bash
 # added 2017-05-03 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
-export TESTMESSAGES=10000
-export EXTRA_EXITCHECK=dumpkafkalogs
-# supression file needed because of this: 
-# https://github.com/edenhill/librdkafka/issues/1536
-export RS_TEST_VALGRIND_EXTRA_OPTS="--suppressions=librdkafka-bugs.supp"
+export TESTMESSAGES=100000
+# enable the EXTRA_EXITCHECK only if really needed - otherwise spams the test log
+# too much
+#export EXTRA_EXITCHECK=dumpkafkalogs
 . $srcdir/diag.sh download-kafka
 . $srcdir/diag.sh stop-zookeeper
 . $srcdir/diag.sh stop-kafka

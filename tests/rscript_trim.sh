@@ -1,12 +1,5 @@
 #!/bin/bash
 # add 2017-08-14 by Jan Gerhards, released under ASL 2.0
-
-uname
-if [ `uname` = "FreeBSD" ] ; then
-   echo "This test currently does not work on FreeBSD."
-   exit 77
-fi
-
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
@@ -23,6 +16,8 @@ set $!str!l7 = ltrim("test ");
 set $!str!l8 = ltrim(" ");
 set $!str!l9 = ltrim("te st");
 set $!str!l10 = ltrim(" te st");
+set $!str!l11 = ltrim(" a");
+set $!str!l12 = ltrim("a ");
 
 set $!str!r1 = rtrim("");
 set $!str!r2 = rtrim("test");
@@ -34,6 +29,8 @@ set $!str!r7 = rtrim("test ");
 set $!str!r8 = rtrim(" ");
 set $!str!r9 = rtrim("te st");
 set $!str!r10 = rtrim("te st ");
+set $!str!r11 = rtrim(" a");
+set $!str!r12 = rtrim("a ");
 
 
 set $!str!b1 = ltrim(" ");
@@ -81,7 +78,7 @@ local4.* action(type="omfile" file="rsyslog.out.log" template="outfmt")
 . $srcdir/diag.sh tcpflood -m1 -y
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
-echo '{ "l1": "", "l2": "test", "l3": "test", "l4": "test   ", "l5": "test   ", "l6": "test", "l7": "test ", "l8": "", "l9": "te st", "l10": "te st", "r1": "", "r2": "test", "r3": "   test", "r4": "test", "r5": "   test", "r6": " test", "r7": "test", "r8": "", "r9": "te st", "r10": "te st", "b1": "", "b2": "test", "b3": "test", "b4": "te st", "b5": "", "b6": "test", "b7": "test", "b8": "te st", "b9": "test", "b10": "te st", "b11": "test", "b12": "test", "b13": "test", "b14": "te st", "b15": "test", "b16": "te st", "b17": "test", "b18": "test", "b19": "test", "b20": "te st" }' | cmp rsyslog.out.log
+echo '{ "l1": "", "l2": "test", "l3": "test", "l4": "test   ", "l5": "test   ", "l6": "test", "l7": "test ", "l8": "", "l9": "te st", "l10": "te st", "l11": "a", "l12": "a ", "r1": "", "r2": "test", "r3": "   test", "r4": "test", "r5": "   test", "r6": " test", "r7": "test", "r8": "", "r9": "te st", "r10": "te st", "r11": " a", "r12": "a", "b1": "", "b2": "test", "b3": "test", "b4": "te st", "b5": "", "b6": "test", "b7": "test", "b8": "te st", "b9": "test", "b10": "te st", "b11": "test", "b12": "test", "b13": "test", "b14": "te st", "b15": "test", "b16": "te st", "b17": "test", "b18": "test", "b19": "test", "b20": "te st" }' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid function output detected, rsyslog.out.log is:"
   cat rsyslog.out.log
