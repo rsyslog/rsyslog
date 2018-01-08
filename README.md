@@ -14,6 +14,44 @@ to rsyslog.com.
 If you are new to rst and Sphinx, see the Sphinx documentation to get started:
 http://www.sphinx-doc.org/en/stable/contents.html
 
+## Contributing to the docs
+
+1. Login with a GitHub account
+1. Fork the official https://github.com/rsyslog/rsyslog-doc repo
+1. Create a new branch off of the latest `master` branch
+1. Make your changes
+1. Commit to the new branch in your fork
+1. Submit a Pull Request (PR) for review
+   (https://github.com/rsyslog/rsyslog-doc/pulls)
+1. Stop making any changes to your new branch now that you have submitted a
+   Pull Request for review. Instead, create a new branch from your `master`
+   branch while you wait for feedback from the doc team.
+1. A member of the team will review and offer feedback on your work. After
+   feedback has been given and you have made all necessary changes, your
+   PR will be accepted and merged into the official `master` branch.
+1. At this point, delete your branch that you submitted the PR from and start
+   a new one for the next round of work.
+
+For small changes, the work can be done entirely through the GitHub web
+interface. For larger changes, some familiarity with Git is useful, though
+some editors such as Atom or Visual Studio Code make interfacing with Git
+easier for newcomers.
+
+Before you begin your work, you are encouraged to review the existing PRs and
+open issues so that you can coordinate your work with other contributors.
+
+Please reach out if you have any questions as you work through making your
+changes.
+
+## Requesting feedback/help
+
+While working on changes to the docs, you are encouraged to seek input from
+other members of the community. This can be done via the forum, the mailing list
+or here on GitHub by submitting a new issue.
+
+- Forum: http://kb.monitorware.com/rsyslog-f40.html
+- Mailing list: http://lists.adiscon.net/mailman/listinfo/rsyslog
+
 ## Building the documentation
 
 These directions assume default installs of Python for Windows and Linux.
