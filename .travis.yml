@@ -23,34 +23,34 @@ addons:
     sources:
     - sourceline: 'deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_14.04/ ./'
       key_url: 'http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_12.04/Release.key'
-#    packages:
-#    - build-essential
-#    - automake
-#    - pkg-config
-#    - libtool
-#    - autoconf
-#    - autotools-dev
-#    - gdb
-#    - valgrind
-#    - libdbi-dev
-#    - libsnmp-dev
-#    - libmysqlclient-dev
-#    - postgresql-client
-#    - libglib2.0-dev
-#    - libtokyocabinet-dev
-#    - zlib1g-dev
-#    - uuid-dev
-#    - libgcrypt11-dev
-#    - bison
-#    - flex
-#    - libcurl4-gnutls-dev
-#    - python-docutils 
-#    - openjdk-7-jdk
-#    - wget
-#    - libkrb5-dev
-#    - libsodium-dev
-#    - libczmq-dev
-#    - libnet1-dev
+    packages:
+    - build-essential
+    - automake
+    - pkg-config
+    - libtool
+    - autoconf
+    - autotools-dev
+    - gdb
+    - valgrind
+    - libdbi-dev
+    - libsnmp-dev
+    - libmysqlclient-dev
+    - postgresql-client
+    - libglib2.0-dev
+    - libtokyocabinet-dev
+    - zlib1g-dev
+    - uuid-dev
+    - libgcrypt11-dev
+    - bison
+    - flex
+    - libcurl4-gnutls-dev
+    - python-docutils 
+    - openjdk-7-jdk
+    - wget
+    - libkrb5-dev
+    - libsodium-dev
+    - libczmq-dev
+    - libnet1-dev
 
 matrix:
   exclude:
@@ -65,16 +65,17 @@ matrix:
        services: docker
        env: RUN="docker-ubuntu-devel.sh"
 
-#     - os: osx
-#       compiler: "clang"
-#       env: CFLAGS="-g "
-#       #env: CFLAGS="-g -std=c99 -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
-#       # note: -Werror makes ./configure.sh not properly detect functions
-#       # like strndup() on Ubuntu 12.04. So we enable it on trusty builds
-#       # only. The first build with gcc actually only has the purpose of
-#       # checking for warnings (the testbench currently has some issues
-#       # on travis Ubuntu 14.04, but not in the regular environments, we
-#       # need to find out some time why this is).
+     - os: osx
+       compiler: "clang"
+       env: RUN="run-osx.sh", CFLAGS="-g "
+       #env: CFLAGS="-g -std=c99 -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
+       # note: -Werror makes ./configure.sh not properly detect functions
+       # like strndup() on Ubuntu 12.04. So we enable it on trusty builds
+       # only. The first build with gcc actually only has the purpose of
+       # checking for warnings (the testbench currently has some issues
+       # on travis Ubuntu 14.04, but not in the regular environments, we
+       # need to find out some time why this is).
+
 #     - os: linux
 #       compiler: "gcc"
 #       env: KAFKA="YES", CFLAGS="-g -std=c99 -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
@@ -111,11 +112,11 @@ matrix:
 #       # we run this test without assert() enabled, so that we get "production timing"
 #       dist: trusty
 #       env: AD_PPA="v8-devel", CHECK="YES", CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics", CONFIGURE_FLAGS="--disable-debug"
-#     - os: linux
-#       compiler: "gcc"
-#       dist: trusty
-#       env: DEBUGLESS="YES", CFLAGS="-g -O2 -std=c99 -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -Wno-unused-function"
-#
+     - os: linux
+       compiler: "gcc"
+       dist: trusty
+       env: RUN="run.sh",DEBUGLESS="YES", CFLAGS="-g -O2"
+
 #     # next is experimental, we may merge it with some other compile-only test
 #     - os: linux
 #       compiler: "gcc"
@@ -129,18 +130,20 @@ matrix:
 allow_failures:
   - env: UBSAN_OPTIONS="print_stacktrace=1"
 
-#before_install:
-#  - if [ "$TRAVIS_OS_NAME" == "linux" ] && [ "${AD_PPA}x" == "x" ] ; then AD_PPA="v8-stable"; fi
-#  - if [ "$TRAVIS_OS_NAME" == "linux" ] ; then sudo add-apt-repository ppa:adiscon/$AD_PPA -y ; fi
-#  - if [ "$TRAVIS_OS_NAME" == "linux" ] ; then sudo add-apt-repository ppa:qpid/released -y ; fi
-#  - if [ "$TRAVIS_OS_NAME" == "linux" ] ; then sudo apt-get update -qq ; fi
-#  - if [ "$TRAVIS_OS_NAME" == "linux" ] ; then mysql -u root -e "CREATE USER 'rsyslog'@'localhost' IDENTIFIED BY 'testbench';" ; fi
-#  - if [ "$TRAVIS_OS_NAME" == "linux" ] ; then mysql -u root -e "GRANT ALL PRIVILEGES ON * . * TO 'rsyslog'@'localhost'; FLUSH PRIVILEGES;" ; fi
-#  - if [ "$TRAVIS_OS_NAME" == "linux" ] ; then mysql -u root -e "CREATE DATABASE Syslog; GRANT ALL ON Syslog.* to 'rsyslog'@'localhost' identified by 'testbench';" ; fi
-#  - if [ "$TRAVIS_OS_NAME" == "linux" ] ; then mysql -u root -e "USE Syslog; CREATE TABLE SystemEvents (ID int unsigned not null auto_increment primary key, CustomerID bigint,ReceivedAt datetime NULL,DeviceReportedTime datetime NULL,Facility smallint NULL,Priority smallint NULL,FromHost varchar(60) NULL,Message text,NTSeverity int NULL,Importance int NULL,EventSource varchar(60),EventUser varchar(60) NULL,EventCategory int NULL,EventID int NULL,EventBinaryData text NULL,MaxAvailable int NULL,CurrUsage int NULL,MinUsage int NULL,MaxUsage int NULL,InfoUnitID int NULL,SysLogTag varchar(60),EventLogType varchar(60),GenericFileName VarChar(60),SystemID int NULL); CREATE TABLE SystemEventsProperties (ID int unsigned not null auto_increment primary key,SystemEventID int NULL,ParamName varchar(255) NULL,ParamValue text NULL);" ; fi
-#
-#install:
-#
+before_install:
+  - if [ "$TRAVIS_OS_NAME" == "linux" ] && [ "${AD_PPA}x" == "x" ] ; then AD_PPA="v8-stable"; fi
+  - if [ "$TRAVIS_OS_NAME" == "linux" ] ; then sudo add-apt-repository ppa:adiscon/$AD_PPA -y ; fi
+  - if [ "$TRAVIS_OS_NAME" == "linux" ] ; then sudo add-apt-repository ppa:qpid/released -y ; fi
+  - if [ "$TRAVIS_OS_NAME" == "linux" ] ; then sudo apt-get update -qq ; fi
+  - if [ "$TRAVIS_OS_NAME" == "linux" ] ; then mysql -u root -e "CREATE USER 'rsyslog'@'localhost' IDENTIFIED BY 'testbench';" ; fi
+  - if [ "$TRAVIS_OS_NAME" == "linux" ] ; then mysql -u root -e "GRANT ALL PRIVILEGES ON * . * TO 'rsyslog'@'localhost'; FLUSH PRIVILEGES;" ; fi
+  - if [ "$TRAVIS_OS_NAME" == "linux" ] ; then mysql -u root -e "CREATE DATABASE Syslog; GRANT ALL ON Syslog.* to 'rsyslog'@'localhost' identified by 'testbench';" ; fi
+  - if [ "$TRAVIS_OS_NAME" == "linux" ] ; then mysql -u root -e "USE Syslog; CREATE TABLE SystemEvents (ID int unsigned not null auto_increment primary key, CustomerID bigint,ReceivedAt datetime NULL,DeviceReportedTime datetime NULL,Facility smallint NULL,Priority smallint NULL,FromHost varchar(60) NULL,Message text,NTSeverity int NULL,Importance int NULL,EventSource varchar(60),EventUser varchar(60) NULL,EventCategory int NULL,EventID int NULL,EventBinaryData text NULL,MaxAvailable int NULL,CurrUsage int NULL,MinUsage int NULL,MaxUsage int NULL,InfoUnitID int NULL,SysLogTag varchar(60),EventLogType varchar(60),GenericFileName VarChar(60),SystemID int NULL); CREATE TABLE SystemEventsProperties (ID int unsigned not null auto_increment primary key,SystemEventID int NULL,ParamName varchar(255) NULL,ParamValue text NULL);" ; fi
+
+install:
+
 script:
-  - if [ "$TRAVIS_OS_NAME" == "linux" ] ; then tests/travis/run.sh ; fi
-  - if [ "$TRAVIS_OS_NAME" == "osx" ]   ; then tests/travis/run-osx.sh ; fi
+#  - if [ "$TRAVIS_OS_NAME" == "linux" ] ; then tests/travis/run.sh ; fi
+#  - if [ "$TRAVIS_OS_NAME" == "osx" ]   ; then tests/travis/run-osx.sh ; fi
+   - echo running tests/travis/$RUN
+   - tests/travis/$RUN
