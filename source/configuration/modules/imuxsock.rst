@@ -60,13 +60,10 @@ Global Parameters
    ``SysSock.Unlink`` setting, this socket is created upon rsyslog startup
    and deleted upon shutdown, according to traditional syslogd behavior.
 
-   The behavior of this parameter is different for systemd systems. For those
-   systems, ``SysSock.Use`` still needs to be enabled, but the value of
-   ``SysSock.Name`` is ignored and the socket provided by systemd is used
-   instead. If this parameter is *not* enabled, then imuxsock will only be
-   of use if a custom input is configured.
-
-   See the :ref:`systemd-details-label` section for details.
+   While the behavior of this parameter is different for systemd systems,
+   this parameter should not be disabled unless the intention is to only
+   listen on custom inputs. See the :ref:`systemd-details-label` section
+   for details.
 
 -  **SysSock.Name** <name-of-socket> - specifies an alternate log socket
    to be used instead of the default system log socket, traditionally
