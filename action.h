@@ -4,7 +4,7 @@
  * File begun on 2007-08-06 by RGerhards (extracted from syslogd.c, which
  * was under BSD license at the time of rsyslog fork)
  *
- * Copyright 2007-2013 Adiscon GmbH.
+ * Copyright 2007-2018 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -73,6 +73,10 @@ struct action_s {
 	pthread_mutex_t mutAction; /* primary action mutex */
 	uchar *pszName;		/* action name */
 	DEF_ATOMIC_HELPER_MUT(mutCAS)
+	/* error file */
+	const char *pszErrFile;
+	int fdErrFile;
+	pthread_mutex_t mutErrFile;
 	/* for per-worker HUP processing */
 	pthread_mutex_t mutWrkrDataTable; /* protects table structures */
 	void **wrkrDataTable;
