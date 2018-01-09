@@ -1334,6 +1334,7 @@ actionWriteErrorFile(action_t *__restrict__ const pThis, const rsRetVal ret,
 				"action %s: error writing errorFile %s, write returned %lld",
 				pThis->pszName, pThis->pszErrFile, (long long) wrRet);
 		}
+		free(rendered);
 
 		fjson_object_put(etry);
 		etry = NULL;
