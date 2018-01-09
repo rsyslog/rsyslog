@@ -15,7 +15,7 @@ fi
 
 release="${version}.0"
 
-docfile=rsyslog-doc.tar.gz
+docfile=rsyslog-doc-$1.tar.gz
 
 # Hard-code html format for now since that is the only format
 # officially provided
@@ -32,6 +32,6 @@ sphinx-build -D version="$version" -D release="$release" -b $format source build
 [ ! -e ./$docfile ] || rm -rf ./$docfile
 
 tar -czf $docfile build source LICENSE README.md || {
-	echo "Failed to create rsyslog-doc.tar.gz tarball..."
+	echo "Failed to create $docfile tarball..."
 	exit 1
 }
