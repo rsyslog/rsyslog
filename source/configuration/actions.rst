@@ -77,6 +77,8 @@ Note: parameter names are case-insensitive.
 
 -  **action.errorfile** string
 
+   .. versionadded:: 8.32.0
+
    When an action is executed, some messages may permanently fail.
    Depending on configuration, this could for example be caused by an
    offline target or exceptionally non-numerical data inside a
@@ -600,4 +602,3 @@ template is used for the action. There can only be one template name for
 each given action. The default template is specific to each action. For
 a description of what a template is and what you can do with it, see the
 :doc:`template<templates>` documentation.
-
