@@ -1947,6 +1947,13 @@ main(int argc, char **argv)
 		}
 #endif
 
+	if((int) getpid() == 1) {
+		fprintf(stderr, "rsyslogd %s: running as pid 1, enabling "
+			"container-specific defaults, press ctl-c to "
+			"terminate rsyslog\n", VERSION);
+		glblPermitCtlC = 1;
+	}
+
 	/* disable case-sensitive comparisons in variable subsystem: */
 	fjson_global_do_case_sensitive_comparison(0);
 
