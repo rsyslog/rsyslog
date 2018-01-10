@@ -1,1 +1,1 @@
-docker build -t rsyslog/rsyslog_appliance:latest .
+docker build --no-cache -t rsyslog/rsyslog_appliance:latest .
