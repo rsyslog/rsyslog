@@ -4,6 +4,10 @@ This aims at providing a full-functional docker container with ample features.
 Right now, it is under development. We welcome checking out and commenting it,
 but **do not use it in production**.
 
+This provides two containers:
+- alpine based, this is what you want in production
+- ubuntu based, this is primarily for rsyslog developers
+
 more info:
 - https://github.com/rsyslog/rsyslog/issues/2368
 - https://github.com/rsyslog/rsyslog/projects/5
