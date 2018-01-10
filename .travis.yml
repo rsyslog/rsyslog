@@ -128,7 +128,7 @@ matrix:
 #       dist: trusty
 #       env: DO_COVERITY="YES",DO_CRON="YES", KAFKA="YES", GROK="YES"
 allow_failures:
-  - env: UBSAN_OPTIONS="print_stacktrace=1"
+  - env: RUN="docker-alpine.sh"
 
 before_install:
   - if [ "$TRAVIS_OS_NAME" == "linux" ] && [ "${AD_PPA}x" == "x" ] ; then AD_PPA="v8-stable"; fi
