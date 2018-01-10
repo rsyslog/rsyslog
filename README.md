@@ -43,6 +43,11 @@ open issues so that you can coordinate your work with other contributors.
 Please reach out if you have any questions as you work through making your
 changes.
 
+Tip: If you would like something less complex to get started with, please see
+issues tagged with
+[good first issue](https://github.com/rsyslog/rsyslog-doc/labels/good%20first%20issue)
+or [help wanted](https://github.com/rsyslog/rsyslog-doc/labels/help%20wanted)
+
 ## Requesting feedback/help
 
 While working on changes to the docs, you are encouraged to seek input from
