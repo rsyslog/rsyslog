@@ -9,9 +9,9 @@ compiler:
   - clang
 
 services:
-  - elasticsearch
-  - mysql
-  - postgresql
+#  - elasticsearch
+#  - mysql
+#  - postgresql
 
 
 env:
@@ -57,9 +57,17 @@ matrix:
      - compiler: "gcc"
      - compiler: "clang"
   include:
+     - os: linux
+       services: docker
+       env: RUN="docker-alpine.sh"
+
+     - os: linux
+       services: docker
+       env: RUN="docker-ubuntu-devel.sh"
+
      - os: osx
        compiler: "clang"
-       env: CFLAGS="-g "
+       env: RUN="run-osx.sh", CFLAGS="-g "
        #env: CFLAGS="-g -std=c99 -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
        # note: -Werror makes ./configure.sh not properly detect functions
        # like strndup() on Ubuntu 12.04. So we enable it on trusty builds
@@ -67,59 +75,60 @@ matrix:
        # checking for warnings (the testbench currently has some issues
        # on travis Ubuntu 14.04, but not in the regular environments, we
        # need to find out some time why this is).
-     - os: linux
-       compiler: "gcc"
-       env: KAFKA="YES", CFLAGS="-g -std=c99 -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
-       dist: trusty
-     - os: linux
-       compiler: "clang"
-       env: STAT_AN="YES", GROK="YES", KAFKA="YES", CFLAGS="-g -O2 -std=c99 -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -Wno-unused-function"
-       # note: we currently need -Wno-unused-function until we fix inline
-       # functions (C99 semantics are really ugly...)
-       dist: trusty
-     - os: linux
-       compiler: "clang"
-       env: MERGE="YES", CHECK="YES", GROK="YES", KAFKA="YES", CFLAGS="-g -O2 -std=c99 -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -Wno-unused-function"
-       # note: we currently need -Wno-unused-function until we fix inline
-       # functions (C99 semantics are really ugly...)
-       dist: trusty
-     - os: linux
-       compiler: "gcc"
-       env: BUILD_FROM_TARBALL="YES", GROK="YES", KAFKA="YES", CHECK="YES", CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all", EXTRA_CONFIGURE="--disable-testbench1"
-       dist: trusty
-     - os: linux
-       compiler: "gcc"
-       env: BUILD_FROM_TARBALL="YES", CHECK="YES", CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all", EXTRA_CONFIGURE="--disable-testbench2"
-       dist: trusty
-     - os: linux
-       compiler: "clang"
-       env: CHECK="YES", ESTEST="YES", CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics"
-     - os: linux
-       compiler: "clang"
-       dist: trusty
-       env: CFLAGS="-fsanitize=undefined,nullability,unsigned-integer-overflow -fno-sanitize-recover=undefined,nullability,unsigned-integer-overflow -g -O3 -fno-omit-frame-pointer -fno-color-diagnostics", UBSAN_OPTIONS="print_stacktrace=1", CHECK="YES", ESTEST="YES", KAFKA="YES"
-     - os: linux
-       compiler: "clang"
-       # we run this test without assert() enabled, so that we get "production timing"
-       dist: trusty
-       env: AD_PPA="v8-devel", CHECK="YES", CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics", CONFIGURE_FLAGS="--disable-debug"
-     - os: linux
-       compiler: "gcc"
-       dist: trusty
-       env: DEBUGLESS="YES", CFLAGS="-g -O2 -std=c99 -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -Wno-unused-function"
 
-     # next is experimental, we may merge it with some other compile-only test
+#     - os: linux
+#       compiler: "gcc"
+#       env: KAFKA="YES", CFLAGS="-g -std=c99 -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
+#       dist: trusty
+#     - os: linux
+#       compiler: "clang"
+#       env: STAT_AN="YES", GROK="YES", KAFKA="YES", CFLAGS="-g -O2 -std=c99 -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -Wno-unused-function"
+#       # note: we currently need -Wno-unused-function until we fix inline
+#       # functions (C99 semantics are really ugly...)
+#       dist: trusty
+#     - os: linux
+#       compiler: "clang"
+#       env: MERGE="YES", CHECK="YES", GROK="YES", KAFKA="YES", CFLAGS="-g -O2 -std=c99 -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -Wno-unused-function"
+#       # note: we currently need -Wno-unused-function until we fix inline
+#       # functions (C99 semantics are really ugly...)
+#       dist: trusty
+#     - os: linux
+#       compiler: "gcc"
+#       env: BUILD_FROM_TARBALL="YES", GROK="YES", KAFKA="YES", CHECK="YES", CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all", EXTRA_CONFIGURE="--disable-testbench1"
+#       dist: trusty
+#     - os: linux
+#       compiler: "gcc"
+#       env: BUILD_FROM_TARBALL="YES", CHECK="YES", CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all", EXTRA_CONFIGURE="--disable-testbench2"
+#       dist: trusty
+#     - os: linux
+#       compiler: "clang"
+#       env: CHECK="YES", ESTEST="YES", CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics"
+#     - os: linux
+#       compiler: "clang"
+#       dist: trusty
+#       env: CFLAGS="-fsanitize=undefined,nullability,unsigned-integer-overflow -fno-sanitize-recover=undefined,nullability,unsigned-integer-overflow -g -O3 -fno-omit-frame-pointer -fno-color-diagnostics", UBSAN_OPTIONS="print_stacktrace=1", CHECK="YES", ESTEST="YES", KAFKA="YES"
+#     - os: linux
+#       compiler: "clang"
+#       # we run this test without assert() enabled, so that we get "production timing"
+#       dist: trusty
+#       env: AD_PPA="v8-devel", CHECK="YES", CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics", CONFIGURE_FLAGS="--disable-debug"
      - os: linux
        compiler: "gcc"
-       env: GCC="NEWEST", KAFKA="YES", GROK="YES", CFLAGS="-g"
        dist: trusty
+       env: RUN="run.sh",DEBUGLESS="YES", CFLAGS="-g -O2"
 
-     - os: linux
-       compiler: "gcc"
-       dist: trusty
-       env: DO_COVERITY="YES",DO_CRON="YES", KAFKA="YES", GROK="YES"
+#     # next is experimental, we may merge it with some other compile-only test
+#     - os: linux
+#       compiler: "gcc"
+#       env: GCC="NEWEST", KAFKA="YES", GROK="YES", CFLAGS="-g"
+#       dist: trusty
+#
+#     - os: linux
+#       compiler: "gcc"
+#       dist: trusty
+#       env: DO_COVERITY="YES",DO_CRON="YES", KAFKA="YES", GROK="YES"
 allow_failures:
-  - env: UBSAN_OPTIONS="print_stacktrace=1"
+  - env: RUN="docker-alpine.sh"
 
 before_install:
   - if [ "$TRAVIS_OS_NAME" == "linux" ] && [ "${AD_PPA}x" == "x" ] ; then AD_PPA="v8-stable"; fi
@@ -134,5 +143,7 @@ before_install:
 install:
 
 script:
-  - if [ "$TRAVIS_OS_NAME" == "linux" ] ; then tests/travis/run.sh ; fi
-  - if [ "$TRAVIS_OS_NAME" == "osx" ]   ; then tests/travis/run-osx.sh ; fi
+#  - if [ "$TRAVIS_OS_NAME" == "linux" ] ; then tests/travis/run.sh ; fi
+#  - if [ "$TRAVIS_OS_NAME" == "osx" ]   ; then tests/travis/run-osx.sh ; fi
+   - echo running tests/travis/$RUN
+   - tests/travis/$RUN
