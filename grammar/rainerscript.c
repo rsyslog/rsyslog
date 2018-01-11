@@ -1935,6 +1935,7 @@ done:
 	return(estr);
 }
 
+#ifdef HAVE_LIBCURL
 /* curl callback for doFunc_http_request */
 static size_t
 curlResult(void *ptr, size_t size, size_t nmemb, void *userdata)
@@ -2010,6 +2011,7 @@ finalize_it:
 	}
 	RETiRet;
 }
+#endif
 
 static int ATTR_NONNULL(1,3,4)
 doFunc_is_time(const char *__restrict__ const str,
@@ -2513,11 +2515,16 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 		if(bMustFree2) free(str2);
 		break;
 	case CNFFUNC_HTTP_REQUEST:
+#ifdef HAVE_LIBCURL
 		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
 		str = (char*) var2CString(&r[0], &bMustFree);
 		doFunc_http_request(func, ret, str);
 		if(bMustFree) free(str);
 		varFreeMembers(&r[0]);
+#else
+		LogError(0, RS_RET_INTERNAL_ERROR,
+			"rainerscript: internal error: HTTP_Fetch not supported, not built with libcurl support");
+#endif
 		break;
 	default:
 		if(Debug) {
