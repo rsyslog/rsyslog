@@ -26,6 +26,7 @@ Manual
    
    installation/index
    configuration/index
+   containers/index
    troubleshooting/index
    faq/index
    concepts/index
