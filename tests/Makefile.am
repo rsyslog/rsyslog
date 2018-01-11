@@ -226,7 +226,6 @@ TESTS +=  \
 	rscript_contains.sh \
 	rscript_bare_var_root.sh \
 	rscript_bare_var_root-empty.sh \
-	rscript_http_request.sh \
 	rscript_ipv42num.sh \
 	rscript_field.sh \
 	rscript_stop.sh \
@@ -305,7 +304,11 @@ TESTS +=  \
 	lookup_table_rscript_reload.sh \
 	lookup_table_rscript_reload_without_stub.sh \
 	multiple_lookup_tables.sh
-endif
+if ENABLE_LIBCURL
+TESTS +=  \
+	rscript_http_request.sh
+endif # ENABLE_LIBCURL
+endif # ENABLE_TESTBENCH2
 
 if HAVE_VALGRIND
 TESTS +=  \
@@ -313,7 +316,6 @@ TESTS +=  \
 	mmexternal-InvldProg-vg.sh \
 	internal-errmsg-memleak-vg.sh \
 	rscript_set_memleak-vg.sh \
-	rscript_http_request-vg.sh \
 	no-parser-vg.sh \
 	discard-rptdmsg-vg.sh \
 	discard-allmark-vg.sh \
@@ -338,6 +340,10 @@ TESTS +=  \
 	multiple_lookup_tables-vg.sh \
 	fac_local0-vg.sh \
 	rscript_trim-vg.sh
+if ENABLE_LIBCURL
+TESTS +=  \
+	rscript_http_request-vg.sh
+endif # ENABLE_LIBCURL
 endif # HAVE_VALGRIND
 
 if ENABLE_ROOT_TESTS

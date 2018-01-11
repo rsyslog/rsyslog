@@ -454,6 +454,8 @@ if test "$enable_libcurl" = "yes"; then
 	)
 fi
 
+AM_CONDITIONAL(ENABLE_LIBCURL, test "x${enable_libcurl}" = "xyes")
+
 # klog
 AC_ARG_ENABLE(klog,
         [AS_HELP_STRING([--enable-klog],[Integrated klog functionality @<:@default=yes@:>@])],
