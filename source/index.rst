@@ -23,7 +23,7 @@ Manual
 ------
 .. toctree::
    :maxdepth: 2
-   
+
    installation/index
    configuration/index
    containers/index
@@ -34,7 +34,7 @@ Manual
    tutorials/index
    development/index
    historical/index
-   
+
 Reference
 ---------
 .. toctree::
@@ -63,3 +63,7 @@ doesn't require a lot of time - even a single mouse click helps. Learn
 
 .. _Sponsor's Page: http://www.rsyslog.com/sponsors
 
+
+.. only:: dev
+
+    Built on |today| from branch |DOC_BRANCH|, commit |DOC_COMMIT|.
