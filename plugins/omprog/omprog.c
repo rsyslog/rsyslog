@@ -36,11 +36,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
-#if defined(__FreeBSD__) || defined(__APPLE__)
 #include <sys/wait.h>
-#else
-#include <wait.h>
-#endif
 #if defined(__linux__) && defined(_GNU_SOURCE)
 #include <sys/syscall.h>
 #include <sys/types.h>

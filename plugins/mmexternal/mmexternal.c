@@ -31,14 +31,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
-#if defined(_AIX) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFlyBSD__) || defined(__APPLE__)
 #include <sys/wait.h>
-#else
-#include <wait.h>
-#endif
-#ifdef _AIX /* AIXPORT */
-#include <errno.h>
-#endif /* AIXPORT */
 #include <sys/uio.h>
 #include "conf.h"
 #include "syslogd-types.h"
