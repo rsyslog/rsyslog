@@ -1,5 +1,5 @@
 impstats: Generate Periodic Statistics of Internal Counters
-===========================================================
+***********************************************************
 
 **Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
 
@@ -36,13 +36,13 @@ continuously being added, and older versions do not support everything.
 
 
 Configuration Parameters
-------------------------
+========================
 
 The configuration parameters for this module are designed for tailoring
 the method and process for outputting the rsyslog statistics to file.
 
 Module Configuration Parameters
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-------------------------------
 
 Note: parameter names are case-insensitive.
 
@@ -184,7 +184,7 @@ This module supports module parameters, only.
    to be set to off.
 
 Statistic Counter
------------------
+=================
 
 The impstats plugin gathers some internal :doc:`statistics <../rsyslog_statistic_counter>`.
 They have different names depending on the actual statistics. Obviously, they do not
@@ -197,45 +197,26 @@ different depending on the platform. A getrusage() call is done immediately
 before the counter is emitted. The following individual counters are
 maintained:
 
--  **utime** - this is the user time in microseconds (thus the timeval structure combined)
--  **stime** - again, time given in microseconds
--  **maxrss**
--  **minflt**
--  **majflt**
--  **inblock**
--  **outblock**
--  **nvcsw**
--  **nivcsw**
--  **openfiles** number of file handles used by rsyslog; includes actual files, sockets and others
+-  ``utime`` - this is the user time in microseconds (thus the timeval structure combined)
+-  ``stime`` - again, time given in microseconds
+-  ``maxrss``
+-  ``minflt``
+-  ``majflt``
+-  ``inblock``
+-  ``outblock``
+-  ``nvcsw``
+-  ``nivcsw``
+-  ``openfiles`` - number of file handles used by rsyslog; includes actual files, sockets and others
 
-Legacy Configuration Parameters
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Note: parameter names are case-insensitive.
-
-A limited set of parameters can also be set via the legacy configuration
-syntax. Note that this is intended as an upward compatibility layer, so
-newer features are intentionally **not** available via legacy
-directives.
-
--  $PStatInterval <Seconds> - same as the "interval" parameter.
--  $PStatFacility <numerical facility> - same as the "facility"
-   parameter.
--  $PStatSeverity <numerical severity> - same as the "severity"
-   parameter.
--  $PStatJSON <on/**off**> (rsyslog v6.3.8+ only)
-   If set to on, stats messages are emitted as structured cee-enhanced
-   syslog. If set to off, legacy format is used (which is compatible
-   with pre v6-rsyslog).
 
 Caveats/Known Bugs
-------------------
+==================
 
 -  This module MUST be loaded right at the top of rsyslog.conf,
    otherwise stats may not get turned on in all places.
 
-Example
--------
+Examples
+========
 
 This activates the module and records messages to /var/log/rsyslog-stats
 in 10 minute intervals:
@@ -248,6 +229,31 @@ in 10 minute intervals:
 
   # to actually gather the data:
   syslog.=debug /var/log/rsyslog-stats
+
+Example output::
+
+   Sep 17 11:43:49 localhost rsyslogd-pstats: imuxsock: submitted=16
+   Sep 17 11:43:49 localhost rsyslogd-pstats: main Q: size=1 enqueued=2403 full=0 maxqsize=2
+
+Explanation:
+
+All objects are shown in the results with a separate counter, one object per
+line.
+
+Line 1: shows details for
+
+- ``imuxsock``, an object
+- ``submitted=16``, a counter showing that 16 messages were received by the
+  imuxsock object.
+
+Line 2: shows details for the main queue:
+
+- ``main Q``, an object
+- ``size``, messages in the queue
+- ``enqueued``, all received messages thus far
+- ``full``, how often was the queue was full
+- ``maxqsize``, the maximum amount of messages that have passed through the
+  queue since rsyslog was started
 
 In the next sample, the default interval of 5 minutes is used. However,
 this time stats data is NOT emitted to the syslog stream but to a local
@@ -275,21 +281,8 @@ server:
 
   syslog.=debug @central.example.net
 
-Legacy Sample
--------------
-
-This activates the module and records messages to /var/log/rsyslog-stats
-in 10 minute intervals:
-
-::
-
-  $ModLoad impstats
-  $PStatInterval 600
-  $PStatSeverity 7
-  syslog.=debug /var/log/rsyslog-stats
-
 See Also
---------
+========
 
 -  `rsyslog statistics
    counter <http://www.rsyslog.com/rsyslog-statistic-counter/>`_
