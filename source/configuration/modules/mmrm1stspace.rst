@@ -21,6 +21,7 @@ This example receives messages over imtcp and modifies them, before sending
 them to a file.
 
 ::
+
    module(load="imtcp")
    module(load="mmrm1stspace")
    input(type="imtcp" port="13514")
