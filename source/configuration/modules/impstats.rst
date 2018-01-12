@@ -218,6 +218,9 @@ Caveats/Known Bugs
 Examples
 ========
 
+Load module, send stats data to syslog stream
+---------------------------------------------
+
 This activates the module and records messages to /var/log/rsyslog-stats
 in 10 minute intervals:
 
@@ -230,7 +233,42 @@ in 10 minute intervals:
   # to actually gather the data:
   syslog.=debug /var/log/rsyslog-stats
 
-Example output::
+
+Load module, send stats data to local file
+------------------------------------------
+
+Here, the default interval of 5 minutes is used. However, this time, stats
+data is NOT emitted to the syslog stream but to a local file instead.
+
+::
+
+  module(load="impstats"
+         interval="600"
+         severity="7"
+         log.syslog="off"
+         /* need to turn log stream logging off! */
+         log.file="/path/to/local/stats.log")
+
+Load module, send stats data to local file and syslog stream
+------------------------------------------------------------
+
+Here we log to both the regular syslog log stream as well as a
+file. Within the log stream, we forward the data records to another
+server:
+
+::
+
+  module(load="impstats"
+         interval="600"
+         severity="7"
+          log.file="/path/to/local/stats.log")
+
+  syslog.=debug @central.example.net
+
+Explanation of output
+---------------------
+
+Example output for illustration::
 
    Sep 17 11:43:49 localhost rsyslogd-pstats: imuxsock: submitted=16
    Sep 17 11:43:49 localhost rsyslogd-pstats: main Q: size=1 enqueued=2403 full=0 maxqsize=2
@@ -254,32 +292,6 @@ Line 2: shows details for the main queue:
 - ``full``, how often was the queue was full
 - ``maxqsize``, the maximum amount of messages that have passed through the
   queue since rsyslog was started
-
-In the next sample, the default interval of 5 minutes is used. However,
-this time stats data is NOT emitted to the syslog stream but to a local
-file instead.
-
-::
-
-  module(load="impstats"
-         interval="600"
-         severity="7"
-         log.syslog="off"
-         /* need to turn log stream logging off! */
-         log.file="/path/to/local/stats.log")
-
-And finally, we log to both the regular syslog log stream as well as a
-file. Within the log stream, we forward the data records to another
-server:
-
-::
-
-  module(load="impstats"
-         interval="600"
-         severity="7"
-          log.file="/path/to/local/stats.log")
-
-  syslog.=debug @central.example.net
 
 See Also
 ========
