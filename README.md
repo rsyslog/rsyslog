@@ -95,6 +95,22 @@ later steps are identical, so those steps have been covered in one place.
     1. `python -m pip install virtualenv --user`
     1. `python -m virtualenv rsyslog-docs-build`
     1. `source rsyslog-docs-build/bin/activate`
+1. Install `git` for your distro. Because distros name the package differently,
+   you may need to substitute the name of the package from the examples
+   below with the name of the package for your distro.
+
+   You will need to install Git in order to clone the project repo, manage
+   your changes and contribute them back for review and eventual inclusion
+   in the project.
+
+   Example commands for installing Git:
+
+     - Debian/Ubuntu: `apt-get install git-core`
+     - CentOS/RHEL: `yum install git`
+
+   See the
+   [Installing Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
+   chapter from [Pro Git 2](https://git-scm.com/book/) for additional examples.
 
 #### Windows
 
@@ -109,8 +125,9 @@ later steps are identical, so those steps have been covered in one place.
 
 #### Windows and Linux
 
-1. Install `sphinx` package in our new virtual environment instead of system-wide
-    1. `pip install sphinx`    
+1. Install `sphinx` package and any other project dependencies in our
+   new virtual environment instead of system-wide
+    1. `pip install -r requirements.txt`
 1. Clone the official Git repo
     1. `git clone https://github.com/rsyslog/rsyslog-doc.git`
 1. Checkout either the current stable or development (aka, "master") branch
