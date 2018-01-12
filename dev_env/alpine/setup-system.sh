@@ -5,4 +5,4 @@ apk add git build-base automake libtool autoconf py-docutils gnutls gnutls-dev \
 	libgcrypt-dev flex bison bsd-compat-headers linux-headers valgrind
 
 # interactive dev only:
-# apk add man man-pages gcc-doc
+apk add man man-pages gcc-doc
