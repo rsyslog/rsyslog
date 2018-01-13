@@ -6,8 +6,9 @@ echo STEP: essentials
 apt-get install -y software-properties-common python-software-properties wget
 
 echo STEP: set gcc-7 repo
-# currently the best repo for gcc-7 we can find...
+add-apt-repository ppa:adiscon/v8-stable -y
 add-apt-repository ppa:qpid/released -y
+# currently the best repo for gcc-7 we can find...
 add-apt-repository ppa:ubuntu-toolchain-r/test -y
 
 # LLVM repository
@@ -18,13 +19,14 @@ wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key| apt-key add -
 # 0mq repository
 echo STEP: set 0mq repo
 echo "deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_16.04/ ./" > /etc/apt/sources.list.d/0mq.list
-wget -O - http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_12.04/Release.key | apt-key add -
+wget -O - http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_16.04/Release.key | apt-key add -
 
 # Ready to go
 apt-get update -y
 apt-get upgrade -y
 echo STEP: install main components
 apt-get install -y \
+	libestr-dev librelp-dev libfastjson-dev liblogging-stdlog-dev liblognorm-dev \
 	vim \
 	gcc-7 \
 	mysql-server \
@@ -57,7 +59,6 @@ apt-get install -y \
 	libgnutls28-dev \
 	libsystemd-dev \
 	libhiredis-dev \
-	librdkafka-dev  \
 	libnet1-dev \
 	postgresql-client libpq-dev \
 	libgrok1 libgrok-dev \
@@ -69,15 +70,16 @@ apt-get install -y \
 	libmaxminddb-dev libmongoc-dev \
 	liblz4-dev \
 	libqpid-proton10-dev \
+	tcl-dev \
 	libkrb5-dev \
 	libsodium-dev
 
 # Whissi "special build" of 2017-12 autoconf-archive:
-wget --no-verbose http://build.rsyslog.com/CI/autoconf-archive_20170928-1adiscon1_all.deb
+#wget --no-verbose http://build.rsyslog.com/CI/autoconf-archive_20170928-1adiscon1_all.deb
 #dpkg -i autoconf-archive_20170928-1adiscon1_all.deb
 # BAD work-around
 apt-get install -y autoconf-archive
-rm autoconf-archive_20170928-1adiscon1_all.deb
+#rm autoconf-archive_20170928-1adiscon1_all.deb
 
 # Now build some custom libraries for whom there are not packages
 mkdir helper-projects
@@ -93,9 +95,15 @@ make install
 cd ..
 rm -r libksi
 
-# librdkafka --> source
+# we need the latest librdkafka as there as always required updates
+git clone https://github.com/edenhill/librdkafka
+cd librdkafka
+(unset CFLAGS; ./configure --prefix=/usr --CFLAGS="-g" ; make -j2)
+make install
 cd ..
+# Note: we do NOT delete the source as we may need it to
+# uninstall (in case the user wants to go back to system-default)
 
 # finished installing helpers from source
-rm -r helper-projects
+cd ..
 
