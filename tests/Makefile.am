@@ -30,11 +30,11 @@ check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen 
 if ENABLE_IMJOURNAL
 check_PROGRAMS += journal_print
 endif
-TESTS = $(TESTRUNS) 
+TESTS = $(TESTRUNS)
 #TESTS = $(TESTRUNS) cfg.sh
 
 TESTS +=  \
-	empty-hostname.sh 
+	empty-hostname.sh
 
 if ENABLE_TESTBENCH1
 TESTS +=  \
@@ -387,7 +387,8 @@ TESTS +=  \
 	omprog-cleanup.sh \
 	omprog-cleanup-with-outfile.sh \
 	omprog-noterm-cleanup.sh \
-	omprog-noterm-default.sh
+	omprog-noterm-default.sh \
+	omprog-feedback.sh
 if OS_LINUX
 TESTS += \
 	omprog-cleanup-when-unresponsive.sh \
@@ -408,7 +409,7 @@ if ENABLE_OMKAFKA
 if ENABLE_IMKAFKA
 if ENABLE_KAFKA_TESTS
 TESTS += \
-	sndrcv_kafka.sh 
+	sndrcv_kafka.sh
 # Tests below need to be stable first!
 #	sndrcv_kafka_multi.sh
 #	sndrcv_kafka_fail.sh
@@ -456,7 +457,7 @@ if HAVE_VALGRIND
 TESTS +=  \
 	mysql-basic-vg.sh \
 	mysql-asyn-vg.sh \
-	mysql-actq-mt-withpause-vg.sh 
+	mysql-actq-mt-withpause-vg.sh
 endif
 if ENABLE_OMLIBDBI
 TESTS +=  \
@@ -534,7 +535,7 @@ TESTS +=  \
 	es-basic-errfile-empty.sh \
 	es-basic-errfile-popul.sh \
 	es-bulk-errfile-empty.sh \
-	es-bulk-errfile-popul.sh 
+	es-bulk-errfile-popul.sh
 if HAVE_VALGRIND
 TESTS += \
 	es-basic-vgthread.sh
@@ -724,7 +725,7 @@ endif
 if ENABLE_EXTENDED_TESTS
 # random.sh is temporarily disabled as it needs some work
 # to rsyslog core to complete in reasonable time
-#TESTS += random.sh 
+#TESTS += random.sh
 endif
 
 if ENABLE_IMFILE
@@ -754,7 +755,7 @@ TESTS += \
 	imfile-wildcards-dirs2.sh \
 	imfile-rename.sh
 
-# TEMPORARILY disable some imfile tests because refactoring 
+# TEMPORARILY disable some imfile tests because refactoring
 # is needed to get them to work 100% all the time.
 # alorbach, 2018-01-05
 #	imfile-wildcards-dirs-multi.sh \
@@ -776,7 +777,7 @@ if ENABLE_OMTCL
 TESTS += \
 	 omtcl.sh
 endif
- 
+
 endif # if ENABLE_TESTBENCH
 
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
@@ -1340,6 +1341,7 @@ EXTRA_DIST= \
 	omprog-noterm-cleanup-vg.sh \
 	omprog-noterm-default.sh \
 	omprog-noterm-unresponsive.sh \
+	omprog-feedback.sh \
 	testsuites/omprog-cleanup.conf \
 	testsuites/omprog-noterm.conf \
 	testsuites/omprog-noterm-default.conf \
@@ -1349,6 +1351,8 @@ EXTRA_DIST= \
 	testsuites/omprog-cleanup-unresponsive.conf \
 	testsuites/omprog-test-bin.sh \
 	testsuites/term-ignoring-script.sh \
+	testsuites/omprog-feedback.conf \
+	testsuites/omprog-feedback-bin.sh \
 	pipe_noreader.sh \
 	testsuites/pipe_noreader.conf \
 	uxsock_simple.sh \
@@ -1765,7 +1769,7 @@ EXTRA_DIST= \
 	testsuites/sample.pmsnare_cccstyle \
 	testsuites/sample.pmsnare_ccbackslash \
 	testsuites/sample.pmsnare_modoverride
-	
+
 ourtail_SOURCES = ourtail.c
 msleep_SOURCES = msleep.c
 omrelp_dflt_port_SOURCES = omrelp_dflt_port.c
