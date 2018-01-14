@@ -103,21 +103,11 @@ make install
 cd ..
 rm -r libksi
 
-# download and install coverity tool
-mkdir coverity
-cd coverity
-wget --no-verbose http://build.rsyslog.com/CI/cov-analysis.tar.gz
-if [ $? -ne 0 ]; then
-	echo Download Coverity analysis tool failed!
-	exit 1
-fi
-tar xzf cov*.tar.gz
-rm -f cov*.tar.gz
-export PATH="coverity/$(ls -d cov*)/bin:$PATH"
-cd ..
-# DO NOT DELETE, we need this directory!
+# NOTE: we do NOT install coverity, because
+# - it is pretty large
+# - seldomly used
+# - quickly installed when required (no build process)
 
-# Coverity scan tool installed
 # we need the latest librdkafka as there as always required updates
 git clone https://github.com/edenhill/librdkafka
 cd librdkafka
