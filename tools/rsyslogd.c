@@ -29,15 +29,11 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <errno.h>
 #ifdef HAVE_LIBLOGGING_STDLOG
 #  include <liblogging/stdlog.h>
 #else
 #  include <syslog.h>
-#endif
-#if defined(OS_SOLARIS) || defined(OS_BSD)
-#	include <errno.h>
-#else
-#	include <sys/errno.h>
 #endif
 #ifdef HAVE_LIBSYSTEMD
 #	include <systemd/sd-daemon.h>

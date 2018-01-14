@@ -57,12 +57,7 @@
 #include <stdarg.h>
 #include <time.h>
 #include <assert.h>
-
-#if defined(OS_SOLARIS) || defined(OS_BSD)
-#	include <errno.h>
-#else
-#	include <sys/errno.h>
-#endif
+#include <errno.h>
 
 #ifdef OS_SOLARIS
 #	include <fcntl.h>
