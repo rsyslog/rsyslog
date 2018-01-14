@@ -156,7 +156,7 @@ int bFinished = 0;	/* used by termination signal handler, read-only except there
 			 * is either 0 or the number of the signal that requested the
  			 * termination.
 			 */
-const char *PidFile = PATH_PIDFILE;
+const char *PidFile;
 #define NO_PIDFILE "NONE"
 int iConfigVerify = 0;	/* is this just a config verify run? */
 rsconf_t *ourConf = NULL;	/* our config object */
@@ -1338,6 +1338,7 @@ initAll(int argc, char **argv)
 			ConfFile = (uchar*) arg;
 			break;
 		case 'i':		/* pid file name */
+			free((void*)PidFile);
 			PidFile = arg;
 			break;
 		case 'l':
@@ -1947,7 +1948,16 @@ main(int argc, char **argv)
 		fprintf(stderr, "rsyslogd %s: running as pid 1, enabling "
 			"container-specific defaults, press ctl-c to "
 			"terminate rsyslog\n", VERSION);
+		PidFile = strdup("NONE"); /* disables pid file writing */
 		glblPermitCtlC = 1;
+	} else {
+		/* "dynamic defaults" - non-container case */
+		PidFile = strdup(PATH_PIDFILE);
+	}
+	if(PidFile == NULL) {
+		fprintf(stderr, "rsyslogd: could not alloc memory for pid file "
+			"default name - aborting\n");
+		exit(1);
 	}
 
 	/* disable case-sensitive comparisons in variable subsystem: */
