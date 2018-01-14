@@ -10,6 +10,7 @@ Version 8.33.0 [v8-stable] 2018-02-20
   Thanks to Yaroslav Bo for the patch.
 - build system bugfix: --disable-libcurl did not work
   Thanks to Dan Molik and Thomas D. (whissi) for the patch.
+- fixed build issues on Alpine Linux
 ------------------------------------------------------------------------------
 Version 8.32.0 [v8-stable] 2018-01-09
 - NEW BUILD REQUIREMENTs:
