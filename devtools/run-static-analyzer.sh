@@ -14,7 +14,7 @@ fi
 autoreconf -fvi
 
 export CC=$SCAN_BUILD_CC
-./configure $RSYSLOG_CONFIGURE_OPTIONS
+./configure $RSYSLOG_CONFIGURE_OPTIONS $RSYSLOG_CONFIGURE_OPTIONS_EXTRA
 
 set +e
 $SCAN_BUILD $REPORT_OPT --use-cc $SCAN_BUILD_CC --status-bugs make -j2
