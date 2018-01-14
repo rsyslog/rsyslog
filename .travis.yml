@@ -6,12 +6,6 @@ language: c
  
 compiler:
   - gcc
-  - clang
-
-services:
-  - elasticsearch
-  - mysql
-  - postgresql
 
 
 env:
@@ -23,34 +17,6 @@ addons:
     sources:
     - sourceline: 'deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_14.04/ ./'
       key_url: 'http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_12.04/Release.key'
-    packages:
-    - build-essential
-    - automake
-    - pkg-config
-    - libtool
-    - autoconf
-    - autotools-dev
-    - gdb
-    - valgrind
-    - libdbi-dev
-    - libsnmp-dev
-    - libmysqlclient-dev
-    - postgresql-client
-    - libglib2.0-dev
-    - libtokyocabinet-dev
-    - zlib1g-dev
-    - uuid-dev
-    - libgcrypt11-dev
-    - bison
-    - flex
-    - libcurl4-gnutls-dev
-    - python-docutils 
-    - openjdk-7-jdk
-    - wget
-    - libkrb5-dev
-    - libsodium-dev
-    - libczmq-dev
-    - libnet1-dev
 
 matrix:
   allow_failures:
@@ -59,7 +25,6 @@ matrix:
 
   exclude:
      - compiler: "gcc"
-     - compiler: "clang"
   include:
      - os: osx
        compiler: "clang"
@@ -73,6 +38,18 @@ matrix:
 
      - os: linux
        services: docker
+       env: RUN="docker-run-statan.sh"
+
+# TODO: code style check (was done in STAT_AN!)
+#     - os: linux
+#       compiler: "clang"
+#       env: RUN="run.sh",STAT_AN="YES", GROK="YES", KAFKA="YES", CFLAGS="-g -O2"
+#       # note: we currently need -Wno-unused-function until we fix inline
+#       # functions (C99 semantics are really ugly...)
+#       dist: trusty
+
+     - os: linux
+       services: docker
        env: RUN="docker-alpine.sh"
 
      - os: linux
@@ -81,18 +58,15 @@ matrix:
 
      - os: linux
        compiler: "gcc"
-       env: RUN="run.sh",KAFKA="YES", CFLAGS="-g -std=c99 -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
+       env: RUN="run.sh",KAFKA="YES", CFLAGS="-g"
        dist: trusty
 
      - os: linux
        compiler: "clang"
-       env: RUN="run.sh",STAT_AN="YES", GROK="YES", KAFKA="YES", CFLAGS="-g -O2"
-       # note: we currently need -Wno-unused-function until we fix inline
-       # functions (C99 semantics are really ugly...)
-       dist: trusty
-
-     - os: linux
-       compiler: "clang"
+       services:
+         - elasticsearch
+         - mysql
+         - postgresql
        env: RUN="run.sh",MERGE="YES", CHECK="YES", GROK="YES", KAFKA="YES", CFLAGS="-g -O2"
        # note: we currently need -Wno-unused-function until we fix inline
        # functions (C99 semantics are really ugly...)
@@ -100,26 +74,46 @@ matrix:
 
      - os: linux
        compiler: "gcc"
-       env: RUN="run.sh",BUILD_FROM_TARBALL="YES", GROK="YES", KAFKA="YES", CHECK="YES", CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all", EXTRA_CONFIGURE="--disable-testbench1"
+       services:
+         - elasticsearch
+         - mysql
+         - postgresql
+       env: RUN="run.sh",BUILD_FROM_TARBALL="YES", GROK="YES", KAFKA="YES", CHECK="YES", CFLAGS="-g -O2", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all", EXTRA_CONFIGURE="--disable-testbench1"
        dist: trusty
 
      - os: linux
        compiler: "gcc"
-       env: RUN="run.sh",BUILD_FROM_TARBALL="YES", CHECK="YES", CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all", EXTRA_CONFIGURE="--disable-testbench2"
+       services:
+         - elasticsearch
+         - mysql
+         - postgresql
+       env: RUN="run.sh",BUILD_FROM_TARBALL="YES", CHECK="YES", CFLAGS="-g -O2", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all", EXTRA_CONFIGURE="--disable-testbench2"
        dist: trusty
 
      - os: linux
        compiler: "clang"
+       services:
+         - elasticsearch
+         - mysql
+         - postgresql
        env: RUN="run.sh",CHECK="YES", ESTEST="YES", CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics"
 
      - os: linux
        compiler: "clang"
        dist: trusty
+       services:
+         - elasticsearch
+         - mysql
+         - postgresql
        env: RUN="run.sh",CFLAGS="-fsanitize=undefined,nullability,unsigned-integer-overflow -fno-sanitize-recover=undefined,nullability,unsigned-integer-overflow -g -O3 -fno-omit-frame-pointer -fno-color-diagnostics", UBSAN_OPTIONS="print_stacktrace=1", CHECK="YES", ESTEST="YES", KAFKA="YES"
      - os: linux
        compiler: "clang"
        # we run this test without assert() enabled, so that we get "production timing"
        dist: trusty
+       services:
+         - elasticsearch
+         - mysql
+         - postgresql
        env: RUN="run.sh",AD_PPA="v8-devel", CHECK="YES", CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics", CONFIGURE_FLAGS="--disable-debug"
      - os: linux
        compiler: "gcc"
@@ -150,5 +144,4 @@ before_install:
 install:
 
 script:
-   - echo running tests/travis/$RUN
-   - tests/travis/$RUN
+   - devtools/ci/travis/do-run.sh
