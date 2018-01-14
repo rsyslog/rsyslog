@@ -16,3 +16,4 @@ ENV RSYSLOG_CONFIGURE_OPTIONS --disable-generate-man-pages --enable-testbench --
 
 # Install any needed packages
 RUN ./setup-system.sh
+WORKDIR /rsyslog
