@@ -54,7 +54,6 @@
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(glbl)
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(netstrm)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(datetime)
@@ -306,7 +305,7 @@ PrepareClose(tcps_sess_t *pThis)
 		/* In this case, we have an invalid frame count and thus
 		 * generate an error message and discard the frame.
 		 */
-		errmsg.LogError(0, NO_ERRCODE, "Incomplete frame at end of stream in session %p - "
+		LogError(0, NO_ERRCODE, "Incomplete frame at end of stream in session %p - "
 			    "ignoring extra data (a message may be lost).", pThis->pStrm);
 		/* nothing more to do */
 	} else { /* here, we have traditional framing. Missing LF at the end
@@ -396,13 +395,13 @@ processDataRcvd(tcps_sess_t *pThis,
 			prop.GetString(pThis->fromHost, &propPeerName, &lenPeerName);
 			prop.GetString(pThis->fromHost, &propPeerIP, &lenPeerIP);
 			if(c != ' ') {
-				errmsg.LogError(0, NO_ERRCODE, "imtcp %s: Framing Error in received TCP message from "
+				LogError(0, NO_ERRCODE, "imtcp %s: Framing Error in received TCP message from "
 					"peer: (hostname) %s, (ip) %s: delimiter is not SP but has "
 					"ASCII value %d.", pThis->pSrv->pszInputName, propPeerName, propPeerIP, c);
 			}
 			if(pThis->iOctetsRemain < 1) {
 				/* TODO: handle the case where the octet count is 0! */
-				errmsg.LogError(0, NO_ERRCODE, "imtcp %s: Framing Error in received TCP message from "
+				LogError(0, NO_ERRCODE, "imtcp %s: Framing Error in received TCP message from "
 					"peer: (hostname) %s, (ip) %s: invalid octet count %d.",
 					pThis->pSrv->pszInputName, propPeerName, propPeerIP, pThis->iOctetsRemain);
 				pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
@@ -410,13 +409,13 @@ processDataRcvd(tcps_sess_t *pThis,
 				/* while we can not do anything against it, we can at least log an indication
 				 * that something went wrong) -- rgerhards, 2008-03-14
 				 */
-				errmsg.LogError(0, NO_ERRCODE, "imtcp %s: received oversize message from peer: "
+				LogError(0, NO_ERRCODE, "imtcp %s: received oversize message from peer: "
 					"(hostname) %s, (ip) %s: size is %d bytes, max msg size "
 					"is %d, truncating...", pThis->pSrv->pszInputName, propPeerName,
 					propPeerIP, pThis->iOctetsRemain, iMaxLine);
 			}
 			if(pThis->iOctetsRemain > pThis->pSrv->maxFrameSize) {
-				errmsg.LogError(0, NO_ERRCODE, "imtcp %s: Framing Error in received TCP message from "
+				LogError(0, NO_ERRCODE, "imtcp %s: Framing Error in received TCP message from "
 					"peer: (hostname) %s, (ip) %s: frame too large: %d, change "
 					"to octet stuffing", pThis->pSrv->pszInputName, propPeerName, propPeerIP,
 						pThis->iOctetsRemain);
@@ -579,7 +578,6 @@ ENDobjQueryInterface(tcps_sess)
 BEGINObjClassExit(tcps_sess, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
 CODESTARTObjClassExit(tcps_sess)
 	/* release objects we no longer need */
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(netstrm, LM_NETSTRMS_FILENAME);
 	objRelease(datetime, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
@@ -592,7 +590,6 @@ ENDObjClassExit(tcps_sess)
  */
 BEGINObjClassInit(tcps_sess, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE class also in END MACRO! */
 	/* request objects we use */
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(netstrm, LM_NETSTRMS_FILENAME));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
