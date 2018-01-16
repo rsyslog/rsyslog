@@ -38,19 +38,11 @@ matrix:
 
      - os: linux
        services: docker
-       env: RUN="docker-run-statan.sh"
+       env: RUN="travis-run-compile-tests.sh"
 
-# TODO: code style check (was done in STAT_AN!)
 #     - os: linux
-#       compiler: "clang"
-#       env: RUN="run.sh",STAT_AN="YES", GROK="YES", KAFKA="YES", CFLAGS="-g -O2"
-#       # note: we currently need -Wno-unused-function until we fix inline
-#       # functions (C99 semantics are really ugly...)
-#       dist: trusty
-
-     - os: linux
-       services: docker
-       env: RUN="docker-alpine.sh"
+#       services: docker
+#       env: RUN="docker-alpine.sh"
 
      - os: linux
        services: docker
@@ -115,10 +107,11 @@ matrix:
          - mysql
          - postgresql
        env: RUN="run.sh",AD_PPA="v8-devel", CHECK="YES", CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics", CONFIGURE_FLAGS="--disable-debug"
-     - os: linux
-       compiler: "gcc"
-       dist: trusty
-       env: RUN="run.sh",DEBUGLESS="YES", CFLAGS="-g -O2"
+
+#     - os: linux
+#       compiler: "gcc"
+#       dist: trusty
+#       env: RUN="run.sh",DEBUGLESS="YES", CFLAGS="-g -O2"
 
      # next is experimental, we may merge it with some other compile-only test
      - os: linux

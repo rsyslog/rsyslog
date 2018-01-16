@@ -1958,9 +1958,10 @@ wrkr(void *myself)
 				pthread_mutex_unlock(&io_q.mut);
 				break;
 			} else {
-				DBGPRINTF("imptcp: worker %u waiting on new work items\n", (unsigned) me->tid);
+				DBGPRINTF("imptcp: worker %llu waiting on new work items\n",
+					(unsigned long long) me->tid);
 				pthread_cond_wait(&io_q.wakeup_worker, &io_q.mut);
-				DBGPRINTF("imptcp: worker %u awoken\n", (unsigned) me->tid);
+				DBGPRINTF("imptcp: worker %llu awoken\n", (unsigned long long) me->tid);
 			}
 			++wrkrRunning;
 		}
