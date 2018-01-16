@@ -785,7 +785,6 @@ rsRetVal ATTR_NONNULL(1)
 lookupReload(lookup_ref_t *const pThis, const uchar *const stub_val_if_reload_fails)
 {
 	uint8_t locked = 0;
-	uint8_t duplicated_stub_value = 0;
 	int lock_errno = 0;
 	DEFiRet;
 	assert(pThis != NULL);
@@ -795,7 +794,6 @@ lookupReload(lookup_ref_t *const pThis, const uchar *const stub_val_if_reload_fa
 		freeStubValueForReloadFailure(pThis);
 		if (stub_val_if_reload_fails != NULL) {
 			CHKmalloc(pThis->stub_value_for_reload_failure = ustrdup(stub_val_if_reload_fails));
-			duplicated_stub_value = 1;
 		}
 		pThis->do_reload = 1;
 		pthread_cond_signal(&pThis->run_reloader);
@@ -811,9 +809,6 @@ lookupReload(lookup_ref_t *const pThis, const uchar *const stub_val_if_reload_fa
 		   and an idempotency-filter is used to reject re-deliveries) */
 	}
 finalize_it:
-	if ((iRet != RS_RET_OK) && duplicated_stub_value) {
-		freeStubValueForReloadFailure(pThis);
-	}
 	if (locked) {
 		pthread_mutex_unlock(&pThis->reloader_mut);
 	}
