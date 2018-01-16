@@ -13,6 +13,7 @@ Version 8.33.0 [v8-stable] 2018-02-20
 - fixed build issues on Alpine Linux
 - CI system
   - we now use well-defined containers for parts of the CI runs
+  - test added for omprog feedback feature
 ------------------------------------------------------------------------------
 Version 8.32.0 [v8-stable] 2018-01-09
 - NEW BUILD REQUIREMENTs:
