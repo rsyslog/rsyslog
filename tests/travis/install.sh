@@ -1,8 +1,11 @@
 # this installs some components that we cannot install any other way
 source /etc/lsb-release
-# the following packages are not yet available via travis package
+
+if [ "${AD_PPA}x" == "x" ] ; then AD_PPA="v8-stable"; fi
+sudo add-apt-repository ppa:adiscon/$AD_PPA -y
 sudo apt-get install -qq faketime libdbd-mysql
 sudo add-apt-repository ppa:qpid/released -y
+sudo apt-get update
 
 # update autoconf-archive (no good enough packets available)
 # this one built by whissi

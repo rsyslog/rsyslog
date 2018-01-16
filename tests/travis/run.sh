@@ -7,26 +7,10 @@ set -e  # abort on first failure
 
 echo "DISTRIB_CODENAME: $DISTRIB_CODENAME"
 echo "CLANG:            $CLANG"
-
 echo "****************************** BEGIN ACTUAL SCRIPT STEP ******************************"
-# check code style. We do this only when DEBUGLESS is enabled,
-# so that we do not do it in each and every run.
-if [ "x$DEBUGLESS" == "xYES" ] ; then source CI/check_line_length.sh ; fi
 
 source tests/travis/install.sh
 source /etc/lsb-release
-
-# handle cron builds (most importantly Coverity)
-if [ "$TRAVIS_EVENT_TYPE" == "cron" ]; then
-	if [ "$DO_CRON" == "YES" ]; then
-		source tests/travis/run-cron.sh
-	fi
-	exit
-fi
-if [ "$DO_CRON" == "YES" ]; then
-	echo cron job not executed under non-cron run
-	exit 0 # this must not run under PRs
-fi
 
 #
 # ACTUAL MAIN CI PART OF THE SCRIPT
@@ -127,6 +111,7 @@ make -j
 if [ "x$CHECK" == "xYES" ]
 then
     set +e  # begin testbench, here we do not want to abort
+    devtools/prep-mysql-db.sh  # prepare mysql for testbench
     make check
     ALL_OK=$?
     if [ -f tests/test-suite.log ]
