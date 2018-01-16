@@ -123,7 +123,6 @@ case "${host}" in
   ;;
 esac
 AM_CONDITIONAL(OS_APPLE, test x$os_type == xapple)
-AM_CONDITIONAL(xOS_LINUX, test x$os_type == xlinux)
 AM_CONDITIONAL(OS_LINUX, test x$os_type == xlinux)
 
 # Running from git source?
