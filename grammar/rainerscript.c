@@ -2515,6 +2515,8 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 		ret->d.n = doFunc_parse_json(str, str2, (smsg_t*) usrptr, pWti);
 		if(bMustFree) free(str);
 		if(bMustFree2) free(str2);
+		varFreeMembers(&r[0]);
+		varFreeMembers(&r[1]);
 		break;
 	case CNFFUNC_HTTP_REQUEST:
 #ifdef HAVE_LIBCURL
