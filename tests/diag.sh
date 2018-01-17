@@ -188,6 +188,14 @@ case $1 in
    'check-url-access')   # check if we can access the URL - will exit 77 when not OK
 		rsyslog_testbench_test_url_access $2
 		;;
+   'check-command-available')   # check if command $2 is available - will exit 77 when not OK
+		command -v $2
+		if [ $? -ne 0 ] ; then
+			echo Testbench requires unavailable command: $2
+			echo skipping this test
+			exit 77
+		fi
+		;;
    'es-init')   # initialize local Elasticsearch *testbench* instance for the next
                 # test. NOTE: do NOT put anything useful on that instance!
 		curl -XDELETE localhost:9200/rsyslog_testbench

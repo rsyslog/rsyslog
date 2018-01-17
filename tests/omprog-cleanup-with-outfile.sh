@@ -1,16 +1,15 @@
 #!/bin/bash
 # added 2016-09-09 by singh.janmejay
 # This file is part of the rsyslog project, released under ASL 2.0
-echo ===============================================================================
-echo \[omprog-cleanup-with-outfile.sh\]: test for cleanup in omprog when used with outfile
+. $srcdir/diag.sh init
+. $srcdir/diag.sh check-command-available lsof
 
 uname
-if [ `uname` = "SunOS" ] ; then
-   echo "Solaris: FIX ME"
-   exit 77
-fi
+#if [ `uname` = "SunOS" ] ; then
+#   echo "Solaris: FIX ME"
+#   exit 77
+#fi
 
-. $srcdir/diag.sh init
 . $srcdir/diag.sh startup omprog-cleanup-outfile.conf
 . $srcdir/diag.sh wait-startup
 . $srcdir/diag.sh injectmsg  0 5

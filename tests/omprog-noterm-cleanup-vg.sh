@@ -8,9 +8,9 @@ if [ `uname` = "FreeBSD" ] ; then
    exit 77
 fi
 
-echo ===============================================================================
-echo \[omprog-noterm-cleanup-vg.sh\]: test for cleanup in omprog without SIGTERM with valgrind
 . $srcdir/diag.sh init
+. $srcdir/diag.sh check-command-available lsof
+
 . $srcdir/diag.sh startup-vg omprog-noterm.conf
 . $srcdir/diag.sh wait-startup
 . $srcdir/diag.sh injectmsg  0 5
