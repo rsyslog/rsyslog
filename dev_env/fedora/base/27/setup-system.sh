@@ -12,6 +12,7 @@ dnf -y install sudo clang clang-analyzer git valgrind libtool autoconf automake 
 	mysql-devel postgresql-devel libdbi-dbd-mysql libdbi-devel \
 	net-snmp-devel systemd-devel hiredis-devel qpid-proton-c-devel redhat-rpm-config \
 	libfaketime \
+	lsof \
 	curl libcurl-devel \
 	libnet libnet-devel \
 	mongo-c-driver-devel \

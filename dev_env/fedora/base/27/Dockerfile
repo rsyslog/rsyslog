@@ -23,6 +23,6 @@ ENV RSYSLOG_CONFIGURE_OPTIONS --disable-generate-man-pages --enable-testbench --
 
 # Install any needed packages
 RUN ./setup-system.sh
-RUN ./setup-projects.sh
+#RUN ./setup-projects.sh
 WORKDIR /rsyslog
 USER rsyslog
