@@ -158,7 +158,6 @@ case $1 in
    'exit')	# cleanup
 		# detect any left-over hanging instance
 		nhanging=0
-		#for pid in $(ps -eo pid,cmd|grep '/tools/[r]syslogd' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
 		for pid in $(ps -eo pid,args|grep '/tools/[r]syslogd' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
 		do
 			echo "ERROR: left-over instance $pid, killing it"
@@ -187,6 +186,14 @@ case $1 in
 		;;
    'check-url-access')   # check if we can access the URL - will exit 77 when not OK
 		rsyslog_testbench_test_url_access $2
+		;;
+   'check-command-available')   # check if command $2 is available - will exit 77 when not OK
+		command -v $2
+		if [ $? -ne 0 ] ; then
+			echo Testbench requires unavailable command: $2
+			echo skipping this test
+			exit 77
+		fi
 		;;
    'es-init')   # initialize local Elasticsearch *testbench* instance for the next
                 # test. NOTE: do NOT put anything useful on that instance!
