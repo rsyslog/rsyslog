@@ -53,7 +53,7 @@ fi
 pwd
 autoreconf --force --verbose --install
 if [ "x$GROK" == "xYES" ]; then export GROK="--enable-mmgrok"; fi
-if [ "x$ESTEST" == "xYES" ]; then export ES_TEST_CONFIGURE_OPT="--enable-elasticsearch-tests" ; fi
+if [ "x$ESTEST" == "xYES" ]; then export ES_TEST_CONFIGURE_OPT="--enable-elasticsearch-tests=minimal" ; fi
 # at this point, the environment should be setup for ./configure
 if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then export CC="clang-3.6"; fi
 $CC -v

@@ -8,7 +8,21 @@ export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
 
 #  Starting actual testbench
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup es-basic.conf
+. $srcdir/diag.sh generate-conf
+. $srcdir/diag.sh add-conf '
+template(name="tpl" type="string"
+	 string="{\"msgnum\":\"%msg:F,58:2%\"}")
+
+module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
+
+if $msg contains "msgnum:" then
+	action(type="omelasticsearch"
+	       server="127.0.0.1"
+	       serverport="19200"
+	       template="tpl"
+	       searchIndex="rsyslog_testbench")
+'
+. $srcdir/diag.sh startup
 . $srcdir/diag.sh injectmsg  0 10000
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown 

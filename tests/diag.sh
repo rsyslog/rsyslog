@@ -340,9 +340,9 @@ case $1 in
 		done
 		echo "rsyslogd$2 startup msg seen, pid " `cat rsyslog$2.pid`
 		;;
-   'wait-pid-termination')  # wait for the pid in pid file $2 to terminate, abort on timeout
+   'wait-pid-termination')  # wait for the pid in pid $2 to terminate, abort on timeout
 		i=0
-		out_pid=`cat $2`
+		out_pid=$2
 		if [[ "x$out_pid" == "x" ]]
 		then
 			terminated=1
@@ -927,8 +927,9 @@ case $1 in
 		fi
 		if [ -d $dep_work_dir/es ]; then
 			if [ -e $dep_work_es_pidfile ]; then
-				kill -SIGTERM $(cat $dep_work_es_pidfile)
-				. $srcdir/diag.sh wait-pid-termination $dep_work_es_pidfile
+				es_pid = $(cat $dep_work_es_pidfile)
+				kill -SIGTERM $es_pid
+				. $srcdir/diag.sh wait-pid-termination $es_pid
 			fi
 		fi
 		rm -rf $dep_work_dir/es
@@ -974,7 +975,7 @@ case $1 in
 		# Loop until elasticsearch port is reachable or until
 		# timeout is reached!
 		until [ "`curl --silent --show-error --connect-timeout 1 http://localhost:${ES_PORT:-19200} | grep 'rsyslog-testbench'`" != "" ]; do
-			echo "--- waiting for startup: 1 ( $timeseconds ) seconds"
+			echo "--- waiting for ES startup: $timeseconds seconds"
 			./msleep 1000
 			let "timeseconds = $timeseconds + 1"
 
@@ -984,6 +985,7 @@ case $1 in
 			fi
 		done
 		./msleep 2000
+		echo ES startup succeeded
 		;;
 	 'dump-kafka-serverlog')
 		if [ "x$2" == "x" ]; then
@@ -1046,18 +1048,16 @@ case $1 in
 			dep_work_es_pidfile="es$2.pid"
 		fi
 		if [ -e $dep_work_es_pidfile ]; then
-			(cd $srcdir && kill $(cat $dep_work_es_pidfile) )
-			. $srcdir/diag.sh wait-pid-termination $dep_work_es_pidfile
+			es_pid=$(cat $dep_work_es_pidfile)
+			printf "stopping ES with pid %d\n" $es_pid
+			kill -SIGTERM $es_pid
+			. $srcdir/diag.sh wait-pid-termination $es_pid
 		fi
 		;;
 	 'cleanup-elasticsearch')
-		if [ "x$2" == "x" ]; then
-			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
-			dep_work_es_pidfile="es.pid"
-		else
-			dep_work_dir=$(readlink -f $srcdir/$2)
-			dep_work_es_pidfile="es$2.pid"
-		fi
+		dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+		dep_work_es_pidfile="es.pid"
+		. $srcdir/diag.sh stop-elasticsearch
 		rm -f $dep_work_es_pidfile
 		rm -rf $dep_work_dir/es
 		;;

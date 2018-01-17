@@ -32,10 +32,6 @@ matrix:
   exclude:
      - compiler: "gcc"
   include:
-     - os: osx
-       compiler: "clang"
-       env: RUN="run-osx.sh", CFLAGS="-g"
-
      - os: linux
        language: minimal
        services: docker
@@ -73,14 +69,6 @@ matrix:
        env: RUN="run.sh",AD_PPA="v8-devel", CHECK="YES", CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics", CONFIGURE_FLAGS="--disable-debug"
 
      - os: linux
-       compiler: "clang"
-       services:
-         - mysql
-         - postgresql
-       env: RUN="run.sh",MERGE="YES", CHECK="YES", GROK="YES", KAFKA="YES", CFLAGS="-g -O2"
-       dist: trusty
-
-     - os: linux
        compiler: "gcc"
        services:
          - mysql
@@ -95,6 +83,18 @@ matrix:
          - postgresql
        env: RUN="run.sh",BUILD_FROM_TARBALL="YES", CHECK="YES", CFLAGS="-g -O2", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all", EXTRA_CONFIGURE="--disable-testbench2"
        dist: trusty
+
+     - os: linux
+       compiler: "clang"
+       services:
+         - mysql
+         - postgresql
+       env: RUN="run.sh",MERGE="YES", CHECK="YES", GROK="YES", KAFKA="YES", CFLAGS="-g -O2"
+       dist: trusty
+
+     - os: osx
+       compiler: "clang"
+       env: RUN="run-osx.sh", CFLAGS="-g"
 
      - os: linux
        # CRON/Coverity entry!
