@@ -17,3 +17,4 @@ RUN ./setup-system.sh
 # the second step shall later go into a different container
 # for now, let's get things going first...
 RUN ./setup-projects.sh
+USER 1000:1000
