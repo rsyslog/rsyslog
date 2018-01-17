@@ -310,7 +310,8 @@ TESTS +=  \
 endif # ENABLE_LIBCURL
 if HAVE_VALGRIND
 TESTS +=  \
-	rscript_parse_json-vg.sh
+	rscript_parse_json-vg.sh \
+	prop-jsonmesg-vg.sh
 endif # HAVE_VALGRIND
 endif # ENABLE_TESTBENCH2
 
@@ -1022,6 +1023,7 @@ EXTRA_DIST= \
 	testsuites/localvar-concurrency.conf \
 	exec_tpl-concurrency.sh \
 	testsuites/exec_tpl-concurrency.conf \
+	prop-jsonmesg-vg.sh \
 	prop-all-json-concurrency.sh \
 	testsuites/prop-all-json-concurrency.conf \
 	no-parser-errmsg.sh \
