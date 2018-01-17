@@ -1,6 +1,13 @@
 # this perform a travis cron job
-echo Travis under cron detected, currently no action!
 #set -x
+
+if [ "$TRAVIS_EVENT_TYPE" != "cron" ]; then
+	echo cron job not executed under non-cron run
+	exit
+fi
+
+source tests/travis/install.sh
+source /etc/lsb-release
 
 # download coverity tool
 mkdir coverity
