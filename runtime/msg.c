@@ -2272,7 +2272,8 @@ rsRetVal MsgSetMSGID(smsg_t * const pMsg, const char* pszMSGID)
 		CHKiRet(rsCStrConstruct(&pMsg->pCSMSGID));
 	}
 	/* if we reach this point, we have the object */
-	iRet = rsCStrSetSzStr(pMsg->pCSMSGID, (uchar*) pszMSGID);
+	CHKiRet(rsCStrSetSzStr(pMsg->pCSMSGID, (uchar*) pszMSGID));
+	cstrFinalize(pMsg->pCSMSGID);
 
 finalize_it:
 	RETiRet;
