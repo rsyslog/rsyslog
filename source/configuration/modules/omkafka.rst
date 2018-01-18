@@ -73,6 +73,9 @@ comma-delimited list of values as shown here:
 
    Kafka key to be used for all messages.
 
+   If a key is provided and partitions.auto="on" is set, then all messages will
+   be assigned to a partition based on the key.
+
 .. function::  dynatopic [boolean]
 
    *Default: off*
@@ -92,13 +95,26 @@ comma-delimited list of values as shown here:
    *Default: off*
 
    librdkafka provides an automatic partitioning function that will
-   evenly split the produced messages into all partitions configured
-   for that topic.
+   automatically distribute the produced messages into all partitions
+   configured for that topic.
 
    To use, set partitions.auto="on". This is instead of specifying the
    number of partitions on the producer side, where it would be easier
    to change the kafka configuration on the cluster for number of
    partitions/topic vs on every machine talking to Kafka via rsyslog.
+
+   If no key is set, messages will be distributed randomly across partitions.
+   This results in a very even load on all partitions, but does not preserve
+   ordering between the messages.
+
+   If a key is set, a partition will be chosen automatically based on it. All
+   messages with the same key will be sorted into the same partition,
+   preserving their ordering. For example, by setting the key to the hostname,
+   messages from a specific host will be written to one partition and ordered,
+   but messages from different nodes will be distributed across different
+   partitions. This distribution is essentially random, but stable. If the
+   number of different keys is much larger than the number of partitions on the
+   topic, load will be distributed fairly evenly.
 
    If set, it will override any other partitioning scheme configured.
 
