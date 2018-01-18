@@ -89,7 +89,6 @@ DEFobjStaticHelpers
 DEFobjCurrIf(conf)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(strms_sess)
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(net)
 DEFobjCurrIf(netstrms)
 DEFobjCurrIf(netstrm)
@@ -210,7 +209,7 @@ configureSTRMListen(strmsrv_t *pThis, uchar *pszPort)
 	if(i >= 0 && i <= 65535) {
 		CHKiRet(addNewLstnPort(pThis, pszPort));
 	} else {
-		errmsg.LogError(0, NO_ERRCODE, "Invalid STRM listen port %s - ignored.\n", pszPort);
+		LogError(0, NO_ERRCODE, "Invalid STRM listen port %s - ignored.\n", pszPort);
 	}
 
 finalize_it:
@@ -400,7 +399,7 @@ create_strm_socket(strmsrv_t *pThis)
 		 * session table, so we can not continue. We need to free all
 		 * we have assigned so far, because we can not really use it...
 		 */
-		errmsg.LogError(0, RS_RET_ERR, "Could not initialize STRM session table, suspending STRM "
+		LogError(0, RS_RET_ERR, "Could not initialize STRM session table, suspending STRM "
 				"message reception.");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
@@ -440,7 +439,7 @@ SessAccept(strmsrv_t *pThis, strmLstnPortList_t *pLstnInfo, strms_sess_t **ppSes
 	iSess = STRMSessTblFindFreeSpot(pThis);
 	if(iSess == -1) {
 		errno = 0;
-		errmsg.LogError(0, RS_RET_MAX_SESS_REACHED, "too many strm sessions - dropping incoming request");
+		LogError(0, RS_RET_MAX_SESS_REACHED, "too many strm sessions - dropping incoming request");
 		ABORT_FINALIZE(RS_RET_MAX_SESS_REACHED);
 	}
 
@@ -471,7 +470,7 @@ SessAccept(strmsrv_t *pThis, strmLstnPortList_t *pLstnInfo, strms_sess_t **ppSes
 		dbgprintf("%s is not an allowed sender\n", fromHostFQDN);
 		if(glbl.GetOption_DisallowWarning()) {
 			errno = 0;
-			errmsg.LogError(0, RS_RET_HOST_NOT_PERMITTED, "STRM message from disallowed "
+			LogError(0, RS_RET_HOST_NOT_PERMITTED, "STRM message from disallowed "
 					"sender %s discarded", fromHostFQDN);
 		}
 		ABORT_FINALIZE(RS_RET_HOST_NOT_PERMITTED);
@@ -604,7 +603,7 @@ Run(strmsrv_t *pThis)
 						/* in this case, something went awfully wrong.
 						 * We are instructed to terminate the session.
 						 */
-						errmsg.LogError(0, localRet, "Tearing down STRM Session %d - see "
+						LogError(0, localRet, "Tearing down STRM Session %d - see "
 							    "previous messages for reason(s)\n", iSTRMSess);
 						pThis->pOnErrClose(pThis->pSessions[iSTRMSess]);
 						strms_sess.Destruct(&pThis->pSessions[iSTRMSess]);
@@ -958,7 +957,6 @@ CODESTARTObjClassExit(strmsrv)
 	objRelease(conf, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(netstrms, DONT_LOAD_LIB);
 	objRelease(nssel, DONT_LOAD_LIB);
 	objRelease(netstrm, LM_NETSTRMS_FILENAME);
@@ -972,7 +970,6 @@ ENDObjClassExit(strmsrv)
  */
 BEGINObjClassInit(strmsrv, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE class also in END MACRO! */
 	/* request objects we use */
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 	CHKiRet(objUse(netstrms, LM_NETSTRMS_FILENAME));
 	CHKiRet(objUse(netstrm, DONT_LOAD_LIB));
