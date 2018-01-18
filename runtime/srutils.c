@@ -838,5 +838,11 @@ split_binary_parameters(uchar **const szBinary, char ***const __restrict__ aPara
 	(*aParams)[iPrm] = NULL; /* NULL per argv[] convention */
 
 finalize_it:
+	if(estrBinary != param_binary) {
+		es_deleteStr(estrBinary);
+	}
+	if(estrParams != NULL) {
+		es_deleteStr(estrParams);
+	}
 	RETiRet;
 }
