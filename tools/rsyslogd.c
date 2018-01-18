@@ -3,7 +3,7 @@
  * because it was either written from scratch by me (rgerhards) or
  * contributors who agreed to ASL 2.0.
  *
- * Copyright 2004-2017 Rainer Gerhards and Adiscon
+ * Copyright 2004-2018 Rainer Gerhards and Adiscon
  *
  * This file is part of rsyslog.
  *
@@ -183,7 +183,7 @@ rsyslogd_usage(void)
 {
 	fprintf(stderr, "usage: rsyslogd [options]\n"
 			"use \"man rsyslogd\" for details. To run rsyslog "
-			"interactively, use \"rsyslogd -n\""
+			"interactively, use \"rsyslogd -n\"\n"
 			"to run it in debug mode use \"rsyslogd -dn\"\n"
 			"For further information see http://www.rsyslog.com/doc\n");
 	exit(1); /* "good" exit - done to terminate usage() */
@@ -1300,6 +1300,18 @@ initAll(int argc, char **argv)
 	 * But we need to have imInternal up first!
 	 */
 	queryLocalHostname();
+
+	/* we now can emit error messages "the regular way" */
+
+	if(getenv("TZ") == NULL) {
+		const char *const tz =
+			(access("/etc/localtime", R_OK) == 0) ? "TZ=/etc/localtime" : "TZ=UTC";
+		putenv((char*)tz);
+		LogMsg(0, RS_RET_NO_TZ_SET, LOG_WARNING, "environment variable TZ is not "
+			"set, auto correcting this to %s\n", tz);
+		fprintf(stderr, "environment variable TZ is not "
+			"set, auto correcting this to %s\n", tz);
+	}
 
 	/* END core initializations - we now come back to carrying out command line options*/
 
