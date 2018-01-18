@@ -134,13 +134,12 @@ case $1 in
 		rm -f rsyslog.input rsyslog.empty rsyslog.input.* imfile-state* omkafka-failed.data
 		rm -f testconf.conf HOSTNAME
 		rm -f rsyslog.errorfile tmp.qi
-		rm -f core.* vghttp://www.rsyslog.com/testbench/echo-get.phpcore.* core*
+		rm -f core.* vgcore.* core*
 		# Note: rsyslog.action.*.include must NOT be deleted, as it
 		# is used to setup some parameters BEFORE calling init. This
 		# happens in chained test scripts. Delete on exit is fine,
 		# though.
 		mkdir test-spool
-		ulimit -c 4000000000
 		# note: TCPFLOOD_EXTRA_OPTS MUST NOT be unset in init, because
 		# some tests need to set it BEFORE calling init to accomodate
 		# their generic test drivers.
@@ -255,7 +254,7 @@ case $1 in
 		    echo "ERROR: config file '$CONF_FILE' not found!"
 		    exit 1
 		fi
-		valgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --gen-suppressions=all --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=$RS_TESTBENCH_LEAK_CHECK ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
+		LD_PRELOAD=$RSYSLOG_PRELOAD valgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --gen-suppressions=all --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=$RS_TESTBENCH_LEAK_CHECK ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
 		. $srcdir/diag.sh wait-startup-pid $3
 		;;
    'startup-vg') # start rsyslogd with default params under valgrind control. $2 is the config file name to use
@@ -516,6 +515,17 @@ case $1 in
 		  . $srcdir/diag.sh error-exit 1
     fi
     ;;
+   'grep-check') # grep for "$EXPECTED" present in rsyslog.log - env var must be set
+		 # before this method is called
+		grep "$EXPECTED" rsyslog.out.log > /dev/null
+		if [ $? -eq 1 ]; then
+		  echo "GREP FAIL: rsyslog.out.log content:"
+		  cat rsyslog.out.log
+		  echo "GREP FAIL: expected text not found:"
+		  echo "$EXPECTED"
+		. $srcdir/diag.sh error-exit 1
+		fi;
+		;;
    'seq-check') # do the usual sequence check to see if everything was properly received. $2 is the instance.
 		rm -f work
 		cp rsyslog.out.log work-presort
@@ -1097,9 +1107,6 @@ case $1 in
 			gdb ../tools/rsyslogd $CORE -batch -x gdb.in
 			CORE=
 			rm gdb.in
-		else
-			echo no core file found, cannot provide additional info
-			ls -l core*
 		fi
 		if [[ "$3" == 'stacktrace' || ( ! -e IN_AUTO_DEBUG &&  "$USE_AUTO_DEBUG" == 'on' ) ]]; then
 			if [ -e core* ]
