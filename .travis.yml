@@ -25,7 +25,7 @@ matrix:
     # the following is left in commented out to provide a sample of how
     # this feature is used for multiple build matrix entries
     #- env: RUN="docker-alpine.sh"
-    - env: RUN="docker-ubuntu-devel.sh"
+    #- env: RUN="docker-ubuntu-devel.sh"
 
   exclude:
      - compiler: "gcc"
@@ -38,9 +38,10 @@ matrix:
        services: docker
        env: RUN="travis-run-compile-tests.sh"
 
-     - os: linux
-       services: docker
-       env: RUN="docker-ubuntu-devel.sh"
+# right now does not work, so keep commented out
+#     - os: linux
+#       services: docker
+#       env: RUN="docker-ubuntu-devel.sh"
 
      - os: linux
        compiler: "clang"
