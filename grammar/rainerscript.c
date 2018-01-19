@@ -555,8 +555,8 @@ objlstPrint(struct objlst *lst)
 	}
 }
 
-struct nvlst*
-nvlstNewStr(es_str_t *value)
+struct nvlst* ATTR_NONNULL(1)
+nvlstNewStr(es_str_t *const value)
 {
 	struct nvlst *lst;
 
@@ -568,6 +568,44 @@ nvlstNewStr(es_str_t *value)
 	}
 
 	return lst;
+}
+
+struct nvlst* ATTR_NONNULL(1)
+nvlstNewStrBackticks(es_str_t *const value)
+{
+	es_str_t *val = NULL;
+	const char *realval;
+
+	char *const param = es_str2cstr(value, NULL);
+	if(param == NULL)
+		goto done;
+
+	if(strncmp(param, "echo $", sizeof("echo $")-1) != 0) {
+		parser_errmsg("invalid backtick parameter `%s` currently "
+			"only `echo $<var>` is supported - replaced by "
+			"empty strong (\"\")", param);
+		realval = NULL;
+	} else {
+		size_t i;
+		const size_t len = strlen(param);
+		for(i = len - 1 ; isspace(param[i]) ; --i) {
+			; /* just go down */
+		}
+		if(i > 6 && i < len - 1) {
+			param[i+1] = '\0';
+		}
+		realval = getenv(param+6);
+	}
+
+	free((void*)param);
+	if(realval == NULL) {
+		realval = "";
+	}
+	val = es_newStrFromCStr(realval, strlen(realval));
+	es_deleteStr(value);
+
+done:
+	return (val == NULL) ? NULL : nvlstNewStr(val);
 }
 
 struct nvlst*

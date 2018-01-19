@@ -39,7 +39,39 @@
 }
 
 %{
+#include <libestr.h>
+#include <ctype.h>
 #include "parserif.h"
+
+static es_str_t* ATTR_NONNULL(1)
+expand_backticks(char *const param)
+{
+	const char *val;
+	assert(param != NULL);
+
+	if(strncmp(param, "echo $", sizeof("echo $")-1) != 0) {
+		parser_errmsg("invalid backtick parameter `%s` currently "
+			"only `echo $<var>` is supported - replaced by "
+			"empty string (\"\")", param);
+		val = NULL;
+	} else {
+		size_t i;
+		const size_t len = strlen(param);
+		for(i = len - 1 ; isspace(param[i]) ; --i) {
+			; /* just go down */
+		}
+		if(i > 6 && i < len - 1) {
+			param[i+1] = '\0';
+		}
+		val = getenv(param+6);
+	}
+
+	if(val == NULL) {
+		val = "";
+	}
+
+	return es_newStrFromCStr(val, strlen(val));
+}
 %}
 
 %option noyywrap nodefault case-insensitive yylineno
@@ -174,6 +206,11 @@ int fileno(FILE *stream);
 				   unescapeStr((uchar*)yytext+1, yyleng-2);
 				   yylval.estr = es_newStrFromBuf(yytext+1, strlen(yytext)-1);
 				   return STRING; }
+<EXPR>`([^`\\]|\\['`"\\bntr]|\\x[0-9a-f][0-9a-f]|\\[0-7][0-7][0-7])*`	 {
+				   yytext[yyleng-1] = '\0';
+				   unescapeStr((uchar*)yytext+1, yyleng-2);
+				   yylval.estr = expand_backticks(yytext+1);
+				   return STRING; }
 <EXPR>\"([^"\\$]|\\["'\\$bntr]|\\x[0-9a-f][0-9a-f]|\\[0-7][0-7][0-7])*\" {
 				   yytext[yyleng-1] = '\0';
 				   unescapeStr((uchar*)yytext+1, yyleng-2);
@@ -266,6 +303,11 @@ int fileno(FILE *stream);
 				   yytext[yyleng-1] = '\0';
 				   unescapeStr((uchar*)yytext+1, yyleng-2);
 				   yylval.estr = es_newStrFromBuf(yytext+1, strlen(yytext)-1);
+				   return STRING; }
+<INOBJ>`([^`\\]|\\['`?\\abfnrtv]|\\[0-7]{1,3})*` {
+				   yytext[yyleng-1] = '\0';
+				   unescapeStr((uchar*)yytext+1, yyleng-2);
+				   yylval.estr = expand_backticks(yytext+1);
 				   return STRING; }
 				  /*yylval.estr = es_newStrFromBuf(yytext+1, yyleng-2);
 				  return VALUE; }*/
