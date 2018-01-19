@@ -122,6 +122,13 @@ case $1 in
 		echo "------------------------------------------------------------"
 		echo "Test: $0"
 		echo "------------------------------------------------------------"
+		# we assume TZ is set, else most test will fail. So let's ensure
+		# this really is the case
+		if [ -z $TZ ]; then
+			echo "testbench: TZ env var not set, setting it to UTC"
+			export TZ=UTC
+		fi
+
 		cp $srcdir/testsuites/diag-common.conf diag-common.conf
 		cp $srcdir/testsuites/diag-common2.conf diag-common2.conf
 		rm -f rsyslogd.started work-*.conf rsyslog.random.data

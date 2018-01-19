@@ -20,6 +20,7 @@ template(name="outfmt" type="list") {
 :msg, contains, "x-pid" stop
 
 action(type="omfile" template="outfmt" file="rsyslog.out.log")
+
 :msg, contains, "this does not occur" action(type="omfwd"
 	target="10.0.0.1" keepalive="on" keepalive.probes="10"
 	keepalive.time="60" keepalive.interval="10")
@@ -33,7 +34,7 @@ echo " msgnum:00000000:" | cmp rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid output generated, rsyslog.out.log is:"
   cat rsyslog.out.log
-  exit 1
+  . $srcdir/diag.sh error-exit 1
 fi;
 
 . $srcdir/diag.sh exit
