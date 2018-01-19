@@ -3,6 +3,9 @@
 FROM ubuntu:16.04
 WORKDIR /home/devel
 VOLUME /rsyslog
+RUN groupadd rsyslog \
+    && useradd -g rsyslog  -s /bin/bash rsyslog \
+    && echo "rsyslog ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 ADD setup-system.sh setup-system.sh
 ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig \
     LD_LIBRARY_PATH=/usr/local/lib
@@ -17,3 +20,4 @@ ENV RSYSLOG_CONFIGURE_OPTIONS --disable-generate-man-pages --enable-testbench --
 # Install any needed packages
 RUN ./setup-system.sh
 WORKDIR /rsyslog
+USER rsyslog
