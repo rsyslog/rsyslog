@@ -402,6 +402,7 @@ endif
 if HAVE_VALGRIND
 TESTS +=  \
 	omprog-cleanup-vg.sh \
+	omprog-multiparam-vg.sh \
 	omprog-noterm-cleanup-vg.sh
 if OS_LINUX
 TESTS += \
@@ -1349,6 +1350,7 @@ EXTRA_DIST= \
 	omprog-noterm-default.sh \
 	omprog-noterm-unresponsive.sh \
 	omprog-feedback.sh \
+	omprog-multiparam-vg.sh \
 	testsuites/omprog-cleanup.conf \
 	testsuites/omprog-noterm.conf \
 	testsuites/omprog-noterm-default.conf \

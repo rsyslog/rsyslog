@@ -788,25 +788,25 @@ split_binary_parameters(uchar **const szBinary, char ***const __restrict__ aPara
 	*szBinary = (uchar*)es_str2cstr(estrBinary, NULL);
 	DBGPRINTF("szBinary = '%s'\n", *szBinary);
 
-	*iParams = 2; /* we always have argv[0], and NULL-terminator for array */
+	*iParams = 1; /* we always have argv[0] */
 	/* count size of argv[] */
 	if (estrParams != NULL) {
+		 (*iParams)++; /* last parameter is not counted in loop below! */
 		if(Debug) {
 			char *params = es_str2cstr(estrParams, NULL);
 			dbgprintf("szParams = '%s'\n", params);
 			free(params);
 		}
 		c = es_getBufAddr(estrParams);
-		assert(c[iCnt] != ' '); /* cannot be at this stage! */
 		for(iCnt = 0 ; iCnt < es_strlen(estrParams) ; ++iCnt) {
 			if (c[iCnt] == ' ' && c[iCnt-1] != '\\')
 				 (*iParams)++;
 		}
 	}
-	DBGPRINTF("iParams = '%d'\n", *iParams);
+	DBGPRINTF("iParams %d (+1 for NULL terminator)\n", *iParams);
 
 	/* create argv[] */
-	CHKmalloc(*aParams = malloc(*iParams * sizeof(char*)));
+	CHKmalloc(*aParams = malloc((*iParams + 1) * sizeof(char*)));
 	iPrm = 0;
 	bInQuotes = FALSE;
 	/* Set first parameter to binary */
@@ -838,5 +838,11 @@ split_binary_parameters(uchar **const szBinary, char ***const __restrict__ aPara
 	(*aParams)[iPrm] = NULL; /* NULL per argv[] convention */
 
 finalize_it:
+	if(estrBinary != param_binary) {
+		es_deleteStr(estrBinary);
+	}
+	if(estrParams != NULL) {
+		es_deleteStr(estrParams);
+	}
 	RETiRet;
 }
