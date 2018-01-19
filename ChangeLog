@@ -4,6 +4,13 @@ Version 8.33.0 [v8-stable] 2018-02-20
   adjust defaults in this case to be more container-friendly
 - new global config parameter "shutdown.enable.ctl-c"
   permits to shutdown rsyslog via ctl-c; useful e.g. in containers
+- core: set TZ on startup if not already set
+  In theory, TZ should be set by the OS. Unfortuantely, this seems
+  to be not the case any longer on many Linux distros. We now check
+  it and set it appropriate if not already given.
+  Thanks to github user JPvRiel for providing an excellent explanation
+  of the reasoning for this and how to work around it.
+  closes https://github.com/rsyslog/rsyslog/issues/2054
 - script bugfix: replace() function worked incorrectly in some cases
   If the end of the message was similar to the replacement string, parts
   of the string could (not always) be missing.
