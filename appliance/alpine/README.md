@@ -13,15 +13,19 @@ you can modify. Note that this happens only for **volume** mounts.
 ### Environment Variables
 
 - TZ
+
   Default: /etc/localtime
+
   Change it to set a specific timezone, e.g. TZ=UTC
 
 - RSYSLOG_CONF
-  Default: /etc/rsyslog.cong
+
+  Default: /etc/rsyslog.conf
+
   If you want to totally replace the default rsyslog configuration with
   your custom config,
 
-  1. create a config file in myconfig: volume or bind mount, e.g. myrsyslog.conf
+  1. create a config file in /config volume or bind mount, e.g. myrsyslog.conf
   2. set RSYSLOG_CONF=/config/myrsyslog.conf
 
   Keep in mind that the myconfig: volume is accessible via /config inside the
