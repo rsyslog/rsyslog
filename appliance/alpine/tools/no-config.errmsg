@@ -1,0 +1,20 @@
+error: container_config file is missing
+
+This most probably means you are using a bind mount to /config but have not
+yet populated the configuration. The container will now shut down.
+
+If you just want to get started now (not recommended), you can simply do a
+
+$ touch /your/config/container_config
+
+which will make this message disappear and start the container.
+
+However, it really is no effort to set it up correctly. Just run
+
+$ docker run -ti <rsyslog-container-name> tools/show-config > /your/config/container_config
+
+to get the defaut config with all config settings. Note that the file name MUST be
+container_config, as this is what the container expects.
+
+Once done, you can start the container. There is no need to change any config
+settings, but now you are able to do so should need arise.
