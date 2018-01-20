@@ -1,0 +1,2 @@
+#!/bin/ash
+cat /config/container_config

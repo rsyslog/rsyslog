@@ -1,0 +1,12 @@
+# rsyslog syslog appliance container configuration.
+# This file will be sourced upon container startup.
+# Uncomment those settings that you need and set them to your
+# desired values.
+
+# If you have an account with Logsene, enter your access
+# information below:
+#export LOGSENE_TOKEN=
+#export LOGSENE_URL=
+
+# Settings for debugging the container
+#export USE_VALGRIND=on
