@@ -8,4 +8,4 @@ fi
 rm /Are-we-Writable
 echo installing valgrind for debugging -- need to access Alpine repositories
 apk update
-apk add rsyslog-dbg musl-dbg valgrind
+apk add --no-cache rsyslog-dbg musl-dbg valgrind
