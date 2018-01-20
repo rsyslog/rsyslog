@@ -10,6 +10,16 @@ mount it to a volume:
 Upon initial creation of the volume, it is populated with a default file that
 you can modify. Note that this happens only for **volume** mounts.
 
+To show the current container config, run
+
+  $ docker run ... tools/show-config
+
+You can also use this to get a template for your own container config if you use
+bind mounts instead of volumes. In this case, make sure that you have **not**
+mounted /config - the container will then use it's own default file.
+
+Note: volumes are automatically populated with the default file upon creation.
+
 ### Environment Variables
 
 - TZ
@@ -30,3 +40,32 @@ you can modify. Note that this happens only for **volume** mounts.
 
   Keep in mind that the myconfig: volume is accessible via /config inside the
   container.
+
+# Runtime Environment
+
+## Volumes
+
+### /config
+
+Holds the container configuration, also the recommaned place for overwriting
+the rsyslog configuration.
+
+This volume can be mounted read-only after initial population with sample files.
+
+### /work
+
+The rsyslog work directory. This is used for spool files and other files that
+rsyslog needs to be persisted over runs.
+
+This volume needs to be mounted writable and **must** be persisted between
+container invocations.
+
+**Warning: this volume is specific to one rsyslog instance.** It **must not**
+be shared between multiple container instances, else strange problems may
+occur.
+
+### /logs
+
+This holds log files if the container is configured to write them.
+
+Needs to be mounted writable.

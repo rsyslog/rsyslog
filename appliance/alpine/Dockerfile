@@ -8,13 +8,13 @@ RUN	echo "http://build.rsyslog.com/alpine/3.7/unstable" >> /etc/apk/repositories
 RUN	adduser -s /bin/ash -D rsyslog rsyslog \
 	&& echo "rsyslog ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 ADD	rsyslog.conf /etc/rsyslog.conf
-VOLUME	/config
-VOLUME	/logs
+VOLUME	/config /work /logs
 # done base system setup
 
 ADD	container_config/container_config /config/container_config
 WORKDIR /home/appliance
 ADD	starter.sh CONTAINER.* ./
+ADD	tools/* ./tools/
 RUN	echo "`date +%F` (`date +%s`)" > CONTAINER.release \
 	&& chown rsyslog:rsyslog *
 CMD	["/home/appliance/starter.sh"]
