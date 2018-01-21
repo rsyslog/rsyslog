@@ -33,6 +33,14 @@ Note: parameter names are case-insensitive.
    considered dead and tried to recover.
 -  **conn.timeout** (not mandatory, default 10)
    Timeout for the socket connection.
+-  **rebindInterval** integer
+   Permits to specify an interval at which the current connection is
+   broken and re-established. This setting is primarily an aid to load
+   balancers. After the configured number of messages has been
+   transmitted, the current connection is terminated and a new one
+   started. This usually is perceived as a \`\`new connection'' by load
+   balancers, which in turn forward messages to another physical target
+   system.
 -  **windowSize** (not mandatory, default 0)
    This is an **expert parameter**. It permits to override the RELP
    window size being used by the client. Changing the window size has
