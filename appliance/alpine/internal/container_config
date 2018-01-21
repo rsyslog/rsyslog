@@ -3,13 +3,17 @@
 # Uncomment those settings that you need and set them to your
 # desired values.
 
+export TZ=UTC
+
 # general container app settings:
 #export CONTAINER_SILENT=on  # do not emit startup message
 
 # If you have an account with Logsene, enter your access
 # information below:
 #export LOGSENE_TOKEN=
-#export LOGSENE_URL=
+#export LOGSENE_URL=logsene-receiver.eu.sematext.com
 
 # Settings for debugging the container
 #export USE_VALGRIND=on
+#export RSYSLOG_DEBUG="debug nostdout"
+#export RSYSLOG_DEBUGLOG="/logs/rsyslog-internal-debug.log"
