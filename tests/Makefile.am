@@ -311,6 +311,7 @@ endif # ENABLE_LIBCURL
 if HAVE_VALGRIND
 TESTS +=  \
 	rscript_parse_json-vg.sh \
+	rscript_backticks-vg.sh \
 	prop-jsonmesg-vg.sh
 endif # HAVE_VALGRIND
 endif # ENABLE_TESTBENCH2
@@ -973,6 +974,7 @@ EXTRA_DIST= \
 	rscript_script_error.sh \
 	rscript_parse_json.sh \
 	rscript_parse_json-vg.sh \
+	rscript_backticks-vg.sh \
 	rscript_previous_action_suspended.sh \
 	rscript_str2num_negative.sh \
 	mmanon_random_32_ipv4.sh \
