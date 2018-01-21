@@ -2,4 +2,7 @@
 # mounts, which makes sense in our case.
 if [ ! -f /config/container_config ]; then
 	cp internal/container_config /config
-fi;
+fi
+if [ ! -f /config/droprules.conf ]; then
+	cp internal/droprules.conf /config
+fi

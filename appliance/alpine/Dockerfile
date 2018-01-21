@@ -14,10 +14,11 @@ RUN	echo "http://build.rsyslog.com/alpine/3.7/unstable" >> /etc/apk/repositories
 	   rsyslog-omstdout
 RUN	adduser -s /bin/ash -D rsyslog rsyslog \
 	&& echo "rsyslog ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-COPY	rsyslog.conf /etc/rsyslog.conf
 VOLUME	/config /work /logs
 CMD	["rsyslog"]
 ENTRYPOINT ["/home/appliance/starter.sh"]
+COPY	rsyslog.conf /etc/rsyslog.conf
+COPY	rsyslog.conf.d/*.conf /etc/rsyslog.conf.d/
 # done base system setup
 
 WORKDIR /home/appliance

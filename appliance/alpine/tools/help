@@ -10,4 +10,9 @@ volumes:
 /log        - log file store (if used)
 /work       - rsyslog work files; do not share with multiple instances
 /config     - configuration files, can be mounted read-only once finalized
+
+listening ports:
+514/udp     - syslog (udp)
+514/tcp     - syslog (plain tcp)
+1601/tcp    - RELP
 '
