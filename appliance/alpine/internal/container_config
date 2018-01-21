@@ -3,6 +3,9 @@
 # Uncomment those settings that you need and set them to your
 # desired values.
 
+# general container app settings:
+#export CONTAINER_SILENT=on  # do not emit startup message
+
 # If you have an account with Logsene, enter your access
 # information below:
 #export LOGSENE_TOKEN=
