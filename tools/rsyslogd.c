@@ -1309,8 +1309,6 @@ initAll(int argc, char **argv)
 		putenv((char*)tz);
 		LogMsg(0, RS_RET_NO_TZ_SET, LOG_WARNING, "environment variable TZ is not "
 			"set, auto correcting this to %s\n", tz);
-		fprintf(stderr, "environment variable TZ is not "
-			"set, auto correcting this to %s\n", tz);
 	}
 
 	/* END core initializations - we now come back to carrying out command line options*/
