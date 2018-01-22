@@ -93,7 +93,6 @@
 DEFobjCurrIf(obj) /* we define our own interface, as this is expected by some macros! */
 DEFobjCurrIf(var)
 DEFobjCurrIf(module)
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(strm)
 static objInfo_t *arrObjInfo[OBJ_NUM_IDS]; /* array with object information pointers */
 pthread_mutex_t mutObjGlobalOp;	/* mutex to guard global operations of the object system */
@@ -1176,7 +1175,7 @@ RegisterObj(uchar *pszObjName, objInfo_t *pInfo)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		errmsg.LogError(0, NO_ERRCODE, "registering object '%s' failed with error code %d", pszObjName, iRet);
+		LogError(0, NO_ERRCODE, "registering object '%s' failed with error code %d", pszObjName, iRet);
 	}
 
 	RETiRet;
@@ -1382,7 +1381,6 @@ objClassExit(void)
 	objRelease(strm, CORE_COMPONENT);
 	objRelease(var, CORE_COMPONENT);
 	objRelease(module, CORE_COMPONENT);
-	objRelease(errmsg, CORE_COMPONENT);
 
 	/* TODO: implement the class exits! */
 #if 0
@@ -1436,7 +1434,6 @@ objClassInit(modInfo_t *pModInfo)
 	CHKiRet(strmClassInit(pModInfo));
 	CHKiRet(objUse(var, CORE_COMPONENT));
 	CHKiRet(objUse(module, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(strm, CORE_COMPONENT));
 
 finalize_it:
