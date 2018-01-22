@@ -2,6 +2,9 @@
 Version 8.33.0 [v8-stable] 2018-02-20
 - auto-detect if running inside a container (as pid 1)
   adjust defaults in this case to be more container-friendly
+- script: permit to use environment variables during configuration
+  new constant string type "backticks", inspired by sh
+  (sample: `echo $VARNAME`).
 - new global config parameter "shutdown.enable.ctl-c"
   permits to shutdown rsyslog via ctl-c; useful e.g. in containers
 - core: set TZ on startup if not already set
