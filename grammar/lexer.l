@@ -41,20 +41,56 @@
 %{
 #include <libestr.h>
 #include <ctype.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include "parserif.h"
+
+/* TODO: move this to a better modules, refactor -- rgerhards, 2018-01-22 */
+static char *
+read_file(const char *const filename)
+{
+	char *content = NULL;
+	int fd;
+	struct stat sb;
+	ssize_t nread;
+	assert(filename != NULL);
+
+	if((fd = open((const char*) filename, O_RDONLY)) == -1) {
+		goto done;
+	}
+
+	if(fstat(fd, &sb) == -1) {
+		goto done;
+	}
+
+	content = malloc(sb.st_size+1);
+	if(content == NULL) {
+		goto done;
+	}
+
+	nread = read(fd, content, sb.st_size);
+	content[nread] = '\0';
+	if(nread != (ssize_t) sb.st_size) {
+		free(content);
+		content = NULL;
+		goto done;
+	}
+
+	close(fd);
+
+done:	return content;
+}
 
 static es_str_t* ATTR_NONNULL(1)
 expand_backticks(char *const param)
 {
-	const char *val;
+	const char *val = NULL;
 	assert(param != NULL);
+	int need_free = 0;
 
-	if(strncmp(param, "echo $", sizeof("echo $")-1) != 0) {
-		parser_errmsg("invalid backtick parameter `%s` currently "
-			"only `echo $<var>` is supported - replaced by "
-			"empty string (\"\")", param);
-		val = NULL;
-	} else {
+	if(strncmp(param, "echo $", sizeof("echo $")-1) == 0) {
 		size_t i;
 		const size_t len = strlen(param);
 		for(i = len - 1 ; isspace(param[i]) ; --i) {
@@ -64,13 +100,24 @@ expand_backticks(char *const param)
 			param[i+1] = '\0';
 		}
 		val = getenv(param+6);
+	} else if(strncmp(param, "cat ", sizeof("cat ")-1) == 0) {
+		val = read_file(param+4);
+		need_free = 1;
 	}
 
 	if(val == NULL) {
+		parser_errmsg("invalid backtick parameter `%s` - replaced by "
+			"empty string (\"\")", param);
 		val = "";
+		need_free = 0;
 	}
 
-	return es_newStrFromCStr(val, strlen(val));
+	es_str_t *const estr = es_newStrFromCStr(val, strlen(val));
+	if(need_free) {
+		free((void*)val);
+	}
+
+	return estr;
 }
 %}
 

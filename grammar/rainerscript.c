@@ -5058,7 +5058,7 @@ cnfDoInclude(const char *const name, const int optional)
 		if(result == GLOB_NOMATCH) {
 	#else
 		result = glob(finalName, GLOB_MARK, NULL, &cfgFiles);
-		if(result == GLOB_NOMATCH && containsGlobWildcard(finalName)) {
+		if(result == GLOB_NOMATCH && containsGlobWildcard((char*)finalName)) {
 	#endif /* HAVE_GLOB_NOMAGIC */
 		goto done;
 	}

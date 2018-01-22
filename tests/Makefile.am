@@ -303,6 +303,7 @@ TESTS +=  \
 	lookup_table_bad_configs.sh \
 	lookup_table_rscript_reload.sh \
 	lookup_table_rscript_reload_without_stub.sh \
+	include-obj-text-from-file.sh \
 	multiple_lookup_tables.sh
 if ENABLE_LIBCURL
 TESTS +=  \
@@ -931,6 +932,7 @@ EXTRA_DIST= \
 	testsuites/diskqueue.conf \
 	arrayqueue.sh \
 	testsuites/arrayqueue.conf \
+	include-obj-text-from-file.sh \
 	include-obj-outside-control-flow-vg.sh \
 	include-obj-in-if-vg.sh \
 	include-obj-text-vg.sh \
