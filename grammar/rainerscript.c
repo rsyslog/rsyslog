@@ -69,6 +69,17 @@ static void cnfstmtOptimizePRIFilt(struct cnfstmt *stmt);
 static void cnfarrayPrint(struct cnfarray *ar, int indent);
 struct cnffunc * cnffuncNew_prifilt(int fac);
 
+static struct cnfparamdescr incpdescr[] = {
+	{ "file", eCmdHdlrString, 0 },
+	{ "text", eCmdHdlrString, 0 },
+	{ "mode", eCmdHdlrGetWord, 0 }
+};
+static struct cnfparamblk incpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(incpdescr)/sizeof(struct cnfparamdescr),
+	  incpdescr
+	};
+
 struct curl_funcData {
 	const char *reply;
 	size_t replyLen;
@@ -5014,18 +5025,21 @@ cnffuncNew_prifilt(int fac)
 /* returns 0 if everything is OK and config parsing shall continue,
  * and 1 if things are so wrong that config parsing shall be aborted.
  */
-int
-cnfDoInclude(char *name)
+int ATTR_NONNULL()
+cnfDoInclude(const char *const name, const int optional)
 {
 	char *cfgFile;
-	char *finalName;
+	const char *finalName;
 	int i;
 	int result;
 	glob_t cfgFiles;
+	int ret = 0;
 	struct stat fileInfo;
+	char errStr[1024];
 	char nameBuf[MAXFNAME+1];
 	char cwdBuf[MAXFNAME+1];
 
+	DBGPRINTF("cnfDoInclude: file: '%s', optional: %d\n", name, optional);
 	finalName = name;
 	if(stat(name, &fileInfo) == 0) {
 		/* stat usually fails if we have a wildcard - so this does NOT indicate error! */
@@ -5038,25 +5052,27 @@ cnfDoInclude(char *name)
 
 	/* Use GLOB_MARK to append a trailing slash for directories. */
 	/* Use GLOB_NOMAGIC to detect wildcards that match nothing. */
-#ifdef HAVE_GLOB_NOMAGIC
-	/* Silently ignore wildcards that match nothing */
-	result = glob(finalName, GLOB_MARK | GLOB_NOMAGIC, NULL, &cfgFiles);
-	if(result == GLOB_NOMATCH) {
-#else
-	result = glob(finalName, GLOB_MARK, NULL, &cfgFiles);
-    if(result == GLOB_NOMATCH && containsGlobWildcard(finalName)) {
-#endif /* HAVE_GLOB_NOMAGIC */
-        return 0;
-    }
+	#ifdef HAVE_GLOB_NOMAGIC
+		/* Silently ignore wildcards that match nothing */
+		result = glob(finalName, GLOB_MARK | GLOB_NOMAGIC, NULL, &cfgFiles);
+		if(result == GLOB_NOMATCH) {
+	#else
+		result = glob(finalName, GLOB_MARK, NULL, &cfgFiles);
+		if(result == GLOB_NOMATCH && containsGlobWildcard(finalName)) {
+	#endif /* HAVE_GLOB_NOMAGIC */
+		goto done;
+	}
 
 	if(result == GLOB_NOSPACE || result == GLOB_ABORTED) {
-		char errStr[1024];
-		rs_strerror_r(errno, errStr, sizeof(errStr));
-		if(getcwd(cwdBuf, sizeof(cwdBuf)) == NULL)
-			strcpy(cwdBuf, "??getcwd() failed??");
-		parser_errmsg("error accessing config file or directory '%s' [cwd:%s]: %s",
-				finalName, cwdBuf, errStr);
-		return 1;
+		if(optional == 0) {
+			rs_strerror_r(errno, errStr, sizeof(errStr));
+			if(getcwd(cwdBuf, sizeof(cwdBuf)) == NULL)
+				strcpy(cwdBuf, "??getcwd() failed??");
+			parser_errmsg("error accessing config file or directory '%s' "
+				"[cwd:%s]: %s", finalName, cwdBuf, errStr);
+			ret = 1;
+		}
+		goto done;
 	}
 
 	/* note: bison "stacks" the files, so we need to submit them
@@ -5067,13 +5083,15 @@ cnfDoInclude(char *name)
 	for(i = cfgFiles.gl_pathc - 1; i >= 0 ; i--) {
 		cfgFile = cfgFiles.gl_pathv[i];
 		if(stat(cfgFile, &fileInfo) != 0) {
-			char errStr[1024];
-			rs_strerror_r(errno, errStr, sizeof(errStr));
-			if(getcwd(cwdBuf, sizeof(cwdBuf)) == NULL)
-				strcpy(cwdBuf, "??getcwd() failed??");
-			parser_errmsg("error accessing config file or directory '%s' "
+			if(optional == 0) {
+				rs_strerror_r(errno, errStr, sizeof(errStr));
+				if(getcwd(cwdBuf, sizeof(cwdBuf)) == NULL)
+					strcpy(cwdBuf, "??getcwd() failed??");
+				parser_errmsg("error accessing config file or directory '%s' "
 					"[cwd: %s]: %s", cfgFile, cwdBuf, errStr);
-			return 1;
+				ret = 1;
+			}
+			goto done;
 		}
 
 		if(S_ISREG(fileInfo.st_mode)) { /* config file */
@@ -5081,15 +5099,104 @@ cnfDoInclude(char *name)
 			cnfSetLexFile(cfgFile);
 		} else if(S_ISDIR(fileInfo.st_mode)) { /* config directory */
 			DBGPRINTF("requested to include directory '%s'\n", cfgFile);
-			cnfDoInclude(cfgFile);
+			cnfDoInclude(cfgFile, optional);
 		} else {
 			DBGPRINTF("warning: unable to process IncludeConfig directive '%s'\n", cfgFile);
 		}
 	}
 
+done:
 	globfree(&cfgFiles);
-	return 0;
+	return ret;
 }
+
+
+/* Process include() objects */
+void
+includeProcessCnf(struct nvlst *const lst)
+{
+	struct cnfparamvals *pvals = NULL;
+	const char *inc_file = NULL;
+	const char *text = NULL;
+	int optional = 0;
+	int abort_if_missing = 0;
+	int i;
+
+	if(lst == NULL) {
+		parser_errmsg("include() must have either 'file' or 'text' "
+			"parameter - ignored");
+		goto done;
+	}
+
+	pvals = nvlstGetParams(lst, &incpblk, NULL);
+	if(pvals == NULL) {
+		goto done;
+	}
+	DBGPRINTF("include param blk after includeProcessCnf:\n");
+	cnfparamsPrint(&incpblk, pvals);
+	for(i = 0 ; i < incpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed) {
+			continue;
+		}
+
+		if(!strcmp(incpblk.descr[i].name, "file")) {
+			inc_file = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(incpblk.descr[i].name, "text")) {
+			text = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(incpblk.descr[i].name, "mode")) {
+			char *const md = es_str2cstr(pvals[i].val.d.estr, NULL);
+			if(!strcmp(md, "abort-if-missing")) {
+				optional = 0;
+				abort_if_missing = 1;
+			} else if(!strcmp(md, "required")) {
+				optional = 0;
+			} else if(!strcmp(md, "optional")) {
+				optional = 1;
+			} else {
+				parser_errmsg("invalid 'mode' paramter: '%s' - ignored", md);
+			}
+			free((void*)md);
+		} else {
+			LogError(0, RS_RET_INTERNAL_ERROR,
+				"rainerscript/include: program error, non-handled inclpblk "
+				"param '%s' in includeProcessCnf()", incpblk.descr[i].name);
+		}
+	}
+
+	if(text != NULL && inc_file != NULL) {
+		parser_errmsg("include() must have either 'file' or 'text' "
+			"parameter, but both are set - ignored");
+		goto done;
+	}
+
+	if(inc_file != NULL) {
+		if(cnfDoInclude(inc_file, optional) != 0 && abort_if_missing) {
+			fprintf(stderr, "include file '%s' mode is set to abort-if-missing "
+				"and the file is indeed missing - thus aborting rsyslog\n",
+				inc_file);
+			exit(1); /* "good exit" - during config processing, requested by user */
+		}
+	} else if(text != NULL) {
+		es_str_t *estr = es_newStrFromCStr((char*)text, strlen(text));
+		/* lex needs 2 \0 bytes as terminator indication (wtf ;-)) */
+		es_addChar(&estr, '\0');
+		es_addChar(&estr, '\0');
+		cnfAddConfigBuffer(estr, "text");
+	} else {
+		parser_errmsg("include must have either 'file' or 'text' "
+			"parameter - ignored");
+		goto done;
+	}
+
+done:
+	free((void*)text);
+	free((void*)inc_file);
+	nvlstDestruct(lst);
+	if(pvals != NULL)
+		cnfparamvalsDestruct(pvals, &incpblk);
+	return;
+}
+
 
 void
 varDelete(const struct svar *v)
@@ -5316,6 +5423,7 @@ tokenval2str(const int tok)
 	case BEGIN_PROPERTY: return "BEGIN_PROPERTY";
 	case BEGIN_CONSTANT: return "BEGIN_CONSTANT";
 	case BEGIN_TPL: return "BEGIN_TPL";
+	case BEGIN_INCLUDE: return "BEGIN_INCLUDE";
 	case BEGIN_RULESET: return "BEGIN_RULESET";
 	case STOP: return "STOP";
 	case SET: return "SET";

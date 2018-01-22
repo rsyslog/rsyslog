@@ -310,6 +310,9 @@ TESTS +=  \
 endif # ENABLE_LIBCURL
 if HAVE_VALGRIND
 TESTS +=  \
+	include-obj-outside-control-flow-vg.sh \
+	include-obj-in-if-vg.sh \
+	include-obj-text-vg.sh \
 	rscript_parse_json-vg.sh \
 	rscript_backticks-vg.sh \
 	prop-jsonmesg-vg.sh
@@ -928,6 +931,9 @@ EXTRA_DIST= \
 	testsuites/diskqueue.conf \
 	arrayqueue.sh \
 	testsuites/arrayqueue.conf \
+	include-obj-outside-control-flow-vg.sh \
+	include-obj-in-if-vg.sh \
+	include-obj-text-vg.sh \
 	rscript_http_request.sh \
 	rscript_http_request-vg.sh \
 	rscript_bare_var_root.sh \

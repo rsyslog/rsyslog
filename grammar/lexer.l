@@ -251,7 +251,7 @@ int fileno(FILE *stream);
   * always the longest match :-(
   */
 <INCL>.|\n
-<INCL>[^ \t\n]+			{ if(cnfDoInclude(yytext) != 0)
+<INCL>[^ \t\n]+			{ if(cnfDoInclude(yytext, 0) != 0)
 					yyterminate();
 				  BEGIN INITIAL; }
 "main_queue"[ \n\t]*"("		{ yylval.objType = CNFOBJ_MAINQ;
@@ -278,6 +278,7 @@ int fileno(FILE *stream);
 				  BEGIN INOBJ; return BEGINOBJ; }
 "dyn_stats"[ \n\t]*"("		{ yylval.objType = CNFOBJ_DYN_STATS;
 				  BEGIN INOBJ; return BEGINOBJ; }
+"include"[ \n\t]*"("		{ BEGIN INOBJ; return BEGIN_INCLUDE; }
 "action"[ \n\t]*"("		{ BEGIN INOBJ; return BEGIN_ACTION; }
 ^[ \t]*:\$?[a-z\-]+[ ]*,[ ]*!?[a-z]+[ ]*,[ ]*\"(\\\"|[^\"])*\"	{
 				  yylval.s = strdup(rmLeadingSpace(yytext));
@@ -369,6 +370,47 @@ cnfParseBuffer(char *buf, unsigned lenBuf)
 done:	return r;
 }
 
+
+/* add config file or text the the stack of config objects to be
+ * processed.
+ * cnfobjname is either the file name or "text" if generated from
+ * text ("text" can also be replaced by something more intelligent
+ * by the caller.
+ * The provided string is freed.
+ */
+int ATTR_NONNULL()
+cnfAddConfigBuffer(es_str_t *const str, const char *const cnfobj_name)
+{
+	struct bufstack *bs;
+	int r = 0;
+	assert(str != NULL);
+	assert(cnfobj_name != NULL);
+
+	if((bs = malloc(sizeof(struct bufstack))) == NULL) {
+		r = 1;
+		goto done;
+	}
+
+	if(currbs != NULL)
+		currbs->lineno = yylineno;
+	bs->prev = currbs;
+	bs->fn = strdup(cnfobj_name);
+	yy_size_t lll = es_strlen(str);
+	bs->bs = yy_scan_buffer((char*)es_getBufAddr(str), lll);
+	bs->estr = str; /* needed so we can free it later */
+	currbs = bs;
+	cnfcurrfn = bs->fn;
+	yylineno = 1;
+	dbgprintf("config parser: pushed config fragment on top of stack: %s\n", cnfobj_name);
+
+done:
+	if(r != 0) {
+		es_deleteStr(str);
+	}
+	return r;
+}
+
+
 /* set a new buffers. Returns 0 on success, 1 on error, 2 on file not exists.
  * note: in case of error, errno must be kept valid!
  */
@@ -376,9 +418,9 @@ int
 cnfSetLexFile(char *fname)
 {
 	es_str_t *str = NULL;
+	struct bufstack *bs;
 	FILE *fp;
 	int r = 0;
-	struct bufstack *bs;
 
 	/* check for invalid recursive include */
 	for(bs = currbs ; bs != NULL ; bs = bs->prev) {
@@ -402,30 +444,9 @@ cnfSetLexFile(char *fname)
 	if(fp != stdin)
 		fclose(fp);
 	
-	/* maintain stack */
-	if((bs = malloc(sizeof(struct bufstack))) == NULL) {
-		r = 1;
-		goto done;
-	}
-
-	if(currbs != NULL)
-		currbs->lineno = yylineno;
-	bs->prev = currbs;
-	bs->fn = strdup(fname == NULL ? "stdin" : fname);
-	yy_size_t lll = es_strlen(str);
-	//bs->bs = yy_scan_buffer((char*)es_getBufAddr(str), (yy_size_t) es_strlen(str));
-	bs->bs = yy_scan_buffer((char*)es_getBufAddr(str), lll);
-	bs->estr = str; /* needed so we can free it later */
-	currbs = bs;
-	cnfcurrfn = bs->fn;
-	yylineno = 1;
-	dbgprintf("config parser: pushed file %s on top of stack\n", fname);
+	r = cnfAddConfigBuffer(str, ((fname == NULL) ? "stdin" : fname));
 
 done:
-	if(r != 0) {
-		if(str != NULL)
-			es_deleteStr(str);
-	}
 	return r;
 }
 

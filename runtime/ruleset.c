@@ -686,9 +686,11 @@ GetParserList(rsconf_t *conf, smsg_t *pMsg)
 
 
 /* Add a script block to the current ruleset */
-static void
-addScript(ruleset_t *pThis, struct cnfstmt *script)
+static void ATTR_NONNULL(1)
+addScript(ruleset_t *const pThis, struct cnfstmt *const script)
 {
+	if(script == NULL) /* happens for include() */
+		return;
 	if(pThis->last == NULL)
 		pThis->root = pThis->last = script;
 	else {
