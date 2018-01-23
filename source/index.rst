@@ -53,20 +53,13 @@ Reference
 Sponsors and Community
 ----------------------
 
-Please visit the rsyslog Sponsor's Page\ [4]_ to honor the project sponsors or 
-become one yourself! We are very grateful for any help towards the project 
+Please visit the rsyslog `Sponsor's Page`_ to honor the project sponsors or
+become one yourself! We are very grateful for any help towards the project
 goals.
-
-Visit the Rsyslog Status Page\ [2]_ to obtain current version information and 
-project status.
 
 If you like rsyslog, you might want to lend us a helping hand. It
 doesn't require a lot of time - even a single mouse click helps. Learn
-:doc:`how to help the rsyslog project <how2help>`.
+:doc:`how2help`.
 
+.. _Sponsor's Page: http://www.rsyslog.com/sponsors
 
-Related Links
--------------
-
-.. [2] `rsyslog Sponsor's Page <http://www.rsyslog.com/sponsors>`_
-.. [4] `Regular expression checker/generator tool for rsyslog <http://www.rsyslog.com/tool-regex>`_
