@@ -6,7 +6,7 @@ Documentation=http://www.rsyslog.com/doc/
 
 [Service]
 Type=notify
-ExecStart=@sbindir@/rsyslogd -n
+ExecStart=@sbindir@/rsyslogd -n -iNONE
 StandardOutput=null
 Restart=on-failure
 
