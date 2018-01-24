@@ -27,3 +27,4 @@ The first full implementation is available since rsyslog v6.
    rainerscript_call
    rainerscript_call_indirect
    global
+   include

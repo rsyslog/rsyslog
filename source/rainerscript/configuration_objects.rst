@@ -37,3 +37,9 @@ timezone()
 
 The :doc:`timezone <../configuration/timezone>` object is used to define
 timezone settings.
+
+include()
+---------
+
+The :doc:`include <include>`  object is use to include configuration snippets
+stored elsewhere into the configuration.
