@@ -2,7 +2,7 @@
  *
  * Module begun 2011-04-19 by Rainer Gerhards
  *
- * Copyright 2011-2016 Adiscon GmbH.
+ * Copyright 2011-2018 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -426,10 +426,12 @@ yyerror(const char *s)
 	parser_errmsg("%s on token '%s'", s, yytext);
 	return 0;
 }
-void cnfDoObj(struct cnfobj *o)
+void ATTR_NONNULL()
+cnfDoObj(struct cnfobj *const o)
 {
 	int bDestructObj = 1;
 	int bChkUnuse = 1;
+	assert(o != NULL);
 
 	dbgprintf("cnf:global:obj: ");
 	cnfobjPrint(o);
