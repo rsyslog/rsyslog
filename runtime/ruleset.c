@@ -11,7 +11,7 @@
  *
  * Module begun 2009-06-10 by Rainer Gerhards
  *
- * Copyright 2009-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -915,6 +915,7 @@ debugPrintAll(rsconf_t *conf)
 	RETiRet;
 }
 
+struct cnfstmt * removeNOPs(struct cnfstmt *root);
 static void
 rulesetOptimize(ruleset_t *pRuleset)
 {
@@ -923,7 +924,7 @@ rulesetOptimize(ruleset_t *pRuleset)
 			  pRuleset->pszName);
 		rulesetDebugPrint((ruleset_t*) pRuleset);
 	}
-	cnfstmtOptimize(pRuleset->root);
+	pRuleset->root = cnfstmtOptimize(pRuleset->root);
 	if(Debug) {
 		dbgprintf("ruleset '%s' after optimization:\n",
 			  pRuleset->pszName);

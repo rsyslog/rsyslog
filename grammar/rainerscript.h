@@ -358,7 +358,7 @@ struct cnfstmt * cnfstmtNewCall(es_str_t *name);
 struct cnfstmt * cnfstmtNewContinue(void);
 struct cnfstmt * cnfstmtNewReloadLookupTable(struct cnffparamlst *fparams);
 void cnfstmtDestructLst(struct cnfstmt *root);
-void cnfstmtOptimize(struct cnfstmt *root);
+struct cnfstmt *cnfstmtOptimize(struct cnfstmt *root);
 struct cnfarray* cnfarrayNew(es_str_t *val);
 struct cnfarray* cnfarrayDup(struct cnfarray *old);
 struct cnfarray* cnfarrayAdd(struct cnfarray *ar, es_str_t *val);
