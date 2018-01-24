@@ -1,15 +1,44 @@
 #!/bin/bash
 
-# this is used to create an rsyslog release tarball.
-# it must be executed from the root of the rsyslog-doc
-# project.
-
-
 # Do not allow use of unitilized variables
 set -u
 
 # Exit if any statement returns a non-true value
 set -e
+
+
+# Read the riot act, give user an option to bail before building the docs
+
+echo <<DISCLAIMER "
+
+#######################################################################
+#                                                                     #
+# Purpose: Create an official rsyslog docs release tarball            #
+#                                                                     #
+# Before proceeding, please confirm that you have performed the       #
+# following steps:                                                    #
+#                                                                     #
+# 1. Manually fetched, merged and tagged the changes to the stable    #
+#    branch that are intended to reflect the latest release.          #
+#                                                                     #
+# 2. Checkout the latest tag (or stable branch)                       #
+#                                                                     #
+# 3. Remove uncommitted files to help prevent them from being         #
+#    included in the release tarball                                  #
+#                                                                     #
+# These steps can be automated, but have been left as-is for this     #
+# version of the release script. If desired, a future version of      #
+# the script can be enhanced to include this functionality.           #
+#                                                                     #
+#                                                                     #
+#             PRESS ENTER TO CONTINUE OR CTRL+C TO CANCEL             #
+#                                                                     #
+#######################################################################
+"
+DISCLAIMER
+
+read -r REPLY
+
 
 
 #####################################################################
