@@ -3,6 +3,33 @@ configuration objects
 
 Note: configuration object parameters are case-insensitive.
 
+Common Parameters
+-----------------
+
+config.enable
+.............
+
+.. versionadded:: 8.33.0
+
+All configuration objects have a parameter "config.enable".
+For auto-generated configs, it is useful to have the ability to disable some
+config constructs even though they may be specified inside the config. This
+can be done via the ``config.enabled`` parameter.
+If set to ``on`` or not specified, the construct will be
+used, if set to any other value, it will be ignored.
+This can be used together with the backtick functionality to enable or
+disable parts of the configuration from either a file or environment variable.
+
+Example:
+
+Let's say we want to conditionally load a module. Environment variable
+``LOAD_IMPTCP`` will be either unset or ``off`` .
+Then we can use this config construct::
+
+    module(load="imptcp" config.enabled=`echo $LOAD_IMPTCP`)
+
+If the variable is set to ```off```, the module will **not** be loaded.
+
 action()
 --------
 
