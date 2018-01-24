@@ -293,3 +293,9 @@ epub_author = u'Rainer Gerhards and Others'
 epub_contributor = u'Rsyslog Community'
 epub_publisher = 'http://www.rsyslog.com/'
 epub_description = u'Documentation for the rsyslog project'
+
+
+# http://www.sphinx-doc.org/en/stable/extdev/appapi.html#sphinx.application.Sphinx.add_stylesheet
+# Include our custom stylesheet in addition to specified theme
+def setup(app):
+    app.add_stylesheet('rsyslog.css')
