@@ -1157,6 +1157,7 @@ struct cnfparamvals*
 nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 	       struct cnfparamvals *vals)
 {
+#ifndef __clang_analyzer__ /* I give up on this one - let Coverity do the work */
 	int i;
 	int bValsWasNULL;
 	int bInError = 0;
@@ -1203,6 +1204,18 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 		}
 	}
 
+	/* now config-system parameters (currently a bit hackish, as we
+	 * only have one...). -- rgerhards, 2018-01-24
+	 */
+	if((valnode = nvlstFindNameCStr(lst, "config.enabled")) != NULL) {
+		if(es_strbufcmp(valnode->val.d.estr, (unsigned char*) "on", 2)) {
+			dbgprintf("config object disabled by configuration\n");
+			valnode->bUsed = 1;
+			bInError = 1;
+		}
+	}
+
+	/* done parameter processing */
 	if(bInError) {
 		if(bValsWasNULL)
 			cnfparamvalsDestruct(vals, params);
@@ -1210,6 +1223,9 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 	}
 
 	return vals;
+#else
+	return NULL;
+#endif
 }
 
 

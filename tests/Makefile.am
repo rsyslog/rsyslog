@@ -267,6 +267,7 @@ TESTS +=  \
 	rscript_parse_json.sh \
 	rscript_previous_action_suspended.sh \
 	rscript_str2num_negative.sh \
+	rscript-config_enable-on.sh \
 	mmanon_random_32_ipv4.sh \
 	mmanon_random_cons_32_ipv4.sh \
 	mmanon_recognize_ipv4.sh \
@@ -316,6 +317,7 @@ TESTS +=  \
 	include-obj-text-vg.sh \
 	rscript_parse_json-vg.sh \
 	rscript_backticks-vg.sh \
+	rscript-config_enable-off-vg.sh \
 	prop-jsonmesg-vg.sh
 endif # HAVE_VALGRIND
 endif # ENABLE_TESTBENCH2
@@ -936,6 +938,8 @@ EXTRA_DIST= \
 	include-obj-outside-control-flow-vg.sh \
 	include-obj-in-if-vg.sh \
 	include-obj-text-vg.sh \
+	rscript-config_enable-off-vg.sh \
+	rscript-config_enable-on.sh \
 	rscript_http_request.sh \
 	rscript_http_request-vg.sh \
 	rscript_bare_var_root.sh \
