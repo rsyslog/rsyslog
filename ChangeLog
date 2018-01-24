@@ -2,6 +2,21 @@
 Version 8.33.0 [v8-stable] 2018-02-20
 - auto-detect if running inside a container (as pid 1)
   adjust defaults in this case to be more container-friendly
+- config: add include() script object
+  This permits to include files (like legacy $IncludeConfig) via a
+  script object. Needless to say, the script object offers more
+  features:
+  - include files can now be
+    - required, with rsyslog aborting when not present
+    - required, with rsyslog emitting an error message but otherwise
+      continuing when not present
+    - optional, which means non-present include files will be
+      skipped without notice
+    This is controlled by the "mode" parameter.
+  - text can be included form e.g. an environment variable
+    --> ex: include(text=`echo $ENVVAR`)
+  This finally really obsoletes $IncludeConfig.
+  closes https://github.com/rsyslog/rsyslog/issues/2151
 - script: permit to use environment variables during configuration
   new constant string type "backticks", inspired by sh
   (sample: `echo $VARNAME`).
