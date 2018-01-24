@@ -17,6 +17,15 @@ Version 8.33.0 [v8-stable] 2018-02-20
     --> ex: include(text=`echo $ENVVAR`)
   This finally really obsoletes $IncludeConfig.
   closes https://github.com/rsyslog/rsyslog/issues/2151
+- config: add ability to disable config parameter ("config.enable")
+  For auto-generated configs, it is useful to have the ability to disable some
+  config constructs even though they may be specified inside the config. This
+  can now be done via the ```config.disable``` parameter, applicable to all
+  script objects. If set to ```on``` or not specified, the construct will be
+  used, if set to any other value, it will be ignored. This can be used
+  together with the backtick functionality to configure enable and disable
+  from either a file or environment variable.
+  closes https://github.com/rsyslog/rsyslog/issues/2431
 - script: permit to use environment variables during configuration
   new constant string type "backticks", inspired by sh
   (sample: `echo $VARNAME`).
