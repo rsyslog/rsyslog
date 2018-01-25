@@ -225,11 +225,17 @@ random(max)
    While the original intent of this function was for load balancing, it
    is generic enough to be used for other purposes as well.
 
+.. warning::
+   The random number must not be assumed to be crypto-grade. rsyslog will
+   attempt to use a crypto-grade source if available, but it will fall
+   back to a very weak random number generator if a crypto-grade source
+   is not available.
+
 .. versionadded:: 8.12.0
 
 .. versionchanged:: 8.31.0
-   ``/dev/urandom`` is used if available. If it is not, an error is logged
-   and the weak PRNG is used instead.
+   If a crypto-grade random number generator is not available, rsyslog will
+   fall back to using a weak PNRG.
 
 ltrim
 -----
