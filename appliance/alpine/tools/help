@@ -5,7 +5,7 @@ help        - display this help message
 show-work   - list the /work area
 show-config - display the current container config
 edit-config - edit container config (with vi editor, press <ESC>ZZ to quit)
-sh          - start an interactive shell (<CTL>-d terminates)
+bash        - start an interactive shell (<CTL>-d terminates)
 
 volumes:
 /log        - log file store (if used)
