@@ -429,8 +429,9 @@ TESTS += \
 #	sndrcv_kafka_failresume.sh
 if HAVE_VALGRIND
 TESTS += \
-	sndrcv_kafka-vg-sender.sh \
 	sndrcv_kafka-vg-rcvr.sh
+# re-enable: (see https://github.com/rsyslog/rsyslog/issues/2434)
+# sndrcv_kafka-vg-sender.sh
 endif
 endif
 endif
