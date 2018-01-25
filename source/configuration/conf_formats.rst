@@ -16,7 +16,7 @@ different configuration formats ("languages"):
    format was first available in rsyslog v6 and is the current, best and most
    precise format for non-trivial use cases where more than one line is needed.
 
-   Prior to v8, there was a performance impact when using this format that
+   Prior to v7, there was a performance impact when using this format that
    encouraged use of the |FmtBasicName| format for best results. Current
    versions of rsyslog do not suffer from this (historical) performance impact.
 
