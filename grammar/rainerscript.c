@@ -3355,7 +3355,7 @@ cnfexprEvalCollection(struct cnfexpr *__restrict__ const expr, void *__restrict_
 	return retptr;
 }
 
-inline static void
+static void
 doIndent(int indent)
 {
 	int i;

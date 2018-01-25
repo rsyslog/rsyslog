@@ -69,7 +69,7 @@ finalize_it:
 	RETiRet;
 }
 
-static inline void
+static void
 dynstats_destroyCtr(dynstats_ctr_t *ctr) {
 	statsobj.DestructUnlinkedCounter(ctr->pCtr);
 	free(ctr->metric);
@@ -500,6 +500,10 @@ finalize_it:
 	RETiRet;
 }
 
+#if !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized" /* TODO: how can we fix these warnings? */
+#endif
 static rsRetVal
 dynstats_addNewCtr(dynstats_bucket_t *b, const uchar* metric, uint8_t doInitialIncrement) {
 	dynstats_ctr_t *ctr;
@@ -577,6 +581,9 @@ finalize_it:
 	}
 	RETiRet;
 }
+#if !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
 rsRetVal
 dynstats_inc(dynstats_bucket_t *b, uchar* metric) {

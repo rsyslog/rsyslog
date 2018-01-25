@@ -93,7 +93,7 @@ static unsigned clockTopicAccess = 0;
 #ifndef HAVE_ATOMIC_BUILTINS
 static pthread_mutex_t mutClock;
 #endif
-static inline uint64
+static uint64
 getClockTopicAccess(void)
 {
 #if HAVE_ATOMIC_BUILTINS64
