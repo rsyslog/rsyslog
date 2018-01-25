@@ -41,7 +41,6 @@ MODULE_TYPE_NOKEEP
 
 /* static data */
 DEFobjStaticHelpers
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 
 /* tables for interfacing with the v6 config system */
@@ -76,7 +75,7 @@ static struct cnfparamblk pblkQueue =
 static void
 errfunc(__attribute__((unused)) void *usrptr, uchar *emsg)
 {
-	errmsg.LogError(0, RS_RET_CRYPROV_ERR, "Crypto Provider"
+	LogError(0, RS_RET_CRYPROV_ERR, "Crypto Provider"
 		"Error: %s - disabling encryption", emsg);
 }
 #endif
@@ -157,32 +156,32 @@ SetCnfParam(void *pT, struct nvlst *lst, int paramType)
 	if(algo != NULL) {
 		iRet = rsgcrySetAlgo(pThis->ctx, algo);
 		if(iRet != RS_RET_OK) {
-			errmsg.LogError(0, iRet, "cry.algo '%s' is not know/supported", algo);
+			LogError(0, iRet, "cry.algo '%s' is not know/supported", algo);
 			FINALIZE;
 		}
 	}
 	if(mode != NULL) {
 		iRet = rsgcrySetMode(pThis->ctx, mode);
 		if(iRet != RS_RET_OK) {
-			errmsg.LogError(0, iRet, "cry.mode '%s' is not know/supported", mode);
+			LogError(0, iRet, "cry.mode '%s' is not know/supported", mode);
 			FINALIZE;
 		}
 	}
 	/* note: key must be set AFTER algo/mode is set (as it depends on them) */
 	if(nKeys != 1) {
-		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "excactly one of the following "
+		LogError(0, RS_RET_INVALID_PARAMS, "excactly one of the following "
 			"parameters can be specified: cry.key, cry.keyfile, cry.keyprogram\n");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
 	if(key != NULL) {
-		errmsg.LogError(0, RS_RET_ERR, "Note: specifying an actual key directly from the "
+		LogError(0, RS_RET_ERR, "Note: specifying an actual key directly from the "
 			"config file is highly insecure - DO NOT USE FOR PRODUCTION");
 		keylen = strlen((char*)key);
 	}
 	if(keyfile != NULL) {
 		r = gcryGetKeyFromFile((char*)keyfile, (char**)&key, &keylen);
 		if(r != 0) {
-			errmsg.LogError(errno, RS_RET_ERR, "error reading keyfile %s",
+			LogError(errno, RS_RET_ERR, "error reading keyfile %s",
 				keyfile);
 			ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 		}
@@ -190,7 +189,7 @@ SetCnfParam(void *pT, struct nvlst *lst, int paramType)
 	if(keyprogram != NULL) {
 		r = gcryGetKeyFromProg((char*)keyprogram, (char**)&key, &keylen);
 		if(r != 0) {
-			errmsg.LogError(0, RS_RET_ERR, "error %d obtaining key from program %s\n",
+			LogError(0, RS_RET_ERR, "error %d obtaining key from program %s\n",
 				r, keyprogram);
 			ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 		}
@@ -199,7 +198,7 @@ SetCnfParam(void *pT, struct nvlst *lst, int paramType)
 	/* if we reach this point, we have a valid key */
 	r = rsgcrySetKey(pThis->ctx, key, keylen);
 	if(r > 0) {
-		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "Key length %d expected, but "
+		LogError(0, RS_RET_INVALID_PARAMS, "Key length %d expected, but "
 			"key of length %d given", r, keylen);
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
@@ -243,7 +242,7 @@ OnFileOpen(void *pT, uchar *fn, void *pGF, char openMode)
 
 	iRet = rsgcryInitCrypt(pThis->ctx, pgf, fn, openMode);
 	if(iRet != RS_RET_OK) {
-		errmsg.LogError(0, iRet, "Encryption Provider"
+		LogError(0, iRet, "Encryption Provider"
 			"Error: cannot open .encinfo file - disabling log file");
 	}
 	RETiRet;
@@ -299,7 +298,6 @@ ENDobjQueryInterface(lmcry_gcry)
 BEGINObjClassExit(lmcry_gcry, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
 CODESTARTObjClassExit(lmcry_gcry)
 	/* release objects we no longer need */
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 
 	rsgcryExit();
@@ -308,11 +306,10 @@ ENDObjClassExit(lmcry_gcry)
 
 BEGINObjClassInit(lmcry_gcry, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
 	/* request objects we use */
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 
 	if(rsgcryInit() != 0) {
-		errmsg.LogError(0, RS_RET_CRYPROV_ERR, "error initializing "
+		LogError(0, RS_RET_CRYPROV_ERR, "error initializing "
 			"crypto provider - cannot encrypt");
 		ABORT_FINALIZE(RS_RET_CRYPROV_ERR);
 	}
