@@ -3,7 +3,7 @@
 *Documentation for building the documentation for ...*
 
 This doc is intended for maintainers and regular contributors to
-the project. The `README.md` doc covers the basic steps for one-off
+the project. The [`README.md`](README.md) doc covers the basic steps for one-off
 builds from the `master` branch.
 
 In all cases, the version number and release string do not *need* to be
@@ -14,8 +14,8 @@ Directions in this doc provide examples for building HTML and epub formats. See
 the official http://www.sphinx-doc.org/en/stable/invocation.html doc for other
 formats that Sphinx is capable of building. Some formats may require
 installation of other packages for your operating system that are not
-installed by following the current setup/prep directions in the `README.md`
-file.
+installed by following the current setup/prep directions in the
+[`README.md`](README.md) file.
 
 
 ## Generating release version of the docs
@@ -25,7 +25,7 @@ docs that match those hosted on rsyslog.com or that are available via
 distro packages.
 
 These directions assume that `8.33.0` is the latest stable release version.
-Substitute the actual latest stable release version as you following the
+Substitute the actual latest stable release version as you follow the
 steps in this document.
 
 
@@ -40,9 +40,9 @@ steps in this document.
 
 #### Directions
 
-1. Review the README.md file for instructions that cover installing `pip`,
-   setting up the virtual environment and installing the latest version
-   of the Sphinx package.
+1. Review the [`README.md`](README.md) file for instructions that cover
+   installing `pip`, setting up the virtual environment and installing
+   the latest version of the Sphinx package.
 1. Clone the https://github.com/rsyslog-doc.git repo
 1. Merge `master` into the current stable branch (e.g., `v8-stable`)
 1. Tag the stable branch
@@ -55,7 +55,7 @@ steps in this document.
 
 ### Contributors
 
-#### Obtain stable docs 
+#### Obtain stable docs
 
 You have several options:
 
@@ -68,15 +68,15 @@ You have several options:
 
 1. Decompress the tarball
 1. Change your current working directory to that of the directory containing
-   the `source` directory, `README.md` and other content that was within
-   the tarball
+   the `source` directory, [`README.md`](README.md) and other content that
+   was within the tarball
     - For example, `cd /tmp/rsyslog-8.33.0`
       (the `rsyslog-8.33.0` folder is within the tarball)
 1. Run `sphinx -b html source build`
 
-You may need to first follow the directions in the `README.md` doc to create
-or activate your virtual environment if the `sphinx` package is not already
-installed and known to your installation of Python.
+You may need to first follow the directions in the [`README.md`](README.md)
+doc to create or activate your virtual environment if the `sphinx` package
+is not already installed and known to your installation of Python.
 
 #### Build from GitHub download
 
@@ -87,8 +87,8 @@ installed and known to your installation of Python.
 1. Click 'Download ZIP' and save the file to your system
 1. Decompress the zip file
 1. Change your current working directory to that of the directory containing
-   the `source` directory, `README.md` and other content that was within
-   the tarball.
+   the `source` directory, [`README.md`](README.md) and other content that was
+   within the tarball.
     - For example, `cd C:\users\deoren\Downloads\rsyslog-8.33.0`
       (the `rsyslog-8.33.0` folder is within the tarball)
 1. `sphinx -D version="8.33" release="8.33.0" -b html source build`
@@ -96,22 +96,22 @@ installed and known to your installation of Python.
       because we do not modify the `source/conf.py` file in the stable branch
       or its tags to hard-code the new version number.
 
-You may need to first follow the directions in the `README.md` doc to create
-or activate your virtual environment if the `sphinx` package is not already
-installed and known to your installation of Python.
+You may need to first follow the directions in the [`README.md`](README.md)
+doc to create or activate your virtual environment if the `sphinx` package
+is not already installed and known to your installation of Python.
 
 #### Build from Git repo
 
-1. Review the `README.md` file for instructions that cover installing `pip`,
-   setting up the virtual environment and installing the latest version
-   of the Sphinx package.
+1. Review the [`README.md`](README.md) file for instructions that cover
+   installing `pip`, setting up the virtual environment and installing
+   the latest version of the Sphinx package.
 1. Run `git clone https://github.com/rsyslog-doc.git`
 1. Run `git checkout v8.33.0`
 1. Run `sphinx -D version="8.33" release="8.33.0" -b html source build`
 
-You may need to first follow the directions in the `README.md` doc to create
-or activate your virtual environment if the `sphinx` package is not already
-installed and known to your installation of Python.
+You may need to first follow the directions in the [`README.md`](README.md)
+doc to create or activate your virtual environment if the `sphinx` package
+is not already installed and known to your installation of Python.
 
 
 ## Generating development builds
@@ -153,9 +153,9 @@ from the Git repo in order to generate a "dev build" release string. This
 release string is prominently displayed in various places throughout the docs
 and is useful to identify a dev build from a release set of documentation.
 
-1. Review the README.md file for instructions that cover installing `pip`,
-   setting up the virtual environment and installing the latest version
-   of the Sphinx package.
+1. Review the [`README.md`](README.md) file for instructions that cover
+   installing `pip`, setting up the virtual environment and installing
+   the latest version of the Sphinx package.
 1. Run `git clone https://github.com/rsyslog-doc.git`
 1. Run `git checkout master`
 1. Run `sphinx -b html source build` to generate HTML format and
