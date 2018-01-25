@@ -58,19 +58,21 @@ author = u'Rainer Gerhards and Others'
 # http://www.sphinx-doc.org/en/stable/config.html#confval-rst_prolog
 #
 # This will be included at the beginning of every source file that is read.
+#
+# Note: We intentionally include a few substitution definitions directly
+# so that the placeholders used here can be replaced by Python's
+# string format method.
 rst_prolog = """
-.. |PRODUCT| replace:: ``Rsyslog``
 
 .. |DOC_BUILD| replace:: ``{doc_build}``
 .. |DOC_COMMIT| replace:: ``{doc_commit}``
 .. |DOC_BRANCH| replace:: ``{doc_branch}``
 
-.. |FmtBasicName| replace:: ``basic``
-.. |FmtAdvancedName| replace:: ``advanced``
-.. |FmtObsoleteName| replace:: ``obsolete legacy``
+.. include:: /substitution_definitions.inc.rst
 
-.. |FmtObsoleteDescription| replace:: ``Obsolete Format Equivalents``
 """
+
+
 
 
 
@@ -158,7 +160,12 @@ if version == '8':
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = []
+#
+# Note: We list the *.inc.rst filename pattern here so that matching
+# files will not be parsed as separate files to include directly into
+# the documentation structure in addition to them being pulled in via
+# include statements.
+exclude_patterns = ['*.inc.rst']
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None
