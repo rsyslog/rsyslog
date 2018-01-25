@@ -1,13 +1,16 @@
-rsyslog-docs
-============
+# rsyslog-docs
 
-Documentation for the rsyslog project
--------------------------------------
+## Documentation for the rsyslog project
 
 Documentation for rsyslog is generated with the (Python) Sphinx documentation
 processor. There is also a procedure which automatically picks up the most
 recent doc from the git archive, generates the html pages and uploads them
 to rsyslog.com.
+
+In addition to the directions here, there is also a separate
+[BUILDS_README.md](BUILDS_README.md) file for use by rsyslog-doc team
+members. This doc is used as a quick reference for those who regularly
+provide dev and official release builds of the documentation.
 
 ## Learning the doc tools
 

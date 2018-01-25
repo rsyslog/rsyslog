@@ -13,11 +13,10 @@ set -e
 
 get_latest_stable_branch() {
 
-    git branch -a | \
-        grep remotes | \
+    git branch -r | \
         grep origin | \
         grep -v "HEAD" | \
-        sed -e 's/ //g' -e 's#remotes/origin/##g' | \
+        sed -e 's/ //g' -e 's#origin/##g' | \
         grep -E 'v[0-9]+' | \
         tail -n 1
 }
@@ -26,12 +25,28 @@ get_latest_stable_branch() {
 # which master is periodically merged into
 get_dev_branches() {
 
-    git branch -a | \
-        grep remotes | \
+    git branch -r | \
         grep origin | \
         grep -v "HEAD" | \
-        sed -e 's/ //g' -e 's#remotes/origin/##g' | \
+        sed -e 's/ //g' -e 's#origin/##g' | \
         grep -v "$latest_stable_branch"
+
+}
+
+# The assumption here is that the latest tag == latest stable tag
+get_latest_tag() {
+
+    git tag --list 'v*' | \
+        sort --version-sort | \
+        grep -Eo '^v[.0-9]+$' | \
+        tail -n 1
+
+}
+
+# The latest stable tag, but without the leading 'v'
+get_latest_stable_version() {
+
+    get_latest_tag | sed "s/[A-Za-z]//g"
 
 }
 
@@ -48,6 +63,18 @@ prep_branch_for_build() {
     echo "Checkout Branch $branch"
     git checkout origin/$branch ||
       { echo "[!] Checkout $branch failed... aborting"; exit 1; }
+
+}
+
+update_build_conf_variables() {
+
+    version_string=$1
+    release_string=$2
+    sphinx_build_conf=$3
+
+    # Replace the entire line in the Sphinx build config file
+    sed -r -i "s/^version.*$/version = \'${version_string}\'/" ./${sphinx_build_conf}
+    sed -r -i "s/^release.*$/release = \'${release_string}\'/" ./${sphinx_build_conf}
 
 }
 
@@ -92,10 +119,10 @@ latest_stable_branch=$(get_latest_stable_branch)
 dev_branches=($(get_dev_branches))
 
 # Build release docs for latest official stable version
-latest_stable_tag=$(git tag --list 'v*' | sort --version-sort | grep -Eo '^v[.0-9]+$' | tail -n 1)
+latest_stable_tag=$(get_latest_tag)
 
 # The latest stable tag, but without the leading 'v'
-latest_stable_version=$(echo $latest_stable_tag | sed "s/[A-Za-z]//g")
+latest_stable_version=$(get_latest_stable_version)
 
 # tarball representing the documentation for the latest stable release
 doc_tarball="rsyslog-doc-${latest_stable_version}.tar.gz"
@@ -111,6 +138,11 @@ else
     output_dir=$1
     echo "Generated files will be placed in ${output_dir}"
 fi
+
+# The build conf used to generate release output files. Included
+# in the release tarball and needs to function as-is outside
+# of a Git repo (e.g., no ".git" directory present).
+sphinx_build_conf_prod="source/conf.py"
 
 
 
@@ -150,19 +182,27 @@ done
 
 prep_branch_for_build $latest_stable_branch
 
+# Reduce X.Y.Z to just X.Y
+latest_stable_major_minor_version=$(basename $latest_stable_version ".0")
+
+# Replace the existing hard-coded placeholder values with current
+# info sourced from the Git repo.
+update_build_conf_variables \
+    ${latest_stable_major_minor_version} \
+    "${latest_stable_version}-stable" \
+    ${sphinx_build_conf_prod}
+
 for format in "${formats[@]}"
 do
     echo "Building $format for $latest_stable_branch branch"
 
-    # Override verbose release value calculated by conf.py that is intended
-    # for dev builds (version, date, commit hash)
-    sphinx-build -b $format source $output_dir/$latest_stable_branch -D release="$latest_stable_version" ||
+    sphinx-build -b $format source $output_dir/$latest_stable_branch ||
       { echo "[!] sphinx-build $format failed for $latest_stable_branch branch ... aborting"; exit 1; }
 done
 
 
 ###############################################################
-# Build latest stable tag
+# Build latest stable tag (HTML only)
 ###############################################################
 
 echo "Building latest stable tag: $latest_stable_tag"
@@ -170,13 +210,19 @@ git reset --hard
 git clean --force -d
 git checkout $latest_stable_tag
 
-# Unless we override the "release" option, the default settings within
-# the conf.py file will label generated content with specific date/commit
-# info for easy visual reference
-sphinx-build -b html source build -D release="$latest_stable_version" ||
+# This modified source/conf.py build conf is included in the
+# tarball for later use by downstream package maintainers
+# or anyone else that wishes to build from source using
+# only the tarball (e.g., no .git directory or repo present)
+update_build_conf_variables \
+    ${latest_stable_major_minor_version} \
+    $latest_stable_version \
+    ${sphinx_build_conf_prod}
+
+sphinx-build -b html source build ||
     { echo "[!] sphinx-build failed for html format of $latest_stable_tag tag ... aborting"; exit 1; }
 
-tar -czf $output_dir/$doc_tarball source build LICENSE README.md build.sh ||
+tar -czf $output_dir/$doc_tarball source build LICENSE README.md ||
     { echo "[!] tarball creation failed for $latest_stable_tag tag ... aborting"; exit 1; }
 
 

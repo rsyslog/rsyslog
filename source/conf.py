@@ -11,11 +11,13 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import datetime
 import os
-import re
-import subprocess
 import sys
+
+# Module for our custom functions. Used with automating automating build info.
+sys.path.append(os.getcwd())
+import conf_helpers
+
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -43,20 +45,6 @@ source_suffix = '.rst'
 # The encoding of source files.
 #source_encoding = 'utf-8-sig'
 
-# https://stackoverflow.com/questions/26242919/sphinx-documentation-system-multiple-substitutions-with-rst-prolog
-# http://www.sphinx-doc.org/en/stable/config.html#confval-rst_prolog
-#
-# This will be included at the beginning of every source file that is read.
-rst_prolog = """
-.. |PRODUCT| replace:: ``Rsyslog``
-
-.. |FmtBasicName| replace:: ``basic``
-.. |FmtAdvancedName| replace:: ``advanced``
-.. |FmtObsoleteName| replace:: ``obsolete legacy``
-
-.. |FmtObsoleteDescription| replace:: ``Obsolete Format Equivalents``
-"""
-
 # The master toctree document.
 master_doc = 'index'
 
@@ -65,18 +53,97 @@ project = u'rsyslog'
 copyright = u'2008-2017, Rainer Gerhards and Others'
 author = u'Rainer Gerhards and Others'
 
-DATE = datetime.date.today()
-TODAY = DATE.strftime('%Y%m%d')
 
-# The version info for the project you're documenting, acts as replacement for
-# |version| and |release|, also used in various other places throughout the
-# built documents.
+# https://stackoverflow.com/questions/26242919/sphinx-documentation-system-multiple-substitutions-with-rst-prolog
+# http://www.sphinx-doc.org/en/stable/config.html#confval-rst_prolog
 #
-# The short X.Y version.
-version = '8.33'
+# This will be included at the beginning of every source file that is read.
+rst_prolog = """
+.. |PRODUCT| replace:: ``Rsyslog``
 
-# The full version, including alpha/beta/rc tags.
-release = '8.33.0'
+.. |DOC_BUILD| replace:: ``{doc_build}``
+.. |DOC_COMMIT| replace:: ``{doc_commit}``
+.. |DOC_BRANCH| replace:: ``{doc_branch}``
+
+.. |FmtBasicName| replace:: ``basic``
+.. |FmtAdvancedName| replace:: ``advanced``
+.. |FmtObsoleteName| replace:: ``obsolete legacy``
+
+.. |FmtObsoleteDescription| replace:: ``Obsolete Format Equivalents``
+"""
+
+
+
+###############################################################################
+# Placeholder/template values to be filled in by the release_build.sh script
+#
+# These values are filled in as part of preparing the official docs
+# distribution tarball. If the placeholder values are left intact then
+# real values will be generated dynamically from info in the repo. If the
+# user builds the docs from "bare" sources not yet processed
+###############################################################################
+
+
+version = '8'
+release = version + ' dev build'
+
+
+# For this to be true, it means that we are not attempting to build from
+# a release tarball, as otherwise the values above would have been replaced
+# with official stable release values.
+if version == '8':
+
+    # Confirm that a .git folder is available. If not, skip all
+    # following steps intended to generate "dev" build values for
+    # 'version' and 'release' build configuration variables. In that
+    # case, keep the placeholder values already set.
+
+    # The directory where this conf.py file is located
+    source_conf_dir = os.getcwd()
+
+    # If building from a Git repo, then this directory should be present
+    # in the parent directory.
+    git_dir = \
+        os.path.abspath(os.path.join(os.getcwd(), os.pardir)) \
+        + os.sep + '.git'
+
+    if os.path.isdir(git_dir):
+
+        # If the 'version' variable is left with a placeholder it means
+        # that this build configuration is being called from a Git repo
+        # and that we should pull info from the repo to dynamically
+        # fill in values that were not specified by a build script.
+        release_type = 'dev'
+
+        # Some items in the source are wrapped with the ".. only:: TAG_NAME_HERE"
+        # Sphinx directive. This directive prevents the wrapped block of markup
+        # from being processed unless the specified tag is set. Using this approach
+        # helps to specific content from being included in stable release docs
+        # that is only intended for dev/review copies of the documentation.
+        tags.add(release_type)
+
+        # The version info for the project you're documenting, acts as replacement for
+        # |version| and |release|, also used in various other places throughout the
+        # built documents.
+        #
+        # The short X.Y version.
+        version = conf_helpers.get_next_stable_version()
+
+        # This is displayed in multiple prominent locations in the docs
+        # where it is useful to be able to tell at a glance when the files
+        # were generated and from what commit.
+        #
+        # The full version, including alpha/beta/rc tags.
+        release = conf_helpers.get_release_string(release_type, version)
+
+
+        # Additions that are used by dev builds
+        rst_prolog = rst_prolog.format(
+            doc_build=release,
+            doc_commit=conf_helpers.get_current_commit_hash(),
+            doc_branch=conf_helpers.get_current_branch()
+        )
+
 
 
 # The language for content autogenerated by Sphinx. Refer to documentation
@@ -288,8 +355,8 @@ texinfo_documents = [
 # -- Options for epub output ---------------------------------------------------
 
 epub_theme = 'epub'
-epub_basename = 'rsyslog'
-epub_author = u'Rainer Gerhards and Others'
+epub_basename = project
+epub_author = author
 epub_contributor = u'Rsyslog Community'
 epub_publisher = 'http://www.rsyslog.com/'
 epub_description = u'Documentation for the rsyslog project'
