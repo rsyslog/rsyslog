@@ -1,11 +1,11 @@
-sudo: false
-
-language: python
-
-python: "2.7"
+sudo: required
+services: docker
+language: minimal
 
 install:
-  - pip install -r requirements.txt
+  - docker pull rsyslog/rsyslog_doc_gen
 
 script:
-  - sphinx-build -n -W -b html source build
+  - docker run -e SPHINX_EXTRA_OPTS=-q
+        -v "$PWD":/rsyslog-doc -ti
+        rsyslog/rsyslog_doc_gen
