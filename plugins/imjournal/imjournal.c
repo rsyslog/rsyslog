@@ -114,6 +114,9 @@ static const char *pidFieldName;	/* read-only after startup */
 static int bPidFallBack;
 static ratelimit_t *ratelimiter = NULL;
 static sd_journal *j;
+static int j_inotify_fd;
+
+#define J_PROCESS_PERIOD 1024  /* Call sd_journal_process() every 1,024 records */
 
 static rsRetVal persistJournalState(void);
 static rsRetVal loadJournalState(void);
@@ -126,6 +129,12 @@ static rsRetVal openJournal(void) {
 		LogError(-r, RS_RET_IO_ERROR, "imjournal: sd_journal_open() failed");
 		iRet = RS_RET_IO_ERROR;
 	}
+	if ((r = sd_journal_get_fd(j)) < 0) {
+		LogError(-r, RS_RET_IO_ERROR, "imjournal: sd_journal_get_fd() failed");
+		iRet = RS_RET_IO_ERROR;
+	} else {
+		j_inotify_fd = r;
+	}	
 	RETiRet;
 }
 
@@ -134,6 +143,7 @@ static void closeJournal(void) {
 		persistJournalState();
 	}
 	sd_journal_close(j);
+	j_inotify_fd = 0;
 }
 
 
@@ -424,7 +434,7 @@ persistJournalState(void)
 	char *cursor;
 	int ret = 0;
 
-	/* On success, sd_journal_get_cursor()  returns 1 in systemd
+	/* On success, sd_journal_get_cursor() returns 1 in systemd
 	   197 or older and 0 in systemd 198 or newer */
 	if ((ret = sd_journal_get_cursor(j, &cursor)) >= 0) {
                /* we create a temporary name by adding a ".tmp"
@@ -471,11 +481,8 @@ pollJournal(void)
 	struct pollfd pollfd;
 	int err; // journal error code to process
 	int pr = 0;
-#ifdef NEW_JOURNAL
-	int jr = 0;
-#endif
 
-	pollfd.fd = sd_journal_get_fd(j);
+	pollfd.fd = j_inotify_fd;
 	pollfd.events = sd_journal_get_events(j);
 #ifdef NEW_JOURNAL
 	pr = poll(&pollfd, 1, POLL_TIMEOUT);
@@ -487,7 +494,7 @@ pollJournal(void)
 			/* EINTR is also received during termination
 			 * so return now to check the term state.
 			 */
-		ABORT_FINALIZE(RS_RET_OK);
+			ABORT_FINALIZE(RS_RET_OK);
 		} else {
 			LogError(errno, RS_RET_ERR, "imjournal: poll() failed");
 			ABORT_FINALIZE(RS_RET_ERR);
@@ -495,30 +502,11 @@ pollJournal(void)
 	}
 #ifndef NEW_JOURNAL
 	assert(pr == 1);
-
-	pr = sd_journal_process(j);
-	err = pr;
-	if (pr < 0) {
-#else
-	jr = sd_journal_process(j);
-
-	if (pr == 1 && jr == SD_JOURNAL_INVALIDATE) {
-		/* do not persist stateFile sd_journal_get_cursor will fail! */
-		char* tmp = cs.stateFile;
-		cs.stateFile = NULL;
-		closeJournal();
-		cs.stateFile = tmp;
-
-		CHKiRet(openJournal());
-
-		if(cs.stateFile != NULL){
-			iRet = loadJournalState(); // TODO: CHECK
-		}
-		LogMsg(0, RS_RET_OK, LOG_NOTICE, "imjournal: journal reloaded...");
-	} else if (jr < 0) {
-		err = jr;
 #endif
-		LogError(err, RS_RET_ERR, "imjournal: sd_journal_process() failed");
+
+	err = sd_journal_process(j);
+	if (err < 0) {
+		LogError(-err, RS_RET_ERR, "imjournal: sd_journal_process() failed");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -566,7 +554,6 @@ loadJournalState(void)
 		free (cs.stateFile);
 		cs.stateFile = new_stateFile;
 	}
-
 
 	if ((r_sf = fopen(cs.stateFile, "rb")) != NULL) {
 		char readCursor[128 + 1];
@@ -642,7 +629,7 @@ tryRecover(void) {
 
 
 BEGINrunInput
-	int count = 0;
+	uint64_t count = 0;
 CODESTARTrunInput
 	CHKiRet(ratelimitNew(&ratelimiter, "imjournal", NULL));
 	dbgprintf("imjournal: ratelimiting burst %d, interval %d\n", cs.ratelimitBurst,
@@ -666,7 +653,6 @@ CODESTARTrunInput
 		LogError(0, RS_RET_DEPRECATED,
 			"\"usepidfromsystem\" is depricated, use \"usepid\" instead");
 	}
-
 
 	if (cs.usePid && (strcmp(cs.usePid, "system") == 0)) {
 		pidFieldName = "_PID";
@@ -698,21 +684,32 @@ CODESTARTrunInput
 
 		if (r == 0) {
 			/* No new messages, wait for activity. */
-			if(pollJournal() != RS_RET_OK) {
+			if (pollJournal() != RS_RET_OK) {
 				tryRecover();
 			}
 			continue;
 		}
 
-		if(readjournal() != RS_RET_OK) {
+		if (readjournal() != RS_RET_OK) {
 			tryRecover();
 			continue;
 		}
+
+		count++;
+		
+		if ((count % J_PROCESS_PERIOD) == 0) {
+			/* Give the journal a periodic chance to detect rotated journal files to be cleaned up. */
+			r = sd_journal_process(j);
+			if (r < 0) {
+				LogError(-r, RS_RET_ERR, "imjournal: sd_journal_process() failed");
+				tryRecover();
+				continue;
+			}
+		}
+
 		if (cs.stateFile) { /* can't persist without a state file */
 			/* TODO: This could use some finer metric. */
-			count++;
-			if (count == cs.iPersistStateInterval) {
-				count = 0;
+			if ((count % cs.iPersistStateInterval) == 0) {
 				persistJournalState();
 			}
 		}
