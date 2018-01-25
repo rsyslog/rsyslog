@@ -1,0 +1,3 @@
+tmp*
+*.sw?
+build.sh
