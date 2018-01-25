@@ -52,7 +52,7 @@ static char *
 read_file(const char *const filename)
 {
 	char *content = NULL;
-	int fd;
+	int fd = -1;
 	struct stat sb;
 	ssize_t nread;
 	assert(filename != NULL);
@@ -78,9 +78,11 @@ read_file(const char *const filename)
 		goto done;
 	}
 
-	close(fd);
-
-done:	return content;
+done:
+	if(fd != -1) {
+		close(fd);
+	}
+	return content;
 }
 
 static es_str_t* ATTR_NONNULL(1)
