@@ -16,8 +16,11 @@ have been kept in rsyslog with their original syntax, because it is
 well-known, highly effective and also needed for compatibility with
 stock syslogd configuration files. If you just need to filter based on
 priority and facility, you should do this with selector lines. They are
-**not** second-class citizens in rsyslog and offer the best performance
-for this job.
+**not** second-class citizens in rsyslog and offer the simplest syntax
+for this job. In versions of rsyslog prior to v7 there were significant
+performance gains by using selector lines instead of the |FmtAdvancedName|
+format. There is no longer any difference in performance between the two
+formats.
 
 The selector field itself again consists of two parts, a facility and a
 priority, separated by a period (".''). Both parts are case insensitive
