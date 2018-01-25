@@ -210,6 +210,33 @@ ipv42num
    contain any other characters in between (except dots). If the format does include these, the
    function results in an error and returns -1.
 
+random(max)
+-----------
+
+   Generates a random number between 0 and the number specified, though
+   the maximum value supported is platform specific.
+
+   - If a number is not specified then 0 is returned.
+   - If 0 is provided as the maximum value, then 0 is returned.
+   - If the specified value is greater than the maximum supported
+     for the current platform, then rsyslog will log this in
+     the debug output and use the maximum value supported instead.
+
+   While the original intent of this function was for load balancing, it
+   is generic enough to be used for other purposes as well.
+
+.. warning::
+   The random number must not be assumed to be crypto-grade. rsyslog will
+   attempt to use a crypto-grade source if available, but it will fall
+   back to a very weak random number generator if a crypto-grade source
+   is not available.
+
+.. versionadded:: 8.12.0
+
+.. versionchanged:: 8.31.0
+   If a crypto-grade random number generator is not available, rsyslog will
+   fall back to using a weak PNRG.
+
 ltrim
 -----
 
