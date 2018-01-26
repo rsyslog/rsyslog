@@ -36,8 +36,14 @@ get_dev_branches() {
 # The assumption here is that the latest tag == latest stable tag
 get_latest_tag() {
 
+    # Treat periods as field separators
+    # Sort on second "field"
+    # Perform general numerical sort
+    # Apply grep filter to make sure we pull in stable tags only (no '-dev'
+    #   suffixes, etc)
+    # Grab the last tag from the list
     git tag --list 'v*' | \
-        sort --version-sort | \
+        sort -t '.' -k2 -g | \
         grep -Eo '^v[.0-9]+$' | \
         tail -n 1
 
