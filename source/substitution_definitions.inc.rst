@@ -12,6 +12,10 @@
 .. |FmtAdvancedName| replace:: ``advanced``
 .. |FmtObsoleteName| replace:: ``obsolete legacy``
 
+.. |DockerHubURL| replace:: https://hub.docker.com/u/rsyslog/
+.. |DockerApplianceAlpineName| replace:: ``rsyslog/syslog_appliance_alpine``
+.. |DockerApplianceAlpineRUN| replace:: ``docker run -ti rsyslog/syslog_appliance_alpine``
+
 .. |FmtObsoleteDescription| replace:: ``Obsolete Format Equivalents``
 
 

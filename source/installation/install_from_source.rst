@@ -12,7 +12,7 @@ running. For more elaborate information, please consult the rest of the
 How to make your life easier...
 -------------------------------
 
-There are :doc:`RPMs/packages for rsyslog <packages>` available.
+There are :doc:`packages for rsyslog <packages>` available.
 If you use them, you can spare yourself many of the steps below.
 This is highly recommended if there is a package for your distribution
 available.
@@ -47,6 +47,8 @@ is nothing that you need to look at very carefully.
 Build Requirements
 ~~~~~~~~~~~~~~~~~~
 
+.. include:: /includes/container_dev_env.inc.rst
+
 At a minimum, the following development tools must be present on the
 system:
 
@@ -64,6 +66,7 @@ Also, development versions of the following supporting libraries
 that the rsyslog project provides are necessary:
 
 * liblogging (only stdlog component is hard requirement)
+* libfastjson
 * libestr
 
 In contrast to the other dependencies, recent versions of rsyslog may
@@ -97,9 +100,7 @@ Step 2 - Run ./configure
 
 Run ./configure to adopt rsyslog to your environment. While doing so,
 you can also enable options. Configure will display selected options
-when it is finished. For example, to enable MySQL support, run
-
-::
+when it is finished. For example, to enable MySQL support, run::
 
  ./configure --enable-mysql
 

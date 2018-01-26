@@ -31,6 +31,8 @@ For example, the command to check out the beta branch is "git checkout
 Prequisites
 -----------
 
+.. include:: /includes/container_dev_env.inc.rst
+
 To build the compilation system, you need
 
 * GNU autotools (autoconf, automake, ...)
