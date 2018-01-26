@@ -51,7 +51,7 @@
 static char *
 read_file(const char *const filename)
 {
-	char *content = NULL;
+	char *content;
 	int fd;
 	struct stat sb;
 	ssize_t nread;
