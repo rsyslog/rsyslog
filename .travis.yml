@@ -36,6 +36,7 @@ matrix:
        env: RUN="run-osx.sh", CFLAGS="-g"
 
      - os: linux
+       language: minimal
        services: docker
        env: RUN="travis-run-compile-tests.sh"
 
