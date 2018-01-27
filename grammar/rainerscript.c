@@ -4452,12 +4452,21 @@ cnfstmtOptimizeIf(struct cnfstmt *stmt)
 	struct cnffunc *func;
 	struct funcData_prifilt *prifilt;
 
+	assert(stmt->nodetype == S_IF);
 	expr = stmt->d.s_if.expr = cnfexprOptimize(stmt->d.s_if.expr);
-	stmt->d.s_if.t_then = removeNOPs(stmt->d.s_if.t_then);
-	stmt->d.s_if.t_else = removeNOPs(stmt->d.s_if.t_else);
 	stmt->d.s_if.t_then = cnfstmtOptimize(stmt->d.s_if.t_then);
 	stmt->d.s_if.t_else = cnfstmtOptimize(stmt->d.s_if.t_else);
 
+	if(stmt->d.s_if.t_then == NULL && stmt->d.s_if.t_else == NULL) {
+		/* pointless if, probably constructed by config mgmt system */
+		DBGPRINTF("optimizer: if with both empty then and else - remove\n");
+		cnfexprDestruct(stmt->d.s_if.expr);
+		/* set to NOP, this will be removed in later stage */
+		stmt->nodetype = S_NOP;
+		goto done;
+	}
+
+	assert(stmt->nodetype == S_IF);
 	if(stmt->d.s_if.expr->nodetype == 'F') {
 		func = (struct cnffunc*)expr;
 		   if(func->fID == CNFFUNC_PRIFILT) {
@@ -4477,16 +4486,7 @@ cnfstmtOptimizeIf(struct cnfstmt *stmt)
 					es_str2cstr(((struct cnfstringval*)func->expr[0])->estr, NULL);
 			cnfexprDestruct(expr);
 			cnfstmtOptimizePRIFilt(stmt);
-			goto done; /* no longer an if! */
 		}
-	}
-	assert(stmt->nodetype == S_IF);
-	if(stmt->d.s_if.t_then == NULL && stmt->d.s_if.t_else == NULL) {
-		/* pointless if, probably constructed by config mgmt system */
-		DBGPRINTF("optimizer: if with both empty then and else - remove\n");
-		cnfexprDestruct(stmt->d.s_if.expr);
-		/* for now, let's set it to NOP (and correct that later on) */
-		stmt->nodetype = S_NOP;
 	}
 done:	return;
 }
