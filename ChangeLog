@@ -63,6 +63,7 @@ Version 8.33.0 [v8-stable] 2018-02-20
   closes https://github.com/rsyslog/rsyslog/issues/2396
 - CI system
   - we now use well-defined containers for parts of the CI runs
+  - now also build test under Alpine Linux
   - test added for omprog feedback feature
 ------------------------------------------------------------------------------
 Version 8.32.0 [v8-stable] 2018-01-09
