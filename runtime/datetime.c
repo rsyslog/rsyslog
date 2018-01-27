@@ -259,7 +259,7 @@ dateTimeFormat_t getDateTimeFormatFromStr(const char * const __restrict__ s) {
  * 		  the method always returns zero.
  * \retval The number parsed.
  */
-static inline int
+static int
 srSLMGParseInt32(uchar** ppsz, int *pLenStr)
 {
 	register int i;

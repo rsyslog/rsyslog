@@ -562,7 +562,7 @@ finalize_it:
 static rsRetVal
 gtlsAddOurCert(void)
 {
-	int gnuRet;
+	int gnuRet = 0;
 	uchar *keyFile;
 	uchar *certFile;
 	uchar *pGnuErr; /* for GnuTLS error reporting */
