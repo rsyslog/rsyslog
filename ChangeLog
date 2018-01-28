@@ -31,6 +31,8 @@ Version 8.33.0 [v8-stable] 2018-02-20
   (sample: `echo $VARNAME`).
 - new global config parameter "shutdown.enable.ctl-c"
   permits to shutdown rsyslog via ctl-c; useful e.g. in containers
+- config optimizer: detect totally empty "if" statements and optimize
+  them out
 - core: set TZ on startup if not already set
   In theory, TZ should be set by the OS. Unfortuantely, this seems
   to be not the case any longer on many Linux distros. We now check
