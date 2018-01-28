@@ -3,19 +3,36 @@
 ## Documentation for the rsyslog project
 
 Documentation for rsyslog is generated with the (Python) Sphinx documentation
-processor. There is also a procedure which automatically picks up the most
-recent doc from the git archive, generates the html pages and uploads them
-to rsyslog.com.
-
-In addition to the directions here, there is also a separate
-[BUILDS_README.md](BUILDS_README.md) file for use by rsyslog-doc team
-members. This doc is used as a quick reference for those who regularly
-provide dev and official release builds of the documentation.
+processor. Documentation for the `rsyslog-doc` project itself is provided
+by this README and other documentation linked from this file.
 
 ## Learning the doc tools
 
 If you are new to rst and Sphinx, see the Sphinx documentation to get started:
 http://www.sphinx-doc.org/en/stable/contents.html
+
+## Contributed Software/Content
+
+In the repo you will find a `contrib` directory.
+
+Although content in this directory is part of the official `rsyslog-doc`
+repo, the status is different. While other content in this repo is fully
+supported by the dev team, content in the `contrib` directory is supported
+primarily by the contributor who provided it.
+
+Content may range from small one-off scripts to tools for automating builds
+of the docs. See the [contrib README](contrib/README.md) for details.
+
+If you have new things to add to this area, please follow the directions
+on this page for contributing to the docs and submit your changes as
+a new Pull Request.
+
+## Dev Team resources
+
+In addition to the directions here, there is also a separate
+[BUILDS_README.md](BUILDS_README.md) file for use by `rsyslog-doc` team
+members. This doc is used as a quick reference for those who regularly
+provide dev and official release builds of the documentation.
 
 ## Contributing to the docs
 
