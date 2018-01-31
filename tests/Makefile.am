@@ -395,8 +395,10 @@ TESTS +=  \
 endif
 
 if ENABLE_OMPROG
+# see https://github.com/rsyslog/rsyslog/issues/2403
+# TODO: re-enable!
+#	omprog-cleanup.sh
 TESTS +=  \
-	omprog-cleanup.sh \
 	omprog-cleanup-with-outfile.sh \
 	omprog-noterm-cleanup.sh \
 	omprog-noterm-default.sh \

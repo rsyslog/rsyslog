@@ -26,7 +26,7 @@ matrix:
     # this feature is used for multiple build matrix entries
     #- env: RUN="docker-alpine.sh"
     #- env: RUN="docker-ubuntu-devel.sh"
-    - env: RUN="run-osx.sh", CFLAGS="-g"
+    #- env: RUN="run-osx.sh", CFLAGS="-g"
 
   exclude:
      - compiler: "gcc"
