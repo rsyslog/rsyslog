@@ -30,7 +30,6 @@
 
 /* definitions for objects we access */
 DEFobjStaticHelpers
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(statsobj)
 
 #define DYNSTATS_PARAM_NAME "name"
@@ -63,7 +62,6 @@ rsRetVal
 dynstatsClassInit(void) {
 	DEFiRet;
 	CHKiRet(objGetObjInterface(&obj));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 finalize_it:
 	RETiRet;
@@ -275,7 +273,7 @@ dynstats_resetIfExpired(dynstats_bucket_t *b) {
 	timeout = timeoutVal(&b->metricCleanupTimeout);
 	pthread_rwlock_unlock(&b->lock);
 	if (timeout == 0) {
-		errmsg.LogMsg(0, RS_RET_TIMED_OUT, LOG_INFO, "dynstats: bucket '%s' is being reset", b->name);
+		LogMsg(0, RS_RET_TIMED_OUT, LOG_INFO, "dynstats: bucket '%s' is being reset", b->name);
 		dynstats_resetBucket(b);
 	}
 }
@@ -350,7 +348,7 @@ dynstats_newBucket(const uchar* name, uint8_t resettable, uint32_t maxCardinalit
 		}
 		pthread_rwlock_unlock(&bkts->lock);
 	} else {
-		errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "dynstats: bucket creation failed, as "
+		LogError(0, RS_RET_INTERNAL_ERROR, "dynstats: bucket creation failed, as "
 		"global-initialization of buckets was unsuccessful");
 		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
 	}
@@ -472,7 +470,7 @@ dynstats_findBucket(const uchar* name) {
 		pthread_rwlock_unlock(&bkts->lock);
 	} else {
 		b = NULL;
-		errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "dynstats: bucket lookup failed, as global-initialization "
+		LogError(0, RS_RET_INTERNAL_ERROR, "dynstats: bucket lookup failed, as global-initialization "
 		"of buckets was unsuccessful");
 	}
 
