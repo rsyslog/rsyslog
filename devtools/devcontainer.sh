@@ -12,4 +12,4 @@ docker run \
 	-e RSYSLOG_CONFIGURE_OPTIONS_EXTRA \
 	-e CC \
 	-e CFLAGS \
-	-v "$RSYSLOG_HOME":/rsyslog -ti $DEV_CONTAINER  $*
+	-v "$RSYSLOG_HOME":/rsyslog $DEV_CONTAINER  $*
