@@ -1,7 +1,7 @@
 FROM	alpine:3.7
 LABEL	maintainer rgerhards@adiscon.com
 RUN	apk add --no-cache py-pip git
-RUN	pip install sphinx
+RUN	pip install sphinx sphinx-better-theme
 RUN	adduser -s /bin/ash -D rsyslog rsyslog \
 	&& echo "rsyslog ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 WORKDIR	/home/appliance
