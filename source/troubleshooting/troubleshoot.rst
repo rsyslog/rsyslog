@@ -60,6 +60,9 @@ value   meaning
 Where 2 automatically turns on config checking mode, if not given. In that
 sense ``-N2`` and ``-N3`` are equivalent.
 
+Values other than given in the table above are **not** supported and may lead
+to unpredictable results.
+
 When set to check include files, some conditions are relaxed. For example,
 rsyslog usually requires that at least one action is defined somewhere in
 the configuration. For obvious reasons, it would not make much sense to run
