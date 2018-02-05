@@ -125,6 +125,17 @@ if version == '8':
         # fill in values that were not specified by a build script.
         release_type = 'dev'
 
+        # Valid options are "simple" and "detailed". "Simple" contains a short
+        # dev build string intended for space constrained display. "Detailed"
+        # contains a much longer dev build string intended for output that is
+        # used for for copyediting/proofreading, where the generated docs may
+        # hang around a while before being disposed of. In that situation,
+        # having detailed build details in the doc are useful to help
+        # differentiate multiple document builds (even from different branches)
+        # from each other.
+        #release_string_detail = 'detailed'
+        release_string_detail = 'simple'
+
         # Some items in the source are wrapped with the ".. only:: TAG_NAME_HERE"
         # Sphinx directive. This directive prevents the wrapped block of markup
         # from being processed unless the specified tag is set. Using this approach
@@ -144,7 +155,10 @@ if version == '8':
         # were generated and from what commit.
         #
         # The full version, including alpha/beta/rc tags.
-        release = conf_helpers.get_release_string(release_type, version)
+        release = conf_helpers.get_release_string(
+            release_type,
+            release_string_detail,
+            version)
 
 
         # Additions that are used by dev builds
@@ -226,7 +240,13 @@ html_theme = 'default'
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
-#html_title = None
+if release_type == 'dev':
+
+    html_title = "{} {} docs".format(
+        project,
+        conf_helpers.get_release_string(
+            release_type, release_string_detail, version)
+    )
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #html_short_title = None
@@ -368,6 +388,12 @@ texinfo_documents = [
 
 
 # -- Options for epub output ---------------------------------------------------
+
+# Use detailed build strings for epub format IF this is a dev build
+# and NOT a stable build (which does not use detailed release strings)
+if release_type == 'dev':
+    epub_title = \
+        conf_helpers.get_release_string(release_type, 'detailed', version)
 
 epub_theme = 'epub'
 epub_basename = project

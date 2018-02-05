@@ -88,7 +88,7 @@ def get_current_commit_hash():
     return commit_hash
 
 
-def get_release_string(release_type, version):
+def get_release_string(release_type, release_string_detail, version):
     """Return a release string representing the type of build. Verbose for
     dev builds and with sparse version info for release builds"""
 
@@ -98,12 +98,36 @@ def get_release_string(release_type, version):
         DATE = datetime.date.today()
         TODAY = DATE.strftime('%Y%m%d')
 
-        release_string = "{}-{}-{}-{}".format(
-            get_next_stable_version(),
-            get_current_branch(),
-            TODAY,
-            get_current_commit_hash()
-            )
+        # The detailed release string is too long for the rsyslog.com 'better'
+        # theme and perhaps too long for other themes as well, so we set the
+        # level to 'simple' by default (to be explicit) and
+        # allow overriding by command-line if desired.
+        if release_string_detail == "simple":
+
+            # 'rsyslog' prefix is already set via 'project' variable in conf.py
+            # HASH
+            # 'docs' string suffix is already ...
+            release_string = "{}".format(
+                get_current_commit_hash()
+                )
+        elif release_string_detail == "detailed":
+
+            # The verbose variation of the release string. This was previously
+            # the default when using the 'classic' theme, but proves to be
+            # too long when viewed using alternate themes. If requested
+            # via command-line override this format is used.
+            release_string = "{}-{}-{}-{}".format(
+                get_next_stable_version(),
+                get_current_branch(),
+                TODAY,
+                get_current_commit_hash()
+                )
+        else:
+            # This means that someone set a value that we do not
+            # have a format defined for. Return an error string instead
+            # to help make it clear what happened.
+            release_string = "invalid value for release_string_detail"
+
     else:
         release_string = "{}".format(version)
 
