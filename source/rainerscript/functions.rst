@@ -22,7 +22,7 @@ strlen(str)
 -----------
 
    returns the length of the provided string
-   
+
 tolower(str)
 ------------
 
@@ -44,15 +44,15 @@ wrap(str, wrapper_str)
 ----------------------
 
    returns the str wrapped with wrapper_str. Eg.
-   
+
 ::
-   
+
    wrap("foo bar", "##")
 
-produces    
+produces
 
 ::
-   
+
    "##foo bar##"
 
 wrap(str, wrapper_str, escaper_str)
@@ -62,21 +62,21 @@ wrap(str, wrapper_str, escaper_str)
    But additionally, any instances of wrapper_str appearing in str would be replaced
    by the escaper_str. Eg.
 
-::   
-   
+::
+
    wrap("foo'bar", "'", "_")
 
 produces
 
 ::
-   
+
    "'foo_bar'"
 
 replace(str, substr_to_replace, replace_with)
 ---------------------------------------------
 
    returns new string with all instances of substr_to_replace replaced
-   by replace_with. Eg. 
+   by replace_with. Eg.
 
 ::
 
@@ -85,7 +85,7 @@ replace(str, substr_to_replace, replace_with)
 produces
 
 ::
-   
+
    "foo, Bar, Baz".
 
 re\_match(expr, re)
@@ -125,9 +125,9 @@ field(str, delim, matchnbr)
    ``field($msg, 44 ,3)`` extraction. Eg.
 
 ::
-   
+
    set $!usr!field = field($msg, 32, 3);  -- the third field, delimited by space
-   
+
    set $!usr!field = field($msg, "#011", 2); -- the second field, delimited by "#011"
 
 exec\_template
@@ -179,7 +179,7 @@ dyn_inc(bucket_name_literal_string, str)
    metric-name(``str``) when full.
 
    **Read more about it here** :doc:`Dynamic Stats<../configuration/dyn_stats>`
-   
+
 lookup(table_name_literal_string, key)
 ---------------------------------------
 
@@ -193,7 +193,7 @@ lookup(table_name_literal_string, key)
    server or the department or remote office it is located in.
 
    **Read more about it here** :doc:`Lookup Tables<../configuration/lookup_tables>`
-   
+
 num2ipv4
 --------
 
@@ -226,16 +226,10 @@ random(max)
    is generic enough to be used for other purposes as well.
 
 .. warning::
-   The random number must not be assumed to be crypto-grade. rsyslog will
-   attempt to use a crypto-grade source if available, but it will fall
-   back to a very weak random number generator if a crypto-grade source
-   is not available.
+   The random number must not be assumed to be crypto-grade.
 
 .. versionadded:: 8.12.0
 
-.. versionchanged:: 8.31.0
-   If a crypto-grade random number generator is not available, rsyslog will
-   fall back to using a weak PNRG.
 
 ltrim
 -----
@@ -370,7 +364,7 @@ parse_time(timestamp)
    * **Note**: This function does not support unusual RFC 3164 dates/times that
      contain year or time zone information.
 
-   * **Note**: Fractional seconds (if present) in RFC 3339 date/time strings will 
+   * **Note**: Fractional seconds (if present) in RFC 3339 date/time strings will
      be discarded.
 
 
