@@ -1,8 +1,9 @@
 String Constants
 ================
 
-String constants are necessary in any scripting language. The provide
-values that never change during rsyslog's run.
+String constants are necessary in any scripting language. They provide
+values that are evaluated at startup and never change during rsyslog's
+run.
 
 Uses
 ----
