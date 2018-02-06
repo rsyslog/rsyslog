@@ -14,4 +14,3 @@ ENV	BRANCH="master" \
 	STRICT="-n -W"
 COPY	starter.sh ./
 COPY	tools/* ./tools/
-# USER	rsyslog # does currentyl not play with VOLUME -- TODO: fix
