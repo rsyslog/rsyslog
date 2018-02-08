@@ -55,6 +55,7 @@
 #include "wti.h"
 #include "unicode-helper.h"
 #include "errmsg.h"
+#include "hash-impl.h"
 
 #if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wswitch-enum"
@@ -1832,6 +1833,46 @@ doRandomGen(struct svar *__restrict__ const sourceVal) {
 	return x % max;
 }
 
+static uint64_t
+doHash64(struct svar *__restrict__ const sourceVal, struct svar *__restrict__ const seedVal) {
+	int freeHashStr = 0, success = 0;
+    uint64_t seed = 0;
+    if(seedVal) {
+        seed = var2Number(seedVal, &success);
+        if (!success) {
+            DBGPRINTF("rainerscript: hash64(string, seed) didn't get a valid 'seed' limit, defaulting hash value to 0");
+            return 0;
+        }
+    }
+	
+    es_str_t *hashStr = var2String(sourceVal, &freeHashStr);
+    uchar *src = es_getBufAddr(hashStr);
+    size_t len = es_strlen(hashStr);
+	uint64_t xhash = hash64(src, len, seed);
+	if (freeHashStr) es_deleteStr(hashStr);
+    DBGPRINTF("rainerscript: hash64 generated hash %" PRIu64 " for string(%.*s)", xhash, (int)len, src);
+	return xhash;
+}
+
+static uint64_t
+doHash64Mod(struct svar *__restrict__ const sourceVal, struct svar *__restrict__ const modVal, struct svar *__restrict__ const seedVal) {
+    
+    int success = 0;
+	uint64_t mod = var2Number(modVal, &success);
+	if (! success) {
+		DBGPRINTF("rainerscript: hash64mod(string, mod)/hash64mod(string, mod, seed) didn't get a valid 'mod' limit, defaulting hash value to 0");
+		return 0;
+	}
+	if(mod == 0) {
+		DBGPRINTF("rainerscript: hash64mod(string, mod)/hash64mod(string, mod, seed) invalid, 'mod' is zero, , defaulting hash value to 0");
+		return 0;
+	}
+    
+    uint64_t xhash = doHash64(sourceVal, seedVal) % mod;
+    DBGPRINTF("rainerscript: hash64mod generated hash-mod %" PRIu64 ".", xhash);
+	return xhash % mod;
+}
+
 static es_str_t*
 lTrim(char *str)
 {
@@ -2244,7 +2285,25 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 		ret->datatype = 'N';
 		varFreeMembers(&r[0]);
 		break;
-	case CNFFUNC_NUM2IPV4:
+    case CNFFUNC_HASH64:
+		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
+        if(func->nParams == 2) cnfexprEval(func->expr[1], &r[1], usrptr, pWti);
+		ret->d.n = doHash64(&r[0], (func->nParams == 2 ? &r[1] : NULL));
+		ret->datatype = 'N';
+		varFreeMembers(&r[0]);
+        if(func->nParams == 2) varFreeMembers(&r[1]);
+		break;
+    case CNFFUNC_HASH64MOD:
+		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
+		cnfexprEval(func->expr[1], &r[1], usrptr, pWti);
+		if(func->nParams == 3) cnfexprEval(func->expr[2], &r[2], usrptr, pWti);
+		ret->d.n = doHash64Mod(&r[0], &r[1], func->nParams > 2 ? &r[2] : NULL);
+		ret->datatype = 'N';
+		varFreeMembers(&r[0]);
+		varFreeMembers(&r[1]);
+		if(func->nParams == 3) varFreeMembers(&r[2]);
+		break;
+    case CNFFUNC_NUM2IPV4:
 		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
 		ret->d.estr = num2ipv4(&r[0]);
 		ret->datatype = 'S';
@@ -4734,6 +4793,18 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 			"but is %d.");
 	} else if(FUNC_NAME("random")) {
 		GENERATE_FUNC("random", 1, CNFFUNC_RANDOM);
+	} else if(FUNC_NAME("hash64")) {
+        GENERATE_FUNC_WITH_NARG_RANGE("hash64", 1, 2, CNFFUNC_HASH64,
+			"number of parameters for %s() must either be "
+			"one (operand_string) or"
+			"two (operand_string, number_seed)"
+			"but is %d.");
+	} else if(FUNC_NAME("hash64mod")) {
+        GENERATE_FUNC_WITH_NARG_RANGE("hash64mod", 2, 3, CNFFUNC_HASH64MOD,
+			"number of parameters for %s() must either be "
+			"two (operand_string, number_mod_to) or"
+			"three (operand_string, number_mod_to, number_seed)"
+			"but is %d.");
 	} else if(FUNC_NAME("format_time")) {
 		GENERATE_FUNC("format_time", 2, CNFFUNC_FORMAT_TIME);
 	} else if(FUNC_NAME("parse_time")) {

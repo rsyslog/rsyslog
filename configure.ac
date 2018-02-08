@@ -300,7 +300,6 @@ if test "$enable_regexp" = "yes"; then
         AC_DEFINE(FEATURE_REGEXP, 1, [Regular expressions support enabled.])
 fi
 
-
 # zlib support
 PKG_CHECK_MODULES([ZLIB], [zlib], [found_zlib=yes], [found_zlib=no])
 AS_IF([test "x$found_zlib" = "xno"], [
@@ -311,6 +310,30 @@ AS_IF([test "x$found_zlib" = "xno"], [
         ZLIB_LIBS="-lz"
         AC_SUBST(ZLIB_LIBS)
 ])
+
+
+#hash implementations header checks
+AC_ARG_ENABLE(hash-xxhash,
+	[AS_HELP_STRING([--enable-hash-xxhash],[Enable xxhash support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_hash_xxhash="yes" ;;
+          no) enable_hash_xxhash="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-hash-xxhash) ;;
+         esac],
+	[enable_hash_xxhash=no]
+)
+
+AM_CONDITIONAL(ENABLE_HASH_XXHASH, test x$enable_hash_xxhash = xyes)
+if test "$enable_hash_xxhash" = "yes"; then  
+	AC_CHECK_LIB([xxhash], [XXH64], [
+		AC_CHECK_HEADER([xxhash.h], [
+			AC_DEFINE(USE_HASH_XXHASH, 1,
+				  [Using XXHASH for hash64.])
+			HASH_XXHASH_LIBS="-lxxhash"
+			AC_SUBST(HASH_XXHASH_LIBS)], 
+			[AC_MSG_ERROR([Unable to add XXHASH support for hash64.])])
+	])
+fi
 
 
 #gssapi
@@ -2224,6 +2247,7 @@ echo
 echo "    Large file support enabled:               $enable_largefile"
 echo "    Networking support enabled:               $enable_inet"
 echo "    Regular expressions support enabled:      $enable_regexp"
+echo "    xxhash support enabled:                   $enable_hash_xxhash"
 echo "    rsyslog runtime will be built:            $enable_rsyslogrt"
 echo "    rsyslogd will be built:                   $enable_rsyslogd"
 echo "    have to generate man pages:               $have_to_generate_man_pages"
