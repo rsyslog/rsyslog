@@ -68,7 +68,7 @@ rst_prolog = """
 .. |DOC_COMMIT| replace:: ``{doc_commit}``
 .. |DOC_BRANCH| replace:: ``{doc_branch}``
 
-.. include:: /substitution_definitions.inc.rst
+.. include:: /includes/substitution_definitions.inc.rst
 
 """
 
@@ -76,7 +76,7 @@ rst_prolog = """
 # This will be included at the end of every source file that is read.
 rst_epilog = """
 
-.. include:: /footer.inc.rst
+.. include:: /includes/footer.inc.rst
 
 """
 
@@ -186,8 +186,12 @@ if version == '8':
 # Note: We list the *.inc.rst filename pattern here so that matching
 # files will not be parsed as separate files to include directly into
 # the documentation structure in addition to them being pulled in via
-# include statements.
-exclude_patterns = ['*.inc.rst']
+# include statements. Even with include files having been moved to the
+# 'source/includes' directory the wildcard pattern has been kept to
+# help rule out any issues should an include file be purposely moved
+# to the root of the 'source' directory (seen a '/' by Sphinx).
+exclude_patterns = ['*.inc.rst', 'includes']
+
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None
