@@ -12,12 +12,23 @@
 .. |FmtAdvancedName| replace:: ``advanced``
 .. |FmtObsoleteName| replace:: ``obsolete legacy``
 
-.. |DockerHubURL| replace:: https://hub.docker.com/u/rsyslog/
+.. |FmtObsoleteDescription| replace:: ``Obsolete Format Equivalents``
+
+.. |RsyslogDockerHub| replace:: official rsyslog Docker Hub
+.. _RsyslogDockerHub: https://hub.docker.com/u/rsyslog/
+
+.. |GitHubDockerProject| replace:: rsyslog-docker project
+.. _GitHubDockerProject: https://github.com/rsyslog/rsyslog-docker
+
+.. |DockerApplianceAlpineDockerHubRepo| replace:: Alpine rsyslog appliance Docker Hub repo
+.. _DockerApplianceAlpineDockerHubRepo: https://hub.docker.com/r/rsyslog/syslog_appliance_alpine/
+
 .. |DockerApplianceAlpineName| replace:: ``rsyslog/syslog_appliance_alpine``
 .. |DockerApplianceAlpineRUN| replace:: ``docker run -ti rsyslog/syslog_appliance_alpine``
 
-.. |FmtObsoleteDescription| replace:: ``Obsolete Format Equivalents``
 
+.. |RsyslogPackageDownloads| replace:: rsyslog package downloads
+.. _RsyslogPackageDownloads: http://www.rsyslog.com/downloads/download-other/
 
 .. |GitHubDocProject| replace:: rsyslog-doc project
 .. _GitHubDocProject: https://github.com/rsyslog/rsyslog-doc/
