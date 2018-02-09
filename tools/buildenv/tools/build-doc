@@ -14,7 +14,10 @@ else
 	export OUTPUT=build
 fi
 cd /rsyslog-doc
-sphinx-build $STRICT -b $FORMAT $SPHINX_EXTRA_OPTS source $OUTPUT
+if [ -e SPHINX_EXTRA_OPTS ]; then
+	export SPHINX_EXTRA_OPTS="$SPHINX_EXTRA_OPTS `cat SPHINX_EXTRA_OPTS`"
+fi
+eval sphinx-build $STRICT -b $FORMAT $SPHINX_EXTRA_OPTS source $OUTPUT
 RESULT=$?
 # we need to do the chown as we currently cannot select the right user
 # inside the Dockerfile. Once this is solved, this can go away.
