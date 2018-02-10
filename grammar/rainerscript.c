@@ -36,7 +36,11 @@
 #include <sys/types.h>
 #include <libestr.h>
 #include <time.h>
+
+#ifdef HAVE_LIBCURL
 #include <curl/curl.h>
+#endif
+
 #include "rsyslog.h"
 #include "rainerscript.h"
 #include "conf.h"
