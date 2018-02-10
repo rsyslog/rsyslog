@@ -489,14 +489,17 @@ static int mkpath(char* path, mode_t mode, uid_t uid, gid_t gid) {
 
 	for (char *p = strchr(path + 1, '/'); p; p = strchr(p + 1, '/')) {
 		*p = '\0';
-		if (mkdir(path, mode) == -1) {
-			if (errno != EEXIST) {
-				*p = '/';
-				return -1;
-			}
-			if (chown(p, uid, gid)) {
+		if (mkdir(path, mode) == 0) {
+			if (uid != (uid_t) -1 || gid != (uid_t) -1) {
+				if (chown(path, uid, gid)) {
+				}
 			}
 		}
+		else if (errno != EEXIST) {
+			*p = '/';
+			return -1;
+		}
+
 		*p = '/';
 	}
 	return 0;
