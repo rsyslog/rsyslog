@@ -43,6 +43,7 @@ Version 8.33.0 [v8-stable] 2018-02-20
 - imjournal bugfix: file handle leak during journal rotation
   Thanks to Peter Portante for the patch
   see also: https://github.com/rsyslog/rsyslog/pull/2437
+- lmsig_ksils12 bugfix: dirOwner and dirGroup config was not respected
 - script bugfix: replace() function worked incorrectly in some cases
   If the end of the message was similar to the replacement string, parts
   of the string could (not always) be missing.
