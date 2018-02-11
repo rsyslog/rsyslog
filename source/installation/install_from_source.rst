@@ -3,7 +3,7 @@ Installing rsyslog from Source
 
 *Written by* `Rainer Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
 
-**In this paper, I describe how to install** 
+**In this paper, I describe how to install**
 `rsyslog <http://www.rsyslog.com/>`_. It is intentionally a brief
 step-by-step guide, targeted to those who want to quickly get it up and
 running. For more elaborate information, please consult the rest of the
@@ -12,10 +12,10 @@ running. For more elaborate information, please consult the rest of the
 How to make your life easier...
 -------------------------------
 
-There are :doc:`packages for rsyslog <packages>` available.
-If you use them, you can spare yourself many of the steps below.
-This is highly recommended if there is a package for your distribution
-available.
+In addition to building from source, you can also install |PRODUCT|
+using packages. If you use them, you can spare yourself many of the steps
+below. This is highly recommended if there is a package for your
+distribution available. See :doc:`packages` for instructions.
 
 Steps To Do
 -----------
@@ -25,8 +25,7 @@ Step 1 - Download Software
 
 For obvious reasons, you need to download rsyslog. Here, I assume that
 you use a distribution tarball. If you would like to use a version
-directly from the repository, see `build rsyslog from
-repository <build_from_repo.html>`_ instead.
+directly from the repository, see :doc:`build_from_repo` instead.
 
 Load the most recent build from
 `http://www.rsyslog.com/downloads <http://www.rsyslog.com/downloads>`_.
@@ -62,7 +61,7 @@ system:
 * libuuid (usually *uuid-dev*, if not present use --disable-uuid)
 * libgcrypt (usually *libgcrypt-dev*)
 
-Also, development versions of the following supporting libraries 
+Also, development versions of the following supporting libraries
 that the rsyslog project provides are necessary:
 
 * liblogging (only stdlog component is hard requirement)
@@ -135,22 +134,27 @@ you are upgrading from stock syslogd, /etc/syslog.conf is probably a
 good starting point. Rsyslogd understands stock syslogd syntax, so you
 can simply copy over /etc/syslog.conf to /etc/rsyslog.conf. Note since
 version 3 rsyslog requires to load plug-in modules to perform useful
-work (more about `compatibility notes v3 <v3compatibility.html>`_). To
-load the most common plug-ins, add the following to the top of
+work.
+
+.. seealso::
+
+   :doc:`/compatibility/v3compatibility`
+
+To load the most common plug-ins, add the following to the top of
 rsyslog.conf:
 
 ::
 
- $ModLoad immark # provides --MARK-- message capability
- $ModLoad imudp # provides UDP syslog reception
- $ModLoad imtcp # provides TCP syslog reception
- $ModLoad imuxsock # provides support for local system logging
- $ModLoad imklog # provides kernel logging support
+  $ModLoad immark # provides --MARK-- message capability
+  $ModLoad imudp # provides UDP syslog reception
+  $ModLoad imtcp # provides TCP syslog reception
+  $ModLoad imuxsock # provides support for local system logging
+  $ModLoad imklog # provides kernel logging support
 
 Change rsyslog.conf for any further enhancements you would like to see.
 For example, you can add database writing as outlined in the paper
-"`Writing syslog Data to MySQL <rsyslog_mysql.html>`_\ " (remember you
-need to enable MySQL support during step 2 if you want to do that!).
+:doc:`/tutorials/database` (remember you need to enable MySQL
+support during step 2 if you want to do that!).
 
 Step 6 - Disable stock syslogd
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -232,36 +236,3 @@ don't go smooth. In some rare cases, enabling debug logging (-d option)
 in rsyslogd can be helpful. If all fails, go to
 `www.rsyslog.com <http://www.rsyslog.com>`_ and check the forum or
 mailing list for help with your issue.
-
-Housekeeping stuff
-------------------
-
-This section and its subsections contain all these nice things that you
-usually need to read only if you are really curios ;)
-
-Feedback requested
-~~~~~~~~~~~~~~~~~~
-
-I would appreciate feedback on this tutorial.
-Additional ideas, comments or bug sighting reports are very
-welcome. Please `let me know <mailto:rgerhards@adiscon.com>`_ about
-them.
-
-Revision History
-~~~~~~~~~~~~~~~~
-
--  2005-08-08 \* `Rainer Gerhards`_ \*
-   Initial version created
--  2005-08-09 \* `Rainer Gerhards`_ \*
-   updated to include distro-specific directories, which are now
-   mandatory
--  2005-09-06 \* `Rainer Gerhards`_ \*
-   added information on log rotation scripts
--  2007-07-13 \* `Rainer Gerhards`_ \*
-   updated to new autotools-based build system
--  2008-10-01 \* `Rainer Gerhards`_ \*
-   added info on building from source repository
--  2014-03181 \* `Rainer
-   Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_  \*
-   revamped doc to match current state.
-

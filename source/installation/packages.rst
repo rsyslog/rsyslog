@@ -21,12 +21,17 @@ can help with simple config questions, for anything else we concentrate on
 current versions.
 
 The rsyslog project offers current packages for a number of major distributions.
-More information about these can be found at http://www.rsyslog.com/downloads/download-other/.
+More information about these can be found at the |RsyslogPackageDownloads|_
+page.
 
 If you do not find a suitable package for your distribution, there is no
-reason to panic. You can use the :doc:`rsyslog docker containers <rsyslog_docker>`
-instead or
-:doc:`install rsyslog from the source tarball <install_from_source>`.
+reason to panic. You can use official rsyslog docker containers or
+install rsyslog from the source tarball.
+
+.. seealso::
+
+   - :doc:`rsyslog_docker`
+   - :doc:`install_from_source`
 
 Package Structure
 -----------------
@@ -57,4 +62,4 @@ Contributing
 additional distribution and know how to build packages, please consider
 contributing to the project and joining the packaging team. Also, rsyslog's
 presence on github also contains the sources for the currently
-maintained packages. They can be found at https://github.com/rsyslog.
+maintained packages. They can be found at the |GitHubSourceProject|_.
