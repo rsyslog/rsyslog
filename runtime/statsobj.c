@@ -49,7 +49,6 @@ int GatherStats = 0;
 
 /* static data */
 DEFobjStaticHelpers
-DEFobjCurrIf(errmsg)
 
 /* doubly linked list of stats objects. Object is automatically linked to it
  * upon construction. Enqueue always happens at the front (simplifies logic).
@@ -587,12 +586,12 @@ statsRecordSender(const uchar *sender, unsigned nMsgs, time_t lastSeen)
 		stat->sender = (const uchar*)strdup((const char*)sender);
 		stat->nMsgs = 0;
 		if(glblReportNewSenders) {
-			errmsg.LogMsg(0, RS_RET_SENDER_APPEARED,
+			LogMsg(0, RS_RET_SENDER_APPEARED,
 				LOG_INFO, "new sender '%s'", stat->sender);
 		}
 		if(hashtable_insert(stats_senders, (void*)stat->sender,
 			(void*)stat) == 0) {
-			errmsg.LogError(errno, RS_RET_INTERNAL_ERROR,
+			LogError(errno, RS_RET_INTERNAL_ERROR,
 				"error inserting sender '%s' into sender "
 				"hash table", sender);
 			ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
@@ -655,7 +654,7 @@ checkGoneAwaySenders(const time_t tCurr)
 			if(stat->lastSeen < rqdLast) {
 				if(glblReportGoneAwaySenders) {
 					localtime_r(&stat->lastSeen, &tm);
-					errmsg.LogMsg(0, RS_RET_SENDER_GONE_AWAY,
+					LogMsg(0, RS_RET_SENDER_GONE_AWAY,
 						LOG_WARNING,
 						"removing sender '%s' from connection "
 						"table, last seen at "
@@ -738,14 +737,13 @@ BEGINAbstractObjClassInit(statsobj, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, statsobjDebugPrint);
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, statsobjConstructFinalize);
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* init other data items */
 	pthread_mutex_init(&mutStats, NULL);
 	pthread_mutex_init(&mutSenders, NULL);
 
 	if((stats_senders = create_hashtable(100, hash_from_string, key_equals_string, NULL)) == NULL) {
-		errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "error trying to initialize hash-table "
+		LogError(0, RS_RET_INTERNAL_ERROR, "error trying to initialize hash-table "
 			"for sender table. Sender statistics and warnings are disabled.");
 		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
 	}
