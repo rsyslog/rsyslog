@@ -165,11 +165,11 @@ SysSock.RateLimit.Interval
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :header: "type", "default", "max", "mandatory", "|FmtObsoleteName| directive"
    :widths: auto
    :class: parameter-table
 
-   "integer", "0", "no", "``$SystemLogRateLimitInterval``"
+   "integer", "0", "", "no", "``$SystemLogRateLimitInterval``"
 
 Specifies the rate-limiting interval in seconds. Default value is 0,
 which turns off rate limiting. Set it to a number of seconds (5
@@ -182,11 +182,11 @@ SysSock.RateLimit.Burst
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 .. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :header: "type", "default", "max", "mandatory", "|FmtObsoleteName| directive"
    :widths: auto
    :class: parameter-table
 
-   "integer", "200", "no", "``$SystemLogRateLimitBurst``"
+   "integer", "200", "(2^31)-1", "no", "``$SystemLogRateLimitBurst``"
 
 Specifies the rate-limiting burst in number of messages.
 
@@ -197,11 +197,11 @@ SysSock.RateLimit.Severity
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :header: "type", "default", "max", "mandatory", "|FmtObsoleteName| directive"
    :widths: auto
    :class: parameter-table
 
-   "integer", "1", "no", "``$SystemLogRateLimitSeverity``"
+   "integer", "1", "", "no", "``$SystemLogRateLimitSeverity``"
 
 Specifies the severity of messages that shall be rate-limited.
 
@@ -412,11 +412,11 @@ RateLimit.Interval
 ^^^^^^^^^^^^^^^^^^
 
 .. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :header: "type", "default", "max", "mandatory", "|FmtObsoleteName| directive"
    :widths: auto
    :class: parameter-table
 
-   "integer", "0", "no", "``$IMUXSockRateLimitInterval``"
+   "integer", "0", "", "no", "``$IMUXSockRateLimitInterval``"
 
 Specifies the rate-limiting interval in seconds. Default value is 0, which
 turns off rate limiting. Set it to a number of seconds (5 recommended)
@@ -429,11 +429,11 @@ RateLimit.Burst
 ^^^^^^^^^^^^^^^
 
 .. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :header: "type", "default", "max", "mandatory", "|FmtObsoleteName| directive"
    :widths: auto
    :class: parameter-table
 
-   "integer", "200", "no", "``$IMUXSockRateLimitBurst``"
+   "integer", "200", "(2^31)-1", "no", "``$IMUXSockRateLimitBurst``"
 
 Specifies the rate-limiting burst in number of messages.
 
@@ -444,11 +444,11 @@ RateLimit.Severity
 ^^^^^^^^^^^^^^^^^^
 
 .. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :header: "type", "default", "max", "mandatory", "|FmtObsoleteName| directive"
    :widths: auto
    :class: parameter-table
 
-   "integer", "1", "no", "``$IMUXSockRateLimitSeverity``"
+   "integer", "1", "", "no", "``$IMUXSockRateLimitSeverity``"
 
 Specifies the severity of messages that shall be rate-limited.
 
