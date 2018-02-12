@@ -157,10 +157,22 @@ an outname, as can be seen here:
         constant(value="\n" outname="IWantThisInMyDB")
     }
 
+To generate a constant json field, the `format` parameter can be used, as
+in this example::
+
+    template(name="outfmt" type="list" option.jsonf="on") {
+             property(outname="message" name="msg" format="jsonf")
+             constant(outname="@version" value="1" format="jsonf")
+    }
+
+The constant in this case will generate `"@version":"1"`. Note that to do
+this, both the `value` and `format` parameter must be given.
+
 The "constant" statement supports the following parameters:
 
--  value - the constant value to use
--  outname - output field name (for structured outputs)
+- value - the constant value to use
+- outname - output field name (for structured outputs)
+- format - can be either empty or `jsonf`
 
 property statement
 ^^^^^^^^^^^^^^^^^^
@@ -348,6 +360,10 @@ must use stdsql together with MySQL if in MySQL configuration the
 will replace single quotes ("'") by two single quotes ("''") inside each
 field.
 
+**option.jsonf** - format the string as JSON object. This means a leading
+and trailing curly brace "{" will be added as well as a comma between all
+non-terminal properties and constantants.
+
 **option.casesensitive** - treat property name references as case
 sensitive. The default is "off", where all property name references are
 first converted to lowercase during template definition. With this
@@ -482,6 +498,45 @@ The equivalent string template looks like this:
             )
 
 Note that the template string itself must be on a single line.
+
+Generating JSON
+^^^^^^^^^^^^^^^
+
+This is especially useful for RESTful APIs, like for example ElasticSearch provides.
+
+This template::
+
+    template(name="outfmt" type="list" option.jsonf="on") {
+             property(outname="@timestamp" name="timereported" dateFormat="rfc3339" format="jsonf")
+             property(outname="host" name="hostname" format="jsonf")
+             property(outname="severity" name="syslogseverity-text" caseConversion="upper" format="jsonf")
+             property(outname="facility" name="syslogfacility-text" format="jsonf")
+             property(outname="syslog-tag" name="syslogtag" format="jsonf")
+             property(outname="source" name="app-name" format="jsonf")
+             property(outname="message" name="msg" format="jsonf")
+
+     }
+
+Generates output similar to this::
+
+
+    {"@timestamp":"2018-03-01T01:00:00+00:00", "host":"172.20.245.8", "severity":"DEBUG", "facility":"local4", "syslog-tag":"tag", "source":"tag", "message":" msgnum:00000000:"}
+
+Pretty-printed this looks like::
+
+    {
+      "@timestamp": "2018-03-01T01:00:00+00:00",
+      "host": "172.20.245.8",
+      "severity": "DEBUG",
+      "facility": "local4",
+      "syslog-tag": "tag",
+      "source": "tag",
+      "message": " msgnum:00000000:"
+    }
+
+Note that the output is **not** pretty-printed as this is just waste of ressources when
+used in RESTful APIs.
+
 
 Creating Dynamic File Names for omfile
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
