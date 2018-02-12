@@ -231,6 +231,30 @@ random(max)
 .. versionadded:: 8.12.0
 
 
+hash64(literal_string, <optional param, default = 0> seed)
+----------------------------------------------------------
+
+   Generates a 64 bit hash of the given string. 
+   - If seed is not a valid number, then 0 is returned.
+
+.. warning::
+   Default hash implementation is non-crypto.
+
+**Read more about it here** :doc:`Hash based sampling<../tutorials/hash_sampling>`
+
+hash64mod(literal_string, modulo, <optional param, default = 0> seed)
+---------------------------------------------------------------------
+
+   Generates a number which is calculated on (64 bit hash of the given string % modulo) 
+   - If modulo is not a valid number, then 0 is returned.
+   - If modulo is 0, then 0 is returned.
+   - If seed is not a valid unsigned number, then 0 is returned.
+
+.. warning::
+   Default hash implementation is non-crypto.
+
+**Read more about it here** :doc:`Hash based sampling<../tutorials/hash_sampling>`
+
 ltrim
 -----
 
