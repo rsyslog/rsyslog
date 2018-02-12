@@ -106,7 +106,8 @@ static struct cnfparamblk pblkProperty =
 
 static struct cnfparamdescr cnfparamdescrConstant[] = {
 	{ "value", eCmdHdlrString, 1 },
-	{ "outname", eCmdHdlrString, 0 },
+	{ "format", eCmdHdlrString, 0 },
+	{ "outname", eCmdHdlrString, 0 }
 };
 static struct cnfparamblk pblkConstant =
 	{ CNFPARAMBLK_VERSION,
@@ -1430,7 +1431,10 @@ createConstantTpe(struct template *pTpl, struct cnfobj *o)
 	struct templateEntry *pTpe;
 	es_str_t *value = NULL; /* init just to keep compiler happy - mandatory parameter */
 	int i;
+	int is_jsonf = 0;
 	struct cnfparamvals *pvals = NULL;
+	struct json_object *json = NULL;
+	struct json_object *jval = NULL;
 	uchar *outname = NULL;
 	DEFiRet;
 
@@ -1449,19 +1453,30 @@ createConstantTpe(struct template *pTpl, struct cnfobj *o)
 			value = pvals[i].val.d.estr;
 		} else if(!strcmp(pblkConstant.descr[i].name, "outname")) {
 			outname = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(pblkConstant.descr[i].name, "format")) {
+			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"jsonf", sizeof("jsonf")-1)) {
+				is_jsonf = 1;
+			} else {
+				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				LogError(0, RS_RET_ERR, "invalid format type '%s' for constant",
+					typeStr);
+				free(typeStr);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
 		} else {
-			dbgprintf("template:constantTpe: program error, non-handled "
-			  "param '%s'\n", pblkConstant.descr[i].name);
+			LogError(0, RS_RET_INTERNAL_ERROR,
+				"template:constantTpe: program error, non-handled "
+				"param '%s'\n", pblkConstant.descr[i].name);
 		}
 	}
 
-	/* sanity check */
-	if(value == NULL) {
-		LogError(0, RS_RET_INTERNAL_ERROR, "createConstantTpe(): "
-			"internal error, variable 'value'==NULL, which is "
-			"not permitted.");
-		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+	if(is_jsonf && outname == NULL) {
+		parser_errmsg("constant set to format jsonf, but outname not specified - aborting");
+		ABORT_FINALIZE(RS_RET_ERR);
 	}
+
+	/* just double-check */
+	assert(value != NULL);
 
 	/* apply */
 	CHKmalloc(pTpe = tpeConstruct(pTpl));
@@ -1470,8 +1485,21 @@ createConstantTpe(struct template *pTpl, struct cnfobj *o)
 	pTpe->fieldName = outname;
 	if(outname != NULL)
 		pTpe->lenFieldName = ustrlen(outname);
-	pTpe->data.constant.iLenConstant = es_strlen(value);
-	pTpe->data.constant.pConstant = (uchar*)es_str2cstr(value, NULL);
+	if(is_jsonf) {
+		CHKmalloc(json = json_object_new_object());
+		const char *sz = es_str2cstr(value, NULL);
+		CHKmalloc(sz);
+		CHKmalloc(jval = json_object_new_string(sz));
+		free((void*)sz);
+		json_object_object_add(json, (char*)outname, jval);
+		CHKmalloc(sz = json_object_get_string(json));
+		CHKmalloc(pTpe->data.constant.pConstant = (uchar*) strdup(sz));
+		pTpe->data.constant.iLenConstant = ustrlen(pTpe->data.constant.pConstant);
+		json_object_put(json);
+	} else {
+		pTpe->data.constant.iLenConstant = es_strlen(value);
+		pTpe->data.constant.pConstant = (uchar*)es_str2cstr(value, NULL);
+	}
 
 finalize_it:
 	if(pvals != NULL)

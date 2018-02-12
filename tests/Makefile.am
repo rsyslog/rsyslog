@@ -73,6 +73,7 @@ TESTS +=  \
 	template-pos-from-to-oversize.sh \
 	template-pos-from-to-oversize-lowercase.sh \
 	template-pos-from-to-missing-jsonvar.sh \
+	template-const-jsonf.sh
 	fac_authpriv.sh \
 	fac_local0.sh \
 	fac_local7.sh \
@@ -1064,6 +1065,7 @@ EXTRA_DIST= \
 	template-pos-from-to-oversize.sh \
 	template-pos-from-to-oversize-lowercase.sh \
 	template-pos-from-to-missing-jsonvar.sh \
+	template-const-jsonf.sh
 	fac_authpriv.sh \
 	testsuites/fac_authpriv.conf \
 	fac_local0.sh \
