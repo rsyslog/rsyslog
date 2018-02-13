@@ -22,13 +22,13 @@ are available.
 Template processing
 -------------------
 
-Due to lack of standardization regarding logs formats, when a template is 
+Due to lack of standardization regarding logs formats, when a template is
 specified it's supposed to include HEADER, as defined in `RFC5424 <https://tools.ietf.org/html/rfc5424>`_
 
-It's very important to have this in mind, and also how to understand how 
+It's very important to have this in mind, and also how to understand how
 `rsyslog parsing <http://www.rsyslog.com/doc/syslog_parsing.html>`_ works
 
-For example, if MSG field is set to "this:is a message" and no HOSTNAME, 
+For example, if MSG field is set to "this:is a message" and no HOSTNAME,
 neither TAG are specified, outgoing parser will split the message as:
 
 ::
@@ -362,7 +362,7 @@ field.
 
 **option.jsonf** - format the string as JSON object. This means a leading
 and trailing curly brace "{" will be added as well as a comma between all
-non-terminal properties and constantants.
+non-terminal properties and constants.
 
 **option.casesensitive** - treat property name references as case
 sensitive. The default is "off", where all property name references are
@@ -534,7 +534,7 @@ Pretty-printed this looks like::
       "message": " msgnum:00000000:"
     }
 
-Note that the output is **not** pretty-printed as this is just waste of ressources when
+Note that the output is **not** pretty-printed as this is just waste of resources when
 used in RESTful APIs.
 
 
