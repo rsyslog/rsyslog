@@ -1,9 +1,7 @@
 Recording the Priority of Syslog Messages
 =========================================
 
-*Written by* `Rainer
-Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
-*(2007-06-18)*
+*Written by* `Rainer Gerhards <http://rainer.gerhards.net>`_ *(2007-06-18)*
 
 Abstract
 --------
@@ -141,23 +139,3 @@ Note the priority recording at the start of each line.
   syslog.info<46>: Jun 18 10:55:47 host [origin software="rsyslogd" swVersion="1.13.3" x-pid="2367"][x-configInfo udpReception="Yes" udpPort="514" tcpReception="Yes" tcpPort="1470"] restart
   user.notice<13>: Jun 18 10:55:50 host rger: test
   syslog.info<46>: Jun 18 10:55:52 host [origin software="rsyslogd" swVersion="1.13.3" x-pid="2367"] exiting on signal 2.``
-
-Feedback Requested
-------------------
-
-I would appreciate feedback on this paper. If you have additional ideas,
-comments or find bugs, please `let me
-know <mailto:rgerhards@adiscon.com>`_.
-
-References and Additional Material
-----------------------------------
-
--  `www.rsyslog.com <http://www.rsyslog.com>`_ - the rsyslog site
-
-Revision History
-----------------
-
--  2007-06-18 \* `Rainer
-   Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_ \*
-   initial version created
-

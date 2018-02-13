@@ -1,7 +1,7 @@
 Installing rsyslog from Source
 ==============================
 
-*Written by* `Rainer Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
+*Written by* `Rainer Gerhards <http://rainer.gerhards.net>`_
 
 **In this paper, I describe how to install**
 `rsyslog <http://www.rsyslog.com/>`_. It is intentionally a brief

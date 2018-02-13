@@ -1,9 +1,7 @@
 SSL Encrypting Syslog with Stunnel
 ==================================
 
-*Written by* `Rainer
-Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
-*(2005-07-22)*
+*Written by* `Rainer Gerhards <http://rainer.gerhards.net>`_ *(2005-07-22)*
 
 **HISTORICAL DOCUMENT**
 
@@ -277,23 +275,3 @@ With minumal effort, you can set up a secure logging infrastructure
 employing ssl encrypted syslog message transmission. As a side note, you
 also have the benefit of reliable tcp delivery which is far less prone
 to message loss than udp.
-
-Feedback requested
-~~~~~~~~~~~~~~~~~~
-
-I would appreciate feedback on this tutorial. If you have additional
-ideas, comments or find bugs (I \*do\* bugs - no way... ;)), please `let
-me know <mailto:rgerhards@adiscon.com>`_.
-
-Revision History
-----------------
-
--  2005-07-22 \* `Rainer Gerhards`_ \*
-   Initial Version created
--  2005-07-26 \* `Rainer Gerhards`_ \*
-   Some text brush-up, hyperlinks added
--  2005-08-03 \* `Rainer Gerhards`_ \*
-   license added
--  2008-05-05 \* `Rainer Gerhards`_ \*
-   updated to reflect native TLS capability of rsyslog 3.19.0 and above
-
