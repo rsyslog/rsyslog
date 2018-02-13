@@ -21,6 +21,23 @@ of the module documentation.
 
 For links, the same policies as laid down below applies.
 
+# Reviewing your PRs
+
+After submitting your pull request, please check for CI errors and handle
+them. **PRs with CI failures cannot be merged.**
+
+The CI system also generates an actual HTML preview from your contribution.
+This helps you (and others!) to review the ultimate outcome of the
+change.
+
+Due to technical reasons, the preview link is a bit hard to find. Thus
+we have created a short video that tells you where to find it:
+
+    https://youtu.be/26CN8hQGGJU
+
+Note: previews are deleted after a couple of days. The exact retention
+period depends on server load, but you should be able to view it for at least
+three days after its creation (we actually try to keep it seven days).
 
 # Contributing Content that already appeared Elsewhere
 
