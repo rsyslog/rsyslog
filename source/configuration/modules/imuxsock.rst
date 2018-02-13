@@ -38,7 +38,7 @@ Configuration Parameters
 
    Parameter names are case-insensitive.
 
-Global Parameters
+Module Parameters
 -----------------
 
 .. warning::
