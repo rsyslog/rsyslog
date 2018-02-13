@@ -1,8 +1,7 @@
 Generic design of a syslogd
 ---------------------------
 
-Written 2007-04-10 by `Rainer
-Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
+Written 2007-04-10 by `Rainer Gerhards <http://rainer.gerhards.net>`_
 
 The text below describes a generic approach on how a syslogd can be
 implemented. I created this description for some other project, where it
@@ -145,4 +144,3 @@ benefit from knowing the generic architecture.
    in a single syslog application.
 -  A syslog application is made up of all or some of the above mentioned
    components.
-

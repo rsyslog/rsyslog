@@ -1,18 +1,11 @@
 Developing rsyslog modules (outdated)
 =====================================
 
-*Written by `Rainer
-Gerhards* <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
-*(2007-07-28)*
+*Written by `Rainer Gerhards* <http://rainer.gerhards.net>`_ *(2007-07-28)*
 
 **This document is outdated and primarily contains historical
 information. Do not trust it to build code. It currently is under
 review.**
-
-This document is incomplete. The module interface is also quite
-incomplete and under development. Do not currently use it! You may
-want to visit `Rainer's blog <http://rgerhards.blogspot.com/>`_ to learn
-what's going on.
 
 Overview
 --------
@@ -109,9 +102,3 @@ identifies a module (e.g. "\*" for a wall message) and the modules
 designator syntax, where the module name is given between colons (e.g.
 ":ommysql:"). The single character syntax is depreciated and should not
 be used for new plugins.
-
-An in-depth discussion of module designation in action selectors can be
-found in this forum thread:
-
-`http://www.rsyslog.com/index.php?name=PNphpBB2&file=viewtopic&p=678#678 <http://www.rsyslog.com/index.php?name=PNphpBB2&file=viewtopic&p=678#678>`_
-
