@@ -594,6 +594,11 @@ TESTS +=  \
 	pmnull-withparams.sh
 endif
 
+if ENABLE_OMSTDOUT
+TESTS +=  \
+	omstdout-basic.sh
+endif
+
 if ENABLE_PMNORMALIZE
 TESTS +=  \
 	pmnormalize-basic.sh \
@@ -1121,6 +1126,7 @@ EXTRA_DIST= \
 	mmnormalize_rule_from_array.sh \
 	pmnull-basic.sh \
 	pmnull-withparams.sh \
+	omstdout-basic.sh \
 	testsuites/mmnormalize_processing_tests.rulebase \
 	mmnormalize_processing_test1.sh \
 	mmnormalize_processing_test2.sh \
