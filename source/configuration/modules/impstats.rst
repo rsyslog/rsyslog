@@ -46,7 +46,7 @@ continuously being added, and older versions do not support everything.
 Notable Features
 ================
 
-- :ref:`statistic-counter`
+- :ref:`impstats-statistic-counter`
 
 
 
@@ -276,7 +276,7 @@ restart). Note that such lower bound logic requires *resetCounters*
 to be set to off.
 
 
-.. _statistic-counter:
+.. _impstats-statistic-counter:
 
 Statistic Counter
 =================
@@ -325,7 +325,7 @@ in 10 minute intervals:
    module(load="impstats"
           interval="600"
           severity="7")
- 
+
    # to actually gather the data:
    syslog.=debug /var/log/rsyslog-stats
 
@@ -342,7 +342,7 @@ data is NOT emitted to the syslog stream but to a local file instead.
           interval="600"
           severity="7"
           log.syslog="off"
-          # need to turn log stream logging off! 
+          # need to turn log stream logging off!
           log.file="/path/to/local/stats.log")
 
 
