@@ -24,7 +24,7 @@ can be used.
 Notable Features
 ================
 
-- :ref:`statistic-counter`
+- :ref:`imptcp-statistic-counter`
 - :ref:`error-messages`
 
 
@@ -525,7 +525,7 @@ Experimental parameter which caues rsyslog to recognise a new message
 only if the line feed is followed by a '<' or if there are no more characters.
 
 
-.. _statistic-counter:
+.. _imptcp-statistic-counter:
 
 Statistic Counter
 =================

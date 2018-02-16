@@ -33,7 +33,7 @@ Clients send messages to the RELP server via omrelp.
 Notable Features
 ================
 
-- :ref:`statistic-counter`
+- :ref:`imrelp-statistic-counter`
 
 
 Configuration Parameters
@@ -328,7 +328,7 @@ This has only effect if keep-alive is enabled. The functionality may
 not be available on all platforms.
 
 
-.. _statistic-counter:
+.. _imrelp-statistic-counter:
 
 Statistic Counter
 =================
