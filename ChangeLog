@@ -17,6 +17,16 @@ Version 8.33.0 [v8-stable] 2018-02-20
     --> ex: include(text=`echo $ENVVAR`)
   This finally really obsoletes $IncludeConfig.
   closes https://github.com/rsyslog/rsyslog/issues/2151
+- template: add option to generate json "container"
+  This enables easy JSON generation via template.
+  This commit also corrects an issue with the constant "jsonf"
+  format. That was recently added, and the implementation problem
+  only became visible when used inside a larger json object. No
+  officially released code is affected, thought - so it rellay
+  is just a side-note.
+  closes https://github.com/rsyslog/rsyslog/issues/2347
+- core/template: add format jsonf to constant template entries
+  closes https://github.com/rsyslog/rsyslog/issues/2348
 - config: add ability to disable config parameter ("config.enable")
   For auto-generated configs, it is useful to have the ability to disable some
   config constructs even though they may be specified inside the config. This
@@ -71,6 +81,10 @@ Version 8.33.0 [v8-stable] 2018-02-20
 - core bugfix: string not properly terminated when RFC5424 MSGID is used
   This could lead to misadressing when the jsonmesg property was used.
   closes https://github.com/rsyslog/rsyslog/issues/2396
+- bugfix: strndup() compatibility layer func copies too much
+  The function did not obey the upper limit, effectively becoming
+  a strdup(). This was only noticed when the compatibility layer
+  was required, most importantly on Solaris 10.
 - CI system
   - we now use well-defined containers for parts of the CI runs
   - now also build test under Alpine Linux
