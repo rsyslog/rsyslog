@@ -399,8 +399,17 @@ texinfo_documents = [
 # Use detailed build strings for epub format IF this is a dev build
 # and NOT a stable build (which does not use detailed release strings)
 if release_type == 'dev':
-    epub_title = \
-        conf_helpers.get_release_string(release_type, 'detailed', version)
+
+    # Override "simple" dev build string for epub format
+    release_string_detail = 'detailed'
+
+    epub_title = "{} {} docs".format(
+        project,
+        conf_helpers.get_release_string(
+            release_type,
+            release_string_detail, version
+        )
+    )
 
 epub_theme = 'epub'
 epub_basename = project
