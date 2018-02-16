@@ -29,11 +29,11 @@ strndup(const char *s, size_t n)
 	const size_t len = strlen(s);
 	if(len <= n)
 		return strdup(s);
-	char *const new_s = malloc(len+1);
+	char *const new_s = malloc(n+1);
 	if(new_s == NULL)
 		return NULL;
-	memcpy(new_s, s, len);
-	new_s[len] = '\0';
+	memcpy(new_s, s, n);
+	new_s[n] = '\0';
 	return new_s;
 }
 

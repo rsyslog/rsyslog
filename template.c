@@ -1,7 +1,7 @@
 /* This is the template processing code of rsyslog.
  * begun 2004-11-17 rgerhards
  *
- * Copyright 2004-2017 Rainer Gerhards and Adiscon
+ * Copyright 2004-2018 Rainer Gerhards and Adiscon
  *
  * This file is part of rsyslog.
  *
@@ -65,6 +65,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "option.stdsql", eCmdHdlrBinary, 0 },
 	{ "option.sql", eCmdHdlrBinary, 0 },
 	{ "option.json", eCmdHdlrBinary, 0 },
+	{ "option.jsonf", eCmdHdlrBinary, 0 },
 	{ "option.casesensitive", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk pblk =
@@ -190,6 +191,13 @@ tplToString(struct template *__restrict__ const pTpl,
 	 */
 	pTpe = pTpl->pEntryRoot;
 	iBuf = 0;
+	const int extra_space = (pTpl->optFormatEscape == JSONF) ? 1 : 3;
+	if(pTpl->optFormatEscape == JSONF) {
+		if(iparam->lenBuf < 2) /* we reserve one char for the final \0! */
+			CHKiRet(ExtendBuf(iparam, 2));
+		iBuf = 1;
+		*iparam->param = '{';
+	}
 	while(pTpe != NULL) {
 		if(pTpe->eEntryType == CONSTANT) {
 			pVal = (uchar*) pTpe->data.constant.pConstant;
@@ -219,11 +227,16 @@ tplToString(struct template *__restrict__ const pTpl,
 		/* got source, now copy over */
 		if(iLenVal > 0) { /* may be zero depending on property */
 			/* first, make sure buffer fits */
-			if(iBuf + iLenVal >= iparam->lenBuf) /* we reserve one char for the final \0! */
+			if(iBuf + iLenVal + extra_space >= iparam->lenBuf) /* we reserve one char for the final \0! */
 				CHKiRet(ExtendBuf(iparam, iBuf + iLenVal + 1));
 
 			memcpy(iparam->param + iBuf, pVal, iLenVal);
 			iBuf += iLenVal;
+			if(pTpl->optFormatEscape == JSONF) {
+				memcpy(iparam->param + iBuf,
+					(pTpe->pNext == NULL) ? "}\n" : ", ", 2);
+				iBuf += 2;
+			}
 		}
 
 		if(bMustBeFreed) {
@@ -1493,7 +1506,8 @@ createConstantTpe(struct template *pTpl, struct cnfobj *o)
 		free((void*)sz);
 		json_object_object_add(json, (char*)outname, jval);
 		CHKmalloc(sz = json_object_get_string(json));
-		CHKmalloc(pTpe->data.constant.pConstant = (uchar*) strdup(sz));
+		const size_t len_json = strlen(sz) - 4;
+		CHKmalloc(pTpe->data.constant.pConstant = (uchar*) strndup(sz+2, len_json));
 		pTpe->data.constant.iLenConstant = ustrlen(pTpe->data.constant.pConstant);
 		json_object_put(json);
 	} else {
@@ -1925,7 +1939,7 @@ tplProcessCnf(struct cnfobj *o)
 	enum { T_STRING, T_PLUGIN, T_LIST, T_SUBTREE }
 		tplType = T_STRING; /* init just to keep compiler happy: mandatory parameter */
 	int i;
-	int o_sql=0, o_stdsql=0, o_json=0, o_casesensitive=0; /* options */
+	int o_sql=0, o_stdsql=0, o_jsonf=0, o_json=0, o_casesensitive=0; /* options */
 	int numopts;
 	rsRetVal localRet;
 	DEFiRet;
@@ -1986,6 +2000,8 @@ tplProcessCnf(struct cnfobj *o)
 			o_sql = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "option.json")) {
 			o_json = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "option.jsonf")) {
+			o_jsonf = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "option.casesensitive")) {
 			o_casesensitive = pvals[i].val.d.n;
 		} else {
@@ -2060,6 +2076,7 @@ tplProcessCnf(struct cnfobj *o)
 	if(o_sql) ++numopts;
 	if(o_stdsql) ++numopts;
 	if(o_json) ++numopts;
+	if(o_jsonf) ++numopts;
 	if(numopts > 1) {
 		LogError(0, RS_RET_ERR, "template '%s' has multiple incompatible "
 			"options of sql, stdsql or json specified", name);
@@ -2112,6 +2129,8 @@ tplProcessCnf(struct cnfobj *o)
 		pTpl->optFormatEscape = SQL_ESCAPE;
 	else if(o_json)
 		pTpl->optFormatEscape = JSON_ESCAPE;
+	else if(o_jsonf)
+		pTpl->optFormatEscape = JSONF;
 
 	if(o_casesensitive)
 		pTpl->optCaseSensitive = 1;
@@ -2296,6 +2315,8 @@ void tplPrintList(rsconf_t *conf)
 			dbgprintf("[JSON-Escaped Format] ");
 		else if(pTpl->optFormatEscape == STDSQL_ESCAPE)
 			dbgprintf("[SQL-Format (standard SQL)] ");
+		else if(pTpl->optFormatEscape == JSONF)
+			dbgprintf("[JSON fields] ");
 		if(pTpl->optCaseSensitive)
 			dbgprintf("[Case Sensitive Vars] ");
 		dbgprintf("\n");

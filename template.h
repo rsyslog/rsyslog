@@ -50,6 +50,7 @@ struct template {
 #	define SQL_ESCAPE 1	/* 1 - escape "the MySQL way"  */
 #	define STDSQL_ESCAPE 2  /* 2 - escape quotes by double quotes, */
 #	define JSON_ESCAPE 3	/* 3 - escape double quotes for JSON.  */
+#	define JSONF 4		/* 4 - not a real escape - template contains json fields only */
 	/* following are options. All are 0/1 defined (either on or off).
 	 * we use chars because they are faster than bit fields and smaller
 	 * than short...
