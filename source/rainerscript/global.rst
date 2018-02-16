@@ -77,7 +77,7 @@ The following parameters can be set:
   *processInternalMessages* is set to "off". Otherwise it is silently
   ignored.
 
-- **shutdown.enable.ctl-c**
+- **shutdown.enable.ctlc**
 
   If set to "on", rsyslogd can be terminated by pressing ctl-c. This is
   most useful for containers. If set to "off" (the default), this is not
