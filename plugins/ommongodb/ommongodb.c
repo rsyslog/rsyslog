@@ -83,6 +83,8 @@ typedef struct _instanceData {
     	char *ssl_cert;
     	char *uid;
     	char *pwd;
+		uint32_t allowed_error_codes[256];
+	int allowed_error_codes_nbr;
    	char *db;
    	char *collection_name;
 	char *tplName;
@@ -106,7 +108,8 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "pwd", eCmdHdlrGetWord, 0 },
 	{ "db", eCmdHdlrGetWord, 0 },
 	{ "collection", eCmdHdlrGetWord, 0 },
-	{ "template", eCmdHdlrGetWord, 0 }
+	{ "template", eCmdHdlrGetWord, 0 },
+	{ "allowed_error_codes", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -503,6 +506,22 @@ CODESTARTtryResume
 	}
 ENDtryResume
 
+/*
+ * Check if `code` is in the allowed error codes.
+ * Return 1 if so, 0 otherwise.
+ */
+static int is_allowed_error_code(instanceData const* pData, uint32_t code) {
+	int i;
+
+	i = 0;
+	while (i < pData->allowed_error_codes_nbr) {
+		if (code == pData->allowed_error_codes[i])
+			return 1;
+		++i;
+	}
+	return 0;
+}
+
 BEGINdoAction_NoStrings
 	bson_t *doc = NULL;
 	instanceData *pData;
@@ -526,6 +545,8 @@ CODESTARTdoAction
 	}
 	if (mongoc_collection_insert (pData->collection, MONGOC_INSERT_NONE, doc, NULL, &(pData->error) ) ) {
 		pData->bErrMsgPermitted = 1;
+	} else if (is_allowed_error_code(pData, pData->error.code)) {
+		dbgprintf("ommongodb: insert error: allowing error code\n");
 	} else {
 		dbgprintf("ommongodb: insert error\n");
 		reportMongoError(pData);
@@ -553,11 +574,16 @@ static void setInstParamDefaults(instanceData *pData)
 	pData->db = NULL;
 	pData->collection = NULL;
 	pData->tplName = NULL;
+	memset (pData->allowed_error_codes, 0, 256 * sizeof(uint32_t));
+	pData->allowed_error_codes_nbr = 0;
 }
 
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
+	char* error_codes;
+	char* saveptr;
+	char* tok;
 CODESTARTnewActInst
 	dbgprintf("ommongodb: Getting configuration.\n");
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
@@ -592,6 +618,19 @@ CODESTARTnewActInst
 			pData->pwd = (char*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (char*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "allowed_error_codes")) {
+			saveptr = NULL;
+			tok = NULL;
+			error_codes = (char*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			if (error_codes != NULL) {
+				tok = strtok_r(error_codes, ", ", &saveptr);
+				while (tok != NULL) {
+					pData->allowed_error_codes[pData->allowed_error_codes_nbr] = (unsigned)atoi(tok);
+					++(pData->allowed_error_codes_nbr);
+					tok = strtok_r(NULL, ", ", &saveptr);
+				}
+				free(error_codes);
+			}
 		} else {
 			dbgprintf("ommongodb: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);
