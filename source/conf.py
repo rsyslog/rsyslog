@@ -94,8 +94,8 @@ rst_epilog = """
 ###############################################################################
 
 
-version = '8'
-release = version + ' dev build'
+version = '8.33'
+release = '8.33.0'
 
 
 # For this to be true, it means that we are not attempting to build from
