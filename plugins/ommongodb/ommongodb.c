@@ -625,7 +625,8 @@ CODESTARTnewActInst
 			if (error_codes != NULL) {
 				tok = strtok_r(error_codes, ", ", &saveptr);
 				while (tok != NULL) {
-					pData->allowed_error_codes[pData->allowed_error_codes_nbr] = (unsigned)atoi(tok);
+					pData->allowed_error_codes[pData->allowed_error_codes_nbr]
+                            = (unsigned)atoi(tok);
 					++(pData->allowed_error_codes_nbr);
 					tok = strtok_r(NULL, ", ", &saveptr);
 				}
