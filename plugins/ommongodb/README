@@ -22,7 +22,7 @@ A very basic example is:
 *.*     action(type="ommongodb" db="logs" collection="syslog")
 
 A more complex example:
-*.*     action(type="ommongodb" uristr="mongodb://vulture:9091,vulture2:9091/?replicaset=Vulture&ssl=true" ssl_cert="/var/db/mongodb/mongod.pem" ssl_ca="/var/db/mongodb/ca.pem" db="logs" collection="syslog")
+*.*     action(type="ommongodb" uristr="mongodb://vulture:9091,vulture2:9091/?replicaset=Vulture&ssl=true" ssl_cert="/var/db/mongodb/mongod.pem" ssl_ca="/var/db/mongodb/ca.pem" db="logs" collection="syslog" allowed_error_codes="11000")
 
 Please see the script clean-mongo-syslog for an example of how to
 purge old records from MongoDB using PyMongo.  It can be run
