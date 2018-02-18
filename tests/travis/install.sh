@@ -1,7 +1,11 @@
 # this installs some components that we cannot install any other way
 source /etc/lsb-release
-# the following packages are not yet available via travis package
-sudo apt-get install -qq faketime libdbd-mysql autoconf-archive
+
+if [ "${AD_PPA}x" == "x" ] ; then AD_PPA="v8-stable"; fi
+sudo add-apt-repository ppa:adiscon/$AD_PPA -y
+sudo apt-get install -qq faketime libdbd-mysql
+sudo add-apt-repository ppa:qpid/released -y
+sudo apt-get update
 
 # update autoconf-archive (no good enough packets available)
 # this one built by whissi
@@ -12,6 +16,8 @@ if [ $? -ne 0 ]; then
 fi
 sudo dpkg -i autoconf-archive_20170928-1adiscon1_all.deb
 rm autoconf-archive_20170928-1adiscon1_all.deb
+
+sudo apt-get install -qq build-essential automake pkg-config libtool autoconf autotools-dev gdb valgrind libdbi-dev libsnmp-dev libmysqlclient-dev postgresql-client libglib2.0-dev libtokyocabinet-dev zlib1g-dev uuid-dev libgcrypt11-dev bison flex libcurl4-gnutls-dev python-docutils openjdk-7-jdk wget libkrb5-dev libsodium-dev libczmq-dev libnet1-dev
 
 if [ "x$GROK" == "xYES" ]; then sudo apt-get install -qq libgrok1 libgrok-dev ; fi
 sudo apt-get install -qq --force-yes libestr-dev librelp-dev libfastjson-dev liblogging-stdlog-dev \

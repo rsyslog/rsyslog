@@ -63,7 +63,6 @@
 
 /* static data */
 DEFobjStaticHelpers
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(strgen)
 
 static modInfo_t *pLoadedModules = NULL;	/* list of currently-loaded modules */
@@ -112,7 +111,7 @@ static rsRetVal
 dummynewActInst(uchar *modName, struct nvlst __attribute__((unused)) *dummy1,
 	  	void __attribute__((unused)) **dummy2, omodStringRequest_t __attribute__((unused)) **dummy3) 
 {
-	errmsg.LogError(0, RS_RET_CONFOBJ_UNSUPPORTED, "config objects are not "
+	LogError(0, RS_RET_CONFOBJ_UNSUPPORTED, "config objects are not "
 			"supported by module '%s' -- legacy config options "
 			"MUST be used instead", modName);
 	return RS_RET_CONFOBJ_UNSUPPORTED;
@@ -379,7 +378,7 @@ readyModForCnf(modInfo_t *pThis, cfgmodules_etry_t **ppNew, cfgmodules_etry_t **
 			if(pLast->pMod == pThis) {
 				DBGPRINTF("module '%s' already in this config\n", modGetName(pThis));
 				if(strncmp((char*)modGetName(pThis), "builtin:", sizeof("builtin:")-1)) {
-					errmsg.LogError(0, RS_RET_MODULE_ALREADY_IN_CONF,
+					LogError(0, RS_RET_MODULE_ALREADY_IN_CONF,
 					   "module '%s' already in this config, cannot be added\n", modGetName(pThis));
 					ABORT_FINALIZE(RS_RET_MODULE_ALREADY_IN_CONF);
 				}
@@ -720,7 +719,7 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			}
 
 			if(pNew->mod.om.doAction == NULL && pNew->mod.om.commitTransaction == NULL) {
-				errmsg.LogError(0, RS_RET_INVLD_OMOD,
+				LogError(0, RS_RET_INVLD_OMOD,
 					"module %s does neither provide doAction() "
 					"nor commitTransaction() interface - cannot "
 					"load", name);
@@ -729,14 +728,14 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 
 			if(pNew->mod.om.commitTransaction != NULL) {
 				if(pNew->mod.om.doAction != NULL){
-					errmsg.LogError(0, RS_RET_INVLD_OMOD,
+					LogError(0, RS_RET_INVLD_OMOD,
 						"module %s provides both doAction() "
 						"and commitTransaction() interface, using "
 						"commitTransaction()", name);
 					pNew->mod.om.doAction = NULL;
 				}
 				if(pNew->mod.om.beginTransaction == NULL){
-					errmsg.LogError(0, RS_RET_INVLD_OMOD,
+					LogError(0, RS_RET_INVLD_OMOD,
 						"module %s provides both commitTransaction() "
 						"but does not provide beginTransaction() - "
 						"cannot load", name);
@@ -1153,7 +1152,7 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 			if(pModInfo->setModCnf != NULL && localRet == RS_RET_OK) {
 				if(!strncmp((char*)pModName, "builtin:", sizeof("builtin:")-1)) {
 					if(pModInfo->bSetModCnfCalled) {
-						errmsg.LogError(0, RS_RET_DUP_PARAM,
+						LogError(0, RS_RET_DUP_PARAM,
 						    "parameters for built-in module %s already set - ignored\n",
 						    pModName);
 						ABORT_FINALIZE(RS_RET_DUP_PARAM);
@@ -1260,16 +1259,16 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 
 	if(!pModHdlr) {
 		if(iLoadCnt) {
-			errmsg.LogError(0, RS_RET_MODULE_LOAD_ERR_DLOPEN, "could not load module '%s', dlopen: %s\n",
+			LogError(0, RS_RET_MODULE_LOAD_ERR_DLOPEN, "could not load module '%s', dlopen: %s\n",
 					pPathBuf, dlerror());
 		} else {
-			errmsg.LogError(0, NO_ERRCODE, "could not load module '%s', ModDir was '%s'\n", pPathBuf,
+			LogError(0, NO_ERRCODE, "could not load module '%s', ModDir was '%s'\n", pPathBuf,
 			                               ((pModDir == NULL) ? _PATH_MODDIR : (char *)pModDir));
 		}
 		ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_DLOPEN);
 	}
 	if(!(pModInit = dlsym(pModHdlr, "modInit"))) {
-		errmsg.LogError(0, RS_RET_MODULE_LOAD_ERR_NO_INIT,
+		LogError(0, RS_RET_MODULE_LOAD_ERR_NO_INIT,
 			 	"could not load module '%s', dlsym: %s\n", pPathBuf, dlerror());
 		dlclose(pModHdlr);
 		ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_NO_INIT);
@@ -1281,7 +1280,7 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 #else
 	if((iRet = doModInit(pModInit, (uchar*) pModName, pModHdlr, &pModInfo)) != RS_RET_OK) {
 #endif
-		errmsg.LogError(0, RS_RET_MODULE_LOAD_ERR_INIT_FAILED,
+		LogError(0, RS_RET_MODULE_LOAD_ERR_INIT_FAILED,
 				"could not load module '%s', rsyslog error %d\n", pPathBuf, iRet);
 		dlclose(pModHdlr);
 		ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_INIT_FAILED);
@@ -1293,7 +1292,7 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 			if(lst != NULL) {
 				localRet = pModInfo->setModCnf(lst);
 				if(localRet != RS_RET_OK) {
-					errmsg.LogError(0, localRet,
+					LogError(0, localRet,
 						"module '%s', failed processing config parameters",
 						pPathBuf);
 					ABORT_FINALIZE(localRet);
@@ -1333,7 +1332,7 @@ modulesProcessCnf(struct cnfobj *o)
 	cnfparamsPrint(&pblk, pvals);
 	typeIdx = cnfparamGetIdx(&pblk, "load");
 	if(pvals[typeIdx].bUsed == 0) {
-		errmsg.LogError(0, RS_RET_CONF_RQRD_PARAM_MISSING, "module type missing");
+		LogError(0, RS_RET_CONF_RQRD_PARAM_MISSING, "module type missing");
 		ABORT_FINALIZE(RS_RET_CONF_RQRD_PARAM_MISSING);
 	}
 
@@ -1437,7 +1436,6 @@ Release(const char *srcFile, modInfo_t **ppThis)
 BEGINObjClassExit(module, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
 CODESTARTObjClassExit(module)
 	/* release objects we no longer need */
-	objRelease(errmsg, CORE_COMPONENT);
 	free(pModDir);
 #	ifdef DEBUG
 	modUsrPrintAll(); /* debug aid - TODO: integrate with debug.c, at least the settings! */
@@ -1499,7 +1497,6 @@ BEGINAbstractObjClassInit(module, 1, OBJ_IS_CORE_MODULE) /* class, version - CHA
 	}
 
 	/* request objects we use */
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDObjClassInit(module)
 
 /* vi:set ai:

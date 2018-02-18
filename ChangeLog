@@ -1,4 +1,95 @@
 ------------------------------------------------------------------------------
+Version 8.33.0 [v8-stable] 2018-02-20
+- auto-detect if running inside a container (as pid 1)
+  adjust defaults in this case to be more container-friendly
+- config: add include() script object
+  This permits to include files (like legacy $IncludeConfig) via a
+  script object. Needless to say, the script object offers more
+  features:
+  - include files can now be
+    - required, with rsyslog aborting when not present
+    - required, with rsyslog emitting an error message but otherwise
+      continuing when not present
+    - optional, which means non-present include files will be
+      skipped without notice
+    This is controlled by the "mode" parameter.
+  - text can be included form e.g. an environment variable
+    --> ex: include(text=`echo $ENVVAR`)
+  This finally really obsoletes $IncludeConfig.
+  closes https://github.com/rsyslog/rsyslog/issues/2151
+- template: add option to generate json "container"
+  This enables easy JSON generation via template.
+  This commit also corrects an issue with the constant "jsonf"
+  format. That was recently added, and the implementation problem
+  only became visible when used inside a larger json object. No
+  officially released code is affected, thought - so it rellay
+  is just a side-note.
+  closes https://github.com/rsyslog/rsyslog/issues/2347
+- core/template: add format jsonf to constant template entries
+  closes https://github.com/rsyslog/rsyslog/issues/2348
+- config: add ability to disable config parameter ("config.enable")
+  For auto-generated configs, it is useful to have the ability to disable some
+  config constructs even though they may be specified inside the config. This
+  can now be done via the ```config.disable``` parameter, applicable to all
+  script objects. If set to ```on``` or not specified, the construct will be
+  used, if set to any other value, it will be ignored. This can be used
+  together with the backtick functionality to configure enable and disable
+  from either a file or environment variable.
+  closes https://github.com/rsyslog/rsyslog/issues/2431
+- script: permit to use environment variables during configuration
+  new constant string type "backticks", inspired by sh
+  (sample: `echo $VARNAME`).
+- new global config parameter "shutdown.enable.ctl-c"
+  permits to shutdown rsyslog via ctl-c; useful e.g. in containers
+- config optimizer: detect totally empty "if" statements and optimize
+  them out
+- template: constant entry can now also be formatted as json field
+  This enhancements permits to craft clean templates that generate JSON,
+  e.g. for ElasticSearch consumption (or any other REST API)
+- omstdout: support for new-style configuration parameters added
+- core: set TZ on startup if not already set
+  In theory, TZ should be set by the OS. Unfortuantely, this seems
+  to be not the case any longer on many Linux distros. We now check
+  it and set it appropriate if not already given.
+  Thanks to github user JPvRiel for providing an excellent explanation
+  of the reasoning for this and how to work around it.
+  closes https://github.com/rsyslog/rsyslog/issues/2054
+- imjournal bugfix: file handle leak during journal rotation
+  Thanks to Peter Portante for the patch
+  see also: https://github.com/rsyslog/rsyslog/pull/2437
+- lmsig_ksils12 bugfix: dirOwner and dirGroup config was not respected
+- script bugfix: replace() function worked incorrectly in some cases
+  If the end of the message was similar to the replacement string, parts
+  of the string could (not always) be missing.
+  Thanks to Yaroslav Bo for the patch.
+- build system bugfix: --disable-libcurl did not work
+  Thanks to Dan Molik, Thomas D. (whissi), and Michael Biebl for the patches.
+- fixed build issues on Alpine Linux
+- core bugfix: misadressing in external command parser
+  This parser is used whenever a module (e.g. omprog) needs to process
+  command lines. If command parameters were given, memory misadressing
+  occured. This could lead to a segfault.
+  This is a regression in 8.32.0.
+  closes https://github.com/rsyslog/rsyslog/issues/2408
+- core bugfix: small memory leak in external command parser
+  This parser is used whenever a module (e.g. omprog) needs to process
+  command lines. On each action definitions for actions that use the
+  parser a small amount of memory was leakd. It is an uncritical leak
+  as it only occurs during config parsing. So it leaks a couple of
+  KiB during startup but does not grow during actual message processing.
+  This is a regression in 8.32.0.
+- core bugfix: string not properly terminated when RFC5424 MSGID is used
+  This could lead to misadressing when the jsonmesg property was used.
+  closes https://github.com/rsyslog/rsyslog/issues/2396
+- bugfix: strndup() compatibility layer func copies too much
+  The function did not obey the upper limit, effectively becoming
+  a strdup(). This was only noticed when the compatibility layer
+  was required, most importantly on Solaris 10.
+- CI system
+  - we now use well-defined containers for parts of the CI runs
+  - now also build test under Alpine Linux
+  - test added for omprog feedback feature
+------------------------------------------------------------------------------
 Version 8.32.0 [v8-stable] 2018-01-09
 - NEW BUILD REQUIREMENTs:
   * libfastjson 0.99.8 is now required; older versions lead to bugs in rsyslog

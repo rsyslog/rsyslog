@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[8.32.0],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[8.33.0],[rsyslog@lists.adiscon.com])
 
 # AIXPORT START: Detect the underlying OS
 unamestr=$(uname)
@@ -123,7 +123,6 @@ case "${host}" in
   ;;
 esac
 AM_CONDITIONAL(OS_APPLE, test x$os_type == xapple)
-AM_CONDITIONAL(xOS_LINUX, test x$os_type == xlinux)
 AM_CONDITIONAL(OS_LINUX, test x$os_type == xlinux)
 
 # Running from git source?
@@ -453,6 +452,8 @@ if test "$enable_libcurl" = "yes"; then
 		[ AC_DEFINE(HAVE_LIBCURL, 1, [libcurl present]) ]
 	)
 fi
+
+AM_CONDITIONAL(ENABLE_LIBCURL, test "x${enable_libcurl}" = "xyes")
 
 # klog
 AC_ARG_ENABLE(klog,

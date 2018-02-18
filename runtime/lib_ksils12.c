@@ -50,7 +50,6 @@
 #include <fcntl.h>
 #include <stdarg.h>
 #include <limits.h>
-#define MAXFNAME 1024
 
 #include <ksi/ksi.h>
 #include <ksi/tlv_element.h>
@@ -58,6 +57,8 @@
 #include <ksi/net_async.h>
 #include <ksi/net_uri.h>
 #include <ksi/signature_builder.h>
+#include "rsyslog.h"
+#include "errmsg.h"
 #include "lib_ksils12.h"
 #include "lib_ksi_queue.h"
 
@@ -489,14 +490,20 @@ static int mkpath(char* path, mode_t mode, uid_t uid, gid_t gid) {
 
 	for (char *p = strchr(path + 1, '/'); p; p = strchr(p + 1, '/')) {
 		*p = '\0';
-		if (mkdir(path, mode) == -1) {
-			if (errno != EEXIST) {
-				*p = '/';
-				return -1;
-			}
-			if (chown(p, uid, gid)) {
+		if (mkdir(path, mode) == 0) {
+			if (uid != (uid_t) -1 || gid != (uid_t) -1) {
+				if (chown(path, uid, gid)) {
+					LogError(errno, RS_RET_IO_ERROR,
+						"ksils12 signatures: could not change to "
+						"configured owner - files may be unaccessible");
+				}
 			}
 		}
+		else if (errno != EEXIST) {
+			*p = '/';
+			return -1;
+		}
+
 		*p = '/';
 	}
 	return 0;

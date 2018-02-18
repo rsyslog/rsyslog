@@ -36,7 +36,11 @@
 #include <sys/types.h>
 #include <libestr.h>
 #include <time.h>
+
+#ifdef HAVE_LIBCURL
 #include <curl/curl.h>
+#endif
+
 #include "rsyslog.h"
 #include "rainerscript.h"
 #include "conf.h"
@@ -68,6 +72,17 @@ struct cnfexpr* cnfexprOptimize(struct cnfexpr *expr);
 static void cnfstmtOptimizePRIFilt(struct cnfstmt *stmt);
 static void cnfarrayPrint(struct cnfarray *ar, int indent);
 struct cnffunc * cnffuncNew_prifilt(int fac);
+
+static struct cnfparamdescr incpdescr[] = {
+	{ "file", eCmdHdlrString, 0 },
+	{ "text", eCmdHdlrString, 0 },
+	{ "mode", eCmdHdlrGetWord, 0 }
+};
+static struct cnfparamblk incpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(incpdescr)/sizeof(struct cnfparamdescr),
+	  incpdescr
+	};
 
 struct curl_funcData {
 	const char *reply;
@@ -504,7 +519,7 @@ objlstAdd(struct objlst *root, struct cnfobj *o)
 {
 	struct objlst *l;
 	struct objlst *newl;
-	
+
 	newl = objlstNew(o);
 	if(root == 0) {
 		root = newl;
@@ -521,7 +536,7 @@ struct cnfstmt*
 scriptAddStmt(struct cnfstmt *root, struct cnfstmt *s)
 {
 	struct cnfstmt *l;
-	
+
 	if(root == NULL) {
 		root = s;
 	} else { /* find last, linear search ok, as only during config phase */
@@ -555,8 +570,8 @@ objlstPrint(struct objlst *lst)
 	}
 }
 
-struct nvlst*
-nvlstNewStr(es_str_t *value)
+struct nvlst* ATTR_NONNULL(1)
+nvlstNewStr(es_str_t *const value)
 {
 	struct nvlst *lst;
 
@@ -568,6 +583,44 @@ nvlstNewStr(es_str_t *value)
 	}
 
 	return lst;
+}
+
+struct nvlst* ATTR_NONNULL(1)
+nvlstNewStrBackticks(es_str_t *const value)
+{
+	es_str_t *val = NULL;
+	const char *realval;
+
+	char *const param = es_str2cstr(value, NULL);
+	if(param == NULL)
+		goto done;
+
+	if(strncmp(param, "echo $", sizeof("echo $")-1) != 0) {
+		parser_errmsg("invalid backtick parameter `%s` currently "
+			"only `echo $<var>` is supported - replaced by "
+			"empty strong (\"\")", param);
+		realval = NULL;
+	} else {
+		size_t i;
+		const size_t len = strlen(param);
+		for(i = len - 1 ; isspace(param[i]) ; --i) {
+			; /* just go down */
+		}
+		if(i > 6 && i < len - 1) {
+			param[i+1] = '\0';
+		}
+		realval = getenv(param+6);
+	}
+
+	free((void*)param);
+	if(realval == NULL) {
+		realval = "";
+	}
+	val = es_newStrFromCStr(realval, strlen(realval));
+	es_deleteStr(value);
+
+done:
+	return (val == NULL) ? NULL : nvlstNewStr(val);
 }
 
 struct nvlst*
@@ -693,7 +746,7 @@ nvlstChkUnused(struct nvlst *lst)
 		if(!lst->bUsed) {
 			cstr = es_str2cstr(lst->name, NULL);
 			parser_errmsg("parameter '%s' not known -- "
-			  "typo in config file?", 
+			  "typo in config file?",
 			  cstr);
 			free(cstr);
 		}
@@ -1108,6 +1161,7 @@ struct cnfparamvals*
 nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 	       struct cnfparamvals *vals)
 {
+#ifndef __clang_analyzer__ /* I give up on this one - let Coverity do the work */
 	int i;
 	int bValsWasNULL;
 	int bInError = 0;
@@ -1120,7 +1174,7 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 			  params->version, CNFPARAMBLK_VERSION);
 		return NULL;
 	}
-	
+
 	if(vals == NULL) {
 		bValsWasNULL = 1;
 		if((vals = calloc(params->nParams,
@@ -1154,6 +1208,18 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 		}
 	}
 
+	/* now config-system parameters (currently a bit hackish, as we
+	 * only have one...). -- rgerhards, 2018-01-24
+	 */
+	if((valnode = nvlstFindNameCStr(lst, "config.enabled")) != NULL) {
+		if(es_strbufcmp(valnode->val.d.estr, (unsigned char*) "on", 2)) {
+			dbgprintf("config object disabled by configuration\n");
+			valnode->bUsed = 1;
+			bInError = 1;
+		}
+	}
+
+	/* done parameter processing */
 	if(bInError) {
 		if(bValsWasNULL)
 			cnfparamvalsDestruct(vals, params);
@@ -1161,10 +1227,13 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 	}
 
 	return vals;
+#else
+	return NULL;
+#endif
 }
 
 
-/* check if at least one cnfparamval is actually set 
+/* check if at least one cnfparamval is actually set
  * returns 1 if so, 0 otherwise
  */
 int
@@ -1428,7 +1497,7 @@ doExtractFieldByChar(uchar *str, uchar delim, const int matchnbr, uchar **resstr
 		}
 	}
 	DBGPRINTF("field() field requested %d, field found %d\n", matchnbr, iCurrFld);
-	
+
 	if(iCurrFld == matchnbr) {
 		/* field found, now extract it */
 		/* first of all, we need to find the end */
@@ -1480,14 +1549,14 @@ doExtractFieldByStr(uchar *str, char *delim, const rs_size_t lenDelim, const int
 		}
 	}
 	DBGPRINTF("field() field requested %d, field found %d\n", matchnbr, iCurrFld);
-	
+
 	if(iCurrFld == matchnbr) {
 		/* field found, now extract it */
 		/* first of all, we need to find the end */
 		pFldEnd = (uchar*) strstr((char*)pFld, delim);
 		if(pFldEnd == NULL) {
 			iLen = strlen((char*) pFld);
-		} else { /* found delmiter!  Note that pFldEnd *is* already on 
+		} else { /* found delmiter!  Note that pFldEnd *is* already on
 			  * the first delmi char, we don't need that. */
 			iLen = pFldEnd - pFld;
 		}
@@ -1636,35 +1705,34 @@ doFuncReplace(struct svar *__restrict__ const operandVal, struct svar *__restric
     uchar *replaceWith = es_getBufAddr(replaceWithStr);
     uint lfind = es_strlen(findStr);
     uint lReplaceWith = es_strlen(replaceWithStr);
-    uint size = 0;
+    uint lSrc = es_strlen(str);
+    uint lDst = 0;
     uchar* src_buff = es_getBufAddr(str);
     uint i, j;
-    for(i = j = 0; i <= es_strlen(str); i++, size++) {
+    for(i = j = 0; i <= lSrc; i++, lDst++) {
         if (j == lfind) {
-            size = size - lfind + lReplaceWith;
+            lDst = lDst - lfind + lReplaceWith;
             j = 0;
         }
-		if (i == es_strlen(str)) break;
+		if (i == lSrc) break;
 		if (src_buff[i] == find[j]) {
 			j++;
 		} else if (j > 0) {
 			i -= (j - 1);
-			size -= (j - 1);
+			lDst -= (j - 1);
 			j = 0;
 		}
     }
-    es_str_t *res = es_newStr(size);
+    es_str_t *res = es_newStr(lDst);
     unsigned char* dest = es_getBufAddr(res);
     uint k, s;
-    for(i = j = k = s = 0; i <= es_strlen(str); i++, s++) {
+    for(i = j = s = 0; i <= lSrc; i++, s++) {
         if (j == lfind) {
-            for (k = 0; k < lReplaceWith; k++) {
-                dest[s - j + k] = replaceWith[k];
-            }
-            s = s - j + lReplaceWith;
+            s -= j;
+            for (k = 0; k < lReplaceWith; k++, s++) dest[s] = replaceWith[k];
             j = 0;
         }
-		if (i == es_strlen(str)) break;
+		if (i == lSrc) break;
 		if (src_buff[i] == find[j]) {
 			j++;
 		} else {
@@ -1676,7 +1744,10 @@ doFuncReplace(struct svar *__restrict__ const operandVal, struct svar *__restric
 			dest[s] = src_buff[i];
 		}
     }
-    res->lenStr = size;
+    if (j > 0) {
+        for (k = 1; k <= j; k++) dest[s - k] = src_buff[i - k];
+    }
+    res->lenStr = lDst;
     if(freeOperand) es_deleteStr(str);
     if(freeFind) es_deleteStr(findStr);
     if(freeReplacement) es_deleteStr(replaceWithStr);
@@ -1935,6 +2006,7 @@ done:
 	return(estr);
 }
 
+#ifdef HAVE_LIBCURL
 /* curl callback for doFunc_http_request */
 static size_t
 curlResult(void *ptr, size_t size, size_t nmemb, void *userdata)
@@ -2010,6 +2082,7 @@ finalize_it:
 	}
 	RETiRet;
 }
+#endif
 
 static int ATTR_NONNULL(1,3,4)
 doFunc_is_time(const char *__restrict__ const str,
@@ -2062,7 +2135,7 @@ doFunc_is_time(const char *__restrict__ const str,
 			} else if (f == DATE_UNIX) {
 				int result;
 				var2Number(r, &result);
-				
+
 				if (result) {
 					DBGPRINTF("is_time: UNIX format found.\n");
 					ret = 1;
@@ -2400,7 +2473,7 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 		if (sizeof(time_t) == sizeof(int)) {
 			if (unixtime < INT_MIN || unixtime > INT_MAX) {
 				LogMsg(
-					0, RS_RET_VAL_OUT_OF_RANGE, LOG_WARNING, 
+					0, RS_RET_VAL_OUT_OF_RANGE, LOG_WARNING,
 					"Timestamp value %lld is out of range for this system (time_t is "
 					"32bits)!\n", unixtime
 				);
@@ -2430,7 +2503,7 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 
 		varFreeMembers(&r[0]);
 		varFreeMembers(&r[1]);
-		
+
 		break;
 	}
 	case CNFFUNC_PARSE_TIME: {
@@ -2511,13 +2584,20 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 		ret->d.n = doFunc_parse_json(str, str2, (smsg_t*) usrptr, pWti);
 		if(bMustFree) free(str);
 		if(bMustFree2) free(str2);
+		varFreeMembers(&r[0]);
+		varFreeMembers(&r[1]);
 		break;
 	case CNFFUNC_HTTP_REQUEST:
+#ifdef HAVE_LIBCURL
 		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
 		str = (char*) var2CString(&r[0], &bMustFree);
 		doFunc_http_request(func, ret, str);
 		if(bMustFree) free(str);
 		varFreeMembers(&r[0]);
+#else
+		LogError(0, RS_RET_INTERNAL_ERROR,
+			"rainerscript: internal error: HTTP_Fetch not supported, not built with libcurl support");
+#endif
 		break;
 	default:
 		if(Debug) {
@@ -3054,7 +3134,7 @@ cnfexprEval(const struct cnfexpr *__restrict__ const expr,
 			cnfexprEval(expr->r, &r, usrptr, pWti);
 			if(var2Number(&r, &convok_r))
 				ret->d.n = 1ll;
-			else 
+			else
 				ret->d.n = 0ll;
 			varFreeMembers(&r);
 		}
@@ -3067,7 +3147,7 @@ cnfexprEval(const struct cnfexpr *__restrict__ const expr,
 			cnfexprEval(expr->r, &r, usrptr, pWti);
 			if(var2Number(&r, &convok_r))
 				ret->d.n = 1ll;
-			else 
+			else
 				ret->d.n = 0ll;
 			varFreeMembers(&r);
 		} else {
@@ -3222,7 +3302,7 @@ cnfexprDestruct(struct cnfexpr *__restrict__ const expr)
 		cnfexprDestruct(expr->l);
 		cnfexprDestruct(expr->r);
 		break;
-	case NOT: 
+	case NOT:
 	case 'M': /* unary */
 		cnfexprDestruct(expr->r);
 		break;
@@ -3279,7 +3359,7 @@ cnfexprEvalCollection(struct cnfexpr *__restrict__ const expr, void *__restrict_
 	return retptr;
 }
 
-inline static void
+static void
 doIndent(int indent)
 {
 	int i;
@@ -3447,7 +3527,7 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		break;
 	}
 }
-/* print only the given stmt 
+/* print only the given stmt
  * if "subtree" equals 1, the full statement subtree is printed, else
  * really only the statement.
  */
@@ -3939,7 +4019,7 @@ cnfstmtNewAct(struct nvlst *lst)
 	struct cnfstmt* cnfstmt;
 	char namebuf[256];
 	rsRetVal localRet;
-	if((cnfstmt = cnfstmtNew(S_ACT)) == NULL) 
+	if((cnfstmt = cnfstmtNew(S_ACT)) == NULL)
 		goto done;
 	localRet = actionNewInst(lst, &cnfstmt->d.act);
 	if(localRet == RS_RET_OK_WARN) {
@@ -3965,7 +4045,7 @@ cnfstmtNewLegaAct(char *actline)
 {
 	struct cnfstmt* cnfstmt;
 	rsRetVal localRet;
-	if((cnfstmt = cnfstmtNew(S_ACT)) == NULL) 
+	if((cnfstmt = cnfstmtNew(S_ACT)) == NULL)
 		goto done;
 	cnfstmt->printable = (uchar*)strdup((char*)actline);
 	localRet = cflineDoAction(loadConf, (uchar**)&actline, &cnfstmt->d.act);
@@ -3984,7 +4064,7 @@ done:	return cnfstmt;
 
 /* returns 1 if the two expressions are constants, 0 otherwise
  * if both are constants, the expression subtrees are destructed
- * (this is an aid for constant folding optimizing) 
+ * (this is an aid for constant folding optimizing)
  */
 static int
 getConstNumber(struct cnfexpr *expr, long long *l, long long *r)
@@ -4121,7 +4201,7 @@ finalize_it:
 }
 
 /* optimize a comparison with a variable as left-hand operand
- * NOTE: Currently support CMP_EQ, CMP_NE only and code NEEDS 
+ * NOTE: Currently support CMP_EQ, CMP_NE only and code NEEDS
  *       TO BE CHANGED fgr other comparisons!
  */
 static struct cnfexpr*
@@ -4333,11 +4413,11 @@ cnfexprOptimize(struct cnfexpr *expr)
  * first non-NOP entry.
  */
 static struct cnfstmt *
-removeNOPs(struct cnfstmt *root)
+removeNOPs(struct cnfstmt *const root)
 {
 	struct cnfstmt *stmt, *toDel, *prevstmt = NULL;
 	struct cnfstmt *newRoot = NULL;
-	
+
 	if(root == NULL) goto done;
 	stmt = root;
 	while(stmt != NULL) {
@@ -4364,8 +4444,7 @@ static void
 cnfstmtOptimizeForeach(struct cnfstmt *stmt)
 {
 	stmt->d.s_foreach.iter->collection = cnfexprOptimize(stmt->d.s_foreach.iter->collection);
-	stmt->d.s_foreach.body = removeNOPs(stmt->d.s_foreach.body);
-	cnfstmtOptimize(stmt->d.s_foreach.body);
+	stmt->d.s_foreach.body = cnfstmtOptimize(stmt->d.s_foreach.body);
 }
 
 
@@ -4377,12 +4456,21 @@ cnfstmtOptimizeIf(struct cnfstmt *stmt)
 	struct cnffunc *func;
 	struct funcData_prifilt *prifilt;
 
+	assert(stmt->nodetype == S_IF);
 	expr = stmt->d.s_if.expr = cnfexprOptimize(stmt->d.s_if.expr);
-	stmt->d.s_if.t_then = removeNOPs(stmt->d.s_if.t_then);
-	stmt->d.s_if.t_else = removeNOPs(stmt->d.s_if.t_else);
-	cnfstmtOptimize(stmt->d.s_if.t_then);
-	cnfstmtOptimize(stmt->d.s_if.t_else);
+	stmt->d.s_if.t_then = cnfstmtOptimize(stmt->d.s_if.t_then);
+	stmt->d.s_if.t_else = cnfstmtOptimize(stmt->d.s_if.t_else);
 
+	if(stmt->d.s_if.t_then == NULL && stmt->d.s_if.t_else == NULL) {
+		/* pointless if, probably constructed by config mgmt system */
+		DBGPRINTF("optimizer: if with both empty then and else - remove\n");
+		cnfexprDestruct(stmt->d.s_if.expr);
+		/* set to NOP, this will be removed in later stage */
+		stmt->nodetype = S_NOP;
+		goto done;
+	}
+
+	assert(stmt->nodetype == S_IF);
 	if(stmt->d.s_if.expr->nodetype == 'F') {
 		func = (struct cnffunc*)expr;
 		   if(func->fID == CNFFUNC_PRIFILT) {
@@ -4404,6 +4492,7 @@ cnfstmtOptimizeIf(struct cnfstmt *stmt)
 			cnfstmtOptimizePRIFilt(stmt);
 		}
 	}
+done:	return;
 }
 
 static void
@@ -4426,8 +4515,7 @@ cnfstmtOptimizePRIFilt(struct cnfstmt *stmt)
 	int isAlways = 1;
 	struct cnfstmt *subroot, *last;
 
-	stmt->d.s_prifilt.t_then = removeNOPs(stmt->d.s_prifilt.t_then);
-	cnfstmtOptimize(stmt->d.s_prifilt.t_then);
+	stmt->d.s_prifilt.t_then = cnfstmtOptimize(stmt->d.s_prifilt.t_then);
 
 	for(i = 0; i <= LOG_NFACILITIES; i++)
 		if(stmt->d.s_prifilt.pmask[i] != 0xff) {
@@ -4501,12 +4589,13 @@ done:
 	return;
 }
 /* (recursively) optimize a statement */
-void
+struct cnfstmt *
 cnfstmtOptimize(struct cnfstmt *root)
 {
 	struct cnfstmt *stmt;
 	if(root == NULL) goto done;
 	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
+		DBGPRINTF("optimizing cnfstmt type %d\n", (int) stmt->nodetype);
 		switch(stmt->nodetype) {
 		case S_IF:
 			cnfstmtOptimizeIf(stmt);
@@ -4518,8 +4607,7 @@ cnfstmtOptimize(struct cnfstmt *root)
 			cnfstmtOptimizePRIFilt(stmt);
 			break;
 		case S_PROPFILT:
-			stmt->d.s_propfilt.t_then = removeNOPs(stmt->d.s_propfilt.t_then);
-			cnfstmtOptimize(stmt->d.s_propfilt.t_then);
+			stmt->d.s_propfilt.t_then = cnfstmtOptimize(stmt->d.s_propfilt.t_then);
 			break;
 		case S_SET:
 			stmt->d.s_set.expr = cnfexprOptimize(stmt->d.s_set.expr);
@@ -4536,19 +4624,22 @@ cnfstmtOptimize(struct cnfstmt *root)
 			break;
 		case S_UNSET: /* nothing to do */
 			break;
-        case S_RELOAD_LOOKUP_TABLE:
-            cnfstmtOptimizeReloadLookupTable(stmt);
+		case S_RELOAD_LOOKUP_TABLE:
+			cnfstmtOptimizeReloadLookupTable(stmt);
 			break;
 		case S_NOP:
-			DBGPRINTF("optimizer error: we see a NOP, how come?\n");
+			LogError(0, RS_RET_INTERNAL_ERROR,
+				"optimizer error: we see a NOP, how come?");
 			break;
 		default:
-			DBGPRINTF("error: unknown stmt type %u during optimizer run\n",
+			LogError(0, RS_RET_INTERNAL_ERROR,
+				"internal error: unknown stmt type %u during optimizer run\n",
 				(unsigned) stmt->nodetype);
 			break;
 		}
 	}
-done:	return;
+	root = removeNOPs(root);
+done:	return root;
 }
 
 
@@ -4701,7 +4792,7 @@ initFunc_re_match(struct cnffunc *func)
 	func->funcdata = re;
 
 	regex = es_str2cstr(((struct cnfstringval*) func->expr[1])->estr, NULL);
-	
+
 	if((localRet = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
 		int errcode;
 		if((errcode = regexp.regcomp(re, (char*) regex, REG_EXTENDED) != 0)) {
@@ -4965,18 +5056,21 @@ cnffuncNew_prifilt(int fac)
 /* returns 0 if everything is OK and config parsing shall continue,
  * and 1 if things are so wrong that config parsing shall be aborted.
  */
-int
-cnfDoInclude(char *name)
+int ATTR_NONNULL()
+cnfDoInclude(const char *const name, const int optional)
 {
 	char *cfgFile;
-	char *finalName;
+	const char *finalName;
 	int i;
 	int result;
 	glob_t cfgFiles;
+	int ret = 0;
 	struct stat fileInfo;
+	char errStr[1024];
 	char nameBuf[MAXFNAME+1];
 	char cwdBuf[MAXFNAME+1];
 
+	DBGPRINTF("cnfDoInclude: file: '%s', optional: %d\n", name, optional);
 	finalName = name;
 	if(stat(name, &fileInfo) == 0) {
 		/* stat usually fails if we have a wildcard - so this does NOT indicate error! */
@@ -4989,25 +5083,27 @@ cnfDoInclude(char *name)
 
 	/* Use GLOB_MARK to append a trailing slash for directories. */
 	/* Use GLOB_NOMAGIC to detect wildcards that match nothing. */
-#ifdef HAVE_GLOB_NOMAGIC
-	/* Silently ignore wildcards that match nothing */
-	result = glob(finalName, GLOB_MARK | GLOB_NOMAGIC, NULL, &cfgFiles);
-	if(result == GLOB_NOMATCH) {
-#else
-	result = glob(finalName, GLOB_MARK, NULL, &cfgFiles);
-    if(result == GLOB_NOMATCH && containsGlobWildcard(finalName)) {
-#endif /* HAVE_GLOB_NOMAGIC */
-        return 0;
-    }
+	#ifdef HAVE_GLOB_NOMAGIC
+		/* Silently ignore wildcards that match nothing */
+		result = glob(finalName, GLOB_MARK | GLOB_NOMAGIC, NULL, &cfgFiles);
+		if(result == GLOB_NOMATCH) {
+	#else
+		result = glob(finalName, GLOB_MARK, NULL, &cfgFiles);
+		if(result == GLOB_NOMATCH && containsGlobWildcard((char*)finalName)) {
+	#endif /* HAVE_GLOB_NOMAGIC */
+		goto done;
+	}
 
 	if(result == GLOB_NOSPACE || result == GLOB_ABORTED) {
-		char errStr[1024];
-		rs_strerror_r(errno, errStr, sizeof(errStr));
-		if(getcwd(cwdBuf, sizeof(cwdBuf)) == NULL)
-			strcpy(cwdBuf, "??getcwd() failed??");
-		parser_errmsg("error accessing config file or directory '%s' [cwd:%s]: %s",
-				finalName, cwdBuf, errStr);
-		return 1;
+		if(optional == 0) {
+			rs_strerror_r(errno, errStr, sizeof(errStr));
+			if(getcwd(cwdBuf, sizeof(cwdBuf)) == NULL)
+				strcpy(cwdBuf, "??getcwd() failed??");
+			parser_errmsg("error accessing config file or directory '%s' "
+				"[cwd:%s]: %s", finalName, cwdBuf, errStr);
+			ret = 1;
+		}
+		goto done;
 	}
 
 	/* note: bison "stacks" the files, so we need to submit them
@@ -5018,13 +5114,15 @@ cnfDoInclude(char *name)
 	for(i = cfgFiles.gl_pathc - 1; i >= 0 ; i--) {
 		cfgFile = cfgFiles.gl_pathv[i];
 		if(stat(cfgFile, &fileInfo) != 0) {
-			char errStr[1024];
-			rs_strerror_r(errno, errStr, sizeof(errStr));
-			if(getcwd(cwdBuf, sizeof(cwdBuf)) == NULL)
-				strcpy(cwdBuf, "??getcwd() failed??");
-			parser_errmsg("error accessing config file or directory '%s' "
+			if(optional == 0) {
+				rs_strerror_r(errno, errStr, sizeof(errStr));
+				if(getcwd(cwdBuf, sizeof(cwdBuf)) == NULL)
+					strcpy(cwdBuf, "??getcwd() failed??");
+				parser_errmsg("error accessing config file or directory '%s' "
 					"[cwd: %s]: %s", cfgFile, cwdBuf, errStr);
-			return 1;
+				ret = 1;
+			}
+			goto done;
 		}
 
 		if(S_ISREG(fileInfo.st_mode)) { /* config file */
@@ -5032,15 +5130,104 @@ cnfDoInclude(char *name)
 			cnfSetLexFile(cfgFile);
 		} else if(S_ISDIR(fileInfo.st_mode)) { /* config directory */
 			DBGPRINTF("requested to include directory '%s'\n", cfgFile);
-			cnfDoInclude(cfgFile);
+			cnfDoInclude(cfgFile, optional);
 		} else {
 			DBGPRINTF("warning: unable to process IncludeConfig directive '%s'\n", cfgFile);
 		}
 	}
 
+done:
 	globfree(&cfgFiles);
-	return 0;
+	return ret;
 }
+
+
+/* Process include() objects */
+void
+includeProcessCnf(struct nvlst *const lst)
+{
+	struct cnfparamvals *pvals = NULL;
+	const char *inc_file = NULL;
+	const char *text = NULL;
+	int optional = 0;
+	int abort_if_missing = 0;
+	int i;
+
+	if(lst == NULL) {
+		parser_errmsg("include() must have either 'file' or 'text' "
+			"parameter - ignored");
+		goto done;
+	}
+
+	pvals = nvlstGetParams(lst, &incpblk, NULL);
+	if(pvals == NULL) {
+		goto done;
+	}
+	DBGPRINTF("include param blk after includeProcessCnf:\n");
+	cnfparamsPrint(&incpblk, pvals);
+	for(i = 0 ; i < incpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed) {
+			continue;
+		}
+
+		if(!strcmp(incpblk.descr[i].name, "file")) {
+			inc_file = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(incpblk.descr[i].name, "text")) {
+			text = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(incpblk.descr[i].name, "mode")) {
+			char *const md = es_str2cstr(pvals[i].val.d.estr, NULL);
+			if(!strcmp(md, "abort-if-missing")) {
+				optional = 0;
+				abort_if_missing = 1;
+			} else if(!strcmp(md, "required")) {
+				optional = 0;
+			} else if(!strcmp(md, "optional")) {
+				optional = 1;
+			} else {
+				parser_errmsg("invalid 'mode' paramter: '%s' - ignored", md);
+			}
+			free((void*)md);
+		} else {
+			LogError(0, RS_RET_INTERNAL_ERROR,
+				"rainerscript/include: program error, non-handled inclpblk "
+				"param '%s' in includeProcessCnf()", incpblk.descr[i].name);
+		}
+	}
+
+	if(text != NULL && inc_file != NULL) {
+		parser_errmsg("include() must have either 'file' or 'text' "
+			"parameter, but both are set - ignored");
+		goto done;
+	}
+
+	if(inc_file != NULL) {
+		if(cnfDoInclude(inc_file, optional) != 0 && abort_if_missing) {
+			fprintf(stderr, "include file '%s' mode is set to abort-if-missing "
+				"and the file is indeed missing - thus aborting rsyslog\n",
+				inc_file);
+			exit(1); /* "good exit" - during config processing, requested by user */
+		}
+	} else if(text != NULL) {
+		es_str_t *estr = es_newStrFromCStr((char*)text, strlen(text));
+		/* lex needs 2 \0 bytes as terminator indication (wtf ;-)) */
+		es_addChar(&estr, '\0');
+		es_addChar(&estr, '\0');
+		cnfAddConfigBuffer(estr, "text");
+	} else {
+		parser_errmsg("include must have either 'file' or 'text' "
+			"parameter - ignored");
+		goto done;
+	}
+
+done:
+	free((void*)text);
+	free((void*)inc_file);
+	nvlstDestruct(lst);
+	if(pvals != NULL)
+		cnfparamvalsDestruct(pvals, &incpblk);
+	return;
+}
+
 
 void
 varDelete(const struct svar *v)
@@ -5072,7 +5259,7 @@ cnfparamvalsDestruct(const struct cnfparamvals *paramvals, const struct cnfparam
 	free((void*)paramvals);
 }
 
-/* find the index (or -1!) for a config param by name. This is used to 
+/* find the index (or -1!) for a config param by name. This is used to
  * address the parameter array. Of course, we could use with static
  * indices, but that would create some extra bug potential. So we
  * resort to names. As we do this only during the initial config parsing
@@ -5267,6 +5454,7 @@ tokenval2str(const int tok)
 	case BEGIN_PROPERTY: return "BEGIN_PROPERTY";
 	case BEGIN_CONSTANT: return "BEGIN_CONSTANT";
 	case BEGIN_TPL: return "BEGIN_TPL";
+	case BEGIN_INCLUDE: return "BEGIN_INCLUDE";
 	case BEGIN_RULESET: return "BEGIN_RULESET";
 	case STOP: return "STOP";
 	case SET: return "SET";

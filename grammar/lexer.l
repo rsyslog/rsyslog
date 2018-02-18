@@ -39,7 +39,88 @@
 }
 
 %{
+#include <libestr.h>
+#include <ctype.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include "parserif.h"
+
+/* TODO: move this to a better modules, refactor -- rgerhards, 2018-01-22 */
+static char *
+read_file(const char *const filename)
+{
+	char *content = NULL;
+	int fd = -1;
+	struct stat sb;
+	ssize_t nread;
+	assert(filename != NULL);
+
+	if((fd = open((const char*) filename, O_RDONLY)) == -1) {
+		goto done;
+	}
+
+	if(fstat(fd, &sb) == -1) {
+		goto done;
+	}
+
+	content = malloc(sb.st_size+1);
+	if(content == NULL) {
+		goto done;
+	}
+
+	nread = read(fd, content, sb.st_size);
+	content[nread] = '\0';
+	if(nread != (ssize_t) sb.st_size) {
+		free(content);
+		content = NULL;
+		goto done;
+	}
+
+done:
+	if(fd != -1) {
+		close(fd);
+	}
+	return content;
+}
+
+static es_str_t* ATTR_NONNULL(1)
+expand_backticks(char *const param)
+{
+	const char *val = NULL;
+	assert(param != NULL);
+	int need_free = 0;
+
+	if(strncmp(param, "echo $", sizeof("echo $")-1) == 0) {
+		size_t i;
+		const size_t len = strlen(param);
+		for(i = len - 1 ; isspace(param[i]) ; --i) {
+			; /* just go down */
+		}
+		if(i > 6 && i < len - 1) {
+			param[i+1] = '\0';
+		}
+		val = getenv(param+6);
+	} else if(strncmp(param, "cat ", sizeof("cat ")-1) == 0) {
+		val = read_file(param+4);
+		need_free = 1;
+	}
+
+	if(val == NULL) {
+		parser_errmsg("invalid backtick parameter `%s` - replaced by "
+			"empty string (\"\")", param);
+		val = "";
+		need_free = 0;
+	}
+
+	es_str_t *const estr = es_newStrFromCStr(val, strlen(val));
+	if(need_free) {
+		free((void*)val);
+	}
+
+	return estr;
+}
 %}
 
 %option noyywrap nodefault case-insensitive yylineno
@@ -151,7 +232,6 @@ int fileno(FILE *stream);
 <EXPR>"-" |
 <EXPR>"[" |
 <EXPR>"]" |
-<EXPR>"(" |
 <EXPR>")"			{ return yytext[0]; }
 <EXPR>"=="			{ return CMP_EQ; }
 <EXPR>"<="			{ return CMP_LE; }
@@ -173,6 +253,11 @@ int fileno(FILE *stream);
 				   yytext[yyleng-1] = '\0';
 				   unescapeStr((uchar*)yytext+1, yyleng-2);
 				   yylval.estr = es_newStrFromBuf(yytext+1, strlen(yytext)-1);
+				   return STRING; }
+<EXPR>`([^`\\]|\\['`"\\bntr]|\\x[0-9a-f][0-9a-f]|\\[0-7][0-7][0-7])*`	 {
+				   yytext[yyleng-1] = '\0';
+				   unescapeStr((uchar*)yytext+1, yyleng-2);
+				   yylval.estr = expand_backticks(yytext+1);
 				   return STRING; }
 <EXPR>\"([^"\\$]|\\["'\\$bntr]|\\x[0-9a-f][0-9a-f]|\\[0-7][0-7][0-7])*\" {
 				   yytext[yyleng-1] = '\0';
@@ -214,7 +299,7 @@ int fileno(FILE *stream);
   * always the longest match :-(
   */
 <INCL>.|\n
-<INCL>[^ \t\n]+			{ if(cnfDoInclude(yytext) != 0)
+<INCL>[^ \t\n]+			{ if(cnfDoInclude(yytext, 0) != 0)
 					yyterminate();
 				  BEGIN INITIAL; }
 "main_queue"[ \n\t]*"("		{ yylval.objType = CNFOBJ_MAINQ;
@@ -241,6 +326,7 @@ int fileno(FILE *stream);
 				  BEGIN INOBJ; return BEGINOBJ; }
 "dyn_stats"[ \n\t]*"("		{ yylval.objType = CNFOBJ_DYN_STATS;
 				  BEGIN INOBJ; return BEGINOBJ; }
+"include"[ \n\t]*"("		{ BEGIN INOBJ; return BEGIN_INCLUDE; }
 "action"[ \n\t]*"("		{ BEGIN INOBJ; return BEGIN_ACTION; }
 ^[ \t]*:\$?[a-z\-]+[ ]*,[ ]*!?[a-z]+[ ]*,[ ]*\"(\\\"|[^\"])*\"	{
 				  yylval.s = strdup(rmLeadingSpace(yytext));
@@ -266,6 +352,11 @@ int fileno(FILE *stream);
 				   yytext[yyleng-1] = '\0';
 				   unescapeStr((uchar*)yytext+1, yyleng-2);
 				   yylval.estr = es_newStrFromBuf(yytext+1, strlen(yytext)-1);
+				   return STRING; }
+<INOBJ>`([^`\\]|\\['`?\\abfnrtv]|\\[0-7]{1,3})*` {
+				   yytext[yyleng-1] = '\0';
+				   unescapeStr((uchar*)yytext+1, yyleng-2);
+				   yylval.estr = expand_backticks(yytext+1);
 				   return STRING; }
 				  /*yylval.estr = es_newStrFromBuf(yytext+1, yyleng-2);
 				  return VALUE; }*/
@@ -327,6 +418,47 @@ cnfParseBuffer(char *buf, unsigned lenBuf)
 done:	return r;
 }
 
+
+/* add config file or text the the stack of config objects to be
+ * processed.
+ * cnfobjname is either the file name or "text" if generated from
+ * text ("text" can also be replaced by something more intelligent
+ * by the caller.
+ * The provided string is freed.
+ */
+int ATTR_NONNULL()
+cnfAddConfigBuffer(es_str_t *const str, const char *const cnfobj_name)
+{
+	struct bufstack *bs;
+	int r = 0;
+	assert(str != NULL);
+	assert(cnfobj_name != NULL);
+
+	if((bs = malloc(sizeof(struct bufstack))) == NULL) {
+		r = 1;
+		goto done;
+	}
+
+	if(currbs != NULL)
+		currbs->lineno = yylineno;
+	bs->prev = currbs;
+	bs->fn = strdup(cnfobj_name);
+	yy_size_t lll = es_strlen(str);
+	bs->bs = yy_scan_buffer((char*)es_getBufAddr(str), lll);
+	bs->estr = str; /* needed so we can free it later */
+	currbs = bs;
+	cnfcurrfn = bs->fn;
+	yylineno = 1;
+	dbgprintf("config parser: pushed config fragment on top of stack: %s\n", cnfobj_name);
+
+done:
+	if(r != 0) {
+		es_deleteStr(str);
+	}
+	return r;
+}
+
+
 /* set a new buffers. Returns 0 on success, 1 on error, 2 on file not exists.
  * note: in case of error, errno must be kept valid!
  */
@@ -334,9 +466,9 @@ int
 cnfSetLexFile(char *fname)
 {
 	es_str_t *str = NULL;
+	struct bufstack *bs;
 	FILE *fp;
 	int r = 0;
-	struct bufstack *bs;
 
 	/* check for invalid recursive include */
 	for(bs = currbs ; bs != NULL ; bs = bs->prev) {
@@ -360,30 +492,9 @@ cnfSetLexFile(char *fname)
 	if(fp != stdin)
 		fclose(fp);
 	
-	/* maintain stack */
-	if((bs = malloc(sizeof(struct bufstack))) == NULL) {
-		r = 1;
-		goto done;
-	}
-
-	if(currbs != NULL)
-		currbs->lineno = yylineno;
-	bs->prev = currbs;
-	bs->fn = strdup(fname == NULL ? "stdin" : fname);
-	yy_size_t lll = es_strlen(str);
-	//bs->bs = yy_scan_buffer((char*)es_getBufAddr(str), (yy_size_t) es_strlen(str));
-	bs->bs = yy_scan_buffer((char*)es_getBufAddr(str), lll);
-	bs->estr = str; /* needed so we can free it later */
-	currbs = bs;
-	cnfcurrfn = bs->fn;
-	yylineno = 1;
-	dbgprintf("config parser: pushed file %s on top of stack\n", fname);
+	r = cnfAddConfigBuffer(str, ((fname == NULL) ? "stdin" : fname));
 
 done:
-	if(r != 0) {
-		if(str != NULL)
-			es_deleteStr(str);
-	}
 	return r;
 }
 

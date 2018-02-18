@@ -45,7 +45,6 @@
 
 /* static data */
 DEFobjStaticHelpers
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 
 
@@ -192,7 +191,7 @@ Ctl(nsdpoll_t *pNsdpoll, nsd_t *pNsd, int id, void *pUsr, int mode, int op) {
 		if(epoll_ctl(pThis->efd, EPOLL_CTL_ADD,  pSock->sock, &pEventLst->event) < 0) {
 			errSave = errno;
 			rs_strerror_r(errSave, errStr, sizeof(errStr));
-			errmsg.LogError(errSave, RS_RET_ERR_EPOLL_CTL,
+			LogError(errSave, RS_RET_ERR_EPOLL_CTL,
 				"epoll_ctl failed on fd %d, id %d/%p, op %d with %s\n",
 				pSock->sock, id, pUsr, mode, errStr);
 		}
@@ -202,7 +201,7 @@ Ctl(nsdpoll_t *pNsdpoll, nsd_t *pNsd, int id, void *pUsr, int mode, int op) {
 		if(epoll_ctl(pThis->efd, EPOLL_CTL_DEL, pSock->sock, &pEventLst->event) < 0) {
 			errSave = errno;
 			rs_strerror_r(errSave, errStr, sizeof(errStr));
-			errmsg.LogError(errSave, RS_RET_ERR_EPOLL_CTL,
+			LogError(errSave, RS_RET_ERR_EPOLL_CTL,
 				"epoll_ctl failed on fd %d, id %d/%p, op %d with %s\n",
 				pSock->sock, id, pUsr, mode, errStr);
 			ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
@@ -294,7 +293,6 @@ BEGINObjClassExit(nsdpoll_ptcp, OBJ_IS_CORE_MODULE) /* CHANGE class also in END 
 CODESTARTObjClassExit(nsdpoll_ptcp)
 	/* release objects we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
-	objRelease(errmsg, CORE_COMPONENT);
 ENDObjClassExit(nsdpoll_ptcp)
 
 
@@ -304,7 +302,6 @@ ENDObjClassExit(nsdpoll_ptcp)
  */
 BEGINObjClassInit(nsdpoll_ptcp, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 
 	/* set our own handlers */

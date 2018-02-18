@@ -49,7 +49,6 @@
 /* definitions for objects we access */
 DEFobjStaticHelpers
 DEFobjCurrIf(glbl)
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(ruleset)
 
@@ -347,7 +346,7 @@ static rsRetVal uncompressMessage(smsg_t *pMsg)
 		 * rgerhards, 2006-12-07
 		 */
 		if(ret != Z_OK) {
-			errmsg.LogError(0, NO_ERRCODE, "Uncompression of a message failed with return code %d "
+			LogError(0, NO_ERRCODE, "Uncompression of a message failed with return code %d "
 			            "- enable debug logging if you need further information. "
 				    "Message ignored.", ret);
 			FINALIZE; /* unconditional exit, nothing left to do... */
@@ -678,7 +677,7 @@ ParseMsg(smsg_t *pMsg)
 	 */
 	if(localRet != RS_RET_OK) {
 		if(++iErrMsgRateLimiter < 1000) {
-			errmsg.LogError(0, localRet, "Error: one message could not be processed by "
+			LogError(0, localRet, "Error: one message could not be processed by "
 				"any parser, message is being discarded (start of raw msg: '%.60s')",
 				pMsg->pszRawMsg);
 		}
@@ -747,7 +746,6 @@ BEGINObjClassExit(parser, OBJ_IS_CORE_MODULE) /* class, version */
 	DestructParserList(&pDfltParsLst);
 	destroyMasterParserList();
 	objRelease(glbl, CORE_COMPONENT);
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
 ENDObjClassExit(parser)
@@ -760,7 +758,6 @@ ENDObjClassExit(parser)
 BEGINObjClassInit(parser, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 

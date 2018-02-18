@@ -67,7 +67,6 @@ typedef struct dnscache_s dnscache_t;
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(glbl)
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(prop)
 static dnscache_t dnsCache;
 static prop_t *staticErrValue;
@@ -76,6 +75,10 @@ static prop_t *staticErrValue;
 /* Our hash function.
  * TODO: check how well it performs on socket addresses!
  */
+#if !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized" /* TODO: how can we fix these warnings? */
+#endif
 static unsigned int
 hash_from_key_fn(void *k) 
 {
@@ -98,6 +101,9 @@ hash_from_key_fn(void *k)
 
 	return hashval;
 }
+#if !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
 static int
 key_equals_fn(void *key1, void *key2)
@@ -151,7 +157,6 @@ dnscacheInit(void)
 	pthread_rwlock_init(&dnsCache.rwlock, NULL);
 	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 
 	prop.Construct(&staticErrValue);
@@ -170,7 +175,6 @@ dnscacheDeinit(void)
 	hashtable_destroy(dnsCache.ht, 1); /* 1 => free all values automatically */
 	pthread_rwlock_destroy(&dnsCache.rwlock);
 	objRelease(glbl, CORE_COMPONENT);
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 	RETiRet;
 }
@@ -332,7 +336,7 @@ resolveAddr(struct sockaddr_storage *addr, dnscache_entry_t *etry)
 						 "Malicious PTR record, message dropped "
 						 "IP = \"%s\" HOST = \"%s\"",
 						 szIP, fqdnBuf);
-					errmsg.LogError(0, RS_RET_MALICIOUS_ENTITY, "%s", szErrMsg);
+					LogError(0, RS_RET_MALICIOUS_ENTITY, "%s", szErrMsg);
 					pthread_sigmask(SIG_SETMASK, &omask, NULL);
 					ABORT_FINALIZE(RS_RET_MALICIOUS_ENTITY);
 				}
@@ -347,7 +351,7 @@ resolveAddr(struct sockaddr_storage *addr, dnscache_entry_t *etry)
 					 "Malicious PTR record (message accepted, but used IP "
 					 "instead of PTR name: IP = \"%s\" HOST = \"%s\"",
 					 szIP, fqdnBuf);
-				errmsg.LogError(0, NO_ERRCODE, "%s", szErrMsg);
+				LogError(0, NO_ERRCODE, "%s", szErrMsg);
 
 				error = 1; /* that will trigger using IP address below. */
 			} else {/* we have a valid entry, so let's create the respective properties */

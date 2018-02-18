@@ -661,7 +661,7 @@ static rsRetVal getReturnCode(action_t * const pThis, wti_t * const pWti)
 /* set the action to a new state
  * rgerhards, 2007-08-02
  */
-static inline void
+static void
 actionSetState(action_t * const pThis, wti_t * const pWti, uint8_t newState)
 {
 	setActionState(pWti, pThis, newState);

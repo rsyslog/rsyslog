@@ -45,7 +45,6 @@
 
 /* static data */
 DEFobjStaticHelpers
-DEFobjCurrIf(errmsg)
 
 /* the following table of ten powers saves us some computation */
 static const int tenPowers[6] = { 1, 10, 100, 1000, 10000, 100000 };
@@ -260,7 +259,7 @@ dateTimeFormat_t getDateTimeFormatFromStr(const char * const __restrict__ s) {
  * 		  the method always returns zero.
  * \retval The number parsed.
  */
-static inline int
+static int
 srSLMGParseInt32(uchar** ppsz, int *pLenStr)
 {
 	register int i;
@@ -1066,7 +1065,7 @@ syslogTime2time_t(const struct syslogTime *ts)
 
 	if(ts->year < 1970 || ts->year > 2100) {
 		TimeInUnixFormat = 0;
-		errmsg.LogError(0, RS_RET_ERR, "syslogTime2time_t: invalid year %d "
+		LogError(0, RS_RET_ERR, "syslogTime2time_t: invalid year %d "
 			"in timestamp - returning 1970-01-01 instead", ts->year);
 		goto done;
 	}
@@ -1203,7 +1202,7 @@ int getOrdinal(struct syslogTime *ts)
 
 	if(ts->year < 1970 || ts->year > 2100) {
 		yday = 0;
-		errmsg.LogError(0, RS_RET_ERR, "getOrdinal: invalid year %d "
+		LogError(0, RS_RET_ERR, "getOrdinal: invalid year %d "
 			"in timestamp - returning 1970-01-01 instead", ts->year);
 		goto done;
 	}
@@ -1356,7 +1355,6 @@ ENDobjQueryInterface(datetime)
  */
 BEGINAbstractObjClassInit(datetime, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDObjClassInit(datetime)
 
 /* vi:set ai:

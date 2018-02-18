@@ -75,7 +75,6 @@
 
 /* static data */
 DEFobjStaticHelpers
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(zlibw)
 
 /* forward definitions */
@@ -999,13 +998,13 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, const sbool bEs
 							}
 							if(msgDiscardingError == 1) {
 								if(discardTruncatedMsg == 1) {
-									errmsg.LogError(0, RS_RET_ERR,
+									LogError(0, RS_RET_ERR,
 									"imfile error: message received is "
 									"larger than max msg size; "
 									"rest of message will not be "
 									"processed");
 								} else {
-									errmsg.LogError(0, RS_RET_ERR,
+									LogError(0, RS_RET_ERR,
 									"imfile error: message received is "
 									"larger than max msg size; message "
 									"will be split and processed as "
@@ -2410,7 +2409,6 @@ ENDobjQueryInterface(strm)
  */
 BEGINObjClassInit(strm, 1, OBJ_IS_CORE_MODULE)
 	/* request objects we use */
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	OBJSetMethodHandler(objMethod_SERIALIZE, strmSerialize);
 	OBJSetMethodHandler(objMethod_SETPROPERTY, strmSetProperty);

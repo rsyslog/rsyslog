@@ -64,7 +64,6 @@ MODULE_TYPE_KEEP
 
 /* static data */
 DEFobjStaticHelpers
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
 DEFobjCurrIf(datetime)
@@ -82,7 +81,7 @@ static pthread_mutex_t mutGtlsStrerror;
  */
 #define ABORTgnutls { \
 		uchar *pErr = gtlsStrerror(gnuRet); \
-		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n", \
+		LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n", \
 	gnuRet, __FILE__, __LINE__, pErr); \
 		free(pErr); \
 		ABORT_FINALIZE(RS_RET_GNUTLS_ERR); \
@@ -91,7 +90,7 @@ static pthread_mutex_t mutGtlsStrerror;
 #define CHKgnutls(x) { \
 	gnuRet = (x); \
 	if(gnuRet == GNUTLS_E_FILE_ERROR) { \
-		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "error reading file - a common cause is that the " \
+		LogError(0, RS_RET_GNUTLS_ERR, "error reading file - a common cause is that the " \
 			"file  does not exist"); \
 		ABORT_FINALIZE(RS_RET_GNUTLS_ERR); \
 	} else if(gnuRet != 0) { \
@@ -132,25 +131,25 @@ readFile(uchar *pszFile, gnutls_datum_t *pBuf)
 	pBuf->data = NULL;
 
 	if((fd = open((char*)pszFile, O_RDONLY)) == -1) {
-		errmsg.LogError(errno, RS_RET_FILE_NOT_FOUND, "can not read file '%s'", pszFile);
+		LogError(errno, RS_RET_FILE_NOT_FOUND, "can not read file '%s'", pszFile);
 		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 	}
 
 	if(fstat(fd, &stat_st) == -1) {
-		errmsg.LogError(errno, RS_RET_FILE_NO_STAT, "can not stat file '%s'", pszFile);
+		LogError(errno, RS_RET_FILE_NO_STAT, "can not stat file '%s'", pszFile);
 		ABORT_FINALIZE(RS_RET_FILE_NO_STAT);
 	}
 
 	/* 1MB limit */
 	if(stat_st.st_size > 1024 * 1024) {
-		errmsg.LogError(0, RS_RET_FILE_TOO_LARGE, "file '%s' too large, max 1MB", pszFile);
+		LogError(0, RS_RET_FILE_TOO_LARGE, "file '%s' too large, max 1MB", pszFile);
 		ABORT_FINALIZE(RS_RET_FILE_TOO_LARGE);
 	}
 
 	CHKmalloc(pBuf->data = MALLOC(stat_st.st_size));
 	pBuf->size = stat_st.st_size;
 	if(read(fd,  pBuf->data, stat_st.st_size) != stat_st.st_size) {
-		errmsg.LogError(0, RS_RET_IO_ERROR, "error or incomplete read of file '%s'", pszFile);
+		LogError(0, RS_RET_IO_ERROR, "error or incomplete read of file '%s'", pszFile);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 
@@ -562,7 +561,7 @@ finalize_it:
 static rsRetVal
 gtlsAddOurCert(void)
 {
-	int gnuRet;
+	int gnuRet = 0;
 	uchar *keyFile;
 	uchar *certFile;
 	uchar *pGnuErr; /* for GnuTLS error reporting */
@@ -573,12 +572,12 @@ gtlsAddOurCert(void)
 	dbgprintf("GTLS certificate file: '%s'\n", certFile);
 	dbgprintf("GTLS key file: '%s'\n", keyFile);
 	if(certFile == NULL) {
-		errmsg.LogError(0, RS_RET_CERT_MISSING, "error: certificate file is not set, cannot "
+		LogError(0, RS_RET_CERT_MISSING, "error: certificate file is not set, cannot "
 				"continue");
 		ABORT_FINALIZE(RS_RET_CERT_MISSING);
 	}
 	if(keyFile == NULL) {
-		errmsg.LogError(0, RS_RET_CERTKEY_MISSING, "error: key file is not set, cannot "
+		LogError(0, RS_RET_CERTKEY_MISSING, "error: key file is not set, cannot "
 				"continue");
 		ABORT_FINALIZE(RS_RET_CERTKEY_MISSING);
 	}
@@ -588,7 +587,7 @@ finalize_it:
 	if(iRet != RS_RET_OK && iRet != RS_RET_CERT_MISSING && iRet != RS_RET_CERTKEY_MISSING) {
 		pGnuErr = gtlsStrerror(gnuRet);
 		errno = 0;
-		errmsg.LogError(0, iRet, "error adding our certificate. GnuTLS error %d, message: '%s', "
+		LogError(0, iRet, "error adding our certificate. GnuTLS error %d, message: '%s', "
 				"key: '%s', cert: '%s'", gnuRet, pGnuErr, keyFile, certFile);
 		free(pGnuErr);
 	}
@@ -616,21 +615,21 @@ gtlsGlblInit(void)
 	/* sets the trusted cas file */
 	cafile = glbl.GetDfltNetstrmDrvrCAF();
 	if(cafile == NULL) {
-		errmsg.LogError(0, RS_RET_CA_CERT_MISSING, "error: ca certificate is not set, cannot "
+		LogError(0, RS_RET_CA_CERT_MISSING, "error: ca certificate is not set, cannot "
 				"continue");
 		ABORT_FINALIZE(RS_RET_CA_CERT_MISSING);
 	}
 	dbgprintf("GTLS CA file: '%s'\n", cafile);
 	gnuRet = gnutls_certificate_set_x509_trust_file(xcred, (char*)cafile, GNUTLS_X509_FMT_PEM);
 	if(gnuRet == GNUTLS_E_FILE_ERROR) {
-		errmsg.LogError(0, RS_RET_GNUTLS_ERR,
+		LogError(0, RS_RET_GNUTLS_ERR,
 			"error reading certificate file '%s' - a common cause is that the "
 			"file  does not exist", cafile);
 		ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
 	} else if(gnuRet < 0) {
 		/* TODO; a more generic error-tracking function (this one based on CHKgnutls()) */
 		uchar *pErr = gtlsStrerror(gnuRet);
-		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n",
+		LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n",
 		gnuRet, __FILE__, __LINE__, pErr);
 		free(pErr);
 		ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
@@ -824,7 +823,7 @@ gtlsChkPeerFingerprint(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
 		dbgprintf("invalid peer fingerprint, not permitted to talk to it\n");
 		if(pThis->bReportAuthErr == 1) {
 			errno = 0;
-			errmsg.LogError(0, RS_RET_INVALID_FINGERPRINT, "error: peer fingerprint '%s' unknown - we are "
+			LogError(0, RS_RET_INVALID_FINGERPRINT, "error: peer fingerprint '%s' unknown - we are "
 					"not permitted to talk to it", cstrGetSzStrNoNULL(pstrFingerprint));
 			pThis->bReportAuthErr = 0;
 		}
@@ -932,7 +931,7 @@ gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
 		if(pThis->bReportAuthErr == 1) {
 			cstrFinalize(pStr);
 			errno = 0;
-			errmsg.LogError(0, RS_RET_INVALID_FINGERPRINT, "error: peer name not authorized -  "
+			LogError(0, RS_RET_INVALID_FINGERPRINT, "error: peer name not authorized -  "
 					"not permitted to talk to it. Names: %s",
 					cstrGetSzStrNoNULL(pStr));
 			pThis->bReportAuthErr = 0;
@@ -975,7 +974,7 @@ gtlsChkPeerID(nsd_gtls_t *pThis)
 	if(list_size < 1) {
 		if(pThis->bReportAuthErr == 1) {
 			errno = 0;
-			errmsg.LogError(0, RS_RET_TLS_NO_CERT, "error: peer did not provide a certificate, "
+			LogError(0, RS_RET_TLS_NO_CERT, "error: peer did not provide a certificate, "
 					"not permitted to talk to it");
 			pThis->bReportAuthErr = 0;
 		}
@@ -1032,7 +1031,7 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 	cert_list = gnutls_certificate_get_peers(pThis->sess, &cert_list_size);
 	if(cert_list_size < 1) {
 		errno = 0;
-		errmsg.LogError(0, RS_RET_TLS_NO_CERT,
+		LogError(0, RS_RET_TLS_NO_CERT,
 			"peer did not provide a certificate, not permitted to talk to it");
 		ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
 	}
@@ -1054,10 +1053,10 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 			dbgprintf("GnuTLS returned no specific reason for GNUTLS_CERT_INVALID, certificate "
 				 "status is %d\n", stateCert);
 		}
-		errmsg.LogError(0, NO_ERRCODE, "not permitted to talk to peer, certificate invalid: %s",
+		LogError(0, NO_ERRCODE, "not permitted to talk to peer, certificate invalid: %s",
 				pszErrCause);
 		gtlsGetCertInfo(pThis, &pStr);
-		errmsg.LogError(0, NO_ERRCODE, "invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
+		LogError(0, NO_ERRCODE, "invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
 		cstrDestruct(&pStr);
 		ABORT_FINALIZE(RS_RET_CERT_INVALID);
 	}
@@ -1077,10 +1076,10 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 		if(ttCert == -1)
 			ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
 		else if(ttCert > ttNow) {
-			errmsg.LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "not permitted to talk to peer: "
+			LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "not permitted to talk to peer: "
 					"certificate %d not yet active", i);
 			gtlsGetCertInfo(pThis, &pStr);
-			errmsg.LogError(0, RS_RET_CERT_NOT_YET_ACTIVE,
+			LogError(0, RS_RET_CERT_NOT_YET_ACTIVE,
 				"invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
 			cstrDestruct(&pStr);
 			ABORT_FINALIZE(RS_RET_CERT_NOT_YET_ACTIVE);
@@ -1090,10 +1089,10 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 		if(ttCert == -1)
 			ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
 		else if(ttCert < ttNow) {
-			errmsg.LogError(0, RS_RET_CERT_EXPIRED, "not permitted to talk to peer: certificate"
+			LogError(0, RS_RET_CERT_EXPIRED, "not permitted to talk to peer: certificate"
 				" %d expired", i);
 			gtlsGetCertInfo(pThis, &pStr);
-			errmsg.LogError(0, RS_RET_CERT_EXPIRED, "invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
+			LogError(0, RS_RET_CERT_EXPIRED, "invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
 			cstrDestruct(&pStr);
 			ABORT_FINALIZE(RS_RET_CERT_EXPIRED);
 		}
@@ -1241,7 +1240,7 @@ SetMode(nsd_t *pNsd, int mode)
 
 	ISOBJ_TYPE_assert((pThis), nsd_gtls);
 	if(mode != 0 && mode != 1) {
-		errmsg.LogError(0, RS_RET_INVALID_DRVR_MODE, "error: driver mode %d not supported by "
+		LogError(0, RS_RET_INVALID_DRVR_MODE, "error: driver mode %d not supported by "
 				"gtls netstream driver", mode);
 		ABORT_FINALIZE(RS_RET_INVALID_DRVR_MODE);
 	}
@@ -1276,7 +1275,7 @@ SetAuthMode(nsd_t *pNsd, uchar *mode)
 	} else if(!strcasecmp((char*) mode, "anon")) {
 		pThis->authMode = GTLS_AUTH_CERTANON;
 	} else {
-		errmsg.LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: authentication mode '%s' not supported by "
+		LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: authentication mode '%s' not supported by "
 				"gtls netstream driver", mode);
 		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
 	}
@@ -1302,7 +1301,7 @@ SetPermPeers(nsd_t *pNsd, permittedPeers_t *pPermPeers)
 		FINALIZE;
 
 	if(pThis->authMode != GTLS_AUTH_CERTFINGERPRINT && pThis->authMode != GTLS_AUTH_CERTNAME) {
-		errmsg.LogError(0, RS_RET_VALUE_NOT_IN_THIS_MODE, "authentication not supported by "
+		LogError(0, RS_RET_VALUE_NOT_IN_THIS_MODE, "authentication not supported by "
 			"gtls netstream driver in the configured authentication mode - ignored");
 		ABORT_FINALIZE(RS_RET_VALUE_NOT_IN_THIS_MODE);
 	}
@@ -1526,7 +1525,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 		if(gnutls_priority_set_direct(pNew->sess,
 					(const char*) pNew->gnutlsPriorityString,
 					&error_position)==GNUTLS_E_INVALID_REQUEST) {
-			errmsg.LogError(0, RS_RET_GNUTLS_ERR, "Syntax Error in"
+			LogError(0, RS_RET_GNUTLS_ERR, "Syntax Error in"
 					" Priority String: \"%s\"\n", error_position);
 		}
 	} else {
@@ -1548,7 +1547,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 		CHKiRet(gtlsChkPeerAuth(pNew));
 	} else {
 		uchar *pGnuErr = gtlsStrerror(gnuRet);
-		errmsg.LogError(0, RS_RET_TLS_HANDSHAKE_ERR, 
+		LogError(0, RS_RET_TLS_HANDSHAKE_ERR, 
 			"gnutls returned error on handshake: %s\n", pGnuErr);
 		free(pGnuErr);
 		ABORT_FINALIZE(RS_RET_TLS_HANDSHAKE_ERR);
@@ -1692,7 +1691,7 @@ Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 		}
 		if(iSent != GNUTLS_E_INTERRUPTED && iSent != GNUTLS_E_AGAIN) {
 			uchar *pErr = gtlsStrerror(iSent);
-			errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d - this "
+			LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d - this "
 				"could be caused by a broken connection. GnuTLS reports: %s \n",
 				iSent, pErr);
 			free(pErr);
@@ -1798,7 +1797,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 		if(gnutls_priority_set_direct(pThis->sess,
 					(const char*) pThis->gnutlsPriorityString,
 					&error_position)==GNUTLS_E_INVALID_REQUEST) {
-			errmsg.LogError(0, RS_RET_GNUTLS_ERR, "Syntax Error in"
+			LogError(0, RS_RET_GNUTLS_ERR, "Syntax Error in"
 					" Priority String: \"%s\"\n", error_position);
 		}
 	} else {
@@ -1905,7 +1904,6 @@ CODESTARTObjClassExit(nsd_gtls)
 	objRelease(net, LM_NET_FILENAME);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
-	objRelease(errmsg, CORE_COMPONENT);
 ENDObjClassExit(nsd_gtls)
 
 
@@ -1915,7 +1913,6 @@ ENDObjClassExit(nsd_gtls)
  */
 BEGINObjClassInit(nsd_gtls, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
 	/* request objects we use */
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME));

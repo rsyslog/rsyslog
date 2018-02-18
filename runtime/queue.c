@@ -80,7 +80,7 @@ unsigned int iOverallQueueSize = 0;
 #endif
 
 /* forward-definitions */
-static inline rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg);
+static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg);
 static rsRetVal qqueueChkPersist(qqueue_t *pThis, int nUpdates);
 static rsRetVal RateLimiter(qqueue_t *pThis);
 /*  AIXPORT : return type mismatch corrected */
@@ -303,7 +303,7 @@ qqueueDbgPrint(qqueue_t *pThis)
  * while mutex is locked!
  * rgerhards, 2008-01-29
  */
-static inline int
+static int
 getPhysicalQueueSize(qqueue_t *pThis)
 {
 	return (int) PREFER_FETCH_32BIT(pThis->iQueueSize);
@@ -314,7 +314,7 @@ getPhysicalQueueSize(qqueue_t *pThis)
  * Must only be called while mutex is locked!
  * rgerhards, 2009-05-19
  */
-static inline int
+static int
 getLogicalQueueSize(qqueue_t *pThis)
 {
 	return pThis->iQueueSize - pThis->nLogDeq;

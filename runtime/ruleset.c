@@ -11,7 +11,7 @@
  *
  * Module begun 2009-06-10 by Rainer Gerhards
  *
- * Copyright 2009-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -54,7 +54,6 @@
 
 /* static data */
 DEFobjStaticHelpers
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(parser)
 
 /* tables for interfacing with the v6 config system (as far as we need to) */
@@ -256,7 +255,7 @@ execCallIndirect(struct cnfstmt *const __restrict__ stmt,
 	const rsRetVal localRet = rulesetGetRuleset(loadConf, &pRuleset, rsName);
 	if(localRet != RS_RET_OK) {
 		/* in that case, we accept that a NOP will "survive" */
-		errmsg.LogError(0, RS_RET_RULESET_NOT_FOUND, "error: CALL_INDIRECT: "
+		LogError(0, RS_RET_RULESET_NOT_FOUND, "error: CALL_INDIRECT: "
 			"ruleset '%s' cannot be found, treating as NOP\n", rsName);
 		FINALIZE;
 	}
@@ -687,9 +686,11 @@ GetParserList(rsconf_t *conf, smsg_t *pMsg)
 
 
 /* Add a script block to the current ruleset */
-static void
-addScript(ruleset_t *pThis, struct cnfstmt *script)
+static void ATTR_NONNULL(1)
+addScript(ruleset_t *const pThis, struct cnfstmt *const script)
 {
+	if(script == NULL) /* happens for include() */
+		return;
 	if(pThis->last == NULL)
 		pThis->root = pThis->last = script;
 	else {
@@ -914,6 +915,7 @@ debugPrintAll(rsconf_t *conf)
 	RETiRet;
 }
 
+struct cnfstmt * removeNOPs(struct cnfstmt *root);
 static void
 rulesetOptimize(ruleset_t *pRuleset)
 {
@@ -922,7 +924,7 @@ rulesetOptimize(ruleset_t *pRuleset)
 			  pRuleset->pszName);
 		rulesetDebugPrint((ruleset_t*) pRuleset);
 	}
-	cnfstmtOptimize(pRuleset->root);
+	pRuleset->root = cnfstmtOptimize(pRuleset->root);
 	if(Debug) {
 		dbgprintf("ruleset '%s' after optimization:\n",
 			  pRuleset->pszName);
@@ -963,13 +965,13 @@ doRulesetCreateQueue(rsconf_t *conf, int *pNewVal)
 	DEFiRet;
 
 	if(conf->rulesets.pCurr == NULL) {
-		errmsg.LogError(0, RS_RET_NO_CURR_RULESET, "error: currently no specific ruleset specified, thus a "
+		LogError(0, RS_RET_NO_CURR_RULESET, "error: currently no specific ruleset specified, thus a "
 				"queue can not be added to it");
 		ABORT_FINALIZE(RS_RET_NO_CURR_RULESET);
 	}
 
 	if(conf->rulesets.pCurr->pQueue != NULL) {
-		errmsg.LogError(0, RS_RET_RULES_QUEUE_EXISTS, "error: ruleset already has a main queue, can not "
+		LogError(0, RS_RET_RULES_QUEUE_EXISTS, "error: ruleset already has a main queue, can not "
 				"add another one");
 		ABORT_FINALIZE(RS_RET_RULES_QUEUE_EXISTS);
 	}
@@ -1009,11 +1011,11 @@ doRulesetAddParser(ruleset_t *pRuleset, uchar *pName)
 	CHKiRet(objUse(parser, CORE_COMPONENT));
 	iRet = parser.FindParser(&pParser, pName);
 	if(iRet == RS_RET_PARSER_NOT_FOUND) {
-		errmsg.LogError(0, RS_RET_PARSER_NOT_FOUND, "error: parser '%s' unknown at this time "
+		LogError(0, RS_RET_PARSER_NOT_FOUND, "error: parser '%s' unknown at this time "
 			  	"(maybe defined too late in rsyslog.conf?)", pName);
 		ABORT_FINALIZE(RS_RET_NO_CURR_RULESET);
 	} else if(iRet != RS_RET_OK) {
-		errmsg.LogError(0, iRet, "error trying to find parser '%s'\n", pName);
+		LogError(0, iRet, "error trying to find parser '%s'\n", pName);
 		FINALIZE;
 	}
 
@@ -1060,7 +1062,7 @@ rulesetProcessCnf(struct cnfobj *o)
 	
 	localRet = rulesetGetRuleset(loadConf, &pRuleset, rsName);
 	if(localRet == RS_RET_OK) {
-		errmsg.LogError(0, RS_RET_RULESET_EXISTS,
+		LogError(0, RS_RET_RULESET_EXISTS,
 			"error: ruleset '%s' specified more than once",
 			rsName);
 		cnfstmtDestructLst(o->script);
@@ -1144,7 +1146,6 @@ ENDobjQueryInterface(ruleset)
  * rgerhards, 2009-04-06
  */
 BEGINObjClassExit(ruleset, OBJ_IS_CORE_MODULE) /* class, version */
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(parser, CORE_COMPONENT);
 ENDObjClassExit(ruleset)
 
@@ -1155,7 +1156,6 @@ ENDObjClassExit(ruleset)
  */
 BEGINObjClassInit(ruleset, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, rulesetDebugPrint);

@@ -62,7 +62,6 @@
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(prop)
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(net)
 
 /* static data
@@ -127,6 +126,7 @@ int glblIntMsgRateLimitBurst = 500;
 char** glblDbgFiles = NULL;
 size_t glblDbgFilesNum = 0;
 int glblDbgWhitelist = 1;
+int glblPermitCtlC = 0;
 
 pid_t glbl_ourpid;
 #ifndef HAVE_ATOMIC_BUILTINS
@@ -185,6 +185,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "internalmsg.ratelimit.interval", eCmdHdlrPositiveInt, 0 },
 	{ "internalmsg.ratelimit.burst", eCmdHdlrPositiveInt, 0 },
 	{ "errormessagestostderr.maxnumber", eCmdHdlrPositiveInt, 0 },
+	{ "shutdown.enable.ctlc", eCmdHdlrBinary, 0 },
 	{ "debug.files", eCmdHdlrArray, 0 },
 	{ "debug.whitelist", eCmdHdlrBinary, 0 }
 };
@@ -325,14 +326,14 @@ setLocalHostIPIF(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	CHKiRet(objUse(net, CORE_COMPONENT));
 
 	if(propLocalIPIF_set) {
-		errmsg.LogError(0, RS_RET_ERR, "$LocalHostIPIF is already set "
+		LogError(0, RS_RET_ERR, "$LocalHostIPIF is already set "
 				"and cannot be reset; place it at TOP OF rsyslog.conf!");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 	localRet = net.GetIFIPAddr(pNewVal, AF_UNSPEC, myIP, (int) sizeof(myIP));
 	if(localRet != RS_RET_OK) {
-		errmsg.LogError(0, RS_RET_ERR, "$LocalHostIPIF: IP address for interface "
+		LogError(0, RS_RET_ERR, "$LocalHostIPIF: IP address for interface "
 				"'%s' cannnot be obtained - ignoring directive", pNewVal);
 	} else  {
 		storeLocalHostIPIF(myIP);
@@ -365,25 +366,25 @@ static rsRetVal setWorkDir(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	}
 
 	if(i < 0) {
-		errmsg.LogError(0, RS_RET_ERR_WRKDIR, "$WorkDirectory: empty value "
+		LogError(0, RS_RET_ERR_WRKDIR, "$WorkDirectory: empty value "
 				"- directive ignored");
 		ABORT_FINALIZE(RS_RET_ERR_WRKDIR);
 	}
 
 	if(i != (int) lenDir - 1) {
 		pNewVal[i+1] = '\0';
-		errmsg.LogError(0, RS_RET_WRN_WRKDIR, "$WorkDirectory: trailing slashes "
+		LogError(0, RS_RET_WRN_WRKDIR, "$WorkDirectory: trailing slashes "
 			"removed, new value is '%s'", pNewVal);
 	}
 
 	if(stat((char*) pNewVal, &sb) != 0) {
-		errmsg.LogError(0, RS_RET_ERR_WRKDIR, "$WorkDirectory: %s can not be "
+		LogError(0, RS_RET_ERR_WRKDIR, "$WorkDirectory: %s can not be "
 				"accessed, probably does not exist - directive ignored", pNewVal);
 		ABORT_FINALIZE(RS_RET_ERR_WRKDIR);
 	}
 
 	if(!S_ISDIR(sb.st_mode)) {
-		errmsg.LogError(0, RS_RET_ERR_WRKDIR, "$WorkDirectory: %s not a directory - directive ignored", 
+		LogError(0, RS_RET_ERR_WRKDIR, "$WorkDirectory: %s not a directory - directive ignored", 
 				pNewVal);
 		ABORT_FINALIZE(RS_RET_ERR_WRKDIR);
 	}
@@ -401,12 +402,12 @@ static void
 setMaxLine(const int64_t iNew)
 {
 	if(iNew < 128) {
-		errmsg.LogError(0, RS_RET_INVALID_VALUE, "maxMessageSize tried to set "
+		LogError(0, RS_RET_INVALID_VALUE, "maxMessageSize tried to set "
 				"to %lld, but cannot be less than 128 - set to 128 "
 				"instead", (long long) iNew);
 		iMaxLine = 128;
 	} else if(iNew > (int64_t) INT_MAX) {
-		errmsg.LogError(0, RS_RET_INVALID_VALUE, "maxMessageSize larger than "
+		LogError(0, RS_RET_INVALID_VALUE, "maxMessageSize larger than "
 				"INT_MAX (%d) - reduced to INT_MAX", INT_MAX);
 		iMaxLine = INT_MAX;
 	} else {
@@ -983,7 +984,7 @@ glblProcessCnf(struct cnfobj *o)
 
 	cnfparamvals = nvlstGetParams(o->nvlst, &paramblk, cnfparamvals);
 	if(cnfparamvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing global "
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing global "
 				"config parameters [global(...)]");
 		goto done;
 	}
@@ -1003,7 +1004,7 @@ glblProcessCnf(struct cnfobj *o)
 			bProcessInternalMessages = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "stdlog.channelspec")) {
 #ifndef HAVE_LIBLOGGING_STDLOG
-			errmsg.LogError(0, RS_RET_ERR, "rsyslog wasn't "
+			LogError(0, RS_RET_ERR, "rsyslog wasn't "
 				"compiled with liblogging-stdlog support. "
 				"The 'stdlog.channelspec' parameter "
 				"is ignored. Note: the syslog API is used instead.\n");
@@ -1029,7 +1030,7 @@ glblProcessMainQCnf(struct cnfobj *o)
 	if(mainqCnfObj == NULL) {
 		mainqCnfObj = o;
 	} else {
-		errmsg.LogError(0, RS_RET_ERR, "main_queue() object can only be specified "
+		LogError(0, RS_RET_ERR, "main_queue() object can only be specified "
 				"once - all but first ignored\n");
 	}
 }
@@ -1193,7 +1194,7 @@ glblDoneLoadCnf(void)
 			setMaxLine(cnfparamvals[i].val.d.n);
 		} else if(!strcmp(paramblk.descr[i].name, "debug.onshutdown")) {
 			glblDebugOnShutdown = (int) cnfparamvals[i].val.d.n;
-			errmsg.LogError(0, RS_RET_OK, "debug: onShutdown set to %d", glblDebugOnShutdown);
+			LogError(0, RS_RET_OK, "debug: onShutdown set to %d", glblDebugOnShutdown);
 		} else if(!strcmp(paramblk.descr[i].name, "debug.gnutls")) {
 			iGnuTLSLoglevel = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "debug.unloadmodules")) {
@@ -1227,11 +1228,11 @@ glblDoneLoadCnf(void)
 				}
 				if((altdbg = open(pszAltDbgFileName, O_WRONLY|O_CREAT|O_TRUNC|O_NOCTTY
 				|O_CLOEXEC, S_IRUSR|S_IWUSR)) == -1) {
-					errmsg.LogError(0, RS_RET_ERR, "debug log file '%s' could not be opened",
+					LogError(0, RS_RET_ERR, "debug log file '%s' could not be opened",
 							pszAltDbgFileName);
 				}
 			}
-			errmsg.LogError(0, RS_RET_OK, "debug log file is '%s', fd %d", pszAltDbgFileName, altdbg);
+			LogError(0, RS_RET_OK, "debug log file is '%s', fd %d", pszAltDbgFileName, altdbg);
 		} else if(!strcmp(paramblk.descr[i].name, "janitor.interval")) {
 			janitorInterval = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "net.ipprotocol")) {
@@ -1243,7 +1244,7 @@ glblDoneLoadCnf(void)
 			} else if(!strcmp(proto, "ipv6-only")) {
 				iDefPFFamily = PF_INET6;
 			} else{
-				errmsg.LogError(0, RS_RET_ERR, "invalid net.ipprotocol "
+				LogError(0, RS_RET_ERR, "invalid net.ipprotocol "
 					"parameter '%s' -- ignored", proto);
 			}
 			free(proto);
@@ -1290,6 +1291,8 @@ glblDoneLoadCnf(void)
 		        glblDbgWhitelist = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "umask")) {
 		        loadConf->globals.umask = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "shutdown.enable.ctlc")) {
+		        glblPermitCtlC = (int) cnfparamvals[i].val.d.n;
 		} else {
 			dbgprintf("glblDoneLoadCnf: program error, non-handled "
 			  "param '%s'\n", paramblk.descr[i].name);
@@ -1312,7 +1315,6 @@ finalize_it:	RETiRet;
 BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(prop, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* intialize properties */
 	storeLocalHostIPIF((uchar*)"127.0.0.1");

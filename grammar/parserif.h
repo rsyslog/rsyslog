@@ -39,4 +39,5 @@ void cnfDoScript(struct cnfstmt *script);
 void cnfDoCfsysline(char *ln);
 void cnfDoBSDTag(char *ln);
 void cnfDoBSDHost(char *ln);
+int cnfAddConfigBuffer(es_str_t *const str, const char *const cnfobj_name);
 #endif

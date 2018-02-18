@@ -3,7 +3,7 @@
  * because it was either written from scratch by me (rgerhards) or
  * contributors who agreed to ASL 2.0.
  *
- * Copyright 2004-2017 Rainer Gerhards and Adiscon
+ * Copyright 2004-2018 Rainer Gerhards and Adiscon
  *
  * This file is part of rsyslog.
  *
@@ -29,15 +29,11 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <errno.h>
 #ifdef HAVE_LIBLOGGING_STDLOG
 #  include <liblogging/stdlog.h>
 #else
 #  include <syslog.h>
-#endif
-#if defined(OS_SOLARIS) || defined(OS_BSD)
-#	include <errno.h>
-#else
-#	include <sys/errno.h>
 #endif
 #ifdef HAVE_LIBSYSTEMD
 #	include <systemd/sd-daemon.h>
@@ -160,7 +156,7 @@ int bFinished = 0;	/* used by termination signal handler, read-only except there
 			 * is either 0 or the number of the signal that requested the
  			 * termination.
 			 */
-const char *PidFile = PATH_PIDFILE;
+const char *PidFile;
 #define NO_PIDFILE "NONE"
 int iConfigVerify = 0;	/* is this just a config verify run? */
 rsconf_t *ourConf = NULL;	/* our config object */
@@ -187,7 +183,7 @@ rsyslogd_usage(void)
 {
 	fprintf(stderr, "usage: rsyslogd [options]\n"
 			"use \"man rsyslogd\" for details. To run rsyslog "
-			"interactively, use \"rsyslogd -n\""
+			"interactively, use \"rsyslogd -n\"\n"
 			"to run it in debug mode use \"rsyslogd -dn\"\n"
 			"For further information see http://www.rsyslog.com/doc\n");
 	exit(1); /* "good" exit - done to terminate usage() */
@@ -1305,6 +1301,16 @@ initAll(int argc, char **argv)
 	 */
 	queryLocalHostname();
 
+	/* we now can emit error messages "the regular way" */
+
+	if(getenv("TZ") == NULL) {
+		const char *const tz =
+			(access("/etc/localtime", R_OK) == 0) ? "TZ=/etc/localtime" : "TZ=UTC";
+		putenv((char*)tz);
+		LogMsg(0, RS_RET_NO_TZ_SET, LOG_WARNING, "environment variable TZ is not "
+			"set, auto correcting this to %s\n", tz);
+	}
+
 	/* END core initializations - we now come back to carrying out command line options*/
 
 	while((iRet = bufOptRemove(&ch, &arg)) == RS_RET_OK) {
@@ -1342,6 +1348,7 @@ initAll(int argc, char **argv)
 			ConfFile = (uchar*) arg;
 			break;
 		case 'i':		/* pid file name */
+			free((void*)PidFile);
 			PidFile = arg;
 			break;
 		case 'l':
@@ -1486,7 +1493,7 @@ initAll(int argc, char **argv)
 
 	hdlr_enable(SIGPIPE, SIG_IGN);
 	hdlr_enable(SIGXFSZ, SIG_IGN);
-	if(Debug) {
+	if(Debug || glblPermitCtlC) {
 		hdlr_enable(SIGUSR1, rsyslogdDebugSwitch);
 		hdlr_enable(SIGINT,  rsyslogdDoDie);
 		hdlr_enable(SIGQUIT, rsyslogdDoDie);
@@ -1946,6 +1953,22 @@ main(int argc, char **argv)
 			exit(-1);
 		}
 #endif
+
+	if((int) getpid() == 1) {
+		fprintf(stderr, "rsyslogd %s: running as pid 1, enabling "
+			"container-specific defaults, press ctl-c to "
+			"terminate rsyslog\n", VERSION);
+		PidFile = strdup("NONE"); /* disables pid file writing */
+		glblPermitCtlC = 1;
+	} else {
+		/* "dynamic defaults" - non-container case */
+		PidFile = strdup(PATH_PIDFILE);
+	}
+	if(PidFile == NULL) {
+		fprintf(stderr, "rsyslogd: could not alloc memory for pid file "
+			"default name - aborting\n");
+		exit(1);
+	}
 
 	/* disable case-sensitive comparisons in variable subsystem: */
 	fjson_global_do_case_sensitive_comparison(0);

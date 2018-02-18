@@ -121,6 +121,7 @@ extern int glblIntMsgRateLimitBurst;
 extern char** glblDbgFiles;
 extern size_t glblDbgFilesNum;
 extern int glblDbgWhitelist;
+extern int glblPermitCtlC;
 
 #define glblGetOurPid() glbl_ourpid
 #define glblSetOurPid(pid) { glbl_ourpid = (pid); }
