@@ -1072,7 +1072,7 @@ EXTRA_DIST= \
 	template-pos-from-to-oversize.sh \
 	template-pos-from-to-oversize-lowercase.sh \
 	template-pos-from-to-missing-jsonvar.sh \
-	template-const-jsonf.sh
+	template-const-jsonf.sh \
 	fac_authpriv.sh \
 	testsuites/fac_authpriv.conf \
 	fac_local0.sh \
@@ -1804,7 +1804,8 @@ EXTRA_DIST= \
 	testsuites/sample.pmsnare_ccdefault \
 	testsuites/sample.pmsnare_cccstyle \
 	testsuites/sample.pmsnare_ccbackslash \
-	testsuites/sample.pmsnare_modoverride
+	testsuites/sample.pmsnare_modoverride \
+	testsuites/include-std-omfile-action.conf
 
 ourtail_SOURCES = ourtail.c
 msleep_SOURCES = msleep.c
