@@ -87,8 +87,8 @@ librsyslog_la_SOURCES = \
 	../parse.c \
 	../parse.h \
 	\
-	hash-impl.h \
-	hash-impl.c \
+	hash_impl.h \
+	hash_impl.c \
 	hashtable.c \
 	hashtable.h \
 	hashtable_itr.c \
@@ -139,11 +139,11 @@ lmzlibw_la_LIBADD =
 # xxhash support
 # 
 if ENABLE_HASH_XXHASH
-pkglib_LTLIBRARIES += lmxxhash.la
-lmxxhash_la_SOURCES = xxhash.h
-lmxxhash_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBLOGGING_STDLOG_CFLAGS)
-lmxxhash_la_LDFLAGS = -module -avoid-version $(LIBLOGGING_STDLOG_LIBS)
-lmxxhash_la_LIBADD = $(HASH_XXHASH_LIBS)
+pkglib_LTLIBRARIES += lmhash_impl.la
+lmhash_impl_la_SOURCES = hash_impl.c hash_impl.h
+lmhash_impl_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBLOGGING_STDLOG_CFLAGS)
+lmhash_impl_la_LDFLAGS = -module -avoid-version $(LIBLOGGING_STDLOG_LIBS)
+lmhash_impl_la_LIBADD = $(HASH_XXHASH_LIBS)
 endif
 
 if ENABLE_INET

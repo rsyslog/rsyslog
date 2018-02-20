@@ -32,7 +32,7 @@
 */
 
 #include "config.h"
-#include "hash-impl.h"
+#include "hash_impl.h"
 #ifdef USE_HASH_XXHASH
 #  include <xxhash.h>
 #endif
@@ -41,7 +41,14 @@
  * Modified Bernstein
  * http://www.eternallyconfuzzled.com/tuts/algorithms/jsw_tut_hashing.aspx
  */
-static uint64_t djb_hash(const void* input, size_t len, uint64_t seed) {
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wunknown-attributes"
+#endif
+static uint64_t
+#if defined(__clang__)
+__attribute__((no_sanitize("unsigned-integer-overflow")))
+#endif
+djb_hash(const void* input, size_t len, uint64_t seed) {
     const char *p = input;
     uint64_t hash = 5381;
     uint64_t i;

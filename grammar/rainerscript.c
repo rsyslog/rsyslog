@@ -55,7 +55,7 @@
 #include "wti.h"
 #include "unicode-helper.h"
 #include "errmsg.h"
-#include "hash-impl.h"
+#include "hash_impl.h"
 
 #if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wswitch-enum"
@@ -1855,16 +1855,19 @@ doHash64(struct svar *__restrict__ const sourceVal, struct svar *__restrict__ co
 }
 
 static uint64_t
-doHash64Mod(struct svar *__restrict__ const sourceVal, struct svar *__restrict__ const modVal, struct svar *__restrict__ const seedVal) {
+doHash64Mod(struct svar *__restrict__ const sourceVal, struct svar *__restrict__ const modVal,
+            struct svar *__restrict__ const seedVal) {
     
     int success = 0;
 	uint64_t mod = var2Number(modVal, &success);
 	if (! success) {
-		DBGPRINTF("rainerscript: hash64mod(string, mod)/hash64mod(string, mod, seed) didn't get a valid 'mod' limit, defaulting hash value to 0");
+		DBGPRINTF("rainerscript: hash64mod(string, mod)/hash64mod(string, mod, seed) didn't"
+        " get a valid 'mod' limit, defaulting hash value to 0");
 		return 0;
 	}
 	if(mod == 0) {
-		DBGPRINTF("rainerscript: hash64mod(string, mod)/hash64mod(string, mod, seed) invalid, 'mod' is zero, , defaulting hash value to 0");
+		DBGPRINTF("rainerscript: hash64mod(string, mod)/hash64mod(string, mod, seed) invalid"
+        ", 'mod' is zero, , defaulting hash value to 0");
 		return 0;
 	}
     
