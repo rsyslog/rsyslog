@@ -212,9 +212,9 @@ Tag
 
    "string", "none", "yes", "``$InputFileTag``"
 
-The tag to be used for messages that originate from this file. If
-you would like to see the colon after the tag, you need to specify it
-here (like 'tag="myTagValue:"').
+The tag to be assigned to messages read from this file. If you would like to
+see the colon after the tag, you need to include it when you assign a tag
+value, like so: ``tag="myTagValue:"``.
 
 
 Facility
