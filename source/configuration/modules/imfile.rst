@@ -225,11 +225,15 @@ Facility
    :widths: auto
    :class: parameter-table
 
-   "facility", "128", "no", "``$InputFileFacility``"
+   "integer or string (preferred)", "local0", "no", "``$InputFileFacility``"
 
-The syslog facility to be assigned to lines read. Can be specified
-in textual form (e.g. "local0", "local1", ...) or as numbers (e.g.
-16 for "local0"). Textual form is suggested. Default  is "local0".
+The syslog facility to be assigned to messages read from this file. Can be
+specified in textual form (e.g. ``local0``, ``local1``, ...) or as numbers (e.g.
+16 for ``local0``). Textual form is suggested. Default  is ``local0``.
+
+.. seealso::
+
+   https://en.wikipedia.org/wiki/Syslog
 
 
 Severity
@@ -240,11 +244,15 @@ Severity
    :widths: auto
    :class: parameter-table
 
-   "severity", "5", "no", "``$InputFileSeverity``"
+   "integer or string (preferred)", "notice", "no", "``$InputFileSeverity``"
 
 The syslog severity to be assigned to lines read. Can be specified
-in textual   form (e.g. "info", "warning", ...) or as numbers (e.g. 6
-for "info"). Textual form is suggested. Default is "notice".
+in textual   form (e.g. ``info``, ``warning``, ...) or as numbers (e.g. 6
+for ``info``). Textual form is suggested. Default is ``notice``.
+
+.. seealso::
+
+   https://en.wikipedia.org/wiki/Syslog
 
 
 PersistStateInterval
