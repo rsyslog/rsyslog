@@ -2288,15 +2288,15 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 		ret->datatype = 'N';
 		varFreeMembers(&r[0]);
 		break;
-    case CNFFUNC_HASH64:
+	case CNFFUNC_HASH64:
 		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
-        if(func->nParams == 2) cnfexprEval(func->expr[1], &r[1], usrptr, pWti);
+		if(func->nParams == 2) cnfexprEval(func->expr[1], &r[1], usrptr, pWti);
 		ret->d.n = doHash64(&r[0], (func->nParams == 2 ? &r[1] : NULL));
 		ret->datatype = 'N';
 		varFreeMembers(&r[0]);
-        if(func->nParams == 2) varFreeMembers(&r[1]);
+		if(func->nParams == 2) varFreeMembers(&r[1]);
 		break;
-    case CNFFUNC_HASH64MOD:
+	case CNFFUNC_HASH64MOD:
 		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
 		cnfexprEval(func->expr[1], &r[1], usrptr, pWti);
 		if(func->nParams == 3) cnfexprEval(func->expr[2], &r[2], usrptr, pWti);
@@ -4797,13 +4797,13 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 	} else if(FUNC_NAME("random")) {
 		GENERATE_FUNC("random", 1, CNFFUNC_RANDOM);
 	} else if(FUNC_NAME("hash64")) {
-        GENERATE_FUNC_WITH_NARG_RANGE("hash64", 1, 2, CNFFUNC_HASH64,
+		GENERATE_FUNC_WITH_NARG_RANGE("hash64", 1, 2, CNFFUNC_HASH64,
 			"number of parameters for %s() must either be "
 			"one (operand_string) or"
 			"two (operand_string, number_seed)"
 			"but is %d.");
 	} else if(FUNC_NAME("hash64mod")) {
-        GENERATE_FUNC_WITH_NARG_RANGE("hash64mod", 2, 3, CNFFUNC_HASH64MOD,
+		GENERATE_FUNC_WITH_NARG_RANGE("hash64mod", 2, 3, CNFFUNC_HASH64MOD,
 			"number of parameters for %s() must either be "
 			"two (operand_string, number_mod_to) or"
 			"three (operand_string, number_mod_to, number_seed)"
