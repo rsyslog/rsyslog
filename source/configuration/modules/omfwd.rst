@@ -334,7 +334,7 @@ Legacy Configuration Parameters
 
 Note: parameter names are case-insensitive.
 
--  **$ActionForwardDefaultTemplateName**\ string [templatename]
+-  **$ActionForwardDefaultTemplate**\ string [templatename]
    sets a new default template for UDP and plain TCP forwarding action
 -  **$ActionSendTCPRebindInterval**\ integer
    instructs the TCP send action to close and re-open the connection to
