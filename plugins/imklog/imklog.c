@@ -133,7 +133,11 @@ initConfigSettings(void)
  * rgerhards, 2008-04-12
  */
 static rsRetVal
-enqMsg(uchar *const __restrict__ msg, uchar* pszTag, const syslog_pri_t pri, struct timeval *tp, ratelimit_t *ratelimiter)
+enqMsg(uchar *const __restrict__ msg,
+       uchar* pszTag,
+       const syslog_pri_t pri,
+       struct timeval *tp,
+       ratelimit_t *ratelimiter)
 {
 	struct syslogTime st;
 	smsg_t *pMsg;
