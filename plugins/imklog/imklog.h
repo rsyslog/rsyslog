@@ -28,6 +28,7 @@
 
 #include "rsyslog.h"
 #include "dirty.h"
+#include "ratelimit.h"
 
 /* we need to have the modConf type present in all submodules */
 struct modConfData_s {
@@ -39,6 +40,9 @@ struct modConfData_s {
 	sbool bKeepKernelStamp;
 	sbool bPermitNonKernel;
 	sbool configSetViaV2Method;
+	ratelimit_t *ratelimiter;
+	int ratelimitInterval;
+	int ratelimitBurst;
 };
 
 /* interface to "drivers"

@@ -83,6 +83,8 @@ typedef struct configSettings_s {
 	int iFacilIntMsg; /* the facility to use for internal messages (set by driver) */
 	uchar *pszPath;
 	int console_log_level; /* still used for BSD */
+	int ratelimitInterval;
+	int ratelimitBurst;
 } configSettings_t;
 static configSettings_t cs;
 
@@ -97,7 +99,9 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "consoleloglevel", eCmdHdlrInt, 0 },
 	{ "parsekerneltimestamp", eCmdHdlrBinary, 0 },
 	{ "keepkerneltimestamp", eCmdHdlrBinary, 0 },
-	{ "internalmsgfacility", eCmdHdlrFacility, 0 }
+	{ "internalmsgfacility", eCmdHdlrFacility, 0 },
+	{ "ratelimitinterval", eCmdHdlrInt, 0 },
+	{ "ratelimitburst", eCmdHdlrInt, 0 }
 };
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -118,6 +122,8 @@ initConfigSettings(void)
 	cs.console_log_level = -1;
 	cs.pszPath = NULL;
 	cs.iFacilIntMsg = klogFacilIntMsg();
+	cs.ratelimitInterval = 0;
+	cs.ratelimitBurst = 10000;
 }
 
 
@@ -127,7 +133,7 @@ initConfigSettings(void)
  * rgerhards, 2008-04-12
  */
 static rsRetVal
-enqMsg(uchar *const __restrict__ msg, uchar* pszTag, const syslog_pri_t pri, struct timeval *tp)
+enqMsg(uchar *const __restrict__ msg, uchar* pszTag, const syslog_pri_t pri, struct timeval *tp, ratelimit_t *ratelimiter)
 {
 	struct syslogTime st;
 	smsg_t *pMsg;
@@ -151,9 +157,7 @@ enqMsg(uchar *const __restrict__ msg, uchar* pszTag, const syslog_pri_t pri, str
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetTAG(pMsg, pszTag, ustrlen(pszTag));
 	msgSetPRI(pMsg, pri);
-	/* note: we do NOT use rate-limiting, as the kernel itself does rate-limiting */
-	CHKiRet(submitMsg2(pMsg));
-
+	ratelimitAddMsg(ratelimiter, NULL, pMsg);
 finalize_it:
 	RETiRet;
 }
@@ -253,7 +257,7 @@ rsRetVal Syslog(modConfData_t *pModConf, syslog_pri_t priority, uchar *pMsg, str
 	if(pModConf->bPermitNonKernel == 0 && pri2fac(priority) != LOG_KERN)
 		FINALIZE; /* silently ignore */
 
-	iRet = enqMsg((uchar*)pMsg, (uchar*) "kernel:", priority, tp);
+	iRet = enqMsg((uchar*)pMsg, (uchar*) "kernel:", priority, tp, pModConf->ratelimiter);
 
 finalize_it:
 	RETiRet;
@@ -290,6 +294,7 @@ ENDrunInput
 
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
+        dbgprintf("imklog: setting hardcoded defaults\n");
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	/* init our settings */
@@ -301,6 +306,8 @@ CODESTARTbeginCnfLoad
 	pModConf->bKeepKernelStamp = 0;
 	pModConf->iFacilIntMsg = klogFacilIntMsg();
 	loadModConf->configSetViaV2Method = 0;
+	pModConf->ratelimitBurst = 10000; /* arbitrary high limit */
+	pModConf->ratelimitInterval = 0; /* off */
 	bLegacyCnfModGlobalsPermitted = 1;
 	/* init legacy config vars */
 	initConfigSettings();
@@ -311,6 +318,7 @@ BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
 CODESTARTsetModCnf
+        dbgprintf("imklog: loading configured values\n");
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
 		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
@@ -338,6 +346,10 @@ CODESTARTsetModCnf
 			loadModConf->console_log_level= (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "internalmsgfacility")) {
 			loadModConf->iFacilIntMsg = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "ratelimitburst")) {
+			loadModConf->ratelimitBurst = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "ratelimitinterval")) {
+			loadModConf->ratelimitInterval = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("imklog: program error, non-handled "
 			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
@@ -363,6 +375,8 @@ CODESTARTendCnfLoad
 		loadModConf->bKeepKernelStamp = cs.bKeepKernelStamp;
 		loadModConf->iFacilIntMsg = cs.iFacilIntMsg;
 		loadModConf->console_log_level = cs.console_log_level;
+		loadModConf->ratelimitBurst = cs.ratelimitBurst;
+		loadModConf->ratelimitInterval = cs.ratelimitInterval;
 		if((cs.pszPath == NULL) || (cs.pszPath[0] == '\0')) {
 			loadModConf->pszPath = NULL;
 			if(cs.pszPath != NULL)
@@ -391,6 +405,11 @@ ENDactivateCnfPrePrivDrop
 
 BEGINactivateCnf
 CODESTARTactivateCnf
+	CHKiRet(ratelimitNew(&runModConf->ratelimiter, "imklog", NULL));
+        ratelimitSetLinuxLike(runModConf->ratelimiter,
+			      runModConf->ratelimitInterval,
+			      runModConf->ratelimitBurst);
+finalize_it:
 ENDactivateCnf
 
 
@@ -408,6 +427,7 @@ ENDwillRun
 
 BEGINafterRun
 CODESTARTafterRun
+	ratelimitDestruct(runModConf->ratelimiter);
         iRet = klogAfterRun(runModConf);
 ENDafterRun
 
@@ -485,6 +505,10 @@ CODEmodInit_QueryRegCFSLineHdlr
 			NULL, &cs.bParseKernelStamp, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(regCfSysLineHdlr2((uchar *)"klogkeepkerneltimestamp", 0, eCmdHdlrBinary,
 			NULL, &cs.bKeepKernelStamp, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"klogratelimitinterval", 0, eCmdHdlrInt,
+			NULL, &cs.ratelimitInterval, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"klogratelimitburst", 0, eCmdHdlrInt,
+			NULL, &cs.ratelimitBurst, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 			resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
