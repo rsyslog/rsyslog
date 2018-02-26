@@ -34,7 +34,8 @@ if [ "$MERGE" == "YES" ]; then
 fi
 
 if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then SCAN_BUILD="scan-build-5.0"; CC=clang-5.0; else SCAN_BUILD="scan-build"; fi
-if [ "x$BUILD_FROM_TARBALL" == "xYES" ]; then autoreconf -fvi && ./configure && make dist && mv *.tar.gz rsyslog.tar.gz && mkdir unpack && cd unpack && tar xzf ../rsyslog.tar.gz && ls -ld rsyslog* && cd rsyslog* ; fi
+set -e
+if [ "x$BUILD_FROM_TARBALL" == "xYES" ]; then autoreconf -fvi && ./configure && make dist && ls -l *.tar.gz && mv *.tar.gz rsyslog.tar.gz && mkdir unpack && cd unpack && tar xzf ../rsyslog.tar.gz && ls -ld rsyslog* && cd rsyslog* ; fi
 pwd
 autoreconf --force --verbose --install
 if [ "x$GROK" == "xYES" ]; then export GROK="--enable-mmgrok"; fi
