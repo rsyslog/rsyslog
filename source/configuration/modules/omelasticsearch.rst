@@ -1,139 +1,284 @@
+********************************************
 omelasticsearch: Elasticsearch Output Module
-============================================
+********************************************
 
-**Module Name:    omelasticsearch**
+===========================  ===========================================================================
+**Module Name:**             **omelasticsearch**
+**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+===========================  ===========================================================================
 
-**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
 
-**Available since:**\ 6.4.0+
-
-**Description**:
+Purpose
+=======
 
 This module provides native support for logging to
 `Elasticsearch <http://www.elasticsearch.org/>`_.
 
+
+Notable Features
+================
+
+- :ref:`omelasticsearch-statistic-counter`
+
+
+Configuration Parameters
+========================
+
+.. note::
+
+   Parameter names are case-insensitive.
+
+
 Action Parameters
 -----------------
 
-Note: parameter names are case-insensitive.
+Server
+^^^^^^
 
-.. _server:
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
--  **server** [ ``http://`` | ``https://`` |  ] <*hostname* | *ip*> [ ``:`` <*port*> ]
-   An array of Elasticsearch servers in the specified format. If no scheme is specified,
-   it will be chosen according to usehttps_. If no port is specified,
-   serverport_ will be used. Defaults to "localhost".
+   "array", "none", "no", "none"
 
-   Requests to Elasticsearch will be load-balanced between all servers in round-robin fashion.
+An array of Elasticsearch servers in the specified format. If no scheme
+is specified, it will be chosen according to usehttps_. If no port is
+specified, serverport_ will be used. Defaults to "localhost".
 
-::
+Requests to Elasticsearch will be load-balanced between all servers in
+round-robin fashion.
+
+.. code-block:: none
 
   Examples:
        server="localhost:9200"
        server=["elasticsearch1", "elasticsearch2"]
 
+
 .. _serverport:
 
--  **serverport**
-   Default HTTP port to use to connect to Elasticsearch if none is specified
-   on a server_. Defaults to 9200
+Serverport
+^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "9200", "no", "none"
+
+Default HTTP port to use to connect to Elasticsearch if none is specified
+on a server_. Defaults to 9200
+
 
 .. _healthchecktimeout:
 
--  **healthchecktimeout**
-   Specifies the number of milliseconds to wait for a successful health check on a server_.
-   Before trying to submit events to Elasticsearch, rsyslog will execute an *HTTP HEAD* to
-   ``/_cat/health`` and expect an *HTTP OK* within this timeframe. Defaults to 3500.
+HealthCheckTimeout
+^^^^^^^^^^^^^^^^^^
 
-   *Note, the health check is verifying connectivity only, not the state of the Elasticsearch cluster.*
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "3500", "no", "none"
+
+Specifies the number of milliseconds to wait for a successful health check
+on a server_. Before trying to submit events to Elasticsearch, rsyslog will
+execute an *HTTP HEAD* to ``/_cat/health`` and expect an *HTTP OK* within
+this timeframe. Defaults to 3500.
+
+*Note, the health check is verifying connectivity only, not the state of
+the Elasticsearch cluster.*
+
 
 .. _searchIndex:
 
--  **searchIndex**
-   `Elasticsearch
-   index <http://www.elasticsearch.org/guide/appendix/glossary.html#index>`_
-   to send your logs to. Defaults to "system"
+searchIndex
+^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+`Elasticsearch
+index <http://www.elasticsearch.org/guide/appendix/glossary.html#index>`_
+to send your logs to. Defaults to "system"
+
 
 .. _dynSearchIndex:
 
--  **dynSearchIndex**\ <on/**off**>
-   Whether the string provided for searchIndex_ should be taken as a
-   `rsyslog template <http://www.rsyslog.com/doc/rsyslog_conf_templates.html>`_.
-   Defaults to "off", which means the index name will be taken
-   literally. Otherwise, it will look for a template with that name, and
-   the resulting string will be the index name. For example, let's
-   assume you define a template named "date-days" containing
-   "%timereported:1:10:date-rfc3339%". Then, with dynSearchIndex="on",
-   if you say searchIndex="date-days", each log will be sent to and
-   index named after the first 10 characters of the timestamp, like
-   "2013-03-22".
+dynSearchIndex
+^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+Whether the string provided for searchIndex_ should be taken as a
+`rsyslog template <http://www.rsyslog.com/doc/rsyslog_conf_templates.html>`_.
+Defaults to "off", which means the index name will be taken
+literally. Otherwise, it will look for a template with that name, and
+the resulting string will be the index name. For example, let's
+assume you define a template named "date-days" containing
+"%timereported:1:10:date-rfc3339%". Then, with dynSearchIndex="on",
+if you say searchIndex="date-days", each log will be sent to and
+index named after the first 10 characters of the timestamp, like
+"2013-03-22".
+
 
 .. _searchType:
 
--  **searchType**
-   `Elasticsearch
-   type <http://www.elasticsearch.org/guide/appendix/glossary.html#type>`_
-   to send your index to. Defaults to "events"
+searchType
+^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+`Elasticsearch
+type <http://www.elasticsearch.org/guide/appendix/glossary.html#type>`_
+to send your index to. Defaults to "events"
+
 
 .. _dynSearchType:
 
--  **dynSearchType** <on/**off**>
-   Like dynSearchIndex_, it allows you to specify a
-   `rsyslog template <http://www.rsyslog.com/doc/rsyslog_conf_templates.html>`_
-   for searchType_, instead of a static string.
+dynSearchType
+^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+Like dynSearchIndex_, it allows you to specify a
+`rsyslog template <http://www.rsyslog.com/doc/rsyslog_conf_templates.html>`_
+for searchType_, instead of a static string.
+
 
 .. _pipelineName:
 
--  **pipelineName**
-   The `ingest node <https://www.elastic.co/guide/en/elasticsearch/reference/current/ingest.html>`_
-   pipeline name to be inclued in the request. This allows pre processing
-   of events bevor indexing them. By default, events are not send to a pipeline.
+pipelineName
+^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+The `ingest node <https://www.elastic.co/guide/en/elasticsearch/reference/current/ingest.html>`_
+pipeline name to be inclued in the request. This allows pre processing
+of events bevor indexing them. By default, events are not send to a pipeline.
+
 
 .. _dynPipelineName:
 
--  **dynPipelineName** <on/**off**>
-   Like dynSearchIndex_, it allows you to specify a
-   `rsyslog template <http://www.rsyslog.com/doc/rsyslog_conf_templates.html>`_
-   for pipelineName_, instead of a static string.
+dynPipelineName
+^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+Like dynSearchIndex_, it allows you to specify a
+`rsyslog template <http://www.rsyslog.com/doc/rsyslog_conf_templates.html>`_
+for pipelineName_, instead of a static string.
+
 
 .. _asyncrepl:
 
--  **asyncrepl**\ <on/**off**>
-   No longer supported as ElasticSearch no longer supports it.
+asyncrepl
+^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+No longer supported as ElasticSearch no longer supports it.
+
 
 .. _usehttps:
 
--  **usehttps**\ <on/**off**>
-   Default scheme to use when sending events to Elasticsearch if none is
-   specified on a  server_. Good for when you have
-   Elasticsearch behind Apache or something else that can add HTTPS.
-   Note that if you have a self-signed certificate, you'd need to install
-   it first. This is done by copying the certificate to a trusted path
-   and then running *update-ca-certificates*. That trusted path is
-   typically */usr/local/share/ca-certificates* but check the man page of
-   *update-ca-certificates* for the default path of your distro
+usehttps
+^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+Default scheme to use when sending events to Elasticsearch if none is
+specified on a  server_. Good for when you have
+Elasticsearch behind Apache or something else that can add HTTPS.
+Note that if you have a self-signed certificate, you'd need to install
+it first. This is done by copying the certificate to a trusted path
+and then running *update-ca-certificates*. That trusted path is
+typically */usr/local/share/ca-certificates* but check the man page of
+*update-ca-certificates* for the default path of your distro
+
 
 .. _timeout:
 
--  **timeout**
-   How long Elasticsearch will wait for a primary shard to be available
-   for indexing your log before sending back an error. Defaults to "1m".
+timeout
+^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "1m", "no", "none"
+
+How long Elasticsearch will wait for a primary shard to be available
+for indexing your log before sending back an error. Defaults to "1m".
+
 
 .. _template:
 
--  **template**
-   This is the JSON document that will be indexed in Elasticsearch. The
-   resulting string needs to be a valid JSON, otherwise Elasticsearch
-   will return an error. Defaults to:
+template
+^^^^^^^^
 
-::
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "see below", "no", "none"
+
+This is the JSON document that will be indexed in Elasticsearch. The
+resulting string needs to be a valid JSON, otherwise Elasticsearch
+will return an error. Defaults to:
+
+.. code-block:: none
 
     $template JSONDefault, "{\"message\":\"%msg:::json%\",\"fromhost\":\"%HOSTNAME:::json%\",\"facility\":\"%syslogfacility-text%\",\"priority\":\"%syslogpriority-text%\",\"timereported\":\"%timereported:::date-rfc3339%\",\"timegenerated\":\"%timegenerated:::date-rfc3339%\"}"
 
 Which will produce this sort of documents (pretty-printed here for
 readability):
 
-::
+.. code-block:: none
 
     {
         "message": " this is a test message",
@@ -144,89 +289,163 @@ readability):
         "timegenerated": "2013-03-12T18:05:01.344864+02:00"
     }
 
+
 .. _bulkmode:
 
--  **bulkmode**\ <on/**off**>
-   The default "off" setting means logs are shipped one by one. Each in
-   its own HTTP request, using the `Index
-   API <http://www.elasticsearch.org/guide/reference/api/index_.html>`_.
-   Set it to "on" and it will use Elasticsearch's `Bulk
-   API <http://www.elasticsearch.org/guide/reference/api/bulk.html>`_ to
-   send multiple logs in the same request. The maximum number of logs
-   sent in a single bulk request depends on your maxbytes_
-   and queue settings -
-   usually limited by the `dequeue batch
-   size <http://www.rsyslog.com/doc/node35.html>`_. More information
-   about queues can be found
-   `here <http://www.rsyslog.com/doc/node32.html>`_.
+bulkmode
+^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+The default "off" setting means logs are shipped one by one. Each in
+its own HTTP request, using the `Index
+API <http://www.elasticsearch.org/guide/reference/api/index_.html>`_.
+Set it to "on" and it will use Elasticsearch's `Bulk
+API <http://www.elasticsearch.org/guide/reference/api/bulk.html>`_ to
+send multiple logs in the same request. The maximum number of logs
+sent in a single bulk request depends on your maxbytes_
+and queue settings -
+usually limited by the `dequeue batch
+size <http://www.rsyslog.com/doc/node35.html>`_. More information
+about queues can be found
+`here <http://www.rsyslog.com/doc/node32.html>`_.
+
 
 .. _maxbytes:
 
--  **maxbytes** *(since v8.23.0)*
-   When shipping logs with bulkmode_ **on**, maxbytes specifies the maximum
-   size of the request body sent to Elasticsearch. Logs are batched until
-   either the buffer reaches maxbytes or the the `dequeue batch
-   size <http://www.rsyslog.com/doc/node35.html>`_ is reached. In order to
-   ensure Elasticsearch does not reject requests due to content length, verify
-   this value is set accoring to the `http.max_content_length
-   <https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-http.html>`_
-   setting in Elasticsearch. Defaults to 100m.
+maxbytes
+^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "100m", "no", "none"
+
+.. versionadded:: 8.23.0
+
+When shipping logs with bulkmode_ **on**, maxbytes specifies the maximum
+size of the request body sent to Elasticsearch. Logs are batched until
+either the buffer reaches maxbytes or the the `dequeue batch
+size <http://www.rsyslog.com/doc/node35.html>`_ is reached. In order to
+ensure Elasticsearch does not reject requests due to content length, verify
+this value is set accoring to the `http.max_content_length
+<https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-http.html>`_
+setting in Elasticsearch. Defaults to 100m.
+
 
 .. _parent:
 
--  **parent**
-   Specifying a string here will index your logs with that string the
-   parent ID of those logs. Please note that you need to define the
-   `parent
-   field <http://www.elasticsearch.org/guide/reference/mapping/parent-field.html>`_
-   in your
-   `mapping <http://www.elasticsearch.org/guide/reference/mapping/>`_
-   for that to work. By default, logs are indexed without a parent.
+parent
+^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+Specifying a string here will index your logs with that string the
+parent ID of those logs. Please note that you need to define the
+`parent
+field <http://www.elasticsearch.org/guide/reference/mapping/parent-field.html>`_
+in your
+`mapping <http://www.elasticsearch.org/guide/reference/mapping/>`_
+for that to work. By default, logs are indexed without a parent.
+
 
 .. _dynParent:
 
--  **dynParent**\ <on/**off**>
-   Using the same parent for all the logs sent in the same action is
-   quite unlikely. So you'd probably want to turn this "on" and specify
-   a
-   `rsyslog template <http://www.rsyslog.com/doc/rsyslog_conf_templates.html>`_
-   that will provide meaningful parent IDs for your logs.
+dynParent
+^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+Using the same parent for all the logs sent in the same action is
+quite unlikely. So you'd probably want to turn this "on" and specify
+a
+`rsyslog template <http://www.rsyslog.com/doc/rsyslog_conf_templates.html>`_
+that will provide meaningful parent IDs for your logs.
+
 
 .. _uid:
 
--  **uid**
-   If you have basic HTTP authentication deployed (eg through the
-   `elasticsearch-basic
-   plugin <https://github.com/Asquera/elasticsearch-http-basic>`_), you
-   can specify your user-name here.
+uid
+^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+If you have basic HTTP authentication deployed (eg through the
+`elasticsearch-basic
+plugin <https://github.com/Asquera/elasticsearch-http-basic>`_), you
+can specify your user-name here.
+
 
 .. _pwd:
 
--  **pwd**
-   Password for basic authentication.
+pwd
+^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+Password for basic authentication.
+
 
 .. _errorfile:
 
-- **errorfile** <filename> (optional)
+errorFile
+^^^^^^^^^
 
-  If specified, records failed in bulk mode are written to this file, including
-  their error cause. Rsyslog itself does not process the file any more, but the
-  idea behind that mechanism is that the user can create a script to periodically
-  inspect the error file and react appropriately. As the complete request is
-  included, it is possible to simply resubmit messages from that script.
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-  *Please note:* when rsyslog has problems connecting to elasticsearch, a general
-  error is assumed and the submit is retried. However, if we receive negative
-  responses during batch processing, we assume an error in the data itself
-  (like a mandatory field is not filled in, a format error or something along
-  those lines). Such errors cannot be solved by simpy resubmitting the record.
-  As such, they are written to the error file so that the user (script) can
-  examine them and act appropriately. Note that e.g. after search index
-  reconfiguration (e.g. dropping the mandatory attribute) a resubmit may
-  be succesful.
+   "word", "none", "no", "none"
+
+If specified, records failed in bulk mode are written to this file, including
+their error cause. Rsyslog itself does not process the file any more, but the
+idea behind that mechanism is that the user can create a script to periodically
+inspect the error file and react appropriately. As the complete request is
+included, it is possible to simply resubmit messages from that script.
+
+*Please note:* when rsyslog has problems connecting to elasticsearch, a general
+error is assumed and the submit is retried. However, if we receive negative
+responses during batch processing, we assume an error in the data itself
+(like a mandatory field is not filled in, a format error or something along
+those lines). Such errors cannot be solved by simpy resubmitting the record.
+As such, they are written to the error file so that the user (script) can
+examine them and act appropriately. Note that e.g. after search index
+reconfiguration (e.g. dropping the mandatory attribute) a resubmit may
+be succesful.
+
+
+.. _omelasticsearch-statistic-counter:
 
 Statistic Counter
------------------
+=================
 
 This plugin maintains global :doc:`statistics <../rsyslog_statistic_counter>`,
 which accumulate all action instances. The statistic is named "omelasticsearch".
@@ -260,18 +479,26 @@ These were experimental and confusing. The only ones really used were "submits",
 which were the number of successfully processed messages and "connfail" which were
 equivalent to "failed.http".
 
-Samples
--------
+
+Examples
+========
+
+Example 1
+---------
 
 The following sample does the following:
 
 -  loads the omelasticsearch module
 -  outputs all logs to Elasticsearch using the default settings
 
-::
+.. code-block:: none
 
     module(load="omelasticsearch")
     *.*     action(type="omelasticsearch")
+
+
+Example 2
+---------
 
 The following sample does the following:
 
@@ -299,7 +526,7 @@ The following sample does the following:
    -  retry indefinitely if the HTTP request failed (eg: if the target
       server is down)
 
-::
+.. code-block:: none
 
     module(load="omelasticsearch")
     template(name="testTemplate"
