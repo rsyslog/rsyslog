@@ -2085,6 +2085,25 @@ AM_CONDITIONAL(ENABLE_OMTCL, test x$enable_omtcl = xyes)
 
 # END TCL SUPPORT
 
+# mmkubernetes - Kubernetes metadata support
+
+AC_ARG_ENABLE(mmkubernetes,
+        [AS_HELP_STRING([--enable-mmkubernetes],
+            [Enable compilation of the mmkubernetes module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mmkubernetes="yes" ;;
+          no) enable_mmkubernetes="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmkubernetes) ;;
+         esac],
+        [enable_mmkubernetes=no]
+)
+if test "x$enable_mmkubernetes" = "xyes"; then
+        PKG_CHECK_MODULES([CURL], [libcurl])
+fi
+AM_CONDITIONAL(ENABLE_MMKUBERNETES, test x$enable_mmkubernetes = xyes)
+
+# END Kubernetes metadata support
+
 # man pages
 have_to_generate_man_pages="no"
 git_src_have_to_generate_man_pages="yes" # default to use when building from git source
@@ -2215,6 +2234,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/omhttpfs/Makefile \
 		contrib/omamqp1/Makefile \
 		contrib/omtcl/Makefile \
+		contrib/mmkubernetes/Makefile \
 		tests/Makefile])
 AC_OUTPUT
 
@@ -2292,6 +2312,7 @@ echo "    mmsequence enabled:                       $enable_mmsequence"
 echo "    mmdblookup enabled:                       $enable_mmdblookup"
 echo "    mmfields enabled:                         $enable_mmfields"
 echo "    mmrm1stspace module enabled:              $enable_mmrm1stspace"
+echo "    mmkubernetes enabled:                     $enable_mmkubernetes"
 echo
 echo "---{ database support }---"
 echo "    MySql support enabled:                    $enable_mysql"
