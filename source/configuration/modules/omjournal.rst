@@ -1,20 +1,41 @@
+*********************************
 omjournal: Systemd Journal Output
-==================================
+*********************************
 
-**Module Name:    omjournal**
+===========================  ===========================================================================
+**Module Name:**             **omjournal**
+**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+===========================  ===========================================================================
 
-**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
 
-**Description**:
+Purpose
+=======
 
 This module provides native support for logging to the systemd journal.
 
-**Action Parameters**:
 
-Note: parameter names are case-insensitive.
+Configuration Parameters
+========================
 
--  **template**
-   Template to use when submitting messages.
+.. note::
+
+   Parameter names are case-insensitive.
+
+
+Action Parameters
+-----------------
+
+Template
+^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+Template to use when submitting messages.
 
 By default, rsyslog will use the incoming %msg% as the MESSAGE field
 of the journald entry, and include the syslog tag and priority.
@@ -26,19 +47,25 @@ fields will be coerced to strings.
 
 Journald requires that you include a template parameter named MESSAGE.
 
-**Sample:**
+
+Examples
+========
+
+Example 1
+---------
 
 The following sample writes all syslog messages to the journal with a
 custom EVENT_TYPE field.
 
-::
+.. code-block:: none
 
-  module(load="omjournal")
+   module(load="omjournal")
 
-  template(name="journal" type="list") {
-    constant(value="Something happened" outname="MESSAGE")
-    property(name="$!event-type" outname="EVENT_TYPE")
-  }
+   template(name="journal" type="list") {
+     constant(value="Something happened" outname="MESSAGE")
+     property(name="$!event-type" outname="EVENT_TYPE")
+   }
 
-  action(type="omjournal" template="journal")
+   action(type="omjournal" template="journal")
+
 
