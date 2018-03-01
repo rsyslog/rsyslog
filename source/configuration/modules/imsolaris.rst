@@ -1,5 +1,15 @@
+*******************************
 imsolaris: Solaris Input Module
-===============================
+*******************************
+
+===========================  ===========================================================================
+**Module Name:**             **imsolaris**
+**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+===========================  ===========================================================================
+
+
+Purpose
+=======
 
 Reads local Solaris log messages including the kernel log.
 
@@ -12,30 +22,38 @@ syslogd instance. As such, only one can be active at one time. If it
 detects another active instance at startup, the module disables itself,
 but rsyslog will continue to run.
 
-**Author:** \ Rainer Gerhards <rgerhards@adiscon.com>
 
 Configuration Parameters
-------------------------
+========================
 
-Note: parameter names are case-insensitive.
+.. note::
+
+   Parameter names are case-insensitive.
+
+
+|FmtObsoleteName| Directives
+----------------------------
 
 | functions:: $IMSolarisLogSocketName <name>
 
    This is the name of the log socket (stream) to read. If not given,
    /dev/log is read.
 
+
 Caveats/Known Bugs
-------------------
+==================
 
 None currently known. For obvious reasons, works on Solaris, only (and
 compilation will most probably fail on any other platform).
 
+
 Examples
---------
+========
 
 The following sample pulls messages from the default log source
 
-::
+.. code-block:: none
 
-  $ModLoad imsolaris
+   $ModLoad imsolaris
+
 
