@@ -119,7 +119,7 @@ SysSock.Name
    :widths: auto
    :class: parameter-table
 
-   "string", "/dev/log", "no", "``$SystemLogSocketName``"
+   "word", "/dev/log", "no", "``$SystemLogSocketName``"
 
 Specifies an alternate log socket to be used instead of the default system
 log socket, traditionally ``/dev/log``. Unless disabled by the
