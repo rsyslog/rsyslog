@@ -1,16 +1,24 @@
 ------------------------------------------------------------------------------
 Version 8.34.0 [v8-stable] 2018-04-03
 ------------------------------------------------------------------------------
-Version 8.33.1 [v8-stable] 2018-04-03
+Version 8.33.1 [v8-stable] 2018-03-06
 - 8.33.0 tarball release was actually pre-8.33.0
   ... and so did not contain all features. This alone made a re-release
-  necessary.
+  necessary, which is what now happens with 8.33.1.
+  Note: the git 8.33.0 label was correctly applied, "just" the tarball
+  was wrong.
 - devcontainer: use some more sensible defaults
   and add ability to specify generic docker run options
   this makes integration into CI (and other scripting) easier
 - fix problems with make dist
+  make dist did not package everything that was needed for CI, thus
+  resulting in make check failures if build from tarball.
   Thanks to Thomas D. (whissi), and Michael Biebl for alerting us on the
-  problem, providing advise and some of the patches.
+  problem, providing advise and some of the patches. We also added addt'l
+  patches ourselves. The problem occured as the CI check for tarball
+  completeness was more or less disabled a couple of weeks ago, which
+  unfortunately went unnoticed. We have also applied some more safeguards
+  to detect such problems in the future.
 ------------------------------------------------------------------------------
 Version 8.33.0 [v8-stable] 2018-02-20
 - auto-detect if running inside a container (as pid 1)
