@@ -1,6 +1,17 @@
 ------------------------------------------------------------------------------
 Version 8.34.0 [v8-stable] 2018-04-03
 ------------------------------------------------------------------------------
+Version 8.33.1 [v8-stable] 2018-04-03
+- 8.33.0 tarball release was actually pre-8.33.0
+  ... and so did not contain all features. This alone made a re-release
+  necessary.
+- devcontainer: use some more sensible defaults
+  and add ability to specify generic docker run options
+  this makes integration into CI (and other scripting) easier
+- fix problems with make dist
+  Thanks to Thomas D. (whissi), and Michael Biebl for alerting us on the
+  problem, providing advise and some of the patches.
+------------------------------------------------------------------------------
 Version 8.33.0 [v8-stable] 2018-02-20
 - auto-detect if running inside a container (as pid 1)
   adjust defaults in this case to be more container-friendly
