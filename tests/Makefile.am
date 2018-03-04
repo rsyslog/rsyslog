@@ -1365,6 +1365,7 @@ EXTRA_DIST= \
 	testsuites/sndrcv_gzip_rcvr.conf \
 	action-tx-single-processing.sh \
 	action-tx-errfile.sh \
+	testsuites/action-tx-errfile.result \
 	pipeaction.sh \
 	testsuites/pipeaction.conf \
 	omprog-cleanup.sh \
@@ -1805,7 +1806,25 @@ EXTRA_DIST= \
 	testsuites/sample.pmsnare_cccstyle \
 	testsuites/sample.pmsnare_ccbackslash \
 	testsuites/sample.pmsnare_modoverride \
-	testsuites/include-std-omfile-action.conf
+	testsuites/include-std-omfile-action.conf \
+	pgsql-basic.sh \
+	testsuites/pgsql-basic.sql \
+	testsuites/pgsql-basic.conf \
+	testsuites/pgsql-select-msg.sql \
+	testsuites/pgsql-select-syslogtag.sql \
+	pgsql-basic-cnf6.sh \
+	pgsql-basic-threads-cnf6.sh \
+	pgsql-template.sh \
+	testsuites/pgsql-template.conf \
+	pgsql-template-cnf6.sh \
+	pgsql-actq-mt-withpause.sh \
+	pgsql-template-threads-cnf6.sh \
+	pgsql-basic-vg.sh \
+	pgsql-template-vg.sh \
+	pgsql-basic-cnf6-vg.sh \
+	pgsql-template-cnf6-vg.sh \
+	pgsql-actq-mt-withpause-vg.sh \
+	../devtools/prep-mysql-db.sh
 
 ourtail_SOURCES = ourtail.c
 msleep_SOURCES = msleep.c
