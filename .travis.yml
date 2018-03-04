@@ -41,9 +41,9 @@ matrix:
        env: RUN="travis-run-compile-tests.sh"
 
 # right now does not work, so keep commented out
-#     - os: linux
-#       services: docker
-#       env: RUN="docker-ubuntu-devel.sh"
+     - os: linux
+       services: docker
+       env: RUN="docker-ubuntu-devel.sh"
 
      - os: linux
        compiler: "clang"
