@@ -221,7 +221,55 @@ TESTS += \
 	mmnormalize_processing_test4.sh
 endif
 endif
+
+if ENABLE_PGSQL
+if ENABLE_PGSQL_TESTS
+TESTS += \
+	pgsql-basic.sh \
+	pgsql-basic-cnf6.sh \
+	pgsql-basic-threads-cnf6.sh \
+	pgsql-template.sh \
+	pgsql-template-cnf6.sh \
+	pgsql-actq-mt-withpause.sh \
+	pgsql-template-threads-cnf6.sh
+if HAVE_VALGRIND
+TESTS += \
+	pgsql-basic-vg.sh \
+	pgsql-template-vg.sh \
+	pgsql-basic-cnf6-vg.sh \
+	pgsql-template-cnf6-vg.sh \
+	pgsql-actq-mt-withpause-vg.sh
 endif
+endif
+endif
+
+if ENABLE_MYSQL_TESTS
+TESTS +=  \
+	mysql-basic.sh \
+	mysql-basic-cnf6.sh \
+	mysql-asyn.sh \
+	mysql-actq-mt.sh \
+	mysql-actq-mt-withpause.sh \
+	action-tx-single-processing.sh \
+	action-tx-errfile.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	mysql-basic-vg.sh \
+	mysql-asyn-vg.sh \
+	mysql-actq-mt-withpause-vg.sh
+endif
+if ENABLE_OMLIBDBI
+TESTS +=  \
+	libdbi-basic.sh \
+	libdbi-asyn.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	libdbi-basic-vg.sh
+endif
+endif
+endif
+
+endif #  ENABLE_TESTBENCH2
 
 if ENABLE_TESTBENCH2
 TESTS +=  \
@@ -322,6 +370,7 @@ TESTS +=  \
 	rscript-config_enable-off-vg.sh \
 	prop-jsonmesg-vg.sh
 endif # HAVE_VALGRIND
+
 endif # ENABLE_TESTBENCH2
 
 if HAVE_VALGRIND
@@ -440,54 +489,6 @@ endif
 endif
 endif
 endif
-
-if ENABLE_PGSQL
-if ENABLE_PGSQL_TESTS
-TESTS += \
-	pgsql-basic.sh \
-	pgsql-basic-cnf6.sh \
-	pgsql-basic-threads-cnf6.sh \
-	pgsql-template.sh \
-	pgsql-template-cnf6.sh \
-	pgsql-actq-mt-withpause.sh \
-	pgsql-template-threads-cnf6.sh
-if HAVE_VALGRIND
-TESTS += \
-	pgsql-basic-vg.sh \
-	pgsql-template-vg.sh \
-	pgsql-basic-cnf6-vg.sh \
-	pgsql-template-cnf6-vg.sh \
-	pgsql-actq-mt-withpause-vg.sh
-endif
-endif
-endif
-
-if ENABLE_MYSQL_TESTS
-TESTS +=  \
-	mysql-basic.sh \
-	mysql-basic-cnf6.sh \
-	mysql-asyn.sh \
-	mysql-actq-mt.sh \
-	mysql-actq-mt-withpause.sh \
-	action-tx-single-processing.sh \
-	action-tx-errfile.sh
-if HAVE_VALGRIND
-TESTS +=  \
-	mysql-basic-vg.sh \
-	mysql-asyn-vg.sh \
-	mysql-actq-mt-withpause-vg.sh
-endif
-if ENABLE_OMLIBDBI
-TESTS +=  \
-	libdbi-basic.sh \
-	libdbi-asyn.sh
-if HAVE_VALGRIND
-TESTS +=  \
-	libdbi-basic-vg.sh
-endif
-endif
-endif
-
 if ENABLE_IMPSTATS
 TESTS +=  \
 	impstats-hup.sh \
