@@ -63,11 +63,11 @@ get_release_version() {
 
 # The latest stable tag, but without the leading 'v'
 # Format: X.Y.Z
-release=$(get_release_version)
+release="8.33.1"
 
 # The release version, but without the trailing '.0'
 # Format: X.Y
-version=$(echo $release | sed 's/.0//')
+version="8.33"
 
 # Use the full version number
 docfile=rsyslog-doc-${release}.tar.gz
