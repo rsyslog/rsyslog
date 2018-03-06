@@ -20,6 +20,10 @@ sleep 1
 echo stopping rsyslog
 . $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 . $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
+
+echo spool:
+ls -l test-spool
+
 echo restarting rsyslog
 . $srcdir/diag.sh startup imfile-readmode2-with-persists.conf
 echo restarted rsyslog, continuing with test

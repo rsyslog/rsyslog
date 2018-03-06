@@ -3,9 +3,8 @@
 export IMFILEINPUTFILES="1"
 export IMFILEINPUTFILESSTEPS="5"
 #export IMFILEINPUTFILESALL=$(($IMFILEINPUTFILES * $IMFILEINPUTFILESSTEPS))
-export IMFILECHECKTIMEOUT="5"
+export IMFILECHECKTIMEOUT="10"
 . $srcdir/diag.sh init
-. $srcdir/diag.sh check-inotify-only
 # generate input files first. Note that rsyslog processes it as
 # soon as it start up (so the file should exist at that point).
 
@@ -13,6 +12,7 @@ for i in `seq 1 $IMFILEINPUTFILES`;
 do
 	echo "Make rsyslog.input.dir$i"
 	mkdir rsyslog.input.dir$i
+		echo created!
 done
 
 # Start rsyslog now before adding more files
@@ -30,6 +30,7 @@ do
 		mkdir rsyslog.input.dir$i/dir$j/testdir
 		mkdir rsyslog.input.dir$i/dir$j/testdir/subdir$j
 		./inputfilegen -m 1 > rsyslog.input.dir$i/dir$j/testdir/subdir$j/file.logfile
+		ls -l rsyslog.input.dir$i/dir$j/testdir/subdir$j/file.logfile
 	done
 	ls -d rsyslog.input.*
 

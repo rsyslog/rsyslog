@@ -56,7 +56,7 @@ HEADER msgnum:2 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\\\\n msgnum:3 bbbbb
 HEADER ccccccccccccccccccccccccccccccccccccc\\\\n msgnum:5 dddddddddddddddddddddddddddddddddddddddddddd
 HEADER msgnum:6 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\\\\n msgnum:7 ffffffffffffffffffffffffffffffffffffffffffff\\\\n msgnum:8 ggggggg
 HEADER ggggggggggggggggggggggggggggggggggggg
-HEADER msgnum:9\n' | cmp -b - rsyslog.out.log
+HEADER msgnum:9\n' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid multiline message generated, rsyslog.out.log is:"
   cat rsyslog.out.log
