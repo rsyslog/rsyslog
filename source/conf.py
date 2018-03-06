@@ -95,7 +95,7 @@ rst_epilog = """
 
 
 version = '8.33'
-release = '8.33.0'
+release = '8.33.1'
 
 
 # For this to be true, it means that we are not attempting to build from
