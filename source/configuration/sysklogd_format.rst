@@ -138,6 +138,7 @@ Here are some examples, partially taken from a real existing site and  configura
 fully they answer all questions about configuring this syslogd(8).  If not, don't hesitate to
 contact the mailing list.
 
+::
       # Store critical stuff in critical
       #
       \*.=crit;kern.none            /var/adm/critical
@@ -145,6 +146,7 @@ contact the mailing list.
 This will store all messages of priority crit in the file /var/adm/critical, with the  excep‐
 tion of any kernel messages.
 
+::
       # Kernel messages are stored in the kernel file,
       # critical messages and higher ones also go
       # to another host and to the console
@@ -173,6 +175,7 @@ selects kernel messages of priority info and higher.  The second selector filter
 messages  of priority error and higher.  This leaves just priorities info, notice and warning
 to get logged.
 
+::
       # The tcp wrapper logs with mail.info, we display
       # all the connections on tty12
       #
@@ -181,6 +184,7 @@ to get logged.
 This directs all messages that use mail.info (in source LOG_MAIL | LOG_INFO)  to  /dev/tty12,
 the 12th console.  For example the tcpwrapper tcpd(8) uses this as its default.
 
+::
       # Write all mail related logs to a file
       #
       mail.*;mail.!=info           /var/adm/mail
@@ -188,6 +192,7 @@ the 12th console.  For example the tcpwrapper tcpd(8) uses this as its default.
 This  pattern matches all messages that come with the mail facility, except for the info pri‐
 ority.  These will be stored in the file /var/adm/mail.
 
+::
       # Log all mail.info and news.info messages to info
       #
       mail,news.=info              /var/adm/info
@@ -195,6 +200,7 @@ ority.  These will be stored in the file /var/adm/mail.
 This will extract all messages that come either with mail.info or with  news.info  and  store
 them in the file /var/adm/info.
 
+::
       # Log info and notice messages to messages file
       #
       \*.=info;\*.=notice;\
@@ -203,6 +209,7 @@ them in the file /var/adm/info.
 This  lets the syslogd log all messages that come with either the info or the notice priority
 into the file /var/log/messages, except for all messages that use the mail facility.
 
+::
       # Log info messages to messages file
       #
       \*.=info;\
@@ -212,6 +219,7 @@ This statement causes the syslogd to log all messages that come with the info pr
 file  /var/log/messages.   But  any  message coming either with the mail or the news facility
 will not be stored.
 
+::
       # Emergency messages will be displayed using wall
       #
       \*.=emerg                     \*
@@ -219,6 +227,7 @@ will not be stored.
 This rule tells the syslogd to write all emergency messages to all currently logged in users.
 This is the wall action.
 
+::
       # Messages of the priority alert will be directed
       # to the operator
       #
@@ -227,6 +236,7 @@ This is the wall action.
 This  rule directs all messages of priority alert or higher to the terminals of the operator,
 i.e. of the users "root" and "joey" if they're logged in.
 
+::
       \*.\*                          @finlandia
 
 This rule would redirect all messages to a remote host  called  finlandia.   This  is  useful
