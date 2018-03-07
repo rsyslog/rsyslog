@@ -441,6 +441,54 @@ examine them and act appropriately. Note that e.g. after search index
 reconfiguration (e.g. dropping the mandatory attribute) a resubmit may
 be succesful.
 
+.. _tls.cacert:
+
+tls.cacert
+^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+This is the full path and file name of the file containing the CA cert for the
+CA that issued the Elasticsearch server cert.  This file is in PEM format.  For
+example: `/etc/rsyslog.d/es-ca.crt`
+
+.. _tls.mycert:
+
+tls.mycert
+^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+This is the full path and file name of the file containing the client cert for
+doing client cert auth against Elasticsearch.  This file is in PEM format.  For
+example: `/etc/rsyslog.d/es-client-cert.pem`
+
+.. _tls.myprivkey:
+
+tls.myprivkey
+^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+This is the full path and file name of the file containing the private key
+corresponding to the cert `tls.mycert` used for doing client cert auth against
+Elasticsearch.  This file is in PEM format, and must be unencrypted, so take
+care to secure it properly.  For example: `/etc/rsyslog.d/es-client-key.pem`
 
 .. _omelasticsearch-statistic-counter:
 
