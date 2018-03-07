@@ -1,385 +1,539 @@
+**************************************
 omfwd: syslog Forwarding Output Module
-======================================
+**************************************
 
-**Module Name:**  **omfwd**
+===========================  ===========================================================================
+**Module Name:**             **omfwd**
+**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+===========================  ===========================================================================
 
-**Author:**       Rainer Gerhards <rgerhards@adiscon.com>
+
+Purpose
+=======
 
 The omfwd plug-in provides the core functionality of traditional message
 forwarding via UDP and plain TCP. It is a built-in module that does not
 need to be loaded.
 
  
-**Note: this documentation describes features present in v7+ of
-rsyslog. If you use an older version, scroll down to "legacy
-parameters".** If you prefer, you can also `obtain a specific version
-of the rsyslog
-documentation <http://www.rsyslog.com/how-to-obtain-a-specific-doc-version/>`_.
+Notable Features
+================
 
- 
+
+Configuration Parameters
+========================
+
+.. note::
+
+   Parameter names are case-insensitive.
 
 Module Parameters
 -----------------
 
-Note: parameter names are case-insensitive.
+Template
+^^^^^^^^
 
--  **Template** [templateName]
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-   sets a non-standard default template for this module.
+   "word", "RSYSLOG_TraditionalForwardFormat", "no", "``$ActionForwardDefaultTemplateName``"
+
+Sets a non-standard default template for this module.
  
 
 Action Parameters
 -----------------
 
-Note: parameter names are case-insensitive.
+Target
+^^^^^^
 
--  **Target** string
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-   Name or IP-Address of the system that shall receive messages. Any
-   resolvable name is fine.
+   "word", "none", "no", "none"
 
--  **Port**
+Name or IP-Address of the system that shall receive messages. Any
+resolvable name is fine.
 
-   Name or numerical value of port to use when connecting to target.
 
--  **Protocol** udp/tcp [default udp]
+Port
+^^^^
 
-   Type of protocol to use for forwarding. Note that \`\`tcp'' means
-   both legacy plain tcp syslog as well as RFC5425-based TCL-encrypted
-   syslog. Which one is selected depends on the protocol drivers set
-   before the action commend. Note that as of 6.3.6, there is no way to
-   specify this within the action itself.
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
--  **NetworkNamespace** [default none]
+   "word", "514", "no", "none"
 
-   Name of a network namespace as in /var/run/netns/ to use for forwarding.
+Name or numerical value of port to use when connecting to target.
 
-   If the setns() system call is not available on the system (e.g. BSD
-   kernel, linux kernel before v2.6.24) the given namespace will be
-   ignored.
 
--  **Device** [default none]
+Protocol
+^^^^^^^^
 
-   Bind socket to given device (e.g., eth0)
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-   For Linux with VRF support, the Device option can be used to specify the
-   VRF for the Target address.
+   "word", "udp", "no", "none"
 
--  **TCP\_Framing** "traditional" or "octet-counted" [default traditional]
+Type of protocol to use for forwarding. Note that \`\`tcp'' means
+both legacy plain tcp syslog as well as RFC5425-based TLS-encrypted
+syslog. Which one is selected depends on the StreamDriver parameter.
+If StreamDriver is set to "gtls" it will use TLS-encrypted syslog.
 
-   Framing-Mode to be for forwarding. This affects only TCP-based
-   protocols. It is ignored for UDP. In protocol engineering,
-   "framing" means how multiple messages over the same connection
-   are separated. Usually, this is transparent to users. Unfortunately,
-   the early syslog protocol evolved, and so there are cases where users
-   need to specify the framing. The traditional framing is
-   nontransparent. With it, messages are end when a LF (aka "line
-   break", "return") is encountered, and the next message starts
-   immediately after the LF. If multi-line messages are received, these
-   are essentially broken up into multiple message, usually with all but
-   the first message segment being incorrectly formatted. The
-   octet-counting framing solves this issue. With it, each message is
-   prefixed with the actual message length, so that a receivers knows
-   exactly where the message ends. Multi-line messages cause no problem
-   here. This mode is very close to the method described in RFC5425 for
-   TLS-enabled syslog. Unfortunately, only few syslogd implementations
-   support octet-counted framing. As such, the traditional framing is
-   set as default, even though it has defects. If it is known that the
-   receiver supports octet-counted framing, it is suggested to use that
-   framing mode.
 
--  **TCP\_FrameDelimiter** [default 10]
+NetworkNamespace
+^^^^^^^^^^^^^^^^
 
-   Sets a custom frame delimiter for TCP transmission when running TCP\_Framing
-   in "traditional" mode. The delimiter has to be a number between 0 and 255
-   (representing the ASCII-code of said character). The default value for this
-   parameter is 10, representing a '\\n'. When using Graylog, the parameter
-   must be set to 0.
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
--  **ZipLevel** 0..9 [default 0]
+   "word", "none", "no", "none"
 
-   Compression level for messages.
+Name of a network namespace as in /var/run/netns/ to use for forwarding.
 
-   Up until rsyslog 7.5.1, this was the only compression setting that
-   rsyslog understood. Starting with 7.5.1, we have different
-   compression modes. All of them are affected by the ziplevel. If,
-   however, no mode is explicitely set, setting ziplevel also turns on
-   "single" compression mode, so pre 7.5.1 configuration will continue
-   to work as expected.
+If the setns() system call is not available on the system (e.g. BSD
+kernel, linux kernel before v2.6.24) the given namespace will be
+ignored.
 
-   The compression level is specified via the usual factor of 0 to 9,
-   with 9 being the strongest compression (taking up most processing
-   time) and 0 being no compression at all (taking up no extra
-   processing time).
 
--  **maxErrorMessages** depricated in 8.29.0, do not use
+Device
+^^^^^^
 
-   This was used to do some very rough "rate limiting" in versions
-   prioer to 8.29.0 and actually stemed back to when there were no
-   real rate-limiting capabilities in rsyslog core. Starting with 8.29.0
-   this setting is ignored and the rsyslog internal message rate limiter
-   is used instead.
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
--  **compression.mode** *mode*
+   "word", "none", "no", "none"
 
-   *mode* is one of "none", "single", or "stream:always". The default
-   is "none", in which no compression happens at all.
-   In "single" compression mode, Rsyslog implements a proprietary
-   capability to zip transmitted messages. That compression happens on a
-   message-per-message basis. As such, there is a performance gain only
-   for larger messages. Before compressing a message, rsyslog checks if
-   there is some gain by compression. If so, the message is sent
-   compressed. If not, it is sent uncompressed. As such, it is totally
-   valid that compressed and uncompressed messages are intermixed within
-   a conversation.
+Bind socket to given device (e.g., eth0)
 
-   In "stream:always" compression mode the full stream is being
-   compressed. This also uses non-standard protocol and is compatible
-   only with receives that have the same abilities. This mode offers
-   potentially very high compression ratios. With typical syslog
-   messages, it can be as high as 95+% compression (so only one
-   twentieth of data is actually transmitted!). Note that this mode
-   introduces extra latency, as data is only sent when the compressor
-   emits new compressed data. For typical syslog messages, this can mean
-   that some hundered messages may be held in local buffers before they
-   are actually sent. This mode has been introduced in 7.5.1.
+For Linux with VRF support, the Device option can be used to specify the
+VRF for the Target address.
 
-   **Note: currently only imptcp supports receiving stream-compressed
-   data.**
 
--  **compression.stream.flushOnTXEnd** *[**on**/off*] (requires 7.5.3+)
+TCP_Framing
+^^^^^^^^^^^
 
-   This setting affects stream compression mode, only. If enabled (the
-   default), the compression buffer will by emptied at the end of a
-   rsyslog batch. If set to "off", end of batch will not affect
-   compression at all.
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-   While setting it to "off" can potentially greatly improve
-   compression ratio, it will also introduce severe delay between when a
-   message is being processed by rsyslog and actually sent out to the
-   network. We have seen cases where for several thousand message not a
-   single byte was sent. This is good in the sense that it can happen
-   only if we have a great compression ratio. This is most probably a
-   very good mode for busy machines which will process several thousand
-   messages per second and te resulting short delay will not pose any
-   problems. However, the default is more conservative, while it works
-   more "naturally" with even low message traffic. Even in flush mode,
-   notable compression should be achivable (but we do not yet have
-   practice reports on actual compression ratios).
+   "word", "traditional", "no", "none"
 
--  **RebindInterval** integer
+Framing-Mode to be for forwarding. This affects only TCP-based
+protocols. It is ignored for UDP. In protocol engineering,
+"framing" means how multiple messages over the same connection
+are separated. Usually, this is transparent to users. Unfortunately,
+the early syslog protocol evolved, and so there are cases where users
+need to specify the framing. The traditional framing is
+nontransparent. With it, messages are end when a LF (aka "line
+break", "return") is encountered, and the next message starts
+immediately after the LF. If multi-line messages are received, these
+are essentially broken up into multiple message, usually with all but
+the first message segment being incorrectly formatted. The
+octet-counting framing solves this issue. With it, each message is
+prefixed with the actual message length, so that a receivers knows
+exactly where the message ends. Multi-line messages cause no problem
+here. This mode is very close to the method described in RFC5425 for
+TLS-enabled syslog. Unfortunately, only few syslogd implementations
+support octet-counted framing. As such, the traditional framing is
+set as default, even though it has defects. If it is known that the
+receiver supports octet-counted framing, it is suggested to use that
+framing mode.
 
-   Permits to specify an interval at which the current connection is
-   broken and re-established. This setting is primarily an aid to load
-   balancers. After the configured number of messages has been
-   transmitted, the current connection is terminated and a new one
-   started. Note that this setting applies to both TCP and UDP traffic.
-   For UDP, the new \`\`connection'' uses a different source port (ports
-   are cycled and not reused too frequently). This usually is perceived
-   as a \`\`new connection'' by load balancers, which in turn forward
-   messages to another physical target system.
 
--  **KeepAlive** *[**on**/off*]
+TCP_FrameDelimiter
+^^^^^^^^^^^^^^^^^^
 
-   Enable or disable keep-alive packets at the tcp socket layer. The
-   default is to disable them.
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
--  **KeepAlive.Probes** integer
+   "integer", "10", "no", "none"
 
-   The number of unacknowledged probes to send before considering the
-   connection dead and notifying the application layer. The default, 0,
-   means that the operating system defaults are used. This has only
-   effect if keep-alive is enabled. The functionality may not be
-   available on all platforms.
+Sets a custom frame delimiter for TCP transmission when running TCP\_Framing
+in "traditional" mode. The delimiter has to be a number between 0 and 255
+(representing the ASCII-code of said character). The default value for this
+parameter is 10, representing a '\\n'. When using Graylog, the parameter
+must be set to 0.
 
--   **KeepAlive.Interval** integer
 
-   The interval between subsequential keepalive probes, regardless of
-   what the connection has exchanged in the meantime. The default, 0,
-   means that the operating system defaults are used. This has only
-   effect if keep-alive is enabled. The functionality may not be
-   available on all platforms.
+ZipLevel
+^^^^^^^^
 
--   **KeepAlive.Time** integer
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-   The interval between the last data packet sent (simple ACKs are not
-   considered data) and the first keepalive probe; after the connection
-   is marked to need keepalive, this counter is not used any further.
-   The default, 0, means that the operating system defaults are used.
-   This has only effect if keep-alive is enabled. The functionality may
-   not be available on all platforms.
+   "integer", "0", "no", "none"
 
--  **StreamDriver** string
+Compression level for messages.
 
-   Set the file owner for directories newly created. Please note that
-   this setting does not affect the owner of directories already
-   existing. The parameter is a user name, for which the userid is
-   obtained by rsyslogd during startup processing. Interim changes to
-   the user mapping are not detected.
+Up until rsyslog 7.5.1, this was the only compression setting that
+rsyslog understood. Starting with 7.5.1, we have different
+compression modes. All of them are affected by the ziplevel. If,
+however, no mode is explicitely set, setting ziplevel also turns on
+"single" compression mode, so pre 7.5.1 configuration will continue
+to work as expected.
 
--  **StreamDriverMode** integer [default 0]
+The compression level is specified via the usual factor of 0 to 9,
+with 9 being the strongest compression (taking up most processing
+time) and 0 being no compression at all (taking up no extra
+processing time).
 
-   mode to use with the stream driver (driver-specific)
 
--  **StreamDriverAuthMode** string
+compression.Mode
+^^^^^^^^^^^^^^^^
 
-   authentication mode to use with the stream driver. Note that this
-   parameter requires TLS netstream drivers. For all others, it will be
-   ignored. (driver-specific).
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
--  **StreamDriverPermittedPeers** string
+   "word", "none", "no", "none"
 
-   accepted fingerprint (SHA1) or name of remote peer. Note that this
-   parameter requires TLS netstream drivers. For all others, it will be
-   ignored. (driver-specific)
+*mode* is one of "none", "single", or "stream:always". The default
+is "none", in which no compression happens at all.
+In "single" compression mode, Rsyslog implements a proprietary
+capability to zip transmitted messages. That compression happens on a
+message-per-message basis. As such, there is a performance gain only
+for larger messages. Before compressing a message, rsyslog checks if
+there is some gain by compression. If so, the message is sent
+compressed. If not, it is sent uncompressed. As such, it is totally
+valid that compressed and uncompressed messages are intermixed within
+a conversation.
 
--  **ResendLastMSGOnReconnect** on/off
+In "stream:always" compression mode the full stream is being
+compressed. This also uses non-standard protocol and is compatible
+only with receives that have the same abilities. This mode offers
+potentially very high compression ratios. With typical syslog
+messages, it can be as high as 95+% compression (so only one
+twentieth of data is actually transmitted!). Note that this mode
+introduces extra latency, as data is only sent when the compressor
+emits new compressed data. For typical syslog messages, this can mean
+that some hundered messages may be held in local buffers before they
+are actually sent. This mode has been introduced in 7.5.1.
 
-   Permits to resend the last message when a connection is reconnected.
-   This setting affects TCP-based syslog, only. It is most useful for
-   traditional, plain TCP syslog. Using this protocol, it is not always
-   possible to know which messages were successfully transmitted to the
-   receiver when a connection breaks. In many cases, the last message
-   sent is lost. By switching this setting to "yes", rsyslog will always
-   retransmit the last message when a connection is reestablished. This
-   reduces potential message loss, but comes at the price that some
-   messages may be duplicated (what usually is more acceptable).
+**Note: currently only imptcp supports receiving stream-compressed
+data.**
 
-   Please note that busy systems probably loose more than a
-   single message in such cases. This is caused by an
-   `inherant unreliability in plain tcp syslog
-   <http://blog.gerhards.net/2008/04/on-unreliability-of-plain-tcp-syslog.html>`_
-   and there is no way rsyslog could prevent this from happening
-   (if you read the detail description, be sure to follow the link
-   to the follow-up posting). In order to prevent these problems,
-   we recommend the use of :doc:`omrelp <omrelp>`.
 
--  **udp.sendToAll** Boolean [on/off]
+compression.stream.flushOnTXEnd
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-   **Default:** off
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-   When sending UDP messages, there are potentially multiple paths to
-   the target destination. By default, rsyslogd
-   only sends to the first target it can successfully send to. If this
-   option is set to "on", messages are sent to all targets. This may improve
-   reliability, but may also cause message duplication. This option
-   should be enabled only if it is fully understood.
+   "binary", "on", "no", "none"
 
-   Note: this option replaces the former -A command line option. In
-   contrast to the -A option, this option must be set once per
-   input() definition.
+.. versionadded:: 7.5.3
 
--  **udp.sendDelay Integer**
+This setting affects stream compression mode, only. If enabled (the
+default), the compression buffer will by emptied at the end of a
+rsyslog batch. If set to "off", end of batch will not affect
+compression at all.
 
-   **Default:** 0
+While setting it to "off" can potentially greatly improve
+compression ratio, it will also introduce severe delay between when a
+message is being processed by rsyslog and actually sent out to the
+network. We have seen cases where for several thousand message not a
+single byte was sent. This is good in the sense that it can happen
+only if we have a great compression ratio. This is most probably a
+very good mode for busy machines which will process several thousand
+messages per second and te resulting short delay will not pose any
+problems. However, the default is more conservative, while it works
+more "naturally" with even low message traffic. Even in flush mode,
+notable compression should be achivable (but we do not yet have
+practice reports on actual compression ratios).
 
-   **Available since:** 8.7.0
 
-   This is an **expert option**, do only use it if you know very well
-   why you are using it!
+RebindInterval
+^^^^^^^^^^^^^^
 
-   This options permits to introduce a small delay after *each* send
-   operation. The integer specifies the delay in microseconds. This
-   option can be used in cases where too-quick sending of UDP messages
-   causes message loss (UDP is permitted to drop packets if e.g. a device
-   runs out of buffers). Usually, you do not want this delay. The parameter
-   was introduced in order to support some testbench tests. Be sure
-   to think twice before you use it in producetion.
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
--  **gnutlsPriorityString** string
+   "integer", "0", "no", "``$ActionSendTCPRebindInterval`` or ``$ActionSendUDPRebindInterval``"
 
-   **Default:** NULL
+Permits to specify an interval at which the current connection is
+broken and re-established. This setting is primarily an aid to load
+balancers. After the configured number of messages has been
+transmitted, the current connection is terminated and a new one
+started. Note that this setting applies to both TCP and UDP traffic.
+For UDP, the new \`\`connection'' uses a different source port (ports
+are cycled and not reused too frequently). This usually is perceived
+as a \`\`new connection'' by load balancers, which in turn forward
+messages to another physical target system.
 
-   **Available since:** 8.29.0
 
-   The GnuTLS priority strings specify the TLS session's handshake algorithms and
-   options. These strings are intended as a user-specified override of the library
-   defaults. If this parameter is NULL, the default settings are used. More
-   information about priority Strings
-   `here <https://gnutls.org/manual/html_node/Priority-Strings.html>`_.
+KeepAlive
+^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+Enable or disable keep-alive packets at the tcp socket layer. The
+default is to disable them.
+
+
+KeepAlive.Probes
+^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "0", "no", "none"
+
+The number of unacknowledged probes to send before considering the
+connection dead and notifying the application layer. The default, 0,
+means that the operating system defaults are used. This has only
+effect if keep-alive is enabled. The functionality may not be
+available on all platforms.
+
+
+KeepAlive.Interval
+^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "0", "no", "none"
+
+The interval between subsequential keepalive probes, regardless of
+what the connection has exchanged in the meantime. The default, 0,
+means that the operating system defaults are used. This has only
+effect if keep-alive is enabled. The functionality may not be
+available on all platforms.
+
+
+KeepAlive.Time
+^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "0", "no", "none"
+
+The interval between the last data packet sent (simple ACKs are not
+considered data) and the first keepalive probe; after the connection
+is marked to need keepalive, this counter is not used any further.
+The default, 0, means that the operating system defaults are used.
+This has only effect if keep-alive is enabled. The functionality may
+not be available on all platforms.
+
+
+StreamDriver
+^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "``$ActionSendStreamDriver``"
+
+Choose the stream driver to be used. Default is plain tcp, but
+you can also choose gtls for TLS encryption.
+
+
+StreamDriverMode
+^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "0", "no", "``$ActionSendStreamDriverMode``"
+
+Mode to use with the stream driver (driver-specific)
+
+
+StreamDriverAuthMode
+^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "``$ActionSendStreamDriverAuthMode``"
+
+Authentication mode to use with the stream driver. Note that this
+parameter requires TLS netstream drivers. For all others, it will be
+ignored. (driver-specific).
+
+
+StreamDriverPermittedPeers
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "``$ActionSendStreamDriverPermittedPeers``"
+
+Accepted fingerprint (SHA1) or name of remote peer. Note that this
+parameter requires TLS netstream drivers. For all others, it will be
+ignored. (driver-specific)
+
+
+ResendLastMSGOnReconnect
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "``$ActionSendResendLastMsgOnReconnect``"
+
+Permits to resend the last message when a connection is reconnected.
+This setting affects TCP-based syslog, only. It is most useful for
+traditional, plain TCP syslog. Using this protocol, it is not always
+possible to know which messages were successfully transmitted to the
+receiver when a connection breaks. In many cases, the last message
+sent is lost. By switching this setting to "yes", rsyslog will always
+retransmit the last message when a connection is reestablished. This
+reduces potential message loss, but comes at the price that some
+messages may be duplicated (what usually is more acceptable).
+
+Please note that busy systems probably loose more than a
+single message in such cases. This is caused by an
+`inherant unreliability in plain tcp syslog
+<http://blog.gerhards.net/2008/04/on-unreliability-of-plain-tcp-syslog.html>`_
+and there is no way rsyslog could prevent this from happening
+(if you read the detail description, be sure to follow the link
+to the follow-up posting). In order to prevent these problems,
+we recommend the use of :doc:`omrelp <omrelp>`.
+
+
+udp.SendToAll
+^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+When sending UDP messages, there are potentially multiple paths to
+the target destination. By default, rsyslogd
+only sends to the first target it can successfully send to. If this
+option is set to "on", messages are sent to all targets. This may improve
+reliability, but may also cause message duplication. This option
+should be enabled only if it is fully understood.
+
+Note: this option replaces the former -A command line option. In
+contrast to the -A option, this option must be set once per
+input() definition.
+
+
+udp.SendDelay
+^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "0", "no", "none"
+
+.. versionadded:: 8.7.0
+
+This is an **expert option**, do only use it if you know very well
+why you are using it!
+
+This options permits to introduce a small delay after *each* send
+operation. The integer specifies the delay in microseconds. This
+option can be used in cases where too-quick sending of UDP messages
+causes message loss (UDP is permitted to drop packets if e.g. a device
+runs out of buffers). Usually, you do not want this delay. The parameter
+was introduced in order to support some testbench tests. Be sure
+to think twice before you use it in producetion.
+
+
+gnutlsPriorityString
+^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+.. versionadded:: 8.29.0
+
+The GnuTLS priority strings specify the TLS session's handshake algorithms and
+options. These strings are intended as a user-specified override of the library
+defaults. If this parameter is NULL, the default settings are used. More
+information about priority Strings
+`here <https://gnutls.org/manual/html_node/Priority-Strings.html>`_.
+
 
 See Also
---------
+========
 
 -  `Encrypted Disk
    Queues <http://www.rsyslog.com/encrypted-disk-queues/>`_
 
-Caveats/Known Bugs
-------------------
 
-Currently none.
+Examples
+========
 
-Sample
-------
+Example 1
+---------
 
 The following command sends all syslog messages to a remote server via
 TCP port 10514.
 
-::
+.. code-block:: none
 
-  action(type="omfwd" Target="192.168.2.11" Port="10514" Protocol="tcp" Device="eth0")
+   action(type="omfwd" Target="192.168.2.11" Port="10514" Protocol="tcp" Device="eth0")
+
+
+Example 2
+---------
 
 In case the system in use has multiple (maybe virtual) network interfaces network
 namespaces come in handy, each with its own routing table. To be able to distribute
 syslogs to remote servers in different namespaces specify them as separate actions.
 
-::
+.. code-block:: none
 
-  action(type="omfwd" Target="192.168.1.13" Port="10514" Protocol="tcp" NetworkNamespace="ns_eth0.0")
-  action(type="omfwd" Target="192.168.2.24" Port="10514" Protocol="tcp" NetworkNamespace="ns_eth0.1")
-  action(type="omfwd" Target="192.168.3.38" Port="10514" Protocol="tcp" NetworkNamespace="ns_eth0.2")
+   action(type="omfwd" Target="192.168.1.13" Port="10514" Protocol="tcp" NetworkNamespace="ns_eth0.0")
+   action(type="omfwd" Target="192.168.2.24" Port="10514" Protocol="tcp" NetworkNamespace="ns_eth0.1")
+   action(type="omfwd" Target="192.168.3.38" Port="10514" Protocol="tcp" NetworkNamespace="ns_eth0.2")
 
-Legacy Configuration Parameters
--------------------------------
-
-Note: parameter names are case-insensitive.
-
--  **$ActionForwardDefaultTemplate**\ string [templatename]
-   sets a new default template for UDP and plain TCP forwarding action
--  **$ActionSendTCPRebindInterval**\ integer
-   instructs the TCP send action to close and re-open the connection to
-   the remote host every nbr of messages sent. Zero, the default, means
-   that no such processing is done. This parameter is useful for use
-   with load-balancers. Note that there is some performance overhead
-   associated with it, so it is advisable to not too often "rebind" the
-   connection (what "too often" actually means depends on your
-   configuration, a rule of thumb is that it should be not be much more
-   often than once per second).
--  **$ActionSendUDPRebindInterval**\ integer
-   instructs the UDP send action to rebind the send socket every nbr of
-   messages sent. Zero, the default, means that no rebind is done. This
-   parameter is useful for use with load-balancers.
--  **$ActionSendStreamDriver**\ <driver basename>
-   just like $DefaultNetstreamDriver, but for the specific action
--  **$ActionSendStreamDriverMode**\ <mode> [default 0]
-   mode to use with the stream driver (driver-specific)
--  **$ActionSendStreamDriverAuthMode**\ <mode>
-   authentication mode to use with the stream driver. Note that this
-   parameter requires TLS netstream drivers. For all others, it will be
-   ignored. (driver-specific))
--  **$ActionSendStreamDriverPermittedPeers**\ <ID>
-   accepted fingerprint (SHA1) or name of remote peer. Note that this
-   parameter requires TLS netstream drivers. For all others, it will be
-   ignored. (driver-specific)
--  **$ActionSendResendLastMsgOnReconnect**\ on/off [default off]
-   specifies if the last message is to be resend when a connecition
-   breaks and has been reconnected. May increase reliability, but comes
-   at the risk of message duplication.
--  **$ResetConfigVariables**
-   Resets all configuration variables to their default value. Any
-   settings made will not be applied to configuration lines following
-   the $ResetConfigVariables. This is a good method to make sure no
-   side-effects exists from previous directives. This parameter has no
-   parameters.
-
-Legacy Sample
--------------
-
-The following command sends all syslog messages to a remote server via
-TCP port 10514.
-
-::
-
-  $ModLoad omfwd
-  *.* @@192.168.2.11:10514
 
