@@ -11,16 +11,21 @@
 . $srcdir/diag.sh require-journalctl
 generate_conf
 add_conf '
-module(load="../plugins/imjournal/.libs/imjournal" StateFile="imjournal.state")
+module(load="../plugins/imjournal/.libs/imjournal" StateFile="imjournal.state"
+	RateLimit.Burst="1000000")
 
 template(name="outfmt" type="string" string="%msg%\n")
 action(type="omfile" template="outfmt" file="rsyslog.out.log")
 '
 TESTMSG="TestBenCH-RSYSLog imjournal This is a test message - $(date +%s)"
-systemd-cat echo "$TESTMSG"
+./journal_print "$TESTMSG"
+if [ $? -ne 0 ]; then
+        echo "SKIP: failed to put test into journal."
+        exit 77
+fi
 journalctl -an 200 | fgrep -qF "$TESTMSG"
 if [ $? -ne 0 ]; then
-        echo "SKIP: some problem with journald service."
+        echo "SKIP: cannot read journal."
         exit 77
 fi
 # do first run to process all the stuff already in journal db

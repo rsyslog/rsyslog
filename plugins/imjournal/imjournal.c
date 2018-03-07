@@ -80,6 +80,7 @@ static struct configSettings_s {
 	int iDfltFacility;
 	int bUseJnlPID;
 	char *usePid;
+	int bWorkAroundJournalBug;
 } cs;
 
 static rsRetVal facilityHdlr(uchar **pp, void *pVal);
@@ -95,7 +96,8 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "defaultseverity", eCmdHdlrSeverity, 0 },
 	{ "defaultfacility", eCmdHdlrString, 0 },
 	{ "usepidfromsystem", eCmdHdlrBinary, 0 },
-	{ "usepid", eCmdHdlrString, 0 }
+	{ "usepid", eCmdHdlrString, 0 },
+	{ "workaroundjournalbug", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -129,6 +131,7 @@ static struct {
 	uint64 ratelimitDiscardedInInterval;
 	uint64 diskUsageBytes;
 } statsCounter;
+static char *last_cursor = NULL;
 
 #define J_PROCESS_PERIOD 1024  /* Call sd_journal_process() every 1,024 records */
 
@@ -288,6 +291,7 @@ readjournal(void)
 	char *message = NULL;
 	char *sys_iden;
 	char *sys_iden_help = NULL;
+	char *c = NULL;
 
 	const void *get;
 	const void *pidget;
@@ -433,6 +437,15 @@ readjournal(void)
 		tv.tv_usec = timestamp % 1000000;
 	}
 
+	if (cs.bWorkAroundJournalBug) {
+		/* save journal cursor (at this point we can be sure it is valid) */
+		sd_journal_get_cursor(j, &c);
+		if (c) {
+			free(last_cursor);
+			last_cursor = c;
+		}
+	}
+
 	/* submit message */
 	enqMsg((uchar *)message, (uchar *) sys_iden_help, facility, severity, &tv, json, 0);
 
@@ -451,87 +464,82 @@ persistJournalState(void)
 	DEFiRet;
 	FILE *sf; /* state file */
 	char tmp_sf[MAXFNAME];
-	char *cursor;
-	int ret = 0;
+	size_t n;
 
-	/* On success, sd_journal_get_cursor() returns 1 in systemd
-	   197 or older and 0 in systemd 198 or newer */
-	if ((ret = sd_journal_get_cursor(j, &cursor)) >= 0) {
-		/* we create a temporary name by adding a ".tmp"
-		* suffix to the end of our state file's name
-		*/
-		snprintf(tmp_sf, sizeof(tmp_sf), "%s.tmp", cs.stateFile);
-		if ((sf = fopen(tmp_sf, "wb")) != NULL) {
-			if (fprintf(sf, "%s", cursor) < 0) {
-				iRet = RS_RET_IO_ERROR;
-			}
-			fclose(sf);
-			free(cursor);
-			/* change the name of the file to the configured one */
-			if (iRet == RS_RET_OK && rename(tmp_sf, cs.stateFile) == -1) {
-				LogError(errno, iRet, "imjournal: rename() failed: "
-					"for new path: '%s'", cs.stateFile);
-				iRet = RS_RET_IO_ERROR;
-			}
-
-		} else {
-			LogError(errno, RS_RET_FOPEN_FAILURE, "imjournal: fopen() failed "
-				"for path: '%s'", tmp_sf);
-			iRet = RS_RET_FOPEN_FAILURE;
+	if (cs.bWorkAroundJournalBug) {
+		/* first check that we have valid cursor */
+		if (!last_cursor) {
+			ABORT_FINALIZE(RS_RET_OK);
 		}
 	} else {
-		LogError(-ret, RS_RET_ERR, "imjournal: sd_journal_get_cursor() failed");
-		iRet = RS_RET_ERR;
+		int ret;
+		if ((ret = sd_journal_get_cursor(j, &last_cursor))) {
+			LogError(-ret, RS_RET_ERR, "imjournal: sd_journal_get_cursor() failed");
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
 	}
+
+	/* we create a temporary name by adding a ".tmp"
+	 * suffix to the end of our state file's name
+	 */
+	n = snprintf(tmp_sf, sizeof(tmp_sf), "%s.tmp", cs.stateFile);
+	if (n >= sizeof(tmp_sf)) { /* backup in case of too long path name */
+		strncpy(tmp_sf, cs.stateFile, sizeof(tmp_sf) - 5);
+		strcat(tmp_sf, ".tmp");
+	}
+
+	sf = fopen(tmp_sf, "wb");
+	if (sf == NULL) {
+		LogError(errno, RS_RET_FOPEN_FAILURE, "imjournal: fopen() failed for path: '%s'", tmp_sf);
+		ABORT_FINALIZE(RS_RET_FOPEN_FAILURE);
+	}
+
+	if(fputs(last_cursor, sf) == EOF) {
+		LogError(errno, RS_RET_IO_ERROR, "imjournal: failed to save cursor to: '%s'", tmp_sf);
+		ABORT_FINALIZE(RS_RET_IO_ERROR);
+	}
+
+	if (fclose(sf) == EOF) {
+		LogError(errno, RS_RET_IO_ERROR, "imjournal: fclose() failed for path: '%s'", tmp_sf);
+		ABORT_FINALIZE(RS_RET_IO_ERROR);
+	}
+
+	/* change the name of the file to the configured one */
+	if (rename(tmp_sf, cs.stateFile) < 0) {
+		LogError(errno, iRet, "imjournal: rename() failed for new path: '%s'", cs.stateFile);
+		ABORT_FINALIZE(RS_RET_IO_ERROR);
+	}
+
+finalize_it:
 	RETiRet;
 }
 
 
 static rsRetVal skipOldMessages(void);
-/* Polls the journal for new messages. Similar to sd_journal_wait()
- * except for the special handling of EINTR.
- */
 
-#define POLL_TIMEOUT 1000 /* timeout for poll is 1s */
+#define POLL_TIMEOUT 900000 /* timeout for poll is 900ms */
 
 static rsRetVal
 pollJournal(void)
 {
 	DEFiRet;
-	struct pollfd pollfd;
-	int err; // journal error code to process
-	int pr = 0;
+	int err;
 
-	pollfd.fd = j_inotify_fd;
-	pollfd.events = sd_journal_get_events(j);
-#ifdef NEW_JOURNAL
-	pr = poll(&pollfd, 1, POLL_TIMEOUT);
-#else
-	pr = poll(&pollfd, 1, -1);
-#endif
-	if (pr == -1) {
-		if (errno == EINTR) {
-			/* EINTR is also received during termination
-			 * so return now to check the term state.
-			 */
-			ABORT_FINALIZE(RS_RET_OK);
-		} else {
-			LogError(errno, RS_RET_ERR, "imjournal: poll() failed");
-			STATSCOUNTER_INC(statsCounter.ctrPollFailed, statsCounter.mutCtrPollFailed)
+	err = sd_journal_wait(j, POLL_TIMEOUT);
+	if (err == SD_JOURNAL_INVALIDATE) {
+		STATSCOUNTER_INC(statsCounter.ctrRotations, statsCounter.mutCtrRotations);
+		closeJournal();
+
+		iRet = openJournal();
+		if (iRet != RS_RET_OK) {
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
-	}
-#ifndef NEW_JOURNAL
-	assert(pr == 1);
-#endif
 
-	err = sd_journal_process(j);
-	if (err < 0) {
-		LogError(-err, RS_RET_ERR, "imjournal: sd_journal_process() failed");
-		ABORT_FINALIZE(RS_RET_ERR);
+		if (cs.stateFile) {
+			iRet = loadJournalState();
+		}
+		LogMsg(0, RS_RET_OK, LOG_NOTICE, "imjournal: journal reloaded...");
 	}
-	if (err == SD_JOURNAL_INVALIDATE)
-		STATSCOUNTER_INC(statsCounter.ctrRotations, statsCounter.mutCtrRotations);
 
 finalize_it:
 	RETiRet;
@@ -776,6 +784,7 @@ CODESTARTbeginCnfLoad
 	cs.iDfltFacility = DFLT_FACILITY;
 	cs.bUseJnlPID = -1;
 	cs.usePid = NULL;
+	cs.bWorkAroundJournalBug = 0;
 ENDbeginCnfLoad
 
 
@@ -912,6 +921,8 @@ CODESTARTsetModCnf
 			cs.bUseJnlPID = (int) pvals[i].val.d.n;
 		} else if (!strcmp(modpblk.descr[i].name, "usepid")) {
 			cs.usePid = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(modpblk.descr[i].name, "workaroundjournalbug")) {
+			cs.bWorkAroundJournalBug = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("imjournal: program error, non-handled "
 				"param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
