@@ -1,14 +1,18 @@
+**************************
 ommail: Mail Output Module
-==========================
+**************************
 
 .. index:: ! imudp
-
 
 ===========================  ===========================================================================
 **Module Name:**             **ommail**
 **Available Since:**         **3.17.0**
-**Author:**                  `Rainer Gerhards <http://www.gerhards.net/rainer>`_ <rgerhards@adiscon.com>
+**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
 ===========================  ===========================================================================
+
+
+Purpose
+=======
 
 This module supports sending syslog messages via mail. Each syslog
 message is sent via its own mail. Obviously, you will want to apply
@@ -29,7 +33,7 @@ option to turn off the body part at all. This is considered to be useful
 to send a short alert to a pager-like device.
 It is highly recommended to use the 
 
-::
+.. code-block:: none
 
   action.execonlyonceeveryinterval="<seconds>"
 
@@ -39,90 +43,151 @@ may be your life safer. And remember that an hour has 3,600 seconds, so
 if you would like to receive mails at most once every two hours, include
 a
 
-::
+.. code-block:: none
 
   action.execonlyonceeveryinterval="7200"
 
 in the action definition. Messages sent more frequently are simpy discarded.
 
+
 Configuration Parameters
-------------------------
+========================
+
 Configuration parameters are supported starting with v8.5.0. Earlier
 v7 and v8 versions did only support legacy parameters.
 
-Note: parameter names are case-insensitive.
+.. note::
+
+   Parameter names are case-insensitive.
+
 
 Action Parameters
-^^^^^^^^^^^^^^^^^
+-----------------
 
-.. function::  server <server-name>
+Server
+^^^^^^
 
-   *Mandatory*
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-   Name or IP address of the SMTP server to be used. Must currently be
-   set. The default is 127.0.0.1, the SMTP server on the local machine.
-   Obviously it is not good to expect one to be present on each machine,
-   so this value should be specified.
+   "word", "none", "yes", "``$ActionMailSMTPServer``"
 
-.. function::  port <port-number-or-name>
+Name or IP address of the SMTP server to be used. Must currently be
+set. The default is 127.0.0.1, the SMTP server on the local machine.
+Obviously it is not good to expect one to be present on each machine,
+so this value should be specified.
 
-   *Mandatory*
 
-   Port number or name of the SMTP port to be used. The default is 25,
-   the standard SMTP port.
+Port
+^^^^
 
-.. function::  mailfrom <sender-address>
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-   *Mandatory*
+   "word", "none", "yes", "``$ActionMailSMTPPort``"
 
-   The email address used as the senders address.
+Port number or name of the SMTP port to be used. The default is 25,
+the standard SMTP port.
 
-.. function::  mailto <recipient-addresses>
 
-   *Mandatory*
+MailFrom
+^^^^^^^^
 
-   The recipient email address(es). Note that this is an array parameter. See
-   samples below on how to specify multiple recipients.
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-.. function::  subject.template <template-name>
+   "word", "none", "yes", "``$ActionMailFrom``"
 
-   *Default: none, but may be left out*
+The email address used as the senders address.
 
-   The name of the template to be used as the mail subject.
 
-   If you want to include some information from the message inside the
-   template, you need to use *subject.template* with an appropriate template.
-   If you just need a constant text, you can simply use *subject.text*
-   instead, which doesn't require a template definition.
+MailTo
+^^^^^^
 
-.. function::  subject.text <subject-string>
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-   *Default: none, but may be left out*
+   "array", "none", "yes", "``$ActionMailTo``"
 
-   This is used to set a **constant** subject text.
+The recipient email address(es). Note that this is an array parameter. See
+samples below on how to specify multiple recipients.
 
-.. function::  body.enable <boolean>
 
-   *Default: on*
+Subject.Template
+^^^^^^^^^^^^^^^^
 
-   Setting this to "off" permits to exclude the actual message body.
-   This may be useful for pager-like devices or cell phone SMS messages.
-   The default is "on", which is appropriate for allmost all cases. Turn
-   it off only if you know exactly what you do!
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-.. function::  template <template-name>
+   "word", "none", "no", "``$ActionMailSubject``"
 
-   *Default: RSYSLOG_FileFormat*
+The name of the template to be used as the mail subject.
 
-   Template to be used for the mail body (if enabled).
+If you want to include some information from the message inside the
+template, you need to use *subject.template* with an appropriate template.
+If you just need a constant text, you can simply use *subject.text*
+instead, which doesn't require a template definition.
+
+
+Subject.Text
+^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+This is used to set a **constant** subject text.
+
+
+Body.Enable
+^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "on", "no", "``$ActionMailEnableBody``"
+
+Setting this to "off" permits to exclude the actual message body.
+This may be useful for pager-like devices or cell phone SMS messages.
+The default is "on", which is appropriate for allmost all cases. Turn
+it off only if you know exactly what you do!
+
+
+Template
+^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "RSYSLOG_FileFormat", "no", "none"
+
+Template to be used for the mail body (if enabled).
 
 The *template.subject* and *template.text* parameters cannot be given together
 inside a single action definition. Use either one of them. If none is used,
 a more or less meaningless mail subject is generated (we don't tell you the exact
 text because that can change - if you want to have something specific, configure it!).
 
+
 Caveats/Known Bugs
-------------------
+==================
 
 The current ommail implementation supports SMTP-direct mode only. In
 that mode, the plugin talks to the mail server via SMTP protocol. No
@@ -145,11 +210,16 @@ the expected infrequent number of calls into this plugin). The big
 advantage of sendmail mode is that it supports all the bells and
 whistles of a full-blown SMTP implementation and may even work for local
 delivery without a SMTP server being present. Sendmail mode will be
-implemented as need arises. So if you need it, please drop us a line (I
+implemented as need arises. So if you need it, please drop us a line (If
 nobody does, sendmail mode will probably never be implemented).
 
+
 Examples
---------
+========
+
+Example 1
+---------
+
 The following example alerts the operator if the string "hard disk fatal
 failure" is present inside a syslog message. The mail server at
 mail.example.net is used and the subject shall be "disk problem on
@@ -159,38 +229,46 @@ any other messages are silently discarded (or, to be precise, not being
 forwarded - they are still being processed by the rest of the configuration
 file).
 
-::
+.. code-block:: none
 
-  module(load="ommail")
+   module(load="ommail")
 
-  template (name="mailBody"  type="string" string="RSYSLOG Alert\\r\\nmsg='%msg%'")
-  template (name="mailSubject" type="string" string="disk problem on %hostname%")
+   template (name="mailBody"  type="string" string="RSYSLOG Alert\\r\\nmsg='%msg%'")
+   template (name="mailSubject" type="string" string="disk problem on %hostname%")
 
-  if $msg contains "hard disk fatal failure" then {
-     action(type="ommail" server="mail.example.net" port="25"
+   if $msg contains "hard disk fatal failure" then {
+      action(type="ommail" server="mail.example.net" port="25"
 	     mailfrom="rsyslog@example.net"
 	     mailto="operator@example.net"
 	     subject.template="mailSubject"
 	     action.execonlyonceeveryinterval="21600")
-  }
+   }
+
+
+Example 2
+---------
 
 The following example is exactly like the first one, but it sends the mails
 to two different email addresses:
 
-::
+.. code-block:: none
 
-  module(load="ommail")
+   module(load="ommail")
 
-  template (name="mailBody"  type="string" string="RSYSLOG Alert\\r\\nmsg='%msg%'")
-  template (name="mailSubject" type="string" string="disk problem on %hostname%")
+   template (name="mailBody"  type="string" string="RSYSLOG Alert\\r\\nmsg='%msg%'")
+   template (name="mailSubject" type="string" string="disk problem on %hostname%")
 
-  if $msg contains "hard disk fatal failure" then {
-     action(type="ommail" server="mail.example.net" port="25"
+   if $msg contains "hard disk fatal failure" then {
+      action(type="ommail" server="mail.example.net" port="25"
 	     mailfrom="rsyslog@example.net"
 	     mailto=["operator@example.net", "admin@example.net"]
 	     subject.template="mailSubject"
 	     action.execonlyonceeveryinterval="21600")
-  }
+   }
+
+
+Example 3
+---------
 
 Note the array syntax to specify email addresses. Note that while rsyslog
 permits you to specify as many recipients as you like, your mail server
@@ -202,118 +280,27 @@ email distribution list.
 The next example is again mostly equivalent to the previous one, but it uses a
 constant subject line, so no subject template is required:
 
-::
+.. code-block:: none
 
-  module(load="ommail")
+   module(load="ommail")
 
-  template (name="mailBody"  type="string" string="RSYSLOG Alert\\r\\nmsg='%msg%'")
+   template (name="mailBody"  type="string" string="RSYSLOG Alert\\r\\nmsg='%msg%'")
 
-  if $msg contains "hard disk fatal failure" then {
-     action(type="ommail" server="mail.example.net" port="25"
+   if $msg contains "hard disk fatal failure" then {
+      action(type="ommail" server="mail.example.net" port="25"
 	     mailfrom="rsyslog@example.net"
 	     mailto=["operator@example.net", "admin@example.net"]
 	     subject.text="rsyslog detected disk problem"
 	     action.execonlyonceeveryinterval="21600")
-  }
-
-Legacy Configuration Parameters
--------------------------------
-
-Note that the legacy configuration parameters do **not** affect
-new-style action definitions via the action() object. This is
-by design. To set default for action() objects, use module parameters
-in the
-
-::
-
-  module(load="builtin:ommail" ...)
-
-object.
-
-Read about :ref:`the importance of order in legacy configuration<legacy-action-order>`
-to understand how to use these configuration parameters.
-**Legacy parameters should NOT be used when writing new configuration files.**
+   }
 
 
--  $ActionMailSMTPServer
-
-   equivalent to the *server* action parameter.
-
--  $ActionMailSMTPPort
-
-   equivalent to the *port* action parameter.
-
--  $ActionMailFrom
-
-   equivalent to the *mailfrom* action parameter.
-
--  $ActionMailTo
-
-   mostly equivalent to the *mailto* action parameter.
-   However, to specify multiple recpients, repeat this directive as often as
-   needed. Note: **This directive must be specified for each new action and is
-   automatically reset.** [Multiple recipients are supported for 3.21.2
-   and above.]
-
--  $ActionMailSubject
-
-   equivalent to the *subject.template* action parameter.
-
--  $ActionMailEnableBody
-
-   equivalent to the *body.enable* action parameter.
-
-
-Legacy Examples
-^^^^^^^^^^^^^^^
-
-The following sample alerts the operator if the string "hard disk fatal
-failure" is present inside a syslog message. The mail server at
-mail.example.net is used and the subject shall be "disk problem on
-<hostname>". Note how \\r\\n is included inside the body text to create
-line breaks. A message is sent at most once every 6 hours, any other
-messages are silently discarded (or, to be precise, not being forwarded
-- they are still being processed by the rest of the configuration file).
-
-::
-
-  $ModLoad ommail
-  $ActionMailSMTPServer mail.example.net
-  $ActionMailFrom rsyslog@example.net
-  $ActionMailTo operator@example.net
-  $template mailSubject,"disk problem on %hostname%"
-  $template mailBody,"RSYSLOG Alert\\r\\nmsg='%msg%'"
-  $ActionMailSubject mailSubject
-  # make sure we receive a mail only once in six
-  # hours (21,600 seconds ;))
-  $ActionExecOnlyOnceEveryInterval 21600
-  # the if ... then ... mailBody must be on one line!
-  if $msg contains 'hard disk fatal failure' then :ommail:;mailBody
-  # re-set interval so that other actions are not affected
-  $ActionExecOnlyOnceEveryInterval 0
-
-The sample below is the same, but sends mail to two recipients:
-
-::
-
-  $ModLoad ommail
-  $ActionMailSMTPServer mail.example.net
-  $ActionMailFrom rsyslog@example.net
-  $ActionMailTo operator@example.net
-  $ActionMailTo admin@example.net
-  $template mailSubject,"disk problem on %hostname%"
-  $template mailBody,"RSYSLOG Alert\\r\\nmsg='%msg%'"
-  $ActionMailSubject mailSubject
-  # make sure we receive a mail only once in six
-  # hours (21,600 seconds ;))
-  $ActionExecOnlyOnceEveryInterval 21600
-  # the if ...  then ... mailBody mus be on one line!
-  if $msg contains 'hard disk fatal failure' then :ommail:;mailBody
-  # re-set interval so that other actions are not affected
-  $ActionExecOnlyOnceEveryInterval 0
+Additional Resources
+====================
 
 A more advanced example plus a discussion on using the email feature
 inside a reliable system can be found in Rainer's blogpost "`Why is
 native email capability an advantage for a
 syslogd? <http://rgerhards.blogspot.com/2008/04/why-is-native-email-capability.html>`_\ "
+
 
