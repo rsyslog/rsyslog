@@ -6,12 +6,12 @@ Note: configuration object parameters are case-insensitive.
 Common Parameters
 -----------------
 
-config.enable
-.............
+config.enabled
+..............
 
 .. versionadded:: 8.33.0
 
-All configuration objects have a parameter "config.enable".
+All configuration objects have a ``config.enabled`` parameter.
 For auto-generated configs, it is useful to have the ability to disable some
 config constructs even though they may be specified inside the config. This
 can be done via the ``config.enabled`` parameter.
@@ -28,7 +28,7 @@ Then we can use this config construct::
 
     module(load="imptcp" config.enabled=`echo $LOAD_IMPTCP`)
 
-If the variable is set to ```off```, the module will **not** be loaded.
+If the variable is set to ``off``, the module will **not** be loaded.
 
 action()
 --------
@@ -40,7 +40,7 @@ global()
 --------
 
 This is used to set global configuration parameters. For details, please
-see the `rsyslog global configuration object <global.html>`_.
+see the :doc:`rsyslog global configuration object <global>`.
 
 input()
 -------
