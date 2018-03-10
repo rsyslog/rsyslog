@@ -39,7 +39,7 @@ view.
 
 Libdbi provides a slim layer between rsyslog and the actual database
 engine. We have not yet done any performance testing (e.g. omlibdbi vs.
-ommysql) but honestly believe that the performance impact should be
+:doc:`ommysql`) but honestly believe that the performance impact should be
 irrelevant, if at all measurable. Part of that assumption is that
 rsyslog just does the "insert" and most of the time is spent either in
 the database engine or rsyslog itself. It's hard to think of any
@@ -116,10 +116,17 @@ Driver
 
 Name of the dbidriver to use, see libdbi-drivers documentation. As a
 quick excerpt, at least those were available at the time of this
-writiting "mysql" (suggest to use `ommysql <ommysql.html>`_ instead), "firebird"
-(Firbird and InterBase), "ingres", "msql", "Oracle", "sqlite",
-"sqlite3", "freetds" (for Microsoft SQL and Sybase) and "pgsql"
-(suggest to use `ompgsql <ompgsql.html>`_ instead).
+writing:
+
+- ``mysql`` (:doc:`ommysql` is recommended instead)
+- ``firebird`` (Firebird and InterBase)
+- ``ingres``
+- ``msql``
+- ``Oracle``
+- ``sqlite``
+- ``sqlite3``
+- ``freetds`` (for Microsoft SQL and Sybase)
+- ``pgsql`` (:doc:`ompgsql` is recommended instead)
 
 
 Server
