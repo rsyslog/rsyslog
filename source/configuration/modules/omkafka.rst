@@ -29,32 +29,7 @@ Action Parameters
 
 Note that omkafka supports some *Array*-type parameters. While the parameter
 name can only be set once, it is possible to set multiple values with that
-single parameter.
-
-For example, to select "snappy" compression, you can use
-
-.. code-block:: none
-
-   action(type="omkafka" topic="mytopic" confParam="compression.codec=snappy")
-
-
-which is equivalent to
-
-.. code-block:: none
-
-   action(type="omkafka" topic="mytopic" confParam=["compression.codec=snappy"])
-
-
-To specify multiple values, just use the bracket notation and create a
-comma-delimited list of values as shown here:
-
-.. code-block:: none
-
-   action(type="omkafka" topic="mytopic"
-          confParam=["compression.codec=snappy",
-	             "socket.timeout.ms=5",
-		     "socket.keepalive.enable=true"]
-         )
+single parameter. See the :ref:`omkafka-examples-label` section for details.
 
 
 Broker
@@ -329,6 +304,40 @@ Needs to be set when keepFailedMessages is enabled, otherwise failed messages wo
 Examples
 ========
 
-To be added, see intro to action parameters.
+.. _omkafka-examples-label:
+
+Example 1
+---------
+
+Set a single value
+^^^^^^^^^^^^^^^^^^
+
+For example, to select "snappy" compression, you can use:
+
+.. code-block:: none
+
+   action(type="omkafka" topic="mytopic" confParam="compression.codec=snappy")
+
+
+which is equivalent to:
+
+.. code-block:: none
+
+   action(type="omkafka" topic="mytopic" confParam=["compression.codec=snappy"])
+
+
+Set multiple values
+^^^^^^^^^^^^^^^^^^^
+
+To specify multiple values, just use the bracket notation and create a
+comma-delimited list of values as shown here:
+
+.. code-block:: none
+
+   action(type="omkafka" topic="mytopic"
+          confParam=["compression.codec=snappy",
+	             "socket.timeout.ms=5",
+		     "socket.keepalive.enable=true"]
+         )
 
 
