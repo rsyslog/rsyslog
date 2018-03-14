@@ -24,11 +24,11 @@ to rsyslogd.
 Notable Features
 ================
 
-- :ref:`rate-limiting-label`
-- :ref:`trusted-properties-label`
-- :ref:`flow-control-label`
-- :ref:`application-timestamps-label`
-- :ref:`systemd-details-label`
+- :ref:`imuxsock-rate-limiting-label`
+- :ref:`imuxsock-trusted-properties-label`
+- :ref:`imuxsock-flow-control-label`
+- :ref:`imuxsock-application-timestamps-label`
+- :ref:`imuxsock-systemd-details-label`
 
 
 Configuration Parameters
@@ -44,7 +44,7 @@ Module Parameters
 .. warning::
 
    When running under systemd, **many "sysSock." parameters are ignored**.
-   See parameter descriptions and the :ref:`systemd-details-label` section for
+   See parameter descriptions and the :ref:`imuxsock-systemd-details-label` section for
    details.
 
 
@@ -108,7 +108,7 @@ systems, ``SysSock.Use`` still needs to be enabled, but the value of
 instead. If this parameter is *not* enabled, then imuxsock will only be
 of use if a custom input is configured.
 
-See the :ref:`systemd-details-label` section for details.
+See the :ref:`imuxsock-systemd-details-label` section for details.
 
 
 SysSock.Name
@@ -127,7 +127,7 @@ log socket, traditionally ``/dev/log``. Unless disabled by the
 and deleted upon shutdown, according to traditional syslogd behavior.
 
 The behavior of this parameter is different for systemd systems. See the
-the :ref:`systemd-details-label` section for details.
+the :ref:`imuxsock-systemd-details-label` section for details.
 
 
 SysSock.FlowControl
@@ -242,7 +242,7 @@ SysSock.Annotate
    "binary", "off", "no", "``$SystemLogSocketAnnotate``"
 
 Turn on annotation/trusted properties for the system log socket. See
-the :ref:`trusted-properties-label` section for more info.
+the :ref:`imuxsock-trusted-properties-label` section for more info.
 
 
 SysSock.ParseTrusted
@@ -282,7 +282,7 @@ SysSock.Unlink
 If turned on (default), the system socket is unlinked and re-created
 when opened and also unlinked when finally closed. Note that this
 setting has no effect when running under systemd control (because
-systemd handles the socket. See the :ref:`systemd-details-label`
+systemd handles the socket. See the :ref:`imuxsock-systemd-details-label`
 section for details.
 
 .. versionadded:: 7.3.9
@@ -558,7 +558,7 @@ Annotate
    "binary", "off", "no", "``$InputUnixListenSocketAnnotate``"
 
 Turn on annotation/trusted properties for the input that is being defined.
-See the :ref:`trusted-properties-label` section for more info.
+See the :ref:`imuxsock-trusted-properties-label` section for more info.
 
 
 ParseTrusted
@@ -631,7 +631,7 @@ to the input that is being defined.
 .. versionadded:: 8.9.0
 
 
-.. _rate-limiting-label:
+.. _imuxsock-rate-limiting-label:
 
 Input rate limiting
 ===================
@@ -657,7 +657,7 @@ accordingly. To turn off rate limiting, set the interval to zero.
 .. versionadded:: 5.7.1
 
 
-.. _trusted-properties-label:
+.. _imuxsock-trusted-properties-label:
 
 Trusted (syslog) properties
 ===========================
@@ -688,7 +688,7 @@ If you want to use it, you must turn it on (via
    <http://www.rsyslog.com/what-are-trusted-properties/>`_
 
 
-.. _flow-control-label:
+.. _imuxsock-flow-control-label:
 
 Flow-control of Unix log sockets
 ================================
@@ -707,7 +707,7 @@ directives. Just make sure you have thought about the implications and have
 tested the change on a non-production system first.
 
 
-.. _application-timestamps-label:
+.. _imuxsock-application-timestamps-label:
 
 Control over application timestamps
 ===================================
@@ -721,7 +721,7 @@ send messages via the local log slot. In that case, it can be enabled via
 the ``SysSock.IgnoreTimestamp`` and ``IgnoreTimestamp`` config directives.
 
 
-.. _systemd-details-label:
+.. _imuxsock-systemd-details-label:
 
 Coexistence with systemd
 ========================
@@ -848,14 +848,14 @@ Caveats/Known Bugs
   more, you need to change the array size in ``imuxsock.c``.
 
 - When running under systemd, **many "sysSock." parameters are ignored**.
-  See parameter descriptions and the :ref:`systemd-details-label` section for
+  See parameter descriptions and the :ref:`imuxsock-systemd-details-label` section for
   details.
 
 - On systems where systemd is used this module is often not loaded by default.
-  See the :ref:`systemd-details-label` section for details.
+  See the :ref:`imuxsock-systemd-details-label` section for details.
 
 - Application timestamps are ignored by default. See the
-  :ref:`application-timestamps-label` section for details.
+  :ref:`imuxsock-application-timestamps-label` section for details.
 
 - `imuxsock does not work on Solaris
   <http://www.rsyslog.com/why-does-imuxsock-not-work-on-solaris/>`_
@@ -891,7 +891,7 @@ Enable flow control
 Enable trusted properties
 -------------------------
 
-As noted in the :ref:`trusted-properties-label` section, trusted properties
+As noted in the :ref:`imuxsock-trusted-properties-label` section, trusted properties
 are disabled by default. If you want to use them, you must turn the feature
 on via ``SysSock.Annotate`` for the system log socket and ``Annotate`` for
 inputs.
