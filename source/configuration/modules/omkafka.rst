@@ -306,11 +306,9 @@ Examples
 
 .. _omkafka-examples-label:
 
-Example 1
----------
 
 Set a single value
-^^^^^^^^^^^^^^^^^^
+------------------
 
 For example, to select "snappy" compression, you can use:
 
@@ -327,7 +325,7 @@ which is equivalent to:
 
 
 Set multiple values
-^^^^^^^^^^^^^^^^^^^
+-------------------
 
 To specify multiple values, just use the bracket notation and create a
 comma-delimited list of values as shown here:
