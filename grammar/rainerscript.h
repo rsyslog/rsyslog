@@ -267,6 +267,12 @@ struct scriptFunct {
 	unsigned short minParams;
 	unsigned short maxParams;
 	rscriptFuncPtr fPtr;
+	rsRetVal (*initFunc) (struct cnffunc *);
+	void (*destruct) (struct cnffunc *);
+	/* currently no optimizer entrypoint, may be added later.
+	 * Since the optimizer needs metadata about functions, it does
+	 * not seem practical to add such a function at the current state
+	 */
 };
 
 
@@ -318,6 +324,8 @@ struct funcData_prifilt {
 #define RS_SCRIPT_EOK		0
 #define RS_SCRIPT_EINVAL	1
 
+void varFreeMembers(const struct svar *r);
+rsRetVal addMod2List(const int version, struct scriptFunct *functArray);
 int cnfParseBuffer(char *buf, unsigned lenBuf);
 void readConfFile(FILE *fp, es_str_t **str);
 struct objlst* objlstNew(struct cnfobj *obj);

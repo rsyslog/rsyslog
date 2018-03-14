@@ -51,6 +51,9 @@
 #define DEF_SMOD_STATIC_DATA \
 	DEFobjCurrIf(obj) \
 	DEF_MOD_STATIC_DATA
+#define DEF_FMOD_STATIC_DATA \
+	DEFobjCurrIf(obj) \
+	DEF_MOD_STATIC_DATA
 
 
 /* Macro to define the module type. Each module can only have a single type. If
@@ -72,6 +75,7 @@ static rsRetVal modGetType(eModType_t *modType) \
 #define MODULE_TYPE_OUTPUT MODULE_TYPE(eMOD_OUT)
 #define MODULE_TYPE_PARSER MODULE_TYPE(eMOD_PARSER)
 #define MODULE_TYPE_STRGEN MODULE_TYPE(eMOD_STRGEN)
+#define MODULE_TYPE_FUNCTION MODULE_TYPE(eMOD_FUNCTION)
 #define MODULE_TYPE_LIB \
 	DEF_LMOD_STATIC_DATA \
 	MODULE_TYPE(eMOD_LIB)
@@ -742,6 +746,16 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 
 
 
+/* the following definition is the standard block for queryEtryPt for rscript function
+ * modules. This can be used if no specific handling (e.g. to cover version
+ * differences) is needed.
+ */
+#define CODEqueryEtryPt_STD_FMOD_QUERIES \
+	CODEqueryEtryPt_STD_MOD_QUERIES \
+	else if(!strcmp((char*) name, "getFunctArray")) {\
+		*pEtryPoint = getFunctArray;\
+	}
+
 /* the following definition is the standard block for queryEtryPt for Strgen
  * modules. This can be used if no specific handling (e.g. to cover version
  * differences) is needed.
@@ -1189,6 +1203,27 @@ static rsRetVal strgen(smsg_t *const pMsg, actWrkrIParams_t *const iparam) \
 	assert(pMsg != NULL);
 
 #define ENDstrgen \
+	RETiRet;\
+}
+
+
+
+/* getFunctArray() - main entry point of parser modules
+ * Note that we do NOT use size_t as this permits us to store the
+ * values directly into optimized heap structures.
+ * ppBuf is the buffer pointer
+ * pLenBuf is the current max size of this buffer
+ * pStrLen is an output parameter that MUST hold the length
+ *         of the generated string on exit (this is cached)
+ */
+#define BEGINgetFunctArray \
+static rsRetVal getFunctArray(int *const version, const struct scriptFunct**const functArray) \
+{\
+	DEFiRet;
+
+#define CODESTARTgetFunctArray
+
+#define ENDgetFunctArray \
 	RETiRet;\
 }
 

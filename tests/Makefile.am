@@ -356,10 +356,10 @@ TESTS +=  \
 	lookup_table_rscript_reload_without_stub.sh \
 	include-obj-text-from-file.sh \
 	multiple_lookup_tables.sh
-if ENABLE_LIBCURL
+if ENABLE_FMHTTP
 TESTS +=  \
 	rscript_http_request.sh
-endif # ENABLE_LIBCURL
+endif # ENABLE_FMHTTP
 if HAVE_VALGRIND
 TESTS +=  \
 	include-obj-outside-control-flow-vg.sh \
@@ -403,10 +403,10 @@ TESTS +=  \
 	multiple_lookup_tables-vg.sh \
 	fac_local0-vg.sh \
 	rscript_trim-vg.sh
-if ENABLE_LIBCURL
+if ENABLE_FMHTTP
 TESTS +=  \
 	rscript_http_request-vg.sh
-endif # ENABLE_LIBCURL
+endif # ENABLE_FMHTTP
 endif # HAVE_VALGRIND
 
 if ENABLE_ROOT_TESTS

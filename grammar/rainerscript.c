@@ -37,10 +37,6 @@
 #include <libestr.h>
 #include <time.h>
 
-#ifdef HAVE_LIBCURL
-#include <curl/curl.h>
-#endif
-
 #include "rsyslog.h"
 #include "rainerscript.h"
 #include "conf.h"
@@ -83,11 +79,6 @@ static struct cnfparamblk incpblk =
 	  sizeof(incpdescr)/sizeof(struct cnfparamdescr),
 	  incpdescr
 	};
-
-struct curl_funcData {
-	const char *reply;
-	size_t replyLen;
-};
 
 /* debug support: convert token to a human-readable string. Note that
  * this function only supports a single thread due to a static buffer.
@@ -1466,7 +1457,7 @@ varFreeMembersSelectively(const struct svar *r, const int skipMask)
 	}
 }
 
-static void
+void
 varFreeMembers(const struct svar *r)
 {
 	varFreeMembersSelectively(r, SKIP_NOTHING);
@@ -2701,113 +2692,6 @@ done:
 	ret->datatype = 'S';
 }
 
-#ifdef HAVE_LIBCURL
-/* curl callback for doFunc_http_request */
-static size_t
-curlResult(void *ptr, size_t size, size_t nmemb, void *userdata)
-{
-	char *buf;
-	size_t newlen;
-	struct cnffunc *const func = (struct cnffunc *) userdata;
-	assert(func != NULL);
-	struct curl_funcData *const curlData = (struct curl_funcData*) func->funcdata;
-	assert(curlData != NULL);
-
-	if(ptr == NULL) {
-		LogError(0, RS_RET_ERR, "internal error: libcurl provided ptr=NULL");
-		return 0;
-	}
-
-	newlen = curlData->replyLen + size*nmemb;
-	if((buf = realloc((void*)curlData->reply, newlen + 1)) == NULL) {
-		LogError(errno, RS_RET_ERR, "rainerscript: realloc failed in curlResult");
-		return 0; /* abort due to failure */
-	}
-	memcpy(buf+curlData->replyLen, (char*)ptr, size*nmemb);
-	curlData->replyLen = newlen;
-	curlData->reply = buf;
-	return size*nmemb;
-}
-#endif
-
-#if 0
-static void
-doFunc_re_extract(struct cnffunc *func, struct svar *ret, void* usrptr, wti_t *const pWti)
-
-static void ATTR_NONNULL()
-doFunct_ReMatch(struct cnffunc *__restrict__ const func,
-	struct svar *__restrict__ const ret,
-	void *__restrict__ const usrptr,
-	wti_t *__restrict__ const pWti)
-
-static rsRetVal ATTR_NONNULL()
-doFunc_http_request(struct cnffunc *__restrict__ const func,
-	struct svar *__restrict__ const ret,
-	void *const usrptr,
-	wti_t *const pWti)
-#endif
-static void ATTR_NONNULL()
-doFunc_http_request(struct cnffunc *__restrict__ const func,
-	struct svar *__restrict__ const ret,
-	void *__restrict__ const usrptr,
-	wti_t *__restrict__ const pWti)
-{
-#ifdef HAVE_LIBCURL
-	struct svar srcVal;
-	int bMustFree;
-	cnfexprEval(func->expr[0], &srcVal, usrptr, pWti);
-	char *url = (char*) var2CString(&srcVal, &bMustFree);
-
-	int resultSet = 0;
-	CURL *handle = NULL;
-	CURLcode res;
-	assert(func != NULL);
-	struct curl_funcData *const curlData = (struct curl_funcData*) func->funcdata;
-	assert(curlData != NULL);
-	rsRetVal iRet __attribute__((unused)) = RS_RET_OK;
-
-	CHKmalloc(handle = curl_easy_init());
-	curl_easy_setopt(handle, CURLOPT_NOSIGNAL, TRUE);
-	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, curlResult);
-	curl_easy_setopt(handle, CURLOPT_WRITEDATA, func);
-
-	curl_easy_setopt(handle, CURLOPT_URL, url);
-	res = curl_easy_perform(handle);
-	if(res != CURLE_OK) {
-		LogError(0, RS_RET_IO_ERROR,
-			"rainerscript: http_request to failed, URL: '%s', error %s",
-			url, curl_easy_strerror(res));
-		ABORT_FINALIZE(RS_RET_OK);
-	}
-
-
-	CHKmalloc(ret->d.estr = es_newStrFromCStr(curlData->reply, curlData->replyLen));
-	ret->datatype = 'S';
-	resultSet = 1;
-
-finalize_it:
-	free((void*)curlData->reply);
-	curlData->reply = NULL;
-	curlData->replyLen = 0;
-
-	if(handle != NULL) {
-		curl_easy_cleanup(handle);
-	}
-	if(!resultSet) {
-		/* provide dummy value */
-		ret->d.n = 0;
-		ret->datatype = 'N';
-	}
-	if(bMustFree) {
-		free(url);
-	}
-	varFreeMembers(&srcVal);
-
-#else
-	LogError(0, RS_RET_INTERNAL_ERROR,
-		"rainerscript: internal error: HTTP_Fetch not supported, not built with libcurl support");
-#endif
-}
 
 /* Perform a function call. This has been moved out of cnfExprEval in order
  * to keep the code small and easier to maintain.
@@ -3463,6 +3347,282 @@ cnfarrayContentDestruct(struct cnfarray *ar)
 }
 
 static void
+regex_destruct(struct cnffunc *func) {
+	if(func->funcdata != NULL) {
+		regexp.regfree(func->funcdata);
+	}
+}
+
+static rsRetVal
+initFunc_dyn_stats(struct cnffunc *func)
+{
+	uchar *cstr = NULL;
+	DEFiRet;
+
+	func->destructable_funcdata = 0;
+
+	if(func->nParams != 2) {
+		parser_errmsg("rsyslog logic error in line %d of file %s\n",
+					  __LINE__, __FILE__);
+		FINALIZE;
+	}
+
+	func->funcdata = NULL;
+	if(func->expr[0]->nodetype != 'S') {
+		parser_errmsg("dyn-stats bucket-name (param 1) of dyn-stats manipulating "
+		"functions like dyn_inc must be a constant string");
+		FINALIZE;
+	}
+
+	cstr = (uchar*)es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL);
+	if((func->funcdata = dynstats_findBucket(cstr)) == NULL) {
+		parser_errmsg("dyn-stats bucket '%s' not found", cstr);
+		FINALIZE;
+	}
+
+finalize_it:
+	free(cstr);
+	RETiRet;
+}
+
+static rsRetVal
+initFunc_re_match(struct cnffunc *func)
+{
+	rsRetVal localRet;
+	char *regex = NULL;
+	regex_t *re;
+	DEFiRet;
+
+	if(func->nParams < 2) {
+		parser_errmsg("rsyslog logic error in line %d of file %s\n",
+			__LINE__, __FILE__);
+		FINALIZE;
+	}
+
+	func->funcdata = NULL;
+	if(func->expr[1]->nodetype != 'S') {
+		parser_errmsg("param 2 of re_match/extract() must be a constant string");
+		FINALIZE;
+	}
+
+	CHKmalloc(re = malloc(sizeof(regex_t)));
+	func->funcdata = re;
+
+	regex = es_str2cstr(((struct cnfstringval*) func->expr[1])->estr, NULL);
+
+	if((localRet = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
+		int errcode;
+		if((errcode = regexp.regcomp(re, (char*) regex, REG_EXTENDED) != 0)) {
+			char errbuff[512];
+			regexp.regerror(errcode, re, errbuff, sizeof(errbuff));
+			parser_errmsg("cannot compile regex '%s': %s", regex, errbuff);
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+	} else { /* regexp object could not be loaded */
+		parser_errmsg("could not load regex support - regex ignored");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+finalize_it:
+	free(regex);
+	RETiRet;
+}
+
+static rsRetVal
+initFunc_exec_template(struct cnffunc *func)
+{
+	char *tplName = NULL;
+	DEFiRet;
+
+	func->destructable_funcdata = 0;
+
+	if(func->nParams != 1) {
+		parser_errmsg("rsyslog logic error in line %d of file %s\n",
+			__LINE__, __FILE__);
+		FINALIZE;
+	}
+
+	if(func->expr[0]->nodetype != 'S') {
+		parser_errmsg("exec_template(): param 1 must be a constant string");
+		FINALIZE;
+	}
+
+	tplName = es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL);
+	func->funcdata = tplFind(ourConf, tplName, strlen(tplName));
+	if(func->funcdata == NULL) {
+		parser_errmsg("exec_template(): template '%s' could not be found", tplName);
+		FINALIZE;
+	}
+
+
+finalize_it:
+	free(tplName);
+	RETiRet;
+}
+
+static rsRetVal
+initFunc_prifilt(struct cnffunc *func)
+{
+	struct funcData_prifilt *pData;
+	uchar *cstr;
+	DEFiRet;
+
+	if(func->nParams != 1) {
+		parser_errmsg("rsyslog logic error in line %d of file %s\n",
+			__LINE__, __FILE__);
+		FINALIZE;
+	}
+
+	func->funcdata = NULL;
+	if(func->expr[0]->nodetype != 'S') {
+		parser_errmsg("param 1 of prifilt() must be a constant string");
+		FINALIZE;
+	}
+
+	CHKmalloc(pData = calloc(1, sizeof(struct funcData_prifilt)));
+	func->funcdata = pData;
+	cstr = (uchar*)es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL);
+	CHKiRet(DecodePRIFilter(cstr, pData->pmask));
+	free(cstr);
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+resolveLookupTable(struct cnffunc *func)
+{
+	uchar *cstr = NULL;
+	char *fn_name = NULL;
+	DEFiRet;
+
+	func->destructable_funcdata = 0;
+
+	if(func->nParams == 0) {/*we assume first arg is lookup-table-name*/
+		parser_errmsg("rsyslog logic error in line %d of file %s\n",
+			__LINE__, __FILE__);
+		FINALIZE;
+	}
+
+	CHKmalloc(fn_name = es_str2cstr(func->fname, NULL));
+
+	func->funcdata = NULL;
+	if(func->expr[0]->nodetype != 'S') {
+		parser_errmsg("table name (param 1) of %s() must be a constant string", fn_name);
+		FINALIZE;
+	}
+
+	CHKmalloc(cstr = (uchar*)es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL));
+	if((func->funcdata = lookupFindTable(cstr)) == NULL) {
+		parser_errmsg("lookup table '%s' not found (used in function: %s)", cstr, fn_name);
+		FINALIZE;
+	}
+
+finalize_it:
+	free(cstr);
+	free(fn_name);
+	RETiRet;
+}
+
+struct modListNode {
+	int version;
+	struct scriptFunct *modFcts;
+	struct modListNode *next;
+};
+
+static struct modListNode *modListRoot = NULL;
+static struct modListNode *modListLast = NULL;
+
+static struct scriptFunct functions[] = {
+	{"strlen", 1, 1, doFunct_StrLen, NULL, NULL},
+	{"getenv", 1, 1, doFunct_Getenv, NULL, NULL},
+	{"num2ipv4", 1, 1, doFunct_num2ipv4, NULL, NULL},
+	{"int2hex", 1, 1, doFunct_Int2Hex, NULL, NULL},
+	{"substring", 3, 3, doFunct_Substring, NULL, NULL},
+	{"ltrim", 1, 1, doFunct_LTrim, NULL, NULL},
+	{"rtrim", 1, 1, doFunct_RTrim, NULL, NULL},
+	{"tolower", 1, 1, doFunct_ToLower, NULL, NULL},
+	{"cstr", 1, 1, doFunct_CStr, NULL, NULL},
+	{"cnum", 1, 1, doFunct_CNum, NULL, NULL},
+	{"ip42num", 1, 1, doFunct_Ipv42num, NULL, NULL},
+	{"re_match", 2, 2, doFunct_ReMatch, initFunc_re_match, regex_destruct},
+	{"re_extract", 5, 5, doFunc_re_extract, initFunc_re_match, regex_destruct},
+	{"field", 3, 3, doFunct_Field, NULL, NULL},
+	{"exec_template", 1, 1, doFunc_exec_template, initFunc_exec_template, NULL},
+	{"prifilt", 1, 1, doFunct_Prifilt, initFunc_prifilt, NULL},
+	{"lookup", 2, 2, doFunct_Lookup, resolveLookupTable, NULL},
+	{"dyn_inc", 2, 2, doFunct_DynInc, initFunc_dyn_stats, NULL},
+	{"replace", 3, 3, doFunct_Replace, NULL, NULL},
+	{"wrap", 2, 3, doFunct_Wrap, NULL, NULL},
+	{"random", 1, 1, doFunct_RandomGen, NULL, NULL},
+	{"format_time", 2, 2, doFunct_FormatTime, NULL, NULL},
+	{"parse_time", 1, 1, doFunct_ParseTime, NULL, NULL},
+	{"is_time", 1, 2, doFunct_IsTime, NULL, NULL},
+	{"parse_json", 2, 2, doFunc_parse_json, NULL, NULL},
+	{"script_error", 0, 0, doFunct_ScriptError, NULL, NULL},
+	{"previous_action_suspended", 0, 0, doFunct_PreviousActionSuspended, NULL, NULL},
+	{NULL, 0, 0, NULL, NULL, NULL} //last element to check end of array
+};
+
+static rscriptFuncPtr ATTR_NONNULL()
+extractFuncPtr(const struct scriptFunct *const funct, const unsigned int nParams)
+{
+	rscriptFuncPtr retPtr = NULL;
+
+	if(funct->minParams == funct->maxParams) {
+		if(nParams == funct->maxParams) {
+			retPtr = funct->fPtr;
+		} else {
+			parser_errmsg("number of parameters for %s() must be %hu but is %d.",
+				funct->fname, funct->maxParams, nParams);
+		}
+	} else {
+		if(nParams < funct->minParams) {
+			parser_errmsg("number of parameters for %s() must be at least %hu but is %d.",
+				funct->fname, funct->minParams, nParams);
+		} else if(nParams > funct->maxParams) {
+			parser_errmsg("number of parameters for %s() must be at most %hu but is %d.",
+				funct->fname, funct->maxParams, nParams);
+		} else {
+			retPtr = funct->fPtr;
+		}
+	}
+
+	return retPtr;
+}
+
+static struct scriptFunct* ATTR_NONNULL()
+searchFunctArray(const char *const fname, struct scriptFunct *functArray)
+{
+	struct scriptFunct *retPtr = NULL;
+	int i = 0;
+	while(functArray[i].fname != NULL) {
+		if(!strcmp(fname, functArray[i].fname)){
+			retPtr = functArray + i;
+			goto done;
+		}
+		i++;
+	}
+done:
+	return retPtr;
+}
+
+static struct scriptFunct* ATTR_NONNULL()
+searchModList(const char *const fname)
+{
+	struct modListNode *modListCurr = modListRoot;
+	struct scriptFunct *foundFunct;
+
+	do {
+		foundFunct = searchFunctArray(fname, modListCurr->modFcts);
+		if(foundFunct != NULL) {
+			return foundFunct;
+		}
+		modListCurr = modListCurr->next;
+	} while(modListCurr != NULL);
+	return NULL;
+}
+
+static void
 cnffuncDestruct(struct cnffunc *func)
 {
 	unsigned short i;
@@ -3470,16 +3630,15 @@ cnffuncDestruct(struct cnffunc *func)
 	for(i = 0 ; i < func->nParams ; ++i) {
 		cnfexprDestruct(func->expr[i]);
 	}
+
 	/* some functions require special destruction */
-	const rscriptFuncPtr fPtr = func->fPtr;
-	if(fPtr == doFunct_ReMatch || fPtr == doFunc_re_extract) {
-		if(func->funcdata != NULL)
-			regexp.regfree(func->funcdata);
-	} else if (fPtr == doFunc_http_request) {
-		if(func->funcdata != NULL) {
-			free((void*) ((struct curl_funcData*)func->funcdata)->reply);
-		}
+	char *cstr = es_str2cstr(func->fname, NULL);
+	struct scriptFunct *foundFunc = searchModList(cstr);
+	free(cstr);
+	if(foundFunc->destruct != NULL) {
+		foundFunc->destruct(func);
 	}
+
 	if(func->destructable_funcdata) {
 		free(func->funcdata);
 	}
@@ -4877,266 +5036,47 @@ cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *next)
 	return lst;
 }
 
-struct scriptFunct functions[] = {
-	{"strlen", 1, 1, doFunct_StrLen},
-	{"getenv", 1, 1, doFunct_Getenv},
-	{"num2ipv4", 1, 1, doFunct_num2ipv4},
-	{"int2hex", 1, 1, doFunct_Int2Hex},
-	{"substring", 3, 3, doFunct_Substring},
-	{"ltrim", 1, 1, doFunct_LTrim},
-	{"rtrim", 1, 1, doFunct_RTrim},
-	{"tolower", 1, 1, doFunct_ToLower},
-	{"cstr", 1, 1, doFunct_CStr},
-	{"cnum", 1, 1, doFunct_CNum},
-	{"ip42num", 1, 1, doFunct_Ipv42num},
-	{"re_match", 2, 2, doFunct_ReMatch},
-	{"re_extract", 5, 5, doFunc_re_extract},
-	{"field", 3, 3, doFunct_Field},
-	{"exec_template", 1, 1, doFunc_exec_template},
-	{"prifilt", 1, 1, doFunct_Prifilt},
-	{"lookup", 2, 2, doFunct_Lookup},
-	{"dyn_inc", 2, 2, doFunct_DynInc},
-	{"replace", 3, 3, doFunct_Replace},
-	{"wrap", 2, 3, doFunct_Wrap},
-	{"random", 1, 1, doFunct_RandomGen},
-	{"format_time", 2, 2, doFunct_FormatTime},
-	{"parse_time", 1, 1, doFunct_ParseTime},
-	{"is_time", 1, 2, doFunct_IsTime},
-	{"parse_json", 2, 2, doFunc_parse_json},
-	{"script_error", 0, 0, doFunct_ScriptError},
-	{"previous_action_suspended", 0, 0, doFunct_PreviousActionSuspended},
-	{"http_request", 1, 1, doFunc_http_request},
-	{NULL, 0, 0, NULL} //last element to check end of array
-};
-
 /* Obtain function id from name AND number of params. Issues the
  * relevant error messages if errors are detected.
  */
 static rscriptFuncPtr
 funcName2Ptr(char *const fname, const unsigned short nParams)
 {
-	rscriptFuncPtr retPtr = NULL;
+	struct scriptFunct *foundFunc = searchModList(fname);
+	if(foundFunc == NULL) {
+		parser_errmsg("function '%s' not found", fname);
+		return NULL;
+	} else {
+		return extractFuncPtr(foundFunc, nParams);
+	}
+}
+
+rsRetVal
+addMod2List(const int version, struct scriptFunct *functArray)
+{
+	DEFiRet;
+	struct modListNode *newNode;
+	CHKmalloc(newNode = (struct modListNode*) malloc(sizeof(struct modListNode)));
+	newNode->version = 1;
+	newNode->next = NULL;
+
 	int i = 0;
-	while(functions[i].fname != NULL) {
-		if(!strcmp(fname, functions[i].fname)){
-			if(functions[i].minParams == functions[i].maxParams) {
-				if(nParams == functions[i].maxParams) {
-					retPtr = functions[i].fPtr;
-				} else {
-					parser_errmsg("number of parameters for %s() must be %hu but is %d.",
-						fname, functions[i].maxParams, nParams);
-				}
-			} else {
-				if(nParams < functions[i].minParams) {
-					parser_errmsg("number of parameters for %s() must be at least %hu but is %d.",
-						fname, functions[i].minParams, nParams);
-				} else if(nParams > functions[i].maxParams) {
-					parser_errmsg("number of parameters for %s() must be at most %hu but is %d.",
-						fname, functions[i].maxParams, nParams);
-				} else {
-					retPtr = functions[i].fPtr;
-				}
-			}
-			goto done;
+	while(functArray[i].fname != NULL) {
+		if(searchModList(functArray[i].fname) != NULL) {
+			parser_errmsg("function %s defined multiple times, second time will be ignored",
+				functArray[i].fname);
 		}
-		i++;
+	i++;
+	dbgprintf("TTTTTTT: i: %d, name: %s\n", i, functArray[i-1].fname);
 	}
-	parser_errmsg("function '%s' not found", fname);
-	//TODO: make error messgae hint that maybe a module has to be loaded
-done:
-	return retPtr;
-}
+	newNode->modFcts = functArray;
 
-static rsRetVal
-initFunc_re_match(struct cnffunc *func)
-{
-	rsRetVal localRet;
-	char *regex = NULL;
-	regex_t *re;
-	DEFiRet;
-
-	if(func->nParams < 2) {
-		parser_errmsg("rsyslog logic error in line %d of file %s\n",
-			__LINE__, __FILE__);
-		FINALIZE;
-	}
-
-	func->funcdata = NULL;
-	if(func->expr[1]->nodetype != 'S') {
-		parser_errmsg("param 2 of re_match/extract() must be a constant string");
-		FINALIZE;
-	}
-
-	CHKmalloc(re = malloc(sizeof(regex_t)));
-	func->funcdata = re;
-
-	regex = es_str2cstr(((struct cnfstringval*) func->expr[1])->estr, NULL);
-
-	if((localRet = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
-		int errcode;
-		if((errcode = regexp.regcomp(re, (char*) regex, REG_EXTENDED) != 0)) {
-			char errbuff[512];
-			regexp.regerror(errcode, re, errbuff, sizeof(errbuff));
-			parser_errmsg("cannot compile regex '%s': %s", regex, errbuff);
-			ABORT_FINALIZE(RS_RET_ERR);
-		}
-	} else { /* regexp object could not be loaded */
-		parser_errmsg("could not load regex support - regex ignored");
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
-
-finalize_it:
-	free(regex);
-	RETiRet;
-}
-
-
-static rsRetVal
-initFunc_exec_template(struct cnffunc *func)
-{
-	char *tplName = NULL;
-	DEFiRet;
-
-	func->destructable_funcdata = 0;
-
-	if(func->nParams != 1) {
-		parser_errmsg("rsyslog logic error in line %d of file %s\n",
-			__LINE__, __FILE__);
-		FINALIZE;
-	}
-
-	if(func->expr[0]->nodetype != 'S') {
-		parser_errmsg("exec_template(): param 1 must be a constant string");
-		FINALIZE;
-	}
-
-	tplName = es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL);
-	func->funcdata = tplFind(ourConf, tplName, strlen(tplName));
-	if(func->funcdata == NULL) {
-		parser_errmsg("exec_template(): template '%s' could not be found", tplName);
-		FINALIZE;
-	}
-
-
-finalize_it:
-	free(tplName);
-	RETiRet;
-}
-
-static rsRetVal ATTR_NONNULL(1)
-initFunc_http_request(struct cnffunc *const func)
-{
-	DEFiRet;
-
-	func->destructable_funcdata = 1;
-	CHKmalloc(func->funcdata = calloc(1, sizeof(struct curl_funcData)));
-	if(func->nParams != 1) {
-		parser_errmsg("rsyslog logic error in line %d of file %s\n",
-			__LINE__, __FILE__);
-		FINALIZE;
-	}
-
+	modListLast->next = newNode;
+	modListLast = newNode;
 finalize_it:
 	RETiRet;
 }
 
-
-
-static rsRetVal
-initFunc_prifilt(struct cnffunc *func)
-{
-	struct funcData_prifilt *pData;
-	uchar *cstr;
-	DEFiRet;
-
-	if(func->nParams != 1) {
-		parser_errmsg("rsyslog logic error in line %d of file %s\n",
-			__LINE__, __FILE__);
-		FINALIZE;
-	}
-
-	func->funcdata = NULL;
-	if(func->expr[0]->nodetype != 'S') {
-		parser_errmsg("param 1 of prifilt() must be a constant string");
-		FINALIZE;
-	}
-
-	CHKmalloc(pData = calloc(1, sizeof(struct funcData_prifilt)));
-	func->funcdata = pData;
-	cstr = (uchar*)es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL);
-	CHKiRet(DecodePRIFilter(cstr, pData->pmask));
-	free(cstr);
-finalize_it:
-	RETiRet;
-}
-
-
-static rsRetVal
-resolveLookupTable(struct cnffunc *func)
-{
-	uchar *cstr = NULL;
-	char *fn_name = NULL;
-	DEFiRet;
-
-	func->destructable_funcdata = 0;
-
-	if(func->nParams == 0) {/*we assume first arg is lookup-table-name*/
-		parser_errmsg("rsyslog logic error in line %d of file %s\n",
-			__LINE__, __FILE__);
-		FINALIZE;
-	}
-
-	CHKmalloc(fn_name = es_str2cstr(func->fname, NULL));
-
-	func->funcdata = NULL;
-	if(func->expr[0]->nodetype != 'S') {
-		parser_errmsg("table name (param 1) of %s() must be a constant string", fn_name);
-		FINALIZE;
-	}
-
-	CHKmalloc(cstr = (uchar*)es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL));
-	if((func->funcdata = lookupFindTable(cstr)) == NULL) {
-		parser_errmsg("lookup table '%s' not found (used in function: %s)", cstr, fn_name);
-		FINALIZE;
-	}
-
-finalize_it:
-	free(cstr);
-	free(fn_name);
-	RETiRet;
-}
-
-static rsRetVal
-initFunc_dyn_stats(struct cnffunc *func)
-{
-	uchar *cstr = NULL;
-	DEFiRet;
-
-	func->destructable_funcdata = 0;
-
-	if(func->nParams != 2) {
-		parser_errmsg("rsyslog logic error in line %d of file %s\n",
-					  __LINE__, __FILE__);
-		FINALIZE;
-	}
-
-	func->funcdata = NULL;
-	if(func->expr[0]->nodetype != 'S') {
-		parser_errmsg("dyn-stats bucket-name (param 1) of dyn-stats manipulating "
-		"functions like dyn_inc must be a constant string");
-		FINALIZE;
-	}
-
-	cstr = (uchar*)es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL);
-	if((func->funcdata = dynstats_findBucket(cstr)) == NULL) {
-		parser_errmsg("dyn-stats bucket '%s' not found", cstr);
-		FINALIZE;
-	}
-
-finalize_it:
-	free(cstr);
-	RETiRet;
-}
 
 struct cnffunc *
 cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
@@ -5165,7 +5105,6 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 		if (func->fPtr == NULL) {
 			parser_errmsg("Invalid function %s", cstr);
 		}
-		free(cstr);
 
 		/* shuffle params over to array (access speed!) */
 		param = paramlst;
@@ -5176,21 +5115,11 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 			free(toDel);
 		}
 		/* some functions require special initialization */
-		const rscriptFuncPtr fPtr = func->fPtr;
-		if(fPtr == doFunct_ReMatch || fPtr == doFunc_re_extract) {
-			/* need to compile the regexp in param 2, so this MUST be a constant */
-			initFunc_re_match(func);
-		} else if(fPtr == doFunct_Prifilt) {
-			initFunc_prifilt(func);
-		} else if(fPtr == doFunct_Lookup) {
-			resolveLookupTable(func);
-		} else if(fPtr == doFunc_exec_template) {
-			initFunc_exec_template(func);
-		} else if(fPtr == doFunct_DynInc) {
-			initFunc_dyn_stats(func);
-		} else if(fPtr == doFunc_http_request) {
-			initFunc_http_request(func);
+		struct scriptFunct *foundFunc = searchModList(cstr);
+		if(foundFunc->initFunc != NULL) {
+			foundFunc->initFunc(func);
 		}
+		free(cstr);
 	}
 	return func;
 }
@@ -5471,7 +5400,15 @@ rmLeadingSpace(char *s)
 rsRetVal
 initRainerscript(void)
 {
-	return objGetObjInterface(&obj);
+	DEFiRet;
+	CHKmalloc(modListRoot = (struct modListNode*) malloc(sizeof(struct modListNode)));
+	modListRoot->version = 1;
+	modListRoot->modFcts = functions;
+	modListRoot->next = NULL;
+	modListLast = modListRoot;
+	CHKiRet(objGetObjInterface(&obj));
+finalize_it:
+	RETiRet;
 }
 
 /* we need a function to check for octal digits */
