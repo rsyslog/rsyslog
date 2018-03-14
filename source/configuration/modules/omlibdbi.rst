@@ -1,11 +1,15 @@
+****************************************
 omlibdbi: Generic Database Output Module
-========================================
+****************************************
 
-**Module Name:** omlibdbi
+===========================  ===========================================================================
+**Module Name:**             **omlibdbi**
+**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+===========================  ===========================================================================
 
-**Author:** Rainer Gerhards <rgerhards@adiscon.com>
 
-**Description**:
+Purpose
+=======
 
 This modules supports a large number of database systems via
 `libdbi <http://libdbi.sourceforge.net/>`_. Libdbi abstracts the
@@ -19,9 +23,9 @@ of this writing, the following drivers are available:
    Server <http://www.microsoft.com/sql>`_ and
    `Sybase <http://www.sybase.com/products/informationmanagement/adaptiveserverenterprise>`_)
 -  `MySQL <http://www.mysql.com/>`_ (also supported via the native
-   ommysql plugin in rsyslog)
+   `ommysql <ommysql.html>`_ plugin in rsyslog)
 -  `PostgreSQL <http://www.postgresql.org/>`_\ (also supported via the
-   native ommysql plugin in rsyslog)
+   native `ommysql <ommysql.html>`_ plugin in rsyslog)
 -  `SQLite/SQLite3 <http://www.sqlite.org/>`_
 
 The following drivers are in various stages of completion:
@@ -35,13 +39,15 @@ view.
 
 Libdbi provides a slim layer between rsyslog and the actual database
 engine. We have not yet done any performance testing (e.g. omlibdbi vs.
-ommysql) but honestly believe that the performance impact should be
+:doc:`ommysql`) but honestly believe that the performance impact should be
 irrelevant, if at all measurable. Part of that assumption is that
 rsyslog just does the "insert" and most of the time is spent either in
 the database engine or rsyslog itself. It's hard to think of any
 considerable time spent in the libdbi abstraction layer.
 
-**Setup**
+
+Setup
+=====
 
 In order for this plugin to work, you need to have libdbi, the libdbi
 driver for your database backend and the client software for your
@@ -53,44 +59,143 @@ plugin (as omlibdbi is). So in short, you probably save you a lot of
 headache if you make sure you have at least libdbi version 0.8.3 on your
 system.
 
-**Configuration Parameters**:
 
-Note: configuration parameter names are case-insensitive.
+Configuration Parameters
+========================
 
--  **$ActionLibdbiDriverDirectory** /path/to/dbd/drivers
+.. note::
 
-   This is a global setting. It points libdbi to its driver directory.
-   Usually, you do not need to set it. If you installed libdbi-driver's
-   at a non-standard location, you may need to specify the directory
-   here. If you are unsure, do not use this configuration parameter.
-   Usually, everything works just fine.\
--  **$ActionLibdbiDriver** drivername
+   Parameter names are case-insensitive.
 
-   Name of the dbidriver to use, see libdbi-drivers documentation. As a
-   quick excerpt, at least those were available at the time of this
-   writiting "mysql" (suggest to use ommysql instead), "firebird"
-   (Firbird and InterBase), "ingres", "msql", "Oracle", "sqlite",
-   "sqlite3", "freetds" (for Microsoft SQL and Sybase) and "pgsql"
-   (suggest to use ompgsql instead).
--  **$ActionLibdbiHost** hostname
 
-   The host to connect to.
--  **$ActionLibdbiUserName** user
+Module Parameters
+-----------------
 
-   The user used to connect to the database.
--  **$ActionlibdbiPassword**
+DriverDirectory
+^^^^^^^^^^^^^^^
 
-   That user's password.
--  **$ActionlibdbiDBName** db
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-   The database that shall be written to.
--  **selector line:** :omlibdbi:;template
+   "word", "none", "no", "``$ActionLibdbiDriverDirectory``"
 
-   executes the recently configured omlibdbi action. The ;template part
-   is optional. If no template is provided, a default template is used
-   (which is currently optimized for MySQL - sorry, folks...)
+This is a global setting. It points libdbi to its driver directory.
+Usually, you do not need to set it. If you installed libdbi-driver's
+at a non-standard location, you may need to specify the directory
+here. If you are unsure, do not use this configuration parameter.
+Usually, everything works just fine.
 
-**Caveats/Known Bugs:**
+
+Template
+^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+Standard template used for the actions.
+
+
+Action Parameters
+-----------------
+
+Driver
+^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "yes", "``$ActionLibdbiDriver``"
+
+Name of the dbidriver to use, see libdbi-drivers documentation. As a
+quick excerpt, at least those were available at the time of this
+writing:
+
+- ``mysql`` (:doc:`ommysql` is recommended instead)
+- ``firebird`` (Firebird and InterBase)
+- ``ingres``
+- ``msql``
+- ``Oracle``
+- ``sqlite``
+- ``sqlite3``
+- ``freetds`` (for Microsoft SQL and Sybase)
+- ``pgsql`` (:doc:`ompgsql` is recommended instead)
+
+
+Server
+^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "yes", "``$ActionLibdbiHost``"
+
+The host to connect to.
+
+
+UID
+^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "yes", "``$ActionLibdbiUserName``"
+
+The user used to connect to the database.
+
+
+PWD
+^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "yes", "``$ActionlibdbiPassword``"
+
+That user's password.
+
+
+DB
+^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "yes", "``$ActionlibdbiDBName``"
+
+The database that shall be written to.
+
+
+Template
+^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+Template used for this action.
+
+
+Caveats/Known Bugs:
+===================
 
 You must make sure that any templates used for omlibdbi properly escape
 strings. This is usually done by supplying the SQL (or STDSQL) option to
@@ -113,16 +218,21 @@ it received limited cross-platform tests. If you run into troubles, be
 sure the let us know at
 `http://www.rsyslog.com <http://www.rsyslog.com>`_.
 
-**Sample:**
+
+Examples
+========
+
+Example 1
+---------
 
 The following sample writes all syslog messages to the database
-"syslog\_db" on mysqlserver.example.com. The server is MySQL and being
-accessed under the account of "user" with password "pwd" (if you have
-empty passwords, just remove the $ActionLibdbiPassword line).
+"syslog_db" on mysqlserver.example.com. The server is MySQL and being
+accessed under the account of "user" with password "pwd".
 
-::
+.. code-block:: none
 
-  $ModLoad omlibdbi $ActionLibdbiDriver mysql $ActionLibdbiHost
-  mysqlserver.example.com $ActionLibdbiUserName user $ActionLibdbiPassword
-  pwd $ActionLibdbiDBName syslog\_db \*.\* :omlibdbi:
+   module(load="omlibdbi")
+   action(type="omlibdbi" driver="mysql" server="mysqlserver.example.com"
+                          uid="user" pwd="pwd" db="syslog_db")
+
 
