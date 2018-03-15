@@ -2730,11 +2730,27 @@ curlResult(void *ptr, size_t size, size_t nmemb, void *userdata)
 }
 #endif
 
+#if 0
+static void
+doFunc_re_extract(struct cnffunc *func, struct svar *ret, void* usrptr, wti_t *const pWti)
+
+static void ATTR_NONNULL()
+doFunct_ReMatch(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
+
 static rsRetVal ATTR_NONNULL()
 doFunc_http_request(struct cnffunc *__restrict__ const func,
 	struct svar *__restrict__ const ret,
 	void *const usrptr,
 	wti_t *const pWti)
+#endif
+static void ATTR_NONNULL()
+doFunc_http_request(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
 {
 #ifdef HAVE_LIBCURL
 	struct svar srcVal;
@@ -2748,8 +2764,7 @@ doFunc_http_request(struct cnffunc *__restrict__ const func,
 	assert(func != NULL);
 	struct curl_funcData *const curlData = (struct curl_funcData*) func->funcdata;
 	assert(curlData != NULL);
-	DEFiRet;
-
+	rsRetVal iRet __attribute__((unused)) = RS_RET_OK;
 
 	CHKmalloc(handle = curl_easy_init());
 	curl_easy_setopt(handle, CURLOPT_NOSIGNAL, TRUE);
@@ -2788,7 +2803,6 @@ finalize_it:
 	}
 	varFreeMembers(&srcVal);
 
-	RETiRet;
 #else
 	LogError(0, RS_RET_INTERNAL_ERROR,
 		"rainerscript: internal error: HTTP_Fetch not supported, not built with libcurl support");
@@ -2804,103 +2818,21 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 	wti_t *__restrict__ const pWti)
 {
 
-	DBGPRINTF("rainerscript: executing function id %d\n", func->fID);
-	switch(func->fID) {
-	case CNFFUNC_STRLEN:
-		doFunct_StrLen(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_REPLACE:
-		doFunct_Replace(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_WRAP:
-		doFunct_Wrap(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_RANDOM:
-		doFunct_RandomGen(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_NUM2IPV4:
-		doFunct_num2ipv4(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_INT2HEX:
-		doFunct_Int2Hex(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_LTRIM:
-		doFunct_LTrim(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_RTRIM:
-		doFunct_RTrim(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_GETENV:
-		doFunct_Getenv(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_TOLOWER:
-		doFunct_ToLower(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_CSTR:
-		doFunct_CStr(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_IPV42NUM:
-		doFunct_Ipv42num(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_CNUM:
-		doFunct_CNum(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_RE_MATCH:
-		doFunct_ReMatch(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_RE_EXTRACT:
-		doFunc_re_extract(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_EXEC_TEMPLATE:
-		doFunc_exec_template(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_SUBSTRING:
-		doFunct_Substring(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_FIELD:
-		doFunct_Field(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_PRIFILT:
-		doFunct_Prifilt(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_LOOKUP:
-		doFunct_Lookup(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_DYN_INC:
-		doFunct_DynInc(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_FORMAT_TIME:
-		doFunct_FormatTime(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_PARSE_TIME:
-		doFunct_ParseTime(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_IS_TIME:
-		doFunct_IsTime(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_SCRIPT_ERROR:
-		doFunct_ScriptError(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_PREVIOUS_ACTION_SUSPENDED:
-		doFunct_PreviousActionSuspended(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_PARSE_JSON:
-		doFunc_parse_json(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_HTTP_REQUEST:
-		doFunc_http_request(func, ret, usrptr, pWti);
-		break;
-	default:
-		if(Debug) {
-			char *fname = es_str2cstr(func->fname, NULL);
-			LogError(0, RS_RET_INTERNAL_ERROR,
-				"rainerscript: internal error: invalid function id %u (name '%s')\n",
-				(unsigned) func->fID, fname);
-			free(fname);
-		}
+	if(Debug) {
+		char *fname = es_str2cstr(func->fname, NULL);
+		DBGPRINTF("rainerscript: executing function id %s\n", fname);
+		free(fname);
+	}
+	if(func->fPtr == NULL) {
+		char *fname = es_str2cstr(func->fname, NULL);
+		LogError(0, RS_RET_INTERNAL_ERROR,
+			"rainerscript: internal error: NULL pointer for function named '%s'\n",
+			fname);
+		free(fname);
 		ret->datatype = 'N';
 		ret->d.n = 0;
-		break;
+	} else {
+		func->fPtr(func, ret, usrptr, pWti);
 	}
 }
 
@@ -3539,18 +3471,14 @@ cnffuncDestruct(struct cnffunc *func)
 		cnfexprDestruct(func->expr[i]);
 	}
 	/* some functions require special destruction */
-	switch(func->fID) {
-		case CNFFUNC_RE_MATCH:
-		case CNFFUNC_RE_EXTRACT:
-			if(func->funcdata != NULL)
-				regexp.regfree(func->funcdata);
-			break;
-		case CNFFUNC_HTTP_REQUEST:
-			if(func->funcdata != NULL) {
-				free((void*) ((struct curl_funcData*)func->funcdata)->reply);
-			}
-			break;
-		default:break;
+	const rscriptFuncPtr fPtr = func->fPtr;
+	if(fPtr == doFunct_ReMatch || fPtr == doFunc_re_extract) {
+		if(func->funcdata != NULL)
+			regexp.regfree(func->funcdata);
+	} else if (fPtr == doFunc_http_request) {
+		if(func->funcdata != NULL) {
+			free((void*) ((struct curl_funcData*)func->funcdata)->reply);
+		}
 	}
 	if(func->destructable_funcdata) {
 		free(func->funcdata);
@@ -3788,8 +3716,10 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		doIndent(indent);
 		func = (struct cnffunc*) expr;
 		cstrPrint("function '", func->fname);
-		dbgprintf("' (id:%d, params:%hu)\n", func->fID, func->nParams);
-		if(func->fID == CNFFUNC_PRIFILT) {
+		char *fname = es_str2cstr(func->fname, NULL);
+		dbgprintf("' (name:%s, params:%hu)\n", fname, func->nParams);
+		free(fname);
+		if(func->fPtr == doFunct_Prifilt) {
 			struct funcData_prifilt *pD;
 			pD = (struct funcData_prifilt*) func->funcdata;
 			pmaskPrint(pD->pmask, indent+1);
@@ -3818,6 +3748,7 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		break;
 	}
 }
+
 /* print only the given stmt
  * if "subtree" equals 1, the full statement subtree is printed, else
  * really only the statement.
@@ -4548,7 +4479,7 @@ cnfexprOptimize_NOT(struct cnfexpr *expr)
 
 	if(expr->r->nodetype == 'F') {
 		func = (struct cnffunc *)expr->r;
-		if(func->fID == CNFFUNC_PRIFILT) {
+		if(func->fPtr == doFunct_Prifilt) {
 			DBGPRINTF("optimize NOT prifilt() to inverted prifilt()\n");
 			expr->r = NULL;
 			cnfexprDestruct(expr);
@@ -4568,7 +4499,7 @@ cnfexprOptimize_AND_OR(struct cnfexpr *expr)
 		if(expr->r->nodetype == 'F') {
 			funcl = (struct cnffunc *)expr->l;
 			funcr = (struct cnffunc *)expr->r;
-			if(funcl->fID == CNFFUNC_PRIFILT && funcr->fID == CNFFUNC_PRIFILT) {
+			if(funcl->fPtr == doFunct_Prifilt && funcr->fPtr == doFunct_Prifilt) {
 				DBGPRINTF("optimize combine AND/OR prifilt()\n");
 				expr->l = NULL;
 				prifiltCombine(funcl->funcdata, funcr->funcdata, expr->nodetype);
@@ -4764,7 +4695,7 @@ cnfstmtOptimizeIf(struct cnfstmt *stmt)
 	assert(stmt->nodetype == S_IF);
 	if(stmt->d.s_if.expr->nodetype == 'F') {
 		func = (struct cnffunc*)expr;
-		   if(func->fID == CNFFUNC_PRIFILT) {
+		   if(func->fPtr == doFunct_Prifilt) {
 			DBGPRINTF("optimizer: change IF to PRIFILT\n");
 			t_then = stmt->d.s_if.t_then;
 			t_else = stmt->d.s_if.t_else;
@@ -4946,118 +4877,75 @@ cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *next)
 	return lst;
 }
 
-static const char* const numInWords[] = {"zero", "one", "two", "three", "four", "five", "six"};
-
-#define GENERATE_FUNC_WITH_NARG_RANGE(name, minArg, maxArg, funcId, errMsg) \
-	if(nParams < minArg || nParams > maxArg) {	\
-		parser_errmsg(errMsg, name, nParams);	\
-		return CNFFUNC_INVALID;			\
-	}						\
-	return funcId
-
-
-#define GENERATE_FUNC_WITH_ERR_MSG(name, expectedParams, funcId, errMsg) \
-	if(nParams != expectedParams) {										\
-		parser_errmsg(errMsg, name, numInWords[expectedParams], nParams); \
-		return CNFFUNC_INVALID; \
-	}	\
-	return funcId
-
-
-#define GENERATE_FUNC(name, expectedParams, func_id)					\
-	GENERATE_FUNC_WITH_ERR_MSG( \
-		name, expectedParams, func_id,									\
-		"number of parameters for %s() must be %s but is %d.")
-
-
-#define FUNC_NAME(name) !es_strbufcmp(fname, (unsigned char*)name, sizeof(name) - 1)
-
+struct scriptFunct functions[] = {
+	{"strlen", 1, 1, doFunct_StrLen},
+	{"getenv", 1, 1, doFunct_Getenv},
+	{"num2ipv4", 1, 1, doFunct_num2ipv4},
+	{"int2hex", 1, 1, doFunct_Int2Hex},
+	{"substring", 3, 3, doFunct_Substring},
+	{"ltrim", 1, 1, doFunct_LTrim},
+	{"rtrim", 1, 1, doFunct_RTrim},
+	{"tolower", 1, 1, doFunct_ToLower},
+	{"cstr", 1, 1, doFunct_CStr},
+	{"cnum", 1, 1, doFunct_CNum},
+	{"ip42num", 1, 1, doFunct_Ipv42num},
+	{"re_match", 2, 2, doFunct_ReMatch},
+	{"re_extract", 5, 5, doFunc_re_extract},
+	{"field", 3, 3, doFunct_Field},
+	{"exec_template", 1, 1, doFunc_exec_template},
+	{"prifilt", 1, 1, doFunct_Prifilt},
+	{"lookup", 2, 2, doFunct_Lookup},
+	{"dyn_inc", 2, 2, doFunct_DynInc},
+	{"replace", 3, 3, doFunct_Replace},
+	{"wrap", 2, 3, doFunct_Wrap},
+	{"random", 1, 1, doFunct_RandomGen},
+	{"format_time", 2, 2, doFunct_FormatTime},
+	{"parse_time", 1, 1, doFunct_ParseTime},
+	{"is_time", 1, 2, doFunct_IsTime},
+	{"parse_json", 2, 2, doFunc_parse_json},
+	{"script_error", 0, 0, doFunct_ScriptError},
+	{"previous_action_suspended", 0, 0, doFunct_PreviousActionSuspended},
+	{"http_request", 1, 1, doFunc_http_request},
+	{NULL, 0, 0, NULL} //last element to check end of array
+};
 
 /* Obtain function id from name AND number of params. Issues the
  * relevant error messages if errors are detected.
  */
-static enum cnffuncid
-funcName2ID(es_str_t *fname, unsigned short nParams)
+static rscriptFuncPtr
+funcName2Ptr(char *const fname, const unsigned short nParams)
 {
-	if(FUNC_NAME("strlen")) {
-		GENERATE_FUNC("strlen", 1, CNFFUNC_STRLEN);
-	} else if(FUNC_NAME("getenv")) {
-		GENERATE_FUNC("getenv", 1, CNFFUNC_GETENV);
-	} else if(FUNC_NAME("num2ipv4")) {
-		GENERATE_FUNC("num2ipv4", 1, CNFFUNC_NUM2IPV4);
-	} else if(FUNC_NAME("int2hex")) {
-		GENERATE_FUNC("int2hex", 1, CNFFUNC_INT2HEX);
-	} else if(FUNC_NAME("substring")) {
-		GENERATE_FUNC("substring", 3, CNFFUNC_SUBSTRING);
-	} else if(FUNC_NAME("ltrim")) {
-		GENERATE_FUNC("ltrim", 1, CNFFUNC_LTRIM);
-	} else if(FUNC_NAME("rtrim")) {
-		GENERATE_FUNC("rtrim", 1, CNFFUNC_RTRIM);
-	} else if(FUNC_NAME("tolower")) {
-		GENERATE_FUNC("tolower", 1, CNFFUNC_TOLOWER);
-	} else if(FUNC_NAME("cstr")) {
-		GENERATE_FUNC("cstr", 1, CNFFUNC_CSTR);
-	} else if(FUNC_NAME("cnum")) {
-		GENERATE_FUNC("cnum", 1, CNFFUNC_CNUM);
-	} else if(FUNC_NAME("ip42num")) {
-		GENERATE_FUNC("ip42num", 1, CNFFUNC_IPV42NUM);
-	} else if(FUNC_NAME("re_match")) {
-		GENERATE_FUNC("re_match", 2, CNFFUNC_RE_MATCH);
-	} else if(FUNC_NAME("re_extract")) {
-		GENERATE_FUNC("re_extract", 5, CNFFUNC_RE_EXTRACT);
-	} else if(FUNC_NAME("field")) {
-		GENERATE_FUNC("field", 3, CNFFUNC_FIELD);
-	} else if(FUNC_NAME("exec_template")) {
-		GENERATE_FUNC("exec_template", 1, CNFFUNC_EXEC_TEMPLATE);
-	} else if(FUNC_NAME("prifilt")) {
-		GENERATE_FUNC("prifilt", 1, CNFFUNC_PRIFILT);
-	} else if(FUNC_NAME("lookup")) {
-		GENERATE_FUNC("lookup", 2, CNFFUNC_LOOKUP);
-	} else if(FUNC_NAME("dyn_inc")) {
-		GENERATE_FUNC("dyn_inc", 2, CNFFUNC_DYN_INC);
-	} else if(FUNC_NAME("replace")) {
-		GENERATE_FUNC_WITH_ERR_MSG(
-			"replace", 3, CNFFUNC_REPLACE,
-			"number of parameters for %s() must be %s "
-			"(operand_string, fragment_to_find, fragment_to_replace_in_its_place)"
-			"but is %d.");
-	} else if(FUNC_NAME("wrap")) {
-		GENERATE_FUNC_WITH_NARG_RANGE("wrap", 2, 3, CNFFUNC_WRAP,
-			"number of parameters for %s() must either be "
-			"two (operand_string, wrapper) or"
-			"three (operand_string, wrapper, wrapper_escape_str)"
-			"but is %d.");
-	} else if(FUNC_NAME("random")) {
-		GENERATE_FUNC("random", 1, CNFFUNC_RANDOM);
-	} else if(FUNC_NAME("format_time")) {
-		GENERATE_FUNC("format_time", 2, CNFFUNC_FORMAT_TIME);
-	} else if(FUNC_NAME("parse_time")) {
-		GENERATE_FUNC("parse_time", 1, CNFFUNC_PARSE_TIME);
-	} else if(FUNC_NAME("is_time")) {
-		GENERATE_FUNC_WITH_NARG_RANGE("is_time", 1, 2, CNFFUNC_IS_TIME,
-			"number of parameters for %s() must either be "
-			"one (time_string) or"
-			"two (time_string, explicit_expected_format)"
-			"but is %d.");
-	} else if(FUNC_NAME("parse_json")) {
-		GENERATE_FUNC("parse_json", 2, CNFFUNC_PARSE_JSON);
-	} else if(FUNC_NAME("script_error")) {
-		GENERATE_FUNC("script_error", 0, CNFFUNC_SCRIPT_ERROR);
-	} else if(FUNC_NAME("previous_action_suspended")) {
-		GENERATE_FUNC("previous_action_suspended", 0, CNFFUNC_PREVIOUS_ACTION_SUSPENDED);
-	} else if(FUNC_NAME("http_request")) {
-#		if defined(HAVE_LIBCURL)
-		GENERATE_FUNC("http_request", 1, CNFFUNC_HTTP_REQUEST);
-#		else
-		parser_errmsg("function http_request() not available, rsyslog build "
-			"without libcurl support -- disabling function");
-		return CNFFUNC_INVALID;
-#		endif
-	} else {
-		return CNFFUNC_INVALID;
+	rscriptFuncPtr retPtr = NULL;
+	int i = 0;
+	while(functions[i].fname != NULL) {
+		if(!strcmp(fname, functions[i].fname)){
+			if(functions[i].minParams == functions[i].maxParams) {
+				if(nParams == functions[i].maxParams) {
+					retPtr = functions[i].fPtr;
+				} else {
+					parser_errmsg("number of parameters for %s() must be %hu but is %d.",
+						fname, functions[i].maxParams, nParams);
+				}
+			} else {
+				if(nParams < functions[i].minParams) {
+					parser_errmsg("number of parameters for %s() must be at least %hu but is %d.",
+						fname, functions[i].minParams, nParams);
+				} else if(nParams > functions[i].maxParams) {
+					parser_errmsg("number of parameters for %s() must be at most %hu but is %d.",
+						fname, functions[i].maxParams, nParams);
+				} else {
+					retPtr = functions[i].fPtr;
+				}
+			}
+			goto done;
+		}
+		i++;
 	}
+	parser_errmsg("function '%s' not found", fname);
+	//TODO: make error messgae hint that maybe a module has to be loaded
+done:
+	return retPtr;
 }
-
 
 static rsRetVal
 initFunc_re_match(struct cnffunc *func)
@@ -5270,14 +5158,14 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 		func->nParams = nParams;
 		func->funcdata = NULL;
 		func->destructable_funcdata = 1;
-		func->fID = funcName2ID(fname, nParams);
+		cstr = es_str2cstr(fname, NULL);
+		func->fPtr = funcName2Ptr(cstr, nParams);
 
 		/* parse error if we have an unknown function */
-		if (func->fID == CNFFUNC_INVALID) {
-			cstr = es_str2cstr(fname, NULL);
+		if (func->fPtr == NULL) {
 			parser_errmsg("Invalid function %s", cstr);
-			free(cstr);
 		}
+		free(cstr);
 
 		/* shuffle params over to array (access speed!) */
 		param = paramlst;
@@ -5288,28 +5176,20 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 			free(toDel);
 		}
 		/* some functions require special initialization */
-		switch(func->fID) {
-			case CNFFUNC_RE_MATCH:
-			case CNFFUNC_RE_EXTRACT:
-				/* need to compile the regexp in param 2, so this MUST be a constant */
-				initFunc_re_match(func);
-				break;
-			case CNFFUNC_PRIFILT:
-				initFunc_prifilt(func);
-				break;
-			case CNFFUNC_LOOKUP:
-				resolveLookupTable(func);
-				break;
-			case CNFFUNC_EXEC_TEMPLATE:
-				initFunc_exec_template(func);
-				break;
-			case CNFFUNC_DYN_INC:
-				initFunc_dyn_stats(func);
-				break;
-			case CNFFUNC_HTTP_REQUEST:
-				initFunc_http_request(func);
-				break;
-			default:break;
+		const rscriptFuncPtr fPtr = func->fPtr;
+		if(fPtr == doFunct_ReMatch || fPtr == doFunc_re_extract) {
+			/* need to compile the regexp in param 2, so this MUST be a constant */
+			initFunc_re_match(func);
+		} else if(fPtr == doFunct_Prifilt) {
+			initFunc_prifilt(func);
+		} else if(fPtr == doFunct_Lookup) {
+			resolveLookupTable(func);
+		} else if(fPtr == doFunc_exec_template) {
+			initFunc_exec_template(func);
+		} else if(fPtr == doFunct_DynInc) {
+			initFunc_dyn_stats(func);
+		} else if(fPtr == doFunc_http_request) {
+			initFunc_http_request(func);
 		}
 	}
 	return func;
@@ -5336,7 +5216,7 @@ cnffuncNew_prifilt(int fac)
 		func->nodetype = 'F';
 		func->fname = es_newStrFromCStr("prifilt", sizeof("prifilt")-1);
 		func->nParams = 0;
-		func->fID = CNFFUNC_PRIFILT;
+		func->fPtr = doFunct_Prifilt;
 		func->destructable_funcdata = 1;
 		((struct funcData_prifilt *)func->funcdata)->pmask[fac] = TABLE_ALLPRI;
 	}
