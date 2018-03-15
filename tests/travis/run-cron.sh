@@ -47,6 +47,7 @@ curl --form token=$COVERITY_TOKEN \
   --form file=@rsyslog.tgz \
   --form version="master branch head" \
   --form description="$(git log -1|head -1)" \
+  --insecure \
   https://scan.coverity.com/builds?project=rsyslog%2Frsyslog
 CURL_RESULT=$?
 echo curl returned $CURL_RESULT
