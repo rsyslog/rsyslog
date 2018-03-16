@@ -1,0 +1,11 @@
+extraction:
+  cpp:
+    prepare:
+      packages:
+        - python-docutils
+    
+    # Enable build with slightly older libfastjson-dev
+    after_prepare:
+        - sed -i -e 's/\[libfastjson >= .*\]/\[libfastjson >= 0.99.4\]/' configure.ac
+        - sed -i -e 's/fjson_global_do_case_sensitive_comparison/\/\/fjson_global_do_case_sensitive_comparison/g' tools/rsyslogd.c
+        - sed -i -e 's/fjson_global_do_case_sensitive_comparison/\/\/fjson_global_do_case_sensitive_comparison/g' runtime/glbl.c
