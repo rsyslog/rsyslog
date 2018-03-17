@@ -183,8 +183,7 @@ typedef struct configSettings_s {
 } configSettings_t;
 
 
-configSettings_t cs;					/* our current config settings */
-configSettings_t cs_save;				/* our saved (scope!) config settings */
+static configSettings_t cs;					/* our current config settings */
 
 /* the counter below counts actions created. It is used to obtain unique IDs for the action. They
  * should not be relied on for any long-term activity (e.g. disk queue names!), but they are nice
