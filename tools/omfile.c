@@ -577,7 +577,7 @@ prepareFile(instanceData *__restrict__ const pData, const uchar *__restrict__ co
 				rs_strerror_r(errno, errStr, sizeof(errStr));
 				parser_errmsg( "omfile: creating parent "
 					"directories for file  '%s' failed: %s",
-					errStr, newFileName);
+					newFileName, errStr);
 			     	ABORT_FINALIZE(RS_RET_ERR); /* we give up */
 			}
 		}
@@ -594,7 +594,7 @@ prepareFile(instanceData *__restrict__ const pData, const uchar *__restrict__ co
 					rs_strerror_r(errno, errStr, sizeof(errStr));
 					parser_errmsg(
 						"omfile: chown for file '%s' failed: %s",
-						errStr, newFileName);
+						newFileName, errStr);
 					if(pData->bFailOnChown) {
 						close(fd);
 						ABORT_FINALIZE(RS_RET_ERR); /* we give up */
