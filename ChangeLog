@@ -10,6 +10,8 @@ Version 8.34.0 [v8-stable] 2018-04-03
 - fix some cosmetic issues found by lgtm.com static code analyzer
   e.g. header file guard not correctly set - if you really are interested in
   details, check git log
+- CI
+  * add lgtm.com static analyzer (automatically called via GitHub PR)
 ------------------------------------------------------------------------------
 Version 8.33.1 [v8-stable] 2018-04-03
 - 8.33.0 tarball release was actually pre-8.33.0
