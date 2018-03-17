@@ -13,4 +13,4 @@ extraction:
     configure:
       command:
         - autoreconf -fvi
-        - ./configure --enable-imfile --enable-mysql
+        - ./configure --enable-imfile --enable-mysql --enable-usertools --enable-pgsql --enable-libdbi
