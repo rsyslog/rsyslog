@@ -792,6 +792,7 @@ if HAVE_VALGRIND
 TESTS += \
 	imfile-basic-vg.sh \
 	imfile-endregex-vg.sh \
+	imfile-readmode0-vg.sh \
 	imfile-readmode2-vg.sh \
 	imfile-basic-vgthread.sh
 endif
@@ -1440,6 +1441,7 @@ EXTRA_DIST= \
 	testsuites/complex1.conf \
 	random.sh \
 	testsuites/random.conf \
+	imfile-readmode0-vg.sh \
 	imfile-readmode2.sh \
 	imfile-readmode2-vg.sh \
 	imfile-readmode2-with-persists-data-during-stop.sh \

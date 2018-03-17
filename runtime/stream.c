@@ -749,7 +749,6 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
 {
         uchar c;
 	uchar finished;
-	rsRetVal readCharRet;
         DEFiRet;
 
         ASSERT(pThis != NULL);
@@ -769,12 +768,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
         if(mode == 0) {
 		while(c != '\n') {
 			CHKiRet(cstrAppendChar(*ppCStr, c));
-			readCharRet = strmReadChar(pThis, &c);
-			if((readCharRet == RS_RET_TIMED_OUT) ||
-			   (readCharRet == RS_RET_EOF) ) { /* end reached without \n? */
-				CHKiRet(rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr));
-                	}
-                	CHKiRet(readCharRet);
+			CHKiRet(strmReadChar(pThis, &c));
         	}
 		if (trimLineOverBytes > 0 && (uint32_t) cstrLen(*ppCStr) > trimLineOverBytes) {
 			/* Truncate long line at trimLineOverBytes position */
