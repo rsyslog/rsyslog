@@ -19,6 +19,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef OUTCHANNEL_H
+#define OUTCHANNEL_H
 struct outchannel {
 	struct outchannel *pNext;
 	char *pszName;
@@ -33,7 +35,4 @@ struct outchannel *ochAddLine(char* pName, unsigned char** pRestOfConfLine);
 struct outchannel *ochFind(char *pName, int iLenName);
 void ochDeleteAll(void);
 void ochPrintList(void);
-
-/*
- * vi:set ai:
- */
+#endif /* #ifdef OUTCHANNEL_H */
