@@ -1140,12 +1140,14 @@ CODESTARTcommitTransaction
 finalize_it:
 
 	if (iRet != RS_RET_OK) {
-		LogError(0, iRet, "suspending action");
-		iRet = RS_RET_SUSPENDED;
+		if (runModConf->bDynafileDoNotSuspend == 0) {
+			LogError(0, iRet, "suspending action");
+			iRet = RS_RET_SUSPENDED;
+		}
+		else {
+			LogError(0, iRet, "discarding message");
+		}
 	}
-/* FIXME: what to do with runModConf->bDynafileDoNotSuspend because
- * now it suspends even with non-dynafiles
- */
 	pthread_mutex_unlock(&pData->mutWrite);
 ENDcommitTransaction
 
