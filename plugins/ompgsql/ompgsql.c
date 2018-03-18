@@ -52,7 +52,6 @@ MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("ompgsql")
 
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
 
 /* internal structures
  */
@@ -76,11 +75,6 @@ typedef struct wrkrInstanceData {
 	PGconn         *f_hpgsql;                /* handle to PgSQL */
 	ConnStatusType  eLastPgSQLStatus;        /* last status from postgres */
 } wrkrInstanceData_t;
-
-typedef struct configSettings_s {
-	EMPTY_STRUCT
-} configSettings_t;
-static configSettings_t __attribute__((unused)) cs;
 
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
@@ -108,7 +102,6 @@ static struct cnfparamblk actpblk =
 
 BEGINinitConfVars     /* (re)set config variables to default values */
 CODESTARTinitConfVars
-	resetConfigVariables(NULL, NULL);
 ENDinitConfVars
 
 
@@ -514,13 +507,6 @@ CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 /* CODEqueryEtryPt_TXIF_OMOD_QUERIES currently no TX support! */ /* we support the transactional interface! */
 ENDqueryEtryPt
-
-/* Reset config variables for this module to default values.  */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
-	DEFiRet;
-	RETiRet;
-}
 
 
 BEGINmodInit()
