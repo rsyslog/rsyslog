@@ -21,7 +21,7 @@ $srcdir/diag.sh injectmsg 0 1
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
 
-if [ `ls -l rsyslog.o*|$RS_HEADCMD -c 10 ` != "-rw-------" ]; then
+if [ `ls -l rsyslog.out.log|$RS_HEADCMD -c 10 ` != "-rw-------" ]; then
   echo "invalid file permission (umask), rsyslog.out.log has:"
   ls -l rsyslog.out.log
   . $srcdir/diag.sh error-exit 1
