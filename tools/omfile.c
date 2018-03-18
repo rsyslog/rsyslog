@@ -37,9 +37,7 @@
  */
 #include "config.h"
 #include "rsyslog.h"
-// <kortemik>
 #include "glbl.h"
-// </kortemik>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -52,9 +50,7 @@
 #include <unistd.h>
 #include <sys/file.h>
 #include <fcntl.h>
-// <kortemik>
 #include <sys/statvfs.h>
-// </kortemik>
 #ifdef HAVE_ATOMIC_BUILTINS
 #	include <pthread.h>
 #endif
@@ -168,10 +164,8 @@ typedef struct _instanceData {
 	cryprov_if_t cryprov;	/* ptr to crypto provider interface */
 	sbool	useCryprov;	/* quicker than checkig ptr (1 vs 8 bytes!) */
 	int	iCurrElt;	/* currently active cache element (-1 = none) */
-	// <kortemik>
 	uint	iCurrCacheSize;	/* currently cache size (1-based) */
 	uint	iDynaFileCacheSize; /* size of file handle cache */
-	// </kortemik>
 	/* The cache is implemented as an array. An empty element is indicated
 	 * by a NULL pointer. Memory is allocated as needed. The following
 	 * pointer points to the overall structure.
@@ -180,9 +174,7 @@ typedef struct _instanceData {
 	off_t	iSizeLimit;		/* file size limit, 0 = no limit */
 	uchar	*pszSizeLimitCmd;	/* command to carry out when size limit is reached */
 	int 	iZipLevel;		/* zip mode to use for this selector */
-	// <kortemik>
 	uint	iIOBufSize;		/* size of associated io buffer */
-	// </kortemik>
 	int	iFlushInterval;		/* how fast flush buffer on inactivity? */
 	short	iCloseTimeout;		/* after how many *minutes* shall the file be closed if inactive? */
 	sbool	bFlushOnTXEnd;		/* flush write buffers when transaction has ended? */
@@ -205,9 +197,7 @@ typedef struct wrkrInstanceData {
 
 
 typedef struct configSettings_s {
-	// <kortemik>
 	uint iDynaFileCacheSize; /* max cache for dynamic files */
-	// </kortemik>
 	int fCreateMode; /* mode to use when creating files */
 	int fDirCreateMode; /* mode to use when creating files */
 	int	bFailOnChown;	/* fail if chown fails? */
@@ -513,9 +503,7 @@ finalize_it:
 static void
 dynaFileFreeCacheEntries(instanceData *__restrict__ const pData)
 {
-	// <kortemik>
 	register uint i;
-	// </kortemik>
 	ASSERT(pData != NULL);
 
 	BEGINfunc;
@@ -620,11 +608,9 @@ prepareFile(instanceData *__restrict__ const pData, const uchar *__restrict__ co
 			}
 			close(fd); /* close again, as we need a stream further on */
 		}
-		// <kortemik>
 		else {
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
-		// </kortemik>
 	}
 
 	/* the copies below are clumpsy, but there is no way around given the
@@ -679,7 +665,7 @@ finalize_it:
 	RETiRet;
 }
 
-// <kortemik>
+// <kortemik date="2018-02-20">
 /* verify enough we have space left for writes */
 static rsRetVal
 fsCheck(instanceData *__restrict__ const pData, const uchar *__restrict__ const fileName)
@@ -745,9 +731,7 @@ prepareDynFile(instanceData *__restrict__ const pData, const uchar *__restrict__
 {
 	uint64 ctOldest; /* "timestamp" of oldest element */
 	int iOldest;
-	// <kortemik>
 	uint i;
-	// </kortemik>
 	int iFirstFree;
 	rsRetVal localRet;
 	dynaFileCacheEntry **pCache;
@@ -761,9 +745,7 @@ prepareDynFile(instanceData *__restrict__ const pData, const uchar *__restrict__
 	/* first check, if we still have the current file */
 	if(   (pData->iCurrElt != -1)
 	   && !ustrcmp(newFileName, pCache[pData->iCurrElt]->pName)) {
-		// <kortemik>
 		CHKiRet(fsCheck(pData, newFileName));
-		// </kortemik>
 
 	   	/* great, we are all set */
 		pCache[pData->iCurrElt]->clkTickAccessed = getClockFileAccess();
@@ -785,9 +767,7 @@ prepareDynFile(instanceData *__restrict__ const pData, const uchar *__restrict__
 				iFirstFree = i;
 		} else { /* got an element, let's see if it matches */
 			if(!ustrcmp(newFileName, pCache[i]->pName)) {
-				// <kortemik>
 				CHKiRet(fsCheck(pData, newFileName));
-				// </kortemik>
 
 				/* we found our element! */
 				pData->pStrm = pCache[i]->pStrm;
@@ -846,13 +826,11 @@ prepareDynFile(instanceData *__restrict__ const pData, const uchar *__restrict__
 		ABORT_FINALIZE(localRet);
 	}
 
-	// <kortemik>
 	localRet = fsCheck(pData, newFileName);
 	if(localRet != RS_RET_OK) {
 		parser_errmsg("Invalid file-system condition for dynamic file '%s' [state %d]", newFileName, localRet);
 		ABORT_FINALIZE(localRet);
 	}
-	// </kortemik>
 
 	if((pCache[iFirstFree]->pName = ustrdup(newFileName)) == NULL) {
 		closeFile(pData); /* need to free failed entry! */
@@ -920,9 +898,7 @@ writeFile(instanceData *__restrict__ const pData,
 				parser_errmsg(
 					"Could not open output file '%s'", pData->fname);
 			}
-			// <kortemik>
 			CHKiRet(fsCheck(pData, pData->fname));
-			// </kortemik>
 		}
 		pData->nInactive = 0;
 	}
@@ -1013,9 +989,7 @@ ENDsetModCnf
 static void
 janitorChkDynaFiles(instanceData *__restrict__ const pData)
 {
-	// <kortemik>
 	uint i;
-	// </kortemik>
 	dynaFileCacheEntry **pCache = pData->dynCache;
 
 	for(i = 0 ; i < pData->iCurrCacheSize ; ++i) {
@@ -1027,12 +1001,10 @@ janitorChkDynaFiles(instanceData *__restrict__ const pData)
 		if(pCache[i]->nInactive >= pData->iCloseTimeout) {
 			STATSCOUNTER_INC(pData->ctrCloseTimeouts, pData->mutCtrCloseTimeouts);
 			dynaFileDelCacheEntry(pData, i, 1);
-			// <kortemik>
 			if(pData->iCurrElt >= 0) {
 				if((uint)(pData->iCurrElt) == i)
 				pData->iCurrElt = -1; /* no longer available! */
 			}
-			// </kortemik>
 		} else {
 			pCache[i]->nInactive += janitorInterval;
 		}
@@ -1150,9 +1122,7 @@ CODESTARTcommitTransaction
 	pthread_mutex_lock(&pData->mutWrite);
 
 	for(i = 0 ; i < nParams ; ++i) {
-		// <kortemik>
 		CHKiRet(writeFile(pData, pParams, i));
-		// </kortemik>
 	}
 	/* Note: pStrm may be NULL if there was an error opening the stream */
 	/* if bFlushOnTXEnd is set, we need to flush on transaction end - in
@@ -1169,7 +1139,6 @@ CODESTARTcommitTransaction
 
 finalize_it:
 
-// <kortemik>
 	if (iRet != RS_RET_OK) {
 		LogError(0, iRet, "suspending action");
 		iRet = RS_RET_SUSPENDED;
@@ -1178,7 +1147,6 @@ finalize_it:
  * now it suspends even with non-dynafiles
  */
 	pthread_mutex_unlock(&pData->mutWrite);
-// </kortemik>
 ENDcommitTransaction
 
 
