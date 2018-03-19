@@ -1138,9 +1138,8 @@ CODESTARTcommitTransaction
 	}
 
 finalize_it:
-
 	if (iRet != RS_RET_OK) {
-		if (runModConf->bDynafileDoNotSuspend == 0) {
+		if (runModConf->bDynafileDoNotSuspend == 0 || !(pData->bDynamicName)) {
 			LogError(0, iRet, "suspending action");
 			iRet = RS_RET_SUSPENDED;
 		}
