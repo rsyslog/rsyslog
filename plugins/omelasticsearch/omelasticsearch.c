@@ -116,6 +116,9 @@ typedef struct _instanceData {
 	size_t maxbytes;
 	sbool useHttps;
 	sbool allowUnsignedCerts;
+	uchar *caCertFile;
+	uchar *myCertFile;
+	uchar *myPrivKeyFile;
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -163,7 +166,10 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "dynbulkid", eCmdHdlrBinary, 0 },
 	{ "dynpipelinename", eCmdHdlrBinary, 0 },
 	{ "bulkid", eCmdHdlrGetWord, 0 },
-	{ "allowunsignedcerts", eCmdHdlrBinary, 0 }
+	{ "allowunsignedcerts", eCmdHdlrBinary, 0 },
+	{ "tls.cacert", eCmdHdlrString, 0 },
+	{ "tls.mycert", eCmdHdlrString, 0 },
+	{ "tls.myprivkey", eCmdHdlrString, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -177,6 +183,9 @@ BEGINcreateInstance
 CODESTARTcreateInstance
 	pData->fdErrFile = -1;
 	pthread_mutex_init(&pData->mutErrFile, NULL);
+	pData->caCertFile = NULL;
+	pData->myCertFile = NULL;
+	pData->myPrivKeyFile = NULL;
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
@@ -227,6 +236,9 @@ CODESTARTfreeInstance
 	free(pData->timeout);
 	free(pData->errorFile);
 	free(pData->bulkId);
+	free(pData->caCertFile);
+	free(pData->myCertFile);
+	free(pData->myPrivKeyFile);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
@@ -283,6 +295,9 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tinterleaved=%d\n", pData->interleaved);
 	dbgprintf("\tdynbulkid=%d\n", pData->dynBulkId);
 	dbgprintf("\tbulkid='%s'\n", pData->bulkId);
+	dbgprintf("\ttls.cacert='%s'\n", pData->caCertFile);
+	dbgprintf("\ttls.mycert='%s'\n", pData->myCertFile);
+	dbgprintf("\ttls.myprivkey='%s'\n", pData->myPrivKeyFile);
 ENDdbgPrintInstInfo
 
 
@@ -1338,6 +1353,12 @@ curlSetupCommon(wrkrInstanceData_t *const pWrkrData, CURL *const handle)
 		curl_easy_setopt(handle, CURLOPT_USERPWD, pWrkrData->pData->authBuf);
 		curl_easy_setopt(handle, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
 	}
+	if(pWrkrData->pData->caCertFile)
+		curl_easy_setopt(handle, CURLOPT_CAINFO, pWrkrData->pData->caCertFile);
+	if(pWrkrData->pData->myCertFile)
+		curl_easy_setopt(handle, CURLOPT_SSLCERT, pWrkrData->pData->myCertFile);
+	if(pWrkrData->pData->myPrivKeyFile)
+		curl_easy_setopt(handle, CURLOPT_SSLKEY, pWrkrData->pData->myPrivKeyFile);
 	/* uncomment for in-dept debuggung:
 	curl_easy_setopt(handle, CURLOPT_VERBOSE, TRUE); */
 }
@@ -1408,6 +1429,9 @@ setInstParamDefaults(instanceData *const pData)
 	pData->interleaved=0;
 	pData->dynBulkId= 0;
 	pData->bulkId = NULL;
+	pData->caCertFile = NULL;
+	pData->myCertFile = NULL;
+	pData->myPrivKeyFile = NULL;
 }
 
 BEGINnewActInst
@@ -1416,6 +1440,8 @@ BEGINnewActInst
 	struct cnfarray* servers = NULL;
 	int i;
 	int iNumTpls;
+	FILE *fp;
+	char errStr[1024];
 CODESTARTnewActInst
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -1475,6 +1501,39 @@ CODESTARTnewActInst
 			pData->dynBulkId = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "bulkid")) {
 			pData->bulkId = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "tls.cacert")) {
+			pData->caCertFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			fp = fopen((const char*)pData->caCertFile, "r");
+			if(fp == NULL) {
+				rs_strerror_r(errno, errStr, sizeof(errStr));
+				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
+						"error: 'tls.cacert' file %s couldn't be accessed: %s\n",
+						pData->caCertFile, errStr);
+			} else {
+				fclose(fp);
+			}
+		} else if(!strcmp(actpblk.descr[i].name, "tls.mycert")) {
+			pData->myCertFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			fp = fopen((const char*)pData->myCertFile, "r");
+			if(fp == NULL) {
+				rs_strerror_r(errno, errStr, sizeof(errStr));
+				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
+						"error: 'tls.mycert' file %s couldn't be accessed: %s\n",
+						pData->myCertFile, errStr);
+			} else {
+				fclose(fp);
+			}
+		} else if(!strcmp(actpblk.descr[i].name, "tls.myprivkey")) {
+			pData->myPrivKeyFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			fp = fopen((const char*)pData->myPrivKeyFile, "r");
+			if(fp == NULL) {
+				rs_strerror_r(errno, errStr, sizeof(errStr));
+				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
+						"error: 'tls.myprivkey' file %s couldn't be accessed: %s\n",
+						pData->myPrivKeyFile, errStr);
+			} else {
+				fclose(fp);
+			}
 		} else {
 			LogError(0, RS_RET_INTERNAL_ERROR, "omelasticsearch: program error, "
 				"non-handled param '%s'", actpblk.descr[i].name);
