@@ -1,5 +1,10 @@
 ------------------------------------------------------------------------------
 Version 8.34.0 [v8-stable] 2018-04-03
+- omelasticsearch: add support for CA cert, client cert auth
+  This allows omelasticsearch to perform client cert based authentication
+  to Elasticsearch.
+  adds parameters: tls.cacert, tls.mycert, tls.myprivkey
+  Thanks to Richard Megginson for the patch.
 - bugfix imfile: memory leak in readMode 0
   closes https://github.com/rsyslog/rsyslog/issues/2421
 - bugfix omfile: some error messages had parameters in wrong order
