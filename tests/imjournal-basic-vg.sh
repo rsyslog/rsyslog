@@ -9,6 +9,7 @@
 # addd 2017-10-25 by RGerhards, released under ASL 2.0
 
 . $srcdir/diag.sh init
+. $srcdir/diag.sh require-journalctl
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
 module(load="../plugins/imjournal/.libs/imjournal")
@@ -23,12 +24,13 @@ TESTMSG="TestBenCH-RSYSLog imjournal This is a test message - $(date +%s)"
 . $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 . $srcdir/diag.sh wait-shutdown-vg
 . $srcdir/diag.sh check-exit-vg
-if [ $? -eq 1 ]; then
+journalctl -q | grep -qF "$TESTMSG"
+if [ $? -ne 0 ]; then
   echo "FAIL: rsyslog.out.log content (tail -n200):"
   tail -n200 rsyslog.out.log
   echo "======="
   echo "last entries from journal:"
-  journalctl|tail -n200
+  journalctl -q|tail -n200
   echo "======="
   echo "NOTE: last 200 lines may be insufficient on busy systems!"
   echo "======="
