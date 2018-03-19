@@ -449,24 +449,26 @@ if ENABLE_OMPROG
 # see https://github.com/rsyslog/rsyslog/issues/2403
 # TODO: re-enable!
 #	omprog-cleanup.sh
+#	omprog-noterm-cleanup.sh
+#	omprog-noterm-default.sh
+# linux:
+#	omprog-noterm-unresponsive.sh
+# valgrind:
+#	omprog-noterm-cleanup-vg.sh
 TESTS +=  \
 	omprog-cleanup-with-outfile.sh \
-	omprog-noterm-cleanup.sh \
-	omprog-noterm-default.sh \
 	omprog-feedback.sh \
 	omprog-transactions.sh \
 	omprog-transactions-failed-messages.sh \
 	omprog-transactions-failed-commits.sh
 if OS_LINUX
 TESTS += \
-	omprog-cleanup-when-unresponsive.sh \
-	omprog-noterm-unresponsive.sh
+	omprog-cleanup-when-unresponsive.sh
 endif
 if HAVE_VALGRIND
 TESTS +=  \
 	omprog-cleanup-vg.sh \
-	omprog-multiparam-vg.sh \
-	omprog-noterm-cleanup-vg.sh
+	omprog-multiparam-vg.sh
 if OS_LINUX
 TESTS += \
 	omprog-cleanup-when-unresponsive-vg.sh
