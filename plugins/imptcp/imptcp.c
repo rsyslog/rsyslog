@@ -441,7 +441,7 @@ static rsRetVal startupUXSrv(ptcpsrv_t *pSrv) {
 		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 	}
 
-	if (listen(sock, 5) < 0) {
+	if (listen(sock, 511) < 0) {
 		errmsg.LogError(errno, RS_RET_ERR_CRE_AFUX, "imptcp: unix socket listen error");
 		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 	}
