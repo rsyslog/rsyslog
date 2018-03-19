@@ -453,7 +453,10 @@ TESTS +=  \
 	omprog-cleanup-with-outfile.sh \
 	omprog-noterm-cleanup.sh \
 	omprog-noterm-default.sh \
-	omprog-feedback.sh
+	omprog-feedback.sh \
+	omprog-transactions.sh \
+	omprog-transactions-failed-messages.sh \
+	omprog-transactions-failed-commits.sh
 if OS_LINUX
 TESTS += \
 	omprog-cleanup-when-unresponsive.sh \
@@ -1380,6 +1383,9 @@ EXTRA_DIST= \
 	omprog-noterm-default.sh \
 	omprog-noterm-unresponsive.sh \
 	omprog-feedback.sh \
+	omprog-transactions.sh \
+	omprog-transactions-failed-messages.sh \
+	omprog-transactions-failed-commits.sh \
 	omprog-multiparam-vg.sh \
 	testsuites/omprog-cleanup.conf \
 	testsuites/omprog-noterm.conf \
@@ -1392,6 +1398,10 @@ EXTRA_DIST= \
 	testsuites/term-ignoring-script.sh \
 	testsuites/omprog-feedback.conf \
 	testsuites/omprog-feedback-bin.sh \
+	testsuites/omprog-transactions-bin.sh \
+	testsuites/omprog-transactions.conf \
+	testsuites/omprog-transactions-failed-messages.conf \
+	testsuites/omprog-transactions-failed-commits.conf \
 	pipe_noreader.sh \
 	testsuites/pipe_noreader.conf \
 	uxsock_simple.sh \
