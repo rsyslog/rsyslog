@@ -428,14 +428,16 @@ TESTS +=  \
 endif
 endif
 
-if ENABLE_IMJOURNAL
-TESTS +=  \
-	imjournal-basic.sh
-if HAVE_VALGRIND
-TESTS +=  \
-	imjournal-basic-vg.sh
-endif
-endif
+# disable temporarily due to issues
+# see: https://github.com/rsyslog/rsyslog/issues/2564
+#if ENABLE_IMJOURNAL
+#TESTS +=  \
+#	imjournal-basic.sh
+#if HAVE_VALGRIND
+#TESTS +=  \
+#	imjournal-basic-vg.sh
+#endif
+#endif
 
 if ENABLE_OMJOURNAL
 TESTS +=  \
