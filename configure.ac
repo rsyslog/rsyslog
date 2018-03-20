@@ -1071,6 +1071,18 @@ AC_ARG_ENABLE(mail,
 AM_CONDITIONAL(ENABLE_MAIL, test x$enable_mail = xyes)
 
 
+AC_ARG_ENABLE(fmhttp,
+        [AS_HELP_STRING([--enable-fmhttp],[Enable fmhttp @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_fmhttp="yes" ;;
+          no) enable_fmhttp="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-fmhttp) ;;
+         esac],
+        [enable_fmhttp=yes]
+)
+AM_CONDITIONAL(ENABLE_FMHTTP, test x$enable_fmhttp = xyes)
+
+
 # imdiag support
 # This is a core testbench tool. You need to enable it if you want to
 # use not only a small subset of the testbench.
@@ -2182,6 +2194,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omrelp/Makefile \
 		plugins/omlibdbi/Makefile \
 		plugins/ommail/Makefile \
+		plugins/fmhttp/Makefile \
 		plugins/omsnmp/Makefile \
 		plugins/omudpspoof/Makefile \
 		plugins/ommongodb/Makefile \
@@ -2305,6 +2318,9 @@ echo "    GnuTLS network stream driver enabled:     $enable_gnutls"
 echo "    GSSAPI Kerberos 5 support enabled:        $enable_gssapi_krb5"
 echo "    RELP support enabled:                     $enable_relp"
 echo "    SNMP support enabled:                     $enable_snmp"
+echo
+echo "---{ function modules }---"
+echo "    fmhttp enabled:                           $enable_fmhttp"
 echo
 echo "---{ debugging support }---"
 echo "    Testbench enabled:                        $enable_testbench"

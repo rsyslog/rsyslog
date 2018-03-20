@@ -12,7 +12,7 @@
  *
  * File begun on 2007-07-22 by RGerhards
  *
- * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -59,7 +59,8 @@ typedef enum eModType_ {
 	eMOD_LIB = 2,	/* library module */
 	eMOD_PARSER = 3,/* parser module */
 	eMOD_STRGEN = 4,/* strgen module */
-	eMOD_ANY = 5	/* meta-name for "any type of module" -- to be used in function calls */
+	eMOD_FUNCTION = 5, /*rscript function module*/
+	eMOD_ANY = 6	/* meta-name for "any type of module" -- to be used in function calls */
 } eModType_t;
 
 
@@ -158,6 +159,9 @@ struct modInfo_s {
 		struct { /* data for strgen modules */
 			rsRetVal (*strgen)(const smsg_t*const, actWrkrIParams_t *const iparam);
 		} sm;
+		struct { /* data for rscript modules */
+			rsRetVal (*getFunctArray)(int *const, struct scriptFunct**);
+		} fm;
 	} mod;
 	void *pModHdlr; /* handler to the dynamic library holding the module */
 #	ifdef DEBUG

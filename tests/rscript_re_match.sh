@@ -9,6 +9,6 @@ echo \[rscript_re_match.sh\]: test re_match rscript-fn
 echo doing shutdown
 . $srcdir/diag.sh shutdown-when-empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown 
+. $srcdir/diag.sh wait-shutdown
 . $srcdir/diag.sh content-check "*Matched*"
 . $srcdir/diag.sh exit
