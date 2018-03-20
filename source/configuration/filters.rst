@@ -76,11 +76,9 @@ Property-Based Filters
 
 Property-based filters are unique to rsyslogd. They allow to filter on
 any property, like HOSTNAME, syslogtag and msg. A list of all
-currently-supported properties can be found in the :doc:`property replacer
-documentation <property_replacer>` (but keep in mind that only the
-properties, not the replacer is supported). With this filter, each
-properties can be checked against a specified value, using a specified
-compare operation.
+currently-supported properties can be found in the :doc:`rsyslog properties
+documentation <properties>`. With this filter, each property can be checked
+against a specified value, using a specified compare operation.
 
 A property-based filter must start with a colon **in column 1**. This tells
 rsyslogd that it is the new filter type. The colon must be followed by
