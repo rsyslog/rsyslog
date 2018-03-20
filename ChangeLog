@@ -1,5 +1,9 @@
 ------------------------------------------------------------------------------
 Version 8.34.0 [v8-stable] 2018-04-03
+- rsyslog script: introduce loadable function modules
+  rsyslog scripting can now also be extended via loadable modules - they
+  provides functions (just like loadable input, output, ... modules)
+  see also http://jan.gerhards.net/2018/03/loadable-rainerscript-functions.html
 - omelasticsearch: add support for CA cert, client cert auth
   This allows omelasticsearch to perform client cert based authentication
   to Elasticsearch.
