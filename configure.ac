@@ -245,9 +245,28 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM(, return __builtin_expect(main != 0, 1))],
                 AC_MSG_RESULT([yes])],
                [AC_MSG_RESULT([no])])
 
+
+
 # check for availability of atomic operations
-RS_ATOMIC_OPERATIONS
-RS_ATOMIC_OPERATIONS_64BIT
+# Note: this switch is primarily for the testbench, so that we can try
+# to build w/o automic operations on systems that actually support them.
+# Usually, atomic operations should be used when available as this
+# speeds up processig.
+# note that when automic operations are enabled but not available, they
+# will silently NOT be used!
+AC_ARG_ENABLE(regexp,
+        [AS_HELP_STRING([--enable-atomic-operations],[Enable atomic operation support @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_atomic_operations="yes" ;;
+          no) enable_atomic_operations="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-atomic-operations) ;;
+         esac],
+        [enable_atomic_operations=yes]
+)
+if test "$enable_atomic_operations" = "yes"; then
+	RS_ATOMIC_OPERATIONS
+	RS_ATOMIC_OPERATIONS_64BIT
+fi
 
 # fall back to POSIX sems for atomic operations (cpu expensive)
 AC_CHECK_HEADERS([semaphore.h sys/syscall.h])
