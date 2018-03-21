@@ -327,7 +327,7 @@ finalize_it:
 
 /* enable linux-like ratelimiting */
 void
-ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned short interval, unsigned short burst)
+ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned short interval, unsigned burst)
 {
 	ratelimit->interval = interval;
 	ratelimit->burst = burst;
