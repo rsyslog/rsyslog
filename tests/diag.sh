@@ -134,9 +134,9 @@ case $1 in
 		rm -f rsyslogd.started work-*.conf rsyslog.random.data
 		rm -f rsyslogd2.started work-*.conf
 		rm -f log log* # RSyslog debug output 
-		rm -f work rsyslog.out.log rsyslog2.out.log rsyslog.out.log.save # common work files
+		rm -f work rsyslog.out.* rsyslog2.out.log # common work files
 		rm -rf test-spool test-logdir stat-file1
-		rm -f rsyslog.out.*.log work-presort rsyslog.pipe
+		rm -f work-presort rsyslog.pipe
 		rm -f -r rsyslog.input.*
 		rm -f rsyslog.input rsyslog.empty rsyslog.input.* imfile-state* omkafka-failed.data
 		rm -f testconf.conf HOSTNAME
@@ -179,9 +179,9 @@ case $1 in
 		# now real cleanup
 		rm -f rsyslogd.started work-*.conf diag-common.conf
    		rm -f rsyslogd2.started diag-common2.conf rsyslog.action.*.include
-		rm -f work rsyslog.out.log rsyslog2.out.log rsyslog.out.log.save # common work files
+		rm -f work rsyslog.out.* rsyslog2.out.log # common work files
 		rm -rf test-spool test-logdir stat-file1
-		rm -f rsyslog.out.*.log rsyslog.random.data work-presort rsyslog.pipe
+		rm -f rsyslog.random.data work-presort rsyslog.pipe
 		rm -f -r rsyslog.input.*
 		rm -f rsyslog.input rsyslog.conf.tlscert stat-file1 rsyslog.empty rsyslog.input.* imfile-state*
 		rm -f testconf.conf
