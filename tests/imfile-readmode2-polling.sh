@@ -1,9 +1,25 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
-echo ======================================================================
-echo [imfile-readmode2.sh]
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup imfile-readmode2-polling.conf
+. $srcdir/diag.sh generate-conf
+. $srcdir/diag.sh add-conf '
+global( debug.whitelist="on"
+	debug.files=["imfile.c"])
+
+module(load="../plugins/imfile/.libs/imfile" mode="polling" PollingInterval="1")
+
+input(type="imfile" File="./rsyslog.input" Tag="file:" ReadMode="2")
+
+template(name="outfmt" type="list") {
+  constant(value="HEADER ")
+  property(name="msg" format="json")
+  constant(value="\n")
+}
+
+if $msg contains "msgnum:" then
+	action(type="omfile" file="rsyslog.out.log" template="outfmt")
+'
+. $srcdir/diag.sh startup
 
 # write the beginning of the file
 echo 'msgnum:0

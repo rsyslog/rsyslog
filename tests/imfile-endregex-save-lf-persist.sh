@@ -47,7 +47,7 @@ echo 'END OF TEST' >> rsyslog.input
 
 printf 'HEADER msgnum:0\\\\n msgnum:1\\\\n msgnum:2
 HEADER msgnum:3
-HEADER msgnum:4\\\\n msgnum:5\n' | cmp -b rsyslog.out.log
+HEADER msgnum:4\\\\n msgnum:5\n' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid multiline message generated, rsyslog.out.log is:"
   cat rsyslog.out.log

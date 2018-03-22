@@ -3,7 +3,7 @@
 export IMFILEINPUTFILES="10"
 export IMFILEINPUTFILESSTEPS="5"
 #export IMFILEINPUTFILESALL=$(($IMFILEINPUTFILES * $IMFILEINPUTFILESSTEPS))
-export IMFILECHECKTIMEOUT="5"
+export IMFILECHECKTIMEOUT="20"
 . $srcdir/diag.sh init
 . $srcdir/diag.sh check-inotify-only
 # generate input files first. Note that rsyslog processes it as

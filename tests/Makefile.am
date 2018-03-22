@@ -769,6 +769,7 @@ TESTS += \
 	imfile-error-not-repeated.sh \
 	imfile-truncate.sh \
 	imfile-readmode2.sh \
+	imfile-readmode2-polling.sh \
 	imfile-readmode2-with-persists-data-during-stop.sh \
 	imfile-readmode2-with-persists.sh \
 	imfile-endregex.sh \
@@ -784,16 +785,14 @@ TESTS += \
 	imfile-wildcards.sh \
 	imfile-wildcards-dirs.sh \
 	imfile-wildcards-dirs2.sh \
+	imfile-wildcards-dirs-multi.sh \
+	imfile-wildcards-dirs-multi2.sh \
+	imfile-wildcards-dirs-multi3.sh \
+	imfile-wildcards-dirs-multi4.sh \
+	imfile-wildcards-dirs-multi5.sh \
+	imfile-wildcards-dirs-multi5-polling.sh \
+	imfile-rename-while-stopped.sh \
 	imfile-rename.sh
-
-# TEMPORARILY disable some imfile tests because refactoring
-# is needed to get them to work 100% all the time.
-# alorbach, 2018-01-05
-#	imfile-wildcards-dirs-multi.sh \
-#	imfile-wildcards-dirs-multi2.sh \
-#	imfile-wildcards-dirs-multi3.sh \
-#	imfile-wildcards-dirs-multi4.sh \
-#
 
 if HAVE_VALGRIND
 TESTS += \
@@ -1457,6 +1456,7 @@ EXTRA_DIST= \
 	testsuites/random.conf \
 	imfile-readmode0-vg.sh \
 	imfile-readmode2.sh \
+	imfile-readmode2-polling.sh \
 	imfile-readmode2-vg.sh \
 	imfile-readmode2-with-persists-data-during-stop.sh \
 	imfile-readmode2-with-persists.sh \
@@ -1492,8 +1492,10 @@ EXTRA_DIST= \
 	imfile-wildcards-dirs-multi2.sh \
 	imfile-wildcards-dirs-multi3.sh \
 	imfile-wildcards-dirs-multi4.sh \
+	imfile-wildcards-dirs-multi5.sh \
+	imfile-wildcards-dirs-multi5-polling.sh \
+	imfile-rename-while-stopped.sh \
 	imfile-rename.sh \
-	testsuites/imfile-wildcards.conf \
 	testsuites/imfile-wildcards-simple.conf \
 	testsuites/imfile-wildcards-dirs.conf \
 	testsuites/imfile-wildcards-dirs-multi.conf \
