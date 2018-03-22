@@ -1,8 +1,27 @@
 Functions
 =========
 
-RainerScript supports a currently quite limited set of functions:
+There are two types of RainerScript functions: built-ins and modules. Built-in
+functions can always be called in the confiuration. To use module functions,
+you have to load the corresponding module first. To do this, add the following
+line to your configuration:
 
+::
+
+	module(load="<name of module>")
+
+If more than one function with the same name is present, the function of the
+first module loaded will be used. Also, an error message stating this will be
+generated. However, the configuration will not abort. Please note that built-in
+functions will always be automatically loaded before any modules. because of this, you
+are unable to override any of the built-in functions, since their names are already
+in use. The name of a function module starts with fm.
+
+
+built-in functions
+==================
+
+You do not have to load any module to use these functions.
 
 getenv(str)
 -----------
@@ -444,3 +463,38 @@ produces
 ::
 
    0
+
+
+module functions
+================
+
+You can make module funtions accessible for the configuration by loading the corresponding
+module. Once they are loaded, you can use them like any other rainerscript function. If
+more than one function are part of the same module, all functions will be available once
+the module is loaded.
+Here is an example for how to use module functions (in this case http_request)
+
+::
+
+  module(load="../plugins/imtcp/.libs/imtcp")
+  module(load="../plugins/fmhttp/.libs/fmhttp")
+  input(type="imtcp" port="13514")
+
+  template(name="outfmt" type="string" string="%$!%\n")
+
+  if $msg contains "msgnum:" then {
+  	set $.url = "http://www.rsyslog.com/testbench/echo-get.php?content=" & ltrim($msg);
+  	set $!reply = http_request($.url);
+  	action(type="omfile" file="rsyslog.out.log" template="outfmt")
+  }
+
+
+http_request(target)
+--------------------
+
+module: fmhttp
+
+performs a http request to target and returns the result of said request.
+
+Please note that this function is very slow and therefore we suggest using it only seldomly
+to insure adequate performance.
