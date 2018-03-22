@@ -91,3 +91,21 @@ understand why the initial error message was issued.
 Please note that you can NOT diagnose problems based on this message
 alone. It follows in a number of error cases and does not pinpoint any
 problems by itself.
+
+invalid peer name
+-----------------
+
+Sample:
+
+::
+
+  # sender error
+  error: peer name not authorized -  not permitted to talk to it. Names: DNSname: syslog.example.com; CN: syslog.example.com;
+
+  # receiver error
+  unexpected GnuTLS error -110 in nsd_gtls.c:536: The TLS connection was non-properly terminated.
+  netstream session 0x7fee240ef650 from X.X.X.X will be closed due to error
+
+This error is caused by the Subject Alternative Name or Common Name on the receivers certificate not matching any StreamDriverPermittedPeers (RainerScript) / $ActionSendStreamDriverPermittedPeers (Legacy Rsyslog). Either we need to update this parameter with the correct domain name / appropriate wildcard or change the AuthMode of the Stream Driver to be less strict (be sure to carefully read the documentation and understand the implications before taking this route).
+
+The receiver error is fairly generic and comes from the upstream GnuTLS library, because the sender has decided it's not authorized to talk to the remote peer over TLS it tears down the connection before any records are sent, this is treated as a premature termination by the library and it returns the given error. 
