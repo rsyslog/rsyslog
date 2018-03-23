@@ -14,7 +14,7 @@
 import os
 import sys
 
-# Module for our custom functions. Used with automating automating build info.
+# Module for our custom functions. Used with automating build info.
 sys.path.append(os.getcwd())
 import conf_helpers
 
