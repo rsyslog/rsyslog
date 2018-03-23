@@ -1,56 +1,127 @@
+****************************
 The rsyslog include() object
-============================
+****************************
 
-The include object is use to include configuration snippets
+The ``include()`` object is used to include configuration snippets
 stored elsewhere into the configuration.
 
+.. versionadded:: 8.33.0
+
+.. note::
+
+   This configuration option deprecates the older ``$IncludeConfig``
+   |FmtObsoleteName| format directive.
+
+
 Parameters
-----------
+==========
 
-  - file
+.. note::
 
-    Name of file to be included. May include wildcards, in which case all
-    matching files are included (in order of file name sort order).
+   Parameter names are case-insensitive.
 
-  - text
+.. warning::
 
-    Text to be included. This is most useful when using backtick string
-    constants.
+   Only one of the ``file`` or ``text`` parameters may be specified for each
+   ``include()`` object.
 
-  - mode
 
-    Affects how mising files are to be handled:
+file
+----
 
-    - "abort-if-missing", with rsyslog aborting when the file is not present
-    - "required" *(default)*, with rsyslog emitting an error message but otherwise
-      continuing when the file is not present
-    - "optional", which means non-present files will be skipped without notice
+Name of file to be included. May include wildcards, in which case all
+matching files are included (in order of file name sort order).
 
-Note: one of the "file" or "text parameters must be specified, but not both.
 
-Example
--------
+text
+----
 
-To include a file and generate an error message if not present, do::
+Text to be included. This is most useful when using backtick string
+constants.
 
-    include(file="/path/to/include.conf")
 
-To include a file that need not necessarily be present, do::
+mode
+----
 
-    include(file="/path/to/include.conf" mode="optional")
+Affects how mising files are to be handled:
 
-To include multiple files, do::
+- ``abort-if-missing``, with rsyslog aborting when the file is not present
+- ``required`` *(default)*, with rsyslog emitting an error message but otherwise
+  continuing when the file is not present
+- ``optional``, which means non-present files will be skipped without notice
 
-    include(file="/etc/rsyslog.d/*.conf")
+Examples
+========
 
-To include an environment variable as configuration, do::
+Include a required file
+-----------------------
 
-    include(text=`echo $ENV_VAR`)
+.. code-block:: none
 
-To include a file specified via an environment variable, do::
+   include(file="/path/to/include.conf")
 
-    include(file=`echo $ENV_VAR`)
+.. note::
 
-To include an file specified via an environment variable, do::
+   Unless otherwise specified, files referenced by an ``include()`` object
+   must be present, otherwise an error will be generated.
 
-    include(file=`echo $ENV_VAR` mode="optional")
+
+Include an optional file
+------------------------
+
+The referenced file will be used if found, otherwise no errors or warnings
+will be generated regarding its absence.
+
+.. code-block:: none
+   :emphasize-lines: 3
+
+   include(
+      file="/path/to/include.conf"
+      mode="optional"
+   )
+
+
+Include multiple files
+----------------------
+
+.. code-block:: none
+
+   include(file="/etc/rsyslog.d/*.conf")
+
+.. note::
+
+   Unless otherwise specified, files referenced by an ``include()`` object
+   must be present, otherwise an error will be generated.
+
+
+Include an environment variable as configuration
+------------------------------------------------
+
+.. code-block:: none
+
+   include(text=`echo $ENV_VAR`)
+
+
+Include a file specified via an environment variable
+----------------------------------------------------
+
+.. code-block:: none
+
+   include(file=`echo $ENV_VAR`)
+
+.. note::
+
+   Unless otherwise specified, files referenced by an ``include()`` object
+   must be present, otherwise an error will be generated.
+
+
+Include an optional file specified via an environment variable
+--------------------------------------------------------------
+
+.. code-block:: none
+   :emphasize-lines: 3
+
+   include(
+      file=`echo $ENV_VAR`
+      mode="optional"
+   )
