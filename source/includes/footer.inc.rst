@@ -7,8 +7,7 @@
    - |RsyslogOfficialMailingList|_ - best route for general questions
    - GitHub: |GitHubSourceProject|_ - best route for detailed questions and
      for reporting issues that are believed to be bugs with |PRODUCT|
-   - |RsyslogStackOverflow|_ - least activity by dev team, but generally
-     good support from the wider tech community
+   - |RsyslogStackOverflow|_ - experimental support from rsyslog community
 
 .. seealso::
 
