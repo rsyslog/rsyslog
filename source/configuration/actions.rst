@@ -139,10 +139,11 @@ Note: parameter names are case-insensitive.
    resumed for the configured interval. Thereafter, it is retried. If
    multiple retries fail, the interval is automatically extended. This
    is to prevent excessive resource use for retries. After each 10
-   retries, the interval is extended by itself. To be precise, the
-   actual interval is (numRetries / 10 + 1) \* Action.ResumeInterval. so
-   after the 10th try, it by default is 60 and after the 100th try it is
-   330.
+   retries, the interval is extended by itself. To be precise, the 
+   actual interval is (numRetries / 10 + 1) * Action.ResumeInterval.
+   Using the default value of 30, this means that on the 10th try the
+   suspension interval will be 60 (seconds) and after the 100th try
+   it will be 330 (seconds).
 
 - **action.reportSuspension** on/off
 
