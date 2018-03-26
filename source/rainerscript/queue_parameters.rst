@@ -18,11 +18,16 @@ As with other configuration objects, parameters for this
 object are case-insensitive.
 
 -  **queue.filename** name
-   File name to be used for the queue files. Please note that this is
-   actually just the file name. A directory can NOT be specified in this
-   parameter. If the files shall be created in a specific directory,
-   specify queue.spoolDirectory for this. The filename is used to build
-   to complete path for queue files.
+   File name to be used for the queue files. If specified, this parameter
+   enables disk-assisted queue functionality. If *not* specified,
+   the queue will operate without saving the queue to disk, either
+   during its operation or when shut down. See the separate
+   ``queue.saveonshutdown`` parameter to configure that option.
+   Please note that this is actually just the file name. A directory
+   can NOT be specified in this parameter. If the files shall be
+   created in a specific directory, specify ``queue.spoolDirectory``
+   for this. The filename is used to build to complete path for queue
+   files.
 -  **queue.spoolDirectory** name
    This is the directory into which queue files will be stored. Note
    that the directory must exist, it is NOT automatically created by
