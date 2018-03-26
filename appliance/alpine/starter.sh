@@ -22,6 +22,13 @@ if [ "$SYSLOG_APPLIANCE_DEBUG" = "on" ]; then
 	#RSYSLOG_DEBUG_FLAG=-d
 fi
 
+# Set $RSYSLOG_CONFIG_BASE64 to overwrite /etc/rsyslog.conf with base64 encoded config
+# Useful to inject rsyslog.conf file without mounting it into the container
+if [ ! -z "$RSYSLOG_CONFIG_BASE64" ]; then
+        echo "Writing RSYSLOG_CONFIG_BASE64"
+        echo "$RSYSLOG_CONFIG_BASE64" | base64 -d > /etc/rsyslog.conf
+fi
+
 if [ -f tools/$1 ]; then
 	source tools/$1
 else
