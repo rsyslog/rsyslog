@@ -250,15 +250,27 @@ enum cnffuncid {
 	CNFFUNC_IS_TIME
 };
 
+typedef struct cnffunc cnffunc_t;
+typedef void (*rscriptFuncPtr) (cnffunc_t *, struct svar *, void *, wti_t *);
+
 struct cnffunc {
 	unsigned nodetype;
 	es_str_t *fname;
 	unsigned short nParams;
-	enum cnffuncid fID; /* function ID for built-ins, 0 means use name */
+	rscriptFuncPtr fPtr;
 	void *funcdata;	/* global data for function-specific use (e.g. compiled regex) */
 	uint8_t destructable_funcdata;
 	struct cnfexpr *expr[];
 } __attribute__((aligned (8)));
+
+
+struct scriptFunct {
+	const char *fname;
+	unsigned short minParams;
+	unsigned short maxParams;
+	rscriptFuncPtr fPtr;
+};
+
 
 /* future extensions
 struct x {

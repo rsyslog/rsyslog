@@ -269,7 +269,8 @@ CODESTARTparse
 			i = 0;
 			int bHadSBracket = 0;
 			if(pInst->bPermitSquareBracketsInHostname) {
-				if(i < lenMsg && p2parse[i] == '[') {
+				assert(i < lenMsg);
+				if(p2parse[i] == '[') {
 					bHadSBracket = 1;
 					bufParseHOSTNAME[0] = '[';
 					++i;

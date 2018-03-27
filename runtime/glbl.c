@@ -185,7 +185,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "internalmsg.ratelimit.interval", eCmdHdlrPositiveInt, 0 },
 	{ "internalmsg.ratelimit.burst", eCmdHdlrPositiveInt, 0 },
 	{ "errormessagestostderr.maxnumber", eCmdHdlrPositiveInt, 0 },
-	{ "shutdown.enable.ctl-c", eCmdHdlrBinary, 0 },
+	{ "shutdown.enable.ctlc", eCmdHdlrBinary, 0 },
 	{ "debug.files", eCmdHdlrArray, 0 },
 	{ "debug.whitelist", eCmdHdlrBinary, 0 }
 };
@@ -1076,7 +1076,7 @@ do_setenv(const char *const var)
 	for(i = 0 ; *val != '=' ; ++i, ++val) {
 		if(i == sizeof(varname)-i) {
 			parser_errmsg("environment variable name too long "
-				"[max %zd chars] or malformed entry: '%s'",
+				"[max %zu chars] or malformed entry: '%s'",
 				sizeof(varname)-1, var);
 			ABORT_FINALIZE(RS_RET_ERR_SETENV);
 		}
@@ -1291,7 +1291,7 @@ glblDoneLoadCnf(void)
 		        glblDbgWhitelist = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "umask")) {
 		        loadConf->globals.umask = (int) cnfparamvals[i].val.d.n;
-		} else if(!strcmp(paramblk.descr[i].name, "shutdown.enable.ctl-c")) {
+		} else if(!strcmp(paramblk.descr[i].name, "shutdown.enable.ctlc")) {
 		        glblPermitCtlC = (int) cnfparamvals[i].val.d.n;
 		} else {
 			dbgprintf("glblDoneLoadCnf: program error, non-handled "

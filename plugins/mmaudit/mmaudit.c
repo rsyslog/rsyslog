@@ -55,7 +55,6 @@
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
 
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
 
 /* static data */
 DEFobjCurrIf(errmsg);
@@ -75,7 +74,6 @@ typedef struct wrkrInstanceData {
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
-	resetConfigVariables(NULL, NULL);
 ENDinitConfVars
 
 
@@ -315,16 +313,6 @@ CODEqueryEtryPt_STD_OMOD8_QUERIES
 ENDqueryEtryPt
 
 
-
-/* Reset config variables for this module to default values.
- */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
-	DEFiRet;
-	RETiRet;
-}
-
-
 BEGINmodInit()
 	rsRetVal localRet;
 	rsRetVal (*pomsrGetSupportedTplOpts)(unsigned long *pOpts);
@@ -355,9 +343,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 	}
 
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-	
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
-				    resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 
 /* vi:set ai:

@@ -559,7 +559,18 @@ case $1 in
 		fi
 		rm -f work2
 		;;
-   'content-check') 
+   'content-cmp')
+		echo "$2" | cmp - rsyslog.out.log
+		if [ "$?" -ne "0" ]; then
+		    echo content-cmp failed
+		    echo EXPECTED:
+		    echo $2
+		    echo ACTUAL:
+		    cat rsyslog.out.log
+		    . $srcdir/diag.sh error-exit 1
+		fi
+		;;
+   'content-check')
 		cat rsyslog.out.log | grep -qF "$2"
 		if [ "$?" -ne "0" ]; then
 		    echo content-check failed to find "'$2'", content is

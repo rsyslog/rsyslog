@@ -68,11 +68,13 @@ TESTS +=  \
 	privdropgroup.sh \
 	privdropgroupid.sh \
 	template-json.sh \
+	template-pure-json.sh \
 	template-pos-from-to.sh \
 	template-pos-from-to-lowercase.sh \
 	template-pos-from-to-oversize.sh \
 	template-pos-from-to-oversize-lowercase.sh \
 	template-pos-from-to-missing-jsonvar.sh \
+	template-const-jsonf.sh \
 	fac_authpriv.sh \
 	fac_local0.sh \
 	fac_local7.sh \
@@ -219,7 +221,55 @@ TESTS += \
 	mmnormalize_processing_test4.sh
 endif
 endif
+
+if ENABLE_PGSQL
+if ENABLE_PGSQL_TESTS
+TESTS += \
+	pgsql-basic.sh \
+	pgsql-basic-cnf6.sh \
+	pgsql-basic-threads-cnf6.sh \
+	pgsql-template.sh \
+	pgsql-template-cnf6.sh \
+	pgsql-actq-mt-withpause.sh \
+	pgsql-template-threads-cnf6.sh
+if HAVE_VALGRIND
+TESTS += \
+	pgsql-basic-vg.sh \
+	pgsql-template-vg.sh \
+	pgsql-basic-cnf6-vg.sh \
+	pgsql-template-cnf6-vg.sh \
+	pgsql-actq-mt-withpause-vg.sh
 endif
+endif
+endif
+
+if ENABLE_MYSQL_TESTS
+TESTS +=  \
+	mysql-basic.sh \
+	mysql-basic-cnf6.sh \
+	mysql-asyn.sh \
+	mysql-actq-mt.sh \
+	mysql-actq-mt-withpause.sh \
+	action-tx-single-processing.sh \
+	action-tx-errfile.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	mysql-basic-vg.sh \
+	mysql-asyn-vg.sh \
+	mysql-actq-mt-withpause-vg.sh
+endif
+if ENABLE_OMLIBDBI
+TESTS +=  \
+	libdbi-basic.sh \
+	libdbi-asyn.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	libdbi-basic-vg.sh
+endif
+endif
+endif
+
+endif #  ENABLE_TESTBENCH2
 
 if ENABLE_TESTBENCH2
 TESTS +=  \
@@ -320,6 +370,7 @@ TESTS +=  \
 	rscript-config_enable-off-vg.sh \
 	prop-jsonmesg-vg.sh
 endif # HAVE_VALGRIND
+
 endif # ENABLE_TESTBENCH2
 
 if HAVE_VALGRIND
@@ -402,7 +453,10 @@ TESTS +=  \
 	omprog-cleanup-with-outfile.sh \
 	omprog-noterm-cleanup.sh \
 	omprog-noterm-default.sh \
-	omprog-feedback.sh
+	omprog-feedback.sh \
+	omprog-transactions.sh \
+	omprog-transactions-failed-messages.sh \
+	omprog-transactions-failed-commits.sh
 if OS_LINUX
 TESTS += \
 	omprog-cleanup-when-unresponsive.sh \
@@ -438,54 +492,6 @@ endif
 endif
 endif
 endif
-
-if ENABLE_PGSQL
-if ENABLE_PGSQL_TESTS
-TESTS += \
-	pgsql-basic.sh \
-	pgsql-basic-cnf6.sh \
-	pgsql-basic-threads-cnf6.sh \
-	pgsql-template.sh \
-	pgsql-template-cnf6.sh \
-	pgsql-actq-mt-withpause.sh \
-	pgsql-template-threads-cnf6.sh
-if HAVE_VALGRIND
-TESTS += \
-	pgsql-basic-vg.sh \
-	pgsql-template-vg.sh \
-	pgsql-basic-cnf6-vg.sh \
-	pgsql-template-cnf6-vg.sh \
-	pgsql-actq-mt-withpause-vg.sh
-endif
-endif
-endif
-
-if ENABLE_MYSQL_TESTS
-TESTS +=  \
-	mysql-basic.sh \
-	mysql-basic-cnf6.sh \
-	mysql-asyn.sh \
-	mysql-actq-mt.sh \
-	mysql-actq-mt-withpause.sh \
-	action-tx-single-processing.sh \
-	action-tx-errfile.sh
-if HAVE_VALGRIND
-TESTS +=  \
-	mysql-basic-vg.sh \
-	mysql-asyn-vg.sh \
-	mysql-actq-mt-withpause-vg.sh
-endif
-if ENABLE_OMLIBDBI
-TESTS +=  \
-	libdbi-basic.sh \
-	libdbi-asyn.sh
-if HAVE_VALGRIND
-TESTS +=  \
-	libdbi-basic-vg.sh
-endif
-endif
-endif
-
 if ENABLE_IMPSTATS
 TESTS +=  \
 	impstats-hup.sh \
@@ -592,6 +598,11 @@ if ENABLE_PMNULL
 TESTS +=  \
 	pmnull-basic.sh \
 	pmnull-withparams.sh
+endif
+
+if ENABLE_OMSTDOUT
+TESTS +=  \
+	omstdout-basic.sh
 endif
 
 if ENABLE_PMNORMALIZE
@@ -785,6 +796,7 @@ if HAVE_VALGRIND
 TESTS += \
 	imfile-basic-vg.sh \
 	imfile-endregex-vg.sh \
+	imfile-readmode0-vg.sh \
 	imfile-readmode2-vg.sh \
 	imfile-basic-vgthread.sh
 endif
@@ -1060,11 +1072,13 @@ EXTRA_DIST= \
 	privdropgroup.sh \
 	privdropgroupid.sh \
 	template-json.sh \
+	template-pure-json.sh \
 	template-pos-from-to.sh \
 	template-pos-from-to-lowercase.sh \
 	template-pos-from-to-oversize.sh \
 	template-pos-from-to-oversize-lowercase.sh \
 	template-pos-from-to-missing-jsonvar.sh \
+	template-const-jsonf.sh \
 	fac_authpriv.sh \
 	testsuites/fac_authpriv.conf \
 	fac_local0.sh \
@@ -1120,6 +1134,7 @@ EXTRA_DIST= \
 	mmnormalize_rule_from_array.sh \
 	pmnull-basic.sh \
 	pmnull-withparams.sh \
+	omstdout-basic.sh \
 	testsuites/mmnormalize_processing_tests.rulebase \
 	mmnormalize_processing_test1.sh \
 	mmnormalize_processing_test2.sh \
@@ -1356,6 +1371,7 @@ EXTRA_DIST= \
 	testsuites/sndrcv_gzip_rcvr.conf \
 	action-tx-single-processing.sh \
 	action-tx-errfile.sh \
+	testsuites/action-tx-errfile.result \
 	pipeaction.sh \
 	testsuites/pipeaction.conf \
 	omprog-cleanup.sh \
@@ -1368,6 +1384,9 @@ EXTRA_DIST= \
 	omprog-noterm-default.sh \
 	omprog-noterm-unresponsive.sh \
 	omprog-feedback.sh \
+	omprog-transactions.sh \
+	omprog-transactions-failed-messages.sh \
+	omprog-transactions-failed-commits.sh \
 	omprog-multiparam-vg.sh \
 	testsuites/omprog-cleanup.conf \
 	testsuites/omprog-noterm.conf \
@@ -1380,6 +1399,10 @@ EXTRA_DIST= \
 	testsuites/term-ignoring-script.sh \
 	testsuites/omprog-feedback.conf \
 	testsuites/omprog-feedback-bin.sh \
+	testsuites/omprog-transactions-bin.sh \
+	testsuites/omprog-transactions.conf \
+	testsuites/omprog-transactions-failed-messages.conf \
+	testsuites/omprog-transactions-failed-commits.conf \
 	pipe_noreader.sh \
 	testsuites/pipe_noreader.conf \
 	uxsock_simple.sh \
@@ -1429,6 +1452,7 @@ EXTRA_DIST= \
 	testsuites/complex1.conf \
 	random.sh \
 	testsuites/random.conf \
+	imfile-readmode0-vg.sh \
 	imfile-readmode2.sh \
 	imfile-readmode2-vg.sh \
 	imfile-readmode2-with-persists-data-during-stop.sh \
@@ -1797,7 +1821,26 @@ EXTRA_DIST= \
 	testsuites/sample.pmsnare_ccdefault \
 	testsuites/sample.pmsnare_cccstyle \
 	testsuites/sample.pmsnare_ccbackslash \
-	testsuites/sample.pmsnare_modoverride
+	testsuites/sample.pmsnare_modoverride \
+	testsuites/include-std-omfile-action.conf \
+	pgsql-basic.sh \
+	testsuites/pgsql-basic.sql \
+	testsuites/pgsql-basic.conf \
+	testsuites/pgsql-select-msg.sql \
+	testsuites/pgsql-select-syslogtag.sql \
+	pgsql-basic-cnf6.sh \
+	pgsql-basic-threads-cnf6.sh \
+	pgsql-template.sh \
+	testsuites/pgsql-template.conf \
+	pgsql-template-cnf6.sh \
+	pgsql-actq-mt-withpause.sh \
+	pgsql-template-threads-cnf6.sh \
+	pgsql-basic-vg.sh \
+	pgsql-template-vg.sh \
+	pgsql-basic-cnf6-vg.sh \
+	pgsql-template-cnf6-vg.sh \
+	pgsql-actq-mt-withpause-vg.sh \
+	../devtools/prep-mysql-db.sh
 
 ourtail_SOURCES = ourtail.c
 msleep_SOURCES = msleep.c

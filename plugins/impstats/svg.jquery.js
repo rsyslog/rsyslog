@@ -1,10 +1,3 @@
-<html>
-<head><title>301 Moved Permanently</title></head>
-<body bgcolor="white">
-<center><h1>301 Moved Permanently</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
 /*!
  * jQuery JavaScript Library v1.7.2 modified by Florian Mounier to work with SVG
  * http://jquery.com/
