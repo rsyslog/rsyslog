@@ -19,6 +19,13 @@ $DO_IN_CONTAINER devtools/run-configure.sh
 $DO_IN_CONTAINER make check TESTS=""
 unset RSYSLOG_CONFIGURE_OPTIONS_EXTRA
 
+$DO_IN_CONTAINER make clean
+printf "\n\n============ STEP: testing build without atomic ops ================\n\n\n"
+export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-atomic-operations"
+$DO_IN_CONTAINER devtools/run-configure.sh
+$DO_IN_CONTAINER make check TESTS=""
+unset RSYSLOG_CONFIGURE_OPTIONS_EXTRA
+
 # #################### newer compilers ####################
 
 $DO_IN_CONTAINER make clean
