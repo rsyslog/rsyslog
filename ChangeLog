@@ -1,5 +1,26 @@
 ------------------------------------------------------------------------------
 Version 8.34.0 [v8-stable] 2018-04-03
+- rsyslog script: introduce loadable function modules
+  rsyslog scripting can now also be extended via loadable modules - they
+  provides functions (just like loadable input, output, ... modules)
+  see also http://jan.gerhards.net/2018/03/loadable-rainerscript-functions.html
+- omelasticsearch: add support for CA cert, client cert auth
+  This allows omelasticsearch to perform client cert based authentication
+  to Elasticsearch.
+  adds parameters: tls.cacert, tls.mycert, tls.myprivkey
+  Thanks to Richard Megginson for the patch.
+- stream/bugfix: memory leak on stream open if filename as already generated
+  this can happen if imfile reads a state file. On each open, memory for the
+  file name can be lost.
+  We detected this while working on imfile refactoring, so there is no related
+  bug report. No specific test has been crafted, as the refactored imfile
+  tests catch it (as soon as they are merged).
+- bugfix/core/ratelimiting: SystemLogRateLimitBurst was limited to 65535
+  rsyslog uses unsigned short for configuration setting SystemLogRateLimitBurst.
+  Being just 16 bits, unsigned short cannot hold values bigger than 65535. in a
+  practical setting rsyslog misbehaved with SystemLogRateLimitBurst being bigger
+  than 65535.
+  Thanks to github user KaleviKolttonen for the patch.
 - bugfix imfile: memory leak in readMode 0
   closes https://github.com/rsyslog/rsyslog/issues/2421
 - bugfix omfile: some error messages had parameters in wrong order
@@ -11,6 +32,7 @@ Version 8.34.0 [v8-stable] 2018-04-03
   e.g. header file guard not correctly set - if you really are interested in
   details, check git log
 - CI
+  * add build test without atomic operations - now catches missing mutex macros
   * add lgtm.com static analyzer (automatically called via GitHub PR)
   * improved stability of global-umask.sh test, which unnecessarily used
     wildcards for test output file checking.

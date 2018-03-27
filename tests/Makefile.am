@@ -356,10 +356,10 @@ TESTS +=  \
 	lookup_table_rscript_reload_without_stub.sh \
 	include-obj-text-from-file.sh \
 	multiple_lookup_tables.sh
-if ENABLE_LIBCURL
+if ENABLE_FMHTTP
 TESTS +=  \
 	rscript_http_request.sh
-endif # ENABLE_LIBCURL
+endif # ENABLE_FMHTTP
 if HAVE_VALGRIND
 TESTS +=  \
 	include-obj-outside-control-flow-vg.sh \
@@ -403,10 +403,10 @@ TESTS +=  \
 	multiple_lookup_tables-vg.sh \
 	fac_local0-vg.sh \
 	rscript_trim-vg.sh
-if ENABLE_LIBCURL
+if ENABLE_FMHTTP
 TESTS +=  \
 	rscript_http_request-vg.sh
-endif # ENABLE_LIBCURL
+endif # ENABLE_FMHTTP
 endif # HAVE_VALGRIND
 
 if ENABLE_ROOT_TESTS
@@ -428,14 +428,16 @@ TESTS +=  \
 endif
 endif
 
-if ENABLE_IMJOURNAL
-TESTS +=  \
-	imjournal-basic.sh
-if HAVE_VALGRIND
-TESTS +=  \
-	imjournal-basic-vg.sh
-endif
-endif
+# disable temporarily due to issues
+# see: https://github.com/rsyslog/rsyslog/issues/2564
+#if ENABLE_IMJOURNAL
+#TESTS +=  \
+#	imjournal-basic.sh
+#if HAVE_VALGRIND
+#TESTS +=  \
+#	imjournal-basic-vg.sh
+#endif
+#endif
 
 if ENABLE_OMJOURNAL
 TESTS +=  \
@@ -449,28 +451,30 @@ if ENABLE_OMPROG
 # see https://github.com/rsyslog/rsyslog/issues/2403
 # TODO: re-enable!
 #	omprog-cleanup.sh
+#	omprog-noterm-cleanup.sh
+#	omprog-noterm-default.sh
+#	omprog-cleanup-with-outfile.sh
+# linux:
+#	omprog-noterm-unresponsive.sh
+# valgrind:
+#	omprog-noterm-cleanup-vg.sh
+#	omprog-cleanup-vg.sh
 TESTS +=  \
-	omprog-cleanup-with-outfile.sh \
-	omprog-noterm-cleanup.sh \
-	omprog-noterm-default.sh \
 	omprog-feedback.sh \
 	omprog-transactions.sh \
 	omprog-transactions-failed-messages.sh \
 	omprog-transactions-failed-commits.sh
-if OS_LINUX
-TESTS += \
-	omprog-cleanup-when-unresponsive.sh \
-	omprog-noterm-unresponsive.sh
-endif
+#if OS_LINUX
+#TESTS += \
+#	omprog-cleanup-when-unresponsive.sh
+#endif
 if HAVE_VALGRIND
 TESTS +=  \
-	omprog-cleanup-vg.sh \
-	omprog-multiparam-vg.sh \
-	omprog-noterm-cleanup-vg.sh
-if OS_LINUX
-TESTS += \
-	omprog-cleanup-when-unresponsive-vg.sh
-endif
+	omprog-multiparam-vg.sh
+#if OS_LINUX
+#TESTS += \
+	#omprog-cleanup-when-unresponsive-vg.sh
+#endif
 endif
 endif
 
@@ -766,6 +770,7 @@ TESTS += \
 	imfile-error-not-repeated.sh \
 	imfile-truncate.sh \
 	imfile-readmode2.sh \
+	imfile-readmode2-polling.sh \
 	imfile-readmode2-with-persists-data-during-stop.sh \
 	imfile-readmode2-with-persists.sh \
 	imfile-endregex.sh \
@@ -781,16 +786,14 @@ TESTS += \
 	imfile-wildcards.sh \
 	imfile-wildcards-dirs.sh \
 	imfile-wildcards-dirs2.sh \
+	imfile-wildcards-dirs-multi.sh \
+	imfile-wildcards-dirs-multi2.sh \
+	imfile-wildcards-dirs-multi3.sh \
+	imfile-wildcards-dirs-multi4.sh \
+	imfile-wildcards-dirs-multi5.sh \
+	imfile-wildcards-dirs-multi5-polling.sh \
+	imfile-rename-while-stopped.sh \
 	imfile-rename.sh
-
-# TEMPORARILY disable some imfile tests because refactoring
-# is needed to get them to work 100% all the time.
-# alorbach, 2018-01-05
-#	imfile-wildcards-dirs-multi.sh \
-#	imfile-wildcards-dirs-multi2.sh \
-#	imfile-wildcards-dirs-multi3.sh \
-#	imfile-wildcards-dirs-multi4.sh \
-#
 
 if HAVE_VALGRIND
 TESTS += \
@@ -1454,6 +1457,7 @@ EXTRA_DIST= \
 	testsuites/random.conf \
 	imfile-readmode0-vg.sh \
 	imfile-readmode2.sh \
+	imfile-readmode2-polling.sh \
 	imfile-readmode2-vg.sh \
 	imfile-readmode2-with-persists-data-during-stop.sh \
 	imfile-readmode2-with-persists.sh \
@@ -1489,8 +1493,10 @@ EXTRA_DIST= \
 	imfile-wildcards-dirs-multi2.sh \
 	imfile-wildcards-dirs-multi3.sh \
 	imfile-wildcards-dirs-multi4.sh \
+	imfile-wildcards-dirs-multi5.sh \
+	imfile-wildcards-dirs-multi5-polling.sh \
+	imfile-rename-while-stopped.sh \
 	imfile-rename.sh \
-	testsuites/imfile-wildcards.conf \
 	testsuites/imfile-wildcards-simple.conf \
 	testsuites/imfile-wildcards-dirs.conf \
 	testsuites/imfile-wildcards-dirs-multi.conf \

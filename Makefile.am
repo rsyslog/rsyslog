@@ -195,6 +195,10 @@ if ENABLE_MAIL
 SUBDIRS += plugins/ommail
 endif
 
+if ENABLE_FMHTTP
+SUBDIRS += plugins/fmhttp
+endif
+
 if ENABLE_OMKAFKA
 SUBDIRS += plugins/omkafka 
 endif

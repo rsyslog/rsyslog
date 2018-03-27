@@ -33,6 +33,7 @@
  */
 #include "config.h"
 #include "rsyslog.h"
+#include "rainerscript.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -802,6 +803,15 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			CHKiRet(strgen.SetModPtr(pStrgen, pNew));
 			CHKiRet(strgen.ConstructFinalize(pStrgen));
 			break;
+		case eMOD_FUNCTION:
+			dbgprintf("TTTTTT: load function module\n");
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"getFunctArray", &pNew->mod.fm.getFunctArray));
+			int version;
+			struct scriptFunct *functArray;
+			pNew->mod.fm.getFunctArray(&version, &functArray);
+			dbgprintf("LLL: %s\n", functArray[0].fname);
+			addMod2List(version, functArray);
+			break;
 		case eMOD_ANY: /* this is mostly to keep the compiler happy! */
 			DBGPRINTF("PROGRAM ERROR: eMOD_ANY set as module type\n");
 			assert(0);
@@ -884,6 +894,9 @@ static void modPrintList(void)
 		case eMOD_STRGEN:
 			dbgprintf("strgen");
 			break;
+		case eMOD_FUNCTION:
+			dbgprintf("function");
+			break;
 		case eMOD_ANY: /* this is mostly to keep the compiler happy! */
 			DBGPRINTF("PROGRAM ERROR: eMOD_ANY set as module type\n");
 			assert(0);
@@ -940,6 +953,10 @@ static void modPrintList(void)
 		case eMOD_STRGEN:
 			dbgprintf("Strgen Module Entry Points\n");
 			dbgprintf("\tstrgen:            0x%lx\n", (unsigned long) pMod->mod.sm.strgen);
+			break;
+		case eMOD_FUNCTION:
+			dbgprintf("Function Module Entry Points\n");
+			dbgprintf("\tgetFunctArray:     0x%lx\n", (unsigned long) pMod->mod.fm.getFunctArray);
 			break;
 		case eMOD_ANY: /* this is mostly to keep the compiler happy! */
 			break;

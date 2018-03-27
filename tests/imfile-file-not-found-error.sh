@@ -1,7 +1,7 @@
 #!/bin/bash
 # add 2017-04-28 by Pascal Withopf, released under ASL 2.0
 echo [imfile-file-not-found-error.sh]
-. $srcdir/diag.sh check-inotify-only
+. $srcdir/diag.sh check-inotify
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
@@ -35,7 +35,7 @@ fi
 
 printf 'testmessage1
 testmessage2
-testmessage3\n' | cmp -b rsyslog.out.log
+testmessage3\n' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
   cat rsyslog.out.log

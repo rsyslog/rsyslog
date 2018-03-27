@@ -4,6 +4,7 @@
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
 module(load="../plugins/imtcp/.libs/imtcp")
+module(load="../plugins/fmhttp/.libs/fmhttp")
 input(type="imtcp" port="13514")
 
 set $!ip!v0 = num2ipv4("");

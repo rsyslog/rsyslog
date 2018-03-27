@@ -134,9 +134,9 @@ case $1 in
 		rm -f rsyslogd.started work-*.conf rsyslog.random.data
 		rm -f rsyslogd2.started work-*.conf
 		rm -f log log* # RSyslog debug output 
-		rm -f work rsyslog.out.log rsyslog2.out.log rsyslog.out.log.save # common work files
+		rm -f work rsyslog.out.* rsyslog2.out.log # common work files
 		rm -rf test-spool test-logdir stat-file1
-		rm -f rsyslog.out.*.log work-presort rsyslog.pipe
+		rm -f work-presort rsyslog.pipe
 		rm -f -r rsyslog.input.*
 		rm -f rsyslog.input rsyslog.empty rsyslog.input.* imfile-state* omkafka-failed.data
 		rm -f testconf.conf HOSTNAME
@@ -179,9 +179,9 @@ case $1 in
 		# now real cleanup
 		rm -f rsyslogd.started work-*.conf diag-common.conf
    		rm -f rsyslogd2.started diag-common2.conf rsyslog.action.*.include
-		rm -f work rsyslog.out.log rsyslog2.out.log rsyslog.out.log.save # common work files
+		rm -f work rsyslog.out.* rsyslog2.out.log # common work files
 		rm -rf test-spool test-logdir stat-file1
-		rm -f rsyslog.out.*.log rsyslog.random.data work-presort rsyslog.pipe
+		rm -f rsyslog.random.data work-presort rsyslog.pipe
 		rm -f -r rsyslog.input.*
 		rm -f rsyslog.input rsyslog.conf.tlscert stat-file1 rsyslog.empty rsyslog.input.* imfile-state*
 		rm -f testconf.conf
@@ -578,6 +578,36 @@ case $1 in
 		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;
+   'wait-file-lines') 
+		# $2 filename, $3 expected nbr of lines, $4 nbr of tries
+		if [ "$4" == "" ]; then
+			timeoutend=1
+		else
+			timeoutend=$4
+		fi
+		timecounter=0
+
+		while [  $timecounter -lt $timeoutend ]; do
+			let timecounter=timecounter+1
+
+			count=$(wc -l < rsyslog.out.log)
+			if [ $count -eq $3 ]; then
+				echo wait-file-lines success, have $3 lines
+				break
+			else
+				if [ "x$timecounter" == "x$timeoutend" ]; then
+					echo wait-file-lines failed, expected $3 got $count
+					. $srcdir/diag.sh shutdown-when-empty
+					. $srcdir/diag.sh wait-shutdown
+					. $srcdir/diag.sh error-exit 1
+				else
+					echo wait-file-lines not yet there, currently $count lines
+					./msleep 200
+				fi
+			fi
+		done
+		unset count
+		;;
    'content-check-with-count') 
 		# content check variables for Timeout
 		if [ "x$4" == "x" ]; then
@@ -588,12 +618,11 @@ case $1 in
 		timecounter=0
 
 		while [  $timecounter -lt $timeoutend ]; do
-#			echo content-check-with-count loop $timecounter
 			let timecounter=timecounter+1
 
 			count=$(cat rsyslog.out.log | grep -F "$2" | wc -l)
 
-			if [ "x$count" == "x$3" ]; then
+			if [ $count -eq $3 ]; then
 				echo content-check-with-count success, \"$2\" occured $3 times
 				break
 			else
@@ -601,12 +630,12 @@ case $1 in
 					. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd
 					. $srcdir/diag.sh wait-shutdown	# Shutdown rsyslog instance on error 
 
-					echo content-check-with-count failed, expected \"$2\" to occure $3 times, but found it $count times
+					echo content-check-with-count failed, expected \"$2\" to occur $3 times, but found it $count times
 					echo file rsyslog.out.log content is:
-					cat rsyslog.out.log
+					sort < rsyslog.out.log
 					. $srcdir/diag.sh error-exit 1
 				else
-					echo content-check-with-count failed, trying again ...
+					echo content-check-with-count have $count, wait for $3 times $2...
 					./msleep 1000
 				fi
 			fi

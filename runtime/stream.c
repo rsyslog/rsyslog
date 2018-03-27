@@ -353,6 +353,8 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 
 	if(pThis->fd != -1)
 		ABORT_FINALIZE(RS_RET_OK);
+
+	free(pThis->pszCurrFName);
 	pThis->pszCurrFName = NULL; /* used to prevent mem leak in case of error */
 
 	if(pThis->pszFName == NULL)

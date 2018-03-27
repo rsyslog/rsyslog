@@ -71,6 +71,9 @@
 #	define _PATH_DEV	"/dev/"
 #endif
 
+#ifdef OS_SOLARIS
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
