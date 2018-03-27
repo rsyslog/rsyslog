@@ -5009,8 +5009,11 @@ cnfstmtOptimize(struct cnfstmt *root)
 			cnfstmtOptimizeReloadLookupTable(stmt);
 			break;
 		case S_NOP:
-			LogError(0, RS_RET_INTERNAL_ERROR,
-				"optimizer error: we see a NOP, how come?");
+			// TODO: fix optimizer, re-enable. see:
+			// https://github.com/rsyslog/rsyslog/issues/2524
+			//LogError(0, RS_RET_INTERNAL_ERROR,
+			//	"optimizer error: we see a NOP, how come?");
+			dbgprintf("optimizer error: we see a NOP, how come?");
 			break;
 		default:
 			LogError(0, RS_RET_INTERNAL_ERROR,
