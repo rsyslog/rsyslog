@@ -403,9 +403,9 @@ CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_FMOD_QUERIES
 ENDqueryEtryPt
 
-#if !defined(__clang__)
-#pragma GCC diagnostic ignored "-Wstrict-prototypes"
-#endif
+//#if !defined(__clang__)
+//#pragma GCC diagnostic ignored "-Wstrict-prototypes"
+//#endif
 BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
