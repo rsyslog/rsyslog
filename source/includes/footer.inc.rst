@@ -5,9 +5,12 @@
    Help with configuring/using |PRODUCT|:
 
    - |RsyslogOfficialMailingList|_ - best route for general questions
-   - GitHub: |GitHubSourceProject|_ - best route for detailed questions and
-     for reporting issues that are believed to be bugs with |PRODUCT|
-   - |RsyslogStackOverflow|_ - experimental support from rsyslog community
+
+   - GitHub: |GitHubSourceProject|_ - detailed questions, reporting issues
+     that are believed to be bugs with |PRODUCT|
+
+   - Stack Exchange (|RsyslogStackExchangeView|_, |RsyslogStackExchangeAsk|_)
+     - experimental support from rsyslog community
 
 .. seealso::
 
