@@ -111,6 +111,7 @@ static struct configSettings_s {
 
 struct instanceConf_s {
 	uchar *pszFileName;
+	uchar *pszFileName_forOldStateFile; /* we unfortunately needs this to read old state files */
 	uchar *pszDirName;
 	uchar *pszFileBaseName;
 	uchar *pszTag;
@@ -301,6 +302,97 @@ static struct cnfparamblk inppblk =
 	};
 
 #include "im-helper.h" /* must be included AFTER the type definitions! */
+
+
+/* Support for "old cruft" state files will potentially become optional in the
+ * future (hopefully). To prepare so, we use conditional compilation with a
+ * fixed-true condition ;-) -- rgerhards, 2018-03-28
+ * reason: https://github.com/rsyslog/rsyslog/issues/2231#issuecomment-376862280
+ */
+#define ENABLE_V1_STATE_FILE_FORMAT_SUPPORT 1
+#ifdef ENABLE_V1_STATE_FILE_FORMAT_SUPPORT
+static uchar * ATTR_NONNULL(1, 2)
+OLD_getStateFileName(const instanceConf_t *const inst,
+	 uchar *const __restrict__ buf,
+	 const size_t lenbuf)
+{
+	DBGPRINTF("OLD_getStateFileName trying '%s'\n", inst->pszFileName_forOldStateFile);
+	snprintf((char*)buf, lenbuf - 1, "imfile-state:%s", inst->pszFileName_forOldStateFile);
+	buf[lenbuf-1] = '\0'; /* be on the safe side... */
+	uchar *p = buf;
+	for( ; *p ; ++p) {
+		if(*p == '/')
+			*p = '-';
+	}
+	return buf;
+}
+
+/* try to open an old-style state file for given file. If the state file does not
+ * exist or cannot be read, an error is returned.
+ */
+static rsRetVal ATTR_NONNULL(1)
+OLD_openFileWithStateFile(act_obj_t *const act)
+{
+	DEFiRet;
+	strm_t *psSF = NULL;
+	uchar pszSFNam[MAXFNAME];
+	size_t lenSFNam;
+	struct stat stat_buf;
+	uchar statefile[MAXFNAME];
+	const instanceConf_t *const inst = act->edge->instarr[0];// TODO: same file, multiple instances?
+
+	uchar *const statefn = OLD_getStateFileName(inst, statefile, sizeof(statefile));
+	DBGPRINTF("OLD_openFileWithStateFile: trying to open state for '%s', state file '%s'\n",
+		  act->name, statefn);
+
+	/* Get full path and file name */
+	lenSFNam = getFullStateFileName(statefn, pszSFNam, sizeof(pszSFNam));
+
+	/* check if the file exists */
+	if(stat((char*) pszSFNam, &stat_buf) == -1) {
+		if(errno == ENOENT) {
+			DBGPRINTF("OLD_openFileWithStateFile: NO state file (%s) exists for '%s'\n",
+				pszSFNam, act->name);
+			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
+		} else {
+			char errStr[1024];
+			rs_strerror_r(errno, errStr, sizeof(errStr));
+			DBGPRINTF("OLD_openFileWithStateFile: error trying to access state "
+				"file for '%s':%s\n", act->name, errStr);
+			ABORT_FINALIZE(RS_RET_IO_ERROR);
+		}
+	}
+
+	/* If we reach this point, we have a state file */
+
+	DBGPRINTF("old state file found - instantiating from it\n");
+	CHKiRet(strm.Construct(&psSF));
+	CHKiRet(strm.SettOperationsMode(psSF, STREAMMODE_READ));
+	CHKiRet(strm.SetsType(psSF, STREAMTYPE_FILE_SINGLE));
+	CHKiRet(strm.SetFName(psSF, pszSFNam, lenSFNam));
+	CHKiRet(strm.SetFileNotFoundError(psSF, inst->fileNotFoundError));
+	CHKiRet(strm.ConstructFinalize(psSF));
+
+	/* read back in the object */
+	CHKiRet(obj.Deserialize(&act->pStrm, (uchar*) "strm", psSF, NULL, act));
+	free(act->pStrm->pszFName);
+	CHKmalloc(act->pStrm->pszFName = ustrdup(act->name));
+
+	strm.CheckFileChange(act->pStrm);
+	CHKiRet(strm.SeekCurrOffs(act->pStrm));
+
+	/* we now persist the new state file and delete the old one, so we will
+	 * never have to deal with the old one. */
+	persistStrmState(act);
+	unlink((char*)pszSFNam);
+
+finalize_it:
+	if(psSF != NULL)
+		strm.Destruct(&psSF);
+	RETiRet;
+}
+#endif /* #ifdef ENABLE_V1_STATE_FILE_FORMAT_SUPPORT */
+
 
 
 #if 0 // Code we can potentially use for new functionality // TODO: use or remove
@@ -995,33 +1087,12 @@ getFullStateFileName(const uchar *const pszstatefile, uchar *const pszout, const
 	pszworkdir = glblGetWorkDirRaw();
 
 	/* Construct file name */
-	lenout = snprintf((char*)pszout, ilenout, "%s/%s.json",
+	lenout = snprintf((char*)pszout, ilenout, "%s/%s",
 			     (char*) (pszworkdir == NULL ? "." : (char*) pszworkdir), (char*)pszstatefile);
 
 	/* return out length */
 	return lenout;
 }
-
-
-#if 0
-/* generate a state file name for the given file name
- * the file is stored in given buf, which must be of MAXFNAME length.
- */
-static void ATTR_NONNULL(1, 2)
-genStateFileName(const char *const name,
-	 	 uchar *const __restrict__ buf,
-		 const size_t lenbuf)
-{
-	DBGPRINTF("genStateFileName for '%s'\n", name);
-	snprintf((char*)buf, lenbuf - 1, "imfile-state:%s", name);
-	buf[lenbuf-1] = '\0'; /* be on the safe side... */
-	uchar *p = buf;
-	for( ; *p ; ++p) {
-		if(*p == '/')
-			*p = '-';
-	}
-}
-#endif
 
 
 /* this generates a state file name suitable for the given file. To avoid
@@ -1040,16 +1111,6 @@ getStateFileName(const act_obj_t *const act,
 	snprintf((char*)buf, lenbuf - 1, "imfile-state:%lld", (long long) act->ino);
 	DBGPRINTF("getStateFileName:  stat file name now is %s\n", buf);
 	return buf;
-#if 0
-	uchar *ret;
-	//if(inst->pszStateFile == NULL) {
-		genStateFileName(act->name, buf, lenbuf);
-		ret = buf;
-	//} else {
-		//ret = inst->pszStateFile;
-	//}
-	return ret;
-#endif
 }
 
 
@@ -1127,8 +1188,10 @@ openFileWithStateFile(act_obj_t *const act)
 	const int fd = open((char*)pszSFNam, O_CLOEXEC | O_NOCTTY | O_RDONLY, 0600);
 	if(fd < 0) {
 		if(errno == ENOENT) {
-			DBGPRINTF("NO state file (%s) exists for '%s'\n", pszSFNam, act->name);
-			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
+			DBGPRINTF("NO state file (%s) exists for '%s' - trying to see if "
+				"old-style file exists\n", pszSFNam, act->name);
+			CHKiRet(OLD_openFileWithStateFile(act));
+			FINALIZE;
 		} else {
 			LogError(errno, RS_RET_IO_ERROR,
 				"imfile error trying to access state file for '%s'",
@@ -1188,6 +1251,7 @@ openFileWithStateFile(act_obj_t *const act)
 	CHKiRet(strm.SeekCurrOffs(act->pStrm));
 
 finalize_it:
+	dbgprintf("openStateFile returned %d\n", iRet);
 	RETiRet;
 }
 
@@ -1418,6 +1482,7 @@ checkInstance(instanceConf_t *const inst)
 	if(inst->pszFileName == NULL)
 		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
 
+	CHKmalloc(inst->pszFileName_forOldStateFile = ustrdup(inst->pszFileName));
 	if(loadModConf->normalizePath) {
 		if(inst->pszFileName[0] == '.' && inst->pszFileName[1] == '/') {
 			DBGPRINTF("imfile: removing heading './' from name '%s'\n", inst->pszFileName);
@@ -1809,6 +1874,7 @@ CODESTARTfreeCnf
 		free(inst->pszFileName);
 		free(inst->pszTag);
 		free(inst->pszStateFile);
+		free(inst->pszFileName_forOldStateFile);
 		if(inst->startRegex != NULL) {
 			regfree(&inst->end_preg);
 			free(inst->startRegex);
