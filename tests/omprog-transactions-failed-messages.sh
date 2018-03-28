@@ -1,10 +1,13 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
-
-echo ===============================================================================
-echo '[omprog-transactions-failed-messages.sh]: test omprog with confirmMessages and useTransactions flags enabled, with message failures'
-
 . $srcdir/diag.sh init
+
+uname
+if [ `uname` = "SunOS" ] ; then
+   echo "Solaris: FIX ME"
+   exit 77
+fi
+
 . $srcdir/diag.sh startup omprog-transactions-failed-messages.conf
 . $srcdir/diag.sh wait-startup
 
