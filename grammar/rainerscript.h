@@ -233,8 +233,6 @@ enum cnffuncid {
 	CNFFUNC_REPLACE,
 	CNFFUNC_WRAP,
 	CNFFUNC_RANDOM,
-	CNFFUNC_HASH64,
-	CNFFUNC_HASH64MOD,
 	CNFFUNC_DYN_INC,
 	CNFFUNC_IPV42NUM,
 	CNFFUNC_NUM2IPV4,
@@ -390,6 +388,7 @@ rsRetVal initRainerscript(void);
 void unescapeStr(uchar *s, int len);
 const char * tokenval2str(int tok);
 uchar* var2CString(struct svar *__restrict__ const r, int *__restrict__ const bMustFree);
+long long var2Number(struct svar *r, int *bSuccess);
 void includeProcessCnf(struct nvlst *const lst);
 
 /* debug helper */

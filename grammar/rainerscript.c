@@ -1380,7 +1380,7 @@ done:
  * was never documented.
  * rgerhards, 2015-11-12
  */
-static long long
+long long
 var2Number(struct svar *r, int *bSuccess)
 {
 	long long n = 0;

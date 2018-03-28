@@ -332,18 +332,30 @@ AS_IF([test "x$found_zlib" = "xno"], [
 
 
 #hash implementations header checks
-AC_ARG_ENABLE(hash-xxhash,
-	[AS_HELP_STRING([--enable-hash-xxhash],[Enable xxhash support @<:@default=no@:>@])],
+AC_ARG_ENABLE(fmhash,
+	[AS_HELP_STRING([--enable-fmhash],[Enable fmhash support @<:@default=yes@:>@])],
         [case "${enableval}" in
-         yes) enable_hash_xxhash="yes" ;;
-          no) enable_hash_xxhash="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-hash-xxhash) ;;
+         yes) enable_fmhash="yes" ;;
+          no) enable_fmhash="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-fmhash) ;;
          esac],
-	[enable_hash_xxhash=no]
+	[enable_fmhash=yes]
 )
 
-AM_CONDITIONAL(ENABLE_HASH_XXHASH, test x$enable_hash_xxhash = xyes)
-if test "$enable_hash_xxhash" = "yes"; then  
+AC_ARG_ENABLE(fmhash-xxhash,
+	[AS_HELP_STRING([--enable-fmhash-xxhash],[Enable xxhash in fmhash support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_fmhash_xxhash="yes" ;;
+          no) enable_fmhash_xxhash="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-fmhash-xxhash) ;;
+         esac],
+	[enable_fmhash_xxhash=no]
+)
+
+AM_CONDITIONAL(ENABLE_FMHASH, [test "x$enable_fmhash" = "xyes" || test "x$enable_fmhash_xxhash" = "xyes"])
+
+AM_CONDITIONAL(ENABLE_FMHASH_XXHASH, test x$enable_fmhash_xxhash = xyes)
+if test "$enable_fmhash_xxhash" = "yes"; then  
 	AC_CHECK_LIB([xxhash], [XXH64], [
 		AC_CHECK_HEADER([xxhash.h], [
 			AC_DEFINE(USE_HASH_XXHASH, 1,
@@ -2236,6 +2248,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omrelp/Makefile \
 		plugins/omlibdbi/Makefile \
 		plugins/ommail/Makefile \
+		plugins/fmhash/Makefile \
 		plugins/fmhttp/Makefile \
 		plugins/omsnmp/Makefile \
 		plugins/omudpspoof/Makefile \
@@ -2279,7 +2292,6 @@ echo
 echo "    Large file support enabled:               $enable_largefile"
 echo "    Networking support enabled:               $enable_inet"
 echo "    Regular expressions support enabled:      $enable_regexp"
-echo "    xxhash support enabled:                   $enable_hash_xxhash"
 echo "    rsyslog runtime will be built:            $enable_rsyslogrt"
 echo "    rsyslogd will be built:                   $enable_rsyslogd"
 echo "    have to generate man pages:               $have_to_generate_man_pages"
@@ -2364,6 +2376,8 @@ echo "    SNMP support enabled:                     $enable_snmp"
 echo
 echo "---{ function modules }---"
 echo "    fmhttp enabled:                           $enable_fmhttp"
+echo "    fmhash enabled:                           $enable_fmhash"
+echo "    fmhash with xxhash enabled:               $enable_fmhash_xxhash"
 echo
 echo "---{ debugging support }---"
 echo "    Testbench enabled:                        $enable_testbench"
