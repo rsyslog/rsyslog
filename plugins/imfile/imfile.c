@@ -30,11 +30,12 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <pthread.h>		/* do NOT remove: will soon be done by the module generation macros */
+#include <pthread.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <glob.h>
 #include <poll.h>
+#include <json.h>
 #include <fnmatch.h>
 #ifdef HAVE_SYS_INOTIFY_H
 #include <sys/inotify.h>
@@ -84,12 +85,6 @@ static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config para
 #define DFLT_PollInterval 10
 #define INIT_WDMAP_TAB_SIZE 1 /* default wdMap table size - is extended as needed, use 2^x value */
 #define ADD_METADATA_UNSPECIFIED -1
-
-/*
-*	Helpers for wildcard in directory detection
-*/
-#define DIR_CONFIGURED 0
-#define DIR_DYNAMIC 1
 
 /* If set to 1, fileTableDisplay will be compiled and used for debugging */
 #define ULTRA_DEBUG 0
@@ -1000,7 +995,7 @@ getFullStateFileName(const uchar *const pszstatefile, uchar *const pszout, const
 	pszworkdir = glblGetWorkDirRaw();
 
 	/* Construct file name */
-	lenout = snprintf((char*)pszout, ilenout, "%s/%s",
+	lenout = snprintf((char*)pszout, ilenout, "%s/%s.json",
 			     (char*) (pszworkdir == NULL ? "." : (char*) pszworkdir), (char*)pszstatefile);
 
 	/* return out length */
@@ -1119,67 +1114,80 @@ static rsRetVal ATTR_NONNULL(1)
 openFileWithStateFile(act_obj_t *const act)
 {
 	DEFiRet;
-	strm_t *psSF = NULL;
 	uchar pszSFNam[MAXFNAME];
-	size_t lenSFNam;
-	struct stat stat_buf;
 	uchar statefile[MAXFNAME];
 	const instanceConf_t *const inst = act->edge->instarr[0];// TODO: same file, multiple instances?
 
 	uchar *const statefn = getStateFileName(act, statefile, sizeof(statefile));
-	DBGPRINTF("trying to open state for '%s', state file '%s'\n", act->name, statefn);
 
-	/* persist state file base name in act, as this may be used for MOVE operations */
-	//free(act->statefile);
-	//CHKmalloc(act->statefile = strdup((char*) statefile));
-
-	/* Get full path and file name */
-	lenSFNam = getFullStateFileName(statefn, pszSFNam, sizeof(pszSFNam));
+	getFullStateFileName(statefn, pszSFNam, sizeof(pszSFNam));
+	DBGPRINTF("trying to open state for '%s', state file '%s'\n", act->name, pszSFNam);
 
 	/* check if the file exists */
-	if(stat((char*) pszSFNam, &stat_buf) == -1) {
+	const int fd = open((char*)pszSFNam, O_CLOEXEC | O_NOCTTY | O_RDONLY, 0600);
+	if(fd < 0) {
 		if(errno == ENOENT) {
 			DBGPRINTF("NO state file (%s) exists for '%s'\n", pszSFNam, act->name);
 			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 		} else {
-			char errStr[1024];
-			rs_strerror_r(errno, errStr, sizeof(errStr));
-			DBGPRINTF("error trying to access state file for '%s':%s\n",
-			          act->name, errStr);
+			LogError(errno, RS_RET_IO_ERROR,
+				"imfile error trying to access state file for '%s'",
+			        act->name);
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
 	}
 
-	/* If we reach this point, we have a state file */
+	CHKiRet(strm.Construct(&act->pStrm));
 
-	CHKiRet(strm.Construct(&psSF));
-	CHKiRet(strm.SettOperationsMode(psSF, STREAMMODE_READ));
-	CHKiRet(strm.SetsType(psSF, STREAMTYPE_FILE_SINGLE));
-	CHKiRet(strm.SetFName(psSF, pszSFNam, lenSFNam));
-	CHKiRet(strm.SetFileNotFoundError(psSF, inst->fileNotFoundError));
-	CHKiRet(strm.ConstructFinalize(psSF));
+	struct json_object *jval;
+	struct json_object *json = fjson_object_from_fd(fd);
+	if(json == NULL) {
+		LogError(0, RS_RET_ERR, "imfile: error reading state file for '%s'", act->name);
+	}
 
-	/* read back in the object */
-	CHKiRet(obj.Deserialize(&act->pStrm, (uchar*) "strm", psSF, NULL, act));
-	DBGPRINTF("deserialized state file, state file base name '%s', "
-		  "configured base name '%s'\n", act->pStrm->pszFName,
-		  act->name);
-	/* correct file name (if renamed) TODO: refactor state file! */
-	free(act->pStrm->pszFName);
-	CHKmalloc(act->pStrm->pszFName = ustrdup(act->name));
+	/* we access some data items a bit dirty, as we need to refactor the whole
+	 * thing in any case - TODO
+	 */
+	/* Note: we ignore filname property - it is just an aid to the user. Most
+	 * importantly it *is wrong* after a file move!
+	 */
+	fjson_object_object_get_ex(json, "prev_was_nl", &jval);
+	act->pStrm->bPrevWasNL = fjson_object_get_int(jval);
 
-	strm.CheckFileChange(act->pStrm);
+	fjson_object_object_get_ex(json, "curr_offs", &jval);
+	act->pStrm->iCurrOffs = fjson_object_get_int64(jval);
+
+	fjson_object_object_get_ex(json, "strt_offs", &jval);
+	act->pStrm->strtOffs = fjson_object_get_int64(jval);
+
+	fjson_object_object_get_ex(json, "prev_line_segment", &jval);
+	const uchar *const prev_line_segment = (const uchar*)fjson_object_get_string(jval);
+	if(jval != NULL) {
+		CHKiRet(rsCStrConstructFromszStr(&act->pStrm->prevLineSegment, prev_line_segment));
+		cstrFinalize(act->pStrm->prevLineSegment);
+		uchar *ret = rsCStrGetSzStrNoNULL(act->pStrm->prevLineSegment);
+		DBGPRINTF("prev_line_segment present in state file 2, is: %s\n", ret);
+	}
+
+	fjson_object_object_get_ex(json, "prev_msg_segment", &jval);
+	const uchar *const prev_msg_segment = (const uchar*)fjson_object_get_string(jval);
+	if(jval != NULL) {
+		CHKiRet(rsCStrConstructFromszStr(&act->pStrm->prevMsgSegment, prev_msg_segment));
+		cstrFinalize(act->pStrm->prevMsgSegment);
+		uchar *ret = rsCStrGetSzStrNoNULL(act->pStrm->prevMsgSegment);
+		DBGPRINTF("prev_msg_segment present in state file 2, is: %s\n", ret);
+	}
+	fjson_object_put(json);
+
+	CHKiRet(strm.SetFName(act->pStrm, (uchar*)act->name, strlen(act->name)));
+	CHKiRet(strm.SettOperationsMode(act->pStrm, STREAMMODE_READ));
+	CHKiRet(strm.SetsType(act->pStrm, STREAMTYPE_FILE_MONITOR));
+	CHKiRet(strm.SetFileNotFoundError(act->pStrm, inst->fileNotFoundError));
+	CHKiRet(strm.ConstructFinalize(act->pStrm));
+
 	CHKiRet(strm.SeekCurrOffs(act->pStrm));
 
-	/* note: we do not delete the state file, so that the last position remains
-	 * known even in the case that rsyslogd aborts for some reason (like powerfail)
-	 */
-
 finalize_it:
-	dbgprintf("state file out %p\n", psSF);
-	if(psSF != NULL)
-		strm.Destruct(&psSF);
-
 	RETiRet;
 }
 
@@ -1193,8 +1201,7 @@ openFileWithoutStateFile(act_obj_t *const act)
 	DEFiRet;
 	struct stat stat_buf;
 
-	// TODO: same file, multiple instances?
-	const instanceConf_t *const inst = act->edge->instarr[0];
+	const instanceConf_t *const inst = act->edge->instarr[0];// TODO: same file, multiple instances?
 
 	DBGPRINTF("clean startup withOUT state file for '%s'\n", act->name);
 	if(act->pStrm != NULL)
@@ -2195,9 +2202,40 @@ CODESTARTwillRun
 	CHKiRet(prop.Construct(&pInputName));
 	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imfile"), sizeof("imfile") - 1));
 	CHKiRet(prop.ConstructFinalize(pInputName));
-
 finalize_it:
 ENDwillRun
+
+// TODO: refactor this into a generically-usable "atomic file creation" utility for
+// all kinds of "state files"
+static rsRetVal ATTR_NONNULL()
+atomicWriteStateFile(const char *fn, const char *content)
+{
+	DEFiRet;
+	const int fd = open(fn, O_CLOEXEC | O_NOCTTY | O_WRONLY | O_CREAT, 0600);
+	if(fd < 0) {
+		LogError(errno, RS_RET_IO_ERROR, "imfile: cannot open state file '%s' for "
+			"persisting file state - some data will probably be duplicated "
+			"on next startup", fn);
+		ABORT_FINALIZE(RS_RET_IO_ERROR);
+	}
+
+	const size_t toWrite = strlen(content);
+	const ssize_t w = write(fd, content, toWrite);
+	if(w != (ssize_t) toWrite) {
+		LogError(errno, RS_RET_IO_ERROR, "imfile: partial write to state file '%s' "
+			"this may cause trouble in the future. We will try to delete the "
+			"state file, as this provides most consistent state", fn);
+		unlink(fn);
+		ABORT_FINALIZE(RS_RET_IO_ERROR);
+	}
+
+finalize_it:
+	if(fd >= 0) {
+		close(fd);
+	}
+	RETiRet;
+}
+
 
 /* This function persists information for a specific file being monitored.
  * To do so, it simply persists the stream object. We do NOT abort on error
@@ -2208,38 +2246,52 @@ static rsRetVal ATTR_NONNULL()
 persistStrmState(act_obj_t *const act)
 {
 	DEFiRet;
-	strm_t *psSF = NULL; /* state file (stream) */
-	size_t lenDir;
 	uchar statefile[MAXFNAME];
-
-	const instanceConf_t *const inst = act->edge->instarr[0];// TODO: same file, multiple instances?
+	uchar statefname[MAXFNAME];
 
 	uchar *const statefn = getStateFileName(act, statefile, sizeof(statefile));
-	DBGPRINTF("persisting state for '%s' to file '%s'\n", act->name, statefn);
-	CHKiRet(strm.Construct(&psSF));
-	lenDir = ustrlen(glbl.GetWorkDir());
-	if(lenDir > 0)
-		CHKiRet(strm.SetDir(psSF, glbl.GetWorkDir(), lenDir));
-	CHKiRet(strm.SettOperationsMode(psSF, STREAMMODE_WRITE_TRUNC));
-	CHKiRet(strm.SetsType(psSF, STREAMTYPE_FILE_SINGLE));
-	CHKiRet(strm.SetFName(psSF, statefn, strlen((char*) statefn)));
-	CHKiRet(strm.SetFileNotFoundError(psSF, inst->fileNotFoundError));
-	CHKiRet(strm.ConstructFinalize(psSF));
+	getFullStateFileName(statefn, statefname, sizeof(statefname));
+	DBGPRINTF("persisting state for '%s', state file '%s'\n", act->name, statefname);
 
-	CHKiRet(strm.Serialize(act->pStrm, psSF));
-	CHKiRet(strm.Flush(psSF));
+	struct json_object *jval = NULL;
+	struct json_object *json = NULL;
+	CHKmalloc(json = json_object_new_object());
+	jval = json_object_new_string((char*) act->name);
+	json_object_object_add(json, "filename", jval);
+	jval = json_object_new_int(strmGetPrevWasNL(act->pStrm));
+	json_object_object_add(json, "prev_was_nl", jval);
 
-	CHKiRet(strm.Destruct(&psSF));
+	/* we access some data items a bit dirty, as we need to refactor the whole
+	 * thing in any case - TODO
+	 */
+	jval = json_object_new_int64(act->pStrm->iCurrOffs);
+	json_object_object_add(json, "curr_offs", jval);
+	jval = json_object_new_int64(act->pStrm->strtOffs);
+	json_object_object_add(json, "strt_offs", jval);
+
+	const uchar *const prevLineSegment = strmGetPrevLineSegment(act->pStrm);
+	if(prevLineSegment != NULL) {
+		jval = json_object_new_string((const char*) prevLineSegment);
+		json_object_object_add(json, "prev_line_segment", jval);
+	}
+
+	const uchar *const prevMsgSegment = strmGetPrevMsgSegment(act->pStrm);
+	if(prevMsgSegment != NULL) {
+		jval = json_object_new_string((const char*) prevMsgSegment);
+		json_object_object_add(json, "prev_msg_segment", jval);
+	}
+
+	const char *jstr =  json_object_to_json_string_ext(json, JSON_C_TO_STRING_SPACED);
+
+	CHKiRet(atomicWriteStateFile((const char*)statefname, jstr));
+	json_object_put(json);
 
 finalize_it:
-	if(psSF != NULL)
-		strm.Destruct(&psSF);
-
 	if(iRet != RS_RET_OK) {
 		LogError(0, iRet, "imfile: could not persist state "
 				"file %s - data may be repeated on next "
 				"startup. Is WorkDirectory set?",
-				statefn);
+				statefname);
 	}
 
 	RETiRet;
