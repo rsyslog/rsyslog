@@ -389,9 +389,9 @@ BEGINmodExit
 CODESTARTmodExit
 ENDmodExit
 
-#if !defined(__clang__)
-#pragma GCC diagnostic ignored "-Wstrict-prototypes"
-#endif
+//#if !defined(__clang__)
+//#pragma GCC diagnostic ignored "-Wstrict-prototypes"
+//#endif
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_FMOD_QUERIES
