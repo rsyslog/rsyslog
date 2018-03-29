@@ -324,7 +324,7 @@ init_fmHash32(struct cnffunc *const func)
 	DEFiRet;
 	hash_context_t *hash_context = NULL;
 	if(func->nParams < 1) {
-		parser_errmsg("fmhash: hash64(string) / hash64(string, seed)"
+		parser_errmsg("fmhash: hash32(string) / hash32(string, seed)"
 				" insufficient params. %d of file %s\n",
 			__LINE__, __FILE__);
 		iRet = RS_RET_ERR;
@@ -345,7 +345,7 @@ init_fmHash32mod(struct cnffunc *const func)
 	DEFiRet;
 	hash_context_t *hash_context = NULL;
 	if(func->nParams < 2) {
-		parser_errmsg("fmhash: hash64mod(string, mod)/hash64mod(string, mod, seed)"
+		parser_errmsg("fmhash: hash32mod(string, mod)/hash32mod(string, mod, seed)"
 				" insufficient params. %d of file %s\n",
 			__LINE__, __FILE__);
 		iRet = RS_RET_ERR;
