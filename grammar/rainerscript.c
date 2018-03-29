@@ -5409,7 +5409,7 @@ initRainerscript(void)
 	modListRoot->modFcts = functions;
 	modListRoot->next = NULL;
 	modListLast = modListRoot;
-	CHKiRet(objGetObjInterface(&obj));
+	iRet = objGetObjInterface(&obj);
 finalize_it:
 	RETiRet;
 }
