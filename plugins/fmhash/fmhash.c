@@ -153,15 +153,12 @@ finalize_it:
 	RETiRet;
 }
 
-#if !defined(__clang__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
 static rsRetVal
 hash_wrapper2(struct svar *__restrict__ const sourceVal
 		, struct svar *__restrict__ const seedVal, hash_context_t* hcontext) {
 	DEFiRet;
 	int freeHashStr = 0, success = 0;
+	char *hashStr = NULL;
     uint32_t seed = 0;
     if(seedVal) {
         seed = var2Number(seedVal, &success);
@@ -172,7 +169,6 @@ hash_wrapper2(struct svar *__restrict__ const sourceVal
         }
     }
 
-    char *hashStr = NULL;
     hashStr = (char*)var2CString(sourceVal, &freeHashStr);
     size_t len = strlen(hashStr);
     CHKiRet((hcontext->hashXX(hashStr, len, seed, hcontext)));
@@ -184,10 +180,6 @@ finalize_it:
 	}
 	RETiRet;
 }
-#if !defined(__clang__)
-#pragma GCC diagnostic pop
-#endif
-
 
 static rsRetVal
 hash_wrapper3(struct svar *__restrict__ const sourceVal, struct svar *__restrict__ const modVal
