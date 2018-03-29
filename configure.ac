@@ -2248,7 +2248,6 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omrelp/Makefile \
 		plugins/omlibdbi/Makefile \
 		plugins/ommail/Makefile \
-		plugins/fmhash/Makefile \
 		plugins/fmhttp/Makefile \
 		plugins/omsnmp/Makefile \
 		plugins/omudpspoof/Makefile \
@@ -2265,6 +2264,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/mmsnmptrapd/Makefile \
 		plugins/pmlastmsg/Makefile \
 		plugins/mmdblookup/Makefile \
+		contrib/fmhash/Makefile \
 		contrib/pmsnare/Makefile \
 		contrib/pmpanngfw/Makefile \
 		contrib/pmaixforwardedfrom/Makefile \

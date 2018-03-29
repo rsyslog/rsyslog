@@ -200,7 +200,7 @@ SUBDIRS += plugins/fmhttp
 endif
 
 if ENABLE_FMHASH
-SUBDIRS += plugins/fmhash
+SUBDIRS += contrib/fmhash
 endif
 
 if ENABLE_OMKAFKA
