@@ -153,6 +153,10 @@ finalize_it:
 	RETiRet;
 }
 
+#if !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
 static rsRetVal
 hash_wrapper2(struct svar *__restrict__ const sourceVal
 		, struct svar *__restrict__ const seedVal, hash_context_t* hcontext) {
@@ -176,16 +180,14 @@ hash_wrapper2(struct svar *__restrict__ const sourceVal
 					, *((uint64_t*)(hcontext->xhash)), (int)len, hashStr);
 finalize_it:
 	if (freeHashStr) {
-        #if !defined(__clang__)
-		#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 		free(hashStr);
-        #endif
-		#if !defined(__clang__)
-		#pragma GCC diagnostic pop
-        #endif
 	}
 	RETiRet;
 }
+#if !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+
 
 static rsRetVal
 hash_wrapper3(struct svar *__restrict__ const sourceVal, struct svar *__restrict__ const modVal
