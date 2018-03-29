@@ -41,7 +41,7 @@
  * deflateInit2(zstrmptr, 6, Z_DEFLATED, 31, 9, Z_DEFAULT_STRATEGY);
  * --------------------------------------------------------------------------
  * 
- * Copyright 2008-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -230,5 +230,8 @@ rsRetVal strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg,
 int strmReadMultiLine_isTimedOut(const strm_t *const __restrict__ pThis);
 void strmDebugOutBuf(const strm_t *const pThis);
 void strmSetReadTimeout(strm_t *const __restrict__ pThis, const int val);
+const uchar * ATTR_NONNULL() strmGetPrevLineSegment(strm_t *const pThis);
+const uchar * ATTR_NONNULL() strmGetPrevMsgSegment(strm_t *const pThis);
+int ATTR_NONNULL() strmGetPrevWasNL(const strm_t *const pThis);
 
 #endif /* #ifndef STREAM_H_INCLUDED */

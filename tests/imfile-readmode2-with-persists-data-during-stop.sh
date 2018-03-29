@@ -25,6 +25,7 @@ echo stopping rsyslog
 # polling loop properly picks up that data. Note that even in
 # inotify case we do have one polling loop at startup, as this
 # is required to find data written while we were stopped.
+ls -l test-spool
 
 echo 'msgnum:3
  msgnum:4' >> rsyslog.input
