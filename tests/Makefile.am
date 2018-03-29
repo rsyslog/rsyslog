@@ -543,6 +543,7 @@ TESTS +=  \
 	imptcp-NUL.sh \
 	imptcp-NUL-rawmsg.sh \
 	rscript_random.sh \
+	rscript_hash32.sh \
 	rscript_hash64.sh \
 	rscript_replace.sh
 if HAVE_VALGRIND
@@ -1681,6 +1682,8 @@ EXTRA_DIST= \
 	testsuites/tokenized_input \
 	rscript_random.sh \
 	testsuites/rscript_random.conf \
+	rscript_hash32.sh \
+	testsuites/rscript_hash32.conf \
 	rscript_hash64.sh \
 	testsuites/rscript_hash64.conf \
 	rscript_replace.sh \

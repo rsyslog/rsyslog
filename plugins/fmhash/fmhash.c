@@ -31,6 +31,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include "config.h"
 #include <stdint.h>
 #include <stddef.h>
 #include <typedefs.h>
@@ -40,8 +41,6 @@
 #  include <xxhash.h>
 #endif
 
-
-#include "config.h"
 #include "rsyslog.h"
 #include "parserif.h"
 #include "module-template.h"
@@ -55,8 +54,10 @@ DEF_FMOD_STATIC_DATA
 
 typedef struct hash_context_s hash_context_t;
 typedef rsRetVal (*hash_impl)(const void*, size_t, uint32_t, hash_context_t*);
-typedef rsRetVal (*hash_wrapper_2)(struct svar *, struct svar *, hash_context_t*);
-typedef rsRetVal (*hash_wrapper_3)(struct svar *, struct svar *, struct svar *, hash_context_t*);
+typedef rsRetVal (*hash_wrapper_2)(struct svar *__restrict__ const
+		, struct svar *__restrict__ const, hash_context_t*);
+typedef rsRetVal (*hash_wrapper_3)(struct svar *__restrict__ const, struct svar *__restrict__ const
+		, struct svar *__restrict__ const, hash_context_t*);
 
 struct hash_context_s {
 	hash_impl hashXX;
@@ -157,6 +158,7 @@ hash_wrapper2(struct svar *__restrict__ const sourceVal
 		, struct svar *__restrict__ const seedVal, hash_context_t* hcontext) {
 	DEFiRet;
 	int freeHashStr = 0, success = 0;
+	char *hashStr = NULL;
     uint32_t seed = 0;
     if(seedVal) {
         seed = var2Number(seedVal, &success);
@@ -167,7 +169,6 @@ hash_wrapper2(struct svar *__restrict__ const sourceVal
         }
     }
 
-    char *hashStr = NULL;
     hashStr = (char*)var2CString(sourceVal, &freeHashStr);
     size_t len = strlen(hashStr);
     CHKiRet((hcontext->hashXX(hashStr, len, seed, hcontext)));
@@ -175,20 +176,14 @@ hash_wrapper2(struct svar *__restrict__ const sourceVal
 					, *((uint64_t*)(hcontext->xhash)), (int)len, hashStr);
 finalize_it:
 	if (freeHashStr) {
-        #if !defined(__clang__)
-		#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 		free(hashStr);
-        #endif
-		#if !defined(__clang__)
-		#pragma GCC diagnostic pop
-        #endif
 	}
 	RETiRet;
 }
 
 static rsRetVal
-hash_wrapper3(struct svar *__restrict__ const sourceVal, struct svar *__restrict__ const modVal,
-            struct svar *__restrict__ const seedVal, hash_context_t* hcontext) {
+hash_wrapper3(struct svar *__restrict__ const sourceVal, struct svar *__restrict__ const modVal
+		, struct svar *__restrict__ const seedVal, hash_context_t* hcontext) {
 
 	DEFiRet;
     int success = 0;
@@ -297,7 +292,7 @@ init_fmHash64(struct cnffunc *const func)
 	func->destructable_funcdata = 1;
 	CHKmalloc(hash_context = calloc(1, sizeof(hash_context_t)));
 	init_hash64_context(hash_context);
-	func->funcdata = (void*)&hash_context;
+	func->funcdata = (void*)hash_context;
 
 finalize_it:
 	RETiRet;
@@ -318,7 +313,7 @@ init_fmHash64mod(struct cnffunc *const func)
 	func->destructable_funcdata = 1;
 	CHKmalloc(hash_context = calloc(1, sizeof(hash_context_t)));
 	init_hash64_context(hash_context);
-	func->funcdata = (void*)&hash_context;
+	func->funcdata = (void*)hash_context;
 finalize_it:
 	RETiRet;
 }
@@ -329,7 +324,7 @@ init_fmHash32(struct cnffunc *const func)
 	DEFiRet;
 	hash_context_t *hash_context = NULL;
 	if(func->nParams < 1) {
-		parser_errmsg("fmhash: hash64(string) / hash64(string, seed)"
+		parser_errmsg("fmhash: hash32(string) / hash32(string, seed)"
 				" insufficient params. %d of file %s\n",
 			__LINE__, __FILE__);
 		iRet = RS_RET_ERR;
@@ -338,7 +333,7 @@ init_fmHash32(struct cnffunc *const func)
 	func->destructable_funcdata = 1;
 	CHKmalloc(hash_context = calloc(1, sizeof(hash_context_t)));
 	init_hash32_context(hash_context);
-	func->funcdata = (void*)&hash_context;
+	func->funcdata = (void*)hash_context;
 
 finalize_it:
 	RETiRet;
@@ -350,7 +345,7 @@ init_fmHash32mod(struct cnffunc *const func)
 	DEFiRet;
 	hash_context_t *hash_context = NULL;
 	if(func->nParams < 2) {
-		parser_errmsg("fmhash: hash64mod(string, mod)/hash64mod(string, mod, seed)"
+		parser_errmsg("fmhash: hash32mod(string, mod)/hash32mod(string, mod, seed)"
 				" insufficient params. %d of file %s\n",
 			__LINE__, __FILE__);
 		iRet = RS_RET_ERR;
@@ -359,7 +354,7 @@ init_fmHash32mod(struct cnffunc *const func)
 	func->destructable_funcdata = 1;
 	CHKmalloc(hash_context = calloc(1, sizeof(hash_context_t)));
 	init_hash32_context(hash_context);
-	func->funcdata = (void*)&hash_context;
+	func->funcdata = (void*)hash_context;
 finalize_it:
 	RETiRet;
 }
@@ -371,7 +366,6 @@ destruct_fmhash(struct cnffunc *const func)
 		if(((hash_context_t*)func->funcdata)->xhash != NULL) {
 			free((void*)((hash_context_t*)func->funcdata)->xhash);
 		}
-		free((void*) ((hash_context_t*)func->funcdata));
 	}
 }
 
