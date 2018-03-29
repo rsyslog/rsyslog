@@ -1759,7 +1759,8 @@ CODESTARTsetModCnf
 #if defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE) /* use FEN on Solaris! */
 				loadModConf->opMode = OPMODE_FEN;
 				DBGPRINTF("inotify mode configured, but only FEN "
-				"is available on OS SOLARIS. Switching to FEN Mode automatically\n");
+					"is available on OS SOLARIS. Switching to FEN "
+					"Mode automatically\n");
 #else
 				#if defined(HAVE_INOTIFY_INIT)
 					loadModConf->opMode = OPMODE_INOTIFY;
@@ -2237,6 +2238,12 @@ do_fen(void)
  */
 BEGINrunInput
 CODESTARTrunInput
+	#if defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE) /* use FEN on Solaris! */
+	if(runModConf->opMode == OPMODE_INOTIFY) {
+		DBGPRINTF("auto-adjusting 'inotify' mode to 'fen' on Solaris\n");
+		runModConf->opMode = OPMODE_FEN;
+	}
+	#endif
 	DBGPRINTF("working in %s mode\n",
 		 (runModConf->opMode == OPMODE_POLLING) ? "polling" :
 			((runModConf->opMode == OPMODE_INOTIFY) ?"inotify" : "fen"));
