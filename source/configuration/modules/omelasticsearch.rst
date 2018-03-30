@@ -441,7 +441,7 @@ examine them and act appropriately. Note that e.g. after search index
 reconfiguration (e.g. dropping the mandatory attribute) a resubmit may
 be succesful.
 
-.. _tls.cacert:
+.. _omelasticsearch-tls.cacert:
 
 tls.cacert
 ^^^^^^^^^^
