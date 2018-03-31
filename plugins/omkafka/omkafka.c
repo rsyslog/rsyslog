@@ -588,20 +588,15 @@ finalize_it:
 static rsRetVal
 updateKafkaFailureCounts(rd_kafka_resp_err_t err) {
 	DEFiRet;
-	switch (err) {
-	case RD_KAFKA_RESP_ERR_MSG_SIZE_TOO_LARGE:
+	if (err == RD_KAFKA_RESP_ERR_MSG_SIZE_TOO_LARGE) {
 		STATSCOUNTER_INC(ctrKafkaMsgTooLarge, mutCtrKafkaMsgTooLarge);
-		break;
-	case RD_KAFKA_RESP_ERR__UNKNOWN_TOPIC:
+	} else if (err == RD_KAFKA_RESP_ERR__UNKNOWN_TOPIC) {
 		STATSCOUNTER_INC(ctrKafkaUnknownTopic, mutCtrKafkaUnknownTopic);
-		break;
-	case RD_KAFKA_RESP_ERR__QUEUE_FULL:
+	} else if (err == RD_KAFKA_RESP_ERR__QUEUE_FULL) {
 		STATSCOUNTER_INC(ctrKafkaQueueFull, mutCtrKafkaQueueFull);
-		break;
-	case RD_KAFKA_RESP_ERR__UNKNOWN_PARTITION:
+	} else if (err == RD_KAFKA_RESP_ERR__UNKNOWN_PARTITION) {
 		STATSCOUNTER_INC(ctrKafkaUnknownPartition, mutCtrKafkaUnknownPartition);
-		break;
-	default:
+	} else {
 		STATSCOUNTER_INC(ctrKafkaOtherErrors, mutCtrKafkaOtherErrors);
 	}
 
@@ -1039,20 +1034,15 @@ errorCallback(rd_kafka_t __attribute__((unused)) *rk,
 	instanceData *const pData = (instanceData *) opaque;
 
 	/* count kafka transport errors that cause action suspension */
-	switch (err) {
-	case RD_KAFKA_RESP_ERR__MSG_TIMED_OUT:
+	if (err == RD_KAFKA_RESP_ERR__MSG_TIMED_OUT) {
 		STATSCOUNTER_INC(ctrKafkaRespTimedOut, mutCtrKafkaRespTimedOut);
-		break;
-	case RD_KAFKA_RESP_ERR__TRANSPORT:
+	} else if (err == RD_KAFKA_RESP_ERR__TRANSPORT) {
 		STATSCOUNTER_INC(ctrKafkaRespTransport, mutCtrKafkaRespTransport);
-		break;
-	case RD_KAFKA_RESP_ERR__ALL_BROKERS_DOWN:
+	} else if (err == RD_KAFKA_RESP_ERR__ALL_BROKERS_DOWN) {
 		STATSCOUNTER_INC(ctrKafkaRespBrokerDown, mutCtrKafkaRespBrokerDown);
-		break;
-	case RD_KAFKA_RESP_ERR__AUTHENTICATION:
+	} else if (err == RD_KAFKA_RESP_ERR__AUTHENTICATION) {
 		STATSCOUNTER_INC(ctrKafkaRespAuth, mutCtrKafkaRespAuth);
-		break;
-	default:
+	} else {
 		STATSCOUNTER_INC(ctrKafkaRespOther, mutCtrKafkaRespOther);
 	}
 
