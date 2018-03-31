@@ -693,8 +693,9 @@ fsCheck(instanceData *__restrict__ const pData, const uchar *__restrict__ const 
 			LogError(0, iRet, "too few available blocks in %s", path);
 			FINALIZE;
 		}
-	/* there must be enough inodes left  */
-	if (stat.f_favail < 1)
+	/* there must be enough inodes left, one is left for administrative purposes
+	 * check is not done if file system reports 0 total inodes, such as btrfs */
+	if (stat.f_favail < 2 && stat.f_files > 0)
 		{
 			iRet = RS_RET_FS_ERR;
 			LogError(0, iRet, "too few available inodes in %s", path);
