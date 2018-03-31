@@ -52,8 +52,12 @@ MODULE_TYPE_FUNCTION
 MODULE_TYPE_NOKEEP
 DEF_FMOD_STATIC_DATA
 
+typedef uint64_t hash_t;
+typedef uint32_t seed_t;
 typedef struct hash_context_s hash_context_t;
-typedef rsRetVal (*hash_impl)(const void*, size_t, uint32_t, hash_context_t*);
+
+typedef hash_t (*hash_impl)(const void*, size_t, seed_t);
+
 typedef rsRetVal (*hash_wrapper_2)(struct svar *__restrict__ const
 		, struct svar *__restrict__ const, hash_context_t*);
 typedef rsRetVal (*hash_wrapper_3)(struct svar *__restrict__ const, struct svar *__restrict__ const
@@ -63,7 +67,7 @@ struct hash_context_s {
 	hash_impl hashXX;
 	hash_wrapper_2 hash_wrapper_1_2;
 	hash_wrapper_3 hash_wrapper_2_3;
-	void* xhash;
+	hash_t xhash;
 };
 
 /*
@@ -73,11 +77,11 @@ struct hash_context_s {
 #if defined(__clang__)
 #pragma GCC diagnostic ignored "-Wunknown-attributes"
 #endif
-static uint32_t
+static hash_t
 #if defined(__clang__)
 __attribute__((no_sanitize("unsigned-integer-overflow")))
 #endif
-fnv_32(const void* input, size_t len, uint32_t seed) {
+fnv_32(const void* input, size_t len, seed_t seed) {
     unsigned char *bp = (unsigned char *)input;	/* start of buffer */
 
     /*
@@ -89,7 +93,7 @@ fnv_32(const void* input, size_t len, uint32_t seed) {
         seed += (seed<<1) + (seed<<4) + (seed<<7) + (seed<<8) + (seed<<24);
 
         /* xor the bottom with the current octet */
-        seed ^= (uint32_t)*bp++;
+        seed ^= (seed_t)*bp++;
     }
 
     /* return our new hash value */
@@ -104,14 +108,14 @@ fnv_32(const void* input, size_t len, uint32_t seed) {
 #if defined(__clang__)
 #pragma GCC diagnostic ignored "-Wunknown-attributes"
 #endif
-static uint64_t
+static hash_t
 #if defined(__clang__)
 __attribute__((no_sanitize("unsigned-integer-overflow")))
 #endif
-djb_hash(const void* input, size_t len, uint32_t seed) {
+djb_hash(const void* input, size_t len, seed_t seed) {
     const char *p = input;
-    uint64_t hash = 5381;
-    uint64_t i;
+    hash_t hash = 5381;
+    size_t i;
     for (i = 0; i < len; i++) {
         hash = 33 * hash ^ p[i];
     }
@@ -120,37 +124,27 @@ djb_hash(const void* input, size_t len, uint32_t seed) {
 }
 
 /*Get 32 bit hash for input*/
-static rsRetVal
-hash32(const void* input, size_t len, uint32_t seed, hash_context_t* hcontext) {
-	DEFiRet;
-	uint64_t* xhash;
-	CHKmalloc(xhash = calloc(1, sizeof(uint64_t)));
-    #ifdef USE_HASH_XXHASH
-	    *xhash = XXH32(input, len, seed);
+static hash_t
+hash32(const void* input, size_t len, seed_t seed) {
+	hash_t xhash = 0;
+	#ifdef USE_HASH_XXHASH
+	    xhash = XXH32(input, len, seed);
     #else
-	    *xhash = fnv_32(input, len, seed);
+	    xhash = fnv_32(input, len, seed);
     #endif
-    hcontext->xhash = (void*)xhash;
-	iRet = RS_RET_OK;
-finalize_it:
-	RETiRet;
+    return xhash;
 }
 
 /*Get 64 bit hash for input*/
-static rsRetVal
-hash64(const void* input, size_t len, uint32_t seed, hash_context_t* hcontext) {
-	DEFiRet;
-	uint64_t* xhash;
-	CHKmalloc(xhash = calloc(1, sizeof(uint64_t)));
+static hash_t
+hash64(const void* input, size_t len, seed_t seed) {
+	hash_t xhash = 0;
 	#ifdef USE_HASH_XXHASH
-        *xhash = XXH64(input, len, seed);
+        xhash = XXH64(input, len, seed);
     #else
-        *xhash = djb_hash(input, len, seed);
+        xhash = djb_hash(input, len, seed);
     #endif
-    hcontext->xhash = (void*)xhash;
-    iRet = RS_RET_OK;
-finalize_it:
-	RETiRet;
+    return xhash;
 }
 
 static rsRetVal
@@ -159,7 +153,7 @@ hash_wrapper2(struct svar *__restrict__ const sourceVal
 	DEFiRet;
 	int freeHashStr = 0, success = 0;
 	char *hashStr = NULL;
-    uint32_t seed = 0;
+    seed_t seed = 0;
     if(seedVal) {
         seed = var2Number(seedVal, &success);
         if (!success) {
@@ -171,9 +165,9 @@ hash_wrapper2(struct svar *__restrict__ const sourceVal
 
     hashStr = (char*)var2CString(sourceVal, &freeHashStr);
     size_t len = strlen(hashStr);
-    CHKiRet((hcontext->hashXX(hashStr, len, seed, hcontext)));
+    hcontext->xhash = hcontext->hashXX(hashStr, len, seed);
 	DBGPRINTF("fmhash: hashXX generated hash %" PRIu64 " for string(%.*s)"
-					, *((uint64_t*)(hcontext->xhash)), (int)len, hashStr);
+					, hcontext->xhash, (int)len, hashStr);
 finalize_it:
 	if (freeHashStr) {
 		free(hashStr);
@@ -187,8 +181,8 @@ hash_wrapper3(struct svar *__restrict__ const sourceVal, struct svar *__restrict
 
 	DEFiRet;
     int success = 0;
-    uint64_t xhash = 0;
-	uint64_t mod = var2Number(modVal, &success);
+    hash_t xhash = 0;
+	hash_t mod = var2Number(modVal, &success);
 	if (! success) {
 		DBGPRINTF("fmhash: hashXXmod(string, mod)/hash64mod(string, mod, seed) didn't"
         " get a valid 'mod' limit, defaulting hash value to 0");
@@ -203,9 +197,9 @@ hash_wrapper3(struct svar *__restrict__ const sourceVal, struct svar *__restrict
 	}
 
 	CHKiRet((hcontext->hash_wrapper_1_2(sourceVal, seedVal, hcontext)));
-	xhash = (*((uint64_t*)(hcontext->xhash))) % mod;
+	xhash = hcontext->xhash % mod;
     DBGPRINTF("fmhash: hashXXmod generated hash-mod %" PRIu64 ".", xhash);
-    (*((uint64_t*)(hcontext->xhash))) = xhash % mod;
+    hcontext->xhash = xhash;
 finalize_it:
 	RETiRet;
 }
@@ -215,7 +209,7 @@ init_hash32_context(hash_context_t* hash32_context) {
 	hash32_context->hashXX = hash32;
 	hash32_context->hash_wrapper_1_2 = hash_wrapper2;
 	hash32_context->hash_wrapper_2_3 = hash_wrapper3;
-	hash32_context->xhash = NULL;
+	hash32_context->xhash = 0;
 };
 
 static void
@@ -223,7 +217,7 @@ init_hash64_context(hash_context_t* hash64_context) {
 	hash64_context->hashXX = hash64;
 	hash64_context->hash_wrapper_1_2 = hash_wrapper2;
 	hash64_context->hash_wrapper_2_3 = hash_wrapper3;
-	hash64_context->xhash = NULL;
+	hash64_context->xhash = 0;
 };
 
 static void ATTR_NONNULL()
@@ -232,19 +226,17 @@ fmHashXX(struct cnffunc *__restrict__ const func, struct svar *__restrict__ cons
 	DEFiRet;
 	struct svar hashStrVal;
 	struct svar seedVal;
+	hash_context_t* hcontext = NULL;
 	cnfexprEval(func->expr[0], &hashStrVal, usrptr, pWti);
 	if(func->nParams == 2) cnfexprEval(func->expr[1], &seedVal, usrptr, pWti);
 	ret->d.n = 0;
 	ret->datatype = 'N';
-	CHKiRet(((((hash_context_t*) func->funcdata))->hash_wrapper_1_2(&hashStrVal
+	hcontext = (hash_context_t*) func->funcdata;
+	CHKiRet((hcontext->hash_wrapper_1_2(&hashStrVal
 			, (func->nParams == 2 ? &seedVal : NULL)
-			, (hash_context_t*) func->funcdata)));
-	ret->d.n = *((uint64_t*)((hash_context_t*) func->funcdata)->xhash);
+			, hcontext)));
+	ret->d.n = hcontext->xhash;
 finalize_it:
-	if(((hash_context_t*)func->funcdata)->xhash != NULL) {
-		free((void*)((hash_context_t*)func->funcdata)->xhash);
-		((hash_context_t*)func->funcdata)->xhash = NULL;
-	}
 	varFreeMembers(&hashStrVal);
 	if(func->nParams == 2) varFreeMembers(&seedVal);
 }
@@ -257,21 +249,18 @@ fmHashXXmod(struct cnffunc *__restrict__ const func, struct svar *__restrict__ c
 	struct svar hashStrVal;
 	struct svar modVal;
 	struct svar seedVal;
-
+	hash_context_t* hcontext = NULL;
 	cnfexprEval(func->expr[0], &hashStrVal, usrptr, pWti);
 	cnfexprEval(func->expr[1], &modVal, usrptr, pWti);
 	if(func->nParams == 3) cnfexprEval(func->expr[2], &seedVal, usrptr, pWti);
 	ret->d.n = 0;
 	ret->datatype = 'N';
-	CHKiRet((((hash_context_t*)func->funcdata)->hash_wrapper_2_3(&hashStrVal
+	hcontext = (hash_context_t*) func->funcdata;
+	CHKiRet((hcontext->hash_wrapper_2_3(&hashStrVal
 			, &modVal, func->nParams > 2 ? &seedVal : NULL
-			, (hash_context_t*) func->funcdata)));
-	ret->d.n = *((uint64_t*)((hash_context_t*) func->funcdata)->xhash);
+			, hcontext)));
+	ret->d.n = hcontext->xhash;
 finalize_it:
-	if(((hash_context_t*)func->funcdata)->xhash != NULL) {
-		free((void*)((hash_context_t*)func->funcdata)->xhash);
-		((hash_context_t*)func->funcdata)->xhash = NULL;
-	}
 	varFreeMembers(&hashStrVal);
 	varFreeMembers(&modVal);
 	if(func->nParams == 3) varFreeMembers(&seedVal);
@@ -359,21 +348,12 @@ finalize_it:
 	RETiRet;
 }
 
-static void ATTR_NONNULL(1)
-destruct_fmhash(struct cnffunc *const func)
-{
-	if(func->funcdata != NULL) {
-		if(((hash_context_t*)func->funcdata)->xhash != NULL) {
-			free((void*)((hash_context_t*)func->funcdata)->xhash);
-		}
-	}
-}
 
 static struct scriptFunct functions[] = {
-	{"hash64", 1, 2, fmHashXX, init_fmHash64, destruct_fmhash},
-	{"hash64mod", 2, 3, fmHashXXmod, init_fmHash64mod, destruct_fmhash},
-	{"hash32", 1, 2, fmHashXX, init_fmHash32, destruct_fmhash},
-	{"hash32mod", 2, 3, fmHashXXmod, init_fmHash32mod, destruct_fmhash},
+	{"hash64", 1, 2, fmHashXX, init_fmHash64, NULL},
+	{"hash64mod", 2, 3, fmHashXXmod, init_fmHash64mod, NULL},
+	{"hash32", 1, 2, fmHashXX, init_fmHash32, NULL},
+	{"hash32mod", 2, 3, fmHashXXmod, init_fmHash32mod, NULL},
 	{NULL, 0, 0, NULL} //last element to check end of array
 };
 

@@ -549,7 +549,12 @@ TESTS +=  \
 if HAVE_VALGRIND
 TESTS +=  \
 	imptcp_conndrop-vg.sh
-endif
+if ENABLE_FMHASH
+TESTS +=  \
+	rscript_hash32-vg.sh \
+	rscript_hash64-vg.sh
+endif # ENABLE_FMHASH
+endif # HAVE_VALGRIND
 endif
 
 if ENABLE_ELASTICSEARCH_TESTS
@@ -1683,8 +1688,10 @@ EXTRA_DIST= \
 	rscript_random.sh \
 	testsuites/rscript_random.conf \
 	rscript_hash32.sh \
+	rscript_hash32-vg.sh \
 	testsuites/rscript_hash32.conf \
 	rscript_hash64.sh \
+	rscript_hash64-vg.sh \
 	testsuites/rscript_hash64.conf \
 	rscript_replace.sh \
 	testsuites/rscript_replace.conf \
