@@ -342,7 +342,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 		ABORT_FINALIZE(RS_RET_NO_MSG_PASSING);
 	}
 
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	iRet = objUse(errmsg, CORE_COMPONENT);
 ENDmodInit
 
 /* vi:set ai:
