@@ -133,6 +133,7 @@ lmzlibw_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBLOGGING_STDLOG_CFLA
 lmzlibw_la_LDFLAGS = -module -avoid-version $(LIBLOGGING_STDLOG_LIBS)
 lmzlibw_la_LIBADD =
 
+
 if ENABLE_INET
 pkglib_LTLIBRARIES += lmnet.la lmnetstrms.la
 #

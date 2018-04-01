@@ -388,6 +388,7 @@ rsRetVal initRainerscript(void);
 void unescapeStr(uchar *s, int len);
 const char * tokenval2str(int tok);
 uchar* var2CString(struct svar *__restrict__ const r, int *__restrict__ const bMustFree);
+long long var2Number(struct svar *r, int *bSuccess);
 void includeProcessCnf(struct nvlst *const lst);
 
 /* debug helper */
