@@ -1177,6 +1177,7 @@ openFileWithStateFile(act_obj_t *const act)
 	DEFiRet;
 	uchar pszSFNam[MAXFNAME];
 	uchar statefile[MAXFNAME];
+	int fd = -1;
 	const instanceConf_t *const inst = act->edge->instarr[0];// TODO: same file, multiple instances?
 
 	uchar *const statefn = getStateFileName(act, statefile, sizeof(statefile));
@@ -1185,7 +1186,7 @@ openFileWithStateFile(act_obj_t *const act)
 	DBGPRINTF("trying to open state for '%s', state file '%s'\n", act->name, pszSFNam);
 
 	/* check if the file exists */
-	const int fd = open((char*)pszSFNam, O_CLOEXEC | O_NOCTTY | O_RDONLY, 0600);
+	fd = open((char*)pszSFNam, O_CLOEXEC | O_NOCTTY | O_RDONLY, 0600);
 	if(fd < 0) {
 		if(errno == ENOENT) {
 			DBGPRINTF("NO state file (%s) exists for '%s' - trying to see if "
@@ -1251,7 +1252,9 @@ openFileWithStateFile(act_obj_t *const act)
 	CHKiRet(strm.SeekCurrOffs(act->pStrm));
 
 finalize_it:
-	dbgprintf("openStateFile returned %d\n", iRet);
+	if(fd >= 0) {
+		close(fd);
+	}
 	RETiRet;
 }
 
