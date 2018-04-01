@@ -791,6 +791,7 @@ TESTS += \
 	imfile-wildcards-dirs-multi4.sh \
 	imfile-wildcards-dirs-multi5.sh \
 	imfile-wildcards-dirs-multi5-polling.sh \
+	imfile-old-state-file.sh \
 	imfile-rename-while-stopped.sh \
 	imfile-rename.sh
 
@@ -1454,6 +1455,7 @@ EXTRA_DIST= \
 	testsuites/complex1.conf \
 	random.sh \
 	testsuites/random.conf \
+	testsuites/imfile-old-state-file_imfile-state_.-rsyslog.input \
 	imfile-readmode0-vg.sh \
 	imfile-readmode2.sh \
 	imfile-readmode2-polling.sh \
@@ -1494,6 +1496,7 @@ EXTRA_DIST= \
 	imfile-wildcards-dirs-multi4.sh \
 	imfile-wildcards-dirs-multi5.sh \
 	imfile-wildcards-dirs-multi5-polling.sh \
+	imfile-old-state-file.sh \
 	imfile-rename-while-stopped.sh \
 	imfile-rename.sh \
 	testsuites/imfile-wildcards-simple.conf \
