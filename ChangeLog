@@ -6,6 +6,51 @@ Version 8.34.0 [v8-stable] 2018-04-03
   rsyslog scripting can now also be extended via loadable modules - they
   provides functions (just like loadable input, output, ... modules)
   see also http://jan.gerhards.net/2018/03/loadable-rainerscript-functions.html
+- imfile: large refactoring of complete module
+  This commit greatly refactors imfile internal workings. It changes the
+  handling of inotify, FEN, and polling modes. Mostly unchanged is the
+  processing of the way a file is read and state files are kept.
+  This is about a 50% rewrite of the module.
+  Polling, inotify, and FEN modes now use greatly unified code. Some
+  differences still exists and may be changed with further commits. The
+  internal handling of wildcards and file detection has been completely
+  re-written from scratch. For example, previously when multi-level
+  wildcards were used these were not reliably detected. The code also
+  now provides much of the same functionality in all modes, most importantly
+  wildcards are now also supported in polling mode.
+  The refactoring sets ground for further enhancements and smaller
+  refactorings. This commit provides the same feature set that imfile
+  had previously and all existing CI tests pass, as do some newly
+  created tests.
+  Some specific changes:
+  - bugfix: module parameter "sortfiles" ignored
+    This parameter only works in Solaris FEN mode, but is otherwise
+    ignored.  Most importantly it is ignored under Linux.
+    fixes https://github.com/rsyslog/rsyslog/issues/2528
+  - bugfix: imfile did not pick up all files when not present
+    at startup
+    fixes https://github.com/rsyslog/rsyslog/issues/2241
+    fixes https://github.com/rsyslog/rsyslog/issues/2230
+    fixes https://github.com/rsyslog/rsyslog/issues/2354
+  - bugfix: directories only support "*" wildcard, no others
+    fixes https://github.com/rsyslog/rsyslog/issues/2303
+  - bugfix: parameter "sortfiles" did only work in FEN mode
+    fixes https://github.com/rsyslog/rsyslog/issues/2528
+  - provides the ability to dynamically add and remove files via
+    multi-level wildcards
+    see also https://github.com/rsyslog/rsyslog/issues/1280
+  - the state file name currently has been changed to inode number
+    This will further be worked on in upcoming PRs
+    see also https://github.com/rsyslog/rsyslog/issues/2231
+  - some enhancements were also done to CI tests, most importantly
+    they were made more compatibile with BSD
+  Note that most of the mentioned bug fixes cannot be applied to older
+  versions, as they fix design issues which are solved by the refactoring.
+  Thus there are not separate commits for them.
+  There are probably also a number of different issues fixed, which have
+  not yet been full confirmed. Especially anyone having troubles with imfile
+  and wildcards will benefit from the refactoring.
+  closes https://github.com/rsyslog/rsyslog/issues/2359
 - omelasticsearch: add support for CA cert, client cert auth
   This allows omelasticsearch to perform client cert based authentication
   to Elasticsearch.
@@ -17,6 +62,8 @@ Version 8.34.0 [v8-stable] 2018-04-03
   We detected this while working on imfile refactoring, so there is no related
   bug report. No specific test has been crafted, as the refactored imfile
   tests catch it (as soon as they are merged).
+- bugfix/omkafka: did not build on platforms without atomic operations
+  Thanks to github user bruce87en for the patch
 - bugfix/core/ratelimiting: SystemLogRateLimitBurst was limited to 65535
   rsyslog uses unsigned short for configuration setting SystemLogRateLimitBurst.
   Being just 16 bits, unsigned short cannot hold values bigger than 65535. in a
