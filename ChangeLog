@@ -75,6 +75,11 @@ Version 8.34.0 [v8-stable] 2018-04-03
 - bugfix omfile: some error messages had parameters in wrong order
   which made the message look strange, but still readable
   Thanks to Hans Rakers for the patch.
+- bugfix omprog: file handle leak
+  There was a fd leak in the feedback feature added in v8.31.0 (github PR #1753).
+  The leak occurred when omprog was used with the confirmMessages=on setting
+  and no output setting. One fd was leaked every time the external program was started.
+  Thanks to Joan Sala for the patch.
 - bugfix testbench: some test were accidently not executed
   Thanks to Kasumi Hanazuki for the patch.
 - fix some cosmetic issues found by lgtm.com static code analyzer
