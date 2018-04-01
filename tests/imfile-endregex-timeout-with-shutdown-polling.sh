@@ -29,7 +29,7 @@ if $msg contains "msgnum:" then
 # to pick up the data (IN MULTIPLE ITERATIONS!)
 echo 'msgnum:0
  msgnum:1' > rsyslog.input
-./msleep 5000
+./msleep 8000
 echo ' msgnum:2
  msgnum:3' >> rsyslog.input
 
@@ -45,10 +45,10 @@ echo ' msgnum:2
 
 # new data
 echo ' msgnum:4' >> rsyslog.input
-./msleep 5000
+./msleep 8000
 echo ' msgnum:5
  msgnum:6' >> rsyslog.input
-./msleep 5000
+./msleep 8000
 
 # the next line terminates our test. It is NOT written to the output file,
 # as imfile waits whether or not there is a follow-up line that it needs
