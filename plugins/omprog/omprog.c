@@ -273,6 +273,7 @@ openPipe(wrkrInstanceData_t *pWrkrData)
 			pWrkrData->fdPipeErr = pipeStderr[0];
 		}
 		else {
+			close(pipeStderr[0]);
 			pWrkrData->fdPipeErr = -1;
 		}
 	} else if (pWrkrData->pData->outputFileName != NULL) {
