@@ -1,15 +1,14 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 
-echo ===============================================================================
-echo '[omprog-transactions.sh]: test omprog with confirmMessages and useTransactions flags enabled'
+# This test tests omprog with the confirmMessages=on and useTransactions=on
+# parameters, with the external program successfully confirming all messages
+# and transactions.
 
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup omprog-transactions.conf
 . $srcdir/diag.sh wait-startup
-
 . $srcdir/diag.sh injectmsg 0 10
-
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown

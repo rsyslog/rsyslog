@@ -1,15 +1,14 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 
-echo ===============================================================================
-echo '[omprog-feedback.sh]: test omprog with confirmMessages flag enabled'
+# This test tests the feedback feature of omprog (confirmMessages=on),
+# by checking that omprog re-sends to the external program the messages
+# it has failed to process.
 
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup omprog-feedback.conf
 . $srcdir/diag.sh wait-startup
-
 . $srcdir/diag.sh injectmsg 0 10
-
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
@@ -45,7 +44,7 @@ expected_output="<= OK
 <= OK"
 
 written_output=$(<rsyslog.out.log)
-if [[ "x$expected_output" != "x$written_output" ]]; then
+if [[ "$expected_output" != "$written_output" ]]; then
     echo unexpected omprog script output:
     echo "$written_output"
     . $srcdir/diag.sh error-exit 1
