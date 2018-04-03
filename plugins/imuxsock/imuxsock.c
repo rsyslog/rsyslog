@@ -1043,11 +1043,6 @@ finalize_it:
  * of the socket which is to be processed. This eases access to the
  * growing number of properties. -- rgerhards, 2008-08-01
  */
-#if !defined(_AIX)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-align" /* TODO: how can we fix these warnings? */
-#endif
-/* Problem with the warnings: they seem to stem back from the way the API is structured */
 static rsRetVal readSocket(lstn_t *pLstn)
 {
 	DEFiRet;
@@ -1055,12 +1050,18 @@ static rsRetVal readSocket(lstn_t *pLstn)
 	int iMaxLine;
 	struct msghdr msgh;
 	struct iovec msgiov;
-	struct ucred *cred;
-	struct timeval *ts;
+	struct ucred cred;
+	struct timeval ts;
+	int cred_set = 0;
+	int ts_set = 0;
 	uchar bufRcv[4096+1];
 	uchar *pRcv = NULL; /* receive buffer */
 #	ifdef HAVE_SCM_CREDENTIALS
-	char aux[128];
+	/* aux is a union rather than a direct char array to force alignment with cmsghdr */
+	union {
+		char buf[128];
+		struct cmsghdr cm;
+	} aux;
 #	endif
 
 	assert(pLstn->fd >= 0);
@@ -1084,7 +1085,7 @@ static rsRetVal readSocket(lstn_t *pLstn)
 #	ifdef HAVE_SCM_CREDENTIALS
 	if(pLstn->bUseCreds) {
 		memset(&aux, 0, sizeof(aux));
-		msgh.msg_control = aux;
+		msgh.msg_control = &aux;
 		msgh.msg_controllen = sizeof(aux);
 	}
 #	endif
@@ -1100,8 +1101,6 @@ static rsRetVal readSocket(lstn_t *pLstn)
  
 	DBGPRINTF("Message from UNIX socket: #%d, size %d\n", pLstn->fd, (int) iRcvd);
 	if(iRcvd > 0) {
-		cred = NULL;
-		ts = NULL;
 #		if defined(HAVE_SCM_CREDENTIALS) || defined(HAVE_SO_TIMESTAMP)
 		if(pLstn->bUseCreds) {
 			struct cmsghdr *cm;
@@ -1109,19 +1108,21 @@ static rsRetVal readSocket(lstn_t *pLstn)
 #				ifdef HAVE_SCM_CREDENTIALS
 				if(   pLstn->bUseCreds
 				   && cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SCM_CREDENTIALS) {
-					cred = (struct ucred*) CMSG_DATA(cm);
+					memcpy(&cred, CMSG_DATA(cm), sizeof(cred));
+					cred_set = 1;
 				}
 #				endif /* HAVE_SCM_CREDENTIALS */
 #				if HAVE_SO_TIMESTAMP
 				if(   pLstn->bUseSysTimeStamp 
 				   && cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SO_TIMESTAMP) {
-					ts = (struct timeval *)CMSG_DATA(cm);
+					memcpy(&ts, CMSG_DATA(cm), sizeof(ts));
+					ts_set = 1;
 				}
 #				endif /* HAVE_SO_TIMESTAMP */
 			}
 		}
 #		endif /* defined(HAVE_SCM_CREDENTIALS) || defined(HAVE_SO_TIMESTAMP) */
-		CHKiRet(SubmitMsg(pRcv, iRcvd, pLstn, cred, ts));
+		CHKiRet(SubmitMsg(pRcv, iRcvd, pLstn, (cred_set ? &cred : NULL), (ts_set ? &ts : NULL)));
 	} else if(iRcvd < 0 && errno != EINTR && errno != EAGAIN) {
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -1135,9 +1136,6 @@ finalize_it:
 
 	RETiRet;
 }
-#if  !defined(_AIX)
-#pragma GCC diagnostic pop
-#endif
 
 
 /* activate current listeners */
