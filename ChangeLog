@@ -86,7 +86,7 @@ Version 8.34.0 [v8-stable] 2018-04-03
 - bugfix tcp subsystem: keepalive settings mixed up
   TCPKeepAliveIntvl and TPCKeepAliveTime were switched. This is now correct and
   thus causes a CHANGE OF BeHAVIOR of these settings. We applied this change only
-  after careful consideration of the effect. The contributor
+  after careful consideration of the effect. The contributor Alexandre Pierret
   explained the situation as such:
   "From my side, I work with thousands of servers centralizing logs to rsyslog
   servers in tcp. All of them are running RHEL 6 and 7. The default rsyslog settings
