@@ -1,4 +1,6 @@
 ------------------------------------------------------------------------------
+Version 8.35.0 [v8-stable] 2018-05-15
+------------------------------------------------------------------------------
 Version 8.34.0 [v8-stable] 2018-04-03
 - mmkubernetes: new module
   Thanks to Richard Megginson and Peter Portante for contributing the module.
