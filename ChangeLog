@@ -32,6 +32,7 @@ Version 8.34.0 [v8-stable] 2018-04-03
     fixes https://github.com/rsyslog/rsyslog/issues/2241
     fixes https://github.com/rsyslog/rsyslog/issues/2230
     fixes https://github.com/rsyslog/rsyslog/issues/2354
+    fixes https://github.com/rsyslog/rsyslog/issues/1716
   - bugfix: directories only support "*" wildcard, no others
     fixes https://github.com/rsyslog/rsyslog/issues/2303
   - bugfix: parameter "sortfiles" did only work in FEN mode
@@ -56,6 +57,10 @@ Version 8.34.0 [v8-stable] 2018-04-03
   to Elasticsearch.
   adds parameters: tls.cacert, tls.mycert, tls.myprivkey
   Thanks to Richard Megginson for the patch.
+- omfile-hardening: new contributed module for "omfile hardened operations"
+  This extends omfile with features considered useful for hardening. Comes
+  at the expense of performance loss and changed semantics.
+  Thanks to Mikko Kortalainen for contributing this work.
 - stream/bugfix: memory leak on stream open if filename as already generated
   this can happen if imfile reads a state file. On each open, memory for the
   file name can be lost.
@@ -81,6 +86,14 @@ Version 8.34.0 [v8-stable] 2018-04-03
   and no output setting. One fd was leaked every time the external program was
   started.
   Thanks to Joan Sala for the patch.
+- bugfix imuxsock: data alignment problems
+  gcc did rightly complain that the cred and ts pointers would cause
+  alignment problems, so they were converted to structs and the necessary
+  data was memcpy()'ed to them.
+  the aux[] buffer was also potentially misaligned, so making a union
+  out of it and struct cmsghdr insured it was properly aligned.
+  The problems were especially visible on alpha and ia64 machines.
+  Thanks to Jason Duerstock for the fix.
 - bugfix testbench: some test were accidently not executed
   Thanks to Kasumi Hanazuki for the patch.
 - bugfix tcp subsystem: keepalive settings mixed up
