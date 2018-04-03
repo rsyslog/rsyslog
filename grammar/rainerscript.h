@@ -248,15 +248,33 @@ enum cnffuncid {
 	CNFFUNC_IS_TIME
 };
 
+typedef struct cnffunc cnffunc_t;
+typedef void (*rscriptFuncPtr) (cnffunc_t *, struct svar *, void *, wti_t *);
+
 struct cnffunc {
 	unsigned nodetype;
 	es_str_t *fname;
 	unsigned short nParams;
-	enum cnffuncid fID; /* function ID for built-ins, 0 means use name */
+	rscriptFuncPtr fPtr;
 	void *funcdata;	/* global data for function-specific use (e.g. compiled regex) */
 	uint8_t destructable_funcdata;
 	struct cnfexpr *expr[];
 } __attribute__((aligned (8)));
+
+
+struct scriptFunct {
+	const char *fname;
+	unsigned short minParams;
+	unsigned short maxParams;
+	rscriptFuncPtr fPtr;
+	rsRetVal (*initFunc) (struct cnffunc *);
+	void (*destruct) (struct cnffunc *);
+	/* currently no optimizer entrypoint, may be added later.
+	 * Since the optimizer needs metadata about functions, it does
+	 * not seem practical to add such a function at the current state
+	 */
+};
+
 
 /* future extensions
 struct x {
@@ -306,6 +324,8 @@ struct funcData_prifilt {
 #define RS_SCRIPT_EOK		0
 #define RS_SCRIPT_EINVAL	1
 
+void varFreeMembers(const struct svar *r);
+rsRetVal addMod2List(const int version, struct scriptFunct *functArray);
 int cnfParseBuffer(char *buf, unsigned lenBuf);
 void readConfFile(FILE *fp, es_str_t **str);
 struct objlst* objlstNew(struct cnfobj *obj);

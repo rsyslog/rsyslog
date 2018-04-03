@@ -67,6 +67,10 @@ if ENABLE_RELP
 SUBDIRS += plugins/omrelp plugins/imrelp
 endif
 
+if ENABLE_OMFILE_HARDENED
+SUBDIRS += contrib/omfile-hardened
+endif
+
 if ENABLE_MYSQL
 SUBDIRS += plugins/ommysql
 endif
@@ -195,6 +199,10 @@ if ENABLE_MAIL
 SUBDIRS += plugins/ommail
 endif
 
+if ENABLE_FMHTTP
+SUBDIRS += plugins/fmhttp
+endif
+
 if ENABLE_OMKAFKA
 SUBDIRS += plugins/omkafka 
 endif
@@ -277,6 +285,11 @@ endif
 # omtcl
 if ENABLE_OMTCL
 SUBDIRS += contrib/omtcl
+endif
+
+# mmkubernetes
+if ENABLE_MMKUBERNETES
+SUBDIRS += contrib/mmkubernetes
 endif
 
 # tests are added as last element, because tests may need different

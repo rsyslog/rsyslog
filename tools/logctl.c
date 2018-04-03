@@ -145,9 +145,10 @@ static void formater(struct ofields* fields)
 {
 	char str[N];
 	time_t rtime;
+	struct tm now;
 
 	rtime = (time_t) (fields->date_r / 1000);
-	strftime (str, N, "%b %d %H:%M:%S", gmtime (&rtime));
+	strftime (str, N, "%b %d %H:%M:%S", gmtime_r (&rtime, &now));
 	printf ("%s  %s %s %s\n", str, fields->prog, fields->syslog_tag,
 		fields->msg);
 }

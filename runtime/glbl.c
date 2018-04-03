@@ -1076,7 +1076,7 @@ do_setenv(const char *const var)
 	for(i = 0 ; *val != '=' ; ++i, ++val) {
 		if(i == sizeof(varname)-i) {
 			parser_errmsg("environment variable name too long "
-				"[max %zd chars] or malformed entry: '%s'",
+				"[max %zu chars] or malformed entry: '%s'",
 				sizeof(varname)-1, var);
 			ABORT_FINALIZE(RS_RET_ERR_SETENV);
 		}

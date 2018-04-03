@@ -61,7 +61,7 @@ echo ' msgnum:5
 
 printf 'HEADER msgnum:0\\\\n msgnum:1
 HEADER  msgnum:2\\\\n msgnum:3\\\\n msgnum:4
-HEADER  msgnum:5\\\\n msgnum:6\n' | cmp -b rsyslog.out.log
+HEADER  msgnum:5\\\\n msgnum:6\n' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid multiline message generated, rsyslog.out.log is:"
   cat rsyslog.out.log

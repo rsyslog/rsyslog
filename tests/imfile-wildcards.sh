@@ -10,8 +10,36 @@ echo [imfile-wildcards.sh]
 imfilebefore="rsyslog.input.1.log"
 ./inputfilegen -m 1 > $imfilebefore
 
+. $srcdir/diag.sh generate-conf
+. $srcdir/diag.sh add-conf '
+# comment out if you need more debug info:
+	global( debug.whitelist="on"
+		debug.files=["imfile.c"])
+
+module(load="../plugins/imfile/.libs/imfile"
+       mode="inotify" normalizePath="off")
+
+input(type="imfile" File="./rsyslog.input.*.log" Tag="file:"
+	Severity="error" Facility="local7" addMetadata="on")
+
+input(type="imfile" File="/does/not/exist/*.log" Tag="file:"
+	Severity="error" Facility="local7" addMetadata="on")
+
+template(name="outfmt" type="list") {
+	constant(value="HEADER ")
+	property(name="msg" format="json")
+	constant(value=", filename: ")
+	property(name="$!metadata!filename")
+	constant(value=", fileoffset: ")
+	property(name="$!metadata!fileoffset")
+	constant(value="\n")
+}
+
+if $msg contains "msgnum:" then
+	action( type="omfile" file="rsyslog.out.log" template="outfmt")
+'
 # Start rsyslog now before adding more files
-. $srcdir/diag.sh startup imfile-wildcards.conf
+. $srcdir/diag.sh startup
 
 for i in `seq 2 $IMFILEINPUTFILES`;
 do
@@ -38,7 +66,7 @@ HEADER msgnum:00000000:, filename: ./rsyslog.input.9.log, fileoffset: 0
 HEADER msgnum:00000000:, filename: ./rsyslog.input.10.log, fileoffset: 0
 HEADER msgnum:00000000:, filename: ./rsyslog.input.11.log, fileoffset: 0
 HEADER msgnum:00000001:, filename: ./rsyslog.input.11.log, fileoffset: 17
-HEADER msgnum:00000002:, filename: ./rsyslog.input.11.log, fileoffset: 34\n' | cmp -b rsyslog.out.log
+HEADER msgnum:00000002:, filename: ./rsyslog.input.11.log, fileoffset: 34\n' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid output generated, rsyslog.out.log is:"
   cat rsyslog.out.log

@@ -1,5 +1,145 @@
 ------------------------------------------------------------------------------
 Version 8.34.0 [v8-stable] 2018-04-03
+- mmkubernetes: new module
+  Thanks to Richard Megginson and Peter Portante for contributing the module.
+- rsyslog script: introduce loadable function modules
+  rsyslog scripting can now also be extended via loadable modules - they
+  provides functions (just like loadable input, output, ... modules)
+  see also http://jan.gerhards.net/2018/03/loadable-rainerscript-functions.html
+- imfile: large refactoring of complete module
+  This commit greatly refactors imfile internal workings. It changes the
+  handling of inotify, FEN, and polling modes. Mostly unchanged is the
+  processing of the way a file is read and state files are kept.
+  This is about a 50% rewrite of the module.
+  Polling, inotify, and FEN modes now use greatly unified code. Some
+  differences still exists and may be changed with further commits. The
+  internal handling of wildcards and file detection has been completely
+  re-written from scratch. For example, previously when multi-level
+  wildcards were used these were not reliably detected. The code also
+  now provides much of the same functionality in all modes, most importantly
+  wildcards are now also supported in polling mode.
+  The refactoring sets ground for further enhancements and smaller
+  refactorings. This commit provides the same feature set that imfile
+  had previously and all existing CI tests pass, as do some newly
+  created tests.
+  Some specific changes:
+  - bugfix: module parameter "sortfiles" ignored
+    This parameter only works in Solaris FEN mode, but is otherwise
+    ignored.  Most importantly it is ignored under Linux.
+    fixes https://github.com/rsyslog/rsyslog/issues/2528
+  - bugfix: imfile did not pick up all files when not present
+    at startup
+    fixes https://github.com/rsyslog/rsyslog/issues/2241
+    fixes https://github.com/rsyslog/rsyslog/issues/2230
+    fixes https://github.com/rsyslog/rsyslog/issues/2354
+    fixes https://github.com/rsyslog/rsyslog/issues/1716
+  - bugfix: directories only support "*" wildcard, no others
+    fixes https://github.com/rsyslog/rsyslog/issues/2303
+  - bugfix: parameter "sortfiles" did only work in FEN mode
+    fixes https://github.com/rsyslog/rsyslog/issues/2528
+  - provides the ability to dynamically add and remove files via
+    multi-level wildcards
+    see also https://github.com/rsyslog/rsyslog/issues/1280
+  - the state file name currently has been changed to inode number
+    This will further be worked on in upcoming PRs
+    see also https://github.com/rsyslog/rsyslog/issues/2231
+  - some enhancements were also done to CI tests, most importantly
+    they were made more compatibile with BSD
+  Note that most of the mentioned bug fixes cannot be applied to older
+  versions, as they fix design issues which are solved by the refactoring.
+  Thus there are not separate commits for them.
+  There are probably also a number of different issues fixed, which have
+  not yet been full confirmed. Especially anyone having troubles with imfile
+  and wildcards will benefit from the refactoring.
+  closes https://github.com/rsyslog/rsyslog/issues/2359
+- omelasticsearch: add support for CA cert, client cert auth
+  This allows omelasticsearch to perform client cert based authentication
+  to Elasticsearch.
+  adds parameters: tls.cacert, tls.mycert, tls.myprivkey
+  Thanks to Richard Megginson for the patch.
+- omfile-hardening: new contributed module for "omfile hardened operations"
+  This extends omfile with features considered useful for hardening. Comes
+  at the expense of performance loss and changed semantics.
+  Thanks to Mikko Kortalainen for contributing this work.
+- stream/bugfix: memory leak on stream open if filename as already generated
+  this can happen if imfile reads a state file. On each open, memory for the
+  file name can be lost.
+  We detected this while working on imfile refactoring, so there is no related
+  bug report. No specific test has been crafted, as the refactored imfile
+  tests catch it (as soon as they are merged).
+- bugfix/omkafka: did not build on platforms without atomic operations
+  Thanks to github user bruce87en for the patch
+- bugfix/core/ratelimiting: SystemLogRateLimitBurst was limited to 65535
+  rsyslog uses unsigned short for configuration setting SystemLogRateLimitBurst.
+  Being just 16 bits, unsigned short cannot hold values bigger than 65535. in a
+  practical setting rsyslog misbehaved with SystemLogRateLimitBurst being bigger
+  than 65535.
+  Thanks to github user KaleviKolttonen for the patch.
+- bugfix imfile: memory leak in readMode 0
+  closes https://github.com/rsyslog/rsyslog/issues/2421
+- bugfix omfile: some error messages had parameters in wrong order
+  which made the message look strange, but still readable
+  Thanks to Hans Rakers for the patch.
+- bugfix omprog: file handle leak
+  There was a fd leak in the feedback feature added in v8.31.0 (github PR #1753).
+  The leak occurred when omprog was used with the confirmMessages=on setting
+  and no output setting. One fd was leaked every time the external program was
+  started.
+  Thanks to Joan Sala for the patch.
+- bugfix imuxsock: data alignment problems
+  gcc did rightly complain that the cred and ts pointers would cause
+  alignment problems, so they were converted to structs and the necessary
+  data was memcpy()'ed to them.
+  the aux[] buffer was also potentially misaligned, so making a union
+  out of it and struct cmsghdr insured it was properly aligned.
+  The problems were especially visible on alpha and ia64 machines.
+  Thanks to Jason Duerstock for the fix.
+- bugfix testbench: some test were accidently not executed
+  Thanks to Kasumi Hanazuki for the patch.
+- bugfix tcp subsystem: keepalive settings mixed up
+  TCPKeepAliveIntvl and TPCKeepAliveTime were switched. This is now correct and
+  thus causes a CHANGE OF BeHAVIOR of these settings. We applied this change only
+  after careful consideration of the effect. The contributor Alexandre Pierret
+  explained the situation as such:
+  "From my side, I work with thousands of servers centralizing logs to rsyslog
+  servers in tcp. All of them are running RHEL 6 and 7. The default rsyslog settings
+  in RHEL is TCPKeepAlive off. Since there are thousands of connections on the
+  rsyslog servers, I had to turn the TCPKeepAlive on to setup an agressive policy
+  regarding ghost connections (following firewall tcp-timeout issue). Basically,
+  I set up: intvl=10 - probe=5 - time=2 If intvl and time are switched, it won't
+  break anything. It will just send 5 more empty tcp packets for 10 seconds (5
+  probe x 2 seconds), which is painless (any professional grade 100€ router can
+  send more than 1.000.000 PPS). For 3000 servers, it means 3000 pps for 5
+  seconds (3000 servers x 2 back-and-forth / 2 seconds). Let's take another worst
+  example: intvl=3600 - probe=5 - time=1. It means one keepalive every hour and
+  a 5 retry every 1s after a network issue. If the time and intvl values are
+  switched, it will generate 1 keepalive every seconds, It's a LOT more, but
+  after 5 probe or packet, it will stop. To summarize, I think it won't
+  break anything:
+  * Keepalive is off by default is many linux distribution
+  * When we enable it, it's to set up an agressive policy. And setting up a
+    10-5-1, 60-5-2, 2-5-60 or 1-20-1 policy is almost the same.
+  Bonus: For people setting up their rsyslog from the documentation, it will
+  now work as expected."
+  This was convincing, and we actually think that the fast majority of users set
+  up keepalive based on the doc and did never verify it actually worked as
+  excpected. So we think that in all those cases, rsyslog will finally work as
+  intended. So we consider it justified to "change the behavior" here.
+  full discussion in PR: https://github.com/rsyslog/rsyslog/pull/2367
+  Thanks to Alexandre Pierret for analyzing the situation and providing the
+  patch.
+- fix some cosmetic issues found by lgtm.com static code analyzer
+  e.g. header file guard not correctly set - if you really are interested in
+  details, check git log
+- CI
+  * add build test without atomic operations - now catches missing mutex macros
+  * add lgtm.com static analyzer (automatically called via GitHub PR)
+  * improved stability of global-umask.sh test, which unnecessarily used
+    wildcards for test output file checking.
+    Thanks to Kasumi Hanazuki for the patch.
+  * added some test for omprog with transactional interface
+    Thanks to Joan Sala for the new tests.
+  * fixed some omjournal tests which did not properly check result
 ------------------------------------------------------------------------------
 Version 8.33.1 [v8-stable] 2018-03-06
 - 8.33.0 tarball release was actually pre-8.33.0
@@ -48,10 +188,10 @@ Version 8.33.0 [v8-stable] 2018-02-20
   closes https://github.com/rsyslog/rsyslog/issues/2347
 - core/template: add format jsonf to constant template entries
   closes https://github.com/rsyslog/rsyslog/issues/2348
-- config: add ability to disable config parameter ("config.enable")
+- config: add ability to disable config parameter ("config.enabled")
   For auto-generated configs, it is useful to have the ability to disable some
   config constructs even though they may be specified inside the config. This
-  can now be done via the ```config.disable``` parameter, applicable to all
+  can now be done via the ```config.enabled``` parameter, applicable to all
   script objects. If set to ```on``` or not specified, the construct will be
   used, if set to any other value, it will be ignored. This can be used
   together with the backtick functionality to configure enable and disable

@@ -1,19 +1,9 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
-echo ======================================================================
-# Check if inotify header exist
-if [ -n "$(find /usr/include -name 'inotify.h' -print -quit)" ]; then
-	echo [imfile-endregex.sh]
-else
-	exit 77 # no inotify available, skip this test
-fi
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
-module(load="../plugins/imfile/.libs/imfile"
-	mode="polling"
-	pollingInterval="2"
-      )
+module(load="../plugins/imfile/.libs/imfile" mode="polling" pollingInterval="1")
 
 input(type="imfile"
       File="./rsyslog.input"
@@ -47,6 +37,10 @@ echo ' msgnum:2
 # works across restarts.
 . $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 . $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
+
+#echo DROPPING YOU TO BASH!
+#bash
+
 . $srcdir/diag.sh startup
 
 # new data
@@ -65,13 +59,13 @@ echo ' msgnum:5
 . $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 . $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
 
-echo 'HEADER msgnum:0\\n msgnum:1
-HEADER  msgnum:2\\n msgnum:3\\n msgnum:4
-HEADER  msgnum:5\\n msgnum:6' | cmp rsyslog.out.log
+printf 'HEADER msgnum:0\\\\n msgnum:1
+HEADER  msgnum:2\\\\n msgnum:3\\\\n msgnum:4
+HEADER  msgnum:5\\\\n msgnum:6\n' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid multiline message generated, rsyslog.out.log is:"
   cat rsyslog.out.log
-  exit 1
+  . $srcdir/diag.sh error-exit 1
 fi;
 
 . $srcdir/diag.sh exit

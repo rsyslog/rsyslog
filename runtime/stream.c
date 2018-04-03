@@ -16,7 +16,7 @@
  * it turns out to be problematic. Then, we need to quasi-refcount the number of accesses
  * to the object.
  *
- * Copyright 2008-2017 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -90,6 +90,41 @@ static rsRetVal strmSeekCurrOffs(strm_t *pThis);
 
 
 /* methods */
+
+/* note: this may return NULL if not line segment is currently set  */
+// TODO: due to the cstrFinalize() this is not totally clean, albeit for our
+// current use case it does not hurt -- refactor! rgerhards, 2018-03-27
+const uchar * ATTR_NONNULL()
+strmGetPrevLineSegment(strm_t *const pThis)
+{
+	const uchar *ret = NULL;
+	if(pThis->prevLineSegment != NULL) {
+		cstrFinalize(pThis->prevLineSegment);
+		ret = rsCStrGetSzStrNoNULL(pThis->prevLineSegment);
+	}
+	return ret;
+}
+/* note: this may return NULL if not line segment is currently set  */
+// TODO: due to the cstrFinalize() this is not totally clean, albeit for our
+// current use case it does not hurt -- refactor! rgerhards, 2018-03-27
+const uchar * ATTR_NONNULL()
+strmGetPrevMsgSegment(strm_t *const pThis)
+{
+	const uchar *ret = NULL;
+	if(pThis->prevMsgSegment != NULL) {
+		cstrFinalize(pThis->prevMsgSegment);
+		ret = rsCStrGetSzStrNoNULL(pThis->prevMsgSegment);
+	}
+	return ret;
+}
+
+
+int ATTR_NONNULL()
+strmGetPrevWasNL(const strm_t *const pThis)
+{
+	return pThis->bPrevWasNL;
+}
+
 
 /* output (current) file name for debug log purposes. Falls back to various
  * levels of impreciseness if more precise name is not known.
@@ -353,6 +388,8 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 
 	if(pThis->fd != -1)
 		ABORT_FINALIZE(RS_RET_OK);
+
+	free(pThis->pszCurrFName);
 	pThis->pszCurrFName = NULL; /* used to prevent mem leak in case of error */
 
 	if(pThis->pszFName == NULL)
@@ -749,7 +786,6 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
 {
         uchar c;
 	uchar finished;
-	rsRetVal readCharRet;
         DEFiRet;
 
         ASSERT(pThis != NULL);
@@ -769,12 +805,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
         if(mode == 0) {
 		while(c != '\n') {
 			CHKiRet(cstrAppendChar(*ppCStr, c));
-			readCharRet = strmReadChar(pThis, &c);
-			if((readCharRet == RS_RET_TIMED_OUT) ||
-			   (readCharRet == RS_RET_EOF) ) { /* end reached without \n? */
-				CHKiRet(rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr));
-                	}
-                	CHKiRet(readCharRet);
+			CHKiRet(strmReadChar(pThis, &c));
         	}
 		if (trimLineOverBytes > 0 && (uint32_t) cstrLen(*ppCStr) > trimLineOverBytes) {
 			/* Truncate long line at trimLineOverBytes position */
@@ -2190,6 +2221,7 @@ static rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 	l = pThis->strtOffs;
 	objSerializeSCALAR_VAR(pStrm, strtOffs, INT64, l);
 
+	dbgprintf("strmSerialize: pThis->prevLineSegment %p\n", pThis->prevLineSegment);
 	if(pThis->prevLineSegment != NULL) {
 		cstrFinalize(pThis->prevLineSegment);
 		objSerializePTR(pStrm, prevLineSegment, CSTR);

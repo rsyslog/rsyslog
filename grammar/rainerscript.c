@@ -37,10 +37,6 @@
 #include <libestr.h>
 #include <time.h>
 
-#ifdef HAVE_LIBCURL
-#include <curl/curl.h>
-#endif
-
 #include "rsyslog.h"
 #include "rainerscript.h"
 #include "conf.h"
@@ -83,11 +79,6 @@ static struct cnfparamblk incpblk =
 	  sizeof(incpdescr)/sizeof(struct cnfparamdescr),
 	  incpdescr
 	};
-
-struct curl_funcData {
-	const char *reply;
-	size_t replyLen;
-};
 
 /* debug support: convert token to a human-readable string. Note that
  * this function only supports a single thread due to a static buffer.
@@ -1466,7 +1457,7 @@ varFreeMembersSelectively(const struct svar *r, const int skipMask)
 	}
 }
 
-static void
+void
 varFreeMembers(const struct svar *r)
 {
 	varFreeMembersSelectively(r, SKIP_NOTHING);
@@ -1676,8 +1667,10 @@ finalize_it:
 static void
 doFunc_exec_template(struct cnffunc *__restrict__ const func,
 	struct svar *__restrict__ const ret,
-	smsg_t *const pMsg)
+	void *const usrptr,
+	wti_t *__restrict__ const pWti)
 {
+	smsg_t *const pMsg = (smsg_t*) usrptr;
 	rsRetVal localRet;
 	actWrkrIParams_t iparam;
 
@@ -1755,77 +1748,79 @@ doFuncReplace(struct svar *__restrict__ const operandVal, struct svar *__restric
 }
 
 
-static int ATTR_NONNULL()
-doFunc_parse_json(const char *__restrict__ const jsontext,
-	const char *__restrict__ const container,
-	smsg_t *const pMsg,
-	wti_t *pWti)
+static void ATTR_NONNULL()
+doFunc_parse_json(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *const usrptr,
+	wti_t *const pWti)
 {
-	int ret;
+	struct svar srcVal[2];
+	int bMustFree;
+	int bMustFree2;
+	smsg_t *const pMsg = (smsg_t*)usrptr;
+	cnfexprEval(func->expr[0], &srcVal[0], usrptr, pWti);
+	cnfexprEval(func->expr[1], &srcVal[1], usrptr, pWti);
+	char *jsontext = (char*) var2CString(&srcVal[0], &bMustFree);
+	char *container = (char*) var2CString(&srcVal[1], &bMustFree2);
+
+	int retVal;
 	assert(jsontext != NULL);
 	assert(container != NULL);
 	assert(pMsg != NULL);
 
 	struct json_tokener *const tokener = json_tokener_new();
 	if(tokener == NULL) {
-		ret = 1;
+		retVal = 1;
 		goto finalize_it;
 	}
 	struct json_object *const json = json_tokener_parse_ex(tokener, jsontext, strlen(jsontext));
 	if(json == NULL) {
-		ret = RS_SCRIPT_EINVAL;
+		retVal = RS_SCRIPT_EINVAL;
 	} else {
 		size_t off = (*container == '$') ? 1 : 0;
 		msgAddJSON(pMsg, (uchar*)container+off, json, 0, 0);
-		ret = RS_SCRIPT_EOK;
+		retVal = RS_SCRIPT_EOK;
 	}
-	wtiSetScriptErrno(pWti, ret);
+	wtiSetScriptErrno(pWti, retVal);
 	json_tokener_free(tokener);
+
+
 finalize_it:
-	return ret;
+	ret->datatype = 'N';
+	ret->d.n = retVal;
+
+	if(bMustFree) {
+		free(jsontext);
+	}
+	if(bMustFree2) {
+		free(container);
+	}
+	varFreeMembers(&srcVal[0]);
+	varFreeMembers(&srcVal[1]);
 }
 
-
-static es_str_t*
-doFuncWrap(struct svar *__restrict__ const sourceVal, struct svar *__restrict__ const wrapperVal,
-	struct svar *__restrict__ const escaperVal) {
-    int freeSource, freeWrapper;
-    es_str_t *sourceStr;
-    if (escaperVal) {
-        sourceStr = doFuncReplace(sourceVal, wrapperVal, escaperVal);
-        freeSource = 1;
-    } else {
-        sourceStr = var2String(sourceVal, &freeSource);
-    }
-    es_str_t *wrapperStr = var2String(wrapperVal, &freeWrapper);
-    uchar *src = es_getBufAddr(sourceStr);
-    uchar *wrapper = es_getBufAddr(wrapperStr);
-    uint lWrapper = es_strlen(wrapperStr);
-    uint lSrc = es_strlen(sourceStr);
-    uint totalLen = lSrc + 2 * lWrapper;
-    es_str_t *res = es_newStr(totalLen);
-    uchar* resBuf = es_getBufAddr(res);
-    memcpy(resBuf, wrapper, lWrapper);
-    memcpy(resBuf + lWrapper, src, lSrc);
-    memcpy(resBuf + lSrc + lWrapper, wrapper, lWrapper);
-    res->lenStr = totalLen;
-    if (freeSource) es_deleteStr(sourceStr);
-    if (freeWrapper) es_deleteStr(wrapperStr);
-    return res;
-}
-
-static long long
-doRandomGen(struct svar *__restrict__ const sourceVal) {
+static void ATTR_NONNULL()
+doFunct_RandomGen(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
+{
 	int success = 0;
-	long long max = var2Number(sourceVal, &success);
+	struct svar srcVal;
+	long long retVal;
+
+	cnfexprEval(func->expr[0], &srcVal, usrptr, pWti);
+	long long max = var2Number(&srcVal, &success);
 	if (! success) {
 		DBGPRINTF("rainerscript: random(max) didn't get a valid 'max' limit, defaulting random-number "
 			"value to 0");
-		return 0;
+		retVal = 0;
+		goto done;
 	}
 	if(max == 0) {
 		DBGPRINTF("rainerscript: random(max) invalid, 'max' is zero, , defaulting random-number value to 0");
-		return 0;
+		retVal = 0;
+		goto done;
 	}
 	long int x = randomNumber();
 	if (max > MAX_RANDOM_NUMBER) {
@@ -1833,12 +1828,25 @@ doRandomGen(struct svar *__restrict__ const sourceVal) {
 			"is wider than supported limit of [0 - %d)\n",
 			max, MAX_RANDOM_NUMBER);
 	}
-	return x % max;
+
+	retVal = (x % max);
+done:
+	ret->d.n = retVal;
+	ret->datatype = 'N';
+	varFreeMembers(&srcVal);
 }
 
-static es_str_t*
-lTrim(char *str)
+static void ATTR_NONNULL()
+doFunct_LTrim(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
 {
+	struct svar srcVal;
+	int bMustFree;
+	cnfexprEval(func->expr[0], &srcVal, usrptr, pWti);
+	char *str = (char*)var2CString(&srcVal, &bMustFree);
+
 	const int len = strlen(str);
 	int i;
 	es_str_t *estr = NULL;
@@ -1851,12 +1859,24 @@ lTrim(char *str)
 
 	estr = es_newStrFromCStr(str + i, len - i);
 
-	return(estr);
+	ret->d.estr = estr;
+	ret->datatype = 'S';
+	varFreeMembers(&srcVal);
+	if(bMustFree)
+		free(str);
 }
 
-static es_str_t*
-rTrim(char *str)
+static void ATTR_NONNULL()
+doFunct_RTrim(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
 {
+	struct svar srcVal;
+	int bMustFree;
+	cnfexprEval(func->expr[0], &srcVal, usrptr, pWti);
+	char *str = (char*)var2CString(&srcVal, &bMustFree);
+
 	int len = strlen(str);
 	int i;
 	es_str_t *estr = NULL;
@@ -1873,13 +1893,153 @@ rTrim(char *str)
 		estr = es_newStr(1);
 	}
 
-	return(estr);
+	ret->d.estr = estr;
+	ret->datatype = 'S';
+	varFreeMembers(&srcVal);
+	if(bMustFree)
+		free(str);
 }
 
-
-static long long
-ipv42num(char *str)
+static void ATTR_NONNULL()
+doFunct_Getenv(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
 {
+	/* note: the optimizer shall have replaced calls to getenv()
+	 * with a constant argument to a single string (once obtained via
+	 * getenv()). So we do NOT need to check if there is just a
+	 * string following.
+	 */
+	struct svar srcVal;
+	char *envvar;
+	es_str_t *estr;
+	char *str;
+	int bMustFree;
+
+	cnfexprEval(func->expr[0], &srcVal, usrptr, pWti);
+	estr = var2String(&srcVal, &bMustFree);
+	str = (char*) es_str2cstr(estr, NULL);
+	envvar = getenv(str);
+	if(envvar == NULL) {
+		ret->d.estr = es_newStr(0);
+	} else {
+		ret->d.estr = es_newStrFromCStr(envvar, strlen(envvar));
+	}
+	ret->datatype = 'S';
+	if(bMustFree) {
+		es_deleteStr(estr);
+	}
+	varFreeMembers(&srcVal);
+	free(str);
+
+}
+
+static void ATTR_NONNULL()
+doFunct_ToLower(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
+{
+	struct svar srcVal;
+	es_str_t *estr;
+	int bMustFree;
+
+	cnfexprEval(func->expr[0], &srcVal, usrptr, pWti);
+	estr = var2String(&srcVal, &bMustFree);
+	if(!bMustFree) {/* let caller handle that M) */
+		estr = es_strdup(estr);
+	}
+	es_tolower(estr);
+	ret->datatype = 'S';
+	ret->d.estr = estr;
+	varFreeMembers(&srcVal);
+}
+
+static void ATTR_NONNULL()
+doFunct_CStr(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
+{
+	struct svar srcVal;
+	es_str_t *estr;
+	int bMustFree;
+
+	cnfexprEval(func->expr[0], &srcVal, usrptr, pWti);
+	estr = var2String(&srcVal, &bMustFree);
+	if(!bMustFree) /* let caller handle that M) */
+		estr = es_strdup(estr);
+	ret->datatype = 'S';
+	ret->d.estr = estr;
+	varFreeMembers(&srcVal);
+}
+
+static void ATTR_NONNULL()
+doFunct_CNum(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
+{
+	struct svar srcVal;
+
+	if(func->expr[0]->nodetype == 'N') {
+		ret->d.n = ((struct cnfnumval*)func->expr[0])->val;
+	} else if(func->expr[0]->nodetype == 'S') {
+		ret->d.n = es_str2num(((struct cnfstringval*) func->expr[0])->estr,
+				      NULL);
+	} else {
+		cnfexprEval(func->expr[0], &srcVal, usrptr, pWti);
+		ret->d.n = var2Number(&srcVal, NULL);
+		varFreeMembers(&srcVal);
+	}
+	ret->datatype = 'N';
+	DBGPRINTF("JSONorString: cnum node type %c result %d\n", func->expr[0]->nodetype, (int) ret->d.n);
+}
+
+static void ATTR_NONNULL()
+doFunct_ReMatch(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
+{
+	struct svar srcVal;
+	int bMustFree;
+	char *str;
+	int retval;
+
+	cnfexprEval(func->expr[0], &srcVal, usrptr, pWti);
+	str = (char*) var2CString(&srcVal, &bMustFree);
+	retval = regexp.regexec(func->funcdata, str, 0, NULL, 0);
+	if(retval == 0)
+		ret->d.n = 1;
+	else {
+		ret->d.n = 0;
+		if(retval != REG_NOMATCH) {
+			DBGPRINTF("re_match: regexec returned error %d\n", retval);
+		}
+	}
+	ret->datatype = 'N';
+	if(bMustFree) {
+		free(str);
+	}
+	varFreeMembers(&srcVal);
+}
+
+static void ATTR_NONNULL()
+doFunct_Ipv42num(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
+{
+	struct svar srcVal;
+	int bMustFree;
+	char *str;
+
+	cnfexprEval(func->expr[0], &srcVal, usrptr, pWti);
+	str = (char*)var2CString(&srcVal, &bMustFree);
+
+
 	unsigned num[4] = {0, 0, 0, 0};
 	long long value = -1;
 	size_t len = strlen(str);
@@ -1952,15 +2112,26 @@ ipv42num(char *str)
 	value = num[0]*256*256*256+num[1]*256*256+num[2]*256+num[3];
 done:
 	DBGPRINTF("rainerscript: (ipv42num): return value:'%lld'\n",value);
-	return(value);
+	ret->datatype = 'N';
+	ret->d.n = value;
+	varFreeMembers(&srcVal);
+	if(bMustFree)
+		free(str);
 }
 
-static es_str_t*
-int2Hex(struct svar *__restrict__ const sourceVal) {
+static void ATTR_NONNULL()
+doFunct_Int2Hex(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
+{
+	struct svar srcVal;
 	int success = 0;
 	char str[18];
-	long long num = var2Number(sourceVal, &success);
 	es_str_t* estr = NULL;
+	cnfexprEval(func->expr[0], &srcVal, usrptr, pWti);
+	long long num = var2Number(&srcVal, &success);
+
 	if (!success) {
 		DBGPRINTF("rainerscript: (int2hex) couldn't access number\n");
 		estr = es_newStrFromCStr("NAN", strlen("NAN"));
@@ -1969,120 +2140,385 @@ int2Hex(struct svar *__restrict__ const sourceVal) {
 
 	snprintf(str, 18, "%llx", num);
 	estr = es_newStrFromCStr(str, strlen(str));
+
 done:
-	return(estr);
-}
-
-static es_str_t*
-num2ipv4(struct svar *__restrict__ const sourceVal) {
-	int success = 0;
-	int numip[4];
-	char str[16];
-	size_t len;
-	es_str_t *estr;
-	long long num = var2Number(sourceVal, &success);
-	DBGPRINTF("rainrescript: (num2ipv4) var2Number output: '%lld\n'", num);
-	if (! success) {
-		DBGPRINTF("rainerscript: (num2ipv4) couldn't access number\n");
-		len = snprintf(str, 16, "-1");
-		goto done;
-	}
-	if(num < 0 || num > 4294967295) {
-		DBGPRINTF("rainerscript: (num2ipv4) invalid number(too big/negative); does "
-			"not represent IPv4 address\n");
-		len = snprintf(str, 16, "-1");
-		goto done;
-	}
-	for(int i = 0 ; i < 4 ; i++){
-		numip[i] = num % 256;
-		num = num / 256;
-	}
-	DBGPRINTF("rainerscript: (num2ipv4) Numbers: 1:'%d' 2:'%d' 3:'%d' 4:'%d'\n",
-		numip[0], numip[1], numip[2], numip[3]);
-	len = snprintf(str, 16, "%d.%d.%d.%d", numip[3], numip[2], numip[1], numip[0]);
-done:
-	DBGPRINTF("rainerscript: (num2ipv4) ipv4-Address: %s, lengh: %zu\n", str, len);
-	estr = es_newStrFromCStr(str, len);
-	return(estr);
-}
-
-#ifdef HAVE_LIBCURL
-/* curl callback for doFunc_http_request */
-static size_t
-curlResult(void *ptr, size_t size, size_t nmemb, void *userdata)
-{
-	char *buf;
-	size_t newlen;
-	struct cnffunc *const func = (struct cnffunc *) userdata;
-	assert(func != NULL);
-	struct curl_funcData *const curlData = (struct curl_funcData*) func->funcdata;
-	assert(curlData != NULL);
-
-	if(ptr == NULL) {
-		LogError(0, RS_RET_ERR, "internal error: libcurl provided ptr=NULL");
-		return 0;
-	}
-
-	newlen = curlData->replyLen + size*nmemb;
-	if((buf = realloc((void*)curlData->reply, newlen + 1)) == NULL) {
-		LogError(errno, RS_RET_ERR, "rainerscript: realloc failed in curlResult");
-		return 0; /* abort due to failure */
-	}
-	memcpy(buf+curlData->replyLen, (char*)ptr, size*nmemb);
-	curlData->replyLen = newlen;
-	curlData->reply = buf;
-	return size*nmemb;
-}
-
-static rsRetVal ATTR_NONNULL(1,2,3)
-doFunc_http_request(struct cnffunc *__restrict__ const func,
-	struct svar *__restrict__ const ret,
-	const char *const url)
-{
-	int resultSet = 0;
-	CURL *handle = NULL;
-	CURLcode res;
-	assert(func != NULL);
-	struct curl_funcData *const curlData = (struct curl_funcData*) func->funcdata;
-	assert(curlData != NULL);
-	DEFiRet;
-
-
-	CHKmalloc(handle = curl_easy_init());
-	curl_easy_setopt(handle, CURLOPT_NOSIGNAL, TRUE);
-	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, curlResult);
-	curl_easy_setopt(handle, CURLOPT_WRITEDATA, func);
-
-	curl_easy_setopt(handle, CURLOPT_URL, url);
-	res = curl_easy_perform(handle);
-	if(res != CURLE_OK) {
-		LogError(0, RS_RET_IO_ERROR,
-			"rainerscript: http_request to failed, URL: '%s', error %s",
-			url, curl_easy_strerror(res));
-		ABORT_FINALIZE(RS_RET_OK);
-	}
-
-
-	CHKmalloc(ret->d.estr = es_newStrFromCStr(curlData->reply, curlData->replyLen));
+	ret->d.estr = estr;
 	ret->datatype = 'S';
-	resultSet = 1;
-
-finalize_it:
-	free((void*)curlData->reply);
-	curlData->reply = NULL;
-	curlData->replyLen = 0;
-
-	if(handle != NULL) {
-		curl_easy_cleanup(handle);
-	}
-	if(!resultSet) {
-		/* provide dummy value */
-		ret->d.n = 0;
-		ret->datatype = 'N';
-	}
-	RETiRet;
+	varFreeMembers(&srcVal);
 }
-#endif
+
+static void ATTR_NONNULL()
+doFunct_Replace(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
+{
+	struct svar srcVal[3];
+
+	cnfexprEval(func->expr[0], &srcVal[0], usrptr, pWti);
+	cnfexprEval(func->expr[1], &srcVal[1], usrptr, pWti);
+	cnfexprEval(func->expr[2], &srcVal[2], usrptr, pWti);
+	ret->d.estr = doFuncReplace(&srcVal[0], &srcVal[1], &srcVal[2]);
+	ret->datatype = 'S';
+	varFreeMembers(&srcVal[0]);
+	varFreeMembers(&srcVal[1]);
+	varFreeMembers(&srcVal[2]);
+}
+
+static void ATTR_NONNULL()
+doFunct_Wrap(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
+{
+	struct svar sourceVal;
+	struct svar wrapperVal;
+	struct svar escaperVal;
+	int freeSource, freeWrapper;
+	es_str_t *sourceStr;
+
+	cnfexprEval(func->expr[0], &sourceVal, usrptr, pWti);
+	cnfexprEval(func->expr[1], &wrapperVal, usrptr, pWti);
+	if(func->nParams == 3) {
+		cnfexprEval(func->expr[2], &escaperVal, usrptr, pWti);
+		sourceStr = doFuncReplace(&sourceVal, &wrapperVal, &escaperVal);
+		freeSource = 1;
+
+	} else {
+		sourceStr = var2String(&sourceVal, &freeSource);
+	}
+	es_str_t *wrapperStr = var2String(&wrapperVal, &freeWrapper);
+	uchar *src = es_getBufAddr(sourceStr);
+	uchar *wrapper = es_getBufAddr(wrapperStr);
+	uint lWrapper = es_strlen(wrapperStr);
+	uint lSrc = es_strlen(sourceStr);
+	uint totalLen = lSrc + 2 * lWrapper;
+	es_str_t *res = es_newStr(totalLen);
+	uchar* resBuf = es_getBufAddr(res);
+	memcpy(resBuf, wrapper, lWrapper);
+	memcpy(resBuf + lWrapper, src, lSrc);
+	memcpy(resBuf + lSrc + lWrapper, wrapper, lWrapper);
+	res->lenStr = totalLen;
+	if (freeSource) {
+		es_deleteStr(sourceStr);
+	}
+	if (freeWrapper) {
+		es_deleteStr(wrapperStr);
+	}
+
+	ret->d.estr = res;
+	ret->datatype = 'S';
+	varFreeMembers(&sourceVal);
+	varFreeMembers(&wrapperVal);
+	if(func->nParams == 3) varFreeMembers(&escaperVal);
+}
+
+static void ATTR_NONNULL()
+doFunct_StrLen(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
+{
+	struct svar srcVal;
+	int bMustFree;
+	es_str_t *estr;
+
+	if(func->expr[0]->nodetype == 'S') {
+		/* if we already have a string, we do not need to
+		 * do one more recursive call.
+		 */
+		ret->d.n = es_strlen(((struct cnfstringval*) func->expr[0])->estr);
+	} else {
+		cnfexprEval(func->expr[0], &srcVal, usrptr, pWti);
+		estr = var2String(&srcVal, &bMustFree);
+		ret->d.n = es_strlen(estr);
+		if(bMustFree) {
+			es_deleteStr(estr);
+		}
+		varFreeMembers(&srcVal);
+	}
+	ret->datatype = 'N';
+}
+
+static void ATTR_NONNULL()
+doFunct_Substring(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
+{    //TODO: generalize parameter getter? jgerhards, 2018-02-26
+	int bMustFree;
+	struct svar srcVal[3];
+
+	cnfexprEval(func->expr[0], &srcVal[0], usrptr, pWti);
+	cnfexprEval(func->expr[1], &srcVal[1], usrptr, pWti);
+	cnfexprEval(func->expr[2], &srcVal[2], usrptr, pWti);
+	es_str_t *es = var2String(&srcVal[0], &bMustFree);
+	const int start = var2Number(&srcVal[1], NULL);
+	const int subStrLen = var2Number(&srcVal[2], NULL);
+
+	ret->datatype = 'S';
+	ret->d.estr = es_newStrFromSubStr(es, (es_size_t)start, (es_size_t)subStrLen);
+	if(bMustFree) es_deleteStr(es);
+	varFreeMembers(&srcVal[0]);
+	varFreeMembers(&srcVal[1]);
+	varFreeMembers(&srcVal[2]);
+}
+
+static void ATTR_NONNULL()
+doFunct_Field(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
+{
+	struct svar srcVal[3];
+	int bMustFree;
+	char *str;
+	uchar *resStr;
+	int matchnbr;
+	int delim;
+	rsRetVal localRet;
+
+	cnfexprEval(func->expr[0], &srcVal[0], usrptr, pWti);
+	cnfexprEval(func->expr[1], &srcVal[1], usrptr, pWti);
+	cnfexprEval(func->expr[2], &srcVal[2], usrptr, pWti);
+	str = (char*) var2CString(&srcVal[0], &bMustFree);
+	matchnbr = var2Number(&srcVal[2], NULL);
+	if(srcVal[1].datatype == 'S') {
+		char *delimstr;
+		delimstr = (char*) es_str2cstr(srcVal[1].d.estr, NULL);
+		localRet = doExtractFieldByStr((uchar*)str, delimstr, es_strlen(srcVal[1].d.estr),
+						matchnbr, &resStr);
+		free(delimstr);
+	} else {
+		delim = var2Number(&srcVal[1], NULL);
+		localRet = doExtractFieldByChar((uchar*)str, (char) delim, matchnbr, &resStr);
+	}
+	if(localRet == RS_RET_OK) {
+		ret->d.estr = es_newStrFromCStr((char*)resStr, strlen((char*)resStr));
+		free(resStr);
+	} else if(localRet == RS_RET_FIELD_NOT_FOUND) {
+		ret->d.estr = es_newStrFromCStr("***FIELD NOT FOUND***",
+				sizeof("***FIELD NOT FOUND***")-1);
+	} else {
+		ret->d.estr = es_newStrFromCStr("***ERROR in field() FUNCTION***",
+				sizeof("***ERROR in field() FUNCTION***")-1);
+	}
+	ret->datatype = 'S';
+	if(bMustFree) free(str);
+	varFreeMembers(&srcVal[0]);
+	varFreeMembers(&srcVal[1]);
+	varFreeMembers(&srcVal[2]);
+}
+
+static void ATTR_NONNULL()
+doFunct_Prifilt(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
+{
+	struct funcData_prifilt *pPrifilt;
+
+	pPrifilt = (struct funcData_prifilt*) func->funcdata;
+	if( (pPrifilt->pmask[((smsg_t*)usrptr)->iFacility] == TABLE_NOPRI) ||
+	   ((pPrifilt->pmask[((smsg_t*)usrptr)->iFacility]
+		    & (1<<((smsg_t*)usrptr)->iSeverity)) == 0) )
+		ret->d.n = 0;
+	else
+		ret->d.n = 1;
+	ret->datatype = 'N';
+}
+
+static void ATTR_NONNULL()
+doFunct_Lookup(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
+{
+	struct svar srcVal;
+	lookup_key_t key;
+	uint8_t lookup_key_type;
+	lookup_t *lookup_table;
+	int bMustFree;
+
+	ret->datatype = 'S';
+	if(func->funcdata == NULL) {
+		ret->d.estr = es_newStrFromCStr("TABLE-NOT-FOUND", sizeof("TABLE-NOT-FOUND")-1);
+		return;
+	}
+	cnfexprEval(func->expr[1], &srcVal, usrptr, pWti);
+	lookup_table = ((lookup_ref_t*)func->funcdata)->self;
+	if (lookup_table != NULL) {
+		lookup_key_type = lookup_table->key_type;
+		bMustFree = 0;
+		if (lookup_key_type == LOOKUP_KEY_TYPE_STRING) {
+			key.k_str = (uchar*) var2CString(&srcVal, &bMustFree);
+		} else if (lookup_key_type == LOOKUP_KEY_TYPE_UINT) {
+			key.k_uint = var2Number(&srcVal, NULL);
+		} else {
+			DBGPRINTF("program error in %s:%d: lookup_key_type unknown\n",
+				__FILE__, __LINE__);
+			key.k_uint = 0;
+		}
+		ret->d.estr = lookupKey((lookup_ref_t*)func->funcdata, key);
+		if(bMustFree) {
+			free(key.k_str);
+		}
+	} else {
+		ret->d.estr = es_newStrFromCStr("", 1);
+	}
+	varFreeMembers(&srcVal);
+}
+
+static void ATTR_NONNULL()
+doFunct_DynInc(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
+{
+	struct svar srcVal;
+	int bMustFree;
+	char *str;
+
+	ret->datatype = 'N';
+	if(func->funcdata == NULL) {
+		ret->d.n = -1;
+		return;
+	}
+	cnfexprEval(func->expr[1], &srcVal, usrptr, pWti);
+	str = (char*) var2CString(&srcVal, &bMustFree);
+	ret->d.n = dynstats_inc(func->funcdata, (uchar*)str);
+	if(bMustFree) free(str);
+	varFreeMembers(&srcVal);
+}
+
+static void ATTR_NONNULL()
+doFunct_FormatTime(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
+{
+	struct svar srcVal[2];
+	int bMustFree;
+	char *str;
+	int retval;
+	long long unixtime;
+	const int resMax = 64;
+	char   result[resMax];
+	char  *formatstr = NULL;
+
+	cnfexprEval(func->expr[0], &srcVal[0], usrptr, pWti);
+	cnfexprEval(func->expr[1], &srcVal[1], usrptr, pWti);
+
+	unixtime = var2Number(&srcVal[0], &retval);
+
+	// Make sure that the timestamp we got can fit into
+	// time_t on older systems.
+	if (sizeof(time_t) == sizeof(int)) {
+		if (unixtime < INT_MIN || unixtime > INT_MAX) {
+			LogMsg(
+				0, RS_RET_VAL_OUT_OF_RANGE, LOG_WARNING,
+				"Timestamp value %lld is out of range for this system (time_t is "
+				"32bits)!\n", unixtime
+			);
+			retval = 0;
+		}
+	}
+
+	// We want the string form too so we can return it as the
+	// default if we run into problems parsing the number.
+	str = (char*) var2CString(&srcVal[0], &bMustFree);
+	formatstr = (char*) es_str2cstr(srcVal[1].d.estr, NULL);
+
+	ret->datatype = 'S';
+
+	if (objUse(datetime, CORE_COMPONENT) != RS_RET_OK) {
+		ret->d.estr = es_newStr(0);
+	} else {
+		if (!retval || datetime.formatUnixTimeFromTime_t(unixtime, formatstr, result, resMax) == -1) {
+			strncpy(result, str, resMax);
+			result[resMax - 1] = '\0';
+		}
+		ret->d.estr = es_newStrFromCStr(result, strlen(result));
+	}
+
+	if (bMustFree) {
+		free(str);
+	}
+	free(formatstr);
+
+	varFreeMembers(&srcVal[0]);
+	varFreeMembers(&srcVal[1]);
+
+}
+
+/*
+ * Uses the given (current) year/month to decide which year
+ * the incoming month likely belongs in.
+ *
+ * cy - Current Year (actual)
+ * cm - Current Month (actual)
+ * im - "Incoming" Month
+ */
+static int
+estimateYear(int cy, int cm, int im) {
+	im += 12;
+
+	if ((im - cm) == 1) {
+		if (cm == 12 && im == 13)
+			return cy + 1;
+	}
+
+	if ((im - cm) > 13)
+		return cy - 1;
+
+	return cy;
+}
+
+static void ATTR_NONNULL()
+doFunct_ParseTime(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
+{
+	struct svar srcVal;
+	int bMustFree;
+	cnfexprEval(func->expr[0], &srcVal, usrptr, pWti);
+	char *str = (char*) var2CString(&srcVal, &bMustFree);
+	ret->datatype = 'N';
+	ret->d.n = 0;
+	wtiSetScriptErrno(pWti, RS_SCRIPT_EOK);
+
+	if (objUse(datetime, CORE_COMPONENT) == RS_RET_OK) {
+		struct syslogTime s;
+		int len = strlen(str);
+		uchar *pszTS = (uchar*) str;
+		memset(&s, 0, sizeof(struct syslogTime));
+		// Attempt to parse the date/time string
+		if (datetime.ParseTIMESTAMP3339(&s, (uchar**) &pszTS, &len) == RS_RET_OK) {
+			ret->d.n = datetime.syslogTime2time_t(&s);
+			DBGPRINTF("parse_time: RFC3339 format found\n");
+		} else if (datetime.ParseTIMESTAMP3164(&s, (uchar**) &pszTS, &len,
+			NO_PARSE3164_TZSTRING, NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
+			time_t t = time(NULL);
+			struct tm tm;
+			gmtime_r(&t, &tm); // Get the current UTC date
+			// Since properly formatted RFC 3164 timestamps do not have a YEAR
+			// specified, we have to assume one that seems reasonable - SW.
+			s.year = estimateYear(tm.tm_year + 1900, tm.tm_mon + 1, s.month);
+			ret->d.n = datetime.syslogTime2time_t(&s);
+			DBGPRINTF("parse_time: RFC3164 format found\n");
+		} else {
+			DBGPRINTF("parse_time: no valid format found\n");
+			wtiSetScriptErrno(pWti, RS_SCRIPT_EINVAL);
+		}
+	}
+
+	if(bMustFree) {
+		free(str);
+	}
+	varFreeMembers(&srcVal);
+
+}
 
 static int ATTR_NONNULL(1,3,4)
 doFunc_is_time(const char *__restrict__ const str,
@@ -2157,28 +2593,105 @@ doFunc_is_time(const char *__restrict__ const str,
 	return ret;
 }
 
-/*
- * Uses the given (current) year/month to decide which year
- * the incoming month likely belongs in.
- *
- * cy - Current Year (actual)
- * cm - Current Month (actual)
- * im - "Incoming" Month
- */
-static int
-estimateYear(int cy, int cm, int im) {
-	im += 12;
+static void ATTR_NONNULL()
+doFunct_IsTime(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
+{
+	struct svar srcVal[2];
+	int bMustFree;
+	int bMustFree2;
+	char *fmt = NULL;
 
-	if ((im - cm) == 1) {
-		if (cm == 12 && im == 13)
-			return cy + 1;
+	cnfexprEval(func->expr[0], &srcVal[0], usrptr, pWti);
+	char *str = (char*) var2CString(&srcVal[0], &bMustFree);
+
+	bMustFree2 = 0;
+
+	// Check if the optional 2nd parameter was provided
+	if(func->nParams == 2) {
+		cnfexprEval(func->expr[1], &srcVal[1], usrptr, pWti);
+		fmt = (char*) var2CString(&srcVal[1], &bMustFree2);
 	}
 
-	if ((im - cm) > 13)
-		return cy - 1;
+	ret->datatype = 'N';
+	ret->d.n = doFunc_is_time(str, fmt, &srcVal[0], pWti);
 
-	return cy;
+	if(bMustFree) {
+		free(str);
+	}
+	if(bMustFree2) {
+		free(fmt);
+	}
+	varFreeMembers(&srcVal[0]);
+	if(func->nParams == 2) {
+		varFreeMembers(&srcVal[1]);
+	}
 }
+
+static void ATTR_NONNULL()
+doFunct_ScriptError(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
+{
+	ret->datatype = 'N';
+	ret->d.n = wtiGetScriptErrno(pWti);
+	DBGPRINTF("script_error() is %d\n", (int) ret->d.n);
+}
+
+static void ATTR_NONNULL()
+doFunct_PreviousActionSuspended(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
+{
+	ret->datatype = 'N';
+	ret->d.n = wtiGetPrevWasSuspended(pWti);
+	DBGPRINTF("previous_action_suspended() is %d\n", (int) ret->d.n);
+}
+
+static void ATTR_NONNULL()
+doFunct_num2ipv4(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
+{
+	struct svar srcVal;
+	cnfexprEval(func->expr[0], &srcVal, usrptr, pWti);
+	int success = 0;
+	long long num = var2Number(&srcVal, &success);
+	varFreeMembers(&srcVal);
+
+	int numip[4];
+	char str[16];
+	size_t len;
+	DBGPRINTF("rainrescript: (num2ipv4) var2Number output: '%lld\n'", num);
+	if (! success) {
+		DBGPRINTF("rainerscript: (num2ipv4) couldn't access number\n");
+		len = snprintf(str, 16, "-1");
+		goto done;
+	}
+	if(num < 0 || num > 4294967295) {
+		DBGPRINTF("rainerscript: (num2ipv4) invalid number(too big/negative); does "
+			"not represent IPv4 address\n");
+		len = snprintf(str, 16, "-1");
+		goto done;
+	}
+	for(int i = 0 ; i < 4 ; i++){
+		numip[i] = num % 256;
+		num = num / 256;
+	}
+	DBGPRINTF("rainerscript: (num2ipv4) Numbers: 1:'%d' 2:'%d' 3:'%d' 4:'%d'\n",
+		numip[0], numip[1], numip[2], numip[3]);
+	len = snprintf(str, 16, "%d.%d.%d.%d", numip[3], numip[2], numip[1], numip[0]);
+done:
+	DBGPRINTF("rainerscript: (num2ipv4) ipv4-Address: %s, lengh: %zu\n", str, len);
+	ret->d.estr = es_newStrFromCStr(str, len);
+	ret->datatype = 'S';
+}
+
 
 /* Perform a function call. This has been moved out of cnfExprEval in order
  * to keep the code small and easier to maintain.
@@ -2188,428 +2701,22 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 	void *__restrict__ const usrptr,
 	wti_t *__restrict__ const pWti)
 {
-	char *envvar;
-	int bMustFree;
-	int bMustFree2;
-	es_str_t *estr;
-	char *str;
-	char *str2;
-	uchar *resStr;
-	int retval;
-	struct svar r[CNFFUNC_MAX_ARGS];
-	int delim;
-	int matchnbr;
-	struct funcData_prifilt *pPrifilt;
-	rsRetVal localRet;
-	lookup_key_t key;
-	uint8_t lookup_key_type;
-	lookup_t *lookup_table;
 
-	DBGPRINTF("rainerscript: executing function id %d\n", func->fID);
-	switch(func->fID) {
-	case CNFFUNC_STRLEN:
-		if(func->expr[0]->nodetype == 'S') {
-			/* if we already have a string, we do not need to
-			 * do one more recursive call.
-			 */
-			ret->d.n = es_strlen(((struct cnfstringval*) func->expr[0])->estr);
-		} else {
-			cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
-			estr = var2String(&r[0], &bMustFree);
-			ret->d.n = es_strlen(estr);
-			if(bMustFree) es_deleteStr(estr);
-			varFreeMembers(&r[0]);
-		}
-		ret->datatype = 'N';
-		break;
-	case CNFFUNC_REPLACE:
-		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
-		cnfexprEval(func->expr[1], &r[1], usrptr, pWti);
-		cnfexprEval(func->expr[2], &r[2], usrptr, pWti);
-		ret->d.estr = doFuncReplace(&r[0], &r[1], &r[2]);
-		ret->datatype = 'S';
-		varFreeMembers(&r[0]);
-		varFreeMembers(&r[1]);
-		varFreeMembers(&r[2]);
-		break;
-	case CNFFUNC_WRAP:
-		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
-		cnfexprEval(func->expr[1], &r[1], usrptr, pWti);
-		if(func->nParams == 3) cnfexprEval(func->expr[2], &r[2], usrptr, pWti);
-		ret->d.estr = doFuncWrap(&r[0], &r[1], func->nParams > 2 ? &r[2] : NULL);
-		ret->datatype = 'S';
-		varFreeMembers(&r[0]);
-		varFreeMembers(&r[1]);
-		if(func->nParams == 3) varFreeMembers(&r[2]);
-		break;
-	case CNFFUNC_RANDOM:
-		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
-		ret->d.n = doRandomGen(&r[0]);
-		ret->datatype = 'N';
-		varFreeMembers(&r[0]);
-		break;
-	case CNFFUNC_NUM2IPV4:
-		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
-		ret->d.estr = num2ipv4(&r[0]);
-		ret->datatype = 'S';
-		varFreeMembers(&r[0]);
-		break;
-	case CNFFUNC_INT2HEX:
-		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
-		ret->d.estr = int2Hex(&r[0]);
-		ret->datatype = 'S';
-		varFreeMembers(&r[0]);
-		break;
-	case CNFFUNC_LTRIM:
-		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
-		str = (char*)var2CString(&r[0], &bMustFree);
-		ret->datatype = 'S';
-		ret->d.estr = lTrim(str);
-		varFreeMembers(&r[0]);
-		if(bMustFree)
-			free(str);
-		break;
-	case CNFFUNC_RTRIM:
-		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
-		str = (char*)var2CString(&r[0], &bMustFree);
-		ret->datatype = 'S';
-		ret->d.estr = rTrim(str);
-		varFreeMembers(&r[0]);
-		if(bMustFree)
-			free(str);
-		break;
-	case CNFFUNC_GETENV:
-		/* note: the optimizer shall have replaced calls to getenv()
-		 * with a constant argument to a single string (once obtained via
-		 * getenv()). So we do NOT need to check if there is just a
-		 * string following.
-		 */
-		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
-		estr = var2String(&r[0], &bMustFree);
-		str = (char*) es_str2cstr(estr, NULL);
-		envvar = getenv(str);
-		if(envvar == NULL) {
-			ret->d.estr = es_newStr(0);
-		} else {
-			ret->d.estr = es_newStrFromCStr(envvar, strlen(envvar));
-		}
-		ret->datatype = 'S';
-		if(bMustFree) es_deleteStr(estr);
-		varFreeMembers(&r[0]);
-		free(str);
-		break;
-	case CNFFUNC_TOLOWER:
-		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
-		estr = var2String(&r[0], &bMustFree);
-		if(!bMustFree) /* let caller handle that M) */
-			estr = es_strdup(estr);
-		es_tolower(estr);
-		ret->datatype = 'S';
-		ret->d.estr = estr;
-		varFreeMembers(&r[0]);
-		break;
-	case CNFFUNC_CSTR:
-		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
-		estr = var2String(&r[0], &bMustFree);
-		if(!bMustFree) /* let caller handle that M) */
-			estr = es_strdup(estr);
-		ret->datatype = 'S';
-		ret->d.estr = estr;
-		varFreeMembers(&r[0]);
-		break;
-	case CNFFUNC_IPV42NUM:
-		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
-		str = (char*)var2CString(&r[0], &bMustFree);
-		ret->datatype = 'N';
-		ret->d.n = ipv42num(str);
-		varFreeMembers(&r[0]);
-		if(bMustFree)
-			free(str);
-		break;
-	case CNFFUNC_CNUM:
-		if(func->expr[0]->nodetype == 'N') {
-			ret->d.n = ((struct cnfnumval*)func->expr[0])->val;
-		} else if(func->expr[0]->nodetype == 'S') {
-			ret->d.n = es_str2num(((struct cnfstringval*) func->expr[0])->estr,
-					      NULL);
-		} else {
-			cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
-			ret->d.n = var2Number(&r[0], NULL);
-			varFreeMembers(&r[0]);
-		}
-		ret->datatype = 'N';
-		DBGPRINTF("JSONorString: cnum node type %c result %d\n", func->expr[0]->nodetype, (int) ret->d.n);
-		break;
-	case CNFFUNC_RE_MATCH:
-		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
-		str = (char*) var2CString(&r[0], &bMustFree);
-		retval = regexp.regexec(func->funcdata, str, 0, NULL, 0);
-		if(retval == 0)
-			ret->d.n = 1;
-		else {
-			ret->d.n = 0;
-			if(retval != REG_NOMATCH) {
-				DBGPRINTF("re_match: regexec returned error %d\n", retval);
-			}
-		}
-		ret->datatype = 'N';
-		if(bMustFree) free(str);
-		varFreeMembers(&r[0]);
-		break;
-	case CNFFUNC_RE_EXTRACT:
-		doFunc_re_extract(func, ret, usrptr, pWti);
-		break;
-	case CNFFUNC_EXEC_TEMPLATE:
-		doFunc_exec_template(func, ret, (smsg_t*) usrptr);
-		break;
-	case CNFFUNC_SUBSTRING:
-		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
-		cnfexprEval(func->expr[1], &r[1], usrptr, pWti);
-		cnfexprEval(func->expr[2], &r[2], usrptr, pWti);
-		es_str_t *es = var2String(&r[0], &bMustFree);
-		const int start = var2Number(&r[1], NULL);
-		const int subStrLen = var2Number(&r[2], NULL);
-		ret->datatype = 'S';
-		ret->d.estr = es_newStrFromSubStr(es, (es_size_t)start, (es_size_t)subStrLen);
-		if(bMustFree) es_deleteStr(es);
-		varFreeMembers(&r[0]);
-		varFreeMembers(&r[1]);
-		varFreeMembers(&r[2]);
-		break;
-	case CNFFUNC_FIELD:
-		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
-		cnfexprEval(func->expr[1], &r[1], usrptr, pWti);
-		cnfexprEval(func->expr[2], &r[2], usrptr, pWti);
-		str = (char*) var2CString(&r[0], &bMustFree);
-		matchnbr = var2Number(&r[2], NULL);
-		if(r[1].datatype == 'S') {
-			char *delimstr;
-			delimstr = (char*) es_str2cstr(r[1].d.estr, NULL);
-			localRet = doExtractFieldByStr((uchar*)str, delimstr, es_strlen(r[1].d.estr),
-							matchnbr, &resStr);
-			free(delimstr);
-		} else {
-			delim = var2Number(&r[1], NULL);
-			localRet = doExtractFieldByChar((uchar*)str, (char) delim, matchnbr, &resStr);
-		}
-		if(localRet == RS_RET_OK) {
-			ret->d.estr = es_newStrFromCStr((char*)resStr, strlen((char*)resStr));
-			free(resStr);
-		} else if(localRet == RS_RET_FIELD_NOT_FOUND) {
-			ret->d.estr = es_newStrFromCStr("***FIELD NOT FOUND***",
-					sizeof("***FIELD NOT FOUND***")-1);
-		} else {
-			ret->d.estr = es_newStrFromCStr("***ERROR in field() FUNCTION***",
-					sizeof("***ERROR in field() FUNCTION***")-1);
-		}
-		ret->datatype = 'S';
-		if(bMustFree) free(str);
-		varFreeMembers(&r[0]);
-		varFreeMembers(&r[1]);
-		varFreeMembers(&r[2]);
-		break;
-	case CNFFUNC_PRIFILT:
-		pPrifilt = (struct funcData_prifilt*) func->funcdata;
-		if( (pPrifilt->pmask[((smsg_t*)usrptr)->iFacility] == TABLE_NOPRI) ||
-		   ((pPrifilt->pmask[((smsg_t*)usrptr)->iFacility]
-			    & (1<<((smsg_t*)usrptr)->iSeverity)) == 0) )
-			ret->d.n = 0;
-		else
-			ret->d.n = 1;
-		ret->datatype = 'N';
-		break;
-	case CNFFUNC_LOOKUP:
-		ret->datatype = 'S';
-		if(func->funcdata == NULL) {
-			ret->d.estr = es_newStrFromCStr("TABLE-NOT-FOUND", sizeof("TABLE-NOT-FOUND")-1);
-			break;
-		}
-		cnfexprEval(func->expr[1], &r[1], usrptr, pWti);
-		lookup_table = ((lookup_ref_t*)func->funcdata)->self;
-		if (lookup_table != NULL) {
-			lookup_key_type = lookup_table->key_type;
-			bMustFree = 0;
-			if (lookup_key_type == LOOKUP_KEY_TYPE_STRING) {
-				key.k_str = (uchar*) var2CString(&r[1], &bMustFree);
-			} else if (lookup_key_type == LOOKUP_KEY_TYPE_UINT) {
-				key.k_uint = var2Number(&r[1], NULL);
-			} else {
-				DBGPRINTF("program error in %s:%d: lookup_key_type unknown\n",
-					__FILE__, __LINE__);
-				key.k_uint = 0;
-			}
-			ret->d.estr = lookupKey((lookup_ref_t*)func->funcdata, key);
-			if(bMustFree) free(key.k_str);
-		} else {
-			ret->d.estr = es_newStrFromCStr("", 1);
-		}
-		varFreeMembers(&r[1]);
-		break;
-	case CNFFUNC_DYN_INC:
-		ret->datatype = 'N';
-		if(func->funcdata == NULL) {
-			ret->d.n = -1;
-			break;
-		}
-		cnfexprEval(func->expr[1], &r[1], usrptr, pWti);
-		str = (char*) var2CString(&r[1], &bMustFree);
-		ret->d.n = dynstats_inc(func->funcdata, (uchar*)str);
-		if(bMustFree) free(str);
-		varFreeMembers(&r[1]);
-		break;
-	case CNFFUNC_FORMAT_TIME: {
-		long long unixtime;
-		const int resMax = 64;
-		char   result[resMax];
-		char  *formatstr = NULL;
-
-		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
-		cnfexprEval(func->expr[1], &r[1], usrptr, pWti);
-
-		unixtime = var2Number(&r[0], &retval);
-
-		// Make sure that the timestamp we got can fit into
-		// time_t on older systems.
-		if (sizeof(time_t) == sizeof(int)) {
-			if (unixtime < INT_MIN || unixtime > INT_MAX) {
-				LogMsg(
-					0, RS_RET_VAL_OUT_OF_RANGE, LOG_WARNING,
-					"Timestamp value %lld is out of range for this system (time_t is "
-					"32bits)!\n", unixtime
-				);
-				retval = 0;
-			}
-		}
-
-		// We want the string form too so we can return it as the
-		// default if we run into problems parsing the number.
-		str = (char*) var2CString(&r[0], &bMustFree);
-		formatstr = (char*) es_str2cstr(r[1].d.estr, NULL);
-
-		ret->datatype = 'S';
-
-		if (objUse(datetime, CORE_COMPONENT) != RS_RET_OK) {
-			ret->d.estr = es_newStr(0);
-		} else {
-			if (!retval || datetime.formatUnixTimeFromTime_t(unixtime, formatstr, result, resMax) == -1) {
-				strncpy(result, str, resMax);
-				result[resMax - 1] = '\0';
-			}
-			ret->d.estr = es_newStrFromCStr(result, strlen(result));
-		}
-
-		if (bMustFree) free(str);
-		free(formatstr);
-
-		varFreeMembers(&r[0]);
-		varFreeMembers(&r[1]);
-
-		break;
+	if(Debug) {
+		char *fname = es_str2cstr(func->fname, NULL);
+		DBGPRINTF("rainerscript: executing function id %s\n", fname);
+		free(fname);
 	}
-	case CNFFUNC_PARSE_TIME: {
-		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
-		str = (char*) var2CString(&r[0], &bMustFree);
-		ret->datatype = 'N';
-		ret->d.n = 0;
-		wtiSetScriptErrno(pWti, RS_SCRIPT_EOK);
-
-		if (objUse(datetime, CORE_COMPONENT) == RS_RET_OK) {
-			struct syslogTime s;
-			int len = strlen(str);
-			uchar *pszTS = (uchar*) str;
-			memset(&s, 0, sizeof(struct syslogTime));
-			// Attempt to parse the date/time string
-			if (datetime.ParseTIMESTAMP3339(&s, (uchar**) &pszTS, &len) == RS_RET_OK) {
-				ret->d.n = datetime.syslogTime2time_t(&s);
-				DBGPRINTF("parse_time: RFC3339 format found\n");
-			} else if (datetime.ParseTIMESTAMP3164(&s, (uchar**) &pszTS, &len,
-				NO_PARSE3164_TZSTRING, NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
-				time_t t = time(NULL);
-				struct tm tm;
-				gmtime_r(&t, &tm); // Get the current UTC date
-				// Since properly formatted RFC 3164 timestamps do not have a YEAR
-				// specified, we have to assume one that seems reasonable - SW.
-				s.year = estimateYear(tm.tm_year + 1900, tm.tm_mon + 1, s.month);
-				ret->d.n = datetime.syslogTime2time_t(&s);
-				DBGPRINTF("parse_time: RFC3164 format found\n");
-			} else {
-				DBGPRINTF("parse_time: no valid format found\n");
-				wtiSetScriptErrno(pWti, RS_SCRIPT_EINVAL);
-			}
-		}
-
-		if(bMustFree) free(str);
-		varFreeMembers(&r[0]);
-		break;
-	}
-	case CNFFUNC_IS_TIME: {
-		char *fmt = NULL;
-
-		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
-		str = (char*) var2CString(&r[0], &bMustFree);
-
-		bMustFree2 = 0;
-
-		// Check if the optional 2nd parameter was provided
-		if(func->nParams == 2) {
-			cnfexprEval(func->expr[1], &r[1], usrptr, pWti);
-			fmt = (char*) var2CString(&r[1], &bMustFree2);
-		}
-
-		ret->datatype = 'N';
-		ret->d.n = doFunc_is_time(str, fmt, &r[0], pWti);
-
-		if(bMustFree) free(str);
-		if(bMustFree2) free(fmt);
-		varFreeMembers(&r[0]);
-		if(func->nParams == 2) varFreeMembers(&r[1]);
-		break;
-	}
-	case CNFFUNC_SCRIPT_ERROR:
-		ret->datatype = 'N';
-		ret->d.n = wtiGetScriptErrno(pWti);
-		DBGPRINTF("script_error() is %d\n", (int) ret->d.n);
-		break;
-	case CNFFUNC_PREVIOUS_ACTION_SUSPENDED:
-		ret->datatype = 'N';
-		ret->d.n = wtiGetPrevWasSuspended(pWti);
-		DBGPRINTF("previous_action_suspended() is %d\n", (int) ret->d.n);
-		break;
-	case CNFFUNC_PARSE_JSON:
-		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
-		cnfexprEval(func->expr[1], &r[1], usrptr, pWti);
-		str = (char*) var2CString(&r[0], &bMustFree);
-		str2 = (char*) var2CString(&r[1], &bMustFree2);
-		ret->datatype = 'N';
-		ret->d.n = doFunc_parse_json(str, str2, (smsg_t*) usrptr, pWti);
-		if(bMustFree) free(str);
-		if(bMustFree2) free(str2);
-		varFreeMembers(&r[0]);
-		varFreeMembers(&r[1]);
-		break;
-	case CNFFUNC_HTTP_REQUEST:
-#ifdef HAVE_LIBCURL
-		cnfexprEval(func->expr[0], &r[0], usrptr, pWti);
-		str = (char*) var2CString(&r[0], &bMustFree);
-		doFunc_http_request(func, ret, str);
-		if(bMustFree) free(str);
-		varFreeMembers(&r[0]);
-#else
+	if(func->fPtr == NULL) {
+		char *fname = es_str2cstr(func->fname, NULL);
 		LogError(0, RS_RET_INTERNAL_ERROR,
-			"rainerscript: internal error: HTTP_Fetch not supported, not built with libcurl support");
-#endif
-		break;
-	default:
-		if(Debug) {
-			char *fname = es_str2cstr(func->fname, NULL);
-			LogError(0, RS_RET_INTERNAL_ERROR,
-				"rainerscript: internal error: invalid function id %u (name '%s')\n",
-				(unsigned) func->fID, fname);
-			free(fname);
-		}
+			"rainerscript: internal error: NULL pointer for function named '%s'\n",
+			fname);
+		free(fname);
 		ret->datatype = 'N';
 		ret->d.n = 0;
-		break;
+	} else {
+		func->fPtr(func, ret, usrptr, pWti);
 	}
 }
 
@@ -3240,6 +3347,282 @@ cnfarrayContentDestruct(struct cnfarray *ar)
 }
 
 static void
+regex_destruct(struct cnffunc *func) {
+	if(func->funcdata != NULL) {
+		regexp.regfree(func->funcdata);
+	}
+}
+
+static rsRetVal
+initFunc_dyn_stats(struct cnffunc *func)
+{
+	uchar *cstr = NULL;
+	DEFiRet;
+
+	func->destructable_funcdata = 0;
+
+	if(func->nParams != 2) {
+		parser_errmsg("rsyslog logic error in line %d of file %s\n",
+					  __LINE__, __FILE__);
+		FINALIZE;
+	}
+
+	func->funcdata = NULL;
+	if(func->expr[0]->nodetype != 'S') {
+		parser_errmsg("dyn-stats bucket-name (param 1) of dyn-stats manipulating "
+		"functions like dyn_inc must be a constant string");
+		FINALIZE;
+	}
+
+	cstr = (uchar*)es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL);
+	if((func->funcdata = dynstats_findBucket(cstr)) == NULL) {
+		parser_errmsg("dyn-stats bucket '%s' not found", cstr);
+		FINALIZE;
+	}
+
+finalize_it:
+	free(cstr);
+	RETiRet;
+}
+
+static rsRetVal
+initFunc_re_match(struct cnffunc *func)
+{
+	rsRetVal localRet;
+	char *regex = NULL;
+	regex_t *re;
+	DEFiRet;
+
+	if(func->nParams < 2) {
+		parser_errmsg("rsyslog logic error in line %d of file %s\n",
+			__LINE__, __FILE__);
+		FINALIZE;
+	}
+
+	func->funcdata = NULL;
+	if(func->expr[1]->nodetype != 'S') {
+		parser_errmsg("param 2 of re_match/extract() must be a constant string");
+		FINALIZE;
+	}
+
+	CHKmalloc(re = malloc(sizeof(regex_t)));
+	func->funcdata = re;
+
+	regex = es_str2cstr(((struct cnfstringval*) func->expr[1])->estr, NULL);
+
+	if((localRet = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
+		int errcode;
+		if((errcode = regexp.regcomp(re, (char*) regex, REG_EXTENDED) != 0)) {
+			char errbuff[512];
+			regexp.regerror(errcode, re, errbuff, sizeof(errbuff));
+			parser_errmsg("cannot compile regex '%s': %s", regex, errbuff);
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+	} else { /* regexp object could not be loaded */
+		parser_errmsg("could not load regex support - regex ignored");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+finalize_it:
+	free(regex);
+	RETiRet;
+}
+
+static rsRetVal
+initFunc_exec_template(struct cnffunc *func)
+{
+	char *tplName = NULL;
+	DEFiRet;
+
+	func->destructable_funcdata = 0;
+
+	if(func->nParams != 1) {
+		parser_errmsg("rsyslog logic error in line %d of file %s\n",
+			__LINE__, __FILE__);
+		FINALIZE;
+	}
+
+	if(func->expr[0]->nodetype != 'S') {
+		parser_errmsg("exec_template(): param 1 must be a constant string");
+		FINALIZE;
+	}
+
+	tplName = es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL);
+	func->funcdata = tplFind(ourConf, tplName, strlen(tplName));
+	if(func->funcdata == NULL) {
+		parser_errmsg("exec_template(): template '%s' could not be found", tplName);
+		FINALIZE;
+	}
+
+
+finalize_it:
+	free(tplName);
+	RETiRet;
+}
+
+static rsRetVal
+initFunc_prifilt(struct cnffunc *func)
+{
+	struct funcData_prifilt *pData;
+	uchar *cstr;
+	DEFiRet;
+
+	if(func->nParams != 1) {
+		parser_errmsg("rsyslog logic error in line %d of file %s\n",
+			__LINE__, __FILE__);
+		FINALIZE;
+	}
+
+	func->funcdata = NULL;
+	if(func->expr[0]->nodetype != 'S') {
+		parser_errmsg("param 1 of prifilt() must be a constant string");
+		FINALIZE;
+	}
+
+	CHKmalloc(pData = calloc(1, sizeof(struct funcData_prifilt)));
+	func->funcdata = pData;
+	cstr = (uchar*)es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL);
+	CHKiRet(DecodePRIFilter(cstr, pData->pmask));
+	free(cstr);
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+resolveLookupTable(struct cnffunc *func)
+{
+	uchar *cstr = NULL;
+	char *fn_name = NULL;
+	DEFiRet;
+
+	func->destructable_funcdata = 0;
+
+	if(func->nParams == 0) {/*we assume first arg is lookup-table-name*/
+		parser_errmsg("rsyslog logic error in line %d of file %s\n",
+			__LINE__, __FILE__);
+		FINALIZE;
+	}
+
+	CHKmalloc(fn_name = es_str2cstr(func->fname, NULL));
+
+	func->funcdata = NULL;
+	if(func->expr[0]->nodetype != 'S') {
+		parser_errmsg("table name (param 1) of %s() must be a constant string", fn_name);
+		FINALIZE;
+	}
+
+	CHKmalloc(cstr = (uchar*)es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL));
+	if((func->funcdata = lookupFindTable(cstr)) == NULL) {
+		parser_errmsg("lookup table '%s' not found (used in function: %s)", cstr, fn_name);
+		FINALIZE;
+	}
+
+finalize_it:
+	free(cstr);
+	free(fn_name);
+	RETiRet;
+}
+
+struct modListNode {
+	int version;
+	struct scriptFunct *modFcts;
+	struct modListNode *next;
+};
+
+static struct modListNode *modListRoot = NULL;
+static struct modListNode *modListLast = NULL;
+
+static struct scriptFunct functions[] = {
+	{"strlen", 1, 1, doFunct_StrLen, NULL, NULL},
+	{"getenv", 1, 1, doFunct_Getenv, NULL, NULL},
+	{"num2ipv4", 1, 1, doFunct_num2ipv4, NULL, NULL},
+	{"int2hex", 1, 1, doFunct_Int2Hex, NULL, NULL},
+	{"substring", 3, 3, doFunct_Substring, NULL, NULL},
+	{"ltrim", 1, 1, doFunct_LTrim, NULL, NULL},
+	{"rtrim", 1, 1, doFunct_RTrim, NULL, NULL},
+	{"tolower", 1, 1, doFunct_ToLower, NULL, NULL},
+	{"cstr", 1, 1, doFunct_CStr, NULL, NULL},
+	{"cnum", 1, 1, doFunct_CNum, NULL, NULL},
+	{"ip42num", 1, 1, doFunct_Ipv42num, NULL, NULL},
+	{"re_match", 2, 2, doFunct_ReMatch, initFunc_re_match, regex_destruct},
+	{"re_extract", 5, 5, doFunc_re_extract, initFunc_re_match, regex_destruct},
+	{"field", 3, 3, doFunct_Field, NULL, NULL},
+	{"exec_template", 1, 1, doFunc_exec_template, initFunc_exec_template, NULL},
+	{"prifilt", 1, 1, doFunct_Prifilt, initFunc_prifilt, NULL},
+	{"lookup", 2, 2, doFunct_Lookup, resolveLookupTable, NULL},
+	{"dyn_inc", 2, 2, doFunct_DynInc, initFunc_dyn_stats, NULL},
+	{"replace", 3, 3, doFunct_Replace, NULL, NULL},
+	{"wrap", 2, 3, doFunct_Wrap, NULL, NULL},
+	{"random", 1, 1, doFunct_RandomGen, NULL, NULL},
+	{"format_time", 2, 2, doFunct_FormatTime, NULL, NULL},
+	{"parse_time", 1, 1, doFunct_ParseTime, NULL, NULL},
+	{"is_time", 1, 2, doFunct_IsTime, NULL, NULL},
+	{"parse_json", 2, 2, doFunc_parse_json, NULL, NULL},
+	{"script_error", 0, 0, doFunct_ScriptError, NULL, NULL},
+	{"previous_action_suspended", 0, 0, doFunct_PreviousActionSuspended, NULL, NULL},
+	{NULL, 0, 0, NULL, NULL, NULL} //last element to check end of array
+};
+
+static rscriptFuncPtr ATTR_NONNULL()
+extractFuncPtr(const struct scriptFunct *const funct, const unsigned int nParams)
+{
+	rscriptFuncPtr retPtr = NULL;
+
+	if(funct->minParams == funct->maxParams) {
+		if(nParams == funct->maxParams) {
+			retPtr = funct->fPtr;
+		} else {
+			parser_errmsg("number of parameters for %s() must be %hu but is %d.",
+				funct->fname, funct->maxParams, nParams);
+		}
+	} else {
+		if(nParams < funct->minParams) {
+			parser_errmsg("number of parameters for %s() must be at least %hu but is %d.",
+				funct->fname, funct->minParams, nParams);
+		} else if(nParams > funct->maxParams) {
+			parser_errmsg("number of parameters for %s() must be at most %hu but is %d.",
+				funct->fname, funct->maxParams, nParams);
+		} else {
+			retPtr = funct->fPtr;
+		}
+	}
+
+	return retPtr;
+}
+
+static struct scriptFunct* ATTR_NONNULL()
+searchFunctArray(const char *const fname, struct scriptFunct *functArray)
+{
+	struct scriptFunct *retPtr = NULL;
+	int i = 0;
+	while(functArray[i].fname != NULL) {
+		if(!strcmp(fname, functArray[i].fname)){
+			retPtr = functArray + i;
+			goto done;
+		}
+		i++;
+	}
+done:
+	return retPtr;
+}
+
+static struct scriptFunct* ATTR_NONNULL()
+searchModList(const char *const fname)
+{
+	struct modListNode *modListCurr = modListRoot;
+	struct scriptFunct *foundFunct;
+
+	do {
+		foundFunct = searchFunctArray(fname, modListCurr->modFcts);
+		if(foundFunct != NULL) {
+			return foundFunct;
+		}
+		modListCurr = modListCurr->next;
+	} while(modListCurr != NULL);
+	return NULL;
+}
+
+static void
 cnffuncDestruct(struct cnffunc *func)
 {
 	unsigned short i;
@@ -3247,20 +3630,15 @@ cnffuncDestruct(struct cnffunc *func)
 	for(i = 0 ; i < func->nParams ; ++i) {
 		cnfexprDestruct(func->expr[i]);
 	}
+
 	/* some functions require special destruction */
-	switch(func->fID) {
-		case CNFFUNC_RE_MATCH:
-		case CNFFUNC_RE_EXTRACT:
-			if(func->funcdata != NULL)
-				regexp.regfree(func->funcdata);
-			break;
-		case CNFFUNC_HTTP_REQUEST:
-			if(func->funcdata != NULL) {
-				free((void*) ((struct curl_funcData*)func->funcdata)->reply);
-			}
-			break;
-		default:break;
+	char *cstr = es_str2cstr(func->fname, NULL);
+	struct scriptFunct *foundFunc = searchModList(cstr);
+	free(cstr);
+	if(foundFunc->destruct != NULL) {
+		foundFunc->destruct(func);
 	}
+
 	if(func->destructable_funcdata) {
 		free(func->funcdata);
 	}
@@ -3497,8 +3875,10 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		doIndent(indent);
 		func = (struct cnffunc*) expr;
 		cstrPrint("function '", func->fname);
-		dbgprintf("' (id:%d, params:%hu)\n", func->fID, func->nParams);
-		if(func->fID == CNFFUNC_PRIFILT) {
+		char *fname = es_str2cstr(func->fname, NULL);
+		dbgprintf("' (name:%s, params:%hu)\n", fname, func->nParams);
+		free(fname);
+		if(func->fPtr == doFunct_Prifilt) {
 			struct funcData_prifilt *pD;
 			pD = (struct funcData_prifilt*) func->funcdata;
 			pmaskPrint(pD->pmask, indent+1);
@@ -3527,6 +3907,7 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		break;
 	}
 }
+
 /* print only the given stmt
  * if "subtree" equals 1, the full statement subtree is printed, else
  * really only the statement.
@@ -4257,7 +4638,7 @@ cnfexprOptimize_NOT(struct cnfexpr *expr)
 
 	if(expr->r->nodetype == 'F') {
 		func = (struct cnffunc *)expr->r;
-		if(func->fID == CNFFUNC_PRIFILT) {
+		if(func->fPtr == doFunct_Prifilt) {
 			DBGPRINTF("optimize NOT prifilt() to inverted prifilt()\n");
 			expr->r = NULL;
 			cnfexprDestruct(expr);
@@ -4277,7 +4658,7 @@ cnfexprOptimize_AND_OR(struct cnfexpr *expr)
 		if(expr->r->nodetype == 'F') {
 			funcl = (struct cnffunc *)expr->l;
 			funcr = (struct cnffunc *)expr->r;
-			if(funcl->fID == CNFFUNC_PRIFILT && funcr->fID == CNFFUNC_PRIFILT) {
+			if(funcl->fPtr == doFunct_Prifilt && funcr->fPtr == doFunct_Prifilt) {
 				DBGPRINTF("optimize combine AND/OR prifilt()\n");
 				expr->l = NULL;
 				prifiltCombine(funcl->funcdata, funcr->funcdata, expr->nodetype);
@@ -4473,7 +4854,7 @@ cnfstmtOptimizeIf(struct cnfstmt *stmt)
 	assert(stmt->nodetype == S_IF);
 	if(stmt->d.s_if.expr->nodetype == 'F') {
 		func = (struct cnffunc*)expr;
-		   if(func->fID == CNFFUNC_PRIFILT) {
+		   if(func->fPtr == doFunct_Prifilt) {
 			DBGPRINTF("optimizer: change IF to PRIFILT\n");
 			t_then = stmt->d.s_if.t_then;
 			t_else = stmt->d.s_if.t_else;
@@ -4628,8 +5009,11 @@ cnfstmtOptimize(struct cnfstmt *root)
 			cnfstmtOptimizeReloadLookupTable(stmt);
 			break;
 		case S_NOP:
-			LogError(0, RS_RET_INTERNAL_ERROR,
-				"optimizer error: we see a NOP, how come?");
+			// TODO: fix optimizer, re-enable. see:
+			// https://github.com/rsyslog/rsyslog/issues/2524
+			//LogError(0, RS_RET_INTERNAL_ERROR,
+			//	"optimizer error: we see a NOP, how come?");
+			dbgprintf("optimizer error: we see a NOP, how come?");
 			break;
 		default:
 			LogError(0, RS_RET_INTERNAL_ERROR,
@@ -4655,309 +5039,47 @@ cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *next)
 	return lst;
 }
 
-static const char* const numInWords[] = {"zero", "one", "two", "three", "four", "five", "six"};
-
-#define GENERATE_FUNC_WITH_NARG_RANGE(name, minArg, maxArg, funcId, errMsg) \
-	if(nParams < minArg || nParams > maxArg) {	\
-		parser_errmsg(errMsg, name, nParams);	\
-		return CNFFUNC_INVALID;			\
-	}						\
-	return funcId
-
-
-#define GENERATE_FUNC_WITH_ERR_MSG(name, expectedParams, funcId, errMsg) \
-	if(nParams != expectedParams) {										\
-		parser_errmsg(errMsg, name, numInWords[expectedParams], nParams); \
-		return CNFFUNC_INVALID; \
-	}	\
-	return funcId
-
-
-#define GENERATE_FUNC(name, expectedParams, func_id)					\
-	GENERATE_FUNC_WITH_ERR_MSG( \
-		name, expectedParams, func_id,									\
-		"number of parameters for %s() must be %s but is %d.")
-
-
-#define FUNC_NAME(name) !es_strbufcmp(fname, (unsigned char*)name, sizeof(name) - 1)
-
-
 /* Obtain function id from name AND number of params. Issues the
  * relevant error messages if errors are detected.
  */
-static enum cnffuncid
-funcName2ID(es_str_t *fname, unsigned short nParams)
+static rscriptFuncPtr
+funcName2Ptr(char *const fname, const unsigned short nParams)
 {
-	if(FUNC_NAME("strlen")) {
-		GENERATE_FUNC("strlen", 1, CNFFUNC_STRLEN);
-	} else if(FUNC_NAME("getenv")) {
-		GENERATE_FUNC("getenv", 1, CNFFUNC_GETENV);
-	} else if(FUNC_NAME("num2ipv4")) {
-		GENERATE_FUNC("num2ipv4", 1, CNFFUNC_NUM2IPV4);
-	} else if(FUNC_NAME("int2hex")) {
-		GENERATE_FUNC("int2hex", 1, CNFFUNC_INT2HEX);
-	} else if(FUNC_NAME("substring")) {
-		GENERATE_FUNC("substring", 3, CNFFUNC_SUBSTRING);
-	} else if(FUNC_NAME("ltrim")) {
-		GENERATE_FUNC("ltrim", 1, CNFFUNC_LTRIM);
-	} else if(FUNC_NAME("rtrim")) {
-		GENERATE_FUNC("rtrim", 1, CNFFUNC_RTRIM);
-	} else if(FUNC_NAME("tolower")) {
-		GENERATE_FUNC("tolower", 1, CNFFUNC_TOLOWER);
-	} else if(FUNC_NAME("cstr")) {
-		GENERATE_FUNC("cstr", 1, CNFFUNC_CSTR);
-	} else if(FUNC_NAME("cnum")) {
-		GENERATE_FUNC("cnum", 1, CNFFUNC_CNUM);
-	} else if(FUNC_NAME("ip42num")) {
-		GENERATE_FUNC("ip42num", 1, CNFFUNC_IPV42NUM);
-	} else if(FUNC_NAME("re_match")) {
-		GENERATE_FUNC("re_match", 2, CNFFUNC_RE_MATCH);
-	} else if(FUNC_NAME("re_extract")) {
-		GENERATE_FUNC("re_extract", 5, CNFFUNC_RE_EXTRACT);
-	} else if(FUNC_NAME("field")) {
-		GENERATE_FUNC("field", 3, CNFFUNC_FIELD);
-	} else if(FUNC_NAME("exec_template")) {
-		GENERATE_FUNC("exec_template", 1, CNFFUNC_EXEC_TEMPLATE);
-	} else if(FUNC_NAME("prifilt")) {
-		GENERATE_FUNC("prifilt", 1, CNFFUNC_PRIFILT);
-	} else if(FUNC_NAME("lookup")) {
-		GENERATE_FUNC("lookup", 2, CNFFUNC_LOOKUP);
-	} else if(FUNC_NAME("dyn_inc")) {
-		GENERATE_FUNC("dyn_inc", 2, CNFFUNC_DYN_INC);
-	} else if(FUNC_NAME("replace")) {
-		GENERATE_FUNC_WITH_ERR_MSG(
-			"replace", 3, CNFFUNC_REPLACE,
-			"number of parameters for %s() must be %s "
-			"(operand_string, fragment_to_find, fragment_to_replace_in_its_place)"
-			"but is %d.");
-	} else if(FUNC_NAME("wrap")) {
-		GENERATE_FUNC_WITH_NARG_RANGE("wrap", 2, 3, CNFFUNC_WRAP,
-			"number of parameters for %s() must either be "
-			"two (operand_string, wrapper) or"
-			"three (operand_string, wrapper, wrapper_escape_str)"
-			"but is %d.");
-	} else if(FUNC_NAME("random")) {
-		GENERATE_FUNC("random", 1, CNFFUNC_RANDOM);
-	} else if(FUNC_NAME("format_time")) {
-		GENERATE_FUNC("format_time", 2, CNFFUNC_FORMAT_TIME);
-	} else if(FUNC_NAME("parse_time")) {
-		GENERATE_FUNC("parse_time", 1, CNFFUNC_PARSE_TIME);
-	} else if(FUNC_NAME("is_time")) {
-		GENERATE_FUNC_WITH_NARG_RANGE("is_time", 1, 2, CNFFUNC_IS_TIME,
-			"number of parameters for %s() must either be "
-			"one (time_string) or"
-			"two (time_string, explicit_expected_format)"
-			"but is %d.");
-	} else if(FUNC_NAME("parse_json")) {
-		GENERATE_FUNC("parse_json", 2, CNFFUNC_PARSE_JSON);
-	} else if(FUNC_NAME("script_error")) {
-		GENERATE_FUNC("script_error", 0, CNFFUNC_SCRIPT_ERROR);
-	} else if(FUNC_NAME("previous_action_suspended")) {
-		GENERATE_FUNC("previous_action_suspended", 0, CNFFUNC_PREVIOUS_ACTION_SUSPENDED);
-	} else if(FUNC_NAME("http_request")) {
-#		if defined(HAVE_LIBCURL)
-		GENERATE_FUNC("http_request", 1, CNFFUNC_HTTP_REQUEST);
-#		else
-		parser_errmsg("function http_request() not available, rsyslog build "
-			"without libcurl support -- disabling function");
-		return CNFFUNC_INVALID;
-#		endif
+	struct scriptFunct *foundFunc = searchModList(fname);
+	if(foundFunc == NULL) {
+		parser_errmsg("function '%s' not found", fname);
+		return NULL;
 	} else {
-		return CNFFUNC_INVALID;
+		return extractFuncPtr(foundFunc, nParams);
 	}
 }
 
-
-static rsRetVal
-initFunc_re_match(struct cnffunc *func)
+rsRetVal
+addMod2List(const int version, struct scriptFunct *functArray)
 {
-	rsRetVal localRet;
-	char *regex = NULL;
-	regex_t *re;
 	DEFiRet;
+	struct modListNode *newNode;
+	CHKmalloc(newNode = (struct modListNode*) malloc(sizeof(struct modListNode)));
+	newNode->version = 1;
+	newNode->next = NULL;
 
-	if(func->nParams < 2) {
-		parser_errmsg("rsyslog logic error in line %d of file %s\n",
-			__LINE__, __FILE__);
-		FINALIZE;
-	}
-
-	func->funcdata = NULL;
-	if(func->expr[1]->nodetype != 'S') {
-		parser_errmsg("param 2 of re_match/extract() must be a constant string");
-		FINALIZE;
-	}
-
-	CHKmalloc(re = malloc(sizeof(regex_t)));
-	func->funcdata = re;
-
-	regex = es_str2cstr(((struct cnfstringval*) func->expr[1])->estr, NULL);
-
-	if((localRet = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
-		int errcode;
-		if((errcode = regexp.regcomp(re, (char*) regex, REG_EXTENDED) != 0)) {
-			char errbuff[512];
-			regexp.regerror(errcode, re, errbuff, sizeof(errbuff));
-			parser_errmsg("cannot compile regex '%s': %s", regex, errbuff);
-			ABORT_FINALIZE(RS_RET_ERR);
+	int i = 0;
+	while(functArray[i].fname != NULL) {
+		if(searchModList(functArray[i].fname) != NULL) {
+			parser_errmsg("function %s defined multiple times, second time will be ignored",
+				functArray[i].fname);
 		}
-	} else { /* regexp object could not be loaded */
-		parser_errmsg("could not load regex support - regex ignored");
-		ABORT_FINALIZE(RS_RET_ERR);
+	i++;
+	dbgprintf("TTTTTTT: i: %d, name: %s\n", i, functArray[i-1].fname);
 	}
+	newNode->modFcts = functArray;
 
-finalize_it:
-	free(regex);
-	RETiRet;
-}
-
-
-static rsRetVal
-initFunc_exec_template(struct cnffunc *func)
-{
-	char *tplName = NULL;
-	DEFiRet;
-
-	func->destructable_funcdata = 0;
-
-	if(func->nParams != 1) {
-		parser_errmsg("rsyslog logic error in line %d of file %s\n",
-			__LINE__, __FILE__);
-		FINALIZE;
-	}
-
-	if(func->expr[0]->nodetype != 'S') {
-		parser_errmsg("exec_template(): param 1 must be a constant string");
-		FINALIZE;
-	}
-
-	tplName = es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL);
-	func->funcdata = tplFind(ourConf, tplName, strlen(tplName));
-	if(func->funcdata == NULL) {
-		parser_errmsg("exec_template(): template '%s' could not be found", tplName);
-		FINALIZE;
-	}
-
-
-finalize_it:
-	free(tplName);
-	RETiRet;
-}
-
-static rsRetVal ATTR_NONNULL(1)
-initFunc_http_request(struct cnffunc *const func)
-{
-	DEFiRet;
-
-	func->destructable_funcdata = 1;
-	CHKmalloc(func->funcdata = calloc(1, sizeof(struct curl_funcData)));
-	if(func->nParams != 1) {
-		parser_errmsg("rsyslog logic error in line %d of file %s\n",
-			__LINE__, __FILE__);
-		FINALIZE;
-	}
-
+	modListLast->next = newNode;
+	modListLast = newNode;
 finalize_it:
 	RETiRet;
 }
 
-
-
-static rsRetVal
-initFunc_prifilt(struct cnffunc *func)
-{
-	struct funcData_prifilt *pData;
-	uchar *cstr;
-	DEFiRet;
-
-	if(func->nParams != 1) {
-		parser_errmsg("rsyslog logic error in line %d of file %s\n",
-			__LINE__, __FILE__);
-		FINALIZE;
-	}
-
-	func->funcdata = NULL;
-	if(func->expr[0]->nodetype != 'S') {
-		parser_errmsg("param 1 of prifilt() must be a constant string");
-		FINALIZE;
-	}
-
-	CHKmalloc(pData = calloc(1, sizeof(struct funcData_prifilt)));
-	func->funcdata = pData;
-	cstr = (uchar*)es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL);
-	CHKiRet(DecodePRIFilter(cstr, pData->pmask));
-	free(cstr);
-finalize_it:
-	RETiRet;
-}
-
-
-static rsRetVal
-resolveLookupTable(struct cnffunc *func)
-{
-	uchar *cstr = NULL;
-	char *fn_name = NULL;
-	DEFiRet;
-
-	func->destructable_funcdata = 0;
-
-	if(func->nParams == 0) {/*we assume first arg is lookup-table-name*/
-		parser_errmsg("rsyslog logic error in line %d of file %s\n",
-			__LINE__, __FILE__);
-		FINALIZE;
-	}
-
-	CHKmalloc(fn_name = es_str2cstr(func->fname, NULL));
-
-	func->funcdata = NULL;
-	if(func->expr[0]->nodetype != 'S') {
-		parser_errmsg("table name (param 1) of %s() must be a constant string", fn_name);
-		FINALIZE;
-	}
-
-	CHKmalloc(cstr = (uchar*)es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL));
-	if((func->funcdata = lookupFindTable(cstr)) == NULL) {
-		parser_errmsg("lookup table '%s' not found (used in function: %s)", cstr, fn_name);
-		FINALIZE;
-	}
-
-finalize_it:
-	free(cstr);
-	free(fn_name);
-	RETiRet;
-}
-
-static rsRetVal
-initFunc_dyn_stats(struct cnffunc *func)
-{
-	uchar *cstr = NULL;
-	DEFiRet;
-
-	func->destructable_funcdata = 0;
-
-	if(func->nParams != 2) {
-		parser_errmsg("rsyslog logic error in line %d of file %s\n",
-					  __LINE__, __FILE__);
-		FINALIZE;
-	}
-
-	func->funcdata = NULL;
-	if(func->expr[0]->nodetype != 'S') {
-		parser_errmsg("dyn-stats bucket-name (param 1) of dyn-stats manipulating "
-		"functions like dyn_inc must be a constant string");
-		FINALIZE;
-	}
-
-	cstr = (uchar*)es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL);
-	if((func->funcdata = dynstats_findBucket(cstr)) == NULL) {
-		parser_errmsg("dyn-stats bucket '%s' not found", cstr);
-		FINALIZE;
-	}
-
-finalize_it:
-	free(cstr);
-	RETiRet;
-}
 
 struct cnffunc *
 cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
@@ -4979,13 +5101,12 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 		func->nParams = nParams;
 		func->funcdata = NULL;
 		func->destructable_funcdata = 1;
-		func->fID = funcName2ID(fname, nParams);
+		cstr = es_str2cstr(fname, NULL);
+		func->fPtr = funcName2Ptr(cstr, nParams);
 
 		/* parse error if we have an unknown function */
-		if (func->fID == CNFFUNC_INVALID) {
-			cstr = es_str2cstr(fname, NULL);
+		if (func->fPtr == NULL) {
 			parser_errmsg("Invalid function %s", cstr);
-			free(cstr);
 		}
 
 		/* shuffle params over to array (access speed!) */
@@ -4997,29 +5118,11 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 			free(toDel);
 		}
 		/* some functions require special initialization */
-		switch(func->fID) {
-			case CNFFUNC_RE_MATCH:
-			case CNFFUNC_RE_EXTRACT:
-				/* need to compile the regexp in param 2, so this MUST be a constant */
-				initFunc_re_match(func);
-				break;
-			case CNFFUNC_PRIFILT:
-				initFunc_prifilt(func);
-				break;
-			case CNFFUNC_LOOKUP:
-				resolveLookupTable(func);
-				break;
-			case CNFFUNC_EXEC_TEMPLATE:
-				initFunc_exec_template(func);
-				break;
-			case CNFFUNC_DYN_INC:
-				initFunc_dyn_stats(func);
-				break;
-			case CNFFUNC_HTTP_REQUEST:
-				initFunc_http_request(func);
-				break;
-			default:break;
+		struct scriptFunct *foundFunc = searchModList(cstr);
+		if(foundFunc->initFunc != NULL) {
+			foundFunc->initFunc(func);
 		}
+		free(cstr);
 	}
 	return func;
 }
@@ -5045,7 +5148,7 @@ cnffuncNew_prifilt(int fac)
 		func->nodetype = 'F';
 		func->fname = es_newStrFromCStr("prifilt", sizeof("prifilt")-1);
 		func->nParams = 0;
-		func->fID = CNFFUNC_PRIFILT;
+		func->fPtr = doFunct_Prifilt;
 		func->destructable_funcdata = 1;
 		((struct funcData_prifilt *)func->funcdata)->pmask[fac] = TABLE_ALLPRI;
 	}
@@ -5300,7 +5403,15 @@ rmLeadingSpace(char *s)
 rsRetVal
 initRainerscript(void)
 {
-	return objGetObjInterface(&obj);
+	DEFiRet;
+	CHKmalloc(modListRoot = (struct modListNode*) malloc(sizeof(struct modListNode)));
+	modListRoot->version = 1;
+	modListRoot->modFcts = functions;
+	modListRoot->next = NULL;
+	modListLast = modListRoot;
+	iRet = objGetObjInterface(&obj);
+finalize_it:
+	RETiRet;
 }
 
 /* we need a function to check for octal digits */

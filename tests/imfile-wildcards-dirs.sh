@@ -2,7 +2,7 @@
 # This is part of the rsyslog testbench, licensed under GPLv3
 export IMFILEINPUTFILES="10"
 echo [imfile-wildcards-dirs.sh]
-. $srcdir/diag.sh check-inotify-only
+. $srcdir/diag.sh check-inotify
 . $srcdir/diag.sh init
 # generate input files first. Note that rsyslog processes it as
 # soon as it start up (so the file should exist at that point).

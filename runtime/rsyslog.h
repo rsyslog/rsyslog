@@ -506,6 +506,7 @@ operation not carried out */
 	RS_RET_UDP_MSGSIZE_TOO_LARGE = -2440, /**< a message is too large to be sent via UDP */
 	RS_RET_NON_JSON_PROP = -2441, /**< a non-json property id is provided where a json one is requried */
 	RS_RET_NO_TZ_SET = -2442, /**< system env var TZ is not set (status msg) */
+	RS_RET_FS_ERR = -2443, /**< file-system error */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

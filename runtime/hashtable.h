@@ -164,8 +164,6 @@ hashtable_count(struct hashtable *h);
 void
 hashtable_destroy(struct hashtable *h, int free_values);
 
-#endif /* __HASHTABLE_CWC22_H__ */
-
 /*
  * Copyright (c) 2002, Christopher Clark
  * All rights reserved.
@@ -200,3 +198,5 @@ hashtable_destroy(struct hashtable *h, int free_values);
  */
 unsigned __attribute__((nonnull(1))) int hash_from_string(void *k) ;
 int key_equals_string(void *key1, void *key2);
+
+#endif /* __HASHTABLE_CWC22_H__ */

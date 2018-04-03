@@ -142,6 +142,7 @@ typedef struct _instanceData {
 	int fixedPartition;
 	int nPartitions;
 	uint32_t currPartition;
+	pthread_mutex_t mutCurrPartition;
 	int nConfParams;
 	struct kafka_params *confParams;
 	int nTopicConfParams;
@@ -1216,6 +1217,7 @@ CODESTARTcreateInstance
 	CHKiRet(pthread_mutex_init(&pData->mutErrFile, NULL));
 	CHKiRet(pthread_rwlock_init(&pData->rkLock, NULL));
 	CHKiRet(pthread_mutex_init(&pData->mutDynCache, NULL));
+	CHKiRet(pthread_mutex_init(&pData->mutCurrPartition, NULL));
 finalize_it:
 ENDcreateInstance
 
@@ -1278,6 +1280,7 @@ CODESTARTfreeInstance
 	pthread_mutex_destroy(&pData->mut_doAction);
 	pthread_mutex_destroy(&pData->mutErrFile);
 	pthread_mutex_destroy(&pData->mutDynCache);
+	pthread_mutex_destroy(&pData->mutCurrPartition);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
