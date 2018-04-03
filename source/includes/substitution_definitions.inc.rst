@@ -49,6 +49,12 @@
 .. |RsyslogOfficialForums| replace:: Forum
 .. _RsyslogOfficialForums: http://kb.monitorware.com/rsyslog-f40.html
 
+.. |RsyslogStackExchangeAsk| replace:: Ask
+.. _RsyslogStackExchangeAsk: https://serverfault.com/questions/ask?tags=rsyslog
+
+.. |RsyslogStackExchangeView| replace:: View
+.. _RsyslogStackExchangeView: https://stackexchange.com/filters/327462/rsyslog
+
 .. |RsyslogOfficialMailingList| replace:: Mailing list
 .. _RsyslogOfficialMailingList: http://lists.adiscon.net/mailman/listinfo/rsyslog
 
