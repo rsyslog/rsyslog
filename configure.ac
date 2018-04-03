@@ -1319,6 +1319,19 @@ fi
 AM_CONDITIONAL(ENABLE_MMRFC5424ADDHMAC, test x$enable_mmrfc5424addhmac = xyes)
 
 
+# experimental omfile-hardened module
+AC_ARG_ENABLE(omfile-hardened,
+        [AS_HELP_STRING([--enable-omfile-hardened],[Enable omfile-hardened support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omfile_hardened="yes" ;;
+          no) enable_omfile_hardened="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omfile-hardened) ;;
+         esac],
+        [enable_omfile_hardened=no]
+)
+AM_CONDITIONAL(ENABLE_OMFILE_HARDENED, test x$enable_omfile_hardened = xyes)
+
+
 # RELP support
 AC_ARG_ENABLE(relp,
         [AS_HELP_STRING([--enable-relp],[Enable RELP support @<:@default=no@:>@])],
@@ -2266,6 +2279,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/omhttpfs/Makefile \
 		contrib/omamqp1/Makefile \
 		contrib/omtcl/Makefile \
+		contrib/omfile-hardened/Makefile \
 		contrib/mmkubernetes/Makefile \
 		tests/Makefile])
 AC_OUTPUT
@@ -2305,6 +2319,7 @@ echo "    imkafka module will be compiled:          $enable_imkafka"
 echo
 echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
+echo "    omfile-hardened module will be compiled:  $enable_omfile_hardened"
 echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
 echo "    omjournal module will be compiled:        $enable_omjournal"
