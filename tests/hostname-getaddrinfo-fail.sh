@@ -13,14 +13,11 @@ fi
 
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
-# note: the listener error on port 13500 is OK! It is caused by plumbing
-# we do not use here in this special case, and we did not want to work
-# very hard to remove that problem (which does not affect the test)
 . $srcdir/diag.sh add-conf '
 action(type="omfile" file="rsyslog.out.log")
 '
 export RSYSLOG_PRELOAD=".libs/liboverride_gethostname_nonfqdn.so:.libs/liboverride_getaddrinfo.so"
-. $srcdir/diag.sh startup-vg
+. $srcdir/diag.sh startup
 sleep 1
 . $srcdir/diag.sh shutdown-immediate
 . $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
@@ -33,4 +30,7 @@ if [ ! $? -eq 0 ]; then
 fi;
 
 echo EVERYTHING OK - error messages are just as expected!
+echo "note: the listener error on port 13500 is OK! It is caused by plumbing"
+echo "we do not use here in this special case, and we did not want to work"
+echo "very hard to remove that problem (which does not affect the test)"
 . $srcdir/diag.sh exit
