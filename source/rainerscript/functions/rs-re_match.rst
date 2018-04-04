@@ -9,6 +9,11 @@ re_match(expr, re)
 
 Returns 1, if expr matches re, 0 otherwise. Uses POSIX ERE.
 
+.. note::
+
+   Functions using regular expressions tend to be slow and other options
+   may be faster.
+
 
 Example
 =======
