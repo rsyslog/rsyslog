@@ -1099,6 +1099,9 @@ AC_ARG_ENABLE(fmhttp,
          esac],
         [enable_fmhttp=yes]
 )
+if test "$enable_fmhttp" = "yes"; then
+        PKG_CHECK_MODULES([CURL], [libcurl])
+fi
 AM_CONDITIONAL(ENABLE_FMHTTP, test x$enable_fmhttp = xyes)
 
 
