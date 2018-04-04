@@ -20,7 +20,7 @@ fi
 action(type="omfile" file="rsyslog.out.log")
 '
 export RSYSLOG_PRELOAD=".libs/liboverride_gethostname_nonfqdn.so:.libs/liboverride_getaddrinfo.so"
-. $srcdir/diag.sh startup
+. $srcdir/diag.sh startup-vg
 sleep 1
 . $srcdir/diag.sh shutdown-immediate
 . $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
@@ -32,4 +32,5 @@ if [ ! $? -eq 0 ]; then
   . $srcdir/diag.sh error-exit 1
 fi;
 
+echo EVERYTHING OK - error messages are just as expected!
 . $srcdir/diag.sh exit
