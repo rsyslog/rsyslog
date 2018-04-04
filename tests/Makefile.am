@@ -58,6 +58,8 @@ TESTS +=  \
 	invalid_nested_include.sh \
 	omfwd-keepalive.sh \
 	omfile-read-only-errmsg.sh \
+	omfile-null-filename.sh \
+	omfile-whitespace-filename.sh \
 	omfile-read-only.sh \
 	omfile_both_files_set.sh \
 	msgvar-concurrency.sh \
@@ -1043,6 +1045,8 @@ EXTRA_DIST= \
 	testsuites/stop-msgvar.conf \
 	omfwd-keepalive.sh \
 	omfile-read-only-errmsg.sh \
+	omfile-null-filename.sh \
+	omfile-whitespace-filename.sh \
 	omfile-read-only.sh \
 	omfile_both_files_set.sh \
 	msgvar-concurrency.sh \

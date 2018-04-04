@@ -17,7 +17,7 @@
  * pipes. These have been moved to ompipe, to reduced the entanglement
  * between the two different functionalities. -- rgerhards
  *
- * Copyright 2007-2017 Adiscon GmbH.
+ * Copyright 2007-2018 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -1323,9 +1323,22 @@ CODESTARTnewActInst
 		}
 	}
 
-	if(pData->fname == NULL) {
+	if(pData->fname == NULL || *pData->fname == '\0') {
 		parser_errmsg("omfile: either the \"file\" or "
 				"\"dynfile\" parameter must be given");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	int allWhiteSpace = 1;
+	for(const char *p = (const char*) pData->fname ; *p ; ++p) {
+		if(!isspace(*p)) {
+			allWhiteSpace = 0;
+			break;
+		}
+	}
+	if(allWhiteSpace) {
+		parser_errmsg("omfile: \"file\" or \"dynfile\" parameter "
+			"consist only of whitespace - this is not permitted");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
