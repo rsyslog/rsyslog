@@ -86,7 +86,7 @@ dynstats_destroyCountersIn(dynstats_bucket_t *b, htable *table, dynstats_ctr_t *
 		ctrs_purged++;
 	}
 	STATSCOUNTER_ADD(b->ctrMetricsPurged, b->mutCtrMetricsPurged, ctrs_purged);
-	ATOMIC_SUB(&b->metricCount, ctrs_purged, &b->mutMetricCount);
+	ATOMIC_SUB_unsigned(&b->metricCount, ctrs_purged, &b->mutMetricCount);
 }
 
 static void /* assumes exclusive access to bucket */
@@ -513,7 +513,7 @@ dynstats_addNewCtr(dynstats_bucket_t *b, const uchar* metric, uint8_t doInitialI
 	created = 0;
 	ctr = NULL;
 
-	if ((unsigned) ATOMIC_FETCH_32BIT(&b->metricCount, &b->mutMetricCount) >= b->maxCardinality) {
+	if ((unsigned) ATOMIC_FETCH_32BIT_unsigned(&b->metricCount, &b->mutMetricCount) >= b->maxCardinality) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	

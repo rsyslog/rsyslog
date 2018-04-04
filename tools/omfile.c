@@ -95,7 +95,7 @@ DEFobjCurrIf(statsobj)
  * That should be sufficient (and even than, there would no really bad effect ;)).
  * The variable below is the global counter/clock.
  */
-#if HAVE_ATOMIC_BUILTINS64
+#ifdef HAVE_ATOMIC_BUILTINS64
 static uint64 clockFileAccess = 0;
 #else
 static unsigned clockFileAccess = 0;
@@ -107,7 +107,7 @@ static pthread_mutex_t mutClock;
 static uint64
 getClockFileAccess(void)
 {
-#if HAVE_ATOMIC_BUILTINS64
+#ifdef HAVE_ATOMIC_BUILTINS64
 	return ATOMIC_INC_AND_FETCH_uint64(&clockFileAccess, &mutClock);
 #else
 	return ATOMIC_INC_AND_FETCH_unsigned(&clockFileAccess, &mutClock);
