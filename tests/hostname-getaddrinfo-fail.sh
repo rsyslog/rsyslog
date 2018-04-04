@@ -13,9 +13,6 @@ fi
 
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
-# note: the listener error on port 13500 is OK! It is caused by plumbing
-# we do not use here in this special case, and we did not want to work
-# very hard to remove that problem (which does not affect the test)
 . $srcdir/diag.sh add-conf '
 action(type="omfile" file="rsyslog.out.log")
 '
@@ -32,4 +29,8 @@ if [ ! $? -eq 0 ]; then
   . $srcdir/diag.sh error-exit 1
 fi;
 
+echo EVERYTHING OK - error messages are just as expected!
+echo "note: the listener error on port 13500 is OK! It is caused by plumbing"
+echo "we do not use here in this special case, and we did not want to work"
+echo "very hard to remove that problem (which does not affect the test)"
 . $srcdir/diag.sh exit
