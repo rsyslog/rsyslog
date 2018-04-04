@@ -6,7 +6,7 @@
  *
  * File begun on 2007-12-20 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2017 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -38,6 +38,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <poll.h>
 #include <sys/stat.h>
 #include <sys/un.h>
 #include <sys/socket.h>
@@ -1497,62 +1498,47 @@ ENDfreeCnf
 
 /* This function is called to gather input. */
 BEGINrunInput
-	int maxfds;
 	int nfds;
 	int i;
-	int fd;
-#ifdef USE_UNLIMITED_SELECT
-        fd_set  *pReadfds = malloc(glbl.GetFdSetSize());
-#else
-        fd_set  readfds;
-        fd_set *pReadfds = &readfds;
-#endif
-
 CODESTARTrunInput
-	CHKmalloc(pReadfds);
+	struct pollfd *const pollfds = calloc(nfd, sizeof(struct pollfd));
+	CHKmalloc(pollfds);
 	if(startIndexUxLocalSockets == 1 && nfd == 1) {
 		/* No sockets were configured, no reason to run. */
 		ABORT_FINALIZE(RS_RET_OK);
 	}
+	if(startIndexUxLocalSockets == 1) {
+		pollfds[0].fd = -1;
+	}
+	for (i = startIndexUxLocalSockets; i < nfd; i++) {
+		pollfds[i].fd = listeners[i].fd;
+		pollfds[i].events = POLLIN;
+	}
+
 	/* this is an endless loop - it is terminated when the thread is
-	 * signalled to do so. This, however, is handled by the framework,
-	 * right into the sleep below.
+	 * signalled to do so.
 	 */
 	while(1) {
-		/* Add the Unix Domain Sockets to the list of read
-		 * descriptors.
-		 * rgerhards 2005-08-01: we must now check if there are
-		 * any local sockets to listen to at all. If the -o option
-		 * is given without -a, we do not need to listen at all..
-		 */
-	        maxfds = 0;
-	        FD_ZERO (pReadfds);
-		/* Copy master connections */
-		for (i = startIndexUxLocalSockets; i < nfd; i++) {
-			if (listeners[i].fd!= -1) {
-				FD_SET(listeners[i].fd, pReadfds);
-				if(listeners[i].fd > maxfds)
-					maxfds=listeners[i].fd;
-			}
-		}
+		DBGPRINTF("--------imuxsock calling poll() on %d fds\n", nfd);
 
-		if(Debug) {
-			dbgprintf("--------imuxsock calling select, active file descriptors (max %d): ", maxfds);
-			for (nfds= 0; nfds <= maxfds; ++nfds)
-				if ( FD_ISSET(nfds, pReadfds) )
-					dbgprintf("%d ", nfds);
-			dbgprintf("\n");
-		}
-
-		/* wait for io to become ready */
-		nfds = select(maxfds+1, (fd_set *) pReadfds, NULL, NULL, NULL);
+		nfds = poll(pollfds, nfd, -1);
 		if(glbl.GetGlobalInputTermState() == 1)
 			break; /* terminate input! */
+
+		if(nfds < 0) {
+			if(errno == EINTR) {
+				DBGPRINTF("imuxsock: EINTR occured\n");
+			} else {
+				LogMsg(errno, RS_RET_POLL_ERR, LOG_WARNING, "imuxsock: poll "
+					"system call failed, may cause further troubles");
+			}
+			nfds = 0;
+		}
 
 		for (i = startIndexUxLocalSockets ; i < nfd && nfds > 0; i++) {
 			if(glbl.GetGlobalInputTermState() == 1)
 				ABORT_FINALIZE(RS_RET_FORCE_TERM); /* terminate input! */
-			if ((fd = listeners[i].fd) != -1 && FD_ISSET(fd, pReadfds)) {
+			if(pollfds[i].revents & POLLIN) {
 				readSocket(&(listeners[i]));
 				--nfds; /* indicate we have processed one */
 			}
@@ -1560,7 +1546,7 @@ CODESTARTrunInput
 	}
 
 finalize_it:
-	freeFdSet(pReadfds);
+	free(pollfds);
 ENDrunInput
 
 
