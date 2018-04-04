@@ -1,5 +1,14 @@
 ------------------------------------------------------------------------------
 Version 8.35.0 [v8-stable] 2018-05-15
+- omfile: do not permit filename that only consists of whitespace
+- omfile bugfix: segfault if empty filename was given
+  closes https://github.com/rsyslog/rsyslog/issues/2417
+- fix build issues when atomic operations are not present
+  for details, see https://github.com/rsyslog/rsyslog/pull/2604
+- build system bugfix: --enable-atomic-operations did not work
+  closes https://github.com/rsyslog/rsyslog/pull/2604
+- CI
+  * new tests for omfile
 ------------------------------------------------------------------------------
 Version 8.34.0 [v8-stable] 2018-04-03
 - mmkubernetes: new module
