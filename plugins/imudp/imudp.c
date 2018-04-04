@@ -34,6 +34,7 @@
 #include <sys/socket.h>
 #include <pthread.h>
 #include <signal.h>
+#include <poll.h>
 #ifdef HAVE_SYS_EPOLL_H
 #	include <sys/epoll.h>
 #endif
@@ -836,61 +837,75 @@ finalize_it:
 }
 #else /* #if HAVE_EPOLL_CREATE1 */
 /* this is the code for the select() interface */
-static rsRetVal
+static rsRetVal ATTR_NONNULL()
 rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr)
 {
 	DEFiRet;
-	int maxfds;
 	int nfds;
-	fd_set readfds;
 	struct sockaddr_storage frominetPrev;
 	int bIsPermitted;
+	int i = 0;
 	struct lstn_s *lstn;
 
+	DBGPRINTF("imudp uses poll() [ex-select]\n");
 	/* start "name caching" algo by making sure the previous system indicator
-	 * is invalidated.
-	 */
+	 * is invalidated. */
 	bIsPermitted = 0;
 	memset(&frominetPrev, 0, sizeof(frominetPrev));
-	DBGPRINTF("imudp uses select()\n");
+
+	/* setup poll() subsystem */
+	int nfd = 0;
+	for(lstn = lcnfRoot ; lstn != NULL ; lstn = lstn->next) {
+		if(lstn->sock != -1) {
+			if(Debug) {
+				net.debugListenInfo(lstn->sock, (char*)"UDP");
+			}
+			++nfd;
+		}
+	}
+	struct pollfd *const pollfds = calloc(nfd, sizeof(struct pollfd));
+	CHKmalloc(pollfds);
+
+	for(lstn = lcnfRoot ; lstn != NULL ; lstn = lstn->next) {
+		assert(i < nfd);
+		if (lstn->sock != -1) {
+			pollfds[i].fd = lstn->sock;
+			pollfds[i].events = POLLIN;
+			++i;
+		}
+	}
 
 	while(1) {
-		/* Add the Unix Domain Sockets to the list of read descriptors.
-		 */
-	        maxfds = 0;
-	        FD_ZERO(&readfds);
-
-		/* Add the UDP listen sockets to the list of read descriptors. */
-		for(lstn = lcnfRoot ; lstn != NULL ; lstn = lstn->next) {
-			if (lstn->sock != -1) {
-				if(Debug)
-					net.debugListenInfo(lstn->sock, (char*)"UDP");
-				FD_SET(lstn->sock, &readfds);
-				if(lstn->sock>maxfds) maxfds=lstn->sock;
-			}
-		}
-		if(Debug) {
-			dbgprintf("--------imUDP calling select, active file descriptors (max %d): ", maxfds);
-			for (nfds = 0; nfds <= maxfds; ++nfds)
-				if(FD_ISSET(nfds, &readfds))
-					dbgprintf("%d ", nfds);
-			dbgprintf("\n");
-		}
-
-		/* wait for io to become ready */
-		nfds = select(maxfds+1, (fd_set *) &readfds, NULL, NULL, NULL);
+		DBGPRINTF("--------imudp calling poll() on %d fds\n", nfd);
+		nfds = poll(pollfds, nfd, -1);
 		if(glbl.GetGlobalInputTermState() == 1)
 			break; /* terminate input! */
 
-		for(lstn = lcnfRoot ; nfds && lstn != NULL ; lstn = lstn->next) {
-			if(FD_ISSET(lstn->sock, &readfds)) {
-		       		processSocket(pWrkr, lstn, &frominetPrev, &bIsPermitted);
-			--nfds; /* indicate we have processed one descriptor */
+		if(nfds < 0) {
+			if(errno == EINTR) {
+				DBGPRINTF("imudp: EINTR occured\n");
+			} else {
+				LogMsg(errno, RS_RET_POLL_ERR, LOG_WARNING, "imudp: poll "
+					"system call failed, may cause further troubles");
 			}
+			nfds = 0;
+		}
+
+		i = 0;
+		for(lstn = lcnfRoot ; nfds && lstn != NULL ; lstn = lstn->next) {
+			assert(i < nfd);
+			if(glbl.GetGlobalInputTermState() == 1)
+				ABORT_FINALIZE(RS_RET_FORCE_TERM); /* terminate input! */
+			if(pollfds[i].revents & POLLIN) {
+		       		processSocket(pWrkr, lstn, &frominetPrev, &bIsPermitted);
+				--nfds;
+			}
+			++i;
 	       }
 	       /* end of a run, back to loop for next recv() */
 	}
 
+finalize_it:
 	RETiRet;
 }
 #endif /* #if HAVE_EPOLL_CREATE1 */
