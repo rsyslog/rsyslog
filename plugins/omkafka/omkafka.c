@@ -823,46 +823,46 @@ static struct fjson_object * get_object(struct fjson_object *fj_obj,
  * allows skipping values that are too small, so that they don't
  * impact on aggregate averaged value that is returned.
  */
-static uint64 jsonExtractWindoStats(struct fjson_object * stats_object,
+static uint64
+jsonExtractWindoStats(struct fjson_object * stats_object,
 		const char * level1_obj_name, const char * level2_obj_name,
 		unsigned long skip_threshold) {
-  uint64 level2_val;
-  uint64 agg_val = 0;
-  uint64 ret_val = 0;
-  int active_brokers = 0;
+	uint64 level2_val;
+	uint64 agg_val = 0;
+	uint64 ret_val = 0;
+	int active_brokers = 0;
 
-  struct fjson_object * brokers_obj = get_object(stats_object, "brokers");
-  if (brokers_obj == NULL) {
-	  LogMsg(0, NO_ERRCODE, LOG_ERR,
-			  "jsonExtractWindowStat: failed to find brokers object");
-	  return ret_val;
-  }
+	struct fjson_object * brokers_obj = get_object(stats_object, "brokers");
+	if (brokers_obj == NULL) {
+		LogMsg(0, NO_ERRCODE, LOG_ERR, "jsonExtractWindowStat: failed to find brokers object");
+		return ret_val;
+	}
 
-  /* iterate over borkers to get level1 window objects at level2 (min, max, avg, etc.) */
-  struct fjson_object_iterator it = fjson_object_iter_begin(brokers_obj);
-  struct fjson_object_iterator itEnd = fjson_object_iter_end(brokers_obj);
-  while (!fjson_object_iter_equal (&it, &itEnd)) {
-    struct fjson_object * val = fjson_object_iter_peek_value(&it);
-    struct fjson_object * level1_obj = get_object(val, level1_obj_name);
-    if(level1_obj == NULL)
-      return ret_val;
+	/* iterate over borkers to get level1 window objects at level2 (min, max, avg, etc.) */
+	struct fjson_object_iterator it = fjson_object_iter_begin(brokers_obj);
+	struct fjson_object_iterator itEnd = fjson_object_iter_end(brokers_obj);
+	while (!fjson_object_iter_equal (&it, &itEnd)) {
+		struct fjson_object * val = fjson_object_iter_peek_value(&it);
+		struct fjson_object * level1_obj = get_object(val, level1_obj_name);
+		if(level1_obj == NULL)
+			return ret_val;
 
-    struct fjson_object * level2_obj = get_object(level1_obj, level2_obj_name);
-    if(level2_obj == NULL)
-      return ret_val;
+		struct fjson_object * level2_obj = get_object(level1_obj, level2_obj_name);
+		if(level2_obj == NULL)
+			return ret_val;
 
-    level2_val = fjson_object_get_int64(level2_obj);
-    if (level2_val > skip_threshold) {
-      agg_val += level2_val;
-      active_brokers++;
-    }
-    fjson_object_iter_next (&it);
-  }
-  if(active_brokers > 0) {
-	  ret_val = agg_val/active_brokers;
-  }
+		level2_val = fjson_object_get_int64(level2_obj);
+		if (level2_val > skip_threshold) {
+			agg_val += level2_val;
+			active_brokers++;
+		}
+		fjson_object_iter_next (&it);
+	}
+	if(active_brokers > 0) {
+		ret_val = agg_val/active_brokers;
+	}
 
-  return ret_val;
+	return ret_val;
 }
 
 /**
@@ -877,7 +877,7 @@ static int
 statsCallback(rd_kafka_t __attribute__((unused)) *rk,
 		char *json, size_t __attribute__((unused)) json_len,
 		void __attribute__((unused)) *opaque) {
-    char buf[2048];
+	char buf[2048];
     char handler_name[1024] = "unknown";
     int replyq = 0;
     int msg_cnt = 0;
@@ -898,8 +898,7 @@ statsCallback(rd_kafka_t __attribute__((unused)) *rk,
 	}
 	enum fjson_type type = fjson_object_get_type(stats_object);
 	if (type != fjson_type_object) {
-		LogMsg(0, NO_ERRCODE, LOG_ERR,
-				"statsCallback: json is not of type object; can't process statsCB\n");
+		LogMsg(0, NO_ERRCODE, LOG_ERR, "statsCallback: json is not of type object; can't process statsCB\n");
 		return 0;
 	}
 
