@@ -24,20 +24,16 @@
 #ifndef INCLUDED_NSDSEL_PTCP_H
 #define INCLUDED_NSDSEL_PTCP_H
 
+#include <poll.h>
 #include "nsd.h"
 typedef nsdsel_if_t nsdsel_ptcp_if_t; /* we just *implement* this interface */
 
 /* the nsdsel_ptcp object */
 struct nsdsel_ptcp_s {
-	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-	int maxfds;
-#ifdef USE_UNLIMITED_SELECT
-	fd_set *pReadfds;
-	fd_set *pWritefds;
-#else
-	fd_set readfds;
-	fd_set writefds;
-#endif
+	BEGINobjInstance;
+	uint32_t maxfds;
+	uint32_t currfds;
+	struct pollfd *fds;
 };
 
 /* interface is defined in nsd.h, we just implement it! */
