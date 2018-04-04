@@ -590,13 +590,13 @@ fi
 
 # support for unlimited select() syscall
 AC_ARG_ENABLE(unlimited_select,
-        [AS_HELP_STRING([--enable-unlimited-select],[Enable unlimited select() syscall @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-unlimited-select],[Enable unlimited select() syscall @<:@default=yes@:>@])],
         [case "${enableval}" in
          yes) enable_unlimited_select="yes" ;;
           no) enable_unlimited_select="no" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-unlimited-select) ;;
          esac],
-        [enable_unlimited_select="no"]
+        [enable_unlimited_select="yes"]
 )
 if test "$enable_unlimited_select" = "yes"; then
         AC_DEFINE(USE_UNLIMITED_SELECT, 1, [If defined, the select() syscall won't be limited to a particular number of file descriptors.])
