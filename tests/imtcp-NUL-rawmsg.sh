@@ -1,12 +1,6 @@
 #!/bin/bash
 # addd 2016-05-13 by RGerhards, released under ASL 2.0
 
-uname
-if [ `uname` = "FreeBSD" ] ; then
-   echo "This test currently does not work on FreeBSD."
-   exit 77
-fi
-
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
@@ -24,7 +18,7 @@ echo '<167>Mar  6 16:57:54 172.20.245.8 test: msgnum:0 X test message
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
 echo '<167>Mar  6 16:57:54 172.20.245.8 test: msgnum:0 #000 test message
-<167>Mar  6 16:57:54 172.20.245.8 #000test: msgnum:1 test message' | cmp rsyslog.out.log
+<167>Mar  6 16:57:54 172.20.245.8 #000test: msgnum:1 test message' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid output generated, rsyslog.out.log is:"
   cat rsyslog.out.log

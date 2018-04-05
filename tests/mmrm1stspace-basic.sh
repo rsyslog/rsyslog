@@ -22,7 +22,7 @@ action(type="mmrm1stspace")
 echo '-msgnum:1-
 - msgnum:2-
 -msgnum:3-
---' | cmp rsyslog.out.log
+--' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
   cat rsyslog.out.log

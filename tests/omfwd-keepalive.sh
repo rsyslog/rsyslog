@@ -1,12 +1,6 @@
 #!/bin/bash
 # addd 2016-03-30 by RGerhards, released under ASL 2.0
 
-uname
-if [ `uname` = "FreeBSD" ] ; then
-   echo "This test currently does not work on FreeBSD."
-   exit 77
-fi
-
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
@@ -30,7 +24,7 @@ action(type="omfile" template="outfmt" file="rsyslog.out.log")
 . $srcdir/diag.sh tcpflood -m1
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
-echo " msgnum:00000000:" | cmp rsyslog.out.log
+echo " msgnum:00000000:" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid output generated, rsyslog.out.log is:"
   cat rsyslog.out.log

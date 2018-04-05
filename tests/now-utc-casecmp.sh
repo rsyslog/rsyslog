@@ -25,7 +25,7 @@ FAKETIME='2016-01-01 01:00:00' $srcdir/diag.sh startup
 . $srcdir/diag.sh tcpflood -m1
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
-echo "2016-01-01:2016-01-01,2015-12-31:2015-12-31" | cmp rsyslog.out.log
+echo "2016-01-01:2016-01-01,2015-12-31:2015-12-31" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, rsyslog.out.log is:"
   cat rsyslog.out.log
