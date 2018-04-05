@@ -159,7 +159,7 @@ destructFunc_http_request(struct cnffunc *const func)
 
 static struct scriptFunct functions[] = {
 	{"http_request", 1, 1, doFunc_http_request, initFunc_http_request, destructFunc_http_request},
-	{NULL, 0, 0, NULL} //last element to check end of array
+	{NULL, 0, 0, NULL, NULL, NULL} //last element to check end of array
 };
 
 BEGINgetFunctArray
