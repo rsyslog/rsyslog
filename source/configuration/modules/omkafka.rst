@@ -367,7 +367,7 @@ accumulate all action instances. The statistic origin is named "omafka" with fol
 - **int_latency_avg_usec** - intranal librdkafka producer queue latency in microsconds averaged other
   all brokers. This is also part of window statistics and average excludes broers with zero internal latency.
 
-**Note that three window statics counters are not safe with multiple clients. When statistics callback is
+Note that three window statics counters are not safe with multiple clients. When statistics callback is
 enabled, for example, by using statics.callback.ms=60000, omkafa will generate an internal log message every
 minute for the corresponing omkafka action:
 
