@@ -796,7 +796,7 @@ finalize_it:
 
 /**
  * This function looks for a json object that corresponds to the
- * passed name and returns it if found. Otherwise returns NULL.
+ * passed name and returns it is found. Otherwise returns NULL.
  * It will be used for processing stats callback json object.
  */
 static struct fjson_object * get_object(struct fjson_object *fj_obj,
