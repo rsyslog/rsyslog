@@ -525,6 +525,23 @@ Experimental parameter which caues rsyslog to recognise a new message
 only if the line feed is followed by a '<' or if there are no more characters.
 
 
+SocketBacklog
+^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "5", "no", "none"
+
+Specifies the backlog parameter sent to the listen() function.
+It defines the maximum length to which the queue of pending connections may grow.
+See man page of listen(2) for more information.
+The parameter controls both TCP and UNIX sockets backlog parameter.
+Default value is arbitrary set to 5.
+
+
 .. _imptcp-statistic-counter:
 
 Statistic Counter
