@@ -2,9 +2,8 @@
 # pmsnare.sh
 # Performs parser testing for the pmsnare module.
 # It's based on rgerhards' parsertest.sh.
-
-echo TEST: \[pmsnare.sh\]: test snare parser module
 . $srcdir/diag.sh init
+set -x
 
 # first we need to obtain the hostname as rsyslog sees it
 rm -f HOSTNAME
@@ -13,6 +12,8 @@ rm -f HOSTNAME
 ./msleep 100
 . $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 . $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
+
+printf "got hostname, now doing \"real\" tests:\n"
 
 # now start the real tests
 . $srcdir/diag.sh nettester pmsnare_default udp
