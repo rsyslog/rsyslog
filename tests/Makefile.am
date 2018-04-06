@@ -815,6 +815,15 @@ TESTS += \
 	 omtcl.sh
 endif
 
+if ENABLE_MMKUBERNETES
+TESTS += \
+	mmkubernetes-basic.sh
+if HAVE_VALGRIND
+TESTS += \
+	mmkubernetes-basic-vg.sh
+endif
+endif
+
 endif # if ENABLE_TESTBENCH
 
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
@@ -1856,7 +1865,9 @@ EXTRA_DIST= \
 	pgsql-basic-cnf6-vg.sh \
 	pgsql-template-cnf6-vg.sh \
 	pgsql-actq-mt-withpause-vg.sh \
-	../devtools/prep-mysql-db.sh
+	../devtools/prep-mysql-db.sh \
+	mmkubernetes-basic.sh \
+	mmkubernetes-basic-vg.sh
 
 ourtail_SOURCES = ourtail.c
 msleep_SOURCES = msleep.c

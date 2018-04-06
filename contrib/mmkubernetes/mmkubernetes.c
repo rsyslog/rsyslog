@@ -75,10 +75,10 @@ DEFobjCurrIf(regexp)
  * this is for _tag_ match, not actual filename match - in_tail turns filename
  * into a fluentd tag
  */
-#define DFLT_FILENAME_LNRULES ":/var/log/containers/%pod_name:char-to:.%."\
+#define DFLT_FILENAME_LNRULES "rule=:/var/log/containers/%pod_name:char-to:.%."\
 	"%container_hash:char-to:_%_"\
 	"%namespace_name:char-to:_%_%container_name:char-to:-%-%container_id:char-to:.%.log\n"\
-	":/var/log/containers/%pod_name:char-to:_%_"\
+	"rule=:/var/log/containers/%pod_name:char-to:_%_"\
 	"%namespace_name:char-to:_%_%container_name:char-to:-%-%container_id:char-to:.%.log"
 #define DFLT_FILENAME_RULEBASE "/etc/rsyslog.d/k8s_filename.rulebase"
 /* original from fluentd plugin:
@@ -86,10 +86,10 @@ DEFobjCurrIf(regexp)
  *     (\.(?<container_hash>[^_]+))?_(?<pod_name>[^_]+)_\
  *     (?<namespace>[^_]+)_[^_]+_[^_]+$'
  */
-#define DFLT_CONTAINER_LNRULES ":%k8s_prefix:char-to:_%_%container_name:char-to:.%."\
-	"%container_hash:char-to:_%_%"\
+#define DFLT_CONTAINER_LNRULES "rule=:%k8s_prefix:char-to:_%_%container_name:char-to:.%."\
+	"%container_hash:char-to:_%_"\
 	"%pod_name:char-to:_%_%namespace_name:char-to:_%_%not_used_1:char-to:_%_%not_used_2:rest%\n"\
-	":%k8s_prefix:char-to:_%_%container_name:char-to:_%_"\
+	"rule=:%k8s_prefix:char-to:_%_%container_name:char-to:_%_"\
 	"%pod_name:char-to:_%_%namespace_name:char-to:_%_%not_used_1:char-to:_%_%not_used_2:rest%"
 #define DFLT_CONTAINER_RULEBASE "/etc/rsyslog.d/k8s_container_name.rulebase"
 #define DFLT_SRCMD_PATH "$!metadata!filename"
@@ -98,6 +98,7 @@ DEFobjCurrIf(regexp)
 #define DFLT_DE_DOT_SEPARATOR "_"
 #define DFLT_CONTAINER_NAME "$!CONTAINER_NAME" /* name of variable holding CONTAINER_NAME value */
 #define DFLT_CONTAINER_ID_FULL "$!CONTAINER_ID_FULL" /* name of variable holding CONTAINER_ID_FULL value */
+#define DFLT_KUBERNETES_URL "https://kubernetes.default.svc.cluster.local:443"
 
 static struct cache_s {
 	const uchar *kbUrl;
@@ -953,9 +954,11 @@ CODESTARTnewActInst
 			loadModConf->contRules, loadModConf->contRulebase));
 
 	if(pData->kubernetesUrl == NULL) {
-		if(loadModConf->kubernetesUrl == NULL)
-			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
-		pData->kubernetesUrl = (uchar *) strdup((char *) loadModConf->kubernetesUrl);
+		if(loadModConf->kubernetesUrl == NULL) {
+			CHKmalloc(pData->kubernetesUrl = (uchar *) strdup(DFLT_KUBERNETES_URL));
+		} else {
+			CHKmalloc(pData->kubernetesUrl = (uchar *) strdup((char *) loadModConf->kubernetesUrl));
+		}
 	}
 	if(pData->srcMetadataDescr == NULL) {
 		CHKmalloc(pData->srcMetadataDescr = MALLOC(sizeof(msgPropDescr_t)));
@@ -1125,10 +1128,10 @@ extractMsgMetadata(smsg_t *pMsg, instanceData *pData, struct json_object **json)
 
 	/* extract metadata from the file name */
 	filename = MsgGetProp(pMsg, NULL, pData->srcMetadataDescr, &fnLen, &freeFn, NULL);
-	dbgprintf("mmkubernetes: filename: '%s'.\n", filename);
-	if(filename == NULL)
+	if((filename == NULL) || (fnLen == 0))
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 
+	dbgprintf("mmkubernetes: filename: '%s' len %d.\n", filename, fnLen);
 	if ((lnret = ln_normalize(pData->fnCtxln, (char*)filename, fnLen, json))) {
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
@@ -1173,18 +1176,58 @@ queryKB(wrkrInstanceData_t *pWrkrData, char *url, struct json_object **rply)
 	CURLcode ccode;
 	struct json_tokener *jt = NULL;
 	struct json_object *jo;
+	long resp_code = 400;
 
 	/* query kubernetes for pod info */
 	ccode = curl_easy_setopt(pWrkrData->curlCtx, CURLOPT_URL, url);
 	if(ccode != CURLE_OK)
 		ABORT_FINALIZE(RS_RET_ERR);
-	if (CURLE_OK != (ccode = curl_easy_perform(pWrkrData->curlCtx))) {
+	if(CURLE_OK != (ccode = curl_easy_perform(pWrkrData->curlCtx))) {
 		errmsg.LogMsg(0, RS_RET_ERR, LOG_ERR,
 			      "mmkubernetes: failed to connect to [%s] - %d:%s\n",
 			      url, ccode, curl_easy_strerror(ccode));
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-
+	if(CURLE_OK != (ccode = curl_easy_getinfo(pWrkrData->curlCtx,
+					CURLINFO_RESPONSE_CODE, &resp_code))) {
+		errmsg.LogMsg(0, RS_RET_ERR, LOG_ERR,
+			      "mmkubernetes: could not get response code from query to [%s] - %d:%s\n",
+			      url, ccode, curl_easy_strerror(ccode));
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	if(resp_code == 401) {
+		errmsg.LogMsg(0, RS_RET_ERR, LOG_ERR,
+			      "mmkubernetes: Unauthorized: not allowed to view url - "
+			      "check token/auth credentials [%s]\n",
+			      url);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	if(resp_code == 403) {
+		errmsg.LogMsg(0, RS_RET_ERR, LOG_ERR,
+			      "mmkubernetes: Forbidden: no access - "
+			      "check permissions to view url [%s]\n",
+			      url);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	if(resp_code == 404) {
+		errmsg.LogMsg(0, RS_RET_ERR, LOG_ERR,
+			      "mmkubernetes: Not Found: the resource does not exist at url [%s]\n",
+			      url);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	if(resp_code == 429) {
+		errmsg.LogMsg(0, RS_RET_ERR, LOG_ERR,
+			      "mmkubernetes: Too Many Requests: the server is too heavily loaded "
+			      "to provide the data for the requested url [%s]\n",
+			      url);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	if(resp_code != 200) {
+		errmsg.LogMsg(0, RS_RET_ERR, LOG_ERR,
+			      "mmkubernetes: server returned unexpected code [%ld] for url [%s]\n",
+			      resp_code, url);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
 	/* parse retrieved data */
 	jt = json_tokener_new();
 	json_tokener_reset(jt);
@@ -1384,7 +1427,7 @@ CODESTARTdoAction
 	msgAddJSON(pMsg, (uchar *) pWrkrData->pData->dstMetadataPath + 1, jMetadataCopy, 0, 0);
 
 finalize_it:
-    json_object_put(jMsgMeta);
+	json_object_put(jMsgMeta);
 	free(mdKey);
 ENDdoAction
 
