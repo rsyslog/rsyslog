@@ -799,20 +799,20 @@ finalize_it:
  * passed name and returns it is found. Otherwise returns NULL.
  * It will be used for processing stats callback json object.
  */
-static struct fjson_object * get_object(struct fjson_object *fj_obj,
-		const char * name) {
-  struct fjson_object_iterator it = fjson_object_iter_begin(fj_obj);
-  struct fjson_object_iterator itEnd = fjson_object_iter_end(fj_obj);
-  while (!fjson_object_iter_equal (&it, &itEnd)) {
+static struct fjson_object *
+get_object(struct fjson_object *fj_obj, const char * name) {
+	struct fjson_object_iterator it = fjson_object_iter_begin(fj_obj);
+	struct fjson_object_iterator itEnd = fjson_object_iter_end(fj_obj);
+	while (!fjson_object_iter_equal (&it, &itEnd)) {
 		const char * key = fjson_object_iter_peek_name (&it);
 		struct fjson_object * val = fjson_object_iter_peek_value(&it);
 		if(!strncmp(key, name, strlen(name))){
 			return val;
 		}
 		fjson_object_iter_next (&it);
-  }
+	}
 
-  return NULL;
+	return NULL;
 }
 
 /**
@@ -825,8 +825,8 @@ static struct fjson_object * get_object(struct fjson_object *fj_obj,
  */
 static uint64
 jsonExtractWindoStats(struct fjson_object * stats_object,
-		const char * level1_obj_name, const char * level2_obj_name,
-		unsigned long skip_threshold) {
+	const char * level1_obj_name, const char * level2_obj_name,
+	unsigned long skip_threshold) {
 	uint64 level2_val;
 	uint64 agg_val = 0;
 	uint64 ret_val = 0;
@@ -875,20 +875,20 @@ jsonExtractWindoStats(struct fjson_object * stats_object,
  */
 static int
 statsCallback(rd_kafka_t __attribute__((unused)) *rk,
-		char *json, size_t __attribute__((unused)) json_len,
-		void __attribute__((unused)) *opaque) {
+	char *json, size_t __attribute__((unused)) json_len,
+	void __attribute__((unused)) *opaque) {
 	char buf[2048];
-    char handler_name[1024] = "unknown";
-    int replyq = 0;
-    int msg_cnt = 0;
-    int msg_size = 0;
-    uint64 msg_max = 0;
-    uint64 msg_size_max = 0;
+	char handler_name[1024] = "unknown";
+	int replyq = 0;
+	int msg_cnt = 0;
+	int msg_size = 0;
+	uint64 msg_max = 0;
+	uint64 msg_size_max = 0;
 
-    struct fjson_object * stats_object = NULL;
-    struct fjson_object * fj_obj = NULL;
+	struct fjson_object * stats_object = NULL;
+	struct fjson_object * fj_obj = NULL;
 
-    DBGPRINTF("omkafka: librdkafka stats callback: %s\n", json);
+	DBGPRINTF("omkafka: librdkafka stats callback: %s\n", json);
 
 	/* prepare fjson object from stats callback for parsing */
 	stats_object = fjson_tokener_parse(json);
@@ -905,8 +905,7 @@ statsCallback(rd_kafka_t __attribute__((unused)) *rk,
 	/* top level stats extraction through libfastjson based parsing */
 	fj_obj = get_object(stats_object, "name");
 	if (fj_obj != NULL)
-		snprintf(handler_name, sizeof(handler_name),
-				"%s", (char *)fjson_object_get_string(fj_obj));
+		snprintf(handler_name, sizeof(handler_name), "%s", (char *)fjson_object_get_string(fj_obj));
 	fj_obj = get_object(stats_object, "replyq");
 	replyq = (fj_obj == NULL) ? 0 : fjson_object_get_int(fj_obj);
 	fj_obj = get_object(stats_object, "msg_cnt");
@@ -926,11 +925,11 @@ statsCallback(rd_kafka_t __attribute__((unused)) *rk,
 
 	/* emit a log line to get stats visibility per librdkafka client */
 	snprintf(buf, sizeof(buf),
-			"statscb_window_stats: handler_name=%s replyq=%d msg_cnt=%d msg_size=%d "
-			"msg_max=%lld msg_size_max=%lld rtt_avg_usec=%lld throttle_avg_msec=%lld "
-			"int_latency_avg_usec=%lld",
-			handler_name, replyq, msg_cnt, msg_size, msg_max, msg_size_max,
-			rtt_avg_usec, throttle_avg_msec, int_latency_avg_usec);
+		"statscb_window_stats: handler_name=%s replyq=%d msg_cnt=%d msg_size=%d "
+		"msg_max=%lld msg_size_max=%lld rtt_avg_usec=%lld throttle_avg_msec=%lld "
+		"int_latency_avg_usec=%lld",
+		handler_name, replyq, msg_cnt, msg_size, msg_max, msg_size_max,
+		rtt_avg_usec, throttle_avg_msec, int_latency_avg_usec);
 	LogMsg(0, NO_ERRCODE, LOG_INFO, "%s\n", buf);
 
 	return 0;
@@ -1818,7 +1817,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrCacheEvict));
 	STATSCOUNTER_INIT(ctrKafkaAck, mutCtrKafkaAck);
 	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"acked",
-			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaAck));
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaAck));
 	STATSCOUNTER_INIT(ctrKafkaMsgTooLarge, mutCtrKafkaMsgTooLarge);
 	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"failures_msg_too_large",
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaMsgTooLarge));
@@ -1852,9 +1851,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(statsobj.AddCounter(kafkaStats, UCHAR_CONSTANT("rtt_avg_usec"),
 		ctrType_Int, CTR_FLAG_NONE, &rtt_avg_usec));
 	CHKiRet(statsobj.AddCounter(kafkaStats, UCHAR_CONSTANT("throttle_avg_msec"),
-			ctrType_Int, CTR_FLAG_NONE, &throttle_avg_msec));
+		ctrType_Int, CTR_FLAG_NONE, &throttle_avg_msec));
 	CHKiRet(statsobj.AddCounter(kafkaStats, UCHAR_CONSTANT("int_latency_avg_usec"),
-			ctrType_Int, CTR_FLAG_NONE, &int_latency_avg_usec));
+		ctrType_Int, CTR_FLAG_NONE, &int_latency_avg_usec));
 	CHKiRet(statsobj.ConstructFinalize(kafkaStats));
 
 	DBGPRINTF("omkafka: Add KAFKA_TimeStamp to template system ONCE\n");
