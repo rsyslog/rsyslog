@@ -23,7 +23,7 @@ ruleset(name="norm") {
 . $srcdir/diag.sh wait-shutdown
 echo 'ubuntu tag1:
 debian tag2:
-centos tag3:' | cmp rsyslog.out.log
+centos tag3:' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
   cat rsyslog.out.log

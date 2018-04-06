@@ -1,12 +1,6 @@
 #!/bin/bash
 # addd 2016-05-13 by RGerhards, released under ASL 2.0
 
-uname
-if [ `uname` = "FreeBSD" ] ; then
-   echo "This test currently does not work on FreeBSD."
-   exit 77
-fi
-
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
@@ -40,7 +34,7 @@ echo '<120> 2011-03-01T11:22:12Z host msgnum:1
 <120> 2011-03-01T11:22:12Z host msgnum:1
 2000000010<120> 2011-03-01T11:22:12Z host msgnum:1
 4000000000<120> 2011-03-01T11:22:12Z host msgnum:1
-<120> 2011-03-01T11:22:12Z host msgnum:1' | cmp rsyslog.out.log
+<120> 2011-03-01T11:22:12Z host msgnum:1' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
   cat rsyslog.out.log

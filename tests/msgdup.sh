@@ -10,7 +10,6 @@ if [ `uname` = "FreeBSD" ] ; then
    echo "This test currently does not work on FreeBSD."
    exit 77
 fi
-
 if [ `uname` = "SunOS" ] ; then
    echo "This test currently does not work on all flavors of Solaris."
    exit 77
@@ -38,7 +37,7 @@ logger -d -u testbench_socket -t RSYSLOG_TESTBENCH 'test 01234567890123456789012
 ./msleep 100
 . $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 . $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
-echo " test 01234567890123456789012345678901234567890123456789012345" | cmp rsyslog.out.log
+echo " test 01234567890123456789012345678901234567890123456789012345" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "msgdup.sh failed"
   echo contents of rsyslog.out.log:

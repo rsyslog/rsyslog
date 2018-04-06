@@ -25,7 +25,7 @@ ruleset(name="ruleset1") {
 echo '<120> 2011-03-01T11:22:12Z host tag: this is a way to long message that has abcdefghijklmnopqrstuvwxyz test1 test2 test3 test4 t
 <120> 2011-03-01T11:22:12Z host tag: this is a way to long message
 <120> 2011-03-01T11:22:12Z host tag: this is a way to long message that has abcdefghijklmnopqrstuvwxyz test1 test2 test3 test4 t
-<120> 2011-03-01T11:22:12Z host tag: this is a way to long message' | cmp rsyslog.out.log
+<120> 2011-03-01T11:22:12Z host tag: this is a way to long message' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
   cat rsyslog.out.log

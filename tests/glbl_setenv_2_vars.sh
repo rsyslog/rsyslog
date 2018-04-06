@@ -1,12 +1,6 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 
-uname
-if [ `uname` = "FreeBSD" ] ; then
-   echo "This test currently does not work on FreeBSD."
-   exit 77
-fi
-
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
@@ -24,7 +18,7 @@ template(name="outfmt" type="string" string="%$!prx%, %$!second%\n")
 . $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 . $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
 
-echo 'http://127.0.0.1, OK OK' | cmp rsyslog.out.log
+echo 'http://127.0.0.1, OK OK' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid content seen, rsyslog.out.log is:"
   cat rsyslog.out.log

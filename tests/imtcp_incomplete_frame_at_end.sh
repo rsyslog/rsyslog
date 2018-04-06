@@ -2,12 +2,6 @@
 # Copyright (C) 2016 by Rainer Gerhardds
 # This file is part of the rsyslog project, released  under ASL 2.0
 
-uname
-if [ `uname` = "FreeBSD" ] ; then
-   echo "This test currently does not work on FreeBSD."
-   exit 77
-fi
-
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
@@ -28,7 +22,7 @@ rm tmp.in
 ./msleep 500
 . $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 . $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
-echo "lastmsg" | cmp rsyslog.out.log
+echo "lastmsg" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "lastmsg was not properly recorded, file content:"
   cat rsyslog.out.log

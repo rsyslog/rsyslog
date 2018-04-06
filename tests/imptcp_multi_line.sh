@@ -22,7 +22,7 @@ NEWMSG: <133>Mar  1 01:00:00 172.20.245.8 tag multi#012l#012i#012n#012#012e2
 NEWMSG: <133>Mar  1 01:00:00 172.20.245.8 tag test3
 NEWMSG: <133>Mar  1 01:00:00 172.20.245.8 tag multi#012line3
 NEWMSG: <133>Mar  1 01:00:00 172.20.245.8 tag test4
-NEWMSG: <133>Mar  1 01:00:00 172.20.245.8 tag test end' | cmp rsyslog.out.log
+NEWMSG: <133>Mar  1 01:00:00 172.20.245.8 tag test end' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
   cat rsyslog.out.log
