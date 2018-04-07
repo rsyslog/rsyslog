@@ -157,7 +157,8 @@ hash_wrapper2(struct svar *__restrict__ const sourceVal
 	if(seedVal) {
 		seed = var2Number(seedVal, &success);
 		if (!success) {
-			parser_warnmsg("fmhash: hashXX(string, seed) didn't get a valid 'seed' limit, defaulting hash value to 0");
+			parser_warnmsg("fmhash: hashXX(string, seed) didn't get a valid 'seed' limit"
+					", defaulting hash value to 0");
 			iRet = RS_RET_ERR;
 			FINALIZE;
 		}
