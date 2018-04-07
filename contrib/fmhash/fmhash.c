@@ -29,7 +29,7 @@
  * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ */
 
 #include "config.h"
 #include <stdint.h>
@@ -82,22 +82,22 @@ static hash_t
 __attribute__((no_sanitize("unsigned-integer-overflow")))
 #endif
 fnv_32(const void* input, size_t len, seed_t seed) {
-    unsigned char *bp = (unsigned char *)input;	/* start of buffer */
+	unsigned char *bp = (unsigned char *)input;	/* start of buffer */
 
-    /*
-     * FNV-1 hash each octet in the buffer
-     */
-    size_t i;
-    for (i = 0; i < len; i++) {
-        /* multiply by the 32 bit FNV magic prime mod 2^32 */
-        seed += (seed<<1) + (seed<<4) + (seed<<7) + (seed<<8) + (seed<<24);
+	/*
+	 * FNV-1 hash each octet in the buffer
+	 */
+	size_t i;
+	for (i = 0; i < len; i++) {
+		/* multiply by the 32 bit FNV magic prime mod 2^32 */
+		seed += (seed<<1) + (seed<<4) + (seed<<7) + (seed<<8) + (seed<<24);
 
-        /* xor the bottom with the current octet */
-        seed ^= (seed_t)*bp++;
-    }
+		/* xor the bottom with the current octet */
+		seed ^= (seed_t)*bp++;
+	}
 
-    /* return our new hash value */
-    return seed;
+	/* return our new hash value */
+	return seed;
 }
 
 
@@ -113,38 +113,38 @@ static hash_t
 __attribute__((no_sanitize("unsigned-integer-overflow")))
 #endif
 djb_hash(const void* input, size_t len, seed_t seed) {
-    const char *p = input;
-    hash_t hash = 5381;
-    size_t i;
-    for (i = 0; i < len; i++) {
-        hash = 33 * hash ^ p[i];
-    }
+	const char *p = input;
+	hash_t hash = 5381;
+	size_t i;
+	for (i = 0; i < len; i++) {
+		hash = 33 * hash ^ p[i];
+	}
 
-    return hash + seed;
+	return hash + seed;
 }
 
 /*Get 32 bit hash for input*/
 static hash_t
 hash32(const void* input, size_t len, seed_t seed) {
 	hash_t xhash = 0;
-	#ifdef USE_HASH_XXHASH
-	    xhash = XXH32(input, len, seed);
-    #else
-	    xhash = fnv_32(input, len, seed);
-    #endif
-    return xhash;
+#ifdef USE_HASH_XXHASH
+	xhash = XXH32(input, len, seed);
+#else
+	xhash = fnv_32(input, len, seed);
+#endif
+	return xhash;
 }
 
 /*Get 64 bit hash for input*/
 static hash_t
 hash64(const void* input, size_t len, seed_t seed) {
 	hash_t xhash = 0;
-	#ifdef USE_HASH_XXHASH
-        xhash = XXH64(input, len, seed);
-    #else
-        xhash = djb_hash(input, len, seed);
-    #endif
-    return xhash;
+#ifdef USE_HASH_XXHASH
+	xhash = XXH64(input, len, seed);
+#else
+	xhash = djb_hash(input, len, seed);
+#endif
+	return xhash;
 }
 
 static rsRetVal
@@ -153,21 +153,21 @@ hash_wrapper2(struct svar *__restrict__ const sourceVal
 	DEFiRet;
 	int freeHashStr = 0, success = 0;
 	char *hashStr = NULL;
-    seed_t seed = 0;
-    if(seedVal) {
-        seed = var2Number(seedVal, &success);
-        if (!success) {
-            DBGPRINTF("fmhash: hashXX(string, seed) didn't get a valid 'seed' limit, defaulting hash value to 0");
-            iRet = RS_RET_ERR;
-            FINALIZE;
-        }
-    }
+	seed_t seed = 0;
+	if(seedVal) {
+		seed = var2Number(seedVal, &success);
+		if (!success) {
+			parser_warnmsg("fmhash: hashXX(string, seed) didn't get a valid 'seed' limit, defaulting hash value to 0");
+			iRet = RS_RET_ERR;
+			FINALIZE;
+		}
+	}
 
-    hashStr = (char*)var2CString(sourceVal, &freeHashStr);
-    size_t len = strlen(hashStr);
-    hcontext->xhash = hcontext->hashXX(hashStr, len, seed);
+	hashStr = (char*)var2CString(sourceVal, &freeHashStr);
+	size_t len = strlen(hashStr);
+	hcontext->xhash = hcontext->hashXX(hashStr, len, seed);
 	DBGPRINTF("fmhash: hashXX generated hash %" PRIu64 " for string(%.*s)"
-					, hcontext->xhash, (int)len, hashStr);
+			, hcontext->xhash, (int)len, hashStr);
 finalize_it:
 	if (freeHashStr) {
 		free(hashStr);
@@ -180,26 +180,26 @@ hash_wrapper3(struct svar *__restrict__ const sourceVal, struct svar *__restrict
 		, struct svar *__restrict__ const seedVal, hash_context_t* hcontext) {
 
 	DEFiRet;
-    int success = 0;
-    hash_t xhash = 0;
+	int success = 0;
+	hash_t xhash = 0;
 	hash_t mod = var2Number(modVal, &success);
 	if (! success) {
-		DBGPRINTF("fmhash: hashXXmod(string, mod)/hash64mod(string, mod, seed) didn't"
-        " get a valid 'mod' limit, defaulting hash value to 0");
+		parser_warnmsg("fmhash: hashXXmod(string, mod)/hash64mod(string, mod, seed) didn't"
+				" get a valid 'mod' limit, defaulting hash value to 0");
 		iRet = RS_RET_ERR;
 		FINALIZE;
 	}
 	if(mod == 0) {
-		DBGPRINTF("fmhash: hashXXmod(string, mod)/hash64mod(string, mod, seed) invalid"
-        ", 'mod' is zero, , defaulting hash value to 0");
+		parser_warnmsg("fmhash: hashXXmod(string, mod)/hash64mod(string, mod, seed) invalid"
+				", 'mod' is zero, , defaulting hash value to 0");
 		iRet = RS_RET_ERR;
 		FINALIZE;
 	}
 
 	CHKiRet((hcontext->hash_wrapper_1_2(sourceVal, seedVal, hcontext)));
 	xhash = hcontext->xhash % mod;
-    DBGPRINTF("fmhash: hashXXmod generated hash-mod %" PRIu64 ".", xhash);
-    hcontext->xhash = xhash;
+	DBGPRINTF("fmhash: hashXXmod generated hash-mod %" PRIu64 ".", xhash);
+	hcontext->xhash = xhash;
 finalize_it:
 	RETiRet;
 }
@@ -273,8 +273,7 @@ init_fmHash64(struct cnffunc *const func)
 	hash_context_t *hash_context = NULL;
 	if(func->nParams < 1) {
 		parser_errmsg("fmhash: hash64(string) / hash64(string, seed)"
-				" insufficient params. %d of file %s\n",
-			__LINE__, __FILE__);
+				" insufficient params.\n");
 		iRet = RS_RET_ERR;
 		FINALIZE;
 	}
@@ -294,8 +293,7 @@ init_fmHash64mod(struct cnffunc *const func)
 	hash_context_t *hash_context = NULL;
 	if(func->nParams < 2) {
 		parser_errmsg("fmhash: hash64mod(string, mod)/hash64mod(string, mod, seed)"
-				" insufficient params. %d of file %s\n",
-			__LINE__, __FILE__);
+				" insufficient params.\n");
 		iRet = RS_RET_ERR;
 		FINALIZE;
 	}
@@ -314,8 +312,7 @@ init_fmHash32(struct cnffunc *const func)
 	hash_context_t *hash_context = NULL;
 	if(func->nParams < 1) {
 		parser_errmsg("fmhash: hash32(string) / hash32(string, seed)"
-				" insufficient params. %d of file %s\n",
-			__LINE__, __FILE__);
+				" insufficient params.\n");
 		iRet = RS_RET_ERR;
 		FINALIZE;
 	}
@@ -335,8 +332,7 @@ init_fmHash32mod(struct cnffunc *const func)
 	hash_context_t *hash_context = NULL;
 	if(func->nParams < 2) {
 		parser_errmsg("fmhash: hash32mod(string, mod)/hash32mod(string, mod, seed)"
-				" insufficient params. %d of file %s\n",
-			__LINE__, __FILE__);
+				" insufficient params.\n");
 		iRet = RS_RET_ERR;
 		FINALIZE;
 	}
@@ -350,11 +346,11 @@ finalize_it:
 
 
 static struct scriptFunct functions[] = {
-	{"hash64", 1, 2, fmHashXX, init_fmHash64, NULL},
-	{"hash64mod", 2, 3, fmHashXXmod, init_fmHash64mod, NULL},
-	{"hash32", 1, 2, fmHashXX, init_fmHash32, NULL},
-	{"hash32mod", 2, 3, fmHashXXmod, init_fmHash32mod, NULL},
-	{NULL, 0, 0, NULL} //last element to check end of array
+		{"hash64", 1, 2, fmHashXX, init_fmHash64, NULL},
+		{"hash64mod", 2, 3, fmHashXXmod, init_fmHash64mod, NULL},
+		{"hash32", 1, 2, fmHashXX, init_fmHash32, NULL},
+		{"hash32mod", 2, 3, fmHashXXmod, init_fmHash32mod, NULL},
+		{NULL, 0, 0, NULL} //last element to check end of array
 };
 
 
