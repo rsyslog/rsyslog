@@ -1,6 +1,6 @@
-**********
-re_extract
-**********
+************
+re_extract()
+************
 
 Purpose
 =======
@@ -15,6 +15,11 @@ The "no-found" parameter specifies which string is to be returned in case
 when the regular expression is not found. Note that match and
 submatch start with zero. It currently is not possible to extract
 more than one submatch with a single call.
+
+.. note::
+
+   Functions using regular expressions tend to be slow and other options
+   may be faster.
 
 
 Example
