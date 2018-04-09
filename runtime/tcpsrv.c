@@ -175,6 +175,7 @@ addNewLstnPort(tcpsrv_t *const pThis, const uchar *const pszPort,
 	pThis->pLstnPorts = pEntry;
 
 finalize_it:
+dbgprintf("tcpsrv finalize, iRet %d\n", iRet);
 	if(iRet != RS_RET_OK) {
 		if(pEntry != NULL) {
 			free(pEntry->pszAddr);
@@ -192,6 +193,7 @@ finalize_it:
 		}
 	}
 
+dbgprintf("tcpsrv finalize return\n");
 	RETiRet;
 }
 
