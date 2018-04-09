@@ -94,6 +94,11 @@ static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config para
 	#define GLOB_BRACE 0
 #endif
 
+/* how to handle oversize messages? */
+enum oversizeMsgMode {
+	OSZMSG_ACCEPT = 0,
+	OSZMSG_TRUNCATE = 1
+};
 
 static struct configSettings_s {
 	uchar *pszFileName;
@@ -127,6 +132,7 @@ struct instanceConf_s {
 	uint8_t readMode;
 	uchar *startRegex;
 	regex_t end_preg;	/* compiled version of startRegex */
+	enum oversizeMsgMode oszmsg_mode;
 	sbool discardTruncatedMsg;
 	sbool msgDiscardingError;
 	sbool escapeLF;
@@ -293,7 +299,8 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "statefile", eCmdHdlrString, CNFPARAM_DEPRECATED },
 	{ "readtimeout", eCmdHdlrPositiveInt, 0 },
 	{ "freshstarttail", eCmdHdlrBinary, 0},
-	{ "filenotfounderror", eCmdHdlrBinary, 0}
+	{ "filenotfounderror", eCmdHdlrBinary, 0},
+	{ "oversizemessagemode", eCmdHdlrGetWord, 0}
 };
 static struct cnfparamblk inppblk =
 	{ CNFPARAMBLK_VERSION,
@@ -1129,7 +1136,21 @@ enqLine(act_obj_t *const act,
 	uchar file_offset[MAX_OFFSET_REPRESENTATION_NUM_BYTES+1];
 	const uchar *metadata_names[2] = {(uchar *)"filename",(uchar *)"fileoffset"} ;
 	const uchar *metadata_values[2] ;
-	const size_t msgLen = cstrLen(cstrLine);
+	size_t msgLen = cstrLen(cstrLine);
+	if(inst->addCeeTag) {
+		msgLen += CONST_LEN_CEE_COOKIE;
+	}
+	if(msgLen > (size_t) glblGetMaxLine()) {
+		if(inst->oszmsg_mode == OSZMSG_TRUNCATE) {
+			LogMsg(0, RS_RET_MSGSIZE_TOO_LARGE, LOG_WARNING, "imfile: truncating "
+				"too large message - size was %zd, max configured is %d. "
+				"first 128 bytes of message: %128.128s",
+				msgLen, glblGetMaxLine(), (char*)rsCStrGetSzStrNoNULL(cstrLine));
+		} else {
+			assert(inst->oszmsg_mode == OSZMSG_ACCEPT);
+		}
+		msgLen = (size_t) glblGetMaxLine;
+	}
 
 	if(msgLen == 0) {
 		/* we do not process empty lines */
@@ -1140,13 +1161,12 @@ enqLine(act_obj_t *const act,
 	MsgSetFlowControlType(pMsg, eFLOWCTL_FULL_DELAY);
 	MsgSetInputName(pMsg, pInputName);
 	if(inst->addCeeTag) {
-		/* Make sure we account for terminating null byte */
-		size_t ceeMsgSize = msgLen + CONST_LEN_CEE_COOKIE + 1;
 		char *ceeMsg;
-		CHKmalloc(ceeMsg = MALLOC(ceeMsgSize));
+		CHKmalloc(ceeMsg = MALLOC(msgLen + 1));
+		/* Make sure we account for terminating null byte */
 		strcpy(ceeMsg, CONST_CEE_COOKIE);
 		strcat(ceeMsg, (char*)rsCStrGetSzStrNoNULL(cstrLine));
-		MsgSetRawMsg(pMsg, ceeMsg, ceeMsgSize);
+		MsgSetRawMsg(pMsg, ceeMsg, msgLen);
 		free(ceeMsg);
 	} else {
 		MsgSetRawMsg(pMsg, (char*)rsCStrGetSzStrNoNULL(cstrLine), msgLen);
@@ -1419,6 +1439,7 @@ createInstance(instanceConf_t **const pinst)
 	inst->readMode = 0;
 	inst->startRegex = NULL;
 	inst->discardTruncatedMsg = 0;
+	inst->oszmsg_mode = OSZMSG_ACCEPT;
 	inst->msgDiscardingError = 1;
 	inst->bRMStateOnDel = 1;
 	inst->escapeLF = 1;
@@ -1625,7 +1646,21 @@ CODESTARTnewInpInst
 			inst->readMode = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "startmsg.regex")) {
 			inst->startRegex = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "oversizemessagemode")) {
+			const char *const md = es_str2cstr(pvals[i].val.d.estr, NULL);
+			if(!strcmp(md, "accept")) {
+				inst->oszmsg_mode = OSZMSG_ACCEPT;
+			} else if(!strcmp(md, "truncate")) {
+				inst->oszmsg_mode = OSZMSG_TRUNCATE;
+			} else {
+				parser_warnmsg("imfile: invalid oversizeMessageMode '%s' - using "
+					"\"accept\" instead", md);
+			}
+			free((void*) md);
 		} else if(!strcmp(inppblk.descr[i].name, "discardtruncatedmsg")) {
+			/* note: this is a legacy parameter which conflicts "a bit"
+			 * with oversizemessagemode.
+			 */
 			inst->discardTruncatedMsg = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "msgdiscardingerror")) {
 			inst->msgDiscardingError = (sbool) pvals[i].val.d.n;
