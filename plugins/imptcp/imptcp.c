@@ -131,6 +131,7 @@ struct instanceConf_s {
 	int bSuppOctetFram;		/* support octet-counted framing? */
 	int bSPFramingFix;
 	int iAddtlFrameDelim;
+	int socketBacklog;
 	sbool multiLine;
 	uint8_t compressionMode;
 	uchar *pszBindPort;		/* port to bind to */
@@ -206,7 +207,8 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "addtlframedelimiter", eCmdHdlrInt, 0 },
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
 	{ "ratelimit.burst", eCmdHdlrInt, 0 },
-	{ "multiline", eCmdHdlrBinary, 0 }
+	{ "multiline", eCmdHdlrBinary, 0 },
+	{ "socketbacklog", eCmdHdlrInt, 0 }
 };
 static struct cnfparamblk inppblk =
 	{ CNFPARAMBLK_VERSION,
@@ -238,6 +240,7 @@ struct ptcpsrv_s {
 	int maxFrameSize;
 	int	bFailOnPerms;	/* fail creation if chown fails? */
 	sbool bUnixSocket;
+	int socketBacklog;
 	int iAddtlFrameDelim;
 	sbool multiLine;
 	int iKeepAliveIntvl;
@@ -441,7 +444,7 @@ static rsRetVal startupUXSrv(ptcpsrv_t *pSrv) {
 		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 	}
 
-	if (listen(sock, 5) < 0) {
+	if (listen(sock, pSrv->socketBacklog) < 0) {
 		errmsg.LogError(errno, RS_RET_ERR_CRE_AFUX, "imptcp: unix socket listen error");
 		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 	}
@@ -593,7 +596,7 @@ startupSrv(ptcpsrv_t *pSrv)
 			continue;
 		}
 
-		if(listen(sock, 511) < 0) {
+		if(listen(sock, pSrv->socketBacklog) < 0) {
 			DBGPRINTF("tcp listen error %d, suspending\n", errno);
 			close(sock);
 			sock = -1;
@@ -1505,6 +1508,7 @@ createInstance(instanceConf_t **pinst)
 	inst->ratelimitInterval = 0; /* off */
 	inst->compressionMode = COMPRESS_SINGLE_MSG;
 	inst->multiLine = 0;
+	inst->socketBacklog = 5;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -1594,6 +1598,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	}
 	pSrv->iAddtlFrameDelim = inst->iAddtlFrameDelim;
 	pSrv->multiLine = inst->multiLine;
+	pSrv->socketBacklog = inst->socketBacklog;
 	pSrv->maxFrameSize = inst->maxFrameSize;
 	if (inst->pszBindAddr == NULL) {
 		pSrv->lstnIP = NULL;
@@ -2080,6 +2085,8 @@ CODESTARTnewInpInst
 			inst->ratelimitInterval = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "multiline")) {
 			inst->multiLine = (sbool) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "socketbacklog")) {
+			inst->socketBacklog = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("imptcp: program error, non-handled "
 			  "param '%s'\n", inppblk.descr[i].name);
