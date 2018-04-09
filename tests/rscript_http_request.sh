@@ -1,7 +1,7 @@
 #!/bin/bash
 # add 2017-12-01 by Rainer Gerhards, released under ASL 2.0
 . $srcdir/diag.sh init
-. $srcdir/diag.sh check-url-access http://www.rsyslog.com/testbench/echo-get.php
+. $srcdir/diag.sh check-url-access http://testbench.rsyslog.com/testbench/echo-get.php
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
 module(load="../plugins/imtcp/.libs/imtcp")
@@ -13,7 +13,7 @@ input(type="imtcp" port="13514")
 template(name="outfmt" type="string" string="%$!%\n")
 
 if $msg contains "msgnum:" then {
-	set $.url = "http://www.rsyslog.com/testbench/echo-get.php?content=" & ltrim($msg);
+	set $.url = "http://testbench.rsyslog.com/testbench/echo-get.php?content=" & ltrim($msg);
 	set $!reply = http_request($.url);
 	action(type="omfile" file="rsyslog.out.log" template="outfmt")
 }
