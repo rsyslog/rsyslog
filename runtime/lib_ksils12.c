@@ -62,7 +62,6 @@
 #include "lib_ksils12.h"
 #include "lib_ksi_queue.h"
 
-typedef unsigned char uchar;
 #ifndef VERSION
 #define VERSION "no-version"
 #endif
@@ -553,8 +552,13 @@ ksiCreateFile(rsksictx ctx, const char *path, uid_t uid, gid_t gid, int mode, bo
 		goto done;
 	}
 
-	if (stat_st.st_size == 0 && header != NULL)
-		fwrite(header, strlen(header), 1, f);
+	if (stat_st.st_size == 0 && header != NULL) {
+		if(fwrite(header, strlen(header), 1, f) != 1) {
+        	        report(ctx, "ksiOpenSigFile: fwrite for file %s failed: %s",
+				path, strerror(errno));
+	                goto done;
+		}
+	}
 
 done:
 	return f;
