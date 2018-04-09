@@ -1,5 +1,9 @@
 ------------------------------------------------------------------------------
 Version 8.35.0 [v8-stable] 2018-05-15
+- imptcp: add ability to configure socket backlog
+  this can be useful under heavy load.
+  For a detailled discussion see https://github.com/rsyslog/rsyslog/pull/2561
+  Thanks to Maxime Graff for implementing this.
 - omfile: do not permit filename that only consists of whitespace
 - omfile bugfix: segfault if empty filename was given
   closes https://github.com/rsyslog/rsyslog/issues/2417
