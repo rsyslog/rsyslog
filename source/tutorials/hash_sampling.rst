@@ -2,7 +2,7 @@ Hash-based Sampling
 ===================
 
 
-Rsyslog supports various sampling and filtering mechanisms. These can be used on client systems to save servers from getting overwhelmed. Here we introduce a new sampling mechanism "Hash-based sampling".
+Rsyslog supports various sampling mechanisms. These can be used on client systems to save servers from getting overwhelmed. Here we introduce a new sampling mechanism "Hash-based sampling".
 
 Let's consider the following setup of systems running services and generating logs.
 There are three services A, B and C.
