@@ -1,37 +1,44 @@
+*******************************
 imkafka: read from Apache Kafka
-===============================
+*******************************
 
-===========================  =======================================================
+===========================  ===========================================================================
 **Module Name:**             **imkafka**
-**Author:**                  Pascal Withopf <pascalwithopf1@gmail.com>
-**Available since:**         v8.27.0
-===========================  =======================================================
+**Author:**                  Andre Lorbach <alorbach@adiscon.com>
+**Available since:**         8.27.0
+===========================  ===========================================================================
+
+
+Purpose
+=======
 
 The imkafka plug-in implements an Apache Kafka consumer, permitting
 rsyslog to receive data from Kafka.
 
+
 Configuration Parameters
-------------------------
+========================
+
 Note that imkafka supports some *Array*-type parameters. While the parameter
 name can only be set once, it is possible to set multiple values with that
 single parameter.
 
 For example, to select a broker, you can use
 
-::
+.. code-block:: none
 
    input(type="imkafka" topic="mytopic" broker="localhost:9092" consumergroup="default")
 
 which is equivalent to
 
-::
+.. code-block:: none
 
    input(type="imkafka" topic="mytopic" broker=["localhost:9092"] consumergroup="default")
 
 To specify multiple values, just use the bracket notation and create a
 comma-delimited list of values as shown here:
 
-::
+.. code-block:: none
 
    input(type="imkafka" topic="mytopic"
           broker=["localhost:9092",
@@ -39,77 +46,116 @@ comma-delimited list of values as shown here:
                   "localhost:9094"]
          )
 
-Module Parameters
-^^^^^^^^^^^^^^^^^
 
-Note: parameter names are case-insensitive.
+.. note::
+
+   Parameter names are case-insensitive.
+
+
+Module Parameters
+-----------------
 
 Currently none.
 
 
 Action Parameters
-^^^^^^^^^^^^^^^^^
+-----------------
 
-Note: parameter names are case-insensitive.
+Broker
+^^^^^^
 
-.. function::  broker <Array>
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-   *Default: "localhost:9092"*
+   "array", "localhost:9092", "no", "none"
 
-   Specifies the broker(s) to use.
+Specifies the broker(s) to use.
 
-.. function::  topic <String>
 
-   *Mandatory*
+Topic
+^^^^^
 
-   *Default: none*
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-   Specifies the topic to produce to.
+   "string", "none", "yes", "none"
 
-.. function::  confParam <Array>
+Specifies the topic to produce to.
 
-   *Default: none*
 
-   Permits to specify Kafka options. Rather than offering a myriad of
-   config settings to match the Kafka parameters, we provide this setting
-   here as a vehicle to set any Kafka parameter. This has the big advantage
-   that Kafka parameters that come up in new releases can immediately be used.
+ConfParam
+^^^^^^^^^
 
-   Note that we use librdkafka for the Kafka connection, so the parameters
-   are actually those that librdkafka supports. As of our understanding, this
-   is a superset of the native Kafka parameters.
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-.. function:: consumergroup <String>
+   "array", "none", "no", "none"
 
-   *Default none*
+Permits to specify Kafka options. Rather than offering a myriad of
+config settings to match the Kafka parameters, we provide this setting
+here as a vehicle to set any Kafka parameter. This has the big advantage
+that Kafka parameters that come up in new releases can immediately be used.
 
-   With this parameter the group.id for the consumer is set. All consumers
-   sharing the same group.id belong to the same group.
+Note that we use librdkafka for the Kafka connection, so the parameters
+are actually those that librdkafka supports. As of our understanding, this
+is a superset of the native Kafka parameters.
 
-.. function:: ruleset <String>
 
-   *Default: none*
+ConsumerGroup
+^^^^^^^^^^^^^
 
-   Specifies the ruleset to be used.
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+With this parameter the group.id for the consumer is set. All consumers
+sharing the same group.id belong to the same group.
+
+
+Ruleset
+^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+Specifies the ruleset to be used.
+
 
 Caveats/Known Bugs
-------------------
+==================
 
 -  currently none
 
-Example
--------
 
-**Sample 1:**
+Examples
+========
+
+Example 1
+---------
 
 In this sample a consumer for the topic static is created and will forward the messages to the omfile action.
 
-::
+.. code-block:: none
 
-  module(load="imkafka")
-  input(type="imkafka" topic="static" broker="localhost:9092"
-                       consumergroup="default" ruleset="pRuleset")
+   module(load="imkafka")
+   input(type="imkafka" topic="static" broker="localhost:9092"
+                        consumergroup="default" ruleset="pRuleset")
 
-  ruleset(name="pRuleset") {
-  	action(type="omfile" file="path/to/file")
-  }
+   ruleset(name="pRuleset") {
+   	action(type="omfile" file="path/to/file")
+   }
+
+

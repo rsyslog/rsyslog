@@ -1,17 +1,19 @@
 configuration objects
 =====================
 
-Note: configuration object parameters are case-insensitive.
+.. note::
+
+  Configuration object parameters are case-insensitive.
 
 Common Parameters
 -----------------
 
-config.enable
-.............
+config.enabled
+^^^^^^^^^^^^^^
 
 .. versionadded:: 8.33.0
 
-All configuration objects have a parameter "config.enable".
+All configuration objects have a ``config.enabled`` parameter.
 For auto-generated configs, it is useful to have the ability to disable some
 config constructs even though they may be specified inside the config. This
 can be done via the ``config.enabled`` parameter.
@@ -24,49 +26,56 @@ Example:
 
 Let's say we want to conditionally load a module. Environment variable
 ``LOAD_IMPTCP`` will be either unset or ``off`` .
-Then we can use this config construct::
+Then we can use this config construct:
 
-    module(load="imptcp" config.enabled=`echo $LOAD_IMPTCP`)
+.. code-block:: none
+   :emphasize-lines: 2
 
-If the variable is set to ```off```, the module will **not** be loaded.
+    module(load="imptcp"
+        config.enabled=`echo $LOAD_IMPTCP`)
+
+If the variable is set to ``off``, the module will **not** be loaded.
+
+Objects
+-------
 
 action()
---------
+^^^^^^^^
 
 The :doc:`action <../configuration/actions>`  object is the primary means of
 describing actions to be carried out.
 
 global()
---------
+^^^^^^^^
 
 This is used to set global configuration parameters. For details, please
-see the `rsyslog global configuration object <global.html>`_.
+see the :doc:`rsyslog global configuration object <global>`.
 
 input()
--------
+^^^^^^^
 
 The :doc:`input <../configuration/input>` object is the primary means of
 describing inputs, which are used to gather messages for rsyslog processing.
 
 module()
---------
+^^^^^^^^
 
 The module object is used to load plugins.
 
 parser()
---------
+^^^^^^^^
 
 The :doc:`parser <../configuration/parser>` object is used to define
 custom parser objects.
 
 timezone()
-----------
+^^^^^^^^^^
 
 The :doc:`timezone <../configuration/timezone>` object is used to define
 timezone settings.
 
 include()
----------
+^^^^^^^^^
 
 The :doc:`include <include>`  object is use to include configuration snippets
 stored elsewhere into the configuration.

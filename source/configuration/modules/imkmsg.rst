@@ -1,12 +1,16 @@
+**********************************
 imkmsg: /dev/kmsg Log Input Module
-==================================
+**********************************
 
-**Module Name:    imkmsg**
+===========================  ===========================================================================
+**Module Name:**             **imkmsg**
+**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+                             Milan Bartos <mbartos@redhat.com>
+===========================  ===========================================================================
 
-**Authors:**\ Rainer Gerhards <rgerhards@adiscon.com>
- Milan Bartos <mbartos@redhat.com>
 
-**Description**:
+Purpose
+=======
 
 Reads messages from the /dev/kmsg structured kernel log and submits them
 to the syslog engine.
@@ -20,13 +24,20 @@ Log messages are parsed as necessary into rsyslog msg\_t structure.
 Continuation lines are parsed as json key/value pairs and added into
 rsyslog's message json representation.
 
-**Configuration Parameters**:
 
-Note: parameter names are case-insensitive.
+Configuration Parameters
+========================
+
+.. note::
+
+   Parameter names are case-insensitive.
+
 
 This module has no configuration directives.
 
-**Caveats/Known Bugs:**
+
+Caveats/Known Bugs:
+===================
 
 This module can't be used together with imklog module. When using one of
 them, make sure the other one is not enabled.
@@ -34,12 +45,17 @@ them, make sure the other one is not enabled.
 This is Linux specific module and requires /dev/kmsg device with
 structured kernel logs.
 
-**Sample:**
+
+Examples
+========
 
 The following sample pulls messages from the /dev/kmsg log device. All
 parameters are left by default, which is usually a good idea. Please
 note that loading the plugin is sufficient to activate it. No directive
 is needed to start pulling messages.
 
-$ModLoad imkmsg
+.. code-block:: none
+
+   $ModLoad imkmsg
+
 

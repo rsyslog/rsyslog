@@ -77,7 +77,7 @@ The following parameters can be set:
   *processInternalMessages* is set to "off". Otherwise it is silently
   ignored.
 
-- **shutdown.enable.ctl-c**
+- **shutdown.enable.ctlc**
 
   If set to "on", rsyslogd can be terminated by pressing ctl-c. This is
   most useful for containers. If set to "off" (the default), this is not
@@ -168,32 +168,25 @@ The following parameters can be set:
   It is highly suggested to change this setting to "off" only if you
   know exactly why you are doing this.
 
-- **parser.permitSlashInHostname** [on/off] available in 8.25.0+
-
-  **Default:** off
-
-  This controls whether slashes in the "programname" property are
-  permitted or not. This property bases on a BSD concept, and by
-  BSD syslogd sources, slashes are NOT permitted inside the program
-  name. However, some Linux tools (including most importantly the
-  journal) store slashes as part of the program name inside the
-  syslogtag. In those cases, the programname is truncated at the
-  first slash. If this setting is changed to "on", slashes are
-  permitted and will not terminate programname parsing.
-
 - **parser.permitSlashInProgramName** [on/off] available in 8.25.0+
 
   **Default:** off
 
-  This controls whether slashes in the static part of the tag are
-  permitted or not. If this setting is off, a value of
-  "app/foo[1234]" in the tag will result in a programname of "app".
-  If an application stores an absolute path name like
-  "/app/foo[1234]", the programname property will become empty ("").
-  If you need to actually store slashes as part of the programname,
-  this setting should be changed to "on" to permit this. Then, a
-  syslogtag of "/app/foo[1234]" will result in programname being
-  "/app/foo".
+  This controls whether slashes in the "programname" property
+  (the static part of the tag) are permitted or not. By default
+  this is not permitted, but some Linux tools (including most
+  importantly the journal) store slashes as part of the program
+  name inside the syslogtag. In those cases, the ``programname``
+  is truncated at the first slash.
+
+  In other words, if the setting is off, a value of ``app/foo[1234]``
+  in the tag will result in a programname of ``app``, and if an
+  application stores an absolute path name like ``/app/foo[1234]``,
+  the ``programname`` property will be empty ("").
+  If set to ``on``, a syslogtag of ``/app/foo[1234]`` will result
+  in a ``programname`` value of ``/app/foo`` and a syslogtag of
+  ``app/foo[1234]`` will result in a ``programname`` value of
+  ``app/foo``.
 
 - **senders.keepTrack** [on/off] available 8.17.0+
 

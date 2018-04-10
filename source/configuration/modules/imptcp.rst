@@ -1,5 +1,15 @@
+************************
 imptcp: Plain TCP Syslog
-========================
+************************
+
+===========================  ===========================================================================
+**Module Name:**             **imptcp**
+**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+===========================  ===========================================================================
+
+
+Purpose
+=======
 
 Provides the ability to receive syslog messages via plain TCP syslog.
 This is a specialised input plugin tailored for high performance on
@@ -10,295 +20,532 @@ provide TLS services. Encryption can be provided by using
 This module has no limit on the number of listeners and sessions that
 can be used.
 
-**Author:** Rainer Gerhards <rgerhards@adiscon.com>
 
-Error Messages
---------------
+Notable Features
+================
 
-When a message is to long it will be truncated and an error will show the remaining length of the message and the beginning of it. It will be easier to comprehend the truncation.
+- :ref:`imptcp-statistic-counter`
+- :ref:`error-messages`
 
-Configuration Directives
-------------------------
+
+Configuration Parameters
+========================
 
 This plugin has config directives similar named as imtcp, but they all
 have **P**\ TCP in their name instead of just TCP. Note that only a
 subset of the parameters are supported.
 
+.. note::
+
+   Parameter names are case-insensitive.
+
+
 Module Parameters
-^^^^^^^^^^^^^^^^^
+-----------------
 
-Note: parameter names are case-insensitive.
+Threads
+^^^^^^^
 
-These parameters can be used with the "module()" statement. They apply
-globaly to all inputs defined by the module.
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-.. function:: Threads <number>
+   "integer", "2", "no", "``$InputPTCPServerHelperThreads``"
 
-   Number of helper worker threads to process incoming messages. These
-   threads are utilized to pull data off the network. On a busy system,
-   additional helper threads (but not more than there are CPUs/Cores)
-   can help improving performance. The default value is two, which means
-   there is a default thread count of three (the main input thread plus
-   two helpers). No more than 16 threads can be set (if tried to,
-   rsyslog always resorts to 16).
+Number of helper worker threads to process incoming messages. These
+threads are utilized to pull data off the network. On a busy system,
+additional helper threads (but not more than there are CPUs/Cores)
+can help improving performance. The default value is two, which means
+there is a default thread count of three (the main input thread plus
+two helpers). No more than 16 threads can be set (if tried to,
+rsyslog always resorts to 16).
 
-.. function:: processOnPoller on/off
 
-   *Defaults to on*
+ProcessOnPoller
+^^^^^^^^^^^^^^^
 
-   Instructs imptcp to process messages on poller thread opportunistically.
-   This leads to lower resource footprint(as poller thread doubles up as
-   message-processing thread too). "On" works best when imptcp is handling
-   low ingestion rates.
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-   At high throughput though, it causes polling delay(as poller spends time
-   processing messages, which keeps connections in read-ready state longer
-   than they need to be, filling socket-buffer, hence eventually applying
-   backpressure).
+   "binary", "on", "no", "none"
 
-   It defaults to allowing messages to be processed on poller (for backward
-   compatibility).
+Instructs imptcp to process messages on poller thread opportunistically.
+This leads to lower resource footprint(as poller thread doubles up as
+message-processing thread too). "On" works best when imptcp is handling
+low ingestion rates.
+
+At high throughput though, it causes polling delay(as poller spends time
+processing messages, which keeps connections in read-ready state longer
+than they need to be, filling socket-buffer, hence eventually applying
+backpressure).
+
+It defaults to allowing messages to be processed on poller (for backward
+compatibility).
+
 
 Input Parameters
-^^^^^^^^^^^^^^^^
-
-Note: parameter names are case-insensitive.
+----------------
 
 These parameters can be used with the "input()" statement. They apply to
 the input they are specified with.
 
-.. function:: port <number>
 
-   *Mandatory*
+Port
+^^^^
 
-   Select a port to listen on. It is an error to specify
-   both `path` and `port`.
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-.. function:: path <name>
+   "string", "none", "no", "``$InputPTCPServerRun``"
 
-   A path on the filesystem for a unix domain socket. It is an error to specify
-   both `path` and `port`.
+Select a port to listen on. It is an error to specify
+both `path` and `port`.
 
-.. function:: discardTruncatedMsg <on/off>
 
-   *Default: off*
+Path
+^^^^
 
-   When a message is split because it is to long the second part is normally
-   processed as the next message. This can cause Problems. When this parameter
-   is turned on the part of the message after the truncation will be discarded.
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-.. function::  fileOwner [userName]
+   "string", "none", "no", "none"
 
-   *Default: system default*
+A path on the filesystem for a unix domain socket. It is an error to specify
+both `path` and `port`.
 
-   Set the file owner for the domain socket. The
-   parameter is a user name, for which the userid is obtained by
-   rsyslogd during startup processing. Interim changes to the user
-   mapping are *not* detected.
 
-.. function::  fileOwnerNum [uid]
+DiscardTruncatedMsg
+^^^^^^^^^^^^^^^^^^^
 
-   *Default: system default*
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-   Set the file owner for the domain socket. The
-   parameter is a numerical ID, which which is used regardless of
-   whether the user actually exists. This can be useful if the user
-   mapping is not available to rsyslog during startup.
+   "binary", "off", "no", "none"
 
-.. function::  fileGroup [groupName]
+When a message is split because it is to long the second part is normally
+processed as the next message. This can cause Problems. When this parameter
+is turned on the part of the message after the truncation will be discarded.
 
-   *Default: system default*
+FileOwner
+^^^^^^^^^
 
-   Set the group for the domain socket. The parameter is
-   a group name, for which the groupid is obtained by rsyslogd during
-   startup processing. Interim changes to the user mapping are not
-   detected.
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-.. function::  fileGroupNum [gid]
+   "UID", "system default", "no", "none"
 
-   *Default: system default*
+Set the file owner for the domain socket. The
+parameter is a user name, for which the userid is obtained by
+rsyslogd during startup processing. Interim changes to the user
+mapping are *not* detected.
 
-   Set the group for the domain socket. The parameter is
-   a numerical ID, which is used regardless of whether the group
-   actually exists. This can be useful if the group mapping is not
-   available to rsyslog during startup.
 
-.. function::  fileCreateMode [octalNumber]
+FileOwnerNum
+^^^^^^^^^^^^
 
-   *Default: 0644*
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-   Set the access permissions for the domain socket. The value given must
-   always be a 4-digit octal number, with the initial digit being zero.
-   Please note that the actual permission depend on rsyslogd's process
-   umask. If in doubt, use "$umask 0000" right at the beginning of the
-   configuration file to remove any restrictions.
+   "integer", "system default", "no", "none"
 
-.. function::  failOnChOwnFailure [switch]
+Set the file owner for the domain socket. The
+parameter is a numerical ID, which which is used regardless of
+whether the user actually exists. This can be useful if the user
+mapping is not available to rsyslog during startup.
 
-   *Default: on*
 
-   rsyslog will not start if this is on and changing the file owner, group,
-   or access permissions fails. Disable this to ignore these errors.
+FileGroup
+^^^^^^^^^
 
-.. function:: unlink on/off
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-   *Default: off*
+   "GID", "system default", "no", "none"
 
-   If a unix domain socket is being used this controls whether or not the socket
-   is unlinked before listening and after closing.
+Set the group for the domain socket. The parameter is
+a group name, for which the groupid is obtained by rsyslogd during
+startup processing. Interim changes to the user mapping are not
+detected.
 
-.. function:: name <name>
 
-   Sets a name for the inputname property. If no name is set "imptcp"
-   is used by default. Setting a name is not strictly necessary, but can
-   be useful to apply filtering based on which input the message was
-   received from. Note that the name also shows up in
-   :doc:`impstats <impstats>` logs.
+FileGroupNum
+^^^^^^^^^^^^
 
-.. function:: ruleset <name>
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-   Binds specified ruleset to this input. If not set, the default
-   ruleset is bound.
+   "integer", "system default", "no", "none"
 
-.. function:: maxFrameSize <int>
+Set the group for the domain socket. The parameter is
+a numerical ID, which is used regardless of whether the group
+actually exists. This can be useful if the group mapping is not
+available to rsyslog during startup.
 
-   *Default: 200000; Max: 200000000*
 
-   When in octet counted mode, the frame size is given at the beginning
-   of the message. With this parameter the max size this frame can have
-   is specified and when the frame gets to large the mode is switched to
-   octet stuffing.
-   The max value this parameter can have was specified because otherwise
-   the integer could become negative and this would result in a
-   Segmentation Fault.
+FileCreateMode
+^^^^^^^^^^^^^^
 
-.. function:: address <name>
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-   *Default: all interfaces*
+   "octalNumber", "0644", "no", "none"
 
-   On multi-homed machines, specifies to which local address the
-   listerner should be bound.
+Set the access permissions for the domain socket. The value given must
+always be a 4-digit octal number, with the initial digit being zero.
+Please note that the actual permission depend on rsyslogd's process
+umask. If in doubt, use "$umask 0000" right at the beginning of the
+configuration file to remove any restrictions.
 
-.. function:: AddtlFrameDelimiter <Delimiter>
 
-   This directive permits to specify an additional frame delimiter for
-   plain tcp syslog. The industry-standard specifies using the LF
-   character as frame delimiter. Some vendors, notable Juniper in their
-   NetScreen products, use an invalid frame delimiter, in Juniper's case
-   the NUL character. This directive permits to specify the ASCII value
-   of the delimiter in question. Please note that this does not
-   guarantee that all wrong implementations can be cured with this
-   directive. It is not even a sure fix with all versions of NetScreen,
-   as I suggest the NUL character is the effect of a (common) coding
-   error and thus will probably go away at some time in the future. But
-   for the time being, the value 0 can probably be used to make rsyslog
-   handle NetScreen's invalid syslog/tcp framing. For additional
-   information, see this `forum
-   thread <http://kb.monitorware.com/problem-with-netscreen-log-t1652.html>`_.
-   **If this doesn't work for you, please do not blame the rsyslog team.
-   Instead file a bug report with Juniper!**
+FailOnChOwnFailure
+^^^^^^^^^^^^^^^^^^
 
-   Note that a similar, but worse, issue exists with Cisco's IOS
-   implementation. They do not use any framing at all. This is confirmed
-   from Cisco's side, but there seems to be very limited interest in
-   fixing this issue. This directive **can not** fix the Cisco bug. That
-   would require much more code changes, which I was unable to do so
-   far. Full details can be found at the `Cisco tcp syslog
-   anomaly <http://www.rsyslog.com/Article321.phtml>`_ page.
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-.. function:: SupportOctetCountedFraming on/off
+   "binary", "on", "no", "none"
 
-   *Defaults to "on"*
+Rsyslog will not start if this is on and changing the file owner, group,
+or access permissions fails. Disable this to ignore these errors.
 
-   The legacy octed-counted framing (similar to RFC5425
-   framing) is activated. This is the default and should be left
-   unchanged until you know very well what you do. It may be useful to
-   turn it off, if you know this framing is not used and some senders
-   emit multi-line messages into the message stream.
 
-.. function:: NotifyOnConnectionClose on/off
+Unlink
+^^^^^^
 
-   *Defaults to off*
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-   instructs imptcp to emit a message if a remote peer closes the
-   connection.
+   "binary", "off", "no", "none"
 
-.. function:: NotifyOnConnectionOpen on/off
+If a unix domain socket is being used this controls whether or not the socket
+is unlinked before listening and after closing.
 
-   *Defaults to off*
 
-   instructs imptcp to emit a message if a remote peer opens a
-   connection. Hostname of the remote peer is given in the message.
+Name
+^^^^
 
-.. function:: KeepAlive on/off
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-   *Defaults to off*
+   "string", "imptcp", "no", "``$InputPTCPServerInputName``"
 
-   enable of disable keep-alive packets at the tcp socket layer. The
-   default is to disable them.
+Sets a name for the inputname property. If no name is set "imptcp"
+is used by default. Setting a name is not strictly necessary, but can
+be useful to apply filtering based on which input the message was
+received from. Note that the name also shows up in
+:doc:`impstats <impstats>` logs.
 
-.. function:: KeepAlive.Probes <number>
 
-   The number of unacknowledged probes to send before considering the
-   connection dead and notifying the application layer. The default, 0,
-   means that the operating system defaults are used. This has only
-   effect if keep-alive is enabled. The functionality may not be
-   available on all platforms.
+Ruleset
+^^^^^^^
 
-.. function:: KeepAlive.Interval <number>
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-   The interval between subsequential keepalive probes, regardless of
-   what the connection has exchanged in the meantime. The default, 0,
-   means that the operating system defaults are used. This has only
-   effect if keep-alive is enabled. The functionality may not be
-   available on all platforms.
+   "string", "none", "no", "``$InputPTCPServerBindRuleset``"
 
-.. function:: KeepAlive.Time <number>
+Binds specified ruleset to this input. If not set, the default
+ruleset is bound.
 
-   The interval between the last data packet sent (simple ACKs are not
-   considered data) and the first keepalive probe; after the connection
-   is marked to need keepalive, this counter is not used any further.
-   The default, 0, means that the operating system defaults are used.
-   This has only effect if keep-alive is enabled. The functionality may
-   not be available on all platforms.
 
-.. function:: RateLimit.Interval [number]
+MaxFrameSize
+^^^^^^^^^^^^
 
-   *Default is 0, which turns off rate limiting*
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-   Specifies the rate-limiting interval in seconds. Set it to a number
-   of seconds (5 recommended) to activate rate-limiting.
+   "integer", "200000", "no", "none"
 
-.. function:: RateLimit.Burst [number]
+When in octet counted mode, the frame size is given at the beginning
+of the message. With this parameter the max size this frame can have
+is specified and when the frame gets to large the mode is switched to
+octet stuffing.
+The max value this parameter can have was specified because otherwise
+the integer could become negative and this would result in a
+Segmentation Fault. (Max Value: 200000000)
 
-   *Default is 10,000*
 
-   Specifies the rate-limiting burst in number of messages.
+Address
+^^^^^^^
 
-.. function:: compression.mode [mode]
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-   *Default is none*
+   "string", "none", "no", "``$InputPTCPServerListenIP``"
 
-   This is the counterpart to the compression modes set in
-   :doc:`omfwd <omfwd>`.
-   Please see it's documentation for details.
+On multi-homed machines, specifies to which local address the
+listerner should be bound.
 
-.. function:: flowControl <on/off>
 
-   *Default: on*
+AddtlFrameDelimiter
+^^^^^^^^^^^^^^^^^^^
 
-   Flow control is used to throttle the sender if the receiver queue is
-   near-full preserving some space for input that can not be throttled.
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-.. function:: multiLine <on/off>
+   "integer", "-1", "no", "``$InputPTCPServerAddtlFrameDelimiter``"
 
-   *Default: off*
+This directive permits to specify an additional frame delimiter for
+plain tcp syslog. The industry-standard specifies using the LF
+character as frame delimiter. Some vendors, notable Juniper in their
+NetScreen products, use an invalid frame delimiter, in Juniper's case
+the NUL character. This directive permits to specify the ASCII value
+of the delimiter in question. Please note that this does not
+guarantee that all wrong implementations can be cured with this
+directive. It is not even a sure fix with all versions of NetScreen,
+as I suggest the NUL character is the effect of a (common) coding
+error and thus will probably go away at some time in the future. But
+for the time being, the value 0 can probably be used to make rsyslog
+handle NetScreen's invalid syslog/tcp framing. For additional
+information, see this `forum
+thread <http://kb.monitorware.com/problem-with-netscreen-log-t1652.html>`_.
+**If this doesn't work for you, please do not blame the rsyslog team.
+Instead file a bug report with Juniper!**
 
-   Experimental parameter which caues rsyslog to recognise a new message
-   only if the line feed is followed by a '<' or if there are no more characters.
+Note that a similar, but worse, issue exists with Cisco's IOS
+implementation. They do not use any framing at all. This is confirmed
+from Cisco's side, but there seems to be very limited interest in
+fixing this issue. This directive **can not** fix the Cisco bug. That
+would require much more code changes, which I was unable to do so
+far. Full details can be found at the `Cisco tcp syslog
+anomaly <http://www.rsyslog.com/Article321.phtml>`_ page.
+
+
+SupportOctetCountetFraming
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "on", "no", "``$InputPTCPSupportOctetCountedFraming``"
+
+The legacy octed-counted framing (similar to RFC5425
+framing) is activated. This is the default and should be left
+unchanged until you know very well what you do. It may be useful to
+turn it off, if you know this framing is not used and some senders
+emit multi-line messages into the message stream.
+
+
+NotifyOnConnectionClose
+^^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "``$InputPTCPServerNotifyOnConnectionClose``"
+
+instructs imptcp to emit a message if a remote peer closes the
+connection.
+
+
+NotifyOnConnectionOpen
+^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+Instructs imptcp to emit a message if a remote peer opens a
+connection. Hostname of the remote peer is given in the message.
+
+
+KeepAlive
+^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "``$InputPTCPServerKeepAlive``"
+
+Enable of disable keep-alive packets at the tcp socket layer. The
+default is to disable them.
+
+
+KeepAlive.Probes
+^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "0", "no", "``$InputPTCPServerKeepAlive_probes``"
+
+The number of unacknowledged probes to send before considering the
+connection dead and notifying the application layer. The default, 0,
+means that the operating system defaults are used. This has only
+effect if keep-alive is enabled. The functionality may not be
+available on all platforms.
+
+
+KeepAlive.Interval
+^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "0", "no", "``$InputPTCPServerKeepAlive_intvl``"
+
+The interval between subsequential keepalive probes, regardless of
+what the connection has exchanged in the meantime. The default, 0,
+means that the operating system defaults are used. This has only
+effect if keep-alive is enabled. The functionality may not be
+available on all platforms.
+
+
+KeepAlive.Time
+^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "0", "no", "``$InputPTCPServerKeepAlive_time``"
+
+The interval between the last data packet sent (simple ACKs are not
+considered data) and the first keepalive probe; after the connection
+is marked to need keepalive, this counter is not used any further.
+The default, 0, means that the operating system defaults are used.
+This has only effect if keep-alive is enabled. The functionality may
+not be available on all platforms.
+
+
+RateLimit.Interval
+^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "0", "no", "none"
+
+Specifies the rate-limiting interval in seconds. Set it to a number
+of seconds (5 recommended) to activate rate-limiting.
+
+
+RateLimit.Burst
+^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "10000", "no", "none"
+
+Specifies the rate-limiting burst in number of messages.
+
+
+Compression.mode
+^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+This is the counterpart to the compression modes set in
+:doc:`omfwd <omfwd>`.
+Please see it's documentation for details.
+
+
+flowControl
+^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "on", "no", "none"
+
+Flow control is used to throttle the sender if the receiver queue is
+near-full preserving some space for input that can not be throttled.
+
+
+MultiLine
+^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+Experimental parameter which caues rsyslog to recognise a new message
+only if the line feed is followed by a '<' or if there are no more characters.
+
+
+SocketBacklog
+^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "5", "no", "none"
+
+Specifies the backlog parameter sent to the listen() function.
+It defines the maximum length to which the queue of pending connections may grow.
+See man page of listen(2) for more information.
+The parameter controls both TCP and UNIX sockets backlog parameter.
+Default value is arbitrary set to 5.
+
+
+.. _imptcp-statistic-counter:
 
 Statistic Counter
------------------
+=================
 
 This plugin maintains :doc:`statistics <../rsyslog_statistic_counter>` for each listener. The statistic is
 named "imtcp" , followed by the bound address, listener port and IP
@@ -310,99 +557,55 @@ The following properties are maintained for each listener:
 
 -  **submitted** - total number of messages submitted for processing since startup
 
+
+.. _error-messages:
+
+Error Messages
+==============
+
+When a message is to long it will be truncated and an error will show the remaining length of the message and the beginning of it. It will be easier to comprehend the truncation.
+
+
 Caveats/Known Bugs
-------------------
+==================
 
 -  module always binds to all interfaces
 
-Example
--------
+
+Examples
+========
+
+Example 1
+---------
 
 This sets up a TCP server on port 514:
 
-::
+.. code-block:: none
 
-  module(load="imptcp") # needs to be done just once
-  input(type="imptcp" port="514")
+   module(load="imptcp") # needs to be done just once
+   input(type="imptcp" port="514")
+
+
+Example 2
+---------
 
 This creates a listener that listens on the local loopback
 interface, only.
 
-::
+.. code-block:: none
 
-  module(load="imptcp") # needs to be done just once
-  input(type="imptcp" port="514" address="127.0.0.1")
+   module(load="imptcp") # needs to be done just once
+   input(type="imptcp" port="514" address="127.0.0.1")
+
+
+Example 3
+---------
 
 Create a unix domain socket:
 
-::
+.. code-block:: none
 
-  module(load="imptcp") # needs to be done just once
-  input(type="imptcp" path="/tmp/unix.sock" unlink="on")
+   module(load="imptcp") # needs to be done just once
+   input(type="imptcp" path="/tmp/unix.sock" unlink="on")
 
-Legacy Configuration Directives
--------------------------------
-
-.. function:: $InputPTCPServerAddtlFrameDelimiter <Delimiter>
-
-   Equivalent to: AddTLFrameDelimiter
-
-.. function:: $InputPTCPSupportOctetCountedFraming on/off
-
-   Equivalent to: SupportOctetCountedFraming
-
-.. function:: $InputPTCPServerNotifyOnConnectionClose on/off
-
-   Equivalent to: NotifyOnConnectionClose.
-
-.. function:: $InputPTCPServerKeepAlive <on/**off**>
-
-   Equivalent to: KeepAlive
-
-.. function:: $InputPTCPServerKeepAlive\_probes <number>
-
-   Equivalent to: KeepAlive.Probes
-
-.. function:: $InputPTCPServerKeepAlive\_intvl <number>
-
-   Equivalent to: KeepAlive.Interval
-
-.. function:: $InputPTCPServerKeepAlive\_time <number>
-
-   Equivalent to: KeepAlive.Time
-
-.. function:: $InputPTCPServerRun <port>
-
-   Equivalent to: Port
-
-.. function:: $InputPTCPServerInputName <name>
-
-   Equivalent to: Name
-
-.. function:: $InputPTCPServerBindRuleset <name>
-
-   Equivalent to: Ruleset
-
-.. function:: $InputPTCPServerHelperThreads <number>
-
-   Equivalent to: threads
-
-.. function:: $InputPTCPServerListenIP <name>
-
-   Equivalent to: Address
-
-Caveats/Known Bugs
-------------------
-
--  module always binds to all interfaces
-
-Example
---------
-
-This sets up a TCP server on port 514:
-
-::
-
-  $ModLoad imptcp # needs to be done just once
-  $InputPTCPServerRun 514
 
