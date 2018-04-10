@@ -5071,7 +5071,6 @@ addMod2List(const int __attribute__((unused)) version, struct scriptFunct *funct
 				functArray[i].fname);
 		}
 	i++;
-	dbgprintf("TTTTTTT: i: %d, name: %s\n", i, functArray[i-1].fname);
 	}
 	newNode->modFcts = functArray;
 

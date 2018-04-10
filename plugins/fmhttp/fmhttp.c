@@ -164,7 +164,6 @@ static struct scriptFunct functions[] = {
 
 BEGINgetFunctArray
 CODESTARTgetFunctArray
-	dbgprintf("TTTTTT: fmhttp\n");
 	*version = 1;
 	*functArray = functions;
 ENDgetFunctArray
