@@ -804,7 +804,6 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			CHKiRet(strgen.ConstructFinalize(pStrgen));
 			break;
 		case eMOD_FUNCTION:
-			dbgprintf("TTTTTT: load function module\n");
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"getFunctArray", &pNew->mod.fm.getFunctArray));
 			int version;
 			struct scriptFunct *functArray;
