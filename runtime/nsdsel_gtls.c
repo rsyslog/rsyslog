@@ -41,7 +41,6 @@
 
 /* static data */
 DEFobjStaticHelpers
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(nsdsel_ptcp)
 
@@ -175,7 +174,7 @@ doRetry(nsd_gtls_t *pNsd)
 		pNsd->rtryCall = gtlsRtry_None; /* we are done */
 	} else if(gnuRet != GNUTLS_E_AGAIN && gnuRet != GNUTLS_E_INTERRUPTED) {
 		uchar *pErr = gtlsStrerror(gnuRet);
-		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n",
+		LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n",
 		gnuRet, __FILE__, __LINE__, pErr); \
 		free(pErr);
 		pNsd->rtryCall = gtlsRtry_None; /* we are also done... ;) */
@@ -275,7 +274,6 @@ BEGINObjClassExit(nsdsel_gtls, OBJ_IS_CORE_MODULE) /* CHANGE class also in END M
 CODESTARTObjClassExit(nsdsel_gtls)
 	/* release objects we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(nsdsel_ptcp, LM_NSD_PTCP_FILENAME);
 ENDObjClassExit(nsdsel_gtls)
 
@@ -286,7 +284,6 @@ ENDObjClassExit(nsdsel_gtls)
  */
 BEGINObjClassInit(nsdsel_gtls, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(nsdsel_ptcp, LM_NSD_PTCP_FILENAME));
 
