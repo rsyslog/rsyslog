@@ -82,7 +82,6 @@ MODULE_CNFNAME("omusrmsg")
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 
 typedef struct _instanceData {
 	int bIsWall; /* 1- is wall, 0 - individual users */
@@ -171,7 +170,7 @@ void setutent(void)
 {
 	assert(BSD_uf == NULL);
 	if ((BSD_uf = fopen(_PATH_UTMP, "r")) == NULL) {
-		errmsg.LogError(errno, NO_ERRCODE, "error opening utmp %s", _PATH_UTMP);
+		LogError(errno, NO_ERRCODE, "error opening utmp %s", _PATH_UTMP);
 		return;
 	}
 }
@@ -319,14 +318,14 @@ populateUsers(instanceData *pData, es_str_t *usrs)
 		pData->uname[i][iDst] = '\0';
 		DBGPRINTF("omusrmsg: send to user '%s'\n", pData->uname[i]);
 		if(iUsr < len && c[iUsr] != ',') {
-			errmsg.LogError(0, RS_RET_ERR, "user name '%s...' too long - "
+			LogError(0, RS_RET_ERR, "user name '%s...' too long - "
 				"ignored", pData->uname[i]);
 			--i;
 			++iUsr;
 			while(iUsr < len && c[iUsr] != ',')
 				++iUsr; /* skip to next name */
 		} else if(iDst == 0) {
-			errmsg.LogError(0, RS_RET_ERR, "no user name given - "
+			LogError(0, RS_RET_ERR, "no user name given - "
 				"ignored");
 			--i;
 			++iUsr;
@@ -340,7 +339,7 @@ populateUsers(instanceData *pData, es_str_t *usrs)
 		}
 	}
 	if(i == MAXUNAMES && iUsr != len) {
-		errmsg.LogError(0, RS_RET_ERR, "omusrmsg supports only up to %d "
+		LogError(0, RS_RET_ERR, "omusrmsg supports only up to %d "
 			"user names in a single action - all others have been ignored",
 			MAXUNAMES);
 	}
@@ -410,7 +409,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	   || (*p >= '0' && *p <= '9') || *p == '_' || *p == '.' || *p == '*')) {
 			ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 		} else {
-			errmsg.LogMsg(0, RS_RET_OUTDATED_STMT, LOG_WARNING,
+			LogMsg(0, RS_RET_OUTDATED_STMT, LOG_WARNING,
 				"action '%s' treated as ':omusrmsg:%s' - please "
 				"use ':omusrmsg:%s' syntax instead, '%s' will "
 				"not be supported in the future",
@@ -463,7 +462,6 @@ CODESTARTmodInit
 INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDmodInit
 
 /* vim:set ai:
