@@ -9,6 +9,11 @@ Version 8.35.0 [v8-stable] 2018-05-15
   closes https://github.com/rsyslog/rsyslog/issues/2417
 - fix build issues when atomic operations are not present
   for details, see https://github.com/rsyslog/rsyslog/pull/2604
+- lmsig_ksils12 bugfix: build and static analyzer issues
+  The module had a couple of problems building as well as some potential
+  errors detected by clang static analyzer. These have been fixed.
+  Thanks to Allan Park for the patch.
+  closes https://github.com/rsyslog/rsyslog/issues/2517
 - build system bugfix: --enable-atomic-operations did not work
   closes https://github.com/rsyslog/rsyslog/pull/2604
 - CI
