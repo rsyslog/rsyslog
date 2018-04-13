@@ -206,6 +206,7 @@ void *worker_thread_main(void *arg) {
 	WorkerThreadContext* tc = (WorkerThreadContext*) arg;
 
 	while (1) {
+		item = NULL;
 		res = ProtectedQueue_waitForItem(tc->queue, &item, tc->timeout);
 		if (tc->queue->bStop)
 			return NULL;
