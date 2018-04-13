@@ -38,7 +38,6 @@ MODULE_TYPE_NOKEEP
 
 /* static data */
 DEFobjStaticHelpers
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 
 /* tables for interfacing with the v6 config system */
@@ -77,14 +76,14 @@ static struct cnfparamblk pblk =
 static void
 errfunc(__attribute__((unused)) void *usrptr, uchar *emsg)
 {
-	errmsg.LogError(0, RS_RET_SIGPROV_ERR, "KSI Signature Provider"
+	LogError(0, RS_RET_SIGPROV_ERR, "KSI Signature Provider"
 		"Error: %s", emsg);
 }
 
 static void
 logfunc(__attribute__((unused)) void *usrptr, uchar *emsg)
 {
-	errmsg.LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO,
+	LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO,
 		"KSI/LS12 Signature Provider: %s", emsg);
 }
 
@@ -107,7 +106,7 @@ ENDobjDestruct(lmsig_ksi_ls12)
 #define REPORT_PARAM_MISSING(param) \
 	do { \
 		pThis->ctx->disabled = true; \
-		errmsg.LogError(0, RS_RET_ERR, "%s missing - signing disabled", param); \
+		LogError(0, RS_RET_ERR, "%s missing - signing disabled", param); \
 		/* TODO: ABORT_FINALIZE actually is useless because the return value is not checked by the caller*/ \
 		ABORT_FINALIZE(RS_RET_KSI_ERR); \
 	} while(0)
@@ -130,7 +129,7 @@ SetCnfParam(void *pT, struct nvlst *lst)
 	DEFiRet;
 	pvals = nvlstGetParams(lst, &pblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_ERR, "Failed to load configuration - signing disabled");
+		LogError(0, RS_RET_ERR, "Failed to load configuration - signing disabled");
 		pThis->ctx->disabled=true;
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -154,7 +153,7 @@ SetCnfParam(void *pT, struct nvlst *lst)
 			hmac = (char*) es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if (!strcmp(pblk.descr[i].name, "sig.block.levelLimit")) {
 			if (pvals[i].val.d.n < 2) {
-				errmsg.LogError(0, RS_RET_ERR, "sig.block.levelLimit "
+				LogError(0, RS_RET_ERR, "sig.block.levelLimit "
 					"%llu invalid - signing disabled", pvals[i].val.d.n);
 				pThis->ctx->disabled = true;
 			} else {
@@ -162,7 +161,7 @@ SetCnfParam(void *pT, struct nvlst *lst)
 			}
 		} else if (!strcmp(pblk.descr[i].name, "sig.block.timeLimit")) {
 			if (pvals[i].val.d.n < 0) {
-				errmsg.LogError(0, RS_RET_ERR, "sig.block.timeLimit "
+				LogError(0, RS_RET_ERR, "sig.block.timeLimit "
 					"%llu invalid - signing disabled", pvals[i].val.d.n);
 				pThis->ctx->disabled = true;
 			} else {
@@ -176,7 +175,7 @@ SetCnfParam(void *pT, struct nvlst *lst)
 			cstr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
 			if (!strcasecmp((char*) cstr, "sync")) rsksiSetSyncMode(pThis->ctx, LOGSIG_SYNCHRONOUS);
 			else if (!strcasecmp((char*) cstr, "async")) rsksiSetSyncMode(pThis->ctx, LOGSIG_ASYNCHRONOUS);
-			else errmsg.LogError(0, RS_RET_ERR, "sig.syncmode '%s' unknown - using default", cstr);
+			else LogError(0, RS_RET_ERR, "sig.syncmode '%s' unknown - using default", cstr);
 			free(cstr);
 		} else if (!strcmp(pblk.descr[i].name, "sig.randomsource")) {
 			cstr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
@@ -288,14 +287,12 @@ ENDobjQueryInterface(lmsig_ksi_ls12)
 BEGINObjClassExit(lmsig_ksi_ls12, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
 CODESTARTObjClassExit(lmsig_ksi_ls12)
 	/* release objects we no longer need */
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 ENDObjClassExit(lmsig_ksi_ls12)
 
 
 BEGINObjClassInit(lmsig_ksi_ls12, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
 	/* request objects we use */
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 ENDObjClassInit(lmsig_ksi_ls12)
 
