@@ -603,7 +603,7 @@ done:	return;
 }
 #else
 static void ATTR_NONNULL()
-fen_setupWatch(act_obj_t *const __attribute__((unused)) act)
+fen_setupWatch(act_obj_t *const act __attribute__((unused)))
 {
 	DBGPRINTF("fen_setupWatch: DUMMY CALLED - not on Solaris?");
 }

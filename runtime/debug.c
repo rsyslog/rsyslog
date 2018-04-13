@@ -307,7 +307,7 @@ dbgFuncDBRemoveMutexLock(dbgFuncDB_t *pFuncDB, pthread_mutex_t *pmut)
  * (what "relevant" means is determinded by various ways)
  */
 void
-dbgOutputTID(char* name)
+dbgOutputTID(char* name __attribute__((unused)))
 {
 #	if defined(HAVE_SYSCALL) && defined(HAVE_SYS_gettid)
 	if(bOutputTidToStderr)

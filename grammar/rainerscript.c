@@ -1668,7 +1668,7 @@ static void
 doFunc_exec_template(struct cnffunc *__restrict__ const func,
 	struct svar *__restrict__ const ret,
 	void *const usrptr,
-	wti_t *const __attribute__((unused)) pWti)
+	wti_t *const pWti __attribute__((unused)))
 {
 	smsg_t *const pMsg = (smsg_t*) usrptr;
 	rsRetVal localRet;
@@ -2314,7 +2314,7 @@ static void ATTR_NONNULL()
 doFunct_Prifilt(struct cnffunc *__restrict__ const func,
 	struct svar *__restrict__ const ret,
 	void *__restrict__ const usrptr,
-	wti_t *const __attribute__((unused)) pWti)
+	wti_t *const pWti __attribute__((unused)))
 {
 	struct funcData_prifilt *pPrifilt;
 
@@ -2631,9 +2631,9 @@ doFunct_IsTime(struct cnffunc *__restrict__ const func,
 }
 
 static void ATTR_NONNULL()
-doFunct_ScriptError(struct cnffunc *const __attribute__((unused)) func,
+doFunct_ScriptError(struct cnffunc *const func __attribute__((unused)),
 	struct svar *__restrict__ const ret,
-	void *const __attribute__((unused)) usrptr,
+	void *const usrptr __attribute__((unused)),
 	wti_t *__restrict__ const pWti)
 {
 	ret->datatype = 'N';
@@ -2642,9 +2642,9 @@ doFunct_ScriptError(struct cnffunc *const __attribute__((unused)) func,
 }
 
 static void ATTR_NONNULL()
-doFunct_PreviousActionSuspended(struct cnffunc *const __attribute__((unused)) func,
+doFunct_PreviousActionSuspended(struct cnffunc *const func __attribute__((unused)),
 	struct svar *__restrict__ const ret,
-	void *const __attribute__((unused)) usrptr,
+	void *const usrptr __attribute__((unused)),
 	wti_t *__restrict__ const pWti)
 {
 	ret->datatype = 'N';

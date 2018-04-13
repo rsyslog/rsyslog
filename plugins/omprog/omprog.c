@@ -449,7 +449,7 @@ doForceKillSubprocess(subprocess_timeout_desc_t *subpTimeOut, int do_kill, pid_t
 #endif
 
 static void
-waitForChild(wrkrInstanceData_t *pWrkrData, const long timeout_ms)
+waitForChild(wrkrInstanceData_t *pWrkrData, const long timeout_ms __attribute__((unused)))
 {
 	int status;
 	int ret;

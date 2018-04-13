@@ -7,7 +7,7 @@
  * are very small, and so we use a single driver for both OS's with
  * a little help of conditional compilation.
  *
- * Copyright 2008-2015 Adiscon GmbH
+ * Copyright 2008-2018 Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -285,7 +285,8 @@ readklog(modConfData_t *pModConf)
 /* to be called in the module's AfterRun entry point
  * rgerhards, 2008-04-09
  */
-rsRetVal klogAfterRun(modConfData_t *pModConf)
+rsRetVal ATTR_NONNULL()
+klogAfterRun(modConfData_t *const pModConf __attribute__((unused)))
 {
         DEFiRet;
 	if(fklog != -1)

@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * Copyright 2007-2016 Adiscon GmbH.
+ * Copyright 2007-2018 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -777,7 +777,7 @@ finalize_it:
 /* change to network namespace pData->networkNamespace and keep the file
  * descriptor to the original namespace.
  */
-static rsRetVal changeToNs(instanceData *pData)
+static rsRetVal changeToNs(instanceData *const pData __attribute__((unused)))
 {
 	DEFiRet;
 #ifdef HAVE_SETNS
@@ -831,7 +831,7 @@ finalize_it:
 /* return to the original network namespace. This should be called after
  * changeToNs().
  */
-static rsRetVal returnToOriginalNs(instanceData *pData)
+static rsRetVal returnToOriginalNs(instanceData *const pData __attribute__((unused)))
 {
 	DEFiRet;
 #ifdef HAVE_SETNS
