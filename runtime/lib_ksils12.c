@@ -62,7 +62,6 @@
 #include "lib_ksils12.h"
 #include "lib_ksi_queue.h"
 
-typedef unsigned char uchar;
 #ifndef VERSION
 #define VERSION "no-version"
 #endif
@@ -488,6 +487,9 @@ ksiCloseSigFile(ksifile ksi) {
 
 static int mkpath(char* path, mode_t mode, uid_t uid, gid_t gid) {
 
+	if(path == NULL)
+		return 1;
+
 	for (char *p = strchr(path + 1, '/'); p; p = strchr(p + 1, '/')) {
 		*p = '\0';
 		if (mkdir(path, mode) == 0) {
@@ -515,6 +517,9 @@ ksiCreateFile(rsksictx ctx, const char *path, uid_t uid, gid_t gid, int mode, bo
 	struct stat stat_st;
 	FILE *f = NULL;
 	struct flock lock = {F_WRLCK, SEEK_SET, 0, 0, 0};
+
+	if(path ==NULL)
+		return NULL;
 
 	if (mkpath((char*) path, ctx->fDirCreateMode, ctx->dirUID, ctx->dirGID) != 0) {
 		report(ctx, "ksiCreateFile: mkpath failed for %s", path);
@@ -553,8 +558,13 @@ ksiCreateFile(rsksictx ctx, const char *path, uid_t uid, gid_t gid, int mode, bo
 		goto done;
 	}
 
-	if (stat_st.st_size == 0 && header != NULL)
-		fwrite(header, strlen(header), 1, f);
+	if (stat_st.st_size == 0 && header != NULL) {
+		if(fwrite(header, strlen(header), 1, f) != 1) {
+        	        report(ctx, "ksiOpenSigFile: fwrite for file %s failed: %s",
+				path, strerror(errno));
+	                goto done;
+		}
+	}
 
 done:
 	return f;
@@ -1239,6 +1249,9 @@ static void process_requests(rsksictx ctx, KSI_CTX *ksi_ctx, FILE* outfile) {
 	int r = KSI_OK;
 	KSI_Signature *sig = NULL;
 
+	if(ProtectedQueue_count(ctx->signer_queue) == 0)
+		return;
+
 	while (ProtectedQueue_peekFront(ctx->signer_queue, (void**) &item) && item->type == QITEM_SIGNATURE_REQUEST) {
 		if (lastItem != NULL) {
 			if (outfile)
@@ -1260,6 +1273,14 @@ static void process_requests(rsksictx ctx, KSI_CTX *ksi_ctx, FILE* outfile) {
 
 	if (!outfile)
 		goto signing_failed;
+
+	if(!lastItem || item->type != QITEM_SIGNATURE_REQUEST)
+		return;
+
+	if(lastItem->arg == NULL) {
+		r = KSI_INVALID_ARGUMENT;
+		goto signing_failed;
+	}
 
 	r = KSI_Signature_signAggregated(ksi_ctx, lastItem->arg, lastItem->intarg2, &sig);
 	if (r != KSI_OK) {

@@ -21,7 +21,7 @@ void RingBuffer_free(RingBuffer* this) {
 
 static bool RingBuffer_grow(RingBuffer* this) {
 	void **pTmp = calloc(this->size * RB_GROW_FACTOR, sizeof (void*));
-	void *pTmpItem;
+	void *pTmpItem = NULL;
 	if (!pTmp)
 		return false;
 
@@ -42,6 +42,9 @@ static bool RingBuffer_grow(RingBuffer* this) {
 bool RingBuffer_pushBack(RingBuffer* this, void* item) {
 
 	if (this->size == this->count && !RingBuffer_grow(this))
+		return false;
+
+	if(this->size == 0)
 		return false;
 
 	this->buffer[this->tail] = item;
@@ -203,6 +206,7 @@ void *worker_thread_main(void *arg) {
 	WorkerThreadContext* tc = (WorkerThreadContext*) arg;
 
 	while (1) {
+		item = NULL;
 		res = ProtectedQueue_waitForItem(tc->queue, &item, tc->timeout);
 		if (tc->queue->bStop)
 			return NULL;
@@ -210,7 +214,7 @@ void *worker_thread_main(void *arg) {
 		if (res == ETIMEDOUT) {
 			if (!tc->timeoutFunc())
 				return NULL;
-		} else if (!tc->workerFunc(item))
+		} else if (item != NULL && !tc->workerFunc(item))
 			return NULL;
 	}
 }
