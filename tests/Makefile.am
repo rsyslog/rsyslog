@@ -659,6 +659,8 @@ TESTS +=  \
 	imptcp-msg-truncation-on-number2.sh \
 	imptcp-maxFrameSize-parameter.sh \
 	mmjsonparse_cim.sh \
+	mmjsonparse_cim2.sh \
+	mmjsonparse_localvar.sh \
 	json_array_subscripting.sh \
 	json_array_looping.sh \
 	json_object_looping.sh \
@@ -1190,6 +1192,8 @@ EXTRA_DIST= \
 	testsuites/mmjsonparse_simple.conf \
 	mmjsonparse_cim.sh \
 	testsuites/mmjsonparse_cim.conf \
+	mmjsonparse_cim2.sh \
+	mmjsonparse_localvar.sh \
 	mmdb.sh \
 	mmdb.rb \
 	test.mmdb \
