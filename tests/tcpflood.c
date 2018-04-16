@@ -135,7 +135,7 @@ char *test_rs_strerror_r(int errnum, char *buf, size_t buflen) {
 #define NETTEST_INPUT_CONF_FILE "nettest.input.conf"
 /* name of input file, must match $IncludeConfig in .conf files */
 
-#define MAX_EXTRADATA_LEN 100*1024
+#define MAX_EXTRADATA_LEN 200*1024
 #define MAX_SENDBUF 2 * MAX_EXTRADATA_LEN
 
 static char *targetIP = "127.0.0.1";
