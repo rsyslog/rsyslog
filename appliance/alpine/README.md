@@ -41,13 +41,31 @@ Note: volumes are automatically populated with the default file upon creation.
   Keep in mind that the myconfig: volume is accessible via /config inside the
   container.
 
+- LOGSENE_TOKEN
+
+  Default: disabled
+
+  If you are using Sematext Logsene, set this to your Logsene token.
+
+- LOGSENE_URL
+
+  Default: disabled
+
+  If you are using Sematext Logsene, set this to the Logsene URL. Ex: logsene-receiver.sematext.com or logsene-receiver.eu.sematext.com
+
+- RSYSLOG_CONFIG_BASE64
+
+  Default: disabled
+
+  If you would like to overwite the `/etc/rsyslog.conf` file, _without_ mounting a configuration file into the container, you can use this variable. The contents are the base64 encoded `rsyslog.conf` file contents, without newlines. This can be generated with the following command: `cat rsyslog.conf | base64 | tr -d '\n'`. On startup, the contents of the environment variable will be decoded and overwrite the `/etc/rsyslog.conf` file.
+
 # Runtime Environment
 
 ## Volumes
 
 ### /config
 
-Holds the container configuration, also the recommaned place for overwriting
+Holds the container configuration, also the recommended place for overwriting
 the rsyslog configuration.
 
 This volume can be mounted read-only after initial population with sample files.
