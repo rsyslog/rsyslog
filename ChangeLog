@@ -5,6 +5,9 @@ Version 8.35.0 [v8-stable] 2018-05-15
   For a detailled discussion see https://github.com/rsyslog/rsyslog/pull/2561
   Thanks to Maxime Graff for implementing this.
 - omfile: do not permit filename that only consists of whitespace
+- fmhash: new hash function module
+  implements hash32() and hash64() functions
+  Thanks to Harshvardhan Shrivastava for implementing these
 - omfile bugfix: segfault if empty filename was given
   closes https://github.com/rsyslog/rsyslog/issues/2417
 - fix build issues when atomic operations are not present
