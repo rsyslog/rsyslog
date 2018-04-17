@@ -14,11 +14,20 @@ Version 8.35.0 [v8-stable] 2018-05-15
   errors detected by clang static analyzer. These have been fixed.
   Thanks to Allan Park for the patch.
   closes https://github.com/rsyslog/rsyslog/issues/2517
+- mmkubernetes bugfixes: fix lnrules, add defaults, add test
+  - Fix lnrules for CONTAINER_NAME
+  - Add pkg check for lognorm >= 2.0.3 so we can set the macro
+    to enable ln_loadSamplesFromString
+  - Add some reasonable default values for parameters, such as
+    kubernetesurl https://kubernetes.default.svc.cluster.local:443
+  - Clean up sample.conf configuration file
+  Thanks to Richard Megginson for the patch set.
 - build system bugfix: --enable-atomic-operations did not work
   closes https://github.com/rsyslog/rsyslog/pull/2604
 - QA/CI
   * enabled some additional useful compiler warnings
   * new tests for omfile
+  * added tests for mmkubernetes
   * added tests for some script functions that were missing them
   * made far more test compatible with FreeBSD, so that we now have fuller
     coverage there
