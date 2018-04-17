@@ -119,7 +119,6 @@ DEFobjCurrIf(prop)
 DEFobjCurrIf(parser)
 DEFobjCurrIf(ruleset)
 DEFobjCurrIf(net)
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(rsconf)
 DEFobjCurrIf(module)
 DEFobjCurrIf(datetime)
@@ -276,7 +275,7 @@ writePidFile(void)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	if(fprintf(fp, "%d", (int) glblGetOurPid()) < 0) {
-		errmsg.LogError(errno, iRet, "rsyslog: error writing pid file");
+		LogError(errno, iRet, "rsyslog: error writing pid file");
 	}
 	fclose(fp);
 	if(tmpPidFile != PidFile) {
@@ -591,8 +590,6 @@ rsyslogd_InitGlobalClasses(void)
 	/* Now tell the system which classes we need ourselfs */
 	pErrObj = "glbl";
 	CHKiRet(objUse(glbl,     CORE_COMPONENT));
-	pErrObj = "errmsg";
-	CHKiRet(objUse(errmsg,   CORE_COMPONENT));
 	pErrObj = "module";
 	CHKiRet(objUse(module,   CORE_COMPONENT));
 	pErrObj = "datetime";
@@ -730,7 +727,7 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
 	CHKiRet_Hdlr(qqueueConstruct(ppQueue, ourConf->globals.mainQ.MainMsgQueType,
 	ourConf->globals.mainQ.iMainMsgQueueNumWorkers, ourConf->globals.mainQ.iMainMsgQueueSize, msgConsumer)) {
 		/* no queue is fatal, we need to give up in that case... */
-		errmsg.LogError(0, iRet, "could not create (ruleset) main message queue"); \
+		LogError(0, iRet, "could not create (ruleset) main message queue"); \
 	}
 	/* name our main queue object (it's not fatal if it fails...) */
 	obj.SetName((obj_t*) (*ppQueue), pszQueueName);
@@ -739,12 +736,12 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
 		/* ... set some properties ... */
 	#	define setQPROP(func, directive, data) \
 		CHKiRet_Hdlr(func(*ppQueue, data)) { \
-			errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, " \
+			LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, " \
 			"running with default setting", iRet); \
 		}
 	#	define setQPROPstr(func, directive, data) \
 		CHKiRet_Hdlr(func(*ppQueue, data, (data == NULL)? 0 : strlen((char*) data))) { \
-			errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, " \
+			LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, " \
 			"running with default setting", iRet); \
 		}
 
@@ -758,7 +755,7 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
 						 ++qfn_renamenum, ourConf->globals.mainQ.pszMainMsgQFName,  
 						 (pszQueueName == NULL) ? "NONAME" : (char*)pszQueueName);
 					qfname = ustrdup(qfrenamebuf);
-					errmsg.LogError(0, NO_ERRCODE, "Error: queue file name '%s' already in use "
+					LogError(0, NO_ERRCODE, "Error: queue file name '%s' already in use "
 						" - using '%s' instead", ourConf->globals.mainQ.pszMainMsgQFName,
 						qfname);
 					break;
@@ -824,7 +821,7 @@ startMainQueue(qqueue_t *pQueue)
 	DEFiRet;
 	CHKiRet_Hdlr(qqueueStart(pQueue)) {
 		/* no queue is fatal, we need to give up in that case... */
-		errmsg.LogError(0, iRet, "could not start (ruleset) main message queue"); \
+		LogError(0, iRet, "could not start (ruleset) main message queue"); \
 	}
 	RETiRet;
 }
