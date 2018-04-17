@@ -203,6 +203,10 @@ if ENABLE_FMHTTP
 SUBDIRS += plugins/fmhttp
 endif
 
+if ENABLE_FMHASH
+SUBDIRS += contrib/fmhash
+endif
+
 if ENABLE_OMKAFKA
 SUBDIRS += plugins/omkafka 
 endif

@@ -324,7 +324,6 @@ if test "$enable_regexp" = "yes"; then
         AC_DEFINE(FEATURE_REGEXP, 1, [Regular expressions support enabled.])
 fi
 
-
 # zlib support
 PKG_CHECK_MODULES([ZLIB], [zlib], [found_zlib=yes], [found_zlib=no])
 AS_IF([test "x$found_zlib" = "xno"], [
@@ -335,6 +334,42 @@ AS_IF([test "x$found_zlib" = "xno"], [
         ZLIB_LIBS="-lz"
         AC_SUBST(ZLIB_LIBS)
 ])
+
+
+#hash implementations header checks
+AC_ARG_ENABLE(fmhash,
+	[AS_HELP_STRING([--enable-fmhash],[Enable fmhash support @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_fmhash="yes" ;;
+          no) enable_fmhash="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-fmhash) ;;
+         esac],
+	[enable_fmhash=yes]
+)
+
+AC_ARG_ENABLE(fmhash-xxhash,
+	[AS_HELP_STRING([--enable-fmhash-xxhash],[Enable xxhash in fmhash support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_fmhash_xxhash="yes" ;;
+          no) enable_fmhash_xxhash="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-fmhash-xxhash) ;;
+         esac],
+	[enable_fmhash_xxhash=no]
+)
+
+AM_CONDITIONAL(ENABLE_FMHASH, [test "x$enable_fmhash" = "xyes" || test "x$enable_fmhash_xxhash" = "xyes"])
+
+AM_CONDITIONAL(ENABLE_FMHASH_XXHASH, test x$enable_fmhash_xxhash = xyes)
+if test "$enable_fmhash_xxhash" = "yes"; then  
+	AC_CHECK_LIB([xxhash], [XXH64], [
+		AC_CHECK_HEADER([xxhash.h], [
+			AC_DEFINE(USE_HASH_XXHASH, 1,
+				  [Using XXHASH for hash64.])
+			HASH_XXHASH_LIBS="-lxxhash"
+			AC_SUBST(HASH_XXHASH_LIBS)], 
+			[AC_MSG_ERROR([Unable to add XXHASH support for hash64.])])
+	])
+fi
 
 
 #gssapi
@@ -2283,6 +2318,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/mmsnmptrapd/Makefile \
 		plugins/pmlastmsg/Makefile \
 		plugins/mmdblookup/Makefile \
+		contrib/fmhash/Makefile \
 		contrib/pmsnare/Makefile \
 		contrib/pmpanngfw/Makefile \
 		contrib/pmaixforwardedfrom/Makefile \
@@ -2399,6 +2435,8 @@ echo "    SNMP support enabled:                     $enable_snmp"
 echo
 echo "---{ function modules }---"
 echo "    fmhttp enabled:                           $enable_fmhttp"
+echo "    fmhash enabled:                           $enable_fmhash"
+echo "    fmhash with xxhash enabled:               $enable_fmhash_xxhash"
 echo
 echo "---{ debugging support }---"
 echo "    Testbench enabled:                        $enable_testbench"
