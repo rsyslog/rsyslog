@@ -2151,6 +2151,20 @@ AC_ARG_ENABLE(mmkubernetes,
 )
 if test "x$enable_mmkubernetes" = "xyes"; then
         PKG_CHECK_MODULES([CURL], [libcurl])
+        PKG_CHECK_MODULES(LIBLOGNORM, lognorm >= 2.0.3)
+
+        save_CFLAGS="$CFLAGS"
+        save_LIBS="$LIBS"
+
+        CFLAGS="$CFLAGS $LIBLOGNORM_CFLAGS"
+        LIBS="$LIBS $LIBLOGNORM_LIBS"
+
+        AC_CHECK_FUNC([ln_loadSamplesFromString],
+                      [AC_DEFINE([HAVE_LOADSAMPLESFROMSTRING], [1], [Define if ln_loadSamplesFromString exists.])],
+                      [AC_DEFINE([NO_LOADSAMPLESFROMSTRING], [1], [Define if ln_loadSamplesFromString does not exist.])])
+
+        CFLAGS="$save_CFLAGS"
+        LIBS="$save_LIBS"
 fi
 AM_CONDITIONAL(ENABLE_MMKUBERNETES, test x$enable_mmkubernetes = xyes)
 

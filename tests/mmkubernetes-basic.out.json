@@ -1,0 +1,110 @@
+[{
+  "kubernetes": {
+    "namespace_id": "namespace-name2-id",
+    "namespace_labels": {
+      "label_1_key": "label 1 value",
+      "label_with_empty_value": "",
+      "label_2_key": "label 2 value"
+    },
+    "creation_timestamp": "2018-04-09T21:56:39Z",
+    "pod_id": "pod-name2-id",
+    "labels": {
+      "custom_label": "pod-name2-label-value",
+      "deploymentconfig": "pod-name2-dc",
+      "component": "pod-name2-component",
+      "label_with_empty_value": "",
+      "deployment": "pod-name2-deployment"
+    },
+    "pod_name": "pod-name2",
+    "namespace_name": "namespace-name2",
+    "container_name": "container-name2",
+    "master_url": "http://localhost:18443"
+  },
+  "docker": {
+    "container_id": "id2"
+  }
+},
+{
+  "message": "a message from container 4",
+  "CONTAINER_NAME": "some-prefix_container-name4_pod-name4_namespace-name4_unused4_unused44",
+  "CONTAINER_ID_FULL": "id4",
+  "kubernetes": {
+    "namespace_id": "namespace-name4-id",
+    "namespace_labels": {
+      "label_1_key": "label 1 value",
+      "label_with_empty_value": "",
+      "label_2_key": "label 2 value"
+    },
+    "creation_timestamp": "2018-04-09T21:56:39Z",
+    "pod_id": "pod-name4-id",
+    "labels": {
+      "custom_label": "pod-name4-label-value",
+      "deploymentconfig": "pod-name4-dc",
+      "component": "pod-name4-component",
+      "label_with_empty_value": "",
+      "deployment": "pod-name4-deployment"
+    },
+    "pod_name": "pod-name4",
+    "namespace_name": "namespace-name4",
+    "container_name": "container-name4",
+    "master_url": "http://localhost:18443"
+  },
+  "docker": {
+    "container_id": "id4"
+  }
+},
+{
+  "kubernetes": {
+    "namespace_id": "namespace-name1-id",
+    "namespace_labels": {
+      "label_1_key": "label 1 value",
+      "label_with_empty_value": "",
+      "label_2_key": "label 2 value"
+    },
+    "creation_timestamp": "2018-04-09T21:56:39Z",
+    "pod_id": "pod-name1-id",
+    "labels": {
+      "custom_label": "pod-name1-label-value",
+      "deploymentconfig": "pod-name1-dc",
+      "component": "pod-name1-component",
+      "label_with_empty_value": "",
+      "deployment": "pod-name1-deployment"
+    },
+    "pod_name": "pod-name1",
+    "namespace_name": "namespace-name1",
+    "container_name": "container-name1",
+    "master_url": "http://localhost:18443"
+  },
+  "docker": {
+    "container_id": "id1"
+  }
+},
+{
+  "message": "a message from container 3",
+  "CONTAINER_NAME": "some-prefix_container-name3.container-hash3_pod-name3_namespace-name3_unused3_unused33",
+  "CONTAINER_ID_FULL": "id3",
+  "kubernetes": {
+    "namespace_id": "namespace-name3-id",
+    "namespace_labels": {
+      "label_1_key": "label 1 value",
+      "label_with_empty_value": "",
+      "label_2_key": "label 2 value"
+    },
+    "creation_timestamp": "2018-04-09T21:56:39Z",
+    "pod_id": "pod-name3-id",
+    "labels": {
+      "custom_label": "pod-name3-label-value",
+      "deploymentconfig": "pod-name3-dc",
+      "component": "pod-name3-component",
+      "label_with_empty_value": "",
+      "deployment": "pod-name3-deployment"
+    },
+    "pod_name": "pod-name3",
+    "namespace_name": "namespace-name3",
+    "container_name": "container-name3",
+    "master_url": "http://localhost:18443"
+  },
+  "docker": {
+    "container_id": "id3"
+  }
+}]
