@@ -472,7 +472,7 @@ dynaFileDelCacheEntry(instanceData *__restrict__ const pData, const int iEntry, 
 		pCache[iEntry]->pName == NULL ? UCHAR_CONSTANT("[OPEN FAILED]") : pCache[iEntry]->pName);
 
 	if(pCache[iEntry]->pName != NULL) {
-		d_free(pCache[iEntry]->pName);
+		//d_free(pCache[iEntry]->pName);
 		pCache[iEntry]->pName = NULL;
 	}
 
