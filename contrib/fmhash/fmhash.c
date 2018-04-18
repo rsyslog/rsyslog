@@ -170,9 +170,9 @@ hash_wrapper2(struct svar *__restrict__ const sourceVal
 	DBGPRINTF("fmhash: hashXX generated hash %" PRIu64 " for string(%.*s)"
 			, hcontext->xhash, (int)len, hashStr);
 finalize_it:
-	if (freeHashStr) {
-		free(hashStr);
-	}
+	//if (freeHashStr) {
+		//free(hashStr);
+	//}
 	RETiRet;
 }
 
@@ -351,7 +351,7 @@ static struct scriptFunct functions[] = {
 		{"hash64mod", 2, 3, fmHashXXmod, init_fmHash64mod, NULL},
 		{"hash32", 1, 2, fmHashXX, init_fmHash32, NULL},
 		{"hash32mod", 2, 3, fmHashXXmod, init_fmHash32mod, NULL},
-		{NULL, 0, 0, NULL} //last element to check end of array
+		{NULL, 0, 0, NULL, NULL, NULL} //last element to check end of array
 };
 
 
