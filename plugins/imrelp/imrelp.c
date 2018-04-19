@@ -88,6 +88,7 @@ struct instanceConf_s {
 	sbool bEnableTLSZip;
 	int dhBits;
 	size_t maxDataSize;
+	int oversizeMode;
 	uchar *pristring;		/* GnuTLS priority string (NULL if not to be provided) */
 	uchar *authmode;		/* TLS auth mode */
 	uchar *caCertFile;
@@ -145,6 +146,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "keepalive.time", eCmdHdlrInt, 0 },
 	{ "keepalive.interval", eCmdHdlrInt, 0 },
 	{ "maxdatasize", eCmdHdlrSize, 0 },
+	{ "oversizemode", eCmdHdlrString, 0 },
 	{ "tls", eCmdHdlrBinary, 0 },
 	{ "tls.permittedpeer", eCmdHdlrArray, 0 },
 	{ "tls.authmode", eCmdHdlrString, 0 },
@@ -285,6 +287,7 @@ createInstance(instanceConf_t **pinst)
 	inst->myCertFile = NULL;
 	inst->myPrivKeyFile = NULL;
 	inst->maxDataSize = glbl.GetMaxLine();
+	inst->oversizeMode = RELP_OVERSIZE_TRUNCATE;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -367,6 +370,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	CHKiRet(relpEngineListnerConstruct(pRelpEngine, &pSrv));
 	CHKiRet(relpSrvSetLstnPort(pSrv, inst->pszBindPort));
 	CHKiRet(relpSrvSetMaxDataSize(pSrv, inst->maxDataSize));
+	CHKiRet(relpSrvSetOversizeMode(pSrv, inst->oversizeMode));
 	inst->pszInputName = ustrdup((inst->pszInputName == NULL) ?  UCHAR_CONSTANT("imrelp") : inst->pszInputName);
 	CHKiRet(prop.Construct(&inst->pInputName));
 	CHKiRet(prop.SetString(inst->pInputName, inst->pszInputName, ustrlen(inst->pszInputName)));
@@ -495,6 +499,18 @@ CODESTARTnewInpInst
 					"maxMessageSize - global parameter will be used.");
 			} else {
 				inst->maxDataSize = maxDataSize;
+			}
+		} else if(!strcmp(inppblk.descr[i].name, "oversizemode")) {
+			char *mode = es_str2cstr(pvals[i].val.d.estr, NULL);
+			if(!strcmp(mode, "abort")) {
+				inst->oversizeMode = RELP_OVERSIZE_ABORT;
+			} else if(!strcmp(mode, "truncate")) {
+				inst->oversizeMode = RELP_OVERSIZE_TRUNCATE;
+			} else {
+				errmsg.LogError(0, RS_RET_INVALID_PARAMS,
+					"error: wrong oversizeMode parameter value %s, "
+					"using default: truncate\n", mode);	
+				inst->oversizeMode = RELP_OVERSIZE_TRUNCATE;
 			}
 		} else if(!strcmp(inppblk.descr[i].name, "keepalive")) {
 			inst->bKeepAlive = (sbool) pvals[i].val.d.n;
