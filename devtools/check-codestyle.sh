@@ -20,6 +20,7 @@ rsyslog_stylecheck -l 120 compat/ifaddrs.h \
 	tests/msleep.c \
 	tests/testconfgen.c \
 	plugins/imfile/imfile.c \
+	plugins/imrelp/imrelp.c \
 	plugins/omrelp/omrelp.c \
 	plugins/external/skeletons/C/c_sample.c \
 	plugins/imsolaris/imsolaris.h \
