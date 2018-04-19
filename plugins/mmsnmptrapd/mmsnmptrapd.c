@@ -339,8 +339,8 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	/* finally build the instance */
 	if(cs.pszTagName == NULL) {
-		CHKmalloc(pData->pszTagName = (uchar*) strdup("snmptrapd:"));
-		CHKmalloc(pData->pszTagID = (uchar*) strdup("snmptrapd/"));
+		pData->pszTagName = (uchar*) strdup("snmptrapd:");
+		pData->pszTagID = (uchar*) strdup("snmptrapd/");
 	} else {
 		int lenTag = ustrlen(cs.pszTagName);
 		/* new tag value (with colon at the end) */

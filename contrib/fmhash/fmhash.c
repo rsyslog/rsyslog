@@ -170,9 +170,9 @@ hash_wrapper2(struct svar *__restrict__ const sourceVal
 	DBGPRINTF("fmhash: hashXX generated hash %" PRIu64 " for string(%.*s)"
 			, hcontext->xhash, (int)len, hashStr);
 finalize_it:
-	if (freeHashStr) {
-		free(hashStr);
-	}
+	//if (freeHashStr) {
+		//free(hashStr);
+	//}
 	RETiRet;
 }
 
