@@ -8,6 +8,10 @@ Version 8.35.0 [v8-stable] 2018-05-15
 - fmhash: new hash function module
   implements hash32() and hash64() functions
   Thanks to Harshvardhan Shrivastava for implementing these
+- template systemd service file proposes higher permitted file handle limit
+  Especially on busy systems the default are too low. Please keep in mind
+  that on a very busy system even the now-proposed setting may be too low.
+  Thanks to github user jvymazal for the patch.
 - omfile bugfix: segfault if empty filename was given
   closes https://github.com/rsyslog/rsyslog/issues/2417
 - fix build issues when atomic operations are not present
