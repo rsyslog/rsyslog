@@ -1,18 +1,14 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
+
+# This test tests omprog with the confirmMessages=on and useTransactions=on
+# parameters, with the external program returning an error on certain
+# messages.
+
 . $srcdir/diag.sh init
-
-uname
-if [ `uname` = "SunOS" ] ; then
-   echo "Solaris: FIX ME"
-   exit 77
-fi
-
 . $srcdir/diag.sh startup omprog-transactions-failed-messages.conf
 . $srcdir/diag.sh wait-startup
-
 . $srcdir/diag.sh injectmsg 0 10
-
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown

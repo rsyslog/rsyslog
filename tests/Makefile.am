@@ -453,33 +453,23 @@ TESTS +=  \
 endif
 
 if ENABLE_OMPROG
-# see https://github.com/rsyslog/rsyslog/issues/2403
-# TODO: re-enable!
-#	omprog-cleanup.sh
-#	omprog-noterm-cleanup.sh
-#	omprog-noterm-default.sh
-#	omprog-cleanup-with-outfile.sh
-# linux:
-#	omprog-noterm-unresponsive.sh
-# valgrind:
-#	omprog-noterm-cleanup-vg.sh
-#	omprog-cleanup-vg.sh
 TESTS +=  \
+	omprog-defaults.sh \
 	omprog-feedback.sh \
+	omprog-close-unresponsive.sh \
+	omprog-close-unresponsive-noterm.sh \
+	omprog-restart-terminated.sh \
+	omprog-restart-terminated-outfile.sh \
 	omprog-transactions.sh \
 	omprog-transactions-failed-messages.sh \
 	omprog-transactions-failed-commits.sh
-#if OS_LINUX
-#TESTS += \
-#	omprog-cleanup-when-unresponsive.sh
-#endif
 if HAVE_VALGRIND
 TESTS +=  \
-	omprog-multiparam-vg.sh
-#if OS_LINUX
-#TESTS += \
-	#omprog-cleanup-when-unresponsive-vg.sh
-#endif
+	omprog-defaults-vg.sh \
+	omprog-feedback-vg.sh \
+	omprog-close-unresponsive-vg.sh \
+	omprog-restart-terminated-vg.sh \
+	omprog-transactions-vg.sh
 endif
 endif
 
@@ -1412,35 +1402,34 @@ EXTRA_DIST= \
 	testsuites/action-tx-errfile.result \
 	pipeaction.sh \
 	testsuites/pipeaction.conf \
-	omprog-cleanup.sh \
-	omprog-cleanup-vg.sh \
-	omprog-cleanup-with-outfile.sh \
-	omprog-cleanup-when-unresponsive.sh \
-	omprog-cleanup-when-unresponsive-vg.sh \
-	omprog-noterm-cleanup.sh \
-	omprog-noterm-cleanup-vg.sh \
-	omprog-noterm-default.sh \
-	omprog-noterm-unresponsive.sh \
+	omprog-defaults.sh \
+	omprog-defaults-vg.sh \
 	omprog-feedback.sh \
+	omprog-feedback-vg.sh \
+	omprog-close-unresponsive.sh \
+	omprog-close-unresponsive-vg.sh \
+	omprog-close-unresponsive-noterm.sh \
+	omprog-restart-terminated.sh \
+	omprog-restart-terminated-vg.sh \
+	omprog-restart-terminated-outfile.sh \
 	omprog-transactions.sh \
+	omprog-transactions-vg.sh \
 	omprog-transactions-failed-messages.sh \
 	omprog-transactions-failed-commits.sh \
-	omprog-multiparam-vg.sh \
-	testsuites/omprog-cleanup.conf \
-	testsuites/omprog-noterm.conf \
-	testsuites/omprog-noterm-default.conf \
-	testsuites/omprog-noterm-unresponsive.conf \
-	testsuites/omprog-noterm.sh \
-	testsuites/omprog-cleanup-outfile.conf \
-	testsuites/omprog-cleanup-unresponsive.conf \
-	testsuites/omprog-test-bin.sh \
-	testsuites/term-ignoring-script.sh \
+	testsuites/omprog-defaults.conf \
+	testsuites/omprog-defaults-bin.sh \
 	testsuites/omprog-feedback.conf \
 	testsuites/omprog-feedback-bin.sh \
-	testsuites/omprog-transactions-bin.sh \
+	testsuites/omprog-close-unresponsive.conf \
+	testsuites/omprog-close-unresponsive-noterm.conf \
+	testsuites/omprog-close-unresponsive-bin.sh \
+	testsuites/omprog-restart-terminated.conf \
+	testsuites/omprog-restart-terminated-outfile.conf \
+	testsuites/omprog-restart-terminated-bin.sh \
 	testsuites/omprog-transactions.conf \
 	testsuites/omprog-transactions-failed-messages.conf \
 	testsuites/omprog-transactions-failed-commits.conf \
+	testsuites/omprog-transactions-bin.sh \
 	pipe_noreader.sh \
 	testsuites/pipe_noreader.conf \
 	uxsock_simple.sh \
