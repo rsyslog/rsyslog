@@ -12,6 +12,19 @@ Version 8.35.0 [v8-stable] 2018-05-15
   Especially on busy systems the default are too low. Please keep in mind
   that on a very busy system even the now-proposed setting may be too low.
   Thanks to github user jvymazal for the patch.
+- omprog: refactor tests, fix child closing issues
+  Refactor omprog tests. Fix sync issues in these tests by
+  using the feedback mode (confirmMessages=on) to synchronize
+  the test with the external program. Closes #2403 (I hope)
+  Fix omprog not properly closing child process when
+  signalOnClose=on. Needed for the new tests. Closes #2599
+  Fix omprog not waiting for the child process to terminate
+  when signalOnClose=off. Needed for the new tests. Closes #2600
+  Close all fds before executing the child even when valgrind
+  is enabled (--enable-valgrind). Needed for the new tests.
+  Fix memory leak when the xxxTransactionMark parameters were
+  used.
+  Thanks to Joan Sala for the patch.
 - omfile bugfix: segfault if empty filename was given
   closes https://github.com/rsyslog/rsyslog/issues/2417
 - fix build issues when atomic operations are not present
@@ -21,6 +34,18 @@ Version 8.35.0 [v8-stable] 2018-05-15
   errors detected by clang static analyzer. These have been fixed.
   Thanks to Allan Park for the patch.
   closes https://github.com/rsyslog/rsyslog/issues/2517
+- impstats bugfix: segfault if bound to non-existing ruleset
+  segfault happens during shutdown; up until unload of impstats,
+  rsyslog works correctly, except that no pstats are emitted. This
+  can be considered to be expected, because the error message
+  indicates the default ruleset is used instead. This is what
+  now actually happens.
+  closes https://github.com/rsyslog/rsyslog/issues/2645
+- mmjsonparse bugfix: invalid container name was not detected
+  in debug builds, this will trigger an assertion. In production
+  builds, an rsyslog internal error is logged, but rsyslog
+  continues to run.
+  closes https://github.com/rsyslog/rsyslog/issues/2584
 - mmkubernetes bugfixes: fix lnrules, add defaults, add test
   - Fix lnrules for CONTAINER_NAME
   - Add pkg check for lognorm >= 2.0.3 so we can set the macro
