@@ -646,7 +646,8 @@ TESTS += \
 	mmjsonparse-w-o-cookie-multi-spaces.sh
 if ENABLE_IMPSTATS
 TESTS += \
-	mmjsonparse-invalid-containerName.sh
+	mmjsonparse-invalid-containerName.sh \
+	wtpShutdownAll-assertionFailure.sh
 endif
 if ENABLE_IMPTCP
 TESTS +=  \
@@ -1191,6 +1192,7 @@ EXTRA_DIST= \
 	mmjsonparse-w-o-cookie-multi-spaces.sh \
 	mmjsonparse_simple.sh \
 	mmjsonparse-invalid-containerName.sh \
+	wtpShutdownAll-assertionFailure.sh \
 	imptcp-oversize-message-display.sh \
 	imptcp-msg-truncation-on-number.sh \
 	imptcp-msg-truncation-on-number2.sh \
