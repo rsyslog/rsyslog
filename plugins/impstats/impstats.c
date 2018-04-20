@@ -488,7 +488,7 @@ CODESTARTcheckCnf
 				"default of %d seconds", DEFAULT_STATS_PERIOD);
 		pModConf->iStatsInterval = DEFAULT_STATS_PERIOD;
 	}
-	iRet = checkRuleset(pModConf);
+	checkRuleset(pModConf);
 ENDcheckCnf
 
 

@@ -6,7 +6,7 @@
  *
  * File begun on 2012-02-20 by RGerhards
  *
- * Copyright 2012 Adiscon GmbH.
+ * Copyright 2012-2018 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -42,6 +42,7 @@
 #include "module-template.h"
 #include "errmsg.h"
 #include "cfsysline.h"
+#include "parserif.h"
 #include "dirty.h"
 
 MODULE_TYPE_OUTPUT
@@ -282,9 +283,29 @@ CODESTARTnewActInst
 			pData->cookie = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "container")) {
 			free(pData->container);
+			size_t lenvar = es_strlen(pvals[i].val.d.estr);
 			pData->container = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-        } else if(!strcmp(actpblk.descr[i].name, "userawmsg")) {
-            pData->bUseRawMsg = (int) pvals[i].val.d.n;
+			if(pData->container[0] == '$') {
+				/* pre 8.35, the container name needed to be specified without
+				 * the leading $. This was confusing, so we now require a full
+				 * variable name. Nevertheless, we still need to support the
+				 * version without $. -- rgerhards, 2018-05-16
+				 */
+				/* copy lenvar size because of \0 string terminator */
+				memmove(pData->container, pData->container+1,  lenvar);
+				--lenvar;
+			}
+			if(   (lenvar == 0)
+			   || (  !(   pData->container[0] == '!'
+			           || pData->container[0] == '.'
+			           || pData->container[0] == '/' ) )
+			   ) {
+			parser_errmsg("mmjsonparse: invalid container name '%s', name must "
+				"start with either '$!', '$.', or '$/'", pData->container);
+			ABORT_FINALIZE(RS_RET_INVALID_VAR);
+		}
+		} else if(!strcmp(actpblk.descr[i].name, "userawmsg")) {
+			pData->bUseRawMsg = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("mmjsonparse: program error, non-handled param '%s'\n", actpblk.descr[i].name);
 		}

@@ -654,6 +654,10 @@ if ENABLE_MMJSONPARSE
 TESTS += \
 	mmjsonparse-w-o-cookie.sh \
 	mmjsonparse-w-o-cookie-multi-spaces.sh
+if ENABLE_IMPSTATS
+TESTS += \
+	mmjsonparse-invalid-containerName.sh
+endif
 if ENABLE_IMPTCP
 TESTS +=  \
 	mmjsonparse_simple.sh \
@@ -662,6 +666,8 @@ TESTS +=  \
 	imptcp-msg-truncation-on-number2.sh \
 	imptcp-maxFrameSize-parameter.sh \
 	mmjsonparse_cim.sh \
+	mmjsonparse_cim2.sh \
+	mmjsonparse_localvar.sh \
 	json_array_subscripting.sh \
 	json_array_looping.sh \
 	json_object_looping.sh \
@@ -1194,6 +1200,7 @@ EXTRA_DIST= \
 	mmjsonparse-w-o-cookie.sh \
 	mmjsonparse-w-o-cookie-multi-spaces.sh \
 	mmjsonparse_simple.sh \
+	mmjsonparse-invalid-containerName.sh \
 	imptcp-oversize-message-display.sh \
 	imptcp-msg-truncation-on-number.sh \
 	imptcp-msg-truncation-on-number2.sh \
@@ -1201,6 +1208,8 @@ EXTRA_DIST= \
 	testsuites/mmjsonparse_simple.conf \
 	mmjsonparse_cim.sh \
 	testsuites/mmjsonparse_cim.conf \
+	mmjsonparse_cim2.sh \
+	mmjsonparse_localvar.sh \
 	mmdb.sh \
 	mmdb.rb \
 	test.mmdb \
