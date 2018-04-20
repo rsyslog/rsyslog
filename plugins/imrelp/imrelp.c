@@ -287,7 +287,9 @@ createInstance(instanceConf_t **pinst)
 	inst->myCertFile = NULL;
 	inst->myPrivKeyFile = NULL;
 	inst->maxDataSize = glbl.GetMaxLine();
+#ifdef HAVE_RELPSRVSETOVERSIZEMODE
 	inst->oversizeMode = RELP_OVERSIZE_TRUNCATE;
+#endif
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -370,7 +372,12 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	CHKiRet(relpEngineListnerConstruct(pRelpEngine, &pSrv));
 	CHKiRet(relpSrvSetLstnPort(pSrv, inst->pszBindPort));
 	CHKiRet(relpSrvSetMaxDataSize(pSrv, inst->maxDataSize));
+
+#ifdef HAVE_RELPSRVSETOVERSIZEMODE
 	CHKiRet(relpSrvSetOversizeMode(pSrv, inst->oversizeMode));
+#else
+	errmsg.LogError(0, RS_RET_PARAM_ERROR, "imrelp: parameter oversizeMode is not available in this relp version and is therefore disabled.");
+#endif
 	inst->pszInputName = ustrdup((inst->pszInputName == NULL) ?  UCHAR_CONSTANT("imrelp") : inst->pszInputName);
 	CHKiRet(prop.Construct(&inst->pInputName));
 	CHKiRet(prop.SetString(inst->pInputName, inst->pszInputName, ustrlen(inst->pszInputName)));
@@ -501,6 +508,7 @@ CODESTARTnewInpInst
 				inst->maxDataSize = maxDataSize;
 			}
 		} else if(!strcmp(inppblk.descr[i].name, "oversizemode")) {
+#ifdef HAVE_RELPSRVSETOVERSIZEMODE
 			char *mode = es_str2cstr(pvals[i].val.d.estr, NULL);
 			if(!strcmp(mode, "abort")) {
 				inst->oversizeMode = RELP_OVERSIZE_ABORT;
@@ -512,6 +520,7 @@ CODESTARTnewInpInst
 					"using default: truncate\n", mode);
 				inst->oversizeMode = RELP_OVERSIZE_TRUNCATE;
 			}
+#endif
 		} else if(!strcmp(inppblk.descr[i].name, "keepalive")) {
 			inst->bKeepAlive = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "keepalive.probes")) {

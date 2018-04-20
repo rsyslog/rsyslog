@@ -1,6 +1,12 @@
 #!/bin/bash
 # add 2018-04-19 by PascalWithopf, released under ASL 2.0
 . $srcdir/diag.sh init
+set -x
+. $srcdir/have_relpSrvSetOversizeMode
+if [ $? -eq 1 ]; then
+  echo "imrelp parameter oversizeMode not available. Test stopped"
+  exit 77
+fi;
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
 module(load="../plugins/imrelp/.libs/imrelp")
