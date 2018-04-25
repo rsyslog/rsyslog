@@ -25,7 +25,7 @@ Note: parameter names are case-insensitive.
 None
 
 **Sample:**
-The following command sends all syslog messages to a remote server via TCP port 10514.
+The following command sends all syslog messages to a pipe named "NameofPipe".
 
 ::
 
@@ -38,7 +38,7 @@ rsyslog has support for logging output to named pipes (fifos). A fifo or named p
 
 **Legacy Sample:**
 
-The following command sends all syslog messages to a remote server via TCP port 10514.
+The following command sends all syslog messages to a pipe named /var/log/pipe.
 
 ::
 
