@@ -4,7 +4,7 @@
  *
  * File begun on 2008-03-13 by RGerhards
  *
- * Copyright 2008-2016 Adiscon GmbH.
+ * Copyright 2008-2018 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -376,7 +376,8 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 #ifdef HAVE_RELPSRVSETOVERSIZEMODE
 	CHKiRet(relpSrvSetOversizeMode(pSrv, inst->oversizeMode));
 #else
-	errmsg.LogError(0, RS_RET_PARAM_ERROR, "imrelp: parameter oversizeMode is not available in this relp version and is therefore disabled.");
+	errmsg.LogError(0, RS_RET_PARAM_ERROR, "imrelp: parameter oversizeMode is not available in "
+			"this relp version and is therefore disabled.");
 #endif
 	inst->pszInputName = ustrdup((inst->pszInputName == NULL) ?  UCHAR_CONSTANT("imrelp") : inst->pszInputName);
 	CHKiRet(prop.Construct(&inst->pInputName));
@@ -514,6 +515,8 @@ CODESTARTnewInpInst
 				inst->oversizeMode = RELP_OVERSIZE_ABORT;
 			} else if(!strcmp(mode, "truncate")) {
 				inst->oversizeMode = RELP_OVERSIZE_TRUNCATE;
+			} else if(!strcmp(mode, "accept")) {
+				inst->oversizeMode = RELP_OVERSIZE_ACCEPT;
 			} else {
 				errmsg.LogError(0, RS_RET_INVALID_PARAMS,
 					"error: wrong oversizeMode parameter value %s, "
