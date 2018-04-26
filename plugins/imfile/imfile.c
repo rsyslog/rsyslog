@@ -2287,7 +2287,7 @@ static rsRetVal ATTR_NONNULL()
 atomicWriteStateFile(const char *fn, const char *content)
 {
 	DEFiRet;
-	const int fd = open(fn, O_CLOEXEC | O_NOCTTY | O_WRONLY | O_CREAT, 0600);
+	const int fd = open(fn, O_CLOEXEC | O_NOCTTY | O_WRONLY | O_CREAT | O_TRUNC, 0600);
 	if(fd < 0) {
 		LogError(errno, RS_RET_IO_ERROR, "imfile: cannot open state file '%s' for "
 			"persisting file state - some data will probably be duplicated "
