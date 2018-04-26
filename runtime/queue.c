@@ -1181,7 +1181,8 @@ tryShutdownWorkersWithinQueueTimeout(qqueue_t *const pThis)
 	iRetLocal = wtpShutdownAll(pThis->pWtpReg, wtpState_SHUTDOWN, &tTimeout);
 	if(iRetLocal == RS_RET_TIMED_OUT) {
 		LogMsg(0, RS_RET_TIMED_OUT, LOG_INFO,
-			"%s: regular queue shutdown timed out on primary queue (this is OK, timeout was %d)",
+			"%s: regular queue shutdown timed out on primary queue "
+			"(this is OK, timeout was %d)",
 			objGetName((obj_t*) pThis), pThis->toQShutdown);
 	} else {
 		DBGOPRINT((obj_t*) pThis, "regular queue workers shut down.\n");
@@ -1301,6 +1302,8 @@ cancelWorkers(qqueue_t *pThis)
 	rsRetVal iRetLocal;
 	DEFiRet;
 
+	assert(pThis->qType != QUEUETYPE_DIRECT);
+
 	/* Now queue workers should have terminated. If not, we need to cancel them as we have applied
 	 * all timeout setting. If any worker in any queue still executes, its consumer is possibly
 	 * long-running and cancelling is the only way to get rid of it.
@@ -1360,10 +1363,14 @@ qqueueShutdownWorkers(qqueue_t *const pThis)
 {
 	DEFiRet;
 
+	if(pThis->qType == QUEUETYPE_DIRECT) {
+		FINALIZE;
+	}
+
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	ASSERT(pThis->pqParent == NULL); /* detect invalid calling sequence */
 
-	DBGOPRINT((obj_t*) pThis, "initiating worker thread shutdown sequence\n");
+	DBGOPRINT((obj_t*) pThis, "initiating worker thread shutdown sequence %p\n", pThis);
 
 	CHKiRet(tryShutdownWorkersWithinQueueTimeout(pThis));
 
