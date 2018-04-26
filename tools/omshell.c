@@ -57,7 +57,6 @@ MODULE_TYPE_NOKEEP
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 
 typedef struct _instanceData {
 	uchar	progName[MAXFNAME]; /* program  to execute */
@@ -108,7 +107,7 @@ BEGINdoAction
 CODESTARTdoAction
 	dbgprintf("\n");
 	if(execProg((uchar*) pWrkrData->pData->progName, 1, ppString[0]) == 0)
-	 	errmsg.LogError(0, NO_ERRCODE, "Executing program '%s' failed", (char*)pWrkrData->pData->progName);
+	 	LogError(0, NO_ERRCODE, "Executing program '%s' failed", (char*)pWrkrData->pData->progName);
 ENDdoAction
 
 
@@ -157,7 +156,6 @@ BEGINmodInit(Shell)
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDmodInit
 
 /*
