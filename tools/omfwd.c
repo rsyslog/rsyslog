@@ -84,6 +84,7 @@ typedef struct _instanceData {
 	permittedPeers_t *pPermPeers;
 	int iStrmDrvrMode;
 	char	*target;
+	char	*address;
 	char	*device;
 	int compressionLevel;	/* 0 - no compression, else level for zlib */
 	char *port;
@@ -96,6 +97,7 @@ typedef struct _instanceData {
 	int iKeepAliveProbes;
 	int iKeepAliveTime;
 	uchar *gnutlsPriorityString;
+	int ipfreebind;
 
 #	define	FORW_UDP 0
 #	define	FORW_TCP 1
@@ -164,6 +166,7 @@ static struct cnfparamblk modpblk =
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
 	{ "target", eCmdHdlrGetWord, 0 },
+	{ "address", eCmdHdlrGetWord, 0 },
 	{ "device", eCmdHdlrGetWord, 0 },
 	{ "port", eCmdHdlrGetWord, 0 },
 	{ "protocol", eCmdHdlrGetWord, 0 },
@@ -173,6 +176,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "ziplevel", eCmdHdlrInt, 0 },
 	{ "compression.mode", eCmdHdlrGetWord, 0 },
 	{ "compression.stream.flushontxend", eCmdHdlrBinary, 0 },
+	{ "ipfreebind", eCmdHdlrInt, 0 },
 	{ "maxerrormessages", eCmdHdlrInt, CNFPARAM_DEPRECATED },
 	{ "rebindinterval", eCmdHdlrInt, 0 },
 	{ "keepalive", eCmdHdlrBinary, 0 },
@@ -395,6 +399,7 @@ CODESTARTfreeInstance
 	free(pData->port);
 	free(pData->networkNamespace);
 	free(pData->target);
+	free(pData->address);
 	free(pData->device);
 	net.DestructPermittedPeers(&pData->pPermPeers);
 ENDfreeInstance
@@ -863,9 +868,11 @@ finalize_it:
 static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 {
 	int iErr;
-	struct addrinfo *res;
+	struct addrinfo *res, *addr;
 	struct addrinfo hints;
 	instanceData *pData;
+	int bBindRequired = 0;
+	const char *address;
 	DEFiRet;
 
 	if(pWrkrData->bIsConnected)
@@ -885,12 +892,26 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 				pData->target, pData->port, gai_strerror(iErr));
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
+		address = pData->target;
+		if(pData->address) {
+			/* The AF of the bind addr must match that of target */
+			hints.ai_family = res->ai_family;
+			hints.ai_flags |= AI_PASSIVE;
+			if((iErr = getaddrinfo(pData->address, pData->port, &hints, &addr)) != 0) {
+				LogError(0, RS_RET_SUSPENDED,
+					 "omfwd: cannot use bind address '%s' for host '%s': %s",
+					 pData->address, pData->target, gai_strerror(iErr));
+				ABORT_FINALIZE(RS_RET_SUSPENDED);
+			}
+			bBindRequired = 1;
+			address = pData->address;
+		}
 		DBGPRINTF("%s found, resuming.\n", pData->target);
 		pWrkrData->f_addr = res;
 		if(pWrkrData->pSockArray == NULL) {
 			CHKiRet(changeToNs(pData));
-			pWrkrData->pSockArray = net.create_udp_socket((uchar*)pData->target,
-				NULL, 0, 0, pData->UDPSendBuf, 0, pData->device);
+			pWrkrData->pSockArray = net.create_udp_socket((uchar*)address,
+				NULL, bBindRequired, 0, pData->UDPSendBuf, pData->ipfreebind, pData->device);
 			CHKiRet(returnToOriginalNs(pData));
 		}
 		if(pWrkrData->pSockArray != NULL) {
@@ -1097,6 +1118,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->compressionLevel = 9;
 	pData->strmCompFlushOnTxEnd = 1;
 	pData->compressionMode = COMPRESS_NEVER;
+	pData->ipfreebind = IPFREEBIND_ENABLED_WITH_LOG;
 }
 
 BEGINnewActInst
@@ -1129,6 +1151,8 @@ CODESTARTnewActInst
 			continue;
 		if(!strcmp(actpblk.descr[i].name, "target")) {
 			pData->target = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "address")) {
+			pData->address = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "device")) {
 			pData->device = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "port")) {
@@ -1254,6 +1278,8 @@ CODESTARTnewActInst
 				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 			}
 			free(cstr);
+		} else if(!strcmp(actpblk.descr[i].name, "ipfreebind")) {
+			pData->ipfreebind = (int) pvals[i].val.d.n;
 		} else {
 			LogError(0, RS_RET_INTERNAL_ERROR,
 				"omfwd: program error, non-handled parameter '%s'",
@@ -1283,6 +1309,11 @@ CODESTARTnewActInst
 			LogError(0, RS_RET_PARAM_ERROR, "omfwd: parameter udp.sendToAll "
 					"cannot be used with tcp transport -- ignored");
 		}
+	}
+
+	if(pData->address && (pData->protocol == FORW_TCP)) {
+		LogError(0, RS_RET_PARAM_ERROR,
+			 "omfwd: parameter \"address\" not supported for tcp -- ignored");
 	}
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
