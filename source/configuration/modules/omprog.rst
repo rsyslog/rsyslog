@@ -1,13 +1,15 @@
+*****************************************
 omprog: Program integration Output module
-=========================================
+*****************************************
 
-**Module Name:    omprog**
+===========================  ===========================================================================
+**Module Name:**             **omprog**
+**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+===========================  ===========================================================================
 
-**Available since**: 4.3.0
 
-**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
-
-**Description**:
+Purpose
+=======
 
 This module permits to integrate arbitrary external programs into
 rsyslog's logging. It is similar to the "execute program (^)" action,
@@ -52,69 +54,228 @@ the messae shows up in that instance that processes the default
 log socket, which may be different from the one where the error occured.
 Also, if you redirected the log destination, that redirection may
 not work as expected.
- 
 
-**Module Parameters**:
 
-Note: parameter names are case-insensitive.
+Configuration Parameters
+========================
 
--  **Template**\ [templateName]
-    sets a new default template for file actions.
+.. note::
 
- 
+   Parameter names are case-insensitive.
 
-**Action Parameters**:
+Action Parameters
+-----------------
 
-Note: parameter names are case-insensitive.
+Template
+^^^^^^^^
 
--  **binary**
-   Mostly equivalent to the "binary" action parameter, but must contain
-   the binary name only. In legacy config, it is **not possible** to
-   specify command line parameters.
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
--  **hup.signal** [v8.9.0+]
-   Specifies which signal, if any, is to be forwarded to the executed program.
-   Currently, HUP, USR1, USR2, INT, and TERM are supported. If unset, no signal
-   is sent on HUP. This is the default and what pre 8.9.0 versions did.
+   "word", "", "no", "none"
 
--  **signalOnClose** [switch] [v8.23.0+]
-   *Default: off*
+Sets a new default template for omprog actions.
 
-   Signal the child process when worker-instance is stopped or Rsyslog is about
-   to shutdown. To signal shutdown, SIGTERM is issued to child and Rsyslog
-   reaps the process before proceeding.
 
-   No signal is issued if this switch is set to 'off' (default). The child-process
-   can still detect shutdown because 'read' from stdin would EOF. However its
-   possible to have process-leak due to careless error-handling around read.
-   Rsyslog won't try to reap the child process in this case.
+Binary
+^^^^^^
 
-   Additionaly, this controls the following **GNU/Linux specific behavior**:
-   If 'on', Rsyslog waits for upto 5 seconds for child process to terminate
-   after issuing SIGTERM, after which a SIGKILL is issued ensuring child-death.
-   This ensures even an unresponsive child is reaped before shutdown.
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-**Caveats/Known Bugs:**
+   "string", "RSYSLOG_FileFormat", "yes", "``$ActionOMProgBinary``"
 
--  None.
+Mostly equivalent to the "binary" action parameter, but must contain
+the binary name only. In legacy config, it is **not possible** to
+specify command line parameters.
 
-**Sample:**
 
-The following command writes all syslog messages into a file.
+Hup.Signal
+^^^^^^^^^^
 
-::
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-  module(load="omprog")
-  action(type="omprog"
-         binary="/pathto/omprog.py --parm1=\"value 1\" --parm2=\"value2\""
-         template="RSYSLOG_TraditionalFileFormat")
+   "word", "none", "no", "none"
 
-**Legacy Configuration Directives**:
+.. versionadded:: 8.9.0
+
+Specifies which signal, if any, is to be forwarded to the executed program.
+Currently, HUP, USR1, USR2, INT, and TERM are supported. If unset, no signal
+is sent on HUP. This is the default and what pre 8.9.0 versions did.
+
+SignalOnClose
+^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+.. versionadded:: 8.23.0
+
+Signal the child process when worker-instance is stopped or Rsyslog is about
+to shutdown. To signal shutdown, SIGTERM is issued to child and Rsyslog
+reaps the process before proceeding.
+
+No signal is issued if this switch is set to 'off' (default). The child-process
+can still detect shutdown because 'read' from stdin would EOF. However its
+possible to have process-leak due to careless error-handling around read.
+Rsyslog won't try to reap the child process in this case.
+
+Additionaly, this controls the following **GNU/Linux specific behavior**:
+If 'on', Rsyslog waits for upto 5 seconds for child process to terminate
+after issuing SIGTERM, after which a SIGKILL is issued ensuring child-death.
+This ensures even an unresponsive child is reaped before shutdown.
+
+
+confirmMessages
+^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+.. versionadded:: ???
+
+Description following soon.
+
+
+useTransactions
+^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+.. versionadded:: ???
+
+Description following soon.
+
+
+beginTransactionMark
+^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+.. versionadded:: ???
+
+Description following soon.
+
+
+commitTransactionMark
+^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+.. versionadded:: ???
+
+Description following soon.
+
+
+output
+^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+.. versionadded:: ???
+
+Description following soon.
+
+
+forceSingleInstance
+^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+.. versionadded:: ???
+
+Description following soon.
+
+
+closeTimeout
+^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "5000", "no", "none"
+
+.. versionadded:: ???
+
+Description following soon.
+
+
+killUnresponsive
+^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "", "no", "none"
+
+.. versionadded:: ???
+
+Description following soon.
+
+
+Examples
+========
+
+Starting an external program
+----------------------------
+
+In the following example omprog.py is executed when a message is put in.
+
+.. code-block:: none
+
+   module(load="omprog")
+   action(type="omprog"
+          binary="/pathto/omprog.py --parm1=\"value 1\" --parm2=\"value2\""
+          template="RSYSLOG_TraditionalFileFormat")
+
+
+|FmtObsoleteName| directives
+============================
 
 -  **$ActionOMProgBinary** <binary>
    The binary program to be executed.
-
-**Caveats/Known Bugs:**
-
-Currently none known.
 
