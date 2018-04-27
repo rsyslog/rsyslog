@@ -4999,6 +4999,9 @@ cnfstmtOptimize(struct cnfstmt *root)
 		case S_CALL:
 			cnfstmtOptimizeCall(stmt);
 			break;
+		case S_CALL_INDIRECT:
+			stmt->d.s_call_ind.expr = cnfexprOptimize(stmt->d.s_call_ind.expr);
+			break;
 		case S_STOP:
 			if(stmt->next != NULL)
 				parser_errmsg("STOP is followed by unreachable statements!\n");
