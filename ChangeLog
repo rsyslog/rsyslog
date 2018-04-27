@@ -8,6 +8,17 @@ Version 8.35.0 [v8-stable] 2018-05-15
 - fmhash: new hash function module
   implements hash32() and hash64() functions
   Thanks to Harshvardhan Shrivastava for implementing these
+- omfwd: add support for bind-to-address for UDP
+  To allow the same source address to be used regardless of the egress
+  interface taken, an option is added for an address to bind the datagram
+  socket to. Similarly to imudp, it is necessary to add an ipfreebind
+  option which is set by default, so as to avoid an excess of errors at
+  startup before the network interface has come up. This enhancement
+  allows a usecase on networking devices, by which a source interface
+  that is typically a loopback is specified, on which an address to bind
+  to is configured. This is so that the same source address is used for
+  all packets from rsyslog.
+  Thanks to Mike Manning for the patch.
 - template systemd service file proposes higher permitted file handle limit
   Especially on busy systems the default are too low. Please keep in mind
   that on a very busy system even the now-proposed setting may be too low.
@@ -25,6 +36,19 @@ Version 8.35.0 [v8-stable] 2018-05-15
   Fix memory leak when the xxxTransactionMark parameters were
   used.
   Thanks to Joan Sala for the patch.
+- core: config optimizer did not handle call_indirect
+  This also caused the emission of an "internal error" error message
+  closes https://github.com/rsyslog/rsyslog/issues/2665
+- core bugfix: segfault on queue shutdown
+  if a ruleset queue is in direct mode, a segfault can occur during
+  rsyslog shutdown. The root cause is that a direct queue does not
+  have an associated worker thread pool, but the ruleset destructor
+  does not anticipate that and tries to destruct the worker thread
+  pool. It needs to do this itself, as otherwise we get a race
+  between rulesets on shutdown.
+  This was a regression from
+    https://github.com/rsyslog/rsyslog/commit/3fbd901b3e6300010
+  closes https://github.com/rsyslog/rsyslog/issues/2480
 - omfile bugfix: segfault if empty filename was given
   closes https://github.com/rsyslog/rsyslog/issues/2417
 - fix build issues when atomic operations are not present
