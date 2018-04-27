@@ -49,6 +49,12 @@ Version 8.35.0 [v8-stable] 2018-05-15
   This was a regression from
     https://github.com/rsyslog/rsyslog/commit/3fbd901b3e6300010
   closes https://github.com/rsyslog/rsyslog/issues/2480
+- imfile bugfix: statefiles contain invalid JSON
+  When imfile rewrites state files, it does not truncate previous
+  content. If the new content is smaller than the existing one, the
+  existing part will not be overwritten, resulting in invalid json.
+  That in turn can lead to some other failures.
+  closes https://github.com/rsyslog/rsyslog/issues/2662
 - omfile bugfix: segfault if empty filename was given
   closes https://github.com/rsyslog/rsyslog/issues/2417
 - fix build issues when atomic operations are not present
