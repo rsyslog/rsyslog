@@ -4263,6 +4263,7 @@ cnfstmtNewCall(es_str_t *name)
 	struct cnfstmt* cnfstmt;
 	if((cnfstmt = cnfstmtNew(S_CALL)) != NULL) {
 		cnfstmt->d.s_call.name = name;
+		cnfstmt->d.s_call.ruleset = NULL;
 	}
 	return cnfstmt;
 }
