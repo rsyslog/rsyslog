@@ -238,7 +238,7 @@ news.info and store them in the file ``/var/adm/info``.
 
   # Log info and notice messages to messages file
   #
-  \*.=info;\*.=notice;\
+  *.=info;*.=notice;\
   mail.none /var/log/messages
 
 This lets the syslogd log all messages that come with either the info or the
@@ -249,7 +249,7 @@ that use the mail facility.
 
   # Log info messages to messages file
   #
-  \*.=info;\
+  *.=info;\
   mail,news.none  /var/log/messages
 
 This statement causes the syslogd to log all messages that come with the info
@@ -260,7 +260,7 @@ the mail or the news facility will not be stored.
 
   # Emergency messages will be displayed using wall
   #
-  \*.=emerg      \*
+  *.=emerg      *
 
 This rule tells the syslogd to write all emergency messages to all currently
 logged in users. This is the wall action.
@@ -270,14 +270,14 @@ logged in users. This is the wall action.
   # Messages of the priority alert will be directed
   # to the operator
   #
-  \*.alert      root,joey
+  *.alert      root,joey
 
 This rule directs all messages of priority alert or higher to the terminals
 of the operator, i.e. of the users "root" and "joey" if they're logged in.
 
 ::
 
-  \*.\*       @finlandia
+  *.*       @finlandia
 
 This rule would redirect all messages to a remote host called finlandia.
 This is useful especially in a cluster of machines where all syslog messages
