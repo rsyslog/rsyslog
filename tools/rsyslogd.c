@@ -1452,6 +1452,13 @@ initAll(int argc, char **argv)
 
 	resetErrMsgsFlag();
 	localRet = rsconf.Load(&ourConf, ConfFile);
+
+	/* check for "hard" errors that needs us to abort in any case */
+	if(   (localRet == RS_RET_CONF_FILE_NOT_FOUND)
+	   || (localRet == RS_RET_NO_ACTIONS) ) {
+		ABORT_FINALIZE(localRet);
+	}
+
 	glbl.GenerateLocalHostNameProperty();
 
 	if(hadErrMsgs()) {
