@@ -86,6 +86,17 @@ Version 8.35.0 [v8-stable] 2018-05-15
   Thanks to Richard Megginson for the patch set.
 - build system bugfix: --enable-atomic-operations did not work
   closes https://github.com/rsyslog/rsyslog/pull/2604
+- bugfix: rsyslog aborts on startup when specific config errors are made 
+  The following errors must be made in rsyslog.conf:
+  * no action present
+  * a call statement is used on an undefined ruleset
+  In this case, rsyslog emits an error message on the missing actions and
+  then segfaults. Depending on memory layout, it may also continue to run
+  but do nothing except accepting messages as no action is configured.
+  This patch make rsyslog properly terminate after the error message. It
+  is a change in behavior, but there really is no reason why a defunct
+  instance should be kept running.
+  closes https://github.com/rsyslog/rsyslog/issues/2399
 - QA/CI
   * enabled some additional useful compiler warnings
   * new tests for omfile
