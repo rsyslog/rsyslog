@@ -1324,28 +1324,27 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 		conf.GetNbrActActions(loadConf, &iNbrActions);
 	}
 
+	/* we run the optimizer even if we have an error, as it may spit out
+	 * additional error messages and we want to see these even if we abort.
+	 */
+	rulesetOptimizeAll(loadConf);
+
 	if(r == 1) {
-		LogError(0, RS_RET_CONF_PARSE_ERROR,
-				"CONFIG ERROR: could not interpret master "
-				"config file '%s'.", confFile);
+		LogError(0, RS_RET_CONF_PARSE_ERROR, "could not interpret master "
+			"config file '%s'.", confFile);
 		ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
 	} else if(r == 2) { /* file not found? */
-		char err[1024];
-		rs_strerror_r(errno, err, sizeof(err));
-		LogError(0, RS_RET_CONF_FILE_NOT_FOUND,
-			        "could not open config file '%s': %s",
-			        confFile, err);
+		LogError(errno, RS_RET_CONF_FILE_NOT_FOUND, "could not open config file '%s'",
+		        confFile);
 		ABORT_FINALIZE(RS_RET_CONF_FILE_NOT_FOUND);
-	} else if(iNbrActions == 0 &&
-		!(iConfigVerify & CONF_VERIFY_PARTIAL_CONF)) {
-		LogError(0, RS_RET_NO_ACTIONS, "CONFIG ERROR: there are no "
-				"active actions configured. Inputs will "
-			 	"run, but no output whatsoever is created.");
+	} else if(    (iNbrActions == 0)
+		  && !(iConfigVerify & CONF_VERIFY_PARTIAL_CONF)) {
+		LogError(0, RS_RET_NO_ACTIONS, "there are no active actions configured. "
+			"Inputs would run, but no output whatsoever were created.");
 		ABORT_FINALIZE(RS_RET_NO_ACTIONS);
 	}
 	tellLexEndParsing();
 	DBGPRINTF("Number of actions in this configuration: %d\n", iActionNbr);
-	rulesetOptimizeAll(loadConf);
 
 	CHKiRet(tellCoreConfigLoadDone());
 	tellModulesConfigLoadDone();
