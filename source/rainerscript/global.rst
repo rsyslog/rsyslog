@@ -360,3 +360,15 @@ The following parameters can be set:
   This permits SUSPENDing dynafile actions. Traditionally, SUSPEND mode was
   never entered for dynafiles as it would have blocked overall processing
   flow. Default is not to suspend (and thus block).
+
+- **internal.developeronly.options**
+
+  This is NOT to be used by end users. It provides rsyslog developers the
+  ability to do some (possibly strange) things inside rsyslog, e.g. for
+  testing. This parameter should never be set, except if instructed by
+  a developer. If it is set, rsyslog may misbehave, segfault, or cause
+  other strange things. Note that option values are not guaranteed to
+  stay the same between releases, so do not be "smart" and apply settings
+  that you found via a web search.
+
+  Once again: **users must NOT set this parameter!**
