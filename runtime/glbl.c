@@ -7,7 +7,7 @@
  *
  * Module begun 2008-04-16 by Rainer Gerhards
  *
- * Copyright 2008-2017 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -128,6 +128,8 @@ size_t glblDbgFilesNum = 0;
 int glblDbgWhitelist = 1;
 int glblPermitCtlC = 0;
 
+uint64_t glblDevOptions = 0; /* to be used by developers only */
+
 pid_t glbl_ourpid;
 #ifndef HAVE_ATOMIC_BUILTINS
 static DEF_ATOMIC_HELPER_MUT(mutTerminateInputs);
@@ -182,6 +184,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "environment", eCmdHdlrArray, 0 },
 	{ "processinternalmessages", eCmdHdlrBinary, 0 },
 	{ "umask", eCmdHdlrFileCreateMode, 0 },
+	{ "internal.developeronly.options", eCmdHdlrInt, 0 },
 	{ "internalmsg.ratelimit.interval", eCmdHdlrPositiveInt, 0 },
 	{ "internalmsg.ratelimit.burst", eCmdHdlrPositiveInt, 0 },
 	{ "errormessagestostderr.maxnumber", eCmdHdlrPositiveInt, 0 },
@@ -1002,6 +1005,8 @@ glblProcessCnf(struct cnfobj *o)
 			continue;
 		if(!strcmp(paramblk.descr[i].name, "processinternalmessages")) {
 			bProcessInternalMessages = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "internal.developeronly.options")) {
+		        glblDevOptions = (uint64_t) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "stdlog.channelspec")) {
 #ifndef HAVE_LIBLOGGING_STDLOG
 			LogError(0, RS_RET_ERR, "rsyslog wasn't "

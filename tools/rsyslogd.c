@@ -1456,7 +1456,17 @@ initAll(int argc, char **argv)
 	/* check for "hard" errors that needs us to abort in any case */
 	if(   (localRet == RS_RET_CONF_FILE_NOT_FOUND)
 	   || (localRet == RS_RET_NO_ACTIONS) ) {
-		ABORT_FINALIZE(localRet);
+		/* for extreme testing, we keep the ability to let rsyslog continue
+		 * even on hard config errors. Note that this may lead to segfaults
+		 * or other malfunction further down the road.
+		 */
+		if((glblDevOptions & DEV_OPTION_KEEP_RUNNING_ON_HARD_CONF_ERROR) == 1) {
+			fprintf(stderr, "rsyslogd: NOTE: developer-only option set to keep rsyslog "
+				"running where it should abort - this can lead to "
+				"more problems later in the run.\n");
+		} else {
+			ABORT_FINALIZE(localRet);
+		}
 	}
 
 	glbl.GenerateLocalHostNameProperty();
