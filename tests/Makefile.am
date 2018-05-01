@@ -718,7 +718,8 @@ if ENABLE_RELP
 TESTS += sndrcv_relp.sh \
 	 sndrcv_relp_rebind.sh \
 	 imrelp-basic.sh \
-	 imrelp-manyconn.sh
+	 imrelp-manyconn.sh \
+	 imrelp-maxDataSize-error.sh
 if ENABLE_GNUTLS
 TESTS += \
          sndrcv_relp_tls.sh \
@@ -1364,6 +1365,7 @@ EXTRA_DIST= \
 	testsuites/sndrcv_rcvr.conf \
 	imrelp-basic.sh \
 	imrelp-manyconn.sh \
+	imrelp-maxDataSize-error.sh \
 	sndrcv_relp.sh \
 	testsuites/sndrcv_relp_sender.conf \
 	testsuites/sndrcv_relp_rcvr.conf \

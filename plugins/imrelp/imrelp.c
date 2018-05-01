@@ -488,7 +488,14 @@ CODESTARTnewInpInst
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
 			inst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "maxdatasize")) {
-			inst->maxDataSize = (size_t) pvals[i].val.d.n;
+			size_t maxDataSize = (size_t) pvals[i].val.d.n;
+			if(maxDataSize < (size_t)glbl.GetMaxLine()) {
+				errmsg.LogError(0, RS_RET_INVALID_PARAMS, "error: "
+					"maxDataSize is smaller than global parameter "
+					"maxMessageSize - global parameter will be used.");
+			} else {
+				inst->maxDataSize = maxDataSize;
+			}
 		} else if(!strcmp(inppblk.descr[i].name, "keepalive")) {
 			inst->bKeepAlive = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "keepalive.probes")) {
