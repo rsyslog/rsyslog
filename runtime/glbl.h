@@ -123,6 +123,16 @@ extern size_t glblDbgFilesNum;
 extern int glblDbgWhitelist;
 extern int glblPermitCtlC;
 
+/* Developer options enable some strange things for developer-only testing.
+ * These should never be enabled in a user build, except if explicitly told
+ * by a developer. The options are acutally flags, so they should be powers
+ * of two. Flag assignment may change between versions, **backward
+ * compatibility is NOT necessary**.
+ * rgerhards, 2018-04-28
+ */
+#define DEV_OPTION_KEEP_RUNNING_ON_HARD_CONF_ERROR 1
+extern uint64_t glblDevOptions;
+
 #define glblGetOurPid() glbl_ourpid
 #define glblSetOurPid(pid) { glbl_ourpid = (pid); }
 
