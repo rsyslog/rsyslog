@@ -8,6 +8,7 @@ Version 8.35.0 [v8-stable] 2018-05-15
 - fmhash: new hash function module
   implements hash32() and hash64() functions
   Thanks to Harshvardhan Shrivastava for implementing these
+- some better error messages
 - omfwd: add support for bind-to-address for UDP
   To allow the same source address to be used regardless of the egress
   interface taken, an option is added for an address to bind the datagram
@@ -39,6 +40,11 @@ Version 8.35.0 [v8-stable] 2018-05-15
 - core: config optimizer did not handle call_indirect
   This also caused the emission of an "internal error" error message
   closes https://github.com/rsyslog/rsyslog/issues/2665
+- imrelp bugfix: maxDataSize could be set lower than maxMessageSize
+  maxDataSize specifies the length which will still be accepted
+  It previously could be set to any value, including values lower than the
+  configured rsyslog max message size, which makes no sense. Now this is
+  checked an error message is emitted if the size is set too low.
 - core bugfix: segfault on queue shutdown
   if a ruleset queue is in direct mode, a segfault can occur during
   rsyslog shutdown. The root cause is that a direct queue does not
