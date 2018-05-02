@@ -300,6 +300,86 @@ failedMsgFile
 Filename where the failed messages should be stored into.
 Needs to be set when keepFailedMessages is enabled, otherwise failed messages won't be saved.
 
+Statistic Counter
+=================
+
+This plugin maintains global :doc:`statistics <../rsyslog_statistic_counter>` for omkafka that
+accumulate all action instances. The statistic origin is named "omafka" with following counters:
+
+- **submitted** - number of messages submitted to omkafka for processing (with both acknowledged
+  deliveries to broker as well as failed or re-submitted from omkafka to librdkafka).
+
+- **maxoutqsize** - high water mark of output queue size.
+
+- **failures** - number of messages that librdkafka failed to deliver. This number is
+  broken down into counts of various types of failures.
+
+- **topicdynacache.skipped** - count of dynamic topic cache lookups that find an existing topic and
+  skip creating a new one.
+
+- **topicdynacache.miss** - count of dynamic topic cache lookps that fail to find an existing topic
+  and end up creating new ones.
+
+- **topicdynacache.evicted** - count of dynamic topic cache entry evictions.
+
+- **acked** - count of messages that were acknowledged by kafka broker. Note that
+  kafka broker provides two levels of delivery acknowledgements depending on topicConfParam:
+  default (acks=1) implies devlivery to the leader only while acks=-1 implies delivery to leader
+  as well as replication to all brokers.
+
+- **failures_msg_too_large** - count of messages dropped by librdkafka when it failed to
+  deliver to the broker because broker considers message to be too large. Note that
+  omkafka may still resubmit to librdkafka depending on resubmitOnFailure option.
+
+- **failures_unknown_topic** - count of messages dropped by librdkafka when it failed to
+  deliver to the broker because broker does not recognize the topic.
+
+- **failures_queue_full** - count of messages dropped by librdkafka when its queue becomes
+  full. Note that default size of librdkafka queue is 100,000 messages.
+
+- **failures_unknown_partition** - count of messages that librdkafka failed to deliver becuase
+  broker does not recognize a partition.
+
+- **failures_other** - count of all of the rest of the failures that do not fall in any of
+  the above failure categories.
+
+- **errors_timed_out** - count of messages that librdkafka could not deliver within timeout. These
+  errors will cause action to be suspended but messages can be retried depending on retry options.
+
+- **errors_transport** - count of messages that librdkafka could not deliver due to transport errors.
+  These messages can be retried depending on retry options.
+
+- **errors_broker_down** - count of messages that librdkafka could not deliver because it thins that
+  broker is not accessible. These messages can be ertried depending on options.
+
+- **errors_auth** - count of messages that librdkafka could not deliver due to authentication errors.
+  These messages can be retried depending on the options.
+
+- **errors_other** - count of rest of librdkafka errors.
+
+- **rtt_avg_usec** - broker round trip time in microseconds averaged over all brokers. It is based
+  on the statistics callback window specified through statistics.interval.ms parameter to librdkafka.
+  Averag exclude brokers with less than 100 microseconds rtt.
+
+- **throttle_avg_msec** - broker throttling time in milliseconds averaged overa all brokers. This is
+  also a part of window statistics delivered by librdkakfka. Averge excludes brokers with zero throttling time.
+
+- **int_latency_avg_usec** - intranal librdkafka producer queue latency in microsconds averaged other
+  all brokers. This is also part of window statistics and average excludes broers with zero internal latency.
+
+Note that three window statics counters are not safe with multiple clients. When statistics callback is
+enabled, for example, by using statics.callback.ms=60000, omkafa will generate an internal log message every
+minute for the corresponing omkafka action:
+
+.. code-block:: none
+
+	2018-03-31T01:51:59.368491+00:00 app1-1.example.com rsyslogd: statscb_window_stats:
+	handler_name=collections.rsyslog.core#producer-1 replyq=0 msg_cnt=30 msg_size=37986 msg_max=100000
+	msg_size_max=1073741824 rtt_avg_usec=41475 throttle_avg_msec=0 int_latency_avg_usec=2943224 [v8.32.0]
+
+For multiple actions using statistics callabck, there will be one such record for each action after specified
+window period. See https://github.com/edenhill/librdkafka/wiki/Statistics for more details on statistics
+callback values.
 
 Examples
 ========

@@ -79,3 +79,5 @@ Plugins
 
 :doc:`omelasticsearch <modules/omelasticsearch>`
 
+:doc:`omkafka <modules/omkafka>`
+
