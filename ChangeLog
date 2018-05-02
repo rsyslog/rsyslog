@@ -9,6 +9,12 @@ Version 8.35.0 [v8-stable] 2018-05-15
   implements hash32() and hash64() functions
   Thanks to Harshvardhan Shrivastava for implementing these
 - some better error messages
+- omkafka: added impstats counters for librdkafka returned statistics
+  Adds:
+  * statscallback counters
+  * librdkafka failure and error counters
+  * acked message counter
+  Thanks to Abdul Waheed for implementing this.
 - omfwd: add support for bind-to-address for UDP
   To allow the same source address to be used regardless of the egress
   interface taken, an option is added for an address to bind the datagram
@@ -24,6 +30,14 @@ Version 8.35.0 [v8-stable] 2018-05-15
   Especially on busy systems the default are too low. Please keep in mind
   that on a very busy system even the now-proposed setting may be too low.
   Thanks to github user jvymazal for the patch.
+- nsdsel_ptcp: replace select() by poll()
+  This removes us of problems with fds > 1024. The performance will
+  probably also increase in most cases.
+  Note this is not a replacement for the epoll drivers, but a general
+  stability improvement when epoll() is not available for some reason.
+  see also https://github.com/rsyslog/rsyslog/issues/2615
+  closes https://github.com/rsyslog/rsyslog/issues/1728
+  closes https://github.com/rsyslog/rsyslog/issues/1459
 - omprog: refactor tests, fix child closing issues
   Refactor omprog tests. Fix sync issues in these tests by
   using the feedback mode (confirmMessages=on) to synchronize
