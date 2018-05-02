@@ -982,6 +982,45 @@ submitMsg(smsg_t *pMsg)
 	return submitMsgWithDfltRatelimiter(pMsg);
 }
 
+
+static rsRetVal ATTR_NONNULL()
+splitOversizeMessage(smsg_t *const pMsg)
+{
+	DEFiRet;
+	const char *rawmsg;
+	int nsegments;
+	int len_rawmsg;
+	const int maxlen = glblGetMaxLine();
+	ISOBJ_TYPE_assert(pMsg, msg);
+
+	getRawMsg(pMsg, (uchar**) &rawmsg, &len_rawmsg);
+	nsegments = len_rawmsg / maxlen;
+	const int len_last_segment = len_rawmsg % maxlen;
+	DBGPRINTF("splitting oversize message, size %d, segment size %d, "
+		"nsegments %d, bytes in last fragment %d\n",
+		len_rawmsg, maxlen, nsegments, len_last_segment);
+
+	smsg_t *pMsg_seg;
+
+	/* process full segments */
+	for(int i = 0 ; i < nsegments ; ++i) {
+		CHKmalloc(pMsg_seg = MsgDup(pMsg));
+		MsgSetRawMsg(pMsg_seg, rawmsg + (i * maxlen), maxlen);
+		submitMsg2(pMsg_seg);
+	}
+
+	/* if necessary, write partial last segment */
+	if(len_last_segment != 0) {
+		CHKmalloc(pMsg_seg = MsgDup(pMsg));
+		MsgSetRawMsg(pMsg_seg, rawmsg + (nsegments * maxlen), len_last_segment);
+		submitMsg2(pMsg_seg);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* submit a message to the main message queue.   This is primarily
  * a hook to prevent the need for callers to know about the main message queue
  * rgerhards, 2008-02-13
@@ -994,6 +1033,34 @@ submitMsg2(smsg_t *pMsg)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pMsg, msg);
+
+	if(getRawMsgLen(pMsg) > glblGetMaxLine()){
+		uchar *rawmsg;
+		int dummy;
+		getRawMsg(pMsg, &rawmsg, &dummy);
+		if(glblReportOversizeMessage()) {
+			LogMsg(0, RS_RET_OVERSIZE_MSG, LOG_WARNING,
+				"message too long (%d) with configured size %d, begin of "
+				"message is: %.80s",
+				getRawMsgLen(pMsg), glblGetMaxLine(), rawmsg);
+		}
+		writeOversizeMessageLog(pMsg);
+		if(glblGetOversizeMsgInputMode() == glblOversizeMsgInputMode_Split) {
+			splitOversizeMessage(pMsg);
+			/* we have submitted the message segments recursively, so we
+			 * can just deleted the original msg object and terminate.
+			 */
+			msgDestruct(&pMsg);
+			FINALIZE;
+		} else if(glblGetOversizeMsgInputMode() == glblOversizeMsgInputMode_Truncate) {
+			MsgTruncateToMaxSize(pMsg);
+		} else {
+			/* in "accept" mode, we do nothing, simply because "accept" means
+			 * to use as-is.
+			 */
+			assert(glblGetOversizeMsgInputMode() == glblOversizeMsgInputMode_Accept);
+		}
+	}
 
 	pRuleset = MsgGetRuleset(pMsg);
 	pQueue = (pRuleset == NULL) ? pMsgQueue : ruleset.GetRulesetQueue(pRuleset);
@@ -1015,13 +1082,12 @@ finalize_it:
  * for multi_submit_t. All messages need to go into the SAME queue!
  * rgerhards, 2009-06-16
  */
-rsRetVal
-multiSubmitMsg2(multi_submit_t *pMultiSub)
+rsRetVal ATTR_NONNULL()
+multiSubmitMsg2(multi_submit_t *const pMultiSub)
 {
 	qqueue_t *pQueue;
 	ruleset_t *pRuleset;
 	DEFiRet;
-	assert(pMultiSub != NULL);
 
 	if(pMultiSub->nElem == 0)
 		FINALIZE;
@@ -1679,6 +1745,7 @@ doHUP(void)
 	ruleset.IterateAllActions(ourConf, doHUPActions, NULL);
 	modDoHUP();
 	lookupDoHUP();
+	errmsgDoHUP();
 }
 
 /* rsyslogdDoDie() is a signal handler. If called, it sets the bFinished variable

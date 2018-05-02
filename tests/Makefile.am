@@ -385,6 +385,7 @@ TESTS +=  \
 	mmexternal-SegFault-vg.sh \
 	mmexternal-InvldProg-vg.sh \
 	internal-errmsg-memleak-vg.sh \
+	glbl-oversizeMsg-log-vg.sh \
 	rscript_set_memleak-vg.sh \
 	no-parser-vg.sh \
 	discard-rptdmsg-vg.sh \
@@ -725,7 +726,10 @@ TESTS += sndrcv_relp.sh \
 	 imrelp-maxDataSize-error.sh \
 	 imrelp-long-msg.sh \
 	 imrelp-oversizeMode-truncate.sh \
-	 imrelp-oversizeMode-accept.sh
+	 imrelp-oversizeMode-accept.sh \
+	 glbl-oversizeMsg-log.sh \
+	 glbl-oversizeMsg-truncate.sh \
+	 glbl-oversizeMsg-split.sh
 if ENABLE_GNUTLS
 TESTS += \
          sndrcv_relp_tls.sh \
@@ -808,7 +812,8 @@ TESTS += \
 	imfile-wildcards-dirs-multi5-polling.sh \
 	imfile-old-state-file.sh \
 	imfile-rename-while-stopped.sh \
-	imfile-rename.sh
+	imfile-rename.sh \
+	glbl-oversizeMsg-truncate-imfile.sh
 
 if HAVE_VALGRIND
 TESTS += \
@@ -842,6 +847,7 @@ test_files = testbench.h runtime-dummy.c
 
 EXTRA_DIST= \
 	internal-errmsg-memleak-vg.sh \
+	glbl-oversizeMsg-log-vg.sh \
 	empty-hostname.sh \
 	hostname-getaddrinfo-fail.sh \
 	hostname-with-slash-pmrfc5424.sh \
@@ -1377,6 +1383,9 @@ EXTRA_DIST= \
 	imrelp-long-msg.sh \
 	imrelp-oversizeMode-truncate.sh \
 	imrelp-oversizeMode-accept.sh \
+	glbl-oversizeMsg-log.sh \
+	glbl-oversizeMsg-truncate.sh \
+	glbl-oversizeMsg-split.sh \
 	sndrcv_relp.sh \
 	testsuites/sndrcv_relp_sender.conf \
 	testsuites/sndrcv_relp_rcvr.conf \
@@ -1536,6 +1545,7 @@ EXTRA_DIST= \
 	imfile-old-state-file.sh \
 	imfile-rename-while-stopped.sh \
 	imfile-rename.sh \
+	glbl-oversizeMsg-truncate-imfile.sh \
 	testsuites/imfile-wildcards-simple.conf \
 	testsuites/imfile-wildcards-dirs.conf \
 	testsuites/imfile-wildcards-dirs-multi.conf \

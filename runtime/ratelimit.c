@@ -263,30 +263,39 @@ ratelimitAddMsg(ratelimit_t *ratelimit, multi_submit_t *pMultiSub, smsg_t *pMsg)
 	smsg_t *repMsg;
 	DEFiRet;
 
+	localRet = ratelimitMsg(ratelimit, pMsg, &repMsg);
 	if(pMultiSub == NULL) {
-		localRet = ratelimitMsg(ratelimit, pMsg, &repMsg);
 		if(repMsg != NULL)
 			CHKiRet(submitMsg2(repMsg));
-		if(localRet == RS_RET_OK)
-			CHKiRet(submitMsg2(pMsg));
+		CHKiRet(localRet);
+		CHKiRet(submitMsg2(pMsg));
 	} else {
-		localRet = ratelimitMsg(ratelimit, pMsg, &repMsg);
-dbgprintf("RRRRRR: localRet %d\n", localRet);
 		if(repMsg != NULL) {
 			pMultiSub->ppMsgs[pMultiSub->nElem++] = repMsg;
 			if(pMultiSub->nElem == pMultiSub->maxElem)
 				CHKiRet(multiSubmitMsg2(pMultiSub));
 		}
-		if(localRet == RS_RET_OK) {
-			pMultiSub->ppMsgs[pMultiSub->nElem++] = pMsg;
-			if(pMultiSub->nElem == pMultiSub->maxElem)
+		CHKiRet(localRet);
+		if(pMsg->iLenRawMsg > glblGetMaxLine()) {
+			/* oversize message needs special processing. We keep
+			 * at least the previous batch as batch...
+			 */
+			if(pMultiSub->nElem > 0) {
+dbgprintf("RRRRR: ratelimitAddMsg flush multi submit\n");
 				CHKiRet(multiSubmitMsg2(pMultiSub));
-		//} else if(localRet == RS_RET_DISCARDMSG) { /////
-			//msgDestruct(&pMsg); /////
+			}
+dbgprintf("RRRRR: ratelimitAddMsg doing singles submit\n");
+			CHKiRet(submitMsg2(pMsg));
+dbgprintf("RRRRR: ratelimitAddMsg done  singles submit\n");
+			FINALIZE;
 		}
+		pMultiSub->ppMsgs[pMultiSub->nElem++] = pMsg;
+		if(pMultiSub->nElem == pMultiSub->maxElem)
+			CHKiRet(multiSubmitMsg2(pMultiSub));
 	}
 
 finalize_it:
+dbgprintf("RRRRR: ratelimitAddMsg returns %d\n", iRet);
 	RETiRet;
 }
 

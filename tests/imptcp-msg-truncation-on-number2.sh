@@ -5,7 +5,8 @@
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
 $MaxMessageSize 128
-global(processInternalMessages="on")
+global(processInternalMessages="on"
+	oversizemsg.input.mode="accept")
 module(load="../plugins/imptcp/.libs/imptcp")
 input(type="imptcp" port="13514" ruleset="ruleset1")
 

@@ -10,6 +10,7 @@ echo [imfile-truncate-line.sh]
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
 $MaxMessageSize 128
+global(oversizemsg.input.mode="accept" oversizemsg.report="on")
 module(load="../plugins/imfile/.libs/imfile")
 input(type="imfile"
       File="./rsyslog.input"

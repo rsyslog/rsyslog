@@ -3,7 +3,7 @@
  *
  * File begun on 2007-07-13 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -195,7 +195,7 @@ void MsgSetHOSTNAME(smsg_t *pMsg, const uchar* pszHOSTNAME, const int lenHOSTNAM
 rsRetVal MsgSetAfterPRIOffs(smsg_t *pMsg, short offs);
 void MsgSetMSGoffs(smsg_t *pMsg, short offs);
 void MsgSetRawMsgWOSize(smsg_t *pMsg, char* pszRawMsg);
-void MsgSetRawMsg(smsg_t *pMsg, const char* pszRawMsg, size_t lenMsg);
+void ATTR_NONNULL() MsgSetRawMsg(smsg_t *const pThis, const char*const pszRawMsg, const size_t lenMsg);
 rsRetVal MsgReplaceMSG(smsg_t *pThis, const uchar* pszMSG, int lenMSG);
 uchar *MsgGetProp(smsg_t *pMsg, struct templateEntry *pTpe, msgPropDescr_t *pProp,
 		  rs_size_t *pPropLen, unsigned short *pbMustBeFreed, struct syslogTime *ttNow);
@@ -204,7 +204,9 @@ void getTAG(smsg_t *pM, uchar **ppBuf, int *piLen);
 const char *getTimeReported(smsg_t *pM, enum tplFormatTypes eFmt);
 const char *getPRI(smsg_t *pMsg);
 int getPRIi(const smsg_t * const pM);
-void getRawMsg(smsg_t *pM, uchar **pBuf, int *piLen);
+int ATTR_NONNULL() getRawMsgLen(const smsg_t *const pMsg);
+void getRawMsg(const smsg_t *pM, uchar **pBuf, int *piLen);
+void ATTR_NONNULL() MsgTruncateToMaxSize(smsg_t *const pThis);
 rsRetVal msgAddJSON(smsg_t *pM, uchar *name, struct json_object *json, int force_reset, int sharedReference);
 rsRetVal msgAddMetadata(smsg_t *msg, uchar *metaname, uchar *metaval);
 rsRetVal msgAddMultiMetadata(smsg_t *msg, const uchar **metaname, const uchar **metaval, const int count);
@@ -214,13 +216,13 @@ rsRetVal MsgSetPropsViaJSON(smsg_t *__restrict__ const pMsg, const uchar *__rest
 rsRetVal MsgSetPropsViaJSON_Object(smsg_t *__restrict__ const pMsg, struct json_object *json);
 const uchar* msgGetJSONMESG(smsg_t *__restrict__ const pMsg);
 
-/* TODO: remove these five (so far used in action.c) */
 uchar *getMSG(smsg_t *pM);
 const char *getHOSTNAME(smsg_t *pM);
 char *getPROCID(smsg_t *pM, sbool bLockMutex);
 char *getAPPNAME(smsg_t *pM, sbool bLockMutex);
 void setMSGLen(smsg_t *pM, int lenMsg);
 int getMSGLen(smsg_t *pM);
+void getInputName(const smsg_t * const pM, uchar **ppsz, int *const plen);
 
 int getHOSTNAMELen(smsg_t *pM);
 uchar *getProgramName(smsg_t *pM, sbool bLockMutex);

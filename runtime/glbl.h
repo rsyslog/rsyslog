@@ -38,6 +38,10 @@
 #include "prop.h"
 
 #define glblGetIOBufSize() 4096 /* size of the IO buffer, e.g. for strm class */
+#define glblOversizeMsgInputMode_Truncate 0
+#define glblOversizeMsgInputMode_Split 1
+#define glblOversizeMsgInputMode_Accept 2
+
 
 extern pid_t glbl_ourpid;
 extern int bProcessInternalMessages;
@@ -147,5 +151,8 @@ tzinfo_t* glblFindTimezoneInfo(char *id);
 int GetGnuTLSLoglevel(void);
 int glblGetMaxLine(void);
 int bs_arrcmp_glblDbgFiles(const void *s1, const void *s2);
+uchar* glblGetOversizeMsgErrorFile(void);
+int glblGetOversizeMsgInputMode(void);
+int glblReportOversizeMessage(void);
 
 #endif /* #ifndef GLBL_H_INCLUDED */
