@@ -66,6 +66,17 @@ STATSCOUNTER_DEF(ctrKafkaFail, mutCtrKafkaFail);
 STATSCOUNTER_DEF(ctrCacheMiss, mutCtrCacheMiss);
 STATSCOUNTER_DEF(ctrCacheEvict, mutCtrCacheEvict);
 STATSCOUNTER_DEF(ctrCacheSkip, mutCtrCacheSkip);
+STATSCOUNTER_DEF(ctrKafkaAck, mutCtrKafkaAck);
+STATSCOUNTER_DEF(ctrKafkaMsgTooLarge, mutCtrKafkaMsgTooLarge);
+STATSCOUNTER_DEF(ctrKafkaUnknownTopic, mutCtrKafkaUnknownTopic);
+STATSCOUNTER_DEF(ctrKafkaQueueFull, mutCtrKafkaQueueFull);
+STATSCOUNTER_DEF(ctrKafkaUnknownPartition, mutCtrKafkaUnknownPartition);
+STATSCOUNTER_DEF(ctrKafkaOtherErrors, mutCtrKafkaOtherErrors);
+STATSCOUNTER_DEF(ctrKafkaRespTimedOut, mutCtrKafkaRespTimedOut);
+STATSCOUNTER_DEF(ctrKafkaRespTransport, mutCtrKafkaRespTransport);
+STATSCOUNTER_DEF(ctrKafkaRespBrokerDown, mutCtrKafkaRespBrokerDown);
+STATSCOUNTER_DEF(ctrKafkaRespAuth, mutCtrKafkaRespAuth);
+STATSCOUNTER_DEF(ctrKafkaRespOther, mutCtrKafkaRespOther);
 
 #define MAX_ERRMSG 1024 /* max size of error messages that we support */
 
@@ -108,6 +119,11 @@ getClockTopicAccess(void)
 
 static int closeTimeout = 1000;
 static pthread_mutex_t closeTimeoutMut = PTHREAD_MUTEX_INITIALIZER;
+
+/* stats callback window metrics */
+static uint64 rtt_avg_usec;
+static uint64 throttle_avg_msec;
+static uint64 int_latency_avg_usec;
 
 /* dynamic topic cache */
 struct s_dynaTopicCacheEntry {
@@ -568,6 +584,26 @@ finalize_it:
 	RETiRet;
 }
 
+/* identify and count specific types of kafka failures.
+ */
+static rsRetVal
+updateKafkaFailureCounts(rd_kafka_resp_err_t err) {
+	DEFiRet;
+	if (err == RD_KAFKA_RESP_ERR_MSG_SIZE_TOO_LARGE) {
+		STATSCOUNTER_INC(ctrKafkaMsgTooLarge, mutCtrKafkaMsgTooLarge);
+	} else if (err == RD_KAFKA_RESP_ERR__UNKNOWN_TOPIC) {
+		STATSCOUNTER_INC(ctrKafkaUnknownTopic, mutCtrKafkaUnknownTopic);
+	} else if (err == RD_KAFKA_RESP_ERR__QUEUE_FULL) {
+		STATSCOUNTER_INC(ctrKafkaQueueFull, mutCtrKafkaQueueFull);
+	} else if (err == RD_KAFKA_RESP_ERR__UNKNOWN_PARTITION) {
+		STATSCOUNTER_INC(ctrKafkaUnknownPartition, mutCtrKafkaUnknownPartition);
+	} else {
+		STATSCOUNTER_INC(ctrKafkaOtherErrors, mutCtrKafkaOtherErrors);
+	}
+
+	RETiRet;
+}
+
 /* must be called with read(rkLock)
  * b_do_resubmit tells if we shall resubmit on error or not. This is needed
  *               when we submit already resubmitted messages.
@@ -582,8 +618,8 @@ writeKafka(instanceData *const pData, uchar *const msg,
 	pthread_rwlock_t *dynTopicLock = NULL;
 	failedmsg_entry* fmsgEntry;
 	int topic_mut_locked = 0;
-#if RD_KAFKA_VERSION >= 0x00090400
 	rd_kafka_resp_err_t msg_kafka_response;
+#if RD_KAFKA_VERSION >= 0x00090400
 	int64_t ttMsgTimestamp;
 #else
 	int msg_enqueue_status = 0;
@@ -638,6 +674,8 @@ writeKafka(instanceData *const pData, uchar *const msg,
 	}
 
 	if (msg_kafka_response != RD_KAFKA_RESP_ERR_NO_ERROR ) {
+		updateKafkaFailureCounts(msg_kafka_response);
+
 		/* Put into kafka queue, again if configured! */
 		if (pData->bResubmitOnFailure && b_do_resubmit) {
 			DBGPRINTF("omkafka: Failed to produce to topic '%s' (rd_kafka_producev)"
@@ -664,11 +702,14 @@ writeKafka(instanceData *const pData, uchar *const msg,
 				  pData->key == NULL ? 0 : strlen((char*)pData->key),
 				  NULL);
 	if(msg_enqueue_status == -1) {
+		msg_kafka_response = rd_kafka_last_error();
+		updateKafkaFailureCounts(msg_kafka_response);
+
 		/* Put into kafka queue, again if configured! */
 		if (pData->bResubmitOnFailure && b_do_resubmit) {
 		   	DBGPRINTF("omkafka: Failed to produce to topic '%s' (rd_kafka_produce)"
 				"partition %d: '%d/%s' - adding MSG '%s' to failed for RETRY!\n",
-				rd_kafka_topic_name(rkt), partition, rd_kafka_last_error(),
+				rd_kafka_topic_name(rkt), partition, msg_kafka_response,
 				rd_kafka_err2str(rd_kafka_errno2err(errno)), msg);
 			CHKmalloc(fmsgEntry = failedmsg_entry_construct((char*) msg, strlen((char*)msg),
 				rd_kafka_topic_name(rkt)));
@@ -677,8 +718,8 @@ writeKafka(instanceData *const pData, uchar *const msg,
 			LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
 				"omkafka: Failed to produce to topic '%s' (rd_kafka_produce) "
 				"partition %d: %d/%s\n",
-				rd_kafka_topic_name(rkt), partition, rd_kafka_last_error(),
-				rd_kafka_err2str(rd_kafka_last_error()));
+				rd_kafka_topic_name(rkt), partition, msg_kafka_response,
+				rd_kafka_err2str(msg_kafka_response));
 		}
 	}
 #endif
@@ -722,6 +763,8 @@ deliveryCallback(rd_kafka_t __attribute__((unused)) *rk,
 	DEFiRet;
 
 	if (rkmessage->err) {
+		updateKafkaFailureCounts(rkmessage->err);
+
 		/* Put into kafka queue, again if configured! */
 		if (pData->bResubmitOnFailure) {
 			DBGPRINTF("omkafka: kafka delivery FAIL on Topic '%s', msg '%.*s', key '%.*s' -"
@@ -744,11 +787,153 @@ deliveryCallback(rd_kafka_t __attribute__((unused)) *rk,
 	} else {
 		DBGPRINTF("omkafka: kafka delivery SUCCESS on msg '%.*s'\n", (int)(rkmessage->len-1),
 			(char*)rkmessage->payload);
+		STATSCOUNTER_INC(ctrKafkaAck, mutCtrKafkaAck);
 	}
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		DBGPRINTF("omkafka: deliveryCallback returned failure %d\n", iRet);
 	}
+}
+
+/**
+ * This function looks for a json object that corresponds to the
+ * passed name and returns it is found. Otherwise returns NULL.
+ * It will be used for processing stats callback json object.
+ */
+static struct fjson_object *
+get_object(struct fjson_object *fj_obj, const char * name) {
+	struct fjson_object_iterator it = fjson_object_iter_begin(fj_obj);
+	struct fjson_object_iterator itEnd = fjson_object_iter_end(fj_obj);
+	while (!fjson_object_iter_equal (&it, &itEnd)) {
+		const char * key = fjson_object_iter_peek_name (&it);
+		struct fjson_object * val = fjson_object_iter_peek_value(&it);
+		if(!strncmp(key, name, strlen(name))){
+			return val;
+		}
+		fjson_object_iter_next (&it);
+	}
+
+	return NULL;
+}
+
+/**
+ * This function performs a two level search in stats callback json
+ * object. It iterates over broker objects and for each broker object
+ * returns desired level2 value (such as avg/min/max) for specified
+ * level1 window statistic (such as rtt/throttle/int_latency). Threshold
+ * allows skipping values that are too small, so that they don't
+ * impact on aggregate averaged value that is returned.
+ */
+static uint64
+jsonExtractWindoStats(struct fjson_object * stats_object,
+	const char * level1_obj_name, const char * level2_obj_name,
+	unsigned long skip_threshold) {
+	uint64 level2_val;
+	uint64 agg_val = 0;
+	uint64 ret_val = 0;
+	int active_brokers = 0;
+
+	struct fjson_object * brokers_obj = get_object(stats_object, "brokers");
+	if (brokers_obj == NULL) {
+		LogMsg(0, NO_ERRCODE, LOG_ERR, "jsonExtractWindowStat: failed to find brokers object");
+		return ret_val;
+	}
+
+	/* iterate over borkers to get level1 window objects at level2 (min, max, avg, etc.) */
+	struct fjson_object_iterator it = fjson_object_iter_begin(brokers_obj);
+	struct fjson_object_iterator itEnd = fjson_object_iter_end(brokers_obj);
+	while (!fjson_object_iter_equal (&it, &itEnd)) {
+		struct fjson_object * val = fjson_object_iter_peek_value(&it);
+		struct fjson_object * level1_obj = get_object(val, level1_obj_name);
+		if(level1_obj == NULL)
+			return ret_val;
+
+		struct fjson_object * level2_obj = get_object(level1_obj, level2_obj_name);
+		if(level2_obj == NULL)
+			return ret_val;
+
+		level2_val = fjson_object_get_int64(level2_obj);
+		if (level2_val > skip_threshold) {
+			agg_val += level2_val;
+			active_brokers++;
+		}
+		fjson_object_iter_next (&it);
+	}
+	if(active_brokers > 0) {
+		ret_val = agg_val/active_brokers;
+	}
+
+	return ret_val;
+}
+
+/**
+ * librdkafka will call this function after every statistics.interval.ms
+ * interval, which is specified in confParam. See the explanation at:
+ * https://github.com/edenhill/librdkafka/wiki/Statistics
+ *
+ * Here we have extracted windows stats: rtt, throttle time, and internal
+ * latency averages. These values will be logged as impstats messages.
+ */
+static int
+statsCallback(rd_kafka_t __attribute__((unused)) *rk,
+	char *json, size_t __attribute__((unused)) json_len,
+	void __attribute__((unused)) *opaque) {
+	char buf[2048];
+	char handler_name[1024] = "unknown";
+	int replyq = 0;
+	int msg_cnt = 0;
+	int msg_size = 0;
+	uint64 msg_max = 0;
+	uint64 msg_size_max = 0;
+
+	struct fjson_object * stats_object = NULL;
+	struct fjson_object * fj_obj = NULL;
+
+	DBGPRINTF("omkafka: librdkafka stats callback: %s\n", json);
+
+	/* prepare fjson object from stats callback for parsing */
+	stats_object = fjson_tokener_parse(json);
+	if (stats_object == NULL) {
+		LogMsg(0, NO_ERRCODE, LOG_ERR, "statsCallback: fjson tokenizer failed:");
+		return 0;
+	}
+	enum fjson_type type = fjson_object_get_type(stats_object);
+	if (type != fjson_type_object) {
+		LogMsg(0, NO_ERRCODE, LOG_ERR, "statsCallback: json is not of type object; can't process statsCB\n");
+		return 0;
+	}
+
+	/* top level stats extraction through libfastjson based parsing */
+	fj_obj = get_object(stats_object, "name");
+	if (fj_obj != NULL)
+		snprintf(handler_name, sizeof(handler_name), "%s", (char *)fjson_object_get_string(fj_obj));
+	fj_obj = get_object(stats_object, "replyq");
+	replyq = (fj_obj == NULL) ? 0 : fjson_object_get_int(fj_obj);
+	fj_obj = get_object(stats_object, "msg_cnt");
+	msg_cnt = (fj_obj == NULL) ? 0 : fjson_object_get_int(fj_obj);
+	fj_obj = get_object(stats_object, "msg_size");
+	msg_size = (fj_obj == NULL) ? 0 : fjson_object_get_int(fj_obj);
+	fj_obj = get_object(stats_object, "msg_max");
+	msg_max = (fj_obj == NULL) ? 0 : fjson_object_get_int64(fj_obj);
+	fj_obj = get_object(stats_object, "msg_size_max");
+	msg_size_max = (fj_obj == NULL) ? 0 : fjson_object_get_int64(fj_obj);
+
+	/* window stats extraction to be picked up by impstats counters */
+	rtt_avg_usec = jsonExtractWindoStats(stats_object, "rtt", "avg", 100);
+	throttle_avg_msec = jsonExtractWindoStats(stats_object, "throttle", "avg", 0);
+	int_latency_avg_usec = jsonExtractWindoStats(stats_object, "int_latency", "avg", 0);
+	json_object_put (stats_object);
+
+	/* emit a log line to get stats visibility per librdkafka client */
+	snprintf(buf, sizeof(buf),
+		"statscb_window_stats: handler_name=%s replyq=%d msg_cnt=%d msg_size=%d "
+		"msg_max=%lld msg_size_max=%lld rtt_avg_usec=%lld throttle_avg_msec=%lld "
+		"int_latency_avg_usec=%lld",
+		handler_name, replyq, msg_cnt, msg_size, msg_max, msg_size_max,
+		rtt_avg_usec, throttle_avg_msec, int_latency_avg_usec);
+	LogMsg(0, NO_ERRCODE, LOG_INFO, "%s\n", buf);
+
+	return 0;
 }
 
 static void
@@ -847,6 +1032,19 @@ errorCallback(rd_kafka_t __attribute__((unused)) *rk,
 	/* Get InstanceData pointer */
 	instanceData *const pData = (instanceData *) opaque;
 
+	/* count kafka transport errors that cause action suspension */
+	if (err == RD_KAFKA_RESP_ERR__MSG_TIMED_OUT) {
+		STATSCOUNTER_INC(ctrKafkaRespTimedOut, mutCtrKafkaRespTimedOut);
+	} else if (err == RD_KAFKA_RESP_ERR__TRANSPORT) {
+		STATSCOUNTER_INC(ctrKafkaRespTransport, mutCtrKafkaRespTransport);
+	} else if (err == RD_KAFKA_RESP_ERR__ALL_BROKERS_DOWN) {
+		STATSCOUNTER_INC(ctrKafkaRespBrokerDown, mutCtrKafkaRespBrokerDown);
+	} else if (err == RD_KAFKA_RESP_ERR__AUTHENTICATION) {
+		STATSCOUNTER_INC(ctrKafkaRespAuth, mutCtrKafkaRespAuth);
+	} else {
+		STATSCOUNTER_INC(ctrKafkaRespOther, mutCtrKafkaRespOther);
+	}
+
 	/* Handle common transport error codes*/
 	if (err == RD_KAFKA_RESP_ERR__MSG_TIMED_OUT ||
 		err == RD_KAFKA_RESP_ERR__TRANSPORT ||
@@ -933,6 +1131,7 @@ openKafka(instanceData *const __restrict__ pData)
 	rd_kafka_conf_set_opaque(conf, (void *) pData);
 	rd_kafka_conf_set_dr_msg_cb(conf, deliveryCallback);
 	rd_kafka_conf_set_error_cb(conf, errorCallback);
+	rd_kafka_conf_set_stats_cb(conf, statsCallback);
 #	if RD_KAFKA_VERSION >= 0x00090001
 	rd_kafka_conf_set_log_cb(conf, kafkaLogger);
 #	endif
@@ -1619,6 +1818,45 @@ CODEmodInit_QueryRegCFSLineHdlr
 	STATSCOUNTER_INIT(ctrCacheEvict, mutCtrCacheEvict);
 	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"topicdynacache.evicted",
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrCacheEvict));
+	STATSCOUNTER_INIT(ctrKafkaAck, mutCtrKafkaAck);
+	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"acked",
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaAck));
+	STATSCOUNTER_INIT(ctrKafkaMsgTooLarge, mutCtrKafkaMsgTooLarge);
+	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"failures_msg_too_large",
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaMsgTooLarge));
+	STATSCOUNTER_INIT(ctrKafkaUnknownTopic, mutCtrKafkaUnknownTopic);
+	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"failures_unknown_topic",
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaUnknownTopic));
+	STATSCOUNTER_INIT(ctrKafkaQueueFull, mutCtrKafkaQueueFull);
+	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"failures_queue_full",
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaQueueFull));
+	STATSCOUNTER_INIT(ctrKafkaUnknownPartition, mutCtrKafkaUnknownPartition);
+	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"failures_unknown_partition",
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaUnknownPartition));
+	STATSCOUNTER_INIT(ctrKafkaOtherErrors, mutCtrKafkaOtherErrors);
+	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"failures_other",
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaOtherErrors));
+	STATSCOUNTER_INIT(ctrKafkaRespTimedOut, mutCtrKafkaRespTimedOut);
+	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"errors_timed_out",
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespTimedOut));
+	STATSCOUNTER_INIT(ctrKafkaRespTransport, mutCtrKafkaRespTransport);
+	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"errors_transport",
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespTransport));
+	STATSCOUNTER_INIT(ctrKafkaRespBrokerDown, mutCtrKafkaRespBrokerDown);
+	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"errors_broker_down",
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespBrokerDown));
+	STATSCOUNTER_INIT(ctrKafkaRespAuth, mutCtrKafkaRespAuth);
+	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"errors_auth",
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespAuth));
+	STATSCOUNTER_INIT(ctrKafkaRespOther, mutCtrKafkaRespOther);
+	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"errors_other",
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespOther));
+	CHKiRet(statsobj.AddCounter(kafkaStats, UCHAR_CONSTANT("rtt_avg_usec"),
+		ctrType_Int, CTR_FLAG_NONE, &rtt_avg_usec));
+	CHKiRet(statsobj.AddCounter(kafkaStats, UCHAR_CONSTANT("throttle_avg_msec"),
+		ctrType_Int, CTR_FLAG_NONE, &throttle_avg_msec));
+	CHKiRet(statsobj.AddCounter(kafkaStats, UCHAR_CONSTANT("int_latency_avg_usec"),
+		ctrType_Int, CTR_FLAG_NONE, &int_latency_avg_usec));
 	CHKiRet(statsobj.ConstructFinalize(kafkaStats));
 
 	DBGPRINTF("omkafka: Add KAFKA_TimeStamp to template system ONCE\n");
