@@ -286,7 +286,7 @@ createInstance(instanceConf_t **pinst)
 	inst->caCertFile = NULL;
 	inst->myCertFile = NULL;
 	inst->myPrivKeyFile = NULL;
-	inst->maxDataSize = glbl.GetMaxLine();
+	inst->maxDataSize = 0;
 #ifdef HAVE_RELPSRVSETOVERSIZEMODE
 	inst->oversizeMode = RELP_OVERSIZE_TRUNCATE;
 #endif
@@ -666,6 +666,12 @@ CODESTARTcheckCnf
 		std_checkRuleset(pModConf, inst);
 
 
+		if(inst->maxDataSize == 0) {
+			/* We set default value for maxDataSize here because
+			 * otherwise the maxMessageSize isn't set.
+			 */
+			inst->maxDataSize = glbl.GetMaxLine();
+		}
 		maxMessageSize = (size_t)glbl.GetMaxLine();
 		if(inst->maxDataSize < maxMessageSize) {
 			errmsg.LogError(0, RS_RET_INVALID_PARAMS, "error: "
