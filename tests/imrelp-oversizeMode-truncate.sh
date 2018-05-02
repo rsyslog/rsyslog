@@ -9,6 +9,9 @@ fi;
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
 module(load="../plugins/imrelp/.libs/imrelp")
+global(maxMessageSize="150")
+
+
 input(type="imrelp" port="13514" maxdatasize="200" oversizeMode="truncate")
 
 template(name="outfmt" type="string" string="%msg%\n")

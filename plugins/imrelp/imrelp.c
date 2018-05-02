@@ -500,14 +500,7 @@ CODESTARTnewInpInst
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
 			inst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "maxdatasize")) {
-			size_t maxDataSize = (size_t) pvals[i].val.d.n;
-			if(maxDataSize < (size_t)glbl.GetMaxLine()) {
-				errmsg.LogError(0, RS_RET_INVALID_PARAMS, "error: "
-					"maxDataSize is smaller than global parameter "
-					"maxMessageSize - global parameter will be used.");
-			} else {
-				inst->maxDataSize = maxDataSize;
-			}
+			inst->maxDataSize = (size_t) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "oversizemode")) {
 #ifdef HAVE_RELPSRVSETOVERSIZEMODE
 			char *mode = es_str2cstr(pvals[i].val.d.estr, NULL);
@@ -664,13 +657,25 @@ ENDendCnfLoad
 
 BEGINcheckCnf
 	instanceConf_t *inst;
+	size_t maxMessageSize;
 CODESTARTcheckCnf
 	for(inst = pModConf->root ; inst != NULL ; inst = inst->next) {
 		if(inst->pszBindRuleset == NULL && pModConf->pszBindRuleset != NULL) {
 			CHKmalloc(inst->pszBindRuleset = ustrdup(pModConf->pszBindRuleset));
 		}
 		std_checkRuleset(pModConf, inst);
+
+
+		maxMessageSize = (size_t)glbl.GetMaxLine();
+		if(inst->maxDataSize < maxMessageSize) {
+			errmsg.LogError(0, RS_RET_INVALID_PARAMS, "error: "
+					"maxDataSize (%zu) is smaller than global parameter "
+					"maxMessageSize (%zu) - global parameter will be used.",
+					inst->maxDataSize, maxMessageSize);
+			inst->maxDataSize = maxMessageSize;
+		}
 	}
+
 finalize_it:
 ENDcheckCnf
 
