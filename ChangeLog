@@ -15,6 +15,22 @@ Version 8.35.0 [v8-stable] 2018-05-15
   * librdkafka failure and error counters
   * acked message counter
   Thanks to Abdul Waheed for implementing this.
+- imrelp: add parameter "oversizeMode"
+  Permits to instruct librelp how to handle oversize messages. The new default
+  is to truncate messages. Previously, the connection was aborted, what often
+  lead to stuck messages at the sender side. Now, there are three options passed
+  down to librelp:
+  * abort - same behavior as previously, connection is aborted on error
+  * truncate - do not abort but instead truncate oversize message to
+               configured max size
+  * accept - accept all oversize messages (note: this can cause security issues,
+             see doc for details)
+  see also https://github.com/rsyslog/rsyslog/pull/1525#issuecomment-384179393
+  see also https://github.com/rsyslog/rsyslog/issues/2190
+  closes https://github.com/rsyslog/rsyslog/issues/2633
+  closes https://github.com/rsyslog/rsyslog/issues/1741
+  closes https://github.com/rsyslog/rsyslog/issues/1782
+  closes https://github.com/rsyslog/rsyslog/issues/2496
 - omfwd: add support for bind-to-address for UDP
   To allow the same source address to be used regardless of the egress
   interface taken, an option is added for an address to bind the datagram
