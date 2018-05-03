@@ -26,7 +26,8 @@ liboverride_getaddrinfo_la_LDFLAGS = -avoid-version -shared
 check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen \
 	diagtalker uxsockrcvr syslog_caller inputfilegen minitcpsrv \
 	omrelp_dflt_port \
-	mangle_qi
+	mangle_qi \
+	have_relpSrvSetOversizeMode
 if ENABLE_IMJOURNAL
 check_PROGRAMS += journal_print
 endif
@@ -720,7 +721,10 @@ TESTS += sndrcv_relp.sh \
 	 sndrcv_relp_rebind.sh \
 	 imrelp-basic.sh \
 	 imrelp-manyconn.sh \
-	 imrelp-maxDataSize-error.sh
+	 imrelp-maxDataSize-error.sh \
+	 imrelp-long-msg.sh \
+	 imrelp-oversizeMode-truncate.sh \
+	 imrelp-oversizeMode-accept.sh
 if ENABLE_GNUTLS
 TESTS += \
          sndrcv_relp_tls.sh \
@@ -1368,6 +1372,9 @@ EXTRA_DIST= \
 	imrelp-basic.sh \
 	imrelp-manyconn.sh \
 	imrelp-maxDataSize-error.sh \
+	imrelp-long-msg.sh \
+	imrelp-oversizeMode-truncate.sh \
+	imrelp-oversizeMode-accept.sh \
 	sndrcv_relp.sh \
 	testsuites/sndrcv_relp_sender.conf \
 	testsuites/sndrcv_relp_rcvr.conf \
@@ -1889,6 +1896,7 @@ msleep_SOURCES = msleep.c
 omrelp_dflt_port_SOURCES = omrelp_dflt_port.c
 mangle_qi_SOURCES = mangle_qi.c
 chkseq_SOURCES = chkseq.c
+have_relpSrvSetOversizeMode = have_relpSrvSetOversizeMode.c
 
 uxsockrcvr_SOURCES = uxsockrcvr.c
 uxsockrcvr_LDADD = $(SOL_LIBS)

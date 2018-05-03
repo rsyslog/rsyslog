@@ -20,7 +20,7 @@ action(type="omfile" file="rsyslog.out.log")
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
 
-grep "error: maxDataSize is smaller than global parameter maxMessageSize" rsyslog.out.log > /dev/null
+grep "error: maxDataSize.*smaller than global parameter maxMessageSize" rsyslog.out.log > /dev/null
 if [ $? -ne 0 ]; then
         echo
         echo "FAIL: expected error message not found. rsyslog.out.log is:"

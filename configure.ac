@@ -1388,6 +1388,17 @@ AC_ARG_ENABLE(relp,
 if test "x$enable_relp" = "xyes"; then
 	PKG_CHECK_MODULES(RELP, relp >= 1.2.14)
 	AC_DEFINE([ENABLE_RELP], [1], [Indicator that RELP is present])
+        save_CFLAGS="$CFLAGS"
+        save_LIBS="$LIBS"
+
+        CFLAGS="$CFLAGS $RELP_CFLAGS"
+        LIBS="$LIBS $RELP_LIBS"
+
+        AC_CHECK_FUNC([relpSrvSetOversizeMode],
+                      [AC_DEFINE([HAVE_RELPSRVSETOVERSIZEMODE], [1], [Define if relpSrvSetOversizeMode exists.])])
+
+        CFLAGS="$save_CFLAGS"
+        LIBS="$save_LIBS"
 fi
 AM_CONDITIONAL(ENABLE_RELP, test x$enable_relp = xyes)
 
