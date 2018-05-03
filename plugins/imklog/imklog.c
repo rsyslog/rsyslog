@@ -21,7 +21,7 @@
  * To test under Linux:
  * echo test1 > /dev/kmsg
  *
- * Copyright (C) 2008-2017 Adiscon GmbH
+ * Copyright (C) 2008-2018 Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -51,6 +51,7 @@
 
 #include "dirty.h"
 #include "cfsysline.h"
+#include "parserif.h"
 #include "obj.h"
 #include "msg.h"
 #include "module-template.h"
@@ -339,8 +340,9 @@ CODESTARTsetModCnf
 		} else if(!strcmp(modpblk.descr[i].name, "internalmsgfacility")) {
 			loadModConf->iFacilIntMsg = (int) pvals[i].val.d.n;
 		} else {
-			dbgprintf("imklog: program error, non-handled "
-			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
+			LogMsg(0, RS_RET_INTERNAL_ERROR, LOG_WARNING,
+				"imklog: RSYSLOG BUG, non-handled param '%s' in "
+				"beginCnfLoad\n", modpblk.descr[i].name);
 		}
 	}
 
