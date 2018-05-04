@@ -315,18 +315,18 @@ finalize_it:
 static rsRetVal
 MotifyMessage(instanceData *pData)
 {
-    DEFiRet;
-    grok_t  *grok = CreateGrok();
-    char     *msg = strdup(pData->pszSource);
-    char     *line = NULL;
-    line = strtok(msg,"\n");
-    while(line!=NULL)
-    {
-        MotifyLine(line,grok,pData);
-        line = strtok(NULL,"\n");
-    }
-    free(msg);msg=NULL;
-    RETiRet;
+	char *saveptr;
+	DEFiRet;
+	grok_t  *grok = CreateGrok();
+	char     *msg = strdup(pData->pszSource);
+	char     *line = NULL;
+	line = strtok_r(msg, "\n", &saveptr);
+	while(line!=NULL) {
+		MotifyLine(line,grok,pData);
+		line = strtok_r(NULL, "\n", &saveptr);
+	}
+	free(msg);msg=NULL;
+	RETiRet;
 }
 
 
