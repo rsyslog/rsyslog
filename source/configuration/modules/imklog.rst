@@ -47,7 +47,7 @@ is needed for good reason. Bottom line: if you don't have a good idea
 why you should use this setting, do not touch it.
 
 
-PermitNonKernalFacility
+PermitNonKernelFacility
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 .. csv-table::
