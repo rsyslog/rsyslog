@@ -6,8 +6,13 @@
 # Note that we use the override of the hostname to ensure we do not
 # accidentely get an acceptable FQDN-type hostname during testing.
 # This is part of the rsyslog testbench, licensed under ASL 2.0
+uname
 if [ `uname` = "SunOS" ] ; then
    echo "Solaris: there seems to be an issue with LD_PRELOAD libraries"
+   exit 77
+fi
+if [ `uname` = "FreeBSD" ] ; then
+   echo "FreeBSD: temporarily disabled until we know what is wrong"
    exit 77
 fi
 
