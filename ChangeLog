@@ -9,6 +9,11 @@ Version 8.35.0 [v8-stable] 2018-05-15
   implements hash32() and hash64() functions
   Thanks to Harshvardhan Shrivastava for implementing these
 - some better error messages
+- imklog: add ratelimiting capability
+  On Linux kernel logs are ratelimited only for messages using
+  printk_ratelimit().  Some logs do not use this facility, so
+  we ratelimit kernel ourselves.
+  Thanks to Berend De Schouwer for the patch.
 - omkafka: added impstats counters for librdkafka returned statistics
   Adds:
   * statscallback counters
