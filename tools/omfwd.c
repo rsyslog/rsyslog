@@ -868,7 +868,7 @@ finalize_it:
 static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 {
 	int iErr;
-	struct addrinfo *res, *addr;
+	struct addrinfo *res = NULL;
 	struct addrinfo hints;
 	instanceData *pData;
 	int bBindRequired = 0;
@@ -894,10 +894,13 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 		}
 		address = pData->target;
 		if(pData->address) {
+			struct addrinfo *addr;
 			/* The AF of the bind addr must match that of target */
 			hints.ai_family = res->ai_family;
 			hints.ai_flags |= AI_PASSIVE;
-			if((iErr = getaddrinfo(pData->address, pData->port, &hints, &addr)) != 0) {
+			iErr = getaddrinfo(pData->address, pData->port, &hints, &addr);
+			freeaddrinfo(addr);
+			if(iErr != 0) {
 				LogError(0, RS_RET_SUSPENDED,
 					 "omfwd: cannot use bind address '%s' for host '%s': %s",
 					 pData->address, pData->target, gai_strerror(iErr));
@@ -908,6 +911,7 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 		}
 		DBGPRINTF("%s found, resuming.\n", pData->target);
 		pWrkrData->f_addr = res;
+		res = NULL;
 		if(pWrkrData->pSockArray == NULL) {
 			CHKiRet(changeToNs(pData));
 			pWrkrData->pSockArray = net.create_udp_socket((uchar*)address,
@@ -925,6 +929,9 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 
 finalize_it:
 	DBGPRINTF("omfwd: doTryResume %s iRet %d\n", pWrkrData->pData->target, iRet);
+	if(res != NULL) {
+		freeaddrinfo(res);
+	}
 	if(iRet != RS_RET_OK) {
 		returnToOriginalNs(pData);
 		if(pWrkrData->f_addr != NULL) {
