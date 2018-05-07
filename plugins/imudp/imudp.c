@@ -90,10 +90,6 @@ static struct lstn_s {
 static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config parameters permitted? */
 static int bDoACLCheck;			/* are ACL checks neeed? Cached once immediately before listener startup */
 static int iMaxLine;			/* maximum UDP message size supported */
-static time_t ttLastDiscard = 0;	/* timestamp when a message from a non-permitted sender was last discarded
-					 * This shall prevent remote DoS when the "discard on disallowed sender"
-					 * message is configured to be logged on occurance of such a case.
-					 */
 #define BATCH_SIZE_DFLT 32		/* do not overdo, has heavy toll on memory, especially with large msgs */
 #define TIME_REQUERY_DFLT 2
 #define SCHED_PRIO_UNSET -12345678	/* a value that indicates that the scheduling priority has not been set */
@@ -424,13 +420,8 @@ processPacket(struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *p
 			if(*pbIsPermitted == 0) {
 				DBGPRINTF("msg is not from an allowed sender\n");
 				if(glbl.GetOption_DisallowWarning) {
-					time_t tt;
-					datetime.GetTime(&tt);
-					if(tt > ttLastDiscard + 60) {
-						ttLastDiscard = tt;
-						errmsg.LogError(0, NO_ERRCODE,
-						"UDP message from disallowed sender discarded");
-					}
+					errmsg.LogError(0, NO_ERRCODE,
+						"imudp: UDP message from disallowed sender discarded");
 				}
 			}
 		}
