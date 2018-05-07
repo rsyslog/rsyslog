@@ -406,6 +406,15 @@ from all listeners.
 
 Note: worker thread statistics are available starting with rsyslog 7.5.5.
 
+-  **disallowed** - total number of messages discarded due to disallowed sender
+
+This counts the number of messages that have been discarded because they have
+been received by an disallowed sender. Note that if no allowed senders are
+configured (the default), this counter will always be zero.
+
+This counter was introduced by rsyslog 8.35.0.
+
+
 The following properties are maintained for each worker thread:
 
 -  **called.recvmmsg** - number of recvmmsg() OS calls done
