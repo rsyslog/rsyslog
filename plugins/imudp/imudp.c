@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * Copyright 2007-2017 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -84,16 +84,13 @@ static struct lstn_s {
 	ratelimit_t *ratelimiter;
 	uchar *dfltTZ;
 	STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
+	STATSCOUNTER_DEF(ctrDisallowed, mutCtrDisallowed)
 } *lcnfRoot = NULL, *lcnfLast = NULL;
 
 
 static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config parameters permitted? */
 static int bDoACLCheck;			/* are ACL checks neeed? Cached once immediately before listener startup */
 static int iMaxLine;			/* maximum UDP message size supported */
-static time_t ttLastDiscard = 0;	/* timestamp when a message from a non-permitted sender was last discarded
-					 * This shall prevent remote DoS when the "discard on disallowed sender"
-					 * message is configured to be logged on occurance of such a case.
-					 */
 #define BATCH_SIZE_DFLT 32		/* do not overdo, has heavy toll on memory, especially with large msgs */
 #define TIME_REQUERY_DFLT 2
 #define SCHED_PRIO_UNSET -12345678	/* a value that indicates that the scheduling priority has not been set */
@@ -339,6 +336,9 @@ addListner(instanceConf_t *inst)
 			STATSCOUNTER_INIT(newlcnfinfo->ctrSubmit, newlcnfinfo->mutCtrSubmit);
 			CHKiRet(statsobj.AddCounter(newlcnfinfo->stats, UCHAR_CONSTANT("submitted"),
 				ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(newlcnfinfo->ctrSubmit)));
+			STATSCOUNTER_INIT(newlcnfinfo->ctrDisallowed, newlcnfinfo->mutCtrDisallowed);
+			CHKiRet(statsobj.AddCounter(newlcnfinfo->stats, UCHAR_CONSTANT("disallowed"),
+				ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(newlcnfinfo->ctrDisallowed)));
 			CHKiRet(statsobj.ConstructFinalize(newlcnfinfo->stats));
 			/* link to list. Order must be preserved to take care for 
 			 * conflicting matches.
@@ -423,14 +423,10 @@ processPacket(struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *p
 	
 			if(*pbIsPermitted == 0) {
 				DBGPRINTF("msg is not from an allowed sender\n");
+				STATSCOUNTER_INC(lstn->ctrDisallowed, lstn->mutCtrDisallowed);
 				if(glbl.GetOption_DisallowWarning) {
-					time_t tt;
-					datetime.GetTime(&tt);
-					if(tt > ttLastDiscard + 60) {
-						ttLastDiscard = tt;
-						errmsg.LogError(0, NO_ERRCODE,
-						"UDP message from disallowed sender discarded");
-					}
+					errmsg.LogError(0, NO_ERRCODE,
+						"imudp: UDP message from disallowed sender discarded");
 				}
 			}
 		}
