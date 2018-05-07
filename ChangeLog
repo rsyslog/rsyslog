@@ -51,6 +51,13 @@ Version 8.35.0 [v8-stable] 2018-05-15
   Especially on busy systems the default are too low. Please keep in mind
   that on a very busy system even the now-proposed setting may be too low.
   Thanks to github user jvymazal for the patch.
+- imuxsock: replace select() call by poll()
+  While extremely unlikely, imuxsock could abort if a file descriptor
+  > 1024 was received during the startup phase (never occured in
+  practice, but theoretically could if imfile monitored a large number
+  of files and were loaded before imuxsock - and maybe other
+  strange cases).
+  see also https://github.com/rsyslog/rsyslog/issues/2615
 - nsdsel_ptcp: replace select() by poll()
   This removes us of problems with fds > 1024. The performance will
   probably also increase in most cases.
