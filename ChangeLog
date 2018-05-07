@@ -75,6 +75,13 @@ Version 8.35.0 [v8-stable] 2018-05-15
 - core: config optimizer did not handle call_indirect
   This also caused the emission of an "internal error" error message
   closes https://github.com/rsyslog/rsyslog/issues/2665
+- mmgrok: fix potential segfault
+  The modules used strtok(), which is not thread-safe. So it will potentially
+  segfault when multiple instances are spawned (what e.g. happens on busy
+  systems).
+  This patch replaces strtok() with its thread-safe counterpart
+  strtok_r().
+  see also https://github.com/rsyslog/rsyslog/issues/1359
 - imrelp bugfix: maxDataSize could be set lower than maxMessageSize
   maxDataSize specifies the length which will still be accepted
   It previously could be set to any value, including values lower than the
