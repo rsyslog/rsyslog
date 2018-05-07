@@ -20,6 +20,20 @@ Version 8.35.0 [v8-stable] 2018-05-15
   * librdkafka failure and error counters
   * acked message counter
   Thanks to Abdul Waheed for implementing this.
+- imudp
+  * use rsyslog message rate-limiter instead of home-grown one
+    imudp introduced it's own (feature-limited) rate-limiting capability for
+    message on disallowed senders before we had central rate-limiters
+    inside rsyslog. Also, that code evolved from running on a single
+    thread to running on multiple threads, which introduced data races
+    and so made unreliable.
+    Now we removed the old rate-limiting capability and depend on the
+    system rate limiter for internal rsyslog messages.
+    closes https://github.com/rsyslog/rsyslog/issues/2467
+  * add stats counter "disallowed"
+    counts the number of messages discarded due to being received from
+    disallowed senders
+    see also https://github.com/rsyslog/rsyslog/issues/2467
 - imrelp: add parameter "oversizeMode"
   Permits to instruct librelp how to handle oversize messages. The new default
   is to truncate messages. Previously, the connection was aborted, what often
