@@ -114,8 +114,9 @@ MaxDataSize
 
    "size_nbr", ":doc:`global(maxMessageSize) <../../rainerscript/global>`", "no", "none"
 
-Sets the max message size (in bytes) that can be received. Any messages above this size
-will be rejected causing the relp client to reconnect and retry.
+Sets the max message size (in bytes) that can be received. Messages that
+are too long are handled as specified in parameter oversizeMode. Note that
+maxDataSize cannot be smaller than the global parameter maxMessageSize.
 
 
 TLS
@@ -326,6 +327,27 @@ is marked to need keepalive, this counter is not used any further.
 The default, 0, means that the operating system defaults are used.
 This has only effect if keep-alive is enabled. The functionality may
 not be available on all platforms.
+
+
+oversizeMode
+^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "truncate", "no", "none"
+
+.. versionadded:: 8.35.0
+
+This parameter specifies how messages that are too long will be handled.
+For this parameter the length of the parameter maxDataSize is used.
+- truncate: Messages will be truncated at the maximal message size.
+- abort: This is the behaviour until version 8.35.0. Upon receiving a
+message that is too long imrelp will abort.
+- accept: Messages will be accepted even if they are too long and an error
+message will be put out. Using this option will bring some risks with it.
 
 
 .. _imrelp-statistic-counter:
