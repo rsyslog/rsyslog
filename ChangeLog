@@ -166,6 +166,12 @@ Version 8.35.0 [v8-stable] 2018-05-15
   is a change in behavior, but there really is no reason why a defunct
   instance should be kept running.
   closes https://github.com/rsyslog/rsyslog/issues/2399
+- build system: remove no longer needed --enable-libcurl configure switch
+  The --enable-libcurl switch was added to be able to disable libcurl
+  functionality inside the rsyslog core, see 46f4f43. As libcurl is no
+  longer used inside the core (due to introducing function modules),
+  --enable-libcurl needs to be removed.
+  closes https://github.com/rsyslog/rsyslog/issues/2628
 - QA/CI
   * enabled some additional useful compiler warnings
   * new tests for omfile
