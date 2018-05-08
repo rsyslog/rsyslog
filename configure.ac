@@ -495,25 +495,6 @@ if test "$rsyslog_have_pthread_setschedparam" = "yes" -a "$rsyslog_have_sched_h"
 	LIBS=$save_LIBS
 fi
 
-
-# use libcurl?
-AC_ARG_ENABLE(libcurl,
-        [AS_HELP_STRING([--enable-libcurl],[Enable libcurl mode @<:@default=yes@:>@])],
-        [case "${enableval}" in
-          yes) enable_libcurl="yes" ;;
-           no) enable_libcurl="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-libcurl) ;;
-         esac],
-        [enable_libcurl="yes"]
-)
-if test "$enable_libcurl" = "yes"; then
-	PKG_CHECK_MODULES([CURL], [libcurl], 
-		[ AC_DEFINE(HAVE_LIBCURL, 1, [libcurl present]) ]
-	)
-fi
-
-AM_CONDITIONAL(ENABLE_LIBCURL, test "x${enable_libcurl}" = "xyes")
-
 # klog
 AC_ARG_ENABLE(klog,
         [AS_HELP_STRING([--enable-klog],[Integrated klog functionality @<:@default=yes@:>@])],
