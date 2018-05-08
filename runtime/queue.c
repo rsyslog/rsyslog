@@ -2934,8 +2934,18 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg)
 				ABORT_FINALIZE(RS_RET_FORCE_TERM);
 			}
 			timeoutComp(&t, pThis->toEnq);
-			if(pthread_cond_timedwait(&pThis->notFull, pThis->mut, &t) != 0) {
+			const int r = pthread_cond_timedwait(&pThis->notFull, pThis->mut, &t);
+			if(dbgTimeoutToStderr && r != 0) {
+				fprintf(stderr, "%lld: queue timeout, error %d, (ETIMEDOUT is %d) lost message %s\n",
+						(long long) time(NULL), r, ETIMEDOUT, pMsg->pszRawMsg);
+			}
+			if(r == ETIMEDOUT) {
 				DBGOPRINT((obj_t*) pThis, "doEnqSingleObject: cond timeout, dropping message!\n");
+				STATSCOUNTER_INC(pThis->ctrFDscrd, pThis->mutCtrFDscrd);
+				msgDestruct(&pMsg);
+				ABORT_FINALIZE(RS_RET_QUEUE_FULL);
+			} else if(r != 0) {
+				DBGOPRINT((obj_t*) pThis, "doEnqSingleObject: cond error %d, dropping message!\n", r);
 				STATSCOUNTER_INC(pThis->ctrFDscrd, pThis->mutCtrFDscrd);
 				msgDestruct(&pMsg);
 				ABORT_FINALIZE(RS_RET_QUEUE_FULL);

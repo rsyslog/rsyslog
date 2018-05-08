@@ -36,6 +36,7 @@
 extern int Debug;		/* debug flag  - read-only after startup */
 extern int debugging_on;	 /* read-only, except on sig USR1 */
 extern int stddbg; /* the handle for regular debug output, set to stdout if not forking, -1 otherwise */
+extern int dbgTimeoutToStderr;
 
 /* data types */
 
