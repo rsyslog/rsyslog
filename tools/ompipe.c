@@ -62,7 +62,6 @@ MODULE_CNFNAME("ompipe")
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 
 
 typedef struct _instanceData {
@@ -157,7 +156,7 @@ preparePipe(instanceData *pData)
 	if(pData->fd < 0 ) {
 		pData->fd = -1;
 		if(!pData->bHadError) {
-			errmsg.LogError(errno, RS_RET_NO_FILE_ACCESS, "Could not open output pipe '%s':",
+			LogError(errno, RS_RET_NO_FILE_ACCESS, "Could not open output pipe '%s':",
 				        pData->pipe);
 			pData->bHadError = 1;
 		}
@@ -196,7 +195,7 @@ static rsRetVal writePipe(uchar **ppString, instanceData *pData)
 		close(pData->fd);
 		pData->fd = -1; /* tell that fd is no longer open! */
 		iRet = RS_RET_SUSPENDED;
-		errmsg.LogError(e, NO_ERRCODE, "write error on pipe %s", pData->pipe);
+		LogError(e, NO_ERRCODE, "write error on pipe %s", pData->pipe);
 	}
 
 finalize_it:
@@ -217,7 +216,7 @@ BEGINsetModCnf
 CODESTARTsetModCnf
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
 				"config parameters [module(...)]");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -233,7 +232,7 @@ CODESTARTsetModCnf
 		if(!strcmp(modpblk.descr[i].name, "template")) {
 			loadModConf->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			if(pszFileDfltTplName != NULL) {
-				errmsg.LogError(0, RS_RET_DUP_PARAM, "ompipe: warning: default template "
+				LogError(0, RS_RET_DUP_PARAM, "ompipe: warning: default template "
 						"was already set via legacy directive - may lead to inconsistent "
 						"results.");
 			}
@@ -434,7 +433,6 @@ CODESTARTmodInit
 INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDmodInit
 /* vi:set ai:
  */
