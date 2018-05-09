@@ -72,7 +72,7 @@ struct nsd_ossl_s {
 	int ptrRcvBuf;		/**< offset for next recv operation if 0 < lenRcvBuf < NSD_OSSL_MAX_RCVBUF */
 
 	/* Open SSL objects */
-	BIO *acc;		/* OpenSSL main BIO obj */
+//	BIO *acc;		/* OpenSSL main BIO obj */
 	SSL *ssl;		/* OpenSSL main SSL obj */
 };
 
@@ -86,6 +86,9 @@ PROTOTYPEObj(nsd_ossl);
 uchar *osslStrerror(int error);
 rsRetVal osslChkPeerAuth(nsd_ossl_t *pThis);
 rsRetVal osslRecordRecv(nsd_ossl_t *pThis);
+rsRetVal osslHandshakeCheck(nsd_ossl_t *pNsd);
+void osslLastSSLErrorMsg(int ret, SSL *ssl, char* pszCallSource);
+
 
 /* the name of our library binary */
 #define LM_NSD_OSSL_FILENAME "lmnsd_ossl"

@@ -77,10 +77,11 @@ ENDobjDestruct(nsdsel_ossl)
 static rsRetVal
 Add(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp)
 {
+dbgprintf("nsdsel_ossl: Add BEGIN \n");
 	DEFiRet;
 	nsdsel_ossl_t *pThis = (nsdsel_ossl_t*) pNsdsel;
 	nsd_ossl_t *pNsdOSSL = (nsd_ossl_t*) pNsd;
-	int iLastErr;
+	int iwant;
 
 	ISOBJ_TYPE_assert(pThis, nsdsel_ossl);
 	ISOBJ_TYPE_assert(pNsdOSSL, nsd_ossl);
@@ -93,22 +94,34 @@ Add(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp)
 			FINALIZE;
 		}
 		if(pNsdOSSL->rtryCall != osslRtry_None) {
-assert( 1 != 1 );
-LogError(0, RS_RET_GNUTLS_ERR, "pNsdOSSL->rtryCall != osslRtry_None NOT IMPLEMENTED YET\n");
-
-			iLastErr = SSL_get_error(pNsdOSSL->ssl,0);
-			if(iLastErr == SSL_ERROR_WANT_READ) {
+			/*
+			# define SSL_NOTHING            1
+			# define SSL_WRITING            2
+			# define SSL_READING            3
+			# define SSL_X509_LOOKUP        4
+			*/
+			iwant = SSL_want(pNsdOSSL->ssl);
+			if(iwant == SSL_READING) {
 				CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdOSSL->pTcp, NSDSEL_RD));
-			} else {
+				FINALIZE;
+			} else if(iwant == SSL_WRITING) {
 				CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdOSSL->pTcp, NSDSEL_WR));
+				FINALIZE;
+			} else {
+				dbgprintf("nsdsel_ossl: rtryCall=%d, SSL_want = %d, nothing to do ... \n",
+					pNsdOSSL->rtryCall, iwant);
 			}
-			FINALIZE;
+		} else {
+			dbgprintf("nsdsel_ossl: rtryCall=%d, nothing to do ... \n",
+				pNsdOSSL->rtryCall);
 		}
 	}
 
+	dbgprintf("nsdsel_ossl: reached end, calling nsdsel_ptcp.Add with waitOp %d... \n", waitOp);
 	/* if we reach this point, we need no special handling */
 	CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdOSSL->pTcp, waitOp));
 
+dbgprintf("nsdsel_ossl: Add END \n");
 finalize_it:
 	RETiRet;
 }
@@ -120,6 +133,7 @@ finalize_it:
 static rsRetVal
 Select(nsdsel_t *pNsdsel, int *piNumReady)
 {
+dbgprintf("nsdsel_ossl: Select BEGIN \n");
 	DEFiRet;
 	nsdsel_ossl_t *pThis = (nsdsel_ossl_t*) pNsdsel;
 
@@ -132,6 +146,7 @@ Select(nsdsel_t *pNsdsel, int *piNumReady)
 		iRet = nsdsel_ptcp.Select(pThis->pTcp, piNumReady);
 	}
 
+dbgprintf("nsdsel_ossl: Select END \n");
 	RETiRet;
 }
 
@@ -142,10 +157,12 @@ Select(nsdsel_t *pNsdsel, int *piNumReady)
 static rsRetVal
 doRetry(nsd_ossl_t *pNsd)
 {
+dbgprintf("nsdsel_ossl: doRetry BEGIN \n");
 	DEFiRet;
 	int osslRet;
+	nsd_ossl_t *pNsdOSSL = (nsd_ossl_t*) pNsd;
 
-	dbgprintf("openssl requested retry of %d operation - executing\n", pNsd->rtryCall);
+	dbgprintf("doRetry requested retry of %d operation - executing\n", pNsd->rtryCall);
 
 	/* We follow a common scheme here: first, we do the systen call and
 	 * then we check the result. So far, the result is checked after the
@@ -156,8 +173,8 @@ doRetry(nsd_ossl_t *pNsd)
 	 */
 	switch(pNsd->rtryCall) {
 		case osslRtry_handshake:
-assert( 1 != 1 );
-LogError(0, RS_RET_GNUTLS_ERR, "doRetry - osslRtry_handshake NOT IMPLEMENTED YET\n");
+			/* Do the handshake again*/
+			CHKiRet(osslHandshakeCheck(pNsdOSSL));
 /*			gnuRet = gnutls_handshake(pNsd->sess);
 			if(gnuRet == 0) {
 				pNsd->rtryCall = osslRtry_None;
@@ -179,22 +196,7 @@ LogError(0, RS_RET_GNUTLS_ERR, "doRetry - osslRtry_handshake NOT IMPLEMENTED YET
 			osslRet = 0; /* if it happens, we have at least a defined behaviour... ;) */
 			break;
 	}
-
-/*
-	if(osslRet == 0) {
-		// we are done
-		pNsd->rtryCall = osslRtry_None;
-	} else if(osslRet != GNUTLS_E_AGAIN && osslRet != GNUTLS_E_INTERRUPTED) {
-		uchar *pErr = osslStrerror(osslRet);
-		LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n",
-		osslRet, __FILE__, __LINE__, pErr); \
-		free(pErr);
-		// we are also done... ;)
-		pNsd->rtryCall = osslRtry_None;
-		ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
-	}
-	*/
-
+dbgprintf("nsdsel_ossl: doRetry END \n");
 finalize_it:
 	if(iRet != RS_RET_OK && iRet != RS_RET_CLOSED && iRet != RS_RET_RETRY)
 		pNsd->bAbortConn = 1; /* request abort */
@@ -206,6 +208,7 @@ finalize_it:
 static rsRetVal
 IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
 {
+dbgprintf("nsdsel_ossl: IsReady BEGIN \n");
 	DEFiRet;
 	nsdsel_ossl_t *pThis = (nsdsel_ossl_t*) pNsdsel;
 	nsd_ossl_t *pNsdOSSL = (nsd_ossl_t*) pNsd;
@@ -213,14 +216,16 @@ IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
 	ISOBJ_TYPE_assert(pThis, nsdsel_ossl);
 	ISOBJ_TYPE_assert(pNsdOSSL, nsd_ossl);
 	if(pNsdOSSL->iMode == 1) {
+dbgprintf("nsdl_ossl: IsReady ENTER (%d) for %p\n", pNsdOSSL->rtryCall, pThis);
 		if(waitOp == NSDSEL_RD && osslHasRcvInBuffer(pNsdOSSL)) {
 			*pbIsReady = 1;
 			--pThis->iBufferRcvReady; /* one "pseudo-read" less */
-			dbgprintf("nsdl_ossl: dummy read, decermenting %p->iBufRcvReady, now %d\n",
+			dbgprintf("nsdl_ossl: IsReady #1 dummy read, decermenting %p->iBufRcvReady, now %d\n",
 				   pThis, pThis->iBufferRcvReady);
 			FINALIZE;
 		}
 		if(pNsdOSSL->rtryCall == osslRtry_handshake) {
+dbgprintf("nsdl_ossl: IsReady do osslRtry_handshake for %p\n", pThis);
 			CHKiRet(doRetry(pNsdOSSL));
 			/* we used this up for our own internal processing, so the socket
 			 * is not ready from the upper layer point of view.
@@ -229,6 +234,7 @@ IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
 			FINALIZE;
 		}
 		else if(pNsdOSSL->rtryCall == osslRtry_recv) {
+dbgprintf("nsdl_ossl: IsReady do osslRtry_recv for %p\n", pThis);
 			iRet = doRetry(pNsdOSSL);
 			if(iRet == RS_RET_OK) {
 				*pbIsReady = 0;
@@ -242,19 +248,19 @@ IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
 		 * socket. -- rgerhards, 2010-11-20
 		 */
 		if(pThis->iBufferRcvReady) {
-			dbgprintf("nsd_ossl: dummy read, buffer not available for this FD\n");
+			dbgprintf("nsd_ossl: IsReady #2 dummy read, buffer not available for this FD\n");
 			*pbIsReady = 0;
 			FINALIZE;
 		}
 	}
+dbgprintf("nsdl_ossl: IsReady before nsdsel_ptcp.IsReady for %p\n", pThis);
 
 	CHKiRet(nsdsel_ptcp.IsReady(pThis->pTcp, pNsdOSSL->pTcp, waitOp, pbIsReady));
 
+dbgprintf("nsdsel_ossl: IsReady END \n");
 finalize_it:
 	RETiRet;
 }
-
-
 /* ------------------------------ end support for the select() interface ------------------------------ */
 
 

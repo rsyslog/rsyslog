@@ -1,7 +1,7 @@
 /* nsd_ptcp.c
  *
  * An implementation of the nsd interface for plain tcp sockets.
- * 
+ *
  * Copyright 2007-2017 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
@@ -156,7 +156,7 @@ finalize_it:
  * mode == NULL is valid and defaults to anon
  * Actually, we do not even record the mode right now, because we can
  * always work in anon mode, only. So there is no point in recording
- * something if that's the only choice. What the function does is 
+ * something if that's the only choice. What the function does is
  * return an error if something is requested that we can not support.
  * rgerhards, 2008-05-17
  */
@@ -314,7 +314,7 @@ static rsRetVal
 FillRemHost(nsd_ptcp_t *pThis, struct sockaddr_storage *pAddr)
 {
 	prop_t *fqdn;
-	
+
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
 	assert(pAddr != NULL);
@@ -498,7 +498,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
              on most unixes, AIX does not support this option , hence remove the call.
 */
 #if !defined(_AIX)
-#ifndef BSD	
+#ifndef BSD
 		if(net.should_use_so_bsdcompat()) {
 			if (setsockopt(sock, SOL_SOCKET, SO_BSDCOMPAT,
 					(char *) &on, sizeof(on)) < 0) {
@@ -608,7 +608,7 @@ Rcv(nsd_t *pNsd, uchar *pRcvBuf, ssize_t *pLenBuf, int *const oserr)
 	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
 	assert(oserr != NULL);
-/*  AIXPORT : MSG_DONTWAIT not supported */ 
+/*  AIXPORT : MSG_DONTWAIT not supported */
 #if defined (_AIX)
 #define MSG_DONTWAIT    MSG_NONBLOCK
 #endif
@@ -762,7 +762,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 			host);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
-	
+
 	if((pThis->sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1) {
 		LogError(errno, RS_RET_IO_ERROR, "cannot bind socket for %s:%s",
 			host, port);
@@ -788,7 +788,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 finalize_it:
 	if(res != NULL)
                freeaddrinfo(res);
-		
+
 	if(iRet != RS_RET_OK) {
 		sockClose(&pThis->sock);
 	}

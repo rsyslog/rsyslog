@@ -1,7 +1,7 @@
 /* nsd_gtls.c
  *
  * An implementation of the nsd interface for GnuTLS.
- * 
+ *
  * Copyright (C) 2007-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
@@ -189,7 +189,7 @@ gtlsLoadOurCertKey(nsd_gtls_t *pThis)
 	keyFile = glbl.GetDfltNetstrmDrvrKeyFile();
 
 	if(certFile == NULL || keyFile == NULL) {
-		/* in this case, we can not set our certificate. If we are 
+		/* in this case, we can not set our certificate. If we are
 		 * a client and the server is running in "anon" auth mode, this
 		 * may be well acceptable. In other cases, we will see some
 		 * more error messages down the road. -- rgerhards, 2008-07-02
@@ -608,7 +608,7 @@ gtlsGlblInit(void)
 	gcry_control (GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
 	#endif
 	CHKgnutls(gnutls_global_init());
-	
+
 	/* X509 stuff */
 	CHKgnutls(gnutls_certificate_allocate_credentials(&xcred));
 
@@ -637,7 +637,7 @@ gtlsGlblInit(void)
 
 	if(GetGnuTLSLoglevel() > 0){
 		gnutls_global_set_log_function(logFunction);
-		gnutls_global_set_log_level(GetGnuTLSLoglevel()); 
+		gnutls_global_set_log_level(GetGnuTLSLoglevel());
 		/* 0 (no) to 9 (most), 10 everything */
 	}
 
@@ -665,7 +665,7 @@ gtlsInitSession(nsd_gtls_t *pThis)
 
 	pThis->sess = session;
 
-#	if HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION 
+#	if HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION
 	/* store a pointer to ourselfs (needed by callback) */
 	gnutls_session_set_ptr(pThis->sess, (void*)pThis);
 	iRet = gtlsLoadOurCertKey(pThis); /* first load .pem files */
@@ -706,7 +706,7 @@ finalize_it:
 
 
 /* Obtain the CN from the DN field and hand it back to the caller
- * (which is responsible for destructing it). We try to follow 
+ * (which is responsible for destructing it). We try to follow
  * RFC2253 as far as it makes sense for our use-case. This function
  * is considered a compromise providing good-enough correctness while
  * limiting code size and complexity. If a problem occurs, we may enhance
@@ -981,7 +981,7 @@ gtlsChkPeerID(nsd_gtls_t *pThis)
 		ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
 	}
 
-	/* If we reach this point, we have at least one valid certificate. 
+	/* If we reach this point, we have at least one valid certificate.
 	 * We always use only the first certificate. As of GnuTLS documentation, the
 	 * first certificate always contains the remote peer's own certificate. All other
 	 * certificates are issuer's certificates (up the chain). We are only interested
@@ -1287,7 +1287,7 @@ finalize_it:
 }
 
 
-/* Set permitted peers. It is depending on the auth mode if this are 
+/* Set permitted peers. It is depending on the auth mode if this are
  * fingerprints or names. -- rgerhards, 2008-05-19
  */
 static rsRetVal
@@ -1507,7 +1507,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	CHKiRet(nsd_gtlsConstruct(&pNew)); // TODO: prevent construct/destruct!
 	CHKiRet(nsd_ptcp.Destruct(&pNew->pTcp));
 	CHKiRet(nsd_ptcp.AcceptConnReq(pThis->pTcp, &pNew->pTcp));
-	
+
 	if(pThis->iMode == 0) {
 		/* we are in non-TLS mode, so we are done */
 		*ppNew = (nsd_t*) pNew;
@@ -1533,7 +1533,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 		CHKgnutls(gnutls_set_default_priority(pNew->sess));
 	}
 
-	/* we now do the handshake. This is a bit complicated, because we are 
+	/* we now do the handshake. This is a bit complicated, because we are
 	 * on non-blocking sockets. Usually, the handshake will not complete
 	 * immediately, so that we need to retry it some time later.
 	 */
@@ -1547,7 +1547,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 		CHKiRet(gtlsChkPeerAuth(pNew));
 	} else {
 		uchar *pGnuErr = gtlsStrerror(gnuRet);
-		LogError(0, RS_RET_TLS_HANDSHAKE_ERR, 
+		LogError(0, RS_RET_TLS_HANDSHAKE_ERR,
 			"gnutls returned error on handshake: %s\n", pGnuErr);
 		free(pGnuErr);
 		ABORT_FINALIZE(RS_RET_TLS_HANDSHAKE_ERR);
@@ -1579,7 +1579,7 @@ finalize_it:
  * implementation, it is on the stack and extremely likely to change). To
  * work-around this problem, we allocate a buffer ourselfs and always receive
  * into that buffer. We pass data on to the caller only after we have received it.
- * To save some space, we allocate that internal buffer only when it is actually 
+ * To save some space, we allocate that internal buffer only when it is actually
  * needed, which means when we reach this function for the first time. To keep
  * the algorithm simple, we always supply data only from the internal buffer,
  * even if it is a single byte. As we have a stream, the caller must be prepared
@@ -1606,7 +1606,7 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr)
 
 	/* --- in TLS mode now --- */
 
-	/* Buffer logic applies only if we are in TLS mode. Here we 
+	/* Buffer logic applies only if we are in TLS mode. Here we
 	 * assume that we will switch from plain to TLS, but never back. This
 	 * assumption may be unsafe, but it is the model for the time being and I
 	 * do not see any valid reason why we should switch back to plain TCP after
@@ -1645,7 +1645,7 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr)
 	*pLenBuf = iBytesCopy;
 
 finalize_it:
-	if (iRet != RS_RET_OK && 
+	if (iRet != RS_RET_OK &&
 		iRet != RS_RET_RETRY) {
 		/* We need to free the receive buffer in error error case unless a retry is wanted. , if we
 		 * allocated one. -- rgerhards, 2008-12-03 -- moved here by alorbach, 2015-12-01
@@ -1767,7 +1767,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 
 	if(pThis->iMode == 0)
 		FINALIZE;
-	
+
 	/* we reach this point if in TLS mode */
 	CHKgnutls(gnutls_init(&pThis->sess, GNUTLS_CLIENT));
 	pThis->bHaveSess = 1;
@@ -1783,7 +1783,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	gnutls_session_set_ptr(pThis->sess, (void*)pThis);
 	iRet = gtlsLoadOurCertKey(pThis); /* first load .pem files */
 	if(iRet == RS_RET_OK) {
-#		if HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION 
+#		if HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION
 		gnutls_certificate_set_retrieve_function(xcred, gtlsClientCertCallback);
 #		else
 		gnutls_certificate_client_set_retrieve_function(xcred, gtlsClientCertCallback);
@@ -1837,8 +1837,8 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	CHKgnutls(gnutls_handshake(pThis->sess));
 	dbgprintf("GnuTLS handshake succeeded\n");
 
-	/* now check if the remote peer is permitted to talk to us - ideally, we 
-	 * should do this during the handshake, but GnuTLS does not yet provide 
+	/* now check if the remote peer is permitted to talk to us - ideally, we
+	 * should do this during the handshake, but GnuTLS does not yet provide
 	 * the necessary callbacks -- rgerhards, 2008-05-26
 	 */
 	CHKiRet(gtlsChkPeerAuth(pThis));
