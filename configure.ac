@@ -945,6 +945,24 @@ AC_ARG_ENABLE(elasticsearch_tests,
 AM_CONDITIONAL(ENABLE_ELASTICSEARCH_TESTS, test x$enable_elasticsearch_tests = xyes)
 
 
+# openssl support
+AC_ARG_ENABLE(openssl,
+        [AS_HELP_STRING([--enable-openssl],[Enable openssl support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_openssl="yes" ;;
+          no) enable_openssl="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-openssl) ;;
+         esac],
+        [enable_openssl=no]
+)
+if test "x$enable_openssl" = "xyes"; then
+	PKG_CHECK_MODULES(OPENSSL, openssl)
+	AC_DEFINE([ENABLE_OPENSSL], [1], [Indicator that openssl is present])
+	save_libs=$LIBS
+fi
+AM_CONDITIONAL(ENABLE_OPENSSL, test x$enable_openssl = xyes)
+
+
 # GnuTLS support
 AC_ARG_ENABLE(gnutls,
         [AS_HELP_STRING([--enable-gnutls],[Enable GNU TLS support @<:@default=no@:>@])],
@@ -2420,6 +2438,7 @@ echo "    mongodb support enabled:                  $enable_ommongodb"
 echo "    hiredis support enabled:                  $enable_omhiredis"
 echo
 echo "---{ protocol support }---"
+echo "    openssl network stream driver enabled:    $enable_openssl"
 echo "    GnuTLS network stream driver enabled:     $enable_gnutls"
 echo "    GSSAPI Kerberos 5 support enabled:        $enable_gssapi_krb5"
 echo "    RELP support enabled:                     $enable_relp"
