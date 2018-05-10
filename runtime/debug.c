@@ -1452,6 +1452,9 @@ rsRetVal dbgClassInit(void)
 
 	const char *dbgto2stderr = getenv("RSYSLOG_DEBUG_TIMEOUTS_TO_STDERR");
 	dbgTimeoutToStderr = (dbgto2stderr != NULL && !strcmp(dbgto2stderr, "on")) ? 1 : 0;
+	if(dbgTimeoutToStderr) {
+		fprintf(stderr, "rsyslogd: NOTE: RSYSLOG_DEBUG_TIMEOUTS_TO_STDERR activated\n");
+	}
 	dbgGetRuntimeOptions(); /* init debug system from environment */
 	pszAltDbgFileName = getenv("RSYSLOG_DEBUGLOG");
 

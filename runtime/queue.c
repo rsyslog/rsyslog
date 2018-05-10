@@ -2936,8 +2936,9 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg)
 			timeoutComp(&t, pThis->toEnq);
 			const int r = pthread_cond_timedwait(&pThis->notFull, pThis->mut, &t);
 			if(dbgTimeoutToStderr && r != 0) {
-				fprintf(stderr, "%lld: queue timeout, error %d, (ETIMEDOUT is %d) lost message %s\n",
-						(long long) time(NULL), r, ETIMEDOUT, pMsg->pszRawMsg);
+				fprintf(stderr, "%lld: queue timeout(%dms), error %d%s, "
+					"lost message %s\n", (long long) time(NULL), pThis->toEnq,
+					r, ( r == ETIMEDOUT) ? "[ETIMEDOUT]" : "", pMsg->pszRawMsg);
 			}
 			if(r == ETIMEDOUT) {
 				DBGOPRINT((obj_t*) pThis, "doEnqSingleObject: cond timeout, dropping message!\n");
