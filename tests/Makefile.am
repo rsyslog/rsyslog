@@ -125,6 +125,7 @@ TESTS +=  \
 	diskq-rfc5424.sh \
 	diskqueue.sh \
 	diskqueue-fsync.sh \
+	diskqueue-full.sh \
 	rulesetmultiqueue.sh \
 	rulesetmultiqueue-v6.sh \
 	manytcp.sh \
@@ -972,6 +973,7 @@ EXTRA_DIST= \
 	rsf_getenv.sh \
 	testsuites/rsf_getenv.conf \
 	diskq-rfc5424.sh \
+	diskqueue-full.sh \
 	diskqueue.sh \
 	testsuites/diskqueue.conf \
 	arrayqueue.sh \
