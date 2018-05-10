@@ -96,6 +96,9 @@ Version 8.35.0 [v8-stable] 2018-05-15
 - core: config optimizer did not handle call_indirect
   This also caused the emission of an "internal error" error message
   closes https://github.com/rsyslog/rsyslog/issues/2665
+- debug support: add capability to print testbench-specific timeout reports
+  done by setting RSYSLOG_DEBUG_TIMEOUTS_TO_STDERR to "on"
+  this is by default activated inside the testbench
 - mmgrok: fix potential segfault
   The modules used strtok(), which is not thread-safe. So it will potentially
   segfault when multiple instances are spawned (what e.g. happens on busy
@@ -174,6 +177,7 @@ Version 8.35.0 [v8-stable] 2018-05-15
   closes https://github.com/rsyslog/rsyslog/issues/2628
 - QA/CI
   * enabled some additional useful compiler warnings
+  * new test for diskqueue hitting configured disk space limit
   * new tests for omfile
   * added tests for mmkubernetes
   * added tests for some script functions that were missing them
