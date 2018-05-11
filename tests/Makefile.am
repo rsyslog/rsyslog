@@ -626,7 +626,10 @@ if ENABLE_MMNORMALIZE
 TESTS += msgvar-concurrency-array.sh \
 	msgvar-concurrency-array-event.tags.sh \
 	mmnormalize_rule_from_string.sh \
-	mmnormalize_rule_from_array.sh
+	mmnormalize_rule_from_array.sh \
+	mmnormalize_parsesuccess_fail.sh \
+	mmnormalize_parsesuccess_fail2.sh \
+	mmnormalize_parsesuccess_ok.sh
 
 if ENABLE_IMPTCP
 TESTS +=  \
@@ -1165,6 +1168,11 @@ EXTRA_DIST= \
 	mmrm1stspace-basic.sh \
 	mmnormalize_rule_from_string.sh \
 	mmnormalize_rule_from_array.sh \
+	mmnormalize_parsesuccess_fail.sh \
+	testsuites/mmnormalize_parsesuccess_fail.sh \
+	mmnormalize_parsesuccess_fail2.sh \
+	testsuites/mmnormalize_parsesuccess_fail2.sh \
+	mmnormalize_parsesuccess_ok.sh \
 	pmnull-basic.sh \
 	pmnull-withparams.sh \
 	omstdout-basic.sh \
