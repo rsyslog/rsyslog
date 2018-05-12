@@ -7,7 +7,6 @@
 # in practice many threading bugs result in an abort rather quickly and these
 # should be covered by this test here.
 # rgerhards, 2009-06-26
-echo \[threadingmqaq.sh\]: main/action queue concurrency
 
 uname
 if [ `uname` = "SunOS" ] ; then
