@@ -1724,8 +1724,12 @@ BEGINsetModCnf
 	int i;
 CODESTARTsetModCnf
 	/* new style config has different default! */
-#if defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE) /* use FEN on Solaris! */
-	loadModConf->opMode = OPMODE_FEN;
+#if defined(OS_SOLARIS)
+	#if defined (HAVE_PORT_SOURCE_FILE) /* use FEN on Solaris if available */
+		loadModConf->opMode = OPMODE_FEN;
+	#else
+		loadModConf->opMode = OPMODE_POLLING;
+	#endif
 #else
 	loadModConf->opMode = OPMODE_INOTIFY;
 #endif

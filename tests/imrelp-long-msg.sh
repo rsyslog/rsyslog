@@ -3,6 +3,7 @@
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
+global(maxMessageSize="214800")
 module(load="../plugins/imrelp/.libs/imrelp")
 input(type="imrelp" port="13514" maxdatasize="214800")
 

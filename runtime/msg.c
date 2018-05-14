@@ -526,8 +526,8 @@ finalize_it:
 }
 
 
-static void
-getInputName(smsg_t * const pM, uchar **ppsz, int *plen)
+void
+getInputName(const smsg_t * const pM, uchar **ppsz, int *const plen)
 {
 	BEGINfunc
 	if(pM == NULL || pM->pInputName == NULL) {
@@ -1643,8 +1643,14 @@ static void getUUID(smsg_t * const pM, uchar **pBuf, int *piLen)
 }
 #endif
 
+int ATTR_NONNULL()
+getRawMsgLen(const smsg_t *const pMsg)
+{
+	return (pMsg->pszRawMsg == NULL) ?  0 : pMsg->iLenRawMsg;
+}
+
 void
-getRawMsg(smsg_t * const pM, uchar **pBuf, int *piLen)
+getRawMsg(const smsg_t * const pM, uchar **pBuf, int *piLen)
 {
 	if(pM == NULL) {
 		*pBuf=  UCHAR_CONSTANT("");
@@ -2875,15 +2881,37 @@ finalize_it:
 	RETiRet;
 }
 
+/* truncate the (raw) message to configured max size.
+ * The function makes sure that the stored rawmsg remains
+ * properly terminated by '\0'.
+ */
+void ATTR_NONNULL()
+MsgTruncateToMaxSize(smsg_t *const pThis)
+{
+	ISOBJ_TYPE_assert(pThis, msg);
+	const int maxMsgSize = glblGetMaxLine();
+	assert(pThis->iLenRawMsg > maxMsgSize);
+
+	const int deltaSize = pThis->iLenRawMsg - maxMsgSize;
+	pThis->pszRawMsg[maxMsgSize] = '\0';
+	pThis->iLenRawMsg = maxMsgSize;
+	if(pThis->iLenMSG < deltaSize) {
+		pThis->iLenMSG = 0;
+	} else {
+		pThis->iLenMSG -= deltaSize;
+	}
+}
+
 /* set raw message in message object. Size of message is provided.
  * The function makes sure that the stored rawmsg is properly
  * terminated by '\0'.
  * rgerhards, 2009-06-16
  */
-void MsgSetRawMsg(smsg_t *pThis, const char* pszRawMsg, size_t lenMsg)
+void ATTR_NONNULL()
+MsgSetRawMsg(smsg_t *const pThis, const char*const pszRawMsg, const size_t lenMsg)
 {
+	ISOBJ_TYPE_assert(pThis, msg);
 	int deltaSize;
-	assert(pThis != NULL);
 	if(pThis->pszRawMsg != pThis->szRawMsg)
 		free(pThis->pszRawMsg);
 

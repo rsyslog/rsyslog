@@ -456,7 +456,7 @@ processPacket(struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *p
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pMsg != NULL) {
+		if(pMsg != NULL && iRet != RS_RET_DISCARDMSG) {
 			msgDestruct(&pMsg);
 		}
 	}

@@ -49,6 +49,7 @@
 #include "glbl.h"
 #include "statsobj.h"
 #include "srUtils.h"
+#include "parserif.h"
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
@@ -375,9 +376,6 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 
 #ifdef HAVE_RELPSRVSETOVERSIZEMODE
 	CHKiRet(relpSrvSetOversizeMode(pSrv, inst->oversizeMode));
-#else
-	errmsg.LogError(0, RS_RET_PARAM_ERROR, "imrelp: parameter oversizeMode is not available in "
-			"this relp version and is therefore disabled.");
 #endif
 	inst->pszInputName = ustrdup((inst->pszInputName == NULL) ?  UCHAR_CONSTANT("imrelp") : inst->pszInputName);
 	CHKiRet(prop.Construct(&inst->pInputName));
@@ -511,11 +509,13 @@ CODESTARTnewInpInst
 			} else if(!strcmp(mode, "accept")) {
 				inst->oversizeMode = RELP_OVERSIZE_ACCEPT;
 			} else {
-				errmsg.LogError(0, RS_RET_INVALID_PARAMS,
-					"error: wrong oversizeMode parameter value %s, "
-					"using default: truncate\n", mode);
+				parser_errmsg("imrelp: wrong oversizeMode parameter "
+					"value %s, using default: truncate\n", mode);
 				inst->oversizeMode = RELP_OVERSIZE_TRUNCATE;
 			}
+#else
+			parser_errmsg("imrelp: parameter oversizeMode is not available in "
+				"this relp version and is therefore disabled.");
 #endif
 		} else if(!strcmp(inppblk.descr[i].name, "keepalive")) {
 			inst->bKeepAlive = (sbool) pvals[i].val.d.n;
@@ -829,6 +829,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
+
+	LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "imrelp: librelp too old, oversizemode "
+		"defaults to \"abort\"");
 
 	/* register config file handlers */
 	CHKiRet(regCfSysLineHdlr2((uchar*)"inputrelpserverbindruleset", 0, eCmdHdlrGetWord,

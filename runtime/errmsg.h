@@ -1,6 +1,6 @@
 /* The errmsg object. It is used to emit error message inside rsyslog.
  *
- * Copyright 2008-2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -44,10 +44,12 @@ ENDinterface(errmsg)
 
 /* prototypes */
 PROTOTYPEObj(errmsg);
+void errmsgDoHUP(void);
 void resetErrMsgsFlag(void);
 int hadErrMsgs(void);
 void __attribute__((format(printf, 3, 4))) LogError(const int iErrno, const int iErrCode, const char *fmt, ... );
 void __attribute__((format(printf, 4, 5)))
 	LogMsg(const int iErrno, const int iErrCode, const int severity, const char *fmt, ... );
+rsRetVal ATTR_NONNULL() writeOversizeMessageLog(const smsg_t *const pMsg);
 
 #endif /* #ifndef INCLUDED_ERRMSG_H */

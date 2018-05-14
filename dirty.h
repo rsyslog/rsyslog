@@ -27,7 +27,7 @@
 #define	DIRTY_H_INCLUDED 1
 
 rsRetVal __attribute__((deprecated)) multiSubmitMsg(multi_submit_t *pMultiSub);
-rsRetVal multiSubmitMsg2(multi_submit_t *pMultiSub); /* friends only! */
+rsRetVal ATTR_NONNULL() multiSubmitMsg2(multi_submit_t *const pMultiSub); /* friends only! */
 rsRetVal submitMsg2(smsg_t *pMsg);
 rsRetVal __attribute__((deprecated)) submitMsg(smsg_t *pMsg);
 rsRetVal multiSubmitFlush(multi_submit_t *pMultiSub);

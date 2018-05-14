@@ -508,6 +508,7 @@ operation not carried out */
 	RS_RET_NO_TZ_SET = -2442, /**< system env var TZ is not set (status msg) */
 	RS_RET_FS_ERR = -2443, /**< file-system error */
 	RS_RET_POLL_ERR = -2444, /**< error in poll() system call */
+	RS_RET_OVERSIZE_MSG = -2445, /**< message is too long (above configured max) */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
