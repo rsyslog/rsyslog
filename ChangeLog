@@ -153,6 +153,8 @@ Version 8.35.0 [v8-stable] 2018-05-15
   It previously could be set to any value, including values lower than the
   configured rsyslog max message size, which makes no sense. Now this is
   checked an error message is emitted if the size is set too low.
+- build system bugfix: build broken if liblogging-stdlog installed in custom path
+  Thanks to Dirk Hörner for the patch.
 - core bugfix: segfault on queue shutdown
   if a ruleset queue is in direct mode, a segfault can occur during
   rsyslog shutdown. The root cause is that a direct queue does not
