@@ -372,3 +372,25 @@ The following parameters can be set:
   that you found via a web search.
 
   Once again: **users must NOT set this parameter!**
+
+- **oversizemsg.errorfile** [file name] available 8.35.0+
+
+  This parameter is used to specify the name of the oversize message log file.
+  Here messages that are longer than maxMessageSize will be gathered.
+
+- **oversizemsg.input.mode** [mode] available 8.35.0+
+
+  With this parameter the behavior for oversized messages can be specified.
+  Available modes are:
+
+  - truncate: Oversized messages will be truncated.
+  - split: Oversized messages will be split and the rest of the message will
+    be send in another message.
+  - accept: Oversized messages will still be accepted.
+
+- **oversizemsg.report** [boolean (on/off)] available 8.35.0+
+
+  This parameter specifies if an error shall be reported when an oversized
+  message is seen. The default is "on".
+
+
