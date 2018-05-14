@@ -50,6 +50,48 @@ Version 8.35.0 [v8-stable] 2018-05-15
   closes https://github.com/rsyslog/rsyslog/issues/1741
   closes https://github.com/rsyslog/rsyslog/issues/1782
   closes https://github.com/rsyslog/rsyslog/issues/2496
+- core: consistent handling of oversize input messages
+  In the community we frequently discuss handling of oversize messages.
+  David Lang rightfully suggested to create a central capability inside
+  rsyslog core to handle them.
+  We need to make a distinction between input and output messages. Also,
+  input messages frequently need to have some size restrictions done at
+  a lower layer (e.g. protocol layer) for security reasons. Nevertheless,
+  we should have a central capability
+  * for cases where it need not be handled at a lower level
+  * as a safeguard when a module invalidly emits it (imfile is an example,
+    see https://github.com/rsyslog/rsyslog/pull/2632 for a try to fix it
+    on the module level - we will replace that with the new capability
+    described here).
+  The central capability works on message submission, and so cannot be
+  circumvented. It has these capabilities:
+  * overisze message handling modes:
+    - truncate message
+    - split message
+      this is of questionable use, but also often requested. In that mode,
+      the oversize message content is split into multiple messages. Usually,
+      this ends up with message segments where all but the first is lost
+      anyhow as the regular filter rules do not match the other fragments.
+      As it is requested, we still implemented it.
+    - accept message as is, even if oversize
+      This may be required for some cases. Most importantly, it makes
+      quite some sense when writing messages to file, where oversize
+      does not matter (accept from a DoS PoV).
+  * report message to a special "oversize message log file" (not via the
+    regular engine, as that would obviously cause another oversize message)
+  This commit, as the title says, handles oversize INPUT messages.
+  see also https://github.com/rsyslog/rsyslog/issues/2190
+  closes https://github.com/rsyslog/rsyslog/issues/2681
+  closes https://github.com/rsyslog/rsyslog/issues/498
+  Note: this commit adds global parameters:
+   * "oversizemsg.errorfile",
+     is used to specify the location of the oversize message log file.
+   * "oversizemsg.report",
+     is used to control if an error shall be reported when an oversize
+     message is seen. The default it "on".
+   * add global parameter "oversizemsg.input.mode"
+     is used to specify the mode with which oversized messages will
+     be handled.
 - omfwd: add support for bind-to-address for UDP
   To allow the same source address to be used regardless of the egress
   interface taken, an option is added for an address to bind the datagram
