@@ -566,7 +566,8 @@ TESTS +=  \
 	es-basic-errfile-empty.sh \
 	es-basic-errfile-popul.sh \
 	es-bulk-errfile-empty.sh \
-	es-bulk-errfile-popul.sh
+	es-bulk-errfile-popul.sh \
+	es-writeoperation.sh
 if HAVE_VALGRIND
 TESTS += \
 	es-basic-vgthread.sh
@@ -1933,7 +1934,8 @@ EXTRA_DIST= \
 	mmkubernetes-basic.sh \
 	mmkubernetes-basic-vg.sh \
 	mmkubernetes_test_server.py \
-	mmkubernetes-basic.out.json
+	mmkubernetes-basic.out.json \
+	es-writeoperation.sh
 
 ourtail_SOURCES = ourtail.c
 msleep_SOURCES = msleep.c

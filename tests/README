@@ -29,6 +29,51 @@ To configure system properties like hostname and firewall, use the
 graphical "yast2" administration tool. Note the ssh-access by default
 is disable in the firewall!
 
+Before running tests
+====================
+make check - this will compile all of the C code used in the tests, as well as
+do any other preparations, and will start running all of the tests.  Ctrl-C to
+stop running all of the tests.
+
+Running all tests
+=================
+make check
+
+Running named tests
+===================
+make testname.sh.log
+
+For example, to run the imfile-basic.sh test, use
+
+make imfile-basic.sh.log
+
+Test output is in imfile-basic.sh.log
+
+To re-run the test, first remove imfile-basic.sh.log then make again
+
+* Using gdb to debug rsyslog during a test run
+
+Edit your test like this:
+
+    . $srcdir/diag.sh startup
+    if [ -n "${USE_GDB:-}" ] ; then
+        echo attach gdb here
+        sleep 54321 || :
+    fi
+
+Run your test in the background:
+
+    USE_GDB=1 make mytest.sh.log &
+
+Tail mytest.sh.log until you see 'attach gdb here'.  The log should also
+tell you what is the rsyslogd pid.
+
+   gdb ../tools/rsyslogd $rsyslogd_pid
+
+Set breakpoints, whatever, then 'continue'
+
+In another window, do ps -ef|grep 54321, then kill that pid
+
 Core Dump Analysis
 ==================
 The testbench contains some limited (yet useful) support for automatically
