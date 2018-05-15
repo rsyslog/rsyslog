@@ -43,6 +43,7 @@
 #include "datetime.h"
 #include "net.h"
 #include "glbl.h"
+#include "statsobj.h"
 #include "parser.h"
 #include "prop.h"
 #include "errmsg.h"
@@ -62,6 +63,7 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(parser)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(net)
+DEFobjCurrIf(statsobj)
 
 struct modConfData_s {
 	int bIgnPrevMsg;
@@ -115,6 +117,10 @@ static int bPidFallBack;
 static ratelimit_t *ratelimiter = NULL;
 static sd_journal *j;
 static int j_inotify_fd;
+static struct {
+	statsobj_t *stats;
+	STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
+} statsCounter;
 
 #define J_PROCESS_PERIOD 1024  /* Call sd_journal_process() every 1,024 records */
 
@@ -246,6 +252,7 @@ int sharedJsonProperties)
 	}
 
 	CHKiRet(ratelimitAddMsg(ratelimiter, NULL, pMsg));
+	STATSCOUNTER_INC(statsCounter.ctrSubmit, statsCounter.mutCtrSubmit);
 
 finalize_it:
 	RETiRet;
@@ -669,6 +676,7 @@ CODESTARTrunInput
 		}
 	}
 
+
 	/* this is an endless loop - it is terminated when the thread is
 	 * signalled to do so. This, however, is handled by the framework.
 	 */
@@ -747,6 +755,18 @@ ENDcheckCnf
 
 BEGINactivateCnf
 CODESTARTactivateCnf
+
+	/* support statistic gathering */
+	CHKiRet(statsobj.Construct(&(statsCounter.stats)));
+	CHKiRet(statsobj.SetName(statsCounter.stats, (uchar*)"imjournal"));
+	CHKiRet(statsobj.SetOrigin(statsCounter.stats, (uchar*)"imjournal"));
+	STATSCOUNTER_INIT(statsCounter.ctrSubmit, statsCounter.mutCtrSubmit);
+	CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("submitted"),
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(statsCounter.ctrSubmit)));
+	CHKiRet(statsobj.ConstructFinalize(statsCounter.stats));
+	/* end stats counter */
+
+finalize_it:
 ENDactivateCnf
 
 
@@ -754,6 +774,7 @@ BEGINfreeCnf
 CODESTARTfreeCnf
 	free(cs.stateFile);
 	free(cs.usePid);
+	statsobj.Destruct(&(statsCounter.stats));
 ENDfreeCnf
 
 /* open journal */
@@ -778,6 +799,7 @@ CODESTARTmodExit
 		prop.Destruct(&pLocalHostIP);
 
 	/* release objects we used */
+	objRelease(statsobj, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(net, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
@@ -870,6 +892,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(parser, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(net, CORE_COMPONENT));
+	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 
 	/* we need to create the inputName property (only once during our lifetime) */
 	CHKiRet(prop.CreateStringProp(&pInputName, UCHAR_CONSTANT("imjournal"), sizeof("imjournal") - 1));
