@@ -168,32 +168,25 @@ The following parameters can be set:
   It is highly suggested to change this setting to "off" only if you
   know exactly why you are doing this.
 
-- **parser.permitSlashInHostname** [on/off] available in 8.25.0+
-
-  **Default:** off
-
-  This controls whether slashes in the "programname" property are
-  permitted or not. This property bases on a BSD concept, and by
-  BSD syslogd sources, slashes are NOT permitted inside the program
-  name. However, some Linux tools (including most importantly the
-  journal) store slashes as part of the program name inside the
-  syslogtag. In those cases, the programname is truncated at the
-  first slash. If this setting is changed to "on", slashes are
-  permitted and will not terminate programname parsing.
-
 - **parser.permitSlashInProgramName** [on/off] available in 8.25.0+
 
   **Default:** off
 
-  This controls whether slashes in the static part of the tag are
-  permitted or not. If this setting is off, a value of
-  "app/foo[1234]" in the tag will result in a programname of "app".
-  If an application stores an absolute path name like
-  "/app/foo[1234]", the programname property will become empty ("").
-  If you need to actually store slashes as part of the programname,
-  this setting should be changed to "on" to permit this. Then, a
-  syslogtag of "/app/foo[1234]" will result in programname being
-  "/app/foo".
+  This controls whether slashes in the "programname" property
+  (the static part of the tag) are permitted or not. By default
+  this is not permitted, but some Linux tools (including most
+  importantly the journal) store slashes as part of the program
+  name inside the syslogtag. In those cases, the ``programname``
+  is truncated at the first slash.
+
+  In other words, if the setting is off, a value of ``app/foo[1234]``
+  in the tag will result in a programname of ``app``, and if an
+  application stores an absolute path name like ``/app/foo[1234]``,
+  the ``programname`` property will be empty ("").
+  If set to ``on``, a syslogtag of ``/app/foo[1234]`` will result
+  in a ``programname`` value of ``/app/foo`` and a syslogtag of
+  ``app/foo[1234]`` will result in a ``programname`` value of
+  ``app/foo``.
 
 - **senders.keepTrack** [on/off] available 8.17.0+
 
@@ -367,3 +360,37 @@ The following parameters can be set:
   This permits SUSPENDing dynafile actions. Traditionally, SUSPEND mode was
   never entered for dynafiles as it would have blocked overall processing
   flow. Default is not to suspend (and thus block).
+
+- **internal.developeronly.options**
+
+  This is NOT to be used by end users. It provides rsyslog developers the
+  ability to do some (possibly strange) things inside rsyslog, e.g. for
+  testing. This parameter should never be set, except if instructed by
+  a developer. If it is set, rsyslog may misbehave, segfault, or cause
+  other strange things. Note that option values are not guaranteed to
+  stay the same between releases, so do not be "smart" and apply settings
+  that you found via a web search.
+
+  Once again: **users must NOT set this parameter!**
+
+- **oversizemsg.errorfile** [file name] available 8.35.0+
+
+  This parameter is used to specify the name of the oversize message log file.
+  Here messages that are longer than maxMessageSize will be gathered.
+
+- **oversizemsg.input.mode** [mode] available 8.35.0+
+
+  With this parameter the behavior for oversized messages can be specified.
+  Available modes are:
+
+  - truncate: Oversized messages will be truncated.
+  - split: Oversized messages will be split and the rest of the message will
+    be send in another message.
+  - accept: Oversized messages will still be accepted.
+
+- **oversizemsg.report** [boolean (on/off)] available 8.35.0+
+
+  This parameter specifies if an error shall be reported when an oversized
+  message is seen. The default is "on".
+
+

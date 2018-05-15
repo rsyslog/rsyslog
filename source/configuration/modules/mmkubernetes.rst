@@ -70,9 +70,9 @@ KubernetesURL
    :widths: auto
    :class: parameter-table
 
-   "word", "none", "yes", "none"
+   "word", "https://kubernetes.default.svc.cluster.local:443", "yes", "none"
 
-The URL of the Kubernetes API server.  Example: `https://localhost:8443`
+The URL of the Kubernetes API server.  Example: `https://localhost:8443`.
 
 .. _mmkubernetes-tls.cacert:
 
@@ -84,10 +84,12 @@ tls.cacert
    :widths: auto
    :class: parameter-table
 
-   "word", "none", "yes", "none"
+   "word", "none", "no", "none"
 
 Full path and file name of file containing the CA cert of the
-Kubernetes API server cert issuer.  Example: `/etc/rsyslog.d/mmk8s-ca.crt`
+Kubernetes API server cert issuer.  Example: `/etc/rsyslog.d/mmk8s-ca.crt`.
+This parameter is not mandatory if using an `http` scheme instead of `https` in
+`kubernetesurl`, or if using `allowunsignedcerts="yes"`.
 
 .. _tokenfile:
 
@@ -99,11 +101,11 @@ tokenfile
    :widths: auto
    :class: parameter-table
 
-   "word", "none", "yes", "none"
+   "word", "none", "no", "none"
 
-The file containing the token to use to authenticate to the Kubernetes
-API server.  Either `tokenfile` or `token` is required.  Example:
-`/etc/rsyslog.d/mmk8s.token`
+The file containing the token to use to authenticate to the Kubernetes API
+server.  One of `tokenfile` or `token` is required if Kubernetes is configured
+with access control.  Example: `/etc/rsyslog.d/mmk8s.token`
 
 .. _token:
 
@@ -115,10 +117,11 @@ token
    :widths: auto
    :class: parameter-table
 
-   "word", "none", "yes", "none"
+   "word", "none", "no", "none"
 
-The token to use to authenticate to the Kubernetes API server.  Either
-`token` or `tokenfile` is required.  Example: `UxMU46ptoEWOSqLNa1bFmH`
+The token to use to authenticate to the Kubernetes API server.  One of `token`
+or `tokenfile` is required if Kubernetes is configured with access control.
+Example: `UxMU46ptoEWOSqLNa1bFmH`
 
 .. _annotation_match:
 
@@ -314,42 +317,60 @@ When processing json-file logs, this is the rulebase used to
 match the CONTAINER_NAME property value and extract metadata.  For the
 actual rules, see `containerrules`.
 
+Fields
+------
+
+These are the fields added from the metadata in the json-file filename, or from
+the `CONTAINER_NAME` and `CONTAINER_ID_FULL` fields from the `imjournal` input:
+
+`$!kubernetes!namespace_name`, `$!kubernetes!pod_name`,
+`$!kubernetes!container_name`, `$!docker!id`, `$!kubernetes!master_url`.
+
+If mmkubernetes can extract the above fields from the input, the following
+fields will always be present.  If they are not present, mmkubernetes
+failed to look up the namespace or pod in Kubernetes:
+
+`$!kubernetes!namespace_id`, `$!kubernetes!pod_id`,
+`$!kubernetes!creation_timestamp`, `$!kubernetes!host`
+
+The following fields may be present, depending on how the namespace and pod are
+defined in Kubernetes, and depending on the value of the directive
+`annotation_match`:
+
+`$!kubernetes!labels`, `$!kubernetes!annotations`, `$!kubernetes!namespace_labels`,
+`$!kubernetes!namespace_annotations`
+
+More fields may be added in the future.
+
 Example
 -------
 
-This is an example of a configuration file `/etc/rsyslog.d/mmk8s.conf` for a
-setup which reads Docker container logs from `/var/log/containers/*.log`, and
-looks for Docker container logs in the journal, annotates those log records
-with Kubernetes metadata, and writes them to `/var/log/k8s.log`.
+Assuming you have an `imfile` input reading from docker json-file container
+logs managed by Kubernetes, with `addmetadata="on"` so that mmkubernetes can
+get the basic necessary Kubernetes metadata from the filename:
 
 .. code-block:: none
 
-    module(load="imfile" mode="inotify")
-    module(load="imjournal")
-    module(load="mmkubernetes" kubernetesurl="https://localhost:8443"
-           tls.cacert="/etc/rsyslog.d/mmk8s.ca.crt"
-           tokenfile="/etc/rsyslog.d/mmk8s.token" annotation_match=["."])
-
-    template(name="tpl" type="list") {
-             property(name="jsonmesg")
-             constant(value="\n")
-    }
-
-    ruleset(name="k8s") {
-            action(type="mmkubernetes")
-            action(type="omfile" file="/var/log/k8s.log" template="tpl")
-    }
-
     input(type="imfile" file="/var/log/containers/*.log"
-          tag="kubernetes" addmetadata="on" ruleset="k8s")
+          tag="kubernetes" addmetadata="on")
 
-    if ($!_SYSTEMD_UNIT == "docker.service") and (strlen($!CONTAINER_NAME) > 0) then {
-        call k8s
-    }
+and/or an `imjournal` input for docker journald container logs annotated by
+Kubernetes:
 
-This assumes the files `/etc/rsyslog.d/k8s_filename.rulebase` and
-`/etc/rsyslog.d/k8s_container_name.rulebase` exist, as well as the
-files specified by `tls.cacert` and `tokenfile`.
+.. code-block:: none
+
+    input(type="imjournal")
+
+Then mmkubernetes can be used to annotate log records like this:
+
+.. code-block:: none
+
+    module(load="mmkubernetes")
+
+    action(type="mmkubernetes")
+
+After this, you should have log records with fields described in the `Fields`
+section above.
 
 Credits
 -------

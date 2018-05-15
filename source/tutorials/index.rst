@@ -13,3 +13,6 @@ Tutorials
    failover_syslog_server
    log_rotation_fix_size
    gelf_forwarding
+   log_sampling
+   random_sampling
+   hash_sampling

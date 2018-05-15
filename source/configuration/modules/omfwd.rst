@@ -105,6 +105,48 @@ If the setns() system call is not available on the system (e.g. BSD
 kernel, linux kernel before v2.6.24) the given namespace will be
 ignored.
 
+Address
+^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+.. versionadded:: 8.35.0
+
+Bind socket to a given local IP address. This option is only supported
+for UDP, not TCP.
+
+IpFreeBind
+^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "2", "no", "none"
+
+.. versionadded:: 8.35.0
+
+Manages the IP_FREEBIND option on the UDP socket, which allows binding it to
+an IP address that is not yet associated to any network interface. This option
+is only relevant if the address option is set.
+
+The parameter accepts the following values:
+
+-  0 - does not enable the IP_FREEBIND option on the
+   UDP socket. If the *bind()* call fails because of *EADDRNOTAVAIL* error,
+   socket initialization fails.
+
+-  1 - silently enables the IP_FREEBIND socket
+   option if it is required to successfully bind the socket to a nonlocal address.
+
+-  2 - enables the IP_FREEBIND socket option and
+   warns when it is used to successfully bind the socket to a nonlocal address.
 
 Device
 ^^^^^^

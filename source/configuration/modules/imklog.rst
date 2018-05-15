@@ -47,7 +47,7 @@ is needed for good reason. Bottom line: if you don't have a good idea
 why you should use this setting, do not touch it.
 
 
-PermitNonKernalFacility
+PermitNonKernelFacility
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 .. csv-table::
@@ -138,6 +138,37 @@ If this parameter is not set a default will be used.
 On Linux "/proc/kmsg" and else "/dev/klog".
 
 
+RatelimitInterval
+^^^^^^^^^^^^^^^^^
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "0", "no", "none"
+
+.. versionadded:: 8.35.0
+
+The rate-limiting interval in seconds. Value 0 turns off rate limiting.
+Set it to a number of seconds (5 recommended) to activate rate-limiting.
+
+
+RatelimitBurst
+^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "10000", "no", "none"
+
+.. versionadded:: 8.35.0
+
+Specifies the rate-limiting burst in number of messages.  Set it high to
+preserve all bootup messages.
+
+
 Caveats/Known Bugs
 ==================
 
@@ -148,8 +179,8 @@ This module is **not supported on Solaris** and not needed there. For
 Solaris kernel input, use :doc:`imsolaris <imsolaris>`.
 
 
-Example
-=======
+Example 1
+=========
 
 The following sample pulls messages from the kernel log. All parameters
 are left by default, which is usually a good idea. Please note that
@@ -159,6 +190,17 @@ to start pulling kernel messages.
 .. code-block:: none
 
    module(load="imklog")
+
+
+Example 2
+=========
+
+The following sample adds a ratelimiter.  The burst and interval are
+set high to allow for a large volume of messages on boot.
+
+.. code-block:: none
+
+  module(load="imklog" RatelimitBurst="5000" RatelimitInterval="5")
 
 
 Unsupported |FmtObsoleteName| directives
