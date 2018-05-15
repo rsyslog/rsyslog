@@ -1,23 +1,28 @@
+******************************************
 omruleset: ruleset output/including module
-==========================================
+******************************************
 
-**Module Name:    omruleset**
+===========================  ===========================================================================
+**Module Name:**             **omruleset**
+**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+===========================  ===========================================================================
 
-**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
+.. warning::
+
+   This module is outdated and only provided to support configurations that
+   already use it. **Do no longer use it in new configurations.** It has
+   been replaced by the much more efficient `"call" RainerScript
+   statement <rainerscript_call.html>`_. The "call" statement supports
+   everything omruleset does, but in an easier to use way. 
+
 
 **Available Since**: 5.3.4
 
 **Deprecated in**: 7.2.0+
 
-**Deprecation note**
 
-This module exists only for backwards-compatibility reasons. **Do no
-longer use it in new configurations.** It has been replaced by the much
-more efficient `"call" RainerScript
-statement <rainerscript_call.html>`_. The "call" statement supports
-everything omruleset does, but in an easier to use way.
-
-**Description**:
+Purpose
+=======
 
 This is a very special "output" module. It permits to pass a message
 object to another rule set. While this is a very simple action, it
@@ -60,9 +65,13 @@ before using omruleset!**
 -  if you use multiple levels of ruleset nesting, double check for
    endless loops - the rsyslog engine does not detect these
 
-**Configuration Parameters**:
 
-Note: parameter names are case-insensitive.
+|FmtObsoleteName| directives
+============================
+
+.. note::
+
+   Parameter names are case-insensitive.
 
 -  **$ActionOmrulesetRulesetName** ruleset-to-submit-to
    This directive specifies the name of the ruleset that the message
@@ -74,7 +83,12 @@ Note: parameter names are case-insensitive.
    ruleset name has been defined. As usual, the ruleset name must be
    specified in front of the action that it modifies.
 
-**Examples:**
+
+Examples
+========
+
+Ruleset for Write-to-file action
+--------------------------------
 
 This example creates a ruleset for a write-to-file action. The idea here
 is that the same file is written based on multiple filters, problems
@@ -89,30 +103,34 @@ simple. Note that we create a ruleset-specific main queue (for
 simplicity with the default main queue parameters) in order to avoid
 re-queueing messages back into the main queue.
 
-::
+.. code-block:: none
 
-  $ModLoad omruleset # define ruleset for commonly written file
-  $RuleSet CommonAction
-  $RulesetCreateMainQueue on
-  *.* /path/to/file.log
+   $ModLoad omruleset # define ruleset for commonly written file
+   $RuleSet CommonAction
+   $RulesetCreateMainQueue on
+   *.* /path/to/file.log
+ 
+   #switch back to default ruleset
+   $ruleset RSYSLOG_DefaultRuleset
+ 
+   # begin first action
+   # note that we must first specify which ruleset to use for omruleset:
+   $ActionOmrulesetRulesetName CommonAction
+   mail.info :omruleset:
+   # end first action
+ 
+   # begin second action
+   # note that we must first specify which ruleset to use for omruleset:
+   $ActionOmrulesetRulesetName CommonAction
+   :FROMHOST, isequal, "myhost.example.com" :omruleset:
+   #end second action
+ 
+   # of course, we can have "regular" actions alongside :omrulset: actions
+   *.* /path/to/general-message-file.log
 
-  #switch back to default ruleset
-  $ruleset RSYSLOG_DefaultRuleset
 
-  # begin first action
-  # note that we must first specify which ruleset to use for omruleset:
-  $ActionOmrulesetRulesetName CommonAction
-  mail.info :omruleset:
-  # end first action
-
-  # begin second action
-  # note that we must first specify which ruleset to use for omruleset:
-  $ActionOmrulesetRulesetName CommonAction
-  :FROMHOST, isequal, "myhost.example.com" :omruleset:
-  #end second action
-
-  # of course, we can have "regular" actions alongside :omrulset: actions
-  *.* /path/to/general-message-file.log
+High-performance filter condition
+---------------------------------
 
 The next example is used to creat a high-performance nested and filter
 condition. Here, it is first checked if the message contains a string
@@ -123,36 +141,38 @@ slower) expression-based filters. Also, this enables pipeline
 processing, in that second ruleset is executed in parallel to the first
 one.
 
-::
+.. code-block:: none
 
-  $ModLoad omruleset
-  # define "second" ruleset
-  $RuleSet nested
-  $RulesetCreateMainQueue on
-  # again, we use our own queue
-  mail.* /path/to/mailerr.log
-  kernel.* /path/to/kernelerr.log
-  auth.* /path/to/autherr.log
+   $ModLoad omruleset
+   # define "second" ruleset
+   $RuleSet nested
+   $RulesetCreateMainQueue on
+   # again, we use our own queue
+   mail.* /path/to/mailerr.log
+   kernel.* /path/to/kernelerr.log
+   auth.* /path/to/autherr.log
+ 
+   #switch back to default ruleset
+   $ruleset RSYSLOG_DefaultRuleset
+ 
+   # begin first action - here we filter on "error"
+   # note that we must first specify which ruleset to use for omruleset:
+   $ActionOmrulesetRulesetName nested
+   :msg, contains, "error" :omruleset:
+   #end first action
+ 
+   # begin second action - as an example we can do anything else in
+   # this processing. Note that these actions are processed concurrently
+   # to the ruleset "nested"
+   :FROMHOST, isequal, "myhost.example.com" /path/to/host.log
+   #end second action
+ 
+   # of course, we can have "regular" actions alongside :omrulset: actions
+   *.* /path/to/general-message-file.log
+ 
 
-  #switch back to default ruleset
-  $ruleset RSYSLOG_DefaultRuleset
-
-  # begin first action - here we filter on "error"
-  # note that we must first specify which ruleset to use for omruleset:
-  $ActionOmrulesetRulesetName nested
-  :msg, contains, "error" :omruleset:
-  #end first action
-
-  # begin second action - as an example we can do anything else in
-  # this processing. Note that these actions are processed concurrently
-  # to the ruleset "nested"
-  :FROMHOST, isequal, "myhost.example.com" /path/to/host.log
-  #end second action
-
-  # of course, we can have "regular" actions alongside :omrulset: actions
-  *.* /path/to/general-message-file.log
-
-**Caveats/Known Bugs:**
+Caveats/Known Bugs
+==================
 
 The current configuration file language is not really adequate for a
 complex construct like omruleset. Unfortunately, more important work is
