@@ -830,8 +830,10 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 
-	LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "imrelp: librelp too old, oversizemode "
-		"defaults to \"abort\"");
+	#ifndef HAVE_RELPSRVSETOVERSIZEMODE
+		LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "imrelp: librelp too old, oversizemode "
+			"defaults to \"abort\"");
+	#endif
 
 	/* register config file handlers */
 	CHKiRet(regCfSysLineHdlr2((uchar*)"inputrelpserverbindruleset", 0, eCmdHdlrGetWord,
