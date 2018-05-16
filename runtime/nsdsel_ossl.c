@@ -77,7 +77,7 @@ ENDobjDestruct(nsdsel_ossl)
 static rsRetVal
 Add(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp)
 {
-dbgprintf("nsdsel_ossl: Add BEGIN \n");
+dbgprintf("nsdsel_ossl: Add BEGIN [%p]\n", pNsd);
 	DEFiRet;
 	nsdsel_ossl_t *pThis = (nsdsel_ossl_t*) pNsdsel;
 	nsd_ossl_t *pNsdOSSL = (nsd_ossl_t*) pNsd;
@@ -94,23 +94,30 @@ dbgprintf("nsdsel_ossl: Add BEGIN \n");
 			FINALIZE;
 		}
 		if(pNsdOSSL->rtryCall != osslRtry_None) {
+dbgprintf("nsdsel_ossl: rtryOsslErr=%d ... \n", pNsdOSSL->rtryOsslErr);
+			if (pNsdOSSL->rtryOsslErr == SSL_ERROR_WANT_READ) {
+				CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdOSSL->pTcp, NSDSEL_RD));
+				FINALIZE;
+			} else if (pNsdOSSL->rtryOsslErr == SSL_ERROR_WANT_READ) {
+				CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdOSSL->pTcp, NSDSEL_WR));
+				FINALIZE;
+			} else {
+				dbgprintf("nsdsel_ossl: rtryCall=%d, rtryOsslErr=%d, unexpected ... help?! ... \n",
+					pNsdOSSL->rtryCall, pNsdOSSL->rtryOsslErr);
+				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
+			}
+
 			/*
 			# define SSL_NOTHING            1
 			# define SSL_WRITING            2
 			# define SSL_READING            3
 			# define SSL_X509_LOOKUP        4
-			*/
 			iwant = SSL_want(pNsdOSSL->ssl);
 			if(iwant == SSL_READING) {
-				CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdOSSL->pTcp, NSDSEL_RD));
-				FINALIZE;
 			} else if(iwant == SSL_WRITING) {
-				CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdOSSL->pTcp, NSDSEL_WR));
-				FINALIZE;
 			} else {
-				dbgprintf("nsdsel_ossl: rtryCall=%d, SSL_want = %d, nothing to do ... \n",
-					pNsdOSSL->rtryCall, iwant);
 			}
+			*/
 		} else {
 			dbgprintf("nsdsel_ossl: rtryCall=%d, nothing to do ... \n",
 				pNsdOSSL->rtryCall);
@@ -173,8 +180,11 @@ dbgprintf("nsdsel_ossl: doRetry BEGIN \n");
 	 */
 	switch(pNsd->rtryCall) {
 		case osslRtry_handshake:
+dbgprintf("doRetry start osslHandshakeCheck, nsd: %p\n", pNsd);
 			/* Do the handshake again*/
 			CHKiRet(osslHandshakeCheck(pNsdOSSL));
+			pNsd->rtryCall = osslRtry_None; /* we are done */
+
 /*			gnuRet = gnutls_handshake(pNsd->sess);
 			if(gnuRet == 0) {
 				pNsd->rtryCall = osslRtry_None;

@@ -50,6 +50,7 @@ struct nsd_ossl_s {
 		OSSL_AUTH_CERTANON = 3
 	} authMode;
 	osslRtryCall_t rtryCall;/**< what must we retry? */
+	int rtryOsslErr;	/**< store ssl error code into like SSL_ERROR_WANT_READ or SSL_ERROR_WANT_WRITE */
 	int bIsInitiator;	/**< 0 if socket is the server end (listener), 1 if it is the initiator */
 	int bHaveSess;		/* as we don't know exactly which gnutls_session values
 					are invalid, we use this one to flag whether or

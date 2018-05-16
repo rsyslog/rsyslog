@@ -211,25 +211,45 @@ void osslLastSSLErrorMsg(int ret, SSL *ssl, char* pszCallSource)
 		}
 		errmsg.LogError(0, RS_RET_NO_ERRCODE, "%s", psz);
 	} else {
-		errmsg.LogError(0, RS_RET_NO_ERRCODE, "Unknown SSL Error, SSL_get_error: %d", iMyRet);
+		errmsg.LogError(0, RS_RET_NO_ERRCODE, "Unknown SSL Error in '%s' (%d), SSL_get_error: %d",
+			pszCallSource, ret, iMyRet);
 	}
 }
 
 int verify_callback(int status, X509_STORE_CTX *store)
 {
-	char data[256];
+	char szdbgdata1[256];
+	char szdbgdata2[256];
 
-	if(!status) {
+	if(status == 0) {
+		dbgprintf("verify_callback: certificate validation failed!\n");
+
 		X509 *cert = X509_STORE_CTX_get_current_cert(store);
 		int depth = X509_STORE_CTX_get_error_depth(store);
 		int err = X509_STORE_CTX_get_error(store);
+		X509_NAME_oneline(X509_get_issuer_name(cert), szdbgdata1, sizeof(szdbgdata1));
+		X509_NAME_oneline(X509_get_subject_name(cert), szdbgdata2, sizeof(szdbgdata2));
 
-		errmsg.LogError(0, RS_RET_NO_ERRCODE, "Certificate error at depth: %i", depth);
-		X509_NAME_oneline(X509_get_issuer_name(cert), data, 256);
-		errmsg.LogError(0, RS_RET_NO_ERRCODE, " issuer  = %s", data);
-		X509_NAME_oneline(X509_get_subject_name(cert), data, 256);
-		errmsg.LogError(0, RS_RET_NO_ERRCODE, " subject = %s", data);
-		errmsg.LogError(0, RS_RET_NO_ERRCODE, " err %i:%s", err, X509_verify_cert_error_string(err));
+		/* Log Warning only on EXPIRED */
+		if (err == X509_V_OK || err == X509_V_ERR_CERT_HAS_EXPIRED) {
+			errmsg.LogMsg(0, RS_RET_NO_ERRCODE, LOG_ERR,
+				"Certificate warning at depth: %d \n\t"
+				"issuer  = %s\n\t"
+				"subject = %s\n\t"
+				"err %d:%s",
+				depth, szdbgdata1, szdbgdata2, err, X509_verify_cert_error_string(err));
+
+			/* Set Status to OK*/
+			status = 1;
+		} else {
+			errmsg.LogError(0, RS_RET_NO_ERRCODE,
+				"Certificate error at depth: %d \n\t"
+				"issuer  = %s\n\t"
+				"subject = %s\n\t"
+				"err %d:%s",
+				depth, szdbgdata1, szdbgdata2, err, X509_verify_cert_error_string(err));
+		}
+
 	}
 
 	return status;
@@ -716,6 +736,7 @@ osslRecordRecv(nsd_ossl_t *pThis)
 		} else {
 			DBGPRINTF("osslRecordRecv: SSL_get_error = %d\n", err);
 			pThis->rtryCall =  osslRtry_recv;
+			pThis->rtryOsslErr = err; /* Store SSL ErrorCode into*/
 			ABORT_FINALIZE(RS_RET_RETRY);
 		}
 	}
@@ -737,7 +758,7 @@ osslInitSession(nsd_ossl_t *pThis) /* , nsd_ossl_t *pServer) */
 	nsd_ptcp_t *pPtcp = (nsd_ptcp_t*) pThis->pTcp;
 
 	if(!(pThis->ssl = SSL_new(ctx))) {
-		osslLastSSLErrorMsg(0, pThis->ssl, "Error while creating SSL context in osslInitSession");
+		osslLastSSLErrorMsg(0, pThis->ssl, "osslInitSession");
 	}
 
 	/* Create BIO from ptcp socket! */
@@ -1643,9 +1664,6 @@ osslPostHandshakeCheck(nsd_ossl_t *pNsd)
 
 /*TODO: IMPLEMENTE X509 cert check HERE !*/
 
-	/* Set socket to SSL mode */
-	pNsd->iMode = 1;
-
 	FINALIZE;
 
 finalize_it:
@@ -1660,18 +1678,21 @@ osslHandshakeCheck(nsd_ossl_t *pNsd)
 {
 	DEFiRet;
 	int res;
-	dbgprintf("osslHandshakeCheck: Starting TLS Handshake for ssl[%p\n", (void *)pNsd->ssl);
+	dbgprintf("osslHandshakeCheck: Starting TLS Handshake for ssl[%p]\n", (void *)pNsd->ssl);
 
 	/* SSL_do_handshake(pNsd->ssl) */
 	if((res = SSL_accept(pNsd->ssl)) <= 0) {
+		/* Obtain SSL Error code */
+		res = SSL_get_error(pNsd->ssl, res);
 		if(	res == SSL_ERROR_WANT_READ ||
 			res == SSL_ERROR_WANT_WRITE) {
 			pNsd->rtryCall = osslRtry_handshake;
+			pNsd->rtryOsslErr = res; /* Store SSL ErrorCode into*/
 			dbgprintf("osslHandshakeCheck: OpenSSL handshake does not complete immediately - "
 				"setting to retry (this is OK and normal)\n");
 			FINALIZE;
 		} else {
-			osslLastSSLErrorMsg(res, pNsd->ssl, "osslHandshakeCheck|Error accepting SSL connection");
+			osslLastSSLErrorMsg(res, pNsd->ssl, "osslHandshakeCheck");
 			ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 		}
 	}
@@ -1680,6 +1701,11 @@ osslHandshakeCheck(nsd_ossl_t *pNsd)
 	CHKiRet(osslPostHandshakeCheck(pNsd));
 
 finalize_it:
+	if(iRet == RS_RET_OK) {
+		/* If no error occured, set socket to SSL mode */
+		pNsd->iMode = 1;
+	}
+
 	RETiRet;
 }
 
@@ -1720,7 +1746,8 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	*ppNew = (nsd_t*) pNew;
 finalize_it:
 	/* Init appears to be done here */
-	dbgprintf("AcceptConnReq: END iRet = %d\n", iRet);
+	dbgprintf("AcceptConnReq: END iRet = %d, pNew=[%p], pNsd->rtryCall=%d\n",
+		iRet, pNew, pNew->rtryCall);
 	if(iRet != RS_RET_OK) {
 		if(pNew != NULL) {
 			nsd_osslDestruct(&pNew);
@@ -1957,17 +1984,10 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 	}
 	pThis->bHaveSess = 1;
+	pThis->ssl = ssl;
 
 	/* Do post handshake stuff */
 	CHKiRet(osslPostHandshakeCheck(pThis));
-/*
-	long err;
-	if((err = post_connection_check(ssl)) != X509_V_OK) {
-		errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error checking SSL object after connection, peer"
-				" certificate: %s", X509_verify_cert_error_string(err));
-		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
-	}
-*/
 
 finalize_it:
 	if(name != NULL) {
