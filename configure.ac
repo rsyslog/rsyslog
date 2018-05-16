@@ -1409,13 +1409,13 @@ AM_CONDITIONAL(ENABLE_KSI_LS12, test x$enable_ksi_ls12 = xyes)
 
 # liblogging-stdlog support
 AC_ARG_ENABLE(liblogging-stdlog,
-        [AS_HELP_STRING([--enable-liblogging-stdlog],[Enable liblogging-stdlog support @<:@default=yes@:>@])],
+        [AS_HELP_STRING([--enable-liblogging-stdlog],[Enable liblogging-stdlog support @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_liblogging_stdlog="yes" ;;
           no) enable_liblogging_stdlog="no" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-liblogging-stdlog) ;;
          esac],
-        [enable_liblogging_stdlog=yes]
+        [enable_liblogging_stdlog=no]
 )
 if test "x$enable_liblogging_stdlog" = "xyes"; then
         PKG_CHECK_MODULES(LIBLOGGING_STDLOG, liblogging-stdlog >= 1.0.3,
