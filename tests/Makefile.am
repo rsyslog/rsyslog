@@ -1901,7 +1901,8 @@ EXTRA_DIST= \
 	pgsql-actq-mt-withpause-vg.sh \
 	../devtools/prep-mysql-db.sh \
 	mmkubernetes-basic.sh \
-	mmkubernetes-basic-vg.sh
+	mmkubernetes-basic-vg.sh \
+	mmkubernetes_test_server.py
 
 ourtail_SOURCES = ourtail.c
 msleep_SOURCES = msleep.c
