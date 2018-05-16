@@ -1,5 +1,50 @@
 ------------------------------------------------------------------------------
 Version 8.36.0 [v8-stable] 2018-06-26
+- build system change:
+  Liblogging-stdlog was introduced to provide a broader ability to send rsyslog
+  internal logs to different sources. However, most distros did not pick up
+  that capability and so instead we do a regular syslog() call. We assume that
+  the actual functionality is never used in practice, so we plan to retire it.
+  That makes building rsyslog from source easier.
+  The plan is to disable use of liblogging-stdlog by default during
+  configure. So users (and distros!) can still opt-in to have it enabled if
+  they desire.
+  A couple of releases later, we want to completely remove the functionality,
+  except if there has desire been shown in the meantime which justifies to keep
+  liblogging-stdlog.
+  This version disabled liblogging-stdlog by default. We now also
+  emit a warning message ("liblogging-stdlog will go away") so that users
+  know what is going on and my react.
+  closes https://github.com/rsyslog/rsyslog/issues/2705
+  see also https://github.com/rsyslog/rsyslog/issues/2706
+- imjournal: add statistics counter
+  following statistics counter are now supported by imjournal
+  - submitted = total number of messages submitted for processing
+  closes https://github.com/rsyslog/rsyslog/issues/2549
+- config: permit 4-digit file creation modes
+  permit 4-digit file creation modes (actually 5 with the leading zero) so
+  that the setgid bit can also be set (and anything else on that position.
+  closes https://github.com/rsyslog/rsyslog/issues/1092
+- imrelp bugfix: error message "librelp too old" is always emitted ...
+  ... even if librelp is current. The codition check was actually missing.
+  This commit adds it.
+  closes https://github.com/rsyslog/rsyslog/issues/2712
+- imfile/core bugfix: potential misadressing in string copy routine
+  This can be exposed via imfile, as follows:
+  - use a regex to process multiline messages
+  - configure timeouts
+  - make sure imfile reads a partial message
+  - wait so that at least one timeout occurs
+  - add the message termination sequence
+  This leads to a misadressing, which may have no obvious effects potentially
+  up to a segfault.
+  closes https://github.com/rsyslog/rsyslog/issues/2661
+- core: fix undefined behaviour (unsigned computation may lead to value < 0)
+  This was detected by LLVM UBSAN. On some platforms re-setting the rawmsg
+  inside the message object could lead to invalid computation due to the
+  fact the the computation was carried out as unsigned and only then
+  converted to integer.
+  No known problem in practice.
 ------------------------------------------------------------------------------
 Version 8.35.0 [v8-stable] 2018-05-15
 - imptcp: add ability to configure socket backlog
