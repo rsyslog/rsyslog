@@ -852,24 +852,34 @@ doGetFileCreateMode(struct nvlst *valnode, struct cnfparamdescr *param,
 	int fmtOK = 0;
 	char *cstr;
 	uchar *c;
+	const int len_val = es_strlen(valnode->val.d.estr);
 
-	if(es_strlen(valnode->val.d.estr) == 4) {
+	if(len_val >= 4) {
 		c = es_getBufAddr(valnode->val.d.estr);
 		if(    (c[0] == '0')
 		    && (c[1] >= '0' && c[1] <= '7')
 		    && (c[2] >= '0' && c[2] <= '7')
 		    && (c[3] >= '0' && c[3] <= '7')  )  {
-			fmtOK = 1;
+			if(len_val == 5) {
+				if(c[4] >= '0' && c[4] <= '7') {
+					fmtOK = 1;
+				}
+			} else {
+				fmtOK = 1;
+			}
 		}
 	}
 
 	if(fmtOK) {
 		val->val.datatype = 'N';
 		val->val.d.n = (c[1]-'0') * 64 + (c[2]-'0') * 8 + (c[3]-'0');
+		if(len_val == 5) {
+			val->val.d.n  = val->val.d.n * 8 + (c[4]-'0');
+		}
 	} else {
 		cstr = es_str2cstr(valnode->val.d.estr, NULL);
 		parser_errmsg("file modes need to be specified as "
-		  "4-digit octal numbers starting with '0' -"
+		  "4- or 5-digit octal numbers starting with '0' -"
 		  "parameter '%s=\"%s\"' is not a file mode",
 		param->name, cstr);
 		free(cstr);
