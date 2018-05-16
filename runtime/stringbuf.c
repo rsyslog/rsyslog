@@ -11,7 +11,7 @@
  * e.g. search. Further refactoring and simplificytin may make
  * sense.
  *
- * Copyright (C) 2005-2017 Adiscon GmbH
+ * Copyright (C) 2005-2018 Adiscon GmbH
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -190,7 +190,8 @@ finalize_it:
 /* construct from CStr object.
  * rgerhards 2005-10-18
  */
-rsRetVal rsCStrConstructFromCStr(cstr_t **const ppThis, const cstr_t *const pFrom)
+rsRetVal ATTR_NONNULL()
+rsCStrConstructFromCStr(cstr_t **const ppThis, const cstr_t *const pFrom)
 {
 	DEFiRet;
 	cstr_t *pThis;
@@ -198,16 +199,15 @@ rsRetVal rsCStrConstructFromCStr(cstr_t **const ppThis, const cstr_t *const pFro
 	rsCHECKVALIDOBJECT(pFrom, OIDrsCStr);
 
 	CHKiRet(rsCStrConstruct(&pThis));
-
-	pThis->iStrLen = pFrom->iStrLen;
-	pThis->iBufSize = pFrom->iStrLen + 1;
-	if((pThis->pBuf = (uchar*) MALLOC(pThis->iBufSize)) == NULL) {
-		RSFREEOBJ(pThis);
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	if(pFrom->iStrLen > 0) {
+		pThis->iStrLen = pFrom->iStrLen;
+		pThis->iBufSize = pFrom->iStrLen + 1;
+		if((pThis->pBuf = (uchar*) MALLOC(pThis->iBufSize)) == NULL) {
+			RSFREEOBJ(pThis);
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+		}
+		memcpy(pThis->pBuf, pFrom->pBuf, pThis->iStrLen);
 	}
-
-	/* copy properties */
-	memcpy(pThis->pBuf, pFrom->pBuf, pThis->iStrLen);
 
 	*ppThis = pThis;
 finalize_it:
