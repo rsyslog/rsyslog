@@ -232,7 +232,7 @@ int verify_callback(int status, X509_STORE_CTX *store)
 
 		/* Log Warning only on EXPIRED */
 		if (err == X509_V_OK || err == X509_V_ERR_CERT_HAS_EXPIRED) {
-			errmsg.LogMsg(0, RS_RET_NO_ERRCODE, LOG_ERR,
+			errmsg.LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
 				"Certificate warning at depth: %d \n\t"
 				"issuer  = %s\n\t"
 				"subject = %s\n\t"
