@@ -1902,7 +1902,8 @@ EXTRA_DIST= \
 	../devtools/prep-mysql-db.sh \
 	mmkubernetes-basic.sh \
 	mmkubernetes-basic-vg.sh \
-	mmkubernetes_test_server.py
+	mmkubernetes_test_server.py \
+	mmkubernetes-basic.out.json
 
 ourtail_SOURCES = ourtail.c
 msleep_SOURCES = msleep.c
