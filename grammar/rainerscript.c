@@ -1809,6 +1809,88 @@ finalize_it:
 	varFreeMembers(&srcVal[1]);
 }
 
+/*
+ * parse_json extension 
+ *
+ * Usage
+ *   set $.ret = parse_json_ex(json_string_to_parse, container, 
+ *                             boolean_to_specify_compact_or_not);
+ *
+ * Purpose
+ *   To drop empty json (applicable to string type, array type, items in array, json object type) 
+ *     set $.ret = parse_json_ex($msg, "\$!parsed", "true");
+ */
+static void ATTR_NONNULL()
+doFunc_parse_json_ex(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *const usrptr,
+	wti_t *const pWti)
+{
+	struct svar srcVal[3];
+	int bMustFree;
+	int bMustFree2;
+	int bMustFree3;
+	smsg_t *const pMsg = (smsg_t*)usrptr;
+	cnfexprEval(func->expr[0], &srcVal[0], usrptr, pWti);
+	cnfexprEval(func->expr[1], &srcVal[1], usrptr, pWti);
+	cnfexprEval(func->expr[2], &srcVal[2], usrptr, pWti);
+	char *jsontext = (char*) var2CString(&srcVal[0], &bMustFree);
+	char *container = (char*) var2CString(&srcVal[1], &bMustFree2);
+	char *compact = (char*) var2CString(&srcVal[2], &bMustFree3);
+
+	int retVal;
+	assert(jsontext != NULL);
+	assert(container != NULL);
+	assert(compact != NULL);
+	assert(pMsg != NULL);
+
+	struct json_tokener *const tokener = json_tokener_new();
+	if(tokener == NULL) {
+		retVal = 1;
+		goto finalize_it;
+	}
+	struct json_object *const json = json_tokener_parse_ex(tokener, jsontext, strlen(jsontext));
+	if(json == NULL) {
+		retVal = RS_SCRIPT_EINVAL;
+	} else {
+		size_t off = (*container == '$') ? 1 : 0;
+		retVal = RS_SCRIPT_EOK;
+		if (0 == strcasecmp(compact, "true")) {
+			int rc = jsonCompact(json);
+			if (rc < 0) { /*error*/
+				json_object_put(json); 
+				retVal = RS_SCRIPT_EINVAL;
+			} else if (rc > 0) { /*empty*/
+				json_object_put(json); 
+			} else {
+				msgAddJSON(pMsg, (uchar*)container+off, json, 0, 0);
+			}
+		} else {
+			msgAddJSON(pMsg, (uchar*)container+off, json, 0, 0);
+		}
+	}
+	wtiSetScriptErrno(pWti, retVal);
+	json_tokener_free(tokener);
+
+
+finalize_it:
+	ret->datatype = 'N';
+	ret->d.n = retVal;
+
+	if(bMustFree) {
+		free(jsontext);
+	}
+	if(bMustFree2) {
+		free(container);
+	}
+	if(bMustFree3) {
+		free(compact);
+	}
+	varFreeMembers(&srcVal[0]);
+	varFreeMembers(&srcVal[1]);
+	varFreeMembers(&srcVal[2]);
+}
+
 static void ATTR_NONNULL()
 doFunct_RandomGen(struct cnffunc *__restrict__ const func,
 	struct svar *__restrict__ const ret,
@@ -3568,6 +3650,7 @@ static struct scriptFunct functions[] = {
 	{"parse_time", 1, 1, doFunct_ParseTime, NULL, NULL},
 	{"is_time", 1, 2, doFunct_IsTime, NULL, NULL},
 	{"parse_json", 2, 2, doFunc_parse_json, NULL, NULL},
+	{"parse_json_ex", 3, 3, doFunc_parse_json_ex, NULL, NULL},
 	{"script_error", 0, 0, doFunct_ScriptError, NULL, NULL},
 	{"previous_action_suspended", 0, 0, doFunct_PreviousActionSuspended, NULL, NULL},
 	{NULL, 0, 0, NULL, NULL, NULL} //last element to check end of array

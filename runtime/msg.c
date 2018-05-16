@@ -4824,6 +4824,77 @@ finalize_it:
 	RETiRet;
 }
 
+/*
+ * Delete children of the given object if it has children and they are empty.
+ *
+ * return 0 if object is not empty
+ * return 1 if object is empty
+ * return < 0 if error
+ *
+ * Caller should do this:
+ * if (jsonCompact(obj) > 0) {
+ *     json_object_put(obj);
+ *     obj = NULL;
+ * }
+ * or otherwise not use obj if jsonCompact returns > 0.
+ */
+int
+jsonCompact(struct json_object *__restrict__ json)
+{
+	int rc = 0;
+	struct json_object *val = NULL;
+
+	if(json == NULL) {
+		rc = 1;
+		goto finalize_it;
+	}
+
+	switch (json_object_get_type(json)) {
+	case json_type_string:
+		rc = json_object_get_string_len(json) == 0;
+		break;
+	case json_type_array:
+	{
+		int i;
+		int arrayLen = json_object_array_length(json);
+		for (i = 0 ; i < arrayLen ; ++i) {
+			val = json_object_array_get_idx(json, i);
+			if ((rc = jsonCompact(val)) > 0) {
+				/* delete the empty item and reset the index and arrayLen */
+				json_object_array_del_idx(json, i--);
+				arrayLen = json_object_array_length(json);
+			} else if (rc < 0) {
+				goto finalize_it;
+			}
+		}
+		rc = json_object_array_length(json) == 0;
+		break;
+	}
+	case json_type_object:
+	{
+		struct json_object_iterator it = json_object_iter_begin(json);
+		struct json_object_iterator itEnd = json_object_iter_end(json);
+		while (!json_object_iter_equal(&it, &itEnd)) {
+			val = json_object_iter_peek_value(&it);
+			if ((rc = jsonCompact(val)) > 0) {
+				json_object_object_del(json, json_object_iter_peek_name(&it));
+			} else if (rc < 0) {
+				goto finalize_it;
+			}
+			json_object_iter_next(&it);
+		}
+		rc = json_object_object_length(json) == 0;
+	}
+	case json_type_null:
+	case json_type_boolean:
+	case json_type_double:
+	case json_type_int:
+	default: break;
+	}
+finalize_it:
+	return rc;
+}
+
 rsRetVal
 msgAddJSON(smsg_t * const pM, uchar *name, struct json_object *json, int force_reset, int sharedReference)
 {

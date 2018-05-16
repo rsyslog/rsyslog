@@ -237,6 +237,7 @@ unsigned short *pbMustBeFreed);
 rsRetVal msgSetJSONFromVar(smsg_t *pMsg, uchar *varname, struct svar *var, int force_reset);
 rsRetVal msgDelJSON(smsg_t *pMsg, uchar *varname);
 rsRetVal jsonFind(struct json_object *jroot, msgPropDescr_t *pProp, struct json_object **jsonres);
+rsRetVal jsonCompact(struct json_object *__restrict__ json);
 
 rsRetVal msgPropDescrFill(msgPropDescr_t *pProp, uchar *name, int nameLen);
 void msgPropDescrDestruct(msgPropDescr_t *pProp);
