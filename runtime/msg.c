@@ -2915,7 +2915,7 @@ MsgSetRawMsg(smsg_t *const pThis, const char*const pszRawMsg, const size_t lenMs
 	if(pThis->pszRawMsg != pThis->szRawMsg)
 		free(pThis->pszRawMsg);
 
-	deltaSize = lenMsg - pThis->iLenRawMsg;
+	deltaSize = (int) lenMsg - pThis->iLenRawMsg; /* value < 0 in truncation case! */
 	pThis->iLenRawMsg = lenMsg;
 	if(pThis->iLenRawMsg < CONF_RAWMSG_BUFSIZE) {
 		/* small enough: use fixed buffer (faster!) */
