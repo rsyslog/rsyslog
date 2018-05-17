@@ -81,7 +81,7 @@ dbgprintf("nsdsel_ossl: Add BEGIN [%p]\n", pNsd);
 	DEFiRet;
 	nsdsel_ossl_t *pThis = (nsdsel_ossl_t*) pNsdsel;
 	nsd_ossl_t *pNsdOSSL = (nsd_ossl_t*) pNsd;
-	int iwant;
+//	int iwant;
 
 	ISOBJ_TYPE_assert(pThis, nsdsel_ossl);
 	ISOBJ_TYPE_assert(pNsdOSSL, nsd_ossl);

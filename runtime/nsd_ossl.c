@@ -772,9 +772,10 @@ osslInitSession(nsd_ossl_t *pThis) /* , nsd_ossl_t *pServer) */
 BIO_set_nbio( client, 1 );
 
 	SSL_set_bio(pThis->ssl, client, client);
-	SSL_set_accept_state(pThis->ssl);
+	SSL_set_accept_state(pThis->ssl); /* sets ssl to work in server mode. */
 
 	pThis->bHaveSess = 1;
+	pThis->sslState = osslServer; /*set Server state */
 
 	/* we are done */
 	FINALIZE;
@@ -1400,7 +1401,7 @@ SetSock(nsd_t *pNsd, int sock)
 	ISOBJ_TYPE_assert((pThis), nsd_ossl);
 	assert(sock >= 0);
 
-	DBGPRINTF("SetSock (%p): Setting sock %d\n", nsd_ptcp.SetSock, sock);
+	DBGPRINTF("SetSock for [%p]: Setting sock %d\n", pNsd, sock);
 	nsd_ptcp.SetSock(pThis->pTcp, sock);
 
 	RETiRet;
@@ -1680,20 +1681,39 @@ osslHandshakeCheck(nsd_ossl_t *pNsd)
 	int res;
 	dbgprintf("osslHandshakeCheck: Starting TLS Handshake for ssl[%p]\n", (void *)pNsd->ssl);
 
-	/* SSL_do_handshake(pNsd->ssl) */
-	if((res = SSL_accept(pNsd->ssl)) <= 0) {
-		/* Obtain SSL Error code */
-		res = SSL_get_error(pNsd->ssl, res);
-		if(	res == SSL_ERROR_WANT_READ ||
-			res == SSL_ERROR_WANT_WRITE) {
-			pNsd->rtryCall = osslRtry_handshake;
-			pNsd->rtryOsslErr = res; /* Store SSL ErrorCode into*/
-			dbgprintf("osslHandshakeCheck: OpenSSL handshake does not complete immediately - "
-				"setting to retry (this is OK and normal)\n");
-			FINALIZE;
-		} else {
-			osslLastSSLErrorMsg(res, pNsd->ssl, "osslHandshakeCheck");
-			ABORT_FINALIZE(RS_RET_NO_ERRCODE);
+	if (pNsd->sslState == osslServer) {
+		/* Handle Server SSL Object */
+		if((res = SSL_accept(pNsd->ssl)) <= 0) {
+			/* Obtain SSL Error code */
+			res = SSL_get_error(pNsd->ssl, res);
+			if(	res == SSL_ERROR_WANT_READ ||
+				res == SSL_ERROR_WANT_WRITE) {
+				pNsd->rtryCall = osslRtry_handshake;
+				pNsd->rtryOsslErr = res; /* Store SSL ErrorCode into*/
+				dbgprintf("osslHandshakeCheck: OpenSSL Server handshake does not complete "
+					"immediately - setting to retry (this is OK and normal)\n");
+				FINALIZE;
+			} else {
+				osslLastSSLErrorMsg(res, pNsd->ssl, "osslHandshakeCheck");
+				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
+			}
+		}
+	} else {
+		/* Handle Client SSL Object */
+		if((res = SSL_do_handshake(pNsd->ssl)) <= 0) {
+			/* Obtain SSL Error code */
+			res = SSL_get_error(pNsd->ssl, res);
+			if(	res == SSL_ERROR_WANT_READ ||
+				res == SSL_ERROR_WANT_WRITE) {
+				pNsd->rtryCall = osslRtry_handshake;
+				pNsd->rtryOsslErr = res; /* Store SSL ErrorCode into*/
+				dbgprintf("osslHandshakeCheck: OpenSSL Client handshake does not complete "
+					"immediately - setting to retry (this is OK and normal)\n");
+				FINALIZE;
+			} else {
+				osslLastSSLErrorMsg(res, pNsd->ssl, "osslHandshakeCheck");
+				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
+			}
 		}
 	}
 
@@ -1724,7 +1744,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	ISOBJ_TYPE_assert((pThis), nsd_ossl);
 	CHKiRet(nsd_osslConstruct(&pNew));
 	CHKiRet(nsd_ptcp.Destruct(&pNew->pTcp));
-	dbgprintf("AcceptConnReq: PTCP[%p] accepting connection ... \n", (void *)pNew->pTcp);
+	dbgprintf("AcceptConnReq for [%p]: Accepting connection ... \n", (void *)pThis);
 	CHKiRet(nsd_ptcp.AcceptConnReq(pThis->pTcp, &pNew->pTcp));
 // *((char*)0)= 0;
 
@@ -1745,7 +1765,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 
 	*ppNew = (nsd_t*) pNew;
 finalize_it:
-	/* Init appears to be done here */
+	/* Accept appears to be done here */
 	dbgprintf("AcceptConnReq: END iRet = %d, pNew=[%p], pNsd->rtryCall=%d\n",
 		iRet, pNew, pNew->rtryCall);
 	if(iRet != RS_RET_OK) {
@@ -1940,14 +1960,36 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	DEFiRet;
 	DBGPRINTF("openssl: entering Connect family=%d, device=%s\n", family, device);
 	nsd_ossl_t*pThis = (nsd_ossl_t*) pNsd;
+	nsd_ptcp_t *pPtcp = (nsd_ptcp_t*) pThis->pTcp;
+
 	BIO *conn;
-	SSL * ssl;
-	char *name;
+//	SSL * ssl;
+//	char *name;
 
 	ISOBJ_TYPE_assert(pThis, nsd_ossl);
 	assert(port != NULL);
 	assert(host != NULL);
 
+	CHKiRet(nsd_ptcp.Connect(pThis->pTcp, family, port, host, device));
+
+	if(pThis->iMode == 0) {
+		/*we are in non-TLS mode, so we are done */
+		DBGPRINTF("Connect: NOT in TLS mode!\n");
+		FINALIZE;
+	}
+
+	/* Create BIO from ptcp socket! */
+	conn = BIO_new_socket(pPtcp->sock, BIO_CLOSE /*BIO_NOCLOSE*/);
+	dbgprintf("Connect: Init conn BIO[%p] done\n", (void *)conn);
+
+
+	/* Set debug Callback for client BIO as well! */
+	BIO_set_callback(conn, BIO_debug_callback);
+
+/* TODO: still needed? Set to NON blocking ! */
+BIO_set_nbio( conn, 1 );
+
+/*
 	if((name = malloc(ustrlen(host)+ustrlen(port)+2)) != NULL) {
 		name[0] = '\0';
 		strcat(name, (char*)host);
@@ -1956,7 +1998,6 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	} else {
 		errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error, malloc failed");
 	}
-
 // TODO: Change to NON BLOCKING or USE 	nsd_ptcp
 	conn = BIO_new_connect(name);
 	if(!conn) {
@@ -1967,36 +2008,41 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 		errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error connecting to remote machine");
 		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 	}
+*/
 
-	if(pThis->iMode == 0) {
-		FINALIZE;
-	}
-
-	DBGPRINTF("We are in tls mode\n");
 	/*if we reach this point we are in tls mode */
-	if(!(ssl = SSL_new(ctx))) {
+	DBGPRINTF("Connect: TLS Mode\n");
+	if(!(pThis->ssl = SSL_new(ctx))) {
 		errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error creating an SSL context");
 		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 	}
-	SSL_set_bio(ssl, conn, conn);
+	SSL_set_bio(pThis->ssl, conn, conn);
+	SSL_set_connect_state(pThis->ssl); /*sets ssl to work in client mode.*/
+	pThis->sslState = osslClient; /*set Client state */
+	pThis->bHaveSess = 1;
+
+	/*
 	if(SSL_connect(ssl) <= 0) {
 		errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error connecting SSL object");
 		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 	}
-	pThis->bHaveSess = 1;
-	pThis->ssl = ssl;
+	*/
 
-	/* Do post handshake stuff */
-	CHKiRet(osslPostHandshakeCheck(pThis));
+	/* We now do the handshake */
+	CHKiRet(osslHandshakeCheck(pThis));
+
+//	/* Do post handshake stuff */
+//	CHKiRet(osslPostHandshakeCheck(pThis));
 
 finalize_it:
-	if(name != NULL) {
-		free(name);
-	}
+	/* Connect appears to be done here */
+	dbgprintf("Connect: END iRet = %d, pThis=[%p], pNsd->rtryCall=%d\n",
+		iRet, pThis, pThis->rtryCall);
 	if(iRet != RS_RET_OK) {
 		if(pThis->bHaveSess) {
 			pThis->bHaveSess = 0;
-			SSL_free(ssl);
+			SSL_free(pThis->ssl);
+			pThis->ssl = NULL;
 		}
 	}
 	RETiRet;

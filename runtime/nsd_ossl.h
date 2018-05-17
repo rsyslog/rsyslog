@@ -33,6 +33,12 @@ typedef enum {
 	osslRtry_recv = 2
 } osslRtryCall_t;		/**< IDs of calls that needs to be retried */
 
+typedef enum {
+	osslServer = 0,		/**< Server SSL Object */
+	osslClient = 1		/**< Client SSL Object */
+} osslSslState_t;
+
+
 typedef nsd_if_t nsd_ossl_if_t; /* we just *implement* this interface */
 
 /* the nsd_ossl object */
@@ -75,6 +81,8 @@ struct nsd_ossl_s {
 	/* Open SSL objects */
 //	BIO *acc;		/* OpenSSL main BIO obj */
 	SSL *ssl;		/* OpenSSL main SSL obj */
+	osslSslState_t sslState;/**< what must we retry? */
+
 };
 
 /* interface is defined in nsd.h, we just implement it! */
