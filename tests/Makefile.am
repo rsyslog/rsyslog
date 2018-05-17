@@ -801,6 +801,9 @@ TESTS += \
 	imfile-endregex-timeout-with-shutdown.sh \
 	imfile-endregex-timeout-with-shutdown-polling.sh \
 	imfile-persist-state-1.sh \
+	imfile-freshStartTail1.sh \
+	imfile-freshStartTail2.sh \
+	imfile-freshStartTail3.sh \
 	imfile-wildcards.sh \
 	imfile-wildcards-dirs.sh \
 	imfile-wildcards-dirs2.sh \
@@ -1532,6 +1535,9 @@ EXTRA_DIST= \
 	imfile-endregex-timeout-with-shutdown.sh \
 	imfile-endregex-timeout-with-shutdown-polling.sh \
 	imfile-persist-state-1.sh \
+	imfile-freshStartTail1.sh \
+	imfile-freshStartTail2.sh \
+	imfile-freshStartTail3.sh \
 	imfile-truncate.sh \
 	imfile-wildcards.sh \
 	imfile-wildcards-dirs.sh \
