@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2020, Harshvardhan Shrivastava
+ * Copyright (c) 2018, Harshvardhan Shrivastava
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
