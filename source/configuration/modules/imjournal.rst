@@ -44,6 +44,8 @@ plugin only if there is hard need to do so.**
 Notable Features
 ================
 
+- :ref:`imjournal-statistic-counter`
+
 
 Configuration Parameters
 ========================
@@ -229,6 +231,18 @@ When a corrupted statefile is read imjournal ignores the statefile and continues
 with logging from the beginning of the journal (from its end if IgnorePreviousMessages
 is on). After PersistStateInterval or when rsyslog is stopped invalid statefile
 is overwritten with a new valid cursor.
+
+
+.. _imjournal-statistic-counter:
+
+Statistic Counter
+=================
+
+This plugin maintains :doc:`statistics <../rsyslog_statistic_counter>` for each listener and for each worker thread. The listener statistic is named "imjournal".
+
+The following properties are maintained for each listener:
+
+-  **submitted** - total number of messages submitted for processing since startup
 
 
 Caveats/Known Bugs:
