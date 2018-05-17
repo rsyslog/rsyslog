@@ -1894,11 +1894,35 @@ CODESTARTfreeCnf
 ENDfreeCnf
 
 
+/* initial poll run, to be used for all modes. Depending on mode, it does some
+ * further initializations (e.g. watches in inotify mode). Most importantly,
+ * it processes already-existing files, which would not otherwise be picked
+ * up in notifcation modes (inotfiy, FEN). Also, when freshStartTail is set,
+ * this run assumes that all previous existing data exists and needs not
+ * to be considered.
+ * Note: there is a race on files created *during* the run, but that race is
+ * inevitable (and thus freshStartTail is actually broken, but users still seem
+ * to want it...).
+ * rgerhards, 2018-05-17
+ */
+static void
+do_initial_poll_run(void)
+{
+	fs_node_walk(runModConf->conf_tree, poll_tree);
+
+	/* fresh start done, so disable freshStartTail for files that now will be created */
+	for(instanceConf_t *inst = runModConf->root ; inst != NULL ; inst = inst->next) {
+		inst->freshStartTail = 0;
+	}
+}
+
+
 /* Monitor files in polling mode. */
 static rsRetVal
 doPolling(void)
 {
 	DEFiRet;
+	do_initial_poll_run();
 	while(glbl.GetGlobalInputTermState() == 0) {
 		DBGPRINTF("doPolling: new poll run\n");
 		do {
@@ -2063,8 +2087,7 @@ do_inotify(void)
 	}
 	DBGPRINTF("inotify fd %d\n", ino_fd);
 
-	/* do watch initialization */
-	fs_node_walk(runModConf->conf_tree, poll_tree);
+	do_initial_poll_run();
 
 	while(glbl.GetGlobalInputTermState() == 0) {
 		if(runModConf->haveReadTimeouts) {
@@ -2182,8 +2205,7 @@ do_fen(void)
 		return RS_RET_FEN_INIT_FAILED;
 	}
 
-	/* do watch initialization */
-	fs_node_walk(runModConf->conf_tree, poll_tree);
+	do_initial_poll_run();
 
 	DBGPRINTF("do_fen ENTER monitoring loop \n");
 	while(glbl.GetGlobalInputTermState() == 0) {
