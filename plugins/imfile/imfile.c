@@ -1876,8 +1876,6 @@ CODESTARTfreeCnf
 	fs_node_destroy(pModConf->conf_tree);
 	//move_list_destruct(pModConf);
 	for(inst = pModConf->root ; inst != NULL ; ) {
-		if(inst->startRegex != NULL)
-			regfree(&inst->end_preg);
 		free(inst->pszBindRuleset);
 		free(inst->pszFileName);
 		free(inst->pszTag);
