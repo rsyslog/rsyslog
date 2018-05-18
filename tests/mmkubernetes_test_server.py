@@ -104,7 +104,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             self.log_error(resp)
         self.send_response(status)
         self.end_headers()
-        self.wfile.write(json.dumps(json.loads(resp), separators=(',',':')))
+        self.wfile.write(json.dumps(json.loads(resp), separators=(',',':')).encode())
 
 port = int(sys.argv[1])
 

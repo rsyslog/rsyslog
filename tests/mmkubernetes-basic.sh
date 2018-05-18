@@ -4,7 +4,7 @@
 . $srcdir/diag.sh init
 
 testsrv=mmk8s-test-server
-python ./mmkubernetes_test_server.py 18443 rsyslog${testsrv}.pid rsyslogd${testsrv}.started > mmk8s_srv.log 2>&1 &
+python -u ./mmkubernetes_test_server.py 18443 rsyslog${testsrv}.pid rsyslogd${testsrv}.started > mmk8s_srv.log 2>&1 &
 BGPROCESS=$!
 . $srcdir/diag.sh wait-startup $testsrv
 echo background mmkubernetes_test_server.py process id is $BGPROCESS
