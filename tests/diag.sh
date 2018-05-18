@@ -688,9 +688,9 @@ case $1 in
 		done
 		echo "dyn-stats reset for bucket ${3} registered"
 		;;
-   'content-check')
+   'content-check-regex')
 		# this does a content check which permits regex
-		grep "$2" $3
+		grep "$2" $3 -q
 		if [ "$?" -ne "0" ]; then
 		    echo "----------------------------------------------------------------------"
 		    echo content-check failed to find "'$2'" inside "'$3'"
