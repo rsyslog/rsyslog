@@ -277,6 +277,8 @@ readjournal(void)
 	char *message = NULL;
 	char *sys_iden;
 	char *sys_iden_help = NULL;
+	char *unit = NULL;
+	char *user_unit = NULL;
 
 	const void *get;
 	const void *pidget;
@@ -334,6 +336,14 @@ readjournal(void)
 		}
 	}
 
+	/* Get full unit names - including @ arguments */
+	if (sd_journal_get_data(j, "_SYSTEMD_UNIT", &get, &length) >= 0) {
+		CHKiRet(sanitizeValue(((const char *)get) + 14, length - 14, &unit));
+	}
+	if (sd_journal_get_data(j, "_SYSTEMD_USER_UNIT", &get, &length) >= 0) {
+		CHKiRet(sanitizeValue(((const char *)get) + 19, length - 19, &user_unit));
+	}
+
 	/* Get message identifier, client pid and add ':' */
 	if (sd_journal_get_data(j, "SYSLOG_IDENTIFIER", &get, &length) >= 0) {
 		CHKiRet(sanitizeValue(((const char *)get) + 18, length - 18, &sys_iden));
@@ -351,7 +361,13 @@ readjournal(void)
 			free (sys_iden);
 			FINALIZE;
 		}
-		r = asprintf(&sys_iden_help, "%s[%s]:", sys_iden, sys_pid);
+		if (!unit != !user_unit) {
+			r = asprintf(&sys_iden_help, "%s[%s][%s]:", sys_iden, sys_pid, unit ? unit : user_unit);
+		} else if (unit && user_unit) {
+			r = asprintf(&sys_iden_help, "%s[%s][%s %s]:", sys_iden, sys_pid, user_unit, unit);
+		} else {
+			r = asprintf(&sys_iden_help, "%s[%s]:", sys_iden, sys_pid);
+		}
 		free (sys_pid);
 	} else {
 		/* this is fallback, "SYSLOG_PID" doesn't exist so trying to get "_PID" property */
@@ -364,15 +380,29 @@ readjournal(void)
 				free (sys_iden);
 				FINALIZE;
 			}
-			r = asprintf(&sys_iden_help, "%s[%s]:", sys_iden, sys_pid);
+			if (!unit != !user_unit) {
+				r = asprintf(&sys_iden_help, "%s[%s][%s]:", sys_iden, sys_pid, unit ? unit : user_unit);
+			} else if (unit && user_unit) {
+				r = asprintf(&sys_iden_help, "%s[%s][%s %s]:", sys_iden, sys_pid, user_unit, unit);
+			} else {
+				r = asprintf(&sys_iden_help, "%s[%s]:", sys_iden, sys_pid);
+			}
 			free (sys_pid);
 		} else {
 			/* there is no PID property available */
-			r = asprintf(&sys_iden_help, "%s:", sys_iden);
+			if (!unit != !user_unit) {
+				r = asprintf(&sys_iden_help, "%s[%s]:", sys_iden, unit ? unit : user_unit);
+			} else if (unit && user_unit) {
+				r = asprintf(&sys_iden_help, "%s[%s %s]:", sys_iden, user_unit, unit);
+			} else {
+				r = asprintf(&sys_iden_help, "%s:", sys_iden);
+			}
 		}
 	}
 
 	free (sys_iden);
+	free (unit);
+	free (user_unit);
 
 	if (-1 == r) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
