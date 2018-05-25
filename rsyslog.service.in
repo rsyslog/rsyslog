@@ -10,10 +10,10 @@ ExecStart=@sbindir@/rsyslogd -n -iNONE
 StandardOutput=null
 Restart=on-failure
 
-[Install]
-WantedBy=multi-user.target
-Alias=syslog.service
-
 # Increase the default a bit in order to allow many simultaneous
 # files to be monitored, we might need a lot of fds.
 LimitNOFILE=16384
+
+[Install]
+WantedBy=multi-user.target
+Alias=syslog.service
