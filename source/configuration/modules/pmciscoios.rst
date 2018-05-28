@@ -1,9 +1,16 @@
+**********
 pmciscoios
-==========
+**********
 
-Author: Rainer Gerhards
+===========================  ===========================================================================
+**Module Name:**             **pmciscoios**
+**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+**Available since:**         8.3.4+
+===========================  ===========================================================================
 
-Available since: 8.3.4+
+
+Purpose
+=======
 
 This is a parser that understands Cisco IOS "syslog" format. Note
 that this format is quite different from RFC syslog format, and
@@ -27,35 +34,60 @@ timestamp field will be prepended with a dot (.). In both of these cases
 parsing the timestamp would fail, therefore any preceding asterisks (*) or
 dots (.) are ignored. This may lead to "incorrect" timestamps being logged.
 
+
+Configuration Parameters
+========================
+
+.. note::
+
+   Parameter names are case-insensitive.
+
+
 Parser Parameters
 -----------------
 
-Note: parameter names are case-insensitive.
+present.origin
+^^^^^^^^^^^^^^
 
-.. function::  present.origin <boolean>
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-   **Default**: off
+   "binary", "off", "no", "none"
 
-   This setting tell the parser if the origin field is present inside
-   the message. Due to the nature of Cisco's logging format, the parser
-   cannot sufficiently correctly deduce if the origin field is present
-   or not (at least not with reasonable performance). As such, the parser
-   must be provided with that information. If the origin is present,
-   its value is stored inside the HOSTNAME message property.
+This setting tell the parser if the origin field is present inside
+the message. Due to the nature of Cisco's logging format, the parser
+cannot sufficiently correctly deduce if the origin field is present
+or not (at least not with reasonable performance). As such, the parser
+must be provided with that information. If the origin is present,
+its value is stored inside the HOSTNAME message property.
 
-   .. function::  present.xr <boolean>
 
-   **Default**: off
+present.xr
+^^^^^^^^^^
 
-   If syslog is recviced from an IOSXR device the syslog format will usually
-   start with the RSP/LC/etc that produced the log, then the timestamp.
-   It will also contain an additional syslog tag before the standard Cisco
-   %TAG, this tag references the process that produced the log.
-   In order to use this Cisco IOS parser module with XR format messages both
-   of these additional fields must be ignored.
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
 
-Example
--------
+   "binary", "off", "no", "none"
+
+If syslog is recviced from an IOSXR device the syslog format will usually
+start with the RSP/LC/etc that produced the log, then the timestamp.
+It will also contain an additional syslog tag before the standard Cisco
+%TAG, this tag references the process that produced the log.
+In order to use this Cisco IOS parser module with XR format messages both
+of these additional fields must be ignored.
+
+
+Examples
+========
+
+Listening multiple devices, some emitting origin information and some not
+-------------------------------------------------------------------------
+
 We assume a scenario where we have some devices configured to emit origin
 information whereas some others do not. In order to differentiate between
 the two classes, rsyslog accepts input on different ports, one per class.
@@ -65,7 +97,7 @@ different parsers, processing shall be identical for both classes. In our
 first example we do this via a common ruleset which carries out the
 actual processing:
 
-::
+.. code-block:: none
 
    module(load="imtcp")
    module(load="pmciscoios")
@@ -92,6 +124,9 @@ actual processing:
    }
 
 
+Date stamp immediately following the origin
+-------------------------------------------
+
 The example configuration above is a good solution. However, it is possible
 to do the same thing in a somewhat condensed way, but if and only if the date
 stamp immediately follows the origin. In that case, the parser has a chance to
@@ -103,7 +138,7 @@ runtime overhead. The example below is **not** good practice -- it is given
 as a purely educational sample to show some fine details of how parser
 definitions interact. In this case, we can use a single listener.
 
-::
+.. code-block:: none
 
    module(load="imtcp")
    module(load="pmciscoios")
@@ -117,9 +152,13 @@ definitions interact. In this case, we can use a single listener.
        ... do processing here ...
    }
 
+
+Handling Cisco IOS and IOSXR formats
+------------------------------------
+
 The following sample demonstrates how to handle Cisco IOS and IOSXR formats
 
-::
+.. code-block:: none
 
    module(load="imudp")
    module(load="pmciscoios")
@@ -140,3 +179,5 @@ The following sample demonstrates how to handle Cisco IOS and IOSXR formats
    ruleset(name="iosxr" parser="custom.ciscoios.withXr"] {
        call common
    }
+
+
