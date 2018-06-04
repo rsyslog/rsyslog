@@ -69,7 +69,6 @@ DEFobjCurrIf(tcpsrv)
 DEFobjCurrIf(tcps_sess)
 DEFobjCurrIf(net)
 DEFobjCurrIf(netstrm)
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(statsobj)
@@ -363,7 +362,7 @@ imdiag_statsReadCallback(statsobj_t __attribute__((unused)) *const ignore_stats,
 	if ((int)ATOMIC_DEC_AND_FETCH(&allowOnlyOnce, &mutAllowOnlyOnce) < 0) {
 		sem_post(&statsReportingBlocker);
 	} else {
-		errmsg.LogError(0, RS_RET_OK, "imdiag(stats-read-callback): current stats-reporting "
+		LogError(0, RS_RET_OK, "imdiag(stats-read-callback): current stats-reporting "
 						"cycle will proceed now, next reporting cycle will again be blocked");
 	}
 
@@ -388,12 +387,12 @@ blockStatsReporting(tcps_sess_t *pSess) {
 	CHKiConcCtrl(pthread_mutex_unlock(&mutStatsReporterWatch));
 	ATOMIC_STORE_0_TO_INT(&allowOnlyOnce, &mutAllowOnlyOnce);
 	statsReportingBlockStartTimeMs = currentTimeMills();
-	errmsg.LogError(0, RS_RET_OK, "imdiag: blocked stats reporting");
+	LogError(0, RS_RET_OK, "imdiag: blocked stats reporting");
 	CHKiRet(sendResponse(pSess, "next stats reporting call will be blocked\n"));
 
 finalize_it:
 	if (iRet != RS_RET_OK) {
-		errmsg.LogError(0, iRet, "imdiag: block-stats-reporting wasn't successful");
+		LogError(0, iRet, "imdiag: block-stats-reporting wasn't successful");
 		CHKiRet(sendResponse(pSess, "imdiag::error something went wrong\n"));
 	}
 	RETiRet;
@@ -411,16 +410,16 @@ awaitStatsReport(uchar *pszCmd, tcps_sess_t *pSess) {
 		long delta = currentTimeMills() - statsReportingBlockStartTimeMs;
 		if (blockAgain) {
 			ATOMIC_STORE_1_TO_INT(&allowOnlyOnce, &mutAllowOnlyOnce);
-			errmsg.LogError(0, RS_RET_OK, "imdiag: un-blocking ONLY the next cycle of stats reporting");
+			LogError(0, RS_RET_OK, "imdiag: un-blocking ONLY the next cycle of stats reporting");
 		} else {
 			statsReportingBlockStartTimeMs = 0;
-			errmsg.LogError(0, RS_RET_OK, "imdiag: un-blocking stats reporting");
+			LogError(0, RS_RET_OK, "imdiag: un-blocking stats reporting");
 		}
 		sem_post(&statsReportingBlocker);
-		errmsg.LogError(0, RS_RET_OK, "imdiag: stats reporting unblocked");
+		LogError(0, RS_RET_OK, "imdiag: stats reporting unblocked");
 		STATSCOUNTER_ADD(potentialArtificialDelayMs, mutPotentialArtificialDelayMs, delta);
 		STATSCOUNTER_INC(delayInvocationCount, mutDelayInvocationCount);
-		errmsg.LogError(0, RS_RET_OK, "imdiag: will now await next reporting cycle");
+		LogError(0, RS_RET_OK, "imdiag: will now await next reporting cycle");
 		CHKiConcCtrl(pthread_mutex_lock(&mutStatsReporterWatch));
 		while (! statsReported) {
 			CHKiConcCtrl(pthread_cond_wait(&statsReporterWatch, &mutStatsReporterWatch));
@@ -430,7 +429,7 @@ awaitStatsReport(uchar *pszCmd, tcps_sess_t *pSess) {
 		if (blockAgain) {
 			statsReportingBlockStartTimeMs = currentTimeMills();
 		}
-		errmsg.LogError(0, RS_RET_OK, "imdiag: stats were reported, wait complete, returning");
+		LogError(0, RS_RET_OK, "imdiag: stats were reported, wait complete, returning");
 		CHKiRet(sendResponse(pSess, "stats reporting was unblocked\n"));
 	} else {
 		CHKiRet(sendResponse(pSess, "imdiag::error : stats reporting was not blocked, bug?\n"));
@@ -438,7 +437,7 @@ awaitStatsReport(uchar *pszCmd, tcps_sess_t *pSess) {
 
 finalize_it:
 	if (iRet != RS_RET_OK) {
-		errmsg.LogError(0, iRet, "imdiag: stats-reporting unblock + await-run wasn't successfully completed");
+		LogError(0, iRet, "imdiag: stats-reporting unblock + await-run wasn't successfully completed");
 		CHKiRet(sendResponse(pSess, "imdiag::error something went wrong\n"));
 	}
 	RETiRet;
@@ -540,7 +539,7 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		errmsg.LogError(0, NO_ERRCODE, "error %d trying to add listener", iRet);
+		LogError(0, NO_ERRCODE, "error %d trying to add listener", iRet);
 		if(pOurTcpsrv != NULL)
 			tcpsrv.Destruct(&pOurTcpsrv);
 	}
@@ -642,7 +641,6 @@ CODESTARTmodExit
 	objRelease(netstrm, LM_NETSTRMS_FILENAME);
 	objRelease(tcps_sess, LM_TCPSRV_FILENAME);
 	objRelease(tcpsrv, LM_TCPSRV_FILENAME);
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(statsobj, CORE_COMPONENT);
@@ -688,7 +686,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(netstrm, LM_NETSTRMS_FILENAME));
 	CHKiRet(objUse(tcps_sess, LM_TCPSRV_FILENAME));
 	CHKiRet(objUse(tcpsrv, LM_TCPSRV_FILENAME));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
