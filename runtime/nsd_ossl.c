@@ -483,145 +483,41 @@ long BIO_debug_callback(BIO *bio, int cmd, const char __attribute__((unused)) *a
 	}
 
 
-	/* This function extracts some information about this session's peer
-	 * certificate. Works for X.509 certificates only. Adds all
-	 * of the info to a cstr_t, which is handed over to the caller.
-	 * Caller must destruct it when no longer needed.
-	 * rgerhards, 2008-05-21
-	 */
-	static rsRetVal
-	osslGetCertInfo(nsd_ossl_t *const pThis, cstr_t **ppStr)
-	{
-		uchar szBufA[1024];
-		uchar *szBuf = szBufA;
-		size_t szBufLen = sizeof(szBufA), tmp;
-		unsigned int algo, bits;
-		time_t expiration_time, activation_time;
-		const gnutls_datum_t *cert_list;
-		unsigned cert_list_size = 0;
-		gnutls_x509_crt_t cert;
-		cstr_t *pStr = NULL;
-		int gnuRet;
-		DEFiRet;
-		unsigned iAltName;
-
-		assert(ppStr != NULL);
-		ISOBJ_TYPE_assert(pThis, nsd_ossl);
-
-		if(gnutls_certificate_type_get(pThis->sess) != GNUTLS_CRT_X509)
-			return RS_RET_TLS_CERT_ERR;
-
-		cert_list = gnutls_certificate_get_peers(pThis->sess, &cert_list_size);
-		CHKiRet(rsCStrConstructFromszStrf(&pStr, "peer provided %d certificate(s). ", cert_list_size));
-
-		if(cert_list_size > 0) {
-			/* we only print information about the first certificate */
-			CHKgnutls(gnutls_x509_crt_init(&cert));
-			CHKgnutls(gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER));
-
-			expiration_time = gnutls_x509_crt_get_expiration_time(cert);
-			activation_time = gnutls_x509_crt_get_activation_time(cert);
-			ctime_r(&activation_time, (char*)szBuf);
-			szBuf[ustrlen(szBuf) - 1] = '\0'; /* strip linefeed */
-			CHKiRet(rsCStrAppendStrf(pStr, "Certificate 1 info: "
-				"certificate valid from %s ", szBuf));
-			ctime_r(&expiration_time, (char*)szBuf);
-			szBuf[ustrlen(szBuf) - 1] = '\0'; /* strip linefeed */
-			CHKiRet(rsCStrAppendStrf(pStr, "to %s; ", szBuf));
-
-			/* Extract some of the public key algorithm's parameters */
-			algo = gnutls_x509_crt_get_pk_algorithm(cert, &bits);
-			CHKiRet(rsCStrAppendStrf(pStr, "Certificate public key: %s; ",
-				gnutls_pk_algorithm_get_name(algo)));
-
-			/* names */
-			tmp = szBufLen;
-			if(gnutls_x509_crt_get_dn(cert, (char*)szBuf, &tmp)
-			    == GNUTLS_E_SHORT_MEMORY_BUFFER) {
-				szBufLen = tmp;
-				szBuf = malloc(tmp);
-				gnutls_x509_crt_get_dn(cert, (char*)szBuf, &tmp);
-			}
-			CHKiRet(rsCStrAppendStrf(pStr, "DN: %s; ", szBuf));
-
-			tmp = szBufLen;
-			if(gnutls_x509_crt_get_issuer_dn(cert, (char*)szBuf, &tmp)
-			    == GNUTLS_E_SHORT_MEMORY_BUFFER) {
-				szBufLen = tmp;
-				szBuf = realloc((szBuf == szBufA) ? NULL : szBuf, tmp);
-				gnutls_x509_crt_get_issuer_dn(cert, (char*)szBuf, &tmp);
-			}
-			CHKiRet(rsCStrAppendStrf(pStr, "Issuer DN: %s; ", szBuf));
-
-			/* dNSName alt name */
-			iAltName = 0;
-			while(1) { /* loop broken below */
-				tmp = szBufLen;
-				gnuRet = gnutls_x509_crt_get_subject_alt_name(cert, iAltName,
-						szBuf, &tmp, NULL);
-				if(gnuRet == GNUTLS_E_SHORT_MEMORY_BUFFER) {
-					szBufLen = tmp;
-					szBuf = realloc((szBuf == szBufA) ? NULL : szBuf, tmp);
-					continue;
-				} else if(gnuRet < 0)
-					break;
-				else if(gnuRet == GNUTLS_SAN_DNSNAME) {
-					/* we found it! */
-					CHKiRet(rsCStrAppendStrf(pStr, "SAN:DNSname: %s; ", szBuf));
-					/* do NOT break, because there may be multiple dNSName's! */
-				}
-				++iAltName;
-			}
-
-			gnutls_x509_crt_deinit(cert);
-		}
-
-		cstrFinalize(pStr);
-		*ppStr = pStr;
-
-	finalize_it:
-		if(iRet != RS_RET_OK) {
-			if(pStr != NULL)
-				rsCStrDestruct(&pStr);
-		}
-		if(szBuf != szBufA)
-			free(szBuf);
-
-		RETiRet;
-	}
-
-	/* Convert a fingerprint to printable data. The  conversion is carried out
-	 * according IETF I-D syslog-transport-tls-12. The fingerprint string is
-	 * returned in a new cstr object. It is the caller's responsibility to
-	 * destruct that object.
-	 * rgerhards, 2008-05-08
-	 */
-	static rsRetVal
-	GenFingerprintStr(uchar *pFingerprint, size_t sizeFingerprint, cstr_t **ppStr)
-	{
-		cstr_t *pStr = NULL;
-		uchar buf[4];
-		size_t i;
-		DEFiRet;
-
-		CHKiRet(rsCStrConstruct(&pStr));
-		CHKiRet(rsCStrAppendStrWithLen(pStr, (uchar*)"SHA1", 4));
-		for(i = 0 ; i < sizeFingerprint ; ++i) {
-			snprintf((char*)buf, sizeof(buf), ":%2.2X", pFingerprint[i]);
-			CHKiRet(rsCStrAppendStrWithLen(pStr, buf, 3));
-		}
-		cstrFinalize(pStr);
-
-		*ppStr = pStr;
-
-	finalize_it:
-		if(iRet != RS_RET_OK) {
-			if(pStr != NULL)
-				rsCStrDestruct(&pStr);
-		}
-		RETiRet;
-	}
 #endif
+
+
+/* Convert a fingerprint to printable data. The  conversion is carried out
+ * according IETF I-D syslog-transport-tls-12. The fingerprint string is
+ * returned in a new cstr object. It is the caller's responsibility to
+ * destruct that object.
+ * rgerhards, 2008-05-08
+ */
+static rsRetVal
+GenFingerprintStr(uchar *pFingerprint, size_t sizeFingerprint, cstr_t **ppStr)
+{
+	cstr_t *pStr = NULL;
+	uchar buf[4];
+	size_t i;
+	DEFiRet;
+
+	CHKiRet(rsCStrConstruct(&pStr));
+	CHKiRet(rsCStrAppendStrWithLen(pStr, (uchar*)"SHA1", 4));
+	for(i = 0 ; i < sizeFingerprint ; ++i) {
+		snprintf((char*)buf, sizeof(buf), ":%2.2X", pFingerprint[i]);
+		CHKiRet(rsCStrAppendStrWithLen(pStr, buf, 3));
+	}
+	cstrFinalize(pStr);
+
+	*ppStr = pStr;
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pStr != NULL)
+			rsCStrDestruct(&pStr);
+	}
+	RETiRet;
+}
+
 
 /* globally initialize OpenSSL  */
 static rsRetVal
@@ -688,12 +584,8 @@ osslGlblInit(void)
 // TODO MORE NEEDED 	SSL_CTX_set_ecdh_auto(ctx, 1);
 	/* Enable Support for automatic EC temporary key parameter selection. */
 
-// --- TODO: HANDLE based on TLS MODE!
-	/* pascal: wird bei gnutls in methode gnutlsInitSession gemacht!!!*/
-	SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
-	/*TODO: pascal: Wie tief sollen Ketten geprüft werden? Zur Zeit 4 */
-	SSL_CTX_set_verify_depth(ctx, 4);
-// ---
+	/* Set default VERIFY Options for OpenSSL CTX - and CALLBACK */
+	SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, verify_callback);
 
 	SSL_CTX_set_timeout(ctx, 30);	/* Default Session Timeout, TODO: Make configureable */
 	SSL_CTX_set_mode(ctx, SSL_MODE_AUTO_RETRY);
@@ -761,6 +653,13 @@ osslInitSession(nsd_ossl_t *pThis) /* , nsd_ossl_t *pServer) */
 		osslLastSSLErrorMsg(0, pThis->ssl, "osslInitSession");
 	}
 
+	if (pThis->authMode != OSSL_AUTH_CERTANON) {
+		dbgprintf("osslInitSession: enable certificate checking\n");
+		/* Enable certificate valid checking */
+		SSL_set_verify(pThis->ssl, SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
+		SSL_set_verify_depth(pThis->ssl, 4);
+	}
+
 	/* Create BIO from ptcp socket! */
 	client = BIO_new_socket(pPtcp->sock, BIO_CLOSE /*BIO_NOCLOSE*/);
 	dbgprintf("osslInitSession: Init client BIO[%p] done\n", (void *)client);
@@ -784,110 +683,33 @@ finalize_it:
 	RETiRet;
 }
 
-#if 0 /* copied CODE needs to be converted first! */
-
-/* Obtain the CN from the DN field and hand it back to the caller
- * (which is responsible for destructing it). We try to follow
- * RFC2253 as far as it makes sense for our use-case. This function
- * is considered a compromise providing good-enough correctness while
- * limiting code size and complexity. If a problem occurs, we may enhance
- * this function. A (pointer to a) certificate must be caller-provided.
- * If no CN is contained in the cert, no string is returned
- * (*ppstrCN remains NULL). *ppstrCN MUST be NULL on entry!
- * rgerhards, 2008-05-22
- */
-static rsRetVal
-osslGetCN(gnutls_x509_crt_t *pCert, cstr_t **ppstrCN)
-{
-	DEFiRet;
-	int gnuRet;
-	int i;
-	int bFound;
-	cstr_t *pstrCN = NULL;
-	size_t size;
-	/* big var the last, so we hope to have all we usually neeed within one mem cache line */
-	uchar szDN[1024]; /* this should really be large enough for any non-malicious case... */
-
-	assert(pCert != NULL);
-	assert(ppstrCN != NULL);
-	assert(*ppstrCN == NULL);
-
-	size = sizeof(szDN);
-	CHKgnutls(gnutls_x509_crt_get_dn(*pCert, (char*)szDN, &size));
-
-	/* now search for the CN part */
-	i = 0;
-	bFound = 0;
-	while(!bFound && szDN[i] != '\0') {
-		/* note that we do not overrun our string due to boolean shortcut
-		 * operations. If we have '\0', the if does not match and evaluation
-		 * stops. Order of checks is obviously important!
-		 */
-		if(szDN[i] == 'C' && szDN[i+1] == 'N' && szDN[i+2] == '=') {
-			bFound = 1;
-			i += 2;
-		}
-		i++;
-
-	}
-
-	if(!bFound) {
-		FINALIZE; /* we are done */
-	}
-
-	/* we found a common name, now extract it */
-	CHKiRet(cstrConstruct(&pstrCN));
-	while(szDN[i] != '\0' && szDN[i] != ',') {
-		if(szDN[i] == '\\') {
-			/* hex escapes are not implemented */
-			++i; /* escape char processed */
-			if(szDN[i] == '\0')
-				ABORT_FINALIZE(RS_RET_CERT_INVALID_DN);
-			CHKiRet(cstrAppendChar(pstrCN, szDN[i]));
-		} else {
-			CHKiRet(cstrAppendChar(pstrCN, szDN[i]));
-		}
-		++i; /* char processed */
-	}
-	cstrFinalize(pstrCN);
-
-	/* we got it - we ignore the rest of the DN string (if any). So we may
-	 * not detect if it contains more than one CN
-	 */
-
-	*ppstrCN = pstrCN;
-
-finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pstrCN != NULL)
-			cstrDestruct(&pstrCN);
-	}
-
-	RETiRet;
-}
-
 
 /* Check the peer's ID in fingerprint auth mode.
  * rgerhards, 2008-05-22
  */
 static rsRetVal
-osslChkPeerFingerprint(nsd_ossl_t *pThis, gnutls_x509_crt_t *pCert)
+osslChkPeerFingerprint(nsd_ossl_t *pThis, X509 *pCert)
 {
-	uchar fingerprint[20];
+	unsigned int n;
+	uchar fingerprint[EVP_MAX_MD_SIZE];
 	size_t size;
 	cstr_t *pstrFingerprint = NULL;
 	int bFoundPositiveMatch;
 	permittedPeers_t *pPeer;
-	int gnuRet;
+	const EVP_MD *fdig = EVP_sha1();
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, nsd_ossl);
 
 	/* obtain the SHA1 fingerprint */
 	size = sizeof(fingerprint);
-	CHKgnutls(gnutls_x509_crt_get_fingerprint(*pCert, GNUTLS_DIG_SHA1, fingerprint, &size));
+	if (!X509_digest(pCert,fdig,fingerprint,&n)) {
+		dbgprintf("osslChkPeerFingerprint: error X509cert is not valid!\n");
+		ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
+	}
+
 	CHKiRet(GenFingerprintStr(fingerprint, size, &pstrFingerprint));
-	dbgprintf("peer's certificate SHA1 fingerprint: %s\n", cstrGetSzStrNoNULL(pstrFingerprint));
+	dbgprintf("osslChkPeerFingerprint: peer's certificate SHA1 fingerprint: %s\n", cstrGetSzStrNoNULL(pstrFingerprint));
 
 	/* now search through the permitted peers to see if we can find a permitted one */
 	bFoundPositiveMatch = 0;
@@ -901,7 +723,7 @@ osslChkPeerFingerprint(nsd_ossl_t *pThis, gnutls_x509_crt_t *pCert)
 	}
 
 	if(!bFoundPositiveMatch) {
-		dbgprintf("invalid peer fingerprint, not permitted to talk to it\n");
+		dbgprintf("osslChkPeerFingerprint: invalid peer fingerprint, not permitted to talk to it\n");
 		if(pThis->bReportAuthErr == 1) {
 			errno = 0;
 			LogError(0, RS_RET_INVALID_FINGERPRINT, "error: peer fingerprint '%s' unknown - we are "
@@ -927,9 +749,10 @@ finalize_it:
  * rgerhards, 2008-05-26
  */
 static rsRetVal
-osslChkOnePeerName(nsd_ossl_t *pThis, uchar *pszPeerID, int *pbFoundPositiveMatch)
+osslChkOnePeerName(nsd_ossl_t *pThis, X509 *pCert, uchar *pszPeerID, int *pbFoundPositiveMatch)
 {
 	permittedPeers_t *pPeer;
+	int osslRet;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, nsd_ossl);
@@ -952,25 +775,33 @@ osslChkOnePeerName(nsd_ossl_t *pThis, uchar *pszPeerID, int *pbFoundPositiveMatc
 		}
 	}
 
+	if(!(*pbFoundPositiveMatch)) {
+		/* if we did not succeed so far, try ossl X509_check_host ( Includes check against SubjectAlternativeName ) */
+		osslRet = X509_check_host(pCert, (const char*)pszPeerID, strlen((const char*)pszPeerID), 0, NULL);
+		if ( osslRet == 1 ) {
+			/* Found Peer cert in allowed Peerslist */
+			dbgprintf("osslChkOnePeerName: Client ('%s') is allowed (X509_check_host)\n", pCert->name);
+			*pbFoundPositiveMatch = 1;
+		} else if ( osslRet == 0 ) {
+			dbgprintf("osslChkOnePeerName: Client ('%s') is NOT allowed (X509_check_host)\n", pCert->name);
+		} else if ( osslRet < 0 ) {
+			osslLastSSLErrorMsg(osslRet, pThis->ssl, "osslChkOnePeerName");
+			ABORT_FINALIZE(RS_RET_NO_ERRCODE);
+		}
+	}
 finalize_it:
 	RETiRet;
 }
 
 
 /* Check the peer's ID in name auth mode.
- * rgerhards, 2008-05-22
  */
 static rsRetVal
-osslChkPeerName(nsd_ossl_t *pThis, gnutls_x509_crt_t *pCert)
+osslChkPeerName(nsd_ossl_t *pThis, X509 *pCert)
 {
 	uchar lnBuf[256];
-	char szAltName[1024]; /* this is sufficient for the DNSNAME... */
-	int iAltName;
-	size_t szAltNameLen;
 	int bFoundPositiveMatch;
 	cstr_t *pStr = NULL;
-	cstr_t *pstrCN = NULL;
-	int gnuRet;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, nsd_ossl);
@@ -978,37 +809,13 @@ osslChkPeerName(nsd_ossl_t *pThis, gnutls_x509_crt_t *pCert)
 	bFoundPositiveMatch = 0;
 	CHKiRet(rsCStrConstruct(&pStr));
 
-	/* first search through the dNSName subject alt names */
-	iAltName = 0;
-	while(!bFoundPositiveMatch) { /* loop broken below */
-		szAltNameLen = sizeof(szAltName);
-		gnuRet = gnutls_x509_crt_get_subject_alt_name(*pCert, iAltName,
-				szAltName, &szAltNameLen, NULL);
-		if(gnuRet < 0)
-			break;
-		else if(gnuRet == GNUTLS_SAN_DNSNAME) {
-			dbgprintf("subject alt dnsName: '%s'\n", szAltName);
-			snprintf((char*)lnBuf, sizeof(lnBuf), "DNSname: %s; ", szAltName);
-			CHKiRet(rsCStrAppendStr(pStr, lnBuf));
-			CHKiRet(osslChkOnePeerName(pThis, (uchar*)szAltName, &bFoundPositiveMatch));
-			/* do NOT break, because there may be multiple dNSName's! */
-		}
-		++iAltName;
-	}
+	dbgprintf("osslChkPeerName: subject name: '%s'\n", pCert->name);
+	snprintf((char*)lnBuf, sizeof(lnBuf), "name: %s; ", pCert->name);
+	CHKiRet(rsCStrAppendStr(pStr, lnBuf));
+	CHKiRet(osslChkOnePeerName(pThis, pCert, (uchar*)pCert->name, &bFoundPositiveMatch));
 
 	if(!bFoundPositiveMatch) {
-		/* if we did not succeed so far, we try the CN part of the DN... */
-		CHKiRet(osslGetCN(pCert, &pstrCN));
-		if(pstrCN != NULL) { /* NULL if there was no CN present */
-			dbgprintf("ossl now checking auth for CN '%s'\n", cstrGetSzStrNoNULL(pstrCN));
-			snprintf((char*)lnBuf, sizeof(lnBuf), "CN: %s; ", cstrGetSzStrNoNULL(pstrCN));
-			CHKiRet(rsCStrAppendStr(pStr, lnBuf));
-			CHKiRet(osslChkOnePeerName(pThis, cstrGetSzStrNoNULL(pstrCN), &bFoundPositiveMatch));
-		}
-	}
-
-	if(!bFoundPositiveMatch) {
-		dbgprintf("invalid peer name, not permitted to talk to it\n");
+		dbgprintf("osslChkPeerName: invalid peer name, not permitted to talk to it\n");
 		if(pThis->bReportAuthErr == 1) {
 			cstrFinalize(pStr);
 			errno = 0;
@@ -1023,36 +830,24 @@ osslChkPeerName(nsd_ossl_t *pThis, gnutls_x509_crt_t *pCert)
 finalize_it:
 	if(pStr != NULL)
 		rsCStrDestruct(&pStr);
-	if(pstrCN != NULL)
-		rsCStrDestruct(&pstrCN);
 	RETiRet;
 }
 
 
 /* check the ID of the remote peer - used for both fingerprint and
- * name authentication. This is common code. Will call into specific
- * drivers once the certificate has been obtained.
- * rgerhards, 2008-05-08
+ * name authentication.
  */
 static rsRetVal
 osslChkPeerID(nsd_ossl_t *pThis)
 {
-	const gnutls_datum_t *cert_list;
-	unsigned int list_size = 0;
-	gnutls_x509_crt_t cert;
-	int bMustDeinitCert = 0;
-	int gnuRet;
+	X509* certpeer;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, nsd_ossl);
 
-	/* This function only works for X.509 certificates.  */
-	if(gnutls_certificate_type_get(pThis->sess) != GNUTLS_CRT_X509)
-		return RS_RET_TLS_CERT_ERR;
-
-	cert_list = gnutls_certificate_get_peers(pThis->sess, &list_size);
-
-	if(list_size < 1) {
+	/* Get peer certificate from SSL */
+	certpeer = SSL_get_peer_certificate(pThis->ssl);
+	if ( certpeer == NULL || certpeer->name == NULL) {
 		if(pThis->bReportAuthErr == 1) {
 			errno = 0;
 			LogError(0, RS_RET_TLS_NO_CERT, "error: peer did not provide a certificate, "
@@ -1062,128 +857,47 @@ osslChkPeerID(nsd_ossl_t *pThis)
 		ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
 	}
 
-	/* If we reach this point, we have at least one valid certificate.
-	 * We always use only the first certificate. As of GnuTLS documentation, the
-	 * first certificate always contains the remote peer's own certificate. All other
-	 * certificates are issuer's certificates (up the chain). We are only interested
-	 * in the first certificate, which is our peer. -- rgerhards, 2008-05-08
-	 */
-	CHKgnutls(gnutls_x509_crt_init(&cert));
-	bMustDeinitCert = 1; /* indicate cert is initialized and must be freed on exit */
-	CHKgnutls(gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER));
-
 	/* Now we see which actual authentication code we must call.  */
 	if(pThis->authMode == OSSL_AUTH_CERTFINGERPRINT) {
-		CHKiRet(osslChkPeerFingerprint(pThis, &cert));
+		CHKiRet(osslChkPeerFingerprint(pThis, certpeer));
 	} else {
 		assert(pThis->authMode == OSSL_AUTH_CERTNAME);
-		CHKiRet(osslChkPeerName(pThis, &cert));
+		CHKiRet(osslChkPeerName(pThis, certpeer));
 	}
 
 finalize_it:
-	if(bMustDeinitCert)
-		gnutls_x509_crt_deinit(cert);
-
 	RETiRet;
 }
 
 
+// !!!!!! #endif
+
 /* Verify the validity of the remote peer's certificate.
- * rgerhards, 2008-05-21
  */
 static rsRetVal
 osslChkPeerCertValidity(nsd_ossl_t *pThis)
 {
 	DEFiRet;
-	const char *pszErrCause;
-	int gnuRet;
-	cstr_t *pStr = NULL;
-	unsigned stateCert;
-	const gnutls_datum_t *cert_list;
-	unsigned cert_list_size = 0;
-	gnutls_x509_crt_t cert;
-	unsigned i;
-	time_t ttCert;
-	time_t ttNow;
+	int iVerErr = X509_V_OK;
 
 	ISOBJ_TYPE_assert(pThis, nsd_ossl);
 
-	/* check if we have at least one cert */
-	cert_list = gnutls_certificate_get_peers(pThis->sess, &cert_list_size);
-	if(cert_list_size < 1) {
-		errno = 0;
-		LogError(0, RS_RET_TLS_NO_CERT,
-			"peer did not provide a certificate, not permitted to talk to it");
-		ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
-	}
-
-	CHKgnutls(gnutls_certificate_verify_peers2(pThis->sess, &stateCert));
-
-	if(stateCert & GNUTLS_CERT_INVALID) {
-		/* provide error details if we have them */
-		if(stateCert & GNUTLS_CERT_SIGNER_NOT_FOUND) {
-			pszErrCause = "signer not found";
-		} else if(stateCert & GNUTLS_CERT_SIGNER_NOT_CA) {
-			pszErrCause = "signer is not a CA";
-		} else if(stateCert & GNUTLS_CERT_INSECURE_ALGORITHM) {
-			pszErrCause = "insecure algorithm";
-		} else if(stateCert & GNUTLS_CERT_REVOKED) {
-			pszErrCause = "certificate revoked";
-		} else {
-			pszErrCause = "GnuTLS returned no specific reason";
-			dbgprintf("GnuTLS returned no specific reason for GNUTLS_CERT_INVALID, certificate "
-				 "status is %d\n", stateCert);
-		}
-		LogError(0, NO_ERRCODE, "not permitted to talk to peer, certificate invalid: %s",
-				pszErrCause);
-		osslGetCertInfo(pThis, &pStr);
-		LogError(0, NO_ERRCODE, "invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
-		cstrDestruct(&pStr);
-		ABORT_FINALIZE(RS_RET_CERT_INVALID);
-	}
-
-	/* get current time for certificate validation */
-	if(datetime.GetTime(&ttNow) == -1)
-		ABORT_FINALIZE(RS_RET_SYS_ERR);
-
-	/* as it looks, we need to validate the expiration dates ourselves...
-	 * We need to loop through all certificates as we need to make sure the
-	 * interim certificates are also not expired.
-	 */
-	for(i = 0 ; i < cert_list_size ; ++i) {
-		CHKgnutls(gnutls_x509_crt_init(&cert));
-		CHKgnutls(gnutls_x509_crt_import(cert, &cert_list[i], GNUTLS_X509_FMT_DER));
-		ttCert = gnutls_x509_crt_get_activation_time(cert);
-		if(ttCert == -1)
-			ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
-		else if(ttCert > ttNow) {
-			LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "not permitted to talk to peer: "
-					"certificate %d not yet active", i);
-			osslGetCertInfo(pThis, &pStr);
-			LogError(0, RS_RET_CERT_NOT_YET_ACTIVE,
-				"invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
-			cstrDestruct(&pStr);
-			ABORT_FINALIZE(RS_RET_CERT_NOT_YET_ACTIVE);
-		}
-
-		ttCert = gnutls_x509_crt_get_expiration_time(cert);
-		if(ttCert == -1)
-			ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
-		else if(ttCert < ttNow) {
-			LogError(0, RS_RET_CERT_EXPIRED, "not permitted to talk to peer: certificate"
-				" %d expired", i);
-			osslGetCertInfo(pThis, &pStr);
-			LogError(0, RS_RET_CERT_EXPIRED, "invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
-			cstrDestruct(&pStr);
+	iVerErr = SSL_get_verify_result(pThis->ssl);
+	if (iVerErr != X509_V_OK) {
+		if (iVerErr == X509_V_ERR_CERT_HAS_EXPIRED) {
+			LogError(0, RS_RET_CERT_EXPIRED, "not permitted to talk to peer: certificate expired: %s",
+				X509_verify_cert_error_string(iVerErr));
 			ABORT_FINALIZE(RS_RET_CERT_EXPIRED);
+		} else {
+			LogError(0, RS_RET_CERT_INVALID, "not permitted to talk to peer: certificate validation failed: %s",
+				X509_verify_cert_error_string(iVerErr));
+			ABORT_FINALIZE(RS_RET_CERT_INVALID);
 		}
-		gnutls_x509_crt_deinit(cert);
 	}
 
 finalize_it:
 	RETiRet;
 }
-
 
 /* check if it is OK to talk to the remote peer
  * rgerhards, 2008-05-21
@@ -1216,7 +930,6 @@ osslChkPeerAuth(nsd_ossl_t *pThis)
 finalize_it:
 	RETiRet;
 }
-#endif
 
 
 /* globally de-initialize OpenSSL */
@@ -1518,64 +1231,10 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 
 	/* Init TCP Listener using base ptcp class */
 	CHKiRet(nsd_ptcp.LstnInit(pNS, pUsr, fAddLstn, pLstnPort, pLstnIP, iSessMax));
-
-	/* OLD CODE
-	nsd_t *pNewNsd = NULL;
-	netstrm_t *pNewStrm = NULL;
-	BIO *acc;
-	int sock;
-
-	acc = BIO_new_accept((const char*)pLstnPort);
-	if(!acc) {
-		errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error creating server socket");
-		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
-	}
-
-	DBGPRINTF("LstnInit: Set NON BLOCKING using BIO_set_nbio on Listener BIO\n");
-	BIO_set_nbio( acc, 1 );
-
-	DBGPRINTF("LstnInit: Server socket created\n");
-	if(BIO_do_accept(acc) <= 0) {
-		errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error binding server socket");
-		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
-	}
-	DBGPRINTF("LstnInit: Server socket bound (BIO_do_accept)\n");
-
-	BIO_set_callback(acc, BIO_debug_callback);
-	DBGPRINTF("LstnInit: Set BIO to NON BLocking socket (BIO_set_nbio_accept)\n");
-	BIO_set_nbio_accept(acc, 1);
-
-	CHKiRet(nsd_osslConstruct( (nsd_ossl_t**) &pNewNsd));
-	dbgprintf("LstnInit: after construct\n");
-
-	CHKiRet(SetBio(pNewNsd, acc));
-	// Get socket from BIO and set
-	BIO_get_fd(acc, &sock);
-	CHKiRet(SetSock(pNewNsd, sock));
-
-	CHKiRet(SetMode(pNewNsd, netstrms.GetDrvrMode(pNS)));
-	CHKiRet(SetAuthMode(pNewNsd, netstrms.GetDrvrAuthMode(pNS)));
-	CHKiRet(SetPermPeers(pNewNsd, netstrms.GetDrvrPermPeers(pNS)));
-	CHKiRet(netstrms.CreateStrm(pNS, &pNewStrm));
-	pNewStrm->pDrvrData = (nsd_t*) pNewNsd;
-
-	CHKiRet(fAddLstn(pUsr, pNewStrm));
-	*/
-
 finalize_it:
 	if(iRet != RS_RET_OK) {
-//		if(pNewStrm != NULL) {
-//			netstrm.Destruct(&pNewStrm);
-//		}
 	}
 	RETiRet;
-/* old
-	DEFiRet;
-	CHKiRet(osslGlblInitLstn());
-	iRet = nsd_ptcp.LstnInit(pNS, pUsr, fAddLstn, pLstnPort, pLstnIP, iSessMax);
-finalize_it:
-	RETiRet;
-*/
 }
 
 
@@ -1663,8 +1322,6 @@ osslPostHandshakeCheck(nsd_ossl_t *pNsd)
 		dbgprintf("osslPostHandshakeCheck: Debug Version: %s Name: %s\n",
 			SSL_CIPHER_get_version(sslCipher), SSL_CIPHER_get_name(sslCipher));
 
-/*TODO: IMPLEMENTE X509 cert check HERE !*/
-
 	FINALIZE;
 
 finalize_it:
@@ -1719,6 +1376,9 @@ osslHandshakeCheck(nsd_ossl_t *pNsd)
 
 	/* Do post handshake stuff */
 	CHKiRet(osslPostHandshakeCheck(pNsd));
+
+	/* Now check authorization */
+	CHKiRet(osslChkPeerAuth(pNsd));
 
 finalize_it:
 	if(iRet == RS_RET_OK) {
@@ -2030,10 +1690,6 @@ BIO_set_nbio( conn, 1 );
 
 	/* We now do the handshake */
 	CHKiRet(osslHandshakeCheck(pThis));
-
-//	/* Do post handshake stuff */
-//	CHKiRet(osslPostHandshakeCheck(pThis));
-
 finalize_it:
 	/* Connect appears to be done here */
 	dbgprintf("Connect: END iRet = %d, pThis=[%p], pNsd->rtryCall=%d\n",

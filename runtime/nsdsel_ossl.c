@@ -185,13 +185,9 @@ dbgprintf("doRetry start osslHandshakeCheck, nsd: %p\n", pNsd);
 			CHKiRet(osslHandshakeCheck(pNsdOSSL));
 			pNsd->rtryCall = osslRtry_None; /* we are done */
 
-/*			gnuRet = gnutls_handshake(pNsd->sess);
-			if(gnuRet == 0) {
-				pNsd->rtryCall = osslRtry_None;
-				// we got a handshake, now check authorization
-				CHKiRet(osslChkPeerAuth(pNsd));
-			}
-*/
+			/* we got a handshake, now check authorization */
+			CHKiRet(osslChkPeerAuth(pNsd));
+
 			break;
 		case osslRtry_recv:
 			dbgprintf("retrying ossl recv, nsd: %p\n", pNsd);
