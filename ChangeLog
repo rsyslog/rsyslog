@@ -17,6 +17,8 @@ Version 8.36.0 [v8-stable] 2018-06-26
   know what is going on and my react.
   closes https://github.com/rsyslog/rsyslog/issues/2705
   see also https://github.com/rsyslog/rsyslog/issues/2706
+- lookup tables: reload message now with "info" severity (was "error")
+  thanks to Adam Chalkley for the patch
 - imjournal: add statistics counter
   following statistics counter are now supported by imjournal
   - submitted = total number of messages submitted for processing
@@ -29,6 +31,12 @@ Version 8.36.0 [v8-stable] 2018-06-26
   ... even if librelp is current. The codition check was actually missing.
   This commit adds it.
   closes https://github.com/rsyslog/rsyslog/issues/2712
+- imrelp: segfault on startup when cert without priv key is configured
+  closes https://github.com/rsyslog/rsyslog/issues/2747
+- omrelp bugfix: segfault on first message sent when authmode was wrong
+  A segfault could occur if the authmode was configured to an invalid value.
+  This is now caught during config processing and an error is reported.
+  closes https://github.com/rsyslog/rsyslog/issues/2743
 - imfile/core bugfix: potential misadressing in string copy routine
   This can be exposed via imfile, as follows:
   - use a regex to process multiline messages
