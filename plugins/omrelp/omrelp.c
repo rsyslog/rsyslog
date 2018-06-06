@@ -407,7 +407,14 @@ CODESTARTnewActInst
 				fclose(fp);
 			}
 		} else if(!strcmp(actpblk.descr[i].name, "tls.authmode")) {
-			pData->authmode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			char *authMode = es_str2cstr(pvals[i].val.d.estr, NULL);
+			if(!strcmp(authMode, "name") || !strcmp(authMode, "fingerprint")) {
+				pData->authmode = (uchar*)authMode;
+			} else {
+				errmsg.LogError(0, RS_RET_INVALID_PARAMS,
+						"omrelp error: invalid authmode: %s\n",
+						authMode);
+			}
 		} else if(!strcmp(actpblk.descr[i].name, "tls.permittedpeer")) {
 			pData->permittedPeers.nmemb = pvals[i].val.d.ar->nmemb;
 			CHKmalloc(pData->permittedPeers.name =
