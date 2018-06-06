@@ -77,11 +77,9 @@ ENDobjDestruct(nsdsel_ossl)
 static rsRetVal
 Add(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp)
 {
-dbgprintf("nsdsel_ossl: Add BEGIN [%p]\n", pNsd);
 	DEFiRet;
 	nsdsel_ossl_t *pThis = (nsdsel_ossl_t*) pNsdsel;
 	nsd_ossl_t *pNsdOSSL = (nsd_ossl_t*) pNsd;
-//	int iwant;
 
 	ISOBJ_TYPE_assert(pThis, nsdsel_ossl);
 	ISOBJ_TYPE_assert(pNsdOSSL, nsd_ossl);
@@ -94,7 +92,9 @@ dbgprintf("nsdsel_ossl: Add BEGIN [%p]\n", pNsd);
 			FINALIZE;
 		}
 		if(pNsdOSSL->rtryCall != osslRtry_None) {
+/* // VERBOSE
 dbgprintf("nsdsel_ossl: rtryOsslErr=%d ... \n", pNsdOSSL->rtryOsslErr);
+*/
 			if (pNsdOSSL->rtryOsslErr == SSL_ERROR_WANT_READ) {
 				CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdOSSL->pTcp, NSDSEL_RD));
 				FINALIZE;
@@ -128,7 +128,6 @@ dbgprintf("nsdsel_ossl: rtryOsslErr=%d ... \n", pNsdOSSL->rtryOsslErr);
 	/* if we reach this point, we need no special handling */
 	CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdOSSL->pTcp, waitOp));
 
-dbgprintf("nsdsel_ossl: Add END \n");
 finalize_it:
 	RETiRet;
 }
@@ -140,7 +139,6 @@ finalize_it:
 static rsRetVal
 Select(nsdsel_t *pNsdsel, int *piNumReady)
 {
-dbgprintf("nsdsel_ossl: Select BEGIN \n");
 	DEFiRet;
 	nsdsel_ossl_t *pThis = (nsdsel_ossl_t*) pNsdsel;
 
@@ -153,7 +151,6 @@ dbgprintf("nsdsel_ossl: Select BEGIN \n");
 		iRet = nsdsel_ptcp.Select(pThis->pTcp, piNumReady);
 	}
 
-dbgprintf("nsdsel_ossl: Select END \n");
 	RETiRet;
 }
 
@@ -164,12 +161,10 @@ dbgprintf("nsdsel_ossl: Select END \n");
 static rsRetVal
 doRetry(nsd_ossl_t *pNsd)
 {
-dbgprintf("nsdsel_ossl: doRetry BEGIN \n");
 	DEFiRet;
-	int osslRet;
 	nsd_ossl_t *pNsdOSSL = (nsd_ossl_t*) pNsd;
 
-	dbgprintf("doRetry requested retry of %d operation - executing\n", pNsd->rtryCall);
+	dbgprintf("doRetry: requested retry of %d operation - executing\n", pNsd->rtryCall);
 
 	/* We follow a common scheme here: first, we do the systen call and
 	 * then we check the result. So far, the result is checked after the
@@ -180,7 +175,7 @@ dbgprintf("nsdsel_ossl: doRetry BEGIN \n");
 	 */
 	switch(pNsd->rtryCall) {
 		case osslRtry_handshake:
-dbgprintf("doRetry start osslHandshakeCheck, nsd: %p\n", pNsd);
+			dbgprintf("doRetry: start osslHandshakeCheck, nsd: %p\n", pNsd);
 			/* Do the handshake again*/
 			CHKiRet(osslHandshakeCheck(pNsdOSSL));
 			pNsd->rtryCall = osslRtry_None; /* we are done */
@@ -190,19 +185,16 @@ dbgprintf("doRetry start osslHandshakeCheck, nsd: %p\n", pNsd);
 
 			break;
 		case osslRtry_recv:
-			dbgprintf("retrying ossl recv, nsd: %p\n", pNsd);
+			dbgprintf("doRetry: retrying ossl recv, nsd: %p\n", pNsd);
 			CHKiRet(osslRecordRecv(pNsd));
 			pNsd->rtryCall = osslRtry_None; /* we are done */
-			osslRet = 0;
 			break;
 		case osslRtry_None:
 		default:
 			assert(0); /* this shall not happen! */
-			dbgprintf("ERROR: pNsd->rtryCall invalid in nsdsel_ossl.c:%d\n", __LINE__);
-			osslRet = 0; /* if it happens, we have at least a defined behaviour... ;) */
+			dbgprintf("doRetry: ERROR, pNsd->rtryCall invalid in nsdsel_ossl.c:%d\n", __LINE__);
 			break;
 	}
-dbgprintf("nsdsel_ossl: doRetry END \n");
 finalize_it:
 	if(iRet != RS_RET_OK && iRet != RS_RET_CLOSED && iRet != RS_RET_RETRY)
 		pNsd->bAbortConn = 1; /* request abort */
@@ -214,7 +206,6 @@ finalize_it:
 static rsRetVal
 IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
 {
-dbgprintf("nsdsel_ossl: IsReady BEGIN \n");
 	DEFiRet;
 	nsdsel_ossl_t *pThis = (nsdsel_ossl_t*) pNsdsel;
 	nsd_ossl_t *pNsdOSSL = (nsd_ossl_t*) pNsd;
@@ -222,16 +213,12 @@ dbgprintf("nsdsel_ossl: IsReady BEGIN \n");
 	ISOBJ_TYPE_assert(pThis, nsdsel_ossl);
 	ISOBJ_TYPE_assert(pNsdOSSL, nsd_ossl);
 	if(pNsdOSSL->iMode == 1) {
-dbgprintf("nsdl_ossl: IsReady ENTER (%d) for %p\n", pNsdOSSL->rtryCall, pThis);
 		if(waitOp == NSDSEL_RD && osslHasRcvInBuffer(pNsdOSSL)) {
 			*pbIsReady = 1;
 			--pThis->iBufferRcvReady; /* one "pseudo-read" less */
-			dbgprintf("nsdl_ossl: IsReady #1 dummy read, decermenting %p->iBufRcvReady, now %d\n",
-				   pThis, pThis->iBufferRcvReady);
 			FINALIZE;
 		}
 		if(pNsdOSSL->rtryCall == osslRtry_handshake) {
-dbgprintf("nsdl_ossl: IsReady do osslRtry_handshake for %p\n", pThis);
 			CHKiRet(doRetry(pNsdOSSL));
 			/* we used this up for our own internal processing, so the socket
 			 * is not ready from the upper layer point of view.
@@ -240,7 +227,6 @@ dbgprintf("nsdl_ossl: IsReady do osslRtry_handshake for %p\n", pThis);
 			FINALIZE;
 		}
 		else if(pNsdOSSL->rtryCall == osslRtry_recv) {
-dbgprintf("nsdl_ossl: IsReady do osslRtry_recv for %p\n", pThis);
 			iRet = doRetry(pNsdOSSL);
 			if(iRet == RS_RET_OK) {
 				*pbIsReady = 0;
@@ -254,16 +240,15 @@ dbgprintf("nsdl_ossl: IsReady do osslRtry_recv for %p\n", pThis);
 		 * socket. -- rgerhards, 2010-11-20
 		 */
 		if(pThis->iBufferRcvReady) {
-			dbgprintf("nsd_ossl: IsReady #2 dummy read, buffer not available for this FD\n");
 			*pbIsReady = 0;
 			FINALIZE;
 		}
 	}
+/* // VERBOSE
 dbgprintf("nsdl_ossl: IsReady before nsdsel_ptcp.IsReady for %p\n", pThis);
-
+*/
 	CHKiRet(nsdsel_ptcp.IsReady(pThis->pTcp, pNsdOSSL->pTcp, waitOp, pbIsReady));
 
-dbgprintf("nsdsel_ossl: IsReady END \n");
 finalize_it:
 	RETiRet;
 }

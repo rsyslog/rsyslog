@@ -67,10 +67,6 @@ struct nsd_ossl_s {
 				 * one successful authentication. */
 	permittedPeers_t *pPermPeers; /* permitted peers */
 
-//	uchar *gnutlsPriorityString;	/* gnutls priority string */
-//	gnutls_x509_crt_t ourCert;	/**< our certificate, if in client mode (unused in server mode) */
-//	gnutls_x509_privkey_t ourKey;	/**< our private key, if in client mode (unused in server mode) */
-
 	short	bOurCertIsInit;	/**< 1 if our certificate is initialized and must be deinit on destruction */
 	short	bOurKeyIsInit;	/**< 1 if our private key is initialized and must be deinit on destruction */
 	char *pszRcvBuf;
@@ -96,8 +92,39 @@ uchar *osslStrerror(int error);
 rsRetVal osslChkPeerAuth(nsd_ossl_t *pThis);
 rsRetVal osslRecordRecv(nsd_ossl_t *pThis);
 rsRetVal osslHandshakeCheck(nsd_ossl_t *pNsd);
-void osslLastSSLErrorMsg(int ret, SSL *ssl, char* pszCallSource);
 
+/* some more prototypes to avoid warnings ... */
+void osslLastSSLErrorMsg(int ret, SSL *ssl, const char* pszCallSource);
+int verify_callback(int status, X509_STORE_CTX *store);
+rsRetVal osslPostHandshakeCheck(nsd_ossl_t *pNsd);
+
+int opensslh_THREAD_setup(void);
+int opensslh_THREAD_cleanup(void);
+
+/*-----------------------------------------------------------------------------*/
+#define MUTEX_TYPE       pthread_mutex_t
+#define MUTEX_SETUP(x)   pthread_mutex_init(&(x), NULL)
+#define MUTEX_CLEANUP(x) pthread_mutex_destroy(&(x))
+#define MUTEX_LOCK(x)    pthread_mutex_lock(&(x))
+#define MUTEX_UNLOCK(x)  pthread_mutex_unlock(&(x))
+#define THREAD_ID        pthread_self()
+
+/* This array will store all of the mutexes available to OpenSSL. */
+struct CRYPTO_dynlock_value
+{
+	MUTEX_TYPE mutex;
+};
+
+void dyn_destroy_function(struct CRYPTO_dynlock_value *l,
+	__attribute__((unused)) const char *file, __attribute__((unused)) int line);
+void dyn_lock_function(int mode, struct CRYPTO_dynlock_value *l,
+	__attribute__((unused)) const char *file, __attribute__((unused)) int line);
+struct CRYPTO_dynlock_value * dyn_create_function(
+	__attribute__((unused)) const char *file, __attribute__((unused)) int line);
+unsigned long id_function(void);
+void locking_function(int mode, int n,
+	__attribute__((unused)) const char * file, __attribute__((unused)) int line);
+/*-----------------------------------------------------------------------------*/
 
 /* the name of our library binary */
 #define LM_NSD_OSSL_FILENAME "lmnsd_ossl"

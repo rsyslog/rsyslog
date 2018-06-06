@@ -29,7 +29,6 @@
 #include <assert.h>
 #include <string.h>
 #include <openssl/ssl.h>
-// #include <openssl/bio.h>
 #include <openssl/x509v3.h>
 #include <openssl/err.h>
 #include <openssl/engine.h>
@@ -54,7 +53,7 @@
 #include "unicode-helper.h"
 
 /* things to move to some better place/functionality - TODO */
-#define CRLFILE "crl.pem"
+// #define CRLFILE "crl.pem"
 
 
 MODULE_TYPE_LIB
@@ -68,6 +67,19 @@ DEFobjCurrIf(net)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(nsd_ptcp)
 
+/* OpenSSL API differences */
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	#define RSYSLOG_X509_NAME_oneline(X509CERT) X509_get_subject_name(X509CERT)
+	#define RSYSLOG_BIO_method_name(SSLBIO) BIO_method_name(SSLBIO)
+	#define RSYSLOG_BIO_number_read(SSLBIO) BIO_number_read(SSLBIO)
+	#define RSYSLOG_BIO_number_written(SSLBIO) BIO_number_written(SSLBIO)
+#else
+ 	#define RSYSLOG_X509_NAME_oneline(X509CERT) (X509CERT != NULL ? X509CERT->cert_info->subject : NULL)
+	#define RSYSLOG_BIO_method_name(SSLBIO) SSLBIO->method->name
+	#define RSYSLOG_BIO_number_read(SSLBIO) SSLBIO->num
+	#define RSYSLOG_BIO_number_written(SSLBIO) SSLBIO->num
+#endif
+
 
 static int bGlblSrvrInitDone = 0;	/**< 0 - server global init not yet done, 1 - already done */
 
@@ -75,16 +87,9 @@ static int bGlblSrvrInitDone = 0;	/**< 0 - server global init not yet done, 1 - 
 static SSL_CTX *ctx;
 
 /*--------------------------------------MT OpenSSL helpers ------------------------------------------*/
-#define MUTEX_TYPE       pthread_mutex_t
-#define MUTEX_SETUP(x)   pthread_mutex_init(&(x), NULL)
-#define MUTEX_CLEANUP(x) pthread_mutex_destroy(&(x))
-#define MUTEX_LOCK(x)    pthread_mutex_lock(&(x))
-#define MUTEX_UNLOCK(x)  pthread_mutex_unlock(&(x))
-#define THREAD_ID        pthread_self()
-
-/* This array will store all of the mutexes available to OpenSSL. */
 static MUTEX_TYPE *mutex_buf = NULL;
-static void locking_function(int mode, int n,
+
+void locking_function(int mode, int n,
 	__attribute__((unused)) const char * file, __attribute__((unused)) int line)
 {
 	if (mode & CRYPTO_LOCK)
@@ -93,17 +98,13 @@ static void locking_function(int mode, int n,
 		MUTEX_UNLOCK(mutex_buf[n]);
 }
 
-static unsigned long id_function(void)
+unsigned long id_function(void)
 {
 	return ((unsigned long)THREAD_ID);
 }
 
-struct CRYPTO_dynlock_value
-{
-	MUTEX_TYPE mutex;
-};
 
-static struct CRYPTO_dynlock_value * dyn_create_function(
+struct CRYPTO_dynlock_value * dyn_create_function(
 	__attribute__((unused)) const char *file, __attribute__((unused)) int line)
 {
 	struct CRYPTO_dynlock_value *value;
@@ -115,7 +116,7 @@ static struct CRYPTO_dynlock_value * dyn_create_function(
 	return value;
 }
 
-static void dyn_lock_function(int mode, struct CRYPTO_dynlock_value *l,
+void dyn_lock_function(int mode, struct CRYPTO_dynlock_value *l,
 	__attribute__((unused)) const char *file, __attribute__((unused)) int line)
 {
 	if (mode & CRYPTO_LOCK)
@@ -124,7 +125,7 @@ static void dyn_lock_function(int mode, struct CRYPTO_dynlock_value *l,
 		MUTEX_UNLOCK(l->mutex);
 }
 
-static void dyn_destroy_function(struct CRYPTO_dynlock_value *l,
+void dyn_destroy_function(struct CRYPTO_dynlock_value *l,
 	__attribute__((unused)) const char *file, __attribute__((unused)) int line)
 {
 	MUTEX_CLEANUP(l->mutex);
@@ -184,7 +185,7 @@ int opensslh_THREAD_cleanup(void)
 /*--------------------------------------MT OpenSSL helpers ------------------------------------------*/
 
 /*--------------------------------------OpenSSL helpers ------------------------------------------*/
-void osslLastSSLErrorMsg(int ret, SSL *ssl, char* pszCallSource)
+void osslLastSSLErrorMsg(int ret, SSL *ssl, const char* pszCallSource)
 {
 	unsigned long un_error = 0;
 	char psz[256];
@@ -228,7 +229,7 @@ int verify_callback(int status, X509_STORE_CTX *store)
 		int depth = X509_STORE_CTX_get_error_depth(store);
 		int err = X509_STORE_CTX_get_error(store);
 		X509_NAME_oneline(X509_get_issuer_name(cert), szdbgdata1, sizeof(szdbgdata1));
-		X509_NAME_oneline(X509_get_subject_name(cert), szdbgdata2, sizeof(szdbgdata2));
+		X509_NAME_oneline(RSYSLOG_X509_NAME_oneline(cert), szdbgdata2, sizeof(szdbgdata2));
 
 		/* Log Warning only on EXPIRED */
 		if (err == X509_V_OK || err == X509_V_ERR_CERT_HAS_EXPIRED) {
@@ -267,36 +268,46 @@ long BIO_debug_callback(BIO *bio, int cmd, const char __attribute__((unused)) *a
 
     switch (cmd) {
     case BIO_CB_FREE:
-        dbgprintf("Free - %s\n", bio->method->name);
+        dbgprintf("Free - %s\n", RSYSLOG_BIO_method_name(bio));
         break;
+/* Disabled due API changes for OpenSSL 1.1.0+ */
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
     case BIO_CB_READ:
         if (bio->method->type & BIO_TYPE_DESCRIPTOR)
             dbgprintf("read(%d,%lu) - %s fd=%d\n",
-                         bio->num, (unsigned long)argi,
-                         bio->method->name, bio->num);
+                         RSYSLOG_BIO_number_read(bio), (unsigned long)argi,
+                         RSYSLOG_BIO_method_name(bio), RSYSLOG_BIO_number_read(bio));
         else
             dbgprintf("read(%d,%lu) - %s\n",
-                         bio->num, (unsigned long)argi, bio->method->name);
+                         RSYSLOG_BIO_number_read(bio), (unsigned long)argi, RSYSLOG_BIO_method_name(bio));
         break;
     case BIO_CB_WRITE:
         if (bio->method->type & BIO_TYPE_DESCRIPTOR)
             dbgprintf("write(%d,%lu) - %s fd=%d\n",
-                         bio->num, (unsigned long)argi,
-                         bio->method->name, bio->num);
+                         RSYSLOG_BIO_number_written(bio), (unsigned long)argi,
+                         RSYSLOG_BIO_method_name(bio), RSYSLOG_BIO_number_written(bio));
         else
             dbgprintf("write(%d,%lu) - %s\n",
-                         bio->num, (unsigned long)argi, bio->method->name);
+                         RSYSLOG_BIO_number_written(bio), (unsigned long)argi, RSYSLOG_BIO_method_name(bio));
         break;
+#else
+    case BIO_CB_READ:
+            dbgprintf("read %s\n", RSYSLOG_BIO_method_name(bio));
+        break;
+    case BIO_CB_WRITE:
+            dbgprintf("write %s\n", RSYSLOG_BIO_method_name(bio));
+        break;
+#endif
     case BIO_CB_PUTS:
-        dbgprintf("puts() - %s\n", bio->method->name);
+        dbgprintf("puts() - %s\n", RSYSLOG_BIO_method_name(bio));
         break;
     case BIO_CB_GETS:
         dbgprintf("gets(%lu) - %s\n", (unsigned long)argi,
-                     bio->method->name);
+                     RSYSLOG_BIO_method_name(bio));
         break;
     case BIO_CB_CTRL:
         dbgprintf("ctrl(%lu) - %s\n", (unsigned long)argi,
-                     bio->method->name);
+                     RSYSLOG_BIO_method_name(bio));
         break;
     case BIO_CB_RETURN | BIO_CB_READ:
         dbgprintf("read return %ld\n", ret);
@@ -320,170 +331,6 @@ long BIO_debug_callback(BIO *bio, int cmd, const char __attribute__((unused)) *a
 
     return (r);
 }
-/*--------------------------------------------------------------------------------*/
-#if 0 /* copied CODE needs to be converted first! */
-
-	/* read in the whole content of a file. The caller is responsible for
-	 * freeing the buffer. To prevent DOS, this function can NOT read
-	 * files larger than 1MB (which still is *very* large).
-	 * rgerhards, 2008-05-26
-	 */
-	static rsRetVal
-	readFile(uchar *pszFile, gnutls_datum_t *pBuf)
-	{
-		int fd;
-		struct stat stat_st;
-		DEFiRet;
-
-		assert(pszFile != NULL);
-		assert(pBuf != NULL);
-
-		pBuf->data = NULL;
-
-		if((fd = open((char*)pszFile, O_RDONLY)) == -1) {
-			LogError(errno, RS_RET_FILE_NOT_FOUND, "can not read file '%s'", pszFile);
-			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
-		}
-
-		if(fstat(fd, &stat_st) == -1) {
-			LogError(errno, RS_RET_FILE_NO_STAT, "can not stat file '%s'", pszFile);
-			ABORT_FINALIZE(RS_RET_FILE_NO_STAT);
-		}
-
-		/* 1MB limit */
-		if(stat_st.st_size > 1024 * 1024) {
-			LogError(0, RS_RET_FILE_TOO_LARGE, "file '%s' too large, max 1MB", pszFile);
-			ABORT_FINALIZE(RS_RET_FILE_TOO_LARGE);
-		}
-
-		CHKmalloc(pBuf->data = MALLOC(stat_st.st_size));
-		pBuf->size = stat_st.st_size;
-		if(read(fd,  pBuf->data, stat_st.st_size) != stat_st.st_size) {
-			LogError(0, RS_RET_IO_ERROR, "error or incomplete read of file '%s'", pszFile);
-			ABORT_FINALIZE(RS_RET_IO_ERROR);
-		}
-
-	finalize_it:
-		if(fd != -1)
-			close(fd);
-		if(iRet != RS_RET_OK) {
-			if(pBuf->data != NULL) {
-				free(pBuf->data);
-				pBuf->data = NULL;
-				pBuf->size = 0;
-				}
-		}
-		RETiRet;
-	}
-
-
-	/* Load the certificate and the private key into our own store. We need to do
-	 * this in the client case, to support fingerprint authentication. In that case,
-	 * we may be presented no matching root certificate, but we must provide ours.
-	 * The only way to do that is via the cert callback interface, but for it we
-	 * need to load certificates into our private store.
-	 * rgerhards, 2008-05-26
-	 */
-	static rsRetVal
-	osslLoadOurCertKey(nsd_ossl_t *pThis)
-	{
-		DEFiRet;
-		int gnuRet;
-		gnutls_datum_t data = { NULL, 0 };
-		uchar *keyFile;
-		uchar *certFile;
-
-		ISOBJ_TYPE_assert(pThis, nsd_ossl);
-
-		certFile = glbl.GetDfltNetstrmDrvrCertFile();
-		keyFile = glbl.GetDfltNetstrmDrvrKeyFile();
-
-		if(certFile == NULL || keyFile == NULL) {
-			/* in this case, we can not set our certificate. If we are
-			 * a client and the server is running in "anon" auth mode, this
-			 * may be well acceptable. In other cases, we will see some
-			 * more error messages down the road. -- rgerhards, 2008-07-02
-			 */
-			dbgprintf("our certificate is not set, file name values are cert: '%s', key: '%s'\n",
-				  certFile, keyFile);
-			ABORT_FINALIZE(RS_RET_CERTLESS);
-		}
-
-		/* try load certificate */
-		CHKiRet(readFile(certFile, &data));
-		CHKgnutls(gnutls_x509_crt_init(&pThis->ourCert));
-		pThis->bOurCertIsInit = 1;
-		CHKgnutls(gnutls_x509_crt_import(pThis->ourCert, &data, GNUTLS_X509_FMT_PEM));
-		free(data.data);
-		data.data = NULL;
-
-		/* try load private key */
-		CHKiRet(readFile(keyFile, &data));
-		CHKgnutls(gnutls_x509_privkey_init(&pThis->ourKey));
-		pThis->bOurKeyIsInit = 1;
-		CHKgnutls(gnutls_x509_privkey_import(pThis->ourKey, &data, GNUTLS_X509_FMT_PEM));
-		free(data.data);
-
-	finalize_it:
-		if(iRet != RS_RET_OK) {
-			if(data.data != NULL)
-				free(data.data);
-			if(pThis->bOurCertIsInit) {
-				gnutls_x509_crt_deinit(pThis->ourCert);
-				pThis->bOurCertIsInit = 0;
-			}
-			if(pThis->bOurKeyIsInit) {
-				gnutls_x509_privkey_deinit(pThis->ourKey);
-				pThis->bOurKeyIsInit = 0;
-			}
-		}
-		RETiRet;
-	}
-
-
-	/* This callback must be associated with a session by calling
-	 * gnutls_certificate_client_set_retrieve_function(session, cert_callback),
-	 * before a handshake. We will always return the configured certificate,
-	 * even if it does not match the peer's trusted CAs. This is necessary
-	 * to use self-signed certs in fingerprint mode. And, yes, this usage
-	 * of the callback is quite a hack. But it seems the only way to
-	 * obey to the IETF -transport-tls I-D.
-	 * Note: GnuTLS requires the function to return 0 on success and
-	 * -1 on failure.
-	 * rgerhards, 2008-05-27
-	 */
-	static int
-	osslClientCertCallback(gnutls_session_t session,
-		__attribute__((unused)) const gnutls_datum_t* req_ca_rdn,
-		int __attribute__((unused)) nreqs,
-		__attribute__((unused)) const gnutls_pk_algorithm_t* sign_algos,
-		int __attribute__((unused)) sign_algos_length,
-	#if HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION
-		gnutls_retr2_st* st
-	#else
-		gnutls_retr_st *st
-	#endif
-		)
-	{
-		nsd_ossl_t *pThis;
-
-		pThis = (nsd_ossl_t*) gnutls_session_get_ptr(session);
-
-	#if HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION
-		st->cert_type = GNUTLS_CRT_X509;
-	#else
-		st->type = GNUTLS_CRT_X509;
-	#endif
-		st->ncerts = 1;
-		st->cert.x509 = &pThis->ourCert;
-		st->key.x509 = pThis->ourKey;
-		st->deinit_all = 0;
-
-		return 0;
-	}
-
-
-#endif
 
 
 /* Convert a fingerprint to printable data. The  conversion is carried out
@@ -691,7 +538,7 @@ static rsRetVal
 osslChkPeerFingerprint(nsd_ossl_t *pThis, X509 *pCert)
 {
 	unsigned int n;
-	uchar fingerprint[EVP_MAX_MD_SIZE];
+	uchar fingerprint[20 /*EVP_MAX_MD_SIZE**/];
 	size_t size;
 	cstr_t *pstrFingerprint = NULL;
 	int bFoundPositiveMatch;
@@ -709,13 +556,21 @@ osslChkPeerFingerprint(nsd_ossl_t *pThis, X509 *pCert)
 	}
 
 	CHKiRet(GenFingerprintStr(fingerprint, size, &pstrFingerprint));
-	dbgprintf("osslChkPeerFingerprint: peer's certificate SHA1 fingerprint: %s\n", cstrGetSzStrNoNULL(pstrFingerprint));
+	dbgprintf("osslChkPeerFingerprint: peer's certificate SHA1 fingerprint: %s\n",
+		cstrGetSzStrNoNULL(pstrFingerprint));
 
 	/* now search through the permitted peers to see if we can find a permitted one */
 	bFoundPositiveMatch = 0;
 	pPeer = pThis->pPermPeers;
 	while(pPeer != NULL && !bFoundPositiveMatch) {
+/* // VERBOSE
+dbgprintf("osslChkPeerFingerprint: Compare '%s'  against Peerfingerprint '%s'\n",
+	pPeer->pszID, cstrGetSzStrNoNULL(pstrFingerprint));
+*/
 		if(!rsCStrSzStrCmp(pstrFingerprint, pPeer->pszID, strlen((char*) pPeer->pszID))) {
+// VERBOSE
+dbgprintf("osslChkPeerFingerprint: peer's certificate MATCH found: %s\n", pPeer->pszID);
+
 			bFoundPositiveMatch = 1;
 		} else {
 			pPeer = pPeer->pNext;
@@ -753,18 +608,45 @@ osslChkOnePeerName(nsd_ossl_t *pThis, X509 *pCert, uchar *pszPeerID, int *pbFoun
 {
 	permittedPeers_t *pPeer;
 	int osslRet;
+	char *x509name = NULL;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, nsd_ossl);
 	assert(pszPeerID != NULL);
 	assert(pbFoundPositiveMatch != NULL);
 
+	/* Obtain Namex509 name from subject */
+	x509name = X509_NAME_oneline(RSYSLOG_X509_NAME_oneline(pCert), NULL, 0);
+
 	if(pThis->pPermPeers) { /* do we have configured peer IDs? */
 		pPeer = pThis->pPermPeers;
 		while(pPeer != NULL) {
+/* // VERBOSE
+dbgprintf("osslChkOnePeerName: Compare '%s'  against Peercert '%s'\n",
+	pPeer->pszID, x509name);
+*/
 			CHKiRet(net.PermittedPeerWildcardMatch(pPeer, pszPeerID, pbFoundPositiveMatch));
 			if(*pbFoundPositiveMatch)
 				break;
+
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+			/* if we did not succeed so far, try ossl X509_check_host
+			* ( Includes check against SubjectAlternativeName )
+			*/
+			osslRet = X509_check_host(	pCert, (const char*)pPeer->pszID,
+							strlen((const char*)pPeer->pszID), 0, NULL);
+			if ( osslRet == 1 ) {
+				/* Found Peer cert in allowed Peerslist */
+				dbgprintf("osslChkOnePeerName: Client ('%s') is allowed (X509_check_host)\n",
+					x509name);
+				*pbFoundPositiveMatch = 1;
+				break;
+			} else if ( osslRet < 0 ) {
+				osslLastSSLErrorMsg(osslRet, pThis->ssl, "osslChkOnePeerName");
+				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
+			}
+#endif
+			/* Check next peer */
 			pPeer = pPeer->pNext;
 		}
 	} else {
@@ -774,22 +656,11 @@ osslChkOnePeerName(nsd_ossl_t *pThis, X509 *pCert, uchar *pszPeerID, int *pbFoun
 			*pbFoundPositiveMatch = 1;
 		}
 	}
-
-	if(!(*pbFoundPositiveMatch)) {
-		/* if we did not succeed so far, try ossl X509_check_host ( Includes check against SubjectAlternativeName ) */
-		osslRet = X509_check_host(pCert, (const char*)pszPeerID, strlen((const char*)pszPeerID), 0, NULL);
-		if ( osslRet == 1 ) {
-			/* Found Peer cert in allowed Peerslist */
-			dbgprintf("osslChkOnePeerName: Client ('%s') is allowed (X509_check_host)\n", pCert->name);
-			*pbFoundPositiveMatch = 1;
-		} else if ( osslRet == 0 ) {
-			dbgprintf("osslChkOnePeerName: Client ('%s') is NOT allowed (X509_check_host)\n", pCert->name);
-		} else if ( osslRet < 0 ) {
-			osslLastSSLErrorMsg(osslRet, pThis->ssl, "osslChkOnePeerName");
-			ABORT_FINALIZE(RS_RET_NO_ERRCODE);
-		}
-	}
 finalize_it:
+	if (x509name != NULL){
+		OPENSSL_free(x509name);
+	}
+
 	RETiRet;
 }
 
@@ -802,6 +673,7 @@ osslChkPeerName(nsd_ossl_t *pThis, X509 *pCert)
 	uchar lnBuf[256];
 	int bFoundPositiveMatch;
 	cstr_t *pStr = NULL;
+	char *x509name = NULL;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, nsd_ossl);
@@ -809,13 +681,16 @@ osslChkPeerName(nsd_ossl_t *pThis, X509 *pCert)
 	bFoundPositiveMatch = 0;
 	CHKiRet(rsCStrConstruct(&pStr));
 
-	dbgprintf("osslChkPeerName: subject name: '%s'\n", pCert->name);
-	snprintf((char*)lnBuf, sizeof(lnBuf), "name: %s; ", pCert->name);
+	/* Obtain Namex509 name from subject */
+	x509name = X509_NAME_oneline(RSYSLOG_X509_NAME_oneline(pCert), NULL, 0);
+
+	dbgprintf("osslChkPeerName: checking - peername '%s'\n", x509name);
+	snprintf((char*)lnBuf, sizeof(lnBuf), "name: %s; ", x509name);
 	CHKiRet(rsCStrAppendStr(pStr, lnBuf));
-	CHKiRet(osslChkOnePeerName(pThis, pCert, (uchar*)pCert->name, &bFoundPositiveMatch));
+	CHKiRet(osslChkOnePeerName(pThis, pCert, (uchar*)x509name, &bFoundPositiveMatch));
 
 	if(!bFoundPositiveMatch) {
-		dbgprintf("osslChkPeerName: invalid peer name, not permitted to talk to it\n");
+		dbgprintf("osslChkPeerName: invalid peername, not permitted to talk to it\n");
 		if(pThis->bReportAuthErr == 1) {
 			cstrFinalize(pStr);
 			errno = 0;
@@ -825,9 +700,15 @@ osslChkPeerName(nsd_ossl_t *pThis, X509 *pCert)
 			pThis->bReportAuthErr = 0;
 		}
 		ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
+	} else {
+		dbgprintf("osslChkPeerName: permitted to talk!\n");
 	}
 
 finalize_it:
+	if (x509name != NULL){
+		OPENSSL_free(x509name);
+	}
+
 	if(pStr != NULL)
 		rsCStrDestruct(&pStr);
 	RETiRet;
@@ -847,7 +728,7 @@ osslChkPeerID(nsd_ossl_t *pThis)
 
 	/* Get peer certificate from SSL */
 	certpeer = SSL_get_peer_certificate(pThis->ssl);
-	if ( certpeer == NULL || certpeer->name == NULL) {
+	if ( certpeer == NULL ) {
 		if(pThis->bReportAuthErr == 1) {
 			errno = 0;
 			LogError(0, RS_RET_TLS_NO_CERT, "error: peer did not provide a certificate, "
@@ -870,8 +751,6 @@ finalize_it:
 }
 
 
-// !!!!!! #endif
-
 /* Verify the validity of the remote peer's certificate.
  */
 static rsRetVal
@@ -889,8 +768,8 @@ osslChkPeerCertValidity(nsd_ossl_t *pThis)
 				X509_verify_cert_error_string(iVerErr));
 			ABORT_FINALIZE(RS_RET_CERT_EXPIRED);
 		} else {
-			LogError(0, RS_RET_CERT_INVALID, "not permitted to talk to peer: certificate validation failed: %s",
-				X509_verify_cert_error_string(iVerErr));
+			LogError(0, RS_RET_CERT_INVALID, "not permitted to talk to peer: "
+				"certificate validation failed: %s", X509_verify_cert_error_string(iVerErr));
 			ABORT_FINALIZE(RS_RET_CERT_INVALID);
 		}
 	}
@@ -898,6 +777,7 @@ osslChkPeerCertValidity(nsd_ossl_t *pThis)
 finalize_it:
 	RETiRet;
 }
+
 
 /* check if it is OK to talk to the remote peer
  * rgerhards, 2008-05-21
@@ -913,13 +793,16 @@ osslChkPeerAuth(nsd_ossl_t *pThis)
 	switch(pThis->authMode) {
 		case OSSL_AUTH_CERTNAME:
 			/* if we check the name, we must ensure the cert is valid */
+			dbgprintf("osslChkPeerAuth: Check peer certname[%p]\n", (void *)pThis->ssl);
 			CHKiRet(osslChkPeerCertValidity(pThis));
 			CHKiRet(osslChkPeerID(pThis));
 			break;
 		case OSSL_AUTH_CERTFINGERPRINT:
+			dbgprintf("osslChkPeerAuth: Check peer fingerprint[%p]\n", (void *)pThis->ssl);
 			CHKiRet(osslChkPeerID(pThis));
 			break;
 		case OSSL_AUTH_CERTVALID:
+			dbgprintf("osslChkPeerAuth: Check peer valid[%p]\n", (void *)pThis->ssl);
 			CHKiRet(osslChkPeerCertValidity(pThis));
 			break;
 		case OSSL_AUTH_CERTANON:
@@ -954,31 +837,37 @@ static rsRetVal
 osslEndSess(nsd_ossl_t *pThis)
 {
 	DEFiRet;
-	DBGPRINTF("openssl: entering osslEndSess\n");
 	int ret;
 	int err;
 
+	/* try closing SSL Connection */
 	if(pThis->bHaveSess) {
+		DBGPRINTF("osslEndSess: closing SSL Session ...\n");
 		ret = SSL_shutdown(pThis->ssl);
-		while(ret == 0) {
-
+		if (ret <= 0) {
 			err = SSL_get_error(pThis->ssl, ret);
-			DBGPRINTF("openssl: osslEndSess shutdown loop, err = %d\n", err);
-// TODO: Not a good Idea to LOOP like this!
-			ret = SSL_shutdown(pThis->ssl);
-		}
-		if(ret < 0) {
-			err = SSL_get_error(pThis->ssl, ret);
-			if(err != SSL_ERROR_ZERO_RETURN && err != SSL_ERROR_WANT_READ &&
-				err != SSL_ERROR_WANT_WRITE) {
+			DBGPRINTF("osslEndSess: shutdown failed with err = %d\n", err);
+			/* ignore those SSL Errors on shutdown */
+			if(	err != SSL_ERROR_SYSCALL &&
+					err != SSL_ERROR_ZERO_RETURN &&
+					err != SSL_ERROR_WANT_READ &&
+					err != SSL_ERROR_WANT_WRITE) {
 				errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error while closing "
 						"session: [%d] %s", err,
 						ERR_error_string(err, NULL));
 				errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error is: %s",
 						ERR_reason_error_string(err));
 			}
+
+			DBGPRINTF("osslEndSess: session closed (un)successfully \n");
+		} else {
+			DBGPRINTF("osslEndSess: session closed successfully \n");
 		}
+
+		/* Session closed */
 		pThis->bHaveSess = 0;
+		SSL_free(pThis->ssl);
+		pThis->ssl = NULL;
 	}
 
 	RETiRet;
@@ -1011,11 +900,6 @@ CODESTARTobjDestruct(nsd_ossl)
 
 	if(pThis->pszRcvBuf == NULL) {
 		free(pThis->pszRcvBuf);
-	}
-
-	if(pThis->bHaveSess) {
-// TODO CHECK IF CORRECT?!
-		SSL_shutdown(pThis->ssl);
 	}
 ENDobjDestruct(nsd_ossl)
 
@@ -1120,26 +1004,6 @@ SetSock(nsd_t *pNsd, int sock)
 	RETiRet;
 }
 
-
-/* Provide access to the underlying OS socket. This is primarily
- * useful for other drivers (like nsd_ossl) who utilize ourselfs
- * for some of their functionality.
- */
-/* MAY BE DELETED
-static rsRetVal
-SetBio(nsd_t *pNsd, BIO *acc)
-{
-	DEFiRet;
-	nsd_ossl_t *pThis = (nsd_ossl_t*) pNsd;
-	ISOBJ_TYPE_assert((pThis), nsd_ossl);
-	assert(acc != NULL);
-
-	DBGPRINTF("SetBio: Setting BIO %p\n", acc);
-	pThis->acc = acc;
-
-	RETiRet;
-}
-*/
 
 /* Keep Alive Options
  */
@@ -1305,15 +1169,6 @@ osslPostHandshakeCheck(nsd_ossl_t *pNsd)
 	char szDbg[255];
 	const SSL_CIPHER* sslCipher;
 
-	/* TODO: Perform post handshake checks */
-/*
-	long err;
-	if((err = osslPostHandshakeCheck(pNsd->ssl)) != X509_V_OK) {
-		errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error checking SSL object after connection, peer"
-				" certificate: %s", X509_verify_cert_error_string(err));
-		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
-	}
-*/
 	/* Some extra output for debugging openssl */
 	if (SSL_get_shared_ciphers(pNsd->ssl,szDbg, sizeof szDbg) != NULL)
 		dbgprintf("osslPostHandshakeCheck: Debug Shared ciphers = %s\n", szDbg);
@@ -1335,18 +1190,18 @@ rsRetVal
 osslHandshakeCheck(nsd_ossl_t *pNsd)
 {
 	DEFiRet;
-	int res;
+	int res, resErr;
 	dbgprintf("osslHandshakeCheck: Starting TLS Handshake for ssl[%p]\n", (void *)pNsd->ssl);
 
 	if (pNsd->sslState == osslServer) {
 		/* Handle Server SSL Object */
 		if((res = SSL_accept(pNsd->ssl)) <= 0) {
 			/* Obtain SSL Error code */
-			res = SSL_get_error(pNsd->ssl, res);
-			if(	res == SSL_ERROR_WANT_READ ||
-				res == SSL_ERROR_WANT_WRITE) {
+			resErr = SSL_get_error(pNsd->ssl, res);
+			if(	resErr == SSL_ERROR_WANT_READ ||
+				resErr == SSL_ERROR_WANT_WRITE) {
 				pNsd->rtryCall = osslRtry_handshake;
-				pNsd->rtryOsslErr = res; /* Store SSL ErrorCode into*/
+				pNsd->rtryOsslErr = resErr; /* Store SSL ErrorCode into*/
 				dbgprintf("osslHandshakeCheck: OpenSSL Server handshake does not complete "
 					"immediately - setting to retry (this is OK and normal)\n");
 				FINALIZE;
@@ -1359,11 +1214,11 @@ osslHandshakeCheck(nsd_ossl_t *pNsd)
 		/* Handle Client SSL Object */
 		if((res = SSL_do_handshake(pNsd->ssl)) <= 0) {
 			/* Obtain SSL Error code */
-			res = SSL_get_error(pNsd->ssl, res);
-			if(	res == SSL_ERROR_WANT_READ ||
-				res == SSL_ERROR_WANT_WRITE) {
+			resErr = SSL_get_error(pNsd->ssl, res);
+			if(	resErr == SSL_ERROR_WANT_READ ||
+				resErr == SSL_ERROR_WANT_WRITE) {
 				pNsd->rtryCall = osslRtry_handshake;
-				pNsd->rtryOsslErr = res; /* Store SSL ErrorCode into*/
+				pNsd->rtryOsslErr = resErr; /* Store SSL ErrorCode into*/
 				dbgprintf("osslHandshakeCheck: OpenSSL Client handshake does not complete "
 					"immediately - setting to retry (this is OK and normal)\n");
 				FINALIZE;
@@ -1406,7 +1261,6 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	CHKiRet(nsd_ptcp.Destruct(&pNew->pTcp));
 	dbgprintf("AcceptConnReq for [%p]: Accepting connection ... \n", (void *)pThis);
 	CHKiRet(nsd_ptcp.AcceptConnReq(pThis->pTcp, &pNew->pTcp));
-// *((char*)0)= 0;
 
 	if(pThis->iMode == 0) {
 		/*we are in non-TLS mode, so we are done */
@@ -1530,6 +1384,9 @@ finalize_it:
 			if (SSL_get_shutdown(pThis->ssl) == SSL_RECEIVED_SHUTDOWN) {
 				dbgprintf("osslRcv received SSL_RECEIVED_SHUTDOWN!\n");
 				iRet = RS_RET_CLOSED;
+
+				/* Send Shutdown message back */
+				SSL_shutdown(pThis->ssl);
 			}
 		}
 	}
@@ -1612,8 +1469,6 @@ EnableKeepAlive(nsd_t *pNsd)
 /* open a connection to a remote host (server). With OpenSSL, we always
  * open a plain tcp socket and then, if in TLS mode, do a handshake on it.
  */
-//#pragma GCC diagnostic push
-//#pragma GCC diagnostic ignored "-Wdeprecated-declarations" /* TODO: FIX Warnings! */
 static rsRetVal
 Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 {
@@ -1623,8 +1478,6 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	nsd_ptcp_t *pPtcp = (nsd_ptcp_t*) pThis->pTcp;
 
 	BIO *conn;
-//	SSL * ssl;
-//	char *name;
 
 	ISOBJ_TYPE_assert(pThis, nsd_ossl);
 	assert(port != NULL);
@@ -1649,27 +1502,6 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 /* TODO: still needed? Set to NON blocking ! */
 BIO_set_nbio( conn, 1 );
 
-/*
-	if((name = malloc(ustrlen(host)+ustrlen(port)+2)) != NULL) {
-		name[0] = '\0';
-		strcat(name, (char*)host);
-		strcat(name, ":");
-		strcat(name, (char*)port);
-	} else {
-		errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error, malloc failed");
-	}
-// TODO: Change to NON BLOCKING or USE 	nsd_ptcp
-	conn = BIO_new_connect(name);
-	if(!conn) {
-		errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error creating connection Bio");
-		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
-	}
-	if(BIO_do_connect(conn) <= 0) {
-		errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error connecting to remote machine");
-		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
-	}
-*/
-
 	/*if we reach this point we are in tls mode */
 	DBGPRINTF("Connect: TLS Mode\n");
 	if(!(pThis->ssl = SSL_new(ctx))) {
@@ -1680,13 +1512,6 @@ BIO_set_nbio( conn, 1 );
 	SSL_set_connect_state(pThis->ssl); /*sets ssl to work in client mode.*/
 	pThis->sslState = osslClient; /*set Client state */
 	pThis->bHaveSess = 1;
-
-	/*
-	if(SSL_connect(ssl) <= 0) {
-		errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error connecting SSL object");
-		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
-	}
-	*/
 
 	/* We now do the handshake */
 	CHKiRet(osslHandshakeCheck(pThis));
@@ -1703,7 +1528,6 @@ finalize_it:
 	}
 	RETiRet;
 }
-//#pragma GCC diagnostic pop
 
 
 /* Empty wrapper for GNUTLS helper function

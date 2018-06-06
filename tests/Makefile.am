@@ -714,6 +714,22 @@ endif
 endif
 endif
 
+if ENABLE_OPENSSL
+TESTS +=  \
+	imtcp-tls-ossl-basic.sh \
+	sndrcv_tls_ossl_anon_ipv4.sh \
+	sndrcv_tls_ossl_anon_ipv6.sh \
+	sndrcv_tls_ossl_anon_rebind.sh \
+	imtcp-tls-ossl-x509valid.sh \
+	imtcp-tls-ossl-x509name.sh \
+	imtcp-tls-ossl-x509fingerprint.sh
+if HAVE_VALGRIND
+TESTS += \
+	imtcp-tls-ossl-basic-vg.sh
+endif
+endif
+
+
 if ENABLE_OMUXSOCK
 TESTS += uxsock_simple.sh
 endif
@@ -1284,6 +1300,20 @@ EXTRA_DIST= \
 	testsuites/udp-msgreduc-vg.conf \
 	manytcp-too-few-tls-vg.sh \
 	testsuites/manytcp-too-few-tls.conf \
+	imtcp-tls-ossl-basic.sh \
+	sndrcv_tls_ossl_anon_ipv4.sh \
+	testsuites/sndrcv_tls_ossl_anon_ipv4_sender.conf \
+	testsuites/sndrcv_tls_ossl_anon_ipv4_rcvr.conf \
+	sndrcv_tls_ossl_anon_ipv6.sh \
+	testsuites/sndrcv_tls_ossl_anon_ipv6_sender.conf \
+	testsuites/sndrcv_tls_ossl_anon_ipv6_rcvr.conf \
+	sndrcv_tls_ossl_anon_rebind.sh \
+	testsuites/sndrcv_tls_ossl_anon_rebind_sender.conf \
+	testsuites/sndrcv_tls_ossl_anon_rebind_rcvr.conf \
+	imtcp-tls-ossl-x509valid.sh \
+	imtcp-tls-ossl-x509name.sh \
+	imtcp-tls-ossl-x509fingerprint.sh \
+	imtcp-tls-ossl-basic-vg.sh \
 	manytcp.sh \
 	testsuites/manytcp.conf \
 	manyptcp.sh \
