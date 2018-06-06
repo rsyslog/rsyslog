@@ -87,6 +87,7 @@ struct instanceConf_s {
 	sbool bKeepAlive;		/* support keep-alive packets */
 	sbool bEnableTLS;
 	sbool bEnableTLSZip;
+	sbool bEnableLstn;		/* flag to permit disabling of listener in error case */
 	int dhBits;
 	size_t maxDataSize;
 	int oversizeMode;
@@ -280,6 +281,7 @@ createInstance(instanceConf_t **pinst)
 	inst->iKeepAliveTime = 0;
 	inst->bEnableTLS = 0;
 	inst->bEnableTLSZip = 0;
+	inst->bEnableLstn = 0;
 	inst->dhBits = 0;
 	inst->pristring = NULL;
 	inst->authmode = NULL;
@@ -356,6 +358,12 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	uchar statname[64];
 	int i;
 	DEFiRet;
+
+	if(!inst->bEnableLstn) {
+		DBGPRINTF("listener not started because it is disabled by config error\n");
+		FINALIZE;
+	}
+
 	if(pRelpEngine == NULL) {
 		CHKiRet(relpEngineConstruct(&pRelpEngine));
 		CHKiRet(relpEngineSetDbgprint(pRelpEngine, (void (*)(char *, ...))imrelp_dbgprintf));
@@ -583,9 +591,29 @@ CODESTARTnewInpInst
 			  "param '%s'\n", inppblk.descr[i].name);
 		}
 	}
+
+	if(inst->myCertFile  != NULL && inst->myPrivKeyFile == NULL) {
+		LogError(0, RS_RET_ERR, "imrelp: certificate file given but no corresponding "
+			"private key file - this is invalid, listener cannot be started");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	if(inst->myCertFile  == NULL && inst->myPrivKeyFile != NULL) {
+		LogError(0, RS_RET_ERR, "imrelp: private key file given but no corresponding "
+			"certificate file - this is invalid, listener cannot be started");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	inst->bEnableLstn = -1; /* all ok, ready to start up */
+
 finalize_it:
 CODE_STD_FINALIZERnewInpInst
 	cnfparamvalsDestruct(pvals, &inppblk);
+	if(iRet != RS_RET_OK) {
+		free(inst->myCertFile);
+		inst->myCertFile = NULL;
+		free(inst->myPrivKeyFile);
+		inst->myPrivKeyFile = NULL;
+	}
 ENDnewInpInst
 
 
@@ -715,10 +743,12 @@ CODESTARTfreeCnf
 		free(inst->pszInputName);
 		free(inst->pristring);
 		free(inst->authmode);
-		prop.Destruct(&inst->pInputName);
-		statsobj.Destruct(&(inst->data.stats));
 		for(i = 0 ; i <  inst->permittedPeers.nmemb ; ++i) {
 			free(inst->permittedPeers.name[i]);
+		}
+		if(inst->bEnableLstn) {
+			prop.Destruct(&inst->pInputName);
+			statsobj.Destruct(&(inst->data.stats));
 		}
 		del = inst;
 		inst = inst->next;
