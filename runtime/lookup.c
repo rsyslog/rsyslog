@@ -738,7 +738,7 @@ finalize_it:
 		lookupDestruct(newlu);
 	} else {
 		if (stub_val == NULL) {
-			LogError(0, RS_RET_OK, "lookup table '%s' reloaded from file '%s'",
+			LogMsg(0, RS_RET_OK, LOG_INFO, "lookup table '%s' reloaded from file '%s'",
 					pThis->name, pThis->filename);
 		} else {
 			LogError(0, RS_RET_OK, "lookup table '%s' stubbed with value '%s'",
