@@ -1666,6 +1666,7 @@ DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch)
 
 	for(i = 0 ; i < pBatch->nElem ; ++i) {
 		pMsg = pBatch->pElem[i].pMsg;
+		DBGPRINTF("DeleteProcessedBatch: etry %d state %d\n", i, pBatch->eltState[i]);
 		if(   pBatch->eltState[i] == BATCH_STATE_RDY
 		   || pBatch->eltState[i] == BATCH_STATE_SUB) {
 			localRet = doEnqSingleObj(pThis, eFLOWCTL_NO_DELAY, MsgAddRef(pMsg));
@@ -1778,6 +1779,8 @@ DequeueConsumableElements(qqueue_t *pThis, wti_t *pWti, int *piRemainingQueueSiz
 	/* it is sufficient to persist only when the bulk of work is done */
 	qqueueChkPersist(pThis, nDequeued+nDiscarded+nDeleted);
 
+	DBGOPRINT((obj_t*) pThis, "dequeued %d consumable elements, szlog %d sz phys %d\n",
+		nDequeued, getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
 	pWti->batch.nElem = nDequeued;
 	pWti->batch.nElemDeq = nDequeued + nDiscarded;
 	pWti->batch.deqID = getNextDeqID(pThis);
