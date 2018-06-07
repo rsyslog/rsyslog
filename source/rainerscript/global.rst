@@ -85,7 +85,9 @@ The following parameters can be set:
 
 - **defaultNetstreamDriver**
 
-  Set it to "gtls" to enable TLS for `TLS syslog <http://www.rsyslog.com/doc/rsyslog_secure_tls.html>`_
+  Set it to "ossl" or "gtls" to enable TLS.
+  This `guide <http://www.rsyslog.com/doc/rsyslog_secure_tls.html>`_
+  showes how to use TLS.
 
 - **maxMessageSize**
 

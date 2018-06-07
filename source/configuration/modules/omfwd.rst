@@ -86,7 +86,7 @@ Protocol
 Type of protocol to use for forwarding. Note that \`\`tcp'' means
 both legacy plain tcp syslog as well as RFC5425-based TLS-encrypted
 syslog. Which one is selected depends on the StreamDriver parameter.
-If StreamDriver is set to "gtls" it will use TLS-encrypted syslog.
+If StreamDriver is set to "ossl" or "gtls" it will use TLS-encrypted syslog.
 
 
 NetworkNamespace
@@ -403,7 +403,7 @@ StreamDriver
    "word", "none", "no", "``$ActionSendStreamDriver``"
 
 Choose the stream driver to be used. Default is plain tcp, but
-you can also choose gtls for TLS encryption.
+you can also choose "ossl" or "gtls" for TLS encryption.
 
 
 StreamDriverMode
