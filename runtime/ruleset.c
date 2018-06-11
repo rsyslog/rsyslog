@@ -832,7 +832,6 @@ CODESTARTobjDestruct(ruleset)
 		parser.DestructParserList(&pThis->pParserLst);
 	}
 	free(pThis->pszName);
-	cnfstmtDestructLst(pThis->root);
 ENDobjDestruct(ruleset)
 
 
@@ -849,6 +848,17 @@ DEFFUNC_llExecFunc(doShutdownQueueWorkers)
 	}
 	RETiRet;
 }
+/* helper for Destructor, shut down actions (cnfstmt's in general) */
+DEFFUNC_llExecFunc(doDestructCnfStmt)
+{
+	DEFiRet;
+	ruleset_t *const pThis = (ruleset_t*) pData;
+	DBGPRINTF("shutting down actions and conf stmts for ruleset %p, name %s\n",
+		pThis, pThis->pszName);
+	ISOBJ_TYPE_assert(pThis, ruleset);
+	cnfstmtDestructLst(pThis->root);
+	RETiRet;
+}
 /* destruct ALL rule sets that reside in the system. This must
  * be callable before unloading this module as the module may
  * not be unloaded before unload of the actions is required. This is
@@ -860,17 +870,20 @@ destructAllActions(rsconf_t *conf)
 {
 	DEFiRet;
 
-DBGPRINTF("rulesetDestructAllActions\n");
+	DBGPRINTF("rulesetDestructAllActions\n");
 	/* we first need to stop all queue workers, else we
 	 * may run into trouble with "call" statements calling
 	 * into then-destroyed rulesets.
 	 * see: https://github.com/rsyslog/rsyslog/issues/1122
 	 */
-DBGPRINTF("RRRRRR: rsconfDestruct - queue shutdown\n");
+	DBGPRINTF("destructAllActions: queue shutdown\n");
 	llExecFunc(&(conf->rulesets.llRulesets), doShutdownQueueWorkers, NULL);
+	DBGPRINTF("destructAllActions: action and conf stmt shutdown\n");
+	llExecFunc(&(conf->rulesets.llRulesets), doDestructCnfStmt, NULL);
 
 	CHKiRet(llDestroy(&(conf->rulesets.llRulesets)));
-	CHKiRet(llInit(&(conf->rulesets.llRulesets), rulesetDestructForLinkedList, rulesetKeyDestruct, strcasecmp));
+	CHKiRet(llInit(&(conf->rulesets.llRulesets), rulesetDestructForLinkedList,
+		rulesetKeyDestruct, strcasecmp));
 	conf->rulesets.pDflt = NULL;
 
 finalize_it:
@@ -1166,6 +1179,3 @@ BEGINObjClassInit(ruleset, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(regCfSysLineHdlr((uchar *)"rulesetcreatemainqueue", 0, eCmdHdlrBinary, rulesetCreateQueue,
 		NULL, NULL));
 ENDObjClassInit(ruleset)
-
-/* vi:set ai:
- */

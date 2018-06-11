@@ -5,6 +5,12 @@ if [ `uname` = "FreeBSD" ] ; then
    echo "This test currently does not work on FreeBSD."
    exit 77
 fi
+grep "\.el6\." <<< $(uname -a)
+if [ "$?" == "0" ]; then
+	echo "CentOS 6 detected, adding valgrind suppressions"
+	export RS_TEST_VALGRIND_EXTRA_OPTS="--suppressions=imfile-basic-vgthread.supp"
+fi
+
 
 echo [imfile-basic.sh]
 . $srcdir/diag.sh init
