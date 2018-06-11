@@ -27,6 +27,31 @@ Version 8.36.0 [v8-stable] 2018-06-26
   permit 4-digit file creation modes (actually 5 with the leading zero) so
   that the setgid bit can also be set (and anything else on that position.
   closes https://github.com/rsyslog/rsyslog/issues/1092
+- core: misadressing when writing disk queue files
+  when writing disk queue files during shutdown, access to freed
+  memory can occur under these circumstances:
+  - action A is processing data, but could not complete it
+    most importantly, the current in-process batch needs not to
+    be totally completed. Most probable cause for this scenario
+    is a suspended action in retry mode.
+  - action A is called from a ruleset RA which
+    - does not have a queue assigned
+    - where RA is called from a ruleset RO which is bound
+      to the input from which the message originated
+    - RO must be defined before RA inside the expanded config
+  - Disk queues (or the disk part of a DA queue) must be utilized by A
+  When re-injecting the unprocessed messages from A into the disk queue, the
+  name of ruleset RO is accessed (for persisting to disk). However, RO is
+  already destructed at this point in time.
+  The patch changes the shutdown processing of rulesets, so that all
+  shutdown processing is done before any ruleset data is destructed. This
+  ensures that all data items which potentially need to be accessed
+  remain valid as long as some part may potentially try to access them.
+  This follows a the approach used in
+     https://github.com/rsyslog/rsyslog/pull/1857
+  where obviously that part of the problem was not noticed.
+  see also https://github.com/rsyslog/rsyslog/issues/1122
+  closes https://github.com/rsyslog/rsyslog/issues/2742
 - imrelp bugfix: error message "librelp too old" is always emitted ...
   ... even if librelp is current. The codition check was actually missing.
   This commit adds it.
