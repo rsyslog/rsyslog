@@ -2479,6 +2479,8 @@ tryEmulateTAG(smsg_t * const pM, sbool bLockMutex)
 			bufTAG[sizeof(bufTAG)-1] = '\0'; /* just to make sure... */
 			MsgSetTAG(pM, bufTAG, lenTAG);
 		}
+		/* Signal change in TAG for aquireProgramName */
+		pM->iLenPROGNAME = -1;
 	}
 	if(bLockMutex == LOCK_MUTEX)
 		MsgUnlock(pM);
