@@ -1554,8 +1554,15 @@ processBatchMain(void *__restrict__ const pVoid,
 			/* we do not check error state below, because aborting would be
 			 * more harmful than continuing.
 			 */
-			processMsgMain(pAction, pWti, pBatch->pElem[i].pMsg, &ttNow);
-			batchSetElemState(pBatch, i, BATCH_STATE_COMM);
+			rsRetVal localRet = processMsgMain(pAction, pWti, pBatch->pElem[i].pMsg, &ttNow);
+			DBGPRINTF("processBatchMain: i %d, processMsgMain iRet %d\n", i, localRet);
+			if(   localRet == RS_RET_OK
+			   || localRet == RS_RET_DEFER_COMMIT
+			   || localRet == RS_RET_ACTION_FAILED
+			   || localRet == RS_RET_PREVIOUS_COMMITTED ) {
+				batchSetElemState(pBatch, i, BATCH_STATE_COMM);
+				DBGPRINTF("processBatchMain: i %d, COMM state set\n", i);
+			}
 		}
 	}
 
