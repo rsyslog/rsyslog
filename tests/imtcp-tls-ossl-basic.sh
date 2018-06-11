@@ -25,7 +25,7 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 '
 # Begin actuall testcase
 . $srcdir/diag.sh startup
-. $srcdir/diag.sh tcpflood -p13514 -m10000 -Ttls -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem
+. $srcdir/diag.sh tcpflood -p13514 -m10000 -Ttls -x$srcdir/tls-certs/ca.pem -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem
 . $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 . $srcdir/diag.sh wait-shutdown
 . $srcdir/diag.sh seq-check 0 9999

@@ -1946,11 +1946,18 @@ uxsockrcvr_SOURCES = uxsockrcvr.c
 uxsockrcvr_LDADD = $(SOL_LIBS)
 
 tcpflood_SOURCES = tcpflood.c
-tcpflood_CFLAGS = $(PTHREADS_CFLAGS) $(RELP_CFLAGS) $(GNUTLS_CFLAGS)
-tcpflood_CPPFLAGS = $(PTHREADS_CFLAGS) $(RELP_CFLAGS) $(GNUTLS_CFLAGS)
-tcpflood_LDADD = $(SOL_LIBS) $(PTHREADS_LIBS) $(RELP_LIBS) $(GNUTLS_LIBS)
+tcpflood_CFLAGS = $(PTHREADS_CFLAGS) $(RELP_CFLAGS)
+tcpflood_CPPFLAGS = $(PTHREADS_CFLAGS) $(RELP_CFLAGS)
+tcpflood_LDADD = $(SOL_LIBS) $(PTHREADS_LIBS) $(RELP_LIBS)
 if ENABLE_GNUTLS
-tcpflood_LDADD += -lgcrypt
+tcpflood_CFLAGS += $(GNUTLS_CFLAGS)
+tcpflood_CPPFLAGS += $(GNUTLS_CFLAGS)
+tcpflood_LDADD += $(GNUTLS_LIBS) -lgcrypt
+endif
+if ENABLE_OPENSSL
+tcpflood_CFLAGS += $(OPENSSL_CFLAGS)
+tcpflood_CPPFLAGS += $(OPENSSL_CFLAGS)
+tcpflood_LDADD += $(OPENSSL_LIBS)
 endif
 
 minitcpsrv_SOURCES = minitcpsrvr.c

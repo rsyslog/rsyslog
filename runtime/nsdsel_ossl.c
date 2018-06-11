@@ -179,10 +179,6 @@ doRetry(nsd_ossl_t *pNsd)
 			/* Do the handshake again*/
 			CHKiRet(osslHandshakeCheck(pNsdOSSL));
 			pNsd->rtryCall = osslRtry_None; /* we are done */
-
-			/* we got a handshake, now check authorization */
-			CHKiRet(osslChkPeerAuth(pNsd));
-
 			break;
 		case osslRtry_recv:
 			dbgprintf("doRetry: retrying ossl recv, nsd: %p\n", pNsd);

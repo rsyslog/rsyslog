@@ -3,4 +3,5 @@
 # This file is part of the rsyslog project, released  under GPLv3
 echo ===============================================================================
 echo \[sndrcv_tls_ossl_anon_rebind.sh\]: testing sending and receiving via TLS with anon auth and rebind
-. $srcdir/sndrcv_drvr.sh sndrcv_tls_ossl_anon_rebind 25000
+#valgrind="valgrind"
+. $srcdir/sndrcv_drvr.sh sndrcv_tls_ossl_anon_rebind 25000 -d

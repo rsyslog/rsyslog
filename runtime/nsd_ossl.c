@@ -185,35 +185,47 @@ int opensslh_THREAD_cleanup(void)
 /*--------------------------------------MT OpenSSL helpers ------------------------------------------*/
 
 /*--------------------------------------OpenSSL helpers ------------------------------------------*/
-void osslLastSSLErrorMsg(int ret, SSL *ssl, const char* pszCallSource)
+void osslLastSSLErrorMsg(int ret, SSL *ssl, int severity, const char* pszCallSource)
 {
 	unsigned long un_error = 0;
-	char psz[256];
-	int iMyRet = SSL_get_error(ssl, ret);
+//	char psz[256];
+	int iSSLErr = SSL_get_error(ssl, ret);
 
 	/* Check which kind of error we have */
-	dbgprintf("OpenSSL Error '%s' with  ret=%d\n", pszCallSource, ret);
-	if(iMyRet == SSL_ERROR_SSL) {
-		un_error = ERR_peek_last_error();
-		ERR_error_string_n(un_error, psz, 256);
-		errmsg.LogError(0, RS_RET_NO_ERRCODE, "%s", psz);
-	} else if(iMyRet == SSL_ERROR_SYSCALL){
-		iMyRet = ERR_get_error();
+	dbgprintf("OpenSSL Error '%s(%d)' in '%s' with ret=%d\n",
+		ERR_error_string(iSSLErr, NULL), iSSLErr, pszCallSource, ret);
+	if(iSSLErr == SSL_ERROR_SSL) {
+		errmsg.LogMsg(0, RS_RET_NO_ERRCODE, severity, "SSL_ERROR_SSL in '%s'", pszCallSource);
+	} else if(iSSLErr == SSL_ERROR_SYSCALL){
+		errmsg.LogMsg(0, RS_RET_NO_ERRCODE, severity, "SSL_ERROR_SYSCALL in '%s'", pszCallSource);
+/*
 		if(ret == 0) {
-			iMyRet = SSL_get_error(ssl, iMyRet);
-			if(iMyRet == 0) {
+			// iSSLErr = ERR_get_error();
+			// iSSLErr = SSL_get_error(ssl, iSSLErr);
+			if(iSSLErr == 0) {
 				*psz = '\0';
 			} else {
-				ERR_error_string_n(iMyRet, psz, 256);
+				ERR_error_string_n(ERR_get_error(), psz, sizeof(psz));
 			}
-		} else {
-			un_error = ERR_peek_last_error();
-			ERR_error_string_n(un_error, psz, 256);
 		}
-		errmsg.LogError(0, RS_RET_NO_ERRCODE, "%s", psz);
+		errmsg.LogMsg(0, RS_RET_NO_ERRCODE, "SSL_ERROR_SYSCALL in '%s': %s",
+			pszCallSource, psz);
+*/
 	} else {
-		errmsg.LogError(0, RS_RET_NO_ERRCODE, "Unknown SSL Error in '%s' (%d), SSL_get_error: %d",
-			pszCallSource, ret, iMyRet);
+		errmsg.LogMsg(0, RS_RET_NO_ERRCODE, severity, "SSL_ERROR_UNKNOWN in '%s', SSL_get_error: '%s(%d)'",
+			pszCallSource, ERR_error_string(iSSLErr, NULL), iSSLErr);
+	}
+
+	/* Loop through ERR_get_error */
+	while ((un_error = ERR_get_error()) > 0){
+		errmsg.LogMsg(0, RS_RET_NO_ERRCODE, severity, "Error Stack: %s", ERR_error_string(un_error, NULL) );
+		dbgprintf("OpenSSL Error Stack: %s\n", ERR_error_string(un_error, NULL) );
+	}
+
+	/* Loop through ERR_peek_last_error */
+	while ((un_error = ERR_peek_last_error()) != 0){
+		errmsg.LogMsg(0, RS_RET_NO_ERRCODE, severity, "Error Stack: %s", ERR_error_string(un_error, NULL) );
+		dbgprintf("OpenSSL Error Stack: %s\n", ERR_error_string(un_error, NULL) );
 	}
 }
 
@@ -425,9 +437,10 @@ osslGlblInit(void)
 	/* Set CTX Options */
 	SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2);		/* Disable insecure SSLv2 Protocol */
 	SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv3);		/* Disable insecure SSLv3 Protocol */
-
 	SSL_CTX_sess_set_cache_size(ctx,1024);			/* TODO: make configurable? */
-	SSL_CTX_set_cipher_list(ctx,"ALL");			/* Support all ciphers */
+
+	/* TODO: DO ONLY SUPPORT DEFAULT CIPHERS YET
+	SSL_CTX_set_cipher_list(ctx,"ALL");			Support all ciphers */
 // TODO MORE NEEDED 	SSL_CTX_set_ecdh_auto(ctx, 1);
 	/* Enable Support for automatic EC temporary key parameter selection. */
 
@@ -467,11 +480,15 @@ osslRecordRecv(nsd_ossl_t *pThis)
 		pThis->ptrRcvBuf = 0;
 	} else {
 		err = SSL_get_error(pThis->ssl, lenRcvd);
-		if(	err != SSL_ERROR_ZERO_RETURN &&
-			err != SSL_ERROR_WANT_READ &&
+		if(	err == SSL_ERROR_ZERO_RETURN ) {
+			DBGPRINTF("osslRecordRecv: SSL_ERROR_ZERO_RETURN received, connection may closed already\n");
+			ABORT_FINALIZE(RS_RET_RETRY);
+		}
+		else if(err != SSL_ERROR_WANT_READ &&
 			err != SSL_ERROR_WANT_WRITE) {
-				osslLastSSLErrorMsg(lenRcvd, pThis->ssl, "osslRecordRecv");
-				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
+			/* Output error and abort */
+			osslLastSSLErrorMsg(lenRcvd, pThis->ssl, LOG_ERR, "osslRecordRecv");
+			ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 		} else {
 			DBGPRINTF("osslRecordRecv: SSL_get_error = %d\n", err);
 			pThis->rtryCall =  osslRtry_recv;
@@ -497,7 +514,7 @@ osslInitSession(nsd_ossl_t *pThis) /* , nsd_ossl_t *pServer) */
 	nsd_ptcp_t *pPtcp = (nsd_ptcp_t*) pThis->pTcp;
 
 	if(!(pThis->ssl = SSL_new(ctx))) {
-		osslLastSSLErrorMsg(0, pThis->ssl, "osslInitSession");
+		osslLastSSLErrorMsg(0, pThis->ssl, LOG_ERR, "osslInitSession");
 	}
 
 	if (pThis->authMode != OSSL_AUTH_CERTANON) {
@@ -642,7 +659,7 @@ dbgprintf("osslChkOnePeerName: Compare '%s'  against Peercert '%s'\n",
 				*pbFoundPositiveMatch = 1;
 				break;
 			} else if ( osslRet < 0 ) {
-				osslLastSSLErrorMsg(osslRet, pThis->ssl, "osslChkOnePeerName");
+				osslLastSSLErrorMsg(osslRet, pThis->ssl, LOG_ERR, "osslChkOnePeerName");
 				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 			}
 #endif
@@ -846,17 +863,15 @@ osslEndSess(nsd_ossl_t *pThis)
 		ret = SSL_shutdown(pThis->ssl);
 		if (ret <= 0) {
 			err = SSL_get_error(pThis->ssl, ret);
-			DBGPRINTF("osslEndSess: shutdown failed with err = %d\n", err);
+			DBGPRINTF("osslEndSess: shutdown failed with err = %d, forcing ssl shutdown!\n", err);
+
 			/* ignore those SSL Errors on shutdown */
 			if(	err != SSL_ERROR_SYSCALL &&
 					err != SSL_ERROR_ZERO_RETURN &&
 					err != SSL_ERROR_WANT_READ &&
 					err != SSL_ERROR_WANT_WRITE) {
-				errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error while closing "
-						"session: [%d] %s", err,
-						ERR_error_string(err, NULL));
-				errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error is: %s",
-						ERR_reason_error_string(err));
+				/* Output Warning only */
+				osslLastSSLErrorMsg(ret, pThis->ssl, LOG_WARNING, "osslEndSess");
 			}
 
 			DBGPRINTF("osslEndSess: session closed (un)successfully \n");
@@ -1205,8 +1220,13 @@ osslHandshakeCheck(nsd_ossl_t *pNsd)
 				dbgprintf("osslHandshakeCheck: OpenSSL Server handshake does not complete "
 					"immediately - setting to retry (this is OK and normal)\n");
 				FINALIZE;
+			} else if(resErr == SSL_ERROR_SYSCALL) {
+				dbgprintf("osslHandshakeCheck: OpenSSL Server handshake failed with SSL_ERROR_SYSCALL "
+					"- Aborting handshake.\n");
+				osslLastSSLErrorMsg(res, pNsd->ssl, LOG_WARNING, "osslHandshakeCheck Server");
+				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 			} else {
-				osslLastSSLErrorMsg(res, pNsd->ssl, "osslHandshakeCheck");
+				osslLastSSLErrorMsg(res, pNsd->ssl, LOG_ERR, "osslHandshakeCheck Server");
 				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 			}
 		}
@@ -1222,8 +1242,13 @@ osslHandshakeCheck(nsd_ossl_t *pNsd)
 				dbgprintf("osslHandshakeCheck: OpenSSL Client handshake does not complete "
 					"immediately - setting to retry (this is OK and normal)\n");
 				FINALIZE;
+			} else if(resErr == SSL_ERROR_SYSCALL) {
+				dbgprintf("osslHandshakeCheck: OpenSSL Client handshake failed with SSL_ERROR_SYSCALL "
+					"- Aborting handshake.\n");
+				osslLastSSLErrorMsg(res, pNsd->ssl, LOG_WARNING, "osslHandshakeCheck Client");
+				ABORT_FINALIZE(RS_RET_NO_ERRCODE /*RS_RET_RETRY*/);
 			} else {
-				osslLastSSLErrorMsg(res, pNsd->ssl, "osslHandshakeCheck");
+				osslLastSSLErrorMsg(res, pNsd->ssl, LOG_ERR, "osslHandshakeCheck Client");
 				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 			}
 		}
@@ -1234,7 +1259,6 @@ osslHandshakeCheck(nsd_ossl_t *pNsd)
 
 	/* Now check authorization */
 	CHKiRet(osslChkPeerAuth(pNsd));
-
 finalize_it:
 	if(iRet == RS_RET_OK) {
 		/* If no error occured, set socket to SSL mode */
@@ -1428,23 +1452,26 @@ Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 			break;
 		} else {
 			err = SSL_get_error(pThis->ssl, iSent);
-			if(err != SSL_ERROR_ZERO_RETURN && err != SSL_ERROR_WANT_READ &&
+			if(	err == SSL_ERROR_ZERO_RETURN ) {
+				DBGPRINTF("Send: SSL_ERROR_ZERO_RETURN received, retry next time\n");
+				ABORT_FINALIZE(RS_RET_RETRY);
+			}
+			else if(err != SSL_ERROR_WANT_READ &&
 				err != SSL_ERROR_WANT_WRITE) {
-				/*SSL_ERROR_ZERO_RETURN: TLS connection has been closed. This
-				 * result code is returned only if a closure alert has occurred
-				 * in the protocol, i.e. if the connection has been closed cleanly.
-				 *SSL_ERROR_WANT_READ/WRITE: The operation did not complete, try
-				 * again later. */
+				/* Output error and abort */
+				osslLastSSLErrorMsg(iSent, pThis->ssl, LOG_ERR, "Send");
+/*
 				errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error while sending data: "
 						"[%d] %s", err, ERR_error_string(err, NULL));
 				errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error is: %s",
 						ERR_reason_error_string(err));
+*/
 				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 			} else {
 				/* Check for SSL Shutdown */
 				if (SSL_get_shutdown(pThis->ssl) == SSL_RECEIVED_SHUTDOWN) {
 					dbgprintf("osslRcv received SSL_RECEIVED_SHUTDOWN!\n");
-					iRet = RS_RET_CLOSED;
+					ABORT_FINALIZE(RS_RET_CLOSED);
 				}
 			}
 		}
@@ -1505,7 +1532,8 @@ BIO_set_nbio( conn, 1 );
 	/*if we reach this point we are in tls mode */
 	DBGPRINTF("Connect: TLS Mode\n");
 	if(!(pThis->ssl = SSL_new(ctx))) {
-		errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error creating an SSL context");
+		osslLastSSLErrorMsg(0, pThis->ssl, LOG_ERR, "Connect");
+/*		errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error creating an SSL context"); */
 		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 	}
 	SSL_set_bio(pThis->ssl, conn, conn);
