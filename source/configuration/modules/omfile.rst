@@ -4,7 +4,7 @@ omfile: File Output Module
 
 ===========================  ===========================================================================
 **Module Name:**             **omfile**
-**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+**Author:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
 ===========================  ===========================================================================
 
 

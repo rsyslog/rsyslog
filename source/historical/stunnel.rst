@@ -1,7 +1,7 @@
 SSL Encrypting Syslog with Stunnel
 ==================================
 
-*Written by* `Rainer Gerhards <http://rainer.gerhards.net>`_ *(2005-07-22)*
+*Written by* `Rainer Gerhards <https://rainer.gerhards.net>`_ *(2005-07-22)*
 
 **HISTORICAL DOCUMENT**
 

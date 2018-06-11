@@ -193,7 +193,7 @@ options are defined:
   The jsonf option cannot be used together with either json or csv options.
 
   For more information you can read `this article from Rainer's blog 
-  <http://blog.gerhards.net/2012/04/rsyslog-templates-json.html>`_.
+  <https://rainer.gerhards.net/2012/04/rsyslog-templates-json.html>`_.
 
 **csv**
   formats the resulting field (after all modifications) in CSV format as

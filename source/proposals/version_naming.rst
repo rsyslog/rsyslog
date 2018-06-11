@@ -123,7 +123,7 @@ unstable and have a different naming schema.
 
 **Please note that version naming is currently being changed. There is a
 `blog post about future rsyslog
-versions <http://blog.gerhards.net/2007/08/on-rsyslog-versions.html>`_.**
+versions <https://rainer.gerhards.net/2007/08/on-rsyslog-versions.html>`_.**
 
 The major version is incremented whenever a considerate, major features
 have been added. This is expected to happen quite infrequently.

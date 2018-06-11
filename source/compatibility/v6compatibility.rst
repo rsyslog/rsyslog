@@ -49,7 +49,7 @@ RainerScript based rsyslog.conf
 A better config format was the main release target for rsyslog v6. It comes in the
 flavor of so-called RainerScript
 `(why the name RainerScript?)
-<http://blog.gerhards.net/2008/02/introducing-rainerscript-and-some.html>`_
+<https://rainer.gerhards.net/2008/02/introducing-rainerscript-and-some.html>`_
 RainerScript supports legacy syslog.conf format, much as you know it
 from other syslogds (like sysklogd or the BSD syslogd) as well as previous versions
 of rsyslog. Initial work on RainerScript began in v4, and the if-construct was already
@@ -90,7 +90,7 @@ on the rsyslog side. In that case, please let us know.
 
 Please see the
 `blog post about rsyslog 6.3.3 config format
-<http://blog.gerhards.net/2011/07/rsyslog-633-config-format-improvements.html>`_
+<https://rainer.gerhards.net/2011/07/rsyslog-633-config-format-improvements.html>`_
 for details of what is currently supported.
 
 compatibility mode
@@ -181,7 +181,7 @@ just the user name to call this action, like in this example:
   *.* rgerhards
 
 This format is very ambiguous and causes headache (see
-`blog post on omusrmsg <http://blog.gerhards.net/2011/07/why-omusrmsg-is-evil-and-how-it-is.html>`_
+`blog post on omusrmsg <https://rainer.gerhards.net/2011/07/why-omusrmsg-is-evil-and-how-it-is.html>`_
 for details). Thus the format has been superseded by this syntax
 (which is legacy format ;-)):
 

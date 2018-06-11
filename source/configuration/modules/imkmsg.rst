@@ -4,7 +4,7 @@ imkmsg: /dev/kmsg Log Input Module
 
 ===========================  ===========================================================================
 **Module Name:**             **imkmsg**
-**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+**Author:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
                              Milan Bartos <mbartos@redhat.com>
 ===========================  ===========================================================================
 

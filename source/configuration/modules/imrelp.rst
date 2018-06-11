@@ -4,7 +4,7 @@ imrelp: RELP Input Module
 
 ===========================  ===========================================================================
 **Module Name:**             **imrelp**
-**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+**Author:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
 ===========================  ===========================================================================
 
 

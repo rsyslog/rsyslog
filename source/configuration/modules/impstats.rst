@@ -4,7 +4,7 @@ impstats: Generate Periodic Statistics of Internal Counters
 
 ===========================  ===========================================================================
 **Module Name:**             **impstats**
-**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+**Author:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
 ===========================  ===========================================================================
 
 

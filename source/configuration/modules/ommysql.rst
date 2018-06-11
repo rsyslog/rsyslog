@@ -4,7 +4,7 @@ ommysql: MySQL Database Output Module
 
 ===========================  ===========================================================================
 **Module Name:**             **ommysql**
-**Author:**                  Michael Meckelein (Initial Author) / `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+**Author:**                  Michael Meckelein (Initial Author) / `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
 ===========================  ===========================================================================
 
 
