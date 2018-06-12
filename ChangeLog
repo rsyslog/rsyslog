@@ -70,6 +70,8 @@ Version 8.36.0 [v8-stable] 2018-06-26
   A segfault could occur if the authmode was configured to an invalid value.
   This is now caught during config processing and an error is reported.
   closes https://github.com/rsyslog/rsyslog/issues/2743
+- imfile bugfix: double-free on module shutdown
+  detected by code review, not seen in practice
 - imfile/core bugfix: potential misadressing in string copy routine
   This can be exposed via imfile, as follows:
   - use a regex to process multiline messages
