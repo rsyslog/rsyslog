@@ -17,7 +17,7 @@ Compile information from current sources of information
 Below are listed the official locations where documentation about Rsyslog can be found.
 
 	* Wiki: http://wiki.rsyslog.com/index.php/Main_Page
-	* Rainer's blog: http://blog.gerhards.net/2012/10/how-to-use-rsyslogs-ruleset-and-call.html
+	* Rainer's blog: https://rainer.gerhards.net/2012/10/how-to-use-rsyslogs-ruleset-and-call.html
 	* Issues: https://github.com/rsyslog/rsyslog
 	* docs: https://github.com/rsyslog/rsyslog-doc
 	* Forum: http://kb.monitorware.com/configuration-f36.html

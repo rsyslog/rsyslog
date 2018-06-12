@@ -4,7 +4,7 @@ imsolaris: Solaris Input Module
 
 ===========================  ===========================================================================
 **Module Name:**             **imsolaris**
-**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+**Author:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
 ===========================  ===========================================================================
 
 

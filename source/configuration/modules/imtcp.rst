@@ -4,7 +4,7 @@ imtcp: TCP Syslog Input Module
 
 ===========================  ===========================================================================
 **Module Name:**             **imtcp**
-**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+**Author:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
 ===========================  ===========================================================================
 
 

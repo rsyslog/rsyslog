@@ -78,4 +78,4 @@ why traditional syslog had a reputation for being very slow.
 
 See Also
 --------
-* http://blog.gerhards.net/2008/04/on-unreliability-of-plain-tcp-syslog.html
+* https://rainer.gerhards.net/2008/04/on-unreliability-of-plain-tcp-syslog.html
