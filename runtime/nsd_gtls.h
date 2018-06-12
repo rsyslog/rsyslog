@@ -61,7 +61,8 @@ struct nsd_gtls_s {
 				 * one successful authentication. */
 	permittedPeers_t *pPermPeers; /* permitted peers */
 	uchar *gnutlsPriorityString;	/* gnutls priority string */
-	gnutls_x509_crt_t pOurCerts[NSD_GTLS_MAX_CERT];	/**< our certificate, if in client mode (unused in server mode) */
+	gnutls_x509_crt_t pOurCerts[NSD_GTLS_MAX_CERT];	/**< our certificate, if in client mode
+							(unused in server mode) */
 	unsigned int nOurCerts;  /* number of certificates in our chain */
 	gnutls_x509_privkey_t ourKey;	/**< our private key, if in client mode (unused in server mode) */
 	short	bOurCertIsInit;	/**< 1 if our certificate is initialized and must be deinit on destruction */

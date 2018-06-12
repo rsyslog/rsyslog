@@ -223,7 +223,7 @@ finalize_it:
 		if(data.data != NULL)
 			free(data.data);
 		if(pThis->bOurCertIsInit) {
-			for (int i=0; i<pThis->nOurCerts; ++i) {
+			for(unsigned i=0; i<pThis->nOurCerts; ++i) {
 				gnutls_x509_crt_deinit(pThis->pOurCerts[i]);
 			}
 			pThis->bOurCertIsInit = 0;
@@ -1225,7 +1225,7 @@ CODESTARTobjDestruct(nsd_gtls)
 	}
 
 	if(pThis->bOurCertIsInit)
-                  for (int i=0; i<pThis->nOurCerts; ++i) {
+                  for(unsigned i=0; i<pThis->nOurCerts; ++i) {
 			gnutls_x509_crt_deinit(pThis->pOurCerts[i]);
                   }
 	if(pThis->bOurKeyIsInit)
