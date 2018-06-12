@@ -27,6 +27,12 @@ Version 8.36.0 [v8-stable] 2018-06-26
   permit 4-digit file creation modes (actually 5 with the leading zero) so
   that the setgid bit can also be set (and anything else on that position.
   closes https://github.com/rsyslog/rsyslog/issues/1092
+- omprog: simplify 'plugin-with-feedback.py' example
+  Make the skeleton easier to understand by removing transaction support.
+  Also, transaction failures did not work as explained in the skeleton,
+  because of issue #2420. In the future, a 'plugin-with-transactions.py'
+  example can be added, ideally once the issue is solved.
+  Thanks to Joan Sala for contributing this.
 - core: misadressing when writing disk queue files
   when writing disk queue files during shutdown, access to freed
   memory can occur under these circumstances:
