@@ -36,7 +36,7 @@ Providing Feedback to Rsyslog
 The plugin may convey error information to rsyslog. To do this, set the
 `confirmMessages` flag to `on` in the `omprog` action configuration (this flag
 is disabled by default). When this flag is enabled, rsyslog will wait for a
-confirmation from the plugin after sending every log message to it.
+confirmation from the plugin after sending each log message to it.
 
 The plugin must confirm the message by writing a line with the word `OK` to
 its standard output. That is, the plugin must write the characters `O`, `K` and
@@ -89,8 +89,8 @@ Apart from this facility, rsyslog will ignore the plugin's stderr.
 
 Note: When the `output` setting is specified and `confirmMessages` is set to
 `off`, rsyslog will capture both the stdout and stderr of the plugin to the
-specified file. You can use this to debug your plugin if you think it is not confirming
-the messages as expected.
+specified file. You can use this to debug your plugin if you think it is not
+confirming the messages as expected.
 
 Example implementation
 ----------------------
@@ -185,10 +185,6 @@ confirms the log messages within each transaction with `DEFER_COMMIT`:
     => COMMIT TRANSACTION
     <= OK
 
-Example implementation
-----------------------
-For a reference example of a plugin with transaction support, see [this Python
-plugin skeleton](skeletons/python/plugin-with-feedback.py).
 
 Threading Model
 ===============
