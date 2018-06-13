@@ -1,6 +1,7 @@
 #!/bin/bash
 # add 2018-05-17 by Pascal Withopf, released under ASL 2.0
 . $srcdir/diag.sh init
+. $srcdir/diag.sh check-inotify
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
 module(load="../plugins/imfile/.libs/imfile")
