@@ -7,7 +7,7 @@
  * -n	number of target ports (targets are in range -p..(-p+-n-1)
  *      Note -c must also be set to at LEAST the number of -n!
  * -c	number of connections (default 1), use negative number
- *      to set a "soft limit": if tcpflood cannot open the 
+ *      to set a "soft limit": if tcpflood cannot open the
  *      requested number of connections, gracefully degrade to
  *      whatever number could be opened. This is useful in environments
  *      where system config constraints cannot be overriden (e.g.
@@ -54,6 +54,7 @@
  * -Y	use multiple threads, one per connection (which means 1 if one only connection
  *  	is configured!)
  * -y   use RFC5424 style test message
+ * -x	CA Cert File for verification (TLS Mode / OpenSSL only)
  * -z	private key file for TLS mode
  * -Z	cert (public key) file for TLS mode
  * -L	loglevel to use for GnuTLS troubleshooting (0-off to 10-all, 0 default)
@@ -108,6 +109,26 @@
 #		include <gcrypt.h>
 	GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #	endif
+#endif
+#ifdef ENABLE_OPENSSL
+	#include <openssl/ssl.h>
+	#include <openssl/x509v3.h>
+	#include <openssl/err.h>
+	#include <openssl/engine.h>
+
+	/* OpenSSL API differences */
+	#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+		#define RSYSLOG_X509_NAME_oneline(X509CERT) X509_get_subject_name(X509CERT)
+		#define RSYSLOG_BIO_method_name(SSLBIO) BIO_method_name(SSLBIO)
+		#define RSYSLOG_BIO_number_read(SSLBIO) BIO_number_read(SSLBIO)
+		#define RSYSLOG_BIO_number_written(SSLBIO) BIO_number_written(SSLBIO)
+	#else
+		#define RSYSLOG_X509_NAME_oneline(X509CERT) (X509CERT != NULL ? X509CERT->cert_info->subject : NULL)
+		#define RSYSLOG_BIO_method_name(SSLBIO) SSLBIO->method->name
+		#define RSYSLOG_BIO_number_read(SSLBIO) SSLBIO->num
+		#define RSYSLOG_BIO_number_written(SSLBIO) SSLBIO->num
+	#endif
+
 #endif
 
 char *test_rs_strerror_r(int errnum, char *buf, size_t buflen) {
@@ -174,6 +195,7 @@ static long long batchsize = 100000000ll;
 static int waittime = 0;
 static int runMultithreaded = 0; /* run tests in multithreaded mode */
 static int numThrds = 1;	/* number of threads to use */
+static char *tlsCAFile = NULL;
 static char *tlsCertFile = NULL;
 static char *tlsKeyFile = NULL;
 static int tlsLogLevel = 0;
@@ -183,6 +205,13 @@ static int octateCountFramed = 0;
 #ifdef ENABLE_GNUTLS
 static gnutls_session_t *sessArray;	/* array of TLS sessions to use */
 static gnutls_certificate_credentials_t tlscred;
+#endif
+
+#ifdef ENABLE_OPENSSL
+/* Main OpenSSL CTX pointer */
+static SSL_CTX *ctx;
+static SSL **sslArray;
+// static DH *pDH;
 #endif
 
 /* variables for managing multi-threaded operations */
@@ -318,7 +347,7 @@ int openConn(int *fd, const int connIdx)
 					usleep(100000); /* ms = 1000 us! */
 				}
 			}
-		} 
+		}
 
 		*fd = sock;
 	}
@@ -340,7 +369,9 @@ int openConnections(void)
 
 	if(bShowProgress)
 		if(write(1, "      open connections", sizeof("      open connections")-1)){}
-#	ifdef ENABLE_GNUTLS
+#	if defined(ENABLE_OPENSSL)
+	sslArray = calloc(numConnections, sizeof(sslArray));
+#	elif defined(ENABLE_GNUTLS)
 	sessArray = calloc(numConnections, sizeof(gnutls_session_t));
 #	endif
 	sockArray = calloc(numConnections, sizeof(int));
@@ -666,7 +697,7 @@ int sendMessages(struct instdata *inst)
 				printf("\r%8.8d", i);
 		}
 		if(!runMultithreaded && bRandConnDrop) {
-			/* if we need to randomly drop connections, see if we 
+			/* if we need to randomly drop connections, see if we
 			 * are a victim
 			 */
 			if(rand() > (int) (RAND_MAX * dbRandConnDrop)) {
@@ -734,7 +765,7 @@ prepareGenerators()
 	int i;
 	long long msgsThrd;
 	long long starting = 0;
-	
+
 	if(runMultithreaded) {
 		bSilent = 1;
 		numThrds = numConnections;
@@ -759,7 +790,7 @@ prepareGenerators()
 		instarray[i].numMsgs = msgsThrd;
 		instarray[i].numSent = 0;
 		instarray[i].idx = i;
-		pthread_create(&(instarray[i].thread), NULL, thrdStarter, instarray + i); 
+		pthread_create(&(instarray[i].thread), NULL, thrdStarter, instarray + i);
 		/*printf("started thread %x\n", (unsigned) instarray[i].thread);*/
 		starting += msgsThrd;
 	}
@@ -901,7 +932,344 @@ runTests(void)
 	return 0;
 }
 
-#	if defined(ENABLE_GNUTLS)
+#	if defined(ENABLE_OPENSSL)
+/* OpenSSL implementation of TLS funtions.
+ * alorbach, 2018-06-11
+ */
+
+long BIO_debug_callback(BIO *bio, int cmd, const char __attribute__((unused)) *argp,
+                        int argi, long __attribute__((unused)) argl, long ret)
+{
+    long r = 1;
+
+    if (BIO_CB_RETURN & cmd)
+        r = ret;
+
+    printf("tcpdump: openssl debugmsg: BIO[%p]: ", (void *)bio);
+
+    switch (cmd) {
+    case BIO_CB_FREE:
+        printf("Free - %s\n", RSYSLOG_BIO_method_name(bio));
+        break;
+/* Disabled due API changes for OpenSSL 1.1.0+ */
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    case BIO_CB_READ:
+        if (bio->method->type & BIO_TYPE_DESCRIPTOR)
+            printf("read(%d,%lu) - %s fd=%d\n",
+                         RSYSLOG_BIO_number_read(bio), (unsigned long)argi,
+                         RSYSLOG_BIO_method_name(bio), RSYSLOG_BIO_number_read(bio));
+        else
+            printf("read(%d,%lu) - %s\n",
+                         RSYSLOG_BIO_number_read(bio), (unsigned long)argi, RSYSLOG_BIO_method_name(bio));
+        break;
+    case BIO_CB_WRITE:
+        if (bio->method->type & BIO_TYPE_DESCRIPTOR)
+            printf("write(%d,%lu) - %s fd=%d\n",
+                         RSYSLOG_BIO_number_written(bio), (unsigned long)argi,
+                         RSYSLOG_BIO_method_name(bio), RSYSLOG_BIO_number_written(bio));
+        else
+            printf("write(%d,%lu) - %s\n",
+                         RSYSLOG_BIO_number_written(bio), (unsigned long)argi, RSYSLOG_BIO_method_name(bio));
+        break;
+#else
+    case BIO_CB_READ:
+            printf("read %s\n", RSYSLOG_BIO_method_name(bio));
+        break;
+    case BIO_CB_WRITE:
+            printf("write %s\n", RSYSLOG_BIO_method_name(bio));
+        break;
+#endif
+    case BIO_CB_PUTS:
+        printf("puts() - %s\n", RSYSLOG_BIO_method_name(bio));
+        break;
+    case BIO_CB_GETS:
+        printf("gets(%lu) - %s\n", (unsigned long)argi,
+                     RSYSLOG_BIO_method_name(bio));
+        break;
+    case BIO_CB_CTRL:
+        printf("ctrl(%lu) - %s\n", (unsigned long)argi,
+                     RSYSLOG_BIO_method_name(bio));
+        break;
+    case BIO_CB_RETURN | BIO_CB_READ:
+        printf("read return %ld\n", ret);
+        break;
+    case BIO_CB_RETURN | BIO_CB_WRITE:
+        printf("write return %ld\n", ret);
+        break;
+    case BIO_CB_RETURN | BIO_CB_GETS:
+        printf("gets return %ld\n", ret);
+        break;
+    case BIO_CB_RETURN | BIO_CB_PUTS:
+        printf("puts return %ld\n", ret);
+        break;
+    case BIO_CB_RETURN | BIO_CB_CTRL:
+        printf("ctrl return %ld\n", ret);
+        break;
+    default:
+        printf("bio callback - unknown type (%d)\n", cmd);
+        break;
+    }
+
+    return (r);
+}
+
+void osslLastSSLErrorMsg(int ret, SSL *ssl, const char* pszCallSource)
+{
+	unsigned long un_error = 0;
+	char psz[256];
+	long iMyRet = SSL_get_error(ssl, ret);
+
+	/* Check which kind of error we have */
+	printf("tcpdump: openssl error '%s' with error code=%ld\n", pszCallSource, iMyRet);
+	if(iMyRet == SSL_ERROR_SSL) {
+		/* Loop through errors */
+		while ((un_error = ERR_peek_last_error()) != 0){
+			ERR_error_string_n(un_error, psz, 256);
+			printf("tcpdump: Errorstack: %s\n", psz);
+		}
+
+	} else if(iMyRet == SSL_ERROR_SYSCALL){
+		iMyRet = ERR_get_error();
+		if(ret == 0) {
+			iMyRet = SSL_get_error(ssl, iMyRet);
+			if(iMyRet == 0) {
+				*psz = '\0';
+			} else {
+				ERR_error_string_n(iMyRet, psz, 256);
+			}
+			printf("tcpdump: SysErr: %s\n", psz);
+		} else {
+			/* Loop through errors */
+			while ((un_error = ERR_peek_last_error()) != 0){
+				ERR_error_string_n(un_error, psz, 256);
+				printf("tcpdump: Errorstack: %s\n", psz);
+			}
+		}
+	} else {
+		printf("tcpdump: Unknown SSL Error in '%s' (%d), SSL_get_error: %ld\n",
+			pszCallSource, ret, iMyRet);
+	}
+}
+
+int verify_callback(int status, X509_STORE_CTX *store)
+{
+	char szdbgdata1[256];
+	char szdbgdata2[256];
+
+	if(status == 0) {
+		printf("tcpdump: verify_callback certificate validation failed!\n");
+
+		X509 *cert = X509_STORE_CTX_get_current_cert(store);
+		int depth = X509_STORE_CTX_get_error_depth(store);
+		int err = X509_STORE_CTX_get_error(store);
+		X509_NAME_oneline(X509_get_issuer_name(cert), szdbgdata1, sizeof(szdbgdata1));
+		X509_NAME_oneline(RSYSLOG_X509_NAME_oneline(cert), szdbgdata2, sizeof(szdbgdata2));
+
+		/* Log Warning only on EXPIRED */
+		if (err == X509_V_OK || err == X509_V_ERR_CERT_HAS_EXPIRED) {
+			printf(
+				"tcpdump: Certificate warning at depth: %d \n\t"
+				"issuer  = %s\n\t"
+				"subject = %s\n\t"
+				"err %d:%s\n",
+				depth, szdbgdata1, szdbgdata2, err, X509_verify_cert_error_string(err));
+
+			/* Set Status to OK*/
+			status = 1;
+		} else {
+			printf(
+				"tcpdump: Certificate error at depth: %d \n\t"
+				"issuer  = %s\n\t"
+				"subject = %s\n\t"
+				"err %d:%s\n",
+				depth, szdbgdata1, szdbgdata2, err, X509_verify_cert_error_string(err));
+//			exit(1);
+		}
+	}
+	return status;
+}
+
+
+/* global init OpenSSL
+ */
+static void
+initTLS(void)
+{
+
+	/* Setup OpenSSL library */
+	if( /*(opensslh_THREAD_setup() == 0) || */ !SSL_library_init()) {
+		printf("tcpdump: error openSSL initialization failed!\n");
+		exit(1);
+	}
+
+	/* Load readable error strings */
+	SSL_load_error_strings();
+	ERR_load_BIO_strings();
+	ERR_load_crypto_strings();
+
+	/* Create main CTX Object */
+	ctx = SSL_CTX_new(SSLv23_method());
+
+	if(tlsCAFile != NULL && SSL_CTX_load_verify_locations(ctx, tlsCAFile, NULL) != 1) {
+		printf("tcpdump: Error, Failed loading CA certificate"
+				" Is the file at the right path? And do we have the permissions?");
+		exit(1);
+	}
+	if(SSL_CTX_use_certificate_file(ctx, tlsCertFile, SSL_FILETYPE_PEM) != 1) {
+		printf("tcpdump: error cert file could not be accessed -- have you mixed up key and certificate?\n");
+		printf("If in doubt, try swapping the files in -z/-Z\n");
+		printf("Certifcate is: '%s'\n", tlsCertFile);
+		printf("Key        is: '%s'\n", tlsKeyFile);
+		exit(1);
+	}
+	if(SSL_CTX_use_PrivateKey_file(ctx, tlsKeyFile, SSL_FILETYPE_PEM) != 1) {
+		printf("tcpdump: error key file could not be accessed -- have you mixed up key and certificate?\n");
+		printf("If in doubt, try swapping the files in -z/-Z\n");
+		printf("Certifcate is: '%s'\n", tlsCertFile);
+		printf("Key        is: '%s'\n", tlsKeyFile);
+		exit(1);
+	}
+
+	/* Set CTX Options */
+	SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2);		/* Disable insecure SSLv2 Protocol */
+	SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv3);		/* Disable insecure SSLv3 Protocol */
+	SSL_CTX_sess_set_cache_size(ctx,1024);
+	/* DO ONLY SUPPORT DEFAULT CIPHERS YET
+	* SSL_CTX_set_cipher_list(ctx,"ALL");			 Support all ciphers */
+
+/*	// Create Extra Length DH!
+	pDH = DH_new();
+	if ( !DH_generate_parameters_ex(pDH, 768, DH_GENERATOR_2, NULL) )
+	{
+		if(pDH)
+			DH_free(pDH);
+
+		fprintf(stderr, "Failed to generated dynamic DH\n");
+		exit(1);
+	}
+	else
+	{
+		int iErrCheck = 0;
+		if ( !DH_check( pDH, &iErrCheck) )
+		{
+			fprintf(stderr, "Failed to generated dynamic DH - iErrCheck=%d\n", iErrCheck);
+			exit(1);
+		}
+	}
+*/
+	/* Set default VERIFY Options for OpenSSL CTX - and CALLBACK */
+	SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, verify_callback);
+
+	SSL_CTX_set_timeout(ctx, 30);	/* Default Session Timeout, TODO: Make configureable */
+	SSL_CTX_set_mode(ctx, SSL_MODE_AUTO_RETRY);
+}
+
+static void
+exitTLS(void)
+{
+	SSL_CTX_free(ctx);
+	ENGINE_cleanup();
+	ERR_free_strings();
+	EVP_cleanup();
+	CRYPTO_cleanup_all_ex_data();
+}
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
+static void
+initTLSSess(int i)
+{
+	int res;
+	BIO *client;
+	SSL* pNewSsl = SSL_new(ctx);
+
+	sslArray[i] = pNewSsl;
+
+	if(!sslArray[i]) {
+		osslLastSSLErrorMsg(0, sslArray[i], "initTLSSess1");
+	}
+
+	SSL_set_verify(sslArray[i], SSL_VERIFY_NONE, verify_callback);
+
+	/* Create BIO from socket array! */
+	client = BIO_new_socket(sockArray[i], BIO_CLOSE /*BIO_NOCLOSE*/);
+	if (client == NULL) {
+		osslLastSSLErrorMsg(0, sslArray[i], "initTLSSess2");
+		exit(1);
+	} else {
+	//	printf("initTLSSess: Init client BIO[%p] done\n", (void *)client);
+	}
+
+	if(tlsLogLevel > 0) {
+		/* Set debug Callback for client BIO as well! */
+		BIO_set_callback(client, BIO_debug_callback);
+	}
+
+	/* Blocking socket */
+	BIO_set_nbio( client, 0 );
+	SSL_set_bio(sslArray[i], client, client);
+	SSL_set_connect_state(sslArray[i]); /*sets ssl to work in client mode.*/
+
+	/* Perform the TLS handshake */
+	if((res = SSL_do_handshake(sslArray[i])) <= 0) {
+		osslLastSSLErrorMsg(res, sslArray[i], "initTLSSess3");
+		exit(1);
+	}
+}
+#pragma GCC diagnostic pop
+
+
+static int
+sendTLS(int i, char *buf, int lenBuf)
+{
+	int lenSent;
+	int r, err;
+
+	lenSent = 0;
+	while(lenSent != lenBuf) {
+		r = SSL_write(sslArray[i], buf + lenSent, lenBuf - lenSent);
+		if(r > 0) {
+			lenSent += r;
+		} else {
+			err = SSL_get_error(sslArray[i], r);
+			if(err != SSL_ERROR_ZERO_RETURN && err != SSL_ERROR_WANT_READ &&
+				err != SSL_ERROR_WANT_WRITE) {
+				/*SSL_ERROR_ZERO_RETURN: TLS connection has been closed. This
+				 * result code is returned only if a closure alert has occurred
+				 * in the protocol, i.e. if the connection has been closed cleanly.
+				 *SSL_ERROR_WANT_READ/WRITE: The operation did not complete, try
+				 * again later. */
+				printf("Error while sending data: "
+						"[%d] %s", err, ERR_error_string(err, NULL));
+				printf("Error is: %s",
+						ERR_reason_error_string(err));
+			} else {
+				/* Check for SSL Shutdown */
+				if (SSL_get_shutdown(sslArray[i]) == SSL_RECEIVED_SHUTDOWN) {
+					printf("received SSL_RECEIVED_SHUTDOWN!\n");
+				} else {
+					printf("Error while sending data: "
+							"[%d] %s", err, ERR_error_string(err, NULL));
+					printf("Error is: %s",
+							ERR_reason_error_string(err));
+				}
+			}
+			exit(1);
+		}
+	}
+
+	return lenSent;
+}
+
+static void
+closeTLSSess(int i)
+{
+	int r;
+	printf("closeTLSSess: closing SSL Session ...\n");
+	r = SSL_shutdown(sslArray[i]);
+	SSL_free(sslArray[i]);
+}
+#	elif defined(ENABLE_GNUTLS)
 /* This defines a log function to be provided to GnuTLS. It hopefully
  * helps us track down hard to find problems.
  * rgerhards, 2008-06-20
@@ -909,9 +1277,12 @@ runTests(void)
 static void tlsLogFunction(int level, const char *msg)
 {
 	printf("GnuTLS (level %d): %s", level, msg);
-
 }
 
+static void
+exitTLS(void)
+{
+}
 
 /* global init GnuTLS
  */
@@ -1016,6 +1387,7 @@ closeTLSSess(int i)
 }
 #	else	/* NO TLS available */
 static void initTLS(void) {}
+static void exitTLS(void) {}
 static void initTLSSess(int __attribute__((unused)) i) {}
 static int sendTLS(int __attribute__((unused)) i, char __attribute__((unused)) *buf,
 	int __attribute__((unused)) lenBuf) { return 0; }
@@ -1044,8 +1416,8 @@ int main(int argc, char *argv[])
 	sigaction(SIGPIPE, &sigAct, NULL);
 
 	setvbuf(stdout, buf, _IONBF, 48);
-	
-	while((opt = getopt(argc, argv, "b:ef:F:t:p:c:C:m:i:I:P:d:Dn:l:L:M:rsBR:S:T:XW:yYz:Z:j:Ov")) != -1) {
+
+	while((opt = getopt(argc, argv, "b:ef:F:t:p:c:C:m:i:I:P:d:Dn:l:L:M:rsBR:S:T:x:XW:yYz:Z:j:Ov")) != -1) {
 		switch (opt) {
 		case 'b':	batchsize = atoll(optarg);
 				break;
@@ -1080,8 +1452,8 @@ int main(int argc, char *argv[])
 				break;
 		case 'D':	bRandConnDrop = 1;
 				break;
-		case 'l':	
-					dbRandConnDrop = atof(optarg); 
+		case 'l':
+					dbRandConnDrop = atof(optarg);
 					printf("RandConnDrop Level: '%lf' \n", dbRandConnDrop);
 				break;
 		case 'r':	bRandomizeExtraData = 1;
@@ -1117,10 +1489,12 @@ int main(int argc, char *argv[])
 				} else if(!strcmp(optarg, "tcp")) {
 					transport = TP_TCP;
 				} else if(!strcmp(optarg, "tls")) {
-#					if defined(ENABLE_GNUTLS)
+#					if defined(ENABLE_OPENSSL)
+						transport = TP_TLS;
+#					elif defined(ENABLE_GNUTLS)
 						transport = TP_TLS;
 #					else
-						fprintf(stderr, "compiled without TLS support: "
+						fprintf(stderr, "compiled without gnutls/openssl TLS support: "
 							"\"-Ttls\" not supported!\n");
 						exit(1);
 #					endif
@@ -1145,12 +1519,19 @@ int main(int argc, char *argv[])
 				break;
 		case 'y':	useRFC5424Format = 1;
 				break;
+		case 'x':
+#			if defined(ENABLE_OPENSSL)
+				tlsCAFile = optarg;
+#			else
+				fprintf(stderr, "-x CAFile not supported \n");
+#			endif
+				break;
 		case 'z':	tlsKeyFile = optarg;
 				break;
 		case 'Z':	tlsCertFile = optarg;
 				break;
 		case 'O':	octateCountFramed = 1;
-				break;				
+				break;
 		case 'v':	verbose = 1;
 				break;
 		default:	printf("invalid option '%c' or value missing - terminating...\n", opt);
@@ -1187,7 +1568,7 @@ int main(int argc, char *argv[])
 			exit(1);
 		}
 	}
-	
+
 	if(dataFile != NULL) {
 		if((dataFP = fopen(dataFile, "r")) == NULL) {
 			perror(dataFile);
@@ -1234,6 +1615,10 @@ int main(int argc, char *argv[])
 
 	if(!bSilent)
 		printf("End of tcpflood Run\n");
+
+	if(transport == TP_TLS) {
+		exitTLS();
+	}
 
 	exit(ret);
 }

@@ -1,8 +1,9 @@
-/* nsdsel_gtls.c
+/* nsdsel_ossl.c
  *
- * An implementation of the nsd select() interface for GnuTLS.
+ * An implementation of the nsd select() interface for OpenSSL.
  *
- * Copyright (C) 2008-2016 Adiscon GmbH.
+ * Copyright (C) 2018-2018 Adiscon GmbH.
+ * Author: Andre Lorbach
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -27,17 +28,18 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/select.h>
-#include <gnutls/gnutls.h>
+#include <openssl/ssl.h>
+#include <openssl/bio.h>
 
 #include "rsyslog.h"
 #include "module-template.h"
 #include "obj.h"
 #include "errmsg.h"
 #include "nsd.h"
-#include "nsd_gtls.h"
+#include "nsd_ossl.h"
 #include "nsd_ptcp.h"
 #include "nsdsel_ptcp.h"
-#include "nsdsel_gtls.h"
+#include "nsdsel_ossl.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -45,7 +47,7 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(nsdsel_ptcp)
 
 static rsRetVal
-gtlsHasRcvInBuffer(nsd_gtls_t *pThis)
+osslHasRcvInBuffer(nsd_ossl_t *pThis)
 {
 	/* we have a valid receive buffer one such is allocated and
 	 * NOT exhausted!
@@ -53,22 +55,22 @@ gtlsHasRcvInBuffer(nsd_gtls_t *pThis)
 	DBGPRINTF("hasRcvInBuffer on nsd %p: pszRcvBuf %p, lenRcvBuf %d\n", pThis,
 		pThis->pszRcvBuf, pThis->lenRcvBuf);
 	return(pThis->pszRcvBuf != NULL && pThis->lenRcvBuf != -1);
-	}
+}
 
 
 /* Standard-Constructor
  */
-BEGINobjConstruct(nsdsel_gtls) /* be sure to specify the object type also in END macro! */
+BEGINobjConstruct(nsdsel_ossl) /* be sure to specify the object type also in END macro! */
 	iRet = nsdsel_ptcp.Construct(&pThis->pTcp);
-ENDobjConstruct(nsdsel_gtls)
+ENDobjConstruct(nsdsel_ossl)
 
 
-/* destructor for the nsdsel_gtls object */
-BEGINobjDestruct(nsdsel_gtls) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(nsdsel_gtls)
+/* destructor for the nsdsel_ossl object */
+BEGINobjDestruct(nsdsel_ossl) /* be sure to specify the object type also in END and CODESTART macros! */
+CODESTARTobjDestruct(nsdsel_ossl)
 	if(pThis->pTcp != NULL)
 		nsdsel_ptcp.Destruct(&pThis->pTcp);
-ENDobjDestruct(nsdsel_gtls)
+ENDobjDestruct(nsdsel_ossl)
 
 
 /* Add a socket to the select set */
@@ -76,31 +78,55 @@ static rsRetVal
 Add(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp)
 {
 	DEFiRet;
-	nsdsel_gtls_t *pThis = (nsdsel_gtls_t*) pNsdsel;
-	nsd_gtls_t *pNsdGTLS = (nsd_gtls_t*) pNsd;
+	nsdsel_ossl_t *pThis = (nsdsel_ossl_t*) pNsdsel;
+	nsd_ossl_t *pNsdOSSL = (nsd_ossl_t*) pNsd;
 
-	ISOBJ_TYPE_assert(pThis, nsdsel_gtls);
-	ISOBJ_TYPE_assert(pNsdGTLS, nsd_gtls);
-	if(pNsdGTLS->iMode == 1) {
-		if(waitOp == NSDSEL_RD && gtlsHasRcvInBuffer(pNsdGTLS)) {
+	ISOBJ_TYPE_assert(pThis, nsdsel_ossl);
+	ISOBJ_TYPE_assert(pNsdOSSL, nsd_ossl);
+	if(pNsdOSSL->iMode == 1) {
+		if(waitOp == NSDSEL_RD && osslHasRcvInBuffer(pNsdOSSL)) {
 			++pThis->iBufferRcvReady;
-			dbgprintf("nsdsel_gtls: data already present in buffer, initiating "
+			dbgprintf("nsdsel_ossl: data already present in buffer, initiating "
 				  "dummy select %p->iBufferRcvReady=%d\n",
 				  pThis, pThis->iBufferRcvReady);
 			FINALIZE;
 		}
-		if(pNsdGTLS->rtryCall != gtlsRtry_None) {
-			if(gnutls_record_get_direction(pNsdGTLS->sess) == 0) {
-				CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdGTLS->pTcp, NSDSEL_RD));
+		if(pNsdOSSL->rtryCall != osslRtry_None) {
+/* // VERBOSE
+dbgprintf("nsdsel_ossl: rtryOsslErr=%d ... \n", pNsdOSSL->rtryOsslErr);
+*/
+			if (pNsdOSSL->rtryOsslErr == SSL_ERROR_WANT_READ) {
+				CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdOSSL->pTcp, NSDSEL_RD));
+				FINALIZE;
+			} else if (pNsdOSSL->rtryOsslErr == SSL_ERROR_WANT_READ) {
+				CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdOSSL->pTcp, NSDSEL_WR));
+				FINALIZE;
 			} else {
-				CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdGTLS->pTcp, NSDSEL_WR));
+				dbgprintf("nsdsel_ossl: rtryCall=%d, rtryOsslErr=%d, unexpected ... help?! ... \n",
+					pNsdOSSL->rtryCall, pNsdOSSL->rtryOsslErr);
+				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 			}
-			FINALIZE;
+
+			/*
+			# define SSL_NOTHING            1
+			# define SSL_WRITING            2
+			# define SSL_READING            3
+			# define SSL_X509_LOOKUP        4
+			iwant = SSL_want(pNsdOSSL->ssl);
+			if(iwant == SSL_READING) {
+			} else if(iwant == SSL_WRITING) {
+			} else {
+			}
+			*/
+		} else {
+			dbgprintf("nsdsel_ossl: rtryCall=%d, nothing to do ... \n",
+				pNsdOSSL->rtryCall);
 		}
 	}
 
+	dbgprintf("nsdsel_ossl: reached end, calling nsdsel_ptcp.Add with waitOp %d... \n", waitOp);
 	/* if we reach this point, we need no special handling */
-	CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdGTLS->pTcp, waitOp));
+	CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdOSSL->pTcp, waitOp));
 
 finalize_it:
 	RETiRet;
@@ -114,13 +140,13 @@ static rsRetVal
 Select(nsdsel_t *pNsdsel, int *piNumReady)
 {
 	DEFiRet;
-	nsdsel_gtls_t *pThis = (nsdsel_gtls_t*) pNsdsel;
+	nsdsel_ossl_t *pThis = (nsdsel_ossl_t*) pNsdsel;
 
-	ISOBJ_TYPE_assert(pThis, nsdsel_gtls);
+	ISOBJ_TYPE_assert(pThis, nsdsel_ossl);
 	if(pThis->iBufferRcvReady > 0) {
 		/* we still have data ready! */
 		*piNumReady = pThis->iBufferRcvReady;
-		dbgprintf("nsdsel_gtls: doing dummy select, data present\n");
+		dbgprintf("nsdsel_ossl: doing dummy select, data present\n");
 	} else {
 		iRet = nsdsel_ptcp.Select(pThis->pTcp, piNumReady);
 	}
@@ -129,16 +155,16 @@ Select(nsdsel_t *pNsdsel, int *piNumReady)
 }
 
 
-/* retry an interrupted GTLS operation
+/* retry an interrupted OSSL operation
  * rgerhards, 2008-04-30
  */
 static rsRetVal
-doRetry(nsd_gtls_t *pNsd)
+doRetry(nsd_ossl_t *pNsd)
 {
 	DEFiRet;
-	int gnuRet;
+	nsd_ossl_t *pNsdOSSL = (nsd_ossl_t*) pNsd;
 
-	dbgprintf("GnuTLS requested retry of %d operation - executing\n", pNsd->rtryCall);
+	dbgprintf("doRetry: requested retry of %d operation - executing\n", pNsd->rtryCall);
 
 	/* We follow a common scheme here: first, we do the systen call and
 	 * then we check the result. So far, the result is checked after the
@@ -148,42 +174,23 @@ doRetry(nsd_gtls_t *pNsd)
 	 * for relp). -- rgerhards, 2008-04-30
 	 */
 	switch(pNsd->rtryCall) {
-		case gtlsRtry_handshake:
-			gnuRet = gnutls_handshake(pNsd->sess);
-			if(gnuRet == 0) {
-				pNsd->rtryCall = gtlsRtry_None; /* we are done */
-				/* we got a handshake, now check authorization */
-				CHKiRet(gtlsChkPeerAuth(pNsd));
-			}
+		case osslRtry_handshake:
+			dbgprintf("doRetry: start osslHandshakeCheck, nsd: %p\n", pNsd);
+			/* Do the handshake again*/
+			CHKiRet(osslHandshakeCheck(pNsdOSSL));
+			pNsd->rtryCall = osslRtry_None; /* we are done */
 			break;
-		case gtlsRtry_recv:
-			dbgprintf("retrying gtls recv, nsd: %p\n", pNsd);
-			CHKiRet(gtlsRecordRecv(pNsd));
-			pNsd->rtryCall = gtlsRtry_None; /* we are done */
-			gnuRet = 0;
+		case osslRtry_recv:
+			dbgprintf("doRetry: retrying ossl recv, nsd: %p\n", pNsd);
+			CHKiRet(osslRecordRecv(pNsd));
+			pNsd->rtryCall = osslRtry_None; /* we are done */
 			break;
-		case gtlsRtry_None:
+		case osslRtry_None:
 		default:
 			assert(0); /* this shall not happen! */
-			dbgprintf("ERROR: pNsd->rtryCall invalid in nsdsel_gtls.c:%d\n", __LINE__);
-			gnuRet = 0; /* if it happens, we have at least a defined behaviour... ;) */
+			dbgprintf("doRetry: ERROR, pNsd->rtryCall invalid in nsdsel_ossl.c:%d\n", __LINE__);
 			break;
 	}
-
-	if(gnuRet == 0) {
-		pNsd->rtryCall = gtlsRtry_None; /* we are done */
-	} else if(gnuRet != GNUTLS_E_AGAIN && gnuRet != GNUTLS_E_INTERRUPTED) {
-		uchar *pErr = gtlsStrerror(gnuRet);
-		LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n",
-		gnuRet, __FILE__, __LINE__, pErr); \
-		free(pErr);
-		pNsd->rtryCall = gtlsRtry_None; /* we are also done... ;) */
-		ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
-	}
-	/* if we are interrupted once again (else case), we do not need to
-	 * change our status because we are already setup for retries.
-	 */
-
 finalize_it:
 	if(iRet != RS_RET_OK && iRet != RS_RET_CLOSED && iRet != RS_RET_RETRY)
 		pNsd->bAbortConn = 1; /* request abort */
@@ -196,29 +203,27 @@ static rsRetVal
 IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
 {
 	DEFiRet;
-	nsdsel_gtls_t *pThis = (nsdsel_gtls_t*) pNsdsel;
-	nsd_gtls_t *pNsdGTLS = (nsd_gtls_t*) pNsd;
+	nsdsel_ossl_t *pThis = (nsdsel_ossl_t*) pNsdsel;
+	nsd_ossl_t *pNsdOSSL = (nsd_ossl_t*) pNsd;
 
-	ISOBJ_TYPE_assert(pThis, nsdsel_gtls);
-	ISOBJ_TYPE_assert(pNsdGTLS, nsd_gtls);
-	if(pNsdGTLS->iMode == 1) {
-		if(waitOp == NSDSEL_RD && gtlsHasRcvInBuffer(pNsdGTLS)) {
+	ISOBJ_TYPE_assert(pThis, nsdsel_ossl);
+	ISOBJ_TYPE_assert(pNsdOSSL, nsd_ossl);
+	if(pNsdOSSL->iMode == 1) {
+		if(waitOp == NSDSEL_RD && osslHasRcvInBuffer(pNsdOSSL)) {
 			*pbIsReady = 1;
 			--pThis->iBufferRcvReady; /* one "pseudo-read" less */
-			dbgprintf("nsdl_gtls: dummy read, decermenting %p->iBufRcvReady, now %d\n",
-				   pThis, pThis->iBufferRcvReady);
 			FINALIZE;
 		}
-		if(pNsdGTLS->rtryCall == gtlsRtry_handshake) {
-			CHKiRet(doRetry(pNsdGTLS));
+		if(pNsdOSSL->rtryCall == osslRtry_handshake) {
+			CHKiRet(doRetry(pNsdOSSL));
 			/* we used this up for our own internal processing, so the socket
 			 * is not ready from the upper layer point of view.
 			 */
 			*pbIsReady = 0;
 			FINALIZE;
 		}
-		else if(pNsdGTLS->rtryCall == gtlsRtry_recv) {
-			iRet = doRetry(pNsdGTLS);
+		else if(pNsdOSSL->rtryCall == osslRtry_recv) {
+			iRet = doRetry(pNsdOSSL);
 			if(iRet == RS_RET_OK) {
 				*pbIsReady = 0;
 				FINALIZE;
@@ -231,25 +236,24 @@ IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
 		 * socket. -- rgerhards, 2010-11-20
 		 */
 		if(pThis->iBufferRcvReady) {
-			dbgprintf("nsd_gtls: dummy read, buffer not available for this FD\n");
 			*pbIsReady = 0;
 			FINALIZE;
 		}
 	}
-
-	CHKiRet(nsdsel_ptcp.IsReady(pThis->pTcp, pNsdGTLS->pTcp, waitOp, pbIsReady));
+/* // VERBOSE
+dbgprintf("nsdl_ossl: IsReady before nsdsel_ptcp.IsReady for %p\n", pThis);
+*/
+	CHKiRet(nsdsel_ptcp.IsReady(pThis->pTcp, pNsdOSSL->pTcp, waitOp, pbIsReady));
 
 finalize_it:
 	RETiRet;
 }
-
-
 /* ------------------------------ end support for the select() interface ------------------------------ */
 
 
 /* queryInterface function */
-BEGINobjQueryInterface(nsdsel_gtls)
-CODESTARTobjQueryInterface(nsdsel_gtls)
+BEGINobjQueryInterface(nsdsel_ossl)
+CODESTARTobjQueryInterface(nsdsel_ossl)
 	if(pIf->ifVersion != nsdCURR_IF_VERSION) {/* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
@@ -259,35 +263,35 @@ CODESTARTobjQueryInterface(nsdsel_gtls)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	pIf->Construct = (rsRetVal(*)(nsdsel_t**)) nsdsel_gtlsConstruct;
-	pIf->Destruct = (rsRetVal(*)(nsdsel_t**)) nsdsel_gtlsDestruct;
+	pIf->Construct = (rsRetVal(*)(nsdsel_t**)) nsdsel_osslConstruct;
+	pIf->Destruct = (rsRetVal(*)(nsdsel_t**)) nsdsel_osslDestruct;
 	pIf->Add = Add;
 	pIf->Select = Select;
 	pIf->IsReady = IsReady;
 finalize_it:
-ENDobjQueryInterface(nsdsel_gtls)
+ENDobjQueryInterface(nsdsel_ossl)
 
 
 /* exit our class
  */
-BEGINObjClassExit(nsdsel_gtls, OBJ_IS_CORE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(nsdsel_gtls)
+BEGINObjClassExit(nsdsel_ossl, OBJ_IS_CORE_MODULE) /* CHANGE class also in END MACRO! */
+CODESTARTObjClassExit(nsdsel_ossl)
 	/* release objects we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(nsdsel_ptcp, LM_NSD_PTCP_FILENAME);
-ENDObjClassExit(nsdsel_gtls)
+ENDObjClassExit(nsdsel_ossl)
 
 
-/* Initialize the nsdsel_gtls class. Must be called as the very first method
+/* Initialize the nsdsel_ossl class. Must be called as the very first method
  * before anything else is called inside this class.
  * rgerhards, 2008-02-19
  */
-BEGINObjClassInit(nsdsel_gtls, 1, OBJ_IS_CORE_MODULE) /* class, version */
+BEGINObjClassInit(nsdsel_ossl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(nsdsel_ptcp, LM_NSD_PTCP_FILENAME));
 
 	/* set our own handlers */
-ENDObjClassInit(nsdsel_gtls)
+ENDObjClassInit(nsdsel_ossl)
 /* vi:set ai:
  */

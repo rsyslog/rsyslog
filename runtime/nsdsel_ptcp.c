@@ -1,7 +1,7 @@
 /* nsdsel_ptcp.c
  *
  * An implementation of the nsd select() interface for plain tcp sockets.
- * 
+ *
  * Copyright 2008-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
@@ -97,7 +97,7 @@ finalize_it:
 }
 
 
-/* perform the select()  piNumReady returns how many descriptors are ready for IO 
+/* perform the select()  piNumReady returns how many descriptors are ready for IO
  * TODO: add timeout!
  */
 static rsRetVal ATTR_NONNULL()

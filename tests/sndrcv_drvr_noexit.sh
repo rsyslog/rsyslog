@@ -50,4 +50,4 @@ sleep 5 # make sure all data is received in input buffers
 
 # may be needed by TLS (once we do it): sleep 60
 # do the final check
-. $srcdir/diag.sh seq-check 1 $2
+. $srcdir/diag.sh seq-check 1 $2 $3
