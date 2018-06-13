@@ -18,3 +18,4 @@ Current Network Stream Drivers
    
    ns_ptcp
    ns_gtls
+   ns_ossl
