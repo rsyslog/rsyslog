@@ -25,6 +25,7 @@
 #include "nsd.h"
 
 #define NSD_GTLS_MAX_RCVBUF 8 * 1024 /* max size of buffer for message reception */
+#define NSD_GTLS_MAX_CERT 10 /* max number of certs in our chain */
 
 typedef enum {
 	gtlsRtry_None = 0,	/**< no call needs to be retried */
@@ -60,7 +61,9 @@ struct nsd_gtls_s {
 				 * one successful authentication. */
 	permittedPeers_t *pPermPeers; /* permitted peers */
 	uchar *gnutlsPriorityString;	/* gnutls priority string */
-	gnutls_x509_crt_t ourCert;	/**< our certificate, if in client mode (unused in server mode) */
+	gnutls_x509_crt_t pOurCerts[NSD_GTLS_MAX_CERT];	/**< our certificate, if in client mode
+							(unused in server mode) */
+	unsigned int nOurCerts;  /* number of certificates in our chain */
 	gnutls_x509_privkey_t ourKey;	/**< our private key, if in client mode (unused in server mode) */
 	short	bOurCertIsInit;	/**< 1 if our certificate is initialized and must be deinit on destruction */
 	short	bOurKeyIsInit;	/**< 1 if our private key is initialized and must be deinit on destruction */

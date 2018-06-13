@@ -182,6 +182,7 @@ gtlsLoadOurCertKey(nsd_gtls_t *pThis)
 	gnutls_datum_t data = { NULL, 0 };
 	uchar *keyFile;
 	uchar *certFile;
+	int lenRcvd;
 
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
@@ -201,9 +202,12 @@ gtlsLoadOurCertKey(nsd_gtls_t *pThis)
 
 	/* try load certificate */
 	CHKiRet(readFile(certFile, &data));
-	CHKgnutls(gnutls_x509_crt_init(&pThis->ourCert));
+	pThis->nOurCerts=sizeof(pThis->pOurCerts);
+	lenRcvd=gnutls_x509_crt_list_import(pThis->pOurCerts, &pThis->nOurCerts, &data, GNUTLS_X509_FMT_PEM,0);
+	if (lenRcvd<0) {
+		CHKgnutls(lenRcvd);
+	}
 	pThis->bOurCertIsInit = 1;
-	CHKgnutls(gnutls_x509_crt_import(pThis->ourCert, &data, GNUTLS_X509_FMT_PEM));
 	free(data.data);
 	data.data = NULL;
 
@@ -219,7 +223,9 @@ finalize_it:
 		if(data.data != NULL)
 			free(data.data);
 		if(pThis->bOurCertIsInit) {
-			gnutls_x509_crt_deinit(pThis->ourCert);
+			for(unsigned i=0; i<pThis->nOurCerts; ++i) {
+				gnutls_x509_crt_deinit(pThis->pOurCerts[i]);
+			}
 			pThis->bOurCertIsInit = 0;
 		}
 		if(pThis->bOurKeyIsInit) {
@@ -264,8 +270,8 @@ gtlsClientCertCallback(gnutls_session_t session,
 #else
 	st->type = GNUTLS_CRT_X509;
 #endif
-	st->ncerts = 1;
-	st->cert.x509 = &pThis->ourCert;
+	st->ncerts = pThis->nOurCerts;
+	st->cert.x509 = pThis->pOurCerts;
 	st->key.x509 = pThis->ourKey;
 	st->deinit_all = 0;
 
@@ -1219,7 +1225,9 @@ CODESTARTobjDestruct(nsd_gtls)
 	}
 
 	if(pThis->bOurCertIsInit)
-		gnutls_x509_crt_deinit(pThis->ourCert);
+                  for(unsigned i=0; i<pThis->nOurCerts; ++i) {
+			gnutls_x509_crt_deinit(pThis->pOurCerts[i]);
+                  }
 	if(pThis->bOurKeyIsInit)
 		gnutls_x509_privkey_deinit(pThis->ourKey);
 	if(pThis->bHaveSess)
