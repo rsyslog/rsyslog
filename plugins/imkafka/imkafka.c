@@ -57,7 +57,6 @@ MODULE_CNFNAME("imkafka")
 /* static data */
 DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(prop)
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(ruleset)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(statsobj)
@@ -314,7 +313,7 @@ checkInstance(instanceConf_t *const inst)
 	inst->conf = rd_kafka_conf_new();
 	if(inst->conf == NULL) {
 		if(inst->bReportErrs) {
-			errmsg.LogError(0, RS_RET_KAFKA_ERROR,
+			LogError(0, RS_RET_KAFKA_ERROR,
 				"imkafka: error creating kafka conf obj: %s\n",
 				rd_kafka_err2str(rd_kafka_last_error()));
 		}
@@ -340,7 +339,7 @@ checkInstance(instanceConf_t *const inst)
 			inst->confParams[i].val,
 			kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
 			if(inst->bReportErrs) {
-				errmsg.LogError(0, RS_RET_PARAM_ERROR, "imkafka: error in kafka "
+				LogError(0, RS_RET_PARAM_ERROR, "imkafka: error in kafka "
 					"parameter '%s=%s': %s",
 					inst->confParams[i].name,
 					inst->confParams[i].val, kafkaErrMsg);
@@ -358,7 +357,7 @@ checkInstance(instanceConf_t *const inst)
 		if (rd_kafka_conf_set(inst->conf, "group.id", (char*) inst->consumergroup,
 			kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
 			if(inst->bReportErrs) {
-				errmsg.LogError(0, RS_RET_KAFKA_ERROR,
+				LogError(0, RS_RET_KAFKA_ERROR,
 					"imkafka: error assigning consumergroup %s to "
 					"kafka config: %s\n", inst->consumergroup,
 					kafkaErrMsg);
@@ -371,7 +370,7 @@ checkInstance(instanceConf_t *const inst)
 		if (rd_kafka_topic_conf_set(inst->topic_conf, "auto.offset.reset",
 			"smallest", kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
 			if(inst->bReportErrs) {
-				errmsg.LogError(0, RS_RET_KAFKA_ERROR,
+				LogError(0, RS_RET_KAFKA_ERROR,
 					"imkafka: error setting kafka auto.offset.reset on %s: %s\n",
 					inst->consumergroup,
 					kafkaErrMsg);
@@ -382,7 +381,7 @@ checkInstance(instanceConf_t *const inst)
 		if (rd_kafka_topic_conf_set(inst->topic_conf, "offset.store.method",
 			"broker", kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
 			if(inst->bReportErrs) {
-				errmsg.LogError(0, RS_RET_KAFKA_ERROR,
+				LogError(0, RS_RET_KAFKA_ERROR,
 					"imkafka: error setting kafka offset.store.method on %s: %s\n",
 					inst->consumergroup,
 					kafkaErrMsg);
@@ -403,7 +402,7 @@ checkInstance(instanceConf_t *const inst)
 				     kafkaErrMsg, sizeof(kafkaErrMsg));
 	if(inst->rk == NULL) {
 		if(inst->bReportErrs) {
-			errmsg.LogError(0, RS_RET_KAFKA_ERROR,
+			LogError(0, RS_RET_KAFKA_ERROR,
 				"imkafka: error creating kafka handle: %s\n", kafkaErrMsg);
 		}
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
@@ -415,7 +414,7 @@ checkInstance(instanceConf_t *const inst)
    	DBGPRINTF("imkafka: setting brokers: '%s'\n", inst->brokers);
 	if((nBrokers = rd_kafka_brokers_add(inst->rk, (char*)inst->brokers)) == 0) {
 		if(inst->bReportErrs) {
-			errmsg.LogError(0, RS_RET_KAFKA_NO_VALID_BROKERS,
+			LogError(0, RS_RET_KAFKA_NO_VALID_BROKERS,
 				"imkafka: no valid brokers specified: %s", inst->brokers);
 		}
 		ABORT_FINALIZE(RS_RET_KAFKA_NO_VALID_BROKERS);
@@ -445,7 +444,7 @@ static inline void
 std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst)
 {
 	if(inst->bReportErrs) {
-		errmsg.LogError(0, NO_ERRCODE, "imkafka: ruleset '%s' not found - "
+		LogError(0, NO_ERRCODE, "imkafka: ruleset '%s' not found - "
 			"using default ruleset instead",
 			inst->pszBindRuleset);
 	}
@@ -497,7 +496,7 @@ processKafkaParam(char *const param,
 	DEFiRet;
 	char *val = strstr(param, "=");
 	if(val == NULL) {
-		errmsg.LogError(0, RS_RET_PARAM_ERROR, "missing equal sign in "
+		LogError(0, RS_RET_PARAM_ERROR, "missing equal sign in "
 				"parameter '%s'", param);
 		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 	}
@@ -592,7 +591,7 @@ BEGINsetModCnf
 CODESTARTsetModCnf
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "imkafka: error processing module "
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "imkafka: error processing module "
 			"config parameters [module(...)]");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -785,7 +784,6 @@ CODESTARTmodExit
 	objRelease(ruleset, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
-	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -814,7 +812,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* request objects we use */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 	DBGPRINTF("imkafka: version %s initializing\n", VERSION);
