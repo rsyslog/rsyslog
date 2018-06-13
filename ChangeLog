@@ -17,6 +17,16 @@ Version 8.36.0 [v8-stable] 2018-06-26
   know what is going on and my react.
   closes https://github.com/rsyslog/rsyslog/issues/2705
   see also https://github.com/rsyslog/rsyslog/issues/2706
+- add openssl driver alongside GnuTLS one for TLS communication
+  The openssl driver is curently experimental. It will become the new preferred
+  driver as it permits us to provide much better end-user error message than
+  we could provide with GnuTLS. It is also less picky with certificate files
+  and provides specific error messages if there are certificate problems.
+  closes: https://github.com/rsyslog/rsyslog/issues/1390
+  closes: https://github.com/rsyslog/rsyslog/issues/1840
+  closes: https://github.com/rsyslog/rsyslog/issues/1352
+  closes: https://github.com/rsyslog/rsyslog/issues/1702
+  closes: https://github.com/rsyslog/rsyslog/issues/2547
 - lookup tables: reload message now with "info" severity (was "error")
   thanks to Adam Chalkley for the patch
 - imjournal: add statistics counter
