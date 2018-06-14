@@ -4,12 +4,6 @@ extraction:
       packages:
         - python-docutils
     
-    # Enable build with slightly older libfastjson-dev
-    after_prepare:
-        - sed -i -e 's/\[libfastjson >= .*\]/\[libfastjson >= 0.99.4\]/' configure.ac
-        - sed -i -e 's/fjson_global_do_case_sensitive_comparison/\/\/fjson_global_do_case_sensitive_comparison/g' tools/rsyslogd.c
-        - sed -i -e 's/fjson_global_do_case_sensitive_comparison/\/\/fjson_global_do_case_sensitive_comparison/g' runtime/glbl.c
-
     configure:
       command:
         - autoreconf -fvi
@@ -17,4 +11,4 @@ extraction:
         # --enable-mmnormalize  --enable-pmnormalize --enable-relp 
         # We need to look more into the following ones:
         # --enable-mmgrok --enable-omtcl 
-        - ./configure --enable-imfile --enable-mysql --enable-usertools --enable-pgsql --enable-libdbi --enable-snmp --enable-elasticsearch --enable-gnutls    --enable-mail --enable-imdiag --enable-mmjsonparse --enable-mmaudit --enable-mmanon --enable-mmrm1stspace --enable-mmutf8fix --enable-mmcount --enable-mmdblookup --enable-mmfields --enable-mmpstrucdata --enable-imptcp --enable-impstats --enable-omprog --enable-omudpspoof --enable-omstdout --enable-omjournal --enable-pmlastmsg --enable-pmcisconames --enable-pmciscoios --enable-pmnull --enable-pmaixforwardedfrom --enable-pmsnare --enable-pmpanngfw --enable-omuxsock --enable-omkafka --enable-imkafka --enable-ommongodb --enable-omhiredis --enable-omhttpfs --enable-gssapi-krb5 --enable-mmkubernetes
+        - ./configure --enable-imfile --enable-mysql --enable-usertools --enable-pgsql --enable-libdbi --enable-snmp --enable-elasticsearch --enable-gnutls    --enable-mail --enable-imdiag --enable-mmjsonparse --enable-mmaudit --enable-mmanon --enable-mmrm1stspace --enable-mmutf8fix --enable-mmcount --enable-mmdblookup --enable-mmfields --enable-mmpstrucdata --enable-imptcp --enable-impstats --enable-omprog --enable-omudpspoof --enable-omstdout --enable-omjournal --enable-pmlastmsg --enable-pmcisconames --enable-pmciscoios --enable-pmnull --enable-pmaixforwardedfrom --enable-pmsnare --enable-pmpanngfw --enable-omuxsock --enable-omkafka --enable-imkafka --enable-ommongodb --enable-omhiredis --enable-omhttpfs --enable-gssapi-krb5 --enable-mmkubernetes --enable-relp
