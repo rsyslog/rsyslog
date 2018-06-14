@@ -1,15 +1,16 @@
+****************************************
 pmlastmsg: last message repeated n times
-========================================
+****************************************
 
-**Module Name:    pmlastmsg**
+===========================  ===========================================================================
+**Module Name:**             **pmlastmsg**
+**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+**Available Since:**         5.5.6
+===========================  ===========================================================================
 
-**Module Type:    parser module**
 
-**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
-
-**Available Since**: 5.5.6
-
-**Description**:
+Purpose
+=======
 
 Some syslogds are known to emit severily malformed messages with content
 "last message repeated n times". These messages can mess up message
@@ -29,14 +30,24 @@ contain a PRI, then none or some spaces and then the exact text
 (case-insensitive) "last message repeated n times" where n must be an
 integer. All other messages are left untouched.
 
-**Configuration Parameters**:
 
-Note: parameter names are case-insensitive.
+Configuration Parameters
+========================
+
+.. note::
+
+   Parameter names are case-insensitive.
+
 
 There do not currently exist any configuration parameters for this
 module.
 
-**Examples:**
+
+Examples
+========
+
+Systems emitting malformed "repeated msg" messages
+--------------------------------------------------
 
 This example is the typical use case, where some systems emit malformed
 "repeated msg" messages. Other than that, the default :rfc:`5424` and
@@ -44,22 +55,14 @@ This example is the typical use case, where some systems emit malformed
 the default parser chain is removed, so we need to specify all three
 parsers. We use this together with the default ruleset.
 
-::
+.. code-block:: none
 
-   $ModLoad pmlastmsg   # This parser is not a built-in module.
+   module(load="pmlastmsg")
 
-   # Note that parsers are tried in the order they appear in
-   # rsyslog.conf, so put pmlastmsg first.
+   parser(type="pmlastmsg" name="custom.pmlastmsg")
 
-   $RulesetParser rsyslog.lastline
+   ruleset(name="ruleset" parser=["custom.pmlastmsg", "rsyslog.rfc5424",
+                                  "rsyslog.rfc3164"]) {
+        ... do processing here ...
+   }
 
-   # As we have removed the default parser chain, we need to add the
-   # default parsers as well.
-   $RulesetParser rsyslog.rfc5424
-   $RulesetParser rsyslog.rfc3164
-
-   # Here come the typical rules, like... \*.\* /path/to/file.log
-
-**Caveats/Known Bugs:**
-
-currently none
