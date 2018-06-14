@@ -309,7 +309,7 @@ readjournal(void)
 	} else {
 		CHKiRet(sanitizeValue(((const char *)get) + 8, length - 8, &message));
 	}
-	STATSCOUNTER_INC(statsCounter.ctrRead, statsCouner.mutCtrRead);
+	STATSCOUNTER_INC(statsCounter.ctrRead, statsCounter.mutCtrRead);
 
 	/* Get message severity ("priority" in journald's terminology) */
 	if (sd_journal_get_data(j, "PRIORITY", &get, &length) >= 0) {
