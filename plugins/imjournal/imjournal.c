@@ -230,7 +230,6 @@ int sharedJsonProperties)
 	struct syslogTime st;
 	smsg_t *pMsg;
 	size_t len;
-	uint64 discardCount;
 	DEFiRet;
 
 	assert(msg != NULL);
@@ -260,25 +259,12 @@ int sharedJsonProperties)
 		msgAddJSON(pMsg, (uchar*)"!", json, 0, sharedJsonProperties);
 	}
 
-	discardCount = ratelimiter->missed;
 	CHKiRet(ratelimitAddMsg(ratelimiter, NULL, pMsg));
+	STATSCOUNTER_INC(statsCounter.ctrSubmitted, statsCounter.mutCtrSubmitted);
 
 finalize_it:
-/*
- * Since ratelimitAddMsg return value does not provide RS_RET_DISCARDMSG
- * for all cases, we rely on ratelimiter->missed and ratelimiter->done
- * values to determine whether a message was discarded due to rate
- * limiting or submitted to main queue. Since these values are
- * modulo Ratelimit.Interval, we need to take care of the case where
- * these counters can reset at the start of a new interval.
- */
-	statsCounter.ratelimitDiscardedInInterval = ratelimiter->missed;
-	if((statsCounter.ratelimitDiscardedInInterval > discardCount) ||
-			((ratelimiter->missed == 1) && (ratelimiter->done == 0))) {
+	if (iRet == RS_RET_DISCARDMSG)
 		STATSCOUNTER_INC(statsCounter.ctrDiscarded, statsCounter.mutCtrDiscarded);
-	} else {
-		STATSCOUNTER_INC(statsCounter.ctrSubmitted, statsCounter.mutCtrSubmitted);
-	}
 
 	RETiRet;
 }
@@ -732,7 +718,7 @@ CODESTARTrunInput
 		/*
 		 * update journal disk usage before reading the new message.
 		 */
-		if (sd_journal_get_usage(j, &statsCounter.diskUsageBytes) < 0) {
+		if (sd_journal_get_usage(j, (uint64_t *)&statsCounter.diskUsageBytes) < 0) {
 			LogError(0, RS_RET_ERR, "imjournal: sd_get_usage() failed");
 		}
 
