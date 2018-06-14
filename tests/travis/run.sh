@@ -100,6 +100,7 @@ export CONFIG_FLAGS="$CONFIGURE_FLAGS \
 	--enable-snmp \
 	--enable-mmsnmptrapd \
 	--enable-gnutls \
+	--enable-openssl \
 	--enable-mysql --enable-mysql-tests \
 	--enable-gt-ksi \
 	--enable-libdbi \
