@@ -115,6 +115,26 @@ Version 8.36.0 [v8-stable] 2018-06-26
   This leads to a misadressing, which may have no obvious effects potentially
   up to a segfault.
   closes https://github.com/rsyslog/rsyslog/issues/2661
+- imfile bugfix: if freshStartTail is set some initial file lines missing
+  When the option is set and a new file is created after rsyslog startup,
+  freshStartTail is also applied to it. That is data written quickly to it
+  (before rsyslog can process it) will potentially be discarded. If so,
+  and how much, depends on the timing between rsyslog and the logging process.
+  This problem is most likely to be seen in polling mode, where a relatively
+  long time may be required for rsyslog to find the new file.
+  This is changed so that now freshStartTail only applies to files that
+  are already-existing during rsyslog's initial processing of the file
+  monitors. HOWEVER, depending on the number and location (network?) of
+  existing files, this initial startup processing may take some time as
+  well. If another process creates a new file at exactly the time of
+  startup processing and writes data to it, rsyslog might detect this
+  file and it's data as prexisting and may skip it. This race is inevitable.
+  So when freshStartTail is used, some risk of data loss exists. The same
+  holds true if between the last shutdown of rsyslog and its restart log
+  file content has been added. This is no rsyslog bug if it occurs.
+  As such, the rsyslog team advises against activating the freshStartTail
+  option.
+  closes https://github.com/rsyslog/rsyslog/issues/2464
 - core: fix undefined behaviour (unsigned computation may lead to value < 0)
   This was detected by LLVM UBSAN. On some platforms re-setting the rawmsg
   inside the message object could lead to invalid computation due to the
