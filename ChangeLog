@@ -27,6 +27,23 @@ Version 8.36.0 [v8-stable] 2018-06-26
   closes: https://github.com/rsyslog/rsyslog/issues/1352
   closes: https://github.com/rsyslog/rsyslog/issues/1702
   closes: https://github.com/rsyslog/rsyslog/issues/2547
+- GnuTLS TLS driver: support intermediate certificates
+  this is necessary for certificate chains
+  Thanks to Arne Nordmark for providing the patch.
+  closes https://github.com/rsyslog/rsyslog/issues/2762
+- omelasticsearch: write op types; bulk rejection retries
+  * Add support for a 'create' write operation type in addition to
+    the default 'index'.  Using create allows specifying a unique id
+    for each record, and allows duplicate document detection.
+  * Add support for checking each record returned in a bulk index
+    request response.  Allow specifying a ruleset to send each failed
+    record to.  Add a local variable `omes` which contains the
+    information in the error response, so that users can control how
+    to handle responses e.g. retry, or send to an error file.
+  * Add support for response stats - count successes, duplicates, and
+    different types of failures.
+  * Add testing for bulk index rejections.
+  Thanks to Richard Megginson for the patch.
 - lookup tables: reload message now with "info" severity (was "error")
   thanks to Adam Chalkley for the patch
 - imjournal: add statistics counter
