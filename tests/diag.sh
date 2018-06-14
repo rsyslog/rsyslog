@@ -71,8 +71,8 @@ dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.10/zookeeper-3.
 dep_zk_cached_file=$dep_cache_dir/zookeeper-3.4.10.tar.gz
 dep_kafka_url=http://www-us.apache.org/dist/kafka/0.10.2.1/kafka_2.12-0.10.2.1.tgz
 if [ -z "$ES_DOWNLOAD" ]; then
-	dep_es_url=https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.3.tar.gz
-	dep_es_cached_file=$dep_cache_dir/elasticsearch-5.6.3.tar.gz
+	dep_es_url=https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz
+	dep_es_cached_file=$dep_cache_dir/elasticsearch-5.6.9.tar.gz
 else
 	dep_es_url="https://artifacts.elastic.co/downloads/elasticsearch/$ES_DOWNLOAD"
 	dep_es_cached_file="$dep_cache_dir/$ES_DOWNLOAD"
@@ -205,7 +205,7 @@ case $1 in
 		;;
    'es-init')   # initialize local Elasticsearch *testbench* instance for the next
                 # test. NOTE: do NOT put anything useful on that instance!
-		curl -XDELETE localhost:9200/rsyslog_testbench
+		curl --silent -XDELETE localhost:${ES_PORT:-9200}/rsyslog_testbench
 		;;
    'es-getdata') # read data from ES to a local file so that we can process
 		if [ "x$3" == "x" ]; then
@@ -217,7 +217,7 @@ case $1 in
    		# it with out regular tooling.
 		# Note: param 2 MUST be number of records to read (ES does
 		# not return the full set unless you tell it explicitely).
-		curl localhost:$es_get_port/rsyslog_testbench/_search?size=$2 > work
+		curl --silent localhost:$es_get_port/rsyslog_testbench/_search?size=$2 > work
 		python $srcdir/es_response_get_msgnum.py > rsyslog.out.log
 		;;
    'getpid')
@@ -934,7 +934,11 @@ case $1 in
 		rm -rf $dep_work_dir/es
 		echo TEST USES ELASTICSEARCH BINARY $dep_es_cached_file
 		(cd $dep_work_dir && tar -zxf $dep_es_cached_file --xform $dep_es_dir_xform_pattern --show-transformed-names) > /dev/null
-		cp $srcdir/testsuites/$dep_work_es_config $dep_work_dir/es/config/elasticsearch.yml
+		if [ -n "${ES_PORT:-}" ] ; then
+			sed "s/^http.port:.*\$/http.port: ${ES_PORT}/" $srcdir/testsuites/$dep_work_es_config > $dep_work_dir/es/config/elasticsearch.yml
+		else
+			cp $srcdir/testsuites/$dep_work_es_config $dep_work_dir/es/config/elasticsearch.yml
+		fi
 
 		if [ ! -d $dep_work_dir/es/data ]; then
 				echo "Creating elastic search directories"
@@ -969,7 +973,7 @@ case $1 in
 		timeseconds=0
 		# Loop until elasticsearch port is reachable or until
 		# timeout is reached!
-		until [ "`curl --silent --show-error --connect-timeout 1 http://localhost:19200 | grep 'rsyslog-testbench'`" != "" ]; do
+		until [ "`curl --silent --show-error --connect-timeout 1 http://localhost:${ES_PORT:-19200} | grep 'rsyslog-testbench'`" != "" ]; do
 			echo "--- waiting for startup: 1 ( $timeseconds ) seconds"
 			./msleep 1000
 			let "timeseconds = $timeseconds + 1"
