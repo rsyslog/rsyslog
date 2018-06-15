@@ -623,7 +623,9 @@ static rsRetVal
 osslChkOnePeerName(nsd_ossl_t *pThis, X509 *pCert, uchar *pszPeerID, int *pbFoundPositiveMatch)
 {
 	permittedPeers_t *pPeer;
+	#if OPENSSL_VERSION_NUMBER >= 0x10002000L
 	int osslRet;
+	#endif
 	char *x509name = NULL;
 	DEFiRet;
 
@@ -1558,15 +1560,12 @@ finalize_it:
 
 
 /* Empty wrapper for GNUTLS helper function
- * Should be removed after review and not be used in base driver layer!
+ * TODO: implement a similar capability
  */
 static rsRetVal
-SetGnutlsPriorityString(nsd_t *pNsd, __attribute__((unused)) uchar *gnutlsPriorityString)
+SetGnutlsPriorityString(__attribute__((unused)) nsd_t *pNsd, __attribute__((unused)) uchar *gnutlsPriorityString)
 {
 	DEFiRet;
-	nsd_ossl_t *pThis = (nsd_ossl_t*) pNsd;
-
-	ISOBJ_TYPE_assert((pThis), nsd_ossl);
 	RETiRet;
 }
 
