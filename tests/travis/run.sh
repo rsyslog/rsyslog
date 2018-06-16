@@ -106,6 +106,7 @@ export CONFIG_FLAGS="$CONFIGURE_FLAGS \
 	--enable-pgsql --enable-pgsql-tests \
 	--enable-omhttpfs \
 	--enable-elasticsearch \
+	--enable-omhttp \
 	--enable-valgrind \
 	--enable-ommongodb \
 	--enable-omtcl \
