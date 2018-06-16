@@ -268,6 +268,7 @@ with default rate-limit interval and burst and running a docker container with l
 spews lots of logs to stdout:
 
 .. code-block:: none
+
 	Jun 13 15:02:48 app1-1.example.com rsyslogd-pstats: imjournal: origin=imjournal submitted=20000 read=216557
 	discarded=196557 failed=0 poll_failed=0 rotations=6 recovery_attempts=0 ratelimit_discarded_in_interval=196557
 	disk_usage_bytes=106610688
@@ -279,13 +280,15 @@ loss due to journal rate-limiting. sd_journal_* API does not provide any visibil
 discarded by the journal due to rate-limiting. Journald does emit a syslog message when log messages cannot make
 it into the journal due to rate-limiting:
 
-.. code-block:: none
+.. code-block::	none
+
 	Jun 13 15:50:32 app1-1.example.com systemd-journal[333]: Suppressed 102 messages from /system.slice/docker.service
 
 Such messages can be processed after they are read through imjournal to get a signal for message loss due to journal
 end rate-limiting using a dynamic statistics counter for such log lines with a rule like this:
 
 .. code-block:: none
+
 	dyn_stats(name="journal" resettable="off")
 	if $programname == 'journal' and $msg contains 'Suppressed' and $msg contains 'messages from' then {
 		set $.inc = dyn_inc("journal", "suppressed_count");
