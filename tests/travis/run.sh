@@ -86,6 +86,7 @@ else
 	--enable-libdbi \
 	--enable-omhttpfs \
 	--enable-elasticsearch \
+	--enable-omhttp \
 	--enable-ommongodb \
 	--enable-omtcl \
 	--enable-mmdblookup \

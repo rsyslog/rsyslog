@@ -918,6 +918,23 @@ fi
 AM_CONDITIONAL(ENABLE_ELASTICSEARCH, test x$enable_elasticsearch = xyes)
 
 
+# omhttp support
+AC_ARG_ENABLE(omhttp,
+        [AS_HELP_STRING([--enable-omhttp],[Enable http output module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omhttp="yes" ;;
+          no) enable_omhttp="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omhttp) ;;
+         esac],
+        [enable_omhttp=no]
+)
+if test "x$enable_omhttp" = "xyes"; then
+        PKG_CHECK_MODULES([CURL], [libcurl])
+        LT_LIB_M
+fi
+AM_CONDITIONAL(ENABLE_OMHTTP, test x$enable_omhttp = xyes)
+
+
 # capability to enable elasticsearch testbench tests. This requries that an ES test
 # environment is present on the local (127.0.0.1) machine. 
 # we support a "minimal" mode to take care of travis where we cannot run all tests
@@ -2330,6 +2347,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/mmsnmptrapd/Makefile \
 		plugins/pmlastmsg/Makefile \
 		plugins/mmdblookup/Makefile \
+		contrib/omhttp/Makefile \
 		contrib/fmhash/Makefile \
 		contrib/pmsnare/Makefile \
 		contrib/pmpanngfw/Makefile \
@@ -2396,6 +2414,7 @@ echo "    omstdout module will be compiled:         $enable_omstdout"
 echo "    omjournal module will be compiled:        $enable_omjournal"
 echo "    omhdfs module will be compiled:           $enable_omhdfs"
 echo "    omelasticsearch module will be compiled:  $enable_elasticsearch"
+echo "    omhttp module will be compiled:           $enable_omhttp"
 echo "    omruleset module will be compiled:        $enable_omruleset"
 echo "    omudpspoof module will be compiled:       $enable_omudpspoof"
 echo "    omuxsock module will be compiled:         $enable_omuxsock"
