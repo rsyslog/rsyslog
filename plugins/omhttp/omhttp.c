@@ -293,8 +293,10 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("]\n");
 	dbgprintf("\tdefaultPort=%d\n", pData->defaultPort);
 	dbgprintf("\tuid='%s'\n", pData->uid == NULL ? (uchar*)"(not configured)" : pData->uid);
-    dbgprintf("\thttpheaderkey='%s'\n", pData->httpheaderkey == NULL ? (uchar*)"(not configured)" : pData->httpheaderkey);
-    dbgprintf("\thttpheadervalue='%s'\n", pData->httpheadervalue == NULL ? (uchar*)"(not configured)" : pData->httpheadervalue);
+    dbgprintf("\thttpheaderkey='%s'\n", pData->httpheaderkey == NULL ?
+              (uchar*)"(not configured)" : pData->httpheaderkey);
+    dbgprintf("\thttpheadervalue='%s'\n", pData->httpheadervalue == NULL ?
+              (uchar*)"(not configured)" : pData->httpheadervalue);
 	dbgprintf("\tpwd=(%sconfigured)\n", pData->pwd == NULL ? "not " : "");
     dbgprintf("\trest path='%s'\n", pData->restPath);
     dbgprintf("\tcheck path='%s'\n", pData->checkPath);
