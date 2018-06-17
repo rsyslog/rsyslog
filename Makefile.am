@@ -179,6 +179,10 @@ if ENABLE_ELASTICSEARCH
 SUBDIRS += plugins/omelasticsearch
 endif
 
+if ENABLE_OMHTTP
+SUBDIRS += plugins/omhttp
+endif
+
 if ENABLE_MMSNMPTRAPD
 SUBDIRS += plugins/mmsnmptrapd
 endif
@@ -341,6 +345,7 @@ THIS_IS_TEMPORARILY_DISABLED = \
 	--enable-pmcisconames \
 	--enable-pmsnare \
 	--enable-elasticsearch \
+	--enable-omhttp \
 	--enable-valgrind \
 	--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir) 
 # temporarily disable these checks for make distcheck 2012-09-06 rgerhards
