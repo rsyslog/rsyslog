@@ -61,7 +61,6 @@ MODULE_TYPE_KEEP
 
 /* static data */
 DEFobjStaticHelpers
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
 DEFobjCurrIf(datetime)
@@ -195,9 +194,9 @@ void osslLastSSLErrorMsg(int ret, SSL *ssl, int severity, const char* pszCallSou
 	dbgprintf("OpenSSL Error '%s(%d)' in '%s' with ret=%d\n",
 		ERR_error_string(iSSLErr, NULL), iSSLErr, pszCallSource, ret);
 	if(iSSLErr == SSL_ERROR_SSL) {
-		errmsg.LogMsg(0, RS_RET_NO_ERRCODE, severity, "SSL_ERROR_SSL in '%s'", pszCallSource);
+		LogMsg(0, RS_RET_NO_ERRCODE, severity, "SSL_ERROR_SSL in '%s'", pszCallSource);
 	} else if(iSSLErr == SSL_ERROR_SYSCALL){
-		errmsg.LogMsg(0, RS_RET_NO_ERRCODE, severity, "SSL_ERROR_SYSCALL in '%s'", pszCallSource);
+		LogMsg(0, RS_RET_NO_ERRCODE, severity, "SSL_ERROR_SYSCALL in '%s'", pszCallSource);
 /*
 		if(ret == 0) {
 			// iSSLErr = ERR_get_error();
@@ -208,23 +207,23 @@ void osslLastSSLErrorMsg(int ret, SSL *ssl, int severity, const char* pszCallSou
 				ERR_error_string_n(ERR_get_error(), psz, sizeof(psz));
 			}
 		}
-		errmsg.LogMsg(0, RS_RET_NO_ERRCODE, "SSL_ERROR_SYSCALL in '%s': %s",
+		LogMsg(0, RS_RET_NO_ERRCODE, "SSL_ERROR_SYSCALL in '%s': %s",
 			pszCallSource, psz);
 */
 	} else {
-		errmsg.LogMsg(0, RS_RET_NO_ERRCODE, severity, "SSL_ERROR_UNKNOWN in '%s', SSL_get_error: '%s(%d)'",
+		LogMsg(0, RS_RET_NO_ERRCODE, severity, "SSL_ERROR_UNKNOWN in '%s', SSL_get_error: '%s(%d)'",
 			pszCallSource, ERR_error_string(iSSLErr, NULL), iSSLErr);
 	}
 
 	/* Loop through ERR_get_error */
 	while ((un_error = ERR_get_error()) > 0){
-		errmsg.LogMsg(0, RS_RET_NO_ERRCODE, severity, "Error Stack: %s", ERR_error_string(un_error, NULL) );
+		LogMsg(0, RS_RET_NO_ERRCODE, severity, "Error Stack: %s", ERR_error_string(un_error, NULL) );
 		dbgprintf("OpenSSL Error Stack: %s\n", ERR_error_string(un_error, NULL) );
 	}
 
 	/* Loop through ERR_peek_last_error */
 	while ((un_error = ERR_peek_last_error()) != 0){
-		errmsg.LogMsg(0, RS_RET_NO_ERRCODE, severity, "Error Stack: %s", ERR_error_string(un_error, NULL) );
+		LogMsg(0, RS_RET_NO_ERRCODE, severity, "Error Stack: %s", ERR_error_string(un_error, NULL) );
 		dbgprintf("OpenSSL Error Stack: %s\n", ERR_error_string(un_error, NULL) );
 	}
 }
@@ -245,7 +244,7 @@ int verify_callback(int status, X509_STORE_CTX *store)
 
 		/* Log Warning only on EXPIRED */
 		if (err == X509_V_OK || err == X509_V_ERR_CERT_HAS_EXPIRED) {
-			errmsg.LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
+			LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
 				"Certificate warning at depth: %d \n\t"
 				"issuer  = %s\n\t"
 				"subject = %s\n\t"
@@ -255,7 +254,7 @@ int verify_callback(int status, X509_STORE_CTX *store)
 			/* Set Status to OK*/
 			status = 1;
 		} else {
-			errmsg.LogError(0, RS_RET_NO_ERRCODE,
+			LogError(0, RS_RET_NO_ERRCODE,
 				"Certificate error at depth: %d \n\t"
 				"issuer  = %s\n\t"
 				"subject = %s\n\t"
@@ -388,7 +387,7 @@ osslGlblInit(void)
 
 	/* Setup OpenSSL library */
 	if((opensslh_THREAD_setup() == 0) || !SSL_library_init()) {
-		errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error: OpenSSL initialization failed!");
+		LogError(0, RS_RET_NO_ERRCODE, "Error: OpenSSL initialization failed!");
 	}
 
 	/* Load readable error strings */
@@ -399,18 +398,18 @@ osslGlblInit(void)
 	/* Setup certificates */
 	caFile = (const char *) glbl.GetDfltNetstrmDrvrCAF();
 	if(caFile == NULL) {
-		errmsg.LogError(0, RS_RET_CA_CERT_MISSING, "Error: CA certificate is not set, cannot continue");
+		LogError(0, RS_RET_CA_CERT_MISSING, "Error: CA certificate is not set, cannot continue");
 		ABORT_FINALIZE(RS_RET_CA_CERT_MISSING);
 	}
 	certFile = (const char *) glbl.GetDfltNetstrmDrvrCertFile();
 	if(certFile == NULL) {
-		errmsg.LogError(0, RS_RET_CERT_MISSING, "Error: Certificate file is not set, cannot continue");
+		LogError(0, RS_RET_CERT_MISSING, "Error: Certificate file is not set, cannot continue");
 		ABORT_FINALIZE(RS_RET_CERT_MISSING);
 
 	}
 	keyFile = (const char *) glbl.GetDfltNetstrmDrvrKeyFile();
 	if(keyFile == NULL) {
-		errmsg.LogError(0, RS_RET_CERTKEY_MISSING, "Error: Key file is not set, cannot continue");
+		LogError(0, RS_RET_CERTKEY_MISSING, "Error: Key file is not set, cannot continue");
 		ABORT_FINALIZE(RS_RET_CERTKEY_MISSING);
 
 	}
@@ -418,18 +417,18 @@ osslGlblInit(void)
 	/* Create main CTX Object */
 	ctx = SSL_CTX_new(SSLv23_method());
 	if(SSL_CTX_load_verify_locations(ctx, caFile, NULL) != 1) {
-		errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error: CA certificate could not be accessed."
+		LogError(0, RS_RET_NO_ERRCODE, "Error: CA certificate could not be accessed."
 				" Is the file at the right path? And do we have the permissions?");
 		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 	}
 	if(SSL_CTX_use_certificate_file(ctx, certFile, SSL_FILETYPE_PEM) != 1) {
-		errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error: Certificate file could not be "
+		LogError(0, RS_RET_NO_ERRCODE, "Error: Certificate file could not be "
 				"accessed. Is the file at the right path? And do we have the "
 				"permissions?");
 		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 	}
 	if(SSL_CTX_use_PrivateKey_file(ctx, keyFile, SSL_FILETYPE_PEM) != 1) {
-		errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error: Key file could not be accessed. "
+		LogError(0, RS_RET_NO_ERRCODE, "Error: Key file could not be accessed. "
 				"Is the file at the right path? And do we have the permissions?");
 		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 	}
@@ -932,7 +931,7 @@ SetMode(nsd_t *pNsd, int mode)
 
 	ISOBJ_TYPE_assert((pThis), nsd_ossl);
 	if(mode != 0 && mode != 1) {
-		errmsg.LogError(0, RS_RET_INVALID_DRVR_MODE, "error: driver mode %d not supported by"
+		LogError(0, RS_RET_INVALID_DRVR_MODE, "error: driver mode %d not supported by"
 				" ossl netstream driver", mode);
 	}
 	pThis->iMode = mode;
@@ -990,7 +989,7 @@ SetPermPeers(nsd_t *pNsd, permittedPeers_t *pPermPeers)
 		FINALIZE;
 
 	if(pThis->authMode != OSSL_AUTH_CERTFINGERPRINT && pThis->authMode != OSSL_AUTH_CERTNAME) {
-		errmsg.LogError(0, RS_RET_VALUE_NOT_IN_THIS_MODE, "authentication not supported by "
+		LogError(0, RS_RET_VALUE_NOT_IN_THIS_MODE, "authentication not supported by "
 				"ossl netstream driver in the configured authentication mode - ignored");
 		ABORT_FINALIZE(RS_RET_VALUE_NOT_IN_THIS_MODE);
 	}
@@ -1461,9 +1460,9 @@ Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 				/* Output error and abort */
 				osslLastSSLErrorMsg(iSent, pThis->ssl, LOG_ERR, "Send");
 /*
-				errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error while sending data: "
+				LogError(0, RS_RET_NO_ERRCODE, "Error while sending data: "
 						"[%d] %s", err, ERR_error_string(err, NULL));
-				errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error is: %s",
+				LogError(0, RS_RET_NO_ERRCODE, "Error is: %s",
 						ERR_reason_error_string(err));
 */
 				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
@@ -1533,7 +1532,7 @@ BIO_set_nbio( conn, 1 );
 	DBGPRINTF("Connect: TLS Mode\n");
 	if(!(pThis->ssl = SSL_new(ctx))) {
 		osslLastSSLErrorMsg(0, pThis->ssl, LOG_ERR, "Connect");
-/*		errmsg.LogError(0, RS_RET_NO_ERRCODE, "Error creating an SSL context"); */
+/*		LogError(0, RS_RET_NO_ERRCODE, "Error creating an SSL context"); */
 		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 	}
 	SSL_set_bio(pThis->ssl, conn, conn);
@@ -1620,7 +1619,6 @@ CODESTARTObjClassExit(nsd_ossl)
 	objRelease(net, LM_NET_FILENAME);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
-	objRelease(errmsg, CORE_COMPONENT);
 ENDObjClassExit(nsd_ossl)
 
 
@@ -1633,7 +1631,6 @@ BEGINObjClassInit(nsd_ossl, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 	CHKiRet(objUse(nsd_ptcp, LM_NSD_PTCP_FILENAME));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* now do global TLS init stuff */
 	CHKiRet(osslGlblInit());
