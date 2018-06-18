@@ -2342,10 +2342,10 @@ AC_CONFIG_FILES([Makefile \
 		plugins/mmfields/Makefile \
 		plugins/mmpstrucdata/Makefile \
 		plugins/omelasticsearch/Makefile \
-		plugins/omhttp/Makefile \
 		plugins/mmsnmptrapd/Makefile \
 		plugins/pmlastmsg/Makefile \
 		plugins/mmdblookup/Makefile \
+		contrib/omhttp/Makefile \
 		contrib/fmhash/Makefile \
 		contrib/pmsnare/Makefile \
 		contrib/pmpanngfw/Makefile \

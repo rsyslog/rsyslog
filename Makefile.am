@@ -180,7 +180,7 @@ SUBDIRS += plugins/omelasticsearch
 endif
 
 if ENABLE_OMHTTP
-SUBDIRS += plugins/omhttp
+SUBDIRS += contrib/omhttp
 endif
 
 if ENABLE_MMSNMPTRAPD

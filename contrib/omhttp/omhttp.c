@@ -294,13 +294,13 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tdefaultPort=%d\n", pData->defaultPort);
 	dbgprintf("\tuid='%s'\n", pData->uid == NULL ? (uchar*)"(not configured)" : pData->uid);
     dbgprintf("\thttpheaderkey='%s'\n", pData->httpheaderkey == NULL ?
-              (uchar*)"(not configured)" : pData->httpheaderkey);
+        (uchar*)"(not configured)" : pData->httpheaderkey);
     dbgprintf("\thttpheadervalue='%s'\n", pData->httpheadervalue == NULL ?
-              (uchar*)"(not configured)" : pData->httpheadervalue);
+        (uchar*)"(not configured)" : pData->httpheadervalue);
 	dbgprintf("\tpwd=(%sconfigured)\n", pData->pwd == NULL ? "not " : "");
     dbgprintf("\trest path='%s'\n", pData->restPath);
     dbgprintf("\tcheck path='%s'\n", pData->checkPath);
-	dbgprintf("\tdynamic rest path=%d\n", pData->dynRestPath);
+    dbgprintf("\tdynamic rest path=%d\n", pData->dynRestPath);
 	dbgprintf("\tuse https=%d\n", pData->useHttps);
 	dbgprintf("\tmaxbytes=%zu\n", pData->maxbytes);
 	dbgprintf("\tallowUnsignedCerts=%d\n", pData->allowUnsignedCerts);
@@ -1465,7 +1465,6 @@ curlSetupCommon(wrkrInstanceData_t *const pWrkrData, CURL *const handle)
 {
 	PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
 	curl_easy_setopt(handle, CURLOPT_HTTPHEADER, pWrkrData->curlHeader);
-    curl_easy_setopt(handle, CURLOPT_ACCEPT_ENCODING, "");
 	curl_easy_setopt(handle, CURLOPT_NOSIGNAL, TRUE);
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, curlResult);
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, pWrkrData);
@@ -1538,13 +1537,13 @@ setInstParamDefaults(instanceData *const pData)
 	pData->uid = NULL;
     pData->httpheaderkey = NULL;
     pData->httpheadervalue = NULL;
-	pData->pwd = NULL;
+    pData->pwd = NULL;
 	pData->authBuf = NULL;
 	pData->restPath = NULL;
     pData->checkPath = NULL;
-	pData->dynRestPath = 0;
+    pData->dynRestPath = 0;
     pData->bulkmode = 1;
-	pData->useHttps = 1;
+    pData->useHttps = 1;
 	pData->maxbytes = 10485760; //i.e. 10 MB Is the default max message size for AWS API Gateway
 	pData->allowUnsignedCerts = 0;
 	pData->tplName = NULL;
@@ -1602,11 +1601,11 @@ CODESTARTnewActInst
 		} else if(!strcmp(actpblk.descr[i].name, "pwd")) {
 			pData->pwd = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "restpath")) {
-			pData->restPath = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+            pData->restPath = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if(!strcmp(actpblk.descr[i].name, "checkpath")) {
             pData->checkPath = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "dynrestpath")) {
-			pData->dynRestPath = pvals[i].val.d.n;
+        } else if(!strcmp(actpblk.descr[i].name, "dynrestpath")) {
+            pData->dynRestPath = pvals[i].val.d.n;
         } else if(!strcmp(actpblk.descr[i].name, "bulkmode")) {
             pData->bulkmode = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "maxbytes")) {
@@ -1676,12 +1675,12 @@ CODESTARTnewActInst
                         "- action definition invalid");
         ABORT_FINALIZE(RS_RET_UID_MISSING);
     }
-	if(pData->dynRestPath && pData->restPath == NULL) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR,
-			"omhttp: requested dynamic rest path, but no "
-			"name for rest path template given - action definition invalid");
-		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
-	}
+    if(pData->dynRestPath && pData->restPath == NULL) {
+        errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+                        "omhttp: requested dynamic rest path, but no "
+                        "name for rest path template given - action definition invalid");
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
 
 	if (pData->uid != NULL)
 		CHKiRet(computeAuthHeader((char*) pData->uid, (char*) pData->pwd, &pData->authBuf));
