@@ -199,7 +199,13 @@ case $1 in
 		command -v $2
 		if [ $? -ne 0 ] ; then
 			echo Testbench requires unavailable command: $2
-			echo skipping this test
+			exit 77
+		fi
+		;;
+   'check-ipv6-available')   # check if IPv6  - will exit 77 when not OK
+		ifconfig -a |grep ::1
+		if [ $? -ne 0 ] ; then
+			echo this test requires an active IPv6 stack, which we do not have here
 			exit 77
 		fi
 		;;
