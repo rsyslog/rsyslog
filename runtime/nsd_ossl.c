@@ -1110,10 +1110,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		fAddLstn, pLstnIP, pLstnPort, iSessMax);
 
 	/* Init TCP Listener using base ptcp class */
-	CHKiRet(nsd_ptcp.LstnInit(pNS, pUsr, fAddLstn, pLstnPort, pLstnIP, iSessMax));
-finalize_it:
-	if(iRet != RS_RET_OK) {
-	}
+	iRet = nsd_ptcp.LstnInit(pNS, pUsr, fAddLstn, pLstnPort, pLstnIP, iSessMax);
 	RETiRet;
 }
 
@@ -1305,8 +1302,10 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	*ppNew = (nsd_t*) pNew;
 finalize_it:
 	/* Accept appears to be done here */
-	dbgprintf("AcceptConnReq: END iRet = %d, pNew=[%p], pNsd->rtryCall=%d\n",
-		iRet, pNew, pNew->rtryCall);
+	if(pNew != NULL) {
+		DBGPRINTF("AcceptConnReq: END iRet = %d, pNew=[%p], pNsd->rtryCall=%d\n",
+			iRet, pNew, pNew->rtryCall);
+	}
 	if(iRet != RS_RET_OK) {
 		if(pNew != NULL) {
 			nsd_osslDestruct(&pNew);
@@ -1543,7 +1542,7 @@ BIO_set_nbio( conn, 1 );
 	pThis->bHaveSess = 1;
 
 	/* We now do the handshake */
-	CHKiRet(osslHandshakeCheck(pThis));
+	iRet = osslHandshakeCheck(pThis);
 finalize_it:
 	/* Connect appears to be done here */
 	dbgprintf("Connect: END iRet = %d, pThis=[%p], pNsd->rtryCall=%d\n",
