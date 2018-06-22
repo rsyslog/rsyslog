@@ -141,6 +141,10 @@ Version 8.36.0 [v8-stable] 2018-06-26
   fact the the computation was carried out as unsigned and only then
   converted to integer.
   No known problem in practice.
+- CI/QA:
+  - improved Elasticsearch tests so they can now be run without system-
+    installed ES service; also enables us to specify specific ES versions
+    and should now make the tests executable inside a container
 ------------------------------------------------------------------------------
 Version 8.35.0 [v8-stable] 2018-05-15
 - imptcp: add ability to configure socket backlog
