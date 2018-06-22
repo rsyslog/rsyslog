@@ -50,7 +50,7 @@ fork. As the actual execution must happen after the fork, we cannot
 use the default error logger to emit the error message. As such,
 we use ``syslog()``. In most cases, there is no real difference
 between both methods. However, if you run multiple rsyslog instances,
-the messae shows up in that instance that processes the default
+the message shows up in that instance that processes the default
 log socket, which may be different from the one where the error occured.
 Also, if you redirected the log destination, that redirection may
 not work as expected.
@@ -63,10 +63,11 @@ Configuration Parameters
 
    Parameter names are case-insensitive.
 
+
 Action Parameters
 -----------------
 
-Template
+template
 ^^^^^^^^
 
 .. csv-table::
@@ -74,12 +75,13 @@ Template
    :widths: auto
    :class: parameter-table
 
-   "word", "", "no", "none"
+   "word", "RSYSLOG_FileFormat", "no", "none"
 
-Sets a new default template for omprog actions.
+Name of the :doc:`template <../templates>` to use to format the log messages
+passed to the external program.
 
 
-Binary
+binary
 ^^^^^^
 
 .. csv-table::
@@ -87,55 +89,14 @@ Binary
    :widths: auto
    :class: parameter-table
 
-   "string", "RSYSLOG_FileFormat", "yes", "``$ActionOMProgBinary``"
+   "string", "", "yes", "``$ActionOMProgBinary``"
 
-Mostly equivalent to the "binary" action parameter, but must contain
-the binary name only. In legacy config, it is **not possible** to
-specify command line parameters.
+Full path and command line parameters of the external program to execute.
+
+In legacy config, it is **not possible** to specify command line parameters.
 
 
-Hup.Signal
-^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-.. versionadded:: 8.9.0
-
-Specifies which signal, if any, is to be forwarded to the executed program.
-Currently, HUP, USR1, USR2, INT, and TERM are supported. If unset, no signal
-is sent on HUP. This is the default and what pre 8.9.0 versions did.
-
-SignalOnClose
-^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "none"
-
-.. versionadded:: 8.23.0
-
-Signal the child process when worker-instance is stopped or Rsyslog is about
-to shutdown. To signal shutdown, SIGTERM is issued to child and Rsyslog
-reaps the process before proceeding.
-
-No signal is issued if this switch is set to 'off' (default). The child-process
-can still detect shutdown because 'read' from stdin would EOF. However its
-possible to have process-leak due to careless error-handling around read.
-Rsyslog won't try to reap the child process in this case.
-
-Additionaly, this controls the following **GNU/Linux specific behavior**:
-If 'on', Rsyslog waits for upto 5 seconds for child process to terminate
-after issuing SIGTERM, after which a SIGKILL is issued ensuring child-death.
-This ensures even an unresponsive child is reaped before shutdown.
-
+.. _confirmMessages:
 
 confirmMessages
 ^^^^^^^^^^^^^^^
@@ -147,10 +108,32 @@ confirmMessages
 
    "binary", "off", "no", "none"
 
-.. versionadded:: ???
+.. versionadded:: 8.31.0
 
-Description following soon.
+Specifies whether the external program provides feedback to rsyslog via stdout.
+When this switch is set to "on", rsyslog will wait for the program to confirm
+each received message. This feature facilitates error handling: instead of
+having to implement a retry logic, the external program can rely on the rsyslog
+queueing capabilities.
 
+To confirm a message, the program must write a line with the word ``OK`` to its
+standard output. If it writes a line containing anything else, rsyslog considers
+that the message could not be processed, keeps it in the action queue, and
+re-sends it to the program later (after the period specified by the
+:doc:`action.resumeInterval <../actions>` parameter).
+
+In addition, when a new instance of the program is started, rsyslog will also
+wait for the program to confirm it is ready to start consuming logs. This
+prevents rsyslog from starting to send logs to a program that could not
+complete its initialization properly.
+
+.. seealso::
+
+   `Interface between rsyslog and external output plugins
+   <https://github.com/rsyslog/rsyslog/blob/master/plugins/external/INTERFACE.md>`_
+
+
+.. _useTransactions:
 
 useTransactions
 ^^^^^^^^^^^^^^^
@@ -162,10 +145,33 @@ useTransactions
 
    "binary", "off", "no", "none"
 
-.. versionadded:: ???
+.. versionadded:: 8.31.0
 
-Description following soon.
+Specifies whether the external program processes the messages in
+:doc:`batches <../../development/dev_oplugins>` (transactions). When this
+switch is enabled, the logs sent to the program are grouped in transactions.
+At the start of a transaction, rsyslog sends a special mark message to the
+program (see beginTransactionMark_). At the end of the transaction, rsyslog
+sends another mark message (see commitTransactionMark_).
 
+If confirmMessages_ is also set to "on", the program must confirm both the
+mark messages and the logs within the transaction. The mark messages must be
+confirmed by returning ``OK``, and the individual messages by returning
+``DEFER_COMMIT`` (instead of ``OK``). Refer to the link below for details. 
+
+.. seealso::
+
+   `Interface between rsyslog and external output plugins
+   <https://github.com/rsyslog/rsyslog/blob/master/plugins/external/INTERFACE.md>`_
+
+.. note::
+
+   There is currently a `known issue
+   <https://github.com/rsyslog/rsyslog/issues/2420>`_ with the use of
+   transactions together with ``confirmMessages=on``.
+
+
+.. _beginTransactionMark:
 
 beginTransactionMark
 ^^^^^^^^^^^^^^^^^^^^
@@ -175,12 +181,16 @@ beginTransactionMark
    :widths: auto
    :class: parameter-table
 
-   "string", "none", "no", "none"
+   "string", "BEGIN TRANSACTION", "no", "none"
 
-.. versionadded:: ???
+.. versionadded:: 8.31.0
 
-Description following soon.
+Allows specifying the mark message that rsyslog will send to the external
+program to indicate the start of a transaction (batch). This parameter is
+ignored if useTransactions_ is disabled.
 
+
+.. _commitTransactionMark:
 
 commitTransactionMark
 ^^^^^^^^^^^^^^^^^^^^^
@@ -190,12 +200,16 @@ commitTransactionMark
    :widths: auto
    :class: parameter-table
 
-   "string", "none", "no", "none"
+   "string", "COMMIT TRANSACTION", "no", "none"
 
-.. versionadded:: ???
+.. versionadded:: 8.31.0
 
-Description following soon.
+Allows specifying the mark message that rsyslog will send to the external
+program to indicate the end of a transaction (batch). This parameter is
+ignored if useTransactions_ is disabled.
 
+
+.. _output:
 
 output
 ^^^^^^
@@ -207,13 +221,47 @@ output
 
    "string", "none", "no", "none"
 
-.. versionadded:: ???
+.. versionadded:: v8.1.6
 
-Description following soon.
+Full path of a file where the output of the external program must be saved,
+for debugging purposes.
+
+Note that if the action has multiple worker threads
+(:doc:`queue.workerThreads <../../rainerscript/queue_parameters>` is
+set to a value greater than 1), all threads will write to the file at the
+same time, which will cause the output of the multiple child processes to be
+mixed. When using this parameter, use a single worker thread.
+
+If confirmMessages_ is set to "off" (the default), both the stdout and
+stderr of the child process are written to the specified file.
+
+If confirmMessages_ is set to "on", only the stderr of the child is
+written to the specified file (since stdout is used for confirming the
+messages).
 
 
-forceSingleInstance
-^^^^^^^^^^^^^^^^^^^
+hup.signal
+^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+.. versionadded:: 8.9.0
+
+Specifies which signal, if any, is to be forwarded to the external program
+when rsyslog receives a HUP signal. Currently, HUP, USR1, USR2, INT, and
+TERM are supported. If unset, no signal is sent on HUP. This is the default
+and what pre 8.9.0 versions did.
+
+
+.. _signalOnClose:
+
+signalOnClose
+^^^^^^^^^^^^^
 
 .. csv-table::
    :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
@@ -222,10 +270,24 @@ forceSingleInstance
 
    "binary", "off", "no", "none"
 
-.. versionadded:: ???
+.. versionadded:: 8.23.0
 
-Description following soon.
+Specifies whether a TERM signal must be sent to the external program before
+closing it (either because the worker thread has been unscheduled, or rsyslog
+is about to shutdown).
 
+If this switch is set to "on", rsyslog will send a TERM signal to the child
+process before closing the pipe. That is, the process will first receive a
+TERM signal, and then an EOF on stdin.
+
+No signal is issued if this switch is set to "off" (default). The child
+process can still detect it must terminate because reading from stdin will
+return EOF.
+
+See the killUnresponsive_ parameter for more details.
+
+
+.. _closeTimeout:
 
 closeTimeout
 ^^^^^^^^^^^^
@@ -237,10 +299,17 @@ closeTimeout
 
    "integer", "5000", "no", "none"
 
-.. versionadded:: ???
+.. versionadded:: 8.35.0
 
-Description following soon.
+Specifies how long rsyslog must wait for the external program to terminate
+after closing the pipe (that is, sending EOF to the stdin of the child
+process). The value must be expressed in milliseconds and must be greater
+than or equal to zero.
 
+See the killUnresponsive_ parameter for more details.
+
+
+.. _killUnresponsive:
 
 killUnresponsive
 ^^^^^^^^^^^^^^^^
@@ -250,27 +319,84 @@ killUnresponsive
    :widths: auto
    :class: parameter-table
 
-   "binary", "", "no", "none"
+   "binary", "the value of 'signalOnClose'", "no", "none"
 
-.. versionadded:: ???
+.. versionadded:: 8.35.0
 
-Description following soon.
+Specifies whether a KILL signal must be sent to the external program in case
+it does not terminate within the timeout indicated by closeTimeout_ (when
+rsyslog is shutting down or the worker thread is being unscheduled).
+
+If signalOnClose_ is set to "on", the default value of ``killUnresponsive``
+is also "on". In this case, the cleanup sequence of the child process is as
+follows: (1) a TERM signal is sent to the child, (2) the pipe with the child
+process is closed (the child will receive EOF on stdin), (3) rsyslog waits
+for the child process to terminate during closeTimeout_, (4) if the child
+has not terminated within the timeout, a KILL signal is sent to it.
+
+If signalOnClose_ is set to "off", the default value of ``killUnresponsive``
+is also "off". In this case, the child cleanup sequence is as follows: (1) the
+pipe with the child process is closed (the child will receive EOF on stdin),
+(2) rsyslog waits for the child process to terminate during closeTimeout_,
+(3) if the child has not terminated within the timeout, rsyslog ignores it and
+continues with the shutdown (or the unschedule of the worker thread).
+
+This parameter can be set to a different value than signalOnClose_, obtaining
+the corresponding variations of cleanup sequences described above.
 
 
 Examples
 ========
 
-Starting an external program
-----------------------------
+Example: command line arguments
+-------------------------------
 
-In the following example omprog.py is executed when a message is put in.
+In the following example, logs will be sent to a program ``log.sh`` located
+in ``/path/to``. The program will receive the command line arguments
+``-p="value 1"`` and ``--param2="value2"``.
 
 .. code-block:: none
 
    module(load="omprog")
+
    action(type="omprog"
-          binary="/pathto/omprog.py --parm1=\"value 1\" --parm2=\"value2\""
+          binary="/path/to/log.sh -p=\"value 1\" --param2=\"value2\""
           template="RSYSLOG_TraditionalFileFormat")
+
+
+Example: external program that writes logs to a database
+--------------------------------------------------------
+
+In this example, logs are sent to the stdin of a Python program that
+(let's assume) writes them to a database. A dedicated disk-assisted
+queue with (a maximum of) 5 worker threads is used, to avoid affecting
+other log destinations in moments of high load. The ``confirmMessages``
+flag is enabled, which tells rsyslog to wait for the program to confirm
+its initialization and each message received. The purpose of this setup
+is preventing logs from being lost because of database connection
+failures.
+
+If the program cannot write a log to the database, it will return a
+negative confirmation to rsyslog via stdout. Rsyslog will then keep the
+failed log  in the queue, and send it again to the program after 5
+seconds, with infinite retries.
+
+.. code-block:: none
+
+   module(load="omprog")
+
+   action(type="omprog"
+          name="db_forward"
+          binary="/usr/share/logging/db_forward.py"
+          confirmMessages="on"
+          queue.type="LinkedList"
+          queue.saveOnShutdown="on"
+          queue.workerThreads="5"
+          action.resumeInterval="5"
+          action.resumeRetryCount="-1")
+
+Note that the ``useTransactions`` flag is not used in this example. The
+program stores and confirms each log individually.
 
 
 |FmtObsoleteName| directives
@@ -279,3 +405,47 @@ In the following example omprog.py is executed when a message is put in.
 -  **$ActionOMProgBinary** <binary>
    The binary program to be executed.
 
+
+Deprecated parameters
+=====================
+
+**Note:** While these parameters are still accepted, they should no longer be
+used for newly created configurations.
+
+
+forceSingleInstance
+-------------------
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+.. versionadded:: v8.1.6
+
+If set to "on", this switch prevents the action's worker threads from
+concurrently sending logs to the running instances (child processes) of
+the external program.
+
+Note that enabling this switch, despite its name, will NOT force a single
+instance of the program to be executed. If you want this behavior, set the
+:doc:`queue.workerThreads <../../rainerscript/queue_parameters>`
+parameter to 1 (which is the default value). This will cause only one worker
+thread to be scheduled for the action.
+
+Besides, when :doc:`queue.workerThreads <../../rainerscript/queue_parameters>`
+is greater than 1, enabling this switch will NOT prevent the child processes
+from concurrently process the received logs, since the processes run
+asynchronously with respect to rsyslog because of the pipe buffering (unless
+the feedback mode is used; see the confirmMessages_ parameter). In general,
+if the external program uses or accesses some kind of shared resource that
+does not allow concurrent access from multiple processes, it is recommended
+to set :doc:`queue.workerThreads <../../rainerscript/queue_parameters>`
+to 1.
+
+This parameter is deprecated. If you are using it with a value of "off" (the
+default), you can safely remove it. If you are using it with a value of "on",
+consider setting :doc:`queue.workerThreads <../../rainerscript/queue_parameters>`
+to 1 instead, for the reasons explained above.
