@@ -933,16 +933,20 @@ AM_CONDITIONAL(ENABLE_ELASTICSEARCH, test x$enable_elasticsearch = xyes)
 
 # capability to enable elasticsearch testbench tests. This requries that an ES test
 # environment is present on the local (127.0.0.1) machine. 
+# we support a "minimal" mode to take care of travis where we cannot run all tests
+# due to runtime constraints
 AC_ARG_ENABLE(elasticsearch_tests,
-        [AS_HELP_STRING([--enable-elasticsearch-tests],[enable MySQL specific tests in testbench @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-elasticsearch-tests],[enable Elasticsearch specific tests in testbench @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_elasticsearch_tests="yes" ;;
           no) enable_elasticsearch_tests="no" ;;
+         minimal) enable_elasticsearch_tests="minimal" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-elasticsearch-tests) ;;
          esac],
         [enable_elasticsearch_tests=no]
 )
 AM_CONDITIONAL(ENABLE_ELASTICSEARCH_TESTS, test x$enable_elasticsearch_tests = xyes)
+AM_CONDITIONAL(ENABLE_ELASTICSEARCH_TESTS_MINIMAL, test x$enable_elasticsearch_tests = xminimal -o x$enable_elasticsearch_tests = xyes)
 
 
 # openssl support
@@ -2456,6 +2460,7 @@ echo "    Testbench2 enabled:                       $enable_testbench2"
 echo "    Testbench libfaketime tests enabled:      $enable_libfaketime"
 echo "    Extended Testbench enabled:               $enable_extended_tests"
 echo "    MySQL Tests enabled:                      $enable_mysql_tests"
+echo "    Elasticsearch Tests:                      $enable_elasticsearch_tests"
 echo "    PostgreSQL Tests enabled:                 $enable_pgsql_tests"
 echo "    Kafka Tests enabled:                      $enable_kafka_tests"
 echo "    Debug mode enabled:                       $enable_debug"

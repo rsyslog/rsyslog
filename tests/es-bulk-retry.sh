@@ -81,7 +81,7 @@ action(type="omfile" file="rsyslog.out.log")
 '
 rm -f es-bulk-errors.log es-stats.log
 
-curl -s -XPUT localhost:${ES_PORT:-19200}/rsyslog_testbench/ -d '{
+curl -s -H 'Content-Type: application/json' -XPUT localhost:${ES_PORT:-19200}/rsyslog_testbench/ -d '{
   "mappings": {
     "test-type": {
       "properties": {

@@ -1,10 +1,14 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
-echo ===============================================================================
-echo \[es-basic-errfile-popul\]: basic test for elasticsearch functionality
+export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
+. $srcdir/diag.sh download-elasticsearch
+. $srcdir/diag.sh stop-elasticsearch
+. $srcdir/diag.sh prepare-elasticsearch
+. $srcdir/diag.sh start-elasticsearch
+
 . $srcdir/diag.sh init
 . $srcdir/diag.sh es-init
-curl -XPUT localhost:9200/rsyslog_testbench/ -d '{
+curl -H 'Content-Type: application/json' -XPUT localhost:19200/rsyslog_testbench/ -d '{
   "mappings": {
     "test-type": {
       "properties": {
@@ -15,7 +19,25 @@ curl -XPUT localhost:9200/rsyslog_testbench/ -d '{
     }
   }
 }'
-. $srcdir/diag.sh startup es-basic-errfile-popul.conf
+. $srcdir/diag.sh generate-conf
+. $srcdir/diag.sh add-conf '
+# Note: we must mess up with the template, because we can not
+# instruct ES to put further constraints on the data type and
+# values. So we require integer and make sure it is none.
+template(name="tpl" type="string"
+	 string="{\"msgnum\":\"x%msg:F,58:2%\"}")
+
+
+module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
+:msg, contains, "msgnum:" action(type="omelasticsearch"
+				 template="tpl"
+				 searchIndex="rsyslog_testbench"
+				 searchType="test-type"
+				 serverport="19200"
+				 bulkmode="off"
+				 errorFile="./rsyslog.errorfile")
+'
+. $srcdir/diag.sh startup
 . $srcdir/diag.sh injectmsg  0 1000
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown 
@@ -24,4 +46,5 @@ then
     echo "error: error file does not exist!"
     exit 1
 fi
+. $srcdir/diag.sh cleanup-elasticsearch
 . $srcdir/diag.sh exit

@@ -1,8 +1,8 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
+export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
 . $srcdir/diag.sh download-elasticsearch
 . $srcdir/diag.sh stop-elasticsearch
-. $srcdir/diag.sh cleanup-elasticsearch
 . $srcdir/diag.sh prepare-elasticsearch
 . $srcdir/diag.sh start-elasticsearch
 

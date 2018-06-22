@@ -555,23 +555,28 @@ endif # ENABLE_FMHASH
 endif # HAVE_VALGRIND
 endif
 
-if ENABLE_ELASTICSEARCH_TESTS
+if ENABLE_ELASTICSEARCH_TESTS_MINIMAL
 TESTS +=  \
 	es-basic.sh \
 	es-basic-es6.0.sh \
+	es-basic-bulk.sh
+if HAVE_VALGRIND
+TESTS += \
+	es-basic-vg.sh \
+	es-basic-vgthread.sh
+endif
+endif
+
+if ENABLE_ELASTICSEARCH_TESTS
+TESTS +=  \
 	es-basic-server.sh \
 	es-basic-ha.sh \
-	es-basic-bulk.sh \
 	es-maxbytes-bulk.sh \
 	es-basic-errfile-empty.sh \
 	es-basic-errfile-popul.sh \
 	es-bulk-errfile-empty.sh \
 	es-bulk-errfile-popul.sh \
 	es-writeoperation.sh
-if HAVE_VALGRIND
-TESTS += \
-	es-basic-vgthread.sh
-endif
 if ENABLE_IMFILE
 TESTS +=  \
 	es-bulk-errfile-popul-def-format.sh \
@@ -581,7 +586,6 @@ TESTS +=  \
 endif
 if HAVE_VALGRIND
 TESTS +=  \
-	es-basic-vg.sh \
 	es-basic-bulk-vg.sh \
 	es-basic-ha-vg.sh
 endif
@@ -1254,25 +1258,15 @@ EXTRA_DIST= \
 	es-basic-es6.0.sh \
 	es-basic.sh \
 	es-basic-vgthread.sh \
-	testsuites/es-basic.conf \
 	es-basic-bulk.sh \
-	testsuites/es-basic-bulk.conf \
 	es-basic-errfile-empty.sh \
-	testsuites/es-basic-errfile-empty.conf \
 	es-basic-errfile-popul.sh \
-	testsuites/es-basic-errfile-popul.conf \
 	es-bulk-errfile-empty.sh \
-	testsuites/es-bulk-errfile-empty.conf \
 	es-bulk-errfile-popul.sh \
-	testsuites/es-bulk-errfile-popul.conf \
 	es-bulk-errfile-popul-def-format.sh \
-	testsuites/es-bulk-errfile-popul-def-format.conf \
 	es-bulk-errfile-popul-erronly.sh \
-	testsuites/es-bulk-errfile-popul-erronly.conf \
 	es-bulk-errfile-popul-erronly-interleaved.sh \
-	testsuites/es-bulk-errfile-popul-erronly-interleaved.conf \
 	es-bulk-errfile-popul-def-interleaved.sh \
-	testsuites/es-bulk-errfile-popul-def-interleaved.conf \
 	es-basic-vg.sh \
 	es-basic-bulk-vg.sh \
 	es-basic-ha-vg.sh \
