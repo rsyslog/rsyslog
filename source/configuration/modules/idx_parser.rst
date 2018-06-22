@@ -10,6 +10,7 @@ The current modules are currently provided as part of rsyslog:
 
 .. toctree::
    :glob:
+   :maxdepth: 1
 
    pm*
 
