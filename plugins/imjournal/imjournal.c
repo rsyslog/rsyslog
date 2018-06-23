@@ -718,8 +718,9 @@ CODESTARTrunInput
 		/*
 		 * update journal disk usage before reading the new message.
 		 */
-		if (sd_journal_get_usage(j, (uint64_t *)&statsCounter.diskUsageBytes) < 0) {
-			LogError(0, RS_RET_ERR, "imjournal: sd_get_usage() failed");
+		const int e = sd_journal_get_usage(j, (uint64_t *)&statsCounter.diskUsageBytes);
+		if (e < 0) {
+			LogError(e, RS_RET_ERR, "imjournal: sd_get_usage() failed");
 		}
 
 		if (readjournal() != RS_RET_OK) {
