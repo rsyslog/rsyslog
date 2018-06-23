@@ -54,7 +54,6 @@ MODULE_CNFNAME("mmnormalize")
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
 
 /* static data */
-DEFobjCurrIf(errmsg);
 
 /* internal structures
  */
@@ -118,7 +117,7 @@ static void
 errCallBack(void __attribute__((unused)) *cookie, const char *msg,
 	    size_t __attribute__((unused)) lenMsg)
 {
-	errmsg.LogError(0, RS_RET_ERR_LIBLOGNORM, "liblognorm error: %s", msg);
+	LogError(0, RS_RET_ERR_LIBLOGNORM, "liblognorm error: %s", msg);
 }
 
 /* to be called to build the liblognorm part of the instance ONCE ALL PARAMETERS ARE CORRECT
@@ -129,7 +128,7 @@ buildInstance(instanceData *pData)
 {
 	DEFiRet;
 	if((pData->ctxln = ln_initCtx()) == NULL) {
-		errmsg.LogError(0, RS_RET_ERR_LIBLOGNORM_INIT, "error: could not initialize "
+		LogError(0, RS_RET_ERR_LIBLOGNORM_INIT, "error: could not initialize "
 				"liblognorm ctx, cannot activate action");
 		ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_INIT);
 	}
@@ -137,7 +136,7 @@ buildInstance(instanceData *pData)
 	ln_setErrMsgCB(pData->ctxln, errCallBack, NULL);
 	if(pData->rule !=NULL && pData->rulebase == NULL) {
 		if(ln_loadSamplesFromString(pData->ctxln, (char*) pData->rule) !=0) {
-			errmsg.LogError(0, RS_RET_NO_RULEBASE, "error: normalization rule '%s' "
+			LogError(0, RS_RET_NO_RULEBASE, "error: normalization rule '%s' "
 					"could not be loaded cannot activate action", pData->rule);
 			ln_exitCtx(pData->ctxln);
 			ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD);
@@ -146,7 +145,7 @@ buildInstance(instanceData *pData)
 		pData->rule = NULL;
 	} else if(pData->rule ==NULL && pData->rulebase != NULL) {
 		if(ln_loadSamples(pData->ctxln, (char*) pData->rulebase) != 0) {
-			errmsg.LogError(0, RS_RET_NO_RULEBASE, "error: normalization rulebase '%s' "
+			LogError(0, RS_RET_NO_RULEBASE, "error: normalization rulebase '%s' "
 					"could not be loaded cannot activate action", pData->rulebase);
 			ln_exitCtx(pData->ctxln);
 			ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD);
@@ -290,7 +289,7 @@ BEGINsetModCnf
 CODESTARTsetModCnf
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "mmnormalize: error processing module "
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "mmnormalize: error processing module "
 						"config parameters missing [module(...)]");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -332,7 +331,7 @@ CODESTARTnewActInst
 	bDestructPValsOnExit = 0;
 	pvals = nvlstGetParams(lst, &actpblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "mmnormalize: error reading "
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "mmnormalize: error reading "
 				"config parameters");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -377,12 +376,12 @@ CODESTARTnewActInst
 		} else if(!strcmp(actpblk.descr[i].name, "path")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
 			if (strlen(cstr) < 2) {
-				errmsg.LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
+				LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
 						"mmnormalize: valid path name should be at least "
 						"2 symbols long, got %s",	cstr);
 				free(cstr);
 			} else if (cstr[0] != '$') {
-				errmsg.LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
+				LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
 						"mmnormalize: valid path name should start with $,"
 						"got %s", cstr);
 				free(cstr);
@@ -399,7 +398,7 @@ CODESTARTnewActInst
 
 	if (varName) {
 		if(pData->bUseRawMsg) {
-			errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+			LogError(0, RS_RET_CONFIG_ERROR,
 			                "mmnormalize: 'variable' param can't be used with 'useRawMsg'. "
 			                "Ignoring 'variable', will use raw message.");
 		} else {
@@ -411,13 +410,13 @@ CODESTARTnewActInst
 	}
 	if(!pData->rulebase) {
 		if(!pData->rule) {
-			errmsg.LogError(0, RS_RET_CONFIG_ERROR, "mmnormalize: rulebase needed. "
+			LogError(0, RS_RET_CONFIG_ERROR, "mmnormalize: rulebase needed. "
 					"Use option rulebase or rule.");
 		}
 	}
 	if(pData->rulebase) {
 		if(pData->rule) {
-			errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+			LogError(0, RS_RET_CONFIG_ERROR,
 					"mmnormalize: only one rulebase possible, rulebase "
 					"can't be used with rule");
 		}
@@ -441,7 +440,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	}
 
 	if(cs.rulebase == NULL && cs.rule == NULL) {
-		errmsg.LogError(0, RS_RET_NO_RULEBASE, "error: no normalization rulebase was specified, use "
+		LogError(0, RS_RET_NO_RULEBASE, "error: no normalization rulebase was specified, use "
 				"$MMNormalizeSampleDB directive first!");
 		ABORT_FINALIZE(RS_RET_NO_RULEBASE);
 	}
@@ -473,7 +472,6 @@ ENDparseSelectorAct
 
 BEGINmodExit
 CODESTARTmodExit
-	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -539,7 +537,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 		ABORT_FINALIZE(RS_RET_NO_MSG_PASSING);
 	}
 
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"mmnormalizerulebase", 0, eCmdHdlrGetWord,
 				    setRuleBase, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"mmnormalizerule", 0, eCmdHdlrGetWord, NULL,
