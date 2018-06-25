@@ -6,7 +6,7 @@ imfile: Text File Input Module
 
 ===========================  ===========================================================================
 **Module Name:**             **imfile**
-**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+**Author:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
 ===========================  ===========================================================================
 
 Purpose
@@ -552,6 +552,21 @@ When deploy rsyslog to a large number of servers, we may only care about
 new log messages generated after the deployment. set **freshstartTail**
 to **on** will discard old logs. Otherwise, there may be vast useless
 message burst on the remote central log receiver
+
+This parameter only applies to files that are already existing during
+rsyslog's initial processing of the file monitors.
+
+.. warning::
+
+   Depending on the number and location of existing files, this initial
+   startup processing may take some time as well. If another process
+   creates a new file at exactly the time of startup processing and writes
+   data to it, rsyslog might detect this file and it's data as prexisting
+   and may skip it. This race is inevitable. So when freshStartTail is used,
+   some risk of data loss exists. The same holds true if between the last
+   shutdown of rsyslog and its restart log file content has been added.
+   As such, the rsyslog team advises against activating the freshStartTail
+   option.
 
 
 discardTruncatedMsg

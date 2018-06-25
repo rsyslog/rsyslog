@@ -4,7 +4,7 @@ omfwd: syslog Forwarding Output Module
 
 ===========================  ===========================================================================
 **Module Name:**             **omfwd**
-**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+**Author:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
 ===========================  ===========================================================================
 
 
@@ -86,7 +86,7 @@ Protocol
 Type of protocol to use for forwarding. Note that \`\`tcp'' means
 both legacy plain tcp syslog as well as RFC5425-based TLS-encrypted
 syslog. Which one is selected depends on the StreamDriver parameter.
-If StreamDriver is set to "gtls" it will use TLS-encrypted syslog.
+If StreamDriver is set to "ossl" or "gtls" it will use TLS-encrypted syslog.
 
 
 NetworkNamespace
@@ -403,7 +403,7 @@ StreamDriver
    "word", "none", "no", "``$ActionSendStreamDriver``"
 
 Choose the stream driver to be used. Default is plain tcp, but
-you can also choose gtls for TLS encryption.
+you can also choose "ossl" or "gtls" for TLS encryption.
 
 
 StreamDriverMode
@@ -472,7 +472,7 @@ messages may be duplicated (what usually is more acceptable).
 Please note that busy systems probably loose more than a
 single message in such cases. This is caused by an
 `inherant unreliability in plain tcp syslog
-<http://blog.gerhards.net/2008/04/on-unreliability-of-plain-tcp-syslog.html>`_
+<https://rainer.gerhards.net/2008/04/on-unreliability-of-plain-tcp-syslog.html>`_
 and there is no way rsyslog could prevent this from happening
 (if you read the detail description, be sure to follow the link
 to the follow-up posting). In order to prevent these problems,

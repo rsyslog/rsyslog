@@ -4,7 +4,7 @@ imrelp: RELP Input Module
 
 ===========================  ===========================================================================
 **Module Name:**             **imrelp**
-**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+**Author:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
 ===========================  ===========================================================================
 
 
@@ -343,11 +343,12 @@ oversizeMode
 
 This parameter specifies how messages that are too long will be handled.
 For this parameter the length of the parameter maxDataSize is used.
+
 - truncate: Messages will be truncated at the maximal message size.
 - abort: This is the behaviour until version 8.35.0. Upon receiving a
-message that is too long imrelp will abort.
+  message that is too long imrelp will abort.
 - accept: Messages will be accepted even if they are too long and an error
-message will be put out. Using this option will bring some risks with it.
+  message will be put out. Using this option will bring some risks with it.
 
 
 .. _imrelp-statistic-counter:

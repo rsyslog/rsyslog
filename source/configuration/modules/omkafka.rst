@@ -4,7 +4,7 @@ omkafka: write to Apache Kafka
 
 ===========================  ===========================================================================
 **Module Name:**             **omkafka**
-**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+**Author:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
 **Available since:**         v8.7.0
 ===========================  ===========================================================================
 

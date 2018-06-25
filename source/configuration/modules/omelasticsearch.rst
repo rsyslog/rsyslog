@@ -4,7 +4,7 @@ omelasticsearch: Elasticsearch Output Module
 
 ===========================  ===========================================================================
 **Module Name:**             **omelasticsearch**
-**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+**Author:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
 ===========================  ===========================================================================
 
 
@@ -490,6 +490,184 @@ corresponding to the cert `tls.mycert` used for doing client cert auth against
 Elasticsearch.  This file is in PEM format, and must be unencrypted, so take
 care to secure it properly.  For example: `/etc/rsyslog.d/es-client-key.pem`
 
+.. _omelasticsearch-bulkid:
+
+bulkid
+^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+This is the unique id to assign to the record.  The `bulk` part is misleading - this
+can be used in both bulk mode :ref:`bulkmode` or in index
+(record at a time) mode.  Although you can specify a static value for this
+parameter, you will almost always want to specify a *template* for the value of
+this parameter, and set `dynbulkid="on"` :ref:`omelasticsearch-dynbulkid`.  NOTE:
+you must use `bulkid` and `dynbulkid` in order to use `writeoperation="create"`
+:ref:`omelasticsearch-writeoperation`.
+
+.. _omelasticsearch-dynbulkid:
+
+dynbulkid
+^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+If this parameter is set to `"on"`, then the `bulkid` parameter :ref:`omelasticsearch-bulkid`
+specifies a *template* to use to generate the unique id value to assign to the record.  If
+using `bulkid` you will almost always want to set this parameter to `"on"` to assign
+a different unique id value to each record.  NOTE:
+you must use `bulkid` and `dynbulkid` in order to use `writeoperation="create"`
+:ref:`omelasticsearch-writeoperation`.
+
+.. _omelasticsearch-writeoperation:
+
+writeoperation
+^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "index", "no", "none"
+
+The value of this parameter is either `"index"` (the default) or `"create"`.  If `"create"` is
+used, this means the bulk action/operation will be `create` - create a document only if the
+document does not already exist.  The record must have a unique id in order to use `create`.
+See :ref:`omelasticsearch-bulkid` and :ref:`omelasticsearch-dynbulkid`.  See
+:ref:`omelasticsearch-writeoperation-example` for an example.
+
+.. _omelasticsearch-retryfailures:
+
+retryfailures
+^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+If this parameter is set to `"on"`, then the module will look for an
+`"errors":true` in the bulk index response.  If found, each element in the
+response will be parsed to look for errors, since a bulk request may have some
+records which are successful and some which are failures.  Failed requests will
+be converted back into records and resubmitted back to rsyslog for
+reprocessing.  Each failed request will be resubmitted with a local variable
+called `$.omes`.  This is a hash consisting of the fields from the response.
+See below :ref:`omelasticsearch-retry-example` for an example of how retry
+processing works.
+*NOTE* The retried record will be resubmitted at the "top" of your processing
+pipeline.  If your processing pipeline is not idempotent (that is, your
+processing pipeline expects "raw" records), then you can specify a ruleset to
+redirect retries to.  See :ref:`omelasticsearch-retryruleset` below.
+
+`$.omes` fields:
+
+* writeoperation - the operation used to submit the request - for rsyslog
+  omelasticsearch this currently means either `"index"` or `"create"`
+* status - the HTTP status code - typically an error will have a `4xx` or `5xx`
+  code - of particular note is `429` - this means Elasticsearch was unable to
+  process this bulk record request due to a temporary condition e.g. the bulk
+  index thread pool queue is full, and rsyslog should retry the operation.
+* _index, _type, _id - the metadata associated with the request
+* error - a hash containing one or more, possibly nested, fields containing
+  more detailed information about a failure.  Typically there will be fields
+  `$.omes!error!type` (a keyword) and `$.omes!error!reason` (a longer string)
+  with more detailed information about the rejection.  NOTE: The format is
+  apparently not described in great detail, so code must not make any
+  assumption about the availability of `error` or any specific sub-field.
+
+There may be other fields too - the code just copies everything in the
+response.  Here is an example of a detailed error response, in JSON format, from
+Elasticsearch 5.6.9:
+
+.. code-block:: json
+
+    {"omes":
+      {"writeoperation": "create",
+       "_index": "rsyslog_testbench",
+       "_type": "test-type",
+       "_id": "92BE7AF79CD44305914C7658AF846A08",
+       "status": 400,
+       "error":
+         {"type": "mapper_parsing_exception",
+          "reason": "failed to parse [msgnum]",
+          "caused_by":
+            {"type": "number_format_exception",
+             "reason": "For input string: \"x00000025\""}}}}
+
+Reference: https://www.elastic.co/guide/en/elasticsearch/guide/current/bulk.html#bulk
+
+.. _omelasticsearch-retryruleset:
+
+retryruleset
+^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "", "no", "none"
+
+If `retryfailures` is not `"on"` (:ref:`omelasticsearch-retryfailures`) then
+this parameter has no effect.  This parameter specifies the name of a ruleset
+to use to route retries.  This is useful if you do not want retried messages to
+be processed starting from the top of your processing pipeline, or if you have
+multiple outputs but do not want to send retried Elasticsearch failures to all
+of your outputs, and you do not want to clutter your processing pipeline with a
+lot of conditionals.  See below :ref:`omelasticsearch-retry-example` for an
+example of how retry processing works.
+
+.. _omelasticsearch-ratelimit.interval:
+
+ratelimit.interval
+^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "600", "no", "none"
+
+If `retryfailures` is not `"on"` (:ref:`omelasticsearch-retryfailures`) then
+this parameter has no effect.  Specifies the interval in seconds onto which
+rate-limiting is to be applied. If more than ratelimit.burst messages are read
+during that interval, further messages up to the end of the interval are
+discarded. The number of messages discarded is emitted at the end of the
+interval (if there were any discards).
+Setting this to value zero turns off ratelimiting.
+
+.. _omelasticsearch-ratelimit.burst:
+
+ratelimit.burst
+^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "20000", "no", "none"
+
+If `retryfailures` is not `"on"` (:ref:`omelasticsearch-retryfailures`) then
+this parameter has no effect.  Specifies the maximum number of messages that
+can be emitted within the ratelimit.interval interval. For futher information,
+see description there.
+
 .. _omelasticsearch-statistic-counter:
 
 Statistic Counter
@@ -514,6 +692,36 @@ Parameters are:
    times a failure occured (a potentially much smaller number). Counting messages
    would be quite performance-intense and is thus not done.
 
+The following counters are available when `retryfailures="on"` is used:
+
+-  **response.success** - number of records successfully sent in bulk index
+   requests - counts the number of successful responses
+
+-  **response.bad** - number of times omelasticsearch received a response in a
+   bulk index response that was unrecognized or unable to be parsed.  This may
+   indicate that omelasticsearch is attempting to communicate with a version of
+   Elasticsearch that is incompatible, or is otherwise sending back data in the
+   response that cannot be handled
+
+-  **response.duplicate** - number of records in the bulk index request that
+   were duplicates of already existing records - this will only be reported if
+   using `writeoperation="create"` and `bulkid` to assign each record a unique
+   ID
+
+-  **response.badargument** - number of times omelasticsearch received a
+   response that had a status indicating omelasticsearch sent bad data to
+   Elasticsearch.  For example, status `400` and an error message indicating
+   omelasticsearch attempted to store a non-numeric string value in a numeric
+   field.
+
+-  **response.bulkrejection** - number of times omelasticsearch received a
+   response that had a status indicating Elasticsearch was unable to process
+   the record at this time - status `429`.  The record can be retried.
+
+-  **response.other** - number of times omelasticsearch received a
+   response not recognized as one of the above responses, typically some other
+   `4xx` or `5xx` http status.
+
 **The fail.httprequests and fail.http counters reflect only failures that
 omelasticsearch detected.** Once it detects problems, it (usually, depends on
 circumstances) tell the rsyslog core that it wants to be suspended until the
@@ -527,6 +735,40 @@ These were experimental and confusing. The only ones really used were "submits",
 which were the number of successfully processed messages and "connfail" which were
 equivalent to "failed.http".
 
+How Retries Are Handled
+=======================
+
+When using `retryfailures="on"` (:ref:`omelasticsearch-retryfailures`), the
+original `Message` object (that is, the original `smsg_t *msg` object) **is not
+available**.  This means none of the metadata associated with that object, such
+as various timestamps, hosts/ip addresses, etc. are not available for the retry
+operation.  The only thing available is the original JSON string sent in the
+original request, and whatever data is returned in the error response, which
+will contain the Elasticsearch metadata about the index, type, and id, and will
+be made available in the `$.omes` fields.  For the message to retry, the code
+will take the original JSON string and parse it back into an internal `Message`
+object.  This means you **may need to use a different template** to output
+messages for your retry ruleset.  For example, if you used the following
+template to format the Elasticsearch message for the initial submission:
+
+.. code-block:: none
+
+    template(name="es_output_template"
+             type="list"
+             option.json="on") {
+               constant(value="{")
+                 constant(value="\"timestamp\":\"")      property(name="timereported" dateFormat="rfc3339")
+                 constant(value="\",\"message\":\"")     property(name="msg")
+                 constant(value="\",\"host\":\"")        property(name="hostname")
+                 constant(value="\",\"severity\":\"")    property(name="syslogseverity-text")
+                 constant(value="\",\"facility\":\"")    property(name="syslogfacility-text")
+                 constant(value="\",\"syslogtag\":\"")   property(name="syslogtag")
+               constant(value="\"}")
+             }
+
+You would have to use a different template for the retry, since none of the
+`timereported`, `msg`, etc. fields will have the same values for the retry as
+for the initial try.
 
 Examples
 ========
@@ -603,3 +845,84 @@ The following sample does the following:
            action.resumeretrycount="-1")
 
 
+.. _omelasticsearch-writeoperation-example:
+
+Example 3
+---------
+
+The following sample shows how to use :ref:`omelasticsearch-writeoperation`
+with :ref:`omelasticsearch-dynbulkid` and :ref:`omelasticsearch-bulkid`.  For
+simplicity, it assumes rsyslog has been built with `--enable-libuuid` which
+provides the `uuid` property for each record:
+
+.. code-block:: none
+
+    module(load="omelasticsearch")
+    set $!es_record_id = $uuid;
+    template(name="bulkid-template" type="list") { property(name="$!es_record_id") }
+    action(type="omelasticsearch"
+           ...
+           bulkmode="on"
+           bulkid="bulkid-template"
+           dynbulkid="on"
+           writeoperation="create")
+
+
+.. _omelasticsearch-retry-example:
+
+Example 4
+---------
+
+The following sample shows how to use :ref:`omelasticsearch-retryfailures` to
+process, discard, or retry failed operations.  This uses
+`writeoperation="create"` with a unique `bulkid` so that we can check for and
+discard duplicate messages as successful.  The `try_es` ruleset is used both
+for the initial attempt and any subsequent retries.  The code in the ruleset
+assumes that if `$.omes!status` is set and is non-zero, this is a retry for a
+previously failed operation.  If the status was successful, or Elasticsearch
+said this was a duplicate, the record is already in Elasticsearch, so we can
+drop the record.  If there was some error processing the response
+e.g. Elasticsearch sent a response formatted in some way that we did not know
+how to process, then submit the record to the `error_es` ruleset.  If the
+response was a "hard" error like `400`, then submit the record to the
+`error_es` ruleset.  In any other case, such as a status `429` or `5xx`, the
+record will be resubmitted to Elasticsearch. In the example, the `error_es`
+ruleset just dumps the records to a file.
+
+.. code-block:: none
+
+    module(load="omelasticsearch")
+    module(load="omfile")
+    set $!es_record_id = $uuid;
+    template(name="bulkid-template" type="list") { property(name="$!es_record_id") }
+
+    ruleset(name="error_es") {
+	    action(type="omfile" template="RSYSLOG_DebugFormat" file="es-bulk-errors.log")
+    }
+
+    ruleset(name="try_es") {
+        if strlen($.omes!status) > 0 then {
+            # retry case
+            if ($.omes!status == 200) or ($.omes!status == 201) or (($.omes!status == 409) and ($.omes!writeoperation == "create")) then {
+                stop # successful
+            }
+            if ($.omes!writeoperation == "unknown") or (strlen($.omes!error!type) == 0) or (strlen($.omes!error!reason) == 0) then {
+                call error_es
+                stop
+            }
+            if ($.omes!status == 400) or ($.omes!status < 200) then {
+                call error_es
+                stop
+            }
+            # else fall through to retry operation
+        }
+        action(type="omelasticsearch"
+                  ...
+                  bulkmode="on"
+                  bulkid="bulkid-template"
+                  dynbulkid="on"
+                  writeoperation="create"
+                  retryfailures="on"
+                  retryruleset="try_es")
+    }
+    call try_es

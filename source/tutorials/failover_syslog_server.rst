@@ -1,5 +1,7 @@
+**********************
 Failover Syslog Server
-======================
+**********************
+
 
 There are often situations where syslog data from the local system should be 
 sent to a central syslogd (for consolidation, archival and whatever other 
@@ -12,16 +14,21 @@ Let's assume you have a primary and two secondary central servers. Then, you
 can use the following config file excerpt to send data to them:
 rsyslog.conf:
 
-::
+.. code-block:: none
 
-  *.* @@primary-syslog.example.com
-  $ActionExecOnlyWhenPreviousIsSuspended on
-  & @@secondary-1-syslog.example.com
-  & @@secondary-2-syslog.example.com
-  & /var/log/localbuffer
-  $ActionExecOnlyWhenPreviousIsSuspended off
+   if($msg contains "error") then {
+        action(type="omfwd" target="primary-syslog.example.com" port="15314"
+               protocol="tcp")
+        action(type="omfwd" target="secondary-1-syslog.example.com" port="15314"
+               action.execOnlyWhenPreviousIsSuspended="on")
+        action(type="omfwd" target="secondary-2-syslog.example.com" port="15314"
+               action.execOnlyWhenPreviousIsSuspended="on")
+        action(type="omfile" tag="failover" file="/var/log/localbuffer"
+               action.execOnlyWhenPreviousIsSuspended="on")
+   }
 
-This selector processes all messages it receives (*.*). It tries to forward 
+
+The action processes all messages that contain "error". It tries to forward 
 every message to primary-syslog.example.com (via tcp). If it can not reach that
 server, it tries secondary-1-syslog.example.com, if that fails too, it tries 
 secondary-2-syslog.example.com. If neither of these servers can be connected, 

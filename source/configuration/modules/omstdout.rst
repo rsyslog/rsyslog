@@ -4,7 +4,7 @@ omstdout: stdout output module (testbench tool)
 
 ===========================  ===========================================================================
 **Module Name:**             **omstdout**
-**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+**Author:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
 **Available Since:**         4.1.6
 ===========================  ===========================================================================
 

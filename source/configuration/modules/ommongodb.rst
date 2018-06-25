@@ -4,7 +4,7 @@ ommongodb: MongoDB Output Module
 
 ===========================  ===========================================================================
 **Module Name:**             **ommongodb**
-**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+**Author:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
 ===========================  ===========================================================================
 
 
@@ -88,6 +88,20 @@ Collection
    "word", "log", "no", "none"
 
 Collection to use.
+
+
+Allowed_Error_Codes
+^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "array", "no", "no", "none"
+
+The list of error codes returned by MongoDB you want ommongodb to ignore.
+Please use the following format: allowed_error_codes=["11000","47"].
 
 
 Template

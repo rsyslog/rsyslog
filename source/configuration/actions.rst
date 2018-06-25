@@ -174,7 +174,7 @@ Useful Links
 
 -  Rainer's blog posting on the performance of `main and action queue
    worker
-   threads <http://blog.gerhards.net/2013/06/rsyslog-performance-main-and-action.html>`_
+   threads <https://rainer.gerhards.net/2013/06/rsyslog-performance-main-and-action.html>`_
 
 Legacy Format
 -------------

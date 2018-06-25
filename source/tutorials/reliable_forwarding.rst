@@ -1,7 +1,7 @@
 Reliable Forwarding of syslog Messages with Rsyslog
 ===================================================
 
-*Written by* `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+*Written by* `Rainer Gerhards <https://rainer.gerhards.net/>`_
 *(2008-06-27)*
 
 Abstract
@@ -13,7 +13,7 @@ Abstract
 being installed on the client system and it is recommended to have it
 installed on the server system. Please note that industry-standard
 `plain TCP syslog protocol is not fully
-reliable <http://blog.gerhards.net/2008/04/on-unreliability-of-plain-tcp-syslog.html>`_
+reliable <https://rainer.gerhards.net/2008/04/on-unreliability-of-plain-tcp-syslog.html>`_
 (thus the "quite reliable"). If you need a truly reliable solution, you
 need to look into RELP (natively supported by rsyslog).*
 
@@ -154,7 +154,7 @@ order to get full reliability, you need to use the RELP protocol.
 
 Follow the next link to learn more about `the problems you may encounter
 with plain tcp
-syslog <http://blog.gerhards.net/2008/04/on-unreliability-of-plain-tcp-syslog.html>`_.
+syslog <https://rainer.gerhards.net/2008/04/on-unreliability-of-plain-tcp-syslog.html>`_.
 
 Feedback requested
 ~~~~~~~~~~~~~~~~~~
@@ -166,6 +166,6 @@ me know <mailto:rgerhards@adiscon.com>`_.
 Revision History
 ----------------
 
--  2008-06-27 \* `Rainer Gerhards <http://www.gerhards.net/rainer>`_ \*
+-  2008-06-27 \* `Rainer Gerhards <https://rainer.gerhards.net/>`_ \*
    Initial Version created
 
