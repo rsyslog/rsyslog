@@ -1,4 +1,6 @@
 ------------------------------------------------------------------------------
+Version 8.37.0 [v8-stable] 2018-08-07
+------------------------------------------------------------------------------
 Version 8.36.0 [v8-stable] 2018-06-26
 - build system change:
   Liblogging-stdlog was introduced to provide a broader ability to send rsyslog
