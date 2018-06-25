@@ -90,6 +90,20 @@ Collection
 Collection to use.
 
 
+Allowed_Error_Codes
+^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "array", "no", "no", "none"
+
+The list of error codes returned by MongoDB you want ommongodb to ignore.
+Please use the following format: allowed_error_codes=["11000","47"].
+
+
 Template
 ^^^^^^^^
 
