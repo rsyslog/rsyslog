@@ -60,6 +60,7 @@
 #include "datetime.h"
 #include "errmsg.h"
 #include "cfsysline.h"
+#include "parserif.h"
 #include "unicode-helper.h"
 
 MODULE_TYPE_OUTPUT
@@ -83,7 +84,7 @@ typedef struct _instanceData {
     	char *ssl_cert;
     	char *uid;
     	char *pwd;
-		uint32_t allowed_error_codes[256];
+	uint32_t allowed_error_codes[256];
 	int allowed_error_codes_nbr;
    	char *db;
    	char *collection_name;
@@ -109,7 +110,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "db", eCmdHdlrGetWord, 0 },
 	{ "collection", eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
-	{ "allowed_error_codes", eCmdHdlrGetWord, 0 }
+	{ "allowed_error_codes", eCmdHdlrArray, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -510,7 +511,8 @@ ENDtryResume
  * Check if `code` is in the allowed error codes.
  * Return 1 if so, 0 otherwise.
  */
-static int is_allowed_error_code(instanceData const* pData, uint32_t code) {
+static int is_allowed_error_code(instanceData const* pData, uint32_t code)
+{
 	int i;
 
 	i = 0;
@@ -581,9 +583,6 @@ static void setInstParamDefaults(instanceData *pData)
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
-	char* error_codes;
-	char* saveptr;
-	char* tok;
 CODESTARTnewActInst
 	dbgprintf("ommongodb: Getting configuration.\n");
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
@@ -619,18 +618,19 @@ CODESTARTnewActInst
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (char*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "allowed_error_codes")) {
-			saveptr = NULL;
-			tok = NULL;
-			error_codes = (char*)es_str2cstr(pvals[i].val.d.estr, NULL);
-			if (error_codes != NULL) {
-				tok = strtok_r(error_codes, ", ", &saveptr);
-				while (tok != NULL) {
-					pData->allowed_error_codes[pData->allowed_error_codes_nbr]
-                            = (unsigned)atoi(tok);
-					++(pData->allowed_error_codes_nbr);
-					tok = strtok_r(NULL, ", ", &saveptr);
-				}
-				free(error_codes);
+			const int maxerrcodes = sizeof(pData->allowed_error_codes) / sizeof(uint32_t);
+			pData->allowed_error_codes_nbr = pvals[i].val.d.ar->nmemb;
+			if(pData->allowed_error_codes_nbr > maxerrcodes) {
+				parser_errmsg("ommongodb: %d allowed_error_codes given, but max "
+					"supported number is %d. Only the first %d error codes will "
+					"be accepted", pData->allowed_error_codes_nbr, maxerrcodes, maxerrcodes);
+				pData->allowed_error_codes_nbr = maxerrcodes;
+			}
+			for(int j = 0 ; j <  pData->allowed_error_codes_nbr ; ++j) {
+				const char *const str = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+				assert(str != NULL);
+				pData->allowed_error_codes[j] = (unsigned)atoi(str);
+				free((void*)str);
 			}
 		} else {
 			dbgprintf("ommongodb: program error, non-handled "
