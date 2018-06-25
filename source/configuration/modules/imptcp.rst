@@ -31,10 +31,6 @@ Notable Features
 Configuration Parameters
 ========================
 
-This plugin has config directives similar named as imtcp, but they all
-have **P**\ TCP in their name instead of just TCP. Note that only a
-subset of the parameters are supported.
-
 .. note::
 
    Parameter names are case-insensitive.
@@ -523,6 +519,31 @@ MultiLine
 
 Experimental parameter which caues rsyslog to recognise a new message
 only if the line feed is followed by a '<' or if there are no more characters.
+
+
+framing.delimiter.regex
+^^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "off", "no", "none"
+
+Experimental parameter. It is similar to "MultiLine", but provides greater
+control of when a log message ends. You can specify a regular expression that
+characterizes the header to expect at the start of the next message. As such,
+it indicates the end of the current message. For example, one can use this
+setting to use a RFC3164 header as frame delimiter::
+
+    framing.delimiter.regex="^<[0-9]{1,3}>(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
+
+Note that when oversize messages arrive this mode may have problems finding
+the proper frame terminator. There are some provisions inside imptcp to make
+these kinds of problems unlikely, but if the messages are very much over the
+configured MaxMessageSize, imptcp emits an error messages. Chances are great
+it will properly recover from such a situation.
 
 
 SocketBacklog
