@@ -479,7 +479,7 @@ finalize_it:
 
 BEGINnewInpInst
 	struct cnfparamvals *pvals;
-	instanceConf_t *inst;
+	instanceConf_t *inst = NULL;
 	int i,j;
 	FILE *fp;
 CODESTARTnewInpInst
@@ -609,10 +609,12 @@ finalize_it:
 CODE_STD_FINALIZERnewInpInst
 	cnfparamvalsDestruct(pvals, &inppblk);
 	if(iRet != RS_RET_OK) {
-		free(inst->myCertFile);
-		inst->myCertFile = NULL;
-		free(inst->myPrivKeyFile);
-		inst->myPrivKeyFile = NULL;
+		if(inst != NULL) {
+			free(inst->myCertFile);
+			inst->myCertFile = NULL;
+			free(inst->myPrivKeyFile);
+			inst->myPrivKeyFile = NULL;
+		}
 	}
 ENDnewInpInst
 
