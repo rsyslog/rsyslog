@@ -259,6 +259,7 @@ finalize_it:
 BEGINcreateInstance
 CODESTARTcreateInstance
 	pData->constSubject = NULL;
+	pData->bEnableBody = 1;
 ENDcreateInstance
 
 
