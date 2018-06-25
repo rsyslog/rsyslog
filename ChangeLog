@@ -46,6 +46,11 @@ Version 8.36.0 [v8-stable] 2018-06-26
   Thanks to Richard Megginson for the patch.
 - lookup tables: reload message now with "info" severity (was "error")
   thanks to Adam Chalkley for the patch
+- imptcp: add support for regex-based framing
+  for complex multi-line messages (XML in particular), the multiLine method
+  does not work well. We now have a capability to specify via a regex when
+  a frame starts (and the previous thus ends).
+  adds imptcp input parameter "framing.delimiter.regex"
 - imjournal: add statistics counter
   following statistics counter are now supported by imjournal
   - submitted = total number of messages submitted for processing
