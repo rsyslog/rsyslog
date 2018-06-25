@@ -720,7 +720,7 @@ CODESTARTrunInput
 		 */
 		const int e = sd_journal_get_usage(j, (uint64_t *)&statsCounter.diskUsageBytes);
 		if (e < 0) {
-			LogError(e, RS_RET_ERR, "imjournal: sd_get_usage() failed");
+			LogError(-e, RS_RET_ERR, "imjournal: sd_get_usage() failed");
 		}
 
 		if (readjournal() != RS_RET_OK) {
