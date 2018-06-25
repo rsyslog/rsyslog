@@ -527,6 +527,8 @@ if ENABLE_IMPTCP
 # need to be disabled if we do not have this module
 TESTS +=  \
 	manyptcp.sh \
+	imptcp_framing_regex.sh \
+	imptcp_framing_regex-oversize.sh \
 	imptcp_large.sh \
 	imptcp-connection-msg-disabled.sh \
 	imptcp-connection-msg-received.sh \
@@ -1318,6 +1320,10 @@ EXTRA_DIST= \
 	testsuites/manyptcp.conf \
 	imptcp-NUL.sh \
 	imptcp-NUL-rawmsg.sh \
+	imptcp_framing_regex.sh \
+	testsuites/imptcp_framing_regex.testdata \
+	imptcp_framing_regex-oversize.sh \
+	testsuites/imptcp_framing_regex-oversize.testdata \
 	imptcp_large.sh \
 	imptcp-connection-msg-disabled.sh \
 	imptcp-connection-msg-received.sh \
