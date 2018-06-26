@@ -150,8 +150,6 @@ typedef struct instanceConf_s {
 	struct instanceConf_s *next;
 } instanceData;
 
-typedef instanceConf_t instanceData;
-
 struct modConfData_s {
 	rsconf_t *pConf;		/* our overall config object */
 	instanceConf_t *root, *tail;
