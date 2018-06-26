@@ -56,6 +56,7 @@ apt-get install -y \
 	libcurl4-gnutls-dev \
 	python-docutils  \
 	wget \
+	curl \
 	libgnutls28-dev \
 	libsystemd-dev \
 	libhiredis-dev \
