@@ -119,7 +119,15 @@ static sd_journal *j;
 static int j_inotify_fd;
 static struct {
 	statsobj_t *stats;
-	STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
+	STATSCOUNTER_DEF(ctrSubmitted, mutCtrSubmitted)
+	STATSCOUNTER_DEF(ctrRead, mutCtrRead);
+	STATSCOUNTER_DEF(ctrDiscarded, mutCtrDiscarded);
+	STATSCOUNTER_DEF(ctrFailed, mutCtrFailed);
+	STATSCOUNTER_DEF(ctrPollFailed, mutCtrPollFailed);
+	STATSCOUNTER_DEF(ctrRotations, mutCtrRotations);
+	STATSCOUNTER_DEF(ctrRecoveryAttempts, mutCtrRecoveryAttempts);
+	uint64 ratelimitDiscardedInInterval;
+	uint64 diskUsageBytes;
 } statsCounter;
 
 #define J_PROCESS_PERIOD 1024  /* Call sd_journal_process() every 1,024 records */
@@ -140,7 +148,7 @@ static rsRetVal openJournal(void) {
 		iRet = RS_RET_IO_ERROR;
 	} else {
 		j_inotify_fd = r;
-	}	
+	}
 	RETiRet;
 }
 
@@ -252,9 +260,12 @@ int sharedJsonProperties)
 	}
 
 	CHKiRet(ratelimitAddMsg(ratelimiter, NULL, pMsg));
-	STATSCOUNTER_INC(statsCounter.ctrSubmit, statsCounter.mutCtrSubmit);
+	STATSCOUNTER_INC(statsCounter.ctrSubmitted, statsCounter.mutCtrSubmitted);
 
 finalize_it:
+	if (iRet == RS_RET_DISCARDMSG)
+		STATSCOUNTER_INC(statsCounter.ctrDiscarded, statsCounter.mutCtrDiscarded);
+
 	RETiRet;
 }
 
@@ -298,6 +309,7 @@ readjournal(void)
 	} else {
 		CHKiRet(sanitizeValue(((const char *)get) + 8, length - 8, &message));
 	}
+	STATSCOUNTER_INC(statsCounter.ctrRead, statsCounter.mutCtrRead);
 
 	/* Get message severity ("priority" in journald's terminology) */
 	if (sd_journal_get_data(j, "PRIORITY", &get, &length) >= 0) {
@@ -375,6 +387,7 @@ readjournal(void)
 	free (sys_iden);
 
 	if (-1 == r) {
+		STATSCOUNTER_INC(statsCounter.ctrFailed, statsCounter.mutCtrFailed);
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 
@@ -504,6 +517,7 @@ pollJournal(void)
 			ABORT_FINALIZE(RS_RET_OK);
 		} else {
 			LogError(errno, RS_RET_ERR, "imjournal: poll() failed");
+			STATSCOUNTER_INC(statsCounter.ctrPollFailed, statsCounter.mutCtrPollFailed)
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	}
@@ -516,6 +530,8 @@ pollJournal(void)
 		LogError(-err, RS_RET_ERR, "imjournal: sd_journal_process() failed");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
+	if (err == SD_JOURNAL_INVALIDATE)
+		STATSCOUNTER_INC(statsCounter.ctrRotations, statsCounter.mutCtrRotations);
 
 finalize_it:
 	RETiRet;
@@ -629,6 +645,7 @@ static void
 tryRecover(void) {
 	LogMsg(0, RS_RET_OK, LOG_INFO, "imjournal: trying to recover from unexpected "
 		"journal error");
+	STATSCOUNTER_INC(statsCounter.ctrRecoveryAttempts, statsCounter.mutCtrRecoveryAttempts);
 	closeJournal();
 	srSleep(10, 0);	// do not hammer machine with too-frequent retries
 	openJournal();
@@ -698,13 +715,21 @@ CODESTARTrunInput
 			continue;
 		}
 
+		/*
+		 * update journal disk usage before reading the new message.
+		 */
+		const int e = sd_journal_get_usage(j, (uint64_t *)&statsCounter.diskUsageBytes);
+		if (e < 0) {
+			LogError(-e, RS_RET_ERR, "imjournal: sd_get_usage() failed");
+		}
+
 		if (readjournal() != RS_RET_OK) {
 			tryRecover();
 			continue;
 		}
 
 		count++;
-		
+
 		if ((count % J_PROCESS_PERIOD) == 0) {
 			/* Give the journal a periodic chance to detect rotated journal files to be cleaned up. */
 			r = sd_journal_process(j);
@@ -760,9 +785,31 @@ CODESTARTactivateCnf
 	CHKiRet(statsobj.Construct(&(statsCounter.stats)));
 	CHKiRet(statsobj.SetName(statsCounter.stats, (uchar*)"imjournal"));
 	CHKiRet(statsobj.SetOrigin(statsCounter.stats, (uchar*)"imjournal"));
-	STATSCOUNTER_INIT(statsCounter.ctrSubmit, statsCounter.mutCtrSubmit);
+	STATSCOUNTER_INIT(statsCounter.ctrSubmitted, statsCounter.mutCtrSubmitted);
 	CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("submitted"),
-			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(statsCounter.ctrSubmit)));
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(statsCounter.ctrSubmitted)));
+	STATSCOUNTER_INIT(statsCounter.ctrRead, statsCounter.mutCtrRead);
+	CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("read"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(statsCounter.ctrRead)));
+	STATSCOUNTER_INIT(statsCounter.ctrDiscarded, statsCounter.mutCtrDiscarded);
+	CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("discarded"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(statsCounter.ctrDiscarded)));
+	STATSCOUNTER_INIT(statsCounter.ctrFailed, statsCounter.mutCtrFailed);
+	CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("failed"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(statsCounter.ctrFailed)));
+	STATSCOUNTER_INIT(statsCounter.ctrPollFailed, statsCounter.mutCtrPollFailed);
+	CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("poll_failed"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(statsCounter.ctrPollFailed)));
+	STATSCOUNTER_INIT(statsCounter.ctrRotations, statsCounter.mutCtrRotations);
+	CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("rotations"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(statsCounter.ctrRotations)));
+	STATSCOUNTER_INIT(statsCounter.ctrRecoveryAttempts, statsCounter.mutCtrRecoveryAttempts);
+	CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("recovery_attempts"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(statsCounter.ctrRecoveryAttempts)));
+	CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("ratelimit_discarded_in_interval"),
+	                ctrType_Int, CTR_FLAG_NONE, &(statsCounter.ratelimitDiscardedInInterval)));
+	CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("disk_usage_bytes"),
+	                ctrType_Int, CTR_FLAG_NONE, &(statsCounter.diskUsageBytes)));
 	CHKiRet(statsobj.ConstructFinalize(statsCounter.stats));
 	/* end stats counter */
 
