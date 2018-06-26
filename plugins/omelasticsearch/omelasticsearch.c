@@ -755,10 +755,10 @@ static rsRetVal
 getSection(const char* bulkRequest, const char **bulkRequestNextSectionStart )
 {
 		DEFiRet;
-		char* index =0;
-		if( (index = strchr(bulkRequest,'\n')) != 0)/*intermediate section*/
+		char* idx =0;
+		if( (idx = strchr(bulkRequest,'\n')) != 0)/*intermediate section*/
 		{
-			*bulkRequestNextSectionStart = ++index;
+			*bulkRequestNextSectionStart = ++idx;
 		}
 		else
 		{
