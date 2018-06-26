@@ -857,11 +857,15 @@ TESTS += \
 endif
 
 if ENABLE_MMKUBERNETES
+if ENABLE_MMJSONPARSE
+if ENABLE_IMFILE
 TESTS += \
 	mmkubernetes-basic.sh
 if HAVE_VALGRIND
 TESTS += \
 	mmkubernetes-basic-vg.sh
+endif
+endif
 endif
 endif
 
