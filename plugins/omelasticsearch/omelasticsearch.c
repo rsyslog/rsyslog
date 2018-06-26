@@ -150,8 +150,6 @@ typedef struct instanceConf_s {
 	struct instanceConf_s *next;
 } instanceData;
 
-typedef instanceConf_t instanceData;
-
 struct modConfData_s {
 	rsconf_t *pConf;		/* our overall config object */
 	instanceConf_t *root, *tail;
@@ -757,10 +755,10 @@ static rsRetVal
 getSection(const char* bulkRequest, const char **bulkRequestNextSectionStart )
 {
 		DEFiRet;
-		char* index =0;
-		if( (index = strchr(bulkRequest,'\n')) != 0)/*intermediate section*/
+		char* idx =0;
+		if( (idx = strchr(bulkRequest,'\n')) != 0)/*intermediate section*/
 		{
-			*bulkRequestNextSectionStart = ++index;
+			*bulkRequestNextSectionStart = ++idx;
 		}
 		else
 		{
