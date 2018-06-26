@@ -1,5 +1,8 @@
 ------------------------------------------------------------------------------
 Version 8.37.0 [v8-stable] 2018-08-07
+- imjournal: add journal-specific impstats counters
+  these provide some additional insight into journal operations
+  Thanks to Abdul Waheed for the patch.
 ------------------------------------------------------------------------------
 Version 8.36.0 [v8-stable] 2018-06-26
 - build system change:
