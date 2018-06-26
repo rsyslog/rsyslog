@@ -1,5 +1,9 @@
 ------------------------------------------------------------------------------
 Version 8.37.0 [v8-stable] 2018-08-07
+- core/omfile: race in async writing mode
+  mutex was not properly locked at all times when the async writing buffer
+  was flushed
+  Thanks to Radovan Sroka for the patch.
 - imjournal: add journal-specific impstats counters
   these provide some additional insight into journal operations
   Thanks to Abdul Waheed for the patch.
