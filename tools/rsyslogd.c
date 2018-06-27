@@ -1552,10 +1552,11 @@ initAll(int argc, char **argv)
 
 	if(hadErrMsgs()) {
 		if(loadConf->globals.bAbortOnUncleanConfig) {
-			fprintf(stderr, "rsyslogd: $AbortOnUncleanConfig is set, and config is not clean.\n"
-					"Check error log for details, fix errors and restart. As a last\n"
-					"resort, you may want to remove $AbortOnUncleanConfig to permit a\n"
-					"startup with a dirty config.\n");
+			fprintf(stderr, "rsyslogd: global(AbortOnUncleanConfig=\"on\") is set, and "
+				"config is not clean.\n"
+				"Check error log for details, fix errors and restart. As a last\n"
+				"resort, you may want to use global(AbortOnUncleanConfig=\"off\") \n"
+				"to permit a startup with a dirty config.\n");
 			exit(2);
 		}
 		if(iConfigVerify) {
