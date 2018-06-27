@@ -1,19 +1,29 @@
 #!/bin/bash
-echo \[omod-if-array.sh\]: test omod-if-array via udp
-echo NOTE: the interface checked with this test is currently NOT
-echo supported. We may support it again in the future. So for now\,
-echo we just skip this test and do not remove it.
-exit 77
-$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
+# add 2018-06-29 by Pascal Withopf, released under ASL 2.0
+. $srcdir/diag.sh init
+. $srcdir/diag.sh generate-conf
+. $srcdir/diag.sh add-conf '
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="13514" ruleset="ruleset1")
 
-./nettester -tomod-if-array -iudp -p4711
-if [ "$?" -ne "0" ]; then
-  exit 1
-fi
+template(name="outfmt" type="string" string="%PRI%%timestamp%%hostname%%programname%%syslogtag%\n")
 
-echo test omod-if-array via tcp
-./nettester -tomod-if-array -itcp
-if [ "$?" -ne "0" ]; then
-  exit 1
-fi
+ruleset(name="ruleset1") {
+	action(type="omfile" file="rsyslog.out.log"
+	       template="outfmt")
+}
 
+'
+. $srcdir/diag.sh startup
+. $srcdir/diag.sh tcpflood -m1 -M "\"<167>Mar  6 16:57:54 172.20.245.8 %PIX-7-710005: UDP request discarded from SERVER1/2741 to test_app:255.255.255.255/61601\""
+. $srcdir/diag.sh shutdown-when-empty
+. $srcdir/diag.sh wait-shutdown
+
+echo '167Mar  6 16:57:54172.20.245.8%PIX-7-710005%PIX-7-710005:' | cmp - rsyslog.out.log
+if [ ! $? -eq 0 ]; then
+  echo "invalid response generated, rsyslog.out.log is:"
+  cat rsyslog.out.log
+  . $srcdir/diag.sh error-exit  1
+fi;
+
+. $srcdir/diag.sh exit
