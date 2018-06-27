@@ -22,6 +22,9 @@ real error and a warning-like condition. As such, the startup will also
 prevented if warnings are present. I consider this a good thing in being
 "strict", but I admit there also currently is no other way of doing it.
 
+It is recommended to use the new config style. The equivalent of this
+parameter in the new style has the same name abortOnUncleanConfig.
+
 **Caveats:**
 
 Note that the consequences of a failed rsyslogd startup can be much more
