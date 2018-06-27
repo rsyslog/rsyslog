@@ -9,6 +9,9 @@ Version 8.37.0 [v8-stable] 2018-08-07
   as part of the name. This is still not perfect, but hopefully a bit
   easier to grasp.
   see also https://github.com/rsyslog/rsyslog/issues/342
+- tcpflood no longer links with -lgrcypt
+  as this is no longer necessary for GnuTLS
+  Thanks to Michael Biebl for the patch.
 - omelasticsearch: fix build regression
   Commit 6d4635efbb13907bf651b1a6e5a545effe84d9d9 introduced some compile
   problems, which were only detected on CentOS6, which unfortunately did
