@@ -1964,7 +1964,7 @@ tcpflood_LDADD = $(SOL_LIBS) $(PTHREADS_LIBS) $(RELP_LIBS)
 if ENABLE_GNUTLS
 tcpflood_CFLAGS += $(GNUTLS_CFLAGS)
 tcpflood_CPPFLAGS += $(GNUTLS_CFLAGS)
-tcpflood_LDADD += $(GNUTLS_LIBS) -lgcrypt
+tcpflood_LDADD += $(GNUTLS_LIBS)
 endif
 if ENABLE_OPENSSL
 tcpflood_CFLAGS += $(OPENSSL_CFLAGS)
