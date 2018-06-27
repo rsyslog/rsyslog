@@ -336,7 +336,6 @@ THIS_IS_TEMPORARILY_DISABLED = \
 	--enable-imptcp \
 	--enable-omuxsock \
 	--enable-impstats \
-	--enable-memcheck \
 	--enable-pmaixforwardedfrom \
 	--enable-pmcisconames \
 	--enable-pmsnare \
