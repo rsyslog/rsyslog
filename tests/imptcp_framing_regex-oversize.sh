@@ -16,7 +16,7 @@ ruleset(name="remote") {
 action(type="omfile" file="rsyslog2.out.log")
 '
 . $srcdir/diag.sh startup
-. $srcdir/diag.sh tcpflood -B -I testsuites/imptcp_framing_regex-oversize.testdata
+. $srcdir/diag.sh tcpflood -B -I ${srcdir}/testsuites/imptcp_framing_regex-oversize.testdata
 . $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 . $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
 echo 'NEWMSG: <33>Mar  1 01:00:00 172.20.245.8 tag test1

@@ -40,8 +40,6 @@ echo 'msgnum:3
 echo 'msgnum:5' >> rsyslog.input # this one shouldn't be written to the output file because of ReadMode 2
 
 # give it time to finish
-#echo you are in bash! ctl-d to exit
-#bash
 
 . $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 . $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
@@ -49,14 +47,15 @@ echo 'msgnum:5' >> rsyslog.input # this one shouldn't be written to the output f
 # give it time to write the output file
 
 sleep 1
-#cat log
 
 ## check if we have the correct number of messages
 
 NUMLINES=$(grep -c HEADER ./rsyslog.out.log 2>/dev/null)
 
 if [ -z $NUMLINES ]; then
-  echo "ERROR: expecting at least a match for HEADER, maybe rsyslog.out.log wasn't even written?" cat ./rsyslog.out.log exit 1
+  echo "ERROR: expecting at least a match for HEADER, maybe rsyslog.out.log wasn't even written?"
+  cat ./rsyslog.out.log
+  exit 1
 else
   if [ ! $NUMLINES -eq 3 ]; then
     echo "ERROR: expecting 3 headers, got $NUMLINES"

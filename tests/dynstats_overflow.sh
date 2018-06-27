@@ -39,7 +39,7 @@ echo \[dynstats_overflow.sh\]: test for gathering stats when metrics exceed prov
 
 . $srcdir/diag.sh first-column-sum-check 's/.*metrics_purged=\([0-9]\+\)/\1/g' 'metrics_purged=' 'rsyslog.out.stats.log' 3
 
-rm $srcdir/rsyslog.out.stats.log
+rm rsyslog.out.stats.log
 . $srcdir/diag.sh issue-HUP #reopen stats file
 . $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
 . $srcdir/diag.sh block-stats-flush

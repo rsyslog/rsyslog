@@ -70,6 +70,7 @@ export CONFIG_FLAGS="$CONFIGURE_FLAGS \
 	$ES_TEST_CONFIGURE_OPT \
 	$AMQP1 \
 	--disable-generate-man-pages \
+	--enable-distcheck-workaround \
 	--enable-testbench \
 	--enable-imdiag \
 	--enable-imfile \
@@ -140,6 +141,7 @@ then
         exit $ALL_OK
     fi
     set -e # now errors are no longer permited, again
+    echo now running \"make distcheck\"
     make distcheck
 fi
 

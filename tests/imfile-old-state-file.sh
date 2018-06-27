@@ -20,7 +20,7 @@ inode=$(ls -i rsyslog.input|awk '{print $1}')
 leninode=${#inode}
 newline="+inode:2:${leninode}:${inode}:"
 
-sed s/+inode:2:7:4464465:/${newline}/ <testsuites/imfile-old-state-file_imfile-state_.-rsyslog.input > test-spool/imfile-state\:.-rsyslog.input
+sed s/+inode:2:7:4464465:/${newline}/ <$srcdir/testsuites/imfile-old-state-file_imfile-state_.-rsyslog.input > test-spool/imfile-state\:.-rsyslog.input
 printf "info: new input file: $(ls -i rsyslog.input)\n"
 printf "info: new inode line: ${newline}\n"
 printf "info: patched state file:\n"

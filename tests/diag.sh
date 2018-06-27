@@ -35,7 +35,7 @@
 #valgrind="valgrind --leak-check=full --show-leak-kinds=all --malloc-fill=ff --free-fill=fe --log-fd=1"
 
 #valgrind="valgrind --tool=drd --log-fd=1"
-#valgrind="valgrind --tool=helgrind --log-fd=1 --suppressions=linux_localtime_r.supp --gen-suppressions=all"
+#valgrind="valgrind --tool=helgrind --log-fd=1 --suppressions=$srcdir/linux_localtime_r.supp --gen-suppressions=all"
 #valgrind="valgrind --tool=exp-ptrcheck --log-fd=1"
 #set -o xtrace
 #export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
@@ -43,6 +43,12 @@
 TB_TIMEOUT_STARTSTOP=400 # timeout for start/stop rsyslogd in tenths (!) of a second 400 => 40 sec
 # note that 40sec for the startup should be sufficient even on very slow machines. we changed this from 2min on 2017-12-12
 export RSYSLOG_DEBUG_TIMEOUTS_TO_STDERR="on"  # we want to know when we loose messages due to timeouts
+if [ "$srcdir" == "" ]; then
+	printf "\$srcdir not set, for a manual build, do 'export srcdir=\$(pwd)'\n"
+fi
+if [ "$TESTTOOL_DIR" == "" ]; then
+	export TESTTOOL_DIR="$srcdir"
+fi
 
 # newer functionality is preferrably introduced via bash functions
 # rgerhards, 2018-07-03
@@ -103,25 +109,24 @@ function cmp_exact() {
 
 
 #START: ext kafka config
-dep_cache_dir=$(readlink -f $srcdir/.dep_cache)
+dep_cache_dir=$(readlink -f .dep_cache)
 dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.10/zookeeper-3.4.10.tar.gz
 dep_zk_cached_file=$dep_cache_dir/zookeeper-3.4.10.tar.gz
 dep_kafka_url=http://www-us.apache.org/dist/kafka/0.10.2.1/kafka_2.12-0.10.2.1.tgz
 if [ -z "$ES_DOWNLOAD" ]; then
-	dep_es_url=https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz
-	dep_es_cached_file=$dep_cache_dir/elasticsearch-5.6.9.tar.gz
-else
-	dep_es_url="https://artifacts.elastic.co/downloads/elasticsearch/$ES_DOWNLOAD"
-	dep_es_cached_file="$dep_cache_dir/$ES_DOWNLOAD"
+	export ES_DOWNLOAD=elasticsearch-5.6.9.tar.gz
 fi
+dep_es_cached_file="$dep_cache_dir/$ES_DOWNLOAD"
+
+# kafaka (including Zookeeper)
 dep_kafka_cached_file=$dep_cache_dir/kafka_2.12-0.10.2.1.tgz
 dep_kafka_dir_xform_pattern='s#^[^/]\+#kafka#g'
 dep_zk_dir_xform_pattern='s#^[^/]\+#zk#g'
 dep_es_dir_xform_pattern='s#^[^/]\+#es#g'
-dep_kafka_log_dump=$(readlink -f $srcdir/rsyslog.out.kafka.log)
+dep_kafka_log_dump=$(readlink -f rsyslog.out.kafka.log)
 
 #	TODO Make dynamic work dir for multiple instances
-dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+dep_work_dir=$(readlink -f .dep_wrk)
 #dep_kafka_work_dir=$dep_work_dir/kafka
 #dep_zk_work_dir=$dep_work_dir/zk
 
@@ -167,11 +172,10 @@ case $1 in
 			echo "testbench: TZ env var not set, setting it to UTC"
 			export TZ=UTC
 		fi
-
-		cp $srcdir/testsuites/diag-common.conf diag-common.conf
-		cp $srcdir/testsuites/diag-common2.conf diag-common2.conf
+		cp -f $srcdir/testsuites/diag-common.conf diag-common.conf
+		cp -f $srcdir/testsuites/diag-common2.conf diag-common2.conf
 		rm -f rsyslogd.started work-*.conf rsyslog.random.data
-		rm -f rsyslogd2.started work-*.conf
+		rm -f rsyslogd2.started work-*.conf rsyslog*.pid.save xlate*.lkp_tbl
 		rm -f log log* # RSyslog debug output 
 		rm -f work rsyslog.out.* rsyslog2.out.log # common work files
 		rm -rf test-spool test-logdir stat-file1
@@ -218,7 +222,7 @@ case $1 in
 		# now real cleanup
 		rm -f rsyslogd.started work-*.conf diag-common.conf
    		rm -f rsyslogd2.started diag-common2.conf rsyslog.action.*.include
-		rm -f work rsyslog.out.* rsyslog2.out.log # common work files
+		rm -f work rsyslog.out.* rsyslog2.out.log rsyslog*.pid.save xlate*.lkp_tbl
 		rm -rf test-spool test-logdir stat-file1
 		rm -f rsyslog.random.data work-presort rsyslog.pipe
 		rm -f -r rsyslog.input.*
@@ -268,6 +272,7 @@ case $1 in
 		;;
    'startup')   # start rsyslogd with default params. $2 is the config file name to use
    		# returns only after successful startup, $3 is the instance (blank or 2!)
+		echo in startup
 		if [ "x$2" == "x" ]; then
 		    CONF_FILE="testconf.conf"
 		    echo $CONF_FILE is:
@@ -326,7 +331,7 @@ case $1 in
 		echo startup-vg still running
 		;;
 	 'msleep')
-   	$srcdir/msleep $2
+		$TESTTOOL_DIR/msleep $2
 		;;
 
    'startup-vgthread-waitpid-only') # same as startup-vgthread, BUT we do NOT wait on the startup message!
@@ -341,7 +346,7 @@ case $1 in
 		    echo "ERROR: config file '$CONF_FILE' not found!"
 		    exit 1
 		fi
-		valgrind --tool=helgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --suppressions=linux_localtime_r.supp --gen-suppressions=all ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
+		valgrind --tool=helgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --suppressions=$srcdir/linux_localtime_r.supp --gen-suppressions=all ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
 		. $srcdir/diag.sh wait-startup-pid $3
 		;;
    'startup-vgthread') # start rsyslogd with default params under valgrind thread debugger control.
@@ -353,7 +358,7 @@ case $1 in
    'wait-startup-pid') # wait for rsyslogd startup, PID only ($2 is the instance)
 		i=0
 		while test ! -f rsyslog$2.pid; do
-			./msleep 100 # wait 100 milliseconds
+			$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
 			let "i++"
 			if test $i -gt $TB_TIMEOUT_STARTSTOP
 			then
@@ -367,7 +372,7 @@ case $1 in
 		. $srcdir/diag.sh wait-startup-pid $2
 		i=0
 		while test ! -f rsyslogd$2.started; do
-			./msleep 100 # wait 100 milliseconds
+			$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
 			ps -p `cat rsyslog$2.pid` &> /dev/null
 			if [ $? -ne 0 ]
 			then
@@ -398,7 +403,7 @@ case $1 in
 			then
 				terminated=1
 			fi
-			./msleep 100 # wait 100 milliseconds
+			$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
 			let "i++"
 			if test $i -gt $TB_TIMEOUT_STARTSTOP
 			then
@@ -428,7 +433,7 @@ case $1 in
 			then
 				terminated=1
 			fi
-			./msleep 100 # wait 100 milliseconds
+			$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
 			let "i++"
 			if test $i -gt $TB_TIMEOUT_STARTSTOP
 			then
@@ -467,30 +472,30 @@ case $1 in
    'get-mainqueuesize') # show the current main queue size
 		if [ "$2" == "2" ]
 		then
-			echo getmainmsgqueuesize | ./diagtalker -p13501 || . $srcdir/diag.sh error-exit  $?
+			echo getmainmsgqueuesize | $TESTTOOL_DIR/diagtalker -p13501 || . $srcdir/diag.sh error-exit  $?
 		else
-			echo getmainmsgqueuesize | ./diagtalker || . $srcdir/diag.sh error-exit  $?
+			echo getmainmsgqueuesize | $TESTTOOL_DIR/diagtalker || . $srcdir/diag.sh error-exit  $?
 		fi
 		;;
    'wait-queueempty') # wait for main message queue to be empty. $2 is the instance.
 		if [ "$2" == "2" ]
 		then
-			echo WaitMainQueueEmpty | ./diagtalker -p13501 || . $srcdir/diag.sh error-exit  $?
+			echo WaitMainQueueEmpty | $TESTTOOL_DIR/diagtalker -p13501 || . $srcdir/diag.sh error-exit  $?
 		else
-			echo WaitMainQueueEmpty | ./diagtalker || . $srcdir/diag.sh error-exit  $?
+			echo WaitMainQueueEmpty | $TESTTOOL_DIR/diagtalker || . $srcdir/diag.sh error-exit  $?
 		fi
 		;;
    'await-lookup-table-reload') # wait for all pending lookup table reloads to complete $2 is the instance.
 		if [ "$2" == "2" ]
 		then
-			echo AwaitLookupTableReload | ./diagtalker -p13501 || . $srcdir/diag.sh error-exit  $?
+			echo AwaitLookupTableReload | $TESTTOOL_DIR/diagtalker -p13501 || . $srcdir/diag.sh error-exit  $?
 		else
-			echo AwaitLookupTableReload | ./diagtalker || . $srcdir/diag.sh error-exit  $?
+			echo AwaitLookupTableReload | $TESTTOOL_DIR/diagtalker || . $srcdir/diag.sh error-exit  $?
 		fi
 		;;
    'issue-HUP') # shut rsyslogd down when main queue is empty. $2 is the instance.
 		kill -HUP `cat rsyslog$2.pid`
-		./msleep 1000
+		$TESTTOOL_DIR/msleep 1000
 		;;
    'shutdown-when-empty') # shut rsyslogd down when main queue is empty. $2 is the instance.
 		if [ "$2" == "2" ]
@@ -499,7 +504,7 @@ case $1 in
 		fi
 		. $srcdir/diag.sh wait-queueempty $2
 		cp rsyslog$2.pid rsyslog$2.pid.save
-		./msleep 1000 # wait a bit (think about slow testbench machines!)
+		$TESTTOOL_DIR/msleep 1000 # wait a bit (think about slow testbench machines!)
 		kill `cat rsyslog$2.pid`
 		# note: we do not wait for the actual termination!
 		;;
@@ -523,12 +528,12 @@ case $1 in
 		;;
    'injectmsg') # inject messages via our inject interface (imdiag)
 		echo injecting $3 messages
-		echo injectmsg $2 $3 $4 $5 | ./diagtalker || . $srcdir/diag.sh error-exit  $?
+		echo injectmsg $2 $3 $4 $5 | $TESTTOOL_DIR/diagtalker || . $srcdir/diag.sh error-exit  $?
 		# TODO: some return state checking? (does it really make sense here?)
 		;;
     'injectmsg-litteral') # inject litteral-payload  via our inject interface (imdiag)
 		echo injecting msg payload from: $2
-    cat $2 | sed -e 's/^/injectmsg litteral /g' | ./diagtalker || . $srcdir/diag.sh error-exit  $?
+    cat $2 | sed -e 's/^/injectmsg litteral /g' | $TESTTOOL_DIR/diagtalker || . $srcdir/diag.sh error-exit  $?
 		# TODO: some return state checking? (does it really make sense here?)
 		;;
    'check-mainq-spool') # check if mainqueue spool files exist, if not abort (we just check .qi).
@@ -607,7 +612,7 @@ case $1 in
    'content-cmp')
 		echo "$2" | cmp - rsyslog.out.log
 		if [ "$?" -ne "0" ]; then
-		    echo content-cmp failed
+		    echo FAIL: content-cmp failed
 		    echo EXPECTED:
 		    echo $2
 		    echo ACTUAL:
@@ -618,7 +623,8 @@ case $1 in
    'content-check')
 		cat rsyslog.out.log | grep -qF "$2"
 		if [ "$?" -ne "0" ]; then
-		    echo content-check failed to find "'$2'", content is
+		    printf "\n============================================================\n"
+		    echo FAIL: content-check failed to find "'$2'", content is
 		    cat rsyslog.out.log
 		    . $srcdir/diag.sh error-exit 1
 		fi
@@ -647,7 +653,7 @@ case $1 in
 					. $srcdir/diag.sh error-exit 1
 				else
 					echo wait-file-lines not yet there, currently $count lines
-					./msleep 200
+					$TESTTOOL_DIR/msleep 200
 				fi
 			fi
 		done
@@ -681,28 +687,28 @@ case $1 in
 					. $srcdir/diag.sh error-exit 1
 				else
 					echo content-check-with-count have $count, wait for $3 times $2...
-					./msleep 1000
+					$TESTTOOL_DIR/msleep 1000
 				fi
 			fi
 		done
 		;;
 	 'block-stats-flush')
 		echo blocking stats flush
-		echo "blockStatsReporting" | ./diagtalker || . $srcdir/diag.sh error-exit  $?
+		echo "blockStatsReporting" | $TESTTOOL_DIR/diagtalker || . $srcdir/diag.sh error-exit  $?
 		;;
 	 'await-stats-flush-after-block')
 		echo unblocking stats flush and waiting for it
-		echo "awaitStatsReport" | ./diagtalker || . $srcdir/diag.sh error-exit  $?
+		echo "awaitStatsReport" | $TESTTOOL_DIR/diagtalker || . $srcdir/diag.sh error-exit  $?
 		;;
 	 'allow-single-stats-flush-after-block-and-wait-for-it')
 		echo blocking stats flush
-		echo "awaitStatsReport block_again" | ./diagtalker || . $srcdir/diag.sh error-exit  $?
+		echo "awaitStatsReport block_again" | $TESTTOOL_DIR/diagtalker || . $srcdir/diag.sh error-exit  $?
 		;;
 	 'wait-for-stats-flush')
 		echo "will wait for stats push"
 		while [[ ! -f $2 ]]; do
 				echo waiting for stats file "'$2'" to be created
-				./msleep 100
+				$TESTTOOL_DIR/msleep 100
 		done
 		prev_count=$(cat $2 | grep 'BEGIN$' | wc -l)
 		new_count=$prev_count
@@ -715,13 +721,13 @@ case $1 in
 		echo "will wait for dyn-stats-reset"
 		while [[ ! -f $2 ]]; do
 				echo waiting for stats file "'$2'" to be created
-				./msleep 100
+				$TESTTOOL_DIR/msleep 100
 		done
 		prev_purged=$(cat $2 | grep -F 'origin=dynstats' | grep -F "${3}.purge_triggered=" | sed -e 's/.\+.purge_triggered=//g' | awk '{s+=$1} END {print s}')
 		new_purged=$prev_purged
 		while [[ "x$prev_purged" == "x$new_purged" ]]; do
 				new_purged=$(cat $2 | grep -F 'origin=dynstats' | grep -F "${3}.purge_triggered=" | sed -e 's/.\+\.purge_triggered=//g' | awk '{s+=$1} END {print s}') # busy spin, because it allows as close timing-coordination in actual test run as possible
-				./msleep 10
+				$TESTTOOL_DIR/msleep 10
 		done
 		echo "dyn-stats reset for bucket ${3} registered"
 		;;
@@ -730,25 +736,29 @@ case $1 in
 		grep "$2" $3 -q
 		if [ "$?" -ne "0" ]; then
 		    echo "----------------------------------------------------------------------"
-		    echo content-check failed to find "'$2'" inside "'$3'"
+		    echo FAIL: content-check-regex failed to find "'$2'" inside "'$3'"
 		    echo "file contents:"
 		    cat $3
 		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;
    'custom-content-check') 
-		cat $3 | grep -qF "$2"
+   		set -x
+		#cat $3 | grep -qF "$2"
+		cat $3 | grep -F "$2"
 		if [ "$?" -ne "0" ]; then
-		    echo content-check failed to find "'$2'" inside "'$3'"
+		    echo FAIL: custom-content-check failed to find "'$2'" inside "'$3'"
 		    echo "file contents:"
 		    cat $3
 		    . $srcdir/diag.sh error-exit 1
 		fi
+		set +x
 		;;
    'first-column-sum-check') 
 		sum=$(cat $4 | grep $3 | sed -e $2 | awk '{s+=$1} END {print s}')
 		if [ "x${sum}" != "x$5" ]; then
-		    echo sum of first column with edit-expr "'$2'" run over lines from file "'$4'" matched by "'$3'" equals "'$sum'" which is not equal to expected value of "'$5'"
+		    printf "\n============================================================\n"
+		    echo FAIL: sum of first column with edit-expr "'$2'" run over lines from file "'$4'" matched by "'$3'" equals "'$sum'" which is NOT equal to EXPECTED value of "'$5'"
 		    echo "file contents:"
 		    cat $4
 		    . $srcdir/diag.sh error-exit 1
@@ -815,7 +825,7 @@ case $1 in
    'generate-HOSTNAME')   # generate the HOSTNAME file
 		. $srcdir/diag.sh startup gethostname.conf
 		. $srcdir/diag.sh tcpflood -m1 -M "\"<128>\""
-		./msleep 100
+		$TESTTOOL_DIR/msleep 100
 		. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 		. $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
 		;;
@@ -833,7 +843,7 @@ case $1 in
 		;;
    'download-kafka')
 		if [ ! -d $dep_cache_dir ]; then
-			echo "Creating dependency cache dir"
+			echo "Creating dependency cache dir $dep_cache_dir"
 			mkdir $dep_cache_dir
 		fi
 		if [ ! -f $dep_zk_cached_file ]; then
@@ -865,17 +875,23 @@ case $1 in
 		;;
 	 'download-elasticsearch')
 		if [ ! -d $dep_cache_dir ]; then
-				echo "Creating dependency cache dir"
+				echo "Creating dependency cache dir $dep_cache_dir"
 				mkdir $dep_cache_dir
 		fi
 		if [ ! -f $dep_es_cached_file ]; then
-				echo "Downloading ElasticSearch"
-				wget -q $dep_es_url -O $dep_es_cached_file
+				if [ -f /local_dep_cache/$ES_DOWNLOAD ]; then
+					printf "ElasticSearch: satisfying dependency %s from system cache.\n" "$ES_DOWNLOAD"
+					cp /local_dep_cache/$ES_DOWNLOAD $dep_es_cached_file
+				else
+					dep_es_url="https://artifacts.elastic.co/downloads/elasticsearch/$ES_DOWNLOAD"
+					printf "ElasticSearch: satisfying dependency %s from %s\n" "$ES_DOWNLOAD" "$dep_es_url"
+					wget -q $dep_es_url -O $dep_es_cached_file
+				fi
 		fi
 		;;
 	 'start-zookeeper')
 		if [ "x$2" == "x" ]; then
-			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+			dep_work_dir=$(readlink -f .dep_wrk)
 			dep_work_tk_config="zoo.cfg"
 		else
 			dep_work_dir=$(readlink -f $srcdir/$2)
@@ -892,21 +908,21 @@ case $1 in
 		fi
 		if [ -d $dep_work_dir/zk ]; then
 				(cd $dep_work_dir/zk && ./bin/zkServer.sh stop)
-				./msleep 2000
+				$TESTTOOL_DIR/msleep 2000
 		fi
 		rm -rf $dep_work_dir/zk
 		(cd $dep_work_dir && tar -zxvf $dep_zk_cached_file --xform $dep_zk_dir_xform_pattern --show-transformed-names) > /dev/null
-		cp $srcdir/testsuites/$dep_work_tk_config $dep_work_dir/zk/conf/zoo.cfg
+		cp -f $srcdir/testsuites/$dep_work_tk_config $dep_work_dir/zk/conf/zoo.cfg
 		echo "Starting Zookeeper instance $2"
 		(cd $dep_work_dir/zk && ./bin/zkServer.sh start)
-		./msleep 2000
+		$TESTTOOL_DIR/msleep 2000
 		;;
 	 'start-kafka')
 		if [ "x$2" == "x" ]; then
-			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+			dep_work_dir=$(readlink -f .dep_wrk)
 			dep_work_kafka_config="kafka-server.properties"
 		else
-			dep_work_dir=$(readlink -f $srcdir/$2)
+			dep_work_dir=$(readlink -f $2)
 			dep_work_kafka_config="kafka-server$2.properties"
 		fi
 
@@ -920,10 +936,10 @@ case $1 in
 		fi
 		rm -rf $dep_work_dir/kafka
 		(cd $dep_work_dir && tar -zxvf $dep_kafka_cached_file --xform $dep_kafka_dir_xform_pattern --show-transformed-names) > /dev/null
-		cp $srcdir/testsuites/$dep_work_kafka_config $dep_work_dir/kafka/config/
+		cp -f $srcdir/testsuites/$dep_work_kafka_config $dep_work_dir/kafka/config/
 		echo "Starting Kafka instance $dep_work_kafka_config"
 		(cd $dep_work_dir/kafka && ./bin/kafka-server-start.sh -daemon ./config/$dep_work_kafka_config)
-		./msleep 4000
+		$TESTTOOL_DIR/msleep 4000
 
 		# Check if kafka instance came up!
 		kafkapid=`ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}'`
@@ -933,7 +949,7 @@ case $1 in
 		else
 			echo "Starting Kafka instance $dep_work_kafka_config, SECOND ATTEMPT!"
 			(cd $dep_work_dir/kafka && ./bin/kafka-server-start.sh -daemon ./config/$dep_work_kafka_config)
-			./msleep 4000
+			$TESTTOOL_DIR/msleep 4000
 
 			kafkapid=`ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}'`
 			if [[ "" !=  "$kafkapid" ]];
@@ -950,7 +966,7 @@ case $1 in
 		export ES_JAVA_OPTS="-Xms128m -Xmx128m"
 
 		if [ "x$2" == "x" ]; then
-			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+			dep_work_dir=$(readlink -f .dep_wrk)
 			dep_work_es_config="es.yml"
 			dep_work_es_pidfile="es.pid"
 		else
@@ -962,7 +978,7 @@ case $1 in
 		if [ ! -f $dep_es_cached_file ]; then
 				echo "Dependency-cache does not have elasticsearch package, did "
 				echo "you download dependencies?"
-				exit 77
+		                . $srcdir/diag.sh error-exit 1
 		fi
 		if [ ! -d $dep_work_dir ]; then
 				echo "Creating dependency working directory"
@@ -979,9 +995,11 @@ case $1 in
 		echo TEST USES ELASTICSEARCH BINARY $dep_es_cached_file
 		(cd $dep_work_dir && tar -zxf $dep_es_cached_file --xform $dep_es_dir_xform_pattern --show-transformed-names) > /dev/null
 		if [ -n "${ES_PORT:-}" ] ; then
+			rm -f $dep_work_dir/es/config/elasticsearch.yml
 			sed "s/^http.port:.*\$/http.port: ${ES_PORT}/" $srcdir/testsuites/$dep_work_es_config > $dep_work_dir/es/config/elasticsearch.yml
 		else
-			cp $srcdir/testsuites/$dep_work_es_config $dep_work_dir/es/config/elasticsearch.yml
+			cp -f $srcdir/testsuites/diag-common.conf diag-common.conf
+			cp -f $srcdir/testsuites/$dep_work_es_config $dep_work_dir/es/config/elasticsearch.yml
 		fi
 
 		if [ ! -d $dep_work_dir/es/data ]; then
@@ -996,20 +1014,20 @@ case $1 in
 		# Heap Size (limit to 128MB for testbench! defaults is way to HIGH)
 		export ES_JAVA_OPTS="-Xms128m -Xmx128m"
 
+		pwd
 		if [ "x$2" == "x" ]; then
-			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+			dep_work_dir=$(readlink -f .dep_wrk)
 			dep_work_es_config="es.yml"
-			dep_work_es_pidfile="es.pid"
+			dep_work_es_pidfile="$(pwd)/es.pid"
 		else
 			dep_work_dir=$(readlink -f $srcdir/$2)
 			dep_work_es_config="es$2.yml"
 			dep_work_es_pidfile="es$2.pid"
 		fi
 		echo "Starting ElasticSearch instance $2"
-		cd $srcdir 
 		# THIS IS THE ACTUAL START of ES
 		$dep_work_dir/es/bin/elasticsearch -p $dep_work_es_pidfile -d
-		./msleep 2000
+		$TESTTOOL_DIR/msleep 2000
 		echo "Starting instance $2 started with PID" `cat $dep_work_es_pidfile`
 
 		# Wait for startup with hardcoded timeout
@@ -1019,7 +1037,7 @@ case $1 in
 		# timeout is reached!
 		until [ "`curl --silent --show-error --connect-timeout 1 http://localhost:${ES_PORT:-19200} | grep 'rsyslog-testbench'`" != "" ]; do
 			echo "--- waiting for ES startup: $timeseconds seconds"
-			./msleep 1000
+			$TESTTOOL_DIR/msleep 1000
 			let "timeseconds = $timeseconds + 1"
 
 			if [ "$timeseconds" -gt "$timeoutend" ]; then 
@@ -1027,12 +1045,12 @@ case $1 in
 		                . $srcdir/diag.sh error-exit 1
 			fi
 		done
-		./msleep 2000
+		$TESTTOOL_DIR/msleep 2000
 		echo ES startup succeeded
 		;;
 	 'dump-kafka-serverlog')
 		if [ "x$2" == "x" ]; then
-			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+			dep_work_dir=$(readlink -f .dep_wrk)
 		else
 			dep_work_dir=$(readlink -f $srcdir/$2)
 		fi
@@ -1048,7 +1066,7 @@ case $1 in
 		
 	 'dump-zookeeper-serverlog')
 		if [ "x$2" == "x" ]; then
-			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+			dep_work_dir=$(readlink -f .dep_wrk)
 		else
 			dep_work_dir=$(readlink -f $srcdir/$2)
 		fi
@@ -1059,7 +1077,7 @@ case $1 in
 		;;
 	 'stop-kafka')
 		if [ "x$2" == "x" ]; then
-			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+			dep_work_dir=$(readlink -f .dep_wrk)
 		else
 			dep_work_dir=$(readlink -f $srcdir/$2)
 		fi
@@ -1068,23 +1086,23 @@ case $1 in
 		else
 			echo "Stopping Kafka instance $2"
 			(cd $dep_work_dir/kafka && ./bin/kafka-server-stop.sh)
-			./msleep 2000
+			$TESTTOOL_DIR/msleep 2000
 			rm -rf $dep_work_dir/kafka
 		fi
 		;;
 	 'stop-zookeeper')
 		if [ "x$2" == "x" ]; then
-			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+			dep_work_dir=$(readlink -f .dep_wrk)
 		else
 			dep_work_dir=$(readlink -f $srcdir/$2)
 		fi
 		(cd $dep_work_dir/zk &> /dev/null && ./bin/zkServer.sh stop)
-		./msleep 2000
+		$TESTTOOL_DIR/msleep 2000
 		rm -rf $dep_work_dir/zk
 		;;
 	 'stop-elasticsearch')
 		if [ "x$2" == "x" ]; then
-			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+			dep_work_dir=$(readlink -f .dep_wrk)
 			dep_work_es_pidfile="es.pid"
 		else
 			dep_work_dir=$(readlink -f $srcdir/$2)
@@ -1098,7 +1116,7 @@ case $1 in
 		fi
 		;;
 	 'cleanup-elasticsearch')
-		dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+		dep_work_dir=$(readlink -f .dep_wrk)
 		dep_work_es_pidfile="es.pid"
 		. $srcdir/diag.sh stop-elasticsearch
 		rm -f $dep_work_es_pidfile
@@ -1106,9 +1124,9 @@ case $1 in
 		;;
 	 'create-kafka-topic')
 		if [ "x$3" == "x" ]; then
-			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+			dep_work_dir=$(readlink -f .dep_wrk)
 		else
-			dep_work_dir=$(readlink -f $srcdir/$3)
+			dep_work_dir=$(readlink -f $3)
 		fi
 		if [ "x$4" == "x" ]; then
 			dep_work_port='2181'
@@ -1116,7 +1134,7 @@ case $1 in
 			dep_work_port=$4
 		fi
 		if [ ! -d $dep_work_dir/kafka ]; then
-				echo "Kafka work-dir does not exist, did you start kafka?"
+				echo "Kafka work-dir $dep_work_dir/kafka does not exist, did you start kafka?"
 				exit 1
 		fi
 		if [ "x$2" == "x" ]; then
@@ -1127,7 +1145,7 @@ case $1 in
 		;;
 	 'delete-kafka-topic')
 		if [ "x$3" == "x" ]; then
-			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+			dep_work_dir=$(readlink -f .dep_wrk)
 		else
 			dep_work_dir=$(readlink -f $srcdir/$3)
 		fi
@@ -1142,11 +1160,11 @@ case $1 in
 		;;
 	 'dump-kafka-topic')
 		if [ "x$3" == "x" ]; then
-			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
-			dep_kafka_log_dump=$(readlink -f $srcdir/rsyslog.out.kafka.log)
+			dep_work_dir=$(readlink -f .dep_wrk)
+			dep_kafka_log_dump=$(readlink -f rsyslog.out.kafka.log)
 		else
 			dep_work_dir=$(readlink -f $srcdir/$3)
-			dep_kafka_log_dump=$(readlink -f $srcdir/rsyslog.out.kafka$3.log)
+			dep_kafka_log_dump=$(readlink -f rsyslog.out.kafka$3.log)
 		fi
 		if [ "x$4" == "x" ]; then
 			dep_work_port='2181'
@@ -1230,12 +1248,12 @@ case $1 in
 			current_test="./$(basename $0)" # this path is probably wrong -- theinric
 			$current_test
 			# wait a little bit so that valgrind can finish
-			./msleep 4000
+			$TESTTOOL_DIR/msleep 4000
 			# next let's try us to get a debug log
 			RSYSLOG_DEBUG_SAVE=$RSYSLOG_DEBUG
 			export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction"
 			$current_test
-			./msleep 4000
+			$TESTTOOL_DIR/msleep 4000
 			RSYSLOG_DEBUG=$RSYSLOG_DEBUG_SAVE
 			rm IN_AUTO_DEBUG
 		fi
@@ -1246,6 +1264,9 @@ case $1 in
 			# Dump Kafka log
 			. $srcdir/diag.sh dump-kafka-serverlog
 		fi
+		# we need to do some minimal cleanup so that "make distcheck" does not
+		# complain too much
+		rm -f diag-common.conf diag-common2.conf
 		exit $2
 		;;
    *)		echo "invalid argument" $1

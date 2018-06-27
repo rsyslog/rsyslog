@@ -3,6 +3,7 @@
 echo [imfile-truncate.sh]
 . $srcdir/diag.sh check-inotify
 . $srcdir/diag.sh init
+export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction stdout"
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
 module(load="../plugins/imfile/.libs/imfile")
@@ -28,6 +29,7 @@ if $msg contains "msgnum:" then
 echo 'msgnum:0
 msgnum:1' > rsyslog.input
 
+set -x
 # sleep a little to give rsyslog a chance to begin processing
 sleep 1
 
@@ -40,6 +42,7 @@ msgnum:4' >> rsyslog.input
 
 # give it time to finish
 sleep 1
+set -x
 
 . $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 . $srcdir/diag.sh wait-shutdown

@@ -11,24 +11,24 @@ fi
 echo ===============================================================================
 echo \[lookup_table_rscript_reload_without_stub-vg.sh\]: test for lookup-table reload by rscript-stmt without stub-value with valgrind
 . $srcdir/diag.sh init
-cp $srcdir/testsuites/xlate.lkp_tbl $srcdir/xlate.lkp_tbl
+cp -f $srcdir/testsuites/xlate.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh startup-vg lookup_table_reload.conf
 # the last message ..002 should cause successful lookup-table reload
-cp $srcdir/testsuites/xlate_more.lkp_tbl $srcdir/xlate.lkp_tbl
+cp -f $srcdir/testsuites/xlate_more.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh injectmsg  0 3
 . $srcdir/diag.sh await-lookup-table-reload
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh content-check "msgnum:00000000: foo_old"
 . $srcdir/diag.sh content-check "msgnum:00000001: bar_old"
 . $srcdir/diag.sh assert-content-missing "baz"
-cp $srcdir/testsuites/xlate_more_with_duplicates_and_nomatch.lkp_tbl $srcdir/xlate.lkp_tbl
+cp -f $srcdir/testsuites/xlate_more_with_duplicates_and_nomatch.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh injectmsg  0 3
 . $srcdir/diag.sh await-lookup-table-reload
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh content-check "msgnum:00000000: foo_new"
 . $srcdir/diag.sh content-check "msgnum:00000001: bar_new"
 . $srcdir/diag.sh content-check "msgnum:00000002: baz"
-rm $srcdir/xlate.lkp_tbl # this should lead to unsuccessful reload
+rm -f xlate.lkp_tbl # this should lead to unsuccessful reload
 . $srcdir/diag.sh injectmsg  0 3
 . $srcdir/diag.sh await-lookup-table-reload
 . $srcdir/diag.sh wait-queueempty

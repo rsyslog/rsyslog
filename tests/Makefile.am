@@ -411,6 +411,7 @@ TESTS +=  \
 	multiple_lookup_tables-vg.sh \
 	fac_local0-vg.sh \
 	rscript_trim-vg.sh
+
 if ENABLE_FMHTTP
 TESTS +=  \
 	rscript_http_request-vg.sh
@@ -572,13 +573,16 @@ endif
 if ENABLE_ELASTICSEARCH_TESTS
 TESTS +=  \
 	es-basic-server.sh \
-	es-basic-ha.sh \
 	es-maxbytes-bulk.sh \
 	es-basic-errfile-empty.sh \
 	es-basic-errfile-popul.sh \
 	es-bulk-errfile-empty.sh \
 	es-bulk-errfile-popul.sh \
 	es-writeoperation.sh
+if ENABLE_IMPSTATS
+TESTS +=  \
+	es-basic-ha.sh
+endif
 if ENABLE_IMFILE
 TESTS +=  \
 	es-bulk-errfile-popul-def-format.sh \
@@ -713,11 +717,8 @@ TESTS +=  \
 if HAVE_VALGRIND
 TESTS += \
 	imtcp-tls-basic-vg.sh \
-	imtcp_conndrop_tls-vg.sh
-if !ENABLE_DISTCHECK_WORKAROUND
-TESTS += \
+	imtcp_conndrop_tls-vg.sh \
 	manytcp-too-few-tls-vg.sh
-endif
 endif
 endif
 
@@ -769,11 +770,12 @@ endif
 
 if ENABLE_OMSTDOUT
 TESTS += \
-	omod-if-array.sh \
-	omod-if-array-udp.sh \
 	threadingmq.sh \
 	threadingmqaq.sh \
 	badqi.sh
+#disabled as array-passing mode is no longer supported:	omod-if-array.sh 
+#	omod-if-array.sh 
+#	omod-if-array-udp.sh 
 if ENABLE_IMPTCP
 TESTS += \
 	tabescape_dflt.sh \
@@ -922,8 +924,13 @@ endif
 endif # if ENABLE_TESTBENCH
 
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
-DISTCLEANFILES=rsyslog.pid
+TESTS_ENVIRONMENT+= TOP_BUILDDIR='$(top_builddir)'
+TESTS_ENVIRONMENT+= TESTTOOL_DIR='$(abs_top_builddir)/tests'
+DISTCLEANFILES=rsyslog.pid #.dep_cache/* .dep_wrk/*
 test_files = testbench.h runtime-dummy.c
+
+distclean-local:
+	rm -rf .dep_cache .dep_wrk
 
 EXTRA_DIST= \
 	internal-errmsg-memleak-vg.sh \
@@ -1266,17 +1273,18 @@ EXTRA_DIST= \
 	mmdb-container-empty.sh \
 	mmdb-multilevel-vg.sh \
 	incltest.sh \
-	testsuites/incltest.conf \
 	incltest_dir.sh \
-	testsuites/incltest_dir.conf \
 	incltest_dir_empty_wildcard.sh \
-	testsuites/incltest_dir_empty_wildcard.conf \
 	incltest_dir_wildcard.sh \
-	testsuites/incltest_dir_wildcard.conf \
 	testsuites/incltest.d/include.conf \
+	testsuites/es.yml \
+	es_response_get_msgnum.py \
+	elasticsearch-error-format-check.py \
 	es-basic-es6.0.sh \
 	es-basic.sh \
 	es-basic-vgthread.sh \
+	es-basic-server.sh \
+	es-basic-ha.sh \
 	es-basic-bulk.sh \
 	es-basic-errfile-empty.sh \
 	es-basic-errfile-popul.sh \
@@ -1289,6 +1297,7 @@ EXTRA_DIST= \
 	es-basic-vg.sh \
 	es-basic-bulk-vg.sh \
 	es-basic-ha-vg.sh \
+	es-maxbytes-bulk.sh \
 	linkedlistqueue.sh \
 	testsuites/linkedlistqueue.conf \
 	da-mainmsg-q.sh \
@@ -1489,7 +1498,6 @@ EXTRA_DIST= \
 	omprog-transactions-vg.sh \
 	omprog-transactions-failed-messages.sh \
 	omprog-transactions-failed-commits.sh \
-	testsuites/omprog-defaults.conf \
 	testsuites/omprog-defaults-bin.sh \
 	testsuites/omprog-feedback.conf \
 	testsuites/omprog-feedback-bin.sh \

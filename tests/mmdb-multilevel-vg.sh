@@ -3,7 +3,7 @@
 
 # we libmaxmindb, in packaged versions, has a small cosmetic memory leak,
 # thus we need a supressions file:
-export RS_TESTBENCH_VALGRIND_EXTRA_OPTS="$RS_TESTBENCH_VALGRIND_EXTRA_OPTS --suppressions=libmaxmindb.supp"
+export RS_TESTBENCH_VALGRIND_EXTRA_OPTS="$RS_TESTBENCH_VALGRIND_EXTRA_OPTS --suppressions=$srcdir/libmaxmindb.supp"
 
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
@@ -16,11 +16,11 @@ module(load="../plugins/imptcp/.libs/imptcp")
 input(type="imptcp" port="13514" ruleset="testing")
 
 ruleset(name="testing") {
-	action(type="mmnormalize" rulebase="./mmdb.rb")
+	action(type="mmnormalize" rulebase=`echo $srcdir/mmdb.rb`)
 	# Uncomment this action when using the real GeoLite2 city database;
 	# we have not included it into the testbench for licensing concerns.
 	# action(type="mmdblookup" mmdbfile="/home/USR/GeoLite2-City_20170502/GeoLite2-City.mmdb" key="$!ip" fields=":city:!city!names!en" )
-	action(type="mmdblookup" mmdbfile="./test.mmdb" key="$!ip" fields=":city_name:city" )
+	action(type="mmdblookup" mmdbfile=`echo $srcdir/test.mmdb` key="$!ip" fields=":city_name:city" )
 	action(type="omfile" file="./rsyslog.out.log" template="outfmt")
 }'
 . $srcdir/diag.sh startup-vg

@@ -8,7 +8,7 @@ fi
 grep "\.el6\." <<< $(uname -a)
 if [ "$?" == "0" ]; then
 	echo "CentOS 6 detected, adding valgrind suppressions"
-	export RS_TEST_VALGRIND_EXTRA_OPTS="--suppressions=imfile-basic-vgthread.supp"
+	export RS_TEST_VALGRIND_EXTRA_OPTS="--suppressions=${srcdir}/imfile-basic-vgthread.supp"
 fi
 
 

@@ -7,7 +7,7 @@ module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/pmnormalize/.libs/pmnormalize")
 
 input(type="imtcp" port="13514" ruleset="ruleset")
-parser(name="custom.pmnormalize" type="pmnormalize" rulebase="testsuites/pmnormalize_basic.rulebase")
+parser(name="custom.pmnormalize" type="pmnormalize" rulebase=`echo $srcdir/testsuites/pmnormalize_basic.rulebase`)
 
 template(name="test" type="string" string="host: %hostname%, ip: %fromhost-ip%, tag: %syslogtag%, pri: %pri%, syslogfacility: %syslogfacility%, syslogseverity: %syslogseverity% msg: %msg%\n")
 
