@@ -4,6 +4,11 @@ Version 8.37.0 [v8-stable] 2018-08-07
   mutex was not properly locked at all times when the async writing buffer
   was flushed
   Thanks to Radovan Sroka for the patch.
+- core: provide a somewhat better default action name
+  We now inlcude the module name (e.g. "omelasticsearch" or "builtin:omfile")
+  as part of the name. This is still not perfect, but hopefully a bit
+  easier to grasp.
+  see also https://github.com/rsyslog/rsyslog/issues/342
 - omelasticsearch: fix build regression
   Commit 6d4635efbb13907bf651b1a6e5a545effe84d9d9 introduced some compile
   problems, which were only detected on CentOS6, which unfortunately did
