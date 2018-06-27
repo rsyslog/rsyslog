@@ -737,8 +737,10 @@ CODESTARTcreateWrkrInstance
 			free(token);
 			token = NULL;
 		}
-		fclose(fp);
-		fp = NULL;
+		if (fp) {
+			fclose(fp);
+			fp = NULL;
+		}
 	}
 	if (tokenHdr) {
 		hdr = curl_slist_append(hdr, tokenHdr);
