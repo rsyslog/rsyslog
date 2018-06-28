@@ -395,4 +395,14 @@ The following parameters can be set:
   This parameter specifies if an error shall be reported when an oversized
   message is seen. The default is "on".
 
+- **abortOnUncleanConfig** [boolean (on/of)] available 8.37.0+
+
+  This parameter permits to prevent rsyslog from running when the
+  configuration file is not clean. "Not Clean" means there are errors or
+  some other annoyances that rsyslgod reports on startup. This is a
+  user-requested feature to have a strict startup mode. Note that with the
+  current code base it is not always possible to differentiate between an
+  real error and a warning-like condition. As such, the startup will also
+  prevented if warnings are present. I consider this a good thing in being
+  "strict", but I admit there also currently is no other way of doing it.
 
