@@ -55,8 +55,6 @@ MODULE_CNFNAME("omrabbitmq")
  */
 DEF_OMOD_STATIC_DATA
 
-static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
-
 typedef struct _instanceData {
 	/* here you need to define all action-specific data. A record of type 
 	 * instanceData will be handed over to each instance of the action. Keep
@@ -64,6 +62,7 @@ typedef struct _instanceData {
 	 * inside rsyslog.conf, and this is what keeps them apart. Do NOT use
 	 * static data for this!
 	 */
+	pthread_mutex_t mutDoAct;
 	amqp_connection_state_t conn;
 	amqp_basic_properties_t props;
 	uchar *host;
@@ -266,6 +265,7 @@ finalize_it:
 
 BEGINcreateInstance
 CODESTARTcreateInstance
+	pthread_mutex_init(&pData->mutDoAct, NULL);
 ENDcreateInstance
 
 
@@ -300,6 +300,7 @@ CODESTARTfreeInstance
 	free(pData->routing_key);
 	free(pData->tplName);
 	free(pData->exchange_type);
+	pthread_mutex_destroy(&pData->mutDoAct);
 ENDfreeInstance
 
 
@@ -351,11 +352,11 @@ CODESTARTtryResume
 	 * not always be the case.
 	 */
 
-	pthread_mutex_lock(&mutDoAct);
+	pthread_mutex_lock(&pData->mutDoAct);
 	if (pData->conn == NULL) {
 		iRet = initRabbitMQ(pData);
 	}
-	pthread_mutex_unlock(&mutDoAct);
+	pthread_mutex_unlock(&pData->mutDoAct);
 
 ENDtryResume
 
@@ -376,7 +377,7 @@ CODESTARTdoAction
 
 	amqp_bytes_t body_bytes;
 
-	pthread_mutex_lock(&mutDoAct);
+	pthread_mutex_lock(&pData->mutDoAct);
 	if (pData->conn == NULL) {
 		CHKiRet(initRabbitMQ(pData));
 	}
@@ -392,7 +393,7 @@ CODESTARTdoAction
 	}
 
 finalize_it:
-	pthread_mutex_unlock(&mutDoAct);
+	pthread_mutex_unlock(&pData->mutDoAct);
 ENDdoAction
 
 
