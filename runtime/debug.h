@@ -105,7 +105,6 @@ void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore, int iRet);
 void dbgSetExecLocation(int iStackPtr, int line);
 void dbgSetThrdName(uchar *pszName);
 void dbgPrintAllDebugInfo(void);
-void *dbgmalloc(size_t size);
 void dbgOutputTID(char* name);
 int dbgGetDbglogFd(void);
 
@@ -139,11 +138,8 @@ extern int altdbg;	/* and the handle for alternate debug output */
 #define RUNLOG_VAR(fmt, x)
 #define RUNLOG_STR(str)
 
-#ifdef MEMCHECK
-#	define MALLOC(x) dbgmalloc(x)
-#else
-#	define MALLOC(x) malloc(x)
-#endif
+/* this macro is needed to support old, no longer used --enable-memcheck setting (now we use ASAN/valgrind!) */
+#define MALLOC(x) malloc(x)
 
 #define MUTOP_LOCKWAIT		1
 #define MUTOP_LOCK		2
