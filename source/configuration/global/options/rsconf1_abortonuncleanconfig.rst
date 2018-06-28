@@ -23,7 +23,7 @@ prevented if warnings are present. I consider this a good thing in being
 "strict", but I admit there also currently is no other way of doing it.
 
 It is recommended to use the new config style. The equivalent of this
-parameter in the new style has the same name abortOnUncleanConfig.
+parameter in the new style is ``global(abortOnUncleanConfig="")``.
 
 **Caveats:**
 
