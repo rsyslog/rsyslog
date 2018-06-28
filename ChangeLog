@@ -1,5 +1,10 @@
 ------------------------------------------------------------------------------
 Version 8.37.0 [v8-stable] 2018-08-07
+- ommail change of behavior: "enable.body" default now "on"
+  This was always documented to be "on", but actually was "off". Usually, we
+  fix the doc, but after long discussion the agreement was that in this
+  specific case it was actually better to change the default.
+  see also: https://github.com/rsyslog/rsyslog/pull/2791
 - core/omfile: race in async writing mode
   mutex was not properly locked at all times when the async writing buffer
   was flushed
@@ -12,13 +17,26 @@ Version 8.37.0 [v8-stable] 2018-08-07
 - tcpflood no longer links with -lgrcypt
   as this is no longer necessary for GnuTLS
   Thanks to Michael Biebl for the patch.
+- imjournal: add journal-specific impstats counters
+  these provide some additional insight into journal operations
+  Thanks to Abdul Waheed for the patch.
+- omrabittmq: improve high-load performance
+  A different pthread mutex is created for each connection (action)
+  instead of a single one shared by all connections. This will
+  improve performance when using multiple concurrent connections
+  to a single (or multiple) RabbitMQ instance(s) (e.g. for load balancing)
+  Thanks to github user micoq for contributing the patch.
+- build system cleanup: remove no longer needed --enable-memcheck
+  This was used for a very old testing capability, no longer functional but
+  causes build to fail if enabled. Replaced by ASAN/valgrind.
+  Issue detected while testing some other CI settings.
 - omelasticsearch: fix build regression
   Commit 6d4635efbb13907bf651b1a6e5a545effe84d9d9 introduced some compile
   problems, which were only detected on CentOS6, which unfortunately did
   not compile omelasticsearch during CI runs
-- imjournal: add journal-specific impstats counters
-  these provide some additional insight into journal operations
-  Thanks to Abdul Waheed for the patch.
+- CI improvements:
+  * new test for gnutls priority string in librelp
+    Thanks to github user jvymazal for the patch
 ------------------------------------------------------------------------------
 Version 8.36.0 [v8-stable] 2018-06-26
 - build system change:
