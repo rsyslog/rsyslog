@@ -45,7 +45,6 @@ matrix:
      - os: linux
        compiler: "clang"
        services:
-         - elasticsearch
          - mysql
          - postgresql
        env: RUN="run.sh",CHECK="YES", ESTEST="YES", CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics"
@@ -54,7 +53,6 @@ matrix:
        compiler: "clang"
        dist: trusty
        services:
-         - elasticsearch
          - mysql
          - postgresql
        env: RUN="run.sh",CFLAGS="-fsanitize=undefined,nullability,unsigned-integer-overflow -fno-sanitize-recover=undefined,nullability,unsigned-integer-overflow -g -O3 -fno-omit-frame-pointer -fno-color-diagnostics", UBSAN_OPTIONS="print_stacktrace=1", CHECK="YES", ESTEST="YES", KAFKA="YES"
