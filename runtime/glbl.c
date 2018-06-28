@@ -186,6 +186,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "net.aclresolvehostname", eCmdHdlrBinary, 0 },
 	{ "net.enabledns", eCmdHdlrBinary, 0 },
 	{ "net.permitACLwarning", eCmdHdlrBinary, 0 },
+	{ "abortonuncleanconfig", eCmdHdlrBinary, 0 },
 	{ "variables.casesensitive", eCmdHdlrBinary, 0 },
 	{ "environment", eCmdHdlrArray, 0 },
 	{ "processinternalmessages", eCmdHdlrBinary, 0 },
@@ -1332,6 +1333,8 @@ glblDoneLoadCnf(void)
 		        setDisableDNS(!((int) cnfparamvals[i].val.d.n));
 		} else if(!strcmp(paramblk.descr[i].name, "net.permitwarning")) {
 		        setOption_DisallowWarning(!((int) cnfparamvals[i].val.d.n));
+		} else if(!strcmp(paramblk.descr[i].name, "abortonuncleanconfig")) {
+		        loadConf->globals.bAbortOnUncleanConfig = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "internalmsg.ratelimit.burst")) {
 		        glblIntMsgRateLimitBurst = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "internalmsg.ratelimit.interval")) {
