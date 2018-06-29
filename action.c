@@ -575,7 +575,9 @@ actionConstructFinalize(action_t *__restrict__ const pThis, struct nvlst *lst)
 	if(pThis->bUsesMsgPassingMode && pThis->pQueue->qType != QUEUETYPE_DIRECT) {
 		parser_warnmsg("module %s with message passing mode uses "
 			"non-direct queue. This most probably leads to undesired "
-			"results", (char*)modGetName(pThis->pMod));
+			"results. For message modificaton modules (mm*), this means "
+			"that they will have no effect - "
+			"see https://www.rsyslog.com/mm-no-queue/", (char*)modGetName(pThis->pMod));
 	}
 	
 	/* and now reset the queue params (see comment in its function header!) */
@@ -2055,8 +2057,6 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 
 	CHKiRet(actionConstructFinalize(pAction, lst));
 	
-	/* TODO: if we exit here, we have a (quite acceptable...) memory leak */
-
 	*ppAction = pAction; /* finally store the action pointer */
 
 finalize_it:
