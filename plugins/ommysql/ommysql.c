@@ -77,7 +77,6 @@ typedef struct configSettings_s {
 	int iSrvPort;				/* database server port */
 	uchar *pszMySQLConfigFile;	/* MySQL Client Configuration File */
 	uchar *pszMySQLConfigSection;	/* MySQL Client Configuration Section */ 
-	uchar *pszMySQLSocket;		/* MySQL Socket Path */
 } configSettings_t;
 static configSettings_t cs;
 
@@ -470,7 +469,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		pData->dbsrvPort = (unsigned) cs.iSrvPort;	/* set configured port */
 		pData->configfile = cs.pszMySQLConfigFile;
 		pData->configsection = cs.pszMySQLConfigSection;
-		pData->socket = cs.pszMySQLSocket;
+		pData->socket = NULL;
 	}
 
 CODE_STD_FINALIZERparseSelectorAct
@@ -505,8 +504,6 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	cs.pszMySQLConfigFile = NULL;
 	free(cs.pszMySQLConfigSection);
 	cs.pszMySQLConfigSection = NULL;
-	free(cs.pszMySQLSocket);
-	cs.pszMySQLSocket = NULL;
 	RETiRet;
 }
 
@@ -544,8 +541,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 	STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables,
 	NULL, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"ommysqlsocket", 0, eCmdHdlrGetWord, NULL, &cs.pszMySQLSocket,
-	STD_LOADABLE_MODULE_ID));
 ENDmodInit
 
 /* vi:set ai:
