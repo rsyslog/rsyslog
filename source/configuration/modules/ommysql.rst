@@ -40,6 +40,23 @@ Server
 This is the address of the MySQL-Server.
 
 
+Socket
+^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+This is the unix socket path of the MySQL-Server. When the server
+address is set localhost, the mysql client library connects using
+the default unix socket specified at build time.
+If you run mysql server and run the unix socket path differently
+than the default, you can set the socket path with this option.
+
+
 db
 ^^
 
