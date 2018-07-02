@@ -74,6 +74,7 @@ static int bOutputTidToStderr = 0;/* output TID to stderr on thread creation */
 char *pszAltDbgFileName = NULL; /* if set, debug output is *also* sent to here */
 int altdbg = -1;	/* and the handle for alternate debug output */
 int stddbg = 1; /* the handle for regular debug output, set to stdout if not forking, -1 otherwise */
+static uint64_t dummy_errcount = 0; /* just to avoid some static analyzer complaints */
 
 /* list of files/objects that should be printed */
 typedef struct dbgPrintName_s {
@@ -890,8 +891,16 @@ do_dbgprint(uchar *pszObjName, char *pszMsg, const char *pszFileName, size_t len
 	 * warnings. Here, we really don't care if the write fails, we
 	 * have no good response to that in any case... -- rgerhards, 2012-11-28
 	 */
-	if(stddbg != -1) if(write(stddbg, pszWriteBuf, offsWriteBuf)){};
-	if(altdbg != -1) if(write(altdbg, pszWriteBuf, offsWriteBuf)){};
+	if(stddbg != -1) {
+		if(write(stddbg, pszWriteBuf, offsWriteBuf)) {
+			++dummy_errcount;
+		}
+	}
+	if(altdbg != -1) {
+		if(write(altdbg, pszWriteBuf, offsWriteBuf)) {
+			++dummy_errcount;
+		}
+	}
 
 	bWasNL = (pszMsg[lenMsg - 1] == '\n') ? 1 : 0;
 }
