@@ -45,6 +45,11 @@ Version 8.37.0 [v8-stable] 2018-08-07
   Commit 6d4635efbb13907bf651b1a6e5a545effe84d9d9 introduced some compile
   problems, which were only detected on CentOS6, which unfortunately did
   not compile omelasticsearch during CI runs
+- build system: do not disable tests via --disable-liblogging-stdlog
+  This setting controlled both the actual rsyslog functionality as well
+  as some testbench tests, which use liblogging-stdlog to provide some
+  specific functionality. This meant those tests were not run since
+  changing the default. Now untangling the dependency.
 - CI improvements:
   * new test for gnutls priority string in librelp
     Thanks to github user jvymazal for the patch
