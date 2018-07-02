@@ -31,7 +31,7 @@
 #define GLBL_H_INCLUDED
 
 #include <sys/types.h>
-#ifdef HAVE_LIBLOGGING_STDLOG
+#ifdef ENABLE_LIBLOGGING_STDLOG
 #include <liblogging/stdlog.h>
 #endif
 #include "rainerscript.h"
@@ -46,7 +46,7 @@
 extern pid_t glbl_ourpid;
 extern int bProcessInternalMessages;
 extern int bPermitSlashInProgramname;
-#ifdef HAVE_LIBLOGGING_STDLOG
+#ifdef ENABLE_LIBLOGGING_STDLOG
 extern stdlog_channel_t stdlog_hdl;
 #endif
 
