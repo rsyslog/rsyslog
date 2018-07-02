@@ -30,7 +30,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <errno.h>
-#ifdef HAVE_LIBLOGGING_STDLOG
+#ifdef ENABLE_LIBLOGGING_STDLOG
 #  include <liblogging/stdlog.h>
 #else
 #  include <syslog.h>
@@ -858,7 +858,7 @@ logmsgInternal_doWrite(smsg_t *pMsg)
 	} else {
 		const int pri = getPRIi(pMsg);
 		uchar *const msg = getMSG(pMsg);
-#		ifdef HAVE_LIBLOGGING_STDLOG
+#		ifdef ENABLE_LIBLOGGING_STDLOG
 		/* the "emit only once" rate limiter is quick and dirty and not
 		 * thread safe. However, that's no problem for the current intend
 		 * and it is not justified to create more robust code for the
@@ -2082,7 +2082,7 @@ main(int argc, char **argv)
 
 	mainloop();
 	deinitAll();
-#ifdef HAVE_LIBLOGGING_STDLOG
+#ifdef ENABLE_LIBLOGGING_STDLOG
 	stdlog_close(stdlog_hdl);
 #endif
 	return 0;

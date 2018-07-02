@@ -69,7 +69,7 @@ DEFobjCurrIf(net)
  * class...
  */
 int glblDebugOnShutdown = 0;	/* start debug log when we are shut down */
-#ifdef HAVE_LIBLOGGING_STDLOG
+#ifdef ENABLE_LIBLOGGING_STDLOG
 stdlog_channel_t stdlog_hdl = NULL;	/* handle to be used for stdlog */
 #endif
 
@@ -79,7 +79,7 @@ int bProcessInternalMessages = 0;	/* Should rsyslog itself process internal mess
 					 * 0 - send them to libstdlog (e.g. to push to journal) or syslog()
 					 */
 static uchar *pszWorkDir = NULL;
-#ifdef HAVE_LIBLOGGING_STDLOG
+#ifdef ENABLE_LIBLOGGING_STDLOG
 static uchar *stdlog_chanspec = NULL;
 #endif
 static int bParseHOSTNAMEandTAG = 1;	/* parser modification (based on startup params!) */
@@ -1061,7 +1061,7 @@ glblProcessCnf(struct cnfobj *o)
 		} else if(!strcmp(paramblk.descr[i].name, "internal.developeronly.options")) {
 		        glblDevOptions = (uint64_t) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "stdlog.channelspec")) {
-#ifndef HAVE_LIBLOGGING_STDLOG
+#ifndef ENABLE_LIBLOGGING_STDLOG
 			LogError(0, RS_RET_ERR, "rsyslog wasn't "
 				"compiled with liblogging-stdlog support. "
 				"The 'stdlog.channelspec' parameter "
