@@ -23,6 +23,10 @@ Version 8.37.0 [v8-stable] 2018-08-07
 - imjournal: add journal-specific impstats counters
   these provide some additional insight into journal operations
   Thanks to Abdul Waheed for the patch.
+- more explicit error msg with message modification mod on queue
+  Message modification modules do not work if used with a non-direct queue.
+  We now make this more explicit in the config parsing error message.
+  closes https://github.com/rsyslog/rsyslog/issues/1323
 - omrabittmq: improve high-load performance
   A different pthread mutex is created for each connection (action)
   instead of a single one shared by all connections. This will
