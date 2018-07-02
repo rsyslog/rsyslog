@@ -542,7 +542,6 @@ CODESTARTdoAction
 	}
 	if(doc == NULL) {
 		dbgprintf("ommongodb: error creating BSON doc\n");
-		/* FIXME: is this a correct return code? */
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	if (mongoc_collection_insert (pData->collection, MONGOC_INSERT_NONE, doc, NULL, &(pData->error) ) ) {
