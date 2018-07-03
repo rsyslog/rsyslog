@@ -241,9 +241,9 @@ When processing json-file logs, these are the lognorm rules to use to
 match the filename and extract metadata.  The default value is::
 
     rule=:/var/log/containers/%pod_name:char-to:.%.%container_hash:char-to:_%_%names\
-    pace_name:char-to:_%_%container_name:char-to:-%-%container_id:char-to:.%.log
-    rule=:/var/log/containers/%pod_name:char-to:_%_%namespace_name:char-to:_%_%conta\
-    iner_name:char-to:-%-%container_id:char-to:.%.log
+    pace_name:char-to:_%_%container_name_and_id:char-to:.%.log
+    rule=:/var/log/containers/%pod_name:char-to:_%_%namespace_name:char-to:_%_%contai\
+    ner_name_and_id:char-to:.%.log
 
 .. note::
 
@@ -264,9 +264,8 @@ filenamerulebase
 
    "word", "/etc/rsyslog.d/k8s_filename.rulebase", "no", "none"
 
-When processing json-file logs, this is the rulebase used to
-match the filename and extract metadata.  For the actual rules, see
-below `filenamerules`.
+When processing json-file logs, this is the rulebase used to match the filename
+and extract metadata.  For the actual rules, see :ref:`filenamerules`.
 
 .. _containerrules:
 
@@ -313,9 +312,9 @@ containerrulebase
 
    "word", "/etc/rsyslog.d/k8s_container_name.rulebase", "no", "none"
 
-When processing json-file logs, this is the rulebase used to
-match the CONTAINER_NAME property value and extract metadata.  For the
-actual rules, see `containerrules`.
+When processing json-file logs, this is the rulebase used to match the
+CONTAINER_NAME property value and extract metadata.  For the actual rules, see
+:ref:`containerrules`.
 
 Fields
 ------
