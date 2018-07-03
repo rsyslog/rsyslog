@@ -37,11 +37,12 @@ Version 8.37.0 [v8-stable] 2018-08-07
   This was used for a very old testing capability, no longer functional but
   causes build to fail if enabled. Replaced by ASAN/valgrind.
   Issue detected while testing some other CI settings.
-- mmkubernetes bugfix: potential NULL pointer access
+- tools: Updated python based statslog analyzer sample scripts
+- bugfix mmkubernetes: potential NULL pointer access
   If token file could not be opened, fclose() was passed a NULL pointer.
   Thanks to github user jvymazal for finding and Richard Megginson
   for fixing the issue.
-- mmkubernetes bugfix: default rules use container_name_and_id
+- bugfix mmkubernetes: default rules use container_name_and_id
   also include rulebase files in dist
   Thanks to Richard Megginson for fixing the issue.
 - bugfix omelasticsearch: build regression
