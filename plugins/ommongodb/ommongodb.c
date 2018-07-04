@@ -673,7 +673,7 @@ CODESTARTnewActInst
 		if(pData->uid && pData->pwd){
 			uid = strlen(pData->uid);
 			pwd = strlen(pData->pwd);
-			uri_len += uid + pwd + strlen("?authMechanism=PLAIN") + 2;
+			uri_len += uid + pwd + 2;
 		}
 		if(pData->ssl_ca && pData->ssl_cert)
 			uri_len += strlen("?ssl=true"); /* "?ssl=true" & "&ssl=true" are the same size */
@@ -699,8 +699,6 @@ CODESTARTnewActInst
 		tmp = stpncpy(tmp, pData->port, port);
 		*tmp = '/';
 		++tmp;
-		if(pData->uid && pData->pwd)
-			tmp = stpncpy(tmp, "?authMechanism=PLAIN", 20);
 		if(pData->ssl_ca && pData->ssl_cert){
 			dbgprintf("ommongodb: Adding ssl to uristr.\n");
 			if(pData->uid && pData->pwd)
