@@ -86,37 +86,70 @@ done:
 }
 
 static es_str_t* ATTR_NONNULL(1)
+expand_backticks_echo(const char *param)
+{
+	assert(param != NULL);
+	assert(strncmp(param, "echo ", sizeof("echo ")-1) == 0);
+	char envvar[512];
+	int i_envvar = 0;
+	int in_env = 0;
+	es_str_t *estr;
+
+	param += sizeof("echo ")-1;
+	if((estr = es_newStr(strlen(param))) == NULL) {
+		goto done;
+	}
+
+	while(*param) {
+		if(in_env) {
+			if(isspace(*param) || *param == '/') {
+				envvar[i_envvar] = '\0';
+				const char *envval = getenv(envvar);
+				es_addBuf(&estr, envval, strlen(envval));
+				es_addChar(&estr, *param); /* curr char part of output! */
+				i_envvar = 0;
+				in_env = 0;
+			} else if(i_envvar > sizeof(envvar) - 1) {
+				parser_errmsg("environment variable too long, begins with %s", envvar);
+				goto done;
+			} else {
+				envvar[i_envvar++] = *param;
+			}
+		} else if (*param == '$') {
+			in_env = 1;
+		} else {
+			es_addChar(&estr, *param);
+		}
+		++param;
+	}
+
+	/* final check, we may be in env var name (very probable!) */
+	if(in_env) {
+		envvar[i_envvar] = '\0';
+		const char *envval = getenv(envvar);
+		es_addBuf(&estr, envval, strlen(envval));
+	}
+
+done:	return estr;
+}
+
+
+static es_str_t* ATTR_NONNULL(1)
 expand_backticks(char *const param)
 {
-	const char *val = NULL;
+	es_str_t *estr;
 	assert(param != NULL);
-	int need_free = 0;
 
-	if(strncmp(param, "echo $", sizeof("echo $")-1) == 0) {
-		size_t i;
-		const size_t len = strlen(param);
-		for(i = len - 1 ; isspace(param[i]) ; --i) {
-			; /* just go down */
-		}
-		if(i > 6 && i < len - 1) {
-			param[i+1] = '\0';
-		}
-		val = getenv(param+6);
+	if(strncmp(param, "echo ", sizeof("echo ")-1) == 0) {
+		estr = expand_backticks_echo(param);
 	} else if(strncmp(param, "cat ", sizeof("cat ")-1) == 0) {
-		val = read_file(param+4);
-		need_free = 1;
-	}
-
-	if(val == NULL) {
+		const char *val = read_file(param+4);
+		estr = es_newStrFromCStr(val, strlen(val));
+		free((void*) val);
+	} else {
 		parser_errmsg("invalid backtick parameter `%s` - replaced by "
 			"empty string (\"\")", param);
-		val = "";
-		need_free = 0;
-	}
-
-	es_str_t *const estr = es_newStrFromCStr(val, strlen(val));
-	if(need_free) {
-		free((void*)val);
+		estr = es_newStr(1);
 	}
 
 	return estr;
