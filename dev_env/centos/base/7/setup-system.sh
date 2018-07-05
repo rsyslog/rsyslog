@@ -1,31 +1,11 @@
 set -v
-yum -y update
+#yum -y update
 
 echo STEP: essentials
 # prevent systemd from stealing our core files (bad for testbench)
 bash -c "echo core > /proc/sys/kernel/core_pattern"
 
 # search for packages that contain <file>: yum whatprovides <file>
-yum -y install sudo clang clang-analyzer git valgrind libtool autoconf automake flex bison \
-	python-docutils python-sphinx python-devel \
-	libuuid-devel libgcrypt-devel zlib-devel openssl-devel gnutls-devel \
-	mysql-devel postgresql-devel libdbi-dbd-mysql libdbi-devel \
-	net-snmp-devel systemd-devel hiredis-devel qpid-proton-c-devel redhat-rpm-config \
-	libfaketime \
-	lsof \
-	curl libcurl-devel \
-	libnet libnet-devel \
-	mongo-c-driver-devel \
-	czmq-devel \
-	libmaxminddb-devel \
-	gcc \
-	gdb \
-	nc \
-	snappy-devel \
-	cyrus-sasl-devel \
-	cyrus-sasl-lib \
-	autoconf-archive \
-	compat-libstdc++-33
 
 # Now build some custom libraries for whom there are not packages
 mkdir helper-projects
