@@ -23,6 +23,20 @@ Version 8.37.0 [v8-stable] 2018-08-07
 - imjournal: add journal-specific impstats counters
   these provide some additional insight into journal operations
   Thanks to Abdul Waheed for the patch.
+- config: enhance backticks "echo" capability
+  This is now more along the lines of what bash does. We now support
+  multiple environment variable expansions as well as constant text
+  between them.
+  example:
+  env SOMEPATH is set to "/var/log/custompath"
+  config is: param=`echo $SOMEPATH/myfile`
+  param than is expaned to "/var/log/custompath/myfile"
+  among others, this is also needed inside the testbench to properly
+  support "make distcheck".
+  Note: testbench tests follows via separate commit. There will be
+  no special test, as the testbench itself requires the functionality
+  at several places, so the coverage will be very good even without
+  a dedicated test.
 - more explicit error msg with message modification mod on queue
   Message modification modules do not work if used with a non-direct queue.
   We now make this more explicit in the config parsing error message.
@@ -49,6 +63,13 @@ Version 8.37.0 [v8-stable] 2018-08-07
   Commit 6d4635efbb13907bf651b1a6e5a545effe84d9d9 introduced some compile
   problems, which were only detected on CentOS6, which unfortunately did
   not compile omelasticsearch during CI runs
+- bugfix ommongodb: do not force MongoDB to use "PLAIN" auth mechanism
+  ... which also seems not to be handled by current MongoDB.
+  Remove ?authMechanism=PLAIN URI part to let the mongo library chooses the
+  default mechanism. One can force a specific authentication mechanism by
+  adding ?authMechanism=XXX into the uristr argument of the module
+  Thanks to Jérémie Jourdin for the fix.
+  closes https://github.com/rsyslog/rsyslog/issues/2753
 - build system: do not disable tests via --disable-liblogging-stdlog
   This setting controlled both the actual rsyslog functionality as well
   as some testbench tests, which use liblogging-stdlog to provide some
