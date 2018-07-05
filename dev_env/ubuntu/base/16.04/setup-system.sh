@@ -73,7 +73,10 @@ apt-get install -y \
 	libqpid-proton10-dev \
 	tcl-dev \
 	libkrb5-dev \
-	libsodium-dev
+	libsodium-dev \
+	default-jre
+
+# Note: we need Java for some dynamic tests (e.g. ElasticSearch)
 
 # Whissi "special build" of 2017-12 autoconf-archive:
 #wget --no-verbose http://build.rsyslog.com/CI/autoconf-archive_20170928-1adiscon1_all.deb
