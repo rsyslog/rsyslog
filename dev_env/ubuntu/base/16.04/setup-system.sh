@@ -28,6 +28,7 @@ echo STEP: install main components
 apt-get install -y \
 	libestr-dev librelp-dev libfastjson-dev liblogging-stdlog-dev liblognorm-dev \
 	vim \
+	net-tools \
 	gcc-7 \
 	mysql-server \
 	pkg-config \
