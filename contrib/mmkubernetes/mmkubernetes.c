@@ -75,10 +75,7 @@ DEFobjCurrIf(regexp)
  * this is for _tag_ match, not actual filename match - in_tail turns filename
  * into a fluentd tag
  */
-#define DFLT_FILENAME_LNRULES "rule=:/var/log/containers/%pod_name:char-to:.%."\
-	"%container_hash:char-to:_%_"\
-	"%namespace_name:char-to:_%_%container_name_and_id:char-to:.%.log\n"\
-	"rule=:/var/log/containers/%pod_name:char-to:_%_"\
+#define DFLT_FILENAME_LNRULES "rule=:/var/log/containers/%pod_name:char-to:_%_"\
 	"%namespace_name:char-to:_%_%container_name_and_id:char-to:.%.log"
 #define DFLT_FILENAME_RULEBASE "/etc/rsyslog.d/k8s_filename.rulebase"
 /* original from fluentd plugin:
