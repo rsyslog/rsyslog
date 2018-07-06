@@ -3,63 +3,60 @@
 FROM ubuntu:18.04
 ENV	DEBIAN_FRONTEND=noninteractive
 RUN 	apt-get update && \
-	apt-get upgrade -y
-RUN	apt-get install -y \
-	software-properties-common \
-	wget \
-	git \
-	gcc \
-	clang \
+	apt-get upgrade -y && \
+	apt-get install -y \
 	autoconf \
-	autotools-dev \
-	automake \
-	make \
-	vim \
-	gcc \
-	mysql-server \
-	pkg-config \
-	libtool \
-	python-docutils \
-	pkg-config \
-	libtool \
-	gdb \
-	valgrind \
-	libdbi-dev \
-	libsnmp-dev \
-	libmysqlclient-dev \
-	libglib2.0-dev \
-	zlib1g-dev \
-	uuid-dev \
-	libgcrypt11-dev \
-	bison \
-	flex \
-	clang \
-	libcurl4-gnutls-dev \
-	python-docutils  \
-	wget \
-	curl \
-	libgnutls28-dev \
-	libsystemd-dev \
-	libnet1-dev \
-	postgresql-client libpq-dev \
-	libgrok1 libgrok-dev \
-	libmongoc-dev \
-	libbson-dev \
-	git \
-	faketime libdbd-mysql \
 	autoconf-archive \
-	libssl-dev libsasl2-dev \
-	libmaxminddb-dev libmongoc-dev \
-	liblz4-dev \
-	libkrb5-dev \
+	automake \
+	autotools-dev \
+	bison \
+	clang \
+	curl \
+	default-jdk \
+	default-jre \
+	faketime libdbd-mysql \
+	flex \
+	gcc \
+	gdb \
+	git \
+	libbson-dev \
+	libcurl4-gnutls-dev \
+	libdbi-dev \
+	libgcrypt11-dev \
+	libglib2.0-dev \
+	libgnutls28-dev \
+	libgrok1 libgrok-dev \
 	libhiredis-dev \
+	libkrb5-dev \
+	liblz4-dev \
+	libmaxminddb-dev libmongoc-dev \
+	libmongoc-dev \
+	libmysqlclient-dev \
+	libnet1-dev \
+	libsnmp-dev \
+	libssl-dev libsasl2-dev \
+	libsystemd-dev \
 	libtokyocabinet-dev \
-	default-jre
+	libtool \
+	lsof \
+	make \
+	mysql-server \
+	net-tools \
+	pkg-config \
+	postgresql-client libpq-dev \
+	python-docutils  \
+	software-properties-common \
+	uuid-dev \
+	valgrind \
+	vim \
+	wget \
+	wget \
+	zlib1g-dev
 RUN	echo "deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_18.04/ ./" > /etc/apt/sources.list.d/0mq.list && \
 	wget -nv -O - http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_18.04/Release.key | apt-key add - && \
  	add-apt-repository ppa:adiscon/v8-stable -y && \
-	apt-get update -y
-RUN	apt-get install -y  \
+	apt-get update -y && \
+	apt-get install -y  \
 	libczmq-dev \
 	libqpid-proton8-dev \
 	tcl-dev \
