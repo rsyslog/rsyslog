@@ -78,6 +78,26 @@ Version 8.37.0 [v8-stable] 2018-08-07
 - CI improvements:
   * new test for gnutls priority string in librelp
     Thanks to github user jvymazal for the patch
+  * testbench: refactor tests which used "nettester" tool
+    Some old tests are carried out via the nettester tool. This was
+    our initial shot at a testbench a couple of years ago. While it
+    worked back then, the testbench framework has been much enhanced.
+    These old tests are nowadays very hard to handle, as they miss
+    debug support etc. So it is time to refactor them to new style.
+    As a side-activity, the testbench plumbing has been enhanced to
+    support some operations commonly needed by these tests. Contrary
+    to pre-existing plumbing, these new operations are now crafted
+    using bash functions, which we consider superior to the current
+    method. So this is also the start of converting the older-style
+    functionality into bash functions. We just did this now because
+    it was required and we entangled it into the test refactoring
+    because it was really needed. Else we had to write old-style
+    operations and convert them in another commit, which would
+    have been a waste of time.
+    Special thanks to Pascal Withopf for the initial step of taking
+    old tests and putting config as well as test data together into
+    the refactored tests, on which Rainer Gerhards than could build
+    to create the new tests and update testbench plumbing.
 ------------------------------------------------------------------------------
 Version 8.36.0 [v8-stable] 2018-06-26
 - build system change:
