@@ -31,19 +31,19 @@ for logging.  For special features see the
 manpage. Rsyslog.conf is backward-compatible with sysklogd's syslog.conf file. So if you migrate
 from sysklogd you can rename it and it should work.
 
-.B Note that this version of rsyslog ships with extensive documentation in html format.
+.B Note that this version of rsyslog ships with extensive documentation in HTML format.
 This is provided in the ./doc subdirectory and probably
 in a separate package if you installed rsyslog via a packaging system.
 To use rsyslog's advanced features, you
 .B need
-to look at the html documentation, because the man pages only cover
+to look at the HTML documentation, because the man pages only cover
 basic aspects of operation.
 
 
 .SH MODULES
 
 Rsyslog has a modular design. Consequently, there is a growing number
-of modules. See the html documentation for their full description.
+of modules. See the HTML documentation for their full description.
 
 .TP
 .I omsnmp
@@ -57,7 +57,7 @@ Output module for MySQL
 .TP
 .I omrelp
 Output module for the reliable RELP protocol (prevents message loss). 
-For details, see below at imrelp and the html documentation.
+For details, see below at imrelp and the HTML documentation.
 It can be used like this:
 .IP
 *.*  :omrelp:server:port
@@ -138,7 +138,7 @@ Global directives
 Global directives set some global properties of whole rsyslog daemon, for example size of main
 message queue ($MainMessageQueueSize), loading external modules ($ModLoad) and so on.
 All global directives need to be specified on a line by their own and must start with 
-a dollar-sign. The complete list of global directives can be found in html documentation in doc 
+a dollar-sign. The complete list of global directives can be found in HTML documentation in doc 
 directory or online on web pages.
 
 .TP
@@ -290,7 +290,7 @@ Note that a port number was given as there is no standard port for relp.
 Keep in mind that you need to load the correct input and output plugins (see "Modules" above).
 
 Please note that rsyslogd offers a variety of options in regarding to remote
-forwarding. For full details, please see the html documentation.
+forwarding. For full details, please see the HTML documentation.
 
 .SS List of users
 Usually critical messages are also directed to ``root'' on that machine. You
@@ -311,7 +311,7 @@ create that schema with the createDB.SQL file that came with the rsyslog package
 use any other schema of your liking - you just need to define a proper template and assign this 
 template to the action.
 
-See the html documentation for further details on database logging.
+See the HTML documentation for further details on database logging.
 
 .SS Discard
 If the discard action is carried out, the received message is immediately discarded. Discard 
@@ -401,7 +401,7 @@ Compares the property against the provided regular expression.
 .RE
 
 .SS Expression-Based Filters
-See the html documentation for this feature.
+See the HTML documentation for this feature.
 
 
 .SH TEMPLATES
@@ -762,7 +762,7 @@ queued mode, rsyslogd buffers messages to memory and optionally to disk
 It is highly suggested to use remote forwarding and database writing
 in queued mode, only.
 
-To learn more about queued operations, see the html documentation.
+To learn more about queued operations, see the HTML documentation.
 
 .SH FILES
 .PD 0
@@ -783,7 +783,7 @@ The complete documentation can be found in the doc folder of the rsyslog distrib
 
 .RE
 Please note that the man page reflects only a subset of the configuration options. Be sure to read
-the html documentation for all features and details. This is especially vital if you plan to set
+the HTML documentation for all features and details. This is especially vital if you plan to set
 up a more-then-extremely-simple system.
 
 .SH AUTHORS
