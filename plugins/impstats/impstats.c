@@ -1,7 +1,7 @@
 /* impstats.c
  * A module to periodically output statistics gathered by rsyslog.
  *
- * Copyright 2010-2017 Adiscon GmbH.
+ * Copyright 2010-2018 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -50,6 +50,7 @@
 #include "statsobj.h"
 #include "prop.h"
 #include "ruleset.h"
+#include "parserif.h"
 
 
 MODULE_TYPE_INPUT
@@ -407,6 +408,14 @@ CODESTARTsetModCnf
 			dbgprintf("impstats: program error, non-handled "
 			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
 		}
+	}
+
+	if(loadModConf->pszBindRuleset != NULL && loadModConf->bLogToSyslog == 0) {
+		parser_warnmsg("impstats: log.syslog set to \"off\" but ruleset specified - with "
+			"these settings, the ruleset will never be used, because regular syslog "
+			"processing is turned off - ruleset parameter is ignored");
+		free(loadModConf->pszBindRuleset);
+		loadModConf->pszBindRuleset = NULL;
 	}
 
 	loadModConf->configSetViaV2Method = 1;
