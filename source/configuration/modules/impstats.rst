@@ -181,7 +181,8 @@ usual syslog stream. This is useful if custom formatting or more
 elaborate processing is desired. However, output is placed under the
 same restrictions as regular syslog data, especially in regard to the
 queue position (stats data may sit for an extended period of time in
-queues if they are full).
+queues if they are full). If set "off", then you cannot bind the module to
+ruleset.
 
 
 log.file
@@ -217,6 +218,9 @@ Ruleset
    "string", "none", "no", "none"
 
 Binds the listener to a specific :doc:`ruleset <../../concepts/multi_ruleset>`.
+
+**Note** that setting ``ruleset`` and ``log.syslog="off"`` are mutually
+exclusive because syslog stream processing must be enabled to use a ruleset.
 
 
 Bracketing
