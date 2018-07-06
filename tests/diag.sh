@@ -44,7 +44,8 @@ TB_TIMEOUT_STARTSTOP=400 # timeout for start/stop rsyslogd in tenths (!) of a se
 # note that 40sec for the startup should be sufficient even on very slow machines. we changed this from 2min on 2017-12-12
 export RSYSLOG_DEBUG_TIMEOUTS_TO_STDERR="on"  # we want to know when we loose messages due to timeouts
 
-
+# newer functionality is preferrably introduced via bash functions
+# rgerhards, 2018-07-03
 function rsyslog_testbench_test_url_access() {
     local missing_requirements=
     if ! hash curl 2>/dev/null ; then
@@ -64,6 +65,42 @@ function rsyslog_testbench_test_url_access() {
         echo "HTTP endpoint '${http_endoint}' is reachable! Starting test ..."
     fi
 }
+
+function setvar_RS_HOSTNAME() {
+	rm -f HOSTNAME
+	. $srcdir/diag.sh startup gethostname.conf
+	. $srcdir/diag.sh tcpflood -m1 -M "\"<128>\""
+	. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
+	. $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
+	export RS_HOSTNAME="$(cat HOSTNAME)"
+	echo HOSTNAME is: $RS_HOSTNAME
+}
+
+# compare file to expected exact content
+# $1 is file to compare
+function cmp_exact() {
+	if [ "$1" == "" ]; then
+		printf "Testbench ERROR, cmp_exact() needs filename as \$1\n"
+		. $srcdir/diag.sh error-exit  1
+	fi
+	if [ "$EXPECTED" == "" ]; then
+		printf "Testbench ERROR, cmp_exact() needs to have env var EXPECTED set!\n"
+		. $srcdir/diag.sh error-exit  1
+	fi
+	printf "%s\n" "$EXPECTED" | cmp - "$1"
+	if [ $? -ne 0 ]; then
+		echo "invalid response generated"
+		echo "################# $1 is:"
+		cat -n rsyslog.out.log
+		echo "################# EXPECTED was:"
+		printf "%s\n" "$EXPECTED" | cat -n -
+		printf "\n#################### diff is:\n"
+		printf "%s\n" "$EXPECTED" | diff - "$1"
+		. $srcdir/diag.sh error-exit  1
+	fi;
+}
+
+
 
 #START: ext kafka config
 dep_cache_dir=$(readlink -f $srcdir/.dep_cache)

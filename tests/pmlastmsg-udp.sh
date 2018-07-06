@@ -4,8 +4,8 @@
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
 module(load="../plugins/pmlastmsg/.libs/pmlastmsg")
-module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="13514" ruleset="ruleset1")
+module(load="../plugins/imudp/.libs/imudp")
+input(type="imudp" port="13514" ruleset="ruleset1")
 
 template(name="outfmt" type="string" string="%msg%\n")
 
@@ -16,14 +16,14 @@ ruleset(name="ruleset1" parser=["rsyslog.lastline","rsyslog.rfc5424","rsyslog.rf
 
 '
 . $srcdir/diag.sh startup
-. $srcdir/diag.sh tcpflood -m1 -M "\"<13>last message repeated 5 times\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"<13>last message repeated 0090909787348927349875 times\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"<13>last message  repeated 5 times\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"<13>last message repeated 5 times -- more data\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"<13>last message repeated 5.2 times\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"<167>Mar  6 16:57:54 172.20.245.8 TAG: Rest of message...\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"<167>Mar  6 16:57:54 172.20.245.8 TAG long message ================================================================================\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"<34>1 2003-11-11T22:14:15.003Z mymachine.example.com su - ID47 last message repeated 5 times\""
+. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<13>last message repeated 5 times\""
+. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<13>last message repeated 0090909787348927349875 times\""
+. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<13>last message  repeated 5 times\""
+. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<13>last message repeated 5 times -- more data\""
+. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<13>last message repeated 5.2 times\""
+. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<167>Mar  6 16:57:54 172.20.245.8 TAG: Rest of message...\""
+. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<167>Mar  6 16:57:54 172.20.245.8 TAG long message ================================================================================\""
+. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<34>1 2003-11-11T22:14:15.003Z mymachine.example.com su - ID47 last message repeated 5 times\""
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
 
