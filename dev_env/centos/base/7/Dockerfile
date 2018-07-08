@@ -14,7 +14,6 @@ RUN	yum -y install \
 	clang-analyzer \
 	compat-libstdc++-33 \
 	curl \
-	libcurl-devel \
 	cyrus-sasl-devel \
 	cyrus-sasl-lib \
 	flex \
@@ -23,6 +22,7 @@ RUN	yum -y install \
 	git \
 	gnutls-devel \
 	hiredis-devel \
+	libcurl-devel \
 	libdbi-dbd-mysql \
 	libdbi-devel \
 	libfaketime \
@@ -46,6 +46,7 @@ RUN	yum -y install \
 	sudo \
 	systemd-devel \
 	valgrind \
+	wget \
 	zlib-devel \
 	# end of this RUN
 RUN	yum -y install epel-release && \
