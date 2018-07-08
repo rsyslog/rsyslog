@@ -47,6 +47,9 @@ Version 8.37.0 [v8-stable] 2018-08-07
   improve performance when using multiple concurrent connections
   to a single (or multiple) RabbitMQ instance(s) (e.g. for load balancing)
   Thanks to github user micoq for contributing the patch.
+- imudp: replace select() calls by poll()
+  This improves reliability in extreme cases (more than 1024 fds open when
+  imudp begins to listen) and potentially improves performance a little.
 - build system cleanup: remove no longer needed --enable-memcheck
   This was used for a very old testing capability, no longer functional but
   causes build to fail if enabled. Replaced by ASAN/valgrind.
