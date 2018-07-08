@@ -436,7 +436,8 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 
         error = getaddrinfo((char*)pLstnIP, (char*) pLstnPort, &hints, &res);
         if(error) {
-		dbgprintf("error %d querying port '%s'\n", error, pLstnPort);
+		LogError(0, RS_RET_INVALID_PORT, "error querying port '%s': %s",
+			pLstnPort, gai_strerror(error));
 		ABORT_FINALIZE(RS_RET_INVALID_PORT);
 	}
 
