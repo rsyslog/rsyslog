@@ -2479,6 +2479,8 @@ tryEmulateTAG(smsg_t * const pM, sbool bLockMutex)
 			bufTAG[sizeof(bufTAG)-1] = '\0'; /* just to make sure... */
 			MsgSetTAG(pM, bufTAG, lenTAG);
 		}
+		/* Signal change in TAG for aquireProgramName */
+		pM->iLenPROGNAME = -1;
 	}
 	if(bLockMutex == LOCK_MUTEX)
 		MsgUnlock(pM);
@@ -2597,6 +2599,12 @@ MsgGetStructuredData(smsg_t * const pM, uchar **pBuf, rs_size_t *len)
 uchar *getProgramName(smsg_t * const pM, sbool bLockMutex)
 {
 	if(pM->iLenPROGNAME == -1) {
+		if(pM->iLenTAG == 0) {
+			uchar *pRes;
+			rs_size_t bufLen = -1;
+			getTAG(pM, &pRes, &bufLen);
+		}
+
 		if(bLockMutex == LOCK_MUTEX) {
 			MsgLock(pM);
 			/* need to re-check, things may have change in between! */
