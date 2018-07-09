@@ -17,3 +17,4 @@ RUN buildbot-worker create-worker . docker.rsyslog.com docker-centos7 password
 COPY tpl-buildbot.tac /worker/buildbot.tac
 ENTRYPOINT ["/usr/bin/buildbot-worker"]
 CMD ["start", "--nodaemon"]
+VOLUME /worker
