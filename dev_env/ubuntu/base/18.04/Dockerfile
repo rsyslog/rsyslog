@@ -158,5 +158,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-valgrind \
 	\
 	--enable-testbench
+
+# module needs fixes: --enable-kmsg
 WORKDIR /rsyslog
 USER rsyslog
