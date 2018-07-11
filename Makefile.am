@@ -302,51 +302,173 @@ SUBDIRS += tests
 
 
 
+DISTCHECK_CONFIGURE_FLAGS=
 # make sure "make distcheck" tries to build all modules. This means that
 # a developer must always have an environment where every supporting library
 # is available. If that is not the case, the respective configure option may
 # temporarily be removed below. The intent behind forcing everthing to compile
 # in a make distcheck is so that we detect code that accidently was not updated
 # when some global update happened.
-DISTCHECK_CONFIGURE_FLAGS= \
-	--disable-silent-rules \
-	--disable-testbench \
-	--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir) 
-
-THIS_IS_TEMPORARILY_DISABLED = \
-	--enable-distcheck-workaround \
-	--enable-testbench \
-	--enable-imdiag \
-	--enable-testbench \
-	--enable-imfile \
-	--enable-snmp \
-	--enable-libdbi \
-	--enable-mysql \
-	--enable-relp \
-	--enable-rsyslogd \
-	--enable-mail \
-	--enable-klog \
+DISTCHECK_CONFIGURE_FLAGS+= \
+	--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir) \
+	--enable-silent-rules \
 	--enable-diagtools \
-	--enable-mmgrok \
-	--enable-gnutls \
-	--enable-omstdout \
-	--enable-pmlastmsg \
-	--enable-omruleset \
-	--enable-omprog \
-	--enable-imptcp \
-	--enable-omuxsock \
+	--enable-imdiag \
 	--enable-impstats \
+	--enable-imptcp \
+	--enable-klog \
+	--enable-mail \
+	--enable-mmanon \
+	--enable-mmaudit \
+	--enable-mmcount \
+	--enable-mmexternal \
+	--enable-mmfields \
+	--enable-mmjsonparse \
+	--enable-mmpstrucdata \
+	--enable-mmrm1stspace \
+	--enable-mmsequence \
+	--enable-mmutf8fix \
+	--enable-omprog \
+	--enable-omruleset \
+	--enable-omstdout \
+	--enable-omuxsock \
 	--enable-pmaixforwardedfrom \
+	--enable-pmciscoios \
 	--enable-pmcisconames \
+	--enable-pmlastmsg \
+	--enable-pmnull \
 	--enable-pmsnare \
-	--enable-elasticsearch \
-	--enable-valgrind \
-	--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir) 
-# temporarily disable these checks for make distcheck 2012-09-06 rgerhards
-#				--enable-mmsnmptrapd \
-#				--enable-gssapi_krb5 \
-#				--enable-extended-tests \
-#				--enable-pgsql 
+	--enable-rsyslogd \
+	--enable-usertools \
+	--enable-testbench \
+	--enable-valgrind
+# currently not supported in make distcheck:
+# --enable-mysql-tests
+# --enable-pgsql-tests 
+# --enable-extended-tests --> should probably never be enabled due to runtime
+
+# Note: [io]mzmq3 cannot be built any longer, according to Brian Knox they require an
+# outdated version of the client lib. So we do not bother any longer about them.
+if ENABLE_GSSAPI
+DISTCHECK_CONFIGURE_FLAGS+= --enable-gssapi-krb5
+endif
+
+if ENABLE_PMNORMALIZE
+DISTCHECK_CONFIGURE_FLAGS+= --enable-pmnormalize
+endif
+
+if ENABLE_MMDBLOOKUP
+DISTCHECK_CONFIGURE_FLAGS+= --enable-mmdblookup
+endif
+
+if ENABLE_MMNORMALIZE
+DISTCHECK_CONFIGURE_FLAGS+= --enable-mmnormalize
+endif
+
+if ENABLE_OMMONGODB
+DISTCHECK_CONFIGURE_FLAGS+= --enable-ommongodb
+endif
+
+if ENABLE_OMHIREDIS
+DISTCHECK_CONFIGURE_FLAGS+= --enable-omhiredis
+endif
+
+if ENABLE_MMSNMPTRAPD
+DISTCHECK_CONFIGURE_FLAGS+= --enable-mmsnmptrapd
+endif
+
+if ENABLE_OMLIBDBI
+DISTCHECK_CONFIGURE_FLAGS+= --enable-libdbi
+endif
+
+if ENABLE_LIBGCRYPT
+DISTCHECK_CONFIGURE_FLAGS+= --enable-libgcrypt
+endif
+
+if ENABLE_OMHTTPFS
+DISTCHECK_CONFIGURE_FLAGS+= --enable-omhttpfs
+endif
+
+if ENABLE_OMTCL
+DISTCHECK_CONFIGURE_FLAGS+= --enable-omtcl
+endif
+
+if ENABLE_SNMP
+DISTCHECK_CONFIGURE_FLAGS+= --enable-snmp
+endif
+
+if ENABLE_FMHTTP
+DISTCHECK_CONFIGURE_FLAGS+= --enable-fmhttp
+endif
+
+if ENABLE_OMUDPSPOOF
+DISTCHECK_CONFIGURE_FLAGS+= --enable-omudpspoof
+endif
+
+if ENABLE_PGSQL
+DISTCHECK_CONFIGURE_FLAGS+= --enable-pgsql
+endif
+
+if ENABLE_GNUTLS
+DISTCHECK_CONFIGURE_FLAGS+= --enable-gnutls
+endif
+
+if ENABLE_OPENSSL
+DISTCHECK_CONFIGURE_FLAGS+= --enable-openssl
+endif
+
+if ENABLE_MYSQL
+DISTCHECK_CONFIGURE_FLAGS+= --enable-mysql
+endif
+
+if ENABLE_ELASTICSEARCH
+DISTCHECK_CONFIGURE_FLAGS+= --enable-elasticsearch
+endif
+if ENABLE_ELASTICSEARCH_TESTS
+DISTCHECK_CONFIGURE_FLAGS+= --enable-elasticsearch-tests
+endif
+
+if ENABLE_MMGROK
+DISTCHECK_CONFIGURE_FLAGS+= --enable-mmgrok
+endif
+
+if ENABLE_RELP
+DISTCHECK_CONFIGURE_FLAGS+= --enable-relp --enable-omrelp-default-port=13515
+endif
+
+if ENABLE_IMKAFKA
+DISTCHECK_CONFIGURE_FLAGS+= --enable-imkafka
+endif
+if ENABLE_OMKAFKA
+DISTCHECK_CONFIGURE_FLAGS+= --enable-omkafka
+endif
+if ENABLE_KAFKA_TESTS
+DISTCHECK_CONFIGURE_FLAGS+= --enable-kafka-tests
+endif
+
+if ENABLE_IMJOURNAL
+DISTCHECK_CONFIGURE_FLAGS+= --enable-imjournal
+endif
+if ENABLE_OMJOURNAL
+DISTCHECK_CONFIGURE_FLAGS+= --enable-omjournal
+endif
+
+if ENABLE_IMCZMQ
+DISTCHECK_CONFIGURE_FLAGS+= --enable-imczmq
+endif
+if ENABLE_OMCZMQ
+DISTCHECK_CONFIGURE_FLAGS+= --enable-omczmq
+endif
+
+if ENABLE_IMFILE
+DISTCHECK_CONFIGURE_FLAGS+= --enable-imfile
+endif
+
+if ENABLE_DISTCHECK_WORKAROUND
+DISTCHECK_CONFIGURE_FLAGS+= --disable-testbench
+else
+DISTCHECK_CONFIGURE_FLAGS+= --enable-testbench
+endif
 
 dist-hook:
 	$(AM_V_GEN)echo $(VERSION) > $(distdir)/.tarball-version

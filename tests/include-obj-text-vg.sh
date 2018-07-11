@@ -2,7 +2,8 @@
 # added 2018-01-22 by Rainer Gerhards; Released under ASL 2.0
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
-export CONF_SNIPPET=`cat testsuites/include-std-omfile-action.conf`
+INCLFILE="${srcdir}/testsuites/include-std-omfile-action.conf"
+export CONF_SNIPPET=`cat $INCLFILE`
 printf "\nThis SNIPPET will be included via env var:\n$CONF_SNIPPET\n\nEND SNIPPET\n"
 . $srcdir/diag.sh add-conf '
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")

@@ -5,8 +5,11 @@
 . $srcdir/diag.sh add-conf '
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 
-if $msg contains "msgnum:" then {
-	include(file="testsuites/include-std-omfile-actio*.conf")
+if $msg contains "msgnum:" then {'
+. $srcdir/diag.sh add-conf "
+	include(file=\"${srcdir}/testsuites/include-std-omfile-actio*.conf\")
+"
+. $srcdir/diag.sh add-conf '
 	continue
 }
 '

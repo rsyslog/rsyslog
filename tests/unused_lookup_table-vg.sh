@@ -11,7 +11,7 @@ fi
 echo ===============================================================================
 echo \[unused_lookup_table.sh\]: test for ensuring clean destruction of lookup-table even when it is never used
 . $srcdir/diag.sh init
-cp $srcdir/testsuites/xlate.lkp_tbl $srcdir/xlate.lkp_tbl
+cp -f $srcdir/testsuites/xlate.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh startup-vg unused_lookup_table.conf
 . $srcdir/diag.sh injectmsg  0 1
 . $srcdir/diag.sh shutdown-when-empty

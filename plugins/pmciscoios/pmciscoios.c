@@ -28,7 +28,6 @@
 #include <assert.h>
 #include <errno.h>
 #include <ctype.h>
-#include "syslogd.h"
 #include "conf.h"
 #include "syslogd-types.h"
 #include "template.h"

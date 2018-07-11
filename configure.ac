@@ -2225,10 +2225,10 @@ AC_ARG_ENABLE(generate-man-pages,
 )
 
 
-# This provides a work-around to use "make distcheck" by disabling
-# some tests that do have problems with the distcheck environment.
+# This provides a work-around to use "make distcheck" without
+# running tests (mode used pre 2018-07-02)
 AC_ARG_ENABLE(distcheck-workaround,
-        [AS_HELP_STRING([--enable-distcheck-workaround],[enable to use make distcheck by disabling some tests that do not support the distcheck environment @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-distcheck-workaround],[enable to use make distcheck without runing testbench inside it @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_distcheck_workaround="yes" ;;
           no) enable_distcheck_workaround="no" ;;
@@ -2444,6 +2444,7 @@ echo "    fmhash enabled:                           $enable_fmhash"
 echo "    fmhash with xxhash enabled:               $enable_fmhash_xxhash"
 echo
 echo "---{ debugging support }---"
+echo "    distcheck workaround enabled:             $enable_distcheck_workaround"
 echo "    Testbench enabled:                        $enable_testbench"
 echo "    Testbench1 enabled:                       $enable_testbench1"
 echo "    Testbench2 enabled:                       $enable_testbench2"

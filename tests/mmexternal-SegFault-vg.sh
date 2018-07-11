@@ -12,8 +12,10 @@ set $!x = "a";
 template(name="outfmt" type="string" string="-%$!%-\n")
 
 if $msg contains "msgnum:" then {
-	action(type="mmexternal" interface.input="fulljson"
-		binary="testsuites/mmexternal-SegFault-mm-python.py")
+	action(type="mmexternal" interface.input="fulljson"'
+. $srcdir/diag.sh add-conf "
+		binary=\"${srcdir}/testsuites/mmexternal-SegFault-mm-python.py\")"
+. $srcdir/diag.sh add-conf '
 	action(type="omfile" template="outfmt" file="rsyslog.out.log")
 }
 '

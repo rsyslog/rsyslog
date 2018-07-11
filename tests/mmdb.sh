@@ -17,8 +17,8 @@ module(load="../plugins/imptcp/.libs/imptcp")
 input(type="imptcp" port="13514" ruleset="testing")
 
 ruleset(name="testing") {
-	action(type="mmnormalize" rulebase="./mmdb.rb")
-	action(type="mmdblookup" mmdbfile="./test.mmdb" key="$!ip" fields="city" )
+	action(type="mmnormalize" rulebase=`echo $srcdir/mmdb.rb`)
+	action(type="mmdblookup" mmdbfile=`echo $srcdir/test.mmdb` key="$!ip" fields="city" )
 	action(type="omfile" file="./rsyslog.out.log" template="outfmt")
 }'
 . $srcdir/diag.sh startup

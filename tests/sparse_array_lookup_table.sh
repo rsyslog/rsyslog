@@ -11,7 +11,7 @@ fi
 echo ===============================================================================
 echo \[sparse_array_lookup_table.sh\]: test for sparse-array lookup-table and HUP based reloading of it
 . $srcdir/diag.sh init
-cp $srcdir/testsuites/xlate_sparse_array.lkp_tbl $srcdir/xlate_array.lkp_tbl
+cp -f $srcdir/testsuites/xlate_sparse_array.lkp_tbl xlate_array.lkp_tbl
 . $srcdir/diag.sh startup array_lookup_table.conf
 . $srcdir/diag.sh injectmsg  0 1
 . $srcdir/diag.sh wait-queueempty
@@ -23,7 +23,7 @@ cp $srcdir/testsuites/xlate_sparse_array.lkp_tbl $srcdir/xlate_array.lkp_tbl
 . $srcdir/diag.sh content-check "msgnum:00000003: bar_old"
 . $srcdir/diag.sh content-check "msgnum:00000004: bar_old"
 . $srcdir/diag.sh assert-content-missing "baz"
-cp $srcdir/testsuites/xlate_sparse_array_more.lkp_tbl $srcdir/xlate_array.lkp_tbl
+cp -f $srcdir/testsuites/xlate_sparse_array_more.lkp_tbl xlate_array.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
 . $srcdir/diag.sh injectmsg  0 6
@@ -34,7 +34,7 @@ cp $srcdir/testsuites/xlate_sparse_array_more.lkp_tbl $srcdir/xlate_array.lkp_tb
 . $srcdir/diag.sh content-check "msgnum:00000003: bar_new"
 . $srcdir/diag.sh content-check "msgnum:00000004: baz"
 . $srcdir/diag.sh content-check "msgnum:00000005: baz"
-cp $srcdir/testsuites/xlate_sparse_array_more_with_duplicates_and_nomatch.lkp_tbl $srcdir/xlate_array.lkp_tbl
+cp -f $srcdir/testsuites/xlate_sparse_array_more_with_duplicates_and_nomatch.lkp_tbl xlate_array.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
 . $srcdir/diag.sh injectmsg  0 15

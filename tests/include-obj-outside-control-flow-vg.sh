@@ -10,9 +10,10 @@ if not ($msg contains "msgnum:") then {
 }
 
 # Note: the point of this test is to have this include outside of
-# a control flow construct -- this the "strange" if above.
-include(file="testsuites/include-std-omfile-actio*.conf")
-'
+# a control flow construct -- this the "strange" if above.'
+. $srcdir/diag.sh add-conf "
+include(file=\"${srcdir}/testsuites/include-std-omfile-actio*.conf\")
+"
 . $srcdir/diag.sh startup-vg
 . $srcdir/diag.sh injectmsg 0 10
 . $srcdir/diag.sh shutdown-when-empty

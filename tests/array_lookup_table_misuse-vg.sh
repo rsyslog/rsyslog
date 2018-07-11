@@ -11,14 +11,14 @@ fi
 echo ===============================================================================
 echo \[array_lookup_table-vg.sh\]: test cleanup for array lookup-table and HUP based reloading of it
 . $srcdir/diag.sh init
-cp $srcdir/testsuites/xlate_array_misuse.lkp_tbl $srcdir/xlate_array.lkp_tbl
+cp -f $srcdir/testsuites/xlate_array_misuse.lkp_tbl xlate_array.lkp_tbl
 . $srcdir/diag.sh startup-vg array_lookup_table.conf
 . $srcdir/diag.sh injectmsg  0 3
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh assert-content-missing "foo"
 . $srcdir/diag.sh assert-content-missing "bar"
 . $srcdir/diag.sh assert-content-missing "baz"
-cp $srcdir/testsuites/xlate_array_more_misuse.lkp_tbl $srcdir/xlate_array.lkp_tbl
+cp -f $srcdir/testsuites/xlate_array_more_misuse.lkp_tbl xlate_array.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
 . $srcdir/diag.sh injectmsg  0 3
@@ -26,7 +26,7 @@ cp $srcdir/testsuites/xlate_array_more_misuse.lkp_tbl $srcdir/xlate_array.lkp_tb
 . $srcdir/diag.sh assert-content-missing "foo"
 . $srcdir/diag.sh assert-content-missing "bar"
 . $srcdir/diag.sh assert-content-missing "baz"
-cp $srcdir/testsuites/xlate_array_more.lkp_tbl $srcdir/xlate_array.lkp_tbl
+cp -f $srcdir/testsuites/xlate_array_more.lkp_tbl xlate_array.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
 . $srcdir/diag.sh injectmsg  0 3
