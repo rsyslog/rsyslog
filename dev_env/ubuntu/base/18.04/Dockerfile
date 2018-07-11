@@ -1,6 +1,6 @@
 # container for rsyslog development
 # creates the build environment
-FROM ubuntu:18.04
+FROM	ubuntu:18.04
 ENV	DEBIAN_FRONTEND=noninteractive
 RUN 	apt-get update && \
 	apt-get upgrade -y && \
@@ -11,6 +11,7 @@ RUN 	apt-get update && \
 	autotools-dev \
 	bison \
 	clang \
+	clang-tools \
 	curl \
 	default-jdk \
 	default-jre \
@@ -45,6 +46,7 @@ RUN 	apt-get update && \
 	pkg-config \
 	postgresql-client libpq-dev \
 	python-docutils  \
+	python-pip \
 	software-properties-common \
 	uuid-dev \
 	valgrind \
@@ -76,14 +78,81 @@ ENV	PKG_CONFIG_PATH=/usr/local/lib/pkgconfig \
 	LD_LIBRARY_PATH=/usr/local/lib \
 	DEBIAN_FRONTEND=
 
+# Install any needed packages
+RUN	./setup-system.sh
+
+# create dependency cache
+RUN	mkdir /local_dep_cache
+ADD	local_dep_cache /local_dep_cache
+RUN	chmod -v 0444 /local_dep_cache/*
+
 # next ENV is specifically for running scan-build - so we do not need to
 # change scripts if at a later time we can move on to a newer version
-ENV SCAN_BUILD=scan-build \
-    SCAN_BUILD_CC=clang-6.0
+ENV	SCAN_BUILD=scan-build \
+	SCAN_BUILD_CC=clang-6.0
 
-ENV RSYSLOG_CONFIGURE_OPTIONS --disable-generate-man-pages --enable-testbench --enable-imdiag --enable-imfile --enable-impstats --enable-mmrm1stspace --enable-imptcp --enable-mmanon --enable-mmaudit --enable-mmfields --enable-mmjsonparse --enable-mmpstrucdata --enable-mmsequence --enable-mmutf8fix --enable-mail --enable-omprog --enable-omruleset --enable-omstdout --enable-omuxsock --enable-pmaixforwardedfrom --enable-pmciscoios --enable-pmcisconames --enable-pmlastmsg --enable-pmsnare --enable-libgcrypt --enable-mmnormalize --enable-omudpspoof --enable-relp --enable-omrelp-default-port=13515 --enable-snmp --enable-mmsnmptrapd --enable-gnutls --enable-openssl --enable-mysql --enable-mysql-tests --enable-ksi-ls12 --enable-libdbi --enable-pgsql --enable-pgsql-tests --enable-omhttpfs --enable-elasticsearch --enable-valgrind --enable-ommongodb --enable-omtcl --enable-mmdblookup --enable-mmcount --enable-gssapi-krb5 --enable-omhiredis --enable-imczmq --enable-omczmq --enable-usertools --enable-pmnull --enable-omhiredis --enable-imjournal --enable-omjournal --enable-omkafka=no --enable-imkafka=no --enable-mmgrok --enable-omamqp1 --enable-pmnormalize --enable-mmkubernetes
-
-# Install any needed packages
-RUN ./setup-system.sh
+ENV RSYSLOG_CONFIGURE_OPTIONS \
+	--enable-elasticsearch \
+	--enable-elasticsearch-tests \
+	--enable-gnutls \
+	--enable-gssapi-krb5 \
+	--enable-imczmq \
+	--enable-imdiag \
+	--enable-imfile \
+	--enable-imjournal \
+	--enable-imkafka \
+	--enable-impstats \
+	--enable-imptcp \
+	--enable-kafka-tests \
+	--enable-ksi-ls12 \
+	--enable-libdbi \
+	--enable-libfaketime \
+	--enable-libgcrypt \
+	--enable-mail \
+	--enable-mmanon \
+	--enable-mmaudit \
+	--enable-mmcount \
+	--enable-mmdblookup \
+	--enable-mmfields \
+	--enable-mmgrok \
+	--enable-mmjsonparse \
+	--enable-mmkubernetes \
+	--enable-mmnormalize \
+	--enable-mmpstrucdata \
+	--enable-mmrm1stspace \
+	--enable-mmsequence \
+	--enable-mmsnmptrapd \
+	--enable-mmutf8fix \
+	--enable-mysql \
+	--enable-omamqp1 \
+	--enable-omczmq \
+	--enable-omhiredis \
+	--enable-omhiredis \
+	--enable-omhttpfs \
+	--enable-omjournal \
+	--enable-omkafka \
+	--enable-ommongodb \
+	--enable-omprog \
+	--enable-omrelp-default-port=13515 \
+	--enable-omruleset \
+	--enable-omstdout \
+	--enable-omtcl \
+	--enable-omudpspoof \
+	--enable-omuxsock \
+	--enable-openssl \
+	--enable-pgsql \
+	--enable-pmaixforwardedfrom \
+	--enable-pmciscoios \
+	--enable-pmcisconames \
+	--enable-pmlastmsg \
+	--enable-pmnormalize \
+	--enable-pmnull \
+	--enable-pmsnare \
+	--enable-relp \
+	--enable-snmp \
+	--enable-usertools \
+	--enable-valgrind \
+	\
+	--enable-testbench
 WORKDIR /rsyslog
 USER rsyslog
