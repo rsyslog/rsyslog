@@ -94,7 +94,6 @@ MODULE_CNFNAME("imsolaris")
 
 /* Module static data */
 DEF_IMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
 
@@ -117,7 +116,7 @@ static char *LogName = NULL;	/* the log socket name TODO: make configurable! */
 void
 imsolaris_logerror(int err, char *errStr)
 {
-	errmsg.LogError(err, RS_RET_ERR_DOOR, "%s", errStr);
+	LogError(err, RS_RET_ERR_DOOR, "%s", errStr);
 }
 
 
@@ -143,13 +142,13 @@ tryRecover(void)
 		iRet = sun_openklog((LogName == NULL) ? PATH_LOG : LogName);
 		if(iRet == RS_RET_OK) {
 			if(tryNum > 1) {		
-				errmsg.LogError(0, iRet, "failure on system log socket recovered.");
+				LogError(0, iRet, "failure on system log socket recovered.");
 			}	
 			break;
 		}	
 		/* failure, so sleep a bit. We wait try*10 ms, with a max of 15 seconds */
 		if(tryNum == 1) {		
-			errmsg.LogError(0, iRet, "failure on system log socket, trying to recover...");
+			LogError(0, iRet, "failure on system log socket, trying to recover...");
 		}	
 		waitusecs = tryNum * 10000;
 		waitsecs = waitusecs / 1000000;
@@ -199,7 +198,7 @@ readLog(int fd, uchar *pRcv, int iMaxLine)
 			int en = errno;
 			rs_strerror_r(errno, errStr, sizeof(errStr));
 			DBGPRINTF("imsolaris: stream input error on fd %d: %s.\n", fd, errStr);
-			errmsg.LogError(en, NO_ERRCODE, "imsolaris: stream input error: %s", errStr);
+			LogError(en, NO_ERRCODE, "imsolaris: stream input error: %s", errStr);
 			tryRecover();
 		}	
 	} else {
@@ -274,7 +273,7 @@ getMsgs(thrdInfo_t *pThrd, int timeout)
 					int en = errno;
 					rs_strerror_r(en, errStr, sizeof(errStr));
 					DBGPRINTF("imsolaris: poll error: %d = %s.\n", errno, errStr);
-					errmsg.LogError(en, NO_ERRCODE, "imsolaris: poll error: %s",
+					LogError(en, NO_ERRCODE, "imsolaris: poll error: %s",
 							errStr);
 				}
 				continue;
@@ -365,7 +364,7 @@ CODESTARTwillRun
 
 	iRet = sun_openklog((LogName == NULL) ? PATH_LOG : LogName);
 	if(iRet != RS_RET_OK) {
-		errmsg.LogError(0, iRet, "error opening system log socket");
+		LogError(0, iRet, "error opening system log socket");
 	}
 finalize_it:
 ENDwillRun
@@ -384,7 +383,6 @@ BEGINmodExit
 CODESTARTmodExit
 	sun_delete_doorfiles();
 	objRelease(glbl, CORE_COMPONENT);
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 ENDmodExit
 
@@ -413,7 +411,6 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 
