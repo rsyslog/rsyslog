@@ -59,6 +59,24 @@ Version 8.37.0 [v8-stable] 2018-08-07
   causes build to fail if enabled. Replaced by ASAN/valgrind.
   Issue detected while testing some other CI settings.
 - tools: Updated python based statslog analyzer sample scripts
+- enable better testing via "make distcheck"
+  Also a couple of changes to testbench worth mentioning:
+  * use cp -f to ensure files can be overwirtten in VBUILD
+  * fix issue of missing include test file in EXTRA_DIST
+  * new supressions
+  * testbench: try to use local system dependency cache
+    avoid going to Internet repos if not absolutely necessary. For
+    development containers, they should be pre-populated with the
+    important dependencies.
+  * do not enable libfaketime if ASAN is selected
+    unfortunately, libfaketime does not work in that case
+  Note: for modules with non-standard dependencies (e.g. databases),
+  "make distcheck" only enables what on the original ./configure line
+  was enabled. This is done in order to ensure that "distcheck" adapts
+  to what is actually available on the system in question. Rsyslog's
+  own CI system installs the maximum set of possible dependencies and
+  so tries the maximum set "make distcheck" can support on a platform.
+  see also https://github.com/rsyslog/rsyslog/issues/174
 - bugfix mmgrok: cosmetic build issue - compiler warings
   caused build under gcc 7 to fail with warning
 - bugfix mmkubernetes: potential NULL pointer access
