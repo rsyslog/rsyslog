@@ -315,7 +315,7 @@ finalize_it:
 static rsRetVal
 MotifyMessage(instanceData *pData)
 {
-	char *saveptr;
+	char *saveptr = NULL;
 	DEFiRet;
 	grok_t  *grok = CreateGrok();
 	char     *msg = strdup(pData->pszSource);
