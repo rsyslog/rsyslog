@@ -82,9 +82,13 @@ ENV	PKG_CONFIG_PATH=/usr/local/lib/pkgconfig \
 RUN	./setup-system.sh
 
 # create dependency cache
-RUN	mkdir /local_dep_cache
-ADD	local_dep_cache /local_dep_cache
-RUN	chmod -v 0444 /local_dep_cache/*
+RUN	mkdir /local_dep_cache && \
+	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch && \
+	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.1.tar.gz && \
+	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.3.1.tar.gz -O /local_dep_cache/elasticsearch-6.3.1.tar.gz
+# tell tests which are the newester versions, so they can be checked without the need
+# to adjust test sources.
+ENV	ELASTICSEARCH_NEWEST="elasticsearch-6.3.1.tar.gz"
 
 # next ENV is specifically for running scan-build - so we do not need to
 # change scripts if at a later time we can move on to a newer version
