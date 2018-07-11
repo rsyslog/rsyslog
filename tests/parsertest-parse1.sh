@@ -64,10 +64,10 @@ export EXPECTED="167,local4,debug,Mar  6 16:57:54,172.20.245.8,%PIX-7-710005,%PI
 38,auth,info,Mar 27 19:06:53,source_server,0123456789012345678901234567890123456789,0123456789012345678901234567890123456789:, MSG part
 29,daemon,notice,Oct 16 20:47:24,example-p,exam-pl,exam-pl[12345]:, connect host= /192.0.2.1
 34,auth,crit,Oct 11 22:14:15,mymachine,su,su:, su root failed for lonvick on /dev/pts/8
-34,auth,crit,Oct 11 22:14:15,mymachine.example.com,,su,BOMsu root failed for lonvick on /dev/pts/8
-165,local4,notice,Aug 24 05:14:15,192.0.2.1,,myproc[8710],%% Its time to make the do-nuts.
-165,local4,notice,Oct 11 22:14:15,mymachine.example.com,,evntslog,
-165,local4,notice,Oct 11 22:14:15,mymachine.example.com,,evntslog,BOMAn application event log entry...
+34,auth,crit,Oct 11 22:14:15,mymachine.example.com,su,su,BOMsu root failed for lonvick on /dev/pts/8
+165,local4,notice,Aug 24 05:14:15,192.0.2.1,myproc,myproc[8710],%% Its time to make the do-nuts.
+165,local4,notice,Oct 11 22:14:15,mymachine.example.com,evntslog,evntslog,
+165,local4,notice,Oct 11 22:14:15,mymachine.example.com,evntslog,evntslog,BOMAn application event log entry...
 6,kern,info,Aug 10 22:18:24,2009,,, netips-warden2-p [audit] user=[*SMS] src=192.168.11.11 iface=5 access=9 Update State Reset
 14,user,info,Aug 30 23:00:05,X4711,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,
 14,user,info,Aug 30 23:00:05,X4711,,,
