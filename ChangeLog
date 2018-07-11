@@ -50,6 +50,10 @@ Version 8.37.0 [v8-stable] 2018-08-07
 - imudp: replace select() calls by poll()
   This improves reliability in extreme cases (more than 1024 fds open when
   imudp begins to listen) and potentially improves performance a little.
+- impstats: emit warning if log.syslog="off" and ruleset name given
+  With this config, "ruleset" is silently ignored, what probably is
+  not obvious to a user.
+  closes https://github.com/rsyslog/rsyslog/issues/2821
 - build system cleanup: remove no longer needed --enable-memcheck
   This was used for a very old testing capability, no longer functional but
   causes build to fail if enabled. Replaced by ASAN/valgrind.
@@ -60,7 +64,8 @@ Version 8.37.0 [v8-stable] 2018-08-07
   Thanks to github user jvymazal for finding and Richard Megginson
   for fixing the issue.
 - bugfix mmkubernetes: default rules use container_name_and_id
-  also include rulebase files in dist
+  also include rulebase files in dist and fix rule so that dot inside
+  pod name is supported.
   Thanks to Richard Megginson for fixing the issue.
 - bugfix omelasticsearch: build regression
   Commit 6d4635efbb13907bf651b1a6e5a545effe84d9d9 introduced some compile
