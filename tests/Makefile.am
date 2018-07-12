@@ -217,13 +217,13 @@ TESTS +=  \
 	timegenerated-utc-legacy.sh \
 	timereported-utc.sh \
 	timereported-utc-legacy.sh
+endif
 if ENABLE_MMNORMALIZE
 TESTS += \
 	mmnormalize_processing_test1.sh \
 	mmnormalize_processing_test2.sh \
 	mmnormalize_processing_test3.sh \
 	mmnormalize_processing_test4.sh
-endif
 endif
 
 if ENABLE_PGSQL
@@ -262,7 +262,7 @@ TESTS +=  \
 	mysql-asyn-vg.sh \
 	mysql-actq-mt-withpause-vg.sh
 endif
-if ENABLE_OMLIBDBI
+if ENABLE_OMLIBDBI # we piggy-back on MYSQL_TESTS as we need the same environment
 TESTS +=  \
 	libdbi-basic.sh \
 	libdbi-asyn.sh
@@ -273,7 +273,7 @@ endif
 endif
 endif
 
-endif #  ENABLE_TESTBENCH2
+endif #  ENABLE_TESTBENCH1
 
 if ENABLE_TESTBENCH2
 TESTS +=  \
