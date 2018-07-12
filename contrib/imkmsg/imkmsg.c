@@ -113,7 +113,7 @@ enqMsg(uchar *msg, uchar* pszTag, syslog_pri_t pri, struct timeval *tp, struct j
 	MsgSetTAG(pMsg, pszTag, ustrlen(pszTag));
 	msgSetPRI(pMsg, pri);
 	pMsg->json = json;
-	CHKiRet(submitMsg(pMsg));
+	CHKiRet(submitMsg2(pMsg));
 
 finalize_it:
 	RETiRet;
@@ -123,7 +123,7 @@ finalize_it:
 /* log an imkmsg-internal message
  * rgerhards, 2008-04-14
  */
-rsRetVal imkmsgLogIntMsg(syslog_pri_t priority, char *fmt, ...)
+rsRetVal imkmsgLogIntMsg(syslog_pri_t priority, const char *fmt, ...)
 {
 	DEFiRet;
 	va_list ap;
