@@ -217,13 +217,14 @@ TESTS +=  \
 	timegenerated-utc-legacy.sh \
 	timereported-utc.sh \
 	timereported-utc-legacy.sh
-endif
+# now come faketime tests that utilize mmnormalize - aka "no endif here"
 if ENABLE_MMNORMALIZE
 TESTS += \
 	mmnormalize_processing_test1.sh \
 	mmnormalize_processing_test2.sh \
 	mmnormalize_processing_test3.sh \
 	mmnormalize_processing_test4.sh
+endif
 endif
 
 if ENABLE_PGSQL
