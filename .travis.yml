@@ -71,16 +71,16 @@ matrix:
        services:
          - mysql
          - postgresql
-       env: RUN="run.sh",BUILD_FROM_TARBALL="YES", GROK="YES", KAFKA="YES", CHECK="YES", CFLAGS="-g -O2", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all", EXTRA_CONFIGURE="--disable-testbench1"
+       env: RUN="run.sh",BUILD_FROM_TARBALL="YES", GROK="YES", CHECK="YES", CFLAGS="-g -O2", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all", EXTRA_CONFIGURE="--disable-testbench2"
        dist: trusty
 
-     - os: linux
-       compiler: "gcc"
-       services:
-         - mysql
-         - postgresql
-       env: RUN="run.sh",BUILD_FROM_TARBALL="YES", CHECK="YES", CFLAGS="-g -O2", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all", EXTRA_CONFIGURE="--disable-testbench2"
-       dist: trusty
+#     - os: linux
+#       compiler: "gcc"
+#       services:
+#         - mysql
+#         - postgresql
+#       env: RUN="run.sh",BUILD_FROM_TARBALL="YES", CHECK="YES", CFLAGS="-g -O2", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all", EXTRA_CONFIGURE="--disable-testbench2"
+#       dist: trusty
 
      - os: osx
        compiler: "clang"
