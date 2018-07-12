@@ -13,7 +13,8 @@ if [ `uname` = "SunOS" ] ; then
 fi
 if [ `uname` = "FreeBSD" ] ; then
    echo "FreeBSD: temporarily disabled until we know what is wrong"
-   #exit 77
+   echo "see https://github.com/rsyslog/rsyslog/issues/2833"
+   exit 77
 fi
 
 . $srcdir/diag.sh init
