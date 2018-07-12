@@ -506,7 +506,11 @@ resolveDNS(smsg_t * const pMsg) {
 	MsgLock(pMsg);
 	CHKiRet(objUse(net, CORE_COMPONENT));
 	if(pMsg->msgFlags & NEEDS_DNSRESOL) {
-		localRet = net.cvthname(pMsg->rcvFrom.pfrominet, &localName, NULL, &ip);
+		if (pMsg->msgFlags & PRESERVE_CASE) {
+			localRet = net.cvthname(pMsg->rcvFrom.pfrominet, NULL, &localName, &ip);
+		} else {
+			localRet = net.cvthname(pMsg->rcvFrom.pfrominet, &localName, NULL, &ip);
+		}
 		if(localRet == RS_RET_OK) {
 			/* we pass down the props, so no need for AddRef */
 			MsgSetRcvFromWithoutAddRef(pMsg, localName);

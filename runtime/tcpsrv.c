@@ -495,6 +495,15 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 
 	/* get the host name */
 	CHKiRet(netstrm.GetRemoteHName(pNewStrm, &fromHostFQDN));
+	if (!pThis->bPreserveCase) {
+		/* preserve_case = off */
+		uchar *p;
+		for(p = fromHostFQDN; *p; p++) {
+			if (isupper((int) *p)) {
+				*p = tolower((int) *p);
+			}
+		}
+	}
 	CHKiRet(netstrm.GetRemoteIP(pNewStrm, &fromHostIP));
 	CHKiRet(netstrm.GetRemAddr(pNewStrm, &addr));
 	/* TODO: check if we need to strip the domain name here -- rgerhards, 2008-04-24 */
@@ -1001,6 +1010,7 @@ BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macr
 	pThis->ratelimitBurst = 10000;
 	pThis->bUseFlowControl = 1;
 	pThis->pszDrvrName = NULL;
+	pThis->bPreserveCase = 1; /* preserve case in fromhost; default to true. */
 ENDobjConstruct(tcpsrv)
 
 
@@ -1433,6 +1443,16 @@ SetSessMax(tcpsrv_t *pThis, int iMax)
 }
 
 
+static rsRetVal
+SetPreserveCase(tcpsrv_t *pThis, int bPreserveCase)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	pThis-> bPreserveCase = bPreserveCase;
+	RETiRet;
+}
+
+
 /* queryInterface function
  * rgerhards, 2008-02-29
  */
@@ -1491,6 +1511,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetRuleset = SetRuleset;
 	pIf->SetLinuxLikeRatelimiters = SetLinuxLikeRatelimiters;
 	pIf->SetNotificationOnRemoteClose = SetNotificationOnRemoteClose;
+	pIf->SetPreserveCase = SetPreserveCase;
 
 finalize_it:
 ENDobjQueryInterface(tcpsrv)

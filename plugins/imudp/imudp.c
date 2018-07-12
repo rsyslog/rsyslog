@@ -152,6 +152,7 @@ struct modConfData_s {
 	int batchSize;			/* max nbr of input batch --> also recvmmsg() max count */
 	int8_t wrkrMax;			/* max nbr of worker threads */
 	sbool configSetViaV2Method;
+	sbool bPreserveCase;	/* preserves the case of fromhost; "off" by default */
 };
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
@@ -162,7 +163,8 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "schedulingpriority", eCmdHdlrInt, 0 },
 	{ "batchsize", eCmdHdlrInt, 0 },
 	{ "threads", eCmdHdlrPositiveInt, 0 },
-	{ "timerequery", eCmdHdlrInt, 0 }
+	{ "timerequery", eCmdHdlrInt, 0 },
+	{ "preservecase", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -447,8 +449,12 @@ processPacket(struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *p
 		if(lstn->dfltTZ != NULL)
 			MsgSetDfltTZ(pMsg, (char*) lstn->dfltTZ);
 		pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME | NEEDS_DNSRESOL;
-		if(*pbIsPermitted == 2)
-			pMsg->msgFlags  |= NEEDS_ACLCHK_U; /* request ACL check after resolution */
+		if(*pbIsPermitted == 2) {
+			pMsg->msgFlags |= NEEDS_ACLCHK_U; /* request ACL check after resolution */
+		}
+		if(runModConf->bPreserveCase) {
+			pMsg->msgFlags |= PRESERVE_CASE; /* preserve case of fromhost */
+		}
 		CHKiRet(msgSetFromSockinfo(pMsg, frominet));
 		CHKiRet(ratelimitAddMsg(lstn->ratelimiter, multiSub, pMsg));
 		STATSCOUNTER_INC(lstn->ctrSubmit, lstn->mutCtrSubmit);
@@ -1030,6 +1036,7 @@ CODESTARTbeginCnfLoad
 	loadModConf->iTimeRequery = TIME_REQUERY_DFLT;
 	loadModConf->iSchedPrio = SCHED_PRIO_UNSET;
 	loadModConf->pszSchedPolicy = NULL;
+	loadModConf->bPreserveCase = 0; /* off */
 	bLegacyCnfModGlobalsPermitted = 1;
 	/* init legacy config vars */
 	cs.pszBindRuleset = NULL;
@@ -1079,6 +1086,8 @@ CODESTARTsetModCnf
 			} else {
 				loadModConf->wrkrMax = wrkrMax;
 			}
+		} else if(!strcmp(modpblk.descr[i].name, "preservecase")) {
+			loadModConf->bPreserveCase = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("imudp: program error, non-handled "
 			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
