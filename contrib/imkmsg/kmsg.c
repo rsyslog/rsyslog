@@ -156,7 +156,7 @@ submitSyslog(uchar *buf)
 /* open the kernel log - will be called inside the willRun() imkmsg entry point
  */
 rsRetVal
-klogWillRunPrePrivDrop(modConfData_t *pModConf)
+klogWillRunPrePrivDrop(modConfData_t __attribute__((unused)) *pModConf)
 {
 	char errmsg[2048];
 	DEFiRet;
@@ -175,7 +175,7 @@ finalize_it:
 /* make sure the kernel log is readable after dropping privileges
  */
 rsRetVal
-klogWillRunPostPrivDrop(modConfData_t *pModConf)
+klogWillRunPostPrivDrop(modConfData_t __attribute__((unused)) *pModConf)
 {
 	char errmsg[2048];
 	int r;
