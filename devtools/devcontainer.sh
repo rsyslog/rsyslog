@@ -1,7 +1,15 @@
 #!/bin/bash
 # This scripts uses an rsyslog development container to execute given
 # command inside it.
+# Note: command line parameters are passed as parameters to the container,
+# with the notable exception that -ti, if given as first parameter, is
+# passed to "docker run" itself but NOT the container.
 set -e
+
+if [ "$1" == "-ti" ]; then
+	ti="-ti"
+	shift 1
+fi
 
 if [ "$RSYSLOG_HOME" == "" ]; then
 	export RSYSLOG_HOME=$(pwd)
@@ -13,8 +21,9 @@ if [ -z "$RSYSLOG_DEV_CONTAINER" ]; then
 fi
 
 printf "/rsyslog is mapped to $RSYSLOG_HOME\n"
+printf "pulling container...\n"
 docker pull $RSYSLOG_DEV_CONTAINER
-docker run \
+docker run $ti \
 	-u `id -u`:`id -g` \
 	-e RSYSLOG_CONFIGURE_OPTIONS_EXTRA \
 	-e CC \
