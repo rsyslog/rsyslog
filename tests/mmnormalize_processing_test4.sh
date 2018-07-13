@@ -15,7 +15,7 @@ template(name="t_file_record" type="string" string="%timestamp:::date-rfc3339% %
 template(name="t_file_path" type="string" string="/sb/logs/incoming/%$year%/%$month%/%$day%/svc_%$!v_svc%/ret_%$!v_ret%/os_%$!v_os%/%fromhost-ip%/r_relay1/%$!v_file:::lowercase%.gz\n")
 
 ruleset(name="ruleset1") {
-	action(type="mmnormalize" rulebase="testsuites/mmnormalize_processing_tests.rulebase" useRawMsg="on")
+	action(type="mmnormalize" rulebase=`echo $srcdir/testsuites/mmnormalize_processing_tests.rulebase` useRawMsg="on")
 	if ($!v_file == "") then {
 		set $!v_file=$!v_tag;
 	}

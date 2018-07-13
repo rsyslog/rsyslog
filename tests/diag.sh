@@ -145,10 +145,11 @@ case $1 in
 
 		# cleanup of hanging instances from previous runs
 		# practice has shown this is pretty useful!
-		for pid in $(ps -eo pid,args|grep '/tools/[r]syslogd' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
+		for pid in $(ps -eo pid,args|grep '/tools/[r]syslogd ' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
 		do
 			echo "ERROR: left-over previous instance $pid, killing it"
 			ps -fp $pid
+			pwd
 			kill -9 $pid
 		done
 		# end cleanup
@@ -207,11 +208,14 @@ case $1 in
    'exit')	# cleanup
 		# detect any left-over hanging instance
 		nhanging=0
-		for pid in $(ps -eo pid,args|grep '/tools/[r]syslogd' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
+		for pid in $(ps -eo pid,args|grep '/tools/[r]syslogd ' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
 		do
 			echo "ERROR: left-over instance $pid, killing it"
 			ps -fp $pid
-			kill -9 $pid
+			pwd
+			printf "we do NOT kill the instance as this does not work with multiple\n"
+			printf "builds per machine - this message is now informational to show prob exists!\n"
+			#kill -9 $pid
 			let "nhanging++"
 		done
 		if test $nhanging -ne 0

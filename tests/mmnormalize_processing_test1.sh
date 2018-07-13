@@ -22,7 +22,7 @@ template(name="t_analytics_msg_normalized_vc" type="string" string="%timereporte
 template(name="t_analytics" type="string" string="[][][%$!v_fromhost-ip%][%timestamp:::date-unixtimestamp%][] %$!v_analytics_msg%\n")
 
 ruleset(name="ruleset1") {
-	action(type="mmnormalize" rulebase="testsuites/mmnormalize_processing_tests.rulebase" useRawMsg="on")
+	action(type="mmnormalize" rulebase=`echo $srcdir/testsuites/mmnormalize_processing_tests.rulebase` useRawMsg="on")
 	if ($!v_file == "") then {
 		set $!v_file=$!v_tag;
 	}
