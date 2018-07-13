@@ -23,6 +23,7 @@ RUN	yum -y install \
 	gnutls-devel \
 	hiredis-devel \
 	java-1.8.0-openjdk \
+	java-1.8.0-openjdk-devel \
 	libcurl-devel \
 	libdbi-dbd-mysql \
 	libdbi-devel \
@@ -36,6 +37,7 @@ RUN	yum -y install \
 	mysql-devel \
 	nc \
 	net-snmp-devel \
+	net-tools \
 	openssl-devel \
 	postgresql-devel \
 	python-devel \
@@ -46,6 +48,7 @@ RUN	yum -y install \
 	snappy-devel \
 	sudo \
 	systemd-devel \
+	tcl-devel \
 	valgrind \
 	wget \
 	zlib-devel \
@@ -76,13 +79,85 @@ ENV	PKG_CONFIG_PATH=/usr/local/lib/pkgconfig \
 #ENV SCAN_BUILD=scan-build \
 #    SCAN_BUILD_CC=clang-5.0
 
-ENV RSYSLOG_CONFIGURE_OPTIONS --disable-generate-man-pages --enable-testbench --enable-imdiag --enable-imfile --enable-impstats --enable-mmrm1stspace --enable-imptcp --enable-mmanon --enable-mmaudit --enable-mmfields --enable-mmjsonparse --enable-mmpstrucdata --enable-mmsequence --enable-mmutf8fix --enable-mail --enable-omprog --enable-omruleset --enable-omstdout --enable-omuxsock --enable-pmaixforwardedfrom --enable-pmciscoios --enable-pmcisconames --enable-pmlastmsg --enable-pmsnare --enable-libgcrypt --enable-mmnormalize --enable-omudpspoof --enable-relp --enable-omrelp-default-port=13515 --enable-snmp --enable-mmsnmptrapd --enable-gnutls --enable-openssl --enable-mysql --enable-mysql-tests --enable-libdbi --enable-pgsql --enable-pgsql-tests --enable-omhttpfs --enable-elasticsearch --enable-valgrind --enable-ommongodb --enable-mmdblookup --enable-mmcount --enable-gssapi-krb5 --enable-omhiredis --enable-imczmq --enable-omczmq --enable-usertools --enable-pmnull --enable-omhiredis --enable-imjournal --enable-omjournal --enable-omkafka --enable-imkafka --enable-omamqp1 --enable-pmnormalize --enable-ksi-ls12=no --enable-omtcl=no --enable-mmgrok=no 
+ENV RSYSLOG_CONFIGURE_OPTIONS \
+	--enable-elasticsearch \
+	--enable-elasticsearch-tests \
+	--enable-gnutls \
+	--enable-gssapi-krb5 \
+	--enable-imczmq \
+	--enable-imdiag \
+	--enable-imfile \
+	--enable-imjournal \
+	--enable-imkafka \
+	--enable-impstats \
+	--enable-imptcp \
+	--enable-kafka-tests \
+	--enable-ksi-ls12 \
+	--enable-libdbi \
+	--enable-libfaketime \
+	--enable-libgcrypt \
+	--enable-mail \
+	--enable-mmanon \
+	--enable-mmaudit \
+	--enable-mmcount \
+	--enable-mmdblookup \
+	--enable-mmfields \
+	--enable-mmjsonparse \
+	--enable-mmkubernetes \
+	--enable-mmnormalize \
+	--enable-mmpstrucdata \
+	--enable-mmrm1stspace \
+	--enable-mmsequence \
+	--enable-mmsnmptrapd \
+	--enable-mmutf8fix \
+	--enable-mysql \
+	--enable-omamqp1 \
+	--enable-omczmq \
+	--enable-omhiredis \
+	--enable-omhiredis \
+	--enable-omhttpfs \
+	--enable-omjournal \
+	--enable-omkafka \
+	--enable-ommongodb \
+	--enable-omprog \
+	--enable-omrelp-default-port=13515 \
+	--enable-omruleset \
+	--enable-omstdout \
+	--enable-omtcl=no \
+	--enable-omudpspoof \
+	--enable-omuxsock \
+	--enable-openssl \
+	--enable-pgsql \
+	--enable-pmaixforwardedfrom \
+	--enable-pmciscoios \
+	--enable-pmcisconames \
+	--enable-pmlastmsg \
+	--enable-pmnormalize \
+	--enable-pmnull \
+	--enable-pmsnare \
+	--enable-relp \
+	--enable-snmp \
+	--enable-usertools \
+	--enable-valgrind \
+	\
+	--enable-testbench
+
+# build errors at the moment: --enable-kmsg 
+#	--enable-mmgrok - no package
+
+RUN	mkdir helper-projects
+# code style checker - not yet packaged
+RUN	cd helper-projects && \
+	git clone https://github.com/rsyslog/codestyle && \
+	cd codestyle && \
+	gcc --std=c99 stylecheck.c -o stylecheck && \
+	mv stylecheck /usr/bin/rsyslog_stylecheck && \
+	cd .. && \
+	rm -r codestyle && \
+	cd ..
 
 # Install any needed packages
 RUN ./setup-system.sh
 RUN ./setup-projects.sh
 WORKDIR /rsyslog
 USER rsyslog
-RUN	sudo yum -y install \
-	java-1.8.0-openjdk-devel \
-	net-tools

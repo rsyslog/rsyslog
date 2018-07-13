@@ -116,7 +116,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-impstats \
 	--enable-imptcp \
 	--enable-kafka-tests \
-	--enable-kmsg \
+	--disable-kmsg \
 	--enable-ksi-ls12 \
 	--enable-libdbi \
 	--enable-libfaketime \
