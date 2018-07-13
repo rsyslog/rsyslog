@@ -1,5 +1,8 @@
 #!/bin/bash
 . $srcdir/diag.sh init
+ls -l ../contrib/omtcl/.libs/omtcl.so
+echo ldd:
+ldd ../contrib/omtcl/.libs/omtcl.so
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
 $ModLoad ../contrib/omtcl/.libs/omtcl
