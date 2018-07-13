@@ -59,6 +59,8 @@ Version 8.37.0 [v8-stable] 2018-08-07
   causes build to fail if enabled. Replaced by ASAN/valgrind.
   Issue detected while testing some other CI settings.
 - tools: Updated python based statslog analyzer sample scripts
+- developer tools: make devcontainer tool more developer friendly
+  slight improvement for easy interactive use
 - enable better testing via "make distcheck"
   Also a couple of changes to testbench worth mentioning:
   * use cp -f to ensure files can be overwirtten in VBUILD
@@ -106,6 +108,11 @@ Version 8.37.0 [v8-stable] 2018-08-07
 - CI improvements:
   * new test for gnutls priority string in librelp
     Thanks to github user jvymazal for the patch
+  * testbench: relax hanging instance detection
+    This does not work reliably if multiple instances of rsyslog
+    builds run on a single machine. We need to improve, but this
+    commit makes conflict less likely and provides some diagnostic
+    info to help guide us towards a final solution.
   * testbench: refactor tests which used "nettester" tool
     Some old tests are carried out via the nettester tool. This was
     our initial shot at a testbench a couple of years ago. While it
