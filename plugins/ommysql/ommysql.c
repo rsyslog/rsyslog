@@ -64,6 +64,7 @@ typedef struct _instanceData {
 	uchar   *configfile;			/* MySQL Client Configuration File */
 	uchar   *configsection;		/* MySQL Client Configuration Section */
 	uchar	*tplName;			/* format template to use */
+	uchar	*socket;			/* MySQL socket path */
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -89,7 +90,8 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "serverport", eCmdHdlrInt, 0 },
 	{ "mysqlconfig.file", eCmdHdlrGetWord, 0 },
 	{ "mysqlconfig.section", eCmdHdlrGetWord, 0 },
-	{ "template", eCmdHdlrGetWord, 0 }
+	{ "template", eCmdHdlrGetWord, 0 },
+	{ "socket", eCmdHdlrGetWord, 0 },
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -139,6 +141,7 @@ CODESTARTfreeInstance
 	free(pData->configfile);
 	free(pData->configsection);
 	free(pData->tplName);
+	free(pData->socket);
 ENDfreeInstance
 
 
@@ -222,7 +225,8 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent)
 		}
 		/* Connect to database */
 		if(mysql_real_connect(pWrkrData->hmysql, pData->dbsrv, pData->dbuid,
-				      pData->dbpwd, pData->dbname, pData->dbsrvPort, NULL, 0) == NULL) {
+				      pData->dbpwd, pData->dbname, pData->dbsrvPort,
+					  (const char *)pData->socket, 0) == NULL) {
 			reportDBError(pWrkrData, bSilent);
 			closeMySQL(pWrkrData); /* ignore any error we may get */
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
@@ -333,6 +337,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->configfile = NULL;
 	pData->configsection = NULL;
 	pData->tplName = NULL;
+	pData->socket = NULL;
 }
 
 
@@ -379,6 +384,8 @@ CODESTARTnewActInst
 			pData->configsection = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "socket")) {
+			pData->socket = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			dbgprintf("ommysql: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);
@@ -462,6 +469,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		pData->dbsrvPort = (unsigned) cs.iSrvPort;	/* set configured port */
 		pData->configfile = cs.pszMySQLConfigFile;
 		pData->configsection = cs.pszMySQLConfigSection;
+		pData->socket = NULL;
 	}
 
 CODE_STD_FINALIZERparseSelectorAct
