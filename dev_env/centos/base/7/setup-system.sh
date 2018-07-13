@@ -1,9 +1,8 @@
 set -v
-#yum -y update
 
 echo STEP: essentials
 # prevent systemd from stealing our core files (bad for testbench)
-bash -c "echo core > /proc/sys/kernel/core_pattern"
+#bash -c "echo core > /proc/sys/kernel/core_pattern" # does not work inside container
 
 # search for packages that contain <file>: yum whatprovides <file>
 
@@ -11,27 +10,30 @@ bash -c "echo core > /proc/sys/kernel/core_pattern"
 mkdir helper-projects
 cd helper-projects
 
-# code style checker - not yet packaged
-git clone https://github.com/rsyslog/codestyle
-cd codestyle
-gcc --std=c99 stylecheck.c -o stylecheck
-mv stylecheck /usr/bin/rsyslog_stylecheck
-cd ..
-rm -r codestyle
-
 if [ "$LIBDIR_PATH" != "" ]; then
 	export LIBDIR=--libdir=$LIBDIR_PATH
 fi
 
-# we need Guardtime libksi here, otherwise we cannot check the KSI component
-#git clone https://github.com/guardtime/libksi.git
-#cd libksi
-#autoreconf -fvi
-#./configure --prefix=/usr
-#make -j2
+#set -e
+# libgrok - not packaged, manual build also does not work ATM
+#git clone https://github.com/jordansissel/grok
+#cd grok
+##autoreconf -fvi
+##./configure --libdir=/usr/lib64
+#make
 #make install
 #cd ..
-#rm -r libksi
+#rm -r grok
+
+# we need Guardtime libksi here, otherwise we cannot check the KSI component
+git clone https://github.com/guardtime/libksi.git
+cd libksi
+autoreconf -fvi
+./configure --libdir=/usr/lib64
+make -j2
+make install
+cd ..
+rm -r libksi
 
 # we need the latest librdkafka as there as always required updates
 git clone https://github.com/edenhill/librdkafka
