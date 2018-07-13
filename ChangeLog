@@ -50,6 +50,9 @@ Version 8.37.0 [v8-stable] 2018-08-07
 - imudp: replace select() calls by poll()
   This improves reliability in extreme cases (more than 1024 fds open when
   imudp begins to listen) and potentially improves performance a little.
+- ommysql: support mysql unix domain socket:
+  via action(.. socket="/tmp/mysqld.sock" ..)
+  Thanks to JoungKyun Kim for contributing this.
 - impstats: emit warning if log.syslog="off" and ruleset name given
   With this config, "ruleset" is silently ignored, what probably is
   not obvious to a user.
