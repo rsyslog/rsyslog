@@ -84,7 +84,14 @@ wtpGetDbgHdr(wtp_t *pThis)
 
 
 /* Not implemented dummy function for constructor */
-static rsRetVal NotImplementedDummy(void) { return RS_RET_NOT_IMPLEMENTED; }
+static rsRetVal NotImplementedDummy_voidp_int(__attribute__((unused)) void* p1, __attribute__((unused)) int p2) {
+	return RS_RET_NOT_IMPLEMENTED; }
+static rsRetVal NotImplementedDummy_voidp_intp(__attribute__((unused)) void* p1, __attribute__((unused)) int* p2) {
+	return RS_RET_NOT_IMPLEMENTED; }
+static rsRetVal NotImplementedDummy_voidp_voidp(__attribute__((unused)) void* p1, __attribute__((unused)) void* p2) {
+	return RS_RET_NOT_IMPLEMENTED; }
+static rsRetVal NotImplementedDummy_voidp_wti_tp(__attribute__((unused)) void* p1, __attribute__((unused)) wti_t* p2) {
+	return RS_RET_NOT_IMPLEMENTED; }
 /* Standard-Constructor for the wtp object
  */
 BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! */
@@ -100,10 +107,10 @@ BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! 
 #endif
 	pthread_attr_setdetachstate(&pThis->attrThrd, PTHREAD_CREATE_DETACHED);
 	/* set all function pointers to "not implemented" dummy so that we can safely call them */
-	pThis->pfChkStopWrkr = (rsRetVal (*)(void*,int))NotImplementedDummy;
-	pThis->pfGetDeqBatchSize = (rsRetVal (*)(void*,int*))NotImplementedDummy;
-	pThis->pfDoWork = (rsRetVal (*)(void*,void*))NotImplementedDummy;
-	pThis->pfObjProcessed = (rsRetVal (*)(void*,wti_t*))NotImplementedDummy;
+	pThis->pfChkStopWrkr = (rsRetVal (*)(void*,int))NotImplementedDummy_voidp_int;
+	pThis->pfGetDeqBatchSize = (rsRetVal (*)(void*,int*))NotImplementedDummy_voidp_intp;
+	pThis->pfDoWork = (rsRetVal (*)(void*,void*))NotImplementedDummy_voidp_voidp;
+	pThis->pfObjProcessed = (rsRetVal (*)(void*,wti_t*))NotImplementedDummy_voidp_wti_tp;
 	INIT_ATOMIC_HELPER_MUT(pThis->mutCurNumWrkThrd);
 	INIT_ATOMIC_HELPER_MUT(pThis->mutWtpState);
 ENDobjConstruct(wtp)
@@ -579,7 +586,7 @@ finalize_it:
 }
 
 /* dummy */
-static rsRetVal wtpQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
+static rsRetVal wtpQueryInterface(interface_t __attribute__((unused)) *i) { return RS_RET_NOT_IMPLEMENTED; }
 
 /* exit our class
  */

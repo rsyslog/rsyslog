@@ -1,7 +1,7 @@
 /* lookup.c
  * Support for lookup tables in RainerScript.
  *
- * Copyright 2013-2017 Adiscon GmbH.
+ * Copyright 2013-2018 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
