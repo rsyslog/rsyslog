@@ -86,7 +86,7 @@
 #define objSerialize(pThis) (((obj_t*) (pThis))->pObjInfo->objMethods[objMethod_SERIALIZE])
 
 #define OBJSetMethodHandler(methodID, pHdlr) \
-	CHKiRet(obj.InfoSetMethod(pObjInfoOBJ, methodID, (rsRetVal (*)(void*)) pHdlr))
+	CHKiRet(obj.InfoSetMethod(pObjInfoOBJ, methodID, (rsRetVal (*)()) pHdlr))
 
 /* interfaces */
 BEGINinterface(obj) /* name must also be changed in ENDinterface macro! */
