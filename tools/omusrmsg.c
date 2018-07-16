@@ -242,7 +242,7 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 		if(ut.ut_type != USER_PROCESS)
 			continue;
 #endif
-		if(!(strncmp (ut.UTNAME,"LOGIN", 6))) /* paranoia */
+		if(!(memcmp (ut.UTNAME,"LOGIN", 6))) /* paranoia */
 			continue;
 
 		/* should we send the message to this user? */
@@ -261,7 +261,7 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 
 		/* compute the device name */
 		strcpy(p, _PATH_DEV);
-		strncat(p, ut.ut_line, UNAMESZ);
+		memcpy(p, ut.ut_line, UNAMESZ);
 
 		/* we must be careful when writing to the terminal. A terminal may block
 		 * (for example, a user has pressed <ctl>-s). In that case, we can not
