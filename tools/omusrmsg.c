@@ -8,7 +8,7 @@
  * File begun on 2007-07-20 by RGerhards (extracted from syslogd.c, which at the
  * time of the fork from sysklogd was under BSD license)
  *
- * Copyright 2007-2016 Adiscon GmbH.
+ * Copyright 2007-2018 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -70,6 +70,13 @@
 #ifndef _PATH_DEV
 #	define _PATH_DEV	"/dev/"
 #endif
+
+#ifdef UT_NAMESIZE
+# define UNAMESZ	UT_NAMESIZE	/* length of a login name */
+#else
+# define UNAMESZ	32	/* length of a login name, 32 seems current (2018) good bet */
+#endif
+#define MAXUNAMES	20	/* maximum number of user names */
 
 #ifdef OS_SOLARIS
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
