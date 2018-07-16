@@ -82,6 +82,18 @@ Version 8.37.0 [v8-stable] 2018-08-07
   own CI system installs the maximum set of possible dependencies and
   so tries the maximum set "make distcheck" can support on a platform.
   see also https://github.com/rsyslog/rsyslog/issues/174
+- omusrmsg: do not fall back to max username length of 8
+  This happens if utmp.h and friends are not available and stems back to
+  the original syslogd. Nowadas, 32 is more appropriate and now being used
+  in that (now very unlikely) case. The detection logic for UT_NAMESIZE has
+  also been streamlined.
+  closes https://github.com/rsyslog/rsyslog/issues/2834
+- build: fix improper function casts
+  no real issue, but generated warnings under gcc 8 and thus
+  broke CI
+- bugfix omhttpfs: fix insecure usage if strncmp()
+  consequences not evaluated as this is a contributed module.
+  Detected by gcc 8.
 - bugfix mmgrok: cosmetic build issue - compiler warings
   caused build under gcc 7 to fail with warning
 - bugfix mmkubernetes: potential NULL pointer access
