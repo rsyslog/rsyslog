@@ -5194,7 +5194,7 @@ msgPropDescrDestruct(msgPropDescr_t *pProp)
 
 
 /* dummy */
-static rsRetVal msgQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
+static rsRetVal msgQueryInterface(interface_t __attribute__((unused)) *i) { return RS_RET_NOT_IMPLEMENTED; }
 
 /* Initialize the message class. Must be called as the very first method
  * before anything else is called inside this class.

@@ -128,7 +128,7 @@ dynstats_addBucketMetrics(dynstats_buckets_t *bkts, dynstats_bucket_t *b, const 
 	name_len = ustrlen(name);
 	CHKmalloc(metric_name_buff = malloc((name_len + DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH + 1) * sizeof(uchar)));
 
-	ustrncpy(metric_name_buff, name, name_len);
+	strcpy((char*)metric_name_buff, (char*)name);
 	metric_suffix = metric_name_buff + name_len;
 	*metric_suffix = DYNSTATS_METRIC_NAME_SEPARATOR;
 	metric_suffix++;

@@ -74,6 +74,9 @@ DEFobjCurrIf(strm)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(statsobj)
 
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wcast-function-type" // TODO: investigate further!
+#endif /* if __GNUC__ >= 8 */
 
 #ifdef ENABLE_IMDIAG
 unsigned int iOverallQueueSize = 0;
@@ -3314,7 +3317,7 @@ finalize_it:
 #undef	isProp
 
 /* dummy */
-static rsRetVal qqueueQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
+static rsRetVal qqueueQueryInterface(interface_t __attribute__((unused)) *i) { return RS_RET_NOT_IMPLEMENTED; }
 
 /* Initialize the stream class. Must be called as the very first method
  * before anything else is called inside this class.
@@ -3330,6 +3333,3 @@ BEGINObjClassInit(qqueue, 1, OBJ_IS_CORE_MODULE)
 	/* now set our own handlers */
 	OBJSetMethodHandler(objMethod_SETPROPERTY, qqueueSetProperty);
 ENDObjClassInit(qqueue)
-
-/* vi:set ai:
- */

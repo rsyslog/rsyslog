@@ -486,7 +486,7 @@ wtiGetDummy(void)
 }
 
 /* dummy */
-static rsRetVal wtiQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
+static rsRetVal wtiQueryInterface(interface_t __attribute__((unused)) *i) { return RS_RET_NOT_IMPLEMENTED; }
 
 /* exit our class
  */
