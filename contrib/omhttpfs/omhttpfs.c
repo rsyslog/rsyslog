@@ -424,22 +424,21 @@ httpfs_parse_exception(char* buf, int length, httpfs_json_remote_exception* jre)
     memset(jre, 0, sizeof(*jre));
 
     const char *str;
-    size_t len;
 
     json_object_object_get_ex(json, "javaClassName", &jobj);
     str = json_object_get_string(jobj);
-    len = strlen(str);
-    strncpy(jre->class, str, len);
+    strncpy(jre->class, str, sizeof(jre->class));
+    jre->class[sizeof(jre->class)-1] = '\0';
 
     json_object_object_get_ex(json, "exception", &jobj);
     str = json_object_get_string(jobj);
-    len = strlen(str);
-    strncpy(jre->exception, str, len);
+    strncpy(jre->exception, str, sizeof(jre->exception));
+    jre->exception[sizeof(jre->exception)-1] = '\0';
 
     json_object_object_get_ex(json, "message", &jobj);
     str = json_object_get_string(jobj);
-    len = strlen(str);
-    strncpy(jre->message, str, len);
+    strncpy(jre->message, str, sizeof(jre->message));
+    jre->message[sizeof(jre->message)-1] = '\0';
 
 finalize_it:
 	if(jt != NULL)
