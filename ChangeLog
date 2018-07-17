@@ -1,5 +1,6 @@
 ------------------------------------------------------------------------------
 Version 8.37.0 [v8-stable] 2018-08-07
+- overall adaption to gcc 8 which emits new warnings
 - ommail change of behavior: "enable.body" default now "on"
   This was always documented to be "on", but actually was "off". Usually, we
   fix the doc, but after long discussion the agreement was that in this
@@ -88,9 +89,15 @@ Version 8.37.0 [v8-stable] 2018-08-07
   in that (now very unlikely) case. The detection logic for UT_NAMESIZE has
   also been streamlined.
   closes https://github.com/rsyslog/rsyslog/issues/2834
+- bugfix config optimizer: error in constant folding
+  did not work properly if a string and a number were to be folded.
+  Detected by gcc 8.
 - build: fix improper function casts
   no real issue, but generated warnings under gcc 8 and thus
   broke CI
+- bugfix ommysql: unsafe use of strncpy()
+  also now reports oversize names as user error vs. silent trucation
+  overly long names only could affect config load phase
 - bugfix omhttpfs: fix insecure usage if strncmp()
   consequences not evaluated as this is a contributed module.
   Detected by gcc 8.
@@ -120,7 +127,7 @@ Version 8.37.0 [v8-stable] 2018-08-07
   as some testbench tests, which use liblogging-stdlog to provide some
   specific functionality. This meant those tests were not run since
   changing the default. Now untangling the dependency.
-- CI improvements:
+- CI:
   * new test for gnutls priority string in librelp
     Thanks to github user jvymazal for the patch
   * testbench: relax hanging instance detection
@@ -128,6 +135,12 @@ Version 8.37.0 [v8-stable] 2018-08-07
     builds run on a single machine. We need to improve, but this
     commit makes conflict less likely and provides some diagnostic
     info to help guide us towards a final solution.
+  * testbench: fix tests that look awfully wrong
+    These tests indicated they terminate rsyslog forcefully without
+    drainging the queues, but then checked if they were drained (all
+    messages processed). That does not make sense, and we cannot
+    envison why this was written the first place. So we assume some
+    copy&paste problem was the root of that.
   * testbench: refactor tests which used "nettester" tool
     Some old tests are carried out via the nettester tool. This was
     our initial shot at a testbench a couple of years ago. While it
