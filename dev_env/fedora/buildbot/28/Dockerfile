@@ -15,6 +15,6 @@ RUN buildbot-worker create-worker . docker.rsyslog.com docker-ubuntu16 password
 # to be necessary at the moment.
 # see https://github.com/buildbot/buildbot/issues/4179
 COPY tpl-buildbot.tac /worker/buildbot.tac
-ENTRYPOINT ["/usr/local/bin/buildbot-worker"]
+ENTRYPOINT ["/usr/bin/buildbot-worker"]
 CMD ["start", "--nodaemon"]
 VOLUME /worker
