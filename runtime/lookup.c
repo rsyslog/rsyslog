@@ -500,8 +500,14 @@ build_ArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar *name) {
 					ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 				}
 			}
-			canonicalValueRef = *(uchar**) bsearch(indexes[i].val, pThis->interned_vals,
-			pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
+			uchar *const *const canonicalValueRef_ptr = bsearch(indexes[i].val, pThis->interned_vals,
+				pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
+			if(canonicalValueRef_ptr == NULL) {
+				LogError(0, RS_RET_ERR, "BUG: canonicalValueRef not found in "
+					"build_ArrayTable(), %s:%d", __FILE__, __LINE__);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+			canonicalValueRef = *canonicalValueRef_ptr;
 			assert(canonicalValueRef != NULL);
 			pThis->table.arr->interned_val_refs[i] = canonicalValueRef;
 		}
@@ -536,8 +542,14 @@ build_SparseArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar* n
 			}
 			pThis->table.sprsArr->entries[i].key = (uint32_t) json_object_get_int(jindex);
 			value = (uchar*) json_object_get_string(jvalue);
-			canonicalValueRef = *(uchar**) bsearch(value, pThis->interned_vals,
-			pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
+			uchar *const *const canonicalValueRef_ptr = bsearch(value, pThis->interned_vals,
+				pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
+			if(canonicalValueRef_ptr == NULL) {
+				LogError(0, RS_RET_ERR, "BUG: canonicalValueRef not found in "
+					"build_SparseArrayTable(), %s:%d", __FILE__, __LINE__);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+			canonicalValueRef = *canonicalValueRef_ptr;
 			assert(canonicalValueRef != NULL);
 			pThis->table.sprsArr->entries[i].interned_val_ref = canonicalValueRef;
 		}

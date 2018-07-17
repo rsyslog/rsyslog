@@ -6,7 +6,7 @@
  *
  * File begun on 2007-07-20 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2014 Adiscon GmbH.
+ * Copyright 2007-2018 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,6 +43,7 @@
 #include "module-template.h"
 #include "errmsg.h"
 #include "cfsysline.h"
+#include "parserif.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -348,6 +349,7 @@ BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
 	char *cstr;
+	size_t len;
 CODESTARTnewActInst
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -362,21 +364,45 @@ CODESTARTnewActInst
 			continue;
 		if(!strcmp(actpblk.descr[i].name, "server")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			strncpy(pData->dbsrv, cstr, sizeof(pData->dbsrv));
+			len = es_strlen(pvals[i].val.d.estr);
+			if(len >= sizeof(pData->dbsrv)-1) {
+				parser_errmsg("ommysql: dbname parameter longer than supported "
+					"maximum of %d characters", (int)sizeof(pData->dbsrv)-1);
+				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+			}
+			memcpy(pData->dbsrv, cstr, len+1);
 			free(cstr);
 		} else if(!strcmp(actpblk.descr[i].name, "serverport")) {
 			pData->dbsrvPort = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "db")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			strncpy(pData->dbname, cstr, sizeof(pData->dbname));
+			len = es_strlen(pvals[i].val.d.estr);
+			if(len >= sizeof(pData->dbname)-1) {
+				parser_errmsg("ommysql: dbname parameter longer than supported "
+					"maximum of %d characters", (int)sizeof(pData->dbname)-1);
+				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+			}
+			memcpy(pData->dbname, cstr, len+1);
 			free(cstr);
 		} else if(!strcmp(actpblk.descr[i].name, "uid")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			strncpy(pData->dbuid, cstr, sizeof(pData->dbuid));
+			len = es_strlen(pvals[i].val.d.estr);
+			if(len >= sizeof(pData->dbuid)-1) {
+				parser_errmsg("ommysql: uid parameter longer than supported "
+					"maximum of %d characters", (int)sizeof(pData->dbuid)-1);
+				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+			}
+			memcpy(pData->dbuid, cstr, len+1);
 			free(cstr);
 		} else if(!strcmp(actpblk.descr[i].name, "pwd")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			strncpy(pData->dbpwd, cstr, sizeof(pData->dbpwd));
+			len = es_strlen(pvals[i].val.d.estr);
+			if(len >= sizeof(pData->dbpwd)-1) {
+				parser_errmsg("ommysql: pwd parameter longer than supported "
+					"maximum of %d characters", (int)sizeof(pData->dbpwd)-1);
+				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+			}
+			memcpy(pData->dbpwd, cstr, len+1);
 			free(cstr);
 		} else if(!strcmp(actpblk.descr[i].name, "mysqlconfig.file")) {
 			pData->configfile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);

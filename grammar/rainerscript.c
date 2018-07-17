@@ -4533,7 +4533,7 @@ constFoldConcat(struct cnfexpr *expr)
 			cnfexprDestruct(expr->r);
 			expr->nodetype = 'S';
 			((struct cnfstringval*)expr)->estr = estr;
-		} else if(expr->r->nodetype == 'S') {
+		} else if(expr->r->nodetype == 'N') {
 			es_str_t *numstr;
 			estr = es_newStrFromNumber(((struct cnfnumval*)expr->l)->val);
 			numstr = es_newStrFromNumber(((struct cnfnumval*)expr->r)->val);
