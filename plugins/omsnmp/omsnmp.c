@@ -2,7 +2,7 @@
  *
  * This module sends an snmp trap.
  *
- * Copyright 2007-2013 Adiscon GmbH.
+ * Copyright 2007-2018 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -41,6 +41,7 @@
 #include <net-snmp/net-snmp-includes.h>
 #include "omsnmp.h"
 #include "errmsg.h"
+#include "parserif.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -443,8 +444,10 @@ CODESTARTnewActInst
 			pData->szSyslogMessageOID = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "traptype")) {
 			pData->iTrapType = pvals[i].val.d.n;
-			if(cs.iTrapType < 0 && cs.iTrapType >= 6)
+			if(cs.iTrapType < 0 || cs.iTrapType >= 6) {
+				parser_errmsg("omsnmp: traptype invalid, setting to ENTERPRISESPECIFIC");
 				pData->iTrapType = SNMP_TRAP_ENTERPRISESPECIFIC;
+			}
 		} else if(!strcmp(actpblk.descr[i].name, "specifictype")) {
 			pData->iSpecificType = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
@@ -507,7 +510,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		pData->iSNMPVersion = cs.iSNMPVersion;
 
 	/* Copy TrapType */
-	if ( cs.iTrapType < 0 && cs.iTrapType >= 6)		/* Only allow values from 0 to 6 !*/
+	if ( cs.iTrapType < 0 || cs.iTrapType >= 6)		/* Only allow values from 0 to 6 !*/
 		pData->iTrapType = SNMP_TRAP_ENTERPRISESPECIFIC;
 	else
 		pData->iTrapType = cs.iTrapType;
