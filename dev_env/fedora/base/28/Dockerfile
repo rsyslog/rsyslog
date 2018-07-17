@@ -4,12 +4,11 @@
 # build the "rsyslog libraries" - we do not have packages for them
 FROM	fedora:28
 # search for packages that contain <file>: dnf whatprovides <file>
-RUN	dnf -y update
-RUN	dnf -y install \
+RUN	dnf -y update && \
+	dnf -y install \
 	autoconf \
 	autoconf-archive \
 	automake \
-	make \
 	bison \
 	clang \
 	clang-analyzer \
@@ -17,11 +16,14 @@ RUN	dnf -y install \
 	curl \
 	cyrus-sasl-devel \
 	cyrus-sasl-lib \
+	czmq-devel \
 	flex \
 	gcc \
 	gdb \
 	git \
 	gnutls-devel \
+	hiredis \
+	hiredis-devel \
 	hiredis-devel \
 	java-1.8.0-openjdk \
 	java-1.8.0-openjdk-devel \
@@ -30,11 +32,16 @@ RUN	dnf -y install \
 	libdbi-devel \
 	libfaketime \
 	libgcrypt-devel \
+	libmaxminddb \
 	libmaxminddb-devel \
-	libnet libnet-devel \
+	libnet \
+	libnet-devel \
 	libtool \
 	libuuid-devel \
 	lsof \
+	make \
+	mongo-c-driver \
+	mongo-c-driver-devel \
 	mysql-devel \
 	nc \
 	net-snmp-devel \
@@ -52,20 +59,26 @@ RUN	dnf -y install \
 	tcl-devel \
 	valgrind \
 	wget \
-	zlib-devel 
+	zlib-devel
 	# end of this RUN
-#RUN	dnf -y install epel-release && 
-RUN	dnf -y install \
-	czmq-devel \
-	hiredis \
-	hiredis-devel \
-	libmaxminddb \
-	libmaxminddb-devel \
-	mongo-c-driver \
-	mongo-c-driver-devel 
-	# end of this RUN
-WORKDIR /home/devel
-VOLUME /rsyslog
+# unfortunately, tcl-devel does not properly setup required bits in the environment
+# so we now try to do that. In case this does no longer work with a version, search
+# for a file tclConfig.sh, which should be present in the library directory (usually
+# beneath /usr). It contains the environment variables. Inside container do:
+# $cat $(find /usr -name tclConfig.sh|head -n1)
+ENV	TCL_LIB_SPEC="-L/usr/lib64 -ltcl8.6" \
+	TCL_INCLUDE_SPEC=-I/usr/include
+
+# create dependency cache
+RUN	mkdir /local_dep_cache && \
+	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch && \
+	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.1.tar.gz && \
+	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.3.1.tar.gz -O /local_dep_cache/elasticsearch-6.3.1.tar.gz
+# tell tests which are the newester versions, so they can be checked without the need
+# to adjust test sources.
+ENV	ELASTICSEARCH_NEWEST="elasticsearch-6.3.1.tar.gz"
+WORKDIR	/home/devel
+VOLUME	/rsyslog
 RUN	groupadd rsyslog \
 	&& adduser -g rsyslog  -s /bin/bash rsyslog \
 	&& echo "rsyslog ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
@@ -105,7 +118,7 @@ RUN	cd helper-projects && \
 RUN	cd helper-projects && \
 	git clone https://github.com/edenhill/librdkafka && \
 	cd librdkafka && \
-	(unset CFLAGS; ./configure --prefix=/usr $LIBDIR --CFLAGS="-g" ; make -j2) && \
+	(unset CFLAGS; ./configure --prefix=/usr --libdir=$LIBDIR_PATH --CFLAGS="-g" ; make -j2) && \
 	make install && \
 	cd .. && \
 # Note: we do NOT delete the source as we may need it to
@@ -161,7 +174,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-omrelp-default-port=13515 \
 	--enable-omruleset \
 	--enable-omstdout \
-	--enable-omtcl=no \
+	--enable-omtcl \
 	--enable-omudpspoof \
 	--enable-omuxsock \
 	--enable-openssl \
@@ -184,7 +197,6 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 #	--enable-mmgrok - no package
 
 # Install any needed packages
-#RUN ./setup-system.sh
-RUN ./setup-projects.sh
-WORKDIR /rsyslog
-USER rsyslog
+RUN	./setup-projects.sh
+WORKDIR	/rsyslog
+USER	rsyslog
