@@ -6,7 +6,7 @@
  *
  * File begun on 2007-10-18 by sur5r (converted from ommysql.c)
  *
- * Copyright 2007, 2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * The following link my be useful for the not-so-postgres literate
  * when setting up a test environment (on Fedora):
@@ -47,6 +47,7 @@
 #include "template.h"
 #include "module-template.h"
 #include "errmsg.h"
+#include "parserif.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -356,14 +357,15 @@ setInstParamDefaults(instanceData *pData)
 	pData->trans_commit  = 100;
 	pData->trans_age     = 60;
 	pData->port          = 5432;
-	strncpy(pData->user, "postgres", sizeof(pData->user));
-	strncpy(pData->pass, "postgres", sizeof(pData->pass));
+	strcpy(pData->user, "postgres");
+	strcpy(pData->pass, "postgres");
 }
 
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
 	char *cstr;
+	size_t len;
 CODESTARTnewActInst
 	if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -378,7 +380,13 @@ CODESTARTnewActInst
 			continue;
 		if (!strcmp(actpblk.descr[i].name, "server")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			strncpy(pData->srv, cstr, sizeof(pData->srv));
+			len = es_strlen(pvals[i].val.d.estr);
+			if(len >= sizeof(pData->srv)-1) {
+				parser_errmsg("ompgsql: srv parameter longer than supported "
+					"maximum of %d characters", (int)sizeof(pData->srv)-1);
+				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+			}
+			memcpy(pData->srv, cstr, len+1);
 			free(cstr);
 		} else if (!strcmp(actpblk.descr[i].name, "port")) {
 			pData->port = (int) pvals[i].val.d.n;
@@ -392,23 +400,35 @@ CODESTARTnewActInst
 			pData->trans_age = (int) pvals[i].val.d.n;
 		} else if (!strcmp(actpblk.descr[i].name, "db")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			strncpy(pData->dbname, cstr, sizeof(pData->dbname));
+			len = es_strlen(pvals[i].val.d.estr);
+			if(len >= sizeof(pData->dbname)-1) {
+				parser_errmsg("ompgsql: db parameter longer than supported "
+					"maximum of %d characters", (int)sizeof(pData->dbname)-1);
+				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+			}
+			memcpy(pData->dbname, cstr, len+1);
 			free(cstr);
-		} else if (!strcmp(actpblk.descr[i].name, "user")) {
+		} else if (   !strcmp(actpblk.descr[i].name, "user")
+		           || !strcmp(actpblk.descr[i].name, "uid")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			strncpy(pData->user, cstr, sizeof(pData->user));
+			len = es_strlen(pvals[i].val.d.estr);
+			if(len >= sizeof(pData->user)-1) {
+				parser_errmsg("ompgsql: user/uid parameter longer than supported "
+					"maximum of %d characters", (int)sizeof(pData->user)-1);
+				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+			}
+			memcpy(pData->user, cstr, len+1);
 			free(cstr);
-		} else if (!strcmp(actpblk.descr[i].name, "uid")) {
+		} else if (   !strcmp(actpblk.descr[i].name, "pass")
+		           || !strcmp(actpblk.descr[i].name, "pwd")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			strncpy(pData->user, cstr, sizeof(pData->user));
-			free(cstr);
-		} else if (!strcmp(actpblk.descr[i].name, "pass")) {
-			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			strncpy(pData->pass, cstr, sizeof(pData->pass));
-			free(cstr);
-		} else if (!strcmp(actpblk.descr[i].name, "pwd")) {
-			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			strncpy(pData->pass, cstr, sizeof(pData->pass));
+			len = es_strlen(pvals[i].val.d.estr);
+			if(len >= sizeof(pData->pass)-1) {
+				parser_errmsg("ompgsql: pass/pwd parameter longer than supported "
+					"maximum of %d characters", (int)sizeof(pData->pass)-1);
+				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+			}
+			memcpy(pData->pass, cstr, len+1);
 			free(cstr);
 		} else if (!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tpl = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
