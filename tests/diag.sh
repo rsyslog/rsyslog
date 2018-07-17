@@ -1035,7 +1035,7 @@ case $1 in
 		echo "Starting instance $2 started with PID" `cat $dep_work_es_pidfile`
 
 		# Wait for startup with hardcoded timeout
-		timeoutend=30
+		timeoutend=60
 		timeseconds=0
 		# Loop until elasticsearch port is reachable or until
 		# timeout is reached!
