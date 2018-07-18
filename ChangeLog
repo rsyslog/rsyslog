@@ -1,3 +1,5 @@
+DO NOT MERGE
+this tests what exactly the github trigger provides to CI
 ------------------------------------------------------------------------------
 Version 8.37.0 [v8-stable] 2018-08-07
 - overall adaption to gcc 8 which emits new warnings
