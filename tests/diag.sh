@@ -16,6 +16,10 @@
 #               E.g. Solaris needs "gcmp"
 # RS_HEADCMD    head command to use. If unset, "head" is used.
 #               E.g. Solaris needs "ghead"
+# RS_PWORK	path prefix for (smaller) work files. If not set, current
+#		working directory can be used. Idea is to use tmpfs for
+#		it where possible. 10MiB free space is expected.
+#		MUST end in '/', e.g. "/mnt/rs_workdir/"
 #
 
 # environment variables:
@@ -145,6 +149,7 @@ case $1 in
 
 		# cleanup of hanging instances from previous runs
 		# practice has shown this is pretty useful!
+		df -h
 		for pid in $(ps -eo pid,args|grep '/tools/[r]syslogd ' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
 		do
 			echo "ERROR: left-over previous instance $pid, killing it"
@@ -178,12 +183,12 @@ case $1 in
 		rm -f rsyslogd.started work-*.conf rsyslog.random.data
 		rm -f rsyslogd2.started work-*.conf rsyslog*.pid.save xlate*.lkp_tbl
 		rm -f log log* # RSyslog debug output 
-		rm -f work rsyslog.out.* rsyslog2.out.log # common work files
+		rm -f ${RS_PWORK}work rsyslog.out.* rsyslog2.out.log # common work files
 		rm -rf test-spool test-logdir stat-file1
 		rm -f work-presort rsyslog.pipe
 		rm -f -r rsyslog.input.*
 		rm -f rsyslog.input rsyslog.empty rsyslog.input.* imfile-state* omkafka-failed.data
-		rm -f testconf.conf HOSTNAME
+		rm -f ${RS_PWORK}testconf.conf HOSTNAME
 		rm -f rsyslog.errorfile tmp.qi nocert
 		rm -f core.* vgcore.* core*
 		# Note: rsyslog.action.*.include must NOT be deleted, as it
@@ -226,12 +231,12 @@ case $1 in
 		# now real cleanup
 		rm -f rsyslogd.started work-*.conf diag-common.conf
    		rm -f rsyslogd2.started diag-common2.conf rsyslog.action.*.include
-		rm -f work rsyslog.out.* rsyslog2.out.log rsyslog*.pid.save xlate*.lkp_tbl
+		rm -f ${RS_PWORK}work rsyslog.out.* rsyslog2.out.log rsyslog*.pid.save xlate*.lkp_tbl
 		rm -rf test-spool test-logdir stat-file1
 		rm -f rsyslog.random.data work-presort rsyslog.pipe
 		rm -f -r rsyslog.input.*
 		rm -f rsyslog.input rsyslog.conf.tlscert stat-file1 rsyslog.empty rsyslog.input.* imfile-state*
-		rm -f testconf.conf
+		rm -f ${RS_PWORK}testconf.conf
 		rm -f rsyslog.errorfile tmp.qi nocert
 		rm -f HOSTNAME imfile-state:.-rsyslog.input
 		unset TCPFLOOD_EXTRA_OPTS
@@ -272,13 +277,13 @@ case $1 in
 		python $srcdir/es_response_get_msgnum.py > rsyslog.out.log
 		;;
    'getpid')
-		pid=$(cat rsyslog$2.pid)
+		pid=$(cat ${RS_PWORK}rsyslog$2.pid)
 		;;
    'startup')   # start rsyslogd with default params. $2 is the config file name to use
    		# returns only after successful startup, $3 is the instance (blank or 2!)
 		echo in startup
 		if [ "x$2" == "x" ]; then
-		    CONF_FILE="testconf.conf"
+		    CONF_FILE="${RS_PWORK}testconf.conf"
 		    echo $CONF_FILE is:
 		    cat -n $CONF_FILE
 		else
@@ -288,7 +293,7 @@ case $1 in
 		    echo "ERROR: config file '$CONF_FILE' not found!"
 		    exit 1
 		fi
-		LD_PRELOAD=$RSYSLOG_PRELOAD $valgrind ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
+		LD_PRELOAD=$RSYSLOG_PRELOAD $valgrind ../tools/rsyslogd -C -n -i${RS_PWORK}rsyslog$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
 		. $srcdir/diag.sh wait-startup $3
 		;;
    'startup-silent')   # start rsyslogd with default params. $2 is the config file name to use
@@ -297,7 +302,7 @@ case $1 in
 		    echo "ERROR: config file '$srcdir/testsuites/$2' not found!"
 		    exit 1
 		fi
-		$valgrind ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 2>/dev/null &
+		$valgrind ../tools/rsyslogd -C -n -i${RS_PWORK}rsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 2>/dev/null &
 		. $srcdir/diag.sh wait-startup $3
 		;;
    'startup-vg-waitpid-only') # same as startup-vg, BUT we do NOT wait on the startup message!
@@ -305,7 +310,7 @@ case $1 in
 		    RS_TESTBENCH_LEAK_CHECK=full
 		fi
 		if [ "x$2" == "x" ]; then
-		    CONF_FILE="testconf.conf"
+		    CONF_FILE="${RS_PWORK}testconf.conf"
 		    echo $CONF_FILE is:
 		    cat -n $CONF_FILE
 		else
@@ -315,7 +320,7 @@ case $1 in
 		    echo "ERROR: config file '$CONF_FILE' not found!"
 		    exit 1
 		fi
-		LD_PRELOAD=$RSYSLOG_PRELOAD valgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --gen-suppressions=all --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=$RS_TESTBENCH_LEAK_CHECK ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
+		LD_PRELOAD=$RSYSLOG_PRELOAD valgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --gen-suppressions=all --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=$RS_TESTBENCH_LEAK_CHECK ../tools/rsyslogd -C -n -i${RS_PWORK}rsyslog$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
 		. $srcdir/diag.sh wait-startup-pid $3
 		;;
    'startup-vg') # start rsyslogd with default params under valgrind control. $2 is the config file name to use
@@ -340,7 +345,7 @@ case $1 in
 
    'startup-vgthread-waitpid-only') # same as startup-vgthread, BUT we do NOT wait on the startup message!
 		if [ "x$2" == "x" ]; then
-		    CONF_FILE="testconf.conf"
+		    CONF_FILE="${RS_PWORK}testconf.conf"
 		    echo $CONF_FILE is:
 		    cat -n $CONF_FILE
 		else
@@ -350,7 +355,7 @@ case $1 in
 		    echo "ERROR: config file '$CONF_FILE' not found!"
 		    exit 1
 		fi
-		valgrind --tool=helgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --suppressions=$srcdir/linux_localtime_r.supp --gen-suppressions=all ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
+		valgrind --tool=helgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --suppressions=$srcdir/linux_localtime_r.supp --gen-suppressions=all ../tools/rsyslogd -C -n -i${RS_PWORK}rsyslog$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
 		. $srcdir/diag.sh wait-startup-pid $3
 		;;
    'startup-vgthread') # start rsyslogd with default params under valgrind thread debugger control.
@@ -361,7 +366,7 @@ case $1 in
 		;;
    'wait-startup-pid') # wait for rsyslogd startup, PID only ($2 is the instance)
 		i=0
-		while test ! -f rsyslog$2.pid; do
+		while test ! -f ${RS_PWORK}rsyslog$2.pid; do
 			$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
 			let "i++"
 			if test $i -gt $TB_TIMEOUT_STARTSTOP
@@ -370,14 +375,14 @@ case $1 in
 			   . $srcdir/diag.sh error-exit 1
 			fi
 		done
-		echo "rsyslogd$2 started, start msg not yet seen, pid " `cat rsyslog$2.pid`
+		echo "rsyslogd$2 started, start msg not yet seen, pid " `cat ${RS_PWORK}rsyslog$2.pid`
 		;;
    'wait-startup') # wait for rsyslogd startup ($2 is the instance)
 		. $srcdir/diag.sh wait-startup-pid $2
 		i=0
 		while test ! -f rsyslogd$2.started; do
 			$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
-			ps -p `cat rsyslog$2.pid` &> /dev/null
+			ps -p `cat ${RS_PWORK}rsyslog$2.pid` &> /dev/null
 			if [ $? -ne 0 ]
 			then
 			   echo "ABORT! rsyslog pid no longer active during startup!"
@@ -390,7 +395,7 @@ case $1 in
 			   . $srcdir/diag.sh error-exit 1
 			fi
 		done
-		echo "rsyslogd$2 startup msg seen, pid " `cat rsyslog$2.pid`
+		echo "rsyslogd$2 startup msg seen, pid " `cat ${RS_PWORK}rsyslog$2.pid`
 		;;
    'wait-pid-termination')  # wait for the pid in pid $2 to terminate, abort on timeout
 		i=0
@@ -424,7 +429,7 @@ case $1 in
    'wait-shutdown')  # actually, we wait for rsyslog.pid to be deleted. $2 is the
    		# instance
 		i=0
-		out_pid=`cat rsyslog$2.pid.save`
+		out_pid=`cat ${RS_PWORK}rsyslog$2.pid.save`
 		if [[ "x$out_pid" == "x" ]]
 		then
 			terminated=1
@@ -457,7 +462,7 @@ case $1 in
 		;;
    'wait-shutdown-vg')  # actually, we wait for rsyslog.pid to be deleted. $2 is the
    		# instance
-		wait `cat rsyslog$2.pid`
+		wait `cat ${RS_PWORK}rsyslog$2.pid`
 		export RSYSLOGD_EXIT=$?
 		echo rsyslogd run exited with $RSYSLOGD_EXIT
 		if [ -e vgcore.* ]
@@ -498,7 +503,7 @@ case $1 in
 		fi
 		;;
    'issue-HUP') # shut rsyslogd down when main queue is empty. $2 is the instance.
-		kill -HUP `cat rsyslog$2.pid`
+		kill -HUP `cat ${RS_PWORK}rsyslog$2.pid`
 		$TESTTOOL_DIR/msleep 1000
 		;;
    'shutdown-when-empty') # shut rsyslogd down when main queue is empty. $2 is the instance.
@@ -507,18 +512,18 @@ case $1 in
 		   echo Shutting down instance 2
 		fi
 		. $srcdir/diag.sh wait-queueempty $2
-		cp rsyslog$2.pid rsyslog$2.pid.save
+		cp ${RS_PWORK}rsyslog$2.pid ${RS_PWORK}rsyslog$2.pid.save
 		$TESTTOOL_DIR/msleep 1000 # wait a bit (think about slow testbench machines!)
-		kill `cat rsyslog$2.pid`
+		kill `cat ${RS_PWORK}rsyslog$2.pid`
 		# note: we do not wait for the actual termination!
 		;;
    'shutdown-immediate') # shut rsyslogd down without emptying the queue. $2 is the instance.
-		cp rsyslog$2.pid rsyslog$2.pid.save
-		kill `cat rsyslog$2.pid`
+		cp ${RS_PWORK}rsyslog$2.pid ${RS_PWORK}rsyslog$2.pid.save
+		kill `cat ${RS_PWORK}rsyslog$2.pid`
 		# note: we do not wait for the actual termination!
 		;;
    'kill-immediate') # kill rsyslog unconditionally
-		kill -9 `cat rsyslog.pid`
+		kill -9 `cat ${RS_PWORK}rsyslog.pid`
 		# note: we do not wait for the actual termination!
 		;;
    'tcpflood') # do a tcpflood run and check if it worked params are passed to tcpflood
@@ -554,8 +559,8 @@ case $1 in
 		# seqchk. This is needed for some operations where we need the sort
 		# result for some preprocessing. Note that a later seqchk will sort
 		# again, but that's not an issue.
-		rm -f work
-		$RS_SORTCMD -g < rsyslog.out.log > work
+		rm -f ${RS_PWORK}work
+		$RS_SORTCMD -g < rsyslog.out.log > ${RS_PWORK}work
 		;;
    'assert-equal')
 		if [ "x$4" == "x" ]; then
@@ -588,12 +593,14 @@ case $1 in
 		fi;
 		;;
    'seq-check') # do the usual sequence check to see if everything was properly received. $2 is the instance.
-		rm -f work
+		rm -f ${RS_PWORK}work
+		df -h
+		ls -l rsyslog.out.log
 		cp rsyslog.out.log work-presort
-		$RS_SORTCMD -g < rsyslog.out.log > work
+		$RS_SORTCMD -g < rsyslog.out.log > ${RS_PWORK}work
 		# $4... are just to have the abilit to pass in more options...
 		# add -v to chkseq if you need more verbose output
-		./chkseq -fwork -s$2 -e$3 $4 $5 $6 $7
+		./chkseq -f${RS_PWORK}work -s$2 -e$3 $4 $5 $6 $7
 		if [ "$?" -ne "0" ]; then
 		  echo "sequence error detected"
 		  . $srcdir/diag.sh error-exit 1 
@@ -801,12 +808,12 @@ case $1 in
 		fi
 		;;
    'gzip-seq-check') # do the usual sequence check, but for gzip files
-		rm -f work
+		rm -f ${RS_PWORK}work
 		ls -l rsyslog.out.log
-		gunzip < rsyslog.out.log | $RS_SORTCMD -g > work
-		ls -l work
+		gunzip < rsyslog.out.log | $RS_SORTCMD -g > ${RS_PWORK}work
+		ls -l ${RS_PWORK}work
 		# $4... are just to have the abilit to pass in more options...
-		./chkseq -fwork -v -s$2 -e$3 $4 $5 $6 $7
+		./chkseq -f${RS_PWORK}work -v -s$2 -e$3 $4 $5 $6 $7
 		if [ "$?" -ne "0" ]; then
 		  echo "sequence error detected"
 		  . $srcdir/diag.sh error-exit 1
@@ -834,10 +841,10 @@ case $1 in
 		. $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
 		;;
    'generate-conf')   # start a standard test rsyslog.conf
-		echo "\$IncludeConfig diag-common.conf" > testconf.conf
+		echo "\$IncludeConfig diag-common.conf" > ${RS_PWORK}testconf.conf
 		;;
    'add-conf')   # start a standard test rsyslog.conf
-		printf "%s" "$2" >> testconf.conf
+		printf "%s" "$2" >> ${RS_PWORK}testconf.conf
 		;;
    'require-journalctl')   # check if journalctl exists on the system
 		if ! hash journalctl 2>/dev/null ; then

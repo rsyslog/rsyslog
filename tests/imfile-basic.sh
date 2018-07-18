@@ -1,6 +1,5 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under GPLv3
-echo [imfile-basic.sh]
 . $srcdir/diag.sh init
 # generate input file first. Note that rsyslog processes it as
 # soon as it start up (so the file should exist at that point).

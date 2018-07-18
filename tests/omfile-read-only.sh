@@ -33,7 +33,7 @@ $srcdir/diag.sh injectmsg 0 $messages
 # the first message number and calculate based on it what must be
 # present in the output file.
 . $srcdir/diag.sh presort
-let firstnum=$((10#`$RS_HEADCMD -n1 work`)) # work is the sorted output file
+let firstnum=$((10#`$RS_HEADCMD -n1 ${RS_PWORK}work`)) # work is the sorted output file
 echo "info: first message expected to be number $firstnum, using that value."
 . $srcdir/diag.sh seq-check $firstnum $(($messages-1))
 . $srcdir/diag.sh exit
