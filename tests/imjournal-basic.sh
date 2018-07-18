@@ -2,34 +2,38 @@
 # This test injects a message and checks if it is received by
 # imjournal. We use a special test string which we do not expect
 # to be present in the regular log stream. So we do not expect that
-# any other journal content matches our test message. We pull the
-# complete journal content for this test, this may be a bit lengthy
-# in some environments. But we think that's the only way to check the
-# basic core functionality.
+# any other journal content matches our test message. We skip the 
+# test in case message does not make it even to journal which may 
+# sometimes happen in some environments.
 # addd 2017-10-25 by RGerhards, released under ASL 2.0
 
 . $srcdir/diag.sh init
 . $srcdir/diag.sh require-journalctl
 generate_conf
 add_conf '
-module(load="../plugins/imjournal/.libs/imjournal")
+module(load="../plugins/imjournal/.libs/imjournal" IgnorePreviousMessages="on")
 
 template(name="outfmt" type="string" string="%msg%\n")
 action(type="omfile" template="outfmt" file="rsyslog.out.log")
 '
 startup
 TESTMSG="TestBenCH-RSYSLog imjournal This is a test message - $(date +%s)"
-./journal_print "$TESTMSG"
+systemd-cat echo "$TESTMSG"
+journalctl -an 200 | fgrep -qF "$TESTMSG"
+if [ $? -ne 0 ]; then
+	echo "SKIP: some problem with journald service."
+	exit 77
+fi
 ./msleep 500
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
-journalctl -q | grep -qF "$TESTMSG"
+cat rsyslog.out.log | fgrep -qF "$TESTMSG"
 if [ $? -ne 0 ]; then
   echo "FAIL: rsyslog.out.log content (tail -n200):"
   tail -n200 rsyslog.out.log
   echo "======="
   echo "last entries from journal:"
-  journalctl -q|tail -n200
+  journalctl -an 200
   echo "======="
   echo "NOTE: last 200 lines may be insufficient on busy systems!"
   echo "======="
