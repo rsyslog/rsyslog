@@ -612,6 +612,9 @@ data items:
   useful when using wildcards inside file monitors, because it then
   is the only way to know which file the message originated from.
   The value can be accessed using the %$!metadata!filename% property.
+  **Note**: For symlink-ed files this does **not** contain name of the
+  actual file (source of the data) but name of the symlink (file which
+  matched configured input).
 
 - fileoffset
 
