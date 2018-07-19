@@ -438,7 +438,7 @@ Examples
 Example 1
 ---------
 
-This sets up an UPD server on port 514:
+This sets up an UDP server on port 514:
 
 .. code-block:: none
 

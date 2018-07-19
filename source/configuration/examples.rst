@@ -173,7 +173,7 @@ The destination port is set to the default auf 514. Rsyslog is also
 capable of using much more secure and reliable TCP sessions for message
 forwarding. Also, the destination port can be specified. To select TCP,
 simply add one additional @ in front of the host name (that is, @host is
-UPD, @@host is TCP). For example:
+UDP, @@host is TCP). For example:
 
 ::
 
