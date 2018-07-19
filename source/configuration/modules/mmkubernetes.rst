@@ -240,8 +240,6 @@ filenamerules
 When processing json-file logs, these are the lognorm rules to use to
 match the filename and extract metadata.  The default value is::
 
-    rule=:/var/log/containers/%pod_name:char-to:.%.%container_hash:char-to:_%_%names\
-    pace_name:char-to:_%_%container_name_and_id:char-to:.%.log
     rule=:/var/log/containers/%pod_name:char-to:_%_%namespace_name:char-to:_%_%contai\
     ner_name_and_id:char-to:.%.log
 
