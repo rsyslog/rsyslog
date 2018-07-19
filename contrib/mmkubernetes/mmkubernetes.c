@@ -769,7 +769,17 @@ CODESTARTfreeWrkrInstance
 ENDfreeWrkrInstance
 
 
-static struct cache_s *cacheNew(const uchar *url)
+/* next function is work-around to avoid type-unsafe casts. It looks
+ * like not really needed in practice, but gcc 8 complains and doing
+ * it 100% correct for sure does not hurt ;-) -- rgerhards, 2018-07-19
+ */
+static void
+hashtable_json_object_put(void *jso)
+{
+	json_object_put((struct fjson_object *)jso);
+}
+static struct cache_s *
+cacheNew(const uchar *const url)
 {
 	struct cache_s *cache;
 
@@ -778,9 +788,9 @@ static struct cache_s *cacheNew(const uchar *url)
 	}
 	cache->kbUrl = url;
 	cache->mdHt = create_hashtable(100, hash_from_string,
-		key_equals_string, (void (*)(void *)) json_object_put);
+		key_equals_string, hashtable_json_object_put);
 	cache->nsHt = create_hashtable(100, hash_from_string,
-		key_equals_string, (void (*)(void *)) json_object_put);
+		key_equals_string, hashtable_json_object_put);
 	cache->cacheMtx = malloc(sizeof(pthread_mutex_t));
 	pthread_mutex_init(cache->cacheMtx, NULL);
 
