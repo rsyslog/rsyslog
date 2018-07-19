@@ -1772,6 +1772,7 @@ doFunc_parse_json(struct cnffunc *__restrict__ const func,
 	cnfexprEval(func->expr[1], &srcVal[1], usrptr, pWti);
 	char *jsontext = (char*) var2CString(&srcVal[0], &bMustFree);
 	char *container = (char*) var2CString(&srcVal[1], &bMustFree2);
+	struct json_object *json;
 
 	int retVal;
 	assert(jsontext != NULL);
@@ -1783,7 +1784,7 @@ doFunc_parse_json(struct cnffunc *__restrict__ const func,
 		retVal = 1;
 		goto finalize_it;
 	}
-	struct json_object *const json = json_tokener_parse_ex(tokener, jsontext, strlen(jsontext));
+	json = json_tokener_parse_ex(tokener, jsontext, strlen(jsontext));
 	if(json == NULL) {
 		retVal = RS_SCRIPT_EINVAL;
 	} else {
@@ -1818,6 +1819,7 @@ doFunct_RandomGen(struct cnffunc *__restrict__ const func,
 	int success = 0;
 	struct svar srcVal;
 	long long retVal;
+	long int x;
 
 	cnfexprEval(func->expr[0], &srcVal, usrptr, pWti);
 	long long max = var2Number(&srcVal, &success);
@@ -1832,7 +1834,7 @@ doFunct_RandomGen(struct cnffunc *__restrict__ const func,
 		retVal = 0;
 		goto done;
 	}
-	long int x = randomNumber();
+	x = randomNumber();
 	if (max > MAX_RANDOM_NUMBER) {
 		DBGPRINTF("rainerscript: desired random-number range [0 - %lld] "
 			"is wider than supported limit of [0 - %d)\n",
@@ -3785,6 +3787,7 @@ void
 cnfexprPrint(struct cnfexpr *expr, int indent)
 {
 	struct cnffunc *func;
+	char *fname;
 	int i;
 
 	switch(expr->nodetype) {
@@ -3885,7 +3888,7 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		doIndent(indent);
 		func = (struct cnffunc*) expr;
 		cstrPrint("function '", func->fname);
-		char *fname = es_str2cstr(func->fname, NULL);
+		fname = es_str2cstr(func->fname, NULL);
 		dbgprintf("' (name:%s, params:%hu)\n", fname, func->nParams);
 		free(fname);
 		if(func->fPtr == doFunct_Prifilt) {
@@ -5073,12 +5076,13 @@ addMod2List(const int __attribute__((unused)) version, struct scriptFunct *funct
 /*version currently not used, might be needed later for versin check*/
 {
 	DEFiRet;
+	int i;
 	struct modListNode *newNode;
 	CHKmalloc(newNode = (struct modListNode*) malloc(sizeof(struct modListNode)));
 	newNode->version = 1;
 	newNode->next = NULL;
 
-	int i = 0;
+	i = 0;
 	while(functArray[i].fname != NULL) {
 		if(searchModList(functArray[i].fname) != NULL) {
 			parser_errmsg("function %s defined multiple times, second time will be ignored",

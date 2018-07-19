@@ -1459,7 +1459,8 @@ rsRetVal dbgClassInit(void)
 	sigaddset(&sigSet, SIGUSR2);
 	pthread_sigmask(SIG_UNBLOCK, &sigSet, NULL);
 
-	const char *dbgto2stderr = getenv("RSYSLOG_DEBUG_TIMEOUTS_TO_STDERR");
+	const char *dbgto2stderr;
+	dbgto2stderr = getenv("RSYSLOG_DEBUG_TIMEOUTS_TO_STDERR");
 	dbgTimeoutToStderr = (dbgto2stderr != NULL && !strcmp(dbgto2stderr, "on")) ? 1 : 0;
 	if(dbgTimeoutToStderr) {
 		fprintf(stderr, "rsyslogd: NOTE: RSYSLOG_DEBUG_TIMEOUTS_TO_STDERR activated\n");
