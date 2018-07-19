@@ -975,7 +975,8 @@ static rsRetVal qAddDisk(qqueue_t *pThis, smsg_t* pMsg)
 	 * should do a "robustness sync" of the .qi file to guard
 	 * against the most harsh consequences of kill -9 and power off.
 	 */
-	const int newfile = strmGetCurrFileNum(pThis->tVars.disk.pWrite);
+	int newfile;
+	newfile = strmGetCurrFileNum(pThis->tVars.disk.pWrite);
 	if(newfile != oldfile) {
 		DBGOPRINT((obj_t*) pThis, "current to-be-written-to file has changed from "
 			"number %d to number %d - requiring a .qi write for robustness\n",
@@ -1378,7 +1379,8 @@ qqueueShutdownWorkers(qqueue_t *const pThis)
 	CHKiRet(tryShutdownWorkersWithinQueueTimeout(pThis));
 
 	pthread_mutex_lock(pThis->mut);
-	const int physQueueSize = getPhysicalQueueSize(pThis);
+	int physQueueSize;
+	physQueueSize = getPhysicalQueueSize(pThis);
 	pthread_mutex_unlock(pThis->mut);
 	if(physQueueSize > 0) {
 		CHKiRet(tryShutdownWorkersWithinActionTimeout(pThis));
@@ -2545,14 +2547,15 @@ qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 		FINALIZE; /* nothing left to do, so be happy */
 	}
 
+	int lentmpQIFName;
 #ifdef _AIX
-	const int lentmpQIFName = strlen( pThis->pszQIFNam) + strlen(".tmp") + 1;
+	lentmpQIFName = strlen( pThis->pszQIFNam) + strlen(".tmp") + 1;
 	tmpQIFName = malloc(sizeof(char)*lentmpQIFName);
 	if(tmpQIFName == NULL)
                 tmpQIFName = (char*)pThis->pszQIFNam;
 	snprintf(tmpQIFName, lentmpQIFName, "%s.tmp", pThis->pszQIFNam);
 #else 
-	const int lentmpQIFName = asprintf((char **)&tmpQIFName, "%s.tmp", pThis->pszQIFNam);
+	lentmpQIFName = asprintf((char **)&tmpQIFName, "%s.tmp", pThis->pszQIFNam);
 	if(tmpQIFName == NULL)
 		tmpQIFName = (char*)pThis->pszQIFNam;
 #endif

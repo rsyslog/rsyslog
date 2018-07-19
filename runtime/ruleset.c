@@ -350,19 +350,22 @@ callForeachObject(struct cnfstmt *stmt, json_object *arr, smsg_t *pMsg, wti_t *p
 	json_object *entry = NULL;
 	json_object *key = NULL;
 	const char **keys = NULL;
+	json_object *curr = NULL;
+	const char **curr_key;
+	struct json_object_iterator it;
+	struct json_object_iterator itEnd;
 	DEFiRet;
 
 	int len = json_object_object_length(arr);
 	CHKmalloc(keys = calloc(len, sizeof(char*)));
-	const char **curr_key = keys;
-	struct json_object_iterator it = json_object_iter_begin(arr);
-	struct json_object_iterator itEnd = json_object_iter_end(arr);
+	curr_key = keys;
+	it = json_object_iter_begin(arr);
+	itEnd = json_object_iter_end(arr);
 	while (!json_object_iter_equal(&it, &itEnd)) {
 		*curr_key = json_object_iter_peek_name(&it);
 		curr_key++;
 		json_object_iter_next(&it);
 	}
-	json_object *curr = NULL;
 	CHKmalloc(entry = json_object_new_object());
 	for (int i = 0; i < len; i++) {
 		if (json_object_object_get_ex(arr, keys[i], &curr)) {
