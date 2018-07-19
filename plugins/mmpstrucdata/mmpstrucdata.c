@@ -38,6 +38,7 @@
 #include "template.h"
 #include "module-template.h"
 #include "errmsg.h"
+#include "parserif.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -150,7 +151,27 @@ CODESTARTnewActInst
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(actpblk.descr[i].name, "jsonroot")) {
+			size_t lenvar = es_strlen(pvals[i].val.d.estr);
 			pData->jsonRoot = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			if(pData->jsonRoot[0] == '$') {
+				/* pre 8.35, the jsonRoot name needed to be specified without
+				 * the leading $. This was confusing, so we now require a full
+				 * variable name. Nevertheless, we still need to support the
+				 * version without $. -- rgerhards, 2018-05-16
+				 */
+				/* copy lenvar size because of \0 string terminator */
+				memmove(pData->jsonRoot, pData->jsonRoot+1,  lenvar);
+				--lenvar;
+			}
+			if(   (lenvar == 0)
+			   || (  !(   pData->jsonRoot[0] == '!'
+			           || pData->jsonRoot[0] == '.'
+			           || pData->jsonRoot[0] == '/' ) )
+			   ) {
+				parser_errmsg("mmpstrucdata: invalid jsonRoot name '%s', name must "
+					"start with either '$!', '$.', or '$/'", pData->jsonRoot);
+				ABORT_FINALIZE(RS_RET_INVALID_VAR);
+			}
 		} else if(!strcmp(actpblk.descr[i].name, "sd_name.lowercase")) {
 			pData->lowercase_SD_ID = pvals[i].val.d.n;
 		} else {
