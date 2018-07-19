@@ -96,6 +96,16 @@ DEFobjCurrIf(statsobj)
 /* forward references */
 static void * wrkr(void *myself);
 
+/* unfortunately, on some platforms EAGAIN == EWOULDBOLOCK and so checking against
+ * both of them generates a gcc 8 warning for this reason. We do not want to disable
+ * the warning, so we need to work around this via a macro.
+ */
+#if EAGAIN == EWOULDBLOCK
+	#define CHK_EAGAIN_EWOULDBLOCK (errno == EAGAIN)
+#else
+	#define CHK_EAGAIN_EWOULDBLOCK (errno == EAGAIN | errno == EWOULDBLOCK)
+#endif /* #if EAGAIN == EWOULDBOLOCK */
+
 #define DFLT_wrkrMax 2
 #define DFLT_inlineDispatchThreshold 1
 
@@ -809,7 +819,7 @@ AcceptConnReq(ptcplstn_t *const pLstn, int *const newSock, prop_t **peerName, pr
 	*peerName = NULL; /* ensure we know if we don't have one! */
 	iNewSock = accept(pLstn->sock, (struct sockaddr*) &addr, &addrlen);
 	if(iNewSock < 0) {
-		if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EMFILE)
+		if(CHK_EAGAIN_EWOULDBLOCK || errno == EMFILE)
 			ABORT_FINALIZE(RS_RET_NO_MORE_DATA);
 		LogError(errno, RS_RET_ACCEPT_ERR, "error accepting connection "
 			    "on listen socket %d", pLstn->sock);
@@ -1872,7 +1882,7 @@ sessActivity(ptcpsess_t *pSess, int *continue_polling)
 			CHKiRet(closeSess(pSess)); /* close may emit more messages in strmzip mode! */
 			break;
 		} else {
-			if(errno == EAGAIN || errno == EWOULDBLOCK)
+			if(CHK_EAGAIN_EWOULDBLOCK)
 				break;
 			DBGPRINTF("imptcp: error on session socket %d - closed.\n", pSess->sock);
 			*continue_polling = 0;
@@ -1961,12 +1971,13 @@ static rsRetVal
 enqueueIoWork(epolld_t *epd, int dispatchInlineIfQueueFull) {
 	io_req_t *n;
 	int dispatchInline;
+	int inlineDispatchThreshold;
 	DEFiRet;
 	
 	CHKmalloc(n = malloc(sizeof(io_req_t)));
 	n->epd = epd;
 	
-	int inlineDispatchThreshold = DFLT_inlineDispatchThreshold * runModConf->wrkrMax;
+	inlineDispatchThreshold = DFLT_inlineDispatchThreshold * runModConf->wrkrMax;
 	dispatchInline = 0;
 	
 	pthread_mutex_lock(&io_q.mut);
