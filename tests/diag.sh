@@ -180,8 +180,7 @@ case $1 in
 		rm -f log log* # RSyslog debug output 
 		rm -f work rsyslog.out.* rsyslog2.out.log # common work files
 		rm -rf test-spool test-logdir stat-file1
-		rm -f work-presort rsyslog.pipe
-		rm -f -r rsyslog.input.*
+		rm -f rsyslog.pipe rsyslog.input.*
 		rm -f rsyslog.input rsyslog.empty rsyslog.input.* imfile-state* omkafka-failed.data
 		rm -f testconf.conf HOSTNAME
 		rm -f rsyslog.errorfile tmp.qi nocert
@@ -228,7 +227,7 @@ case $1 in
    		rm -f rsyslogd2.started diag-common2.conf rsyslog.action.*.include
 		rm -f work rsyslog.out.* rsyslog2.out.log rsyslog*.pid.save xlate*.lkp_tbl
 		rm -rf test-spool test-logdir stat-file1
-		rm -f rsyslog.random.data work-presort rsyslog.pipe
+		rm -f rsyslog.random.data rsyslog.pipe
 		rm -f -r rsyslog.input.*
 		rm -f rsyslog.input rsyslog.conf.tlscert stat-file1 rsyslog.empty rsyslog.input.* imfile-state*
 		rm -f testconf.conf
@@ -588,12 +587,9 @@ case $1 in
 		fi;
 		;;
    'seq-check') # do the usual sequence check to see if everything was properly received. $2 is the instance.
-		rm -f work
-		cp rsyslog.out.log work-presort
-		$RS_SORTCMD -g < rsyslog.out.log > work
 		# $4... are just to have the abilit to pass in more options...
 		# add -v to chkseq if you need more verbose output
-		./chkseq -fwork -s$2 -e$3 $4 $5 $6 $7
+		$RS_SORTCMD -g < rsyslog.out.log | ./chkseq -s$2 -e$3 $4 $5 $6 $7
 		if [ "$?" -ne "0" ]; then
 		  echo "sequence error detected"
 		  . $srcdir/diag.sh error-exit 1 
@@ -602,11 +598,9 @@ case $1 in
    'seq-check2') # do the usual sequence check to see if everything was properly received. This is
    		# a duplicateof seq-check, but we could not change its calling conventions without
 		# breaking a lot of exitings test cases, so we preferred to duplicate the code here.
-		rm -f work2
-		$RS_SORTCMD -g < rsyslog2.out.log > work2
 		# $4... are just to have the abilit to pass in more options...
 		# add -v to chkseq if you need more verbose output
-		./chkseq -fwork2 -s$2 -e$3 $4 $5 $6 $7
+		$RS_SORTCMD -g < rsyslog2.out.log  | ./chkseq -s$2 -e$3 $4 $5 $6 $7
 		if [ "$?" -ne "0" ]; then
 		  echo "sequence error detected"
 		  . $srcdir/diag.sh error-exit 1
@@ -801,12 +795,9 @@ case $1 in
 		fi
 		;;
    'gzip-seq-check') # do the usual sequence check, but for gzip files
-		rm -f work
 		ls -l rsyslog.out.log
-		gunzip < rsyslog.out.log | $RS_SORTCMD -g > work
-		ls -l work
 		# $4... are just to have the abilit to pass in more options...
-		./chkseq -fwork -v -s$2 -e$3 $4 $5 $6 $7
+		gunzip < rsyslog.out.log | $RS_SORTCMD -g | ./chkseq -v -s$2 -e$3 $4 $5 $6 $7
 		if [ "$?" -ne "0" ]; then
 		  echo "sequence error detected"
 		  . $srcdir/diag.sh error-exit 1

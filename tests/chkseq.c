@@ -3,7 +3,7 @@
  * be set.
  *
  * Params
- * -f<filename> MUST be given!
+ * -f<filename> file to process, if not given stdin is processed.
  * -s<starting number> -e<ending number>
  * default for s is 0. -e should be given (else it is also 0)
  * -d may be specified, in which case duplicate messages are permitted.
@@ -18,7 +18,7 @@
  *
  * Part of the testbench for rsyslog.
  *
- * Copyright 2009-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -100,11 +100,6 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if(file == NULL) {
-		printf("file must be given!\n");
-		exit(1);
-	}
-
 	if(start > end) {
 		printf("start must be less than or equal end!\n");
 		exit(1);
@@ -115,7 +110,11 @@ int main(int argc, char *argv[])
 	}
 
 	/* read file */
-	fp = fopen(file, "r");
+	if(file == NULL) {
+		fp = stdin;
+	} else {
+		fp = fopen(file, "r");
+	}
 	if(fp == NULL) {
 		printf("error opening file '%s'\n", file);
 		perror(file);
