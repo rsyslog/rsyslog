@@ -139,7 +139,6 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-omamqp1 \
 	--enable-omczmq \
 	--enable-omhiredis \
-	--enable-omhiredis \
 	--enable-omhttpfs \
 	--enable-omjournal \
 	--enable-omkafka \
