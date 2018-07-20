@@ -784,7 +784,7 @@ cacheNew(const uchar *const url)
 	struct cache_s *cache;
 
 	if (NULL == (cache = calloc(1, sizeof(struct cache_s)))) {
-		goto finalize_it;
+		FINALIZE;
 	}
 	cache->kbUrl = url;
 	cache->mdHt = create_hashtable(100, hash_from_string,
@@ -792,6 +792,11 @@ cacheNew(const uchar *const url)
 	cache->nsHt = create_hashtable(100, hash_from_string,
 		key_equals_string, hashtable_json_object_put);
 	cache->cacheMtx = malloc(sizeof(pthread_mutex_t));
+	if (!cache->mdHt || !cache->nsHt || !cache->cacheMtx) {
+		free (cache);
+		cache = NULL;
+		FINALIZE;
+	}
 	pthread_mutex_init(cache->cacheMtx, NULL);
 
 finalize_it:
@@ -1005,7 +1010,7 @@ CODESTARTnewActInst
 	if(caches[i] != NULL) {
 		pData->cache = caches[i];
 	} else {
-		pData->cache = cacheNew(pData->kubernetesUrl);
+		CHKmalloc(pData->cache = cacheNew(pData->kubernetesUrl));
 
 		CHKmalloc(caches = realloc(caches, (i + 2) * sizeof(struct cache_s *)));
 		caches[i] = pData->cache;
