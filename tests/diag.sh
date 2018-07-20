@@ -365,7 +365,8 @@ case $1 in
 			let "i++"
 			if test $i -gt $TB_TIMEOUT_STARTSTOP
 			then
-			   echo "ABORT! Timeout waiting on startup (pid file)"
+			   ps -f
+			   echo "ABORT! Timeout waiting on startup (pid file rsyslog$2.pid)"
 			   . $srcdir/diag.sh error-exit 1
 			fi
 		done
