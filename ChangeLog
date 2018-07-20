@@ -120,6 +120,9 @@ Version 8.37.0 [v8-stable] 2018-08-07
   If token file could not be opened, fclose() was passed a NULL pointer.
   Thanks to github user jvymazal for finding and Richard Megginson
   for fixing the issue.
+- bugfix omsnmp: invalid traptype was not detected
+  this could leave config errors unreported and cause unexpected
+  behaviour
 - bugfix mmkubernetes: default rules use container_name_and_id
   also include rulebase files in dist and fix rule so that dot inside
   pod name is supported.
