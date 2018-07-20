@@ -54,6 +54,7 @@ RUN 	apt-get update && \
 	wget \
 	wget \
 	zlib1g-dev
+ENV	REBUILD=1
 RUN	echo "deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_18.04/ ./" > /etc/apt/sources.list.d/0mq.list && \
 	wget -nv -O - http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_18.04/Release.key | apt-key add - && \
  	add-apt-repository ppa:adiscon/v8-stable -y && \
