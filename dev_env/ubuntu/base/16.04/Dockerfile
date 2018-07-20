@@ -30,7 +30,6 @@ RUN	apt-get install -y \
 	liblz4-dev \
 	libmaxminddb-dev \
 	libmongoc-dev \
-	libmongoc-dev \
 	libmysqlclient-dev \
 	libnet1-dev \
 	libpq-dev \
