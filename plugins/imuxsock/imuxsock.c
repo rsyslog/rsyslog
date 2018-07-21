@@ -106,7 +106,6 @@ struct ucred { int pid; uid_t uid; gid_t gid; };
 #endif
 /* Module static data */
 DEF_IMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(net)
@@ -361,7 +360,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	DEFiRet;
 
 	if(pNewVal == NULL || pNewVal[0] == '\0') {
-		errmsg.LogError(0, RS_RET_SOCKNAME_MISSING , "imuxsock: socket name must be specified, "
+		LogError(0, RS_RET_SOCKNAME_MISSING , "imuxsock: socket name must be specified, "
 			        "but is not - listener not created\n");
 		if(pNewVal != NULL)
 			free(pNewVal);
@@ -587,12 +586,12 @@ openLogSocket(lstn_t *pLstn)
 	if(pLstn->bUseCreds) {
 		one = 1;
 		if(setsockopt(pLstn->fd, SOL_SOCKET, SO_PASSCRED, &one, (socklen_t) sizeof(one)) != 0) {
-			errmsg.LogError(errno, NO_ERRCODE, "set SO_PASSCRED failed on '%s'", pLstn->sockName);
+			LogError(errno, NO_ERRCODE, "set SO_PASSCRED failed on '%s'", pLstn->sockName);
 			pLstn->bUseCreds = 0;
 		}
 // TODO: move to its own #if
 		if(setsockopt(pLstn->fd, SOL_SOCKET, SO_TIMESTAMP, &one, sizeof(one)) != 0) {
-			errmsg.LogError(errno, NO_ERRCODE, "set SO_TIMESTAMP failed on '%s'", pLstn->sockName);
+			LogError(errno, NO_ERRCODE, "set SO_TIMESTAMP failed on '%s'", pLstn->sockName);
 		}
 	}
 #	else /* HAVE_SCM_CREDENTIALS */
@@ -1128,7 +1127,7 @@ static rsRetVal readSocket(lstn_t *pLstn)
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
 		DBGPRINTF("UNIX socket error: %d = %s.\n", errno, errStr);
-		errmsg.LogError(errno, NO_ERRCODE, "imuxsock: recvfrom UNIX");
+		LogError(errno, NO_ERRCODE, "imuxsock: recvfrom UNIX");
 	}
 
 finalize_it:
@@ -1165,7 +1164,7 @@ activateListeners(void)
 		if(runModConf->ratelimitIntervalSysSock > 0) {
 			if((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
 				/* in this case, we simply turn of rate-limiting */
-				errmsg.LogError(0, NO_ERRCODE, "imuxsock: turning off rate limiting because "
+				LogError(0, NO_ERRCODE, "imuxsock: turning off rate limiting because "
 					"we could not create hash table\n");
 				runModConf->ratelimitIntervalSysSock = 0;
 			}
@@ -1203,7 +1202,7 @@ activateListeners(void)
 #ifdef HAVE_LIBSYSTEMD
 	sd_fds = sd_listen_fds(0);
 	if(sd_fds < 0) {
-		errmsg.LogError(-sd_fds, NO_ERRCODE, "imuxsock: Failed to acquire systemd socket");
+		LogError(-sd_fds, NO_ERRCODE, "imuxsock: Failed to acquire systemd socket");
 		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 	}
 #endif
@@ -1219,7 +1218,7 @@ activateListeners(void)
 	}
 
 	if(actSocks == 0) {
-		errmsg.LogError(0, RS_RET_ERR, "imuxsock does not run because we could not "
+		LogError(0, RS_RET_ERR, "imuxsock does not run because we could not "
 			"aquire any socket\n");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
@@ -1265,7 +1264,7 @@ BEGINsetModCnf
 CODESTARTsetModCnf
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
 				"config parameters [module(...)]");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -1333,7 +1332,7 @@ CODESTARTnewInpInst
 
 	pvals = nvlstGetParams(lst, &inppblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS,
+		LogError(0, RS_RET_MISSING_CNFPARAMS,
 			        "imuxsock: required parameter are missing\n");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -1423,7 +1422,7 @@ ENDendCnfLoad
 static void
 std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst)
 {
-	errmsg.LogError(0, NO_ERRCODE, "imuxsock: ruleset '%s' for socket %s not found - "
+	LogError(0, NO_ERRCODE, "imuxsock: ruleset '%s' for socket %s not found - "
 			"using default ruleset instead", inst->pszBindRuleset,
 			inst->sockName);
 }
@@ -1605,7 +1604,6 @@ CODESTARTmodExit
 
 	objRelease(parser, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(statsobj, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
@@ -1664,7 +1662,6 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(net, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));

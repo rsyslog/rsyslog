@@ -47,7 +47,6 @@ MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("mmutf8fix")
 
 
-DEFobjCurrIf(errmsg);
 DEF_OMOD_STATIC_DATA
 
 /* define operation modes we have */
@@ -165,7 +164,7 @@ CODESTARTnewActInst
 				pData->mode = MODE_CC;
 			} else {
 				char *cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-				errmsg.LogError(0, RS_RET_INVLD_MODE,
+				LogError(0, RS_RET_INVLD_MODE,
 					"mmutf8fix: invalid mode '%s' - ignored",
 					cstr);
 				free(cstr);
@@ -311,7 +310,6 @@ NO_LEGACY_CONF_parseSelectorAct
 
 BEGINmodExit
 CODESTARTmodExit
-	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -329,5 +327,4 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	DBGPRINTF("mmutf8fix: module compiled with rsyslog version %s.\n", VERSION);
-	iRet = objUse(errmsg, CORE_COMPONENT);
 ENDmodInit

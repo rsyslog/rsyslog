@@ -61,7 +61,6 @@ MODULE_CNFNAME("omlibdbi")
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 static int bDbiInitialized = 0;	/* dbi_initialize() can only be called one - this keeps track of it */
 
 typedef struct _instanceData {
@@ -227,7 +226,7 @@ reportDBError(instanceData *pData, int bSilent)
 	/* output log message */
 	errno = 0;
 	if(pData->conn == NULL) {
-		errmsg.LogError(0, NO_ERRCODE, "unknown DB error occured - could not obtain connection handle");
+		LogError(0, NO_ERRCODE, "unknown DB error occured - could not obtain connection handle");
 	} else { /* we can ask dbi for the error description... */
 		uDBErrno = dbi_conn_error(pData->conn, &pszDbiErr);
 		snprintf(errMsg, sizeof(errMsg), "db error (%d): %s\n", uDBErrno, pszDbiErr);
@@ -235,7 +234,7 @@ reportDBError(instanceData *pData, int bSilent)
 			dbgprintf("libdbi, DBError(silent): %s\n", errMsg);
 		else {
 			pData->uLastDBErrno = uDBErrno;
-			errmsg.LogError(0, NO_ERRCODE, "%s", errMsg);
+			LogError(0, NO_ERRCODE, "%s", errMsg);
 		}
 	}
 		
@@ -261,11 +260,11 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 		iDrvrsLoaded = dbi_initialize((char*) pData->dbiDrvrDir);
 #		endif
 		if(iDrvrsLoaded == 0) {
-			errmsg.LogError(0, RS_RET_SUSPENDED, "libdbi error: libdbi or libdbi drivers not "
+			LogError(0, RS_RET_SUSPENDED, "libdbi error: libdbi or libdbi drivers not "
 			"present on this system - suspending.");
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		} else if(iDrvrsLoaded < 0) {
-			errmsg.LogError(0, RS_RET_SUSPENDED, "libdbi error: libdbi could not be "
+			LogError(0, RS_RET_SUSPENDED, "libdbi error: libdbi could not be "
 				"initialized (do you have any dbi drivers installed?) - suspending.");
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
@@ -278,7 +277,7 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 	pData->conn = dbi_conn_new((char*)pData->drvrName);
 #	endif
 	if(pData->conn == NULL) {
-		errmsg.LogError(0, RS_RET_SUSPENDED, "can not initialize libdbi connection");
+		LogError(0, RS_RET_SUSPENDED, "can not initialize libdbi connection");
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	} else { /* we could get the handle, now on with work... */
 		/* Connect to database */
@@ -432,7 +431,7 @@ BEGINsetModCnf
 CODESTARTsetModCnf
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "omlibdbi: error processing "
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "omlibdbi: error processing "
 			  	"module config parameters [module(...)]");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -448,7 +447,7 @@ CODESTARTsetModCnf
 		if(!strcmp(modpblk.descr[i].name, "template")) {
 			loadModConf->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			if(pszFileDfltTplName != NULL) {
-				errmsg.LogError(0, RS_RET_DUP_PARAM, "omlibdbi: warning: default template "
+				LogError(0, RS_RET_DUP_PARAM, "omlibdbi: warning: default template "
 						"was already set via legacy directive - may lead to inconsistent "
 						"results.");
 			}
@@ -563,7 +562,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	CHKiRet(createInstance(&pData));
 	/* no create the instance based on what we currently have */
 	if(cs.drvrName == NULL) {
-		errmsg.LogError(0, RS_RET_NO_DRIVERNAME, "omlibdbi: no db driver name given - action can not "
+		LogError(0, RS_RET_NO_DRIVERNAME, "omlibdbi: no db driver name given - action can not "
 				"be created");
 		ABORT_FINALIZE(RS_RET_NO_DRIVERNAME);
 	}
@@ -640,7 +639,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 #	ifndef HAVE_DBI_TXSUPP
 	DBGPRINTF("omlibdbi: no transaction support in libdbi\n");
 #	endif
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(regCfSysLineHdlr2((uchar *)"actionlibdbidriverdirectory", 0, eCmdHdlrGetWord, NULL, &cs.dbiDrvrDir,
 	STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionlibdbidriver", 0, eCmdHdlrGetWord, NULL, &cs.drvrName,

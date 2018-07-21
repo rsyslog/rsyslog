@@ -43,7 +43,6 @@ MODULE_TYPE_NOKEEP
 
 /* static data */
 DEFobjStaticHelpers
-//DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(netstrm)
 

@@ -65,7 +65,6 @@ MODULE_CNFNAME("omrelp")
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 
 #define DFLT_ENABLE_TLS 0
@@ -183,7 +182,7 @@ static void
 onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
 {
 	wrkrInstanceData_t *pWrkrData = (wrkrInstanceData_t*) pUsr;
-	errmsg.LogError(0, RS_RET_RELP_AUTH_FAIL, "omrelp[%s:%s]: error '%s', object "
+	LogError(0, RS_RET_RELP_AUTH_FAIL, "omrelp[%s:%s]: error '%s', object "
 			" '%s' - action may not work as intended",
 			pWrkrData->pData->target, pWrkrData->pData->port, errmesg, objinfo);
 }
@@ -191,7 +190,7 @@ onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetV
 static void
 onGenericErr(char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
 {
-	errmsg.LogError(0, RS_RET_RELP_ERR, "omrelp: librelp error '%s', object "
+	LogError(0, RS_RET_RELP_ERR, "omrelp: librelp error '%s', object "
 			"'%s' - action may not work as intended",
 			errmesg, objinfo);
 }
@@ -200,7 +199,7 @@ static void
 onAuthErr(void *pUsr, char *authinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
 {
 	instanceData *pData = ((wrkrInstanceData_t*) pUsr)->pData;
-	errmsg.LogError(0, RS_RET_RELP_AUTH_FAIL, "omrelp[%s:%s]: authentication error '%s', peer "
+	LogError(0, RS_RET_RELP_AUTH_FAIL, "omrelp[%s:%s]: authentication error '%s', peer "
 			"is '%s' - DISABLING action", pData->target, pData->port, errmesg, authinfo);
 	pData->bHadAuthFail = 1;
 }
@@ -234,7 +233,7 @@ doCreateRelpClient(wrkrInstanceData_t *pWrkrData)
 		if(relpCltSetGnuTLSPriString(pWrkrData->pRelpClt, (char*) pData->pristring) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 		if(relpCltSetAuthMode(pWrkrData->pRelpClt, (char*) pData->authmode) != RELP_RET_OK) {
-			errmsg.LogError(0, RS_RET_RELP_ERR,
+			LogError(0, RS_RET_RELP_ERR,
 					"omrelp: invalid auth mode '%s'\n", pData->authmode);
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 		}
@@ -376,7 +375,7 @@ CODESTARTnewActInst
 			if(fp == NULL) {
 				char errStr[1024];
 				rs_strerror_r(errno, errStr, sizeof(errStr));
-				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
+				LogError(0, RS_RET_NO_FILE_ACCESS,
 				"error: certificate file %s couldn't be accessed: %s\n",
 				pData->caCertFile, errStr);
 			} else {
@@ -388,7 +387,7 @@ CODESTARTnewActInst
 			if(fp == NULL) {
 				char errStr[1024];
 				rs_strerror_r(errno, errStr, sizeof(errStr));
-				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
+				LogError(0, RS_RET_NO_FILE_ACCESS,
 				"error: certificate file %s couldn't be accessed: %s\n",
 				pData->myCertFile, errStr);
 			} else {
@@ -400,7 +399,7 @@ CODESTARTnewActInst
 			if(fp == NULL) {
 				char errStr[1024];
 				rs_strerror_r(errno, errStr, sizeof(errStr));
-				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
+				LogError(0, RS_RET_NO_FILE_ACCESS,
 				"error: certificate file %s couldn't be accessed: %s\n",
 				pData->myPrivKeyFile, errStr);
 			} else {
@@ -411,7 +410,7 @@ CODESTARTnewActInst
 			if(!strcmp(authMode, "name") || !strcmp(authMode, "fingerprint")) {
 				pData->authmode = (uchar*)authMode;
 			} else {
-				errmsg.LogError(0, RS_RET_INVALID_PARAMS,
+				LogError(0, RS_RET_INVALID_PARAMS,
 						"omrelp error: invalid authmode: %s\n",
 						authMode);
 			}
@@ -478,12 +477,12 @@ doConnect(wrkrInstanceData_t *const pWrkrData)
 	if(iRet == RELP_RET_OK) {
 		pWrkrData->bIsConnected = 1;
 	} else if(iRet == RELP_RET_ERR_NO_TLS) {
-		errmsg.LogError(0, iRet, "omrelp: Could not connect, librelp does NOT "
+		LogError(0, iRet, "omrelp: Could not connect, librelp does NOT "
 				"does not support TLS (most probably GnuTLS lib "
 				"is too old)!");
 		FINALIZE;
 	} else if(iRet == RELP_RET_ERR_NO_TLS_AUTH) {
-		errmsg.LogError(0, iRet,
+		LogError(0, iRet,
 				"omrelp: could not activate relp TLS with "
 				"authentication, librelp does not support it "
 				"(most probably GnuTLS lib is too old)! "
@@ -626,7 +625,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			/* SKIP AND COUNT */;
 		pData->port = MALLOC(i + 1);
 		if(pData->port == NULL) {
-			errmsg.LogError(0, NO_ERRCODE, "Could not get memory to store relp port, "
+			LogError(0, NO_ERRCODE, "Could not get memory to store relp port, "
 				 "using default port, results may not be what you intend\n");
 			/* we leave f_forw.port set to NULL, this is then handled by getRelpPt() */
 		} else {
@@ -642,7 +641,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			if(bErr == 0) { /* only 1 error msg! */
 				bErr = 1;
 				errno = 0;
-				errmsg.LogError(0, NO_ERRCODE, "invalid selector line (port), probably not doing "
+				LogError(0, NO_ERRCODE, "invalid selector line (port), probably not doing "
 					 "what was intended");
 			}
 		}
@@ -670,7 +669,6 @@ CODESTARTmodExit
 
 	/* release what we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
-	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -699,6 +697,5 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(relpEngineSetEnableCmd(pRelpEngine, (uchar*) "syslog", eRelpCmdState_Required));
 
 	/* tell which objects we need */
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 ENDmodInit

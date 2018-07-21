@@ -46,7 +46,6 @@ PARSER_NAME("rsyslog.panngfw")
 /* internal structures
  */
 DEF_PMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(parser)
 DEFobjCurrIf(datetime)
@@ -265,7 +264,6 @@ ENDparse
 BEGINmodExit
 CODESTARTmodExit
     /* release what we no longer need */
-    objRelease(errmsg, CORE_COMPONENT);
     objRelease(glbl, CORE_COMPONENT);
     objRelease(parser, CORE_COMPONENT);
     objRelease(datetime, CORE_COMPONENT);
@@ -284,7 +282,6 @@ CODESTARTmodInit
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
     CHKiRet(objUse(glbl, CORE_COMPONENT));
-    CHKiRet(objUse(errmsg, CORE_COMPONENT));
     CHKiRet(objUse(parser, CORE_COMPONENT));
     CHKiRet(objUse(datetime, CORE_COMPONENT));
 

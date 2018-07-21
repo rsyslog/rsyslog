@@ -69,7 +69,6 @@ MODULE_CNFNAME("ommongodb")
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(datetime)
 
 typedef struct _instanceData {
@@ -187,7 +186,7 @@ static void
 reportMongoError(instanceData *pData)
 {
 	if(pData->bErrMsgPermitted) {
-		errmsg.LogError(0, RS_RET_ERR, "ommongodb: error: %s", pData->error.message);
+		LogError(0, RS_RET_ERR, "ommongodb: error: %s", pData->error.message);
 		pData->bErrMsgPermitted = 0;
 	}
 }
@@ -721,7 +720,6 @@ NO_LEGACY_CONF_parseSelectorAct
 
 BEGINmodExit
 CODESTARTmodExit
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
 ENDmodExit
 
@@ -741,7 +739,6 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
 	DBGPRINTF("ommongodb: module compiled with rsyslog version %s.\n", VERSION);

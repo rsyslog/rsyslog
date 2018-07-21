@@ -54,7 +54,6 @@ MODULE_CNFNAME("mmsnmptrapd")
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
 
 /* static data */
-DEFobjCurrIf(errmsg);
 
 /* internal structures
  */
@@ -286,7 +285,7 @@ buildSeverityMapping(instanceData *const pData)
 			FINALIZE;
 		}
 		if(getSubstring(&mapping, ',', pszSevCode, sizeof(pszSevCode)) == 0) {
-			errmsg.LogError(0, RS_RET_ERR, "error: invalid severity mapping, cannot "
+			LogError(0, RS_RET_ERR, "error: invalid severity mapping, cannot "
 					"extract code. given: '%s'\n", cs.pszSeverityMapping);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
@@ -294,7 +293,7 @@ buildSeverityMapping(instanceData *const pData)
 		if(!isNumeric(pszSevCode))
 			sevCode = -1;
 		if(sevCode < 0 || sevCode > 7) {
-			errmsg.LogError(0, RS_RET_ERR, "error: severity code %d outside of valid "
+			LogError(0, RS_RET_ERR, "error: severity code %d outside of valid "
 					"range 0..7 (was string '%s')\n", sevCode, pszSevCode);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
@@ -368,7 +367,6 @@ ENDparseSelectorAct
 
 BEGINmodExit
 CODESTARTmodExit
-	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -423,7 +421,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 		ABORT_FINALIZE(RS_RET_NO_MSG_PASSING);
 	}
 
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* TODO: config vars ininit can be replaced by commented-out code above in v6 */
 	cs.pszTagName = NULL;

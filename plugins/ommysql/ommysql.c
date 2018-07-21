@@ -54,7 +54,6 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 
 typedef struct _instanceData {
 	char	dbsrv[MAXHOSTNAMELEN+1];	/* IP or hostname of DB server*/ 
@@ -201,7 +200,7 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent)
 	pData = pWrkrData->pData;
 	pWrkrData->hmysql = mysql_init(NULL);
 	if(pWrkrData->hmysql == NULL) {
-		errmsg.LogError(0, RS_RET_SUSPENDED, "can not initialize MySQL handle");
+		LogError(0, RS_RET_SUSPENDED, "can not initialize MySQL handle");
 		iRet = RS_RET_SUSPENDED;
 	} else { /* we could get the handle, now on with work... */
 		mysql_options(pWrkrData->hmysql,MYSQL_READ_DEFAULT_GROUP,
@@ -218,7 +217,7 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent)
 					rs_strerror_r(err, errStr, sizeof(errStr));
 					dbgprintf("mysql configuration error(%d): %s - %s\n",err,msg,errStr);
 				} else
-					errmsg.LogError(err,NO_ERRCODE,"mysql configuration error: %s\n",msg);
+					LogError(err,NO_ERRCODE,"mysql configuration error: %s\n",msg);
 			} else {
 				fclose(fp);
 				mysql_options(pWrkrData->hmysql,MYSQL_READ_DEFAULT_FILE,pData->configfile);
@@ -488,7 +487,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * Retries make no sense. 
 	 */
 	if (iMySQLPropErr) { 
-		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "Trouble with MySQL connection properties. "
+		LogError(0, RS_RET_INVALID_PARAMS, "Trouble with MySQL connection properties. "
 				"-MySQL logging disabled");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	} else {
@@ -538,10 +537,9 @@ CODESTARTmodInit
 INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
 	if(!bCoreSupportsBatching) {	
-		errmsg.LogError(0, NO_ERRCODE, "ommysql: rsyslog core too old");
+		LogError(0, NO_ERRCODE, "ommysql: rsyslog core too old");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -553,7 +551,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	   mysql_server_init(0, NULL, NULL)
 #	endif
 	                                   ) {
-		errmsg.LogError(0, NO_ERRCODE, "ommysql: intializing mysql client failed, plugin "
+		LogError(0, NO_ERRCODE, "ommysql: intializing mysql client failed, plugin "
 		                "can not run");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}

@@ -46,7 +46,6 @@
 DEFobjStaticHelpers
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(netstrm)
 DEFobjCurrIf(datetime)
 
@@ -273,7 +272,6 @@ ENDobjQueryInterface(strms_sess)
 BEGINObjClassExit(strms_sess, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
 CODESTARTObjClassExit(strms_sess)
 	/* release objects we no longer need */
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(netstrm, LM_NETSTRMS_FILENAME);
 	objRelease(datetime, CORE_COMPONENT);
 ENDObjClassExit(strms_sess)
@@ -285,7 +283,6 @@ ENDObjClassExit(strms_sess)
  */
 BEGINObjClassInit(strms_sess, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE class also in END MACRO! */
 	/* request objects we use */
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(netstrm, LM_NETSTRMS_FILENAME));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));

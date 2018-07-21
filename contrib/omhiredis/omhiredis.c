@@ -48,7 +48,6 @@ MODULE_CNFNAME("omhiredis")
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 
 #define OMHIREDIS_MODE_TEMPLATE 0
 #define OMHIREDIS_MODE_QUEUE 1
@@ -151,7 +150,7 @@ static rsRetVal initHiredis(wrkrInstanceData_t *pWrkrData, int bSilent)
 			timeout);
 	if (pWrkrData->conn->err) {
 		if(!bSilent)
-			errmsg.LogError(0, RS_RET_SUSPENDED,
+			LogError(0, RS_RET_SUSPENDED,
 				"can not initialize redis handle");
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
@@ -161,7 +160,7 @@ static rsRetVal initHiredis(wrkrInstanceData_t *pWrkrData, int bSilent)
 		int rc;
 		rc = redisAppendCommand(pWrkrData->conn, "AUTH %s", serverpasswd);
 		if (rc == REDIS_ERR) {
-			errmsg.LogError(0, NO_ERRCODE, "omhiredis: %s", pWrkrData->conn->errstr);
+			LogError(0, NO_ERRCODE, "omhiredis: %s", pWrkrData->conn->errstr);
 			ABORT_FINALIZE(RS_RET_ERR);
 		} else {
 			pWrkrData->count++;
@@ -206,7 +205,7 @@ static rsRetVal writeHiredis(uchar* key, uchar *message, wrkrInstanceData_t *pWr
 	}
 
 	if (rc == REDIS_ERR) {
-		errmsg.LogError(0, NO_ERRCODE, "omhiredis: %s", pWrkrData->conn->errstr);
+		LogError(0, NO_ERRCODE, "omhiredis: %s", pWrkrData->conn->errstr);
 		dbgprintf("omhiredis: %s\n", pWrkrData->conn->errstr);
 		ABORT_FINALIZE(RS_RET_ERR);
 	} else {
@@ -407,10 +406,9 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* only supports rsyslog 6 configs */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
 	if (!bCoreSupportsBatching) {
-		errmsg.LogError(0, NO_ERRCODE, "omhiredis: rsyslog core does not support batching - abort");
+		LogError(0, NO_ERRCODE, "omhiredis: rsyslog core does not support batching - abort");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	DBGPRINTF("omhiredis: module compiled with rsyslog version %s.\n", VERSION);

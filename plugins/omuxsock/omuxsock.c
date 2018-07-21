@@ -51,7 +51,6 @@ MODULE_CNFNAME("omuxsock")
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 
 #define INVLD_SOCK -1
@@ -133,7 +132,7 @@ setLegacyDfltTpl(void __attribute__((unused)) *pVal, uchar* newVal)
 
 	if(loadModConf != NULL && loadModConf->tplName != NULL) {
 		free(newVal);
-		errmsg.LogError(0, RS_RET_ERR, "omuxsock default template already set via module "
+		LogError(0, RS_RET_ERR, "omuxsock default template already set via module "
 			"global parameter - can no longer be changed");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
@@ -171,7 +170,7 @@ BEGINsetModCnf
 CODESTARTsetModCnf
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
 				"config parameters [module(...)]");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -187,7 +186,7 @@ CODESTARTsetModCnf
 		if(!strcmp(modpblk.descr[i].name, "template")) {
 			loadModConf->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			if(cs.tplName != NULL) {
-				errmsg.LogError(0, RS_RET_DUP_PARAM, "omuxsock: default template "
+				LogError(0, RS_RET_DUP_PARAM, "omuxsock: default template "
 						"was already set via legacy directive - may lead to inconsistent "
 						"results.");
 			}
@@ -385,7 +384,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, 0, getDfltTpl()));
 	
 	if(cs.sockName == NULL) {
-		errmsg.LogError(0, RS_RET_NO_SOCK_CONFIGURED, "No output socket configured for omuxsock\n");
+		LogError(0, RS_RET_NO_SOCK_CONFIGURED, "No output socket configured for omuxsock\n");
 		ABORT_FINALIZE(RS_RET_NO_SOCK_CONFIGURED);
 	}
 
@@ -412,7 +411,6 @@ freeConfigVars(void)
 BEGINmodExit
 CODESTARTmodExit
 	/* release what we no longer need */
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 
 	freeConfigVars();
@@ -444,7 +442,6 @@ INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	CHKiRet(regCfSysLineHdlr((uchar *)"omuxsockdefaulttemplate", 0, eCmdHdlrGetWord, setLegacyDfltTpl,
 		NULL, NULL));

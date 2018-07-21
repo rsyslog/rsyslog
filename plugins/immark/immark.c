@@ -54,7 +54,6 @@ MODULE_CNFNAME("immark")
 /* Module static data */
 DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(glbl)
-DEFobjCurrIf(errmsg)
 
 static int iMarkMessagePeriod = DEFAULT_MARK_PERIOD;
 struct modConfData_s {
@@ -107,7 +106,7 @@ BEGINsetModCnf
 CODESTARTsetModCnf
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
 				"config parameters [module(...)]");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -149,7 +148,7 @@ ENDendCnfLoad
 BEGINcheckCnf
 CODESTARTcheckCnf
 	if(pModConf->iMarkMessagePeriod == 0) {
-		errmsg.LogError(0, NO_ERRCODE, "immark: mark message period must not be 0, can not run");
+		LogError(0, NO_ERRCODE, "immark: mark message period must not be 0, can not run");
 		ABORT_FINALIZE(RS_RET_NO_RUN);	/* we can not run with this error */
 	}
 finalize_it:
@@ -205,7 +204,6 @@ ENDwillRun
 
 BEGINmodExit
 CODESTARTmodExit
-	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -228,7 +226,6 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* legacy config handlers */
 	CHKiRet(regCfSysLineHdlr2((uchar *)"markmessageperiod", 0, eCmdHdlrInt, NULL,

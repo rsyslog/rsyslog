@@ -29,7 +29,6 @@ MODULE_CNFNAME("mmgrok");
         
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
 
-DEFobjCurrIf(errmsg);
 DEF_OMOD_STATIC_DATA
 
 typedef struct result_s{
@@ -372,7 +371,6 @@ ENDparseSelectorAct
 
 BEGINmodExit
 CODESTARTmodExit
-	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -416,7 +414,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 		ABORT_FINALIZE(RS_RET_NO_MSG_PASSING);
 	}
 
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 				    resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));

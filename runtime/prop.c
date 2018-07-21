@@ -242,7 +242,6 @@ ENDobjQueryInterface(prop)
  * rgerhards, 2009-04-06
  */
 BEGINObjClassExit(prop, OBJ_IS_CORE_MODULE) /* class, version */
-//	objRelease(errmsg, CORE_COMPONENT);
 ENDObjClassExit(prop)
 
 
@@ -252,7 +251,6 @@ ENDObjClassExit(prop)
  */
 BEGINObjClassInit(prop, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
-//	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, propDebugPrint);
