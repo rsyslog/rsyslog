@@ -1,8 +1,8 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 set $!backslash = "a \\ \"b\" c / d"; # '/' must not be escaped!
 
 template(name="json" type="list" option.json="on") {
@@ -15,16 +15,16 @@ template(name="json" type="list" option.json="on") {
 :msg, contains, "msgnum:" action(type="omfile" template="json"
 			         file="rsyslog.out.log")
 '
-. $srcdir/diag.sh startup
+startup
 . $srcdir/diag.sh injectmsg  0 1
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown    # we need to wait until rsyslogd is finished!
 
 printf '{"backslash":"a \\\\ \\"b\\" c / d"}\n' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid JSON generated, rsyslog.out.log is:"
   cat rsyslog.out.log
-  . $srcdir/diag.sh error-exit 1
+  error_exit 1
 fi;
 
-. $srcdir/diag.sh exit
+exit_test

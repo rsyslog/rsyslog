@@ -6,12 +6,12 @@
 # and transactions.
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup omprog-transactions.conf
+startup omprog-transactions.conf
 . $srcdir/diag.sh wait-startup
 . $srcdir/diag.sh injectmsg 0 10
 . $srcdir/diag.sh wait-queueempty
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 
 # Since the transaction boundaries are not deterministic, we cannot check for
 # an exact expected output. We must check the output programmatically.
@@ -93,7 +93,7 @@ fi
 if [[ -n "$error" ]]; then
     echo "rsyslog.out.log: line $line_num: $error"
     cat rsyslog.out.log
-    . $srcdir/diag.sh error-exit 1
+    error_exit 1
 fi
 
 expected_messages=(
@@ -113,7 +113,7 @@ if [[ "${messages_processed[*]}" != "${expected_messages[*]}" ]]; then
     printf '%s\n' "${messages_processed[@]}"
     echo "contents of rsyslog.out.log:"
     cat rsyslog.out.log
-    . $srcdir/diag.sh error-exit 1
+    error_exit 1
 fi
 
-. $srcdir/diag.sh exit
+exit_test

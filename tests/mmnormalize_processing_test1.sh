@@ -5,8 +5,8 @@
 
 export TZ=TEST+02:00
 
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/mmnormalize/.libs/mmnormalize")
 input(type="imtcp" port="13514" ruleset="ruleset1")
@@ -54,17 +54,17 @@ ruleset(name="ruleset1") {
 	}	
 }
 '
-FAKETIME='2017-03-08 12:53:47' $srcdir/diag.sh startup
+FAKETIME='2017-03-08 12:53:47' startup
 . $srcdir/diag.sh tcpflood -m1 -M "\"<37>1 2017-03-08T12:53:47+02:00 Host1.domain.com Security - - - SER1 M01 WIN [AUF] Wed Mar 08 11:53:48 2017: N\A/Security/Host1.domain.com/Microsoft-Windows-Security-Auditing (5152) - message\""
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 echo '2017-03-08T12:53:47+02:00 2017-03-08T12:53:47+02:00 Host1.domain.com Security [AUF] Wed Mar 08 11:53:48 2017: N\A/Security/Host1.domain.com/Microsoft-Windows-Security-Auditing (5152) - message
 /sb/logs/incoming/2017/03/08/svc_SER1/ret_M01/os_WIN/127.0.0.1/r_relay1/security.gz
 [][][127.0.0.1][1488970427][] Mar  8 12:53:47 127.0.0.1 EvntSLog: [AUF] Wed Mar 08 11:53:48 2017: N\A/Security/Host1.domain.com/Microsoft-Windows-Security-Auditing (5152) - message' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
   cat rsyslog.out.log
-  . $srcdir/diag.sh error-exit  1
+  error_exit  1
 fi;
 
-. $srcdir/diag.sh exit
+exit_test

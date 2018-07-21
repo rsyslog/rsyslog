@@ -1,8 +1,8 @@
 #!/bin/bash
 # Added 2017-12-09 by Rainer Gerhards, released under ASL 2.0
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="13514")
 template(name="outfmt" type="string" string="%$!%\n")
@@ -13,10 +13,10 @@ local4.* {
 }
 '
 
-. $srcdir/diag.sh startup
+startup
 . $srcdir/diag.sh tcpflood -m1
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 
 # Our fixed and calculated expected results
 EXPECTED='{ "parsed": { "c1": "data" } }'
@@ -26,7 +26,7 @@ if [[ $? -ne 0 ]]; then
   printf "expected:\n$EXPECTED\n"
   printf "rsyslog.out is:\n"
   cat rsyslog.out.log
-  . $srcdir/diag.sh error-exit 1
+  error_exit 1
 fi;
 
-. $srcdir/diag.sh exit
+exit_test

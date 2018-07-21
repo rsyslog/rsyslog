@@ -10,19 +10,19 @@
 
 . $srcdir/diag.sh init
 . $srcdir/diag.sh require-journalctl
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imjournal/.libs/imjournal")
 
 template(name="outfmt" type="string" string="%msg%\n")
 action(type="omfile" template="outfmt" file="rsyslog.out.log")
 '
-. $srcdir/diag.sh startup-vg
+startup_vg
 TESTMSG="TestBenCH-RSYSLog imjournal This is a test message - $(date +%s)"
 ./journal_print "$TESTMSG"
 ./msleep 500
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown-vg
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
 journalctl -q | grep -qF "$TESTMSG"
 if [ $? -ne 0 ]; then
@@ -37,6 +37,6 @@ if [ $? -ne 0 ]; then
   echo "FAIL: imjournal test message could not be found!"
   echo "Expected message content was:"
   echo "$TESTMSG"
-  . $srcdir/diag.sh error-exit 1
+  error_exit 1
 fi;
-. $srcdir/diag.sh exit
+exit_test

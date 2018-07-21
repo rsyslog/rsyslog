@@ -4,11 +4,11 @@
 echo ===============================================================================
 echo \rscript_hash64.sh\]: test for hash64 and hash64mod script-function
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup rscript_hash64.conf
+startup rscript_hash64.conf
 . $srcdir/diag.sh tcpflood -m 20
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown
+wait_shutdown
 . $srcdir/diag.sh content-pattern-check "^\(-2574714428477944902 -  14\|-50452361579464591 -  25\)$"
-. $srcdir/diag.sh exit
+exit_test

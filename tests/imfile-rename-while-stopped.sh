@@ -11,9 +11,9 @@ echo [imfile-rename.sh]
 ./inputfilegen -m $TESTMESSAGES > rsyslog.input.1.log
 ls -li rsyslog.input*
 
-. $srcdir/diag.sh startup imfile-wildcards-simple.conf
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
+startup imfile-wildcards-simple.conf
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown	# we need to wait until rsyslogd is finished!
 
 # Move to another filename
 mv rsyslog.input.1.log rsyslog.input.2.log
@@ -24,10 +24,10 @@ ls -li rsyslog.input*
 echo ls test-spool:
 ls -l test-spool
 
-. $srcdir/diag.sh startup imfile-wildcards-simple.conf
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
+startup imfile-wildcards-simple.conf
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown	# we need to wait until rsyslogd is finished!
 
-. $srcdir/diag.sh seq-check 0 $TESTMESSAGESFULL
+seq_check 0 $TESTMESSAGESFULL
 wc rsyslog.out.log
-. $srcdir/diag.sh exit
+exit_test

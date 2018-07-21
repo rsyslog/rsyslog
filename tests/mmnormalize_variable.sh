@@ -4,11 +4,11 @@
 echo ===============================================================================
 echo \[mmnormalize_variable.sh\]: basic test for mmnormalize module variable-support
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup mmnormalize_variable.conf
+startup mmnormalize_variable.conf
 . $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/date_time_msg
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown 
+wait_shutdown 
 . $srcdir/diag.sh content-check  "h:13 m:20 s:18"
-. $srcdir/diag.sh exit
+exit_test

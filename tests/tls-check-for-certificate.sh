@@ -1,8 +1,8 @@
 #!/bin/bash
 # add 2017-05-05 by Pascal Withopf, released under ASL 2.0
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 global(
 	defaultNetstreamDriver="gtls"
 	defaultNetstreamDriverKeyFile="tls-certs/key.pem"
@@ -18,10 +18,10 @@ if $msg contains "msgnum" then {
 	action(type="omfile" template="outfmt" file="rsyslog.out.log")
 }
 '
-. $srcdir/diag.sh startup
+startup
 . $srcdir/diag.sh tcpflood -m1000 -Ttls -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh seq-check 0 999
+shutdown_when_empty
+wait_shutdown
+seq_check 0 999
 
-. $srcdir/diag.sh exit
+exit_test

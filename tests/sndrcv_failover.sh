@@ -19,4 +19,4 @@ if [[ -s rsyslog.empty ]] ; then
 else
   echo "rsyslog.empty is empty - OK"
 fi ;
-. $srcdir/diag.sh exit
+exit_test

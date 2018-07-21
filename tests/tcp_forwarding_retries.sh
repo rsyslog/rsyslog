@@ -14,8 +14,8 @@ messages=20000 # how many messages to inject?
 BGPROCESS=$!
 echo background minitcpsrvr process id is $BGPROCESS
 
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 :msg, contains, "msgnum:" {
 	action(type="omfwd"
@@ -24,10 +24,10 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 	       template="outfmt")
 }
 '
-. $srcdir/diag.sh startup
+startup
 . $srcdir/diag.sh injectmsg 0 $messages
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 
 # note: minitcpsrvr shuts down automatically if the connection is closed, but
 # we still try to kill it in case the test did not connect to it! Note that we
@@ -37,5 +37,5 @@ echo wating on background process
 #kill $BGPROCESS &> /dev/null
 wait $BGPROCESS
 
-. $srcdir/diag.sh seq-check 0 $(($messages-1))
-. $srcdir/diag.sh exit
+seq_check 0 $(($messages-1))
+exit_test

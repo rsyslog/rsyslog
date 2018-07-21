@@ -4,8 +4,8 @@
 . $srcdir/diag.sh init
 
 echo "*** string template ****"
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="13514")
 
@@ -13,10 +13,10 @@ template(name="outfmt" type="string" string="-%msg:109:116:%-\n")
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
 			         file="rsyslog.out.log")
 '
-. $srcdir/diag.sh startup
+startup
 . $srcdir/diag.sh tcpflood -m1
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 echo "--" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid output generated, rsyslog.out.log is:"
@@ -28,8 +28,8 @@ fi;
 
 echo "*** list template ****"
 rm rsyslog.out.log # cleanup previous run
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="13514")
 template(name="outfmt" type="list") {
@@ -41,10 +41,10 @@ template(name="outfmt" type="list") {
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
 			         file="rsyslog.out.log")
 '
-. $srcdir/diag.sh startup
+startup
 . $srcdir/diag.sh tcpflood -m1
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 echo "--" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid output generated, rsyslog.out.log is:"
@@ -53,4 +53,4 @@ if [ ! $? -eq 0 ]; then
   echo "--"
   exit 1
 fi;
-. $srcdir/diag.sh exit
+exit_test

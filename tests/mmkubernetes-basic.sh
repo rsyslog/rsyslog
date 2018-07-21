@@ -19,8 +19,8 @@ BGPROCESS=$!
 echo background mmkubernetes_test_server.py process id is $BGPROCESS
 
 pwd=$( pwd )
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imfile/.libs/imfile")
 module(load="../plugins/mmjsonparse/.libs/mmjsonparse")
 module(load="../contrib/mmkubernetes/.libs/mmkubernetes" token="dummy" kubernetesurl="http://localhost:18443"
@@ -51,10 +51,10 @@ cat > pod-name4.log <<EOF
 {"message":"a message from container 4","CONTAINER_NAME":"some-prefix_container-name4_pod-name4_namespace-name4_unused4_unused44","CONTAINER_ID_FULL":"id4"}
 EOF
 rm -f imfile-state\:*
-. $srcdir/diag.sh startup
+startup
 sleep 10 || :
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 
 kill $BGPROCESS
 . $srcdir/diag.sh wait-pid-termination rsyslog${testsrv}.pid
@@ -91,7 +91,7 @@ if [ $? -ne 0 ]; then
 	echo
 	echo "FAIL: expected data not found. rsyslog.out.log is:"
 	cat rsyslog.out.log
-	. $srcdir/diag.sh error-exit 1
+	error_exit 1
 fi
 
-. $srcdir/diag.sh exit
+exit_test

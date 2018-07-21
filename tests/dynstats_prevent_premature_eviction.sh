@@ -11,22 +11,22 @@ fi
 echo ===============================================================================
 echo \[dynstats_prevent_premature_eviction.sh\]: test for ensuring metrics are not evicted before unused-ttl
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup dynstats_reset.conf
+startup dynstats_reset.conf
 . $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
-. $srcdir/diag.sh msleep 1000
+rst_msleep 1000
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_1
-. $srcdir/diag.sh msleep 4000
+rst_msleep 4000
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_2
-. $srcdir/diag.sh msleep 4000
+rst_msleep 4000
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_3
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
 . $srcdir/diag.sh content-check "foo 001 0"
 . $srcdir/diag.sh content-check "foo 006 0"
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown
+wait_shutdown
  # because dyn-accumulators for existing metrics were posted-to under a second, they should not have been evicted
 . $srcdir/diag.sh custom-content-check 'baz=2' 'rsyslog.out.stats.log'
 . $srcdir/diag.sh custom-content-check 'bar=1' 'rsyslog.out.stats.log'
@@ -38,4 +38,4 @@ echo wait on shutdown
 . $srcdir/diag.sh first-column-sum-check 's/.*new_metric_add=\([0-9]\+\)/\1/g' 'new_metric_add=' 'rsyslog.out.stats.log' 3
 . $srcdir/diag.sh first-column-sum-check 's/.*ops_overflow=\([0-9]\+\)/\1/g' 'ops_overflow=' 'rsyslog.out.stats.log' 0
 . $srcdir/diag.sh first-column-sum-check 's/.*no_metric=\([0-9]\+\)/\1/g' 'no_metric=' 'rsyslog.out.stats.log' 0
-. $srcdir/diag.sh exit
+exit_test

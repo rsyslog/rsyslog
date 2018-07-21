@@ -4,16 +4,16 @@
 # addd 2016-03-03 by RGerhards, released under ASL 2.0
 echo \[glbl-unloadmodules\]: 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 global(debug.unloadModules="off")
 
 action(type="omfile" file="rsyslog.out.log")
 '
-. $srcdir/diag.sh startup
+startup
 sleep 1
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 # to check for support, we check if an error message has
 # been recorded, which would bear the name of our option.
 # if it is not recorded, we assume all is well. Not perfect,
@@ -24,4 +24,4 @@ if [ ! $? -eq 1 ]; then
   cat rsyslog.out.log
   exit 1
 fi;
-. $srcdir/diag.sh exit
+exit_test

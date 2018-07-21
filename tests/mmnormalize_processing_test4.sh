@@ -5,8 +5,8 @@
 
 export TZ=TEST-02:00
 
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/mmnormalize/.libs/mmnormalize")
 input(type="imtcp" port="13514" ruleset="ruleset1")
@@ -24,16 +24,16 @@ ruleset(name="ruleset1") {
 
 }
 '
-FAKETIME='2017-03-08 14:56:37' $srcdir/diag.sh startup
+FAKETIME='2017-03-08 14:56:37' startup
 . $srcdir/diag.sh tcpflood -m1 -M "\"<187>Mar  8 14:56:37 host4 Process2: {SER4.local7 Y01 LNX [SRCH ALRT DASH REPT ANOM]} (/sb/env/logs/dir1/dir2/log_20170308.log) in 1: X/c79RgpDtrva5we84XHTg== (String)\""
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 echo '2017-03-08T14:56:37+02:00 2017-03-08T14:56:37+02:00 host4 Process2 in 1: X/c79RgpDtrva5we84XHTg== (String)
 /sb/logs/incoming/2017/03/08/svc_SER4/ret_Y01/os_LNX/127.0.0.1/r_relay1/sb/env/logs/dir1/dir2/log_20170308.log.gz' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
   cat rsyslog.out.log
-  . $srcdir/diag.sh error-exit  1
+  error_exit  1
 fi;
 
-. $srcdir/diag.sh exit
+exit_test

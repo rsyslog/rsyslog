@@ -1,8 +1,8 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 template(name="outfmt" type="string" string="%$!mmdb_root%\n")
 
 module(load="../plugins/mmdblookup/.libs/mmdblookup" container="!mmdb_root")
@@ -15,9 +15,9 @@ ruleset(name="testing") {
 	action(type="mmdblookup" mmdbfile=`echo $srcdir/test.mmdb` key="$!ip" fields="city" )
 	action(type="omfile" file="./rsyslog.out.log" template="outfmt")
 }'
-. $srcdir/diag.sh startup
+startup
 . $srcdir/diag.sh tcpflood -m 1 -j "202.106.0.20\ "
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 . $srcdir/diag.sh content-check '{ "city": "Beijing" }'
-. $srcdir/diag.sh exit
+exit_test

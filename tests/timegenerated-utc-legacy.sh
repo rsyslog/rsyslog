@@ -13,8 +13,8 @@
 
 export TZ=TEST+02:00
 
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
 $InputTCPServerRun 13514
 
@@ -26,10 +26,10 @@ template(name="outfmt" type="string"
 
 echo "***SUBTEST: check 2016-03-01"
 rm -f rsyslog.out.log	# do cleanup of previous subtest
-FAKETIME='2016-03-01 12:00:00' $srcdir/diag.sh startup
+FAKETIME='2016-03-01 12:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 echo "Mar  1 14:00:00" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, rsyslog.out.log is:"
@@ -37,4 +37,4 @@ if [ ! $? -eq 0 ]; then
   exit 1
 fi;
 
-. $srcdir/diag.sh exit
+exit_test

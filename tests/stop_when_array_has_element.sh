@@ -4,13 +4,13 @@
 echo ===============================================================================
 echo \[stop_when_array_has_element.sh\]: loop detecting presense of an element and stopping ruleset execution
 . $srcdir/diag.sh init stop_when_array_has_element.sh
-. $srcdir/diag.sh startup stop_when_array_has_element.conf
+startup stop_when_array_has_element.conf
 . $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/stop_when_array_has_elem_input
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown 
+wait_shutdown 
 . $srcdir/diag.sh content-check '"abc0"'
 . $srcdir/diag.sh content-check '"abc2"'
 . $srcdir/diag.sh assert-content-missing 'xyz0'
-. $srcdir/diag.sh exit
+exit_test

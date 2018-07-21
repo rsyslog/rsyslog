@@ -2,12 +2,12 @@
 # add 2017-10-30 by PascalWithopf, released under ASL 2.0
 #tests for Segmentation Fault
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 #set $!r = $!var1!var3!var2;
 '
-. $srcdir/diag.sh startup
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+startup
+shutdown_when_empty
+wait_shutdown
 
-. $srcdir/diag.sh exit
+exit_test

@@ -7,8 +7,8 @@ echo ======================================================================
 echo [imfile-discard-truncated-line.sh]
 . $srcdir/diag.sh check-inotify
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 $MaxMessageSize 128
 module(load="../plugins/imfile/.libs/imfile")
 input(type="imfile"
@@ -28,7 +28,7 @@ ruleset(name="ruleset") {
 }
 action(type="omfile" file="rsyslog2.out.log" template="outfmt")
 '
-. $srcdir/diag.sh startup
+startup
 
 # write the beginning of the file
 echo 'msgnum:0
@@ -47,8 +47,8 @@ msgnum:9' > rsyslog.input
 echo 'END OF TEST' >> rsyslog.input
 # sleep a little to give rsyslog a chance to begin processing
 ./msleep 500
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown    # we need to wait until rsyslogd is finished!
 
 printf 'HEADER msgnum:0
 HEADER msgnum:1
@@ -66,7 +66,7 @@ if [ $? -eq 0 ]; then
         echo
         echo "FAIL: expected error message from missing input file not found. rsyslog2.out.log is:"
         cat rsyslog2.out.log
-        . $srcdir/diag.sh error-exit 1
+        error_exit 1
 fi
 
-. $srcdir/diag.sh exit
+exit_test

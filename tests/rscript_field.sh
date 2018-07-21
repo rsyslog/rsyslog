@@ -4,11 +4,11 @@
 echo ===============================================================================
 echo \[rscript_field.sh\]: testing rainerscript field\(\) function
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup rscript_field.conf
+startup rscript_field.conf
 . $srcdir/diag.sh injectmsg  0 5000
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown 
-. $srcdir/diag.sh seq-check  0 4999
-. $srcdir/diag.sh exit
+wait_shutdown 
+seq_check  0 4999
+exit_test

@@ -10,7 +10,7 @@ export IMFILECHECKTIMEOUT="5"
 # soon as it start up (so the file should exist at that point).
 
 # Start rsyslog now before adding more files
-. $srcdir/diag.sh startup imfile-wildcards-dirs.conf
+startup imfile-wildcards-dirs.conf
 # sleep a little to give rsyslog a chance to begin processing
 sleep 1
 
@@ -39,6 +39,6 @@ done
 # sleep a little to give rsyslog a chance for processing
 sleep 1
 
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
-. $srcdir/diag.sh exit
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown	# we need to wait until rsyslogd is finished!
+exit_test

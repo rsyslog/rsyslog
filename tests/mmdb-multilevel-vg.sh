@@ -6,8 +6,8 @@
 export RS_TESTBENCH_VALGRIND_EXTRA_OPTS="$RS_TESTBENCH_VALGRIND_EXTRA_OPTS --suppressions=$srcdir/libmaxmindb.supp"
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 template(name="outfmt" type="string" string="%$!iplocation%\n")
 
 module(load="../plugins/mmdblookup/.libs/mmdblookup")
@@ -23,10 +23,10 @@ ruleset(name="testing") {
 	action(type="mmdblookup" mmdbfile=`echo $srcdir/test.mmdb` key="$!ip" fields=":city_name:city" )
 	action(type="omfile" file="./rsyslog.out.log" template="outfmt")
 }'
-. $srcdir/diag.sh startup-vg
+startup_vg
 . $srcdir/diag.sh tcpflood -m 100 -j "202.106.0.20\ "
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown-vg
+shutdown_when_empty
+wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
 . $srcdir/diag.sh content-check '{ "city_name": "Beijing" }'
-. $srcdir/diag.sh exit 
+exit_test 

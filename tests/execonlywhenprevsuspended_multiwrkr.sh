@@ -3,7 +3,7 @@
 echo =====================================================================================
 echo \[execonlywhenprevsuspended_multiwrkr.sh\]: test execonly...suspended functionality multiworker case
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup execonlywhenprevsuspended_multiwrkr.conf
+startup execonlywhenprevsuspended_multiwrkr.conf
 # we initially send only 10 messages. It has shown that if we send more,
 # we cannot really control which are the first two messages imdiag sees,
 # and so we do not know for sure which numbers are skipped. So we inject
@@ -11,7 +11,7 @@ echo \[execonlywhenprevsuspended_multiwrkr.sh\]: test execonly...suspended funct
 . $srcdir/diag.sh injectmsg 0 10
 ./msleep 500
 . $srcdir/diag.sh injectmsg 10 990
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh seq-check 1 999
-. $srcdir/diag.sh exit
+shutdown_when_empty
+wait_shutdown
+seq_check 1 999
+exit_test

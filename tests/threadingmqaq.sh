@@ -15,14 +15,14 @@ if [ `uname` = "SunOS" ] ; then
 fi
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup threadingmqaq.conf
+startup threadingmqaq.conf
 #. $srcdir/diag.sh tcpflood -c2 -m100000
-#. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
+#shutdown_when_empty # shut down rsyslogd when done processing messages
 . $srcdir/diag.sh injectmsg 0 100000
 # we need to sleep a bit on some environments, as imdiag can not correctly
 # diagnose when the action queues are empty...
 sleep 3
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh seq-check 0 99999
-. $srcdir/diag.sh exit
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown
+seq_check 0 99999
+exit_test

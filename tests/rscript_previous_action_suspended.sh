@@ -1,8 +1,8 @@
 #!/bin/bash
 # Added 2017-12-09 by Rainer Gerhards, released under ASL 2.0
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/omtesting/.libs/omtesting")
 input(type="imtcp" port="13514")
@@ -19,9 +19,9 @@ ruleset(name="output_writer") {
 }
 '
 
-. $srcdir/diag.sh startup
+startup
 . $srcdir/diag.sh injectmsg 0 10
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh seq-check 1 9
-. $srcdir/diag.sh exit
+shutdown_when_empty
+wait_shutdown
+seq_check 1 9
+exit_test

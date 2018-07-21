@@ -5,8 +5,8 @@
 
 . $srcdir/diag.sh init
 . $srcdir/diag.sh check-inotify
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 global( debug.whitelist="on"
 	debug.files=["imfile.c"])
 
@@ -24,7 +24,7 @@ template(name="outfmt" type="list") {
 if $msg contains "msgnum:" then
 	action(type="omfile" file="rsyslog.out.log" template="outfmt"
  ) '
-. $srcdir/diag.sh startup
+startup
 
 # write the beginning of the file
 echo 'msgnum:0
@@ -41,8 +41,8 @@ echo 'msgnum:5' >> rsyslog.input # this one shouldn't be written to the output f
 
 # give it time to finish
 
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown    # we need to wait until rsyslogd is finished!
 
 # give it time to write the output file
 
@@ -77,4 +77,4 @@ done
 
 ## if we got here, all is good :)
 
-. $srcdir/diag.sh exit
+exit_test

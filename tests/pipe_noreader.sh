@@ -20,11 +20,11 @@ echo TEST: \[pipe_noreader.sh\]: test for pipe writing without reader
 #export RSYSLOG_DEBUGLOG="log"
 . $srcdir/diag.sh init
 mkfifo ./rsyslog.pipe
-. $srcdir/diag.sh startup pipe_noreader.conf
+startup pipe_noreader.conf
 # we need to emit ~ 128K of data according to bug report
 . $srcdir/diag.sh tcpflood -m1000 -d500
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown       # and wait for it to terminate
 # NO need to check seqno -- see header comment
 echo we did not loop, so the test is sucessfull
-. $srcdir/diag.sh exit
+exit_test

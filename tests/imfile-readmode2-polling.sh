@@ -1,8 +1,8 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 global( debug.whitelist="on"
 	debug.files=["imfile.c"])
 
@@ -19,7 +19,7 @@ template(name="outfmt" type="list") {
 if $msg contains "msgnum:" then
 	action(type="omfile" file="rsyslog.out.log" template="outfmt")
 '
-. $srcdir/diag.sh startup
+startup
 
 # write the beginning of the file
 echo 'msgnum:0
@@ -37,8 +37,8 @@ echo 'msgnum:5' >> rsyslog.input # this one shouldn't be written to the output f
 # give it time to finish
 sleep 1
 
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown    # we need to wait until rsyslogd is finished!
 
 # give it time to write the output file
 sleep 1
@@ -49,12 +49,12 @@ NUMLINES=$(grep -c HEADER rsyslog.out.log 2>/dev/null)
 
 if [ -z $NUMLINES ]; then
   echo "ERROR: expecting at least a match for HEADER, maybe rsyslog.out.log wasn't even written?"
-  . $srcdir/diag.sh exit
+  exit_test
   exit 1
 else
   if [ ! $NUMLINES -eq 3 ]; then
     echo "ERROR: expecting 3 headers, got $NUMLINES"
-    . $srcdir/diag.sh exit
+    exit_test
     exit 1
   fi
 fi
@@ -65,11 +65,11 @@ for i in {1..4}; do
   grep msgnum:$i rsyslog.out.log > /dev/null 2>&1
   if [ ! $? -eq 0 ]; then
     echo "ERROR: expecting the string 'msgnum:$i', it's not there"
-    . $srcdir/diag.sh exit
+    exit_test
     exit 1
   fi
 done
 
 ## if we got here, all is good :)
 
-. $srcdir/diag.sh exit
+exit_test

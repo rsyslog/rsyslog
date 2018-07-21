@@ -8,7 +8,7 @@
 . $srcdir/diag.sh init
 . $srcdir/diag.sh check-command-available lsof
 
-. $srcdir/diag.sh startup omprog-restart-terminated-outfile.conf
+startup omprog-restart-terminated-outfile.conf
 . $srcdir/diag.sh wait-startup
 . $srcdir/diag.sh injectmsg 0 1
 . $srcdir/diag.sh wait-queueempty
@@ -44,8 +44,8 @@ sleep .1
 
 end_fd_count=$(lsof -p $pid | wc -l)
 
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 
 expected_output="Starting
 Received msgnum:00000000:
@@ -74,12 +74,12 @@ written_output=$(<rsyslog.out.log)
 if [[ "$expected_output" != "$written_output" ]]; then
     echo unexpected omprog script output:
     echo "$written_output"
-    . $srcdir/diag.sh error-exit 1
+    error_exit 1
 fi
 
 if [[ "$start_fd_count" != "$end_fd_count" ]]; then
     echo "file descriptor leak: started with $start_fd_count open files, ended with $end_fd_count"
-    . $srcdir/diag.sh error-exit 1
+    error_exit 1
 fi
 
-. $srcdir/diag.sh exit
+exit_test

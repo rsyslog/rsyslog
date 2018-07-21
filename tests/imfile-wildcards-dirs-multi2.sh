@@ -15,7 +15,7 @@ do
 done
 
 # Start rsyslog now before adding more files
-. $srcdir/diag.sh startup imfile-wildcards-dirs-multi2.conf
+startup imfile-wildcards-dirs-multi2.conf
 
 for j in `seq 1 $IMFILEINPUTFILESSTEPS`;
 do
@@ -41,6 +41,6 @@ do
 	done
 done
 
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
-. $srcdir/diag.sh exit
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown	# we need to wait until rsyslogd is finished!
+exit_test

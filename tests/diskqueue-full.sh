@@ -4,8 +4,8 @@
 # addd 2017-02-07 by RGerhards, released under ASL 2.0
 . $srcdir/diag.sh init
 
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/omtesting/.libs/omtesting")
 global(workDirectory="test-spool")
 main_queue(queue.filename="mainq" queue.maxDiskSpace="4m"
@@ -24,12 +24,12 @@ template(name="outfmt" type="string"
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
 			         file="rsyslog.out.log")
 '
-. $srcdir/diag.sh startup
+startup
 . $srcdir/diag.sh injectmsg 0 20000
 ls -l test-spool
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 ls -l test-spool
-. $srcdir/diag.sh seq-check 0 19999
+seq_check 0 19999
 
-. $srcdir/diag.sh exit
+exit_test

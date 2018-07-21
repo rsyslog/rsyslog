@@ -13,7 +13,7 @@ echo \[multiple_lookup_table-vg.sh\]: test for multiple lookup-table and HUP bas
 . $srcdir/diag.sh init
 cp -f $srcdir/testsuites/xlate.lkp_tbl xlate.lkp_tbl
 cp -f $srcdir/testsuites/xlate.lkp_tbl xlate_1.lkp_tbl
-. $srcdir/diag.sh startup-vg multiple_lookup_tables.conf
+startup_vg multiple_lookup_tables.conf
 . $srcdir/diag.sh injectmsg  0 3
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh content-check "msgnum:00000000: 0_foo_old 1_foo_old"
@@ -33,11 +33,11 @@ cp -f $srcdir/testsuites/xlate_more.lkp_tbl xlate_1.lkp_tbl
 . $srcdir/diag.sh await-lookup-table-reload
 . $srcdir/diag.sh injectmsg  0 3
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown-vg
+wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
 . $srcdir/diag.sh content-check "msgnum:00000000: 0_foo_new 1_foo_new"
 . $srcdir/diag.sh content-check "msgnum:00000001: 0_bar_new 1_bar_new"
 . $srcdir/diag.sh content-check "msgnum:00000002: 0_baz 1_baz"
-. $srcdir/diag.sh exit
+exit_test

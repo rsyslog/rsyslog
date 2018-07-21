@@ -7,21 +7,21 @@ rm -f "$srcdir/testbench_socket"
 echo "nope" > "$srcdir/testbench_socket"
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup imptcp_uds.conf
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
+startup imptcp_uds.conf
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown	# we need to wait until rsyslogd is finished!
 . $srcdir/diag.sh content-check "imptcp: error while binding unix socket: Address already in use"
-. $srcdir/diag.sh exit
+exit_test
 
 # Now make sure we unlink if asked to
 echo "ok" > "$srcdir/testbench_socket"
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup imptcp_uds_unlink.conf
+startup imptcp_uds_unlink.conf
 
 logger -Tu "$srcdir/testbench_socket" "hello from imptcp uds"
 
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown	# we need to wait until rsyslogd is finished!
 . $srcdir/diag.sh content-check "hello from imptcp uds"
-. $srcdir/diag.sh exit
+exit_test

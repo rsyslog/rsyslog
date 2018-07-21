@@ -10,14 +10,14 @@
 echo ===============================================================================
 echo \[execonlyonce.sh\]: test for the $ActionExecOnlyOnceEveryInterval directive
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup execonlyonce.conf
+startup execonlyonce.conf
 . $srcdir/diag.sh tcpflood -m10 -i1
 # now wait until the interval definitely expires
 sleep 4 # one more than the once inerval!
 # and inject another couple of messages
 . $srcdir/diag.sh tcpflood -m10 -i100
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown
 
 # now we need your custom logic to see if the result is equal to the
 # expected result
@@ -27,4 +27,4 @@ then
 	echo "ERROR, output not as expected"
 	exit 1
 fi
-. $srcdir/diag.sh exit
+exit_test

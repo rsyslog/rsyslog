@@ -11,7 +11,7 @@ fi
 echo ===============================================================================
 echo \[dynstats_ctr_reset.sh\]: test to ensure correctness of stats-ctr reset
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup dynstats_ctr_reset.conf
+startup dynstats_ctr_reset.conf
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_1
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_2
 . $srcdir/diag.sh wait-queueempty
@@ -20,9 +20,9 @@ sleep 1
 . $srcdir/diag.sh wait-queueempty
 sleep 1
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown
+wait_shutdown
 . $srcdir/diag.sh content-check "foo 006"
 . $srcdir/diag.sh custom-content-check 'bar=1' 'rsyslog.out.stats.log'
 . $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'msg_stats_resettable_on.\+foo=' 'rsyslog.out.stats.log' 3
@@ -34,4 +34,4 @@ echo wait on shutdown
 . $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'msg_stats_resettable_default.\+foo=' 'rsyslog.out.stats.log' 3
 . $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'msg_stats_resettable_default.\+bar=' 'rsyslog.out.stats.log' 1
 . $srcdir/diag.sh first-column-sum-check 's/.*baz=\([0-9]\+\)/\1/g' 'msg_stats_resettable_default.\+baz=' 'rsyslog.out.stats.log' 2
-. $srcdir/diag.sh exit
+exit_test

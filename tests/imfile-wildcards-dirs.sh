@@ -8,7 +8,7 @@ echo [imfile-wildcards-dirs.sh]
 # soon as it start up (so the file should exist at that point).
 
 # Start rsyslog now before adding more files
-. $srcdir/diag.sh startup imfile-wildcards-dirs.conf
+startup imfile-wildcards-dirs.conf
 
 for i in `seq 1 $IMFILEINPUTFILES`;
 do
@@ -17,7 +17,7 @@ do
 done
 ls -d rsyslog.input.*
 
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown	# we need to wait until rsyslogd is finished!
 . $srcdir/diag.sh content-check-with-count "HEADER msgnum:00000000:" $IMFILEINPUTFILES
-. $srcdir/diag.sh exit
+exit_test

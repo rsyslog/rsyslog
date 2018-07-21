@@ -11,12 +11,12 @@ fi
 echo ===============================================================================
 echo \[json_array_looping-vg.sh\]: basic test for looping over json array with valgrind
 . $srcdir/diag.sh init json_array_looping-vg.sh
-. $srcdir/diag.sh startup-vg json_array_looping.conf
+startup_vg json_array_looping.conf
 . $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/json_array_input
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown-vg
+wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
 . $srcdir/diag.sh content-check 'quux: abc0'
 . $srcdir/diag.sh content-check 'quux: def1'
@@ -27,4 +27,4 @@ echo wait on shutdown
 . $srcdir/diag.sh custom-content-check 'prefixed_grault: { "baz": "important_msg" }' 'rsyslog.out.prefixed.log'
 . $srcdir/diag.sh custom-content-check 'prefixed_grault: { "baz": "other_msg" }' 'rsyslog.out.prefixed.log'
 . $srcdir/diag.sh content-check 'garply: important_msg, other_msg'
-. $srcdir/diag.sh exit
+exit_test

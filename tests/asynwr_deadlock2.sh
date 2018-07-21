@@ -57,14 +57,14 @@ echo TEST: \[asynwr_deadlock2.sh\]: a case known to have caused a deadlock in th
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="log"
-. $srcdir/diag.sh startup asynwr_deadlock2.conf
+startup asynwr_deadlock2.conf
 # send 20000 messages, each close to 2K (non-randomized!), so that we can fill
 # the buffers and hopefully run into the "deadlock".
 . $srcdir/diag.sh tcpflood -m20000 -d1800 -P129 -i1 -f5
 # the sleep below is needed to prevent too-early termination of the tcp listener
 sleep 1
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown       # and wait for it to terminate
 cat rsyslog.out.*.log > rsyslog.out.log
-. $srcdir/diag.sh seq-check 1 20000 -E
-. $srcdir/diag.sh exit
+seq_check 1 20000 -E
+exit_test

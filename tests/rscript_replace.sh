@@ -4,11 +4,11 @@
 echo ===============================================================================
 echo \[rscript_replace.sh\]: test for replace script-function
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup rscript_replace.conf
+startup rscript_replace.conf
 . $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/date_time_msg
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown 
+wait_shutdown 
 . $srcdir/diag.sh content-check  "date time: Thu 0ct0ber 30 13:20:18 IST 2014"
-. $srcdir/diag.sh exit
+exit_test

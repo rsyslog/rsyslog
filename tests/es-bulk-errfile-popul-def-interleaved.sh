@@ -12,8 +12,8 @@ echo '{ "name" : "foo" }
 {"name": bar"}
 {"name": "baz"}
 {"name": foz"}' > inESData.inputfile
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 # Note: we must mess up with the template, because we can not
 # instruct ES to put further constraints on the data type and
 # values. So we require integer and make sure it is none.
@@ -44,9 +44,9 @@ input(type="imfile" File="./inESData.inputfile"
       Severity="info"
       ruleset="foo")
 '
-. $srcdir/diag.sh startup
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+startup
+shutdown_when_empty
+wait_shutdown
 rm -f inESData.inputfile
 
 python $srcdir/elasticsearch-error-format-check.py interleaved
@@ -57,4 +57,4 @@ then
     exit 1
 fi
 . $srcdir/diag.sh cleanup-elasticsearch
-. $srcdir/diag.sh exit
+exit_test

@@ -3,24 +3,24 @@
 echo [imfile-file-not-found-error.sh]
 . $srcdir/diag.sh check-inotify
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imfile/.libs/imfile")
 
 input(type="imfile" File="testsuites/NotExistingInputFile" Tag="tag1" fileNotFoundError="off")
 
 action(type="omfile" file="rsyslog.out.log")
 '
-. $srcdir/diag.sh startup
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+startup
+shutdown_when_empty
+wait_shutdown
 
 grep "error*file*NotExistingInputFile*No such file or directory" rsyslog.out.log > /dev/null
 if [ $? -eq 0 ]; then
         echo
         echo "FAIL: error message from missing input file found. rsyslog.out.log is:"
         cat rsyslog.out.log
-        . $srcdir/diag.sh error-exit 1
+        error_exit 1
 fi
 
-. $srcdir/diag.sh exit
+exit_test

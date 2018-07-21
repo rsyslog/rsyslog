@@ -17,11 +17,11 @@ if [ `uname` = "SunOS" ] ; then
 fi
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup omruleset-queue.conf
+startup omruleset-queue.conf
 . $srcdir/diag.sh injectmsg  0 20000
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown 
-. $srcdir/diag.sh seq-check 0 19999
-. $srcdir/diag.sh exit
+wait_shutdown 
+seq_check 0 19999
+exit_test

@@ -11,8 +11,8 @@ echo \[timegenerated-dateordinal-invld\]: check invalid dates with ordinal forma
 
 export TZ=UTC+00:00
 
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
 $InputTCPServerRun 13514
 
@@ -25,10 +25,10 @@ template(name="outfmt" type="string"
 
 echo "***SUBTEST: check 1800-01-01"
 rm -f rsyslog.out.log	# do cleanup of previous subtest
-FAKETIME='1800-01-01 00:00:00' $srcdir/diag.sh startup
+FAKETIME='1800-01-01 00:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 echo "001" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, rsyslog.out.log is:"
@@ -40,10 +40,10 @@ fi;
 
 echo "***SUBTEST: check 1960-01-01"
 rm -f rsyslog.out.log	# do cleanup of previous subtest
-FAKETIME='1960-01-01 00:00:00' $srcdir/diag.sh startup
+FAKETIME='1960-01-01 00:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 echo "001" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, rsyslog.out.log is:"
@@ -55,10 +55,10 @@ fi;
 
 echo "***SUBTEST: check 2101-01-01"
 rm -f rsyslog.out.log	# do cleanup of previous subtest
-FAKETIME='2101-01-01 00:00:00' $srcdir/diag.sh startup
+FAKETIME='2101-01-01 00:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 echo "001" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, rsyslog.out.log is:"
@@ -70,10 +70,10 @@ fi;
 
 echo "***SUBTEST: check 2500-01-01"
 rm -f rsyslog.out.log	# do cleanup of previous subtest
-FAKETIME='2500-01-01 00:00:00' $srcdir/diag.sh startup
+FAKETIME='2500-01-01 00:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 echo "001" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, rsyslog.out.log is:"
@@ -83,4 +83,4 @@ if [ ! $? -eq 0 ]; then
 fi;
 
 
-. $srcdir/diag.sh exit
+exit_test

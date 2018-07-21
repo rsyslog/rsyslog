@@ -2,8 +2,8 @@
 # test many concurrent tcp connections
 # addd 2016-03-28 by RGerhards, released under ASL 2.0
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="13514")
 
@@ -11,9 +11,9 @@ template(name="outfmt" type="string" string="%msg:9:16:lowercase%\n")
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
 			         file="rsyslog.out.log")
 '
-. $srcdir/diag.sh startup
+startup
 . $srcdir/diag.sh tcpflood -m9
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh seq-check  0 8
-. $srcdir/diag.sh exit
+shutdown_when_empty
+wait_shutdown
+seq_check  0 8
+exit_test

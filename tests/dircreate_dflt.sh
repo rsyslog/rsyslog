@@ -8,14 +8,14 @@
 echo ===================================================================================
 echo \[dircreate_dflt_dflt.sh\]: testing automatic directory creation for dynafiles - default
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup dircreate_dflt.conf
+startup dircreate_dflt.conf
 . $srcdir/diag.sh injectmsg  0 1 # a single message is sufficient
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown
 if [ ! -e test-logdir/rsyslog.out.log ]
 then
 	echo "test-logdir or logfile not created!"
 	exit 1
 fi
 exit
-. $srcdir/diag.sh exit
+exit_test

@@ -11,5 +11,5 @@ if [ $? -ne 0 ]; then
    echo "Error: config check fail"
    exit 1 
 fi
-. $srcdir/diag.sh exit
+exit_test
 

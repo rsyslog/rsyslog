@@ -6,12 +6,12 @@
 # child if unresponsive.
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup omprog-close-unresponsive.conf
+startup omprog-close-unresponsive.conf
 . $srcdir/diag.sh wait-startup
 . $srcdir/diag.sh injectmsg 0 10
 . $srcdir/diag.sh wait-queueempty
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 . $srcdir/diag.sh ensure-no-process-exists omprog-close-unresponsive-bin.sh
 
 expected_output="Starting
@@ -32,7 +32,7 @@ written_output=$(<rsyslog.out.log)
 if [[ "$expected_output" != "$written_output" ]]; then
     echo unexpected omprog script output:
     echo "$written_output"
-    . $srcdir/diag.sh error-exit 1
+    error_exit 1
 fi
 
-. $srcdir/diag.sh exit
+exit_test

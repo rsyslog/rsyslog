@@ -17,14 +17,14 @@ fi
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout"
 #export RSYSLOG_DEBUGLOG="log"
-. $srcdir/diag.sh startup complex1.conf
+startup complex1.conf
 # send 40,000 messages of 400 bytes plus header max, via three dest ports
 . $srcdir/diag.sh tcpflood -m40000 -rd400 -P129 -f5 -n3 -c15 -i1
 sleep 4 # due to large messages, we need this time for the tcp receiver to settle...
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown       # and wait for it to terminate
 ls rsyslog.out.*.log
 . $srcdir/diag.sh setzcat		   # find out which zcat to use
 $ZCAT rsyslog.out.*.log > rsyslog.out.log
-. $srcdir/diag.sh seq-check 1 40000 -E
-. $srcdir/diag.sh exit
+seq_check 1 40000 -E
+exit_test

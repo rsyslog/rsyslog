@@ -3,9 +3,9 @@
 
 # This file is part of the rsyslog project, released under ASL 2.0
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup fac_invld3.conf
+startup fac_invld3.conf
 . $srcdir/diag.sh tcpflood -m1000 -P x112
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
-. $srcdir/diag.sh seq-check 0 999 
-. $srcdir/diag.sh exit
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown       # and wait for it to terminate
+seq_check 0 999 
+exit_test

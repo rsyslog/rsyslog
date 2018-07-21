@@ -9,8 +9,8 @@ echo \[now-utc-casecmp\]: test \$year-utc, \$month-utc, \$day-utc
 
 export TZ=TEST-02:00
 
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
 $InputTCPServerRun 13514
 
@@ -19,12 +19,12 @@ template(name="outfmt" type="string"
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
 			         file="rsyslog.out.log")
 '
-FAKETIME='2016-01-01 01:00:00' $srcdir/diag.sh startup
+FAKETIME='2016-01-01 01:00:00' startup
 # what we send actually is irrelevant, as we just use system properties.
 # but we need to send one message in order to gain output!
 . $srcdir/diag.sh tcpflood -m1
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 echo "2016-01-01:2016-01-01,2015-12-31:2015-12-31" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, rsyslog.out.log is:"
@@ -33,4 +33,4 @@ if [ ! $? -eq 0 ]; then
 fi;
 
 
-. $srcdir/diag.sh exit
+exit_test

@@ -12,7 +12,7 @@ echo ===========================================================================
 echo \[lookup_table_rscript_reload_without_stub.sh\]: test for lookup-table reload by rscript-stmt without stub
 . $srcdir/diag.sh init
 cp -f $srcdir/testsuites/xlate.lkp_tbl xlate.lkp_tbl
-. $srcdir/diag.sh startup lookup_table_reload.conf
+startup lookup_table_reload.conf
 # the last message ..002 should cause successful lookup-table reload
 cp -f $srcdir/testsuites/xlate_more.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh injectmsg  0 3
@@ -34,11 +34,11 @@ rm -f xlate.lkp_tbl # this should lead to unsuccessful reload
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh injectmsg  0 2
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown
+wait_shutdown
 . $srcdir/diag.sh content-check-with-count "msgnum:00000000: foo_latest" 2
 . $srcdir/diag.sh content-check-with-count "msgnum:00000001: quux" 2
 . $srcdir/diag.sh content-check-with-count "msgnum:00000002: baz_latest" 1
 
-. $srcdir/diag.sh exit
+exit_test

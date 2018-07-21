@@ -12,7 +12,7 @@ echo ===========================================================================
 echo \[lookup_table_no_hup_reload-vg.sh\]: test for lookup-table with HUP based reloading disabled with valgrind
 . $srcdir/diag.sh init
 cp -f $srcdir/testsuites/xlate.lkp_tbl xlate.lkp_tbl
-. $srcdir/diag.sh startup-vg lookup_table_no_hup_reload.conf
+startup_vg lookup_table_no_hup_reload.conf
 . $srcdir/diag.sh injectmsg  0 3
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh content-check "msgnum:00000000: foo_old"
@@ -23,11 +23,11 @@ cp -f $srcdir/testsuites/xlate_more.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh await-lookup-table-reload
 . $srcdir/diag.sh injectmsg  0 3
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown-vg
+wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
 . $srcdir/diag.sh assert-content-missing "foo_new"
 . $srcdir/diag.sh assert-content-missing "bar_new"
 . $srcdir/diag.sh assert-content-missing "baz"
-. $srcdir/diag.sh exit
+exit_test

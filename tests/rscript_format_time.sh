@@ -2,8 +2,8 @@
 # Added 2017-10-03 by Stephen Workman, released under ASL 2.0
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/omstdout/.libs/omstdout")
 input(type="imtcp" port="13514")
@@ -24,10 +24,10 @@ local4.* action(type="omfile" file="rsyslog.out.log" template="outfmt")
 local4.* :omstdout:;outfmt
 '
 
-. $srcdir/diag.sh startup
+startup
 . $srcdir/diag.sh tcpflood -m1 -y | sed 's|\r||'
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 
 EXPECTED='{ "rfc3164": "Oct  5 01:10:11", "rfc3339": "2017-10-05T01:10:11Z", "rfc3164Neg": "Mar 29 22:49:49", "rfc3339Neg": "1922-03-29T22:49:49Z", "str1": "2017-10-05T01:10:11Z", "strinv1": "ABC" }'
 
@@ -39,7 +39,7 @@ if [[ $? -ne 0 ]]; then
   printf "Expected: $EXPECTED\n"
   printf "Got:      "
   cat rsyslog.out.log
-  . $srcdir/diag.sh error-exit 1
+  error_exit 1
 fi;
 
-. $srcdir/diag.sh exit
+exit_test

@@ -5,8 +5,8 @@
 
 export TZ=TEST+02:00
 
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/mmnormalize/.libs/mmnormalize")
 input(type="imtcp" port="13514" ruleset="ruleset1")
@@ -54,17 +54,17 @@ ruleset(name="ruleset1") {
 	}	
 }
 '
-FAKETIME='2017-03-08 12:18:47' $srcdir/diag.sh startup
+FAKETIME='2017-03-08 12:18:47' startup
 . $srcdir/diag.sh tcpflood -m1 -M "\"<166>2017-03-08T12:18:47.165Z Host2.domain.com Process1: [FFB87B70 verbose Process1HalCnxHostagent opID=WFU-abfbbece] [WaitForUpdatesDone] Completed callback\""
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 echo '2017-03-08T12:18:47.165Z 2017-03-08T12:18:47.165Z Host2.domain.com Process1 [FFB87B70 verbose Process1HalCnxHostagent opID=WFU-abfbbece] [WaitForUpdatesDone] Completed callback
 /sb/logs/incoming/2017/03/08/svc_SER2/ret_Y01/os_ESX/127.0.0.1/r_relay1/esx.gz
 [][][127.0.0.1][1488975527][] Mar  8 12:18:47 127.0.0.1 Process1: [FFB87B70 verbose Process1HalCnxHostagent opID=WFU-abfbbece] [WaitForUpdatesDone] Completed callback' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
   cat rsyslog.out.log
-  . $srcdir/diag.sh error-exit  1
+  error_exit  1
 fi;
 
-. $srcdir/diag.sh exit
+exit_test

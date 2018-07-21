@@ -1,8 +1,8 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released  under ASL 2.0
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imptcp/.libs/imptcp")
 input(type="imptcp" port="13514" ruleset="remote" multiline="on")
 
@@ -11,10 +11,10 @@ ruleset(name="remote") {
 	action(type="omfile" file="rsyslog.out.log" template="outfmt")
 }
 '
-. $srcdir/diag.sh startup
+startup
 . $srcdir/diag.sh tcpflood -B -I ${srcdir}/testsuites/imptcp_multi_line.testdata
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown       # and wait for it to terminate
 echo 'NEWMSG: <133>Mar  1 01:00:00 172.20.245.8 tag test1
 NEWMSG: <133>Mar  1 01:00:00 172.20.245.8 tag test2
 NEWMSG: <133>Mar  1 01:00:00 172.20.245.8 tag multi#012line1
@@ -26,6 +26,6 @@ NEWMSG: <133>Mar  1 01:00:00 172.20.245.8 tag test end' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
   cat rsyslog.out.log
-  . $srcdir/diag.sh error-exit  1
+  error_exit  1
 fi;
-. $srcdir/diag.sh exit
+exit_test

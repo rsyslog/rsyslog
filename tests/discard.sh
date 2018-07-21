@@ -8,11 +8,11 @@
 echo ===============================================================================
 echo \[discard.sh\]: testing discard functionality
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup discard.conf
+startup discard.conf
 # 20000 messages should be enough - the disk test is slow enough ;)
 sleep 4
 . $srcdir/diag.sh tcpflood -m10 -i1
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh seq-check 2 10
-. $srcdir/diag.sh exit
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown
+seq_check 2 10
+exit_test

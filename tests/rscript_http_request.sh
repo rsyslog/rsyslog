@@ -1,9 +1,9 @@
 #!/bin/bash
 # add 2017-12-01 by Rainer Gerhards, released under ASL 2.0
 . $srcdir/diag.sh init
-. $srcdir/diag.sh check-url-access http://testbench.rsyslog.com/testbench/echo-get.php
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+rsyslog_testbench_test_url_access http://testbench.rsyslog.com/testbench/echo-get.php
+generate_conf
+add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/fmhttp/.libs/fmhttp")
 input(type="imtcp" port="13514")
@@ -18,10 +18,10 @@ if $msg contains "msgnum:" then {
 	action(type="omfile" file="rsyslog.out.log" template="outfmt")
 }
 '
-. $srcdir/diag.sh startup
+startup
 . $srcdir/diag.sh tcpflood -m10
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 echo '{ "reply": "msgnum:00000000:" }
 { "reply": "msgnum:00000001:" }
 { "reply": "msgnum:00000002:" }
@@ -35,7 +35,7 @@ echo '{ "reply": "msgnum:00000000:" }
 if [ ! $? -eq 0 ]; then
   echo "invalid function output detected, rsyslog.out.log is:"
   cat rsyslog.out.log
-  . $srcdir/diag.sh error-exit 1
+  error_exit 1
 fi;
-. $srcdir/diag.sh exit
+exit_test
 

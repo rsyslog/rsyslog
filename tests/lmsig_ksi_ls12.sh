@@ -4,16 +4,16 @@ echo \[lmsig_ksi_ls12.sh\]: test ksi_ls12
 rm -rf $srcdir/ksitest
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup lmsig_ksi_ls12.conf
+startup lmsig_ksi_ls12.conf
 
 #generate 100 messages
 for i in {0..100}; do logger -d -u /tmp/testbench_socket "test log line $i"; done
 
 # the sleep below is needed to prevent too-early termination of rsyslogd
 ./msleep 100
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
+shutdown_when_empty # shut down rsyslogd when done processing messages
 ./msleep 2000
-. $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
+wait_shutdown	# we need to wait until rsyslogd is finished!
 
 #compare resulting files
 cmp ksitest/messages.logsig.parts/block-signatures.dat resultdata/lmsig_ksi_ls12_async/messages.logsig.parts/block-signatures.dat
@@ -28,5 +28,5 @@ if [ ! $? -eq 0 ]; then
   exit 1
 fi;
 
-. $srcdir/diag.sh exit
+exit_test
 

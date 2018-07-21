@@ -4,8 +4,8 @@
 echo [imfile-persist-state-1.sh]
 . $srcdir/diag.sh check-inotify
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 global(workDirectory="test-spool")
 
 module(load="../plugins/imfile/.libs/imfile")
@@ -24,8 +24,8 @@ if $msg contains "msgnum:" then
 # generate input file first. Note that rsyslog processes it as
 # soon as it start up (so the file should exist at that point).
 ./inputfilegen 5 4000 > rsyslog.input
-. $srcdir/diag.sh startup
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
-. $srcdir/diag.sh seq-check 0 3
-. $srcdir/diag.sh exit
+startup
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown	# we need to wait until rsyslogd is finished!
+seq_check 0 3
+exit_test

@@ -2,8 +2,8 @@
 # add 2016-11-22 by Jan Gerhards, released under ASL 2.0
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 template(name="outfmt" type="string" string="%msg%\n")
 
 module(load="../plugins/mmanon/.libs/mmanon")
@@ -15,7 +15,7 @@ ruleset(name="testing") {
 	action(type="omfile" file="rsyslog.out.log" template="outfmt")
 }'
 
-. $srcdir/diag.sh startup
+startup
 . $srcdir/diag.sh tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag: asdfghjk
 <129>Mar 10 01:00:00 172.20.245.8 tag: before 172.9.6.4
 <129>Mar 10 01:00:00 172.20.245.8 tag: 75.123.123.0 after
@@ -43,8 +43,8 @@ ruleset(name="testing") {
 <129>Mar 10 01:00:00 172.20.245.8 tag: 111.1.1.8.
 <129>Mar 10 01:00:00 172.20.245.8 tag: textnoblank1.1.1.9stillnoblank\""
 
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 echo ' asdfghjk
  before 0.0.0.0
  0.0.0.0 after
@@ -74,7 +74,7 @@ echo ' asdfghjk
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
   cat rsyslog.out.log
-  . $srcdir/diag.sh error-exit  1
+  error_exit  1
 fi;
 
-. $srcdir/diag.sh exit
+exit_test

@@ -26,27 +26,27 @@ printf "info: new inode line: ${newline}\n"
 printf "info: patched state file:\n"
 cat test-spool/imfile-state\:.-rsyslog.input
 
-. $srcdir/diag.sh startup imfile-readmode2-with-persists.conf
+startup imfile-readmode2-with-persists.conf
 
 echo 'msgnum:3
  msgnum:4' >> rsyslog.input
 echo 'msgnum:5' >> rsyslog.input
 
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown    # we need to wait until rsyslogd is finished!
 
 NUMLINES=$(grep -c HEADER rsyslog.out.log 2>/dev/null)
 
 if [ -z $NUMLINES ]; then
   echo "ERROR: expecting at least a match for HEADER, maybe rsyslog.out.log wasn't even written?"
   cat ./rsyslog.out.log
-  . $srcdir/diag.sh error-exit 1
+  error_exit 1
 else
   # note: we expect only 2 headers as the first file part if NOT processed!
   if [ ! $NUMLINES -eq 2 ]; then
     echo "ERROR: expecting 2 headers, got $NUMLINES"
     cat ./rsyslog.out.log
-    . $srcdir/diag.sh error-exit 1
+    error_exit 1
   fi
 fi
 
@@ -57,8 +57,8 @@ for i in {2..4}; do
   if [ ! $? -eq 0 ]; then
     echo "ERROR: expecting the string 'msgnum:$i', it's not there"
     cat ./rsyslog.out.log
-    . $srcdir/diag.sh error-exit 1
+    error_exit 1
   fi
 done
 
-. $srcdir/diag.sh exit
+exit_test

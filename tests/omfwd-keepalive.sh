@@ -2,8 +2,8 @@
 # addd 2016-03-30 by RGerhards, released under ASL 2.0
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="13514")
 
@@ -20,15 +20,15 @@ action(type="omfile" template="outfmt" file="rsyslog.out.log")
 	keepalive.time="60" keepalive.interval="10")
  
 '
-. $srcdir/diag.sh startup
+startup
 . $srcdir/diag.sh tcpflood -m1
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 echo " msgnum:00000000:" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid output generated, rsyslog.out.log is:"
   cat rsyslog.out.log
-  . $srcdir/diag.sh error-exit 1
+  error_exit 1
 fi;
 
-. $srcdir/diag.sh exit
+exit_test
