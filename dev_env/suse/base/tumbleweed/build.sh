@@ -2,6 +2,7 @@ set -e
 docker build $1 -t rsyslog/rsyslog_dev_base_suse:tumbleweed .
 printf "\n\n================== BUILD DONE, NOW TESTING CONTAINER:"
 docker run -ti rsyslog/rsyslog_dev_base_suse:tumbleweed bash -c  "
+set -e && \
 git clone https://github.com/rsyslog/rsyslog.git && \
 cd rsyslog && \
 autoreconf -fi && \
