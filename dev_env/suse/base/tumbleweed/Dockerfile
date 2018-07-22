@@ -1,6 +1,7 @@
 # container for rsyslog development
 # creates the build environment
 # to search for packages:
+# note: czmq OBS link: https://build.opensuse.org/package/show/network:messaging:zeromq:release-stable/czmq
 # 1. zypper search
 # 2. scout bin which  # scout need zypper install scout - then call "scout" for usage
 FROM	opensuse/tumbleweed
@@ -11,6 +12,7 @@ RUN	zypper --non-interactive install \
 	automake \
 	bison \
 	clang \
+	cmake \
 	curl \
 	flex \
 	gcc \
@@ -23,9 +25,11 @@ RUN	zypper --non-interactive install \
 	libczmq4 \
 	libdbi-devel \
 	libdbi-drivers-dbd-mysql \
+	libestr-devel \
 	libfaketime \
 	libgcrypt-devel \
 	libgnutls-devel \
+	libmaxminddb-devel \
 	libmysqlclient-devel \
 	libnet-devel \
 	libopenssl-devel \
@@ -44,25 +48,19 @@ RUN	zypper --non-interactive install \
 	qpid-proton-devel \
 	systemd-devel \
 	tcl-devel \
+	util-linux-systemd \
 	valgrind \
 	vi \
 	wget \
+	which \
 	zlib-devel
+RUN	zypper --non-interactive addrepo https://download.opensuse.org/repositories/network:messaging:zeromq:release-stable/openSUSE_Tumbleweed/network:messaging:zeromq:release-stable.repo && \
+	zypper --non-interactive --gpg-auto-import-keys refresh && \
+	zypper --non-interactive install \
+	czmq \
+	czmq-devel
+
 ENV	REBUILD=1
-#RUN	echo "deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_18.04/ ./" > /etc/apt/sources.list.d/0mq.list && \
-	#wget -nv -O - http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_18.04/Release.key | apt-key add - && \
- 	#add-apt-repository ppa:adiscon/v8-stable -y && \
-	#apt-get update -y && \
-	#apt-get install -y  \
-	#libczmq-dev \
-	#libqpid-proton8-dev \
-	#tcl-dev \
-	#libsodium-dev \
-	#libestr-dev \
-	#librelp-dev \
-	#libfastjson-dev \
-	#liblogging-stdlog-dev \
-	#liblognorm-dev
 WORKDIR /home/devel
 RUN	groupadd rsyslog && \
 	useradd -g rsyslog  -s /bin/bash rsyslog && \
@@ -73,9 +71,6 @@ VOLUME /rsyslog
 ADD	setup-projects.sh setup-projects.sh
 ENV	PKG_CONFIG_PATH=/usr/lib/pkgconfig \
 	xLD_LIBRARY_PATH=/usr/local/lib 
-
-# Install any needed packages
-#RUN	./setup-system.sh
 
 # create dependency cache
 RUN	mkdir /local_dep_cache && \
@@ -112,6 +107,7 @@ RUN	cd helper-projects && \
 	cd .. && \
 	rm -r libksi && \
 	cd ..
+
 # we need the latest librdkafka as there as always required updates
 RUN	cd helper-projects && \
 	git clone https://github.com/edenhill/librdkafka && \
@@ -123,20 +119,33 @@ RUN	cd helper-projects && \
 # uninstall (in case the user wants to go back to system-default)
 	cd ..
 
+# libmongoc is unfortunately not available on openSuse - later?
+RUN	cd helper-projects && \
+	wget -nv https://github.com/mongodb/mongo-c-driver/releases/download/1.12.0/mongo-c-driver-1.12.0.tar.gz && \
+	tar xzf mongo-c-driver-1.12.0.tar.gz && \
+	cd mongo-c-driver-1.12.0 && \
+	mkdir cmake-build && \
+	cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF && \
+	make -j4 && \
+	make install && \
+	cd .. && \
+	rm -r mongo-c-driver-1.12.0* && \
+	cd ..
+
 # bump dependency version below to trigger a dependency rebuild
 # but not a full one (via --no-cache)
 ENV	RSYSLOG_DEP_VERSION=2018-07-22
 
-# libestr
-RUN	cd helper-projects && \
-	git clone https://github.com/rsyslog/libestr.git && \
-	cd libestr && \
-	autoreconf -fi && ./configure --libdir=/usr/lib64 --prefix=/usr && \
-	make -j4 && \
-	make install && \
-	cd .. && \
-	rm -r libestr && \
-	cd ..
+# libestr - currently, not needed, we use from offical repo (unlikely to change)
+#RUN	cd helper-projects && \
+#	git clone https://github.com/rsyslog/libestr.git && \
+#	cd libestr && \
+#	autoreconf -fi && ./configure --libdir=/usr/lib64 --prefix=/usr && \
+#	make -j4 && \
+#	make install && \
+#	cd .. && \
+#	rm -r libestr && \
+#	cd ..
 
 # liblogging
 RUN	cd helper-projects && \
@@ -191,9 +200,6 @@ RUN	cd helper-projects && \
 ENV	SCAN_BUILD=scan-build \
 	SCAN_BUILD_CC=clang-6.0
 
-RUN	zypper --non-interactive install \
-	util-linux-systemd \
-	which
 # unfortunately, tcl-devel does not properly setup required bits in the environment
 # so we now try to do that. In case this does no longer work with a version, search
 # for a file tclConfig.sh, which should be present in the library directory (usually
@@ -258,15 +264,16 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-valgrind \
 	--enable-gssapi-krb5 \
 	--enable-omtcl \
+	--enable-imczmq \
+	--enable-omczmq \
+	--enable-mmdblookup \
+	--enable-kmsg \
+	--enable-ommongodb \
 	\
 	--enable-testbench
 
 # module needs fixes:
-#	--enable-kmsg
-#	--enable-ommongodb
-#	--enable-imczmq
-#	--enable-omczmq
-#	--enable-mmdblookup \
-#	--enable-mmgrok \
+#	--enable-mmgrok
+#	   -> we cannot build, libtokyocabinet dependency is not available as well
 WORKDIR /rsyslog
 USER rsyslog
