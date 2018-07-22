@@ -1,10 +1,19 @@
 #!/bin/bash
 # added 2018-04-06 by richm, released under ASL 2.0
+#
+# Note: on buidbot VMs (where there is no environment cleanup), the
+# kubernetes test server may be kept running if the script aborts or
+# is aborted (buildbot master failure!) for some reason. As such we
+# execute it under "timeout" control, which ensure it always is
+# terminated. It's not a 100% great method, but hopefully does the
+# trick. -- rgerhards, 2018-07-21
 #export RSYSLOG_DEBUG="debug"
 . $srcdir/diag.sh init
+. $srcdir/diag.sh check-command-available timeout
 
 testsrv=mmk8s-test-server
-python -u ./mmkubernetes_test_server.py 18443 rsyslog${testsrv}.pid rsyslogd${testsrv}.started > mmk8s_srv.log 2>&1 &
+echo starting kubernetes \"emulator\"
+timeout 3m python -u ./mmkubernetes_test_server.py 18443 rsyslog${testsrv}.pid rsyslogd${testsrv}.started > mmk8s_srv.log 2>&1 &
 BGPROCESS=$!
 . $srcdir/diag.sh wait-startup $testsrv
 echo background mmkubernetes_test_server.py process id is $BGPROCESS
