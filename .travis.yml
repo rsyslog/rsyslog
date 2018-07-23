@@ -71,7 +71,7 @@ matrix:
        services:
          - mysql
          - postgresql
-       env: RUN="run.sh",BUILD_FROM_TARBALL="YES", GROK="YES", CHECK="YES", CFLAGS="-g -O2", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all", EXTRA_CONFIGURE="--disable-testbench2"
+       env: RUN="run.sh",BUILD_FROM_TARBALL="YES", GROK="YES", CHECK="YES", CFLAGS="-g -O2", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all", EXTRA_CONFIGURE="--disable-default-tests --disable-elasticsearch --disable-impstats --disable-imfile --disable-imptcp --disable-gnutls -disable-openssl --disable-relp --disable-pmsnare --disable-pmlastmsg"
        dist: trusty
 
 #     - os: linux
@@ -79,7 +79,7 @@ matrix:
 #       services:
 #         - mysql
 #         - postgresql
-#       env: RUN="run.sh",BUILD_FROM_TARBALL="YES", CHECK="YES", CFLAGS="-g -O2", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all", EXTRA_CONFIGURE="--disable-testbench2"
+#       env: RUN="run.sh",BUILD_FROM_TARBALL="YES", CHECK="YES", CFLAGS="-g -O2", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all", EXTRA_CONFIGURE="--disable-default-tests"
 #       dist: trusty
 
      - os: osx
