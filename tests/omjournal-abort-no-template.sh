@@ -6,15 +6,15 @@
 # but better than nothing.
 # addd 2016-03-16 by RGerhards, released under ASL 2.0
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/omjournal/.libs/omjournal")
 
 action(type="omjournal")
 '
-. $srcdir/diag.sh startup
+startup
 ./msleep 500
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 # if we reach this, we have at least not aborted
-. $srcdir/diag.sh exit
+exit_test

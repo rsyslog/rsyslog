@@ -4,11 +4,11 @@
 echo ===============================================================================
 echo \[no-dynstats.sh\]: test for verifying stats are reported correctly in legacy format in absence of any dynstats buckets being configured
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup no-dynstats.conf
+startup no-dynstats.conf
 . $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown
+wait_shutdown
 . $srcdir/diag.sh custom-content-check 'global: origin=dynstats' 'rsyslog.out.stats.log'
-. $srcdir/diag.sh exit
+exit_test

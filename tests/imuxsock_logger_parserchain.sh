@@ -17,15 +17,15 @@ if [ `uname` = "SunOS" ] ; then
 fi
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup imuxsock_logger_parserchain.conf
+startup imuxsock_logger_parserchain.conf
 logger -d --rfc3164 -u testbench_socket test
 if [ ! $? -eq 0 ]; then
 logger -d -u testbench_socket test
 fi;
 # the sleep below is needed to prevent too-early termination of rsyslogd
 ./msleep 100
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 cmp rsyslog.out.log $srcdir/resultdata/imuxsock_logger.log
 if [ ! $? -eq 0 ]; then
   echo "imuxsock_logger_parserchain.sh failed"
@@ -33,4 +33,4 @@ if [ ! $? -eq 0 ]; then
   echo \"`cat rsyslog.out.log`\"
   exit 1
 fi;
-. $srcdir/diag.sh exit
+exit_test

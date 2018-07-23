@@ -8,8 +8,8 @@ if [ `uname` = "FreeBSD" ] ; then
 fi
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="13514")
 
@@ -21,12 +21,12 @@ template(name="outfmt" type="string"
 				 asyncWriting="on"
 			         file="rsyslog.out.log")
 '
-. $srcdir/diag.sh startup
+startup
 . $srcdir/diag.sh tcpflood -m2500 -P129
 ./msleep 2500
-. $srcdir/diag.sh gzip-seq-check 0 2499
+gzip_seq_check 0 2499
 . $srcdir/diag.sh tcpflood -i2500 -m2500 -P129
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh gzip-seq-check 0 4999
-. $srcdir/diag.sh exit
+shutdown_when_empty
+wait_shutdown
+gzip_seq_check 0 4999
+exit_test

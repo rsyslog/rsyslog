@@ -6,12 +6,12 @@
 # it has failed to process.
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup omprog-feedback.conf
+startup omprog-feedback.conf
 . $srcdir/diag.sh wait-startup
 . $srcdir/diag.sh injectmsg 0 10
 . $srcdir/diag.sh wait-queueempty
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 
 expected_output="<= OK
 => msgnum:00000000:
@@ -47,7 +47,7 @@ written_output=$(<rsyslog.out.log)
 if [[ "$expected_output" != "$written_output" ]]; then
     echo unexpected omprog script output:
     echo "$written_output"
-    . $srcdir/diag.sh error-exit 1
+    error_exit 1
 fi
 
-. $srcdir/diag.sh exit
+exit_test

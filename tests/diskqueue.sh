@@ -12,11 +12,11 @@ echo \[diskqueue.sh\]: testing queue disk-only mode
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="log"
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup diskqueue.conf
+startup diskqueue.conf
 # 20000 messages should be enough - the disk test is slow enough ;)
 sleep 4
 . $srcdir/diag.sh tcpflood -m20000
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh seq-check 0 19999
-. $srcdir/diag.sh exit
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown
+seq_check 0 19999
+exit_test

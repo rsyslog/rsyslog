@@ -6,11 +6,11 @@
 echo ====================================================================================
 echo TEST: \[imptcp_large.sh\]: test imptcp with large-size messages
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup imptcp_large.conf
+startup imptcp_large.conf
 # send 4000 messages of 10.000bytes plus header max, randomized
 . $srcdir/diag.sh tcpflood -c5 -m20000 -r -d10000 -P129
 sleep 2 # due to large messages, we need this time for the tcp receiver to settle...
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
-. $srcdir/diag.sh seq-check 0 19999 -E
-. $srcdir/diag.sh exit
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown       # and wait for it to terminate
+seq_check 0 19999 -E
+exit_test

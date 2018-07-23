@@ -11,14 +11,14 @@ echo TEST: \[asynwr_deadlock.sh\]: a case known to have caused a deadlock in the
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="log"
-. $srcdir/diag.sh startup asynwr_deadlock.conf
+startup asynwr_deadlock.conf
 # just send one message
 . $srcdir/diag.sh tcpflood -m1
 # sleep is important! need to make sure the instance is inactive
 sleep 1
 # now try shutdown. The actual test is if the process does hang here!
 echo "processing must continue soon"
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
-. $srcdir/diag.sh seq-check 0 0
-. $srcdir/diag.sh exit
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown       # and wait for it to terminate
+seq_check 0 0
+exit_test

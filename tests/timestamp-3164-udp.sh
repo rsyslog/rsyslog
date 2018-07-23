@@ -1,8 +1,8 @@
 #!/bin/bash
 # add 2018-06-25 by Pascal Withopf, released under ASL 2.0
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imudp/.libs/imudp")
 input(type="imudp" port="13514")
 
@@ -13,7 +13,7 @@ template(name="outfmt" type="string" string="%timestamp:::date-rfc3164%\n")
 
 
 '
-. $srcdir/diag.sh startup
+startup
 . $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<167>Jan  6 16:57:54 172.20.245.8 TAG: MSG\""
 . $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<167>Feb  6 16:57:54 172.20.245.8 TAG: MSG\""
 . $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<167>Mar  6 16:57:54 172.20.245.8 TAG: MSG\""
@@ -28,8 +28,8 @@ template(name="outfmt" type="string" string="%timestamp:::date-rfc3164%\n")
 . $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<167>Dec  6 16:57:54 172.20.245.8 TAG: MSG\""
 . $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<167>Jan  6 16:57:54 172.20.245.8 TAG: MSG\""
 . $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<167>Jan 16 16:57:54 172.20.245.8 TAG: MSG\""
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 
 echo 'Jan  6 16:57:54
 Feb  6 16:57:54
@@ -48,7 +48,7 @@ Jan 16 16:57:54' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
   cat rsyslog.out.log
-  . $srcdir/diag.sh error-exit  1
+  error_exit  1
 fi;
 
-. $srcdir/diag.sh exit
+exit_test

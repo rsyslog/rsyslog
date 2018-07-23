@@ -28,11 +28,11 @@
 # start up the instances
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"
-. $srcdir/diag.sh startup $1_rcvr.conf 
+startup $1_rcvr.conf 
 . $srcdir/diag.sh wait-startup
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
-. $srcdir/diag.sh startup $1_sender.conf 2
+startup $1_sender.conf 2
 . $srcdir/diag.sh wait-startup 2
 # may be needed by TLS (once we do it): sleep 30
 
@@ -42,12 +42,12 @@ export RSYSLOG_DEBUGLOG="log2"
 sleep 5 # make sure all data is received in input buffers
 # shut down sender when everything is sent, receiver continues to run concurrently
 # may be needed by TLS (once we do it): sleep 60
-. $srcdir/diag.sh shutdown-when-empty 2
-. $srcdir/diag.sh wait-shutdown 2
+shutdown_when_empty 2
+wait_shutdown 2
 # now it is time to stop the receiver as well
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 
 # may be needed by TLS (once we do it): sleep 60
 # do the final check
-. $srcdir/diag.sh seq-check 1 $2 $3
+seq_check 1 $2 $3

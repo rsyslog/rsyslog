@@ -11,7 +11,7 @@ fi
 echo ===============================================================================
 echo \[dynstats_prevent_premature_eviction-vg.sh\]: test for ensuring metrics are not evicted before unused-ttl with valgrind
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup-vg dynstats_reset.conf
+startup_vg dynstats_reset.conf
 . $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
 . $srcdir/diag.sh block-stats-flush
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_1
@@ -25,9 +25,9 @@ echo \[dynstats_prevent_premature_eviction-vg.sh\]: test for ensuring metrics ar
 . $srcdir/diag.sh content-check "foo 001 0"
 . $srcdir/diag.sh content-check "foo 006 0"
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown-vg
+wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
  # because dyn-accumulators for existing metrics were posted-to under a second, they should not have been evicted
 . $srcdir/diag.sh custom-content-check 'baz=2' 'rsyslog.out.stats.log'
@@ -40,4 +40,4 @@ echo wait on shutdown
 . $srcdir/diag.sh first-column-sum-check 's/.*new_metric_add=\([0-9]\+\)/\1/g' 'new_metric_add=' 'rsyslog.out.stats.log' 3
 . $srcdir/diag.sh first-column-sum-check 's/.*ops_overflow=\([0-9]\+\)/\1/g' 'ops_overflow=' 'rsyslog.out.stats.log' 0
 . $srcdir/diag.sh first-column-sum-check 's/.*no_metric=\([0-9]\+\)/\1/g' 'no_metric=' 'rsyslog.out.stats.log' 0
-. $srcdir/diag.sh exit
+exit_test

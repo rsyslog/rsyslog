@@ -5,10 +5,10 @@
 echo ===============================================================================
 echo \[prop-all-json-concurrency.sh\]: testing concurrency of $!all-json variables
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup prop-all-json-concurrency.conf
+startup prop-all-json-concurrency.conf
 sleep 1
 . $srcdir/diag.sh tcpflood -m500000
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh seq-check 0 499999
-. $srcdir/diag.sh exit
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown
+seq_check 0 499999
+exit_test

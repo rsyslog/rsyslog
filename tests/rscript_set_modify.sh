@@ -5,9 +5,9 @@
 echo ===============================================================================
 echo \[rscript_set_modify.sh\]: testing set twice
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup rscript_set_modify.conf
+startup rscript_set_modify.conf
 . $srcdir/diag.sh injectmsg  0 100
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown 
-. $srcdir/diag.sh seq-check  0 99
-. $srcdir/diag.sh exit
+shutdown_when_empty
+wait_shutdown 
+seq_check  0 99
+exit_test

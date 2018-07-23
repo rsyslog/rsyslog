@@ -17,7 +17,7 @@ fi
 
 . $srcdir/diag.sh init
 rm -f rsyslog.out1.log rsyslog.out2.log rsyslog.out3.log
-. $srcdir/diag.sh startup rulesetmultiqueue.conf
+startup rulesetmultiqueue.conf
 . $srcdir/diag.sh wait-startup
 # now fill the three files (a bit sequentially, but they should
 # still get their share of concurrency - to increase the chance
@@ -31,11 +31,11 @@ rm -f rsyslog.out1.log rsyslog.out2.log rsyslog.out3.log
 # sufficiently drain the queues. This is race, but the best we currently
 # can do... - rgerhards, 2009-11-05
 sleep 2 
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown
 # now consolidate all logs into a single one so that we can use the
 # regular check logic
 cat rsyslog.out1.log rsyslog.out2.log rsyslog.out3.log > rsyslog.out.log
-. $srcdir/diag.sh seq-check 0 59999
+seq_check 0 59999
 rm -f rsyslog.out1.log rsyslog.out2.log rsyslog.out3.log
-. $srcdir/diag.sh exit
+exit_test

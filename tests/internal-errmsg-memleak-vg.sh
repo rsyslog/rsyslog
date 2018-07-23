@@ -15,8 +15,8 @@ if [ `uname` = "FreeBSD" ] ; then
 fi
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 global(processInternalMessages="off")
 $RepeatedMsgReduction on # keep this on because many distros have set it
 
@@ -29,9 +29,9 @@ ruleset(name="ruleset1") {
 }
 action(type="omfile" file="rsyslog2.out.log")
 '
-. $srcdir/diag.sh startup-vg-waitpid-only
+startup_vg_waitpid_only
 ./msleep 500 # wait a bit so that the error message can be emitted
 . $srcdir/diag.sh shutdown-immediate
-. $srcdir/diag.sh wait-shutdown-vg
+wait_shutdown_vg
 
-. $srcdir/diag.sh exit
+exit_test

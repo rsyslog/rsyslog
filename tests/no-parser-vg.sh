@@ -8,19 +8,19 @@ if [ `uname` = "FreeBSD" ] ; then
 fi
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="13514" ruleset="ruleset")
 ruleset(name="ruleset" parser="rsyslog.rfc5424") {
 	action(type="omfile" file="rsyslog2.out.log")
 }
 '
-. $srcdir/diag.sh startup-vg
+startup_vg
 . $srcdir/diag.sh tcpflood -m10
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown-vg
+shutdown_when_empty
+wait_shutdown_vg
 # note: we just check the valgrind output, the log file itself does not
 # interest us
 
-. $srcdir/diag.sh exit
+exit_test

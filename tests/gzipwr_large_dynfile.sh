@@ -21,17 +21,17 @@ echo TEST: \[gzipwr_large_dynfile.sh\]: test for gzip file writing for large mes
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout"
 #export RSYSLOG_DEBUGLOG="log"
-. $srcdir/diag.sh startup gzipwr_large_dynfile.conf
+startup gzipwr_large_dynfile.conf
 # send 4000 messages of 10.000bytes plus header max, randomized
 . $srcdir/diag.sh tcpflood -m4000 -r -d10000 -P129 -f5
 sleep 2 # due to large messages, we need this time for the tcp receiver to settle...
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown       # and wait for it to terminate
 gunzip < rsyslog.out.0.log > rsyslog.out.log
 gunzip < rsyslog.out.1.log >> rsyslog.out.log
 gunzip < rsyslog.out.2.log >> rsyslog.out.log
 gunzip < rsyslog.out.3.log >> rsyslog.out.log
 gunzip < rsyslog.out.4.log >> rsyslog.out.log
 #cat rsyslog.out.* > rsyslog.out.log
-. $srcdir/diag.sh seq-check 0 3999 -E
-. $srcdir/diag.sh exit
+seq_check 0 3999 -E
+exit_test

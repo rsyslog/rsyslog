@@ -10,10 +10,10 @@ if [ `uname` = "FreeBSD" ] ; then
 fi
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup-vg fac_local0.conf
+startup_vg fac_local0.conf
 . $srcdir/diag.sh tcpflood -m1000 -P 129
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown-vg
+shutdown_when_empty
+wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
-. $srcdir/diag.sh seq-check 0 999 
-. $srcdir/diag.sh exit
+seq_check 0 999 
+exit_test

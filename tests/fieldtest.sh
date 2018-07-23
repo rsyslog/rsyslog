@@ -1,8 +1,8 @@
 #!/bin/bash
 # add 2018-06-29 by Pascal Withopf, released under ASL 2.0
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="13514" ruleset="ruleset1")
 
@@ -14,16 +14,16 @@ ruleset(name="ruleset1") {
 }
 
 '
-. $srcdir/diag.sh startup
+startup
 . $srcdir/diag.sh tcpflood -m1 -M "\"<167>Mar  6 16:57:54 172.20.245.8 %PIX-7-710005: DROP_url_www.sina.com.cn:IN=eth1 OUT=eth0 SRC=192.168.10.78 DST=61.172.201.194 LEN=1182 TOS=0x00 PREC=0x00 TTL=63 ID=14368 DF PROTO=TCP SPT=33343 DPT=80 WINDOW=92 RES=0x00 ACK PSH URGP=0\""
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 
 echo 'DROP_url_www.sina.com.cn:IN=eth1' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
   cat rsyslog.out.log
-  . $srcdir/diag.sh error-exit  1
+  error_exit  1
 fi;
 
-. $srcdir/diag.sh exit
+exit_test

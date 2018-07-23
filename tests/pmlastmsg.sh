@@ -1,8 +1,8 @@
 #!/bin/bash
 # add 2018-06-29 by Pascal Withopf, released under ASL 2.0
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/pmlastmsg/.libs/pmlastmsg")
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="13514" ruleset="ruleset1")
@@ -15,7 +15,7 @@ ruleset(name="ruleset1" parser=["rsyslog.lastline","rsyslog.rfc5424","rsyslog.rf
 }
 
 '
-. $srcdir/diag.sh startup
+startup
 . $srcdir/diag.sh tcpflood -m1 -M "\"<13>last message repeated 5 times\""
 . $srcdir/diag.sh tcpflood -m1 -M "\"<13>last message repeated 0090909787348927349875 times\""
 . $srcdir/diag.sh tcpflood -m1 -M "\"<13>last message  repeated 5 times\""
@@ -24,8 +24,8 @@ ruleset(name="ruleset1" parser=["rsyslog.lastline","rsyslog.rfc5424","rsyslog.rf
 . $srcdir/diag.sh tcpflood -m1 -M "\"<167>Mar  6 16:57:54 172.20.245.8 TAG: Rest of message...\""
 . $srcdir/diag.sh tcpflood -m1 -M "\"<167>Mar  6 16:57:54 172.20.245.8 TAG long message ================================================================================\""
 . $srcdir/diag.sh tcpflood -m1 -M "\"<34>1 2003-11-11T22:14:15.003Z mymachine.example.com su - ID47 last message repeated 5 times\""
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 
 echo 'last message repeated 5 times
 last message repeated 0090909787348927349875 times
@@ -38,7 +38,7 @@ last message repeated 5 times' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
   cat rsyslog.out.log
-  . $srcdir/diag.sh error-exit  1
+  error_exit  1
 fi;
 
-. $srcdir/diag.sh exit
+exit_test

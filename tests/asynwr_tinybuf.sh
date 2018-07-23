@@ -12,9 +12,10 @@ echo TEST: \[asynwr_tinybuf.sh\]: test async file writing with 1-byte buffer
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="log"
-. $srcdir/diag.sh startup asynwr_tinybuf.conf
+startup asynwr_tinybuf.conf
 # send 1000 messages, fairly enough to trigger problems
 . $srcdir/diag.sh tcpflood -m1000
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh seq-check 0 999
-. $srcdir/diag.sh exit
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown # shut down rsyslogd when done processing messages
+seq_check 0 999
+exit_test

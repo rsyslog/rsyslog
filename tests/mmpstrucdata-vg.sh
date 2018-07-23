@@ -11,11 +11,11 @@ fi
 echo ===============================================================================
 echo \[mmpstrucdata.sh\]: testing mmpstrucdata
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup-vg mmpstrucdata.conf
+startup_vg mmpstrucdata.conf
 sleep 1
 . $srcdir/diag.sh tcpflood -m100 -y
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown-vg
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
-. $srcdir/diag.sh seq-check 0 99
-. $srcdir/diag.sh exit
+seq_check 0 99
+exit_test

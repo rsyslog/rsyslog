@@ -10,7 +10,7 @@ fi
 echo ======================================================================
 echo [imfile-readmode2-vg.sh]
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup-vg imfile-readmode2.conf
+startup_vg imfile-readmode2.conf
 
 # write the beginning of the file
 echo 'msgnum:0
@@ -28,8 +28,8 @@ echo 'msgnum:5' >> rsyslog.input # this one shouldn't be written to the output f
 # give it time to finish
 sleep 1
 
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown-vg    # we need to wait until rsyslogd is finished!
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown_vg    # we need to wait until rsyslogd is finished!
 . $srcdir/diag.sh check-exit-vg
 
 # give it time to write the output file
@@ -64,4 +64,4 @@ done
 
 ## if we got here, all is good :)
 
-. $srcdir/diag.sh exit
+exit_test

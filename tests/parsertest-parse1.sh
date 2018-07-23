@@ -2,8 +2,8 @@
 # add 2018-06-27 by Pascal Withopf, released under ASL 2.0
 . $srcdir/diag.sh init
 setvar_RS_HOSTNAME
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="13514" ruleset="ruleset1")
 
@@ -15,7 +15,7 @@ ruleset(name="ruleset1") {
 }
 
 '
-. $srcdir/diag.sh startup
+startup
 . $srcdir/diag.sh tcpflood -m1 -M "\"<167>Mar  6 16:57:54 172.20.245.8 %PIX-7-710005: UDP request discarded from SERVER1/2741 to test_app:255.255.255.255/61601\""
 . $srcdir/diag.sh tcpflood -m1 -M "\"<167>Mar 27 19:06:53 source_server sshd(pam_unix)[12750]: session opened for user foo by (uid=0)\""
 . $srcdir/diag.sh tcpflood -m1 -M "\"<167>Apr  6 15:07:10 lxcvs07 sshd(pam_unix)[31738]: session closed for user cvsadmin\""
@@ -45,8 +45,8 @@ ruleset(name="ruleset1") {
 . $srcdir/diag.sh tcpflood -m1 -M "\"<14>2010-08-30T23:00:05Z X4711 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\""
 . $srcdir/diag.sh tcpflood -m1 -M "\"<14>2010-08-30T23:00:05Z X4711 \""
 . $srcdir/diag.sh tcpflood -m1 -M "\"<14>2010-08-30T23:00:05Z X4711\""
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 
 export EXPECTED="167,local4,debug,Mar  6 16:57:54,172.20.245.8,%PIX-7-710005,%PIX-7-710005:, UDP request discarded from SERVER1/2741 to test_app:255.255.255.255/61601
 167,local4,debug,Mar 27 19:06:53,source_server,sshd(pam_unix),sshd(pam_unix)[12750]:, session opened for user foo by (uid=0)
@@ -79,4 +79,4 @@ export EXPECTED="167,local4,debug,Mar  6 16:57:54,172.20.245.8,%PIX-7-710005,%PI
 14,user,info,Aug 30 23:00:05,X4711,,,"
 cmp_exact rsyslog.out.log
 
-. $srcdir/diag.sh exit
+exit_test

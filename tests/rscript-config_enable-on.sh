@@ -5,8 +5,8 @@
 # added 2018-01-22 by Rainer Gerhards; Released under ASL 2.0
 . $srcdir/diag.sh init
 export DO_STOP=on
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 
 if $msg contains "msgnum:" then {
@@ -16,9 +16,9 @@ if $msg contains "msgnum:" then {
 	action(type="omfile" template="outfmt" file="rsyslog.out.log")
 }
 '
-. $srcdir/diag.sh startup
+startup
 . $srcdir/diag.sh injectmsg 0 10
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh seq-check 1 9
-. $srcdir/diag.sh exit
+shutdown_when_empty
+wait_shutdown
+seq_check 1 9
+exit_test

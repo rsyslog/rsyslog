@@ -11,8 +11,8 @@ fi
 rsyslog_testbench_setup_testuser
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 global(privdrop.group.keepsupplemental="on")
 template(name="outfmt" type="list") {
 	property(name="msg" compressSpace="on")
@@ -20,10 +20,10 @@ template(name="outfmt" type="list") {
 }
 action(type="omfile" template="outfmt" file="rsyslog.out.log")
 '
-. $srcdir/diag.sh add-conf "\$PrivDropToGroup ${TESTBENCH_TESTUSER[groupname]}"
-. $srcdir/diag.sh startup
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+add_conf "\$PrivDropToGroup ${TESTBENCH_TESTUSER[groupname]}"
+startup
+shutdown_when_empty
+wait_shutdown
 grep "groupid.*${TESTBENCH_TESTUSER[gid]}" < rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "message indicating drop to group \"${TESTBENCH_TESTUSER[groupname]}\" (#${TESTBENCH_TESTUSER[gid]}) is missing:"
@@ -31,4 +31,4 @@ if [ ! $? -eq 0 ]; then
   exit 1
 fi;
 
-. $srcdir/diag.sh exit
+exit_test

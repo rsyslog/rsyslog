@@ -12,7 +12,7 @@ echo ===========================================================================
 echo \[sparse_array_lookup_table.sh\]: test for sparse-array lookup-table and HUP based reloading of it
 . $srcdir/diag.sh init
 cp -f $srcdir/testsuites/xlate_sparse_array.lkp_tbl xlate_array.lkp_tbl
-. $srcdir/diag.sh startup array_lookup_table.conf
+startup array_lookup_table.conf
 . $srcdir/diag.sh injectmsg  0 1
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh assert-content-missing "foo"
@@ -39,9 +39,9 @@ cp -f $srcdir/testsuites/xlate_sparse_array_more_with_duplicates_and_nomatch.lkp
 . $srcdir/diag.sh await-lookup-table-reload
 . $srcdir/diag.sh injectmsg  0 15
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown
+wait_shutdown
 . $srcdir/diag.sh content-check "msgnum:00000000: quux"
 . $srcdir/diag.sh content-check "msgnum:00000001: quux"
 . $srcdir/diag.sh content-check "msgnum:00000002: foo_latest"
@@ -57,4 +57,4 @@ echo wait on shutdown
 . $srcdir/diag.sh content-check "msgnum:00000012: foo_latest"
 . $srcdir/diag.sh content-check "msgnum:00000013: foo_latest"
 . $srcdir/diag.sh content-check "msgnum:00000014: foo_latest"
-. $srcdir/diag.sh exit
+exit_test

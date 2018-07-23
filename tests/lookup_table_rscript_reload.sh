@@ -12,7 +12,7 @@ echo ===========================================================================
 echo \[lookup_table_rscript_reload.sh\]: test for lookup-table reload by rscript-fn
 . $srcdir/diag.sh init
 cp -f $srcdir/testsuites/xlate.lkp_tbl xlate.lkp_tbl
-. $srcdir/diag.sh startup lookup_table_reload_stub.conf
+startup lookup_table_reload_stub.conf
 # the last message ..002 should cause successful lookup-table reload
 cp -f $srcdir/testsuites/xlate_more.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh injectmsg  0 3
@@ -34,13 +34,13 @@ rm -f xlate.lkp_tbl # this should lead to unsuccessful reload
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh injectmsg  0 2
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown
+wait_shutdown
 . $srcdir/diag.sh content-check "msgnum:00000000: foo_latest"
 . $srcdir/diag.sh content-check "msgnum:00000001: quux"
 . $srcdir/diag.sh content-check "msgnum:00000002: baz_latest"
 . $srcdir/diag.sh content-check "msgnum:00000000: reload_failed"
 . $srcdir/diag.sh content-check "msgnum:00000000: reload_failed"
 
-. $srcdir/diag.sh exit
+exit_test

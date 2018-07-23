@@ -9,11 +9,11 @@ echo TEST: \[asynwr_simple.sh\]: simple test for async file writing
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="log"
-. $srcdir/diag.sh startup asynwr_simple.conf
+startup asynwr_simple.conf
 # send 35555 messages, make sure file size is not a multiple of
 # 10K, the buffer size!
 . $srcdir/diag.sh tcpflood -m35555
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
-. $srcdir/diag.sh seq-check 0 35554
-. $srcdir/diag.sh exit
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown       # and wait for it to terminate
+seq_check 0 35554
+exit_test

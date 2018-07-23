@@ -14,7 +14,7 @@ echo \[lookup_table_bad_configs.sh\]: test for sparse-array lookup-table and HUP
 
 echo "empty file..."
 cp -f $srcdir/testsuites/xlate_empty_file.lkp_tbl xlate.lkp_tbl
-. $srcdir/diag.sh startup lookup_table_all.conf
+startup lookup_table_all.conf
 . $srcdir/diag.sh injectmsg  0 5
 . $srcdir/diag.sh wait-queueempty
 
@@ -151,7 +151,7 @@ cp -f $srcdir/testsuites/xlate_sparseArray_empty_table.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh content-check "msgnum:00000001: baz_sparse_arr"
 
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown 
-. $srcdir/diag.sh exit
+wait_shutdown 
+exit_test

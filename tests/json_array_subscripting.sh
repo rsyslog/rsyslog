@@ -4,11 +4,11 @@
 echo ===============================================================================
 echo \[json_array_subscripting.sh\]: basic test for json array subscripting
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup json_array_subscripting.conf
+startup json_array_subscripting.conf
 . $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/json_array_input
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown 
+wait_shutdown 
 . $srcdir/diag.sh content-check 'msg: def1 | ghi2 | important_msg | { "baz": "other_msg" } | other_msg'
-. $srcdir/diag.sh exit
+exit_test

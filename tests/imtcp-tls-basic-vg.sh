@@ -14,10 +14,10 @@ echo \[imtcp-tls-basic-vg.sh\]: testing imtcp in TLS mode - basic test
 echo \$DefaultNetstreamDriverCAFile $srcdir/tls-certs/ca.pem     >rsyslog.conf.tlscert
 echo \$DefaultNetstreamDriverCertFile $srcdir/tls-certs/cert.pem >>rsyslog.conf.tlscert
 echo \$DefaultNetstreamDriverKeyFile $srcdir/tls-certs/key.pem   >>rsyslog.conf.tlscert
-. $srcdir/diag.sh startup-vg-noleak imtcp-tls-basic.conf
+startup_vg_noleak imtcp-tls-basic.conf
 . $srcdir/diag.sh tcpflood -p13514 -m10000 -Ttls -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown-vg
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
-. $srcdir/diag.sh seq-check 0 9999
-. $srcdir/diag.sh exit
+seq_check 0 9999
+exit_test

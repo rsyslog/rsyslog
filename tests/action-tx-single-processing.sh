@@ -1,8 +1,8 @@
 #!/bin/bash
 . $srcdir/diag.sh init
 mysql --user=rsyslog --password=testbench < testsuites/mysql-truncate.sql
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 $ModLoad ../plugins/ommysql/.libs/ommysql
 global(errormessagestostderr.maxnumber="50")
 
@@ -22,11 +22,11 @@ if($msg contains "msgnum:") then {
 }
 action(type="omfile" file="rsyslog2.out.log")
 '
-. $srcdir/diag.sh startup
+startup
 . $srcdir/diag.sh injectmsg 0 5000
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 # note "-s" is requried to suppress the select "field header"
 mysql -s --user=rsyslog --password=testbench < testsuites/mysql-select-msg.sql > rsyslog.out.log
-. $srcdir/diag.sh seq-check  0 4999 -i2
-. $srcdir/diag.sh exit
+seq_check  0 4999 -i2
+exit_test

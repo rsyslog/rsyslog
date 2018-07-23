@@ -6,14 +6,14 @@ echo ===========================================================================
 echo \[execonlywhenprevsuspended-nonsusp\]: test execonly...suspended functionality with non-suspended action
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup execonlywhenprevsuspended-nonsusp.conf
+startup execonlywhenprevsuspended-nonsusp.conf
 . $srcdir/diag.sh injectmsg 0 1000
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh seq-check 0 999
+shutdown_when_empty
+wait_shutdown
+seq_check 0 999
 if [ -e rsyslog2.out.log ]; then
     echo "error: \"suspended\" file exists, first 10 lines:"
     $RS_HEADCMD rsyslog2.out.log
     exit 1
 fi
-. $srcdir/diag.sh exit
+exit_test

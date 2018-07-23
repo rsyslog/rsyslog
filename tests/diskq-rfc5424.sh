@@ -14,8 +14,8 @@ if [ `uname` = "SunOS" ] ; then
 fi
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="13514" ruleset="rs")
 
@@ -32,10 +32,10 @@ ruleset(name="rs") {
 	call rs2
 }
 '
-. $srcdir/diag.sh startup
+startup
 . $srcdir/diag.sh tcpflood -m1000 -y
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh seq-check 0 999
+shutdown_when_empty
+wait_shutdown
+seq_check 0 999
 
-. $srcdir/diag.sh exit
+exit_test

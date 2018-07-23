@@ -10,9 +10,9 @@ if [ `uname` = "SunOS" ] ; then
 fi
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup execonlywhenprevsuspended-queue.conf
+startup execonlywhenprevsuspended-queue.conf
 . $srcdir/diag.sh injectmsg 0 1000
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh seq-check 1 999
-. $srcdir/diag.sh exit
+shutdown_when_empty
+wait_shutdown
+seq_check 1 999
+exit_test

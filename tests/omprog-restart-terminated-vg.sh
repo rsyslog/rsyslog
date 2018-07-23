@@ -6,7 +6,7 @@
 # rest of checks (this simplifies the maintenance of the tests).
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup-vg omprog-restart-terminated.conf
+startup_vg omprog-restart-terminated.conf
 . $srcdir/diag.sh wait-startup
 . $srcdir/diag.sh injectmsg 0 1
 . $srcdir/diag.sh wait-queueempty
@@ -37,7 +37,7 @@ sleep .1
 . $srcdir/diag.sh injectmsg 9 1
 . $srcdir/diag.sh wait-queueempty
 
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown-vg
+shutdown_when_empty
+wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
-. $srcdir/diag.sh exit
+exit_test

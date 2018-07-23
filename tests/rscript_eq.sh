@@ -4,11 +4,11 @@
 echo ===============================================================================
 echo \[rscript_eq.sh\]: testing rainerscript EQ statement
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup rscript_eq.conf
+startup rscript_eq.conf
 . $srcdir/diag.sh injectmsg  0 8000
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown 
-. $srcdir/diag.sh seq-check  5000 5002
-. $srcdir/diag.sh exit
+wait_shutdown 
+seq_check  5000 5002
+exit_test

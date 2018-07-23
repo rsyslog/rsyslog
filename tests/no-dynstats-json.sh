@@ -4,11 +4,11 @@
 echo ===============================================================================
 echo \[no-dynstats-json.sh\]: test for verifying stats are reported correctly in json format in absence of any dynstats buckets being configured
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup no-dynstats-json.conf
+startup no-dynstats-json.conf
 . $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown
+wait_shutdown
 . $srcdir/diag.sh custom-content-check '{ "name": "global", "origin": "dynstats", "values": { } }' 'rsyslog.out.stats.log'
-. $srcdir/diag.sh exit
+exit_test

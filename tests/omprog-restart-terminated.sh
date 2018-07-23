@@ -11,7 +11,7 @@
 . $srcdir/diag.sh init
 . $srcdir/diag.sh check-command-available lsof
 
-. $srcdir/diag.sh startup omprog-restart-terminated.conf
+startup omprog-restart-terminated.conf
 . $srcdir/diag.sh wait-startup
 . $srcdir/diag.sh injectmsg 0 1
 . $srcdir/diag.sh wait-queueempty
@@ -49,8 +49,8 @@ end_fd_count=$(lsof -p $pid | wc -l)
 child_pid=$(ps -ef | grep "[o]mprog-restart-terminated-bin.sh" | awk '{print $2}')
 child_netstat=$(netstat -p | grep "$child_pid/bash")
 
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 
 expected_output="Starting
 Received msgnum:00000000:
@@ -79,12 +79,12 @@ written_output=$(<rsyslog.out.log)
 if [[ "$expected_output" != "$written_output" ]]; then
     echo unexpected omprog script output:
     echo "$written_output"
-    . $srcdir/diag.sh error-exit 1
+    error_exit 1
 fi
 
 if [[ "$start_fd_count" != "$end_fd_count" ]]; then
     echo "file descriptor leak: started with $start_fd_count open files, ended with $end_fd_count"
-    . $srcdir/diag.sh error-exit 1
+    error_exit 1
 fi
 
 # Check also that the child process does not inherit open fds from
@@ -94,7 +94,7 @@ fi
 if [[ "$child_netstat" != "" ]]; then
     echo "child process has socket(s) open (should have none):"
     echo "$child_netstat"
-    . $srcdir/diag.sh error-exit 1
+    error_exit 1
 fi
 
-. $srcdir/diag.sh exit
+exit_test

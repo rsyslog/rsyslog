@@ -14,17 +14,17 @@ echo \$MainMsgQueueType $1 > work-queuemode.conf
 echo "*.*     :omtesting:sleep 0 1000" > work-delay.conf
 
 # inject 5000 msgs, so that we do not hit the high watermark
-. $srcdir/diag.sh startup queue-persist.conf
+startup queue-persist.conf
 . $srcdir/diag.sh injectmsg 0 5000
 . $srcdir/diag.sh shutdown-immediate
-. $srcdir/diag.sh wait-shutdown
+wait_shutdown
 . $srcdir/diag.sh check-mainq-spool
 
 # restart engine and have rest processed
 #remove delay
 echo "#" > work-delay.conf
-. $srcdir/diag.sh startup queue-persist.conf
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
+startup queue-persist.conf
+shutdown_when_empty # shut down rsyslogd when done processing messages
 ./msleep 1000
 $srcdir/diag.sh wait-shutdown
 # note: we need to permit duplicate messages, as due to the forced
@@ -32,5 +32,5 @@ $srcdir/diag.sh wait-shutdown
 # actually were processed. This is inline with rsyslog's philosophy
 # to better duplicate than loose messages. Duplicate messages are
 # permitted by the -d seq-check option.
-. $srcdir/diag.sh seq-check 0 4999 -d
-. $srcdir/diag.sh exit
+seq_check 0 4999 -d
+exit_test

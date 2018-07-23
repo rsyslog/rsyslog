@@ -11,12 +11,12 @@ fi
 echo ===============================================================================
 echo \[json_object_looping-vg.sh\]: basic test for looping over json object / associative-array with valgrind
 . $srcdir/diag.sh init json_object_looping-vg.sh
-. $srcdir/diag.sh startup-vg json_object_looping.conf
+startup_vg json_object_looping.conf
 . $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/json_object_input
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown-vg
+wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
 . $srcdir/diag.sh content-check 'quux: { "key": "str1", "value": "abc0" }'
 . $srcdir/diag.sh content-check 'quux: { "key": "str2", "value": "def1", "random_key": "str2" }'
@@ -28,4 +28,4 @@ echo wait on shutdown
 . $srcdir/diag.sh custom-content-check 'corge: key: bar val: { "k1": "important_msg", "k2": "other_msg" }' 'rsyslog.out.async.log'
 . $srcdir/diag.sh custom-content-check 'prefixed_corge: { "key": "bar", "value": { "k1": "important_msg", "k2": "other_msg" } }' 'rsyslog.out.prefixed.log'
 . $srcdir/diag.sh content-check 'garply: k1=important_msg, k2=other_msg'
-. $srcdir/diag.sh exit
+exit_test

@@ -4,7 +4,7 @@ echo ======================================================================
 echo [imfile-readmode2-with-persists-data-during-stop.sh]
 . $srcdir/diag.sh check-inotify
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup imfile-readmode2-with-persists-data-during-stop.conf
+startup imfile-readmode2-with-persists-data-during-stop.conf
 
 # write the beginning of the file
 echo 'msgnum:0
@@ -18,8 +18,8 @@ sleep 1
 # persisted and read again on startup. Results should still be
 # correct ;)
 echo stopping rsyslog
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 
 # write some more lines - we want to check here if the initial
 # polling loop properly picks up that data. Note that even in
@@ -31,7 +31,7 @@ echo 'msgnum:3
  msgnum:4' >> rsyslog.input
 
 echo restarting rsyslog
-. $srcdir/diag.sh startup imfile-readmode2-with-persists.conf
+startup imfile-readmode2-with-persists.conf
 echo restarted rsyslog, continuing with test
 
 echo ' msgnum:5' >> rsyslog.input
@@ -43,8 +43,8 @@ msgnum:8' >> rsyslog.input
 # give it time to finish
 sleep 1
 
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown    # we need to wait until rsyslogd is finished!
 
 # give it time to write the output file
 sleep 1
@@ -78,4 +78,4 @@ done
 
 ## if we got here, all is good :)
 
-. $srcdir/diag.sh exit
+exit_test

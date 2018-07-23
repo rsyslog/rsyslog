@@ -13,13 +13,13 @@ if [ $no_liblogging_stdlog -ne 0 ];then
   exit 77
 fi
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup imuxsock_traillf_syssock.conf
+startup imuxsock_traillf_syssock.conf
 # send a message with trailing LF
 ./syslog_caller -fsyslog_inject-l -m1 -C "uxsock:testbench_socket"
 # the sleep below is needed to prevent too-early termination of rsyslogd
 ./msleep 100
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown	# we need to wait until rsyslogd is finished!
 cmp rsyslog.out.log $srcdir/resultdata/imuxsock_traillf.log
 if [ ! $? -eq 0 ]; then
   echo "imuxsock_traillf_syssock failed"
@@ -29,4 +29,4 @@ if [ ! $? -eq 0 ]; then
   echo \"`cat $srcdir/resultdata/imuxsock_traillf.log`\"
   exit 1
 fi;
-. $srcdir/diag.sh exit
+exit_test

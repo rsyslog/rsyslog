@@ -11,33 +11,33 @@
 echo ===============================================================================
 echo \[imtcp-multiport.sh\]: testing imtcp multiple listeners
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup imtcp-multiport.conf
+startup imtcp-multiport.conf
 . $srcdir/diag.sh tcpflood -p13514 -m10000
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh seq-check 0 9999
-. $srcdir/diag.sh exit
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown
+seq_check 0 9999
+exit_test
 #
 #
 # ### now complete new cycle with other port ###
 #
 #
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup imtcp-multiport.conf
+startup imtcp-multiport.conf
 . $srcdir/diag.sh tcpflood -p13515 -m10000
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh seq-check 0 9999
-. $srcdir/diag.sh exit
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown
+seq_check 0 9999
+exit_test
 #
 #
 # ### now complete new cycle with other port ###
 #
 #
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup imtcp-multiport.conf
+startup imtcp-multiport.conf
 . $srcdir/diag.sh tcpflood -p13516 -m10000
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh seq-check 0 9999
-. $srcdir/diag.sh exit
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown
+seq_check 0 9999
+exit_test

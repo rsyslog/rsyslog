@@ -5,16 +5,16 @@
 
 psql -h localhost -U postgres -f testsuites/pgsql-basic.sql
 
-. $srcdir/diag.sh startup-vg pgsql-basic.conf
+startup_vg pgsql-basic.conf
 . $srcdir/diag.sh injectmsg  0 5000
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown-vg
+shutdown_when_empty
+wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
 
 psql -h localhost -U postgres -d syslogtest -f testsuites/pgsql-select-msg.sql -t -A > rsyslog.out.log
-. $srcdir/diag.sh seq-check  0 4999
+seq_check  0 4999
 
 echo cleaning up test database
 psql -h localhost -U postgres -c 'DROP DATABASE IF EXISTS syslogtest;'
 
-. $srcdir/diag.sh exit
+exit_test

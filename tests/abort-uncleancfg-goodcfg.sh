@@ -5,14 +5,14 @@ echo ===========================================================================
 echo \[abort-uncleancfg-goodcfg.sh\]: testing abort on unclean configuration
 echo "testing a good Configuration verification run"
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup abort-uncleancfg-goodcfg.conf 
+startup abort-uncleancfg-goodcfg.conf 
 . $srcdir/diag.sh tcpflood -m10 -i1 
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown
 
 if [ ! -e rsyslog.out.log ]
 then
         echo "error: expected file does not exist"
-	. $srcdir/diag.sh error-exit 1
+	error_exit 1
 fi
-. $srcdir/diag.sh exit
+exit_test

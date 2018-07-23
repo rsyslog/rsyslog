@@ -9,12 +9,12 @@ echo \[now-utc\]: test \$NOW-UTC
 
 export TZ=TEST-02:00
 
-FAKETIME='2016-01-01 01:00:00' $srcdir/diag.sh startup now-utc.conf
+FAKETIME='2016-01-01 01:00:00' startup now-utc.conf
 # what we send actually is irrelevant, as we just use system properties.
 # but we need to send one message in order to gain output!
 . $srcdir/diag.sh tcpflood -m1
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 echo "2016-01-01,2015-12-31" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, rsyslog.out.log is:"
@@ -23,4 +23,4 @@ if [ ! $? -eq 0 ]; then
 fi;
 
 
-. $srcdir/diag.sh exit
+exit_test

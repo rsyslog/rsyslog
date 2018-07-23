@@ -11,7 +11,7 @@ fi
 echo ===============================================================================
 echo \[dynstats_overflow.sh\]: test for gathering stats when metrics exceed provisioned capacity
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup dynstats_overflow.conf
+startup dynstats_overflow.conf
 . $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
 . $srcdir/diag.sh block-stats-flush
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_more_0
@@ -78,11 +78,11 @@ rm rsyslog.out.stats.log
 . $srcdir/diag.sh await-stats-flush-after-block
 
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown
+wait_shutdown
 
 . $srcdir/diag.sh first-column-sum-check 's/.*metrics_purged=\([0-9]\+\)/\1/g' 'metrics_purged=' 'rsyslog.out.stats.log' 3
 
 . $srcdir/diag.sh custom-assert-content-missing 'foo' 'rsyslog.out.stats.log'
-. $srcdir/diag.sh exit
+exit_test

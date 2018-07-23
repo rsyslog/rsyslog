@@ -5,8 +5,8 @@
 
 export TZ=TEST+01:00
 
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/mmnormalize/.libs/mmnormalize")
 input(type="imtcp" port="13514" ruleset="ruleset1")
@@ -54,17 +54,17 @@ ruleset(name="ruleset1") {
 	}	
 }
 '
-FAKETIME='2017-03-08 14:23:51' $srcdir/diag.sh startup
+FAKETIME='2017-03-08 14:23:51' startup
 . $srcdir/diag.sh tcpflood -m1 -M "\"<182>Mar  8 14:23:51 host3 audispd: {SER3.local6 Y01 LNX [SRCH ALRT DASH REPT ANOM]}  node=host3.domain.com type=SYSCALL msg=audit(1488975831.267:230190721):\""
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 echo '2017-03-08T14:23:51-01:00 2017-03-08T14:23:51-01:00 host3 audispd  node=host3.domain.com type=SYSCALL msg=audit(1488975831.267:230190721):
 /sb/logs/incoming/2017/03/08/svc_SER3/ret_Y01/os_LNX/127.0.0.1/r_relay1/local6.gz
 [][][127.0.0.1][1488986631][] Mar  8 14:23:51 host3 audispd:  node=host3.domain.com type=SYSCALL msg=audit(1488975831.267:230190721):' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
   cat rsyslog.out.log
-  . $srcdir/diag.sh error-exit  1
+  error_exit  1
 fi;
 
-. $srcdir/diag.sh exit
+exit_test

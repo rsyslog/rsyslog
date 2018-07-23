@@ -8,8 +8,8 @@ if [ `uname` = "SunOS" ] ; then
 fi
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imfile/.libs/imfile"
        mode="polling"
        pollingInterval="2"
@@ -32,7 +32,7 @@ if $msg contains "msgnum:" then
    template="outfmt"
  )
 '
-. $srcdir/diag.sh startup
+startup
 
 # we need to sleep a bit between writes to give imfile a chance
 # to pick up the data (IN MULTIPLE ITERATIONS!)
@@ -47,8 +47,8 @@ echo ' msgnum:2
 echo 'END OF TEST' >> rsyslog.input
 ./msleep 2000
 
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown    # we need to wait until rsyslogd is finished!
 
 echo 'HEADER msgnum:0\\n msgnum:1
 HEADER  msgnum:2\\n msgnum:3' | cmp - rsyslog.out.log
@@ -58,4 +58,4 @@ if [ ! $? -eq 0 ]; then
   exit 1
 fi;
 
-. $srcdir/diag.sh exit
+exit_test

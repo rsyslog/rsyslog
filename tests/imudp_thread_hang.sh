@@ -6,8 +6,8 @@
 # Copyright 2014 by Rainer Gerhards, licensed under ASL 2.0
 echo \[imudp_thread_hang\]: a situation where imudp caused a hang
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup imudp_thread_hang.conf
+startup imudp_thread_hang.conf
 ./msleep 1000
 . $srcdir/diag.sh shutdown-immediate
-. $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh exit
+wait_shutdown
+exit_test

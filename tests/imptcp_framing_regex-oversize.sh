@@ -1,8 +1,8 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released  under ASL 2.0
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 $EscapeControlCharactersOnReceive off
 global(maxMessageSize="256")
 module(load="../plugins/imptcp/.libs/imptcp")
@@ -15,10 +15,10 @@ ruleset(name="remote") {
 }
 action(type="omfile" file="rsyslog2.out.log")
 '
-. $srcdir/diag.sh startup
+startup
 . $srcdir/diag.sh tcpflood -B -I ${srcdir}/testsuites/imptcp_framing_regex-oversize.testdata
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown       # and wait for it to terminate
 echo 'NEWMSG: <33>Mar  1 01:00:00 172.20.245.8 tag test1
 NEWMSG: <33>Mar  1 01:00:00 172.20.245.8 tag test xml-ish
 <test/>
@@ -40,8 +40,8 @@ NEWMSG: <33>Mar  1 01:00:00 172.20.245.8 tag test4' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
   cat rsyslog.out.log
-  . $srcdir/diag.sh error-exit  1
+  error_exit  1
 fi;
 . $srcdir/diag.sh content-check-regex "assuming end of frame" rsyslog2.out.log
 . $srcdir/diag.sh content-check-regex "message too long" rsyslog2.out.log
-. $srcdir/diag.sh exit
+exit_test

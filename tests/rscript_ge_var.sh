@@ -4,11 +4,11 @@
 echo ===============================================================================
 echo \[rscript_ge.sh\]: testing rainerscript GE statement for two JSON variables
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup rscript_ge_var.conf
+startup rscript_ge_var.conf
 . $srcdir/diag.sh injectmsg  0 1
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown 
-. $srcdir/diag.sh seq-check  0 0
-. $srcdir/diag.sh exit
+wait_shutdown 
+seq_check  0 0
+exit_test

@@ -13,10 +13,10 @@ fi
 echo ===============================================================================
 echo \[json_null.sh\]: test for json containung \"null\" value
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup-vg json_null.conf
+startup_vg json_null.conf
 . $srcdir/diag.sh tcpflood -m 1 -M "\"<167>Mar  6 16:57:54 172.20.245.8 test: @cee: { \\\"nope\\\": null }\""
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown-vg
-. $srcdir/diag.sh exit
+wait_shutdown_vg
+exit_test

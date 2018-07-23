@@ -10,12 +10,12 @@ fi
 echo ===============================================================================
 echo \[failover-no-rptd.sh\]: rptd test for failover functionality - no failover
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup-vg failover-no-rptd.conf
+startup_vg failover-no-rptd.conf
 . $srcdir/diag.sh injectmsg  0 5000
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown-vg
+wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
 # now we need our custom logic to see if the result file is empty
 # (what it should be!)
@@ -25,4 +25,4 @@ then
 	echo "ERROR, output file not empty"
 	exit 1
 fi
-. $srcdir/diag.sh exit
+exit_test

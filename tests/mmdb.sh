@@ -7,8 +7,8 @@ echo \[mmdb.sh\]: test for mmdb
 #export RSYSLOG_DEBUG="debug nostdout"
 #export RSYSLOG_DEBUGLOG="log"
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 template(name="outfmt" type="string" string="%$!iplocation%\n")
 
 module(load="../plugins/mmdblookup/.libs/mmdblookup")
@@ -21,9 +21,9 @@ ruleset(name="testing") {
 	action(type="mmdblookup" mmdbfile=`echo $srcdir/test.mmdb` key="$!ip" fields="city" )
 	action(type="omfile" file="./rsyslog.out.log" template="outfmt")
 }'
-. $srcdir/diag.sh startup
+startup
 . $srcdir/diag.sh tcpflood -m 1 -j "202.106.0.20\ "
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 . $srcdir/diag.sh content-check '{ "city": "Beijing" }'
-. $srcdir/diag.sh exit 
+exit_test 

@@ -18,10 +18,10 @@ echo TEST: \[asynwr_small.sh\]: test for async file writing for few messages
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="log"
-. $srcdir/diag.sh startup asynwr_small.conf
+startup asynwr_small.conf
 # send 4000 messages
 . $srcdir/diag.sh tcpflood -m2
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
-. $srcdir/diag.sh seq-check 0 1
-. $srcdir/diag.sh exit
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown       # and wait for it to terminate
+seq_check 0 1
+exit_test

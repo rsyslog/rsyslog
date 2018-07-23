@@ -6,7 +6,7 @@ echo ======================================================================
 echo [imfile-endregex.sh]
 . $srcdir/diag.sh check-inotify
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup imfile-endregex.conf
+startup imfile-endregex.conf
 
 # write the beginning of the file
 echo 'msgnum:0
@@ -24,8 +24,8 @@ echo 'msgnum:5' >> rsyslog.input # this one shouldn't be written to the output f
 # give it time to finish
 sleep 1
 
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown    # we need to wait until rsyslogd is finished!
 
 # give it time to write the output file
 sleep 1
@@ -59,4 +59,4 @@ done
 
 ## if we got here, all is good :)
 
-. $srcdir/diag.sh exit
+exit_test

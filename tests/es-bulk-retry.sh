@@ -12,8 +12,8 @@ EOF
 . $srcdir/diag.sh start-elasticsearch
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/impstats/.libs/impstats" interval="1"
 	   log.file="es-stats.log" log.syslog="off" format="cee")
 
@@ -96,9 +96,9 @@ curl -s -H 'Content-Type: application/json' -XPUT localhost:${ES_PORT:-19200}/rs
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="debug.log"
 if [ "x${USE_VALGRIND:-false}" == "xtrue" ] ; then
-	. $srcdir/diag.sh startup-vg
+	startup_vg
 else
-	. $srcdir/diag.sh startup
+	startup
 fi
 if [ -n "${USE_GDB:-}" ] ; then
 	echo attach gdb here
@@ -108,12 +108,12 @@ numrecords=100
 success=50
 badarg=50
 . $srcdir/diag.sh injectmsg 0 $numrecords
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 if [ "x${USE_VALGRIND:-false}" == "xtrue" ] ; then
-	. $srcdir/diag.sh wait-shutdown-vg
+	wait_shutdown_vg
 	. $srcdir/diag.sh check-exit-vg
 else
-	. $srcdir/diag.sh wait-shutdown
+	wait_shutdown
 fi
 . $srcdir/diag.sh es-getdata $numrecords $ES_PORT
 rc=$?
@@ -195,7 +195,7 @@ if [ $rc -eq 0 ] ; then
 	echo tests completed successfully
 else
 	cat rsyslog.out.log
-	. $srcdir/diag.sh error-exit 1 stacktrace
+	error_exit 1 stacktrace
 fi
 
-. $srcdir/diag.sh exit
+exit_test

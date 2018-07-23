@@ -7,12 +7,12 @@
 echo ===============================================================================
 echo \[execonlywhenprevsuspended2.sh\]: test execonly...suspended functionality
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup execonlywhenprevsuspended2.conf
+startup execonlywhenprevsuspended2.conf
 . $srcdir/diag.sh injectmsg 0 1000
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown
 echo check file 1
-. $srcdir/diag.sh seq-check 1 999
+seq_check 1 999
 echo check file 2
-. $srcdir/diag.sh seq-check2 0 999
-. $srcdir/diag.sh exit
+seq_check2 0 999
+exit_test
