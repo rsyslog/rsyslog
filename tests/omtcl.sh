@@ -9,7 +9,7 @@ add_conf "*.* :omtcl:$srcdir/omtcl.tcl,doAction;tcldict
 "
 startup
 echo 'injectmsg litteral <167>Mar  1 01:00:00 172.20.245.8 tag hello world' | \
-	./diagtalker || error_exit $?
+	./diagtalker -p$IMDIAG_PORT || error_exit $?
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
