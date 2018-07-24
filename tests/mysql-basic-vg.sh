@@ -3,8 +3,13 @@
 echo ===============================================================================
 echo \[mysql-basic-vg.sh\]: basic test for mysql-basic functionality/valgrind
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+$ModLoad ../plugins/ommysql/.libs/ommysql
+:msg, contains, "msgnum:" :ommysql:127.0.0.1,Syslog,rsyslog,testbench;
+'
 mysql --user=rsyslog --password=testbench < testsuites/mysql-truncate.sql
-startup_vg mysql-basic.conf
+startup_vg
 . $srcdir/diag.sh injectmsg  0 5000
 shutdown_when_empty
 wait_shutdown_vg

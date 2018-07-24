@@ -4,7 +4,68 @@
 echo ===============================================================================
 echo \[rscript_ge.sh\]: testing rainerscript GE statement for two JSON variables
 . $srcdir/diag.sh init
-startup rscript_ge_var.conf
+generate_conf
+add_conf '
+template(name="outfmt" type="list") {
+	property(name="$!usr!msgnum")
+	constant(value="\n")
+}
+
+set $!var1 = "42";
+set $!var2 = "42";
+set $!var3 = "41";
+if $!var1 >= $!var2 and $!var1 >= $!var3 then {
+        if $!var3 >= $!var1 then {
+                # Failure
+                stop
+        } else {
+                unset $!var1;
+                unset $!var2;
+                unset $!var3;
+        }
+} else {
+        # Failure
+        stop
+}
+set $.var1 = "42";
+set $.var2 = "42";
+set $.var3 = "41";
+if $.var1 >= $.var2 and $.var1 >= $.var3 then {
+        if $.var3 >= $.var1 then {
+                # Failure
+                stop
+        } else {
+                unset $.var1;
+                unset $.var2;
+                unset $.var3;
+        }
+} else {
+        # Failure
+        stop
+}
+set $/var1 = "42";
+set $/var2 = "42";
+set $/var3 = "41";
+if $/var1 >= $/var2 and $/var1 >= $/var3 then {
+        if $/var3 >= $/var1 then {
+                # Failure
+                stop
+        } else {
+                unset $/var1;
+                unset $/var2;
+                unset $/var3;
+        }
+} else {
+        # Failure
+        stop
+}
+
+if $msg contains 'msgnum' then {
+	set $!usr!msgnum = field($msg, 58, 2);
+	action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+}
+'
+startup
 . $srcdir/diag.sh injectmsg  0 1
 echo doing shutdown
 shutdown_when_empty

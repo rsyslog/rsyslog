@@ -6,7 +6,20 @@
 echo ===============================================================================
 echo \[rscript_unaffected_reset.sh\]: testing set/reset
 . $srcdir/diag.sh init
-startup rscript_unaffected_reset.conf
+generate_conf
+add_conf '
+template(name="outfmt" type="list") {
+	property(name="$!usr!msgnum")
+	constant(value="\n")
+}
+
+if $msg contains 'msgnum' then {
+	set $!usr!msgnum = field($msg, 58, 2);
+	set $!usr!msgnum_reset = "dummy";
+	action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+}
+'
+startup
 . $srcdir/diag.sh injectmsg  0 100
 shutdown_when_empty
 wait_shutdown 

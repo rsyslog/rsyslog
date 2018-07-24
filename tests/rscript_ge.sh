@@ -4,7 +4,21 @@
 echo ===============================================================================
 echo \[rscript_ge.sh\]: testing rainerscript GE statement
 . $srcdir/diag.sh init
-startup rscript_ge.conf
+generate_conf
+add_conf '
+template(name="outfmt" type="list") {
+	property(name="$!usr!msgnum")
+	constant(value="\n")
+}
+
+if $msg contains 'msgnum' then {
+	set $!usr!msgnum = field($msg, 58, 2);
+	if $!usr!msgnum >= "00005000" then
+		stop
+	action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+}
+'
+startup
 . $srcdir/diag.sh injectmsg  0 8000
 echo doing shutdown
 shutdown_when_empty

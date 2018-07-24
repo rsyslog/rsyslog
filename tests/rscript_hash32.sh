@@ -4,7 +4,20 @@
 echo ===============================================================================
 echo \rscript_hash32.sh\]: test for hash32 and hash64mod script-function
 . $srcdir/diag.sh init
-startup rscript_hash32.conf
+generate_conf
+add_conf '
+template(name="outfmt" type="string" string="%$.hash_no_1% -  %$.hash_no_2%\n")
+
+module(load="../plugins/imtcp/.libs/imtcp")
+module(load="../contrib/fmhash/.libs/fmhash")
+input(type="imtcp" port="13514")
+
+set $.hash_no_1 = hash32("0f9a1d07-a8c9-43a7-a6f7-198dca3d932e");
+set $.hash_no_2 = hash32mod("0f9a1d07-a8c9-43a7-a6f7-198dca3d932e", 100);
+
+action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+'
+startup
 . $srcdir/diag.sh tcpflood -m 20
 echo doing shutdown
 shutdown_when_empty

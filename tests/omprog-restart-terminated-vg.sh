@@ -6,7 +6,28 @@
 # rest of checks (this simplifies the maintenance of the tests).
 
 . $srcdir/diag.sh init
-startup_vg omprog-restart-terminated.conf
+generate_conf
+add_conf '
+module(load="../plugins/omprog/.libs/omprog")
+
+template(name="outfmt" type="string" string="%msg%\n")
+
+:msg, contains, "msgnum:" {
+    action(
+        type="omprog"
+        binary=`echo $srcdir/testsuites/omprog-restart-terminated-bin.sh`
+        template="outfmt"
+        name="omprog_action"
+        queue.type="Direct"  # the default; facilitates sync with the child process
+        confirmMessages="on"  # facilitates sync with the child process
+        action.resumeRetryCount="10"
+        action.resumeInterval="1"
+        action.reportSuspensionContinuation="on"
+        signalOnClose="off"
+    )
+}
+'
+startup_vg
 . $srcdir/diag.sh wait-startup
 . $srcdir/diag.sh injectmsg 0 1
 . $srcdir/diag.sh wait-queueempty

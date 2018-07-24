@@ -5,7 +5,20 @@
 echo ===============================================================================
 echo \[rscript_set_modify.sh\]: testing set twice
 . $srcdir/diag.sh init
-startup rscript_set_modify.conf
+generate_conf
+add_conf '
+template(name="outfmt" type="list") {
+	property(name="$!usr!msgnum")
+	constant(value="\n")
+}
+
+if $msg contains 'msgnum' then {
+	set $!usr!msgnum = field($msg, 58, 1);
+	set $!usr!msgnum = field($msg, 58, 2);
+	action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+}
+'
+startup
 . $srcdir/diag.sh injectmsg  0 100
 shutdown_when_empty
 wait_shutdown 
