@@ -9,7 +9,22 @@
 # rgerhards, 2009-06-26
 echo \[threadingmq.sh\]: main queue concurrency
 . $srcdir/diag.sh init
-startup threadingmq.conf
+generate_conf
+add_conf '
+$MainMsgQueueTimeoutShutdown 1
+#$MainMsgQueueTimeoutShutdown 100000
+
+$MainMsgQueueWorkerThreadMinimumMessages 10
+$MainMsgQueueWorkerThreads 5
+
+$template outfmt,"%msg:F,58:2%\n"
+$template dynfile,"rsyslog.out.log" # trick to use relative path names!
+# write quickly to the output file:
+$OMFileFlushOnTXEnd off
+$OMFileIOBufferSize 256k 
+:msg, contains, "msgnum:" ?dynfile;outfmt
+'
+startup
 . $srcdir/diag.sh injectmsg 0 100000
 shutdown_when_empty # shut down rsyslogd when done processing messages
 # we give an extra seconds for things to settle, especially
