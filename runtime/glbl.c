@@ -130,6 +130,7 @@ char** glblDbgFiles = NULL;
 size_t glblDbgFilesNum = 0;
 int glblDbgWhitelist = 1;
 int glblPermitCtlC = 0;
+int glblInputTimeoutShutdown = 1000; /* input shutdown timeout in ms */
 
 uint64_t glblDevOptions = 0; /* to be used by developers only */
 
@@ -180,6 +181,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "senders.reportgoneaway", eCmdHdlrBinary, 0 },
 	{ "senders.timeoutafter", eCmdHdlrPositiveInt, 0 },
 	{ "senders.keeptrack", eCmdHdlrBinary, 0 },
+	{ "inputs.timeout.shutdown", eCmdHdlrPositiveInt, 0 },
 	{ "privdrop.group.keepsupplemental", eCmdHdlrBinary, 0 },
 	{ "net.ipprotocol", eCmdHdlrGetWord, 0 },
 	{ "net.acladdhostnameonfail", eCmdHdlrBinary, 0 },
@@ -1323,6 +1325,8 @@ glblDoneLoadCnf(void)
 		        glblSenderStatsTimeout = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "senders.keeptrack")) {
 		        glblSenderKeepTrack = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "inputs.timeout.shutdown")) {
+		        glblInputTimeoutShutdown = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "privdrop.group.keepsupplemental")) {
 		        loadConf->globals.gidDropPrivKeepSupplemental = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "net.acladdhostnameonfail")) {

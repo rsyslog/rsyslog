@@ -41,6 +41,7 @@
 #include "threads.h"
 #include "srUtils.h"
 #include "errmsg.h"
+#include "glbl.h"
 #include "unicode-helper.h"
 
 /* linked list of currently-known threads */
@@ -116,13 +117,15 @@ thrdTerminateNonCancel(thrdInfo_t *pThis)
 		  pThis->name, (void*) pThis->thrdID);
 
 	pThis->bShallStop = RSTRUE;
-	timeoutComp(&tTimeout, 1000); /* a fixed 1sec timeout */
+	timeoutComp(&tTimeout, glblInputTimeoutShutdown);
 	d_pthread_mutex_lock(&pThis->mutThrd);
 	was_active = pThis->bIsActive;
 	while(was_active) {
 		if(dbgTimeoutToStderr) {
-			fprintf(stderr, "rsyslogd debug: info: trying to kill input %s\n", pThis->name);
+			fprintf(stderr, "rsyslogd debug: info: trying to kill input %s, timeout %d ms\n", pThis->name, glblInputTimeoutShutdown);
 		}
+		DBGPRINTF("thread %s: initiating termination, timeout %d ms\n",
+			pThis->name, glblInputTimeoutShutdown);
 		pthread_kill(pThis->thrdID, SIGTTIN);
 		ret = d_pthread_cond_timedwait(&pThis->condThrdTerm, &pThis->mutThrd, &tTimeout);
 		if(ret == ETIMEDOUT) {
