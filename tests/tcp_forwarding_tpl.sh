@@ -8,12 +8,21 @@ echo \[tcp_forwarding_tpl.sh\]: test for tcp forwarding with assigned template
 # create the pipe and start a background process that copies data from 
 # it to the "regular" work file
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+$MainMsgQueueTimeoutShutdown 10000
+template(name="outfmt" type="string" string="%msg:F,58:2%\n")
+
+if $msg contains "msgnum:" then
+	action(type="omfwd" template="outfmt"
+	       target="127.0.0.1" port="13514" protocol="tcp")
+'
 ./minitcpsrv -t127.0.0.1 -p13514 -frsyslog.out.log &
 BGPROCESS=$!
 echo background minitcpsrvr process id is $BGPROCESS
 
 # now do the usual run
-startup tcp_forwarding_tpl.conf
+startup
 # 10000 messages should be enough
 . $srcdir/diag.sh injectmsg 0 10000
 shutdown_when_empty # shut down rsyslogd when done processing messages

@@ -4,8 +4,23 @@
 echo ===============================================================================
 echo \[mysql-act-mt.sh\]: test for mysql with multithread actionq
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+module(load="../plugins/ommysql/.libs/ommysql")
+
+:msg, contains, "msgnum:" {
+	action(type="ommysql" server="127.0.0.1"
+	db="Syslog" uid="rsyslog" pwd="testbench"
+	queue.size="10000" queue.type="linkedList"
+	queue.workerthreads="5"
+	queue.workerthreadMinimumMessages="500"
+	queue.timeoutWorkerthreadShutdown="100"
+	queue.timeoutEnqueue="10000"
+	)
+} 
+'
 mysql --user=rsyslog --password=testbench < testsuites/mysql-truncate.sql
-startup mysql-actq-mt-withpause-extended.conf
+startup
 
 
 let "strtnum = 0"

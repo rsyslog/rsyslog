@@ -4,7 +4,20 @@
 echo ===============================================================================
 echo \[rscript_gt.sh\]: testing rainerscript GT statement
 . $srcdir/diag.sh init
-startup rscript_gt.conf
+generate_conf
+add_conf '
+template(name="outfmt" type="list") {
+	property(name="$!usr!msgnum")
+	constant(value="\n")
+}
+
+if $msg contains 'msgnum' then {
+	set $!usr!msgnum = field($msg, 58, 2);
+	if $!usr!msgnum > "00004999" then
+		action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+}
+'
+startup
 . $srcdir/diag.sh injectmsg  0 8000
 echo doing shutdown
 shutdown_when_empty

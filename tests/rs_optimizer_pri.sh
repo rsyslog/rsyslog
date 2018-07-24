@@ -8,7 +8,17 @@
 echo ===============================================================================
 echo \[rs_optimizer_pri.sh\]: testing RainerScript PRI optimizer
 . $srcdir/diag.sh init
-startup rs_optimizer_pri.conf
+generate_conf
+add_conf '
+template(name="outfmt" type="string" string="%msg:F,58:2%\n")
+
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="13514")
+
+if $syslogfacility-text == "local4" then
+	action(type="omfile" template="outfmt" file="rsyslog.out.log")
+'
+startup
 sleep 1
 . $srcdir/diag.sh tcpflood -m100 # correct facility
 . $srcdir/diag.sh tcpflood -m100 -P175 # incorrect facility --> must be ignored
