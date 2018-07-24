@@ -10,8 +10,35 @@ fi
 
 echo ===============================================================================
 echo \[json_object_sucide_in_loop-vg.sh\]: basic test for looping over json object and unsetting it while inside the loop-body
-. $srcdir/diag.sh init json_object_suicide_in_loop-vg.sh
-startup_vg json_object_suicide_in_loop.conf
+. $srcdir/diag.sh init
+generate_conf
+add_conf '
+template(name="corge" type="string" string="corge: key: %$.corge!key% val: %$.corge!value%\n")
+template(name="quux" type="string" string="quux: %$.quux%\n")
+template(name="post_suicide_foo" type="string" string="post_suicide_foo: '
+add_conf "'%$!foo%'"
+add_conf '\n")
+
+module(load="../plugins/mmjsonparse/.libs/mmjsonparse")
+module(load="../plugins/imptcp/.libs/imptcp")
+input(type="imptcp" port="13514")
+
+action(type="mmjsonparse")
+set $.garply = "";
+
+foreach ($.quux in $!foo) do {
+  if ($.quux!key == "str2") then {
+    set $.quux!random_key = $.quux!key;
+		unset $!foo; #because it is deep copied, the foreach loop will continue to work, but the action to print "post_sucide_foo" will not see $!foo
+	}
+  action(type="omfile" file="./rsyslog.out.log" template="quux")
+  foreach ($.corge in $.quux!value) do {
+    action(type="omfile" file="./rsyslog.out.async.log" template="corge" queue.type="linkedlist" action.copyMsg="on")
+  }
+}
+action(type="omfile" file="./rsyslog.out.log" template="post_suicide_foo")
+'
+startup_vg
 . $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/json_object_input
 echo doing shutdown
 shutdown_when_empty

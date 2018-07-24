@@ -4,7 +4,21 @@
 echo ===============================================================================
 echo \[mmnormalize_regex_defaulted.sh\]: test for mmnormalize regex field_type, with allow_regex defaulted
 . $srcdir/diag.sh init
-startup mmnormalize_regex_defaulted.conf
+generate_conf
+add_conf '
+template(name="hosts_and_ports" type="string" string="host and port list: %$!hps%\n")
+
+template(name="paths" type="string" string="%$!fragments% %$!user%\n")
+template(name="numbers" type="string" string="nos: %$!some_nos%\n")
+
+module(load="../plugins/mmnormalize/.libs/mmnormalize")
+module(load="../plugins/imptcp/.libs/imptcp")
+input(type="imptcp" port="13514")
+
+action(type="mmnormalize" rulebase=`echo $srcdir/testsuites/mmnormalize_regex.rulebase`)
+action(type="omfile" file="./rsyslog.out.log" template="hosts_and_ports")
+'
+startup
 . $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/regex_input
 echo doing shutdown
 shutdown_when_empty

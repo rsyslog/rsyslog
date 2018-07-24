@@ -4,7 +4,65 @@
 echo ===============================================================================
 echo \[rscript_eq.sh\]: testing rainerscript EQ statement comparing two variables
 . $srcdir/diag.sh init
-startup rscript_eq_var.conf
+generate_conf
+add_conf '
+template(name="outfmt" type="list") {
+	property(name="$!usr!msgnum")
+	constant(value="\n")
+}
+
+set $!var1 = "value";
+set $!var2 = "value";
+if $!var1 == $!var2 then {
+	set $!var2 = "bad";
+	if $!var1 == $!var2 then {
+		# Failure
+		stop
+	} else {
+		unset $!var1;
+		unset $!var2;
+	}
+} else {
+	# Failure
+	stop
+}
+set $.var1 = "value";
+set $.var2 = "value";
+if $.var1 == $.var2 then {
+	set $.var2 = "bad";
+	if $.var1 == $.var2 then {
+		# Failure
+		stop
+	} else {
+		unset $.var1;
+		unset $.var2;
+	}
+} else {
+	# Failure
+	stop
+}
+set $/var1 = "value";
+set $/var2 = "value";
+if $/var1 == $/var2 then {
+	set $/var2 = "bad";
+	if $/var1 == $/var2 then {
+		# Failure
+		stop
+	} else {
+		unset $/var1;
+		unset $/var2;
+	}
+} else {
+	# Failure
+	stop
+}
+
+if $msg contains "msgnum" then {
+	set $!usr!msgnum = field($msg, 58, 2);
+	action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+}
+'
+startup
 . $srcdir/diag.sh injectmsg  0 1
 echo doing shutdown
 shutdown_when_empty

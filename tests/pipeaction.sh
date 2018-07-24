@@ -16,6 +16,21 @@ fi
 # create the pipe and start a background process that copies data from 
 # it to the "regular" work file
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+$MainMsgQueueTimeoutShutdown 10000
+
+# set spool locations and switch queue to disk-only mode
+$WorkDirectory test-spool
+$MainMsgQueueFilename mainq
+$MainMsgQueueType disk
+
+$template outfmt,"%msg:F,58:2%\n"
+# with pipes, we do not need to use absolute path names, so
+# we can simply refer to our working pipe via the usual relative
+# path name
+:msg, contains, "msgnum:" |rsyslog-testbench-fifo;outfmt
+'
 rm -f rsyslog-testbench-fifo
 mkfifo rsyslog-testbench-fifo
 cp rsyslog-testbench-fifo rsyslog.out.log &
@@ -23,7 +38,7 @@ CPPROCESS=$!
 echo background cp process id is $CPPROCESS
 
 # now do the usual run
-startup pipeaction.conf
+startup
 # 20000 messages should be enough
 #. $srcdir/diag.sh tcpflood -m20000
 . $srcdir/diag.sh injectmsg 0 20000

@@ -5,7 +5,15 @@
 
 psql -h localhost -U postgres -f testsuites/pgsql-basic.sql
 
-startup_vg pgsql-template.conf
+generate_conf
+add_conf '
+# putting the message in the SyslogTag field, so we know the template is actually used
+$template mytemplate,"insert into SystemEvents (SysLogTag) values ('%msg%')",STDSQL
+
+$ModLoad ../plugins/ompgsql/.libs/ompgsql
+:msg, contains, "msgnum:" :ompgsql:127.0.0.1,syslogtest,postgres,testbench;mytemplate
+'
+startup_vg
 . $srcdir/diag.sh injectmsg  0 5000
 shutdown_when_empty
 wait_shutdown_vg

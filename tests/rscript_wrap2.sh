@@ -4,7 +4,18 @@
 echo ===============================================================================
 echo \[rscript_wrap2.sh\]: a test for wrap\(2\) script-function
 . $srcdir/diag.sh init
-startup rscript_wrap2.conf
+generate_conf
+add_conf '
+template(name="outfmt" type="string" string="%$.replaced_msg%\n")
+
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="13514")
+
+set $.replaced_msg = wrap("foo says" & $msg, "*" & "*");
+
+action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+'
+startup
 . $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/date_time_msg
 echo doing shutdown
 shutdown_when_empty

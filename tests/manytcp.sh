@@ -16,7 +16,19 @@ if [ `uname` = "SunOS" ] ; then
 fi
 
 . $srcdir/diag.sh init
-startup manytcp.conf
+generate_conf
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$MainMsgQueueTimeoutShutdown 10000
+$MaxOpenFiles 2000
+$InputTCPMaxSessions 1100
+$InputTCPServerRun 13514
+
+$template outfmt,"%msg:F,58:2%\n"
+$template dynfile,"rsyslog.out.log" # trick to use relative path names!
+:msg, contains, "msgnum:" ?dynfile;outfmt
+'
+startup
 # the config file specifies exactly 1100 connections
 . $srcdir/diag.sh tcpflood -c-1100 -m40000
 # the sleep below is needed to prevent too-early termination of the tcp listener

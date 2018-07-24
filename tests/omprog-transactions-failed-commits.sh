@@ -6,6 +6,27 @@
 # transaction commits.
 
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+module(load="../plugins/omprog/.libs/omprog")
+
+template(name="outfmt" type="string" string="%msg%\n")
+
+:msg, contains, "msgnum:" {
+    action(
+        type="omprog"
+        binary=`echo $srcdir/testsuites/omprog-transactions-bin.sh --failed_commits`
+        template="outfmt"
+        name="omprog_action"
+        queue.type="Direct"  # the default; facilitates sync with the child process
+        queue.dequeueBatchSize="6"
+        confirmMessages="on"
+        useTransactions="on"
+        action.resumeRetryCount="10"
+        action.resumeInterval="1"
+    )
+}
+'
 
 uname
 if [ `uname` = "SunOS" ] ; then
@@ -16,7 +37,7 @@ if [ `uname` = "SunOS" ] ; then
     exit 77
 fi
 
-startup omprog-transactions-failed-commits.conf
+startup
 . $srcdir/diag.sh wait-startup
 . $srcdir/diag.sh injectmsg 0 10
 . $srcdir/diag.sh wait-queueempty

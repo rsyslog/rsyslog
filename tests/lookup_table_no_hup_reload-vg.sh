@@ -11,8 +11,18 @@ fi
 echo ===============================================================================
 echo \[lookup_table_no_hup_reload-vg.sh\]: test for lookup-table with HUP based reloading disabled with valgrind
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+lookup_table(name="xlate" file="xlate.lkp_tbl" reloadOnHUP="off")
+
+template(name="outfmt" type="string" string="- %msg% %$.lkp%\n")
+
+set $.lkp = lookup("xlate", $msg);
+
+action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+'
 cp -f $srcdir/testsuites/xlate.lkp_tbl xlate.lkp_tbl
-startup_vg lookup_table_no_hup_reload.conf
+startup_vg
 . $srcdir/diag.sh injectmsg  0 3
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh content-check "msgnum:00000000: foo_old"

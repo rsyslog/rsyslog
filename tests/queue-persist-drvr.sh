@@ -8,13 +8,32 @@
 # uncomment for debugging support:
 echo testing memory queue persisting to disk, mode $1
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$MainMsgQueueTimeoutShutdown 1
+$MainMsgQueueSaveOnShutdown on
+$InputTCPServerRun 13514
 
+$ModLoad ../plugins/omtesting/.libs/omtesting
+
+# set spool locations and switch queue to disk-only mode
+$WorkDirectory test-spool
+$MainMsgQueueFilename mainq
+$IncludeConfig work-queuemode.conf
+
+$template outfmt,"%msg:F,58:2%\n"
+$template dynfile,"rsyslog.out.log" # trick to use relative path names!
+:msg, contains, "msgnum:" ?dynfile;outfmt
+
+$IncludeConfig work-delay.conf
+'
 # prepare config
 echo \$MainMsgQueueType $1 > work-queuemode.conf
 echo "*.*     :omtesting:sleep 0 1000" > work-delay.conf
 
 # inject 5000 msgs, so that we do not hit the high watermark
-startup queue-persist.conf
+startup
 . $srcdir/diag.sh injectmsg 0 5000
 . $srcdir/diag.sh shutdown-immediate
 wait_shutdown
@@ -23,7 +42,7 @@ wait_shutdown
 # restart engine and have rest processed
 #remove delay
 echo "#" > work-delay.conf
-startup queue-persist.conf
+startup
 shutdown_when_empty # shut down rsyslogd when done processing messages
 ./msleep 1000
 $srcdir/diag.sh wait-shutdown

@@ -3,8 +3,15 @@
 echo ===============================================================================
 echo \[mysql-asyn.sh\]: asyn test for mysql functionality
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+$ModLoad ../plugins/ommysql/.libs/ommysql
+$ActionQueueType LinkedList
+$ActionQueueTimeoutEnqueue 10000 # 10 second to make sure we do not loose due to action q full
+:msg, contains, "msgnum:" :ommysql:127.0.0.1,Syslog,rsyslog,testbench;
+'
 mysql --user=rsyslog --password=testbench < testsuites/mysql-truncate.sql
-startup_vg mysql-asyn.conf
+startup_vg
 . $srcdir/diag.sh injectmsg  0 50000
 shutdown_when_empty
 wait_shutdown_vg
