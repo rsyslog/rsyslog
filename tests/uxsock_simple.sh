@@ -16,12 +16,21 @@ echo \[uxsock_simple.sh\]: simple tests for omuxsock functionality
 # create the pipe and start a background process that copies data from 
 # it to the "regular" work file
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+$MainMsgQueueTimeoutShutdown 10000
+
+$ModLoad ../plugins/omuxsock/.libs/omuxsock
+$template outfmt,"%msg:F,58:2%\n"
+$OMUXSockSocket rsyslog-testbench-dgram-uxsock
+:msg, contains, "msgnum:" :omuxsock:;outfmt
+'
 ./uxsockrcvr -srsyslog-testbench-dgram-uxsock -orsyslog.out.log &
 BGPROCESS=$!
 echo background uxsockrcvr process id is $BGPROCESS
 
 # now do the usual run
-startup uxsock_simple.conf
+startup
 # 10000 messages should be enough
 . $srcdir/diag.sh injectmsg 0 10000
 shutdown_when_empty # shut down rsyslogd when done processing messages
