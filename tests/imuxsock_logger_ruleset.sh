@@ -2,7 +2,20 @@
 # rgerhards, 2016-02-02 released under ASL 2.0
 echo \[imuxsock_logger_ruleset.sh\]: test imuxsock with ruleset definition
 . $srcdir/diag.sh init
-startup imuxsock_logger_ruleset.conf
+generate_conf
+add_conf '
+module(load="../plugins/imuxsock/.libs/imuxsock" sysSock.use="off")
+input(	type="imuxsock" socket="testbench_socket"
+	useSpecialParser="off"
+	ruleset="testruleset"
+	parseHostname="on")
+template(name="outfmt" type="string" string="%msg:%\n")
+
+ruleset(name="testruleset") {
+	./rsyslog.out.log;outfmt
+}
+'
+startup
 # send a message with trailing LF
 logger -d -u testbench_socket test
 # the sleep below is needed to prevent too-early termination of rsyslogd

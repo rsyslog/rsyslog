@@ -7,7 +7,14 @@ if [ "$EUID" -ne 0 ]; then
     exit 77 # Not root, skip this test
 fi
 . $srcdir/diag.sh init
-startup imuxsock_logger_root.conf
+generate_conf
+add_conf '
+$ModLoad ../plugins/imuxsock/.libs/imuxsock
+
+$template outfmt,"%msg:%\n"
+*.notice	./rsyslog.out.log;outfmt
+'
+startup
 # send a message with trailing LF
 logger test
 # the sleep below is needed to prevent too-early termination of rsyslogd

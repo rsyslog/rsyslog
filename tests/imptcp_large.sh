@@ -6,7 +6,22 @@
 echo ====================================================================================
 echo TEST: \[imptcp_large.sh\]: test imptcp with large-size messages
 . $srcdir/diag.sh init
-startup imptcp_large.conf
+generate_conf
+add_conf '
+$MaxMessageSize 10k
+
+$ModLoad ../plugins/imptcp/.libs/imptcp
+$MainMsgQueueTimeoutShutdown 10000
+$InputPTCPServerRun 13514
+
+$template outfmt,"%msg:F,58:2%,%msg:F,58:3%,%msg:F,58:4%\n"
+$template dynfile,"rsyslog.out.log" # trick to use relative path names!
+$OMFileFlushOnTXEnd off
+$OMFileFlushInterval 2
+$OMFileIOBufferSize 256k
+local0.* ?dynfile;outfmt
+'
+startup
 # send 4000 messages of 10.000bytes plus header max, randomized
 . $srcdir/diag.sh tcpflood -c5 -m20000 -r -d10000 -P129
 sleep 2 # due to large messages, we need this time for the tcp receiver to settle...

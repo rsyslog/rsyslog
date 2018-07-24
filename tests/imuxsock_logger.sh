@@ -13,7 +13,15 @@ if [ `uname` = "SunOS" ] ; then
 fi
 
 . $srcdir/diag.sh init
-startup imuxsock_logger.conf
+generate_conf
+add_conf '
+module(load="../plugins/imuxsock/.libs/imuxsock" sysSock.use="off")
+input(type="imuxsock" Socket="testbench_socket")
+
+template(name="outfmt" type="string" string="%msg:%\n")
+*.notice	./rsyslog.out.log;outfmt
+'
+startup
 # send a message with trailing LF
 logger -d -u testbench_socket test
 # the sleep below is needed to prevent too-early termination of rsyslogd

@@ -11,8 +11,7 @@ template(name="outfmt" type="string" string="*Number is %$.number%*\n")
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="13514")'
 add_conf "
-set $.number = re_extract($msg, 
-'.* ([0-9]+)$', 0, 1, 'none');"
+set \$.number = re_extract(\$msg, '.* ([0-9]+)$', 0, 1, 'none');"
 add_conf '
 action(type="omfile" file="./rsyslog.out.log" template="outfmt")
 '

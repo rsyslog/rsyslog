@@ -5,7 +5,20 @@
 echo ====================================================================================
 echo TEST: \[imtcp_addtlframedelim.sh\]: test imtcp additional frame delimiter
 . $srcdir/diag.sh init
-startup imtcp_addtlframedelim.conf
+generate_conf
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$MainMsgQueueTimeoutShutdown 10000
+$InputTCPServerAddtlFrameDelimiter 0
+$InputTCPServerRun 13514
+
+$template outfmt,"%msg:F,58:2%\n"
+$OMFileFlushOnTXEnd off
+$OMFileFlushInterval 2
+$OMFileIOBufferSize 256k
+local0.* ./rsyslog.out.log;outfmt
+'
+startup
 . $srcdir/diag.sh tcpflood -m20000 -F0 -P129
 #sleep 2 # due to large messages, we need this time for the tcp receiver to settle...
 shutdown_when_empty # shut down rsyslogd when done processing messages

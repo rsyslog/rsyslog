@@ -6,7 +6,22 @@
 echo ====================================================================================
 echo TEST: \[imptcp_conndrop.sh\]: test imptcp with random connection drops
 . $srcdir/diag.sh init
-startup imptcp_conndrop.conf
+generate_conf
+add_conf '
+$MaxMessageSize 10k
+
+$ModLoad ../plugins/imptcp/.libs/imptcp
+$MainMsgQueueTimeoutShutdown 10000
+$InputPTCPServerRun 13514
+
+$template outfmt,"%msg:F,58:2%,%msg:F,58:3%,%msg:F,58:4%\n"
+$template dynfile,"rsyslog.out.log" # trick to use relative path names!
+$OMFileFlushOnTXEnd off
+$OMFileFlushInterval 2
+$OMFileIOBufferSize 256k
+local0.* ?dynfile;outfmt
+'
+startup
 # 100 byte messages to gain more practical data use
 . $srcdir/diag.sh tcpflood -c20 -m50000 -r -d100 -P129 -D
 sleep 10 # due to large messages, we need this time for the tcp receiver to settle...
