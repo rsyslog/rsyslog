@@ -3,8 +3,22 @@
 echo ===============================================================================
 echo \[libdbi-asyn.sh\]: asyn test for libdbi functionality
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+$ModLoad ../plugins/omlibdbi/.libs/omlibdbi
+
+$ActionQueueType LinkedList
+$ActionQueueTimeoutEnqueue 2000
+
+$ActionLibdbiDriver mysql
+$ActionLibdbiHost 127.0.0.1
+$ActionLibdbiUserName rsyslog
+$ActionLibdbiPassword testbench
+$ActionLibdbiDBName Syslog
+:msg, contains, "msgnum:" :omlibdbi:
+'
 mysql --user=rsyslog --password=testbench < testsuites/mysql-truncate.sql
-startup libdbi-asyn.conf
+startup
 . $srcdir/diag.sh injectmsg  0 50000
 shutdown_when_empty
 wait_shutdown 

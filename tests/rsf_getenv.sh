@@ -22,7 +22,7 @@ $MainMsgQueueType disk
 
 $template outfmt,"%msg:F,58:2%\n"
 $template dynfile,"rsyslog.out.log" # trick to use relative path names!
-if $msg contains getenv('MSGNUM') then ?dynfile;outfmt
+if $msg contains getenv("MSGNUM") then ?dynfile;outfmt
 '
 startup
 . $srcdir/diag.sh tcpflood -m10000

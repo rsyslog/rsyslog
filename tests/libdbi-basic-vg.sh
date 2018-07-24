@@ -5,8 +5,18 @@
 echo ===============================================================================
 echo \[libdbi-basic.sh\]: basic test for libdbi-basic functionality via mysql
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+$ModLoad ../plugins/omlibdbi/.libs/omlibdbi
+$ActionLibdbiDriver mysql
+$ActionLibdbiHost 127.0.0.1
+$ActionLibdbiUserName rsyslog
+$ActionLibdbiPassword testbench
+$ActionLibdbiDBName Syslog
+:msg, contains, "msgnum:" :omlibdbi:
+'
 mysql --user=rsyslog --password=testbench < testsuites/mysql-truncate.sql
-startup_vg_noleak libdbi-basic.conf
+startup_vg_noleak
 . $srcdir/diag.sh injectmsg  0 5000
 shutdown_when_empty
 wait_shutdown_vg

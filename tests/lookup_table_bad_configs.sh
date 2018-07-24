@@ -11,10 +11,22 @@ fi
 echo ===============================================================================
 echo \[lookup_table_bad_configs.sh\]: test for sparse-array lookup-table and HUP based reloading of it
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+lookup_table(name="xlate" file="xlate.lkp_tbl")
+
+template(name="outfmt" type="string" string="%msg% %$.lkp%\n")
+
+set $.num = field($msg, 58, 2);
+
+set $.lkp = lookup("xlate", $.num);
+
+action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+'
 
 echo "empty file..."
 cp -f $srcdir/testsuites/xlate_empty_file.lkp_tbl xlate.lkp_tbl
-startup lookup_table_all.conf
+startup
 . $srcdir/diag.sh injectmsg  0 5
 . $srcdir/diag.sh wait-queueempty
 
