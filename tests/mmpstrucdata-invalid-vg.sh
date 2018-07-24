@@ -13,7 +13,18 @@ fi
 echo ===============================================================================
 echo \[mmpstrucdata-invalid.sh\]: testing mmpstrucdata with invalid SD
 . $srcdir/diag.sh init
-startup_vg mmpstrucdata-invalid.conf
+generate_conf
+add_conf '
+module(load="../plugins/mmpstrucdata/.libs/mmpstrucdata")
+module(load="../plugins/imtcp/.libs/imtcp")
+
+input(type="imtcp" port="13514")
+
+action(type="mmpstrucdata")
+if $msg contains "msgnum" then
+	action(type="omfile" file="rsyslog.out.log")
+'
+startup_vg
 . $srcdir/diag.sh wait-startup
 # we use different message counts as this hopefully aids us
 # in finding which sample is leaking. For this, check the number

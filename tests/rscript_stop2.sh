@@ -11,7 +11,7 @@ template(name="outfmt" type="list") {
 	constant(value="\n")
 }
 
-if not ($msg contains 'msgnum') then
+if not ($msg contains "msgnum") then
 	stop
 
 set $!usr!msgnum = field($msg, 58, 2);

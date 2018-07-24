@@ -6,7 +6,7 @@ echo \[mysql-basic.sh\]: basic test for mysql-basic functionality
 generate_conf
 add_conf '
 $ModLoad ../plugins/ommysql/.libs/ommysql
-if $msg contains 'msgnum' then {
+if $msg contains "msgnum" then {
 	action(type="ommysql" server="127.0.0.1"
 	       db="Syslog" uid="rsyslog" pwd="testbench")
 }

@@ -11,7 +11,7 @@ template(name="outfmt" type="list") {
 	constant(value="\n")
 }
 
-if $msg contains 'msgnum' then {
+if $msg contains "msgnum" then {
 	set $!usr!msgnum = field($msg, 58, 2);
 	if $!usr!msgnum <= "00005000" then
 		action(type="omfile" file="./rsyslog.out.log" template="outfmt")

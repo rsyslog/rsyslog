@@ -11,7 +11,7 @@ template(name="outfmt" type="list") {
 	constant(value="\n")
 }
 
-if $msg contains 'msgnum' then {
+if $msg contains "msgnum" then {
 	set $!usr!msgnum = field($msg, 58, 2);
 	if cnum($!usr!msgnum) >= 5000 then
 		stop

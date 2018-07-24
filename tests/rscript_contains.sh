@@ -7,7 +7,7 @@ echo \[rscript_contains.sh\]: test for contains script-filter
 generate_conf
 add_conf '
 $template outfmt,"%msg:F,58:2%\n"
-if $msg contains 'msgnum' then ./rsyslog.out.log;outfmt
+if $msg contains "msgnum" then ./rsyslog.out.log;outfmt
 '
 startup
 . $srcdir/diag.sh injectmsg  0 5000

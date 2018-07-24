@@ -11,7 +11,7 @@ template(name="outfmt" type="string" string="*Matched*\n")
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="13514")
 
-if (re_match($msg, '.* ([0-9]+)$')) then {
+if (re_match($msg, ".* ([0-9]+)$")) then {
 	 action(type="omfile" file="./rsyslog.out.log" template="outfmt")
 }
 '

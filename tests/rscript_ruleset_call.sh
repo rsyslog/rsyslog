@@ -25,7 +25,7 @@ ruleset(name="rs1") {
 	call rs2
 }
 
-if $msg contains 'msgnum' then call rs1
+if $msg contains "msgnum" then call rs1
 '
 startup
 . $srcdir/diag.sh injectmsg  0 5000

@@ -60,7 +60,7 @@ if $/var1 >= $/var2 and $/var1 >= $/var3 then {
         stop
 }
 
-if $msg contains 'msgnum' then {
+if $msg contains "msgnum" then {
 	set $!usr!msgnum = field($msg, 58, 2);
 	action(type="omfile" file="./rsyslog.out.log" template="outfmt")
 }
