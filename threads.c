@@ -117,12 +117,13 @@ thrdTerminateNonCancel(thrdInfo_t *pThis)
 		  pThis->name, (void*) pThis->thrdID);
 
 	pThis->bShallStop = RSTRUE;
-	timeoutComp(&tTimeout, glblInputTimeoutShutdown);
 	d_pthread_mutex_lock(&pThis->mutThrd);
+	timeoutComp(&tTimeout, glblInputTimeoutShutdown);
 	was_active = pThis->bIsActive;
 	while(was_active) {
 		if(dbgTimeoutToStderr) {
-			fprintf(stderr, "rsyslogd debug: info: trying to kill input %s, timeout %d ms\n", pThis->name, glblInputTimeoutShutdown);
+			fprintf(stderr, "rsyslogd debug: info: trying to cooperatively stop "
+				"input %s, timeout %d ms\n", pThis->name, glblInputTimeoutShutdown);
 		}
 		DBGPRINTF("thread %s: initiating termination, timeout %d ms\n",
 			pThis->name, glblInputTimeoutShutdown);
