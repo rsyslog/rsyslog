@@ -16,7 +16,7 @@ add_conf '
 template(name="corge" type="string" string="corge: key: %$.corge!key% val: %$.corge!value%\n")
 template(name="quux" type="string" string="quux: %$.quux%\n")
 template(name="post_suicide_foo" type="string" string="post_suicide_foo: '
-add_conf "'%$!foo%'"
+add_conf "'%\$!foo%'"
 add_conf '\n")
 
 module(load="../plugins/mmjsonparse/.libs/mmjsonparse")

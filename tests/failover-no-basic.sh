@@ -3,7 +3,16 @@
 echo ===============================================================================
 echo \[failover-no-basic.sh\]: basic test for failover functionality - no failover
 . $srcdir/diag.sh init
-startup failover-no-basic.conf
+generate_conf
+add_conf '
+$RepeatedMsgReduction off
+
+# second action should never execute
+:msg, contains, "msgnum:" /dev/null
+$ActionExecOnlyWhenPreviousIsSuspended on
+& ./rsyslog.out.log
+'
+startup
 . $srcdir/diag.sh injectmsg  0 5000
 echo doing shutdown
 shutdown_when_empty

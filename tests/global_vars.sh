@@ -5,7 +5,25 @@
 echo ===============================================================================
 echo \[global_vars.sh\]: testing global variable support
 . $srcdir/diag.sh init
-startup global_vars.conf
+generate_conf
+add_conf '
+$MainMsgQueueTimeoutShutdown 10000
+
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="13514")
+
+template(name="outfmt" type="string" string="%$/msgnum%\n")
+template(name="dynfile" type="string" string="rsyslog.out.log") /* trick to use relative path names! */
+
+if $/msgnum == "" then
+	set $/msgnum = 0;
+
+if $msg contains "msgnum:" then {
+	action(type="omfile" dynaFile="dynfile" template="outfmt")
+	set $/msgnum = $/msgnum + 1;
+}
+'
+startup
 
 # 40000 messages should be enough
 . $srcdir/diag.sh injectmsg  0 40000

@@ -3,7 +3,15 @@
 echo ===============================================================================
 echo \[failover-basic.sh\]: basic test for failover functionality
 . $srcdir/diag.sh init
-startup failover-basic.conf
+generate_conf
+add_conf '
+$template outfmt,"%msg:F,58:2%\n"
+# note: the target server shall not be available!
+:msg, contains, "msgnum:" @@127.0.0.1:13514
+$ActionExecOnlyWhenPreviousIsSuspended on
+& ./rsyslog.out.log;outfmt
+'
+startup
 . $srcdir/diag.sh injectmsg  0 5000
 echo doing shutdown
 shutdown_when_empty

@@ -8,7 +8,9 @@ psql -h localhost -U postgres -f testsuites/pgsql-basic.sql
 generate_conf
 add_conf '
 # putting the message in the SyslogTag field, so we know the template is actually used
-$template mytemplate,"insert into SystemEvents (SysLogTag) values ('%msg%')",STDSQL
+$template mytemplate,"insert into SystemEvents (SysLogTag) values '
+add_conf "('%msg%')"
+add_conf '",STDSQL
 
 $ModLoad ../plugins/ompgsql/.libs/ompgsql
 :msg, contains, "msgnum:" :ompgsql:127.0.0.1,syslogtest,postgres,testbench;mytemplate
