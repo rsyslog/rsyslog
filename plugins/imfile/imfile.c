@@ -753,9 +753,11 @@ poll_tree(fs_edge_t *const chld)
 {
 	struct stat fileInfo;
 	glob_t files;
+	int need_globfree = 0;
 	DBGPRINTF("poll_tree: chld %p, name '%s', path: %s\n", chld, chld->name, chld->path);
 	detect_updates(chld);
 	const int ret = glob((char*)chld->path, runModConf->sortFiles|GLOB_BRACE, NULL, &files);
+	need_globfree = 1;
 	DBGPRINTF("poll_tree: glob returned %d\n", ret);
 	if(ret == 0) {
 		DBGPRINTF("poll_tree: processing %d files\n", (int) files.gl_pathc);
@@ -788,12 +790,15 @@ poll_tree(fs_edge_t *const chld)
 			}
 			act_obj_add(chld, file, is_file, fileInfo.st_ino);
 		}
-		globfree(&files);
 	}
 
 	poll_active_files(chld);
 
-done:	return;
+done:
+	if(need_globfree) {
+		globfree(&files);
+	}
+	return;
 }
 
 #ifdef HAVE_INOTIFY_INIT // TODO: shouldn't we use that in polling as well?
