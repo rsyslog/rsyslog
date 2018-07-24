@@ -85,7 +85,8 @@ function setvar_RS_HOSTNAME() {
 
 # begin a new testconfig
 function generate_conf() {
-echo '$ModLoad ../plugins/imdiag/.libs/imdiag
+echo 'global(inputs.timeout.shutdown="10000")
+$ModLoad ../plugins/imdiag/.libs/imdiag
 $IMDiagServerRun 13500
 
 :syslogtag, contains, "rsyslogd"  ./rsyslogd.started
