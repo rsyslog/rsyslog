@@ -203,7 +203,7 @@ function shutdown_when_empty() {
 	fi
 	. $srcdir/diag.sh wait-queueempty $1
 	cp rsyslog$1.pid rsyslog$1.pid.save
-	$TESTTOOL_DIR/msleep 1000 # wait a bit (think about slow testbench machines!)
+	$TESTTOOL_DIR/msleep 500 # wait a bit (think about slow testbench machines!)
 	kill `cat rsyslog$1.pid` # note: we do not wait for the actual termination!
 }
 
