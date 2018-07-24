@@ -4,7 +4,18 @@
 echo ===============================================================================
 echo \[rscript_random.sh\]: test for random-number-generator script-function
 . $srcdir/diag.sh init
-startup rscript_random.conf
+generate_conf
+add_conf '
+template(name="outfmt" type="string" string="%$.random_no%\n")
+
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="13514")
+
+set $.random_no = random(10);
+
+action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+'
+startup
 . $srcdir/diag.sh tcpflood -m 20
 echo doing shutdown
 shutdown_when_empty

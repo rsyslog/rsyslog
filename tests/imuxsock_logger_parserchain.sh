@@ -17,7 +17,17 @@ if [ `uname` = "SunOS" ] ; then
 fi
 
 . $srcdir/diag.sh init
-startup imuxsock_logger_parserchain.conf
+generate_conf
+add_conf '
+module(load="../plugins/imuxsock/.libs/imuxsock" sysSock.use="off")
+input(	type="imuxsock" socket="testbench_socket"
+	useSpecialParser="off"
+	parseHostname="on")
+
+template(name="outfmt" type="string" string="%msg:%\n")
+*.notice	./rsyslog.out.log;outfmt
+'
+startup
 logger -d --rfc3164 -u testbench_socket test
 if [ ! $? -eq 0 ]; then
 logger -d -u testbench_socket test

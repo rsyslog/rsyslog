@@ -6,7 +6,27 @@
 # it has failed to process.
 
 . $srcdir/diag.sh init
-startup omprog-feedback.conf
+generate_conf
+add_conf '
+module(load="../plugins/omprog/.libs/omprog")
+
+template(name="outfmt" type="string" string="%msg%\n")
+
+:msg, contains, "msgnum:" {
+    action(
+        type="omprog"
+        binary=`echo $srcdir/testsuites/omprog-feedback-bin.sh`
+        template="outfmt"
+        name="omprog_action"
+        queue.type="Direct"  # the default; facilitates sync with the child process
+        confirmMessages="on"
+        useTransactions="off"
+        action.resumeRetryCount="10"
+        action.resumeInterval="1"
+    )
+}
+'
+startup
 . $srcdir/diag.sh wait-startup
 . $srcdir/diag.sh injectmsg 0 10
 . $srcdir/diag.sh wait-queueempty

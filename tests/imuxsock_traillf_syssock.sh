@@ -13,7 +13,15 @@ if [ $no_liblogging_stdlog -ne 0 ];then
   exit 77
 fi
 . $srcdir/diag.sh init
-startup imuxsock_traillf_syssock.conf
+generate_conf
+add_conf '
+module(load="../plugins/imuxsock/.libs/imuxsock"
+       SysSock.name="testbench_socket")
+
+template(name="outfmt" type="string" string="%msg:%\n")
+local1.*	action(type="omfile" file="rsyslog.out.log" template="outfmt")
+'
+startup
 # send a message with trailing LF
 ./syslog_caller -fsyslog_inject-l -m1 -C "uxsock:testbench_socket"
 # the sleep below is needed to prevent too-early termination of rsyslogd

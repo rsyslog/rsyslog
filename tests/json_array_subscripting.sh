@@ -4,7 +4,21 @@
 echo ===============================================================================
 echo \[json_array_subscripting.sh\]: basic test for json array subscripting
 . $srcdir/diag.sh init
-startup json_array_subscripting.conf
+generate_conf
+add_conf '
+template(name="outfmt" type="string" string="msg: %$!foo[1]% | %$.quux% | %$.corge% | %$.grault% | %$!foo[3]!bar[1]!baz%\n")
+
+module(load="../plugins/mmjsonparse/.libs/mmjsonparse")
+module(load="../plugins/imptcp/.libs/imptcp")
+input(type="imptcp" port="13514")
+
+action(type="mmjsonparse")
+set $.quux = $!foo[2];
+set $.corge = $!foo[3]!bar[0]!baz;
+set $.grault = $!foo[3]!bar[1];
+action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+'
+startup
 . $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/json_array_input
 echo doing shutdown
 shutdown_when_empty

@@ -4,7 +4,21 @@
 echo ===============================================================================
 echo \[rscript_replace_complex.sh\]: a more complex test for replace script-function
 . $srcdir/diag.sh init
-startup rscript_replace_complex.conf
+generate_conf
+add_conf '
+template(name="outfmt" type="string" string="%$.replaced_msg%\n")
+
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="13514")
+
+set $.replaced_msg = replace($msg, "syslog", "rsyslog");
+set $.replaced_msg = replace($.replaced_msg, "hello", "hello_world");
+set $.replaced_msg = replace($.replaced_msg, "foo_bar_baz", "FBB");
+set $.replaced_msg = replace($.replaced_msg, "as_longer_this_string_as_more_probability_to_catch_the_bug", "ss");
+
+action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+'
+startup
 . $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/complex_replace_input
 echo doing shutdown
 shutdown_when_empty

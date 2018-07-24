@@ -11,7 +11,19 @@
 echo ===============================================================================
 echo \[imtcp-multiport.sh\]: testing imtcp multiple listeners
 . $srcdir/diag.sh init
-startup imtcp-multiport.conf
+generate_conf
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$MainMsgQueueTimeoutShutdown 10000
+$InputTCPServerRun 13514
+$InputTCPServerRun 13515
+$InputTCPServerRun 13516
+
+$template outfmt,"%msg:F,58:2%\n"
+$template dynfile,"rsyslog.out.log" # trick to use relative path names!
+:msg, contains, "msgnum:" ?dynfile;outfmt
+'
+startup
 . $srcdir/diag.sh tcpflood -p13514 -m10000
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
@@ -23,7 +35,19 @@ exit_test
 #
 #
 . $srcdir/diag.sh init
-startup imtcp-multiport.conf
+generate_conf
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$MainMsgQueueTimeoutShutdown 10000
+$InputTCPServerRun 13514
+$InputTCPServerRun 13515
+$InputTCPServerRun 13516
+
+$template outfmt,"%msg:F,58:2%\n"
+$template dynfile,"rsyslog.out.log" # trick to use relative path names!
+:msg, contains, "msgnum:" ?dynfile;outfmt
+'
+startup
 . $srcdir/diag.sh tcpflood -p13515 -m10000
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
@@ -35,7 +59,19 @@ exit_test
 #
 #
 . $srcdir/diag.sh init
-startup imtcp-multiport.conf
+generate_conf
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$MainMsgQueueTimeoutShutdown 10000
+$InputTCPServerRun 13514
+$InputTCPServerRun 13515
+$InputTCPServerRun 13516
+
+$template outfmt,"%msg:F,58:2%\n"
+$template dynfile,"rsyslog.out.log" # trick to use relative path names!
+:msg, contains, "msgnum:" ?dynfile;outfmt
+'
+startup
 . $srcdir/diag.sh tcpflood -p13516 -m10000
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown

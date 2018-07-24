@@ -19,8 +19,17 @@ echo TEST: \[pipe_noreader.sh\]: test for pipe writing without reader
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="log"
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$MainMsgQueueTimeoutShutdown 10000
+$InputTCPServerRun 13514
+
+$template outfmt,"%msg:F,58:2%\n"
+:msg, contains, "msgnum:" |./rsyslog.pipe
+'
 mkfifo ./rsyslog.pipe
-startup pipe_noreader.conf
+startup
 # we need to emit ~ 128K of data according to bug report
 . $srcdir/diag.sh tcpflood -m1000 -d500
 shutdown_when_empty # shut down rsyslogd when done processing messages

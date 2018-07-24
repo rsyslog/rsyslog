@@ -5,7 +5,27 @@
 echo ===============================================================================
 echo \[prop-all-json-concurrency.sh\]: testing concurrency of $!all-json variables
 . $srcdir/diag.sh init
-startup prop-all-json-concurrency.conf
+generate_conf
+add_conf '
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="13514")
+
+template(name="interim" type="string" string="%$!tree!here!nbr%")
+template(name="outfmt" type="string" string="%$.interim%\n")
+template(name="all-json" type="string" string="%$!%\n")
+
+if $msg contains "msgnum:" then {
+	set $!tree!here!nbr = field($msg, 58, 2);
+	action(type="omfile" file="rsyslog2.out.log" template="all-json"
+	       queue.type="linkedList")
+
+	set $.interim = $!all-json;
+	unset $!tree!here!nbr;
+	action(type="omfile" file="rsyslog.out.log" template="outfmt"
+	       queue.type="fixedArray")
+}
+'
+startup
 sleep 1
 . $srcdir/diag.sh tcpflood -m500000
 shutdown_when_empty # shut down rsyslogd when done processing messages

@@ -4,7 +4,22 @@
 echo ===============================================================================
 echo \[rscript_replace.sh\]: test for replace script-function
 . $srcdir/diag.sh init
-startup rscript_replace.conf
+generate_conf
+add_conf '
+template(name="outfmt" type="string" string="%$.replaced_msg%\n")
+
+module(load="../plugins/imptcp/.libs/imptcp")
+input(type="imptcp" port="13514")
+
+template(name="date_time" type="list") {
+  property(name="msg" regex.Expression="Thu .+ 2014" regex.Type="ERE" regex.Match="0")
+}
+
+set $.replaced_msg = replace("date time: " & exec_template("date_time"), "O" & "ct", replace("october", "o", "0"));
+
+action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+'
+startup
 . $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/date_time_msg
 echo doing shutdown
 shutdown_when_empty
