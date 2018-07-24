@@ -120,11 +120,19 @@ thrdTerminateNonCancel(thrdInfo_t *pThis)
 	d_pthread_mutex_lock(&pThis->mutThrd);
 	was_active = pThis->bIsActive;
 	while(was_active) {
+		if(dbgTimeoutToStderr) {
+			fprintf(stderr, "rsyslogd debug: info: trying to kill input %s\n", pThis->name);
+		}
 		pthread_kill(pThis->thrdID, SIGTTIN);
 		ret = d_pthread_cond_timedwait(&pThis->condThrdTerm, &pThis->mutThrd, &tTimeout);
 		if(ret == ETIMEDOUT) {
 			DBGPRINTF("input thread term: timeout expired waiting on thread %s "
 				"termination - canceling\n", pThis->name);
+			if(dbgTimeoutToStderr) {
+				fprintf(stderr, "rsyslogd debug: input thread term: "
+					"timeout expired waiting on thread %s "
+					"termination - canceling\n", pThis->name);
+			}
 			pthread_cancel(pThis->thrdID);
 			break;
 		} else if(ret != 0) {
@@ -158,7 +166,11 @@ rsRetVal thrdTerminate(thrdInfo_t *pThis)
 	assert(pThis != NULL);
 
 	if(pThis->bNeedsCancel) {
-		DBGPRINTF("request term via canceling for input thread %p\n", (void*) pThis->thrdID);
+		DBGPRINTF("request term via canceling for input thread %s\n", pThis->name);
+		if(dbgTimeoutToStderr) {
+			fprintf(stderr, "rsyslogd debug: request term via canceling for "
+				"input thread %s\n", pThis->name);
+		}
 		pthread_cancel(pThis->thrdID);
 	} else {
 		thrdTerminateNonCancel(pThis);
