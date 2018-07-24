@@ -4,7 +4,20 @@
 echo ===============================================================================
 echo \[rscript_optimizer1.sh\]: testing rainerscript optimizer
 . $srcdir/diag.sh init
-startup rscript_optimizer1.conf
+generate_conf
+add_conf '
+template(name="outfmt" type="list") {
+	property(name="msg" field.delimiter="58" field.number="2")
+	constant(value="\n")
+}
+
+/* tcpflood uses local4.=debug */
+if prifilt("syslog.*") then
+	stop # it actually doesn't matter what we do here
+else
+	action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+'
+startup
 . $srcdir/diag.sh injectmsg  0 5000
 echo doing shutdown
 shutdown_when_empty

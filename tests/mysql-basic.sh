@@ -3,8 +3,13 @@
 echo ===============================================================================
 echo \[mysql-basic.sh\]: basic test for mysql-basic functionality
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+$ModLoad ../plugins/ommysql/.libs/ommysql
+:msg, contains, "msgnum:" :ommysql:127.0.0.1,Syslog,rsyslog,testbench;
+'
 mysql --user=rsyslog --password=testbench < testsuites/mysql-truncate.sql
-startup mysql-basic.conf
+startup
 . $srcdir/diag.sh injectmsg  0 5000
 shutdown_when_empty
 wait_shutdown 
