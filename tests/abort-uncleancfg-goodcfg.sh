@@ -5,7 +5,19 @@ echo ===========================================================================
 echo \[abort-uncleancfg-goodcfg.sh\]: testing abort on unclean configuration
 echo "testing a good Configuration verification run"
 . $srcdir/diag.sh init
-startup abort-uncleancfg-goodcfg.conf 
+generate_conf
+add_conf '
+$AbortOnUncleanConfig on
+
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$MainMsgQueueTimeoutShutdown 10000
+$InputTCPServerRun 13514
+
+$template outfmt,"%msg:F,58:2%\n"
+$template dynfile,"rsyslog.out.log" # trick to use relative path names!
+:msg, contains, "msgnum:" ?dynfile;outfmt
+'
+startup
 . $srcdir/diag.sh tcpflood -m10 -i1 
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown

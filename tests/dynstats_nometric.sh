@@ -11,7 +11,25 @@ fi
 echo ===============================================================================
 echo \[dynstats_nometric.sh\]: test for dyn-stats meta-metric behavior with zero-length metric name
 . $srcdir/diag.sh init
-startup dynstats_nometric.conf
+generate_conf
+add_conf '
+ruleset(name="stats") {
+  action(type="omfile" file="./rsyslog.out.stats.log")
+}
+
+module(load="../plugins/impstats/.libs/impstats" interval="1" severity="7" resetCounters="on" Ruleset="stats" bracketing="on")
+
+template(name="outfmt" type="string" string="%msg% %$.increment_successful%\n")
+
+dyn_stats(name="msg_stats")
+
+set $.msg_prefix = field($msg, 32, 2);
+
+set $.increment_successful = dyn_inc("msg_stats", $.msg_prefix);
+
+action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+'
+startup
 . $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
 . $srcdir/diag.sh wait-queueempty
 rm $srcdir/rsyslog.out.stats.log

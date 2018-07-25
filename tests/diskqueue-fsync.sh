@@ -15,7 +15,23 @@ if [ `uname` = "SunOS" ] ; then
 fi
 
 . $srcdir/diag.sh init
-startup diskqueue-fsync.conf
+generate_conf
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$InputTCPServerRun 13514
+
+# set spool locations and switch queue to disk-only mode
+$WorkDirectory test-spool
+$MainMsgQueueSyncQueueFiles on
+$MainMsgQueueTimeoutShutdown 10000
+$MainMsgQueueFilename mainq
+$MainMsgQueueType disk
+
+$template outfmt,"%msg:F,58:2%\n"
+$template dynfile,"rsyslog.out.log" # trick to use relative path names!
+:msg, contains, "msgnum:" ?dynfile;outfmt
+'
+startup
 # 1000 messages should be enough - the disk fsync test is very slow!
 . $srcdir/diag.sh injectmsg 0 1000
 shutdown_when_empty # shut down rsyslogd when done processing messages

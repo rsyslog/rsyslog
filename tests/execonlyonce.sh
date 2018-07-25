@@ -10,7 +10,18 @@
 echo ===============================================================================
 echo \[execonlyonce.sh\]: test for the $ActionExecOnlyOnceEveryInterval directive
 . $srcdir/diag.sh init
-startup execonlyonce.conf
+generate_conf
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$MainMsgQueueTimeoutShutdown 10000
+$InputTCPServerRun 13514
+
+$template outfmt,"%msg:F,58:2%\n"
+$template dynfile,"rsyslog.out.log" # trick to use relative path names!
+$ActionExecOnlyOnceEveryInterval 3
+:msg, contains, "msgnum:" ?dynfile;outfmt
+'
+startup
 . $srcdir/diag.sh tcpflood -m10 -i1
 # now wait until the interval definitely expires
 sleep 4 # one more than the once inerval!

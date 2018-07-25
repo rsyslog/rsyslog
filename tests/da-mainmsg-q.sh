@@ -11,7 +11,27 @@
 echo ===============================================================================
 echo "[da-mainmsg-q.sh]: testing main message queue in DA mode (going to disk)"
 . $srcdir/diag.sh init
-startup da-mainmsg-q.conf
+generate_conf
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$MainMsgQueueTimeoutShutdown 10000
+$InputTCPServerRun 13514
+
+# set spool locations and switch queue to disk assisted mode
+$WorkDirectory test-spool
+$MainMsgQueueSize 200 # this *should* trigger moving on to DA mode...
+# note: we must set QueueSize sufficiently high, so that 70% (light delay mark)
+# is high enough above HighWatermark!
+$MainMsgQueueHighWatermark 80
+$MainMsgQueueLowWatermark 40
+$MainMsgQueueFilename mainq
+$MainMsgQueueType linkedlist
+
+$template outfmt,"%msg:F,58:2%\n"
+$template dynfile,"rsyslog.out.log" # trick to use relative path names!
+:msg, contains, "msgnum:" ?dynfile;outfmt
+'
+startup
 
 # part1: send first 50 messages (in memory, only)
 #. $srcdir/diag.sh tcpflood 127.0.0.1 13514 1 50

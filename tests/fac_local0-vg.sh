@@ -10,7 +10,16 @@ if [ `uname` = "FreeBSD" ] ; then
 fi
 
 . $srcdir/diag.sh init
-startup_vg fac_local0.conf
+generate_conf
+add_conf '
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="13514")
+
+template(type="string" name="outfmt" string="%msg:F,58:2%,%msg:F,58:3%,%msg:F,58:4%\n")
+if $syslogfacility-text == "local0" then
+    action(type="omfile" file="rsyslog.out.log" template="outfmt")
+'
+startup_vg
 . $srcdir/diag.sh tcpflood -m1000 -P 129
 shutdown_when_empty
 wait_shutdown_vg

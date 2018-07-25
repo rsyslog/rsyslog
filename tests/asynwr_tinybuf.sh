@@ -9,10 +9,24 @@
 echo ===============================================================================
 echo TEST: \[asynwr_tinybuf.sh\]: test async file writing with 1-byte buffer
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$MainMsgQueueTimeoutShutdown 10000
+$InputTCPServerRun 13514
+
+$template outfmt,"%msg:F,58:2%\n"
+$template dynfile,"rsyslog.out.log" # trick to use relative path names!
+$OMFileFlushOnTXEnd off
+$OMFileFlushInterval 2
+$OMFileIOBufferSize 1
+$OMFileAsyncWriting on
+:msg, contains, "msgnum:" ?dynfile;outfmt
+'
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="log"
-startup asynwr_tinybuf.conf
+startup
 # send 1000 messages, fairly enough to trigger problems
 . $srcdir/diag.sh tcpflood -m1000
 shutdown_when_empty # shut down rsyslogd when done processing messages

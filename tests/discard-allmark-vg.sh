@@ -10,7 +10,21 @@ fi
 echo ===============================================================================
 echo \[discard-allmark.sh\]: testing discard-allmark functionality
 . $srcdir/diag.sh init
-startup_vg discard-allmark.conf
+generate_conf
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$MainMsgQueueTimeoutShutdown 10000
+$InputTCPServerRun 13514
+
+$ActionWriteAllMarkMessages on
+
+:msg, contains, "00000001" ~
+
+$template outfmt,"%msg:F,58:2%\n"
+$template dynfile,"rsyslog.out.log" # trick to use relative path names!
+:msg, contains, "msgnum:" ?dynfile;outfmt
+'
+startup_vg
 . $srcdir/diag.sh tcpflood -m10 -i1
 # we need to give rsyslog a little time to settle the receiver
 ./msleep 1500

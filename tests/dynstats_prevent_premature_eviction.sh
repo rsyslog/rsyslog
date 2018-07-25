@@ -11,7 +11,29 @@ fi
 echo ===============================================================================
 echo \[dynstats_prevent_premature_eviction.sh\]: test for ensuring metrics are not evicted before unused-ttl
 . $srcdir/diag.sh init
-startup dynstats_reset.conf
+generate_conf
+add_conf '
+ruleset(name="stats") {
+  action(type="omfile" file="./rsyslog.out.stats.log")
+}
+
+module(load="../plugins/impstats/.libs/impstats" interval="4" severity="7" resetCounters="on" Ruleset="stats" bracketing="on")
+
+template(name="outfmt" type="string" string="%msg% %$.increment_successful%\n")
+
+dyn_stats(name="msg_stats" unusedMetricLife="1" resettable="off")
+
+set $.msg_prefix = field($msg, 32, 1);
+
+if (re_match($.msg_prefix, "foo|bar|baz|quux|corge|grault")) then {
+  set $.increment_successful = dyn_inc("msg_stats", $.msg_prefix);
+} else {
+  set $.increment_successful = -1;
+}
+
+action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+'
+startup
 . $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
 rst_msleep 1000
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_1

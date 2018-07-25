@@ -11,9 +11,21 @@ fi
 echo ===============================================================================
 echo \[multiple_lookup_table-vg.sh\]: test for multiple lookup-table and HUP based reloading of it
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+lookup_table(name="xlate_0" file="xlate.lkp_tbl")
+lookup_table(name="xlate_1" file="xlate_1.lkp_tbl")
+
+template(name="outfmt" type="string" string="- %msg% 0_%$.lkp_0% 1_%$.lkp_1%\n")
+
+set $.lkp_0 = lookup("xlate_0", $msg);
+set $.lkp_1 = lookup("xlate_1", $msg);
+
+action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+'
 cp -f $srcdir/testsuites/xlate.lkp_tbl xlate.lkp_tbl
 cp -f $srcdir/testsuites/xlate.lkp_tbl xlate_1.lkp_tbl
-startup_vg multiple_lookup_tables.conf
+startup_vg
 . $srcdir/diag.sh injectmsg  0 3
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh content-check "msgnum:00000000: 0_foo_old 1_foo_old"

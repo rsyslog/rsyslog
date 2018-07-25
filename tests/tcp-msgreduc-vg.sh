@@ -12,7 +12,16 @@ fi
 echo ===============================================================================
 echo \[tcp-msgreduc-vg.sh\]: testing msg reduction via UDP
 . $srcdir/diag.sh init
-startup_vg tcp-msgreduc-vg.conf
+generate_conf
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$InputTCPServerRun 13514
+$RepeatedMsgReduction on
+
+$template outfmt,"%msg:F,58:2%\n"
+*.*  ./rsyslog.out.log;outfmt
+'
+startup_vg
 . $srcdir/diag.sh wait-startup
 . $srcdir/diag.sh tcpflood -t 127.0.0.1 -m 4 -r -M "\"<133>2011-03-01T11:22:12Z host tag msgh ...\""
 . $srcdir/diag.sh tcpflood -t 127.0.0.1 -m 1 -r -M "\"<133>2011-03-01T11:22:12Z host tag msgh ...x\""

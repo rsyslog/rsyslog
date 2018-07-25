@@ -8,10 +8,24 @@
 echo ================================================================================
 echo TEST: \[asynwr_deadlock_2.sh\]: a case known to have caused a deadlock in the past
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$MainMsgQueueTimeoutShutdown 10000
+$InputTCPServerRun 13514
+
+$template outfmt,"%msg:F,58:2%\n"
+
+$OMFileFlushOnTXEnd on
+$OMFileFlushInterval 10
+$OMFileIOBufferSize 4k
+$OMFileAsyncWriting on
+:msg, contains, "msgnum:" ./rsyslog.out.log;outfmt
+'
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="log"
-startup asynwr_deadlock_2.conf
+startup
 # just send one message
 . $srcdir/diag.sh tcpflood -m1
 # sleep is important! need to make sure the instance is inactive

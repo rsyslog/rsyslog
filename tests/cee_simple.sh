@@ -4,7 +4,16 @@
 echo ===============================================================================
 echo \[cee_simple.sh\]: basic CEE property test
 . $srcdir/diag.sh init
-startup cee_simple.conf
+generate_conf
+add_conf '
+template(name="outfmt" type="string" string="%$!usr!msg:F,58:2%\n")
+set $!usr!msg = $msg;
+if $msg contains '
+add_conf "'msgnum' "
+add_conf 'then
+	action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+'
+startup
 . $srcdir/diag.sh injectmsg  0 5000
 echo doing shutdown
 shutdown_when_empty
