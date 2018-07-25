@@ -1,5 +1,14 @@
 ------------------------------------------------------------------------------
 Version 8.37.0 [v8-stable] 2018-08-07
+- build system: add --enable-default-tests ./configure option
+  This permits to control the "default tests" in testbench runs. These
+  are those tests that do not need a special configure option. There are
+  some situations where we really want to turn them of so that we can
+  run tests only for a specific component (e.g. ElasticSearch).
+  This commit also removes the --enable-testbench[12] configure switches,
+  which were introduced just to work-around travis runtime restrictions.
+  With the new CI setup and new options we could reduce the Travis runtime
+  dramatically and so we do not need them any longer.
 - overall adaption to gcc 8 which emits new warnings
 - ommail change of behavior: "enable.body" default now "on"
   This was always documented to be "on", but actually was "off". Usually, we
