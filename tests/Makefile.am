@@ -34,11 +34,9 @@ endif
 TESTS = $(TESTRUNS)
 #TESTS = $(TESTRUNS) cfg.sh
 
+if ENABLE_DEFAULT_TESTS
 TESTS +=  \
-	empty-hostname.sh
-
-if ENABLE_TESTBENCH1
-TESTS +=  \
+	empty-hostname.sh \
 	hostname-getaddrinfo-fail.sh \
 	prop-programname.sh \
 	prop-programname-with-slashes.sh \
@@ -201,83 +199,7 @@ TESTS +=  \
 	failover-rptd.sh \
 	failover-no-rptd.sh \
 	failover-no-basic.sh \
-	rcvr_fail_restore.sh
-if ENABLE_LIBFAKETIME
-TESTS +=  \
-	now_family_utc.sh \
-	now-utc.sh \
-	now-utc-ymd.sh \
-	now-utc-casecmp.sh \
-	timegenerated-ymd.sh \
-	timegenerated-uxtimestamp.sh \
-	timegenerated-uxtimestamp-invld.sh \
-	timegenerated-dateordinal.sh \
-	timegenerated-dateordinal-invld.sh \
-	timegenerated-utc.sh \
-	timegenerated-utc-legacy.sh \
-	timereported-utc.sh \
-	timereported-utc-legacy.sh
-# now come faketime tests that utilize mmnormalize - aka "no endif here"
-if ENABLE_MMNORMALIZE
-TESTS += \
-	mmnormalize_processing_test1.sh \
-	mmnormalize_processing_test2.sh \
-	mmnormalize_processing_test3.sh \
-	mmnormalize_processing_test4.sh
-endif
-endif
-
-if ENABLE_PGSQL
-if ENABLE_PGSQL_TESTS
-TESTS += \
-	pgsql-basic.sh \
-	pgsql-basic-cnf6.sh \
-	pgsql-basic-threads-cnf6.sh \
-	pgsql-template.sh \
-	pgsql-template-cnf6.sh \
-	pgsql-actq-mt-withpause.sh \
-	pgsql-template-threads-cnf6.sh
-if HAVE_VALGRIND
-TESTS += \
-	pgsql-basic-vg.sh \
-	pgsql-template-vg.sh \
-	pgsql-basic-cnf6-vg.sh \
-	pgsql-template-cnf6-vg.sh \
-	pgsql-actq-mt-withpause-vg.sh
-endif
-endif
-endif
-
-if ENABLE_MYSQL_TESTS
-TESTS +=  \
-	mysql-basic.sh \
-	mysql-basic-cnf6.sh \
-	mysql-asyn.sh \
-	mysql-actq-mt.sh \
-	mysql-actq-mt-withpause.sh \
-	action-tx-single-processing.sh \
-	action-tx-errfile.sh
-if HAVE_VALGRIND
-TESTS +=  \
-	mysql-basic-vg.sh \
-	mysql-asyn-vg.sh \
-	mysql-actq-mt-withpause-vg.sh
-endif
-if ENABLE_OMLIBDBI # we piggy-back on MYSQL_TESTS as we need the same environment
-TESTS +=  \
-	libdbi-basic.sh \
-	libdbi-asyn.sh
-if HAVE_VALGRIND
-TESTS +=  \
-	libdbi-basic-vg.sh
-endif
-endif
-endif
-
-endif #  ENABLE_TESTBENCH1
-
-if ENABLE_TESTBENCH2
-TESTS +=  \
+	rcvr_fail_restore.sh \
 	rscript_contains.sh \
 	rscript_bare_var_root.sh \
 	rscript_bare_var_root-empty.sh \
@@ -364,10 +286,6 @@ TESTS +=  \
 	lookup_table_rscript_reload_without_stub.sh \
 	include-obj-text-from-file.sh \
 	multiple_lookup_tables.sh
-if ENABLE_FMHTTP
-TESTS +=  \
-	rscript_http_request.sh
-endif # ENABLE_FMHTTP
 if HAVE_VALGRIND
 TESTS +=  \
 	include-obj-outside-control-flow-vg.sh \
@@ -376,13 +294,7 @@ TESTS +=  \
 	rscript_parse_json-vg.sh \
 	rscript_backticks-vg.sh \
 	rscript-config_enable-off-vg.sh \
-	prop-jsonmesg-vg.sh
-endif # HAVE_VALGRIND
-
-endif # ENABLE_TESTBENCH2
-
-if HAVE_VALGRIND
-TESTS +=  \
+	prop-jsonmesg-vg.sh \
 	mmexternal-SegFault-vg.sh \
 	mmexternal-InvldProg-vg.sh \
 	internal-errmsg-memleak-vg.sh \
@@ -412,12 +324,90 @@ TESTS +=  \
 	multiple_lookup_tables-vg.sh \
 	fac_local0-vg.sh \
 	rscript_trim-vg.sh
+endif # HAVE_VALGRIND
+endif # ENABLE_DEFAULT_TESTS
+
+if ENABLE_LIBFAKETIME
+TESTS +=  \
+	now_family_utc.sh \
+	now-utc.sh \
+	now-utc-ymd.sh \
+	now-utc-casecmp.sh \
+	timegenerated-ymd.sh \
+	timegenerated-uxtimestamp.sh \
+	timegenerated-uxtimestamp-invld.sh \
+	timegenerated-dateordinal.sh \
+	timegenerated-dateordinal-invld.sh \
+	timegenerated-utc.sh \
+	timegenerated-utc-legacy.sh \
+	timereported-utc.sh \
+	timereported-utc-legacy.sh
+# now come faketime tests that utilize mmnormalize - aka "no endif here"
+if ENABLE_MMNORMALIZE
+TESTS += \
+	mmnormalize_processing_test1.sh \
+	mmnormalize_processing_test2.sh \
+	mmnormalize_processing_test3.sh \
+	mmnormalize_processing_test4.sh
+endif
+endif
+
+if ENABLE_PGSQL
+if ENABLE_PGSQL_TESTS
+TESTS += \
+	pgsql-basic.sh \
+	pgsql-basic-cnf6.sh \
+	pgsql-basic-threads-cnf6.sh \
+	pgsql-template.sh \
+	pgsql-template-cnf6.sh \
+	pgsql-actq-mt-withpause.sh \
+	pgsql-template-threads-cnf6.sh
+if HAVE_VALGRIND
+TESTS += \
+	pgsql-basic-vg.sh \
+	pgsql-template-vg.sh \
+	pgsql-basic-cnf6-vg.sh \
+	pgsql-template-cnf6-vg.sh \
+	pgsql-actq-mt-withpause-vg.sh
+endif
+endif
+endif
+
+if ENABLE_MYSQL_TESTS
+TESTS +=  \
+	mysql-basic.sh \
+	mysql-basic-cnf6.sh \
+	mysql-asyn.sh \
+	mysql-actq-mt.sh \
+	mysql-actq-mt-withpause.sh \
+	action-tx-single-processing.sh \
+	action-tx-errfile.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	mysql-basic-vg.sh \
+	mysql-asyn-vg.sh \
+	mysql-actq-mt-withpause-vg.sh
+endif
+if ENABLE_OMLIBDBI # we piggy-back on MYSQL_TESTS as we need the same environment
+TESTS +=  \
+	libdbi-basic.sh \
+	libdbi-asyn.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	libdbi-basic-vg.sh
+endif
+endif
+endif #  MYSQL_TESTS
 
 if ENABLE_FMHTTP
 TESTS +=  \
+	rscript_http_request.sh
+if HAVE_VALGRIND
+TESTS +=  \
 	rscript_http_request-vg.sh
-endif # ENABLE_FMHTTP
 endif # HAVE_VALGRIND
+endif # ENABLE_FMHTTP
+
 
 if ENABLE_ROOT_TESTS
 TESTS +=  \
