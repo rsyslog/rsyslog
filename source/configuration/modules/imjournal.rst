@@ -233,7 +233,25 @@ is on). After PersistStateInterval or when rsyslog is stopped invalid statefile
 is overwritten with a new valid cursor.
 
 
+WorkAroundJournalBug
+^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+.. versionadded:: 8.37.0
+
+When journald instance rotates its files it is possible that duplicate records 
+appear in rsyslog. If you turn on this option imjournal will keep track of cursor
+with each message to work around this problem. Be aware that in some cases this
+might result in imjournal performance hit.
+
 .. _imjournal-statistic-counter:
+
 
 Statistic Counter
 =================
