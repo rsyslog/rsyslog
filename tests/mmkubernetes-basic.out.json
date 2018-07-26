@@ -107,4 +107,33 @@
   "docker": {
     "container_id": "id3"
   }
+},
+{
+  "message": "a message from container 5",
+  "CONTAINER_NAME": "some-prefix_container-name5_pod-name5.with.dot.in.pod.name_namespace-name5_unused5_unused55",
+  "CONTAINER_ID_FULL": "id5",
+  "kubernetes": {
+    "namespace_id": "namespace-name5-id",
+    "namespace_labels": {
+      "label_1_key": "label 1 value",
+      "label_with_empty_value": "",
+      "label_2_key": "label 2 value"
+    },
+    "creation_timestamp": "2018-04-09T21:56:39Z",
+    "pod_id": "pod-name5.with.dot.in.pod.name-id",
+    "labels": {
+      "custom_label": "pod-name5.with.dot.in.pod.name-label-value",
+      "deploymentconfig": "pod-name5.with.dot.in.pod.name-dc",
+      "component": "pod-name5.with.dot.in.pod.name-component",
+      "label_with_empty_value": "",
+      "deployment": "pod-name5.with.dot.in.pod.name-deployment"
+    },
+    "pod_name": "pod-name5.with.dot.in.pod.name",
+    "namespace_name": "namespace-name5",
+    "container_name": "container-name5",
+    "master_url": "http://localhost:18443"
+  },
+  "docker": {
+    "container_id": "id5"
+  }
 }]
