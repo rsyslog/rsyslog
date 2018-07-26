@@ -33,6 +33,11 @@ Version 8.37.0 [v8-stable] 2018-08-07
 - imjournal: add journal-specific impstats counters
   these provide some additional insight into journal operations
   Thanks to Abdul Waheed for the patch.
+- imjournal: fixed startup on missing state file
+  When starting rsyslog with imjournal for first time it outputs
+  an error and plugin does not run because no state file exists yet.
+  Now it skips the loading and creates state file on first persist.
+  Thanks to Jiri Vymazal for the patch.
 - config: enhance backticks "echo" capability
   This is now more along the lines of what bash does. We now support
   multiple environment variable expansions as well as constant text
@@ -153,8 +158,12 @@ Version 8.37.0 [v8-stable] 2018-08-07
   specific functionality. This meant those tests were not run since
   changing the default. Now untangling the dependency.
 - CI:
+  * most test refactored to use newer testbench plumbing
+    while no functional change, this permits further enhancements
   * ElasticSearch startup timeout in tests increased to care for
     slower test systems
+  * imjournal: fixed tests to actually test plugin functionality
+    Thanks to Jiri Vymazal for the patch.
   * new test for gnutls priority string in librelp
     Thanks to github user jvymazal for the patch
   * testbench: relax hanging instance detection
