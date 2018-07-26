@@ -58,7 +58,7 @@ static const int yearInSec_startYear = 1967;
 /* for x in $(seq 1967 2099) ; do
  *   printf %s', ' $(date --date="Dec 31 ${x} UTC 23:59:59" +%s)
  * done |fold -w 70 -s */
-static const time_t yearInSecs[] = {
+static const long long yearInSecs[] = {
 	-63158401, -31536001, -1, 31535999, 63071999, 94694399, 126230399,
 	157766399, 189302399, 220924799, 252460799, 283996799, 315532799,
 	347155199, 378691199, 410227199, 441763199, 473385599, 504921599,
@@ -1132,7 +1132,7 @@ syslogTime2time_t(const struct syslogTime *ts)
 
 	NumberOfYears = ts->year - yearInSec_startYear - 1;
 	NumberOfDays = MonthInDays + ts->day - 1;
-	TimeInUnixFormat = (yearInSecs[NumberOfYears] + 1) + NumberOfDays * 86400;
+	TimeInUnixFormat = (time_t) (yearInSecs[NumberOfYears] + 1) + NumberOfDays * 86400;
 
 	/*Add Hours, minutes and seconds */
 	TimeInUnixFormat += ts->hour*60*60;
@@ -1209,7 +1209,7 @@ int getOrdinal(struct syslogTime *ts)
 
 	thistime = syslogTime2time_t(ts);
 
-	previousyears = yearInSecs[ts->year - yearInSec_startYear - 1];
+	previousyears = (time_t) yearInSecs[ts->year - yearInSec_startYear - 1];
 
 	/* adjust previous years to match UTC offset */
 	utcOffset = ts->OffsetHour*3600 + ts->OffsetMinute*60;

@@ -17,7 +17,7 @@
  * information (most importantly last block hash) and sigblkConstruct
  * reads (or initilizes if not present) it.
  *
- * Copyright 2013-2017 Adiscon GmbH and Guardtime, Inc.
+ * Copyright 2013-2018 Adiscon GmbH and Guardtime, Inc.
  *
  * This file is part of rsyslog.
  *
@@ -705,21 +705,25 @@ rsksiInitModule(rsksictx ctx) {
 		if (KSI_Config_getMaxRequests(config, &ksi_int) == KSI_OK && ksi_int != NULL) {
 			tmpInt = KSI_Integer_getUInt64(ksi_int);
 			ctx->max_requests=tmpInt;
-			report(ctx, "KSI gateway has reported a max requests value of %lu", tmpInt);
+			report(ctx, "KSI gateway has reported a max requests value of %llu",
+				(long long unsigned) tmpInt);
 		}
 
 		ksi_int = NULL;
 		if(KSI_Config_getMaxLevel(config, &ksi_int) == KSI_OK && ksi_int != NULL) {
 			tmpInt = KSI_Integer_getUInt64(ksi_int);
-			report(ctx, "KSI gateway has reported a max level value of %lu", tmpInt);
+			report(ctx, "KSI gateway has reported a max level value of %llu",
+				(long long unsigned) tmpInt);
 			if(ctx->blockLevelLimit > tmpInt) {
-				report(ctx, "Decreasing the configured block level limit from %lu to %lu "
-				"reported by KSI gateway", ctx->blockLevelLimit, tmpInt);
+				report(ctx, "Decreasing the configured block level limit from %llu to %llu "
+				"reported by KSI gateway",
+				(long long unsigned) ctx->blockLevelLimit,
+				(long long unsigned) tmpInt);
 				ctx->blockLevelLimit=tmpInt;
 			}
 			else if(tmpInt < 2) {
-				report(ctx, "KSI gateway has reported an invalid level limit value (%lu), "
-					"plugin disabled", tmpInt);
+				report(ctx, "KSI gateway has reported an invalid level limit value (%llu), "
+					"plugin disabled", (long long unsigned) tmpInt);
 				ctx->disabled = true;
 				res = KSI_INVALID_ARGUMENT;
 				goto done;
@@ -1063,7 +1067,7 @@ sigblkCheckTimeOut(rsksictx ctx) {
 
 	now = time(NULL);
 
-	if (ctx->ksi->blockStarted + ctx->blockTimeLimit > now)
+	if ((time_t) (ctx->ksi->blockStarted + ctx->blockTimeLimit) > now)
 		goto done;
 
 	snprintf(buf, KSI_BUF_SIZE, "Block closed due to reaching time limit %d", ctx->blockTimeLimit);
@@ -1495,6 +1499,8 @@ cleanup:
 	return ret;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
 void *signer_thread(void *arg) {
 
 	rsksictx ctx = (rsksictx) arg;
@@ -1605,3 +1611,4 @@ cleanup:
 	ctx->thread_started = false;
 	return NULL;
 }
+#pragma GCC diagnostic push
