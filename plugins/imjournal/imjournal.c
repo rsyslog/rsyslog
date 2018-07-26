@@ -578,6 +578,17 @@ loadJournalState(void)
 		cs.stateFile = new_stateFile;
 	}
 
+	/* if state file not exists (on very first run), skip */
+	if (access(cs.stateFile, F_OK|R_OK) == -1 && errno == ENOENT) {
+		if (cs.bIgnorePrevious) {
+			/* Seek to the very end of the journal and ignore all older messages. */
+			skipOldMessages();
+		}
+		LogMsg(errno, RS_RET_FILE_NOT_FOUND, LOG_NOTICE, "imjournal: No statefile exists, "
+				"%s will be created (ignore if this is first run)", cs.stateFile);
+		FINALIZE;
+	}
+
 	if ((r_sf = fopen(cs.stateFile, "rb")) != NULL) {
 		char readCursor[128 + 1];
 		if (fscanf(r_sf, "%128s\n", readCursor) != EOF) {

@@ -11,26 +11,32 @@
 . $srcdir/diag.sh require-journalctl
 generate_conf
 add_conf '
-module(load="../plugins/imjournal/.libs/imjournal" IgnorePreviousMessages="on")
+module(load="../plugins/imjournal/.libs/imjournal" StateFile="imjournal.state")
 
 template(name="outfmt" type="string" string="%msg%\n")
 action(type="omfile" template="outfmt" file="rsyslog.out.log")
 '
-startup_vg
 TESTMSG="TestBenCH-RSYSLog imjournal This is a test message - $(date +%s)"
-systemd-cat echo "$TESTMSG" 
+systemd-cat echo "$TESTMSG"
 journalctl -an 200 | fgrep -qF "$TESTMSG"
 if [ $? -ne 0 ]; then
         echo "SKIP: some problem with journald service."
         exit 77
 fi
+# do first run to process all the stuff already in journal db
+startup
 ./msleep 500
 shutdown_when_empty # shut down rsyslogd when done processing messages
-wait_shutdown_vg
-. $srcdir/diag.sh check-exit-vg
-cat rsyslog.out.log | fgrep -qF "$TESTMSG"
-if [ $? -ne 0 ]; then
-  echo "FAIL: rsyslog.out.log content (tail -n200):"
+wait_shutdown
+#now do a second which should NOT capture testmsg again
+startup
+./msleep 500
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown
+COUNT= cat rsyslog.out.log | fgrep "$TESTMSG" | wc -l
+if [ $COUNT -ne 1 ]; then
+  echo "FAIL: message found $COUNT times (expected 1)"
+  echo "rsyslog.out.log content (tail -n200):"
   tail -n200 rsyslog.out.log
   echo "======="
   echo "last entries from journal:"

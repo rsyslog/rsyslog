@@ -28,9 +28,6 @@ check_PROGRAMS = $(TESTRUNS) ourtail tcpflood chkseq msleep randomgen \
 	omrelp_dflt_port \
 	mangle_qi \
 	have_relpSrvSetOversizeMode
-if ENABLE_IMJOURNAL
-check_PROGRAMS += journal_print
-endif
 TESTS = $(TESTRUNS)
 #TESTS = $(TESTRUNS) cfg.sh
 
@@ -428,16 +425,15 @@ TESTS +=  \
 endif
 endif
 
-# disable temporarily due to issues
-# see: https://github.com/rsyslog/rsyslog/issues/2564
-#if ENABLE_IMJOURNAL
-#TESTS +=  \
-#	imjournal-basic.sh
-#if HAVE_VALGRIND
-#TESTS +=  \
-#	imjournal-basic-vg.sh
-#endif
-#endif
+if ENABLE_IMJOURNAL
+TESTS +=  \
+	imjournal-basic.sh
+	imjournal-statefile.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	imjournal-basic-vg.sh
+endif
+endif
 
 if ENABLE_OMJOURNAL
 TESTS +=  \
@@ -1194,6 +1190,7 @@ EXTRA_DIST= \
 	testsuites/now-utc.conf \
 	faketime_common.sh \
 	imjournal-basic.sh \
+	imjournal-statefile.sh \
 	imjournal-basic-vg.sh \
 	omjournal-abort-template.sh \
 	omjournal-abort-no-template.sh \
@@ -1984,10 +1981,6 @@ minitcpsrv_LDADD = $(SOL_LIBS)
 syslog_caller_SOURCES = syslog_caller.c
 syslog_caller_CPPFLAGS = $(LIBLOGGING_STDLOG_CFLAGS)
 syslog_caller_LDADD = $(SOL_LIBS) $(LIBLOGGING_STDLOG_LIBS)
-
-journal_print_SOURCES = journal_print.c
-journal_print_CPPFLAGS = $(LIBSYSTEMD_JOURNAL_CFLAGS)
-journal_print_LDADD = $(LIBSYSTEMD_JOURNAL_LIBS)
 
 diagtalker_SOURCES = diagtalker.c
 diagtalker_LDADD = $(SOL_LIBS)
