@@ -6,7 +6,24 @@ echo ===========================================================================
 echo \[execonlywhenprevsuspended-nonsusp\]: test execonly...suspended functionality with non-suspended action
 
 . $srcdir/diag.sh init
-startup execonlywhenprevsuspended-nonsusp.conf
+generate_conf
+add_conf '
+main_queue(queue.workerthreads="1") 
+
+# omtesting provides the ability to cause "SUSPENDED" action state
+module(load="../plugins/omtesting/.libs/omtesting")
+
+$MainMsgQueueTimeoutShutdown 100000
+template(name="outfmt" type="string" string="%msg:F,58:2%\n")
+
+:msg, contains, "msgnum:" {
+	action(type="omfile" file="rsyslog.out.log" template="outfmt")
+	action(type="omfile" file="rsyslog2.out.log" template="outfmt"
+	       action.ExecOnlyWhenPreviousIsSuspended="on"
+	      )
+}
+'
+startup
 . $srcdir/diag.sh injectmsg 0 1000
 shutdown_when_empty
 wait_shutdown

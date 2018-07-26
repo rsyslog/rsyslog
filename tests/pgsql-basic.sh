@@ -5,7 +5,12 @@
 
 psql -h localhost -U postgres -f testsuites/pgsql-basic.sql
 
-startup pgsql-basic.conf
+generate_conf
+add_conf '
+$ModLoad ../plugins/ompgsql/.libs/ompgsql
+:msg, contains, "msgnum:" :ompgsql:127.0.0.1,syslogtest,postgres,testbench
+'
+startup
 . $srcdir/diag.sh injectmsg  0 5000
 shutdown_when_empty
 wait_shutdown

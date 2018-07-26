@@ -4,7 +4,17 @@
 echo ===============================================================================
 echo \[no-dynstats.sh\]: test for verifying stats are reported correctly in legacy format in absence of any dynstats buckets being configured
 . $srcdir/diag.sh init
-startup no-dynstats.conf
+generate_conf
+add_conf '
+ruleset(name="stats") {
+  action(type="omfile" file="./rsyslog.out.stats.log")
+}
+
+module(load="../plugins/impstats/.libs/impstats" interval="1" severity="7" resetCounters="on" Ruleset="stats" bracketing="on")
+
+action(type="omfile" file="./rsyslog.out.log")
+'
+startup
 . $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
 echo doing shutdown
 shutdown_when_empty

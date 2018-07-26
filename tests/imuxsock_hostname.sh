@@ -7,7 +7,17 @@ if [ $no_liblogging_stdlog -ne 0 ];then
   exit 77
 fi
 . $srcdir/diag.sh init
-startup imuxsock_hostname.conf
+generate_conf
+add_conf '
+global(localHostName="rsyslog-testbench-hostname")
+
+module(load="../plugins/imuxsock/.libs/imuxsock" sysSock.use="off")
+input(type="imuxsock" Socket="testbench_socket")
+
+template(name="outfmt" type="string" string="%hostname:%\n")
+local1.*	./rsyslog.out.log;outfmt
+'
+startup
 # the message itself is irrelevant. The only important thing is
 # there is one
 ./syslog_caller -m1 -C "uxsock:testbench_socket"

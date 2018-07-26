@@ -12,7 +12,19 @@ if [ `uname` = "SunOS" ] ; then
 fi
 
 . $srcdir/diag.sh init
-startup cee_diskqueue.conf
+generate_conf
+add_conf '
+global(workDirectory="/tmp")
+template(name="outfmt" type="string" string="%$!usr!msg:F,58:2%\n")
+
+set $!usr!msg = $msg;
+if $msg contains '
+add_conf "'msgnum' "
+add_conf 'then
+	action(type="omfile" file="./rsyslog.out.log" template="outfmt"
+	       queue.type="disk" queue.filename="rsyslog-act1")
+'
+startup
 . $srcdir/diag.sh injectmsg  0 5000
 echo doing shutdown
 shutdown_when_empty

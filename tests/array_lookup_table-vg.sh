@@ -11,8 +11,20 @@ fi
 echo ===============================================================================
 echo \[array_lookup_table-vg.sh\]: test cleanup for array lookup-table and HUP based reloading of it
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+lookup_table(name="xlate" file="xlate_array.lkp_tbl")
+
+template(name="outfmt" type="string" string="%msg% %$.lkp%\n")
+
+set $.num = field($msg, 58, 2);
+
+set $.lkp = lookup("xlate", $.num);
+
+action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+'
 cp -f $srcdir/testsuites/xlate_array.lkp_tbl xlate_array.lkp_tbl
-startup_vg array_lookup_table.conf
+startup_vg
 . $srcdir/diag.sh injectmsg  0 3
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh content-check "msgnum:00000000: foo_old"

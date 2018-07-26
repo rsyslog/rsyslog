@@ -8,6 +8,29 @@
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 # added 2018-03-29 by rgerhards
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+global(workDirectory="test-spool")
+module(load="../plugins/imfile/.libs/imfile")
+
+input(type="imfile"
+      File="./rsyslog.input"
+      Tag="file:"
+      ReadMode="2")
+
+template(name="outfmt" type="list") {
+  constant(value="HEADER ")
+  property(name="msg" format="json")
+  constant(value="\n")
+}
+
+if $msg contains "msgnum:" then
+ action(
+   type="omfile"
+   file="rsyslog.out.log"
+   template="outfmt"
+ )
+'
 . $srcdir/diag.sh check-inotify
 
 # do mock-up setup
@@ -26,7 +49,7 @@ printf "info: new inode line: ${newline}\n"
 printf "info: patched state file:\n"
 cat test-spool/imfile-state\:.-rsyslog.input
 
-startup imfile-readmode2-with-persists.conf
+startup
 
 echo 'msgnum:3
  msgnum:4' >> rsyslog.input

@@ -11,7 +11,29 @@ fi
 echo ===============================================================================
 echo \[dynstats_ctr_reset.sh\]: test to ensure correctness of stats-ctr reset
 . $srcdir/diag.sh init
-startup dynstats_ctr_reset.conf
+generate_conf
+add_conf '
+ruleset(name="stats") {
+  action(type="omfile" file="./rsyslog.out.stats.log")
+}
+
+module(load="../plugins/impstats/.libs/impstats" interval="1" severity="7" resetCounters="on" Ruleset="stats" bracketing="on")
+
+template(name="outfmt" type="string" string="%msg%\n")
+
+dyn_stats(name="msg_stats_resettable_on" resettable="on")
+dyn_stats(name="msg_stats_resettable_off" resettable="off")
+dyn_stats(name="msg_stats_resettable_default")
+
+set $.msg_prefix = field($msg, 32, 1);
+
+set $.x = dyn_inc("msg_stats_resettable_on", $.msg_prefix);
+set $.y = dyn_inc("msg_stats_resettable_off", $.msg_prefix);
+set $.z = dyn_inc("msg_stats_resettable_default", $.msg_prefix);
+
+action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+'
+startup
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_1
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_2
 . $srcdir/diag.sh wait-queueempty

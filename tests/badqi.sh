@@ -8,7 +8,21 @@
 echo ===============================================================================
 echo \[badqi.sh\]: test startup with invalid .qi file
 . $srcdir/diag.sh init
-startup badqi.conf
+generate_conf
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$MainMsgQueueTimeoutShutdown 10000
+$InputTCPServerRun 13514
+
+$template outfmt,"%msg:F,58:2%\n"
+$template dynfile,"rsyslog.out.log" # trick to use relative path names!
+# instruct to use bad .qi file
+$WorkDirectory bad_qi
+$ActionQueueType LinkedList
+$ActionQueueFileName dbq
+:msg, contains, "msgnum:" ?dynfile;outfmt
+'
+startup
 # we just inject a handful of messages so that we have something to wait for...
 . $srcdir/diag.sh tcpflood -m20
 shutdown_when_empty # shut down rsyslogd when done processing messages

@@ -3,7 +3,20 @@
 # added 2009-05-20 by rgerhards
 # This file is part of the rsyslog project, released  under ASL 2.0
 . $srcdir/diag.sh init
-startup arrayqueue.conf
+generate_conf
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$MainMsgQueueTimeoutShutdown 10000
+$InputTCPServerRun 13514
+
+# set spool locations and switch queue to disk-only mode
+$MainMsgQueueType FixedArray
+
+$template outfmt,"%msg:F,58:2%\n"
+$template dynfile,"rsyslog.out.log" # trick to use relative path names!
+:msg, contains, "msgnum:" ?dynfile;outfmt
+'
+startup
 
 # 40000 messages should be enough
 . $srcdir/diag.sh injectmsg  0 40000

@@ -9,7 +9,28 @@ fi
 
 echo \[manytcp-too-few-tls.sh\]: test concurrent tcp connections
 . $srcdir/diag.sh init
-startup_vg manytcp-too-few-tls.conf
+generate_conf
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$MainMsgQueueTimeoutShutdown 10000
+$MaxOpenFiles 200
+$InputTCPMaxSessions 1100
+global(
+	defaultNetstreamDriverCAFile=`echo $srcdir/testsuites/x.509/ca.pem`
+	defaultNetstreamDriverCertFile=`echo $srcdir/testsuites/x.509/client-cert.pem`
+	defaultNetstreamDriverKeyFile=`echo $srcdir/testsuites/x.509/client-key.pem`
+	defaultNetstreamDriver="gtls"
+)
+
+$InputTCPServerStreamDriverMode 1
+$InputTCPServerStreamDriverAuthMode anon
+$InputTCPServerRun 13514
+
+$template outfmt,"%msg:F,58:2%\n"
+$template dynfile,"rsyslog.out.log" # trick to use relative path names!
+:msg, contains, "msgnum:" ?dynfile;outfmt
+'
+startup_vg
 # the config file specifies exactly 1100 connections
 . $srcdir/diag.sh tcpflood -c1000 -m40000
 # the sleep below is needed to prevent too-early termination of the tcp listener

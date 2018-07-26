@@ -6,7 +6,29 @@ echo ======================================================================
 echo [imfile-endregex.sh]
 . $srcdir/diag.sh check-inotify
 . $srcdir/diag.sh init
-startup imfile-endregex.conf
+generate_conf
+add_conf '
+module(load="../plugins/imfile/.libs/imfile")
+
+input(type="imfile"
+      File="./rsyslog.input"
+      Tag="file:"
+      startmsg.regex="^[^ ]")
+
+template(name="outfmt" type="list") {
+  constant(value="HEADER ")
+  property(name="msg" format="json")
+  constant(value="\n")
+}
+
+if $msg contains "msgnum:" then
+ action(
+   type="omfile"
+   file="rsyslog.out.log"
+   template="outfmt"
+ )
+'
+startup
 
 # write the beginning of the file
 echo 'msgnum:0

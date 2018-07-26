@@ -6,7 +6,31 @@
 # the unresponsive child if killUnresponsive=on.
 
 . $srcdir/diag.sh init
-startup omprog-close-unresponsive-noterm.conf
+generate_conf
+add_conf '
+module(load="../plugins/omprog/.libs/omprog")
+
+template(name="outfmt" type="string" string="%msg%\n")
+
+main_queue(
+    queue.timeoutShutdown="60000"  # give time to omprog to wait for the child
+)
+
+:msg, contains, "msgnum:" {
+    action(
+        type="omprog"
+        binary=`echo $srcdir/testsuites/omprog-close-unresponsive-bin.sh`
+        template="outfmt"
+        name="omprog_action"
+        queue.type="Direct"  # the default; facilitates sync with the child process
+        confirmMessages="on"  # facilitates sync with the child process
+        signalOnClose="off"
+        closeTimeout="1000"  # ms
+        killUnresponsive="on"  # default value: the value of signalOnClose
+    )
+}
+'
+startup
 . $srcdir/diag.sh wait-startup
 . $srcdir/diag.sh injectmsg 0 10
 . $srcdir/diag.sh wait-queueempty

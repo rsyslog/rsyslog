@@ -15,10 +15,23 @@
 echo ===============================================================================
 echo TEST: \[asynwr_small.sh\]: test for async file writing for few messages
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$MainMsgQueueTimeoutShutdown 10000
+$InputTCPServerRun 13514
+
+$template outfmt,"%msg:F,58:2%\n"
+$template dynfile,"rsyslog.out.log" # trick to use relative path names!
+$OMFileFlushOnTXEnd off
+$OMFileFlushInterval 2
+$OMFileAsyncWriting on
+:msg, contains, "msgnum:" ?dynfile;outfmt
+'
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="log"
-startup asynwr_small.conf
+startup
 # send 4000 messages
 . $srcdir/diag.sh tcpflood -m2
 shutdown_when_empty # shut down rsyslogd when done processing messages

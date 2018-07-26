@@ -43,7 +43,7 @@ mkdir rsyslog.input.dir1
 # the following is INVALID, as this is a file, but must be a directory!
 ./inputfilegen -m 1 > rsyslog.input.dir0
 
-startup 
+startup
 
 for j in `seq 1 $IMFILEINPUTFILESSTEPS`;
 do

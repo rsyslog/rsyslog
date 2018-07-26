@@ -16,8 +16,42 @@ if [ `uname` = "SunOS" ] ; then
 fi
 
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$MainMsgQueueTimeoutShutdown 10000
+
+# general definition
+$template outfmt,"%msg:F,58:2%\n"
+
+# create the individual rulesets
+$ruleset file1
+$RulesetCreateMainQueue on
+$template dynfile1,"rsyslog.out1.log" # trick to use relative path names!
+:msg, contains, "msgnum:" ?dynfile1;outfmt
+
+$ruleset file2
+$RulesetCreateMainQueue on
+$template dynfile2,"rsyslog.out2.log" # trick to use relative path names!
+:msg, contains, "msgnum:" ?dynfile2;outfmt
+
+$ruleset file3
+$RulesetCreateMainQueue on
+$template dynfile3,"rsyslog.out3.log" # trick to use relative path names!
+:msg, contains, "msgnum:" ?dynfile3;outfmt
+
+# start listeners and bind them to rulesets
+$InputTCPServerBindRuleset file1
+$InputTCPServerRun 13514
+
+$InputTCPServerBindRuleset file2
+$InputTCPServerRun 13515
+
+$InputTCPServerBindRuleset file3
+$InputTCPServerRun 13516
+'
 rm -f rsyslog.out1.log rsyslog.out2.log rsyslog.out3.log
-startup rulesetmultiqueue.conf
+startup
 . $srcdir/diag.sh wait-startup
 # now fill the three files (a bit sequentially, but they should
 # still get their share of concurrency - to increase the chance

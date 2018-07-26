@@ -11,8 +11,22 @@ fi
 echo ===============================================================================
 echo \[lookup_table_rscript_reload_without_stub-vg.sh\]: test for lookup-table reload by rscript-stmt without stub-value with valgrind
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+lookup_table(name="xlate" file="xlate.lkp_tbl")
+
+template(name="outfmt" type="string" string="- %msg% %$.lkp%\n")
+
+set $.lkp = lookup("xlate", $msg);
+
+if ($msg == " msgnum:00000002:") then {
+  reload_lookup_table("xlate")
+}
+
+action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+'
 cp -f $srcdir/testsuites/xlate.lkp_tbl xlate.lkp_tbl
-startup_vg lookup_table_reload.conf
+startup_vg
 # the last message ..002 should cause successful lookup-table reload
 cp -f $srcdir/testsuites/xlate_more.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh injectmsg  0 3

@@ -11,8 +11,22 @@ fi
 echo ===============================================================================
 echo \[lookup_table_rscript_reload.sh\]: test for lookup-table reload by rscript-fn
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+lookup_table(name="xlate" file="xlate.lkp_tbl")
+
+template(name="outfmt" type="string" string="- %msg% %$.lkp%\n")
+
+set $.lkp = lookup("xlate", $msg);
+
+if ($msg == " msgnum:00000002:") then {
+  reload_lookup_table("xlate", "reload_failed");
+}
+
+action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+'
 cp -f $srcdir/testsuites/xlate.lkp_tbl xlate.lkp_tbl
-startup lookup_table_reload_stub.conf
+startup
 # the last message ..002 should cause successful lookup-table reload
 cp -f $srcdir/testsuites/xlate_more.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh injectmsg  0 3

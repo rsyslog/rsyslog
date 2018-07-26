@@ -4,7 +4,28 @@
 echo ===============================================================================
 echo \[dynstats-json.sh\]: test for verifying stats are reported correctly in json format
 . $srcdir/diag.sh init
-startup dynstats-json.conf
+generate_conf
+add_conf '
+dyn_stats(name="stats_one")
+dyn_stats(name="stats_two")
+
+ruleset(name="stats") {
+  action(type="omfile" file="./rsyslog.out.stats.log")
+}
+
+module(load="../plugins/impstats/.libs/impstats" interval="2" severity="7" resetCounters="on" Ruleset="stats" bracketing="on" format="json")
+
+template(name="outfmt" type="string" string="%msg%\n")
+
+set $.p = field($msg, 32, 1);
+if ($.p == "foo") then {
+  set $.ign = dyn_inc("stats_one", $.p);
+  set $.ign = dyn_inc("stats_two", $.p);
+}
+
+action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+'
+startup
 . $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_1
 . $srcdir/diag.sh wait-queueempty

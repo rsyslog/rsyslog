@@ -11,8 +11,16 @@ fi
 echo ===============================================================================
 echo \[unused_lookup_table.sh\]: test for ensuring clean destruction of lookup-table even when it is never used
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+lookup_table(name="xlate" file="xlate.lkp_tbl")
+
+template(name="outfmt" type="string" string="- %msg%\n")
+
+action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+'
 cp -f $srcdir/testsuites/xlate.lkp_tbl xlate.lkp_tbl
-startup_vg unused_lookup_table.conf
+startup_vg
 . $srcdir/diag.sh injectmsg  0 1
 shutdown_when_empty
 wait_shutdown_vg

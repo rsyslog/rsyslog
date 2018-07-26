@@ -11,7 +11,21 @@ fi
 echo ===============================================================================
 echo \[json_null_array.sh\]: test for json containung \"null\" value
 . $srcdir/diag.sh init
-startup_vg json_null_array.conf
+generate_conf
+add_conf '
+module(load="../plugins/mmjsonparse/.libs/mmjsonparse")
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="13514")
+
+template(name="outfmt" type="string" string="%$.data%\n")
+
+action(type="mmjsonparse")
+foreach ($.data in $!array) do {
+	if not ($.data == "") then
+		action(type="omfile" file="rsyslog.out.log" template="outfmt")
+}
+'
+startup_vg
 . $srcdir/diag.sh tcpflood -m 1 -M "\"<167>Mar  6 16:57:54 172.20.245.8 test: @cee: { \\\"array\\\": [0, 1, null, 2, 3, null, 4] }\""
 echo doing shutdown
 shutdown_when_empty
