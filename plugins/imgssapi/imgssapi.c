@@ -83,7 +83,6 @@ DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(tcpsrv)
 DEFobjCurrIf(tcps_sess)
 DEFobjCurrIf(gssutil)
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(netstrm)
 DEFobjCurrIf(net)
 DEFobjCurrIf(glbl)
@@ -272,7 +271,7 @@ doOpenLstnSocks(tcpsrv_t *pSrv)
 	if(pGSrv->allowedMethods) {
 		if(pGSrv->allowedMethods & ALLOWEDMETHOD_GSS) {
 			if(TCPSessGSSInit()) {
-				errmsg.LogError(0, NO_ERRCODE, "GSS-API initialization failed\n");
+				LogError(0, NO_ERRCODE, "GSS-API initialization failed\n");
 				pGSrv->allowedMethods &= ~(ALLOWEDMETHOD_GSS);
 			}
 		}
@@ -361,7 +360,7 @@ actGSSListener(uchar *port)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		errmsg.LogError(0, NO_ERRCODE, "error %d trying to add listener", iRet);
+		LogError(0, NO_ERRCODE, "error %d trying to add listener", iRet);
 		if(pOurTcpsrv != NULL)
 			tcpsrv.Destruct(&pOurTcpsrv);
 		free(pGSrv);
@@ -455,7 +454,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 				ret = select(fdSess + 1, pFds, NULL, NULL, &tv);
 			} while (ret < 0 && errno == EINTR);
 			if (ret < 0) {
-				errmsg.LogError(0, RS_RET_ERR, "TCP session %p from %s will be "
+				LogError(0, RS_RET_ERR, "TCP session %p from %s will be "
 						"closed, error ignored\n", pSess, (char *)pszPeer);
 				ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
 			} else if (ret == 0) {
@@ -471,7 +470,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 				if (ret == 0) {
 					dbgprintf("GSS-API Connection closed by peer %s\n", (char *)pszPeer);
                                 } else {
-					errmsg.LogError(0, RS_RET_ERR, "TCP(GSS) session %p from %s will be closed, "
+					LogError(0, RS_RET_ERR, "TCP(GSS) session %p from %s will be closed, "
 					"error ignored\n", pSess, (char *)pszPeer);
                                 }
 				ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
@@ -493,7 +492,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 					if (ret == 0) {
 						dbgprintf("GSS-API Connection closed by peer %s\n", (char *)pszPeer);
                                         } else {
-						errmsg.LogError(0, NO_ERRCODE, "TCP session %p from %s will be "
+						LogError(0, NO_ERRCODE, "TCP session %p from %s will be "
 						"closed, error ignored\n", pSess, (char *)pszPeer);
                                         }
 					ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
@@ -519,7 +518,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 		sess_flags = &pGSess->gss_flags;
 		do {
 			if (gssutil.recv_token(fdSess, &recv_tok) <= 0) {
-				errmsg.LogError(0, NO_ERRCODE, "TCP session %p from %s will be "
+				LogError(0, NO_ERRCODE, "TCP session %p from %s will be "
 						"closed, error ignored\n", pSess, (char *)pszPeer);
 				ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
 			}
@@ -539,7 +538,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 					dbgprintf("GSS-API Reverting to plain TCP from %s\n", (char *)pszPeer);
 					dbgprintf("tcp session socket with new data: #%d\n", fdSess);
 					if(tcps_sess.DataRcvd(pSess, buf, ret) != RS_RET_OK) {
-						errmsg.LogError(0, NO_ERRCODE, "Tearing down TCP "
+						LogError(0, NO_ERRCODE, "Tearing down TCP "
 							"Session %p from %s - see previous messages "
 							"for reason(s)\n", pSess, (char *)pszPeer);
 						ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
@@ -553,7 +552,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 			if (send_tok.length != 0) {
 				if(gssutil.send_token(fdSess, &send_tok) < 0) {
 					gss_release_buffer(&min_stat, &send_tok);
-					errmsg.LogError(0, NO_ERRCODE, "TCP session %p from %s will be "
+					LogError(0, NO_ERRCODE, "TCP session %p from %s will be "
 							"closed, error ignored\n", pSess, (char *)pszPeer);
 					if (*context != GSS_C_NO_CONTEXT)
 						gss_delete_sec_context(&min_stat, context, GSS_C_NO_BUFFER);
@@ -734,7 +733,6 @@ CODESTARTmodExit
 	objRelease(tcps_sess, LM_TCPSRV_FILENAME);
 	objRelease(tcpsrv, LM_TCPSRV_FILENAME);
 	objRelease(gssutil, LM_GSSUTIL_FILENAME);
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(netstrm, LM_NETSTRM_FILENAME);
 	objRelease(net, LM_NET_FILENAME);
@@ -786,7 +784,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(tcps_sess, LM_TCPSRV_FILENAME));
 	CHKiRet(objUse(tcpsrv, LM_TCPSRV_FILENAME));
 	CHKiRet(objUse(gssutil, LM_GSSUTIL_FILENAME));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(netstrm, LM_NETSTRM_FILENAME));
 	CHKiRet(objUse(net, LM_NET_FILENAME));

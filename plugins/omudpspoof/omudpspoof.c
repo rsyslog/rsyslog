@@ -85,7 +85,6 @@ MODULE_CNFNAME("omudpspoof")
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
 
@@ -204,7 +203,7 @@ setLegacyDfltTpl(void __attribute__((unused)) *pVal, uchar* newVal)
 
 	if(loadModConf != NULL && loadModConf->tplName != NULL) {
 		free(newVal);
-		errmsg.LogError(0, RS_RET_ERR, "omudpspoof default template already set via module "
+		LogError(0, RS_RET_ERR, "omudpspoof default template already set via module "
 			"global parameter - can no longer be changed");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
@@ -255,7 +254,7 @@ BEGINsetModCnf
 CODESTARTsetModCnf
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
 				"config parameters [module(...)]");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -271,7 +270,7 @@ CODESTARTsetModCnf
 		if(!strcmp(modpblk.descr[i].name, "template")) {
 			loadModConf->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			if(cs.tplName != NULL) {
-				errmsg.LogError(0, RS_RET_DUP_PARAM, "omudpspoof: warning: default template "
+				LogError(0, RS_RET_DUP_PARAM, "omudpspoof: warning: default template "
 						"was already set via legacy directive - may lead to inconsistent "
 						"results.");
 			}
@@ -556,7 +555,7 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 
 		if(pWrkrData->libnet_handle == NULL) {
 			if(pData->bReportLibnetInitErr) {
-				errmsg.LogError(0, RS_RET_ERR_LIBNET_INIT, "omudpsoof: error "
+				LogError(0, RS_RET_ERR_LIBNET_INIT, "omudpsoof: error "
 				                "initializing libnet - are you running as root?");
 				pData->bReportLibnetInitErr = 0;
 			}
@@ -643,7 +642,7 @@ CODESTARTnewActInst
 
 	pvals = nvlstGetParams(lst, &actpblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "omudpspoof: mandatory "
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "omudpspoof: mandatory "
 		                "parameters missing");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -707,7 +706,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(2)
 						    : cs.pszSourceNameTemplate;
 
 	if(cs.pszTargetHost == NULL) {
-		errmsg.LogError(0, NO_ERRCODE, "No $ActionOMUDPSpoofTargetHost given, can not continue "
+		LogError(0, NO_ERRCODE, "No $ActionOMUDPSpoofTargetHost given, can not continue "
 			"with this action.");
 		ABORT_FINALIZE(RS_RET_HOST_NOT_SPECIFIED);
 	}
@@ -750,7 +749,6 @@ CODESTARTmodExit
 	/* destroy the libnet state needed for forged UDP sources */
 	pthread_mutex_destroy(&mutLibnet);
 	/* release what we no longer need */
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(net, LM_NET_FILENAME);
 	freeConfigVars();
@@ -786,7 +784,6 @@ INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net,LM_NET_FILENAME));
 
 	pthread_mutex_init(&mutLibnet, NULL);

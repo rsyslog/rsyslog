@@ -49,7 +49,6 @@ MODULE_CNFNAME("mmexternal")
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 
 typedef struct _instanceData {
 	uchar *szBinary;	/* name of binary to call */
@@ -249,7 +248,7 @@ processProgramReply(wrkrInstanceData_t *__restrict__ const pWrkrData, smsg_t *co
 	pWrkrData->respBuf[numCharsRead-1] = '\0';
 	iRet = MsgSetPropsViaJSON(pMsg, (uchar*)pWrkrData->respBuf);
 	if(iRet != RS_RET_OK) {
-		errmsg.LogError(0, iRet, "mmexternal: invalid reply '%s' from program '%s'",
+		LogError(0, iRet, "mmexternal: invalid reply '%s' from program '%s'",
 				pWrkrData->respBuf, pWrkrData->pData->szBinary);
 	}
 
@@ -399,10 +398,10 @@ cleanup(wrkrInstanceData_t *pWrkrData)
 		DBGPRINTF("mmexternal: waitpid status return for program '%s': %2.2x\n",
 			  pWrkrData->pData->szBinary, status);
 		if(WIFEXITED(status)) {
-			errmsg.LogError(0, NO_ERRCODE, "program '%s' exited normally, state %d",
+			LogError(0, NO_ERRCODE, "program '%s' exited normally, state %d",
 					pWrkrData->pData->szBinary, WEXITSTATUS(status));
 		} else if(WIFSIGNALED(status)) {
-			errmsg.LogError(0, NO_ERRCODE, "program '%s' terminated by signal %d.",
+			LogError(0, NO_ERRCODE, "program '%s' terminated by signal %d.",
 					pWrkrData->pData->szBinary, WTERMSIG(status));
 		}
 	}
@@ -577,7 +576,7 @@ CODESTARTnewActInst
 			else if(!strcmp(cstr, "fulljson"))
 				pData->inputProp = INPUT_JSON;
 			else {
-				errmsg.LogError(0, RS_RET_INVLD_INTERFACE_INPUT,
+				LogError(0, RS_RET_INVLD_INTERFACE_INPUT,
 					"mmexternal: invalid interface.input parameter '%s'",
 					cstr);
 				ABORT_FINALIZE(RS_RET_INVLD_INTERFACE_INPUT);
@@ -602,7 +601,6 @@ BEGINmodExit
 CODESTARTmodExit
 	free(cs.szBinary);
 	cs.szBinary = NULL;
-	iRet = objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -619,6 +617,5 @@ CODESTARTmodInit
 INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 CODEmodInit_QueryRegCFSLineHdlr
 ENDmodInit

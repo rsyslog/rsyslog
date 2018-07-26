@@ -52,7 +52,6 @@ MODULE_CNFNAME("mmjsonparse")
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
 
 /* static data */
-DEFobjCurrIf(errmsg);
 
 /* internal structures
  */
@@ -128,7 +127,7 @@ BEGINcreateWrkrInstance
 CODESTARTcreateWrkrInstance
 	pWrkrData->tokener = json_tokener_new();
 	if(pWrkrData->tokener == NULL) {
-		errmsg.LogError(0, RS_RET_ERR, "error: could not create json "
+		LogError(0, RS_RET_ERR, "error: could not create json "
 				"tokener, cannot activate instance");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
@@ -343,7 +342,6 @@ ENDparseSelectorAct
 
 BEGINmodExit
 CODESTARTmodExit
-	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -395,7 +393,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 		ABORT_FINALIZE(RS_RET_NO_MSG_PASSING);
 	}
 
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 				    resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));

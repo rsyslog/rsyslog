@@ -67,7 +67,6 @@ MODULE_CNFNAME("imudp")
 
 /* Module static data */
 DEF_IMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
 DEFobjCurrIf(datetime)
@@ -354,7 +353,7 @@ addListner(instanceConf_t *inst)
 			}
 		}
 	} else {
-		errmsg.LogError(0, NO_ERRCODE, "imudp: Could not create udp listener,"
+		LogError(0, NO_ERRCODE, "imudp: Could not create udp listener,"
 				" ignoring port %s bind-address %s.",
 				port, bindAddr);
 	}
@@ -385,7 +384,7 @@ finalize_it:
 static inline void
 std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst)
 {
-	errmsg.LogError(0, NO_ERRCODE, "imudp: ruleset '%s' for %s:%s not found - "
+	LogError(0, NO_ERRCODE, "imudp: ruleset '%s' for %s:%s not found - "
 			"using default ruleset instead", inst->pszBindRuleset,
 			inst->pszBindAddr == NULL ? "*" : (char*) inst->pszBindAddr,
 			inst->pszBindPort);
@@ -426,7 +425,7 @@ processPacket(struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *p
 				DBGPRINTF("msg is not from an allowed sender\n");
 				STATSCOUNTER_INC(lstn->ctrDisallowed, lstn->mutCtrDisallowed);
 				if(glbl.GetOption_DisallowWarning) {
-					errmsg.LogError(0, NO_ERRCODE,
+					LogError(0, NO_ERRCODE,
 						"imudp: UDP message from disallowed sender discarded");
 				}
 			}
@@ -523,7 +522,7 @@ int *pbIsPermitted)
 			if(errno != EINTR && errno != EAGAIN) {
 				rs_strerror_r(errno, errStr, sizeof(errStr));
 				DBGPRINTF("INET socket error: %d = %s.\n", errno, errStr);
-				errmsg.LogError(errno, NO_ERRCODE, "imudp: error receiving on socket: %s", errStr);
+				LogError(errno, NO_ERRCODE, "imudp: error receiving on socket: %s", errStr);
 			}
 			ABORT_FINALIZE(RS_RET_ERR);
 			// this most often is NOT an error, state is not checked by caller!
@@ -598,7 +597,7 @@ int *pbIsPermitted)
 			if(errno != EINTR && errno != EAGAIN) {
 				rs_strerror_r(errno, errStr, sizeof(errStr));
 				DBGPRINTF("INET socket error: %d = %s.\n", errno, errStr);
-				errmsg.LogError(errno, NO_ERRCODE, "imudp: error receiving on socket: %s", errStr);
+				LogError(errno, NO_ERRCODE, "imudp: error receiving on socket: %s", errStr);
 			}
 			ABORT_FINALIZE(RS_RET_ERR);
 			// this most often is NOT an error, state is not checked by caller!
@@ -632,7 +631,7 @@ checkSchedulingPriority(modConfData_t *modConf)
 #ifdef HAVE_SCHED_GET_PRIORITY_MAX
 	if(   modConf->iSchedPrio < sched_get_priority_min(modConf->iSchedPolicy)
 	   || modConf->iSchedPrio > sched_get_priority_max(modConf->iSchedPolicy)) {
-		errmsg.LogError(0, NO_ERRCODE,
+		LogError(0, NO_ERRCODE,
 			"imudp: scheduling priority %d out of range (%d - %d)"
 			" for scheduling policy '%s' - ignoring settings",
 			modConf->iSchedPrio,
@@ -669,7 +668,7 @@ checkSchedulingPolicy(modConfData_t *modConf)
 		modConf->iSchedPolicy = SCHED_OTHER;
 #endif
 	} else {
-		errmsg.LogError(errno, NO_ERRCODE,
+		LogError(errno, NO_ERRCODE,
 			    "imudp: invalid scheduling policy '%s' "
 			    "- ignoring setting", modConf->pszSchedPolicy);
 		ABORT_FINALIZE(RS_RET_ERR_SCHED_PARAMS);
@@ -685,11 +684,11 @@ checkSchedParam(modConfData_t *modConf)
 	DEFiRet;
 
 	if(modConf->pszSchedPolicy != NULL && modConf->iSchedPrio == SCHED_PRIO_UNSET) {
-		errmsg.LogError(0, RS_RET_ERR_SCHED_PARAMS,
+		LogError(0, RS_RET_ERR_SCHED_PARAMS,
 			"imudp: scheduling policy set, but without priority - ignoring settings");
 		ABORT_FINALIZE(RS_RET_ERR_SCHED_PARAMS);
 	} else if(modConf->pszSchedPolicy == NULL && modConf->iSchedPrio != SCHED_PRIO_UNSET) {
-		errmsg.LogError(0, RS_RET_ERR_SCHED_PARAMS,
+		LogError(0, RS_RET_ERR_SCHED_PARAMS,
 			"imudp: scheduling priority set, but without policy - ignoring settings");
 		ABORT_FINALIZE(RS_RET_ERR_SCHED_PARAMS);
 	} else if(modConf->pszSchedPolicy != NULL && modConf->iSchedPrio != SCHED_PRIO_UNSET) {
@@ -700,7 +699,7 @@ checkSchedParam(modConfData_t *modConf)
 		modConf->iSchedPrio = SCHED_PRIO_UNSET; /* prevents doing the activation call */
 	}
 #ifndef HAVE_PTHREAD_SETSCHEDPARAM
-	errmsg.LogError(0, NO_ERRCODE,
+	LogError(0, NO_ERRCODE,
 		"imudp: cannot set thread scheduling policy, "
 		"pthread_setschedparam() not available");
 	ABORT_FINALIZE(RS_RET_ERR_SCHED_PARAMS);
@@ -732,7 +731,7 @@ setSchedParams(modConfData_t *modConf)
 		  modConf->pszSchedPolicy, modConf->iSchedPrio);
 	err = pthread_setschedparam(pthread_self(), modConf->iSchedPolicy, &sparam);
 	if(err != 0) {
-		errmsg.LogError(err, NO_ERRCODE, "imudp: pthread_setschedparam() failed - ignoring");
+		LogError(err, NO_ERRCODE, "imudp: pthread_setschedparam() failed - ignoring");
 	}
 finalize_it:
 #	endif
@@ -775,7 +774,7 @@ rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr)
 		++nLstn;
 
 	if(nLstn == 0) {
-		errmsg.LogError(errno, RS_RET_ERR,
+		LogError(errno, RS_RET_ERR,
 			"imudp error: we have 0 listeners, terminating"
 			"worker thread");
 		ABORT_FINALIZE(RS_RET_ERR);
@@ -807,7 +806,7 @@ rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr)
 			udpEPollEvt[i].data.ptr = lstn;
 			if(epoll_ctl(efd, EPOLL_CTL_ADD,  lstn->sock, &(udpEPollEvt[i])) < 0) {
 				rs_strerror_r(errno, errStr, sizeof(errStr));
-				errmsg.LogError(errno, NO_ERRCODE, "epoll_ctrl failed on fd %d with %s\n",
+				LogError(errno, NO_ERRCODE, "epoll_ctrl failed on fd %d with %s\n",
 					lstn->sock, errStr);
 			}
 		}
@@ -928,33 +927,33 @@ createListner(es_str_t *port, struct cnfparamvals *pvals)
 			continue;	/* array, handled by caller */
 		} else if(!strcmp(inppblk.descr[i].name, "name")) {
 			if(inst->inputname != NULL) {
-				errmsg.LogError(0, RS_RET_INVALID_PARAMS, "imudp: name and inputname "
+				LogError(0, RS_RET_INVALID_PARAMS, "imudp: name and inputname "
 						"parameter specified - only one can be used");
 				ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 			}
 			inst->inputname = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "name.appendport")) {
 			if(bAppendPortUsed) {
-				errmsg.LogError(0, RS_RET_INVALID_PARAMS, "imudp: name.appendport and "
+				LogError(0, RS_RET_INVALID_PARAMS, "imudp: name.appendport and "
 						"inputname.appendport parameter specified - only one can be used");
 				ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 			}
 			inst->bAppendPortToInpname = (int) pvals[i].val.d.n;
 			bAppendPortUsed = 1;
 		} else if(!strcmp(inppblk.descr[i].name, "inputname")) {
-			errmsg.LogError(0, RS_RET_DEPRECATED , "imudp: deprecated parameter inputname "
+			LogError(0, RS_RET_DEPRECATED , "imudp: deprecated parameter inputname "
 					"used. Suggest to use name instead");
 			if(inst->inputname != NULL) {
-				errmsg.LogError(0, RS_RET_INVALID_PARAMS, "imudp: name and inputname "
+				LogError(0, RS_RET_INVALID_PARAMS, "imudp: name and inputname "
 						"parameter specified - only one can be used");
 				ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 			}
 			inst->inputname = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "inputname.appendport")) {
-			errmsg.LogError(0, RS_RET_DEPRECATED , "imudp: deprecated parameter inputname.appendport "
+			LogError(0, RS_RET_DEPRECATED , "imudp: deprecated parameter inputname.appendport "
 					"used. Suggest to use name.appendport instead");
 			if(bAppendPortUsed) {
-				errmsg.LogError(0, RS_RET_INVALID_PARAMS, "imudp: name.appendport and "
+				LogError(0, RS_RET_INVALID_PARAMS, "imudp: name.appendport and "
 						"inputname.appendport parameter specified - only one can be used");
 				ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 			}
@@ -975,7 +974,7 @@ createListner(es_str_t *port, struct cnfparamvals *pvals)
 		} else if(!strcmp(inppblk.descr[i].name, "rcvbufsize")) {
 			const uint64_t val = pvals[i].val.d.n;
 			if(val > 1024 * 1024 * 1024) {
-				errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS,
+				LogError(0, RS_RET_MISSING_CNFPARAMS,
 					"imudp: rcvbufsize maximum is 1 GiB, using "
 					"default instead");
 			} else {
@@ -1049,7 +1048,7 @@ BEGINsetModCnf
 CODESTARTsetModCnf
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "imudp: error processing module "
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "imudp: error processing module "
 				"config parameters [module(...)]");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -1073,7 +1072,7 @@ CODESTARTsetModCnf
 		} else if(!strcmp(modpblk.descr[i].name, "threads")) {
 			wrkrMax = (int) pvals[i].val.d.n;
 			if(wrkrMax > MAX_WRKR_THREADS) {
-				errmsg.LogError(0, RS_RET_PARAM_ERROR, "imudp: configured for %d"
+				LogError(0, RS_RET_PARAM_ERROR, "imudp: configured for %d"
 						"worker threads, but maximum permitted is %d",
 						wrkrMax, MAX_WRKR_THREADS);
 				loadModConf->wrkrMax = MAX_WRKR_THREADS;
@@ -1126,7 +1125,7 @@ CODESTARTcheckCnf
 		std_checkRuleset(pModConf, inst);
 	}
 	if(pModConf->root == NULL) {
-		errmsg.LogError(0, RS_RET_NO_LISTNERS , "imudp: module loaded, but "
+		LogError(0, RS_RET_NO_LISTNERS , "imudp: module loaded, but "
 				"no listeners defined - no input will be gathered");
 		iRet = RS_RET_NO_LISTNERS;
 	}
@@ -1142,7 +1141,7 @@ CODESTARTactivateCnfPrePrivDrop
 	}
 	/* if we could not set up any listeners, there is no point in running... */
 	if(lcnfRoot == NULL) {
-		errmsg.LogError(0, NO_ERRCODE, "imudp: no listeners could be started, "
+		LogError(0, NO_ERRCODE, "imudp: no listeners could be started, "
 				"input not activated.\n");
 		ABORT_FINALIZE(RS_RET_NO_RUN);
 	}
@@ -1308,7 +1307,6 @@ ENDafterRun
 BEGINmodExit
 CODESTARTmodExit
 	/* release what we no longer need */
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(statsobj, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
@@ -1355,7 +1353,6 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));

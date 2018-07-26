@@ -43,7 +43,6 @@ MODULE_TYPE_NOKEEP
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg);
 
 typedef struct _instanceData {
 	EMPTY_STRUCT
@@ -110,7 +109,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(0)
 
 	if(*p == '~') {
 		dbgprintf("discard\n");
-		errmsg.LogMsg(0, RS_RET_DEPRECATED, LOG_WARNING,
+		LogMsg(0, RS_RET_DEPRECATED, LOG_WARNING,
 			"warning: ~ action is deprecated, consider "
 			"using the 'stop' statement instead");
 	} else {
@@ -139,7 +138,6 @@ ENDparseSelectorAct
 
 BEGINmodExit
 CODESTARTmodExit
-	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -154,7 +152,6 @@ BEGINmodInit(Discard)
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDmodInit
 /*
  * vi:set ai:

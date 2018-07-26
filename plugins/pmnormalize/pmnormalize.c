@@ -48,7 +48,6 @@ MODULE_CNFNAME("pmnormalize")
 
 /* internal structures */
 DEF_PMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(parser)
 DEFobjCurrIf(datetime)
@@ -105,7 +104,7 @@ static void
 errCallBack(void __attribute__((unused)) *cookie, const char *msg,
 	    size_t __attribute__((unused)) lenMsg)
 {
-	errmsg.LogError(0, RS_RET_ERR_LIBLOGNORM, "liblognorm error: %s", msg);
+	LogError(0, RS_RET_ERR_LIBLOGNORM, "liblognorm error: %s", msg);
 }
 
 /* to be called to build the liblognorm part of the instance ONCE ALL PARAMETERS ARE CORRECT
@@ -116,7 +115,7 @@ buildInstance(instanceConf_t *inst)
 {
 	DEFiRet;
 	if((inst->ctxln = ln_initCtx()) == NULL) {
-		errmsg.LogError(0, RS_RET_ERR_LIBLOGNORM_INIT, "error: could not initialize "
+		LogError(0, RS_RET_ERR_LIBLOGNORM_INIT, "error: could not initialize "
 				"liblognorm ctx, cannot activate action");
 		ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_INIT);
 	}
@@ -124,7 +123,7 @@ buildInstance(instanceConf_t *inst)
 
 	if(inst->rule != NULL && inst->rulebase == NULL) {
 		if(ln_loadSamplesFromString(inst->ctxln, inst->rule) !=0) {
-			errmsg.LogError(0, RS_RET_NO_RULEBASE, "error: normalization rulebase '%s' "
+			LogError(0, RS_RET_NO_RULEBASE, "error: normalization rulebase '%s' "
 					"could not be loaded cannot activate action", inst->rulebase);
 			ln_exitCtx(inst->ctxln);
 			ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD);
@@ -133,7 +132,7 @@ buildInstance(instanceConf_t *inst)
 		inst->rule = NULL;
 	} else if(inst->rulebase != NULL && inst->rule == NULL) {
 		if(ln_loadSamples(inst->ctxln, (char*) inst->rulebase) != 0) {
-			errmsg.LogError(0, RS_RET_NO_RULEBASE, "error: normalization rulebase '%s' "
+			LogError(0, RS_RET_NO_RULEBASE, "error: normalization rulebase '%s' "
 					"could not be loaded cannot activate action", inst->rulebase);
 			ln_exitCtx(inst->ctxln);
 			ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD);
@@ -193,11 +192,11 @@ CODESTARTnewParserInst
                 }
 	}
 	if(!inst->rulebase && !inst->rule) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR, "pmnormalize: rulebase needed. "
+		LogError(0, RS_RET_CONFIG_ERROR, "pmnormalize: rulebase needed. "
 				"Use option rulebase or rule.");
 	}
 	if(inst->rulebase && inst->rule) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR, "pmnormalize: only one rulebase "
+		LogError(0, RS_RET_CONFIG_ERROR, "pmnormalize: only one rulebase "
 				"possible, rulebase can't be used with rule");
 	}
 
@@ -226,7 +225,7 @@ CODESTARTparse2
 	if(r != 0) {
 		DBGPRINTF("error %d during ln_normalize\n", r);
 		if(pInst->undefPropErr) {
-			errmsg.LogError(0, RS_RET_ERR, "error %d during ln_normalize; "
+			LogError(0, RS_RET_ERR, "error %d during ln_normalize; "
 					"json: %s\n", r, fjson_object_to_json_string(json));
 		}
 	} else {
@@ -239,7 +238,6 @@ ENDparse2
 BEGINmodExit
 CODESTARTmodExit
 	/* release what we no longer need */
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(parser, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
@@ -258,7 +256,6 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(parser, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 

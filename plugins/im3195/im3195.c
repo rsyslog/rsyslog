@@ -55,7 +55,6 @@ MODULE_TYPE_NOKEEP
 
 /* Module static data */
 DEF_IMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(prop)
 
 /* configuration settings */
@@ -137,7 +136,7 @@ CODESTARTrunInput
 		 * return after SIGUSR1.
 		 */
 		if((iRet = (rsRetVal) srAPIRunListener(pAPI)) != RS_RET_OK) {
-			errmsg.LogError(0, NO_ERRCODE, "error %d running liblogging listener - im3195 "
+			LogError(0, NO_ERRCODE, "error %d running liblogging listener - im3195 "
 				"is defunct", iRet);
 			FINALIZE; /* this causes im3195 to become defunct; TODO: recovery handling */
 		}
@@ -149,17 +148,17 @@ ENDrunInput
 BEGINwillRun
 CODESTARTwillRun
 	if((pAPI = srAPIInitLib()) == NULL) {
-		errmsg.LogError(0, NO_ERRCODE, "error initializing liblogging - im3195 is defunct");
+		LogError(0, NO_ERRCODE, "error initializing liblogging - im3195 is defunct");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 	if((iRet = (rsRetVal) srAPISetOption(pAPI, srOPTION_BEEP_LISTENPORT, listenPort)) != RS_RET_OK) {
-		errmsg.LogError(0, NO_ERRCODE, "error %d setting liblogging listen port - im3195 is defunct", iRet);
+		LogError(0, NO_ERRCODE, "error %d setting liblogging listen port - im3195 is defunct", iRet);
 		FINALIZE;
 	}
 
 	if((iRet = (rsRetVal) srAPISetupListener(pAPI, OnReceive)) != RS_RET_OK) {
-		errmsg.LogError(0, NO_ERRCODE, "error %d setting up liblogging listener - im3195 is defunct", iRet);
+		LogError(0, NO_ERRCODE, "error %d setting up liblogging listener - im3195 is defunct", iRet);
 		FINALIZE;
 	}
 
@@ -181,7 +180,6 @@ CODESTARTmodExit
 	if(pInputName != NULL)
 		prop.Destruct(&pInputName);
 	/* release objects we used */
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 ENDmodExit
 
@@ -202,7 +200,6 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"input3195listenport", 0, eCmdHdlrInt, NULL, &listenPort,

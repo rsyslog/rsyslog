@@ -57,7 +57,6 @@ MODULE_TYPE_NOKEEP
 
 
 /* static data */
-DEFobjCurrIf(errmsg);
 
 /* internal structures
  */
@@ -302,7 +301,6 @@ ENDparseSelectorAct
 
 BEGINmodExit
 CODESTARTmodExit
-	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -342,7 +340,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 		ABORT_FINALIZE(RS_RET_NO_MSG_PASSING);
 	}
 
-	iRet = objUse(errmsg, CORE_COMPONENT);
 ENDmodInit
 
 /* vi:set ai:

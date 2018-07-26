@@ -65,7 +65,6 @@ MODULE_CNFNAME("omelasticsearch")
 
 /* internal structures */
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(statsobj)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(ruleset)
@@ -1592,7 +1591,7 @@ computeAuthHeader(char* uid, char* pwd, uchar** authBuf) {
 	if(r == 0) *authBuf = (uchar*) es_str2cstr(auth, NULL);
 
 	if (r != 0 || *authBuf == NULL) {
-		errmsg.LogError(0, RS_RET_ERR, "omelasticsearch: failed to build auth header\n");
+		LogError(0, RS_RET_ERR, "omelasticsearch: failed to build auth header\n");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -1776,7 +1775,7 @@ CODESTARTnewActInst
 			fp = fopen((const char*)pData->caCertFile, "r");
 			if(fp == NULL) {
 				rs_strerror_r(errno, errStr, sizeof(errStr));
-				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
+				LogError(0, RS_RET_NO_FILE_ACCESS,
 						"error: 'tls.cacert' file %s couldn't be accessed: %s\n",
 						pData->caCertFile, errStr);
 			} else {
@@ -1787,7 +1786,7 @@ CODESTARTnewActInst
 			fp = fopen((const char*)pData->myCertFile, "r");
 			if(fp == NULL) {
 				rs_strerror_r(errno, errStr, sizeof(errStr));
-				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
+				LogError(0, RS_RET_NO_FILE_ACCESS,
 						"error: 'tls.mycert' file %s couldn't be accessed: %s\n",
 						pData->myCertFile, errStr);
 			} else {
@@ -1798,7 +1797,7 @@ CODESTARTnewActInst
 			fp = fopen((const char*)pData->myPrivKeyFile, "r");
 			if(fp == NULL) {
 				rs_strerror_r(errno, errStr, sizeof(errStr));
-				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
+				LogError(0, RS_RET_NO_FILE_ACCESS,
 						"error: 'tls.myprivkey' file %s couldn't be accessed: %s\n",
 						pData->myPrivKeyFile, errStr);
 			} else {
@@ -1811,7 +1810,7 @@ CODESTARTnewActInst
 			} else if (writeop && !strcmp(writeop, "index")) {
 				pData->writeOperation = ES_WRITE_INDEX;
 			} else if (writeop) {
-				errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+				LogError(0, RS_RET_CONFIG_ERROR,
 					"omelasticsearch: invalid value '%s' for writeoperation: "
 					"must be one of 'index' or 'create' - using default value 'index'", writeop);
 				pData->writeOperation = ES_WRITE_INDEX;
@@ -1832,37 +1831,37 @@ CODESTARTnewActInst
 	}
 
 	if(pData->pwd != NULL && pData->uid == NULL) {
-		errmsg.LogError(0, RS_RET_UID_MISSING,
+		LogError(0, RS_RET_UID_MISSING,
 			"omelasticsearch: password is provided, but no uid "
 			"- action definition invalid");
 		ABORT_FINALIZE(RS_RET_UID_MISSING);
 	}
 	if(pData->dynSrchIdx && pData->searchIndex == NULL) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+		LogError(0, RS_RET_CONFIG_ERROR,
 			"omelasticsearch: requested dynamic search index, but no "
 			"name for index template given - action definition invalid");
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 	if(pData->dynSrchType && pData->searchType == NULL) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+		LogError(0, RS_RET_CONFIG_ERROR,
 			"omelasticsearch: requested dynamic search type, but no "
 			"name for type template given - action definition invalid");
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 	if(pData->dynParent && pData->parent == NULL) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+		LogError(0, RS_RET_CONFIG_ERROR,
 			"omelasticsearch: requested dynamic parent, but no "
 			"name for parent template given - action definition invalid");
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 	if(pData->dynBulkId && pData->bulkId == NULL) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+		LogError(0, RS_RET_CONFIG_ERROR,
 			"omelasticsearch: requested dynamic bulkid, but no "
 			"name for bulkid template given - action definition invalid");
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 	if(pData->dynPipelineName && pData->pipelineName == NULL) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+		LogError(0, RS_RET_CONFIG_ERROR,
 			"omelasticsearch: requested dynamic pipeline name, but no "
 			"name for pipelineName template given - action definition invalid");
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
@@ -1921,7 +1920,7 @@ CODESTARTnewActInst
 		pData->numServers = servers->nmemb;
 		pData->serverBaseUrls = malloc(servers->nmemb * sizeof(uchar*));
 		if (pData->serverBaseUrls == NULL) {
-			errmsg.LogError(0, RS_RET_ERR, "omelasticsearch: unable to allocate buffer "
+			LogError(0, RS_RET_ERR, "omelasticsearch: unable to allocate buffer "
 					"for ElasticSearch server configuration.");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
@@ -1929,7 +1928,7 @@ CODESTARTnewActInst
 		for(i = 0 ; i < servers->nmemb ; ++i) {
 			serverParam = es_str2cstr(servers->arr[i], NULL);
 			if (serverParam == NULL) {
-				errmsg.LogError(0, RS_RET_ERR, "omelasticsearch: unable to allocate buffer "
+				LogError(0, RS_RET_ERR, "omelasticsearch: unable to allocate buffer "
 					"for ElasticSearch server configuration.");
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
@@ -1949,7 +1948,7 @@ CODESTARTnewActInst
 		pData->numServers = 1;
 		pData->serverBaseUrls = malloc(sizeof(uchar*));
 		if (pData->serverBaseUrls == NULL) {
-			errmsg.LogError(0, RS_RET_ERR, "omelasticsearch: unable to allocate buffer "
+			LogError(0, RS_RET_ERR, "omelasticsearch: unable to allocate buffer "
 					"for ElasticSearch server configuration.");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
@@ -1962,7 +1961,7 @@ CODESTARTnewActInst
 		pData->searchType = (uchar*) strdup("events");
 
 	if ((pData->writeOperation != ES_WRITE_INDEX) && (pData->bulkId == NULL)) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+		LogError(0, RS_RET_CONFIG_ERROR,
 			"omelasticsearch: writeoperation '%d' requires bulkid", pData->writeOperation);
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
@@ -2012,7 +2011,7 @@ CODESTARTcheckCnf
 		if (inst->retryRulesetName) {
 			localRet = ruleset.GetRuleset(pModConf->pConf, &pRuleset, inst->retryRulesetName);
 			if(localRet == RS_RET_NOT_FOUND) {
-				errmsg.LogError(0, localRet, "omelasticsearch: retryruleset '%s' not found - "
+				LogError(0, localRet, "omelasticsearch: retryruleset '%s' not found - "
 						"no retry ruleset will be used", inst->retryRulesetName);
 			} else {
 				inst->retryRuleset = pRuleset;
@@ -2047,7 +2046,6 @@ CODESTARTmodExit
 		prop.Destruct(&pInputName);
 	curl_global_cleanup();
 	statsobj.Destruct(&indexStats);
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(statsobj, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
@@ -2071,13 +2069,12 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 
 	if (curl_global_init(CURL_GLOBAL_ALL) != 0) {
-		errmsg.LogError(0, RS_RET_OBJ_CREATION_FAILED, "CURL fail. -elasticsearch indexing disabled");
+		LogError(0, RS_RET_OBJ_CREATION_FAILED, "CURL fail. -elasticsearch indexing disabled");
 		ABORT_FINALIZE(RS_RET_OBJ_CREATION_FAILED);
 	}
 

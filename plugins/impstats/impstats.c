@@ -67,7 +67,6 @@ DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(statsobj)
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(ruleset)
 
 typedef struct configSettings_s {
@@ -142,7 +141,6 @@ CODESTARTmodExit
 	/* release objects we used */
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(statsobj, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
 ENDmodExit
@@ -360,7 +358,7 @@ BEGINsetModCnf
 CODESTARTsetModCnf
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
 				"config parameters [module(...)]");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -398,7 +396,7 @@ CODESTARTsetModCnf
 			} else if(!strcasecmp(mode, "legacy")) {
 				loadModConf->statsFmt = statsFmt_Legacy;
 			} else {
-				errmsg.LogError(0, RS_RET_ERR, "impstats: invalid format %s",
+				LogError(0, RS_RET_ERR, "impstats: invalid format %s",
 						mode);
 			}
 			free(mode);
@@ -460,7 +458,7 @@ checkRuleset(modConfData_t *modConf)
 
 	localRet = ruleset.GetRuleset(modConf->pConf, &pRuleset, modConf->pszBindRuleset);
 	if(localRet == RS_RET_NOT_FOUND) {
-		errmsg.LogError(0, NO_ERRCODE, "impstats: ruleset '%s' not found - "
+		LogError(0, NO_ERRCODE, "impstats: ruleset '%s' not found - "
 				"using default ruleset instead", modConf->pszBindRuleset);
 	}
 	CHKiRet(localRet);
@@ -493,7 +491,7 @@ ENDdoHUP
 BEGINcheckCnf
 CODESTARTcheckCnf
 	if(pModConf->iStatsInterval == 0) {
-		errmsg.LogError(0, NO_ERRCODE, "impstats: stats interval zero not permitted, using "
+		LogError(0, NO_ERRCODE, "impstats: stats interval zero not permitted, using "
 				"default of %d seconds", DEFAULT_STATS_PERIOD);
 		pModConf->iStatsInterval = DEFAULT_STATS_PERIOD;
 	}
@@ -510,7 +508,7 @@ CODESTARTactivateCnf
 		  runModConf->logfile == NULL ? "deactivated" : (char*)runModConf->logfile);
 	localRet = statsobj.EnableStats();
 	if(localRet != RS_RET_OK) {
-		errmsg.LogError(0, localRet, "impstats: error enabling statistics gathering");
+		LogError(0, localRet, "impstats: error enabling statistics gathering");
 		ABORT_FINALIZE(RS_RET_NO_RUN);
 	}
 	/* initialize our own counters */
@@ -542,7 +540,7 @@ CODESTARTactivateCnf
 	CHKiRet(statsobj.ConstructFinalize(statsobj_resources));
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		errmsg.LogError(0, iRet, "impstats: error activating module");
+		LogError(0, iRet, "impstats: error activating module");
 		iRet = RS_RET_NO_RUN;
 	}
 ENDactivateCnf
@@ -611,7 +609,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 	initConfigSettings();
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 	/* the pstatsinverval is an alias to support a previous screwed-up syntax... */

@@ -57,7 +57,6 @@ MODULE_CNFNAME("ompgsql")
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 
 typedef struct _instanceData {
 	char            srv[MAXHOSTNAMELEN+1];   /* IP or hostname of DB server*/ 
@@ -169,7 +168,7 @@ static void reportDBError(wrkrInstanceData_t *pWrkrData, int bSilent)
 	/* output log message */
 	errno = 0;
 	if (pWrkrData->f_hpgsql == NULL) {
-		errmsg.LogError(0, NO_ERRCODE, "unknown DB error occured - could not obtain PgSQL handle");
+		LogError(0, NO_ERRCODE, "unknown DB error occured - could not obtain PgSQL handle");
 	} else { /* we can ask pgsql for the error description... */
 		ePgSQLStatus = PQstatus(pWrkrData->f_hpgsql);
 		snprintf(errMsg, sizeof(errMsg), "db error (%d): %s\n", ePgSQLStatus,
@@ -178,7 +177,7 @@ static void reportDBError(wrkrInstanceData_t *pWrkrData, int bSilent)
 			dbgprintf("pgsql, DBError(silent): %s\n", errMsg);
 		else {
 			pWrkrData->eLastPgSQLStatus = ePgSQLStatus;
-			errmsg.LogError(0, NO_ERRCODE, "%s", errMsg);
+			LogError(0, NO_ERRCODE, "%s", errMsg);
 		}
 	}
 
@@ -507,7 +506,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * Retries make no sense. 
 	 */
 	if (iPgSQLPropErr) {
-		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "Trouble with PgSQL connection properties. "
+		LogError(0, RS_RET_INVALID_PARAMS, "Trouble with PgSQL connection properties. "
 				"-PgSQL logging disabled");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
@@ -534,10 +533,9 @@ CODESTARTmodInit
 INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
 	if (!bCoreSupportsBatching) {
-		errmsg.LogError(0, NO_ERRCODE, "ompgsql: rsyslog core too old");
+		LogError(0, NO_ERRCODE, "ompgsql: rsyslog core too old");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 ENDmodInit

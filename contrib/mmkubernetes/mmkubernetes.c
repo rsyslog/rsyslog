@@ -61,7 +61,6 @@ MODULE_TYPE_OUTPUT /* this is technically an output plugin */
 MODULE_TYPE_KEEP /* releasing the module would cause a leak through libcurl */
 MODULE_CNFNAME("mmkubernetes")
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(regexp)
 
 #define HAVE_LOADSAMPLESFROMSTRING 1
@@ -248,7 +247,7 @@ static int init_annotationmatch(annotation_match_t *match, struct cnfarray *ar) 
 			char errMsg[512];
 			regexp.regerror(rexret, &match->regexps[jj], errMsg, sizeof(errMsg));
 			iRet = RS_RET_CONFIG_ERROR;
-			errmsg.LogError(0, iRet,
+			LogError(0, iRet,
 					"error: could not compile annotation_match string [%s]"
 					" into an extended regexp - %d: %s\n",
 					match->patterns[jj], rexret, errMsg);
@@ -432,7 +431,7 @@ static void
 errCallBack(void __attribute__((unused)) *cookie, const char *msg,
 	    size_t __attribute__((unused)) lenMsg)
 {
-	errmsg.LogError(0, RS_RET_ERR_LIBLOGNORM, "liblognorm error: %s", msg);
+	LogError(0, RS_RET_ERR_LIBLOGNORM, "liblognorm error: %s", msg);
 }
 
 static rsRetVal
@@ -446,7 +445,7 @@ set_lnctx(ln_ctx *ctxln, char *instRules, uchar *instRulebase, char *modRules, u
 	if(instRules) {
 #if HAVE_LOADSAMPLESFROMSTRING == 1
 		if(ln_loadSamplesFromString(*ctxln, instRules) !=0) {
-			errmsg.LogError(0, RS_RET_NO_RULEBASE, "error: normalization rules '%s' "
+			LogError(0, RS_RET_NO_RULEBASE, "error: normalization rules '%s' "
 					"could not be loaded", instRules);
 			ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD);
 		}
@@ -455,14 +454,14 @@ set_lnctx(ln_ctx *ctxln, char *instRules, uchar *instRulebase, char *modRules, u
 #endif
 	} else if(instRulebase) {
 		if(ln_loadSamples(*ctxln, (char*) instRulebase) != 0) {
-			errmsg.LogError(0, RS_RET_NO_RULEBASE, "error: normalization rulebase '%s' "
+			LogError(0, RS_RET_NO_RULEBASE, "error: normalization rulebase '%s' "
 					"could not be loaded", instRulebase);
 			ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD);
 		}
 	} else if(modRules) {
 #if HAVE_LOADSAMPLESFROMSTRING == 1
 		if(ln_loadSamplesFromString(*ctxln, modRules) !=0) {
-			errmsg.LogError(0, RS_RET_NO_RULEBASE, "error: normalization rules '%s' "
+			LogError(0, RS_RET_NO_RULEBASE, "error: normalization rules '%s' "
 					"could not be loaded", modRules);
 			ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD);
 		}
@@ -471,7 +470,7 @@ set_lnctx(ln_ctx *ctxln, char *instRules, uchar *instRulebase, char *modRules, u
 #endif
 	} else if(modRulebase) {
 		if(ln_loadSamples(*ctxln, (char*) modRulebase) != 0) {
-			errmsg.LogError(0, RS_RET_NO_RULEBASE, "error: normalization rulebase '%s' "
+			LogError(0, RS_RET_NO_RULEBASE, "error: normalization rulebase '%s' "
 					"could not be loaded", modRulebase);
 			ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD);
 		}
@@ -499,7 +498,7 @@ BEGINsetModCnf
 CODESTARTsetModCnf
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "mmkubernetes: "
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "mmkubernetes: "
 			"error processing module config parameters [module(...)]");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -532,7 +531,7 @@ CODESTARTsetModCnf
 				char errStr[1024];
 				rs_strerror_r(errno, errStr, sizeof(errStr));
 				iRet = RS_RET_NO_FILE_ACCESS;
-				errmsg.LogError(0, iRet,
+				LogError(0, iRet,
 						"error: certificate file %s couldn't be accessed: %s\n",
 						loadModConf->caCertFile, errStr);
 				ABORT_FINALIZE(iRet);
@@ -552,7 +551,7 @@ CODESTARTsetModCnf
 				char errStr[1024];
 				rs_strerror_r(errno, errStr, sizeof(errStr));
 				iRet = RS_RET_NO_FILE_ACCESS;
-				errmsg.LogError(0, iRet,
+				LogError(0, iRet,
 						"error: token file %s couldn't be accessed: %s\n",
 						loadModConf->tokenFile, errStr);
 				ABORT_FINALIZE(iRet);
@@ -581,7 +580,7 @@ CODESTARTsetModCnf
 				char errStr[1024];
 				rs_strerror_r(errno, errStr, sizeof(errStr));
 				iRet = RS_RET_NO_FILE_ACCESS;
-				errmsg.LogError(0, iRet,
+				LogError(0, iRet,
 						"error: filenamerulebase file %s couldn't be accessed: %s\n",
 						loadModConf->fnRulebase, errStr);
 				ABORT_FINALIZE(iRet);
@@ -601,7 +600,7 @@ CODESTARTsetModCnf
 				char errStr[1024];
 				rs_strerror_r(errno, errStr, sizeof(errStr));
 				iRet = RS_RET_NO_FILE_ACCESS;
-				errmsg.LogError(0, iRet,
+				LogError(0, iRet,
 						"error: containerrulebase file %s couldn't be accessed: %s\n",
 						loadModConf->contRulebase, errStr);
 				ABORT_FINALIZE(iRet);
@@ -617,12 +616,12 @@ CODESTARTsetModCnf
 
 #if HAVE_LOADSAMPLESFROMSTRING == 1
 	if (loadModConf->fnRules && loadModConf->fnRulebase) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+		LogError(0, RS_RET_CONFIG_ERROR,
 				"mmkubernetes: only 1 of filenamerules or filenamerulebase may be used");
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 	if (loadModConf->contRules && loadModConf->contRulebase) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+		LogError(0, RS_RET_CONFIG_ERROR,
 				"mmkubernetes: only 1 of containerrules or containerrulebase may be used");
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
@@ -825,7 +824,7 @@ CODESTARTnewActInst
 
 	pvals = nvlstGetParams(lst, &actpblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "mmkubernetes: "
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "mmkubernetes: "
 			"error processing config parameters [action(...)]");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -867,7 +866,7 @@ CODESTARTnewActInst
 				char errStr[1024];
 				rs_strerror_r(errno, errStr, sizeof(errStr));
 				iRet = RS_RET_NO_FILE_ACCESS;
-				errmsg.LogError(0, iRet,
+				LogError(0, iRet,
 						"error: certificate file %s couldn't be accessed: %s\n",
 						pData->caCertFile, errStr);
 				ABORT_FINALIZE(iRet);
@@ -887,7 +886,7 @@ CODESTARTnewActInst
 				char errStr[1024];
 				rs_strerror_r(errno, errStr, sizeof(errStr));
 				iRet = RS_RET_NO_FILE_ACCESS;
-				errmsg.LogError(0, iRet,
+				LogError(0, iRet,
 						"error: token file %s couldn't be accessed: %s\n",
 						pData->tokenFile, errStr);
 				ABORT_FINALIZE(iRet);
@@ -916,7 +915,7 @@ CODESTARTnewActInst
 				char errStr[1024];
 				rs_strerror_r(errno, errStr, sizeof(errStr));
 				iRet = RS_RET_NO_FILE_ACCESS;
-				errmsg.LogError(0, iRet,
+				LogError(0, iRet,
 						"error: filenamerulebase file %s couldn't be accessed: %s\n",
 						pData->fnRulebase, errStr);
 				ABORT_FINALIZE(iRet);
@@ -936,7 +935,7 @@ CODESTARTnewActInst
 				char errStr[1024];
 				rs_strerror_r(errno, errStr, sizeof(errStr));
 				iRet = RS_RET_NO_FILE_ACCESS;
-				errmsg.LogError(0, iRet,
+				LogError(0, iRet,
 						"error: containerrulebase file %s couldn't be accessed: %s\n",
 						pData->contRulebase, errStr);
 				ABORT_FINALIZE(iRet);
@@ -952,12 +951,12 @@ CODESTARTnewActInst
 
 #if HAVE_LOADSAMPLESFROMSTRING == 1
 	if (pData->fnRules && pData->fnRulebase) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+		LogError(0, RS_RET_CONFIG_ERROR,
 		    "mmkubernetes: only 1 of filenamerules or filenamerulebase may be used");
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 	if (pData->contRules && pData->contRulebase) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+		LogError(0, RS_RET_CONFIG_ERROR,
 			"mmkubernetes: only 1 of containerrules or containerrulebase may be used");
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
@@ -1029,7 +1028,7 @@ BEGINparseSelectorAct
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(strncmp((char *) p, ":mmkubernetes:", sizeof(":mmkubernetes:") - 1)) {
-		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
+		LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
 			"mmkubernetes supports only v6+ config format, use: "
 			"action(type=\"mmkubernetes\" ...)");
 	}
@@ -1197,47 +1196,47 @@ queryKB(wrkrInstanceData_t *pWrkrData, char *url, struct json_object **rply)
 	if(ccode != CURLE_OK)
 		ABORT_FINALIZE(RS_RET_ERR);
 	if(CURLE_OK != (ccode = curl_easy_perform(pWrkrData->curlCtx))) {
-		errmsg.LogMsg(0, RS_RET_ERR, LOG_ERR,
+		LogMsg(0, RS_RET_ERR, LOG_ERR,
 			      "mmkubernetes: failed to connect to [%s] - %d:%s\n",
 			      url, ccode, curl_easy_strerror(ccode));
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	if(CURLE_OK != (ccode = curl_easy_getinfo(pWrkrData->curlCtx,
 					CURLINFO_RESPONSE_CODE, &resp_code))) {
-		errmsg.LogMsg(0, RS_RET_ERR, LOG_ERR,
+		LogMsg(0, RS_RET_ERR, LOG_ERR,
 			      "mmkubernetes: could not get response code from query to [%s] - %d:%s\n",
 			      url, ccode, curl_easy_strerror(ccode));
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	if(resp_code == 401) {
-		errmsg.LogMsg(0, RS_RET_ERR, LOG_ERR,
+		LogMsg(0, RS_RET_ERR, LOG_ERR,
 			      "mmkubernetes: Unauthorized: not allowed to view url - "
 			      "check token/auth credentials [%s]\n",
 			      url);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	if(resp_code == 403) {
-		errmsg.LogMsg(0, RS_RET_ERR, LOG_ERR,
+		LogMsg(0, RS_RET_ERR, LOG_ERR,
 			      "mmkubernetes: Forbidden: no access - "
 			      "check permissions to view url [%s]\n",
 			      url);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	if(resp_code == 404) {
-		errmsg.LogMsg(0, RS_RET_ERR, LOG_ERR,
+		LogMsg(0, RS_RET_ERR, LOG_ERR,
 			      "mmkubernetes: Not Found: the resource does not exist at url [%s]\n",
 			      url);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	if(resp_code == 429) {
-		errmsg.LogMsg(0, RS_RET_ERR, LOG_ERR,
+		LogMsg(0, RS_RET_ERR, LOG_ERR,
 			      "mmkubernetes: Too Many Requests: the server is too heavily loaded "
 			      "to provide the data for the requested url [%s]\n",
 			      url);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	if(resp_code != 200) {
-		errmsg.LogMsg(0, RS_RET_ERR, LOG_ERR,
+		LogMsg(0, RS_RET_ERR, LOG_ERR,
 			      "mmkubernetes: server returned unexpected code [%ld] for url [%s]\n",
 			      resp_code, url);
 		ABORT_FINALIZE(RS_RET_ERR);
@@ -1250,7 +1249,7 @@ queryKB(wrkrInstanceData_t *pWrkrData, char *url, struct json_object **rply)
 	if(!json_object_is_type(jo, json_type_object)) {
 		json_object_put(jo);
 		jo = NULL;
-		errmsg.LogMsg(0, RS_RET_JSON_PARSE_ERR, LOG_INFO,
+		LogMsg(0, RS_RET_JSON_PARSE_ERR, LOG_INFO,
 			      "mmkubernetes: unable to parse string as JSON:[%.*s]\n",
 			      (int)pWrkrData->curlRplyLen, pWrkrData->curlRply);
 		ABORT_FINALIZE(RS_RET_JSON_PARSE_ERR);
@@ -1350,7 +1349,7 @@ CODESTARTdoAction
 				add_ns_metadata = 1;
 			} else {
 				/* namespace with no metadata??? */
-				errmsg.LogMsg(0, RS_RET_ERR, LOG_INFO,
+				LogMsg(0, RS_RET_ERR, LOG_INFO,
 					      "mmkubernetes: namespace [%s] has no metadata!\n", ns);
 				jNsMeta = NULL;
 			}
@@ -1457,7 +1456,6 @@ CODESTARTmodExit
 	curl_global_cleanup();
 
 	objRelease(regexp, LM_REGEXP_FILENAME);
-	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -1476,7 +1474,6 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	DBGPRINTF("mmkubernetes: module compiled with rsyslog version %s.\n", VERSION);
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(regexp, LM_REGEXP_FILENAME));
 
 	/* CURL_GLOBAL_ALL initializes more than is needed but the

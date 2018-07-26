@@ -72,7 +72,6 @@ MODULE_CNFNAME("omamqp1")
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 
 
 /* Settings for the action */
@@ -321,7 +320,7 @@ CODESTARTnewActInst
             char *u = es_str2cstr(pvals[i].val.d.estr, NULL);
             cs->url = pn_url_parse(u);
             if (!cs->url) {
-                errmsg.LogError(0, RS_RET_CONF_PARSE_ERROR, "omamqp1: Invalid host URL configured: '%s'", u);
+                LogError(0, RS_RET_CONF_PARSE_ERROR, "omamqp1: Invalid host URL configured: '%s'", u);
                 free(u);
                 ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
             }
@@ -371,8 +370,6 @@ NO_LEGACY_CONF_parseSelectorAct
 
 BEGINmodExit
 CODESTARTmodExit
-    CHKiRet(objRelease(errmsg, CORE_COMPONENT));
-finalize_it:
 ENDmodExit
 
 
@@ -392,7 +389,6 @@ CODESTARTmodInit
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current
                                                 interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-    CHKiRet(objUse(errmsg, CORE_COMPONENT));
     INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
     DBGPRINTF("omamqp1: module compiled with rsyslog version %s.\n", VERSION);
     DBGPRINTF("omamqp1: %susing transactional output interface.\n", bCoreSupportsBatching ? "" : "not ");
@@ -905,7 +901,7 @@ static rsRetVal _launch_protocol_thread(instanceData *pData)
             return RS_RET_OK;
         }
     } while (rc == EAGAIN);
-    errmsg.LogError(0, RS_RET_SYS_ERR, "omamqp1: thread create failed: %d", rc);
+    LogError(0, RS_RET_SYS_ERR, "omamqp1: thread create failed: %d", rc);
     return RS_RET_SYS_ERR;
 }
 

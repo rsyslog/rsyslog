@@ -43,7 +43,6 @@ MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("mmfields")
 
 
-DEFobjCurrIf(errmsg)
 DEF_OMOD_STATIC_DATA
 
 /* config variables */
@@ -255,7 +254,6 @@ NO_LEGACY_CONF_parseSelectorAct
 
 BEGINmodExit
 CODESTARTmodExit
-	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -274,5 +272,4 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	DBGPRINTF("mmfields: module compiled with rsyslog version %s.\n", VERSION);
-	iRet = objUse(errmsg, CORE_COMPONENT);
 ENDmodInit
