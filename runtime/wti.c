@@ -161,6 +161,11 @@ wtiCancelThrd(wti_t *pThis, const uchar *const cancelobj)
 
 	if(wtiGetState(pThis)) {
 		LogMsg(0, RS_RET_ERR, LOG_WARNING, "%s: need to do hard cancellation", cancelobj);
+		if(dbgTimeoutToStderr) {
+			fprintf(stderr, "rsyslogd debug: %s: need to do hard cancellation\n",
+				cancelobj);
+		}
+		pthread_cancel(pThis->thrdID);
 		DBGPRINTF("cooperative worker termination failed, using cancellation...\n");
 		DBGOPRINT((obj_t*) pThis, "canceling worker thread\n");
 		pthread_cancel(pThis->thrdID);

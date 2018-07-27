@@ -85,7 +85,8 @@ function setvar_RS_HOSTNAME() {
 
 # begin a new testconfig
 function generate_conf() {
-echo '$ModLoad ../plugins/imdiag/.libs/imdiag
+echo 'global(inputs.timeout.shutdown="10000")
+$ModLoad ../plugins/imdiag/.libs/imdiag
 $IMDiagServerRun 13500
 
 :syslogtag, contains, "rsyslogd"  ./rsyslogd.started
@@ -203,7 +204,7 @@ function shutdown_when_empty() {
 	fi
 	. $srcdir/diag.sh wait-queueempty $1
 	cp rsyslog$1.pid rsyslog$1.pid.save
-	$TESTTOOL_DIR/msleep 1000 # wait a bit (think about slow testbench machines!)
+	$TESTTOOL_DIR/msleep 500 # wait a bit (think about slow testbench machines!)
 	kill `cat rsyslog$1.pid` # note: we do not wait for the actual termination!
 }
 
