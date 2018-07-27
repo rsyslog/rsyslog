@@ -111,12 +111,39 @@ Version 8.37.0 [v8-stable] 2018-08-07
   own CI system installs the maximum set of possible dependencies and
   so tries the maximum set "make distcheck" can support on a platform.
   see also https://github.com/rsyslog/rsyslog/issues/174
+- add new global config parameter "inputs.timeout.shutdown"
 - omusrmsg: do not fall back to max username length of 8
   This happens if utmp.h and friends are not available and stems back to
   the original syslogd. Nowadas, 32 is more appropriate and now being used
   in that (now very unlikely) case. The detection logic for UT_NAMESIZE has
   also been streamlined.
   closes https://github.com/rsyslog/rsyslog/issues/2834
+- bugfix build system: fix race in parallel builds
+  If libgcry.la is built later than lmcry_gcry.la, there is a failure:
+  [snip]
+  |../aarch64-wrs-linux-libtool  --tag=CC   --mode=link aarch64-wrs-linux-gcc
+  -o lmcry_gcry.la lmcry_gcry_la-lmcry_gcry.lo libgcry.la -lgcrypt
+  |aarch64-wrs-linux-libtool:   error: cannot find the library 'libgcry.la'
+  or unhandled argument 'libgcry.la'
+  |Makefile:1049: recipe for target 'lmcry_gcry.la' failed
+  |make[2]: *** [lmcry_gcry.la] Error 1
+  [snip]
+  The LIBADD of lmcry_gcry.la contains libgcry.la, we should also add libgcry.la
+  to lmcry_gcry.la's DEPENDENCIES.
+  Thanks to Hongxu Jia for the patch.
+- bugfix imfile: memory leak upon shutdown (cosmetic)
+  When rsyslog shuts down and imfile is inside a change polling loop,
+  it does not properly free memory returned by glob(). This is a cosmetic
+  bug as the process terminates within the next few milliseconds. However,
+  it causes memory analyzer reports and thus makes CI fail.
+- bugfix core: input shutdown timeout not properly applied
+  The timeout could be reduced by mutex wait time, which was not the
+  intended behaviour and could lead the the input thread being
+  cancelled while it would have been perfectly legal to shut it down
+  cleanly.
+  Noticed during working on the CI system. May explain some testbench
+  instability and may have caused trouble with state files (not)
+  properly being written by inputs.
 - bugfix config optimizer: error in constant folding
   did not work properly if a string and a number were to be folded.
   Detected by gcc 8.
@@ -131,6 +158,15 @@ Version 8.37.0 [v8-stable] 2018-08-07
   Detected by gcc 8.
 - bugfix mmgrok: cosmetic build issue - compiler warings
   caused build under gcc 7 to fail with warning
+- bugfix mmkubernetes: stops working with non-kubernetes container names
+  When mmkubernetes encounters a record with a CONTAINER_NAME field,
+  but the value does not match the rulebase, mmkubernetes returns
+  an error, and mmkubernetes does not do any further processing
+  of any records.
+  The fix is to check the return value of ln_normalize to see if
+  it is a "hard" error or a "does not match" error.
+  This also adds a test for pod names with dots in them.
+  Thanks to Richard Megginson for the patch.
 - bugfix mmkubernetes: potential NULL pointer access
   If token file could not be opened, fclose() was passed a NULL pointer.
   Thanks to github user jvymazal for finding and Richard Megginson
