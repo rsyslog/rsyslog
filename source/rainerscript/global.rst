@@ -406,3 +406,11 @@ The following parameters can be set:
   prevented if warnings are present. I consider this a good thing in being
   "strict", but I admit there also currently is no other way of doing it.
 
+- **inputs.timeout.shutdown** [numeric, ms] available 8.37.0+
+
+  This parameter specifies how long input modules are given time to terminate
+  when rsyslog is shutdown. The default is 1000ms (1 second). If the input
+  requires longer to terminate, it will be cancelled. This is necessary if
+  the input is inside a lengthy operation, but should generally be tried to
+  avoid. On busy systems it may make sense to increase that timeout. This
+  especially seems to be the case with containers.
