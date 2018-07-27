@@ -1,6 +1,6 @@
 /* gcry.c - rsyslog's libgcrypt based crypto provider
  *
- * Copyright 2013-2017 Adiscon GmbH.
+ * Copyright 2013-2018 Adiscon GmbH.
  *
  * We need to store some additional information in support of encryption.
  * For this, we create a side-file, which is named like the actual log
@@ -285,7 +285,8 @@ eiGetEND(gcryfile gf, off64_t *offs)
 	DEFiRet;
 
 	CHKiRet(eiGetRecord(gf, rectype, value));
-	if(strcmp(rectype, "END")) {
+	const char *const const_END = "END"; // clang static analyzer work-around
+	if(strcmp(rectype, const_END)) {
 		DBGPRINTF("no END record found when expected, record type "
 			  "seen is '%s'\n", rectype);
 		ABORT_FINALIZE(RS_RET_ERR);
