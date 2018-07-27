@@ -136,6 +136,20 @@ Version 8.37.0 [v8-stable] 2018-08-07
   it does not properly free memory returned by glob(). This is a cosmetic
   bug as the process terminates within the next few milliseconds. However,
   it causes memory analyzer reports and thus makes CI fail.
+- bugfix core: do not abort startup on problems setting scheduling policy
+  rsyslog creates a default scheduling policy on startup. This code
+  invalidly used CHKiRet (our exception handler) to check pthreads
+  return codes, what this macro cannot do. This lead to hard to
+  diagnose startup problems in cases where there were problems
+  setting the scheduling defaults (e.g. when rsyslog is set to run
+  at idle priority). Even more so, this blocked startup altogether,
+  which is not the right thing to do. Actually, this can be considered
+  a regression from commit 7742b21. That commit was 8 years ago, so
+  in general this cannot be a big issues ;-)
+  The code now emits proper error messages (to stderr, as at this point
+  no other output is available as it is during the initial state of
+  rsyslog initialization) and continues the startup.
+  closes https://github.com/rsyslog/rsyslog/issues/2855
 - bugfix core: input shutdown timeout not properly applied
   The timeout could be reduced by mutex wait time, which was not the
   intended behaviour and could lead the the input thread being
@@ -150,6 +164,8 @@ Version 8.37.0 [v8-stable] 2018-08-07
 - build: fix improper function casts
   no real issue, but generated warnings under gcc 8 and thus
   broke CI
+- bugfix omlibdbi: fix potential small memory leak
+  detected by clang static analyzer
 - bugfix ommysql: unsafe use of strncpy()
   also now reports oversize names as user error vs. silent trucation
   overly long names only could affect config load phase
