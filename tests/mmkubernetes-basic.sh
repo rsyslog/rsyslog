@@ -38,6 +38,12 @@ action(type="mmjsonparse" cookie="")
 action(type="mmkubernetes")
 action(type="omfile" file="rsyslog.out.log" template="mmk8s_template")
 '
+cat > pod-error1.log <<EOF
+{"log":"not in right format","stream":"stdout","time":"2018-04-06T17:26:34.492083106Z"}
+EOF
+cat > pod-error2.log <<EOF
+{"message":"not in right format","CONTAINER_NAME":"not in right format","CONTAINER_ID_FULL":"id3"}
+EOF
 cat > pod-name1_namespace-name1_container-name1-id1.log <<EOF
 {"log":"{\"type\":\"response\",\"@timestamp\":\"2018-04-06T17:26:34Z\",\"tags\":[],\"pid\":75,\"method\":\"head\",\"statusCode\":200,\"req\":{\"url\":\"/\",\"method\":\"head\",\"headers\":{\"user-agent\":\"curl/7.29.0\",\"host\":\"localhost:5601\",\"accept\":\"*/*\"},\"remoteAddress\":\"127.0.0.1\",\"userAgent\":\"127.0.0.1\"},\"res\":{\"statusCode\":200,\"responseTime\":1,\"contentLength\":9},\"message\":\"HEAD1 / 200 1ms - 9.0B\"}\n","stream":"stdout","time":"2018-04-06T17:26:34.492083106Z"}
 EOF
@@ -49,6 +55,9 @@ cat > pod-name3.log <<EOF
 EOF
 cat > pod-name4.log <<EOF
 {"message":"a message from container 4","CONTAINER_NAME":"some-prefix_container-name4_pod-name4_namespace-name4_unused4_unused44","CONTAINER_ID_FULL":"id4"}
+EOF
+cat > pod-name5.log <<EOF
+{"message":"a message from container 5","CONTAINER_NAME":"some-prefix_container-name5_pod-name5.with.dot.in.pod.name_namespace-name5_unused5_unused55","CONTAINER_ID_FULL":"id5"}
 EOF
 rm -f imfile-state\:*
 startup

@@ -1124,13 +1124,19 @@ extractMsgMetadata(smsg_t *pMsg, instanceData *pData, struct json_object **json)
 			  container_name, container_id_full);
 		if ((lnret = ln_normalize(pData->contCtxln, (char*)container_name,
 					  container_name_len, json))) {
-			ABORT_FINALIZE(RS_RET_ERR);
-		}
-		/* if we have fields for pod name, namespace name, container name,
-		 * and container id, we are good to go */
-		if (fjson_object_object_get_ex(*json, "pod_name", NULL) &&
+			if (LN_WRONGPARSER != lnret) {
+				LogMsg(0, RS_RET_ERR, LOG_ERR,
+					"mmkubernetes: error parsing container_name [%s]: [%d]",
+					container_name, lnret);
+
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+			/* else assume parser didn't find a match and fall through */
+		} else if (fjson_object_object_get_ex(*json, "pod_name", NULL) &&
 			fjson_object_object_get_ex(*json, "namespace_name", NULL) &&
 			fjson_object_object_get_ex(*json, "container_name", NULL)) {
+			/* if we have fields for pod name, namespace name, container name,
+			 * and container id, we are good to go */
 			/* add field for container id */
 			json_object_object_add(*json, "container_id",
 				json_object_new_string_len((const char *)container_id_full,
@@ -1146,7 +1152,16 @@ extractMsgMetadata(smsg_t *pMsg, instanceData *pData, struct json_object **json)
 
 	dbgprintf("mmkubernetes: filename: '%s' len %d.\n", filename, fnLen);
 	if ((lnret = ln_normalize(pData->fnCtxln, (char*)filename, fnLen, json))) {
-		ABORT_FINALIZE(RS_RET_ERR);
+		if (LN_WRONGPARSER != lnret) {
+			LogMsg(0, RS_RET_ERR, LOG_ERR,
+				"mmkubernetes: error parsing container_name [%s]: [%d]",
+				filename, lnret);
+
+			ABORT_FINALIZE(RS_RET_ERR);
+		} else {
+			/* no match */
+			ABORT_FINALIZE(RS_RET_NOT_FOUND);
+		}
 	}
 	/* if we have fields for pod name, namespace name, container name,
 	 * and container id, we are good to go */
