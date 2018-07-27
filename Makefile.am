@@ -312,8 +312,19 @@ DISTCHECK_CONFIGURE_FLAGS=
 DISTCHECK_CONFIGURE_FLAGS+= \
 	--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir) \
 	--enable-silent-rules \
-	--enable-diagtools \
+	--enable-rsyslogd \
+	--enable-omstdout \
 	--enable-imdiag \
+	--enable-testbench \
+	--enable-valgrind
+# currently not supported in make distcheck:
+# --enable-mysql-tests
+# --enable-pgsql-tests 
+# --enable-extended-tests --> should probably never be enabled due to runtime
+
+if ENABLE_DEFAULT_TESTS
+DISTCHECK_CONFIGURE_FLAGS+= \
+	--enable-diagtools \
 	--enable-impstats \
 	--enable-imptcp \
 	--enable-klog \
@@ -328,9 +339,7 @@ DISTCHECK_CONFIGURE_FLAGS+= \
 	--enable-mmrm1stspace \
 	--enable-mmsequence \
 	--enable-mmutf8fix \
-	--enable-omprog \
 	--enable-omruleset \
-	--enable-omstdout \
 	--enable-omuxsock \
 	--enable-pmaixforwardedfrom \
 	--enable-pmciscoios \
@@ -338,14 +347,13 @@ DISTCHECK_CONFIGURE_FLAGS+= \
 	--enable-pmlastmsg \
 	--enable-pmnull \
 	--enable-pmsnare \
-	--enable-rsyslogd \
-	--enable-usertools \
-	--enable-testbench \
-	--enable-valgrind
-# currently not supported in make distcheck:
-# --enable-mysql-tests
-# --enable-pgsql-tests 
-# --enable-extended-tests --> should probably never be enabled due to runtime
+	--enable-usertools
+
+endif  # if ENABLE_DEFAULT_TESTS
+
+if ENABLE_OMPROG
+DISTCHECK_CONFIGURE_FLAGS+= --enable-omprog 
+endif
 
 # Note: [io]mzmq3 cannot be built any longer, according to Brian Knox they require an
 # outdated version of the client lib. So we do not bother any longer about them.
