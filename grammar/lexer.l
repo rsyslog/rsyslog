@@ -29,6 +29,7 @@
   */
 
 %top{
+#ifndef __clang_analyzer__ /* this is not really our code */
 #include "config.h"
 #include "rsyslog.h"
 #include "srUtils.h"
@@ -578,3 +579,4 @@ tellLexEndParsing(void)
 	free(cnfcurrfn);
 	cnfcurrfn= NULL;
 }
+#endif // #ifndef __clang_analyzer__

@@ -263,9 +263,11 @@ static int _regcomp(regex_t *preg, const char *regex, int cflags) {
 
 static int _regexec(const regex_t *preg, const char *string, size_t nmatch, regmatch_t pmatch[], int eflags) {
 	perthread_regex_t *entry = get_perthread_regex(preg);
-	int ret = regexec(&entry->preg, string, nmatch, pmatch, eflags);
-
-	pthread_mutex_unlock(&entry->lock);
+	int ret = REG_NOMATCH;
+	if(entry != NULL) {
+		ret = regexec(&entry->preg, string, nmatch, pmatch, eflags);
+		pthread_mutex_unlock(&entry->lock);
+	}
 	return ret;
 }
 

@@ -296,8 +296,9 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 			dn = dirname(dn);
 			dbi_conn_set_option(pData->conn, is_sqlite3 ? "sqlite3_dbdir" : "sqlite_dbdir",dn);
 
-			char *bn = strdup((char*)pData->dbName);
-			bn = basename(bn);
+			char *tmp = strdup((char*)pData->dbName);
+			char *bn = basename(tmp);
+			free(tmp);
 			dbi_conn_set_option(pData->conn, "dbname", bn);
 		} else {
 			dbi_conn_set_option(pData->conn, "dbname",   (char*) pData->dbName);
