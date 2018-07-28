@@ -29,7 +29,6 @@ check_PROGRAMS = $(TESTRUNS) ourtail tcpflood chkseq msleep randomgen \
 	mangle_qi \
 	have_relpSrvSetOversizeMode
 TESTS = $(TESTRUNS)
-#TESTS = $(TESTRUNS) cfg.sh
 
 if ENABLE_DEFAULT_TESTS
 TESTS +=  \
@@ -283,6 +282,22 @@ TESTS +=  \
 	lookup_table_rscript_reload_without_stub.sh \
 	include-obj-text-from-file.sh \
 	multiple_lookup_tables.sh
+	parsertest-parse1.sh \
+	parsertest-parse1-udp.sh \
+	parsertest-parse2.sh \
+	parsertest-parse2-udp.sh \
+	parsertest-parse_8bit_escape.sh \
+	parsertest-parse_8bit_escape-udp.sh \
+	parsertest-parse3.sh \
+	parsertest-parse3-udp.sh \
+	parsertest-parse_invld_regex.sh \
+	parsertest-parse_invld_regex-udp.sh \
+	parsertest-parse-3164-buggyday.sh \
+	parsertest-parse-3164-buggyday-udp.sh \
+	parsertest-parse-nodate.sh \
+	parsertest-parse-nodate-udp.sh \
+	parsertest-snare_ccoff_udp.sh \
+	parsertest-snare_ccoff_udp2.sh
 if HAVE_VALGRIND
 TESTS +=  \
 	include-obj-outside-control-flow-vg.sh \
@@ -320,6 +335,9 @@ TESTS +=  \
 	lookup_table_rscript_reload_without_stub-vg.sh \
 	multiple_lookup_tables-vg.sh \
 	fac_local0-vg.sh \
+	badqi.sh \
+	threadingmq.sh \
+	threadingmqaq.sh \
 	rscript_trim-vg.sh
 endif # HAVE_VALGRIND
 endif # ENABLE_DEFAULT_TESTS
@@ -755,11 +773,6 @@ TESTS += \
 	sndrcv_omudpspoof_nonstdpt.sh
 endif
 
-if ENABLE_OMSTDOUT
-TESTS += \
-	threadingmq.sh \
-	threadingmqaq.sh \
-	badqi.sh
 #disabled as array-passing mode is no longer supported:	omod-if-array.sh 
 #	omod-if-array.sh 
 #	omod-if-array-udp.sh 
@@ -770,22 +783,6 @@ TESTS += \
 	tabescape_off.sh \
 	tabescape_off-udp.sh \
 	inputname-imtcp.sh \
-	parsertest-parse1.sh \
-	parsertest-parse1-udp.sh \
-	parsertest-parse2.sh \
-	parsertest-parse2-udp.sh \
-	parsertest-parse_8bit_escape.sh \
-	parsertest-parse_8bit_escape-udp.sh \
-	parsertest-parse3.sh \
-	parsertest-parse3-udp.sh \
-	parsertest-parse_invld_regex.sh \
-	parsertest-parse_invld_regex-udp.sh \
-	parsertest-parse-3164-buggyday.sh \
-	parsertest-parse-3164-buggyday-udp.sh \
-	parsertest-parse-nodate.sh \
-	parsertest-parse-nodate-udp.sh \
-	parsertest-snare_ccoff_udp.sh \
-	parsertest-snare_ccoff_udp2.sh \
 	fieldtest.sh \
 	fieldtest-udp.sh \
 	proprepltest-nolimittag-udp.sh \
@@ -803,7 +800,6 @@ TESTS += \
 	timestamp-subseconds-udp.sh \
 	timestamp-subseconds.sh
 
-endif
 endif
 
 if ENABLE_OMRULESET
