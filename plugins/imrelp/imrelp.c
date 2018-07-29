@@ -79,6 +79,7 @@ static configSettings_t cs;
 
 struct instanceConf_s {
 	uchar *pszBindPort;		/* port to bind to */
+	uchar *pszBindAddr;		/* address to bind to */
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
 	uchar *pszInputName;		/* value for inputname property */
 	prop_t *pInputName;		/* InputName in property format for fast access */
@@ -140,6 +141,7 @@ static struct cnfparamblk modpblk =
 /* input instance parameters */
 static struct cnfparamdescr inppdescr[] = {
 	{ "port", eCmdHdlrString, CNFPARAM_REQUIRED },
+	{ "address", eCmdHdlrString, 0 },
 	{ "name", eCmdHdlrString, 0 },
 	{ "ruleset", eCmdHdlrString, 0 },
 	{ "keepalive", eCmdHdlrBinary, 0 },
@@ -271,6 +273,7 @@ createInstance(instanceConf_t **pinst)
 	inst->next = NULL;
 
 	inst->pszBindPort = NULL;
+	inst->pszBindAddr = NULL;
 	inst->pszBindRuleset = NULL;
 	inst->pszInputName = NULL;
 	inst->pBindRuleset = NULL;
@@ -379,6 +382,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 
 	CHKiRet(relpEngineListnerConstruct(pRelpEngine, &pSrv));
 	CHKiRet(relpSrvSetLstnPort(pSrv, inst->pszBindPort));
+	CHKiRet(relpSrvSetLstnAddr(pSrv, inst->pszBindAddr));
 	CHKiRet(relpSrvSetMaxDataSize(pSrv, inst->maxDataSize));
 
 #ifdef HAVE_RELPSRVSETOVERSIZEMODE
@@ -500,6 +504,8 @@ CODESTARTnewInpInst
 			continue;
 		if(!strcmp(inppblk.descr[i].name, "port")) {
 			inst->pszBindPort = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "address")) {
+			inst->pszBindAddr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "name")) {
 			inst->pszInputName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
@@ -740,6 +746,9 @@ BEGINfreeCnf
 CODESTARTfreeCnf
 	for(inst = pModConf->root ; inst != NULL ; ) {
 		free(inst->pszBindPort);
+		if (inst->pszBindAddr != NULL) {
+			free(inst->pszBindAddr);
+		}
 		free(inst->pszBindRuleset);
 		free(inst->pszInputName);
 		free(inst->pristring);
