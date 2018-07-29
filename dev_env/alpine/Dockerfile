@@ -3,7 +3,7 @@
 FROM	alpine:latest
 LABEL   maintainer="rgerhards@adiscon.com"
 COPY	rsyslog@lists.adiscon.com-5a55e598.rsa.pub /etc/apk/keys/rsyslog@lists.adiscon.com-5a55e598.rsa.pub
-RUN	echo "http://build.rsyslog.com/alpine/3.7/unstable" >> /etc/apk/repositories \
+RUN	echo "http://alpine.rsyslog.com/3.7/stable" >> /etc/apk/repositories \
 	&& apk --no-cache update
 RUN	apk add --no-cache \
 		git build-base automake libtool autoconf py-docutils gnutls gnutls-dev \
