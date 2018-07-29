@@ -81,7 +81,7 @@ if [ "$CC" == "clang" ]; then export NO_VALGRIND="--without-valgrind-testbench";
 if [ "$CC" == "clang" ]; then sudo apt-get install -qq $CLANG_PKG ; fi
 
 
-if [ "x$KAFKA" == "xYES" ]; then export ENABLE_KAFKA="--enable-omkafka --enable-imkafka --enable-kafka-tests" ; fi
+if [ "x$KAFKA" == "xYES" ]; then export ENABLE_KAFKA="--enable-omkafka --enable-imkafka --enable-kafka-tests=no" ; fi
 if [ "x$DEBUGLESS" == "xYES" ]; then export ENABLE_DEBUGLESS="--enable-debugless" ; fi
 
 #
