@@ -925,13 +925,6 @@ case $1 in
 		    error_exit 1
 		fi
 		;;
-   'nettester') # perform nettester-based tests
-   		# use -v for verbose output!
-		./nettester -t$2 -i$3 $4
-		if [ "$?" -ne "0" ]; then
-		  error_exit 1
-		fi
-		;;
    'setzcat')   # find out name of zcat tool
 		if [ `uname` == SunOS ]; then
 		   ZCAT=gzcat
