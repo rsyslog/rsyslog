@@ -85,12 +85,14 @@ function setvar_RS_HOSTNAME() {
 
 # begin a new testconfig
 function generate_conf() {
-echo 'global(inputs.timeout.shutdown="10000")
-$ModLoad ../plugins/imdiag/.libs/imdiag
-$IMDiagServerRun 13500
+	export IMDIAG_PORT="$(get_free_port)"
+	echo default-instance imdiag running on port $IMDIAG_PORT
+	echo "module(load=\"../plugins/imdiag/.libs/imdiag\")
+global(inputs.timeout.shutdown=\"10000\")
+\$IMDiagServerRun $IMDIAG_PORT
 
-:syslogtag, contains, "rsyslogd"  ./rsyslogd.started
-###### end of testbench instrumentation part, test conf follows:' > testconf.conf
+:syslogtag, contains, \"rsyslogd\"  ./rsyslogd.started
+###### end of testbench instrumentation part, test conf follows:" > testconf.conf
 }
 
 
@@ -396,6 +398,14 @@ function exit_test() {
 	echo  -------------------------------------------------------------------------------
 }
 
+# finds a free port that we can bind a listener to
+# Obviously, any solution is race as another process could start
+# just after us and grab the same port. However, in practice it seems
+# to work pretty well. In any case, we should probably call this as
+# late as possible before the usage of the port.
+function get_free_port() {
+python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()'
+}
 
 #START: ext kafka config
 dep_cache_dir=$(readlink -f .dep_cache)
@@ -492,7 +502,9 @@ case $1 in
 			export valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
 		fi
 		export RSYSLOG_DFLT_LOG_INTERNAL=1 # testbench needs internal messages logged internally!
+		export IMDIAG_PORT=13500
 		;;
+
    'check-command-available')   # check if command $2 is available - will exit 77 when not OK
 		command -v $2
 		if [ $? -ne 0 ] ; then
@@ -640,7 +652,7 @@ case $1 in
 		then
 			echo getmainmsgqueuesize | $TESTTOOL_DIR/diagtalker -p13501 || error_exit  $?
 		else
-			echo getmainmsgqueuesize | $TESTTOOL_DIR/diagtalker || error_exit  $?
+			echo getmainmsgqueuesize | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
 		fi
 		;;
    'wait-queueempty') # wait for main message queue to be empty. $2 is the instance.
@@ -648,7 +660,7 @@ case $1 in
 		then
 			echo WaitMainQueueEmpty | $TESTTOOL_DIR/diagtalker -p13501 || error_exit  $?
 		else
-			echo WaitMainQueueEmpty | $TESTTOOL_DIR/diagtalker || error_exit  $?
+			echo WaitMainQueueEmpty | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
 		fi
 		;;
    'await-lookup-table-reload') # wait for all pending lookup table reloads to complete $2 is the instance.
@@ -656,7 +668,7 @@ case $1 in
 		then
 			echo AwaitLookupTableReload | $TESTTOOL_DIR/diagtalker -p13501 || error_exit  $?
 		else
-			echo AwaitLookupTableReload | $TESTTOOL_DIR/diagtalker || error_exit  $?
+			echo AwaitLookupTableReload | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
 		fi
 		;;
    'issue-HUP') # shut rsyslogd down when main queue is empty. $2 is the instance.
@@ -683,12 +695,12 @@ case $1 in
 		;;
    'injectmsg') # inject messages via our inject interface (imdiag)
 		echo injecting $3 messages
-		echo injectmsg $2 $3 $4 $5 | $TESTTOOL_DIR/diagtalker || error_exit  $?
+		echo injectmsg $2 $3 $4 $5 | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
 		# TODO: some return state checking? (does it really make sense here?)
 		;;
     'injectmsg-litteral') # inject litteral-payload  via our inject interface (imdiag)
 		echo injecting msg payload from: $2
-    cat $2 | sed -e 's/^/injectmsg litteral /g' | $TESTTOOL_DIR/diagtalker || error_exit  $?
+    cat $2 | sed -e 's/^/injectmsg litteral /g' | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
 		# TODO: some return state checking? (does it really make sense here?)
 		;;
    'check-mainq-spool') # check if mainqueue spool files exist, if not abort (we just check .qi).
@@ -823,15 +835,15 @@ case $1 in
 		;;
 	 'block-stats-flush')
 		echo blocking stats flush
-		echo "blockStatsReporting" | $TESTTOOL_DIR/diagtalker || error_exit  $?
+		echo "blockStatsReporting" | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
 		;;
 	 'await-stats-flush-after-block')
 		echo unblocking stats flush and waiting for it
-		echo "awaitStatsReport" | $TESTTOOL_DIR/diagtalker || error_exit  $?
+		echo "awaitStatsReport" | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
 		;;
 	 'allow-single-stats-flush-after-block-and-wait-for-it')
 		echo blocking stats flush
-		echo "awaitStatsReport block_again" | $TESTTOOL_DIR/diagtalker || error_exit  $?
+		echo "awaitStatsReport block_again" | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
 		;;
 	 'wait-for-stats-flush')
 		echo "will wait for stats push"
