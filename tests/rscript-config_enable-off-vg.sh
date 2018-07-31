@@ -10,7 +10,7 @@ if $msg contains "msgnum:" then {
 	if $msg contains "msgnum:00000000" then {
 		include(text="stop" config.enabled=`echo $DO_STOP`)
 	}
-	action(type="omfile" template="outfmt" file="rsyslog.out.log")
+	action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 }
 '
 startup_vg

@@ -10,7 +10,7 @@ input(type="imtcp" port="13514" ruleset="ruleset1")
 
 template(name="outfmt" type="string" string="%rawmsg%\n")
 ruleset(name="ruleset1") {
-	action(type="omfile" template="outfmt" file="rsyslog.out.log")
+	action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 }
 '
 startup

@@ -13,7 +13,7 @@ if $msg contains "msgnum:0" then
 	set $!doOutput = "1";
 
 if $!doOutput == "" then stop
-action(type="omfile" template="outfmt" file="rsyslog.out.log")
+action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 echo '<167>Mar  6 16:57:54 172.20.245.8 test: msgnum:0

@@ -13,7 +13,7 @@ module(load="../plugins/imklog/.libs/imklog" permitnonkernelfacility="on")
 
 template(name="outfmt" type="string" string="%msg:57:16%: -%pri%-\n")
 
-:msg, contains, "msgnum" action(type="omfile" template="outfmt" file="rsyslog.out.log")
+:msg, contains, "msgnum" action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 echo "<115>Mar 10 01:00:00 172.20.245.8 tag: msgnum:1" > /dev/kmsg

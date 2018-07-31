@@ -10,7 +10,7 @@ module(load="../plugins/mmrm1stspace/.libs/mmrm1stspace")
 template(name="outfmt" type="string" string="-%msg%-\n")
 action(type="mmrm1stspace")
 :syslogtag, contains, "tag" action(type="omfile" template="outfmt"
-			         file="rsyslog.out.log")
+			         file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 . $srcdir/diag.sh tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag: msgnum:1\""

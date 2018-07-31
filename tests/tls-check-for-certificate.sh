@@ -15,7 +15,7 @@ input(type="imtcp" port="13514")
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 
 if $msg contains "msgnum" then {
-	action(type="omfile" template="outfmt" file="rsyslog.out.log")
+	action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 }
 '
 startup

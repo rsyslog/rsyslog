@@ -9,7 +9,7 @@ template(name="outfmt" type="string" string="%hostname%\n")
 
 parser(name="pmrfc3164.hostname_with_slashes" type="pmrfc3164" permit.slashesinhostname="on")
 $rulesetparser pmrfc3164.hostname_with_slashes
-local4.debug action(type="omfile" template="outfmt" file="rsyslog.out.log")
+local4.debug action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 echo '<167>Mar  6 16:57:54 hostname1/hostname2 test: msgnum:0' > rsyslog.input

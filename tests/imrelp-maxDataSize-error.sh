@@ -12,7 +12,7 @@ global(
 
 input(type="imrelp" port="13514" maxDataSize="250")
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 ./msleep 2000

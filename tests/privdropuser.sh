@@ -17,7 +17,7 @@ template(name="outfmt" type="list") {
 	property(name="msg" compressSpace="on")
 	constant(value="\n")
 }
-action(type="omfile" template="outfmt" file="rsyslog.out.log")
+action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 '
 add_conf "\$PrivDropToUser ${TESTBENCH_TESTUSER[username]}"
 startup

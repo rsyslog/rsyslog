@@ -12,7 +12,7 @@ template(name="outfmt" type="string" string="%hostname% %syslogtag%\n")
 
 ruleset(name="norm") {
 	action(type="mmnormalize" rule=["rule=: no longer listening on %ip:ipv4%#%port:number%", "rule=: is sending messages on %ip:ipv4%", "rule=: apfelkuchen"])
-	action(type="omfile" file="rsyslog.out.log" template="outfmt")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }
 '
 startup

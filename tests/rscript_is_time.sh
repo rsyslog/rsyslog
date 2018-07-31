@@ -55,7 +55,7 @@ set $!result!date_fail_6 = is_time("90210", "date-spoonix");
 set $!result!errno_date_fail_6 = script_error();
 
 template(name="outfmt" type="string" string="%!result%\n")
-local4.* action(type="omfile" file="rsyslog.out.log" template="outfmt")
+local4.* action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 local4.* :omstdout:;outfmt
 '
 

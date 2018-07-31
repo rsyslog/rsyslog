@@ -16,7 +16,7 @@ input(type="imrelp" port="13514" maxdatasize="300")
 
 template(name="outfmt" type="string" string="%rawmsg%\n")
 action(type="omfile" template="outfmt"
-				 file="rsyslog.out.log")
+				 file=`echo $RSYSLOG_OUT_LOG`)
 '
 # TODO: add tcpflood option to specific EXACT test message size!
 startup

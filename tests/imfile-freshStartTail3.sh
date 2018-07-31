@@ -11,7 +11,7 @@ input(type="imfile" freshStartTail="on" Tag="pro"
 
 template(name="outfmt" type="string" string="%msg%\n")
 
-:syslogtag, contains, "pro" action(type="omfile" File="rsyslog.out.log"
+:syslogtag, contains, "pro" action(type="omfile" File=`echo $RSYSLOG_OUT_LOG`
 	template="outfmt")
 '
 

@@ -22,7 +22,7 @@ if $msg contains "msgnum:" then
 	       writeoperation="create"
 	       searchIndex="rsyslog_testbench")
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 
 # . $srcdir/diag.sh es-init
@@ -54,7 +54,7 @@ if $msg contains "msgnum:" then
 	       writeoperation="unknown"
 	       searchIndex="rsyslog_testbench")
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 
 # . $srcdir/diag.sh es-init
@@ -91,7 +91,7 @@ if $msg contains "msgnum:" then
 	       bulkmode="on"
 	       searchIndex="rsyslog_testbench")
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 
 export ES_PORT=19200

@@ -9,7 +9,7 @@ template(name="outfmt" type="string" string="%$!%\n")
 
 local4.* {
 	set $.ret = parse_json("{ \"c1\":\"data\" }", "\$!parsed");
-	action(type="omfile" file="rsyslog.out.log" template="outfmt")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }
 '
 

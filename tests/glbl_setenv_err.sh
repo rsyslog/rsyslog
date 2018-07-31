@@ -6,7 +6,7 @@ add_conf '
 # env var is missing equal sign and MUST trigger parsing error!
 global(environment="http_proxy ERROR")
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 . $srcdir/diag.sh injectmsg  0 1

@@ -96,7 +96,7 @@ set $!datetime!inval2 = parse_time("2017-10-05T01:10:11");
 set $!datetime!inval3 = parse_time("2017-SOMETHING: 42");
 
 template(name="outfmt" type="string" string="%!datetime%\n")
-local4.* action(type="omfile" file="rsyslog.out.log" template="outfmt")
+local4.* action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 local4.* :omstdout:;outfmt
 '
 

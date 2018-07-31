@@ -15,7 +15,7 @@ input(type="imtcp" port="13514")
 
 template(name="outfmt" type="string" string="%syslogtag%,%programname%\n")
 local0.* action(type="omfile" template="outfmt"
-	        file="rsyslog.out.log")
+	        file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 . $srcdir/diag.sh tcpflood -m 1 -M "\"<133>2011-03-01T11:22:12Z host tag/with/slashes msgh ...x\""

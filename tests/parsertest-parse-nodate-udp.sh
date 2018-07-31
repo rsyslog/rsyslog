@@ -10,7 +10,7 @@ input(type="imudp" port="13514" ruleset="ruleset1")
 template(name="outfmt" type="string" string="%PRI%,%syslogfacility-text%,%syslogseverity-text%,%hostname%,%programname%,%syslogtag%,%msg%\n")
 
 ruleset(name="ruleset1") {
-	action(type="omfile" file="rsyslog.out.log"
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`
 	       template="outfmt")
 }
 

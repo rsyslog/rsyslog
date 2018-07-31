@@ -16,7 +16,7 @@ if((not($msg contains "error")) and ($msg contains "msgnum:")) then {
 		set $/cntr = 0;
 	}
 	action(type="ommysql" name="mysql_action" server="127.0.0.1" template="tpl"
-	       db="Syslog" uid="rsyslog" pwd="testbench" action.errorfile="rsyslog2.out.log")
+	       db="Syslog" uid="rsyslog" pwd="testbench" action.errorfile=`echo $RSYSLOG2_OUT_LOG`)
 }
 '
 startup

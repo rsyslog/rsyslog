@@ -21,7 +21,7 @@ $InputTCPServerRun 13514
 template(name="outfmt" type="string"
 	 string="%timegenerated:::date-utc%\n")
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
-			         file="rsyslog.out.log")
+			         file=`echo $RSYSLOG_OUT_LOG`)
 '
 
 echo "***SUBTEST: check 2016-03-01"

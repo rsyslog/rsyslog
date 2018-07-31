@@ -22,7 +22,7 @@ input(type="imtcp" port="13514")
 
 action(type="mmpstrucdata")
 if $msg contains "msgnum" then
-	action(type="omfile" file="rsyslog.out.log")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup_vg
 . $srcdir/diag.sh wait-startup

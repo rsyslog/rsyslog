@@ -14,7 +14,7 @@ ruleset(name="testing") {
 	action(type="mmanon")
 	action(type="omfile" file="./rsyslog.out.log" template="outfmt")
 }
-action(type="omfile" file="rsyslog2.out.log")'
+action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG`)'
 
 startup
 . $srcdir/diag.sh tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag: asdfghjk

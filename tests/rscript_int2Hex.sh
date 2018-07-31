@@ -16,7 +16,7 @@ set $!ip!v8 = int2hex("4294967295");
 set $!ip!e1 = int2hex("a");
 
 template(name="outfmt" type="string" string="%!ip%\n")
-local4.* action(type="omfile" file="rsyslog.out.log" template="outfmt")
+local4.* action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 . $srcdir/diag.sh tcpflood -m1 -y

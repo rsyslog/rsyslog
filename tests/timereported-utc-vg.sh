@@ -9,7 +9,7 @@ $InputTCPServerRun 13514
 template(name="outfmt" type="string"
 	 string="%timereported:::date-rfc3339,date-utc%\n")
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
-			         file="rsyslog.out.log")
+			         file=`echo $RSYSLOG_OUT_LOG`)
 '
 
 echo "*** SUBTEST 2003 ****"

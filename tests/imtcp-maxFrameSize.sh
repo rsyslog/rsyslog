@@ -8,7 +8,7 @@ global(processInternalMessages="on")
 module(load="../plugins/imtcp/.libs/imtcp" maxFrameSize="100")
 input(type="imtcp" port="13514")
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 . $srcdir/diag.sh tcpflood -m1 -M "\"1005 <120> 2011-03-01T11:22:12Z host tag: this is a way too long message\""

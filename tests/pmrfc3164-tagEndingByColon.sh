@@ -9,7 +9,7 @@ parser(name="custom.rfc3164" type="pmrfc3164" force.tagEndingByColon="on")
 template(name="outfmt" type="string" string="-%syslogtag%-%msg%-\n")
 
 ruleset(name="customparser" parser="custom.rfc3164") {
-	:syslogtag, contains, "tag" action(type="omfile" template="outfmt" file="rsyslog.out.log")
+	:syslogtag, contains, "tag" action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 }
 '
 startup

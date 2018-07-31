@@ -9,7 +9,7 @@ parser(name="custom.rfc3164" type="pmrfc3164" permit.AtSignsInHostname="off" for
 template(name="outfmt" type="string" string="?%hostname%?%syslogtag%?%msg%?\n")
 
 ruleset(name="customparser" parser="custom.rfc3164") {
-	:hostname, contains, "Hostname" action(type="omfile" template="outfmt" file="rsyslog.out.log")
+	:hostname, contains, "Hostname" action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 }
 '
 startup

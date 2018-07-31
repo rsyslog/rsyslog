@@ -16,7 +16,7 @@ if $msg contains "msgnum:" then {
 add_conf "
 		binary=\"${srcdir}/testsuites/mmexternal-SegFault-mm-python.py\")"
 add_conf '
-	action(type="omfile" template="outfmt" file="rsyslog.out.log")
+	action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 }
 '
 startup_vg

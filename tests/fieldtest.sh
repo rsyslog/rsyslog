@@ -9,7 +9,7 @@ input(type="imtcp" port="13514" ruleset="ruleset1")
 template(name="outfmt" type="string" string="%msg:F,32:2%\n")
 
 ruleset(name="ruleset1") {
-	action(type="omfile" file="rsyslog.out.log"
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`
 	       template="outfmt")
 }
 

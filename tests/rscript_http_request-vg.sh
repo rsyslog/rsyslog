@@ -15,7 +15,7 @@ template(name="outfmt" type="string" string="%$!%\n")
 if $msg contains "msgnum:" then {
 	set $.url = "http://testbench.rsyslog.com/testbench/echo-get.php?content=" & ltrim($msg);
 	set $!reply = http_request($.url);
-	action(type="omfile" file="rsyslog.out.log" template="outfmt")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }
 '
 startup_vg

@@ -12,7 +12,7 @@ global(localHostname="localhost")
 template(name="outfmt" type="string" string="%PRI%,%syslogfacility-text%,%syslogseverity-text%,%programname%,%syslogtag%,%msg%\n")
 
 ruleset(name="ruleset1" parser=["rsyslog.snare","rsyslog.rfc5424","rsyslog.rfc3164"]) {
-	action(type="omfile" file="rsyslog.out.log"
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`
 	       template="outfmt")
 }
 

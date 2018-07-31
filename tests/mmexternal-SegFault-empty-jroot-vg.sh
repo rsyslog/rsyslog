@@ -13,7 +13,7 @@ template(name="outfmt" type="string" string="-%$!%-\n")
 if $msg contains "msgnum:" then {
 	action(type="mmexternal" interface.input="fulljson"
 		binary="testsuites/mmexternal-SegFault-mm-python.py")
-	action(type="omfile" template="outfmt" file="rsyslog.out.log")
+	action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 }
 '
 startup_vg

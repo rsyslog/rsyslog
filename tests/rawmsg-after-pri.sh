@@ -8,7 +8,7 @@ input(type="imtcp" port="13514")
 
 template(type="string" name="outfmt" string="%rawmsg-after-pri%\n")
 if $syslogfacility-text == "local0" then
-    action(type="omfile" file="rsyslog.out.log" template="outfmt")
+    action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 . $srcdir/diag.sh tcpflood -m1 -P 129

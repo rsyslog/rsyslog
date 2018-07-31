@@ -8,7 +8,7 @@ input(type="imtcp" port="13514")
 
 template(name="outfmt" type="string" string="%timestamp:::date-rfc3164%\n")
 
-:syslogtag, contains, "TAG" action(type="omfile" file="rsyslog.out.log"
+:syslogtag, contains, "TAG" action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`
 				   template="outfmt")
 
 

@@ -15,7 +15,7 @@ module(load="../plugins/imjournal/.libs/imjournal" StateFile="imjournal.state"
 	RateLimit.Burst="1000000")
 
 template(name="outfmt" type="string" string="%msg%\n")
-action(type="omfile" template="outfmt" file="rsyslog.out.log")
+action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 '
 TESTMSG="TestBenCH-RSYSLog imjournal This is a test message - $(date +%s)"
 ./journal_print "$TESTMSG"

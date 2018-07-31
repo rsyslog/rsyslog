@@ -9,10 +9,10 @@ template(name="json" type="string" string="%$!%\n")
 ruleset(name="rcvr" queue.type="LinkedList") {
 	set $@timestamp="test";
 	unset $@timestamp2;
-	action(type="omfile" file="rsyslog2.out.log")
+	action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG`)
 }
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
  
 '
 startup

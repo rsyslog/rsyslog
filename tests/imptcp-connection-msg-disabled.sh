@@ -8,10 +8,10 @@ module(load="../plugins/imptcp/.libs/imptcp")
 input(type="imptcp" port="13514")
 
 :msg, contains, "msgnum:" {
-	action(type="omfile" file="rsyslog2.out.log")
+	action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG`)
 }
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 
 '
 startup

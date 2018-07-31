@@ -77,7 +77,7 @@ if $msg contains "msgnum:" then {
 	call try_es
 }
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 rm -f es-bulk-errors.log es-stats.log
 

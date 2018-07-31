@@ -9,10 +9,10 @@ input(type="imtcp" port="13514")
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 :msg, contains, "msgnum:" {
-	action(type="omfile" template="outfmt" file="rsyslog2.out.log")
+	action(type="omfile" template="outfmt" file=`echo $RSYSLOG2_OUT_LOG`)
 }
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 touch rsyslog2.out.log
 chmod 0400 rsyslog2.out.log

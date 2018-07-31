@@ -14,7 +14,7 @@ template(name="outfmt" type="list") {
 }
 
 if $msg contains "msgnum:" then
-	action(type="omfile" file="rsyslog.out.log" template="outfmt")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup_vg
 

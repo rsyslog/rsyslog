@@ -10,7 +10,7 @@ add_conf '
 $IncludeConfig work-nested.conf
 template(name="outfmt" type="string" string="%msg%\n")
 if $msg contains "error" then
-	action(type="omfile" template="outfmt" file="rsyslog.out.log")
+	action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 shutdown_when_empty

@@ -17,7 +17,7 @@ $InputTCPServerRun 13514
 template(name="outfmt" type="string"
 	 string="%timegenerated:::date-year%-%timegenerated:::date-month%-%timegenerated:::date-day%\n")
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
-			         file="rsyslog.out.log")
+			         file=`echo $RSYSLOG_OUT_LOG`)
 '
 FAKETIME='2016-01-01 01:00:00' startup
 # what we send actually is irrelevant, as we just use system properties.

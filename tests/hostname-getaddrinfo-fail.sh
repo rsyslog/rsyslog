@@ -20,7 +20,7 @@ fi
 . $srcdir/diag.sh init
 generate_conf
 add_conf '
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 export RSYSLOG_PRELOAD=".libs/liboverride_gethostname_nonfqdn.so:.libs/liboverride_getaddrinfo.so"
 startup

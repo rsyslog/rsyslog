@@ -10,7 +10,7 @@ template(name="outfmt" type="list"){
     property(name="jsonmesg")
     constant(value="\n")
 }
-local4.* action(type="omfile" file="rsyslog.out.log" template="outfmt")
+local4.* action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 
 startup_vg

@@ -12,7 +12,7 @@ parser(name="custom.pmnormalize" type="pmnormalize" rulebase=`echo $srcdir/tests
 template(name="test" type="string" string="host: %hostname%, ip: %fromhost-ip%, tag: %syslogtag%, pri: %pri%, syslogfacility: %syslogfacility%, syslogseverity: %syslogseverity% msg: %msg%\n")
 
 ruleset(name="ruleset" parser="custom.pmnormalize") {
-	action(type="omfile" file="rsyslog.out.log" template="test")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="test")
 }
 '
 startup

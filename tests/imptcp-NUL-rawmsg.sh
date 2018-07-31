@@ -9,7 +9,7 @@ input(type="imptcp" port="13514")
 
 template(name="outfmt" type="string" string="%rawmsg%\n")
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
-			         file="rsyslog.out.log")
+			         file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 echo '<167>Mar  6 16:57:54 172.20.245.8 test: msgnum:0 X test message

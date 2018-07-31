@@ -9,7 +9,7 @@ input(type="imtcp" port="13514" ruleset="ruleset")
 parser(name="custom.pmnull" type="pmnull" tag="mytag" syslogfacility="3" syslogseverity="1")
 template(name="test" type="string" string="tag: %syslogtag%, pri: %pri%, syslogfacility: %syslogfacility%, syslogseverity: %syslogseverity% msg: %msg%\n")
 ruleset(name="ruleset" parser=["custom.pmnull", "rsyslog.pmnull"]) {
-	action(type="omfile" file="rsyslog.out.log" template="test")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="test")
 }
 '
 startup

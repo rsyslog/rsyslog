@@ -13,7 +13,7 @@ template(name="outfmt" type="list") {
 }
 :msg, contains, "x-pid" stop
 
-action(type="omfile" template="outfmt" file="rsyslog.out.log")
+action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 
 :msg, contains, "this does not occur" action(type="omfwd"
 	target="10.0.0.1" keepalive="on" keepalive.probes="10"

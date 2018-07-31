@@ -22,7 +22,7 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 
 :msg, contains, "msgnum:" {
 	:omtesting:fail 2 0 # omtesting has only legacy params!
-	action(type="omfile" file="rsyslog.out.log" template="outfmt"
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt"
 	       queue.type="linkedList"
 	       action.ExecOnlyWhenPreviousIsSuspended="on"
 	      )

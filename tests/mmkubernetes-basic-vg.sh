@@ -35,7 +35,7 @@ template(name="mmk8s_template" type="list") {
 input(type="imfile" file="'$pwd'/pod-*.log" tag="kubernetes" addmetadata="on")
 action(type="mmjsonparse" cookie="")
 action(type="mmkubernetes")
-action(type="omfile" file="rsyslog.out.log" template="mmk8s_template")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="mmk8s_template")
 '
 cat > pod-error1.log <<EOF
 {"log":"not in right format","stream":"stdout","time":"2018-04-06T17:26:34.492083106Z"}

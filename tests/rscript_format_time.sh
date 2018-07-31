@@ -20,7 +20,7 @@ set $!datetime!str1 = format_time("1507165811", "date-rfc3339");
 set $!datetime!strinv1 = format_time("ABC", "date-rfc3339");
 
 template(name="outfmt" type="string" string="%!datetime%\n")
-local4.* action(type="omfile" file="rsyslog.out.log" template="outfmt")
+local4.* action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 local4.* :omstdout:;outfmt
 '
 

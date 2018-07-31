@@ -8,7 +8,7 @@ generate_conf
 add_conf '
 global(debug.unloadModules="off")
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 sleep 1

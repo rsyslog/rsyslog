@@ -8,7 +8,7 @@ input(type="imptcp" port="13514" ruleset="remote" multiline="on")
 
 template(name="outfmt" type="string" string="NEWMSG: %rawmsg%\n")
 ruleset(name="remote") {
-	action(type="omfile" file="rsyslog.out.log" template="outfmt")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }
 '
 startup

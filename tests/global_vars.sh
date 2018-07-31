@@ -13,7 +13,7 @@ module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="13514")
 
 template(name="outfmt" type="string" string="%$/msgnum%\n")
-template(name="dynfile" type="string" string="rsyslog.out.log") /* trick to use relative path names! */
+template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) /* trick to use relative path names! */
 
 if $/msgnum == "" then
 	set $/msgnum = 0;

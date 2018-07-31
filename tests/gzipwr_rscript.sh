@@ -10,7 +10,7 @@ template(name="outfmt" type="string"
 	 string="%msg:F,58:2%,%msg:F,58:3%,%msg:F,58:4%\n")
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
 				 zipLevel="6" ioBufferSize="256k" flushOnTXEnd="off"
-			         file="rsyslog.out.log")
+			         file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 . $srcdir/diag.sh tcpflood -m2500 -P129

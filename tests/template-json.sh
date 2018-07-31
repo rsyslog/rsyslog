@@ -13,7 +13,7 @@ template(name="json" type="list" option.json="on") {
 }
 
 :msg, contains, "msgnum:" action(type="omfile" template="json"
-			         file="rsyslog.out.log")
+			         file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 . $srcdir/diag.sh injectmsg  0 1

@@ -20,7 +20,7 @@ if($msg contains "msgnum:") then {
 	action(type="ommysql" name="mysql_action" server="127.0.0.1" template="tpl"
 	       db="Syslog" uid="rsyslog" pwd="testbench")
 }
-action(type="omfile" file="rsyslog2.out.log")
+action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG`)
 '
 startup
 . $srcdir/diag.sh injectmsg 0 5000

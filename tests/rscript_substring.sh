@@ -16,7 +16,7 @@ set $!str!var7 = substring("test", 3, 4);
 set $!str!var8 = substring("test", 1, 0);
 
 template(name="outfmt" type="string" string="%!str%\n")
-local4.* action(type="omfile" file="rsyslog.out.log" template="outfmt")
+local4.* action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 . $srcdir/diag.sh tcpflood -m1 -y

@@ -9,7 +9,7 @@ module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="13514")
 
 template(type="string" name="outfmt" string="%msg:F,58:2%,%msg:F,58:3%,%msg:F,58:4%\n")
-mail.* action(type="omfile" file="rsyslog.out.log" template="outfmt")
+mail.* action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 . $srcdir/diag.sh tcpflood -m1000 -P 17

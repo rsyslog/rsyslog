@@ -11,7 +11,7 @@ $Escape8BitCharactersOnReceive on
 template(name="outfmt" type="string" string="%PRI%,%syslogfacility-text%,%syslogseverity-text%,%timestamp%,%hostname%,%programname%,%syslogtag%,%msg%\n")
 
 ruleset(name="ruleset1") {
-	action(type="omfile" file="rsyslog.out.log"
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`
 	       template="outfmt")
 }
 

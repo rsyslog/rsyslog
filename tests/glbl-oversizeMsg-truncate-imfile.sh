@@ -19,7 +19,7 @@ input(type="imfile" File="./rsyslog.input" tag="tag:")
 
 template(name="outfmt" type="string" string="%rawmsg%\n")
 action(type="omfile" template="outfmt"
-				 file="rsyslog.out.log")
+				 file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 shutdown_when_empty # shut down rsyslogd when done processing messages

@@ -24,9 +24,9 @@ template(name="outfmt" type="list") {
   constant(value="\n")
 }
 ruleset(name="ruleset") {
-	action(type="omfile" file="rsyslog.out.log" template="outfmt")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }
-action(type="omfile" file="rsyslog2.out.log" template="outfmt")
+action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG` template="outfmt")
 '
 startup
 

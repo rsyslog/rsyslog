@@ -7,9 +7,9 @@ module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="13514" ruleset="ruleset")
 template(name="test" type="string" string="tag: %syslogtag%, pri: %pri%, syslogfacility: %syslogfacility%, syslogseverity: %syslogseverity% msg: %msg%\n")
 ruleset(name="ruleset" parser="rsyslog.rfc5424") {
-	action(type="omfile" file="rsyslog2.out.log" template="test")
+	action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG` template="test")
 }
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 . $srcdir/diag.sh tcpflood -m1

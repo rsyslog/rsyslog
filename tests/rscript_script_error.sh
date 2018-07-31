@@ -14,7 +14,7 @@ local4.* {
 	set $!invalid!error  = script_error();
 	set $!valid2!serial   = parse_time("2017-10-05T01:10:11Z");
 	set $!valid2!error    = script_error();
-	action(type="omfile" file="rsyslog.out.log" template="outfmt")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }
 '
 

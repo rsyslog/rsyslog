@@ -19,8 +19,8 @@ ruleset(name="ruleset1") {
 	if ($!v_file == "") then {
 		set $!v_file=$!v_tag;
 	}
-	action(type="omfile" File="rsyslog.out.log" template="t_file_record")
-	action(type="omfile" File="rsyslog.out.log" template="t_file_path")
+	action(type="omfile" File=`echo $RSYSLOG_OUT_LOG` template="t_file_record")
+	action(type="omfile" File=`echo $RSYSLOG_OUT_LOG` template="t_file_path")
 
 }
 '

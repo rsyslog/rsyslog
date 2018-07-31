@@ -9,7 +9,7 @@ module(load="../plugins/mmjsonparse/.libs/mmjsonparse")
 
 action(name="fooname" type="mmjsonparse" container="foobar")
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 shutdown_when_empty

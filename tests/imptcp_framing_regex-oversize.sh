@@ -11,9 +11,9 @@ input(type="imptcp" port="13514" ruleset="remote"
 
 template(name="outfmt" type="string" string="NEWMSG: %rawmsg%\n")
 ruleset(name="remote") {
-	action(type="omfile" file="rsyslog.out.log" template="outfmt")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }
-action(type="omfile" file="rsyslog2.out.log")
+action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG`)
 '
 startup
 . $srcdir/diag.sh tcpflood -B -I ${srcdir}/testsuites/imptcp_framing_regex-oversize.testdata

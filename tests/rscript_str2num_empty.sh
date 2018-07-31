@@ -9,7 +9,7 @@ input(type="imtcp" port="13514")
 set $!ip!v1 = 1+"";
 
 template(name="outfmt" type="string" string="%!ip%\n")
-local4.* action(type="omfile" file="rsyslog.out.log" template="outfmt")
+local4.* action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 . $srcdir/diag.sh tcpflood -m1 -y

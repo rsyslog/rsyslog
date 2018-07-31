@@ -12,7 +12,7 @@ template(name="outfmt" type="list") {
 	constant(value="\n")
 }
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
-			         file="rsyslog.out.log")
+			         file=`echo $RSYSLOG_OUT_LOG`)
 '
 
 startup

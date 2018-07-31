@@ -9,7 +9,7 @@ module(load="../plugins/imfile/.libs/imfile")
 
 input(type="imfile" File="testsuites/NotExistingInputFile" Tag="tag1" fileNotFoundError="off")
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 shutdown_when_empty

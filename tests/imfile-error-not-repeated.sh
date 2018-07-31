@@ -9,9 +9,9 @@ input(type="imfile" File="./rsyslog.input" Tag="tag1" ruleset="ruleset1")
 
 template(name="tmpl1" type="string" string="%msg%\n")
 ruleset(name="ruleset1") {
-	action(type="omfile" file="rsyslog.out.log" template="tmpl1")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="tmpl1")
 }
-action(type="omfile" file="rsyslog2.out.log")
+action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG`)
 '
 startup
 ./msleep 3000

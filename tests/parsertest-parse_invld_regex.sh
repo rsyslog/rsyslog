@@ -10,7 +10,7 @@ input(type="imtcp" port="13514" ruleset="ruleset1")
 template(name="outfmt" type="string" string="%timereported:1:19:date-rfc3339,csv%, %hostname:::csv%, %programname:::csv%, %syslogtag:R,ERE,0,BLANK:[0-9+--end:csv%, %syslogseverity:::csv%, %msg:::drop-last-lf,csv%\n")
 
 ruleset(name="ruleset1") {
-	action(type="omfile" file="rsyslog.out.log"
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`
 	       template="outfmt")
 }
 

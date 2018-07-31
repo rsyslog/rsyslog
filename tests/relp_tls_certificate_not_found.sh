@@ -13,7 +13,7 @@ ruleset(name="ruleset") {
 	action(type="omrelp" target="127.0.0.1" port="10514" tls="on" tls.authMode="name" tls.caCert="tls-certs/ca.pem" tls.myCert="tls-certs/fake-cert.pem" tls.myPrivKey="tls-certs/fake-key.pem" tls.permittedPeer=["rsyslog-test-root-ca"])
 }
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 shutdown_when_empty

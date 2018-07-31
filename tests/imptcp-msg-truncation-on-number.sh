@@ -10,7 +10,7 @@ global(processInternalMessages="on"
 module(load="../plugins/imptcp/.libs/imptcp")
 input(type="imptcp" port="13514")
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 
 '
 startup
