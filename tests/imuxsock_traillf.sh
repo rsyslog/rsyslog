@@ -24,7 +24,7 @@ wait_shutdown	# we need to wait until rsyslogd is finished!
 cmp $RSYSLOG_OUT_LOG $srcdir/resultdata/imuxsock_traillf.log
 if [ ! $? -eq 0 ]; then
   echo "imuxsock_traillf.sh failed"
-  echo contents of rsyslog.out.log:
+  echo "contents of $RSYSLOG_OUT_LOG:"
   echo \"`cat $RSYSLOG_OUT_LOG`\"
   echo expected:
   echo \"`cat $srcdir/resultdata/imuxsock_traillf.log`\"

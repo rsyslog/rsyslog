@@ -39,7 +39,7 @@ wait_shutdown
 cmp $RSYSLOG_OUT_LOG $srcdir/resultdata/imuxsock_logger.log
 if [ ! $? -eq 0 ]; then
   echo "imuxsock_logger_parserchain.sh failed"
-  echo contents of rsyslog.out.log:
+  echo "contents of $RSYSLOG_OUT_LOG:"
   echo \"`cat $RSYSLOG_OUT_LOG`\"
   exit 1
 fi;

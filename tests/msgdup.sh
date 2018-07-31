@@ -40,7 +40,7 @@ wait_shutdown	# we need to wait until rsyslogd is finished!
 echo " test 01234567890123456789012345678901234567890123456789012345" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "msgdup.sh failed"
-  echo contents of rsyslog.out.log:
+  echo "contents of $RSYSLOG_OUT_LOG:"
   echo \"`cat $RSYSLOG_OUT_LOG`\"
   exit 1
 fi;

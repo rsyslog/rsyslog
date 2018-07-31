@@ -26,7 +26,7 @@ cmp $RSYSLOG_OUT_LOG $srcdir/resultdata/imuxsock_logger.log
   echo \"`cat $RSYSLOG_OUT_LOG`\"
 if [ ! $? -eq 0 ]; then
   echo "imuxsock_logger.sh failed"
-  echo contents of rsyslog.out.log:
+  echo "contents of $RSYSLOG_OUT_LOG:"
   echo \"`cat $RSYSLOG_OUT_LOG`\"
   exit 1
 fi;
