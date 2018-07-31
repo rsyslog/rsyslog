@@ -39,6 +39,18 @@ Version 8.37.0 [v8-stable] 2018-08-07
   an error and plugin does not run because no state file exists yet.
   Now it skips the loading and creates state file on first persist.
   Thanks to Jiri Vymazal for the patch.
+- imjournal: fetching cursor on readJournal() and simplified pollJournal()
+  Fetching journal cursor in persistJournal could cause us to save
+  invalid cursor leading to duplicating messages further on, when new
+  WorkAroundJournalBug option is set we are saving it on each
+  readJournal() where we now that the state is good.
+  pollJournal() is now cleaner and faster, correctly handles INVALIDATE
+  status from journald and is able to continue polling after journal
+  flush. Also reduced POLL_TIMEOUT a bit as it caused rsyslog to exit
+  with error in corner cases for some ppc when left at full second.
+  re-factored imjournal CI tests with journal_print tool to have more
+  detailed error reporting.
+  Thanks to Jiri Vymazal for the patch.
 - config: enhance backticks "echo" capability
   This is now more along the lines of what bash does. We now support
   multiple environment variable expansions as well as constant text
