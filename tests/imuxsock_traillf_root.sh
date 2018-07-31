@@ -27,7 +27,7 @@ startup
 ./msleep 100
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown	# we need to wait until rsyslogd is finished!
-cmp rsyslog.out.log $srcdir/resultdata/imuxsock_traillf.log
+cmp $RSYSLOG_OUT_LOG $srcdir/resultdata/imuxsock_traillf.log
 if [ ! $? -eq 0 ]; then
 echo "imuxsock_traillf_root.sh failed"
 exit 1

@@ -32,7 +32,7 @@ wait_shutdown
 
 # now we need your custom logic to see if the result is equal to the
 # expected result
-cmp rsyslog.out.log testsuites/execonlyonce.data
+cmp $RSYSLOG_OUT_LOG testsuites/execonlyonce.data
 if [ $? -eq 1 ]
 then
 	echo "ERROR, output not as expected"

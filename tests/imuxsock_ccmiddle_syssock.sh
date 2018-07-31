@@ -29,7 +29,7 @@ startup
 ./msleep 100
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown	# we need to wait until rsyslogd is finished!
-cmp rsyslog.out.log $srcdir/resultdata/imuxsock_ccmiddle.log
+cmp $RSYSLOG_OUT_LOG $srcdir/resultdata/imuxsock_ccmiddle.log
 if [ ! $? -eq 0 ]; then
   echo "imuxsock_ccmiddle_syssock.sh failed"
   echo contents of rsyslog.out.log:

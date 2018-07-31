@@ -25,7 +25,7 @@ startup
 ./msleep 100
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown	# we need to wait until rsyslogd is finished!
-cmp rsyslog.out.log $srcdir/resultdata/imuxsock_hostname.log
+cmp $RSYSLOG_OUT_LOG $srcdir/resultdata/imuxsock_hostname.log
 if [ ! $? -eq 0 ]; then
   echo "imuxsock_hostname.sh failed"
   exit 1
