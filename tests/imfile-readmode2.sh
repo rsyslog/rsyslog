@@ -54,12 +54,12 @@ NUMLINES=$(grep -c HEADER ./ $RSYSLOG_OUT_LOG 2>/dev/null)
 
 if [ -z $NUMLINES ]; then
   echo "ERROR: expecting at least a match for HEADER, maybe  $RSYSLOG_OUT_LOG wasn't even written?"
-  cat ./rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   exit 1
 else
   if [ ! $NUMLINES -eq 3 ]; then
     echo "ERROR: expecting 3 headers, got $NUMLINES"
-    cat ./rsyslog.out.log
+    cat $RSYSLOG_OUT_LOG
     exit 1
   fi
 fi
@@ -70,7 +70,7 @@ for i in {1..4}; do
   grep msgnum:$i ./ $RSYSLOG_OUT_LOG > /dev/null 2>&1
   if [ ! $? -eq 0 ]; then
     echo "ERROR: expecting the string 'msgnum:$i', it's not there"
-    cat ./rsyslog.out.log
+    cat $RSYSLOG_OUT_LOG
     exit 1
   fi
 done
