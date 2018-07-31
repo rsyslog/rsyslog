@@ -108,7 +108,7 @@ if [[ ! -z $spoolFiles ]]; then
 fi
 
 # check if we got at least some data
-if [ ! -f rsyslog.out.log ]; then
+if [ ! -f  $RSYSLOG_OUT_LOG ]; then
     echo "FAIL: no output data gathered (no rsyslog.out.log)!"
     error_exit 1
 fi

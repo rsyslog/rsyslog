@@ -19,18 +19,18 @@ startup
 shutdown_when_empty
 wait_shutdown
 
-grep "imptcp: connection established" rsyslog.out.log > /dev/null
+grep "imptcp: connection established"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -eq 0 ]; then
 	echo
-	echo "FAIL: expected error message not found. rsyslog.out.log is:"
+	echo "FAIL: expected error message not found.  $RSYSLOG_OUT_LOG is:"
 	cat $RSYSLOG_OUT_LOG
 	error_exit 1
 fi
 
-grep "imptcp: session on socket.* closed" rsyslog.out.log > /dev/null
+grep "imptcp: session on socket.* closed"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -eq 0 ]; then
 	echo
-	echo "FAIL: expected error message not found. rsyslog.out.log is:"
+	echo "FAIL: expected error message not found.  $RSYSLOG_OUT_LOG is:"
 	cat $RSYSLOG_OUT_LOG
 	error_exit 1
 fi

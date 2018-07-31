@@ -21,10 +21,10 @@ startup
 shutdown_when_empty
 wait_shutdown
 
-grep "defaultnetstreamdriverkeyfile.*tls-certs/nokey.pem" rsyslog.out.log > /dev/null
+grep "defaultnetstreamdriverkeyfile.*tls-certs/nokey.pem"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
         echo
-        echo "FAIL: expected error message from missing input file not found. rsyslog.out.log is:"
+        echo "FAIL: expected error message from missing input file not found.  $RSYSLOG_OUT_LOG is:"
         cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi

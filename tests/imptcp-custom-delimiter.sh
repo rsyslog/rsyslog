@@ -18,18 +18,18 @@ startup
 shutdown_when_empty
 wait_shutdown
 
-grep "error:.*150.*\"ghijklmn test8 test9 test10 test\"" rsyslog.out.log > /dev/null
+grep "error:.*150.*\"ghijklmn test8 test9 test10 test\""  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
         echo
-        echo "FAIL: expected error message from imptcp truncation not found. rsyslog.out.log is:"
+        echo "FAIL: expected error message from imptcp truncation not found.  $RSYSLOG_OUT_LOG is:"
         cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 
-grep "error:.*22.*\"sstetstetsytetestetste\"" rsyslog.out.log > /dev/null
+grep "error:.*22.*\"sstetstetsytetestetste\""  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
         echo
-        echo "FAIL: expected error message from imptcp truncation not found. rsyslog.out.log is:"
+        echo "FAIL: expected error message from imptcp truncation not found.  $RSYSLOG_OUT_LOG is:"
         cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi

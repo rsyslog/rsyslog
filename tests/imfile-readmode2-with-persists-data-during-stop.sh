@@ -99,10 +99,10 @@ sleep 1
 
 ## check if we have the correct number of messages
 
-NUMLINES=$(grep -c HEADER rsyslog.out.log 2>/dev/null)
+NUMLINES=$(grep -c HEADER  $RSYSLOG_OUT_LOG 2>/dev/null)
 
 if [ -z $NUMLINES ]; then
-  echo "ERROR: expecting at least a match for HEADER, maybe rsyslog.out.log wasn't even written?"
+  echo "ERROR: expecting at least a match for HEADER, maybe  $RSYSLOG_OUT_LOG wasn't even written?"
   cat ./rsyslog.out.log
   exit 1
 else
@@ -116,7 +116,7 @@ fi
 ## check if all the data we expect to get in the file is there
 
 for i in {1..7}; do
-  grep msgnum:$i rsyslog.out.log > /dev/null 2>&1
+  grep msgnum:$i  $RSYSLOG_OUT_LOG > /dev/null 2>&1
   if [ ! $? -eq 0 ]; then
     echo "ERROR: expecting the string 'msgnum:$i', it's not there"
     cat ./rsyslog.out.log

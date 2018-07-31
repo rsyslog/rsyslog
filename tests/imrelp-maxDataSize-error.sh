@@ -20,10 +20,10 @@ startup
 shutdown_when_empty
 wait_shutdown
 
-grep "error: maxDataSize.*smaller than global parameter maxMessageSize" rsyslog.out.log > /dev/null
+grep "error: maxDataSize.*smaller than global parameter maxMessageSize"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
         echo
-        echo "FAIL: expected error message not found. rsyslog.out.log is:"
+        echo "FAIL: expected error message not found.  $RSYSLOG_OUT_LOG is:"
         cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi

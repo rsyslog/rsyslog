@@ -25,7 +25,7 @@ $template outfmt,"%msg:F,58:2%\n"
 $OMUXSockSocket rsyslog-testbench-dgram-uxsock
 :msg, contains, "msgnum:" :omuxsock:;outfmt
 '
-timeout 1m ./uxsockrcvr -srsyslog-testbench-dgram-uxsock -orsyslog.out.log &
+timeout 1m ./uxsockrcvr -srsyslog-testbench-dgram-uxsock -o $RSYSLOG_OUT_LOG &
 BGPROCESS=$!
 echo background uxsockrcvr process id is $BGPROCESS
 

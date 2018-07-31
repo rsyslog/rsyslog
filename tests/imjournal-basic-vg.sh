@@ -35,7 +35,7 @@ wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
 cat $RSYSLOG_OUT_LOG | fgrep -qF "$TESTMSG"
 if [ $? -ne 0 ]; then
-  echo "FAIL: rsyslog.out.log content (tail -n200):"
+  echo "FAIL:  $RSYSLOG_OUT_LOG content (tail -n200):"
   tail -n200 rsyslog.out.log
   echo "======="
   echo "last entries from journal:"

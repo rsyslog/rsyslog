@@ -30,7 +30,7 @@ fi
 
 echo '- msgnum:1-' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "unexpected content in rsyslog.out.log is:"
+  echo "unexpected content in  $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;

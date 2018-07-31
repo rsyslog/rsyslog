@@ -22,7 +22,7 @@ startup
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
 
-if [ ! -e rsyslog.out.log ]
+if [ ! -e  $RSYSLOG_OUT_LOG ]
 then
         echo "error: expected file does not exist"
 	error_exit 1

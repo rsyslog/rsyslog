@@ -52,7 +52,7 @@ startup
 
 # sleep a little to give rsyslog a chance to begin processing
 
-. $srcdir/diag.sh wait-file-lines rsyslog.out.log $TESTMESSAGES $RETRIES
+. $srcdir/diag.sh wait-file-lines  $RSYSLOG_OUT_LOG $TESTMESSAGES $RETRIES
 
 # Move to another filename
 mv rsyslog.input.1.log rsyslog.input.2.log
@@ -66,7 +66,7 @@ ls -l test-spool
 ./msleep 500
 
 let msgcount="2* $TESTMESSAGES"
-. $srcdir/diag.sh wait-file-lines rsyslog.out.log $msgcount $RETRIES
+. $srcdir/diag.sh wait-file-lines  $RSYSLOG_OUT_LOG $msgcount $RETRIES
 
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown	# we need to wait until rsyslogd is finished!

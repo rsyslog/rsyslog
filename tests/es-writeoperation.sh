@@ -30,7 +30,7 @@ startup
 . $srcdir/diag.sh injectmsg  0 1
 shutdown_when_empty
 wait_shutdown
-if grep -q "omelasticsearch: writeoperation '1' requires bulkid" rsyslog.out.log ; then
+if grep -q "omelasticsearch: writeoperation '1' requires bulkid"  $RSYSLOG_OUT_LOG ; then
 	echo found correct error message
 else
 	echo Error: did not complain about incorrect writeoperation
@@ -62,7 +62,7 @@ startup
 . $srcdir/diag.sh injectmsg  0 1
 shutdown_when_empty
 wait_shutdown
-if grep -q "omelasticsearch: invalid value 'unknown' for writeoperation" rsyslog.out.log ; then
+if grep -q "omelasticsearch: invalid value 'unknown' for writeoperation"  $RSYSLOG_OUT_LOG ; then
 	echo found correct error message
 else
 	echo Error: did not complain about incorrect writeoperation

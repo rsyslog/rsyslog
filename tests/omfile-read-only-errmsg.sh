@@ -22,10 +22,10 @@ $srcdir/diag.sh injectmsg 0 1
 shutdown_when_empty
 wait_shutdown
 
-grep "rsyslog2.out.log.* open error" rsyslog.out.log > /dev/null
+grep "rsyslog2.out.log.* open error"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
 	echo
-	echo "FAIL: expected error message not found. rsyslog.out.log is:"
+	echo "FAIL: expected error message not found.  $RSYSLOG_OUT_LOG is:"
 	cat $RSYSLOG_OUT_LOG
 	error_exit 1
 fi

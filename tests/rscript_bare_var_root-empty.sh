@@ -22,7 +22,7 @@ wait_shutdown
 EXPECTED='empty--'
 echo "$EXPECTED" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-	echo "FAIL: rsyslog.out.log content invalid:"
+	echo "FAIL:  $RSYSLOG_OUT_LOG content invalid:"
 	cat $RSYSLOG_OUT_LOG
 	echo "Expected:"
 	echo "$EXPECTED"

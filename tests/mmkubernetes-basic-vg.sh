@@ -98,7 +98,7 @@ sys.exit(rc)
 ' mmkubernetes-basic.out.json rsyslog.out.log
 if [ $? -ne 0 ]; then
 	echo
-	echo "FAIL: expected data not found. rsyslog.out.log is:"
+	echo "FAIL: expected data not found.  $RSYSLOG_OUT_LOG is:"
 	cat $RSYSLOG_OUT_LOG
 	error_exit 1
 fi

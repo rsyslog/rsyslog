@@ -10,7 +10,7 @@ messages=20000 # how many messages to inject?
 . $srcdir/diag.sh init
 
 # we start a small receiver process
-./minitcpsrv -t127.0.0.1 -p13514 -frsyslog.out.log -s4 &
+./minitcpsrv -t127.0.0.1 -p13514 -f $RSYSLOG_OUT_LOG -s4 &
 BGPROCESS=$!
 echo background minitcpsrvr process id is $BGPROCESS
 

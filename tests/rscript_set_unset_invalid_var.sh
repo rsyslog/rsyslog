@@ -20,7 +20,7 @@ startup
 shutdown_when_empty
 wait_shutdown
 
-grep "@timestamp" rsyslog.out.log > /dev/null
+grep "@timestamp"  $RSYSLOG_OUT_LOG > /dev/null
 if [ ! $? -eq 0 ]; then
   echo "expected error message on \"@timestamp\" not found, output is:"
   echo "------------------------------------------------------------"
@@ -29,7 +29,7 @@ if [ ! $? -eq 0 ]; then
   error_exit 1
 fi;
 
-grep "@timestamp2" rsyslog.out.log > /dev/null
+grep "@timestamp2"  $RSYSLOG_OUT_LOG > /dev/null
 if [ ! $? -eq 0 ]; then
   echo "expected error message on \"@timestamp2\" not found, output is:"
   echo "------------------------------------------------------------"

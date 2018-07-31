@@ -34,7 +34,7 @@ shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
 cat $RSYSLOG_OUT_LOG | fgrep -qF "$TESTMSG"
 if [ $? -ne 0 ]; then
-  echo "FAIL: rsyslog.out.log content (tail -n200):"
+  echo "FAIL:  $RSYSLOG_OUT_LOG content (tail -n200):"
   tail -n200 rsyslog.out.log
   echo "======="
   echo "last entries from journal:"

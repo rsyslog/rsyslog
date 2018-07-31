@@ -17,7 +17,7 @@ shutdown_when_empty
 wait_shutdown
 grep work-nested.conf rsyslog.out.log
 if [ $? -ne 0 ]; then
-	echo "FAIL: rsyslog.out.log does not contain expected error message on"
+	echo "FAIL:  $RSYSLOG_OUT_LOG does not contain expected error message on"
 	echo "recursive include file work-nested.conf."
 	echo "content is:"
 	echo "......................................................................"

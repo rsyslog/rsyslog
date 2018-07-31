@@ -15,7 +15,7 @@ startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
 wait_shutdown
-grep 'one message could not be processed by any parser' rsyslog.out.log > /dev/null
+grep 'one message could not be processed by any parser'  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
   echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG

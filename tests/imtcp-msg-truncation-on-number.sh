@@ -18,18 +18,18 @@ startup
 shutdown_when_empty
 wait_shutdown
 
-grep "Framing Error in received" rsyslog.out.log > /dev/null
+grep "Framing Error in received"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
         echo
-        echo "FAIL: expected error message from imtcp not found. rsyslog.out.log is:"
+        echo "FAIL: expected error message from imtcp not found.  $RSYSLOG_OUT_LOG is:"
         cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 
-grep "9876543210cdefghijklmn test8 test9 test10 test11 test12 test13 test14 test15 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk tag: testtestt" rsyslog.out.log > /dev/null
+grep "9876543210cdefghijklmn test8 test9 test10 test11 test12 test13 test14 test15 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk tag: testtestt"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
         echo
-        echo "FAIL: expected date from imtcp not found. rsyslog.out.log is:"
+        echo "FAIL: expected date from imtcp not found.  $RSYSLOG_OUT_LOG is:"
         cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi

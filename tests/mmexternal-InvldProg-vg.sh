@@ -23,7 +23,7 @@ shutdown_when_empty
 wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
 
-grep 'failed to execute' rsyslog.out.log > /dev/null
+grep 'failed to execute'  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
   echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG

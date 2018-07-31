@@ -15,10 +15,10 @@ startup
 shutdown_when_empty
 wait_shutdown
 
-grep "Framing Error.*change to octet stuffing" rsyslog.out.log > /dev/null
+grep "Framing Error.*change to octet stuffing"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
         echo
-        echo "FAIL: expected error message from imtcp not found. rsyslog.out.log is:"
+        echo "FAIL: expected error message from imtcp not found.  $RSYSLOG_OUT_LOG is:"
         cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi

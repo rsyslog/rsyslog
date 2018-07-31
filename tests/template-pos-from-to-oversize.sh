@@ -27,7 +27,7 @@ if [ ! $? -eq 0 ]; then
 fi;
 
 echo "*** list template ****"
-rm rsyslog.out.log # cleanup previous run
+rm  $RSYSLOG_OUT_LOG # cleanup previous run
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")

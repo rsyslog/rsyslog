@@ -10,10 +10,10 @@ startup
 shutdown_when_empty
 wait_shutdown
 
-grep "only of whitespace" rsyslog.out.log > /dev/null
+grep "only of whitespace"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
 	echo
-	echo "FAIL: expected error message not found. rsyslog.out.log is:"
+	echo "FAIL: expected error message not found.  $RSYSLOG_OUT_LOG is:"
 	cat $RSYSLOG_OUT_LOG
 	error_exit 1
 fi

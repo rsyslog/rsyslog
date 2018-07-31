@@ -15,10 +15,10 @@ startup
 shutdown_when_empty
 wait_shutdown
 
-grep "error*file*NotExistingInputFile*No such file or directory" rsyslog.out.log > /dev/null
+grep "error*file*NotExistingInputFile*No such file or directory"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -eq 0 ]; then
         echo
-        echo "FAIL: error message from missing input file found. rsyslog.out.log is:"
+        echo "FAIL: error message from missing input file found.  $RSYSLOG_OUT_LOG is:"
         cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
