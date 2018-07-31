@@ -15,7 +15,7 @@ $ErrorMessagesToStderr off
 $MainMsgQueueType LinkedList
 
 $template outfmt,"%msg:F,58:2%\n"
-$template dynfile,"rsyslog.out.log" # trick to use relative path names!
+template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
 startup
