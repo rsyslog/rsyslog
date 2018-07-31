@@ -18,14 +18,14 @@ wait_shutdown
 grep "mmjsonparse: invalid container name 'foobar', name must start with" rsyslog.out.log > /dev/null
 if [ $? -ne 0 ]; then
         echo "FAIL: expected error message not found. rsyslog.out.log is:"
-        cat rsyslog.out.log
+        cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 
 grep "impstats: ruleset 'fooruleset' not found - using default ruleset instead" rsyslog.out.log > /dev/null
 if [ $? -ne 0 ]; then
         echo "FAIL: expected error message not found. rsyslog.out.log is:"
-        cat rsyslog.out.log
+        cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 

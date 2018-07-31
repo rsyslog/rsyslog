@@ -28,7 +28,7 @@ echo '<120> 2011-03-01T11:22:12Z host tag: this is a way to long message that ha
 <120> 2011-03-01T11:22:12Z host tag: this is a way to long message' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

@@ -24,7 +24,7 @@ wait_shutdown
 echo '6,kern,info,Aug 10 22:18:24,host,tag,tag, This msg contains 8-bit European chars: #303#244#303#266#303#274' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

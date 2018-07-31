@@ -22,7 +22,7 @@ grep "Framing Error in received" rsyslog.out.log > /dev/null
 if [ $? -ne 0 ]; then
         echo
         echo "FAIL: expected error message from imtcp not found. rsyslog.out.log is:"
-        cat rsyslog.out.log
+        cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 
@@ -30,7 +30,7 @@ grep "9876543210cdefghijklmn test8 test9 test10 test11 test12 test13 test14 test
 if [ $? -ne 0 ]; then
         echo
         echo "FAIL: expected date from imtcp not found. rsyslog.out.log is:"
-        cat rsyslog.out.log
+        cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 

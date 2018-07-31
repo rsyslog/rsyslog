@@ -26,7 +26,7 @@ grep "rsyslog2.out.log.* open error" rsyslog.out.log > /dev/null
 if [ $? -ne 0 ]; then
 	echo
 	echo "FAIL: expected error message not found. rsyslog.out.log is:"
-	cat rsyslog.out.log
+	cat $RSYSLOG_OUT_LOG
 	error_exit 1
 fi
 

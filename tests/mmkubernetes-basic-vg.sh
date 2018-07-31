@@ -99,7 +99,7 @@ sys.exit(rc)
 if [ $? -ne 0 ]; then
 	echo
 	echo "FAIL: expected data not found. rsyslog.out.log is:"
-	cat rsyslog.out.log
+	cat $RSYSLOG_OUT_LOG
 	error_exit 1
 fi
 

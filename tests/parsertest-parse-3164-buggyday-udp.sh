@@ -25,7 +25,7 @@ echo '38,auth,info,Mar 07 19:06:53,example,tag,tag:, testmessage (only date actu
 38,auth,info,Mar 17 19:06:53,example,tag,tag:, testmessage (only date actually tested)' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

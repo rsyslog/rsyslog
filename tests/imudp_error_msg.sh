@@ -21,7 +21,7 @@ grep "imudp: Could not create udp listener, ignoring port 514 bind-address 128.9
 if [ $? -ne 0 ]; then
         echo
         echo "FAIL: expected error message from missing input file not found. rsyslog.out.log is:"
-        cat rsyslog.out.log
+        cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 

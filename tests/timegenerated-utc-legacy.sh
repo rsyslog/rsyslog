@@ -33,7 +33,7 @@ wait_shutdown
 echo "Mar  1 14:00:00" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   exit 1
 fi;
 

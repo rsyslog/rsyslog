@@ -22,7 +22,7 @@ grep "error:.*150.*\"ghijklmn test8 test9 test10 test\"" rsyslog.out.log > /dev/
 if [ $? -ne 0 ]; then
         echo
         echo "FAIL: expected error message from imptcp truncation not found. rsyslog.out.log is:"
-        cat rsyslog.out.log
+        cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 
@@ -30,7 +30,7 @@ grep "error:.*22.*\"sstetstetsytetestetste\"" rsyslog.out.log > /dev/null
 if [ $? -ne 0 ]; then
         echo
         echo "FAIL: expected error message from imptcp truncation not found. rsyslog.out.log is:"
-        cat rsyslog.out.log
+        cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 

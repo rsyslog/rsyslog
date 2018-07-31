@@ -63,7 +63,7 @@ echo '2017-03-08T12:18:47.165Z 2017-03-08T12:18:47.165Z Host2.domain.com Process
 [][][127.0.0.1][1488975527][] Mar  8 12:18:47 127.0.0.1 Process1: [FFB87B70 verbose Process1HalCnxHostagent opID=WFU-abfbbece] [WaitForUpdatesDone] Completed callback' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

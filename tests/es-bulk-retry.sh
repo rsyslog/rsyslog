@@ -194,7 +194,7 @@ fi
 if [ $rc -eq 0 ] ; then
 	echo tests completed successfully
 else
-	cat rsyslog.out.log
+	cat $RSYSLOG_OUT_LOG
 	error_exit 1 stacktrace
 fi
 

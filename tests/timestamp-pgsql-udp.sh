@@ -21,7 +21,7 @@ wait_shutdown
 echo '2003-01-23 12:34:56' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

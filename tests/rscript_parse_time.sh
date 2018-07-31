@@ -115,7 +115,7 @@ if [[ $? -ne 0 ]]; then
   printf "Invalid function output detected!\n"
   printf "Expected: $EXPECTED\n"
   printf "Got:      "
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   error_exit 1
 fi;
 

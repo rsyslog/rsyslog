@@ -20,12 +20,12 @@ NUMLINES=$(grep -c "^Mar  1 01:00:00 172.20.245.8 tag msgnum:00000000:$" rsyslog
 if [ -z $NUMLINES ]; then
   echo "ERROR: output file seems not to exist"
   ls -l rsyslog.out.log
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   error_exit 1
 else
   if [ ! $NUMLINES -eq 1 ]; then
     echo "ERROR: output format does not match expectation"
-    cat rsyslog.out.log
+    cat $RSYSLOG_OUT_LOG
     error_exit 1
   fi
 fi

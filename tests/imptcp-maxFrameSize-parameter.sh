@@ -21,7 +21,7 @@ grep "Framing Error.*change to octet stuffing" rsyslog.out.log > /dev/null
 if [ $? -ne 0 ]; then
         echo
         echo "FAIL: expected error message from imptcp truncation not found. rsyslog.out.log is:"
-        cat rsyslog.out.log
+        cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 

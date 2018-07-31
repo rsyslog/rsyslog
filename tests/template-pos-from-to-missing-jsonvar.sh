@@ -18,7 +18,7 @@ wait_shutdown
 echo "--" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid output generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   echo "expected was:"
   echo "--"
   exit 1

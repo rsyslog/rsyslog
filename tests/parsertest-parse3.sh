@@ -25,7 +25,7 @@ echo '"2009-10-16T23:47:31", "hostname", "tag", "", "7", " This is a message"
 "2009-10-16T23:47:31", "hostname", "tag", "1234", "7", " This is a message"' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

@@ -82,7 +82,7 @@ wait_shutdown_vg
 echo '{ "l1": "", "l2": "test", "l3": "test", "l4": "test   ", "l5": "test   ", "l6": "test", "l7": "test ", "l8": "", "l9": "te st", "l10": "te st", "l11": "a", "l12": "a ", "r1": "", "r2": "test", "r3": "   test", "r4": "test", "r5": "   test", "r6": " test", "r7": "test", "r8": "", "r9": "te st", "r10": "te st", "r11": " a", "r12": "a", "b1": "", "b2": "test", "b3": "test", "b4": "te st", "b5": "", "b6": "test", "b7": "test", "b8": "te st", "b9": "test", "b10": "te st", "b11": "test", "b12": "test", "b13": "test", "b14": "te st", "b15": "test", "b16": "te st", "b17": "test", "b18": "test", "b19": "test", "b20": "te st" }' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid function output detected, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   error_exit 1
 fi;
 exit_test

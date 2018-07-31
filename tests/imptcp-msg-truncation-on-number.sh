@@ -23,7 +23,7 @@ grep "Framing Error" rsyslog.out.log > /dev/null
 if [ $? -ne 0 ]; then
         echo
         echo "FAIL: expected error message from imptcp truncation not found. rsyslog.out.log is:"
-        cat rsyslog.out.log
+        cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 
@@ -31,7 +31,7 @@ grep " 9876543210cdefghijklmn test8 test9 test10 test11 test12 test13 test14 tes
 if [ $? -ne 0 ]; then
         echo
         echo "FAIL: expected message from imptcp truncation not found. rsyslog.out.log is:"
-        cat rsyslog.out.log
+        cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 

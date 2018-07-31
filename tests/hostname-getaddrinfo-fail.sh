@@ -31,7 +31,7 @@ wait_shutdown    # we need to wait until rsyslogd is finished!
 grep " nonfqdn " < rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "expected hostname \"nonfqdn\" not found in logs, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   error_exit 1
 fi;
 

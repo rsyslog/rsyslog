@@ -25,7 +25,7 @@ wait_shutdown
 echo '{ "var1": "", "var2": "test", "var3": "es", "var4": "", "var5": "test", "var6": "test", "var7": "t", "var8": "" }' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid function output detected, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   error_exit 1
 fi;
 exit_test

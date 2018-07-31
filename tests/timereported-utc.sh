@@ -23,7 +23,7 @@ wait_shutdown
 echo "2003-08-24T12:14:15.000003+00:00" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   exit 1
 fi;
 
@@ -36,7 +36,7 @@ wait_shutdown
 echo "2016-03-01T14:00:00.000000+00:00" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   exit 1
 fi;
 
@@ -49,7 +49,7 @@ wait_shutdown
 echo "2016-03-01T12:00:00.000000+00:00" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   exit 1
 fi;
 

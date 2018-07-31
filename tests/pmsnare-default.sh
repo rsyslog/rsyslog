@@ -38,7 +38,7 @@ echo '14,user,info,,, 05/21/2017:00:00:00 GMT HOSTNAME 1-ABC-2 : default SSLLOG 
 14,user,info,MSWinEventLog#0111#011N,MSWinEventLog#0111#011N/A#011113977#011Sun, May 21 12:00:01.123#011N/A#011nxlog#011N/A#011N/A#011N/A#011hostname#011N/A#011#011reconnecting to agent manager in 200 seconds#011N/A' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

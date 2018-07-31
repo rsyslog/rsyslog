@@ -24,7 +24,7 @@ EXPECTED='{ "a": "TEST-overwritten" }'
 echo "$EXPECTED" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
 	echo "FAIL: rsyslog.out.log content invalid:"
-	cat rsyslog.out.log
+	cat $RSYSLOG_OUT_LOG
 	echo "Expected:"
 	echo "$EXPECTED"
 	error_exit 1

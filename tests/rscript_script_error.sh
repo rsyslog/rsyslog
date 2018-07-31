@@ -30,7 +30,7 @@ if [[ $? -ne 0 ]]; then
   printf "Invalid function output detected!\n"
   printf "expected:\n$EXPECTED\n"
   printf "rsyslog.out is:\n"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   error_exit 1
 fi;
 

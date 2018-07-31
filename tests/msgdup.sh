@@ -41,7 +41,7 @@ echo " test 01234567890123456789012345678901234567890123456789012345" | cmp - rs
 if [ ! $? -eq 0 ]; then
   echo "msgdup.sh failed"
   echo contents of rsyslog.out.log:
-  echo \"`cat rsyslog.out.log`\"
+  echo \"`cat $RSYSLOG_OUT_LOG`\"
   exit 1
 fi;
 exit_test

@@ -27,7 +27,7 @@ wait_shutdown
 grep "groupid.*${TESTBENCH_TESTUSER[gid]}" < rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "message indicating drop to group \"${TESTBENCH_TESTUSER[groupname]}\" (#${TESTBENCH_TESTUSER[gid]}) is missing:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   exit 1
 fi;
 

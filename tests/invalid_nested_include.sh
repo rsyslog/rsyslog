@@ -21,7 +21,7 @@ if [ $? -ne 0 ]; then
 	echo "recursive include file work-nested.conf."
 	echo "content is:"
 	echo "......................................................................"
-	cat rsyslog.out.log
+	cat $RSYSLOG_OUT_LOG
 	echo "......................................................................"
 	error_exit
 fi

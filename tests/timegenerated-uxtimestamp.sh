@@ -32,8 +32,8 @@ wait_shutdown
 echo "0" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
-  date -d @`cat rsyslog.out.log`
+  cat $RSYSLOG_OUT_LOG
+  date -d @`cat $RSYSLOG_OUT_LOG`
   exit 1
 fi;
 
@@ -47,8 +47,8 @@ wait_shutdown
 echo "951912000" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
-  date -d @`cat rsyslog.out.log`
+  cat $RSYSLOG_OUT_LOG
+  date -d @`cat $RSYSLOG_OUT_LOG`
   exit 1
 fi;
 
@@ -62,8 +62,8 @@ wait_shutdown
 echo "1451649600" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
-  date -d @`cat rsyslog.out.log`
+  cat $RSYSLOG_OUT_LOG
+  date -d @`cat $RSYSLOG_OUT_LOG`
   exit 1
 fi;
 
@@ -77,8 +77,8 @@ wait_shutdown
 echo "1456747200" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
-  date -d @`cat rsyslog.out.log`
+  cat $RSYSLOG_OUT_LOG
+  date -d @`cat $RSYSLOG_OUT_LOG`
   exit 1
 fi;
 
@@ -92,8 +92,8 @@ wait_shutdown
 echo "1456833600" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
-  date -d @`cat rsyslog.out.log`
+  cat $RSYSLOG_OUT_LOG
+  date -d @`cat $RSYSLOG_OUT_LOG`
   exit 1
 fi;
 
@@ -107,8 +107,8 @@ wait_shutdown
 echo "1457006400" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
-  date -d @`cat rsyslog.out.log`
+  cat $RSYSLOG_OUT_LOG
+  date -d @`cat $RSYSLOG_OUT_LOG`
   exit 1
 fi;
 
@@ -122,8 +122,8 @@ wait_shutdown
 echo "1483185600" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
-  date -d @`cat rsyslog.out.log`
+  cat $RSYSLOG_OUT_LOG
+  date -d @`cat $RSYSLOG_OUT_LOG`
   exit 1
 fi;
 
@@ -137,8 +137,8 @@ wait_shutdown
 echo "1483272000" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
-  date -d @`cat rsyslog.out.log`
+  cat $RSYSLOG_OUT_LOG
+  date -d @`cat $RSYSLOG_OUT_LOG`
   exit 1
 fi;
 
@@ -152,8 +152,8 @@ wait_shutdown
 echo "1583064000" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
-  date -d @`cat rsyslog.out.log`
+  cat $RSYSLOG_OUT_LOG
+  date -d @`cat $RSYSLOG_OUT_LOG`
   exit 1
 fi;
 
@@ -167,8 +167,8 @@ wait_shutdown
 echo "2145960000" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
-  date -d @`cat rsyslog.out.log`
+  cat $RSYSLOG_OUT_LOG
+  date -d @`cat $RSYSLOG_OUT_LOG`
   exit 1
 fi;
 
@@ -183,8 +183,8 @@ wait_shutdown
 echo "2209032000" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
-  date -d @`cat rsyslog.out.log`
+  cat $RSYSLOG_OUT_LOG
+  date -d @`cat $RSYSLOG_OUT_LOG`
   exit 1
 fi;
 
@@ -198,8 +198,8 @@ wait_shutdown
 echo "4102488000" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, rsyslog.out.log is:"
-  date -d @`cat rsyslog.out.log`
-  cat rsyslog.out.log
+  date -d @`cat $RSYSLOG_OUT_LOG`
+  cat $RSYSLOG_OUT_LOG
   exit 1
 fi;
 

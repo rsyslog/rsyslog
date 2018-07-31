@@ -23,7 +23,7 @@ EXPECTED='{ "c1":1 }---{ "c1":1 }
 echo "$EXPECTED" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   printf "expected was\n"
   echo "$EXPECTED"
   error_exit  1

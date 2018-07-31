@@ -32,7 +32,7 @@ fi
 ./msleep 500
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
-cat rsyslog.out.log | fgrep -qF "$TESTMSG"
+cat $RSYSLOG_OUT_LOG | fgrep -qF "$TESTMSG"
 if [ $? -ne 0 ]; then
   echo "FAIL: rsyslog.out.log content (tail -n200):"
   tail -n200 rsyslog.out.log

@@ -25,7 +25,7 @@ wait_shutdown
 echo ' before HT	after HT (do NOT remove TAB!)' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

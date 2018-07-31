@@ -38,7 +38,7 @@ startup
 ./msleep 500
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
-COUNT= cat rsyslog.out.log | fgrep "$TESTMSG" | wc -l
+COUNT= cat $RSYSLOG_OUT_LOG | fgrep "$TESTMSG" | wc -l
 if [ $COUNT -ne 1 ]; then
   echo "FAIL: message found $COUNT times (expected 1)"
   echo "rsyslog.out.log content (tail -n200):"

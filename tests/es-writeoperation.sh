@@ -34,7 +34,7 @@ if grep -q "omelasticsearch: writeoperation '1' requires bulkid" rsyslog.out.log
 	echo found correct error message
 else
 	echo Error: did not complain about incorrect writeoperation
-	cat rsyslog.out.log
+	cat $RSYSLOG_OUT_LOG
 	error_exit 1
 fi
 
@@ -66,7 +66,7 @@ if grep -q "omelasticsearch: invalid value 'unknown' for writeoperation" rsyslog
 	echo found correct error message
 else
 	echo Error: did not complain about incorrect writeoperation
-	cat rsyslog.out.log
+	cat $RSYSLOG_OUT_LOG
 	error_exit 1
 fi
 
@@ -122,7 +122,7 @@ except ValueError:
 if [ $? -eq 0 ] ; then
 	echo found correct response
 else
-	cat rsyslog.out.log
+	cat $RSYSLOG_OUT_LOG
 	error_exit 1
 fi
 

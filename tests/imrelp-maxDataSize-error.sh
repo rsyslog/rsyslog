@@ -24,7 +24,7 @@ grep "error: maxDataSize.*smaller than global parameter maxMessageSize" rsyslog.
 if [ $? -ne 0 ]; then
         echo
         echo "FAIL: expected error message not found. rsyslog.out.log is:"
-        cat rsyslog.out.log
+        cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 

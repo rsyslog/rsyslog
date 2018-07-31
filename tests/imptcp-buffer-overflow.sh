@@ -21,7 +21,7 @@ grep "byte larger than max msg size; message will be split" rsyslog.out.log > /d
 if [ $? -ne 0 ]; then
         echo
         echo "FAIL: expected error message from imptcp truncation not found. rsyslog.out.log is:"
-        cat rsyslog.out.log
+        cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 

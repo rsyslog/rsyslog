@@ -33,7 +33,7 @@ cmp rsyslog.out.log $srcdir/resultdata/imuxsock_ccmiddle.log
 if [ ! $? -eq 0 ]; then
   echo "imuxsock_ccmiddle_syssock.sh failed"
   echo contents of rsyslog.out.log:
-  echo \"`cat rsyslog.out.log`\"
+  echo \"`cat $RSYSLOG_OUT_LOG`\"
   exit 1
 fi;
 exit_test

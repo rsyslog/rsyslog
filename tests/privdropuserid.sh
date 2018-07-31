@@ -26,7 +26,7 @@ wait_shutdown
 grep "userid.*${TESTBENCH_TESTUSER[uid]}" < rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "message indicating drop to uid #${TESTBENCH_TESTUSER[uid]} is missing:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   exit 1
 fi;
 

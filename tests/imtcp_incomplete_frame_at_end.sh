@@ -25,7 +25,7 @@ wait_shutdown       # and wait for it to terminate
 echo "lastmsg" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "lastmsg was not properly recorded, file content:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   exit 1
 fi;
 exit_test

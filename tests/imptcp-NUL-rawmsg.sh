@@ -21,7 +21,7 @@ echo '<167>Mar  6 16:57:54 172.20.245.8 test: msgnum:0 #000 test message
 <167>Mar  6 16:57:54 172.20.245.8 #000test: msgnum:1 test message' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid output generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   exit 1
 fi;
 exit_test

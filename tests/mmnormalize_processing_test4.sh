@@ -32,7 +32,7 @@ echo '2017-03-08T14:56:37+02:00 2017-03-08T14:56:37+02:00 host4 Process2 in 1: X
 /sb/logs/incoming/2017/03/08/svc_SER4/ret_Y01/os_LNX/127.0.0.1/r_relay1/sb/env/logs/dir1/dir2/log_20170308.log.gz' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

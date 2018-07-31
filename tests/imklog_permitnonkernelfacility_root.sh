@@ -24,7 +24,7 @@ wait_shutdown
 echo 'Mar 10 01:00:00 172.20.245.8 tag: msgnum:1: -115-' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

@@ -29,7 +29,7 @@ echo '14,user,info,,, 05/21/2017:00:00:00 GMT HOSTNAME 1-ABC-2 : default SSLLOG 
 13,user,notice,MSWinEventLog,MSWinEventLog, 1#011Security#01100000000#011Sun May 21 12:00:01.123#0115061#011Microsoft-Windows-Security-Auditing#011N/A#011N/A#011Success Audit#011hostname.domain#011System Integrity#011#011Cryptographic operation.    Subject:   Security ID:  0x000000000   Account Name:  first.last   Account Domain:  domain   Logon ID:  0x000000000    Cryptographic Parameters:   Provider Name: Microsoft Software Key Storage Provider   Algorithm Name: RSA   Key Name: le-c6bdb786-1851-4159-b5ea-5e3966571698   Key Type: Machine key.    Cryptographic Operation:   Operation: Open Key.   Return Code: 0x0#011-0000000000' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

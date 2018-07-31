@@ -24,7 +24,7 @@ grep "@timestamp" rsyslog.out.log > /dev/null
 if [ ! $? -eq 0 ]; then
   echo "expected error message on \"@timestamp\" not found, output is:"
   echo "------------------------------------------------------------"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   echo "------------------------------------------------------------"
   error_exit 1
 fi;
@@ -33,7 +33,7 @@ grep "@timestamp2" rsyslog.out.log > /dev/null
 if [ ! $? -eq 0 ]; then
   echo "expected error message on \"@timestamp2\" not found, output is:"
   echo "------------------------------------------------------------"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   echo "------------------------------------------------------------"
   error_exit 1
 fi;

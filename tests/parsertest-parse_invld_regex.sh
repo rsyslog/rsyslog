@@ -23,7 +23,7 @@ wait_shutdown
 echo '"2008-02-08T23:47:31", "hostname", "tag", **NO MATCH** **BAD REGULAR EXPRESSION**, "7", " This is a message"' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

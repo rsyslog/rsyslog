@@ -35,7 +35,7 @@ line3
 NEWMSG: <33>Mar  1 01:00:00 172.20.245.8 tag test4' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 exit_test

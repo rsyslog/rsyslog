@@ -19,7 +19,7 @@ wait_shutdown    # we need to wait until rsyslogd is finished!
 echo 'http://127.0.0.1' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid content seen, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   error_exit 1
 fi;
 

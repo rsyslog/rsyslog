@@ -19,7 +19,7 @@ grep "error*file*NotExistingInputFile*No such file or directory" rsyslog.out.log
 if [ $? -eq 0 ]; then
         echo
         echo "FAIL: error message from missing input file found. rsyslog.out.log is:"
-        cat rsyslog.out.log
+        cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 

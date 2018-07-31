@@ -22,7 +22,7 @@ wait_shutdown    # we need to wait until rsyslogd is finished!
 grep " localhost-empty-hostname " < rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "expected hostname \"localhost-empty-hostname\" not found in logs, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   error_exit 1
 fi;
 

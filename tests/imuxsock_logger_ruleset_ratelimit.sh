@@ -24,11 +24,11 @@ logger -d -u testbench_socket test
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown	# we need to wait until rsyslogd is finished!
 cmp rsyslog.out.log $srcdir/resultdata/imuxsock_logger.log
-  echo \"`cat rsyslog.out.log`\"
+  echo \"`cat $RSYSLOG_OUT_LOG`\"
 if [ ! $? -eq 0 ]; then
   echo "imuxsock_logger.sh failed"
   echo contents of rsyslog.out.log:
-  echo \"`cat rsyslog.out.log`\"
+  echo \"`cat $RSYSLOG_OUT_LOG`\"
   exit 1
 fi;
 exit_test

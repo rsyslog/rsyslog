@@ -27,7 +27,7 @@ wait_shutdown
 echo "msgnum:0000000 test test test" | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid message recorded, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   exit 1
 fi;
 

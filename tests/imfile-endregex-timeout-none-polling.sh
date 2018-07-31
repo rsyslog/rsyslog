@@ -51,7 +51,7 @@ wait_shutdown    # we need to wait until rsyslogd is finished!
 echo 'HEADER msgnum:0\\n msgnum:1\\n msgnum:2\\n msgnum:3' | cmp - rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid multiline message generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   exit 1
 fi;
 

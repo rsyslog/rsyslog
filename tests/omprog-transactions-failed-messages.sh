@@ -129,7 +129,7 @@ fi
 
 if [[ -n "$error" ]]; then
     echo "rsyslog.out.log: line $line_num: $error"
-    cat rsyslog.out.log
+    cat $RSYSLOG_OUT_LOG
     error_exit 1
 fi
 
@@ -154,7 +154,7 @@ if [[ "${messages_sorted[*]}" != "${expected_messages[*]}" ]]; then
     echo "unexpected set of processed messages:"
     printf '%s\n' "${messages_processed[@]}"
     echo "contents of rsyslog.out.log:"
-    cat rsyslog.out.log
+    cat $RSYSLOG_OUT_LOG
     error_exit 1
 fi
 

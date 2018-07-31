@@ -21,7 +21,7 @@ wait_shutdown
 grep -i "unloadModules" < rsyslog.out.log
 if [ ! $? -eq 1 ]; then
   echo "parameter name in output, assuming error message:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   exit 1
 fi;
 exit_test
