@@ -462,7 +462,7 @@ SanitizeMsg(smsg_t *pMsg)
 		maxDest = iMaxLine;	/* but not more than the max size! */
 	if(maxDest < sizeof(szSanBuf))
 		pDst = szSanBuf;
-	else 
+	else
 		CHKmalloc(pDst = MALLOC(maxDest + 1));
 	if(iSrc > 0) {
 		iSrc--; /* go back to where everything is OK */

@@ -8,7 +8,7 @@
  * This module is not meant to be used on plaforms other than Solaris. As
  * such, trying to compile it elswhere will probably fail with all sorts
  * of errors.
- * 
+ *
  * Some notes on the Solaris syslog mechanism:
  * Both system (kernel) and application log messages are provided via
  * a single message stream.
@@ -24,11 +24,11 @@
  * call is done, and the server process inside rsyslog simply does NOTHING
  * but return. All that Solaris sylsogd() is interested in is if the door
  * server (we) responds and thus can be considered alive. The actual message
- * is then submitted via the usual stream. I have to admit I do not 
+ * is then submitted via the usual stream. I have to admit I do not
  * understand why the message itself is not passed via this high-performance
  * API. But anyhow, that's nothing I can change, so the most important thing
  * is to note how Solaris does this thing ;)
- * The syslog() library call checks syslogd state for *each* call (what a 
+ * The syslog() library call checks syslogd state for *each* call (what a
  * waste of time...) and decides each time if the message should go to the
  * console or not.  According to OpenSolaris sources, it looks like there is
  * message loss potential when the door file is created before all data has
@@ -141,15 +141,15 @@ tryRecover(void)
 	while(1) { /* loop broken inside */
 		iRet = sun_openklog((LogName == NULL) ? PATH_LOG : LogName);
 		if(iRet == RS_RET_OK) {
-			if(tryNum > 1) {		
+			if(tryNum > 1) {
 				LogError(0, iRet, "failure on system log socket recovered.");
-			}	
+			}
 			break;
-		}	
+		}
 		/* failure, so sleep a bit. We wait try*10 ms, with a max of 15 seconds */
-		if(tryNum == 1) {		
+		if(tryNum == 1) {
 			LogError(0, iRet, "failure on system log socket, trying to recover...");
-		}	
+		}
 		waitusecs = tryNum * 10000;
 		waitsecs = waitusecs / 1000000;
 		DBGPRINTF("imsolaris: try %d to recover system log socket in %d.%d seconds\n",
@@ -157,12 +157,12 @@ tryRecover(void)
 		if(waitsecs > 15) {
 			waitsecs = 15;
 			waitusecs = 0;
-		} else  {	
+		} else  {
 			waitusecs = waitusecs % 1000000;
-		}	
+		}
 		srSleep(waitsecs, waitusecs);
 		++tryNum;
-	}	
+	}
 }
 
 
@@ -200,7 +200,7 @@ readLog(int fd, uchar *pRcv, int iMaxLine)
 			DBGPRINTF("imsolaris: stream input error on fd %d: %s.\n", fd, errStr);
 			LogError(en, NO_ERRCODE, "imsolaris: stream input error: %s", errStr);
 			tryRecover();
-		}	
+		}
 	} else {
 		DBGPRINTF("imsolaris: message from log stream %d: %s\n", fd, pRcv);
 		pRcv[data.len] = '\0'; /* make sure it is a valid C-String */
@@ -265,8 +265,8 @@ getMsgs(thrdInfo_t *pThrd, int timeout)
 					FINALIZE;
 				} else {
 					continue;
-				}	
-			}		
+				}
+			}
 
 			if(nfds < 0) {
 				if(errno != EINTR) {
@@ -375,7 +375,7 @@ CODESTARTafterRun
 	/* do cleanup here */
 	if(pInputName != NULL)
 		prop.Destruct(&pInputName);
-	free(LogName);	
+	free(LogName);
 ENDafterRun
 
 
@@ -389,8 +389,8 @@ ENDmodExit
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-        if(eFeat == sFEATURENonCancelInputTermination)
-                iRet = RS_RET_OK;
+	if(eFeat == sFEATURENonCancelInputTermination)
+		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
@@ -419,8 +419,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
-        CHKiRet(omsdRegCFSLineHdlr((uchar *)"imsolarislogsocketname", 0, eCmdHdlrGetWord,
-                NULL, &LogName, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imsolarislogsocketname", 0, eCmdHdlrGetWord,
+		NULL, &LogName, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 /* vim:set ai:
  */

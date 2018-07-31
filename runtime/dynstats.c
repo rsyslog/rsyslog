@@ -53,9 +53,10 @@ static struct cnfparamdescr modpdescr[] = {
 };
 
 static struct cnfparamblk modpblk =
-{ CNFPARAMBLK_VERSION,
-  sizeof(modpdescr)/sizeof(struct cnfparamdescr),
-  modpdescr
+{
+	CNFPARAMBLK_VERSION,
+	sizeof(modpdescr)/sizeof(struct cnfparamdescr),
+	modpdescr
 };
 
 rsRetVal
@@ -320,7 +321,7 @@ dynstats_newBucket(const uchar* name, uint8_t resettable, uint32_t maxCardinalit
 		CHKmalloc(b = calloc(1, sizeof(dynstats_bucket_t)));
 		b->resettable = resettable;
 		b->maxCardinality = maxCardinality;
-		b->unusedMetricLife = 1000 * unusedMetricLife; 
+		b->unusedMetricLife = 1000 * unusedMetricLife;
 		CHKmalloc(b->name = ustrdup(name));
 
 		pthread_rwlockattr_init(&bucket_lock_attr);

@@ -17,11 +17,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -146,11 +146,11 @@ getDfltTpl(void)
 
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
+CODESTARTinitConfVars
 	cs.dbiDrvrDir = NULL;
 	cs.drvrName = NULL;
 	cs.host = NULL;
-	cs.usrName = NULL;	
+	cs.usrName = NULL;
 	cs.pwd = NULL;
 	cs.dbName = NULL;
 ENDinitConfVars
@@ -237,7 +237,7 @@ reportDBError(instanceData *pData, int bSilent)
 			LogError(0, NO_ERRCODE, "%s", errMsg);
 		}
 	}
-		
+
 	ENDfunc
 }
 
@@ -287,7 +287,7 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 		/* libdbi-driver-sqlite(2/3) requires to provide sqlite3_db dir which is absolute
 		   path, where database file lives,
 		 * and dbname, which is database file name itself. So in order to keep the config API unchanged,
-		 * we split the dbname to path and filename. 
+		 * we split the dbname to path and filename.
 		 */
 		int is_sqlite2 = !strcmp((const char *)pData->drvrName, "sqlite");
 		int is_sqlite3 = !strcmp((const char *)pData->drvrName, "sqlite3");
@@ -308,7 +308,7 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 		if(dbi_conn_connect(pData->conn) < 0) {
 			reportDBError(pData, bSilent);
 			closeConn(pData); /* ignore any error we may get */
-			ABORT_FINALIZE(RS_RET_SUSPENDED);		
+			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 		pData->txSupport = dbi_conn_cap_get(pData->conn, "transaction_support");
 	}
@@ -375,14 +375,14 @@ CODESTARTbeginTransaction
 	}
 #	ifdef HAVE_DBI_TXSUPP
 	if (pData->txSupport == 1) {
-		if (dbi_conn_transaction_begin(pData->conn) != 0) {	
+		if (dbi_conn_transaction_begin(pData->conn) != 0) {
 			const char *emsg;
 			dbi_conn_error(pData->conn, &emsg);
 			dbgprintf("libdbi server error: begin transaction "
 				  "not successful: %s\n", emsg);
 			closeConn(pData);
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
-		} 
+		}
 	}
 #	endif
 finalize_it:
@@ -406,14 +406,14 @@ ENDdoAction
 BEGINendTransaction
 CODESTARTendTransaction
 #	ifdef HAVE_DBI_TXSUPP
-	if (dbi_conn_transaction_commit(pData->conn) != 0) {	
+	if (dbi_conn_transaction_commit(pData->conn) != 0) {
 		const char *emsg;
 		dbi_conn_error(pData->conn, &emsg);
 		dbgprintf("libdbi server error: transaction not committed: %s\n",
 			  emsg);
 		closeConn(pData);
-		iRet = RS_RET_SUSPENDED; 
-	} 
+		iRet = RS_RET_SUSPENDED;
+	}
 #	endif
 ENDendTransaction
 /* end transaction */
@@ -478,7 +478,7 @@ CODESTARTendCnfLoad
 	cs.dbiDrvrDir = NULL;
 	cs.drvrName = NULL;
 	cs.host = NULL;
-	cs.usrName = NULL;	
+	cs.usrName = NULL;
 	cs.pwd = NULL;
 	cs.dbName = NULL;
 	free(pszFileDfltTplName);

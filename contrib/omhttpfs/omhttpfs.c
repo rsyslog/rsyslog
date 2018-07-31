@@ -1,5 +1,5 @@
 /* omhttpfs.c
- * Send all output to HDFS via httpfs 
+ * Send all output to HDFS via httpfs
  *
  * Author: sskaje (sskaje@gmail.com, http://sskaje.me/)
  *
@@ -73,7 +73,7 @@ DEFobjCurrIf(datetime)
 
 
 /*
-Examples: 
+Examples:
 
 module(load="omhttpfs")
 template(name="hdfs_tmp_file" type="string" string="/tmp/%$YEAR%/test.log")
@@ -91,54 +91,54 @@ template="hdfs_tmp_filecontent")
  *
  */
 typedef struct _HTTPFS_JSON_REMOTE_EXCEPTION {
-    char message[1024];
-    char exception[256];
-    char class[256];
+	char message[1024];
+	char exception[256];
+	char class[256];
 } httpfs_json_remote_exception;
 
 
 typedef struct _instanceData {
-    sbool https;
-    uchar* host;
-    uchar* ip;
-    int  port;
-    uchar* user;
+	sbool https;
+	uchar* host;
+	uchar* ip;
+	int  port;
+	uchar* user;
 
-    int timeout;
-    uchar* file;
-    sbool isDynFile;
+	int timeout;
+	uchar* file;
+	sbool isDynFile;
 
-    uchar* tplName;
+	uchar* tplName;
 } instanceData;
 
 
 typedef struct wrkrInstanceData {
-    instanceData *pData;
+	instanceData *pData;
 
-    CURL* curl;
+	CURL* curl;
 
-    uchar* file;
+	uchar* file;
 
-    int replyLen;
-    char* reply;
+	int replyLen;
+	char* reply;
 } wrkrInstanceData_t;
 
 
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-    { "host", eCmdHdlrGetWord, 0 },
-    { "port", eCmdHdlrInt, 0 },
-    { "user", eCmdHdlrGetWord, 0 },
-    { "https", eCmdHdlrBinary, 0 },
-    { "file", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
-    { "isdynfile", eCmdHdlrBinary, 0 },
-    { "template", eCmdHdlrGetWord, 0 },
+	{ "host", eCmdHdlrGetWord, 0 },
+	{ "port", eCmdHdlrInt, 0 },
+	{ "user", eCmdHdlrGetWord, 0 },
+	{ "https", eCmdHdlrBinary, 0 },
+	{ "file", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
+	{ "isdynfile", eCmdHdlrBinary, 0 },
+	{ "template", eCmdHdlrGetWord, 0 },
 };
 static struct cnfparamblk actpblk = {
-    CNFPARAMBLK_VERSION,
-    sizeof(actpdescr)/sizeof(struct cnfparamdescr),
-    actpdescr
+	CNFPARAMBLK_VERSION,
+	sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+	actpdescr
 };
 
 /**
@@ -151,32 +151,32 @@ static struct cnfparamblk actpblk = {
 static rsRetVal
 httpfs_init_curl(wrkrInstanceData_t *pWrkrData, instanceData *pData)
 {
-    CURL *curl = NULL;
+	CURL *curl = NULL;
 
-    curl = curl_easy_init();
+	curl = curl_easy_init();
 
-    if (curl) {
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 0L);
+	if (curl) {
+		curl_easy_setopt(curl, CURLOPT_VERBOSE, 0L);
 
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 
-        if (pData->https) {
-            DBGPRINTF("%s(): Enable HTTPS\n", __FUNCTION__);
-            /* for ssl */
-            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-        }
-    } else {
-	    /* LOG */
-        LogError(0, RS_RET_OBJ_CREATION_FAILED, "omhttpfs: failed to init cURL\n");
+		if (pData->https) {
+			DBGPRINTF("%s(): Enable HTTPS\n", __FUNCTION__);
+			/* for ssl */
+			curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+			curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+		}
+	} else {
+		/* LOG */
+		LogError(0, RS_RET_OBJ_CREATION_FAILED, "omhttpfs: failed to init cURL\n");
 
-        return RS_RET_OBJ_CREATION_FAILED;
-    }
+		return RS_RET_OBJ_CREATION_FAILED;
+	}
 
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, HTTPFS_USER_AGENT);
+	curl_easy_setopt(curl, CURLOPT_USERAGENT, HTTPFS_USER_AGENT);
 
-    pWrkrData->curl = curl;
-    return RS_RET_OK;
+	pWrkrData->curl = curl;
+	return RS_RET_OK;
 }
 
 /**
@@ -279,13 +279,13 @@ static void httpfs_curl_set_post(CURL* curl)
 
 /**
  * Build curl slist
- * 
+ *
  * @param struct curl_slist* headers
  * @param int hdr_count
  * @param ...
- * @return struct curl_slist* 
+ * @return struct curl_slist*
  */
-static struct curl_slist* 
+static struct curl_slist*
 httpfs_curl_add_header(struct curl_slist* headers, int hdr_count, ...)
 {
     const char* hdr;
@@ -326,18 +326,18 @@ httpfs_curl_result_callback(void *contents, size_t size, size_t nmemb, void *use
     size_t realsize = size * nmemb;
     char *newreply = NULL;
     wrkrInstanceData_t *mem = (wrkrInstanceData_t *)userp;
-    
+
     newreply = realloc(mem->reply, mem->replyLen + realsize + 1);
     if (newreply == NULL) {
         /* out of memory! */
         dbgprintf("not enough memory (realloc returned NULL)\n");
-        
-        if (mem->reply != NULL) 
+
+        if (mem->reply != NULL)
             free(mem->reply);
-        
+
         mem->reply = NULL;
         mem->replyLen = 0;
-        
+
         return 0;
     }
 
@@ -444,7 +444,7 @@ finalize_it:
 	if(jt != NULL)
 		json_tokener_free(jt);
 	if(json != NULL)
-		json_object_put(json); 
+		json_object_put(json);
 	RETiRet;
 }	
 
@@ -454,7 +454,7 @@ finalize_it:
  * Create a file
  * op=CREATE
  * overwrite is turned off
- * 
+ *
  * @param wrkrInstanceData_t *pWrkrData
  * @param char*   buf
  * @return rsRetVal
@@ -464,7 +464,7 @@ httpfs_create_file(wrkrInstanceData_t *pWrkrData, uchar* buf)
 {
     /* httpfs.create automatically create folders, no mkdirs needed. */
 
-    /* 
+    /*
     curl -b /tmp/c.tmp -c /tmp/c.tmp  -d 'aaaaabbbbb' -i -H 'Content-Type: application/octet-stream' -X PUT \
            'http://172.16.3.20:14000/webhdfs/v1/tmp/a/b?user.name=hdfs&op=create&data=true'
     */
@@ -539,7 +539,7 @@ HTTPFS_CURL_EXEC
         success = 1;
     } else if (response_code == 404) {
         /* TODO: 404 ? */
-        
+
     }
 HTTPFS_CURL_VARS_RELEASE
     if (success) {
@@ -551,7 +551,7 @@ HTTPFS_CURL_VARS_RELEASE
 
 
 /**
- * httpfs log 
+ * httpfs log
  *
  * @param wrkrInstanceData_t *pWrkrData
  * @param uchar* buf
@@ -818,7 +818,7 @@ CODESTARTmodExit
     /* release what we no longer need */
     objRelease(datetime, CORE_COMPONENT);
     objRelease(glbl, CORE_COMPONENT);
- 
+
 ENDmodExit
 
 /**
@@ -829,7 +829,7 @@ CODESTARTqueryEtryPt
     CODEqueryEtryPt_STD_OMOD_QUERIES
     CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
     CODEqueryEtryPt_STD_OMOD8_QUERIES
-    CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+    CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 ENDqueryEtryPt
 
 

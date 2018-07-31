@@ -411,7 +411,7 @@ checkInstance(instanceConf_t *const inst)
 		rd_kafka_set_logger(inst->rk, kafkaLogger);
 	#endif
 
-   	DBGPRINTF("imkafka: setting brokers: '%s'\n", inst->brokers);
+	DBGPRINTF("imkafka: setting brokers: '%s'\n", inst->brokers);
 	if((nBrokers = rd_kafka_brokers_add(inst->rk, (char*)inst->brokers)) == 0) {
 		if(inst->bReportErrs) {
 			LogError(0, RS_RET_KAFKA_NO_VALID_BROKERS,

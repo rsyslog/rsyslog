@@ -9,11 +9,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -52,7 +52,7 @@ MODULE_CNFNAME("omsnmp")
 DEF_OMOD_STATIC_DATA
 
 /* Default static snmp OID's */
-/*unused 
+/*unused
 static oid             objid_enterprise[] = { 1, 3, 6, 1, 4, 1, 3, 1, 1 };
 static oid             objid_sysdescr[] = { 1, 3, 6, 1, 2, 1, 1, 1, 0 };
 */
@@ -61,20 +61,20 @@ static oid             objid_sysuptime[] = { 1, 3, 6, 1, 2, 1, 1, 3, 0 };
 
 
 typedef struct _instanceData {
-	uchar	*szTransport;	/* Transport - Can be udp, tcp, udp6, tcp6 and other types supported by NET-SNMP */ 
-	uchar	*szTarget;	/* IP/hostname of Snmp Target*/ 
-	uchar	*szCommunity;	/* Snmp Community */ 
-	uchar	*szEnterpriseOID;/* Snmp Enterprise OID - default is (1.3.6.1.4.1.3.1.1 = enterprises.cmu.1.1) */ 
+	uchar	*szTransport;	/* Transport - Can be udp, tcp, udp6, tcp6 and other types supported by NET-SNMP */
+	uchar	*szTarget;	/* IP/hostname of Snmp Target*/
+	uchar	*szCommunity;	/* Snmp Community */
+	uchar	*szEnterpriseOID;/* Snmp Enterprise OID - default is (1.3.6.1.4.1.3.1.1 = enterprises.cmu.1.1) */
 	uchar	*szSnmpTrapOID;	/* Snmp Trap OID - default is (1.3.6.1.4.1.19406.1.2.1 =
-ADISCON-MONITORWARE-MIB::syslogtrap) */ 
+ADISCON-MONITORWARE-MIB::syslogtrap) */
 	uchar	*szSyslogMessageOID;	/* Snmp OID used for the Syslog Message:
 	        * default is 1.3.6.1.4.1.19406.1.1.2.1 - ADISCON-MONITORWARE-MIB::syslogMsg
 		* You will need the ADISCON-MONITORWARE-MIB and ADISCON-MIB mibs installed on the receiver
-		* side in order to decode this mib. 
-		* Downloads of these mib files can be found here: 
+		* side in order to decode this mib.
+		* Downloads of these mib files can be found here:
 		*	http://www.adiscon.org/download/ADISCON-MONITORWARE-MIB.txt
 		*	http://www.adiscon.org/download/ADISCON-MIB.txt
-		*/ 
+		*/
 	int iPort;			/* Target Port */
 	int iSNMPVersion;		/* SNMP Version to use */
 	int iTrapType;			/* Snmp TrapType or GenericType */
@@ -100,7 +100,7 @@ typedef struct configSettings_s {
 	uchar* pszSyslogMessageOID;
 	int iSpecificType;
 	int iTrapType;		/*Default is SNMP_TRAP_ENTERPRISESPECIFIC */
-	/* 
+	/*
 				Possible Values
 		SNMP_TRAP_COLDSTART		(0)
 		SNMP_TRAP_WARMSTART		(1)
@@ -135,7 +135,7 @@ static struct cnfparamblk actpblk =
 	};
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
+CODESTARTinitConfVars
 	cs.pszTransport = NULL;
 	cs.pszTarget = NULL;
 	cs.iPort = 0;
@@ -228,7 +228,7 @@ omsnmp_initSession(wrkrInstanceData_t *pWrkrData)
 	session.peername = (char*) szTargetAndPort;
 	
 	/* Set SNMP Community */
-	if (session.version == SNMP_VERSION_1 || session.version == SNMP_VERSION_2c) {	
+	if (session.version == SNMP_VERSION_1 || session.version == SNMP_VERSION_2c) {
 		session.community = (unsigned char *) pData->szCommunity
 			== NULL ? (uchar*)"public" : pData->szCommunity;
 		session.community_len = strlen((char*) session.community);
@@ -287,8 +287,8 @@ static rsRetVal omsnmp_sendsnmp(wrkrInstanceData_t *pWrkrData, uchar *psz)
 		pdu->enterprise_length = enterpriseoidlen;
 
 		/* Set Traptype */
-		pdu->trap_type = pData->iTrapType; 
-		
+		pdu->trap_type = pData->iTrapType;
+
 		/* Set SpecificType */
 		pdu->specific_type = pData->iSpecificType;
 
@@ -296,14 +296,14 @@ static rsRetVal omsnmp_sendsnmp(wrkrInstanceData_t *pWrkrData, uchar *psz)
 		pdu->time = get_uptime();
 	}
 	/* If SNMP Version2c is configured !*/
-	else if (pWrkrData->snmpsession->version == SNMP_VERSION_2c) 
+	else if (pWrkrData->snmpsession->version == SNMP_VERSION_2c)
 	{
 		long sysuptime;
 		char csysuptime[20];
-		
+
 		/* Create PDU */
 		pdu = snmp_pdu_create(SNMP_MSG_TRAP2);
-		
+
 		/* Set uptime */
 		sysuptime = get_uptime();
 		snprintf( csysuptime, sizeof(csysuptime) , "%ld", sysuptime);
@@ -463,7 +463,7 @@ CODESTARTnewActInst
 	/* Set some defaults in the NetSNMP library */
 	netsnmp_ds_set_int(NETSNMP_DS_LIBRARY_ID, NETSNMP_DS_LIB_DEFAULT_PORT, pData->iPort );
 
-	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->tplName == NULL) ? 
+	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->tplName == NULL) ?
 						"RSYSLOG_FileFormat" : (char*)pData->tplName),
 						OMSR_NO_RQD_TPL_OPTS));
 
@@ -578,7 +578,7 @@ BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt
 

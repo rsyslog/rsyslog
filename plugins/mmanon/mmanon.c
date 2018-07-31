@@ -8,11 +8,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -668,7 +668,7 @@ getip(uchar *start, size_t end, char *address)
 }
 
 /* in case of error with malloc causing abort of function, the
- string at the target of address remains the same*/
+ * string at the target of address remains the same */
 static rsRetVal
 findip(char* address, wrkrInstanceData_t *pWrkrData)
 {
@@ -817,7 +817,7 @@ code_ipv6_int(struct ipv6_int* ip, wrkrInstanceData_t *pWrkrData, int useEmbedde
 		ip->low = 0;
 		ip->high = (ip->high >> (bits - 64)) <<  (bits - 64);
 	} else if(bits == 64) {
-		ip->low = 0;			
+		ip->low = 0;
 	} else {
 		ip->low = (ip->low >> bits) << bits;
 	}
@@ -1139,7 +1139,7 @@ syntax_embedded(const uchar *const __restrict__ buf,
 	while(*nprocessed < buflen) {
 		numLen = isValidHexNum(buf + *nprocessed, buflen - *nprocessed, nprocessed, 1);
 		if(numLen > 0) {  //found a valid num
-			if((ipParts == 6 && hadAbbrev) || ipParts > 6) {  //is 6 since the first part of 
+			if((ipParts == 6 && hadAbbrev) || ipParts > 6) {  //is 6 since the first part of
 									  //IPv4 will also result in a valid hexvalue
 				isIP = 0;
 				goto done;

@@ -268,7 +268,7 @@ CODESTARTnewActInst
 				CHKmalloc(pData->fieldList.name[j] = strdup(name));
 				char vnamebuf[1024];
 				snprintf(vnamebuf, sizeof(vnamebuf),
-					"%s!%s", loadModConf->container, 
+					"%s!%s", loadModConf->container,
 					(varname == NULL) ? name : varname);
 				CHKmalloc(pData->fieldList.varname[j] = strdup(vnamebuf));
 				free(param);

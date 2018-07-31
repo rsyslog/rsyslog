@@ -559,7 +559,7 @@ readline(int fd, char **lineptr)
 	}
 
 	/* Ignore \r (if any) before \n */
-   	if (len > 0 && buf[len-1] == '\r') {
+	if (len > 0 && buf[len-1] == '\r') {
 		--len;
 	}
 

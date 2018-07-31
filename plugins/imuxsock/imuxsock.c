@@ -93,7 +93,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 #if defined(_AIX)
 #define ucred  ucred_t
-#endif 
+#endif
 /* emulate struct ucred for platforms that do not have it */
 #ifndef HAVE_SCM_CREDENTIALS
 struct ucred { int pid; uid_t uid; gid_t gid; };
@@ -102,7 +102,7 @@ struct ucred { int pid; uid_t uid; gid_t gid; };
 /* handle some defines missing on more than one platform */
 #ifndef SUN_LEN
 #define SUN_LEN(su) \
-   (sizeof(*(su)) - sizeof((su)->sun_path) + strlen((su)->sun_path))
+	(sizeof(*(su)) - sizeof((su)->sun_path) + strlen((su)->sun_path))
 #endif
 /* Module static data */
 DEF_IMOD_STATIC_DATA
@@ -123,7 +123,7 @@ STATSCOUNTER_DEF(ctrNumRatelimiters, mutCtrNumRatelimiters)
 
 /* a very simple "hash function" for process IDs - we simply use the
  * pid itself: it is quite expected that all pids may log some time, but
- * from a collision point of view it is likely that long-running daemons 
+ * from a collision point of view it is likely that long-running daemons
  * start early and so will stay right in the top spots of the
  * collision list.
  */
@@ -169,11 +169,11 @@ static lstn_t *listeners;
 static prop_t *pLocalHostIP = NULL;	/* there is only one global IP for all internally-generated messages */
 static prop_t *pInputName = NULL;	/* our inputName currently is always "imuxsock", and this will hold it */
 static int startIndexUxLocalSockets; /* process fd from that index on (used to
- 				   * suppress local logging. rgerhards 2005-08-01
-				   * read-only after startup
-				   */
-static int nfd = 1; /* number of active unix sockets  (socket 0 is always reserved for the system 
-                        socket, even if it is not enabled. */
+				* suppress local logging. rgerhards 2005-08-01
+				* read-only after startup
+				*/
+static int nfd = 1; /* number of active unix sockets  (socket 0 is always reserved for the system
+			socket, even if it is not enabled. */
 static int sd_fds = 0;			/* number of systemd activated sockets */
 
 #define DFLT_bCreatePath 0
@@ -186,7 +186,7 @@ static struct configSettings_s {
 	uchar *pLogSockName;
 	uchar *pLogHostName;		/* host name to use with this socket */
 	int bUseFlowCtl;		/* use flow control or not (if yes, only LIGHT is used!) */
-	int bUseFlowCtlSysSock;	
+	int bUseFlowCtlSysSock;
 	int bIgnoreTimestamp;		/* ignore timestamps present in the incoming message? */
 	int bIgnoreTimestampSysSock;
 	int bUseSysTimeStamp;		/* use timestamp from system (rather than from message) */
@@ -391,7 +391,7 @@ finalize_it:
 }
 
 
-/* add an additional listen socket. 
+/* add an additional listen socket.
  * added capability to specify hostname for socket -- rgerhards, 2008-08-01
  */
 static rsRetVal
@@ -470,7 +470,7 @@ static rsRetVal discardLogSockets(void)
 	}
 
 	/* Clean up all other sockets */
-        for (i = 1; i < nfd; i++) {
+	for (i = 1; i < nfd; i++) {
 		if(listeners[i].sockName != NULL) {
 			free(listeners[i].sockName);
 			listeners[i].sockName = NULL;
@@ -488,7 +488,7 @@ static rsRetVal discardLogSockets(void)
 }
 
 
-/* used to create a log socket if NOT passed in via systemd. 
+/* used to create a log socket if NOT passed in via systemd.
  */
 /* note: the linux SUN_LEN macro uses a sizeof based on a NULL pointer. This
  * triggers UBSan warning. As such, we turn that warning off for the fuction.
@@ -553,7 +553,7 @@ openLogSocket(lstn_t *pLstn)
 
 #ifdef HAVE_LIBSYSTEMD
 	if (sd_fds > 0) {
-               /* Check if the current socket is a systemd activated one.
+		/* Check if the current socket is a systemd activated one.
 	        * If so, just use it.
 		*/
 		int fd;
@@ -845,7 +845,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 		pri = pri * 10 + *parse - '0';
 		++parse;
 		++offs;
-	} 
+	}
 
 	findRatelimiter(pLstn, cred, &ratelimiter); /* ignore error, better so than others... */
 
@@ -921,7 +921,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 			memcpy(pmsgbuf+lenRcv, " @[", 3);
 			toffs = lenRcv + 3; /* next free location */
 			lenProp = snprintf((char*)propBuf, sizeof(propBuf), "_PID=%lu _UID=%lu _GID=%lu",
-				 		(long unsigned) cred->pid, (long unsigned) cred->uid, 
+				 		(long unsigned) cred->pid, (long unsigned) cred->uid,
 						(long unsigned) cred->gid);
 			memcpy(pmsgbuf+toffs, propBuf, lenProp);
 			toffs = toffs + lenProp;
@@ -938,7 +938,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 			}
 			if(getTrustedProp(cred, "cmdline", propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
 				memcpy(pmsgbuf+toffs, " _CMDLINE=", 10);
-				toffs = toffs + 10 + 
+				toffs = toffs + 10 +
 					copyescaped(pmsgbuf+toffs+10, propBuf, lenProp);
 			}
 
@@ -1098,7 +1098,7 @@ static rsRetVal readSocket(lstn_t *pLstn)
 #define MSG_DONTWAIT    MSG_NONBLOCK
 #endif
 	iRcvd = recvmsg(pLstn->fd, &msgh, MSG_DONTWAIT);
- 
+
 	DBGPRINTF("Message from UNIX socket: #%d, size %d\n", pLstn->fd, (int) iRcvd);
 	if(iRcvd > 0) {
 #		if defined(HAVE_SCM_CREDENTIALS) || defined(HAVE_SO_TIMESTAMP)
@@ -1113,7 +1113,7 @@ static rsRetVal readSocket(lstn_t *pLstn)
 				}
 #				endif /* HAVE_SCM_CREDENTIALS */
 #				if HAVE_SO_TIMESTAMP
-				if(   pLstn->bUseSysTimeStamp 
+				if(   pLstn->bUseSysTimeStamp
 				   && cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SO_TIMESTAMP) {
 					memcpy(&ts, CMSG_DATA(cm), sizeof(ts));
 					ts_set = 1;
@@ -1558,10 +1558,10 @@ BEGINafterRun
 	int i;
 CODESTARTafterRun
 	/* do cleanup here */
-        if(startIndexUxLocalSockets == 1 && nfd == 1) {
-                /* No sockets were configured, no cleanup needed. */
-                return RS_RET_OK;
-        }
+	if(startIndexUxLocalSockets == 1 && nfd == 1) {
+		/* No sockets were configured, no cleanup needed. */
+		return RS_RET_OK;
+	}
 
 	/* Close the UNIX sockets. */
        for (i = 0; i < nfd; i++)

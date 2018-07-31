@@ -272,8 +272,8 @@ static int copy_annotationmatch(annotation_match_t *src, annotation_match_t *des
 		regexp.regcomp(&dest->regexps[jj], (char *)dest->patterns[jj], REG_EXTENDED|REG_NOSUB);
 	}
 finalize_it:
-    if (iRet)
-    	free_annotationmatch(dest);
+	if (iRet)
+	free_annotationmatch(dest);
 	RETiRet;
 }
 
@@ -418,10 +418,10 @@ finalize_it:
 	if (tmpstr) {
 		es_deleteStr(tmpstr);
 	}
-    if (iRet != RS_RET_OK) {
-    	free(*rules);
-    	*rules = NULL;
-    }
+	if (iRet != RS_RET_OK) {
+		free(*rules);
+		*rules = NULL;
+	}
 	RETiRet;
 }
 #endif

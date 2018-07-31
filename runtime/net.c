@@ -19,11 +19,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -358,7 +358,7 @@ PermittedPeerWildcardCompile(permittedPeers_t *pPeer)
 		/* now check if we have an empty component at end of string */
 		if(*pC == '.' && *(pC + 1) == '\0') {
 			/* pStart is a dummy, it is not used if length is 0 */
-			CHKiRet(AddPermittedPeerWildcard(pPeer, pStart, 0)); 
+			CHKiRet(AddPermittedPeerWildcard(pPeer, pStart, 0));
 		}
 		if(*pC != '\0')
 			++pC;
@@ -732,7 +732,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 							ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 						}
 						SIN(allowIP.addr.NetAddr)->sin_family = AF_INET;
-#ifdef HAVE_STRUCT_SOCKADDR_SA_LEN    
+#ifdef HAVE_STRUCT_SOCKADDR_SA_LEN
                                                 SIN(allowIP.addr.NetAddr)->sin_len    = sizeof (struct sockaddr_in);
 #endif
 						SIN(allowIP.addr.NetAddr)->sin_port   = 0;
@@ -794,23 +794,23 @@ PrintAllowedSenders(int iListToPrint)
 	uchar szIP[64];
 	
 #ifdef _AIX
-#ifdef USE_GSSAPI 
+#ifdef USE_GSSAPI
 	assert((iListToPrint == 1) || (iListToPrint == 2) || (iListToPrint == 3));
 	dbgprintf("Allowed %s Senders:\n",
 	       (iListToPrint == 1) ? "UDP" :
 	       (iListToPrint == 3) ? "GSS" :
 	       "TCP");
-#else 
+#else
 	assert((iListToPrint == 1) || (iListToPrint == 2));
 	dbgprintf("Allowed %s Senders:\n",
 	       (iListToPrint == 1) ? "UDP" :
 	       "TCP");
 #endif /* USE_GSSAPI */
 #else /* _AIX */
-	assert((iListToPrint == 1) || (iListToPrint == 2) 
-#ifdef USE_GSSAPI 
-	       || (iListToPrint == 3)  
-#endif 
+	assert((iListToPrint == 1) || (iListToPrint == 2)
+#ifdef USE_GSSAPI
+	       || (iListToPrint == 3)
+#endif
 	       );
 
 	dbgprintf("Allowed %s Senders:\n",
@@ -919,7 +919,7 @@ addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
 				return(iRet);
 		        }
 		}
-		free (uIP); /* copy stored in AllowedSenders list */ 
+		free (uIP); /* copy stored in AllowedSenders list */
 	}
 
 	/* cleanup */
@@ -1011,7 +1011,7 @@ MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr *pFrom, const char
 /* check if a sender is allowed. The root of the the allowed sender.
  * list must be proveded by the caller. As such, this function can be
  * used to check both UDP and TCP allowed sender lists.
- * returns 1, if the sender is allowed, 0 if not and 2 if we could not 
+ * returns 1, if the sender is allowed, 0 if not and 2 if we could not
  * obtain a result because we would need a dns name, which we don't have
  * (2 was added rgerhards, 2009-11-16).
  * rgerhards, 2005-09-26
@@ -1055,7 +1055,7 @@ isAllowedSender(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost)
 }
 
 
-/* The following #ifdef sequence is a small compatibility 
+/* The following #ifdef sequence is a small compatibility
  * layer. It tries to work around the different availality
  * levels of SO_BSDCOMPAT on linuxes...
  * I borrowed this code from
@@ -1236,7 +1236,7 @@ finalize_it:
 
 
 /* closes the UDP listen sockets (if they exist) and frees
- * all dynamically assigned memory. 
+ * all dynamically assigned memory.
  */
 static void
 closeUDPListenSockets(int *pSockArr)
@@ -1356,7 +1356,7 @@ create_single_udp_socket(int *const s, /* socket */
 		if(setsockopt(*s, SOL_SOCKET, SO_SNDBUFFORCE, &sndbuf, sizeof(sndbuf)) < 0)
 #		endif
 		{
-			/* if we fail, try to do it the regular way. Experiments show that at 
+			/* if we fail, try to do it the regular way. Experiments show that at
 			 * least some platforms do not return an error here, but silently set
 			 * it to the max permitted value. So we do our error check a bit
 			 * differently by querying the size below.
@@ -1388,7 +1388,7 @@ create_single_udp_socket(int *const s, /* socket */
 		if(setsockopt(*s, SOL_SOCKET, SO_RCVBUFFORCE, &rcvbuf, sizeof(rcvbuf)) < 0)
 #		endif
 		{
-			/* if we fail, try to do it the regular way. Experiments show that at 
+			/* if we fail, try to do it the regular way. Experiments show that at
 			 * least some platforms do not return an error here, but silently set
 			 * it to the max permitted value. So we do our error check a bit
 			 * differently by querying the size below.
@@ -1546,7 +1546,7 @@ create_udp_socket(uchar *hostname,
  * at the relevant fields, what means a somewhat more complicated processing.
  * Also note that we use a non-standard calling interface, as this is much more natural and
  * it looks extremely unlikely that we get an exception of any kind here. What we
- * return is mimiced after memcmp(), and as such useful for building binary trees 
+ * return is mimiced after memcmp(), and as such useful for building binary trees
  * (the order relation may be a bit arbritrary, but at least it is consistent).
  * rgerhards, 2009-09-03
  */
@@ -1648,7 +1648,7 @@ getIFIPAddr(uchar *szif, int family, uchar *pszbuf, int lenBuf)
 			pAddr = &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
 			inet_ntop(AF_INET, pAddr, (char*)pszbuf, lenBuf);
 			break;
-		} 
+		}
 	}
 
 	if(ifaddrs != NULL)

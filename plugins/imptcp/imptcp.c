@@ -540,7 +540,7 @@ startupSrv(ptcpsrv_t *pSrv)
 				 * also be ignored...
 				 */
 			}
-                        continue;
+			continue;
 		}
 
 		if(r->ai_family == AF_INET6) {
@@ -585,18 +585,18 @@ startupSrv(ptcpsrv_t *pSrv)
 		 * could flood our log files by sending us tons of ICMP errors.
 		 */
 #if !defined (_AIX)
-#ifndef BSD	
+#ifndef BSD
 		if(net.should_use_so_bsdcompat()) {
 			if (setsockopt(sock, SOL_SOCKET, SO_BSDCOMPAT,
 					(char *) &on, sizeof(on)) < 0) {
 				LogError(errno, NO_ERRCODE, "TCP setsockopt(BSDCOMPAT)");
-                                close(sock);
+				close(sock);
 				sock = -1;
 				continue;
 			}
 		}
 #endif
-#endif 
+#endif
 		if( (bind(sock, r->ai_addr, r->ai_addrlen) < 0)
 #ifndef IPV6_V6ONLY
 		     && (errno != EADDRINUSE)
@@ -882,7 +882,7 @@ finalize_it:
  * It does some common processing, including resetting the various
  * state variables to a "processed" state.
  * Note that this function is also called if we had a buffer overflow
- * due to a too-long message. So far, there is no indication this 
+ * due to a too-long message. So far, there is no indication this
  * happened and it may be worth thinking about different handling
  * of this case (what obviously would require a change to this
  * function or some related code).
@@ -1339,7 +1339,7 @@ finalize_it:
 }
 
 
-/* add a listener to the server 
+/* add a listener to the server
  */
 static rsRetVal
 addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6)
@@ -1411,7 +1411,7 @@ finalize_it:
 }
 
 
-/* add a session to the server 
+/* add a session to the server
  */
 static rsRetVal
 addSess(ptcplstn_t *pLstn, int sock, prop_t *peerName, prop_t *peerIP)
@@ -1607,7 +1607,7 @@ finalize_it:
 }
 
 
-/* This function is called when a new listener instace shall be added to 
+/* This function is called when a new listener instace shall be added to
  * the current config object via the legacy config system. It just shuffles
  * all parameters to the listener in-memory instance.
  */
@@ -1770,12 +1770,12 @@ stopWorkerPool(void)
 		pthread_join(wrkrInfo[i].tid, NULL);
 		DBGPRINTF("imptcp: info: worker %d was called %llu times\n", i, wrkrInfo[i].numCalled);
 	}
-    free(wrkrInfo);
+	free(wrkrInfo);
 }
 
 
 
-/* start up all listeners 
+/* start up all listeners
  * This is a one-time stop once the module is set to start.
  */
 static rsRetVal
@@ -1804,7 +1804,7 @@ startupServers(void)
 	DBGPRINTF("imptcp: %d out of %d servers started successfully\n", iOK, iAll);
 	if(iOK == 0)	/* iff all fails, we report an error */
 		iRet = lastErr;
-		
+
 	RETiRet;
 }
 

@@ -48,7 +48,7 @@ DEFobjCurrIf(glbl)
 BEGINobjConstruct(nsdsel_ptcp) /* be sure to specify the object type also in END macro! */
 	pThis->currfds = 0;
 	pThis->maxfds = FDSET_INCREMENT;
-        CHKmalloc(pThis->fds = calloc(FDSET_INCREMENT, sizeof(struct pollfd)));
+	CHKmalloc(pThis->fds = calloc(FDSET_INCREMENT, sizeof(struct pollfd)));
 finalize_it:
 ENDobjConstruct(nsdsel_ptcp)
 

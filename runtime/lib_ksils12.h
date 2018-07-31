@@ -7,11 +7,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -147,7 +147,7 @@ struct rsksistatefile {
 #define RSGTE_LEN 5	/* error related to length records */
 #define RSGTE_SIG_EXTEND 6/* error extending signature */
 #define RSGTE_INVLD_RECCNT 7/* mismatch between actual records and records
-                               given in block-sig record */
+				given in block-sig record */
 #define RSGTE_INVLHDR 8/* invalid file header */
 #define RSGTE_EOF 9 	/* specific EOF */
 #define RSGTE_MISS_REC_HASH 10 /* record hash missing when expected */

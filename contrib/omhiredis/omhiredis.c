@@ -54,7 +54,7 @@ DEF_OMOD_STATIC_DATA
 #define OMHIREDIS_MODE_PUBLISH 2
 
 /* our instance data.
- * this will be accessable 
+ * this will be accessable
  * via pData */
 typedef struct _instanceData {
 	uchar *server; /* redis server address */
@@ -140,9 +140,9 @@ static rsRetVal initHiredis(wrkrInstanceData_t *pWrkrData, int bSilent)
 	char *serverpasswd;
 	DEFiRet;
 
-	server = (pWrkrData->pData->server == NULL) ? (char *)"127.0.0.1" : 
+	server = (pWrkrData->pData->server == NULL) ? (char *)"127.0.0.1" :
 			(char*) pWrkrData->pData->server;
-	DBGPRINTF("omhiredis: trying connect to '%s' at port %d\n", server, 
+	DBGPRINTF("omhiredis: trying connect to '%s' at port %d\n", server,
 			pWrkrData->pData->port);
 	
 	struct timeval timeout = { 1, 500000 }; /* 1.5 seconds */
@@ -180,7 +180,7 @@ static rsRetVal writeHiredis(uchar* key, uchar *message, wrkrInstanceData_t *pWr
 	if(pWrkrData->conn == NULL)
 		CHKiRet(initHiredis(pWrkrData, 0));
 
-	/* try to append the command to the pipeline. 
+	/* try to append the command to the pipeline.
 	 * REDIS_ERR reply indicates something bad
 	 * happened, in which case abort. otherwise
 	 * increase our current pipeline count
@@ -239,7 +239,7 @@ ENDbeginTransaction
  * current pipeline */
 BEGINdoAction
 CODESTARTdoAction
-	if(pWrkrData->pData->dynaKey) { 
+	if(pWrkrData->pData->dynaKey) {
 		CHKiRet(writeHiredis(ppString[1], ppString[0], pWrkrData));
 	}
 	else {
@@ -275,8 +275,8 @@ CODESTARTendTransaction
 finalize_it:
 ENDendTransaction
 
-/* set defaults. note server is set to NULL 
- * and is set to a default in initHiredis if 
+/* set defaults. note server is set to NULL
+ * and is set to a default in initHiredis if
  * it is still null when it's called - I should
  * probable just set the default here instead */
 static void
@@ -293,7 +293,7 @@ setInstParamDefaults(instanceData *pData)
 }
 
 /* here is where the work to set up a new instance
- * is done.  this reads the config options from 
+ * is done.  this reads the config options from
  * the rsyslog conf and takes appropriate setup
  * actions. */
 BEGINnewActInst
@@ -398,7 +398,7 @@ CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
-CODEqueryEtryPt_TXIF_OMOD_QUERIES /*  supports transaction interface */ 
+CODEqueryEtryPt_TXIF_OMOD_QUERIES /*  supports transaction interface */
 ENDqueryEtryPt
 
 /* note we do not support rsyslog v5 syntax */

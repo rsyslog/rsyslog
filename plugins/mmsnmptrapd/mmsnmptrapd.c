@@ -83,7 +83,7 @@ typedef struct configSettings_s {
 static configSettings_t cs;
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
+CODESTARTinitConfVars
 	cs.pszTagName = NULL;
 	cs.pszSeverityMapping = NULL;
 	resetConfigVariables(NULL, NULL);
@@ -374,7 +374,7 @@ BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 ENDqueryEtryPt
 
 

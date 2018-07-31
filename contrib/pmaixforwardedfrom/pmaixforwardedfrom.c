@@ -87,7 +87,7 @@ CODESTARTparse
 	}
 	if((unsigned) lenMsg < 24) {
 		/* too short, can not be "our" message */
-                /* minimum message, 16 character timestamp, 'From ", 1 character name, ': '*/
+		/* minimum message, 16 character timestamp, 'From ", 1 character name, ': '*/
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
 
@@ -165,7 +165,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
 	DBGPRINTF("aixforwardedfrom parser init called, compiled with version %s\n", VERSION);
- 	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG();
+	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG();
 	/* cache value, is set only during rsyslogd option processing */
 
 

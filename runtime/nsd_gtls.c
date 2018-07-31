@@ -250,14 +250,14 @@ finalize_it:
  */
 static int
 gtlsClientCertCallback(gnutls_session_t session,
-        __attribute__((unused)) const gnutls_datum_t* req_ca_rdn,
+	__attribute__((unused)) const gnutls_datum_t* req_ca_rdn,
 	int __attribute__((unused)) nreqs,
-        __attribute__((unused)) const gnutls_pk_algorithm_t* sign_algos,
+	__attribute__((unused)) const gnutls_pk_algorithm_t* sign_algos,
 	int __attribute__((unused)) sign_algos_length,
 #if HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION
 	gnutls_retr2_st* st
 #else
-        gnutls_retr_st *st
+	gnutls_retr_st *st
 #endif
 	)
 {
@@ -1225,9 +1225,9 @@ CODESTARTobjDestruct(nsd_gtls)
 	}
 
 	if(pThis->bOurCertIsInit)
-                  for(unsigned i=0; i<pThis->nOurCerts; ++i) {
+		for(unsigned i=0; i<pThis->nOurCerts; ++i) {
 			gnutls_x509_crt_deinit(pThis->pOurCerts[i]);
-                  }
+		}
 	if(pThis->bOurKeyIsInit)
 		gnutls_x509_privkey_deinit(pThis->ourKey);
 	if(pThis->bHaveSess)

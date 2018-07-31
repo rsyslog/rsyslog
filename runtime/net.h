@@ -56,11 +56,11 @@ typedef enum _TCPFRAMINGMODE {
 #endif
 
 struct NetAddr {
-  uint8_t flags;
-  union {
-    struct sockaddr *NetAddr;
-    char *HostWildcard;
-  } addr;
+	uint8_t flags;
+	union {
+		struct sockaddr *NetAddr;
+		char *HostWildcard;
+	} addr;
 };
 
 #ifndef SO_BSDCOMPAT

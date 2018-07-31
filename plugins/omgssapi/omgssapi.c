@@ -286,7 +286,7 @@ static rsRetVal TCPSendGSSInit(void *pvData)
 finalize_it:
 	RETiRet;
 
- fail:
+fail:
 	LogError(0, RS_RET_GSS_SENDINIT_ERROR, "GSS-API Context initialization failed\n");
 	gss_release_name(&min_stat, &target_name);
 	gss_release_buffer(&min_stat, &out_tok);
@@ -331,7 +331,7 @@ static rsRetVal TCPSendGSSSend(void *pvData, char *msg, size_t len)
 
 	return RS_RET_OK;
 
- fail:
+fail:
 	close(s);
 	pData->sock = -1;
 	gss_delete_sec_context(&min_stat, context, GSS_C_NO_BUFFER);
@@ -357,7 +357,7 @@ static rsRetVal doTryResume(instanceData *pData)
 		iRet = RS_RET_OK; /* the actual check happens during doAction() only */
 		pData->eDestState = eDestFORW;
 		break;
-		
+
 	case eDestFORW_UNKN:
 		/* The remote address is not yet known and needs to be obtained */
 		dbgprintf(" %s\n", pData->f_hname);
@@ -407,7 +407,7 @@ CODESTARTdoAction
 		dbgprintf("internal error in omgssapi.c, eDestFORW_SUSP in doAction()!\n");
 		iRet = RS_RET_SUSPENDED;
 		break;
-		
+
 	case eDestFORW_UNKN:
 		dbgprintf("doAction eDestFORW_UNKN\n");
 		iRet = doTryResume(pData);
@@ -483,9 +483,9 @@ ENDdoAction
 BEGINparseSelectorAct
 	uchar *q;
 	int i;
-        int error;
+	int error;
 	int bErr;
-        struct addrinfo hints, *res;
+	struct addrinfo hints, *res;
 	TCPFRAMINGMODE tcp_framing = TCP_FRAMING_OCTET_STUFFING;
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
@@ -514,7 +514,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * The first option defined is "z[0..9]" where the digit indicates
 	 * the compression level. If it is not given, 9 (best compression) is
 	 * assumed. An example action statement might be:
-	 * @@(z5,o)127.0.0.1:1400  
+	 * @@(z5,o)127.0.0.1:1400
 	 * Which means send via TCP with medium (5) compresion (z) to the local
 	 * host on port 1400. The '0' option means that octet-couting (as in
 	 * IETF I-D syslog-transport-tls) is to be used for framing (this option
@@ -590,7 +590,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		}
 	}
 	
-		
+
 	/* now skip to template */
 	bErr = 0;
 	while(*p && *p != ';') {

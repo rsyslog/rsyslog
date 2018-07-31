@@ -182,11 +182,11 @@ uchar *srUtilStrDup(uchar *pOld, size_t len)
  * Return 0 on success, -1 otherwise. On failure, errno * hold the last OS error.
  * Param "mode" holds the mode that all non-existing directories are to be
  * created with.
- * Note that we have a potential race inside that code, a race that even exists 
+ * Note that we have a potential race inside that code, a race that even exists
  * outside of the rsyslog process (if multiple instances run, or other programs
  * generate directories): If the directory does not exist, a context switch happens,
- * at that moment another process creates it, then our creation on the context 
- * switch back fails. This actually happened in practice, and depending on the 
+ * at that moment another process creates it, then our creation on the context
+ * switch back fails. This actually happened in practice, and depending on the
  * configuration it is even likely to happen. We can not solve this situation
  * with a mutex, as that works only within out process space. So the solution
  * is that we take the optimistic approach, try the creation, and if it fails
@@ -521,7 +521,7 @@ mutexCancelCleanup(void *arg)
 }
 
 
-/* rsSleep() - a fairly portable way to to sleep. It 
+/* rsSleep() - a fairly portable way to to sleep. It
  * will wake up when
  * a) the wake-time is over
  * rgerhards, 2008-01-28
@@ -608,13 +608,13 @@ int decodeSyslogName(uchar *name, syslogName_t *codetab)
 /**
  * getSubString
  *
- * Copy a string byte by byte until the occurrence  
+ * Copy a string byte by byte until the occurrence
  * of a given separator.
  *
  * \param ppSrc		Pointer to a pointer of the source array of characters. If a
 			separator detected the Pointer points to the next char after the
-			separator. Except if the end of the string is dedected ('\n'). 
-			Then it points to the terminator char. 
+			separator. Except if the end of the string is dedected ('\n').
+			Then it points to the terminator char.
  * \param pDst		Pointer to the destination array of characters. Here the substing
 			will be stored.
  * \param DstSize	Maximum numbers of characters to store.
@@ -634,7 +634,7 @@ int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep)
 		DstSize--;
 	}
 	/* check if the Dst buffer was to small */
-	if ((cSep == ' ' ? !isspace(*pSrc) : *pSrc != cSep) && *pSrc != '\n' && *pSrc != '\0') { 
+	if ((cSep == ' ' ? !isspace(*pSrc) : *pSrc != cSep) && *pSrc != '\n' && *pSrc != '\0') {
 		dbgprintf("in getSubString, error Src buffer > Dst buffer\n");
 		iErr = 1;
 	}	

@@ -4,7 +4,7 @@
  * name is abbreviated to "rsrt" (rsyslog runtime).
  *
  * Please note that the runtime library tends to be plugin-safe. That is, it must be
- * initialized by calling a global initialization function. However, that 
+ * initialized by calling a global initialization function. However, that
  * function checks if the library is already initialized and, if so, does
  * nothing except incrementing a refeence count. Similarly, the deinit
  * function does nothing as long as there are still other users (which
@@ -96,7 +96,7 @@ void (*glblErrLogger)(const int, const int, const uchar*) = dfltErrLogger;
 
 /* static data */
 static int iRefCount = 0; /* our refcount - it MUST exist only once inside a process (not thread)
- 		             thus it is perfectly OK to use a static. MUST be initialized to 0! */
+			thus it is perfectly OK to use a static. MUST be initialized to 0! */
 
 /* This is the default instance of the error logger. It simply writes the message
  * to stderr. It is expected that this is replaced by the runtime user very early
@@ -163,7 +163,7 @@ rsrtInit(const char **ppErrObj, obj_if_t *pObjIF)
 			default_thr_sched_policy = 0; /* should be default on all platforms */
 		}
 #if defined (_AIX)
-                pthread_attr_setstacksize(&default_thread_attr, 4096*512);
+		pthread_attr_setstacksize(&default_thread_attr, 4096*512);
 #endif
 
 

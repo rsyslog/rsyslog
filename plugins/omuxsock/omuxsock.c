@@ -11,11 +11,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -96,7 +96,7 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current ex
 static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
+CODESTARTinitConfVars
 	cs.tplName = NULL;
 	cs.sockName = NULL;
 ENDinitConfVars
@@ -300,13 +300,13 @@ openSocket(instanceData *pData)
 			eno, rs_strerror_r(eno, errStr, sizeof(errStr)));
 		pData->sock = INVLD_SOCK;
 		ABORT_FINALIZE(RS_RET_NO_SOCKET);
-		
+
 	}
 
 	/* set up server address structure */
 	memset(&pData->addr, 0, sizeof(pData->addr));
-        pData->addr.sun_family = AF_UNIX;
-        strncpy(pData->addr.sun_path, (char*)pData->sockName, sizeof(pData->addr.sun_path));
+	pData->addr.sun_family = AF_UNIX;
+	strncpy(pData->addr.sun_path, (char*)pData->sockName, sizeof(pData->addr.sun_path));
 	pData->addr.sun_path[sizeof(pData->addr.sun_path)-1] = '\0';
 
 finalize_it:

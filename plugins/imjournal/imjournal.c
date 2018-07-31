@@ -10,11 +10,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -457,22 +457,22 @@ persistJournalState(void)
 	/* On success, sd_journal_get_cursor() returns 1 in systemd
 	   197 or older and 0 in systemd 198 or newer */
 	if ((ret = sd_journal_get_cursor(j, &cursor)) >= 0) {
-               /* we create a temporary name by adding a ".tmp"
-                * suffix to the end of our state file's name
-                */
-               snprintf(tmp_sf, sizeof(tmp_sf), "%s.tmp", cs.stateFile);
-               if ((sf = fopen(tmp_sf, "wb")) != NULL) {
+		/* we create a temporary name by adding a ".tmp"
+		* suffix to the end of our state file's name
+		*/
+		snprintf(tmp_sf, sizeof(tmp_sf), "%s.tmp", cs.stateFile);
+		if ((sf = fopen(tmp_sf, "wb")) != NULL) {
 			if (fprintf(sf, "%s", cursor) < 0) {
 				iRet = RS_RET_IO_ERROR;
 			}
 			fclose(sf);
 			free(cursor);
-                       /* change the name of the file to the configured one */
-                       if (iRet == RS_RET_OK && rename(tmp_sf, cs.stateFile) == -1) {
-                               LogError(errno, iRet, "imjournal: rename() failed: "
-                                       "for new path: '%s'", cs.stateFile);
-                               iRet = RS_RET_IO_ERROR;
-                       }
+			/* change the name of the file to the configured one */
+			if (iRet == RS_RET_OK && rename(tmp_sf, cs.stateFile) == -1) {
+				LogError(errno, iRet, "imjournal: rename() failed: "
+					"for new path: '%s'", cs.stateFile);
+				iRet = RS_RET_IO_ERROR;
+			}
 
 		} else {
 			LogError(errno, RS_RET_FOPEN_FAILURE, "imjournal: fopen() failed "
@@ -603,7 +603,7 @@ loadJournalState(void)
 				* This is resolving the situation when system is after reboot and boot_id
 				* doesn't match so cursor pointing into "future".
 				* Usually sd_journal_next jump to head of journal due to journal aproximation,
-				* but when system time goes backwards and cursor is still 
+				* but when system time goes backwards and cursor is still
 				  invalid, rsyslog stops logging.
 				* We use sd_journal_get_cursor to validate our cursor.
 				* When cursor is invalid we are trying to jump to the head of journal
@@ -896,7 +896,7 @@ CODESTARTsetModCnf
 		} else if (!strcmp(modpblk.descr[i].name, "ignorepreviousmessages")) {
 			cs.bIgnorePrevious = (int) pvals[i].val.d.n;
 		} else if (!strcmp(modpblk.descr[i].name, "ignorenonvalidstatefile")) {
-			cs.bIgnoreNonValidStatefile = (int) pvals[i].val.d.n; 
+			cs.bIgnoreNonValidStatefile = (int) pvals[i].val.d.n;
 		} else if (!strcmp(modpblk.descr[i].name, "defaultseverity")) {
 			cs.iDfltSeverity = (int) pvals[i].val.d.n;
 		} else if (!strcmp(modpblk.descr[i].name, "defaultfacility")) {

@@ -3,7 +3,7 @@
  * This file proides debug and run time error analysis support. Some of the
  * settings are very performance intense and my be turned off during a release
  * build.
- * 
+ *
  * File begun on 2008-01-22 by RGerhards
  *
  * Some functions are controlled by environment variables:
@@ -20,11 +20,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -176,9 +176,9 @@ dbgRecordExecLocation(int iStackPtr, int line)
 }
 
 
-/* ------------------------- mutex tracking code ------------------------- */ 
+/* ------------------------- mutex tracking code ------------------------- */
 
-/* ------------------------- FuncDB utility functions ------------------------- */ 
+/* ------------------------- FuncDB utility functions ------------------------- */
 
 #define SIZE_FUNCDB_MUTEX_TABLE(pFuncDB) ((int) (sizeof(pFuncDB->mutInfo) / sizeof(dbgFuncDBmutInfoEntry_t)))
 
@@ -303,7 +303,7 @@ dbgFuncDBRemoveMutexLock(dbgFuncDB_t *pFuncDB, pthread_mutex_t *pmut)
 }
 
 
-/* ------------------------- END FuncDB utility functions ------------------------- */ 
+/* ------------------------- END FuncDB utility functions ------------------------- */
 
 /* output the current thread ID to "relevant" places
  * (what "relevant" means is determinded by various ways)
@@ -323,7 +323,7 @@ dbgOutputTID(char* name __attribute__((unused)))
 /* ###########################################################################
  * 				IMPORTANT NOTE
  * Mutex instrumentation reduces the code's concurrency and thus affects its
- * order of execution. It is vital to test the code also with mutex 
+ * order of execution. It is vital to test the code also with mutex
  * instrumentation turned off! Some bugs may not show up while it on...
  * ###########################################################################
  */
@@ -505,7 +505,7 @@ dbgMutexLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int lockLn)
 	dbgFuncDBAddMutexLock(pFuncDB, pmut, lockLn);
 	pthread_mutex_unlock(&mutMutLog);
 	if(bPrintMutexAction)
-		dbgprintf("%s:%d:%s: mutex %p aquired\n", pFuncDB->file, lockLn, pFuncDB->func, (void*)pmut); 
+		dbgprintf("%s:%d:%s: mutex %p aquired\n", pFuncDB->file, lockLn, pFuncDB->func, (void*)pmut);
 }
 
 
@@ -536,8 +536,8 @@ if(pLog == NULL) {
 }
 #endif
 #ifndef _AIX
-#include <sys/syscall.h> 
-#endif 
+#include <sys/syscall.h>
+#endif
 
 	/* we found the last lock entry. We now need to see from which FuncDB we need to
 	 * remove it. This is recorded inside the mutex log entry.
@@ -637,10 +637,10 @@ dbgFuncDB_t *pFuncDB, int ln, int iStackPtr)
 }
 
 
-/* ------------------------- end mutex tracking code ------------------------- */ 
+/* ------------------------- end mutex tracking code ------------------------- */
 
 
-/* ------------------------- thread tracking code ------------------------- */ 
+/* ------------------------- thread tracking code ------------------------- */
 
 /* get ptr to call stack - if none exists, create a new stack
  */
@@ -768,7 +768,7 @@ static void dbgCallStackPrintAll(void)
 }
 
 
-/* handler for SIGSEGV - MUST terminiate the app, but does so in a somewhat 
+/* handler for SIGSEGV - MUST terminiate the app, but does so in a somewhat
  * more meaningful way.
  * rgerhards, 2008-01-22
  */
@@ -881,7 +881,7 @@ do_dbgprint(uchar *pszObjName, char *pszMsg, const char *pszFileName, size_t len
 		offsWriteBuf += lenWriteBuf;
 	}
 #endif
-	if(lenMsg > sizeof(pszWriteBuf) - offsWriteBuf) 
+	if(lenMsg > sizeof(pszWriteBuf) - offsWriteBuf)
 		lenCopy = sizeof(pszWriteBuf) - offsWriteBuf;
 	else
 		lenCopy = lenMsg;
@@ -1161,7 +1161,7 @@ void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore, int iRet)
 			if(iRet == RS_RET_NO_IRET)
 				dbgprintf("%s:%d: %s: exit: (no iRet)\n", pFuncDB->file, pFuncDB->line,
 					pFuncDB->func);
-			else 
+			else
 				dbgprintf("%s:%d: %s: exit: %d\n", pFuncDB->file, pFuncDB->line, pFuncDB->func, iRet);
 		}
 	}
@@ -1205,7 +1205,7 @@ static void sigusr2Hdlr(int __attribute__((unused)) signum)
 
 
 /* parse a param/value pair from the current location of the
- * option string. Returns 1 if an option was found, 0 
+ * option string. Returns 1 if an option was found, 0
  * otherwise. 0 means there are NO MORE options to be
  * processed. -- rgerhards, 2008-02-28
  */
@@ -1261,7 +1261,7 @@ dbgGetRTOptNamVal(uchar **ppszOpt, uchar **ppOptName, uchar **ppOptVal)
 /* create new PrintName list entry and add it to list (they will never
  * be removed. -- rgerhards, 2008-02-28
  */
-static void 
+static void
 dbgPrintNameAdd(uchar *pName, dbgPrintName_t **ppRoot)
 {
 	dbgPrintName_t *pEntry;

@@ -14,7 +14,7 @@
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * If that may be required, an exception is granted to permit linking 
+ * If that may be required, an exception is granted to permit linking
  * this code to the code in solaris_cddl.c that is under the cddl license.
  *
  * Rsyslog is distributed in the hope that it will be useful,
@@ -85,10 +85,10 @@ klogWillRun(void)
  */
 rsRetVal klogAfterRun(void)
 {
-        DEFiRet;
+	DEFiRet;
 	if(fklog != -1)
 		close(fklog);
-        RETiRet;
+	RETiRet;
 }
 
 
@@ -99,7 +99,7 @@ rsRetVal klogAfterRun(void)
  */
 rsRetVal klogLogKMsg(void)
 {
-        DEFiRet;
+	DEFiRet;
 	sun_sys_poll();
 	RETiRet;
 }

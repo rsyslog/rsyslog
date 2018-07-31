@@ -59,7 +59,7 @@ MODULE_CNFNAME("ompgsql")
 DEF_OMOD_STATIC_DATA
 
 typedef struct _instanceData {
-	char            srv[MAXHOSTNAMELEN+1];   /* IP or hostname of DB server*/ 
+	char            srv[MAXHOSTNAMELEN+1];   /* IP or hostname of DB server*/
 	char            dbname[_DB_MAXDBLEN+1];  /* DB name */
 	char            user[_DB_MAXUNAMELEN+1]; /* DB user */
 	char            pass[_DB_MAXPWDLEN+1];   /* DB user's password */
@@ -303,7 +303,7 @@ CODESTARTtryResume
 		if (iRet == RS_RET_OK) {
 			/* the code above seems not to actually connect to the database. As such, we do a
 			 * dummy statement (a pointless select...) to verify the connection and return
-			 * success only when that statemetn succeeds. Note that I am far from being a 
+			 * success only when that statemetn succeeds. Note that I am far from being a
 			 * PostgreSQL expert, so any patch that does the desired result in a more
 			 * intelligent way is highly welcome. -- rgerhards, 2009-12-16
 			 */
@@ -472,7 +472,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	/* sur5r 2007-10-18: added support for PgSQL
 	 * :ompgsql:server,dbname,userid,password
-	 * Now we read the PgSQL connection properties 
+	 * Now we read the PgSQL connection properties
 	 * and verify that the properties are valid.
 	 */
 	if (getSubString(&p, pData->srv, MAXHOSTNAMELEN+1, ','))
@@ -501,9 +501,9 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar*)" StdPgSQLFmt"));
 	}
 
-	/* If we detect invalid properties, we disable logging, 
-	 * because right properties are vital at this place.  
-	 * Retries make no sense. 
+	/* If we detect invalid properties, we disable logging,
+	 * because right properties are vital at this place.
+	 * Retries make no sense.
 	 */
 	if (iPgSQLPropErr) {
 		LogError(0, RS_RET_INVALID_PARAMS, "Trouble with PgSQL connection properties. "

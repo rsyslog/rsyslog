@@ -4,7 +4,7 @@
  * much later. I began the file on 2008-02-19 as part of the modularization
  * effort. Over time, a clean abstration will become even more important
  * because the config file handler will by dynamically be loaded and be
- * kept in memory only as long as the config file is actually being 
+ * kept in memory only as long as the config file is actually being
  * processed. Thereafter, it shall be unloaded. -- rgerhards
  * Please note that the original syslogd.c source was under BSD license
  * at the time of the rsyslog fork from sysklogd.
@@ -16,11 +16,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -150,7 +150,7 @@ ltrim(char *src)
  * and then the proper sub-function is called to handle
  * the actual directive.
  * rgerhards 2004-11-17
- * rgerhards 2005-06-21: previously only for templates, now 
+ * rgerhards 2005-06-21: previously only for templates, now
  *    generalized.
  */
 static rsRetVal
@@ -182,13 +182,13 @@ doNameLine(uchar **pp, void* pVal)
 	 */
 	
 	switch(eDir) {
-		case DIR_TEMPLATE: 
+		case DIR_TEMPLATE:
 			tplAddLine(loadConf, szName, &p);
 			break;
-		case DIR_OUTCHANNEL: 
+		case DIR_OUTCHANNEL:
 			ochAddLine(szName, &p);
 			break;
-		case DIR_ALLOWEDSENDER: 
+		case DIR_ALLOWEDSENDER:
 			net.addAllowedSenderLine(szName, &p);
 			break;
 		default:/* we do this to avoid compiler warning - not all
@@ -241,7 +241,7 @@ cfsysline(uchar *p)
 	skipWhiteSpace(&p);
 
 	if(*p && *p != '#') { /* we have a non-whitespace, so let's complain */
-		LogError(0, NO_ERRCODE, 
+		LogError(0, NO_ERRCODE,
 		         "error: extra characters in config line ignored: '%s'", p);
 	}
 

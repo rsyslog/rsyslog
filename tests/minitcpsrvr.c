@@ -54,7 +54,7 @@ main(int argc, char *argv[])
 	int fdf = -1;
 	struct sockaddr_in srvAddr;
 	struct sockaddr_in cliAddr;
-	unsigned int srvAddrLen; 
+	unsigned int srvAddrLen;
 	unsigned int cliAddrLen;
 	char wrkBuf[4096];
 	ssize_t nRead;
@@ -119,7 +119,7 @@ main(int argc, char *argv[])
 	cliAddrLen = sizeof(cliAddr);
 
 	fdc = accept(fds, (struct sockaddr *)&cliAddr, &cliAddrLen);
-	while(1) {       
+	while(1) {
 		nRead = read(fdc, wrkBuf, sizeof(wrkBuf));
 		if(nRead == 0) break;
 		if(write(fdf, wrkBuf, nRead) != nRead)

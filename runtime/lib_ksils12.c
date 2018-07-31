@@ -1,6 +1,6 @@
 /* lib_ksils12.c - rsyslog's KSI-LS12 support library
  *
- * Regarding the online algorithm for Merkle tree signing. Expected 
+ * Regarding the online algorithm for Merkle tree signing. Expected
  * calling sequence is:
  *
  * sigblkConstruct
@@ -11,7 +11,7 @@
  *    sigblkFinishKSI
  * sigblkDestruct
  *
- * Obviously, the next call after sigblkFinsh must either be to 
+ * Obviously, the next call after sigblkFinsh must either be to
  * sigblkInitKSI or sigblkDestruct (if no more signature blocks are
  * to be emitted, e.g. on file close). sigblkDestruct saves state
  * information (most importantly last block hash) and sigblkConstruct
@@ -24,11 +24,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -210,7 +210,7 @@ tlvWriteHeader8(FILE *f, int flags, uint8_t tlvtype, int len) {
 	buf[1] = len & 0xff;
 
 	return tlvWriteOctetString(f, buf, 2);
-} 
+}
 
 static int
 tlvWriteHeader16(FILE *f, int flags, uint16_t tlvtype, uint16_t len)
@@ -359,7 +359,7 @@ done:
 }
 
 static int
-tlvCreateMetadata(ksifile ksi, uint64_t record_index, const char *key, 
+tlvCreateMetadata(ksifile ksi, uint64_t record_index, const char *key,
 		const char *value, unsigned char *buffer, size_t *len) {
 	int r = 0;
 	KSI_TlvElement *metadata = NULL, *attrib_tlv = NULL;
@@ -560,7 +560,7 @@ ksiCreateFile(rsksictx ctx, const char *path, uid_t uid, gid_t gid, int mode, bo
 
 	if (stat_st.st_size == 0 && header != NULL) {
 		if(fwrite(header, strlen(header), 1, f) != 1) {
-        	        report(ctx, "ksiOpenSigFile: fwrite for file %s failed: %s",
+			report(ctx, "ksiOpenSigFile: fwrite for file %s failed: %s",
 				path, strerror(errno));
 	                goto done;
 		}
@@ -793,7 +793,7 @@ done:
 	pthread_mutex_unlock(&ctx->module_lock);
 	return ksi;
 }
- 
+
 
 /* returns 0 on succes, 1 if algo is unknown, 2 is algo has been remove
  * because it is now considered insecure
@@ -931,7 +931,7 @@ done:
 
 int
 sigblkHashTwoNodes(ksifile ksi, KSI_DataHash **out, KSI_DataHash *left, KSI_DataHash *right,
-          uint8_t level) {
+		uint8_t level) {
 	int r = 0;
 
 	CHKr(KSI_DataHasher_reset(ksi->ctx->hasher));
@@ -996,7 +996,7 @@ sigblkAddLeaf(ksifile ksi, const uchar *leafData, const size_t leafLength, bool 
 	CHKr(sigblkCreateMask(ksi, &mask));
 	CHKr(sigblkCreateHash(ksi, &leafHash, leafData, leafLength));
 
-	if(ksi->nRecords == 0) 
+	if(ksi->nRecords == 0)
 		tlvWriteBlockHdrKSI(ksi);
 
 	/* metadata record has to be written into the block file too*/
@@ -1132,17 +1132,17 @@ signing_done:
 
 unsigned
 sigblkCalcLevel(unsigned leaves) {
-    unsigned level = 0;
-    unsigned c = leaves;
-    while (c > 1) {
-        level++;
-        c >>= 1;
-    }
+	unsigned level = 0;
+	unsigned c = leaves;
+	while (c > 1) {
+		level++;
+		c >>= 1;
+	}
 
-    if (1 << level < (int)leaves)
-        level++;
+	if (1 << level < (int)leaves)
+		level++;
 
-    return level;
+	return level;
 }
 
 int
@@ -1259,7 +1259,7 @@ static void process_requests(rsksictx ctx, KSI_CTX *ksi_ctx, FILE* outfile) {
 	while (ProtectedQueue_peekFront(ctx->signer_queue, (void**) &item) && item->type == QITEM_SIGNATURE_REQUEST) {
 		if (lastItem != NULL) {
 			if (outfile)
-				tlvWriteNoSigLS12(outfile, lastItem->intarg1, lastItem->arg, 
+				tlvWriteNoSigLS12(outfile, lastItem->intarg1, lastItem->arg,
 						"Signature request dropped for block, signer queue full");
 			report(ctx, "Signature request dropped for block, signer queue full");
 

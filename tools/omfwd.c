@@ -11,11 +11,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -212,7 +212,7 @@ static rsRetVal initTCP(wrkrInstanceData_t *pWrkrData);
 
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
+CODESTARTinitConfVars
 	cs.pszTplName = NULL; /* name of the default template to use */
 	cs.pszStrmDrvr = NULL; /* name of the stream driver to use */
 	cs.iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
@@ -1116,7 +1116,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->iKeepAliveIntvl = 0;
 	pData->iKeepAliveTime = 0;
 	pData->gnutlsPriorityString = NULL;
-	pData->bResendLastOnRecon = 0; 
+	pData->bResendLastOnRecon = 0;
 	pData->bSendToAll = -1;  /* unspecified */
 	pData->iUDPSendDelay = 0;
 	pData->UDPSendBuf = 0;
@@ -1359,7 +1359,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * The first option defined is "z[0..9]" where the digit indicates
 	 * the compression level. If it is not given, 9 (best compression) is
 	 * assumed. An example action statement might be:
-	 * @@(z5,o)127.0.0.1:1400  
+	 * @@(z5,o)127.0.0.1:1400
 	 * Which means send via TCP with medium (5) compresion (z) to the local
 	 * host on port 1400. The '0' option means that octet-couting (as in
 	 * IETF I-D syslog-transport-tls) is to be used for framing (this option

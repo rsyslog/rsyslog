@@ -26,17 +26,17 @@
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("mmgrok");
-        
+
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
 
 DEF_OMOD_STATIC_DATA
 
 typedef struct result_s{
-    char *key;
-    int     key_len;
-    const char *value;
-    int value_len;
-    char *type;
+	char *key;
+	int key_len;
+	const char *value;
+	int value_len;
+	char *type;
 }result_t;
 
 /* config variables */
@@ -68,7 +68,7 @@ static struct cnfparamdescr actpdescr[]={
     {"target",eCmdHdlrString,0},
 };
 
-static struct cnfparamblk actpblk = 
+static struct cnfparamblk actpblk =
 {
     CNFPARAMBLK_VERSION,
     sizeof(actpdescr)/sizeof(struct cnfparamdescr),
@@ -132,7 +132,7 @@ static inline void setInstParamDefaults(instanceData *pData)
     pData->pmsg = NULL;
 }
 
-    
+
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
@@ -187,7 +187,7 @@ ENDdbgPrintInstInfo
 BEGINtryResume
 CODESTARTtryResume
 ENDtryResume
-        
+
 static inline grok_t *CreateGrok(void)
 {
     grok_t  *grok = grok_new();
@@ -200,16 +200,16 @@ static inline grok_t *CreateGrok(void)
 }
 
 /* the parseing is complate message into json */
-static rsRetVal 
+static rsRetVal
 smsg_to_json(GList *list,instanceData *pData)
 {
     GList *it= list;
 
     struct json_object *json;
     struct json_object *jval;
-    
+
     DEFiRet;
-    
+
     json = json_object_new_object();
     if(json == NULL)
     {
@@ -234,25 +234,25 @@ finalize_it:
 }
 
 /* store parse result ,use list in glib*/
-static rsRetVal 
+static rsRetVal
 parse_result_store(const grok_match_t gm,instanceData *pData)
 {
         GList *re_list = NULL;
         char  *pname;
         const char  *pdata;
         int    pname_len,pdata_len;
-        
+
         char *key;
         char *type;
         DEFiRet;
         	
         grok_match_walk_init(&gm); //grok API
-        
+
         while(grok_match_walk_next(&gm,&pname,&pname_len,&pdata,&pdata_len) == 0)
         {
             /* parse key and value type from patterns */
             key = strchr(pname,':');
-	    
+	
             if(key!=NULL)
             {
                 int key_len;
@@ -305,7 +305,7 @@ MotifyLine(char *line,grok_t *grok,instanceData *pData)
         DBGPRINTF("mmgrok: grok_exec faile!exit code: %d\n",exe);
 	ABORT_FINALIZE(RS_RET_ERR);
     }
-    parse_result_store(gm,pData); 
+    parse_result_store(gm,pData);
 finalize_it:
     RETiRet;
 }

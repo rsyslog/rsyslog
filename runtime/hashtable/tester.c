@@ -70,10 +70,10 @@ main(int argc, char **argv)
         k->two_ip = 0xcf0cee67 - (5 * i);
         k->one_port = 22 + (7 * i);
         k->two_port = 5522 - (3 * i);
-        
+
         v = (struct value *)malloc(sizeof(struct value));
         v->id = "a value";
-        
+
         if (!insert_some(h,k,v)) exit(-1); /*oom*/
     }
     printf("After insertion, hashtable contains %u items.\n",
@@ -86,14 +86,14 @@ main(int argc, char **argv)
         printf("ran out of memory allocating a key\n");
         return 1;
     }
-    
+
     for (i = 0; i < ITEM_COUNT; i++)
     {
         k->one_ip = 0xcfccee40 + i;
         k->two_ip = 0xcf0cee67 - (5 * i);
         k->one_port = 22 + (7 * i);
         k->two_port = 5522 - (3 * i);
-        
+
         if (NULL == (found = search_some(h,k))) {
             printf("BUG: key not found\n");
         }
@@ -131,7 +131,7 @@ main(int argc, char **argv)
         k->two_ip = 0xcf0cee67 - (5 * i);
         k->one_port = 22 + (7 * i);
         k->two_port = 5522 - (3 * i);
-        
+
         if (0 == search_itr_some(itr,h,k)) {
             printf("BUG: key not found searching with iterator");
         }
@@ -146,7 +146,7 @@ main(int argc, char **argv)
         k->two_ip = 0xcf0cee67 - (5 * i);
         k->one_port = 22 + (7 * i);
         k->two_port = 5522 - (3 * i);
-        
+
         if (NULL == (found = remove_some(h,k))) {
             printf("BUG: key not found for removal\n");
         }
@@ -177,10 +177,10 @@ main(int argc, char **argv)
         k->two_ip = 0xcf0cee67 - (5 * i);
         k->one_port = 22 + (7 * i);
         k->two_port = 5522 - (3 * i);
-        
+
         v = (struct value *)malloc(sizeof(struct value));
         v->id = "a value";
-        
+
         if (!insert_some(h,k,v))
         {
             printf("out of memory inserting into second hashtable\n");
@@ -198,14 +198,14 @@ main(int argc, char **argv)
         printf("ran out of memory allocating a key\n");
         return 1;
     }
-    
+
     for (i = ITEM_COUNT - 1; i >= 0; i = i - 7)
     {
         k->one_ip = 0xcfccee40 + i;
         k->two_ip = 0xcf0cee67 - (5 * i);
         k->one_port = 22 + (7 * i);
         k->two_port = 5522 - (3 * i);
-        
+
         if (0 == search_itr_some(itr, h, k)) {
             printf("BUG: key %u not found for search preremoval using iterator\n", i);
             return 1;
@@ -239,23 +239,23 @@ main(int argc, char **argv)
 /*
  * Copyright (c) 2002, 2004, Christopher Clark
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * 
+ *
  * * Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * * Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * * Neither the name of the original author; nor the names of any contributors
  * may be used to endorse or promote products derived from this software
  * without specific prior written permission.
- * 
- * 
+ *
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR

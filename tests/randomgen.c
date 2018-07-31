@@ -1,7 +1,7 @@
 /* generates random data for later use in test cases. Of course,
  * we could generate random data during the testcase itself, but
  * the core idea is that we record the random data so that we have
- * a chance to reproduce a problem should it occur. IMHO this 
+ * a chance to reproduce a problem should it occur. IMHO this
  * provides the best compromise, by a) having randomness but
  * b) knowing what was used during the test.
  *

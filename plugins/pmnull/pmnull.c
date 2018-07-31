@@ -10,11 +10,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -129,14 +129,14 @@ CODESTARTnewParserInst
 		if(!strcmp(parserpblk.descr[i].name, "tag")) {
 			inst->tag = (const char *) es_str2cstr(pvals[i].val.d.estr, NULL);
 			inst->lenTag = strlen(inst->tag);
-                } else if(!strcmp(parserpblk.descr[i].name, "syslogfacility")) {
+		} else if(!strcmp(parserpblk.descr[i].name, "syslogfacility")) {
 			syslogfacility = pvals[i].val.d.n;
 		} else if(!strcmp(parserpblk.descr[i].name, "syslogseverity")) {
 			syslogseverity = pvals[i].val.d.n;
 		} else {
-                        dbgprintf("pmnull: program error, non-handled "
-                          "param '%s'\n", parserpblk.descr[i].name);
-                }
+			dbgprintf("pmnull: program error, non-handled "
+				"param '%s'\n", parserpblk.descr[i].name);
+		}
 	}
 	inst->pri = syslogfacility*8 + syslogseverity;
 finalize_it:

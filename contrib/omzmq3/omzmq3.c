@@ -52,7 +52,7 @@ DEF_OMOD_STATIC_DATA
 static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 
 /* convienent symbols to denote a socket we want to bind
-   vs one we want to just connect to 
+   vs one we want to just connect to
 */
 #define ACTION_CONNECT 1
 #define ACTION_BIND    2
@@ -62,39 +62,39 @@ static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
  * structs to describe sockets
  */
 struct socket_type {
-    const char*  name;
-    int    type;
+	const char*  name;
+	int type;
 };
 
 /* more overkill, but seems nice to be consistent. */
 struct socket_action {
-    const char* name;
-    int   action;
+	const char* name;
+	int action;
 };
 
 typedef struct _instanceData {
-    void*   socket;
-	uchar*  description;
-    int     type;
-    int     action;
-    int     sndHWM;
-    int     rcvHWM;
-    uchar*  identity;
-    int     sndBuf;
-    int     rcvBuf;
-    int     linger;
-    int     backlog;
-    int     sndTimeout;
-    int     rcvTimeout;
-    int     maxMsgSize;
-    int     rate;
-    int     recoveryIVL;
-    int     multicastHops;
-    int     reconnectIVL;
-    int     reconnectIVLMax;
-    int     ipv4Only;
-    int     affinity;
-    uchar*  tplName;
+	void* socket;
+	uchar* description;
+	int type;
+	int action;
+	int sndHWM;
+	int rcvHWM;
+	uchar* identity;
+	int sndBuf;
+	int rcvBuf;
+	int linger;
+	int backlog;
+	int sndTimeout;
+	int rcvTimeout;
+	int maxMsgSize;
+	int rate;
+	int recoveryIVL;
+	int multicastHops;
+	int reconnectIVL;
+	int reconnectIVLMax;
+	int ipv4Only;
+	int affinity;
+	uchar* tplName;
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -106,9 +106,9 @@ typedef struct wrkrInstanceData {
  * Static definitions/initializations
  */
 
-/* only 1 zctx for all the sockets, with an adjustable number of 
+/* only 1 zctx for all the sockets, with an adjustable number of
    worker threads which may be useful if we use affinity in particular
-   sockets 
+   sockets
 */
 static zctx_t* s_context       = NULL;
 static int     s_workerThreads = -1;
@@ -161,7 +161,7 @@ static struct cnfparamblk actpblk = {
  */
 
 /* get the name of a socket type, return the ZMQ_XXX type
-   or -1 if not a supported type (see above) 
+   or -1 if not a supported type (see above)
 */
 static int getSocketType(char* name) {
     int type = -1;
@@ -188,7 +188,7 @@ static int getSocketAction(char* name) {
     return action;
 }
 
-/* closeZMQ will destroy the context and 
+/* closeZMQ will destroy the context and
  * associated socket
  */
 static void closeZMQ(instanceData* pData) {
@@ -203,14 +203,14 @@ static void closeZMQ(instanceData* pData) {
 
 static rsRetVal initZMQ(instanceData* pData) {
     DEFiRet;
-    
+
     /* create the context if necessary. */
     if (NULL == s_context) {
         zsys_handler_set(NULL);
         s_context = zctx_new();
         if (s_workerThreads > 0) zctx_set_iothreads(s_context, s_workerThreads);
     }
-    
+
     pData->socket = zsocket_new(s_context, pData->type);
     if (NULL == pData->socket) {
         LogError(0, RS_RET_NO_ERRCODE,
@@ -236,7 +236,7 @@ static rsRetVal initZMQ(instanceData* pData) {
     if(pData->affinity != 1)        zsocket_set_affinity(pData->socket, pData->affinity);
     if(pData->rcvHWM > -1)          zsocket_set_rcvhwm(pData->socket, pData->rcvHWM);
     if(pData->sndHWM > -1)          zsocket_set_sndhwm(pData->socket, pData->sndHWM);
-    
+
     /* bind or connect to it */
     if (pData->action == ACTION_BIND) {
         /* bind asserts, so no need to test return val here
@@ -249,7 +249,7 @@ static rsRetVal initZMQ(instanceData* pData) {
         DBGPRINTF("omzmq3: bind to %s successful\n",pData->description);
     } else {
         if(-1 == zsocket_connect(pData->socket, "%s", (char*)pData->description)) {
-            LogError(0, RS_RET_NO_ERRCODE, "omzmq3: connect failed for %s: %s", 
+            LogError(0, RS_RET_NO_ERRCODE, "omzmq3: connect failed for %s: %s",
                             pData->description, zmq_strerror(errno));
             ABORT_FINALIZE(RS_RET_NO_ERRCODE);
         }
@@ -265,10 +265,10 @@ static rsRetVal writeZMQ(uchar* msg, instanceData* pData) {
     /* initialize if necessary */
     if(NULL == pData->socket)
 		CHKiRet(initZMQ(pData));
-    
+
     /* send it */
     int result = zstr_send(pData->socket, (char*)msg);
-    
+
     /* whine if things went wrong */
     if (result == -1) {
         LogError(0, NO_ERRCODE, "omzmq3: send of %s failed: %s", msg, zmq_strerror(errno));

@@ -10,11 +10,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -174,7 +174,7 @@ CODESTARTnewParserInst
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(parserpblk.descr[i].name, "undefinedpropertyerror")) {
-			inst->undefPropErr = (int) pvals[i].val.d.n; 
+			inst->undefPropErr = (int) pvals[i].val.d.n;
 		} else if(!strcmp(parserpblk.descr[i].name, "rulebase")) {
 			inst->rulebase = (char *) es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(parserpblk.descr[i].name, "rule")) {
@@ -186,10 +186,10 @@ CODESTARTnewParserInst
 			}
 			inst->rule = (char*)es_str2cstr(rules, NULL);
 		} else {
-                        LogError(0, RS_RET_INTERNAL_ERROR ,
+			LogError(0, RS_RET_INTERNAL_ERROR ,
 				"pmnormalize: program error, non-handled param '%s'",
 				parserpblk.descr[i].name);
-                }
+		}
 	}
 	if(!inst->rulebase && !inst->rule) {
 		LogError(0, RS_RET_CONFIG_ERROR, "pmnormalize: rulebase needed. "

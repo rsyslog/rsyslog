@@ -39,7 +39,7 @@
 #if defined(__FreeBSD__)
 #include <sys/socket.h>
 #endif
- 
+
 char *sockName = NULL;
 int sock;
 int addNL = 0;
@@ -133,12 +133,12 @@ main(int argc, char *argv[])
         memset(&addr, 0, sizeof(addr));
         addr.sun_family = AF_UNIX;
         strcpy(addr.sun_path, sockName);
-        
+
         if (bind(sock, (struct sockaddr*) &addr, sizeof(addr)) < 0) {
                 close(sock);
                 perror("server: bind");
                 exit(1);
-        }        
+        }
 
 	/* we now run in an endless loop. We do not check who sends us
 	 * data. This should be no problem for our testbench use.

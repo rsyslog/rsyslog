@@ -138,7 +138,7 @@ static rsRetVal initCZMQ(instanceData* pData) {
 	}
 #endif
 
-	if(runModConf->authType) {	
+	if(runModConf->authType) {
 		if (!strcmp(runModConf->authType, "CURVESERVER")) {
 			zcert_t *serverCert = zcert_load(runModConf->serverCertPath);
 			if(!serverCert) {
@@ -150,7 +150,7 @@ static rsRetVal initCZMQ(instanceData* pData) {
 			zsock_set_curve_server(pData->sock, 1);
 			zcert_apply(serverCert, pData->sock);
 			zcert_destroy(&serverCert);
-		} 
+		}
 		else if(!strcmp(runModConf->authType, "CURVECLIENT")) {
 			zcert_t *serverCert = zcert_load(runModConf->serverCertPath);
 			if(!serverCert) {
@@ -161,14 +161,14 @@ static rsRetVal initCZMQ(instanceData* pData) {
 			const char *server_key = zcert_public_txt(serverCert);
 			zcert_destroy(&serverCert);
 			zsock_set_curve_serverkey(pData->sock, server_key);
-			
+
 			zcert_t *clientCert = zcert_load(runModConf->clientCertPath);
 			if(!clientCert) {
 				LogError(0, NO_ERRCODE, "could not load cert %s",
 					runModConf->clientCertPath);
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
-			
+
 			zcert_apply(clientCert, pData->sock);
 			zcert_destroy(&clientCert);
 		}
@@ -211,7 +211,7 @@ static rsRetVal outputCZMQ(uchar** ppString, instanceData* pData) {
 		CHKiRet(initCZMQ(pData));
 	}
 
-	/* if we are using a PUB (or RADIO) socket and we have a topic list then we 
+	/* if we are using a PUB (or RADIO) socket and we have a topic list then we
 	 * need some special care and attention */
 #if defined(ZMQ_RADIO)
 	DBGPRINTF("omczmq: ZMQ_RADIO is defined...\n");
@@ -228,14 +228,14 @@ static rsRetVal outputCZMQ(uchar** ppString, instanceData* pData) {
 			 * by applying the supplied template to the message properties */
 			if(pData->dynaTopic)
 				topic = (const char*)ppString[templateIndex];
-		
-			if (pData->sockType == ZMQ_PUB) {	
+
+			if (pData->sockType == ZMQ_PUB) {
 				/* if topicFrame is true, send the topic as a separate zmq frame */
 				if(pData->topicFrame) {
 					rc = zstr_sendx(pData->sock, topic, (char*)ppString[0], NULL);
 				}
 
-				/* if topicFrame is false, concatenate the topic with the 
+				/* if topicFrame is false, concatenate the topic with the
 				 * message in the same frame */
 				else {
 					rc = zstr_sendf(pData->sock, "%s%s", topic, (char*)ppString[0]);
@@ -270,7 +270,7 @@ static rsRetVal outputCZMQ(uchar** ppString, instanceData* pData) {
 				}
 			}
 #endif
-			
+
 			/* get the next topic from the list, and increment
 			 * our topic index */
 			topic = zlist_next(pData->topics);
@@ -426,12 +426,12 @@ CODESTARTsetModCnf
 			DBGPRINTF("omczmq: clientCertPath set to %s\n", runModConf->clientCertPath);
 		}
 		else {
-			LogError(0, RS_RET_INVALID_PARAMS, 
+			LogError(0, RS_RET_INVALID_PARAMS,
 						"omczmq: config error, unknown "
-						"param %s in setModCnf\n", 
+						"param %s in setModCnf\n",
 						modpblk.descr[i].name);
-		} 
-	}	
+		}
+	}
 
 	DBGPRINTF("omczmq: authenticator set to %d\n", runModConf->authenticator);
 	DBGPRINTF("omczmq: authType set to %s\n", runModConf->authType);
@@ -479,7 +479,7 @@ CODESTARTnewActInst
 		if(!strcmp(actpblk.descr[i].name, "endpoints")) {
 			pData->sockEndpoints = es_str2cstr(pvals[i].val.d.estr, NULL);
 			DBGPRINTF("omczmq: sockEndPoints set to '%s'\n", pData->sockEndpoints);
-		} 
+		}
 		else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			DBGPRINTF("omczmq: template set to '%s'\n", pData->tplName);
@@ -550,7 +550,7 @@ CODESTARTnewActInst
 						"omczmq: out of memory");
 				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 			}
-		} 
+		}
 		else if(!strcmp(actpblk.descr[i].name, "topicframe")) {
 			pData->topicFrame = pvals[i].val.d.n;
 			DBGPRINTF("omczmq: topicFrame set to %s\n", pData->topicFrame ? "true" : "false");
@@ -566,7 +566,7 @@ CODESTARTnewActInst
 					"out of memory");
 				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 			}
-			
+
 			while(*topics) {
 				char *delimiter = strchr(topics, ',');
 				if (!delimiter) {
@@ -601,7 +601,7 @@ CODESTARTnewActInst
 	if (pData->tplName == NULL) {
 		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup("RSYSLOG_ForwardFormat"),
 					OMSR_NO_RQD_TPL_OPTS));
-	} 
+	}
 	else {
 		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)pData->tplName, OMSR_NO_RQD_TPL_OPTS));
 	}
@@ -634,7 +634,7 @@ BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 	CODEqueryEtryPt_STD_OMOD_QUERIES
 	CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
-    CODEqueryEtryPt_STD_CONF2_QUERIES
+	CODEqueryEtryPt_STD_CONF2_QUERIES
 	CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 	CODEqueryEtryPt_STD_OMOD8_QUERIES
 ENDqueryEtryPt

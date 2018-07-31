@@ -19,11 +19,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -172,7 +172,7 @@ finalize_it:
  * If the string is different (or the pointer NULL), the current property
  * is destructed and a new one created. This can be used to get a specific
  * name in those cases where there is a good chance that the property
- * immediatly previously processed already contained the value we need - in 
+ * immediatly previously processed already contained the value we need - in
  * which case we save us all the creation overhead by just reusing the already
  * existing property).
  * rgerhards, 2009-07-01
@@ -185,7 +185,7 @@ static rsRetVal CreateOrReuseStringProp(prop_t **ppThis, const uchar *psz, const
 	assert(ppThis != NULL);
 
 	if(*ppThis == NULL) {
-		/* we need to create a property */ 
+		/* we need to create a property */
 		CHKiRet(CreateStringProp(ppThis, psz, len));
 	} else {
 		/* already exists, check if we can re-use it */

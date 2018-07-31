@@ -13,7 +13,7 @@
  *            encryption block ends.
  * For the current implementation, there must always be an IV record
  * followed by an END record. Each records is LF-terminated. Record
- * types can simply be extended in the future by specifying new 
+ * types can simply be extended in the future by specifying new
  * types (like "IV") before the colon.
  * To identify a file as rsyslog encryption info file, it must start with
  * the line "FILETYPE:rsyslog-enrcyption-info"
@@ -620,7 +620,7 @@ readBlkEnd(gcryfile gf)
 	} else {
 		FINALIZE;
 	}
-		
+
 finalize_it:
 	RETiRet;
 }

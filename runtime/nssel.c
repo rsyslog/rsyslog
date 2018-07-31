@@ -6,7 +6,7 @@
  * the structure must contain nsd_t's from the same stream driver type
  * only. This is implemented as a singly-linked list where every
  * new element is added at the top of the list.
- * 
+ *
  * Work on this module begun 2008-04-22 by Rainer Gerhards.
  *
  * Copyright 2008-2014 Adiscon GmbH.
@@ -16,11 +16,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -52,10 +52,10 @@ DEFobjCurrIf(glbl)
  * out. Note that the driver's .ifIsLoaded is correctly
  * initialized by calloc() and we depend on that. Please note that
  * we do some name-mangeling. We know that each nsd driver also needs
- * a nssel driver. So we simply append "sel" to the nsd driver name: This, 
+ * a nssel driver. So we simply append "sel" to the nsd driver name: This,
  * of course, means that the driver name must match these rules, but that
  * shouldn't be a real problem.
- * WARNING: this code is mostly identical to similar code in 
+ * WARNING: this code is mostly identical to similar code in
  * netstrms.c - TODO: abstract it and move it to some common place.
  * rgerhards, 2008-04-28
  */
@@ -74,7 +74,7 @@ loadDrvr(nssel_t *pThis)
 	CHKmalloc(pThis->pDrvrName = (uchar*) strdup((char*)szDrvrName));
 
 	pThis->Drvr.ifVersion = nsdCURR_IF_VERSION;
-	/* The pDrvrName+2 below is a hack to obtain the object name. It 
+	/* The pDrvrName+2 below is a hack to obtain the object name. It
 	 * safes us to have yet another variable with the name without "lm" in
 	 * front of it. If we change the module load interface, we may re-think
 	 * about this hack, but for the time being it is efficient and clean
@@ -106,7 +106,7 @@ CODESTARTobjDestruct(nssel)
 
 	/* and now we must release our driver, if we got one. We use the presence of
 	 * a driver name string as load indicator (because we also need that string
-	 * to release the driver 
+	 * to release the driver
 	 */
 	free(pThis->pBaseDrvrName);
 	if(pThis->pDrvrName != NULL) {

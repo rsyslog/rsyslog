@@ -18,11 +18,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -269,7 +269,7 @@ rsRetVal cstrAppendChar(cstr_t *const __restrict__ pThis, const uchar c)
 {
 	rsRetVal iRet = RS_RET_OK;
 
-	if(pThis->iStrLen+1 >= pThis->iBufSize) {  
+	if(pThis->iStrLen+1 >= pThis->iBufSize) {
 		CHKiRet(rsCStrExtendBuf(pThis, 1)); /* need more memory! */
 	}
 
@@ -291,7 +291,7 @@ rsRetVal rsCStrAppendStrWithLen(cstr_t *const pThis, const uchar*const  psz, con
 	assert(psz != NULL);
 
 	/* does the string fit? */
-	if(pThis->iStrLen + iStrLen >= pThis->iBufSize) {  
+	if(pThis->iStrLen + iStrLen >= pThis->iBufSize) {
 		CHKiRet(rsCStrExtendBuf(pThis, iStrLen)); /* need more memory! */
 	}
 
@@ -726,7 +726,7 @@ rsCStrLocateInSzStr(cstr_t *const pThis, uchar *const sz)
 		return 0;
 	
 	/* compute the largest index where a match could occur - after all,
-	 * the to-be-located string must be able to be present in the 
+	 * the to-be-located string must be able to be present in the
 	 * searched string (it needs its size ;)).
 	 */
 	iMax = (pThis->iStrLen >= len_sz) ? 0 : len_sz - pThis->iStrLen;

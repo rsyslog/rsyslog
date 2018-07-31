@@ -1,5 +1,5 @@
 /* This is a tool for processing rsyslog encrypted log files.
- * 
+ *
  * Copyright 2013-2016 Adiscon GmbH
  *
  * This file is part of rsyslog.
@@ -7,11 +7,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either exprs or implied.
@@ -88,14 +88,14 @@ eiGetRecord(FILE *eifp, char *rectype, char *value)
 	for(i = 0 ; i < EIF_MAX_RECTYPE_LEN && buf[i] != ':' ; ++i)
 		if(buf[i] == '\0') {
 			r = 2; goto done;
-		} else 
+		} else
 			rectype[i] = buf[i];
 	rectype[i] = '\0';
 	j = 0;
 	for(++i ; i < EIF_MAX_VALUE_LEN && buf[i] != '\n' ; ++i, ++j)
 		if(buf[i] == '\0') {
 			r = 3; goto done;
-		} else 
+		} else
 			value[j] = buf[i];
 	value[j] = '\0';
 	r = 0;
@@ -433,8 +433,8 @@ setKey(void)
 	}
 }
 
-static struct option long_options[] = 
-{ 
+static struct option long_options[] =
+{
 	{"verbose", no_argument, NULL, 'v'},
 	{"version", no_argument, NULL, 'V'},
 	{"decrypt", no_argument, NULL, 'd'},
@@ -446,8 +446,8 @@ static struct option long_options[] =
 	{"key-program", required_argument, NULL, 'p'},
 	{"algo", required_argument, NULL, 'a'},
 	{"mode", required_argument, NULL, 'm'},
-	{NULL, 0, NULL, 0} 
-}; 
+	{NULL, 0, NULL, 0}
+};
 
 int
 main(int argc, char *argv[])
