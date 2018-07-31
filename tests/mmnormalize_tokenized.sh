@@ -18,17 +18,17 @@ input(type="imptcp" port="13514")
 action(type="mmnormalize" rulebase=`echo $srcdir/testsuites/mmnormalize_tokenized.rulebase`)
 if ( $!only_ips != "" ) then {
   set $.ips = $!only_ips;
-  action(type="omfile" file="./rsyslog.out.log" template="ips")
+  action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="ips")
 } else if ( $!local_ips != "" ) then {
   set $.ips = $!local_ips;
-  action(type="omfile" file="./rsyslog.out.log" template="ips")
+  action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="ips")
 } else if ( $!external_ips != "" ) then {
   set $.ips = $!external_ips;
-  action(type="omfile" file="./rsyslog.out.log" template="ips")
+  action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="ips")
 } else if ( $!some_nos != "" ) then { 
-  action(type="omfile" file="./rsyslog.out.log" template="numbers")
+  action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="numbers")
 } else {
-  action(type="omfile" file="./rsyslog.out.log" template="paths")
+  action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="paths")
 }
 '
 startup

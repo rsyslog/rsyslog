@@ -17,7 +17,7 @@ template(name="outfmt-all-json" type="string" string="%$!all-json%\n")
 
 action(type="mmjsonparse")
 set $!_aBc = "7";
-action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 if $!_aBc != "7" then
 	action(type="omfile" file="./rsyslog2.out.log" template="outfmt-all-json")
 '

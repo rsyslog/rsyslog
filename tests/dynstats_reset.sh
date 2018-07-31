@@ -31,7 +31,7 @@ if (re_match($.msg_prefix, "foo|bar|baz|quux|corge|grault")) then {
   set $.increment_successful = -1;
 }
 
-action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 . $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'

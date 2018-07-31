@@ -16,7 +16,7 @@ module(load="../plugins/imptcp/.libs/imptcp")
 input(type="imptcp" port="13514")
 
 action(type="mmnormalize" rulebase=`echo $srcdir/testsuites/mmnormalize_regex.rulebase`)
-action(type="omfile" file="./rsyslog.out.log" template="hosts_and_ports")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="hosts_and_ports")
 '
 startup
 . $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/regex_input

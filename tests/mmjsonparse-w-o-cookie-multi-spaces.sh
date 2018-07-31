@@ -11,7 +11,7 @@ input(type="imtcp" port="13514")
 
 action(type="mmjsonparse" cookie="")
 if $parsesuccess == "OK" then {
-	action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }
 '
 rm -f $RSYSLOG_OUT_LOG	# do cleanup of previous subtest

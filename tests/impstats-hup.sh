@@ -5,7 +5,7 @@
 generate_conf
 add_conf '
 module(load="../plugins/impstats/.libs/impstats"
-	log.file="./rsyslog.out.log"
+	log.file=`echo $RSYSLOG_OUT_LOG`
 	interval="1" ruleset="stats")
 
 ruleset(name="stats") {

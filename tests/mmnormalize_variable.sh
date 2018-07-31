@@ -19,7 +19,7 @@ template(name="time_fragment" type="list") {
 set $.time_frag = exec_template("time_fragment");
 
 action(type="mmnormalize" rulebase=`echo $srcdir/testsuites/mmnormalize_variable.rulebase` variable="$.time_frag")
-action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 . $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/date_time_msg

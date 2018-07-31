@@ -26,7 +26,7 @@ if ($/val == $/rval) then {
 	set $/val = "ghi";
 }
 
-action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 . $srcdir/diag.sh tcpflood -m 1 -M "\"<167>Nov  6 12:34:56 172.0.0.1 test: @cee: { \\\"val\\\": \\\"abc\\\" }\""

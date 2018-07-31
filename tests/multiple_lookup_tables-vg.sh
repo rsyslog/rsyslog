@@ -21,7 +21,7 @@ template(name="outfmt" type="string" string="- %msg% 0_%$.lkp_0% 1_%$.lkp_1%\n")
 set $.lkp_0 = lookup("xlate_0", $msg);
 set $.lkp_1 = lookup("xlate_1", $msg);
 
-action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 cp -f $srcdir/testsuites/xlate.lkp_tbl xlate.lkp_tbl
 cp -f $srcdir/testsuites/xlate.lkp_tbl xlate_1.lkp_tbl

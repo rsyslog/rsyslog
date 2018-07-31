@@ -17,7 +17,7 @@ template(name="date_time" type="list") {
 
 set $.replaced_msg = replace("date time: " & exec_template("date_time"), "O" & "ct", replace("october", "o", "0"));
 
-action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 . $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/date_time_msg

@@ -21,7 +21,7 @@ ruleset(name="testing") {
 	# we have not included it into the testbench for licensing concerns.
 	# action(type="mmdblookup" mmdbfile="/home/USR/GeoLite2-City_20170502/GeoLite2-City.mmdb" key="$!ip" fields=":city:!city!names!en" )
 	action(type="mmdblookup" mmdbfile=`echo $srcdir/test.mmdb` key="$!ip" fields=":city_name:city" )
-	action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }'
 startup_vg
 . $srcdir/diag.sh tcpflood -m 100 -j "202.106.0.20\ "

@@ -31,7 +31,7 @@ set $.x = dyn_inc("msg_stats_resettable_on", $.msg_prefix);
 set $.y = dyn_inc("msg_stats_resettable_off", $.msg_prefix);
 set $.z = dyn_inc("msg_stats_resettable_default", $.msg_prefix);
 
-action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_1

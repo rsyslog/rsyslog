@@ -16,7 +16,7 @@ ruleset(name="rs") {
 if $msg contains "msgnum" then
 	call_indirect "does-not-exist";
 else
-	action(type="omfile" file="./rsyslog.out.log")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 . $srcdir/diag.sh injectmsg  0 5

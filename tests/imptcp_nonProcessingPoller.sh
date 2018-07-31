@@ -14,7 +14,7 @@ module(load="../plugins/imptcp/.libs/imptcp" threads="32" processOnPoller="off")
 input(type="imptcp" port="13514")
 
 if (prifilt("local0.*")) then {
-   action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+   action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }
 '
 startup

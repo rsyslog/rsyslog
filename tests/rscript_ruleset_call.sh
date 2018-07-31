@@ -16,7 +16,7 @@ template(name="outfmt" type="list") {
 # one statement. This catches grammar erorrs
 ruleset(name="rs2") {
 	continue
-	action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 	stop
 }
 
