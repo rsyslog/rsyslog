@@ -14,7 +14,7 @@ if $parsesuccess == "OK" then {
 	action(type="omfile" file="./rsyslog.out.log" template="outfmt")
 }
 '
-rm -f rsyslog.out.log	# do cleanup of previous subtest
+rm -f $RSYSLOG_OUT_LOG	# do cleanup of previous subtest
 startup
 . $srcdir/diag.sh tcpflood -m 5000 "-j \"      \""
 shutdown_when_empty

@@ -24,7 +24,7 @@ template(name="outfmt" type="string"
 
 
 echo "***SUBTEST: check 1970-01-01"
-rm -f rsyslog.out.log	# do cleanup of previous subtest
+rm -f $RSYSLOG_OUT_LOG	# do cleanup of previous subtest
 FAKETIME='1970-01-01 00:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
@@ -38,7 +38,7 @@ fi;
 
 
 echo "***SUBTEST: check 2000-03-01"
-rm -f rsyslog.out.log	# do cleanup of previous subtest
+rm -f $RSYSLOG_OUT_LOG	# do cleanup of previous subtest
 FAKETIME='2000-03-01 12:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
@@ -52,7 +52,7 @@ fi;
 
 
 echo "***SUBTEST: check 2016-01-01"
-rm -f rsyslog.out.log	# do cleanup of previous subtest
+rm -f $RSYSLOG_OUT_LOG	# do cleanup of previous subtest
 FAKETIME='2016-01-01 12:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
@@ -66,7 +66,7 @@ fi;
 
 
 echo "***SUBTEST: check 2016-02-29"
-rm -f rsyslog.out.log	# do cleanup of previous subtest
+rm -f $RSYSLOG_OUT_LOG	# do cleanup of previous subtest
 FAKETIME='2016-02-29 12:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
@@ -80,7 +80,7 @@ fi;
 
 
 echo "***SUBTEST: check 2016-03-01"
-rm -f rsyslog.out.log	# do cleanup of previous subtest
+rm -f $RSYSLOG_OUT_LOG	# do cleanup of previous subtest
 FAKETIME='2016-03-01 12:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
@@ -94,7 +94,7 @@ fi;
 
 
 echo "***SUBTEST: check 2016-03-03"
-rm -f rsyslog.out.log	# do cleanup of previous subtest
+rm -f $RSYSLOG_OUT_LOG	# do cleanup of previous subtest
 FAKETIME='2016-03-03 12:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
@@ -108,7 +108,7 @@ fi;
 
 
 echo "***SUBTEST: check 2016-12-31"
-rm -f rsyslog.out.log	# do cleanup of previous subtest
+rm -f $RSYSLOG_OUT_LOG	# do cleanup of previous subtest
 FAKETIME='2016-12-31 12:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
@@ -122,7 +122,7 @@ fi;
 
 
 echo "***SUBTEST: check 2017-01-01"
-rm -f rsyslog.out.log	# do cleanup of previous subtest
+rm -f $RSYSLOG_OUT_LOG	# do cleanup of previous subtest
 FAKETIME='2017-01-01 12:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
@@ -136,7 +136,7 @@ fi;
 
 
 echo "***SUBTEST: check 2020-03-01"
-rm -f rsyslog.out.log	# do cleanup of previous subtest
+rm -f $RSYSLOG_OUT_LOG	# do cleanup of previous subtest
 FAKETIME='2020-03-01 12:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
@@ -150,7 +150,7 @@ fi;
 
 
 echo "***SUBTEST: check 2038-01-01"
-rm -f rsyslog.out.log	# do cleanup of previous subtest
+rm -f $RSYSLOG_OUT_LOG	# do cleanup of previous subtest
 FAKETIME='2038-01-01 12:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
@@ -167,7 +167,7 @@ rsyslog_testbench_require_y2k38_support
 
 
 echo "***SUBTEST: check 2038-12-31"
-rm -f rsyslog.out.log	# do cleanup of previous subtest
+rm -f $RSYSLOG_OUT_LOG	# do cleanup of previous subtest
 FAKETIME='2038-12-31 12:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
@@ -181,7 +181,7 @@ fi;
 
 
 echo "***SUBTEST: check 2040-01-01"
-rm -f rsyslog.out.log	# do cleanup of previous subtest
+rm -f $RSYSLOG_OUT_LOG	# do cleanup of previous subtest
 FAKETIME='2040-01-01 12:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
@@ -195,7 +195,7 @@ fi;
 
 
 echo "***SUBTEST: check 2040-12-31"
-rm -f rsyslog.out.log	# do cleanup of previous subtest
+rm -f $RSYSLOG_OUT_LOG	# do cleanup of previous subtest
 FAKETIME='2040-12-31 12:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
@@ -209,7 +209,7 @@ fi;
 
 
 echo "***SUBTEST: check 2100-01-01"
-rm -f rsyslog.out.log	# do cleanup of previous subtest
+rm -f $RSYSLOG_OUT_LOG	# do cleanup of previous subtest
 FAKETIME='2100-01-01 12:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
