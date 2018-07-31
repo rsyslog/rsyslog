@@ -23,6 +23,6 @@ wait_shutdown
 
 export EXPECTED="27,daemon,err,$RS_HOSTNAME,xapi,xapi:, [error|xen3|15|Guest liveness monitor D:bca30ab3f1c1|master_connection] Connection to master died. I will continue to retry indefinitely (supressing future logging of this message)
 13,user,notice,This,is,is, a message!"
-cmp_exact rsyslog.out.log
+cmp_exact $RSYSLOG_OUT_LOG
 
 exit_test
