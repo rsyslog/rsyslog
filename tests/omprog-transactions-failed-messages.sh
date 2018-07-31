@@ -121,7 +121,7 @@ while IFS= read -r line; do
         status_expected=true;
     fi
     let "line_num++"
-done < rsyslog.out.log
+done < $RSYSLOG_OUT_LOG
 
 if [[ -z "$error" && "$transaction_state" != "NONE" ]]; then
     error="unexpected end of file (transaction state: $transaction_state)"

@@ -24,7 +24,7 @@ add_conf "\$PrivDropToGroup ${TESTBENCH_TESTUSER[groupname]}"
 startup
 shutdown_when_empty
 wait_shutdown
-grep "groupid.*${TESTBENCH_TESTUSER[gid]}" < rsyslog.out.log
+grep "groupid.*${TESTBENCH_TESTUSER[gid]}" < $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "message indicating drop to group \"${TESTBENCH_TESTUSER[groupname]}\" (#${TESTBENCH_TESTUSER[gid]}) is missing:"
   cat $RSYSLOG_OUT_LOG

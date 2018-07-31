@@ -15,7 +15,7 @@ startup
 shutdown_when_empty
 wait_shutdown
 
-psql -h localhost -U postgres -d syslogtest -f testsuites/pgsql-select-msg.sql -t -A > rsyslog.out.log
+psql -h localhost -U postgres -d syslogtest -f testsuites/pgsql-select-msg.sql -t -A > $RSYSLOG_OUT_LOG
 seq_check  0 4999
 
 echo cleaning up test database

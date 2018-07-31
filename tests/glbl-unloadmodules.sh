@@ -18,7 +18,7 @@ wait_shutdown
 # been recorded, which would bear the name of our option.
 # if it is not recorded, we assume all is well. Not perfect,
 # but works good enough.
-grep -i "unloadModules" < rsyslog.out.log
+grep -i "unloadModules" < $RSYSLOG_OUT_LOG
 if [ ! $? -eq 1 ]; then
   echo "parameter name in output, assuming error message:"
   cat $RSYSLOG_OUT_LOG

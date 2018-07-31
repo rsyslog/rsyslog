@@ -21,7 +21,7 @@ shutdown_when_empty
 wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
 
-psql -h localhost -U postgres -d syslogtest -f testsuites/pgsql-select-syslogtag.sql -t -A > rsyslog.out.log
+psql -h localhost -U postgres -d syslogtest -f testsuites/pgsql-select-syslogtag.sql -t -A > $RSYSLOG_OUT_LOG
 seq_check  0 4999
 
 echo cleaning up test database

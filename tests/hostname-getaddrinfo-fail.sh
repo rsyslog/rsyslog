@@ -28,7 +28,7 @@ sleep 1
 . $srcdir/diag.sh shutdown-immediate
 wait_shutdown    # we need to wait until rsyslogd is finished!
 
-grep " nonfqdn " < rsyslog.out.log
+grep " nonfqdn " < $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "expected hostname \"nonfqdn\" not found in logs, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG

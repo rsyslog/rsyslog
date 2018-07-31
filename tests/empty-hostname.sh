@@ -19,7 +19,7 @@ startup
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown    # we need to wait until rsyslogd is finished!
 
-grep " localhost-empty-hostname " < rsyslog.out.log
+grep " localhost-empty-hostname " < $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "expected hostname \"localhost-empty-hostname\" not found in logs, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG

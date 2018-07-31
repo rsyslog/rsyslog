@@ -44,11 +44,11 @@ startup
 sleep 2 # due to large messages, we need this time for the tcp receiver to settle...
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate
-gunzip < rsyslog.out.0.log > rsyslog.out.log
-gunzip < rsyslog.out.1.log >> rsyslog.out.log
-gunzip < rsyslog.out.2.log >> rsyslog.out.log
-gunzip < rsyslog.out.3.log >> rsyslog.out.log
-gunzip < rsyslog.out.4.log >> rsyslog.out.log
-#cat rsyslog.out.* > rsyslog.out.log
+gunzip < rsyslog.out.0.log > $RSYSLOG_OUT_LOG
+gunzip < rsyslog.out.1.log >> $RSYSLOG_OUT_LOG
+gunzip < rsyslog.out.2.log >> $RSYSLOG_OUT_LOG
+gunzip < rsyslog.out.3.log >> $RSYSLOG_OUT_LOG
+gunzip < rsyslog.out.4.log >> $RSYSLOG_OUT_LOG
+#cat rsyslog.out.* > $RSYSLOG_OUT_LOG
 seq_check 0 3999 -E
 exit_test

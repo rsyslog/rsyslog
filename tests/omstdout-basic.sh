@@ -11,7 +11,7 @@ template(name="outfmt" type="string" string="-%msg%-\n")
 action(type="omstdout" template="outfmt")
 
 '
-startup > rsyslog.out.log
+startup > $RSYSLOG_OUT_LOG
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
 wait_shutdowna

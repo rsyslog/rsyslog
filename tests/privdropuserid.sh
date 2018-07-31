@@ -23,7 +23,7 @@ add_conf "\$PrivDropToUserID ${TESTBENCH_TESTUSER[uid]}"
 startup
 shutdown_when_empty
 wait_shutdown
-grep "userid.*${TESTBENCH_TESTUSER[uid]}" < rsyslog.out.log
+grep "userid.*${TESTBENCH_TESTUSER[uid]}" < $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "message indicating drop to uid #${TESTBENCH_TESTUSER[uid]} is missing:"
   cat $RSYSLOG_OUT_LOG

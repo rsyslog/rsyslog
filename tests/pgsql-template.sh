@@ -22,7 +22,7 @@ wait_shutdown
 
 # we actually put the message in the SysLogTag field, so we know it doesn't use the default
 # template, like in pgsql-basic
-psql -h localhost -U postgres -d syslogtest -f testsuites/pgsql-select-syslogtag.sql -t -A > rsyslog.out.log 
+psql -h localhost -U postgres -d syslogtest -f testsuites/pgsql-select-syslogtag.sql -t -A > $RSYSLOG_OUT_LOG 
 
 seq_check  0 4999
 
