@@ -255,6 +255,11 @@ Version 8.37.0 [v8-stable] 2018-08-07
     old tests and putting config as well as test data together into
     the refactored tests, on which Rainer Gerhards than could build
     to create the new tests and update testbench plumbing.
+  * testbench: ensure uxsock test leaves no dangling listener instances
+    ..in case the test aborts. We utilize the timeout utility for now
+    to prevent this.
+  * testbench: make port for imdiag dynamic
+    This is prep work to support parallel test runs
 ------------------------------------------------------------------------------
 Version 8.36.0 [v8-stable] 2018-06-26
 - build system change:
