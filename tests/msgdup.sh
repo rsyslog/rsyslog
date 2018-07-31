@@ -37,7 +37,7 @@ logger -d -u testbench_socket -t RSYSLOG_TESTBENCH 'test 01234567890123456789012
 ./msleep 100
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown	# we need to wait until rsyslogd is finished!
-echo " test 01234567890123456789012345678901234567890123456789012345" | cmp - rsyslog.out.log
+echo " test 01234567890123456789012345678901234567890123456789012345" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "msgdup.sh failed"
   echo contents of rsyslog.out.log:

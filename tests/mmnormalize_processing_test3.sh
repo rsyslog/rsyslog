@@ -60,9 +60,9 @@ shutdown_when_empty
 wait_shutdown
 echo '2017-03-08T14:23:51-01:00 2017-03-08T14:23:51-01:00 host3 audispd  node=host3.domain.com type=SYSCALL msg=audit(1488975831.267:230190721):
 /sb/logs/incoming/2017/03/08/svc_SER3/ret_Y01/os_LNX/127.0.0.1/r_relay1/local6.gz
-[][][127.0.0.1][1488986631][] Mar  8 14:23:51 host3 audispd:  node=host3.domain.com type=SYSCALL msg=audit(1488975831.267:230190721):' | cmp - rsyslog.out.log
+[][][127.0.0.1][1488986631][] Mar  8 14:23:51 host3 audispd:  node=host3.domain.com type=SYSCALL msg=audit(1488975831.267:230190721):' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;

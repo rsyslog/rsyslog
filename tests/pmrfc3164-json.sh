@@ -20,9 +20,9 @@ wait_shutdown
 EXPECTED='{ "c1":1 }---{ "c1":1 }
    { "c2":2 }---   { "c2":2 }
    [{ "c3":3 }]---   [{ "c3":3 }]'
-echo "$EXPECTED" | cmp - rsyslog.out.log
+echo "$EXPECTED" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   printf "expected was\n"
   echo "$EXPECTED"

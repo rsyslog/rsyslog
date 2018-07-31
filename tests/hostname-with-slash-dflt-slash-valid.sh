@@ -17,9 +17,9 @@ echo '<167>1 2003-03-01T01:00:00.000Z hostname1/hostname2 tcpflood - tag [tcpflo
 . $srcdir/diag.sh tcpflood -B -I rsyslog.input
 shutdown_when_empty
 wait_shutdown
-echo "hostname1/hostname2" | cmp - rsyslog.out.log
+echo "hostname1/hostname2" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid hostname generated, rsyslog.out.log is:"
+  echo "invalid hostname generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   error_exit 1
 fi;

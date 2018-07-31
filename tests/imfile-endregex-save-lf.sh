@@ -41,9 +41,9 @@ echo 'END OF TEST' >> rsyslog.input
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown    # we need to wait until rsyslogd is finished!
 
-printf 'HEADER msgnum:0\\\\n msgnum:1\\\\n msgnum:2\n' | cmp - rsyslog.out.log
+printf 'HEADER msgnum:0\\\\n msgnum:1\\\\n msgnum:2\n' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid multiline message generated, rsyslog.out.log is:"
+  echo "invalid multiline message generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   exit 1
 fi;

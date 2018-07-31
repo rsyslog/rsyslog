@@ -21,7 +21,7 @@ wait_shutdown_vg
 
 # Our fixed and calculated expected results
 EXPECTED='{ "parsed": { "c1": "data" } }'
-echo $EXPECTED | cmp - rsyslog.out.log
+echo $EXPECTED | cmp - $RSYSLOG_OUT_LOG
 if [[ $? -ne 0 ]]; then
   printf "Invalid function output detected!\n"
   printf "expected:\n$EXPECTED\n"

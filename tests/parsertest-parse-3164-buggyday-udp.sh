@@ -22,9 +22,9 @@ shutdown_when_empty
 wait_shutdown
 
 echo '38,auth,info,Mar 07 19:06:53,example,tag,tag:, testmessage (only date actually tested)
-38,auth,info,Mar 17 19:06:53,example,tag,tag:, testmessage (only date actually tested)' | cmp - rsyslog.out.log
+38,auth,info,Mar 17 19:06:53,example,tag,tag:, testmessage (only date actually tested)' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;

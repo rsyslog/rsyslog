@@ -16,9 +16,9 @@ startup
 . $srcdir/diag.sh tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag: msgnum:1\""
 shutdown_when_empty
 wait_shutdown
-echo '-45-' | cmp - rsyslog.out.log
+echo '-45-' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;

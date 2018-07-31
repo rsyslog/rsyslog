@@ -32,9 +32,9 @@ e2
 NEWMSG: <33>Mar  1 01:00:00 172.20.245.8 tag test3
 NEWMSG: <33>Mar  1 01:00:00 172.20.245.8 tag multi
 line3
-NEWMSG: <33>Mar  1 01:00:00 172.20.245.8 tag test4' | cmp - rsyslog.out.log
+NEWMSG: <33>Mar  1 01:00:00 172.20.245.8 tag test4' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;

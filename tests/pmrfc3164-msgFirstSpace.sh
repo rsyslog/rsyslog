@@ -22,9 +22,9 @@ wait_shutdown
 echo '-msgnum:1-
 - msgnum:2-
 -msgnum:3-
---' | cmp - rsyslog.out.log
+--' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;

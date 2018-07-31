@@ -28,7 +28,7 @@ if [ $? -ne 0 ]; then
 	error_exit 1
 fi
 
-echo '- msgnum:1-' | cmp - rsyslog.out.log
+echo '- msgnum:1-' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "unexpected content in rsyslog.out.log is:"
   cat $RSYSLOG_OUT_LOG

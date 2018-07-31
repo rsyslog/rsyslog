@@ -18,7 +18,7 @@ shutdown_when_empty
 wait_shutdown
 cmp HOSTNAME rsyslog.out.log
 if [ ! $? -eq 0 ]; then
-  echo "invalid hostname generated, rsyslog.out.log is:"
+  echo "invalid hostname generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   echo
   echo "expected was:"

@@ -19,9 +19,9 @@ startup
 shutdown_when_empty
 wait_shutdown
 
-echo 'DROP_url_www.sina.com.cn:IN=eth1' | cmp - rsyslog.out.log
+echo 'DROP_url_www.sina.com.cn:IN=eth1' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;

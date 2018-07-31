@@ -24,9 +24,9 @@ startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
 wait_shutdown
-echo " msgnum:00000000:" | cmp - rsyslog.out.log
+echo " msgnum:00000000:" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid output generated, rsyslog.out.log is:"
+  echo "invalid output generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   error_exit 1
 fi;

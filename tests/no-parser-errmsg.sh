@@ -17,7 +17,7 @@ shutdown_when_empty
 wait_shutdown
 grep 'one message could not be processed by any parser' rsyslog.out.log > /dev/null
 if [ $? -ne 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;

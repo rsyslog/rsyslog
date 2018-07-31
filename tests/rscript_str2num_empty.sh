@@ -15,9 +15,9 @@ startup
 . $srcdir/diag.sh tcpflood -m1 -y
 shutdown_when_empty
 wait_shutdown
-echo '{ "v1": 1 }' | cmp - rsyslog.out.log
+echo '{ "v1": 1 }' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid function output detected, rsyslog.out.log is:"
+  echo "invalid function output detected, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   error_exit 1
 fi;

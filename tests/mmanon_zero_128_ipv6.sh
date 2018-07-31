@@ -33,9 +33,9 @@ echo ' asdfghjk
  0:0:0:0:0:0:0:0
  0:0:0:0:0:0:0:0
  13:abd:45:
- textnoblank0:0:0:0:0:0:0:0stillnoblank' | cmp - rsyslog.out.log
+ textnoblank0:0:0:0:0:0:0:0stillnoblank' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;

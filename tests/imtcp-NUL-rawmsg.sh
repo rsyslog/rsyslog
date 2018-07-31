@@ -18,9 +18,9 @@ echo '<167>Mar  6 16:57:54 172.20.245.8 test: msgnum:0 X test message
 shutdown_when_empty
 wait_shutdown
 echo '<167>Mar  6 16:57:54 172.20.245.8 test: msgnum:0 #000 test message
-<167>Mar  6 16:57:54 172.20.245.8 #000test: msgnum:1 test message' | cmp - rsyslog.out.log
+<167>Mar  6 16:57:54 172.20.245.8 #000test: msgnum:1 test message' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid output generated, rsyslog.out.log is:"
+  echo "invalid output generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   exit 1
 fi;

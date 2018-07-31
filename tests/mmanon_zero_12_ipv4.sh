@@ -26,9 +26,9 @@ wait_shutdown
 echo ' 1.1.0.0
  0.0.0.0
  172.0.224.0
- 111.1.0.0.' | cmp - rsyslog.out.log
+ 111.1.0.0.' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;

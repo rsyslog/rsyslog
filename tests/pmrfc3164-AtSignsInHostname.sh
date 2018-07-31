@@ -22,9 +22,9 @@ wait_shutdown
 echo '-Hostname1-
 -Hostn@me2-
 -Hostname3-
--Hos@name4-' | cmp - rsyslog.out.log
+-Hos@name4-' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;

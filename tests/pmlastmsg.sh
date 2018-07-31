@@ -34,9 +34,9 @@ last message repeated 0090909787348927349875 times
  repeated 5.2 times
  Rest of message...
  long message ================================================================================
-last message repeated 5 times' | cmp - rsyslog.out.log
+last message repeated 5 times' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;

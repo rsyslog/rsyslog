@@ -20,7 +20,7 @@ startup
 shutdown_when_empty
 wait_shutdown
 EXPECTED='empty--'
-echo "$EXPECTED" | cmp - rsyslog.out.log
+echo "$EXPECTED" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
 	echo "FAIL: rsyslog.out.log content invalid:"
 	cat $RSYSLOG_OUT_LOG

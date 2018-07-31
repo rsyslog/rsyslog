@@ -31,9 +31,9 @@ echo '2003-11-11T22:14:15.003Z
 2003-11-11T22:04:05.003Z
 2003-11-11T22:04:05.003+02:00
 2003-11-11T22:04:05.003+01:30
-2003-11-11T22:04:05.123456+01:30' | cmp - rsyslog.out.log
+2003-11-11T22:04:05.123456+01:30' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;

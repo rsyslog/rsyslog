@@ -29,9 +29,9 @@ FAKETIME='1970-01-01 00:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
 wait_shutdown
-echo "0" | cmp - rsyslog.out.log
+echo "0" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid timestamps generated, rsyslog.out.log is:"
+  echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   date -d @`cat $RSYSLOG_OUT_LOG`
   exit 1
@@ -44,9 +44,9 @@ FAKETIME='2000-03-01 12:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
 wait_shutdown
-echo "951912000" | cmp - rsyslog.out.log
+echo "951912000" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid timestamps generated, rsyslog.out.log is:"
+  echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   date -d @`cat $RSYSLOG_OUT_LOG`
   exit 1
@@ -59,9 +59,9 @@ FAKETIME='2016-01-01 12:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
 wait_shutdown
-echo "1451649600" | cmp - rsyslog.out.log
+echo "1451649600" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid timestamps generated, rsyslog.out.log is:"
+  echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   date -d @`cat $RSYSLOG_OUT_LOG`
   exit 1
@@ -74,9 +74,9 @@ FAKETIME='2016-02-29 12:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
 wait_shutdown
-echo "1456747200" | cmp - rsyslog.out.log
+echo "1456747200" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid timestamps generated, rsyslog.out.log is:"
+  echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   date -d @`cat $RSYSLOG_OUT_LOG`
   exit 1
@@ -89,9 +89,9 @@ FAKETIME='2016-03-01 12:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
 wait_shutdown
-echo "1456833600" | cmp - rsyslog.out.log
+echo "1456833600" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid timestamps generated, rsyslog.out.log is:"
+  echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   date -d @`cat $RSYSLOG_OUT_LOG`
   exit 1
@@ -104,9 +104,9 @@ FAKETIME='2016-03-03 12:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
 wait_shutdown
-echo "1457006400" | cmp - rsyslog.out.log
+echo "1457006400" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid timestamps generated, rsyslog.out.log is:"
+  echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   date -d @`cat $RSYSLOG_OUT_LOG`
   exit 1
@@ -119,9 +119,9 @@ FAKETIME='2016-12-31 12:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
 wait_shutdown
-echo "1483185600" | cmp - rsyslog.out.log
+echo "1483185600" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid timestamps generated, rsyslog.out.log is:"
+  echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   date -d @`cat $RSYSLOG_OUT_LOG`
   exit 1
@@ -134,9 +134,9 @@ FAKETIME='2017-01-01 12:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
 wait_shutdown
-echo "1483272000" | cmp - rsyslog.out.log
+echo "1483272000" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid timestamps generated, rsyslog.out.log is:"
+  echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   date -d @`cat $RSYSLOG_OUT_LOG`
   exit 1
@@ -149,9 +149,9 @@ FAKETIME='2020-03-01 12:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
 wait_shutdown
-echo "1583064000" | cmp - rsyslog.out.log
+echo "1583064000" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid timestamps generated, rsyslog.out.log is:"
+  echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   date -d @`cat $RSYSLOG_OUT_LOG`
   exit 1
@@ -164,9 +164,9 @@ FAKETIME='2038-01-01 12:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
 wait_shutdown
-echo "2145960000" | cmp - rsyslog.out.log
+echo "2145960000" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid timestamps generated, rsyslog.out.log is:"
+  echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   date -d @`cat $RSYSLOG_OUT_LOG`
   exit 1
@@ -180,9 +180,9 @@ FAKETIME='2040-01-01 12:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
 wait_shutdown
-echo "2209032000" | cmp - rsyslog.out.log
+echo "2209032000" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid timestamps generated, rsyslog.out.log is:"
+  echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   date -d @`cat $RSYSLOG_OUT_LOG`
   exit 1
@@ -195,9 +195,9 @@ FAKETIME='2100-01-01 12:00:00' startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
 wait_shutdown
-echo "4102488000" | cmp - rsyslog.out.log
+echo "4102488000" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid timestamps generated, rsyslog.out.log is:"
+  echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   date -d @`cat $RSYSLOG_OUT_LOG`
   cat $RSYSLOG_OUT_LOG
   exit 1

@@ -18,9 +18,9 @@ startup
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown    # we need to wait until rsyslogd is finished!
 
-echo 'http://127.0.0.1, OK OK' | cmp - rsyslog.out.log
+echo 'http://127.0.0.1, OK OK' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid content seen, rsyslog.out.log is:"
+  echo "invalid content seen, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   error_exit 1
 fi;

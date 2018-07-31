@@ -20,9 +20,9 @@ startup
 shutdown_when_empty
 wait_shutdown
 echo '-Hostname1-tag:- msgnum:1-
--Hostname3-tag:-msgnum:3-' | cmp - rsyslog.out.log
+-Hostname3-tag:-msgnum:3-' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;

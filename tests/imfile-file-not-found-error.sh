@@ -35,9 +35,9 @@ fi
 
 printf 'testmessage1
 testmessage2
-testmessage3\n' | cmp - rsyslog.out.log
+testmessage3\n' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;

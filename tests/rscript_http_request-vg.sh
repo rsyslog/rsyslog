@@ -32,9 +32,9 @@ echo '{ "reply": "msgnum:00000000:" }
 { "reply": "msgnum:00000006:" }
 { "reply": "msgnum:00000007:" }
 { "reply": "msgnum:00000008:" }
-{ "reply": "msgnum:00000009:" }' | cmp - rsyslog.out.log
+{ "reply": "msgnum:00000009:" }' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid function output detected, rsyslog.out.log is:"
+  echo "invalid function output detected, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   error_exit 1
 fi;

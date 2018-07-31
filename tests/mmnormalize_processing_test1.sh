@@ -60,9 +60,9 @@ shutdown_when_empty
 wait_shutdown
 echo '2017-03-08T12:53:47+02:00 2017-03-08T12:53:47+02:00 Host1.domain.com Security [AUF] Wed Mar 08 11:53:48 2017: N\A/Security/Host1.domain.com/Microsoft-Windows-Security-Auditing (5152) - message
 /sb/logs/incoming/2017/03/08/svc_SER1/ret_M01/os_WIN/127.0.0.1/r_relay1/security.gz
-[][][127.0.0.1][1488970427][] Mar  8 12:53:47 127.0.0.1 EvntSLog: [AUF] Wed Mar 08 11:53:48 2017: N\A/Security/Host1.domain.com/Microsoft-Windows-Security-Auditing (5152) - message' | cmp - rsyslog.out.log
+[][][127.0.0.1][1488970427][] Mar  8 12:53:47 127.0.0.1 EvntSLog: [AUF] Wed Mar 08 11:53:48 2017: N\A/Security/Host1.domain.com/Microsoft-Windows-Security-Auditing (5152) - message' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
