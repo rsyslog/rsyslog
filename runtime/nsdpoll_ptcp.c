@@ -1,7 +1,7 @@
 /* nsdpoll_ptcp.c
  *
  * An implementation of the nsd epoll() interface for plain tcp sockets.
- * 
+ *
  * Copyright 2009-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.

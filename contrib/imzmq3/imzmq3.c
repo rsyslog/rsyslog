@@ -9,17 +9,17 @@
  * modify it under the terms of the GNU Lesser General Public License
  * as published by the Free Software Foundation, either version 3 of
  * the License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
- * Authors: 
+ *
+ * Authors:
  * David Kelly <davidk@talksum.com>
  * Hongfei Cheng <hongfeic@talksum.com>
  */
@@ -53,7 +53,7 @@ MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("imzmq3");
 
 /* convienent symbols to denote a socket we want to bind
- * vs one we want to just connect to 
+ * vs one we want to just connect to
  */
 #define ACTION_CONNECT 1
 #define ACTION_BIND    2
@@ -64,102 +64,102 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(ruleset)
 
- 
+
 /* ----------------------------------------------------------------------------
  * structs to describe sockets
  */
 typedef struct _socket_type {
-    const char*  name;
-    int    type;
+	const char* name;
+	int type;
 } socket_type;
 
 /* more overkill, but seems nice to be consistent.*/
 typedef struct _socket_action {
-    const char* name;
-    int   action;
+	const char* name;
+	int action;
 } socket_action;
 
 typedef struct _poller_data {
-    ruleset_t*  ruleset;
-    thrdInfo_t* thread;
+	ruleset_t* ruleset;
+	thrdInfo_t* thread;
 } poller_data;
 
 
 /* a linked-list of subscription topics */
 typedef struct sublist_t {
-    char* subscribe;
-    struct sublist_t* next;
+	char* subscribe;
+	struct sublist_t* next;
 } sublist;
 
 struct instanceConf_s {
-    int                    type;
-    int                    action;
-    char*                  description;
-    int                    sndHWM; /* if you want more than 2^32 messages, */
-    int                    rcvHWM; /* then pass in 0 (the default). */
-    char*                  identity;
-    sublist*               subscriptions;
-    int                    sndBuf;
-    int                    rcvBuf;
-    int                    linger;
-    int                    backlog;
-    int                    sndTimeout;
-    int                    rcvTimeout;
-    int                    maxMsgSize;
-    int                    rate;
-    int                    recoveryIVL;
-    int                    multicastHops;
-    int                    reconnectIVL;
-    int                    reconnectIVLMax;
-    int                    ipv4Only;
-    int                    affinity;
-    uchar*                 pszBindRuleset;
-    ruleset_t*             pBindRuleset;
-    struct instanceConf_s* next;
-    
+	int type;
+	int action;
+	char* description;
+	int sndHWM; /* if you want more than 2^32 messages, */
+	int rcvHWM; /* then pass in 0 (the default). */
+	char* identity;
+	sublist* subscriptions;
+	int sndBuf;
+	int rcvBuf;
+	int linger;
+	int backlog;
+	int sndTimeout;
+	int rcvTimeout;
+	int maxMsgSize;
+	int rate;
+	int recoveryIVL;
+	int multicastHops;
+	int reconnectIVL;
+	int reconnectIVLMax;
+	int ipv4Only;
+	int affinity;
+	uchar* pszBindRuleset;
+	ruleset_t* pBindRuleset;
+	struct instanceConf_s* next;
+
 };
 
 struct modConfData_s {
-    rsconf_t* pConf;
-    instanceConf_t* root;
-    instanceConf_t* tail;
-    int             io_threads;
+	rsconf_t* pConf;
+	instanceConf_t* root;
+	instanceConf_t* tail;
+	int io_threads;
 };
 struct lstn_s {
-    struct lstn_s* next;
-    void* sock;
-    ruleset_t* pRuleset;
+	struct lstn_s* next;
+	void* sock;
+	ruleset_t* pRuleset;
 };
 
 /* ----------------------------------------------------------------------------
  *  Static definitions/initializations.
  */
-static modConfData_t*       runModConf      = NULL;
-static struct lstn_s*       lcnfRoot        = NULL;
-static struct lstn_s*       lcnfLast        = NULL;
-static prop_t*              s_namep         = NULL;
-static zloop_t*             s_zloop         = NULL;
-static zctx_t*              s_context       = NULL;
-static socket_type          socketTypes[]   = {
-    {"SUB",    ZMQ_SUB  },
-    {"PULL",   ZMQ_PULL },
-    {"ROUTER", ZMQ_ROUTER },
-    {"XSUB",   ZMQ_XSUB }
+static modConfData_t* runModConf = NULL;
+static struct lstn_s* lcnfRoot = NULL;
+static struct lstn_s* lcnfLast = NULL;
+static prop_t* s_namep = NULL;
+static zloop_t* s_zloop = NULL;
+static zctx_t* s_context = NULL;
+static socket_type socketTypes[] = {
+	{"SUB", ZMQ_SUB },
+	{"PULL", ZMQ_PULL },
+	{"ROUTER", ZMQ_ROUTER },
+	{"XSUB", ZMQ_XSUB }
 };
 
-static socket_action        socketActions[] = {
-    {"BIND",    ACTION_BIND},
-    {"CONNECT", ACTION_CONNECT},
+static socket_action socketActions[] = {
+	{"BIND", ACTION_BIND},
+	{"CONNECT", ACTION_CONNECT},
 };
 
 static struct cnfparamdescr modpdescr[] = {
-    { "ioThreads", eCmdHdlrInt,     0 },
+	{ "ioThreads", eCmdHdlrInt, 0 },
 };
 
 static struct cnfparamblk modpblk = {
-    CNFPARAMBLK_VERSION,
-    sizeof(modpdescr)/sizeof(struct cnfparamdescr),
-    modpdescr
+	CNFPARAMBLK_VERSION,
+	sizeof(modpdescr)/sizeof(struct cnfparamdescr),
+	modpdescr
 };
 
 static struct cnfparamdescr inppdescr[] = {
@@ -205,7 +205,7 @@ static struct cnfparamblk inppblk = {
 static int getSocketType(char* name) {
     int type = -1;
     uint i;
-    
+
     /* match name with known socket type */
     for(i=0; i<sizeof(socketTypes)/sizeof(socket_type); ++i) {
         if( !strcmp(socketTypes[i].name, name) ) {
@@ -213,11 +213,11 @@ static int getSocketType(char* name) {
             break;
         }
     }
-    
+
     /* whine if no match was found. */
-    if (type == -1) 
+    if (type == -1)
         LogError(0, NO_ERRCODE, "unknown type %s",name);
-    
+
     return type;
 }
 
@@ -235,9 +235,9 @@ static int getSocketAction(char* name) {
     }
 
     /* whine if no matching action was found */
-    if (action == -1) 
+    if (action == -1)
         LogError(0, NO_ERRCODE, "unknown action %s",name);
-    
+
     return action;
 }
 
@@ -270,7 +270,7 @@ static void setDefaults(instanceConf_t* info) {
 };
 
 /* given a comma separated list of subscriptions, create a char* array of them
- * to set later 
+ * to set later
  */
 static rsRetVal parseSubscriptions(char* subscribes, sublist** subList){
     char* tok = strtok(subscribes, ",");
@@ -284,7 +284,7 @@ static rsRetVal parseSubscriptions(char* subscribes, sublist** subList){
     head->next = NULL;
     head->subscribe=NULL;
     currentSub=head;
-    
+
     if(tok) {
         head->subscribe=strdup(tok);
         for(tok=strtok(NULL, ","); tok!=NULL;tok=strtok(NULL, ",")) {
@@ -301,10 +301,10 @@ static rsRetVal parseSubscriptions(char* subscribes, sublist** subList){
     currentSub = head;
     DBGPRINTF("imzmq3: Subscriptions:");
     for(currentSub = head; currentSub != NULL; currentSub=currentSub->next) {
-        DBGPRINTF("'%s'", currentSub->subscribe); 
+        DBGPRINTF("'%s'", currentSub->subscribe);
     }
     DBGPRINTF("\n");
-    
+
 finalize_it:
     RETiRet;
 }
@@ -344,7 +344,7 @@ static rsRetVal createContext(void) {
         DBGPRINTF("imzmq3: creating zctx...");
         zsys_handler_set(NULL);
         s_context = zctx_new();
-        
+
         if (s_context == NULL) {
             LogError(0, RS_RET_INVALID_PARAMS,
                             "zctx_new failed: %s",
@@ -436,10 +436,10 @@ static rsRetVal createInstance(instanceConf_t** pinst) {
     DEFiRet;
     instanceConf_t* inst;
     CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
-    
+
     /* set defaults into new instance config struct */
     setDefaults(inst);
-    
+
     /* add this to the config */
     if (runModConf->root == NULL || runModConf->tail == NULL) {
         runModConf->tail = runModConf->root = inst;
@@ -456,10 +456,10 @@ static rsRetVal createListener(struct cnfparamvals* pvals) {
     instanceConf_t* inst;
     int i;
     DEFiRet;
-    
+
     CHKiRet(createInstance(&inst));
     for(i = 0 ; i < inppblk.nParams ; ++i) {
-        if(!pvals[i].bUsed) 
+        if(!pvals[i].bUsed)
             continue;	
         if(!strcmp(inppblk.descr[i].name, "ruleset")) {
             inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
@@ -512,7 +512,7 @@ static rsRetVal createListener(struct cnfparamvals* pvals) {
             LogError(0, NO_ERRCODE, "imzmq3: program error, non-handled "
                             "param '%s'\n", inppblk.descr[i].name);
         }
-    
+
     }
 finalize_it:
     RETiRet;
@@ -531,11 +531,11 @@ static rsRetVal addListener(instanceConf_t* inst){
     newcnfinfo->next = NULL;
     newcnfinfo->sock = sock;
     newcnfinfo->pRuleset = inst->pBindRuleset;
-    
+
     /* add this struct to the global */
     if(lcnfRoot == NULL) {
         lcnfRoot = newcnfinfo;
-    } 
+    }
     if(lcnfLast == NULL) {
         lcnfLast = newcnfinfo;
     } else {
@@ -564,21 +564,21 @@ static int handlePoll(zloop_t __attribute__((unused)) * loop, zmq_pollitem_t *po
         pMsg->msgFlags = NEEDS_PARSING | PARSE_HOSTNAME;
         submitMsg2(pMsg);
     }
-    
+
     /* gotta free the string returned from zstr_recv() */
     free(buf);
-    
+
     if( pollerData->thread->bShallStop == TRUE) {
-        /* a handler that returns -1 will terminate the 
+        /* a handler that returns -1 will terminate the
            czmq reactor loop
         */
-        return -1; 
+        return -1;
     }
-    
+
     return 0;
 }
 
-/* called when runInput is called by rsyslog 
+/* called when runInput is called by rsyslog
  */
 static rsRetVal rcv_loop(thrdInfo_t* pThrd){
     size_t          n_items = 0;
@@ -605,10 +605,10 @@ static rsRetVal rcv_loop(thrdInfo_t* pThrd){
         n_items++;
 
     /* make arrays of pollitems, pollerdata so they are easy to delete later */
-    
-    /* create the poll items*/ 
+
+    /* create the poll items*/
     CHKmalloc(items = (zmq_pollitem_t*)MALLOC(sizeof(zmq_pollitem_t)*n_items));
-    
+
     /* create poller data (stuff to pass into the zmq closure called when we get a message)*/
     CHKmalloc(pollerData = (poller_data*)MALLOC(sizeof(poller_data)*n_items));
 
@@ -617,7 +617,7 @@ static rsRetVal rcv_loop(thrdInfo_t* pThrd){
         /* create the socket, update items.*/
         items[i].socket=current->sock;
         items[i].events = ZMQ_POLLIN;
-        
+
         /* now update the poller_data for this item */
         pollerData[i].thread  = pThrd;
         pollerData[i].ruleset = current->pRuleset;
@@ -625,14 +625,14 @@ static rsRetVal rcv_loop(thrdInfo_t* pThrd){
 
     s_zloop = zloop_new();
     for(i=0; i<n_items; ++i) {
-        
+
         rv = zloop_poller(s_zloop, &items[i], handlePoll, &pollerData[i]);
         if (rv) {
             LogError(0, NO_ERRCODE, "imzmq3: zloop_poller failed for item %zu: %s", i, zmq_strerror(errno));
-        } 
+        }
     }
     DBGPRINTF("imzmq3: zloop_poller starting...");
-    zloop_start(s_zloop);   
+    zloop_start(s_zloop);
     zloop_destroy(&s_zloop);
     DBGPRINTF("imzmq3: zloop_poller stopped.");
 finalize_it:
@@ -717,20 +717,20 @@ CODESTARTsetModCnf
                          " config parameters ['module(...)']");
          ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
     }
- 
+
     for (i=0; i < modpblk.nParams; ++i) {
         if (!pvals[i].bUsed)
             continue;
         if (!strcmp(modpblk.descr[i].name, "ioThreads")) {
             runModConf->io_threads = (int)pvals[i].val.d.n;
         } else {
-            LogError(0, RS_RET_INVALID_PARAMS, 
+            LogError(0, RS_RET_INVALID_PARAMS,
                            "imzmq3: config error, unknown "
-                           "param %s in setModCnf\n", 
+                           "param %s in setModCnf\n",
                            modpblk.descr[i].name);
-        }   
+        }
     }
- 
+
 finalize_it:
     if (pvals != NULL)
         cnfparamvalsDestruct(pvals, &modpblk);
@@ -842,7 +842,7 @@ CODESTARTnewInpInst
     }
     DBGPRINTF("imzmq3: input param blk:\n");
     cnfparamsPrint(&inppblk, pvals);
-    
+
     /* now, parse the config params and so on... */
     CHKiRet(createListener(pvals));
 

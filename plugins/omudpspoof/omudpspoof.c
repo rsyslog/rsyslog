@@ -2,12 +2,12 @@
  *
  * This is a udp-based output module that support spoofing.
  *
- * This file builds on UDP spoofing code contributed by 
+ * This file builds on UDP spoofing code contributed by
  * David Lang <david@lang.hm>. I then created a "real" rsyslog module
  * out of that code and omfwd. I decided to make it a separate module because
  * omfwd already mixes up too many things (TCP & UDP & a different modes,
  * this has historic reasons), it would not be a good idea to also add
- * spoofing to it. And, looking at the requirements, there is little in 
+ * spoofing to it. And, looking at the requirements, there is little in
  * common between omfwd and this module.
  *
  * Note: I have briefly checked libnet source code and I somewhat have the feeling
@@ -158,7 +158,7 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current ex
 
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
+CODESTARTinitConfVars
 	cs.tplName = NULL;
 	cs.pszSourceNameTemplate = NULL;
 	cs.pszTargetHost = NULL;
@@ -354,7 +354,7 @@ ENDdbgPrintInstInfo
  * Note: libnet is not thread-safe, so we need to ensure that only one
  * instance ever is calling libnet code.
  * rgehards, 2007-12-20
- */ 
+ */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-align"
 static rsRetVal
@@ -370,7 +370,7 @@ UDPSend(wrkrInstanceData_t *pWrkrData, uchar *pszSourcename, char *msg, size_t l
 	sbool bNeedUnlock = 0;
 	/* hdrOffs = fragmentation flags + offset (in bytes)
 	* divided by 8 */
-	unsigned msgOffs, hdrOffs; 
+	unsigned msgOffs, hdrOffs;
 	unsigned maxPktLen, pktLen;
 	DEFiRet;
 
@@ -715,7 +715,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(2)
 	CHKmalloc(pData->host = ustrdup(cs.pszTargetHost));
 	if(cs.pszTargetPort == NULL)
 		pData->port = NULL;
-	else 
+	else
 		CHKmalloc(pData->port = ustrdup(cs.pszTargetPort));
 	CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(sourceTpl), OMSR_NO_RQD_TPL_OPTS));
 	pData->sourcePortStart = cs.iSourcePortStart;

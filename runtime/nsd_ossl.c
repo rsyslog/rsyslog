@@ -73,7 +73,7 @@ DEFobjCurrIf(nsd_ptcp)
 	#define RSYSLOG_BIO_number_read(SSLBIO) BIO_number_read(SSLBIO)
 	#define RSYSLOG_BIO_number_written(SSLBIO) BIO_number_written(SSLBIO)
 #else
- 	#define RSYSLOG_X509_NAME_oneline(X509CERT) (X509CERT != NULL ? X509CERT->cert_info->subject : NULL)
+	#define RSYSLOG_X509_NAME_oneline(X509CERT) (X509CERT != NULL ? X509CERT->cert_info->subject : NULL)
 	#define RSYSLOG_BIO_method_name(SSLBIO) SSLBIO->method->name
 	#define RSYSLOG_BIO_number_read(SSLBIO) SSLBIO->num
 	#define RSYSLOG_BIO_number_written(SSLBIO) SSLBIO->num
@@ -268,46 +268,48 @@ int verify_callback(int status, X509_STORE_CTX *store)
 }
 
 long BIO_debug_callback(BIO *bio, int cmd, const char __attribute__((unused)) *argp,
-                        int argi, long __attribute__((unused)) argl, long ret)
+			int argi, long __attribute__((unused)) argl, long ret)
 {
-    long r = 1;
+	long r = 1;
 
-    if (BIO_CB_RETURN & cmd)
-        r = ret;
+	if (BIO_CB_RETURN & cmd)
+		r = ret;
 
-    dbgprintf("openssl debugmsg: BIO[%p]: ", (void *)bio);
+	dbgprintf("openssl debugmsg: BIO[%p]: ", (void *)bio);
 
-    switch (cmd) {
-    case BIO_CB_FREE:
-        dbgprintf("Free - %s\n", RSYSLOG_BIO_method_name(bio));
-        break;
+	switch (cmd) {
+	case BIO_CB_FREE:
+		dbgprintf("Free - %s\n", RSYSLOG_BIO_method_name(bio));
+		break;
 /* Disabled due API changes for OpenSSL 1.1.0+ */
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
-    case BIO_CB_READ:
-        if (bio->method->type & BIO_TYPE_DESCRIPTOR)
-            dbgprintf("read(%d,%lu) - %s fd=%d\n",
-                         RSYSLOG_BIO_number_read(bio), (unsigned long)argi,
-                         RSYSLOG_BIO_method_name(bio), RSYSLOG_BIO_number_read(bio));
-        else
-            dbgprintf("read(%d,%lu) - %s\n",
-                         RSYSLOG_BIO_number_read(bio), (unsigned long)argi, RSYSLOG_BIO_method_name(bio));
-        break;
-    case BIO_CB_WRITE:
-        if (bio->method->type & BIO_TYPE_DESCRIPTOR)
-            dbgprintf("write(%d,%lu) - %s fd=%d\n",
-                         RSYSLOG_BIO_number_written(bio), (unsigned long)argi,
-                         RSYSLOG_BIO_method_name(bio), RSYSLOG_BIO_number_written(bio));
-        else
-            dbgprintf("write(%d,%lu) - %s\n",
-                         RSYSLOG_BIO_number_written(bio), (unsigned long)argi, RSYSLOG_BIO_method_name(bio));
-        break;
+	case BIO_CB_READ:
+		if (bio->method->type & BIO_TYPE_DESCRIPTOR)
+			dbgprintf("read(%d,%lu) - %s fd=%d\n",
+				RSYSLOG_BIO_number_read(bio), (unsigned long)argi,
+				RSYSLOG_BIO_method_name(bio), RSYSLOG_BIO_number_read(bio));
+		else
+			dbgprintf("read(%d,%lu) - %s\n", RSYSLOG_BIO_number_read(bio),
+					(unsigned long)argi, RSYSLOG_BIO_method_name(bio));
+		break;
+	case BIO_CB_WRITE:
+		if (bio->method->type & BIO_TYPE_DESCRIPTOR)
+			dbgprintf("write(%d,%lu) - %s fd=%d\n",
+				RSYSLOG_BIO_number_written(bio), (unsigned long)argi,
+				RSYSLOG_BIO_method_name(bio), RSYSLOG_BIO_number_written(bio));
+		else
+			dbgprintf("write(%d,%lu) - %s\n",
+					RSYSLOG_BIO_number_written(bio),
+					(unsigned long)argi,
+					RSYSLOG_BIO_method_name(bio));
+		break;
 #else
-    case BIO_CB_READ:
-            dbgprintf("read %s\n", RSYSLOG_BIO_method_name(bio));
-        break;
-    case BIO_CB_WRITE:
-            dbgprintf("write %s\n", RSYSLOG_BIO_method_name(bio));
-        break;
+	case BIO_CB_READ:
+		dbgprintf("read %s\n", RSYSLOG_BIO_method_name(bio));
+		break;
+	case BIO_CB_WRITE:
+		dbgprintf("write %s\n", RSYSLOG_BIO_method_name(bio));
+		break;
 #endif
     case BIO_CB_PUTS:
         dbgprintf("puts() - %s\n", RSYSLOG_BIO_method_name(bio));

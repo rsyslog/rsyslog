@@ -38,7 +38,7 @@
 #include "atomic.h"
 
 /* rgerhards 2004-11-08: The following structure represents a
- * syslog message. 
+ * syslog message.
  *
  * Important Note:
  * The message object is used for multiple purposes (once it

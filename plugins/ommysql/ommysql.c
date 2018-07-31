@@ -12,11 +12,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -56,7 +56,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 DEF_OMOD_STATIC_DATA
 
 typedef struct _instanceData {
-	char	dbsrv[MAXHOSTNAMELEN+1];	/* IP or hostname of DB server*/ 
+	char	dbsrv[MAXHOSTNAMELEN+1];	/* IP or hostname of DB server*/
 	unsigned int dbsrvPort;		/* port of MySQL server */
 	char	dbname[_DB_MAXDBLEN+1];	/* DB name */
 	char	dbuid[_DB_MAXUNAMELEN+1];	/* DB user */
@@ -76,7 +76,7 @@ typedef struct wrkrInstanceData {
 typedef struct configSettings_s {
 	int iSrvPort;				/* database server port */
 	uchar *pszMySQLConfigFile;	/* MySQL Client Configuration File */
-	uchar *pszMySQLConfigSection;	/* MySQL Client Configuration Section */ 
+	uchar *pszMySQLConfigSection;	/* MySQL Client Configuration Section */
 } configSettings_t;
 static configSettings_t cs;
 
@@ -101,7 +101,7 @@ static struct cnfparamblk actpblk =
 
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
+CODESTARTinitConfVars
 	resetConfigVariables(NULL, NULL);
 ENDinitConfVars
 
@@ -131,7 +131,7 @@ ENDisCompatibleWithFeature
 static void closeMySQL(wrkrInstanceData_t *pWrkrData)
 {
 	if(pWrkrData->hmysql != NULL) {	/* just to be on the safe side... */
-		mysql_close(pWrkrData->hmysql);	
+		mysql_close(pWrkrData->hmysql);
 		pWrkrData->hmysql = NULL;
 	}
 }
@@ -182,7 +182,7 @@ static void reportDBError(wrkrInstanceData_t *pWrkrData, int bSilent)
 			LogError(0, NO_ERRCODE, "ommysql: %s", errMsg);
 		}
 	}
-		
+
 	return;
 }
 
@@ -455,7 +455,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	/* rger 2004-10-28: added support for MySQL
 	 * >server,dbname,userid,password
-	 * Now we read the MySQL connection properties 
+	 * Now we read the MySQL connection properties
 	 * and verify that the properties are valid.
 	 */
 	if(getSubString(&p, pData->dbsrv, MAXHOSTNAMELEN+1, ','))
@@ -482,11 +482,11 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			 */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar*) " StdDBFmt"));
 	
-	/* If we detect invalid properties, we disable logging, 
-	 * because right properties are vital at this place.  
-	 * Retries make no sense. 
+	/* If we detect invalid properties, we disable logging,
+	 * because right properties are vital at this place.
+	 * Retries make no sense.
 	 */
-	if (iMySQLPropErr) { 
+	if (iMySQLPropErr) {
 		LogError(0, RS_RET_INVALID_PARAMS, "Trouble with MySQL connection properties. "
 				"-MySQL logging disabled");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
@@ -538,7 +538,7 @@ INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
-	if(!bCoreSupportsBatching) {	
+	if(!bCoreSupportsBatching) {
 		LogError(0, NO_ERRCODE, "ommysql: rsyslog core too old");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}

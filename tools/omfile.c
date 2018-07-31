@@ -24,11 +24,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -303,7 +303,7 @@ getDfltTpl(void)
 
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
+CODESTARTinitConfVars
 	pszFileDfltTplName = NULL; /* make sure this can be free'ed! */
 	iRet = resetConfigVariables(NULL, NULL); /* params are dummies */
 ENDinitConfVars
@@ -394,7 +394,7 @@ static rsRetVal setDynaFileCacheSize(void __attribute__((unused)) *pVal, int iNe
 
 /* Helper to cfline(). Parses a output channel name up until the first
  * comma and then looks for the template specifier. Tries
- * to find that template. Maps the output channel to the 
+ * to find that template. Maps the output channel to the
  * proper filed structure settings. Everything is stored in the
  * filed struct. Over time, the dependency on filed might be
  * removed.
@@ -421,7 +421,7 @@ static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringR
 	pOch = ochFind(szBuf, i);
 
 	if(pOch == NULL) {
-		parser_errmsg( 
+		parser_errmsg(
 			 "outchannel '%s' not found - ignoring action line",
 			 szBuf);
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
@@ -1161,7 +1161,7 @@ initSigprov(instanceData *__restrict__ const pData, struct nvlst *lst)
 	pData->sigprovNameFull = ustrdup(szDrvrName);
 
 	pData->sigprov.ifVersion = sigprovCURR_IF_VERSION;
-	/* The pDrvrName+2 below is a hack to obtain the object name. It 
+	/* The pDrvrName+2 below is a hack to obtain the object name. It
 	 * safes us to have yet another variable with the name without "lm" in
 	 * front of it. If we change the module load interface, we may re-think
 	 * about this hack, but for the time being it is efficient and clean enough.
@@ -1204,7 +1204,7 @@ initCryprov(instanceData *__restrict__ const pData, struct nvlst *lst)
 	pData->cryprovNameFull = ustrdup(szDrvrName);
 
 	pData->cryprov.ifVersion = cryprovCURR_IF_VERSION;
-	/* The pDrvrName+2 below is a hack to obtain the object name. It 
+	/* The pDrvrName+2 below is a hack to obtain the object name. It
 	 * safes us to have yet another variable with the name without "lm" in
 	 * front of it. If we change the module load interface, we may re-think
 	 * about this hack, but for the time being it is efficient and clean enough.
@@ -1388,13 +1388,13 @@ BEGINparseSelectorAct
 	uchar fname[MAXFNAME];
 CODESTARTparseSelectorAct
 	/* Note: the indicator sequence permits us to use '$' to signify
-	 * outchannel, what otherwise is not possible due to truely 
+	 * outchannel, what otherwise is not possible due to truely
 	 * unresolvable grammar conflicts (*this time no way around*).
 	 * rgerhards, 2011-07-09
 	 */
 	if(!strncmp((char*) p, ":omfile:", sizeof(":omfile:") - 1)) {
 		p += sizeof(":omfile:") - 1;
-	} 
+	}
 	if(!(*p == '$' || *p == '?' || *p == '/' || *p == '.' || *p == '-'))
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 

@@ -110,7 +110,7 @@ dummyIsCompatibleWithFeature(__attribute__((unused)) syslogFeature eFeat)
 }
 static rsRetVal
 dummynewActInst(uchar *modName, struct nvlst __attribute__((unused)) *dummy1,
-	  	void __attribute__((unused)) **dummy2, omodStringRequest_t __attribute__((unused)) **dummy3) 
+		void __attribute__((unused)) **dummy2, omodStringRequest_t __attribute__((unused)) **dummy3)
 {
 	LogError(0, RS_RET_CONFOBJ_UNSUPPORTED, "config objects are not "
 			"supported by module '%s' -- legacy config options "
@@ -373,7 +373,7 @@ readyModForCnf(modInfo_t *pThis, cfgmodules_etry_t **ppNew, cfgmodules_etry_t **
 	}
 
 	/* check for duplicates and, as a side-activity, identify last node */
-	pLast = loadConf->modules.root; 
+	pLast = loadConf->modules.root;
 	if(pLast != NULL) {
 		while(1) { /* loop broken inside */
 			if(pLast->pMod == pThis) {
@@ -461,7 +461,7 @@ finalize_it:
 /* Get the next module pointer - this is used to traverse the list.
  * The function returns the next pointer or NULL, if there is no next one.
  * The last object must be provided to the function. If NULL is provided,
- * it starts at the root of the list. Even in this case, NULL may be 
+ * it starts at the root of the list. Even in this case, NULL may be
  * returned - then, the list is empty.
  * rgerhards, 2007-07-23
  */
@@ -863,7 +863,7 @@ finalize_it:
 	RETiRet;
 }
 
-/* Print loaded modules. This is more or less a 
+/* Print loaded modules. This is more or less a
  * debug or test aid, but anyhow I think it's worth it...
  * This only works if the dbgprintf() subsystem is initialized.
  * TODO: update for new input modules!
@@ -1126,7 +1126,7 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 {
 	size_t iPathLen, iModNameLen;
 	int bHasExtension;
-        void *pModHdlr, *pModInit;
+	void *pModHdlr, *pModInit;
 	modInfo_t *pModInfo;
 	cfgmodules_etry_t *pNew = NULL;
 	cfgmodules_etry_t *pLast = NULL;
@@ -1173,7 +1173,7 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 						    pModName);
 						ABORT_FINALIZE(RS_RET_DUP_PARAM);
 					} else {
-						/* for built-in moules, we need to call setModConf, 
+						/* for built-in moules, we need to call setModConf,
 						 * because there is no way to set parameters at load
 						 * time for obvious reasons...
 						 */
@@ -1406,7 +1406,7 @@ Use(const char *srcFile, modInfo_t *pThis)
 
 
 /* Reference-Counting object access: subract one from the current refcount. Must
- * by called by anyone who no longer needs a module. If count reaches 0, the 
+ * by called by anyone who no longer needs a module. If count reaches 0, the
  * module is unloaded. -- rgerhards, 20080-03-10
  */
 static rsRetVal

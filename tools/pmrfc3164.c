@@ -13,11 +13,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -206,7 +206,7 @@ CODESTARTparse
 
 
 	/* Check to see if msg contains a timestamp. We start by assuming
-	 * that the message timestamp is the time of reception (which we 
+	 * that the message timestamp is the time of reception (which we
 	 * generated ourselfs and then try to actually find one inside the
 	 * message. There we go from high-to low precison and are done
 	 * when we find a matching one. -- rgerhards, 2008-09-16
@@ -239,7 +239,7 @@ CODESTARTparse
 		memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
 	}
 
-	/* rgerhards, 2006-03-13: next, we parse the hostname and tag. But we 
+	/* rgerhards, 2006-03-13: next, we parse the hostname and tag. But we
 	 * do this only when the user has not forbidden this. I now introduce some
 	 * code that allows a user to configure rsyslogd to treat the rest of the
 	 * message as MSG part completely. In this case, the hostname will be the
@@ -343,7 +343,7 @@ CODESTARTparse
 			--lenMsg;
 		}
 		if(lenMsg > 0 && *p2parse == ':') {
-			++p2parse; 
+			++p2parse;
 			--lenMsg;
 			bufParseTAG[i++] = ':';
 		}

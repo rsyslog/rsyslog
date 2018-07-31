@@ -2,7 +2,7 @@
  *
  * this detects logs sent by Cisco devices that mangle their syslog output when you tell them to log by name
  * by adding ' :' between the name and the %XXX-X-XXXXXXX: tag
- * 
+ *
  * instead of actually parsing the message, this modifies the message and then falls through to allow a later
  * parser to handle the now modified message
  *
@@ -13,11 +13,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -86,7 +86,7 @@ CODESTARTparse
 	}
 	if((unsigned) lenMsg < 34) {
 		/* too short, can not be "our" message */
-                /* minimum message, 16 character timestamp, 1 character name, ' : %ASA-1-000000: '*/
+		/* minimum message, 16 character timestamp, 1 character name, ' : %ASA-1-000000: '*/
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
 	/* check if the timestamp is a 16 character or 21 character timestamp
@@ -122,7 +122,7 @@ CODESTARTparse
 	/* skip the space after the hostname */
 	lenMsg -=1;
 	p2parse +=1;
-        /* if the syslog tag is : and the next thing starts with a % assume that this is a mangled cisco
+	/* if the syslog tag is : and the next thing starts with a % assume that this is a mangled cisco
 	log and fix it */
 	if(strncasecmp((char*) p2parse, OpeningText, sizeof(OpeningText)-1) != 0) {
 		/* wrong opening text */
@@ -169,7 +169,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
 	DBGPRINTF("cisconames parser init called, compiled with version %s\n", VERSION);
- 	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG();
+	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG();
 	/* cache value, is set only during rsyslogd option processing */
 
 

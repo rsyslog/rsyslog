@@ -1,5 +1,5 @@
-/* Testbench for rsyslog 
- * 
+/* Testbench for rsyslog
+ *
  * This are dummy calls for "runtime" routines which are not yet properly
  * abstracted and part of the actual runtime libraries. This module tries
  * to make the linker happy. Please note that it does NOT provide anything

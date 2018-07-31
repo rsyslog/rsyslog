@@ -9,11 +9,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -97,7 +97,7 @@ static struct cnfparamblk actpblk =
 	};
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
+CODESTARTinitConfVars
 	cs.szBinary = NULL;	/* name of binary to call */
 ENDinitConfVars
 
@@ -179,7 +179,7 @@ writeOutputDebug(wrkrInstanceData_t *__restrict__ const pWrkrData,
 				       O_WRONLY | O_APPEND | O_CREAT, 0600);
 		if(pWrkrData->fdOutput == -1) {
 			DBGPRINTF("mmexternal: error opening output file %s: %s\n",
-				   pWrkrData->pData->outputFileName, 
+				   pWrkrData->pData->outputFileName,
 				   rs_strerror_r(errno, errStr, sizeof(errStr)));
 			goto done;
 		}
@@ -301,7 +301,7 @@ execBinary(wrkrInstanceData_t *pWrkrData, const int fdStdin, const int fdStdOutE
 	sigAct.sa_handler = SIG_IGN;
 	sigaction(SIGINT, &sigAct, NULL);
 	sigemptyset(&set);
-        sigprocmask(SIG_SETMASK, &set, NULL);
+	sigprocmask(SIG_SETMASK, &set, NULL);
 
 	alarm(0);
 
@@ -357,7 +357,7 @@ openPipe(wrkrInstanceData_t *pWrkrData)
 	}
 	pWrkrData->pid = cpid;
 
-	if(cpid == 0) {    
+	if(cpid == 0) {
 		/* we are now the child, just exec the binary. */
 		close(pipestdin[1]); /* close those pipe "ports" that */
 		close(pipestdout[0]); /* we don't need */
@@ -608,7 +608,7 @@ BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt
 

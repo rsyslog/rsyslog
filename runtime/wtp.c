@@ -1,7 +1,7 @@
 /* wtp.c
  *
  * This file implements the worker thread pool (wtp) class.
- * 
+ *
  * File begun on 2008-01-20 by RGerhards
  *
  * There is some in-depth documentation available in doc/dev_queue.html
@@ -145,7 +145,7 @@ wtpConstructFinalize(wtp_t *pThis)
 		CHKiRet(wtiSetpWtp(pWti, pThis));
 		CHKiRet(wtiConstructFinalize(pWti));
 	}
-		
+
 
 finalize_it:
 	RETiRet;
@@ -180,7 +180,7 @@ ENDobjDestruct(wtp)
 
 
 /* Sent a specific state for the worker thread pool. -- rgerhards, 2008-01-21
- * We do not need to do atomic instructions as set operations are only 
+ * We do not need to do atomic instructions as set operations are only
  * called when terminating the pool, and then in strict sequence. So we
  * can never overwrite each other. On the other hand, it also doesn't
  * matter if the read operation obtains an older value, as we then simply
@@ -378,7 +378,7 @@ wtpWrkrExecCancelCleanup(void *arg)
  */
 #if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wempty-body"
-#endif 
+#endif
 static void *
 wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in wtp! */
 {
@@ -411,17 +411,17 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	dbgOutputTID((char*)thrdName);
 #	endif
 
-        /* let the parent know we're done with initialization */
-        d_pthread_mutex_lock(&pThis->mutWtp);
+	/* let the parent know we're done with initialization */
+	d_pthread_mutex_lock(&pThis->mutWtp);
 	wtiSetState(pWti, WRKTHRD_RUNNING);
-        pthread_cond_broadcast(&pThis->condThrdInitDone);
-        d_pthread_mutex_unlock(&pThis->mutWtp);
+	pthread_cond_broadcast(&pThis->condThrdInitDone);
+	d_pthread_mutex_unlock(&pThis->mutWtp);
 
 	pthread_cleanup_push(wtpWrkrExecCancelCleanup, pWti);
 
 	wtiWorker(pWti);
 	pthread_cleanup_pop(0);
-        d_pthread_mutex_lock(&pThis->mutWtp);
+	d_pthread_mutex_lock(&pThis->mutWtp);
 	pthread_cleanup_push(mutexCancelCleanup, &pThis->mutWtp);
 	wtpWrkrExecCleanup(pWti);
 
@@ -475,9 +475,9 @@ wtpStartWrkr(wtp_t *pThis)
 		wtpGetDbgHdr(pThis), iState,
 		ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
 
-        /* wait for the new thread to initialize its signal mask and
-         * cancelation cleanup handler before proceeding
-         */
+	/* wait for the new thread to initialize its signal mask and
+	 * cancelation cleanup handler before proceeding
+	 */
 	do {
 		d_pthread_cond_wait(&pThis->condThrdInitDone, &pThis->mutWtp);
 	} while(wtiGetState(pWti) != WRKTHRD_RUNNING);

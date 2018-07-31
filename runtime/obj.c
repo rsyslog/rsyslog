@@ -38,11 +38,11 @@
  * than will be defined global and be queriable via pHostQueryEtryPoint().
  * I agree, technically this is much the same, but from an architecture
  * point of view it looks cleaner (at least to me).
- * 
+ *
  * Please note that there is another egg-hen problem: we use a linked list,
  * which is provided by the linkedList object. However, we need to
  * initialize the linked list before we can provide the UseObj()
- * functionality. That, in turn, would probably be required by the 
+ * functionality. That, in turn, would probably be required by the
  * linkedList object. So the solution is to use a backdoor just to
  * init the linked list and from then on use the usual interfaces.
  *
@@ -55,11 +55,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -110,7 +110,7 @@ static rsRetVal FindObjInfo(const char *szObjName, objInfo_t **ppInfo);
 /* methods */
 
 /* This is a dummy method to be used when a standard method has not been
- * implemented by an object. Having it allows us to simply call via the 
+ * implemented by an object. Having it allows us to simply call via the
  * jump table without any NULL pointer checks - which gains quite
  * some performance. -- rgerhards, 2008-01-04
  */
@@ -266,7 +266,7 @@ finalize_it:
 /* begin serialization of an object's property bag
  * Note: a property bag is used to serialize some of an objects
  * properties, but not necessarily all. A good example is the queue
- * object, which at some stage needs to serialize a number of its 
+ * object, which at some stage needs to serialize a number of its
  * properties, but not the queue data itself. From the object point
  * of view, a property bag can not be used to re-instantiate an object.
  * Otherwise, the serialization is exactly the same.
@@ -1393,10 +1393,10 @@ objClassExit(void)
 }
 
 
-/* initialize our own class 
+/* initialize our own class
  * Please note that this also initializes those classes that we rely on.
  * Though this is a bit dirty, we need to do it - otherwise we can't get
- * around that bootstrap problem. We need to face the fact the the obj 
+ * around that bootstrap problem. We need to face the fact the the obj
  * class is a little different from the rest of the system, as it provides
  * the core class loader functionality.
  * rgerhards, 2008-02-29

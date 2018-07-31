@@ -1,5 +1,5 @@
 /* netstrms.c
- * 
+ *
  * Work on this module begung 2008-04-23 by Rainer Gerhards.
  *
  * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
@@ -51,7 +51,7 @@ DEFobjCurrIf(netstrm)
  * driver-specific functions (allmost all...) can be carried
  * out. Note that the driver's .ifIsLoaded is correctly
  * initialized by calloc() and we depend on that.
- * WARNING: this code is mostly identical to similar code in 
+ * WARNING: this code is mostly identical to similar code in
  * nssel.c - TODO: abstract it and move it to some common place.
  * rgerhards, 2008-04-18
  */
@@ -70,7 +70,7 @@ loadDrvr(netstrms_t *pThis)
 	CHKmalloc(pThis->pDrvrName = (uchar*) strdup((char*)szDrvrName));
 
 	pThis->Drvr.ifVersion = nsdCURR_IF_VERSION;
-	/* The pDrvrName+2 below is a hack to obtain the object name. It 
+	/* The pDrvrName+2 below is a hack to obtain the object name. It
 	 * safes us to have yet another variable with the name without "lm" in
 	 * front of it. If we change the module load interface, we may re-think
 	 * about this hack, but for the time being it is efficient and clean
@@ -99,7 +99,7 @@ BEGINobjDestruct(netstrms) /* be sure to specify the object type also in END and
 CODESTARTobjDestruct(netstrms)
 	/* and now we must release our driver, if we got one. We use the presence of
 	 * a driver name string as load indicator (because we also need that string
-	 * to release the driver 
+	 * to release the driver
 	 */
 	if(pThis->pDrvrName != NULL) {
 		obj.ReleaseObj(__FILE__, pThis->pDrvrName+2, pThis->pDrvrName, (void*) &pThis->Drvr);
@@ -260,7 +260,7 @@ CreateStrm(netstrms_t *pThis, netstrm_t **ppStrm)
 
 	CHKiRet(objUse(netstrm, DONT_LOAD_LIB));
 	CHKiRet(netstrm.Construct(&pStrm));
-	/* we copy over our driver structure. We could provide a pointer to 
+	/* we copy over our driver structure. We could provide a pointer to
 	 * ourselves, but that costs some performance on each driver invocation.
 	 * As we already have hefty indirection (and thus performance toll), I
 	 * prefer to copy over the function pointers here. -- rgerhards, 2008-04-23

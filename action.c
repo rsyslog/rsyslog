@@ -98,7 +98,7 @@
 #include <unistd.h>
 #ifdef _AIX
 #include <pthread.h>
-#endif 
+#endif
 #include <json.h>
 
 #include "dirty.h"
@@ -170,9 +170,9 @@ typedef struct configSettings_s {
 	int64 iActionQueMaxFileSize;
 	int iActionQPersistUpdCnt;			/* persist queue info every n updates */
 	int bActionQSyncQeueFiles;			/* sync queue files */
-	int iActionQtoQShutdown;			/* queue shutdown */ 
-	int iActionQtoActShutdown;			/* action shutdown (in phase 2) */ 
-	int iActionQtoEnq;				/* timeout for queue enque */ 
+	int iActionQtoQShutdown;			/* queue shutdown */
+	int iActionQtoActShutdown;			/* action shutdown (in phase 2) */
+	int iActionQtoEnq;				/* timeout for queue enque */
 	int iActionQtoWrkShutdown;			/* timeout for worker thread shutdown */
 	int iActionQWrkMinMsgs;				/* minimum messages per worker needed to start a new one */
 	int bActionQSaveOnShutdown;			/* save queue on shutdown (when DA enabled)? */
@@ -241,7 +241,7 @@ batchState2String(const batch_state_t state)
 }
 */
 
-/* ------------------------------ methods ------------------------------ */ 
+/* ------------------------------ methods ------------------------------ */
 
 /* This function returns the "current" time for this action. Current time
  * is not necessarily real-time. In order to enhance performance, current
@@ -303,9 +303,9 @@ actionResetQueueParams(void)
 	cs.iActionQueMaxFileSize = 1024*1024;
 	cs.iActionQPersistUpdCnt = 0;			/* persist queue info every n updates */
 	cs.bActionQSyncQeueFiles = 0;
-	cs.iActionQtoQShutdown = 0;			/* queue shutdown */ 
-	cs.iActionQtoActShutdown = 1000;		/* action shutdown (in phase 2) */ 
-	cs.iActionQtoEnq = 50;				/* timeout for queue enque */ 
+	cs.iActionQtoQShutdown = 0;			/* queue shutdown */
+	cs.iActionQtoActShutdown = 1000;		/* action shutdown (in phase 2) */
+	cs.iActionQtoEnq = 50;				/* timeout for queue enque */
 	cs.iActionQtoWrkShutdown = 60000;		/* timeout for worker thread shutdown */
 	cs.iActionQWrkMinMsgs = -1;			/* minimum messages per worker needed to start a new one */
 	cs.bActionQSaveOnShutdown = 1;			/* save queue on shutdown (when DA enabled)? */
@@ -495,7 +495,7 @@ actionConstructFinalize(action_t *__restrict__ const pThis, struct nvlst *lst)
 	snprintf((char*) pszAName, sizeof(pszAName), "%s queue",
 		 pThis->pszName);
 
-	/* now check if we can run the action in "firehose mode" during stage one of 
+	/* now check if we can run the action in "firehose mode" during stage one of
 	 * its processing (that is before messages are enqueued into the action q).
 	 * This is only possible if some features, which require strict sequence, are
 	 * not used. Thankfully, that is usually the case. The benefit of firehose
@@ -770,8 +770,8 @@ actionSuspend(action_t * const pThis, wti_t * const pWti)
  * entry point. This is invalid, but has harsh consequences: it will cause the rsyslog
  * engine to go into a tight loop. That obviously is not acceptable. As such, we track the
  * count of iterations that a tryResume returning RS_RET_OK is immediately followed by
- * an unsuccessful call to doAction(). If that happens more than 10 times, we assume 
- * the return acutally is a RS_RET_SUSPENDED. In order to go through the various 
+ * an unsuccessful call to doAction(). If that happens more than 10 times, we assume
+ * the return acutally is a RS_RET_SUSPENDED. In order to go through the various
  * resumption stages, we do this for every 10 requests. This magic number 10 may
  * not be the most appropriate, but it should be thought of a "if nothing else helps"
  * kind of facility: in the first place, the module should return a proper indication
@@ -980,7 +980,7 @@ prepareDoActionParams(action_t * __restrict__ const pAction,
 	if(pAction->isTransactional) {
 		CHKiRet(wtiNewIParam(pWti, pAction, &iparams));
 		for(i = 0 ; i < pAction->iNumTpls ; ++i) {
-			CHKiRet(tplToString(pAction->ppTpl[i], pMsg, 
+			CHKiRet(tplToString(pAction->ppTpl[i], pMsg,
 					    &actParam(iparams, pAction->iNumTpls, 0, i),
 				            ttNow));
 		}
@@ -1377,7 +1377,7 @@ actionTryRemoveHardErrorsFromBatch(action_t *__restrict__ const pThis, wti_t *__
 	RETiRet;
 }
 
-/* Note: we currently need to return an iRet, as this is used in 
+/* Note: we currently need to return an iRet, as this is used in
  * direct mode. TODO: However, it may be worth further investigating this,
  * as it looks like there is no ultimate consumer of this code.
  * rgerhards, 2013-11-06
@@ -1691,7 +1691,7 @@ doSubmitToActionQ(action_t * const pAction, wti_t * const pWti, smsg_t *pMsg)
 	if(pAction->pQueue->qType == QUEUETYPE_DIRECT) {
 		ttNow.year = 0;
 		iRet = processMsgMain(pAction, pWti, pMsg, &ttNow);
-	} else {/* in this case, we do single submits to the queue. 
+	} else {/* in this case, we do single submits to the queue.
 		 * TODO: optimize this, we may do at least a multi-submit!
 		 */
 		iRet = qqueueEnqMsg(pAction->pQueue, eFLOWCTL_NO_DELAY,

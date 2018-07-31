@@ -718,7 +718,7 @@ lookupFindTable(uchar *name)
  */
 static rsRetVal
 lookupReloadOrStub(lookup_ref_t *pThis, const uchar* stub_val) {
-	lookup_t *newlu, *oldlu; /* dummy to be able to use support functions without 
+	lookup_t *newlu, *oldlu; /* dummy to be able to use support functions without
 								affecting current settings. */
 	DEFiRet;
 
@@ -1012,13 +1012,13 @@ lookupTableDefProcessCnf(struct cnfobj *o)
 	strcpy(reloader_thd_name, reloader_prefix);
 	strcpy(reloader_thd_name + strlen(reloader_prefix), (char*) lu->name);
 	reloader_thd_name[thd_name_len - 1] = '\0';
-  #if defined(__NetBSD__)
-     pthread_setname_np(lu->reloader, "%s", reloader_thd_name);
-  #elif defined(__APPLE__)
-     pthread_setname_np(reloader_thd_name); // must check
-  #else
-     pthread_setname_np(lu->reloader, reloader_thd_name);
-  #endif
+#if defined(__NetBSD__)
+	pthread_setname_np(lu->reloader, "%s", reloader_thd_name);
+#elif defined(__APPLE__)
+	pthread_setname_np(reloader_thd_name); // must check
+#else
+	pthread_setname_np(lu->reloader, reloader_thd_name);
+#endif
 #endif
 	CHKiRet(lookupReadFile(lu->self, lu->name, lu->filename));
 	DBGPRINTF("lookup table '%s' loaded from file '%s'\n", lu->name, lu->filename);

@@ -76,53 +76,53 @@ DEF_OMOD_STATIC_DATA
 
 /* Settings for the action */
 typedef struct _configSettings {
-    pn_url_t *url;      /* address of message bus */
-    uchar *username;    /* authentication credentials */
-    uchar *password;
-    uchar *target;      /* endpoint for sent log messages */
-    uchar *templateName;
-    int bDisableSASL;   /* do not enable SASL? 0-enable 1-disable */
-    int idleTimeout;    /* disconnect idle connection (seconds) */
-    int reconnectDelay; /* pause before re-connecting (seconds) */
-    int maxRetries;   /* drop unrouteable messages after maxRetries attempts */
+	pn_url_t *url;      /* address of message bus */
+	uchar *username;    /* authentication credentials */
+	uchar *password;
+	uchar *target;      /* endpoint for sent log messages */
+	uchar *templateName;
+	int bDisableSASL;   /* do not enable SASL? 0-enable 1-disable */
+	int idleTimeout;    /* disconnect idle connection (seconds) */
+	int reconnectDelay; /* pause before re-connecting (seconds) */
+	int maxRetries;   /* drop unrouteable messages after maxRetries attempts */
 } configSettings_t;
 
 
 /* Control for communicating with the protocol engine thread */
 
 typedef enum {          // commands sent to protocol thread
-    COMMAND_DONE,       // marks command complete
-    COMMAND_SEND,       // send a message to the message bus
-    COMMAND_IS_READY,   // is the connection to the message bus active?
-    COMMAND_SHUTDOWN    // cleanup and terminate protocol thread.
+	COMMAND_DONE,       // marks command complete
+	COMMAND_SEND,       // send a message to the message bus
+	COMMAND_IS_READY,   // is the connection to the message bus active?
+	COMMAND_SHUTDOWN    // cleanup and terminate protocol thread.
 } commands_t;
 
 
 typedef struct _threadIPC {
-    pthread_mutex_t lock;
-    pthread_cond_t condition;
-    commands_t command;
-    rsRetVal result;    // of command
-    pn_message_t *message;
-    uint64_t    tag;    // per message id
+	pthread_mutex_t lock;
+	pthread_cond_t condition;
+	commands_t command;
+	rsRetVal result;    // of command
+	pn_message_t *message;
+	uint64_t    tag;    // per message id
 } threadIPC_t;
 
 
 /* per-instance data */
 
 typedef struct _instanceData {
-    configSettings_t config;
-    threadIPC_t ipc;
-    int bThreadRunning;
-    pthread_t thread_id;
-    pn_reactor_t *reactor;
-    pn_handler_t *handler;
-    pn_message_t *message;
-    int log_count;
+	configSettings_t config;
+	threadIPC_t ipc;
+	int bThreadRunning;
+	pthread_t thread_id;
+	pn_reactor_t *reactor;
+	pn_handler_t *handler;
+	pn_message_t *message;
+	int log_count;
 } instanceData;
 
 typedef struct wrkrInstanceData {
-        instanceData *pData;
+	instanceData *pData;
 } wrkrInstanceData_t;
 
 
@@ -155,28 +155,28 @@ static void dispatcher(pn_handler_t *handler,
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-    { "host", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
-    { "target", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
-    { "username", eCmdHdlrGetWord, 0 },
-    { "password", eCmdHdlrGetWord, 0 },
-    { "template", eCmdHdlrGetWord, 0 },
-    { "idleTimeout", eCmdHdlrNonNegInt, 0 },
-    { "reconnectDelay", eCmdHdlrPositiveInt, 0 },
-    { "maxRetries", eCmdHdlrNonNegInt, 0 },
-    { "disableSASL", eCmdHdlrInt, 0 }
+	{ "host", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
+	{ "target", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
+	{ "username", eCmdHdlrGetWord, 0 },
+	{ "password", eCmdHdlrGetWord, 0 },
+	{ "template", eCmdHdlrGetWord, 0 },
+	{ "idleTimeout", eCmdHdlrNonNegInt, 0 },
+	{ "reconnectDelay", eCmdHdlrPositiveInt, 0 },
+	{ "maxRetries", eCmdHdlrNonNegInt, 0 },
+	{ "disableSASL", eCmdHdlrInt, 0 }
 };
 static struct cnfparamblk actpblk = {
-    CNFPARAMBLK_VERSION,
-    sizeof(actpdescr)/sizeof(struct cnfparamdescr),
-    actpdescr
+	CNFPARAMBLK_VERSION,
+	sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+	actpdescr
 };
 
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
 {
-    if (eFeat == sFEATURERepeatedMsgReduction)
-        iRet = RS_RET_OK;
+	if (eFeat == sFEATURERepeatedMsgReduction)
+		iRet = RS_RET_OK;
 }
 ENDisCompatibleWithFeature
 
@@ -184,9 +184,9 @@ ENDisCompatibleWithFeature
 BEGINcreateInstance
 CODESTARTcreateInstance
 {
-    memset(pData, 0, sizeof(instanceData));
-    _init_config_settings(&pData->config);
-    _init_thread_ipc(&pData->ipc);
+	memset(pData, 0, sizeof(instanceData));
+	_init_config_settings(&pData->config);
+	_init_thread_ipc(&pData->ipc);
 }
 ENDcreateInstance
 
@@ -204,12 +204,12 @@ ENDfreeWrkrInstance
 BEGINfreeInstance
 CODESTARTfreeInstance
 {
-    _shutdown_thread(pData);
-    _clean_config_settings(&pData->config);
-    _clean_thread_ipc(&pData->ipc);
-    if (pData->reactor) pn_decref(pData->reactor);
-    if (pData->handler) pn_decref(pData->handler);
-    if (pData->message) pn_decref(pData->message);
+	_shutdown_thread(pData);
+	_clean_config_settings(&pData->config);
+	_clean_thread_ipc(&pData->ipc);
+	if (pData->reactor) pn_decref(pData->reactor);
+	if (pData->handler) pn_decref(pData->handler);
+	if (pData->message) pn_decref(pData->message);
 }
 ENDfreeInstance
 
@@ -217,18 +217,18 @@ ENDfreeInstance
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
 {
-    configSettings_t *cfg = &pData->config;
-    dbgprintf("omamqp1:\n");
-    dbgprintf("  host=%s\n", pn_url_str(cfg->url));
-    dbgprintf("  username=%s\n", cfg->username);
-    //dbgprintf("  password=%s\n", pData->password);
-    dbgprintf("  target=%s\n", cfg->target);
-    dbgprintf("  template=%s\n", cfg->templateName);
-    dbgprintf("  disableSASL=%d\n", cfg->bDisableSASL);
-    dbgprintf("  idleTimeout=%d\n", cfg->idleTimeout);
-    dbgprintf("  reconnectDelay=%d\n", cfg->reconnectDelay);
-    dbgprintf("  maxRetries=%d\n", cfg->maxRetries);
-    dbgprintf("  running=%d\n", pData->bThreadRunning);
+	configSettings_t *cfg = &pData->config;
+	dbgprintf("omamqp1:\n");
+	dbgprintf("  host=%s\n", pn_url_str(cfg->url));
+	dbgprintf("  username=%s\n", cfg->username);
+	//dbgprintf("  password=%s\n", pData->password);
+	dbgprintf("  target=%s\n", cfg->target);
+	dbgprintf("  template=%s\n", cfg->templateName);
+	dbgprintf("  disableSASL=%d\n", cfg->bDisableSASL);
+	dbgprintf("  idleTimeout=%d\n", cfg->idleTimeout);
+	dbgprintf("  reconnectDelay=%d\n", cfg->reconnectDelay);
+	dbgprintf("  maxRetries=%d\n", cfg->maxRetries);
+	dbgprintf("  running=%d\n", pData->bThreadRunning);
 }
 ENDdbgPrintInstInfo
 
@@ -236,9 +236,9 @@ ENDdbgPrintInstInfo
 BEGINtryResume
 CODESTARTtryResume
 {
-    // is the link active?
-    instanceData *pData = pWrkrData->pData;
-    iRet = _issue_command(&pData->ipc, pData->reactor, COMMAND_IS_READY, NULL);
+	// is the link active?
+	instanceData *pData = pWrkrData->pData;
+	iRet = _issue_command(&pData->ipc, pData->reactor, COMMAND_IS_READY, NULL);
 }
 ENDtryResume
 
@@ -246,15 +246,15 @@ ENDtryResume
 BEGINbeginTransaction
 CODESTARTbeginTransaction
 {
-    DBGPRINTF("omamqp1: beginTransaction\n");
-    instanceData *pData = pWrkrData->pData;
-    pData->log_count = 0;
-    if (pData->message) pn_decref(pData->message);
-    pData->message = pn_message();
-    CHKmalloc(pData->message);
-    pn_data_t *body = pn_message_body(pData->message);
-    pn_data_put_list(body);
-    pn_data_enter(body);
+	DBGPRINTF("omamqp1: beginTransaction\n");
+	instanceData *pData = pWrkrData->pData;
+	pData->log_count = 0;
+	if (pData->message) pn_decref(pData->message);
+	pData->message = pn_message();
+	CHKmalloc(pData->message);
+	pn_data_t *body = pn_message_body(pData->message);
+	pn_data_put_list(body);
+	pn_data_enter(body);
 }
 finalize_it:
 ENDbeginTransaction
@@ -263,15 +263,15 @@ ENDbeginTransaction
 BEGINdoAction
 CODESTARTdoAction
 {
-    DBGPRINTF("omamqp1: doAction\n");
-    instanceData *pData = pWrkrData->pData;
-    if (!pData->message) ABORT_FINALIZE(RS_RET_OK);
-    pn_bytes_t msg = pn_bytes(strlen((const char *)ppString[0]),
-                              (const char *)ppString[0]);
-    pn_data_t *body = pn_message_body(pData->message);
-    pn_data_put_string(body, msg);
-    pData->log_count++;
-    iRet = RS_RET_DEFER_COMMIT;
+	DBGPRINTF("omamqp1: doAction\n");
+	instanceData *pData = pWrkrData->pData;
+	if (!pData->message) ABORT_FINALIZE(RS_RET_OK);
+	pn_bytes_t msg = pn_bytes(strlen((const char *)ppString[0]),
+		(const char *)ppString[0]);
+	pn_data_t *body = pn_message_body(pData->message);
+	pn_data_put_string(body, msg);
+	pData->log_count++;
+	iRet = RS_RET_DEFER_COMMIT;
 }
 finalize_it:
 ENDdoAction
@@ -280,88 +280,84 @@ ENDdoAction
 BEGINendTransaction
 CODESTARTendTransaction
 {
-    DBGPRINTF("omamqp1: endTransaction\n");
-    instanceData *pData = pWrkrData->pData;
-    if (!pData->message) ABORT_FINALIZE(RS_RET_OK);
-    pn_data_t *body = pn_message_body(pData->message);
-    pn_data_exit(body);
-    pn_message_t *message = pData->message;
-    pData->message = NULL;
-    if (pData->log_count > 0) {
-        CHKiRet(_issue_command(&pData->ipc, pData->reactor, COMMAND_SEND, message));
-    } else {
-        DBGPRINTF("omamqp1: no log messages to send\n");
-        pn_decref(message);
-    }
+	DBGPRINTF("omamqp1: endTransaction\n");
+	instanceData *pData = pWrkrData->pData;
+	if (!pData->message) ABORT_FINALIZE(RS_RET_OK);
+	pn_data_t *body = pn_message_body(pData->message);
+	pn_data_exit(body);
+	pn_message_t *message = pData->message;
+	pData->message = NULL;
+	if (pData->log_count > 0) {
+		CHKiRet(_issue_command(&pData->ipc, pData->reactor, COMMAND_SEND, message));
+	} else {
+		DBGPRINTF("omamqp1: no log messages to send\n");
+		pn_decref(message);
+	}
 }
 finalize_it:
 ENDendTransaction
 
 
 BEGINnewActInst
-struct cnfparamvals *pvals;
-int i;
-configSettings_t *cs;
+	struct cnfparamvals *pvals;
+	int i;
+	configSettings_t *cs;
 CODESTARTnewActInst
 {
-    if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
-        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-    }
+	if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
 
-    CHKiRet(createInstance(&pData));
-    cs = &pData->config;
+	CHKiRet(createInstance(&pData));
+	cs = &pData->config;
 
-    CODE_STD_STRING_REQUESTnewActInst(1);
+	CODE_STD_STRING_REQUESTnewActInst(1);
 
-    for(i = 0 ; i < actpblk.nParams ; ++i) {
-        if (!pvals[i].bUsed)
-            continue;
-        if (!strcmp(actpblk.descr[i].name, "host")) {
-            char *u = es_str2cstr(pvals[i].val.d.estr, NULL);
-            cs->url = pn_url_parse(u);
-            if (!cs->url) {
-                LogError(0, RS_RET_CONF_PARSE_ERROR, "omamqp1: Invalid host URL configured: '%s'", u);
-                free(u);
-                ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
-            }
-            free(u);
-        } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            cs->templateName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-        } else if (!strcmp(actpblk.descr[i].name, "target")) {
-            cs->target = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-        } else if (!strcmp(actpblk.descr[i].name, "username")) {
-            cs->username = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-        } else if (!strcmp(actpblk.descr[i].name, "password")) {
-            cs->password = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-        } else if (!strcmp(actpblk.descr[i].name, "reconnectDelay")) {
-            cs->reconnectDelay = (int) pvals[i].val.d.n;
-        } else if (!strcmp(actpblk.descr[i].name, "idleTimeout")) {
-            cs->idleTimeout = (int) pvals[i].val.d.n;
-        } else if (!strcmp(actpblk.descr[i].name, "maxRetries")) {
-            cs->maxRetries = (int) pvals[i].val.d.n;
-        } else if (!strcmp(actpblk.descr[i].name, "disableSASL")) {
-            cs->bDisableSASL = (int) pvals[i].val.d.n;
-        } else {
-            dbgprintf("omamqp1: program error, unrecognized param '%s', ignored.\n",
-                      actpblk.descr[i].name);
-        }
-    }
+	for(i = 0 ; i < actpblk.nParams ; ++i) {
+		if (!pvals[i].bUsed)
+			continue;
+		if (!strcmp(actpblk.descr[i].name, "host")) {
+			char *u = es_str2cstr(pvals[i].val.d.estr, NULL);
+			cs->url = pn_url_parse(u);
+			if (!cs->url) {
+				LogError(0, RS_RET_CONF_PARSE_ERROR, "omamqp1: Invalid host URL configured: '%s'", u);
+				free(u);
+				ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
+			}
+			free(u);
+		} else if (!strcmp(actpblk.descr[i].name, "template")) {
+			cs->templateName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(actpblk.descr[i].name, "target")) {
+			cs->target = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(actpblk.descr[i].name, "username")) {
+			cs->username = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(actpblk.descr[i].name, "password")) {
+			cs->password = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(actpblk.descr[i].name, "reconnectDelay")) {
+			cs->reconnectDelay = (int) pvals[i].val.d.n;
+		} else if (!strcmp(actpblk.descr[i].name, "idleTimeout")) {
+			cs->idleTimeout = (int) pvals[i].val.d.n;
+		} else if (!strcmp(actpblk.descr[i].name, "maxRetries")) {
+			cs->maxRetries = (int) pvals[i].val.d.n;
+		} else if (!strcmp(actpblk.descr[i].name, "disableSASL")) {
+			cs->bDisableSASL = (int) pvals[i].val.d.n;
+		} else {
+			dbgprintf("omamqp1: program error, unrecognized param '%s', ignored.\n",
+			actpblk.descr[i].name);
+		}
+	}
 
-    CHKiRet(OMSRsetEntry(*ppOMSR,
-                         0,
-                         (uchar*)strdup((cs->templateName == NULL)
-                                        ? "RSYSLOG_FileFormat"
-                                        : (char*)cs->templateName),
-                         OMSR_NO_RQD_TPL_OPTS));
+	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((cs->templateName == NULL)
+		? "RSYSLOG_FileFormat" : (char*)cs->templateName), OMSR_NO_RQD_TPL_OPTS));
 
-    // once configuration is known, start the protocol engine thread
-    pData->reactor = pn_reactor();
-    CHKmalloc(pData->reactor);
-    CHKiRet(_new_handler(&pData->handler, pData->reactor, dispatcher, &pData->config, &pData->ipc));
-    CHKiRet(_launch_protocol_thread(pData));
+	// once configuration is known, start the protocol engine thread
+	pData->reactor = pn_reactor();
+	CHKmalloc(pData->reactor);
+	CHKiRet(_new_handler(&pData->handler, pData->reactor, dispatcher, &pData->config, &pData->ipc));
+	CHKiRet(_launch_protocol_thread(pData));
 }
 CODE_STD_FINALIZERnewActInst
-    cnfparamvalsDestruct(pvals, &actpblk);
+	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
@@ -374,24 +370,24 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-    CODEqueryEtryPt_STD_OMOD_QUERIES
-    CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
-    CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
-    CODEqueryEtryPt_TXIF_OMOD_QUERIES   /* use transaction interface */
-    CODEqueryEtryPt_STD_OMOD8_QUERIES
+	CODESTARTqueryEtryPt
+	CODEqueryEtryPt_STD_OMOD_QUERIES
+	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
+	CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+	CODEqueryEtryPt_TXIF_OMOD_QUERIES   /* use transaction interface */
+	CODEqueryEtryPt_STD_OMOD8_QUERIES
 ENDqueryEtryPt
 
 
 BEGINmodInit()
 CODESTARTmodInit
 {
-    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current
-                                                interface specification */
+	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current
+						interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-    INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
-    DBGPRINTF("omamqp1: module compiled with rsyslog version %s.\n", VERSION);
-    DBGPRINTF("omamqp1: %susing transactional output interface.\n", bCoreSupportsBatching ? "" : "not ");
+	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
+	DBGPRINTF("omamqp1: module compiled with rsyslog version %s.\n", VERSION);
+	DBGPRINTF("omamqp1: %susing transactional output interface.\n", bCoreSupportsBatching ? "" : "not ");
 }
 ENDmodInit
 
@@ -404,19 +400,19 @@ ENDmodInit
 /* state maintained by the protocol thread */
 
 typedef struct {
-    const configSettings_t *config;
-    threadIPC_t   *ipc;
-    pn_reactor_t *reactor;  // AMQP 1.0 protocol engine
-    pn_connection_t *conn;
-    pn_link_t *sender;
-    pn_delivery_t *delivery;
-    char *encode_buffer;
-    size_t buffer_size;
-    uint64_t tag;
-    int msgs_sent;
-    int msgs_settled;
-    int retries;
-    sbool stopped;
+	const configSettings_t *config;
+	threadIPC_t   *ipc;
+	pn_reactor_t *reactor;  // AMQP 1.0 protocol engine
+	pn_connection_t *conn;
+	pn_link_t *sender;
+	pn_delivery_t *delivery;
+	char *encode_buffer;
+	size_t buffer_size;
+	uint64_t tag;
+	int msgs_sent;
+	int msgs_settled;
+	int retries;
+	sbool stopped;
 } protocolState_t;
 
 // protocolState_t is embedded in the engine handler
@@ -425,77 +421,77 @@ typedef struct {
 
 static void _init_config_settings(configSettings_t *pConfig)
 {
-    memset(pConfig, 0, sizeof(configSettings_t));
-    pConfig->reconnectDelay = 5;
-    pConfig->maxRetries = 10;
+	memset(pConfig, 0, sizeof(configSettings_t));
+	pConfig->reconnectDelay = 5;
+	pConfig->maxRetries = 10;
 }
 
 
 static void _clean_config_settings(configSettings_t *pConfig)
 {
-    if (pConfig->url) pn_url_free(pConfig->url);
-    if (pConfig->username) free(pConfig->username);
-    if (pConfig->password) free(pConfig->password);
-    if (pConfig->target) free(pConfig->target);
-    if (pConfig->templateName) free(pConfig->templateName);
-    memset(pConfig, 0, sizeof(configSettings_t));
+	if (pConfig->url) pn_url_free(pConfig->url);
+	if (pConfig->username) free(pConfig->username);
+	if (pConfig->password) free(pConfig->password);
+	if (pConfig->target) free(pConfig->target);
+	if (pConfig->templateName) free(pConfig->templateName);
+	memset(pConfig, 0, sizeof(configSettings_t));
 }
 
 
 static void _init_thread_ipc(threadIPC_t *pIPC)
 {
-    memset(pIPC, 0, sizeof(threadIPC_t));
-    pthread_mutex_init(&pIPC->lock, NULL);
-    pthread_cond_init(&pIPC->condition, NULL);
-    pIPC->command = COMMAND_DONE;
-    pIPC->result = RS_RET_OK;
+	memset(pIPC, 0, sizeof(threadIPC_t));
+	pthread_mutex_init(&pIPC->lock, NULL);
+	pthread_cond_init(&pIPC->condition, NULL);
+	pIPC->command = COMMAND_DONE;
+	pIPC->result = RS_RET_OK;
 }
 
 static void _clean_thread_ipc(threadIPC_t *ipc)
 {
-    pthread_cond_destroy(&ipc->condition);
-    pthread_mutex_destroy(&ipc->lock);
+	pthread_cond_destroy(&ipc->condition);
+	pthread_mutex_destroy(&ipc->lock);
 }
 
 
 // create a new handler for the engine and set up the protocolState
 static rsRetVal _new_handler(pn_handler_t **handler,
-                             pn_reactor_t *reactor,
-                             dispatch_t *dispatch,
-                             configSettings_t *config,
-                             threadIPC_t *ipc)
+				pn_reactor_t *reactor,
+				dispatch_t *dispatch,
+				configSettings_t *config,
+				threadIPC_t *ipc)
 {
-    DEFiRet;
-    *handler = pn_handler_new(dispatch, sizeof(protocolState_t), _del_handler);
-    CHKmalloc(*handler);
-    pn_handler_add(*handler, pn_handshaker());
-    protocolState_t *pState = PROTOCOL_STATE(*handler);
-    memset(pState, 0, sizeof(protocolState_t));
-    pState->buffer_size = 64;  // will grow if not enough
-    pState->encode_buffer = (char *)malloc(pState->buffer_size);
-    CHKmalloc(pState->encode_buffer);
-    pState->reactor = reactor;
-    pState->stopped = false;
-    // these are _references_, don't free them:
-    pState->config = config;
-    pState->ipc = ipc;
+	DEFiRet;
+	*handler = pn_handler_new(dispatch, sizeof(protocolState_t), _del_handler);
+	CHKmalloc(*handler);
+	pn_handler_add(*handler, pn_handshaker());
+	protocolState_t *pState = PROTOCOL_STATE(*handler);
+	memset(pState, 0, sizeof(protocolState_t));
+	pState->buffer_size = 64;  // will grow if not enough
+	pState->encode_buffer = (char *)malloc(pState->buffer_size);
+	CHKmalloc(pState->encode_buffer);
+	pState->reactor = reactor;
+	pState->stopped = false;
+	// these are _references_, don't free them:
+	pState->config = config;
+	pState->ipc = ipc;
 
- finalize_it:
-    RETiRet;
+finalize_it:
+	RETiRet;
 }
 
 
 // in case existing buffer too small
 static rsRetVal _grow_buffer(protocolState_t *pState)
 {
-    DEFiRet;
-    pState->buffer_size *= 2;
-    free(pState->encode_buffer);
-    pState->encode_buffer = (char *)malloc(pState->buffer_size);
-    CHKmalloc(pState->encode_buffer);
+	DEFiRet;
+	pState->buffer_size *= 2;
+	free(pState->encode_buffer);
+	pState->encode_buffer = (char *)malloc(pState->buffer_size);
+	CHKmalloc(pState->encode_buffer);
 
- finalize_it:
-    RETiRet;
+finalize_it:
+	RETiRet;
 }
 
 

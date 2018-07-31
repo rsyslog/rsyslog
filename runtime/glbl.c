@@ -158,7 +158,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "debug.unloadmodules", eCmdHdlrBinary, 0 },
 	{ "defaultnetstreamdrivercafile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdriverkeyfile", eCmdHdlrString, 0 },
-        { "defaultnetstreamdrivercertfile", eCmdHdlrString, 0 },
+	{ "defaultnetstreamdrivercertfile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdriver", eCmdHdlrString, 0 },
 	{ "maxmessagesize", eCmdHdlrSize, 0 },
 	{ "oversizemsg.errorfile", eCmdHdlrGetWord, 0 },
@@ -242,13 +242,13 @@ GetGnuTLSLoglevel(void)
  */
 #define SIMP_PROP(nameFunc, nameVar, dataType) \
 	SIMP_PROP_GET(nameFunc, nameVar, dataType) \
-	SIMP_PROP_SET(nameFunc, nameVar, dataType) 
+	SIMP_PROP_SET(nameFunc, nameVar, dataType)
 #define SIMP_PROP_SET(nameFunc, nameVar, dataType) \
 static rsRetVal Set##nameFunc(dataType newVal) \
 { \
 	nameVar = newVal; \
 	return RS_RET_OK; \
-} 
+}
 #define SIMP_PROP_GET(nameFunc, nameVar, dataType) \
 static dataType Get##nameFunc(void) \
 { \
@@ -304,7 +304,7 @@ static void SetGlobalInputTermination(void)
 
 /* set the local host IP address to a specific string. Helper to
  * small set of functions. No checks done, caller must ensure it is
- * ok to call. Most importantly, the IP address must not already have 
+ * ok to call. Most importantly, the IP address must not already have
  * been set. -- rgerhards, 2012-03-21
  */
 static rsRetVal
@@ -359,7 +359,7 @@ finalize_it:
 }
 
 
-/* This function is used to set the global work directory name. 
+/* This function is used to set the global work directory name.
  * It verifies that the provided directory actually exists and
  * emits an error message if not.
  * rgerhards, 2011-02-16
@@ -397,7 +397,7 @@ static rsRetVal setWorkDir(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	}
 
 	if(!S_ISDIR(sb.st_mode)) {
-		LogError(0, RS_RET_ERR_WRKDIR, "$WorkDirectory: %s not a directory - directive ignored", 
+		LogError(0, RS_RET_ERR_WRKDIR, "$WorkDirectory: %s not a directory - directive ignored",
 				pNewVal);
 		ABORT_FINALIZE(RS_RET_ERR_WRKDIR);
 	}
@@ -700,7 +700,7 @@ SetLocalFQDNName(uchar *newname)
 	return RS_RET_OK;
 }
 
-/* return the current localhost name as FQDN (requires FQDN to be set) 
+/* return the current localhost name as FQDN (requires FQDN to be set)
  * TODO: we should set the FQDN ourselfs in here!
  */
 static uchar*

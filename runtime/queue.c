@@ -1,7 +1,7 @@
 /* queue.c
  *
  * This file implements the queue object and its several queueing methods.
- * 
+ *
  * File begun on 2008-01-03 by RGerhards
  *
  * There is some in-depth documentation available in doc/dev_queue.html
@@ -251,16 +251,16 @@ getQueueTypeName(queueType_t t)
 	const char *r;
 
 	switch(t) {
-	case QUEUETYPE_FIXED_ARRAY: 
+	case QUEUETYPE_FIXED_ARRAY:
 		r = "FixedArray";
 		break;
-	case QUEUETYPE_LINKEDLIST: 
+	case QUEUETYPE_LINKEDLIST:
 		r = "LinkedList";
 		break;
-	case QUEUETYPE_DISK: 
+	case QUEUETYPE_DISK:
 		r = "Disk";
 		break;
-	case QUEUETYPE_DIRECT: 
+	case QUEUETYPE_DIRECT:
 		r = "Direct";
 		break;
 	default:
@@ -332,7 +332,7 @@ getLogicalQueueSize(qqueue_t *pThis)
  * This function returns void, as it makes no sense to communicate an error back, even if
  * it happens.
  * This functions works "around" the regular deque mechanism, because it is only used to
- * clean up (in cases where message loss is acceptable). 
+ * clean up (in cases where message loss is acceptable).
  */
 static void queueDrain(qqueue_t *pThis)
 {
@@ -709,10 +709,10 @@ static rsRetVal qDelLinkedList(qqueue_t *pThis)
 
 
 /* The following function is used to "save" ourself from being killed by
- * a fatally failed disk queue. A fatal failure is, for example, if no 
+ * a fatally failed disk queue. A fatal failure is, for example, if no
  * data can be read or written. In that case, the disk support is disabled,
  * with all on-disk structures kept as-is as much as possible. Instead, the
- * queue is switched to direct mode, so that at least 
+ * queue is switched to direct mode, so that at least
  * some processing can happen. Of course, this may still have lots of
  * undesired side-effects, but is probably better than aborting the
  * syslogd. Note that this function *must* succeed in one way or another, as
@@ -769,7 +769,7 @@ finalize_it:
 /* The method loads the persistent queue information.
  * rgerhards, 2008-01-11
  */
-static rsRetVal 
+static rsRetVal
 qqueueTryLoadPersistedInfo(qqueue_t *pThis)
 {
 	DEFiRet;
@@ -1136,9 +1136,9 @@ qqueueDeq(qqueue_t *pThis, smsg_t **ppMsg)
 }
 
 
-/* Try to shut down regular and DA queue workers, within the queue timeout 
+/* Try to shut down regular and DA queue workers, within the queue timeout
  * period. That means processing continues as usual. This is the expected
- * usual case, where during shutdown those messages remaining are being 
+ * usual case, where during shutdown those messages remaining are being
  * processed. At this point, it is acceptable that the queue can not be
  * fully depleted, that case is handled in the next step. During this phase,
  * we first shut down the main queue DA worker to prevent new data to arrive
@@ -1214,7 +1214,7 @@ tryShutdownWorkersWithinQueueTimeout(qqueue_t *const pThis)
 }
 
 
-/* Try to shut down regular and DA queue workers, within the action timeout 
+/* Try to shut down regular and DA queue workers, within the action timeout
  * period. This aborts processing, but at the end of the current action, in
  * a well-defined manner. During this phase, we terminate all three worker
  * pools, including the regular queue DA worker if it not yet has terminated.
@@ -1285,7 +1285,7 @@ tryShutdownWorkersWithinActionTimeout(qqueue_t *pThis)
 		if(iRetLocal == RS_RET_TIMED_OUT) {
 			LogMsg(0, iRetLocal, LOG_WARNING,
 				"%s: shutdown timed out on main queue DA worker pool "
-				"(this is not good, but possibly OK)", 
+				"(this is not good, but possibly OK)",
 				objGetName((obj_t*) pThis));
 		} else {
 			DBGOPRINT((obj_t*) pThis, "main queue DA worker pool shut down.\n");
@@ -1472,9 +1472,9 @@ qqueueSetDefaultsActionQueue(qqueue_t *pThis)
 	pThis->iMaxFileSize = 1024*1024;
 	pThis->iPersistUpdCnt = 0;		/* persist queue info every n updates */
 	pThis->bSyncQueueFiles = 0;
-	pThis->toQShutdown = 0;			/* queue shutdown */ 
-	pThis->toActShutdown = 1000;		/* action shutdown (in phase 2) */ 
-	pThis->toEnq = 2000;			/* timeout for queue enque */ 
+	pThis->toQShutdown = 0;			/* queue shutdown */
+	pThis->toActShutdown = 1000;		/* action shutdown (in phase 2) */
+	pThis->toEnq = 2000;			/* timeout for queue enque */
 	pThis->toWrkShutdown = 60000;		/* timeout for worker thread shutdown */
 	pThis->iMinMsgsPerWrkr = -1;		/* minimum messages per worker needed to start a new one */
 	pThis->bSaveOnShutdown = 1;		/* save queue on shutdown (when DA enabled)? */
@@ -1503,9 +1503,9 @@ qqueueSetDefaultsRulesetQueue(qqueue_t *pThis)
 	pThis->iMaxFileSize = 16*1024*1024;
 	pThis->iPersistUpdCnt = 0;		/* persist queue info every n updates */
 	pThis->bSyncQueueFiles = 0;
-	pThis->toQShutdown = 1500;			/* queue shutdown */ 
-	pThis->toActShutdown = 1000;		/* action shutdown (in phase 2) */ 
-	pThis->toEnq = 2000;			/* timeout for queue enque */ 
+	pThis->toQShutdown = 1500;			/* queue shutdown */
+	pThis->toActShutdown = 1000;		/* action shutdown (in phase 2) */
+	pThis->toEnq = 2000;			/* timeout for queue enque */
 	pThis->toWrkShutdown = 60000;		/* timeout for worker thread shutdown */
 	pThis->iMinMsgsPerWrkr = -1;		/* minimum messages per worker needed to start a new one */
 	pThis->bSaveOnShutdown = 1;		/* save queue on shutdown (when DA enabled)? */
@@ -1653,7 +1653,7 @@ finalize_it:
 
 
 /* Delete a batch of processed user objects from the queue, which includes
- * destructing the objects themself. Any entries not marked as finally 
+ * destructing the objects themself. Any entries not marked as finally
  * processed are enqueued again. The new enqueue is necessary because we have a
  * rgerhards, 2009-05-13
  */
@@ -1684,7 +1684,7 @@ DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch)
 		msgDestruct(&pMsg);
 	}
 
-	DBGPRINTF("DeleteProcessedBatch: we deleted %d objects and enqueued %d objects\n", i-nEnqueued, nEnqueued); 
+	DBGPRINTF("DeleteProcessedBatch: we deleted %d objects and enqueued %d objects\n", i-nEnqueued, nEnqueued);
 
 	if(nEnqueued > 0)
 		qqueueChkPersist(pThis, nEnqueued);
@@ -1879,7 +1879,7 @@ DequeueConsumable(qqueue_t *pThis, wti_t *pWti, int *const pSkippedMsgs)
  * }
  *
  * Bottom line: we need to check which type of window we have and need to adjust our
- * logic accordingly. Of course, sleep calculations need to be done up to the minute, 
+ * logic accordingly. Of course, sleep calculations need to be done up to the minute,
  * but you get the idea from the code above.
  */
 static rsRetVal
@@ -1995,7 +1995,7 @@ batchProcessed(qqueue_t *pThis, wti_t *pWti)
 }
 
 
-/* This is the queue consumer in the regular (non-DA) case. It is 
+/* This is the queue consumer in the regular (non-DA) case. It is
  * protected by the queue mutex, but MUST release it as soon as possible.
  * rgerhards, 2008-01-21
  */
@@ -2004,7 +2004,7 @@ ConsumerReg(qqueue_t *pThis, wti_t *pWti)
 {
 	int iCancelStateSave;
 	int bNeedReLock = 0;	/**< do we need to lock the mutex again? */
-	int skippedMsgs = 0;	/**< did the queue loose any messages (can happen with 
+	int skippedMsgs = 0;	/**< did the queue loose any messages (can happen with
 	                         ** disk queue if .qi file is corrupt */
 	DEFiRet;
 
@@ -2120,16 +2120,16 @@ ConsumerDA(qqueue_t *pThis, wti_t *pWti)
 
 finalize_it:
 	/*	Check the last return state of qqueueEnqMsg. If an error was returned, we acknowledge it only.
-	*	Unless the error code is RS_RET_ERR_QUEUE_EMERGENCY, we reset the return state to RS_RET_OK.  
-	*	Otherwise the Caller functions would run into an infinite Loop trying to enqueue the 
-	*	same messages over and over again. 
+	*	Unless the error code is RS_RET_ERR_QUEUE_EMERGENCY, we reset the return state to RS_RET_OK.
+	*	Otherwise the Caller functions would run into an infinite Loop trying to enqueue the
+	*	same messages over and over again.
 	*	
-	*	However we do NOT overwrite positive return states like 
-	*		RS_RET_TERMINATE_NOW, 
-	*		RS_RET_NO_RUN, 
+	*	However we do NOT overwrite positive return states like
+	*		RS_RET_TERMINATE_NOW,
+	*		RS_RET_NO_RUN,
 	*		RS_RET_IDLE,
-	*		RS_RET_TERMINATE_WHEN_IDLE 
-	*	These return states are important for Queue handling of the upper laying functions. 
+	*		RS_RET_TERMINATE_WHEN_IDLE
+	*	These return states are important for Queue handling of the upper laying functions.
 	*	RGer: Note that checking for iRet < 0 is a bit bold. In theory, positive iRet
 	*	values are "OK" states, and things that the caller shall deal with. However,
 	*	this has not been done so consistently. Andre convinced me that the current
@@ -2138,8 +2138,8 @@ finalize_it:
 	*	cases it may work out to check all status codes explicitely, just to avoid
 	*	a pitfall due to unexpected states being passed on to the caller.
 	*/
-	if(	iRet != RS_RET_OK && 
-		iRet != RS_RET_ERR_QUEUE_EMERGENCY && 
+	if(	iRet != RS_RET_OK &&
+		iRet != RS_RET_ERR_QUEUE_EMERGENCY &&
 		iRet < 0) {
 		DBGOPRINT((obj_t*) pThis, "ConsumerDA:qqueueEnqMsg Resetting iRet from %d back to RS_RET_OK\n", iRet);
 		iRet = RS_RET_OK;
@@ -2352,7 +2352,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 		}
 	}
 	if(   pThis->iLowWtrMrk < 2
-	   || pThis->iLowWtrMrk > pThis->iMaxQueueSize 
+	   || pThis->iLowWtrMrk > pThis->iMaxQueueSize
 	   || pThis->iLowWtrMrk > pThis->iHighWtrMrk ) {
 		pThis->iLowWtrMrk  = (pThis->iMaxQueueSize / 100) * 70;
 		if(pThis->iLowWtrMrk == 0) {
@@ -2554,7 +2554,7 @@ qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 	if(tmpQIFName == NULL)
                 tmpQIFName = (char*)pThis->pszQIFNam;
 	snprintf(tmpQIFName, lentmpQIFName, "%s.tmp", pThis->pszQIFNam);
-#else 
+#else
 	lentmpQIFName = asprintf((char **)&tmpQIFName, "%s.tmp", pThis->pszQIFNam);
 	if(tmpQIFName == NULL)
 		tmpQIFName = (char*)pThis->pszQIFNam;
@@ -2717,7 +2717,7 @@ CODESTARTobjDestruct(qqueue)
 		/* Now check if we actually have a DA queue and, if so, destruct it.
 		 * Note that the wtp must be destructed first, it may be in cancel cleanup handler
 		 * *right now* and actually *need* to access the queue object to persist some final
-		 * data (re-queueing case). So we need to destruct the wtp first, which will make 
+		 * data (re-queueing case). So we need to destruct the wtp first, which will make
 		 * sure all workers have terminated. Please note that this also generates a situation
 		 * where it is possible that the DA queue has a parent pointer but the parent has
 		 * no WtpDA associated with it - which is perfectly legal thanks to this code here.
@@ -2930,7 +2930,7 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg)
 			DBGOPRINT((obj_t*) pThis, "doEnqSingleObject: queue FULL - configured for immediate "
 					"discarding QueueSize=%d MaxQueueSize=%d sizeOnDisk=%lld "
 					"sizeOnDiskMax=%lld\n", pThis->iQueueSize, pThis->iMaxQueueSize,
-					pThis->tVars.disk.sizeOnDisk, pThis->sizeOnDiskMax); 
+					pThis->tVars.disk.sizeOnDisk, pThis->sizeOnDiskMax);
 			STATSCOUNTER_INC(pThis->ctrFDscrd, pThis->mutCtrFDscrd);
 			msgDestruct(&pMsg);
 			ABORT_FINALIZE(RS_RET_QUEUE_FULL);
@@ -2993,7 +2993,7 @@ finalize_it:
  * during its execution. If that is not done, race conditions occur if the
  * thread is canceled (most important use case is input module termination).
  * rgerhards, 2009-06-16
- * Note: there now exists multiple different functions implementing specially 
+ * Note: there now exists multiple different functions implementing specially
  * optimized algorithms for different config cases. -- rgerhards, 2010-06-09
  */
 /* now the function for all modes but direct */
@@ -3049,7 +3049,7 @@ finalize_it:
 /* ------------------------------ END multi-enqueue functions ------------------------------ */
 
 
-/* enqueue a new user data element 
+/* enqueue a new user data element
  * Enqueues the new element and awakes worker thread.
  */
 rsRetVal
@@ -3089,7 +3089,7 @@ finalize_it:
  * inefficient. HOWEVER, this is only done during config load, so we really
  * don't care... -- rgerhards, 2013-05-10
  */
-int 
+int
 queueCnfParamsSet(struct nvlst *lst)
 {
 	int r;
@@ -3118,7 +3118,7 @@ initCryprov(qqueue_t *pThis, struct nvlst *lst)
 	pThis->cryprovNameFull = ustrdup(szDrvrName);
 
 	pThis->cryprov.ifVersion = cryprovCURR_IF_VERSION;
-	/* The pDrvrName+2 below is a hack to obtain the object name. It 
+	/* The pDrvrName+2 below is a hack to obtain the object name. It
 	 * safes us to have yet another variable with the name without "lm" in
 	 * front of it. If we change the module load interface, we may re-think
 	 * about this hack, but for the time being it is efficient and clean enough.

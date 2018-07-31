@@ -279,7 +279,7 @@ sun_sys_poll()
 		} else {
 			/* TODO: shutdown, the rsyslog way (in v5!) -- check shutdown flag */
 			if (Pfd.revents & (POLLNVAL|POLLHUP|POLLERR)) {
-			// TODO: trigger retry logic	
+			// TODO: trigger retry logic
 /*				logerror("kernel log driver poll error");
 				(void) close(Pfd.fd);
 				Pfd.fd = -1;

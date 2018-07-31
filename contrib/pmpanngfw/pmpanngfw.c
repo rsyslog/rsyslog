@@ -10,11 +10,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -55,15 +55,15 @@ DEFobjCurrIf(datetime)
 static int bParseHOSTNAMEandTAG;    /* cache for the equally-named global param - performance enhancement */
 
 typedef struct {
-    uint64 value;
-    uint64 mask;
+	uint64 value;
+	uint64 mask;
 } log_type_t;
 
 const log_type_t log_types[] = {
-    { 0x002c544145524854ULL, 0x00FFFFFFFFFFFFFFULL }, /* THREAT, */
-    { 0x2c43494646415254ULL, 0xFFFFFFFFFFFFFFFFULL }, /* TRAFFIC, */
-    { 0x002c4d4554535953ULL, 0x00FFFFFFFFFFFFFFULL }, /* CONFIG */
-    { 0x002c4749464e4f43ULL, 0x00FFFFFFFFFFFFFFULL } /* SYSTEM */
+	{ 0x002c544145524854ULL, 0x00FFFFFFFFFFFFFFULL }, /* THREAT, */
+	{ 0x2c43494646415254ULL, 0xFFFFFFFFFFFFFFFFULL }, /* TRAFFIC, */
+	{ 0x002c4d4554535953ULL, 0x00FFFFFFFFFFFFFFULL }, /* CONFIG */
+	{ 0x002c4749464e4f43ULL, 0x00FFFFFFFFFFFFFFULL } /* SYSTEM */
 };
 
 #define NUM_LOG_TYPES (sizeof(log_types)/sizeof(log_type_t))
@@ -143,7 +143,7 @@ CODESTARTparse
     }
     if (j == NUM_LOG_TYPES) {
         dbgprintf("not a PAN-OS syslog message, log type: %llx\n", log_type);
-        ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);        
+        ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
     }
 
     /* set the delimiter */

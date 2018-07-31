@@ -10,11 +10,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -56,7 +56,7 @@ static int
 CreateSocket(struct addrinfo *addrDest)
 {
 	int fd;
-	struct addrinfo *r; 
+	struct addrinfo *r;
 	
 	r = addrDest;
 
@@ -66,7 +66,7 @@ CreateSocket(struct addrinfo *addrDest)
 			/* We can not allow the TCP sender to block syslogd, at least
 			 * not in a single-threaded design. That would cause rsyslogd to
 			 * loose input messages - which obviously also would affect
-			 * other selector lines, too. So we do set it to non-blocking and 
+			 * other selector lines, too. So we do set it to non-blocking and
 			 * handle the situation ourselfs (by discarding messages). IF we run
 			 * dual-threaded, however, the situation is different: in this case,
 			 * the receivers and the selector line processing are only loosely
@@ -106,7 +106,7 @@ CreateSocket(struct addrinfo *addrDest)
 
 
 
-/* Build frame based on selected framing 
+/* Build frame based on selected framing
  * This function was created by pulling code from TCPSend()
  * on 2007-12-27 by rgerhards. Older comments are still relevant.
  *
@@ -280,7 +280,7 @@ finalize_it:
  * rgerhards, 2006-11-30
  * I greatly restructured the function to be more generic and work
  * with function pointers. So it now can be used with any type of transport,
- * as long as it follows stream semantics. This was initially done to 
+ * as long as it follows stream semantics. This was initially done to
  * support plain TCP and GSS via common code.
  */
 static int
@@ -310,7 +310,7 @@ Send(tcpclt_t *pThis, void *pData, char *msg, size_t len)
 
 		if(iRet == RS_RET_OK || iRet == RS_RET_DEFER_COMMIT || iRet == RS_RET_PREVIOUS_COMMITTED) {
 			/* we are done, we also use this as indication that the previous
-			 * message was succesfully received (it's not always the case, but its at 
+			 * message was succesfully received (it's not always the case, but its at
 			 * least our best shot at it -- rgerhards, 2008-03-12
 			 * As of 2008-06-09, we have implemented an algorithm which detects connection
 			 * loss quite good in some (common) scenarios. Thus, the probability of

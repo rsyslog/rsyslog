@@ -32,7 +32,7 @@
  */
 extern int GatherStats;
 
-/* our basic counter type -- need 32 bit on 32 bit platform. 
+/* our basic counter type -- need 32 bit on 32 bit platform.
  * IMPORTANT: this type *MUST* be supported by atomic instructions!
  */
 typedef uint64 intctr_t;
@@ -78,8 +78,8 @@ struct statsobj_s {
 	uchar *name;
 	uchar *origin;
 	uchar *reporting_ns;
-    statsobj_read_notifier_t read_notifier;
-    void *read_notifier_ctx;
+	statsobj_read_notifier_t read_notifier;
+	void *read_notifier_ctx;
 	pthread_mutex_t mutCtr;		/* to guard counter linked-list ops */
 	ctr_t *ctrRoot;			/* doubly-linked list of statsobj counters */
 	ctr_t *ctrLast;
@@ -104,7 +104,7 @@ BEGINinterface(statsobj) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Destruct)(statsobj_t **ppThis);
 	rsRetVal (*SetName)(statsobj_t *pThis, uchar *name);
 	rsRetVal (*SetOrigin)(statsobj_t *pThis, uchar *name); /* added v12, 2014-09-08 */
-    rsRetVal (*SetReadNotifier)(statsobj_t *pThis, statsobj_read_notifier_t notifier, void* ctx);
+	rsRetVal (*SetReadNotifier)(statsobj_t *pThis, statsobj_read_notifier_t notifier, void* ctx);
 	rsRetVal (*SetReportingNamespace)(statsobj_t *pThis, uchar *ns);
 	void (*SetStatsObjFlags)(statsobj_t *pThis, int flags);
 	//rsRetVal (*GetStatsLine)(statsobj_t *pThis, cstr_t **ppcstr);
@@ -143,7 +143,7 @@ void checkGoneAwaySenders(time_t);
 /* macros to handle stats counters
  * These are to be used by "counter providers". Note that we MUST
  * specify the mutex name, even though at first it looks like it
- * could be automatically be generated via e.g. "mut##ctr". 
+ * could be automatically be generated via e.g. "mut##ctr".
  * Unfortunately, this does not work if counter is e.g. "pThis->ctr".
  * So we decided, for clarity, to always insist on specifying the mutex
  * name (after all, it's just a few more keystrokes...).
@@ -151,7 +151,7 @@ void checkGoneAwaySenders(time_t);
  *                               NOTE WELL
  * --------------------------------------------------------------------
  * There are actually two types of stats counters: "regular" counters,
- * which are only used for stats purposes and "dual" counters, which 
+ * which are only used for stats purposes and "dual" counters, which
  * are primarily used for other purposes but can be included in stats
  * as well. ALL regular counters MUST be initialized with
  * STATSCOUNTER_INIT and only be modified by STATSCOUNTER_* functions.
@@ -167,7 +167,7 @@ void checkGoneAwaySenders(time_t);
  * (enough) synchronized access to these counters. Most importantly,
  * this means they have NO stats-system mutex associated to them.
  *
- * The interface function AddCounter() is a read-only function. It 
+ * The interface function AddCounter() is a read-only function. It
  * only provides the stats subsystem with a reference to a counter.
  * It is irrelevant if the counter is a regular or dual one. For that
  * reason, AddCounter() must not modify the counter contents, as in
@@ -194,7 +194,7 @@ void checkGoneAwaySenders(time_t);
 		ATOMIC_DEC_uint64(&ctr, mut);
 
 /* the next macro works only if the variable is already guarded
- * by mutex (or the users risks a wrong result). It is assumed 
+ * by mutex (or the users risks a wrong result). It is assumed
  * that there are not concurrent operations that modify the counter.
  */
 #define STATSCOUNTER_SETMAX_NOMUT(ctr, newmax) \

@@ -11,11 +11,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -36,10 +36,10 @@
 #include <unistd.h>
 #include <sys/file.h>
 #include <pthread.h>
-#ifdef HAVE_HDFS_H 
+#ifdef HAVE_HDFS_H
 #  include <hdfs.h>
 #endif
-#ifdef HAVE_HADOOP_HDFS_H 
+#ifdef HAVE_HADOOP_HDFS_H
 #  include <hadoop/hdfs.h>
 #endif
 
@@ -67,8 +67,8 @@ static struct hashtable *files;		/* holds all file objects that we know */
 static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct configSettings_s {
-	uchar *fileName;	
-	uchar *hdfsHost;	
+	uchar *fileName;
+	uchar *hdfsHost;
 	uchar *dfltTplName;	/* default template name to use */
 	int hdfsPort;
 } configSettings_t;
@@ -502,8 +502,8 @@ ENDparseSelectorAct
 
 
 BEGINdoHUP
-    file_t *pFile;
-    struct hashtable_itr *itr;
+	file_t *pFile;
+	struct hashtable_itr *itr;
 CODESTARTdoHUP
 	DBGPRINTF("omhdfs: HUP received (file count %d)\n", hashtable_count(files));
 	/* Iterator constructor only returns a valid iterator if

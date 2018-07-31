@@ -1,10 +1,10 @@
 /* netstrm.c
- * 
+ *
  * This class implements a generic netstrmwork stream class. It supports
  * sending and receiving data streams over a netstrmwork. The class abstracts
  * the transport, though it is a safe assumption that TCP is being used.
  * The class has a number of properties, among which are also ones to
- * select privacy settings, eg by enabling TLS and/or GSSAPI. In the 
+ * select privacy settings, eg by enabling TLS and/or GSSAPI. In the
  * long run, this class shall provide all stream-oriented netstrmwork
  * functionality inside rsyslog.
  *
@@ -96,7 +96,7 @@ AbortDestruct(netstrm_t **ppThis)
 
 /* accept an incoming connection request
  * The netstrm instance that had the incoming request must be provided. If
- * the connection request succeeds, a new netstrm object is created and 
+ * the connection request succeeds, a new netstrm object is created and
  * passed back to the caller. The caller is responsible for destructing it.
  * pReq is the nsd_t obj that has the accept request.
  * rgerhards, 2008-04-21

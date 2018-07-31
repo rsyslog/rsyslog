@@ -56,7 +56,7 @@ BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*CheckConnection)(netstrm_t *pThis);	/* This is a trick mostly for plain tcp syslog */
 	/* the GetSock() below is a hack to make imgssapi work. In the long term,
 	 * we should migrate imgssapi to a stream driver, which will relieve us of
-	 * this problem. Please note that nobody else should use GetSock(). Using it 
+	 * this problem. Please note that nobody else should use GetSock(). Using it
 	 * will also tie the caller to nsd_ptcp, because other drivers may not support
 	 * it at all. Once the imgssapi problem is solved, GetSock should be removed from
 	 * this interface. -- rgerhards, 2008-05-05

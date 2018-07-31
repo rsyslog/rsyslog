@@ -1,7 +1,7 @@
 /* lmsig_ksi-ls12.c
  *
  * An implementation of the sigprov interface for KSI-LS12.
- * 
+ *
  * Copyright 2013-2017 Adiscon GmbH and Guardtime, Inc.
  *
  * This file is part of the rsyslog runtime library.
@@ -9,11 +9,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -244,7 +244,7 @@ OnFileOpen(void *pT, uchar *fn, void *pGF) {
 /* Note: we assume that the record is terminated by a \n.
  * As of the GuardTime paper, \n is not part of the signed
  * message, so we subtract one from the record size. This
- * may cause issues with non-standard formats, but let's 
+ * may cause issues with non-standard formats, but let's
  * see how things evolve (the verifier will not work in
  * any case when the records are not \n delimited...).
  * rgerhards, 2013-03-17

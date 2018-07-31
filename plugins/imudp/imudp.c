@@ -232,7 +232,7 @@ finalize_it:
 	RETiRet;
 }
 
-/* This function is called when a new listener instace shall be added to 
+/* This function is called when a new listener instace shall be added to
  * the current config object via the legacy config system. It just shuffles
  * all parameters to the listener in-memory instance.
  * rgerhards, 2011-05-04
@@ -340,7 +340,7 @@ addListner(instanceConf_t *inst)
 			CHKiRet(statsobj.AddCounter(newlcnfinfo->stats, UCHAR_CONSTANT("disallowed"),
 				ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(newlcnfinfo->ctrDisallowed)));
 			CHKiRet(statsobj.ConstructFinalize(newlcnfinfo->stats));
-			/* link to list. Order must be preserved to take care for 
+			/* link to list. Order must be preserved to take care for
 			 * conflicting matches.
 			 */
 			if(lcnfRoot == NULL)
@@ -479,7 +479,7 @@ int *pbIsPermitted)
 	DEFiRet;
 	int iNbrTimeUsed;
 	time_t ttGenTime = 0; /* to avoid clang static analyzer false positive */
-		/* note: we do never use this time, because we always get a 
+		/* note: we do never use this time, because we always get a
 		 * requery below on first loop iteration */
 	struct syslogTime stTime;
 	char errStr[1024];
@@ -500,7 +500,7 @@ int *pbIsPermitted)
 		for(i = 0 ; i < runModConf->batchSize ; ++i) {
 			pWrkr->recvmsg_iov[i].iov_base = pWrkr->pRcvBuf+(i*(iMaxLine+1));
 			pWrkr->recvmsg_iov[i].iov_len = iMaxLine;
-			pWrkr->recvmsg_mmh[i].msg_hdr.msg_namelen = sizeof(struct sockaddr_storage); 
+			pWrkr->recvmsg_mmh[i].msg_hdr.msg_namelen = sizeof(struct sockaddr_storage);
 			pWrkr->recvmsg_mmh[i].msg_hdr.msg_name = &(pWrkr->frominet[i]);
 			pWrkr->recvmsg_mmh[i].msg_hdr.msg_iov = &(pWrkr->recvmsg_iov[i]);
 			pWrkr->recvmsg_mmh[i].msg_hdr.msg_iovlen = 1;
@@ -588,7 +588,7 @@ int *pbIsPermitted)
 		iov[0].iov_len = iMaxLine;
 		memset(&mh, 0, sizeof(mh));
 		mh.msg_name = &frominet;
-		mh.msg_namelen = sizeof(struct sockaddr_storage); 
+		mh.msg_namelen = sizeof(struct sockaddr_storage);
 		mh.msg_iov = iov;
 		mh.msg_iovlen = 1;
 		lenRcvBuf = recvmsg(lstn->sock, &mh, 0);
@@ -626,7 +626,7 @@ finalize_it:
 static rsRetVal
 checkSchedulingPriority(modConfData_t *modConf)
 {
-    	DEFiRet;
+	DEFiRet;
 
 #ifdef HAVE_SCHED_GET_PRIORITY_MAX
 	if(   modConf->iSchedPrio < sched_get_priority_min(modConf->iSchedPolicy)
@@ -646,7 +646,7 @@ finalize_it:
 }
 
 
-/* check scheduling policy string and, if valid, set its 
+/* check scheduling policy string and, if valid, set its
  * numeric equivalent in current load config
  */
 static rsRetVal
@@ -1210,7 +1210,7 @@ wrkr(void *myself)
 
 	/* Note well: the setting of scheduling parameters will not work
 	 * when we dropped privileges (if the user is not sufficiently
-	 * privileged, of course). Howerver, we can't change the 
+	 * privileged, of course). Howerver, we can't change the
 	 * scheduling params in PrePrivDrop(), as at that point our thread
 	 * is not yet created. So at least as an interim solution, we do
 	 * NOT support both setting sched parameters and dropping

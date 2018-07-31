@@ -9,11 +9,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -282,7 +282,7 @@ BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and
 	/* TODO: add
 	iActionRetryCount = 0;
 	iActionRetryInterval = 30000;
-       static int iMainMsgQtoWrkMinMsgs = 100;
+	static int iMainMsgQtoWrkMinMsgs = 100;
 	static int iMainMsgQbSaveOnShutdown = 1;
 	iMainMsgQueMaxDiskSpace = 0;
 	setQPROP(qqueueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", 100);
@@ -610,13 +610,13 @@ dropPrivileges(rsconf_t *cnf)
 
 	if(cnf->globals.gidDropPriv != 0) {
 		CHKiRet(doDropPrivGid());
-		DBGPRINTF("group privileges have been dropped to gid %u\n", (unsigned) 
+		DBGPRINTF("group privileges have been dropped to gid %u\n", (unsigned)
 			  ourConf->globals.gidDropPriv);
 	}
 
 	if(cnf->globals.uidDropPriv != 0) {
 		doDropPrivUid(ourConf->globals.uidDropPriv);
-		DBGPRINTF("user privileges have been dropped to uid %u\n", (unsigned) 
+		DBGPRINTF("user privileges have been dropped to uid %u\n", (unsigned)
 			  ourConf->globals.uidDropPriv);
 	}
 
@@ -1107,7 +1107,7 @@ finalize_it:
 
 
 /* intialize the legacy config system */
-static rsRetVal 
+static rsRetVal
 initLegacyConf(void)
 {
 	DEFiRet;
@@ -1266,7 +1266,7 @@ finalize_it:
 }
 
 
-/* validate the current configuration, generate error messages, do 
+/* validate the current configuration, generate error messages, do
  * optimizations, etc, etc,...
  */
 static rsRetVal

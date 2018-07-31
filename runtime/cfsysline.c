@@ -12,11 +12,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -113,7 +113,7 @@ static rsRetVal parseIntVal(uchar **pp, int64 *pVal)
 {
 	DEFiRet;
 	uchar *p;
-	int64 i;	
+	int64 i;
 	int bWasNegative;
 
 	assert(pp != NULL);
@@ -185,12 +185,12 @@ static rsRetVal doGetSize(uchar **pp, rsRetVal (*pSetHdlr)(void*, int64), void *
 		/* and now the "new" 1000-based definitions */
 		case 'K': i *= 1000; ++(*pp); break;
 	        case 'M': i *= 1000000; ++(*pp); break;
-                case 'G': i *= 1000000000; ++(*pp); break;
+		case 'G': i *= 1000000000; ++(*pp); break;
 			  /* we need to use the multiplication below because otherwise
 			   * the compiler gets an error during constant parsing */
-                case 'T': i *= (int64) 1000       * 1000000000; ++(*pp); break; /* tera */
-                case 'P': i *= (int64) 1000000    * 1000000000; ++(*pp); break; /* peta */
-                case 'E': i *= (int64) 1000000000 * 1000000000; ++(*pp); break; /* exa */
+		case 'T': i *= (int64) 1000       * 1000000000; ++(*pp); break; /* tera */
+		case 'P': i *= (int64) 1000000    * 1000000000; ++(*pp); break; /* peta */
+		case 'E': i *= (int64) 1000000000 * 1000000000; ++(*pp); break; /* exa */
 	}
 
 	/* done */
@@ -214,7 +214,7 @@ static rsRetVal doGetInt(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 {
 	uchar *p;
 	DEFiRet;
-	int64 i;	
+	int64 i;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -222,7 +222,7 @@ static rsRetVal doGetInt(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	CHKiRet(doGetSize(pp, NULL,&i));
 	p = *pp;
 	if(i > 2147483648ll) { /*2^31*/
-		LogError(0, RS_RET_INVALID_VALUE, 
+		LogError(0, RS_RET_INVALID_VALUE,
 		         "value %lld too large for integer argument.", i);
 		ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 	}
@@ -258,7 +258,7 @@ static rsRetVal doFileCreateMode(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t),
 {
 	uchar *p;
 	DEFiRet;
-	int iVal;	
+	int iVal;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -654,7 +654,7 @@ finalize_it:
 }
 
 /* destructor for linked list keys. As we do not use any dynamic memory,
- * we simply return. However, this entry point must be defined for the 
+ * we simply return. However, this entry point must be defined for the
  * linkedList class to make sure we have not forgotten a destructor.
  * rgerhards, 2007-11-21
  */

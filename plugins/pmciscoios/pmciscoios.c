@@ -10,11 +10,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -126,11 +126,11 @@ CODESTARTnewParserInst
 		if(!strcmp(parserpblk.descr[i].name, "present.origin")) {
 			inst->bOriginPresent = (int) pvals[i].val.d.n;
 		} else if(!strcmp(parserpblk.descr[i].name, "present.xr")) {
-                        inst->bXrPresent = (int) pvals[i].val.d.n;
-                } else {
-                        dbgprintf("pmciscoios: program error, non-handled "
-                          "param '%s'\n", parserpblk.descr[i].name);
-                }
+			inst->bXrPresent = (int) pvals[i].val.d.n;
+		} else {
+			dbgprintf("pmciscoios: program error, non-handled "
+				"param '%s'\n", parserpblk.descr[i].name);
+		}
 	}
 finalize_it:
 CODE_STD_FINALIZERnewParserInst
@@ -192,20 +192,20 @@ CODESTARTparse2
 		p2parse += 2;
 	}
 
-        /* XR RSP (optional) */
-        if(pInst->bXrPresent) {
-                while(   lenMsg > 1
-                      && !(*p2parse == ':')) {
-                        --lenMsg;
+	/* XR RSP (optional) */
+	if(pInst->bXrPresent) {
+		while(   lenMsg > 1
+			&& !(*p2parse == ':')) {
+			--lenMsg;
 			++p2parse;
-                }
-                /* delimiter check */
-                if(lenMsg < 2) {
-                        DBGPRINTF("pmciscoios: fail after XR: '%s'\n", p2parse);
-                        ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
-                }
-                p2parse += 1;
-        }
+		}
+		/* delimiter check */
+		if(lenMsg < 2) {
+			DBGPRINTF("pmciscoios: fail after XR: '%s'\n", p2parse);
+			ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+		}
+		p2parse += 1;
+	}
 
 	/* TIMESTAMP */
 	if(p2parse[0] == '*' || p2parse[0] == '.') p2parse++;

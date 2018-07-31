@@ -17,11 +17,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -171,7 +171,7 @@ ENDfreeCnf
  * a) on failure (iRet set accordingly)
  * b) on termination of the input module (as part of the unload process)
  * Code begun 2007-12-12 rgerhards
- *  
+ *
  * This code must simply spawn emit a mark message at each mark interval.
  * We are running on our own thread, so this is extremely easy: we just
  * sleep MarkInterval seconds and each time we awake, we inject the message.

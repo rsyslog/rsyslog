@@ -15,11 +15,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -167,10 +167,10 @@ CODESTARTrunInput
 	 */
 	while(!pThrd->bShallStop) {
 		/* klogLogKMsg() waits for the next kernel message, obtains it
-                 * and then submits it to the rsyslog main queue.
+		 * and then submits it to the rsyslog main queue.
 	   	 * rgerhards, 2008-04-09
 	   	 */
-                CHKiRet(klogLogKMsg(runModConf));
+		CHKiRet(klogLogKMsg(runModConf));
 	}
 finalize_it:
 ENDrunInput
@@ -208,7 +208,7 @@ ENDcheckCnf
 BEGINactivateCnfPrePrivDrop
 CODESTARTactivateCnfPrePrivDrop
 	runModConf = pModConf;
-        iRet = klogWillRunPrePrivDrop(runModConf);
+	iRet = klogWillRunPrePrivDrop(runModConf);
 ENDactivateCnfPrePrivDrop
 
 
@@ -224,13 +224,13 @@ ENDfreeCnf
 
 BEGINwillRun
 CODESTARTwillRun
-        iRet = klogWillRunPostPrivDrop(runModConf);
+	iRet = klogWillRunPostPrivDrop(runModConf);
 ENDwillRun
 
 
 BEGINafterRun
 CODESTARTafterRun
-        iRet = klogAfterRun(runModConf);
+	iRet = klogAfterRun(runModConf);
 ENDafterRun
 
 

@@ -136,7 +136,7 @@ finalize_it:
 static rsRetVal addListener(instanceConf_t* iconf){
 	DEFiRet;
 	
-	DBGPRINTF("imczmq: addListener called..\n");	
+	DBGPRINTF("imczmq: addListener called..\n");
 	struct listener_t* pData = NULL;
 	CHKmalloc(pData=(struct listener_t*)MALLOC(sizeof(struct listener_t)));
 	pData->ruleset = iconf->pBindRuleset;
@@ -149,11 +149,11 @@ static rsRetVal addListener(instanceConf_t* iconf){
 		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 	}
 
-	DBGPRINTF("imczmq: created socket of type %d..\n", iconf->sockType);	
+	DBGPRINTF("imczmq: created socket of type %d..\n", iconf->sockType);
 
-	if(runModConf->authType) {	
+	if(runModConf->authType) {
 		if(!strcmp(runModConf->authType, "CURVESERVER")) {
-			DBGPRINTF("imczmq: we are a CURVESERVER\n");	
+			DBGPRINTF("imczmq: we are a CURVESERVER\n");
 			zcert_t *serverCert = zcert_load(runModConf->serverCertPath);
 			if(!serverCert) {
 				LogError(0, NO_ERRCODE, "could not load cert %s",
@@ -166,7 +166,7 @@ static rsRetVal addListener(instanceConf_t* iconf){
 			zcert_destroy(&serverCert);
 		}
 		else if(!strcmp(runModConf->authType, "CURVECLIENT")) {
-			DBGPRINTF("imczmq: we are a CURVECLIENT\n");	
+			DBGPRINTF("imczmq: we are a CURVECLIENT\n");
 			zcert_t *serverCert = zcert_load(runModConf->serverCertPath);
 			if(!serverCert) {
 				LogError(0, NO_ERRCODE, "could not load cert %s",
@@ -176,14 +176,14 @@ static rsRetVal addListener(instanceConf_t* iconf){
 			const char *server_key = zcert_public_txt(serverCert);
 			zcert_destroy(&serverCert);
 			zsock_set_curve_serverkey(pData->sock, server_key);
-			
+
 			zcert_t *clientCert = zcert_load(runModConf->clientCertPath);
 			if(!clientCert) {
 				LogError(0, NO_ERRCODE, "could not load cert %s",
 					runModConf->clientCertPath);
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
-			
+
 			zcert_apply(clientCert, pData->sock);
 			zcert_destroy(&clientCert);
 		}
@@ -283,7 +283,7 @@ static rsRetVal rcvData(void){
 		authActor = zactor_new(zauth, NULL);
 		zstr_sendx(authActor, "CURVE", runModConf->clientCertPath, NULL);
 		zsock_wait(authActor);
-	} 
+	}
 
 	instanceConf_t *inst;
 	for(inst = runModConf->root; inst != NULL; inst=inst->next) {
@@ -435,7 +435,7 @@ CODESTARTsetModCnf
 
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
- 
+
 	for(i=0; i < modpblk.nParams; ++i) {
 		if(!pvals[i].bUsed) {
 			continue;
@@ -453,11 +453,11 @@ CODESTARTsetModCnf
 			runModConf->clientCertPath = es_str2cstr(pvals[i].val.d.estr, NULL);
 		}
 		else {
-			LogError(0, RS_RET_INVALID_PARAMS, 
+			LogError(0, RS_RET_INVALID_PARAMS,
 						"imczmq: config error, unknown "
-						"param %s in setModCnf\n", 
+						"param %s in setModCnf\n",
 						modpblk.descr[i].name);
-		}   
+		}
 	}
 
 	DBGPRINTF("imczmq: authenticator set to %d\n", runModConf->authenticator);
@@ -553,10 +553,10 @@ CODESTARTnewInpInst
 
 		if(!strcmp(inppblk.descr[i].name, "ruleset")) {
 			inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} 
+		}
 		else if(!strcmp(inppblk.descr[i].name, "endpoints")) {
 			inst->sockEndpoints = es_str2cstr(pvals[i].val.d.estr, NULL);
-		} 
+		}
 		else if(!strcmp(inppblk.descr[i].name, "topics")) {
 			inst->topics = es_str2cstr(pvals[i].val.d.estr, NULL);
 		}
@@ -594,7 +594,7 @@ CODESTARTnewInpInst
 #endif
 			free(stringType);
 
-		} 
+		}
 		else {
 			LogError(0, NO_ERRCODE,
 					"imczmq: program error, non-handled "

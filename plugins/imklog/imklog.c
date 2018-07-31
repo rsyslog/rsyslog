@@ -28,11 +28,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -132,10 +132,10 @@ initConfigSettings(void)
  */
 static rsRetVal
 enqMsg(uchar *const __restrict__ msg,
-       uchar* pszTag,
-       const syslog_pri_t pri,
-       struct timeval *tp,
-       ratelimit_t *ratelimiter)
+	uchar* pszTag,
+	const syslog_pri_t pri,
+	struct timeval *tp,
+	ratelimit_t *ratelimiter)
 {
 	struct syslogTime st;
 	smsg_t *pMsg;
@@ -166,7 +166,7 @@ finalize_it:
 
 /* parse the PRI from a kernel message. At least BSD seems to have
  * non-kernel messages inside the kernel log...
- * Expected format: "<pri>". piPri is only valid if the function 
+ * Expected format: "<pri>". piPri is only valid if the function
  * successfully returns. If there was a proper pri ppSz is advanced to the
  * position right after ">".
  * rgerhards, 2008-04-14
@@ -285,10 +285,10 @@ CODESTARTrunInput
 	 */
 	while(!pThrd->bShallStop) {
 		/* klogLogKMsg() waits for the next kernel message, obtains it
-                 * and then submits it to the rsyslog main queue.
+		 * and then submits it to the rsyslog main queue.
 	   	 * rgerhards, 2008-04-09
 	   	 */
-                CHKiRet(klogLogKMsg(runModConf));
+		CHKiRet(klogLogKMsg(runModConf));
 	}
 finalize_it:
 ENDrunInput
@@ -398,14 +398,14 @@ ENDcheckCnf
 BEGINactivateCnfPrePrivDrop
 CODESTARTactivateCnfPrePrivDrop
 	runModConf = pModConf;
-        iRet = klogWillRunPrePrivDrop(runModConf);
+	iRet = klogWillRunPrePrivDrop(runModConf);
 ENDactivateCnfPrePrivDrop
 
 
 BEGINactivateCnf
 CODESTARTactivateCnf
 	CHKiRet(ratelimitNew(&runModConf->ratelimiter, "imklog", NULL));
-        ratelimitSetLinuxLike(runModConf->ratelimiter,
+	ratelimitSetLinuxLike(runModConf->ratelimiter,
 			      runModConf->ratelimitInterval,
 			      runModConf->ratelimitBurst);
 finalize_it:
@@ -427,7 +427,7 @@ ENDwillRun
 BEGINafterRun
 CODESTARTafterRun
 	ratelimitDestruct(runModConf->ratelimiter);
-        iRet = klogAfterRun(runModConf);
+	iRet = klogAfterRun(runModConf);
 ENDafterRun
 
 

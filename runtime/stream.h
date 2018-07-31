@@ -28,19 +28,19 @@
  * is initialized within zlib to properly add the gzip wrappers to the
  * output.  (gzip is effectively a small metadata wrapper around raw
  * zstream output.)
- * 
+ *
  * I had written an old bit of code to do this - the documentation on
  * deflatInit2() was pretty tricky to nail down on this specific feature:
- * 
+ *
  * int deflateInit2 (z_streamp strm, int level, int method, int windowBits,
  * int memLevel, int strategy);
- * 
+ *
  * I believe "31" would be the value for the "windowBits" field that you'd
  * want to try:
- * 
+ *
  * deflateInit2(zstrmptr, 6, Z_DEFLATED, 31, 9, Z_DEFAULT_STRATEGY);
  * --------------------------------------------------------------------------
- * 
+ *
  * Copyright 2008-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
