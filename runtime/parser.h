@@ -61,7 +61,7 @@ BEGINinterface(parser) /* name must also be changed in ENDinterface macro! */
 ENDinterface(parser)
 #define parserCURR_IF_VERSION 2 /* increment whenever you change the interface above! */
 /* version changes
-   2       SetDoSanitization removed, no longer needed
+	2       SetDoSanitization removed, no longer needed
 */
 
 void printParserList(parserList_t *pList);

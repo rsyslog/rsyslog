@@ -83,11 +83,11 @@ struct objlst {
 };
 
 struct nvlst {
-  struct nvlst *next;
-  es_str_t *name;
-  struct svar val;
-  unsigned char bUsed;
-  	/**< was this node used during config processing? If not, this
+	struct nvlst *next;
+	es_str_t *name;
+	struct svar val;
+	unsigned char bUsed;
+	/**< was this node used during config processing? If not, this
 	 *   indicates an error. After all, the user specified a setting
 	 *   that the software does not know.
 	 */
@@ -164,13 +164,13 @@ struct cnfstmt {
 			struct cnfstmt *t_else;
 		} s_propfilt;
 		struct action_s *act;
-        struct {
+	struct {
 			struct cnfitr *iter;
 			struct cnfstmt *body;
 		} s_foreach;
-        struct {
+	struct {
 			lookup_ref_t *table;
-            uchar *table_name;
+			uchar *table_name;
 			uchar *stub_value;
 		} s_reload_lookup_table;
 	} d;
@@ -183,8 +183,8 @@ struct cnfexpr {
 } __attribute__((aligned (8)));
 
 struct cnfitr {
-    char* var;
-    struct cnfexpr* collection;
+	char* var;
+	struct cnfexpr* collection;
 } __attribute__((aligned (8)));
 
 struct cnfnumval {

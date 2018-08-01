@@ -311,38 +311,38 @@ long BIO_debug_callback(BIO *bio, int cmd, const char __attribute__((unused)) *a
 		dbgprintf("write %s\n", RSYSLOG_BIO_method_name(bio));
 		break;
 #endif
-    case BIO_CB_PUTS:
-        dbgprintf("puts() - %s\n", RSYSLOG_BIO_method_name(bio));
-        break;
-    case BIO_CB_GETS:
-        dbgprintf("gets(%lu) - %s\n", (unsigned long)argi,
-                     RSYSLOG_BIO_method_name(bio));
-        break;
-    case BIO_CB_CTRL:
-        dbgprintf("ctrl(%lu) - %s\n", (unsigned long)argi,
-                     RSYSLOG_BIO_method_name(bio));
-        break;
-    case BIO_CB_RETURN | BIO_CB_READ:
-        dbgprintf("read return %ld\n", ret);
-        break;
-    case BIO_CB_RETURN | BIO_CB_WRITE:
-        dbgprintf("write return %ld\n", ret);
-        break;
-    case BIO_CB_RETURN | BIO_CB_GETS:
-        dbgprintf("gets return %ld\n", ret);
-        break;
-    case BIO_CB_RETURN | BIO_CB_PUTS:
-        dbgprintf("puts return %ld\n", ret);
-        break;
-    case BIO_CB_RETURN | BIO_CB_CTRL:
-        dbgprintf("ctrl return %ld\n", ret);
-        break;
-    default:
-        dbgprintf("bio callback - unknown type (%d)\n", cmd);
-        break;
-    }
+	case BIO_CB_PUTS:
+		dbgprintf("puts() - %s\n", RSYSLOG_BIO_method_name(bio));
+		break;
+	case BIO_CB_GETS:
+		dbgprintf("gets(%lu) - %s\n", (unsigned long)argi,
+			RSYSLOG_BIO_method_name(bio));
+		break;
+	case BIO_CB_CTRL:
+		dbgprintf("ctrl(%lu) - %s\n", (unsigned long)argi,
+			RSYSLOG_BIO_method_name(bio));
+		break;
+	case BIO_CB_RETURN | BIO_CB_READ:
+		dbgprintf("read return %ld\n", ret);
+		break;
+	case BIO_CB_RETURN | BIO_CB_WRITE:
+		dbgprintf("write return %ld\n", ret);
+		break;
+	case BIO_CB_RETURN | BIO_CB_GETS:
+		dbgprintf("gets return %ld\n", ret);
+		break;
+	case BIO_CB_RETURN | BIO_CB_PUTS:
+		dbgprintf("puts return %ld\n", ret);
+		break;
+	case BIO_CB_RETURN | BIO_CB_CTRL:
+		dbgprintf("ctrl return %ld\n", ret);
+		break;
+	default:
+		dbgprintf("bio callback - unknown type (%d)\n", cmd);
+		break;
+	}
 
-    return (r);
+	return (r);
 }
 
 

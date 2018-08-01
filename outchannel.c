@@ -199,7 +199,7 @@ finalize_it:
 struct outchannel *ochAddLine(char* pName, uchar** ppRestOfConfLine)
 {
 	struct outchannel *pOch;
- 	uchar *p;
+	uchar *p;
 
 	assert(pName != NULL);
 	assert(ppRestOfConfLine != NULL);

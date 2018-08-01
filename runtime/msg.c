@@ -43,10 +43,10 @@
 #include <libestr.h>
 #include <json.h>
 #ifdef HAVE_MALLOC_H
-#  include <malloc.h>
+#include <malloc.h>
 #endif
 #ifdef USE_LIBUUID
-  #include <uuid/uuid.h>
+#include <uuid/uuid.h>
 #endif
 #include <errno.h>
 #include "rsyslog.h"
@@ -374,19 +374,19 @@ static char hexdigit[16] =
 	{'0', '1', '2', '3', '4', '5', '6', '7', '8',
 	 '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
- #if defined(_AIX)
- /* AIXPORT : replace facility names with aso and caa only for AIX */
- static char *syslog_fac_names[LOG_NFACILITIES] = { "kern", "user", "mail", "daemon", "auth", "syslog", "lpr",
-                                     "news", "uucp", "cron", "authpriv", "ftp", "aso", "audit",
-                                     "alert", "caa", "local0", "local1", "local2", "local3",
-                                     "local4", "local5", "local6", "local7", "invld"    };
- /* length of the facility names string (for optimizatiions) */
- static short len_syslog_fac_names[LOG_NFACILITIES] = { 4, 4, 4, 6, 4, 6, 3,
-                                         4, 4, 4, 8, 3, 3, 5,
-                                         5, 3, 6, 6, 6, 6,
-                                         6, 6, 6, 6, 5 };
+#if defined(_AIX)
+/* AIXPORT : replace facility names with aso and caa only for AIX */
+static char *syslog_fac_names[LOG_NFACILITIES] = { "kern", "user", "mail", "daemon", "auth", "syslog", "lpr",
+			"news", "uucp", "cron", "authpriv", "ftp", "aso", "audit",
+			"alert", "caa", "local0", "local1", "local2", "local3",
+			"local4", "local5", "local6", "local7", "invld"    };
+/* length of the facility names string (for optimizatiions) */
+static short len_syslog_fac_names[LOG_NFACILITIES] = { 4, 4, 4, 6, 4, 6, 3,
+							4, 4, 4, 8, 3, 3, 5,
+							5, 3, 6, 6, 6, 6,
+							6, 6, 6, 6, 5 };
 
- #else
+#else
 /*syslog facility names (as of RFC5424) */
 static const char *syslog_fac_names[LOG_NFACILITIES] = { "kern", "user", "mail", "daemon", "auth", "syslog", "lpr",
 			    	      "news", "uucp", "cron", "authpriv", "ftp", "ntp", "audit",
@@ -960,7 +960,7 @@ static inline void freeHOSTNAME(smsg_t *pThis)
 rsRetVal msgDestruct(smsg_t **ppThis)
 {
 	DEFiRet;
-        smsg_t *pThis;
+	smsg_t *pThis;
 	int currRefCount;
 #	ifdef HAVE_MALLOC_TRIM
 	int currCnt;
@@ -2130,10 +2130,10 @@ static const char *getFacility(smsg_t * const pM)
 
 static const char *getFacilityStr(smsg_t * const pM)
 {
-        const char *name = NULL;
+	const char *name = NULL;
 
-        if(pM == NULL)
-                return "";
+	if(pM == NULL)
+		return "";
 
 	if(pM->iFacility > 23) {
 		name = "invld";
@@ -3470,8 +3470,8 @@ finalize_it:
 	*pPropLen = sizeof("**OUT OF MEMORY**") - 1; \
 	return(UCHAR_CONSTANT("**OUT OF MEMORY**"));}
 uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restrict__ const pTpe,
-                 msgPropDescr_t *pProp, rs_size_t *__restrict__ const pPropLen,
-		 unsigned short *__restrict__ const pbMustBeFreed, struct syslogTime * const ttNow)
+			msgPropDescr_t *pProp, rs_size_t *__restrict__ const pPropLen,
+			unsigned short *__restrict__ const pbMustBeFreed, struct syslogTime * const ttNow)
 {
 	uchar *pRes; /* result pointer */
 	rs_size_t bufLen = -1; /* length of string or -1, if not known */
@@ -3790,14 +3790,14 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 
 			if(clock_gettime(CLOCK_UPTIME, &tp) == -1) {
 				free(pRes);
- 				*pPropLen = sizeof("**SYSCALL FAILED**") - 1;
- 				return(UCHAR_CONSTANT("**SYSCALL FAILED**"));
- 			}
+				*pPropLen = sizeof("**SYSCALL FAILED**") - 1;
+				return(UCHAR_CONSTANT("**SYSCALL FAILED**"));
+			}
 
 			*pbMustBeFreed = 1;
 
 			snprintf((char*) pRes, 32, "%ld", tp.tv_sec);
- 			}
+			}
 
 #			else
 
@@ -3871,7 +3871,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			}
 		}
 		dbgprintf("field requested %d, field found %d\n", pTpe->data.field.iFieldNr, (int) iCurrFld);
-		
+
 		if(iCurrFld == pTpe->data.field.iFieldNr) {
 			/* field found, now extract it */
 			/* first of all, we need to find the end */
@@ -4172,7 +4172,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			uchar *pDstStart;
 			uchar *pDst;
 			uchar bDropped = 0;
-			
+
 			while(*pSrc) {
 				if(!iscntrl((int) *pSrc++))
 					iLenBuf++;
@@ -4202,7 +4202,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			uchar *pSrc;
 			uchar *pDstStart;
 			uchar *pDst;
-			
+
 			if(*pbMustBeFreed == 1) {
 				/* in this case, we already work on dynamic
 				 * memory, so there is no need to copy it - we can
@@ -4291,14 +4291,14 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			uchar *pDstStart;
 			uchar *pDst;
 			uchar bDropped = 0;
-			
+
 			while(*pSrc) {
 				if(*pSrc++ != '/')
 					iLenBuf++;
 				else
 					bDropped = 1;
 			}
-			
+
 			if(bDropped) {
 				pDst = pDstStart = MALLOC(iLenBuf + 1);
 				if(pDst == NULL) {
@@ -4321,7 +4321,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			uchar *pSrc;
 			uchar *pDstStart;
 			uchar *pDst;
-			
+
 			if(*pbMustBeFreed == 1) {
 				/* here, again, we can modify the string as we already obtained
 				 * a private buffer. As we do not change the size of that buffer,
@@ -4356,7 +4356,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 				*pbMustBeFreed = 1;
 			}
 		}
-		
+
 		/* check for "." and ".." (note the parenthesis in the if condition!) */
 		if(*pRes == '\0') {
 			if(*pbMustBeFreed == 1)
@@ -4692,33 +4692,33 @@ jsonPathGetLeaf(uchar *name, int lenName)
 }
 
 static json_bool jsonVarExtract(struct json_object* root, const char *key, struct json_object **value) {
-    char namebuf[MAX_VARIABLE_NAME_LEN];
-    int key_len = strlen(key);
-    char *array_idx_start = strstr(key, "[");
-    char *array_idx_end = NULL;
-    char *array_idx_num_end_discovered = NULL;
-    struct json_object *arr = NULL;
-    if (array_idx_start != NULL) {
-        array_idx_end = strstr(array_idx_start, "]");
-    }
-    if (array_idx_end != NULL && (array_idx_end - key + 1) == key_len) {
-        errno = 0;
-        int idx = (int) strtol(array_idx_start + 1, &array_idx_num_end_discovered, 10);
-        if (errno == 0 && array_idx_num_end_discovered == array_idx_end) {
-            memcpy(namebuf, key, array_idx_start - key);
-            namebuf[array_idx_start - key] = '\0';
-            json_bool found_obj = json_object_object_get_ex(root, namebuf, &arr);
-            if (found_obj && json_object_is_type(arr, json_type_array)) {
-                int len = json_object_array_length(arr);
-                if (len > idx) {
-                    *value = json_object_array_get_idx(arr, idx);
-                    if (*value != NULL) return TRUE;
-                }
-                return FALSE;
-            }
-        }
-    }
-    return json_object_object_get_ex(root, key, value);
+	char namebuf[MAX_VARIABLE_NAME_LEN];
+	int key_len = strlen(key);
+	char *array_idx_start = strstr(key, "[");
+	char *array_idx_end = NULL;
+	char *array_idx_num_end_discovered = NULL;
+	struct json_object *arr = NULL;
+	if (array_idx_start != NULL) {
+		array_idx_end = strstr(array_idx_start, "]");
+	}
+	if (array_idx_end != NULL && (array_idx_end - key + 1) == key_len) {
+		errno = 0;
+		int idx = (int) strtol(array_idx_start + 1, &array_idx_num_end_discovered, 10);
+		if (errno == 0 && array_idx_num_end_discovered == array_idx_end) {
+			memcpy(namebuf, key, array_idx_start - key);
+			namebuf[array_idx_start - key] = '\0';
+			json_bool found_obj = json_object_object_get_ex(root, namebuf, &arr);
+			if (found_obj && json_object_is_type(arr, json_type_array)) {
+				int len = json_object_array_length(arr);
+				if (len > idx) {
+					*value = json_object_array_get_idx(arr, idx);
+					if (*value != NULL) return TRUE;
+				}
+				return FALSE;
+			}
+		}
+	}
+	return json_object_object_get_ex(root, key, value);
 }
 
 
@@ -4988,7 +4988,7 @@ msgAddMultiMetadata(smsg_t *const __restrict__ pMsg,
 		if(jval == NULL) {
 			json_object_put(json);
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
- 		}
+		}
 		json_object_object_add(json, (const char *const)metaname[i], jval);
 	}
 	iRet = msgAddJSON(pMsg, (uchar*)"!metadata", json, 0, 0);

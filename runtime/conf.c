@@ -626,7 +626,7 @@ BEGINAbstractObjClassInit(conf, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANG
 	CHKiRet(objUse(net, LM_NET_FILENAME)); /* TODO: make this dependcy go away! */
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 
- 	/* These commands will NOT be supported -- the new v6.3 config system provides
+	/* These commands will NOT be supported -- the new v6.3 config system provides
 	 * far better methods. We will remove the related code soon. -- rgerhards, 2012-01-09
 	 */
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables,

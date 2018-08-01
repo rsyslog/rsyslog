@@ -575,20 +575,20 @@ int dbgMutexLock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int ln, int iStack
 /* wrapper for pthread_mutex_trylock() */
 int dbgMutexTryLock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int ln, int iStackPtr)
 {
-   int ret;
+	int ret;
 
-   dbgRecordExecLocation(iStackPtr, ln);
-   dbgMutexPreLockLog(pmut, pFuncDB, ln); // TODO : update this
-   ret = pthread_mutex_trylock(pmut);
-   if(ret == 0 || ret == EBUSY) {
-      // TODO : update this
-      dbgMutexLockLog(pmut, pFuncDB, ln);
-   } else {
-      dbgprintf("%s:%d:%s: ERROR: pthread_mutex_trylock() for mutex %p failed with error %d\n",
-           pFuncDB->file, ln, pFuncDB->func, (void*)pmut, ret);
-   }
+	dbgRecordExecLocation(iStackPtr, ln);
+	dbgMutexPreLockLog(pmut, pFuncDB, ln); // TODO : update this
+	ret = pthread_mutex_trylock(pmut);
+	if(ret == 0 || ret == EBUSY) {
+		// TODO : update this
+		dbgMutexLockLog(pmut, pFuncDB, ln);
+	} else {
+		dbgprintf("%s:%d:%s: ERROR: pthread_mutex_trylock() for mutex %p failed with error %d\n",
+				pFuncDB->file, ln, pFuncDB->func, (void*)pmut, ret);
+	}
 
-   return ret;
+	return ret;
 }
 
 
@@ -730,9 +730,9 @@ static void dbgCallStackDestruct(void *arg)
 		free(pThrd->pszThrdName);
 	}
 
- 	pthread_mutex_lock(&mutCallStack);
+	pthread_mutex_lock(&mutCallStack);
 	DLL_Del(CallStack, pThrd);
- 	pthread_mutex_unlock(&mutCallStack);
+	pthread_mutex_unlock(&mutCallStack);
 }
 
 
@@ -965,7 +965,7 @@ checkDbgFile(const char *srcname)
  * time being. -- rgerhards, 2008-01-29
  */
 #ifndef DEBUGLESS
- void
+void
 r_dbgoprint( const char *srcname, obj_t *pObj, const char *fmt, ...)
 {
 	va_list ap;

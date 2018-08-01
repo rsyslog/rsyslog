@@ -493,9 +493,9 @@ static bson_t *BSONFromJSONObject(struct json_object *json)
 	return doc;
 
 error:
-        if(doc != NULL)
-                bson_destroy(doc);
-        return NULL;
+	if(doc != NULL)
+		bson_destroy(doc);
+	return NULL;
 
 }
 

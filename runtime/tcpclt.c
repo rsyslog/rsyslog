@@ -95,7 +95,7 @@ CreateSocket(struct addrinfo *addrDest)
 			char errStr[1024];
 			dbgprintf("couldn't create send socket, reason %s", rs_strerror_r(errno, errStr,
 				sizeof(errStr)));
-		}		
+		}
 		r = r->ai_next;
 	}
 

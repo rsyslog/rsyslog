@@ -350,8 +350,8 @@ doTest(syncType_t st)
 	}
 
 	/* we have a memory leak due to calling dispRuntime(), but we don't
-         * care as we terminate immediately.
-         */
+	 * care as we terminate immediately.
+	 */
 	printf("%-10s: total runtime %6ld.%3.3u, avg %s, min %s, max %s\n",
 	       getSyncMethName(st),
 	       (long)totalRuntime/1000, (unsigned)(totalRuntime % 1000),

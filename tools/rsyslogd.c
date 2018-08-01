@@ -153,7 +153,7 @@ static int bHadHUP;
 static int doFork = 1; 	/* fork - run in daemon mode - read-only after startup */
 int bFinished = 0;	/* used by termination signal handler, read-only except there
 			 * is either 0 or the number of the signal that requested the
- 			 * termination.
+			 * termination.
 			 */
 const char *PidFile;
 #define NO_PIDFILE "NONE"
@@ -1309,9 +1309,9 @@ initAll(int argc, char **argv)
 	while((ch = getopt(argc, argv, "46ACDdf:i:l:M:nN:qQs:S:T:u:vwx")) != EOF) {
 #endif
 		switch((char)ch) {
-                case '4':
-                case '6':
-                case 'A':
+		case '4':
+		case '6':
+		case 'A':
 		case 'f': /* configuration file */
 		case 'i': /* pid file name */
 		case 'l':
@@ -1392,24 +1392,24 @@ initAll(int argc, char **argv)
 	while((iRet = bufOptRemove(&ch, &arg)) == RS_RET_OK) {
 		DBGPRINTF("deque option %c, optarg '%s'\n", ch, (arg == NULL) ? "" : arg);
 		switch((char)ch) {
-                case '4':
+		case '4':
 			fprintf (stderr, "rsyslogd: the -4 command line option will go away "
 				 "soon.\nPlease use the global(net.ipprotocol=\"ipv4-only\") "
 				 "configuration parameter instead.\n");
 	                glbl.SetDefPFFamily(PF_INET);
-                        break;
-                case '6':
+			break;
+		case '6':
 			fprintf (stderr, "rsyslogd: the -6 command line option will go away "
 				 "soon.\nPlease use the global(net.ipprotocol=\"ipv6-only\") "
 				 "configuration parameter instead.\n");
-                        glbl.SetDefPFFamily(PF_INET6);
-                        break;
-                case 'A':
+			glbl.SetDefPFFamily(PF_INET6);
+			break;
+		case 'A':
 			fprintf (stderr, "rsyslogd: the -A command line option will go away "
 				 "soon.\n"
 				 "Please use the omfwd parameter \"upd.sendToAll\" instead.\n");
-                        send_to_all++;
-                        break;
+			send_to_all++;
+			break;
 		case 'S':		/* Source IP for local client to be used on multihomed host */
 			fprintf (stderr, "rsyslogd: the -S command line option will go away "
 				 "soon.\n"
@@ -1477,8 +1477,8 @@ initAll(int argc, char **argv)
 				perror("chroot");
 				exit(1);
 			}
-            		if(chdir("/") != 0) {
-                		perror("chdir");
+			if(chdir("/") != 0) {
+				perror("chdir");
 		                exit(1);
 		            }
 			break;
@@ -1514,7 +1514,7 @@ initAll(int argc, char **argv)
 				 "configuration parameter instead.\n");
 			glbl.SetDisableDNS(1);
 			break;
-               case '?':
+		case '?':
 		default:
 			rsyslogd_usage();
 		}

@@ -232,12 +232,12 @@ ctr_t **entryRef, int8_t linked)
 	*entryRef = ctr;
 
 finalize_it:
-    if (iRet != RS_RET_OK) {
-        if (ctr != NULL) {
-            free(ctr->name);
-            free(ctr);
-        }
-    }
+	if (iRet != RS_RET_OK) {
+		if (ctr != NULL) {
+			free(ctr->name);
+			free(ctr);
+		}
+	}
 	RETiRet;
 }
 
@@ -267,7 +267,7 @@ destructUnlinkedCounter(ctr_t *ctr) {
 static void
 destructCounter(statsobj_t *pThis, ctr_t *pCtr)
 {
-    pthread_mutex_lock(&pThis->mutCtr);
+	pthread_mutex_lock(&pThis->mutCtr);
 	if (pCtr->prev != NULL) {
 		pCtr->prev->next = pCtr->next;
 	}

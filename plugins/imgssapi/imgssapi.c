@@ -510,7 +510,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 				ABORT_FINALIZE(RS_RET_OK); // TODO: define good error codes
 			}
 
-                        freeFdSet(pFds);
+			freeFdSet(pFds);
 		}
 
 		context = &pGSess->gss_context;
@@ -565,10 +565,10 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 		maj_stat = gss_display_name(&min_stat, client, &recv_tok, NULL);
 		if (maj_stat != GSS_S_COMPLETE) {
 			gssutil.display_status((char*)"displaying name", maj_stat, min_stat);
-                } else {
+		} else {
 			dbgprintf("GSS-API Accepted connection from peer %s: %s\n", (char *)pszPeer,
 				(char*) recv_tok.value);
-                }
+		}
 		gss_release_name(&min_stat, &client);
 		gss_release_buffer(&min_stat, &recv_tok);
 
@@ -736,7 +736,7 @@ CODESTARTmodExit
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(netstrm, LM_NETSTRM_FILENAME);
 	objRelease(net, LM_NET_FILENAME);
-        objRelease(prop, CORE_COMPONENT);
+	objRelease(prop, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -770,7 +770,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	}
 	bPermitPlainTcp = 0;
 	iTCPSessMax = 200;
-        bKeepAlive = 0;
+	bKeepAlive = 0;
 	return RS_RET_OK;
 }
 
@@ -787,7 +787,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(netstrm, LM_NETSTRM_FILENAME));
 	CHKiRet(objUse(net, LM_NET_FILENAME));
-        CHKiRet(objUse(prop, CORE_COMPONENT));
+	CHKiRet(objUse(prop, CORE_COMPONENT));
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgssserverpermitplaintcp", 0, eCmdHdlrBinary,
@@ -798,7 +798,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 				   NULL, &gss_listen_service_name, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgssservermaxsessions", 0, eCmdHdlrInt,
 				   NULL, &iTCPSessMax, STD_LOADABLE_MODULE_ID));
-        CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgssserverkeepalive", 0, eCmdHdlrBinary,
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgssserverkeepalive", 0, eCmdHdlrBinary,
 				   NULL, &bKeepAlive, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));

@@ -254,7 +254,7 @@ static void closeTLSSess(int __attribute__((unused)) i);
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-security"
 static void relp_dbgprintf(char __attribute__((unused)) *fmt, ...) {
-    printf(fmt);
+	printf(fmt);
 }
 #pragma GCC diagnostic pop
 
@@ -938,79 +938,79 @@ runTests(void)
  */
 
 long BIO_debug_callback(BIO *bio, int cmd, const char __attribute__((unused)) *argp,
-                        int argi, long __attribute__((unused)) argl, long ret)
+			int argi, long __attribute__((unused)) argl, long ret)
 {
-    long r = 1;
+	long r = 1;
 
-    if (BIO_CB_RETURN & cmd)
-        r = ret;
+	if (BIO_CB_RETURN & cmd)
+	r = ret;
 
-    printf("tcpdump: openssl debugmsg: BIO[%p]: ", (void *)bio);
+	printf("tcpdump: openssl debugmsg: BIO[%p]: ", (void *)bio);
 
-    switch (cmd) {
-    case BIO_CB_FREE:
-        printf("Free - %s\n", RSYSLOG_BIO_method_name(bio));
-        break;
+	switch (cmd) {
+	case BIO_CB_FREE:
+		printf("Free - %s\n", RSYSLOG_BIO_method_name(bio));
+		break;
 /* Disabled due API changes for OpenSSL 1.1.0+ */
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
-    case BIO_CB_READ:
-        if (bio->method->type & BIO_TYPE_DESCRIPTOR)
-            printf("read(%d,%lu) - %s fd=%d\n",
-                         RSYSLOG_BIO_number_read(bio), (unsigned long)argi,
-                         RSYSLOG_BIO_method_name(bio), RSYSLOG_BIO_number_read(bio));
-        else
-            printf("read(%d,%lu) - %s\n",
-                         RSYSLOG_BIO_number_read(bio), (unsigned long)argi, RSYSLOG_BIO_method_name(bio));
-        break;
-    case BIO_CB_WRITE:
-        if (bio->method->type & BIO_TYPE_DESCRIPTOR)
-            printf("write(%d,%lu) - %s fd=%d\n",
-                         RSYSLOG_BIO_number_written(bio), (unsigned long)argi,
-                         RSYSLOG_BIO_method_name(bio), RSYSLOG_BIO_number_written(bio));
-        else
-            printf("write(%d,%lu) - %s\n",
-                         RSYSLOG_BIO_number_written(bio), (unsigned long)argi, RSYSLOG_BIO_method_name(bio));
-        break;
+	case BIO_CB_READ:
+		if (bio->method->type & BIO_TYPE_DESCRIPTOR)
+			printf("read(%d,%lu) - %s fd=%d\n",
+				RSYSLOG_BIO_number_read(bio), (unsigned long)argi,
+				RSYSLOG_BIO_method_name(bio), RSYSLOG_BIO_number_read(bio));
+		else
+			printf("read(%d,%lu) - %s\n",
+				RSYSLOG_BIO_number_read(bio), (unsigned long)argi, RSYSLOG_BIO_method_name(bio));
+		break;
+	case BIO_CB_WRITE:
+		if (bio->method->type & BIO_TYPE_DESCRIPTOR)
+			printf("write(%d,%lu) - %s fd=%d\n",
+				RSYSLOG_BIO_number_written(bio), (unsigned long)argi,
+				RSYSLOG_BIO_method_name(bio), RSYSLOG_BIO_number_written(bio));
+		else
+			printf("write(%d,%lu) - %s\n",
+				RSYSLOG_BIO_number_written(bio), (unsigned long)argi, RSYSLOG_BIO_method_name(bio));
+		break;
 #else
-    case BIO_CB_READ:
-            printf("read %s\n", RSYSLOG_BIO_method_name(bio));
-        break;
-    case BIO_CB_WRITE:
-            printf("write %s\n", RSYSLOG_BIO_method_name(bio));
-        break;
+	case BIO_CB_READ:
+		printf("read %s\n", RSYSLOG_BIO_method_name(bio));
+		break;
+	case BIO_CB_WRITE:
+		printf("write %s\n", RSYSLOG_BIO_method_name(bio));
+		break;
 #endif
-    case BIO_CB_PUTS:
-        printf("puts() - %s\n", RSYSLOG_BIO_method_name(bio));
-        break;
-    case BIO_CB_GETS:
-        printf("gets(%lu) - %s\n", (unsigned long)argi,
-                     RSYSLOG_BIO_method_name(bio));
-        break;
-    case BIO_CB_CTRL:
-        printf("ctrl(%lu) - %s\n", (unsigned long)argi,
-                     RSYSLOG_BIO_method_name(bio));
-        break;
-    case BIO_CB_RETURN | BIO_CB_READ:
-        printf("read return %ld\n", ret);
-        break;
-    case BIO_CB_RETURN | BIO_CB_WRITE:
-        printf("write return %ld\n", ret);
-        break;
-    case BIO_CB_RETURN | BIO_CB_GETS:
-        printf("gets return %ld\n", ret);
-        break;
-    case BIO_CB_RETURN | BIO_CB_PUTS:
-        printf("puts return %ld\n", ret);
-        break;
-    case BIO_CB_RETURN | BIO_CB_CTRL:
-        printf("ctrl return %ld\n", ret);
-        break;
-    default:
-        printf("bio callback - unknown type (%d)\n", cmd);
-        break;
-    }
+	case BIO_CB_PUTS:
+		printf("puts() - %s\n", RSYSLOG_BIO_method_name(bio));
+		break;
+	case BIO_CB_GETS:
+		printf("gets(%lu) - %s\n", (unsigned long)argi,
+			RSYSLOG_BIO_method_name(bio));
+		break;
+	case BIO_CB_CTRL:
+		printf("ctrl(%lu) - %s\n", (unsigned long)argi,
+			RSYSLOG_BIO_method_name(bio));
+		break;
+	case BIO_CB_RETURN | BIO_CB_READ:
+		printf("read return %ld\n", ret);
+		break;
+	case BIO_CB_RETURN | BIO_CB_WRITE:
+		printf("write return %ld\n", ret);
+		break;
+	case BIO_CB_RETURN | BIO_CB_GETS:
+		printf("gets return %ld\n", ret);
+		break;
+	case BIO_CB_RETURN | BIO_CB_PUTS:
+		printf("puts return %ld\n", ret);
+		break;
+	case BIO_CB_RETURN | BIO_CB_CTRL:
+		printf("ctrl return %ld\n", ret);
+		break;
+	default:
+		printf("bio callback - unknown type (%d)\n", cmd);
+		break;
+	}
 
-    return (r);
+	return (r);
 }
 
 void osslLastSSLErrorMsg(int ret, SSL *ssl, const char* pszCallSource)

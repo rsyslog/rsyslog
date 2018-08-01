@@ -282,7 +282,7 @@ AddPermittedPeer(permittedPeers_t **ppRootPeer, uchar* pszID)
 		pNew->pNext = *ppRootPeer;
 	}
 	*ppRootPeer = pNew;
-		
+
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pNew != NULL)
@@ -524,8 +524,8 @@ static void MaskIP4 (struct in_addr  *addr, uint8_t bits) {
  */
 static int
 mygetnameinfo(const struct sockaddr *sa, socklen_t salen,
-                       char *host, size_t hostlen,
-                       char *serv, size_t servlen, int flags)
+			char *host, size_t hostlen,
+			char *serv, size_t servlen, int flags)
 {
 	int iCancelStateSave;
 	int i;
@@ -632,7 +632,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 			LogError(0, NO_ERRCODE, "You can not specify 0 bits of the netmask, this would "
 				 "match ALL systems. If you really intend to do that, "
 				 "remove all $AllowedSender directives.");
-		
+
 		switch (iAllow->addr.NetAddr->sa_family) {
 		case AF_INET:
 			if((iSignificantBits < 1) || (iSignificantBits > 32)) {
@@ -640,7 +640,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 					    (int)iSignificantBits);
 				iSignificantBits = 32;
 			}
-			
+
 			MaskIP4 (&(SIN(iAllow->addr.NetAddr)->sin_addr), iSignificantBits);
 			break;
 		case AF_INET6:
@@ -672,7 +672,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 			LogError(0, NO_ERRCODE, "Ignoring hostname based ACLs because DNS is disabled.");
 			ABORT_FINALIZE(RS_RET_OK);
 		}
-		
+
 		if (!strchr (iAllow->addr.HostWildcard, '*') &&
 		    !strchr (iAllow->addr.HostWildcard, '?') &&
 		    ACLDontResolve == 0) {
@@ -681,7 +681,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 			*/
 			struct addrinfo hints, *res;
 			struct NetAddr allowIP;
-			
+
 			memset (&hints, 0, sizeof (struct addrinfo));
 			hints.ai_family = AF_UNSPEC;
 			hints.ai_socktype = SOCK_DGRAM;
@@ -691,7 +691,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 
 			if (getaddrinfo (iAllow->addr.HostWildcard, NULL, &hints, &res) != 0) {
 			        LogError(0, NO_ERRCODE, "DNS error: Can't resolve \"%s\"", iAllow->addr.HostWildcard);
-				
+
 				if (ACLAddHostnameOnFail) {
 				        LogError(0, NO_ERRCODE, "Adding hostname \"%s\" to ACL as a wildcard "
 					"entry.", iAllow->addr.HostWildcard);
@@ -703,7 +703,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 				        ABORT_FINALIZE(RS_RET_NOENTRY);
 				}
 			}
-			
+
 			restmp = res;
 			for ( ; res != NULL ; res = res->ai_next) {
 				switch (res->ai_family) {
@@ -714,7 +714,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 						ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 					}
 					memcpy(allowIP.addr.NetAddr, res->ai_addr, res->ai_addrlen);
-					
+
 					if((iRet = AddAllowedSenderEntry(ppRoot, ppLast, &allowIP, iSignificantBits))
 						!= RS_RET_OK) {
 						free(allowIP.addr.NetAddr);
@@ -724,7 +724,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 				case AF_INET6: /* IPv6 - but need to check if it is a v6-mapped IPv4 */
 					if(IN6_IS_ADDR_V4MAPPED (&SIN6(res->ai_addr)->sin6_addr)) {
 						/* extract & add IPv4 */
-						
+
 						iSignificantBits = 32;
 						allowIP.flags = 0;
 						if((allowIP.addr.NetAddr = (struct sockaddr *)
@@ -733,7 +733,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 						}
 						SIN(allowIP.addr.NetAddr)->sin_family = AF_INET;
 #ifdef HAVE_STRUCT_SOCKADDR_SA_LEN
-                                                SIN(allowIP.addr.NetAddr)->sin_len    = sizeof (struct sockaddr_in);
+						SIN(allowIP.addr.NetAddr)->sin_len    = sizeof (struct sockaddr_in);
 #endif
 						SIN(allowIP.addr.NetAddr)->sin_port   = 0;
 						memcpy(&(SIN(allowIP.addr.NetAddr)->sin_addr.s_addr),
@@ -748,14 +748,14 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 						}
 					} else {
 						/* finally add IPv6 */
-						
+
 						iSignificantBits = 128;
 						allowIP.flags = 0;
 						if((allowIP.addr.NetAddr = MALLOC(res->ai_addrlen)) == NULL) {
 							ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 						}
 						memcpy(allowIP.addr.NetAddr, res->ai_addr, res->ai_addrlen);
-						
+
 						if((iRet = AddAllowedSenderEntry(ppRoot, ppLast, &allowIP,
 								iSignificantBits))
 							!= RS_RET_OK) {
@@ -945,7 +945,7 @@ MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr *pFrom, const char
 		if(bChkDNS == 0)
 			return 2;
 		dbgprintf("MaskCmp: host=\"%s\"; pattern=\"%s\"\n", pszFromHost, pAllow->addr.HostWildcard);
-		
+
 #		if !defined(FNM_CASEFOLD)
 			/* TODO: I don't know if that then works, seen on HP UX, what I have not in lab... ;) */
 			return(fnmatch(pAllow->addr.HostWildcard, pszFromHost, FNM_NOESCAPE) == 0);
@@ -966,16 +966,16 @@ MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr *pFrom, const char
 			case AF_INET6: {
 				struct in6_addr ip, net;
 				register uint8_t i;
-				
+
 				memcpy (&ip,  &(SIN6(pFrom))->sin6_addr, sizeof (struct in6_addr));
 				memcpy (&net, &(SIN6(pAllow->addr.NetAddr))->sin6_addr, sizeof (struct in6_addr));
-				
+
 				i = bits/32;
 				if (bits % 32)
 					ip.s6_addr32[i++] &= htonl(0xffffffff << (32 - (bits % 32)));
 				for (; i < (sizeof ip.s6_addr32)/4; i++)
 					ip.s6_addr32[i] = 0;
-				
+
 				return (memcmp (ip.s6_addr, net.s6_addr, sizeof ip.s6_addr) == 0 &&
 					(SIN6(pAllow->addr.NetAddr)->sin6_scope_id != 0 ?
 					 SIN6(pFrom)->sin6_scope_id == SIN6(pAllow->addr.NetAddr)->sin6_scope_id : 1));
@@ -983,7 +983,7 @@ MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr *pFrom, const char
 			case AF_INET: {
 				struct in6_addr *ip6 = &(SIN6(pFrom))->sin6_addr;
 				struct in_addr  *net = &(SIN(pAllow->addr.NetAddr))->sin_addr;
-				
+
 				if ((ip6->s6_addr32[3] & (u_int32_t)
 					htonl((0xffffffff << (32 - bits)))) == net->s_addr &&
 #if BYTE_ORDER == LITTLE_ENDIAN
@@ -1068,35 +1068,35 @@ static int
 should_use_so_bsdcompat(void)
 {
 #ifndef OS_BSD
-    static int init_done = 0;
-    static int so_bsdcompat_is_obsolete = 0;
+	static int init_done = 0;
+	static int so_bsdcompat_is_obsolete = 0;
 
-    if (!init_done) {
-	struct utsname myutsname;
-	unsigned int version, patchlevel;
+	if (!init_done) {
+		struct utsname myutsname;
+		unsigned int version, patchlevel;
 
-	init_done = 1;
-	if (uname(&myutsname) < 0) {
-		char errStr[1024];
-		dbgprintf("uname: %s\r\n", rs_strerror_r(errno, errStr, sizeof(errStr)));
-		return 1;
+		init_done = 1;
+		if (uname(&myutsname) < 0) {
+			char errStr[1024];
+			dbgprintf("uname: %s\r\n", rs_strerror_r(errno, errStr, sizeof(errStr)));
+			return 1;
+		}
+		/* Format is <version>.<patchlevel>.<sublevel><extraversion>
+		 * where the first three are unsigned integers and the last
+		 * is an arbitrary string. We only care about the first two. */
+		if (sscanf(myutsname.release, "%u.%u", &version, &patchlevel) != 2) {
+		    dbgprintf("uname: unexpected release '%s'\r\n",
+			    myutsname.release);
+		    return 1;
+		}
+		/* SO_BSCOMPAT is deprecated and triggers warnings in 2.5
+		   kernels. It is a no-op in 2.4 but not in 2.2 kernels. */
+		if (version > 2 || (version == 2 && patchlevel >= 5))
+		    so_bsdcompat_is_obsolete = 1;
 	}
-	/* Format is <version>.<patchlevel>.<sublevel><extraversion>
-	   where the first three are unsigned integers and the last
-	   is an arbitrary string. We only care about the first two. */
-	if (sscanf(myutsname.release, "%u.%u", &version, &patchlevel) != 2) {
-	    dbgprintf("uname: unexpected release '%s'\r\n",
-		    myutsname.release);
-	    return 1;
-	}
-	/* SO_BSCOMPAT is deprecated and triggers warnings in 2.5
-	   kernels. It is a no-op in 2.4 but not in 2.2 kernels. */
-	if (version > 2 || (version == 2 && patchlevel >= 5))
-	    so_bsdcompat_is_obsolete = 1;
-    }
-    return !so_bsdcompat_is_obsolete;
+	return !so_bsdcompat_is_obsolete;
 #else	/* #ifndef OS_BSD */
-    return 1;
+	return 1;
 #endif	/* #ifndef OS_BSD */
 }
 #ifndef SO_BSDCOMPAT
@@ -1244,7 +1244,7 @@ closeUDPListenSockets(int *pSockArr)
 	register int i;
 
 	assert(pSockArr != NULL);
-        if(pSockArr != NULL) {
+	if(pSockArr != NULL) {
 	        for (i = 0; i < *pSockArr; i++)
 	                close(pSockArr[i+1]);
 		free(pSockArr);
@@ -1268,7 +1268,7 @@ create_single_udp_socket(int *const s, /* socket */
 	const char *const device
 	)
 {
-        const int on = 1;
+	const int on = 1;
 	int sockflags;
 	int actrcvbuf;
 	int actsndbuf;
@@ -1471,44 +1471,44 @@ create_udp_socket(uchar *hostname,
 	const int ipfreebind,
 	char *device)
 {
-        struct addrinfo hints, *res, *r;
-        int error, maxs, *s, *socks;
+	struct addrinfo hints, *res, *r;
+	int error, maxs, *s, *socks;
 	rsRetVal localRet;
 
 	assert(!((pszPort == NULL) && (hostname == NULL))); /* one of them must be non-NULL */
-        memset(&hints, 0, sizeof(hints));
+	memset(&hints, 0, sizeof(hints));
 	if(bIsServer)
 		hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
 	else
 		hints.ai_flags = AI_NUMERICSERV;
-        hints.ai_family = glbl.GetDefPFFamily();
-        hints.ai_socktype = SOCK_DGRAM;
+	hints.ai_family = glbl.GetDefPFFamily();
+	hints.ai_socktype = SOCK_DGRAM;
 #	if defined (_AIX)
 	/* AIXPORT : SOCK_DGRAM has the protocol IPPROTO_UDP
 	 *           getaddrinfo needs this hint on AIX
 	 */
-        hints.ai_protocol = IPPROTO_UDP;
+	hints.ai_protocol = IPPROTO_UDP;
 #	endif
-        error = getaddrinfo((char*) hostname, (char*) pszPort, &hints, &res);
-        if(error) {
-               LogError(0, NO_ERRCODE, "%s",  gai_strerror(error));
-	       LogError(0, NO_ERRCODE, "UDP message reception disabled due to error logged in last message.\n");
+	error = getaddrinfo((char*) hostname, (char*) pszPort, &hints, &res);
+	if(error) {
+		LogError(0, NO_ERRCODE, "%s",  gai_strerror(error));
+		LogError(0, NO_ERRCODE, "UDP message reception disabled due to error logged in last message.\n");
 	       return NULL;
 	}
 
-        /* Count max number of sockets we may open */
-        for (maxs = 0, r = res; r != NULL ; r = r->ai_next, maxs++)
+	/* Count max number of sockets we may open */
+	for (maxs = 0, r = res; r != NULL ; r = r->ai_next, maxs++)
 		/* EMPTY */;
-        socks = MALLOC((maxs+1) * sizeof(int));
-        if (socks == NULL) {
+	socks = MALLOC((maxs+1) * sizeof(int));
+	if (socks == NULL) {
 		LogError(0, RS_RET_OUT_OF_MEMORY, "couldn't allocate memory for UDP "
 			"sockets, suspending UDP message reception");
 		freeaddrinfo(res);
 		return NULL;
-        }
+	}
 
-        *socks = 0;   /* num of sockets counter at start of array */
-        s = socks + 1;
+	*socks = 0;   /* num of sockets counter at start of array */
+	s = socks + 1;
 	for (r = res; r != NULL ; r = r->ai_next) {
 		localRet = create_single_udp_socket(s, r, hostname, bIsServer, rcvbuf,
 			sndbuf, ipfreebind, device);
@@ -1518,18 +1518,18 @@ create_udp_socket(uchar *hostname,
 		}
 	}
 
-        if(res != NULL)
-               freeaddrinfo(res);
+	if(res != NULL)
+		freeaddrinfo(res);
 
 	if(Debug && *socks != maxs)
 		dbgprintf("We could initialize %d UDP listen sockets out of %d we received "
 		 	"- this may or may not be an error indication.\n", *socks, maxs);
 
-        if(*socks == 0) {
+	if(*socks == 0) {
 		LogError(0, NO_ERRCODE, "No UDP socket could successfully be initialized, "
 			 "some functionality may be disabled.\n");
 		/* we do NOT need to close any sockets, because there were none... */
-        	free(socks);
+		free(socks);
 		return(NULL);
 	}
 
@@ -1631,7 +1631,7 @@ getIFIPAddr(uchar *szif, int family, uchar *pszbuf, int lenBuf)
 	void * pAddr;
 	DEFiRet;
 
- 	if(getifaddrs(&ifaddrs) != 0) {
+	if(getifaddrs(&ifaddrs) != 0) {
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 

@@ -203,21 +203,21 @@ uchar *srUtilStrDup(uchar *pOld, size_t len)
 static int real_makeFileParentDirs(const uchar *const szFile, const size_t lenFile, const mode_t mode,
 	const uid_t uid, const gid_t gid, const int bFailOnChownFail)
 {
-        uchar *p;
-        uchar *pszWork;
-        size_t len;
+	uchar *p;
+	uchar *pszWork;
+	size_t len;
 
 	assert(szFile != NULL);
 	assert(lenFile > 0);
 
-        len = lenFile + 1; /* add one for '\0'-byte */
+	len = lenFile + 1; /* add one for '\0'-byte */
 	if((pszWork = MALLOC(len)) == NULL)
 		return -1;
-        memcpy(pszWork, szFile, len);
-        for(p = pszWork+1 ; *p ; p++)
-                if(*p == '/') {
+	memcpy(pszWork, szFile, len);
+	for(p = pszWork+1 ; *p ; p++)
+		if(*p == '/') {
 			/* temporarily terminate string, create dir and go on */
-                        *p = '\0';
+			*p = '\0';
 			int bErr = 0;
 			if(mkdir((char*)pszWork, mode) == 0) {
 				if(uid != (uid_t) -1 || gid != (gid_t) -1) {
@@ -242,8 +242,8 @@ static int real_makeFileParentDirs(const uchar *const szFile, const size_t lenFi
 				errno = eSave;
 				return -1;
 			}
-                        *p = '/';
-                }
+			*p = '/';
+		}
 	free(pszWork);
 	return 0;
 }
@@ -274,17 +274,17 @@ int makeFileParentDirs(const uchar *const szFile, const size_t lenFile, const mo
  */
 int execProg(uchar *program, int bWait, uchar *arg)
 {
-        int pid;
+	int pid;
 	int sig;
 	struct sigaction sigAct;
 
 	dbgprintf("exec program '%s' with param '%s'\n", program, arg);
-        pid = fork();
-        if (pid < 0) {
-                return 0;
-        }
+	pid = fork();
+	if (pid < 0) {
+		return 0;
+	}
 
-        if(pid) {       /* Parent */
+	if(pid) {       /* Parent */
 		if(bWait)
 			if(waitpid(pid, NULL, 0) == -1)
 				if(errno != ECHILD) {
@@ -296,9 +296,9 @@ int execProg(uchar *program, int bWait, uchar *arg)
 					dbgprintf("could not wait on child after executing '%s'",
 					        (char*)program);
 				}
-                return pid;
+		return pid;
 	}
-        /* Child */
+	/* Child */
 	alarm(0); /* create a clean environment before we exec the real child */
 
 	memset(&sigAct, 0, sizeof(sigAct));
@@ -637,7 +637,7 @@ int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep)
 	if ((cSep == ' ' ? !isspace(*pSrc) : *pSrc != cSep) && *pSrc != '\n' && *pSrc != '\0') {
 		dbgprintf("in getSubString, error Src buffer > Dst buffer\n");
 		iErr = 1;
-	}	
+	}
 	if (*pSrc == '\0' || *pSrc == '\n')
 		/* this line was missing, causing ppSrc to be invalid when it
 		 * was returned in case of end-of-string. rgerhards 2005-07-29

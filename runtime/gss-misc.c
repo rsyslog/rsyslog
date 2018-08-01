@@ -149,21 +149,21 @@ static int read_all(int fd, char *buf, unsigned int nbyte)
 
 static int write_all(int fd, char *buf, unsigned int nbyte)
 {
-    int     ret;
-    char   *ptr;
+	int     ret;
+	char   *ptr;
 
-    for (ptr = buf; nbyte; ptr += ret, nbyte -= ret) {
-	ret = send(fd, ptr, nbyte, 0);
-	if (ret < 0) {
-	    if (errno == EINTR)
-		continue;
-	    return (ret);
-	} else if (ret == 0) {
-	    return (ptr - buf);
+	for (ptr = buf; nbyte; ptr += ret, nbyte -= ret) {
+		ret = send(fd, ptr, nbyte, 0);
+		if (ret < 0) {
+			if (errno == EINTR)
+				continue;
+			return (ret);
+		} else if (ret == 0) {
+			return (ptr - buf);
+		}
 	}
-    }
 
-    return (ptr - buf);
+	return (ptr - buf);
 }
 
 

@@ -292,7 +292,7 @@ Abort(nsd_t *pNsd)
 	if((pThis)->sock != -1) {
 		ling.l_onoff = 1;
 		ling.l_linger = 0;
-       		if(setsockopt((pThis)->sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0 ) {
+		if(setsockopt((pThis)->sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0 ) {
 			dbgprintf("could not set SO_LINGER, errno %d\n", errno);
 		}
 	}
@@ -416,11 +416,11 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 	DEFiRet;
 	netstrm_t *pNewStrm = NULL;
 	nsd_t *pNewNsd = NULL;
-        int error, maxs, on = 1;
+	int error, maxs, on = 1;
 	int sock = -1;
 	int numSocks;
 	int sockflags;
-        struct addrinfo hints, *res = NULL, *r;
+	struct addrinfo hints, *res = NULL, *r;
 
 	ISOBJ_TYPE_assert(pNS, netstrms);
 	assert(fAddLstn != NULL);
@@ -429,49 +429,49 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 
 	dbgprintf("creating tcp listen socket on port %s\n", pLstnPort);
 
-        memset(&hints, 0, sizeof(hints));
-        hints.ai_flags = AI_PASSIVE;
-        hints.ai_family = glbl.GetDefPFFamily();
-        hints.ai_socktype = SOCK_STREAM;
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_flags = AI_PASSIVE;
+	hints.ai_family = glbl.GetDefPFFamily();
+	hints.ai_socktype = SOCK_STREAM;
 
-        error = getaddrinfo((char*)pLstnIP, (char*) pLstnPort, &hints, &res);
-        if(error) {
+	error = getaddrinfo((char*)pLstnIP, (char*) pLstnPort, &hints, &res);
+	if(error) {
 		LogError(0, RS_RET_INVALID_PORT, "error querying port '%s': %s",
 			pLstnPort, gai_strerror(error));
 		ABORT_FINALIZE(RS_RET_INVALID_PORT);
 	}
 
-        /* Count max number of sockets we may open */
-        for(maxs = 0, r = res; r != NULL ; r = r->ai_next, maxs++)
+	/* Count max number of sockets we may open */
+	for(maxs = 0, r = res; r != NULL ; r = r->ai_next, maxs++)
 		/* EMPTY */;
 
-        numSocks = 0;   /* num of sockets counter at start of array */
+	numSocks = 0;   /* num of sockets counter at start of array */
 	for(r = res; r != NULL ; r = r->ai_next) {
-               sock = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
-        	if(sock < 0) {
+		sock = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
+		if(sock < 0) {
 			if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT)) {
 				dbgprintf("error %d creating tcp listen socket", errno);
 				/* it is debatable if PF_INET with EAFNOSUPPORT should
 				 * also be ignored...
 				 */
 			}
-                        continue;
-                }
+			continue;
+		}
 
 #ifdef IPV6_V6ONLY
-                if(r->ai_family == AF_INET6) {
-                	int iOn = 1;
+		if(r->ai_family == AF_INET6) {
+			int iOn = 1;
 			if(setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY,
 			      (char *)&iOn, sizeof (iOn)) < 0) {
 				close(sock);
 				sock = -1;
 				continue;
-                	}
-                }
+			}
+		}
 #endif
-       		if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on)) < 0 ) {
+			if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on)) < 0 ) {
 			dbgprintf("error %d setting tcp socket option\n", errno);
-                        close(sock);
+			close(sock);
 			sock = -1;
 			continue;
 		}
@@ -486,7 +486,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		}
 		if(sockflags == -1) {
 			dbgprintf("error %d setting fcntl(O_NONBLOCK) on tcp socket", errno);
-                        close(sock);
+			close(sock);
 			sock = -1;
 			continue;
 		}
@@ -496,15 +496,15 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		 * could flood our log files by sending us tons of ICMP errors.
 		 */
 /* AIXPORT : SO_BSDCOMPAT socket option is depricated , and its usage has been discontinued
-             on most unixes, AIX does not support this option , hence remove the call.
-*/
+ * on most unixes, AIX does not support this option , hence remove the call.
+ */
 #if !defined(_AIX)
 #ifndef BSD
 		if(net.should_use_so_bsdcompat()) {
 			if (setsockopt(sock, SOL_SOCKET, SO_BSDCOMPAT,
 					(char *) &on, sizeof(on)) < 0) {
 				LogError(errno, NO_ERRCODE, "TCP setsockopt(BSDCOMPAT)");
-                                close(sock);
+				close(sock);
 				sock = -1;
 				continue;
 			}
@@ -520,11 +520,11 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 			/* TODO: check if *we* bound the socket - else we *have* an error! */
 			char errStr[1024];
 			rs_strerror_r(errno, errStr, sizeof(errStr));
-                        dbgprintf("error %d while binding tcp socket: %s\n", errno, errStr);
-                	close(sock);
+			dbgprintf("error %d while binding tcp socket: %s\n", errno, errStr);
+			close(sock);
 			sock = -1;
-                        continue;
-                }
+			continue;
+		}
 
 		if(listen(sock, iSessMax / 10 + 5) < 0) {
 			/* If the listen fails, it most probably fails because we ask
@@ -538,7 +538,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 				dbgprintf("tcp listen error %d, suspending\n", errno);
 	                	close(sock);
 				sock = -1;
-               		        continue;
+				continue;
 			}
 		}
 
@@ -569,7 +569,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		dbgprintf("We could initialize %d TCP listen sockets out of %d we received "
 		 	  "- this may or may not be an error indication.\n", numSocks, maxs);
 
-        if(numSocks == 0) {
+	if(numSocks == 0) {
 		dbgprintf("No TCP listen sockets could successfully be initialized\n");
 		ABORT_FINALIZE(RS_RET_COULD_NOT_BIND);
 	}
@@ -774,8 +774,8 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 #		if defined(SO_BINDTODEVICE)
 		if(setsockopt(pThis->sock, SOL_SOCKET, SO_BINDTODEVICE, device, strlen(device) + 1) < 0)
 #		endif
-                {
-                        dbgprintf("setsockopt(SO_BINDTODEVICE) failed\n");
+		{
+			dbgprintf("setsockopt(SO_BINDTODEVICE) failed\n");
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
 	}
@@ -788,7 +788,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 
 finalize_it:
 	if(res != NULL)
-               freeaddrinfo(res);
+		freeaddrinfo(res);
 
 	if(iRet != RS_RET_OK) {
 		sockClose(&pThis->sock);

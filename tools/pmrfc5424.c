@@ -237,7 +237,7 @@ CODESTARTparse
 	 * wiser than to use individual buffers.
 	 */
 	CHKmalloc(pBuf = MALLOC(lenMsg + 1));
-		
+
 	/* IMPORTANT NOTE:
 	 * Validation is not actually done below nor are any errors handled. I have
 	 * NOT included this for the current proof of concept. However, it is strongly

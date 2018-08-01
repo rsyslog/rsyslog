@@ -60,11 +60,11 @@
 #if defined (_AIX) /* Use ifaddrs_rsys instead of ifaddrs and ifreq instead of lifreq */
 int getallifaddrs(sa_family_t af, struct ifaddrs_rsys **ifap, int64_t flags);
 int getallifs(int s, sa_family_t af, struct ifreq **ifr, int *numifs,
-    int64_t ifc_flags);
+	int64_t ifc_flags);
 #else
 int getallifaddrs(sa_family_t af, struct ifaddrs **ifap, int64_t flags);
 int getallifs(int s, sa_family_t af, struct lifreq **lifr, int *numifs,
-    int64_t lifc_flags);
+	int64_t lifc_flags);
 #endif
 
 /*
@@ -310,7 +310,7 @@ fail:
  */
 int
 getallifs(int s, sa_family_t af, struct ifreq **ifr, int *iflen,
-    int64_t ifc_flags)
+		int64_t ifc_flags)
 {
 	int ifsize;
 	struct ifconf ifc;
@@ -488,7 +488,7 @@ fail:
  */
 int
 getallifs(int s, sa_family_t af, struct lifreq **lifr, int *numifs,
-    int64_t lifc_flags)
+		int64_t lifc_flags)
 {
 	struct lifnum lifn;
 	struct lifconf lifc;

@@ -564,7 +564,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 BEGINmodExit
 CODESTARTmodExit
-	free(cs.pszTarget);	
+	free(cs.pszTarget);
 	free(cs.pszCommunity);
 	free(cs.pszEnterpriseOID);
 	free(cs.pszSnmpTrapOID);
