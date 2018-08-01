@@ -42,7 +42,7 @@ COUNT= cat $RSYSLOG_OUT_LOG | fgrep "$TESTMSG" | wc -l
 if [ $COUNT -ne 1 ]; then
   echo "FAIL: message found $COUNT times (expected 1)"
   echo " $RSYSLOG_OUT_LOG content (tail -n200):"
-  tail -n200 rsyslog.out.log
+  tail -n200 $RSYSLOG_OUT_LOG
   echo "======="
   echo "last entries from journal:"
   journalctl -an 200

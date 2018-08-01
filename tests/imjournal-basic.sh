@@ -35,7 +35,7 @@ wait_shutdown
 cat $RSYSLOG_OUT_LOG | fgrep -qF "$TESTMSG"
 if [ $? -ne 0 ]; then
   echo "FAIL:  $RSYSLOG_OUT_LOG content (tail -n200):"
-  tail -n200 rsyslog.out.log
+  tail -n200 $RSYSLOG_OUT_LOG
   echo "======="
   echo "last entries from journal:"
   journalctl -an 200
