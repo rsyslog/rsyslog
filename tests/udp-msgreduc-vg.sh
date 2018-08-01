@@ -19,7 +19,7 @@ $UDPServerRun 13514
 $RepeatedMsgReduction on
 
 $template outfmt,"%msg:F,58:2%\n"
-*.*  ./rsyslog.out.log;outfmt
+*.*       action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 #:msg, contains, "msgnum:" ./rsyslog.out.log;outfmt
 '
 startup_vg

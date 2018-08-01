@@ -23,7 +23,7 @@ module(load="../plugins/imuxsock/.libs/imuxsock"
        SysSock.name="testbench_socket")
 
 $template outfmt,"%msg:%\n"
-*.notice	./rsyslog.out.log;outfmt
+*.notice      action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 # send a message with trailing LF

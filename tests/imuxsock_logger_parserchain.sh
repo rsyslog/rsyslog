@@ -25,7 +25,7 @@ input(	type="imuxsock" socket="testbench_socket"
 	parseHostname="on")
 
 template(name="outfmt" type="string" string="%msg:%\n")
-*.notice	./rsyslog.out.log;outfmt
+*.notice      action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 logger -d --rfc3164 -u testbench_socket test
