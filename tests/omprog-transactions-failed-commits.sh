@@ -127,7 +127,7 @@ if [[ -z "$error" && "$transaction_state" != "NONE" ]]; then
 fi
 
 if [[ -n "$error" ]]; then
-    echo "rsyslog.out.log: line $line_num: $error"
+    echo "$RSYSLOG_OUT_LOG: line $line_num: $error"
     cat $RSYSLOG_OUT_LOG
     error_exit 1
 fi

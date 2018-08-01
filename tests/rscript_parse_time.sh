@@ -109,7 +109,7 @@ wait_shutdown
 EXPECTED='{ "rfc3164_1": '"$rfc3164_1_r"', "rfc3164_2": '"$rfc3164_2_r"', "rfc3164_3": '"$rfc3164_3_r"', "rfc3164_4": '"$rfc3164_4_r"', "rfc3164_5": '"$rfc3164_5_r"', "rfc3164_6": '"$rfc3164_6_r"', "rfc3164_7": '"$rfc3164_7_r"', "rfc3164_8": '"$rfc3164_8_r"', "rfc3164_9": '"$rfc3164_9_r"', "rfc3164_10": '"$rfc3164_10_r"', "rfc3164_11": '"$rfc3164_11_r"', "rfc3164_12": '"$rfc3164_12_r"', "rfc3339": 1507165811, "rfc3339tz1": 1507151411, "rfc3339tz2": 1507165811, "inval1": 0, "inval2": 0, "inval3": 0 }'
 
 # FreeBSD's cmp does not support reading from STDIN
-cmp <(echo "$EXPECTED") rsyslog.out.log
+cmp <(echo "$EXPECTED") $RSYSLOG_OUT_LOG
 
 if [[ $? -ne 0 ]]; then
   printf "Invalid function output detected!\n"
