@@ -15,7 +15,7 @@ if $msg contains "error" then
 startup
 shutdown_when_empty
 wait_shutdown
-grep work-nested.conf rsyslog.out.log
+grep work-nested.conf $RSYSLOG_OUT_LOG
 if [ $? -ne 0 ]; then
 	echo "FAIL:  $RSYSLOG_OUT_LOG does not contain expected error message on"
 	echo "recursive include file work-nested.conf."

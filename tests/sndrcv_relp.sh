@@ -16,7 +16,7 @@ module(load="../plugins/imrelp/.libs/imrelp")
 input(type="imrelp" port=`echo $PORT_RCVR`)
 
 $template outfmt,"%msg:F,58:2%\n"
-:msg, contains, "msgnum:" action(type="omfile" file="rsyslog.out.log" template="outfmt")
+:msg, contains, "msgnum:" action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 . $srcdir/diag.sh wait-startup

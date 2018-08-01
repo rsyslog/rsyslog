@@ -22,5 +22,5 @@ wait_shutdown
 echo checking pre-HUP file
 . $srcdir/diag.sh content-check 'global: origin=dynstats' rsyslog2.out.log
 echo checking post-HUP file
-. $srcdir/diag.sh content-check 'global: origin=dynstats' rsyslog.out.log
+. $srcdir/diag.sh content-check 'global: origin=dynstats' $RSYSLOG_OUT_LOG
 exit_test

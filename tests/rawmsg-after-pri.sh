@@ -14,12 +14,11 @@ startup
 . $srcdir/diag.sh tcpflood -m1 -P 129
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate
-echo "Mar  1 01:00:00 172.20.245.8 tag msgnum:00000000:" > rsyslog.out.compare
 NUMLINES=$(grep -c "^Mar  1 01:00:00 172.20.245.8 tag msgnum:00000000:$"  $RSYSLOG_OUT_LOG 2>/dev/null)
 
 if [ -z $NUMLINES ]; then
   echo "ERROR: output file seems not to exist"
-  ls -l rsyslog.out.log
+  ls -l $RSYSLOG_OUT_LOG
   cat $RSYSLOG_OUT_LOG
   error_exit 1
 else

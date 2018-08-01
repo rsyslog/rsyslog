@@ -22,7 +22,7 @@ startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
 wait_shutdown
-echo "tag/with/slashes,tag" | $RS_CMPCMD rsyslog.out.log
+echo "tag/with/slashes,tag" | $RS_CMPCMD $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "invalid output generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG

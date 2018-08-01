@@ -1,13 +1,11 @@
 #!/bin/bash
 # added 2012-09-14 by rgerhards
 # This file is part of the rsyslog project, released under ASL 2.0
-echo ===============================================================================
-echo \[rscript_contains.sh\]: test for contains script-filter
 . $srcdir/diag.sh init
 generate_conf
 add_conf '
 $template outfmt,"%msg:F,58:2%\n"
-if $msg contains "msgnum" then ./rsyslog.out.log;outfmt
+if $msg contains "msgnum" then action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 . $srcdir/diag.sh injectmsg  0 5000

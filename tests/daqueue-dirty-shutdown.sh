@@ -109,7 +109,7 @@ fi
 
 # check if we got at least some data
 if [ ! -f  $RSYSLOG_OUT_LOG ]; then
-    echo "FAIL: no output data gathered (no rsyslog.out.log)!"
+    echo "FAIL: no output data gathered (no ${RSYSLOG_OUT_LOG})!"
     error_exit 1
 fi
 

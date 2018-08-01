@@ -12,7 +12,7 @@ input(	type="imuxsock" socket="testbench_socket"
 template(name="outfmt" type="string" string="%msg:%\n")
 
 ruleset(name="testruleset") {
-	./rsyslog.out.log;outfmt
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }
 '
 startup
