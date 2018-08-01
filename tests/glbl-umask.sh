@@ -23,7 +23,7 @@ wait_shutdown
 
 if [ `ls -l rsyslog.out.log|$RS_HEADCMD -c 10 ` != "-rw-------" ]; then
   echo "invalid file permission (umask),  $RSYSLOG_OUT_LOG has:"
-  ls -l rsyslog.out.log
+  ls -l $RSYSLOG_OUT_LOG
   error_exit 1
 fi;
 exit_test
