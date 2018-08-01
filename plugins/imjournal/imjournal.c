@@ -496,6 +496,7 @@ persistJournalState(void)
 
 	if(fputs(last_cursor, sf) == EOF) {
 		LogError(errno, RS_RET_IO_ERROR, "imjournal: failed to save cursor to: '%s'", tmp_sf);
+		fclose(sf);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 
