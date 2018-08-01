@@ -214,6 +214,8 @@ function shutdown_when_empty() {
 	if [ "$1" == "2" ]
 	then
 	   echo Shutting down instance 2
+	else
+	   echo Shutting down instance 1
 	fi
 	. $srcdir/diag.sh wait-queueempty $1
 	cp rsyslog$1.pid rsyslog$1.pid.save
@@ -276,6 +278,7 @@ function wait_shutdown_vg() {
 # for systems like Travis-CI where we cannot debug on the machine itself.
 # our $1 is the to-be-used exit code. if $2 is "stacktrace", call gdb.
 function error_exit() {
+	env
 	if [ -e core* ]
 	then
 		echo trying to obtain crash location info
