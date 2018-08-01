@@ -84,21 +84,28 @@ function setvar_RS_HOSTNAME() {
 
 
 # begin a new testconfig
+# $1 is the instance id, if given
 function generate_conf() {
-	export IMDIAG_PORT="$(get_free_port)"
-	echo default-instance imdiag running on port $IMDIAG_PORT
+	new_port="$(get_free_port)"
+	if [ "$1" == "" ]; then
+		export IMDIAG_PORT=$new_port
+	else
+		export IMDIAG_PORT2=$new_port
+	fi
+	echo imdiag running on port $new_port
 	echo "module(load=\"../plugins/imdiag/.libs/imdiag\")
 global(inputs.timeout.shutdown=\"10000\")
-\$IMDiagServerRun $IMDIAG_PORT
+\$IMDiagServerRun $new_port
 
-:syslogtag, contains, \"rsyslogd\"  ./rsyslogd.started
-###### end of testbench instrumentation part, test conf follows:" > testconf.conf
+:syslogtag, contains, \"rsyslogd\"  ./rsyslogd$1.started
+###### end of testbench instrumentation part, test conf follows:" > testconf$1.conf
 }
 
 
 # add more data to config file. Note: generate_conf must have been called
+# $1 is config fragment, $2 the instance id, if given
 function add_conf() {
-	printf "%s" "$1" >> testconf.conf
+	printf "%s" "$1" >> testconf$2.conf
 }
 
 
@@ -134,20 +141,24 @@ function cmp_exact() {
 # start rsyslogd with default params. $1 is the config file name to use
 # returns only after successful startup, $2 is the instance (blank or 2!)
 function startup() {
-	echo in startup
-	if [ "$1" == "" ]; then
+	instance=
+	if [ "$1" == "2" ]; then
+	    CONF_FILE="testconf2.conf"
+	    instance=2
+	elif [ "$1" == "" ]; then
 	    CONF_FILE="testconf.conf"
-	    echo $CONF_FILE is:
-	    cat -n $CONF_FILE
 	else
 	    CONF_FILE="$srcdir/testsuites/$1"
+	    instance=$2
 	fi
 	if [ ! -f $CONF_FILE ]; then
 	    echo "ERROR: config file '$CONF_FILE' not found!"
-	    exit 1
+	    error_exit 1
 	fi
-	LD_PRELOAD=$RSYSLOG_PRELOAD $valgrind ../tools/rsyslogd -C -n -irsyslog$2.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
-	. $srcdir/diag.sh wait-startup $2
+	echo $CONF_FILE is:
+	cat -n $CONF_FILE
+	LD_PRELOAD=$RSYSLOG_PRELOAD $valgrind ../tools/rsyslogd -C -n -irsyslog$instance.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
+	. $srcdir/diag.sh wait-startup $instance
 }
 
 # start rsyslogd with default params. $1 is the config file name to use
@@ -481,7 +492,7 @@ case $1 in
 		rm -rf test-spool test-logdir stat-file1
 		rm -f rsyslog.pipe rsyslog.input.*
 		rm -f rsyslog.input rsyslog.empty rsyslog.input.* imfile-state* omkafka-failed.data
-		rm -f testconf.conf HOSTNAME
+		rm -f testconf*.conf HOSTNAME
 		rm -f rsyslog.errorfile tmp.qi nocert
 		rm -f core.* vgcore.* core*
 		# Note: rsyslog.action.*.include must NOT be deleted, as it
@@ -503,6 +514,8 @@ case $1 in
 		fi
 		export RSYSLOG_DFLT_LOG_INTERNAL=1 # testbench needs internal messages logged internally!
 		export IMDIAG_PORT=13500
+		export IMDIAG_PORT2=13501
+		export TCPFLOOD_PORT=13514
 		;;
 
    'check-command-available')   # check if command $2 is available - will exit 77 when not OK
@@ -650,7 +663,7 @@ case $1 in
    'get-mainqueuesize') # show the current main queue size
 		if [ "$2" == "2" ]
 		then
-			echo getmainmsgqueuesize | $TESTTOOL_DIR/diagtalker -p13501 || error_exit  $?
+			echo getmainmsgqueuesize | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
 		else
 			echo getmainmsgqueuesize | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
 		fi
@@ -658,7 +671,7 @@ case $1 in
    'wait-queueempty') # wait for main message queue to be empty. $2 is the instance.
 		if [ "$2" == "2" ]
 		then
-			echo WaitMainQueueEmpty | $TESTTOOL_DIR/diagtalker -p13501 || error_exit  $?
+			echo WaitMainQueueEmpty | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
 		else
 			echo WaitMainQueueEmpty | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
 		fi
@@ -666,7 +679,7 @@ case $1 in
    'await-lookup-table-reload') # wait for all pending lookup table reloads to complete $2 is the instance.
 		if [ "$2" == "2" ]
 		then
-			echo AwaitLookupTableReload | $TESTTOOL_DIR/diagtalker -p13501 || error_exit  $?
+			echo AwaitLookupTableReload | $TESTTOOL_DIR/diagtalker -pIMDIAG_PORT2 || error_exit  $?
 		else
 			echo AwaitLookupTableReload | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
 		fi
@@ -686,7 +699,7 @@ case $1 in
 		;;
    'tcpflood') # do a tcpflood run and check if it worked params are passed to tcpflood
 		shift 1
-		eval ./tcpflood "$@" $TCPFLOOD_EXTRA_OPTS
+		eval ./tcpflood -p$TCPFLOOD_PORT "$@" $TCPFLOOD_EXTRA_OPTS
 		if [ "$?" -ne "0" ]; then
 		  echo "error during tcpflood! see rsyslog.out.log.save for what was written"
 		  cp rsyslog.out.log rsyslog.out.log.save
