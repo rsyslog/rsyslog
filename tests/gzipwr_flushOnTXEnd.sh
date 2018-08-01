@@ -19,7 +19,7 @@ template(name="outfmt" type="string"
 				 zipLevel="6" ioBufferSize="256k"
 				 flushOnTXEnd="on"
 				 asyncWriting="on"
-			         file="rsyslog.out.log")
+			         file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 . $srcdir/diag.sh tcpflood -m2500 -P129

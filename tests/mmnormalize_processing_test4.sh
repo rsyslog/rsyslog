@@ -19,8 +19,8 @@ ruleset(name="ruleset1") {
 	if ($!v_file == "") then {
 		set $!v_file=$!v_tag;
 	}
-	action(type="omfile" File="rsyslog.out.log" template="t_file_record")
-	action(type="omfile" File="rsyslog.out.log" template="t_file_path")
+	action(type="omfile" File=`echo $RSYSLOG_OUT_LOG` template="t_file_record")
+	action(type="omfile" File=`echo $RSYSLOG_OUT_LOG` template="t_file_path")
 
 }
 '
@@ -29,10 +29,10 @@ FAKETIME='2017-03-08 14:56:37' startup
 shutdown_when_empty
 wait_shutdown
 echo '2017-03-08T14:56:37+02:00 2017-03-08T14:56:37+02:00 host4 Process2 in 1: X/c79RgpDtrva5we84XHTg== (String)
-/sb/logs/incoming/2017/03/08/svc_SER4/ret_Y01/os_LNX/127.0.0.1/r_relay1/sb/env/logs/dir1/dir2/log_20170308.log.gz' | cmp - rsyslog.out.log
+/sb/logs/incoming/2017/03/08/svc_SER4/ret_Y01/os_LNX/127.0.0.1/r_relay1/sb/env/logs/dir1/dir2/log_20170308.log.gz' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

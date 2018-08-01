@@ -10,7 +10,7 @@ input(type="imudp" port="13514" ruleset="ruleset1")
 template(name="outfmt" type="string" string="%PRI%,%syslogfacility-text%,%syslogseverity-text%,%hostname%,%programname%,%syslogtag%,%msg%\n")
 
 ruleset(name="ruleset1") {
-	action(type="omfile" file="rsyslog.out.log"
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`
 	       template="outfmt")
 }
 
@@ -23,6 +23,6 @@ wait_shutdown
 
 export EXPECTED="27,daemon,err,$RS_HOSTNAME,xapi,xapi:, [error|xen3|15|Guest liveness monitor D:bca30ab3f1c1|master_connection] Connection to master died. I will continue to retry indefinitely (supressing future logging of this message)
 13,user,notice,This,is,is, a message!"
-cmp_exact rsyslog.out.log
+cmp_exact $RSYSLOG_OUT_LOG
 
 exit_test

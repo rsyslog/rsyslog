@@ -25,7 +25,7 @@ input(	type="imuxsock" socket="testbench_socket"
 	parseHostname="on")
 
 template(name="outfmt" type="string" string="%msg:%\n")
-*.notice	./rsyslog.out.log;outfmt
+*.notice      action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 logger -d --rfc3164 -u testbench_socket test
@@ -36,11 +36,11 @@ fi;
 ./msleep 100
 shutdown_when_empty
 wait_shutdown
-cmp rsyslog.out.log $srcdir/resultdata/imuxsock_logger.log
+cmp $RSYSLOG_OUT_LOG $srcdir/resultdata/imuxsock_logger.log
 if [ ! $? -eq 0 ]; then
   echo "imuxsock_logger_parserchain.sh failed"
-  echo contents of rsyslog.out.log:
-  echo \"`cat rsyslog.out.log`\"
+  echo "contents of $RSYSLOG_OUT_LOG:"
+  echo \"`cat $RSYSLOG_OUT_LOG`\"
   exit 1
 fi;
 exit_test

@@ -16,7 +16,7 @@ if((not($msg contains "error")) and ($msg contains "msgnum:")) then {
 		set $/cntr = 0;
 	}
 	action(type="ommysql" name="mysql_action" server="127.0.0.1" template="tpl"
-	       db="Syslog" uid="rsyslog" pwd="testbench" action.errorfile="rsyslog2.out.log")
+	       db="Syslog" uid="rsyslog" pwd="testbench" action.errorfile=`echo $RSYSLOG2_OUT_LOG`)
 }
 '
 startup
@@ -32,6 +32,6 @@ if [ ! $? -eq 0 ]; then
   error_exit 1
 fi;
 # note "-s" is required to suppress the select "field header"
-mysql -s --user=rsyslog --password=testbench < testsuites/mysql-select-msg.sql > rsyslog.out.log
+mysql -s --user=rsyslog --password=testbench < testsuites/mysql-select-msg.sql > $RSYSLOG_OUT_LOG
 seq_check  0 49 -i2
 exit_test

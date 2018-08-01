@@ -16,7 +16,7 @@ if $msg contains "msgnum" then {
 	if $!usr!msgnum == "00005000" or
 	   $!usr!msgnum == "00005001" or
 	   $!usr!msgnum == "00005002" then
-		action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+		action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }
 '
 startup

@@ -19,7 +19,7 @@ $MainMsgQueueTimeoutShutdown 10000
 $InputTCPServerRun 13514
 
 $template outfmt,"%msg:F,58:3%,%msg:F,58:4%,%msg:F,58:5%\n"
-$template dynfile,"rsyslog.out.log" # use multiple dynafiles
+template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # use multiple dynafiles
 
 $OMFileFlushOnTXEnd on
 $OMFileFlushInterval 10

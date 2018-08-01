@@ -13,7 +13,7 @@ template(name="outfmt" type="list") {
 	constant(value="\n")
 }
 :msg, contains, "lastmsg" action(type="omfile" template="outfmt"
-			         file="rsyslog.out.log")
+			         file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 echo -n "<165>1 2003-08-24T05:14:15.000003-07:00 192.0.2.1 tcpflood 8710 - - lastmsg" >tmp.in
@@ -22,10 +22,10 @@ rm tmp.in
 ./msleep 500
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate
-echo "lastmsg" | cmp - rsyslog.out.log
+echo "lastmsg" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "lastmsg was not properly recorded, file content:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   exit 1
 fi;
 exit_test

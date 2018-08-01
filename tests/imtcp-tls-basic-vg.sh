@@ -29,7 +29,7 @@ $OMFileFlushOnTXEnd off
 $OMFileFlushInterval 2
 $OMFileAsyncWriting on
 $OMFileIOBufferSize 16k
-:msg, contains, "msgnum:" ./rsyslog.out.log;outfmt
+:msg, contains, "msgnum:" action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 echo \$DefaultNetstreamDriverCAFile $srcdir/tls-certs/ca.pem     >rsyslog.conf.tlscert
 echo \$DefaultNetstreamDriverCertFile $srcdir/tls-certs/cert.pem >>rsyslog.conf.tlscert

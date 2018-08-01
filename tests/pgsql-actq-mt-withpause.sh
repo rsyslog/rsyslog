@@ -31,7 +31,7 @@ echo waiting for worker threads to timeout
 shutdown_when_empty
 wait_shutdown
 
-psql -h localhost -U postgres -d syslogtest -f testsuites/pgsql-select-msg.sql -t -A > rsyslog.out.log
+psql -h localhost -U postgres -d syslogtest -f testsuites/pgsql-select-msg.sql -t -A > $RSYSLOG_OUT_LOG
 seq_check  0 149999
 echo cleaning up test database
 psql -h localhost -U postgres -c 'DROP DATABASE IF EXISTS syslogtest;'

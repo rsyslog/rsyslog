@@ -33,7 +33,7 @@ $template outfmt,"%msg:F,58:2%\n"
 '
 rm -f rsyslog-testbench-fifo
 mkfifo rsyslog-testbench-fifo
-cp rsyslog-testbench-fifo rsyslog.out.log &
+cp rsyslog-testbench-fifo  $RSYSLOG_OUT_LOG &
 CPPROCESS=$!
 echo background cp process id is $CPPROCESS
 

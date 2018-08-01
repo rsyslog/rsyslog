@@ -14,7 +14,7 @@ if $msg contains "msgnum:" then {
 	action(type="mmexternal" interface.input="fulljson"
 		binary="does/not/exist")
 }
-action(type="omfile" template="outfmt" file="rsyslog.out.log")
+action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup_vg_noleak
 . $srcdir/diag.sh tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag:msgnum:1\""
@@ -23,10 +23,10 @@ shutdown_when_empty
 wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
 
-grep 'failed to execute' rsyslog.out.log > /dev/null
+grep 'failed to execute'  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

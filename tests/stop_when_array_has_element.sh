@@ -17,7 +17,7 @@ action(type="mmjsonparse")
 foreach ($.quux in $!foo) do {
   if ($.quux == "xyz0") then stop
 }
-action(type="omfile" file="./rsyslog.out.log" template="foo")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="foo")
 '
 startup
 . $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/stop_when_array_has_elem_input

@@ -25,7 +25,7 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 ruleset(name="rs2" queue.type="disk" queue.filename="rs2_q"
 	queue.spoolDirectory="test-spool") {
 	set $!tmp=$msg;
-	action(type="omfile" file="rsyslog.out.log" template="outfmt")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }
 ruleset(name="rs") {
 	set $!tmp=$msg;

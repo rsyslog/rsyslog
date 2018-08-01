@@ -55,7 +55,7 @@ set $!result!date_fail_6 = is_time("90210", "date-spoonix");
 set $!result!errno_date_fail_6 = script_error();
 
 template(name="outfmt" type="string" string="%!result%\n")
-local4.* action(type="omfile" file="rsyslog.out.log" template="outfmt")
+local4.* action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 local4.* :omstdout:;outfmt
 '
 
@@ -68,13 +68,13 @@ wait_shutdown
 EXPECTED='{ "date_auto_1": 1, "errno_date_auto_1": 0, "date_auto_2": 1, "errno_date_auto_2": 0, "date_auto_3": 1, "errno_date_auto_3": 0, "date_auto_4": 1, "errno_date_auto_4": 0, "date_explicit_1": 1, "errno_date_explicit_1": 0, "date_explicit_2": 1, "errno_date_explicit_2": 0, "date_explicit_3": 1, "errno_date_explicit_3": 0, "date_explicit_4": 1, "errno_date_explicit_4": 0, "date_explicit_5": 1, "errno_date_explicit_5": 0, "date_explicit_6": 1, "errno_date_explicit_6": 0, "date_explicit_7": 1, "errno_date_explicit_7": 0, "date_explicit_8": 1, "errno_date_explicit_8": 0, "date_fail_1": 0, "errno_date_fail_1": 1, "date_fail_2": 0, "errno_date_fail_2": 1, "date_fail_3": 0, "errno_date_fail_3": 1, "date_fail_4": 0, "errno_date_fail_4": 1, "date_fail_5": 0, "errno_date_fail_5": 1, "date_fail_6": 0, "errno_date_fail_6": 1 }'
 
 # FreeBSD's cmp does not support reading from STDIN
-cmp <(echo "$EXPECTED") rsyslog.out.log
+cmp <(echo "$EXPECTED") $RSYSLOG_OUT_LOG
 
 if [[ $? -ne 0 ]]; then
   printf "Invalid function output detected!\n"
   printf "Expected: $EXPECTED\n"
   printf "Got:      "
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   error_exit 1
 fi;
 

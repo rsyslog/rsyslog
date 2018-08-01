@@ -16,7 +16,7 @@ input(type="imptcp" path="testbench_socket" unlink="on" filecreatemode="0600")
 input(type="imptcp" path="testbench_socket2" unlink="on" filecreatemode="0666")
 
 template(name="outfmt" type="string" string="%msg:%\n")
-*.notice	./rsyslog.out.log;outfmt
+*.notice	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 shutdown_when_empty # shut down rsyslogd when done processing messages
@@ -38,7 +38,7 @@ module(load="../plugins/imptcp/.libs/imptcp")
 input(type="imptcp" path="testbench_socket" unlink="on")
 
 template(name="outfmt" type="string" string="%msg:%\n")
-*.notice	./rsyslog.out.log;outfmt
+*.notice	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 

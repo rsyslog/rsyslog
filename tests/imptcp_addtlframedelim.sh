@@ -1,9 +1,7 @@
 #!/bin/bash
 # added 2010-08-11 by Rgerhards
 #
-# This file is part of the rsyslog project, released  under GPLv3
-echo ====================================================================================
-echo TEST: \[imptcp_addtlframedelim.sh\]: test imptcp additional frame delimiter
+# This file is part of the rsyslog project, released  under ASL 2.0
 . $srcdir/diag.sh init
 generate_conf
 add_conf '
@@ -16,11 +14,10 @@ $template outfmt,"%msg:F,58:2%\n"
 $OMFileFlushOnTXEnd off
 $OMFileFlushInterval 2
 $OMFileIOBufferSize 256k
-local0.* ./rsyslog.out.log;outfmt
+local0.* action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 . $srcdir/diag.sh tcpflood -m20000 -F0 -P129
-#sleep 2 # due to large messages, we need this time for the tcp receiver to settle...
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate
 seq_check 0 19999

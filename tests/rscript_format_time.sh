@@ -20,7 +20,7 @@ set $!datetime!str1 = format_time("1507165811", "date-rfc3339");
 set $!datetime!strinv1 = format_time("ABC", "date-rfc3339");
 
 template(name="outfmt" type="string" string="%!datetime%\n")
-local4.* action(type="omfile" file="rsyslog.out.log" template="outfmt")
+local4.* action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 local4.* :omstdout:;outfmt
 '
 
@@ -32,13 +32,13 @@ wait_shutdown
 EXPECTED='{ "rfc3164": "Oct  5 01:10:11", "rfc3339": "2017-10-05T01:10:11Z", "rfc3164Neg": "Mar 29 22:49:49", "rfc3339Neg": "1922-03-29T22:49:49Z", "str1": "2017-10-05T01:10:11Z", "strinv1": "ABC" }'
 
 # FreeBSD's cmp does not support reading from STDIN
-cmp <(echo "$EXPECTED") rsyslog.out.log
+cmp <(echo "$EXPECTED") $RSYSLOG_OUT_LOG
 
 if [[ $? -ne 0 ]]; then
   printf "Invalid function output detected!\n"
   printf "Expected: $EXPECTED\n"
   printf "Got:      "
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   error_exit 1
 fi;
 

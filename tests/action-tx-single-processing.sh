@@ -20,13 +20,13 @@ if($msg contains "msgnum:") then {
 	action(type="ommysql" name="mysql_action" server="127.0.0.1" template="tpl"
 	       db="Syslog" uid="rsyslog" pwd="testbench")
 }
-action(type="omfile" file="rsyslog2.out.log")
+action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG`)
 '
 startup
 . $srcdir/diag.sh injectmsg 0 5000
 shutdown_when_empty
 wait_shutdown
 # note "-s" is requried to suppress the select "field header"
-mysql -s --user=rsyslog --password=testbench < testsuites/mysql-select-msg.sql > rsyslog.out.log
+mysql -s --user=rsyslog --password=testbench < testsuites/mysql-select-msg.sql > $RSYSLOG_OUT_LOG
 seq_check  0 4999 -i2
 exit_test

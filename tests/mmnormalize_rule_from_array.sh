@@ -12,7 +12,7 @@ template(name="outfmt" type="string" string="%hostname% %syslogtag%\n")
 
 ruleset(name="norm") {
 	action(type="mmnormalize" rule=["rule=: no longer listening on %ip:ipv4%#%port:number%", "rule=: is sending messages on %ip:ipv4%", "rule=: apfelkuchen"])
-	action(type="omfile" file="rsyslog.out.log" template="outfmt")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }
 '
 startup
@@ -23,10 +23,10 @@ shutdown_when_empty
 wait_shutdown
 echo 'ubuntu tag1:
 debian tag2:
-centos tag3:' | cmp - rsyslog.out.log
+centos tag3:' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

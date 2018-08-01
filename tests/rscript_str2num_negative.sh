@@ -10,16 +10,16 @@ set $.n = "-1";
 set $!ip!v1 = 1 + $.n;
 
 template(name="outfmt" type="string" string="%!ip%\n")
-local4.* action(type="omfile" file="rsyslog.out.log" template="outfmt")
+local4.* action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
 wait_shutdown
-echo '{ "v1": 0 }' | cmp - rsyslog.out.log
+echo '{ "v1": 0 }' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid function output detected, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid function output detected, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   error_exit 1
 fi;
 exit_test

@@ -81,6 +81,6 @@ startup
 sleep 1
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate
-cat rsyslog.out.*.log > rsyslog.out.log
+cat rsyslog.out.*.log > $RSYSLOG_OUT_LOG
 seq_check 1 20000 -E
 exit_test

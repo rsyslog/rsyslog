@@ -9,7 +9,7 @@ module(load="../plugins/imuxsock/.libs/imuxsock" sysSock.use="off")
 input(type="imuxsock" Socket="testbench_socket")
 
 template(name="outfmt" type="string" string="%msg:%\n")
-*.notice	./rsyslog.out.log;outfmt
+*.notice      action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 # send a message with trailing LF
@@ -18,7 +18,7 @@ logger -d -u testbench_socket "wrong message"
 ./msleep 100
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown	# we need to wait until rsyslogd is finished!
-cmp rsyslog.out.log $srcdir/resultdata/imuxsock_logger.log
+cmp $RSYSLOG_OUT_LOG $srcdir/resultdata/imuxsock_logger.log
 if [ $? -eq 0 ]; then
   echo "imuxsock_logger_err.sh did not report an error where it should!"
   exit 1

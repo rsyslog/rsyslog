@@ -36,7 +36,7 @@ template(name="mmk8s_template" type="list") {
 input(type="imfile" file="'$pwd'/pod-*.log" tag="kubernetes" addmetadata="on")
 action(type="mmjsonparse" cookie="")
 action(type="mmkubernetes")
-action(type="omfile" file="rsyslog.out.log" template="mmk8s_template")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="mmk8s_template")
 '
 cat > pod-error1.log <<EOF
 {"log":"not in right format","stream":"stdout","time":"2018-04-06T17:26:34.492083106Z"}
@@ -70,7 +70,7 @@ kill $BGPROCESS
 cat mmk8s_srv.log
 
 # for each record in mmkubernetes-basic.out.json, see if the matching
-# record is found in rsyslog.out.log
+# record is found in $RSYSLOG_OUT_LOG
 python -c 'import sys,json
 expected = {}
 for hsh in json.load(open(sys.argv[1])):
@@ -95,11 +95,11 @@ for pod,hsh in expected.items():
 				print("Error: value {0} for key {1} in record for pod {2} does not match the expected value {3}".format(actual[pod][kk], kk, pod, vv))
 				rc = 1
 sys.exit(rc)
-' mmkubernetes-basic.out.json rsyslog.out.log
+' mmkubernetes-basic.out.json $RSYSLOG_OUT_LOG
 if [ $? -ne 0 ]; then
 	echo
-	echo "FAIL: expected data not found. rsyslog.out.log is:"
-	cat rsyslog.out.log
+	echo "FAIL: expected data not found.  $RSYSLOG_OUT_LOG is:"
+	cat $RSYSLOG_OUT_LOG
 	error_exit 1
 fi
 

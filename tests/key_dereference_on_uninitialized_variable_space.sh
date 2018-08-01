@@ -14,7 +14,7 @@ ruleset(name="echo") {
   if ($!foo == "bar") then {
     set $!baz = "quux";
   }
-  action(type="omfile" file="./rsyslog.out.log" template="corge")
+  action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="corge")
 }
 
 input(type="imtcp" port="13514")

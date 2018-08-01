@@ -13,7 +13,7 @@ input(type="imrelp" port="13514" maxdatasize="200" oversizeMode="accept")
 
 template(name="outfmt" type="string" string="%msg%\n")
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
-				 file="rsyslog.out.log")
+				 file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 . $srcdir/diag.sh tcpflood -Trelp-plain -p13514 -m1 -d 240
@@ -22,11 +22,11 @@ wait_shutdown
 
 # We need the ^-sign to symbolize the beginning and the $-sign to symbolize the end
 # because otherwise we won't know if it was truncated at the right length.
-grep "^ msgnum:00000000:240:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX$" rsyslog.out.log > /dev/null
+grep "^ msgnum:00000000:240:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX$"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
         echo
-        echo "FAIL: expected message not found. rsyslog.out.log is:"
-        cat rsyslog.out.log
+        echo "FAIL: expected message not found.  $RSYSLOG_OUT_LOG is:"
+        cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 

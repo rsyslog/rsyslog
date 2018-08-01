@@ -14,7 +14,7 @@ $InputFileMaxLinesAtOnce 100000
 $InputRunFileMonitor
 
 $template outfmt,"%msg:F,58:2%\n"
-:msg, contains, "msgnum:" ./rsyslog.out.log;outfmt
+:msg, contains, "msgnum:" action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 # generate input file first. Note that rsyslog processes it as
 # soon as it start up (so the file should exist at that point).

@@ -38,7 +38,7 @@ main_queue(queue.filename="mainq" queue.saveonshutdown="on"
 	   )
 
 $template outfmt,"%msg:F,58:2%\n"
-$template dynfile,"rsyslog.out.log" # trick to use relative path names!
+template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!
 #:msg, contains, "msgnum:" ?dynfile;outfmt
 :msg, contains, "msgnum:" :omtesting:sleep 10 0
 '
@@ -88,7 +88,7 @@ main_queue(queue.filename="mainq" queue.saveonshutdown="on"
 	   )
 
 $template outfmt,"%msg:F,58:2%\n"
-$template dynfile,"rsyslog.out.log" # trick to use relative path names!
+template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
 startup
@@ -108,8 +108,8 @@ if [[ ! -z $spoolFiles ]]; then
 fi
 
 # check if we got at least some data
-if [ ! -f rsyslog.out.log ]; then
-    echo "FAIL: no output data gathered (no rsyslog.out.log)!"
+if [ ! -f  $RSYSLOG_OUT_LOG ]; then
+    echo "FAIL: no output data gathered (no ${RSYSLOG_OUT_LOG})!"
     error_exit 1
 fi
 

@@ -10,7 +10,7 @@ template(name="outfmt" type="list") {
 }
 
 ruleset(name="rs") {
-	action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }
 
 if $msg contains "msgnum" then call_indirect "r" & "s";

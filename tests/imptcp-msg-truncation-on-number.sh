@@ -10,7 +10,7 @@ global(processInternalMessages="on"
 module(load="../plugins/imptcp/.libs/imptcp")
 input(type="imptcp" port="13514")
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 
 '
 startup
@@ -19,19 +19,19 @@ startup
 shutdown_when_empty
 wait_shutdown
 
-grep "Framing Error" rsyslog.out.log > /dev/null
+grep "Framing Error"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
         echo
-        echo "FAIL: expected error message from imptcp truncation not found. rsyslog.out.log is:"
-        cat rsyslog.out.log
+        echo "FAIL: expected error message from imptcp truncation not found.  $RSYSLOG_OUT_LOG is:"
+        cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 
-grep " 9876543210cdefghijklmn test8 test9 test10 test11 test12 test13 test14 test15 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk tag: testtestets" rsyslog.out.log > /dev/null
+grep " 9876543210cdefghijklmn test8 test9 test10 test11 test12 test13 test14 test15 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk tag: testtestets"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
         echo
-        echo "FAIL: expected message from imptcp truncation not found. rsyslog.out.log is:"
-        cat rsyslog.out.log
+        echo "FAIL: expected message from imptcp truncation not found.  $RSYSLOG_OUT_LOG is:"
+        cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 

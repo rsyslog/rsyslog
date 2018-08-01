@@ -12,7 +12,7 @@ input(type="imtcp" port="13514" ruleset="testing")
 
 ruleset(name="testing") {
 	action(type="mmanon" ipv6.bits="64" ipv6.anonmode="zero")
-	action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }'
 
 startup
@@ -32,10 +32,10 @@ echo ' asdfghjk
  0:0:0:0:0:0:0:0
  0:0:0:0:0:0:0:0
  13:abd:45:
- textnoblank72:8374:adc7:47ff:0:0:0:0stillnoblank' | cmp - rsyslog.out.log
+ textnoblank72:8374:adc7:47ff:0:0:0:0stillnoblank' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

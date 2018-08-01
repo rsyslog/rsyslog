@@ -8,7 +8,7 @@ generate_conf
 add_conf '
 global(debug.unloadModules="off")
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 sleep 1
@@ -18,10 +18,10 @@ wait_shutdown
 # been recorded, which would bear the name of our option.
 # if it is not recorded, we assume all is well. Not perfect,
 # but works good enough.
-grep -i "unloadModules" < rsyslog.out.log
+grep -i "unloadModules" < $RSYSLOG_OUT_LOG
 if [ ! $? -eq 1 ]; then
   echo "parameter name in output, assuming error message:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   exit 1
 fi;
 exit_test

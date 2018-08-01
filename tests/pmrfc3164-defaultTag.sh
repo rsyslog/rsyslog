@@ -9,7 +9,7 @@ parser(name="custom.rfc3164" type="pmrfc3164" permit.AtSignsInHostname="off" for
 template(name="outfmt" type="string" string="?%hostname%?%syslogtag%?%msg%?\n")
 
 ruleset(name="customparser" parser="custom.rfc3164") {
-	:hostname, contains, "Hostname" action(type="omfile" template="outfmt" file="rsyslog.out.log")
+	:hostname, contains, "Hostname" action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 }
 '
 startup
@@ -22,10 +22,10 @@ wait_shutdown
 echo '?Hostname1?-?  msgnum:1?
 ?Hostname2?-?   msgnum:2?
 ?Hostname3?-? tag msgnum:3?
-?Hostname4?tag:? msg?' | cmp - rsyslog.out.log
+?Hostname4?tag:? msg?' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

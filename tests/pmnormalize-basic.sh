@@ -12,7 +12,7 @@ parser(name="custom.pmnormalize" type="pmnormalize" rulebase=`echo $srcdir/tests
 template(name="test" type="string" string="host: %hostname%, ip: %fromhost-ip%, tag: %syslogtag%, pri: %pri%, syslogfacility: %syslogfacility%, syslogseverity: %syslogseverity% msg: %msg%\n")
 
 ruleset(name="ruleset" parser="custom.pmnormalize") {
-	action(type="omfile" file="rsyslog.out.log" template="test")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="test")
 }
 '
 startup
@@ -23,10 +23,10 @@ shutdown_when_empty
 wait_shutdown
 echo 'host: ubuntu, ip: 127.0.0.1, tag: tag1, pri: 189, syslogfacility: 23, syslogseverity: 5 msg: test
 host: debian, ip: 255.255.255.255, tag: tag2, pri: 112, syslogfacility: 14, syslogseverity: 0 msg: test
-host: centos, ip: 192.168.0.9, tag: tag3, pri: 177, syslogfacility: 22, syslogseverity: 1 msg: test' | cmp - rsyslog.out.log
+host: centos, ip: 192.168.0.9, tag: tag3, pri: 177, syslogfacility: 22, syslogseverity: 1 msg: test' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

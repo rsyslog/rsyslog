@@ -27,7 +27,7 @@ template(name="outfmt" type="list") {
 if $msg contains "msgnum:" then
  action(
    type="omfile"
-   file="rsyslog.out.log"
+   file=`echo $RSYSLOG_OUT_LOG`
    template="outfmt"
  )
 '
@@ -58,17 +58,17 @@ echo 'msgnum:5' >> rsyslog.input
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown    # we need to wait until rsyslogd is finished!
 
-NUMLINES=$(grep -c HEADER rsyslog.out.log 2>/dev/null)
+NUMLINES=$(grep -c HEADER  $RSYSLOG_OUT_LOG 2>/dev/null)
 
 if [ -z $NUMLINES ]; then
-  echo "ERROR: expecting at least a match for HEADER, maybe rsyslog.out.log wasn't even written?"
-  cat ./rsyslog.out.log
+  echo "ERROR: expecting at least a match for HEADER, maybe  $RSYSLOG_OUT_LOG wasn't even written?"
+  cat $RSYSLOG_OUT_LOG
   error_exit 1
 else
   # note: we expect only 2 headers as the first file part if NOT processed!
   if [ ! $NUMLINES -eq 2 ]; then
     echo "ERROR: expecting 2 headers, got $NUMLINES"
-    cat ./rsyslog.out.log
+    cat $RSYSLOG_OUT_LOG
     error_exit 1
   fi
 fi
@@ -76,10 +76,10 @@ fi
 ## check if all the data we expect to get in the file is there
 
 for i in {2..4}; do
-  grep msgnum:$i rsyslog.out.log > /dev/null 2>&1
+  grep msgnum:$i  $RSYSLOG_OUT_LOG > /dev/null 2>&1
   if [ ! $? -eq 0 ]; then
     echo "ERROR: expecting the string 'msgnum:$i', it's not there"
-    cat ./rsyslog.out.log
+    cat $RSYSLOG_OUT_LOG
     error_exit 1
   fi
 done

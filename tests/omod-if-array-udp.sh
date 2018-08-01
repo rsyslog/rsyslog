@@ -9,7 +9,7 @@ input(type="imudp" port="13514" ruleset="ruleset1")
 template(name="outfmt" type="string" string="%PRI%%timestamp%%hostname%%programname%%syslogtag%\n")
 
 ruleset(name="ruleset1") {
-	action(type="omfile" file="rsyslog.out.log"
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`
 	       template="outfmt")
 }
 
@@ -19,10 +19,10 @@ startup
 shutdown_when_empty
 wait_shutdown
 
-echo '167Mar  6 16:57:54172.20.245.8%PIX-7-710005%PIX-7-710005:' | cmp - rsyslog.out.log
+echo '167Mar  6 16:57:54172.20.245.8%PIX-7-710005%PIX-7-710005:' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

@@ -39,7 +39,7 @@ $template outfmt,"%msg:F,58:2%\n"
 if $msg contains "msgnum:" then
  action(
    type="omfile"
-   file="rsyslog.out.log"
+   file=`echo $RSYSLOG_OUT_LOG`
    template="outfmt"
  )
 '
@@ -66,5 +66,5 @@ shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown	# we need to wait until rsyslogd is finished!
 
 seq_check 0 $TESTMESSAGESFULL
-wc rsyslog.out.log
+wc $RSYSLOG_OUT_LOG
 exit_test

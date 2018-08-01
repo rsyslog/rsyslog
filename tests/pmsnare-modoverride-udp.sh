@@ -26,7 +26,7 @@ parser(
 template(name="outfmt" type="string" string="%PRI%,%syslogfacility-text%,%syslogseverity-text%,%programname%,%syslogtag%,%msg%\n")
 
 ruleset(name="ruleset1" parser=["modoverride.snare","rsyslog.rfc5424","rsyslog.rfc3164"]) {
-	action(type="omfile" file="rsyslog.out.log"
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`
 	       template="outfmt")
 }
 '
@@ -42,6 +42,6 @@ export EXPECTED='14,user,info,,, 05/21/2017:00:00:00 GMT HOSTNAME 1-ABC-2 : defa
 14,user,info,Hostd,Hostd:, verbose hostd[81480B70] [Originator@6876 sub=Hostsvc.StorageSystem] SendStorageInfoEvent: Notify: StorageSystemMsg{HBAs=[vmhba0, vmhba1, vmhba2, vmhba3, vmhba32, vmhba4, ]};
 14,user,info,CROND,CROND[12393]:, pam_unix(crond:session): session closed for user root................
 14,user,info,MSWinEventLog,MSWinEventLog, 1\011Security\01100000000\011Sun May 21 12:00:01.123\0114624\011Microsoft-Windows-Security-Auditing\011N/A\011N/A\011Success Audit\011hostname.domain\011Logon\011\011An account was successfully logged on.    Subject:   Security ID:  0x000000000   Account Name:  first.last   Account Domain:  domain   Logon ID:  0x000000000    Logon Type:   3    New Logon:   Security ID:  0x000000000   Account Name:  first.last   Account Domain:  domain   Logon ID:  0x000000000   Logon GUID:  0x000000000    Process Information:   Process ID:  0x000000000   Process Name:  first.last    Network Information:   Workstation Name:    Source Network Address: 192.168.0.11   Source Port:  51542    Detailed Authentication Information:   Logon Process:  Kerberos   Authentication Package: Kerberos   Transited Services: -   Package Name (NTLM only): -   Key Length:  0    This event is generated when a logon session is created. It is generated on the computer that was accessed.    The subject fields indicate the account on the local system which requested the logon. This is most commonly a service such as the Server service, or a local process such as Winlogon.exe or Services.exe.    The logon type field indicates the kind of logon that occurred. The most common types are 2 (interactive) and 3 (network).    The New Logon fields indicate the account for whom the new logon was created, i.e. the account that wa................'
-cmp_exact rsyslog.out.log
+cmp_exact $RSYSLOG_OUT_LOG
 
 exit_test

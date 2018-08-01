@@ -15,7 +15,7 @@ module(load="../plugins/imjournal/.libs/imjournal" StateFile="imjournal.state"
 	RateLimit.Burst="1000000")
 
 template(name="outfmt" type="string" string="%msg%\n")
-action(type="omfile" template="outfmt" file="rsyslog.out.log")
+action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 '
 TESTMSG="TestBenCH-RSYSLog imjournal This is a test message - $(date +%s)"
 ./journal_print "$TESTMSG"
@@ -38,11 +38,11 @@ startup
 ./msleep 500
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
-COUNT= cat rsyslog.out.log | fgrep "$TESTMSG" | wc -l
+COUNT= cat $RSYSLOG_OUT_LOG | fgrep "$TESTMSG" | wc -l
 if [ $COUNT -ne 1 ]; then
   echo "FAIL: message found $COUNT times (expected 1)"
-  echo "rsyslog.out.log content (tail -n200):"
-  tail -n200 rsyslog.out.log
+  echo " $RSYSLOG_OUT_LOG content (tail -n200):"
+  tail -n200 $RSYSLOG_OUT_LOG
   echo "======="
   echo "last entries from journal:"
   journalctl -an 200

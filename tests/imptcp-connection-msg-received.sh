@@ -8,10 +8,10 @@ module(load="../plugins/imptcp/.libs/imptcp")
 input(type="imptcp" port="13514" notifyonconnectionclose="on" notifyonconnectionopen="on")
 
 :msg, contains, "msgnum:" {
-	action(type="omfile" file="rsyslog2.out.log")
+	action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG`)
 }
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 
 '
 startup
@@ -19,19 +19,19 @@ startup
 shutdown_when_empty
 wait_shutdown
 
-grep "imptcp: connection established" rsyslog.out.log > /dev/null
+grep "imptcp: connection established"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
 	echo
-	echo "FAIL: expected error message not found. rsyslog.out.log is:"
-	cat rsyslog.out.log
+	echo "FAIL: expected error message not found.  $RSYSLOG_OUT_LOG is:"
+	cat $RSYSLOG_OUT_LOG
 	error_exit 1
 fi
 
-grep "imptcp: session on socket.* closed" rsyslog.out.log > /dev/null
+grep "imptcp: session on socket.* closed"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
 	echo
-	echo "FAIL: expected error message not found. rsyslog.out.log is:"
-	cat rsyslog.out.log
+	echo "FAIL: expected error message not found.  $RSYSLOG_OUT_LOG is:"
+	cat $RSYSLOG_OUT_LOG
 	error_exit 1
 fi
 

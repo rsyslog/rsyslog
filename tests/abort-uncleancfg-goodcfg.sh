@@ -14,7 +14,7 @@ $MainMsgQueueTimeoutShutdown 10000
 $InputTCPServerRun 13514
 
 $template outfmt,"%msg:F,58:2%\n"
-$template dynfile,"rsyslog.out.log" # trick to use relative path names!
+template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
 startup
@@ -22,7 +22,7 @@ startup
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
 
-if [ ! -e rsyslog.out.log ]
+if [ ! -e  $RSYSLOG_OUT_LOG ]
 then
         echo "error: expected file does not exist"
 	error_exit 1

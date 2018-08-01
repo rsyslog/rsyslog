@@ -16,7 +16,7 @@ set $.replaced_msg = replace($.replaced_msg, "hello", "hello_world");
 set $.replaced_msg = replace($.replaced_msg, "foo_bar_baz", "FBB");
 set $.replaced_msg = replace($.replaced_msg, "as_longer_this_string_as_more_probability_to_catch_the_bug", "ss");
 
-action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 . $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/complex_replace_input

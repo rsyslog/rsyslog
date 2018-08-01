@@ -23,12 +23,12 @@ template(name="all-json" type="string" string="%$!%\n")
 
 if $msg contains "msgnum:" then {
 	set $!tree!here!nbr = field($msg, 58, 2);
-	action(type="omfile" file="rsyslog2.out.log" template="all-json"
+	action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG` template="all-json"
 	       queue.type="linkedList")
 
 	set $!interim = exec_template("interim");
 	unset $!tree!here!nbr;
-	action(type="omfile" file="rsyslog.out.log" template="outfmt"
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt"
 	       queue.type="fixedArray")
 }
 '

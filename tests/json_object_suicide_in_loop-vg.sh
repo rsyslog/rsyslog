@@ -31,12 +31,12 @@ foreach ($.quux in $!foo) do {
     set $.quux!random_key = $.quux!key;
 		unset $!foo; #because it is deep copied, the foreach loop will continue to work, but the action to print "post_sucide_foo" will not see $!foo
 	}
-  action(type="omfile" file="./rsyslog.out.log" template="quux")
+  action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="quux")
   foreach ($.corge in $.quux!value) do {
     action(type="omfile" file="./rsyslog.out.async.log" template="corge" queue.type="linkedlist" action.copyMsg="on")
   }
 }
-action(type="omfile" file="./rsyslog.out.log" template="post_suicide_foo")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="post_suicide_foo")
 '
 startup_vg
 . $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/json_object_input

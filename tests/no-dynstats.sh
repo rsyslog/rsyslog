@@ -12,7 +12,7 @@ ruleset(name="stats") {
 
 module(load="../plugins/impstats/.libs/impstats" interval="1" severity="7" resetCounters="on" Ruleset="stats" bracketing="on")
 
-action(type="omfile" file="./rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 . $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'

@@ -20,7 +20,7 @@ ruleset(name="stats") {
 module(load="../plugins/impstats/.libs/impstats" interval="1" severity="7" resetCounters="on" Ruleset="stats" bracketing="on" format="cee")
 
 if ($msg == "this condition will never match") then {
-  action(name="an_action_that_is_never_called" type="omfile" file="./rsyslog.out.log")
+  action(name="an_action_that_is_never_called" type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 }
 '
 startup_vg

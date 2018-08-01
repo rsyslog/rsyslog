@@ -17,9 +17,9 @@ $MainMsgQueueTimeoutShutdown 100000
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 
 :msg, contains, "msgnum:" {
-	action(type="omfile" file="rsyslog.out.log"
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`
 	       template="outfmt" name="ok")
-	action(type="omfile" file="rsyslog2.out.log"
+	action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG`
 	       template="outfmt" name="susp"
 	       queue.type="linkedList"
 	       action.ExecOnlyWhenPreviousIsSuspended="on"

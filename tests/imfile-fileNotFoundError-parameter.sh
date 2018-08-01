@@ -9,17 +9,17 @@ module(load="../plugins/imfile/.libs/imfile")
 
 input(type="imfile" File="testsuites/NotExistingInputFile" Tag="tag1" fileNotFoundError="off")
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 shutdown_when_empty
 wait_shutdown
 
-grep "error*file*NotExistingInputFile*No such file or directory" rsyslog.out.log > /dev/null
+grep "error*file*NotExistingInputFile*No such file or directory"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -eq 0 ]; then
         echo
-        echo "FAIL: error message from missing input file found. rsyslog.out.log is:"
-        cat rsyslog.out.log
+        echo "FAIL: error message from missing input file found.  $RSYSLOG_OUT_LOG is:"
+        cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 

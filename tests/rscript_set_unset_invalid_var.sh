@@ -9,10 +9,10 @@ template(name="json" type="string" string="%$!%\n")
 ruleset(name="rcvr" queue.type="LinkedList") {
 	set $@timestamp="test";
 	unset $@timestamp2;
-	action(type="omfile" file="rsyslog2.out.log")
+	action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG`)
 }
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
  
 '
 startup
@@ -20,20 +20,20 @@ startup
 shutdown_when_empty
 wait_shutdown
 
-grep "@timestamp" rsyslog.out.log > /dev/null
+grep "@timestamp"  $RSYSLOG_OUT_LOG > /dev/null
 if [ ! $? -eq 0 ]; then
   echo "expected error message on \"@timestamp\" not found, output is:"
   echo "------------------------------------------------------------"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   echo "------------------------------------------------------------"
   error_exit 1
 fi;
 
-grep "@timestamp2" rsyslog.out.log > /dev/null
+grep "@timestamp2"  $RSYSLOG_OUT_LOG > /dev/null
 if [ ! $? -eq 0 ]; then
   echo "expected error message on \"@timestamp2\" not found, output is:"
   echo "------------------------------------------------------------"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   echo "------------------------------------------------------------"
   error_exit 1
 fi;

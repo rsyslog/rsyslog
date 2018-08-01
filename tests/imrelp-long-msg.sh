@@ -9,7 +9,7 @@ input(type="imrelp" port="13514" maxdatasize="214800")
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
-				 file="rsyslog.out.log")
+				 file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 . $srcdir/diag.sh tcpflood -Trelp-plain -p13514 -m2 -d 204800

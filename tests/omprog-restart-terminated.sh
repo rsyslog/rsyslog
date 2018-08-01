@@ -96,7 +96,7 @@ Received msgnum:00000008:
 Received msgnum:00000009:
 Terminating normally"
 
-written_output=$(<rsyslog.out.log)
+written_output=$(<$RSYSLOG_OUT_LOG)
 if [[ "$expected_output" != "$written_output" ]]; then
     echo unexpected omprog script output:
     echo "$written_output"

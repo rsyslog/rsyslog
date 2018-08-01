@@ -12,7 +12,7 @@ ruleset(name="rs") {
 	set $. = $!;
 	set $! = $.;
 
-	action(type="omfile" file="rsyslog.out.log" template="outfmt")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }
 '
 startup
@@ -20,10 +20,10 @@ startup
 shutdown_when_empty
 wait_shutdown
 EXPECTED='empty--'
-echo "$EXPECTED" | cmp - rsyslog.out.log
+echo "$EXPECTED" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-	echo "FAIL: rsyslog.out.log content invalid:"
-	cat rsyslog.out.log
+	echo "FAIL:  $RSYSLOG_OUT_LOG content invalid:"
+	cat $RSYSLOG_OUT_LOG
 	echo "Expected:"
 	echo "$EXPECTED"
 	error_exit 1

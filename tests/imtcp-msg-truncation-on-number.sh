@@ -10,7 +10,7 @@ global(processInternalMessages="on"
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="13514")
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 . $srcdir/diag.sh tcpflood -m1 -M "\"<120> 2011-03-01T11:22:12Z host tag: this is a way too long message that has ab
@@ -18,19 +18,19 @@ startup
 shutdown_when_empty
 wait_shutdown
 
-grep "Framing Error in received" rsyslog.out.log > /dev/null
+grep "Framing Error in received"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
         echo
-        echo "FAIL: expected error message from imtcp not found. rsyslog.out.log is:"
-        cat rsyslog.out.log
+        echo "FAIL: expected error message from imtcp not found.  $RSYSLOG_OUT_LOG is:"
+        cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 
-grep "9876543210cdefghijklmn test8 test9 test10 test11 test12 test13 test14 test15 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk tag: testtestt" rsyslog.out.log > /dev/null
+grep "9876543210cdefghijklmn test8 test9 test10 test11 test12 test13 test14 test15 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk tag: testtestt"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
         echo
-        echo "FAIL: expected date from imtcp not found. rsyslog.out.log is:"
-        cat rsyslog.out.log
+        echo "FAIL: expected date from imtcp not found.  $RSYSLOG_OUT_LOG is:"
+        cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 

@@ -27,16 +27,16 @@ set $!ip!e5 = num2ipv4("2839.");
 
 
 template(name="outfmt" type="string" string="%!ip%\n")
-local4.* action(type="omfile" file="rsyslog.out.log" template="outfmt")
+local4.* action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 . $srcdir/diag.sh tcpflood -m1 -y
 shutdown_when_empty
 wait_shutdown
-echo '{ "v0": "0.0.0.0", "v1": "0.0.0.0", "v2": "0.0.0.1", "v3": "0.0.1.0", "v4": "0.1.0.0", "v5": "1.0.0.0", "v6": "0.0.0.135", "v7": "1.1.1.1", "v8": "225.33.1.10", "v9": "172.0.0.1", "v10": "255.255.255.255", "e1": "-1", "e2": "-1", "e3": "-1", "e4": "-1", "e5": "-1" }' | cmp - rsyslog.out.log
+echo '{ "v0": "0.0.0.0", "v1": "0.0.0.0", "v2": "0.0.0.1", "v3": "0.0.1.0", "v4": "0.1.0.0", "v5": "1.0.0.0", "v6": "0.0.0.135", "v7": "1.1.1.1", "v8": "225.33.1.10", "v9": "172.0.0.1", "v10": "255.255.255.255", "e1": "-1", "e2": "-1", "e3": "-1", "e4": "-1", "e5": "-1" }' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid function output detected, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid function output detected, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   error_exit 1
 fi;
 exit_test

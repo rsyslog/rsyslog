@@ -19,7 +19,7 @@ template(name="outfmt" type="string" string="- %msg% %$.lkp%\n")
 
 set $.lkp = lookup("xlate", $msg);
 
-action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 cp -f $srcdir/testsuites/xlate.lkp_tbl xlate.lkp_tbl
 startup_vg

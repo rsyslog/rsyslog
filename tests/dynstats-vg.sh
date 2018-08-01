@@ -27,7 +27,7 @@ set $.msg_prefix = field($msg, 32, 1);
 
 set $.increment_successful = dyn_inc("msg_stats", $.msg_prefix);
 
-action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup_vg
 . $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'

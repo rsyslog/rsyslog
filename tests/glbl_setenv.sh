@@ -9,17 +9,17 @@ set $!prx = getenv("http_proxy");
 
 template(name="outfmt" type="string" string="%$!prx%\n")
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
-			         file="rsyslog.out.log")
+			         file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 . $srcdir/diag.sh injectmsg  0 1
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown    # we need to wait until rsyslogd is finished!
 
-echo 'http://127.0.0.1' | cmp - rsyslog.out.log
+echo 'http://127.0.0.1' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid content seen, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid content seen, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   error_exit 1
 fi;
 

@@ -15,7 +15,7 @@ template(name="outfmt" type="string" string="%$!%\n")
 if $msg contains "msgnum:" then {
 	set $.url = "http://testbench.rsyslog.com/testbench/echo-get.php?content=" & ltrim($msg);
 	set $!reply = http_request($.url);
-	action(type="omfile" file="rsyslog.out.log" template="outfmt")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }
 '
 startup
@@ -31,10 +31,10 @@ echo '{ "reply": "msgnum:00000000:" }
 { "reply": "msgnum:00000006:" }
 { "reply": "msgnum:00000007:" }
 { "reply": "msgnum:00000008:" }
-{ "reply": "msgnum:00000009:" }' | cmp - rsyslog.out.log
+{ "reply": "msgnum:00000009:" }' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid function output detected, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid function output detected, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   error_exit 1
 fi;
 exit_test

@@ -12,10 +12,10 @@ input(type="imtcp" port="13514" ruleset="testing")
 
 ruleset(name="testing") {
 	action(type="mmanon" ipv4.bits="33")
-	action(type="omfile" file="rsyslog.out.log" template="outfmt")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }
 
-action(type="omfile" file="rsyslog2.out.log")'
+action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG`)'
 
 startup
 . $srcdir/diag.sh tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag: 1.1.1.8
@@ -28,10 +28,10 @@ wait_shutdown
 echo ' 0.0.0.0
  0.0.0.0
  0.0.0.0
- 0.0.0.0.' | cmp - rsyslog.out.log
+ 0.0.0.0.' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

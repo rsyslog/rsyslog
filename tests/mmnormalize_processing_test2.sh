@@ -26,8 +26,8 @@ ruleset(name="ruleset1") {
 	if ($!v_file == "") then {
 		set $!v_file=$!v_tag;
 	}
-	action(type="omfile" File="rsyslog.out.log" template="t_file_record")
-	action(type="omfile" File="rsyslog.out.log" template="t_file_path")
+	action(type="omfile" File=`echo $RSYSLOG_OUT_LOG` template="t_file_record")
+	action(type="omfile" File=`echo $RSYSLOG_OUT_LOG` template="t_file_path")
 
 	set $!v_forward="PCI";
 
@@ -50,7 +50,7 @@ ruleset(name="ruleset1") {
 				set $!v_analytics_msg=exec_template("t_analytics_msg_normalized");
 			}
 		}
-		action(type="omfile" File="rsyslog.out.log" template="t_analytics")
+		action(type="omfile" File=`echo $RSYSLOG_OUT_LOG` template="t_analytics")
 	}	
 }
 '
@@ -60,10 +60,10 @@ shutdown_when_empty
 wait_shutdown
 echo '2017-03-08T12:18:47.165Z 2017-03-08T12:18:47.165Z Host2.domain.com Process1 [FFB87B70 verbose Process1HalCnxHostagent opID=WFU-abfbbece] [WaitForUpdatesDone] Completed callback
 /sb/logs/incoming/2017/03/08/svc_SER2/ret_Y01/os_ESX/127.0.0.1/r_relay1/esx.gz
-[][][127.0.0.1][1488975527][] Mar  8 12:18:47 127.0.0.1 Process1: [FFB87B70 verbose Process1HalCnxHostagent opID=WFU-abfbbece] [WaitForUpdatesDone] Completed callback' | cmp - rsyslog.out.log
+[][][127.0.0.1][1488975527][] Mar  8 12:18:47 127.0.0.1 Process1: [FFB87B70 verbose Process1HalCnxHostagent opID=WFU-abfbbece] [WaitForUpdatesDone] Completed callback' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

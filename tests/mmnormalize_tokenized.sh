@@ -18,17 +18,17 @@ input(type="imptcp" port="13514")
 action(type="mmnormalize" rulebase=`echo $srcdir/testsuites/mmnormalize_tokenized.rulebase`)
 if ( $!only_ips != "" ) then {
   set $.ips = $!only_ips;
-  action(type="omfile" file="./rsyslog.out.log" template="ips")
+  action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="ips")
 } else if ( $!local_ips != "" ) then {
   set $.ips = $!local_ips;
-  action(type="omfile" file="./rsyslog.out.log" template="ips")
+  action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="ips")
 } else if ( $!external_ips != "" ) then {
   set $.ips = $!external_ips;
-  action(type="omfile" file="./rsyslog.out.log" template="ips")
+  action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="ips")
 } else if ( $!some_nos != "" ) then { 
-  action(type="omfile" file="./rsyslog.out.log" template="numbers")
+  action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="numbers")
 } else {
-  action(type="omfile" file="./rsyslog.out.log" template="paths")
+  action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="paths")
 }
 '
 startup
@@ -37,7 +37,7 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown 
-cp rsyslog.out.log /tmp/
+cp  $RSYSLOG_OUT_LOG /tmp/
 . $srcdir/diag.sh content-check '[ "10.20.30.40", "50.60.70.80", "90.100.110.120", "130.140.150.160" ]'
 . $srcdir/diag.sh content-check '[ "192.168.1.2", "192.168.1.3", "192.168.1.4" ]'
 . $srcdir/diag.sh content-check '[ "10.20.30.40", "50.60.70.80", "190.200.210.220" ]'

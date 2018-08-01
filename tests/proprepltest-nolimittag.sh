@@ -8,7 +8,7 @@ input(type="imtcp" port="13514")
 
 template(name="outfmt" type="string" string="+%syslogtag%+\n")
 
-:pri, contains, "167" action(type="omfile" file="rsyslog.out.log"
+:pri, contains, "167" action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`
 				   template="outfmt")
 
 
@@ -24,10 +24,10 @@ wait_shutdown
 echo '+TAG:+
 +0+
 +01234567890123456789012345678901+
-+01234567890123456789012345678901-toolong+' | cmp - rsyslog.out.log
++01234567890123456789012345678901-toolong+' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

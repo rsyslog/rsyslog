@@ -15,7 +15,7 @@ template(name="outfmt" type="string" string="%$.data%\n")
 action(type="mmjsonparse")
 foreach ($.data in $!array) do {
 	if not ($.data == "") then
-		action(type="omfile" file="rsyslog.out.log" template="outfmt")
+		action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }
 '
 startup

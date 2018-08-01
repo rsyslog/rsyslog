@@ -10,18 +10,18 @@ add_conf '
 $IncludeConfig work-nested.conf
 template(name="outfmt" type="string" string="%msg%\n")
 if $msg contains "error" then
-	action(type="omfile" template="outfmt" file="rsyslog.out.log")
+	action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 shutdown_when_empty
 wait_shutdown
-grep work-nested.conf rsyslog.out.log
+grep work-nested.conf $RSYSLOG_OUT_LOG
 if [ $? -ne 0 ]; then
-	echo "FAIL: rsyslog.out.log does not contain expected error message on"
+	echo "FAIL:  $RSYSLOG_OUT_LOG does not contain expected error message on"
 	echo "recursive include file work-nested.conf."
 	echo "content is:"
 	echo "......................................................................"
-	cat rsyslog.out.log
+	cat $RSYSLOG_OUT_LOG
 	echo "......................................................................"
 	error_exit
 fi

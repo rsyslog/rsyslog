@@ -13,7 +13,7 @@ input(type="imtcp" port="13514")'
 add_conf "
 if (re_match(\$msg, '.* ([0-9]+)$')) then {"
 add_conf '
-	 action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+	 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }
 '
 startup

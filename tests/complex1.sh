@@ -109,6 +109,6 @@ shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate
 ls rsyslog.out.*.log
 . $srcdir/diag.sh setzcat		   # find out which zcat to use
-$ZCAT rsyslog.out.*.log > rsyslog.out.log
+$ZCAT rsyslog.out.*.log > $RSYSLOG_OUT_LOG
 seq_check 1 40000 -E
 exit_test

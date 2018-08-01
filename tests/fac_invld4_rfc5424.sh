@@ -9,7 +9,7 @@ module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="13514")
 
 template(type="string" name="outfmt" string="%msg:F,58:4%\n")
-invld.=debug action(type="omfile" file="rsyslog.out.log" template="outfmt")
+invld.=debug action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 . $srcdir/diag.sh tcpflood -y -m1000 -P 8000000000000000000000000000000

@@ -21,7 +21,7 @@ if cnum($!usr!msgnum) >= 5000 then
  * without a filter in rsyslog.conf top level hierarchy - so this test, as
  * a side-effect, also tests this ability.
  */
-action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 . $srcdir/diag.sh injectmsg  0 8000

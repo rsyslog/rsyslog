@@ -10,7 +10,7 @@ input(type="imtcp" port="13514" ruleset="ruleset1")
 template(name="outfmt" type="string" string="%PRI%,%syslogfacility-text%,%syslogseverity-text%,%timestamp%,%hostname%,%programname%,%syslogtag%,%msg%\n")
 
 ruleset(name="ruleset1") {
-	action(type="omfile" file="rsyslog.out.log"
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`
 	       template="outfmt")
 }
 
@@ -77,6 +77,6 @@ export EXPECTED="167,local4,debug,Mar  6 16:57:54,172.20.245.8,%PIX-7-710005,%PI
 14,user,info,Aug 30 23:00:05,X4711,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,
 14,user,info,Aug 30 23:00:05,X4711,,,
 14,user,info,Aug 30 23:00:05,X4711,,,"
-cmp_exact rsyslog.out.log
+cmp_exact $RSYSLOG_OUT_LOG
 
 exit_test

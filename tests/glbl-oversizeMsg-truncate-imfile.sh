@@ -19,7 +19,7 @@ input(type="imfile" File="./rsyslog.input" tag="tag:")
 
 template(name="outfmt" type="string" string="%rawmsg%\n")
 action(type="omfile" template="outfmt"
-				 file="rsyslog.out.log")
+				 file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 shutdown_when_empty # shut down rsyslogd when done processing messages
@@ -27,19 +27,19 @@ wait_shutdown
 
 # We need the ^-sign to symbolize the beginning and the $-sign to symbolize the end
 # because otherwise we won't know if it was truncated at the right length.
-grep "^<167>Mar  1 01:00:00 172.20.245.8 tag msgnum:00000000:240:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX$" rsyslog.out.log #> /dev/null
+grep "^<167>Mar  1 01:00:00 172.20.245.8 tag msgnum:00000000:240:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX$"  $RSYSLOG_OUT_LOG #> /dev/null
 if [ $? -ne 0 ]; then
         echo
-        echo "FAIL: expected message not found. rsyslog.out.log is:"
-        cat rsyslog.out.log
+        echo "FAIL: expected message not found.  $RSYSLOG_OUT_LOG is:"
+        cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 
-grep "message too long.*begin of message is:" rsyslog.out.log > /dev/null
+grep "message too long.*begin of message is:"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
         echo
-        echo "FAIL: expected error message not found. rsyslog.out.log is:"
-        cat rsyslog.out.log
+        echo "FAIL: expected error message not found.  $RSYSLOG_OUT_LOG is:"
+        cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 

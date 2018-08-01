@@ -7,7 +7,7 @@ generate_conf
 add_conf "\$IncludeConfig ${srcdir}/testsuites/incltest.d/*.conf-not-there
 "
 add_conf '$template outfmt,"%msg:F,58:2%\n"
-:msg, contains, "msgnum:" ./rsyslog.out.log;outfmt'
+:msg, contains, "msgnum:" action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")'
 startup
 # 100 messages are enough - the question is if the include is read ;)
 . $srcdir/diag.sh injectmsg 0 100

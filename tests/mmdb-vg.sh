@@ -18,7 +18,7 @@ input(type="imptcp" port="13514" ruleset="testing")
 ruleset(name="testing") {
 	action(type="mmnormalize" rulebase=`echo $srcdir/mmdb.rb`)
 	action(type="mmdblookup" mmdbfile=`echo $srcdir/test.mmdb` key="$!ip" fields="city" )
-	action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }'
 startup_vg
 . $srcdir/diag.sh tcpflood -m 100 -j "202.106.0.20\ "

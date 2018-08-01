@@ -9,9 +9,9 @@ input(type="imfile" File="./rsyslog.input" Tag="tag1" ruleset="ruleset1")
 
 template(name="tmpl1" type="string" string="%msg%\n")
 ruleset(name="ruleset1") {
-	action(type="omfile" file="rsyslog.out.log" template="tmpl1")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="tmpl1")
 }
-action(type="omfile" file="rsyslog2.out.log")
+action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG`)
 '
 startup
 ./msleep 3000
@@ -41,10 +41,10 @@ fi
 
 echo 'testmessage1
 testmessage2
-testmessage3' | cmp - rsyslog.out.log
+testmessage3' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

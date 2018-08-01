@@ -15,7 +15,7 @@ module(load="../plugins/imjournal/.libs/imjournal" IgnorePreviousMessages="on"
 	RateLimit.Burst="1000000")
 
 template(name="outfmt" type="string" string="%msg%\n")
-action(type="omfile" template="outfmt" file="rsyslog.out.log")
+action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup_vg
 TESTMSG="TestBenCH-RSYSLog imjournal This is a test message - $(date +%s)"
@@ -33,10 +33,10 @@ fi
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
-cat rsyslog.out.log | fgrep -qF "$TESTMSG"
+cat $RSYSLOG_OUT_LOG | fgrep -qF "$TESTMSG"
 if [ $? -ne 0 ]; then
-  echo "FAIL: rsyslog.out.log content (tail -n200):"
-  tail -n200 rsyslog.out.log
+  echo "FAIL:  $RSYSLOG_OUT_LOG content (tail -n200):"
+  tail -n200 $RSYSLOG_OUT_LOG
   echo "======="
   echo "last entries from journal:"
   journalctl -an 200

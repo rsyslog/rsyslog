@@ -9,10 +9,10 @@ input(type="imtcp" port="13514")
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 :msg, contains, "msgnum:" {
-	action(type="omfile" template="outfmt" file="rsyslog2.out.log")
+	action(type="omfile" template="outfmt" file=`echo $RSYSLOG2_OUT_LOG`)
 }
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 touch rsyslog2.out.log
 chmod 0400 rsyslog2.out.log
@@ -22,11 +22,11 @@ $srcdir/diag.sh injectmsg 0 1
 shutdown_when_empty
 wait_shutdown
 
-grep "rsyslog2.out.log.* open error" rsyslog.out.log > /dev/null
+grep "rsyslog2.out.log.* open error"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
 	echo
-	echo "FAIL: expected error message not found. rsyslog.out.log is:"
-	cat rsyslog.out.log
+	echo "FAIL: expected error message not found.  $RSYSLOG_OUT_LOG is:"
+	cat $RSYSLOG_OUT_LOG
 	error_exit 1
 fi
 

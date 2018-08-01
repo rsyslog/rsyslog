@@ -69,7 +69,7 @@ shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
 # now consolidate all logs into a single one so that we can use the
 # regular check logic
-cat rsyslog.out1.log rsyslog.out2.log rsyslog.out3.log > rsyslog.out.log
+cat rsyslog.out1.log rsyslog.out2.log rsyslog.out3.log > $RSYSLOG_OUT_LOG
 seq_check 0 59999
 rm -f rsyslog.out1.log rsyslog.out2.log rsyslog.out3.log
 exit_test

@@ -18,7 +18,7 @@ template(name="outfmt" type="string" string="%$!nope%\n")
 template(name="outfmt-all-json" type="string" string="%$!all-json%\n")
 
 action(type="mmjsonparse")
-action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 if $!nope == "" then
 	action(type="omfile" file="./rsyslog2.out.log" template="outfmt-all-json")
 '

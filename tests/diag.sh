@@ -129,7 +129,7 @@ function cmp_exact() {
 	if [ $? -ne 0 ]; then
 		echo "invalid response generated"
 		echo "################# $1 is:"
-		cat -n rsyslog.out.log
+		cat -n ${RSYSLOG_OUT_LOG}
 		echo "################# EXPECTED was:"
 		printf "%s\n" "$EXPECTED" | cat -n -
 		printf "\n#################### diff is:\n"
@@ -214,6 +214,8 @@ function shutdown_when_empty() {
 	if [ "$1" == "2" ]
 	then
 	   echo Shutting down instance 2
+	else
+	   echo Shutting down instance 1
 	fi
 	. $srcdir/diag.sh wait-queueempty $1
 	cp rsyslog$1.pid rsyslog$1.pid.save
@@ -276,6 +278,7 @@ function wait_shutdown_vg() {
 # for systems like Travis-CI where we cannot debug on the machine itself.
 # our $1 is the to-be-used exit code. if $2 is "stacktrace", call gdb.
 function error_exit() {
+	env
 	if [ -e core* ]
 	then
 		echo trying to obtain crash location info
@@ -340,7 +343,7 @@ function error_exit() {
 # $4... are just to have the abilit to pass in more options...
 # add -v to chkseq if you need more verbose output
 function seq_check() {
-	$RS_SORTCMD -g < rsyslog.out.log | ./chkseq -s$1 -e$2 $3 $4 $5 $6 $7
+	$RS_SORTCMD -g < ${RSYSLOG_OUT_LOG} | ./chkseq -s$1 -e$2 $3 $4 $5 $6 $7
 	if [ "$?" -ne "0" ]; then
 		echo "sequence error detected"
 		error_exit 1 
@@ -354,7 +357,7 @@ function seq_check() {
 # $4... are just to have the abilit to pass in more options...
 # add -v to chkseq if you need more verbose output
 function seq_check2() {
-	$RS_SORTCMD -g < rsyslog2.out.log  | ./chkseq -s$1 -e$2 $3 $4 $5 $6 $7
+	$RS_SORTCMD -g < ${RSYSLOG2_OUT_LOG}  | ./chkseq -s$1 -e$2 $3 $4 $5 $6 $7
 	if [ "$?" -ne "0" ]; then
 		echo "sequence error detected"
 		error_exit 1
@@ -365,8 +368,8 @@ function seq_check2() {
 # do the usual sequence check, but for gzip files
 # $4... are just to have the abilit to pass in more options...
 function gzip_seq_check() {
-	ls -l rsyslog.out.log
-	gunzip < rsyslog.out.log | $RS_SORTCMD -g | ./chkseq -v -s$1 -e$2 $3 $4 $5 $6 $7
+	ls -l ${RSYSLOG_OUT_LOG}
+	gunzip < ${RSYSLOG_OUT_LOG} | $RS_SORTCMD -g | ./chkseq -v -s$1 -e$2 $3 $4 $5 $6 $7
 	if [ "$?" -ne "0" ]; then
 		echo "sequence error detected"
 		error_exit 1
@@ -397,7 +400,7 @@ function exit_test() {
 	# now real cleanup
 	rm -f rsyslogd.started work-*.conf diag-common.conf
 	rm -f rsyslogd2.started diag-common2.conf rsyslog.action.*.include
-	rm -f work rsyslog.out.* rsyslog2.out.log rsyslog*.pid.save xlate*.lkp_tbl
+	rm -f work rsyslog.out.* ${RSYSLOG2_OUT_LOG} rsyslog*.pid.save xlate*.lkp_tbl
 	rm -rf test-spool test-logdir stat-file1
 	rm -f rsyslog.random.data rsyslog.pipe
 	rm -f -r rsyslog.input.*
@@ -488,7 +491,7 @@ case $1 in
 		rm -f rsyslogd.started work-*.conf rsyslog.random.data
 		rm -f rsyslogd2.started work-*.conf rsyslog*.pid.save xlate*.lkp_tbl
 		rm -f log log* # RSyslog debug output 
-		rm -f work rsyslog.out.* rsyslog2.out.log # common work files
+		rm -f work rsyslog.out.* ${RSYSLOG2_OUT_LOG} # common work files
 		rm -rf test-spool test-logdir stat-file1
 		rm -f rsyslog.pipe rsyslog.input.*
 		rm -f rsyslog.input rsyslog.empty rsyslog.input.* imfile-state* omkafka-failed.data
@@ -513,6 +516,8 @@ case $1 in
 			export valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
 		fi
 		export RSYSLOG_DFLT_LOG_INTERNAL=1 # testbench needs internal messages logged internally!
+		export RSYSLOG2_OUT_LOG=rsyslog2.out.log
+		export RSYSLOG_OUT_LOG=rsyslog.out.log
 		export IMDIAG_PORT=13500
 		export IMDIAG_PORT2=13501
 		export TCPFLOOD_PORT=13514
@@ -547,7 +552,7 @@ case $1 in
 		# Note: param 2 MUST be number of records to read (ES does
 		# not return the full set unless you tell it explicitely).
 		curl --silent localhost:$es_get_port/rsyslog_testbench/_search?size=$2 > work
-		python $srcdir/es_response_get_msgnum.py > rsyslog.out.log
+		python $srcdir/es_response_get_msgnum.py > ${RSYSLOG_OUT_LOG}
 		;;
    'getpid')
 		pid=$(cat rsyslog$2.pid)
@@ -701,8 +706,8 @@ case $1 in
 		shift 1
 		eval ./tcpflood -p$TCPFLOOD_PORT "$@" $TCPFLOOD_EXTRA_OPTS
 		if [ "$?" -ne "0" ]; then
-		  echo "error during tcpflood! see rsyslog.out.log.save for what was written"
-		  cp rsyslog.out.log rsyslog.out.log.save
+		  echo "error during tcpflood! see ${RSYSLOG_OUT_LOG}.save for what was written"
+		  cp ${RSYSLOG_OUT_LOG} ${RSYSLOG_OUT_LOG}.save
 		  error_exit 1 stacktrace
 		fi
 		;;
@@ -731,7 +736,7 @@ case $1 in
 		# result for some preprocessing. Note that a later seqchk will sort
 		# again, but that's not an issue.
 		rm -f work
-		$RS_SORTCMD -g < rsyslog.out.log > work
+		$RS_SORTCMD -g < ${RSYSLOG_OUT_LOG} > work
 		;;
    'assert-equal')
 		if [ "x$4" == "x" ]; then
@@ -754,32 +759,32 @@ case $1 in
     ;;
    'grep-check') # grep for "$EXPECTED" present in rsyslog.log - env var must be set
 		 # before this method is called
-		grep "$EXPECTED" rsyslog.out.log > /dev/null
+		grep "$EXPECTED" ${RSYSLOG_OUT_LOG} > /dev/null
 		if [ $? -eq 1 ]; then
-		  echo "GREP FAIL: rsyslog.out.log content:"
-		  cat rsyslog.out.log
+		  echo "GREP FAIL: ${RSYSLOG_OUT_LOG} content:"
+		  cat ${RSYSLOG_OUT_LOG}
 		  echo "GREP FAIL: expected text not found:"
 		  echo "$EXPECTED"
 		error_exit 1
 		fi;
 		;;
    'content-cmp')
-		echo "$2" | cmp - rsyslog.out.log
+		echo "$2" | cmp - ${RSYSLOG_OUT_LOG}
 		if [ "$?" -ne "0" ]; then
 		    echo FAIL: content-cmp failed
 		    echo EXPECTED:
 		    echo $2
 		    echo ACTUAL:
-		    cat rsyslog.out.log
+		    cat ${RSYSLOG_OUT_LOG}
 		    error_exit 1
 		fi
 		;;
    'content-check')
-		cat rsyslog.out.log | grep -qF "$2"
+		cat ${RSYSLOG_OUT_LOG} | grep -qF "$2"
 		if [ "$?" -ne "0" ]; then
 		    printf "\n============================================================\n"
 		    echo FAIL: content-check failed to find "'$2'", content is
-		    cat rsyslog.out.log
+		    cat ${RSYSLOG_OUT_LOG}
 		    error_exit 1
 		fi
 		;;
@@ -795,7 +800,7 @@ case $1 in
 		while [  $timecounter -lt $timeoutend ]; do
 			let timecounter=timecounter+1
 
-			count=$(wc -l < rsyslog.out.log)
+			count=$(wc -l < ${RSYSLOG_OUT_LOG})
 			if [ $count -eq $3 ]; then
 				echo wait-file-lines success, have $3 lines
 				break
@@ -825,7 +830,7 @@ case $1 in
 		while [  $timecounter -lt $timeoutend ]; do
 			let timecounter=timecounter+1
 
-			count=$(cat rsyslog.out.log | grep -F "$2" | wc -l)
+			count=$(cat ${RSYSLOG_OUT_LOG} | grep -F "$2" | wc -l)
 
 			if [ $count -eq $3 ]; then
 				echo content-check-with-count success, \"$2\" occured $3 times
@@ -836,8 +841,8 @@ case $1 in
 					wait_shutdown	# Shutdown rsyslog instance on error 
 
 					echo content-check-with-count failed, expected \"$2\" to occur $3 times, but found it $count times
-					echo file rsyslog.out.log content is:
-					sort < rsyslog.out.log
+					echo file ${RSYSLOG_OUT_LOG} content is:
+					sort < ${RSYSLOG_OUT_LOG}
 					error_exit 1
 				else
 					echo content-check-with-count have $count, wait for $3 times $2...
@@ -928,7 +933,7 @@ case $1 in
 		fi
 		;;
    'content-pattern-check') 
-		cat rsyslog.out.log | grep -q "$2"
+		cat ${RSYSLOG_OUT_LOG} | grep -q "$2"
 		if [ "$?" -ne "0" ]; then
 		    echo content-check failed, not every line matched pattern "'$2'"
 		    echo "file contents:"
@@ -937,7 +942,7 @@ case $1 in
 		fi
 		;;
    'assert-content-missing') 
-		cat rsyslog.out.log | grep -qF "$2"
+		cat ${RSYSLOG_OUT_LOG} | grep -qF "$2"
 		if [ "$?" -eq "0" ]; then
 				echo content-missing assertion failed, some line matched pattern "'$2'"
 		    error_exit 1

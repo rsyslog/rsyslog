@@ -77,7 +77,7 @@ if $msg contains "msgnum:" then {
 	call try_es
 }
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 rm -f es-bulk-errors.log es-stats.log
 
@@ -194,7 +194,7 @@ fi
 if [ $rc -eq 0 ] ; then
 	echo tests completed successfully
 else
-	cat rsyslog.out.log
+	cat $RSYSLOG_OUT_LOG
 	error_exit 1 stacktrace
 fi
 

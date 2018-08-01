@@ -14,7 +14,7 @@ local4.* {
 	set $!invalid!error  = script_error();
 	set $!valid2!serial   = parse_time("2017-10-05T01:10:11Z");
 	set $!valid2!error    = script_error();
-	action(type="omfile" file="rsyslog.out.log" template="outfmt")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }
 '
 
@@ -25,12 +25,12 @@ wait_shutdown
 
 # Our fixed and calculated expected results
 EXPECTED='{ "valid": { "serial": 1507165811, "error": 0 }, "invalid": { "serial": 0, "error": 1 }, "valid2": { "serial": 1507165811, "error": 0 } }'
-echo $EXPECTED | cmp - rsyslog.out.log
+echo $EXPECTED | cmp - $RSYSLOG_OUT_LOG
 if [[ $? -ne 0 ]]; then
   printf "Invalid function output detected!\n"
   printf "expected:\n$EXPECTED\n"
   printf "rsyslog.out is:\n"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   error_exit 1
 fi;
 

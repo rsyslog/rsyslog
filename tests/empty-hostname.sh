@@ -12,17 +12,17 @@ echo ======================================================================
 . $srcdir/diag.sh init
 generate_conf
 add_conf '
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 export RSYSLOG_PRELOAD=.libs/liboverride_gethostname.so
 startup
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown    # we need to wait until rsyslogd is finished!
 
-grep " localhost-empty-hostname " < rsyslog.out.log
+grep " localhost-empty-hostname " < $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "expected hostname \"localhost-empty-hostname\" not found in logs, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "expected hostname \"localhost-empty-hostname\" not found in logs, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   error_exit 1
 fi;
 

@@ -9,7 +9,7 @@ global(processInternalMessages="on" oversizemsg.input.mode="accept")
 module(load="../plugins/imptcp/.libs/imptcp")
 input(type="imptcp" port="13514")
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 
 '
 startup
@@ -17,19 +17,19 @@ startup
 shutdown_when_empty
 wait_shutdown
 
-grep "imptcp: message received.*150 byte larger.*will be split.*\"ghijkl" rsyslog.out.log > /dev/null
+grep "imptcp: message received.*150 byte larger.*will be split.*\"ghijkl"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
         echo
-        echo "FAIL: expected error message from imptcp truncation not found. rsyslog.out.log is:"
-        cat rsyslog.out.log
+        echo "FAIL: expected error message from imptcp truncation not found.  $RSYSLOG_OUT_LOG is:"
+        cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 
-grep "imptcp: message received.*22 byte larger.*will be split.*\"sstets" rsyslog.out.log > /dev/null
+grep "imptcp: message received.*22 byte larger.*will be split.*\"sstets"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
         echo
-        echo "FAIL: expected error message from imptcp truncation not found. rsyslog.out.log is:"
-        cat rsyslog.out.log
+        echo "FAIL: expected error message from imptcp truncation not found.  $RSYSLOG_OUT_LOG is:"
+        cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 

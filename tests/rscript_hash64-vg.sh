@@ -15,7 +15,7 @@ input(type="imtcp" port="13514")
 set $.hash_no_1 = hash64("0f9a1d07-a8c9-43a7-a6f7-198dca3d932e");
 set $.hash_no_2 = hash64mod("0f9a1d07-a8c9-43a7-a6f7-198dca3d932e", 100);
 
-action(type="omfile" file="./rsyslog.out.log" template="outfmt")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup_vg
 . $srcdir/diag.sh tcpflood -m 20

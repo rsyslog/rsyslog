@@ -13,17 +13,17 @@ template(name="json" type="list" option.json="on") {
 }
 
 :msg, contains, "msgnum:" action(type="omfile" template="json"
-			         file="rsyslog.out.log")
+			         file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 . $srcdir/diag.sh injectmsg  0 1
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown    # we need to wait until rsyslogd is finished!
 
-printf '{"backslash":"a \\\\ \\"b\\" c / d"}\n' | cmp - rsyslog.out.log
+printf '{"backslash":"a \\\\ \\"b\\" c / d"}\n' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid JSON generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid JSON generated, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   error_exit 1
 fi;
 

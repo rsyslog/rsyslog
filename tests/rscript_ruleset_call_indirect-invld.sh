@@ -16,17 +16,17 @@ ruleset(name="rs") {
 if $msg contains "msgnum" then
 	call_indirect "does-not-exist";
 else
-	action(type="omfile" file="./rsyslog.out.log")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 . $srcdir/diag.sh injectmsg  0 5
 shutdown_when_empty
 wait_shutdown 
-grep "error.*does-not-exist" rsyslog.out.log > /dev/null
+grep "error.*does-not-exist"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
 	echo
-	echo "FAIL: expected error message not found. rsyslog.out.log is:"
-	cat rsyslog.out.log
+	echo "FAIL: expected error message not found.  $RSYSLOG_OUT_LOG is:"
+	cat $RSYSLOG_OUT_LOG
 	error_exit 1
 fi
 exit_test

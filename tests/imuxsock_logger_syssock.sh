@@ -23,7 +23,7 @@ module(load="../plugins/imuxsock/.libs/imuxsock"
        SysSock.name="testbench_socket")
 
 $template outfmt,"%msg:%\n"
-*.notice	./rsyslog.out.log;outfmt
+*.notice      action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 # send a message with trailing LF
@@ -32,11 +32,11 @@ logger -d -u testbench_socket test
 ./msleep 100
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown	# we need to wait until rsyslogd is finished!
-cmp rsyslog.out.log $srcdir/resultdata/imuxsock_logger.log
+cmp $RSYSLOG_OUT_LOG $srcdir/resultdata/imuxsock_logger.log
 if [ ! $? -eq 0 ]; then
   echo "imuxsock_logger_syssock.sh failed"
-  echo contents of rsyslog.out.log:
-  echo \"`cat rsyslog.out.log`\"
+  echo "contents of $RSYSLOG_OUT_LOG:"
+  echo \"`cat $RSYSLOG_OUT_LOG`\"
   exit 1
 fi;
 exit_test

@@ -36,7 +36,7 @@ foreach ($.quux in $!foo) do {
 		unset $!foo!str3; #because it is deep copied, the foreach loop will still see str3, but the "modified" action in the bottom will not
 		set $!foo!str4 = "jkl3";
 	}
-  action(type="omfile" file="./rsyslog.out.log" template="quux")
+  action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="quux")
   foreach ($.corge in $.quux!value) do {
     action(type="omfile" file="./rsyslog.out.async.log" template="corge" queue.type="linkedlist" action.copyMsg="on")
     call prefixed_writer
@@ -48,8 +48,8 @@ foreach ($.quux in $!foo) do {
     }
   }
 }
-action(type="omfile" file="./rsyslog.out.log" template="garply")
-action(type="omfile" file="./rsyslog.out.log" template="modified")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="garply")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="modified")
 '
 startup_vg
 . $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/json_object_input

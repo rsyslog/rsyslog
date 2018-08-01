@@ -16,7 +16,7 @@ if $msg contains "msgnum:" then {
 add_conf "
 		binary=\"${srcdir}/testsuites/mmexternal-SegFault-mm-python.py\")"
 add_conf '
-	action(type="omfile" template="outfmt" file="rsyslog.out.log")
+	action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 }
 '
 startup_vg
@@ -25,10 +25,10 @@ shutdown_when_empty
 wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
 
-echo '-{ "x": "a", "sometag": "somevalue" }-' | cmp - rsyslog.out.log
+echo '-{ "x": "a", "sometag": "somevalue" }-' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

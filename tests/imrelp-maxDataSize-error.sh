@@ -12,7 +12,7 @@ global(
 
 input(type="imrelp" port="13514" maxDataSize="250")
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 ./msleep 2000
@@ -20,11 +20,11 @@ startup
 shutdown_when_empty
 wait_shutdown
 
-grep "error: maxDataSize.*smaller than global parameter maxMessageSize" rsyslog.out.log > /dev/null
+grep "error: maxDataSize.*smaller than global parameter maxMessageSize"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
         echo
-        echo "FAIL: expected error message not found. rsyslog.out.log is:"
-        cat rsyslog.out.log
+        echo "FAIL: expected error message not found.  $RSYSLOG_OUT_LOG is:"
+        cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 

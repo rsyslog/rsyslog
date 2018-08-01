@@ -23,7 +23,7 @@ ruleset(name="prefixed_writer" queue.type="linkedlist" queue.workerthreads="5") 
 }
 
 foreach ($.quux in $!foo) do {
-  action(type="omfile" file="./rsyslog.out.log" template="quux")
+  action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="quux")
   foreach ($.corge in $.quux!bar) do {
      reset $.grault = $.corge;
      action(type="omfile" file="./rsyslog.out.async.log" template="grault" queue.type="linkedlist" action.copyMsg="on")
@@ -33,7 +33,7 @@ foreach ($.quux in $!foo) do {
      reset $.garply = $.garply & $.grault!baz;
   }
 }
-action(type="omfile" file="./rsyslog.out.log" template="garply")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="garply")
 '
 startup
 . $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/json_array_input

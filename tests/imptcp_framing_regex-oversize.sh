@@ -11,9 +11,9 @@ input(type="imptcp" port="13514" ruleset="remote"
 
 template(name="outfmt" type="string" string="NEWMSG: %rawmsg%\n")
 ruleset(name="remote") {
-	action(type="omfile" file="rsyslog.out.log" template="outfmt")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }
-action(type="omfile" file="rsyslog2.out.log")
+action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG`)
 '
 startup
 . $srcdir/diag.sh tcpflood -B -I ${srcdir}/testsuites/imptcp_framing_regex-oversize.testdata
@@ -36,10 +36,10 @@ END
 NEWMSG: <33>Mar  1 01:00:00 172.20.245.8 tag test3
 NEWMSG: <33>Mar  1 01:00:00 172.20.245.8 tag multi
 line3
-NEWMSG: <33>Mar  1 01:00:00 172.20.245.8 tag test4' | cmp - rsyslog.out.log
+NEWMSG: <33>Mar  1 01:00:00 172.20.245.8 tag test4' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 . $srcdir/diag.sh content-check-regex "assuming end of frame" rsyslog2.out.log

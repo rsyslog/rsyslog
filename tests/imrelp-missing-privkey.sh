@@ -11,7 +11,7 @@ input(
     tls.myCert="nocert"
 )
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 touch nocert # it is not important that this is a real cert, it just must exist!
 startup

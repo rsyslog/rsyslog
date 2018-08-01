@@ -11,7 +11,7 @@ input(type="imptcp" path="testbench_socket" unlink="on" filecreatemode="0600")
 input(type="imptcp" path="testbench_socket2" unlink="on" filecreatemode="0666")
 
 template(name="outfmt" type="string" string="%msg:%\n")
-*.notice	./rsyslog.out.log;outfmt
+*.notice      action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 
@@ -35,7 +35,7 @@ fi
 
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown	# we need to wait until rsyslogd is finished!
-LEN="$(cat "./rsyslog.out.log" | wc -c)"
+LEN="$(cat "${RSYSLOG_OUT_LOG}" | wc -c)"
 if [ "$LEN" -lt "124000" ]; then
   echo "imptcp_uds.sh failed, should have logged at least 124k characters in a single line"
   error_exit

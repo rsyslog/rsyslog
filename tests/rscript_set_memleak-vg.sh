@@ -28,7 +28,7 @@ ruleset(name="rcvr" queue.type="LinkedList") {
 	set $!time_received=$timegenerated;
 	set $!@timestamp=exec_template("ts");
 	action( type="omfile"
-		file="rsyslog.out.log"
+		file=`echo $RSYSLOG_OUT_LOG`
 		template="json"
 	)
 }'

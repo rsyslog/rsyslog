@@ -7,11 +7,11 @@ add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="13514")
 
-template(name="dynafile" type="string" string="rsyslog.out.log")
+template(name="dynafile" type="string" string=`echo $RSYSLOG_OUT_LOG`)
 template(name="outfmt" type="string" string="-%msg%-\n")
 
 :msg, contains, "msgnum:" {
-	action(type="omfile" template="outfmt" file="rsyslog2.out.log" dynafile="dynafile")
+	action(type="omfile" template="outfmt" file=`echo $RSYSLOG2_OUT_LOG` dynafile="dynafile")
 }
 action(type="omfile" file="rsyslog.errorfile") 
 '
@@ -28,10 +28,10 @@ if [ $? -ne 0 ]; then
 	error_exit 1
 fi
 
-echo '- msgnum:1-' | cmp - rsyslog.out.log
+echo '- msgnum:1-' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "unexpected content in rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "unexpected content in  $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

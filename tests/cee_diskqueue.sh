@@ -21,7 +21,7 @@ set $!usr!msg = $msg;
 if $msg contains '
 add_conf "'msgnum' "
 add_conf 'then
-	action(type="omfile" file="./rsyslog.out.log" template="outfmt"
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt"
 	       queue.type="disk" queue.filename="rsyslog-act1")
 '
 startup

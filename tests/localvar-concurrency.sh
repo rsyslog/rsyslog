@@ -21,13 +21,13 @@ template(name="outfmt" type="string" string="%$.tree!here!nbr%\n")
 
 if $msg contains "msgnum:" then {
 	set $.tree!here!nbr = field($msg, 58, 2);
-	action(type="omfile" file="rsyslog2.out.log" template="outfmt"
+	action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG` template="outfmt"
 	       queue.type="linkedList")
 
 	set $.tree!here!save = $.tree!here!nbr;
 	set $.tree!here!nbr = "";
 	set $.tree!here!nbr = $.tree!here!save;
-	action(type="omfile" file="rsyslog.out.log" template="outfmt")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }
 '
 startup

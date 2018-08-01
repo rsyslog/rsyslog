@@ -20,7 +20,7 @@ echo wait on shutdown
 wait_shutdown 
 # now we need our custom logic to see if the result file is empty
 # (what it should be!)
-cmp rsyslog.out.log /dev/null
+cmp $RSYSLOG_OUT_LOG /dev/null
 if [ $? -eq 1 ]
 then
 	echo "ERROR, output file not empty"

@@ -15,5 +15,5 @@ shutdown_when_empty
 echo wait on shutdown
 wait_shutdown
 . $srcdir/diag.sh content-check 'HELLO WORLD'
-cat rsyslog.out.log
+cat $RSYSLOG_OUT_LOG
 exit_test

@@ -13,7 +13,7 @@ add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="13514" ruleset="ruleset")
 ruleset(name="ruleset" parser="rsyslog.rfc5424") {
-	action(type="omfile" file="rsyslog2.out.log")
+	action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG`)
 }
 '
 startup_vg

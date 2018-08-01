@@ -11,7 +11,7 @@ input(type="imfile" freshStartTail="on" Tag="pro"
 
 template(name="outfmt" type="string" string="%msg%\n")
 
-:syslogtag, contains, "pro" action(type="omfile" File="rsyslog.out.log"
+:syslogtag, contains, "pro" action(type="omfile" File=`echo $RSYSLOG_OUT_LOG`
 	template="outfmt")
 '
 startup
@@ -24,10 +24,10 @@ shutdown_when_empty
 wait_shutdown
 
 echo '{ "id": "jinqiao1"}
-{ "id": "jinqiao2"}' | cmp - rsyslog.out.log
+{ "id": "jinqiao2"}' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

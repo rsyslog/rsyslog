@@ -9,7 +9,7 @@ input(type="imtcp" port="13514" ruleset="ruleset1")
 template(name="outfmt" type="string" string="%msg%\n")
 
 ruleset(name="ruleset1") {
-	action(type="omfile" file="rsyslog.out.log"
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`
 	       template="outfmt")
 }
 
@@ -19,10 +19,10 @@ startup
 shutdown_when_empty
 wait_shutdown
 
-echo ' before HT#011after HT (do NOT remove TAB!)' | cmp - rsyslog.out.log
+echo ' before HT#011after HT (do NOT remove TAB!)' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

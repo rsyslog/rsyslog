@@ -120,15 +120,15 @@ while IFS= read -r line; do
         status_expected=true;
     fi
     let "line_num++"
-done < rsyslog.out.log
+done < $RSYSLOG_OUT_LOG
 
 if [[ -z "$error" && "$transaction_state" != "NONE" ]]; then
     error="unexpected end of file (transaction state: $transaction_state)"
 fi
 
 if [[ -n "$error" ]]; then
-    echo "rsyslog.out.log: line $line_num: $error"
-    cat rsyslog.out.log
+    echo "$RSYSLOG_OUT_LOG: line $line_num: $error"
+    cat $RSYSLOG_OUT_LOG
     error_exit 1
 fi
 
@@ -152,8 +152,8 @@ expected_messages=(
 if [[ "${messages_sorted[*]}" != "${expected_messages[*]}" ]]; then
     echo "unexpected set of processed messages:"
     printf '%s\n' "${messages_processed[@]}"
-    echo "contents of rsyslog.out.log:"
-    cat rsyslog.out.log
+    echo "contents of $RSYSLOG_OUT_LOG:"
+    cat $RSYSLOG_OUT_LOG
     error_exit 1
 fi
 

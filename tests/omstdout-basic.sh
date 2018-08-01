@@ -11,16 +11,16 @@ template(name="outfmt" type="string" string="-%msg%-\n")
 action(type="omstdout" template="outfmt")
 
 '
-startup > rsyslog.out.log
+startup > $RSYSLOG_OUT_LOG
 . $srcdir/diag.sh tcpflood -m1
 shutdown_when_empty
 wait_shutdowna
 
-grep "msgnum:00000000:" rsyslog.out.log > /dev/null
+grep "msgnum:00000000:"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
         echo
-        echo "FAIL: expected message not found. rsyslog.out.log is:"
-        cat rsyslog.out.log
+        echo "FAIL: expected message not found.  $RSYSLOG_OUT_LOG is:"
+        cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 

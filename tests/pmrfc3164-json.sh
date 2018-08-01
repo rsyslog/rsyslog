@@ -8,7 +8,7 @@ input(type="imtcp" port="13514" ruleset="rs")
 template(name="outfmt" type="string" string="%msg%---%rawmsg%\n")
 
 ruleset(name="rs") {
-	action(type="omfile" template="outfmt" file="rsyslog.out.log")
+	action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 }
 '
 startup
@@ -20,10 +20,10 @@ wait_shutdown
 EXPECTED='{ "c1":1 }---{ "c1":1 }
    { "c2":2 }---   { "c2":2 }
    [{ "c3":3 }]---   [{ "c3":3 }]'
-echo "$EXPECTED" | cmp - rsyslog.out.log
+echo "$EXPECTED" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   printf "expected was\n"
   echo "$EXPECTED"
   error_exit  1

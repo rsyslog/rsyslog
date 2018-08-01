@@ -20,7 +20,7 @@ $OMFileFlushOnTXEnd on
 $OMFileFlushInterval 10
 $OMFileIOBufferSize 4k
 $OMFileAsyncWriting on
-:msg, contains, "msgnum:" ./rsyslog.out.log;outfmt
+:msg, contains, "msgnum:" action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"

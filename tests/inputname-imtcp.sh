@@ -12,7 +12,7 @@ input(type="imtcp" name="12516" port="12516" ruleset="ruleset1")
 template(name="outfmt" type="string" string="%inputname%\n")
 
 ruleset(name="ruleset1") {
-	action(type="omfile" file="rsyslog.out.log"
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`
 	       template="outfmt")
 }
 
@@ -26,10 +26,10 @@ wait_shutdown
 
 echo '12514
 12515
-12516' | cmp - rsyslog.out.log
+12516' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

@@ -6,19 +6,19 @@ add_conf '
 # env var is missing equal sign and MUST trigger parsing error!
 global(environment="http_proxy ERROR")
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 . $srcdir/diag.sh injectmsg  0 1
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown    # we need to wait until rsyslogd is finished!
 
-grep "http_proxy ERROR" < rsyslog.out.log
+grep "http_proxy ERROR" < $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo 
   echo "MESSAGE INDICATING ERROR ON ENVIRONMENT VARIABLE IS MISSING:"
   echo 
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   error_exit 1
 fi;
 

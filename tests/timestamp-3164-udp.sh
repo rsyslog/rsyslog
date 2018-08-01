@@ -8,7 +8,7 @@ input(type="imudp" port="13514")
 
 template(name="outfmt" type="string" string="%timestamp:::date-rfc3164%\n")
 
-:syslogtag, contains, "TAG" action(type="omfile" file="rsyslog.out.log"
+:syslogtag, contains, "TAG" action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`
 				   template="outfmt")
 
 
@@ -44,10 +44,10 @@ Oct  6 16:57:54
 Nov  6 16:57:54
 Dec  6 16:57:54
 Jan  6 16:57:54
-Jan 16 16:57:54' | cmp - rsyslog.out.log
+Jan 16 16:57:54' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
 

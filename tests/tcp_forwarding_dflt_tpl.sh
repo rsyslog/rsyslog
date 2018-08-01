@@ -19,7 +19,7 @@ module(load="builtin:omfwd" template="outfmt")
 if $msg contains "msgnum:" then
 	action(type="omfwd" target="127.0.0.1" port="13514" protocol="tcp")
 '
-./minitcpsrv -t127.0.0.1 -p13514 -frsyslog.out.log &
+./minitcpsrv -t127.0.0.1 -p13514 -f $RSYSLOG_OUT_LOG &
 BGPROCESS=$!
 echo background minitcpsrv process id is $BGPROCESS
 
