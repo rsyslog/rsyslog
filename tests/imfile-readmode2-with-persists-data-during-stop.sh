@@ -4,7 +4,30 @@ echo ======================================================================
 echo [imfile-readmode2-with-persists-data-during-stop.sh]
 . $srcdir/diag.sh check-inotify
 . $srcdir/diag.sh init
-startup imfile-readmode2-with-persists-data-during-stop.conf
+generate_conf
+add_conf '
+global(workDirectory="test-spool")
+module(load="../plugins/imfile/.libs/imfile")
+
+input(type="imfile"
+      File="./rsyslog.input"
+      Tag="file:"
+      ReadMode="2")
+
+template(name="outfmt" type="list") {
+  constant(value="HEADER ")
+  property(name="msg" format="json")
+  constant(value="\n")
+}
+
+if $msg contains "msgnum:" then
+ action(
+   type="omfile"
+   file="rsyslog.out.log"
+   template="outfmt"
+ )
+'
+startup
 
 # write the beginning of the file
 echo 'msgnum:0
@@ -31,7 +54,32 @@ echo 'msgnum:3
  msgnum:4' >> rsyslog.input
 
 echo restarting rsyslog
-startup imfile-readmode2-with-persists.conf
+
+generate_conf
+add_conf '
+global(workDirectory="test-spool")
+module(load="../plugins/imfile/.libs/imfile")
+
+input(type="imfile"
+      File="./rsyslog.input"
+      Tag="file:"
+      ReadMode="2")
+
+template(name="outfmt" type="list") {
+  constant(value="HEADER ")
+  property(name="msg" format="json")
+  constant(value="\n")
+}
+
+if $msg contains "msgnum:" then
+ action(
+   type="omfile"
+   file="rsyslog.out.log"
+   template="outfmt"
+ )
+'
+
+startup
 echo restarted rsyslog, continuing with test
 
 echo ' msgnum:5' >> rsyslog.input
