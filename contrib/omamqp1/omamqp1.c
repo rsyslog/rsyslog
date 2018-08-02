@@ -136,20 +136,20 @@ static void _init_config_settings(configSettings_t *pConfig);
 static void _clean_config_settings(configSettings_t *pConfig);
 static rsRetVal _shutdown_thread(instanceData *pData);
 static rsRetVal _new_handler(pn_handler_t **handler,
-                             pn_reactor_t *reactor,
-                             dispatch_t *dispatcher,
-                             configSettings_t *config,
-                             threadIPC_t *ipc);
+	                         pn_reactor_t *reactor,
+	                         dispatch_t *dispatcher,
+	                         configSettings_t *config,
+	                         threadIPC_t *ipc);
 static void _del_handler(pn_handler_t *handler);
 static rsRetVal _launch_protocol_thread(instanceData *pData);
 static rsRetVal _shutdown_thread(instanceData *pData);
 static rsRetVal _issue_command(threadIPC_t *ipc,
-                               pn_reactor_t *reactor,
-                               commands_t command,
-                               pn_message_t *message);
+	                           pn_reactor_t *reactor,
+	                           commands_t command,
+	                           pn_message_t *message);
 static void dispatcher(pn_handler_t *handler,
-                       pn_event_t *event,
-                       pn_event_type_t type);
+	                   pn_event_t *event,
+	                   pn_event_type_t type);
 
 
 /* tables for interfacing with the v6 config system */
@@ -501,8 +501,8 @@ finalize_it:
  */
 static void _del_handler(pn_handler_t *handler)
 {
-    protocolState_t *pState = PROTOCOL_STATE(handler);
-    if (pState->encode_buffer) free(pState->encode_buffer);
+	protocolState_t *pState = PROTOCOL_STATE(handler);
+	if (pState->encode_buffer) free(pState->encode_buffer);
 }
 
 
@@ -510,285 +510,285 @@ static void _del_handler(pn_handler_t *handler)
 static void _close_connection(protocolState_t *ps)
 {
   if (ps->sender) {
-      pn_link_close(ps->sender);
-      pn_session_close(pn_link_session(ps->sender));
+	  pn_link_close(ps->sender);
+	  pn_session_close(pn_link_session(ps->sender));
   }
   if (ps->conn) pn_connection_close(ps->conn);
 }
 
 static void _abort_command(protocolState_t *ps)
 {
-    threadIPC_t *ipc = ps->ipc;
+	threadIPC_t *ipc = ps->ipc;
 
-    pthread_mutex_lock(&ipc->lock);
-    switch (ipc->command) {
-    case COMMAND_SEND:
-      dbgprintf("omamqp1: aborted the message send in progress\n");
-      CASE_FALLTHROUGH
-    case COMMAND_IS_READY:
-      ipc->result = RS_RET_SUSPENDED;
-      ipc->command = COMMAND_DONE;
-      pthread_cond_signal(&ipc->condition);
-      break;
-    case COMMAND_SHUTDOWN: // cannot be aborted
-    case COMMAND_DONE:
-      break;
-    }
-    pthread_mutex_unlock(&ipc->lock);
+	pthread_mutex_lock(&ipc->lock);
+	switch (ipc->command) {
+	case COMMAND_SEND:
+	  dbgprintf("omamqp1: aborted the message send in progress\n");
+	  CASE_FALLTHROUGH
+	case COMMAND_IS_READY:
+	  ipc->result = RS_RET_SUSPENDED;
+	  ipc->command = COMMAND_DONE;
+	  pthread_cond_signal(&ipc->condition);
+	  break;
+	case COMMAND_SHUTDOWN: // cannot be aborted
+	case COMMAND_DONE:
+	  break;
+	}
+	pthread_mutex_unlock(&ipc->lock);
 }
 
 
 // log a protocol error received from the message bus
 static void _log_error(const char *message, pn_condition_t *cond)
 {
-    const char *name = pn_condition_get_name(cond);
-    const char *desc = pn_condition_get_description(cond);
-    dbgprintf("omamqp1: %s %s:%s\n",
-              message,
-              (name) ? name : "<no name>",
-              (desc) ? desc : "<no description>");
+	const char *name = pn_condition_get_name(cond);
+	const char *desc = pn_condition_get_description(cond);
+	dbgprintf("omamqp1: %s %s:%s\n",
+	          message,
+	          (name) ? name : "<no name>",
+	          (desc) ? desc : "<no description>");
 }
 
 
 /* is the link ready to send messages? */
 static sbool _is_ready(pn_link_t *link)
 {
-    return (link
-            && pn_link_state(link) == (PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE)
-            && pn_link_credit(link) > 0);
+	return (link
+	        && pn_link_state(link) == (PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE)
+	        && pn_link_credit(link) > 0);
 }
 
 
 /* Process each event emitted by the protocol engine */
 static void dispatcher(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type)
 {
-    protocolState_t *ps = PROTOCOL_STATE(handler);
-    const configSettings_t *cfg = ps->config;
+	protocolState_t *ps = PROTOCOL_STATE(handler);
+	const configSettings_t *cfg = ps->config;
 
-    //DBGPRINTF("omamqp1: Event received: %s\n", pn_event_type_name(type));
+	//DBGPRINTF("omamqp1: Event received: %s\n", pn_event_type_name(type));
 
-    switch (type) {
+	switch (type) {
 
-    case PN_LINK_REMOTE_OPEN:
-        DBGPRINTF("omamqp1: Message bus opened link.\n");
-        break;
+	case PN_LINK_REMOTE_OPEN:
+	    DBGPRINTF("omamqp1: Message bus opened link.\n");
+	    break;
 
-    case PN_DELIVERY:
-        // has the message been delivered to the message bus?
-        if (ps->delivery) {
-            assert(ps->delivery == pn_event_delivery(event));
-            if (pn_delivery_updated(ps->delivery)) {
-                rsRetVal result = RS_RET_IDLE;
-                uint64_t rs = pn_delivery_remote_state(ps->delivery);
-                switch (rs) {
-                case PN_ACCEPTED:
-                    DBGPRINTF("omamqp1: Message ACCEPTED by message bus\n");
-                    result = RS_RET_OK;
-                    break;
-                case PN_REJECTED:
-                  dbgprintf("omamqp1: message bus rejected log message: invalid message - dropping\n");
-                    // message bus considers this a 'bad message'. Cannot be redelivered.
-                    // Likely a configuration error. Drop the message by returning OK
-                    result = RS_RET_OK;
-                    break;
-                case PN_RELEASED:
-                case PN_MODIFIED:
+	case PN_DELIVERY:
+	    // has the message been delivered to the message bus?
+	    if (ps->delivery) {
+	        assert(ps->delivery == pn_event_delivery(event));
+	        if (pn_delivery_updated(ps->delivery)) {
+	            rsRetVal result = RS_RET_IDLE;
+	            uint64_t rs = pn_delivery_remote_state(ps->delivery);
+	            switch (rs) {
+	            case PN_ACCEPTED:
+	                DBGPRINTF("omamqp1: Message ACCEPTED by message bus\n");
+	                result = RS_RET_OK;
+	                break;
+	            case PN_REJECTED:
+	              dbgprintf("omamqp1: message bus rejected log message: invalid message - dropping\n");
+	                // message bus considers this a 'bad message'. Cannot be redelivered.
+	                // Likely a configuration error. Drop the message by returning OK
+	                result = RS_RET_OK;
+	                break;
+	            case PN_RELEASED:
+	            case PN_MODIFIED:
 		// the message bus cannot accept the message.  This may be temporary - retry
 		// up to maxRetries before dropping
-                    if (++ps->retries >= cfg->maxRetries) {
-                      dbgprintf("omamqp1: message bus failed to accept message - dropping\n");
-                      result = RS_RET_OK;
-                    } else {
-                      dbgprintf("omamqp1: message bus cannot accept message, retrying\n");
-                      result = RS_RET_SUSPENDED;
-                    }
-                    break;
-                case PN_RECEIVED:
-                    // not finished yet, wait for next delivery update
-                    break;
-                default:
-                    // no other terminal states defined, so ignore anything else
-                    dbgprintf("omamqp1: unknown delivery state=0x%lX, assuming message accepted\n",
-                              (unsigned long) pn_delivery_remote_state(ps->delivery));
-                    result = RS_RET_OK;
-                    break;
-                }
+	                if (++ps->retries >= cfg->maxRetries) {
+	                  dbgprintf("omamqp1: message bus failed to accept message - dropping\n");
+	                  result = RS_RET_OK;
+	                } else {
+	                  dbgprintf("omamqp1: message bus cannot accept message, retrying\n");
+	                  result = RS_RET_SUSPENDED;
+	                }
+	                break;
+	            case PN_RECEIVED:
+	                // not finished yet, wait for next delivery update
+	                break;
+	            default:
+	                // no other terminal states defined, so ignore anything else
+	                dbgprintf("omamqp1: unknown delivery state=0x%lX, assuming message accepted\n",
+	                          (unsigned long) pn_delivery_remote_state(ps->delivery));
+	                result = RS_RET_OK;
+	                break;
+	            }
 
-                if (result != RS_RET_IDLE) {
-                    // the command is complete
-                    threadIPC_t *ipc = ps->ipc;
-                    pthread_mutex_lock(&ipc->lock);
-                    assert(ipc->command == COMMAND_SEND);
-                    ipc->result = result;
-                    ipc->command = COMMAND_DONE;
-                    pthread_cond_signal(&ipc->condition);
-                    pthread_mutex_unlock(&ipc->lock);
-                    pn_delivery_settle(ps->delivery);
-                    ps->delivery = NULL;
-                    if (result == RS_RET_OK) {
-                      ps->retries = 0;
-                    }
-                }
-            }
-        }
-        break;
+	            if (result != RS_RET_IDLE) {
+	                // the command is complete
+	                threadIPC_t *ipc = ps->ipc;
+	                pthread_mutex_lock(&ipc->lock);
+	                assert(ipc->command == COMMAND_SEND);
+	                ipc->result = result;
+	                ipc->command = COMMAND_DONE;
+	                pthread_cond_signal(&ipc->condition);
+	                pthread_mutex_unlock(&ipc->lock);
+	                pn_delivery_settle(ps->delivery);
+	                ps->delivery = NULL;
+	                if (result == RS_RET_OK) {
+	                  ps->retries = 0;
+	                }
+	            }
+	        }
+	    }
+	    break;
 
 
-    case PN_CONNECTION_BOUND:
-        if (!cfg->bDisableSASL) {
-            // force use of SASL, even allowing PLAIN authentication
-            pn_sasl_t *sasl = pn_sasl(pn_event_transport(event));
+	case PN_CONNECTION_BOUND:
+	    if (!cfg->bDisableSASL) {
+	        // force use of SASL, even allowing PLAIN authentication
+	        pn_sasl_t *sasl = pn_sasl(pn_event_transport(event));
 #if PN_VERSION_MAJOR == 0 && PN_VERSION_MINOR >= 10
-            pn_sasl_set_allow_insecure_mechs(sasl, true);
+	        pn_sasl_set_allow_insecure_mechs(sasl, true);
 #else
-            // proton version <= 0.9 only supports PLAIN authentication
-            const char *user = cfg->username
-                ? (char *)cfg->username
-                : pn_url_get_username(cfg->url);
-            if (user) {
-                pn_sasl_plain(sasl, user, (cfg->password
-                                           ? (char *) cfg->password
-                                           : pn_url_get_password(cfg->url)));
-            }
+	        // proton version <= 0.9 only supports PLAIN authentication
+	        const char *user = cfg->username
+	            ? (char *)cfg->username
+	            : pn_url_get_username(cfg->url);
+	        if (user) {
+	            pn_sasl_plain(sasl, user, (cfg->password
+	                                       ? (char *) cfg->password
+	                                       : pn_url_get_password(cfg->url)));
+	        }
 #endif
-        }
-        if (cfg->idleTimeout) {
-            // configured as seconds, set as milliseconds
-            pn_transport_set_idle_timeout(pn_event_transport(event),
-                                          cfg->idleTimeout * 1000);
-        }
-        break;
+	    }
+	    if (cfg->idleTimeout) {
+	        // configured as seconds, set as milliseconds
+	        pn_transport_set_idle_timeout(pn_event_transport(event),
+	                                      cfg->idleTimeout * 1000);
+	    }
+	    break;
 
-    case PN_CONNECTION_UNBOUND:
-        DBGPRINTF("omamqp1: cleaning up connection resources\n");
-        pn_connection_release(pn_event_connection(event));
-        ps->conn = NULL;
-        ps->sender = NULL;
-        ps->delivery = NULL;
-        break;
+	case PN_CONNECTION_UNBOUND:
+	    DBGPRINTF("omamqp1: cleaning up connection resources\n");
+	    pn_connection_release(pn_event_connection(event));
+	    ps->conn = NULL;
+	    ps->sender = NULL;
+	    ps->delivery = NULL;
+	    break;
 
 
-    case PN_TRANSPORT_ERROR:
-        {
-            // TODO: if auth failure, does it make sense to retry???
-            pn_transport_t *tport = pn_event_transport(event);
-            pn_condition_t *cond = pn_transport_condition(tport);
-            if (pn_condition_is_set(cond)) {
-                _log_error("transport failure", cond);
-            }
-            dbgprintf("omamqp1: network transport failed, reconnecting...\n");
-            // the protocol thread will attempt to reconnect if it is not
-            // being shut down
-        }
-        break;
+	case PN_TRANSPORT_ERROR:
+	    {
+	        // TODO: if auth failure, does it make sense to retry???
+	        pn_transport_t *tport = pn_event_transport(event);
+	        pn_condition_t *cond = pn_transport_condition(tport);
+	        if (pn_condition_is_set(cond)) {
+	            _log_error("transport failure", cond);
+	        }
+	        dbgprintf("omamqp1: network transport failed, reconnecting...\n");
+	        // the protocol thread will attempt to reconnect if it is not
+	        // being shut down
+	    }
+	    break;
 
-    default:
-        break;
-    }
+	default:
+	    break;
+	}
 }
 
 
 // Send a command to the protocol thread and
 // wait for the command to complete
 static rsRetVal _issue_command(threadIPC_t *ipc,
-                               pn_reactor_t *reactor,
-                               commands_t command,
-                               pn_message_t *message)
+	                           pn_reactor_t *reactor,
+	                           commands_t command,
+	                           pn_message_t *message)
 {
-    DEFiRet;
+	DEFiRet;
 
-    DBGPRINTF("omamqp1: Sending command %d to protocol thread\n", command);
+	DBGPRINTF("omamqp1: Sending command %d to protocol thread\n", command);
 
-    pthread_mutex_lock(&ipc->lock);
+	pthread_mutex_lock(&ipc->lock);
 
-    if (message) {
-        assert(ipc->message == NULL);
-        ipc->message = message;
-    }
-    assert(ipc->command == COMMAND_DONE);
-    ipc->command = command;
-    pn_reactor_wakeup(reactor);
-    while (ipc->command != COMMAND_DONE) {
-        pthread_cond_wait(&ipc->condition, &ipc->lock);
-    }
-    iRet = ipc->result;
-    if (ipc->message) {
-        pn_decref(ipc->message);
-        ipc->message = NULL;
-    }
+	if (message) {
+	    assert(ipc->message == NULL);
+	    ipc->message = message;
+	}
+	assert(ipc->command == COMMAND_DONE);
+	ipc->command = command;
+	pn_reactor_wakeup(reactor);
+	while (ipc->command != COMMAND_DONE) {
+	    pthread_cond_wait(&ipc->condition, &ipc->lock);
+	}
+	iRet = ipc->result;
+	if (ipc->message) {
+	    pn_decref(ipc->message);
+	    ipc->message = NULL;
+	}
 
-    pthread_mutex_unlock(&ipc->lock);
+	pthread_mutex_unlock(&ipc->lock);
 
-    DBGPRINTF("omamqp1: Command %d completed, status=%d\n", command, iRet);
-    RETiRet;
+	DBGPRINTF("omamqp1: Command %d completed, status=%d\n", command, iRet);
+	RETiRet;
 }
 
 
 // check if a command needs processing
 static void _poll_command(protocolState_t *ps)
 {
-    if (ps->stopped) return;
+	if (ps->stopped) return;
 
-    threadIPC_t *ipc = ps->ipc;
+	threadIPC_t *ipc = ps->ipc;
 
-    pthread_mutex_lock(&ipc->lock);
+	pthread_mutex_lock(&ipc->lock);
 
-    switch (ipc->command) {
+	switch (ipc->command) {
 
-    case COMMAND_SHUTDOWN:
-        DBGPRINTF("omamqp1: Protocol thread processing shutdown command\n");
-        ps->stopped = true;
-        _close_connection(ps);
-        // wait for the shutdown to complete before ack'ing this command
-        break;
+	case COMMAND_SHUTDOWN:
+	    DBGPRINTF("omamqp1: Protocol thread processing shutdown command\n");
+	    ps->stopped = true;
+	    _close_connection(ps);
+	    // wait for the shutdown to complete before ack'ing this command
+	    break;
 
-    case COMMAND_IS_READY:
-        DBGPRINTF("omamqp1: Protocol thread processing ready query command\n");
-        ipc->result = _is_ready(ps->sender)
-                      ? RS_RET_OK
-                      : RS_RET_SUSPENDED;
-        ipc->command = COMMAND_DONE;
-        pthread_cond_signal(&ipc->condition);
-        break;
+	case COMMAND_IS_READY:
+	    DBGPRINTF("omamqp1: Protocol thread processing ready query command\n");
+	    ipc->result = _is_ready(ps->sender)
+	                  ? RS_RET_OK
+	                  : RS_RET_SUSPENDED;
+	    ipc->command = COMMAND_DONE;
+	    pthread_cond_signal(&ipc->condition);
+	    break;
 
-    case COMMAND_SEND:
-        if (ps->delivery) break;  // currently processing this command
-        DBGPRINTF("omamqp1: Protocol thread processing send message command\n");
-        if (!_is_ready(ps->sender)) {
-            ipc->result = RS_RET_SUSPENDED;
-            ipc->command = COMMAND_DONE;
-            pthread_cond_signal(&ipc->condition);
-            break;
-        }
+	case COMMAND_SEND:
+	    if (ps->delivery) break;  // currently processing this command
+	    DBGPRINTF("omamqp1: Protocol thread processing send message command\n");
+	    if (!_is_ready(ps->sender)) {
+	        ipc->result = RS_RET_SUSPENDED;
+	        ipc->command = COMMAND_DONE;
+	        pthread_cond_signal(&ipc->condition);
+	        break;
+	    }
 
-        // send the message
-        ++ps->tag;
-        ps->delivery = pn_delivery(ps->sender,
-                                   pn_dtag((const char *)&ps->tag, sizeof(ps->tag)));
-        pn_message_t *message = ipc->message;
-        assert(message);
+	    // send the message
+	    ++ps->tag;
+	    ps->delivery = pn_delivery(ps->sender,
+	                               pn_dtag((const char *)&ps->tag, sizeof(ps->tag)));
+	    pn_message_t *message = ipc->message;
+	    assert(message);
 
-        int rc = 0;
-        size_t len = ps->buffer_size;
-        do {
-            rc = pn_message_encode(message, ps->encode_buffer, &len);
-            if (rc == PN_OVERFLOW) {
-                _grow_buffer(ps);
-                len = ps->buffer_size;
-            }
-        } while (rc == PN_OVERFLOW);
+	    int rc = 0;
+	    size_t len = ps->buffer_size;
+	    do {
+	        rc = pn_message_encode(message, ps->encode_buffer, &len);
+	        if (rc == PN_OVERFLOW) {
+	            _grow_buffer(ps);
+	            len = ps->buffer_size;
+	        }
+	    } while (rc == PN_OVERFLOW);
 
-        pn_link_send(ps->sender, ps->encode_buffer, len);
-        pn_link_advance(ps->sender);
-        ++ps->msgs_sent;
-        // command completes when remote updates the delivery (see PN_DELIVERY)
-        break;
+	    pn_link_send(ps->sender, ps->encode_buffer, len);
+	    pn_link_advance(ps->sender);
+	    ++ps->msgs_sent;
+	    // command completes when remote updates the delivery (see PN_DELIVERY)
+	    break;
 
-    case COMMAND_DONE:
-        break;
-    }
+	case COMMAND_DONE:
+	    break;
+	}
 
-    pthread_mutex_unlock(&ipc->lock);
+	pthread_mutex_unlock(&ipc->lock);
 }
 
 /* runs the protocol engine, allowing it to handle TCP socket I/O and timer
@@ -796,125 +796,125 @@ static void _poll_command(protocolState_t *ps)
 */
 static void *amqp1_thread(void *arg)
 {
-    DBGPRINTF("omamqp1: Protocol thread started\n");
+	DBGPRINTF("omamqp1: Protocol thread started\n");
 
-    pn_handler_t *handler = (pn_handler_t *)arg;
-    protocolState_t *ps = PROTOCOL_STATE(handler);
-    const configSettings_t *cfg = ps->config;
+	pn_handler_t *handler = (pn_handler_t *)arg;
+	protocolState_t *ps = PROTOCOL_STATE(handler);
+	const configSettings_t *cfg = ps->config;
 
-    // have pn_reactor_process() exit after 5 sec to poll for commands
-    pn_reactor_set_timeout(ps->reactor, 5000);
-    pn_reactor_start(ps->reactor);
+	// have pn_reactor_process() exit after 5 sec to poll for commands
+	pn_reactor_set_timeout(ps->reactor, 5000);
+	pn_reactor_start(ps->reactor);
 
-    while (!ps->stopped) {
-        // setup a connection:
-        const char *host = pn_url_get_host(cfg->url);
-        const char *port = pn_url_get_port(cfg->url);
-        if (!port) port = "5672";
+	while (!ps->stopped) {
+	    // setup a connection:
+	    const char *host = pn_url_get_host(cfg->url);
+	    const char *port = pn_url_get_port(cfg->url);
+	    if (!port) port = "5672";
 
 #if PN_VERSION_MAJOR == 0 && PN_VERSION_MINOR >= 13
-        ps->conn = pn_reactor_connection_to_host(ps->reactor,
-                                                 host,
-                                                 port,
-                                                 handler);
-        pn_connection_set_hostname(ps->conn, host);
+	    ps->conn = pn_reactor_connection_to_host(ps->reactor,
+	                                             host,
+	                                             port,
+	                                             handler);
+	    pn_connection_set_hostname(ps->conn, host);
 #else
-        {
-            char host_addr[300];
-            ps->conn = pn_reactor_connection(ps->reactor, handler);
-            snprintf(host_addr, sizeof(host_addr), "%s:%s", host, port);
-            pn_connection_set_hostname(ps->conn, host_addr);
-        }
+	    {
+	        char host_addr[300];
+	        ps->conn = pn_reactor_connection(ps->reactor, handler);
+	        snprintf(host_addr, sizeof(host_addr), "%s:%s", host, port);
+	        pn_connection_set_hostname(ps->conn, host_addr);
+	    }
 #endif
-        pn_connection_set_container(ps->conn, "rsyslogd-omamqp1");
+	    pn_connection_set_container(ps->conn, "rsyslogd-omamqp1");
 
 #if PN_VERSION_MAJOR == 0 && PN_VERSION_MINOR >= 10
-        // proton version <= 0.9 did not support Cyrus SASL
-        const char *user = cfg->username
-            ? (char *)cfg->username
-            : pn_url_get_username(cfg->url);
-        if (user)
-            pn_connection_set_user(ps->conn, user);
+	    // proton version <= 0.9 did not support Cyrus SASL
+	    const char *user = cfg->username
+	        ? (char *)cfg->username
+	        : pn_url_get_username(cfg->url);
+	    if (user)
+	        pn_connection_set_user(ps->conn, user);
 
-        const char *pword = cfg->password
-            ? (char *) cfg->password
-            : pn_url_get_password(cfg->url);
-        if (pword)
-            pn_connection_set_password(ps->conn, pword);
+	    const char *pword = cfg->password
+	        ? (char *) cfg->password
+	        : pn_url_get_password(cfg->url);
+	    if (pword)
+	        pn_connection_set_password(ps->conn, pword);
 #endif
-        pn_connection_open(ps->conn);
-        pn_session_t *ssn = pn_session(ps->conn);
-        pn_session_open(ssn);
-        ps->sender = pn_sender(ssn, (char *)cfg->target);
-        pn_link_set_snd_settle_mode(ps->sender, PN_SND_UNSETTLED);
-        char *addr = (char *)ps->config->target;
-        pn_terminus_set_address(pn_link_target(ps->sender), addr);
-        pn_terminus_set_address(pn_link_source(ps->sender), addr);
-        pn_link_open(ps->sender);
+	    pn_connection_open(ps->conn);
+	    pn_session_t *ssn = pn_session(ps->conn);
+	    pn_session_open(ssn);
+	    ps->sender = pn_sender(ssn, (char *)cfg->target);
+	    pn_link_set_snd_settle_mode(ps->sender, PN_SND_UNSETTLED);
+	    char *addr = (char *)ps->config->target;
+	    pn_terminus_set_address(pn_link_target(ps->sender), addr);
+	    pn_terminus_set_address(pn_link_source(ps->sender), addr);
+	    pn_link_open(ps->sender);
 
-        // run the protocol engine until the connection closes or thread is shut down
-        sbool engine_running = true;
-        while (engine_running) {
-            engine_running = pn_reactor_process(ps->reactor);
-            _poll_command(ps);
-        }
+	    // run the protocol engine until the connection closes or thread is shut down
+	    sbool engine_running = true;
+	    while (engine_running) {
+	        engine_running = pn_reactor_process(ps->reactor);
+	        _poll_command(ps);
+	    }
 
-        DBGPRINTF("omamqp1: reactor finished\n");
+	    DBGPRINTF("omamqp1: reactor finished\n");
 
-        _abort_command(ps);   // unblock main thread if necessary
+	    _abort_command(ps);   // unblock main thread if necessary
 
-        // delay reconnectDelay seconds before re-connecting:
-        int delay = ps->config->reconnectDelay;
-        while (delay-- > 0 && !ps->stopped) {
-            srSleep(1, 0);
-            _poll_command(ps);
-        }
-    }
-    pn_reactor_stop(ps->reactor);
+	    // delay reconnectDelay seconds before re-connecting:
+	    int delay = ps->config->reconnectDelay;
+	    while (delay-- > 0 && !ps->stopped) {
+	        srSleep(1, 0);
+	        _poll_command(ps);
+	    }
+	}
+	pn_reactor_stop(ps->reactor);
 
-    // stop command is now done:
-    threadIPC_t *ipc = ps->ipc;
-    pthread_mutex_lock(&ipc->lock);
-    ipc->result = RS_RET_OK;
-    ipc->command = COMMAND_DONE;
-    pthread_cond_signal(&ipc->condition);
-    pthread_mutex_unlock(&ipc->lock);
+	// stop command is now done:
+	threadIPC_t *ipc = ps->ipc;
+	pthread_mutex_lock(&ipc->lock);
+	ipc->result = RS_RET_OK;
+	ipc->command = COMMAND_DONE;
+	pthread_cond_signal(&ipc->condition);
+	pthread_mutex_unlock(&ipc->lock);
 
-    DBGPRINTF("omamqp1: Protocol thread stopped\n");
+	DBGPRINTF("omamqp1: Protocol thread stopped\n");
 
-    return 0;
+	return 0;
 }
 
 
 static rsRetVal _launch_protocol_thread(instanceData *pData)
 {
-    int rc;
-    DBGPRINTF("omamqp1: Starting protocol thread\n");
-    do {
-        rc = pthread_create(&pData->thread_id, NULL, amqp1_thread, pData->handler);
-        if (!rc) {
-            pData->bThreadRunning = true;
-            return RS_RET_OK;
-        }
-    } while (rc == EAGAIN);
-    LogError(0, RS_RET_SYS_ERR, "omamqp1: thread create failed: %d", rc);
-    return RS_RET_SYS_ERR;
+	int rc;
+	DBGPRINTF("omamqp1: Starting protocol thread\n");
+	do {
+	    rc = pthread_create(&pData->thread_id, NULL, amqp1_thread, pData->handler);
+	    if (!rc) {
+	        pData->bThreadRunning = true;
+	        return RS_RET_OK;
+	    }
+	} while (rc == EAGAIN);
+	LogError(0, RS_RET_SYS_ERR, "omamqp1: thread create failed: %d", rc);
+	return RS_RET_SYS_ERR;
 }
 
 static rsRetVal _shutdown_thread(instanceData *pData)
 {
-    DEFiRet;
+	DEFiRet;
 
-    if (pData->bThreadRunning) {
-        DBGPRINTF("omamqp1: shutting down thread...\n");
-        CHKiRet(_issue_command(&pData->ipc, pData->reactor, COMMAND_SHUTDOWN, NULL));
-        pthread_join(pData->thread_id, NULL);
-        pData->bThreadRunning = false;
-        DBGPRINTF("omamqp1: thread shutdown complete\n");
-    }
+	if (pData->bThreadRunning) {
+	    DBGPRINTF("omamqp1: shutting down thread...\n");
+	    CHKiRet(_issue_command(&pData->ipc, pData->reactor, COMMAND_SHUTDOWN, NULL));
+	    pthread_join(pData->thread_id, NULL);
+	    pData->bThreadRunning = false;
+	    DBGPRINTF("omamqp1: thread shutdown complete\n");
+	}
 
  finalize_it:
-    RETiRet;
+	RETiRet;
 }
 
 
