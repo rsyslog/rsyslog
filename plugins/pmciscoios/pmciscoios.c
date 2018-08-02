@@ -219,19 +219,19 @@ CODESTARTparse2
 	}
 	/* Note: date parser strips ": ", so we cannot do the delimiter check here */
 
-        /* XR RSP (optional) */
-        if(pInst->bXrPresent) {
-                while(   lenMsg > 1
-                      && !(*p2parse == '%')) {
-                        --lenMsg;
-                        p2parse++;
-                }
-                /* delimiter check */
-                if(lenMsg < 2) {
-                        DBGPRINTF("pmciscoios: fail after XR tag search: '%s'\n", p2parse);
-                        ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
-                }
-        }
+	/* XR RSP (optional) */
+	if(pInst->bXrPresent) {
+		while(   lenMsg > 1
+			&& !(*p2parse == '%')) {
+			--lenMsg;
+			p2parse++;
+		}
+		/* delimiter check */
+		if(lenMsg < 2) {
+			DBGPRINTF("pmciscoios: fail after XR tag search: '%s'\n", p2parse);
+			ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+		}
+	}
 
 	/* parse SYSLOG TAG. must always start with '%', else we have a field mismatch */
 	if(lenMsg < 1 || *p2parse != '%') {

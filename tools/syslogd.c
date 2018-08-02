@@ -147,7 +147,7 @@ char **syslogd_crunch_list(char *list)
 	}
 	/* cut off leading delimiters */
 	while (p[0] == LIST_DELIMITER) {
-               p++;
+		p++;
 	}
 
 	/* count delimiters to calculate elements */

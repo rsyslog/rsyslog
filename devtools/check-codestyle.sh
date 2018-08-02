@@ -19,6 +19,9 @@ rsyslog_stylecheck -l 120 compat/ifaddrs.h \
 	tests/inputfilegen.c \
 	tests/msleep.c \
 	tests/testconfgen.c \
+	tests/testbench.h \
+	tests/uxsockrcvr.c \
+	tests/tcpflood.c \
 	plugins/imfile/imfile.c \
 	plugins/imrelp/imrelp.c \
 	plugins/omrelp/omrelp.c \
@@ -72,6 +75,11 @@ rsyslog_stylecheck -l 120 compat/ifaddrs.h \
 	plugins/mmanon/mmanon.c \
 	plugins/mmdblookup/mmdblookup.c \
 	plugins/omudpspoof/omudpspoof.c \
+	plugins/omsnmp/omsnmp.c \
+	plugins/imuxsock/imuxsock.c \
+	plugins/pmciscoios/pmciscoios.c \
+	plugins/imgssapi/imgssapi.c \
+	plugins/ommongodb/ommongodb.c \
 	grammar/testdriver.c \
 	runtime/netstrms.h \
 	runtime/lib_ksi_queue.h \
@@ -149,6 +157,30 @@ rsyslog_stylecheck -l 120 compat/ifaddrs.h \
 	runtime/tcpsrv.h \
 	runtime/janitor.c \
 	runtime/linkedlist.c \
+	runtime/tcpsrv.c \
+	runtime/gss-misc.c \
+	runtime/obj.c \
+	runtime/hashtable/hashtable_utility.c \
+	runtime/conf.c \
+	runtime/hashtable_itr.h \
+	runtime/debug.c \
+	runtime/parser.h \
+	runtime/strmsrv.c \
+	runtime/queue.c \
+	runtime/lib_ksi_queue.c \
+	runtime/typedefs.h \
+	runtime/tcpclt.c \
+	runtime/statsobj.c \
+	runtime/dnscache.c \
+	runtime/unlimited_select.h \
+	runtime/srutils.c \
+	runtime/nsd_ptcp.c \
+	runtime/net.c \
+	runtime/msg.c \
+	runtime/hashtable_itr.c \
+	runtime/librsksi_read.c \
+	runtime/hashtable/tester.c \
+	runtime/hashtable.c \
 	contrib/mmkubernetes/mmkubernetes.c \
 	contrib/mmrfc5424addhmac/mmrfc5424addhmac.c \
 	contrib/mmcount/mmcount.c \
@@ -166,5 +198,24 @@ rsyslog_stylecheck -l 120 compat/ifaddrs.h \
 	contrib/omhiredis/omhiredis.c \
 	contrib/omczmq/omczmq.c \
 	contrib/omrabbitmq/omrabbitmq.c \
+	compat/getifaddrs.c \
+	grammar/rainerscript.h \
+	grammar/rainerscript.c \
+	tools/omfile.c \
+	tools/rsyslogd.c \
+	tools/syncdemo.c \
+	tools/syslogd.c \
+	tools/logctl.c \
+	tools/omfwd.c \
+	tools/pmrfc3164.c \
+	tools/rscryutil.c \
+	tools/pmrfc5424.c \
+	tools/ompipe.c \
+	parse.c \
 	parse.h \
-	action.h
+	action.h \
+	template.h \
+	threads.c \
+	outchannel.c \
+	action.c \
+	template.c

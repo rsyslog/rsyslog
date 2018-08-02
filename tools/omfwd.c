@@ -1330,7 +1330,7 @@ BEGINparseSelectorAct
 	uchar *q;
 	int i;
 	rsRetVal localRet;
-        struct addrinfo;
+	struct addrinfo;
 	TCPFRAMINGMODE tcp_framing = TCP_FRAMING_OCTET_STUFFING;
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)

@@ -408,7 +408,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
 	DBGPRINTF("rfc3164 parser init called\n");
- 	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG();
+	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG();
 	/* cache value, is set only during rsyslogd option processing */
 
 

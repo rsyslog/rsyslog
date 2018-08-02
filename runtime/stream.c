@@ -862,7 +862,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
 				if(pThis->bPrevWasNL) {
 					if ((c == ' ') || (c == '\t')){
 						CHKiRet(cstrAppendChar(*ppCStr, c));
-               					CHKiRet(strmReadChar(pThis, &c));
+						CHKiRet(strmReadChar(pThis, &c));
 						pThis->bPrevWasNL = 0;
 					} else {
 						/* clean things up by putting the character we just read back into
@@ -885,7 +885,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
 					} else {
 						CHKiRet(cstrAppendChar(*ppCStr, c));
 					}
-               				CHKiRet(strmReadChar(pThis, &c));
+					CHKiRet(strmReadChar(pThis, &c));
 				}
 			}
 		}
@@ -900,7 +900,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
 	}
 
 finalize_it:
-        if(iRet == RS_RET_OK) {
+	if(iRet == RS_RET_OK) {
 		if(strtOffs != NULL) {
 			*strtOffs = pThis->strtOffs;
 		}
@@ -920,7 +920,7 @@ finalize_it:
 		}
 	}
 
-        RETiRet;
+	RETiRet;
 }
 
 /* check if the current multi line read is timed out
@@ -950,13 +950,13 @@ rsRetVal
 strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, const sbool bEscapeLF,
 	const sbool discardTruncatedMsg, const sbool msgDiscardingError, int64 *const strtOffs)
 {
-        uchar c;
+	uchar c;
 	uchar finished = 0;
 	cstr_t *thisLine = NULL;
 	rsRetVal readCharRet;
 	const time_t tCurr = pThis->readTimeout ? getTime(NULL) : 0;
 	int maxMsgSize = glblGetMaxLine();
-        DEFiRet;
+	DEFiRet;
 
 	do {
 		CHKiRet(strmReadChar(pThis, &c)); /* immediately exit on EOF */
@@ -1073,7 +1073,7 @@ finalize_it:
 			}
 		}
 	}
-        RETiRet;
+	RETiRet;
 }
 
 /* Standard-Constructor for the strm object
@@ -1544,7 +1544,7 @@ asyncWriterThread(void *pPtr)
 				pthread_cond_broadcast(&pThis->isEmpty);
 		}
 	}
-	/* Not reached */	
+	/* Not reached */
 
 finalize_it:
 	ENDfunc
@@ -2318,37 +2318,37 @@ static rsRetVal strmSetProperty(strm_t *pThis, var_t *pProp)
 	ISOBJ_TYPE_assert(pThis, strm);
 	ASSERT(pProp != NULL);
 
- 	if(isProp("sType")) {
+	if(isProp("sType")) {
 		CHKiRet(strmSetsType(pThis, (strmType_t) pProp->val.num));
- 	} else if(isProp("iCurrFNum")) {
+	} else if(isProp("iCurrFNum")) {
 		pThis->iCurrFNum = (unsigned) pProp->val.num;
- 	} else if(isProp("pszFName")) {
+	} else if(isProp("pszFName")) {
 		CHKiRet(strmSetFName(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr)));
- 	} else if(isProp("tOperationsMode")) {
+	} else if(isProp("tOperationsMode")) {
 		CHKiRet(strmSettOperationsMode(pThis, pProp->val.num));
- 	} else if(isProp("tOpenMode")) {
+	} else if(isProp("tOpenMode")) {
 		CHKiRet(strmSettOpenMode(pThis, pProp->val.num));
- 	} else if(isProp("iCurrOffs")) {
+	} else if(isProp("iCurrOffs")) {
 		pThis->iCurrOffs = pProp->val.num;
- 	} else if(isProp("inode")) {
+	} else if(isProp("inode")) {
 		pThis->inode = (ino_t) pProp->val.num;
- 	} else if(isProp("strtOffs")) {
+	} else if(isProp("strtOffs")) {
 		pThis->strtOffs = pProp->val.num;
- 	} else if(isProp("iMaxFileSize")) {
+	} else if(isProp("iMaxFileSize")) {
 		CHKiRet(strmSetiMaxFileSize(pThis, pProp->val.num));
- 	} else if(isProp("fileNotFoundError")) {
+	} else if(isProp("fileNotFoundError")) {
 		CHKiRet(strmSetFileNotFoundError(pThis, pProp->val.num));
- 	} else if(isProp("iMaxFiles")) {
+	} else if(isProp("iMaxFiles")) {
 		CHKiRet(strmSetiMaxFiles(pThis, pProp->val.num));
- 	} else if(isProp("iFileNumDigits")) {
+	} else if(isProp("iFileNumDigits")) {
 		CHKiRet(strmSetiFileNumDigits(pThis, pProp->val.num));
- 	} else if(isProp("bDeleteOnClose")) {
+	} else if(isProp("bDeleteOnClose")) {
 		CHKiRet(strmSetbDeleteOnClose(pThis, pProp->val.num));
- 	} else if(isProp("prevLineSegment")) {
+	} else if(isProp("prevLineSegment")) {
 		CHKiRet(rsCStrConstructFromCStr(&pThis->prevLineSegment, pProp->val.pStr));
- 	} else if(isProp("prevMsgSegment")) {
+	} else if(isProp("prevMsgSegment")) {
 		CHKiRet(rsCStrConstructFromCStr(&pThis->prevMsgSegment, pProp->val.pStr));
- 	} else if(isProp("bPrevWasNL")) {
+	} else if(isProp("bPrevWasNL")) {
 		pThis->bPrevWasNL = (sbool) pProp->val.num;
 	}
 

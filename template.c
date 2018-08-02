@@ -647,7 +647,7 @@ do_Constant(unsigned char **pp, struct template *pTpl, int bDoEscapes)
 	while(*p && *p != '%' && !(bDoEscapes && *p == '\"')) {
 		if(bDoEscapes && *p == '\\') {
 			switch(*++p) {
-				case '\0':	
+				case '\0':
 					/* the best we can do - it's invalid anyhow... */
 					cstrAppendChar(pStrB, *p);
 					break;
@@ -760,8 +760,8 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 		 */
 		 if(!strcmp((char*)Buf, "date-mysql")) {
 			pTpe->data.field.eDateFormat = tplFmtMySQLDate;
-                 } else if(!strcmp((char*)Buf, "date-pgsql")) {
-                        pTpe->data.field.eDateFormat = tplFmtPgSQLDate;
+		} else if(!strcmp((char*)Buf, "date-pgsql")) {
+			pTpe->data.field.eDateFormat = tplFmtPgSQLDate;
 		 } else if(!strcmp((char*)Buf, "date-rfc3164")) {
 			pTpe->data.field.eDateFormat = tplFmtRFC3164Date;
 		 } else if(!strcmp((char*)Buf, "date-rfc3164-buggyday")) {
@@ -1264,7 +1264,7 @@ tplAddTplMod(struct template *pTpl, uchar** ppRestOfConfLine)
 	while(*pSrc && !isspace(*pSrc) && lenMod < sizeof(szMod) - 1) {
 		szMod[lenMod] = *pSrc++;
 		lenMod++;
-		
+
 	}
 	szMod[lenMod] = '\0';
 	*ppRestOfConfLine = pSrc;
@@ -1300,7 +1300,7 @@ finalize_it:
 struct template *tplAddLine(rsconf_t *conf, const char* pName, uchar** ppRestOfConfLine)
 {
 	struct template *pTpl;
- 	unsigned char *p;
+	unsigned char *p;
 	int bDone;
 	size_t i;
 	rsRetVal localRet;
@@ -1392,14 +1392,14 @@ struct template *tplAddLine(rsconf_t *conf, const char* pName, uchar** ppRestOfC
 	while(*p) {
 		while(isspace((int)*p))/* skip whitespace */
 			++p;
-		
+
 		if(*p != ',')
 			break;
 		++p; /* eat ',' */
 
 		while(isspace((int)*p))/* skip whitespace */
 			++p;
-		
+
 		/* read option word */
 		char optBuf[128] = { '\0' }; /* buffer for options - should be more than enough... */
 		i = 0;
@@ -2345,9 +2345,9 @@ void tplPrintList(rsconf_t *conf)
 				case tplFmtMySQLDate:
 					dbgprintf("[Format as MySQL-Date] ");
 					break;
-                                case tplFmtPgSQLDate:
-                                        dbgprintf("[Format as PgSQL-Date] ");
-                                        break;
+				case tplFmtPgSQLDate:
+					dbgprintf("[Format as PgSQL-Date] ");
+					break;
 				case tplFmtRFC3164Date:
 					dbgprintf("[Format as RFC3164-Date] ");
 					break;

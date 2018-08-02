@@ -182,7 +182,7 @@ done:	return r;
 static int
 initCrypt(FILE *eifp)
 {
- 	int r = 0;
+	int r = 0;
 	gcry_error_t gcryError;
 	char iv[4096];
 
@@ -296,21 +296,21 @@ doDecrypt(FILE *logfp, FILE *eifp, FILE *outfp)
 	off64_t currOffs = 0;
 	int r = 1;
 	int fd;
-        struct stat buf;
+	struct stat buf;
 
 	while(1) {
 		/* process block */
 		if(initCrypt(eifp) != 0)
 			goto done;
 		/* set blkEnd to size of logfp and proceed. */
-                if((fd = fileno(logfp)) == -1) {
-                        r = -1;
-                        goto done;
-                }
-                if((r = fstat(fd, &buf)) != 0) goto done;
-                blkEnd = buf.st_size;
-                r = eiGetEND(eifp, &blkEnd);
-                if(r != 0 && r != 1) goto done;
+		if((fd = fileno(logfp)) == -1) {
+			r = -1;
+			goto done;
+		}
+		if((r = fstat(fd, &buf)) != 0) goto done;
+		blkEnd = buf.st_size;
+		r = eiGetEND(eifp, &blkEnd);
+		if(r != 0 && r != 1) goto done;
 		decryptBlock(logfp, outfp, blkEnd, &currOffs);
 		gcry_cipher_close(gcry_chd);
 	}

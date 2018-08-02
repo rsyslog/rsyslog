@@ -6,7 +6,7 @@
  *
  * Copyright 2017 Hugo Soszynski and aDvens
  *
- * long		short	
+ * long		short
 
  * level	l	read records with level x
  * severity	s	read records with severity x

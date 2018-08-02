@@ -1187,10 +1187,10 @@ SetKeepAliveProbes(tcpsrv_t *pThis, int iVal)
 static rsRetVal
 SetKeepAliveTime(tcpsrv_t *pThis, int iVal)
 {
-       DEFiRet;
-       DBGPRINTF("tcpsrv: keep-alive timeout set to %d\n", iVal);
-       pThis->iKeepAliveTime = iVal;
-       RETiRet;
+	DEFiRet;
+	DBGPRINTF("tcpsrv: keep-alive timeout set to %d\n", iVal);
+	pThis->iKeepAliveTime = iVal;
+	RETiRet;
 }
 
 static rsRetVal

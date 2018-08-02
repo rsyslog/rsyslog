@@ -9,10 +9,10 @@
  * accessor functions. */
 struct hashtable_itr
 {
-    struct hashtable *h;
-    struct entry *e;
-    struct entry *parent;
-    unsigned int index;
+	struct hashtable *h;
+	struct entry *e;
+	struct entry *parent;
+	unsigned int index;
 };
 
 
@@ -53,16 +53,16 @@ hashtable_iterator_remove(struct hashtable_itr *itr);
 /*****************************************************************************/
 /* search - overwrite the supplied iterator, to point to the entry
  *          matching the supplied key.
-            h points to the hashtable to be searched.
+ *	    h points to the hashtable to be searched.
  *          returns zero if not found. */
 int
 hashtable_iterator_search(struct hashtable_itr *itr,
-                          struct hashtable *h, void *k);
+				struct hashtable *h, void *k);
 
 #define DEFINE_HASHTABLE_ITERATOR_SEARCH(fnname, keytype) \
 int fnname (struct hashtable_itr *i, struct hashtable *h, keytype *k) \
 { \
-    return (hashtable_iterator_search(i,h,k)); \
+	return (hashtable_iterator_search(i,h,k)); \
 }
 
 

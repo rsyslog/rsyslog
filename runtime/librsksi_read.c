@@ -410,7 +410,7 @@ rsksi_tlvRecRead(FILE *fp, tlvrecord_t *rec)
 	}
 
 	r = 0;
-done:	
+done:
 	/* Only show debug if no fail */
 	if(rsksi_read_debug && r != 0 && r != RSGTE_EOF)
 		printf("debug: rsksi_tlvRecRead:\t read tlvtype %4.4x, len %u r=%d\n",
@@ -467,7 +467,7 @@ rsksi_tlvDecodeSUBREC(tlvrecord_t *rec, uint16_t *stridx, tlvrecord_t *newrec)
 			(unsigned) newrec->tlvtype,
 			(unsigned) newrec->tlvlen);
 	r = 0;
-done:	
+done:
 	if(r != 0) /* Only on FAIL! */
 		printf("debug: rsksi_tlvDecodeSUBREC:\t\t Failed, tlv record %4.4x with error %d\n", rec->tlvtype, r);
 	return r;
@@ -494,7 +494,7 @@ rsksi_tlvDecodeIMPRINT(tlvrecord_t *rec, imprint_t **imprint)
 	memcpy(imp->data, rec->data+1, imp->len);
 	*imprint = imp;
 	r = 0;
-done:	
+done:
 	if(r == 0) {
 		if (rsksi_read_debug) printf("debug: rsksi_tlvDecodeIMPRINT:\t\t returned %d TLVType=%4.4x, "
 		"TLVLen=%d, HashID=%d\n", r, rec->tlvtype, rec->tlvlen, imp->hashID);
@@ -547,7 +547,7 @@ rsksi_tlvDecodeREC_HASH(tlvrecord_t *rec, uint16_t *strtidx, imprint_t *imp)
 	if((imp->data = (uint8_t*)malloc(imp->len)) == NULL) {r=RSGTE_OOM;goto done;}
 	memcpy(imp->data, subrec.data+1, subrec.tlvlen-1);
 	r = 0;
-done:	
+done:
 	if(r == 0) {
 		if (rsksi_read_debug) printf("debug: rsksi_tlvDecodeREC_HASH:\t\t returned %d TLVType=%4.4x, "
 		"TLVLen=%d\n", r, rec->tlvtype, rec->tlvlen);
@@ -572,7 +572,7 @@ rsksi_tlvDecodeLEVEL_CORR(tlvrecord_t *rec, uint16_t *strtidx, uint8_t *levelcor
 	}
 	*levelcorr = subrec.data[0];
 	r = 0;
-done:	
+done:
 	if(r == 0) {
 		if (rsksi_read_debug) printf("debug: rsksi_tlvDecodeLEVEL_CORR:\t returned %d TLVType=%4.4x, "
 		"TLVLen=%d\n", r, rec->tlvtype, rec->tlvlen);
@@ -588,7 +588,7 @@ rsksi_tlvDecodeHASH_STEP(tlvrecord_t *rec, uint16_t *pstrtidx, block_hashstep_t 
 	int r = 1;
 	uint16_t strtidx = 0;
 	tlvrecord_t subrec;
- 	*blhashstep = NULL; /* Set to NULL by default first */
+	*blhashstep = NULL; /* Set to NULL by default first */
 	
 	/* Init HashStep */
 	block_hashstep_t *hashstep = NULL;
@@ -611,9 +611,9 @@ rsksi_tlvDecodeHASH_STEP(tlvrecord_t *rec, uint16_t *pstrtidx, block_hashstep_t 
 		goto done;
 	}
 
- 	*blhashstep = hashstep;
+	*blhashstep = hashstep;
 	r = 0;
-done:	
+done:
 	if (r == 0) {
 		if(rsksi_read_debug) printf("debug: rsksi_tlvDecodeHASH_STEP:\t returned %d, tlvtype "
 		"%4.4x\n", r, (unsigned) rec->tlvtype);
@@ -656,7 +656,7 @@ rsksi_tlvDecodeHASH_CHAIN(tlvrecord_t *rec, block_hashchain_t **blhashchain)
 
 	*blhashchain = hashchain;
 	r = 0;
-done:	
+done:
 	if(r == 0) {
 		if (rsksi_read_debug) printf("debug: rsksi_tlvDecodeHASH_CHAIN:\t returned %d TLVType=%4.4x, "
 		"TLVLen=%d\n", r, rec->tlvtype, rec->tlvlen);
@@ -751,7 +751,7 @@ rsksi_tlvDecodeSIG(tlvrecord_t *rec, uint16_t *strtidx, block_sig_t *bs)
 	if((bs->sig.der.data = (uint8_t*)malloc(bs->sig.der.len)) == NULL) {r=RSGTE_OOM;goto done;}
 	memcpy(bs->sig.der.data, subrec.data, bs->sig.der.len);
 	r = 0;
-done:	
+done:
 	if(rsksi_read_debug) printf("debug: rsksi_tlvDecodeSIG:\t\t returned %d, tlvtype %4.4x\n",
 	r, (unsigned) rec->tlvtype);
 	return r;
@@ -776,7 +776,7 @@ rsksi_tlvDecodeBLOCK_HDR(tlvrecord_t *rec, block_hdr_t **blockhdr)
 	}
 	*blockhdr = bh;
 	r = 0;
-done:	
+done:
 	if (r == 0) {
 		if(rsksi_read_debug) printf("debug: tlvDecodeBLOCK_HDR:\t\t returned %d, tlvtype %4.4x\n",
 		r, (unsigned) rec->tlvtype);
@@ -808,7 +808,7 @@ rsksi_tlvDecodeEXCERPT_SIG(tlvrecord_t *rec, block_sig_t **blocksig)
 
 	*blocksig = bs;
 	r = 0;
-done:	
+done:
 	if(r == 0) {
 		if (rsksi_read_debug) printf("debug: tlvDecodeEXCERPT_SIG:\t returned %d, tlvtype %4.4x\n",
 		r, (unsigned) rec->tlvtype);
@@ -816,7 +816,7 @@ done:
 		/* Free memory on FAIL!*/
 		if (bs != NULL)
 			rsksi_objfree(rec->tlvtype, bs);
-	}	
+	}
 	return r;
 }
 static int
@@ -838,7 +838,7 @@ rsksi_tlvDecodeBLOCK_SIG(tlvrecord_t *rec, block_sig_t **blocksig)
 	}
 	*blocksig = bs;
 	r = 0;
-done:	
+done:
 	if(r == 0) {
 		if (rsksi_read_debug) printf("debug: tlvDecodeBLOCK_SIG:\t\t returned %d, tlvtype %4.4x, recCount "
 		"%ju\n", r, (unsigned) rec->tlvtype, bs->recCount);
@@ -846,7 +846,7 @@ done:
 		/* Free memory on FAIL!*/
 		if (bs != NULL)
 			rsksi_objfree(rec->tlvtype, bs);
-	}	
+	}
 	return r;
 }
 int
@@ -901,7 +901,7 @@ rsksi_tlvrdRecHash(FILE *fp, FILE *outfp, imprint_t **imp)
 		if((r = rsksi_tlvwrite(outfp, &rec)) != 0) goto done;
 	}
 	r = 0;
-done:	
+done:
 	if(r == 0 && rsksi_read_debug)
 		printf("debug: tlvrdRecHash:\t\t\t returned %d, rec->tlvtype %4.4x\n", r, (unsigned) rec.tlvtype);
 	return r;
@@ -926,7 +926,7 @@ rsksi_tlvrdTreeHash(FILE *fp, FILE *outfp, imprint_t **imp)
 		if((r = rsksi_tlvwrite(outfp, &rec)) != 0) goto done;
 	}
 	r = 0;
-done:	
+done:
 	if(r == 0 && rsksi_read_debug) printf("debug: rsksi_tlvrdTreeHash:\t\t returned %d, rec->tlvtype %4.4x\n",
 	r, (unsigned) rec.tlvtype);
 	return r;
@@ -974,7 +974,7 @@ rsksi_tlvrd(FILE *fp, tlvrecord_t *rec, void *obj)
 	int r;
 	if((r = rsksi_tlvRecRead(fp, rec)) != 0) goto done;
 	r = rsksi_tlvRecDecode(rec, obj);
-done:	
+done:
 	if(rsksi_read_debug && r != RSGTE_SUCCESS && r != RSGTE_EOF) printf("debug: rsksi_tlvrd:\t failed with "
 	"error %d\n", r);
 	return r;
@@ -1025,19 +1025,19 @@ rsksi_printINT_HASH(FILE *fp, imprint_t *imp, uint8_t verbose)
  */
 void
 rsksi_printBLOCK_HDR(FILE *fp, block_hdr_t *bh, uint8_t verbose)
- {
+{
 	fprintf(fp, "[0x0901]Block Header Record:\n");
- 	fprintf(fp, "\tPrevious Block Hash:\n");
+	fprintf(fp, "\tPrevious Block Hash:\n");
 	fprintf(fp, "\t   Algorithm..: %s\n", hashAlgNameKSI(bh->lastHash.hashID));
- 	fprintf(fp, "\t   Hash.......: ");
+	fprintf(fp, "\t   Hash.......: ");
 		outputHexBlob(fp, bh->lastHash.data, bh->lastHash.len, verbose);
- 		fputc('\n', fp);
+		fputc('\n', fp);
 	if(blobIsZero(bh->lastHash.data, bh->lastHash.len))
- 		fprintf(fp, "\t   NOTE: New Hash Chain Start!\n");
+		fprintf(fp, "\t   NOTE: New Hash Chain Start!\n");
 	fprintf(fp, "\tHash Algorithm: %s\n", hashAlgNameKSI(bh->hashID));
- 	fprintf(fp, "\tIV............: ");
+	fprintf(fp, "\tIV............: ");
 		outputHexBlob(fp, bh->iv, getIVLenKSI(bh), verbose);
- 		fputc('\n', fp);
+		fputc('\n', fp);
 }
 
 
@@ -1223,7 +1223,7 @@ rsksiHashstepFromKSI_DataHash(ksifile ksi, KSI_DataHash *hash)
 		goto done;
 	}
 	memcpy(hashstep->sib_hash.data, digest, digest_len);
-done:	
+done:
 	return hashstep;
 }
 
@@ -1377,7 +1377,7 @@ rsksi_getExcerptBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, block_h
 		default:fprintf(fp, "unknown tlv record %4.4x\n", rec.tlvtype);
 			break;
 		}
-		
+
 		/* Free second Signatur object if set! */
 		if(bSig == 1 && obj != NULL) rsksi_objfree(rec.tlvtype, obj);
 	}
@@ -1566,7 +1566,7 @@ done:
 
 static int
 rsksi_vrfy_chkTreeHash(ksifile ksi, FILE *sigfp, FILE *nsigfp,
-                      KSI_DataHash *hash, ksierrctx_t *ectx)
+		KSI_DataHash *hash, ksierrctx_t *ectx)
 {
 	int r = 0;
 	imprint_t *imp = NULL;
@@ -1726,11 +1726,11 @@ block_hashchain_t *hashchain, int storehashchain)
 			hashstep->level_corr = 0;	/* Level Correction 0 */
 			if(rsksi_read_debug) outputHash(stdout, "debug: rsksi_vrfy_nextRecExtract:\t RIGHT Hash:"
 			" \t\t", hashstep->sib_hash.data, hashstep->sib_hash.len, ectx->verbose);
-			
+
 			/* Attach to HashChain */
 			hashchain->hashsteps[hashchain->stepCount] = hashstep;
 			hashchain->stepCount++;
-			
+
 			hashchain->direction = 0x03; /* RIGHT */
 			hashchain->level = 1;
 		}
@@ -1773,7 +1773,7 @@ block_hashchain_t *hashchain, int storehashchain)
 						hashstep->sib_hash.len, ectx->verbose);
 				}
 				hashstep->direction = hashchain->direction;
-				hashstep->level_corr = 0;	
+				hashstep->level_corr = 0;
 				/* Attach to HashChain */
 				hashchain->hashsteps[hashchain->stepCount] = hashstep;
 				hashchain->stepCount++;
@@ -1942,7 +1942,7 @@ rsksi_vrfy_nextHashChain(ksifile ksi, block_sig_t *bs, FILE *sigfp, unsigned cha
 			}
 			bCheckLineHash = 1;
 		}
-		
+
 		/* Store into TMP for next LOOP */
 		root_tmp = root_hash;
 
@@ -2051,7 +2051,7 @@ if(rsksi_read_debug)
 						ectx->verbose);
 				}
 				hashstep->direction = hashchain->direction;
-				hashstep->level_corr = j+1 - hashchain->level;	
+				hashstep->level_corr = j+1 - hashchain->level;
 if(rsksi_read_debug) printf("debug: verifySigblkFinishChain:\t\t level_corr=%d\n", hashstep->level_corr);
 
 				/* Attach to HashChain */
@@ -2224,7 +2224,7 @@ verifyBLOCK_HDRKSI(FILE *sigfp, FILE *nsigfp, tlvrecord_t* tlvrec)
 	}
 	if (nsigfp != NULL)
 		if ((r = rsksi_tlvwrite(nsigfp, tlvrec)) != 0) goto done;
-done:	
+done:
 	if (bh != NULL)
 		rsksi_objfree(tlvrec->tlvtype, bh);
 	if(rsksi_read_debug) printf("debug: verifyBLOCK_HDRKSI:\t\t returned %d\n", r);
@@ -2236,7 +2236,7 @@ done:
  */
 int
 verifyBLOCK_SIGKSI(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp,
-                uint8_t bExtend, KSI_DataHash *ksiHash, ksierrctx_t *ectx)
+		uint8_t bExtend, KSI_DataHash *ksiHash, ksierrctx_t *ectx)
 {
 	int r;
 	int ksistate;
@@ -2591,7 +2591,7 @@ int rsksi_WriteHashChain(FILE *newsigfp, block_hashchain_t *hashchain, int verbo
 	tlvlenLevelCorr = rsksi_tlvGetInt64OctetSize(uiLevelCorr);
 
 	/* Total Length of Hash Chain */
-	tlvlen =	/*4 +  ???? */	
+	tlvlen =	/*4 +  ???? */
 	2 + 1 + hashchain->rec_hash.len	/* rec-hash */ +
 	((2 + 2 + tlvlenLevelCorr + 2 + 1 + hashchain->hashsteps[0]->sib_hash.len) * hashchain->stepCount);
 	/* Count of all left/right chains*/

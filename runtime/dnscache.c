@@ -194,8 +194,8 @@ findEntry(struct sockaddr_storage *addr)
  */
 static int
 mygetnameinfo(const struct sockaddr *sa, socklen_t salen,
-                       char *host, size_t hostlen,
-                       char *serv, size_t servlen, int flags)
+		char *host, size_t hostlen,
+		char *serv, size_t servlen, int flags)
 {
 	int iCancelStateSave;
 	int i;
@@ -296,10 +296,10 @@ resolveAddr(struct sockaddr_storage *addr, dnscache_entry_t *etry)
 	rs_size_t fqdnLen;
 	rs_size_t i;
 	
-        error = mygetnameinfo((struct sockaddr *)addr, SALEN((struct sockaddr *)addr),
+	error = mygetnameinfo((struct sockaddr *)addr, SALEN((struct sockaddr *)addr),
 			    (char*) szIP, sizeof(szIP), NULL, 0, NI_NUMERICHOST);
-        if(error) {
-                dbgprintf("Malformed from address %s\n", gai_strerror(error));
+	if(error) {
+		dbgprintf("Malformed from address %s\n", gai_strerror(error));
 		ABORT_FINALIZE(RS_RET_INVALID_SOURCE);
 	}
 
@@ -310,7 +310,7 @@ resolveAddr(struct sockaddr_storage *addr, dnscache_entry_t *etry)
 
 		error = mygetnameinfo((struct sockaddr *)addr, SALEN((struct sockaddr *) addr),
 				    fqdnBuf, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
-		
+
 		if(error == 0) {
 			memset (&hints, 0, sizeof (struct addrinfo));
 			hints.ai_flags = AI_NUMERICHOST;
@@ -375,13 +375,13 @@ finalize_it:
 	/* we need to create the inputName property (only once during our lifetime) */
 	prop.CreateStringProp(&etry->ip, (uchar*)szIP, strlen(szIP));
 
-        if(error || glbl.GetDisableDNS()) {
-                dbgprintf("Host name for your address (%s) unknown\n", szIP);
+	if(error || glbl.GetDisableDNS()) {
+		dbgprintf("Host name for your address (%s) unknown\n", szIP);
 		prop.AddRef(etry->ip);
 		etry->fqdn = etry->ip;
 		prop.AddRef(etry->ip);
 		etry->fqdnLowerCase = etry->ip;
-        }
+	}
 
 	setLocalHostName(etry);
 

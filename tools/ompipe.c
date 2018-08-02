@@ -397,7 +397,7 @@ CODESTARTparseSelectorAct
 	++p;
 	CHKiRet(cflineParseFileName(p, (uchar*) pData->pipe, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
 				       getDfltTpl()));
-		
+
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 

@@ -133,8 +133,8 @@ static rsRetVal objInfoNotImplementedDummy(void __attribute__((unused)) *pThis)
  */
 static rsRetVal
 InfoConstruct(objInfo_t **ppThis, uchar *pszID, int iObjVers,
-              rsRetVal (*pConstruct)(void *), rsRetVal (*pDestruct)(void *),
-	      rsRetVal (*pQueryIF)(interface_t*), modInfo_t *pModInfo)
+		rsRetVal (*pConstruct)(void *), rsRetVal (*pDestruct)(void *),
+		rsRetVal (*pQueryIF)(interface_t*), modInfo_t *pModInfo)
 {
 	DEFiRet;
 	int i;

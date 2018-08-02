@@ -1409,7 +1409,7 @@ CODESTARTparseSelectorAct
 	pData->iSizeLimit = 0; /* default value, use outchannels to configure! */
 
 	switch(*p) {
-        case '$':
+	case '$':
 		CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		pData->iNumTpls = 1;
 		/* rgerhards 2005-06-21: this is a special setting for output-channel

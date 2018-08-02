@@ -307,7 +307,7 @@ static void deinit_strm_listener(strmsrv_t *pThis)
 			/* now get next... */
 			i = STRMSessGetNxtSess(pThis, i);
 		}
-		
+
 		/* we are done with the session table - so get rid of it...  */
 		free(pThis->pSessions);
 		pThis->pSessions = NULL; /* just to make sure... */

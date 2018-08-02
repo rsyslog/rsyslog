@@ -1564,12 +1564,12 @@ CODESTARTafterRun
 	}
 
 	/* Close the UNIX sockets. */
-       for (i = 0; i < nfd; i++)
+	for (i = 0; i < nfd; i++)
 		if (listeners[i].fd != -1)
 			close(listeners[i].fd);
 
-       /* Clean-up files. */
-       for(i = startIndexUxLocalSockets; i < nfd; i++)
+	/* Clean-up files. */
+	for(i = startIndexUxLocalSockets; i < nfd; i++)
 		if (listeners[i].sockName && listeners[i].fd != -1) {
 			/* If systemd passed us a socket it is systemd's job to clean it up.
 			 * Do not unlink it -- we will get same socket (node) from systemd

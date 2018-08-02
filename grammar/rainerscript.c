@@ -775,12 +775,12 @@ doGetSize(struct nvlst *valnode, struct cnfparamdescr *param,
 		/* and now the "new" 1000-based definitions */
 		case 'K': n *= 1000; break;
 	        case 'M': n *= 1000000; break;
-                case 'G': n *= 1000000000; break;
+		case 'G': n *= 1000000000; break;
 			  /* we need to use the multiplication below because otherwise
 			   * the compiler gets an error during constant parsing */
-                case 'T': n *= (int64) 1000       * 1000000000; break; /* tera */
-                case 'P': n *= (int64) 1000000    * 1000000000; break; /* peta */
-                case 'E': n *= (int64) 1000000000 * 1000000000; break; /* exa */
+		case 'T': n *= (int64) 1000       * 1000000000; break; /* tera */
+		case 'P': n *= (int64) 1000000    * 1000000000; break; /* peta */
+		case 'E': n *= (int64) 1000000000 * 1000000000; break; /* exa */
 		default: --i; break; /* indicates error */
 		}
 	}
@@ -1478,7 +1478,7 @@ static rsRetVal
 doExtractFieldByChar(uchar *str, uchar delim, const int matchnbr, uchar **resstr)
 {
 	int iCurrFld;
-    int allocLen;
+	int allocLen;
 	int iLen;
 	uchar *pBuf;
 	uchar *pFld;
@@ -1512,7 +1512,7 @@ doExtractFieldByChar(uchar *str, uchar delim, const int matchnbr, uchar **resstr
 		allocLen = iLen + 1;
 #		ifdef VALGRIND
 		allocLen += (3 - (iLen % 4));
-        	/*older versions of valgrind have a problem with strlen inspecting 4-bytes at a time*/
+		/*older versions of valgrind have a problem with strlen inspecting 4-bytes at a time*/
 #		endif
 		CHKmalloc(pBuf = MALLOC(allocLen));
 		/* now copy */
@@ -1699,24 +1699,24 @@ doFunc_exec_template(struct cnffunc *__restrict__ const func,
 
 static es_str_t*
 doFuncReplace(struct svar *__restrict__ const operandVal, struct svar *__restrict__ const findVal,
-	struct svar *__restrict__ const replaceWithVal) {
-    int freeOperand, freeFind, freeReplacement;
-    es_str_t *str = var2String(operandVal, &freeOperand);
-    es_str_t *findStr = var2String(findVal, &freeFind);
-    es_str_t *replaceWithStr = var2String(replaceWithVal, &freeReplacement);
-    uchar *find = es_getBufAddr(findStr);
-    uchar *replaceWith = es_getBufAddr(replaceWithStr);
-    uint lfind = es_strlen(findStr);
-    uint lReplaceWith = es_strlen(replaceWithStr);
-    uint lSrc = es_strlen(str);
-    uint lDst = 0;
-    uchar* src_buff = es_getBufAddr(str);
-    uint i, j;
-    for(i = j = 0; i <= lSrc; i++, lDst++) {
-        if (j == lfind) {
-            lDst = lDst - lfind + lReplaceWith;
-            j = 0;
-        }
+		struct svar *__restrict__ const replaceWithVal) {
+	int freeOperand, freeFind, freeReplacement;
+	es_str_t *str = var2String(operandVal, &freeOperand);
+	es_str_t *findStr = var2String(findVal, &freeFind);
+	es_str_t *replaceWithStr = var2String(replaceWithVal, &freeReplacement);
+	uchar *find = es_getBufAddr(findStr);
+	uchar *replaceWith = es_getBufAddr(replaceWithStr);
+	uint lfind = es_strlen(findStr);
+	uint lReplaceWith = es_strlen(replaceWithStr);
+	uint lSrc = es_strlen(str);
+	uint lDst = 0;
+	uchar* src_buff = es_getBufAddr(str);
+	uint i, j;
+	for(i = j = 0; i <= lSrc; i++, lDst++) {
+		if (j == lfind) {
+			lDst = lDst - lfind + lReplaceWith;
+			j = 0;
+		}
 		if (i == lSrc) break;
 		if (src_buff[i] == find[j]) {
 			j++;
@@ -1725,16 +1725,16 @@ doFuncReplace(struct svar *__restrict__ const operandVal, struct svar *__restric
 			lDst -= (j - 1);
 			j = 0;
 		}
-    }
-    es_str_t *res = es_newStr(lDst);
-    unsigned char* dest = es_getBufAddr(res);
-    uint k, s;
-    for(i = j = s = 0; i <= lSrc; i++, s++) {
-        if (j == lfind) {
-            s -= j;
-            for (k = 0; k < lReplaceWith; k++, s++) dest[s] = replaceWith[k];
-            j = 0;
-        }
+	}
+	es_str_t *res = es_newStr(lDst);
+	unsigned char* dest = es_getBufAddr(res);
+	uint k, s;
+	for(i = j = s = 0; i <= lSrc; i++, s++) {
+		if (j == lfind) {
+		s -= j;
+		for (k = 0; k < lReplaceWith; k++, s++) dest[s] = replaceWith[k];
+			j = 0;
+		}
 		if (i == lSrc) break;
 		if (src_buff[i] == find[j]) {
 			j++;
@@ -1746,15 +1746,15 @@ doFuncReplace(struct svar *__restrict__ const operandVal, struct svar *__restric
 			}
 			dest[s] = src_buff[i];
 		}
-    }
-    if (j > 0) {
-        for (k = 1; k <= j; k++) dest[s - k] = src_buff[i - k];
-    }
-    res->lenStr = lDst;
-    if(freeOperand) es_deleteStr(str);
-    if(freeFind) es_deleteStr(findStr);
-    if(freeReplacement) es_deleteStr(replaceWithStr);
-    return res;
+	}
+	if (j > 0) {
+		for (k = 1; k <= j; k++) dest[s - k] = src_buff[i - k];
+	}
+	res->lenStr = lDst;
+	if(freeOperand) es_deleteStr(str);
+	if(freeFind) es_deleteStr(findStr);
+	if(freeReplacement) es_deleteStr(replaceWithStr);
+	return res;
 }
 
 

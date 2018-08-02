@@ -2123,7 +2123,7 @@ finalize_it:
 	*	Unless the error code is RS_RET_ERR_QUEUE_EMERGENCY, we reset the return state to RS_RET_OK.
 	*	Otherwise the Caller functions would run into an infinite Loop trying to enqueue the
 	*	same messages over and over again.
-	*	
+	*
 	*	However we do NOT overwrite positive return states like
 	*		RS_RET_TERMINATE_NOW,
 	*		RS_RET_NO_RUN,
@@ -2525,7 +2525,7 @@ qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 	if(pThis->qType != QUEUETYPE_DISK) {
 		if(getPhysicalQueueSize(pThis) > 0) {
 			/* This error code is OK, but we will probably not implement this any time
- 			 * The reason is that persistence happens via DA queues. But I would like to
+			 * The reason is that persistence happens via DA queues. But I would like to
 			 * leave the code as is, as we so have a hook in case we need one.
 			 * -- rgerhards, 2008-01-28
 			 */
@@ -2552,7 +2552,7 @@ qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 	lentmpQIFName = strlen( pThis->pszQIFNam) + strlen(".tmp") + 1;
 	tmpQIFName = malloc(sizeof(char)*lentmpQIFName);
 	if(tmpQIFName == NULL)
-                tmpQIFName = (char*)pThis->pszQIFNam;
+		tmpQIFName = (char*)pThis->pszQIFNam;
 	snprintf(tmpQIFName, lentmpQIFName, "%s.tmp", pThis->pszQIFNam);
 #else
 	lentmpQIFName = asprintf((char **)&tmpQIFName, "%s.tmp", pThis->pszQIFNam);
@@ -2898,7 +2898,7 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg)
 				DBGOPRINT((obj_t*) pThis, "potential program bug: pthread_cond_timedwait()"
 				          "/fulldelay returned %d\n", err);
 				break;
-				
+
 			}
 			DBGPRINTF("wti worker in full delay timed out, checking termination...\n");
 		}
@@ -2912,7 +2912,7 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg)
 				/* Something is really wrong now. Report to debug log */
 				DBGOPRINT((obj_t*) pThis, "potential program bug: pthread_cond_timedwait()"
 				          "/lightdelay returned %d\n", err);
-				
+
 			}
 		}
 	}
@@ -3302,14 +3302,14 @@ static rsRetVal qqueueSetProperty(qqueue_t *pThis, var_t *pProp)
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	ASSERT(pProp != NULL);
 
- 	if(isProp("iQueueSize")) {
+	if(isProp("iQueueSize")) {
 		pThis->iQueueSize = pProp->val.num;
 #		ifdef ENABLE_IMDIAG
 			iOverallQueueSize += pThis->iQueueSize;
 #		endif
- 	} else if(isProp("tVars.disk.sizeOnDisk")) {
+	} else if(isProp("tVars.disk.sizeOnDisk")) {
 		pThis->tVars.disk.sizeOnDisk = pProp->val.num;
- 	} else if(isProp("qType")) {
+	} else if(isProp("qType")) {
 		if(pThis->qType != pProp->val.num)
 			ABORT_FINALIZE(RS_RET_QTYPE_MISMATCH);
 	}
