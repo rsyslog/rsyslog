@@ -15,7 +15,7 @@ EOF
 generate_conf
 add_conf '
 module(load="../plugins/impstats/.libs/impstats" interval="1"
-	   log.file="es-stats.log" log.syslog="off" format="cee")
+	   log.file="test-spool/es-stats.log" log.syslog="off" format="cee")
 
 set $.msgnum = field($msg, 58, 2);
 set $.testval = cnum($.msgnum % 2);
@@ -28,19 +28,14 @@ if $.testval == 0 then {
 }
 
 template(name="tpl" type="string"
-    string="{\"msgnum\":\"%$!msgnum%\",\"es_msg_id\":\"%$!es_msg_id%\"}")
+    string="{\"msgnum\":\"%$!msgnum%\"}")
 
 module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 
-template(name="id-template" type="string" string="%$!es_msg_id%")
-
-if strlen($!es_msg_id) == 0 then {
-	# NOTE: depends on rsyslog being compiled with --enable-uuid
-	set $!es_msg_id = $uuid;
-}
+template(name="id-template" type="string" string="%$.es_msg_id%")
 
 ruleset(name="error_es") {
-	action(type="omfile" template="RSYSLOG_DebugFormat" file="es-bulk-errors.log")
+	action(type="omfile" template="RSYSLOG_DebugFormat" file="test-spool/es-bulk-errors.log")
 }
 
 ruleset(name="try_es") {
@@ -58,6 +53,12 @@ ruleset(name="try_es") {
 			stop
 		}
 		# else fall through to retry operation
+	}
+	if strlen($.omes!_id) > 0 then {
+		set $.es_msg_id = $.omes!_id;
+	} else {
+		# NOTE: in production code, use $uuid - depends on rsyslog being compiled with --enable-uuid
+		set $.es_msg_id = $.msgnum;
 	}
 	action(type="omelasticsearch"
 	       server="127.0.0.1"
@@ -77,9 +78,8 @@ if $msg contains "msgnum:" then {
 	call try_es
 }
 
-action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
+action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 '
-rm -f es-bulk-errors.log es-stats.log
 
 curl -s -H 'Content-Type: application/json' -XPUT localhost:${ES_PORT:-19200}/rsyslog_testbench/ -d '{
   "mappings": {
@@ -121,7 +121,8 @@ rc=$?
 . $srcdir/diag.sh stop-elasticsearch
 . $srcdir/diag.sh cleanup-elasticsearch
 
-cat work | \
+if [ -f work ] ; then
+	cat work | \
 	python -c '
 import sys,json
 records = int(sys.argv[1])
@@ -142,8 +143,13 @@ for item in expectedrecs:
 	rc = 1
 sys.exit(rc)
 ' $success || { rc=$?; echo error: did not find expected records in Elasticsearch; }
+else
+	echo error: elasticsearch output file work not found
+	rc=1
+fi
 
-cat es-stats.log | \
+if [ -f test-spool/es-stats.log ] ; then
+	cat test-spool/es-stats.log | \
 	python -c '
 import sys,json
 success = int(sys.argv[1])
@@ -163,31 +169,40 @@ assert(actualsuccess == success)
 assert(actualbadarg == badarg)
 assert(actualrej > 0)
 assert(actualsuccess + actualbadarg + actualrej == actualsubmitted)
-' $success $badarg || { rc=$?; echo error: expected responses not found in stats; }
+' $success $badarg || { rc=$?; echo error: expected responses not found in test-spool/es-stats.log; }
+else
+	echo error: stats file test-spool/es-stats.log not found
+	rc=1
+fi
 
-found=0
-for ii in $(seq --format="x%08.f" 1 2 $(expr 2 \* $badarg)) ; do
-	if grep -q '^[$][!]:{.*"msgnum": "'$ii'"' es-bulk-errors.log ; then
-		found=$( expr $found + 1 )
-	else
-		echo error: missing message $ii
+if [ -f test-spool/es-bulk-errors.log ] ; then
+	found=0
+	for ii in $(seq --format="x%08.f" 1 2 $(expr 2 \* $badarg)) ; do
+		if grep -q '^[$][!]:{.*"msgnum": "'$ii'"' test-spool/es-bulk-errors.log ; then
+			found=$( expr $found + 1 )
+		else
+			echo error: missing message $ii in test-spool/es-bulk-errors.log
+			rc=1
+		fi
+	done
+	if [ $found -ne $badarg ] ; then
+		echo error: found only $found of $badarg messages in test-spool/es-bulk-errors.log
 		rc=1
 	fi
-done
-if [ $found -ne $badarg ] ; then
-	echo error: found only $found of $badarg messages in es-bulk-errors.log
-	rc=1
-fi
-if grep -q '^[$][.]:{.*"omes": {' es-bulk-errors.log ; then
-	:
+	if grep -q '^[$][.]:{.*"omes": {' test-spool/es-bulk-errors.log ; then
+		:
+	else
+		echo error: es response info not found in test-spool/es-bulk-errors.log
+		rc=1
+	fi
+	if grep -q '^[$][.]:{.*"status": 400' test-spool/es-bulk-errors.log ; then
+		:
+	else
+		echo error: status 400 not found in test-spool/es-bulk-errors.log
+		rc=1
+	fi
 else
-	echo error: es response info not found in bulk error file
-	rc=1
-fi
-if grep -q '^[$][.]:{.*"status": 400' es-bulk-errors.log ; then
-	:
-else
-	echo error: status 400 not found in bulk error file
+	echo error: bulk error file test-spool/es-bulk-errors.log not found
 	rc=1
 fi
 
@@ -195,6 +210,12 @@ if [ $rc -eq 0 ] ; then
 	echo tests completed successfully
 else
 	cat $RSYSLOG_OUT_LOG
+	if [ -f test-spool/es-stats.log ] ; then
+		cat test-spool/es-stats.log
+	fi
+	if [ -f test-spool/es-bulk-errors.log ] ; then
+		cat test-spool/es-bulk-errors.log
+	fi
 	error_exit 1 stacktrace
 fi
 

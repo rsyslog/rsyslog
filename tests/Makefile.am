@@ -589,7 +589,8 @@ TESTS +=  \
 	es-writeoperation.sh
 if ENABLE_IMPSTATS
 TESTS +=  \
-	es-basic-ha.sh
+	es-basic-ha.sh \
+	es-bulk-retry.sh
 endif
 if ENABLE_IMFILE
 TESTS +=  \
@@ -1285,6 +1286,7 @@ EXTRA_DIST= \
 	es-basic-bulk-vg.sh \
 	es-basic-ha-vg.sh \
 	es-maxbytes-bulk.sh \
+	es-bulk-retry.sh \
 	linkedlistqueue.sh \
 	testsuites/linkedlistqueue.conf \
 	da-mainmsg-q.sh \
