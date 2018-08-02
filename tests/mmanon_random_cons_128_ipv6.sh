@@ -17,7 +17,7 @@ ruleset(name="testing") {
 
 echo 'Since this test tests randomization, there is a theoretical possibility of it failing even if rsyslog works correctly. Therefore, if the test unexpectedly fails try restarting it.'
 startup
-. $srcdir/diag.sh tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 file1 33:45:DDD::4
+tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 file1 33:45:DDD::4
 <129>Mar 10 01:00:00 172.20.245.8 file2 ::
 <129>Mar 10 01:00:00 172.20.245.8 file6 ::
 <129>Mar 10 01:00:00 172.20.245.8 file3 72:8374:adc7:47FF::43:0:1AFE

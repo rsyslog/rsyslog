@@ -16,7 +16,7 @@ template(name="outfmt" type="string" string="-%msg%-\n")
 action(type="omfile" file="rsyslog.errorfile") 
 '
 startup
-. $srcdir/diag.sh tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag: msgnum:1\""
+tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag: msgnum:1\""
 shutdown_when_empty
 wait_shutdown
 

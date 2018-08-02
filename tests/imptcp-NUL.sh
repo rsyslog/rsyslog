@@ -14,7 +14,7 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 startup
 echo '<167>Mar  6 16:57:54 172.20.245.8 test: msgnum:0 X test message
 <167>Mar  6 16:57:54 172.20.245.8 Xtest: msgnum:1 test message' | tr X '\000' > rsyslog.input
-. $srcdir/diag.sh tcpflood -B -I rsyslog.input
+tcpflood -B -I rsyslog.input
 shutdown_when_empty
 wait_shutdown
 seq_check 0 1

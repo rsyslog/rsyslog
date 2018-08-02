@@ -12,7 +12,7 @@ template(name="outfmt" type="string" string="-%$!non!existing!var:109:116:%-\n")
 			         file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
-. $srcdir/diag.sh tcpflood -m1
+tcpflood -m1
 shutdown_when_empty
 wait_shutdown
 echo "--" | cmp - $RSYSLOG_OUT_LOG

@@ -22,7 +22,7 @@ if $!_aBc != "7" then
 	action(type="omfile" file="./rsyslog2.out.log" template="outfmt-all-json")
 '
 startup
-. $srcdir/diag.sh tcpflood -m 1 -M "\"<167>Nov  6 12:34:56 172.0.0.1 test: @cee: { \\\"abc\\\": \\\"1\\\", \\\"ABC\\\": \\\"2\\\", \\\"aBc\\\": \\\"3\\\", \\\"_abc\\\": \\\"4\\\", \\\"_ABC\\\": \\\"5\\\", \\\"_aBc\\\": \\\"6\\\" }\""
+tcpflood -m 1 -M "\"<167>Nov  6 12:34:56 172.0.0.1 test: @cee: { \\\"abc\\\": \\\"1\\\", \\\"ABC\\\": \\\"2\\\", \\\"aBc\\\": \\\"3\\\", \\\"_abc\\\": \\\"4\\\", \\\"_ABC\\\": \\\"5\\\", \\\"_aBc\\\": \\\"6\\\" }\""
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown

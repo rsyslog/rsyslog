@@ -16,8 +16,8 @@ ruleset(name="ruleset1") {
 
 '
 startup
-. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<27>xapi: [error|xen3|15|Guest liveness monitor D:bca30ab3f1c1|master_connection] Connection to master died. I will continue to retry indefinitely (supressing future logging of this message)\""
-. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"This is a message!\""
+tcpflood -m1 -T "udp" -M "\"<27>xapi: [error|xen3|15|Guest liveness monitor D:bca30ab3f1c1|master_connection] Connection to master died. I will continue to retry indefinitely (supressing future logging of this message)\""
+tcpflood -m1 -T "udp" -M "\"This is a message!\""
 shutdown_when_empty
 wait_shutdown
 

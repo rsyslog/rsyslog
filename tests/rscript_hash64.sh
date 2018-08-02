@@ -18,7 +18,7 @@ set $.hash_no_2 = hash64mod("0f9a1d07-a8c9-43a7-a6f7-198dca3d932e", 100);
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
-. $srcdir/diag.sh tcpflood -m 20
+tcpflood -m 20
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown

@@ -16,7 +16,7 @@ ruleset(name="rs") {
 }
 '
 startup
-. $srcdir/diag.sh tcpflood -m1
+tcpflood -m1
 shutdown_when_empty
 wait_shutdown
 EXPECTED='empty--'

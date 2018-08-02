@@ -12,7 +12,7 @@ ruleset(name="ruleset" parser="rsyslog.rfc5424") {
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
-. $srcdir/diag.sh tcpflood -m1
+tcpflood -m1
 shutdown_when_empty
 wait_shutdown
 grep 'one message could not be processed by any parser'  $RSYSLOG_OUT_LOG > /dev/null

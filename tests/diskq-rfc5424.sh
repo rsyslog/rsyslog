@@ -33,7 +33,7 @@ ruleset(name="rs") {
 }
 '
 startup
-. $srcdir/diag.sh tcpflood -m1000 -y
+tcpflood -m1000 -y
 shutdown_when_empty
 wait_shutdown
 seq_check 0 999

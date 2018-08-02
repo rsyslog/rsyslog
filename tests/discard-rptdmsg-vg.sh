@@ -25,7 +25,7 @@ template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
 startup_vg
-. $srcdir/diag.sh tcpflood -m10 -i1
+tcpflood -m10 -i1
 # we need to give rsyslog a little time to settle the receiver
 ./msleep 1500
 shutdown_when_empty # shut down rsyslogd when done processing messages

@@ -60,7 +60,7 @@ local4.* :omstdout:;outfmt
 '
 
 startup
-. $srcdir/diag.sh tcpflood -m1 -y
+tcpflood -m1 -y
 shutdown_when_empty
 wait_shutdown
 

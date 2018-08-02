@@ -16,9 +16,9 @@ ruleset(name="ruleset" parser="custom.pmnormalize") {
 }
 '
 startup
-. $srcdir/diag.sh tcpflood -m1 -M "\"<189> 127.0.0.1 ubuntu tag1: this is a test message\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"<112> 255.255.255.255 debian tag2: this is a test message\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"<177> centos 192.168.0.9 tag3: this is a test message\""
+tcpflood -m1 -M "\"<189> 127.0.0.1 ubuntu tag1: this is a test message\""
+tcpflood -m1 -M "\"<112> 255.255.255.255 debian tag2: this is a test message\""
+tcpflood -m1 -M "\"<177> centos 192.168.0.9 tag3: this is a test message\""
 shutdown_when_empty
 wait_shutdown
 echo 'host: ubuntu, ip: 127.0.0.1, tag: tag1, pri: 189, syslogfacility: 23, syslogseverity: 5 msg: this is a test message

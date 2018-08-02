@@ -22,7 +22,7 @@ export TZ=TEST+06:30
 FAKETIME='2016-01-01 01:00:00' startup
 # what we send actually is irrelevant, as we just use system properties.
 # but we need to send one message in order to gain output!
-. $srcdir/diag.sh tcpflood -m1
+tcpflood -m1
 shutdown_when_empty
 wait_shutdown
 echo "01:00,07:30" | cmp - $RSYSLOG_OUT_LOG

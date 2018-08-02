@@ -27,7 +27,7 @@ template(name="outfmt" type="string"
 echo "***SUBTEST: check 2016-03-01"
 rm -f $RSYSLOG_OUT_LOG	# do cleanup of previous subtest
 FAKETIME='2016-03-01 12:00:00' startup
-. $srcdir/diag.sh tcpflood -m1
+tcpflood -m1
 shutdown_when_empty
 wait_shutdown
 echo "Mar  1 14:00:00" | cmp - $RSYSLOG_OUT_LOG

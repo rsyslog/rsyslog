@@ -12,7 +12,7 @@ ruleset(name="remote") {
 }
 '
 startup
-. $srcdir/diag.sh tcpflood -B -I ${srcdir}/testsuites/imptcp_multi_line.testdata
+tcpflood -B -I ${srcdir}/testsuites/imptcp_multi_line.testdata
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate
 echo 'NEWMSG: <133>Mar  1 01:00:00 172.20.245.8 tag test1

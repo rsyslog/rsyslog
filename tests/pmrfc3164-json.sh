@@ -12,9 +12,9 @@ ruleset(name="rs") {
 }
 '
 startup
-. $srcdir/diag.sh tcpflood -m1 -M "\"{ \\\"c1\\\":1 }\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"   { \\\"c2\\\":2 }\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"   [{ \\\"c3\\\":3 }]\""
+tcpflood -m1 -M "\"{ \\\"c1\\\":1 }\""
+tcpflood -m1 -M "\"   { \\\"c2\\\":2 }\""
+tcpflood -m1 -M "\"   [{ \\\"c3\\\":3 }]\""
 shutdown_when_empty
 wait_shutdown
 EXPECTED='{ "c1":1 }---{ "c1":1 }

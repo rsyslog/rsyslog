@@ -17,7 +17,7 @@ ruleset(name="ruleset" parser="rsyslog.rfc5424") {
 }
 '
 startup_vg
-. $srcdir/diag.sh tcpflood -m10
+tcpflood -m10
 shutdown_when_empty
 wait_shutdown_vg
 # note: we just check the valgrind output, the log file itself does not

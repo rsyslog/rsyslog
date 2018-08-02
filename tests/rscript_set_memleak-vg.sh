@@ -33,7 +33,7 @@ ruleset(name="rcvr" queue.type="LinkedList") {
 	)
 }'
 startup_vg
-. $srcdir/diag.sh tcpflood -m5000
+tcpflood -m5000
 shutdown_when_empty
 wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg

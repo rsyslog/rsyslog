@@ -12,7 +12,7 @@ template(name="outfmt" type="string" string="%!ip%\n")
 local4.* action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
-. $srcdir/diag.sh tcpflood -m1 -y
+tcpflood -m1 -y
 shutdown_when_empty
 wait_shutdown
 echo '{ "v1": 1 }' | cmp - $RSYSLOG_OUT_LOG

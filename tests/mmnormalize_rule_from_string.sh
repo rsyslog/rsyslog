@@ -16,9 +16,9 @@ ruleset(name="norm") {
 }
 '
 startup
-. $srcdir/diag.sh tcpflood -m1 -M "\"ubuntu tag1: no longer listening on 127.168.0.1#10514\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"debian tag2: no longer listening on 127.168.0.2#10514\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"centos tag3: no longer listening on 192.168.0.1#10514\""
+tcpflood -m1 -M "\"ubuntu tag1: no longer listening on 127.168.0.1#10514\""
+tcpflood -m1 -M "\"debian tag2: no longer listening on 127.168.0.2#10514\""
+tcpflood -m1 -M "\"centos tag3: no longer listening on 192.168.0.1#10514\""
 shutdown_when_empty
 wait_shutdown
 echo 'ubuntu tag1:

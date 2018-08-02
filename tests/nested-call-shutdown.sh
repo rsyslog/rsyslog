@@ -26,7 +26,7 @@ ruleset(name="rs1" queue.type="linkedList") {
 if $msg contains "msgnum:" then call rs1
 '
 startup
-#. $srcdir/diag.sh tcpflood -p13514 -m10000
+#tcpflood -p13514 -m10000
 . $srcdir/diag.sh injectmsg 0 1000
 . $srcdir/diag.sh shutdown-immediate
 wait_shutdown

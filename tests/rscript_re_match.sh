@@ -17,7 +17,7 @@ add_conf '
 }
 '
 startup
-. $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/date_time_msg
+tcpflood -m 1 -I $srcdir/testsuites/date_time_msg
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown

@@ -30,7 +30,7 @@ if $!nope == "" then
 	action(type="omfile" file="./rsyslog2.out.log" template="outfmt-all-json")
 '
 startup_vg
-. $srcdir/diag.sh tcpflood -m 1 -M "\"<167>Mar  6 16:57:54 172.20.245.8 test: @cee: { \\\"nope\\\": null }\""
+tcpflood -m 1 -M "\"<167>Mar  6 16:57:54 172.20.245.8 test: @cee: { \\\"nope\\\": null }\""
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown

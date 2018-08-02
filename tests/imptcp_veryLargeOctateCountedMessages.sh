@@ -6,7 +6,7 @@ echo ===========================================================================
 echo TEST: \[imptcp_veryLargeOctateCountedMessages.sh\]: test imptcp with very large messages while poller driven processing is disabled
 . $srcdir/diag.sh init
 startup_silent imptcp_nonProcessingPoller.conf
-. $srcdir/diag.sh tcpflood -c1 -m20000 -r -d100000 -P129 -O
+tcpflood -c1 -m20000 -r -d100000 -P129 -O
 sleep 2 # due to large messages, we need this time for the tcp receiver to settle...
 shutdown_when_empty
 wait_shutdown

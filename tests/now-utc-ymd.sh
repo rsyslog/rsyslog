@@ -22,7 +22,7 @@ template(name="outfmt" type="string"
 FAKETIME='2016-01-01 01:00:00' startup
 # what we send actually is irrelevant, as we just use system properties.
 # but we need to send one message in order to gain output!
-. $srcdir/diag.sh tcpflood -m1
+tcpflood -m1
 shutdown_when_empty
 wait_shutdown
 echo "2016-01-01,2015-12-31" | cmp - $RSYSLOG_OUT_LOG

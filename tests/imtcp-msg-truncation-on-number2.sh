@@ -15,14 +15,14 @@ ruleset(name="ruleset1") {
 }
 '
 startup
-. $srcdir/diag.sh tcpflood -m2 -M "\"41 <120> 2011-03-01T11:22:12Z host msgnum:1\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"214000000000 <120> 2011-03-01T11:22:12Z host msgnum:1\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"41 <120> 2011-03-01T11:22:12Z host msgnum:1\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"214000000000 <120> 2011-03-01T11:22:12Z host msgnum:1\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"41 <120> 2011-03-01T11:22:12Z host msgnum:1\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"2000000010 <120> 2011-03-01T11:22:12Z host msgnum:1\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"4000000000 <120> 2011-03-01T11:22:12Z host msgnum:1\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"0 <120> 2011-03-01T11:22:12Z host msgnum:1\""
+tcpflood -m2 -M "\"41 <120> 2011-03-01T11:22:12Z host msgnum:1\""
+tcpflood -m1 -M "\"214000000000 <120> 2011-03-01T11:22:12Z host msgnum:1\""
+tcpflood -m1 -M "\"41 <120> 2011-03-01T11:22:12Z host msgnum:1\""
+tcpflood -m1 -M "\"214000000000 <120> 2011-03-01T11:22:12Z host msgnum:1\""
+tcpflood -m1 -M "\"41 <120> 2011-03-01T11:22:12Z host msgnum:1\""
+tcpflood -m1 -M "\"2000000010 <120> 2011-03-01T11:22:12Z host msgnum:1\""
+tcpflood -m1 -M "\"4000000000 <120> 2011-03-01T11:22:12Z host msgnum:1\""
+tcpflood -m1 -M "\"0 <120> 2011-03-01T11:22:12Z host msgnum:1\""
 shutdown_when_empty
 wait_shutdown
 

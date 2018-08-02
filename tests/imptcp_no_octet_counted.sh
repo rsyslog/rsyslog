@@ -14,7 +14,7 @@ ruleset(name="remote") {
 }
 '
 startup
-. $srcdir/diag.sh tcpflood -B -I ${srcdir}/testsuites/no_octet_counted.testdata
+tcpflood -B -I ${srcdir}/testsuites/no_octet_counted.testdata
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate
 seq_check 0 19

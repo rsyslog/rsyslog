@@ -24,8 +24,8 @@ $template outfmt,"%msg:F,58:2%\n"
 '
 startup_vg
 . $srcdir/diag.sh wait-startup
-. $srcdir/diag.sh tcpflood -t 127.0.0.1 -m 4 -r -Tudp -M "\"<133>2011-03-01T11:22:12Z host tag msgh ...\""
-. $srcdir/diag.sh tcpflood -t 127.0.0.1 -m 1 -r -Tudp -M "\"<133>2011-03-01T11:22:12Z host tag msgh ...x\""
+tcpflood -t 127.0.0.1 -m 4 -r -Tudp -M "\"<133>2011-03-01T11:22:12Z host tag msgh ...\""
+tcpflood -t 127.0.0.1 -m 1 -r -Tudp -M "\"<133>2011-03-01T11:22:12Z host tag msgh ...x\""
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown_vg
 if [ "$RSYSLOGD_EXIT" -eq "10" ]

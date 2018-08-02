@@ -31,7 +31,7 @@ startup sndrcv_kafka_sender.conf 2
 . $srcdir/diag.sh wait-startup 2
 
 echo \[sndrcv_kafka_failresume.sh\]: Inject messages into rsyslog sender instance  
-. $srcdir/diag.sh tcpflood -m$TESTMESSAGES -i1
+tcpflood -m$TESTMESSAGES -i1
 
 echo \[sndrcv_kafka_failresume.sh\]: Stopping kafka cluster instance 
 . $srcdir/diag.sh stop-kafka

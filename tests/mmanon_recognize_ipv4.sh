@@ -16,7 +16,7 @@ ruleset(name="testing") {
 }'
 
 startup
-. $srcdir/diag.sh tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag: asdfghjk
+tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag: asdfghjk
 <129>Mar 10 01:00:00 172.20.245.8 tag: before 172.9.6.4
 <129>Mar 10 01:00:00 172.20.245.8 tag: 75.123.123.0 after
 <129>Mar 10 01:00:00 172.20.245.8 tag: before 181.23.1.4 after

@@ -19,7 +19,7 @@ set $.grault = $!foo[3]!bar[1];
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
-. $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/json_array_input
+tcpflood -m 1 -I $srcdir/testsuites/json_array_input
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown

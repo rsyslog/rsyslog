@@ -23,9 +23,9 @@ ruleset(name="real") {
 }
 '
 startup
-. $srcdir/diag.sh tcpflood -p13515 -m5000 -i0 # these should NOT show up
-. $srcdir/diag.sh tcpflood -p13514 -m10000 -i5000
-. $srcdir/diag.sh tcpflood -p13515 -m500 -i15000 # these should NOT show up
+tcpflood -p13515 -m5000 -i0 # these should NOT show up
+tcpflood -p13514 -m10000 -i5000
+tcpflood -p13515 -m500 -i15000 # these should NOT show up
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
 seq_check 5000 14999

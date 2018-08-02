@@ -22,10 +22,10 @@ template(name="outfmt" type="string"
 			         file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
-. $srcdir/diag.sh tcpflood -m2500 -P129
+tcpflood -m2500 -P129
 ./msleep 2500
 gzip_seq_check 0 2499
-. $srcdir/diag.sh tcpflood -i2500 -m2500 -P129
+tcpflood -i2500 -m2500 -P129
 shutdown_when_empty
 wait_shutdown
 gzip_seq_check 0 4999

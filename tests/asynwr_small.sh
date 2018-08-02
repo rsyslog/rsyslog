@@ -33,7 +33,7 @@ $OMFileAsyncWriting on
 #export RSYSLOG_DEBUGLOG="log"
 startup
 # send 4000 messages
-. $srcdir/diag.sh tcpflood -m2
+tcpflood -m2
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate
 seq_check 0 1

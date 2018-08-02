@@ -40,7 +40,7 @@ local0.* ?dynfile;outfmt
 #export RSYSLOG_DEBUGLOG="log"
 startup
 # send 4000 messages of 10.000bytes plus header max, randomized
-. $srcdir/diag.sh tcpflood -m4000 -r -d10000 -P129 -f5
+tcpflood -m4000 -r -d10000 -P129 -f5
 sleep 2 # due to large messages, we need this time for the tcp receiver to settle...
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate

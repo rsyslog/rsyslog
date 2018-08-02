@@ -20,7 +20,7 @@ if $syslogfacility-text == "local0" then
     action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup_vg
-. $srcdir/diag.sh tcpflood -m1000 -P 129
+tcpflood -m1000 -P 129
 shutdown_when_empty
 wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg

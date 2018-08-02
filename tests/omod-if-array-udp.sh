@@ -15,7 +15,7 @@ ruleset(name="ruleset1") {
 
 '
 startup
-. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<167>Mar  6 16:57:54 172.20.245.8 %PIX-7-710005: UDP request discarded from SERVER1/2741 to test_app:255.255.255.255/61601\""
+tcpflood -m1 -T "udp" -M "\"<167>Mar  6 16:57:54 172.20.245.8 %PIX-7-710005: UDP request discarded from SERVER1/2741 to test_app:255.255.255.255/61601\""
 shutdown_when_empty
 wait_shutdown
 

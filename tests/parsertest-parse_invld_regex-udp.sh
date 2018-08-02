@@ -16,7 +16,7 @@ ruleset(name="ruleset1") {
 
 '
 startup
-. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<175>Feb 08 2008 23:47:31 hostname tag This is a message\""
+tcpflood -m1 -T "udp" -M "\"<175>Feb 08 2008 23:47:31 hostname tag This is a message\""
 shutdown_when_empty
 wait_shutdown
 

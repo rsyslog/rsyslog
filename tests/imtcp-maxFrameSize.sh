@@ -11,7 +11,7 @@ input(type="imtcp" port="13514")
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
-. $srcdir/diag.sh tcpflood -m1 -M "\"1005 <120> 2011-03-01T11:22:12Z host tag: this is a way too long message\""
+tcpflood -m1 -M "\"1005 <120> 2011-03-01T11:22:12Z host tag: this is a way too long message\""
 shutdown_when_empty
 wait_shutdown
 

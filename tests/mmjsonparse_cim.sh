@@ -18,7 +18,7 @@ if $parsesuccess == "OK" then {
 }
 '
 startup
-. $srcdir/diag.sh tcpflood -m 5000 -j "@cim: "
+tcpflood -m 5000 -j "@cim: "
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown

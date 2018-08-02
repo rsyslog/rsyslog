@@ -13,11 +13,11 @@ ruleset(name="customparser" parser="custom.rfc3164") {
 }
 '
 startup
-. $srcdir/diag.sh tcpflood -m1 -M "\"<129>Mar 10 01:00:00 Hostname1 tag1: msgnum:1\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"<129>Mar 10 01:00:00 Hostname2 tag2:  msgnum:2\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"<129>Mar 10 01:00:00 Hostname3 tag3 msgnum:3\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"<129>Mar 10 01:00:00 Hostname4 tag4 :\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"<129>Mar 10 01:00:00 Hostname5 tag5:msgnum:5\""
+tcpflood -m1 -M "\"<129>Mar 10 01:00:00 Hostname1 tag1: msgnum:1\""
+tcpflood -m1 -M "\"<129>Mar 10 01:00:00 Hostname2 tag2:  msgnum:2\""
+tcpflood -m1 -M "\"<129>Mar 10 01:00:00 Hostname3 tag3 msgnum:3\""
+tcpflood -m1 -M "\"<129>Mar 10 01:00:00 Hostname4 tag4 :\""
+tcpflood -m1 -M "\"<129>Mar 10 01:00:00 Hostname5 tag5:msgnum:5\""
 shutdown_when_empty
 wait_shutdown
 echo '-tag1:- msgnum:1-

@@ -13,7 +13,7 @@ if prifilt("news.*") then
     action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
-. $srcdir/diag.sh tcpflood -m1000 -P 57
+tcpflood -m1000 -P 57
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate
 seq_check 0 999 

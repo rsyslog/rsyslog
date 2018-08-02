@@ -17,7 +17,7 @@ template(name="outfmt" type="list") {
 '
 startup
 echo -n "<165>1 2003-08-24T05:14:15.000003-07:00 192.0.2.1 tcpflood 8710 - - lastmsg" >tmp.in
-. $srcdir/diag.sh tcpflood -I tmp.in
+tcpflood -I tmp.in
 rm tmp.in
 ./msleep 500
 shutdown_when_empty # shut down rsyslogd when done processing messages

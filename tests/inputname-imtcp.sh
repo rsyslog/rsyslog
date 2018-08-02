@@ -18,9 +18,9 @@ ruleset(name="ruleset1") {
 
 '
 startup
-. $srcdir/diag.sh tcpflood -p12514 -m1 -M "\"<167>Mar  6 16:57:54 172.20.245.8 %PIX-7-710005: MSG\""
-. $srcdir/diag.sh tcpflood -p12515 -m1 -M "\"<167>Mar  6 16:57:54 172.20.245.8 %PIX-7-710005: MSG\""
-. $srcdir/diag.sh tcpflood -p12516 -m1 -M "\"<167>Mar  6 16:57:54 172.20.245.8 %PIX-7-710005: MSG\""
+tcpflood -p12514 -m1 -M "\"<167>Mar  6 16:57:54 172.20.245.8 %PIX-7-710005: MSG\""
+tcpflood -p12515 -m1 -M "\"<167>Mar  6 16:57:54 172.20.245.8 %PIX-7-710005: MSG\""
+tcpflood -p12516 -m1 -M "\"<167>Mar  6 16:57:54 172.20.245.8 %PIX-7-710005: MSG\""
 shutdown_when_empty
 wait_shutdown
 

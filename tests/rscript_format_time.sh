@@ -25,7 +25,7 @@ local4.* :omstdout:;outfmt
 '
 
 startup
-. $srcdir/diag.sh tcpflood -m1 -y | sed 's|\r||'
+tcpflood -m1 -y | sed 's|\r||'
 shutdown_when_empty
 wait_shutdown
 

@@ -16,9 +16,9 @@ ruleset(name="norm") {
 }
 '
 startup
-. $srcdir/diag.sh tcpflood -m1 -M "\"<167>Mar 6 16:57:54 ubuntu tag1: no longer listening on 127.168.0.1#10514\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"<167>Mar 6 16:57:54 debian tag2: is sending messages on 127.168.0.1\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"<167>Mar 6 16:57:54 centos tag3: apfelkuchen\""
+tcpflood -m1 -M "\"<167>Mar 6 16:57:54 ubuntu tag1: no longer listening on 127.168.0.1#10514\""
+tcpflood -m1 -M "\"<167>Mar 6 16:57:54 debian tag2: is sending messages on 127.168.0.1\""
+tcpflood -m1 -M "\"<167>Mar 6 16:57:54 centos tag3: apfelkuchen\""
 shutdown_when_empty
 wait_shutdown
 echo 'ubuntu tag1:

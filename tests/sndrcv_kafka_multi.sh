@@ -32,7 +32,7 @@ startup sndrcv_kafka_multi_sender.conf 2
 . $srcdir/diag.sh wait-startup 2
 
 # now inject the messages into instance 2. It will connect to instance 1, and that instance will record the data.
-. $srcdir/diag.sh tcpflood -m$TESTMESSAGES -i1
+tcpflood -m$TESTMESSAGES -i1
 
 echo \[sndrcv_kafka_multi.sh\]: Sleep to give rsyslog instances time to process data ...
 sleep 20 

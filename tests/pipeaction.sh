@@ -40,7 +40,7 @@ echo background cp process id is $CPPROCESS
 # now do the usual run
 startup
 # 20000 messages should be enough
-#. $srcdir/diag.sh tcpflood -m20000
+#tcpflood -m20000
 . $srcdir/diag.sh injectmsg 0 20000
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown

@@ -19,7 +19,7 @@ if $msg contains "msgnum:" then {
 }
 '
 startup_vg
-. $srcdir/diag.sh tcpflood -m10
+tcpflood -m10
 shutdown_when_empty
 wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg

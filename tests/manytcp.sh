@@ -30,7 +30,7 @@ template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to
 '
 startup
 # the config file specifies exactly 1100 connections
-. $srcdir/diag.sh tcpflood -c-1100 -m40000
+tcpflood -c-1100 -m40000
 # the sleep below is needed to prevent too-early termination of the tcp listener
 sleep 1
 shutdown_when_empty # shut down rsyslogd when done processing messages

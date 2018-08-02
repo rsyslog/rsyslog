@@ -24,7 +24,7 @@ template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
 startup
-. $srcdir/diag.sh tcpflood -p13514 -m10000
+tcpflood -p13514 -m10000
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
 seq_check 0 9999
@@ -48,7 +48,7 @@ template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
 startup
-. $srcdir/diag.sh tcpflood -p13515 -m10000
+tcpflood -p13515 -m10000
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
 seq_check 0 9999
@@ -72,7 +72,7 @@ template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
 startup
-. $srcdir/diag.sh tcpflood -p13516 -m10000
+tcpflood -p13516 -m10000
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
 seq_check 0 9999

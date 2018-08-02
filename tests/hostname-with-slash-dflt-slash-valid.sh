@@ -14,7 +14,7 @@ local4.debug action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`
 '
 startup
 echo '<167>1 2003-03-01T01:00:00.000Z hostname1/hostname2 tcpflood - tag [tcpflood@32473 MSGNUM="0"] data' > rsyslog.input
-. $srcdir/diag.sh tcpflood -B -I rsyslog.input
+tcpflood -B -I rsyslog.input
 shutdown_when_empty
 wait_shutdown
 echo "hostname1/hostname2" | cmp - $RSYSLOG_OUT_LOG

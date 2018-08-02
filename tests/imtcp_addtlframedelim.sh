@@ -22,7 +22,7 @@ add_conf "
 local0.* ./$RSYSLOG_OUT_LOG;outfmt
 "
 startup
-. $srcdir/diag.sh tcpflood -m20000 -F0 -P129 -p$PORT_TCP
+tcpflood -m20000 -F0 -P129 -p$PORT_TCP
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate
 seq_check 0 19999
