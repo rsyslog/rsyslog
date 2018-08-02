@@ -12,7 +12,7 @@ action(type="omstdout" template="outfmt")
 
 '
 startup > $RSYSLOG_OUT_LOG
-. $srcdir/diag.sh tcpflood -m1
+tcpflood -m1
 shutdown_when_empty
 wait_shutdowna
 

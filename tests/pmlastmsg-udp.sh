@@ -16,14 +16,14 @@ ruleset(name="ruleset1" parser=["rsyslog.lastline","rsyslog.rfc5424","rsyslog.rf
 
 '
 startup
-. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<13>last message repeated 5 times\""
-. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<13>last message repeated 0090909787348927349875 times\""
-. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<13>last message  repeated 5 times\""
-. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<13>last message repeated 5 times -- more data\""
-. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<13>last message repeated 5.2 times\""
-. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<167>Mar  6 16:57:54 172.20.245.8 TAG: Rest of message...\""
-. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<167>Mar  6 16:57:54 172.20.245.8 TAG long message ================================================================================\""
-. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<34>1 2003-11-11T22:14:15.003Z mymachine.example.com su - ID47 last message repeated 5 times\""
+tcpflood -m1 -T "udp" -M "\"<13>last message repeated 5 times\""
+tcpflood -m1 -T "udp" -M "\"<13>last message repeated 0090909787348927349875 times\""
+tcpflood -m1 -T "udp" -M "\"<13>last message  repeated 5 times\""
+tcpflood -m1 -T "udp" -M "\"<13>last message repeated 5 times -- more data\""
+tcpflood -m1 -T "udp" -M "\"<13>last message repeated 5.2 times\""
+tcpflood -m1 -T "udp" -M "\"<167>Mar  6 16:57:54 172.20.245.8 TAG: Rest of message...\""
+tcpflood -m1 -T "udp" -M "\"<167>Mar  6 16:57:54 172.20.245.8 TAG long message ================================================================================\""
+tcpflood -m1 -T "udp" -M "\"<34>1 2003-11-11T22:14:15.003Z mymachine.example.com su - ID47 last message repeated 5 times\""
 shutdown_when_empty
 wait_shutdown
 

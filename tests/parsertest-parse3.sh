@@ -16,8 +16,8 @@ ruleset(name="ruleset1") {
 
 '
 startup
-. $srcdir/diag.sh tcpflood -m1 -M "\"<175>Oct 16 2009 23:47:31 hostname tag This is a message\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"<175>Oct 16 2009 23:47:31 hostname tag[1234] This is a message\""
+tcpflood -m1 -M "\"<175>Oct 16 2009 23:47:31 hostname tag This is a message\""
+tcpflood -m1 -M "\"<175>Oct 16 2009 23:47:31 hostname tag[1234] This is a message\""
 shutdown_when_empty
 wait_shutdown
 

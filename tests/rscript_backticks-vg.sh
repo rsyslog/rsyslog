@@ -10,7 +10,7 @@ if `echo $DO_WORK` == "on" and $msg contains "msgnum:" then
 export DO_WORK=on
 startup_vg
 . $srcdir/diag.sh injectmsg 0 1000
-#. $srcdir/diag.sh tcpflood -m10
+#tcpflood -m10
 shutdown_when_empty
 wait_shutdown_vg
 seq_check  0 999

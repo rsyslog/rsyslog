@@ -19,7 +19,7 @@ if $msg contains "msgnum" then {
 }
 '
 startup
-. $srcdir/diag.sh tcpflood -m1000 -Ttls -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem
+tcpflood -m1000 -Ttls -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem
 shutdown_when_empty
 wait_shutdown
 seq_check 0 999

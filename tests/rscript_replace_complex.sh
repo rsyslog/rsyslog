@@ -19,7 +19,7 @@ set $.replaced_msg = replace($.replaced_msg, "as_longer_this_string_as_more_prob
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
-. $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/complex_replace_input
+tcpflood -m 1 -I $srcdir/testsuites/complex_replace_input
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown

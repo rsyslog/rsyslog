@@ -35,7 +35,7 @@ $ActionQueueType LinkedList
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
 startup
-#. $srcdir/diag.sh tcpflood -c2 -m100000
+#tcpflood -c2 -m100000
 #shutdown_when_empty # shut down rsyslogd when done processing messages
 . $srcdir/diag.sh injectmsg 0 100000
 # we need to sleep a bit on some environments, as imdiag can not correctly

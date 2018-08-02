@@ -26,7 +26,7 @@ $OMFileAsyncWriting on
 startup
 # send 35555 messages, make sure file size is not a multiple of
 # 4K, the buffer size!
-. $srcdir/diag.sh tcpflood -m35555
+tcpflood -m35555
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate
 seq_check 0 35554

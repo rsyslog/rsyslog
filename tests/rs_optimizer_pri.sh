@@ -20,8 +20,8 @@ if $syslogfacility-text == "local4" then
 '
 startup
 sleep 1
-. $srcdir/diag.sh tcpflood -m100 # correct facility
-. $srcdir/diag.sh tcpflood -m100 -P175 # incorrect facility --> must be ignored
+tcpflood -m100 # correct facility
+tcpflood -m100 -P175 # incorrect facility --> must be ignored
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
 seq_check 0 99

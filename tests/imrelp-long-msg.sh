@@ -12,7 +12,7 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 				 file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
-. $srcdir/diag.sh tcpflood -Trelp-plain -p13514 -m2 -d 204800
+tcpflood -Trelp-plain -p13514 -m2 -d 204800
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
 seq_check 0 1

@@ -30,7 +30,7 @@ template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to
 startup
 # 20000 messages should be enough - the disk test is slow enough ;)
 sleep 4
-. $srcdir/diag.sh tcpflood -m20000
+tcpflood -m20000
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
 seq_check 0 19999

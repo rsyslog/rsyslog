@@ -34,7 +34,7 @@ template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to
 startup
 
 # part1: send first 50 messages (in memory, only)
-#. $srcdir/diag.sh tcpflood 127.0.0.1 13514 1 50
+#tcpflood 127.0.0.1 13514 1 50
 . $srcdir/diag.sh injectmsg 0 50
 . $srcdir/diag.sh wait-queueempty # let queue drain for this test case
 

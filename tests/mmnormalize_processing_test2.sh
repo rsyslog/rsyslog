@@ -55,7 +55,7 @@ ruleset(name="ruleset1") {
 }
 '
 FAKETIME='2017-03-08 12:18:47' startup
-. $srcdir/diag.sh tcpflood -m1 -M "\"<166>2017-03-08T12:18:47.165Z Host2.domain.com Process1: [FFB87B70 verbose Process1HalCnxHostagent opID=WFU-abfbbece] [WaitForUpdatesDone] Completed callback\""
+tcpflood -m1 -M "\"<166>2017-03-08T12:18:47.165Z Host2.domain.com Process1: [FFB87B70 verbose Process1HalCnxHostagent opID=WFU-abfbbece] [WaitForUpdatesDone] Completed callback\""
 shutdown_when_empty
 wait_shutdown
 echo '2017-03-08T12:18:47.165Z 2017-03-08T12:18:47.165Z Host2.domain.com Process1 [FFB87B70 verbose Process1HalCnxHostagent opID=WFU-abfbbece] [WaitForUpdatesDone] Completed callback

@@ -20,7 +20,7 @@ action(type="omfile" template="outfmt"
 '
 # TODO: add tcpflood option to specific EXACT test message size!
 startup
-. $srcdir/diag.sh tcpflood -Trelp-plain -p13514 -m1 -d 240
+tcpflood -Trelp-plain -p13514 -m1 -d 240
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
 

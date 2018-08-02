@@ -22,11 +22,11 @@ $ActionExecOnlyOnceEveryInterval 3
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
 startup
-. $srcdir/diag.sh tcpflood -m10 -i1
+tcpflood -m10 -i1
 # now wait until the interval definitely expires
 sleep 4 # one more than the once inerval!
 # and inject another couple of messages
-. $srcdir/diag.sh tcpflood -m10 -i100
+tcpflood -m10 -i100
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
 

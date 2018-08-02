@@ -18,7 +18,7 @@ if $msg contains "msgnum:" then
 '
 startup
 sleep 1
-. $srcdir/diag.sh tcpflood -m10 -i1
+tcpflood -m10 -i1
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
 seq_check 2 10

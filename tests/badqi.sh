@@ -24,7 +24,7 @@ $ActionQueueFileName dbq
 '
 startup
 # we just inject a handful of messages so that we have something to wait for...
-. $srcdir/diag.sh tcpflood -m20
+tcpflood -m20
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown  # wait for process to terminate
 seq_check 0 19

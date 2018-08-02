@@ -26,7 +26,7 @@ template(name="outfmt" type="string"
 echo "***SUBTEST: check 1800-01-01"
 rm -f $RSYSLOG_OUT_LOG	# do cleanup of previous subtest
 FAKETIME='1800-01-01 00:00:00' startup
-. $srcdir/diag.sh tcpflood -m1
+tcpflood -m1
 shutdown_when_empty
 wait_shutdown
 echo "001" | cmp - $RSYSLOG_OUT_LOG
@@ -41,7 +41,7 @@ fi;
 echo "***SUBTEST: check 1960-01-01"
 rm -f $RSYSLOG_OUT_LOG	# do cleanup of previous subtest
 FAKETIME='1960-01-01 00:00:00' startup
-. $srcdir/diag.sh tcpflood -m1
+tcpflood -m1
 shutdown_when_empty
 wait_shutdown
 echo "001" | cmp - $RSYSLOG_OUT_LOG
@@ -56,7 +56,7 @@ fi;
 echo "***SUBTEST: check 2101-01-01"
 rm -f $RSYSLOG_OUT_LOG	# do cleanup of previous subtest
 FAKETIME='2101-01-01 00:00:00' startup
-. $srcdir/diag.sh tcpflood -m1
+tcpflood -m1
 shutdown_when_empty
 wait_shutdown
 echo "001" | cmp - $RSYSLOG_OUT_LOG
@@ -71,7 +71,7 @@ fi;
 echo "***SUBTEST: check 2500-01-01"
 rm -f $RSYSLOG_OUT_LOG	# do cleanup of previous subtest
 FAKETIME='2500-01-01 00:00:00' startup
-. $srcdir/diag.sh tcpflood -m1
+tcpflood -m1
 shutdown_when_empty
 wait_shutdown
 echo "001" | cmp - $RSYSLOG_OUT_LOG

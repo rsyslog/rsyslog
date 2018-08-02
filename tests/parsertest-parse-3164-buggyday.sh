@@ -16,8 +16,8 @@ ruleset(name="ruleset1") {
 
 '
 startup
-. $srcdir/diag.sh tcpflood -m1 -M "\"<38> Mar  7 19:06:53 example tag: testmessage (only date actually tested)\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"<38> Mar 17 19:06:53 example tag: testmessage (only date actually tested)\""
+tcpflood -m1 -M "\"<38> Mar  7 19:06:53 example tag: testmessage (only date actually tested)\""
+tcpflood -m1 -M "\"<38> Mar 17 19:06:53 example tag: testmessage (only date actually tested)\""
 shutdown_when_empty
 wait_shutdown
 

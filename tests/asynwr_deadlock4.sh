@@ -34,7 +34,7 @@ local0.* ?dynfile;outfmt
 startup
 # send 20000 messages, each close to 2K (non-randomized!), so that we can fill
 # the buffers and hopefully run into the "deadlock".
-. $srcdir/diag.sh tcpflood -m20000 -d18 -P129 -i1 -f5
+tcpflood -m20000 -d18 -P129 -i1 -f5
 # sleep is important! need to make sure the instance is inactive
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate

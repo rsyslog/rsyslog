@@ -17,7 +17,7 @@ $OMFileIOBufferSize 256k
 local0.* action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
-. $srcdir/diag.sh tcpflood -m20000 -F0 -P129
+tcpflood -m20000 -F0 -P129
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate
 seq_check 0 19999

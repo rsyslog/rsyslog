@@ -18,9 +18,9 @@ ruleset(name="ruleset1") {
 
 '
 startup
-. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"test\""
-. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"UX=Abcd-efg-hij-klmno; XXXXX=1111111111, Z123=192.12.231.245:11111, S1234=123456789, XXXXXX=111111111\""
-. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"windowsserver	MSWinEventLog	1	Security	1167	Fri Mar 19 15:33:30 2010	540	Security	SYSTEM	User	Success Audit	WINDOWSSERVER	Logon/Logoff		Successful Network Logon:     User Name: WINDOWSSERVER$     Domain: DOMX     Logon ID: (0x0,0xF88396)     Logon Type: 3     Logon Process: Kerberos     Authentication Package: Kerberos     Workstation Name:      Logon GUID: {79b6eb79-7bcc-8a2e-7dad-953c51dc00fd}     Caller User Name: -     Caller Domain: -     Caller Logon ID: -     Caller Process ID: -     Transited Services: -     Source Network Address: 10.11.11.3     Source Port: 3306    	733\\\n\""
+tcpflood -m1 -T "udp" -M "\"test\""
+tcpflood -m1 -T "udp" -M "\"UX=Abcd-efg-hij-klmno; XXXXX=1111111111, Z123=192.12.231.245:11111, S1234=123456789, XXXXXX=111111111\""
+tcpflood -m1 -T "udp" -M "\"windowsserver	MSWinEventLog	1	Security	1167	Fri Mar 19 15:33:30 2010	540	Security	SYSTEM	User	Success Audit	WINDOWSSERVER	Logon/Logoff		Successful Network Logon:     User Name: WINDOWSSERVER$     Domain: DOMX     Logon ID: (0x0,0xF88396)     Logon Type: 3     Logon Process: Kerberos     Authentication Package: Kerberos     Workstation Name:      Logon GUID: {79b6eb79-7bcc-8a2e-7dad-953c51dc00fd}     Caller User Name: -     Caller Domain: -     Caller Logon ID: -     Caller Process ID: -     Transited Services: -     Source Network Address: 10.11.11.3     Source Port: 3306    	733\\\n\""
 shutdown_when_empty
 wait_shutdown
 

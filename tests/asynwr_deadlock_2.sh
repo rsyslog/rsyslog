@@ -27,7 +27,7 @@ $OMFileAsyncWriting on
 #export RSYSLOG_DEBUGLOG="log"
 startup
 # just send one message
-. $srcdir/diag.sh tcpflood -m1
+tcpflood -m1
 # sleep is important! need to make sure the instance is inactive
 sleep 1
 # now try shutdown. The actual test is if the process does hang here!

@@ -25,7 +25,7 @@ ruleset(name="ruleset1") {
 }
 '
 FAKETIME='2017-03-08 14:56:37' startup
-. $srcdir/diag.sh tcpflood -m1 -M "\"<187>Mar  8 14:56:37 host4 Process2: {SER4.local7 Y01 LNX [SRCH ALRT DASH REPT ANOM]} (/sb/env/logs/dir1/dir2/log_20170308.log) in 1: X/c79RgpDtrva5we84XHTg== (String)\""
+tcpflood -m1 -M "\"<187>Mar  8 14:56:37 host4 Process2: {SER4.local7 Y01 LNX [SRCH ALRT DASH REPT ANOM]} (/sb/env/logs/dir1/dir2/log_20170308.log) in 1: X/c79RgpDtrva5we84XHTg== (String)\""
 shutdown_when_empty
 wait_shutdown
 echo '2017-03-08T14:56:37+02:00 2017-03-08T14:56:37+02:00 host4 Process2 in 1: X/c79RgpDtrva5we84XHTg== (String)

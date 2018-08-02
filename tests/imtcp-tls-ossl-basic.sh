@@ -25,7 +25,7 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 '
 # Begin actuall testcase
 startup
-. $srcdir/diag.sh tcpflood -p13514 -m10000 -Ttls -x$srcdir/tls-certs/ca.pem -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem
+tcpflood -p13514 -m10000 -Ttls -x$srcdir/tls-certs/ca.pem -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
 seq_check 0 9999

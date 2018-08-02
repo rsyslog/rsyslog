@@ -15,7 +15,7 @@ ruleset(name="ruleset1") {
 
 '
 startup
-. $srcdir/diag.sh tcpflood -m1 -M "\"<167>Mar  6 16:57:54 172.20.245.8 %PIX-7-710005: DROP_url_www.sina.com.cn:IN=eth1 OUT=eth0 SRC=192.168.10.78 DST=61.172.201.194 LEN=1182 TOS=0x00 PREC=0x00 TTL=63 ID=14368 DF PROTO=TCP SPT=33343 DPT=80 WINDOW=92 RES=0x00 ACK PSH URGP=0\""
+tcpflood -m1 -M "\"<167>Mar  6 16:57:54 172.20.245.8 %PIX-7-710005: DROP_url_www.sina.com.cn:IN=eth1 OUT=eth0 SRC=192.168.10.78 DST=61.172.201.194 LEN=1182 TOS=0x00 PREC=0x00 TTL=63 ID=14368 DF PROTO=TCP SPT=33343 DPT=80 WINDOW=92 RES=0x00 ACK PSH URGP=0\""
 shutdown_when_empty
 wait_shutdown
 

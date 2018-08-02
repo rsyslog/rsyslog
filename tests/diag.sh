@@ -75,7 +75,7 @@ function rsyslog_testbench_test_url_access() {
 function setvar_RS_HOSTNAME() {
 	rm -f HOSTNAME
 	startup gethostname.conf
-	. $srcdir/diag.sh tcpflood -m1 -M "\"<128>\""
+	tcpflood -m1 -M "\"<128>\""
 	shutdown_when_empty # shut down rsyslogd when done processing messages
 	wait_shutdown	# we need to wait until rsyslogd is finished!
 	export RS_HOSTNAME="$(cat HOSTNAME)"
@@ -373,6 +373,17 @@ function gzip_seq_check() {
 	if [ "$?" -ne "0" ]; then
 		echo "sequence error detected"
 		error_exit 1
+	fi
+}
+
+
+# do a tcpflood run and check if it worked params are passed to tcpflood
+function tcpflood() {
+	eval ./tcpflood -p$TCPFLOOD_PORT "$@" $TCPFLOOD_EXTRA_OPTS
+	if [ "$?" -ne "0" ]; then
+		echo "error during tcpflood! see ${RSYSLOG_OUT_LOG}.save for what was written"
+		cp ${RSYSLOG_OUT_LOG} ${RSYSLOG_OUT_LOG}.save
+		error_exit 1 stacktrace
 	fi
 }
 
@@ -702,15 +713,6 @@ case $1 in
 		kill -9 `cat rsyslog.pid`
 		# note: we do not wait for the actual termination!
 		;;
-   'tcpflood') # do a tcpflood run and check if it worked params are passed to tcpflood
-		shift 1
-		eval ./tcpflood -p$TCPFLOOD_PORT "$@" $TCPFLOOD_EXTRA_OPTS
-		if [ "$?" -ne "0" ]; then
-		  echo "error during tcpflood! see ${RSYSLOG_OUT_LOG}.save for what was written"
-		  cp ${RSYSLOG_OUT_LOG} ${RSYSLOG_OUT_LOG}.save
-		  error_exit 1 stacktrace
-		fi
-		;;
    'injectmsg') # inject messages via our inject interface (imdiag)
 		echo injecting $3 messages
 		echo injectmsg $2 $3 $4 $5 | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
@@ -964,7 +966,7 @@ case $1 in
 		;;
    'generate-HOSTNAME')   # generate the HOSTNAME file
 		startup gethostname.conf
-		. $srcdir/diag.sh tcpflood -m1 -M "\"<128>\""
+		tcpflood -m1 -M "\"<128>\""
 		$TESTTOOL_DIR/msleep 100
 		shutdown_when_empty # shut down rsyslogd when done processing messages
 		wait_shutdown	# we need to wait until rsyslogd is finished!

@@ -16,9 +16,9 @@ ruleset(name="ruleset" parser="custom.pmnormalize") {
 }
 '
 startup
-. $srcdir/diag.sh tcpflood -m1 -M "\"<189> ubuntu tag1: is no longer listening on 127.0.0.1 test\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"<112> debian tag2: is no longer listening on 255.255.255.255 test\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"<177> centos tag3: is no longer listening on 192.168.0.9 test\""
+tcpflood -m1 -M "\"<189> ubuntu tag1: is no longer listening on 127.0.0.1 test\""
+tcpflood -m1 -M "\"<112> debian tag2: is no longer listening on 255.255.255.255 test\""
+tcpflood -m1 -M "\"<177> centos tag3: is no longer listening on 192.168.0.9 test\""
 shutdown_when_empty
 wait_shutdown
 echo 'host: ubuntu, ip: 127.0.0.1, tag: tag1, pri: 189, syslogfacility: 23, syslogseverity: 5 msg: test

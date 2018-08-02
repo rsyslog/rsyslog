@@ -23,7 +23,7 @@ local0.* ?dynfile;outfmt
 '
 startup
 # 100 byte messages to gain more practical data use
-. $srcdir/diag.sh tcpflood -c20 -m50000 -r -d100 -P129 -D
+tcpflood -c20 -m50000 -r -d100 -P129 -D
 sleep 10 # due to large messages, we need this time for the tcp receiver to settle...
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate

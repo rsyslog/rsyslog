@@ -38,7 +38,7 @@ startup $1_sender.conf 2
 
 # now inject the messages into instance 2. It will connect to instance 1,
 # and that instance will record the data.
-. $srcdir/diag.sh tcpflood -m$2 -i1
+tcpflood -m$2 -i1
 sleep 5 # make sure all data is received in input buffers
 # shut down sender when everything is sent, receiver continues to run concurrently
 # may be needed by TLS (once we do it): sleep 60

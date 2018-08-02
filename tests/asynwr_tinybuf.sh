@@ -28,7 +28,7 @@ $OMFileAsyncWriting on
 #export RSYSLOG_DEBUGLOG="log"
 startup
 # send 1000 messages, fairly enough to trigger problems
-. $srcdir/diag.sh tcpflood -m1000
+tcpflood -m1000
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown # shut down rsyslogd when done processing messages
 seq_check 0 999

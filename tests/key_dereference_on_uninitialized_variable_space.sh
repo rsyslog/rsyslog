@@ -22,7 +22,7 @@ input(type="imtcp" port="13514")
 call echo
 '
 startup
-. $srcdir/diag.sh tcpflood -m 10
+tcpflood -m 10
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown

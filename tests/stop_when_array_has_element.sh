@@ -20,7 +20,7 @@ foreach ($.quux in $!foo) do {
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="foo")
 '
 startup
-. $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/stop_when_array_has_elem_input
+tcpflood -m 1 -I $srcdir/testsuites/stop_when_array_has_elem_input
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown

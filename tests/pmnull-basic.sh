@@ -13,7 +13,7 @@ ruleset(name="ruleset" parser=["custom.pmnull.withOrigin", "rsyslog.pmnull"]) {
 }
 '
 startup
-. $srcdir/diag.sh tcpflood -m1 -M "\"<189>16261: May 28 16:09:56.185: %SYS-5-CONFIG_I: Configured from console by adminsepp on vty0 (10.23.214.226)\""
+tcpflood -m1 -M "\"<189>16261: May 28 16:09:56.185: %SYS-5-CONFIG_I: Configured from console by adminsepp on vty0 (10.23.214.226)\""
 shutdown_when_empty
 wait_shutdown
 echo 'tag: , pri: 13, syslogfacility: 1, syslogseverity: 5 msg: <189>16261: May 28 16:09:56.185: %SYS-5-CONFIG_I: Configured from console by adminsepp on vty0 (10.23.214.226)' | cmp - $RSYSLOG_OUT_LOG

@@ -13,7 +13,7 @@ template(name="outfmt" type="string" string="%timestamp:::date-mysql%\n")
 
 '
 startup
-. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<34>1 2003-01-23T12:34:56.003Z mymachine.example.com su - ID47 - MSG\""
+tcpflood -m1 -T "udp" -M "\"<34>1 2003-01-23T12:34:56.003Z mymachine.example.com su - ID47 - MSG\""
 shutdown_when_empty
 wait_shutdown
 

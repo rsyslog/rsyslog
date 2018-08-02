@@ -22,7 +22,7 @@ ruleset(name="testing") {
 	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }'
 startup
-. $srcdir/diag.sh tcpflood -m 1 -j "202.106.0.20\ "
+tcpflood -m 1 -j "202.106.0.20\ "
 shutdown_when_empty
 wait_shutdown
 . $srcdir/diag.sh content-check '{ "city": "Beijing" }'

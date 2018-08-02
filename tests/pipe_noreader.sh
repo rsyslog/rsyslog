@@ -31,7 +31,7 @@ $template outfmt,"%msg:F,58:2%\n"
 mkfifo ./rsyslog.pipe
 startup
 # we need to emit ~ 128K of data according to bug report
-. $srcdir/diag.sh tcpflood -m1000 -d500
+tcpflood -m1000 -d500
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate
 # NO need to check seqno -- see header comment

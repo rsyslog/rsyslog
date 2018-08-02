@@ -2,9 +2,9 @@
 # add 2017-06-12 by Pascal Withopf, released under ASL 2.0
 . $srcdir/diag.sh init
 startup_vg_noleak pmnormalize-rule-vg.conf
-. $srcdir/diag.sh tcpflood -m1 -M "\"<189> 127.0.0.1 ubuntu tag1: this is a test message\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"<112> 255.255.255.255 debian tag2: this is a test message\""
-. $srcdir/diag.sh tcpflood -m1 -M "\"<177> centos 192.168.0.9 tag3: this is a test message\""
+tcpflood -m1 -M "\"<189> 127.0.0.1 ubuntu tag1: this is a test message\""
+tcpflood -m1 -M "\"<112> 255.255.255.255 debian tag2: this is a test message\""
+tcpflood -m1 -M "\"<177> centos 192.168.0.9 tag3: this is a test message\""
 shutdown_when_empty
 wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg

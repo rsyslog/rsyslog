@@ -12,7 +12,7 @@ template(type="string" name="outfmt" string="%msg:F,58:4%\n")
 invld.=debug action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
-. $srcdir/diag.sh tcpflood -m1000 -P 3500000000
+tcpflood -m1000 -P 3500000000
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate
 seq_check 0 999 

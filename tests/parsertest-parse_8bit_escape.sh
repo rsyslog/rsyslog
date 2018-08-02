@@ -17,7 +17,7 @@ ruleset(name="ruleset1") {
 
 '
 startup
-. $srcdir/diag.sh tcpflood -m1 -M "\"<6>AUG 10 22:18:24 host tag This msg contains 8-bit European chars: äöü\""
+tcpflood -m1 -M "\"<6>AUG 10 22:18:24 host tag This msg contains 8-bit European chars: äöü\""
 shutdown_when_empty
 wait_shutdown
 

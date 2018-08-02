@@ -26,7 +26,7 @@ foreach ($.data in $!array) do {
 }
 '
 startup_vg
-. $srcdir/diag.sh tcpflood -m 1 -M "\"<167>Mar  6 16:57:54 172.20.245.8 test: @cee: { \\\"array\\\": [0, 1, null, 2, 3, null, 4] }\""
+tcpflood -m 1 -M "\"<167>Mar  6 16:57:54 172.20.245.8 test: @cee: { \\\"array\\\": [0, 1, null, 2, 3, null, 4] }\""
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown

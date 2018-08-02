@@ -32,7 +32,7 @@ if ( $!only_ips != "" ) then {
 }
 '
 startup
-. $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/tokenized_input
+tcpflood -m 1 -I $srcdir/testsuites/tokenized_input
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown

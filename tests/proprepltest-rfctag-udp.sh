@@ -14,10 +14,10 @@ template(name="outfmt" type="string" string="+%syslogtag:1:32%+\n")
 
 '
 startup
-. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<167>Mar  6 16:57:54 172.20.245.8 TAG: Rest of message...\""
-. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<167>Mar  6 16:57:54 172.20.245.8 0 Rest of message...\""
-. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<167>Mar  6 16:57:54 172.20.245.8 01234567890123456789012345678901 Rest of message...\""
-. $srcdir/diag.sh tcpflood -m1 -T "udp" -M "\"<167>Mar  6 16:57:54 172.20.245.8 01234567890123456789012345678901-toolong Rest of message...\""
+tcpflood -m1 -T "udp" -M "\"<167>Mar  6 16:57:54 172.20.245.8 TAG: Rest of message...\""
+tcpflood -m1 -T "udp" -M "\"<167>Mar  6 16:57:54 172.20.245.8 0 Rest of message...\""
+tcpflood -m1 -T "udp" -M "\"<167>Mar  6 16:57:54 172.20.245.8 01234567890123456789012345678901 Rest of message...\""
+tcpflood -m1 -T "udp" -M "\"<167>Mar  6 16:57:54 172.20.245.8 01234567890123456789012345678901-toolong Rest of message...\""
 shutdown_when_empty
 wait_shutdown
 

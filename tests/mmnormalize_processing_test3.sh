@@ -55,7 +55,7 @@ ruleset(name="ruleset1") {
 }
 '
 FAKETIME='2017-03-08 14:23:51' startup
-. $srcdir/diag.sh tcpflood -m1 -M "\"<182>Mar  8 14:23:51 host3 audispd: {SER3.local6 Y01 LNX [SRCH ALRT DASH REPT ANOM]}  node=host3.domain.com type=SYSCALL msg=audit(1488975831.267:230190721):\""
+tcpflood -m1 -M "\"<182>Mar  8 14:23:51 host3 audispd: {SER3.local6 Y01 LNX [SRCH ALRT DASH REPT ANOM]}  node=host3.domain.com type=SYSCALL msg=audit(1488975831.267:230190721):\""
 shutdown_when_empty
 wait_shutdown
 echo '2017-03-08T14:23:51-01:00 2017-03-08T14:23:51-01:00 host3 audispd  node=host3.domain.com type=SYSCALL msg=audit(1488975831.267:230190721):

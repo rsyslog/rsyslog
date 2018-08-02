@@ -12,7 +12,7 @@ template(name="outfmt" type="string" string="%msg:9:16:%\n")
 			         file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
-. $srcdir/diag.sh tcpflood -m9
+tcpflood -m9
 shutdown_when_empty
 wait_shutdown
 seq_check  0 8

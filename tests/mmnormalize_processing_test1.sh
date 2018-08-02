@@ -55,7 +55,7 @@ ruleset(name="ruleset1") {
 }
 '
 FAKETIME='2017-03-08 12:53:47' startup
-. $srcdir/diag.sh tcpflood -m1 -M "\"<37>1 2017-03-08T12:53:47+02:00 Host1.domain.com Security - - - SER1 M01 WIN [AUF] Wed Mar 08 11:53:48 2017: N\A/Security/Host1.domain.com/Microsoft-Windows-Security-Auditing (5152) - message\""
+tcpflood -m1 -M "\"<37>1 2017-03-08T12:53:47+02:00 Host1.domain.com Security - - - SER1 M01 WIN [AUF] Wed Mar 08 11:53:48 2017: N\A/Security/Host1.domain.com/Microsoft-Windows-Security-Auditing (5152) - message\""
 shutdown_when_empty
 wait_shutdown
 echo '2017-03-08T12:53:47+02:00 2017-03-08T12:53:47+02:00 Host1.domain.com Security [AUF] Wed Mar 08 11:53:48 2017: N\A/Security/Host1.domain.com/Microsoft-Windows-Security-Auditing (5152) - message

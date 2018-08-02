@@ -30,7 +30,7 @@ startup sndrcv_kafka_sender.conf 2
 . $srcdir/diag.sh wait-startup 2
 
 echo \[sndrcv_kafka.sh\]: Inject messages into rsyslog sender instance  
-. $srcdir/diag.sh tcpflood -m$TESTMESSAGES -i1
+tcpflood -m$TESTMESSAGES -i1
 
 echo \[sndrcv_kafka.sh\]: Sleep to give rsyslog instances time to process data ...
 sleep 5

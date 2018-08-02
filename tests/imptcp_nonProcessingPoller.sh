@@ -18,7 +18,7 @@ if (prifilt("local0.*")) then {
 }
 '
 startup
-. $srcdir/diag.sh tcpflood -c1 -m20000 -r -d10000 -P129 -O
+tcpflood -c1 -m20000 -r -d10000 -P129 -O
 sleep 2 # due to large messages, we need this time for the tcp receiver to settle...
 shutdown_when_empty
 wait_shutdown

@@ -16,9 +16,9 @@ startup
 # we need to generate a file, because otherwise our multiple spaces
 # do not survive the execution pathes through the shell
 echo "<165>1 2003-08-24T05:14:15.000003-07:00 192.0.2.1 tcpflood 8710 - - msgnum:0000000 test   test     test" >tmp.in
-. $srcdir/diag.sh tcpflood -I tmp.in
+tcpflood -I tmp.in
 rm tmp.in
-#. $srcdir/diag.sh tcpflood -m1 -M"\"<165>1 2003-08-24T05:14:15.000003-07:00 192.0.2.1 tcpflood 8710 - - msgnum:0000000 test   test     test\""
+#tcpflood -m1 -M"\"<165>1 2003-08-24T05:14:15.000003-07:00 192.0.2.1 tcpflood 8710 - - msgnum:0000000 test   test     test\""
 shutdown_when_empty
 wait_shutdown
 echo "msgnum:0000000 test test test" | cmp - $RSYSLOG_OUT_LOG

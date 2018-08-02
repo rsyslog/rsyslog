@@ -20,7 +20,7 @@ set $.replaced_msg = replace("date time: " & exec_template("date_time"), "O" & "
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
-. $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/date_time_msg
+tcpflood -m 1 -I $srcdir/testsuites/date_time_msg
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown

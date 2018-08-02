@@ -16,7 +16,7 @@ set $.random_no = random(10);
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
-. $srcdir/diag.sh tcpflood -m 20
+tcpflood -m 20
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown

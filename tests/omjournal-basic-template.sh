@@ -18,7 +18,7 @@ action(type="omjournal" template="outfmt")
 COOKIE=`date`
 echo "COOKIE: $COOKIE"
 startup
-. $srcdir/diag.sh tcpflood -m1 -M "\"<133>2011-03-01T11:22:12Z host tag msgh RsysLoG-TESTBENCH $COOKIE\""
+tcpflood -m1 -M "\"<133>2011-03-01T11:22:12Z host tag msgh RsysLoG-TESTBENCH $COOKIE\""
 ./msleep 500
 shutdown_when_empty
 wait_shutdown

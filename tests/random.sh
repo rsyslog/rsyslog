@@ -25,7 +25,7 @@ startup
 # generate random data
 ./randomgen -f rsyslog.random.data -s 100000
 ls -l rsyslog.random.data
-. $srcdir/diag.sh tcpflood -B -I rsyslog.random.data -c5 -C10
+tcpflood -B -I rsyslog.random.data -c5 -C10
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate
 # we do not check anything yet, the point is if rsyslog survived ;)

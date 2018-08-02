@@ -103,7 +103,7 @@ $InputTCPServerRun 13516
 #export RSYSLOG_DEBUGLOG="log"
 startup
 # send 40,000 messages of 400 bytes plus header max, via three dest ports
-. $srcdir/diag.sh tcpflood -m40000 -rd400 -P129 -f5 -n3 -c15 -i1
+tcpflood -m40000 -rd400 -P129 -f5 -n3 -c15 -i1
 sleep 4 # due to large messages, we need this time for the tcp receiver to settle...
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate
