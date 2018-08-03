@@ -563,6 +563,35 @@ The parameter controls both TCP and UNIX sockets backlog parameter.
 Default value is arbitrary set to 5.
 
 
+Defaulttz
+^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+Set default time zone. At most seven chars are set, as we would otherwise
+overrun our buffer.
+
+
+Framingfix.cisco.asa
+^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+Cisco very occasionally sends a space after a line feed, which thrashes framing
+if not taken special care of. When this parameter is set to "on", we permit
+space *in front of the next frame* and ignore it.
+
+
 .. _imptcp-statistic-counter:
 
 Statistic Counter
