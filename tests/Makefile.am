@@ -877,6 +877,8 @@ TESTS += \
 	imfile-old-state-file.sh \
 	imfile-rename-while-stopped.sh \
 	imfile-rename.sh \
+	imfile-symlink.sh \
+	imfile-symlink-multi.sh \
 	glbl-oversizeMsg-truncate-imfile.sh
 
 if HAVE_VALGRIND
@@ -1594,6 +1596,8 @@ EXTRA_DIST= \
 	imfile-old-state-file.sh \
 	imfile-rename-while-stopped.sh \
 	imfile-rename.sh \
+	imfile-symlink.sh \
+	imfile-symlink-multi.sh \
 	glbl-oversizeMsg-truncate-imfile.sh \
 	testsuites/imfile-wildcards-simple.conf \
 	testsuites/imfile-wildcards-dirs.conf \

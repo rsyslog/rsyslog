@@ -416,6 +416,7 @@ function exit_test() {
 	rm -f rsyslog.random.data rsyslog.pipe
 	rm -f -r rsyslog.input.*
 	rm -f rsyslog.input rsyslog.conf.tlscert stat-file1 rsyslog.empty rsyslog.input.* imfile-state*
+	rm -rf rsyslog.input-symlink.log rsyslog-link.*.log targets
 	rm -f testconf.conf
 	rm -f rsyslog.errorfile tmp.qi nocert
 	rm -f HOSTNAME imfile-state:.-rsyslog.input
@@ -514,6 +515,7 @@ case $1 in
 		rm -rf test-spool test-logdir stat-file1
 		rm -f rsyslog.pipe rsyslog.input.*
 		rm -f rsyslog.input rsyslog.empty rsyslog.input.* imfile-state* omkafka-failed.data
+		rm -rf rsyslog.input-symlink.log rsyslog-link.*.log targets
 		rm -f testconf*.conf HOSTNAME
 		rm -f rsyslog.errorfile tmp.qi nocert
 		rm -f core.* vgcore.* core*
