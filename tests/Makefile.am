@@ -1890,6 +1890,7 @@ EXTRA_DIST= \
 	imptcp_nonProcessingPoller.sh \
 	imptcp_veryLargeOctateCountedMessages.sh \
 	testsuites/imptcp_nonProcessingPoller.conf \
+	known_issues.supp \
 	libmaxmindb.supp \
 	travis/trusty.supp \
 	linux_localtime_r.supp \

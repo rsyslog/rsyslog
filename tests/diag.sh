@@ -188,7 +188,7 @@ function startup_vg_waitpid_only() {
 	    echo "ERROR: config file '$CONF_FILE' not found!"
 	    exit 1
 	fi
-	LD_PRELOAD=$RSYSLOG_PRELOAD valgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --gen-suppressions=all --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=$RS_TESTBENCH_LEAK_CHECK ../tools/rsyslogd -C -n -irsyslog$2.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
+	LD_PRELOAD=$RSYSLOG_PRELOAD valgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --suppressions=$srcdir/known_issues.supp --gen-suppressions=all --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=$RS_TESTBENCH_LEAK_CHECK ../tools/rsyslogd -C -n -irsyslog$2.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
 	. $srcdir/diag.sh wait-startup-pid $2
 }
 
@@ -534,7 +534,7 @@ case $1 in
 			rm -f IN_AUTO_DEBUG
                 fi
 		if [ -e IN_AUTO_DEBUG ]; then
-			export valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
+			export valgrind="valgrind --malloc-fill=ff --free-fill=fe --suppressions=$srcdir/known_issues.supp --log-fd=1"
 		fi
 		export RSYSLOG_DFLT_LOG_INTERNAL=1 # testbench needs internal messages logged internally!
 		export RSYSLOG2_OUT_LOG=rsyslog2.out.log
