@@ -478,7 +478,7 @@ case $1 in
 			kill -9 $pid
 		done
 		# cleanup hanging uxsockrcvr processes
-		for pid in $(ps -eo pid,args|grep 'uxsockrcvr' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
+		for pid in $(ps -eo pid,args|grep 'uxsockrcvr' |grep -v grep |sed -e 's/\( *\)\([0-9]*\).*/\2/');
 		do
 			echo "ERROR: left-over previous uxsockrcvr instance $pid, killing it"
 			ps -fp $pid
