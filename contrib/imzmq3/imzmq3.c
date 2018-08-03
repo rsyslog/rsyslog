@@ -200,8 +200,8 @@ static struct cnfparamblk inppblk = {
  */
 
 /* get the name of a socket type, return the ZMQ_XXX type
-   or -1 if not a supported type (see above)
-*/
+ * or -1 if not a supported type (see above)
+ */
 static int getSocketType(char* name) {
 	int type = -1;
 	uint i;
@@ -460,7 +460,7 @@ static rsRetVal createListener(struct cnfparamvals* pvals) {
 	CHKiRet(createInstance(&inst));
 	for(i = 0 ; i < inppblk.nParams ; ++i) {
 	    if(!pvals[i].bUsed)
-	        continue;	
+	        continue;
 	    if(!strcmp(inppblk.descr[i].name, "ruleset")) {
 	        inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
 	    } else if(!strcmp(inppblk.descr[i].name, "description")) {

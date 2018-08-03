@@ -45,24 +45,24 @@ int main(int argc, char *argv[])
 
 	/* First, we need to determine whether journal is running at all */
 	int fd;
-  	FILE *log;
-  	fd = sd_journal_stream_fd("imjournal_test", LOG_WARNING, 0);
-  	if (fd < 0) {
-    		fprintf(stderr, "Failed to create journal fd: %s\n", strerror(-fd));
-    		exit(2);
-  	}
+	FILE *log;
+	fd = sd_journal_stream_fd("imjournal_test", LOG_WARNING, 0);
+	if (fd < 0) {
+		fprintf(stderr, "Failed to create journal fd: %s\n", strerror(-fd));
+		exit(2);
+	}
 	log = fdopen(fd, "w");
- 	if (!log) {
-   		fprintf(stderr, "Failed to create file object: %m\n");
+	if (!log) {
+		fprintf(stderr, "Failed to create file object: %m\n");
 		close(fd);
-    		exit(2);
- 	}
+		exit(2);
+	}
 
 	/* Now we can try inserting something */
 	if (fprintf(log, "%s", argv[1]) <= 0) {
-   		fprintf(stderr, "Failed to write to journal log: %m\n");
+		fprintf(stderr, "Failed to write to journal log: %m\n");
 		close(fd);
-    		exit(3);
+		exit(3);
 	}
 
 	return(0);

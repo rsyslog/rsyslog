@@ -245,7 +245,7 @@ parse_result_store(const grok_match_t gm,instanceData *pData)
 	    char *key;
 	    char *type;
 	    DEFiRet;
-	    	
+
 	    grok_match_walk_init(&gm); //grok API
 
 	    while(grok_match_walk_next(&gm,&pname,&pname_len,&pdata,&pdata_len) == 0)
