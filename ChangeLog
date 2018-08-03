@@ -1,7 +1,8 @@
 ------------------------------------------------------------------------------
 Version 8.38.0 [v8-stable] 2018-09-18
-- imfile: support for following symlinks and providing metadate for them added
-  This cases no change of existing behaviour.
+- bugfix imfile: files which were loaded via symlink were not always followed
+  They were stopped watching after being rotated.
+  closes https://github.com/rsyslog/rsyslog/issues/2229
   Thanks to Jiri Vymazal for the patch.
 ------------------------------------------------------------------------------
 Version 8.37.0 [v8-stable] 2018-08-07
