@@ -509,11 +509,11 @@ static void _del_handler(pn_handler_t *handler)
 // Close the sender and its parent session and connection
 static void _close_connection(protocolState_t *ps)
 {
-  if (ps->sender) {
-	  pn_link_close(ps->sender);
-	  pn_session_close(pn_link_session(ps->sender));
-  }
-  if (ps->conn) pn_connection_close(ps->conn);
+	if (ps->sender) {
+		pn_link_close(ps->sender);
+		pn_session_close(pn_link_session(ps->sender));
+	}
+	if (ps->conn) pn_connection_close(ps->conn);
 }
 
 static void _abort_command(protocolState_t *ps)
@@ -913,7 +913,7 @@ static rsRetVal _shutdown_thread(instanceData *pData)
 	    DBGPRINTF("omamqp1: thread shutdown complete\n");
 	}
 
- finalize_it:
+finalize_it:
 	RETiRet;
 }
 

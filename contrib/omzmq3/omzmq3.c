@@ -52,8 +52,8 @@ DEF_OMOD_STATIC_DATA
 static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 
 /* convienent symbols to denote a socket we want to bind
-   vs one we want to just connect to
-*/
+ * vs one we want to just connect to
+ */
 #define ACTION_CONNECT 1
 #define ACTION_BIND    2
 
@@ -107,9 +107,9 @@ typedef struct wrkrInstanceData {
  */
 
 /* only 1 zctx for all the sockets, with an adjustable number of
-   worker threads which may be useful if we use affinity in particular
-   sockets
-*/
+ * worker threads which may be useful if we use affinity in particular
+ * sockets
+ */
 static zctx_t* s_context       = NULL;
 static int     s_workerThreads = -1;
 
@@ -161,8 +161,8 @@ static struct cnfparamblk actpblk = {
  */
 
 /* get the name of a socket type, return the ZMQ_XXX type
-   or -1 if not a supported type (see above)
-*/
+ * or -1 if not a supported type (see above)
+ */
 static int getSocketType(char* name) {
 	int type = -1;
 	uint i;
@@ -255,7 +255,7 @@ static rsRetVal initZMQ(instanceData* pData) {
 	    }
 	    DBGPRINTF("omzmq3: connect to %s successful", pData->description);
 	}
- finalize_it:
+finalize_it:
 	RETiRet;
 }
 
@@ -274,7 +274,7 @@ static rsRetVal writeZMQ(uchar* msg, instanceData* pData) {
 	    LogError(0, NO_ERRCODE, "omzmq3: send of %s failed: %s", msg, zmq_strerror(errno));
 	    ABORT_FINALIZE(RS_RET_ERR);
 	}
- finalize_it:
+finalize_it:
 	RETiRet;
 }
 

@@ -399,7 +399,7 @@ httpfs_curl_result_callback(void *contents, size_t size, size_t nmemb, void *use
  */
 static rsRetVal
 httpfs_parse_exception(char* buf, int length, httpfs_json_remote_exception* jre)
-{	
+{
 	DEFiRet;
 	
 	if (!length) {
@@ -446,7 +446,7 @@ finalize_it:
 	if(json != NULL)
 		json_object_put(json);
 	RETiRet;
-}	
+}
 
 
 
