@@ -85,7 +85,7 @@ priority and not this priority and all higher priorities.
 You may also precide the priority with an exclamation mark ("!") if you want
 syslogd to ignore this priority and all higher priorities. You may even use
 both, the exclamation mark and the equation sign if you want syslogd to ignore
-only this single priority. If you use both extensions than the exclamation
+only this single priority. If you use both extensions then the exclamation
 mark must occur before the equation sign, just use it intuitively.
 
 ACTIONS

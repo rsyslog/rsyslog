@@ -67,7 +67,7 @@ its use more intuitively. You may precede every priority with an equals
 sign ("='') to specify only this single priority and not any of the
 above. You may also (both is valid, too) precede the priority with an
 exclamation mark ("!'') to ignore all that priorities, either exact this
-one or this and any higher priority. If you use both extensions than the
+one or this and any higher priority. If you use both extensions then the
 exclamation mark must occur before the equals sign, just use it
 intuitively.
 
