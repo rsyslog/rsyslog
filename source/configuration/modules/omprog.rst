@@ -25,13 +25,6 @@ terminates, the program's stdin will see EOF. The program must then
 terminate. The message format passed to the program can, as usual, be
 modified by defining rsyslog templates.
 
-Note that each time an omprog action is defined, the corresponding
-program is invoked. A single instance is **not** being re-used. There
-are arguments pro and con for re-using existing binaries. For the time
-being, it simply is not done. In the future, we may add an option for
-such pooling, provided that some demand for that is voiced. You can also
-mimic the same effect by defining multiple rulesets and including them.
-
 Note that in order to execute the given program, rsyslog needs to have
 sufficient permissions on the binary file. This is especially true if
 not running as root. Also, keep in mind that default SELinux policies
@@ -164,7 +157,7 @@ confirmed by returning ``OK``, and the individual messages by returning
    `Interface between rsyslog and external output plugins
    <https://github.com/rsyslog/rsyslog/blob/master/plugins/external/INTERFACE.md>`_
 
-.. note::
+.. warning::
 
    There is currently a `known issue
    <https://github.com/rsyslog/rsyslog/issues/2420>`_ with the use of
@@ -238,6 +231,18 @@ stderr of the child process are written to the specified file.
 If confirmMessages_ is set to "on", only the stderr of the child is
 written to the specified file (since stdout is used for confirming the
 messages).
+
+.. warning::
+
+   There is currently a known issue with omprog when this parameter is NOT
+   used: the stderr of the program will be assigned arbitrarily, or closed,
+   which can produce unpredictable results if the program emits something
+   to stderr (`example <https://github.com/rsyslog/rsyslog/issues/2787>`_).
+   As a workaround, it is recommended to explicitly redirect stderr within
+   the program, or to use this parameter. In future versions, omprog will
+   execute the program with stderr redirected to /dev/null when this
+   parameter is not specified. The same considerations apply to stdout
+   when confirmMessages_ is set to "off".
 
 
 hup.signal
@@ -345,6 +350,44 @@ This parameter can be set to a different value than signalOnClose_, obtaining
 the corresponding variations of cleanup sequences described above.
 
 
+forceSingleInstance
+-------------------
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+.. versionadded:: v8.1.6
+
+By default, the omprog action will start an instance (process) of the
+external program per worker thread (the maximum number of worker threads
+can be specified with the
+:doc:`queue.workerThreads <../../rainerscript/queue_parameters>`
+parameter). Moreover, if the action is associated to a
+:doc:`disk-assisted queue <../../concepts/queues>`, an additional instance
+will be started when the queue is persisted, to process the items stored
+on disk.
+
+If you want to force a single instance of the program to be executed,
+regardless of the number of worker threads or the queue type, set this
+flag to "on". This is useful when the external program uses or accesses
+some kind of shared resource that does not allow concurrent access from
+multiple processes.
+
+.. warning::
+
+   This parameter is currently affected by `this issue
+   <https://github.com/rsyslog/rsyslog/issues/2813>`_ that essentially
+   causes it to have no effect. As a workaround, if you need this
+   behavior, set the
+   :doc:`queue.workerThreads <../../rainerscript/queue_parameters>`
+   parameter to 1 (which is the default value), and do not use a
+   disk-assisted queue for the omprog action.
+
+
 Examples
 ========
 
@@ -404,48 +447,3 @@ program stores and confirms each log individually.
 
 -  **$ActionOMProgBinary** <binary>
    The binary program to be executed.
-
-
-Deprecated parameters
-=====================
-
-**Note:** While these parameters are still accepted, they should no longer be
-used for newly created configurations.
-
-
-forceSingleInstance
--------------------
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "none"
-
-.. versionadded:: v8.1.6
-
-If set to "on", this switch prevents the action's worker threads from
-concurrently sending logs to the running instances (child processes) of
-the external program.
-
-Note that enabling this switch, despite its name, will NOT force a single
-instance of the program to be executed. If you want this behavior, set the
-:doc:`queue.workerThreads <../../rainerscript/queue_parameters>`
-parameter to 1 (which is the default value). This will cause only one worker
-thread to be scheduled for the action.
-
-Besides, when :doc:`queue.workerThreads <../../rainerscript/queue_parameters>`
-is greater than 1, enabling this switch will NOT prevent the child processes
-from concurrently process the received logs, since the processes run
-asynchronously with respect to rsyslog because of the pipe buffering (unless
-the feedback mode is used; see the confirmMessages_ parameter). In general,
-if the external program uses or accesses some kind of shared resource that
-does not allow concurrent access from multiple processes, it is recommended
-to set :doc:`queue.workerThreads <../../rainerscript/queue_parameters>`
-to 1.
-
-This parameter is deprecated. If you are using it with a value of "off" (the
-default), you can safely remove it. If you are using it with a value of "on",
-consider setting :doc:`queue.workerThreads <../../rainerscript/queue_parameters>`
-to 1 instead, for the reasons explained above.
