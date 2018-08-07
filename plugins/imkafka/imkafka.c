@@ -176,7 +176,7 @@ DBGPRINTF("imkafka: enqMsg: Msg: %.*s\n", (int)rkmessage->len, (char *)rkmessage
 	MsgSetRawMsg(pMsg, (char*)rkmessage->payload, (int)rkmessage->len);
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
 	MsgSetRuleset(pMsg, inst->pBindRuleset);
-	pMsg->msgFlags  = NEEDS_PARSING; // | PARSE_HOSTNAME;
+	pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
 	/* Optional Fields */
 	if (rkmessage->key_len) {
 		DBGPRINTF("imkafka: enqMsg: Key: %.*s\n", (int)rkmessage->key_len, (char *)rkmessage->key);
