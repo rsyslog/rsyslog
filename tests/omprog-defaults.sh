@@ -26,20 +26,18 @@ template(name="outfmt" type="string" string="%msg%\n")
 :msg, contains, "msgnum:" {
     action(
         type="omprog"
-	binary=`echo $srcdir/testsuites/omprog-defaults-bin.sh param1 param2 param3`
+	    binary=`echo $srcdir/testsuites/omprog-defaults-bin.sh p1 p2 p3`
         template="outfmt"
         name="omprog_action"
     )
 }
 '
 startup
-. $srcdir/diag.sh wait-startup
 injectmsg 0 10
-. $srcdir/diag.sh wait-queueempty
 shutdown_when_empty
 wait_shutdown
 
-expected_output="Starting with parameters: param1 param2 param3
+EXPECTED="Starting with parameters: p1 p2 p3
 Received msgnum:00000000:
 Received msgnum:00000001:
 Received msgnum:00000002:
@@ -52,11 +50,6 @@ Received msgnum:00000008:
 Received msgnum:00000009:
 Terminating normally"
 
-written_output=$(<$RSYSLOG_OUT_LOG)
-if [[ "$expected_output" != "$written_output" ]]; then
-    echo unexpected omprog script output:
-    echo "$written_output"
-    error_exit 1
-fi
+cmp_exact $RSYSLOG_OUT_LOG
 
 exit_test

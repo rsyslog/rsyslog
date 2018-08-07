@@ -480,7 +480,7 @@ function exit_test() {
 	rm -f tmp.qi nocert
 	rm -fr $RSYSLOG_DYNNAME*  # delete all of our dynamic files
 	unset TCPFLOOD_EXTRA_OPTS
-	printf "Test SUCCESFULL\n"
+	printf "Test SUCCESFUL\n"
 	echo  -------------------------------------------------------------------------------
 }
 
@@ -828,7 +828,7 @@ case $1 in
 		if [ "$?" -ne "0" ]; then
 		    echo FAIL: content-cmp failed
 		    echo EXPECTED:
-		    echo $2
+		    echo "$2"
 		    echo ACTUAL:
 		    cat ${RSYSLOG_OUT_LOG}
 		    error_exit 1

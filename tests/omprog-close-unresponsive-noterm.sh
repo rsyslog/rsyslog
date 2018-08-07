@@ -33,12 +33,11 @@ main_queue(
 cp -f $srcdir/testsuites/omprog-close-unresponsive-bin.sh $RSYSLOG_DYNNAME.omprog-close-unresponsive-bin.sh
 startup
 injectmsg 0 10
-. $srcdir/diag.sh wait-queueempty
 shutdown_when_empty
 wait_shutdown
 . $srcdir/diag.sh ensure-no-process-exists $RSYSLOG_DYNNAME.omprog-close-unresponsive-bin.sh
 
-expected_output="Starting
+EXPECTED="Starting
 Received msgnum:00000000:
 Received msgnum:00000001:
 Received msgnum:00000002:
@@ -51,11 +50,6 @@ Received msgnum:00000008:
 Received msgnum:00000009:
 Terminating unresponsively"
 
-written_output=$(<$RSYSLOG_OUT_LOG)
-if [[ "$expected_output" != "$written_output" ]]; then
-    echo unexpected omprog script output:
-    echo "$written_output"
-    error_exit 1
-fi
+. $srcdir/diag.sh content-cmp "$EXPECTED"
 
 exit_test

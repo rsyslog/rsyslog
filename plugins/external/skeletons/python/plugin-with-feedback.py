@@ -6,6 +6,7 @@ To integrate a plugin based on this skeleton with rsyslog, configure an
 'omprog' action like the following:
     action(type="omprog"
         binary="/usr/bin/myplugin.py"
+        output="/var/log/myplugin.log"
         confirmMessages="on"
         ...)
 
@@ -61,20 +62,12 @@ def onInit():
     # Apart from processing the logs received from rsyslog, you want your plugin
     # to be able to report its own logs in some way. This will facilitate
     # diagnosing problems and debugging your code. Here we set up the standard
-    # Python logging system to output the logs to stderr.
+    # Python logging system to output the logs to stderr. In the rsyslog
+    # configuration, you can configure the 'omprog' action to capture the stderr
+    # of your plugin by specifying the action's "output" parameter.
     logging.basicConfig(stream=sys.stderr,
                         level=logging.WARNING,
                         format='%(asctime)s %(levelname)s %(message)s')
-
-    # In the rsyslog configuration, you can configure the 'omprog' action to
-    # capture the stderr of your plugin by specifying the action's "output"
-    # parameter. However, note that this parameter is intended for debugging
-    # purposes and cannot be used on a permanent basis (in particular, it will
-    # not work well if rsyslog decides to launch multiple instances of your
-    # plugin, since this would cause concurrent writes to the output file).
-    # As an alternative to logging to stderr, you can log to a per-process
-    # file, as shown here:
-    # logging.basicConfig(filename="myplugin-{}.log".format(os.getpid()), ...)
 
     # This is an example of a debug log. (Note that for debug logs to be
     # emitted you must set 'level' to logging.DEBUG above.)

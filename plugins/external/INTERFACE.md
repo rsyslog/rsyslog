@@ -84,13 +84,34 @@ Writing to stderr
 -----------------
 Aside from confirming messages via stdout, at any moment the plugin may write
 anything it wants to stderr. The `output` setting of the `omprog` action allows
-capturing the plugin's stderr to a file, which can be useful for debugging.
-Apart from this facility, rsyslog will ignore the plugin's stderr.
+capturing the plugin's stderr to a file. This provides an easy way for the
+plugin to record its own logs in case something fails (for example, logging the
+details of a database connection error).
 
-Note: When the `output` setting is specified and `confirmMessages` is set to
-`off`, rsyslog will capture both the stdout and stderr of the plugin to the
-specified file. You can use this to debug your plugin if you think it is not
-confirming the messages as expected.
+To prevent the output file from growing too much over time, it is recommended
+to periodically rotate it using a tool like _logrotate_. After each rotation of
+the file, a HUP signal must be sent to rsyslog. This will cause rsyslog to
+reopen the file.
+
+When multiple instances of the program are running concurrently (see [Threading
+Model](#threading-model)), rsyslog guarantees that the lines written to stderr
+by the various instances will not appear intermingled in the output file, as
+long as: 1) the lines are short enough (the actual limit depends on the platform:
+4KB on Linux, and at least 512 bytes on other systems), and 2) the program
+writes each line at a time, without buffering multiple lines. (Commonly, this
+can be accomplished by either flushing the stream after each line, writing to
+the stream in line-buffered mode, or doing a single write in case the stream is
+unbuffered. Which of these alternatives is the easiest or most natural to use
+depends on the language and libraries the program is coded in.)
+
+If the `output` setting is not specified, the plugin's stderr will be ignored
+(it will be redirected to `/dev/null`).
+
+When `confirmMessages` is set to `off`, the `output` setting will capture both
+the stdout and stderr of the plugin to the specified file (and if omitted, both
+stdout and stderr will be redirected to `/dev/null`). The same considerations
+regarding the rotation of the file and the consistency of the lines apply in
+this case.
 
 Example implementation
 ----------------------

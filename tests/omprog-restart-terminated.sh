@@ -7,16 +7,10 @@
 # omprog is going to write to the pipe (to send a message to the
 # program), and when omprog is going to read from the pipe (when it
 # is expecting the program to confirm the last message).
+
 . $srcdir/diag.sh init
+. $srcdir/diag.sh check-command-available lsof
 
-uname -a
-if [ `uname` = "SunOS" ] ; then
-   echo "This test currently does not work on all flavors of Solaris"
-   echo "looks like a problem with signal delivery to the script"
-   exit 77
-fi
-
-$srcdir/diag.sh check-command-available lsof
 generate_conf
 add_conf '
 module(load="../plugins/omprog/.libs/omprog")
@@ -31,7 +25,7 @@ template(name="outfmt" type="string" string="%msg%\n")
         name="omprog_action"
         queue.type="Direct"  # the default; facilitates sync with the child process
         confirmMessages="on"  # facilitates sync with the child process
-        action.resumeRetryCount="10"
+        action.resumeRetryCount="3"
         action.resumeInterval="1"
         action.reportSuspensionContinuation="on"
         signalOnClose="off"
@@ -39,11 +33,21 @@ template(name="outfmt" type="string" string="%msg%\n")
 }
 '
 
-# we need a test-specifc program name, as we use it inside the process table
-cp -f $srcdir/testsuites/omprog-restart-terminated-bin.sh $RSYSLOG_DYNNAME.omprog-restart-terminated-bin.sh 
+# we need a test-specific program name, as we use it inside the process table
+cp -f $srcdir/testsuites/omprog-restart-terminated-bin.sh $RSYSLOG_DYNNAME.omprog-restart-terminated-bin.sh
+
+# On Solaris 10, the output of ps is truncated for long process names; use /usr/ucb/ps instead:
+if [[ `uname` = "SunOS" && `uname -r` = "5.10" ]]; then
+    function get_child_pid {
+        echo $(/usr/ucb/ps -awwx | grep "[o]mprog-restart-terminated-bin.sh" | awk '{ print $1 }')
+    }
+else
+    function get_child_pid {
+        echo $(ps -ef | grep "[o]mprog-restart-terminated-bin.sh" | awk '{ print $2 }')
+    }
+fi
 
 startup
-. $srcdir/diag.sh wait-startup
 injectmsg 0 1
 . $srcdir/diag.sh wait-queueempty
 
@@ -54,31 +58,30 @@ injectmsg 1 1
 injectmsg 2 1
 . $srcdir/diag.sh wait-queueempty
 
-pkill -USR1 -f $RSYSLOG_DYNNAME.omprog-restart-terminated-bin.sh
-sleep 1 # ensure signal is delivered on (very) slow machines
+kill -s USR1 $(get_child_pid)
+./msleep 100
 
 injectmsg 3 1
 injectmsg 4 1
 . $srcdir/diag.sh wait-queueempty
 
-pkill -TERM -f $RSYSLOG_DYNNAME.omprog-restart-terminated-bin.sh
-sleep 1 # ensure signal is delivered on (very) slow machines
+kill -s TERM $(get_child_pid)
+./msleep 100
 
 injectmsg 5 1
 injectmsg 6 1
 injectmsg 7 1
 . $srcdir/diag.sh wait-queueempty
 
-pkill -USR1 -f $RSYSLOG_DYNNAME.omprog-restart-terminated-bin.sh
-sleep 1 # ensure signal is delivered on (very) slow machines
+kill -s USR1 $(get_child_pid)
+./msleep 100
 
 injectmsg 8 1
 injectmsg 9 1
 . $srcdir/diag.sh wait-queueempty
 
 end_fd_count=$(lsof -p $pid | wc -l)
-child_pid=$(ps -ef | grep "[o]mprog-restart-terminated-bin.sh" | awk '{print $2}')
-child_netstat=$(netstat -p | grep "$child_pid/bash")
+child_lsof=$(lsof -a -d 0-65535 -p $(get_child_pid) | awk '$4 != "255r" { print $4 " " $9 }')
 
 shutdown_when_empty
 wait_shutdown
@@ -113,13 +116,24 @@ if [[ "$start_fd_count" != "$end_fd_count" ]]; then
     error_exit 1
 fi
 
-# Check also that the child process does not inherit open fds from
-# rsyslog (apart from the pipe), by checking it has no open sockets.
-# During the test, rsyslog has at least one socket open, by imdiag
-# (port 13500).
-if [[ "$child_netstat" != "" ]]; then
-    echo "child process has socket(s) open (should have none):"
-    echo "$child_netstat"
+# Check that the child process does not inherit open fds from rsyslog
+# (apart from the pipes), and that stderr is redirected to /dev/null.
+# Ignore fd 255, which bash opens for internal use.
+
+EXPECTED_CHILD_LSOF="FD NAME
+0r pipe
+1w pipe
+2w /dev/null"
+
+# On Solaris, lsof gives this alternate output:
+EXPECTED_CHILD_LSOF_2="FD NAME
+0u (fifofs)
+1u (fifofs)
+2w "
+
+if [[ "$child_lsof" != "$EXPECTED_CHILD_LSOF" && "$child_lsof" != "$EXPECTED_CHILD_LSOF_2" ]]; then
+    echo "unexpected open files for child process:"
+    echo "$child_lsof"
     error_exit 1
 fi
 

@@ -573,6 +573,8 @@ endif #if ENABLE_JOURNAL_TESTS
 if ENABLE_OMPROG
 TESTS +=  \
 	omprog-defaults.sh \
+	omprog-output-capture.sh \
+	omprog-output-capture-mt.sh \
 	omprog-feedback.sh \
 	omprog-close-unresponsive.sh \
 	omprog-close-unresponsive-noterm.sh \
@@ -584,6 +586,7 @@ TESTS +=  \
 if HAVE_VALGRIND
 TESTS +=  \
 	omprog-defaults-vg.sh \
+	omprog-output-capture-vg.sh \
 	omprog-feedback-vg.sh \
 	omprog-close-unresponsive-vg.sh \
 	omprog-restart-terminated-vg.sh \
@@ -1433,6 +1436,9 @@ EXTRA_DIST= \
 	pipeaction.sh \
 	omprog-defaults.sh \
 	omprog-defaults-vg.sh \
+	omprog-output-capture.sh \
+	omprog-output-capture-mt.sh \
+	omprog-output-capture-vg.sh \
 	omprog-feedback.sh \
 	omprog-feedback-vg.sh \
 	omprog-close-unresponsive.sh \
@@ -1446,6 +1452,8 @@ EXTRA_DIST= \
 	omprog-transactions-failed-messages.sh \
 	omprog-transactions-failed-commits.sh \
 	testsuites/omprog-defaults-bin.sh \
+	testsuites/omprog-output-capture-bin.sh \
+	testsuites/omprog-output-capture-mt-bin.py \
 	testsuites/omprog-feedback-bin.sh \
 	testsuites/omprog-close-unresponsive-bin.sh \
 	testsuites/omprog-restart-terminated-bin.sh \
