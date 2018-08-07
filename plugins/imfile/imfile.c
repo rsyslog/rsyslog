@@ -152,7 +152,7 @@ struct act_obj_s {
 	fs_edge_t *edge;	/* edge which this object belongs to */
 	char *name;		/* full path name of active object */
 	char *basename;		/* only basename */ //TODO: remove when refactoring rename support
-	char *source_name;  /* if this object is target of a symlink, source_name is its name (else NULL) */
+	char *source_name;	/* if this object is target of a symlink, source_name is its name (else NULL) */
 	//char *statefile;	/* base name of state file (for move operations) */
 	int wd;
 #if defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE)
@@ -171,18 +171,19 @@ struct act_obj_s {
 	int is_symlink;
 };
 struct fs_edge_s {
-	fs_node_t *parent;
+	fs_node_t *parent;	/* node pointing to this edge */
 	fs_node_t *node;	/* node this edge points to */
 	fs_edge_t *next;
 	uchar *name;
 	uchar *path;
 	act_obj_t *active;
 	int is_file;
-	int ninst;	/* nbr of instances in instarr */
+	int ninst;		/* nbr of instances in instarr */
 	instanceConf_t **instarr;
 };
 struct fs_node_s {
-	fs_edge_t *edges;
+	fs_edge_t *edges;	/* NULL in leaf nodes */
+	fs_node_t *root;	/* node one level up (NULL for file system root) */
 };
 
 
@@ -766,18 +767,30 @@ process_symlink(fs_edge_t *const chld, const char *symlink)
 	CHKmalloc(target = realpath(symlink, target));
 	struct stat fileInfo;
 	if(lstat(target, &fileInfo) != 0) {
-		LogError(errno, RS_RET_ERR,	"imfile: process_symlink cannot stat file '%s' - ignored", target);
+		LogError(errno, RS_RET_ERR,	"imfile: process_symlink: cannot stat file '%s' - ignored", target);
 		FINALIZE;
 	}
 	const int is_file = (S_ISREG(fileInfo.st_mode));
 	DBGPRINTF("process_symlink:  found '%s', File: %d (config file: %d), symlink: %d\n",
 		target, is_file, chld->is_file, 0);
-	if(!is_file && S_ISREG(fileInfo.st_mode)) {
-		LogMsg(0, RS_RET_ERR, LOG_WARNING,
-			"imfile: '%s' is neither a regular file, symlink, nor a directory - ignored", target);
-		FINALIZE;
+	if (act_obj_add(chld, target, is_file, fileInfo.st_ino, 0, symlink) == RS_RET_OK) {
+		/* need to watch parent target as well for proper rotation support */
+		uint idx = ustrlen(chld->active->name) - ustrlen(chld->active->basename);
+		if (idx) { /* basename is different from name */
+			char parent[MAXFNAME];
+			memcpy(parent, chld->active->name, idx-1);
+			parent[idx] = '\0';
+			if(lstat(parent, &fileInfo) != 0) {
+				LogError(errno, RS_RET_ERR,
+					"imfile: process_symlink: cannot stat directory '%s' - ignored", parent);
+				FINALIZE;
+			}
+			if (chld->parent->root->edges) {
+				DBGPRINTF("process_symlink: adding parent '%s' of target '%s'\n", parent, target);
+				act_obj_add(chld->parent->root->edges, parent, 0, fileInfo.st_ino, 0, NULL);
+			}
+		}
 	}
-	act_obj_add(chld, target, is_file, fileInfo.st_ino, 0, symlink);
 
 finalize_it:
 	free(target);
@@ -1025,6 +1038,7 @@ fs_node_walk(fs_node_t *const node,
  */
 static rsRetVal
 fs_node_add(fs_node_t *const node,
+	fs_node_t *const source,
 	const uchar *const toFind,
 	const size_t pathIdx,
 	instanceConf_t *const inst)
@@ -1053,6 +1067,7 @@ fs_node_add(fs_node_t *const node,
 	memcpy(name, toFind+pathIdx, len);
 	name[len] = '\0';
 	DBGPRINTF("fs_node_add: name '%s'\n", name);
+	node->root = source;
 
 	fs_edge_t *chld;
 	for(chld = node->edges ; chld != NULL ; chld = chld->next) {
@@ -1064,7 +1079,7 @@ fs_node_add(fs_node_t *const node,
 			chld->instarr[chld->ninst-1] = inst;
 			/* recurse */
 			if(!isFile) {
-				CHKiRet(fs_node_add(chld->node, toFind, nextPathIdx, inst));
+				CHKiRet(fs_node_add(chld->node, node, toFind, nextPathIdx, inst));
 			}
 			FINALIZE;
 		}
@@ -1086,7 +1101,7 @@ fs_node_add(fs_node_t *const node,
 	DBGPRINTF("fs_node_add(%p, '%s') returns %p\n", node, toFind, newchld->node);
 
 	if(!isFile) {
-		CHKiRet(fs_node_add(newchld->node, toFind, nextPathIdx, inst));
+		CHKiRet(fs_node_add(newchld->node, node, toFind, nextPathIdx, inst));
 	}
 
 	/* link to list */
@@ -1931,7 +1946,7 @@ CODESTARTactivateCnf
 					"be processed. Reason", inst->pszFileName);
 			}
 		}
-		fs_node_add(runModConf->conf_tree, inst->pszFileName, 0, inst);
+		fs_node_add(runModConf->conf_tree, NULL, inst->pszFileName, 0, inst);
 	}
 
 	if(Debug) {
@@ -2097,6 +2112,9 @@ flag_in_move(fs_edge_t *const edge, const char *name_moved)
 		} else {
 			DBGPRINTF("name check fails, '%s' != '%s'\n", act->basename, name_moved);
 		}
+	}
+	if (!act && edge->next) {
+		flag_in_move(edge->next, name_moved);
 	}
 }
 
