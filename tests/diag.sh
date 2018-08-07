@@ -511,7 +511,7 @@ case $1 in
 		rm -f rsyslogd.started work-*.conf rsyslog.random.data
 		rm -f rsyslogd2.started work-*.conf rsyslog*.pid.save xlate*.lkp_tbl
 		rm -f log log* # RSyslog debug output 
-		rm -f work rsyslog.out.* ${RSYSLOG2_OUT_LOG} # common work files
+		rm -f work rsyslog.out.* rsyslog2.out.log # common work files
 		rm -rf test-spool test-logdir stat-file1
 		rm -f rsyslog.pipe rsyslog.input.*
 		rm -f rsyslog.input rsyslog.empty rsyslog.input.* imfile-state* omkafka-failed.data
