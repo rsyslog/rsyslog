@@ -1,5 +1,8 @@
 ------------------------------------------------------------------------------
 Version 8.38.0 [v8-stable] 2018-09-18
+- bugfix omprog: severity of some log messages in waitForChild corrected
+  Log some messages related to child process termination as info/warn
+  instead of error.
 - bugfix imfile: files which were loaded via symlink were not always followed
   They were stopped watching after being rotated.
   closes https://github.com/rsyslog/rsyslog/issues/2229
