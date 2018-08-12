@@ -386,13 +386,13 @@ waitForChild(wrkrInstanceData_t *pWrkrData)
 
 	if (ret == 0) {  /* timeout reached */
 		if (!pWrkrData->pData->bKillUnresponsive) {
-			LogError(0, NO_ERRCODE, "omprog: program '%s' (pid %d) did not terminate "
+			LogMsg(0, NO_ERRCODE, LOG_WARNING, "omprog: program '%s' (pid %d) did not terminate "
 					"within timeout (%ld ms); ignoring it", pWrkrData->pData->szBinary,
 					pWrkrData->pid, pWrkrData->pData->lCloseTimeout);
 			return;
 		}
 
-		LogError(0, NO_ERRCODE, "omprog: program '%s' (pid %d) did not terminate "
+		LogMsg(0, NO_ERRCODE, LOG_WARNING, "omprog: program '%s' (pid %d) did not terminate "
 				"within timeout (%ld ms); killing it", pWrkrData->pData->szBinary,
 				pWrkrData->pid, pWrkrData->pData->lCloseTimeout);
 		if (kill(pWrkrData->pid, SIGKILL) == -1) {
@@ -404,7 +404,7 @@ waitForChild(wrkrInstanceData_t *pWrkrData)
 
 	if (ret != pWrkrData->pid) {
 		if (errno == ECHILD) {  /* child reaped by the rsyslogd main loop (see rsyslogd.c) */
-			LogError(0, NO_ERRCODE, "omprog: program '%s' (pid %d) exited; reaped by main loop",
+			LogMsg(0, NO_ERRCODE, LOG_INFO, "omprog: program '%s' (pid %d) exited; reaped by main loop",
 					pWrkrData->pData->szBinary, pWrkrData->pid);
 		} else {
 			LogError(errno, RS_RET_SYS_ERR, "omprog: waitpid failed for program '%s' (pid %d)",
@@ -415,10 +415,10 @@ waitForChild(wrkrInstanceData_t *pWrkrData)
 		DBGPRINTF("omprog: waitpid status return for program '%s' (pid %d): %2.2x\n",
 				pWrkrData->pData->szBinary, pWrkrData->pid, status);
 		if(WIFEXITED(status)) {
-			LogError(0, NO_ERRCODE, "omprog: program '%s' (pid %d) exited normally, status %d",
+			LogMsg(0, NO_ERRCODE, LOG_INFO, "omprog: program '%s' (pid %d) exited normally, status %d",
 					pWrkrData->pData->szBinary, pWrkrData->pid, WEXITSTATUS(status));
 		} else if(WIFSIGNALED(status)) {
-			LogError(0, NO_ERRCODE, "omprog: program '%s' (pid %d) terminated by signal %d",
+			LogMsg(0, NO_ERRCODE, LOG_WARNING, "omprog: program '%s' (pid %d) terminated by signal %d",
 					pWrkrData->pData->szBinary, pWrkrData->pid, WTERMSIG(status));
 		}
 	}
