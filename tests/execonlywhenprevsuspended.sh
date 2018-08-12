@@ -18,7 +18,7 @@ $template outfmt,"%msg:F,58:2%\n"
 
 :msg, contains, "msgnum:" :omtesting:fail 2 0
 $ActionExecOnlyWhenPreviousIsSuspended on
-&			   ./rsyslog.out.log;outfmt
+&			   ./'"${RSYSLOG_OUT_LOG}"';outfmt
 '
 startup
 . $srcdir/diag.sh injectmsg 0 1000

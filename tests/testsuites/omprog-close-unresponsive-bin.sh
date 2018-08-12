@@ -1,6 +1,6 @@
 #!/bin/bash
 
-outfile=rsyslog.out.log
+outfile=$RSYSLOG_OUT_LOG
 
 function handle_sigterm {
     echo "Received SIGTERM" >> $outfile

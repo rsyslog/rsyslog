@@ -1,7 +1,5 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
-echo ======================================================================
-echo [imfile-readmode2-with-persists-data-during-stop.sh]
 . $srcdir/diag.sh check-inotify
 . $srcdir/diag.sh init
 generate_conf
@@ -54,31 +52,6 @@ echo 'msgnum:3
  msgnum:4' >> rsyslog.input
 
 echo restarting rsyslog
-
-generate_conf
-add_conf '
-global(workDirectory="test-spool")
-module(load="../plugins/imfile/.libs/imfile")
-
-input(type="imfile"
-      File="./rsyslog.input"
-      Tag="file:"
-      ReadMode="2")
-
-template(name="outfmt" type="list") {
-  constant(value="HEADER ")
-  property(name="msg" format="json")
-  constant(value="\n")
-}
-
-if $msg contains "msgnum:" then
- action(
-   type="omfile"
-   file=`echo $RSYSLOG_OUT_LOG`
-   template="outfmt"
- )
-'
-
 startup
 echo restarted rsyslog, continuing with test
 
@@ -104,12 +77,12 @@ NUMLINES=$(grep -c HEADER  $RSYSLOG_OUT_LOG 2>/dev/null)
 if [ -z $NUMLINES ]; then
   echo "ERROR: expecting at least a match for HEADER, maybe  $RSYSLOG_OUT_LOG wasn't even written?"
   cat $RSYSLOG_OUT_LOG
-  exit 1
+  error_exit 1
 else
   if [ ! $NUMLINES -eq 4 ]; then
     echo "ERROR: expecting 4 headers, got $NUMLINES"
     cat $RSYSLOG_OUT_LOG
-    exit 1
+    error_exit 1
   fi
 fi
 
@@ -120,7 +93,7 @@ for i in {1..7}; do
   if [ ! $? -eq 0 ]; then
     echo "ERROR: expecting the string 'msgnum:$i', it's not there"
     cat $RSYSLOG_OUT_LOG
-    exit 1
+    error_exit 1
   fi
 done
 

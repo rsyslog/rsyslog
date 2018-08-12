@@ -13,7 +13,7 @@ $template outfmt,"%msg:F,58:2%\n"
 
 :msg, contains, "msgnum:" :omtesting:fail 2 0
 $ActionExecOnlyWhenPreviousIsSuspended on
-&			   ./rsyslog.out.log;outfmt
+&			   ./'"${RSYSLOG_OUT_LOG}"';outfmt
 '
 startup
 # we initially send only 10 messages. It has shown that if we send more,

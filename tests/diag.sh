@@ -89,6 +89,9 @@ function generate_conf() {
 	new_port="$(get_free_port)"
 	if [ "$1" == "" ]; then
 		export IMDIAG_PORT=$new_port
+		export TESTCONF_NM="${new_port}_" # this basename is also used by instance 2!
+		export RSYSLOG_OUT_LOG="rsyslog_${new_port}.out.log"
+		export RSYSLOG2_OUT_LOG="rsyslog2_${new_port}.out.log"
 	else
 		export IMDIAG_PORT2=$new_port
 	fi
@@ -98,14 +101,14 @@ global(inputs.timeout.shutdown=\"10000\")
 \$IMDiagServerRun $new_port
 
 :syslogtag, contains, \"rsyslogd\"  ./rsyslogd$1.started
-###### end of testbench instrumentation part, test conf follows:" > testconf$1.conf
+###### end of testbench instrumentation part, test conf follows:" > ${TESTCONF_NM}$1.conf
 }
 
 
 # add more data to config file. Note: generate_conf must have been called
 # $1 is config fragment, $2 the instance id, if given
 function add_conf() {
-	printf "%s" "$1" >> testconf$2.conf
+	printf "%s" "$1" >> ${TESTCONF_NM}$2.conf
 }
 
 
@@ -143,10 +146,10 @@ function cmp_exact() {
 function startup() {
 	instance=
 	if [ "$1" == "2" ]; then
-	    CONF_FILE="testconf2.conf"
+	    CONF_FILE="${TESTCONF_NM}2.conf"
 	    instance=2
 	elif [ "$1" == "" ]; then
-	    CONF_FILE="testconf.conf"
+	    CONF_FILE="${TESTCONF_NM}.conf"
 	else
 	    CONF_FILE="$srcdir/testsuites/$1"
 	    instance=$2
@@ -155,7 +158,7 @@ function startup() {
 	    echo "ERROR: config file '$CONF_FILE' not found!"
 	    error_exit 1
 	fi
-	echo $CONF_FILE is:
+	echo config $CONF_FILE is:
 	cat -n $CONF_FILE
 	LD_PRELOAD=$RSYSLOG_PRELOAD $valgrind ../tools/rsyslogd -C -n -irsyslog$instance.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
 	. $srcdir/diag.sh wait-startup $instance
@@ -178,8 +181,8 @@ function startup_vg_waitpid_only() {
 	    RS_TESTBENCH_LEAK_CHECK=full
 	fi
 	if [ "x$1" == "x" ]; then
-	    CONF_FILE="testconf.conf"
-	    echo $CONF_FILE is:
+	    CONF_FILE="${TESTCONF_NM}.conf"
+	    echo config $CONF_FILE is:
 	    cat -n $CONF_FILE
 	else
 	    CONF_FILE="$srcdir/testsuites/$1"
@@ -278,7 +281,7 @@ function wait_shutdown_vg() {
 # for systems like Travis-CI where we cannot debug on the machine itself.
 # our $1 is the to-be-used exit code. if $2 is "stacktrace", call gdb.
 function error_exit() {
-	env
+	#env
 	if [ -e core* ]
 	then
 		echo trying to obtain crash location info
@@ -417,7 +420,7 @@ function exit_test() {
 	rm -f -r rsyslog.input.*
 	rm -f rsyslog.input rsyslog.conf.tlscert stat-file1 rsyslog.empty rsyslog.input.* imfile-state*
 	rm -rf rsyslog.input-symlink.log rsyslog-link.*.log targets
-	rm -f testconf.conf
+	rm -f ${TESTCONF_NM}.conf
 	rm -f rsyslog.errorfile tmp.qi nocert
 	rm -f HOSTNAME imfile-state:.-rsyslog.input
 	unset TCPFLOOD_EXTRA_OPTS
@@ -487,6 +490,15 @@ case $1 in
 		done
 		# end cleanup
 
+		# some default names (later to be set in other parts, once we support fully
+		# parallel tests)
+		export RSYSLOG_DFLT_LOG_INTERNAL=1 # testbench needs internal messages logged internally!
+		export RSYSLOG2_OUT_LOG=rsyslog2.out.log
+		export RSYSLOG_OUT_LOG=rsyslog.out.log
+		export IMDIAG_PORT=13500
+		export IMDIAG_PORT2=13501
+		export TCPFLOOD_PORT=13514
+
 		if [ -z $RS_SORTCMD ]; then
 			RS_SORTCMD=sort
 		fi  
@@ -511,12 +523,13 @@ case $1 in
 		rm -f rsyslogd.started work-*.conf rsyslog.random.data
 		rm -f rsyslogd2.started work-*.conf rsyslog*.pid.save xlate*.lkp_tbl
 		rm -f log log* # RSyslog debug output 
-		rm -f work rsyslog.out.* ${RSYSLOG2_OUT_LOG} # common work files
+		rm -f work 
+		rm -f rsyslog*.out.log # we need this while the sndrcv tests are not converted
 		rm -rf test-spool test-logdir stat-file1
 		rm -f rsyslog.pipe rsyslog.input.*
 		rm -f rsyslog.input rsyslog.empty rsyslog.input.* imfile-state* omkafka-failed.data
 		rm -rf rsyslog.input-symlink.log rsyslog-link.*.log targets
-		rm -f testconf*.conf HOSTNAME
+		rm -f HOSTNAME
 		rm -f rsyslog.errorfile tmp.qi nocert
 		rm -f core.* vgcore.* core*
 		# Note: rsyslog.action.*.include must NOT be deleted, as it
@@ -536,12 +549,6 @@ case $1 in
 		if [ -e IN_AUTO_DEBUG ]; then
 			export valgrind="valgrind --malloc-fill=ff --free-fill=fe --suppressions=$srcdir/known_issues.supp --log-fd=1"
 		fi
-		export RSYSLOG_DFLT_LOG_INTERNAL=1 # testbench needs internal messages logged internally!
-		export RSYSLOG2_OUT_LOG=rsyslog2.out.log
-		export RSYSLOG_OUT_LOG=rsyslog.out.log
-		export IMDIAG_PORT=13500
-		export IMDIAG_PORT2=13501
-		export TCPFLOOD_PORT=13514
 		;;
 
    'check-command-available')   # check if command $2 is available - will exit 77 when not OK
@@ -597,8 +604,8 @@ case $1 in
 
    'startup_vgthread_waitpid_only') # same as startup-vgthread, BUT we do NOT wait on the startup message!
 		if [ "x$2" == "x" ]; then
-		    CONF_FILE="testconf.conf"
-		    echo $CONF_FILE is:
+		    CONF_FILE="${TESTCONF_NM}.conf"
+		    echo config $CONF_FILE is:
 		    cat -n $CONF_FILE
 		else
 		    CONF_FILE="$srcdir/testsuites/$2"

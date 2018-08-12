@@ -78,10 +78,10 @@ if [ ! $? -eq 0 ]; then
   error_exit  1
 fi;
 
-grep 'invalid number of ipv4.bits (33), corrected to 32' rsyslog2.out.log > /dev/null
+grep 'invalid number of ipv4.bits (33), corrected to 32' ${RSYSLOG2_OUT_LOG} > /dev/null
 if [ $? -ne 0 ]; then
-  echo "invalid response generated, rsyslog2.out.log is:"
-  cat rsyslog2.out.log
+  echo "invalid response generated, ${RSYSLOG2_OUT_LOG} is:"
+  cat ${RSYSLOG2_OUT_LOG}
   error_exit  1
 fi;
 

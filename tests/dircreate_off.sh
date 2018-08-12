@@ -3,10 +3,7 @@
 # note that we use the "test-spool" directory, because it is handled by diag.sh
 # in any case, so we do not need to add any extra new test dir.
 # added 2009-11-30 by Rgerhards
-# This file is part of the rsyslog project, released  under GPLv3
-# uncomment for debugging support:
-echo ===================================================================================
-echo \[dircreate_off_off.sh\]: testing automatic directory creation for dynafiles - default
+# This file is part of the rsyslog project, released under ASL 2.0
 . $srcdir/diag.sh init
 generate_conf
 add_conf '
@@ -16,17 +13,16 @@ $MainMsgQueueFilename mainq
 $MainMsgQueueType disk
 
 $CreateDirs off
-$template dynfile,"test-logdir/rsyslog.out.log" # trick to use relative path names!
+$template dynfile,"test-logdir/'$RSYSLOG_OUT_LOG'"
 *.* ?dynfile
 '
 startup
 . $srcdir/diag.sh injectmsg  0 1 # a single message is sufficient
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
-if [ -e test-logdir/ $RSYSLOG_OUT_LOG ]
+if [ -e test-logdir/$RSYSLOG_OUT_LOG ]
 then
 	echo "test-logdir or logfile WAS created where not permitted to!"
-	exit 1
+	error-exit 1
 fi
-exit
 exit_test

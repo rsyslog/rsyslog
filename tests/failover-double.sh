@@ -10,7 +10,7 @@ $template outfmt,"%msg:F,58:2%\n"
 :msg, contains, "msgnum:" @@127.0.0.1:13516
 $ActionExecOnlyWhenPreviousIsSuspended on
 &	@@127.0.0.1:1234
-&	./rsyslog.out.log;outfmt
+&	./'"${RSYSLOG_OUT_LOG}"';outfmt
 $ActionExecOnlyWhenPreviousIsSuspended off
 '
 startup

@@ -11,7 +11,7 @@ $template outfmt,"%msg:F,58:2%\n"
 # note: the target server shall not be available!
 :msg, contains, "msgnum:" @@127.0.0.1:13514
 $ActionExecOnlyWhenPreviousIsSuspended on
-& ./rsyslog.out.log;outfmt
+& ./'"${RSYSLOG_OUT_LOG}"';outfmt
 '
 startup
 . $srcdir/diag.sh injectmsg  0 5000

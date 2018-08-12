@@ -1,5 +1,21 @@
 if ENABLE_TESTBENCH
-CLEANFILES = \
+
+CLEANFILES=\
+	*_*.conf \
+	rsyslogd.started work-*.conf rsyslog.random.data \
+	rsyslogd2.started work-*.conf rsyslog*.pid.save xlate*.lkp_tbl \
+	log log* \
+	work \
+	rsyslog_*.out.* \
+	rsyslog2_*.out.* \
+	test-spool test-logdir stat-file1 \
+	rsyslog.pipe rsyslog.input.* \
+	rsyslog.input rsyslog.empty rsyslog.input.* imfile-state* omkafka-failed.data \
+	rsyslog.input-symlink.log rsyslog-link.*.log targets \
+	HOSTNAME \
+	rsyslog.errorfile tmp.qi nocert
+
+CLEANFILES+= \
 	IN_AUTO_DEBUG
 # IN_AUTO_DEBUG should be deleted each time make check is run, but
 # there exists no such hook. Se we at least delete it on make clean.

@@ -15,16 +15,16 @@ $template outfmt,"%msg:F,58:2%\n"
 
 :msg, contains, "msgnum:" :omtesting:fail 2 0
 $ActionExecOnlyWhenPreviousIsSuspended on
-&			   ./rsyslog.out.log;outfmt
+&			   ./'"${RSYSLOG_OUT_LOG}"';outfmt
 # note that $ActionExecOnlyWhenPreviousIsSuspended on is still active!
-& ./rsyslog2.out.log;outfmt
+& ./'"${RSYSLOG2_OUT_LOG}"';outfmt
 '
 startup
 . $srcdir/diag.sh injectmsg 0 1000
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
 seq_check 1 999
-if [[ -s rsyslog2.out.log ]] ; then
+if [[ -s ${RSYSLOG2_OUT_LOG} ]] ; then
    echo failure: second output file has data where it should be empty
    exit 1
 fi ;

@@ -35,9 +35,9 @@ if [ ! $? -eq 0 ]; then
   error_exit  1
 fi;
 
-if [ -f rsyslog2.out.log ]; then
-  echo "file exists, but should not: rsyslog2.out.log; content:"
-  cat rsyslog2.out.log
+if [ -f ${RSYSLOG2_OUT_LOG} ]; then
+  echo "file exists, but should not: ${RSYSLOG2_OUT_LOG}; content:"
+  cat ${RSYSLOG2_OUT_LOG}
   error_exit  1
 fi;
 

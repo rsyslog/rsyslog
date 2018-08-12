@@ -19,6 +19,7 @@ template(name="outfmt" type="string" string="%msg%\n")
         template="outfmt"
         name="omprog_action"
         queue.type="Direct"  # the default; facilitates sync with the child process
+	hideEnvironment="off"
         confirmMessages="on"
         useTransactions="off"
         action.resumeRetryCount="10"

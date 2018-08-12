@@ -17,12 +17,12 @@ $template outfmt,"%msg:F,58:2%\n"
 
 :msg, contains, "msgnum:" :omtesting:fail 2 0
 $ActionExecOnlyWhenPreviousIsSuspended on
-&			   ./rsyslog.out.log;outfmt
+&			   ./'"${RSYSLOG_OUT_LOG}"';outfmt
 # note that we MUST re-set PrevSusp, else it will remain active
 # for all other actions as well (this tells us how bad the current
 # config language is...). -- rgerhards, 2010-06-24
 $ActionExecOnlyWhenPreviousIsSuspended off
-& ./rsyslog2.out.log;outfmt
+& ./'"${RSYSLOG2_OUT_LOG}"';outfmt
 '
 startup
 . $srcdir/diag.sh injectmsg 0 1000

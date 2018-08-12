@@ -41,10 +41,10 @@ if [ ! $? -eq 0 ]; then
 fi;
 
 
-grep 'invalid number of ipv6.bits (129), corrected to 128' rsyslog2.out.log > /dev/null
+grep 'invalid number of ipv6.bits (129), corrected to 128' ${RSYSLOG2_OUT_LOG} > /dev/null
 if [ $? -ne 0 ]; then
-  echo "invalid correction of bits parameter generated, rsyslog2.out.log is:"
-  cat rsyslog2.out.log
+  echo "invalid correction of bits parameter generated, ${RSYSLOG2_OUT_LOG} is:"
+  cat ${RSYSLOG2_OUT_LOG}
   error_exit  1
 fi;
 
