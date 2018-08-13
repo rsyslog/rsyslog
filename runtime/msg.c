@@ -1224,11 +1224,19 @@ static rsRetVal MsgSerialize(smsg_t *pThis, strm_t *pStrm)
 	psz = pThis->pszStrucData;
 	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszStrucData"), PROPTYPE_PSZ, (void*) psz));
 	if(pThis->json != NULL) {
-		psz = (uchar*) json_object_get_string(pThis->json);
+		if (glbl.GetCompactJsonString()) {
+			psz = (uchar*) json_object_to_json_string_ext(pThis->json, JSON_C_TO_STRING_PLAIN);
+		} else {
+			psz = (uchar*) json_object_get_string(pThis->json);
+		}
 		CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("json"), PROPTYPE_PSZ, (void*) psz));
 	}
 	if(pThis->localvars != NULL) {
-		psz = (uchar*) json_object_get_string(pThis->localvars);
+		if (glbl.GetCompactJsonString()) {
+			psz = (uchar*) json_object_to_json_string_ext(pThis->localvars, JSON_C_TO_STRING_PLAIN);
+		} else {
+			psz = (uchar*) json_object_get_string(pThis->localvars);
+		}
 		CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("localvars"), PROPTYPE_PSZ, (void*) psz));
 	}
 
@@ -2402,7 +2410,11 @@ msgGetJSONMESG(smsg_t *__restrict__ const pMsg)
 
 	json_object_object_add(json, "$!", json_object_get(pMsg->json));
 
-	pRes = (uchar*) strdup(json_object_get_string(json));
+	if (glbl.GetCompactJsonString()) {
+		pRes = (uchar*) strdup(json_object_to_json_string_ext(json, JSON_C_TO_STRING_PLAIN));
+	} else {
+		pRes = (uchar*) strdup(json_object_get_string(json));
+	}
 	json_object_put(json);
 	return pRes;
 }
@@ -3139,7 +3151,12 @@ getJSONPropVal(smsg_t * const pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size
 			field = NULL;
 	}
 	if(field != NULL) {
-		*pRes = (uchar*) strdup(json_object_get_string(field));
+		if (glbl.GetCompactJsonString()) {
+			*pRes = (uchar*) strdup(json_object_to_json_string_ext(field, JSON_C_TO_STRING_PLAIN));
+		} else {	
+			*pRes = (uchar*) strdup(json_object_get_string(field));
+		}
+
 		*buflen = (int) ustrlen(*pRes);
 		*pbMustBeFreed = 1;
 	}
@@ -4524,21 +4541,25 @@ msgSetPropViaJSON(smsg_t *__restrict__ const pMsg, const char *name, struct json
 	int val;
 	prop_t *propFromHost = NULL;
 	prop_t *propRcvFromIP = NULL;
+	int flag = JSON_C_TO_STRING_SPACED;
 	DEFiRet;
 
 	/* note: json_object_get_string() manages the memory of the returned
 	 *       string. So we MUST NOT free it!
 	 */
+	if (glbl.GetCompactJsonString()) {
+		flag = JSON_C_TO_STRING_PLAIN;
+	}
 	dbgprintf("DDDD: msgSetPropViaJSON key: '%s'\n", name);
 	if(!strcmp(name, "rawmsg")) {
-		psz = json_object_get_string(json);
+		psz = json_object_to_json_string_ext(json, flag);
 		MsgSetRawMsg(pMsg, psz, strlen(psz));
 	} else if(!strcmp(name, "msg")) {
-		psz = json_object_get_string(json);
-		MsgReplaceMSG(pMsg, (const uchar*)psz, strlen(psz));
+		psz = json_object_to_json_string_ext(json, flag);
+		MsgReplaceMSG(pMsg, (const uchar*)psz, strlen(psz)); 
 	} else if(!strcmp(name, "syslogtag")) {
-		psz = json_object_get_string(json);
-		MsgSetTAG(pMsg, (const uchar*)psz, strlen(psz));
+		psz = json_object_to_json_string_ext(json, flag);
+		MsgSetTAG(pMsg, (const uchar*)psz, strlen(psz)); 
 	} else if(!strcmp(name, "pri")) {
 		val = json_object_get_int(json);
 		msgSetPRI(pMsg, val);
@@ -4555,22 +4576,22 @@ msgSetPropViaJSON(smsg_t *__restrict__ const pMsg, const char *name, struct json
 		else
 			DBGPRINTF("mmexternal: invalid fac %d requested -- ignored\n", val);
 	} else if(!strcmp(name, "procid")) {
-		psz = json_object_get_string(json);
+		psz = json_object_to_json_string_ext(json, flag);
 		MsgSetPROCID(pMsg, psz);
 	} else if(!strcmp(name, "msgid")) {
-		psz = json_object_get_string(json);
+		psz = json_object_to_json_string_ext(json, flag);
 		MsgSetMSGID(pMsg, psz);
 	} else if(!strcmp(name, "structured-data")) {
-		psz = json_object_get_string(json);
+		psz = json_object_to_json_string_ext(json, flag);
 		MsgSetStructuredData(pMsg, psz);
 	} else if(!strcmp(name, "hostname") || !strcmp(name, "source")) {
-		psz = json_object_get_string(json);
-		MsgSetHOSTNAME(pMsg, (const uchar*)psz, strlen(psz));
+		psz = json_object_to_json_string_ext(json, flag);
+		MsgSetHOSTNAME(pMsg, (const uchar*)psz, strlen(psz)); 
 	} else if(!strcmp(name, "fromhost")) {
-		psz = json_object_get_string(json);
+		psz = json_object_to_json_string_ext(json, flag);
 		MsgSetRcvFromStr(pMsg, (const uchar*) psz, 0, &propFromHost);
 	} else if(!strcmp(name, "fromhost-ip")) {
-		psz = json_object_get_string(json);
+		psz = json_object_to_json_string_ext(json, flag);
 		MsgSetRcvFromIPStr(pMsg, (const uchar*)psz, strlen(psz), &propRcvFromIP);
 	} else if(!strcmp(name, "$!")) {
 		msgAddJSON(pMsg, (uchar*)"!", json, 0, sharedReference);
