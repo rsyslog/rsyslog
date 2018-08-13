@@ -20,12 +20,45 @@ echo \[rcvr_fail_restore.sh\]: test failed receiver restore case
 #export RSYSLOG_DEBUG="debug nostdout"
 #export RSYSLOG_DEBUGLOG="log2"
 echo starting receiver
-startup rcvr_fail_restore_rcvr.conf 2
+generate_conf
+export PORT_RCVR="$(get_free_port)"
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+# then SENDER sends to this port (not tcpflood!)
+$InputTCPServerRun '$PORT_RCVR'
+
+$template outfmt,"%msg:F,58:2%\n"
+:msg, contains, "msgnum:" ./'$RSYSLOG_OUT_LOG';outfmt
+'
+startup
 #export RSYSLOG_DEBUG="debug nostdout"
 #export RSYSLOG_DEBUGLOG="log"
 #valgrind="valgrind"
 echo starting sender
-startup rcvr_fail_restore_sender.conf
+generate_conf 2
+export TCPFLOOD_PORT="$(get_free_port)"
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+# this listener is for message generation by the test framework!
+$InputTCPServerRun '$TCPFLOOD_PORT'
+
+$WorkDirectory test-spool
+$MainMsgQueueSize 2000
+$MainMsgQueueLowWaterMark 800
+$MainMsgQueueHighWaterMark 1000
+$MainMsgQueueDequeueBatchSize 1
+$MainMsgQueueMaxFileSize 1g
+$MainMsgQueueWorkerThreads 1
+$MainMsgQueueFileName mainq
+
+# we use the shortest resume interval a) to let the test not run too long 
+# and b) make sure some retries happen before the reconnect
+$ActionResumeInterval 1
+$ActionSendResendLastMsgOnReconnect on
+$ActionResumeRetryCount -1
+*.*	@@127.0.0.1:'$PORT_RCVR'
+' 2
+startup 2
 # re-set params so that new instances do not thrash it...
 #unset RSYSLOG_DEBUG
 #unset RSYSLOG_DEBUGLOG
@@ -42,8 +75,8 @@ startup rcvr_fail_restore_sender.conf
 #
 echo step 2
 
-shutdown_when_empty 2
-wait_shutdown 2
+shutdown_when_empty
+wait_shutdown
 
 . $srcdir/diag.sh injectmsg  1001 10000
 ./msleep 3000 # make sure some retries happen (retry interval is set to 3 second)
@@ -55,7 +88,7 @@ ls -l test-spool
 #
 echo step 3
 #export RSYSLOG_DEBUGLOG="log2"
-startup rcvr_fail_restore_rcvr.conf 2
+startup
 echo waiting for sender to drain queue [may need a short while]
 . $srcdir/diag.sh wait-queueempty
 ls -l test-spool
@@ -98,8 +131,8 @@ fi
 #
 echo step 5
 echo "*** done primary test *** now checking if DA can be restarted"
-shutdown_when_empty 2
-wait_shutdown 2
+shutdown_when_empty
+wait_shutdown
 
 . $srcdir/diag.sh injectmsg  11011 10000
 sleep 1 # we need to wait, otherwise we may be so fast that the receiver
@@ -111,7 +144,7 @@ ls -l test-spool
 # Step 6: restart receiver, wait that the sender drains its queue
 #
 echo step 6
-startup rcvr_fail_restore_rcvr.conf 2
+startup
 echo waiting for sender to drain queue [may need a short while]
 . $srcdir/diag.sh wait-queueempty
 ls -l test-spool
@@ -121,12 +154,12 @@ ls -l test-spool
 # and see if everything could be received (the usual check, done here
 # for completeness, more or less as a bonus).
 #
-shutdown_when_empty
-wait_shutdown
-
-# now it is time to stop the receiver as well
 shutdown_when_empty 2
 wait_shutdown 2
+
+# now it is time to stop the receiver as well
+shutdown_when_empty
+wait_shutdown
 
 # now abort test if we need to (due to filesize predicate)
 if [ $NEWFILESIZE != $OLDFILESIZE ]
