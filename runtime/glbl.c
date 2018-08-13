@@ -84,6 +84,7 @@ static uchar *stdlog_chanspec = NULL;
 #endif
 static int bParseHOSTNAMEandTAG = 1;	/* parser modification (based on startup params!) */
 static int bPreserveFQDN = 0;		/* should FQDNs always be preserved? */
+static int bCompactJsonString = 0;		/* should export JSON variable with plain string but not a spaced string? */
 static int iMaxLine = 8096;		/* maximum length of a syslog message */
 static uchar * oversizeMsgErrorFile = NULL;		/* File where oversize messages are written to */
 static int oversizeMsgInputMode = 0;	/* Mode which oversize messages will be forwarded */
@@ -151,6 +152,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "workdirectory", eCmdHdlrString, 0 },
 	{ "dropmsgswithmaliciousdnsptrrecords", eCmdHdlrBinary, 0 },
 	{ "localhostname", eCmdHdlrGetWord, 0 },
+	{ "compactjsonstring", eCmdHdlrBinary, 0 },
 	{ "preservefqdn", eCmdHdlrBinary, 0 },
 	{ "debug.onshutdown", eCmdHdlrBinary, 0 },
 	{ "debug.logfile", eCmdHdlrString, 0 },
@@ -256,6 +258,7 @@ static dataType Get##nameFunc(void) \
 }
 
 SIMP_PROP(PreserveFQDN, bPreserveFQDN, int)
+SIMP_PROP(CompactJsonString, bCompactJsonString, int)
 SIMP_PROP(mainqCnfObj, mainqCnfObj, struct cnfobj *)
 SIMP_PROP(DropMalPTRMsgs, bDropMalPTRMsgs, int)
 SIMP_PROP(StripDomains, StripDomains, char**)
@@ -810,6 +813,7 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->Get##name = Get##name; \
 	pIf->Set##name = Set##name;
 	SIMP_PROP(PreserveFQDN);
+	SIMP_PROP(CompactJsonString);
 	SIMP_PROP(DropMalPTRMsgs);
 	SIMP_PROP(mainqCnfObj);
 	SIMP_PROP(LocalFQDNName)
@@ -857,6 +861,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	pszWorkDir = NULL;
 	bDropMalPTRMsgs = 0;
 	bPreserveFQDN = 0;
+	bCompactJsonString = 0;
 	iMaxLine = 8192;
 	cCCEscapeChar = '#';
 	bDropTrailingLF = 1;
@@ -1243,6 +1248,8 @@ glblDoneLoadCnf(void)
 				es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 		} else if(!strcmp(paramblk.descr[i].name, "preservefqdn")) {
 			bPreserveFQDN = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "compactjsonstring")) {
+			bCompactJsonString = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name,
 				"dropmsgswithmaliciousdnsptrrecords")) {
 			bDropMalPTRMsgs = (int) cnfparamvals[i].val.d.n;
@@ -1410,6 +1417,7 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(regCfSysLineHdlr((uchar *)"localhostipif", 0, eCmdHdlrGetWord, setLocalHostIPIF, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"optimizeforuniprocessor", 0, eCmdHdlrGoneAway, NULL, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"preservefqdn", 0, eCmdHdlrBinary, NULL, &bPreserveFQDN, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"compactjsonstring", 0, eCmdHdlrBinary, NULL, &bCompactJsonString, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize, legacySetMaxMessageSize, NULL, NULL));
 
 	/* Deprecated parser config options */
