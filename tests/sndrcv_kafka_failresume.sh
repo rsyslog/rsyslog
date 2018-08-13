@@ -22,12 +22,62 @@ echo \[sndrcv_kafka_failresume.sh\]: Init Testbench
 
 echo \[sndrcv_kafka_failresume.sh\]: Starting receiver instance [omkafka]
 export RSYSLOG_DEBUGLOG="log"
-startup sndrcv_kafka_rcvr.conf 
+generate_conf
+add_conf '
+module(load="../plugins/imkafka/.libs/imkafka")
+/* Polls messages from kafka server!*/
+input(	type="imkafka" 
+	topic="static" 
+	broker="localhost:29092" 
+	consumergroup="default"
+	confParam=[ "compression.codec=none",
+		"socket.timeout.ms=1000",
+		"socket.keepalive.enable=true"]
+	)
+
+template(name="outfmt" type="string" string="%msg:F,58:2%\n")
+
+if ($msg contains "msgnum:") then {
+	action( type="omfile" file="rsyslog.out.log" template="outfmt" )
+}
+'
+startup
 . $srcdir/diag.sh wait-startup
 
 echo \[sndrcv_kafka_failresume.sh\]: Starting sender instance [imkafka]
 export RSYSLOG_DEBUGLOG="log2"
-startup sndrcv_kafka_sender.conf 2
+generate_conf 2
+add_conf '
+main_queue(queue.timeoutactioncompletion="10000" queue.timeoutshutdown="60000")
+
+module(load="../plugins/omkafka/.libs/omkafka")
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="13514")	/* this port for tcpflood! */
+
+template(name="outfmt" type="string" string="%msg%\n")
+
+action(	name="kafka-fwd" 
+	type="omkafka" 
+	topic="static" 
+	broker="localhost:29092" 
+	template="outfmt" 
+	confParam=[	"compression.codec=none",
+			"socket.timeout.ms=1000",
+			"socket.keepalive.enable=true",
+			"reconnect.backoff.jitter.ms=1000",
+			"queue.buffering.max.messages=20000",
+			"message.send.max.retries=1"]
+	topicConfParam=["message.timeout.ms=1000"]
+	partitions.auto="on"
+	resubmitOnFailure="on"
+	keepFailedMessages="on"
+	failedMsgFile="omkafka-failed.data"
+	action.resumeInterval="2"
+	action.resumeRetryCount="10"
+	queue.saveonshutdown="on"
+	)
+' 2
+startup 2
 . $srcdir/diag.sh wait-startup 2
 
 echo \[sndrcv_kafka_failresume.sh\]: Inject messages into rsyslog sender instance  
@@ -45,7 +95,7 @@ echo \[sndrcv_kafka_failresume.sh\]: Starting kafka cluster instance
 
 echo \[sndrcv_kafka_failresume.sh\]: Starting sender instance [imkafka]
 export RSYSLOG_DEBUGLOG="log3"
-startup sndrcv_kafka_sender.conf 2
+startup 2
 . $srcdir/diag.sh wait-startup 2
 
 echo \[sndrcv_kafka_failresume.sh\]: Sleep to give rsyslog sender time to send data ...
