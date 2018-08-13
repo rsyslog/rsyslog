@@ -762,8 +762,8 @@ static rsRetVal ATTR_NONNULL()
 process_symlink(fs_edge_t *const chld, const char *symlink)
 {
 	DEFiRet;
-	char *target = NULL;
-	CHKmalloc(target = realpath(symlink, target));
+	char *target;
+	CHKmalloc(target = realpath(symlink, NULL));
 	struct stat fileInfo;
 	if(lstat(target, &fileInfo) != 0) {
 		LogError(errno, RS_RET_ERR,	"imfile: process_symlink cannot stat file '%s' - ignored", target);
