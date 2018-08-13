@@ -33,6 +33,7 @@
  *
  * After dequeue, processing is as follows:
  * - processBatchMain
+ * - processMsgMain (direct entry for DIRECT queue!)
  * - ...
  *
  * MORE ON PROCESSING, QUEUES and FILTERING
@@ -63,7 +64,7 @@
  * beast.
  * rgerhards, 2011-06-15
  *
- * Copyright 2007-2018 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2019 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -207,6 +208,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "action.reportsuspensioncontinuation", eCmdHdlrBinary, 0 },
 	{ "action.resumeintervalmax", eCmdHdlrPositiveInt, 0 },
 	{ "action.resumeinterval", eCmdHdlrInt, 0 },
+	{ "action.externalstate.file", eCmdHdlrString, 0 },
 	{ "action.copymsg", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk pblk =
@@ -353,6 +355,7 @@ rsRetVal actionDestruct(action_t * const pThis)
 	pthread_mutex_destroy(&pThis->mutAction);
 	pthread_mutex_destroy(&pThis->mutWrkrDataTable);
 	free((void*)pThis->pszErrFile);
+	free((void*)pThis->pszExternalStateFile);
 	free(pThis->pszName);
 	free(pThis->ppTpl);
 	free(pThis->peParamPassing);
@@ -395,6 +398,7 @@ rsRetVal actionConstruct(action_t **ppThis)
 	pThis->iResumeRetryCount = 0;
 	pThis->pszName = NULL;
 	pThis->pszErrFile = NULL;
+	pThis->pszExternalStateFile = NULL;
 	pThis->fdErrFile = -1;
 	pThis->bWriteAllMarkMsgs = 1;
 	pThis->iExecEveryNthOccur = 0;
@@ -680,6 +684,52 @@ static void actionCommitted(action_t * const pThis, wti_t * const pWti)
 }
 
 
+/* set action state according to external state file (if configured)
+*/
+static rsRetVal
+checkExternalStateFile(action_t *__restrict__ const pThis)
+{
+	char filebuf[1024];
+	int fd = -1;
+	int r;
+	DEFiRet;
+
+	DBGPRINTF("checking external state file\n");
+
+	if(pThis->pszExternalStateFile == NULL) {
+		FINALIZE;
+	}
+
+	fd = open(pThis->pszExternalStateFile, O_RDONLY|O_CLOEXEC);
+	if(fd == -1) {
+		dbgprintf("could not read external state file\n");
+		FINALIZE;
+	}
+
+	r = read(fd, filebuf, sizeof(filebuf) - 1);
+	if(r < 1) {
+		dbgprintf("checkExternalStateFile read() returned %d\n", r);
+		FINALIZE;
+	}
+
+	filebuf[r] = '\0';
+	dbgprintf("external state file content: '%s'\n", filebuf);
+	if(!strcmp(filebuf, "SUSPENDED")) {
+		LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
+		      "action '%s' suspended (module '%s') by external state file",
+		      pThis->pszName, pThis->pMod->pszName);
+		ABORT_FINALIZE(RS_RET_SUSPENDED);
+	}
+
+finalize_it:
+	if(fd != -1) {
+		close(fd);
+	}
+	DBGPRINTF("done checking external state file, iRet=%d\n", iRet);
+	RETiRet;
+}
+
+
 /* we need to defer setting the action's own bReportSuspension state until
  * after the full config has been processed. So the most simple case to do
  * that is here. It's not a performance problem, as it happens infrequently.
@@ -779,7 +829,7 @@ actionSuspend(action_t * const pThis, wti_t * const pWti)
  * kind of facility: in the first place, the module should return a proper indication
  * of its inability to recover. -- rgerhards, 2010-04-26.
  */
-static rsRetVal
+static rsRetVal ATTR_NONNULL()
 actionDoRetry(action_t * const pThis, wti_t * const pWti)
 {
 	int iRetries;
@@ -793,7 +843,10 @@ actionDoRetry(action_t * const pThis, wti_t * const pWti)
 	while((*pWti->pbShutdownImmediate == 0) && getActionState(pWti, pThis) == ACT_STATE_RTRY) {
 		DBGPRINTF("actionDoRetry: %s enter loop, iRetries=%d, ResumeInRow %d\n",
 			pThis->pszName, iRetries, getActionResumeInRow(pWti, pThis));
-		iRet = pThis->pMod->tryResume(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
+		iRet = checkExternalStateFile(pThis);
+		if(iRet == RS_RET_OK) {
+			iRet = pThis->pMod->tryResume(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
+		}
 		DBGPRINTF("actionDoRetry: %s action->tryResume returned %d\n", pThis->pszName, iRet);
 		if((getActionResumeInRow(pWti, pThis) > 9) && (getActionResumeInRow(pWti, pThis) % 10 == 0)) {
 			bTreatOKasSusp = 1;
@@ -1153,12 +1206,15 @@ actionCallCommitTransaction(action_t * const pThis,
 	DBGPRINTF("entering actionCallCommitTransaction[%s], state: %s, nMsgs %u\n",
 		  pThis->pszName, getActStateName(pThis, pWti), nparams);
 
-	iRet = pThis->pMod->mod.om.commitTransaction(
-		    pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData,
-		    iparams, nparams);
-	DBGPRINTF("actionCallCommitTransaction[%s] state: %s "
-		"mod commitTransaction returned %d\n",
-		pThis->pszName, getActStateName(pThis, pWti), iRet);
+	iRet = checkExternalStateFile(pThis);
+	if(iRet == RS_RET_OK) {
+		iRet = pThis->pMod->mod.om.commitTransaction(
+			    pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData,
+			    iparams, nparams);
+		DBGPRINTF("actionCallCommitTransaction[%s] state: %s "
+			"mod commitTransaction returned %d\n",
+			pThis->pszName, getActStateName(pThis, pWti), iRet);
+	}
 	iRet = handleActionExecResult(pThis, pWti, iRet);
 	RETiRet;
 }
@@ -1514,6 +1570,11 @@ processMsgMain(action_t *__restrict__ const pAction,
 	DEFiRet;
 
 	CHKiRet(prepareDoActionParams(pAction, pWti, pMsg, ttNow));
+
+	if(checkExternalStateFile(pAction) == RS_RET_SUSPENDED) {
+		DBGPRINTF("processMsgMain suspends via external state file\n");
+		actionSuspend(pAction, pWti);
+	}
 
 	if(pAction->isTransactional) {
 		pWti->actWrkrInfo[pAction->iActionNbr].pAction = pAction;
@@ -1916,6 +1977,8 @@ actionApplyCnfParam(action_t * const pAction, struct cnfparamvals * const pvals)
 			continue; /* this is handled seperately during module select! */
 		} else if(!strcmp(pblk.descr[i].name, "action.errorfile")) {
 			pAction->pszErrFile = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(pblk.descr[i].name, "action.externalstate.file")) {
+			pAction->pszExternalStateFile = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(pblk.descr[i].name, "action.writeallmarkmessages")) {
 			pAction->bWriteAllMarkMsgs = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "action.execonlyeverynthtime")) {
