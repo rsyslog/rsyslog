@@ -497,6 +497,20 @@ MsgSetRulesetByName(smsg_t * const pMsg, cstr_t *const rulesetName)
 	}
 }
 
+static const char *
+jsonToString(struct json_object *json, int jsonFormatOpt)
+{
+	if (!json)
+		return NULL;
+	
+	if (json_object_get_type(json) == json_type_string) {
+		return json_object_get_string(json);
+	}
+	
+	return json_object_to_json_string_ext(json, jsonFormatOpt);
+	
+}
+
 /* do a DNS reverse resolution, if not already done, reflect status
  * rgerhards, 2009-11-16
  */
@@ -1241,15 +1255,16 @@ static rsRetVal MsgSerialize(smsg_t *pThis, strm_t *pStrm)
 	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszRcvFromIP"), PROPTYPE_PSZ, (void*) psz));
 	psz = pThis->pszStrucData;
 	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszStrucData"), PROPTYPE_PSZ, (void*) psz));
+
 	if(pThis->json != NULL) {
 		MsgLock(pThis);
-		psz = (uchar*) json_object_get_string(pThis->json);
+		psz = (uchar*) jsonToString(pThis->json, glblJsonFormatOpt);
 		MsgUnlock(pThis);
 		CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("json"), PROPTYPE_PSZ, (void*) psz));
 	}
 	if(pThis->localvars != NULL) {
 		MsgLock(pThis);
-		psz = (uchar*) json_object_get_string(pThis->localvars);
+		psz = (uchar*) jsonToString(pThis->localvars, glblJsonFormatOpt);
 		MsgUnlock(pThis);
 		CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("localvars"), PROPTYPE_PSZ, (void*) psz));
 	}
@@ -2423,8 +2438,7 @@ msgGetJSONMESG(smsg_t *__restrict__ const pMsg)
 #endif
 
 	json_object_object_add(json, "$!", json_object_get(pMsg->json));
-
-	pRes = (uchar*) strdup(json_object_get_string(json));
+	pRes = (uchar*) strdup(jsonToString(json, glblJsonFormatOpt));
 	json_object_put(json);
 	return pRes;
 }
@@ -3147,7 +3161,7 @@ getJSONPropVal(smsg_t * const pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size
 			field = NULL;
 	}
 	if(field != NULL) {
-		*pRes = (uchar*) strdup(json_object_get_string(field));
+		*pRes = (uchar*) strdup(jsonToString(field, glblJsonFormatOpt));
 		*buflen = (int) ustrlen(*pRes);
 		*pbMustBeFreed = 1;
 	}
@@ -4594,15 +4608,16 @@ msgSetPropViaJSON(smsg_t *__restrict__ const pMsg, const char *name, struct json
 	/* note: json_object_get_string() manages the memory of the returned
 	 *       string. So we MUST NOT free it!
 	 */
+
 	dbgprintf("DDDD: msgSetPropViaJSON key: '%s'\n", name);
 	if(!strcmp(name, "rawmsg")) {
-		psz = json_object_get_string(json);
+		psz = jsonToString(json, glblJsonFormatOpt);
 		MsgSetRawMsg(pMsg, psz, strlen(psz));
 	} else if(!strcmp(name, "msg")) {
-		psz = json_object_get_string(json);
+		psz = jsonToString(json, glblJsonFormatOpt);
 		MsgReplaceMSG(pMsg, (const uchar*)psz, strlen(psz));
 	} else if(!strcmp(name, "syslogtag")) {
-		psz = json_object_get_string(json);
+		psz = jsonToString(json, glblJsonFormatOpt);
 		MsgSetTAG(pMsg, (const uchar*)psz, strlen(psz));
 	} else if(!strcmp(name, "pri")) {
 		val = json_object_get_int(json);
@@ -4620,23 +4635,23 @@ msgSetPropViaJSON(smsg_t *__restrict__ const pMsg, const char *name, struct json
 		else
 			DBGPRINTF("mmexternal: invalid fac %d requested -- ignored\n", val);
 	} else if(!strcmp(name, "procid")) {
-		psz = json_object_get_string(json);
+		psz = jsonToString(json, glblJsonFormatOpt);
 		MsgSetPROCID(pMsg, psz);
 	} else if(!strcmp(name, "msgid")) {
-		psz = json_object_get_string(json);
+		psz = jsonToString(json, glblJsonFormatOpt);
 		MsgSetMSGID(pMsg, psz);
 	} else if(!strcmp(name, "structured-data")) {
-		psz = json_object_get_string(json);
+		psz = jsonToString(json, glblJsonFormatOpt);
 		MsgSetStructuredData(pMsg, psz);
 	} else if(!strcmp(name, "hostname") || !strcmp(name, "source")) {
-		psz = json_object_get_string(json);
+		psz = jsonToString(json, glblJsonFormatOpt);
 		MsgSetHOSTNAME(pMsg, (const uchar*)psz, strlen(psz));
 	} else if(!strcmp(name, "fromhost")) {
-		psz = json_object_get_string(json);
-		MsgSetRcvFromStr(pMsg, (const uchar*) psz, strlen(psz), &propFromHost);
+		psz = jsonToString(json, glblJsonFormatOpt);
+		MsgSetRcvFromStr(pMsg, (const uchar*) psz, 0, &propFromHost);
 		prop.Destruct(&propFromHost);
 	} else if(!strcmp(name, "fromhost-ip")) {
-		psz = json_object_get_string(json);
+		psz = jsonToString(json, glblJsonFormatOpt);
 		MsgSetRcvFromIPStr(pMsg, (const uchar*)psz, strlen(psz), &propRcvFromIP);
 		prop.Destruct(&propRcvFromIP);
 	} else if(!strcmp(name, "$!")) {
