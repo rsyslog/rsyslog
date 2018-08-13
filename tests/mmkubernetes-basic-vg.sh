@@ -10,13 +10,6 @@
 #export RSYSLOG_DEBUG="debug"
 . $srcdir/diag.sh init
 . $srcdir/diag.sh check-command-available timeout
-
-testsrv=mmk8s-test-server
-timeout 3m python ./mmkubernetes_test_server.py 18443 rsyslog${testsrv}.pid rsyslogd${testsrv}.started > mmk8s_srv.log 2>&1 &
-BGPROCESS=$!
-. $srcdir/diag.sh wait-startup $testsrv
-echo background mmkubernetes_test_server.py process id is $BGPROCESS
-
 pwd=$( pwd )
 generate_conf
 add_conf '
@@ -37,6 +30,13 @@ action(type="mmjsonparse" cookie="")
 action(type="mmkubernetes")
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="mmk8s_template")
 '
+
+testsrv=mmk8s-test-server
+timeout 3m python ./mmkubernetes_test_server.py 18443 ${RSYSLOG_PIDBASE}${testsrv}.pid rsyslogd${testsrv}.started > mmk8s_srv.log 2>&1 &
+BGPROCESS=$!
+. $srcdir/diag.sh wait-startup $testsrv
+echo background mmkubernetes_test_server.py process id is $BGPROCESS
+
 cat > pod-error1.log <<EOF
 {"log":"not in right format","stream":"stdout","time":"2018-04-06T17:26:34.492083106Z"}
 EOF
@@ -66,7 +66,7 @@ wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
 
 kill $BGPROCESS
-. $srcdir/diag.sh wait-pid-termination rsyslog${testsrv}.pid
+. $srcdir/diag.sh wait-pid-termination ${RSYSLOG_PIDBASE}${testsrv}.pid
 cat mmk8s_srv.log
 
 # for each record in mmkubernetes-basic.out.json, see if the matching
