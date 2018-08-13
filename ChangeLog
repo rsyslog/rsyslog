@@ -1,5 +1,14 @@
 ------------------------------------------------------------------------------
 Version 8.38.0 [v8-stable] 2018-09-18
+- omelasticsearch: write all header metadata to $.omes for retries
+  Write all of the original request metadata fields to $.omes for
+  the retry, if present. This may include all of the following:
+  _index, _type, _id, _parent, pipeline
+  This is in addition to the fields from the response. If the same
+  field name exists in the request metadata and the response, the
+  field from the request will be used, in order to facilitate
+  retrying the exact same request.
+  Thanks to Richard Megginson for the patch.
 - omprog: add ability to pass rsyslog's environment to script
   Up until 8.37.0, rsyslog provides an empty environment to the spawned
   program. This seems to work in existing use case. However, there are
