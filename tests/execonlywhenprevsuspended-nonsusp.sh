@@ -28,9 +28,9 @@ startup
 shutdown_when_empty
 wait_shutdown
 seq_check 0 999
-if [ -e rsyslog2.out.log ]; then
+if [ -e ${RSYSLOG2_OUT_LOG} ]; then
     echo "error: \"suspended\" file exists, first 10 lines:"
-    $RS_HEADCMD rsyslog2.out.log
+    $RS_HEADCMD ${RSYSLOG2_OUT_LOG}
     exit 1
 fi
 exit_test

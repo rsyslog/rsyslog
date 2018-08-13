@@ -34,10 +34,10 @@ if [ ! $? -eq 0 ]; then
   error_exit  1
 fi;
 
-grep 'invalid number of ipv4 bits in simple mode, corrected to 16' rsyslog2.out.log > /dev/null
+grep 'invalid number of ipv4 bits in simple mode, corrected to 16' ${RSYSLOG2_OUT_LOG} > /dev/null
 if [ $? -ne 0 ]; then
-  echo "invalid response generated, rsyslog2.out.log is:"
-  cat rsyslog2.out.log
+  echo "invalid response generated, ${RSYSLOG2_OUT_LOG} is:"
+  cat ${RSYSLOG2_OUT_LOG}
   error_exit  1
 fi;
 

@@ -20,7 +20,7 @@ template(name="outfmt-all-json" type="string" string="%$!all-json%\n")
 action(type="mmjsonparse")
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 if $!nope == "" then
-	action(type="omfile" file="./rsyslog2.out.log" template="outfmt-all-json")
+	action(type="omfile" file="./'"${RSYSLOG2_OUT_LOG}"'" template="outfmt-all-json")
 '
 startup
 tcpflood -m 1 -M "\"<167>Mar  6 16:57:54 172.20.245.8 test: @cee: { \\\"nope\\\": null }\""

@@ -23,12 +23,12 @@ startup
 . $srcdir/diag.sh injectmsg 0 50
 shutdown_when_empty
 wait_shutdown
-cmp testsuites/action-tx-errfile.result rsyslog2.out.log
+cmp testsuites/action-tx-errfile.result ${RSYSLOG2_OUT_LOG}
 if [ ! $? -eq 0 ]; then
   printf "errorfile does not contain excpected result. Expected:\n\n"
   cat testsuites/action-tx-errfile.result 
   printf "\nActual:\n\n"
-  cat rsyslog2.out.log
+  cat ${RSYSLOG2_OUT_LOG}
   error_exit 1
 fi;
 # note "-s" is required to suppress the select "field header"

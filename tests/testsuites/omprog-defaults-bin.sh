@@ -1,6 +1,6 @@
 #!/bin/bash
 
-outfile=rsyslog.out.log
+outfile=$RSYSLOG_OUT_LOG
 
 echo "Starting with parameters: $@" >> $outfile
 

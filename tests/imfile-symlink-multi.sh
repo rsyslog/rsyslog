@@ -35,7 +35,7 @@ template(name="outfmt" type="list") {
 	constant(value="\n")
 }
 if $msg contains "msgnum:" then
-	action( type="omfile" file="rsyslog.out.log" template="outfmt")
+	action( type="omfile" file="'${RSYSLOG_OUT_LOG}'" template="outfmt")
 '
 # Start rsyslog now before adding more files
 startup
@@ -51,17 +51,17 @@ done
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown        # we need to wait until rsyslogd is finished!
 
-sort rsyslog.out.log > rsyslog.out.sorted.log
+sort ${RSYSLOG_OUT_LOG} > ${RSYSLOG_OUT_LOG}.sorted
 
 {
 	echo HEADER msgnum:00000000:, filename: ./rsyslog.input-symlink.log, fileoffset: 0
 	for i in `seq 2 $IMFILEINPUTFILES` ; do
 		echo HEADER msgnum:00000000:, filename: ./rsyslog.input.${i}.log, fileoffset: 0
 	done
-} | sort | cmp - rsyslog.out.sorted.log
+} | sort | cmp - ${RSYSLOG_OUT_LOG}.sorted
 if [ ! $? -eq 0 ]; then
-  echo "invalid output generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid output generated, ${RSYSLOG_OUT_LOG} is:"
+  cat $RSYSLOG_OUT_LOG
   error_exit 1
 fi;
 

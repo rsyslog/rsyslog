@@ -64,11 +64,11 @@ if [ ! $? -eq 0 ]; then
   error_exit 1
 fi;
 
-grep "imfile error:.*message will be split and processed" rsyslog2.out.log > /dev/null
+grep "imfile error:.*message will be split and processed" ${RSYSLOG2_OUT_LOG} > /dev/null
 if [ $? -ne 0 ]; then
         echo
-        echo "FAIL: expected error message from missing input file not found. rsyslog2.out.log is:"
-        cat rsyslog2.out.log
+        echo "FAIL: expected error message from missing input file not found. ${RSYSLOG2_OUT_LOG} is:"
+        cat ${RSYSLOG2_OUT_LOG}
         error_exit 1
 fi
 

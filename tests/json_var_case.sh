@@ -19,7 +19,7 @@ action(type="mmjsonparse")
 set $!_aBc = "7";
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 if $!_aBc != "7" then
-	action(type="omfile" file="./rsyslog2.out.log" template="outfmt-all-json")
+	action(type="omfile" file="./'"${RSYSLOG2_OUT_LOG}"'" template="outfmt-all-json")
 '
 startup
 tcpflood -m 1 -M "\"<167>Nov  6 12:34:56 172.0.0.1 test: @cee: { \\\"abc\\\": \\\"1\\\", \\\"ABC\\\": \\\"2\\\", \\\"aBc\\\": \\\"3\\\", \\\"_abc\\\": \\\"4\\\", \\\"_ABC\\\": \\\"5\\\", \\\"_aBc\\\": \\\"6\\\" }\""

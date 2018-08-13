@@ -1,6 +1,6 @@
 #!/bin/bash
 
-outfile=rsyslog.out.log
+outfile=$RSYSLOG_OUT_LOG
 terminate=false
 
 function handle_sigusr1 {

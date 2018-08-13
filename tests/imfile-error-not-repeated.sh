@@ -26,16 +26,16 @@ rm ./rsyslog.input
 shutdown_when_empty
 wait_shutdown
 
-grep "file.*rsyslog.input.*No such file or directory" rsyslog2.out.log > /dev/null
+grep "file.*rsyslog.input.*No such file or directory" ${RSYSLOG2_OUT_LOG} > /dev/null
 if [ $? -ne 0 ]; then
-        echo "FAIL: expected error message from missing input file not found. rsyslog2.out.log is:"
-        cat rsyslog2.out.log
+        echo "FAIL: expected error message from missing input file not found. ${RSYSLOG2_OUT_LOG} is:"
+        cat ${RSYSLOG2_OUT_LOG}
         error_exit 1
 fi
 
-if [ `grep "No such file or directory" rsyslog2.out.log | wc -l` -ne 1 ]; then
-	echo "FAIL: expected error message is put out multiple times. rsyslog2.out.log is:"
-	cat rsyslog2.out.log
+if [ `grep "No such file or directory" ${RSYSLOG2_OUT_LOG} | wc -l` -ne 1 ]; then
+	echo "FAIL: expected error message is put out multiple times. ${RSYSLOG2_OUT_LOG} is:"
+	cat ${RSYSLOG2_OUT_LOG}
 	error_exit 1
 fi
 

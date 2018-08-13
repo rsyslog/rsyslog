@@ -21,6 +21,7 @@ template(name="outfmt" type="string" string="%msg%\n")
         binary=`echo $srcdir/testsuites/omprog-restart-terminated-bin.sh`
         template="outfmt"
         name="omprog_action"
+	hideEnvironment="off"
         queue.type="Direct"  # the default; facilitates sync with the child process
         confirmMessages="on"  # facilitates sync with the child process
         action.resumeRetryCount="10"

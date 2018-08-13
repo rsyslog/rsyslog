@@ -14,15 +14,15 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
-touch rsyslog2.out.log
-chmod 0400 rsyslog2.out.log
+touch ${RSYSLOG2_OUT_LOG}
+chmod 0400 ${RSYSLOG2_OUT_LOG}
 ls -l rsyslog.ou*
 startup
 $srcdir/diag.sh injectmsg 0 1
 shutdown_when_empty
 wait_shutdown
 
-grep "rsyslog2.out.log.* open error"  $RSYSLOG_OUT_LOG > /dev/null
+grep "${RSYSLOG2_OUT_LOG}.* open error"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
 	echo
 	echo "FAIL: expected error message not found.  $RSYSLOG_OUT_LOG is:"

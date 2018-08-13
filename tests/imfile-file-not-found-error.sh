@@ -25,11 +25,11 @@ testmessage3' > rsyslog.input
 shutdown_when_empty
 wait_shutdown
 
-grep "file.*rsyslog.input.*No such file or directory" rsyslog2.out.log > /dev/null
+grep "file.*rsyslog.input.*No such file or directory" ${RSYSLOG2_OUT_LOG} > /dev/null
 if [ $? -ne 0 ]; then
         echo
-        echo "FAIL: expected error message from missing input file not found. rsyslog2.out.log is:"
-        cat rsyslog2.out.log
+        echo "FAIL: expected error message from missing input file not found. ${RSYSLOG2_OUT_LOG} is:"
+        cat ${RSYSLOG2_OUT_LOG}
         error_exit 1
 fi
 

@@ -21,8 +21,8 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 	      )
 }
 '
-touch rsyslog2.out.log
-chmod 0400 rsyslog2.out.log
+touch ${RSYSLOG2_OUT_LOG}
+chmod 0400 ${RSYSLOG2_OUT_LOG}
 ls -l rsyslog.ou*
 startup
 $srcdir/diag.sh injectmsg 0 $messages

@@ -17,7 +17,7 @@ $RepeatedMsgReduction on
 # second action should never execute
 :msg, contains, "msgnum:" /dev/null
 $ActionExecOnlyWhenPreviousIsSuspended on
-& ./rsyslog.out.log
+& ./'"${RSYSLOG_OUT_LOG}"'
 '
 startup_vg
 . $srcdir/diag.sh injectmsg  0 5000
