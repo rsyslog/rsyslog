@@ -158,7 +158,7 @@ typedef struct configSettings_s {
 	uchar *pszActionName;				/* short name for the action */
 	/* action queue and its configuration parameters */
 	queueType_t ActionQueType;			/* type of the main message queue above */
-	int iActionQueueSize;				/* size of the main message queue above */
+	int iActionQueueSize;				/* size of the main message queue above */                       
 	int iActionQueueDeqBatchSize;			/* batch size for action queues */
 	int iActionQHighWtrMark;			/* high water mark for disk-assisted queues */
 	int iActionQLowWtrMark;				/* low water mark for disk-assisted queues */
