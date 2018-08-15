@@ -19,7 +19,6 @@
 # Then, we check that at a minimum the .qi file exists.
 # Copyright (C) 2016 by Rainer Gerhards
 # Released under ASL 2.0
-echo ===============================================================================
 
 #uncomment the following if you want a log for step 1 of this test
 #export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
@@ -54,6 +53,8 @@ ls test-spool
 
 . $srcdir/diag.sh kill-immediate   # do not give it sufficient time to shutdown
 wait_shutdown
+rm -f $RSYSLOG_PIDBASE.pid # as we kill, rsyslog does not itself cleanup the pid file
+
 echo spool files after kill:
 ls test-spool
 

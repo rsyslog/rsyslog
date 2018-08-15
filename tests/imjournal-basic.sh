@@ -19,8 +19,16 @@ action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
 TESTMSG="TestBenCH-RSYSLog imjournal This is a test message - $(date +%s)"
+
 ./journal_print "$TESTMSG"
-if [ $? -ne 0 ]; then
+journal_write_state=$?
+
+# we must not terminate the test until we have terminated rsyslog
+./msleep 500
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown
+
+if [ $journal_write_state -ne 0 ]; then
 	echo "SKIP: failed to put test into journal."
 	exit 77
 fi
@@ -29,9 +37,7 @@ if [ $? -ne 0 ]; then
 	echo "SKIP: cannot read journal."
 	exit 77
 fi
-./msleep 500
-shutdown_when_empty # shut down rsyslogd when done processing messages
-wait_shutdown
+
 cat $RSYSLOG_OUT_LOG | fgrep -qF "$TESTMSG"
 if [ $? -ne 0 ]; then
   echo "FAIL:  $RSYSLOG_OUT_LOG content (tail -n200):"

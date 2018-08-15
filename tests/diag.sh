@@ -65,7 +65,7 @@ function rsyslog_testbench_test_url_access() {
 
     local http_endpoint="$1"
     if ! curl --fail --max-time 30 "${http_endpoint}" 1>/dev/null 2>&1; then
-        echo "HTTP endpont '${http_endpoint}' isn't reachable. Skipping test ..."
+        echo "HTTP endpoint '${http_endpoint}' is not reachable. Skipping test ..."
         exit 77
     else
         echo "HTTP endpoint '${http_endpoint}' is reachable! Starting test ..."
@@ -73,12 +73,21 @@ function rsyslog_testbench_test_url_access() {
 }
 
 function setvar_RS_HOSTNAME() {
-	rm -f HOSTNAME
-	startup gethostname.conf
+	printf "### Obtaining HOSTNAME (prequisite, not actual test) ###\n"
+	generate_conf
+	add_conf 'module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="13514")
+
+$template hostname,"%hostname%"
+local0.* ./'${RSYSLOG_DYNNAME}'.HOSTNAME;hostname
+'
+	rm -f "${RSYSLOG_DYNNAME}.HOSTNAME"
+	startup
 	tcpflood -m1 -M "\"<128>\""
 	shutdown_when_empty # shut down rsyslogd when done processing messages
 	wait_shutdown	# we need to wait until rsyslogd is finished!
-	export RS_HOSTNAME="$(cat HOSTNAME)"
+	export RS_HOSTNAME="$(cat ${RSYSLOG_DYNNAME}.HOSTNAME)"
+	rm -f "${RSYSLOG_DYNNAME}.HOSTNAME"
 	echo HOSTNAME is: $RS_HOSTNAME
 }
 
@@ -92,6 +101,8 @@ function generate_conf() {
 		export TESTCONF_NM="${new_port}_" # this basename is also used by instance 2!
 		export RSYSLOG_OUT_LOG="rsyslog_${new_port}.out.log"
 		export RSYSLOG2_OUT_LOG="rsyslog2_${new_port}.out.log"
+		export RSYSLOG_PIDBASE="rsyslog_$(basename $0)_${new_port}"
+		export RSYSLOG_DYNNAME="rsyslog_$(basename $0)_${new_port}"
 	else
 		export IMDIAG_PORT2=$new_port
 	fi
@@ -160,7 +171,7 @@ function startup() {
 	fi
 	echo config $CONF_FILE is:
 	cat -n $CONF_FILE
-	LD_PRELOAD=$RSYSLOG_PRELOAD $valgrind ../tools/rsyslogd -C -n -irsyslog$instance.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
+	LD_PRELOAD=$RSYSLOG_PRELOAD $valgrind ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$instance.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
 	. $srcdir/diag.sh wait-startup $instance
 }
 
@@ -171,7 +182,7 @@ function startup_silent() {
 	    echo "ERROR: config file '$srcdir/testsuites/$1' not found!"
 	    exit 1
 	fi
-	$valgrind ../tools/rsyslogd -C -n -irsyslog$2.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$1 2>/dev/null &
+	$valgrind ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$2.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$1 2>/dev/null &
 	. $srcdir/diag.sh wait-startup $2
 }
 
@@ -191,7 +202,7 @@ function startup_vg_waitpid_only() {
 	    echo "ERROR: config file '$CONF_FILE' not found!"
 	    exit 1
 	fi
-	LD_PRELOAD=$RSYSLOG_PRELOAD valgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --suppressions=$srcdir/known_issues.supp --gen-suppressions=all --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=$RS_TESTBENCH_LEAK_CHECK ../tools/rsyslogd -C -n -irsyslog$2.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
+	LD_PRELOAD=$RSYSLOG_PRELOAD valgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --suppressions=$srcdir/known_issues.supp --gen-suppressions=all --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=$RS_TESTBENCH_LEAK_CHECK ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$2.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
 	. $srcdir/diag.sh wait-startup-pid $2
 }
 
@@ -221,9 +232,13 @@ function shutdown_when_empty() {
 	   echo Shutting down instance 1
 	fi
 	. $srcdir/diag.sh wait-queueempty $1
-	cp rsyslog$1.pid rsyslog$1.pid.save
+	if [ "$RSYSLOG_PIDBASE" == "" ]; then
+		echo "RSYSLOG_PIDBASE is EMPTY! - bug in test? (instance $1)"
+		exit 1
+	fi
+	cp $RSYSLOG_PIDBASE$1.pid $RSYSLOG_PIDBASE$1.pid.save
 	$TESTTOOL_DIR/msleep 500 # wait a bit (think about slow testbench machines!)
-	kill `cat rsyslog$1.pid` # note: we do not wait for the actual termination!
+	kill `cat $RSYSLOG_PIDBASE$1.pid` # note: we do not wait for the actual termination!
 }
 
 
@@ -231,7 +246,7 @@ function shutdown_when_empty() {
 # $1 is the instance
 function wait_shutdown() {
 	i=0
-	out_pid=`cat rsyslog$1.pid.save`
+	out_pid=`cat $RSYSLOG_PIDBASE$1.pid.save`
 	if [[ "x$out_pid" == "x" ]]
 	then
 		terminated=1
@@ -266,7 +281,7 @@ function wait_shutdown() {
 
 # actually, we wait for rsyslog.pid to be deleted. $1 is the instance
 function wait_shutdown_vg() {
-	wait `cat rsyslog$1.pid`
+	wait `cat $RSYSLOG_PIDBASE$1.pid`
 	export RSYSLOGD_EXIT=$?
 	echo rsyslogd run exited with $RSYSLOGD_EXIT
 	if [ -e vgcore.* ]
@@ -495,6 +510,8 @@ case $1 in
 		export RSYSLOG_DFLT_LOG_INTERNAL=1 # testbench needs internal messages logged internally!
 		export RSYSLOG2_OUT_LOG=rsyslog2.out.log
 		export RSYSLOG_OUT_LOG=rsyslog.out.log
+		export RSYSLOG_PIDBASE="rsyslog" # TODO: remove
+		export RSYSLOG_DYNNAME="rsyslog" # TODO: remove
 		export IMDIAG_PORT=13500
 		export IMDIAG_PORT2=13501
 		export TCPFLOOD_PORT=13514
@@ -583,7 +600,7 @@ case $1 in
 		python $srcdir/es_response_get_msgnum.py > ${RSYSLOG_OUT_LOG}
 		;;
    'getpid')
-		pid=$(cat rsyslog$2.pid)
+		pid=$(cat $RSYSLOG_PIDBASE$2.pid)
 		;;
    'startup_vg') # start rsyslogd with default params under valgrind control. $2 is the config file name to use
 		# returns only after successful startup, $3 is the instance (blank or 2!)
@@ -614,7 +631,7 @@ case $1 in
 		    echo "ERROR: config file '$CONF_FILE' not found!"
 		    exit 1
 		fi
-		valgrind --tool=helgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --suppressions=$srcdir/linux_localtime_r.supp --gen-suppressions=all ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
+		valgrind --tool=helgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --suppressions=$srcdir/linux_localtime_r.supp --gen-suppressions=all ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
 		. $srcdir/diag.sh wait-startup-pid $3
 		;;
    'startup_vgthread') # start rsyslogd with default params under valgrind thread debugger control.
@@ -625,24 +642,24 @@ case $1 in
 		;;
    'wait-startup-pid') # wait for rsyslogd startup, PID only ($2 is the instance)
 		i=0
-		while test ! -f rsyslog$2.pid; do
+		while test ! -f $RSYSLOG_PIDBASE$2.pid; do
 			$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
 			let "i++"
 			if test $i -gt $TB_TIMEOUT_STARTSTOP
 			then
 			   ps -f
-			   echo "ABORT! Timeout waiting on startup (pid file rsyslog$2.pid)"
+			   echo "ABORT! Timeout waiting on startup (pid file $RSYSLOG_PIDBASE$2.pid)"
 			   error_exit 1
 			fi
 		done
-		echo "rsyslogd$2 started, start msg not yet seen, pid " `cat rsyslog$2.pid`
+		echo "rsyslogd$2 started, start msg not yet seen, pid " `cat $RSYSLOG_PIDBASE$2.pid`
 		;;
    'wait-startup') # wait for rsyslogd startup ($2 is the instance)
 		. $srcdir/diag.sh wait-startup-pid $2
 		i=0
 		while test ! -f rsyslogd$2.started; do
 			$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
-			ps -p `cat rsyslog$2.pid` &> /dev/null
+			ps -p `cat $RSYSLOG_PIDBASE$2.pid` &> /dev/null
 			if [ $? -ne 0 ]
 			then
 			   echo "ABORT! rsyslog pid no longer active during startup!"
@@ -655,7 +672,7 @@ case $1 in
 			   error_exit 1
 			fi
 		done
-		echo "rsyslogd$2 startup msg seen, pid " `cat rsyslog$2.pid`
+		echo "rsyslogd$2 startup msg seen, pid " `cat $RSYSLOG_PIDBASE$2.pid`
 		;;
    'wait-pid-termination')  # wait for the pid in pid $2 to terminate, abort on timeout
 		i=0
@@ -718,16 +735,16 @@ case $1 in
 		fi
 		;;
    'issue-HUP') # shut rsyslogd down when main queue is empty. $2 is the instance.
-		kill -HUP `cat rsyslog$2.pid`
+		kill -HUP `cat $RSYSLOG_PIDBASE$2.pid`
 		$TESTTOOL_DIR/msleep 1000
 		;;
    'shutdown-immediate') # shut rsyslogd down without emptying the queue. $2 is the instance.
-		cp rsyslog$2.pid rsyslog$2.pid.save
-		kill `cat rsyslog$2.pid`
+		cp $RSYSLOG_PIDBASE$2.pid $RSYSLOG_PIDBASE$2.pid.save
+		kill `cat $RSYSLOG_PIDBASE$2.pid`
 		# note: we do not wait for the actual termination!
 		;;
    'kill-immediate') # kill rsyslog unconditionally
-		kill -9 `cat rsyslog.pid`
+		kill -9 `cat $RSYSLOG_PIDBASE.pid`
 		# note: we do not wait for the actual termination!
 		;;
    'injectmsg') # inject messages via our inject interface (imdiag)

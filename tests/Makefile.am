@@ -1811,7 +1811,6 @@ EXTRA_DIST= \
 	rscript_wrap3.sh \
 	testsuites/rscript_wrap3.conf \
 	testsuites/wrap3_input\
-	testsuites/gethostname.conf \
 	json_array_subscripting.sh \
 	testsuites/json_array_subscripting.conf \
 	testsuites/json_array_input \
