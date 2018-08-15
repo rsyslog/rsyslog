@@ -13,10 +13,10 @@ export PORT_RCVR="$(get_free_port)"
 add_conf '
 module(load="../plugins/imrelp/.libs/imrelp")
 # then SENDER sends to this port (not tcpflood!)
-input(type="imrelp" port=`echo $PORT_RCVR`)
+input(type="imrelp" port="'$PORT_RCVR'")
 
 $template outfmt,"%msg:F,58:2%\n"
-:msg, contains, "msgnum:" action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+:msg, contains, "msgnum:" action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
 . $srcdir/diag.sh wait-startup
@@ -29,9 +29,9 @@ generate_conf 2
 add_conf '
 module(load="../plugins/omrelp/.libs/omrelp")
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port=`echo $TCPFLOOD_PORT`)	/* this port for tcpflood! */
+input(type="imtcp" port="'$TCPFLOOD_PORT'")	/* this port for tcpflood! */
 
-action(type="omrelp" name="omrelp" target="127.0.0.1" port=`echo $PORT_RCVR`)
+action(type="omrelp" name="omrelp" target="127.0.0.1" port="'$PORT_RCVR'")
 ' 2
 startup 2
 . $srcdir/diag.sh wait-startup 2
