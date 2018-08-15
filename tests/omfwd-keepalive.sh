@@ -13,7 +13,7 @@ template(name="outfmt" type="list") {
 }
 :msg, contains, "x-pid" stop
 
-action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
+:msg, contains, "msgnum" action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 
 :msg, contains, "this does not occur" action(type="omfwd"
 	target="10.0.0.1" keepalive="on" keepalive.probes="10"
@@ -24,11 +24,7 @@ startup
 tcpflood -m1
 shutdown_when_empty
 wait_shutdown
-echo " msgnum:00000000:" | cmp - $RSYSLOG_OUT_LOG
-if [ ! $? -eq 0 ]; then
-  echo "invalid output generated, $RSYSLOG_OUT_LOG is:"
-  cat $RSYSLOG_OUT_LOG
-  error_exit 1
-fi;
+export EXPECTED=" msgnum:00000000:"
+cmp_exact $RSYSLOG_OUT_LOG
 
 exit_test
