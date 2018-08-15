@@ -372,7 +372,8 @@ qqueueAdviseMaxWorkers(qqueue_t *pThis)
 	if(!pThis->bEnqOnly) {
 		if(pThis->bIsDA && getLogicalQueueSize(pThis) >= pThis->iHighWtrMrk) {
 			DBGOPRINT((obj_t*) pThis, "(re)activating DA worker\n");
-			wtpAdviseMaxWorkers(pThis->pWtpDA, 1); /* disk queues have always one worker */
+			wtpAdviseMaxWorkers(pThis->pWtpDA, 1, DENY_WORKER_START_DURING_SHUTDOWN);
+			/* disk queues have always one worker */
 		}
 		if(getLogicalQueueSize(pThis) == 0) {
 			iMaxWorkers = 0;
@@ -381,7 +382,7 @@ qqueueAdviseMaxWorkers(qqueue_t *pThis)
 		} else {
 			iMaxWorkers = getLogicalQueueSize(pThis) / pThis->iMinMsgsPerWrkr + 1;
 		}
-		wtpAdviseMaxWorkers(pThis->pWtpReg, iMaxWorkers);
+		wtpAdviseMaxWorkers(pThis->pWtpReg, iMaxWorkers, DENY_WORKER_START_DURING_SHUTDOWN);
 	}
 
 	RETiRet;
@@ -1182,12 +1183,13 @@ tryShutdownWorkersWithinQueueTimeout(qqueue_t *const pThis)
 		DBGOPRINT((obj_t*) pThis, "setting EnqOnly mode for DA worker\n");
 		pThis->pqDA->bEnqOnly = 1;
 		wtpSetState(pThis->pWtpDA, wtpState_SHUTDOWN_IMMEDIATE);
-		wtpAdviseMaxWorkers(pThis->pWtpDA, 1);
+		wtpAdviseMaxWorkers(pThis->pWtpDA, 1, DENY_WORKER_START_DURING_SHUTDOWN);
 		DBGOPRINT((obj_t*) pThis, "awoke DA worker, told it to shut down.\n");
 
 		/* also tell the DA queue worker to shut down, so that it already knows... */
 		wtpSetState(pThis->pqDA->pWtpReg, wtpState_SHUTDOWN);
-		wtpAdviseMaxWorkers(pThis->pqDA->pWtpReg, 1); /* awake its lone worker */
+		wtpAdviseMaxWorkers(pThis->pqDA->pWtpReg, 1, DENY_WORKER_START_DURING_SHUTDOWN);
+			/* awake its lone worker */
 		DBGOPRINT((obj_t*) pThis, "awoke DA queue regular worker, told it to shut down when done.\n");
 
 		d_pthread_mutex_unlock(pThis->mut);
@@ -2685,7 +2687,7 @@ DoSaveOnShutdown(qqueue_t *pThis)
 	pThis->bShutdownImmediate = 0; /* would termiante the DA worker! */
 	pThis->iLowWtrMrk = 0;
 	wtpSetState(pThis->pWtpDA, wtpState_SHUTDOWN);	/* shutdown worker (only) when done (was _IMMEDIATE!) */
-	wtpAdviseMaxWorkers(pThis->pWtpDA, 1);		/* restart DA worker */
+	wtpAdviseMaxWorkers(pThis->pWtpDA, 1, PERMIT_WORKER_START_DURING_SHUTDOWN);	/* restart DA worker */
 
 	DBGOPRINT((obj_t*) pThis, "waiting for DA worker to terminate...\n");
 	timeoutComp(&tTimeout, QUEUE_TIMEOUT_ETERNAL);
