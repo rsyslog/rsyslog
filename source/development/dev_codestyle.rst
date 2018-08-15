@@ -11,7 +11,5 @@ The following is required right now:
   * we use ANSCI C99
   * indention is done with tabs, not spaces
   * trailing whitespace in lines is not permitted
-  * lines longer than 140 characters are not permitted; also, it is
-    advised to keep lines shorter than 120 characters unless there is
-    a good reason. The 120 char rule is not enforced, but everything
-    over 140 chars is rejected and must be reformatted.
+  * lines longer than 120 characters are not permitted;
+    everything over 120 chars is rejected and must be reformatted.
