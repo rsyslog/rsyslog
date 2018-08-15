@@ -149,7 +149,11 @@ static perthread_regex_t *get_perthread_regex(const regex_t *preg) {
 
 		if (uncomp) {
 			entry = create_perthread_regex(preg, uncomp);
-			hashtable_insert(perthread_regexs, (void *)entry, entry);
+			if(!hashtable_insert(perthread_regexs, (void *)entry, entry)) {
+				LogError(0, RS_RET_INTERNAL_ERROR,
+					"error trying to insert thread-regexp into hash-table - things "
+					"will not work 100%% correctly (mostly probably out of memory issue)");
+			}
 		}
 	}
 	if (entry) {
