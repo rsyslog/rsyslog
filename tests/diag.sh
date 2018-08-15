@@ -532,8 +532,8 @@ case $1 in
 			echo "testbench: TZ env var not set, setting it to UTC"
 			export TZ=UTC
 		fi
-		cp -f $srcdir/testsuites/diag-common.conf diag-common.conf
-		cp -f $srcdir/testsuites/diag-common2.conf diag-common2.conf
+		#cp -f $srcdir/testsuites/diag-common.conf diag-common.conf
+		#cp -f $srcdir/testsuites/diag-common2.conf diag-common2.conf
 		rm -f work-*.conf rsyslog.random.data
 		rm -f rsyslog*.pid.save xlate*.lkp_tbl
 		rm -f log log* # RSyslog debug output 
