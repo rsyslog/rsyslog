@@ -1,7 +1,8 @@
 #!/bin/bash
 # added 2017-05-08 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
-export TESTMESSAGES=10000
+export TESTMESSAGES=1000
+export TESTMESSAGESFULL=1000
 
 echo ===============================================================================
 echo \[sndrcv_kafka_multi.sh\]: Create multiple kafka/zookeeper instances and static topic
@@ -20,9 +21,9 @@ echo \[sndrcv_kafka_multi.sh\]: Create multiple kafka/zookeeper instances and st
 . $srcdir/diag.sh start-kafka '.dep_wrk3'
 . $srcdir/diag.sh create-kafka-topic 'static' '.dep_wrk1' '22181'
 
-echo \[sndrcv_kafka_multi.sh\]: Starting sender instance [omkafka]
-export RSYSLOG_DEBUGLOG="log"
 . $srcdir/diag.sh init
+
+# --- Create omkafka receiver config 
 generate_conf
 add_conf '
 module(load="../plugins/imkafka/.libs/imkafka")
@@ -33,7 +34,8 @@ input(	type="imkafka"
 #	broker="localhost:29092" 
 	consumergroup="default"
 	confParam=[ "compression.codec=none",
-		"socket.timeout.ms=1000",
+		"socket.timeout.ms=5000",
+		"enable.partition.eof=false",
 		"socket.keepalive.enable=true"]
 	)	
 
@@ -43,11 +45,9 @@ if ($msg contains "msgnum:") then {
 	action( type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt" )
 }
 '
-startup
-. $srcdir/diag.sh wait-startup
+# --- 
 
-echo \[sndrcv_kafka_multi.sh\]: Starting receiver instance [imkafka]
-export RSYSLOG_DEBUGLOG="log2"
+# --- Create omkafka sender config 
 generate_conf 2
 add_conf '
 module(load="../plugins/omkafka/.libs/omkafka")
@@ -63,7 +63,7 @@ ruleset(name="omkafka") {
 		topic="static" 
 		template="outfmt" 
 		confParam=[	"compression.codec=none",
-				"socket.timeout.ms=1000",
+				"socket.timeout.ms=5000",
 				"socket.keepalive.enable=true",
 				"reconnect.backoff.jitter.ms=1000",
 				"queue.buffering.max.messages=20000",
@@ -89,14 +89,23 @@ ruleset(name="omkafka3") {
 	action(name="kafka-fwd" type="omkafka" topic="static" broker="localhost:29094" template="outfmt" partitions.auto="on")
 }
 ' 2
-startup 2
-. $srcdir/diag.sh wait-startup 2
+# --- 
+
+echo \[sndrcv_kafka_multi.sh\]: Starting sender instance [omkafka]
+export RSYSLOG_DEBUGLOG="log"
+startup
+. $srcdir/diag.sh wait-startup
 
 # now inject the messages into instance 2. It will connect to instance 1, and that instance will record the data.
 tcpflood -m$TESTMESSAGES -i1
 
-echo \[sndrcv_kafka_multi.sh\]: Sleep to give rsyslog instances time to process data ...
-sleep 20 
+echo \[sndrcv_kafka_multi.sh\]: Starting receiver instance [imkafka]
+export RSYSLOG_DEBUGLOG="log2"
+startup 2
+. $srcdir/diag.sh wait-startup 2
+
+#echo \[sndrcv_kafka_multi.sh\]: Sleep to give rsyslog instances time to process data ...
+#sleep 20 
 
 echo \[sndrcv_kafka_multi.sh\]: Stopping sender instance [omkafka]
 shutdown_when_empty
@@ -106,14 +115,19 @@ echo \[sndrcv_kafka_multi.sh\]: Stopping receiver instance [imkafka]
 shutdown_when_empty 2
 wait_shutdown 2
 
+echo \[sndrcv_kafka_multi.sh\]: delete kafka topics 
+. $srcdir/diag.sh delete-kafka-topic 'static' '.dep_wrk1' '22181'
+
 # Do the final sequence check
-seq_check 1 $TESTMESSAGES -d
+seq_check 1 $TESTMESSAGESFULL -d
 
 echo \[sndrcv_kafka.sh\]: stop kafka instances
-. $srcdir/diag.sh delete-kafka-topic 'static' '.dep_wrk1' '22181'
 . $srcdir/diag.sh stop-kafka '.dep_wrk1'
 . $srcdir/diag.sh stop-kafka '.dep_wrk2'
 . $srcdir/diag.sh stop-kafka '.dep_wrk3'
 . $srcdir/diag.sh stop-zookeeper '.dep_wrk1'
 . $srcdir/diag.sh stop-zookeeper '.dep_wrk2'
 . $srcdir/diag.sh stop-zookeeper '.dep_wrk3'
+
+echo success
+exit_test

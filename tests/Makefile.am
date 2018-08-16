@@ -507,11 +507,12 @@ if ENABLE_OMKAFKA
 if ENABLE_IMKAFKA
 if ENABLE_KAFKA_TESTS
 TESTS += \
-	sndrcv_kafka.sh
+	sndrcv_kafka.sh \
+	sndrcv_kafka_multi_topics.sh
 # Tests below need to be stable first!
-#	sndrcv_kafka_multi.sh
-#	sndrcv_kafka_fail.sh
+#	sndrcv_kafka_fail.sh \
 #	sndrcv_kafka_failresume.sh
+#	sndrcv_kafka_multi.sh
 if HAVE_VALGRIND
 TESTS += \
 	sndrcv_kafka-vg-rcvr.sh
@@ -521,6 +522,7 @@ endif
 endif
 endif
 endif
+
 if ENABLE_IMPSTATS
 TESTS +=  \
 	impstats-hup.sh \
@@ -1538,11 +1540,8 @@ EXTRA_DIST= \
 	mysql-actq-mt-withpause.sh \
 	mysql-actq-mt-withpause-vg.sh \
 	sndrcv_kafka.sh \
-	sndrcv_kafka-vg-sender.sh \
+	sndrcv_kafka_multi_topics.sh \
 	sndrcv_kafka-vg-rcvr.sh \
-	sndrcv_kafka_multi.sh \
-	sndrcv_kafka_fail.sh \
-	sndrcv_kafka_failresume.sh \
 	testsuites/kafka-server.properties \
 	testsuites/kafka-server.dep_wrk1.properties \
 	testsuites/kafka-server.dep_wrk2.properties \
