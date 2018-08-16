@@ -84,13 +84,12 @@ RUN	mkdir /local_dep_cache && \
 # to adjust test sources.
 ENV	ELASTICSEARCH_NEWEST="elasticsearch-6.3.1.tar.gz"
 
-WORKDIR /home/devel
-VOLUME /rsyslog
+WORKDIR	/home/devel
+VOLUME	/rsyslog
 RUN	groupadd rsyslog \
 	&& adduser -g rsyslog  -s /bin/bash rsyslog \
 	&& echo "rsyslog ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-ADD setup-system.sh setup-system.sh
-ADD common/setup-projects.sh setup-projects.sh
+ADD	common/setup-projects.sh setup-projects.sh
 ENV	PKG_CONFIG_PATH=/usr/local/lib/pkgconfig \
 	LD_LIBRARY_PATH=/usr/local/lib \
 	LIBDIR_PATH=/usr/lib64
@@ -203,7 +202,6 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 #	--enable-mmgrok - no package
 
 # Install any needed packages
-#RUN ./setup-system.sh
 RUN ./setup-projects.sh
 WORKDIR /rsyslog
 RUN	chown rsyslog:rsyslog /rsyslog
