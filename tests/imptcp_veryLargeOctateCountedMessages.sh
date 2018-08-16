@@ -5,9 +5,21 @@
 echo ====================================================================================
 echo TEST: \[imptcp_veryLargeOctateCountedMessages.sh\]: test imptcp with very large messages while poller driven processing is disabled
 . $srcdir/diag.sh init
-startup_silent imptcp_nonProcessingPoller.conf
+generate_conf
+add_conf '$MaxMessageSize 10k
+$IncludeConfig diag-common.conf
+template(name="outfmt" type="string" string="%msg:F,58:2%,%msg:F,58:3%,%msg:F,58:4%\n")
+
+module(load="../plugins/imptcp/.libs/imptcp" threads="32" processOnPoller="off")
+input(type="imptcp" port="13514")
+
+if (prifilt("local0.*")) then {
+   action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
+}
+'
+export RS_REDIR="2>/dev/null"
+startup 1
 tcpflood -c1 -m20000 -r -d100000 -P129 -O
-sleep 2 # due to large messages, we need this time for the tcp receiver to settle...
 shutdown_when_empty
 wait_shutdown
 seq_check 0 19999 -E -T

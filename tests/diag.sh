@@ -154,12 +154,13 @@ function cmp_exact() {
 
 # start rsyslogd with default params. $1 is the config file name to use
 # returns only after successful startup, $2 is the instance (blank or 2!)
+# RS_REDIR maybe set to redirect rsyslog output
 function startup() {
 	instance=
 	if [ "$1" == "2" ]; then
 	    CONF_FILE="${TESTCONF_NM}2.conf"
 	    instance=2
-	elif [ "$1" == "" ]; then
+	elif [ "$1" == "" -o "$1" == "1" ]; then
 	    CONF_FILE="${TESTCONF_NM}.conf"
 	else
 	    CONF_FILE="$srcdir/testsuites/$1"
@@ -171,20 +172,12 @@ function startup() {
 	fi
 	echo config $CONF_FILE is:
 	cat -n $CONF_FILE
-	LD_PRELOAD=$RSYSLOG_PRELOAD $valgrind ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$instance.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
+	set -x
+	eval LD_PRELOAD=$RSYSLOG_PRELOAD $valgrind ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$instance.pid -M../runtime/.libs:../.libs -f$CONF_FILE $RS_REDIR &
+	set +x
 	. $srcdir/diag.sh wait-startup $instance
 }
 
-# start rsyslogd with default params. $1 is the config file name to use
-# returns only after successful startup, $2 is the instance (blank or 2!)
-function startup_silent() {
-	if [ ! -f $srcdir/testsuites/$1 ]; then
-	    echo "ERROR: config file '$srcdir/testsuites/$1' not found!"
-	    exit 1
-	fi
-	$valgrind ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$2.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$1 2>/dev/null &
-	. $srcdir/diag.sh wait-startup $2
-}
 
 # same as startup_vg, BUT we do NOT wait on the startup message!
 function startup_vg_waitpid_only() {
