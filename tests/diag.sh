@@ -152,10 +152,8 @@ function cmp_exact() {
 	fi;
 }
 
-# start rsyslogd with default params. $1 is the config file name to use
-# returns only after successful startup, $2 is the instance (blank or 2!)
-# RS_REDIR maybe set to redirect rsyslog output
-function startup() {
+# code common to all startup...() functions
+function startup_common() {
 	instance=
 	if [ "$1" == "2" ]; then
 	    CONF_FILE="${TESTCONF_NM}2.conf"
@@ -172,9 +170,15 @@ function startup() {
 	fi
 	echo config $CONF_FILE is:
 	cat -n $CONF_FILE
-	set -x
+}
+
+
+# start rsyslogd with default params. $1 is the config file name to use
+# returns only after successful startup, $2 is the instance (blank or 2!)
+# RS_REDIR maybe set to redirect rsyslog output
+function startup() {
+	startup_common "$1" "$2"
 	eval LD_PRELOAD=$RSYSLOG_PRELOAD $valgrind ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$instance.pid -M../runtime/.libs:../.libs -f$CONF_FILE $RS_REDIR &
-	set +x
 	. $srcdir/diag.sh wait-startup $instance
 }
 
@@ -613,17 +617,7 @@ case $1 in
 		;;
 
    'startup_vgthread_waitpid_only') # same as startup-vgthread, BUT we do NOT wait on the startup message!
-		if [ "x$2" == "x" ]; then
-		    CONF_FILE="${TESTCONF_NM}.conf"
-		    echo config $CONF_FILE is:
-		    cat -n $CONF_FILE
-		else
-		    CONF_FILE="$srcdir/testsuites/$2"
-		fi
-		if [ ! -f $CONF_FILE ]; then
-		    echo "ERROR: config file '$CONF_FILE' not found!"
-		    exit 1
-		fi
+		startup_common "$2" "$3"
 		valgrind --tool=helgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --suppressions=$srcdir/linux_localtime_r.supp --gen-suppressions=all ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
 		. $srcdir/diag.sh wait-startup-pid $3
 		;;
