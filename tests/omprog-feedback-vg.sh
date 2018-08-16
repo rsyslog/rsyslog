@@ -20,7 +20,6 @@ template(name="outfmt" type="string" string="%msg%\n")
         name="omprog_action"
         queue.type="Direct"
         confirmMessages="on"
-        useTransactions="off"
         action.resumeInterval="1"
     )
 }
