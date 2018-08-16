@@ -111,7 +111,7 @@ function generate_conf() {
 global(inputs.timeout.shutdown=\"10000\")
 \$IMDiagServerRun $new_port
 
-:syslogtag, contains, \"rsyslogd\"  ./rsyslogd$1.started
+:syslogtag, contains, \"rsyslogd\"  ./${RSYSLOG_DYNNAME}$1.started
 ###### end of testbench instrumentation part, test conf follows:" > ${TESTCONF_NM}$1.conf
 }
 
@@ -427,8 +427,8 @@ function exit_test() {
 	   exit 77 # for now, just skip - TODO: reconsider when supporting -j
 	fi
 	# now real cleanup
-	rm -f rsyslogd.started work-*.conf diag-common.conf
-	rm -f rsyslogd2.started diag-common2.conf rsyslog.action.*.include
+	rm -f work-*.conf diag-common.conf
+	rm -f diag-common2.conf rsyslog.action.*.include
 	rm -f work rsyslog.out.* ${RSYSLOG2_OUT_LOG} rsyslog*.pid.save xlate*.lkp_tbl
 	rm -rf test-spool test-logdir stat-file1
 	rm -f rsyslog.random.data rsyslog.pipe
@@ -537,8 +537,8 @@ case $1 in
 		fi
 		cp -f $srcdir/testsuites/diag-common.conf diag-common.conf
 		cp -f $srcdir/testsuites/diag-common2.conf diag-common2.conf
-		rm -f rsyslogd.started work-*.conf rsyslog.random.data
-		rm -f rsyslogd2.started work-*.conf rsyslog*.pid.save xlate*.lkp_tbl
+		rm -f work-*.conf rsyslog.random.data
+		rm -f rsyslog*.pid.save xlate*.lkp_tbl
 		rm -f log log* # RSyslog debug output 
 		rm -f work 
 		rm -f rsyslog*.out.log # we need this while the sndrcv tests are not converted
@@ -655,9 +655,10 @@ case $1 in
 		echo "rsyslogd$2 started, start msg not yet seen, pid " `cat $RSYSLOG_PIDBASE$2.pid`
 		;;
    'wait-startup') # wait for rsyslogd startup ($2 is the instance)
+		echo RSYSLOG_DYNNAME: ${RSYSLOG_DYNNAME}
 		. $srcdir/diag.sh wait-startup-pid $2
 		i=0
-		while test ! -f rsyslogd$2.started; do
+		while test ! -f ${RSYSLOG_DYNNAME}$2.started; do
 			$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
 			ps -p `cat $RSYSLOG_PIDBASE$2.pid` &> /dev/null
 			if [ $? -ne 0 ]
@@ -668,7 +669,7 @@ case $1 in
 			let "i++"
 			if test $i -gt $TB_TIMEOUT_STARTSTOP
 			then
-			   echo "ABORT! Timeout waiting on startup ('started' file)"
+			   echo "ABORT! Timeout waiting on startup ('${RSYSLOG_DYNNAME}.started' file)"
 			   error_exit 1
 			fi
 		done

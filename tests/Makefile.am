@@ -2,8 +2,8 @@ if ENABLE_TESTBENCH
 
 CLEANFILES=\
 	*_*.conf \
-	rsyslogd.started work-*.conf rsyslog.random.data \
-	rsyslogd2.started work-*.conf rsyslog*.pid.save xlate*.lkp_tbl \
+	rsyslog*.started work-*.conf rsyslog.random.data \
+	work-*.conf rsyslog*.pid.save xlate*.lkp_tbl \
 	log log* \
 	work \
 	rsyslog_*.out.* \
