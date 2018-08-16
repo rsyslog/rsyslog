@@ -111,7 +111,7 @@ function generate_conf() {
 global(inputs.timeout.shutdown=\"10000\")
 \$IMDiagServerRun $new_port
 
-:syslogtag, contains, \"rsyslogd\"  ./rsyslogd$1.started
+:syslogtag, contains, \"rsyslogd\"  ./${RSYSLOG_DYNNAME}$1.started
 ###### end of testbench instrumentation part, test conf follows:" > ${TESTCONF_NM}$1.conf
 }
 
@@ -152,14 +152,13 @@ function cmp_exact() {
 	fi;
 }
 
-# start rsyslogd with default params. $1 is the config file name to use
-# returns only after successful startup, $2 is the instance (blank or 2!)
-function startup() {
+# code common to all startup...() functions
+function startup_common() {
 	instance=
 	if [ "$1" == "2" ]; then
 	    CONF_FILE="${TESTCONF_NM}2.conf"
 	    instance=2
-	elif [ "$1" == "" ]; then
+	elif [ "$1" == "" -o "$1" == "1" ]; then
 	    CONF_FILE="${TESTCONF_NM}.conf"
 	else
 	    CONF_FILE="$srcdir/testsuites/$1"
@@ -171,20 +170,18 @@ function startup() {
 	fi
 	echo config $CONF_FILE is:
 	cat -n $CONF_FILE
-	LD_PRELOAD=$RSYSLOG_PRELOAD $valgrind ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$instance.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
-	. $srcdir/diag.sh wait-startup $instance
 }
+
 
 # start rsyslogd with default params. $1 is the config file name to use
 # returns only after successful startup, $2 is the instance (blank or 2!)
-function startup_silent() {
-	if [ ! -f $srcdir/testsuites/$1 ]; then
-	    echo "ERROR: config file '$srcdir/testsuites/$1' not found!"
-	    exit 1
-	fi
-	$valgrind ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$2.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$1 2>/dev/null &
-	. $srcdir/diag.sh wait-startup $2
+# RS_REDIR maybe set to redirect rsyslog output
+function startup() {
+	startup_common "$1" "$2"
+	eval LD_PRELOAD=$RSYSLOG_PRELOAD $valgrind ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$instance.pid -M../runtime/.libs:../.libs -f$CONF_FILE $RS_REDIR &
+	. $srcdir/diag.sh wait-startup $instance
 }
+
 
 # same as startup_vg, BUT we do NOT wait on the startup message!
 function startup_vg_waitpid_only() {
@@ -427,8 +424,8 @@ function exit_test() {
 	   exit 77 # for now, just skip - TODO: reconsider when supporting -j
 	fi
 	# now real cleanup
-	rm -f rsyslogd.started work-*.conf diag-common.conf
-	rm -f rsyslogd2.started diag-common2.conf rsyslog.action.*.include
+	rm -f work-*.conf diag-common.conf
+	rm -f diag-common2.conf rsyslog.action.*.include
 	rm -f work rsyslog.out.* ${RSYSLOG2_OUT_LOG} rsyslog*.pid.save xlate*.lkp_tbl
 	rm -rf test-spool test-logdir stat-file1
 	rm -f rsyslog.random.data rsyslog.pipe
@@ -537,8 +534,8 @@ case $1 in
 		fi
 		cp -f $srcdir/testsuites/diag-common.conf diag-common.conf
 		cp -f $srcdir/testsuites/diag-common2.conf diag-common2.conf
-		rm -f rsyslogd.started work-*.conf rsyslog.random.data
-		rm -f rsyslogd2.started work-*.conf rsyslog*.pid.save xlate*.lkp_tbl
+		rm -f work-*.conf rsyslog.random.data
+		rm -f rsyslog*.pid.save xlate*.lkp_tbl
 		rm -f log log* # RSyslog debug output 
 		rm -f work 
 		rm -f rsyslog*.out.log # we need this while the sndrcv tests are not converted
@@ -620,17 +617,7 @@ case $1 in
 		;;
 
    'startup_vgthread_waitpid_only') # same as startup-vgthread, BUT we do NOT wait on the startup message!
-		if [ "x$2" == "x" ]; then
-		    CONF_FILE="${TESTCONF_NM}.conf"
-		    echo config $CONF_FILE is:
-		    cat -n $CONF_FILE
-		else
-		    CONF_FILE="$srcdir/testsuites/$2"
-		fi
-		if [ ! -f $CONF_FILE ]; then
-		    echo "ERROR: config file '$CONF_FILE' not found!"
-		    exit 1
-		fi
+		startup_common "$2" "$3"
 		valgrind --tool=helgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --suppressions=$srcdir/linux_localtime_r.supp --gen-suppressions=all ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
 		. $srcdir/diag.sh wait-startup-pid $3
 		;;
@@ -655,9 +642,10 @@ case $1 in
 		echo "rsyslogd$2 started, start msg not yet seen, pid " `cat $RSYSLOG_PIDBASE$2.pid`
 		;;
    'wait-startup') # wait for rsyslogd startup ($2 is the instance)
+		echo RSYSLOG_DYNNAME: ${RSYSLOG_DYNNAME}
 		. $srcdir/diag.sh wait-startup-pid $2
 		i=0
-		while test ! -f rsyslogd$2.started; do
+		while test ! -f ${RSYSLOG_DYNNAME}$2.started; do
 			$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
 			ps -p `cat $RSYSLOG_PIDBASE$2.pid` &> /dev/null
 			if [ $? -ne 0 ]
@@ -668,7 +656,7 @@ case $1 in
 			let "i++"
 			if test $i -gt $TB_TIMEOUT_STARTSTOP
 			then
-			   echo "ABORT! Timeout waiting on startup ('started' file)"
+			   echo "ABORT! Timeout waiting on startup ('${RSYSLOG_DYNNAME}.started' file)"
 			   error_exit 1
 			fi
 		done
