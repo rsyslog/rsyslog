@@ -931,8 +931,8 @@ endif # if ENABLE_TESTBENCH
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
 TESTS_ENVIRONMENT+= TOP_BUILDDIR='$(top_builddir)'
 TESTS_ENVIRONMENT+= TESTTOOL_DIR='$(abs_top_builddir)/tests'
-DISTCLEANFILES=rsyslog.pid #.dep_cache/* .dep_wrk/*
 test_files = testbench.h runtime-dummy.c
+DISTCLEANFILES=rsyslog.pid
 
 distclean-local:
 	rm -rf .dep_cache .dep_wrk
@@ -977,8 +977,6 @@ EXTRA_DIST= \
 	testsuites/x.509/client-key.pem \
 	testsuites/x.509/machine-cert.pem \
 	testsuites/x.509/machine-key.pem \
-	testsuites/invalid.conf \
-	testsuites/valid.conf \
 	cfg.sh \
 	cfg1.cfgtest \
 	cfg1.testin \
@@ -993,10 +991,7 @@ EXTRA_DIST= \
 	NoExistFile.cfgtest \
 	tcp_forwarding_tpl.sh \
 	tcp_forwarding_ns_tpl.sh \
-	testsuites/tcp_forwarding_tpl.conf \
-	testsuites/tcp_forwarding_ns_tpl.conf \
 	tcp_forwarding_dflt_tpl.sh \
-	testsuites/tcp_forwarding_dflt_tpl.conf \
 	tcp_forwarding_retries.sh \
 	killrsyslog.sh \
 	parsertest-parse1.sh \
@@ -1032,13 +1027,10 @@ EXTRA_DIST= \
 	timestamp-subseconds-udp.sh \
 	timestamp-subseconds.sh \
 	rsf_getenv.sh \
-	testsuites/rsf_getenv.conf \
 	diskq-rfc5424.sh \
 	diskqueue-full.sh \
 	diskqueue.sh \
-	testsuites/diskqueue.conf \
 	arrayqueue.sh \
-	testsuites/arrayqueue.conf \
 	include-obj-text-from-file.sh \
 	include-obj-outside-control-flow-vg.sh \
 	include-obj-in-if-vg.sh \
@@ -1050,35 +1042,21 @@ EXTRA_DIST= \
 	rscript_bare_var_root.sh \
 	rscript_bare_var_root-empty.sh \
 	rscript_contains.sh \
-	testsuites/rscript_contains.conf \
 	rscript_ipv42num.sh \
 	rscript_field.sh \
 	rscript_field-vg.sh \
-	testsuites/rscript_field.conf \
 	rscript_stop.sh \
-	testsuites/rscript_stop.conf \
 	rscript_stop2.sh \
-	testsuites/rscript_stop2.conf \
 	stop.sh \
-	testsuites/stop.conf \
 	rscript_le.sh \
-	testsuites/rscript_le.conf \
 	rscript_le_var.sh \
-	testsuites/rscript_le_var.conf \
 	rscript_ge.sh \
-	testsuites/rscript_ge.conf \
 	rscript_ge_var.sh \
-	testsuites/rscript_ge_var.conf \
 	rscript_lt.sh \
-	testsuites/rscript_lt.conf \
 	rscript_lt_var.sh \
-	testsuites/rscript_lt_var.conf \
 	rscript_gt.sh \
-	testsuites/rscript_gt.conf \
 	rscript_gt_var.sh \
-	testsuites/rscript_gt_var.conf \
 	rscript_ne.sh \
-	testsuites/rscript_ne.conf \
 	rscript_ne_var.sh \
 	rscript_num2ipv4.sh \
 	rscript_int2Hex.sh \
@@ -1116,20 +1094,13 @@ EXTRA_DIST= \
 	mmanon_both_modes_compatible.sh \
 	mmanon_recognize_ipembedded.sh \
 	mmanon_random_cons_128_ipembedded.sh \
-	testsuites/rscript_ne_var.conf \
 	rscript_eq.sh \
-	testsuites/rscript_eq.conf \
 	rscript_eq_var.sh \
-	testsuites/rscript_eq_var.conf \
 	rscript_set_memleak-vg.sh \
 	rscript_set_unset_invalid_var.sh \
 	rscript_set_modify.sh \
-	testsuites/rscript_set_modify.conf \
-	testsuites/rscript_unaffected_reset.conf \
 	stop-localvar.sh \
-	testsuites/stop-localvar.conf \
 	stop-msgvar.sh \
-	testsuites/stop-msgvar.conf \
 	omfwd-keepalive.sh \
 	omfile-read-only-errmsg.sh \
 	omfile-null-filename.sh \
@@ -1137,29 +1108,21 @@ EXTRA_DIST= \
 	omfile-read-only.sh \
 	omfile_both_files_set.sh \
 	msgvar-concurrency.sh \
-	testsuites/msgvar-concurrency.conf \
 	msgvar-concurrency-array.sh \
-	testsuites/msgvar-concurrency-array.conf \
 	testsuites/msgvar-concurrency-array.rulebase \
 	msgvar-concurrency-array-event.tags.sh \
-	testsuites/msgvar-concurrency-array-event.tags.conf \
 	testsuites/msgvar-concurrency-array-event.tags.rulebase \
 	localvar-concurrency.sh \
-	testsuites/localvar-concurrency.conf \
 	exec_tpl-concurrency.sh \
-	testsuites/exec_tpl-concurrency.conf \
 	prop-jsonmesg-vg.sh \
 	prop-all-json-concurrency.sh \
-	testsuites/prop-all-json-concurrency.conf \
 	no-parser-errmsg.sh \
 	global_vars.sh \
-	testsuites/global_vars.conf \
 	no-parser-errmsg.sh \
 	no-parser-vg.sh \
 	prop-programname.sh \
 	prop-programname-with-slashes.sh \
 	rfc5424parser.sh \
-	testsuites/rfc5424parser.conf \
 	privdrop_common.sh \
 	privdropuser.sh \
 	privdropuserid.sh \
@@ -1174,38 +1137,24 @@ EXTRA_DIST= \
 	template-pos-from-to-missing-jsonvar.sh \
 	template-const-jsonf.sh \
 	fac_authpriv.sh \
-	testsuites/fac_authpriv.conf \
 	fac_local0.sh \
 	fac_local0-vg.sh \
-	testsuites/fac_local0.conf \
 	fac_local7.sh \
-	testsuites/fac_local7.conf \
 	fac_mail.sh \
-	testsuites/fac_mail.conf \
 	fac_news.sh \
-	testsuites/fac_news.conf \
 	fac_ftp.sh \
-	testsuites/fac_ftp.conf \
 	fac_ntp.sh \
-	testsuites/fac_ntp.conf \
 	fac_uucp.sh \
-	testsuites/fac_uucp.conf \
 	fac_invld1.sh \
-	testsuites/fac_invld1.conf \
 	fac_invld2.sh \
-	testsuites/fac_invld2.conf \
 	fac_invld3.sh \
-	testsuites/fac_invld3.conf \
 	fac_invld4_rfc5424.sh \
-	testsuites/fac_invld4_rfc5424.conf \
 	compresssp.sh \
 	compresssp-stringtpl.sh \
 	now_family_utc.sh \
-	testsuites/now_family_utc.conf \
 	now-utc-ymd.sh \
 	now-utc-casecmp.sh \
 	now-utc.sh \
-	testsuites/now-utc.conf \
 	faketime_common.sh \
 	imjournal-basic.sh \
 	imjournal-statefile.sh \
@@ -1237,26 +1186,18 @@ EXTRA_DIST= \
 	mmnormalize_processing_test4.sh \
 	pmnormalize-rule.sh \
 	pmnormalize-rule-vg.sh\
-	testsuites/pmnormalize-rule-vg.conf \
 	testsuites/pmnormalize_basic.rulebase \
 	pmnormalize-basic.sh \
 	rawmsg-after-pri.sh \
-	testsuites/rawmsg-after-pri.conf \
 	rs_optimizer_pri.sh \
-	testsuites/rs_optimizer_pri.conf \
 	rscript_prifilt.sh \
-	testsuites/rscript_prifilt.conf \
 	rscript_optimizer1.sh \
-	testsuites/rscript_optimizer1.conf \
 	rscript_ruleset_call.sh \
-	testsuites/rscript_ruleset_call.conf \
 	rscript_ruleset_call_indirect-basic.sh \
 	rscript_ruleset_call_indirect-var.sh \
 	rscript_ruleset_call_indirect-invld.sh \
 	cee_simple.sh \
-	testsuites/cee_simple.conf \
 	cee_diskqueue.sh \
-	testsuites/cee_diskqueue.conf \
 	mmjsonparse-w-o-cookie.sh \
 	mmjsonparse-w-o-cookie-multi-spaces.sh \
 	mmjsonparse_simple.sh \
@@ -1266,9 +1207,7 @@ EXTRA_DIST= \
 	imptcp-msg-truncation-on-number.sh \
 	imptcp-msg-truncation-on-number2.sh \
 	imptcp-maxFrameSize-parameter.sh \
-	testsuites/mmjsonparse_simple.conf \
 	mmjsonparse_cim.sh \
-	testsuites/mmjsonparse_cim.conf \
 	mmjsonparse_cim2.sh \
 	mmjsonparse_localvar.sh \
 	mmdb.sh \
@@ -1282,7 +1221,6 @@ EXTRA_DIST= \
 	incltest_dir.sh \
 	incltest_dir_empty_wildcard.sh \
 	incltest_dir_wildcard.sh \
-	testsuites/incltest.d/include.conf \
 	testsuites/es.yml \
 	es_response_get_msgnum.py \
 	elasticsearch-error-format-check.py \
@@ -1306,14 +1244,10 @@ EXTRA_DIST= \
 	es-maxbytes-bulk.sh \
 	es-bulk-retry.sh \
 	linkedlistqueue.sh \
-	testsuites/linkedlistqueue.conf \
 	da-mainmsg-q.sh \
-	testsuites/da-mainmsg-q.conf \
 	diskqueue-fsync.sh \
-	testsuites/diskqueue-fsync.conf \
 	msgdup.sh \
 	empty-ruleset.sh \
-	testsuites/empty-ruleset.conf \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
 	imtcp-maxFrameSize.sh \
@@ -1323,34 +1257,21 @@ EXTRA_DIST= \
 	imtcp-NUL-rawmsg.sh \
 	imtcp-tls-basic.sh \
 	imtcp-tls-basic-vg.sh \
-	testsuites/imtcp-tls-basic.conf \
 	imtcp_incomplete_frame_at_end.sh \
 	imtcp-multiport.sh \
-	testsuites/imtcp-multiport.conf \
 	udp-msgreduc-orgmsg-vg.sh \
-	testsuites/udp-msgreduc-orgmsg-vg.conf \
 	udp-msgreduc-vg.sh \
-	testsuites/udp-msgreduc-vg.conf \
 	manytcp-too-few-tls-vg.sh \
-	testsuites/manytcp-too-few-tls.conf \
 	imtcp-tls-ossl-basic.sh \
 	sndrcv_tls_ossl_anon_ipv4.sh \
-	testsuites/sndrcv_tls_ossl_anon_ipv4_sender.conf \
-	testsuites/sndrcv_tls_ossl_anon_ipv4_rcvr.conf \
 	sndrcv_tls_ossl_anon_ipv6.sh \
-	testsuites/sndrcv_tls_ossl_anon_ipv6_sender.conf \
-	testsuites/sndrcv_tls_ossl_anon_ipv6_rcvr.conf \
 	sndrcv_tls_ossl_anon_rebind.sh \
-	testsuites/sndrcv_tls_ossl_anon_rebind_sender.conf \
-	testsuites/sndrcv_tls_ossl_anon_rebind_rcvr.conf \
 	imtcp-tls-ossl-x509valid.sh \
 	imtcp-tls-ossl-x509name.sh \
 	imtcp-tls-ossl-x509fingerprint.sh \
 	imtcp-tls-ossl-basic-vg.sh \
 	manytcp.sh \
-	testsuites/manytcp.conf \
 	manyptcp.sh \
-	testsuites/manyptcp.conf \
 	imptcp-NUL.sh \
 	imptcp-NUL-rawmsg.sh \
 	imptcp_framing_regex.sh \
@@ -1361,86 +1282,54 @@ EXTRA_DIST= \
 	imptcp-connection-msg-disabled.sh \
 	imptcp-connection-msg-received.sh \
 	imptcp-discard-truncated-msg.sh \
-	testsuites/imptcp_large.conf \
 	imptcp_addtlframedelim.sh \
-	testsuites/imptcp_addtlframedelim.conf \
 	imptcp_conndrop-vg.sh \
 	imptcp_conndrop.sh \
-	testsuites/imptcp_conndrop.conf \
 	imptcp_multi_line.sh \
 	testsuites/imptcp_multi_line.testdata \
 	imptcp_no_octet_counted.sh \
-	testsuites/imptcp_no_octet_counted.conf \
 	testsuites/no_octet_counted.testdata \
 	imtcp_no_octet_counted.sh \
-	testsuites/imtcp_no_octet_counted.conf \
 	testsuites/spframingfix.testdata \
 	imtcp_spframingfix.sh \
-	testsuites/imtcp_spframingfix.conf \
 	imptcp_spframingfix.sh \
-	testsuites/imptcp_spframingfix.conf \
 	imtcp_conndrop.sh \
-	testsuites/imtcp_conndrop.conf \
 	imtcp_conndrop_tls.sh \
-	testsuites/imtcp_conndrop_tls.conf \
 	imtcp_conndrop_tls-vg.sh \
-	testsuites/imtcp_conndrop.conf \
 	imtcp_addtlframedelim.sh \
-	testsuites/imtcp_addtlframedelim.conf \
 	tcp-msgreduc-vg.sh \
-	testsuites/./tcp-msgreduc-vg.conf \
 	inputname-imtcp.sh \
 	omod-if-array.sh \
 	omod-if-array-udp.sh \
 	discard.sh \
-	testsuites/discard.conf \
 	failover-no-rptd.sh \
 	failover-no-rptd-vg.sh \
-	testsuites/failover-no-rptd.conf \
 	failover-no-basic.sh \
 	failover-no-basic-vg.sh \
-	testsuites/failover-no-basic.conf \
 	failover-rptd.sh \
 	failover-rptd-vg.sh \
-	testsuites/failover-rptd.conf \
 	failover-basic.sh \
 	failover-basic-vg.sh \
-	testsuites/failover-basic.conf \
 	failover-async.sh \
-	testsuites/failover-async.conf \
 	failover-double.sh \
-	testsuites/failover-double.conf \
 	discard-rptdmsg.sh \
 	discard-rptdmsg-vg.sh \
-	testsuites/discard-rptdmsg.conf \
 	discard-allmark.sh \
 	discard-allmark-vg.sh \
-	testsuites/discard-allmark.conf \
 	diag.sh \
-	testsuites/diag-common.conf \
-	testsuites/diag-common2.conf \
 	rcvr_fail_restore.sh \
-	testsuites/rcvr_fail_restore_rcvr.conf \
-	testsuites/rcvr_fail_restore_sender.conf \
 	daqueue-dirty-shutdown.sh \
 	daqueue-invld-qi.sh \
 	daqueue-persist.sh \
 	daqueue-persist-drvr.sh \
 	queue-persist.sh \
 	queue-persist-drvr.sh \
-	testsuites/queue-persist.conf \
 	threadingmq.sh \
-	testsuites/threadingmq.conf \
 	threadingmqaq.sh \
-	testsuites/threadingmqaq.conf \
 	sndrcv_drvr.sh \
 	sndrcv_drvr_noexit.sh \
 	sndrcv_failover.sh \
-	testsuites/sndrcv_failover_sender.conf \
-	testsuites/sndrcv_failover_rcvr.conf \
 	sndrcv.sh \
-	testsuites/sndrcv_sender.conf \
-	testsuites/sndrcv_rcvr.conf \
 	imrelp-basic.sh \
 	imrelp-manyconn.sh \
 	imrelp-maxDataSize-error.sh \
@@ -1451,46 +1340,22 @@ EXTRA_DIST= \
 	glbl-oversizeMsg-truncate.sh \
 	glbl-oversizeMsg-split.sh \
 	sndrcv_relp.sh \
-	testsuites/sndrcv_relp_sender.conf \
-	testsuites/sndrcv_relp_rcvr.conf \
 	sndrcv_relp_rebind.sh \
-	testsuites/sndrcv_relp_rebind_sender.conf \
-	testsuites/sndrcv_relp_rebind_rcvr.conf \
 	sndrcv_relp_tls_prio.sh \
-	testsuites/sndrcv_relp_tls_prio_sender.conf \
-	testsuites/sndrcv_relp_tls_prio_rcvr.conf \
 	sndrcv_relp_tls.sh \
-	testsuites/sndrcv_relp_tls_sender.conf \
-	testsuites/sndrcv_relp_tls_rcvr.conf \
 	relp_tls_certificate_not_found.sh \
 	sndrcv_relp_dflt_pt.sh \
-	testsuites/sndrcv_relp_dflt_pt_rcvr.conf \
-	testsuites/sndrcv_relp_dflt_pt_sender.conf \
 	sndrcv_udp.sh \
-	testsuites/sndrcv_udp_sender.conf \
-	testsuites/sndrcv_udp_rcvr.conf \
 	imudp_thread_hang.sh \
-	testsuites/imudp_thread_hang.conf \
 	sndrcv_udp_nonstdpt.sh \
-	testsuites/sndrcv_udp_nonstdpt_sender.conf \
-	testsuites/sndrcv_udp_nonstdpt_rcvr.conf \
 	sndrcv_udp_nonstdpt_v6.sh \
-	testsuites/sndrcv_udp_nonstdpt_v6_sender.conf \
-	testsuites/sndrcv_udp_nonstdpt_v6_rcvr.conf \
 	sndrcv_omudpspoof.sh \
-	testsuites/sndrcv_omudpspoof_sender.conf \
-	testsuites/sndrcv_omudpspoof_rcvr.conf \
 	sndrcv_omudpspoof_nonstdpt.sh \
-	testsuites/sndrcv_omudpspoof_nonstdpt_sender.conf \
-	testsuites/sndrcv_omudpspoof_nonstdpt_rcvr.conf \
 	sndrcv_gzip.sh \
-	testsuites/sndrcv_gzip_sender.conf \
-	testsuites/sndrcv_gzip_rcvr.conf \
 	action-tx-single-processing.sh \
 	action-tx-errfile.sh \
 	testsuites/action-tx-errfile.result \
 	pipeaction.sh \
-	testsuites/pipeaction.conf \
 	omprog-defaults.sh \
 	omprog-defaults-vg.sh \
 	omprog-feedback.sh \
@@ -1506,67 +1371,37 @@ EXTRA_DIST= \
 	omprog-transactions-failed-messages.sh \
 	omprog-transactions-failed-commits.sh \
 	testsuites/omprog-defaults-bin.sh \
-	testsuites/omprog-feedback.conf \
 	testsuites/omprog-feedback-bin.sh \
-	testsuites/omprog-close-unresponsive.conf \
-	testsuites/omprog-close-unresponsive-noterm.conf \
 	testsuites/omprog-close-unresponsive-bin.sh \
-	testsuites/omprog-restart-terminated.conf \
-	testsuites/omprog-restart-terminated-outfile.conf \
 	testsuites/omprog-restart-terminated-bin.sh \
-	testsuites/omprog-transactions.conf \
-	testsuites/omprog-transactions-failed-messages.conf \
-	testsuites/omprog-transactions-failed-commits.conf \
 	testsuites/omprog-transactions-bin.sh \
 	pipe_noreader.sh \
-	testsuites/pipe_noreader.conf \
 	uxsock_simple.sh \
-	testsuites/uxsock_simple.conf \
 	asynwr_simple.sh \
-	testsuites/asynwr_simple.conf \
 	asynwr_simple_2.sh \
-	testsuites/asynwr_simple_2.conf \
 	asynwr_timeout.sh \
-	testsuites/asynwr_timeout.conf \
 	asynwr_timeout_2.sh \
-	testsuites/asynwr_timeout_2.conf \
 	asynwr_small.sh \
-	testsuites/asynwr_small.conf \
 	asynwr_tinybuf.sh \
-	testsuites/asynwr_tinybuf.conf \
 	wr_large_async.sh \
 	wr_large_sync.sh \
 	wr_large.sh \
-	testsuites/wr_large.conf \
 	asynwr_deadlock.sh \
-	testsuites/asynwr_deadlock.conf \
 	asynwr_deadlock_2.sh \
-	testsuites/asynwr_deadlock_2.conf \
 	asynwr_deadlock2.sh \
-	testsuites/asynwr_deadlock2.conf \
 	asynwr_deadlock4.sh \
-	testsuites/asynwr_deadlock4.conf \
 	abort-uncleancfg-goodcfg.sh \
-	testsuites/abort-uncleancfg-goodcfg.conf \
 	abort-uncleancfg-goodcfg-check.sh \
-	testsuites/abort-uncleancfg-goodcfg.conf \
 	abort-uncleancfg-badcfg-check.sh \
-	testsuites/abort-uncleancfg-badcfg.conf \
 	abort-uncleancfg-badcfg-check_1.sh \
-	testsuites/abort-uncleancfg-badcfg_1.conf \
 	variable_leading_underscore.sh \
-	testsuites/variable_leading_underscore.conf \
 	gzipwr_rscript.sh \
 	gzipwr_flushInterval.sh \
 	gzipwr_flushOnTXEnd.sh \
 	gzipwr_large.sh \
-	testsuites/gzipwr_large.conf \
 	gzipwr_large_dynfile.sh \
-	testsuites/gzipwr_large_dynfile.conf \
 	complex1.sh \
-	testsuites/complex1.conf \
 	random.sh \
-	testsuites/random.conf \
 	testsuites/imfile-old-state-file_imfile-state_.-rsyslog.input \
 	imfile-readmode0-vg.sh \
 	imfile-readmode2.sh \
@@ -1574,14 +1409,10 @@ EXTRA_DIST= \
 	imfile-readmode2-vg.sh \
 	imfile-readmode2-with-persists-data-during-stop.sh \
 	imfile-readmode2-with-persists.sh \
-	testsuites/imfile-readmode2.conf \
-	testsuites/imfile-readmode2-with-persists.conf \
-	testsuites/imfile-readmode2-with-persists-data-during-stop.conf \
 	imfile-endregex-save-lf.sh \
 	imfile-endregex-save-lf-persist.sh \
 	imfile-endregex.sh \
 	imfile-endregex-vg.sh \
-	testsuites/imfile-endregex.conf \
 	imfile-basic.sh \
 	imfile-discard-truncated-line.sh \
 	imfile-truncate-line.sh \
@@ -1590,7 +1421,6 @@ EXTRA_DIST= \
 	imfile-error-not-repeated.sh \
 	imfile-basic-vg.sh \
 	imfile-basic-vgthread.sh \
-	testsuites/imfile-basic.conf \
 	imfile-endregex-timeout-none-polling.sh \
 	imfile-endregex-timeout-polling.sh \
 	imfile-endregex-timeout.sh \
@@ -1617,116 +1447,69 @@ EXTRA_DIST= \
 	imfile-symlink.sh \
 	imfile-symlink-multi.sh \
 	glbl-oversizeMsg-truncate-imfile.sh \
-	testsuites/imfile-wildcards-simple.conf \
-	testsuites/imfile-wildcards-dirs.conf \
-	testsuites/imfile-wildcards-dirs-multi.conf \
-	testsuites/imfile-wildcards-dirs-multi2.conf \
-	testsuites/imfile-wildcards-dirs-multi3.conf \
-	testsuites/imfile-wildcards-dirs-multi4.conf \
 	dynfile_invld_async.sh \
 	dynfile_invld_sync.sh \
 	dynfile_cachemiss.sh \
-	testsuites/dynfile_cachemiss.conf \
 	dynfile_invalid2.sh \
-	testsuites/dynfile_invalid2.conf \
 	rulesetmultiqueue.sh \
-	testsuites/rulesetmultiqueue.conf \
 	rulesetmultiqueue-v6.sh \
-	testsuites/rulesetmultiqueue-v6.conf \
 	omruleset.sh \
-	testsuites/omruleset.conf \
 	omruleset-queue.sh \
-	testsuites/omruleset-queue.conf \
 	badqi.sh \
-	testsuites/badqi.conf \
 	bad_qi/dbq.qi \
 	execonlyonce.sh \
-	testsuites/execonlyonce.conf \
 	testsuites/execonlyonce.data \
 	execonlywhenprevsuspended.sh \
-	testsuites/execonlywhenprevsuspended.conf \
 	execonlywhenprevsuspended2.sh \
-	testsuites/execonlywhenprevsuspended2.conf \
 	execonlywhenprevsuspended3.sh \
-	testsuites/execonlywhenprevsuspended3.conf \
 	execonlywhenprevsuspended4.sh \
-	testsuites/execonlywhenprevsuspended4.conf \
 	execonlywhenprevsuspended_multiwrkr.sh \
-	testsuites/execonlywhenprevsuspended_multiwrkr.conf \
 	execonlywhenprevsuspended-queue.sh \
-	testsuites/execonlywhenprevsuspended-queue.conf \
 	execonlywhenprevsuspended-nonsusp.sh \
-	testsuites/execonlywhenprevsuspended-nonsusp.conf \
 	execonlywhenprevsuspended-nonsusp-queue.sh \
-	testsuites/execonlywhenprevsuspended-nonsusp-queue.conf \
 	tabescape_dflt.sh \
 	tabescape_dflt-udp.sh \
 	tabescape_off.sh \
 	tabescape_off-udp.sh \
 	dircreate_dflt.sh \
-	testsuites/dircreate_dflt.conf \
 	dircreate_off.sh \
-	testsuites/dircreate_off.conf \
 	imuxsock_logger_parserchain.sh \
-	testsuites/imuxsock_logger_parserchain.conf \
 	imuxsock_logger.sh \
-	testsuites/imuxsock_logger.conf \
 	imuxsock_logger_ruleset.sh \
-	testsuites/imuxsock_logger_ruleset.conf \
 	imuxsock_logger_ruleset_ratelimit.sh \
-	testsuites/imuxsock_logger_ruleset_ratelimit.conf \
 	imuxsock_logger_err.sh \
 	imuxsock_logger_root.sh \
 	imuxsock_logger_syssock.sh \
-	testsuites/imuxsock_logger_root.conf \
-	testsuites/imuxsock_logger_syssock.conf \
 	resultdata/imuxsock_logger.log \
 	imuxsock_traillf.sh \
-	testsuites/imuxsock_traillf.conf \
 	imuxsock_traillf_root.sh \
 	imuxsock_traillf_syssock.sh \
-	testsuites/imuxsock_traillf_root.conf \
-	testsuites/imuxsock_traillf_syssock.conf \
 	resultdata/imuxsock_traillf.log \
 	imuxsock_ccmiddle.sh \
-	testsuites/imuxsock_ccmiddle.conf \
 	imuxsock_ccmiddle_root.sh \
 	imklog_permitnonkernelfacility_root.sh \
 	imuxsock_ccmiddle_syssock.sh \
-	testsuites/imuxsock_ccmiddle_root.conf \
-	testsuites/imuxsock_ccmiddle_syssock.conf \
 	resultdata/imuxsock_ccmiddle.log \
 	imuxsock_hostname.sh \
-	testsuites/imuxsock_hostname.conf \
 	resultdata/imuxsock_hostname.log \
 	testsuites/mysql-truncate.sql \
 	testsuites/mysql-select-msg.sql \
 	libdbi-basic.sh \
-	testsuites/libdbi-basic.conf \
 	libdbi-asyn.sh \
-	testsuites/libdbi-asyn.conf \
 	mysql-basic.sh \
 	mysql-basic-cnf6.sh \
 	mysql-basic-vg.sh \
-	testsuites/mysql-basic.conf \
-	testsuites/mysql-basic-cnf6.conf \
 	mysql-asyn.sh \
 	mysql-asyn-vg.sh \
-	testsuites/mysql-asyn.conf \
 	mysql-actq-mt.sh \
 	mysql-actq-mt-withpause.sh \
 	mysql-actq-mt-withpause-vg.sh \
-	testsuites/mysql-actq-mt.conf \
 	sndrcv_kafka.sh \
 	sndrcv_kafka-vg-sender.sh \
 	sndrcv_kafka-vg-rcvr.sh \
 	sndrcv_kafka_multi.sh \
 	sndrcv_kafka_fail.sh \
 	sndrcv_kafka_failresume.sh \
-	testsuites/sndrcv_kafka_rcvr.conf \
-	testsuites/sndrcv_kafka_sender.conf \
-	testsuites/sndrcv_kafka_multi_rcvr.conf \
-	testsuites/sndrcv_kafka_multi_sender.conf \
 	testsuites/kafka-server.properties \
 	testsuites/kafka-server.dep_wrk1.properties \
 	testsuites/kafka-server.dep_wrk2.properties \
@@ -1738,10 +1521,7 @@ EXTRA_DIST= \
 	mmpstrucdata.sh \
 	mmpstrucdata-case.sh \
 	mmpstrucdata-vg.sh \
-	testsuites/mmpstrucdata.conf \
-	testsuites/mmpstrucdata-case.conf \
 	mmpstrucdata-invalid-vg.sh \
-	testsuites/mmpstrucdata-invalid.conf \
 	libdbi-basic-vg.sh \
 	dynstats_ctr_reset.sh \
 	dynstats_reset_without_pstats_reset.sh \
@@ -1755,9 +1535,6 @@ EXTRA_DIST= \
 	dynstats-vg.sh \
 	dynstats_prevent_premature_eviction.sh \
 	dynstats_prevent_premature_eviction-vg.sh \
-	testsuites/dynstats.conf \
-	testsuites/dynstats_ctr_reset.conf \
-	testsuites/dynstats_reset_without_pstats_reset.conf \
 	testsuites/dynstats_empty_input \
 	testsuites/dynstats_input \
 	testsuites/dynstats_input_1 \
@@ -1766,53 +1543,34 @@ EXTRA_DIST= \
 	testsuites/dynstats_input_more_0 \
 	testsuites/dynstats_input_more_1 \
 	testsuites/dynstats_input_more_2 \
-	testsuites/dynstats_nometric.conf \
-	testsuites/dynstats_overflow.conf \
-	testsuites/dynstats_reset.conf \
 	no-dynstats-json.sh \
-	testsuites/no-dynstats-json.conf \
 	no-dynstats.sh \
-	testsuites/no-dynstats.conf \
 	stats-json.sh \
 	stats-json-vg.sh \
-	testsuites/stats-json.conf \
 	stats-cee.sh \
 	stats-cee-vg.sh \
-	testsuites/stats-cee.conf \
 	stats-json-es.sh \
-	testsuites/stats-json-es.conf \
 	dynstats-json.sh \
 	dynstats-json-vg.sh \
-	testsuites/dynstats-json.conf \
 	mmnormalize_variable.sh \
 	mmnormalize_tokenized.sh \
-	testsuites/mmnormalize_variable.conf \
 	testsuites/mmnormalize_variable.rulebase \
 	testsuites/date_time_msg \
-	testsuites/mmnormalize_tokenized.conf \
 	testsuites/mmnormalize_tokenized.rulebase \
 	testsuites/tokenized_input \
 	rscript_random.sh \
-	testsuites/rscript_random.conf \
 	rscript_hash32.sh \
 	rscript_hash32-vg.sh \
-	testsuites/rscript_hash32.conf \
 	rscript_hash64.sh \
 	rscript_hash64-vg.sh \
-	testsuites/rscript_hash64.conf \
 	rscript_replace.sh \
-	testsuites/rscript_replace.conf \
 	rscript_replace_complex.sh \
-	testsuites/rscript_replace_complex.conf \
 	testsuites/complex_replace_input \
 	rscript_unaffected_reset.sh \
 	rscript_wrap2.sh \
-	testsuites/rscript_wrap2.conf \
 	rscript_wrap3.sh \
-	testsuites/rscript_wrap3.conf \
 	testsuites/wrap3_input\
 	json_array_subscripting.sh \
-	testsuites/json_array_subscripting.conf \
 	testsuites/json_array_input \
 	testsuites/json_object_input \
 	testsuites/json_nonarray_input \
@@ -1822,32 +1580,20 @@ EXTRA_DIST= \
 	json_array_looping-vg.sh \
 	json_object_suicide_in_loop-vg.sh \
 	json_nonarray_looping.sh \
-	testsuites/json_array_looping.conf \
-	testsuites/json_object_looping.conf \
-	testsuites/json_object_suicide_in_loop.conf \
 	json_null.sh \
 	json_null-vg.sh \
-	testsuites/json_null.conf \
 	json_null_array.sh \
 	json_null_array-vg.sh \
-	testsuites/json_null_array.conf \
 	mmnormalize_regex.sh \
-	testsuites/mmnormalize_regex.conf \
 	testsuites/mmnormalize_regex.rulebase \
 	testsuites/regex_input \
 	mmnormalize_regex_disabled.sh \
-	testsuites/mmnormalize_regex_disabled.conf \
 	mmnormalize_regex_defaulted.sh \
-	testsuites/mmnormalize_regex_defaulted.conf \
 	stop_when_array_has_element.sh \
 	testsuites/stop_when_array_has_elem_input \
-	testsuites/stop_when_array_has_element.conf \
 	key_dereference_on_uninitialized_variable_space.sh \
-	testsuites/key_dereference_on_uninitialized_variable_space.conf \
 	rscript_re_extract.sh \
-	testsuites/rscript_re_extract.conf \
 	rscript_re_match.sh \
-	testsuites/rscript_re_match.conf \
 	lookup_table.sh \
 	lookup_table_no_hup_reload.sh \
 	lookup_table_no_hup_reload-vg.sh \
@@ -1856,21 +1602,15 @@ EXTRA_DIST= \
 	lookup_table_rscript_reload-vg.sh \
 	lookup_table_rscript_reload_without_stub-vg.sh \
 	rscript_trim-vg.sh \
-	testsuites/lookup_table.conf \
-	testsuites/lookup_table_no_hup_reload.conf \
-	testsuites/lookup_table_reload_stub.conf \
-	testsuites/lookup_table_reload.conf \
 	testsuites/xlate.lkp_tbl \
 	testsuites/xlate_more.lkp_tbl \
 	unused_lookup_table-vg.sh \
 	lookup_table-vg.sh \
-	testsuites/unused_lookup_table.conf \
 	array_lookup_table.sh \
 	array_lookup_table-vg.sh \
 	array_lookup_table_misuse-vg.sh \
 	multiple_lookup_tables.sh \
 	multiple_lookup_tables-vg.sh \
-	testsuites/array_lookup_table.conf \
 	testsuites/xlate_array.lkp_tbl \
 	testsuites/xlate_array_more.lkp_tbl \
 	testsuites/xlate_array_misuse.lkp_tbl \
@@ -1881,7 +1621,6 @@ EXTRA_DIST= \
 	testsuites/xlate_sparse_array_more.lkp_tbl \
 	lookup_table_bad_configs.sh \
 	lookup_table_bad_configs-vg.sh \
-	testsuites/lookup_table_all.conf \
 	testsuites/xlate_array_empty_table.lkp_tbl \
 	testsuites/xlate_array_no_index.lkp_tbl \
 	testsuites/xlate_array_no_table.lkp_tbl \
@@ -1901,35 +1640,21 @@ EXTRA_DIST= \
 	testsuites/xlate_array_more_with_duplicates_and_nomatch.lkp_tbl \
 	testsuites/xlate_more_with_duplicates_and_nomatch.lkp_tbl \
 	testsuites/xlate_sparse_array_more_with_duplicates_and_nomatch.lkp_tbl \
-	testsuites/multiple_lookup_tables.conf \
 	json_var_cmpr.sh \
-	testsuites/json_var_cmpr.conf \
 	imptcp_nonProcessingPoller.sh \
 	imptcp_veryLargeOctateCountedMessages.sh \
-	testsuites/imptcp_nonProcessingPoller.conf \
 	known_issues.supp \
 	libmaxmindb.supp \
 	travis/trusty.supp \
 	linux_localtime_r.supp \
 	json_var_case.sh \
-	testsuites/json_var_case.conf \
 	cfg.sh \
 	empty-prop-comparison.sh \
 	sndrcv_tls_anon_rebind.sh \
-	testsuites/sndrcv_tls_anon_rebind_sender.conf \
-	testsuites/sndrcv_tls_anon_rebind_rcvr.conf \
 	sndrcv_tls_anon_hostname.sh \
-	testsuites/sndrcv_tls_anon_hostname_sender.conf \
-	testsuites/sndrcv_tls_anon_hostname_rcvr.conf \
 	sndrcv_tls_anon_ipv4.sh \
-	testsuites/sndrcv_tls_anon_ipv4_sender.conf \
-	testsuites/sndrcv_tls_anon_ipv4_rcvr.conf \
 	sndrcv_tls_anon_ipv6.sh \
-	testsuites/sndrcv_tls_anon_ipv6_sender.conf \
-	testsuites/sndrcv_tls_anon_ipv6_rcvr.conf \
 	sndrcv_tls_priorityString.sh \
-	testsuites/sndrcv_tls_priorityString_sender.conf \
-	testsuites/sndrcv_tls_priorityString_rcvr.conf \
 	omtcl.sh \
 	omtcl.tcl \
 	pmsnare-default.sh \
@@ -1946,16 +1671,13 @@ EXTRA_DIST= \
 	pmsnare-modoverride-udp.sh \
 	pmlastmsg.sh \
 	pmlastmsg-udp.sh \
-	testsuites/include-std-omfile-action.conf \
 	pgsql-basic.sh \
 	testsuites/pgsql-basic.sql \
-	testsuites/pgsql-basic.conf \
 	testsuites/pgsql-select-msg.sql \
 	testsuites/pgsql-select-syslogtag.sql \
 	pgsql-basic-cnf6.sh \
 	pgsql-basic-threads-cnf6.sh \
 	pgsql-template.sh \
-	testsuites/pgsql-template.conf \
 	pgsql-template-cnf6.sh \
 	pgsql-actq-mt-withpause.sh \
 	pgsql-template-threads-cnf6.sh \
@@ -1969,7 +1691,13 @@ EXTRA_DIST= \
 	mmkubernetes-basic-vg.sh \
 	mmkubernetes_test_server.py \
 	mmkubernetes-basic.out.json \
-	es-writeoperation.sh
+	es-writeoperation.sh \
+	testsuites/incltest.d/include.conf \
+	testsuites/abort-uncleancfg-goodcfg.conf \
+	testsuites/include-std-omfile-action.conf \
+	testsuites/invalid.conf \
+	testsuites/valid.conf \
+	testsuites/variable_leading_underscore.conf
 
 ourtail_SOURCES = ourtail.c
 msleep_SOURCES = msleep.c

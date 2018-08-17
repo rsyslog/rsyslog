@@ -1,13 +1,11 @@
 #!/bin/bash
 # Test imptcp with poller not processing any messages
+# test imptcp with very large messages while poller driven processing is disabled
 # added 2015-10-17 by singh.janmejay
 # This file is part of the rsyslog project, released  under GPLv3
-echo ====================================================================================
-echo TEST: \[imptcp_veryLargeOctateCountedMessages.sh\]: test imptcp with very large messages while poller driven processing is disabled
 . $srcdir/diag.sh init
 generate_conf
 add_conf '$MaxMessageSize 10k
-$IncludeConfig diag-common.conf
 template(name="outfmt" type="string" string="%msg:F,58:2%,%msg:F,58:3%,%msg:F,58:4%\n")
 
 module(load="../plugins/imptcp/.libs/imptcp" threads="32" processOnPoller="off")
