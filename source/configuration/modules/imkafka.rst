@@ -134,6 +134,24 @@ Ruleset
 Specifies the ruleset to be used.
 
 
+ParseHostname
+^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+.. versionadded:: 8.38.0
+
+If this parameter is set to on, imkafka will parse the hostname in log
+if it exists. The result can be retrieved from $hostname. If it's off,
+for compatibility reasons, the local hostname is used, same as the previous
+version.
+
+
 Caveats/Known Bugs
 ==================
 
@@ -157,5 +175,3 @@ In this sample a consumer for the topic static is created and will forward the m
    ruleset(name="pRuleset") {
    	action(type="omfile" file="path/to/file")
    }
-
-
