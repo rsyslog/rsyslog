@@ -7,7 +7,7 @@ generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/omjournal/.libs/omjournal")
-input(type="imtcp" port="13514")
+input(type="imtcp" port="'$TCPFLOOD_PORT'")
 
 action(type="omjournal")
 '

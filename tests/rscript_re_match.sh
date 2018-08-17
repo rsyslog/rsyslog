@@ -9,7 +9,7 @@ add_conf '
 template(name="outfmt" type="string" string="*Matched*\n")
 
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="13514")'
+input(type="imtcp" port="'$TCPFLOOD_PORT'")'
 add_conf "
 if (re_match(\$msg, '.* ([0-9]+)$')) then {"
 add_conf '

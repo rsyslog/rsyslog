@@ -17,7 +17,7 @@ ruleset(name="echo") {
   action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="corge")
 }
 
-input(type="imtcp" port="13514")
+input(type="imtcp" port="'$TCPFLOOD_PORT'")
 
 call echo
 '

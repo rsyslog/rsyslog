@@ -5,7 +5,7 @@ setvar_RS_HOSTNAME
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="13514")
+input(type="imtcp" port="'$TCPFLOOD_PORT'")
 template(name="outfmt" type="string" string="%hostname%") # no LF, as HOSTNAME file also does not have it!
 
 local4.debug action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)

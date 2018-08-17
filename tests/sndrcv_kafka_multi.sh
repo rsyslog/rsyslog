@@ -52,7 +52,7 @@ generate_conf 2
 add_conf '
 module(load="../plugins/omkafka/.libs/omkafka")
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="13514" Ruleset="omkafka")	/* this port for tcpflood! */
+input(type="imtcp" port="'$TCPFLOOD_PORT'" Ruleset="omkafka")	/* this port for tcpflood! */
 
 template(name="outfmt" type="string" string="%msg%\n")
 

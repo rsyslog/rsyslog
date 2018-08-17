@@ -18,7 +18,7 @@ module(	load="../plugins/imtcp/.libs/imtcp"
 	PermittedPeer=["SHA1:5C:C6:62:D5:9D:25:9F:BC:F3:CB:61:FA:D2:B3:8B:61:88:D7:06:C3"]
 	)
 input(	type="imtcp"
-	port="13514" )
+	port="'$TCPFLOOD_PORT'" )
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 :msg, contains, "msgnum:" action(	type="omfile" 
@@ -27,7 +27,7 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 '
 # Begin actuall testcase
 startup
-tcpflood -p13514 -m10000 -Ttls -x$srcdir/tls-certs/ca.pem -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem 
+tcpflood -p'$TCPFLOOD_PORT' -m10000 -Ttls -x$srcdir/tls-certs/ca.pem -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem 
 # -L5
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown

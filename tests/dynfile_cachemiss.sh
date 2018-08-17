@@ -13,7 +13,7 @@ generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
 $MainMsgQueueTimeoutShutdown 10000
-$InputTCPServerRun 13514
+$InputTCPServerRun '$TCPFLOOD_PORT'
 
 $template outfmt,"%msg:F,58:3%\n"
 $template dynfile,"%msg:F,58:2%.log" # complete name is in message

@@ -13,7 +13,7 @@ add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
 $MainMsgQueueTimeoutShutdown 1
 $MainMsgQueueSaveOnShutdown on
-$InputTCPServerRun 13514
+$InputTCPServerRun '$TCPFLOOD_PORT'
 
 $ModLoad ../plugins/omtesting/.libs/omtesting
 

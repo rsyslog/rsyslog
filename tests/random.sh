@@ -15,7 +15,7 @@ $ErrorMessagesToStderr off
 
 $ModLoad ../plugins/imtcp/.libs/imtcp
 $MainMsgQueueTimeoutShutdown 10000
-$InputTCPServerRun 13514
+$InputTCPServerRun '$TCPFLOOD_PORT'
 
 $template outfmt,"%rawmsg%\n"
 template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!

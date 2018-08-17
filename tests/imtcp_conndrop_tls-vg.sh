@@ -25,7 +25,7 @@ $DefaultNetstreamDriver gtls
 $IncludeConfig rsyslog.conf.tlscert
 $InputTCPServerStreamDriverMode 1
 $InputTCPServerStreamDriverAuthMode anon
-$InputTCPServerRun 13514
+$InputTCPServerRun '$TCPFLOOD_PORT'
 
 $template outfmt,"%msg:F,58:2%,%msg:F,58:3%,%msg:F,58:4%\n"
 template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!
@@ -39,7 +39,7 @@ echo \$DefaultNetstreamDriverCertFile $srcdir/tls-certs/cert.pem >>rsyslog.conf.
 echo \$DefaultNetstreamDriverKeyFile $srcdir/tls-certs/key.pem   >>rsyslog.conf.tlscert
 startup_vg
 # 100 byte messages to gain more practical data use
-tcpflood -c20 -p13514 -m10000 -r -d100 -P129 -D -l0.995 -Ttls -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem
+tcpflood -c20 -p'$TCPFLOOD_PORT' -m10000 -r -d100 -P129 -D -l0.995 -Ttls -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem
 sleep 5 # due to large messages, we need this time for the tcp receiver to settle...
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate

@@ -9,7 +9,7 @@ add_conf '
 template(name="outfmt" type="string" string="%$.replaced_msg%\n")
 
 module(load="../plugins/imptcp/.libs/imptcp")
-input(type="imptcp" port="13514")
+input(type="imptcp" port="'$TCPFLOOD_PORT'")
 
 template(name="date_time" type="list") {
   property(name="msg" regex.Expression="Thu .+ 2014" regex.Type="ERE" regex.Match="0")

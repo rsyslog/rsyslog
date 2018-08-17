@@ -6,7 +6,7 @@ generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/fmhttp/.libs/fmhttp")
-input(type="imtcp" port="13514")
+input(type="imtcp" port="'$TCPFLOOD_PORT'")
 
 # for debugging the test itself:
 #template(name="outfmt" type="string" string="%$!%:  :%$.%:  %rawmsg%\n")

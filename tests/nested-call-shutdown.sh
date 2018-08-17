@@ -6,7 +6,7 @@ generate_conf
 add_conf '
 module(load="../plugins/omtesting/.libs/omtesting")
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="13514")
+input(type="imtcp" port="'$TCPFLOOD_PORT'")
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 
@@ -26,7 +26,7 @@ ruleset(name="rs1" queue.type="linkedList") {
 if $msg contains "msgnum:" then call rs1
 '
 startup
-#tcpflood -p13514 -m10000
+#tcpflood -p'$TCPFLOOD_PORT' -m10000
 . $srcdir/diag.sh injectmsg 0 1000
 . $srcdir/diag.sh shutdown-immediate
 wait_shutdown

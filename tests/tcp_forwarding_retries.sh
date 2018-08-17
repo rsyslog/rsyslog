@@ -13,14 +13,14 @@ add_conf '
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 :msg, contains, "msgnum:" {
 	action(type="omfwd"
-	       target="127.0.0.1" port="13514" protocol="TCP"
+	       target="127.0.0.1" port="'$TCPFLOOD_PORT'" protocol="TCP"
 	       action.resumeRetryCount="10"
 	       template="outfmt")
 }
 '
 
 # we start a small receiver process
-./minitcpsrv -t127.0.0.1 -p13514 -f $RSYSLOG_OUT_LOG -s4 &
+./minitcpsrv -t127.0.0.1 -p$TCPFLOOD_PORT -f $RSYSLOG_OUT_LOG -s4 &
 BGPROCESS=$!
 echo background minitcpsrvr process id is $BGPROCESS
 

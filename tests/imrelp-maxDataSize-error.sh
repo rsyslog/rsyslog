@@ -10,7 +10,7 @@ global(
 	maxMessageSize="300"
 )
 
-input(type="imrelp" port="13514" maxDataSize="250")
+input(type="imrelp" port="'$TCPFLOOD_PORT'" maxDataSize="250")
 
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '

@@ -37,7 +37,7 @@ generate_conf 2
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
 # this listener is for message generation by the test framework!
-$InputTCPServerRun 13514
+$InputTCPServerRun '$TCPFLOOD_PORT'
 
 $ModLoad ../plugins/omudpspoof/.libs/omudpspoof
 $template spoofaddr,"127.0.0.1"

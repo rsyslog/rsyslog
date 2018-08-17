@@ -7,7 +7,7 @@ add_conf '
 $MaxMessageSize 128
 global(processInternalMessages="on")
 module(load="../plugins/imptcp/.libs/imptcp")
-input(type="imptcp" port="13514" ruleset="ruleset1" discardTruncatedMsg="on")
+input(type="imptcp" port="'$TCPFLOOD_PORT'" ruleset="ruleset1" discardTruncatedMsg="on")
 
 template(name="outfmt" type="string" string="%rawmsg%\n")
 ruleset(name="ruleset1") {

@@ -6,7 +6,7 @@ echo TEST: \[imptcp_no_octet_counted.sh\]: test imptcp with octet counted framin
 generate_conf
 add_conf '
 module(load="../plugins/imptcp/.libs/imptcp")
-input(type="imptcp" port="13514" ruleset="remote" supportOctetCountedFraming="off")
+input(type="imptcp" port="'$TCPFLOOD_PORT'" ruleset="remote" supportOctetCountedFraming="off")
 
 template(name="outfmt" type="string" string="%rawmsg%\n")
 ruleset(name="remote") {

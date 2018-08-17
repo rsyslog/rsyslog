@@ -5,7 +5,7 @@ generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/pmnull/.libs/pmnull")
-input(type="imtcp" port="13514" ruleset="ruleset")
+input(type="imtcp" port="'$TCPFLOOD_PORT'" ruleset="ruleset")
 parser(name="custom.pmnull.withOrigin" type="pmnull")
 template(name="test" type="string" string="tag: %syslogtag%, pri: %pri%, syslogfacility: %syslogfacility%, syslogseverity: %syslogseverity% msg: %msg%\n")
 ruleset(name="ruleset" parser=["custom.pmnull.withOrigin", "rsyslog.pmnull"]) {

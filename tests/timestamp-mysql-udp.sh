@@ -4,7 +4,7 @@
 generate_conf
 add_conf '
 module(load="../plugins/imudp/.libs/imudp")
-input(type="imudp" port="13514")
+input(type="imudp" port="'$TCPFLOOD_PORT'")
 
 template(name="outfmt" type="string" string="%timestamp:::date-mysql%\n")
 

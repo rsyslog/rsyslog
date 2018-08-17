@@ -7,7 +7,7 @@ generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
 $MainMsgQueueTimeoutShutdown 10000
-$InputTCPServerRun 13514
+$InputTCPServerRun '$TCPFLOOD_PORT'
 
 $ErrorMessagesToStderr off
 

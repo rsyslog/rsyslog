@@ -7,7 +7,7 @@ add_conf '
 $MaxMessageSize 128
 global(processInternalMessages="on")
 module(load="../plugins/imptcp/.libs/imptcp")
-input(type="imptcp" port="13514" AddtlFrameDelimiter="13")
+input(type="imptcp" port="'$TCPFLOOD_PORT'" AddtlFrameDelimiter="13")
 
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 

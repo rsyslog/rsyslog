@@ -6,7 +6,7 @@ generate_conf
 add_conf '
 module(load="../contrib/pmsnare/.libs/pmsnare")
 module(load="../plugins/imudp/.libs/imudp")
-input(type="imudp" port="13514" ruleset="ruleset1")
+input(type="imudp" port="'$TCPFLOOD_PORT'" ruleset="ruleset1")
 
 global(parser.escapeControlCharactersCStyle="on")
 

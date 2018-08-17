@@ -15,7 +15,7 @@ echo \[tcp-msgreduc-vg.sh\]: testing msg reduction via UDP
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
-$InputTCPServerRun 13514
+$InputTCPServerRun '$TCPFLOOD_PORT'
 $RepeatedMsgReduction on
 
 $template outfmt,"%msg:F,58:2%\n"

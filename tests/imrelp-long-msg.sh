@@ -5,14 +5,14 @@ generate_conf
 add_conf '
 global(maxMessageSize="214800")
 module(load="../plugins/imrelp/.libs/imrelp")
-input(type="imrelp" port="13514" maxdatasize="214800")
+input(type="imrelp" port="'$TCPFLOOD_PORT'" maxdatasize="214800")
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
 				 file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
-tcpflood -Trelp-plain -p13514 -m2 -d 204800
+tcpflood -Trelp-plain -p'$TCPFLOOD_PORT' -m2 -d 204800
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
 seq_check 0 1

@@ -12,7 +12,7 @@ export TZ=TEST-02:00
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
-$InputTCPServerRun 13514
+$InputTCPServerRun '$TCPFLOOD_PORT'
 
 template(name="outfmt" type="string"
 	 string="%$Now%:%$Year%-%$Month%-%$Day%,%$Now-utc%:%$Year-utc%-%$Month-utc%-%$Day-utc%\n")

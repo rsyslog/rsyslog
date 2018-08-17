@@ -11,7 +11,7 @@ module(load="../plugins/imtcp/.libs/imtcp")
 
 template(name="outfmt" type="string" string="SD:%$!RFC5424-SD%\n")
 
-input(type="imtcp" port="13514")
+input(type="imtcp" port="'$TCPFLOOD_PORT'")
 
 action(type="mmpstrucdata" sd_name.lowercase="off")
 

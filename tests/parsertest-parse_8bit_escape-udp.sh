@@ -4,7 +4,7 @@
 generate_conf
 add_conf '
 module(load="../plugins/imudp/.libs/imudp")
-input(type="imudp" port="13514" ruleset="ruleset1")
+input(type="imudp" port="'$TCPFLOOD_PORT'" ruleset="ruleset1")
 
 $Escape8BitCharactersOnReceive on
 

@@ -13,7 +13,7 @@ $MaxMessageSize 10k
 
 $ModLoad ../plugins/imtcp/.libs/imtcp
 $MainMsgQueueTimeoutShutdown 10000
-$InputTCPServerRun 13514
+$InputTCPServerRun '$TCPFLOOD_PORT'
 
 $template outfmt,"%msg:F,58:2%,%msg:F,58:3%,%msg:F,58:4%\n"
 template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!

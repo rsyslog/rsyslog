@@ -5,7 +5,7 @@
 generate_conf
 add_conf '
 module(load="../plugins/imptcp/.libs/imptcp")
-input(type="imptcp" port="13514")
+input(type="imptcp" port="'$TCPFLOOD_PORT'")
 
 :msg, contains, "msgnum:" {
 	action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG`)

@@ -8,7 +8,7 @@ add_conf '
 $ModLoad ../plugins/imptcp/.libs/imptcp
 $MainMsgQueueTimeoutShutdown 10000
 $InputPTCPServerAddtlFrameDelimiter 0
-$InputPTCPServerRun 13514
+$InputPTCPServerRun '$TCPFLOOD_PORT'
 
 $template outfmt,"%msg:F,58:2%\n"
 $OMFileFlushOnTXEnd off
