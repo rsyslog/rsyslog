@@ -18,7 +18,6 @@ template(name="outfmt" type="string" string="%msg%\n")
         binary=`echo $srcdir/testsuites/omprog-transactions-bin.sh`
         template="outfmt"
         name="omprog_action"
-	hideEnvironment="off"
         queue.type="Direct"  # the default; facilitates sync with the child process
         queue.dequeueBatchSize="6"
         confirmMessages="on"

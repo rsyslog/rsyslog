@@ -68,7 +68,6 @@ typedef struct _instanceData {
 	uchar *szTemplateName;	/* assigned output template */
 	int bConfirmMessages;	/* does the program provide feedback via stdout? */
 	int bUseTransactions;	/* send begin/end transaction marks to program? */
-	int bUseNULLEnvironment;	/* use an empty environment (vs. rsyslog's)? */
 	uchar *szBeginTransactionMark;	/* mark message for begin transaction */
 	uchar *szCommitTransactionMark;	/* mark message for commit transaction */
 	int bForceSingleInst;	/* only a single wrkr instance of program permitted? */
@@ -99,7 +98,6 @@ static configSettings_t cs;
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
 	{ "binary", eCmdHdlrString, CNFPARAM_REQUIRED },
-	{ "hideEnvironment", eCmdHdlrBinary, 0 },
 	{ "confirmMessages", eCmdHdlrBinary, 0 },
 	{ "useTransactions", eCmdHdlrBinary, 0 },
 	{ "beginTransactionMark", eCmdHdlrString, 0 },
@@ -129,7 +127,6 @@ execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdout, int fdStder
 	struct sigaction sigAct;
 	sigset_t set;
 	char errStr[1024];
-	char *newenviron[] = { NULL };
 
 	if(dup2(fdStdin, STDIN_FILENO) == -1) {
 		DBGPRINTF("omprog: dup() stdin failed\n");
@@ -202,8 +199,7 @@ execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdout, int fdStder
 	alarm(0);
 
 	/* finally exec child */
-	iRet = execve((char*)pWrkrData->pData->szBinary, pWrkrData->pData->aParams,
-		(pWrkrData->pData->bUseNULLEnvironment) ? newenviron : environ);
+	iRet = execve((char*)pWrkrData->pData->szBinary, pWrkrData->pData->aParams, environ);
 	if(iRet == -1) {
 		/* Note: this will go to stdout of the **child**, so rsyslog will never
 		 * see it except when stdout is captured. If we use the plugin interface,
@@ -794,7 +790,6 @@ setInstParamDefaults(instanceData *pData)
 	pData->iParams = 0;
 	pData->bConfirmMessages = 0;
 	pData->bUseTransactions = 0;
-	pData->bUseNULLEnvironment = 1;
 	pData->szBeginTransactionMark = NULL;
 	pData->szCommitTransactionMark = NULL;
 	pData->bForceSingleInst = 0;
@@ -839,8 +834,6 @@ CODESTARTnewActInst
 		if(!strcmp(actpblk.descr[i].name, "binary")) {
 			CHKiRet(split_binary_parameters(&pData->szBinary, &pData->aParams, &pData->iParams,
 				pvals[i].val.d.estr));
-		} else if(!strcmp(actpblk.descr[i].name, "hideEnvironment")) {
-			pData->bUseNULLEnvironment = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "confirmMessages")) {
 			pData->bConfirmMessages = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "useTransactions")) {
