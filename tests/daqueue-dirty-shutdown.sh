@@ -42,7 +42,7 @@ template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to
 :msg, contains, "msgnum:" :omtesting:sleep 10 0
 '
 startup
-$srcdir/diag.sh injectmsg  0 210000
+injectmsg  0 210000
 echo spool files immediately before shutdown:
 ls test-spool
 . $srcdir/diag.sh shutdown-immediate # shut down without the ability to fully persist state
@@ -95,7 +95,7 @@ template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to
 startup
 #. $srcdir/diag.sh wait-queueempty
 #echo existing queue empty, injecting new data
-#$srcdir/diag.sh injectmsg  1000000 1000
+#injectmsg  1000000 1000
 shutdown_when_empty 
 wait_shutdown
 

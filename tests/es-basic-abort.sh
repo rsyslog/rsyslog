@@ -26,7 +26,7 @@ if $msg contains "msgnum:" then
 		searchIndex="rsyslog_testbench")
 '
 startup
-. $srcdir/diag.sh injectmsg  0 10000
+injectmsg  0 10000
 ./msleep 500
 echo stop elasticsearch...
 . $srcdir/diag.sh stop-elasticsearch

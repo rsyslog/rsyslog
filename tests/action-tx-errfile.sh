@@ -20,7 +20,7 @@ if((not($msg contains "error")) and ($msg contains "msgnum:")) then {
 }
 '
 startup
-. $srcdir/diag.sh injectmsg 0 50
+injectmsg 0 50
 shutdown_when_empty
 wait_shutdown
 cmp testsuites/action-tx-errfile.result ${RSYSLOG2_OUT_LOG}

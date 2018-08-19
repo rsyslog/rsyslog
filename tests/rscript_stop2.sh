@@ -24,7 +24,7 @@ if cnum($!usr!msgnum) >= 5000 then
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
-. $srcdir/diag.sh injectmsg  0 8000
+injectmsg  0 8000
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown

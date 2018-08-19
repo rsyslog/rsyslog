@@ -22,7 +22,7 @@ module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 				 bulkmode="on")
 '
 startup_vg
-. $srcdir/diag.sh injectmsg  0 100
+injectmsg  0 100
 . $srcdir/diag.sh wait-queueempty
 shutdown_when_empty
 wait_shutdown_vg

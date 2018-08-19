@@ -25,7 +25,7 @@ action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 cp -f $srcdir/testsuites/xlate_array.lkp_tbl xlate_array.lkp_tbl
 startup
-. $srcdir/diag.sh injectmsg  0 3
+injectmsg  0 3
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh content-check "msgnum:00000000: foo_old"
 . $srcdir/diag.sh content-check "msgnum:00000001: bar_old"
@@ -33,7 +33,7 @@ startup
 cp -f $srcdir/testsuites/xlate_array_more.lkp_tbl xlate_array.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
-. $srcdir/diag.sh injectmsg  0 3
+injectmsg  0 3
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh content-check "msgnum:00000000: foo_new"
 . $srcdir/diag.sh content-check "msgnum:00000001: bar_new"
@@ -41,7 +41,7 @@ cp -f $srcdir/testsuites/xlate_array_more.lkp_tbl xlate_array.lkp_tbl
 cp -f $srcdir/testsuites/xlate_array_more_with_duplicates_and_nomatch.lkp_tbl xlate_array.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
-. $srcdir/diag.sh injectmsg  0 12
+injectmsg  0 12
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown

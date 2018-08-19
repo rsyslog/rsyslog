@@ -21,7 +21,7 @@ action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 cp -f $srcdir/testsuites/xlate.lkp_tbl xlate.lkp_tbl
 startup_vg
-. $srcdir/diag.sh injectmsg  0 1
+injectmsg  0 1
 shutdown_when_empty
 wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg

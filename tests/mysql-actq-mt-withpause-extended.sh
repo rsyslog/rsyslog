@@ -27,7 +27,7 @@ let "strtnum = 0"
 for i in {1..50}
 do
    echo "running iteration $i, startnum: $strtnum"
-   . $srcdir/diag.sh injectmsg  $strtnum 5000
+   injectmsg  $strtnum 5000
    . $srcdir/diag.sh wait-queueempty 
    echo waiting for worker threads to timeout
    ./msleep 1000

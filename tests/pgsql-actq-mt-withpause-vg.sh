@@ -19,15 +19,15 @@ if $msg contains "msgnum" then {
 	)
 }'
 startup_vg
-. $srcdir/diag.sh injectmsg  0 50000
+injectmsg  0 50000
 . $srcdir/diag.sh wait-queueempty
 echo waiting for worker threads to timeout
 ./msleep 3000
-. $srcdir/diag.sh injectmsg  50000 50000
+injectmsg  50000 50000
 . $srcdir/diag.sh wait-queueempty
 echo waiting for worker threads to timeout
 ./msleep 2000
-. $srcdir/diag.sh injectmsg  100000 50000
+injectmsg  100000 50000
 shutdown_when_empty
 wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg

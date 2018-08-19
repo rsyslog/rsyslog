@@ -40,7 +40,7 @@ fi
 
 startup
 . $srcdir/diag.sh wait-startup
-. $srcdir/diag.sh injectmsg 0 10
+injectmsg 0 10
 . $srcdir/diag.sh wait-queueempty
 shutdown_when_empty
 wait_shutdown

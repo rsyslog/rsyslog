@@ -25,7 +25,7 @@ BGPROCESS=$!
 echo background minitcpsrvr process id is $BGPROCESS
 
 startup
-. $srcdir/diag.sh injectmsg 0 $messages
+injectmsg 0 $messages
 shutdown_when_empty
 wait_shutdown
 

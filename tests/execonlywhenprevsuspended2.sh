@@ -26,7 +26,7 @@ $ActionExecOnlyWhenPreviousIsSuspended off
 :msg, contains, "msgnum:" ./'"${RSYSLOG2_OUT_LOG}"';outfmt
 '
 startup
-. $srcdir/diag.sh injectmsg 0 1000
+injectmsg 0 1000
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
 echo check file 1

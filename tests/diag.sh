@@ -221,6 +221,13 @@ function startup_vgthread() {
 }
 
 
+# inject messages via our inject interface (imdiag)
+function injectmsg() {
+	echo injecting $2 messages
+	echo injectmsg $1 $2 $3 $4 | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
+}
+
+
 # shut rsyslogd down when main queue is empty. $1 is the instance.
 function shutdown_when_empty() {
 	if [ "$1" == "2" ]

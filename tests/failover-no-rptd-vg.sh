@@ -20,7 +20,7 @@ $ActionExecOnlyWhenPreviousIsSuspended on
 & ./'"${RSYSLOG_OUT_LOG}"'
 '
 startup_vg
-. $srcdir/diag.sh injectmsg  0 5000
+injectmsg  0 5000
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown

@@ -37,7 +37,7 @@ $ActionOmrulesetRulesetName rsinclude
 *.* :omruleset:
 '
 startup
-. $srcdir/diag.sh injectmsg  0 20000
+injectmsg  0 20000
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
