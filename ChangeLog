@@ -9,15 +9,8 @@ Version 8.38.0 [v8-stable] 2018-09-18
   field from the request will be used, in order to facilitate
   retrying the exact same request.
   Thanks to Richard Megginson for the patch.
-- omprog: add ability to pass rsyslog's environment to script
-  Up until 8.37.0, rsyslog provides an empty environment to the spawned
-  program. This seems to work in existing use case. However, there are
-  use cases where rsyslog's environment should be inherited, at least
-  this is needed for the testbench. There, we need to have access to
-  the output file name, which is now dynamically be generated to support
-  parallel test execution. We assume environment access would also be
-  useful for other use cases as well.
-  see also https://github.com/rsyslog/rsyslog/issues/2921
+- bugfix omprog: rsyslog's environment was not passed to script
+  closes https://github.com/rsyslog/rsyslog/issues/2921
 - bugfix omprog: severity of some log messages in waitForChild corrected
   Log some messages related to child process termination as info/warn
   instead of error.
@@ -25,6 +18,9 @@ Version 8.38.0 [v8-stable] 2018-09-18
   They were stopped watching after being rotated.
   closes https://github.com/rsyslog/rsyslog/issues/2229
   Thanks to Jiri Vymazal for the patch.
+- CI:
+  * many changes with the goal to support parallel test execution, e.g.
+    use dynamic ports and file names, changes to testing tools, etc.
 ------------------------------------------------------------------------------
 Version 8.37.0 [v8-stable] 2018-08-07
 - build system: add --enable-default-tests ./configure option
