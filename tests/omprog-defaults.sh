@@ -29,7 +29,6 @@ template(name="outfmt" type="string" string="%msg%\n")
 	binary=`echo $srcdir/testsuites/omprog-defaults-bin.sh param1 param2 param3`
         template="outfmt"
         name="omprog_action"
-	hideEnvironment="off"
     )
 }
 '

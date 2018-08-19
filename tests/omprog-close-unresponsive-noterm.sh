@@ -22,7 +22,6 @@ main_queue(
         binary=`echo $srcdir/testsuites/omprog-close-unresponsive-bin.sh`
         template="outfmt"
         name="omprog_action"
-	hideEnvironment="off"
         queue.type="Direct"  # the default; facilitates sync with the child process
         confirmMessages="on"  # facilitates sync with the child process
         signalOnClose="off"
