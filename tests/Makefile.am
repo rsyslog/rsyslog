@@ -1,3 +1,5 @@
+TEST_EXTENSIONS=.sh
+
 if ENABLE_TESTBENCH
 
 CLEANFILES=\
@@ -587,12 +589,19 @@ TESTS +=  \
 	es-basic.sh \
 	es-basic-es6.0.sh \
 	es-basic-bulk.sh
+es-basic-es6.0.log: es-basic.log
+es-basic-bulk.log: es-basic-es6.0.log
 if HAVE_VALGRIND
 TESTS += \
 	es-basic-vg.sh \
 	es-basic-vgthread.sh
+es-basic-vg.log: es-basic-bulk.log
+es-basic-vgthread.log: es-basic-vg.log
+# for next if block:
+es-basic-server.log: es-basic-vgthread.log
 endif
 endif
+
 
 if ENABLE_ELASTICSEARCH_TESTS
 TESTS +=  \
@@ -603,10 +612,22 @@ TESTS +=  \
 	es-bulk-errfile-empty.sh \
 	es-bulk-errfile-popul.sh \
 	es-writeoperation.sh
+
+es-basic-server.log: es-basic-bulk.log
+es-maxbytes-bulk.log: es-basic-server.log
+es-basic-errfile-empty.log: es-maxbytes-bulk.log
+es-basic-errfile-popul.log: es-basic-errfile-empty.log
+es-bulk-errfile-empty.log: es-basic-errfile-popul.log
+es-bulk-errfile-popul.log: es-bulk-errfile-empty.log
+es-writeoperation.log: es-writeoperation.log
+
 if ENABLE_IMPSTATS
 TESTS +=  \
 	es-basic-ha.sh \
 	es-bulk-retry.sh
+
+es-basic-ha.log: es-writeoperation.log
+es-bulk-retry.log: es-basic-ha.log
 endif
 if ENABLE_IMFILE
 TESTS +=  \
@@ -614,13 +635,21 @@ TESTS +=  \
 	es-bulk-errfile-popul-erronly.sh \
 	es-bulk-errfile-popul-erronly-interleaved.sh \
 	es-bulk-errfile-popul-def-interleaved.sh
+
+es-bulk-errfile-popul-def-format.log: es-bulk-retry.log
+es-bulk-errfile-popul-erronly.log: es-bulk-errfile-popul-def-format.log
+es-bulk-errfile-popul-erronly-interleaved.log: es-bulk-errfile-popul-erronly.log
+es-bulk-errfile-popul-def-interleaved.log: es-bulk-errfile-popul-erronly-interleaved.log
 endif
 if HAVE_VALGRIND
 TESTS +=  \
 	es-basic-bulk-vg.sh \
 	es-basic-ha-vg.sh
+
+es-basic-bulk-vg.log: es-bulk-errfile-popul-def-interleaved.log
+es-basic-ha-vg.log: es-basic-bulk-vg.log
 endif
-endif
+endif # if ENABLE_ELASTICSEARCH_TESTS
 
 if ENABLE_MMPSTRUCDATA
 TESTS +=  \
@@ -925,6 +954,10 @@ endif
 endif
 endif
 endif
+
+# test samples...
+#empty-hostname.log: hostname-getaddrinfo-fail.log
+#hostname-getaddrinfo-fail.log: empty-hostname.log
 
 endif # if ENABLE_TESTBENCH
 
