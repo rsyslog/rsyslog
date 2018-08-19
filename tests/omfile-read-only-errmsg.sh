@@ -18,7 +18,7 @@ touch ${RSYSLOG2_OUT_LOG}
 chmod 0400 ${RSYSLOG2_OUT_LOG}
 ls -l rsyslog.ou*
 startup
-$srcdir/diag.sh injectmsg 0 1
+injectmsg 0 1
 shutdown_when_empty
 wait_shutdown
 

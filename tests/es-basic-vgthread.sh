@@ -24,7 +24,7 @@ if $msg contains "msgnum:" then
 	       searchIndex="rsyslog_testbench")
 '
 startup_vgthread
-. $srcdir/diag.sh injectmsg  0 10000
+injectmsg  0 10000
 shutdown_when_empty
 wait_shutdown_vg 
 . $srcdir/diag.sh check-exit-vg

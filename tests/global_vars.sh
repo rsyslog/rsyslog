@@ -26,7 +26,7 @@ if $msg contains "msgnum:" then {
 startup
 
 # 40000 messages should be enough
-. $srcdir/diag.sh injectmsg  0 40000
+injectmsg  0 40000
 
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown 

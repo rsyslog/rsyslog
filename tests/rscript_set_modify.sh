@@ -19,7 +19,7 @@ if $msg contains "msgnum" then {
 }
 '
 startup
-. $srcdir/diag.sh injectmsg  0 100
+injectmsg  0 100
 shutdown_when_empty
 wait_shutdown 
 seq_check  0 99

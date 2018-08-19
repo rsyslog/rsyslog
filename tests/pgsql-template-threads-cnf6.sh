@@ -21,7 +21,7 @@ if $msg contains "msgnum" then {
 }'
 
 startup
-. $srcdir/diag.sh injectmsg  0 5000
+injectmsg  0 5000
 shutdown_when_empty
 wait_shutdown
 

@@ -107,7 +107,7 @@ fi
 numrecords=100
 success=50
 badarg=50
-. $srcdir/diag.sh injectmsg 0 $numrecords
+injectmsg 0 $numrecords
 shutdown_when_empty
 if [ "x${USE_VALGRIND:-false}" == "xtrue" ] ; then
 	wait_shutdown_vg

@@ -24,7 +24,7 @@ echo background minitcpsrv process id is $BGPROCESS
 # now do the usual run
 startup
 # 10000 messages should be enough
-. $srcdir/diag.sh injectmsg 0 10000
+injectmsg 0 10000
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
 

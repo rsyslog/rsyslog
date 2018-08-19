@@ -10,7 +10,7 @@ $ModLoad ../plugins/ommysql/.libs/ommysql
 '
 mysql --user=rsyslog --password=testbench < testsuites/mysql-truncate.sql
 startup_vg
-. $srcdir/diag.sh injectmsg  0 5000
+injectmsg  0 5000
 shutdown_when_empty
 wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg

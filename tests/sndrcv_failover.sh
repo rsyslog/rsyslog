@@ -12,7 +12,7 @@
 # uncomment for debugging support:
 # start up the instances
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
-export DEAD_PORT="$(get_free_port)"
+export DEAD_PORT=4  # a port unassigned by IANA and very unlikely to be used
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
 export PORT_RCVR="$(get_free_port)"

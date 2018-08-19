@@ -35,16 +35,16 @@ startup
 
 # part1: send first 50 messages (in memory, only)
 #tcpflood 127.0.0.1 '$TCPFLOOD_PORT' 1 50
-. $srcdir/diag.sh injectmsg 0 50
+injectmsg 0 50
 . $srcdir/diag.sh wait-queueempty # let queue drain for this test case
 
 # part 2: send bunch of messages. This should trigger DA mode
-#. $srcdir/diag.sh injectmsg 50 20000
-. $srcdir/diag.sh injectmsg 50 2000
+#injectmsg 50 20000
+injectmsg 50 2000
 ls -l test-spool	 # for manual review
 
 # send another handful
-. $srcdir/diag.sh injectmsg 2050 50
+injectmsg 2050 50
 #sleep 1 # we need this so that rsyslogd can receive all outstanding messages
 
 # clean up and check test result

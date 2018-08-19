@@ -10,7 +10,7 @@ add_conf '$template outfmt,"%msg:F,58:2%\n"
 :msg, contains, "msgnum:" action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")'
 startup
 # 100 messages are enough - the question is if the include is read ;)
-. $srcdir/diag.sh injectmsg 0 100
+injectmsg 0 100
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
 seq_check 0 99

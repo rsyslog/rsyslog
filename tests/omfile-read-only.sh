@@ -25,7 +25,7 @@ touch ${RSYSLOG2_OUT_LOG}
 chmod 0400 ${RSYSLOG2_OUT_LOG}
 ls -l rsyslog.ou*
 startup
-$srcdir/diag.sh injectmsg 0 $messages
+injectmsg 0 $messages
 shutdown_when_empty
 wait_shutdown
 # we know that the output file is missing some messages, but it

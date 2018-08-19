@@ -37,7 +37,7 @@ echo "*.*     :omtesting:sleep 0 1000" > work-delay.conf
 
 # inject 10000 msgs, so that DO hit the high watermark
 startup
-. $srcdir/diag.sh injectmsg 0 10000
+injectmsg 0 10000
 . $srcdir/diag.sh shutdown-immediate
 wait_shutdown
 . $srcdir/diag.sh check-mainq-spool

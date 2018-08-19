@@ -19,7 +19,7 @@ else
 	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
-. $srcdir/diag.sh injectmsg  0 5
+injectmsg  0 5
 shutdown_when_empty
 wait_shutdown 
 grep "error.*does-not-exist"  $RSYSLOG_OUT_LOG > /dev/null

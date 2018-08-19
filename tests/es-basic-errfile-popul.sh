@@ -38,7 +38,7 @@ module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 				 errorFile="./rsyslog.errorfile")
 '
 startup
-. $srcdir/diag.sh injectmsg  0 1000
+injectmsg  0 1000
 shutdown_when_empty
 wait_shutdown 
 if [ ! -f rsyslog.errorfile ]

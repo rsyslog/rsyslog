@@ -17,7 +17,7 @@ $template dynfile,"test-logdir/'$RSYSLOG_OUT_LOG'"
 *.* ?dynfile
 '
 startup
-. $srcdir/diag.sh injectmsg  0 1 # a single message is sufficient
+injectmsg  0 1 # a single message is sufficient
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
 if [ -e test-logdir/$RSYSLOG_OUT_LOG ]

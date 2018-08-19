@@ -25,10 +25,10 @@ action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 cp -f $srcdir/testsuites/xlate_sparse_array.lkp_tbl xlate_array.lkp_tbl
 startup
-. $srcdir/diag.sh injectmsg  0 1
+injectmsg  0 1
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh assert-content-missing "foo"
-. $srcdir/diag.sh injectmsg  0 5
+injectmsg  0 5
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh content-check "msgnum:00000001: foo_old"
 . $srcdir/diag.sh content-check "msgnum:00000002: foo_old"
@@ -38,7 +38,7 @@ startup
 cp -f $srcdir/testsuites/xlate_sparse_array_more.lkp_tbl xlate_array.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
-. $srcdir/diag.sh injectmsg  0 6
+injectmsg  0 6
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh content-check "msgnum:00000000: foo_new"
 . $srcdir/diag.sh content-check "msgnum:00000001: foo_new"
@@ -49,7 +49,7 @@ cp -f $srcdir/testsuites/xlate_sparse_array_more.lkp_tbl xlate_array.lkp_tbl
 cp -f $srcdir/testsuites/xlate_sparse_array_more_with_duplicates_and_nomatch.lkp_tbl xlate_array.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
-. $srcdir/diag.sh injectmsg  0 15
+injectmsg  0 15
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown

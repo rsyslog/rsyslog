@@ -12,7 +12,7 @@ $ActionQueueTimeoutEnqueue 10000 # 10 second to make sure we do not loose due to
 '
 mysql --user=rsyslog --password=testbench < testsuites/mysql-truncate.sql
 startup
-. $srcdir/diag.sh injectmsg  0 50000
+injectmsg  0 50000
 shutdown_when_empty
 wait_shutdown 
 # note "-s" is requried to suppress the select "field header"

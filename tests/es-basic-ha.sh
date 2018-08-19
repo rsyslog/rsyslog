@@ -27,7 +27,7 @@ module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 				 searchIndex="rsyslog_testbench")
 '
 startup
-. $srcdir/diag.sh injectmsg  0 100
+injectmsg  0 100
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
 shutdown_when_empty

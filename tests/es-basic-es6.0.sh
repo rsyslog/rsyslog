@@ -23,7 +23,7 @@ if $msg contains "msgnum:" then
 	       searchIndex="rsyslog_testbench")
 '
 startup
-. $srcdir/diag.sh injectmsg  0 10000
+injectmsg  0 10000
 shutdown_when_empty
 wait_shutdown 
 . $srcdir/diag.sh es-getdata 10000 19200

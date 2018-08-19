@@ -13,7 +13,7 @@ if $msg contains "msgnum" then {
 		db="syslogtest" user="postgres" pass="testbench")
 }'
 startup_vg
-. $srcdir/diag.sh injectmsg  0 5000
+injectmsg  0 5000
 shutdown_when_empty
 wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg

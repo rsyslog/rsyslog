@@ -1,7 +1,7 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 . $srcdir/diag.sh init
-export DEAD_PORT="$(get_free_port)"
+export DEAD_PORT=4  # a port unassigned by IANA and very unlikely to be used
 generate_conf
 add_conf '
 $template outfmt,"%msg:F,58:2%\n"
@@ -13,7 +13,7 @@ $ActionExecOnlyWhenPreviousIsSuspended on
 $ActionExecOnlyWhenPreviousIsSuspended off
 '
 startup
-. $srcdir/diag.sh injectmsg  0 5000
+injectmsg  0 5000
 shutdown_when_empty
 wait_shutdown 
 seq_check  0 4999

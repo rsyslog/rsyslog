@@ -28,7 +28,7 @@ ruleset(name="rs1") {
 if $msg contains "msgnum" then call rs1
 '
 startup
-. $srcdir/diag.sh injectmsg  0 5000
+injectmsg  0 5000
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown

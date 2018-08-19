@@ -16,7 +16,7 @@ action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
  
 '
 startup
-. $srcdir/diag.sh injectmsg  0 10
+injectmsg  0 10
 shutdown_when_empty
 wait_shutdown
 

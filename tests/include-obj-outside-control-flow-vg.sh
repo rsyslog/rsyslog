@@ -15,7 +15,7 @@ add_conf "
 include(file=\"${srcdir}/testsuites/include-std-omfile-actio*.conf\")
 "
 startup_vg
-. $srcdir/diag.sh injectmsg 0 10
+injectmsg 0 10
 shutdown_when_empty
 wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg

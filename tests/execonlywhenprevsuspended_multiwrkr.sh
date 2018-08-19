@@ -20,9 +20,9 @@ startup
 # we cannot really control which are the first two messages imdiag sees,
 # and so we do not know for sure which numbers are skipped. So we inject
 # those 10 to get past that point.
-. $srcdir/diag.sh injectmsg 0 10
+injectmsg 0 10
 ./msleep 500
-. $srcdir/diag.sh injectmsg 10 990
+injectmsg 10 990
 shutdown_when_empty
 wait_shutdown
 seq_check 1 999

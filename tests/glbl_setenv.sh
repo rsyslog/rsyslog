@@ -12,7 +12,7 @@ template(name="outfmt" type="string" string="%$!prx%\n")
 			         file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
-. $srcdir/diag.sh injectmsg  0 1
+injectmsg  0 1
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown    # we need to wait until rsyslogd is finished!
 

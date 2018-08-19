@@ -20,7 +20,7 @@ module(load="../plugins/ommysql/.libs/ommysql")
 '
 mysql --user=rsyslog --password=testbench < testsuites/mysql-truncate.sql
 startup
-. $srcdir/diag.sh injectmsg  0 150000
+injectmsg  0 150000
 shutdown_when_empty
 wait_shutdown 
 # note "-s" is requried to suppress the select "field header"

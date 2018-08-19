@@ -25,7 +25,7 @@ action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 cp -f $srcdir/testsuites/xlate_array_misuse.lkp_tbl xlate_array.lkp_tbl
 startup_vg
-. $srcdir/diag.sh injectmsg  0 3
+injectmsg  0 3
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh assert-content-missing "foo"
 . $srcdir/diag.sh assert-content-missing "bar"
@@ -33,7 +33,7 @@ startup_vg
 cp -f $srcdir/testsuites/xlate_array_more_misuse.lkp_tbl xlate_array.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
-. $srcdir/diag.sh injectmsg  0 3
+injectmsg  0 3
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh assert-content-missing "foo"
 . $srcdir/diag.sh assert-content-missing "bar"
@@ -41,7 +41,7 @@ cp -f $srcdir/testsuites/xlate_array_more_misuse.lkp_tbl xlate_array.lkp_tbl
 cp -f $srcdir/testsuites/xlate_array_more.lkp_tbl xlate_array.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
-. $srcdir/diag.sh injectmsg  0 3
+injectmsg  0 3
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown

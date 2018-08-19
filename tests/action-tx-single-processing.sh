@@ -23,7 +23,7 @@ if($msg contains "msgnum:") then {
 action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG`)
 '
 startup
-. $srcdir/diag.sh injectmsg 0 5000
+injectmsg 0 5000
 shutdown_when_empty
 wait_shutdown
 # note "-s" is requried to suppress the select "field header"
