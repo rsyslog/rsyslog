@@ -15,7 +15,7 @@ echo \[udp-msgreduc-vg.sh\]: testing imtcp multiple listeners
 generate_conf
 add_conf '
 $ModLoad ../plugins/imudp/.libs/imudp
-$UDPServerRun 13514
+$UDPServerRun '$TCPFLOOD_PORT'
 $RepeatedMsgReduction on
 
 $template outfmt,"%msg:F,58:2%\n"

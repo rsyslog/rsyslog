@@ -14,7 +14,7 @@ export TZ=UTC+00:00
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
-$InputTCPServerRun 13514
+$InputTCPServerRun '$TCPFLOOD_PORT'
 
 template(name="outfmt" type="string"
 	 string="%timegenerated:::date-unixtimestamp%\n")

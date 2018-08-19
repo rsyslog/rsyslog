@@ -15,7 +15,7 @@ generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
 $MainMsgQueueTimeoutShutdown 10000
-$InputTCPServerRun 13514
+$InputTCPServerRun '$TCPFLOOD_PORT'
 
 # set spool locations and switch queue to disk assisted mode
 $WorkDirectory test-spool
@@ -34,7 +34,7 @@ template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to
 startup
 
 # part1: send first 50 messages (in memory, only)
-#tcpflood 127.0.0.1 13514 1 50
+#tcpflood 127.0.0.1 '$TCPFLOOD_PORT' 1 50
 . $srcdir/diag.sh injectmsg 0 50
 . $srcdir/diag.sh wait-queueempty # let queue drain for this test case
 

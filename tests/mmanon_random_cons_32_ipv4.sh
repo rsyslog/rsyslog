@@ -4,11 +4,11 @@
 generate_conf
 add_conf '
 template(name="outfmt" type="string" string="%msg%\n")
-template(name="filename" type="string" string="rsyslog.out.%syslogtag%.log")
+template(name="filename" type="string" string="'$RSYSLOG_DYNNAME'.%syslogtag%.log")
 
 module(load="../plugins/mmanon/.libs/mmanon")
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="13514" ruleset="testing")
+input(type="imtcp" port="'$TCPFLOOD_PORT'" ruleset="testing")
 
 ruleset(name="testing") {
 	action(type="mmanon" ipv4.mode="random-consistent" ipv4.bits="32")
@@ -28,64 +28,65 @@ tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 file1 1.1.1.8
 
 shutdown_when_empty
 wait_shutdown
-echo ' 1.1.1.8' | cmp - rsyslog.out.file1.log >/dev/null
+echo ' 1.1.1.8' | cmp - ${RSYSLOG_DYNNAME}.file1.log >/dev/null
 if [ ! $? -eq 1 ]; then
-  echo "invalidly equal ip-address generated, rsyslog.out.file1.log is:"
-  cat rsyslog.out.file1.log
+  echo "invalidly equal ip-address generated, ${RSYSLOG_DYNNAME}.file1.log is:"
+  cat ${RSYSLOG_DYNNAME}.file1.log
   error_exit  1
 fi;
 
-echo ' 0.0.0.0' | cmp - rsyslog.out.file2.log >/dev/null
+echo ' 0.0.0.0' | cmp - ${RSYSLOG_DYNNAME}.file2.log >/dev/null
 if [ ! $? -eq 1 ]; then
-  echo "invalidly equal ip-address generated, rsyslog.out.file2.log is:"
-  cat rsyslog.out.file2.log
+  echo "invalidly equal ip-address generated, ${RSYSLOG_DYNNAME}.file2.log is:"
+  cat ${RSYSLOG_DYNNAME}.file2.log
   error_exit  1
 fi;
 
-echo ' 172.0.234.255' | cmp - rsyslog.out.file4.log  >/dev/null
+echo ' 172.0.234.255' | cmp - ${RSYSLOG_DYNNAME}.file4.log  >/dev/null
 if [ ! $? -eq 1 ]; then
-  echo "invalidly equal ip-address generated, rsyslog.out.file4.log is:"
-  cat rsyslog.out.file4.log
+  echo "invalidly equal ip-address generated, ${RSYSLOG_DYNNAME}.file4.log is:"
+  cat ${RSYSLOG_DYNNAME}.file4.log
   error_exit  1
 fi;
 
-echo ' 111.1.1.8.' | cmp - rsyslog.out.file7.log >/dev/null
+echo ' 111.1.1.8.' | cmp - ${RSYSLOG_DYNNAME}.file7.log >/dev/null
 if [ ! $? -eq 1 ]; then
-  echo "invalidly equal ip-address generated, rsyslog.out.file7.log is:"
-  cat rsyslog.out.file7.log
+  echo "invalidly equal ip-address generated, ${RSYSLOG_DYNNAME}.file7.log is:"
+  cat ${RSYSLOG_DYNNAME}.file7.log
   error_exit  1
 fi;
 
-cmp rsyslog.out.file1.log rsyslog.out.file6.log >/dev/null
+cmp ${RSYSLOG_DYNNAME}.file1.log ${RSYSLOG_DYNNAME}.file6.log >/dev/null
 if [ ! $? -eq 0 ]; then
-  echo "invalidly unequal ip-addresses generated, rsyslog.out.file1.log and rsyslog.out.file6.log are:"
-  cat rsyslog.out.file1.log
-  cat rsyslog.out.file6.log
+  echo "invalidly unequal ip-addresses generated, ${RSYSLOG_DYNNAME}.file1.log and ${RSYSLOG_DYNNAME}.file6.log are:"
+  cat ${RSYSLOG_DYNNAME}.file1.log
+  cat ${RSYSLOG_DYNNAME}.file6.log
   error_exit  1
 fi;
 
-cmp rsyslog.out.file6.log rsyslog.out.file8.log >/dev/null
+cmp ${RSYSLOG_DYNNAME}.file6.log ${RSYSLOG_DYNNAME}.file8.log >/dev/null
 if [ ! $? -eq 0 ]; then
-  echo "invalidly unequal ip-addresses generated, rsyslog.out.file6.log and rsyslog.out.file8.log are:"
-  cat rsyslog.out.file6.log
-  cat rsyslog.out.file8.log
+  echo "invalidly unequal ip-addresses generated, ${RSYSLOG_DYNNAME}.file6.log and ${RSYSLOG_DYNNAME}.file8.log are:"
+  cat ${RSYSLOG_DYNNAME}.file6.log
+  cat ${RSYSLOG_DYNNAME}.file8.log
   error_exit  1
 fi;
 
-cmp rsyslog.out.file2.log rsyslog.out.file3.log >/dev/null
+cmp ${RSYSLOG_DYNNAME}.file2.log ${RSYSLOG_DYNNAME}.file3.log >/dev/null
 if [ ! $? -eq 0 ]; then
-  echo "invalidly unequal ip-addresses generated, rsyslog.out.file2.log and rsyslog.out.file3.log are:"
-  cat rsyslog.out.file2.log
-  cat rsyslog.out.file3.log
+  echo "invalidly unequal ip-addresses generated, ${RSYSLOG_DYNNAME}.file2.log and ${RSYSLOG_DYNNAME}.file3.log are:"
+  cat ${RSYSLOG_DYNNAME}.file2.log
+  cat ${RSYSLOG_DYNNAME}.file3.log
   error_exit  1
 fi;
 
-cmp rsyslog.out.file4.log rsyslog.out.file5.log >/dev/null
+cmp ${RSYSLOG_DYNNAME}.file4.log ${RSYSLOG_DYNNAME}.file5.log >/dev/null
 if [ ! $? -eq 1 ]; then
-  echo "invalidly equal ip-addresses generated, rsyslog.out.file4.log and rsyslog.out.file5.log are:"
-  cat rsyslog.out.file4.log
-  cat rsyslog.out.file5.log
+  echo "invalidly equal ip-addresses generated, ${RSYSLOG_DYNNAME}.file4.log and ${RSYSLOG_DYNNAME}.file5.log are:"
+  cat ${RSYSLOG_DYNNAME}.file4.log
+  cat ${RSYSLOG_DYNNAME}.file5.log
   error_exit  1
 fi;
 
+rm -f ${RSYSLOG_DYNNAME}.*.log
 exit_test

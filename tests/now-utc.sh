@@ -7,7 +7,7 @@ echo \[now-utc\]: test \$NOW-UTC
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
-$InputTCPServerRun 13514
+$InputTCPServerRun '$TCPFLOOD_PORT'
 
 template(name="outfmt" type="string"
 	 string="%$now%,%$now-utc%\n")

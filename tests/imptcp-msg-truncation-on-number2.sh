@@ -8,7 +8,7 @@ $MaxMessageSize 128
 global(processInternalMessages="on"
 	oversizemsg.input.mode="accept")
 module(load="../plugins/imptcp/.libs/imptcp")
-input(type="imptcp" port="13514" ruleset="ruleset1")
+input(type="imptcp" port="'$TCPFLOOD_PORT'" ruleset="ruleset1")
 
 template(name="templ1" type="string" string="%rawmsg%\n")
 ruleset(name="ruleset1") {

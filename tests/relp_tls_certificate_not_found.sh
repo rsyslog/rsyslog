@@ -6,8 +6,8 @@ add_conf '
 
 module(load="../plugins/omrelp/.libs/omrelp")
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="13514" ruleset="ruleset")
-input(type="imtcp" port="13514")
+input(type="imtcp" port="'$TCPFLOOD_PORT'" ruleset="ruleset")
+input(type="imtcp" port="'$TCPFLOOD_PORT'")
 
 ruleset(name="ruleset") {
 	action(type="omrelp" target="127.0.0.1" port="10514" tls="on" tls.authMode="name" tls.caCert="tls-certs/ca.pem" tls.myCert="tls-certs/fake-cert.pem" tls.myPrivKey="tls-certs/fake-key.pem" tls.permittedPeer=["rsyslog-test-root-ca"])

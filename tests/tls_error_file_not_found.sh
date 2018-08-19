@@ -10,7 +10,7 @@ global(
 	defaultNetstreamDriverCaFile="tls-certs/ca.pem"
 )
 module(load="../plugins/imtcp/.libs/imtcp" StreamDriver.Name="gtls" StreamDriver.Mode="1" StreamDriver.AuthMode="anon")
-input(type="imtcp" port="13514")
+input(type="imtcp" port="'$TCPFLOOD_PORT'")
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 

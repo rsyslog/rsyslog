@@ -4,7 +4,7 @@
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="13514")
+input(type="imtcp" port="'$TCPFLOOD_PORT'")
 
 template(type="string" name="outfmt" string="%rawmsg-after-pri%\n")
 if $syslogfacility-text == "local0" then

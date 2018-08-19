@@ -10,7 +10,7 @@ $MaxMessageSize 10k
 
 $ModLoad ../plugins/imptcp/.libs/imptcp
 $MainMsgQueueTimeoutShutdown 10000
-$InputPTCPServerRun 13514
+$InputPTCPServerRun '$TCPFLOOD_PORT'
 
 $template outfmt,"%msg:F,58:2%,%msg:F,58:3%,%msg:F,58:4%\n"
 template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!

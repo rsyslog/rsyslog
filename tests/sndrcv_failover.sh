@@ -1,19 +1,18 @@
 #!/bin/bash
-# This tests failover capabilities. Data is sent to local port 13516, where
+# This tests failover capabilities. Data is sent to a local port, where
 # no process shall listen. Then it fails over to a second instance, then to
 # a file. The second instance is started. So all data should be received
 # there and none be logged to the file.
 # This builds on the basic sndrcv.sh test, but adds a first, failing,
 # location to the conf file.
 # added 2011-06-20 by Rgerhards
-# This file is part of the rsyslog project, released  under GPLv3
-echo ===============================================================================
-echo \[sndrcv_failover.sh\]: testing failover capabilities for tcp sending
+# This file is part of the rsyslog project, released under ASL 2.0
+. $srcdir/diag.sh init
 
 # uncomment for debugging support:
-. $srcdir/diag.sh init
 # start up the instances
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
+export DEAD_PORT="$(get_free_port)"
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
 export PORT_RCVR="$(get_free_port)"
@@ -37,7 +36,7 @@ $ModLoad ../plugins/imtcp/.libs/imtcp
 # this listener is for message generation by the test framework!
 $InputTCPServerRun '$TCPFLOOD_PORT'
 
-*.*	@@127.0.0.1:13516 # this must be DEAD
+*.*	@@127.0.0.1:'$DEAD_PORT' # this must be DEAD
 $ActionExecOnlyWhenPreviousIsSuspended on
 &	@@127.0.0.1:'$PORT_RCVR'
 &	./rsyslog.empty
@@ -70,7 +69,7 @@ if [[ -s rsyslog.empty ]] ; then
   echo "FAIL: rsyslog.empty has data. Failover handling failed. Data is written"
   echo "      even though the previous action (in a failover chain!) properly"
   echo "      worked."
-  exit 1
+  error_exit 1
 else
   echo "rsyslog.empty is empty - OK"
 fi ;

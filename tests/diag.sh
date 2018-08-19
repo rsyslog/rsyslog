@@ -76,7 +76,7 @@ function setvar_RS_HOSTNAME() {
 	printf "### Obtaining HOSTNAME (prequisite, not actual test) ###\n"
 	generate_conf
 	add_conf 'module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="13514")
+input(type="imtcp" port="'$TCPFLOOD_PORT'")
 
 $template hostname,"%hostname%"
 local0.* ./'${RSYSLOG_DYNNAME}'.HOSTNAME;hostname
@@ -95,14 +95,15 @@ local0.* ./'${RSYSLOG_DYNNAME}'.HOSTNAME;hostname
 # begin a new testconfig
 # $1 is the instance id, if given
 function generate_conf() {
+	export TCPFLOOD_PORT="$(get_free_port)"
 	new_port="$(get_free_port)"
 	if [ "$1" == "" ]; then
 		export IMDIAG_PORT=$new_port
-		export TESTCONF_NM="${new_port}_" # this basename is also used by instance 2!
-		export RSYSLOG_OUT_LOG="rsyslog_${new_port}.out.log"
-		export RSYSLOG2_OUT_LOG="rsyslog2_${new_port}.out.log"
-		export RSYSLOG_PIDBASE="rsyslog_$(basename $0)_${new_port}"
 		export RSYSLOG_DYNNAME="rsyslog_$(basename $0)_${new_port}"
+		export TESTCONF_NM="${RSYSLOG_DYNNAME}_" # this basename is also used by instance 2!
+		export RSYSLOG_OUT_LOG="${RSYSLOG_DYNNAME}.out.log"
+		export RSYSLOG2_OUT_LOG="${RSYSLOG_DYNNAME}_2.out.log"
+		export RSYSLOG_PIDBASE="${RSYSLOG_DYNNAME}_" # also used by instance 2!
 	else
 		export IMDIAG_PORT2=$new_port
 	fi
@@ -358,9 +359,10 @@ function error_exit() {
 # $4... are just to have the abilit to pass in more options...
 # add -v to chkseq if you need more verbose output
 function seq_check() {
+	echo RSYSLOG_OUT_LOG: $RSYSLOG_OUT_LOG
 	$RS_SORTCMD -g < ${RSYSLOG_OUT_LOG} | ./chkseq -s$1 -e$2 $3 $4 $5 $6 $7
 	if [ "$?" -ne "0" ]; then
-		echo "sequence error detected"
+		echo "sequence error detected in $RSYSLOG_OUT_LOG"
 		error_exit 1 
 	fi
 }
@@ -407,26 +409,27 @@ function tcpflood() {
 # detect any left-over hanging instance
 function exit_test() {
 	nhanging=0
-	for pid in $(ps -eo pid,args|grep '/tools/[r]syslogd ' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
-	do
-		echo "ERROR: left-over instance $pid, killing it"
-		ps -fp $pid
-		pwd
-		printf "we do NOT kill the instance as this does not work with multiple\n"
-		printf "builds per machine - this message is now informational to show prob exists!\n"
-		#kill -9 $pid
-		let "nhanging++"
-	done
+	#for pid in $(ps -eo pid,args|grep '/tools/[r]syslogd ' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
+	#do
+		#echo "ERROR: left-over instance $pid, killing it"
+	#	ps -fp $pid
+	#	pwd
+	#	printf "we do NOT kill the instance as this does not work with multiple\n"
+	#	printf "builds per machine - this message is now informational to show prob exists!\n"
+	#	#kill -9 $pid
+	#	let "nhanging++"
+	#done
 	if test $nhanging -ne 0
 	then
 	   echo "ABORT! hanging instances left at exit"
 	   #error_exit 1
-	   exit 77 # for now, just skip - TODO: reconsider when supporting -j
+	   #exit 77 # for now, just skip - TODO: reconsider when supporting -j
 	fi
 	# now real cleanup
 	rm -f work-*.conf diag-common.conf
 	rm -f diag-common2.conf rsyslog.action.*.include
-	rm -f work rsyslog.out.* ${RSYSLOG2_OUT_LOG} rsyslog*.pid.save xlate*.lkp_tbl
+	rm -f work rsyslog.out.* ${RSYSLOG2_OUT_LOG} xlate*.lkp_tbl
+	#rm -f work rsyslog.out.* ${RSYSLOG2_OUT_LOG} rsyslog*.pid.save xlate*.lkp_tbl
 	rm -rf test-spool test-logdir stat-file1
 	rm -f rsyslog.random.data rsyslog.pipe
 	rm -f -r rsyslog.input.*
@@ -485,13 +488,13 @@ case $1 in
 
 		# cleanup of hanging instances from previous runs
 		# practice has shown this is pretty useful!
-		for pid in $(ps -eo pid,args|grep '/tools/[r]syslogd ' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
-		do
-			echo "ERROR: left-over previous instance $pid, killing it"
-			ps -fp $pid
-			pwd
-			kill -9 $pid
-		done
+		#for pid in $(ps -eo pid,args|grep '/tools/[r]syslogd ' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
+		#do
+			#echo "ERROR: left-over previous instance $pid, killing it"
+			#ps -fp $pid
+			#pwd
+			#kill -9 $pid
+		#done
 		# cleanup hanging uxsockrcvr processes
 		for pid in $(ps -eo pid,args|grep 'uxsockrcvr' |grep -v grep |sed -e 's/\( *\)\([0-9]*\).*/\2/');
 		do
@@ -535,15 +538,16 @@ case $1 in
 		#cp -f $srcdir/testsuites/diag-common.conf diag-common.conf
 		#cp -f $srcdir/testsuites/diag-common2.conf diag-common2.conf
 		rm -f work-*.conf rsyslog.random.data
-		rm -f rsyslog*.pid.save xlate*.lkp_tbl
+		rm -f xlate*.lkp_tbl
+		#rm -f rsyslog*.pid.save xlate*.lkp_tbl
 		rm -f log log* # RSyslog debug output 
 		rm -f work 
-		rm -f rsyslog*.out.log # we need this while the sndrcv tests are not converted
+		#rm -f rsyslog*.out.log # we need this while the sndrcv tests are not converted
 		rm -rf test-spool test-logdir stat-file1
 		rm -f rsyslog.pipe rsyslog.input.*
 		rm -f rsyslog.input rsyslog.empty rsyslog.input.* imfile-state* omkafka-failed.data
 		rm -rf rsyslog.input-symlink.log rsyslog-link.*.log targets
-		rm -f HOSTNAME
+		#rm -f HOSTNAME
 		rm -f rsyslog.errorfile tmp.qi nocert
 		rm -f core.* vgcore.* core*
 		# Note: rsyslog.action.*.include must NOT be deleted, as it

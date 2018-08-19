@@ -10,7 +10,7 @@ template(name="outfmt" type="string" string="%$!cim!msgnum%\n")
 
 module(load="../plugins/mmjsonparse/.libs/mmjsonparse")
 module(load="../plugins/imptcp/.libs/imptcp")
-input(type="imptcp" port="13514")
+input(type="imptcp" port="'$TCPFLOOD_PORT'")
 
 action(type="mmjsonparse" cookie="@cim:" container="!cim")
 if $parsesuccess == "OK" then {

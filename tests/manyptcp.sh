@@ -8,7 +8,7 @@ add_conf '
 $ModLoad ../plugins/imptcp/.libs/imptcp
 $MainMsgQueueTimeoutShutdown 10000
 $MaxOpenFiles 2000
-$InputPTCPServerRun 13514
+$InputPTCPServerRun '$TCPFLOOD_PORT'
 
 $template outfmt,"%msg:F,58:2%\n"
 template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!

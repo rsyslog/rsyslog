@@ -8,7 +8,7 @@ template(name="outfmt" type="string" string="%$!mmdb_root%\n")
 module(load="../plugins/mmdblookup/.libs/mmdblookup" container="!mmdb_root")
 module(load="../plugins/mmnormalize/.libs/mmnormalize")
 module(load="../plugins/imptcp/.libs/imptcp")
-input(type="imptcp" port="13514" ruleset="testing")
+input(type="imptcp" port="'$TCPFLOOD_PORT'" ruleset="testing")
 
 ruleset(name="testing") {
 	action(type="mmnormalize" rulebase=`echo $srcdir/mmdb.rb`)

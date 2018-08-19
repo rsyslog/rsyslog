@@ -18,7 +18,7 @@ fi
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
-$InputTCPServerRun 13514
+$InputTCPServerRun '$TCPFLOOD_PORT'
 
 # set spool locations and switch queue to disk-only mode
 $WorkDirectory test-spool

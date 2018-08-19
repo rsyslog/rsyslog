@@ -17,7 +17,7 @@ generate_conf
 add_conf '
 $ModLoad ../plugins/omruleset/.libs/omruleset
 $ModLoad ../plugins/imtcp/.libs/imtcp
-$InputTCPServerRun 13514
+$InputTCPServerRun '$TCPFLOOD_PORT'
 
 $ruleset rsinclude
 $template outfmt,"%msg:F,58:2%\n"

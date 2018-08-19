@@ -24,7 +24,7 @@ $MaxMessageSize 10k
 
 $ModLoad ../plugins/imtcp/.libs/imtcp
 $MainMsgQueueTimeoutShutdown 10000
-$InputTCPServerRun 13514
+$InputTCPServerRun '$TCPFLOOD_PORT'
 
 $template outfmt,"%msg:F,58:3%,%msg:F,58:4%,%msg:F,58:5%\n"
 $template dynfile,"rsyslog.out.%msg:F,58:2%.log" # use multiple dynafiles

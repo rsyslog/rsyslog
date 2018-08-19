@@ -5,7 +5,7 @@
 generate_conf
 add_conf '
 module(load="../plugins/imptcp/.libs/imptcp")
-input(type="imptcp" port="13514")
+input(type="imptcp" port="'$TCPFLOOD_PORT'")
 
 template(name="outfmt" type="string" string="%rawmsg%\n")
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"

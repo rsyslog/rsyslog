@@ -5,7 +5,7 @@ generate_conf
 add_conf '
 $EscapeControlCharactersOnReceive off
 module(load="../plugins/imptcp/.libs/imptcp")
-input(type="imptcp" port="13514" ruleset="remote"
+input(type="imptcp" port="'$TCPFLOOD_PORT'" ruleset="remote"
 	framing.delimiter.regex="^<[0-9]{2}>(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)")
 
 template(name="outfmt" type="string" string="NEWMSG: %rawmsg%\n")

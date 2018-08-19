@@ -13,7 +13,7 @@ template(name="outfmt" type="string" string="%$!iplocation%\n")
 module(load="../plugins/mmdblookup/.libs/mmdblookup")
 module(load="../plugins/mmnormalize/.libs/mmnormalize")
 module(load="../plugins/imptcp/.libs/imptcp")
-input(type="imptcp" port="13514" ruleset="testing")
+input(type="imptcp" port="'$TCPFLOOD_PORT'" ruleset="testing")
 
 ruleset(name="testing") {
 	action(type="mmnormalize" rulebase=`echo $srcdir/mmdb.rb`)

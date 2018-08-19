@@ -19,14 +19,14 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 
 if $msg contains "msgnum:" then
 	action(type="omfwd" template="outfmt"
-	       target="127.0.0.1" port="13514" protocol="tcp" networknamespace="rsyslog_test_ns")
+	       target="127.0.0.1" port="'$TCPFLOOD_PORT'" protocol="tcp" networknamespace="rsyslog_test_ns")
 '
 # create network namespace and bring it up
 ip netns add rsyslog_test_ns
 ip netns exec rsyslog_test_ns ip link set dev lo up
 
 # run server in namespace
-ip netns exec rsyslog_test_ns ./minitcpsrv -t127.0.0.1 -p13514 -f $RSYSLOG_OUT_LOG &
+ip netns exec rsyslog_test_ns ./minitcpsrv -t127.0.0.1 -p'$TCPFLOOD_PORT' -f $RSYSLOG_OUT_LOG &
 BGPROCESS=$!
 echo background minitcpsrvr process id is $BGPROCESS
 

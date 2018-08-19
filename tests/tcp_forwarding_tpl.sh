@@ -1,9 +1,7 @@
 #!/bin/bash
 # This test tests tcp forwarding with assigned template. To do so, a simple
 # tcp listener service is started.
-# added 2012-10-30 by Rgerhards. Released under GNU GPLv3+
-echo ===============================================================================
-echo \[tcp_forwarding_tpl.sh\]: test for tcp forwarding with assigned template
+# added 2012-10-30 by Rgerhards. Released under ASL 2.0
 
 # create the pipe and start a background process that copies data from 
 # it to the "regular" work file
@@ -15,9 +13,9 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 
 if $msg contains "msgnum:" then
 	action(type="omfwd" template="outfmt"
-	       target="127.0.0.1" port="13514" protocol="tcp")
+	       target="127.0.0.1" port="'$TCPFLOOD_PORT'" protocol="tcp")
 '
-./minitcpsrv -t127.0.0.1 -p13514 -f $RSYSLOG_OUT_LOG &
+./minitcpsrv -t127.0.0.1 -p$TCPFLOOD_PORT -f $RSYSLOG_OUT_LOG &
 BGPROCESS=$!
 echo background minitcpsrvr process id is $BGPROCESS
 

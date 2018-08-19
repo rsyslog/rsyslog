@@ -5,7 +5,7 @@ generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/mmexternal/.libs/mmexternal")
-input(type="imtcp" port="13514")
+input(type="imtcp" port="'$TCPFLOOD_PORT'")
 set $!x = "a";
 
 template(name="outfmt" type="string" string="%msg%\n")

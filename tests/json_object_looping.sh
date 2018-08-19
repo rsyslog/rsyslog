@@ -14,7 +14,7 @@ template(name="modified" type="string" string="new: %$!foo!str4% deleted: %$!foo
 
 module(load="../plugins/mmjsonparse/.libs/mmjsonparse")
 module(load="../plugins/imptcp/.libs/imptcp")
-input(type="imptcp" port="13514")
+input(type="imptcp" port="'$TCPFLOOD_PORT'")
 
 action(type="mmjsonparse")
 set $.garply = "";

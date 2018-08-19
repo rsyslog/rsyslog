@@ -18,7 +18,7 @@ module(	load="../plugins/imtcp/.libs/imtcp"
 	PermittedPeer=["/CN=rsyslog-client/OU=Adiscon GmbH/O=Adiscon GmbH/L=Grossrinderfeld/ST=BW/C=DE/DC=rsyslog.com","rsyslog.com"]
 	)
 input(	type="imtcp"
-	port="13514" )
+	port="'$TCPFLOOD_PORT'" )
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 :msg, contains, "msgnum:" action(	type="omfile" 
@@ -27,7 +27,7 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 '
 # Begin actuall testcase
 startup
-tcpflood -p13514 -m10000 -Ttls -x$srcdir/tls-certs/ca.pem -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem
+tcpflood -p'$TCPFLOOD_PORT' -m10000 -Ttls -x$srcdir/tls-certs/ca.pem -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
 seq_check 0 9999

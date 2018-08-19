@@ -7,7 +7,7 @@ echo \[now_family_utc\]: test \$NOW family of system properties
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
-$InputTCPServerRun 13514
+$InputTCPServerRun '$TCPFLOOD_PORT'
 
 template(name="outfmt" type="string"
 	 string="%$hour%:%$minute%,%$hour-utc%:%$minute-utc%\n")

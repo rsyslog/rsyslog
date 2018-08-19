@@ -15,7 +15,7 @@ echo \[udp-msgreduc-orgmsg-vg.sh\]: testing msg reduction via udp, with org mess
 generate_conf
 add_conf '
 $ModLoad ../plugins/imudp/.libs/imudp
-$UDPServerRun 13514
+$UDPServerRun '$TCPFLOOD_PORT'
 $RepeatedMsgReduction on
 $RepeatedMsgContainsOriginalMsg on
 

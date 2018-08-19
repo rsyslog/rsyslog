@@ -8,7 +8,7 @@ template(name="outfmt" type="string" string="%msg%\n")
 
 module(load="../plugins/mmanon/.libs/mmanon")
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="13514" ruleset="testing")
+input(type="imtcp" port="'$TCPFLOOD_PORT'" ruleset="testing")
 
 ruleset(name="testing") {
 	action(type="mmanon" ipv4.enable="off" ipv6.enable="on" ipv6.bits="128" ipv6.anonmode="zero")
