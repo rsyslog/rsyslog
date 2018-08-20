@@ -14,7 +14,7 @@ echo \[dynstats_overflow-vg.sh\]: test for gathering stats when metrics exceed p
 generate_conf
 add_conf '
 ruleset(name="stats") {
-  action(type="omfile" file="./rsyslog.out.stats.log")
+  action(type="omfile" file="'${RSYSLOG_DYNNAME}'.out.stats.log")
 }
 
 module(load="../plugins/impstats/.libs/impstats" interval="2" severity="7" resetCounters="on" Ruleset="stats" bracketing="on")
@@ -34,36 +34,36 @@ if (re_match($.msg_prefix, "foo|bar|baz|quux|corge|grault")) then {
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup_vg
-. $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
+. $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
 . $srcdir/diag.sh block-stats-flush
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_more_0
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_more_1
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh allow-single-stats-flush-after-block-and-wait-for-it
 
-. $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'foo=' 'rsyslog.out.stats.log' 5
-. $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'bar=' 'rsyslog.out.stats.log' 1
-. $srcdir/diag.sh first-column-sum-check 's/.*baz=\([0-9]\+\)/\1/g' 'baz=' 'rsyslog.out.stats.log' 2
+. $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'foo=' "${RSYSLOG_DYNNAME}.out.stats.log" 5
+. $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'bar=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
+. $srcdir/diag.sh first-column-sum-check 's/.*baz=\([0-9]\+\)/\1/g' 'baz=' "${RSYSLOG_DYNNAME}.out.stats.log" 2
 
-. $srcdir/diag.sh custom-assert-content-missing 'quux' 'rsyslog.out.stats.log'
-. $srcdir/diag.sh custom-assert-content-missing 'corge' 'rsyslog.out.stats.log'
-. $srcdir/diag.sh custom-assert-content-missing 'grault' 'rsyslog.out.stats.log'
+. $srcdir/diag.sh custom-assert-content-missing 'quux' "${RSYSLOG_DYNNAME}.out.stats.log"
+. $srcdir/diag.sh custom-assert-content-missing 'corge' "${RSYSLOG_DYNNAME}.out.stats.log"
+. $srcdir/diag.sh custom-assert-content-missing 'grault' "${RSYSLOG_DYNNAME}.out.stats.log"
 
-. $srcdir/diag.sh first-column-sum-check 's/.*new_metric_add=\([0-9]\+\)/\1/g' 'new_metric_add=' 'rsyslog.out.stats.log' 3
-. $srcdir/diag.sh first-column-sum-check 's/.*ops_overflow=\([0-9]\+\)/\1/g' 'ops_overflow=' 'rsyslog.out.stats.log' 5
-. $srcdir/diag.sh first-column-sum-check 's/.*no_metric=\([0-9]\+\)/\1/g' 'no_metric=' 'rsyslog.out.stats.log' 0
+. $srcdir/diag.sh first-column-sum-check 's/.*new_metric_add=\([0-9]\+\)/\1/g' 'new_metric_add=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
+. $srcdir/diag.sh first-column-sum-check 's/.*ops_overflow=\([0-9]\+\)/\1/g' 'ops_overflow=' "${RSYSLOG_DYNNAME}.out.stats.log" 5
+. $srcdir/diag.sh first-column-sum-check 's/.*no_metric=\([0-9]\+\)/\1/g' 'no_metric=' "${RSYSLOG_DYNNAME}.out.stats.log" 0
 
 #ttl-expiry(2*ttl in worst case, ttl + delta in best) so metric-names reset should have happened
 . $srcdir/diag.sh allow-single-stats-flush-after-block-and-wait-for-it
 . $srcdir/diag.sh await-stats-flush-after-block
 
-. $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
+. $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
 
-. $srcdir/diag.sh first-column-sum-check 's/.*metrics_purged=\([0-9]\+\)/\1/g' 'metrics_purged=' 'rsyslog.out.stats.log' 3
+. $srcdir/diag.sh first-column-sum-check 's/.*metrics_purged=\([0-9]\+\)/\1/g' 'metrics_purged=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
 
-rm rsyslog.out.stats.log
+rm ${RSYSLOG_DYNNAME}.out.stats.log
 . $srcdir/diag.sh issue-HUP #reopen stats file
-. $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
+. $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
 . $srcdir/diag.sh block-stats-flush
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_more_2
 . $srcdir/diag.sh wait-queueempty
@@ -88,13 +88,13 @@ rm rsyslog.out.stats.log
 . $srcdir/diag.sh content-check "foo 017 -6"
 . $srcdir/diag.sh content-check "corge 018 0"
 
-. $srcdir/diag.sh first-column-sum-check 's/.*corge=\([0-9]\+\)/\1/g' 'corge=' 'rsyslog.out.stats.log' 2
-. $srcdir/diag.sh first-column-sum-check 's/.*grault=\([0-9]\+\)/\1/g' 'grault=' 'rsyslog.out.stats.log' 1
-. $srcdir/diag.sh first-column-sum-check 's/.*quux=\([0-9]\+\)/\1/g' 'quux=' 'rsyslog.out.stats.log' 1
+. $srcdir/diag.sh first-column-sum-check 's/.*corge=\([0-9]\+\)/\1/g' 'corge=' "${RSYSLOG_DYNNAME}.out.stats.log" 2
+. $srcdir/diag.sh first-column-sum-check 's/.*grault=\([0-9]\+\)/\1/g' 'grault=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
+. $srcdir/diag.sh first-column-sum-check 's/.*quux=\([0-9]\+\)/\1/g' 'quux=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
 
-. $srcdir/diag.sh first-column-sum-check 's/.*new_metric_add=\([0-9]\+\)/\1/g' 'new_metric_add=' 'rsyslog.out.stats.log' 3
-. $srcdir/diag.sh first-column-sum-check 's/.*ops_overflow=\([0-9]\+\)/\1/g' 'ops_overflow=' 'rsyslog.out.stats.log' 1
-. $srcdir/diag.sh first-column-sum-check 's/.*no_metric=\([0-9]\+\)/\1/g' 'no_metric=' 'rsyslog.out.stats.log' 0
+. $srcdir/diag.sh first-column-sum-check 's/.*new_metric_add=\([0-9]\+\)/\1/g' 'new_metric_add=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
+. $srcdir/diag.sh first-column-sum-check 's/.*ops_overflow=\([0-9]\+\)/\1/g' 'ops_overflow=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
+. $srcdir/diag.sh first-column-sum-check 's/.*no_metric=\([0-9]\+\)/\1/g' 'no_metric=' "${RSYSLOG_DYNNAME}.out.stats.log" 0
 
 . $srcdir/diag.sh allow-single-stats-flush-after-block-and-wait-for-it
 . $srcdir/diag.sh await-stats-flush-after-block
@@ -105,7 +105,7 @@ echo wait on shutdown
 wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
 
-. $srcdir/diag.sh first-column-sum-check 's/.*metrics_purged=\([0-9]\+\)/\1/g' 'metrics_purged=' 'rsyslog.out.stats.log' 3
+. $srcdir/diag.sh first-column-sum-check 's/.*metrics_purged=\([0-9]\+\)/\1/g' 'metrics_purged=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
 
-. $srcdir/diag.sh custom-assert-content-missing 'foo' 'rsyslog.out.stats.log'
+. $srcdir/diag.sh custom-assert-content-missing 'foo' "${RSYSLOG_DYNNAME}.out.stats.log"
 exit_test

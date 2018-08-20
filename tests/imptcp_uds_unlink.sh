@@ -1,12 +1,9 @@
 #!/bin/bash
-echo ======================================================================
-echo \[imptcp_uds.sh\]: test imptcp unix domain socket already exists
-
+. $srcdir/diag.sh init
 # First make sure we don't unlink if not asked to
 rm -f "$srcdir/testbench_socket"
 echo "nope" > "$srcdir/testbench_socket"
 
-. $srcdir/diag.sh init
 generate_conf
 add_conf '
 global(MaxMessageSize="124k")
@@ -31,8 +28,6 @@ echo "ok" > "$srcdir/testbench_socket"
 generate_conf
 add_conf '
 global(MaxMessageSize="124k")
-
-$IncludeConfig diag-common.conf
 
 module(load="../plugins/imptcp/.libs/imptcp")
 input(type="imptcp" path="testbench_socket" unlink="on")

@@ -13,18 +13,18 @@ template(name="outfmt" type="string" string="-%msg%-\n")
 :msg, contains, "msgnum:" {
 	action(type="omfile" template="outfmt" file=`echo $RSYSLOG2_OUT_LOG` dynafile="dynafile")
 }
-action(type="omfile" file="rsyslog.errorfile") 
+action(type="omfile" file="'${RSYSLOG_DYNNAME}'.errorfile") 
 '
 startup
 tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag: msgnum:1\""
 shutdown_when_empty
 wait_shutdown
 
-grep "will use dynafile" rsyslog.errorfile > /dev/null
+grep "will use dynafile" ${RSYSLOG_DYNNAME}.errorfile > /dev/null
 if [ $? -ne 0 ]; then
 	echo
-	echo "FAIL: expected error message not found. rsyslog.errorfile is:"
-	cat rsyslog.errorfile
+	echo "FAIL: expected error message not found. ${RSYSLOG_DYNNAME}.errorfile is:"
+	cat ${RSYSLOG_DYNNAME}.errorfile
 	error_exit 1
 fi
 

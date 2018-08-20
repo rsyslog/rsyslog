@@ -39,7 +39,7 @@ $InputTCPServerRun '$TCPFLOOD_PORT'
 *.*	@@127.0.0.1:'$DEAD_PORT' # this must be DEAD
 $ActionExecOnlyWhenPreviousIsSuspended on
 &	@@127.0.0.1:'$PORT_RCVR'
-&	./rsyslog.empty
+&	./'${RSYSLOG_DYNNAME}'.empty
 $ActionExecOnlyWhenPreviousIsSuspended off
 ' 2
 startup 2
@@ -64,13 +64,13 @@ seq_check 1 50000
 
 unset PORT_RCVR # TODO: move to exit_test()?
 
-ls -l rsyslog.empty
-if [[ -s rsyslog.empty ]] ; then
-  echo "FAIL: rsyslog.empty has data. Failover handling failed. Data is written"
+ls -l ${RSYSLOG_DYNNAME}.empty
+if [[ -s ${RSYSLOG_DYNNAME}.empty ]] ; then
+  echo "FAIL: ${RSYSLOG_DYNNAME}.empty has data. Failover handling failed. Data is written"
   echo "      even though the previous action (in a failover chain!) properly"
   echo "      worked."
   error_exit 1
 else
-  echo "rsyslog.empty is empty - OK"
+  echo "${RSYSLOG_DYNNAME}.empty is empty - OK"
 fi ;
 exit_test

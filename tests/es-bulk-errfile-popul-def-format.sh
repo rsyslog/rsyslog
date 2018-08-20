@@ -34,7 +34,7 @@ ruleset(name="foo") {
 	 serverport="19200"
 	 searchType="test-type"
 	 bulkmode="on"
-	 errorFile="./rsyslog.errorfile")
+	 errorFile="./'${RSYSLOG_DYNNAME}'.errorfile")
 }
 
 input(type="imfile" File="./inESData.inputfile"

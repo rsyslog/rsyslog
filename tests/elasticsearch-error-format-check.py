@@ -1,7 +1,8 @@
 import json
 import sys
+import os
 def checkDefaultErrorFile():
-    with open("rsyslog.errorfile") as json_file:
+    with open(os.environ['RSYSLOG_DYNNAME'] + ".errorfile") as json_file:
         json_data = json.load(json_file)
         indexCount =0
         replyCount=0
@@ -47,7 +48,7 @@ def checkDefaultErrorFile():
 
 
 def checkErrorOnlyFile():
-    with open("rsyslog.errorfile") as json_file:
+    with open(os.environ['RSYSLOG_DYNNAME'] + ".errorfile") as json_file:
         json_data = json.load(json_file)
         indexCount =0
         replyCount=0
@@ -77,7 +78,7 @@ def checkErrorOnlyFile():
     return 0
 
 def checkErrorInterleaved():
-    with open("rsyslog.errorfile") as json_file:
+    with open(os.environ['RSYSLOG_DYNNAME'] + ".errorfile") as json_file:
         json_data = json.load(json_file)
         indexCount =0
         replyCount=0

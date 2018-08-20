@@ -34,7 +34,7 @@ ruleset(name="foo") {
 	 searchType="test-type"
 	 bulkmode="on"
 	 serverport="19200"
-	 errorFile="./rsyslog.errorfile"
+	 errorFile="./'${RSYSLOG_DYNNAME}'.errorfile"
 	erroronly="on"		 
 	interleaved="on")
 }
