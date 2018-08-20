@@ -310,6 +310,21 @@ information about priority Strings
 `here <https://gnutls.org/manual/html_node/Priority-Strings.html>`_.
 
 
+PreserveCase
+^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "boolean", "on", "no", "none"
+
+.. versionadded:: 8.37.0
+
+This parameter is for controlling the case in fromhost.  If preservecase is set to "off", the case in fromhost is not preserved.  E.g., 'host1.example.org' the message was received from 'Host1.Example.Org'.  Default to "on" for the backword compatibility.
+
+
 Input Parameters
 ----------------
 
