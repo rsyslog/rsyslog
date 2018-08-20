@@ -480,19 +480,18 @@ terminateChild(wrkrInstanceData_t *pWrkrData)
 static rsRetVal
 writePipe(wrkrInstanceData_t *pWrkrData, uchar *szMsg)
 {
-	int lenWritten;
-	int lenWrite;
-	int writeOffset;
+	ssize_t len;
+	ssize_t written;
+	ssize_t offset = 0;
 	char errStr[1024];
 	DEFiRet;
 
-	lenWrite = strlen((char*)szMsg);
-	writeOffset = 0;
+	len = strlen((char*)szMsg);
 
 	do {
 		checkProgramOutput(pWrkrData);
-		lenWritten = write(pWrkrData->fdPipeOut, ((char*)szMsg)+writeOffset, lenWrite);
-		if(lenWritten == -1) {
+		written = write(pWrkrData->fdPipeOut, ((char*)szMsg) + offset, len - offset);
+		if(written == -1) {
 			if(errno == EPIPE) {
 				DBGPRINTF("omprog: program '%s' terminated, will be restarted\n",
 					  pWrkrData->pData->szBinary);
@@ -504,8 +503,8 @@ writePipe(wrkrInstanceData_t *pWrkrData, uchar *szMsg)
 			}
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
-		writeOffset += lenWritten;
-	} while(lenWritten != lenWrite);
+		offset += written;
+	} while(offset < len);
 
 	checkProgramOutput(pWrkrData);
 
