@@ -9,6 +9,15 @@ Version 8.38.0 [v8-stable] 2018-09-18
   field from the request will be used, in order to facilitate
   retrying the exact same request.
   Thanks to Richard Megginson for the patch.
+- imtcp/imudp: new option preservecase for managing the case of FROMHOST value
+  default is left at current behavior
+  see also https://github.com/rsyslog/rsyslog/pull/2774
+  see also https://bugzilla.redhat.com/show_bug.cgi?id=1309698
+- bugfix omprog: invalid memory access on partial writes to pipe
+  When sending logs to the program, in case of a partial write to the pipe,
+  invalid data was sent, or an invalid memory access could occur. (A
+  partial write can occur if the syscall is interrupted or the pipe is full.)
+  Thanks to Joan Sala for contributing this.
 - bugfix omprog: rsyslog's environment was not passed to script
   closes https://github.com/rsyslog/rsyslog/issues/2921
 - bugfix omprog: severity of some log messages in waitForChild corrected

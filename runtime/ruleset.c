@@ -665,6 +665,8 @@ processBatch(batch_t *pBatch, wti_t *pWti)
 		 */
 		if(localRet == RS_RET_OK)
 			batchSetElemState(pBatch, i, BATCH_STATE_COMM);
+		else if(localRet == RS_RET_SUSPENDED)
+			--i;
 	}
 
 	/* commit phase */
