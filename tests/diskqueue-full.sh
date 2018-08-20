@@ -14,9 +14,6 @@ main_queue(queue.filename="mainq" queue.maxDiskSpace="4m"
 	queue.lowwatermark="5000"
 )
 
-module(load="../plugins/imtcp/.libs/imtcp")
-$InputTCPServerRun '$TCPFLOOD_PORT'
-
 template(name="outfmt" type="string"
 	 string="%msg:F,58:2%,%msg:F,58:3%,%msg:F,58:4%\n")
 

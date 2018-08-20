@@ -436,7 +436,6 @@ function exit_test() {
 	rm -f work-*.conf diag-common.conf
 	rm -f diag-common2.conf rsyslog.action.*.include
 	rm -f work rsyslog.out.* ${RSYSLOG2_OUT_LOG} xlate*.lkp_tbl
-	#rm -f work rsyslog.out.* ${RSYSLOG2_OUT_LOG} rsyslog*.pid.save xlate*.lkp_tbl
 	rm -rf test-spool test-logdir stat-file1
 	rm -f rsyslog.random.data rsyslog.pipe
 	rm -f -r rsyslog.input.*
@@ -445,6 +444,7 @@ function exit_test() {
 	rm -f ${TESTCONF_NM}.conf
 	rm -f rsyslog.errorfile tmp.qi nocert
 	rm -f HOSTNAME imfile-state:.-rsyslog.input
+	rm -f $RSYSLOG_DYNNAME*  # delete all of our dynamic files
 	unset TCPFLOOD_EXTRA_OPTS
 	echo  -------------------------------------------------------------------------------
 }

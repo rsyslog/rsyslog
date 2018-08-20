@@ -54,4 +54,5 @@ if [ $? -ne 0 ]; then
   echo "$TESTMSG"
   error_exit 1
 fi;
+exit 77 # TODO: remove - we just want to see the log file in test-suite.log!
 exit_test
