@@ -1152,7 +1152,7 @@ cvthname(struct sockaddr_storage *f, prop_t **localName, prop_t **fqdn, prop_t *
 {
 	DEFiRet;
 	assert(f != NULL);
-	iRet = dnscacheLookup(f, NULL, fqdn, localName, ip);
+	iRet = dnscacheLookup(f, fqdn, NULL, localName, ip);
 	RETiRet;
 }
 
