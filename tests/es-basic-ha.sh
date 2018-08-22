@@ -8,8 +8,8 @@ export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
 
 . $srcdir/diag.sh init
 . $srcdir/diag.sh es-init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 template(name="tpl" type="string"
 	 string="{\"msgnum\":\"%msg:F,58:2%\"}")
 
@@ -26,15 +26,15 @@ module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 				 template="tpl"
 				 searchIndex="rsyslog_testbench")
 '
-. $srcdir/diag.sh startup
-. $srcdir/diag.sh injectmsg  0 100
+startup
+injectmsg  0 100
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown 
+shutdown_when_empty
+wait_shutdown 
 . $srcdir/diag.sh es-getdata 100 19200
-. $srcdir/diag.sh seq-check  0 99
+seq_check  0 99
 # The configuration makes every other request from message #3 fail checkConn (N/2-1)
 . $srcdir/diag.sh custom-content-check '"failed.checkConn": 49' 'rsyslog.out.stats.log'
 . $srcdir/diag.sh cleanup-elasticsearch
-. $srcdir/diag.sh exit
+exit_test

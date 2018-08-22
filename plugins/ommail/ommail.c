@@ -3,7 +3,7 @@
  * This is an implementation of a mail sending output module. So far, we
  * only support direct SMTP, that is talking to a SMTP server. In the long
  * term, support for using sendmail should also be implemented. Please note
- * that the SMTP protocol implementation is a very bare one. We support 
+ * that the SMTP protocol implementation is a very bare one. We support
  * RFC821/822 messages, without any authentication and any other nice
  * features (no MIME, no nothing). It is assumed that proper firewalling
  * and/or STMP server configuration is used together with this module.
@@ -20,11 +20,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -60,7 +60,6 @@ MODULE_CNFNAME("ommail")
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(datetime)
 
@@ -132,7 +131,7 @@ static struct cnfparamblk actpblk =
 
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
+CODESTARTinitConfVars
 	cs.lstRcpt = NULL;
 	cs.pszSrv = NULL;
 	cs.pszSrvPort = NULL;
@@ -212,7 +211,7 @@ WriteRcpts(wrkrInstanceData_t *pWrkrData, uchar *pszOp, size_t lenOp, int iStatu
 	assert(lenOp != 0);
 
 	for(pRcpt = pWrkrData->pData->md.smtp.lstRcpt ; pRcpt != NULL ; pRcpt = pRcpt->pNext) {
-		DBGPRINTF("Sending '%s: <%s>'\n", pszOp, pRcpt->pszTo); 
+		DBGPRINTF("Sending '%s: <%s>'\n", pszOp, pRcpt->pszTo);
 		CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)pszOp, lenOp));
 		CHKiRet(Send(pWrkrData->md.smtp.sock, ":<", sizeof(":<") - 1));
 		CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)pRcpt->pszTo, strlen((char*)pRcpt->pszTo)));
@@ -328,7 +327,7 @@ getRcvChar(wrkrInstanceData_t *pWrkrData, char *pC)
 				pWrkrData->md.smtp.iRcvBuf = 0;
 				pWrkrData->md.smtp.lenRcvBuf = lenBuf;
 			}
-				
+
 		} while(lenBuf < 1);
 	}
 
@@ -404,8 +403,8 @@ serverConnect(wrkrInstanceData_t *pWrkrData)
 
 finalize_it:
 	if(res != NULL)
-               freeaddrinfo(res);
-		
+		freeaddrinfo(res);
+
 	if(iRet != RS_RET_OK) {
 		if(pWrkrData->md.smtp.sock != -1) {
 			close(pWrkrData->md.smtp.sock);
@@ -794,11 +793,11 @@ CODESTARTparseSelectorAct
 	/* TODO: check strdup() result */
 
 	if(cs.pszFrom == NULL) {
-		errmsg.LogError(0, RS_RET_MAIL_NO_FROM, "no sender address given - specify $ActionMailFrom");
+		LogError(0, RS_RET_MAIL_NO_FROM, "no sender address given - specify $ActionMailFrom");
 		ABORT_FINALIZE(RS_RET_MAIL_NO_FROM);
 	}
 	if(cs.lstRcpt == NULL) {
-		errmsg.LogError(0, RS_RET_MAIL_NO_TO, "no recipient address given - specify $ActionMailTo");
+		LogError(0, RS_RET_MAIL_NO_TO, "no recipient address given - specify $ActionMailTo");
 		ABORT_FINALIZE(RS_RET_MAIL_NO_TO);
 	}
 
@@ -852,7 +851,6 @@ CODESTARTmodExit
 	/* release what we no longer need */
 	objRelease(datetime, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
-	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -861,7 +859,7 @@ CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 ENDqueryEtryPt
 
 
@@ -882,7 +880,6 @@ INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	/* tell which objects we need */
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 

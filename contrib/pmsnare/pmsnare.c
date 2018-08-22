@@ -22,8 +22,8 @@
  *   the system hostname is field 12
  *   the severity is field 3 (criticality ranging form 0 to 4)
  *   the source of the log is field 4 and may be able to be mapped to facility
- * 
- * 
+ *
+ *
  * created 2010-12-13 by David Lang based on pmlastmsg
  * Modified 2017-05-29 by Shane Lawrence.
  *
@@ -32,11 +32,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -68,7 +68,6 @@ MODULE_CNFNAME("pmsnare")
 /* internal structures
  */
 DEF_PMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(parser)
 DEFobjCurrIf(datetime)
@@ -80,7 +79,7 @@ static int bParseHOSTNAMEandTAG;	/* cache for the equally-named global param - p
 /* Keep a list of parser instances so we can apply global settings after config is loaded. */
 typedef struct modInstances_s {
 	instanceConf_t *root;
-	instanceConf_t *tail;	
+	instanceConf_t *tail;
 } modInstances_t;
 static modInstances_t *modInstances = NULL;
 
@@ -255,14 +254,14 @@ ENDendCnfLoad
 
 BEGINcheckCnf
 CODESTARTcheckCnf
-ENDcheckCnf 
+ENDcheckCnf
 
 BEGINactivateCnf
 CODESTARTactivateCnf
 ENDactivateCnf
 
 BEGINfreeCnf
-	instanceConf_t *inst, *del;	
+	instanceConf_t *inst, *del;
 CODESTARTfreeCnf
 	for(inst = modInstances->root ; inst != NULL ; ) {
 		del = inst;
@@ -295,7 +294,7 @@ CODESTARTparse2
 	 * - See if either type flagged as Snare.
 	 *   - If so, replace the tab with a space so that it will be parsed properly.
 	 */
-	 
+
 	snaremessage=0;
 	/* note: offAfterPRI is already the number of PRI chars (do not add one!) */
 	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI;
@@ -313,7 +312,7 @@ CODESTARTparse2
 		--lenMsg;
 		++p2parse;
 	}
-	if ((lenMsg > pInst->tabLength) && (strncasecmp((char *)p2parse, pInst->tabRepresentation, 
+	if ((lenMsg > pInst->tabLength) && (strncasecmp((char *)p2parse, pInst->tabRepresentation,
 			pInst->tabLength) == 0)) {
 		dbgprintf("pmsnare: tab separated message\n");
 		dbgprintf("pmsnare: tab [%d]'%s'	msg at the first separator: [%d]'%s'\n",
@@ -331,11 +330,11 @@ CODESTARTparse2
 			/* Tab-separated but no Snare tag-> can't be Snare! */
 			ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 		}
-		
+
 		/* This is a non-syslog Snare message. Example:
 		 * other.lab.home	MSWinEventLog	1	Security	606129	Wed May 17 02:25:10 2017
 		 */
-		 
+
 		/* Remove the tab between the hostname and Snare tag. */
 		*p2parse = ' ';
 		p2parse++;
@@ -343,7 +342,7 @@ CODESTARTparse2
 		lenMsg -= (pInst->tabLength-1); /* size of tab goes from tabLength to 1, so shorten
 						the message by the difference */
 		memmove(p2parse, p2parse+(pInst->tabLength-1), lenMsg);
-		/* move the message portion up to overwrite the tab */ 
+		/* move the message portion up to overwrite the tab */
 		*(p2parse + lenMsg)	= '\0';
 		pMsg->iLenRawMsg -= (pInst->tabLength-1);
 		pMsg->iLenMSG -= (pInst->tabLength-1);
@@ -397,7 +396,7 @@ CODESTARTparse2
 		lenMsg -= (pInst->tabLength-1); /* size of tab goes from tabLength to 1, so shorten
 						the message by the difference */
 		memmove(p2parse, p2parse+(pInst->tabLength-1), lenMsg);
-		/* move the message portion up to overwrite the tab */ 
+		/* move the message portion up to overwrite the tab */
 		*(p2parse + lenMsg) = '\0';
 		pMsg->iLenRawMsg -= (pInst->tabLength-1);
 		pMsg->iLenMSG -= (pInst->tabLength-1);
@@ -413,7 +412,6 @@ ENDparse2
 BEGINmodExit
 CODESTARTmodExit
 	/* release what we no longer need */
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(parser, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
@@ -433,7 +431,6 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(parser, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 

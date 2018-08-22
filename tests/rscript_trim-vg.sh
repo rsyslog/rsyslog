@@ -1,10 +1,10 @@
 #!/bin/bash
 # add 2017-08-14 by Jan Gerhards, released under ASL 2.0
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="13514")
+input(type="imtcp" port="'$TCPFLOOD_PORT'")
 
 set $!str!l1 = ltrim("");
 set $!str!l2 = ltrim("test");
@@ -72,18 +72,18 @@ set $!str!b19 = ltrim(rtrim(" test "));
 set $!str!b20 = ltrim(rtrim(" te st "));
 
 template(name="outfmt" type="string" string="%!str%\n")
-local4.* action(type="omfile" file="rsyslog.out.log" template="outfmt")
+local4.* action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
-. $srcdir/diag.sh startup-vg
-. $srcdir/diag.sh tcpflood -m1 -y
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown-vg
+startup_vg
+tcpflood -m1 -y
+shutdown_when_empty
+wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
-echo '{ "l1": "", "l2": "test", "l3": "test", "l4": "test   ", "l5": "test   ", "l6": "test", "l7": "test ", "l8": "", "l9": "te st", "l10": "te st", "l11": "a", "l12": "a ", "r1": "", "r2": "test", "r3": "   test", "r4": "test", "r5": "   test", "r6": " test", "r7": "test", "r8": "", "r9": "te st", "r10": "te st", "r11": " a", "r12": "a", "b1": "", "b2": "test", "b3": "test", "b4": "te st", "b5": "", "b6": "test", "b7": "test", "b8": "te st", "b9": "test", "b10": "te st", "b11": "test", "b12": "test", "b13": "test", "b14": "te st", "b15": "test", "b16": "te st", "b17": "test", "b18": "test", "b19": "test", "b20": "te st" }' | cmp - rsyslog.out.log
+echo '{ "l1": "", "l2": "test", "l3": "test", "l4": "test   ", "l5": "test   ", "l6": "test", "l7": "test ", "l8": "", "l9": "te st", "l10": "te st", "l11": "a", "l12": "a ", "r1": "", "r2": "test", "r3": "   test", "r4": "test", "r5": "   test", "r6": " test", "r7": "test", "r8": "", "r9": "te st", "r10": "te st", "r11": " a", "r12": "a", "b1": "", "b2": "test", "b3": "test", "b4": "te st", "b5": "", "b6": "test", "b7": "test", "b8": "te st", "b9": "test", "b10": "te st", "b11": "test", "b12": "test", "b13": "test", "b14": "te st", "b15": "test", "b16": "te st", "b17": "test", "b18": "test", "b19": "test", "b20": "te st" }' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid function output detected, rsyslog.out.log is:"
-  cat rsyslog.out.log
-  . $srcdir/diag.sh error-exit 1
+  echo "invalid function output detected, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
+  error_exit 1
 fi;
-. $srcdir/diag.sh exit
+exit_test
 

@@ -3,9 +3,23 @@
 echo ===============================================================================
 echo \[discard-allmark.sh\]: testing discard-allmark functionality
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup discard-allmark.conf
-. $srcdir/diag.sh tcpflood -m10 -i1
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh seq-check 2 10
-. $srcdir/diag.sh exit
+generate_conf
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$MainMsgQueueTimeoutShutdown 10000
+$InputTCPServerRun '$TCPFLOOD_PORT'
+
+$ActionWriteAllMarkMessages on
+
+:msg, contains, "00000001" ~
+
+$template outfmt,"%msg:F,58:2%\n"
+template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!
+:msg, contains, "msgnum:" ?dynfile;outfmt
+'
+startup
+tcpflood -m10 -i1
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown
+seq_check 2 10
+exit_test

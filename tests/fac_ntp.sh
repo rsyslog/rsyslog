@@ -1,9 +1,17 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup fac_ntp.conf
-. $srcdir/diag.sh tcpflood -m1000 -P 97
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
-. $srcdir/diag.sh seq-check 0 999 
-. $srcdir/diag.sh exit
+generate_conf
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$InputTCPServerRun '$TCPFLOOD_PORT'
+
+$template outfmt,"%msg:F,58:2%,%msg:F,58:3%,%msg:F,58:4%\n"
+ntp.* action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+'
+startup
+tcpflood -m1000 -P 97
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown       # and wait for it to terminate
+seq_check 0 999 
+exit_test

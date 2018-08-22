@@ -28,11 +28,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -138,9 +138,9 @@ addNewLstnPort(tcpsrv_t *const pThis, const uchar *const pszPort,
 	CHKmalloc(pEntry = (tcpLstnPortList_t*)calloc(1, sizeof(tcpLstnPortList_t)));
 	CHKmalloc(pEntry->pszPort = ustrdup(pszPort));
 
-        pEntry->pszAddr = NULL;
-        /* only if a bind adress is defined copy it in struct */
-        if (pszAddr != NULL) {
+	pEntry->pszAddr = NULL;
+	/* only if a bind adress is defined copy it in struct */
+	if (pszAddr != NULL) {
 		CHKmalloc(pEntry->pszAddr = ustrdup(pszAddr));
 	}
 
@@ -150,7 +150,7 @@ addNewLstnPort(tcpsrv_t *const pThis, const uchar *const pszPort,
 	pEntry->pRuleset = pThis->pRuleset;
 	pEntry->bSuppOctetFram = bSuppOctetFram;
 
-	/* we need to create a property */ 
+	/* we need to create a property */
 	CHKiRet(prop.Construct(&pEntry->pInputName));
 	CHKiRet(prop.SetString(pEntry->pInputName, pThis->pszInputName, ustrlen(pThis->pszInputName)));
 	CHKiRet(prop.ConstructFinalize(pEntry->pInputName));
@@ -320,7 +320,7 @@ deinit_tcp_listener(tcpsrv_t *const pThis)
 				i = TCPSessGetNxtSess(pThis, i);
 			}
 		}
-		
+
 		/* we are done with the session table - so get rid of it...  */
 		free(pThis->pSessions);
 		pThis->pSessions = NULL; /* just to make sure... */
@@ -394,7 +394,7 @@ initTCPListener(tcpsrv_t *pThis, tcpLstnPortList_t *pPortEntry)
 		TCPLstnPort = pPortEntry->pszPort;
 
 	// pPortEntry->pszAddr = NULL ==> bind to all interfaces
-        CHKiRet(netstrm.LstnInit(pThis->pNS, (void*)pPortEntry, addTcpLstn, TCPLstnPort,
+	CHKiRet(netstrm.LstnInit(pThis->pNS, (void*)pPortEntry, addTcpLstn, TCPLstnPort,
 	pPortEntry->pszAddr, pThis->iSessMax));
 
 finalize_it:
@@ -448,7 +448,7 @@ finalize_it:
  * ppSess has a pointer to the newly created session, if it succeeds.
  * If it does not succeed, no session is created and ppSess is
  * undefined. If the user has provided an OnSessAccept Callback,
- * this one is executed immediately after creation of the 
+ * this one is executed immediately after creation of the
  * session object, so that it can do its own initialization.
  * rgerhards, 2008-03-02
  */
@@ -495,6 +495,15 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 
 	/* get the host name */
 	CHKiRet(netstrm.GetRemoteHName(pNewStrm, &fromHostFQDN));
+	if (!pThis->bPreserveCase) {
+		/* preserve_case = off */
+		uchar *p;
+		for(p = fromHostFQDN; *p; p++) {
+			if (isupper((int) *p)) {
+				*p = tolower((int) *p);
+			}
+		}
+	}
 	CHKiRet(netstrm.GetRemoteIP(pNewStrm, &fromHostIP));
 	CHKiRet(netstrm.GetRemAddr(pNewStrm, &addr));
 	/* TODO: check if we need to strip the domain name here -- rgerhards, 2008-04-24 */
@@ -959,7 +968,7 @@ Run(tcpsrv_t *pThis)
 				LogError(0, localRet, "tcpsrv listener (inputname: '%s') failed "
 				"to processed incoming connection with error %d",
 				(pThis->pszInputName == NULL) ? (uchar*)"*UNSET*" : pThis->pszInputName, localRet);
-				bFailed = TRUE; 
+				bFailed = TRUE;
 			} else {
 				DBGPRINTF("tcpsrv listener (inputname: '%s') still failing to process "
 						"incoming connection with error %d\n",
@@ -967,10 +976,10 @@ Run(tcpsrv_t *pThis)
 						pThis->pszInputName, localRet);
 			}
 			/* Sleep 20ms */
-			srSleep(0,20000); 
+			srSleep(0,20000);
 		} else {
 			/* Reset bFailed State */
-			bFailed = FALSE; 
+			bFailed = FALSE;
 		}
 	}
 
@@ -1001,6 +1010,7 @@ BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macr
 	pThis->ratelimitBurst = 10000;
 	pThis->bUseFlowControl = 1;
 	pThis->pszDrvrName = NULL;
+	pThis->bPreserveCase = 1; /* preserve case in fromhost; default to true. */
 ENDobjConstruct(tcpsrv)
 
 
@@ -1169,28 +1179,28 @@ SetKeepAlive(tcpsrv_t *pThis, int iVal)
 static rsRetVal
 SetKeepAliveIntvl(tcpsrv_t *pThis, int iVal)
 {
-       DEFiRet;
-       DBGPRINTF("tcpsrv: keep-alive interval set to %d\n", iVal);
-       pThis->iKeepAliveIntvl = iVal;
-       RETiRet;
+	DEFiRet;
+	DBGPRINTF("tcpsrv: keep-alive interval set to %d\n", iVal);
+	pThis->iKeepAliveIntvl = iVal;
+	RETiRet;
 }
 
 static rsRetVal
 SetKeepAliveProbes(tcpsrv_t *pThis, int iVal)
 {
-       DEFiRet;
-       DBGPRINTF("tcpsrv: keep-alive probes set to %d\n", iVal);
-       pThis->iKeepAliveProbes = iVal;
-       RETiRet;
+	DEFiRet;
+	DBGPRINTF("tcpsrv: keep-alive probes set to %d\n", iVal);
+	pThis->iKeepAliveProbes = iVal;
+	RETiRet;
 }
 
 static rsRetVal
 SetKeepAliveTime(tcpsrv_t *pThis, int iVal)
 {
-       DEFiRet;
-       DBGPRINTF("tcpsrv: keep-alive timeout set to %d\n", iVal);
-       pThis->iKeepAliveTime = iVal;
-       RETiRet;
+	DEFiRet;
+	DBGPRINTF("tcpsrv: keep-alive timeout set to %d\n", iVal);
+	pThis->iKeepAliveTime = iVal;
+	RETiRet;
 }
 
 static rsRetVal
@@ -1342,7 +1352,7 @@ SetNotificationOnRemoteClose(tcpsrv_t *pThis, int bNewVal)
 /* here follows a number of methods that shuffle authentication settings down
  * to the drivers. Drivers not supporting these settings may return an error
  * state.
- * -------------------------------------------------------------------------- */   
+ * -------------------------------------------------------------------------- */
 
 /* set the driver mode -- rgerhards, 2008-04-30 */
 static rsRetVal
@@ -1433,6 +1443,16 @@ SetSessMax(tcpsrv_t *pThis, int iMax)
 }
 
 
+static rsRetVal
+SetPreserveCase(tcpsrv_t *pThis, int bPreserveCase)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	pThis-> bPreserveCase = bPreserveCase;
+	RETiRet;
+}
+
+
 /* queryInterface function
  * rgerhards, 2008-02-29
  */
@@ -1491,6 +1511,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetRuleset = SetRuleset;
 	pIf->SetLinuxLikeRatelimiters = SetLinuxLikeRatelimiters;
 	pIf->SetNotificationOnRemoteClose = SetNotificationOnRemoteClose;
+	pIf->SetPreserveCase = SetPreserveCase;
 
 finalize_it:
 ENDobjQueryInterface(tcpsrv)
@@ -1616,7 +1637,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 	/* we just init the worker mutex, but do not start the workers themselves. This is deferred
 	 * to the first call of Run(). Reasons for this:
-	 * 1. depending on load order, tcpsrv gets loaded during rsyslog startup BEFORE 
+	 * 1. depending on load order, tcpsrv gets loaded during rsyslog startup BEFORE
 	 *    it forks, in which case the workers would be running in the then-killed parent,
 	 *    leading to a defuncnt child (we actually had this bug).
 	 * 2. depending on circumstances, Run() would possibly never be called, in which case

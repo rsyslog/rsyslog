@@ -4,11 +4,21 @@
 echo ===============================================================================
 echo \[no-dynstats.sh\]: test for verifying stats are reported correctly in legacy format in absence of any dynstats buckets being configured
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup no-dynstats.conf
+generate_conf
+add_conf '
+ruleset(name="stats") {
+  action(type="omfile" file="./rsyslog.out.stats.log")
+}
+
+module(load="../plugins/impstats/.libs/impstats" interval="1" severity="7" resetCounters="on" Ruleset="stats" bracketing="on")
+
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
+'
+startup
 . $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown
+wait_shutdown
 . $srcdir/diag.sh custom-content-check 'global: origin=dynstats' 'rsyslog.out.stats.log'
-. $srcdir/diag.sh exit
+exit_test

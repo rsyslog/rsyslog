@@ -17,18 +17,26 @@ if [ `uname` = "SunOS" ] ; then
 fi
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup imuxsock_logger_syssock.conf
+generate_conf
+add_conf '
+module(load="../plugins/imuxsock/.libs/imuxsock"
+       SysSock.name="testbench_socket")
+
+$template outfmt,"%msg:%\n"
+*.notice      action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+'
+startup
 # send a message with trailing LF
 logger -d -u testbench_socket test
 # the sleep below is needed to prevent too-early termination of rsyslogd
 ./msleep 100
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
-cmp rsyslog.out.log $srcdir/resultdata/imuxsock_logger.log
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown	# we need to wait until rsyslogd is finished!
+cmp $RSYSLOG_OUT_LOG $srcdir/resultdata/imuxsock_logger.log
 if [ ! $? -eq 0 ]; then
   echo "imuxsock_logger_syssock.sh failed"
-  echo contents of rsyslog.out.log:
-  echo \"`cat rsyslog.out.log`\"
+  echo "contents of $RSYSLOG_OUT_LOG:"
+  echo \"`cat $RSYSLOG_OUT_LOG`\"
   exit 1
 fi;
-. $srcdir/diag.sh exit
+exit_test

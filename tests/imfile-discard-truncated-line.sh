@@ -7,8 +7,8 @@ echo ======================================================================
 echo [imfile-discard-truncated-line.sh]
 . $srcdir/diag.sh check-inotify
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 $MaxMessageSize 128
 module(load="../plugins/imfile/.libs/imfile")
 input(type="imfile"
@@ -24,11 +24,11 @@ template(name="outfmt" type="list") {
   constant(value="\n")
 }
 ruleset(name="ruleset") {
-	action(type="omfile" file="rsyslog.out.log" template="outfmt")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }
-action(type="omfile" file="rsyslog2.out.log" template="outfmt")
+action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG` template="outfmt")
 '
-. $srcdir/diag.sh startup
+startup
 
 # write the beginning of the file
 echo 'msgnum:0
@@ -47,26 +47,26 @@ msgnum:9' > rsyslog.input
 echo 'END OF TEST' >> rsyslog.input
 # sleep a little to give rsyslog a chance to begin processing
 ./msleep 500
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown    # we need to wait until rsyslogd is finished!
 
 printf 'HEADER msgnum:0
 HEADER msgnum:1
 HEADER msgnum:2 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\\\\n msgnum:3 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\\\\n msgnum:4 ccccccc
 HEADER msgnum:6 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\\\\n msgnum:7 ffffffffffffffffffffffffffffffffffffffffffff\\\\n msgnum:8 ggggggg
-HEADER msgnum:9\n' | cmp - rsyslog.out.log
+HEADER msgnum:9\n' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid multiline message generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid multiline message generated, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   exit 1
 fi;
 
-grep "imfile error:.*rest of message will not be processed" rsyslog2.out.log > /dev/null
+grep "imfile error:.*rest of message will not be processed" ${RSYSLOG2_OUT_LOG} > /dev/null
 if [ $? -eq 0 ]; then
         echo
-        echo "FAIL: expected error message from missing input file not found. rsyslog2.out.log is:"
-        cat rsyslog2.out.log
-        . $srcdir/diag.sh error-exit 1
+        echo "FAIL: expected error message from missing input file not found. ${RSYSLOG2_OUT_LOG} is:"
+        cat ${RSYSLOG2_OUT_LOG}
+        error_exit 1
 fi
 
-. $srcdir/diag.sh exit
+exit_test

@@ -49,6 +49,54 @@ if [ "x$BUILD_FROM_TARBALL" == "xYES" ]; then
 	tar xzf ../rsyslog.tar.gz
 	ls -ld rsyslog*
 	cd rsyslog*
+	export JOURNAL_OPT=
+	export DEFAULT_CONFIG_FLAGS="--disable-fmhttp"
+	echo "============================== DONE unpacking =============================="
+else
+	export DEFAULT_CONFIG_FLAGS="
+	--enable-imfile \
+	--enable-impstats \
+	--enable-mmrm1stspace \
+	--enable-imptcp \
+	--enable-mmanon \
+	--enable-mmaudit \
+	--enable-mmfields \
+	--enable-mmjsonparse \
+	--enable-mmpstrucdata \
+	--enable-mmsequence \
+	--enable-mmutf8fix \
+	--enable-mail \
+	--enable-omprog \
+	--enable-omruleset \
+	--enable-omuxsock \
+	--enable-pmaixforwardedfrom \
+	--enable-pmciscoios \
+	--enable-pmcisconames \
+	--enable-pmlastmsg \
+	--enable-pmsnare \
+	--enable-libgcrypt \
+	--enable-mmnormalize \
+	--enable-omudpspoof \
+	--enable-relp --enable-omrelp-default-port=13515 \
+	--enable-snmp \
+	--enable-mmsnmptrapd \
+	--enable-gnutls \
+	--enable-openssl \
+	--enable-gt-ksi \
+	--enable-libdbi \
+	--enable-omhttpfs \
+	--enable-elasticsearch \
+	--enable-ommongodb \
+	--enable-omtcl \
+	--enable-mmdblookup \
+	--enable-mmcount \
+	--enable-gssapi-krb5 \
+	--enable-omhiredis \
+	--enable-imczmq --enable-omczmq \
+	--enable-usertools \
+	--enable-pmnull \
+	--enable-pmnormalize \
+	"
 fi
 pwd
 autoreconf --force --verbose --install
@@ -69,55 +117,19 @@ export CONFIG_FLAGS="$CONFIGURE_FLAGS \
 	$GROK \
 	$ES_TEST_CONFIGURE_OPT \
 	$AMQP1 \
+	$DEFAULT_CONFIG_FLAGS \
 	--disable-generate-man-pages \
-	--enable-testbench \
-	--enable-imdiag \
-	--enable-imfile \
-	--enable-impstats \
-	--enable-mmrm1stspace \
-	--enable-imptcp \
-	--enable-mmanon \
-	--enable-mmaudit \
-	--enable-mmfields \
-	--enable-mmjsonparse \
-	--enable-mmpstrucdata \
-	--enable-mmsequence \
-	--enable-mmutf8fix \
-	--enable-mail \
-	--enable-omprog \
-	--enable-omruleset \
-	--enable-omstdout \
-	--enable-omuxsock \
-	--enable-pmaixforwardedfrom \
-	--enable-pmciscoios \
-	--enable-pmcisconames \
-	--enable-pmlastmsg \
-	--enable-pmsnare \
-	--enable-libgcrypt \
-	--enable-mmnormalize \
-	--enable-omudpspoof \
-	--enable-relp --enable-omrelp-default-port=13515 \
-	--enable-snmp \
-	--enable-mmsnmptrapd \
-	--enable-gnutls \
-	--enable-openssl \
-	--enable-mysql --enable-mysql-tests \
-	--enable-gt-ksi \
-	--enable-libdbi \
-	--enable-pgsql --enable-pgsql-tests \
-	--enable-omhttpfs \
-	--enable-elasticsearch \
 	--enable-valgrind \
-	--enable-ommongodb \
-	--enable-omtcl \
-	--enable-mmdblookup \
-	--enable-mmcount \
-	--enable-gssapi-krb5 \
-	--enable-omhiredis \
-	--enable-imczmq --enable-omczmq \
-	--enable-usertools \
-	--enable-pmnull \
-	--enable-pmnormalize"
+	--enable-testbench \
+	--enable-omstdout \
+	--enable-imdiag \
+	--enable-pgsql --enable-pgsql-tests \
+	--enable-mysql --enable-mysql-tests"
+
+
+echo "============================== flags set =============================="
+env | grep CONFIG
+echo "============================== flags end =============================="
 # Note: [io]mzmq3 cannot be built any longer, according to Brian Knox they require an
 # outdated version of the client lib. So we do not bother any longer about them.
 ./configure  $CONFIG_FLAGS
@@ -140,7 +152,8 @@ then
         exit $ALL_OK
     fi
     set -e # now errors are no longer permited, again
-    make distcheck
+    echo now running \"make distcheck\"
+    #make distcheck
 fi
 
 if [ "x$STAT_AN" == "xYES" ] ; then make clean; CFLAGS="-O2"; ./configure $CONFIG_FLAGS ; fi

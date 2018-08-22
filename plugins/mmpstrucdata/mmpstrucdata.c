@@ -9,11 +9,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -38,13 +38,13 @@
 #include "template.h"
 #include "module-template.h"
 #include "errmsg.h"
+#include "parserif.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("mmpstrucdata")
 
 
-DEFobjCurrIf(errmsg);
 DEF_OMOD_STATIC_DATA
 
 /* config variables */
@@ -150,7 +150,27 @@ CODESTARTnewActInst
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(actpblk.descr[i].name, "jsonroot")) {
+			size_t lenvar = es_strlen(pvals[i].val.d.estr);
 			pData->jsonRoot = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			if(pData->jsonRoot[0] == '$') {
+				/* pre 8.35, the jsonRoot name needed to be specified without
+				 * the leading $. This was confusing, so we now require a full
+				 * variable name. Nevertheless, we still need to support the
+				 * version without $. -- rgerhards, 2018-05-16
+				 */
+				/* copy lenvar size because of \0 string terminator */
+				memmove(pData->jsonRoot, pData->jsonRoot+1,  lenvar);
+				--lenvar;
+			}
+			if(   (lenvar == 0)
+			   || (  !(   pData->jsonRoot[0] == '!'
+			           || pData->jsonRoot[0] == '.'
+			           || pData->jsonRoot[0] == '/' ) )
+			   ) {
+				parser_errmsg("mmpstrucdata: invalid jsonRoot name '%s', name must "
+					"start with either '$!', '$.', or '$/'", pData->jsonRoot);
+				ABORT_FINALIZE(RS_RET_INVALID_VAR);
+			}
 		} else if(!strcmp(actpblk.descr[i].name, "sd_name.lowercase")) {
 			pData->lowercase_SD_ID = pvals[i].val.d.n;
 		} else {
@@ -331,7 +351,7 @@ parse_sd(instanceData *const pData, smsg_t *const pMsg)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	json_object_object_add(jroot, "rfc5424-sd", json);
- 	msgAddJSON(pMsg, pData->jsonRoot, jroot, 0, 0);
+	msgAddJSON(pMsg, pData->jsonRoot, jroot, 0, 0);
 finalize_it:
 	if(iRet != RS_RET_OK && json != NULL)
 		json_object_put(json);
@@ -358,7 +378,6 @@ ENDdoAction
 
 BEGINmodExit
 CODESTARTmodExit
-	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -377,5 +396,4 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	DBGPRINTF("mmpstrucdata: module compiled with rsyslog version %s.\n", VERSION);
-	iRet = objUse(errmsg, CORE_COMPONENT);
 ENDmodInit

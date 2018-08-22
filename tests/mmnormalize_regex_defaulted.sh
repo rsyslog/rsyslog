@@ -4,11 +4,25 @@
 echo ===============================================================================
 echo \[mmnormalize_regex_defaulted.sh\]: test for mmnormalize regex field_type, with allow_regex defaulted
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup mmnormalize_regex_defaulted.conf
-. $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/regex_input
+generate_conf
+add_conf '
+template(name="hosts_and_ports" type="string" string="host and port list: %$!hps%\n")
+
+template(name="paths" type="string" string="%$!fragments% %$!user%\n")
+template(name="numbers" type="string" string="nos: %$!some_nos%\n")
+
+module(load="../plugins/mmnormalize/.libs/mmnormalize")
+module(load="../plugins/imptcp/.libs/imptcp")
+input(type="imptcp" port="'$TCPFLOOD_PORT'")
+
+action(type="mmnormalize" rulebase=`echo $srcdir/testsuites/mmnormalize_regex.rulebase`)
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="hosts_and_ports")
+'
+startup
+tcpflood -m 1 -I $srcdir/testsuites/regex_input
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown 
+wait_shutdown 
 . $srcdir/diag.sh assert-content-missing '192' #several ips in input are 192.168.1.0/24
-. $srcdir/diag.sh exit
+exit_test

@@ -775,12 +775,12 @@ doGetSize(struct nvlst *valnode, struct cnfparamdescr *param,
 		/* and now the "new" 1000-based definitions */
 		case 'K': n *= 1000; break;
 	        case 'M': n *= 1000000; break;
-                case 'G': n *= 1000000000; break;
+		case 'G': n *= 1000000000; break;
 			  /* we need to use the multiplication below because otherwise
 			   * the compiler gets an error during constant parsing */
-                case 'T': n *= (int64) 1000       * 1000000000; break; /* tera */
-                case 'P': n *= (int64) 1000000    * 1000000000; break; /* peta */
-                case 'E': n *= (int64) 1000000000 * 1000000000; break; /* exa */
+		case 'T': n *= (int64) 1000       * 1000000000; break; /* tera */
+		case 'P': n *= (int64) 1000000    * 1000000000; break; /* peta */
+		case 'E': n *= (int64) 1000000000 * 1000000000; break; /* exa */
 		default: --i; break; /* indicates error */
 		}
 	}
@@ -1478,7 +1478,7 @@ static rsRetVal
 doExtractFieldByChar(uchar *str, uchar delim, const int matchnbr, uchar **resstr)
 {
 	int iCurrFld;
-    int allocLen;
+	int allocLen;
 	int iLen;
 	uchar *pBuf;
 	uchar *pFld;
@@ -1512,7 +1512,7 @@ doExtractFieldByChar(uchar *str, uchar delim, const int matchnbr, uchar **resstr
 		allocLen = iLen + 1;
 #		ifdef VALGRIND
 		allocLen += (3 - (iLen % 4));
-        	/*older versions of valgrind have a problem with strlen inspecting 4-bytes at a time*/
+		/*older versions of valgrind have a problem with strlen inspecting 4-bytes at a time*/
 #		endif
 		CHKmalloc(pBuf = MALLOC(allocLen));
 		/* now copy */
@@ -1699,24 +1699,24 @@ doFunc_exec_template(struct cnffunc *__restrict__ const func,
 
 static es_str_t*
 doFuncReplace(struct svar *__restrict__ const operandVal, struct svar *__restrict__ const findVal,
-	struct svar *__restrict__ const replaceWithVal) {
-    int freeOperand, freeFind, freeReplacement;
-    es_str_t *str = var2String(operandVal, &freeOperand);
-    es_str_t *findStr = var2String(findVal, &freeFind);
-    es_str_t *replaceWithStr = var2String(replaceWithVal, &freeReplacement);
-    uchar *find = es_getBufAddr(findStr);
-    uchar *replaceWith = es_getBufAddr(replaceWithStr);
-    uint lfind = es_strlen(findStr);
-    uint lReplaceWith = es_strlen(replaceWithStr);
-    uint lSrc = es_strlen(str);
-    uint lDst = 0;
-    uchar* src_buff = es_getBufAddr(str);
-    uint i, j;
-    for(i = j = 0; i <= lSrc; i++, lDst++) {
-        if (j == lfind) {
-            lDst = lDst - lfind + lReplaceWith;
-            j = 0;
-        }
+		struct svar *__restrict__ const replaceWithVal) {
+	int freeOperand, freeFind, freeReplacement;
+	es_str_t *str = var2String(operandVal, &freeOperand);
+	es_str_t *findStr = var2String(findVal, &freeFind);
+	es_str_t *replaceWithStr = var2String(replaceWithVal, &freeReplacement);
+	uchar *find = es_getBufAddr(findStr);
+	uchar *replaceWith = es_getBufAddr(replaceWithStr);
+	uint lfind = es_strlen(findStr);
+	uint lReplaceWith = es_strlen(replaceWithStr);
+	uint lSrc = es_strlen(str);
+	uint lDst = 0;
+	uchar* src_buff = es_getBufAddr(str);
+	uint i, j;
+	for(i = j = 0; i <= lSrc; i++, lDst++) {
+		if (j == lfind) {
+			lDst = lDst - lfind + lReplaceWith;
+			j = 0;
+		}
 		if (i == lSrc) break;
 		if (src_buff[i] == find[j]) {
 			j++;
@@ -1725,16 +1725,16 @@ doFuncReplace(struct svar *__restrict__ const operandVal, struct svar *__restric
 			lDst -= (j - 1);
 			j = 0;
 		}
-    }
-    es_str_t *res = es_newStr(lDst);
-    unsigned char* dest = es_getBufAddr(res);
-    uint k, s;
-    for(i = j = s = 0; i <= lSrc; i++, s++) {
-        if (j == lfind) {
-            s -= j;
-            for (k = 0; k < lReplaceWith; k++, s++) dest[s] = replaceWith[k];
-            j = 0;
-        }
+	}
+	es_str_t *res = es_newStr(lDst);
+	unsigned char* dest = es_getBufAddr(res);
+	uint k, s;
+	for(i = j = s = 0; i <= lSrc; i++, s++) {
+		if (j == lfind) {
+		s -= j;
+		for (k = 0; k < lReplaceWith; k++, s++) dest[s] = replaceWith[k];
+			j = 0;
+		}
 		if (i == lSrc) break;
 		if (src_buff[i] == find[j]) {
 			j++;
@@ -1746,15 +1746,15 @@ doFuncReplace(struct svar *__restrict__ const operandVal, struct svar *__restric
 			}
 			dest[s] = src_buff[i];
 		}
-    }
-    if (j > 0) {
-        for (k = 1; k <= j; k++) dest[s - k] = src_buff[i - k];
-    }
-    res->lenStr = lDst;
-    if(freeOperand) es_deleteStr(str);
-    if(freeFind) es_deleteStr(findStr);
-    if(freeReplacement) es_deleteStr(replaceWithStr);
-    return res;
+	}
+	if (j > 0) {
+		for (k = 1; k <= j; k++) dest[s - k] = src_buff[i - k];
+	}
+	res->lenStr = lDst;
+	if(freeOperand) es_deleteStr(str);
+	if(freeFind) es_deleteStr(findStr);
+	if(freeReplacement) es_deleteStr(replaceWithStr);
+	return res;
 }
 
 
@@ -1772,6 +1772,7 @@ doFunc_parse_json(struct cnffunc *__restrict__ const func,
 	cnfexprEval(func->expr[1], &srcVal[1], usrptr, pWti);
 	char *jsontext = (char*) var2CString(&srcVal[0], &bMustFree);
 	char *container = (char*) var2CString(&srcVal[1], &bMustFree2);
+	struct json_object *json;
 
 	int retVal;
 	assert(jsontext != NULL);
@@ -1783,7 +1784,7 @@ doFunc_parse_json(struct cnffunc *__restrict__ const func,
 		retVal = 1;
 		goto finalize_it;
 	}
-	struct json_object *const json = json_tokener_parse_ex(tokener, jsontext, strlen(jsontext));
+	json = json_tokener_parse_ex(tokener, jsontext, strlen(jsontext));
 	if(json == NULL) {
 		retVal = RS_SCRIPT_EINVAL;
 	} else {
@@ -1818,6 +1819,7 @@ doFunct_RandomGen(struct cnffunc *__restrict__ const func,
 	int success = 0;
 	struct svar srcVal;
 	long long retVal;
+	long int x;
 
 	cnfexprEval(func->expr[0], &srcVal, usrptr, pWti);
 	long long max = var2Number(&srcVal, &success);
@@ -1832,7 +1834,7 @@ doFunct_RandomGen(struct cnffunc *__restrict__ const func,
 		retVal = 0;
 		goto done;
 	}
-	long int x = randomNumber();
+	x = randomNumber();
 	if (max > MAX_RANDOM_NUMBER) {
 		DBGPRINTF("rainerscript: desired random-number range [0 - %lld] "
 			"is wider than supported limit of [0 - %d)\n",
@@ -3785,6 +3787,7 @@ void
 cnfexprPrint(struct cnfexpr *expr, int indent)
 {
 	struct cnffunc *func;
+	char *fname;
 	int i;
 
 	switch(expr->nodetype) {
@@ -3885,7 +3888,7 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		doIndent(indent);
 		func = (struct cnffunc*) expr;
 		cstrPrint("function '", func->fname);
-		char *fname = es_str2cstr(func->fname, NULL);
+		fname = es_str2cstr(func->fname, NULL);
 		dbgprintf("' (name:%s, params:%hu)\n", fname, func->nParams);
 		free(fname);
 		if(func->fPtr == doFunct_Prifilt) {
@@ -4533,7 +4536,7 @@ constFoldConcat(struct cnfexpr *expr)
 			cnfexprDestruct(expr->r);
 			expr->nodetype = 'S';
 			((struct cnfstringval*)expr)->estr = estr;
-		} else if(expr->r->nodetype == 'S') {
+		} else if(expr->r->nodetype == 'N') {
 			es_str_t *numstr;
 			estr = es_newStrFromNumber(((struct cnfnumval*)expr->l)->val);
 			numstr = es_newStrFromNumber(((struct cnfnumval*)expr->r)->val);
@@ -5073,12 +5076,13 @@ addMod2List(const int __attribute__((unused)) version, struct scriptFunct *funct
 /*version currently not used, might be needed later for versin check*/
 {
 	DEFiRet;
+	int i;
 	struct modListNode *newNode;
 	CHKmalloc(newNode = (struct modListNode*) malloc(sizeof(struct modListNode)));
 	newNode->version = 1;
 	newNode->next = NULL;
 
-	int i = 0;
+	i = 0;
 	while(functArray[i].fname != NULL) {
 		if(searchModList(functArray[i].fname) != NULL) {
 			parser_errmsg("function %s defined multiple times, second time will be ignored",

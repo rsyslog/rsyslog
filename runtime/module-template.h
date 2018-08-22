@@ -1,6 +1,6 @@
 /* module-template.h
- * This header contains macros that can be used to implement the 
- * plumbing of modules. 
+ * This header contains macros that can be used to implement the
+ * plumbing of modules.
  *
  * File begun on 2007-07-25 by RGerhards
  *
@@ -11,11 +11,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -80,7 +80,7 @@ static rsRetVal modGetType(eModType_t *modType) \
 	DEF_LMOD_STATIC_DATA \
 	MODULE_TYPE(eMOD_LIB)
 
-/* Macro to define whether the module should be kept dynamically linked. 
+/* Macro to define whether the module should be kept dynamically linked.
  */
 #define MODULE_KEEP_TYPE(x)\
 static rsRetVal modGetKeepType(eModKeepType_t *modKeepType) \
@@ -93,9 +93,9 @@ static rsRetVal modGetKeepType(eModKeepType_t *modKeepType) \
 
 /* macro to define a unique module id. This must be able to fit in a void*. The
  * module id must be unique inside a running rsyslogd application. It is used to
- * track ownership of several objects. Most importantly, when the module is 
+ * track ownership of several objects. Most importantly, when the module is
  * unloaded the module id value is used to find what needs to be destroyed.
- * We currently use a pointer to modExit() as the module id. This sounds to be 
+ * We currently use a pointer to modExit() as the module id. This sounds to be
  * reasonable save, as each module must have this entry point AND there is no valid
  * reason for twice this entry point being in memory.
  * rgerhards, 2007-11-21
@@ -515,7 +515,7 @@ static rsRetVal initConfVars(void)\
 {\
 	DEFiRet;
 
-#define CODESTARTinitConfVars 
+#define CODESTARTinitConfVars
 
 #define ENDinitConfVars \
 	RETiRet;\
@@ -661,7 +661,7 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 	} else if(!strcmp((char*) name, "freeCnf")) {\
 		*pEtryPoint = freeCnf;\
 	} \
-	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 
 /* the following block is to be added for modules that support v2
  * module global parameters [module(...)]
@@ -678,7 +678,7 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 	  else if(!strcmp((char*) name, "newActInst")) {\
 		*pEtryPoint = newActInst;\
 	} \
-	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 
 
 /* the following block is to be added for input modules that support the v2
@@ -688,7 +688,7 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 	  else if(!strcmp((char*) name, "newInpInst")) {\
 		*pEtryPoint = newInpInst;\
 	} \
-	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 
 
 /* the following block is to be added for modules that require
@@ -742,7 +742,7 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 	} else if(!strcmp((char*) name, "freeParserInst")) {\
 		*pEtryPoint = freeParserInst;\
 	} \
-	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 
 
 
@@ -874,7 +874,7 @@ static rsRetVal modExit(void)\
 {\
 	DEFiRet;
 
-#define CODESTARTmodExit 
+#define CODESTARTmodExit
 
 #define ENDmodExit \
 	RETiRet;\
@@ -920,7 +920,7 @@ static rsRetVal setModCnf(struct nvlst *lst)\
 {\
 	DEFiRet;
 
-#define CODESTARTsetModCnf 
+#define CODESTARTsetModCnf
 
 #define ENDsetModCnf \
 	RETiRet;\
@@ -929,7 +929,7 @@ static rsRetVal setModCnf(struct nvlst *lst)\
 
 /* endCnfLoad()
  * This is a function tells an input module that the current config load ended.
- * It gets a last chance to make changes to its in-memory config object. After 
+ * It gets a last chance to make changes to its in-memory config object. After
  * this call, the config object must no longer be changed.
  * The pModConf pointer passed into the module must no longer be used.
  * rgerards, 2011-05-03
@@ -951,7 +951,7 @@ static rsRetVal endCnfLoad(modConfData_t *ptr)\
  * Check the provided config object for errors, inconsistencies and other things
  * that do not work out.
  * NOTE: no part of the config must be activated, so some checks that require
- * activation can not be done in this entry point. They must be done in the 
+ * activation can not be done in this entry point. They must be done in the
  * activateConf() stage, where the caller must also be prepared for error
  * returns.
  * rgerhards, 2011-05-03
@@ -1050,7 +1050,7 @@ static rsRetVal runInput(thrdInfo_t __attribute__((unused)) *pThrd)\
  * This is a function that will be replaced in the longer term. It is used so
  * that a module can tell the caller if it will run or not. This is to be replaced
  * when we introduce input module instances. However, these require config syntax
- * changes and I may (or may not... ;)) hold that until another config file 
+ * changes and I may (or may not... ;)) hold that until another config file
  * format is available. -- rgerhards, 2007-12-17
  * returns RS_RET_NO_RUN if it will not run (RS_RET_OK or error otherwise)
  */
@@ -1059,7 +1059,7 @@ static rsRetVal willRun(void)\
 {\
 	DEFiRet;
 
-#define CODESTARTwillRun 
+#define CODESTARTwillRun
 
 #define ENDwillRun \
 	RETiRet;\
@@ -1078,7 +1078,7 @@ static rsRetVal afterRun(void)\
 {\
 	DEFiRet;
 
-#define CODESTARTafterRun 
+#define CODESTARTafterRun
 
 #define ENDafterRun \
 	RETiRet;\
@@ -1106,7 +1106,7 @@ static rsRetVal doHUP(instanceData __attribute__((unused)) *pData)\
 {\
 	DEFiRet;
 
-#define CODESTARTdoHUP 
+#define CODESTARTdoHUP
 
 #define ENDdoHUP \
 	RETiRet;\
@@ -1126,7 +1126,7 @@ static rsRetVal doHUPWrkr(wrkrInstanceData_t __attribute__((unused)) *pWrkrData)
 {\
 	DEFiRet;
 
-#define CODESTARTdoHUPWrkr 
+#define CODESTARTdoHUPWrkr
 
 #define ENDdoHUPWrkr \
 	RETiRet;\
@@ -1134,7 +1134,7 @@ static rsRetVal doHUPWrkr(wrkrInstanceData_t __attribute__((unused)) *pWrkrData)
 
 
 /* SetShutdownImmdtPtr()
- * This function is optional. If defined by an output plugin, it is called 
+ * This function is optional. If defined by an output plugin, it is called
  * each time the action is invoked to set the "ShutdownImmediate" pointer,
  * which is used during termination to indicate the action should shutdown
  * as quickly as possible.
@@ -1148,7 +1148,7 @@ static rsRetVal SetShutdownImmdtPtr(instanceData __attribute__((unused)) *pData,
 {\
 	DEFiRet;
 
-#define CODESTARTSetShutdownImmdtPtr 
+#define CODESTARTSetShutdownImmdtPtr
 
 #define ENDSetShutdownImmdtPtr \
 	RETiRet;\

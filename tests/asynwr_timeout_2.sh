@@ -8,15 +8,29 @@
 echo ===============================================================================
 echo TEST: \[asynwr_timeout.sh\]: test async file writing timeout writes
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$MainMsgQueueTimeoutShutdown 10000
+$InputTCPServerRun '$TCPFLOOD_PORT'
+
+$template outfmt,"%msg:F,58:2%\n"
+template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!
+$OMFileFlushOnTXEnd off
+$OMFileFlushInterval 2
+$OMFileIOBufferSize 4k
+$OMFileAsyncWriting on
+:msg, contains, "msgnum:" ?dynfile;outfmt
+'
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="log"
-. $srcdir/diag.sh startup asynwr_timeout.conf
+startup
 # send 35555 messages, make sure file size is not a multiple of
 # 4K, the buffer size!
-. $srcdir/diag.sh tcpflood -m 35555
+tcpflood -m 35555
 sleep 4 # wait for output writer to write and empty buffer
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
-. $srcdir/diag.sh seq-check 0 35554
-. $srcdir/diag.sh exit
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown       # and wait for it to terminate
+seq_check 0 35554
+exit_test

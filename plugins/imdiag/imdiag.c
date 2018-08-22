@@ -12,11 +12,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -243,7 +243,7 @@ doInjectNumericSuffixMsg(int iNum, ratelimit_t *ratelimiter)
 	uchar szMsg[1024];
 	DEFiRet;
 	snprintf((char*)szMsg, sizeof(szMsg)/sizeof(uchar),
-             "<167>Mar  1 01:00:00 172.20.245.8 tag msgnum:%8.8d:", iNum);
+		"<167>Mar  1 01:00:00 172.20.245.8 tag msgnum:%8.8d:", iNum);
 	iRet = doInjectMsg(szMsg, ratelimiter);
 	RETiRet;
 }
@@ -287,7 +287,7 @@ injectMsg(uchar *pszCmd, tcps_sess_t *pSess)
 finalize_it:
 	if(ratelimit != NULL)
 		ratelimitDestruct(ratelimit);
-    free(litteralMsg);
+	free(litteralMsg);
 	RETiRet;
 }
 

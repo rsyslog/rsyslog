@@ -55,7 +55,7 @@ static rsRetVal doInit(void) \
 	DEFiRet; \
 	char *pErrObj; /* tells us which object failed if that happens */ \
 	putenv("RSYSLOG_MODDIR=../runtime/.libs/"); /* this is a bit hackish... */ \
- \
+\
 	dbgClassInit(); \
 	/* Intialize the runtime system */ \
 	pErrObj = "rsyslog runtime"; /* set in case the runtime errors before setting an object */ \
@@ -68,7 +68,7 @@ finalize_it: \
 	if(iRet != RS_RET_OK) { \
 		printf("failure occured during init of object '%s'\n", pErrObj); \
 	} \
- \
+\
 	RETiRet; \
 }
 

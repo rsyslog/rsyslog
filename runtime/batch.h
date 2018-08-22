@@ -51,9 +51,9 @@ struct batch_obj_s {
 
 /* the batch
  * This object is used to dequeue multiple user pointers which are than handed over
- * to processing. The size of elements is fixed after queue creation, but may be 
+ * to processing. The size of elements is fixed after queue creation, but may be
  * modified by config variables (better said: queue properties).
- * Note that a "user pointer" in rsyslog context so far always is a message 
+ * Note that a "user pointer" in rsyslog context so far always is a message
  * object. We stick to the more generic term because queues may potentially hold
  * other types of objects, too.
  * rgerhards, 2009-05-12

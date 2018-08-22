@@ -5,12 +5,30 @@
 echo ===============================================================================
 echo \[global_vars.sh\]: testing global variable support
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup global_vars.conf
+generate_conf
+add_conf '
+$MainMsgQueueTimeoutShutdown 10000
+
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="'$TCPFLOOD_PORT'")
+
+template(name="outfmt" type="string" string="%$/msgnum%\n")
+template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) /* trick to use relative path names! */
+
+if $/msgnum == "" then
+	set $/msgnum = 0;
+
+if $msg contains "msgnum:" then {
+	action(type="omfile" dynaFile="dynfile" template="outfmt")
+	set $/msgnum = $/msgnum + 1;
+}
+'
+startup
 
 # 40000 messages should be enough
-. $srcdir/diag.sh injectmsg  0 40000
+injectmsg  0 40000
 
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown 
-. $srcdir/diag.sh seq-check 0 39999
-. $srcdir/diag.sh exit
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown 
+seq_check 0 39999
+exit_test

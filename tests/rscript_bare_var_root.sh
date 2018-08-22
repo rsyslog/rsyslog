@@ -2,31 +2,31 @@
 # addd 2018-01-01 by RGerhards, released under ASL 2.0
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 template(name="outfmt" type="string" string="%$!%\n")
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="13514" ruleset="rs")
+input(type="imtcp" port="'$TCPFLOOD_PORT'" ruleset="rs")
 
 ruleset(name="rs") {
 	set $!a = "TEST1";
 	set $.a = "TEST-overwritten";
 	set $! = $.;
 
-	action(type="omfile" file="rsyslog.out.log" template="outfmt")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }
 '
-. $srcdir/diag.sh startup
-. $srcdir/diag.sh tcpflood -m1
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+startup
+tcpflood -m1
+shutdown_when_empty
+wait_shutdown
 EXPECTED='{ "a": "TEST-overwritten" }'
-echo "$EXPECTED" | cmp - rsyslog.out.log
+echo "$EXPECTED" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-	echo "FAIL: rsyslog.out.log content invalid:"
-	cat rsyslog.out.log
+	echo "FAIL:  $RSYSLOG_OUT_LOG content invalid:"
+	cat $RSYSLOG_OUT_LOG
 	echo "Expected:"
 	echo "$EXPECTED"
-	. $srcdir/diag.sh error-exit 1
+	error_exit 1
 fi;
-. $srcdir/diag.sh exit
+exit_test

@@ -3,13 +3,11 @@
 # This file is part of the rsyslog project, released  under ASL 2.0
 # The configuration test should pass because we now support leading
 # underscores in variable names.
-echo ===============================================================================
-echo \[variable_leading_underscore.sh\]: testing variables with leading underscores
 . $srcdir/diag.sh init
 ../tools/rsyslogd  -C -N1 -f$srcdir/testsuites/variable_leading_underscore.conf -M../runtime/.libs:../.libs
 if [ $? -ne 0 ]; then
    echo "Error: config check fail"
    exit 1 
 fi
-. $srcdir/diag.sh exit
+exit_test
 

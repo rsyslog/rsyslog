@@ -43,10 +43,10 @@
 #include <libestr.h>
 #include <json.h>
 #ifdef HAVE_MALLOC_H
-#  include <malloc.h>
+#include <malloc.h>
 #endif
 #ifdef USE_LIBUUID
-  #include <uuid/uuid.h>
+#include <uuid/uuid.h>
 #endif
 #include <errno.h>
 #include "rsyslog.h"
@@ -374,19 +374,19 @@ static char hexdigit[16] =
 	{'0', '1', '2', '3', '4', '5', '6', '7', '8',
 	 '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
- #if defined(_AIX)
- /* AIXPORT : replace facility names with aso and caa only for AIX */
- static char *syslog_fac_names[LOG_NFACILITIES] = { "kern", "user", "mail", "daemon", "auth", "syslog", "lpr",
-                                     "news", "uucp", "cron", "authpriv", "ftp", "aso", "audit",
-                                     "alert", "caa", "local0", "local1", "local2", "local3",
-                                     "local4", "local5", "local6", "local7", "invld"    };
- /* length of the facility names string (for optimizatiions) */
- static short len_syslog_fac_names[LOG_NFACILITIES] = { 4, 4, 4, 6, 4, 6, 3,
-                                         4, 4, 4, 8, 3, 3, 5,
-                                         5, 3, 6, 6, 6, 6,
-                                         6, 6, 6, 6, 5 };
+#if defined(_AIX)
+/* AIXPORT : replace facility names with aso and caa only for AIX */
+static char *syslog_fac_names[LOG_NFACILITIES] = { "kern", "user", "mail", "daemon", "auth", "syslog", "lpr",
+			"news", "uucp", "cron", "authpriv", "ftp", "aso", "audit",
+			"alert", "caa", "local0", "local1", "local2", "local3",
+			"local4", "local5", "local6", "local7", "invld"    };
+/* length of the facility names string (for optimizatiions) */
+static short len_syslog_fac_names[LOG_NFACILITIES] = { 4, 4, 4, 6, 4, 6, 3,
+							4, 4, 4, 8, 3, 3, 5,
+							5, 3, 6, 6, 6, 6,
+							6, 6, 6, 6, 5 };
 
- #else
+#else
 /*syslog facility names (as of RFC5424) */
 static const char *syslog_fac_names[LOG_NFACILITIES] = { "kern", "user", "mail", "daemon", "auth", "syslog", "lpr",
 			    	      "news", "uucp", "cron", "authpriv", "ftp", "ntp", "audit",
@@ -506,7 +506,11 @@ resolveDNS(smsg_t * const pMsg) {
 	MsgLock(pMsg);
 	CHKiRet(objUse(net, CORE_COMPONENT));
 	if(pMsg->msgFlags & NEEDS_DNSRESOL) {
-		localRet = net.cvthname(pMsg->rcvFrom.pfrominet, &localName, NULL, &ip);
+		if (pMsg->msgFlags & PRESERVE_CASE) {
+			localRet = net.cvthname(pMsg->rcvFrom.pfrominet, NULL, &localName, &ip);
+		} else {
+			localRet = net.cvthname(pMsg->rcvFrom.pfrominet, &localName, NULL, &ip);
+		}
 		if(localRet == RS_RET_OK) {
 			/* we pass down the props, so no need for AddRef */
 			MsgSetRcvFromWithoutAddRef(pMsg, localName);
@@ -957,10 +961,10 @@ static inline void freeHOSTNAME(smsg_t *pThis)
 }
 
 
-rsRetVal msgDestruct(smsg_t **ppThis) 
-{ 
+rsRetVal msgDestruct(smsg_t **ppThis)
+{
 	DEFiRet;
-        smsg_t *pThis;
+	smsg_t *pThis;
 	int currRefCount;
 #	ifdef HAVE_MALLOC_TRIM
 	int currCnt;
@@ -1217,11 +1221,11 @@ static rsRetVal MsgSerialize(smsg_t *pThis, strm_t *pStrm)
 	objSerializePTR(pStrm, pszHOSTNAME, PSZ);
 	getInputName(pThis, &psz, &len);
 	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszInputName"), PROPTYPE_PSZ, (void*) psz));
-	psz = getRcvFrom(pThis); 
+	psz = getRcvFrom(pThis);
 	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszRcvFrom"), PROPTYPE_PSZ, (void*) psz));
-	psz = getRcvFromIP(pThis); 
+	psz = getRcvFromIP(pThis);
 	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszRcvFromIP"), PROPTYPE_PSZ, (void*) psz));
-	psz = pThis->pszStrucData; 
+	psz = pThis->pszStrucData;
 	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszStrucData"), PROPTYPE_PSZ, (void*) psz));
 	if(pThis->json != NULL) {
 		psz = (uchar*) json_object_get_string(pThis->json);
@@ -1269,7 +1273,7 @@ reinitVar(var_t *pVar)
 			rsCStrDestruct(&pVar->val.pStr);
 	}
 }
-/* deserialize the message again 
+/* deserialize the message again
  * we deserialize the properties in the same order that we serialized them. Except
  * for some checks to cover downlevel version, we do not need to do all these
  * CPU intense name checkings.
@@ -1342,7 +1346,7 @@ MsgDeserialize(smsg_t * const pMsg, strm_t *pStrm)
 		CHKiRet(objDeserializeProperty(pVar, pStrm));
 	}
 	if(isProp("pszInputName")) {
-		/* we need to create a property */ 
+		/* we need to create a property */
 		CHKiRet(prop.Construct(&myProp));
 		CHKiRet(prop.SetString(myProp, rsCStrGetSzStrNoNULL(pVar->val.pStr), rsCStrLen(pVar->val.pStr)));
 		CHKiRet(prop.ConstructFinalize(myProp));
@@ -1523,7 +1527,7 @@ finalize_it:
  * - '['
  * - '/'
  * The above definition has been taken from the FreeBSD syslogd sources.
- * 
+ *
  * The program name is not parsed by default, because it is infrequently-used.
  * IMPORTANT: A locked message object must be provided, else a crash will occur.
  * rgerhards, 2005-10-19
@@ -2130,10 +2134,10 @@ static const char *getFacility(smsg_t * const pM)
 
 static const char *getFacilityStr(smsg_t * const pM)
 {
-        const char *name = NULL;
+	const char *name = NULL;
 
-        if(pM == NULL)
-                return "";
+	if(pM == NULL)
+		return "";
 
 	if(pM->iFacility > 23) {
 		name = "invld";
@@ -2259,7 +2263,7 @@ char *getPROCID(smsg_t * const pM, sbool bLockMutex)
 	preparePROCID(pM, MUTEX_ALREADY_LOCKED);
 	if(pM->pCSPROCID == NULL)
 		pszRet = UCHAR_CONSTANT("-");
-	else 
+	else
 		pszRet = rsCStrGetSzStrNoNULL(pM->pCSPROCID);
 	if(bLockMutex == LOCK_MUTEX)
 		MsgUnlock(pM);
@@ -2300,13 +2304,13 @@ static const char *getParseSuccess(smsg_t * const pM)
 static const char *getMSGID(smsg_t * const pM)
 {
 	if (pM->pCSMSGID == NULL) {
-		return "-"; 
+		return "-";
 	}
 	else {
 		MsgLock(pM);
 		char* pszreturn = (char*) rsCStrGetSzStrNoNULL(pM->pCSMSGID);
 		MsgUnlock(pM);
-		return pszreturn; 
+		return pszreturn;
 	}
 }
 
@@ -2479,6 +2483,8 @@ tryEmulateTAG(smsg_t * const pM, sbool bLockMutex)
 			bufTAG[sizeof(bufTAG)-1] = '\0'; /* just to make sure... */
 			MsgSetTAG(pM, bufTAG, lenTAG);
 		}
+		/* Signal change in TAG for aquireProgramName */
+		pM->iLenPROGNAME = -1;
 	}
 	if(bLockMutex == LOCK_MUTEX)
 		MsgUnlock(pM);
@@ -2597,6 +2603,12 @@ MsgGetStructuredData(smsg_t * const pM, uchar **pBuf, rs_size_t *len)
 uchar *getProgramName(smsg_t * const pM, sbool bLockMutex)
 {
 	if(pM->iLenPROGNAME == -1) {
+		if(pM->iLenTAG == 0) {
+			uchar *pRes;
+			rs_size_t bufLen = -1;
+			getTAG(pM, &pRes, &bufLen);
+		}
+
 		if(bLockMutex == LOCK_MUTEX) {
 			MsgLock(pM);
 			/* need to re-check, things may have change in between! */
@@ -2662,7 +2674,7 @@ char *getAPPNAME(smsg_t * const pM, sbool bLockMutex)
 	prepareAPPNAME(pM, MUTEX_ALREADY_LOCKED);
 	if(pM->pCSAPPNAME == NULL)
 		pszRet = UCHAR_CONSTANT("");
-	else 
+	else
 		pszRet = rsCStrGetSzStrNoNULL(pM->pCSAPPNAME);
 	if(bLockMutex == LOCK_MUTEX)
 		MsgUnlock(pM);
@@ -2694,7 +2706,7 @@ void MsgSetInputName(smsg_t *pThis, prop_t *inputName)
 }
 
 /* Set default TZ. Note that at most 7 chars are set, as we would
- * otherwise overrun our buffer! 
+ * otherwise overrun our buffer!
  */
 void MsgSetDfltTZ(smsg_t *pThis, char *tz)
 {
@@ -2713,7 +2725,7 @@ void MsgSetDfltTZ(smsg_t *pThis, char *tz)
  * rgerhards, 2009-11-17
  */
 rsRetVal
-msgSetFromSockinfo(smsg_t *pThis, struct sockaddr_storage *sa){ 
+msgSetFromSockinfo(smsg_t *pThis, struct sockaddr_storage *sa){
 	DEFiRet;
 	assert(pThis->rcvFrom.pRcvFrom == NULL);
 
@@ -2824,8 +2836,8 @@ void MsgSetHOSTNAME(smsg_t *pThis, const uchar* pszHOSTNAME, const int lenHOSTNA
 
 
 /* set the offset of the MSG part into the raw msg buffer
- * Note that the offset may be higher than the length of the raw message 
- * (exactly by one). This can happen if we have a message that does not 
+ * Note that the offset may be higher than the length of the raw message
+ * (exactly by one). This can happen if we have a message that does not
  * contain any MSG part.
  */
 void MsgSetMSGoffs(smsg_t * const pMsg, short offs)
@@ -2842,7 +2854,7 @@ void MsgSetMSGoffs(smsg_t * const pMsg, short offs)
 
 
 /* replace the MSG part of a message. The update actually takes place inside
- * rawmsg. 
+ * rawmsg.
  * There are two cases: either the new message will be larger than the new msg
  * or it will be less than or equal. If it is less than or equal, we can utilize
  * the previous message buffer. If it is larger, we can utilize the smsg_t-included
@@ -3241,7 +3253,7 @@ finalize_it:
 }
 
 
-/* Encode a JSON value and add it to provided string. Note that 
+/* Encode a JSON value and add it to provided string. Note that
  * the string object may be NULL. In this case, it is created
  * if and only if escaping is needed. if escapeAll is false, previously
  * escaped strings are left as is
@@ -3384,7 +3396,7 @@ finalize_it:
  * "name"="value"
  * where value is JSON-escaped (here we assume that the name
  * only contains characters from the valid character set).
- * Note: this function duplicates code from jsonEncode(). 
+ * Note: this function duplicates code from jsonEncode().
  * TODO: these two functions should be combined, at least if
  * that makes any sense from a performance PoV - definitely
  * something to consider at a later stage. rgerhards, 2012-04-19
@@ -3420,7 +3432,7 @@ finalize_it:
 }
 
 
-/* This function returns a string-representation of the 
+/* This function returns a string-representation of the
  * requested message property. This is a generic function used
  * to abstract properties so that these can be easier
  * queried. Returns NULL if property could not be found.
@@ -3438,7 +3450,7 @@ finalize_it:
  * issues in the upper layers, because we so can guarantee that
  * the buffer will remain static AND available during the lifetime
  * of the object. Please note that both the max size allocation as
- * well as keeping things in memory might like look like a 
+ * well as keeping things in memory might like look like a
  * waste of memory (some might say it actually is...) - we
  * deliberately accept this because performance is more important
  * to us ;)
@@ -3462,8 +3474,8 @@ finalize_it:
 	*pPropLen = sizeof("**OUT OF MEMORY**") - 1; \
 	return(UCHAR_CONSTANT("**OUT OF MEMORY**"));}
 uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restrict__ const pTpe,
-                 msgPropDescr_t *pProp, rs_size_t *__restrict__ const pPropLen,
-		 unsigned short *__restrict__ const pbMustBeFreed, struct syslogTime * const ttNow)
+			msgPropDescr_t *pProp, rs_size_t *__restrict__ const pPropLen,
+			unsigned short *__restrict__ const pbMustBeFreed, struct syslogTime * const ttNow)
 {
 	uchar *pRes; /* result pointer */
 	rs_size_t bufLen = -1; /* length of string or -1, if not known */
@@ -3779,17 +3791,17 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			if((pRes = (uchar*) MALLOC(32)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			}
- 
+
 			if(clock_gettime(CLOCK_UPTIME, &tp) == -1) {
 				free(pRes);
- 				*pPropLen = sizeof("**SYSCALL FAILED**") - 1;
- 				return(UCHAR_CONSTANT("**SYSCALL FAILED**"));
- 			}
- 
+				*pPropLen = sizeof("**SYSCALL FAILED**") - 1;
+				return(UCHAR_CONSTANT("**SYSCALL FAILED**"));
+			}
+
 			*pbMustBeFreed = 1;
 
 			snprintf((char*) pRes, 32, "%ld", tp.tv_sec);
- 			}
+			}
 
 #			else
 
@@ -3863,7 +3875,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			}
 		}
 		dbgprintf("field requested %d, field found %d\n", pTpe->data.field.iFieldNr, (int) iCurrFld);
-		
+
 		if(iCurrFld == pTpe->data.field.iFieldNr) {
 			/* field found, now extract it */
 			/* first of all, we need to find the end */
@@ -4152,7 +4164,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 		 * result is random (though currently there obviously is an order of
 		 * preferrence, see code below. But this is NOT guaranteed.
 		 * RGerhards, 2006-11-17
-		 * We must copy the strings if we modify them, because they may either 
+		 * We must copy the strings if we modify them, because they may either
 		 * point to static memory or may point into the message object, in which
 		 * case we would actually modify the original property (which of course
 		 * is wrong).
@@ -4164,7 +4176,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			uchar *pDstStart;
 			uchar *pDst;
 			uchar bDropped = 0;
-			
+
 			while(*pSrc) {
 				if(!iscntrl((int) *pSrc++))
 					iLenBuf++;
@@ -4194,7 +4206,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			uchar *pSrc;
 			uchar *pDstStart;
 			uchar *pDst;
-			
+
 			if(*pbMustBeFreed == 1) {
 				/* in this case, we already work on dynamic
 				 * memory, so there is no need to copy it - we can
@@ -4283,14 +4295,14 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			uchar *pDstStart;
 			uchar *pDst;
 			uchar bDropped = 0;
-			
+
 			while(*pSrc) {
 				if(*pSrc++ != '/')
 					iLenBuf++;
 				else
 					bDropped = 1;
 			}
-			
+
 			if(bDropped) {
 				pDst = pDstStart = MALLOC(iLenBuf + 1);
 				if(pDst == NULL) {
@@ -4313,7 +4325,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			uchar *pSrc;
 			uchar *pDstStart;
 			uchar *pDst;
-			
+
 			if(*pbMustBeFreed == 1) {
 				/* here, again, we can modify the string as we already obtained
 				 * a private buffer. As we do not change the size of that buffer,
@@ -4348,7 +4360,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 				*pbMustBeFreed = 1;
 			}
 		}
-		
+
 		/* check for "." and ".." (note the parenthesis in the if condition!) */
 		if(*pRes == '\0') {
 			if(*pbMustBeFreed == 1)
@@ -4527,10 +4539,10 @@ msgSetPropViaJSON(smsg_t *__restrict__ const pMsg, const char *name, struct json
 		MsgSetRawMsg(pMsg, psz, strlen(psz));
 	} else if(!strcmp(name, "msg")) {
 		psz = json_object_get_string(json);
-		MsgReplaceMSG(pMsg, (const uchar*)psz, strlen(psz)); 
+		MsgReplaceMSG(pMsg, (const uchar*)psz, strlen(psz));
 	} else if(!strcmp(name, "syslogtag")) {
 		psz = json_object_get_string(json);
-		MsgSetTAG(pMsg, (const uchar*)psz, strlen(psz)); 
+		MsgSetTAG(pMsg, (const uchar*)psz, strlen(psz));
 	} else if(!strcmp(name, "pri")) {
 		val = json_object_get_int(json);
 		msgSetPRI(pMsg, val);
@@ -4557,7 +4569,7 @@ msgSetPropViaJSON(smsg_t *__restrict__ const pMsg, const char *name, struct json
 		MsgSetStructuredData(pMsg, psz);
 	} else if(!strcmp(name, "hostname") || !strcmp(name, "source")) {
 		psz = json_object_get_string(json);
-		MsgSetHOSTNAME(pMsg, (const uchar*)psz, strlen(psz)); 
+		MsgSetHOSTNAME(pMsg, (const uchar*)psz, strlen(psz));
 	} else if(!strcmp(name, "fromhost")) {
 		psz = json_object_get_string(json);
 		MsgSetRcvFromStr(pMsg, (const uchar*) psz, 0, &propFromHost);
@@ -4620,7 +4632,7 @@ MsgSetPropsViaJSON(smsg_t *__restrict__ const pMsg, const uchar *__restrict__ co
 		ABORT_FINALIZE(RS_RET_JSON_UNUSABLE);
 	}
 	MsgSetPropsViaJSON_Object(pMsg, json);
- 
+
 finalize_it:
 	if(tokener != NULL)
 		json_tokener_free(tokener);
@@ -4684,33 +4696,33 @@ jsonPathGetLeaf(uchar *name, int lenName)
 }
 
 static json_bool jsonVarExtract(struct json_object* root, const char *key, struct json_object **value) {
-    char namebuf[MAX_VARIABLE_NAME_LEN];
-    int key_len = strlen(key);
-    char *array_idx_start = strstr(key, "[");
-    char *array_idx_end = NULL;
-    char *array_idx_num_end_discovered = NULL;
-    struct json_object *arr = NULL;
-    if (array_idx_start != NULL) {
-        array_idx_end = strstr(array_idx_start, "]");
-    }
-    if (array_idx_end != NULL && (array_idx_end - key + 1) == key_len) {
-        errno = 0;
-        int idx = (int) strtol(array_idx_start + 1, &array_idx_num_end_discovered, 10);
-        if (errno == 0 && array_idx_num_end_discovered == array_idx_end) {
-            memcpy(namebuf, key, array_idx_start - key);
-            namebuf[array_idx_start - key] = '\0';
-            json_bool found_obj = json_object_object_get_ex(root, namebuf, &arr);
-            if (found_obj && json_object_is_type(arr, json_type_array)) {
-                int len = json_object_array_length(arr);
-                if (len > idx) {
-                    *value = json_object_array_get_idx(arr, idx);
-                    if (*value != NULL) return TRUE;
-                }
-                return FALSE;
-            }
-        }
-    }
-    return json_object_object_get_ex(root, key, value);
+	char namebuf[MAX_VARIABLE_NAME_LEN];
+	int key_len = strlen(key);
+	char *array_idx_start = strstr(key, "[");
+	char *array_idx_end = NULL;
+	char *array_idx_num_end_discovered = NULL;
+	struct json_object *arr = NULL;
+	if (array_idx_start != NULL) {
+		array_idx_end = strstr(array_idx_start, "]");
+	}
+	if (array_idx_end != NULL && (array_idx_end - key + 1) == key_len) {
+		errno = 0;
+		int idx = (int) strtol(array_idx_start + 1, &array_idx_num_end_discovered, 10);
+		if (errno == 0 && array_idx_num_end_discovered == array_idx_end) {
+			memcpy(namebuf, key, array_idx_start - key);
+			namebuf[array_idx_start - key] = '\0';
+			json_bool found_obj = json_object_object_get_ex(root, namebuf, &arr);
+			if (found_obj && json_object_is_type(arr, json_type_array)) {
+				int len = json_object_array_length(arr);
+				if (len > idx) {
+					*value = json_object_array_get_idx(arr, idx);
+					if (*value != NULL) return TRUE;
+				}
+				return FALSE;
+			}
+		}
+	}
+	return json_object_object_get_ex(root, key, value);
 }
 
 
@@ -4980,7 +4992,7 @@ msgAddMultiMetadata(smsg_t *const __restrict__ pMsg,
 		if(jval == NULL) {
 			json_object_put(json);
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
- 		}
+		}
 		json_object_object_add(json, (const char *const)metaname[i], jval);
 	}
 	iRet = msgAddJSON(pMsg, (uchar*)"!metadata", json, 0, 0);
@@ -5186,7 +5198,7 @@ msgPropDescrDestruct(msgPropDescr_t *pProp)
 
 
 /* dummy */
-static rsRetVal msgQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
+static rsRetVal msgQueryInterface(interface_t __attribute__((unused)) *i) { return RS_RET_NOT_IMPLEMENTED; }
 
 /* Initialize the message class. Must be called as the very first method
  * before anything else is called inside this class.

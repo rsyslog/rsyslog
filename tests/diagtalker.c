@@ -30,7 +30,7 @@
 #include <sys/socket.h>
 #if defined(__FreeBSD__)
 #include <netinet/in.h>
-#endif 
+#endif
 
 static char *targetIP = "127.0.0.1";
 static int targetPort = 13500;
@@ -71,7 +71,7 @@ int openConn(int *fd)
 				usleep(100000); /* ms = 1000 us! */
 			}
 		}
-	} 
+	}
 	if(retries > 0) {
 		fprintf(stderr, "connection established.\n");
 	}

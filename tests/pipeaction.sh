@@ -16,19 +16,34 @@ fi
 # create the pipe and start a background process that copies data from 
 # it to the "regular" work file
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+$MainMsgQueueTimeoutShutdown 10000
+
+# set spool locations and switch queue to disk-only mode
+$WorkDirectory test-spool
+$MainMsgQueueFilename mainq
+$MainMsgQueueType disk
+
+$template outfmt,"%msg:F,58:2%\n"
+# with pipes, we do not need to use absolute path names, so
+# we can simply refer to our working pipe via the usual relative
+# path name
+:msg, contains, "msgnum:" |rsyslog-testbench-fifo;outfmt
+'
 rm -f rsyslog-testbench-fifo
 mkfifo rsyslog-testbench-fifo
-cp rsyslog-testbench-fifo rsyslog.out.log &
+cp rsyslog-testbench-fifo  $RSYSLOG_OUT_LOG &
 CPPROCESS=$!
 echo background cp process id is $CPPROCESS
 
 # now do the usual run
-. $srcdir/diag.sh startup pipeaction.conf
+startup
 # 20000 messages should be enough
-#. $srcdir/diag.sh tcpflood -m20000
-. $srcdir/diag.sh injectmsg 0 20000
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown
+#tcpflood -m20000
+injectmsg 0 20000
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown
 
 # wait for the cp process to finish, do pipe-specific cleanup
 echo waiting for background cp to terminate...
@@ -37,5 +52,5 @@ rm -f rsyslog-testbench-fifo
 echo background cp has terminated, continue test...
 
 # and continue the usual checks
-. $srcdir/diag.sh seq-check 0 19999
-. $srcdir/diag.sh exit
+seq_check 0 19999
+exit_test

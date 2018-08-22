@@ -5,8 +5,8 @@
 
 psql -h localhost -U postgres -f testsuites/pgsql-basic.sql
 
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/ompgsql/.libs/ompgsql")
 if $msg contains "msgnum" then {
 	action(type="ompgsql" server="127.0.0.1"
@@ -18,22 +18,22 @@ if $msg contains "msgnum" then {
 		queue.timeoutEnqueue="10000"
 	)
 }'
-. $srcdir/diag.sh startup
-. $srcdir/diag.sh injectmsg  0 50000
+startup
+injectmsg  0 50000
 . $srcdir/diag.sh wait-queueempty
 echo waiting for worker threads to timeout
 ./msleep 3000
-. $srcdir/diag.sh injectmsg  50000 50000
+injectmsg  50000 50000
 . $srcdir/diag.sh wait-queueempty
 echo waiting for worker threads to timeout
 ./msleep 2000
-. $srcdir/diag.sh injectmsg  100000 50000
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+injectmsg  100000 50000
+shutdown_when_empty
+wait_shutdown
 
-psql -h localhost -U postgres -d syslogtest -f testsuites/pgsql-select-msg.sql -t -A > rsyslog.out.log
-. $srcdir/diag.sh seq-check  0 149999
+psql -h localhost -U postgres -d syslogtest -f testsuites/pgsql-select-msg.sql -t -A > $RSYSLOG_OUT_LOG
+seq_check  0 149999
 echo cleaning up test database
 psql -h localhost -U postgres -c 'DROP DATABASE IF EXISTS syslogtest;'
 
-. $srcdir/diag.sh exit
+exit_test

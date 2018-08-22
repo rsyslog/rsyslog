@@ -1,13 +1,13 @@
 /* syncdemo - a program to demonstrate the performance and validity of different
  * synchronization methods as well as some timing properties.
  *
- * The task to be done is very simple: a single gloabl integer is to to incremented 
+ * The task to be done is very simple: a single gloabl integer is to to incremented
  * by multiple threads. All this is done in a very-high concurrency environment. Note that
  * the test is unfair to mechanisms likes spinlocks, because we have almost only wait
  * time but no real processing time between the waits. However, the test provides
  * some good insight into atomic instructions vs. other synchronisation methods.
  * It also proves that garbling variables by not doing proper synchronisation is
- * highly likely. For best results, this program should be executed on a 
+ * highly likely. For best results, this program should be executed on a
  * multiprocessor machine (on a uniprocessor, it will probably not display the
  * problems caused by missing synchronisation).
  *
@@ -22,7 +22,7 @@
  * suitable to compare "part" and "none" modes. If you absolutely need
  * to do that, you need to use inline assembly. However, the results should
  * be fairly OK when consitently using either -O0 or -O1. If you see a big loss
- * of performance when you compare "none" and "part", be sure to run 
+ * of performance when you compare "none" and "part", be sure to run
  * "none" with -t1 and watch out for the results! In any case, looking at the generated
  * assembly code is vital to interpret results correctly. Review of generated assembly
  * done on 2010-05-05 indicates that -O0 is probably the best choice. Note that we
@@ -39,11 +39,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -135,7 +135,7 @@ void *workerThread( void *arg )
 	}
 
 	/* if enabled, try to put thread on a fixed CPU (the one that corresponds to the
-	 * thread ID). This may 
+	 * thread ID). This may
 	 */
 	if(bCPUAffinity) {
 		if (sched_setaffinity( gettid(), sizeof( cpu_set_t ), &set )) {
@@ -350,8 +350,8 @@ doTest(syncType_t st)
 	}
 
 	/* we have a memory leak due to calling dispRuntime(), but we don't
-         * care as we terminate immediately.
-         */
+	 * care as we terminate immediately.
+	 */
 	printf("%-10s: total runtime %6ld.%3.3u, avg %s, min %s, max %s\n",
 	       getSyncMethName(st),
 	       (long)totalRuntime/1000, (unsigned)(totalRuntime % 1000),

@@ -17,11 +17,30 @@ if [ `uname` = "SunOS" ] ; then
 fi
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup omruleset-queue.conf
-. $srcdir/diag.sh injectmsg  0 20000
+generate_conf
+add_conf '
+$ModLoad ../plugins/omruleset/.libs/omruleset
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$InputTCPServerRun '$TCPFLOOD_PORT'
+
+$ruleset rsinclude
+# create ruleset main queue with default parameters
+$RulesetCreateMainQueue on
+# make sure we do not terminate too early!
+$MainMsgQueueTimeoutShutdown 10000
+$template outfmt,"%msg:F,58:2%\n"
+template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!
+:msg, contains, "msgnum:" ?dynfile;outfmt
+
+$ruleset RSYSLOG_DefaultRuleset
+$ActionOmrulesetRulesetName rsinclude
+*.* :omruleset:
+'
+startup
+injectmsg  0 20000
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown 
-. $srcdir/diag.sh seq-check 0 19999
-. $srcdir/diag.sh exit
+wait_shutdown 
+seq_check 0 19999
+exit_test

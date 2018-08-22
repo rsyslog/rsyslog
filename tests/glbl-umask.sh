@@ -7,23 +7,23 @@
 # file
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 global(umask="0077")
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 :msg, contains, "msgnum:" {
-	action(type="omfile" template="outfmt" file="rsyslog.out.log")
+	action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 }
 '
-. $srcdir/diag.sh startup
-$srcdir/diag.sh injectmsg 0 1
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+startup
+injectmsg 0 1
+shutdown_when_empty
+wait_shutdown
 
-if [ `ls -l rsyslog.out.log|$RS_HEADCMD -c 10 ` != "-rw-------" ]; then
-  echo "invalid file permission (umask), rsyslog.out.log has:"
-  ls -l rsyslog.out.log
-  . $srcdir/diag.sh error-exit 1
+if [ `ls -l $RSYSLOG_OUT_LOG|$RS_HEADCMD -c 10 ` != "-rw-------" ]; then
+  echo "invalid file permission (umask),  $RSYSLOG_OUT_LOG has:"
+  ls -l $RSYSLOG_OUT_LOG
+  error_exit 1
 fi;
-. $srcdir/diag.sh exit
+exit_test

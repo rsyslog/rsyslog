@@ -8,18 +8,18 @@
  * File begun on 2007-07-20 by RGerhards (extracted from syslogd.c, which at the
  * time of the fork from sysklogd was under BSD license)
  *
- * Copyright 2007-2016 Adiscon GmbH.
+ * Copyright 2007-2018 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -71,6 +71,13 @@
 #	define _PATH_DEV	"/dev/"
 #endif
 
+#ifdef UT_NAMESIZE
+# define UNAMESZ	UT_NAMESIZE	/* length of a login name */
+#else
+# define UNAMESZ	32	/* length of a login name, 32 seems current (2018) good bet */
+#endif
+#define MAXUNAMES	20	/* maximum number of user names */
+
 #ifdef OS_SOLARIS
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
@@ -112,7 +119,7 @@ static struct cnfparamblk actpblk =
 	};
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
+CODESTARTinitConfVars
 ENDinitConfVars
 
 
@@ -208,7 +215,7 @@ void endutent(void)
  */
 static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 {
-  
+
 	uchar szErr[512];
 	char p[sizeof(_PATH_DEV) + UNAMESZ];
 	register int i;
@@ -235,7 +242,7 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 		if(ut.ut_type != USER_PROCESS)
 			continue;
 #endif
-		if(!(strncmp (ut.UTNAME,"LOGIN", 6))) /* paranoia */
+		if(!(memcmp (ut.UTNAME,"LOGIN", 6))) /* paranoia */
 			continue;
 
 		/* should we send the message to this user? */
@@ -254,7 +261,7 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 
 		/* compute the device name */
 		strcpy(p, _PATH_DEV);
-		strncat(p, ut.ut_line, UNAMESZ);
+		memcpy(p, ut.ut_line, UNAMESZ);
 
 		/* we must be careful when writing to the terminal. A terminal may block
 		 * (for example, a user has pressed <ctl>-s). In that case, we can not

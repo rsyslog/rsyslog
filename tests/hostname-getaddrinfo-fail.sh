@@ -13,29 +13,30 @@ if [ `uname` = "SunOS" ] ; then
 fi
 if [ `uname` = "FreeBSD" ] ; then
    echo "FreeBSD: temporarily disabled until we know what is wrong"
+   echo "see https://github.com/rsyslog/rsyslog/issues/2833"
    exit 77
 fi
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
-action(type="omfile" file="rsyslog.out.log")
+generate_conf
+add_conf '
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 export RSYSLOG_PRELOAD=".libs/liboverride_gethostname_nonfqdn.so:.libs/liboverride_getaddrinfo.so"
-. $srcdir/diag.sh startup
+startup
 sleep 1
 . $srcdir/diag.sh shutdown-immediate
-. $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
+wait_shutdown    # we need to wait until rsyslogd is finished!
 
-grep " nonfqdn " < rsyslog.out.log
+grep " nonfqdn " < $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "expected hostname \"nonfqdn\" not found in logs, rsyslog.out.log is:"
-  cat rsyslog.out.log
-  . $srcdir/diag.sh error-exit 1
+  echo "expected hostname \"nonfqdn\" not found in logs, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
+  error_exit 1
 fi;
 
 echo EVERYTHING OK - error messages are just as expected!
 echo "note: the listener error on port 13500 is OK! It is caused by plumbing"
 echo "we do not use here in this special case, and we did not want to work"
 echo "very hard to remove that problem (which does not affect the test)"
-. $srcdir/diag.sh exit
+exit_test

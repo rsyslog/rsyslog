@@ -2,24 +2,24 @@
 # addd 2016-07-11 by RGerhards, released under ASL 2.0
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="13514")
+input(type="imtcp" port="'$TCPFLOOD_PORT'")
 template(name="outfmt" type="string" string="%hostname%\n")
 
 $rulesetparser rsyslog.rfc5424
-local4.debug action(type="omfile" template="outfmt" file="rsyslog.out.log")
+local4.debug action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 '
-. $srcdir/diag.sh startup
+startup
 echo '<167>1 2003-03-01T01:00:00.000Z hostname1/hostname2 tcpflood - tag [tcpflood@32473 MSGNUM="0"] data' > rsyslog.input
-. $srcdir/diag.sh tcpflood -B -I rsyslog.input
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
-echo "hostname1/hostname2" | cmp - rsyslog.out.log
+tcpflood -B -I rsyslog.input
+shutdown_when_empty
+wait_shutdown
+echo "hostname1/hostname2" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid hostname generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
-  . $srcdir/diag.sh error-exit 1
+  echo "invalid hostname generated, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
+  error_exit 1
 fi;
-. $srcdir/diag.sh exit
+exit_test

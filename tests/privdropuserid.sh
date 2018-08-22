@@ -11,23 +11,23 @@ fi
 rsyslog_testbench_setup_testuser
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 template(name="outfmt" type="list") {
 	property(name="msg" compressSpace="on")
 	constant(value="\n")
 }
-action(type="omfile" template="outfmt" file="rsyslog.out.log")
+action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 '
-. $srcdir/diag.sh add-conf "\$PrivDropToUserID ${TESTBENCH_TESTUSER[uid]}"
-. $srcdir/diag.sh startup
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
-grep "userid.*${TESTBENCH_TESTUSER[uid]}" < rsyslog.out.log
+add_conf "\$PrivDropToUserID ${TESTBENCH_TESTUSER[uid]}"
+startup
+shutdown_when_empty
+wait_shutdown
+grep "userid.*${TESTBENCH_TESTUSER[uid]}" < $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "message indicating drop to uid #${TESTBENCH_TESTUSER[uid]} is missing:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   exit 1
 fi;
 
-. $srcdir/diag.sh exit
+exit_test

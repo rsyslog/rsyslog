@@ -9,8 +9,8 @@ export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
 #  Starting actual testbench
 # TODO: move up,
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 template(name="tpl" type="string"
 	 string="{\"msgnum\":\"%msg:F,58:2%\"}")
 
@@ -25,8 +25,8 @@ if $msg contains "msgnum:" then
 		action.resumeInterval="1" # we need quick retries
 		searchIndex="rsyslog_testbench")
 '
-. $srcdir/diag.sh startup
-. $srcdir/diag.sh injectmsg  0 10000
+startup
+injectmsg  0 10000
 ./msleep 500
 echo stop elasticsearch...
 . $srcdir/diag.sh stop-elasticsearch
@@ -35,12 +35,12 @@ echo start elasticsearch...
 ./msleep 5000
 . $srcdir/diag.sh stop-elasticsearch
 . $srcdir/diag.sh start-elasticsearch
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 ./msleep 1000 # ES might need some time to maintain index...
 . $srcdir/diag.sh es-getdata 10000 19200
 . $srcdir/diag.sh stop-elasticsearch
 
-. $srcdir/diag.sh seq-check  0 9999 -d
+seq_check  0 9999 -d
 . $srcdir/diag.sh cleanup-elasticsearch
-. $srcdir/diag.sh exit
+exit_test

@@ -4,11 +4,66 @@
 echo ===============================================================================
 echo \[rscript_gt.sh\]: testing rainerscript GT statement for two JSON variables
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup rscript_gt_var.conf
-. $srcdir/diag.sh injectmsg  0 1
+generate_conf
+add_conf '
+template(name="outfmt" type="list") {
+	property(name="$!usr!msgnum")
+	constant(value="\n")
+}
+
+set $!var1 = "43";
+set $!var2 = "42";
+if $!var1 > $!var2 then {
+        if $!var2 > $!var1 then {
+                # Failure
+                stop
+        } else {
+                unset $!var1;
+                unset $!var2;
+        }
+} else {
+        # Failure
+        stop
+}
+set $.var1 = "43";
+set $.var2 = "42";
+if $.var1 > $.var2 then {
+        if $.var2 > $.var1 then {
+                # Failure
+                stop
+        } else {
+                unset $.var1;
+                unset $.var2;
+        }
+} else {
+        # Failure
+        stop
+}
+set $/var1 = "43";
+set $/var2 = "42";
+if $/var1 > $/var2 then {
+        if $/var2 > $/var1 then {
+                # Failure
+                stop
+        } else {
+                unset $/var1;
+                unset $/var2;
+        }
+} else {
+        # Failure
+        stop
+}
+
+if $msg contains "msgnum" then {
+	set $!usr!msgnum = field($msg, 58, 2);
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+}
+'
+startup
+injectmsg  0 1
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown 
-. $srcdir/diag.sh seq-check  0 0
-. $srcdir/diag.sh exit
+wait_shutdown 
+seq_check  0 0
+exit_test

@@ -9,8 +9,8 @@ export ES_PORT=19200
 
 . $srcdir/diag.sh init
 . $srcdir/diag.sh es-init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 template(name="tpl" type="string"
 	 string="{\"msgnum\":\"%msg:F,58:2%\"}")
 
@@ -23,13 +23,13 @@ if $msg contains "msgnum:" then
 	       template="tpl"
 	       searchIndex="rsyslog_testbench")
 '
-. $srcdir/diag.sh startup-vgthread
-. $srcdir/diag.sh injectmsg  0 10000
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown-vg 
+startup_vgthread
+injectmsg  0 10000
+shutdown_when_empty
+wait_shutdown_vg 
 . $srcdir/diag.sh check-exit-vg
 . $srcdir/diag.sh es-getdata 10000 $ES_PORT
-. $srcdir/diag.sh seq-check  0 9999
+seq_check  0 9999
 . $srcdir/diag.sh stop-elasticsearch
 . $srcdir/diag.sh cleanup-elasticsearch
-. $srcdir/diag.sh exit
+exit_test

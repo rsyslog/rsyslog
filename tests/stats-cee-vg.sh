@@ -11,14 +11,26 @@ fi
 echo ===============================================================================
 echo \[stats-cee-vg.sh\]: test for verifying stats are reported correctly cee format with valgrind
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup-vg stats-cee.conf
+generate_conf
+add_conf '
+ruleset(name="stats") {
+  action(type="omfile" file="./rsyslog.out.stats.log")
+}
+
+module(load="../plugins/impstats/.libs/impstats" interval="1" severity="7" resetCounters="on" Ruleset="stats" bracketing="on" format="cee")
+
+if ($msg == "this condition will never match") then {
+  action(name="an_action_that_is_never_called" type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
+}
+'
+startup_vg
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_1
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown-vg
+wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
 . $srcdir/diag.sh custom-content-check '@cee: { "name": "an_action_that_is_never_called", "origin": "core.action", "processed": 0, "failed": 0, "suspended": 0, "suspended.duration": 0, "resumed": 0 }' 'rsyslog.out.stats.log'
-. $srcdir/diag.sh exit
+exit_test

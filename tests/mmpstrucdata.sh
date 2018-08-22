@@ -4,10 +4,23 @@
 echo ===============================================================================
 echo \[mmpstrucdata.sh\]: testing mmpstrucdata
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup mmpstrucdata.conf
+generate_conf
+add_conf '
+module(load="../plugins/mmpstrucdata/.libs/mmpstrucdata")
+module(load="../plugins/imtcp/.libs/imtcp")
+
+template(name="outfmt" type="string" string="%$!rfc5424-sd!tcpflood@32473!msgnum%\n")
+
+input(type="imtcp" port="'$TCPFLOOD_PORT'")
+
+action(type="mmpstrucdata")
+if $msg contains "msgnum" then
+	action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
+'
+startup
 sleep 1
-. $srcdir/diag.sh tcpflood -m100 -y
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh seq-check 0 99
-. $srcdir/diag.sh exit
+tcpflood -m100 -y
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown
+seq_check 0 99
+exit_test

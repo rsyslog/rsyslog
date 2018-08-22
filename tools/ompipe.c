@@ -19,11 +19,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -123,7 +123,7 @@ getDfltTpl(void)
 
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
+CODESTARTinitConfVars
 ENDinitConfVars
 
 
@@ -367,7 +367,7 @@ CODESTARTnewActInst
 		}
 	}
 
-	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->tplName == NULL) ? 
+	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->tplName == NULL) ?
 						"RSYSLOG_FileFormat" : (char*)pData->tplName),
 						OMSR_NO_RQD_TPL_OPTS));
 CODE_STD_FINALIZERnewActInst
@@ -386,7 +386,7 @@ CODESTARTparseSelectorAct
 		}
 	} else {
 		/* this is not clean, but we need it for the time being
-		 * TODO: remove when cleaning up modularization 
+		 * TODO: remove when cleaning up modularization
 		 */
 		ENDfunc
 		return RS_RET_CONFLINE_UNPROCESSED;
@@ -397,7 +397,7 @@ CODESTARTparseSelectorAct
 	++p;
 	CHKiRet(cflineParseFileName(p, (uchar*) pData->pipe, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
 				       getDfltTpl()));
-		
+
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -422,7 +422,7 @@ CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_doHUP
 CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt

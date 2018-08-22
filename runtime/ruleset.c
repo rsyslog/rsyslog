@@ -18,11 +18,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -114,7 +114,7 @@ scriptIterateAllActions(struct cnfstmt *root, rsRetVal (*pFunc)(void*, void*), v
 		case S_FOREACH:
 			if(stmt->d.s_foreach.body != NULL)
 				scriptIterateAllActions(stmt->d.s_foreach.body,
-                                        pFunc, pParam);
+							pFunc, pParam);
 			break;
 		case S_PRIFILT:
 			if(stmt->d.s_prifilt.t_then != NULL)
@@ -158,7 +158,7 @@ DEFFUNC_llExecFunc(doIterateAllActions)
 	RETiRet;
 }
 /* iterate over ALL actions present in the WHOLE system.
- * this is often needed, for example when HUP processing 
+ * this is often needed, for example when HUP processing
  * must be done or a shutdown is pending.
  */
 static rsRetVal
@@ -350,19 +350,22 @@ callForeachObject(struct cnfstmt *stmt, json_object *arr, smsg_t *pMsg, wti_t *p
 	json_object *entry = NULL;
 	json_object *key = NULL;
 	const char **keys = NULL;
+	json_object *curr = NULL;
+	const char **curr_key;
+	struct json_object_iterator it;
+	struct json_object_iterator itEnd;
 	DEFiRet;
 
 	int len = json_object_object_length(arr);
 	CHKmalloc(keys = calloc(len, sizeof(char*)));
-	const char **curr_key = keys;
-	struct json_object_iterator it = json_object_iter_begin(arr);
-	struct json_object_iterator itEnd = json_object_iter_end(arr);
+	curr_key = keys;
+	it = json_object_iter_begin(arr);
+	itEnd = json_object_iter_end(arr);
 	while (!json_object_iter_equal(&it, &itEnd)) {
 		*curr_key = json_object_iter_peek_name(&it);
 		curr_key++;
 		json_object_iter_next(&it);
 	}
-	json_object *curr = NULL;
 	CHKmalloc(entry = json_object_new_object());
 	for (int i = 0; i < len; i++) {
 		if (json_object_object_get_ex(arr, keys[i], &curr)) {
@@ -580,7 +583,7 @@ scriptExec(struct cnfstmt *const root, smsg_t *const pMsg, wti_t *const pWti)
 	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
 		if(*pWti->pbShutdownImmediate) {
 			DBGPRINTF("scriptExec: ShutdownImmediate set, "
-				  "force terminating\n");	
+				  "force terminating\n");
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
 		}
 		if(Debug) {
@@ -662,6 +665,8 @@ processBatch(batch_t *pBatch, wti_t *pWti)
 		 */
 		if(localRet == RS_RET_OK)
 			batchSetElemState(pBatch, i, BATCH_STATE_COMM);
+		else if(localRet == RS_RET_SUSPENDED)
+			--i;
 	}
 
 	/* commit phase */
@@ -891,7 +896,7 @@ finalize_it:
 }
 
 /* this is a special destructor for the linkedList class. LinkedList does NOT
- * provide a pointer to the pointer, but rather the raw pointer itself. So we 
+ * provide a pointer to the pointer, but rather the raw pointer itself. So we
  * must map this, otherwise the destructor will abort.
  */
 rsRetVal
@@ -1011,7 +1016,7 @@ rulesetCreateQueue(void __attribute__((unused)) *pVal, int *pNewVal)
  * the must be added via explicit config directives.
  * Note: this is the only spot in the code that requires the parser object. In order
  * to solve some class init bootstrap sequence problems, we get the object handle here
- * instead of during module initialization. Note that objUse() is capable of being 
+ * instead of during module initialization. Note that objUse() is capable of being
  * called multiple times.
  * rgerhards, 2009-11-04
  */

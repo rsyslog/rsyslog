@@ -47,7 +47,6 @@ PARSER_NAME("rsyslog.aixforwardedfrom")
 /* internal structures
  */
 DEF_PMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(parser)
 DEFobjCurrIf(datetime)
@@ -88,7 +87,7 @@ CODESTARTparse
 	}
 	if((unsigned) lenMsg < 24) {
 		/* too short, can not be "our" message */
-                /* minimum message, 16 character timestamp, 'From ", 1 character name, ': '*/
+		/* minimum message, 16 character timestamp, 'From ", 1 character name, ': '*/
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
 
@@ -144,7 +143,6 @@ ENDparse
 BEGINmodExit
 CODESTARTmodExit
 	/* release what we no longer need */
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(parser, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
@@ -163,12 +161,11 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(parser, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
 	DBGPRINTF("aixforwardedfrom parser init called, compiled with version %s\n", VERSION);
- 	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG();
+	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG();
 	/* cache value, is set only during rsyslogd option processing */
 
 

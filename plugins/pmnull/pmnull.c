@@ -10,11 +10,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,7 +28,6 @@
 #include <assert.h>
 #include <errno.h>
 #include <ctype.h>
-#include "syslogd.h"
 #include "conf.h"
 #include "syslogd-types.h"
 #include "template.h"
@@ -47,7 +46,6 @@ MODULE_CNFNAME("pmnull")
 
 /* internal structures */
 DEF_PMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(parser)
 DEFobjCurrIf(datetime)
@@ -131,14 +129,14 @@ CODESTARTnewParserInst
 		if(!strcmp(parserpblk.descr[i].name, "tag")) {
 			inst->tag = (const char *) es_str2cstr(pvals[i].val.d.estr, NULL);
 			inst->lenTag = strlen(inst->tag);
-                } else if(!strcmp(parserpblk.descr[i].name, "syslogfacility")) {
+		} else if(!strcmp(parserpblk.descr[i].name, "syslogfacility")) {
 			syslogfacility = pvals[i].val.d.n;
 		} else if(!strcmp(parserpblk.descr[i].name, "syslogseverity")) {
 			syslogseverity = pvals[i].val.d.n;
 		} else {
-                        dbgprintf("pmnull: program error, non-handled "
-                          "param '%s'\n", parserpblk.descr[i].name);
-                }
+			dbgprintf("pmnull: program error, non-handled "
+				"param '%s'\n", parserpblk.descr[i].name);
+		}
 	}
 	inst->pri = syslogfacility*8 + syslogseverity;
 finalize_it:
@@ -164,7 +162,6 @@ ENDparse2
 BEGINmodExit
 CODESTARTmodExit
 	/* release what we no longer need */
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(parser, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
@@ -183,7 +180,6 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(parser, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 

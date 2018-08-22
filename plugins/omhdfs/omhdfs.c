@@ -11,11 +11,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -36,10 +36,10 @@
 #include <unistd.h>
 #include <sys/file.h>
 #include <pthread.h>
-#ifdef HAVE_HDFS_H 
+#ifdef HAVE_HDFS_H
 #  include <hdfs.h>
 #endif
-#ifdef HAVE_HADOOP_HDFS_H 
+#ifdef HAVE_HADOOP_HDFS_H
 #  include <hadoop/hdfs.h>
 #endif
 
@@ -61,15 +61,14 @@ MODULE_TYPE_NOKEEP
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 
 /* global data */
 static struct hashtable *files;		/* holds all file objects that we know */
 static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct configSettings_s {
-	uchar *fileName;	
-	uchar *hdfsHost;	
+	uchar *fileName;
+	uchar *hdfsHost;
 	uchar *dfltTplName;	/* default template name to use */
 	int hdfsPort;
 } configSettings_t;
@@ -314,7 +313,7 @@ fileWrite(file_t *pFile, uchar *buf, size_t *lenWrite)
 
 	tSize num_written_bytes = hdfsWrite(pFile->fs, pFile->fh, buf, *lenWrite);
 	if((unsigned) num_written_bytes != *lenWrite) {
-		errmsg.LogError(errno, RS_RET_ERR_HDFS_WRITE,
+		LogError(errno, RS_RET_ERR_HDFS_WRITE,
 			        "omhdfs: failed to write %s, expected %lu bytes, "
 			        "written %lu\n", pFile->name, (unsigned long) *lenWrite,
 				(unsigned long) num_written_bytes);
@@ -471,7 +470,7 @@ CODESTARTparseSelectorAct
 				       (cs.dfltTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : cs.dfltTplName));
 
 	if(cs.fileName == NULL) {
-		errmsg.LogError(0, RS_RET_ERR_HDFS_OPEN, "omhdfs: no file name specified, can not continue");
+		LogError(0, RS_RET_ERR_HDFS_OPEN, "omhdfs: no file name specified, can not continue");
 		ABORT_FINALIZE(RS_RET_FILE_NOT_SPECIFIED);
 	}
 
@@ -486,7 +485,7 @@ CODESTARTparseSelectorAct
 		pFile->hdfsPort = cs.hdfsPort;
 		fileOpen(pFile);
 		if(pFile->fh == NULL){
-			errmsg.LogError(0, RS_RET_ERR_HDFS_OPEN, "omhdfs: failed to open %s - "
+			LogError(0, RS_RET_ERR_HDFS_OPEN, "omhdfs: failed to open %s - "
 				    	"retrying later", pFile->name);
 			iRet = RS_RET_SUSPENDED;
 		}
@@ -503,8 +502,8 @@ ENDparseSelectorAct
 
 
 BEGINdoHUP
-    file_t *pFile;
-    struct hashtable_itr *itr;
+	file_t *pFile;
+	struct hashtable_itr *itr;
 CODESTARTdoHUP
 	DBGPRINTF("omhdfs: HUP received (file count %d)\n", hashtable_count(files));
 	/* Iterator constructor only returns a valid iterator if
@@ -538,7 +537,6 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 BEGINmodExit
 CODESTARTmodExit
-	objRelease(errmsg, CORE_COMPONENT);
 	if(files != NULL)
 		hashtable_destroy(files, 1); /* 1 => free all values automatically */
 ENDmodExit
@@ -558,7 +556,6 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKmalloc(files = create_hashtable(20, hash_from_string, key_equals_string,
 			                   fileObjDestruct4Hashtable));
 

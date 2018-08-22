@@ -4,11 +4,34 @@
 echo ===============================================================================
 echo \[rscript_ruleset_call.sh\]: testing rainerscript ruleset\(\) and call statement
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup rscript_ruleset_call.conf
-. $srcdir/diag.sh injectmsg  0 5000
+generate_conf
+add_conf '
+template(name="outfmt" type="list") {
+	property(name="msg" field.delimiter="58" field.number="2")
+	constant(value="\n")
+}
+
+
+# we deliberately include continue/stop to make sure we have more than
+# one statement. This catches grammar erorrs
+ruleset(name="rs2") {
+	continue
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+	stop
+}
+
+# this time we make sure a single statement is properly supported
+ruleset(name="rs1") {
+	call rs2
+}
+
+if $msg contains "msgnum" then call rs1
+'
+startup
+injectmsg  0 5000
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown 
-. $srcdir/diag.sh seq-check  0 4999
-. $srcdir/diag.sh exit
+wait_shutdown 
+seq_check  0 4999
+exit_test

@@ -11,14 +11,22 @@ fi
 echo ===============================================================================
 echo \[unused_lookup_table.sh\]: test for ensuring clean destruction of lookup-table even when it is never used
 . $srcdir/diag.sh init
-cp $srcdir/testsuites/xlate.lkp_tbl $srcdir/xlate.lkp_tbl
-. $srcdir/diag.sh startup-vg unused_lookup_table.conf
-. $srcdir/diag.sh injectmsg  0 1
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown-vg
+generate_conf
+add_conf '
+lookup_table(name="xlate" file="xlate.lkp_tbl")
+
+template(name="outfmt" type="string" string="- %msg%\n")
+
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+'
+cp -f $srcdir/testsuites/xlate.lkp_tbl xlate.lkp_tbl
+startup_vg
+injectmsg  0 1
+shutdown_when_empty
+wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
 . $srcdir/diag.sh content-check "msgnum:00000000:"
-. $srcdir/diag.sh exit
+exit_test
 
 # the test actually expects clean destruction of lookup_table
 # when lookup_table is loaded, it can either be:

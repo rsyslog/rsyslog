@@ -4,24 +4,24 @@
 # addd 2016-03-03 by RGerhards, released under ASL 2.0
 echo \[glbl-unloadmodules\]: 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 global(debug.unloadModules="off")
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
-. $srcdir/diag.sh startup
+startup
 sleep 1
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 # to check for support, we check if an error message has
 # been recorded, which would bear the name of our option.
 # if it is not recorded, we assume all is well. Not perfect,
 # but works good enough.
-grep -i "unloadModules" < rsyslog.out.log
+grep -i "unloadModules" < $RSYSLOG_OUT_LOG
 if [ ! $? -eq 1 ]; then
   echo "parameter name in output, assuming error message:"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   exit 1
 fi;
-. $srcdir/diag.sh exit
+exit_test

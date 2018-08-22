@@ -10,7 +10,7 @@
  * Note that this file obtains the zlib wrapper object is needed, but it never frees it
  * again. While this sounds like a leak (and one may argue it actually is), there is no
  * harm associated with that. The reason is that strm is a core object, so it is terminated
- * only when rsyslogd exists. As we could only release on termination (or else bear more 
+ * only when rsyslogd exists. As we could only release on termination (or else bear more
  * overhead for keeping track of how many users we have), not releasing zlibw is OK, because
  * it will be released when rsyslogd terminates. We may want to revisit this decision if
  * it turns out to be problematic. Then, we need to quasi-refcount the number of accesses
@@ -161,7 +161,7 @@ resolveFileSizeLimit(strm_t *pThis, uchar *pszCurrFName)
 		ABORT_FINALIZE(RS_RET_NON_SIZELIMITCMD); /* nothing we can do in this case... */
 	}
 	
-	/* we first check if we have command line parameters. We assume this, 
+	/* we first check if we have command line parameters. We assume this,
 	 * when we have a space in the program name. If we find it, everything after
 	 * the space is treated as a single argument.
 	 */
@@ -514,7 +514,7 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 			CHKiRet(genFileName(&pThis->pszCurrFName, pThis->pszDir, pThis->lenDir,
 					    pThis->pszFName, pThis->lenFName, pThis->iCurrFNum,
 					    pThis->iFileNumDigits));
-		}			
+		}
 		DBGPRINTF("strmCloseFile: deleting '%s'\n", pThis->pszCurrFName);
 		if(unlink((char*) pThis->pszCurrFName) == -1) {
 			char errStr[1024];
@@ -712,7 +712,7 @@ strmDebugOutBuf(const strm_t *const pThis)
 }
 
 /* logically "read" a character from a file. What actually happens is that
- * data is taken from the buffer. Only if the buffer is full, data is read 
+ * data is taken from the buffer. Only if the buffer is full, data is read
  * directly from file. In that case, a read is performed blockwise.
  * rgerhards, 2008-01-07
  * NOTE: needs to be enhanced to support sticking with a strm entry (if not
@@ -784,15 +784,15 @@ static rsRetVal
 strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
 	uint32_t trimLineOverBytes, int64 *const strtOffs)
 {
-        uchar c;
+	uchar c;
 	uchar finished;
-        DEFiRet;
+	DEFiRet;
 
-        ASSERT(pThis != NULL);
-        ASSERT(ppCStr != NULL);
+	ASSERT(pThis != NULL);
+	ASSERT(ppCStr != NULL);
 
-        CHKiRet(cstrConstruct(ppCStr));
-        CHKiRet(strmReadChar(pThis, &c));
+	CHKiRet(cstrConstruct(ppCStr));
+	CHKiRet(strmReadChar(pThis, &c));
 
 	/* append previous message to current message if necessary */
 	if(pThis->prevLineSegment != NULL) {
@@ -802,11 +802,11 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
 		CHKiRet(cstrAppendCStr(*ppCStr, pThis->prevLineSegment));
 		cstrDestruct(&pThis->prevLineSegment);
 	}
-        if(mode == 0) {
+	if(mode == 0) {
 		while(c != '\n') {
 			CHKiRet(cstrAppendChar(*ppCStr, c));
 			CHKiRet(strmReadChar(pThis, &c));
-        	}
+		}
 		if (trimLineOverBytes > 0 && (uint32_t) cstrLen(*ppCStr) > trimLineOverBytes) {
 			/* Truncate long line at trimLineOverBytes position */
 			dbgprintf("Truncate long line at %u, mode %d\n", trimLineOverBytes, mode);
@@ -817,9 +817,9 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
 	} else if(mode == 1) {
 		finished=0;
 		while(finished == 0){
-        		if(c != '\n') {
-                		CHKiRet(cstrAppendChar(*ppCStr, c));
-                		CHKiRet(strmReadChar(pThis, &c));
+			if(c != '\n') {
+				CHKiRet(cstrAppendChar(*ppCStr, c));
+				CHKiRet(strmReadChar(pThis, &c));
 				pThis->bPrevWasNL = 0;
 			} else {
 				if ((((*ppCStr)->iStrLen) > 0) ){
@@ -834,7 +834,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
 						} else {
 							CHKiRet(cstrAppendChar(*ppCStr, c));
 						}
-               					CHKiRet(strmReadChar(pThis, &c));
+						CHKiRet(strmReadChar(pThis, &c));
 						pThis->bPrevWasNL = 1;
 					}
 				} else {
@@ -850,10 +850,10 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
 		finished=0;
 		while(finished == 0){
 			if ((*ppCStr)->iStrLen == 0){
-        			if(c != '\n') {
+				if(c != '\n') {
 				/* nothing in the buffer, and it's not a newline, add it to the buffer */
-               				CHKiRet(cstrAppendChar(*ppCStr, c));
-               				CHKiRet(strmReadChar(pThis, &c));
+					CHKiRet(cstrAppendChar(*ppCStr, c));
+					CHKiRet(strmReadChar(pThis, &c));
 				} else {
 					finished=1;  /* this is a blank line, a \n with nothing since the
 							last complete record */
@@ -861,8 +861,8 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
 			} else {
 				if(pThis->bPrevWasNL) {
 					if ((c == ' ') || (c == '\t')){
-               					CHKiRet(cstrAppendChar(*ppCStr, c));
-               					CHKiRet(strmReadChar(pThis, &c));
+						CHKiRet(cstrAppendChar(*ppCStr, c));
+						CHKiRet(strmReadChar(pThis, &c));
 						pThis->bPrevWasNL = 0;
 					} else {
 						/* clean things up by putting the character we just read back into
@@ -885,7 +885,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
 					} else {
 						CHKiRet(cstrAppendChar(*ppCStr, c));
 					}
-               				CHKiRet(strmReadChar(pThis, &c));
+					CHKiRet(strmReadChar(pThis, &c));
 				}
 			}
 		}
@@ -900,7 +900,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
 	}
 
 finalize_it:
-        if(iRet == RS_RET_OK) {
+	if(iRet == RS_RET_OK) {
 		if(strtOffs != NULL) {
 			*strtOffs = pThis->strtOffs;
 		}
@@ -920,7 +920,7 @@ finalize_it:
 		}
 	}
 
-        RETiRet;
+	RETiRet;
 }
 
 /* check if the current multi line read is timed out
@@ -950,13 +950,13 @@ rsRetVal
 strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, const sbool bEscapeLF,
 	const sbool discardTruncatedMsg, const sbool msgDiscardingError, int64 *const strtOffs)
 {
-        uchar c;
+	uchar c;
 	uchar finished = 0;
 	cstr_t *thisLine = NULL;
 	rsRetVal readCharRet;
 	const time_t tCurr = pThis->readTimeout ? getTime(NULL) : 0;
 	int maxMsgSize = glblGetMaxLine();
-        DEFiRet;
+	DEFiRet;
 
 	do {
 		CHKiRet(strmReadChar(pThis, &c)); /* immediately exit on EOF */
@@ -1073,7 +1073,7 @@ finalize_it:
 			}
 		}
 	}
-        RETiRet;
+	RETiRet;
 }
 
 /* Standard-Constructor for the strm object
@@ -1344,12 +1344,12 @@ doWriteCall(strm_t *pThis, uchar *pBuf, size_t *pLenBuf)
 					CHKiRet(tryTTYRecover(pThis, err));
 				} else {
 					ABORT_FINALIZE(RS_RET_IO_ERROR);
-					/* Would it make sense to cover more error cases? So far, I 
+					/* Would it make sense to cover more error cases? So far, I
 					 * do not see good reason to do so.
 					 */
 				}
 			}
-	 	} 
+	 	}
 		/* advance buffer to next write position */
 		iTotalWritten += iWritten;
 		lenBuf -= iWritten;
@@ -1387,7 +1387,7 @@ finalize_it:
 }
 
 
-/* This function is called to "do" an async write call, what primarily means that 
+/* This function is called to "do" an async write call, what primarily means that
  * the data is handed over to the writer thread (which will then do the actual write
  * in parallel). Note that the stream mutex has already been locked by the
  * strmWrite...() calls. Also note that we always have only a single producer,
@@ -1440,8 +1440,8 @@ strmSchedWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf, const int bFlushZip)
 	ASSERT(pThis != NULL);
 
 	/* we need to reset the buffer pointer BEFORE calling the actual write
-	 * function. Otherwise, in circular mode, the write function will 
-	 * potentially close the file, then close will flush and as the 
+	 * function. Otherwise, in circular mode, the write function will
+	 * potentially close the file, then close will flush and as the
 	 * buffer pointer is nonzero, will re-call into this code here. In
 	 * the end result, we than have a problem (and things are screwed
 	 * up). So we reset the buffer pointer first, and all this can
@@ -1544,7 +1544,7 @@ asyncWriterThread(void *pPtr)
 				pthread_cond_broadcast(&pThis->isEmpty);
 		}
 	}
-	/* Not reached */	
+	/* Not reached */
 
 finalize_it:
 	ENDfunc
@@ -1767,7 +1767,7 @@ strmFlushInternal(strm_t *pThis, int bFlushZip)
 
 
 /* flush stream output buffer to persistent storage. This can be called at any time
- * and is automatically called when the output buffer is full. This function is for 
+ * and is automatically called when the output buffer is full. This function is for
  * use by EXTERNAL callers. Do NOT use it internally. It locks the async writer
  * mutex if ther is need to do so.
  * rgerhards, 2010-03-18
@@ -2181,7 +2181,7 @@ static rsRetVal strmRecordEnd(strm_t *pThis)
  * later reconstruction of the object.
  * The most common use case for this method is the creation of an
  * on-disk representation of the message object.
- * We do not serialize the dynamic properties. 
+ * We do not serialize the dynamic properties.
  * rgerhards, 2008-01-10
  */
 static rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
@@ -2318,37 +2318,37 @@ static rsRetVal strmSetProperty(strm_t *pThis, var_t *pProp)
 	ISOBJ_TYPE_assert(pThis, strm);
 	ASSERT(pProp != NULL);
 
- 	if(isProp("sType")) {
+	if(isProp("sType")) {
 		CHKiRet(strmSetsType(pThis, (strmType_t) pProp->val.num));
- 	} else if(isProp("iCurrFNum")) {
+	} else if(isProp("iCurrFNum")) {
 		pThis->iCurrFNum = (unsigned) pProp->val.num;
- 	} else if(isProp("pszFName")) {
+	} else if(isProp("pszFName")) {
 		CHKiRet(strmSetFName(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr)));
- 	} else if(isProp("tOperationsMode")) {
+	} else if(isProp("tOperationsMode")) {
 		CHKiRet(strmSettOperationsMode(pThis, pProp->val.num));
- 	} else if(isProp("tOpenMode")) {
+	} else if(isProp("tOpenMode")) {
 		CHKiRet(strmSettOpenMode(pThis, pProp->val.num));
- 	} else if(isProp("iCurrOffs")) {
+	} else if(isProp("iCurrOffs")) {
 		pThis->iCurrOffs = pProp->val.num;
- 	} else if(isProp("inode")) {
+	} else if(isProp("inode")) {
 		pThis->inode = (ino_t) pProp->val.num;
- 	} else if(isProp("strtOffs")) {
+	} else if(isProp("strtOffs")) {
 		pThis->strtOffs = pProp->val.num;
- 	} else if(isProp("iMaxFileSize")) {
+	} else if(isProp("iMaxFileSize")) {
 		CHKiRet(strmSetiMaxFileSize(pThis, pProp->val.num));
- 	} else if(isProp("fileNotFoundError")) {
+	} else if(isProp("fileNotFoundError")) {
 		CHKiRet(strmSetFileNotFoundError(pThis, pProp->val.num));
- 	} else if(isProp("iMaxFiles")) {
+	} else if(isProp("iMaxFiles")) {
 		CHKiRet(strmSetiMaxFiles(pThis, pProp->val.num));
- 	} else if(isProp("iFileNumDigits")) {
+	} else if(isProp("iFileNumDigits")) {
 		CHKiRet(strmSetiFileNumDigits(pThis, pProp->val.num));
- 	} else if(isProp("bDeleteOnClose")) {
+	} else if(isProp("bDeleteOnClose")) {
 		CHKiRet(strmSetbDeleteOnClose(pThis, pProp->val.num));
- 	} else if(isProp("prevLineSegment")) {
+	} else if(isProp("prevLineSegment")) {
 		CHKiRet(rsCStrConstructFromCStr(&pThis->prevLineSegment, pProp->val.pStr));
- 	} else if(isProp("prevMsgSegment")) {
+	} else if(isProp("prevMsgSegment")) {
 		CHKiRet(rsCStrConstructFromCStr(&pThis->prevMsgSegment, pProp->val.pStr));
- 	} else if(isProp("bPrevWasNL")) {
+	} else if(isProp("bPrevWasNL")) {
 		pThis->bPrevWasNL = (sbool) pProp->val.num;
 	}
 

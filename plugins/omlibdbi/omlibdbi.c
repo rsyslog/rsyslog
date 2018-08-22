@@ -17,11 +17,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -61,7 +61,6 @@ MODULE_CNFNAME("omlibdbi")
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 static int bDbiInitialized = 0;	/* dbi_initialize() can only be called one - this keeps track of it */
 
 typedef struct _instanceData {
@@ -147,11 +146,11 @@ getDfltTpl(void)
 
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
+CODESTARTinitConfVars
 	cs.dbiDrvrDir = NULL;
 	cs.drvrName = NULL;
 	cs.host = NULL;
-	cs.usrName = NULL;	
+	cs.usrName = NULL;
 	cs.pwd = NULL;
 	cs.dbName = NULL;
 ENDinitConfVars
@@ -227,7 +226,7 @@ reportDBError(instanceData *pData, int bSilent)
 	/* output log message */
 	errno = 0;
 	if(pData->conn == NULL) {
-		errmsg.LogError(0, NO_ERRCODE, "unknown DB error occured - could not obtain connection handle");
+		LogError(0, NO_ERRCODE, "unknown DB error occured - could not obtain connection handle");
 	} else { /* we can ask dbi for the error description... */
 		uDBErrno = dbi_conn_error(pData->conn, &pszDbiErr);
 		snprintf(errMsg, sizeof(errMsg), "db error (%d): %s\n", uDBErrno, pszDbiErr);
@@ -235,10 +234,10 @@ reportDBError(instanceData *pData, int bSilent)
 			dbgprintf("libdbi, DBError(silent): %s\n", errMsg);
 		else {
 			pData->uLastDBErrno = uDBErrno;
-			errmsg.LogError(0, NO_ERRCODE, "%s", errMsg);
+			LogError(0, NO_ERRCODE, "%s", errMsg);
 		}
 	}
-		
+
 	ENDfunc
 }
 
@@ -261,11 +260,11 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 		iDrvrsLoaded = dbi_initialize((char*) pData->dbiDrvrDir);
 #		endif
 		if(iDrvrsLoaded == 0) {
-			errmsg.LogError(0, RS_RET_SUSPENDED, "libdbi error: libdbi or libdbi drivers not "
+			LogError(0, RS_RET_SUSPENDED, "libdbi error: libdbi or libdbi drivers not "
 			"present on this system - suspending.");
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		} else if(iDrvrsLoaded < 0) {
-			errmsg.LogError(0, RS_RET_SUSPENDED, "libdbi error: libdbi could not be "
+			LogError(0, RS_RET_SUSPENDED, "libdbi error: libdbi could not be "
 				"initialized (do you have any dbi drivers installed?) - suspending.");
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
@@ -278,7 +277,7 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 	pData->conn = dbi_conn_new((char*)pData->drvrName);
 #	endif
 	if(pData->conn == NULL) {
-		errmsg.LogError(0, RS_RET_SUSPENDED, "can not initialize libdbi connection");
+		LogError(0, RS_RET_SUSPENDED, "can not initialize libdbi connection");
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	} else { /* we could get the handle, now on with work... */
 		/* Connect to database */
@@ -288,7 +287,7 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 		/* libdbi-driver-sqlite(2/3) requires to provide sqlite3_db dir which is absolute
 		   path, where database file lives,
 		 * and dbname, which is database file name itself. So in order to keep the config API unchanged,
-		 * we split the dbname to path and filename. 
+		 * we split the dbname to path and filename.
 		 */
 		int is_sqlite2 = !strcmp((const char *)pData->drvrName, "sqlite");
 		int is_sqlite3 = !strcmp((const char *)pData->drvrName, "sqlite3");
@@ -297,8 +296,9 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 			dn = dirname(dn);
 			dbi_conn_set_option(pData->conn, is_sqlite3 ? "sqlite3_dbdir" : "sqlite_dbdir",dn);
 
-			char *bn = strdup((char*)pData->dbName);
-			bn = basename(bn);
+			char *tmp = strdup((char*)pData->dbName);
+			char *bn = basename(tmp);
+			free(tmp);
 			dbi_conn_set_option(pData->conn, "dbname", bn);
 		} else {
 			dbi_conn_set_option(pData->conn, "dbname",   (char*) pData->dbName);
@@ -308,7 +308,7 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 		if(dbi_conn_connect(pData->conn) < 0) {
 			reportDBError(pData, bSilent);
 			closeConn(pData); /* ignore any error we may get */
-			ABORT_FINALIZE(RS_RET_SUSPENDED);		
+			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 		pData->txSupport = dbi_conn_cap_get(pData->conn, "transaction_support");
 	}
@@ -375,14 +375,14 @@ CODESTARTbeginTransaction
 	}
 #	ifdef HAVE_DBI_TXSUPP
 	if (pData->txSupport == 1) {
-		if (dbi_conn_transaction_begin(pData->conn) != 0) {	
+		if (dbi_conn_transaction_begin(pData->conn) != 0) {
 			const char *emsg;
 			dbi_conn_error(pData->conn, &emsg);
 			dbgprintf("libdbi server error: begin transaction "
 				  "not successful: %s\n", emsg);
 			closeConn(pData);
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
-		} 
+		}
 	}
 #	endif
 finalize_it:
@@ -406,14 +406,14 @@ ENDdoAction
 BEGINendTransaction
 CODESTARTendTransaction
 #	ifdef HAVE_DBI_TXSUPP
-	if (dbi_conn_transaction_commit(pData->conn) != 0) {	
+	if (dbi_conn_transaction_commit(pData->conn) != 0) {
 		const char *emsg;
 		dbi_conn_error(pData->conn, &emsg);
 		dbgprintf("libdbi server error: transaction not committed: %s\n",
 			  emsg);
 		closeConn(pData);
-		iRet = RS_RET_SUSPENDED; 
-	} 
+		iRet = RS_RET_SUSPENDED;
+	}
 #	endif
 ENDendTransaction
 /* end transaction */
@@ -432,7 +432,7 @@ BEGINsetModCnf
 CODESTARTsetModCnf
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "omlibdbi: error processing "
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "omlibdbi: error processing "
 			  	"module config parameters [module(...)]");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -448,7 +448,7 @@ CODESTARTsetModCnf
 		if(!strcmp(modpblk.descr[i].name, "template")) {
 			loadModConf->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			if(pszFileDfltTplName != NULL) {
-				errmsg.LogError(0, RS_RET_DUP_PARAM, "omlibdbi: warning: default template "
+				LogError(0, RS_RET_DUP_PARAM, "omlibdbi: warning: default template "
 						"was already set via legacy directive - may lead to inconsistent "
 						"results.");
 			}
@@ -478,7 +478,7 @@ CODESTARTendCnfLoad
 	cs.dbiDrvrDir = NULL;
 	cs.drvrName = NULL;
 	cs.host = NULL;
-	cs.usrName = NULL;	
+	cs.usrName = NULL;
 	cs.pwd = NULL;
 	cs.dbName = NULL;
 	free(pszFileDfltTplName);
@@ -563,7 +563,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	CHKiRet(createInstance(&pData));
 	/* no create the instance based on what we currently have */
 	if(cs.drvrName == NULL) {
-		errmsg.LogError(0, RS_RET_NO_DRIVERNAME, "omlibdbi: no db driver name given - action can not "
+		LogError(0, RS_RET_NO_DRIVERNAME, "omlibdbi: no db driver name given - action can not "
 				"be created");
 		ABORT_FINALIZE(RS_RET_NO_DRIVERNAME);
 	}
@@ -640,7 +640,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 #	ifndef HAVE_DBI_TXSUPP
 	DBGPRINTF("omlibdbi: no transaction support in libdbi\n");
 #	endif
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(regCfSysLineHdlr2((uchar *)"actionlibdbidriverdirectory", 0, eCmdHdlrGetWord, NULL, &cs.dbiDrvrDir,
 	STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionlibdbidriver", 0, eCmdHdlrGetWord, NULL, &cs.drvrName,

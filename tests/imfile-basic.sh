@@ -2,14 +2,28 @@
 # This is part of the rsyslog testbench, licensed under GPLv3
 echo [imfile-basic.sh]
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+$ModLoad ../plugins/imfile/.libs/imfile
+$InputFileName ./rsyslog.input
+$InputFileTag file:
+$InputFileStateFile stat-file1
+$InputFileSeverity error
+$InputFileFacility local7
+$InputFileMaxLinesAtOnce 100000
+$InputRunFileMonitor
+
+$template outfmt,"%msg:F,58:2%\n"
+:msg, contains, "msgnum:" action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+'
 # generate input file first. Note that rsyslog processes it as
 # soon as it start up (so the file should exist at that point).
 ./inputfilegen -m 50000 > rsyslog.input
 ls -l rsyslog.input
-. $srcdir/diag.sh startup imfile-basic.conf
+startup
 # sleep a little to give rsyslog a chance to begin processing
 sleep 1
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
-. $srcdir/diag.sh seq-check 0 49999
-. $srcdir/diag.sh exit
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown	# we need to wait until rsyslogd is finished!
+seq_check 0 49999
+exit_test

@@ -3,39 +3,39 @@
 # Copyright 2017-01-24 by Rainer Gerhards
 # This file is part of the rsyslog project, released under ASL 2.0
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 template(name="json" type="string" string="%$!%\n")
 ruleset(name="rcvr" queue.type="LinkedList") {
 	set $@timestamp="test";
 	unset $@timestamp2;
-	action(type="omfile" file="rsyslog2.out.log")
+	action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG`)
 }
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
  
 '
-. $srcdir/diag.sh startup
-. $srcdir/diag.sh injectmsg  0 10
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+startup
+injectmsg  0 10
+shutdown_when_empty
+wait_shutdown
 
-grep "@timestamp" rsyslog.out.log > /dev/null
+grep "@timestamp"  $RSYSLOG_OUT_LOG > /dev/null
 if [ ! $? -eq 0 ]; then
   echo "expected error message on \"@timestamp\" not found, output is:"
   echo "------------------------------------------------------------"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   echo "------------------------------------------------------------"
-  . $srcdir/diag.sh error-exit 1
+  error_exit 1
 fi;
 
-grep "@timestamp2" rsyslog.out.log > /dev/null
+grep "@timestamp2"  $RSYSLOG_OUT_LOG > /dev/null
 if [ ! $? -eq 0 ]; then
   echo "expected error message on \"@timestamp2\" not found, output is:"
   echo "------------------------------------------------------------"
-  cat rsyslog.out.log
+  cat $RSYSLOG_OUT_LOG
   echo "------------------------------------------------------------"
-  . $srcdir/diag.sh error-exit 1
+  error_exit 1
 fi;
 
-. $srcdir/diag.sh exit
+exit_test

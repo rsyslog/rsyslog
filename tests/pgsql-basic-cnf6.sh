@@ -5,24 +5,24 @@
 
 psql -h localhost -U postgres -f testsuites/pgsql-basic.sql
 
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/ompgsql/.libs/ompgsql")
 if $msg contains "msgnum" then {
 	action(type="ompgsql" server="127.0.0.1"
 		db="syslogtest" user="postgres" pass="testbench")
 }'
-. $srcdir/diag.sh startup
-. $srcdir/diag.sh injectmsg  0 5000
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+startup
+injectmsg  0 5000
+shutdown_when_empty
+wait_shutdown
 
 
-psql -h localhost -U postgres -d syslogtest -f testsuites/pgsql-select-msg.sql -t -A > rsyslog.out.log
+psql -h localhost -U postgres -d syslogtest -f testsuites/pgsql-select-msg.sql -t -A > $RSYSLOG_OUT_LOG
 
-. $srcdir/diag.sh seq-check  0 4999
+seq_check  0 4999
 
 echo cleaning up test database
 psql -h localhost -U postgres -c 'DROP DATABASE IF EXISTS syslogtest;'
 
-. $srcdir/diag.sh exit
+exit_test

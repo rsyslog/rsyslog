@@ -1,7 +1,7 @@
 /* wtp.c
  *
  * This file implements the worker thread pool (wtp) class.
- * 
+ *
  * File begun on 2008-01-20 by RGerhards
  *
  * There is some in-depth documentation available in doc/dev_queue.html
@@ -84,7 +84,14 @@ wtpGetDbgHdr(wtp_t *pThis)
 
 
 /* Not implemented dummy function for constructor */
-static rsRetVal NotImplementedDummy(void) { return RS_RET_NOT_IMPLEMENTED; }
+static rsRetVal NotImplementedDummy_voidp_int(__attribute__((unused)) void* p1, __attribute__((unused)) int p2) {
+	return RS_RET_NOT_IMPLEMENTED; }
+static rsRetVal NotImplementedDummy_voidp_intp(__attribute__((unused)) void* p1, __attribute__((unused)) int* p2) {
+	return RS_RET_NOT_IMPLEMENTED; }
+static rsRetVal NotImplementedDummy_voidp_voidp(__attribute__((unused)) void* p1, __attribute__((unused)) void* p2) {
+	return RS_RET_NOT_IMPLEMENTED; }
+static rsRetVal NotImplementedDummy_voidp_wti_tp(__attribute__((unused)) void* p1, __attribute__((unused)) wti_t* p2) {
+	return RS_RET_NOT_IMPLEMENTED; }
 /* Standard-Constructor for the wtp object
  */
 BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! */
@@ -100,10 +107,10 @@ BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! 
 #endif
 	pthread_attr_setdetachstate(&pThis->attrThrd, PTHREAD_CREATE_DETACHED);
 	/* set all function pointers to "not implemented" dummy so that we can safely call them */
-	pThis->pfChkStopWrkr = (rsRetVal (*)(void*,int))NotImplementedDummy;
-	pThis->pfGetDeqBatchSize = (rsRetVal (*)(void*,int*))NotImplementedDummy;
-	pThis->pfDoWork = (rsRetVal (*)(void*,void*))NotImplementedDummy;
-	pThis->pfObjProcessed = (rsRetVal (*)(void*,wti_t*))NotImplementedDummy;
+	pThis->pfChkStopWrkr = (rsRetVal (*)(void*,int))NotImplementedDummy_voidp_int;
+	pThis->pfGetDeqBatchSize = (rsRetVal (*)(void*,int*))NotImplementedDummy_voidp_intp;
+	pThis->pfDoWork = (rsRetVal (*)(void*,void*))NotImplementedDummy_voidp_voidp;
+	pThis->pfObjProcessed = (rsRetVal (*)(void*,wti_t*))NotImplementedDummy_voidp_wti_tp;
 	INIT_ATOMIC_HELPER_MUT(pThis->mutCurNumWrkThrd);
 	INIT_ATOMIC_HELPER_MUT(pThis->mutWtpState);
 ENDobjConstruct(wtp)
@@ -138,7 +145,7 @@ wtpConstructFinalize(wtp_t *pThis)
 		CHKiRet(wtiSetpWtp(pWti, pThis));
 		CHKiRet(wtiConstructFinalize(pWti));
 	}
-		
+
 
 finalize_it:
 	RETiRet;
@@ -173,7 +180,7 @@ ENDobjDestruct(wtp)
 
 
 /* Sent a specific state for the worker thread pool. -- rgerhards, 2008-01-21
- * We do not need to do atomic instructions as set operations are only 
+ * We do not need to do atomic instructions as set operations are only
  * called when terminating the pool, and then in strict sequence. So we
  * can never overwrite each other. On the other hand, it also doesn't
  * matter if the read operation obtains an older value, as we then simply
@@ -371,7 +378,7 @@ wtpWrkrExecCancelCleanup(void *arg)
  */
 #if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wempty-body"
-#endif 
+#endif
 static void *
 wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in wtp! */
 {
@@ -404,17 +411,17 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	dbgOutputTID((char*)thrdName);
 #	endif
 
-        /* let the parent know we're done with initialization */
-        d_pthread_mutex_lock(&pThis->mutWtp);
+	/* let the parent know we're done with initialization */
+	d_pthread_mutex_lock(&pThis->mutWtp);
 	wtiSetState(pWti, WRKTHRD_RUNNING);
-        pthread_cond_broadcast(&pThis->condThrdInitDone);
-        d_pthread_mutex_unlock(&pThis->mutWtp);
+	pthread_cond_broadcast(&pThis->condThrdInitDone);
+	d_pthread_mutex_unlock(&pThis->mutWtp);
 
 	pthread_cleanup_push(wtpWrkrExecCancelCleanup, pWti);
 
 	wtiWorker(pWti);
 	pthread_cleanup_pop(0);
-        d_pthread_mutex_lock(&pThis->mutWtp);
+	d_pthread_mutex_lock(&pThis->mutWtp);
 	pthread_cleanup_push(mutexCancelCleanup, &pThis->mutWtp);
 	wtpWrkrExecCleanup(pWti);
 
@@ -468,9 +475,9 @@ wtpStartWrkr(wtp_t *pThis)
 		wtpGetDbgHdr(pThis), iState,
 		ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
 
-        /* wait for the new thread to initialize its signal mask and
-         * cancelation cleanup handler before proceeding
-         */
+	/* wait for the new thread to initialize its signal mask and
+	 * cancelation cleanup handler before proceeding
+	 */
 	do {
 		d_pthread_cond_wait(&pThis->condThrdInitDone, &pThis->mutWtp);
 	} while(wtiGetState(pWti) != WRKTHRD_RUNNING);
@@ -579,7 +586,7 @@ finalize_it:
 }
 
 /* dummy */
-static rsRetVal wtpQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
+static rsRetVal wtpQueryInterface(interface_t __attribute__((unused)) *i) { return RS_RET_NOT_IMPLEMENTED; }
 
 /* exit our class
  */

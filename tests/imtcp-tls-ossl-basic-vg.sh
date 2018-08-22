@@ -2,8 +2,8 @@
 # added 2018-04-27 by alorbach
 # This file is part of the rsyslog project, released  under GPLv3
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 global(	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
 	defaultNetstreamDriverCertFile="'$srcdir/tls-certs/cert.pem'"
 	defaultNetstreamDriverKeyFile="'$srcdir/tls-certs/key.pem'"
@@ -16,18 +16,18 @@ module(	load="../plugins/imtcp/.libs/imtcp"
 	StreamDriver.Mode="1"
 	StreamDriver.AuthMode="anon" )
 input(	type="imtcp"
-	port="13514" )
+	port="'$TCPFLOOD_PORT'" )
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 :msg, contains, "msgnum:" action(	type="omfile" 
 					template="outfmt"
-					file="rsyslog.out.log")
+					file=`echo $RSYSLOG_OUT_LOG`)
 '
 # Begin actuall testcase
-. $srcdir/diag.sh startup-vg-noleak
-. $srcdir/diag.sh tcpflood -p13514 -m10000 -Ttls -x$srcdir/tls-certs/ca.pem -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown-vg
+startup_vg_noleak
+tcpflood -p'$TCPFLOOD_PORT' -m10000 -Ttls -x$srcdir/tls-certs/ca.pem -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
-. $srcdir/diag.sh seq-check 0 9999
-. $srcdir/diag.sh exit
+seq_check 0 9999
+exit_test

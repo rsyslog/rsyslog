@@ -4,11 +4,22 @@
 echo ===============================================================================
 echo \[rscript_re_extract.sh\]: test re_extract rscript-fn
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup rscript_re_extract.conf
-. $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/date_time_msg
+generate_conf
+add_conf '
+template(name="outfmt" type="string" string="*Number is %$.number%*\n")
+
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="'$TCPFLOOD_PORT'")'
+add_conf "
+set \$.number = re_extract(\$msg, '.* ([0-9]+)$', 0, 1, 'none');"
+add_conf '
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+'
+startup
+tcpflood -m 1 -I $srcdir/testsuites/date_time_msg
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown 
+wait_shutdown 
 . $srcdir/diag.sh content-check "*Number is 19597*"
-. $srcdir/diag.sh exit
+exit_test

@@ -10,8 +10,8 @@ export IMFILECHECKTIMEOUT="5"
 # soon as it start up (so the file should exist at that point).
 
 # Start rsyslog now before adding more files
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 global( debug.whitelist="on"
 	debug.files=["imfile.c"])
 #	debug.files=["rainerscript.c", "ratelimit.c", "ruleset.c", "main Q",
@@ -33,7 +33,7 @@ template(name="outfmt" type="list") {
 }
 
 if $msg contains "msgnum:" then
-	action( type="omfile" file="rsyslog.out.log" template="outfmt")
+	action( type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 
 # create first directory and file before startup, so ensure we will NOT
@@ -44,7 +44,7 @@ if $msg contains "msgnum:" then
 # the following is INVALID, as this is a file, but must be a directory!
 #./inputfilegen -m 1 > rsyslog.input.dir0
 
-. $srcdir/diag.sh startup 
+startup
 
 for j in `seq 1 $IMFILEINPUTFILESSTEPS`;
 do
@@ -72,6 +72,6 @@ do
 
 done
 
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
-. $srcdir/diag.sh exit
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown	# we need to wait until rsyslogd is finished!
+exit_test

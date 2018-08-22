@@ -59,7 +59,6 @@ MODULE_CNFNAME("imrelp")
 DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(net)
 DEFobjCurrIf(prop)
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(ruleset)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(statsobj)
@@ -80,6 +79,7 @@ static configSettings_t cs;
 
 struct instanceConf_s {
 	uchar *pszBindPort;		/* port to bind to */
+	uchar *pszBindAddr;		/* address to bind to */
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
 	uchar *pszInputName;		/* value for inputname property */
 	prop_t *pInputName;		/* InputName in property format for fast access */
@@ -141,6 +141,7 @@ static struct cnfparamblk modpblk =
 /* input instance parameters */
 static struct cnfparamdescr inppdescr[] = {
 	{ "port", eCmdHdlrString, CNFPARAM_REQUIRED },
+	{ "address", eCmdHdlrString, 0 },
 	{ "name", eCmdHdlrString, 0 },
 	{ "ruleset", eCmdHdlrString, 0 },
 	{ "keepalive", eCmdHdlrBinary, 0 },
@@ -199,7 +200,7 @@ static void
 onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
 {
 	instanceConf_t *inst = (instanceConf_t*) pUsr;
-	errmsg.LogError(0, RS_RET_RELP_AUTH_FAIL, "imrelp[%s]: error '%s', object "
+	LogError(0, RS_RET_RELP_AUTH_FAIL, "imrelp[%s]: error '%s', object "
 			" '%s' - input may not work as intended",
 			inst->pszBindPort, errmesg, objinfo);
 }
@@ -207,7 +208,7 @@ onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetV
 static void
 onGenericErr(char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
 {
-	errmsg.LogError(0, RS_RET_RELP_ERR, "imrelp: librelp error '%s', object "
+	LogError(0, RS_RET_RELP_ERR, "imrelp: librelp error '%s', object "
 			" '%s' - input may not work as intended", errmesg, objinfo);
 }
 
@@ -215,7 +216,7 @@ static void
 onAuthErr(void *pUsr, char *authinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
 {
 	instanceConf_t *inst = (instanceConf_t*) pUsr;
-	errmsg.LogError(0, RS_RET_RELP_AUTH_FAIL, "imrelp[%s]: authentication error '%s', peer "
+	LogError(0, RS_RET_RELP_AUTH_FAIL, "imrelp[%s]: authentication error '%s', peer "
 			"is '%s'", inst->pszBindPort, errmesg, authinfo);
 }
 
@@ -272,6 +273,7 @@ createInstance(instanceConf_t **pinst)
 	inst->next = NULL;
 
 	inst->pszBindPort = NULL;
+	inst->pszBindAddr = NULL;
 	inst->pszBindRuleset = NULL;
 	inst->pszInputName = NULL;
 	inst->pBindRuleset = NULL;
@@ -312,7 +314,7 @@ finalize_it:
 static inline void
 std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst)
 {
-	errmsg.LogError(0, NO_ERRCODE, "imrelp[%s]: ruleset '%s' not found - "
+	LogError(0, NO_ERRCODE, "imrelp[%s]: ruleset '%s' not found - "
 			"using default ruleset instead",
 			inst->pszBindPort, inst->pszBindRuleset);
 }
@@ -331,7 +333,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	CHKiRet(createInstance(&inst));
 
 	if(pNewVal == NULL || *pNewVal == '\0') {
-		errmsg.LogError(0, NO_ERRCODE, "imrelp: port number must be specified, listener ignored");
+		LogError(0, NO_ERRCODE, "imrelp: port number must be specified, listener ignored");
 	}
 	if((pNewVal == NULL) || (*pNewVal == '\0')) {
 		inst->pszBindPort = NULL;
@@ -380,6 +382,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 
 	CHKiRet(relpEngineListnerConstruct(pRelpEngine, &pSrv));
 	CHKiRet(relpSrvSetLstnPort(pSrv, inst->pszBindPort));
+	CHKiRet(relpSrvSetLstnAddr(pSrv, inst->pszBindAddr));
 	CHKiRet(relpSrvSetMaxDataSize(pSrv, inst->maxDataSize));
 
 #ifdef HAVE_RELPSRVSETOVERSIZEMODE
@@ -407,20 +410,20 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	if(inst->bEnableTLS) {
 		relpRet = relpSrvEnableTLS2(pSrv);
 		if(relpRet == RELP_RET_ERR_NO_TLS) {
-			errmsg.LogError(0, RS_RET_RELP_NO_TLS,
+			LogError(0, RS_RET_RELP_NO_TLS,
 					"imrelp: could not activate relp TLS, librelp "
 					"does not support it (most probably GnuTLS lib "
 					"is too old)!");
 			ABORT_FINALIZE(RS_RET_RELP_NO_TLS);
 		} else if(relpRet == RELP_RET_ERR_NO_TLS_AUTH) {
-			errmsg.LogError(0, RS_RET_RELP_NO_TLS_AUTH,
+			LogError(0, RS_RET_RELP_NO_TLS_AUTH,
 					"imrelp: could not activate relp TLS with "
 					"authentication, librelp does not support it "
 					"(most probably GnuTLS lib is too old)! "
 					"Note: anonymous TLS is probably supported.");
 			ABORT_FINALIZE(RS_RET_RELP_NO_TLS_AUTH);
 		} else if(relpRet != RELP_RET_OK) {
-			errmsg.LogError(0, RS_RET_RELP_ERR,
+			LogError(0, RS_RET_RELP_ERR,
 					"imrelp: could not activate relp TLS, code %d", relpRet);
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 		}
@@ -432,7 +435,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 		}
 		relpSrvSetGnuTLSPriString(pSrv, (char*)inst->pristring);
 		if(relpSrvSetAuthMode(pSrv, (char*)inst->authmode) != RELP_RET_OK) {
-			errmsg.LogError(0, RS_RET_RELP_ERR,
+			LogError(0, RS_RET_RELP_ERR,
 					"imrelp: invalid auth mode '%s'", inst->authmode);
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 		}
@@ -451,20 +454,20 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	 * after finalize in some cases...
 	 */
 	if(relpRet == RELP_RET_ERR_NO_TLS) {
-		errmsg.LogError(0, RS_RET_RELP_NO_TLS,
+		LogError(0, RS_RET_RELP_NO_TLS,
 				"imrelp: could not activate relp TLS listener, librelp "
 				"does not support it (most probably GnuTLS lib "
 				"is too old)!");
 		ABORT_FINALIZE(RS_RET_RELP_NO_TLS);
 	} else if(relpRet == RELP_RET_ERR_NO_TLS_AUTH) {
-		errmsg.LogError(0, RS_RET_RELP_NO_TLS_AUTH,
+		LogError(0, RS_RET_RELP_NO_TLS_AUTH,
 				"imrelp: could not activate relp TLS listener with "
 				"authentication, librelp does not support it "
 				"(most probably GnuTLS lib is too old)! "
 				"Note: anonymous TLS is probably supported.");
 		ABORT_FINALIZE(RS_RET_RELP_NO_TLS_AUTH);
 	} else if(relpRet != RELP_RET_OK) {
-		errmsg.LogError(0, RS_RET_RELP_ERR,
+		LogError(0, RS_RET_RELP_ERR,
 				"imrelp: could not activate relp listener, code %d", relpRet);
 		ABORT_FINALIZE(RS_RET_RELP_ERR);
 	}
@@ -501,6 +504,8 @@ CODESTARTnewInpInst
 			continue;
 		if(!strcmp(inppblk.descr[i].name, "port")) {
 			inst->pszBindPort = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "address")) {
+			inst->pszBindAddr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "name")) {
 			inst->pszInputName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
@@ -549,7 +554,7 @@ CODESTARTnewInpInst
 			if(fp == NULL) {
 				char errStr[1024];
 				rs_strerror_r(errno, errStr, sizeof(errStr));
-				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
+				LogError(0, RS_RET_NO_FILE_ACCESS,
 				"error: certificate file %s couldn't be accessed: %s\n",
 				inst->caCertFile, errStr);
 			} else {
@@ -561,7 +566,7 @@ CODESTARTnewInpInst
 			if(fp == NULL) {
 				char errStr[1024];
 				rs_strerror_r(errno, errStr, sizeof(errStr));
-				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
+				LogError(0, RS_RET_NO_FILE_ACCESS,
 				"error: certificate file %s couldn't be accessed: %s\n",
 				inst->myCertFile, errStr);
 			} else {
@@ -573,7 +578,7 @@ CODESTARTnewInpInst
 			if(fp == NULL) {
 				char errStr[1024];
 				rs_strerror_r(errno, errStr, sizeof(errStr));
-				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
+				LogError(0, RS_RET_NO_FILE_ACCESS,
 				"error: certificate file %s couldn't be accessed: %s\n",
 				inst->myPrivKeyFile, errStr);
 			} else {
@@ -636,7 +641,7 @@ BEGINsetModCnf
 CODESTARTsetModCnf
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
 				"config parameters [module(...)]");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -675,7 +680,7 @@ CODESTARTendCnfLoad
 		}
 	} else {
 		if((cs.pszBindRuleset != NULL) && (cs.pszBindRuleset[0] != '\0')) {
-			errmsg.LogError(0, RS_RET_DUP_PARAM, "imrelp: ruleset "
+			LogError(0, RS_RET_DUP_PARAM, "imrelp: ruleset "
 					"set via legacy directive ignored");
 		}
 	}
@@ -704,7 +709,7 @@ CODESTARTcheckCnf
 		}
 		maxMessageSize = (size_t)glbl.GetMaxLine();
 		if(inst->maxDataSize < maxMessageSize) {
-			errmsg.LogError(0, RS_RET_INVALID_PARAMS, "error: "
+			LogError(0, RS_RET_INVALID_PARAMS, "error: "
 					"maxDataSize (%zu) is smaller than global parameter "
 					"maxMessageSize (%zu) - global parameter will be used.",
 					inst->maxDataSize, maxMessageSize);
@@ -724,7 +729,7 @@ CODESTARTactivateCnfPrePrivDrop
 		addListner(pModConf, inst);
 	}
 	if(pRelpEngine == NULL) {
-		errmsg.LogError(0, RS_RET_NO_LSTN_DEFINED, "imrelp: no RELP listener defined, module can not run.");
+		LogError(0, RS_RET_NO_LSTN_DEFINED, "imrelp: no RELP listener defined, module can not run.");
 		ABORT_FINALIZE(RS_RET_NO_RUN);
 	}
 finalize_it:
@@ -741,6 +746,9 @@ BEGINfreeCnf
 CODESTARTfreeCnf
 	for(inst = pModConf->root ; inst != NULL ; ) {
 		free(inst->pszBindPort);
+		if (inst->pszBindAddr != NULL) {
+			free(inst->pszBindAddr);
+		}
 		free(inst->pszBindRuleset);
 		free(inst->pszInputName);
 		free(inst->pristring);
@@ -818,7 +826,6 @@ CODESTARTmodExit
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(net, LM_NET_FILENAME);
-	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -857,7 +864,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* request objects we use */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));

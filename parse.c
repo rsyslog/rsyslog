@@ -10,11 +10,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -243,7 +243,7 @@ rsRetVal parsSkipWhitespace(rsParsObj *pThis)
  *   - bTrimLeading
  *   - bTrimTrailing
  *   - bConvLower - convert string to lower case?
- * 
+ *
  * Output:
  * ppCStr Pointer to the parsed string - must be freed by caller!
  */
@@ -365,10 +365,10 @@ finalize_it:
 	RETiRet;
 }
 
-/* 
+/*
  * Parsing routine for IPv4, IPv6 and domain name wildcards.
- * 
- * Parses string in the format <addr>[/bits] where 
+ *
+ * Parses string in the format <addr>[/bits] where
  * addr can be a IPv4 address (e.g.: 127.0.0.1), IPv6 address (e.g.: [::1]),
  * full hostname (e.g.: localhost.localdomain) or hostname wildcard
  * (e.g.: *.localdomain).
@@ -409,8 +409,8 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 
 	/* now we have the string and must check/convert it to
 	 * an NetAddr structure.
-	 */	
-  	CHKiRet(cstrConvSzStrAndDestruct(&pCStr, &pszIP, 0));
+	 */
+	CHKiRet(cstrConvSzStrAndDestruct(&pCStr, &pszIP, 0));
 
 	if((*pIP = calloc(1, sizeof(struct NetAddr))) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -428,7 +428,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 		hints.ai_flags  = AI_NUMERICHOST;
 
 		switch(getaddrinfo ((char*)pszIP+1, NULL, &hints, &res)) {
-		case 0: 
+		case 0:
 			(*pIP)->addr.NetAddr = MALLOC (res->ai_addrlen);
 			memcpy ((*pIP)->addr.NetAddr, res->ai_addr, res->ai_addrlen);
 			freeaddrinfo (res);
@@ -442,7 +442,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 			free (*pIP);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
-		
+
 		if(*pC == '/') {
 			/* mask bits follow, let's parse them! */
 			++pThis->iCurrPos; /* eat slash */
@@ -464,7 +464,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 		hints.ai_flags  = AI_NUMERICHOST;
 
 		switch(getaddrinfo ((char*)pszIP, NULL, &hints, &res)) {
-		case 0: 
+		case 0:
 			(*pIP)->addr.NetAddr = MALLOC (res->ai_addrlen);
 			memcpy ((*pIP)->addr.NetAddr, res->ai_addr, res->ai_addrlen);
 			freeaddrinfo (res);
@@ -478,7 +478,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 			free (*pIP);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
-			
+
 		if(*pC == '/') {
 			/* mask bits follow, let's parse them! */
 			++pThis->iCurrPos; /* eat slash */

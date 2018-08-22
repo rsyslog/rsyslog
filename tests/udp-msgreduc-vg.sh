@@ -12,15 +12,25 @@ fi
 echo ===============================================================================
 echo \[udp-msgreduc-vg.sh\]: testing imtcp multiple listeners
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup-vg udp-msgreduc-vg.conf
+generate_conf
+add_conf '
+$ModLoad ../plugins/imudp/.libs/imudp
+$UDPServerRun '$TCPFLOOD_PORT'
+$RepeatedMsgReduction on
+
+$template outfmt,"%msg:F,58:2%\n"
+*.*       action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+#:msg, contains, "msgnum:" action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+'
+startup_vg
 . $srcdir/diag.sh wait-startup
-. $srcdir/diag.sh tcpflood -t 127.0.0.1 -m 4 -r -Tudp -M "\"<133>2011-03-01T11:22:12Z host tag msgh ...\""
-. $srcdir/diag.sh tcpflood -t 127.0.0.1 -m 1 -r -Tudp -M "\"<133>2011-03-01T11:22:12Z host tag msgh ...x\""
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown-vg
+tcpflood -t 127.0.0.1 -m 4 -r -Tudp -M "\"<133>2011-03-01T11:22:12Z host tag msgh ...\""
+tcpflood -t 127.0.0.1 -m 1 -r -Tudp -M "\"<133>2011-03-01T11:22:12Z host tag msgh ...x\""
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown_vg
 if [ "$RSYSLOGD_EXIT" -eq "10" ]
 then
 	echo "udp-msgreduc-vg.sh FAILED"
 	exit 1
 fi
-. $srcdir/diag.sh exit
+exit_test

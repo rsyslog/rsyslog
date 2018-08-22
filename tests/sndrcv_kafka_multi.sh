@@ -23,30 +23,91 @@ echo \[sndrcv_kafka_multi.sh\]: Create multiple kafka/zookeeper instances and st
 echo \[sndrcv_kafka_multi.sh\]: Starting sender instance [omkafka]
 export RSYSLOG_DEBUGLOG="log"
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup sndrcv_kafka_multi_rcvr.conf 
+generate_conf
+add_conf '
+module(load="../plugins/imkafka/.libs/imkafka")
+/* Polls messages from kafka server!*/
+input(	type="imkafka" 
+	topic="static" 
+	broker=["localhost:29092", "localhost:29093", "localhost:29094"] 
+#	broker="localhost:29092" 
+	consumergroup="default"
+	confParam=[ "compression.codec=none",
+		"socket.timeout.ms=1000",
+		"socket.keepalive.enable=true"]
+	)	
+
+template(name="outfmt" type="string" string="%msg:F,58:2%\n")
+
+if ($msg contains "msgnum:") then {
+	action( type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt" )
+}
+'
+startup
 . $srcdir/diag.sh wait-startup
 
 echo \[sndrcv_kafka_multi.sh\]: Starting receiver instance [imkafka]
 export RSYSLOG_DEBUGLOG="log2"
-. $srcdir/diag.sh startup sndrcv_kafka_multi_sender.conf 2
+generate_conf 2
+add_conf '
+module(load="../plugins/omkafka/.libs/omkafka")
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="'$TCPFLOOD_PORT'" Ruleset="omkafka")	/* this port for tcpflood! */
+
+template(name="outfmt" type="string" string="%msg%\n")
+
+ruleset(name="omkafka") {
+	action( type="omkafka" 
+		name="kafka-fwd" 
+		broker=["localhost:29092", "localhost:29093", "localhost:29094"] 
+		topic="static" 
+		template="outfmt" 
+		confParam=[	"compression.codec=none",
+				"socket.timeout.ms=1000",
+				"socket.keepalive.enable=true",
+				"reconnect.backoff.jitter.ms=1000",
+				"queue.buffering.max.messages=20000",
+				"message.send.max.retries=1"]
+		partitions.auto="on"
+		partitions.scheme="random"
+		queue.size="1000000"
+		queue.type="LinkedList"
+		action.repeatedmsgcontainsoriginalmsg="off"
+		action.resumeRetryCount="-1"
+		action.reportSuspension="on"
+		action.reportSuspensionContinuation="on" )
+
+}
+
+ruleset(name="omkafka1") {
+	action(name="kafka-fwd" type="omkafka" topic="static" broker="localhost:29092" template="outfmt" partitions.auto="on")
+}
+ruleset(name="omkafka2") {
+	action(name="kafka-fwd" type="omkafka" topic="static" broker="localhost:29093" template="outfmt" partitions.auto="on")
+}
+ruleset(name="omkafka3") {
+	action(name="kafka-fwd" type="omkafka" topic="static" broker="localhost:29094" template="outfmt" partitions.auto="on")
+}
+' 2
+startup 2
 . $srcdir/diag.sh wait-startup 2
 
 # now inject the messages into instance 2. It will connect to instance 1, and that instance will record the data.
-. $srcdir/diag.sh tcpflood -m$TESTMESSAGES -i1
+tcpflood -m$TESTMESSAGES -i1
 
 echo \[sndrcv_kafka_multi.sh\]: Sleep to give rsyslog instances time to process data ...
 sleep 20 
 
 echo \[sndrcv_kafka_multi.sh\]: Stopping sender instance [omkafka]
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 
 echo \[sndrcv_kafka_multi.sh\]: Stopping receiver instance [imkafka]
-. $srcdir/diag.sh shutdown-when-empty 2
-. $srcdir/diag.sh wait-shutdown 2
+shutdown_when_empty 2
+wait_shutdown 2
 
 # Do the final sequence check
-. $srcdir/diag.sh seq-check 1 $TESTMESSAGES -d
+seq_check 1 $TESTMESSAGES -d
 
 echo \[sndrcv_kafka.sh\]: stop kafka instances
 . $srcdir/diag.sh delete-kafka-topic 'static' '.dep_wrk1' '22181'

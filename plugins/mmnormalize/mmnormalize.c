@@ -157,7 +157,7 @@ finalize_it:
 
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
+CODESTARTinitConfVars
 	resetConfigVariables(NULL, NULL);
 ENDinitConfVars
 

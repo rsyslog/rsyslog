@@ -52,7 +52,7 @@ rsyslog_testbench_preload_libfaketime() {
 rsyslog_testbench_require_y2k38_support() {
     if [ -n "${RSYSLOG_TESTBENCH_Y2K38_INCOMPATIBLE}" ]; then
         echo "Skipping further tests because system doesn't support year 2038 ..."
-        . $srcdir/diag.sh exit
+        exit_test
         exit 0
     fi
 }

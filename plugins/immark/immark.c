@@ -17,11 +17,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -54,7 +54,6 @@ MODULE_CNFNAME("immark")
 /* Module static data */
 DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(glbl)
-DEFobjCurrIf(errmsg)
 
 static int iMarkMessagePeriod = DEFAULT_MARK_PERIOD;
 struct modConfData_s {
@@ -107,7 +106,7 @@ BEGINsetModCnf
 CODESTARTsetModCnf
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
 				"config parameters [module(...)]");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -149,7 +148,7 @@ ENDendCnfLoad
 BEGINcheckCnf
 CODESTARTcheckCnf
 	if(pModConf->iMarkMessagePeriod == 0) {
-		errmsg.LogError(0, NO_ERRCODE, "immark: mark message period must not be 0, can not run");
+		LogError(0, NO_ERRCODE, "immark: mark message period must not be 0, can not run");
 		ABORT_FINALIZE(RS_RET_NO_RUN);	/* we can not run with this error */
 	}
 finalize_it:
@@ -172,7 +171,7 @@ ENDfreeCnf
  * a) on failure (iRet set accordingly)
  * b) on termination of the input module (as part of the unload process)
  * Code begun 2007-12-12 rgerhards
- *  
+ *
  * This code must simply spawn emit a mark message at each mark interval.
  * We are running on our own thread, so this is extremely easy: we just
  * sleep MarkInterval seconds and each time we awake, we inject the message.
@@ -205,7 +204,6 @@ ENDwillRun
 
 BEGINmodExit
 CODESTARTmodExit
-	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -228,7 +226,6 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* legacy config handlers */
 	CHKiRet(regCfSysLineHdlr2((uchar *)"markmessageperiod", 0, eCmdHdlrInt, NULL,

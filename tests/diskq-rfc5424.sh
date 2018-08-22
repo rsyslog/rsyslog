@@ -14,10 +14,10 @@ if [ `uname` = "SunOS" ] ; then
 fi
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="13514" ruleset="rs")
+input(type="imtcp" port="'$TCPFLOOD_PORT'" ruleset="rs")
 
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
@@ -25,17 +25,17 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 ruleset(name="rs2" queue.type="disk" queue.filename="rs2_q"
 	queue.spoolDirectory="test-spool") {
 	set $!tmp=$msg;
-	action(type="omfile" file="rsyslog.out.log" template="outfmt")
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 }
 ruleset(name="rs") {
 	set $!tmp=$msg;
 	call rs2
 }
 '
-. $srcdir/diag.sh startup
-. $srcdir/diag.sh tcpflood -m1000 -y
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh seq-check 0 999
+startup
+tcpflood -m1000 -y
+shutdown_when_empty
+wait_shutdown
+seq_check 0 999
 
-. $srcdir/diag.sh exit
+exit_test

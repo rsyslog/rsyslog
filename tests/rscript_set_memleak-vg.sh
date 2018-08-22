@@ -12,10 +12,10 @@ if [ `uname` = "FreeBSD" ] ; then
 fi
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="13514" ruleset="rcvr")
+input(type="imtcp" port="'$TCPFLOOD_PORT'" ruleset="rcvr")
 
 template(name="json" type="string" string="%$!%\n")
 template(name="ts" type="string" string="%timestamp:::date-rfc3339%")
@@ -28,15 +28,15 @@ ruleset(name="rcvr" queue.type="LinkedList") {
 	set $!time_received=$timegenerated;
 	set $!@timestamp=exec_template("ts");
 	action( type="omfile"
-		file="rsyslog.out.log"
+		file=`echo $RSYSLOG_OUT_LOG`
 		template="json"
 	)
 }'
-. $srcdir/diag.sh startup-vg
-. $srcdir/diag.sh tcpflood -m5000
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown-vg
+startup_vg
+tcpflood -m5000
+shutdown_when_empty
+wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
 # note: we check only the valgrind result, we are not really interested
 # in the output data (non-standard format in any way...)
-. $srcdir/diag.sh exit
+exit_test

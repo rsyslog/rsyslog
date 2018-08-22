@@ -38,7 +38,7 @@
 #include "atomic.h"
 
 /* rgerhards 2004-11-08: The following structure represents a
- * syslog message. 
+ * syslog message.
  *
  * Important Note:
  * The message object is used for multiple purposes (once it
@@ -156,6 +156,8 @@ struct msg {
 /* check UDP ACLs after DNS resolution has been done in main queue consumer */
 #define NO_PRI_IN_RAW	0x100
 /* rawmsg does not include a PRI (Solaris!), but PRI is already set correctly in the msg object */
+#define PRESERVE_CASE	0x200
+/* preserve case in fromhost */
 
 /* (syslog) protocol types */
 #define MSG_LEGACY_PROTOCOL 0

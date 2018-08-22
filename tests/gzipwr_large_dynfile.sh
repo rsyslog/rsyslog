@@ -18,20 +18,37 @@
 echo ====================================================================================
 echo TEST: \[gzipwr_large_dynfile.sh\]: test for gzip file writing for large message sets
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+$MaxMessageSize 10k
+
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$MainMsgQueueTimeoutShutdown 10000
+$InputTCPServerRun '$TCPFLOOD_PORT'
+
+$template outfmt,"%msg:F,58:3%,%msg:F,58:4%,%msg:F,58:5%\n"
+$template dynfile,"rsyslog.out.%msg:F,58:2%.log" # use multiple dynafiles
+$OMFileFlushOnTXEnd off
+$OMFileZipLevel 6
+$OMFileIOBufferSize 256k
+$DynaFileCacheSize 4
+$omfileFlushInterval 1
+local0.* ?dynfile;outfmt
+'
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout"
 #export RSYSLOG_DEBUGLOG="log"
-. $srcdir/diag.sh startup gzipwr_large_dynfile.conf
+startup
 # send 4000 messages of 10.000bytes plus header max, randomized
-. $srcdir/diag.sh tcpflood -m4000 -r -d10000 -P129 -f5
+tcpflood -m4000 -r -d10000 -P129 -f5
 sleep 2 # due to large messages, we need this time for the tcp receiver to settle...
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
-gunzip < rsyslog.out.0.log > rsyslog.out.log
-gunzip < rsyslog.out.1.log >> rsyslog.out.log
-gunzip < rsyslog.out.2.log >> rsyslog.out.log
-gunzip < rsyslog.out.3.log >> rsyslog.out.log
-gunzip < rsyslog.out.4.log >> rsyslog.out.log
-#cat rsyslog.out.* > rsyslog.out.log
-. $srcdir/diag.sh seq-check 0 3999 -E
-. $srcdir/diag.sh exit
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown       # and wait for it to terminate
+gunzip < rsyslog.out.0.log > $RSYSLOG_OUT_LOG
+gunzip < rsyslog.out.1.log >> $RSYSLOG_OUT_LOG
+gunzip < rsyslog.out.2.log >> $RSYSLOG_OUT_LOG
+gunzip < rsyslog.out.3.log >> $RSYSLOG_OUT_LOG
+gunzip < rsyslog.out.4.log >> $RSYSLOG_OUT_LOG
+#cat rsyslog.out.* > $RSYSLOG_OUT_LOG
+seq_check 0 3999 -E
+exit_test

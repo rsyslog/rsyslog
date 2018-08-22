@@ -8,11 +8,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,7 +22,7 @@
  * Note: there is a tiny bit of code left where I could not get any response
  * from the author if this code can be placed under ASL2.0. I have guarded this
  * with #ifdef STRICT_GPLV3. Only if that macro is defined, the code will be
- * compiled. Otherwise this feature is not present. The plan is to do a 
+ * compiled. Otherwise this feature is not present. The plan is to do a
  * different implementation in the future to get rid of this problem.
  * rgerhards, 2012-08-25
  */
@@ -250,7 +250,7 @@ tplToString(struct template *__restrict__ const pTpl,
 	if(iBuf == iparam->lenBuf) {
 		/* in the weired case of an *empty* template, this can happen.
 		 * it is debatable if we should really fix it here or simply
-		 * forbid that case. However, performance toll is minimal, so 
+		 * forbid that case. However, performance toll is minimal, so
 		 * I tend to permit it. -- 2010-11-05 rgerhards
 		 */
 		CHKiRet(ExtendBuf(iparam, iBuf + 1));
@@ -422,7 +422,7 @@ finalize_it:
  * measure is to remove the dangerous \' characters (SQL). We
  * replace them by \", which will break the message and
  * signatures eventually present - but this is the
- * best thing we can do now (or does anybody 
+ * best thing we can do now (or does anybody
  * have a better idea?). rgerhards 2004-11-23
  * added support for escape mode (see doEscape for details).
  * if mode = SQL_ESCAPE, then backslashes are changed to slashes.
@@ -539,7 +539,7 @@ finalize_it:
 
 
 /* Constructs a template entry object. Returns pointer to it
- * or NULL (if it fails). Pointer to associated template list entry 
+ * or NULL (if it fails). Pointer to associated template list entry
  * must be provided.
  */
 static struct templateEntry* tpeConstruct(struct template *pTpl)
@@ -647,7 +647,7 @@ do_Constant(unsigned char **pp, struct template *pTpl, int bDoEscapes)
 	while(*p && *p != '%' && !(bDoEscapes && *p == '\"')) {
 		if(bDoEscapes && *p == '\\') {
 			switch(*++p) {
-				case '\0':	
+				case '\0':
 					/* the best we can do - it's invalid anyhow... */
 					cstrAppendChar(pStrB, *p);
 					break;
@@ -760,8 +760,8 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 		 */
 		 if(!strcmp((char*)Buf, "date-mysql")) {
 			pTpe->data.field.eDateFormat = tplFmtMySQLDate;
-                 } else if(!strcmp((char*)Buf, "date-pgsql")) {
-                        pTpe->data.field.eDateFormat = tplFmtPgSQLDate;
+		} else if(!strcmp((char*)Buf, "date-pgsql")) {
+			pTpe->data.field.eDateFormat = tplFmtPgSQLDate;
 		 } else if(!strcmp((char*)Buf, "date-rfc3164")) {
 			pTpe->data.field.eDateFormat = tplFmtRFC3164Date;
 		 } else if(!strcmp((char*)Buf, "date-rfc3164-buggyday")) {
@@ -968,7 +968,7 @@ do_Parameter(uchar **pp, struct template *pTpl)
 					p += 4; /* eat indicator sequence */
 				} else if(p[0] == ',') { /* empty, use default */
 					pTpe->data.field.nomatchAction = TPL_REGEX_NOMATCH_USE_DFLTSTR;
-					 /* do NOT eat indicator sequence, as this was already eaten - the 
+					 /* do NOT eat indicator sequence, as this was already eaten - the
 					  * comma itself is already part of the next field.
 					  */
 				} else {
@@ -1264,7 +1264,7 @@ tplAddTplMod(struct template *pTpl, uchar** ppRestOfConfLine)
 	while(*pSrc && !isspace(*pSrc) && lenMod < sizeof(szMod) - 1) {
 		szMod[lenMod] = *pSrc++;
 		lenMod++;
-		
+
 	}
 	szMod[lenMod] = '\0';
 	*ppRestOfConfLine = pSrc;
@@ -1272,7 +1272,7 @@ tplAddTplMod(struct template *pTpl, uchar** ppRestOfConfLine)
 	pTpl->pStrgen = pStrgen->pModule->mod.sm.strgen;
 	DBGPRINTF("template bound to strgen '%s'\n", szMod);
 	/* check if the name potentially contains some well-known options
-	 * Note: we have opted to let the name contain all options. This sounds 
+	 * Note: we have opted to let the name contain all options. This sounds
 	 * useful, because the strgen MUST actually implement a specific set
 	 * of options. Doing this via the name looks to the enduser as if the
 	 * regular syntax were used, and it make sure the strgen postively
@@ -1300,7 +1300,7 @@ finalize_it:
 struct template *tplAddLine(rsconf_t *conf, const char* pName, uchar** ppRestOfConfLine)
 {
 	struct template *pTpl;
- 	unsigned char *p;
+	unsigned char *p;
 	int bDone;
 	size_t i;
 	rsRetVal localRet;
@@ -1386,20 +1386,20 @@ struct template *tplAddLine(rsconf_t *conf, const char* pName, uchar** ppRestOfC
 	}
 	
 	/* we now have the template - let's look at the options (if any)
-	 * we process options until we reach the end of the string or 
+	 * we process options until we reach the end of the string or
 	 * an error occurs - whichever is first.
 	 */
 	while(*p) {
 		while(isspace((int)*p))/* skip whitespace */
 			++p;
-		
+
 		if(*p != ',')
 			break;
 		++p; /* eat ',' */
 
 		while(isspace((int)*p))/* skip whitespace */
 			++p;
-		
+
 		/* read option word */
 		char optBuf[128] = { '\0' }; /* buffer for options - should be more than enough... */
 		i = 0;
@@ -2297,7 +2297,7 @@ void tplLastStaticInit(rsconf_t *conf, struct template *tpl)
 	conf->templates.lastStatic = tpl;
 }
 
-/* Print the template structure. This is more or less a 
+/* Print the template structure. This is more or less a
  * debug or test aid, but anyhow I think it's worth it...
  */
 void tplPrintList(rsconf_t *conf)
@@ -2345,9 +2345,9 @@ void tplPrintList(rsconf_t *conf)
 				case tplFmtMySQLDate:
 					dbgprintf("[Format as MySQL-Date] ");
 					break;
-                                case tplFmtPgSQLDate:
-                                        dbgprintf("[Format as PgSQL-Date] ");
-                                        break;
+				case tplFmtPgSQLDate:
+					dbgprintf("[Format as PgSQL-Date] ");
+					break;
 				case tplFmtRFC3164Date:
 					dbgprintf("[Format as RFC3164-Date] ");
 					break;

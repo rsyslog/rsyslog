@@ -8,8 +8,8 @@ export ES_PORT=19200
 . $srcdir/diag.sh start-elasticsearch
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 template(name="tpl" type="string"
 	 string="{\"msgnum\":\"%msg:F,58:2%\"}")
 
@@ -20,12 +20,12 @@ module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 				 template="tpl"
 				 searchIndex="rsyslog_testbench")
 '
-. $srcdir/diag.sh startup
-. $srcdir/diag.sh injectmsg  0 10000
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown 
+startup
+injectmsg  0 10000
+shutdown_when_empty
+wait_shutdown 
 . $srcdir/diag.sh es-getdata 10000 $ES_PORT
-. $srcdir/diag.sh seq-check  0 9999
+seq_check  0 9999
 . $srcdir/diag.sh stop-elasticsearch
 . $srcdir/diag.sh cleanup-elasticsearch
-. $srcdir/diag.sh exit
+exit_test

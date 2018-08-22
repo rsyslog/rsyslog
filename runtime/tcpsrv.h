@@ -7,11 +7,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -85,6 +85,7 @@ struct tcpsrv_s {
 	int maxFrameSize;	/**< max frame size for octet counted*/
 	int bDisableLFDelim;	/**< if 1, standard LF frame delimiter is disabled (*very dangerous*) */
 	int discardTruncatedMsg;/**< discard msg part that has been truncated*/
+	sbool bPreserveCase;	/**< preserve case in fromhost */
 	int ratelimitInterval;
 	int ratelimitBurst;
 	tcps_sess_t **pSessions;/**< array of all of our sessions */
@@ -177,8 +178,10 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetbSPFramingFix)(tcpsrv_t*, sbool);
 	/* added v19 -- PascalWithopf, 2017-08-08 */
 	rsRetVal (*SetGnutlsPriorityString)(tcpsrv_t*, uchar*);
+	/* added v21 -- Preserve case in fromhost, 2018-08-16 */
+	rsRetVal (*SetPreserveCase)(tcpsrv_t *pThis, int bPreserveCase);
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 20 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 21 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10

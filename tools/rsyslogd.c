@@ -153,7 +153,7 @@ static int bHadHUP;
 static int doFork = 1; 	/* fork - run in daemon mode - read-only after startup */
 int bFinished = 0;	/* used by termination signal handler, read-only except there
 			 * is either 0 or the number of the signal that requested the
- 			 * termination.
+			 * termination.
 			 */
 const char *PidFile;
 #define NO_PIDFILE "NONE"
@@ -163,7 +163,7 @@ int MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only aft
 ratelimit_t *dflt_ratelimiter = NULL; /* ratelimiter for submits without explicit one */
 uchar *ConfFile = (uchar*) "/etc/rsyslog.conf";
 int bHaveMainQueue = 0;/* set to 1 if the main queue - in queueing mode - is available
-			* If the main queue is either not yet ready or not running in 
+			* If the main queue is either not yet ready or not running in
 			* queueing mode (mode DIRECT!), then this is set to 0.
 			*/
 qqueue_t *pMsgQueue = NULL;	/* default main message queue */
@@ -431,7 +431,7 @@ forkRsyslog(void)
 #endif
 	/* AIXPORT : src support end */
 
-	if(cpid == 0) {    
+	if(cpid == 0) {
 		prepareBackground(pipefd[1]);
 		close(pipefd[0]);
 		return pipefd[1];
@@ -700,7 +700,7 @@ msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch, wti_t *pWt
 	assert(pBatch != NULL);
 	preprocessBatch(pBatch, pWti->pbShutdownImmediate);
 	ruleset.ProcessBatch(pBatch, pWti);
-//TODO: the BATCH_STATE_COMM must be set somewhere down the road, but we 
+//TODO: the BATCH_STATE_COMM must be set somewhere down the road, but we
 //do not have this yet and so we emulate -- 2010-06-10
 int i;
 	for(i = 0 ; i < pBatch->nElem  && !*pWti->pbShutdownImmediate ; i++) {
@@ -752,7 +752,7 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
 					ourConf->globals.mainQ.pszMainMsgQFName );
 				if(!ustrcmp(qfn->name, ourConf->globals.mainQ.pszMainMsgQFName)) {
 					snprintf((char*)qfrenamebuf, sizeof(qfrenamebuf), "%d-%s-%s",
-						 ++qfn_renamenum, ourConf->globals.mainQ.pszMainMsgQFName,  
+						 ++qfn_renamenum, ourConf->globals.mainQ.pszMainMsgQFName,
 						 (pszQueueName == NULL) ? "NONAME" : (char*)pszQueueName);
 					qfname = ustrdup(qfrenamebuf);
 					LogError(0, NO_ERRCODE, "Error: queue file name '%s' already in use "
@@ -1309,9 +1309,9 @@ initAll(int argc, char **argv)
 	while((ch = getopt(argc, argv, "46ACDdf:i:l:M:nN:qQs:S:T:u:vwx")) != EOF) {
 #endif
 		switch((char)ch) {
-                case '4':
-                case '6':
-                case 'A':
+		case '4':
+		case '6':
+		case 'A':
 		case 'f': /* configuration file */
 		case 'i': /* pid file name */
 		case 'l':
@@ -1330,7 +1330,7 @@ initAll(int argc, char **argv)
 			break;
 #if defined(_AIX)
 		case 'R':  /* This option is a no-op for AIX */
-			break;   
+			break;
 #endif
 		case 'd': /* debug - must be handled now, so that debug is active during init! */
 			debugging_on = 1;
@@ -1392,24 +1392,24 @@ initAll(int argc, char **argv)
 	while((iRet = bufOptRemove(&ch, &arg)) == RS_RET_OK) {
 		DBGPRINTF("deque option %c, optarg '%s'\n", ch, (arg == NULL) ? "" : arg);
 		switch((char)ch) {
-                case '4':
+		case '4':
 			fprintf (stderr, "rsyslogd: the -4 command line option will go away "
 				 "soon.\nPlease use the global(net.ipprotocol=\"ipv4-only\") "
 				 "configuration parameter instead.\n");
 	                glbl.SetDefPFFamily(PF_INET);
-                        break;
-                case '6':
+			break;
+		case '6':
 			fprintf (stderr, "rsyslogd: the -6 command line option will go away "
 				 "soon.\nPlease use the global(net.ipprotocol=\"ipv6-only\") "
 				 "configuration parameter instead.\n");
-                        glbl.SetDefPFFamily(PF_INET6);
-                        break;
-                case 'A':
+			glbl.SetDefPFFamily(PF_INET6);
+			break;
+		case 'A':
 			fprintf (stderr, "rsyslogd: the -A command line option will go away "
 				 "soon.\n"
 				 "Please use the omfwd parameter \"upd.sendToAll\" instead.\n");
-                        send_to_all++;
-                        break;
+			send_to_all++;
+			break;
 		case 'S':		/* Source IP for local client to be used on multihomed host */
 			fprintf (stderr, "rsyslogd: the -S command line option will go away "
 				 "soon.\n"
@@ -1477,8 +1477,8 @@ initAll(int argc, char **argv)
 				perror("chroot");
 				exit(1);
 			}
-            		if(chdir("/") != 0) {
-                		perror("chdir");
+			if(chdir("/") != 0) {
+				perror("chdir");
 		                exit(1);
 		            }
 			break;
@@ -1514,7 +1514,7 @@ initAll(int argc, char **argv)
 				 "configuration parameter instead.\n");
 			glbl.SetDisableDNS(1);
 			break;
-               case '?':
+		case '?':
 		default:
 			rsyslogd_usage();
 		}
@@ -2045,7 +2045,7 @@ main(int argc, char **argv)
 		fprintf(stderr, "%s: continuing without SRC support\n", progname);
 		src_exists = FALSE;
 	}
-	if (src_exists) 
+	if (src_exists)
 		if(dup2(0, SRC_FD) == -1) {
 			fprintf(stderr, "%s: dup2 failed exiting now...\n", progname);
 			/* In the unlikely event of dup2 failing we exit */

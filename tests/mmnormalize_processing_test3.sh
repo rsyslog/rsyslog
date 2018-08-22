@@ -5,11 +5,11 @@
 
 export TZ=TEST+01:00
 
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/mmnormalize/.libs/mmnormalize")
-input(type="imtcp" port="13514" ruleset="ruleset1")
+input(type="imtcp" port="'$TCPFLOOD_PORT'" ruleset="ruleset1")
 
 template(name="t_file_record" type="string" string="%timestamp:::date-rfc3339% %timestamp:::date-rfc3339% %hostname% %$!v_tag% %$!v_msg%\n")
 template(name="t_file_path" type="string" string="/sb/logs/incoming/%$year%/%$month%/%$day%/svc_%$!v_svc%/ret_%$!v_ret%/os_%$!v_os%/%fromhost-ip%/r_relay1/%$!v_file:::lowercase%.gz\n")
@@ -22,12 +22,12 @@ template(name="t_analytics_msg_normalized_vc" type="string" string="%timereporte
 template(name="t_analytics" type="string" string="[][][%$!v_fromhost-ip%][%timestamp:::date-unixtimestamp%][] %$!v_analytics_msg%\n")
 
 ruleset(name="ruleset1") {
-	action(type="mmnormalize" rulebase="testsuites/mmnormalize_processing_tests.rulebase" useRawMsg="on")
+	action(type="mmnormalize" rulebase=`echo $srcdir/testsuites/mmnormalize_processing_tests.rulebase` useRawMsg="on")
 	if ($!v_file == "") then {
 		set $!v_file=$!v_tag;
 	}
-	action(type="omfile" File="rsyslog.out.log" template="t_file_record")
-	action(type="omfile" File="rsyslog.out.log" template="t_file_path")
+	action(type="omfile" File=`echo $RSYSLOG_OUT_LOG` template="t_file_record")
+	action(type="omfile" File=`echo $RSYSLOG_OUT_LOG` template="t_file_path")
 
 	set $!v_forward="PCI";
 
@@ -50,21 +50,21 @@ ruleset(name="ruleset1") {
 				set $!v_analytics_msg=exec_template("t_analytics_msg_normalized");
 			}
 		}
-		action(type="omfile" File="rsyslog.out.log" template="t_analytics")
+		action(type="omfile" File=`echo $RSYSLOG_OUT_LOG` template="t_analytics")
 	}	
 }
 '
-FAKETIME='2017-03-08 14:23:51' $srcdir/diag.sh startup
-. $srcdir/diag.sh tcpflood -m1 -M "\"<182>Mar  8 14:23:51 host3 audispd: {SER3.local6 Y01 LNX [SRCH ALRT DASH REPT ANOM]}  node=host3.domain.com type=SYSCALL msg=audit(1488975831.267:230190721):\""
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+FAKETIME='2017-03-08 14:23:51' startup
+tcpflood -m1 -M "\"<182>Mar  8 14:23:51 host3 audispd: {SER3.local6 Y01 LNX [SRCH ALRT DASH REPT ANOM]}  node=host3.domain.com type=SYSCALL msg=audit(1488975831.267:230190721):\""
+shutdown_when_empty
+wait_shutdown
 echo '2017-03-08T14:23:51-01:00 2017-03-08T14:23:51-01:00 host3 audispd  node=host3.domain.com type=SYSCALL msg=audit(1488975831.267:230190721):
 /sb/logs/incoming/2017/03/08/svc_SER3/ret_Y01/os_LNX/127.0.0.1/r_relay1/local6.gz
-[][][127.0.0.1][1488986631][] Mar  8 14:23:51 host3 audispd:  node=host3.domain.com type=SYSCALL msg=audit(1488975831.267:230190721):' | cmp - rsyslog.out.log
+[][][127.0.0.1][1488986631][] Mar  8 14:23:51 host3 audispd:  node=host3.domain.com type=SYSCALL msg=audit(1488975831.267:230190721):' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
-  . $srcdir/diag.sh error-exit  1
+  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
+  error_exit  1
 fi;
 
-. $srcdir/diag.sh exit
+exit_test

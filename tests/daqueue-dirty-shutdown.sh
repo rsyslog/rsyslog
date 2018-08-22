@@ -19,15 +19,14 @@
 # Then, we check that at a minimum the .qi file exists.
 # Copyright (C) 2016 by Rainer Gerhards
 # Released under ASL 2.0
-echo ===============================================================================
 
 #uncomment the following if you want a log for step 1 of this test
 #export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 #export RSYSLOG_DEBUGLOG="log"
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/omtesting/.libs/omtesting")
 
 # set spool locations and switch queue to disk-only mode
@@ -38,12 +37,12 @@ main_queue(queue.filename="mainq" queue.saveonshutdown="on"
 	   )
 
 $template outfmt,"%msg:F,58:2%\n"
-$template dynfile,"rsyslog.out.log" # trick to use relative path names!
+template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!
 #:msg, contains, "msgnum:" ?dynfile;outfmt
 :msg, contains, "msgnum:" :omtesting:sleep 10 0
 '
-. $srcdir/diag.sh startup
-$srcdir/diag.sh injectmsg  0 210000
+startup
+injectmsg  0 210000
 echo spool files immediately before shutdown:
 ls test-spool
 . $srcdir/diag.sh shutdown-immediate # shut down without the ability to fully persist state
@@ -53,13 +52,15 @@ ls test-spool
 
 
 . $srcdir/diag.sh kill-immediate   # do not give it sufficient time to shutdown
-. $srcdir/diag.sh wait-shutdown
+wait_shutdown
+rm -f $RSYSLOG_PIDBASE.pid # as we kill, rsyslog does not itself cleanup the pid file
+
 echo spool files after kill:
 ls test-spool
 
 if [ ! -f test-spool/mainq.qi ]; then
     echo "FAIL: .qi file does not exist!"
-    . $srcdir/diag.sh error-exit 1
+    error_exit 1
 fi
 
 echo .qi file contents:
@@ -76,8 +77,8 @@ cat test-spool/mainq.qi
 #export RSYSLOG_DEBUGLOG="log2"
 
 echo RSYSLOG RESTART
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/omtesting/.libs/omtesting")
 
 # set spool locations and switch queue to disk-only mode
@@ -88,15 +89,15 @@ main_queue(queue.filename="mainq" queue.saveonshutdown="on"
 	   )
 
 $template outfmt,"%msg:F,58:2%\n"
-$template dynfile,"rsyslog.out.log" # trick to use relative path names!
+template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
-. $srcdir/diag.sh startup
+startup
 #. $srcdir/diag.sh wait-queueempty
 #echo existing queue empty, injecting new data
-#$srcdir/diag.sh injectmsg  1000000 1000
-. $srcdir/diag.sh shutdown-when-empty 
-. $srcdir/diag.sh wait-shutdown
+#injectmsg  1000000 1000
+shutdown_when_empty 
+wait_shutdown
 
 # now the spool directory must be empty
 spoolFiles=`ls test-spool/`
@@ -104,15 +105,15 @@ spoolFiles=`ls test-spool/`
 if [[ ! -z $spoolFiles ]]; then
     echo "FAIL: spool directory is not empty!"
     ls -l test-spool
-    . $srcdir/diag.sh error-exit 1
+    error_exit 1
 fi
 
 # check if we got at least some data
-if [ ! -f rsyslog.out.log ]; then
-    echo "FAIL: no output data gathered (no rsyslog.out.log)!"
-    . $srcdir/diag.sh error-exit 1
+if [ ! -f  $RSYSLOG_OUT_LOG ]; then
+    echo "FAIL: no output data gathered (no ${RSYSLOG_OUT_LOG})!"
+    error_exit 1
 fi
 
-#. $srcdir/diag.sh seq-check 0 19999 # so far this does not look doable (see comment above)
+#seq_check 0 19999 # so far this does not look doable (see comment above)
 
-. $srcdir/diag.sh exit
+exit_test

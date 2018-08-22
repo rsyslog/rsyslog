@@ -188,8 +188,8 @@ BEGINinterface(module) /* name must also be changed in ENDinterface macro! */
 	modInfo_t *(*FindWithCnfName)(rsconf_t *cnf, uchar *name, eModType_t rqtdType); /* added v3, 2011-07-19 */
 ENDinterface(module)
 #define moduleCURR_IF_VERSION 5 /* increment whenever you change the interface structure! */
-/* Changes: 
- * v2 
+/* Changes:
+ * v2
  * - added param bCondLoad to Load call - 2011-04-27
  * - removed GetNxtType, added GetNxtCnfType - 2011-04-27
  * v3 (see above)

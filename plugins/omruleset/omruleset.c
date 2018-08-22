@@ -17,11 +17,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -55,7 +55,6 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 /* static data */
 DEFobjCurrIf(ruleset);
-DEFobjCurrIf(errmsg);
 
 /* internal structures
  */
@@ -80,7 +79,7 @@ typedef struct configSettings_s {
 static configSettings_t cs;
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
+CODESTARTinitConfVars
 	resetConfigVariables(NULL, NULL);
 ENDinitConfVars
 
@@ -121,7 +120,7 @@ BEGINtryResume
 CODESTARTtryResume
 ENDtryResume
 
-/* Note that we change the flow control type to "no delay", because at this point in 
+/* Note that we change the flow control type to "no delay", because at this point in
  * rsyslog procesing we can not really slow down the producer any longer, as we already
  * work off a queue. So a delay would just block out execution for longer than needed.
  */
@@ -151,7 +150,7 @@ setRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
 
 	localRet = ruleset.GetRuleset(ourConf, &cs.pRuleset, pszName);
 	if(localRet == RS_RET_NOT_FOUND) {
-		errmsg.LogError(0, RS_RET_RULESET_NOT_FOUND, "error: ruleset '%s' not found - ignored", pszName);
+		LogError(0, RS_RET_RULESET_NOT_FOUND, "error: ruleset '%s' not found - ignored", pszName);
 	}
 	CHKiRet(localRet);
 	cs.pszRulesetName = pszName; /* save for later display purposes */
@@ -174,7 +173,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	}
 
 	if(cs.pRuleset == NULL) {
-		errmsg.LogError(0, RS_RET_NO_RULESET, "error: no ruleset was specified, use "
+		LogError(0, RS_RET_NO_RULESET, "error: no ruleset was specified, use "
 				"$ActionOmrulesetRulesetName directive first!");
 		ABORT_FINALIZE(RS_RET_NO_RULESET);
 	}
@@ -183,7 +182,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	p += sizeof(":omruleset:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
 	CHKiRet(createInstance(&pData));
 
-	errmsg.LogMsg(0, RS_RET_DEPRECATED, LOG_WARNING,
+	LogMsg(0, RS_RET_DEPRECATED, LOG_WARNING,
 			"warning: omruleset is deprecated, consider "
 			"using the 'call' statement instead");
 
@@ -208,7 +207,6 @@ ENDparseSelectorAct
 BEGINmodExit
 CODESTARTmodExit
 	free(cs.pszRulesetName);
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
 ENDmodExit
 
@@ -217,7 +215,7 @@ BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 ENDqueryEtryPt
 
 
@@ -261,9 +259,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	}
 
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
-	errmsg.LogMsg(0, RS_RET_DEPRECATED, LOG_WARNING,
+	LogMsg(0, RS_RET_DEPRECATED, LOG_WARNING,
 			"warning: omruleset is deprecated, consider "
 			"using the 'call' statement instead");
 

@@ -89,81 +89,81 @@ static void display_status(char *m, OM_uint32 maj_stat, OM_uint32 min_stat)
 
 static void display_ctx_flags(OM_uint32 flags)
 {
-    if (flags & GSS_C_DELEG_FLAG)
-	dbgprintf("GSS_C_DELEG_FLAG\n");
-    if (flags & GSS_C_MUTUAL_FLAG)
-	dbgprintf("GSS_C_MUTUAL_FLAG\n");
-    if (flags & GSS_C_REPLAY_FLAG)
-	dbgprintf("GSS_C_REPLAY_FLAG\n");
-    if (flags & GSS_C_SEQUENCE_FLAG)
-	dbgprintf("GSS_C_SEQUENCE_FLAG\n");
-    if (flags & GSS_C_CONF_FLAG)
-	dbgprintf("GSS_C_CONF_FLAG\n");
-    if (flags & GSS_C_INTEG_FLAG)
-	dbgprintf("GSS_C_INTEG_FLAG\n");
+	if (flags & GSS_C_DELEG_FLAG)
+		dbgprintf("GSS_C_DELEG_FLAG\n");
+	if (flags & GSS_C_MUTUAL_FLAG)
+		dbgprintf("GSS_C_MUTUAL_FLAG\n");
+	if (flags & GSS_C_REPLAY_FLAG)
+		dbgprintf("GSS_C_REPLAY_FLAG\n");
+	if (flags & GSS_C_SEQUENCE_FLAG)
+		dbgprintf("GSS_C_SEQUENCE_FLAG\n");
+	if (flags & GSS_C_CONF_FLAG)
+		dbgprintf("GSS_C_CONF_FLAG\n");
+	if (flags & GSS_C_INTEG_FLAG)
+		dbgprintf("GSS_C_INTEG_FLAG\n");
 }
 
 
 static int read_all(int fd, char *buf, unsigned int nbyte)
 {
-    int     ret;
-    char   *ptr;
-    struct timeval tv;
+	int ret;
+	char *ptr;
+	struct timeval tv;
 #ifdef USE_UNLIMITED_SELECT
-    fd_set  *pRfds = malloc(glbl.GetFdSetSize());
+	fd_set *pRfds = malloc(glbl.GetFdSetSize());
 
-    if (pRfds == NULL)
-	    return -1;
+	if (pRfds == NULL)
+		return -1;
 #else
-    fd_set  rfds;
-    fd_set *pRfds = &rfds;
+	fd_set rfds;
+	fd_set *pRfds = &rfds;
 #endif
 
-    for (ptr = buf; nbyte; ptr += ret, nbyte -= ret) {
-	    FD_ZERO(pRfds);
-	    FD_SET(fd, pRfds);
-	    tv.tv_sec = 1;
-	    tv.tv_usec = 0;
+	for (ptr = buf; nbyte; ptr += ret, nbyte -= ret) {
+		FD_ZERO(pRfds);
+		FD_SET(fd, pRfds);
+		tv.tv_sec = 1;
+		tv.tv_usec = 0;
 
-	    if ((ret = select(FD_SETSIZE, pRfds, NULL, NULL, &tv)) <= 0
-		|| !FD_ISSET(fd, pRfds)) {
-                    freeFdSet(pRfds);
-		    return ret;
-            }
-	    ret = recv(fd, ptr, nbyte, 0);
-	    if (ret < 0) {
-		    if (errno == EINTR)
-			    continue;
-                    freeFdSet(pRfds);
-		    return (ret);
-	    } else if (ret == 0) {
-                    freeFdSet(pRfds);
-		    return (ptr - buf);
-	    }
-    }
+		if ((ret = select(FD_SETSIZE, pRfds, NULL, NULL, &tv)) <= 0
+						|| !FD_ISSET(fd, pRfds)) {
+			freeFdSet(pRfds);
+			return ret;
+		}
+		ret = recv(fd, ptr, nbyte, 0);
+		if (ret < 0) {
+			if (errno == EINTR)
+				continue;
+			freeFdSet(pRfds);
+			return (ret);
+		} else if (ret == 0) {
+			freeFdSet(pRfds);
+			return (ptr - buf);
+		}
+	}
 
-    freeFdSet(pRfds);
-    return (ptr - buf);
+	freeFdSet(pRfds);
+	return (ptr - buf);
 }
 
 
 static int write_all(int fd, char *buf, unsigned int nbyte)
 {
-    int     ret;
-    char   *ptr;
+	int     ret;
+	char   *ptr;
 
-    for (ptr = buf; nbyte; ptr += ret, nbyte -= ret) {
-	ret = send(fd, ptr, nbyte, 0);
-	if (ret < 0) {
-	    if (errno == EINTR)
-		continue;
-	    return (ret);
-	} else if (ret == 0) {
-	    return (ptr - buf);
+	for (ptr = buf; nbyte; ptr += ret, nbyte -= ret) {
+		ret = send(fd, ptr, nbyte, 0);
+		if (ret < 0) {
+			if (errno == EINTR)
+				continue;
+			return (ret);
+		} else if (ret == 0) {
+			return (ptr - buf);
+		}
 	}
-    }
 
-    return (ptr - buf);
+	return (ptr - buf);
 }
 
 

@@ -1,17 +1,18 @@
 #!/bin/bash
 # added 2018-04-06 by richm, released under ASL 2.0
+#
+# Note: on buidbot VMs (where there is no environment cleanup), the
+# kubernetes test server may be kept running if the script aborts or
+# is aborted (buildbot master failure!) for some reason. As such we
+# execute it under "timeout" control, which ensure it always is
+# terminated. It's not a 100% great method, but hopefully does the
+# trick. -- rgerhards, 2018-07-21
 #export RSYSLOG_DEBUG="debug"
 . $srcdir/diag.sh init
-
-testsrv=mmk8s-test-server
-python -u ./mmkubernetes_test_server.py 18443 rsyslog${testsrv}.pid rsyslogd${testsrv}.started > mmk8s_srv.log 2>&1 &
-BGPROCESS=$!
-. $srcdir/diag.sh wait-startup $testsrv
-echo background mmkubernetes_test_server.py process id is $BGPROCESS
-
+. $srcdir/diag.sh check-command-available timeout
 pwd=$( pwd )
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imfile/.libs/imfile")
 module(load="../plugins/mmjsonparse/.libs/mmjsonparse")
 module(load="../contrib/mmkubernetes/.libs/mmkubernetes" token="dummy" kubernetesurl="http://localhost:18443"
@@ -27,8 +28,22 @@ template(name="mmk8s_template" type="list") {
 input(type="imfile" file="'$pwd'/pod-*.log" tag="kubernetes" addmetadata="on")
 action(type="mmjsonparse" cookie="")
 action(type="mmkubernetes")
-action(type="omfile" file="rsyslog.out.log" template="mmk8s_template")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="mmk8s_template")
 '
+
+testsrv=mmk8s-test-server
+echo starting kubernetes \"emulator\"
+timeout 2m python -u ./mmkubernetes_test_server.py 18443 ${RSYSLOG_PIDBASE}${testsrv}.pid ${RSYSLOG_DYNNAME}${testsrv}.started > mmk8s_srv.log 2>&1 &
+BGPROCESS=$!
+. $srcdir/diag.sh wait-startup $testsrv
+echo background mmkubernetes_test_server.py process id is $BGPROCESS
+
+cat > pod-error1.log <<EOF
+{"log":"not in right format","stream":"stdout","time":"2018-04-06T17:26:34.492083106Z"}
+EOF
+cat > pod-error2.log <<EOF
+{"message":"not in right format","CONTAINER_NAME":"not in right format","CONTAINER_ID_FULL":"id3"}
+EOF
 cat > pod-name1_namespace-name1_container-name1-id1.log <<EOF
 {"log":"{\"type\":\"response\",\"@timestamp\":\"2018-04-06T17:26:34Z\",\"tags\":[],\"pid\":75,\"method\":\"head\",\"statusCode\":200,\"req\":{\"url\":\"/\",\"method\":\"head\",\"headers\":{\"user-agent\":\"curl/7.29.0\",\"host\":\"localhost:5601\",\"accept\":\"*/*\"},\"remoteAddress\":\"127.0.0.1\",\"userAgent\":\"127.0.0.1\"},\"res\":{\"statusCode\":200,\"responseTime\":1,\"contentLength\":9},\"message\":\"HEAD1 / 200 1ms - 9.0B\"}\n","stream":"stdout","time":"2018-04-06T17:26:34.492083106Z"}
 EOF
@@ -41,18 +56,21 @@ EOF
 cat > pod-name4.log <<EOF
 {"message":"a message from container 4","CONTAINER_NAME":"some-prefix_container-name4_pod-name4_namespace-name4_unused4_unused44","CONTAINER_ID_FULL":"id4"}
 EOF
+cat > pod-name5.log <<EOF
+{"message":"a message from container 5","CONTAINER_NAME":"some-prefix_container-name5_pod-name5.with.dot.in.pod.name_namespace-name5_unused5_unused55","CONTAINER_ID_FULL":"id5"}
+EOF
 rm -f imfile-state\:*
-. $srcdir/diag.sh startup
+startup
 sleep 10 || :
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 
 kill $BGPROCESS
-. $srcdir/diag.sh wait-pid-termination rsyslog${testsrv}.pid
+. $srcdir/diag.sh wait-pid-termination ${RSYSLOG_PIDBASE}${testsrv}.pid
 cat mmk8s_srv.log
 
 # for each record in mmkubernetes-basic.out.json, see if the matching
-# record is found in rsyslog.out.log
+# record is found in $RSYSLOG_OUT_LOG
 python -c 'import sys,json
 expected = {}
 for hsh in json.load(open(sys.argv[1])):
@@ -77,12 +95,12 @@ for pod,hsh in expected.items():
 				print("Error: value {0} for key {1} in record for pod {2} does not match the expected value {3}".format(actual[pod][kk], kk, pod, vv))
 				rc = 1
 sys.exit(rc)
-' mmkubernetes-basic.out.json rsyslog.out.log
+' mmkubernetes-basic.out.json $RSYSLOG_OUT_LOG
 if [ $? -ne 0 ]; then
 	echo
-	echo "FAIL: expected data not found. rsyslog.out.log is:"
-	cat rsyslog.out.log
-	. $srcdir/diag.sh error-exit 1
+	echo "FAIL: expected data not found.  $RSYSLOG_OUT_LOG is:"
+	cat $RSYSLOG_OUT_LOG
+	error_exit 1
 fi
 
-. $srcdir/diag.sh exit
+exit_test

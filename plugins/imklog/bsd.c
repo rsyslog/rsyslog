@@ -14,11 +14,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -56,12 +56,12 @@ static int	fklog = -1;	/* kernel log fd */
 
 
 #ifdef OS_LINUX
-/* submit a message to imklog Syslog() API. In this function, we check if 
+/* submit a message to imklog Syslog() API. In this function, we check if
  * a kernel timestamp is present and, if so, extract and strip it.
  * Note that this is heavily Linux specific and thus is not compiled or
  * used for BSD.
  * Special thanks to Lennart Poettering for suggesting on how to convert
- * the kernel timestamp to a realtime timestamp. This method depends on 
+ * the kernel timestamp to a realtime timestamp. This method depends on
  * the fact the the kernel timestamp is written using the monotonic clock.
  * Shall that change (very unlikely), this code must be changed as well. Note
  * that due to the way we generate the delta, we are unable to write the
@@ -288,7 +288,7 @@ readklog(modConfData_t *pModConf)
 rsRetVal ATTR_NONNULL()
 klogAfterRun(modConfData_t *const pModConf __attribute__((unused)))
 {
-        DEFiRet;
+	DEFiRet;
 	if(fklog != -1)
 		close(fklog);
 #	ifdef OS_LINUX
@@ -296,7 +296,7 @@ klogAfterRun(modConfData_t *const pModConf __attribute__((unused)))
 	if(pModConf->console_log_level != -1)
 		klogctl(7, NULL, 0);
 #	endif
-        RETiRet;
+	RETiRet;
 }
 
 
@@ -307,7 +307,7 @@ klogAfterRun(modConfData_t *const pModConf __attribute__((unused)))
  */
 rsRetVal klogLogKMsg(modConfData_t *pModConf)
 {
-        DEFiRet;
+	DEFiRet;
 	readklog(pModConf);
 	RETiRet;
 }

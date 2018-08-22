@@ -65,7 +65,6 @@ MODULE_CNFNAME("omelasticsearch")
 
 /* internal structures */
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(statsobj)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(ruleset)
@@ -1029,19 +1028,64 @@ getDataErrorOnlyInterleaved(context *ctx,int itemStatus,char *request,char *resp
 		RETiRet;
 }
 
-/* request string looks like this:
+/* input JSON looks like this:
+ * {"someoperation":{"field1":"value1","field2":{.....}}}
+ * output looks like this:
+ * {"writeoperation":"someoperation","field1":"value1","field2":{.....}}
+ */
+static rsRetVal
+formatBulkReqOrResp(fjson_object *jo_input, fjson_object *jo_output)
+{
+	DEFiRet;
+	fjson_object *jo = NULL;
+	struct json_object_iterator it = json_object_iter_begin(jo_input);
+	struct json_object_iterator itEnd = json_object_iter_end(jo_input);
+
+	/* set the writeoperation if not already set */
+	if (!fjson_object_object_get_ex(jo_output, "writeoperation", NULL)) {
+		const char *optype = NULL;
+		if (!json_object_iter_equal(&it, &itEnd))
+			optype = json_object_iter_peek_name(&it);
+		if (optype) {
+			jo = json_object_new_string(optype);
+		} else {
+			jo = json_object_new_string("unknown");
+		}
+		CHKmalloc(jo);
+		json_object_object_add(jo_output, "writeoperation", jo);
+	}
+	if (!json_object_iter_equal(&it, &itEnd)) {
+		/* now iterate the operation object */
+		jo = json_object_iter_peek_value(&it);
+		it = json_object_iter_begin(jo);
+		itEnd = json_object_iter_end(jo);
+		while (!json_object_iter_equal(&it, &itEnd)) {
+			const char *name = json_object_iter_peek_name(&it);
+			/* do not overwrite existing fields */
+			if (!fjson_object_object_get_ex(jo_output, name, NULL)) {
+				json_object_object_add(jo_output, name,
+						json_object_get(json_object_iter_peek_value(&it)));
+			}
+			json_object_iter_next(&it);
+		}
+	}
+finalize_it:
+	RETiRet;
+}
+
+/* request string looks like this (other fields are "_parent" and "pipeline")
  * "{\"create\":{\"_index\": \"rsyslog_testbench\",\"_type\":\"test-type\",
  *   \"_id\":\"FAEAFC0D17C847DA8BD6F47BC5B3800A\"}}\n
  * {\"msgnum\":\"x00000000\",\"viaq_msg_id\":\"FAEAFC0D17C847DA8BD6F47BC5B3800A\"}\n"
- * we don't want the meta header, only the data part
+ * store the metadata header fields in the metadata object
  * start = first \n + 1
  * end = last \n
  */
 static rsRetVal
-createMsgFromRequest(const char *request, context *ctx, smsg_t **msg)
+createMsgFromRequest(const char *request, context *ctx, smsg_t **msg, fjson_object *omes)
 {
 	DEFiRet;
-	fjson_object *jo_msg = NULL;
+	fjson_object *jo_msg = NULL, *jo_metadata = NULL, *jo_request = NULL;
 	const char *datastart, *dataend;
 	size_t datalen;
 	enum json_tokener_error json_error;
@@ -1054,6 +1098,19 @@ createMsgFromRequest(const char *request, context *ctx, smsg_t **msg)
 			request);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
+	datalen = datastart - request;
+	json_tokener_reset(ctx->jTokener);
+	jo_metadata = json_tokener_parse_ex(ctx->jTokener, request, datalen);
+	json_error = fjson_tokener_get_error(ctx->jTokener);
+	if (!jo_metadata || (json_error != fjson_tokener_success)) {
+		LogError(0, RS_RET_ERR,
+			"omelasticsearch: parse error [%s] - could not convert original "
+			"request metadata header JSON back into JSON object [%s]",
+			fjson_tokener_error_desc(json_error), request);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	CHKiRet(formatBulkReqOrResp(jo_metadata, omes));
+
 	datastart++; /* advance to { */
 	if (!(dataend = strchr(datastart, '\n')) || (dataend[1] != '\0')) {
 		LogError(0, RS_RET_ERR,
@@ -1064,7 +1121,7 @@ createMsgFromRequest(const char *request, context *ctx, smsg_t **msg)
 	}
 	datalen = dataend - datastart;
 	json_tokener_reset(ctx->jTokener);
-	fjson_object *jo_request = json_tokener_parse_ex(ctx->jTokener, datastart, datalen);
+	jo_request = json_tokener_parse_ex(ctx->jTokener, datastart, datalen);
 	json_error = fjson_tokener_get_error(ctx->jTokener);
 	if (!jo_request || (json_error != fjson_tokener_success)) {
 		LogError(0, RS_RET_ERR,
@@ -1085,11 +1142,13 @@ createMsgFromRequest(const char *request, context *ctx, smsg_t **msg)
 		MsgSetRawMsg(*msg, request, strlen(request));
 	}
 	MsgSetMSGoffs(*msg, 0);	/* we do not have a header... */
+	MsgSetTAG(*msg, (const uchar *)"omes", 4);
 	CHKiRet(msgAddJSON(*msg, (uchar*)"!", jo_request, 0, 0));
 
-	finalize_it:
-		RETiRet;
-
+finalize_it:
+	if (jo_metadata)
+		json_object_put(jo_metadata);
+	RETiRet;
 }
 
 
@@ -1101,41 +1160,54 @@ getDataRetryFailures(context *ctx,int itemStatus,char *request,char *response,
 	fjson_object *omes = NULL, *jo = NULL;
 	int istatus = fjson_object_get_int(status);
 	int iscreateop = 0;
-	struct json_object_iterator it = json_object_iter_begin(response_item);
-	struct json_object_iterator itEnd = json_object_iter_end(response_item);
 	const char *optype = NULL;
 	smsg_t *msg = NULL;
+	int need_free_omes = 0;
 
 	(void)response;
 	(void)itemStatus;
-	CHKiRet(createMsgFromRequest(request, ctx, &msg));
-	CHKmalloc(msg);
-	/* add status as local variables */
-	omes = json_object_new_object();
-	if (!json_object_iter_equal(&it, &itEnd))
-		optype = json_object_iter_peek_name(&it);
-	if (optype && !strcmp("create", optype))
-		iscreateop = 1;
-	if (optype && !strcmp("index", optype) && (ctx->writeOperation == ES_WRITE_INDEX))
-		iscreateop = 1;
-	if (optype) {
-		jo = json_object_new_string(optype);
-	} else {
-		jo = json_object_new_string("unknown");
+	(void)response_body;
+	CHKmalloc(omes = json_object_new_object());
+	need_free_omes = 1;
+	/* this adds metadata header fields to omes */
+	if (RS_RET_OK != (iRet = createMsgFromRequest(request, ctx, &msg, omes))) {
+		if (iRet != RS_RET_OUT_OF_MEMORY) {
+			STATSCOUNTER_INC(indexBadResponse, mutIndexBadResponse);
+		} else {
+			ABORT_FINALIZE(iRet);
+		}
 	}
-	json_object_object_add(omes, "writeoperation", jo);
+	CHKmalloc(msg);
+	/* this adds response fields as local variables to omes */
+	if (RS_RET_OK != (iRet = formatBulkReqOrResp(response_item, omes))) {
+		if (iRet != RS_RET_OUT_OF_MEMORY) {
+			STATSCOUNTER_INC(indexBadResponse, mutIndexBadResponse);
+		} else {
+			ABORT_FINALIZE(iRet);
+		}
+	}
+	if (fjson_object_object_get_ex(omes, "writeoperation", &jo)) {
+		optype = json_object_get_string(jo);
+		if (optype && !strcmp("create", optype))
+			iscreateop = 1;
+		if (optype && !strcmp("index", optype) && (ctx->writeOperation == ES_WRITE_INDEX))
+			iscreateop = 1;
+	}
 
 	if (!optype) {
 		STATSCOUNTER_INC(indexBadResponse, mutIndexBadResponse);
+		LogMsg(0, RS_RET_ERR, LOG_INFO,
+			"omelasticsearch: no recognized operation type in response [%s]",
+			response);
 	} else if ((istatus == 200) || (istatus == 201)) {
 		STATSCOUNTER_INC(indexSuccess, mutIndexSuccess);
 	} else if ((istatus == 409) && iscreateop) {
 		STATSCOUNTER_INC(indexDuplicate, mutIndexDuplicate);
-	} else if (istatus == 400 || (istatus < 200)) {
+	} else if ((istatus == 400) || (istatus < 200)) {
 		STATSCOUNTER_INC(indexBadArgument, mutIndexBadArgument);
 	} else {
 		fjson_object *error = NULL, *errtype = NULL;
-		if(fjson_object_object_get_ex(response_body, "error", &error) &&
+		if(fjson_object_object_get_ex(omes, "error", &error) &&
 		   fjson_object_object_get_ex(error, "type", &errtype)) {
 			if (istatus == 429) {
 				STATSCOUNTER_INC(indexBulkRejection, mutIndexBulkRejection);
@@ -1144,22 +1216,17 @@ getDataRetryFailures(context *ctx,int itemStatus,char *request,char *response,
 			}
 		} else {
 			STATSCOUNTER_INC(indexBadResponse, mutIndexBadResponse);
+			LogMsg(0, RS_RET_ERR, LOG_INFO,
+				"omelasticsearch: unexpected error response [%s]",
+				response);
 		}
 	}
-	/* add response_body fields to local var omes */
-	it = json_object_iter_begin(response_body);
-	itEnd = json_object_iter_end(response_body);
-	while (!json_object_iter_equal(&it, &itEnd)) {
-		json_object_object_add(omes, json_object_iter_peek_name(&it),
-			json_object_get(json_object_iter_peek_value(&it)));
-		json_object_iter_next(&it);
-	}
+	need_free_omes = 0;
 	CHKiRet(msgAddJSON(msg, (uchar*)".omes", omes, 0, 0));
-	omes = NULL;
 	MsgSetRuleset(msg, ctx->retryRuleset);
 	CHKiRet(ratelimitAddMsg(ctx->ratelimiter, NULL, msg));
 finalize_it:
-	if (omes)
+	if (need_free_omes)
 		json_object_put(omes);
 	RETiRet;
 }
@@ -1592,7 +1659,7 @@ computeAuthHeader(char* uid, char* pwd, uchar** authBuf) {
 	if(r == 0) *authBuf = (uchar*) es_str2cstr(auth, NULL);
 
 	if (r != 0 || *authBuf == NULL) {
-		errmsg.LogError(0, RS_RET_ERR, "omelasticsearch: failed to build auth header\n");
+		LogError(0, RS_RET_ERR, "omelasticsearch: failed to build auth header\n");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -1776,7 +1843,7 @@ CODESTARTnewActInst
 			fp = fopen((const char*)pData->caCertFile, "r");
 			if(fp == NULL) {
 				rs_strerror_r(errno, errStr, sizeof(errStr));
-				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
+				LogError(0, RS_RET_NO_FILE_ACCESS,
 						"error: 'tls.cacert' file %s couldn't be accessed: %s\n",
 						pData->caCertFile, errStr);
 			} else {
@@ -1787,7 +1854,7 @@ CODESTARTnewActInst
 			fp = fopen((const char*)pData->myCertFile, "r");
 			if(fp == NULL) {
 				rs_strerror_r(errno, errStr, sizeof(errStr));
-				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
+				LogError(0, RS_RET_NO_FILE_ACCESS,
 						"error: 'tls.mycert' file %s couldn't be accessed: %s\n",
 						pData->myCertFile, errStr);
 			} else {
@@ -1798,7 +1865,7 @@ CODESTARTnewActInst
 			fp = fopen((const char*)pData->myPrivKeyFile, "r");
 			if(fp == NULL) {
 				rs_strerror_r(errno, errStr, sizeof(errStr));
-				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
+				LogError(0, RS_RET_NO_FILE_ACCESS,
 						"error: 'tls.myprivkey' file %s couldn't be accessed: %s\n",
 						pData->myPrivKeyFile, errStr);
 			} else {
@@ -1811,7 +1878,7 @@ CODESTARTnewActInst
 			} else if (writeop && !strcmp(writeop, "index")) {
 				pData->writeOperation = ES_WRITE_INDEX;
 			} else if (writeop) {
-				errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+				LogError(0, RS_RET_CONFIG_ERROR,
 					"omelasticsearch: invalid value '%s' for writeoperation: "
 					"must be one of 'index' or 'create' - using default value 'index'", writeop);
 				pData->writeOperation = ES_WRITE_INDEX;
@@ -1832,37 +1899,37 @@ CODESTARTnewActInst
 	}
 
 	if(pData->pwd != NULL && pData->uid == NULL) {
-		errmsg.LogError(0, RS_RET_UID_MISSING,
+		LogError(0, RS_RET_UID_MISSING,
 			"omelasticsearch: password is provided, but no uid "
 			"- action definition invalid");
 		ABORT_FINALIZE(RS_RET_UID_MISSING);
 	}
 	if(pData->dynSrchIdx && pData->searchIndex == NULL) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+		LogError(0, RS_RET_CONFIG_ERROR,
 			"omelasticsearch: requested dynamic search index, but no "
 			"name for index template given - action definition invalid");
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 	if(pData->dynSrchType && pData->searchType == NULL) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+		LogError(0, RS_RET_CONFIG_ERROR,
 			"omelasticsearch: requested dynamic search type, but no "
 			"name for type template given - action definition invalid");
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 	if(pData->dynParent && pData->parent == NULL) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+		LogError(0, RS_RET_CONFIG_ERROR,
 			"omelasticsearch: requested dynamic parent, but no "
 			"name for parent template given - action definition invalid");
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 	if(pData->dynBulkId && pData->bulkId == NULL) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+		LogError(0, RS_RET_CONFIG_ERROR,
 			"omelasticsearch: requested dynamic bulkid, but no "
 			"name for bulkid template given - action definition invalid");
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 	if(pData->dynPipelineName && pData->pipelineName == NULL) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+		LogError(0, RS_RET_CONFIG_ERROR,
 			"omelasticsearch: requested dynamic pipeline name, but no "
 			"name for pipelineName template given - action definition invalid");
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
@@ -1921,7 +1988,7 @@ CODESTARTnewActInst
 		pData->numServers = servers->nmemb;
 		pData->serverBaseUrls = malloc(servers->nmemb * sizeof(uchar*));
 		if (pData->serverBaseUrls == NULL) {
-			errmsg.LogError(0, RS_RET_ERR, "omelasticsearch: unable to allocate buffer "
+			LogError(0, RS_RET_ERR, "omelasticsearch: unable to allocate buffer "
 					"for ElasticSearch server configuration.");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
@@ -1929,7 +1996,7 @@ CODESTARTnewActInst
 		for(i = 0 ; i < servers->nmemb ; ++i) {
 			serverParam = es_str2cstr(servers->arr[i], NULL);
 			if (serverParam == NULL) {
-				errmsg.LogError(0, RS_RET_ERR, "omelasticsearch: unable to allocate buffer "
+				LogError(0, RS_RET_ERR, "omelasticsearch: unable to allocate buffer "
 					"for ElasticSearch server configuration.");
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
@@ -1949,7 +2016,7 @@ CODESTARTnewActInst
 		pData->numServers = 1;
 		pData->serverBaseUrls = malloc(sizeof(uchar*));
 		if (pData->serverBaseUrls == NULL) {
-			errmsg.LogError(0, RS_RET_ERR, "omelasticsearch: unable to allocate buffer "
+			LogError(0, RS_RET_ERR, "omelasticsearch: unable to allocate buffer "
 					"for ElasticSearch server configuration.");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
@@ -1962,7 +2029,7 @@ CODESTARTnewActInst
 		pData->searchType = (uchar*) strdup("events");
 
 	if ((pData->writeOperation != ES_WRITE_INDEX) && (pData->bulkId == NULL)) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+		LogError(0, RS_RET_CONFIG_ERROR,
 			"omelasticsearch: writeoperation '%d' requires bulkid", pData->writeOperation);
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
@@ -2012,7 +2079,7 @@ CODESTARTcheckCnf
 		if (inst->retryRulesetName) {
 			localRet = ruleset.GetRuleset(pModConf->pConf, &pRuleset, inst->retryRulesetName);
 			if(localRet == RS_RET_NOT_FOUND) {
-				errmsg.LogError(0, localRet, "omelasticsearch: retryruleset '%s' not found - "
+				LogError(0, localRet, "omelasticsearch: retryruleset '%s' not found - "
 						"no retry ruleset will be used", inst->retryRulesetName);
 			} else {
 				inst->retryRuleset = pRuleset;
@@ -2047,7 +2114,6 @@ CODESTARTmodExit
 		prop.Destruct(&pInputName);
 	curl_global_cleanup();
 	statsobj.Destruct(&indexStats);
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(statsobj, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
@@ -2071,13 +2137,12 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 
 	if (curl_global_init(CURL_GLOBAL_ALL) != 0) {
-		errmsg.LogError(0, RS_RET_OBJ_CREATION_FAILED, "CURL fail. -elasticsearch indexing disabled");
+		LogError(0, RS_RET_OBJ_CREATION_FAILED, "CURL fail. -elasticsearch indexing disabled");
 		ABORT_FINALIZE(RS_RET_OBJ_CREATION_FAILED);
 	}
 

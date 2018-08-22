@@ -6,12 +6,35 @@
 # and transactions.
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup omprog-transactions.conf
+generate_conf
+add_conf '
+module(load="../plugins/omprog/.libs/omprog")
+
+template(name="outfmt" type="string" string="%msg%\n")
+
+:msg, contains, "msgnum:" {
+    action(
+        type="omprog"
+        binary=`echo $srcdir/testsuites/omprog-transactions-bin.sh`
+        template="outfmt"
+        name="omprog_action"
+        queue.type="Direct"  # the default; facilitates sync with the child process
+        queue.dequeueBatchSize="6"
+        confirmMessages="on"
+        useTransactions="on"
+        beginTransactionMark="BEGIN TRANSACTION"
+        commitTransactionMark="COMMIT TRANSACTION"
+        action.resumeRetryCount="10"
+        action.resumeInterval="1"
+    )
+}
+'
+startup
 . $srcdir/diag.sh wait-startup
-. $srcdir/diag.sh injectmsg 0 10
+injectmsg 0 10
 . $srcdir/diag.sh wait-queueempty
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 
 # Since the transaction boundaries are not deterministic, we cannot check for
 # an exact expected output. We must check the output programmatically.
@@ -84,16 +107,16 @@ while IFS= read -r line; do
         status_expected=true;
     fi
     let "line_num++"
-done < rsyslog.out.log
+done < $RSYSLOG_OUT_LOG
 
 if [[ -z "$error" && "$transaction_state" != "NONE" ]]; then
     error="unexpected end of file (transaction state: $transaction_state)"
 fi
 
 if [[ -n "$error" ]]; then
-    echo "rsyslog.out.log: line $line_num: $error"
-    cat rsyslog.out.log
-    . $srcdir/diag.sh error-exit 1
+    echo "$RSYSLOG_OUT_LOG: line $line_num: $error"
+    cat $RSYSLOG_OUT_LOG
+    error_exit 1
 fi
 
 expected_messages=(
@@ -111,9 +134,9 @@ expected_messages=(
 if [[ "${messages_processed[*]}" != "${expected_messages[*]}" ]]; then
     echo "unexpected set of processed messages:"
     printf '%s\n' "${messages_processed[@]}"
-    echo "contents of rsyslog.out.log:"
-    cat rsyslog.out.log
-    . $srcdir/diag.sh error-exit 1
+    echo "contents of $RSYSLOG_OUT_LOG:"
+    cat $RSYSLOG_OUT_LOG
+    error_exit 1
 fi
 
-. $srcdir/diag.sh exit
+exit_test

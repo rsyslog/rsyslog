@@ -19,12 +19,21 @@ echo TEST: \[pipe_noreader.sh\]: test for pipe writing without reader
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="log"
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$MainMsgQueueTimeoutShutdown 10000
+$InputTCPServerRun '$TCPFLOOD_PORT'
+
+$template outfmt,"%msg:F,58:2%\n"
+:msg, contains, "msgnum:" |./rsyslog.pipe
+'
 mkfifo ./rsyslog.pipe
-. $srcdir/diag.sh startup pipe_noreader.conf
+startup
 # we need to emit ~ 128K of data according to bug report
-. $srcdir/diag.sh tcpflood -m1000 -d500
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
+tcpflood -m1000 -d500
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown       # and wait for it to terminate
 # NO need to check seqno -- see header comment
 echo we did not loop, so the test is sucessfull
-. $srcdir/diag.sh exit
+exit_test

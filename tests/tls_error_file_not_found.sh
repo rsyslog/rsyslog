@@ -1,8 +1,8 @@
 #!/bin/bash
 # add 2017-09-21 by Pascal Withopf, released under ASL 2.0
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 global(
 	defaultNetstreamDriver="gtls"
 	defaultNetstreamDriverKeyFile="tls-certs/nokey.pem"
@@ -10,23 +10,23 @@ global(
 	defaultNetstreamDriverCaFile="tls-certs/ca.pem"
 )
 module(load="../plugins/imtcp/.libs/imtcp" StreamDriver.Name="gtls" StreamDriver.Mode="1" StreamDriver.AuthMode="anon")
-input(type="imtcp" port="13514")
+input(type="imtcp" port="'$TCPFLOOD_PORT'")
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 
-action(type="omfile" template="outfmt" file="rsyslog.out.log")
+action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 
 '
-. $srcdir/diag.sh startup
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+startup
+shutdown_when_empty
+wait_shutdown
 
-grep "defaultnetstreamdriverkeyfile.*tls-certs/nokey.pem" rsyslog.out.log > /dev/null
+grep "defaultnetstreamdriverkeyfile.*tls-certs/nokey.pem"  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
         echo
-        echo "FAIL: expected error message from missing input file not found. rsyslog.out.log is:"
-        cat rsyslog.out.log
-        . $srcdir/diag.sh error-exit 1
+        echo "FAIL: expected error message from missing input file not found.  $RSYSLOG_OUT_LOG is:"
+        cat $RSYSLOG_OUT_LOG
+        error_exit 1
 fi
 
-. $srcdir/diag.sh exit
+exit_test

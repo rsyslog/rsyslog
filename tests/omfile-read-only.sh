@@ -8,26 +8,26 @@ messages=20000 # how many messages to inject?
 # file
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="13514")
+input(type="imtcp" port="'$TCPFLOOD_PORT'")
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 :msg, contains, "msgnum:" {
-	action(type="omfile" template="outfmt" file="rsyslog2.out.log")
-	action(type="omfile" template="outfmt" file="rsyslog.out.log"
+	action(type="omfile" template="outfmt" file=`echo $RSYSLOG2_OUT_LOG`)
+	action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`
 	       action.execOnlyWhenPreviousIsSuspended="on"
 	      )
 }
 '
-touch rsyslog2.out.log
-chmod 0400 rsyslog2.out.log
+touch ${RSYSLOG2_OUT_LOG}
+chmod 0400 ${RSYSLOG2_OUT_LOG}
 ls -l rsyslog.ou*
-. $srcdir/diag.sh startup
-$srcdir/diag.sh injectmsg 0 $messages
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+startup
+injectmsg 0 $messages
+shutdown_when_empty
+wait_shutdown
 # we know that the output file is missing some messages, but it
 # MUST have some more, and these be in sequence. So we now read
 # the first message number and calculate based on it what must be
@@ -35,5 +35,5 @@ $srcdir/diag.sh injectmsg 0 $messages
 . $srcdir/diag.sh presort
 let firstnum=$((10#`$RS_HEADCMD -n1 work`)) # work is the sorted output file
 echo "info: first message expected to be number $firstnum, using that value."
-. $srcdir/diag.sh seq-check $firstnum $(($messages-1))
-. $srcdir/diag.sh exit
+seq_check $firstnum $(($messages-1))
+exit_test

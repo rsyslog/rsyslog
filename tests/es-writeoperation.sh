@@ -7,8 +7,8 @@
 
 #  Starting actual testbench
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 template(name="tpl" type="string"
 	 string="{\"msgnum\":\"%msg:F,58:2%\"}")
 
@@ -22,25 +22,25 @@ if $msg contains "msgnum:" then
 	       writeoperation="create"
 	       searchIndex="rsyslog_testbench")
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 
 # . $srcdir/diag.sh es-init
-. $srcdir/diag.sh startup
-. $srcdir/diag.sh injectmsg  0 1
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
-if grep -q "omelasticsearch: writeoperation '1' requires bulkid" rsyslog.out.log ; then
+startup
+injectmsg  0 1
+shutdown_when_empty
+wait_shutdown
+if grep -q "omelasticsearch: writeoperation '1' requires bulkid"  $RSYSLOG_OUT_LOG ; then
 	echo found correct error message
 else
 	echo Error: did not complain about incorrect writeoperation
-	cat rsyslog.out.log
-	. $srcdir/diag.sh error-exit 1
+	cat $RSYSLOG_OUT_LOG
+	error_exit 1
 fi
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 template(name="tpl" type="string"
 	 string="{\"msgnum\":\"%msg:F,58:2%\"}")
 
@@ -54,25 +54,25 @@ if $msg contains "msgnum:" then
 	       writeoperation="unknown"
 	       searchIndex="rsyslog_testbench")
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 
 # . $srcdir/diag.sh es-init
-. $srcdir/diag.sh startup
-. $srcdir/diag.sh injectmsg  0 1
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
-if grep -q "omelasticsearch: invalid value 'unknown' for writeoperation" rsyslog.out.log ; then
+startup
+injectmsg  0 1
+shutdown_when_empty
+wait_shutdown
+if grep -q "omelasticsearch: invalid value 'unknown' for writeoperation"  $RSYSLOG_OUT_LOG ; then
 	echo found correct error message
 else
 	echo Error: did not complain about incorrect writeoperation
-	cat rsyslog.out.log
-	. $srcdir/diag.sh error-exit 1
+	cat $RSYSLOG_OUT_LOG
+	error_exit 1
 fi
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 template(name="tpl" type="string"
 	 string="{\"msgnum\":\"%msg:F,58:2%\"}")
 
@@ -91,17 +91,17 @@ if $msg contains "msgnum:" then
 	       bulkmode="on"
 	       searchIndex="rsyslog_testbench")
 
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 
 export ES_PORT=19200
 . $srcdir/diag.sh es-init
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="debug.log"
-. $srcdir/diag.sh startup
-. $srcdir/diag.sh injectmsg  0 1
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+startup
+injectmsg  0 1
+shutdown_when_empty
+wait_shutdown
 . $srcdir/diag.sh es-getdata 1 $ES_PORT
 
 cat work | \
@@ -122,10 +122,10 @@ except ValueError:
 if [ $? -eq 0 ] ; then
 	echo found correct response
 else
-	cat rsyslog.out.log
-	. $srcdir/diag.sh error-exit 1
+	cat $RSYSLOG_OUT_LOG
+	error_exit 1
 fi
 
 . $srcdir/diag.sh stop-elasticsearch
 . $srcdir/diag.sh cleanup-elasticsearch
-. $srcdir/diag.sh exit
+exit_test

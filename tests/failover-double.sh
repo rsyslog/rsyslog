@@ -1,13 +1,20 @@
 #!/bin/bash
-# This file is part of the rsyslog project, released under GPLv3
-echo ===============================================================================
-echo \[failover-double.sh\]: test for double failover functionality
+# This file is part of the rsyslog project, released under ASL 2.0
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup failover-double.conf
-. $srcdir/diag.sh injectmsg  0 5000
-echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
-echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown 
-. $srcdir/diag.sh seq-check  0 4999
-. $srcdir/diag.sh exit
+export DEAD_PORT=4  # a port unassigned by IANA and very unlikely to be used
+generate_conf
+add_conf '
+$template outfmt,"%msg:F,58:2%\n"
+
+:msg, contains, "msgnum:" @@127.0.0.1:'$DEAD_PORT'
+$ActionExecOnlyWhenPreviousIsSuspended on
+&	@@127.0.0.1:1234
+&	./'"${RSYSLOG_OUT_LOG}"';outfmt
+$ActionExecOnlyWhenPreviousIsSuspended off
+'
+startup
+injectmsg  0 5000
+shutdown_when_empty
+wait_shutdown 
+seq_check  0 4999
+exit_test

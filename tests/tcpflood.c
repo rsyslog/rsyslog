@@ -3,8 +3,8 @@
  *
  * Params
  * -t	target address (default 127.0.0.1)
- * -p	target port (default 13514)
- * -n	number of target ports (targets are in range -p..(-p+-n-1)
+ * -p	target port(s) (default 13514), multiple via port1:port2:port3...
+ * -n	number of target ports (all target ports must be given in -p!)
  *      Note -c must also be set to at LEAST the number of -n!
  * -c	number of connections (default 1), use negative number
  *      to set a "soft limit": if tcpflood cannot open the
@@ -161,7 +161,7 @@ char *test_rs_strerror_r(int errnum, char *buf, size_t buflen) {
 
 static char *targetIP = "127.0.0.1";
 static char *msgPRI = "167";
-static int targetPort = 13514;
+static int targetPort[5] = {13514};
 static int numTargetPorts = 1;
 static int verbose = 0;
 static int dynFileIDs = 0;
@@ -254,7 +254,7 @@ static void closeTLSSess(int __attribute__((unused)) i);
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-security"
 static void relp_dbgprintf(char __attribute__((unused)) *fmt, ...) {
-    printf(fmt);
+	printf(fmt);
 }
 #pragma GCC diagnostic pop
 
@@ -280,7 +280,7 @@ setupUDP(void)
 
 	memset((char *) &udpRcvr, 0, sizeof(udpRcvr));
 	udpRcvr.sin_family = AF_INET;
-	udpRcvr.sin_port = htons(targetPort);
+	udpRcvr.sin_port = htons(targetPort[0]);
 	if(inet_aton(targetIP, &udpRcvr.sin_addr)==0) {
 		fprintf(stderr, "inet_aton() failed\n");
 		return(1);
@@ -303,9 +303,9 @@ int openConn(int *fd, const int connIdx)
 	/* randomize port if required */
 	if(numTargetPorts > 1) {
 		rnd = rand(); /* easier if we need value for debug messages ;) */
-		port = targetPort + (rnd % numTargetPorts);
+		port = targetPort[(rnd % numTargetPorts)];
 	} else {
-		port = targetPort;
+		port = targetPort[0];
 	}
 	if(transport == TP_RELP_PLAIN) {
 		#ifdef ENABLE_RELP
@@ -341,7 +341,7 @@ int openConn(int *fd, const int connIdx)
 			} else {
 				if(retries++ == 50) {
 					perror("connect()");
-					fprintf(stderr, "connect() failed\n");
+					fprintf(stderr, "connect(%d) failed\n", port);
 					return(1);
 				} else {
 					usleep(100000); /* ms = 1000 us! */
@@ -938,79 +938,79 @@ runTests(void)
  */
 
 long BIO_debug_callback(BIO *bio, int cmd, const char __attribute__((unused)) *argp,
-                        int argi, long __attribute__((unused)) argl, long ret)
+			int argi, long __attribute__((unused)) argl, long ret)
 {
-    long r = 1;
+	long r = 1;
 
-    if (BIO_CB_RETURN & cmd)
-        r = ret;
+	if (BIO_CB_RETURN & cmd)
+	r = ret;
 
-    printf("tcpdump: openssl debugmsg: BIO[%p]: ", (void *)bio);
+	printf("tcpdump: openssl debugmsg: BIO[%p]: ", (void *)bio);
 
-    switch (cmd) {
-    case BIO_CB_FREE:
-        printf("Free - %s\n", RSYSLOG_BIO_method_name(bio));
-        break;
+	switch (cmd) {
+	case BIO_CB_FREE:
+		printf("Free - %s\n", RSYSLOG_BIO_method_name(bio));
+		break;
 /* Disabled due API changes for OpenSSL 1.1.0+ */
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
-    case BIO_CB_READ:
-        if (bio->method->type & BIO_TYPE_DESCRIPTOR)
-            printf("read(%d,%lu) - %s fd=%d\n",
-                         RSYSLOG_BIO_number_read(bio), (unsigned long)argi,
-                         RSYSLOG_BIO_method_name(bio), RSYSLOG_BIO_number_read(bio));
-        else
-            printf("read(%d,%lu) - %s\n",
-                         RSYSLOG_BIO_number_read(bio), (unsigned long)argi, RSYSLOG_BIO_method_name(bio));
-        break;
-    case BIO_CB_WRITE:
-        if (bio->method->type & BIO_TYPE_DESCRIPTOR)
-            printf("write(%d,%lu) - %s fd=%d\n",
-                         RSYSLOG_BIO_number_written(bio), (unsigned long)argi,
-                         RSYSLOG_BIO_method_name(bio), RSYSLOG_BIO_number_written(bio));
-        else
-            printf("write(%d,%lu) - %s\n",
-                         RSYSLOG_BIO_number_written(bio), (unsigned long)argi, RSYSLOG_BIO_method_name(bio));
-        break;
+	case BIO_CB_READ:
+		if (bio->method->type & BIO_TYPE_DESCRIPTOR)
+			printf("read(%d,%lu) - %s fd=%d\n",
+				RSYSLOG_BIO_number_read(bio), (unsigned long)argi,
+				RSYSLOG_BIO_method_name(bio), RSYSLOG_BIO_number_read(bio));
+		else
+			printf("read(%d,%lu) - %s\n",
+				RSYSLOG_BIO_number_read(bio), (unsigned long)argi, RSYSLOG_BIO_method_name(bio));
+		break;
+	case BIO_CB_WRITE:
+		if (bio->method->type & BIO_TYPE_DESCRIPTOR)
+			printf("write(%d,%lu) - %s fd=%d\n",
+				RSYSLOG_BIO_number_written(bio), (unsigned long)argi,
+				RSYSLOG_BIO_method_name(bio), RSYSLOG_BIO_number_written(bio));
+		else
+			printf("write(%d,%lu) - %s\n",
+				RSYSLOG_BIO_number_written(bio), (unsigned long)argi, RSYSLOG_BIO_method_name(bio));
+		break;
 #else
-    case BIO_CB_READ:
-            printf("read %s\n", RSYSLOG_BIO_method_name(bio));
-        break;
-    case BIO_CB_WRITE:
-            printf("write %s\n", RSYSLOG_BIO_method_name(bio));
-        break;
+	case BIO_CB_READ:
+		printf("read %s\n", RSYSLOG_BIO_method_name(bio));
+		break;
+	case BIO_CB_WRITE:
+		printf("write %s\n", RSYSLOG_BIO_method_name(bio));
+		break;
 #endif
-    case BIO_CB_PUTS:
-        printf("puts() - %s\n", RSYSLOG_BIO_method_name(bio));
-        break;
-    case BIO_CB_GETS:
-        printf("gets(%lu) - %s\n", (unsigned long)argi,
-                     RSYSLOG_BIO_method_name(bio));
-        break;
-    case BIO_CB_CTRL:
-        printf("ctrl(%lu) - %s\n", (unsigned long)argi,
-                     RSYSLOG_BIO_method_name(bio));
-        break;
-    case BIO_CB_RETURN | BIO_CB_READ:
-        printf("read return %ld\n", ret);
-        break;
-    case BIO_CB_RETURN | BIO_CB_WRITE:
-        printf("write return %ld\n", ret);
-        break;
-    case BIO_CB_RETURN | BIO_CB_GETS:
-        printf("gets return %ld\n", ret);
-        break;
-    case BIO_CB_RETURN | BIO_CB_PUTS:
-        printf("puts return %ld\n", ret);
-        break;
-    case BIO_CB_RETURN | BIO_CB_CTRL:
-        printf("ctrl return %ld\n", ret);
-        break;
-    default:
-        printf("bio callback - unknown type (%d)\n", cmd);
-        break;
-    }
+	case BIO_CB_PUTS:
+		printf("puts() - %s\n", RSYSLOG_BIO_method_name(bio));
+		break;
+	case BIO_CB_GETS:
+		printf("gets(%lu) - %s\n", (unsigned long)argi,
+			RSYSLOG_BIO_method_name(bio));
+		break;
+	case BIO_CB_CTRL:
+		printf("ctrl(%lu) - %s\n", (unsigned long)argi,
+			RSYSLOG_BIO_method_name(bio));
+		break;
+	case BIO_CB_RETURN | BIO_CB_READ:
+		printf("read return %ld\n", ret);
+		break;
+	case BIO_CB_RETURN | BIO_CB_WRITE:
+		printf("write return %ld\n", ret);
+		break;
+	case BIO_CB_RETURN | BIO_CB_GETS:
+		printf("gets return %ld\n", ret);
+		break;
+	case BIO_CB_RETURN | BIO_CB_PUTS:
+		printf("puts return %ld\n", ret);
+		break;
+	case BIO_CB_RETURN | BIO_CB_CTRL:
+		printf("ctrl return %ld\n", ret);
+		break;
+	default:
+		printf("bio callback - unknown type (%d)\n", cmd);
+		break;
+	}
 
-    return (r);
+	return (r);
 }
 
 void osslLastSSLErrorMsg(int ret, SSL *ssl, const char* pszCallSource)
@@ -1394,6 +1394,29 @@ static int sendTLS(int __attribute__((unused)) i, char __attribute__((unused)) *
 static void closeTLSSess(int __attribute__((unused)) i) {}
 #	endif
 
+static void
+setTargetPorts(const char *const port_arg)
+{
+	int i = 0;
+
+	char *saveptr;
+	char *ports = strdup(port_arg);
+	printf("ports: %s\n", ports);
+	char *port = strtok_r(ports, ":", &saveptr);
+	while(port != NULL) {
+		if(i == sizeof(targetPort)/sizeof(int)) {
+			fprintf(stderr, "too many ports specified, max %d\n",
+				(int) (sizeof(targetPort)/sizeof(int)));
+			exit(1);
+		}
+		targetPort[i] = atoi(port);
+		i++;
+		port = strtok_r(NULL, ":", &saveptr);
+	}
+	free(ports);
+}
+
+
 /* Run the test.
  * rgerhards, 2009-04-03
  */
@@ -1423,7 +1446,7 @@ int main(int argc, char *argv[])
 				break;
 		case 't':	targetIP = optarg;
 				break;
-		case 'p':	targetPort = atoi(optarg);
+		case 'p':	setTargetPorts(optarg);
 				break;
 		case 'n':	numTargetPorts = atoi(optarg);
 				break;

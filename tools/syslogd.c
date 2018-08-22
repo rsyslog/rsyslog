@@ -129,7 +129,7 @@ void rsyslogdDoDie(int sig);
  * Note: this stems back to sysklogd, so we cannot put it under ASL 2.0. But
  * we may want to check if the code inside the BSD sources is exactly the same
  * (remember that sysklogd forked the BSD sources). If so, the BSD license applies
- * and permits us to move to ASL 2.0 (but we need to check the fine details). 
+ * and permits us to move to ASL 2.0 (but we need to check the fine details).
  * Probably it is best just to rewrite this code.
  */
 char **syslogd_crunch_list(char *list);
@@ -147,7 +147,7 @@ char **syslogd_crunch_list(char *list)
 	}
 	/* cut off leading delimiters */
 	while (p[0] == LIST_DELIMITER) {
-               p++;
+		p++;
 	}
 
 	/* count delimiters to calculate elements */

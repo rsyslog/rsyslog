@@ -243,7 +243,7 @@ CODESTARTTest
 	for(i = 0; i < testFiles.gl_pathc; i++) {
 		testFile = (uchar*) testFiles.gl_pathv[i];
 
-		if(stat((char*) testFile, &fileInfo) != 0) 
+		if(stat((char*) testFile, &fileInfo) != 0)
 			continue; /* continue with the next file if we can't stat() the file */
 
 		/* all regular files are run through the test logic. Symlinks don't work. */

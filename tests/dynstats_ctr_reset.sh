@@ -11,7 +11,29 @@ fi
 echo ===============================================================================
 echo \[dynstats_ctr_reset.sh\]: test to ensure correctness of stats-ctr reset
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup dynstats_ctr_reset.conf
+generate_conf
+add_conf '
+ruleset(name="stats") {
+  action(type="omfile" file="./rsyslog.out.stats.log")
+}
+
+module(load="../plugins/impstats/.libs/impstats" interval="1" severity="7" resetCounters="on" Ruleset="stats" bracketing="on")
+
+template(name="outfmt" type="string" string="%msg%\n")
+
+dyn_stats(name="msg_stats_resettable_on" resettable="on")
+dyn_stats(name="msg_stats_resettable_off" resettable="off")
+dyn_stats(name="msg_stats_resettable_default")
+
+set $.msg_prefix = field($msg, 32, 1);
+
+set $.x = dyn_inc("msg_stats_resettable_on", $.msg_prefix);
+set $.y = dyn_inc("msg_stats_resettable_off", $.msg_prefix);
+set $.z = dyn_inc("msg_stats_resettable_default", $.msg_prefix);
+
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+'
+startup
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_1
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_2
 . $srcdir/diag.sh wait-queueempty
@@ -20,9 +42,9 @@ sleep 1
 . $srcdir/diag.sh wait-queueempty
 sleep 1
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown
+wait_shutdown
 . $srcdir/diag.sh content-check "foo 006"
 . $srcdir/diag.sh custom-content-check 'bar=1' 'rsyslog.out.stats.log'
 . $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'msg_stats_resettable_on.\+foo=' 'rsyslog.out.stats.log' 3
@@ -34,4 +56,4 @@ echo wait on shutdown
 . $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'msg_stats_resettable_default.\+foo=' 'rsyslog.out.stats.log' 3
 . $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'msg_stats_resettable_default.\+bar=' 'rsyslog.out.stats.log' 1
 . $srcdir/diag.sh first-column-sum-check 's/.*baz=\([0-9]\+\)/\1/g' 'msg_stats_resettable_default.\+baz=' 'rsyslog.out.stats.log' 2
-. $srcdir/diag.sh exit
+exit_test

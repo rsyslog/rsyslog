@@ -4,15 +4,15 @@
 # addd 2016-03-03 by RGerhards, released under ASL 2.0
 echo \[glbl-invld-param\]: 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 global(invalid="off")
 global(debug.unloadModules="invalid")
-action(type="omfile" file="rsyslog.out.log")
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
-. $srcdir/diag.sh startup
+startup
 sleep 1
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 # if we reach this point, we consider this a success.
-. $srcdir/diag.sh exit
+exit_test

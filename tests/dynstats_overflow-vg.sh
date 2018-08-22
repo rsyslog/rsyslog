@@ -11,7 +11,29 @@ fi
 echo ===============================================================================
 echo \[dynstats_overflow-vg.sh\]: test for gathering stats when metrics exceed provisioned capacity
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup-vg dynstats_overflow.conf
+generate_conf
+add_conf '
+ruleset(name="stats") {
+  action(type="omfile" file="./rsyslog.out.stats.log")
+}
+
+module(load="../plugins/impstats/.libs/impstats" interval="2" severity="7" resetCounters="on" Ruleset="stats" bracketing="on")
+
+template(name="outfmt" type="string" string="%msg% %$.increment_successful%\n")
+
+dyn_stats(name="msg_stats" unusedMetricLife="1" maxCardinality="3")
+
+set $.msg_prefix = field($msg, 32, 1);
+
+if (re_match($.msg_prefix, "foo|bar|baz|quux|corge|grault")) then {
+  set $.increment_successful = dyn_inc("msg_stats", $.msg_prefix);
+} else {
+  set $.increment_successful = -1;
+}
+
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+'
+startup_vg
 . $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
 . $srcdir/diag.sh block-stats-flush
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_more_0
@@ -39,7 +61,7 @@ echo \[dynstats_overflow-vg.sh\]: test for gathering stats when metrics exceed p
 
 . $srcdir/diag.sh first-column-sum-check 's/.*metrics_purged=\([0-9]\+\)/\1/g' 'metrics_purged=' 'rsyslog.out.stats.log' 3
 
-rm $srcdir/rsyslog.out.stats.log
+rm rsyslog.out.stats.log
 . $srcdir/diag.sh issue-HUP #reopen stats file
 . $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
 . $srcdir/diag.sh block-stats-flush
@@ -78,12 +100,12 @@ rm $srcdir/rsyslog.out.stats.log
 . $srcdir/diag.sh await-stats-flush-after-block
 
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown-vg
+wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
 
 . $srcdir/diag.sh first-column-sum-check 's/.*metrics_purged=\([0-9]\+\)/\1/g' 'metrics_purged=' 'rsyslog.out.stats.log' 3
 
 . $srcdir/diag.sh custom-assert-content-missing 'foo' 'rsyslog.out.stats.log'
-. $srcdir/diag.sh exit
+exit_test

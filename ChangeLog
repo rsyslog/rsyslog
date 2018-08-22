@@ -1,5 +1,48 @@
 ------------------------------------------------------------------------------
+Version 8.38.0 [v8-stable] 2018-09-18
+- omelasticsearch: write all header metadata to $.omes for retries
+  Write all of the original request metadata fields to $.omes for
+  the retry, if present. This may include all of the following:
+  _index, _type, _id, _parent, pipeline
+  This is in addition to the fields from the response. If the same
+  field name exists in the request metadata and the response, the
+  field from the request will be used, in order to facilitate
+  retrying the exact same request.
+  Thanks to Richard Megginson for the patch.
+- imtcp/imudp: new option preservecase for managing the case of FROMHOST value
+  default is left at current behavior
+  see also https://github.com/rsyslog/rsyslog/pull/2774
+  see also https://bugzilla.redhat.com/show_bug.cgi?id=1309698
+- bugfix omprog: invalid memory access on partial writes to pipe
+  When sending logs to the program, in case of a partial write to the pipe,
+  invalid data was sent, or an invalid memory access could occur. (A
+  partial write can occur if the syscall is interrupted or the pipe is full.)
+  Thanks to Joan Sala for contributing this.
+- bugfix omprog: rsyslog's environment was not passed to script
+  closes https://github.com/rsyslog/rsyslog/issues/2921
+- bugfix omprog: severity of some log messages in waitForChild corrected
+  Log some messages related to child process termination as info/warn
+  instead of error.
+- bugfix imfile: files which were loaded via symlink were not always followed
+  They were stopped watching after being rotated.
+  closes https://github.com/rsyslog/rsyslog/issues/2229
+  Thanks to Jiri Vymazal for the patch.
+- CI:
+  * many changes with the goal to support parallel test execution, e.g.
+    use dynamic ports and file names, changes to testing tools, etc.
+------------------------------------------------------------------------------
 Version 8.37.0 [v8-stable] 2018-08-07
+- build system: add --enable-default-tests ./configure option
+  This permits to control the "default tests" in testbench runs. These
+  are those tests that do not need a special configure option. There are
+  some situations where we really want to turn them of so that we can
+  run tests only for a specific component (e.g. ElasticSearch).
+  This commit also removes the --enable-testbench[12] configure switches,
+  which were introduced just to work-around travis runtime restrictions.
+  With the new CI setup and new options we could reduce the Travis runtime
+  dramatically and so we do not need them any longer.
+- overall adaption to gcc 8 which emits new warnings
+- fix some build warnings on 32bit systems, namely armhf architecture
 - ommail change of behavior: "enable.body" default now "on"
   This was always documented to be "on", but actually was "off". Usually, we
   fix the doc, but after long discussion the agreement was that in this
@@ -23,6 +66,55 @@ Version 8.37.0 [v8-stable] 2018-08-07
 - imjournal: add journal-specific impstats counters
   these provide some additional insight into journal operations
   Thanks to Abdul Waheed for the patch.
+- imjournal: fixed startup on missing state file
+  When starting rsyslog with imjournal for first time it outputs
+  an error and plugin does not run because no state file exists yet.
+  Now it skips the loading and creates state file on first persist.
+  Thanks to Jiri Vymazal for the patch.
+- imjournal: fetching cursor on readJournal() and simplified pollJournal()
+  Fetching journal cursor in persistJournal could cause us to save
+  invalid cursor leading to duplicating messages further on, when new
+  WorkAroundJournalBug option is set we are saving it on each
+  readJournal() where we now that the state is good.
+  pollJournal() is now cleaner and faster, correctly handles INVALIDATE
+  status from journald and is able to continue polling after journal
+  flush. Also reduced POLL_TIMEOUT a bit as it caused rsyslog to exit
+  with error in corner cases for some ppc when left at full second.
+  re-factored imjournal CI tests with journal_print tool to have more
+  detailed error reporting.
+  Thanks to Jiri Vymazal for the patch.
+- config: enhance backticks "echo" capability
+  This is now more along the lines of what bash does. We now support
+  multiple environment variable expansions as well as constant text
+  between them.
+  example:
+  env SOMEPATH is set to "/var/log/custompath"
+  config is: param=`echo $SOMEPATH/myfile`
+  param than is expaned to "/var/log/custompath/myfile"
+  among others, this is also needed inside the testbench to properly
+  support "make distcheck".
+  Note: testbench tests follows via separate commit. There will be
+  no special test, as the testbench itself requires the functionality
+  at several places, so the coverage will be very good even without
+  a dedicated test.
+- imrelp: add support for seting address to bind to (#894)
+  This adds a new optional `address` parameter to `imrelp` inputs in order
+  to specify an address to bind to.
+  Based on support added by rsyslog/librelp@96eb5be
+  Thanks to Simon Wachter for the patch.
+- regexp.c: reduce lock contention when using glibc.
+  When using glibc, we enable per-thread regex to avoid lock contention.
+  See:
+  - https://github.com/rsyslog/rsyslog/issues/2759
+  - https://github.com/rsyslog/rsyslog/pull/2786
+  - https://sourceware.org/bugzilla/show_bug.cgi?id=11159
+  This should not affect BSD as they don't seem to take a lock in regexec.
+  NOTE: it is assumed that we can craft an even better solution than
+  this patch, but it improves the situation and we do not have time to
+  craft more. So we decided to merge. For details see
+  https://github.com/rsyslog/rsyslog/pull/2786
+- mmpstrucdata: better error message, support $! in var names
+  see also https://github.com/rsyslog/rsyslog/issues/1262#issuecomment-404773495
 - more explicit error msg with message modification mod on queue
   Message modification modules do not work if used with a non-direct queue.
   We now make this more explicit in the config parsing error message.
@@ -33,30 +125,185 @@ Version 8.37.0 [v8-stable] 2018-08-07
   improve performance when using multiple concurrent connections
   to a single (or multiple) RabbitMQ instance(s) (e.g. for load balancing)
   Thanks to github user micoq for contributing the patch.
+- imudp: replace select() calls by poll()
+  This improves reliability in extreme cases (more than 1024 fds open when
+  imudp begins to listen) and potentially improves performance a little.
+- ommysql: support mysql unix domain socket:
+  via action(.. socket="/tmp/mysqld.sock" ..)
+  Thanks to JoungKyun Kim for contributing this.
+- impstats: emit warning if log.syslog="off" and ruleset name given
+  With this config, "ruleset" is silently ignored, what probably is
+  not obvious to a user.
+  closes https://github.com/rsyslog/rsyslog/issues/2821
 - build system cleanup: remove no longer needed --enable-memcheck
   This was used for a very old testing capability, no longer functional but
   causes build to fail if enabled. Replaced by ASAN/valgrind.
   Issue detected while testing some other CI settings.
 - tools: Updated python based statslog analyzer sample scripts
+- developer tools: make devcontainer tool more developer friendly
+  slight improvement for easy interactive use
+- enable better testing via "make distcheck"
+  Also a couple of changes to testbench worth mentioning:
+  * use cp -f to ensure files can be overwirtten in VBUILD
+  * fix issue of missing include test file in EXTRA_DIST
+  * new supressions
+  * testbench: try to use local system dependency cache
+    avoid going to Internet repos if not absolutely necessary. For
+    development containers, they should be pre-populated with the
+    important dependencies.
+  * do not enable libfaketime if ASAN is selected
+    unfortunately, libfaketime does not work in that case
+  Note: for modules with non-standard dependencies (e.g. databases),
+  "make distcheck" only enables what on the original ./configure line
+  was enabled. This is done in order to ensure that "distcheck" adapts
+  to what is actually available on the system in question. Rsyslog's
+  own CI system installs the maximum set of possible dependencies and
+  so tries the maximum set "make distcheck" can support on a platform.
+  see also https://github.com/rsyslog/rsyslog/issues/174
+- add new global config parameter "inputs.timeout.shutdown"
+- omusrmsg: do not fall back to max username length of 8
+  This happens if utmp.h and friends are not available and stems back to
+  the original syslogd. Nowadas, 32 is more appropriate and now being used
+  in that (now very unlikely) case. The detection logic for UT_NAMESIZE has
+  also been streamlined.
+  closes https://github.com/rsyslog/rsyslog/issues/2834
+- bugfix build system: fix race in parallel builds
+  If libgcry.la is built later than lmcry_gcry.la, there is a failure:
+  [snip]
+  |../aarch64-wrs-linux-libtool  --tag=CC   --mode=link aarch64-wrs-linux-gcc
+  -o lmcry_gcry.la lmcry_gcry_la-lmcry_gcry.lo libgcry.la -lgcrypt
+  |aarch64-wrs-linux-libtool:   error: cannot find the library 'libgcry.la'
+  or unhandled argument 'libgcry.la'
+  |Makefile:1049: recipe for target 'lmcry_gcry.la' failed
+  |make[2]: *** [lmcry_gcry.la] Error 1
+  [snip]
+  The LIBADD of lmcry_gcry.la contains libgcry.la, we should also add libgcry.la
+  to lmcry_gcry.la's DEPENDENCIES.
+  Thanks to Hongxu Jia for the patch.
+- bugfix imfile: memory leak upon shutdown (cosmetic)
+  When rsyslog shuts down and imfile is inside a change polling loop,
+  it does not properly free memory returned by glob(). This is a cosmetic
+  bug as the process terminates within the next few milliseconds. However,
+  it causes memory analyzer reports and thus makes CI fail.
+- bugfix core: do not abort startup on problems setting scheduling policy
+  rsyslog creates a default scheduling policy on startup. This code
+  invalidly used CHKiRet (our exception handler) to check pthreads
+  return codes, what this macro cannot do. This lead to hard to
+  diagnose startup problems in cases where there were problems
+  setting the scheduling defaults (e.g. when rsyslog is set to run
+  at idle priority). Even more so, this blocked startup altogether,
+  which is not the right thing to do. Actually, this can be considered
+  a regression from commit 7742b21. That commit was 8 years ago, so
+  in general this cannot be a big issues ;-)
+  The code now emits proper error messages (to stderr, as at this point
+  no other output is available as it is during the initial state of
+  rsyslog initialization) and continues the startup.
+  closes https://github.com/rsyslog/rsyslog/issues/2855
+- bugfix core: input shutdown timeout not properly applied
+  The timeout could be reduced by mutex wait time, which was not the
+  intended behaviour and could lead the the input thread being
+  cancelled while it would have been perfectly legal to shut it down
+  cleanly.
+  Noticed during working on the CI system. May explain some testbench
+  instability and may have caused trouble with state files (not)
+  properly being written by inputs.
+- bugfix config optimizer: error in constant folding
+  did not work properly if a string and a number were to be folded.
+  Detected by gcc 8.
+- build: fix improper function casts
+  no real issue, but generated warnings under gcc 8 and thus
+  broke CI
+- bugfix omlibdbi: fix potential small memory leak
+  detected by clang static analyzer
+- bugfix ommysql: unsafe use of strncpy()
+  also now reports oversize names as user error vs. silent trucation
+  overly long names only could affect config load phase
+- bugfix omhttpfs: fix insecure usage if strncmp()
+  consequences not evaluated as this is a contributed module.
+  Detected by gcc 8.
+- bugfix mmgrok: cosmetic build issue - compiler warings
+  caused build under gcc 7 to fail with warning
+- bugfix mmkubernetes: stops working with non-kubernetes container names
+  When mmkubernetes encounters a record with a CONTAINER_NAME field,
+  but the value does not match the rulebase, mmkubernetes returns
+  an error, and mmkubernetes does not do any further processing
+  of any records.
+  The fix is to check the return value of ln_normalize to see if
+  it is a "hard" error or a "does not match" error.
+  This also adds a test for pod names with dots in them.
+  Thanks to Richard Megginson for the patch.
 - bugfix mmkubernetes: potential NULL pointer access
   If token file could not be opened, fclose() was passed a NULL pointer.
   Thanks to github user jvymazal for finding and Richard Megginson
   for fixing the issue.
+- bugfix omsnmp: invalid traptype was not detected
+  this could leave config errors unreported and cause unexpected
+  behaviour
 - bugfix mmkubernetes: default rules use container_name_and_id
-  also include rulebase files in dist
+  also include rulebase files in dist and fix rule so that dot inside
+  pod name is supported.
   Thanks to Richard Megginson for fixing the issue.
 - bugfix omelasticsearch: build regression
   Commit 6d4635efbb13907bf651b1a6e5a545effe84d9d9 introduced some compile
   problems, which were only detected on CentOS6, which unfortunately did
   not compile omelasticsearch during CI runs
+- bugfix ommongodb: do not force MongoDB to use "PLAIN" auth mechanism
+  ... which also seems not to be handled by current MongoDB.
+  Remove ?authMechanism=PLAIN URI part to let the mongo library chooses the
+  default mechanism. One can force a specific authentication mechanism by
+  adding ?authMechanism=XXX into the uristr argument of the module
+  Thanks to Jérémie Jourdin for the fix.
+  closes https://github.com/rsyslog/rsyslog/issues/2753
 - build system: do not disable tests via --disable-liblogging-stdlog
   This setting controlled both the actual rsyslog functionality as well
   as some testbench tests, which use liblogging-stdlog to provide some
   specific functionality. This meant those tests were not run since
   changing the default. Now untangling the dependency.
-- CI improvements:
+- CI:
+  * most test refactored to use newer testbench plumbing
+    while no functional change, this permits further enhancements
+  * ElasticSearch startup timeout in tests increased to care for
+    slower test systems
+  * imjournal: fixed tests to actually test plugin functionality
+    Thanks to Jiri Vymazal for the patch.
   * new test for gnutls priority string in librelp
     Thanks to github user jvymazal for the patch
+  * testbench: relax hanging instance detection
+    This does not work reliably if multiple instances of rsyslog
+    builds run on a single machine. We need to improve, but this
+    commit makes conflict less likely and provides some diagnostic
+    info to help guide us towards a final solution.
+  * testbench: fix tests that look awfully wrong
+    These tests indicated they terminate rsyslog forcefully without
+    drainging the queues, but then checked if they were drained (all
+    messages processed). That does not make sense, and we cannot
+    envison why this was written the first place. So we assume some
+    copy&paste problem was the root of that.
+  * testbench: refactor tests which used "nettester" tool
+    Some old tests are carried out via the nettester tool. This was
+    our initial shot at a testbench a couple of years ago. While it
+    worked back then, the testbench framework has been much enhanced.
+    These old tests are nowadays very hard to handle, as they miss
+    debug support etc. So it is time to refactor them to new style.
+    As a side-activity, the testbench plumbing has been enhanced to
+    support some operations commonly needed by these tests. Contrary
+    to pre-existing plumbing, these new operations are now crafted
+    using bash functions, which we consider superior to the current
+    method. So this is also the start of converting the older-style
+    functionality into bash functions. We just did this now because
+    it was required and we entangled it into the test refactoring
+    because it was really needed. Else we had to write old-style
+    operations and convert them in another commit, which would
+    have been a waste of time.
+    Special thanks to Pascal Withopf for the initial step of taking
+    old tests and putting config as well as test data together into
+    the refactored tests, on which Rainer Gerhards than could build
+    to create the new tests and update testbench plumbing.
+  * testbench: ensure uxsock test leaves no dangling listener instances
+    ..in case the test aborts. We utilize the timeout utility for now
+    to prevent this.
+  * testbench: make port for imdiag dynamic
+    This is prep work to support parallel test runs
 ------------------------------------------------------------------------------
 Version 8.36.0 [v8-stable] 2018-06-26
 - build system change:

@@ -3,25 +3,26 @@
 # file ever again. This is a user error, but we should detect it.
 # This file is part of the rsyslog project, released  under ASL 2.0
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
+generate_conf
 echo '$IncludeConfig work-nested.conf
 ' > work-nested.conf
-. $srcdir/diag.sh add-conf '
+add_conf '
 $IncludeConfig work-nested.conf
 template(name="outfmt" type="string" string="%msg%\n")
 if $msg contains "error" then
-	action(type="omfile" template="outfmt" file="rsyslog.out.log")
+	action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 '
-. $srcdir/diag.sh startup
-. $srcdir/diag.sh shutdown-when-empty
-grep work-nested.conf rsyslog.out.log
+startup
+shutdown_when_empty
+wait_shutdown
+grep work-nested.conf $RSYSLOG_OUT_LOG
 if [ $? -ne 0 ]; then
-	echo "FAIL: rsyslog.out.log does not contain expected error message on"
+	echo "FAIL:  $RSYSLOG_OUT_LOG does not contain expected error message on"
 	echo "recursive include file work-nested.conf."
 	echo "content is:"
 	echo "......................................................................"
-	cat rsyslog.out.log
+	cat $RSYSLOG_OUT_LOG
 	echo "......................................................................"
-	. $srcdir/diag.sh error-exit
+	error_exit
 fi
-. $srcdir/diag.sh exit
+exit_test

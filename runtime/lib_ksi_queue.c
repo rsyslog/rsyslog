@@ -161,7 +161,7 @@ bool ProtectedQueue_getItem(ProtectedQueue* this, size_t index, void** item) {
 }
 
 /* Waits for a new work item or timeout (if specified). Returns 0 in case of exit
-   condition, 1 if item became available and ETIMEDOUT in case of timeout. */
+ * condition, 1 if item became available and ETIMEDOUT in case of timeout. */
 int ProtectedQueue_waitForItem(ProtectedQueue* this, void** item, uint64_t timeout) {
 	struct timespec ts;
 	pthread_mutex_lock(&this->mutex);

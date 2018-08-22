@@ -50,7 +50,6 @@ MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("mmdblookup")
 
 
-DEFobjCurrIf(errmsg);
 DEF_OMOD_STATIC_DATA
 
 /* config variables */
@@ -146,7 +145,7 @@ CODESTARTcreateWrkrInstance
 		if (MMDB_IO_ERROR == status) {
 			dbgprintf("  IO error: %s\n", strerror(errno));
 		}
-		errmsg.LogError(0, RS_RET_SUSPENDED, "can not initialize maxminddb");
+		LogError(0, RS_RET_SUSPENDED, "can not initialize maxminddb");
 		/* ABORT_FINALIZE(RS_RET_SUSPENDED); */
 	}
 ENDcreateWrkrInstance
@@ -185,7 +184,7 @@ CODESTARTsetModCnf
 	loadModConf->container = NULL;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "mmdblookup: error processing module "
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "mmdblookup: error processing module "
 						"config parameters missing [module(...)]");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -269,7 +268,7 @@ CODESTARTnewActInst
 				CHKmalloc(pData->fieldList.name[j] = strdup(name));
 				char vnamebuf[1024];
 				snprintf(vnamebuf, sizeof(vnamebuf),
-					"%s!%s", loadModConf->container, 
+					"%s!%s", loadModConf->container,
 					(varname == NULL) ? name : varname);
 				CHKmalloc(pData->fieldList.varname[j] = strdup(vnamebuf));
 				free(param);
@@ -419,7 +418,6 @@ NO_LEGACY_CONF_parseSelectorAct
 
 BEGINmodExit
 CODESTARTmodExit
-	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -439,5 +437,4 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
 	dbgprintf("mmdblookup: module compiled with rsyslog version %s.\n", VERSION);
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDmodInit

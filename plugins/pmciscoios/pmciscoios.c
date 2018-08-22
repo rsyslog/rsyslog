@@ -10,11 +10,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,7 +28,6 @@
 #include <assert.h>
 #include <errno.h>
 #include <ctype.h>
-#include "syslogd.h"
 #include "conf.h"
 #include "syslogd-types.h"
 #include "template.h"
@@ -47,7 +46,6 @@ MODULE_CNFNAME("pmciscoios")
 
 /* internal structures */
 DEF_PMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(parser)
 DEFobjCurrIf(datetime)
@@ -128,11 +126,11 @@ CODESTARTnewParserInst
 		if(!strcmp(parserpblk.descr[i].name, "present.origin")) {
 			inst->bOriginPresent = (int) pvals[i].val.d.n;
 		} else if(!strcmp(parserpblk.descr[i].name, "present.xr")) {
-                        inst->bXrPresent = (int) pvals[i].val.d.n;
-                } else {
-                        dbgprintf("pmciscoios: program error, non-handled "
-                          "param '%s'\n", parserpblk.descr[i].name);
-                }
+			inst->bXrPresent = (int) pvals[i].val.d.n;
+		} else {
+			dbgprintf("pmciscoios: program error, non-handled "
+				"param '%s'\n", parserpblk.descr[i].name);
+		}
 	}
 finalize_it:
 CODE_STD_FINALIZERnewParserInst
@@ -194,20 +192,20 @@ CODESTARTparse2
 		p2parse += 2;
 	}
 
-        /* XR RSP (optional) */
-        if(pInst->bXrPresent) {
-                while(   lenMsg > 1
-                      && !(*p2parse == ':')) {
-                        --lenMsg;
+	/* XR RSP (optional) */
+	if(pInst->bXrPresent) {
+		while(   lenMsg > 1
+			&& !(*p2parse == ':')) {
+			--lenMsg;
 			++p2parse;
-                }
-                /* delimiter check */
-                if(lenMsg < 2) {
-                        DBGPRINTF("pmciscoios: fail after XR: '%s'\n", p2parse);
-                        ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
-                }
-                p2parse += 1;
-        }
+		}
+		/* delimiter check */
+		if(lenMsg < 2) {
+			DBGPRINTF("pmciscoios: fail after XR: '%s'\n", p2parse);
+			ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+		}
+		p2parse += 1;
+	}
 
 	/* TIMESTAMP */
 	if(p2parse[0] == '*' || p2parse[0] == '.') p2parse++;
@@ -221,19 +219,19 @@ CODESTARTparse2
 	}
 	/* Note: date parser strips ": ", so we cannot do the delimiter check here */
 
-        /* XR RSP (optional) */
-        if(pInst->bXrPresent) {
-                while(   lenMsg > 1
-                      && !(*p2parse == '%')) {
-                        --lenMsg;
-                        p2parse++;
-                }
-                /* delimiter check */
-                if(lenMsg < 2) {
-                        DBGPRINTF("pmciscoios: fail after XR tag search: '%s'\n", p2parse);
-                        ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
-                }
-        }
+	/* XR RSP (optional) */
+	if(pInst->bXrPresent) {
+		while(   lenMsg > 1
+			&& !(*p2parse == '%')) {
+			--lenMsg;
+			p2parse++;
+		}
+		/* delimiter check */
+		if(lenMsg < 2) {
+			DBGPRINTF("pmciscoios: fail after XR tag search: '%s'\n", p2parse);
+			ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+		}
+	}
 
 	/* parse SYSLOG TAG. must always start with '%', else we have a field mismatch */
 	if(lenMsg < 1 || *p2parse != '%') {
@@ -271,7 +269,6 @@ ENDparse2
 BEGINmodExit
 CODESTARTmodExit
 	/* release what we no longer need */
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(parser, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
@@ -290,7 +287,6 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(parser, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 

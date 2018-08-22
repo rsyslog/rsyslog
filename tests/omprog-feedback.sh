@@ -6,12 +6,32 @@
 # it has failed to process.
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup omprog-feedback.conf
+generate_conf
+add_conf '
+module(load="../plugins/omprog/.libs/omprog")
+
+template(name="outfmt" type="string" string="%msg%\n")
+
+:msg, contains, "msgnum:" {
+    action(
+        type="omprog"
+        binary=`echo $srcdir/testsuites/omprog-feedback-bin.sh`
+        template="outfmt"
+        name="omprog_action"
+        queue.type="Direct"  # the default; facilitates sync with the child process
+        confirmMessages="on"
+        useTransactions="off"
+        action.resumeRetryCount="10"
+        action.resumeInterval="1"
+    )
+}
+'
+startup
 . $srcdir/diag.sh wait-startup
-. $srcdir/diag.sh injectmsg 0 10
+injectmsg 0 10
 . $srcdir/diag.sh wait-queueempty
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 
 expected_output="<= OK
 => msgnum:00000000:
@@ -43,11 +63,11 @@ expected_output="<= OK
 => msgnum:00000009:
 <= OK"
 
-written_output=$(<rsyslog.out.log)
+written_output=$(<$RSYSLOG_OUT_LOG)
 if [[ "$expected_output" != "$written_output" ]]; then
     echo unexpected omprog script output:
     echo "$written_output"
-    . $srcdir/diag.sh error-exit 1
+    error_exit 1
 fi
 
-. $srcdir/diag.sh exit
+exit_test

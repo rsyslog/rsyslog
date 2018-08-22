@@ -6,10 +6,29 @@ export TCPFLOOD_EXTRA_OPTS="-M'msg:msg: 1:2, 3:4, 5:6, 7:8 b test'"
 echo ===============================================================================
 echo \[msgvar-concurrency-array.sh\]: testing concurrency of local variables
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup msgvar-concurrency-array.conf
+generate_conf
+add_conf '
+module(load="../plugins/mmnormalize/.libs/mmnormalize")
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="'$TCPFLOOD_PORT'")
+
+template(name="outfmt" type="string" string="%$!%\n")
+
+#action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG` template="outfmt" queue.type="linkedList")
+action(type="mmnormalize" ruleBase="testsuites/msgvar-concurrency-array.rulebase")
+if $msg contains "msg:" then {
+#	set $!tree!here!nbr = field($msg, 58, 2); # Delimiter = :
+	action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG` template="outfmt" queue.type="linkedList")
+	set $!tree!here!save = $!tree!here!nbr;
+	set $!tree!here!nbr = "";
+	set $!tree!here!nbr = $!tree!here!save;
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt" queue.type="linkedList")
+}
+'
+startup
 sleep 1
-. $srcdir/diag.sh tcpflood -m500000
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown
-#. $srcdir/diag.sh seq-check 0 499999
-. $srcdir/diag.sh exit
+tcpflood -m500000
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown
+#seq_check 0 499999
+exit_test

@@ -210,7 +210,7 @@ sun_open_door(void)
 	char line[ERRMSG_LEN+1];
 	int err;
 
-	/* first see if another instance of imsolaris OR another 
+	/* first see if another instance of imsolaris OR another
 	 * syslogd is running by trying a door call - if it succeeds,
 	 * there is already one active.
 	 */
@@ -265,7 +265,7 @@ sun_open_door(void)
 				    S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
 
 				DBGPRINTF("open_door: creat() of %s "
-				    "succeeded\n", 
+				    "succeeded\n",
 				    DoorFileName);
 
 				(void) close(door);
@@ -289,7 +289,7 @@ sun_open_door(void)
 				}
 
 				DBGPRINTF("open_door: %s is not a "
-				    "directory\n", OLD_DOORFILE); 
+				    "directory\n", OLD_DOORFILE);
 				if (unlink(OLD_DOORFILE) < 0) {
 					err = errno;
 					(void) snprintf(line, sizeof (line),
@@ -340,7 +340,7 @@ sun_open_door(void)
 				    "on RO file system\n");
 			} else {
 				DBGPRINTF("open_door: symlink %s -> %s "
-				    "succeeded\n", 
+				    "succeeded\n",
 				    OLD_DOORFILE, RELATIVE_DOORFILE);
 			}
 		}

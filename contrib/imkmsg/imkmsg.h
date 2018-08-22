@@ -8,11 +8,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -48,8 +48,9 @@ rsRetVal klogAfterRun(modConfData_t *pModConf);
 int klogFacilIntMsg();
 
 /* the functions below may be called by the drivers */
-rsRetVal imkmsgLogIntMsg(syslog_pri_t priority, char *fmt, ...) __attribute__((format(printf,2, 3)));
+rsRetVal imkmsgLogIntMsg(syslog_pri_t priority, const char *fmt, ...) __attribute__((format(printf,2, 3)));
 rsRetVal Syslog(syslog_pri_t priority, uchar *msg, struct timeval *tp, struct json_object *json);
+int klogFacilIntMsg(void);
 
 /* prototypes */
 extern int klog_getMaxLine(void); /* work-around for klog drivers to get configured max line size */

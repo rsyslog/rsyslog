@@ -12,11 +12,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -58,7 +58,7 @@ static const int yearInSec_startYear = 1967;
 /* for x in $(seq 1967 2099) ; do
  *   printf %s', ' $(date --date="Dec 31 ${x} UTC 23:59:59" +%s)
  * done |fold -w 70 -s */
-static const time_t yearInSecs[] = {
+static const long long yearInSecs[] = {
 	-63158401, -31536001, -1, 31535999, 63071999, 94694399, 126230399,
 	157766399, 189302399, 220924799, 252460799, 283996799, 315532799,
 	347155199, 378691199, 410227199, 441763199, 473385599, 504921599,
@@ -93,7 +93,7 @@ static const char* monthNames[12] = {
 /* ------------------------------ methods ------------------------------ */
 
 
-/** 
+/**
  * Convert struct timeval to syslog_time
  */
 static void
@@ -103,8 +103,8 @@ timeval2syslogTime(struct timeval *tp, struct syslogTime *t, const int inUTC)
 	struct tm tmBuf;
 	long lBias;
 	time_t secs;
-/* AIXPORT : fix build error : "tm_gmtoff" is not a member of "struct tm" 
- *           Choose the HPUX code path, only for this function. 
+/* AIXPORT : fix build error : "tm_gmtoff" is not a member of "struct tm"
+ *           Choose the HPUX code path, only for this function.
  *           This is achieved by adding a check to _AIX wherever _hpux is checked
  */
 
@@ -164,7 +164,7 @@ timeval2syslogTime(struct timeval *tp, struct syslogTime *t, const int inUTC)
  *
  * Obviously, *t must not be NULL...
  *
- * rgerhards, 2008-10-07: added ttSeconds to provide a way to 
+ * rgerhards, 2008-10-07: added ttSeconds to provide a way to
  * obtain the second-resolution UNIX timestamp. This is needed
  * in some situations to minimize time() calls (namely when doing
  * output processing). This can be left NULL if not needed.
@@ -172,8 +172,8 @@ timeval2syslogTime(struct timeval *tp, struct syslogTime *t, const int inUTC)
 static void getCurrTime(struct syslogTime *t, time_t *ttSeconds, const int inUTC)
 {
 	struct timeval tp;
-/* AIXPORT : fix build error : "tm_gmtoff" is not a member of "struct tm" 
- *           Choose the HPUX code path, only for this function. 
+/* AIXPORT : fix build error : "tm_gmtoff" is not a member of "struct tm"
+ *           Choose the HPUX code path, only for this function.
  *           This is achieved by adding a check to _AIX wherever _hpux is checked
  */
 
@@ -250,7 +250,7 @@ dateTimeFormat_t getDateTimeFormatFromStr(const char * const __restrict__ s) {
  * integer overruns, this the guard against INT_MAX.
  *
  * \param ppsz Pointer to the Pointer to the string being parsed. It
- *             must be positioned at the first digit. Will be updated 
+ *             must be positioned at the first digit. Will be updated
  *             so that on return it points to the first character AFTER
  *             the integer parsed.
  * \param pLenStr pointer to string length, decremented on exit by
@@ -312,7 +312,7 @@ ParseTIMESTAMP3339(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr)
 	lenStr = *pLenStr;
 	year = srSLMGParseInt32(&pszTS, &lenStr);
 
-	/* We take the liberty to accept slightly malformed timestamps e.g. in 
+	/* We take the liberty to accept slightly malformed timestamps e.g. in
 	 * the format of 2003-9-1T1:0:0. This doesn't hurt on receiving. Of course,
 	 * with the current state of affairs, we would never run into this code
 	 * here because at postion 11, there is no "T" in such cases ;)
@@ -430,7 +430,7 @@ finalize_it:
  * Parse a TIMESTAMP-3164. The pTime parameter
  * is guranteed to be updated only if a new valid timestamp
  * could be obtained (restriction added 2008-09-16 by rgerhards). This
- * also means the caller *must* provide a valid (probably current) 
+ * also means the caller *must* provide a valid (probably current)
  * timstamp in pTime when calling this function. a 3164 timestamp contains
  * only partial information and only that partial information is updated.
  * So the "output timestamp" is a valid timestamp only if the "input
@@ -811,8 +811,8 @@ applyDfltTZ(struct syslogTime *pTime, char *tz)
 
 /**
  * Format a syslogTimestamp into format required by MySQL.
- * We are using the 14 digits format. For example 20041111122600 
- * is interpreted as '2004-11-11 12:26:00'. 
+ * We are using the 14 digits format. For example 20041111122600
+ * is interpreted as '2004-11-11 12:26:00'.
  * The caller must provide the timestamp as well as a character
  * buffer that will receive the resulting string. The function
  * returns the size of the timestamp written in bytes (without
@@ -902,7 +902,7 @@ formatTimestampSecFrac(struct syslogTime *ts, char* pBuf)
 
 	iBuf = 0;
 	if(ts->secfracPrecision > 0)
-	{	
+	{
 		power = tenPowers[(ts->secfracPrecision - 1) % 6];
 		secfrac = ts->secfrac;
 		while(power > 0) {
@@ -1044,7 +1044,7 @@ formatTimestamp3164(struct syslogTime *ts, char* pBuf, int bBuggyDay)
  * works on local time, on the machine's time zone. In syslog, we have
  * to deal with multiple time zones at once, so we cannot plainly rely
  * on the local zone, and so we cannot rely on mktime(). One solution would
- * be to refactor all time-related functions so that they are all guarded 
+ * be to refactor all time-related functions so that they are all guarded
  * by a mutex to ensure TZ consistency (which would also enable us to
  * change the TZ at will for specific function calls). But that would
  * potentially mean a lot of overhead.
@@ -1116,7 +1116,7 @@ syslogTime2time_t(const struct syslogTime *ts)
 			  */
 			MonthInDays = 0;	/* any value fits ;) */
 			break;
-	}	
+	}
 	/* adjust for leap years */
 	if((ts->year % 100 != 0 && ts->year % 4 == 0) || (ts->year == 2000)) {
 		if(ts->month > 2)
@@ -1132,7 +1132,7 @@ syslogTime2time_t(const struct syslogTime *ts)
 
 	NumberOfYears = ts->year - yearInSec_startYear - 1;
 	NumberOfDays = MonthInDays + ts->day - 1;
-	TimeInUnixFormat = (yearInSecs[NumberOfYears] + 1) + NumberOfDays * 86400;
+	TimeInUnixFormat = (time_t) (yearInSecs[NumberOfYears] + 1) + NumberOfDays * 86400;
 
 	/*Add Hours, minutes and seconds */
 	TimeInUnixFormat += ts->hour*60*60;
@@ -1184,7 +1184,7 @@ int getWeekdayNbr(struct syslogTime *ts)
 	} else {
 		f = ts->month + 1;
 	}
-	wday = ((36525*g)/100) + ((306*f)/10) + ts->day - 621049; 
+	wday = ((36525*g)/100) + ((306*f)/10) + ts->day - 621049;
 	wday %= 7;
 	return wday;
 }
@@ -1209,7 +1209,7 @@ int getOrdinal(struct syslogTime *ts)
 
 	thistime = syslogTime2time_t(ts);
 
-	previousyears = yearInSecs[ts->year - yearInSec_startYear - 1];
+	previousyears = (time_t) yearInSecs[ts->year - yearInSec_startYear - 1];
 
 	/* adjust previous years to match UTC offset */
 	utcOffset = ts->OffsetHour*3600 + ts->OffsetMinute*60;

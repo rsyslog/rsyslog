@@ -2,7 +2,7 @@
  * These are the definitions for the klog message generation module.
  *
  * File begun on 2007-12-17 by RGerhards
- * Major change: 2008-04-09: switched to a driver interface for 
+ * Major change: 2008-04-09: switched to a driver interface for
  *     several platforms
  *
  * Copyright 2007-2015 Rainer Gerhards and Adiscon GmbH.
@@ -12,11 +12,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.

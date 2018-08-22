@@ -27,7 +27,7 @@
 #define INCLUDED_TYPEDEFS_H
 
 #ifndef _AIX
- #include <stdint.h>
+#include <stdint.h>
 #endif
 #ifdef _AIX
 #include "config.h"

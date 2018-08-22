@@ -4,15 +4,30 @@
 echo ===============================================================================
 echo \[mysql-act-mt.sh\]: test for mysql with multithread actionq
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+module(load="../plugins/ommysql/.libs/ommysql")
+
+:msg, contains, "msgnum:" {
+	action(type="ommysql" server="127.0.0.1"
+	db="Syslog" uid="rsyslog" pwd="testbench"
+	queue.size="10000" queue.type="linkedList"
+	queue.workerthreads="5"
+	queue.workerthreadMinimumMessages="500"
+	queue.timeoutWorkerthreadShutdown="100"
+	queue.timeoutEnqueue="10000"
+	)
+} 
+'
 mysql --user=rsyslog --password=testbench < testsuites/mysql-truncate.sql
-. $srcdir/diag.sh startup mysql-actq-mt-withpause-extended.conf
+startup
 
 
 let "strtnum = 0"
 for i in {1..50}
 do
    echo "running iteration $i, startnum: $strtnum"
-   . $srcdir/diag.sh injectmsg  $strtnum 5000
+   injectmsg  $strtnum 5000
    . $srcdir/diag.sh wait-queueempty 
    echo waiting for worker threads to timeout
    ./msleep 1000
@@ -20,9 +35,9 @@ do
 done
 
 
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown 
+shutdown_when_empty
+wait_shutdown 
 # note "-s" is requried to suppress the select "field header"
-mysql -s --user=rsyslog --password=testbench < testsuites/mysql-select-msg.sql > rsyslog.out.log
-. $srcdir/diag.sh seq-check  0 249999
-. $srcdir/diag.sh exit
+mysql -s --user=rsyslog --password=testbench < testsuites/mysql-select-msg.sql > $RSYSLOG_OUT_LOG
+seq_check  0 249999
+exit_test

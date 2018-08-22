@@ -4,18 +4,18 @@
  *
  * File begun on 2007-07-13 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2017 Adiscon GmbH.
+ * Copyright 2007-2018 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -32,12 +32,6 @@
 #define RSFALSE 0
 #define RSTRUE 1
 
-#ifdef UT_NAMESIZE
-# define UNAMESZ	UT_NAMESIZE	/* length of a login name */
-#else
-# define UNAMESZ	8	/* length of a login name */
-#endif
-#define MAXUNAMES	20	/* maximum number of user names */
 #define MAXFNAME	4096	/* max file pathname length */
 
 #define	_DB_MAXDBLEN	128	/* maximum number of db */

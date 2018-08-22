@@ -4,13 +4,28 @@
 echo ===============================================================================
 echo \[stop_when_array_has_element.sh\]: loop detecting presense of an element and stopping ruleset execution
 . $srcdir/diag.sh init stop_when_array_has_element.sh
-. $srcdir/diag.sh startup stop_when_array_has_element.conf
-. $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/stop_when_array_has_elem_input
+generate_conf
+add_conf '
+template(name="foo" type="string" string="%$!foo%\n")
+
+module(load="../plugins/mmjsonparse/.libs/mmjsonparse")
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="'$TCPFLOOD_PORT'")
+
+action(type="mmjsonparse")
+
+foreach ($.quux in $!foo) do {
+  if ($.quux == "xyz0") then stop
+}
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="foo")
+'
+startup
+tcpflood -m 1 -I $srcdir/testsuites/stop_when_array_has_elem_input
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown 
+wait_shutdown 
 . $srcdir/diag.sh content-check '"abc0"'
 . $srcdir/diag.sh content-check '"abc2"'
 . $srcdir/diag.sh assert-content-missing 'xyz0'
-. $srcdir/diag.sh exit
+exit_test

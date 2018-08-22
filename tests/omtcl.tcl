@@ -1,5 +1,5 @@
 proc doAction {msg} {
-  set fd [open "rsyslog.out.log" a]
+  set fd [open $::env(RSYSLOG_OUT_LOG) a]
   puts $fd "message processed:"
   foreach {k v} $msg {
     puts $fd "  $k: <<$v>>"

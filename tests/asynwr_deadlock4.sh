@@ -12,15 +12,31 @@
 echo =================================================================================
 echo TEST: \[asynwr_deadlock4.sh\]: a case known to have caused a deadlock in the past
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$MainMsgQueueTimeoutShutdown 10000
+$InputTCPServerRun '$TCPFLOOD_PORT'
+
+$template outfmt,"%msg:F,58:3%,%msg:F,58:4%,%msg:F,58:5%\n"
+template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # use multiple dynafiles
+
+$OMFileFlushOnTXEnd on
+$OMFileFlushInterval 10
+$OMFileIOBufferSize 10k
+$OMFileAsyncWriting on
+$DynaFileCacheSize 4
+local0.* ?dynfile;outfmt
+'
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="log"
-. $srcdir/diag.sh startup asynwr_deadlock4.conf
+startup
 # send 20000 messages, each close to 2K (non-randomized!), so that we can fill
 # the buffers and hopefully run into the "deadlock".
-. $srcdir/diag.sh tcpflood -m20000 -d18 -P129 -i1 -f5
+tcpflood -m20000 -d18 -P129 -i1 -f5
 # sleep is important! need to make sure the instance is inactive
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
-. $srcdir/diag.sh seq-check 1 20000 -E
-. $srcdir/diag.sh exit
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown       # and wait for it to terminate
+seq_check 1 20000 -E
+exit_test

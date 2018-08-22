@@ -6,7 +6,7 @@
  *
  * File begun on 2007-10-18 by sur5r (converted from ommysql.c)
  *
- * Copyright 2007, 2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * The following link my be useful for the not-so-postgres literate
  * when setting up a test environment (on Fedora):
@@ -47,6 +47,7 @@
 #include "template.h"
 #include "module-template.h"
 #include "errmsg.h"
+#include "parserif.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -56,10 +57,9 @@ MODULE_CNFNAME("ompgsql")
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 
 typedef struct _instanceData {
-	char            srv[MAXHOSTNAMELEN+1];   /* IP or hostname of DB server*/ 
+	char            srv[MAXHOSTNAMELEN+1];   /* IP or hostname of DB server*/
 	char            dbname[_DB_MAXDBLEN+1];  /* DB name */
 	char            user[_DB_MAXUNAMELEN+1]; /* DB user */
 	char            pass[_DB_MAXPWDLEN+1];   /* DB user's password */
@@ -168,7 +168,7 @@ static void reportDBError(wrkrInstanceData_t *pWrkrData, int bSilent)
 	/* output log message */
 	errno = 0;
 	if (pWrkrData->f_hpgsql == NULL) {
-		errmsg.LogError(0, NO_ERRCODE, "unknown DB error occured - could not obtain PgSQL handle");
+		LogError(0, NO_ERRCODE, "unknown DB error occured - could not obtain PgSQL handle");
 	} else { /* we can ask pgsql for the error description... */
 		ePgSQLStatus = PQstatus(pWrkrData->f_hpgsql);
 		snprintf(errMsg, sizeof(errMsg), "db error (%d): %s\n", ePgSQLStatus,
@@ -177,7 +177,7 @@ static void reportDBError(wrkrInstanceData_t *pWrkrData, int bSilent)
 			dbgprintf("pgsql, DBError(silent): %s\n", errMsg);
 		else {
 			pWrkrData->eLastPgSQLStatus = ePgSQLStatus;
-			errmsg.LogError(0, NO_ERRCODE, "%s", errMsg);
+			LogError(0, NO_ERRCODE, "%s", errMsg);
 		}
 	}
 
@@ -303,7 +303,7 @@ CODESTARTtryResume
 		if (iRet == RS_RET_OK) {
 			/* the code above seems not to actually connect to the database. As such, we do a
 			 * dummy statement (a pointless select...) to verify the connection and return
-			 * success only when that statemetn succeeds. Note that I am far from being a 
+			 * success only when that statemetn succeeds. Note that I am far from being a
 			 * PostgreSQL expert, so any patch that does the desired result in a more
 			 * intelligent way is highly welcome. -- rgerhards, 2009-12-16
 			 */
@@ -356,14 +356,15 @@ setInstParamDefaults(instanceData *pData)
 	pData->trans_commit  = 100;
 	pData->trans_age     = 60;
 	pData->port          = 5432;
-	strncpy(pData->user, "postgres", sizeof(pData->user));
-	strncpy(pData->pass, "postgres", sizeof(pData->pass));
+	strcpy(pData->user, "postgres");
+	strcpy(pData->pass, "postgres");
 }
 
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
 	char *cstr;
+	size_t len;
 CODESTARTnewActInst
 	if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -378,7 +379,13 @@ CODESTARTnewActInst
 			continue;
 		if (!strcmp(actpblk.descr[i].name, "server")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			strncpy(pData->srv, cstr, sizeof(pData->srv));
+			len = es_strlen(pvals[i].val.d.estr);
+			if(len >= sizeof(pData->srv)-1) {
+				parser_errmsg("ompgsql: srv parameter longer than supported "
+					"maximum of %d characters", (int)sizeof(pData->srv)-1);
+				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+			}
+			memcpy(pData->srv, cstr, len+1);
 			free(cstr);
 		} else if (!strcmp(actpblk.descr[i].name, "port")) {
 			pData->port = (int) pvals[i].val.d.n;
@@ -392,23 +399,35 @@ CODESTARTnewActInst
 			pData->trans_age = (int) pvals[i].val.d.n;
 		} else if (!strcmp(actpblk.descr[i].name, "db")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			strncpy(pData->dbname, cstr, sizeof(pData->dbname));
+			len = es_strlen(pvals[i].val.d.estr);
+			if(len >= sizeof(pData->dbname)-1) {
+				parser_errmsg("ompgsql: db parameter longer than supported "
+					"maximum of %d characters", (int)sizeof(pData->dbname)-1);
+				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+			}
+			memcpy(pData->dbname, cstr, len+1);
 			free(cstr);
-		} else if (!strcmp(actpblk.descr[i].name, "user")) {
+		} else if (   !strcmp(actpblk.descr[i].name, "user")
+		           || !strcmp(actpblk.descr[i].name, "uid")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			strncpy(pData->user, cstr, sizeof(pData->user));
+			len = es_strlen(pvals[i].val.d.estr);
+			if(len >= sizeof(pData->user)-1) {
+				parser_errmsg("ompgsql: user/uid parameter longer than supported "
+					"maximum of %d characters", (int)sizeof(pData->user)-1);
+				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+			}
+			memcpy(pData->user, cstr, len+1);
 			free(cstr);
-		} else if (!strcmp(actpblk.descr[i].name, "uid")) {
+		} else if (   !strcmp(actpblk.descr[i].name, "pass")
+		           || !strcmp(actpblk.descr[i].name, "pwd")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			strncpy(pData->user, cstr, sizeof(pData->user));
-			free(cstr);
-		} else if (!strcmp(actpblk.descr[i].name, "pass")) {
-			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			strncpy(pData->pass, cstr, sizeof(pData->pass));
-			free(cstr);
-		} else if (!strcmp(actpblk.descr[i].name, "pwd")) {
-			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			strncpy(pData->pass, cstr, sizeof(pData->pass));
+			len = es_strlen(pvals[i].val.d.estr);
+			if(len >= sizeof(pData->pass)-1) {
+				parser_errmsg("ompgsql: pass/pwd parameter longer than supported "
+					"maximum of %d characters", (int)sizeof(pData->pass)-1);
+				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+			}
+			memcpy(pData->pass, cstr, len+1);
 			free(cstr);
 		} else if (!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tpl = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
@@ -453,7 +472,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	/* sur5r 2007-10-18: added support for PgSQL
 	 * :ompgsql:server,dbname,userid,password
-	 * Now we read the PgSQL connection properties 
+	 * Now we read the PgSQL connection properties
 	 * and verify that the properties are valid.
 	 */
 	if (getSubString(&p, pData->srv, MAXHOSTNAMELEN+1, ','))
@@ -482,12 +501,12 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar*)" StdPgSQLFmt"));
 	}
 
-	/* If we detect invalid properties, we disable logging, 
-	 * because right properties are vital at this place.  
-	 * Retries make no sense. 
+	/* If we detect invalid properties, we disable logging,
+	 * because right properties are vital at this place.
+	 * Retries make no sense.
 	 */
 	if (iPgSQLPropErr) {
-		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "Trouble with PgSQL connection properties. "
+		LogError(0, RS_RET_INVALID_PARAMS, "Trouble with PgSQL connection properties. "
 				"-PgSQL logging disabled");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
@@ -514,10 +533,9 @@ CODESTARTmodInit
 INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
 	if (!bCoreSupportsBatching) {
-		errmsg.LogError(0, NO_ERRCODE, "ompgsql: rsyslog core too old");
+		LogError(0, NO_ERRCODE, "ompgsql: rsyslog core too old");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 ENDmodInit

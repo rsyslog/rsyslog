@@ -1319,7 +1319,7 @@ loadFailedMsgs(instanceData *const __restrict__ pData)
 				"continue startup\n", pData->failedMsgFile);
 			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 		} else {
-			LogError(errno, RS_RET_IO_ERROR, 
+			LogError(errno, RS_RET_IO_ERROR,
 				"omkafka: loadFailedMsgs could not open failed messages file %s",
 				pData->failedMsgFile);
 			ABORT_FINALIZE(RS_RET_IO_ERROR);

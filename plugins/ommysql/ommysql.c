@@ -6,17 +6,17 @@
  *
  * File begun on 2007-07-20 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2014 Adiscon GmbH.
+ * Copyright 2007-2018 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -43,6 +43,7 @@
 #include "module-template.h"
 #include "errmsg.h"
 #include "cfsysline.h"
+#include "parserif.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -53,10 +54,9 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 
 typedef struct _instanceData {
-	char	dbsrv[MAXHOSTNAMELEN+1];	/* IP or hostname of DB server*/ 
+	char	dbsrv[MAXHOSTNAMELEN+1];	/* IP or hostname of DB server*/
 	unsigned int dbsrvPort;		/* port of MySQL server */
 	char	dbname[_DB_MAXDBLEN+1];	/* DB name */
 	char	dbuid[_DB_MAXUNAMELEN+1];	/* DB user */
@@ -64,6 +64,7 @@ typedef struct _instanceData {
 	uchar   *configfile;			/* MySQL Client Configuration File */
 	uchar   *configsection;		/* MySQL Client Configuration Section */
 	uchar	*tplName;			/* format template to use */
+	uchar	*socket;			/* MySQL socket path */
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -75,7 +76,7 @@ typedef struct wrkrInstanceData {
 typedef struct configSettings_s {
 	int iSrvPort;				/* database server port */
 	uchar *pszMySQLConfigFile;	/* MySQL Client Configuration File */
-	uchar *pszMySQLConfigSection;	/* MySQL Client Configuration Section */ 
+	uchar *pszMySQLConfigSection;	/* MySQL Client Configuration Section */
 } configSettings_t;
 static configSettings_t cs;
 
@@ -89,7 +90,8 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "serverport", eCmdHdlrInt, 0 },
 	{ "mysqlconfig.file", eCmdHdlrGetWord, 0 },
 	{ "mysqlconfig.section", eCmdHdlrGetWord, 0 },
-	{ "template", eCmdHdlrGetWord, 0 }
+	{ "template", eCmdHdlrGetWord, 0 },
+	{ "socket", eCmdHdlrGetWord, 0 },
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -99,7 +101,7 @@ static struct cnfparamblk actpblk =
 
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
+CODESTARTinitConfVars
 	resetConfigVariables(NULL, NULL);
 ENDinitConfVars
 
@@ -129,7 +131,7 @@ ENDisCompatibleWithFeature
 static void closeMySQL(wrkrInstanceData_t *pWrkrData)
 {
 	if(pWrkrData->hmysql != NULL) {	/* just to be on the safe side... */
-		mysql_close(pWrkrData->hmysql);	
+		mysql_close(pWrkrData->hmysql);
 		pWrkrData->hmysql = NULL;
 	}
 }
@@ -139,6 +141,7 @@ CODESTARTfreeInstance
 	free(pData->configfile);
 	free(pData->configsection);
 	free(pData->tplName);
+	free(pData->socket);
 ENDfreeInstance
 
 
@@ -179,7 +182,7 @@ static void reportDBError(wrkrInstanceData_t *pWrkrData, int bSilent)
 			LogError(0, NO_ERRCODE, "ommysql: %s", errMsg);
 		}
 	}
-		
+
 	return;
 }
 
@@ -197,7 +200,7 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent)
 	pData = pWrkrData->pData;
 	pWrkrData->hmysql = mysql_init(NULL);
 	if(pWrkrData->hmysql == NULL) {
-		errmsg.LogError(0, RS_RET_SUSPENDED, "can not initialize MySQL handle");
+		LogError(0, RS_RET_SUSPENDED, "can not initialize MySQL handle");
 		iRet = RS_RET_SUSPENDED;
 	} else { /* we could get the handle, now on with work... */
 		mysql_options(pWrkrData->hmysql,MYSQL_READ_DEFAULT_GROUP,
@@ -214,7 +217,7 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent)
 					rs_strerror_r(err, errStr, sizeof(errStr));
 					dbgprintf("mysql configuration error(%d): %s - %s\n",err,msg,errStr);
 				} else
-					errmsg.LogError(err,NO_ERRCODE,"mysql configuration error: %s\n",msg);
+					LogError(err,NO_ERRCODE,"mysql configuration error: %s\n",msg);
 			} else {
 				fclose(fp);
 				mysql_options(pWrkrData->hmysql,MYSQL_READ_DEFAULT_FILE,pData->configfile);
@@ -222,7 +225,8 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent)
 		}
 		/* Connect to database */
 		if(mysql_real_connect(pWrkrData->hmysql, pData->dbsrv, pData->dbuid,
-				      pData->dbpwd, pData->dbname, pData->dbsrvPort, NULL, 0) == NULL) {
+				      pData->dbpwd, pData->dbname, pData->dbsrvPort,
+					  (const char *)pData->socket, 0) == NULL) {
 			reportDBError(pWrkrData, bSilent);
 			closeMySQL(pWrkrData); /* ignore any error we may get */
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
@@ -333,6 +337,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->configfile = NULL;
 	pData->configsection = NULL;
 	pData->tplName = NULL;
+	pData->socket = NULL;
 }
 
 
@@ -343,6 +348,7 @@ BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
 	char *cstr;
+	size_t len;
 CODESTARTnewActInst
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -357,21 +363,45 @@ CODESTARTnewActInst
 			continue;
 		if(!strcmp(actpblk.descr[i].name, "server")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			strncpy(pData->dbsrv, cstr, sizeof(pData->dbsrv));
+			len = es_strlen(pvals[i].val.d.estr);
+			if(len >= sizeof(pData->dbsrv)-1) {
+				parser_errmsg("ommysql: dbname parameter longer than supported "
+					"maximum of %d characters", (int)sizeof(pData->dbsrv)-1);
+				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+			}
+			memcpy(pData->dbsrv, cstr, len+1);
 			free(cstr);
 		} else if(!strcmp(actpblk.descr[i].name, "serverport")) {
 			pData->dbsrvPort = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "db")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			strncpy(pData->dbname, cstr, sizeof(pData->dbname));
+			len = es_strlen(pvals[i].val.d.estr);
+			if(len >= sizeof(pData->dbname)-1) {
+				parser_errmsg("ommysql: dbname parameter longer than supported "
+					"maximum of %d characters", (int)sizeof(pData->dbname)-1);
+				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+			}
+			memcpy(pData->dbname, cstr, len+1);
 			free(cstr);
 		} else if(!strcmp(actpblk.descr[i].name, "uid")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			strncpy(pData->dbuid, cstr, sizeof(pData->dbuid));
+			len = es_strlen(pvals[i].val.d.estr);
+			if(len >= sizeof(pData->dbuid)-1) {
+				parser_errmsg("ommysql: uid parameter longer than supported "
+					"maximum of %d characters", (int)sizeof(pData->dbuid)-1);
+				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+			}
+			memcpy(pData->dbuid, cstr, len+1);
 			free(cstr);
 		} else if(!strcmp(actpblk.descr[i].name, "pwd")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			strncpy(pData->dbpwd, cstr, sizeof(pData->dbpwd));
+			len = es_strlen(pvals[i].val.d.estr);
+			if(len >= sizeof(pData->dbpwd)-1) {
+				parser_errmsg("ommysql: pwd parameter longer than supported "
+					"maximum of %d characters", (int)sizeof(pData->dbpwd)-1);
+				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+			}
+			memcpy(pData->dbpwd, cstr, len+1);
 			free(cstr);
 		} else if(!strcmp(actpblk.descr[i].name, "mysqlconfig.file")) {
 			pData->configfile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
@@ -379,6 +409,8 @@ CODESTARTnewActInst
 			pData->configsection = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "socket")) {
+			pData->socket = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			dbgprintf("ommysql: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);
@@ -423,7 +455,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	/* rger 2004-10-28: added support for MySQL
 	 * >server,dbname,userid,password
-	 * Now we read the MySQL connection properties 
+	 * Now we read the MySQL connection properties
 	 * and verify that the properties are valid.
 	 */
 	if(getSubString(&p, pData->dbsrv, MAXHOSTNAMELEN+1, ','))
@@ -450,18 +482,19 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			 */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar*) " StdDBFmt"));
 	
-	/* If we detect invalid properties, we disable logging, 
-	 * because right properties are vital at this place.  
-	 * Retries make no sense. 
+	/* If we detect invalid properties, we disable logging,
+	 * because right properties are vital at this place.
+	 * Retries make no sense.
 	 */
-	if (iMySQLPropErr) { 
-		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "Trouble with MySQL connection properties. "
+	if (iMySQLPropErr) {
+		LogError(0, RS_RET_INVALID_PARAMS, "Trouble with MySQL connection properties. "
 				"-MySQL logging disabled");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	} else {
 		pData->dbsrvPort = (unsigned) cs.iSrvPort;	/* set configured port */
 		pData->configfile = cs.pszMySQLConfigFile;
 		pData->configsection = cs.pszMySQLConfigSection;
+		pData->socket = NULL;
 	}
 
 CODE_STD_FINALIZERparseSelectorAct
@@ -504,10 +537,9 @@ CODESTARTmodInit
 INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
-	if(!bCoreSupportsBatching) {	
-		errmsg.LogError(0, NO_ERRCODE, "ommysql: rsyslog core too old");
+	if(!bCoreSupportsBatching) {
+		LogError(0, NO_ERRCODE, "ommysql: rsyslog core too old");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -519,7 +551,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	   mysql_server_init(0, NULL, NULL)
 #	endif
 	                                   ) {
-		errmsg.LogError(0, NO_ERRCODE, "ommysql: intializing mysql client failed, plugin "
+		LogError(0, NO_ERRCODE, "ommysql: intializing mysql client failed, plugin "
 		                "can not run");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}

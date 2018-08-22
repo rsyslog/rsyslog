@@ -9,11 +9,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -37,7 +37,6 @@
 
 /* definitions for objects we access */
 DEFobjStaticHelpers
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(parser)
@@ -126,9 +125,9 @@ tellLostCnt(ratelimit_t *ratelimit)
 }
 
 /* Linux-like ratelimiting, modelled after the linux kernel
- * returns 1 if message is within rate limit and shall be 
+ * returns 1 if message is within rate limit and shall be
  * processed, 0 otherwise.
- * This implementation is NOT THREAD-SAFE and must not 
+ * This implementation is NOT THREAD-SAFE and must not
  * be called concurrently.
  */
 static int ATTR_NONNULL()
@@ -398,7 +397,6 @@ ratelimitModExit(void)
 {
 	objRelease(datetime, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
-	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(parser, CORE_COMPONENT);
 }
 
@@ -409,7 +407,6 @@ ratelimitModInit(void)
 	CHKiRet(objGetObjInterface(&obj));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(parser, CORE_COMPONENT));
 finalize_it:
 	RETiRet;

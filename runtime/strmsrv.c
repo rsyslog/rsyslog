@@ -29,11 +29,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -75,7 +75,7 @@
 
 #if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wswitch-enum"
-#endif 
+#endif
 
 MODULE_TYPE_LIB
 MODULE_TYPE_NOKEEP
@@ -307,7 +307,7 @@ static void deinit_strm_listener(strmsrv_t *pThis)
 			/* now get next... */
 			i = STRMSessGetNxtSess(pThis, i);
 		}
-		
+
 		/* we are done with the session table - so get rid of it...  */
 		free(pThis->pSessions);
 		pThis->pSessions = NULL; /* just to make sure... */
@@ -415,7 +415,7 @@ finalize_it:
  * ppSess has a pointer to the newly created session, if it succeeds.
  * If it does not succeed, no session is created and ppSess is
  * undefined. If the user has provided an OnSessAccept Callback,
- * this one is executed immediately after creation of the 
+ * this one is executed immediately after creation of the
  * session object, so that it can do its own initialization.
  * rgerhards, 2008-03-02
  */
@@ -847,7 +847,7 @@ finalize_it:
 /* here follows a number of methods that shuffle authentication settings down
  * to the drivers. Drivers not supporting these settings may return an error
  * state.
- * -------------------------------------------------------------------------- */   
+ * -------------------------------------------------------------------------- */
 
 /* set the driver mode -- rgerhards, 2008-04-30 */
 static rsRetVal

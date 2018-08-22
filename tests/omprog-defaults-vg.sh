@@ -6,11 +6,26 @@
 # rest of checks (this simplifies the maintenance of the tests).
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup-vg omprog-defaults.conf
+generate_conf
+add_conf '
+module(load="../plugins/omprog/.libs/omprog")
+
+template(name="outfmt" type="string" string="%msg%\n")
+
+:msg, contains, "msgnum:" {
+    action(
+        type="omprog"
+	binary=`echo $srcdir/testsuites/omprog-defaults-bin.sh param1 param2 param3`
+        template="outfmt"
+        name="omprog_action"
+    )
+}
+'
+startup_vg
 . $srcdir/diag.sh wait-startup
-. $srcdir/diag.sh injectmsg 0 10
+injectmsg 0 10
 . $srcdir/diag.sh wait-queueempty
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown-vg
+shutdown_when_empty
+wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
-. $srcdir/diag.sh exit
+exit_test

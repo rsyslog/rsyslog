@@ -71,16 +71,16 @@ matrix:
        services:
          - mysql
          - postgresql
-       env: RUN="run.sh",BUILD_FROM_TARBALL="YES", GROK="YES", KAFKA="YES", CHECK="YES", CFLAGS="-g -O2", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all", EXTRA_CONFIGURE="--disable-testbench1"
+       env: RUN="run.sh",BUILD_FROM_TARBALL="YES", GROK="YES", CHECK="YES", CFLAGS="-g -O2", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all", EXTRA_CONFIGURE="--disable-default-tests --disable-elasticsearch --disable-impstats --disable-imfile --disable-imptcp --disable-gnutls -disable-openssl --disable-relp --disable-pmsnare --disable-pmlastmsg"
        dist: trusty
 
-     - os: linux
-       compiler: "gcc"
-       services:
-         - mysql
-         - postgresql
-       env: RUN="run.sh",BUILD_FROM_TARBALL="YES", CHECK="YES", CFLAGS="-g -O2", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all", EXTRA_CONFIGURE="--disable-testbench2"
-       dist: trusty
+#     - os: linux
+#       compiler: "gcc"
+#       services:
+#         - mysql
+#         - postgresql
+#       env: RUN="run.sh",BUILD_FROM_TARBALL="YES", CHECK="YES", CFLAGS="-g -O2", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all", EXTRA_CONFIGURE="--disable-default-tests"
+#       dist: trusty
 
      - os: osx
        compiler: "clang"
@@ -91,18 +91,6 @@ matrix:
        compiler: "gcc"
        dist: trusty
        env: RUN="run-cron.sh",DO_COVERITY="YES",DO_CRON="YES", KAFKA="YES", GROK="YES"
-
-before_install:
-  #- if [ "$TRAVIS_OS_NAME" == "linux" ] && [ "${AD_PPA}x" == "x" ] ; then AD_PPA="v8-stable"; fi
-  #- if [ "$TRAVIS_OS_NAME" == "linux" ] ; then sudo add-apt-repository ppa:adiscon/$AD_PPA -y ; fi
-  #- if [ "$TRAVIS_OS_NAME" == "linux" ] ; then sudo add-apt-repository ppa:qpid/released -y ; fi
-  #- if [ "$TRAVIS_OS_NAME" == "linux" ] ; then sudo apt-get update -qq ; fi
-  #- if [ "$TRAVIS_OS_NAME" == "linux" ] ; then mysql -u root -e "CREATE USER 'rsyslog'@'localhost' IDENTIFIED BY 'testbench';" ; fi
-  #- if [ "$TRAVIS_OS_NAME" == "linux" ] ; then mysql -u root -e "GRANT ALL PRIVILEGES ON * . * TO 'rsyslog'@'localhost'; FLUSH PRIVILEGES;" ; fi
-  #- if [ "$TRAVIS_OS_NAME" == "linux" ] ; then mysql -u root -e "CREATE DATABASE Syslog; GRANT ALL ON Syslog.* to 'rsyslog'@'localhost' identified by 'testbench';" ; fi
-  #- if [ "$TRAVIS_OS_NAME" == "linux" ] ; then mysql -u root -e "USE Syslog; CREATE TABLE SystemEvents (ID int unsigned not null auto_increment primary key, CustomerID bigint,ReceivedAt datetime NULL,DeviceReportedTime datetime NULL,Facility smallint NULL,Priority smallint NULL,FromHost varchar(60) NULL,Message text,NTSeverity int NULL,Importance int NULL,EventSource varchar(60),EventUser varchar(60) NULL,EventCategory int NULL,EventID int NULL,EventBinaryData text NULL,MaxAvailable int NULL,CurrUsage int NULL,MinUsage int NULL,MaxUsage int NULL,InfoUnitID int NULL,SysLogTag varchar(60),EventLogType varchar(60),GenericFileName VarChar(60),SystemID int NULL); CREATE TABLE SystemEventsProperties (ID int unsigned not null auto_increment primary key,SystemEventID int NULL,ParamName varchar(255) NULL,ParamValue text NULL);" ; fi
-#
-#install:
 
 script:
    - devtools/ci/travis/do-run.sh

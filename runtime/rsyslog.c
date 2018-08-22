@@ -4,7 +4,7 @@
  * name is abbreviated to "rsrt" (rsyslog runtime).
  *
  * Please note that the runtime library tends to be plugin-safe. That is, it must be
- * initialized by calling a global initialization function. However, that 
+ * initialized by calling a global initialization function. However, that
  * function checks if the library is already initialized and, if so, does
  * nothing except incrementing a refeence count. Similarly, the deinit
  * function does nothing as long as there are still other users (which
@@ -96,7 +96,7 @@ void (*glblErrLogger)(const int, const int, const uchar*) = dfltErrLogger;
 
 /* static data */
 static int iRefCount = 0; /* our refcount - it MUST exist only once inside a process (not thread)
- 		             thus it is perfectly OK to use a static. MUST be initialized to 0! */
+			thus it is perfectly OK to use a static. MUST be initialized to 0! */
 
 /* This is the default instance of the error logger. It simply writes the message
  * to stderr. It is expected that this is replaced by the runtime user very early
@@ -135,6 +135,8 @@ rsRetVal
 rsrtInit(const char **ppErrObj, obj_if_t *pObjIF)
 {
 	DEFiRet;
+	int ret;
+	char errstr[1024];
 
 	if(iRefCount == 0) {
 		seedRandomNumber();
@@ -143,23 +145,48 @@ rsrtInit(const char **ppErrObj, obj_if_t *pObjIF)
 		stdlog_init(0);
 		stdlog_hdl = stdlog_open("rsyslogd", 0, STDLOG_SYSLOG, NULL);
 #endif
-		CHKiRet(pthread_attr_init(&default_thread_attr));
+		ret = pthread_attr_init(&default_thread_attr);
+		if(ret != 0) {
+			rs_strerror_r(ret, errstr, sizeof(errstr));
+			fprintf(stderr, "rsyslogd: pthread_attr_init failed during "
+				"startup - can not continue. Error was %s\n", errstr);
+			exit(1);
+		}
 		pthread_attr_setstacksize(&default_thread_attr, 4096*1024);
 #ifdef HAVE_PTHREAD_SETSCHEDPARAM
-	    	CHKiRet(pthread_getschedparam(pthread_self(),
-			    		      &default_thr_sched_policy,
-					      &default_sched_param));
+		ret = pthread_getschedparam(pthread_self(), &default_thr_sched_policy,
+			&default_sched_param);
+		if(ret != 0) {
+			rs_strerror_r(ret, errstr, sizeof(errstr));
+			fprintf(stderr, "rsyslogd: pthread_getschedparam failed during "
+				"startup - ignoring. Error was %s\n", errstr);
+			default_thr_sched_policy = 0; /* should be default on all platforms */
+		}
 #if defined (_AIX)
-                pthread_attr_setstacksize(&default_thread_attr, 4096*512);
+		pthread_attr_setstacksize(&default_thread_attr, 4096*512);
 #endif
 
 
-		CHKiRet(pthread_attr_setschedpolicy(&default_thread_attr,
-			    			    default_thr_sched_policy));
-		CHKiRet(pthread_attr_setschedparam(&default_thread_attr,
-			    			   &default_sched_param));
-		CHKiRet(pthread_attr_setinheritsched(&default_thread_attr,
-			    			     PTHREAD_EXPLICIT_SCHED));
+		ret = pthread_attr_setschedpolicy(&default_thread_attr, default_thr_sched_policy);
+		if(ret != 0) {
+			rs_strerror_r(ret, errstr, sizeof(errstr));
+			fprintf(stderr, "rsyslogd: pthread_attr_setschedpolicy failed during "
+				"startup - tried to set priority %d, now using default "
+				"priority instead. Error was: %s\n",
+				default_thr_sched_policy, errstr);
+		}
+		ret = pthread_attr_setschedparam(&default_thread_attr, &default_sched_param);
+		if(ret != 0) {
+			rs_strerror_r(ret, errstr, sizeof(errstr));
+			fprintf(stderr, "rsyslogd: pthread_attr_setschedparam failed during "
+				"startup - ignored Error was: %s\n", errstr);
+		}
+		ret = pthread_attr_setinheritsched(&default_thread_attr, PTHREAD_EXPLICIT_SCHED);
+		if(ret != 0) {
+			rs_strerror_r(ret, errstr, sizeof(errstr));
+			fprintf(stderr, "rsyslogd: pthread_attr_setinheritsched failed during "
+				"startup - ignoring. Error was: %s\n", errstr);
+		}
 #endif
 		if(ppErrObj != NULL) *ppErrObj = "obj";
 		CHKiRet(objClassInit(NULL)); /* *THIS* *MUST* always be the first class initilizer being called! */

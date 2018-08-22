@@ -2,42 +2,27 @@
 # Test for multiple ports in imtcp
 # This test checks if multiple tcp listener ports are correctly
 # handled by imtcp
-#
-# NOTE: this test must (and can) be enhanced when we merge in the
-#       upgraded tcpflood program
-#
 # added 2009-05-22 by Rgerhards
-# This file is part of the rsyslog project, released  under GPLv3
-echo ===============================================================================
-echo \[imtcp-multiport.sh\]: testing imtcp multiple listeners
+# This file is part of the rsyslog project, released under ASL 2.0
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup imtcp-multiport.conf
-. $srcdir/diag.sh tcpflood -p13514 -m10000
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh seq-check 0 9999
-. $srcdir/diag.sh exit
-#
-#
-# ### now complete new cycle with other port ###
-#
-#
-. $srcdir/diag.sh init
-. $srcdir/diag.sh startup imtcp-multiport.conf
-. $srcdir/diag.sh tcpflood -p13515 -m10000
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh seq-check 0 9999
-. $srcdir/diag.sh exit
-#
-#
-# ### now complete new cycle with other port ###
-#
-#
-. $srcdir/diag.sh init
-. $srcdir/diag.sh startup imtcp-multiport.conf
-. $srcdir/diag.sh tcpflood -p13516 -m10000
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh seq-check 0 9999
-. $srcdir/diag.sh exit
+export TCPFLOOD_PORT2="$(get_free_port)"
+export TCPFLOOD_PORT3="$(get_free_port)"
+generate_conf
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$MainMsgQueueTimeoutShutdown 10000
+$InputTCPServerRun '$TCPFLOOD_PORT'
+$InputTCPServerRun '$TCPFLOOD_PORT2'
+$InputTCPServerRun '$TCPFLOOD_PORT3'
+
+$template outfmt,"%msg:F,58:2%\n"
+:msg, contains, "msgnum:" action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
+'
+startup
+tcpflood -p'$TCPFLOOD_PORT' -m10000
+tcpflood -p'$TCPFLOOD_PORT2' -i10000 -m10000
+tcpflood -p'$TCPFLOOD_PORT3' -i20000 -m10000
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown
+seq_check 0 29999
+exit_test

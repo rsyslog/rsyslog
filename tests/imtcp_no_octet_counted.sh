@@ -3,9 +3,19 @@
 echo ====================================================================================
 echo TEST: \[imtcp_no_octet_counted.sh\]: test imtcp with octet counted framing disabled
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup imtcp_no_octet_counted.conf
-. $srcdir/diag.sh tcpflood -B -I testsuites/no_octet_counted.testdata
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
-. $srcdir/diag.sh seq-check 0 19
-. $srcdir/diag.sh exit
+generate_conf
+add_conf '
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="'$TCPFLOOD_PORT'" ruleset="remote" supportOctetCountedFraming="off")
+
+template(name="outfmt" type="string" string="%rawmsg%\n")
+ruleset(name="remote") {
+	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+}
+'
+startup
+tcpflood -B -I ${srcdir}/testsuites/no_octet_counted.testdata
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown       # and wait for it to terminate
+seq_check 0 19
+exit_test

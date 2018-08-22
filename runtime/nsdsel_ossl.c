@@ -98,7 +98,7 @@ dbgprintf("nsdsel_ossl: rtryOsslErr=%d ... \n", pNsdOSSL->rtryOsslErr);
 			if (pNsdOSSL->rtryOsslErr == SSL_ERROR_WANT_READ) {
 				CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdOSSL->pTcp, NSDSEL_RD));
 				FINALIZE;
-			} else if (pNsdOSSL->rtryOsslErr == SSL_ERROR_WANT_READ) {
+			} else if (pNsdOSSL->rtryOsslErr == SSL_ERROR_WANT_WRITE) {
 				CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdOSSL->pTcp, NSDSEL_WR));
 				FINALIZE;
 			} else {

@@ -9,48 +9,69 @@
 # is expecting the program to confirm the last message).
 
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+module(load="../plugins/omprog/.libs/omprog")
+
+template(name="outfmt" type="string" string="%msg%\n")
+
+:msg, contains, "msgnum:" {
+    action(
+        type="omprog"
+        binary=`echo $srcdir/testsuites/omprog-restart-terminated-bin.sh`
+        template="outfmt"
+        name="omprog_action"
+        queue.type="Direct"  # the default; facilitates sync with the child process
+        confirmMessages="on"  # facilitates sync with the child process
+        action.resumeRetryCount="10"
+        action.resumeInterval="1"
+        action.reportSuspensionContinuation="on"
+        signalOnClose="off"
+    )
+}
+'
 . $srcdir/diag.sh check-command-available lsof
 
-. $srcdir/diag.sh startup omprog-restart-terminated.conf
+startup
 . $srcdir/diag.sh wait-startup
-. $srcdir/diag.sh injectmsg 0 1
+injectmsg 0 1
 . $srcdir/diag.sh wait-queueempty
 
 . $srcdir/diag.sh getpid
 start_fd_count=$(lsof -p $pid | wc -l)
 
-. $srcdir/diag.sh injectmsg 1 1
-. $srcdir/diag.sh injectmsg 2 1
+injectmsg 1 1
+injectmsg 2 1
 . $srcdir/diag.sh wait-queueempty
 
 pkill -USR1 -f omprog-restart-terminated-bin.sh
 sleep .1
 
-. $srcdir/diag.sh injectmsg 3 1
-. $srcdir/diag.sh injectmsg 4 1
+injectmsg 3 1
+injectmsg 4 1
 . $srcdir/diag.sh wait-queueempty
 
 pkill -TERM -f omprog-restart-terminated-bin.sh
 sleep .1
 
-. $srcdir/diag.sh injectmsg 5 1
-. $srcdir/diag.sh injectmsg 6 1
-. $srcdir/diag.sh injectmsg 7 1
+injectmsg 5 1
+injectmsg 6 1
+injectmsg 7 1
 . $srcdir/diag.sh wait-queueempty
 
 pkill -USR1 -f omprog-restart-terminated-bin.sh
 sleep .1
 
-. $srcdir/diag.sh injectmsg 8 1
-. $srcdir/diag.sh injectmsg 9 1
+injectmsg 8 1
+injectmsg 9 1
 . $srcdir/diag.sh wait-queueempty
 
 end_fd_count=$(lsof -p $pid | wc -l)
 child_pid=$(ps -ef | grep "[o]mprog-restart-terminated-bin.sh" | awk '{print $2}')
 child_netstat=$(netstat -p | grep "$child_pid/bash")
 
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
+shutdown_when_empty
+wait_shutdown
 
 expected_output="Starting
 Received msgnum:00000000:
@@ -75,16 +96,16 @@ Received msgnum:00000008:
 Received msgnum:00000009:
 Terminating normally"
 
-written_output=$(<rsyslog.out.log)
+written_output=$(<$RSYSLOG_OUT_LOG)
 if [[ "$expected_output" != "$written_output" ]]; then
     echo unexpected omprog script output:
     echo "$written_output"
-    . $srcdir/diag.sh error-exit 1
+    error_exit 1
 fi
 
 if [[ "$start_fd_count" != "$end_fd_count" ]]; then
     echo "file descriptor leak: started with $start_fd_count open files, ended with $end_fd_count"
-    . $srcdir/diag.sh error-exit 1
+    error_exit 1
 fi
 
 # Check also that the child process does not inherit open fds from
@@ -94,7 +115,7 @@ fi
 if [[ "$child_netstat" != "" ]]; then
     echo "child process has socket(s) open (should have none):"
     echo "$child_netstat"
-    . $srcdir/diag.sh error-exit 1
+    error_exit 1
 fi
 
-. $srcdir/diag.sh exit
+exit_test

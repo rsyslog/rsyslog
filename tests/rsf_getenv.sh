@@ -9,10 +9,25 @@ echo ===========================================================================
 echo \[rsf_getenv.sh\]: testing RainerScript getenv\(\) function
 export MSGNUM="msgnum:"
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup rsf_getenv.conf
-. $srcdir/diag.sh tcpflood -m10000
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh seq-check 0 9999
+generate_conf
+add_conf '
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$MainMsgQueueTimeoutShutdown 10000
+$InputTCPServerRun '$TCPFLOOD_PORT'
+
+# set spool locations and switch queue to disk-only mode
+$WorkDirectory test-spool
+$MainMsgQueueFilename mainq
+$MainMsgQueueType disk
+
+$template outfmt,"%msg:F,58:2%\n"
+template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!
+if $msg contains getenv("MSGNUM") then ?dynfile;outfmt
+'
+startup
+tcpflood -m10000
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown
+seq_check 0 9999
 unset MSGNUM
-. $srcdir/diag.sh exit
+exit_test

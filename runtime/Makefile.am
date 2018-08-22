@@ -202,7 +202,7 @@ if ENABLE_LIBGCRYPT
    libgcry_la_SOURCES = libgcry.c libgcry_common.c libgcry.h
    libgcry_la_CPPFLAGS = $(RSRT_CFLAGS) $(LIBGCRYPT_CFLAGS)
    pkglib_LTLIBRARIES += lmcry_gcry.la
-   lmcry_gcry_la_DEPENDENCIES = librsyslog.la
+   lmcry_gcry_la_DEPENDENCIES = librsyslog.la libgcry.la
    lmcry_gcry_la_SOURCES = lmcry_gcry.c lmcry_gcry.h
    lmcry_gcry_la_CPPFLAGS = $(RSRT_CFLAGS) $(LIBGCRYPT_CFLAGS)
    lmcry_gcry_la_LDFLAGS = -module -avoid-version \

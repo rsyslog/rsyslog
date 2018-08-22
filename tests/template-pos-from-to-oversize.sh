@@ -4,34 +4,34 @@
 . $srcdir/diag.sh init
 
 echo "*** string template ****"
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="13514")
+input(type="imtcp" port="'$TCPFLOOD_PORT'")
 
 template(name="outfmt" type="string" string="-%msg:109:116:%-\n")
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
-			         file="rsyslog.out.log")
+			         file=`echo $RSYSLOG_OUT_LOG`)
 '
-. $srcdir/diag.sh startup
-. $srcdir/diag.sh tcpflood -m1
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
-echo "--" | cmp - rsyslog.out.log
+startup
+tcpflood -m1
+shutdown_when_empty
+wait_shutdown
+echo "--" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid output generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid output generated, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   echo "expected was:"
   echo "--"
   exit 1
 fi;
 
 echo "*** list template ****"
-rm rsyslog.out.log # cleanup previous run
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+rm  $RSYSLOG_OUT_LOG # cleanup previous run
+generate_conf
+add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="13514")
+input(type="imtcp" port="'$TCPFLOOD_PORT'")
 template(name="outfmt" type="list") {
 	constant(value="-")
 	property(name="msg" position.from="109" position.to="116")
@@ -39,18 +39,18 @@ template(name="outfmt" type="list") {
 	constant(value="\n")
 }
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
-			         file="rsyslog.out.log")
+			         file=`echo $RSYSLOG_OUT_LOG`)
 '
-. $srcdir/diag.sh startup
-. $srcdir/diag.sh tcpflood -m1
-. $srcdir/diag.sh shutdown-when-empty
-. $srcdir/diag.sh wait-shutdown
-echo "--" | cmp - rsyslog.out.log
+startup
+tcpflood -m1
+shutdown_when_empty
+wait_shutdown
+echo "--" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid output generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid output generated, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   echo "expected was:"
   echo "--"
   exit 1
 fi;
-. $srcdir/diag.sh exit
+exit_test

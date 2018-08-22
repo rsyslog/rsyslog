@@ -6,8 +6,8 @@
 ../tools/rsyslogd  -C -N1 -f$srcdir/testsuites/abort-uncleancfg-badcfg.conf -M../runtime/.libs:../.libs
 if [ $? == 0 ]; then
    echo "Error: config check should fail"
-   . $srcdir/diag.sh error-exit 1
+   error_exit 1
 fi
 printf "unclean config lead to exit, as expected - OK\n"
-. $srcdir/diag.sh exit
+exit_test
 

@@ -41,6 +41,7 @@
 #include "threads.h"
 #include "srUtils.h"
 #include "errmsg.h"
+#include "glbl.h"
 #include "unicode-helper.h"
 
 /* linked list of currently-known threads */
@@ -116,15 +117,26 @@ thrdTerminateNonCancel(thrdInfo_t *pThis)
 		  pThis->name, (void*) pThis->thrdID);
 
 	pThis->bShallStop = RSTRUE;
-	timeoutComp(&tTimeout, 1000); /* a fixed 1sec timeout */
 	d_pthread_mutex_lock(&pThis->mutThrd);
+	timeoutComp(&tTimeout, glblInputTimeoutShutdown);
 	was_active = pThis->bIsActive;
 	while(was_active) {
+		if(dbgTimeoutToStderr) {
+			fprintf(stderr, "rsyslogd debug: info: trying to cooperatively stop "
+				"input %s, timeout %d ms\n", pThis->name, glblInputTimeoutShutdown);
+		}
+		DBGPRINTF("thread %s: initiating termination, timeout %d ms\n",
+			pThis->name, glblInputTimeoutShutdown);
 		pthread_kill(pThis->thrdID, SIGTTIN);
 		ret = d_pthread_cond_timedwait(&pThis->condThrdTerm, &pThis->mutThrd, &tTimeout);
 		if(ret == ETIMEDOUT) {
 			DBGPRINTF("input thread term: timeout expired waiting on thread %s "
 				"termination - canceling\n", pThis->name);
+			if(dbgTimeoutToStderr) {
+				fprintf(stderr, "rsyslogd debug: input thread term: "
+					"timeout expired waiting on thread %s "
+					"termination - canceling\n", pThis->name);
+			}
 			pthread_cancel(pThis->thrdID);
 			break;
 		} else if(ret != 0) {
@@ -158,7 +170,11 @@ rsRetVal thrdTerminate(thrdInfo_t *pThis)
 	assert(pThis != NULL);
 
 	if(pThis->bNeedsCancel) {
-		DBGPRINTF("request term via canceling for input thread %p\n", (void*) pThis->thrdID);
+		DBGPRINTF("request term via canceling for input thread %s\n", pThis->name);
+		if(dbgTimeoutToStderr) {
+			fprintf(stderr, "rsyslogd debug: request term via canceling for "
+				"input thread %s\n", pThis->name);
+		}
 		pthread_cancel(pThis->thrdID);
 	} else {
 		thrdTerminateNonCancel(pThis);
@@ -263,9 +279,9 @@ rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdI
 	pThis->bNeedsCancel = bNeedsCancel;
 	pThis->name = ustrdup(name);
 #if defined (_AIX)
-        pthread_attr_init(&aix_attr);
-        pthread_attr_setstacksize(&aix_attr, 4096*512);
-        pthread_create(&pThis->thrdID, &aix_attr, thrdStarter, pThis);
+	pthread_attr_init(&aix_attr);
+	pthread_attr_setstacksize(&aix_attr, 4096*512);
+	pthread_create(&pThis->thrdID, &aix_attr, thrdStarter, pThis);
 #else
 	pthread_create(&pThis->thrdID, &default_thread_attr, thrdStarter, pThis);
 #endif

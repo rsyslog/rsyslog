@@ -4,11 +4,30 @@
 echo ===============================================================================
 echo \[rscript_stop2.sh\]: testing rainerscript STOP statement, alternate method
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup rscript_stop2.conf
-. $srcdir/diag.sh injectmsg  0 8000
+generate_conf
+add_conf '
+template(name="outfmt" type="list") {
+	property(name="$!usr!msgnum")
+	constant(value="\n")
+}
+
+if not ($msg contains "msgnum") then
+	stop
+
+set $!usr!msgnum = field($msg, 58, 2);
+if cnum($!usr!msgnum) >= 5000 then
+	stop
+/* We could use yet another method, but we like to have the action statement
+ * without a filter in rsyslog.conf top level hierarchy - so this test, as
+ * a side-effect, also tests this ability.
+ */
+action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+'
+startup
+injectmsg  0 8000
 echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
+shutdown_when_empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown 
-. $srcdir/diag.sh seq-check  0 4999
-. $srcdir/diag.sh exit
+wait_shutdown 
+seq_check  0 4999
+exit_test

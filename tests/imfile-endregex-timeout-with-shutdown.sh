@@ -4,8 +4,8 @@ echo ======================================================================
 echo [imfile-endregex-timeout-with-shutdown.sh]
 . $srcdir/diag.sh check-inotify-only
 . $srcdir/diag.sh init
-. $srcdir/diag.sh generate-conf
-. $srcdir/diag.sh add-conf '
+generate_conf
+add_conf '
 module(load="../plugins/imfile/.libs/imfile"
        timeoutGranularity="1"
       )
@@ -23,11 +23,11 @@ template(name="outfmt" type="list") {
 if $msg contains "msgnum:" then
  action(
    type="omfile"
-   file="rsyslog.out.log"
+   file=`echo $RSYSLOG_OUT_LOG`
    template="outfmt"
  )
 '
-. $srcdir/diag.sh startup
+startup
 
 # we need to sleep a bit between writes to give imfile a chance
 # to pick up the data (IN MULTIPLE ITERATIONS!)
@@ -39,9 +39,9 @@ echo ' msgnum:2
 
 # we now do a stop and restart of rsyslog. This checks that everything
 # works across restarts.
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
-. $srcdir/diag.sh startup
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown    # we need to wait until rsyslogd is finished!
+startup
 
 # new data
 echo ' msgnum:4' >> rsyslog.input
@@ -56,16 +56,16 @@ echo ' msgnum:5
 #echo 'END OF TEST' >> rsyslog.input
 #./msleep 2000
 
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown    # we need to wait until rsyslogd is finished!
 
 printf 'HEADER msgnum:0\\\\n msgnum:1
 HEADER  msgnum:2\\\\n msgnum:3\\\\n msgnum:4
-HEADER  msgnum:5\\\\n msgnum:6\n' | cmp - rsyslog.out.log
+HEADER  msgnum:5\\\\n msgnum:6\n' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
-  echo "invalid multiline message generated, rsyslog.out.log is:"
-  cat rsyslog.out.log
+  echo "invalid multiline message generated, $RSYSLOG_OUT_LOG is:"
+  cat $RSYSLOG_OUT_LOG
   exit 1
 fi;
 
-. $srcdir/diag.sh exit
+exit_test

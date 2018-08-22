@@ -6,7 +6,7 @@
  *
  * File begun on 2009-04-01 by RGerhards
  *
- * Copyright 2009-2017 Adiscon GmbH.
+ * Copyright 2009-2018 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -50,10 +50,11 @@ MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("omprog")
 
+extern char **environ; /* POSIX environment ptr, by std not in a header... (see man 7 environ) */
+
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 
 #define NO_HUP_FORWARD -1	/* indicates that HUP should NOT be forwarded */
 #define DEFAULT_CLOSE_TIMEOUT_MS 5000
@@ -126,7 +127,6 @@ execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdout, int fdStder
 	struct sigaction sigAct;
 	sigset_t set;
 	char errStr[1024];
-	char *newenviron[] = { NULL };
 
 	if(dup2(fdStdin, STDIN_FILENO) == -1) {
 		DBGPRINTF("omprog: dup() stdin failed\n");
@@ -199,7 +199,7 @@ execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdout, int fdStder
 	alarm(0);
 
 	/* finally exec child */
-	iRet = execve((char*)pWrkrData->pData->szBinary, pWrkrData->pData->aParams, newenviron);
+	iRet = execve((char*)pWrkrData->pData->szBinary, pWrkrData->pData->aParams, environ);
 	if(iRet == -1) {
 		/* Note: this will go to stdout of the **child**, so rsyslog will never
 		 * see it except when stdout is captured. If we use the plugin interface,
@@ -387,17 +387,17 @@ waitForChild(wrkrInstanceData_t *pWrkrData)
 
 	if (ret == 0) {  /* timeout reached */
 		if (!pWrkrData->pData->bKillUnresponsive) {
-			errmsg.LogError(0, NO_ERRCODE, "omprog: program '%s' (pid %d) did not terminate "
+			LogMsg(0, NO_ERRCODE, LOG_WARNING, "omprog: program '%s' (pid %d) did not terminate "
 					"within timeout (%ld ms); ignoring it", pWrkrData->pData->szBinary,
 					pWrkrData->pid, pWrkrData->pData->lCloseTimeout);
 			return;
 		}
 
-		errmsg.LogError(0, NO_ERRCODE, "omprog: program '%s' (pid %d) did not terminate "
+		LogMsg(0, NO_ERRCODE, LOG_WARNING, "omprog: program '%s' (pid %d) did not terminate "
 				"within timeout (%ld ms); killing it", pWrkrData->pData->szBinary,
 				pWrkrData->pid, pWrkrData->pData->lCloseTimeout);
 		if (kill(pWrkrData->pid, SIGKILL) == -1) {
-			errmsg.LogError(errno, RS_RET_SYS_ERR, "omprog: could not send SIGKILL to child process");
+			LogError(errno, RS_RET_SYS_ERR, "omprog: could not send SIGKILL to child process");
 			return;
 		}
 		ret = waitpid(pWrkrData->pid, &status, 0);
@@ -405,10 +405,10 @@ waitForChild(wrkrInstanceData_t *pWrkrData)
 
 	if (ret != pWrkrData->pid) {
 		if (errno == ECHILD) {  /* child reaped by the rsyslogd main loop (see rsyslogd.c) */
-			errmsg.LogError(0, NO_ERRCODE, "omprog: program '%s' (pid %d) exited; reaped by main loop",
+			LogMsg(0, NO_ERRCODE, LOG_INFO, "omprog: program '%s' (pid %d) exited; reaped by main loop",
 					pWrkrData->pData->szBinary, pWrkrData->pid);
 		} else {
-			errmsg.LogError(errno, RS_RET_SYS_ERR, "omprog: waitpid failed for program '%s' (pid %d)",
+			LogError(errno, RS_RET_SYS_ERR, "omprog: waitpid failed for program '%s' (pid %d)",
 					pWrkrData->pData->szBinary, pWrkrData->pid);
 		}
 	} else {
@@ -416,10 +416,10 @@ waitForChild(wrkrInstanceData_t *pWrkrData)
 		DBGPRINTF("omprog: waitpid status return for program '%s' (pid %d): %2.2x\n",
 				pWrkrData->pData->szBinary, pWrkrData->pid, status);
 		if(WIFEXITED(status)) {
-			errmsg.LogError(0, NO_ERRCODE, "omprog: program '%s' (pid %d) exited normally, status %d",
+			LogMsg(0, NO_ERRCODE, LOG_INFO, "omprog: program '%s' (pid %d) exited normally, status %d",
 					pWrkrData->pData->szBinary, pWrkrData->pid, WEXITSTATUS(status));
 		} else if(WIFSIGNALED(status)) {
-			errmsg.LogError(0, NO_ERRCODE, "omprog: program '%s' (pid %d) terminated by signal %d",
+			LogMsg(0, NO_ERRCODE, LOG_WARNING, "omprog: program '%s' (pid %d) terminated by signal %d",
 					pWrkrData->pData->szBinary, pWrkrData->pid, WTERMSIG(status));
 		}
 	}
@@ -480,19 +480,18 @@ terminateChild(wrkrInstanceData_t *pWrkrData)
 static rsRetVal
 writePipe(wrkrInstanceData_t *pWrkrData, uchar *szMsg)
 {
-	int lenWritten;
-	int lenWrite;
-	int writeOffset;
+	ssize_t len;
+	ssize_t written;
+	ssize_t offset = 0;
 	char errStr[1024];
 	DEFiRet;
 
-	lenWrite = strlen((char*)szMsg);
-	writeOffset = 0;
+	len = strlen((char*)szMsg);
 
 	do {
 		checkProgramOutput(pWrkrData);
-		lenWritten = write(pWrkrData->fdPipeOut, ((char*)szMsg)+writeOffset, lenWrite);
-		if(lenWritten == -1) {
+		written = write(pWrkrData->fdPipeOut, ((char*)szMsg) + offset, len - offset);
+		if(written == -1) {
 			if(errno == EPIPE) {
 				DBGPRINTF("omprog: program '%s' terminated, will be restarted\n",
 					  pWrkrData->pData->szBinary);
@@ -504,8 +503,8 @@ writePipe(wrkrInstanceData_t *pWrkrData, uchar *szMsg)
 			}
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
-		writeOffset += lenWritten;
-	} while(lenWritten != lenWrite);
+		offset += written;
+	} while(offset < len);
 
 	checkProgramOutput(pWrkrData);
 
@@ -560,7 +559,7 @@ readline(int fd, char **lineptr)
 	}
 
 	/* Ignore \r (if any) before \n */
-   	if (len > 0 && buf[len-1] == '\r') {
+	if (len > 0 && buf[len-1] == '\r') {
 		--len;
 	}
 
@@ -865,7 +864,7 @@ CODESTARTnewActInst
 			else if(!strcmp(sig, "TERM"))
 				pData->iHUPForward = SIGTERM;
 			else {
-				errmsg.LogError(0, RS_RET_CONF_PARAM_INVLD,
+				LogError(0, RS_RET_CONF_PARAM_INVLD,
 					"omprog: hup.signal '%s' in hup.signal parameter", sig);
 				ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
 			}
@@ -897,7 +896,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* ok, if we reach this point, we have something for us */
 	p += sizeof(":omprog:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
 	if(cs.szBinary == NULL) {
-		errmsg.LogError(0, RS_RET_CONF_RQRD_PARAM_MISSING,
+		LogError(0, RS_RET_CONF_RQRD_PARAM_MISSING,
 			"no binary to execute specified");
 		ABORT_FINALIZE(RS_RET_CONF_RQRD_PARAM_MISSING);
 	}
@@ -905,7 +904,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	CHKiRet(createInstance(&pData));
 
 	if(cs.szBinary == NULL) {
-		errmsg.LogError(0, RS_RET_CONF_RQRD_PARAM_MISSING,
+		LogError(0, RS_RET_CONF_RQRD_PARAM_MISSING,
 			"no binary to execute specified");
 		ABORT_FINALIZE(RS_RET_CONF_RQRD_PARAM_MISSING);
 	}
@@ -932,7 +931,6 @@ BEGINmodExit
 CODESTARTmodExit
 	free(cs.szBinary);
 	cs.szBinary = NULL;
-	iRet = objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -962,12 +960,11 @@ INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	/* tell engine which objects we need */
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* check that rsyslog core supports transactional plugins */
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
 	if (!bCoreSupportsBatching) {
-		errmsg.LogError(0, NO_ERRCODE, "omprog: rsyslog core too old (does not support batching)");
+		LogError(0, NO_ERRCODE, "omprog: rsyslog core too old (does not support batching)");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 

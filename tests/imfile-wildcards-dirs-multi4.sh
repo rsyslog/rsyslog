@@ -5,12 +5,51 @@ export IMFILEINPUTFILESSTEPS="5"
 #export IMFILEINPUTFILESALL=$(($IMFILEINPUTFILES * $IMFILEINPUTFILESSTEPS))
 export IMFILECHECKTIMEOUT="20"
 . $srcdir/diag.sh init
+generate_conf
+add_conf '
+$WorkDirectory test-spool
+
+/* Filter out busy debug output, comment out if needed */
+global(
+	debug.whitelist="off"
+	debug.files=["rainerscript.c", "ratelimit.c", "ruleset.c", "main Q", "msg.c", "../action.c"]
+)
+
+module(	load="../plugins/imfile/.libs/imfile" 
+	mode="inotify" 
+	PollingInterval="1")
+
+input(type="imfile"
+	File="./rsyslog.input.dir1/*/*/*/*/*/file.logfile"
+	Tag="file:"
+	Severity="error"
+	Facility="local7"
+	addMetadata="on"
+)
+
+template(name="outfmt" type="list") {
+  constant(value="HEADER ")
+  property(name="msg" format="json")
+  constant(value="'
+add_conf "'"
+add_conf ', ")
+  property(name="$!metadata!filename")
+  constant(value="\n")
+}
+
+if $msg contains "msgnum:" then
+ action(
+   type="omfile"
+   file=`echo $RSYSLOG_OUT_LOG`
+   template="outfmt"
+ )
+'
 . $srcdir/diag.sh check-inotify
 # generate input files first. Note that rsyslog processes it as
 # soon as it start up (so the file should exist at that point).
 
 # Start rsyslog now before adding more files
-. $srcdir/diag.sh startup imfile-wildcards-dirs-multi4.conf
+startup
 
 for i in `seq 1 $IMFILEINPUTFILES`;
 do
@@ -45,6 +84,6 @@ do
 	done
 done
 
-. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-. $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
-. $srcdir/diag.sh exit
+shutdown_when_empty # shut down rsyslogd when done processing messages
+wait_shutdown	# we need to wait until rsyslogd is finished!
+exit_test
