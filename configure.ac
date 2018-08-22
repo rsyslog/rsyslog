@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[8.37.0.master],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[8.38.0.master],[rsyslog@lists.adiscon.com])
 
 # AIXPORT START: Detect the underlying OS
 unamestr=$(uname)
@@ -1470,7 +1470,7 @@ AC_ARG_ENABLE(testbench,
 # on some platforms. This provides the ability to turn it off. In the
 # longer term, we should consider writing our own replacement.
 AC_ARG_ENABLE(libfaketime,
-        [AS_HELP_STRING([--enable-libfaketime],[testbench1 enabled @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-libfaketime],[libfaketime enabled @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_libfaketime="yes" ;;
           no) enable_libfaketime="no" ;;
@@ -1478,36 +1478,24 @@ AC_ARG_ENABLE(libfaketime,
          esac],
         [enable_libfaketime=no]
 )
-
-# under Travis, we have a ~50 minute max runtime per VM. So we permit to
-# split the testbench in multiple runs, which we can place into different
-# VMs. It's not perfect, but it works...
-AC_ARG_ENABLE(testbench1,
-        [AS_HELP_STRING([--enable-testbench1],[testbench1 enabled @<:@default=yes@:>@])],
-        [case "${enableval}" in
-         yes) enable_testbench1="yes" ;;
-          no) enable_testbench1="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-testbench1) ;;
-         esac],
-        [enable_testbench1=yes]
-)
 AM_CONDITIONAL(ENABLE_LIBFAKETIME, test "x${enable_libfaketime}" = "xyes")
 
-# under Travis, we have a ~50 minute max runtime per VM. So we permit to
-# split the testbench in multiple runs, which we can place into different
-# VMs. It's not perfect, but it works...
-AC_ARG_ENABLE(testbench2,
-        [AS_HELP_STRING([--enable-testbench2],[testbench2 enabled @<:@default=yes@:>@])],
+# this permits to control the "default tests" in testbench runs. These
+# are those tests that do not need a special configure option. There are
+# some situations where we really want to turn them of so that we can
+# run tests only for a specific component (e.g. ElasticSearch).
+# This also enables us to do some parallel testing even while the
+# testbench is not yet able to support make -j check
+AC_ARG_ENABLE(default-tests,
+        [AS_HELP_STRING([--enable-default-tests],[default-tests enabled @<:@default=yes@:>@])],
         [case "${enableval}" in
-         yes) enable_testbench2="yes" ;;
-          no) enable_testbench2="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-testbench2) ;;
+         yes) enable_default_tests="yes" ;;
+          no) enable_default_tests="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-default-tests) ;;
          esac],
-        [enable_testbench2=yes]
+        [enable_default_tests=yes]
 )
-
-AM_CONDITIONAL(ENABLE_TESTBENCH1, test "x${enable_testbench1}" = "xyes")
-AM_CONDITIONAL(ENABLE_TESTBENCH2, test "x${enable_testbench2}" = "xyes")
+AM_CONDITIONAL(ENABLE_DEFAULT_TESTS, test "x${enable_default_tests}" = "xyes")
 
 AC_CHECK_PROG(IP, [ip], [yes], [no])
 if test "x${IP}" = "xno"; then
@@ -1977,6 +1965,8 @@ AC_ARG_ENABLE(ommongodb,
 )
 if test "x$enable_ommongodb" = "xyes"; then
 	PKG_CHECK_MODULES(LIBMONGOC, libmongoc-1.0)
+    AC_CHECK_FUNCS(mongoc_client_set_ssl_opts,,)
+
 fi
 AM_CONDITIONAL(ENABLE_OMMONGODB, test x$enable_ommongodb = xyes)
 # end of mongodb code
@@ -2225,10 +2215,10 @@ AC_ARG_ENABLE(generate-man-pages,
 )
 
 
-# This provides a work-around to use "make distcheck" by disabling
-# some tests that do have problems with the distcheck environment.
+# This provides a work-around to use "make distcheck" without
+# running tests (mode used pre 2018-07-02)
 AC_ARG_ENABLE(distcheck-workaround,
-        [AS_HELP_STRING([--enable-distcheck-workaround],[enable to use make distcheck by disabling some tests that do not support the distcheck environment @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-distcheck-workaround],[enable to use make distcheck without runing testbench inside it @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_distcheck_workaround="yes" ;;
           no) enable_distcheck_workaround="no" ;;
@@ -2444,9 +2434,9 @@ echo "    fmhash enabled:                           $enable_fmhash"
 echo "    fmhash with xxhash enabled:               $enable_fmhash_xxhash"
 echo
 echo "---{ debugging support }---"
+echo "    distcheck workaround enabled:             $enable_distcheck_workaround"
 echo "    Testbench enabled:                        $enable_testbench"
-echo "    Testbench1 enabled:                       $enable_testbench1"
-echo "    Testbench2 enabled:                       $enable_testbench2"
+echo "    Default tests enabled:                    $enable_default_tests"
 echo "    Testbench libfaketime tests enabled:      $enable_libfaketime"
 echo "    Extended Testbench enabled:               $enable_extended_tests"
 echo "    MySQL Tests enabled:                      $enable_mysql_tests"
@@ -2457,6 +2447,5 @@ echo "    Debug mode enabled:                       $enable_debug"
 echo "    (total) debugless mode enabled:           $enable_debugless"
 echo "    Diagnostic tools enabled:                 $enable_diagtools"
 echo "    End-User tools enabled:                   $enable_usertools"
-echo "    Enhanced memory checking enabled:         $enable_memcheck"
 echo "    Valgrind support settings enabled:        $enable_valgrind"
 echo
