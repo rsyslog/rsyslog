@@ -20,20 +20,20 @@ $ModLoad ../plugins/omtesting/.libs/omtesting
 # set spool locations and switch queue to disk-only mode
 $WorkDirectory test-spool
 $MainMsgQueueFilename mainq
-$IncludeConfig work-queuemode.conf
+$IncludeConfig '${RSYSLOG_DYNNAME}'work-queuemode.conf
 
 $template outfmt,"%msg:F,58:2%\n"
 template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!
 :msg, contains, "msgnum:" ?dynfile;outfmt
 
-$IncludeConfig work-delay.conf
+$IncludeConfig '${RSYSLOG_DYNNAME}'work-delay.conf
 '
 #export RSYSLOG_DEBUG="debug nologfuncflow nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="log"
 
 # prepare config
-echo \$MainMsgQueueType LinkedList > work-queuemode.conf
-echo "*.*     :omtesting:sleep 0 1000" > work-delay.conf
+echo \$MainMsgQueueType LinkedList > ${RSYSLOG_DYNNAME}work-queuemode.conf
+echo "*.*     :omtesting:sleep 0 1000" > ${RSYSLOG_DYNNAME}work-delay.conf
 
 # inject 10000 msgs, so that DO hit the high watermark
 startup
@@ -48,7 +48,7 @@ echo "Enter phase 2, rsyslogd restart"
 
 # restart engine and have rest processed
 #remove delay
-echo "#" > work-delay.conf
+echo "#" > ${RSYSLOG_DYNNAME}work-delay.conf
 startup
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown

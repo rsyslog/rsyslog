@@ -20,17 +20,17 @@ module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 				 serverport=`echo $ES_PORT`
 				 searchIndex="rsyslog_testbench"
 				 bulkmode="on"
-				 errorFile="./rsyslog.errorfile")
+				 errorFile="./'${RSYSLOG_DYNNAME}'.errorfile")
 '
 startup
 injectmsg  0 10000
 shutdown_when_empty
 wait_shutdown 
 . $srcdir/diag.sh es-getdata 10000 $ES_PORT
-if [ -f rsyslog.errorfile ]
+if [ -f ${RSYSLOG_DYNNAME}.errorfile ]
 then
     echo "error: error file exists!"
-    cat rsyslog.errorfile
+    cat ${RSYSLOG_DYNNAME}.errorfile
     error_exit 1
 fi
 seq_check  0 9999 19200

@@ -5,17 +5,17 @@ if ENABLE_TESTBENCH
 CLEANFILES=\
 	*_*.conf \
 	rsyslog*.started work-*.conf rsyslog.random.data \
-	work-*.conf rsyslog*.pid.save xlate*.lkp_tbl \
+	rsyslog*.pid.save xlate*.lkp_tbl \
 	log log* \
 	work \
 	rsyslog_*.out.* \
 	rsyslog2_*.out.* \
 	test-spool test-logdir stat-file1 \
 	rsyslog.pipe rsyslog.input.* \
-	rsyslog.input rsyslog.empty rsyslog.input.* imfile-state* omkafka-failed.data \
+	rsyslog.input rsyslog.input.* imfile-state* omkafka-failed.data \
 	rsyslog.input-symlink.log rsyslog-link.*.log targets \
 	HOSTNAME \
-	rsyslog.errorfile tmp.qi nocert
+	tmp.qi nocert
 
 CLEANFILES+= \
 	IN_AUTO_DEBUG

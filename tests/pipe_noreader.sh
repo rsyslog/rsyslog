@@ -12,9 +12,7 @@
 # a good-enough indication of failure.
 #
 # added 2010-04-26 by Rgerhards
-# This file is part of the rsyslog project, released  under GPLv3
-echo ===============================================================================
-echo TEST: \[pipe_noreader.sh\]: test for pipe writing without reader
+# This file is part of the rsyslog project, released  under ASL 2.0
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="log"
@@ -26,9 +24,9 @@ $MainMsgQueueTimeoutShutdown 10000
 $InputTCPServerRun '$TCPFLOOD_PORT'
 
 $template outfmt,"%msg:F,58:2%\n"
-:msg, contains, "msgnum:" |./rsyslog.pipe
+:msg, contains, "msgnum:" |./'$RSYSLOG_DYNNAME'.pipe
 '
-mkfifo ./rsyslog.pipe
+mkfifo ./$RSYSLOG_DYNNAME.pipe
 startup
 # we need to emit ~ 128K of data according to bug report
 tcpflood -m1000 -d500

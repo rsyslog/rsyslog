@@ -14,7 +14,7 @@ echo \[dynstats_reset_without_pstats_reset.sh\]: test to ensure correctness of s
 generate_conf
 add_conf '
 ruleset(name="stats") {
-  action(type="omfile" file="./rsyslog.out.stats.log")
+  action(type="omfile" file="'${RSYSLOG_DYNNAME}'.out.stats.log")
 }
 
 module(load="../plugins/impstats/.libs/impstats" interval="1" severity="7" resetCounters="off" Ruleset="stats" bracketing="on")
@@ -46,16 +46,16 @@ shutdown_when_empty
 echo wait on shutdown
 wait_shutdown
 . $srcdir/diag.sh content-check "foo 006"
-. $srcdir/diag.sh custom-content-check 'foo=3' 'rsyslog.out.stats.log'
-. $srcdir/diag.sh custom-content-check 'bar=1' 'rsyslog.out.stats.log'
-. $srcdir/diag.sh custom-content-check 'baz=2' 'rsyslog.out.stats.log'
-. $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'msg_stats_resettable_on.\+foo=' 'rsyslog.out.stats.log' 3
-. $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'msg_stats_resettable_on.\+bar=' 'rsyslog.out.stats.log' 1
-. $srcdir/diag.sh first-column-sum-check 's/.*baz=\([0-9]\+\)/\1/g' 'msg_stats_resettable_on.\+baz=' 'rsyslog.out.stats.log' 2
-. $srcdir/diag.sh assert-first-column-sum-greater-than 's/.*foo=\([0-9]\+\)/\1/g' 'msg_stats_resettable_off.\+foo=' 'rsyslog.out.stats.log' 3
-. $srcdir/diag.sh assert-first-column-sum-greater-than 's/.*bar=\([0-9]\+\)/\1/g' 'msg_stats_resettable_off.\+bar=' 'rsyslog.out.stats.log' 1
-. $srcdir/diag.sh assert-first-column-sum-greater-than 's/.*baz=\([0-9]\+\)/\1/g' 'msg_stats_resettable_off.\+baz=' 'rsyslog.out.stats.log' 2
-. $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'msg_stats_resettable_default.\+foo=' 'rsyslog.out.stats.log' 3
-. $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'msg_stats_resettable_default.\+bar=' 'rsyslog.out.stats.log' 1
-. $srcdir/diag.sh first-column-sum-check 's/.*baz=\([0-9]\+\)/\1/g' 'msg_stats_resettable_default.\+baz=' 'rsyslog.out.stats.log' 2
+. $srcdir/diag.sh custom-content-check 'foo=3' "${RSYSLOG_DYNNAME}.out.stats.log"
+. $srcdir/diag.sh custom-content-check 'bar=1' "${RSYSLOG_DYNNAME}.out.stats.log"
+. $srcdir/diag.sh custom-content-check 'baz=2' "${RSYSLOG_DYNNAME}.out.stats.log"
+. $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'msg_stats_resettable_on.\+foo=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
+. $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'msg_stats_resettable_on.\+bar=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
+. $srcdir/diag.sh first-column-sum-check 's/.*baz=\([0-9]\+\)/\1/g' 'msg_stats_resettable_on.\+baz=' "${RSYSLOG_DYNNAME}.out.stats.log" 2
+. $srcdir/diag.sh assert-first-column-sum-greater-than 's/.*foo=\([0-9]\+\)/\1/g' 'msg_stats_resettable_off.\+foo=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
+. $srcdir/diag.sh assert-first-column-sum-greater-than 's/.*bar=\([0-9]\+\)/\1/g' 'msg_stats_resettable_off.\+bar=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
+. $srcdir/diag.sh assert-first-column-sum-greater-than 's/.*baz=\([0-9]\+\)/\1/g' 'msg_stats_resettable_off.\+baz=' "${RSYSLOG_DYNNAME}.out.stats.log" 2
+. $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'msg_stats_resettable_default.\+foo=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
+. $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'msg_stats_resettable_default.\+bar=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
+. $srcdir/diag.sh first-column-sum-check 's/.*baz=\([0-9]\+\)/\1/g' 'msg_stats_resettable_default.\+baz=' "${RSYSLOG_DYNNAME}.out.stats.log" 2
 exit_test

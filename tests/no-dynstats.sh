@@ -7,7 +7,7 @@ echo \[no-dynstats.sh\]: test for verifying stats are reported correctly in lega
 generate_conf
 add_conf '
 ruleset(name="stats") {
-  action(type="omfile" file="./rsyslog.out.stats.log")
+  action(type="omfile" file="'${RSYSLOG_DYNNAME}'.out.stats.log")
 }
 
 module(load="../plugins/impstats/.libs/impstats" interval="1" severity="7" resetCounters="on" Ruleset="stats" bracketing="on")
@@ -15,10 +15,10 @@ module(load="../plugins/impstats/.libs/impstats" interval="1" severity="7" reset
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
-. $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
+. $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown
-. $srcdir/diag.sh custom-content-check 'global: origin=dynstats' 'rsyslog.out.stats.log'
+. $srcdir/diag.sh custom-content-check 'global: origin=dynstats' "${RSYSLOG_DYNNAME}.out.stats.log"
 exit_test

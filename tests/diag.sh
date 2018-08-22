@@ -204,20 +204,37 @@ function startup_vg_waitpid_only() {
 	. $srcdir/diag.sh wait-startup-pid $2
 }
 
+# start rsyslogd with default params under valgrind control. $1 is the config file name to use
+# returns only after successful startup, $2 is the instance (blank or 2!)
 function startup_vg() {
-. $srcdir/diag.sh startup_vg $*
+		startup_vg_waitpid_only $1 $2
+		. $srcdir/diag.sh wait-startup $2
+		echo startup_vg still running
 }
 
+# same as startup-vg, except that --leak-check is set to "none". This
+# is meant to be used in cases where we have to deal with libraries (and such
+# that) we don't can influence and where we cannot provide suppressions as
+# they are platform-dependent. In that case, we can't test for leak checks
+# (obviously), but we can check for access violations, what still is useful.
 function startup_vg_noleak() {
-. $srcdir/diag.sh startup_vg_noleak $*
+	RS_TESTBENCH_LEAK_CHECK=no
+	startup_vg $*
 }
 
+# same as startup-vgthread, BUT we do NOT wait on the startup message!
 function startup_vgthread_waitpid_only() {
-. $srcdir/diag.sh startup_vgthread_waitpid_only $*
+	startup_common "$1" "$2"
+	valgrind --tool=helgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --suppressions=$srcdir/linux_localtime_r.supp --gen-suppressions=all ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$2.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
+	. $srcdir/diag.sh wait-startup-pid $2
 }
 
+# start rsyslogd with default params under valgrind thread debugger control.
+# $1 is the config file name to use, $2 is the instance (blank or 2!)
+# returns only after successful startup
 function startup_vgthread() {
-. $srcdir/diag.sh startup_vgthread $*
+	startup_vgthread_waitpid_only $1 $2
+	. $srcdir/diag.sh wait-startup $2
 }
 
 
@@ -357,7 +374,6 @@ function error_exit() {
 	fi
 	# we need to do some minimal cleanup so that "make distcheck" does not
 	# complain too much
-	rm -f diag-common.conf diag-common2.conf
 	exit $1
 }
 
@@ -433,17 +449,15 @@ function exit_test() {
 	   #exit 77 # for now, just skip - TODO: reconsider when supporting -j
 	fi
 	# now real cleanup
-	rm -f work-*.conf diag-common.conf
-	rm -f diag-common2.conf rsyslog.action.*.include
-	rm -f work rsyslog.out.* ${RSYSLOG2_OUT_LOG} xlate*.lkp_tbl
+	rm -f rsyslog.action.*.include
+	rm -f work rsyslog.out.* xlate*.lkp_tbl
 	rm -rf test-spool test-logdir stat-file1
-	rm -f rsyslog.random.data rsyslog.pipe
 	rm -f -r rsyslog.input.*
 	rm -f rsyslog.input rsyslog.conf.tlscert stat-file1 rsyslog.empty rsyslog.input.* imfile-state*
 	rm -rf rsyslog.input-symlink.log rsyslog-link.*.log targets
 	rm -f ${TESTCONF_NM}.conf
-	rm -f rsyslog.errorfile tmp.qi nocert
-	rm -f HOSTNAME imfile-state:.-rsyslog.input
+	rm -f tmp.qi nocert
+	rm -f imfile-state:.-rsyslog.input
 	rm -f $RSYSLOG_DYNNAME*  # delete all of our dynamic files
 	unset TCPFLOOD_EXTRA_OPTS
 	echo  -------------------------------------------------------------------------------
@@ -542,20 +556,16 @@ case $1 in
 			echo "testbench: TZ env var not set, setting it to UTC"
 			export TZ=UTC
 		fi
-		#cp -f $srcdir/testsuites/diag-common.conf diag-common.conf
-		#cp -f $srcdir/testsuites/diag-common2.conf diag-common2.conf
-		rm -f work-*.conf rsyslog.random.data
 		rm -f xlate*.lkp_tbl
 		#rm -f rsyslog*.pid.save xlate*.lkp_tbl
 		rm -f log log* # RSyslog debug output 
 		rm -f work 
 		#rm -f rsyslog*.out.log # we need this while the sndrcv tests are not converted
 		rm -rf test-spool test-logdir stat-file1
-		rm -f rsyslog.pipe rsyslog.input.*
+		rm -f rsyslog.input.*
 		rm -f rsyslog.input rsyslog.empty rsyslog.input.* imfile-state* omkafka-failed.data
 		rm -rf rsyslog.input-symlink.log rsyslog-link.*.log targets
-		#rm -f HOSTNAME
-		rm -f rsyslog.errorfile tmp.qi nocert
+		rm -f tmp.qi nocert
 		rm -f core.* vgcore.* core*
 		# Note: rsyslog.action.*.include must NOT be deleted, as it
 		# is used to setup some parameters BEFORE calling init. This
@@ -609,34 +619,6 @@ case $1 in
 		;;
    'getpid')
 		pid=$(cat $RSYSLOG_PIDBASE$2.pid)
-		;;
-   'startup_vg') # start rsyslogd with default params under valgrind control. $2 is the config file name to use
-		# returns only after successful startup, $3 is the instance (blank or 2!)
-		startup_vg_waitpid_only $2 $3
-		. $srcdir/diag.sh wait-startup $3
-		echo startup_vg still running
-		;;
-   'startup_vg_noleak') # same as startup-vg, except that --leak-check is set to "none". This
-   		# is meant to be used in cases where we have to deal with libraries (and such
-		# that) we don't can influence and where we cannot provide suppressions as
-		# they are platform-dependent. In that case, we can't test for leak checks
-		# (obviously), but we can check for access violations, what still is useful.
-		RS_TESTBENCH_LEAK_CHECK=no
-		startup_vg_waitpid_only $2 $3
-		. $srcdir/diag.sh wait-startup $3
-		echo startup_vg still running
-		;;
-
-   'startup_vgthread_waitpid_only') # same as startup-vgthread, BUT we do NOT wait on the startup message!
-		startup_common "$2" "$3"
-		valgrind --tool=helgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --suppressions=$srcdir/linux_localtime_r.supp --gen-suppressions=all ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
-		. $srcdir/diag.sh wait-startup-pid $3
-		;;
-   'startup_vgthread') # start rsyslogd with default params under valgrind thread debugger control.
-   		# $2 is the config file name to use
-		# returns only after successful startup, $3 is the instance (blank or 2!)
-		startup_vgthread_waitpid_only $2 $3
-		. $srcdir/diag.sh wait-startup $3
 		;;
    'wait-startup-pid') # wait for rsyslogd startup, PID only ($2 is the instance)
 		i=0
@@ -942,9 +924,7 @@ case $1 in
 		fi
 		;;
    'custom-content-check') 
-   		set -x
-		#cat $3 | grep -qF "$2"
-		cat $3 | grep -F "$2"
+		cat $3 | grep -qF "$2"
 		if [ "$?" -ne "0" ]; then
 		    echo FAIL: custom-content-check failed to find "'$2'" inside "'$3'"
 		    echo "file contents:"
@@ -1001,13 +981,6 @@ case $1 in
 		else
 		   ZCAT=zcat
 		fi
-		;;
-   'generate-HOSTNAME')   # generate the HOSTNAME file
-		startup gethostname.conf
-		tcpflood -m1 -M "\"<128>\""
-		$TESTTOOL_DIR/msleep 100
-		shutdown_when_empty # shut down rsyslogd when done processing messages
-		wait_shutdown	# we need to wait until rsyslogd is finished!
 		;;
    'require-journalctl')   # check if journalctl exists on the system
 		if ! hash journalctl 2>/dev/null ; then
@@ -1172,7 +1145,6 @@ case $1 in
 			rm -f $dep_work_dir/es/config/elasticsearch.yml
 			sed "s/^http.port:.*\$/http.port: ${ES_PORT}/" $srcdir/testsuites/$dep_work_es_config > $dep_work_dir/es/config/elasticsearch.yml
 		else
-			cp -f $srcdir/testsuites/diag-common.conf diag-common.conf
 			cp -f $srcdir/testsuites/$dep_work_es_config $dep_work_dir/es/config/elasticsearch.yml
 		fi
 

@@ -34,13 +34,13 @@ module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 				 searchType="test-type"
 				 serverport="19200"
 				 bulkmode="on"
-				 errorFile="./rsyslog.errorfile")
+				 errorFile="./'${RSYSLOG_DYNNAME}'.errorfile")
 '
 startup
 injectmsg  0 1000
 shutdown_when_empty
 wait_shutdown 
-if [ ! -f rsyslog.errorfile ]
+if [ ! -f ${RSYSLOG_DYNNAME}.errorfile ]
 then
     echo "error: error file does not exist!"
     exit 1

@@ -14,7 +14,7 @@ echo \[dynstats-vg.sh\]: test for gathering stats over dynamic metric names with
 generate_conf
 add_conf '
 ruleset(name="stats") {
-  action(type="omfile" file="./rsyslog.out.stats.log")
+  action(type="omfile" file="'${RSYSLOG_DYNNAME}'.out.stats.log")
 }
 
 module(load="../plugins/impstats/.libs/impstats" interval="1" severity="7" resetCounters="on" Ruleset="stats" bracketing="on")
@@ -30,7 +30,7 @@ set $.increment_successful = dyn_inc("msg_stats", $.msg_prefix);
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup_vg
-. $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
+. $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh content-check "foo 001 0"
@@ -45,8 +45,8 @@ shutdown_when_empty
 echo wait on shutdown
 wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
-. $srcdir/diag.sh custom-content-check 'bar=1' 'rsyslog.out.stats.log'
-. $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'foo=' 'rsyslog.out.stats.log' 3
-. $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'bar=' 'rsyslog.out.stats.log' 1
-. $srcdir/diag.sh first-column-sum-check 's/.*baz=\([0-9]\+\)/\1/g' 'baz=' 'rsyslog.out.stats.log' 2
+. $srcdir/diag.sh custom-content-check 'bar=1' "${RSYSLOG_DYNNAME}.out.stats.log"
+. $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'foo=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
+. $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'bar=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
+. $srcdir/diag.sh first-column-sum-check 's/.*baz=\([0-9]\+\)/\1/g' 'baz=' "${RSYSLOG_DYNNAME}.out.stats.log" 2
 exit_test

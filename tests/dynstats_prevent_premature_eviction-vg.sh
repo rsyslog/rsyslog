@@ -14,7 +14,7 @@ echo \[dynstats_prevent_premature_eviction-vg.sh\]: test for ensuring metrics ar
 generate_conf
 add_conf '
 ruleset(name="stats") {
-  action(type="omfile" file="./rsyslog.out.stats.log")
+  action(type="omfile" file="'${RSYSLOG_DYNNAME}'.out.stats.log")
 }
 
 module(load="../plugins/impstats/.libs/impstats" interval="4" severity="7" resetCounters="on" Ruleset="stats" bracketing="on")
@@ -34,7 +34,7 @@ if (re_match($.msg_prefix, "foo|bar|baz|quux|corge|grault")) then {
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup_vg
-. $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
+. $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
 . $srcdir/diag.sh block-stats-flush
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_1
 . $srcdir/diag.sh allow-single-stats-flush-after-block-and-wait-for-it
@@ -43,7 +43,7 @@ startup_vg
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_3
 . $srcdir/diag.sh await-stats-flush-after-block
 . $srcdir/diag.sh wait-queueempty
-. $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
+. $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
 . $srcdir/diag.sh content-check "foo 001 0"
 . $srcdir/diag.sh content-check "foo 006 0"
 echo doing shutdown
@@ -52,14 +52,14 @@ echo wait on shutdown
 wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
  # because dyn-accumulators for existing metrics were posted-to under a second, they should not have been evicted
-. $srcdir/diag.sh custom-content-check 'baz=2' 'rsyslog.out.stats.log'
-. $srcdir/diag.sh custom-content-check 'bar=1' 'rsyslog.out.stats.log'
-. $srcdir/diag.sh custom-content-check 'foo=3' 'rsyslog.out.stats.log'
+. $srcdir/diag.sh custom-content-check 'baz=2' "${RSYSLOG_DYNNAME}.out.stats.log"
+. $srcdir/diag.sh custom-content-check 'bar=1' "${RSYSLOG_DYNNAME}.out.stats.log"
+. $srcdir/diag.sh custom-content-check 'foo=3' "${RSYSLOG_DYNNAME}.out.stats.log"
 # sum is high because accumulators were never reset, and we expect them to last specific number of cycles(when we posted before ttl expiry)
-. $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'foo=' 'rsyslog.out.stats.log' 6
-. $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'bar=' 'rsyslog.out.stats.log' 1
-. $srcdir/diag.sh first-column-sum-check 's/.*baz=\([0-9]\+\)/\1/g' 'baz=' 'rsyslog.out.stats.log' 3
-. $srcdir/diag.sh first-column-sum-check 's/.*new_metric_add=\([0-9]\+\)/\1/g' 'new_metric_add=' 'rsyslog.out.stats.log' 3
-. $srcdir/diag.sh first-column-sum-check 's/.*ops_overflow=\([0-9]\+\)/\1/g' 'ops_overflow=' 'rsyslog.out.stats.log' 0
-. $srcdir/diag.sh first-column-sum-check 's/.*no_metric=\([0-9]\+\)/\1/g' 'no_metric=' 'rsyslog.out.stats.log' 0
+. $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'foo=' "${RSYSLOG_DYNNAME}.out.stats.log" 6
+. $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'bar=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
+. $srcdir/diag.sh first-column-sum-check 's/.*baz=\([0-9]\+\)/\1/g' 'baz=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
+. $srcdir/diag.sh first-column-sum-check 's/.*new_metric_add=\([0-9]\+\)/\1/g' 'new_metric_add=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
+. $srcdir/diag.sh first-column-sum-check 's/.*ops_overflow=\([0-9]\+\)/\1/g' 'ops_overflow=' "${RSYSLOG_DYNNAME}.out.stats.log" 0
+. $srcdir/diag.sh first-column-sum-check 's/.*no_metric=\([0-9]\+\)/\1/g' 'no_metric=' "${RSYSLOG_DYNNAME}.out.stats.log" 0
 exit_test
