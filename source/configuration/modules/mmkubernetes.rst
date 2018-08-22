@@ -19,14 +19,14 @@ namespace.
 
 .. note::
 
-   This **only** works with log files in `/var/log/containers/*.log`
-   (docker `--log-driver=json-file`), or with journald entries with
+   This **only** works with log files in `/var/log/containers/*.log` (docker
+   `--log-driver=json-file`, or CRI-O log files), or with journald entries with
    message properties `CONTAINER_NAME` and `CONTAINER_ID_FULL` (docker
-   `--log-driver=journald`), and when the application running inside
-   the container writes logs to `stdout`/`stderr`.  This **does not**
-   currently work with other log drivers.
+   `--log-driver=journald`), and when the application running inside the
+   container writes logs to `stdout`/`stderr`.  This **does not** currently
+   work with other log drivers.
 
-For json-file logs, you must use the `imfile` module with the
+For json-file and CRI-O logs, you must use the `imfile` module with the
 `addmetadata="on"` parameter, and the filename must match the
 liblognorm rules specified by the `filenamerules`
 (:ref:`filenamerules`) or `filenamerulebase` (:ref:`filenamerulebase`)
@@ -70,7 +70,7 @@ KubernetesURL
    :widths: auto
    :class: parameter-table
 
-   "word", "https://kubernetes.default.svc.cluster.local:443", "yes", "none"
+   "word", "https://kubernetes.default.svc.cluster.local:443", "no", "none"
 
 The URL of the Kubernetes API server.  Example: `https://localhost:8443`.
 
@@ -248,8 +248,6 @@ match the filename and extract metadata.  The default value is::
     In the above rules, the slashes ``\`` ending each line indicate
     line wrapping - they are not part of the rule.
 
-There are two rules because the `container_hash` is optional.
-
 .. _filenamerulebase:
 
 filenamerulebase
@@ -350,6 +348,8 @@ get the basic necessary Kubernetes metadata from the filename:
 
     input(type="imfile" file="/var/log/containers/*.log"
           tag="kubernetes" addmetadata="on")
+
+(Add `reopenOnTruncate="on"` if using Docker, not required by CRI-O).
 
 and/or an `imjournal` input for docker journald container logs annotated by
 Kubernetes:
