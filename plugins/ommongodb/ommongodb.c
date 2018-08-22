@@ -201,7 +201,7 @@ static rsRetVal initMongoDB(instanceData *pData, int bSilent)
 	mongoc_init ();
 	pData->client = mongoc_client_new (pData->uristr);
 	if (pData->ssl_cert && pData->ssl_ca) {
-#if HAVE_MONGOC_CLIENT_SET_SSL_OPTS
+#ifdef HAVE_MONGOC_CLIENT_SET_SSL_OPTS
 		mongoc_ssl_opt_t ssl_opts;
 		memset(&ssl_opts, 0, sizeof(mongoc_ssl_opt_t));
 		ssl_opts.pem_file = pData->ssl_cert;
