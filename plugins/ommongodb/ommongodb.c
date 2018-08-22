@@ -208,7 +208,7 @@ static rsRetVal initMongoDB(instanceData *pData, int bSilent)
 		ssl_opts.ca_file = pData->ssl_ca;
 		mongoc_client_set_ssl_opts (pData->client, &ssl_opts);
 #else
-        dbgprintf("ommongodb: mongo-c-driver was not built with SSL options, ssl directives will not be used.");
+		dbgprintf("ommongodb: mongo-c-driver was not built with SSL options, ssl directives will not be used.");
 #endif
 	}
 	if(pData->client == NULL) {
