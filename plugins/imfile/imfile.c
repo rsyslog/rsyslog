@@ -778,7 +778,8 @@ process_symlink(fs_edge_t *const chld, const char *symlink)
 		uint idx = ustrlen(chld->active->name) - ustrlen(chld->active->basename);
 		if (idx) { /* basename is different from name */
 			char parent[MAXFNAME];
-			memcpy(parent, chld->active->name, idx-1);
+			idx--; /* move past trailing slash */
+			memcpy(parent, chld->active->name, idx);
 			parent[idx] = '\0';
 			if(lstat(parent, &fileInfo) != 0) {
 				LogError(errno, RS_RET_ERR,
