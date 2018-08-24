@@ -238,6 +238,46 @@ match on any one of these names is considered good and permits the
 peer to talk to rsyslog.
 
 
+TLS.CaCert
+^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+The CA certificate that is being used to verify the client certificates.
+Has to be configured if TLS.AuthMode is set to "*fingerprint*\ " or "*name"*.
+
+
+TLS.MyCert
+^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+The machine certificate that is being used for TLS communciation.
+
+
+TLS.MyPrivKey
+^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+The machine private key for the configured TLS.MyCert.
+
+
 TLS.PriorityString
 ^^^^^^^^^^^^^^^^^^
 
