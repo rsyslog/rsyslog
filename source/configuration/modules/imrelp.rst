@@ -189,7 +189,7 @@ TLS.PermittedPeer
 
    "array", "none", "no", "none"
 
-Peer Places access restrictions on this listener. Only peers which
+Peer places access restrictions on this listener. Only peers which
 have been listed in this parameter may connect. The validation bases
 on the certificate the remote peer presents.
 
@@ -208,7 +208,8 @@ this:
    tls.permittedPeer=["SHA1:...1", "SHA1:....2"]
 
 To specify just a single peer, you can either specify the string
-directly or enclose it in braces.
+directly or enclose it in braces. You may also use wildcards to match
+a larger number of permitted peers, e.g. ``*.example.com``.
 
 
 TLS.AuthMode
