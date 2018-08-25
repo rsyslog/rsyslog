@@ -27,6 +27,15 @@ Version 8.38.0 [v8-stable] 2018-09-18
   They were stopped watching after being rotated.
   closes https://github.com/rsyslog/rsyslog/issues/2229
   Thanks to Jiri Vymazal for the patch.
+- bugfix imfile: potential misadressing when processing symlinks
+  Fixed parent name when processing symlinks. Detected during code review.
+  There was a garbage byte left before which could cause errors down the
+  road.
+  Thanks to Jiri Vymazal for the patch.
+- bugfix ommongodb: build issue if mongo-c-driver is not compiled with TLS
+  Let ommongodb module works even if mongo-c-driver is not compiled with SSL support.
+  Thanks to Jérémie Jourdin for the patch.
+  closes https://github.com/rsyslog/rsyslog/issues/2907
 - CI:
   * many changes with the goal to support parallel test execution, e.g.
     use dynamic ports and file names, changes to testing tools, etc.
