@@ -1,8 +1,5 @@
 /* ommongodb.c
  * Output module for mongodb.
- * Note: this module uses the libmongo-client library. The original 10gen
- * mongodb C interface is crap. Obtain the library here:
- * https://github.com/algernon/libmongo-client
  *
  * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
  *
@@ -204,11 +201,15 @@ static rsRetVal initMongoDB(instanceData *pData, int bSilent)
 	mongoc_init ();
 	pData->client = mongoc_client_new (pData->uristr);
 	if (pData->ssl_cert && pData->ssl_ca) {
+#ifdef HAVE_MONGOC_CLIENT_SET_SSL_OPTS
 		mongoc_ssl_opt_t ssl_opts;
 		memset(&ssl_opts, 0, sizeof(mongoc_ssl_opt_t));
 		ssl_opts.pem_file = pData->ssl_cert;
 		ssl_opts.ca_file = pData->ssl_ca;
 		mongoc_client_set_ssl_opts (pData->client, &ssl_opts);
+#else
+		dbgprintf("ommongodb: mongo-c-driver was not built with SSL options, ssl directives will not be used.");
+#endif
 	}
 	if(pData->client == NULL) {
 		if(!bSilent) {

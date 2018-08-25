@@ -1965,6 +1965,8 @@ AC_ARG_ENABLE(ommongodb,
 )
 if test "x$enable_ommongodb" = "xyes"; then
 	PKG_CHECK_MODULES(LIBMONGOC, libmongoc-1.0)
+    AC_CHECK_FUNCS(mongoc_client_set_ssl_opts,,)
+
 fi
 AM_CONDITIONAL(ENABLE_OMMONGODB, test x$enable_ommongodb = xyes)
 # end of mongodb code
