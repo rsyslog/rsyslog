@@ -94,7 +94,8 @@ ENV	ELASTICSEARCH_NEWEST="elasticsearch-6.3.1.tar.gz"
 # next ENV is specifically for running scan-build - so we do not need to
 # change scripts if at a later time we can move on to a newer version
 ENV	SCAN_BUILD=scan-build \
-	SCAN_BUILD_CC=clang-6.0
+	SCAN_BUILD_CC=clang-6.0 \
+	ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-6.0/bin/llvm-symbolizer
 
 ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-elasticsearch \
