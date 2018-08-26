@@ -925,6 +925,7 @@ TESTS += \
 	imfile-rename.sh \
 	imfile-symlink.sh \
 	imfile-symlink-multi.sh \
+	imfile-growing-file-id.sh \
 	glbl-oversizeMsg-truncate-imfile.sh
 
 if HAVE_VALGRIND
@@ -1479,6 +1480,7 @@ EXTRA_DIST= \
 	imfile-rename.sh \
 	imfile-symlink.sh \
 	imfile-symlink-multi.sh \
+	imfile-growing-file-id.sh \
 	glbl-oversizeMsg-truncate-imfile.sh \
 	dynfile_invld_async.sh \
 	dynfile_invld_sync.sh \

@@ -66,11 +66,13 @@
 
 #include <regex.h>
 
-MODULE_TYPE_INPUT	/* must be present for input modules, do not remove */
+MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("imfile")
 
 /* defines */
+#define FILE_ID_HASH_SIZE 20	/* max size of a file_id hash */
+#define FILE_ID_SIZE	512	/* how many bytes are used for file-id? */
 
 /* Module static data */
 DEF_IMOD_STATIC_DATA	/* must be present, starts static data */
@@ -78,6 +80,9 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(strm)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(ruleset)
+
+extern int rs_siphash(const uint8_t *in, const size_t inlen, const uint8_t *k,
+	uint8_t *out, const size_t outlen); /* see siphash.c */
 
 static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config parameters permitted? */
 
@@ -194,7 +199,8 @@ static rsRetVal ATTR_NONNULL(1) pollFile(act_obj_t *act);
 static int ATTR_NONNULL() getBasename(uchar *const __restrict__ basen, uchar *const __restrict__ path);
 static void ATTR_NONNULL() act_obj_unlink(act_obj_t *act);
 static uchar * ATTR_NONNULL(1, 2) getStateFileName(const act_obj_t *, uchar *, const size_t);
-static int ATTR_NONNULL() getFullStateFileName(const uchar *const, uchar *const pszout, const size_t ilenout);
+static int ATTR_NONNULL() getFullStateFileName(const uchar *const, const char *const,
+	uchar *const pszout, const size_t ilenout);
 
 
 #define OPMODE_POLLING 0
@@ -349,7 +355,7 @@ OLD_openFileWithStateFile(act_obj_t *const act)
 		  act->name, statefn);
 
 	/* Get full path and file name */
-	lenSFNam = getFullStateFileName(statefn, pszSFNam, sizeof(pszSFNam));
+	lenSFNam = getFullStateFileName(statefn, "", pszSFNam, sizeof(pszSFNam));
 
 	/* check if the file exists */
 	if(stat((char*) pszSFNam, &stat_buf) == -1) {
@@ -911,7 +917,7 @@ act_obj_destroy(act_obj_t *const act, const int is_deleted)
 		pollFile(act); /* get any left-over data */
 		if(inst->bRMStateOnDel) {
 			statefn = getStateFileName(act, statefile, sizeof(statefile));
-			getFullStateFileName(statefn, toDel, sizeof(toDel));
+			getFullStateFileName(statefn, "", toDel, sizeof(toDel)); // TODO: check!
 			statefn = toDel;
 		}
 		persistStrmState(act);
@@ -1159,7 +1165,10 @@ fs_node_notify_file_del(act_obj_t *const act, const char *const name)
  * open or otherwise modify disk file state.
  */
 static int ATTR_NONNULL()
-getFullStateFileName(const uchar *const pszstatefile, uchar *const pszout, const size_t ilenout)
+getFullStateFileName(const uchar *const pszstatefile,
+	const char *const file_id,
+	uchar *const pszout,
+	const size_t ilenout)
 {
 	int lenout;
 	const uchar* pszworkdir;
@@ -1168,13 +1177,70 @@ getFullStateFileName(const uchar *const pszstatefile, uchar *const pszout, const
 	pszworkdir = glblGetWorkDirRaw();
 
 	/* Construct file name */
-	lenout = snprintf((char*)pszout, ilenout, "%s/%s",
-			     (char*) (pszworkdir == NULL ? "." : (char*) pszworkdir), (char*)pszstatefile);
+	lenout = snprintf((char*)pszout, ilenout, "%s/%s%s%s",
+		(char*) (pszworkdir == NULL ? "." : (char*) pszworkdir), (char*)pszstatefile,
+		(*file_id == '\0') ? "" : ":", file_id);
 
 	/* return out length */
 	return lenout;
 }
 
+
+/* hash function for file-id
+ * Takes a block of data and returns a string with the hash value.
+ *
+ * Currently one provided by Aaaron Wiebe based on perl's hashing algorithm
+ * (so probably pretty generic). Not for excessively large strings!
+ * TODO: re-think the hash function!
+ */
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wunknown-attributes"
+#endif
+static void __attribute__((nonnull(1,3)))
+#if defined(__clang__)
+__attribute__((no_sanitize("unsigned-integer-overflow")))
+#endif
+get_file_id_hash(const char *data, size_t lendata,
+	char *const hash_str, const size_t len_hash_str)
+{
+	assert(len_hash_str >= 17); /* we always generate 8-byte strings */
+
+	size_t i;
+	uint8_t out[8], k[16];
+	for (i = 0; i < 16; ++i)
+		k[i] = i;
+	memset(out, 0, sizeof(out));
+	rs_siphash((const uint8_t *)data, lendata, k, out, 8);
+
+	for(i = 0 ; i < 8 ; ++i) {
+		if(2 * i+1 >= len_hash_str)
+			break;
+		snprintf(hash_str+(2*i), 3, "%2.2x", out[i]);
+	}
+}
+
+
+/* this returns the file-id for a given file
+ */
+static void ATTR_NONNULL(1, 2)
+getFileID(const act_obj_t *const act, char *const buf, const size_t lenbuf)
+{
+	*buf = '\0'; /* default: empty hash, only set if file has sufficient data */
+	const int fd = open(act->name, O_RDONLY | O_CLOEXEC);
+	if(fd >= 0) {
+		char filedata[FILE_ID_SIZE];
+		const int r = read(fd, filedata, FILE_ID_SIZE);
+		if(r == FILE_ID_SIZE) {
+			get_file_id_hash(filedata, sizeof(filedata), buf, lenbuf);
+		} else {
+			DBGPRINTF("getFileID partial or error read, ret %d\n", r);
+		}
+		close(fd);
+	} else {
+		DBGPRINTF("getFileID open %s failed\n", act->name);
+	}
+	DBGPRINTF("getFileID for '%s', file_id_hash '%s'\n", act->name, buf);
+}
 
 /* this generates a state file name suitable for the given file. To avoid
  * malloc calls, it must be passed a buffer which should be MAXFNAME large.
@@ -1251,8 +1317,6 @@ enqLine(act_obj_t *const act,
 finalize_it:
 	RETiRet;
 }
-
-
 /* try to open a file which has a state file. If the state file does not
  * exist or cannot be read, an error is returned.
  */
@@ -1262,22 +1326,48 @@ openFileWithStateFile(act_obj_t *const act)
 	DEFiRet;
 	uchar pszSFNam[MAXFNAME];
 	uchar statefile[MAXFNAME];
+	char file_id[FILE_ID_HASH_SIZE];
 	int fd = -1;
 	const instanceConf_t *const inst = act->edge->instarr[0];// TODO: same file, multiple instances?
 
 	uchar *const statefn = getStateFileName(act, statefile, sizeof(statefile));
+	getFileID(act, file_id, sizeof(file_id));
 
-	getFullStateFileName(statefn, pszSFNam, sizeof(pszSFNam));
+	getFullStateFileName(statefn, file_id, pszSFNam, sizeof(pszSFNam));
 	DBGPRINTF("trying to open state for '%s', state file '%s'\n", act->name, pszSFNam);
 
 	/* check if the file exists */
 	fd = open((char*)pszSFNam, O_CLOEXEC | O_NOCTTY | O_RDONLY, 0600);
 	if(fd < 0) {
 		if(errno == ENOENT) {
-			DBGPRINTF("NO state file (%s) exists for '%s' - trying to see if "
-				"old-style file exists\n", pszSFNam, act->name);
-			CHKiRet(OLD_openFileWithStateFile(act));
-			FINALIZE;
+			if(file_id[0] != '\0') {
+				const char *pszSFNamHash = strdup((const char*)pszSFNam);
+				CHKmalloc(pszSFNamHash);
+				DBGPRINTF("state file %s for %s does not exist - trying to see if "
+					"inode-only file exists\n", pszSFNam, act->name);
+				getFullStateFileName(statefn, "", pszSFNam, sizeof(pszSFNam));
+				fd = open((char*)pszSFNam, O_CLOEXEC | O_NOCTTY | O_RDONLY, 0600);
+				if(fd >= 0) {
+					/* we now can use identify the file, so let's rename it */
+					if(rename((const char*)pszSFNam, pszSFNamHash) != 0) {
+						LogError(errno, RS_RET_IO_ERROR,
+							"imfile error trying to rename state file for '%s' - "
+							"ignoring this error, usually this means a file no "
+							"longer file is left over, but this may also cause "
+							"some real trouble. Still the best we can do ",
+							act->name);
+						free((void*) pszSFNamHash);
+						ABORT_FINALIZE(RS_RET_IO_ERROR);
+					}
+				}
+				free((void*) pszSFNamHash);
+			}
+			if(fd < 0) {
+				DBGPRINTF("state file %s for %s does not exist - trying to see if "
+					"old-style file exists\n", pszSFNam, act->name);
+				CHKiRet(OLD_openFileWithStateFile(act));
+				FINALIZE;
+			}
 		} else {
 			LogError(errno, RS_RET_IO_ERROR,
 				"imfile error trying to access state file for '%s'",
@@ -1286,6 +1376,7 @@ openFileWithStateFile(act_obj_t *const act)
 		}
 	}
 
+	DBGPRINTF("opened state file %s for %s\n", pszSFNam, act->name);
 	CHKiRet(strm.Construct(&act->pStrm));
 
 	struct json_object *jval;
@@ -2437,11 +2528,13 @@ static rsRetVal ATTR_NONNULL()
 persistStrmState(act_obj_t *const act)
 {
 	DEFiRet;
+	char file_id[FILE_ID_HASH_SIZE];
 	uchar statefile[MAXFNAME];
 	uchar statefname[MAXFNAME];
 
 	uchar *const statefn = getStateFileName(act, statefile, sizeof(statefile));
-	getFullStateFileName(statefn, statefname, sizeof(statefname));
+	getFileID(act, file_id, sizeof(file_id));
+	getFullStateFileName(statefn, file_id, statefname, sizeof(statefname));
 	DBGPRINTF("persisting state for '%s', state file '%s'\n", act->name, statefname);
 
 	struct json_object *jval = NULL;

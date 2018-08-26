@@ -382,7 +382,6 @@ function error_exit() {
 # $4... are just to have the abilit to pass in more options...
 # add -v to chkseq if you need more verbose output
 function seq_check() {
-	echo RSYSLOG_OUT_LOG: $RSYSLOG_OUT_LOG
 	$RS_SORTCMD -g < ${RSYSLOG_OUT_LOG} | ./chkseq -s$1 -e$2 $3 $4 $5 $6 $7
 	if [ "$?" -ne "0" ]; then
 		echo "sequence error detected in $RSYSLOG_OUT_LOG"
@@ -460,6 +459,7 @@ function exit_test() {
 	rm -f imfile-state:.-rsyslog.input
 	rm -f $RSYSLOG_DYNNAME*  # delete all of our dynamic files
 	unset TCPFLOOD_EXTRA_OPTS
+	printf "Test SUCCESFULL\n"
 	echo  -------------------------------------------------------------------------------
 }
 
