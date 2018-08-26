@@ -7,9 +7,10 @@ RUN	yum -y install  \
 RUN	yum -y install \
 	xz \
 	bzip2-devel
-#RUN	yum -y install  \
-	#python-pip \
-	#python-dev
+# Note: bzip2-devel is absolutely necessary to build python and use pip, albeit it is
+#       not checked by the build process! If it is not there, pip will find no packages,
+#       as they are stored as bz2.
+#       see also: https://github.com/pypa/warehouse/issues/2036
 RUN	wget https://www.python.org/ftp/python/3.6.0/Python-3.6.0.tar.xz && \
 	tar xf Python-3.6.0.tar.xz && \
 	cd Python-3.6.0 && \
@@ -32,6 +33,6 @@ RUN buildbot-worker create-worker . docker.rsyslog.com docker-centos6 password
 # to be necessary at the moment.
 # see https://github.com/buildbot/buildbot/issues/4179
 COPY tpl-buildbot.tac /worker/buildbot.tac
-ENTRYPOINT ["/usr/bin/buildbot-worker"]
+ENTRYPOINT ["/usr/local/bin/buildbot-worker"]
 CMD ["start", "--nodaemon"]
 VOLUME /worker
