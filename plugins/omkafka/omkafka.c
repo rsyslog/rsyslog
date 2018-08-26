@@ -688,9 +688,9 @@ writeKafka(instanceData *const pData, uchar *const msg,
 		} else {
 			LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
 				"omkafka: Failed to produce to topic '%s' (rd_kafka_producev)"
-				"partition %d: %d/%s\n",
+				"partition %d: %d/%s - MSG '%s'\n",
 				rd_kafka_topic_name(rkt), partition, msg_kafka_response,
-				rd_kafka_err2str(msg_kafka_response));
+				rd_kafka_err2str(msg_kafka_response), msg);
 		}
 	}
 #else
@@ -717,9 +717,9 @@ writeKafka(instanceData *const pData, uchar *const msg,
 		} else {
 			LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
 				"omkafka: Failed to produce to topic '%s' (rd_kafka_produce) "
-				"partition %d: %d/%s\n",
+				"partition %d: %d/%s - MSG '%s'\n",
 				rd_kafka_topic_name(rkt), partition, msg_kafka_response,
-				rd_kafka_err2str(msg_kafka_response));
+				rd_kafka_err2str(msg_kafka_response), msg);
 		}
 	}
 #endif
@@ -962,24 +962,25 @@ do_rd_kafka_destroy(instanceData *const __restrict__ pData)
 		queuedCount = rd_kafka_outq_len(pData->rk);
 		if (queuedCount > 0) {
 			/* Flush all remaining kafka messages (rd_kafka_poll is called inside) */
-			const int flushStatus = rd_kafka_flush(pData->rk, 5000);
-			if (flushStatus != RD_KAFKA_RESP_ERR_NO_ERROR) /* TODO: Handle unsend messages here! */ {
+			const int flushStatus = rd_kafka_flush(pData->rk, pData->closeTimeout);
+			if (flushStatus == RD_KAFKA_RESP_ERR_NO_ERROR) {
+				DBGPRINTF("omkafka: onDestroyflushed remaining '%d' messages "
+					"to kafka topic '%s'\n", queuedCount,
+					rd_kafka_topic_name(pData->pTopic));
+
+				/* Trigger callbacks a last time before shutdown */
+				const int callbacksCalled = rd_kafka_poll(pData->rk, 0); /* call callbacks */
+				DBGPRINTF("omkafka: onDestroy kafka outqueue length: %d, "
+					"callbacks called %d\n", rd_kafka_outq_len(pData->rk),
+					callbacksCalled);
+			} else /* TODO: Handle unsend messages here! */ {
+				/* timeout = RD_KAFKA_RESP_ERR__TIMED_OUT */
 				LogError(0, RS_RET_KAFKA_ERROR, "omkafka: onDestroy "
 						"Failed to send remaing '%d' messages to "
 						"topic '%s' on shutdown with error: '%s'",
 						queuedCount,
 						rd_kafka_topic_name(pData->pTopic),
 						rd_kafka_err2str(flushStatus));
-			} else {
-				DBGPRINTF("omkafka: onDestroyflushed remaining '%d' messages "
-					"to kafka topic '%s'\n", queuedCount,
-					rd_kafka_topic_name(pData->pTopic));
-
-			/* Trigger callbacks a last time before shutdown */
-			const int callbacksCalled = rd_kafka_poll(pData->rk, 0); /* call callbacks */
-			DBGPRINTF("omkafka: onDestroy kafka outqueue length: %d, "
-				"callbacks called %d\n", rd_kafka_outq_len(pData->rk),
-				callbacksCalled);
 			}
 		} else {
 			break;

@@ -474,16 +474,19 @@ python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsocknam
 
 #START: ext kafka config
 dep_cache_dir=$(readlink -f .dep_cache)
-dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.10/zookeeper-3.4.10.tar.gz
-dep_zk_cached_file=$dep_cache_dir/zookeeper-3.4.10.tar.gz
-dep_kafka_url=http://www-us.apache.org/dist/kafka/0.10.2.1/kafka_2.12-0.10.2.1.tgz
+dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.13/zookeeper-3.4.13.tar.gz
+dep_zk_cached_file=$dep_cache_dir/zookeeper-3.4.13.tar.gz
+#	dep_kafka_url=http://www-us.apache.org/dist/kafka/0.10.2.2/kafka_2.12-0.10.2.2.tgz
+#	dep_kafka_cached_file=$dep_cache_dir/kafka_2.12-0.10.2.2.tgz
+dep_kafka_url=http://www-us.apache.org/dist/kafka/2.0.0/kafka_2.12-2.0.0.tgz
+dep_kafka_cached_file=$dep_cache_dir/kafka_2.12-2.0.0.tgz
+
 if [ -z "$ES_DOWNLOAD" ]; then
 	export ES_DOWNLOAD=elasticsearch-5.6.9.tar.gz
 fi
 dep_es_cached_file="$dep_cache_dir/$ES_DOWNLOAD"
 
 # kafaka (including Zookeeper)
-dep_kafka_cached_file=$dep_cache_dir/kafka_2.12-0.10.2.1.tgz
 dep_kafka_dir_xform_pattern='s#^[^/]\+#kafka#g'
 dep_zk_dir_xform_pattern='s#^[^/]\+#zk#g'
 dep_es_dir_xform_pattern='s#^[^/]\+#es#g'
