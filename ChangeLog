@@ -13,6 +13,14 @@ Version 8.38.0 [v8-stable] 2018-09-18
   default is left at current behavior
   see also https://github.com/rsyslog/rsyslog/pull/2774
   see also https://bugzilla.redhat.com/show_bug.cgi?id=1309698
+- imfile: implement file-id, used in state file
+  This ensures that files with the same inodes are not accidently treated
+  as equal, at least within the limits of the file id hash (see doc for
+  details).
+  We use the siphash reference implementation to generate our non-cryptographic
+  hash.
+  closes https://github.com/rsyslog/rsyslog/issues/2530
+  closes https://github.com/rsyslog/rsyslog/issues/2231
 - bugfix omprog: invalid memory access on partial writes to pipe
   When sending logs to the program, in case of a partial write to the pipe,
   invalid data was sent, or an invalid memory access could occur. (A
