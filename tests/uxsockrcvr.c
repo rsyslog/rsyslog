@@ -5,6 +5,7 @@
  * -s name of socket (required)
  * -o name of output file (stdout if not given)
  * -l add newline after each message received (default: do not add anything)
+ * -t timeout in seconds (default 60)
  *
  * Part of the testbench for rsyslog.
  *
@@ -36,9 +37,13 @@
 #include <getopt.h>
 #include <sys/un.h>
 #include <netdb.h>
+#include <poll.h>
+#include <errno.h>
 #if defined(__FreeBSD__)
 #include <sys/socket.h>
 #endif
+
+#define DFLT_TIMEOUT 60
 
 char *sockName = NULL;
 int sock;
@@ -78,18 +83,20 @@ main(int argc, char *argv[])
 {
 	int opt;
 	int rlen;
+	int timeout = DFLT_TIMEOUT;
 	FILE *fp = stdout;
 	unsigned char data[128*1024];
 	struct  sockaddr_un addr; /* address of server */
 	struct  sockaddr from;
 	socklen_t fromlen;
+	struct pollfd fds[1];
 
 	if(argc < 2) {
 		fprintf(stderr, "error: too few arguments!\n");
 		usage();
 	}
 
-	while((opt = getopt(argc, argv, "s:o:l")) != EOF) {
+	while((opt = getopt(argc, argv, "s:o:lt:")) != EOF) {
 		switch((char)opt) {
 		case 'l':
 			addNL = 1;
@@ -103,9 +110,14 @@ main(int argc, char *argv[])
 				exit(1);
 			}
 			break;
+		case 't':
+			timeout = atoi(optarg);
+			break;
 		default:usage();
 		}
 	}
+
+	timeout = timeout * 1000;
 
 	if(sockName == NULL) {
 		fprintf(stderr, "error: -s /socket/name must be specified!\n");
@@ -140,19 +152,32 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
+	fds[0].fd = sock;
+	fds[0].events = POLLIN;
+
 	/* we now run in an endless loop. We do not check who sends us
 	 * data. This should be no problem for our testbench use.
 	 */
+
 	while(1) {
 		fromlen = sizeof(from);
-		rlen = recvfrom(sock, data, 2000, 0, &from, &fromlen);
+		rlen = poll(fds, 1, timeout);
 		if(rlen == -1) {
-		       perror("uxsockrcvr : recv\n");
-		       exit(1);
+			perror("uxsockrcvr : poll\n");
+			exit(1);
+		} else if(rlen == 0) {
+			fprintf(stderr, "Socket timed out - nothing to receive\n");
+			exit(1);
 		} else {
-		      fwrite(data, 1, rlen, fp);
-			if(addNL)
-				fputc('\n', fp);
+			rlen = recvfrom(sock, data, 2000, 0, &from, &fromlen);
+			if(rlen == -1) {
+				perror("uxsockrcvr : recv\n");
+				exit(1);
+			} else {
+				fwrite(data, 1, rlen, fp);
+				if(addNL)
+					fputc('\n', fp);
+			}
 		}
 	}
 
