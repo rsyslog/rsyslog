@@ -7,7 +7,7 @@ add_conf '
 module(load="../plugins/imfile/.libs/imfile")
 
 input(type="imfile" freshStartTail="on" Tag="pro"
-	File="rsyslog.input")
+	File="'$RSYSLOG_DYNNAME'.input")
 
 template(name="outfmt" type="string" string="%msg%\n")
 
@@ -15,10 +15,10 @@ template(name="outfmt" type="string" string="%msg%\n")
 	template="outfmt")
 '
 
-echo '{ "id": "jinqiao1"}' > rsyslog.input
+echo '{ "id": "jinqiao1"}' > $RSYSLOG_DYNNAME.input
 startup
 ./msleep 2000
-echo '{ "id": "jinqiao2"}' >> rsyslog.input
+echo '{ "id": "jinqiao2"}' >> $RSYSLOG_DYNNAME.input
 
 shutdown_when_empty
 wait_shutdown

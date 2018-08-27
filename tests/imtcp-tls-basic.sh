@@ -12,7 +12,7 @@ $MainMsgQueueTimeoutShutdown 10000
 $DefaultNetstreamDriver gtls
 
 # certificate files - just CA for a client
-$IncludeConfig rsyslog.conf.tlscert
+$IncludeConfig '$RSYSLOG_DYNNAME'.rsyslog.conf.tlscert
 $InputTCPServerStreamDriverMode 1
 $InputTCPServerStreamDriverAuthMode anon
 $InputTCPServerRun '$TCPFLOOD_PORT'
@@ -24,9 +24,9 @@ $OMFileAsyncWriting on
 $OMFileIOBufferSize 16k
 :msg, contains, "msgnum:" action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
-echo \$DefaultNetstreamDriverCAFile $srcdir/tls-certs/ca.pem     >rsyslog.conf.tlscert
-echo \$DefaultNetstreamDriverCertFile $srcdir/tls-certs/cert.pem >>rsyslog.conf.tlscert
-echo \$DefaultNetstreamDriverKeyFile $srcdir/tls-certs/key.pem   >>rsyslog.conf.tlscert
+echo \$DefaultNetstreamDriverCAFile $srcdir/tls-certs/ca.pem     >$RSYSLOG_DYNNAME.rsyslog.conf.tlscert
+echo \$DefaultNetstreamDriverCertFile $srcdir/tls-certs/cert.pem >>$RSYSLOG_DYNNAME.rsyslog.conf.tlscert
+echo \$DefaultNetstreamDriverKeyFile $srcdir/tls-certs/key.pem   >>$RSYSLOG_DYNNAME.rsyslog.conf.tlscert
 startup
 tcpflood -p'$TCPFLOOD_PORT' -m50000 -Ttls -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem
 shutdown_when_empty # shut down rsyslogd when done processing messages

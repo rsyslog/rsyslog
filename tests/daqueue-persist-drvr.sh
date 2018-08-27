@@ -17,7 +17,7 @@ $InputTCPServerRun '$TCPFLOOD_PORT'
 $ModLoad ../plugins/omtesting/.libs/omtesting
 
 # set spool locations and switch queue to disk-only mode
-$WorkDirectory test-spool
+$WorkDirectory '$RSYSLOG_DYNNAME'.spool
 $MainMsgQueueFilename mainq
 $IncludeConfig '${RSYSLOG_DYNNAME}'work-queuemode.conf
 

@@ -21,7 +21,7 @@ add_conf '
 $MainMsgQueueTimeoutShutdown 10000
 
 # set spool locations and switch queue to disk-only mode
-$WorkDirectory test-spool
+$WorkDirectory '$RSYSLOG_DYNNAME'.spool
 $MainMsgQueueFilename mainq
 $MainMsgQueueType disk
 

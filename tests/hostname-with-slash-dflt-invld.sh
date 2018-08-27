@@ -11,8 +11,8 @@ template(name="outfmt" type="string" string="%hostname%") # no LF, as HOSTNAME f
 local4.debug action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
-echo '<167>Mar  6 16:57:54 hostname1/hostname2 test: msgnum:0' > rsyslog.input
-tcpflood -B -I rsyslog.input
+echo '<167>Mar  6 16:57:54 hostname1/hostname2 test: msgnum:0' > $RSYSLOG_DYNNAME.input
+tcpflood -B -I $RSYSLOG_DYNNAME.input
 shutdown_when_empty
 wait_shutdown
 printf "%s" "$RS_HOSTNAME" | cmp - $RSYSLOG_OUT_LOG

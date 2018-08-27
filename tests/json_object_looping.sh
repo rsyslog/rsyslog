@@ -20,7 +20,7 @@ action(type="mmjsonparse")
 set $.garply = "";
 
 ruleset(name="prefixed_writer" queue.type="linkedlist" queue.workerthreads="5") {
-  action(type="omfile" file="./rsyslog.out.prefixed.log" template="prefixed_corge" queue.type="linkedlist")
+  action(type="omfile" file="'$RSYSLOG_DYNNAME'.out.prefixed.log" template="prefixed_corge" queue.type="linkedlist")
 }
 
 foreach ($.quux in $!foo) do {
@@ -31,7 +31,7 @@ foreach ($.quux in $!foo) do {
 	}
   action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="quux")
   foreach ($.corge in $.quux!value) do {
-    action(type="omfile" file="./rsyslog.out.async.log" template="corge" queue.type="linkedlist" action.copyMsg="on")
+    action(type="omfile" file="'$RSYSLOG_DYNNAME'.out.async.log" template="corge" queue.type="linkedlist" action.copyMsg="on")
     call prefixed_writer
 
     foreach ($.grault in $.corge!value) do {
@@ -57,7 +57,7 @@ wait_shutdown
 . $srcdir/diag.sh content-check 'new: jkl3'
 . $srcdir/diag.sh assert-content-missing 'deleted: ghi2'
 . $srcdir/diag.sh content-check 'quux: { "key": "obj", "value": { "bar": { "k1": "important_msg", "k2": "other_msg" } } }'
-. $srcdir/diag.sh custom-content-check 'corge: key: bar val: { "k1": "important_msg", "k2": "other_msg" }' 'rsyslog.out.async.log'
-. $srcdir/diag.sh custom-content-check 'prefixed_corge: { "key": "bar", "value": { "k1": "important_msg", "k2": "other_msg" } }' 'rsyslog.out.prefixed.log'
+. $srcdir/diag.sh custom-content-check 'corge: key: bar val: { "k1": "important_msg", "k2": "other_msg" }' $RSYSLOG_DYNNAME.out.async.log
+. $srcdir/diag.sh custom-content-check 'prefixed_corge: { "key": "bar", "value": { "k1": "important_msg", "k2": "other_msg" } }' $RSYSLOG_DYNNAME.out.prefixed.log
 . $srcdir/diag.sh content-check 'garply: k1=important_msg, k2=other_msg'
 exit_test

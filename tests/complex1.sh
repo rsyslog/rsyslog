@@ -24,7 +24,7 @@ $ModLoad ../plugins/imtcp/.libs/imtcp
 $MainMsgQueueTimeoutShutdown 10000
 
 $template outfmt,"%msg:F,58:3%,%msg:F,58:4%,%msg:F,58:5%\n"
-$template dynfile,"rsyslog.out.%inputname%.%msg:F,58:2%.log"
+$template dynfile,"'$RSYSLOG_DYNNAME'.out.%inputname%.%msg:F,58:2%.log"
 
 ## RULESET with listener
 $Ruleset R13514
@@ -107,8 +107,8 @@ export TCPFLOOD_PORT="$TCPFLOOD_PORT:$RSYSLOG_PORT2:$RSYSLOG_PORT3"
 tcpflood -m40000 -rd400 -P129 -f5 -n3 -c15 -i1
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate
-ls rsyslog.out.*.log
+ls $RSYSLOG_DYNNAME.out.*.log
 . $srcdir/diag.sh setzcat		   # find out which zcat to use
-$ZCAT rsyslog.out.*.log > $RSYSLOG_OUT_LOG
+$ZCAT $RSYSLOG_DYNNAME.out.*.log > $RSYSLOG_OUT_LOG
 seq_check 1 40000 -E
 exit_test

@@ -15,7 +15,7 @@ EOF
 generate_conf
 add_conf '
 module(load="../plugins/impstats/.libs/impstats" interval="1"
-	   log.file="test-spool/es-stats.log" log.syslog="off" format="cee")
+	   log.file="'$RSYSLOG_DYNNAME'.spool/es-stats.log" log.syslog="off" format="cee")
 
 set $.msgnum = field($msg, 58, 2);
 set $.testval = cnum($.msgnum % 2);
@@ -35,7 +35,7 @@ module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 template(name="id-template" type="string" string="%$.es_msg_id%")
 
 ruleset(name="error_es") {
-	action(type="omfile" template="RSYSLOG_DebugFormat" file="test-spool/es-bulk-errors.log")
+	action(type="omfile" template="RSYSLOG_DebugFormat" file="'$RSYSLOG_DYNNAME'.spool/es-bulk-errors.log")
 }
 
 ruleset(name="try_es") {
@@ -148,8 +148,8 @@ else
 	rc=1
 fi
 
-if [ -f test-spool/es-stats.log ] ; then
-	cat test-spool/es-stats.log | \
+if [ -f ${RSYSLOG_DYNNAME}.spool/es-stats.log ] ; then
+	cat ${RSYSLOG_DYNNAME}.spool/es-stats.log | \
 	python -c '
 import sys,json
 success = int(sys.argv[1])
@@ -169,40 +169,40 @@ assert(actualsuccess == success)
 assert(actualbadarg == badarg)
 assert(actualrej > 0)
 assert(actualsuccess + actualbadarg + actualrej == actualsubmitted)
-' $success $badarg || { rc=$?; echo error: expected responses not found in test-spool/es-stats.log; }
+' $success $badarg || { rc=$?; echo error: expected responses not found in ${RSYSLOG_DYNNAME}.spool/es-stats.log; }
 else
-	echo error: stats file test-spool/es-stats.log not found
+	echo error: stats file ${RSYSLOG_DYNNAME}.spool/es-stats.log not found
 	rc=1
 fi
 
-if [ -f test-spool/es-bulk-errors.log ] ; then
+if [ -f ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log ] ; then
 	found=0
 	for ii in $(seq --format="x%08.f" 1 2 $(expr 2 \* $badarg)) ; do
-		if grep -q '^[$][!]:{.*"msgnum": "'$ii'"' test-spool/es-bulk-errors.log ; then
+		if grep -q '^[$][!]:{.*"msgnum": "'$ii'"' ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log ; then
 			found=$( expr $found + 1 )
 		else
-			echo error: missing message $ii in test-spool/es-bulk-errors.log
+			echo error: missing message $ii in ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log
 			rc=1
 		fi
 	done
 	if [ $found -ne $badarg ] ; then
-		echo error: found only $found of $badarg messages in test-spool/es-bulk-errors.log
+		echo error: found only $found of $badarg messages in ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log
 		rc=1
 	fi
-	if grep -q '^[$][.]:{.*"omes": {' test-spool/es-bulk-errors.log ; then
+	if grep -q '^[$][.]:{.*"omes": {' ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log ; then
 		:
 	else
-		echo error: es response info not found in test-spool/es-bulk-errors.log
+		echo error: es response info not found in ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log
 		rc=1
 	fi
-	if grep -q '^[$][.]:{.*"status": 400' test-spool/es-bulk-errors.log ; then
+	if grep -q '^[$][.]:{.*"status": 400' ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log ; then
 		:
 	else
-		echo error: status 400 not found in test-spool/es-bulk-errors.log
+		echo error: status 400 not found in ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log
 		rc=1
 	fi
 else
-	echo error: bulk error file test-spool/es-bulk-errors.log not found
+	echo error: bulk error file ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log not found
 	rc=1
 fi
 
@@ -210,11 +210,11 @@ if [ $rc -eq 0 ] ; then
 	echo tests completed successfully
 else
 	cat $RSYSLOG_OUT_LOG
-	if [ -f test-spool/es-stats.log ] ; then
-		cat test-spool/es-stats.log
+	if [ -f ${RSYSLOG_DYNNAME}.spool/es-stats.log ] ; then
+		cat ${RSYSLOG_DYNNAME}.spool/es-stats.log
 	fi
-	if [ -f test-spool/es-bulk-errors.log ] ; then
-		cat test-spool/es-bulk-errors.log
+	if [ -f ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log ] ; then
+		cat ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log
 	fi
 	error_exit 1 stacktrace
 fi

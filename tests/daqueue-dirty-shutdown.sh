@@ -30,25 +30,25 @@ add_conf '
 module(load="../plugins/omtesting/.libs/omtesting")
 
 # set spool locations and switch queue to disk-only mode
-$WorkDirectory test-spool
+$WorkDirectory '$RSYSLOG_DYNNAME'.spool
 main_queue(queue.filename="mainq" queue.saveonshutdown="on"
            queue.timeoutshutdown="1" queue.maxfilesize="1m"
 	   queue.timeoutworkerthreadshutdown="500" queue.size="200000"
 	   )
 
 $template outfmt,"%msg:F,58:2%\n"
-template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!
+template(name="dynfile" type="string" string="'$RSYSLOG_OUT_LOG'")
 #:msg, contains, "msgnum:" ?dynfile;outfmt
 :msg, contains, "msgnum:" :omtesting:sleep 10 0
 '
 startup
 injectmsg  0 210000
 echo spool files immediately before shutdown:
-ls test-spool
+ls ${RSYSLOG_DYNNAME}.spool
 . $srcdir/diag.sh shutdown-immediate # shut down without the ability to fully persist state
 ./msleep 750	# simulate an os timeout (let it run a *very short* bit, else it's done ;))
 echo spool files immediately after shutdown \(but before kill\):
-ls test-spool
+ls ${RSYSLOG_DYNNAME}.spool
 
 
 . $srcdir/diag.sh kill-immediate   # do not give it sufficient time to shutdown
@@ -56,15 +56,15 @@ wait_shutdown
 rm -f $RSYSLOG_PIDBASE.pid # as we kill, rsyslog does not itself cleanup the pid file
 
 echo spool files after kill:
-ls test-spool
+ls ${RSYSLOG_DYNNAME}.spool
 
-if [ ! -f test-spool/mainq.qi ]; then
+if [ ! -f ${RSYSLOG_DYNNAME}.spool/mainq.qi ]; then
     echo "FAIL: .qi file does not exist!"
     error_exit 1
 fi
 
 echo .qi file contents:
-cat test-spool/mainq.qi
+cat ${RSYSLOG_DYNNAME}.spool/mainq.qi
 
 
 # We now restart rsyslog and make sure it'll clean up the disk queue.
@@ -77,19 +77,25 @@ cat test-spool/mainq.qi
 #export RSYSLOG_DEBUGLOG="log2"
 
 echo RSYSLOG RESTART
+# special case: we need to preserve out dynamic settings, as generate_conf
+# overwrites them. TODO: handle this in diag.sh
+RSYSLOG_DYNNAME_SAVE="$RSYSLOG_DYNNAME"
+RSYSLOG_OUT_LOG_SAVE="$RSYSLOG_OUT_LOG"
 generate_conf
+RSYSLOG_OUT_LOG="$RSYSLOG_OUT_LOG_SAVE"
+RSYSLOG_DYNNAME="$RSYSLOG_DYNNAME_SAVE"
 add_conf '
 module(load="../plugins/omtesting/.libs/omtesting")
 
 # set spool locations and switch queue to disk-only mode
-$WorkDirectory test-spool
+$WorkDirectory '$RSYSLOG_DYNNAME'.spool
 main_queue(queue.filename="mainq" queue.saveonshutdown="on"
            queue.timeoutshutdown="1" queue.maxfilesize="1m"
 	   queue.timeoutworkerthreadshutdown="500" queue.size="200000"
 	   )
 
 $template outfmt,"%msg:F,58:2%\n"
-template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!
+template(name="dynfile" type="string" string="'$RSYSLOG_OUT_LOG'")
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
 startup
@@ -100,11 +106,11 @@ shutdown_when_empty
 wait_shutdown
 
 # now the spool directory must be empty
-spoolFiles=`ls test-spool/`
+spoolFiles=`ls ${RSYSLOG_DYNNAME}.spool/`
 
 if [[ ! -z $spoolFiles ]]; then
     echo "FAIL: spool directory is not empty!"
-    ls -l test-spool
+    ls -l ${RSYSLOG_DYNNAME}.spool
     error_exit 1
 fi
 

@@ -6,7 +6,7 @@ echo [imfile-wildcards-dirs.sh]
 . $srcdir/diag.sh init
 generate_conf
 add_conf '
-$WorkDirectory test-spool
+$WorkDirectory '$RSYSLOG_DYNNAME'.spool
 
 /* Filter out busy debug output, comment out if needed */
 global(
@@ -19,7 +19,7 @@ module(	load="../plugins/imfile/.libs/imfile"
 	PollingInterval="1")
 
 input(type="imfile"
-	File="./rsyslog.input.*/*.logfile"
+	File="./'$RSYSLOG_DYNNAME'.input.*/*.logfile"
 	Tag="file:"
 	Severity="error"
 	Facility="local7"
@@ -29,9 +29,7 @@ input(type="imfile"
 template(name="outfmt" type="list") {
   constant(value="HEADER ")
   property(name="msg" format="json")
-  constant(value="'
-add_conf "'"
-add_conf ', ")
+  constant(value=", ")
   property(name="$!metadata!filename")
   constant(value="\n")
 }
@@ -51,10 +49,10 @@ startup
 
 for i in `seq 1 $IMFILEINPUTFILES`;
 do
-	mkdir rsyslog.input.dir$i
-	./inputfilegen -m 1 > rsyslog.input.dir$i/file.logfile
+	mkdir $RSYSLOG_DYNNAME.input.dir$i
+	./inputfilegen -m 1 > $RSYSLOG_DYNNAME.input.dir$i/file.logfile
 done
-ls -d rsyslog.input.*
+ls -d $RSYSLOG_DYNNAME.input.*
 
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown	# we need to wait until rsyslogd is finished!

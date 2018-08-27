@@ -26,7 +26,7 @@ $ModLoad ../plugins/imudp/.libs/imudp
 $UDPServerRun 2514
 
 $template outfmt,"%msg:F,58:2%\n"
-$template dynfile,"rsyslog.out.log" # trick to use relative path names!
+$template dynfile,"'$RSYSLOG_OUT_LOG'"
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
 startup

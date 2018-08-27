@@ -5,7 +5,7 @@
 generate_conf
 add_conf '
 module(load="../plugins/imfile/.libs/imfile" mode="polling" pollingInterval="1")
-input(type="imfile" File="./rsyslog.input" Tag="tag1" ruleset="ruleset1")
+input(type="imfile" File="./'$RSYSLOG_DYNNAME'.input" Tag="tag1" ruleset="ruleset1")
 
 template(name="tmpl1" type="string" string="%msg%\n")
 ruleset(name="ruleset1") {
@@ -18,15 +18,15 @@ startup
 
 echo 'testmessage1
 testmessage2
-testmessage3' > rsyslog.input
+testmessage3' > $RSYSLOG_DYNNAME.input
 
 ./msleep 2000
-rm ./rsyslog.input
+rm ./'$RSYSLOG_DYNNAME'.input
 ./msleep 3000
 shutdown_when_empty
 wait_shutdown
 
-grep "file.*rsyslog.input.*No such file or directory" ${RSYSLOG2_OUT_LOG} > /dev/null
+grep "file.*$RSYSLOG_DYNNAME.input.*No such file or directory" ${RSYSLOG2_OUT_LOG} > /dev/null
 if [ $? -ne 0 ]; then
         echo "FAIL: expected error message from missing input file not found. ${RSYSLOG2_OUT_LOG} is:"
         cat ${RSYSLOG2_OUT_LOG}

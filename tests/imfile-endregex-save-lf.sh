@@ -10,7 +10,7 @@ generate_conf
 add_conf '
 module(load="../plugins/imfile/.libs/imfile")
 input(type="imfile"
-      File="./rsyslog.input"
+      File="./'$RSYSLOG_DYNNAME'.input"
       Tag="file:"
       startmsg.regex="^[^ ]")
 template(name="outfmt" type="list") {
@@ -30,11 +30,11 @@ startup
 # write the beginning of the file
 echo 'msgnum:0
  msgnum:1
- msgnum:2' > rsyslog.input
+ msgnum:2' > $RSYSLOG_DYNNAME.input
 # the next line terminates our test. It is NOT written to the output file,
 # as imfile waits whether or not there is a follow-up line that it needs
 # to combine.
-echo 'END OF TEST' >> rsyslog.input
+echo 'END OF TEST' >> $RSYSLOG_DYNNAME.input
 # sleep a little to give rsyslog a chance to begin processing
 ./msleep 500
 

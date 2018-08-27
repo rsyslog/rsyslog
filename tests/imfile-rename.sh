@@ -8,7 +8,7 @@ echo [imfile-rename.sh]
 . $srcdir/diag.sh init
 generate_conf
 add_conf '
-$WorkDirectory test-spool
+$WorkDirectory '$RSYSLOG_DYNNAME'.spool
 
 /* Filter out busy debug output */
 global(
@@ -21,7 +21,7 @@ module(	load="../plugins/imfile/.libs/imfile"
 	PollingInterval="1")
 
 input(type="imfile"
-	File="./rsyslog.input.*.log"
+	File="./'$RSYSLOG_DYNNAME'.input.*.log"
 	Tag="file:"
 	Severity="error"
 	Facility="local7"
@@ -45,8 +45,8 @@ if $msg contains "msgnum:" then
 '
 
 # generate input file first. 
-./inputfilegen -m $TESTMESSAGES > rsyslog.input.1.log
-ls -l rsyslog.input*
+./inputfilegen -m $TESTMESSAGES > $RSYSLOG_DYNNAME.input.1.log
+ls -l $RSYSLOG_DYNNAME.input*
 
 startup
 
@@ -55,14 +55,14 @@ startup
 . $srcdir/diag.sh wait-file-lines  $RSYSLOG_OUT_LOG $TESTMESSAGES $RETRIES
 
 # Move to another filename
-mv rsyslog.input.1.log rsyslog.input.2.log
+mv $RSYSLOG_DYNNAME.input.1.log rsyslog.input.2.log
 
 ./msleep 500
 # generate some more input into moved file 
-./inputfilegen -m $TESTMESSAGES -i $TESTMESSAGES >> rsyslog.input.2.log
-ls -l rsyslog.input*
-echo ls test-spool:
-ls -l test-spool
+./inputfilegen -m $TESTMESSAGES -i $TESTMESSAGES >> $RSYSLOG_DYNNAME.input.2.log
+ls -l $RSYSLOG_DYNNAME.input*
+echo ls ${RSYSLOG_DYNNAME}.spool:
+ls -l ${RSYSLOG_DYNNAME}.spool
 ./msleep 500
 
 let msgcount="2* $TESTMESSAGES"

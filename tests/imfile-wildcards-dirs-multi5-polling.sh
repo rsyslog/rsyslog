@@ -19,9 +19,9 @@ global( debug.whitelist="on"
 
 module(load="../plugins/imfile/.libs/imfile" mode="polling" pollingInterval="1")
 
-input(type="imfile" File="./rsyslog.input.dir?/*/*.logfile"
+input(type="imfile" File="./'$RSYSLOG_DYNNAME'.input.dir?/*/*.logfile"
 	Tag="file:" Severity="error" Facility="local7" addMetadata="on")
-input(type="imfile" File="./rsyslog.input.alt/alt*file"
+input(type="imfile" File="./'$RSYSLOG_DYNNAME'.input.alt/alt*file"
 	Tag="file:" Severity="error" Facility="local7" addMetadata="on")
 
 template(name="outfmt" type="list") {
@@ -38,11 +38,11 @@ if $msg contains "msgnum:" then
 
 # create first directory and file before startup, so ensure we will NOT
 # get an initial inotify notify for it!
-#mkdir rsyslog.input.alt
-#./inputfilegen -m 1 > rsyslog.input.alt/altfile.logfile
-#mkdir rsyslog.input.dir1
+#mkdir $RSYSLOG_DYNNAME.input.alt
+#./inputfilegen -m 1 > $RSYSLOG_DYNNAME.input.alt/altfile.logfile
+#mkdir $RSYSLOG_DYNNAME.input.dir1
 # the following is INVALID, as this is a file, but must be a directory!
-#./inputfilegen -m 1 > rsyslog.input.dir0
+#./inputfilegen -m 1 > $RSYSLOG_DYNNAME.input.dir0
 
 startup
 
@@ -52,12 +52,12 @@ do
 
 	for i in `seq 1 $IMFILEINPUTFILES`;
 	do
-		mkdir rsyslog.input.dir$i
-		mkdir rsyslog.input.dir$i/dir$i
-		./inputfilegen -m 1 > rsyslog.input.dir$i/dir$i/file.logfile
+		mkdir $RSYSLOG_DYNNAME.input.dir$i
+		mkdir $RSYSLOG_DYNNAME.input.dir$i/dir$i
+		./inputfilegen -m 1 > $RSYSLOG_DYNNAME.input.dir$i/dir$i/file.logfile
 	done
 
-	ls -d rsyslog.input.*
+	ls -d $RSYSLOG_DYNNAME.input.*
 	
 	# Check correct amount of input files each time
 	let IMFILEINPUTFILESALL=$(($IMFILEINPUTFILES * $j))
@@ -66,8 +66,8 @@ do
 	# Delete all but first!
 	for i in `seq 1 $IMFILEINPUTFILES`;
 	do
-		rm -rf rsyslog.input.dir$i/dir$i/file.logfile
-		rm -rf rsyslog.input.dir$i
+		rm -rf $RSYSLOG_DYNNAME.input.dir$i/dir$i/file.logfile
+		rm -rf $RSYSLOG_DYNNAME.input.dir$i
 	done
 
 done

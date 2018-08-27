@@ -5,7 +5,7 @@
 generate_conf
 add_conf '
 module(load="../plugins/imfile/.libs/imfile")
-input(type="imfile" File="./rsyslog.input" Tag="file:" ReadMode="0")
+input(type="imfile" File="./'$RSYSLOG_DYNNAME'.input" Tag="file:" ReadMode="0")
 
 template(name="outfmt" type="list") {
 	constant(value="HEADER ")
@@ -19,16 +19,16 @@ if $msg contains "msgnum:" then
 startup_vg
 
 printf 'msgnum:0
- msgnum:1' > rsyslog.input
-printf '\nmsgnum:2' >> rsyslog.input
+ msgnum:1' > $RSYSLOG_DYNNAME.input
+printf '\nmsgnum:2' >> $RSYSLOG_DYNNAME.input
 
 # sleep a little to give rsyslog a chance to process unterminated linet 
 ./msleep 500
 
 # write some more lines (see https://github.com/rsyslog/rsyslog/issues/144)
 printf 'msgnum:3
- msgnum:4' >> rsyslog.input
-printf '\nmsgnum:5' >> rsyslog.input # this one shouldn't be written to the output file because of missing LF
+ msgnum:4' >> $RSYSLOG_DYNNAME.input
+printf '\nmsgnum:5' >> $RSYSLOG_DYNNAME.input # this one shouldn't be written to the output file because of missing LF
 
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown_vg    # we need to wait until rsyslogd is finished!

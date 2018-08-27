@@ -13,8 +13,8 @@ template(name="outfmt" type="string" string="%rawmsg%\n")
 '
 startup
 echo '<167>Mar  6 16:57:54 172.20.245.8 test: msgnum:0 X test message
-<167>Mar  6 16:57:54 172.20.245.8 Xtest: msgnum:1 test message' | tr X '\000' > rsyslog.input
-tcpflood -B -I rsyslog.input
+<167>Mar  6 16:57:54 172.20.245.8 Xtest: msgnum:1 test message' | tr X '\000' > $RSYSLOG_DYNNAME.input
+tcpflood -B -I $RSYSLOG_DYNNAME.input
 shutdown_when_empty
 wait_shutdown
 echo '<167>Mar  6 16:57:54 172.20.245.8 test: msgnum:0 #000 test message

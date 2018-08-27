@@ -7,7 +7,7 @@ export IMFILECHECKTIMEOUT="20"
 . $srcdir/diag.sh init
 generate_conf
 add_conf '
-$WorkDirectory test-spool
+$WorkDirectory '$RSYSLOG_DYNNAME'.spool
 
 /* Filter out busy debug output, comment out if needed */
 global(
@@ -20,7 +20,7 @@ module(	load="../plugins/imfile/.libs/imfile"
 	PollingInterval="1")
 
 input(type="imfile"
-	File="./rsyslog.input.dir1/*/testdir/file.logfile"
+	File="./'$RSYSLOG_DYNNAME'.input.dir1/*/testdir/file.logfile"
 	Tag="file:"
 	Severity="error"
 	Facility="local7"
@@ -30,9 +30,7 @@ input(type="imfile"
 template(name="outfmt" type="list") {
   constant(value="HEADER ")
   property(name="msg" format="json")
-  constant(value="'
-add_conf "'"
-add_conf ', ")
+  constant(value=", ")
   property(name="$!metadata!filename")
   constant(value="\n")
 }
@@ -49,8 +47,8 @@ if $msg contains "msgnum:" then
 
 for i in `seq 1 $IMFILEINPUTFILES`;
 do
-	echo "Make rsyslog.input.dir$i"
-	mkdir rsyslog.input.dir$i
+	echo "Make $RSYSLOG_DYNNAME.input.dir$i"
+	mkdir $RSYSLOG_DYNNAME.input.dir$i
 done
 
 # Start rsyslog now before adding more files
@@ -61,12 +59,12 @@ do
 	echo "Loop Num $j"
 	for i in `seq 1 $IMFILEINPUTFILES`;
 	do
-		echo "Make rsyslog.input.dir$i/dir$j/testdir"
-		mkdir rsyslog.input.dir$i/dir$j
-		mkdir rsyslog.input.dir$i/dir$j/testdir
-		./inputfilegen -m 1 > rsyslog.input.dir$i/dir$j/testdir/file.logfile
+		echo "Make $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir"
+		mkdir $RSYSLOG_DYNNAME.input.dir$i/dir$j
+		mkdir $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir
+		./inputfilegen -m 1 > $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir/file.logfile
 	done
-	ls -d rsyslog.input.*
+	ls -d $RSYSLOG_DYNNAME.input.*
 
 	# Check correct amount of input files each time
 	let IMFILEINPUTFILESALL=$(($IMFILEINPUTFILES * $j))
@@ -75,8 +73,8 @@ do
 	# Delete all but first!
 	for i in `seq 1 $IMFILEINPUTFILES`;
 	do
-		rm -rf rsyslog.input.dir$i/dir$j/testdir/file.logfile
-		rm -rr rsyslog.input.dir$i/dir$j
+		rm -rf $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir/file.logfile
+		rm -rr $RSYSLOG_DYNNAME.input.dir$i/dir$j
 	done
 done
 

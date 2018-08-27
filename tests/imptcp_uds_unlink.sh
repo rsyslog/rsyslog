@@ -9,8 +9,8 @@ add_conf '
 global(MaxMessageSize="124k")
 
 module(load="../plugins/imptcp/.libs/imptcp")
-input(type="imptcp" path="testbench_socket" unlink="on" filecreatemode="0600")
-input(type="imptcp" path="testbench_socket2" unlink="on" filecreatemode="0666")
+input(type="imptcp" path="'$RSYSLOG_DYNNAME'-testbench_socket" unlink="on" filecreatemode="0600")
+input(type="imptcp" path="'$RSYSLOG_DYNNAME'-testbench_socket2" unlink="on" filecreatemode="0666")
 
 template(name="outfmt" type="string" string="%msg:%\n")
 *.notice	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
@@ -30,7 +30,7 @@ add_conf '
 global(MaxMessageSize="124k")
 
 module(load="../plugins/imptcp/.libs/imptcp")
-input(type="imptcp" path="testbench_socket" unlink="on")
+input(type="imptcp" path="'$RSYSLOG_DYNNAME'-testbench_socket" unlink="on")
 
 template(name="outfmt" type="string" string="%msg:%\n")
 *.notice	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")

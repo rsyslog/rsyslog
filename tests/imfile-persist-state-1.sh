@@ -5,12 +5,12 @@
 . $srcdir/diag.sh check-inotify
 generate_conf
 add_conf '
-global(workDirectory="test-spool")
+global(workDirectory="'${RSYSLOG_DYNNAME}'.spool")
 
 module(load="../plugins/imfile/.libs/imfile")
 
 input(	type="imfile"
-	file="./rsyslog.input"
+	file="./'$RSYSLOG_DYNNAME'.input"
 	tag="file:"
 	startmsg.regex="^msgnum"
 	PersistStateInterval="1"
@@ -22,7 +22,7 @@ if $msg contains "msgnum:" then
 '
 # generate input file first. Note that rsyslog processes it as
 # soon as it start up (so the file should exist at that point).
-./inputfilegen 5 4000 > rsyslog.input
+./inputfilegen 5 4000 > $RSYSLOG_DYNNAME.input
 startup
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown	# we need to wait until rsyslogd is finished!
