@@ -45,7 +45,8 @@ check_PROGRAMS = $(TESTRUNS) ourtail tcpflood chkseq msleep randomgen \
 	diagtalker uxsockrcvr syslog_caller inputfilegen minitcpsrv \
 	omrelp_dflt_port \
 	mangle_qi \
-	have_relpSrvSetOversizeMode
+	have_relpSrvSetOversizeMode \
+	test_id
 if ENABLE_IMJOURNAL
 check_PROGRAMS += journal_print
 endif
@@ -1739,6 +1740,7 @@ omrelp_dflt_port_SOURCES = omrelp_dflt_port.c
 mangle_qi_SOURCES = mangle_qi.c
 chkseq_SOURCES = chkseq.c
 have_relpSrvSetOversizeMode = have_relpSrvSetOversizeMode.c
+test_id_SOURCES = test_id.c
 
 uxsockrcvr_SOURCES = uxsockrcvr.c
 uxsockrcvr_LDADD = $(SOL_LIBS)
