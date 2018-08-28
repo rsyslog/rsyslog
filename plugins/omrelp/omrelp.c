@@ -108,7 +108,7 @@ typedef struct configSettings_s {
 } configSettings_t;
 static configSettings_t __attribute__((unused)) cs;
 
-static rsRetVal doCreateRelpClient(wrkrInstanceData_t *pWrkrData);
+static rsRetVal doCreateRelpClient(instanceData *pData, relpClt_t **pRelpClt);
 
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
@@ -205,55 +205,53 @@ onAuthErr(void *pUsr, char *authinfo, char* errmesg, __attribute__((unused)) rel
 }
 
 static rsRetVal
-doCreateRelpClient(wrkrInstanceData_t *pWrkrData)
+doCreateRelpClient(instanceData *pData, relpClt_t **pRelpClt)
 {
 	int i;
-	instanceData *pData;
 	DEFiRet;
 
-	pData = pWrkrData->pData;
-	if(relpEngineCltConstruct(pRelpEngine, &pWrkrData->pRelpClt) != RELP_RET_OK)
+	if(relpEngineCltConstruct(pRelpEngine, pRelpClt) != RELP_RET_OK)
 		ABORT_FINALIZE(RS_RET_RELP_ERR);
-	if(relpCltSetTimeout(pWrkrData->pRelpClt, pData->timeout) != RELP_RET_OK)
+	if(relpCltSetTimeout(*pRelpClt, pData->timeout) != RELP_RET_OK)
 		ABORT_FINALIZE(RS_RET_RELP_ERR);
-	if(relpCltSetConnTimeout(pWrkrData->pRelpClt, pData->connTimeout) != RELP_RET_OK) {
+	if(relpCltSetConnTimeout(*pRelpClt, pData->connTimeout) != RELP_RET_OK) {
 		ABORT_FINALIZE(RS_RET_RELP_ERR);
 	}
-	if(relpCltSetWindowSize(pWrkrData->pRelpClt, pData->sizeWindow) != RELP_RET_OK)
-		ABORT_FINALIZE(RS_RET_RELP_ERR);
-	if(relpCltSetUsrPtr(pWrkrData->pRelpClt, pWrkrData) != RELP_RET_OK)
+	if(relpCltSetWindowSize(*pRelpClt, pData->sizeWindow) != RELP_RET_OK)
 		ABORT_FINALIZE(RS_RET_RELP_ERR);
 	if(pData->bEnableTLS) {
-		if(relpCltEnableTLS(pWrkrData->pRelpClt) != RELP_RET_OK)
+		if(relpCltEnableTLS(*pRelpClt) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 		if(pData->bEnableTLSZip) {
-			if(relpCltEnableTLSZip(pWrkrData->pRelpClt) != RELP_RET_OK)
+			if(relpCltEnableTLSZip(*pRelpClt) != RELP_RET_OK)
 				ABORT_FINALIZE(RS_RET_RELP_ERR);
 		}
-		if(relpCltSetGnuTLSPriString(pWrkrData->pRelpClt, (char*) pData->pristring) != RELP_RET_OK)
+		if(relpCltSetGnuTLSPriString(*pRelpClt, (char*) pData->pristring) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
-		if(relpCltSetAuthMode(pWrkrData->pRelpClt, (char*) pData->authmode) != RELP_RET_OK) {
+
+
+		if(relpCltSetAuthMode(*pRelpClt, (char*) pData->authmode) != RELP_RET_OK) {
 			LogError(0, RS_RET_RELP_ERR,
 					"omrelp: invalid auth mode '%s'\n", pData->authmode);
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 		}
-		if(relpCltSetCACert(pWrkrData->pRelpClt, (char*) pData->caCertFile) != RELP_RET_OK)
+
+		if(relpCltSetCACert(*pRelpClt, (char*) pData->caCertFile) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
-		if(relpCltSetOwnCert(pWrkrData->pRelpClt, (char*) pData->myCertFile) != RELP_RET_OK)
+		if(relpCltSetOwnCert(*pRelpClt, (char*) pData->myCertFile) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
-		if(relpCltSetPrivKey(pWrkrData->pRelpClt, (char*) pData->myPrivKeyFile) != RELP_RET_OK)
+		if(relpCltSetPrivKey(*pRelpClt, (char*) pData->myPrivKeyFile) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 		for(i = 0 ; i <  pData->permittedPeers.nmemb ; ++i) {
-			relpCltAddPermittedPeer(pWrkrData->pRelpClt, (char*)pData->permittedPeers.name[i]);
+			relpCltAddPermittedPeer(*pRelpClt, (char*)pData->permittedPeers.name[i]);
 		}
 	}
 	if(pData->localClientIP != NULL) {
-		if(relpCltSetClientIP(pWrkrData->pRelpClt, pData->localClientIP) != RELP_RET_OK)
+		if(relpCltSetClientIP(*pRelpClt, pData->localClientIP) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 	}
-	pWrkrData->bInitialConnect = 1;
-	pWrkrData->nSent = 0;
 finalize_it:
+
 	RETiRet;
 }
 
@@ -278,7 +276,11 @@ ENDcreateInstance
 BEGINcreateWrkrInstance
 CODESTARTcreateWrkrInstance
 	pWrkrData->pRelpClt = NULL;
-	iRet = doCreateRelpClient(pWrkrData);
+	iRet = doCreateRelpClient(pWrkrData->pData, &pWrkrData->pRelpClt);
+	if(relpCltSetUsrPtr(pWrkrData->pRelpClt, pWrkrData) != RELP_RET_OK)
+		LogError(0, RS_RET_NO_ERRCODE, "omrelp: error when creating relp client");
+	pWrkrData->bInitialConnect = 1;
+	pWrkrData->nSent = 0;
 ENDcreateWrkrInstance
 
 BEGINfreeInstance
@@ -336,6 +338,7 @@ BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i,j;
 	FILE *fp;
+	relpClt_t *pRelpClt = NULL;
 CODESTARTnewActInst
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -406,14 +409,7 @@ CODESTARTnewActInst
 				fclose(fp);
 			}
 		} else if(!strcmp(actpblk.descr[i].name, "tls.authmode")) {
-			char *authMode = es_str2cstr(pvals[i].val.d.estr, NULL);
-			if(!strcmp(authMode, "name") || !strcmp(authMode, "fingerprint")) {
-				pData->authmode = (uchar*)authMode;
-			} else {
-				LogError(0, RS_RET_INVALID_PARAMS,
-						"omrelp error: invalid authmode: %s\n",
-						authMode);
-			}
+			pData->authmode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "tls.permittedpeer")) {
 			pData->permittedPeers.nmemb = pvals[i].val.d.ar->nmemb;
 			CHKmalloc(pData->permittedPeers.name =
@@ -432,6 +428,10 @@ CODESTARTnewActInst
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->tplName == NULL) ?
 			    "RSYSLOG_ForwardFormat" : (char*)pData->tplName),
 	   		    OMSR_NO_RQD_TPL_OPTS));
+
+	iRet = doCreateRelpClient(pData, &pRelpClt);
+	if(pRelpClt != NULL)
+		relpEngineCltDestruct(pRelpEngine, &pRelpClt);
 
 CODE_STD_FINALIZERnewActInst
 	if(pvals != NULL)
@@ -514,7 +514,11 @@ doRebind(wrkrInstanceData_t *pWrkrData)
 	DBGPRINTF("omrelp: destructing relp client due to rebindInterval\n");
 	CHKiRet(relpEngineCltDestruct(pRelpEngine, &pWrkrData->pRelpClt));
 	pWrkrData->bIsConnected = 0;
-	CHKiRet(doCreateRelpClient(pWrkrData));
+	CHKiRet(doCreateRelpClient(pWrkrData->pData, &pWrkrData->pRelpClt));
+	if(relpCltSetUsrPtr(pWrkrData->pRelpClt, pWrkrData) != RELP_RET_OK)
+		LogError(0, RS_RET_NO_ERRCODE, "omrelp: error when creating relp client");
+	pWrkrData->bInitialConnect = 1;
+	pWrkrData->nSent = 0;
 finalize_it:
 	RETiRet;
 }
