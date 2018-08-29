@@ -1677,6 +1677,22 @@ if test "x$enable_omjournal" = "xyes"; then
 fi
 AM_CONDITIONAL(ENABLE_OMJOURNAL, test x$enable_omjournal = xyes)
 
+# capability to enable journal testbench tests. They have very special requirements,
+# so it does not make sense to have them run by default.
+# Also note that as of now, they have a pretty high rate of false positives due
+# to bugs in the journal.
+# see also https://github.com/rsyslog/rsyslog/issues/2931#issuecomment-416914707
+AC_ARG_ENABLE(journal_tests,
+        [AS_HELP_STRING([--enable-journal-tests],[enable systemd journal specific tests in testbench @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_journal_tests="yes" ;;
+          no) enable_journal_tests="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-journal-tests) ;;
+         esac],
+        [enable_journal_tests=no]
+)
+AM_CONDITIONAL(ENABLE_JOURNAL_TESTS, test x$enable_journal_tests = xyes)
+
 
 # settings for pmlastmsg
 AC_ARG_ENABLE(pmlastmsg,
@@ -2443,6 +2459,7 @@ echo "    MySQL Tests enabled:                      $enable_mysql_tests"
 echo "    Elasticsearch Tests:                      $enable_elasticsearch_tests"
 echo "    PostgreSQL Tests enabled:                 $enable_pgsql_tests"
 echo "    Kafka Tests enabled:                      $enable_kafka_tests"
+echo "    systemd journal tests enabled:            $enable_journal_tests"
 echo "    Debug mode enabled:                       $enable_debug"
 echo "    (total) debugless mode enabled:           $enable_debugless"
 echo "    Diagnostic tools enabled:                 $enable_diagtools"
