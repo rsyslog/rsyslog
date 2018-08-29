@@ -592,6 +592,23 @@ if not taken special care of. When this parameter is set to "on", we permit
 space *in front of the next frame* and ignore it.
 
 
+ListenPortFileName
+^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+.. versionadded:: 8.38.0
+
+With this parameter you can specify the name for a file. In this file the
+port, imptcp is connected to, will be written.
+This parameter was introduced because the testbench works with dynamic ports.
+
+
 .. _imptcp-statistic-counter:
 
 Statistic Counter
