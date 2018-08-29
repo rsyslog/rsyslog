@@ -409,14 +409,18 @@ finalize_it:
  * number of sessions permitted.
  * rgerhards, 2008-04-22
  */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-align"
 static rsRetVal
 LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
-	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax)
+	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax,
+	 uchar *pszLstnPortFileName)
 {
 	DEFiRet;
 	netstrm_t *pNewStrm = NULL;
 	nsd_t *pNewNsd = NULL;
 	int error, maxs, on = 1;
+	int isIPv6 = 0;
 	int sock = -1;
 	int numSocks;
 	int sockflags;
@@ -460,6 +464,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 
 #ifdef IPV6_V6ONLY
 		if(r->ai_family == AF_INET6) {
+			isIPv6 = 1;
 			int iOn = 1;
 			if(setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY,
 			      (char *)&iOn, sizeof (iOn)) < 0) {
@@ -469,7 +474,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 			}
 		}
 #endif
-			if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on)) < 0 ) {
+		if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on)) < 0 ) {
 			dbgprintf("error %d setting tcp socket option\n", errno);
 			close(sock);
 			sock = -1;
@@ -525,6 +530,26 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 			sock = -1;
 			continue;
 		}
+
+		if(pszLstnPortFileName != NULL) {
+			FILE *fp;
+			if(getsockname(sock, r->ai_addr, &r->ai_addrlen) == -1) {
+				LogError(errno, NO_ERRCODE, "nsd_ptcp: ListenPortFileName: getsockname:"
+						"error while trying to get socket");
+			}
+			if((fp = fopen((const char*)pszLstnPortFileName, "w+")) == NULL) {
+				LogError(errno, NO_ERRCODE, "nsd_ptcp: ListenPortFileName: "
+						"error while trying to open file");
+			}
+			if(isIPv6) {
+				fprintf(fp, "%d", ntohs((((struct sockaddr_in6*)r->ai_addr)->sin6_port)));
+			} else {
+				fprintf(fp, "%d", ntohs((((struct sockaddr_in*)r->ai_addr)->sin_port)));
+			}
+			fclose(fp);
+		}
+
+
 
 		if(listen(sock, iSessMax / 10 + 5) < 0) {
 			/* If the listen fails, it most probably fails because we ask
@@ -590,7 +615,7 @@ finalize_it:
 
 	RETiRet;
 }
-
+#pragma GCC diagnostic pop
 
 /* receive data from a tcp socket
  * The lenBuf parameter must contain the max buffer size on entry and contains

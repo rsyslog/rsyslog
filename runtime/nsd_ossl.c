@@ -1104,7 +1104,7 @@ Abort(nsd_t *pNsd)
  */
 static rsRetVal
 LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
-	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax)
+	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax, uchar *pszLstnPortFileName)
 {
 	DEFiRet;
 
@@ -1112,7 +1112,8 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		fAddLstn, pLstnIP, pLstnPort, iSessMax);
 
 	/* Init TCP Listener using base ptcp class */
-	iRet = nsd_ptcp.LstnInit(pNS, pUsr, fAddLstn, pLstnPort, pLstnIP, iSessMax);
+	iRet = nsd_ptcp.LstnInit(pNS, pUsr, fAddLstn, pLstnPort, pLstnIP,
+			iSessMax, pszLstnPortFileName);
 	RETiRet;
 }
 

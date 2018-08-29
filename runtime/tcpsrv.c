@@ -395,7 +395,7 @@ initTCPListener(tcpsrv_t *pThis, tcpLstnPortList_t *pPortEntry)
 
 	// pPortEntry->pszAddr = NULL ==> bind to all interfaces
 	CHKiRet(netstrm.LstnInit(pThis->pNS, (void*)pPortEntry, addTcpLstn, TCPLstnPort,
-	pPortEntry->pszAddr, pThis->iSessMax));
+	pPortEntry->pszAddr, pThis->iSessMax, pThis->pszLstnPortFileName));
 
 finalize_it:
 	RETiRet;
@@ -1214,6 +1214,16 @@ SetGnutlsPriorityString(tcpsrv_t *pThis, uchar *iVal)
 }
 
 static rsRetVal
+SetLstnPortFileName(tcpsrv_t *pThis, uchar *iVal)
+{
+	DEFiRet;
+	DBGPRINTF("tcpsrv: LstnPortFileName set to %s\n",
+		(iVal == NULL) ? "(null)" : (const char*) iVal);
+	pThis->pszLstnPortFileName = iVal;
+	RETiRet;
+}
+
+static rsRetVal
 SetOnMsgReceive(tcpsrv_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar*, int))
 {
 	DEFiRet;
@@ -1481,6 +1491,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetKeepAliveProbes = SetKeepAliveProbes;
 	pIf->SetKeepAliveTime = SetKeepAliveTime;
 	pIf->SetGnutlsPriorityString = SetGnutlsPriorityString;
+	pIf->SetLstnPortFileName = SetLstnPortFileName;
 	pIf->SetUsrP = SetUsrP;
 	pIf->SetInputName = SetInputName;
 	pIf->SetOrigin = SetOrigin;

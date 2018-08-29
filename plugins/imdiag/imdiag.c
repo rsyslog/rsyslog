@@ -101,6 +101,7 @@ struct modConfData_s {
 
 static int iTCPSessMax = 20; /* max number of sessions */
 static int iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
+static uchar *pszLstnPortFileName = NULL;
 static uchar *pszStrmDrvrAuthMode = NULL; /* authentication mode to use */
 static uchar *pszInputName = NULL; /* value for inputname property, NULL is OK and handled by core engine */
 
@@ -521,6 +522,7 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 		CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
 		CHKiRet(tcpsrv.SetDrvrMode(pOurTcpsrv, iStrmDrvrMode));
 		CHKiRet(tcpsrv.SetOnMsgReceive(pOurTcpsrv, OnMsgReceived));
+		CHKiRet(tcpsrv.SetLstnPortFileName(pOurTcpsrv, pszLstnPortFileName));
 		/* now set optional params, but only if they were actually configured */
 		if(pszStrmDrvrAuthMode != NULL) {
 			CHKiRet(tcpsrv.SetDrvrAuthMode(pOurTcpsrv, pszStrmDrvrAuthMode));
@@ -653,7 +655,8 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 	iTCPSessMax = 200;
 	iStrmDrvrMode = 0;
 	free(pszInputName);
-	pszInputName = NULL;
+	free(pszLstnPortFileName);
+	pszLstnPortFileName = NULL;
 	if(pszStrmDrvrAuthMode != NULL) {
 		free(pszStrmDrvrAuthMode);
 		pszStrmDrvrAuthMode = NULL;
@@ -697,6 +700,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 				   NULL, &iTCPSessMax, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("imdiagserverstreamdrivermode"), 0,
 				   eCmdHdlrInt, NULL, &iStrmDrvrMode, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("listenportfilename"), 0,
+				   eCmdHdlrGetWord, NULL, &pszLstnPortFileName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("imdiagserverstreamdriverauthmode"), 0,
 				   eCmdHdlrGetWord, NULL, &pszStrmDrvrAuthMode, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("imdiagserverstreamdriverpermittedpeer"), 0,

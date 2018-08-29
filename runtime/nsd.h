@@ -55,8 +55,6 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Rcv)(nsd_t *pThis, uchar *pRcvBuf, ssize_t *pLenBuf, int *oserr);
 	rsRetVal (*Send)(nsd_t *pThis, uchar *pBuf, ssize_t *pLenBuf);
 	rsRetVal (*Connect)(nsd_t *pThis, int family, unsigned char *port, unsigned char *host, char *device);
-	rsRetVal (*LstnInit)(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
-			     uchar *pLstnPort, uchar *pLstnIP, int iSessMax);
 	rsRetVal (*AcceptConnReq)(nsd_t *pThis, nsd_t **ppThis);
 	rsRetVal (*GetRemoteHName)(nsd_t *pThis, uchar **pszName);
 	rsRetVal (*GetRemoteIP)(nsd_t *pThis, prop_t **ip);
@@ -84,6 +82,9 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetKeepAliveProbes)(nsd_t *pThis, int keepAliveProbes);
 	rsRetVal (*SetKeepAliveTime)(nsd_t *pThis, int keepAliveTime);
 	rsRetVal (*SetGnutlsPriorityString)(nsd_t *pThis, uchar *gnutlsPriorityString);
+	/* v12 -- parameter pszLstnPortFileName added to LstnInit()*/
+	rsRetVal (*LstnInit)(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
+			     uchar *pLstnPort, uchar *pLstnIP, int iSessMax, uchar *pszLstnPortFileName);
 ENDinterface(nsd)
 #define nsdCURR_IF_VERSION 11 /* increment whenever you change the interface structure! */
 /* interface version 4 added GetRemAddr()
