@@ -545,6 +545,7 @@ TESTS +=  \
 endif
 endif
 
+if ENABLE_JOURNAL_TESTS
 if ENABLE_IMJOURNAL
 TESTS +=  \
 	imjournal-basic.sh \
@@ -562,6 +563,7 @@ TESTS +=  \
 	omjournal-basic-template.sh \
 	omjournal-basic-no-template.sh
 endif
+endif #if ENABLE_JOURNAL_TESTS
 
 if ENABLE_OMPROG
 TESTS +=  \
