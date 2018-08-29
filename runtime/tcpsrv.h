@@ -62,6 +62,7 @@ struct tcpsrv_s {
 	netstrms_t *pNS;	/**< pointer to network stream subsystem */
 	int iDrvrMode;		/**< mode of the stream driver to use */
 	uchar *gnutlsPriorityString;	/**< priority string for gnutls */
+	uchar *pszLstnPortFileName;	/**< File in which the dynamic port is written */
 	uchar *pszDrvrAuthMode;	/**< auth mode of the stream driver to use */
 	uchar *pszDrvrName;	/**< name of stream driver to use */
 	uchar *pszInputName;	/**< value to be used as input name */
@@ -180,8 +181,10 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetGnutlsPriorityString)(tcpsrv_t*, uchar*);
 	/* added v21 -- Preserve case in fromhost, 2018-08-16 */
 	rsRetVal (*SetPreserveCase)(tcpsrv_t *pThis, int bPreserveCase);
+	/* added v22 -- File for dynamic Port, 2018-08-29 */
+	rsRetVal (*SetLstnPortFileName)(tcpsrv_t*, uchar*);
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 21 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 22 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10

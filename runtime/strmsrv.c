@@ -368,7 +368,7 @@ initSTRMListener(strmsrv_t *pThis, strmLstnPortList_t *pPortEntry)
 
 	/* TODO: add capability to specify local listen address! */
 	CHKiRet(netstrm.LstnInit(pThis->pNS, (void*)pPortEntry, addStrmLstn, pPortEntry->pszPort,
-		NULL, pThis->iSessMax));
+		NULL, pThis->iSessMax, NULL));
 
 finalize_it:
 	RETiRet;
