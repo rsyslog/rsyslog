@@ -5,7 +5,7 @@ echo \[imuxsock_logger_ruleset.sh\]: test imuxsock with ruleset definition
 generate_conf
 add_conf '
 module(load="../plugins/imuxsock/.libs/imuxsock" sysSock.use="off")
-input(	type="imuxsock" socket="testbench_socket"
+input(	type="imuxsock" socket="'$RSYSLOG_DYNNAME'-testbench_socket"
 	useSpecialParser="off"
 	ruleset="testruleset"
 	parseHostname="on")
@@ -17,7 +17,7 @@ ruleset(name="testruleset") {
 '
 startup
 # send a message with trailing LF
-logger -d -u testbench_socket test
+logger -d -u $RSYSLOG_DYNNAME-testbench_socket test
 # the sleep below is needed to prevent too-early termination of rsyslogd
 ./msleep 100
 shutdown_when_empty # shut down rsyslogd when done processing messages

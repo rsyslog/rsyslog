@@ -19,7 +19,7 @@ main_queue(
 :msg, contains, "msgnum:" {
     action(
         type="omprog"
-        binary=`echo $srcdir/testsuites/omprog-close-unresponsive-bin.sh`
+        binary="'$RSYSLOG_DYNNAME.'omprog-close-unresponsive-bin.sh"
         template="outfmt"
         name="omprog_action"
         queue.type="Direct"  # the default; facilitates sync with the child process
@@ -30,13 +30,13 @@ main_queue(
     )
 }
 '
+cp -f $srcdir/testsuites/omprog-close-unresponsive-bin.sh $RSYSLOG_DYNNAME.omprog-close-unresponsive-bin.sh
 startup
-. $srcdir/diag.sh wait-startup
 injectmsg 0 10
 . $srcdir/diag.sh wait-queueempty
 shutdown_when_empty
 wait_shutdown
-. $srcdir/diag.sh ensure-no-process-exists omprog-close-unresponsive-bin.sh
+. $srcdir/diag.sh ensure-no-process-exists $RSYSLOG_DYNNAME.omprog-close-unresponsive-bin.sh
 
 expected_output="Starting
 Received msgnum:00000000:

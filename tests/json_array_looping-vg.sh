@@ -26,14 +26,14 @@ action(type="mmjsonparse")
 set $.garply = "";
 
 ruleset(name="prefixed_writer" queue.type="linkedlist" queue.workerthreads="5") {
-  action(type="omfile" file="./rsyslog.out.prefixed.log" template="prefixed_grault" queue.type="linkedlist")
+  action(type="omfile" file="'$RSYSLOG_DYNNAME'.out.prefixed.log" template="prefixed_grault" queue.type="linkedlist")
 }
 
 foreach ($.quux in $!foo) do {
   action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="quux")
   foreach ($.corge in $.quux!bar) do {
      reset $.grault = $.corge;
-     action(type="omfile" file="./rsyslog.out.async.log" template="grault" queue.type="linkedlist" action.copyMsg="on")
+     action(type="omfile" file="'$RSYSLOG_DYNNAME'.out.async.log" template="grault" queue.type="linkedlist" action.copyMsg="on")
      call prefixed_writer
      if ($.garply != "") then
          set $.garply = $.garply & ", ";
@@ -53,9 +53,9 @@ wait_shutdown_vg
 . $srcdir/diag.sh content-check 'quux: def1'
 . $srcdir/diag.sh content-check 'quux: ghi2'
 . $srcdir/diag.sh content-check 'quux: { "bar": [ { "baz": "important_msg" }, { "baz": "other_msg" } ] }'
-. $srcdir/diag.sh custom-content-check 'grault: { "baz": "important_msg" }' 'rsyslog.out.async.log'
-. $srcdir/diag.sh custom-content-check 'grault: { "baz": "other_msg" }' 'rsyslog.out.async.log'
-. $srcdir/diag.sh custom-content-check 'prefixed_grault: { "baz": "important_msg" }' 'rsyslog.out.prefixed.log'
-. $srcdir/diag.sh custom-content-check 'prefixed_grault: { "baz": "other_msg" }' 'rsyslog.out.prefixed.log'
+. $srcdir/diag.sh custom-content-check 'grault: { "baz": "important_msg" }' $RSYSLOG_DYNNAME.out.async.log
+. $srcdir/diag.sh custom-content-check 'grault: { "baz": "other_msg" }' $RSYSLOG_DYNNAME.out.async.log
+. $srcdir/diag.sh custom-content-check 'prefixed_grault: { "baz": "important_msg" }' $RSYSLOG_DYNNAME.out.prefixed.log
+. $srcdir/diag.sh custom-content-check 'prefixed_grault: { "baz": "other_msg" }' $RSYSLOG_DYNNAME.out.prefixed.log
 . $srcdir/diag.sh content-check 'garply: important_msg, other_msg'
 exit_test

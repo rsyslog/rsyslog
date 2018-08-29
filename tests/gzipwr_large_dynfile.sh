@@ -14,9 +14,7 @@
 #
 # added 2010-03-10 by Rgerhards
 #
-# This file is part of the rsyslog project, released  under GPLv3
-echo ====================================================================================
-echo TEST: \[gzipwr_large_dynfile.sh\]: test for gzip file writing for large message sets
+# This file is part of the rsyslog project, released  under ASL 2.0
 . $srcdir/diag.sh init
 generate_conf
 add_conf '
@@ -27,7 +25,7 @@ $MainMsgQueueTimeoutShutdown 10000
 $InputTCPServerRun '$TCPFLOOD_PORT'
 
 $template outfmt,"%msg:F,58:3%,%msg:F,58:4%,%msg:F,58:5%\n"
-$template dynfile,"rsyslog.out.%msg:F,58:2%.log" # use multiple dynafiles
+$template dynfile,"'$RSYSLOG_DYNNAME'.out.%msg:F,58:2%.log" # use multiple dynafiles
 $OMFileFlushOnTXEnd off
 $OMFileZipLevel 6
 $OMFileIOBufferSize 256k
@@ -35,20 +33,17 @@ $DynaFileCacheSize 4
 $omfileFlushInterval 1
 local0.* ?dynfile;outfmt
 '
-# uncomment for debugging support:
-#export RSYSLOG_DEBUG="debug nostdout"
-#export RSYSLOG_DEBUGLOG="log"
 startup
 # send 4000 messages of 10.000bytes plus header max, randomized
 tcpflood -m4000 -r -d10000 -P129 -f5
 sleep 2 # due to large messages, we need this time for the tcp receiver to settle...
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate
-gunzip < rsyslog.out.0.log > $RSYSLOG_OUT_LOG
-gunzip < rsyslog.out.1.log >> $RSYSLOG_OUT_LOG
-gunzip < rsyslog.out.2.log >> $RSYSLOG_OUT_LOG
-gunzip < rsyslog.out.3.log >> $RSYSLOG_OUT_LOG
-gunzip < rsyslog.out.4.log >> $RSYSLOG_OUT_LOG
-#cat rsyslog.out.* > $RSYSLOG_OUT_LOG
+gunzip < $RSYSLOG_DYNNAME.out.0.log > $RSYSLOG_OUT_LOG
+gunzip < $RSYSLOG_DYNNAME.out.1.log >> $RSYSLOG_OUT_LOG
+gunzip < $RSYSLOG_DYNNAME.out.2.log >> $RSYSLOG_OUT_LOG
+gunzip < $RSYSLOG_DYNNAME.out.3.log >> $RSYSLOG_OUT_LOG
+gunzip < $RSYSLOG_DYNNAME.out.4.log >> $RSYSLOG_OUT_LOG
+#cat $RSYSLOG_DYNNAME.out.* > $RSYSLOG_OUT_LOG
 seq_check 0 3999 -E
 exit_test

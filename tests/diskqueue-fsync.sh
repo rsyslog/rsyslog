@@ -21,7 +21,7 @@ $ModLoad ../plugins/imtcp/.libs/imtcp
 $InputTCPServerRun '$TCPFLOOD_PORT'
 
 # set spool locations and switch queue to disk-only mode
-$WorkDirectory test-spool
+$WorkDirectory '$RSYSLOG_DYNNAME'.spool
 $MainMsgQueueSyncQueueFiles on
 $MainMsgQueueTimeoutShutdown 10000
 $MainMsgQueueFilename mainq

@@ -6,7 +6,7 @@ add_conf '
 module(load="../plugins/imfile/.libs/imfile" mode="polling" pollingInterval="1")
 
 input(type="imfile"
-      File="./rsyslog.input"
+      File="./'$RSYSLOG_DYNNAME'.input"
       Tag="file:"
       PersistStateInterval="1"
       readTimeout="3"
@@ -28,10 +28,10 @@ startup
 # we need to sleep a bit between writes to give imfile a chance
 # to pick up the data (IN MULTIPLE ITERATIONS!)
 echo 'msgnum:0
- msgnum:1' > rsyslog.input
+ msgnum:1' > $RSYSLOG_DYNNAME.input
 ./msleep 8000
 echo ' msgnum:2
- msgnum:3' >> rsyslog.input
+ msgnum:3' >> $RSYSLOG_DYNNAME.input
 
 # we now do a stop and restart of rsyslog. This checks that everything
 # works across restarts.
@@ -44,16 +44,16 @@ wait_shutdown    # we need to wait until rsyslogd is finished!
 startup
 
 # new data
-echo ' msgnum:4' >> rsyslog.input
+echo ' msgnum:4' >> $RSYSLOG_DYNNAME.input
 ./msleep 8000
 echo ' msgnum:5
- msgnum:6' >> rsyslog.input
+ msgnum:6' >> $RSYSLOG_DYNNAME.input
 ./msleep 8000
 
 # the next line terminates our test. It is NOT written to the output file,
 # as imfile waits whether or not there is a follow-up line that it needs
 # to combine.
-#echo 'END OF TEST' >> rsyslog.input
+#echo 'END OF TEST' >> $RSYSLOG_DYNNAME.input
 #./msleep 2000
 
 shutdown_when_empty # shut down rsyslogd when done processing messages

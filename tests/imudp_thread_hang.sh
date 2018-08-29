@@ -8,7 +8,7 @@ echo \[imudp_thread_hang\]: a situation where imudp caused a hang
 . $srcdir/diag.sh init
 generate_conf
 add_conf '
-$WorkDirectory test-spool
+$WorkDirectory '$RSYSLOG_DYNNAME'.spool
 
 module(load="../plugins/imudp/.libs/imudp" threads="3")
 input(type="imudp" Address="127.0.0.1" Port="20514")

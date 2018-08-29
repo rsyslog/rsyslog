@@ -7,8 +7,16 @@
 # omprog is going to write to the pipe (to send a message to the
 # program), and when omprog is going to read from the pipe (when it
 # is expecting the program to confirm the last message).
-
 . $srcdir/diag.sh init
+
+uname -a
+if [ `uname` = "SunOS" ] ; then
+   echo "This test currently does not work on all flavors of Solaris"
+   echo "looks like a problem with signal delivery to the script"
+   exit 77
+fi
+
+$srcdir/diag.sh check-command-available lsof
 generate_conf
 add_conf '
 module(load="../plugins/omprog/.libs/omprog")
@@ -18,7 +26,7 @@ template(name="outfmt" type="string" string="%msg%\n")
 :msg, contains, "msgnum:" {
     action(
         type="omprog"
-        binary=`echo $srcdir/testsuites/omprog-restart-terminated-bin.sh`
+        binary="'$RSYSLOG_DYNNAME'.omprog-restart-terminated-bin.sh"
         template="outfmt"
         name="omprog_action"
         queue.type="Direct"  # the default; facilitates sync with the child process
@@ -30,7 +38,9 @@ template(name="outfmt" type="string" string="%msg%\n")
     )
 }
 '
-. $srcdir/diag.sh check-command-available lsof
+
+# we need a test-specifc program name, as we use it inside the process table
+cp -f $srcdir/testsuites/omprog-restart-terminated-bin.sh $RSYSLOG_DYNNAME.omprog-restart-terminated-bin.sh 
 
 startup
 . $srcdir/diag.sh wait-startup
@@ -44,23 +54,23 @@ injectmsg 1 1
 injectmsg 2 1
 . $srcdir/diag.sh wait-queueempty
 
-pkill -USR1 -f omprog-restart-terminated-bin.sh
-sleep .1
+pkill -USR1 -f $RSYSLOG_DYNNAME.omprog-restart-terminated-bin.sh
+sleep 1 # ensure signal is delivered on (very) slow machines
 
 injectmsg 3 1
 injectmsg 4 1
 . $srcdir/diag.sh wait-queueempty
 
-pkill -TERM -f omprog-restart-terminated-bin.sh
-sleep .1
+pkill -TERM -f $RSYSLOG_DYNNAME.omprog-restart-terminated-bin.sh
+sleep 1 # ensure signal is delivered on (very) slow machines
 
 injectmsg 5 1
 injectmsg 6 1
 injectmsg 7 1
 . $srcdir/diag.sh wait-queueempty
 
-pkill -USR1 -f omprog-restart-terminated-bin.sh
-sleep .1
+pkill -USR1 -f $RSYSLOG_DYNNAME.omprog-restart-terminated-bin.sh
+sleep 1 # ensure signal is delivered on (very) slow machines
 
 injectmsg 8 1
 injectmsg 9 1
@@ -73,7 +83,7 @@ child_netstat=$(netstat -p | grep "$child_pid/bash")
 shutdown_when_empty
 wait_shutdown
 
-expected_output="Starting
+EXPECTED="Starting
 Received msgnum:00000000:
 Received msgnum:00000001:
 Received msgnum:00000002:
@@ -96,12 +106,7 @@ Received msgnum:00000008:
 Received msgnum:00000009:
 Terminating normally"
 
-written_output=$(<$RSYSLOG_OUT_LOG)
-if [[ "$expected_output" != "$written_output" ]]; then
-    echo unexpected omprog script output:
-    echo "$written_output"
-    error_exit 1
-fi
+cmp_exact $RSYSLOG_OUT_LOG
 
 if [[ "$start_fd_count" != "$end_fd_count" ]]; then
     echo "file descriptor leak: started with $start_fd_count open files, ended with $end_fd_count"

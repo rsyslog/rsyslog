@@ -364,6 +364,57 @@ TESTS +=  \
 endif # HAVE_VALGRIND
 endif # ENABLE_DEFAULT_TESTS
 
+
+if ENABLE_ELASTICSEARCH_TESTS
+TESTS +=  \
+	es-basic-server.sh \
+	es-maxbytes-bulk.sh \
+	es-basic-errfile-empty.sh \
+	es-basic-errfile-popul.sh \
+	es-bulk-errfile-empty.sh \
+	es-bulk-errfile-popul.sh \
+	es-writeoperation.sh
+
+es-basic-server.log: es-basic-bulk.log
+es-maxbytes-bulk.log: es-basic-server.log
+es-basic-errfile-empty.log: es-maxbytes-bulk.log
+es-basic-errfile-popul.log: es-basic-errfile-empty.log
+es-bulk-errfile-empty.log: es-basic-errfile-popul.log
+es-bulk-errfile-popul.log: es-bulk-errfile-empty.log
+es-writeoperation.log: es-bulk-errfile-popul.log
+
+if ENABLE_IMPSTATS
+TESTS +=  \
+	es-basic-ha.sh \
+	es-bulk-retry.sh
+
+es-basic-ha.log: es-writeoperation.log
+es-bulk-retry.log: es-basic-ha.log
+endif
+if ENABLE_IMFILE
+TESTS +=  \
+	es-bulk-errfile-popul-def-format.sh \
+	es-bulk-errfile-popul-erronly.sh \
+	es-bulk-errfile-popul-erronly-interleaved.sh \
+	es-bulk-errfile-popul-def-interleaved.sh
+
+es-bulk-errfile-popul-def-format.log: es-bulk-retry.log
+es-bulk-errfile-popul-erronly.log: es-bulk-errfile-popul-def-format.log
+es-bulk-errfile-popul-erronly-interleaved.log: es-bulk-errfile-popul-erronly.log
+es-bulk-errfile-popul-def-interleaved.log: es-bulk-errfile-popul-erronly-interleaved.log
+endif
+if HAVE_VALGRIND
+TESTS +=  \
+	es-basic-bulk-vg.sh \
+	es-basic-ha-vg.sh
+
+es-basic-bulk-vg.log: es-writeoperation.log
+es-basic-bulk-vg.log: es-bulk-retry.log
+es-basic-bulk-vg.log: es-bulk-errfile-popul-def-interleaved.log
+es-basic-ha-vg.log: es-basic-bulk-vg.log
+endif
+endif # if ENABLE_ELASTICSEARCH_TESTS
+
 if ENABLE_LIBFAKETIME
 TESTS +=  \
 	now_family_utc.sh \
@@ -399,6 +450,13 @@ TESTS += \
 	pgsql-template-cnf6.sh \
 	pgsql-actq-mt-withpause.sh \
 	pgsql-template-threads-cnf6.sh
+
+pgsql-basic-cnf6.log: pgsql-basic.log
+pgsql-basic-threads-cnf6.log: pgsql-basic-cnf6.log
+pgsql-template.log: pgsql-basic-threads-cnf6.log
+pgsql-template-cnf6.log: pgsql-template.log
+pgsql-actq-mt-withpause.log: pgsql-template-cnf6.log
+pgsql-template-threads-cnf6.log: pgsql-actq-mt-withpause.log
 if HAVE_VALGRIND
 TESTS += \
 	pgsql-basic-vg.sh \
@@ -406,6 +464,12 @@ TESTS += \
 	pgsql-basic-cnf6-vg.sh \
 	pgsql-template-cnf6-vg.sh \
 	pgsql-actq-mt-withpause-vg.sh
+
+pgsql-basic-vg.log: pgsql-template-threads-cnf6.log
+pgsql-template-vg.log: pgsql-basic-vg.log
+pgsql-basic-cnf6-vg.log: pgsql-template-vg.log
+pgsql-template-cnf6-vg.log: pgsql-basic-cnf6-vg.log
+pgsql-actq-mt-withpause-vg.log: pgsql-template-cnf6-vg.log
 endif
 endif
 endif
@@ -419,19 +483,35 @@ TESTS +=  \
 	mysql-actq-mt-withpause.sh \
 	action-tx-single-processing.sh \
 	action-tx-errfile.sh
+
+mysql-basic-cnf6.log: mysql-basic.log
+mysql-asyn.log: mysql-basic-cnf6.log
+mysql-actq-mt.log: mysql-asyn.log
+mysql-actq-mt-withpause.log: mysql-actq-mt.log
+action-tx-single-processing.log: mysql-actq-mt-withpause.log
+action-tx-errfile.log: action-tx-single-processing.log
+
 if HAVE_VALGRIND
 TESTS +=  \
 	mysql-basic-vg.sh \
 	mysql-asyn-vg.sh \
 	mysql-actq-mt-withpause-vg.sh
+mysql-basic-vg.log: action-tx-errfile.log
+mysql-asyn-vg.log: mysql-basic-vg.log
+mysql-actq-mt-withpause-vg.log: mysql-asyn-vg.log
 endif
+
 if ENABLE_OMLIBDBI # we piggy-back on MYSQL_TESTS as we need the same environment
 TESTS +=  \
 	libdbi-basic.sh \
 	libdbi-asyn.sh
+libdbi-basic.log: action-tx-errfile.log
+libdbi-asyn.log: libdbi-basic.log
 if HAVE_VALGRIND
+libdbi-basic.log: mysql-actq-mt-withpause-vg.log
 TESTS +=  \
 	libdbi-basic-vg.sh
+libdbi-basic-vg.log: libdbi-asyn.log
 endif
 endif
 endif #  MYSQL_TESTS
@@ -604,55 +684,6 @@ es-basic-vgthread.log: es-basic-vg.log
 es-basic-server.log: es-basic-vgthread.log
 endif
 endif
-
-
-if ENABLE_ELASTICSEARCH_TESTS
-TESTS +=  \
-	es-basic-server.sh \
-	es-maxbytes-bulk.sh \
-	es-basic-errfile-empty.sh \
-	es-basic-errfile-popul.sh \
-	es-bulk-errfile-empty.sh \
-	es-bulk-errfile-popul.sh \
-	es-writeoperation.sh
-
-es-basic-server.log: es-basic-bulk.log
-es-maxbytes-bulk.log: es-basic-server.log
-es-basic-errfile-empty.log: es-maxbytes-bulk.log
-es-basic-errfile-popul.log: es-basic-errfile-empty.log
-es-bulk-errfile-empty.log: es-basic-errfile-popul.log
-es-bulk-errfile-popul.log: es-bulk-errfile-empty.log
-es-writeoperation.log: es-writeoperation.log
-
-if ENABLE_IMPSTATS
-TESTS +=  \
-	es-basic-ha.sh \
-	es-bulk-retry.sh
-
-es-basic-ha.log: es-writeoperation.log
-es-bulk-retry.log: es-basic-ha.log
-endif
-if ENABLE_IMFILE
-TESTS +=  \
-	es-bulk-errfile-popul-def-format.sh \
-	es-bulk-errfile-popul-erronly.sh \
-	es-bulk-errfile-popul-erronly-interleaved.sh \
-	es-bulk-errfile-popul-def-interleaved.sh
-
-es-bulk-errfile-popul-def-format.log: es-bulk-retry.log
-es-bulk-errfile-popul-erronly.log: es-bulk-errfile-popul-def-format.log
-es-bulk-errfile-popul-erronly-interleaved.log: es-bulk-errfile-popul-erronly.log
-es-bulk-errfile-popul-def-interleaved.log: es-bulk-errfile-popul-erronly-interleaved.log
-endif
-if HAVE_VALGRIND
-TESTS +=  \
-	es-basic-bulk-vg.sh \
-	es-basic-ha-vg.sh
-
-es-basic-bulk-vg.log: es-bulk-errfile-popul-def-interleaved.log
-es-basic-ha-vg.log: es-basic-bulk-vg.log
-endif
-endif # if ENABLE_ELASTICSEARCH_TESTS
 
 if ENABLE_MMPSTRUCDATA
 TESTS +=  \
@@ -1422,7 +1453,6 @@ EXTRA_DIST= \
 	asynwr_tinybuf.sh \
 	wr_large_async.sh \
 	wr_large_sync.sh \
-	wr_large.sh \
 	asynwr_deadlock.sh \
 	asynwr_deadlock_2.sh \
 	asynwr_deadlock2.sh \
@@ -1487,7 +1517,6 @@ EXTRA_DIST= \
 	glbl-oversizeMsg-truncate-imfile.sh \
 	dynfile_invld_async.sh \
 	dynfile_invld_sync.sh \
-	dynfile_cachemiss.sh \
 	dynfile_invalid2.sh \
 	rulesetmultiqueue.sh \
 	rulesetmultiqueue-v6.sh \

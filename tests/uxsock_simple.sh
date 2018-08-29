@@ -3,6 +3,7 @@
 # all data to an output file, then a rsyslog instance is started which generates
 # messages and sends them to the unix socket. Datagram sockets are being used.
 # added 2010-08-06 by Rgerhards
+. $srcdir/diag.sh init
 
 uname
 if [ `uname` = "FreeBSD" ] ; then
@@ -10,22 +11,18 @@ if [ `uname` = "FreeBSD" ] ; then
    exit 77
 fi
 
-echo ===============================================================================
-echo \[uxsock_simple.sh\]: simple tests for omuxsock functionality
-
 # create the pipe and start a background process that copies data from 
 # it to the "regular" work file
-. $srcdir/diag.sh init
 generate_conf
 add_conf '
 $MainMsgQueueTimeoutShutdown 10000
 
 $ModLoad ../plugins/omuxsock/.libs/omuxsock
 $template outfmt,"%msg:F,58:2%\n"
-$OMUXSockSocket rsyslog-testbench-dgram-uxsock
+$OMUXSockSocket '$RSYSLOG_DYNNAME'-testbench-dgram-uxsock
 :msg, contains, "msgnum:" :omuxsock:;outfmt
 '
-./uxsockrcvr -srsyslog-testbench-dgram-uxsock -o $RSYSLOG_OUT_LOG -t 60 &
+./uxsockrcvr -s$RSYSLOG_DYNNAME-testbench-dgram-uxsock -o $RSYSLOG_OUT_LOG -t 60 &
 BGPROCESS=$!
 echo background uxsockrcvr process id is $BGPROCESS
 

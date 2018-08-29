@@ -104,6 +104,7 @@ function generate_conf() {
 		export RSYSLOG_OUT_LOG="${RSYSLOG_DYNNAME}.out.log"
 		export RSYSLOG2_OUT_LOG="${RSYSLOG_DYNNAME}_2.out.log"
 		export RSYSLOG_PIDBASE="${RSYSLOG_DYNNAME}_" # also used by instance 2!
+		mkdir $RSYSLOG_DYNNAME.spool
 	else
 		export IMDIAG_PORT2=$new_port
 	fi
@@ -253,14 +254,18 @@ function shutdown_when_empty() {
 	else
 	   echo Shutting down instance 1
 	fi
+	ls -l $RSYSLOG_PIDBASE$1.pid 
 	. $srcdir/diag.sh wait-queueempty $1
 	if [ "$RSYSLOG_PIDBASE" == "" ]; then
 		echo "RSYSLOG_PIDBASE is EMPTY! - bug in test? (instance $1)"
 		exit 1
 	fi
+	#set -x
+	#ls -l $RSYSLOG_PIDBASE$1.pid
 	cp $RSYSLOG_PIDBASE$1.pid $RSYSLOG_PIDBASE$1.pid.save
 	$TESTTOOL_DIR/msleep 500 # wait a bit (think about slow testbench machines!)
 	kill `cat $RSYSLOG_PIDBASE$1.pid` # note: we do not wait for the actual termination!
+	#set +x
 }
 
 
@@ -385,6 +390,8 @@ function seq_check() {
 	$RS_SORTCMD -g < ${RSYSLOG_OUT_LOG} | ./chkseq -s$1 -e$2 $3 $4 $5 $6 $7
 	if [ "$?" -ne "0" ]; then
 		echo "sequence error detected in $RSYSLOG_OUT_LOG"
+		echo "sorted data has been placed in error.log"
+		$RS_SORTCMD -g < ${RSYSLOG_OUT_LOG} > error.log
 		error_exit 1 
 	fi
 }
@@ -450,14 +457,12 @@ function exit_test() {
 	# now real cleanup
 	rm -f rsyslog.action.*.include
 	rm -f work rsyslog.out.* xlate*.lkp_tbl
-	rm -rf test-spool test-logdir stat-file1
-	rm -f -r rsyslog.input.*
-	rm -f rsyslog.input rsyslog.conf.tlscert stat-file1 rsyslog.empty rsyslog.input.* imfile-state*
-	rm -rf rsyslog.input-symlink.log rsyslog-link.*.log targets
+	rm -rf test-logdir stat-file1
+	rm -f rsyslog.conf.tlscert stat-file1 rsyslog.empty imfile-state*
+	rm -rf rsyslog-link.*.log targets
 	rm -f ${TESTCONF_NM}.conf
 	rm -f tmp.qi nocert
-	rm -f imfile-state:.-rsyslog.input
-	rm -f $RSYSLOG_DYNNAME*  # delete all of our dynamic files
+	rm -fr $RSYSLOG_DYNNAME*  # delete all of our dynamic files
 	unset TCPFLOOD_EXTRA_OPTS
 	printf "Test SUCCESFULL\n"
 	echo  -------------------------------------------------------------------------------
@@ -471,6 +476,17 @@ function exit_test() {
 function get_free_port() {
 python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()'
 }
+
+
+# sort the output file just like we normally do it, but do not call
+# seqchk. This is needed for some operations where we need the sort
+# result for some preprocessing. Note that a later seqchk will sort
+# again, but that's not an issue.
+function presort() {
+	rm -f $RSYSLOG_DYNNAME.presort
+	$RS_SORTCMD -g < ${RSYSLOG_OUT_LOG} > $RSYSLOG_DYNNAME.presort
+}
+
 
 #START: ext kafka config
 dep_cache_dir=$(readlink -f .dep_cache)
@@ -564,17 +580,15 @@ case $1 in
 		rm -f log log* # RSyslog debug output 
 		rm -f work 
 		#rm -f rsyslog*.out.log # we need this while the sndrcv tests are not converted
-		rm -rf test-spool test-logdir stat-file1
-		rm -f rsyslog.input.*
-		rm -f rsyslog.input rsyslog.empty rsyslog.input.* imfile-state* omkafka-failed.data
-		rm -rf rsyslog.input-symlink.log rsyslog-link.*.log targets
+		rm -rf test-logdir stat-file1
+		rm -f rsyslog.empty imfile-state* omkafka-failed.data
+		rm -rf rsyslog-link.*.log targets
 		rm -f tmp.qi nocert
 		rm -f core.* vgcore.* core*
 		# Note: rsyslog.action.*.include must NOT be deleted, as it
 		# is used to setup some parameters BEFORE calling init. This
 		# happens in chained test scripts. Delete on exit is fine,
 		# though.
-		mkdir test-spool
 		# note: TCPFLOOD_EXTRA_OPTS MUST NOT be unset in init, because
 		# some tests need to set it BEFORE calling init to accomodate
 		# their generic test drivers.
@@ -635,7 +649,7 @@ case $1 in
 			   error_exit 1
 			fi
 		done
-		echo "rsyslogd$2 started, start msg not yet seen, pid " `cat $RSYSLOG_PIDBASE$2.pid`
+		echo "rsyslogd$2 started, start msg not yet seen, pid " `cat $RSYSLOG_PIDBASE$2.pid` pidfile: $RSYSLOG_PIDBASE$2.pid
 		;;
    'wait-startup') # wait for rsyslogd startup ($2 is the instance)
 		echo RSYSLOG_DYNNAME: ${RSYSLOG_DYNNAME}
@@ -748,20 +762,13 @@ case $1 in
 		;;
    'check-mainq-spool') # check if mainqueue spool files exist, if not abort (we just check .qi).
 		echo There must exist some files now:
-		ls -l test-spool
+		ls -l $RSYSLOG_DYNNAME.spool
 		echo .qi file:
-		cat test-spool/mainq.qi
-		if test ! -f test-spool/mainq.qi; then
+		cat $RSYSLOG_DYNNAME.spool/mainq.qi
+		if test ! -f $RSYSLOG_DYNNAME.spool/mainq.qi; then
 		  echo "error: mainq.qi does not exist where expected to do so!"
 		  error_exit 1
 		fi
-		;;
-   'presort')	# sort the output file just like we normally do it, but do not call
-		# seqchk. This is needed for some operations where we need the sort
-		# result for some preprocessing. Note that a later seqchk will sort
-		# again, but that's not an issue.
-		rm -f work
-		$RS_SORTCMD -g < ${RSYSLOG_OUT_LOG} > work
 		;;
    'assert-equal')
 		if [ "x$4" == "x" ]; then
@@ -809,7 +816,7 @@ case $1 in
 		if [ "$?" -ne "0" ]; then
 		    printf "\n============================================================\n"
 		    echo FAIL: content-check failed to find "'$2'", content is
-		    cat ${RSYSLOG_OUT_LOG}
+		    cat -n ${RSYSLOG_OUT_LOG}
 		    error_exit 1
 		fi
 		;;
@@ -931,7 +938,7 @@ case $1 in
 		if [ "$?" -ne "0" ]; then
 		    echo FAIL: custom-content-check failed to find "'$2'" inside "'$3'"
 		    echo "file contents:"
-		    cat $3
+		    cat -n $3
 		    error_exit 1
 		fi
 		set +x
@@ -960,7 +967,7 @@ case $1 in
 		if [ "$?" -ne "0" ]; then
 		    echo content-check failed, not every line matched pattern "'$2'"
 		    echo "file contents:"
-		    cat $4
+		    cat -n $4
 		    error_exit 1
 		fi
 		;;

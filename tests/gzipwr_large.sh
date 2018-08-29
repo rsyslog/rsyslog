@@ -4,9 +4,7 @@
 #
 # added 2010-03-10 by Rgerhards
 #
-# This file is part of the rsyslog project, released  under GPLv3
-echo ===============================================================================
-echo TEST: \[gzipwr_large.sh\]: test for gzip file writing for large message sets
+# This file is part of the rsyslog project, released under ASL 2.0
 . $srcdir/diag.sh init
 generate_conf
 add_conf '

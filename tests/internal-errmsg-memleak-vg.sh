@@ -21,7 +21,7 @@ global(processInternalMessages="off")
 $RepeatedMsgReduction on # keep this on because many distros have set it
 
 module(load="../plugins/imfile/.libs/imfile") # mode="polling" pollingInterval="1")
-input(type="imfile" File="./rsyslog.input" Tag="tag1" ruleset="ruleset1")
+input(type="imfile" File="./'$RSYSLOG_DYNNAME'.input" Tag="tag1" ruleset="ruleset1")
 
 template(name="tmpl1" type="string" string="%msg%\n")
 ruleset(name="ruleset1") {

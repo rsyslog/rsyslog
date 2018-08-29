@@ -18,7 +18,7 @@ $InputTCPServerRun '$TCPFLOOD_PORT'
 $ModLoad ../plugins/omtesting/.libs/omtesting
 
 # set spool locations and switch queue to disk-only mode
-$WorkDirectory test-spool
+$WorkDirectory '$RSYSLOG_DYNNAME'.spool
 $MainMsgQueueFilename mainq
 $IncludeConfig '${RSYSLOG_DYNNAME}'work-queuemode.conf
 
@@ -41,8 +41,8 @@ injectmsg 0 10000
 . $srcdir/diag.sh shutdown-immediate
 wait_shutdown
 . $srcdir/diag.sh check-mainq-spool
-./mangle_qi -d -q test-spool/mainq.qi > tmp.qi
-mv tmp.qi test-spool/mainq.qi
+./mangle_qi -d -q ${RSYSLOG_DYNNAME}.spool/mainq.qi > tmp.qi
+mv tmp.qi ${RSYSLOG_DYNNAME}.spool/mainq.qi
 
 echo "Enter phase 2, rsyslogd restart"
 

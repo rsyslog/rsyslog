@@ -7,7 +7,6 @@ if [ $? -eq 1 ]; then
   echo "imrelp parameter oversizeMode not available. Test stopped"
   exit 77
 fi;
-echo '<167>Mar  1 01:00:00 172.20.245.8 tag msgnum:00000000:240:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX' > rsyslog.input
 generate_conf
 add_conf '
 module(load="../plugins/imfile/.libs/imfile")
@@ -15,12 +14,13 @@ global(maxMessageSize="230"
 	oversizemsg.input.mode="truncate")
 
 
-input(type="imfile" File="./rsyslog.input" tag="tag:")
+input(type="imfile" File="./'$RSYSLOG_DYNNAME'.input" tag="tag:")
 
 template(name="outfmt" type="string" string="%rawmsg%\n")
 action(type="omfile" template="outfmt"
 				 file=`echo $RSYSLOG_OUT_LOG`)
 '
+echo '<167>Mar  1 01:00:00 172.20.245.8 tag msgnum:00000000:240:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX' > $RSYSLOG_DYNNAME.input
 startup
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown

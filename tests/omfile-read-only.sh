@@ -32,8 +32,8 @@ wait_shutdown
 # MUST have some more, and these be in sequence. So we now read
 # the first message number and calculate based on it what must be
 # present in the output file.
-. $srcdir/diag.sh presort
-let firstnum=$((10#`$RS_HEADCMD -n1 work`)) # work is the sorted output file
+presort
+let firstnum=$((10#`$RS_HEADCMD -n1 $RSYSLOG_DYNNAME.presort`))
 echo "info: first message expected to be number $firstnum, using that value."
 seq_check $firstnum $(($messages-1))
 exit_test

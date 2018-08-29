@@ -12,8 +12,8 @@ $rulesetparser pmrfc3164.hostname_with_slashes
 local4.debug action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
-echo '<167>Mar  6 16:57:54 hostname1/hostname2 test: msgnum:0' > rsyslog.input
-tcpflood -B -I rsyslog.input
+echo '<167>Mar  6 16:57:54 hostname1/hostname2 test: msgnum:0' > $RSYSLOG_DYNNAME.input
+tcpflood -B -I $RSYSLOG_DYNNAME.input
 shutdown_when_empty
 wait_shutdown
 echo "hostname1/hostname2" | cmp - $RSYSLOG_OUT_LOG

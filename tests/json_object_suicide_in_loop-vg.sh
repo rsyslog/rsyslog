@@ -1,16 +1,14 @@
 #!/bin/bash
+# basic test for looping over json object and unsetting it while inside the loop-body
 # added 2016-03-31 by singh.janmejay
 # This file is part of the rsyslog project, released under ASL 2.0
+. $srcdir/diag.sh init
 
 uname
 if [ `uname` = "FreeBSD" ] ; then
    echo "This test currently does not work on FreeBSD."
    exit 77
 fi
-
-echo ===============================================================================
-echo \[json_object_sucide_in_loop-vg.sh\]: basic test for looping over json object and unsetting it while inside the loop-body
-. $srcdir/diag.sh init
 generate_conf
 add_conf '
 template(name="corge" type="string" string="corge: key: %$.corge!key% val: %$.corge!value%\n")
@@ -33,7 +31,7 @@ foreach ($.quux in $!foo) do {
 	}
   action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="quux")
   foreach ($.corge in $.quux!value) do {
-    action(type="omfile" file="./rsyslog.out.async.log" template="corge" queue.type="linkedlist" action.copyMsg="on")
+    action(type="omfile" file="'$RSYSLOG_DYNNAME'.out.async.log" template="corge" queue.type="linkedlist" action.copyMsg="on")
   }
 }
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="post_suicide_foo")
@@ -50,6 +48,6 @@ wait_shutdown_vg
 . $srcdir/diag.sh content-check 'quux: { "key": "str3", "value": "ghi2" }'
 . $srcdir/diag.sh assert-content-missing 'quux: { "key": "str4", "value": "jkl3" }'
 . $srcdir/diag.sh content-check 'quux: { "key": "obj", "value": { "bar": { "k1": "important_msg", "k2": "other_msg" } } }'
-. $srcdir/diag.sh custom-content-check 'corge: key: bar val: { "k1": "important_msg", "k2": "other_msg" }' 'rsyslog.out.async.log'
+. $srcdir/diag.sh custom-content-check 'corge: key: bar val: { "k1": "important_msg", "k2": "other_msg" }' $RSYSLOG_DYNNAME.out.async.log
 . $srcdir/diag.sh content-check "post_suicide_foo: ''"
 exit_test

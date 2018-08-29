@@ -7,7 +7,7 @@
 generate_conf
 add_conf '
 module(load="../plugins/omtesting/.libs/omtesting")
-global(workDirectory="test-spool")
+global(workDirectory="'${RSYSLOG_DYNNAME}'.spool")
 main_queue(queue.filename="mainq" queue.maxDiskSpace="4m"
 	queue.maxfilesize="1m"
 	queue.timeoutenqueue="300000"
@@ -23,10 +23,10 @@ template(name="outfmt" type="string"
 '
 startup
 injectmsg 0 20000
-ls -l test-spool
+ls -l ${RSYSLOG_DYNNAME}.spool
 shutdown_when_empty
 wait_shutdown
-ls -l test-spool
+ls -l ${RSYSLOG_DYNNAME}.spool
 seq_check 0 19999
 
 exit_test

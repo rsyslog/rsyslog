@@ -20,14 +20,14 @@ fi
 generate_conf
 add_conf '
 module(load="../plugins/imuxsock/.libs/imuxsock"
-       SysSock.name="testbench_socket")
+       SysSock.name="'$RSYSLOG_DYNNAME'-testbench_socket")
 
 $template outfmt,"%msg:%\n"
 *.notice      action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 # send a message with trailing LF
-logger -d -u testbench_socket test
+logger -d -u $RSYSLOG_DYNNAME-testbench_socket test
 # the sleep below is needed to prevent too-early termination of rsyslogd
 ./msleep 100
 shutdown_when_empty # shut down rsyslogd when done processing messages

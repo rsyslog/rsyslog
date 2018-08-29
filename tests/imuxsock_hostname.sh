@@ -12,7 +12,7 @@ add_conf '
 global(localHostName="rsyslog-testbench-hostname")
 
 module(load="../plugins/imuxsock/.libs/imuxsock" sysSock.use="off")
-input(type="imuxsock" Socket="testbench_socket")
+input(type="imuxsock" Socket="'$RSYSLOG_DYNNAME'-testbench_socket")
 
 template(name="outfmt" type="string" string="%hostname:%\n")
 local1.*    action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
@@ -20,7 +20,7 @@ local1.*    action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 startup
 # the message itself is irrelevant. The only important thing is
 # there is one
-./syslog_caller -m1 -C "uxsock:testbench_socket"
+./syslog_caller -m1 -C "uxsock:$RSYSLOG_DYNNAME-testbench_socket"
 # the sleep below is needed to prevent too-early termination of rsyslogd
 ./msleep 100
 shutdown_when_empty # shut down rsyslogd when done processing messages

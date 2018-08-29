@@ -99,9 +99,7 @@ rm ${RSYSLOG_DYNNAME}.out.stats.log
 . $srcdir/diag.sh allow-single-stats-flush-after-block-and-wait-for-it
 . $srcdir/diag.sh await-stats-flush-after-block
 
-echo doing shutdown
 shutdown_when_empty
-echo wait on shutdown
 wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg
 

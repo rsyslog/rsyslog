@@ -1,8 +1,7 @@
 #!/bin/bash
 # added 2015-03-02 by singh.janmejay
+# test to assert attempt to iterate upon a non-array json-object fails gracefully
 # This file is part of the rsyslog project, released under ASL 2.0
-echo ===============================================================================
-echo \[json_nonarray_looping.sh\]: test to assert attempt to iterate upon a non-array json-object fails gracefully
 . $srcdir/diag.sh init
 generate_conf
 add_conf '
@@ -19,14 +18,14 @@ action(type="mmjsonparse")
 set $.garply = "";
 
 ruleset(name="prefixed_writer" queue.type="linkedlist" queue.workerthreads="5") {
-  action(type="omfile" file="./rsyslog.out.prefixed.log" template="prefixed_grault" queue.type="linkedlist")
+  action(type="omfile" file="'$RSYSLOG_DYNNAME'.out.prefixed.log" template="prefixed_grault" queue.type="linkedlist")
 }
 
 foreach ($.quux in $!foo) do {
   action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="quux")
   foreach ($.corge in $.quux!bar) do {
      reset $.grault = $.corge;
-     action(type="omfile" file="./rsyslog.out.async.log" template="grault" queue.type="linkedlist" action.copyMsg="on")
+     action(type="omfile" file="'$RSYSLOG_DYNNAME'.out.async.log" template="grault" queue.type="linkedlist" action.copyMsg="on")
      call prefixed_writer
      if ($.garply != "") then
          set $.garply = $.garply & ", ";
@@ -37,9 +36,7 @@ action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="garply")
 '
 startup
 tcpflood -m 1 -I $srcdir/testsuites/json_nonarray_input
-echo doing shutdown
 shutdown_when_empty
-echo wait on shutdown
 wait_shutdown
 . $srcdir/diag.sh assert-content-missing 'quux'
 exit_test

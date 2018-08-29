@@ -8,7 +8,7 @@ echo [imfile-rename.sh]
 . $srcdir/diag.sh init
 generate_conf
 add_conf '
-$WorkDirectory test-spool
+$WorkDirectory '$RSYSLOG_DYNNAME'.spool
 
 /* Filter out busy debug output */
 global(
@@ -21,7 +21,7 @@ module(	load="../plugins/imfile/.libs/imfile"
 	PollingInterval="1")
 
 input(type="imfile"
-	File="./rsyslog.input.*.log"
+	File="./'$RSYSLOG_DYNNAME'.input.*.log"
 	Tag="file:"
 	Severity="error"
 	Facility="local7"
@@ -45,21 +45,21 @@ if $msg contains "msgnum:" then
 '
 
 # generate input file first. 
-./inputfilegen -m $TESTMESSAGES > rsyslog.input.1.log
-ls -li rsyslog.input*
+./inputfilegen -m $TESTMESSAGES > $RSYSLOG_DYNNAME.input.1.log
+ls -li $RSYSLOG_DYNNAME.input*
 
 startup
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown	# we need to wait until rsyslogd is finished!
 
 # Move to another filename
-mv rsyslog.input.1.log rsyslog.input.2.log
+mv $RSYSLOG_DYNNAME.input.1.log rsyslog.input.2.log
 
 # generate some more input into moved file 
-./inputfilegen -m $TESTMESSAGES -i $TESTMESSAGES >> rsyslog.input.2.log
-ls -li rsyslog.input*
-echo ls test-spool:
-ls -l test-spool
+./inputfilegen -m $TESTMESSAGES -i $TESTMESSAGES >> $RSYSLOG_DYNNAME.input.2.log
+ls -li $RSYSLOG_DYNNAME.input*
+echo ls ${RSYSLOG_DYNNAME}.spool:
+ls -l ${RSYSLOG_DYNNAME}.spool
 
 startup
 shutdown_when_empty # shut down rsyslogd when done processing messages

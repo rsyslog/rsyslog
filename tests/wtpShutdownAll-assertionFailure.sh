@@ -8,7 +8,7 @@ $LocalHostName wtpshutdownall
 $PreserveFQDN on
 
 global(
-	workDirectory="test-spool"
+	workDirectory="'${RSYSLOG_DYNNAME}'.spool"
 )
 
 module(load="../plugins/mmjsonparse/.libs/mmjsonparse")
@@ -16,7 +16,7 @@ module(load="../plugins/impstats/.libs/impstats" interval="300"
 	resetCounters="on" format="cee" ruleset="metrics-impstat" log.syslog="on")
 
 ruleset(name="metrics-impstat" queue.type="Direct"){
-	action(type="omfile" file="test-spool/stats.log")
+	action(type="omfile" file="'$RSYSLOG_DYNNAME'.spool/stats.log")
 }
 '
 startup

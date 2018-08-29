@@ -13,7 +13,7 @@ $MaxMessageSize 128
 global(oversizemsg.input.mode="accept" oversizemsg.report="on")
 module(load="../plugins/imfile/.libs/imfile")
 input(type="imfile"
-      File="./rsyslog.input"
+      File="./'$RSYSLOG_DYNNAME'.input"
       discardTruncatedMsg="off"
       Tag="file:"
       startmsg.regex="^[^ ]"
@@ -40,11 +40,11 @@ msgnum:2 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 msgnum:6 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
  msgnum:7 ffffffffffffffffffffffffffffffffffffffffffff
  msgnum:8 gggggggggggggggggggggggggggggggggggggggggggg
-msgnum:9' > rsyslog.input
+msgnum:9' > $RSYSLOG_DYNNAME.input
 # the next line terminates our test. It is NOT written to the output file,
 # as imfile waits whether or not there is a follow-up line that it needs
 # to combine.
-echo 'END OF TEST' >> rsyslog.input
+echo 'END OF TEST' >> $RSYSLOG_DYNNAME.input
 # sleep a little to give rsyslog a chance to begin processing
 ./msleep 500
 

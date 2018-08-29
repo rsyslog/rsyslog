@@ -8,13 +8,14 @@
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 # added 2018-03-29 by rgerhards
 . $srcdir/diag.sh init
+. $srcdir/diag.sh check-inotify
 generate_conf
 add_conf '
-global(workDirectory="test-spool")
+global(workDirectory="'${RSYSLOG_DYNNAME}'.spool")
 module(load="../plugins/imfile/.libs/imfile")
 
 input(type="imfile"
-      File="./rsyslog.input"
+      File="./'$RSYSLOG_DYNNAME'.input"
       Tag="file:"
       ReadMode="2")
 
@@ -31,29 +32,28 @@ if $msg contains "msgnum:" then
    template="outfmt"
  )
 '
-. $srcdir/diag.sh check-inotify
 
 # do mock-up setup
 echo 'msgnum:0
- msgnum:1' > rsyslog.input
-echo 'msgnum:2' >> rsyslog.input
+ msgnum:1' > $RSYSLOG_DYNNAME.input
+echo 'msgnum:2' >> $RSYSLOG_DYNNAME.input
 
 # we need to patch the state file to match the current inode number
-inode=$(ls -i rsyslog.input|awk '{print $1}')
+inode=$(ls -i $RSYSLOG_DYNNAME.input|awk '{print $1}')
 leninode=${#inode}
 newline="+inode:2:${leninode}:${inode}:"
 
-sed s/+inode:2:7:4464465:/${newline}/ <$srcdir/testsuites/imfile-old-state-file_imfile-state_.-rsyslog.input > test-spool/imfile-state\:.-rsyslog.input
-printf "info: new input file: $(ls -i rsyslog.input)\n"
+sed s/+inode:2:7:4464465:/${newline}/ <$srcdir/testsuites/imfile-old-state-file_imfile-state_.-rsyslog.input > ${RSYSLOG_DYNNAME}.spool/imfile-state\:.-$RSYSLOG_DYNNAME.input
+printf "info: new input file: $(ls -i $RSYSLOG_DYNNAME.input)\n"
 printf "info: new inode line: ${newline}\n"
 printf "info: patched state file:\n"
-cat test-spool/imfile-state\:.-rsyslog.input
+cat ${RSYSLOG_DYNNAME}.spool/imfile-state\:.-$RSYSLOG_DYNNAME.input
 
 startup
 
 echo 'msgnum:3
- msgnum:4' >> rsyslog.input
-echo 'msgnum:5' >> rsyslog.input
+ msgnum:4' >> $RSYSLOG_DYNNAME.input
+echo 'msgnum:5' >> $RSYSLOG_DYNNAME.input
 
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown    # we need to wait until rsyslogd is finished!

@@ -4,9 +4,7 @@
 # has a 2 second timeout, so we wait 4 seconds to be on the save side.
 #
 # added 2010-03-09 by Rgerhards
-# This file is part of the rsyslog project, released  under GPLv3
-echo ===============================================================================
-echo TEST: \[asynwr_timeout.sh\]: test async file writing timeout writes
+# This file is part of the rsyslog project, released  under ASL 2.0
 . $srcdir/diag.sh init
 generate_conf
 add_conf '
@@ -22,14 +20,10 @@ $OMFileIOBufferSize 10k
 $OMFileAsyncWriting on
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
-# uncomment for debugging support:
-#export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
-#export RSYSLOG_DEBUGLOG="log"
 startup
 # send 35555 messages, make sure file size is not a multiple of
 # 10K, the buffer size!
 tcpflood -m 35555
-sleep 4 # wait for output writer to write and empty buffer
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate
 seq_check 0 35554
