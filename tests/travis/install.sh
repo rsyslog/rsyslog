@@ -52,7 +52,8 @@ fi
 
 # As travis has no xenial images, we always need to install librdkafka from source
 if [ "x$KAFKA" == "xYES" ]; then 
-	sudo apt-get install -qq liblz4-dev
+	sudo apt-get install -qq liblz4-dev 
+	# For kafka testbench, "kafkacat" package is needed!
 	git clone https://github.com/edenhill/librdkafka > /dev/null
 	(unset CFLAGS; cd librdkafka ; ./configure --prefix=/usr --CFLAGS="-g" > /dev/null ; make -j2  > /dev/null ; sudo make install > /dev/null)
 	rm -rf librdkafka # get rid of source, e.g. for line length check

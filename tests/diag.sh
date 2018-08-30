@@ -619,7 +619,7 @@ function gzip_seq_check() {
 function tcpflood() {
 	eval ./tcpflood -p$TCPFLOOD_PORT "$@" $TCPFLOOD_EXTRA_OPTS
 	if [ "$?" -ne "0" ]; then
-		echo "error during tcpflood! see ${RSYSLOG_OUT_LOG}.save for what was written"
+		echo "error during tcpflood on port ${TCPFLOOD_PORT}! see ${RSYSLOG_OUT_LOG}.save for what was written"
 		cp ${RSYSLOG_OUT_LOG} ${RSYSLOG_OUT_LOG}.save
 		error_exit 1 stacktrace
 	fi
@@ -694,8 +694,11 @@ function presort() {
 dep_cache_dir=$(pwd)/.dep_cache
 dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.13/zookeeper-3.4.13.tar.gz
 dep_zk_cached_file=$dep_cache_dir/zookeeper-3.4.13.tar.gz
-#	dep_kafka_url=http://www-us.apache.org/dist/kafka/0.10.2.2/kafka_2.12-0.10.2.2.tgz
-#	dep_kafka_cached_file=$dep_cache_dir/kafka_2.12-0.10.2.2.tgz
+
+# byANDRE: We stay with kafka 0.10.x for now. Newer Kafka Versions have changes that
+#	makes creating testbench with single kafka instances difficult.
+# old version -> dep_kafka_url=http://www-us.apache.org/dist/kafka/0.10.2.2/kafka_2.12-0.10.2.2.tgz
+# old version -> dep_kafka_cached_file=$dep_cache_dir/kafka_2.12-0.10.2.2.tgz
 dep_kafka_url=http://www-us.apache.org/dist/kafka/2.0.0/kafka_2.12-2.0.0.tgz
 dep_kafka_cached_file=$dep_cache_dir/kafka_2.12-2.0.0.tgz
 
@@ -1160,6 +1163,8 @@ case $1 in
 		$TESTTOOL_DIR/msleep 2000
 		;;
 	 'start-kafka')
+		# Force IPv4 usage of Kafka!
+		export KAFKA_OPTS="-Djava.net.preferIPv4Stack=True"
 		if [ "x$2" == "x" ]; then
 			dep_work_dir=$(readlink -f .dep_wrk)
 			dep_work_kafka_config="kafka-server.properties"
@@ -1382,7 +1387,9 @@ case $1 in
 				echo "Topic-name not provided."
 				exit 1
 		fi
-		(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --create --zookeeper localhost:$dep_work_port/kafka --topic $2 --partitions 2 --replication-factor 1)
+		(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --zookeeper localhost:$dep_work_port/kafka --create --topic $2 --replication-factor 1 --partitions 2 )
+		(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --zookeeper localhost:$dep_work_port/kafka --alter --topic $2 --delete-config retention.ms)
+		(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --zookeeper localhost:$dep_work_port/kafka --alter --topic $2 --delete-config retention.bytes)
 		;;
 	 'delete-kafka-topic')
 		if [ "x$3" == "x" ]; then

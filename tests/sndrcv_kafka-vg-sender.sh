@@ -16,7 +16,7 @@ export TESTMESSAGESFULL=1000
 echo \[sndrcv_kafka-vg-sender.sh\]: Give Kafka some time to process topic create ...
 sleep 5
 
-echo \[sndrcv_kafka-vg-sender.sh\]: Init Testbench 
+echo \[sndrcv_kafka-vg-sender.sh\]: Init Testbench
 . $srcdir/diag.sh init
 
 echo \[sndrcv_kafka-vg-sender.sh\]: Starting receiver instance [omkafka]
@@ -25,9 +25,9 @@ generate_conf
 add_conf '
 module(load="../plugins/imkafka/.libs/imkafka")
 /* Polls messages from kafka server!*/
-input(	type="imkafka" 
-	topic="static" 
-	broker="localhost:29092" 
+input(	type="imkafka"
+	topic="static"
+	broker="localhost:29092"
 	consumergroup="default"
 	confParam=[ "compression.codec=none",
 		"socket.timeout.ms=5000",
@@ -54,11 +54,11 @@ input(type="imtcp" port="'$TCPFLOOD_PORT'")	/* this port for tcpflood! */
 
 template(name="outfmt" type="string" string="%msg%\n")
 
-action(	name="kafka-fwd" 
-	type="omkafka" 
-	topic="static" 
-	broker="localhost:29092" 
-	template="outfmt" 
+action(	name="kafka-fwd"
+	type="omkafka"
+	topic="static"
+	broker="localhost:29092"
+	template="outfmt"
 	confParam=[	"compression.codec=none",
 			"socket.timeout.ms=5000",
 			"socket.keepalive.enable=true",
@@ -77,7 +77,7 @@ action(	name="kafka-fwd"
 ' 2
 startup_vg 2
 
-echo \[sndrcv_kafka-vg-sender.sh\]: Inject messages into rsyslog sender instance  
+echo \[sndrcv_kafka-vg-sender.sh\]: Inject messages into rsyslog sender instance
 tcpflood -m$TESTMESSAGES -i1
 
 echo \[sndrcv_kafka-vg-sender.sh\]: Sleep to give rsyslog instances time to process data ...
@@ -95,7 +95,7 @@ echo \[sndrcv_kafka-vg-sender.sh\]: Stopping receiver instance [omkafka]
 shutdown_when_empty
 wait_shutdown
 
-echo \[sndrcv_kafka-vg-sender.sh\]: delete kafka topics 
+echo \[sndrcv_kafka-vg-sender.sh\]: delete kafka topics
 . $srcdir/diag.sh delete-kafka-topic 'static' '.dep_wrk' '22181'
 
 # Do the final sequence check
