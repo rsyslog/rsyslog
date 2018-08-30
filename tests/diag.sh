@@ -99,11 +99,10 @@ function generate_conf() {
 	new_port="$(get_free_port)"
 	if [ "$1" == "" ]; then
 		export IMDIAG_PORT=$new_port
-		export RSYSLOG_DYNNAME="rsyslog_$(basename $0)_${new_port}"
 		export TESTCONF_NM="${RSYSLOG_DYNNAME}_" # this basename is also used by instance 2!
 		export RSYSLOG_OUT_LOG="${RSYSLOG_DYNNAME}.out.log"
 		export RSYSLOG2_OUT_LOG="${RSYSLOG_DYNNAME}_2.out.log"
-		export RSYSLOG_PIDBASE="${RSYSLOG_DYNNAME}_" # also used by instance 2!
+		export RSYSLOG_PIDBASE="${RSYSLOG_DYNNAME}:" # also used by instance 2!
 		mkdir $RSYSLOG_DYNNAME.spool
 	else
 		export IMDIAG_PORT2=$new_port
@@ -548,13 +547,17 @@ case $1 in
 		# some default names (later to be set in other parts, once we support fully
 		# parallel tests)
 		export RSYSLOG_DFLT_LOG_INTERNAL=1 # testbench needs internal messages logged internally!
-		export RSYSLOG2_OUT_LOG=rsyslog2.out.log
-		export RSYSLOG_OUT_LOG=rsyslog.out.log
+		export RSYSLOG2_OUT_LOG=rsyslog2.out.log # TODO: remove
+		export RSYSLOG_OUT_LOG=rsyslog.out.log # TODO: remove
 		export RSYSLOG_PIDBASE="rsyslog" # TODO: remove
-		export RSYSLOG_DYNNAME="rsyslog" # TODO: remove
+		export RSYSLOG_DYNNAME="rstb_$(./test_id $(basename $0))"
 		export IMDIAG_PORT=13500
 		export IMDIAG_PORT2=13501
 		export TCPFLOOD_PORT=13514
+
+		# we create one file with the test name, so that we know what was
+		# left over if "make distcheck" complains
+		touch $RSYSLOG_DYNNAME-$(basename $0).test_id
 
 		if [ -z $RS_SORTCMD ]; then
 			RS_SORTCMD=sort
