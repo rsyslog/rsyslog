@@ -1,5 +1,8 @@
 ------------------------------------------------------------------------------
 Version 8.38.0 [v8-stable] 2018-09-18
+- im[p]tcp: improve error message on connect failure
+  Now a message with the actual OS error is emitted, making things far
+  easier to troubleshoot.
 - omelasticsearch: write all header metadata to $.omes for retries
   Write all of the original request metadata fields to $.omes for
   the retry, if present. This may include all of the following:
