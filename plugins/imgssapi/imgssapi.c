@@ -110,6 +110,7 @@ struct modConfData_s {
 	EMPTY_STRUCT;
 };
 
+static uchar *pszLstnPortFileName = NULL;	/* file for dynamic port */
 static int iTCPSessMax = 200; /* max number of sessions */
 static char *gss_listen_service_name = NULL;
 static int bPermitPlainTcp = 0; /* plain tcp syslog allowed on GSSAPI port? */
@@ -320,8 +321,14 @@ addGSSListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 {
 	DEFiRet;
 
-	srvPort = pNewVal;
+	if((ustrcmp(pNewVal, UCHAR_CONSTANT("0")) == 0 && pszLstnPortFileName == NULL)
+			|| ustrcmp(pNewVal, UCHAR_CONSTANT("0")) < 0) {
+		CHKmalloc(srvPort = (uchar*)strdup("514"));
+	} else {
+		srvPort = pNewVal;
+	}
 
+finalize_it:
 	RETiRet;
 }
 
@@ -768,6 +775,10 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 		free(gss_listen_service_name);
 		gss_listen_service_name = NULL;
 	}
+	if (pszLstnPortFileName != NULL) {
+		free(pszLstnPortFileName);
+		pszLstnPortFileName = NULL;
+	}
 	bPermitPlainTcp = 0;
 	iTCPSessMax = 200;
 	bKeepAlive = 0;
@@ -796,6 +807,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 				   addGSSListener, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgssserverservicename", 0, eCmdHdlrGetWord,
 				   NULL, &gss_listen_service_name, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgsslistenportfilename", 0, eCmdHdlrGetWord,
+				   NULL, &pszLstnPortFileName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgssservermaxsessions", 0, eCmdHdlrInt,
 				   NULL, &iTCPSessMax, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgssserverkeepalive", 0, eCmdHdlrBinary,
