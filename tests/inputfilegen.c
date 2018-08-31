@@ -1,5 +1,5 @@
 /* generate an input file suitable for use by the testbench
- * Copyright (C) 2016 by Pascal Withopf and Adiscon GmbH.
+ * Copyright (C) 2016-2018 by Pascal Withopf and Adiscon GmbH.
  * usage: ./inputfilegen num-lines > file
  * Part of rsyslog, licensed under ASL 2.0
  */
@@ -7,7 +7,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <getopt.h>
+#if defined(_AIX)
+	#include  <unistd.h>
+#else
+	#include <getopt.h>
+#endif
 
 #define DEFMSGS 5
 #define NOEXTRADATA -1

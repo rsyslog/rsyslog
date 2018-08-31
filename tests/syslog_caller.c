@@ -10,7 +10,7 @@
  *
  * Part of the testbench for rsyslog.
  *
- * Copyright 2010-2017 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2010-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -31,7 +31,11 @@
 #include <config.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <getopt.h>
+#if defined(_AIX)
+	#include  <unistd.h>
+#else
+	#include <getopt.h>
+#endif
 #include <errno.h>
 #include <string.h>
 #include <syslog.h>
