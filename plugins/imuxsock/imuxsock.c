@@ -29,7 +29,6 @@
 #define _XPG4_2
 #endif
 #include "config.h"
-#include "rsyslog.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -45,6 +44,7 @@
 #ifdef HAVE_LIBSYSTEMD
 #	include <systemd/sd-daemon.h>
 #endif
+#include "rsyslog.h"
 #include "dirty.h"
 #include "cfsysline.h"
 #include "unicode-helper.h"

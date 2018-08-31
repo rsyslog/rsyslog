@@ -31,8 +31,6 @@
 %top{
 #ifndef __clang_analyzer__ /* this is not really our code */
 #include "config.h"
-#include "rsyslog.h"
-#include "srUtils.h"
 #if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wsign-compare"
 #pragma GCC diagnostic ignored "-Wmissing-noreturn"
@@ -46,6 +44,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include "rsyslog.h"
+#include "srUtils.h"
 #include "parserif.h"
 
 /* TODO: move this to a better modules, refactor -- rgerhards, 2018-01-22 */

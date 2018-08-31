@@ -11,7 +11,7 @@
  *
  * File begun on 2007-07-22 by RGerhards
  *
- * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -32,8 +32,6 @@
  * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
  */
 #include "config.h"
-#include "rsyslog.h"
-#include "rainerscript.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -55,6 +53,8 @@
 #	define PATH_MAX MAXPATHLEN
 #endif
 
+#include "rsyslog.h"
+#include "rainerscript.h"
 #include "cfsysline.h"
 #include "rsconf.h"
 #include "modules.h"

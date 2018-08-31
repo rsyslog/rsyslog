@@ -36,7 +36,6 @@
  * limitations under the License.
  */
 #include "config.h"
-#include "rsyslog.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -53,7 +52,7 @@
 #	include <pthread.h>
 #endif
 
-
+#include "rsyslog.h"
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"

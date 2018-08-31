@@ -12,7 +12,7 @@
  * NOTE: read comments in module-template.h to understand how this pipe
  *       works!
  *
- * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -31,7 +31,6 @@
  * limitations under the License.
  */
 #include "config.h"
-#include "rsyslog.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -44,6 +43,7 @@
 #include <unistd.h>
 #include <sys/file.h>
 
+#include "rsyslog.h"
 #include "syslogd.h"
 #include "syslogd-types.h"
 #include "srUtils.h"

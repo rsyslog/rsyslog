@@ -133,6 +133,7 @@ extern int src_exists;
 /* make sure we uses consistent macros, no matter what the
  * platform gives us.
  */
+#undef LOG_NFACILITIES /* may be system defined, override */
 #define LOG_NFACILITIES 24+1 /* plus one for our special "invld" facility! */
 #define LOG_MAXPRI 191	/* highest supported valid PRI value --> RFC3164, RFC5424 */
 #undef LOG_MAKEPRI

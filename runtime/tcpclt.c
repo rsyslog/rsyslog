@@ -3,7 +3,7 @@
  * This is the implementation of TCP-based syslog clients (the counterpart
  * of the tcpsrv class).
  *
- * Copyright 2007-2012 Adiscon GmbH.
+ * Copyright 2007-2018 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -22,7 +22,6 @@
  * limitations under the License.
  */
 #include "config.h"
-#include "rsyslog.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -37,6 +36,7 @@
 #if HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
+#include "rsyslog.h"
 #include "dirty.h"
 #include "syslogd-types.h"
 #include "net.h"

@@ -12,7 +12,7 @@
  * long term, but it is good to have it out of syslogd.c. Maybe this here is
  * an interim location ;)
  *
- * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -32,7 +32,6 @@
  */
 #include "config.h"
 
-#include "rsyslog.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -53,6 +52,7 @@
 #include <sys/types.h>
 #include <arpa/inet.h>
 
+#include "rsyslog.h"
 #include "syslogd-types.h"
 #include "module-template.h"
 #include "parse.h"

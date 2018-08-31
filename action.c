@@ -83,7 +83,6 @@
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
 #include "config.h"
-#include "rsyslog.h"
 #include <stdio.h>
 #include <assert.h>
 #include <stdarg.h>
@@ -101,6 +100,7 @@
 #endif
 #include <json.h>
 
+#include "rsyslog.h"
 #include "dirty.h"
 #include "template.h"
 #include "action.h"
