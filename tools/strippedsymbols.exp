@@ -12,7 +12,6 @@ ratelimitDestruct
 ratelimitSetThreadSafe
 cnfarrayDup
 cnfarrayContentDestruct
-cnfarrayContentDestruct
 rsCStrConstructFromszStrf
 rsCStrAppendStrf
 gnutls_certificate_type_set_priority
@@ -20,3 +19,5 @@ ratelimitSetSeverity
 msgAddJSON
 GetGnuTLSLoglevel
 statsRecordSender
+currentTimeMills
+lookupPendingReloadCount

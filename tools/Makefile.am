@@ -54,8 +54,8 @@ if OS_APPLE
 rsyslogd_LDFLAGS = -export-dynamic \
 	-Wl,$(top_builddir)/runtime/.libs/librsyslog.a
 endif
-if AIX
-rsyslogd_LDFLAGS = -export-dynamic 
+if OS_AIX
+rsyslogd_LDFLAGS = -export-dynamic -bexpall -bE:strippedsymbols.exp
 #else
 #rsyslogd_LDFLAGS = -export-dynamic \
 	#-Wl,--whole-archive,$(top_builddir)/runtime/.libs/librsyslog.a,--no-whole-archive
