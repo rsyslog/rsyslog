@@ -150,7 +150,6 @@ char *test_rs_strerror_r(int errnum, char *buf, size_t buflen) {
 	return buf;
 }
 
-#define EXIT_FAILURE 1
 #define INVALID_SOCKET -1
 /* Name of input file, must match $IncludeConfig in test suite .conf files */
 #define NETTEST_INPUT_CONF_FILE "nettest.input.conf"
@@ -765,6 +764,7 @@ prepareGenerators()
 	int i;
 	long long msgsThrd;
 	long long starting = 0;
+	pthread_attr_t thrd_attr;
 
 	if(runMultithreaded) {
 		bSilent = 1;
@@ -772,6 +772,9 @@ prepareGenerators()
 	} else {
 		numThrds = 1;
 	}
+
+	pthread_attr_init(&thrd_attr);
+	pthread_attr_setstacksize(&thrd_attr, 4096*1024);
 
 	runningThreads = 0;
 	doRun = 0;
@@ -790,7 +793,7 @@ prepareGenerators()
 		instarray[i].numMsgs = msgsThrd;
 		instarray[i].numSent = 0;
 		instarray[i].idx = i;
-		pthread_create(&(instarray[i].thread), NULL, thrdStarter, instarray + i);
+		pthread_create(&(instarray[i].thread), &thrd_attr, thrdStarter, instarray + i);
 		/*printf("started thread %x\n", (unsigned) instarray[i].thread);*/
 		starting += msgsThrd;
 	}
