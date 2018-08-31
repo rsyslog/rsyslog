@@ -430,6 +430,29 @@ Specifies the rate-limiting burst in number of messages. Default is
 10,000.
 
 
+listenPortFileName
+^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+.. versionadded:: 8.38.0
+
+With this parameter you can specify the name for a file. In this file the
+port, imtcp is connected to, will be written.
+This parameter was introduced because the testbench works with dynamic ports.
+
+.. note::
+
+   If this parameter is set, 0 will be accepted as the port. Otherwise it
+   is automatically changed to port 514
+
+
+
 .. _imtcp-statistic-counter:
 
 Statistic Counter
