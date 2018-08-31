@@ -10,8 +10,9 @@
 #
 # This file can be customized to environment specifics via environment
 # variables:
-# RS_SORTCMD    Sort command to use (must support -g option). If unset,
+# RS_SORTCMD    Sort command to use (must support $RS_SORT_NUMERIC_OPT option). If unset,
 #		"sort" is used. E.g. Solaris needs "gsort"
+# RS_SORT_NUMERIC_OPT option to use for numerical sort, If unset "-g" is used.
 # RS_CMPCMD     cmp command to use. If unset, "cmd" is used.
 #               E.g. Solaris needs "gcmp"
 # RS_HEADCMD    head command to use. If unset, "head" is used.
@@ -71,6 +72,21 @@ function rsyslog_testbench_test_url_access() {
         echo "HTTP endpoint '${http_endpoint}' is reachable! Starting test ..."
     fi
 }
+
+# function to skip a test on a specific platform
+# $1 is what we check in uname, $2 (optioal) is a reason message
+function skip_platform() {
+	if [ "$(uname)" == "$1" ]; then
+		echo "uname $(uname)"
+		echo "test does not work under $1"
+		if [ "$2" != "" ]; then
+			echo "reason: $2"
+		fi
+		exit 77
+	fi
+
+}
+
 
 function setvar_RS_HOSTNAME() {
 	printf "### Obtaining HOSTNAME (prequisite, not actual test) ###\n"
@@ -387,11 +403,11 @@ function error_exit() {
 # $4... are just to have the abilit to pass in more options...
 # add -v to chkseq if you need more verbose output
 function seq_check() {
-	$RS_SORTCMD -g < ${RSYSLOG_OUT_LOG} | ./chkseq -s$1 -e$2 $3 $4 $5 $6 $7
+	$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${RSYSLOG_OUT_LOG} | ./chkseq -s$1 -e$2 $3 $4 $5 $6 $7
 	if [ "$?" -ne "0" ]; then
 		echo "sequence error detected in $RSYSLOG_OUT_LOG"
 		echo "sorted data has been placed in error.log"
-		$RS_SORTCMD -g < ${RSYSLOG_OUT_LOG} > error.log
+		$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${RSYSLOG_OUT_LOG} > error.log
 		error_exit 1 
 	fi
 }
@@ -403,7 +419,7 @@ function seq_check() {
 # $4... are just to have the abilit to pass in more options...
 # add -v to chkseq if you need more verbose output
 function seq_check2() {
-	$RS_SORTCMD -g < ${RSYSLOG2_OUT_LOG}  | ./chkseq -s$1 -e$2 $3 $4 $5 $6 $7
+	$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${RSYSLOG2_OUT_LOG}  | ./chkseq -s$1 -e$2 $3 $4 $5 $6 $7
 	if [ "$?" -ne "0" ]; then
 		echo "sequence error detected"
 		error_exit 1
@@ -415,7 +431,7 @@ function seq_check2() {
 # $4... are just to have the abilit to pass in more options...
 function gzip_seq_check() {
 	ls -l ${RSYSLOG_OUT_LOG}
-	gunzip < ${RSYSLOG_OUT_LOG} | $RS_SORTCMD -g | ./chkseq -v -s$1 -e$2 $3 $4 $5 $6 $7
+	gunzip < ${RSYSLOG_OUT_LOG} | $RS_SORTCMD $RS_SORT_NUMERIC_OPT | ./chkseq -v -s$1 -e$2 $3 $4 $5 $6 $7
 	if [ "$?" -ne "0" ]; then
 		echo "sequence error detected"
 		error_exit 1
@@ -484,7 +500,7 @@ python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsocknam
 # again, but that's not an issue.
 function presort() {
 	rm -f $RSYSLOG_DYNNAME.presort
-	$RS_SORTCMD -g < ${RSYSLOG_OUT_LOG} > $RSYSLOG_DYNNAME.presort
+	$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${RSYSLOG_OUT_LOG} > $RSYSLOG_DYNNAME.presort
 }
 
 
@@ -558,7 +574,14 @@ case $1 in
 
 		if [ -z $RS_SORTCMD ]; then
 			RS_SORTCMD=sort
-		fi  
+		fi
+		if [ -z $RS_SORT_NUMERIC_OPT ]; then
+			if [ "$(uname)" == "AIX" ]; then
+				RS_SORT_NUMERIC_OPT=-n
+			else
+				RS_SORT_NUMERIC_OPT=-g
+			fi
+		fi
 		if [ -z $RS_CMPCMD ]; then
 			RS_CMPCMD=cmp
 		fi

@@ -6,18 +6,12 @@
 # Note that we use the override of the hostname to ensure we do not
 # accidentely get an acceptable FQDN-type hostname during testing.
 # This is part of the rsyslog testbench, licensed under ASL 2.0
-uname
-if [ `uname` = "SunOS" ] ; then
-   echo "Solaris: there seems to be an issue with LD_PRELOAD libraries"
-   exit 77
-fi
-if [ `uname` = "FreeBSD" ] ; then
-   echo "FreeBSD: temporarily disabled until we know what is wrong"
-   echo "see https://github.com/rsyslog/rsyslog/issues/2833"
-   exit 77
-fi
-
 . $srcdir/diag.sh init
+skip_platform "AIX" "we cannot preload required dummy lib"
+skip_platform "SunOS" "there seems to be an issue with LD_PRELOAD libraries"
+skip_platform "FreeBSD" "temporarily disabled until we know what is wrong, \
+see https://github.com/rsyslog/rsyslog/issues/2833"
+
 generate_conf
 add_conf '
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)

@@ -266,25 +266,6 @@ TESTS +=  \
 	rs-cnum.sh \
 	rs-substring.sh \
 	rs-int2hex.sh \
-	mmanon_random_32_ipv4.sh \
-	mmanon_random_cons_32_ipv4.sh \
-	mmanon_recognize_ipv4.sh \
-	mmanon_zero_12_ipv4.sh \
-	mmanon_zero_33_ipv4.sh \
-	mmanon_zero_8_ipv4.sh \
-	mmanon_simple_12_ipv4.sh \
-	mmanon_simple_33_ipv4.sh \
-	mmanon_simple_8_ipv4.sh \
-	mmanon_random_128_ipv6.sh \
-	mmanon_zero_128_ipv6.sh \
-	mmanon_zero_96_ipv6.sh \
-	mmanon_random_cons_128_ipv6.sh \
-	mmanon_zero_50_ipv6.sh \
-	mmanon_recognize_ipv6.sh \
-	mmanon_zero_64_ipv6.sh \
-	mmanon_both_modes_compatible.sh \
-	mmanon_recognize_ipembedded.sh \
-	mmanon_random_cons_128_ipembedded.sh \
 	empty-prop-comparison.sh \
 	rs_optimizer_pri.sh \
 	cee_simple.sh \
@@ -364,6 +345,29 @@ TESTS +=  \
 endif # HAVE_VALGRIND
 endif # ENABLE_DEFAULT_TESTS
 
+
+if ENABLE_MMANON
+TESTS +=  \
+	mmanon_random_32_ipv4.sh \
+	mmanon_random_cons_32_ipv4.sh \
+	mmanon_recognize_ipv4.sh \
+	mmanon_zero_12_ipv4.sh \
+	mmanon_zero_33_ipv4.sh \
+	mmanon_zero_8_ipv4.sh \
+	mmanon_simple_12_ipv4.sh \
+	mmanon_simple_33_ipv4.sh \
+	mmanon_simple_8_ipv4.sh \
+	mmanon_random_128_ipv6.sh \
+	mmanon_zero_128_ipv6.sh \
+	mmanon_zero_96_ipv6.sh \
+	mmanon_random_cons_128_ipv6.sh \
+	mmanon_zero_50_ipv6.sh \
+	mmanon_recognize_ipv6.sh \
+	mmanon_zero_64_ipv6.sh \
+	mmanon_both_modes_compatible.sh \
+	mmanon_recognize_ipembedded.sh \
+	mmanon_random_cons_128_ipembedded.sh
+endif # if ENABLE_MMANON
 
 if ENABLE_ELASTICSEARCH_TESTS
 TESTS +=  \
@@ -499,6 +503,8 @@ TESTS +=  \
 mysql-basic-vg.log: action-tx-errfile.log
 mysql-asyn-vg.log: mysql-basic-vg.log
 mysql-actq-mt-withpause-vg.log: mysql-asyn-vg.log
+
+libdbi-basic.log: mysql-actq-mt-withpause-vg.log # for next block!
 endif
 
 if ENABLE_OMLIBDBI # we piggy-back on MYSQL_TESTS as we need the same environment
@@ -508,7 +514,6 @@ TESTS +=  \
 libdbi-basic.log: action-tx-errfile.log
 libdbi-asyn.log: libdbi-basic.log
 if HAVE_VALGRIND
-libdbi-basic.log: mysql-actq-mt-withpause-vg.log
 TESTS +=  \
 	libdbi-basic-vg.sh
 libdbi-basic-vg.log: libdbi-asyn.log
