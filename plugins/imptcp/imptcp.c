@@ -628,8 +628,9 @@ startupSrv(ptcpsrv_t *pSrv)
 						"error while trying to get socket");
 			}
 			if((fp = fopen((const char*)pSrv->pszLstnPortFileName, "w+")) == NULL) {
-				LogError(errno, NO_ERRCODE, "imptcp: ListenPortFileName: "
+				LogError(errno, RS_RET_IO_ERROR, "imptcp: ListenPortFileName: "
 						"error while trying to open file");
+				ABORT_FINALIZE(RS_RET_IO_ERROR);
 			}
 			if(isIPv6) {
 				fprintf(fp, "%d", ntohs((((struct sockaddr_in6*)r->ai_addr)->sin6_port)));
