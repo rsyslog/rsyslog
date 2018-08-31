@@ -7,7 +7,7 @@
  * \date    2003-09-09
  *          Coding begun.
  *
- * Copyright 2003-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2003-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -29,7 +29,6 @@
  */
 #include "config.h"
 
-#include "rsyslog.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -43,6 +42,8 @@
 #include <ctype.h>
 #include <inttypes.h>
 #include <fcntl.h>
+
+#include "rsyslog.h"
 #include "srUtils.h"
 #include "obj.h"
 #include "errmsg.h"

@@ -22,7 +22,6 @@
  * limitations under the License.
  */
 #include "config.h"
-#include "rsyslog.h"
 
 #include <signal.h>
 #include <stdlib.h>
@@ -39,6 +38,7 @@
 #	include <systemd/sd-daemon.h>
 #endif
 
+#include "rsyslog.h"
 #include "wti.h"
 #include "ratelimit.h"
 #include "parser.h"
@@ -1838,9 +1838,10 @@ wait_timeout(void)
 			if (errno != EINTR)
 			{
 				fprintf(stderr,"%s: ERROR: '%d' recvfrom\n", progname,errno);
-				exit(1);
-			} else  /* punt on short read */
-				continue;
+				exit(1); //TODO: this needs to be handled gracefully
+			} else { /* punt on short read */
+				return;
+			}
 
 			switch(srcpacket.subreq.action)
 			{

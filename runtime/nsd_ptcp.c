@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd interface for plain tcp sockets.
  *
- * Copyright 2007-2017 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -24,7 +24,6 @@
  */
 #include "config.h"
 
-#include "rsyslog.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -39,6 +38,7 @@
 #include <unistd.h>
 #include <netinet/tcp.h>
 
+#include "rsyslog.h"
 #include "syslogd-types.h"
 #include "module-template.h"
 #include "parse.h"

@@ -2,7 +2,7 @@
  * This core plugin is an interface module to message modification
  * modules written in languages other than C.
  *
- * Copyright 2014-2017 by Rainer Gerhards
+ * Copyright 2014-2018 by Rainer Gerhards
  *
  * This file is part of rsyslog.
  *
@@ -21,7 +21,6 @@
  * limitations under the License.
  */
 #include "config.h"
-#include "rsyslog.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -33,6 +32,7 @@
 #include <fcntl.h>
 #include <sys/wait.h>
 #include <sys/uio.h>
+#include "rsyslog.h"
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"

@@ -27,7 +27,6 @@
  * limitations under the License.
  */
 #include "config.h"
-#include "rsyslog.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -57,6 +56,7 @@
 #if HAVE_PATHS_H
 #include <paths.h>
 #endif
+#include "rsyslog.h"
 #include "srUtils.h"
 #include "stringbuf.h"
 #include "syslogd-types.h"
