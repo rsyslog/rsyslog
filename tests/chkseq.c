@@ -41,7 +41,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <getopt.h>
+#if defined(_AIX)
+	#include  <unistd.h>
+#else
+	#include <getopt.h>
+#endif
 
 int main(int argc, char *argv[])
 {

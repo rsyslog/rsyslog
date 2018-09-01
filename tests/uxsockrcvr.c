@@ -34,7 +34,14 @@
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
-#include <getopt.h>
+#if defined(_AIX)
+	#include <sys/types.h>
+	#include  <unistd.h>
+	#include <sys/socket.h>
+	#include <sys/socketvar.h>
+#else
+	#include <getopt.h>
+#endif
 #include <sys/un.h>
 #include <netdb.h>
 #include <poll.h>

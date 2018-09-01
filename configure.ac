@@ -12,7 +12,7 @@ if test "$unamestr" = "AIX"; then
 	LIBS="-lbsd -lsrc"
 	CPPFLAGS="-D_THREAD_SAFE -D_BSD43 -D_AIX"
 	CFLAGS="-D_AIX"
-	LDFLAGS="-qcpluscmt -brtl -bexpall -bE:strippedsymbols.exp "
+	LDFLAGS="-qcpluscmt -brtl "
 	LIBESTR_LIBS="-L/usr/lib/ -lestr"
 	LIBESTR_CFLAGS="-I/usr/include"
 	LIBLOGGING_STDLOG_LIBS="-L/usr/lib/ -llogging-stdlog"
@@ -129,6 +129,8 @@ case "${host}" in
 esac
 AM_CONDITIONAL(OS_APPLE, test x$os_type == xapple)
 AM_CONDITIONAL(OS_LINUX, test x$os_type == xlinux)
+AM_CONDITIONAL(OS_AIX, test x$os_type == xaix)
+
 
 # Running from git source?
 in_git_src=no
