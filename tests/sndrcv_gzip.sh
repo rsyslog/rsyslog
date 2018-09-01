@@ -48,3 +48,4 @@ wait_shutdown
 # may be needed by TLS (once we do it): sleep 60
 # do the final check
 seq_check 1 50000 $3
+exit_test
