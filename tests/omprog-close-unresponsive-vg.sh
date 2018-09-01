@@ -31,7 +31,7 @@ main_queue(
 }
 '
 startup_vg
-. $srcdir/diag.sh wait-startup
+wait_startup
 injectmsg 0 10
 . $srcdir/diag.sh wait-queueempty
 shutdown_when_empty

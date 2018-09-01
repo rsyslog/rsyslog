@@ -35,7 +35,7 @@ testsrv=mmk8s-test-server
 echo starting kubernetes \"emulator\"
 timeout 2m python -u ./mmkubernetes_test_server.py 18443 ${RSYSLOG_PIDBASE}${testsrv}.pid ${RSYSLOG_DYNNAME}${testsrv}.started > mmk8s_srv.log 2>&1 &
 BGPROCESS=$!
-. $srcdir/diag.sh wait-startup $testsrv
+wait_startup $testsrv
 echo background mmkubernetes_test_server.py process id is $BGPROCESS
 
 cat > pod-error1.log <<EOF

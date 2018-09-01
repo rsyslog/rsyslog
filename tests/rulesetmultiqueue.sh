@@ -51,7 +51,7 @@ $InputTCPServerRun '$RSYSLOG_PORT3'
 '
 rm -f ${RSYSLOG_OUT_LOG}1.log ${RSYSLOG_OUT_LOG}2.log ${RSYSLOG_OUT_LOG}3.log
 startup
-. $srcdir/diag.sh wait-startup
+wait_startup
 # now fill the three files (a bit sequentially, but they should
 # still get their share of concurrency - to increase the chance
 # we use three connections per set).

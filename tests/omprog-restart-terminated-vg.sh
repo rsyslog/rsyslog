@@ -35,7 +35,7 @@ template(name="outfmt" type="string" string="%msg%\n")
 }
 '
 startup_vg
-. $srcdir/diag.sh wait-startup
+wait_startup
 injectmsg 0 1
 . $srcdir/diag.sh wait-queueempty
 

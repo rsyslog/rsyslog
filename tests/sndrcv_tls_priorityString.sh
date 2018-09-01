@@ -31,7 +31,7 @@ if $msg contains "msgnum" then {
 }
 '
 startup 
-. $srcdir/diag.sh wait-startup
+wait_startup
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
 generate_conf 2
@@ -53,7 +53,7 @@ action(type="omfwd" Target="127.0.0.1" port="'$PORT_RCVR'" Protocol="tcp" stream
 	gnutlsprioritystring="NORMAL:-MD5")
 ' 2
 startup 2
-. $srcdir/diag.sh wait-startup 2
+wait_startup 2
 # may be needed by TLS (once we do it): sleep 30
 
 # now inject the messages into instance 2. It will connect to instance 1,

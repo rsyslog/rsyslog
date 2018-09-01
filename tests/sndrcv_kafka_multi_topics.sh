@@ -82,7 +82,7 @@ local4.* action(	name="kafka-fwd"
 echo \[sndrcv_kafka_multi_topics.sh\]: Starting sender instance [omkafka]
 export RSYSLOG_DEBUGLOG="log"
 startup
-. $srcdir/diag.sh wait-startup
+wait_startup
 # --- 
 
 
@@ -122,7 +122,7 @@ if ($msg contains "msgnum:") then {
 echo \[sndrcv_kafka_multi_topics.sh\]: Starting receiver instance [imkafka]
 export RSYSLOG_DEBUGLOG="log2"
 startup 2
-. $srcdir/diag.sh wait-startup 2
+wait_startup 2
 # --- 
 
 echo \[sndrcv_kafka.sh\]: Inject messages into rsyslog sender instance  

@@ -25,7 +25,7 @@ if $msg contains "msgnum" then
 	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup_vg
-. $srcdir/diag.sh wait-startup
+wait_startup
 # we use different message counts as this hopefully aids us
 # in finding which sample is leaking. For this, check the number
 # of blocks lost and see what set they match.

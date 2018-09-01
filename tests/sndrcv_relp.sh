@@ -19,7 +19,7 @@ $template outfmt,"%msg:F,58:2%\n"
 :msg, contains, "msgnum:" action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
-. $srcdir/diag.sh wait-startup
+wait_startup
 printf "#### RECEIVER STARTED\n\n"
 
 ########## sender ##########
@@ -34,7 +34,7 @@ input(type="imtcp" port="'$TCPFLOOD_PORT'")	/* this port for tcpflood! */
 action(type="omrelp" name="omrelp" target="127.0.0.1" port="'$PORT_RCVR'")
 ' 2
 startup 2
-. $srcdir/diag.sh wait-startup 2
+wait_startup 2
 # may be needed by TLS (once we do it): sleep 30
 printf "#### SENDER STARTED\n\n"
 
