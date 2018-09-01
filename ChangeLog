@@ -1,5 +1,7 @@
 ------------------------------------------------------------------------------
 Version 8.38.0 [v8-stable] 2018-09-18
+- make rsyslog build on AIX again
+  ... at least for a limited set of default modules
 - im[p]tcp: improve error message on connect failure
   Now a message with the actual OS error is emitted, making things far
   easier to troubleshoot.
