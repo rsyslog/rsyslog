@@ -30,9 +30,7 @@ template(name="outfmt" type="string" string="%msg%\n")
 }
 '
 startup_vg
-wait_startup
 injectmsg 0 10
-. $srcdir/diag.sh wait-queueempty
 shutdown_when_empty
 wait_shutdown_vg
 . $srcdir/diag.sh check-exit-vg

@@ -9,7 +9,7 @@ echo $status
 retry_count=0
 
 read line
-while [[ "x$line" != "x" ]]; do
+while [[ -n "$line" ]]; do
     message=${line//$'\n'}
     echo "=> $message" >> $outfile
 

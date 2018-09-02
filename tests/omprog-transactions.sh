@@ -30,9 +30,7 @@ template(name="outfmt" type="string" string="%msg%\n")
 }
 '
 startup
-wait_startup
 injectmsg 0 10
-. $srcdir/diag.sh wait-queueempty
 shutdown_when_empty
 wait_shutdown
 

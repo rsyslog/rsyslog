@@ -4,15 +4,8 @@
 # Same test than 'omprog-restart-terminated.sh', but checking for memory
 # problems using valgrind. Note it is not necessary to repeat the
 # rest of checks (this simplifies the maintenance of the tests).
+
 . $srcdir/diag.sh init
-
-uname -a
-if [ `uname` = "SunOS" ] ; then
-   echo "This test currently does not work on all flavors of Solaris"
-   echo "looks like a problem with signal delivery to the script"
-   exit 77
-fi
-
 generate_conf
 add_conf '
 module(load="../plugins/omprog/.libs/omprog")
@@ -22,48 +15,59 @@ template(name="outfmt" type="string" string="%msg%\n")
 :msg, contains, "msgnum:" {
     action(
         type="omprog"
-        binary=`echo $srcdir/testsuites/omprog-restart-terminated-bin.sh`
+        binary="'$RSYSLOG_DYNNAME'.omprog-restart-terminated-bin.sh"
         template="outfmt"
         name="omprog_action"
         queue.type="Direct"  # the default; facilitates sync with the child process
         confirmMessages="on"  # facilitates sync with the child process
-        action.resumeRetryCount="10"
+        action.resumeRetryCount="3"
         action.resumeInterval="1"
         action.reportSuspensionContinuation="on"
         signalOnClose="off"
     )
 }
 '
-startup_vg
-wait_startup
-injectmsg 0 1
-. $srcdir/diag.sh wait-queueempty
 
+# we need a test-specific program name, as we use it inside the process table
+cp -f $srcdir/testsuites/omprog-restart-terminated-bin.sh $RSYSLOG_DYNNAME.omprog-restart-terminated-bin.sh
+
+# On Solaris 10, the output of ps is truncated for long process names; use /usr/ucb/ps instead:
+if [[ `uname` = "SunOS" && `uname -r` = "5.10" ]]; then
+    function get_child_pid {
+        echo $(/usr/ucb/ps -awwx | grep "[o]mprog-restart-terminated-bin.sh" | awk '{ print $1 }')
+    }
+else
+    function get_child_pid {
+        echo $(ps -ef | grep "[o]mprog-restart-terminated-bin.sh" | awk '{ print $2 }')
+    }
+fi
+
+startup_vg
+injectmsg 0 1
 injectmsg 1 1
 injectmsg 2 1
 . $srcdir/diag.sh wait-queueempty
 
-pkill -USR1 -f omprog-restart-terminated-bin.sh
-sleep 1 # ensure signal is delivered on (very) slow machines
+kill -s USR1 $(get_child_pid)
+./msleep 100
 
 injectmsg 3 1
 injectmsg 4 1
 . $srcdir/diag.sh wait-queueempty
 
-pkill -TERM -f omprog-restart-terminated-bin.sh
-sleep 1 # ensure signal is delivered on (very) slow machines
+kill -s TERM $(get_child_pid)
+./msleep 100
 
 injectmsg 5 1
 injectmsg 6 1
 injectmsg 7 1
 . $srcdir/diag.sh wait-queueempty
 
-pkill -USR1 -f omprog-restart-terminated-bin.sh
-sleep 1 # ensure signal is delivered on (very) slow machines
+kill -s USR1 $(get_child_pid)
+./msleep 100
 
 injectmsg 8 1
 injectmsg 9 1
-. $srcdir/diag.sh wait-queueempty
 
 shutdown_when_empty
 wait_shutdown_vg

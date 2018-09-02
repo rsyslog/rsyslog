@@ -1,18 +1,12 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 
-# Similar to the 'omprog-restart-terminated.sh' test, using the 'outfile'
-# parameter. The use of this parameter has implications on the file
-# descriptors handled by omprog.
+# Similar to the 'omprog-restart-terminated.sh' test, using the 'output'
+# parameter. Checks that no file descriptors are leaked across restarts
+# of the program when stderr is being captured to a file.
+
 . $srcdir/diag.sh init
 . $srcdir/diag.sh check-command-available lsof
-
-uname -a
-if [ `uname` = "SunOS" ] ; then
-   echo "This test currently does not work on all flavors of Solaris"
-   echo "looks like a problem with signal delivery to the script"
-   exit 77
-fi
 
 generate_conf
 add_conf '
@@ -28,20 +22,30 @@ template(name="outfmt" type="string" string="%msg%\n")
         name="omprog_action"
         queue.type="Direct"  # the default; facilitates sync with the child process
         confirmMessages="on"  # facilitates sync with the child process
-        action.resumeRetryCount="10"
+        action.resumeRetryCount="3"
         action.resumeInterval="1"
         action.reportSuspensionContinuation="on"
         signalOnClose="off"
-        output="./rsyslog.omprog.out.log"
+        output=`echo $RSYSLOG2_OUT_LOG`
     )
 }
 '
 
-# we need a test-specifc program name, as we use it inside the process table
-cp -f $srcdir/testsuites/omprog-restart-terminated-bin.sh $RSYSLOG_DYNNAME.omprog-restart-terminated-bin.sh 
+# we need a test-specific program name, as we use it inside the process table
+cp -f $srcdir/testsuites/omprog-restart-terminated-bin.sh $RSYSLOG_DYNNAME.omprog-restart-terminated-bin.sh
+
+# On Solaris 10, the output of ps is truncated for long process names; use /usr/ucb/ps instead:
+if [[ `uname` = "SunOS" && `uname -r` = "5.10" ]]; then
+    function get_child_pid {
+        echo $(/usr/ucb/ps -awwx | grep "[o]mprog-restart-terminated-bin.sh" | awk '{ print $1 }')
+    }
+else
+    function get_child_pid {
+        echo $(ps -ef | grep "[o]mprog-restart-terminated-bin.sh" | awk '{ print $2 }')
+    }
+fi
 
 startup
-wait_startup
 injectmsg 0 1
 . $srcdir/diag.sh wait-queueempty
 
@@ -52,23 +56,23 @@ injectmsg 1 1
 injectmsg 2 1
 . $srcdir/diag.sh wait-queueempty
 
-pkill -USR1 -f $RSYSLOG_DYNNAME.omprog-restart-terminated-bin.sh
-sleep 1 # ensure signal is delivered on (very) slow machines
+kill -s USR1 $(get_child_pid)
+./msleep 100
 
 injectmsg 3 1
 injectmsg 4 1
 . $srcdir/diag.sh wait-queueempty
 
-pkill -TERM -f $RSYSLOG_DYNNAME.omprog-restart-terminated-bin.sh
-sleep 1 # ensure signal is delivered on (very) slow machines
+kill -s TERM $(get_child_pid)
+./msleep 100
 
 injectmsg 5 1
 injectmsg 6 1
 injectmsg 7 1
 . $srcdir/diag.sh wait-queueempty
 
-pkill -USR1 -f $RSYSLOG_DYNNAME.omprog-restart-terminated-bin.sh
-sleep 1 # ensure signal is delivered on (very) slow machines
+kill -s USR1 $(get_child_pid)
+./msleep 100
 
 injectmsg 8 1
 injectmsg 9 1
@@ -103,6 +107,31 @@ Received msgnum:00000009:
 Terminating normally"
 
 cmp_exact $RSYSLOG_OUT_LOG
+
+EXPECTED="[stderr] Starting
+[stderr] Received msgnum:00000000:
+[stderr] Received msgnum:00000001:
+[stderr] Received msgnum:00000002:
+[stderr] Received SIGUSR1, will terminate after the next message
+[stderr] Received msgnum:00000003:
+[stderr] Terminating without confirming the last message
+[stderr] Starting
+[stderr] Received msgnum:00000003:
+[stderr] Received msgnum:00000004:
+[stderr] Received SIGTERM, terminating
+[stderr] Starting
+[stderr] Received msgnum:00000005:
+[stderr] Received msgnum:00000006:
+[stderr] Received msgnum:00000007:
+[stderr] Received SIGUSR1, will terminate after the next message
+[stderr] Received msgnum:00000008:
+[stderr] Terminating without confirming the last message
+[stderr] Starting
+[stderr] Received msgnum:00000008:
+[stderr] Received msgnum:00000009:
+[stderr] Terminating normally"
+
+cmp_exact $RSYSLOG2_OUT_LOG
 
 if [[ "$start_fd_count" != "$end_fd_count" ]]; then
     echo "file descriptor leak: started with $start_fd_count open files, ended with $end_fd_count"
