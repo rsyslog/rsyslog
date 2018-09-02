@@ -20,11 +20,11 @@ if $msg contains "msgnum" then {
 }'
 startup
 injectmsg  0 50000
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 echo waiting for worker threads to timeout
 ./msleep 3000
 injectmsg  50000 50000
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 echo waiting for worker threads to timeout
 ./msleep 2000
 injectmsg  100000 50000

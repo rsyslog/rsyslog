@@ -23,7 +23,7 @@ template(name="outfmt" type="string"
 '
 startup
 tcpflood -m2500 -P129
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 gzip_seq_check 0 2499
 tcpflood -i2500 -m2500 -P129
 shutdown_when_empty

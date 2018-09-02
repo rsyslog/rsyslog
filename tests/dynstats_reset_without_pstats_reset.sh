@@ -36,10 +36,10 @@ action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 startup
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_1
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_2
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 sleep 1
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_3
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 sleep 1
 echo doing shutdown
 shutdown_when_empty

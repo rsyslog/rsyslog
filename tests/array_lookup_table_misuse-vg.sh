@@ -26,7 +26,7 @@ action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 cp -f $srcdir/testsuites/xlate_array_misuse.lkp_tbl xlate_array.lkp_tbl
 startup_vg
 injectmsg  0 3
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh assert-content-missing "foo"
 . $srcdir/diag.sh assert-content-missing "bar"
 . $srcdir/diag.sh assert-content-missing "baz"
@@ -34,7 +34,7 @@ cp -f $srcdir/testsuites/xlate_array_more_misuse.lkp_tbl xlate_array.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
 injectmsg  0 3
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh assert-content-missing "foo"
 . $srcdir/diag.sh assert-content-missing "bar"
 . $srcdir/diag.sh assert-content-missing "baz"

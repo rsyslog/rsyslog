@@ -36,7 +36,7 @@ startup
 . $srcdir/diag.sh block-stats-flush
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_more_0
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_more_1
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh allow-single-stats-flush-after-block-and-wait-for-it
 
 . $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'foo=' "${RSYSLOG_DYNNAME}.out.stats.log" 5
@@ -64,7 +64,7 @@ rm ${RSYSLOG_DYNNAME}.out.stats.log
 . $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
 . $srcdir/diag.sh block-stats-flush
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_more_2
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh allow-single-stats-flush-after-block-and-wait-for-it
 
 . $srcdir/diag.sh content-check "foo 001 0"

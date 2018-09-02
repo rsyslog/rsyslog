@@ -42,7 +42,7 @@ startup_vg
 . $srcdir/diag.sh allow-single-stats-flush-after-block-and-wait-for-it
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_3
 . $srcdir/diag.sh await-stats-flush-after-block
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
 . $srcdir/diag.sh content-check "foo 001 0"
 . $srcdir/diag.sh content-check "foo 006 0"

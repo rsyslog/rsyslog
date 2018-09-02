@@ -64,7 +64,7 @@ startup 2
 # now inject the messages into instance 2. It will connect to instance 1,
 # and that instance will record the data.
 . $srcdir/diag.sh injectmsg2  1 1000
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 ./msleep 1000 # let things settle down a bit
 
 #
@@ -78,7 +78,7 @@ wait_shutdown
 
 . $srcdir/diag.sh injectmsg2  1001 10000
 ./msleep 3000 # make sure some retries happen (retry interval is set to 3 second)
-. $srcdir/diag.sh get-mainqueuesize 2
+get_mainqueuesize 2
 ls -l ${RSYSLOG_DYNNAME}.spool
 
 #
@@ -88,7 +88,7 @@ echo step 3
 #export RSYSLOG_DEBUGLOG="log2"
 startup
 echo waiting for sender to drain queue [may need a short while]
-. $srcdir/diag.sh wait-queueempty 2
+wait_queueempty 2
 ls -l ${RSYSLOG_DYNNAME}.spool
 OLDFILESIZE=$(stat -c%s ${RSYSLOG_DYNNAME}.spool/mainq.00000001)
 echo file size to expect is $OLDFILESIZE
@@ -100,7 +100,7 @@ echo file size to expect is $OLDFILESIZE
 #
 echo step 4
 . $srcdir/diag.sh injectmsg2  11001 10
-. $srcdir/diag.sh wait-queueempty 2
+wait_queueempty 2
 
 # at this point, the queue file shall not have grown. Note
 # that we MUST NOT shut down the instance right now, because it
@@ -135,7 +135,7 @@ wait_shutdown
 . $srcdir/diag.sh injectmsg2  11011 10000
 sleep 1 # we need to wait, otherwise we may be so fast that the receiver
 # comes up before we have finally suspended the action
-. $srcdir/diag.sh get-mainqueuesize 2
+get_mainqueuesize 2
 ls -l ${RSYSLOG_DYNNAME}.spool
 
 #
@@ -144,7 +144,7 @@ ls -l ${RSYSLOG_DYNNAME}.spool
 echo step 6
 startup
 echo waiting for sender to drain queue [may need a short while]
-. $srcdir/diag.sh wait-queueempty 2
+wait_queueempty 2
 ls -l ${RSYSLOG_DYNNAME}.spool
 
 #

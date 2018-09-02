@@ -28,21 +28,21 @@ echo "empty file..."
 cp -f $srcdir/testsuites/xlate_empty_file.lkp_tbl xlate.lkp_tbl
 startup
 injectmsg  0 5
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 
 echo "table with invalid-json..."
 cp -f $srcdir/testsuites/xlate_invalid_json.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
 injectmsg  0 5
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 
 echo "string-table with no index-key..."
 cp -f $srcdir/testsuites/xlate_string_no_index.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
 injectmsg  0 5
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh assert-content-missing "foo"
 . $srcdir/diag.sh assert-content-missing "bar"
 . $srcdir/diag.sh assert-content-missing "baz"
@@ -52,7 +52,7 @@ cp -f $srcdir/testsuites/xlate_array_no_index.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
 injectmsg  0 5
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh assert-content-missing "foo"
 . $srcdir/diag.sh assert-content-missing "bar"
 . $srcdir/diag.sh assert-content-missing "baz"
@@ -62,7 +62,7 @@ cp -f $srcdir/testsuites/xlate_sparseArray_no_index.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
 injectmsg  0 5
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh assert-content-missing "foo"
 . $srcdir/diag.sh assert-content-missing "bar"
 . $srcdir/diag.sh assert-content-missing "baz"
@@ -72,7 +72,7 @@ cp -f $srcdir/testsuites/xlate_string_no_value.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
 injectmsg  0 5
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh assert-content-missing "baz"
 
 echo "array-table with no value..."
@@ -80,7 +80,7 @@ cp -f $srcdir/testsuites/xlate_array_no_value.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
 injectmsg  0 5
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh assert-content-missing "baz"
 
 echo "sparse-array-table with no value..."
@@ -88,7 +88,7 @@ cp -f $srcdir/testsuites/xlate_sparseArray_no_value.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
 injectmsg  0 5
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh assert-content-missing "baz"
 
 echo "incorrect-version in lookup-table..."
@@ -96,7 +96,7 @@ cp -f $srcdir/testsuites/xlate_incorrect_version.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
 injectmsg  0 5
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh assert-content-missing "foo"
 . $srcdir/diag.sh assert-content-missing "bar"
 . $srcdir/diag.sh assert-content-missing "baz"
@@ -106,7 +106,7 @@ cp -f $srcdir/testsuites/xlate_incorrect_type.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
 injectmsg  0 5
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh assert-content-missing "foo"
 . $srcdir/diag.sh assert-content-missing "bar"
 . $srcdir/diag.sh assert-content-missing "baz"
@@ -116,7 +116,7 @@ cp -f $srcdir/testsuites/xlate_string_no_table.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
 injectmsg  0 5
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh assert-content-missing "baz"
 
 echo "array-table with no table..."
@@ -124,7 +124,7 @@ cp -f $srcdir/testsuites/xlate_array_no_table.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
 injectmsg  0 5
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh assert-content-missing "baz"
 
 echo "sparse-array-table with no table..."
@@ -132,7 +132,7 @@ cp -f $srcdir/testsuites/xlate_sparseArray_no_table.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
 injectmsg  0 5
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh assert-content-missing "baz"
 
 echo "string-table with empty table..."
@@ -140,7 +140,7 @@ cp -f $srcdir/testsuites/xlate_string_empty_table.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
 injectmsg  0 2
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh content-check "msgnum:00000000: baz_str"
 . $srcdir/diag.sh content-check "msgnum:00000001: baz_str"
 
@@ -149,7 +149,7 @@ cp -f $srcdir/testsuites/xlate_array_empty_table.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
 injectmsg  0 2
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh content-check "msgnum:00000000: baz_arr"
 . $srcdir/diag.sh content-check "msgnum:00000001: baz_arr"
 
@@ -158,7 +158,7 @@ cp -f $srcdir/testsuites/xlate_sparseArray_empty_table.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
 injectmsg  0 2
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh content-check "msgnum:00000000: baz_sparse_arr"
 . $srcdir/diag.sh content-check "msgnum:00000001: baz_sparse_arr"
 

@@ -26,10 +26,10 @@ action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 cp -f $srcdir/testsuites/xlate_sparse_array.lkp_tbl xlate_array.lkp_tbl
 startup
 injectmsg  0 1
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh assert-content-missing "foo"
 injectmsg  0 5
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh content-check "msgnum:00000001: foo_old"
 . $srcdir/diag.sh content-check "msgnum:00000002: foo_old"
 . $srcdir/diag.sh content-check "msgnum:00000003: bar_old"
@@ -39,7 +39,7 @@ cp -f $srcdir/testsuites/xlate_sparse_array_more.lkp_tbl xlate_array.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
 injectmsg  0 6
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh content-check "msgnum:00000000: foo_new"
 . $srcdir/diag.sh content-check "msgnum:00000001: foo_new"
 . $srcdir/diag.sh content-check "msgnum:00000002: bar_new"

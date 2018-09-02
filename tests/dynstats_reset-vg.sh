@@ -41,7 +41,7 @@ rst_msleep 8100 #two seconds for unused-metrics to be kept under observation, an
 rst_msleep 8100
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_3
 rst_msleep 8100
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh content-check "foo 001 0"
 . $srcdir/diag.sh content-check "bar 002 0"
 . $srcdir/diag.sh content-check "baz 003 0"

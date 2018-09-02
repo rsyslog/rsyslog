@@ -47,21 +47,21 @@ fi
 
 startup
 injectmsg 0 1
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 
 . $srcdir/diag.sh getpid
 start_fd_count=$(lsof -p $pid | wc -l)
 
 injectmsg 1 1
 injectmsg 2 1
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 
 kill -s USR1 $(get_child_pid)
 ./msleep 100
 
 injectmsg 3 1
 injectmsg 4 1
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 
 kill -s TERM $(get_child_pid)
 ./msleep 100
@@ -69,14 +69,14 @@ kill -s TERM $(get_child_pid)
 injectmsg 5 1
 injectmsg 6 1
 injectmsg 7 1
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 
 kill -s USR1 $(get_child_pid)
 ./msleep 100
 
 injectmsg 8 1
 injectmsg 9 1
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 
 end_fd_count=$(lsof -p $pid | wc -l)
 

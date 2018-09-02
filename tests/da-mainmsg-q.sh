@@ -36,7 +36,7 @@ startup
 # part1: send first 50 messages (in memory, only)
 #tcpflood 127.0.0.1 '$TCPFLOOD_PORT' 1 50
 injectmsg 0 50
-. $srcdir/diag.sh wait-queueempty # let queue drain for this test case
+wait_queueempty # let queue drain for this test case
 
 # part 2: send bunch of messages. This should trigger DA mode
 #injectmsg 50 20000

@@ -330,6 +330,26 @@ function injectmsg() {
 }
 
 
+# show the current main queue size. $1 is the instance.
+function get_mainqueuesize() {
+	if [ "$2" == "2" ]; then
+		echo getmainmsgqueuesize | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
+	else
+		echo getmainmsgqueuesize | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
+	fi
+}
+
+
+# wait for main message queue to be empty. $1 is the instance.
+function wait_queueempty() {
+	if [ "$2" == "2" ]; then
+		echo WaitMainQueueEmpty | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
+	else
+		echo WaitMainQueueEmpty | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
+	fi
+}
+
+
 # shut rsyslogd down when main queue is empty. $1 is the instance.
 function shutdown_when_empty() {
 	if [ "$1" == "2" ]
@@ -339,7 +359,7 @@ function shutdown_when_empty() {
 	   echo Shutting down instance 1
 	fi
 	ls -l $RSYSLOG_PIDBASE$1.pid 
-	. $srcdir/diag.sh wait-queueempty $1
+	wait_queueempty $1
 	if [ "$RSYSLOG_PIDBASE" == "" ]; then
 		echo "RSYSLOG_PIDBASE is EMPTY! - bug in test? (instance $1)"
 		exit 1
@@ -485,6 +505,7 @@ function seq_check() {
 	$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${RSYSLOG_OUT_LOG} | ./chkseq -s$1 -e$2 $3 $4 $5 $6 $7
 	if [ "$?" -ne "0" ]; then
 		echo "sequence error detected in $RSYSLOG_OUT_LOG"
+		echo "number of lines in file: $(wc -l $RSYSLOG_OUT_LOG)"
 		echo "sorted data has been placed in error.log"
 		$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${RSYSLOG_OUT_LOG} > error.log
 		error_exit 1 
@@ -645,10 +666,15 @@ case $1 in
 		# some default names (later to be set in other parts, once we support fully
 		# parallel tests)
 		export RSYSLOG_DFLT_LOG_INTERNAL=1 # testbench needs internal messages logged internally!
+		if [ "$SYSLOG_DYNNAME" != "" ]; then
+			echo "FAIL: \$RSYSLOG_DYNNAME already set in init"
+			echo "hint: was init accidently called twice?"
+			exit 2
+		fi
+		export RSYSLOG_DYNNAME="rstb_$(./test_id $(basename $0))"
 		export RSYSLOG2_OUT_LOG=rsyslog2.out.log # TODO: remove
 		export RSYSLOG_OUT_LOG=rsyslog.out.log # TODO: remove
 		export RSYSLOG_PIDBASE="rsyslog" # TODO: remove
-		export RSYSLOG_DYNNAME="rstb_$(./test_id $(basename $0))"
 		export IMDIAG_PORT=13500
 		export IMDIAG_PORT2=13501
 		export TCPFLOOD_PORT=13514
@@ -684,10 +710,8 @@ case $1 in
 			export TZ=UTC
 		fi
 		rm -f xlate*.lkp_tbl
-		#rm -f rsyslog*.pid.save xlate*.lkp_tbl
 		rm -f log log* # RSyslog debug output 
 		rm -f work 
-		#rm -f rsyslog*.out.log # we need this while the sndrcv tests are not converted
 		rm -rf test-logdir stat-file1
 		rm -f rsyslog.empty imfile-state* omkafka-failed.data
 		rm -rf rsyslog-link.*.log targets
@@ -774,22 +798,6 @@ case $1 in
 		unset terminated
 		unset out_pid
 		;;
-   'get-mainqueuesize') # show the current main queue size
-		if [ "$2" == "2" ]
-		then
-			echo getmainmsgqueuesize | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
-		else
-			echo getmainmsgqueuesize | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
-		fi
-		;;
-   'wait-queueempty') # wait for main message queue to be empty. $2 is the instance.
-		if [ "$2" == "2" ]
-		then
-			echo WaitMainQueueEmpty | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
-		else
-			echo WaitMainQueueEmpty | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
-		fi
-		;;
    'await-lookup-table-reload') # wait for all pending lookup table reloads to complete $2 is the instance.
 		if [ "$2" == "2" ]
 		then
@@ -810,11 +818,6 @@ case $1 in
    'kill-immediate') # kill rsyslog unconditionally
 		kill -9 `cat $RSYSLOG_PIDBASE.pid`
 		# note: we do not wait for the actual termination!
-		;;
-   'injectmsg') # inject messages via our inject interface (imdiag)
-		echo injecting $3 messages
-		echo injectmsg $2 $3 $4 $5 | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
-		# TODO: some return state checking? (does it really make sense here?)
 		;;
    'injectmsg2') # inject messages in INSTANCE 2 via our inject interface (imdiag)
 		echo injecting $3 messages

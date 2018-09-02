@@ -32,7 +32,7 @@ action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 startup_vg
 . $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh content-check "foo 001 0"
 . $srcdir/diag.sh content-check "bar 002 0"
 . $srcdir/diag.sh content-check "baz 003 0"
