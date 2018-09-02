@@ -581,7 +581,7 @@ writeOutputToFile(outputCaptureCtx_t *pCtx, char *buf, ssize_t len)
 
 	if(pCtx->fdFile == -1) {
 		if(pCtx->bFileErr) {  /* discarding output because file couldn't be opened */
-			return;
+			goto done;
 		}
 
 		pCtx->fdFile = open((char*)pCtx->szFileName, O_WRONLY | O_APPEND | O_CREAT,
@@ -590,7 +590,7 @@ writeOutputToFile(outputCaptureCtx_t *pCtx, char *buf, ssize_t len)
 			LogError(errno, RS_RET_NO_FILE_ACCESS, "omprog: error opening output file %s; "
 					"output from program will be discarded", pCtx->szFileName);
 			pCtx->bFileErr = 1;  /* avoid reporting too many errors */
-			return;
+			goto done;
 		}
 	}
 
@@ -617,6 +617,7 @@ writeOutputToFile(outputCaptureCtx_t *pCtx, char *buf, ssize_t len)
 		offset += written;
 	} while(offset < len);
 
+done:
 	pthread_mutex_unlock(&pCtx->mutWrite);
 }
 
