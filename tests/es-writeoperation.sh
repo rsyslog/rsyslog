@@ -25,7 +25,6 @@ if $msg contains "msgnum:" then
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 
-# . $srcdir/diag.sh es-init
 startup
 injectmsg  0 1
 shutdown_when_empty
@@ -38,7 +37,6 @@ else
 	error_exit 1
 fi
 
-. $srcdir/diag.sh init
 generate_conf
 add_conf '
 template(name="tpl" type="string"
@@ -57,7 +55,6 @@ if $msg contains "msgnum:" then
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 
-# . $srcdir/diag.sh es-init
 startup
 injectmsg  0 1
 shutdown_when_empty
@@ -70,7 +67,6 @@ else
 	error_exit 1
 fi
 
-. $srcdir/diag.sh init
 generate_conf
 add_conf '
 template(name="tpl" type="string"

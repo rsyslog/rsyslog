@@ -109,6 +109,4 @@ if [[ "$start_fd_count" != "$end_fd_count" ]]; then
     error_exit 1
 fi
 
-cat -n $RSYSLOG_OUT_LOG # 2018-08-29 debug, remove when no longer needed
-
 exit_test

@@ -8,13 +8,12 @@ CLEANFILES=\
 	rsyslog*.pid.save xlate*.lkp_tbl \
 	log log* \
 	work \
-	rsyslog_*.out.* \
-	rsyslog2_*.out.* \
 	test-spool test-logdir stat-file1 \
 	rsyslog.pipe rsyslog.input.* \
 	rsyslog.input rsyslog.input.* imfile-state* omkafka-failed.data \
 	rsyslog.input-symlink.log rsyslog-link.*.log targets \
 	HOSTNAME \
+	rstb_* \
 	tmp.qi nocert
 
 CLEANFILES+= \
