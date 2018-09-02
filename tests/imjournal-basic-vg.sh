@@ -27,7 +27,7 @@ journal_write_state=$?
 ./msleep 500
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown_vg
-. $srcdir/diag.sh check-exit-vg
+. $srcdir/diag.sh check_exit_vg
 
 if [ $journal_write_state -ne 0 ]; then
         echo "SKIP: failed to put test into journal."

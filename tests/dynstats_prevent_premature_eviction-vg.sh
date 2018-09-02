@@ -50,7 +50,7 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown_vg
-. $srcdir/diag.sh check-exit-vg
+. $srcdir/diag.sh check_exit_vg
  # because dyn-accumulators for existing metrics were posted-to under a second, they should not have been evicted
 . $srcdir/diag.sh custom-content-check 'baz=2' "${RSYSLOG_DYNNAME}.out.stats.log"
 . $srcdir/diag.sh custom-content-check 'bar=1' "${RSYSLOG_DYNNAME}.out.stats.log"

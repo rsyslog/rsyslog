@@ -25,7 +25,7 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown_vg
-. $srcdir/diag.sh check-exit-vg
+. $srcdir/diag.sh check_exit_vg
 # now we need our custom logic to see if the result file is empty
 # (what it should be!)
 cmp $RSYSLOG_OUT_LOG /dev/null

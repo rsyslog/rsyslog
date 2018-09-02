@@ -21,7 +21,7 @@ tcpflood -m1 -M "\"<112> 255.255.255.255 debian tag2: this is a test message\""
 tcpflood -m1 -M "\"<177> centos 192.168.0.9 tag3: this is a test message\""
 shutdown_when_empty
 wait_shutdown_vg
-. $srcdir/diag.sh check-exit-vg
+. $srcdir/diag.sh check_exit_vg
 echo 'host: ubuntu, ip: 127.0.0.1, tag: tag1, pri: 189, syslogfacility: 23, syslogseverity: 5 msg: this is a test message
 host: debian, ip: 255.255.255.255, tag: tag2, pri: 112, syslogfacility: 14, syslogseverity: 0 msg: this is a test message
 host: centos, ip: 192.168.0.9, tag: tag3, pri: 177, syslogfacility: 22, syslogseverity: 1 msg: this is a test message' | cmp - $RSYSLOG_OUT_LOG

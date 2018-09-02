@@ -48,7 +48,7 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown_vg
-. $srcdir/diag.sh check-exit-vg
+. $srcdir/diag.sh check_exit_vg
 . $srcdir/diag.sh content-check 'quux: abc0'
 . $srcdir/diag.sh content-check 'quux: def1'
 . $srcdir/diag.sh content-check 'quux: ghi2'

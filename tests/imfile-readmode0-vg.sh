@@ -32,7 +32,7 @@ printf '\nmsgnum:5' >> $RSYSLOG_DYNNAME.input # this one shouldn't be written to
 
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown_vg    # we need to wait until rsyslogd is finished!
-. $srcdir/diag.sh check-exit-vg
+. $srcdir/diag.sh check_exit_vg
 
 ## check if we have the correct number of messages
 NUMLINES=$(grep -c HEADER  $RSYSLOG_OUT_LOG 2>/dev/null)

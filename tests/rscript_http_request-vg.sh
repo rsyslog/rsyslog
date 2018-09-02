@@ -22,7 +22,7 @@ startup_vg
 tcpflood -m10
 shutdown_when_empty
 wait_shutdown_vg
-. $srcdir/diag.sh check-exit-vg
+. $srcdir/diag.sh check_exit_vg
 echo '{ "reply": "msgnum:00000000:" }
 { "reply": "msgnum:00000001:" }
 { "reply": "msgnum:00000002:" }

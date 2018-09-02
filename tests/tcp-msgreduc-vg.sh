@@ -29,5 +29,5 @@ tcpflood -t 127.0.0.1 -m 1 -r -M "\"<133>2011-03-01T11:22:12Z host tag msgh ...x
 ./msleep 1500
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown_vg
-. $srcdir/diag.sh check-exit-vg
+. $srcdir/diag.sh check_exit_vg
 exit_test

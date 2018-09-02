@@ -30,7 +30,7 @@ echo waiting for worker threads to timeout
 injectmsg  100000 50000
 shutdown_when_empty
 wait_shutdown_vg
-. $srcdir/diag.sh check-exit-vg
+. $srcdir/diag.sh check_exit_vg
 
 psql -h localhost -U postgres -d syslogtest -f testsuites/pgsql-select-msg.sql -t -A > $RSYSLOG_OUT_LOG
 seq_check  0 149999

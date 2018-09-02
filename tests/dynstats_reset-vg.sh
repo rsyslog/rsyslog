@@ -52,7 +52,7 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown_vg
-. $srcdir/diag.sh check-exit-vg
+. $srcdir/diag.sh check_exit_vg
  # because dyn-metrics would be reset before it can accumulate and report high counts, sleep between msg-injection ensures that
 . $srcdir/diag.sh custom-assert-content-missing 'baz=2' "${RSYSLOG_DYNNAME}.out.stats.log"
 . $srcdir/diag.sh custom-assert-content-missing 'foo=2' "${RSYSLOG_DYNNAME}.out.stats.log"

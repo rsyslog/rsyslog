@@ -31,7 +31,7 @@ echo waiting for worker threads to timeout
 injectmsg  100000 50000
 shutdown_when_empty
 wait_shutdown_vg 
-. $srcdir/diag.sh check-exit-vg
+. $srcdir/diag.sh check_exit_vg
 # note "-s" is requried to suppress the select "field header"
 mysql -s --user=rsyslog --password=testbench < testsuites/mysql-select-msg.sql > $RSYSLOG_OUT_LOG
 seq_check  0 149999

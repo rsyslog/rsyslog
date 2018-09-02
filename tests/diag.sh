@@ -344,12 +344,12 @@ function shutdown_when_empty() {
 		echo "RSYSLOG_PIDBASE is EMPTY! - bug in test? (instance $1)"
 		exit 1
 	fi
-	#set -x
-	#ls -l $RSYSLOG_PIDBASE$1.pid
+	set -x
+	ls -l $RSYSLOG_PIDBASE$1.pid
 	cp $RSYSLOG_PIDBASE$1.pid $RSYSLOG_PIDBASE$1.pid.save
 	$TESTTOOL_DIR/msleep 500 # wait a bit (think about slow testbench machines!)
 	kill `cat $RSYSLOG_PIDBASE$1.pid` # note: we do not wait for the actual termination!
-	#set +x
+	set +x
 }
 
 
@@ -358,6 +358,7 @@ function shutdown_when_empty() {
 function wait_shutdown() {
 	i=0
 	out_pid=`cat $RSYSLOG_PIDBASE$1.pid.save`
+	echo wait on shutdown of $out_pid
 	if [[ "x$out_pid" == "x" ]]
 	then
 		terminated=1
@@ -399,6 +400,16 @@ function wait_shutdown_vg() {
 	then
 	   echo "ABORT! core file exists"
 	   error_exit 1
+	fi
+}
+
+
+# check exit code for valgrind error
+function check_exit_vg(){
+	if [ "$RSYSLOGD_EXIT" -eq "10" ]
+	then
+		echo "valgrind run FAILED with exceptions - terminating"
+		error_exit 1
 	fi
 }
 
@@ -762,13 +773,6 @@ case $1 in
 		done
 		unset terminated
 		unset out_pid
-		;;
-   'check-exit-vg') # wait for main message queue to be empty. $2 is the instance.
-		if [ "$RSYSLOGD_EXIT" -eq "10" ]
-		then
-			echo "valgrind run FAILED with exceptions - terminating"
-			exit 1
-		fi
 		;;
    'get-mainqueuesize') # show the current main queue size
 		if [ "$2" == "2" ]

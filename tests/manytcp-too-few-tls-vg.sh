@@ -37,7 +37,7 @@ tcpflood -c1000 -m40000
 sleep 1
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown_vg	# we need to wait until rsyslogd is finished!
-. $srcdir/diag.sh check-exit-vg
+. $srcdir/diag.sh check_exit_vg
 # we do not do a seq check, as of the design of this test some messages
 # will be lost. So there is no point in checking if all were received. The
 # point is that we look at the valgrind result, to make sure we do not

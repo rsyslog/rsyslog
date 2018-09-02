@@ -88,7 +88,7 @@ sleep 5
 echo \[sndrcv_kafka-vg-sender.sh\]: Stopping sender instance [imkafka]
 shutdown_when_empty 2
 wait_shutdown_vg 2
-. $srcdir/diag.sh check-exit-vg 2
+. $srcdir/diag.sh check_exit_vg 2
 
 echo \[sndrcv_kafka-vg-sender.sh\]: Sleep to give rsyslog receiver time to receive data ...
 sleep 20
