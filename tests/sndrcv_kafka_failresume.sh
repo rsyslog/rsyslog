@@ -79,12 +79,12 @@ action(	name="kafka-fwd"
 echo \[sndrcv_kafka_failresume.sh\]: Starting sender instance [imkafka]
 export RSYSLOG_DEBUGLOG="log"
 startup 2
-. $srcdir/diag.sh wait-startup 2
+wait_startup 2
 
 echo \[sndrcv_kafka_failresume.sh\]: Starting receiver instance [omkafka]
 export RSYSLOG_DEBUGLOG="log2"
 startup
-. $srcdir/diag.sh wait-startup
+wait_startup
 
 echo \[sndrcv_kafka_failresume.sh\]: Inject messages into rsyslog sender instance  
 tcpflood -m$TESTMESSAGES -i1
@@ -105,7 +105,7 @@ sleep 5
 echo \[sndrcv_kafka_failresume.sh\]: Starting sender instance [imkafka]
 export RSYSLOG_DEBUGLOG="log3"
 startup 2
-. $srcdir/diag.sh wait-startup 2
+wait_startup 2
 
 echo \[sndrcv_kafka_failresume.sh\]: Sleep to give rsyslog sender time to send data ...
 sleep 5

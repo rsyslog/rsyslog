@@ -35,7 +35,7 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 					file="'$RSYSLOG_OUT_LOG'")
 '
 startup 
-. $srcdir/diag.sh wait-startup
+wait_startup
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
 generate_conf 2
@@ -61,7 +61,7 @@ $ActionSendStreamDriverAuthMode anon
 *.*	@@[::1]:'$PORT_RCVR'
 ' 2
 startup 2
-. $srcdir/diag.sh wait-startup 2
+wait_startup 2
 # may be needed by TLS (once we do it): sleep 30
 
 # now inject the messages into instance 2. It will connect to instance 1,

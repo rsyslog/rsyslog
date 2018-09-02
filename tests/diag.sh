@@ -189,6 +189,75 @@ function startup_common() {
 	cat -n $CONF_FILE
 }
 
+# wait for appearance of a specific pid file, given as $1
+function wait_startup_pid() {
+	if [ "$1" == "" ]; then
+		echo "FAIL: testbench bug: wait_startup_called without \$1"
+		error_exit 100
+	fi
+	i=0
+	while test ! -f $1.pid; do
+		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
+		let "i++"
+		if test $i -gt $TB_TIMEOUT_STARTSTOP
+		then
+		   ps -f
+		   echo "ABORT! Timeout waiting on startup (pid file $1.pid)"
+		   error_exit 1
+		fi
+	done
+	echo "$1.pid found, pid  `cat $1.pid`"
+}
+
+
+# wait for startup of an arbitrary process
+# $1 - pid file name
+# $2 - startup file name (optional, only checked if given)
+function wait_process_startup() {
+	wait_startup_pid $1
+	i=0
+	if [ "$2" != "" ]; then
+		while test ! -f "$2"; do
+			$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
+			ps -p `cat $1.pid` &> /dev/null
+			if [ $? -ne 0 ]
+			then
+			   echo "ABORT! pid in $1 no longer active during startup!"
+			   error_exit 1
+			fi
+			let "i++"
+			if test $i -gt $TB_TIMEOUT_STARTSTOP
+			then
+			   echo "ABORT! Timeout waiting on file '$2'"
+			   error_exit 1
+			fi
+		done
+		echo "$2 seen, associated pid " `cat $1.pid`
+	fi
+}
+
+# wait for rsyslogd startup ($1 is the instance)
+function wait_startup() {
+	wait_startup_pid $RSYSLOG_PIDBASE$2
+	i=0
+	while test ! -f ${RSYSLOG_DYNNAME}$1.started; do
+		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
+		ps -p `cat $RSYSLOG_PIDBASE$1.pid` &> /dev/null
+		if [ $? -ne 0 ]
+		then
+		   echo "ABORT! rsyslog pid no longer active during startup!"
+		   error_exit 1 stacktrace
+		fi
+		let "i++"
+		if test $i -gt $TB_TIMEOUT_STARTSTOP
+		then
+		   echo "ABORT! Timeout waiting on startup ('${RSYSLOG_DYNNAME}.started' file)"
+		   error_exit 1
+		fi
+	done
+	echo "rsyslogd$1 startup msg seen, pid " `cat $RSYSLOG_PIDBASE$1.pid`
+}
+
 
 # start rsyslogd with default params. $1 is the config file name to use
 # returns only after successful startup, $2 is the instance (blank or 2!)
@@ -196,7 +265,7 @@ function startup_common() {
 function startup() {
 	startup_common "$1" "$2"
 	eval LD_PRELOAD=$RSYSLOG_PRELOAD $valgrind ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$instance.pid -M../runtime/.libs:../.libs -f$CONF_FILE $RS_REDIR &
-	. $srcdir/diag.sh wait-startup $instance
+	wait_startup $instance
 }
 
 
@@ -217,14 +286,14 @@ function startup_vg_waitpid_only() {
 	    exit 1
 	fi
 	LD_PRELOAD=$RSYSLOG_PRELOAD valgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --suppressions=$srcdir/known_issues.supp --gen-suppressions=all --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=$RS_TESTBENCH_LEAK_CHECK ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$2.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
-	. $srcdir/diag.sh wait-startup-pid $2
+	wait_startup_pid $RSYSLOG_PIDBASE$2
 }
 
 # start rsyslogd with default params under valgrind control. $1 is the config file name to use
 # returns only after successful startup, $2 is the instance (blank or 2!)
 function startup_vg() {
 		startup_vg_waitpid_only $1 $2
-		. $srcdir/diag.sh wait-startup $2
+		wait_startup $2
 		echo startup_vg still running
 }
 
@@ -242,7 +311,7 @@ function startup_vg_noleak() {
 function startup_vgthread_waitpid_only() {
 	startup_common "$1" "$2"
 	valgrind --tool=helgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --suppressions=$srcdir/linux_localtime_r.supp --gen-suppressions=all ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$2.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
-	. $srcdir/diag.sh wait-startup-pid $2
+	wait_startup_pid $RSYSLOG_PIDBASE$2
 }
 
 # start rsyslogd with default params under valgrind thread debugger control.
@@ -250,7 +319,7 @@ function startup_vgthread_waitpid_only() {
 # returns only after successful startup
 function startup_vgthread() {
 	startup_vgthread_waitpid_only $1 $2
-	. $srcdir/diag.sh wait-startup $2
+	wait_startup $2
 }
 
 
@@ -662,41 +731,6 @@ case $1 in
 		;;
    'getpid')
 		pid=$(cat $RSYSLOG_PIDBASE$2.pid)
-		;;
-   'wait-startup-pid') # wait for rsyslogd startup, PID only ($2 is the instance)
-		i=0
-		while test ! -f $RSYSLOG_PIDBASE$2.pid; do
-			$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
-			let "i++"
-			if test $i -gt $TB_TIMEOUT_STARTSTOP
-			then
-			   ps -f
-			   echo "ABORT! Timeout waiting on startup (pid file $RSYSLOG_PIDBASE$2.pid)"
-			   error_exit 1
-			fi
-		done
-		echo "rsyslogd$2 started, start msg not yet seen, pid " `cat $RSYSLOG_PIDBASE$2.pid` pidfile: $RSYSLOG_PIDBASE$2.pid
-		;;
-   'wait-startup') # wait for rsyslogd startup ($2 is the instance)
-		echo RSYSLOG_DYNNAME: ${RSYSLOG_DYNNAME}
-		. $srcdir/diag.sh wait-startup-pid $2
-		i=0
-		while test ! -f ${RSYSLOG_DYNNAME}$2.started; do
-			$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
-			ps -p `cat $RSYSLOG_PIDBASE$2.pid` &> /dev/null
-			if [ $? -ne 0 ]
-			then
-			   echo "ABORT! rsyslog pid no longer active during startup!"
-			   error_exit 1 stacktrace
-			fi
-			let "i++"
-			if test $i -gt $TB_TIMEOUT_STARTSTOP
-			then
-			   echo "ABORT! Timeout waiting on startup ('${RSYSLOG_DYNNAME}.started' file)"
-			   error_exit 1
-			fi
-		done
-		echo "rsyslogd$2 startup msg seen, pid " `cat $RSYSLOG_PIDBASE$2.pid`
 		;;
    'wait-pid-termination')  # wait for the pid in pid $2 to terminate, abort on timeout
 		i=0

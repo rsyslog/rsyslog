@@ -43,7 +43,7 @@ template(name="outfmt" type="string" string="%msg%\n")
 cp -f $srcdir/testsuites/omprog-restart-terminated-bin.sh $RSYSLOG_DYNNAME.omprog-restart-terminated-bin.sh 
 
 startup
-. $srcdir/diag.sh wait-startup
+wait_startup
 injectmsg 0 1
 . $srcdir/diag.sh wait-queueempty
 

@@ -48,7 +48,7 @@ if ($msg contains "msgnum:") then {
 echo \[sndrcv_kafka_fail.sh\]: Starting receiver instance [omkafka]
 export RSYSLOG_DEBUGLOG="log"
 startup
-. $srcdir/diag.sh wait-startup
+wait_startup
 # --- 
 
 # --- Create omkafka sender config 
@@ -89,7 +89,7 @@ local4.* action(	name="kafka-fwd"
 echo \[sndrcv_kafka_fail.sh\]: Starting sender instance [imkafka]
 export RSYSLOG_DEBUGLOG="log2"
 startup 2
-. $srcdir/diag.sh wait-startup 2
+wait_startup 2
 # --- 
 
 echo \[sndrcv_kafka_fail.sh\]: Inject messages into rsyslog sender instance  

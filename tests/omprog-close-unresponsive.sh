@@ -32,7 +32,7 @@ main_queue(
 '
 cp -f $srcdir/testsuites/omprog-close-unresponsive-bin.sh $RSYSLOG_DYNNAME.omprog-close-unresponsive-bin.sh
 startup
-. $srcdir/diag.sh wait-startup
+wait_startup
 injectmsg 0 10
 . $srcdir/diag.sh wait-queueempty
 shutdown_when_empty

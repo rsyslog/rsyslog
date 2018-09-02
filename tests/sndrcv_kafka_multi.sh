@@ -94,7 +94,7 @@ ruleset(name="omkafka3") {
 echo \[sndrcv_kafka_multi.sh\]: Starting sender instance [omkafka]
 export RSYSLOG_DEBUGLOG="log"
 startup
-. $srcdir/diag.sh wait-startup
+wait_startup
 
 # now inject the messages into instance 2. It will connect to instance 1, and that instance will record the data.
 tcpflood -m$TESTMESSAGES -i1
@@ -102,7 +102,7 @@ tcpflood -m$TESTMESSAGES -i1
 echo \[sndrcv_kafka_multi.sh\]: Starting receiver instance [imkafka]
 export RSYSLOG_DEBUGLOG="log2"
 startup 2
-. $srcdir/diag.sh wait-startup 2
+wait_startup 2
 
 #echo \[sndrcv_kafka_multi.sh\]: Sleep to give rsyslog instances time to process data ...
 #sleep 20 
