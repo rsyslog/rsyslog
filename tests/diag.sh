@@ -573,7 +573,8 @@ function presort() {
 
 
 #START: ext kafka config
-dep_cache_dir=$(readlink -f .dep_cache)
+#dep_cache_dir=$(readlink -f .dep_cache)
+dep_cache_dir=$(pwd)/.dep_cache
 dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.13/zookeeper-3.4.13.tar.gz
 dep_zk_cached_file=$dep_cache_dir/zookeeper-3.4.13.tar.gz
 #	dep_kafka_url=http://www-us.apache.org/dist/kafka/0.10.2.2/kafka_2.12-0.10.2.2.tgz
@@ -590,10 +591,11 @@ dep_es_cached_file="$dep_cache_dir/$ES_DOWNLOAD"
 dep_kafka_dir_xform_pattern='s#^[^/]\+#kafka#g'
 dep_zk_dir_xform_pattern='s#^[^/]\+#zk#g'
 dep_es_dir_xform_pattern='s#^[^/]\+#es#g'
-dep_kafka_log_dump=$(readlink -f rsyslog.out.kafka.log)
+#dep_kafka_log_dump=$(readlink -f rsyslog.out.kafka.log)
 
 #	TODO Make dynamic work dir for multiple instances
-dep_work_dir=$(readlink -f .dep_wrk)
+#dep_work_dir=$(readlink -f .dep_wrk)
+dep_work_dir=$(pwd)/.dep_wrk
 #dep_kafka_work_dir=$dep_work_dir/kafka
 #dep_zk_work_dir=$dep_work_dir/zk
 
