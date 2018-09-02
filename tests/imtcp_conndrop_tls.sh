@@ -35,5 +35,5 @@ sleep 5 # due to large messages, we need this time for the tcp receiver to settl
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate
 seq_check 0 49999 -E
-# . $srcdir/diag.sh content-check 'XXXXX'	# Not really a check if it worked, but in TLS stuff in unfished TLS Packets gets lost, so we can't use seq-check.
+# content_check 'XXXXX'	# Not really a check if it worked, but in TLS stuff in unfished TLS Packets gets lost, so we can't use seq-check.
 exit_test

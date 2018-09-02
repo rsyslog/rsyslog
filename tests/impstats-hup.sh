@@ -20,7 +20,7 @@ mv  $RSYSLOG_OUT_LOG ${RSYSLOG2_OUT_LOG}
 shutdown_when_empty
 wait_shutdown
 echo checking pre-HUP file
-. $srcdir/diag.sh content-check 'global: origin=dynstats' ${RSYSLOG2_OUT_LOG}
+content_check 'global: origin=dynstats' ${RSYSLOG2_OUT_LOG}
 echo checking post-HUP file
-. $srcdir/diag.sh content-check 'global: origin=dynstats' $RSYSLOG_OUT_LOG
+content_check 'global: origin=dynstats' $RSYSLOG_OUT_LOG
 exit_test

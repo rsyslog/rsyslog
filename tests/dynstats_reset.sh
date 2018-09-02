@@ -40,12 +40,12 @@ rst_msleep 8100
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_3
 rst_msleep 8100
 wait_queueempty
-. $srcdir/diag.sh content-check "foo 001 0"
-. $srcdir/diag.sh content-check "bar 002 0"
-. $srcdir/diag.sh content-check "baz 003 0"
-. $srcdir/diag.sh content-check "foo 004 0"
-. $srcdir/diag.sh content-check "baz 005 0"
-. $srcdir/diag.sh content-check "foo 006 0"
+content_check "foo 001 0"
+content_check "bar 002 0"
+content_check "baz 003 0"
+content_check "foo 004 0"
+content_check "baz 005 0"
+content_check "foo 006 0"
 shutdown_when_empty
 wait_shutdown
  # because dyn-metrics would be reset before it can accumulate and report high counts, sleep between msg-injection ensures that

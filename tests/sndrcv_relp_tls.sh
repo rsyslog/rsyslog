@@ -1,8 +1,7 @@
 #!/bin/bash
 # added 2013-12-10 by Rgerhards
+# testing sending and receiving via relp with TLS enabled
 # This file is part of the rsyslog project, released under ASL 2.0
-echo ===============================================================================
-echo \[sndrcv_relp_tls.sh\]: testing sending and receiving via relp with TLS enabled
 # uncomment for debugging support:
 . $srcdir/diag.sh init
 # start up the instances

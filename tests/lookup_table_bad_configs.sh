@@ -141,8 +141,8 @@ cp -f $srcdir/testsuites/xlate_string_empty_table.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh await-lookup-table-reload
 injectmsg  0 2
 wait_queueempty
-. $srcdir/diag.sh content-check "msgnum:00000000: baz_str"
-. $srcdir/diag.sh content-check "msgnum:00000001: baz_str"
+content_check "msgnum:00000000: baz_str"
+content_check "msgnum:00000001: baz_str"
 
 echo "array-table with empty table..."
 cp -f $srcdir/testsuites/xlate_array_empty_table.lkp_tbl xlate.lkp_tbl
@@ -150,8 +150,8 @@ cp -f $srcdir/testsuites/xlate_array_empty_table.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh await-lookup-table-reload
 injectmsg  0 2
 wait_queueempty
-. $srcdir/diag.sh content-check "msgnum:00000000: baz_arr"
-. $srcdir/diag.sh content-check "msgnum:00000001: baz_arr"
+content_check "msgnum:00000000: baz_arr"
+content_check "msgnum:00000001: baz_arr"
 
 echo "sparse-array-table with empty table..."
 cp -f $srcdir/testsuites/xlate_sparseArray_empty_table.lkp_tbl xlate.lkp_tbl
@@ -159,8 +159,8 @@ cp -f $srcdir/testsuites/xlate_sparseArray_empty_table.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh await-lookup-table-reload
 injectmsg  0 2
 wait_queueempty
-. $srcdir/diag.sh content-check "msgnum:00000000: baz_sparse_arr"
-. $srcdir/diag.sh content-check "msgnum:00000001: baz_sparse_arr"
+content_check "msgnum:00000000: baz_sparse_arr"
+content_check "msgnum:00000001: baz_sparse_arr"
 
 echo doing shutdown
 shutdown_when_empty

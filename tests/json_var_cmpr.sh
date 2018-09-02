@@ -34,5 +34,5 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown
-. $srcdir/diag.sh content-check  "json prop:abc  local prop:def  global prop:ghi"
+content_check  "json prop:abc  local prop:def  global prop:ghi"
 exit_test

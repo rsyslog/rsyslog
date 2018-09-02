@@ -47,7 +47,7 @@ shutdown_when_empty
 echo wait on shutdown
 wait_shutdown_vg
 . $srcdir/diag.sh check_exit_vg
-. $srcdir/diag.sh content-check "msgnum:00000000: foo_new"
-. $srcdir/diag.sh content-check "msgnum:00000001: bar_new"
-. $srcdir/diag.sh content-check "msgnum:00000002: baz"
+content_check "msgnum:00000000: foo_new"
+content_check "msgnum:00000001: bar_new"
+content_check "msgnum:00000002: baz"
 exit_test

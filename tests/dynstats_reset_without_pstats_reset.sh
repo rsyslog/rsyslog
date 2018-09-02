@@ -45,7 +45,7 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown
-. $srcdir/diag.sh content-check "foo 006"
+content_check "foo 006"
 . $srcdir/diag.sh custom-content-check 'foo=3' "${RSYSLOG_DYNNAME}.out.stats.log"
 . $srcdir/diag.sh custom-content-check 'bar=1' "${RSYSLOG_DYNNAME}.out.stats.log"
 . $srcdir/diag.sh custom-content-check 'baz=2' "${RSYSLOG_DYNNAME}.out.stats.log"

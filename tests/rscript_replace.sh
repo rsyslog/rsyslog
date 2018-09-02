@@ -25,5 +25,5 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown 
-. $srcdir/diag.sh content-check  "date time: Thu 0ct0ber 30 13:20:18 IST 2014"
+content_check  "date time: Thu 0ct0ber 30 13:20:18 IST 2014"
 exit_test

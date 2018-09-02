@@ -30,22 +30,22 @@ wait_queueempty
 . $srcdir/diag.sh assert-content-missing "foo"
 injectmsg  0 5
 wait_queueempty
-. $srcdir/diag.sh content-check "msgnum:00000001: foo_old"
-. $srcdir/diag.sh content-check "msgnum:00000002: foo_old"
-. $srcdir/diag.sh content-check "msgnum:00000003: bar_old"
-. $srcdir/diag.sh content-check "msgnum:00000004: bar_old"
+content_check "msgnum:00000001: foo_old"
+content_check "msgnum:00000002: foo_old"
+content_check "msgnum:00000003: bar_old"
+content_check "msgnum:00000004: bar_old"
 . $srcdir/diag.sh assert-content-missing "baz"
 cp -f $srcdir/testsuites/xlate_sparse_array_more.lkp_tbl xlate_array.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
 injectmsg  0 6
 wait_queueempty
-. $srcdir/diag.sh content-check "msgnum:00000000: foo_new"
-. $srcdir/diag.sh content-check "msgnum:00000001: foo_new"
-. $srcdir/diag.sh content-check "msgnum:00000002: bar_new"
-. $srcdir/diag.sh content-check "msgnum:00000003: bar_new"
-. $srcdir/diag.sh content-check "msgnum:00000004: baz"
-. $srcdir/diag.sh content-check "msgnum:00000005: baz"
+content_check "msgnum:00000000: foo_new"
+content_check "msgnum:00000001: foo_new"
+content_check "msgnum:00000002: bar_new"
+content_check "msgnum:00000003: bar_new"
+content_check "msgnum:00000004: baz"
+content_check "msgnum:00000005: baz"
 cp -f $srcdir/testsuites/xlate_sparse_array_more_with_duplicates_and_nomatch.lkp_tbl xlate_array.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
@@ -54,19 +54,19 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown
-. $srcdir/diag.sh content-check "msgnum:00000000: quux"
-. $srcdir/diag.sh content-check "msgnum:00000001: quux"
-. $srcdir/diag.sh content-check "msgnum:00000002: foo_latest"
-. $srcdir/diag.sh content-check "msgnum:00000003: baz_latest"
-. $srcdir/diag.sh content-check "msgnum:00000004: foo_latest"
-. $srcdir/diag.sh content-check "msgnum:00000005: foo_latest"
-. $srcdir/diag.sh content-check "msgnum:00000006: foo_latest"
-. $srcdir/diag.sh content-check "msgnum:00000007: foo_latest"
-. $srcdir/diag.sh content-check "msgnum:00000008: baz_latest"
-. $srcdir/diag.sh content-check "msgnum:00000009: baz_latest"
-. $srcdir/diag.sh content-check "msgnum:00000010: baz_latest"
-. $srcdir/diag.sh content-check "msgnum:00000011: baz_latest"
-. $srcdir/diag.sh content-check "msgnum:00000012: foo_latest"
-. $srcdir/diag.sh content-check "msgnum:00000013: foo_latest"
-. $srcdir/diag.sh content-check "msgnum:00000014: foo_latest"
+content_check "msgnum:00000000: quux"
+content_check "msgnum:00000001: quux"
+content_check "msgnum:00000002: foo_latest"
+content_check "msgnum:00000003: baz_latest"
+content_check "msgnum:00000004: foo_latest"
+content_check "msgnum:00000005: foo_latest"
+content_check "msgnum:00000006: foo_latest"
+content_check "msgnum:00000007: foo_latest"
+content_check "msgnum:00000008: baz_latest"
+content_check "msgnum:00000009: baz_latest"
+content_check "msgnum:00000010: baz_latest"
+content_check "msgnum:00000011: baz_latest"
+content_check "msgnum:00000012: foo_latest"
+content_check "msgnum:00000013: foo_latest"
+content_check "msgnum:00000014: foo_latest"
 exit_test

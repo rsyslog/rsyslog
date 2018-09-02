@@ -27,5 +27,5 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown
-. $srcdir/diag.sh content-check 'cee:'
+content_check 'cee:'
 exit_test

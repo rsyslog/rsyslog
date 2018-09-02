@@ -25,8 +25,8 @@ cp -f $srcdir/testsuites/xlate.lkp_tbl xlate.lkp_tbl
 startup_vg
 injectmsg  0 3
 wait_queueempty
-. $srcdir/diag.sh content-check "msgnum:00000000: foo_old"
-. $srcdir/diag.sh content-check "msgnum:00000001: bar_old"
+content_check "msgnum:00000000: foo_old"
+content_check "msgnum:00000001: bar_old"
 . $srcdir/diag.sh assert-content-missing "baz"
 cp -f $srcdir/testsuites/xlate_more.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh issue-HUP

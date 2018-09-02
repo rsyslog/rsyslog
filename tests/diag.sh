@@ -332,17 +332,63 @@ function injectmsg() {
 
 # show the current main queue size. $1 is the instance.
 function get_mainqueuesize() {
-	if [ "$2" == "2" ]; then
+	if [ "$1" == "2" ]; then
 		echo getmainmsgqueuesize | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
 	else
 		echo getmainmsgqueuesize | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
 	fi
 }
 
+# grep for (partial) content. $1 is the content to check for
+function content_check() {
+	cat ${RSYSLOG_OUT_LOG} | grep -qF "$1"
+	if [ "$?" -ne "0" ]; then
+	    printf "\n============================================================\n"
+	    echo FAIL: content-check failed to find "'$1'", content is
+	    cat -n ${RSYSLOG_OUT_LOG}
+	    error_exit 1
+	fi
+}
+
+
+function content_check_with_count() {
+	# content check variables for Timeout
+	if [ "x$3" == "x" ]; then
+		timeoutend=1
+	else
+		timeoutend=$3
+	fi
+	timecounter=0
+
+	while [  $timecounter -lt $timeoutend ]; do
+		let timecounter=timecounter+1
+
+		count=$(cat ${RSYSLOG_OUT_LOG} | grep -F "$1" | wc -l)
+
+		if [ $count -eq $2 ]; then
+			echo content_check_with_count success, \"$1\" occured $2 times
+			break
+		else
+			if [ "x$timecounter" == "x$timeoutend" ]; then
+				shutdown_when_empty
+				wait_shutdown
+
+				echo content_check_with_count failed, expected \"$1\" to occur $2 times, but found it $count times
+				echo file ${RSYSLOG_OUT_LOG} content is:
+				sort < ${RSYSLOG_OUT_LOG}
+				error_exit 1
+			else
+				echo content_check_with_count have $count, wait for $2 times $1...
+				$TESTTOOL_DIR/msleep 1000
+			fi
+		fi
+	done
+}
+
 
 # wait for main message queue to be empty. $1 is the instance.
 function wait_queueempty() {
-	if [ "$2" == "2" ]; then
+	if [ "$1" == "2" ]; then
 		echo WaitMainQueueEmpty | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
 	else
 		echo WaitMainQueueEmpty | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
@@ -416,8 +462,7 @@ function wait_shutdown_vg() {
 	wait `cat $RSYSLOG_PIDBASE$1.pid`
 	export RSYSLOGD_EXIT=$?
 	echo rsyslogd run exited with $RSYSLOGD_EXIT
-	if [ -e vgcore.* ]
-	then
+	if [ -e vgcore.* ]; then
 	   echo "ABORT! core file exists"
 	   error_exit 1
 	fi
@@ -426,8 +471,7 @@ function wait_shutdown_vg() {
 
 # check exit code for valgrind error
 function check_exit_vg(){
-	if [ "$RSYSLOGD_EXIT" -eq "10" ]
-	then
+	if [ "$RSYSLOGD_EXIT" -eq "10" ]; then
 		echo "valgrind run FAILED with exceptions - terminating"
 		error_exit 1
 	fi
@@ -918,39 +962,6 @@ case $1 in
 			fi
 		done
 		unset count
-		;;
-   'content-check-with-count') 
-		# content check variables for Timeout
-		if [ "x$4" == "x" ]; then
-			timeoutend=1
-		else
-			timeoutend=$4
-		fi
-		timecounter=0
-
-		while [  $timecounter -lt $timeoutend ]; do
-			let timecounter=timecounter+1
-
-			count=$(cat ${RSYSLOG_OUT_LOG} | grep -F "$2" | wc -l)
-
-			if [ $count -eq $3 ]; then
-				echo content-check-with-count success, \"$2\" occured $3 times
-				break
-			else
-				if [ "x$timecounter" == "x$timeoutend" ]; then
-					shutdown_when_empty # shut down rsyslogd
-					wait_shutdown	# Shutdown rsyslog instance on error 
-
-					echo content-check-with-count failed, expected \"$2\" to occur $3 times, but found it $count times
-					echo file ${RSYSLOG_OUT_LOG} content is:
-					sort < ${RSYSLOG_OUT_LOG}
-					error_exit 1
-				else
-					echo content-check-with-count have $count, wait for $3 times $2...
-					$TESTTOOL_DIR/msleep 1000
-				fi
-			fi
-		done
 		;;
 	 'block-stats-flush')
 		echo blocking stats flush

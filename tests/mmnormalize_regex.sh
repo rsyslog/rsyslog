@@ -24,5 +24,5 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown 
-. $srcdir/diag.sh content-check 'host and port list: 192.168.1.2:80, 192.168.1.3, 192.168.1.4:443, 192.168.1.5'
+content_check 'host and port list: 192.168.1.2:80, 192.168.1.3, 192.168.1.4:443, 192.168.1.5'
 exit_test

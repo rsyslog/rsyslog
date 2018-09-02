@@ -25,17 +25,17 @@ cp -f $srcdir/testsuites/xlate.lkp_tbl xlate.lkp_tbl
 startup
 injectmsg  0 3
 wait_queueempty
-. $srcdir/diag.sh content-check "msgnum:00000000: foo_old"
-. $srcdir/diag.sh content-check "msgnum:00000001: bar_old"
+content_check "msgnum:00000000: foo_old"
+content_check "msgnum:00000001: bar_old"
 . $srcdir/diag.sh assert-content-missing "baz"
 cp -f $srcdir/testsuites/xlate_more.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
 injectmsg  0 3
 wait_queueempty
-. $srcdir/diag.sh content-check "msgnum:00000000: foo_new"
-. $srcdir/diag.sh content-check "msgnum:00000001: bar_new"
-. $srcdir/diag.sh content-check "msgnum:00000002: baz"
+content_check "msgnum:00000000: foo_new"
+content_check "msgnum:00000001: bar_new"
+content_check "msgnum:00000002: baz"
 cp -f $srcdir/testsuites/xlate_more_with_duplicates_and_nomatch.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
@@ -44,14 +44,14 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown
-. $srcdir/diag.sh content-check "msgnum:00000000: foo_latest"
-. $srcdir/diag.sh content-check "msgnum:00000001: quux"
-. $srcdir/diag.sh content-check "msgnum:00000002: baz_latest"
-. $srcdir/diag.sh content-check "msgnum:00000003: foo_latest"
-. $srcdir/diag.sh content-check "msgnum:00000004: foo_latest"
-. $srcdir/diag.sh content-check "msgnum:00000005: baz_latest"
-. $srcdir/diag.sh content-check "msgnum:00000006: foo_latest"
-. $srcdir/diag.sh content-check "msgnum:00000007: baz_latest"
-. $srcdir/diag.sh content-check "msgnum:00000008: baz_latest"
-. $srcdir/diag.sh content-check "msgnum:00000009: quux"
+content_check "msgnum:00000000: foo_latest"
+content_check "msgnum:00000001: quux"
+content_check "msgnum:00000002: baz_latest"
+content_check "msgnum:00000003: foo_latest"
+content_check "msgnum:00000004: foo_latest"
+content_check "msgnum:00000005: baz_latest"
+content_check "msgnum:00000006: foo_latest"
+content_check "msgnum:00000007: baz_latest"
+content_check "msgnum:00000008: baz_latest"
+content_check "msgnum:00000009: quux"
 exit_test

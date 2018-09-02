@@ -28,17 +28,17 @@ cp -f $srcdir/testsuites/xlate.lkp_tbl xlate_1.lkp_tbl
 startup
 injectmsg  0 3
 wait_queueempty
-. $srcdir/diag.sh content-check "msgnum:00000000: 0_foo_old 1_foo_old"
-. $srcdir/diag.sh content-check "msgnum:00000001: 0_bar_old 1_bar_old"
+content_check "msgnum:00000000: 0_foo_old 1_foo_old"
+content_check "msgnum:00000001: 0_bar_old 1_bar_old"
 . $srcdir/diag.sh assert-content-missing "baz"
 cp -f $srcdir/testsuites/xlate_more.lkp_tbl xlate.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
 injectmsg  0 3
 wait_queueempty
-. $srcdir/diag.sh content-check "msgnum:00000000: 0_foo_new 1_foo_old"
-. $srcdir/diag.sh content-check "msgnum:00000001: 0_bar_new 1_bar_old"
-. $srcdir/diag.sh content-check "msgnum:00000002: 0_baz"
+content_check "msgnum:00000000: 0_foo_new 1_foo_old"
+content_check "msgnum:00000001: 0_bar_new 1_bar_old"
+content_check "msgnum:00000002: 0_baz"
 . $srcdir/diag.sh assert-content-missing "1_baz"
 cp -f $srcdir/testsuites/xlate_more.lkp_tbl xlate_1.lkp_tbl
 . $srcdir/diag.sh issue-HUP
@@ -48,7 +48,7 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown
-. $srcdir/diag.sh content-check "msgnum:00000000: 0_foo_new 1_foo_new"
-. $srcdir/diag.sh content-check "msgnum:00000001: 0_bar_new 1_bar_new"
-. $srcdir/diag.sh content-check "msgnum:00000002: 0_baz 1_baz"
+content_check "msgnum:00000000: 0_foo_new 1_foo_new"
+content_check "msgnum:00000001: 0_bar_new 1_bar_new"
+content_check "msgnum:00000002: 0_baz 1_baz"
 exit_test
