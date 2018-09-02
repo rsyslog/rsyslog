@@ -33,9 +33,9 @@ action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="mmk8s_template")
 
 testsrv=mmk8s-test-server
 echo starting kubernetes \"emulator\"
-timeout 2m python -u ./mmkubernetes_test_server.py 18443 ${RSYSLOG_PIDBASE}${testsrv}.pid ${RSYSLOG_DYNNAME}${testsrv}.started > mmk8s_srv.log 2>&1 &
+timeout 2m python -u ./mmkubernetes_test_server.py 18443 ${RSYSLOG_DYNNAME}${testsrv}.pid ${RSYSLOG_DYNNAME}${testsrv}.started > mmk8s_srv.log 2>&1 &
 BGPROCESS=$!
-wait_startup $testsrv
+wait_process_startup ${RSYSLOG_DYNNAME}${testsrv} ${RSYSLOG_DYNNAME}${testsrv}.started
 echo background mmkubernetes_test_server.py process id is $BGPROCESS
 
 cat > pod-error1.log <<EOF

@@ -14,3 +14,12 @@ do
 	pwd
 	kill -9 $pid
 done
+
+# now the same for mmkubernetes_test_server
+set -v
+for pid in $(ps -eo pid,args|grep '\./mmkubernetes_test_server.py ' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
+do
+	echo "ERROR: left-over previous instance $pid, killing it"
+	ps -fp $pid
+	kill -9 $pid || exit 0
+done

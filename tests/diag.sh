@@ -190,26 +190,56 @@ function startup_common() {
 	cat -n $CONF_FILE
 }
 
-# wait for rsyslogd startup, PID only ($1 is the instance)
+# wait for appearance of a specific pid file, given as $1
 function wait_startup_pid() {
+	if [ "$1" == "" ]; then
+		echo "FAIL: testbench bug: wait_startup_called without \$1"
+		error_exit 100
+	fi
 	i=0
-	while test ! -f $RSYSLOG_PIDBASE$1.pid; do
+	while test ! -f $1.pid; do
 		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
 		let "i++"
 		if test $i -gt $TB_TIMEOUT_STARTSTOP
 		then
 		   ps -f
-		   echo "ABORT! Timeout waiting on startup (pid file $RSYSLOG_PIDBASE$1.pid)"
+		   echo "ABORT! Timeout waiting on startup (pid file $1.pid)"
 		   error_exit 1
 		fi
 	done
-	echo "rsyslogd$1 started, start msg not yet seen, pid " `cat $RSYSLOG_PIDBASE$1.pid` pidfile: $RSYSLOG_PIDBASE$1.pid
+	echo "$1.pid found, pid  `cat $1.pid`"
 }
 
 
+# wait for startup of an arbitrary process
+# $1 - pid file name
+# $2 - startup file name (optional, only checked if given)
+function wait_process_startup() {
+	wait_startup_pid $1
+	i=0
+	if [ "$2" != "" ]; then
+		while test ! -f "$2"; do
+			$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
+			ps -p `cat $1.pid` &> /dev/null
+			if [ $? -ne 0 ]
+			then
+			   echo "ABORT! pid in $1 no longer active during startup!"
+			   error_exit 1
+			fi
+			let "i++"
+			if test $i -gt $TB_TIMEOUT_STARTSTOP
+			then
+			   echo "ABORT! Timeout waiting on file '$2'"
+			   error_exit 1
+			fi
+		done
+		echo "$2 seen, associated pid " `cat $1.pid`
+	fi
+}
+
 # wait for rsyslogd startup ($1 is the instance)
 function wait_startup() {
-	wait_startup_pid $2
+	wait_startup_pid $RSYSLOG_PIDBASE$2
 	i=0
 	while test ! -f ${RSYSLOG_DYNNAME}$1.started; do
 		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
@@ -257,7 +287,7 @@ function startup_vg_waitpid_only() {
 	    exit 1
 	fi
 	LD_PRELOAD=$RSYSLOG_PRELOAD valgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --suppressions=$srcdir/known_issues.supp --gen-suppressions=all --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=$RS_TESTBENCH_LEAK_CHECK ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$2.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
-	wait_startup_pid $2
+	wait_startup_pid $RSYSLOG_PIDBASE$2
 }
 
 # start rsyslogd with default params under valgrind control. $1 is the config file name to use
@@ -282,7 +312,7 @@ function startup_vg_noleak() {
 function startup_vgthread_waitpid_only() {
 	startup_common "$1" "$2"
 	valgrind --tool=helgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --suppressions=$srcdir/linux_localtime_r.supp --gen-suppressions=all ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$2.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
-	wait_startup_pid $2
+	wait_startup_pid $RSYSLOG_PIDBASE$2
 }
 
 # start rsyslogd with default params under valgrind thread debugger control.
