@@ -344,7 +344,7 @@ function content_check() {
 	cat ${RSYSLOG_OUT_LOG} | grep -qF "$1"
 	if [ "$?" -ne "0" ]; then
 	    printf "\n============================================================\n"
-	    echo FAIL: content-check failed to find "'$1'", content is
+	    echo FAIL: content_check failed to find "'$1'", content is
 	    cat -n ${RSYSLOG_OUT_LOG}
 	    error_exit 1
 	fi
@@ -383,6 +383,17 @@ function content_check_with_count() {
 			fi
 		fi
 	done
+}
+
+
+function custom_content_check() {
+	cat $2 | grep -qF "$1"
+	if [ "$?" -ne "0" ]; then
+	    echo FAIL: custom_content_check failed to find "'$1'" inside "'$2'"
+	    echo "file contents:"
+	    cat -n $2
+	    error_exit 1
+	fi
 }
 
 
@@ -637,6 +648,15 @@ function get_free_port() {
 python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()'
 }
 
+# check if command $1 is available - will exit 77 when not OK
+function check_command_available() {
+	command -v $1
+	if [ $? -ne 0 ] ; then
+		echo Testbench requires unavailable command: $1
+		exit 77
+	fi
+}
+
 
 # sort the output file just like we normally do it, but do not call
 # seqchk. This is needed for some operations where we need the sort
@@ -779,13 +799,6 @@ case $1 in
 		fi
 		;;
 
-   'check-command-available')   # check if command $2 is available - will exit 77 when not OK
-		command -v $2
-		if [ $? -ne 0 ] ; then
-			echo Testbench requires unavailable command: $2
-			exit 77
-		fi
-		;;
    'check-ipv6-available')   # check if IPv6  - will exit 77 when not OK
 		ifconfig -a |grep ::1
 		if [ $? -ne 0 ] ; then
@@ -913,26 +926,6 @@ case $1 in
 		error_exit 1
 		fi;
 		;;
-   'content-cmp')
-		echo "$2" | cmp - ${RSYSLOG_OUT_LOG}
-		if [ "$?" -ne "0" ]; then
-		    echo FAIL: content-cmp failed
-		    echo EXPECTED:
-		    echo "$2"
-		    echo ACTUAL:
-		    cat ${RSYSLOG_OUT_LOG}
-		    error_exit 1
-		fi
-		;;
-   'content-check')
-		cat ${RSYSLOG_OUT_LOG} | grep -qF "$2"
-		if [ "$?" -ne "0" ]; then
-		    printf "\n============================================================\n"
-		    echo FAIL: content-check failed to find "'$2'", content is
-		    cat -n ${RSYSLOG_OUT_LOG}
-		    error_exit 1
-		fi
-		;;
    'wait-file-lines') 
 		# $2 filename, $3 expected nbr of lines, $4 nbr of tries
 		if [ "$4" == "" ]; then
@@ -1002,27 +995,18 @@ case $1 in
 		done
 		echo "dyn-stats reset for bucket ${3} registered"
 		;;
-   'content-check-regex')
-		# this does a content check which permits regex
-		grep "$2" $3 -q
-		if [ "$?" -ne "0" ]; then
-		    echo "----------------------------------------------------------------------"
-		    echo FAIL: content-check-regex failed to find "'$2'" inside "'$3'"
-		    echo "file contents:"
-		    cat $3
-		    error_exit 1
-		fi
-		;;
-   'custom-content-check') 
-		cat $3 | grep -qF "$2"
-		if [ "$?" -ne "0" ]; then
-		    echo FAIL: custom-content-check failed to find "'$2'" inside "'$3'"
-		    echo "file contents:"
-		    cat -n $3
-		    error_exit 1
-		fi
-		set +x
-		;;
+# note needed at the moment, but let's keep it in a little, 2018-09-03 rgerhards
+#   'content-check-regex')
+#		# this does a content check which permits regex
+#		grep "$2" $3 -q
+#		if [ "$?" -ne "0" ]; then
+#		    echo "----------------------------------------------------------------------"
+#		    echo FAIL: content-check-regex failed to find "'$2'" inside "'$3'"
+#		    echo "file contents:"
+#		    cat $3
+#		    error_exit 1
+#		fi
+#		;;
    'first-column-sum-check') 
 		sum=$(cat $4 | grep $3 | sed -e $2 | awk '{s+=$1} END {print s}')
 		if [ "x${sum}" != "x$5" ]; then

@@ -35,6 +35,6 @@ wait_shutdown
 . $srcdir/diag.sh es-getdata 100 19200
 seq_check  0 99
 # The configuration makes every other request from message #3 fail checkConn (N/2-1)
-. $srcdir/diag.sh custom-content-check '"failed.checkConn": 49' "${RSYSLOG_DYNNAME}.out.stats.log"
+custom_content_check '"failed.checkConn": 49' "${RSYSLOG_DYNNAME}.out.stats.log"
 . $srcdir/diag.sh cleanup-elasticsearch
 exit_test

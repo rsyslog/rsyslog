@@ -9,7 +9,7 @@
 # trick. -- rgerhards, 2018-07-21
 #export RSYSLOG_DEBUG="debug"
 . $srcdir/diag.sh init
-. $srcdir/diag.sh check-command-available timeout
+check_command_available timeout
 pwd=$( pwd )
 generate_conf
 add_conf '

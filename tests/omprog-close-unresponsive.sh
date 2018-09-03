@@ -50,7 +50,6 @@ Received msgnum:00000008:
 Received msgnum:00000009:
 Received SIGTERM
 Terminating unresponsively"
-
-. $srcdir/diag.sh content-cmp "$EXPECTED"
+cmp_exact $RSYSLOG_OUT_LOG
 
 exit_test

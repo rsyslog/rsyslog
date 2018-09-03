@@ -53,9 +53,9 @@ content_check 'quux: abc0'
 content_check 'quux: def1'
 content_check 'quux: ghi2'
 content_check 'quux: { "bar": [ { "baz": "important_msg" }, { "baz": "other_msg" } ] }'
-. $srcdir/diag.sh custom-content-check 'grault: { "baz": "important_msg" }' $RSYSLOG_DYNNAME.out.async.log
-. $srcdir/diag.sh custom-content-check 'grault: { "baz": "other_msg" }' $RSYSLOG_DYNNAME.out.async.log
-. $srcdir/diag.sh custom-content-check 'prefixed_grault: { "baz": "important_msg" }' $RSYSLOG_DYNNAME.out.prefixed.log
-. $srcdir/diag.sh custom-content-check 'prefixed_grault: { "baz": "other_msg" }' $RSYSLOG_DYNNAME.out.prefixed.log
+custom_content_check 'grault: { "baz": "important_msg" }' $RSYSLOG_DYNNAME.out.async.log
+custom_content_check 'grault: { "baz": "other_msg" }' $RSYSLOG_DYNNAME.out.async.log
+custom_content_check 'prefixed_grault: { "baz": "important_msg" }' $RSYSLOG_DYNNAME.out.prefixed.log
+custom_content_check 'prefixed_grault: { "baz": "other_msg" }' $RSYSLOG_DYNNAME.out.prefixed.log
 content_check 'garply: important_msg, other_msg'
 exit_test

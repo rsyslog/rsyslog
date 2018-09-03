@@ -50,9 +50,9 @@ shutdown_when_empty
 echo wait on shutdown
 wait_shutdown
  # because dyn-accumulators for existing metrics were posted-to under a second, they should not have been evicted
-. $srcdir/diag.sh custom-content-check 'baz=2' "${RSYSLOG_DYNNAME}.out.stats.log"
-. $srcdir/diag.sh custom-content-check 'bar=1' "${RSYSLOG_DYNNAME}.out.stats.log"
-. $srcdir/diag.sh custom-content-check 'foo=3' "${RSYSLOG_DYNNAME}.out.stats.log"
+custom_content_check 'baz=2' "${RSYSLOG_DYNNAME}.out.stats.log"
+custom_content_check 'bar=1' "${RSYSLOG_DYNNAME}.out.stats.log"
+custom_content_check 'foo=3' "${RSYSLOG_DYNNAME}.out.stats.log"
 # sum is high because accumulators were never reset, and we expect them to last specific number of cycles(when we posted before ttl expiry)
 . $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'foo=' "${RSYSLOG_DYNNAME}.out.stats.log" 6
 . $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'bar=' "${RSYSLOG_DYNNAME}.out.stats.log" 1

@@ -6,7 +6,7 @@
 # of the program when stderr is being captured to a file.
 
 . $srcdir/diag.sh init
-. $srcdir/diag.sh check-command-available lsof
+check_command_available lsof
 
 generate_conf
 add_conf '
