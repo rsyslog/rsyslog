@@ -28,17 +28,17 @@ template(name="outfmt" type="string" string="%msg%\n")
 }
 '
 
-# we need a test-specific program name, as we use it inside the process table
+# We need a test-specific program name, as the test needs to signal the child process
 cp -f $srcdir/testsuites/omprog-restart-terminated-bin.sh $RSYSLOG_DYNNAME.omprog-restart-terminated-bin.sh
 
 # On Solaris 10, the output of ps is truncated for long process names; use /usr/ucb/ps instead:
 if [[ `uname` = "SunOS" && `uname -r` = "5.10" ]]; then
     function get_child_pid {
-        echo $(/usr/ucb/ps -awwx | grep "[o]mprog-restart-terminated-bin.sh" | awk '{ print $1 }')
+        echo $(/usr/ucb/ps -awwx | grep "$RSYSLOG_DYNNAME.[o]mprog-restart-terminated-bin.sh" | awk '{ print $1 }')
     }
 else
     function get_child_pid {
-        echo $(ps -ef | grep "[o]mprog-restart-terminated-bin.sh" | awk '{ print $2 }')
+        echo $(ps -ef | grep "$RSYSLOG_DYNNAME.[o]mprog-restart-terminated-bin.sh" | awk '{ print $2 }')
     }
 fi
 
