@@ -20,5 +20,5 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown
-. $srcdir/diag.sh custom-content-check 'global: origin=dynstats' "${RSYSLOG_DYNNAME}.out.stats.log"
+custom_content_check 'global: origin=dynstats' "${RSYSLOG_DYNNAME}.out.stats.log"
 exit_test

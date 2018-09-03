@@ -4,7 +4,6 @@
 # This test checks that omprog does NOT send a TERM signal to the
 # external program when signalOnClose=off, closes the pipe, and kills
 # the unresponsive child if killUnresponsive=on.
-
 . $srcdir/diag.sh init
 generate_conf
 add_conf '
@@ -49,7 +48,6 @@ Received msgnum:00000007:
 Received msgnum:00000008:
 Received msgnum:00000009:
 Terminating unresponsively"
-
-. $srcdir/diag.sh content-cmp "$EXPECTED"
+cmp_exact $RSYSLOG_OUT_LOG
 
 exit_test

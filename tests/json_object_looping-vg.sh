@@ -65,7 +65,7 @@ content_check 'quux: { "key": "str3", "value": "ghi2" }'
 content_check 'new: jkl3'
 . $srcdir/diag.sh assert-content-missing 'deleted: ghi2'
 content_check 'quux: { "key": "obj", "value": { "bar": { "k1": "important_msg", "k2": "other_msg" } } }'
-. $srcdir/diag.sh custom-content-check 'corge: key: bar val: { "k1": "important_msg", "k2": "other_msg" }' $RSYSLOG_DYNNAME.out.async.log
-. $srcdir/diag.sh custom-content-check 'prefixed_corge: { "key": "bar", "value": { "k1": "important_msg", "k2": "other_msg" } }' $RSYSLOG_DYNNAME.out.prefixed.log
+custom_content_check 'corge: key: bar val: { "k1": "important_msg", "k2": "other_msg" }' $RSYSLOG_DYNNAME.out.async.log
+custom_content_check 'prefixed_corge: { "key": "bar", "value": { "k1": "important_msg", "k2": "other_msg" } }' $RSYSLOG_DYNNAME.out.prefixed.log
 content_check 'garply: k1=important_msg, k2=other_msg'
 exit_test

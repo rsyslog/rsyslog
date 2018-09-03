@@ -48,6 +48,6 @@ content_check 'quux: { "key": "str2", "value": "def1", "random_key": "str2" }'
 content_check 'quux: { "key": "str3", "value": "ghi2" }'
 . $srcdir/diag.sh assert-content-missing 'quux: { "key": "str4", "value": "jkl3" }'
 content_check 'quux: { "key": "obj", "value": { "bar": { "k1": "important_msg", "k2": "other_msg" } } }'
-. $srcdir/diag.sh custom-content-check 'corge: key: bar val: { "k1": "important_msg", "k2": "other_msg" }' $RSYSLOG_DYNNAME.out.async.log
+custom_content_check 'corge: key: bar val: { "k1": "important_msg", "k2": "other_msg" }' $RSYSLOG_DYNNAME.out.async.log
 content_check "post_suicide_foo: ''"
 exit_test

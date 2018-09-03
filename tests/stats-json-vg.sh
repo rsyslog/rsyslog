@@ -32,6 +32,6 @@ shutdown_when_empty
 echo wait on shutdown
 wait_shutdown_vg
 . $srcdir/diag.sh check_exit_vg
-. $srcdir/diag.sh custom-content-check '{ "name": "an_action_that_is_never_called", "origin": "core.action", "processed": 0, "failed": 0, "suspended": 0, "suspended.duration": 0, "resumed": 0 }' "${RSYSLOG_DYNNAME}.out.stats.log"
+custom_content_check '{ "name": "an_action_that_is_never_called", "origin": "core.action", "processed": 0, "failed": 0, "suspended": 0, "suspended.duration": 0, "resumed": 0 }' "${RSYSLOG_DYNNAME}.out.stats.log"
 . $srcdir/diag.sh custom-assert-content-missing '@cee' "${RSYSLOG_DYNNAME}.out.stats.log"
 exit_test

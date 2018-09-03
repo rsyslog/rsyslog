@@ -46,6 +46,6 @@ wait_shutdown
 . $srcdir/diag.sh custom-assert-content-missing 'bar' "${RSYSLOG_DYNNAME}.out.stats.log"
 . $srcdir/diag.sh custom-assert-content-missing 'baz' "${RSYSLOG_DYNNAME}.out.stats.log"
 . $srcdir/diag.sh custom-assert-content-missing 'corge' "${RSYSLOG_DYNNAME}.out.stats.log"
-. $srcdir/diag.sh custom-content-check 'quux=1' "${RSYSLOG_DYNNAME}.out.stats.log"
-. $srcdir/diag.sh custom-content-check 'grault=1' "${RSYSLOG_DYNNAME}.out.stats.log"
+custom_content_check 'quux=1' "${RSYSLOG_DYNNAME}.out.stats.log"
+custom_content_check 'grault=1' "${RSYSLOG_DYNNAME}.out.stats.log"
 exit_test

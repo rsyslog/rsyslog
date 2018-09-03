@@ -26,7 +26,7 @@ fi
 
 export command_line="/usr/bin/stdbuf -oL -eL $srcdir/testsuites/omprog-output-capture-mt-bin.py $LINE_LENGTH"
 
-. $srcdir/diag.sh check-command-available stdbuf
+check_command_available stdbuf
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")

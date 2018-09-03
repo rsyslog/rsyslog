@@ -42,7 +42,7 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown
-. $srcdir/diag.sh custom-content-check 'bar=1' "${RSYSLOG_DYNNAME}.out.stats.log"
+custom_content_check 'bar=1' "${RSYSLOG_DYNNAME}.out.stats.log"
 . $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'foo=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
 . $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'bar=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
 . $srcdir/diag.sh first-column-sum-check 's/.*baz=\([0-9]\+\)/\1/g' 'baz=' "${RSYSLOG_DYNNAME}.out.stats.log" 2
