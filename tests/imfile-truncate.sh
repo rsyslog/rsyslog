@@ -19,11 +19,11 @@ msgnum:1' > $RSYSLOG_DYNNAME.input
 
 startup
 
-. $srcdir/diag.sh wait-queueempty # wait for message to be processed
+wait_queueempty # wait for message to be processed
 
 # truncate and write some more lines (see https://github.com/rsyslog/rsyslog/issues/1090)
 echo 'msgnum:2' > $RSYSLOG_DYNNAME.input
-. $srcdir/diag.sh wait-queueempty # wait for message to be processed
+wait_queueempty # wait for message to be processed
 
 echo 'msgnum:3
 msgnum:4' >> $RSYSLOG_DYNNAME.input

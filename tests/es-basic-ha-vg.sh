@@ -23,7 +23,7 @@ module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 '
 startup_vg
 injectmsg  0 100
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 shutdown_when_empty
 wait_shutdown_vg
 . $srcdir/diag.sh es-getdata 100 $ES_PORT

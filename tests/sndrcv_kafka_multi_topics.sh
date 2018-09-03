@@ -141,7 +141,7 @@ wait_shutdown
 
 # Do the final sequence check
 seq_check 1 $TESTMESSAGES -d
-. $srcdir/diag.sh content-check-with-count "000" $TESTMESSAGESFULL
+content_check_with_count "000" $TESTMESSAGESFULL
 
 echo \[sndrcv_kafka.sh\]: delete kafka topics 
 . $srcdir/diag.sh delete-kafka-topic 'static1' '.dep_wrk' '22181'

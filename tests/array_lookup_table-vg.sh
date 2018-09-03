@@ -26,18 +26,18 @@ action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 cp -f $srcdir/testsuites/xlate_array.lkp_tbl xlate_array.lkp_tbl
 startup_vg
 injectmsg  0 3
-. $srcdir/diag.sh wait-queueempty
-. $srcdir/diag.sh content-check "msgnum:00000000: foo_old"
-. $srcdir/diag.sh content-check "msgnum:00000001: bar_old"
+wait_queueempty
+content_check "msgnum:00000000: foo_old"
+content_check "msgnum:00000001: bar_old"
 . $srcdir/diag.sh assert-content-missing "baz"
 cp -f $srcdir/testsuites/xlate_array_more.lkp_tbl xlate_array.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
 injectmsg  0 3
-. $srcdir/diag.sh wait-queueempty
-. $srcdir/diag.sh content-check "msgnum:00000000: foo_new"
-. $srcdir/diag.sh content-check "msgnum:00000001: bar_new"
-. $srcdir/diag.sh content-check "msgnum:00000002: baz"
+wait_queueempty
+content_check "msgnum:00000000: foo_new"
+content_check "msgnum:00000001: bar_new"
+content_check "msgnum:00000002: baz"
 cp -f $srcdir/testsuites/xlate_array_more_with_duplicates_and_nomatch.lkp_tbl xlate_array.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
@@ -46,17 +46,17 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown_vg
-. $srcdir/diag.sh check-exit-vg
-. $srcdir/diag.sh content-check "msgnum:00000000: quux"
-. $srcdir/diag.sh content-check "msgnum:00000001: quux"
-. $srcdir/diag.sh content-check "msgnum:00000002: foo_latest"
-. $srcdir/diag.sh content-check "msgnum:00000003: baz_latest"
-. $srcdir/diag.sh content-check "msgnum:00000004: foo_latest"
-. $srcdir/diag.sh content-check "msgnum:00000005: foo_latest"
-. $srcdir/diag.sh content-check "msgnum:00000006: baz_latest"
-. $srcdir/diag.sh content-check "msgnum:00000007: foo_latest"
-. $srcdir/diag.sh content-check "msgnum:00000008: baz_latest"
-. $srcdir/diag.sh content-check "msgnum:00000009: baz_latest"
-. $srcdir/diag.sh content-check "msgnum:00000010: quux"
-. $srcdir/diag.sh content-check "msgnum:00000011: quux"
+. $srcdir/diag.sh check_exit_vg
+content_check "msgnum:00000000: quux"
+content_check "msgnum:00000001: quux"
+content_check "msgnum:00000002: foo_latest"
+content_check "msgnum:00000003: baz_latest"
+content_check "msgnum:00000004: foo_latest"
+content_check "msgnum:00000005: foo_latest"
+content_check "msgnum:00000006: baz_latest"
+content_check "msgnum:00000007: foo_latest"
+content_check "msgnum:00000008: baz_latest"
+content_check "msgnum:00000009: baz_latest"
+content_check "msgnum:00000010: quux"
+content_check "msgnum:00000011: quux"
 exit_test

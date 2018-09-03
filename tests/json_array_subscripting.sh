@@ -24,5 +24,5 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown 
-. $srcdir/diag.sh content-check 'msg: def1 | ghi2 | important_msg | { "baz": "other_msg" } | other_msg'
+content_check 'msg: def1 | ghi2 | important_msg | { "baz": "other_msg" } | other_msg'
 exit_test

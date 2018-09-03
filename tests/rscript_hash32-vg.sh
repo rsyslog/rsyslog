@@ -23,6 +23,6 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown_vg
-. $srcdir/diag.sh check-exit-vg
+. $srcdir/diag.sh check_exit_vg
 . $srcdir/diag.sh content-pattern-check "^\(746581550 -  50\|3889673532 -  32\)$"
 exit_test

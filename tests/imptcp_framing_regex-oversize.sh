@@ -42,6 +42,6 @@ if [ ! $? -eq 0 ]; then
   cat $RSYSLOG_OUT_LOG
   error_exit  1
 fi;
-. $srcdir/diag.sh content-check-regex "assuming end of frame" ${RSYSLOG2_OUT_LOG}
-. $srcdir/diag.sh content-check-regex "message too long" ${RSYSLOG2_OUT_LOG}
+content_check-regex "assuming end of frame" ${RSYSLOG2_OUT_LOG}
+content_check-regex "message too long" ${RSYSLOG2_OUT_LOG}
 exit_test

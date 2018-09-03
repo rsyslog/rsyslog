@@ -21,5 +21,5 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown 
-. $srcdir/diag.sh content-check "**foo says at Thu Oct 30 13:20:18 IST 2014 random number is 19597**"
+content_check "**foo says at Thu Oct 30 13:20:18 IST 2014 random number is 19597**"
 exit_test

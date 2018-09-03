@@ -41,18 +41,18 @@ rst_msleep 8100 #two seconds for unused-metrics to be kept under observation, an
 rst_msleep 8100
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_3
 rst_msleep 8100
-. $srcdir/diag.sh wait-queueempty
-. $srcdir/diag.sh content-check "foo 001 0"
-. $srcdir/diag.sh content-check "bar 002 0"
-. $srcdir/diag.sh content-check "baz 003 0"
-. $srcdir/diag.sh content-check "foo 004 0"
-. $srcdir/diag.sh content-check "baz 005 0"
-. $srcdir/diag.sh content-check "foo 006 0"
+wait_queueempty
+content_check "foo 001 0"
+content_check "bar 002 0"
+content_check "baz 003 0"
+content_check "foo 004 0"
+content_check "baz 005 0"
+content_check "foo 006 0"
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown_vg
-. $srcdir/diag.sh check-exit-vg
+. $srcdir/diag.sh check_exit_vg
  # because dyn-metrics would be reset before it can accumulate and report high counts, sleep between msg-injection ensures that
 . $srcdir/diag.sh custom-assert-content-missing 'baz=2' "${RSYSLOG_DYNNAME}.out.stats.log"
 . $srcdir/diag.sh custom-assert-content-missing 'foo=2' "${RSYSLOG_DYNNAME}.out.stats.log"

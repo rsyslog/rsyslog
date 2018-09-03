@@ -18,7 +18,7 @@ template(name="outfmt" type="string" string="%msg:%\n")
 startup
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown	# we need to wait until rsyslogd is finished!
-. $srcdir/diag.sh content-check "imptcp: error while binding unix socket: Address already in use"
+content_check "imptcp: error while binding unix socket: Address already in use"
 exit_test
 
 # Now make sure we unlink if asked to
@@ -41,5 +41,5 @@ logger -Tu "$srcdir/testbench_socket" "hello from imptcp uds"
 
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown	# we need to wait until rsyslogd is finished!
-. $srcdir/diag.sh content-check "hello from imptcp uds"
+content_check "hello from imptcp uds"
 exit_test

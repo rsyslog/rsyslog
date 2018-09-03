@@ -3,7 +3,6 @@
 
 # This test tests the 'output' setting of omprog when the feedback
 # feature is not used (confirmMessages=off).
-
 . $srcdir/diag.sh init
 generate_conf
 add_conf '
@@ -23,7 +22,7 @@ template(name="outfmt" type="string" string="%msg%\n")
 }
 '
 startup
-. $srcdir/diag.sh injectmsg 0 10
+injectmsg 0 10
 shutdown_when_empty
 wait_shutdown
 

@@ -42,15 +42,15 @@ startup_vg
 . $srcdir/diag.sh allow-single-stats-flush-after-block-and-wait-for-it
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_3
 . $srcdir/diag.sh await-stats-flush-after-block
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
-. $srcdir/diag.sh content-check "foo 001 0"
-. $srcdir/diag.sh content-check "foo 006 0"
+content_check "foo 001 0"
+content_check "foo 006 0"
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown_vg
-. $srcdir/diag.sh check-exit-vg
+. $srcdir/diag.sh check_exit_vg
  # because dyn-accumulators for existing metrics were posted-to under a second, they should not have been evicted
 . $srcdir/diag.sh custom-content-check 'baz=2' "${RSYSLOG_DYNNAME}.out.stats.log"
 . $srcdir/diag.sh custom-content-check 'bar=1' "${RSYSLOG_DYNNAME}.out.stats.log"

@@ -28,7 +28,7 @@ module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 '
 startup
 injectmsg  0 100
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
 shutdown_when_empty
 wait_shutdown 

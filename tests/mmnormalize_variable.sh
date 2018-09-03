@@ -27,5 +27,5 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown 
-. $srcdir/diag.sh content-check  "h:13 m:20 s:18"
+content_check  "h:13 m:20 s:18"
 exit_test

@@ -36,6 +36,6 @@ startup_vg_noleak
 tcpflood -p'$TCPFLOOD_PORT' -m10000 -Ttls -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown_vg
-. $srcdir/diag.sh check-exit-vg
+. $srcdir/diag.sh check_exit_vg
 seq_check 0 9999
 exit_test

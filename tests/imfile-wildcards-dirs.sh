@@ -56,5 +56,5 @@ ls -d $RSYSLOG_DYNNAME.input.*
 
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown	# we need to wait until rsyslogd is finished!
-. $srcdir/diag.sh content-check-with-count "HEADER msgnum:00000000:" $IMFILEINPUTFILES
+content_check_with_count "HEADER msgnum:00000000:" $IMFILEINPUTFILES
 exit_test

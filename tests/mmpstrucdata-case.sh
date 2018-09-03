@@ -29,5 +29,5 @@ wait_startup
 tcpflood -m100 -M "\"<161>1 2003-03-01T01:00:00.000Z mymachine.example.com tcpflood - tag [tcpflood@32473 eventID=\\\"1011\\\"] valid structured data\""
 shutdown_when_empty
 wait_shutdown
-. $srcdir/diag.sh content-check-with-count eventID 100
+content_check_with_count eventID 100
 exit_test

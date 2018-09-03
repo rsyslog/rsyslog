@@ -31,30 +31,30 @@ startup
 cp -f $srcdir/testsuites/xlate_more.lkp_tbl xlate.lkp_tbl
 injectmsg  0 3
 . $srcdir/diag.sh await-lookup-table-reload
-. $srcdir/diag.sh wait-queueempty
-. $srcdir/diag.sh content-check "msgnum:00000000: foo_old"
-. $srcdir/diag.sh content-check "msgnum:00000001: bar_old"
+wait_queueempty
+content_check "msgnum:00000000: foo_old"
+content_check "msgnum:00000001: bar_old"
 . $srcdir/diag.sh assert-content-missing "baz"
 cp -f $srcdir/testsuites/xlate_more_with_duplicates_and_nomatch.lkp_tbl xlate.lkp_tbl
 injectmsg  0 3
 . $srcdir/diag.sh await-lookup-table-reload
-. $srcdir/diag.sh wait-queueempty
-. $srcdir/diag.sh content-check "msgnum:00000000: foo_new"
-. $srcdir/diag.sh content-check "msgnum:00000001: bar_new"
-. $srcdir/diag.sh content-check "msgnum:00000002: baz"
+wait_queueempty
+content_check "msgnum:00000000: foo_new"
+content_check "msgnum:00000001: bar_new"
+content_check "msgnum:00000002: baz"
 rm -f xlate.lkp_tbl # this should lead to unsuccessful reload
 injectmsg  0 3
 . $srcdir/diag.sh await-lookup-table-reload
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 injectmsg  0 2
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown
-. $srcdir/diag.sh content-check "msgnum:00000000: foo_latest"
-. $srcdir/diag.sh content-check "msgnum:00000001: quux"
-. $srcdir/diag.sh content-check "msgnum:00000002: baz_latest"
-. $srcdir/diag.sh content-check "msgnum:00000000: reload_failed"
-. $srcdir/diag.sh content-check "msgnum:00000000: reload_failed"
+content_check "msgnum:00000000: foo_latest"
+content_check "msgnum:00000001: quux"
+content_check "msgnum:00000002: baz_latest"
+content_check "msgnum:00000000: reload_failed"
+content_check "msgnum:00000000: reload_failed"
 
 exit_test

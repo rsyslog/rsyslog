@@ -99,7 +99,7 @@ template(name="dynfile" type="string" string="'$RSYSLOG_OUT_LOG'")
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
 startup
-#. $srcdir/diag.sh wait-queueempty
+#wait_queueempty
 #echo existing queue empty, injecting new data
 #injectmsg  1000000 1000
 shutdown_when_empty 

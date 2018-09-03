@@ -21,5 +21,5 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown 
-. $srcdir/diag.sh content-check "bcdefbcfoo says a abcESCdefb has ESCbcdefbc"
+content_check "bcdefbcfoo says a abcESCdefb has ESCbcdefbc"
 exit_test

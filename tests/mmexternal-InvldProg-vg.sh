@@ -21,7 +21,7 @@ tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag:msgnum:1\""
 ./msleep 500 # let the fork happen and report back!
 shutdown_when_empty
 wait_shutdown_vg
-. $srcdir/diag.sh check-exit-vg
+. $srcdir/diag.sh check_exit_vg
 
 grep 'failed to execute'  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then

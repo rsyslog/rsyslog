@@ -31,11 +31,11 @@ action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
 . $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 rm $srcdir/${RSYSLOG_DYNNAME}.out.stats.log
 . $srcdir/diag.sh issue-HUP #reopen stats file
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_empty_input
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 rst_msleep 1100 # wait for stats flush
 echo doing shutdown
 shutdown_when_empty

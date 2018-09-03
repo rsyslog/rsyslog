@@ -48,14 +48,14 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown_vg
-. $srcdir/diag.sh check-exit-vg
-. $srcdir/diag.sh content-check 'quux: abc0'
-. $srcdir/diag.sh content-check 'quux: def1'
-. $srcdir/diag.sh content-check 'quux: ghi2'
-. $srcdir/diag.sh content-check 'quux: { "bar": [ { "baz": "important_msg" }, { "baz": "other_msg" } ] }'
+. $srcdir/diag.sh check_exit_vg
+content_check 'quux: abc0'
+content_check 'quux: def1'
+content_check 'quux: ghi2'
+content_check 'quux: { "bar": [ { "baz": "important_msg" }, { "baz": "other_msg" } ] }'
 . $srcdir/diag.sh custom-content-check 'grault: { "baz": "important_msg" }' $RSYSLOG_DYNNAME.out.async.log
 . $srcdir/diag.sh custom-content-check 'grault: { "baz": "other_msg" }' $RSYSLOG_DYNNAME.out.async.log
 . $srcdir/diag.sh custom-content-check 'prefixed_grault: { "baz": "important_msg" }' $RSYSLOG_DYNNAME.out.prefixed.log
 . $srcdir/diag.sh custom-content-check 'prefixed_grault: { "baz": "other_msg" }' $RSYSLOG_DYNNAME.out.prefixed.log
-. $srcdir/diag.sh content-check 'garply: important_msg, other_msg'
+content_check 'garply: important_msg, other_msg'
 exit_test

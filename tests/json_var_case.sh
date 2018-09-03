@@ -28,5 +28,5 @@ shutdown_when_empty
 echo wait on shutdown
 wait_shutdown
 # NOTE: conf file updates _aBc to "7"
-. $srcdir/diag.sh content-check  "abc:1 ABC:2 aBc:3 _abc:4 _ABC:5 _aBc:7"
+content_check  "abc:1 ABC:2 aBc:3 _abc:4 _ABC:5 _aBc:7"
 exit_test

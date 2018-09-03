@@ -19,5 +19,5 @@ startup
 tcpflood -m 1 -j "202.106.0.20\ "
 shutdown_when_empty
 wait_shutdown
-. $srcdir/diag.sh content-check '{ "city_name": "Beijing" }'
+content_check '{ "city_name": "Beijing" }'
 exit_test

@@ -41,10 +41,10 @@ rst_msleep 4000
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_2
 rst_msleep 4000
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_3
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
-. $srcdir/diag.sh content-check "foo 001 0"
-. $srcdir/diag.sh content-check "foo 006 0"
+content_check "foo 001 0"
+content_check "foo 006 0"
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown

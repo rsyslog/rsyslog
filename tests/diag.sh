@@ -330,6 +330,72 @@ function injectmsg() {
 }
 
 
+# show the current main queue size. $1 is the instance.
+function get_mainqueuesize() {
+	if [ "$1" == "2" ]; then
+		echo getmainmsgqueuesize | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
+	else
+		echo getmainmsgqueuesize | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
+	fi
+}
+
+# grep for (partial) content. $1 is the content to check for
+function content_check() {
+	cat ${RSYSLOG_OUT_LOG} | grep -qF "$1"
+	if [ "$?" -ne "0" ]; then
+	    printf "\n============================================================\n"
+	    echo FAIL: content-check failed to find "'$1'", content is
+	    cat -n ${RSYSLOG_OUT_LOG}
+	    error_exit 1
+	fi
+}
+
+
+function content_check_with_count() {
+	# content check variables for Timeout
+	if [ "x$3" == "x" ]; then
+		timeoutend=1
+	else
+		timeoutend=$3
+	fi
+	timecounter=0
+
+	while [  $timecounter -lt $timeoutend ]; do
+		let timecounter=timecounter+1
+
+		count=$(cat ${RSYSLOG_OUT_LOG} | grep -F "$1" | wc -l)
+
+		if [ $count -eq $2 ]; then
+			echo content_check_with_count success, \"$1\" occured $2 times
+			break
+		else
+			if [ "x$timecounter" == "x$timeoutend" ]; then
+				shutdown_when_empty
+				wait_shutdown
+
+				echo content_check_with_count failed, expected \"$1\" to occur $2 times, but found it $count times
+				echo file ${RSYSLOG_OUT_LOG} content is:
+				sort < ${RSYSLOG_OUT_LOG}
+				error_exit 1
+			else
+				echo content_check_with_count have $count, wait for $2 times $1...
+				$TESTTOOL_DIR/msleep 1000
+			fi
+		fi
+	done
+}
+
+
+# wait for main message queue to be empty. $1 is the instance.
+function wait_queueempty() {
+	if [ "$1" == "2" ]; then
+		echo WaitMainQueueEmpty | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
+	else
+		echo WaitMainQueueEmpty | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
+	fi
+}
+
+
 # shut rsyslogd down when main queue is empty. $1 is the instance.
 function shutdown_when_empty() {
 	if [ "$1" == "2" ]
@@ -339,17 +405,17 @@ function shutdown_when_empty() {
 	   echo Shutting down instance 1
 	fi
 	ls -l $RSYSLOG_PIDBASE$1.pid 
-	. $srcdir/diag.sh wait-queueempty $1
+	wait_queueempty $1
 	if [ "$RSYSLOG_PIDBASE" == "" ]; then
 		echo "RSYSLOG_PIDBASE is EMPTY! - bug in test? (instance $1)"
 		exit 1
 	fi
-	#set -x
-	#ls -l $RSYSLOG_PIDBASE$1.pid
+	set -x
+	ls -l $RSYSLOG_PIDBASE$1.pid
 	cp $RSYSLOG_PIDBASE$1.pid $RSYSLOG_PIDBASE$1.pid.save
 	$TESTTOOL_DIR/msleep 500 # wait a bit (think about slow testbench machines!)
 	kill `cat $RSYSLOG_PIDBASE$1.pid` # note: we do not wait for the actual termination!
-	#set +x
+	set +x
 }
 
 
@@ -358,6 +424,7 @@ function shutdown_when_empty() {
 function wait_shutdown() {
 	i=0
 	out_pid=`cat $RSYSLOG_PIDBASE$1.pid.save`
+	echo wait on shutdown of $out_pid
 	if [[ "x$out_pid" == "x" ]]
 	then
 		terminated=1
@@ -395,10 +462,18 @@ function wait_shutdown_vg() {
 	wait `cat $RSYSLOG_PIDBASE$1.pid`
 	export RSYSLOGD_EXIT=$?
 	echo rsyslogd run exited with $RSYSLOGD_EXIT
-	if [ -e vgcore.* ]
-	then
+	if [ -e vgcore.* ]; then
 	   echo "ABORT! core file exists"
 	   error_exit 1
+	fi
+}
+
+
+# check exit code for valgrind error
+function check_exit_vg(){
+	if [ "$RSYSLOGD_EXIT" -eq "10" ]; then
+		echo "valgrind run FAILED with exceptions - terminating"
+		error_exit 1
 	fi
 }
 
@@ -474,6 +549,7 @@ function seq_check() {
 	$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${RSYSLOG_OUT_LOG} | ./chkseq -s$1 -e$2 $3 $4 $5 $6 $7
 	if [ "$?" -ne "0" ]; then
 		echo "sequence error detected in $RSYSLOG_OUT_LOG"
+		echo "number of lines in file: $(wc -l $RSYSLOG_OUT_LOG)"
 		echo "sorted data has been placed in error.log"
 		$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${RSYSLOG_OUT_LOG} > error.log
 		error_exit 1 
@@ -634,10 +710,15 @@ case $1 in
 		# some default names (later to be set in other parts, once we support fully
 		# parallel tests)
 		export RSYSLOG_DFLT_LOG_INTERNAL=1 # testbench needs internal messages logged internally!
+		if [ "$SYSLOG_DYNNAME" != "" ]; then
+			echo "FAIL: \$RSYSLOG_DYNNAME already set in init"
+			echo "hint: was init accidently called twice?"
+			exit 2
+		fi
+		export RSYSLOG_DYNNAME="rstb_$(./test_id $(basename $0))"
 		export RSYSLOG2_OUT_LOG=rsyslog2.out.log # TODO: remove
 		export RSYSLOG_OUT_LOG=rsyslog.out.log # TODO: remove
 		export RSYSLOG_PIDBASE="rsyslog" # TODO: remove
-		export RSYSLOG_DYNNAME="rstb_$(./test_id $(basename $0))"
 		export IMDIAG_PORT=13500
 		export IMDIAG_PORT2=13501
 		export TCPFLOOD_PORT=13514
@@ -673,10 +754,8 @@ case $1 in
 			export TZ=UTC
 		fi
 		rm -f xlate*.lkp_tbl
-		#rm -f rsyslog*.pid.save xlate*.lkp_tbl
 		rm -f log log* # RSyslog debug output 
 		rm -f work 
-		#rm -f rsyslog*.out.log # we need this while the sndrcv tests are not converted
 		rm -rf test-logdir stat-file1
 		rm -f rsyslog.empty imfile-state* omkafka-failed.data
 		rm -rf rsyslog-link.*.log targets
@@ -763,29 +842,6 @@ case $1 in
 		unset terminated
 		unset out_pid
 		;;
-   'check-exit-vg') # wait for main message queue to be empty. $2 is the instance.
-		if [ "$RSYSLOGD_EXIT" -eq "10" ]
-		then
-			echo "valgrind run FAILED with exceptions - terminating"
-			exit 1
-		fi
-		;;
-   'get-mainqueuesize') # show the current main queue size
-		if [ "$2" == "2" ]
-		then
-			echo getmainmsgqueuesize | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
-		else
-			echo getmainmsgqueuesize | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
-		fi
-		;;
-   'wait-queueempty') # wait for main message queue to be empty. $2 is the instance.
-		if [ "$2" == "2" ]
-		then
-			echo WaitMainQueueEmpty | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
-		else
-			echo WaitMainQueueEmpty | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
-		fi
-		;;
    'await-lookup-table-reload') # wait for all pending lookup table reloads to complete $2 is the instance.
 		if [ "$2" == "2" ]
 		then
@@ -806,11 +862,6 @@ case $1 in
    'kill-immediate') # kill rsyslog unconditionally
 		kill -9 `cat $RSYSLOG_PIDBASE.pid`
 		# note: we do not wait for the actual termination!
-		;;
-   'injectmsg') # inject messages via our inject interface (imdiag)
-		echo injecting $3 messages
-		echo injectmsg $2 $3 $4 $5 | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
-		# TODO: some return state checking? (does it really make sense here?)
 		;;
    'injectmsg2') # inject messages in INSTANCE 2 via our inject interface (imdiag)
 		echo injecting $3 messages
@@ -911,39 +962,6 @@ case $1 in
 			fi
 		done
 		unset count
-		;;
-   'content-check-with-count') 
-		# content check variables for Timeout
-		if [ "x$4" == "x" ]; then
-			timeoutend=1
-		else
-			timeoutend=$4
-		fi
-		timecounter=0
-
-		while [  $timecounter -lt $timeoutend ]; do
-			let timecounter=timecounter+1
-
-			count=$(cat ${RSYSLOG_OUT_LOG} | grep -F "$2" | wc -l)
-
-			if [ $count -eq $3 ]; then
-				echo content-check-with-count success, \"$2\" occured $3 times
-				break
-			else
-				if [ "x$timecounter" == "x$timeoutend" ]; then
-					shutdown_when_empty # shut down rsyslogd
-					wait_shutdown	# Shutdown rsyslog instance on error 
-
-					echo content-check-with-count failed, expected \"$2\" to occur $3 times, but found it $count times
-					echo file ${RSYSLOG_OUT_LOG} content is:
-					sort < ${RSYSLOG_OUT_LOG}
-					error_exit 1
-				else
-					echo content-check-with-count have $count, wait for $3 times $2...
-					$TESTTOOL_DIR/msleep 1000
-				fi
-			fi
-		done
 		;;
 	 'block-stats-flush')
 		echo blocking stats flush

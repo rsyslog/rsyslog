@@ -32,19 +32,19 @@ action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 startup_vg
 . $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input
-. $srcdir/diag.sh wait-queueempty
-. $srcdir/diag.sh content-check "foo 001 0"
-. $srcdir/diag.sh content-check "bar 002 0"
-. $srcdir/diag.sh content-check "baz 003 0"
-. $srcdir/diag.sh content-check "foo 004 0"
-. $srcdir/diag.sh content-check "baz 005 0"
-. $srcdir/diag.sh content-check "foo 006 0"
+wait_queueempty
+content_check "foo 001 0"
+content_check "bar 002 0"
+content_check "baz 003 0"
+content_check "foo 004 0"
+content_check "baz 005 0"
+content_check "foo 006 0"
 rst_msleep 1100 # wait for stats flush
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown_vg
-. $srcdir/diag.sh check-exit-vg
+. $srcdir/diag.sh check_exit_vg
 . $srcdir/diag.sh custom-content-check 'bar=1' "${RSYSLOG_DYNNAME}.out.stats.log"
 . $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'foo=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
 . $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'bar=' "${RSYSLOG_DYNNAME}.out.stats.log" 1

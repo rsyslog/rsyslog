@@ -38,7 +38,7 @@ startup_vg
 . $srcdir/diag.sh block-stats-flush
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_more_0
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_more_1
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh allow-single-stats-flush-after-block-and-wait-for-it
 
 . $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'foo=' "${RSYSLOG_DYNNAME}.out.stats.log" 5
@@ -66,27 +66,27 @@ rm ${RSYSLOG_DYNNAME}.out.stats.log
 . $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
 . $srcdir/diag.sh block-stats-flush
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_more_2
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 . $srcdir/diag.sh allow-single-stats-flush-after-block-and-wait-for-it
 
-. $srcdir/diag.sh content-check "foo 001 0"
-. $srcdir/diag.sh content-check "bar 002 0"
-. $srcdir/diag.sh content-check "baz 003 0"
-. $srcdir/diag.sh content-check "foo 004 0"
-. $srcdir/diag.sh content-check "baz 005 0"
-. $srcdir/diag.sh content-check "foo 006 0"
-. $srcdir/diag.sh content-check "quux 007 -6"
-. $srcdir/diag.sh content-check "corge 008 -6"
-. $srcdir/diag.sh content-check "quux 009 -6"
-. $srcdir/diag.sh content-check "foo 010 0"
-. $srcdir/diag.sh content-check "corge 011 -6"
-. $srcdir/diag.sh content-check "grault 012 -6"
-. $srcdir/diag.sh content-check "foo 013 0"
-. $srcdir/diag.sh content-check "corge 014 0"
-. $srcdir/diag.sh content-check "grault 015 0"
-. $srcdir/diag.sh content-check "quux 016 0"
-. $srcdir/diag.sh content-check "foo 017 -6"
-. $srcdir/diag.sh content-check "corge 018 0"
+content_check "foo 001 0"
+content_check "bar 002 0"
+content_check "baz 003 0"
+content_check "foo 004 0"
+content_check "baz 005 0"
+content_check "foo 006 0"
+content_check "quux 007 -6"
+content_check "corge 008 -6"
+content_check "quux 009 -6"
+content_check "foo 010 0"
+content_check "corge 011 -6"
+content_check "grault 012 -6"
+content_check "foo 013 0"
+content_check "corge 014 0"
+content_check "grault 015 0"
+content_check "quux 016 0"
+content_check "foo 017 -6"
+content_check "corge 018 0"
 
 . $srcdir/diag.sh first-column-sum-check 's/.*corge=\([0-9]\+\)/\1/g' 'corge=' "${RSYSLOG_DYNNAME}.out.stats.log" 2
 . $srcdir/diag.sh first-column-sum-check 's/.*grault=\([0-9]\+\)/\1/g' 'grault=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
@@ -101,7 +101,7 @@ rm ${RSYSLOG_DYNNAME}.out.stats.log
 
 shutdown_when_empty
 wait_shutdown_vg
-. $srcdir/diag.sh check-exit-vg
+. $srcdir/diag.sh check_exit_vg
 
 . $srcdir/diag.sh first-column-sum-check 's/.*metrics_purged=\([0-9]\+\)/\1/g' 'metrics_purged=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
 

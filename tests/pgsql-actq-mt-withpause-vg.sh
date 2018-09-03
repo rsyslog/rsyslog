@@ -20,17 +20,17 @@ if $msg contains "msgnum" then {
 }'
 startup_vg
 injectmsg  0 50000
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 echo waiting for worker threads to timeout
 ./msleep 3000
 injectmsg  50000 50000
-. $srcdir/diag.sh wait-queueempty
+wait_queueempty
 echo waiting for worker threads to timeout
 ./msleep 2000
 injectmsg  100000 50000
 shutdown_when_empty
 wait_shutdown_vg
-. $srcdir/diag.sh check-exit-vg
+. $srcdir/diag.sh check_exit_vg
 
 psql -h localhost -U postgres -d syslogtest -f testsuites/pgsql-select-msg.sql -t -A > $RSYSLOG_OUT_LOG
 seq_check  0 149999

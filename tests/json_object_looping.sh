@@ -50,14 +50,14 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown
-. $srcdir/diag.sh content-check 'quux: { "key": "str1", "value": "abc0" }'
-. $srcdir/diag.sh content-check 'quux: { "key": "str2", "value": "def1", "random_key": "str2" }'
-. $srcdir/diag.sh content-check 'quux: { "key": "str3", "value": "ghi2" }'
+content_check 'quux: { "key": "str1", "value": "abc0" }'
+content_check 'quux: { "key": "str2", "value": "def1", "random_key": "str2" }'
+content_check 'quux: { "key": "str3", "value": "ghi2" }'
 . $srcdir/diag.sh assert-content-missing 'quux: { "key": "str4", "value": "jkl3" }'
-. $srcdir/diag.sh content-check 'new: jkl3'
+content_check 'new: jkl3'
 . $srcdir/diag.sh assert-content-missing 'deleted: ghi2'
-. $srcdir/diag.sh content-check 'quux: { "key": "obj", "value": { "bar": { "k1": "important_msg", "k2": "other_msg" } } }'
+content_check 'quux: { "key": "obj", "value": { "bar": { "k1": "important_msg", "k2": "other_msg" } } }'
 . $srcdir/diag.sh custom-content-check 'corge: key: bar val: { "k1": "important_msg", "k2": "other_msg" }' $RSYSLOG_DYNNAME.out.async.log
 . $srcdir/diag.sh custom-content-check 'prefixed_corge: { "key": "bar", "value": { "k1": "important_msg", "k2": "other_msg" } }' $RSYSLOG_DYNNAME.out.prefixed.log
-. $srcdir/diag.sh content-check 'garply: k1=important_msg, k2=other_msg'
+content_check 'garply: k1=important_msg, k2=other_msg'
 exit_test

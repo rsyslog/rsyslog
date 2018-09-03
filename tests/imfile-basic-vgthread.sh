@@ -36,7 +36,7 @@ ls -l $RSYSLOG_DYNNAME.input
 startup_vgthread
 shutdown_when_empty
 wait_shutdown_vg
-. $srcdir/diag.sh check-exit-vg
+. $srcdir/diag.sh check_exit_vg
 
 seq_check 0 49999
 exit_test

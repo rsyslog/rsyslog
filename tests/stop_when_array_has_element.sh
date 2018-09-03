@@ -25,7 +25,7 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown 
-. $srcdir/diag.sh content-check '"abc0"'
-. $srcdir/diag.sh content-check '"abc2"'
+content_check '"abc0"'
+content_check '"abc2"'
 . $srcdir/diag.sh assert-content-missing 'xyz0'
 exit_test

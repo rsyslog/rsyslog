@@ -21,5 +21,5 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown 
-. $srcdir/diag.sh content-check "*Number is 19597*"
+content_check "*Number is 19597*"
 exit_test
