@@ -1,7 +1,7 @@
 /* A yet very simple tool to talk to imdiag (this replaces the
  * previous Java implementation in order to get fewer dependencies).
  *
- * Copyright 2010,2011 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2010-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -64,16 +64,16 @@ int openConn(int *fd)
 		} else {
 			if(retries++ == 50) {
 				perror("connect()");
-				fprintf(stderr, "connect() failed\n");
+				fprintf(stderr, "[%d] connect() failed\n", port);
 				exit(1);
 			} else {
-				fprintf(stderr, "connect failed, retrying...\n");
+				fprintf(stderr, "[%d] connect failed, retrying...\n", port);
 				usleep(100000); /* ms = 1000 us! */
 			}
 		}
 	}
 	if(retries > 0) {
-		fprintf(stderr, "connection established.\n");
+		fprintf(stderr, "[%d] connection established.\n", port);
 	}
 
 	*fd = sock;
