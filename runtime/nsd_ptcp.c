@@ -539,8 +539,9 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 						"error while trying to get socket");
 			}
 			if((fp = fopen((const char*)pszLstnPortFileName, "w+")) == NULL) {
-				LogError(errno, NO_ERRCODE, "nsd_ptcp: ListenPortFileName: "
+				LogError(errno, RS_RET_IO_ERROR, "nsd_ptcp: ListenPortFileName: "
 						"error while trying to open file");
+				ABORT_FINALIZE(RS_RET_IO_ERROR);
 			}
 			if(isIPv6) {
 				fprintf(fp, "%d", ntohs((((struct sockaddr_in6*)r->ai_addr)->sin6_port)));
