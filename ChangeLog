@@ -27,6 +27,10 @@ Version 8.38.0 [v8-stable] 2018-09-18
   closes https://github.com/rsyslog/rsyslog/issues/2530
   closes https://github.com/rsyslog/rsyslog/issues/2231
 - omkafka: better debug information
+- omfile bugfix: errant error message when dynafile param needed
+  also fixes related message in contributed module omfile-hardened
+  closes https://github.com/rsyslog/rsyslog/issues/2975
+  Thanks to Frank Bicknell for the patch
 - bugfix omprog: invalid memory access on partial writes to pipe
   When sending logs to the program, in case of a partial write to the pipe,
   invalid data was sent, or an invalid memory access could occur. (A
