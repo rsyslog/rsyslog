@@ -25,7 +25,6 @@ $template dynfile,"'$RSYSLOG_OUT_LOG'" # trick to use relative path names!
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
 startup
-wait_startup
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
 generate_conf 2
@@ -38,7 +37,6 @@ input(type="imtcp" port="'$TCPFLOOD_PORT'")
 action(type="omfwd" target="127.0.0.1" protocol="tcp" port="'$PORT_RCVR'")
 ' 2
 startup 2
-wait_startup 2
 # may be needed by TLS (once we do it): sleep 30
 
 # now inject the messages into instance 2. It will connect to instance 1,

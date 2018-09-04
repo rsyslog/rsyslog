@@ -59,7 +59,6 @@ local4.* action(	name="kafka-fwd"
 
 echo \[sndrcv_kafka.sh\]: Starting sender instance [omkafka]
 startup
-wait_startup
 # --- 
 
 echo \[sndrcv_kafka.sh\]: Inject messages into rsyslog sender instance  
@@ -91,7 +90,6 @@ if ($msg contains "msgnum:") then {
 
 echo \[sndrcv_kafka.sh\]: Starting receiver instance [imkafka]
 startup 2
-wait_startup 2
 # --- 
 
 #echo \[sndrcv_kafka.sh\]: Sleep to give rsyslog instances time to process data ...
