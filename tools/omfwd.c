@@ -1140,7 +1140,7 @@ CODESTARTnewActInst
 	pvals = nvlstGetParams(lst, &actpblk, NULL);
 	if(pvals == NULL) {
 		LogError(0, RS_RET_MISSING_CNFPARAMS, "omfwd: either the \"file\" or "
-				"\"dynfile\" parameter must be given");
+				"\"dynafile\" parameter must be given");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 

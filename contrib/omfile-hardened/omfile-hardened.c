@@ -1398,7 +1398,7 @@ CODESTARTnewActInst
 
 	if(pData->fname == NULL) {
 		parser_errmsg("omfile: either the \"file\" or "
-				"\"dynfile\" parameter must be given");
+				"\"dynafile\" parameter must be given");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
