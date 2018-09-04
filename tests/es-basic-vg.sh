@@ -27,7 +27,7 @@ startup_vg
 injectmsg  0 10000
 shutdown_when_empty
 wait_shutdown_vg
-. $srcdir/diag.sh check_exit_vg
+check_exit_vg
 . $srcdir/diag.sh es-getdata 10000 19200
 . $srcdir/diag.sh stop-elasticsearch
 seq_check  0 9999

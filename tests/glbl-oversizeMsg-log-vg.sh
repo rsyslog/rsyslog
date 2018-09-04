@@ -24,7 +24,7 @@ startup_vg
 tcpflood -Trelp-plain -p'$TCPFLOOD_PORT' -m1 -d 240
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown_vg
-. $srcdir/diag.sh check_exit_vg
+check_exit_vg
 grep "rawmsg.*<167>Mar  1 01:00:00 172.20.245.8 tag msgnum:00000000:240:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.*input.*imrelp" ${RSYSLOG2_OUT_LOG} > /dev/null
 if [ $? -ne 0 ]; then
         echo

@@ -101,7 +101,7 @@ content_check "corge 018 0"
 
 shutdown_when_empty
 wait_shutdown_vg
-. $srcdir/diag.sh check_exit_vg
+check_exit_vg
 
 . $srcdir/diag.sh first-column-sum-check 's/.*metrics_purged=\([0-9]\+\)/\1/g' 'metrics_purged=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
 

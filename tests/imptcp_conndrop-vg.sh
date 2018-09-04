@@ -25,6 +25,6 @@ tcpflood -c20 -m50000 -r -d100 -P129 -D
 sleep 10 # due to large messages, we need this time for the tcp receiver to settle...
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown_vg    # and wait for it to terminate
-. $srcdir/diag.sh check_exit_vg
+check_exit_vg
 seq_check 0 49999 -E
 exit_test

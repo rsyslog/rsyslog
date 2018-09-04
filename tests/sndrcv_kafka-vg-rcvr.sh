@@ -98,7 +98,7 @@ wait_shutdown 2
 echo \[sndrcv_kafka-vg-rcvr.sh\]: Stopping receiver instance [omkafka]
 shutdown_when_empty
 wait_shutdown_vg
-. $srcdir/diag.sh check_exit_vg
+check_exit_vg
 
 # Do the final sequence check
 seq_check 1 $TESTMESSAGESFULL -d

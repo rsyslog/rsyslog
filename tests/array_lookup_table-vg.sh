@@ -46,7 +46,7 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown_vg
-. $srcdir/diag.sh check_exit_vg
+check_exit_vg
 content_check "msgnum:00000000: quux"
 content_check "msgnum:00000001: quux"
 content_check "msgnum:00000002: foo_latest"

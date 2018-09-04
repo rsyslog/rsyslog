@@ -36,7 +36,7 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown_vg
-. $srcdir/diag.sh check_exit_vg
+check_exit_vg
 . $srcdir/diag.sh assert-content-missing "foo_new"
 . $srcdir/diag.sh assert-content-missing "bar_new"
 . $srcdir/diag.sh assert-content-missing "baz"

@@ -17,7 +17,7 @@ startup_vg
 tcpflood -m1 -y
 shutdown_when_empty
 wait_shutdown_vg
-. $srcdir/diag.sh check_exit_vg
+check_exit_vg
 export EXPECTED='"msg": "msgnum:00000000:", '
 . $srcdir/diag.sh grep-check
 exit_test

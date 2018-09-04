@@ -24,7 +24,7 @@ startup_vg
 injectmsg  0 1
 shutdown_when_empty
 wait_shutdown_vg
-. $srcdir/diag.sh check_exit_vg
+check_exit_vg
 content_check "msgnum:00000000:"
 exit_test
 

@@ -23,6 +23,6 @@ startup_vg
 tcpflood -m1000 -P 129
 shutdown_when_empty
 wait_shutdown_vg
-. $srcdir/diag.sh check_exit_vg
+check_exit_vg
 seq_check 0 999 
 exit_test

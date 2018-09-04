@@ -111,7 +111,7 @@ injectmsg 0 $numrecords
 shutdown_when_empty
 if [ "x${USE_VALGRIND:-false}" == "xtrue" ] ; then
 	wait_shutdown_vg
-	. $srcdir/diag.sh check_exit_vg
+	check_exit_vg
 else
 	wait_shutdown
 fi
