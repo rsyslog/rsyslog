@@ -89,7 +89,6 @@ action(	name="kafka-fwd"
 echo \[sndrcv_kafka_failresume.sh\]: Starting sender instance [imkafka]
 startup 2
 # ---
->>>>>>> testbench: Added new kafka tests using kafkacat for better debugging.
 
 echo \[sndrcv_kafka_failresume.sh\]: Inject messages into rsyslog sender instance
 tcpflood -m$TESTMESSAGES -i1

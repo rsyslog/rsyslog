@@ -9,7 +9,7 @@ export RANDTOPIC=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1
 
 # enable the EXTRA_EXITCHECK only if really needed - otherwise spams the test log
 # too much
-#export EXTRA_EXITCHECK=dumpkafkalogs
+# export EXTRA_EXITCHECK=dumpkafkalogs
 echo ===============================================================================
 echo \[sndrcv_kafka.sh\]: Create kafka/zookeeper instance and $RANDTOPIC topic
 . $srcdir/diag.sh download-kafka
@@ -110,6 +110,9 @@ wait_shutdown 2
 
 # Delete topic to remove old traces before
 . $srcdir/diag.sh delete-kafka-topic $RANDTOPIC '.dep_wrk' '22181'
+
+# Dump Kafka log | uncomment if needed
+. $srcdir/diag.sh dump-kafka-serverlog
 
 echo \[sndrcv_kafka.sh\]: stop kafka instance
 . $srcdir/diag.sh stop-kafka

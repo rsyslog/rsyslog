@@ -1,11 +1,17 @@
 #!/bin/bash
 # added 2017-05-03 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
-export TESTMESSAGES=50000
+export TESTMESSAGES=100000
 export TESTMESSAGESFULL=$TESTMESSAGES
 
 # Generate random topic name
 export RANDTOPIC=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
+
+echo \[omkafka.sh\]: Init Testbench 
+. $srcdir/diag.sh init
+
+# Check for kafkacat
+check_command_available kafkacat
 
 # enable the EXTRA_EXITCHECK only if really needed - otherwise spams the test log
 # too much
@@ -22,9 +28,6 @@ echo \[omkafka.sh\]: Create kafka/zookeeper instance and $RANDTOPIC topic
 
 echo \[omkafka.sh\]: Give Kafka some time to process topic create ...
 sleep 5
-
-echo \[omkafka.sh\]: Init Testbench 
-. $srcdir/diag.sh init
 
 # --- Create/Start omkafka sender config 
 export RSYSLOG_DEBUGLOG="log"
@@ -79,8 +82,8 @@ kafkacat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%p@%o:%k:%s' > 
 # Delete topic to remove old traces before
 # . $srcdir/diag.sh delete-kafka-topic $RANDTOPIC '.dep_wrk' '22181'
 
-# Dump Kafka log
-# uncomment if needed . $srcdir/diag.sh dump-kafka-serverlog
+# Dump Kafka log | uncomment if needed
+# . $srcdir/diag.sh dump-kafka-serverlog
 
 echo \[omkafka.sh\]: stop kafka instance
 . $srcdir/diag.sh stop-kafka

@@ -600,11 +600,12 @@ TESTS += \
 	omkafka.sh \
 	imkafka.sh \
 	sndrcv_kafka.sh \
-	sndrcv_kafka_multi.sh
 	sndrcv_kafka_multi_topics.sh
 # Tests below need to be stable first!
 #	sndrcv_kafka_fail.sh \
-#	sndrcv_kafka_failresume.sh
+#	sndrcv_kafka_failresume.sh \
+# needs properly to much mempory on arm devices!
+#	sndrcv_kafka_multi.sh
 if HAVE_VALGRIND
 TESTS += \
 	sndrcv_kafka-vg-rcvr.sh

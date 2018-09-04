@@ -646,7 +646,7 @@ writeKafka(instanceData *const pData, uchar *const msg,
 #if RD_KAFKA_VERSION >= 0x00090400
 	if (msgTimestamp == NULL) {
 		/* Resubmitted items don't have a timestamp */
-		ttMsgTimestamp = time(NULL);
+		ttMsgTimestamp = 0;
 	} else {
 		ttMsgTimestamp = atoi((char*)msgTimestamp); /* Convert timestamp into int */
 		ttMsgTimestamp *= 1000; /* Timestamp in Milliseconds for kafka */
@@ -661,8 +661,10 @@ writeKafka(instanceData *const pData, uchar *const msg,
 						RD_KAFKA_V_VALUE(msg, strlen((char*)msg)),
 						RD_KAFKA_V_MSGFLAGS(RD_KAFKA_MSG_F_COPY),
 						RD_KAFKA_V_TIMESTAMP(ttMsgTimestamp),
+						RD_KAFKA_V_KEY(NULL, 0),
 						RD_KAFKA_V_END);
 	} else {
+		DBGPRINTF("omkafka: rd_kafka_producev key=%s\n", pData->key);
 		msg_kafka_response = rd_kafka_producev(pData->rk,
 						RD_KAFKA_V_RKT(rkt),
 						RD_KAFKA_V_PARTITION(partition),

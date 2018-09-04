@@ -7,6 +7,12 @@ export TESTMESSAGESFULL=$TESTMESSAGES
 # Generate random topic name
 export RANDTOPIC=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
 
+echo \[imkafka.sh\]: Init Testbench 
+. $srcdir/diag.sh init
+
+# Check for kafkacat
+check_command_available kafkacat
+
 # enable the EXTRA_EXITCHECK only if really needed - otherwise spams the test log
 # too much
 #export EXTRA_EXITCHECK=dumpkafkalogs
@@ -22,9 +28,6 @@ echo \[imkafka.sh\]: Create kafka/zookeeper instance and $RANDTOPIC topic
 
 echo \[imkafka.sh\]: Give Kafka some time to process topic create ...
 sleep 5
-
-echo \[imkafka.sh\]: Init Testbench 
-. $srcdir/diag.sh init
 
 # --- Create imkafka receiver config
 export RSYSLOG_DEBUGLOG="log"
