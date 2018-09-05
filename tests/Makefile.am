@@ -1731,6 +1731,7 @@ EXTRA_DIST= \
 	libmaxmindb.supp \
 	travis/trusty.supp \
 	linux_localtime_r.supp \
+	CI/centos6-9.supp \
 	json_var_case.sh \
 	cfg.sh \
 	empty-prop-comparison.sh \
