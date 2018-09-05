@@ -107,7 +107,8 @@ object are case-insensitive.
 -  **queue.workerthreads** number
    number of worker threads, default 1, recommended 1
 -  **queue.timeoutshutdown** number
-   number is timeout in ms (1000ms is 1sec!), default 0 (indefinite)
+   number is timeout in ms (1000ms is 1sec!), 0 means immediately
+   default for action queues is 0, for rule set queues (including main queue) is 1500
 -  **queue.timeoutactioncompletion** number
    number is timeout in ms (1000ms is 1sec!), default 1000, 0 means
    immediate!
