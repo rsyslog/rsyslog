@@ -211,6 +211,12 @@ To specify just a single peer, you can either specify the string
 directly or enclose it in braces. You may also use wildcards to match
 a larger number of permitted peers, e.g. ``*.example.com``.
 
+When using wildcards to match larger number of permitted peers, please
+know that the implementation is simular to Syslog RFC5425 which means:
+This wildcard matches any left-most DNS label in the server name.
+That is, the subject ``*.example.com`` matches the server names ``a.example.com``
+and ``b.example.com``, but does not match ``example.com`` or ``a.b.example.com``.
+
 
 TLS.AuthMode
 ^^^^^^^^^^^^
