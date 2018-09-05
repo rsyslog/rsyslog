@@ -18,6 +18,19 @@ Version 8.38.0 [v8-stable] 2018-09-18
   default is left at current behavior
   see also https://github.com/rsyslog/rsyslog/pull/2774
   see also https://bugzilla.redhat.com/show_bug.cgi?id=1309698
+- omprog: add feedback timeout and keep-alive feature
+  - Restart the program if it does not respond within timeout.
+  - New setting 'confirmTimeout' (default 10 seconds).
+  - Allow the program to provide keep-alive feedback when a
+    message requires long-running processing.
+  - Improve efficiency when reading feedback line (use buffer).
+    Retry interrupted writes/reads to/from pipe.
+  - New setting 'reportFailures' for reporting error messages
+    from the program.
+  - Report child termination when writing to pipe.
+  - Minor refactor: renamed writePipe function to sendMessage,
+    renamed readPipe to readStatus.
+  Thanks to Joan Sala for contributing this.
 - imfile: implement file-id, used in state file
   This ensures that files with the same inodes are not accidently treated
   as equal, at least within the limits of the file id hash (see doc for
