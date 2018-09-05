@@ -38,6 +38,7 @@
 #include <fcntl.h>
 #include <sys/wait.h>
 #include <pthread.h>
+#include <poll.h>
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
@@ -57,8 +58,9 @@ extern char **environ; /* POSIX environment ptr, by std not in a header... (see 
 DEF_OMOD_STATIC_DATA
 
 #define NO_HUP_FORWARD -1	/* indicates that HUP should NOT be forwarded */
+#define DEFAULT_CONFIRM_TIMEOUT_MS 10000
 #define DEFAULT_CLOSE_TIMEOUT_MS 5000
-#define READLINE_BUFFER_SIZE 1024
+#define RESPONSE_LINE_BUFFER_SIZE 4096
 #define OUTPUT_CAPTURE_BUFFER_SIZE 4096
 #define MAX_FD_TO_CLOSE 65535
 
@@ -83,6 +85,8 @@ typedef struct _instanceData {
 	int iParams;			/* holds the count of parameters if set */
 	uchar *szTemplateName;	/* assigned output template */
 	int bConfirmMessages;	/* does the program provide feedback via stdout? */
+	long lConfirmTimeout;	/* how long to wait for feedback from the program (ms) */
+	int bReportFailures;	/* report failures returned by the program as warning logs? */
 	int bUseTransactions;	/* send begin/end transaction marks to program? */
 	uchar *szBeginTransactionMark;	/* mark message for begin transaction */
 	uchar *szCommitTransactionMark;	/* mark message for commit transaction */
@@ -113,6 +117,8 @@ static configSettings_t cs;
 static struct cnfparamdescr actpdescr[] = {
 	{ "binary", eCmdHdlrString, CNFPARAM_REQUIRED },
 	{ "confirmMessages", eCmdHdlrBinary, 0 },
+	{ "confirmTimeout", eCmdHdlrInt, 0 },
+	{ "reportFailures", eCmdHdlrBinary, 0 },
 	{ "useTransactions", eCmdHdlrBinary, 0 },
 	{ "beginTransactionMark", eCmdHdlrString, 0 },
 	{ "commitTransactionMark", eCmdHdlrString, 0 },
@@ -391,18 +397,17 @@ terminateChild(wrkrInstanceData_t *pWrkrData)
 	cleanupChild(pWrkrData);
 }
 
-/* write to pipe
- * note that we do not try to run block-free. If the users fears something
- * may block (and this not be acceptable), the action should be run on its
+/* write message to pipe
+ * note that we do not try to run block-free. If the user fears something
+ * may block (and this is not acceptable), the action should be run on its
  * own action queue.
  */
 static rsRetVal
-writePipe(wrkrInstanceData_t *pWrkrData, uchar *szMsg)
+sendMessage(wrkrInstanceData_t *pWrkrData, uchar *szMsg)
 {
-	ssize_t len;
+	size_t len;
 	ssize_t written;
-	ssize_t offset = 0;
-	char errStr[1024];
+	size_t offset = 0;
 	DEFiRet;
 
 	len = strlen((char*)szMsg);
@@ -410,15 +415,17 @@ writePipe(wrkrInstanceData_t *pWrkrData, uchar *szMsg)
 	do {
 		written = write(pWrkrData->fdPipeOut, ((char*)szMsg) + offset, len - offset);
 		if(written == -1) {
-			if(errno == EPIPE) {
-				DBGPRINTF("omprog: program '%s' terminated, will be restarted\n",
-						pWrkrData->pData->szBinary);
-				/* force restart in tryResume() */
-				cleanupChild(pWrkrData);
-			} else {
-				DBGPRINTF("omprog: error %d writing to pipe: %s\n", errno,
-						rs_strerror_r(errno, errStr, sizeof(errStr)));
+			if(errno == EINTR) {
+				continue;  /* call interrupted: retry write */
 			}
+			if(errno == EPIPE) {
+				LogMsg(0, RS_RET_ERR_WRITE_PIPE, LOG_WARNING,
+						"omprog: program '%s' (pid %d) terminated; will be restarted",
+						pWrkrData->pData->szBinary, pWrkrData->pid);
+				cleanupChild(pWrkrData);  /* force restart in tryResume() */
+				ABORT_FINALIZE(RS_RET_SUSPENDED);
+			}
+			LogError(errno, RS_RET_ERR_WRITE_PIPE, "omprog: error sending message to program");
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 		offset += written;
@@ -428,78 +435,15 @@ finalize_it:
 	RETiRet;
 }
 
-/* Reads a line from a blocking pipe, using the unistd.h read() function.
- * Returns the line as a null-terminated string in *lineptr, not including
- * the \n or \r\n terminator.
- * On success, returns the line length (>= 0).
- * On error, returns -1 and sets errno.
- * On EOF, returns -1 and sets errno to EPIPE (if EOF is read in the middle of
- * a line, discards the read characters).
- * On success, the caller is responsible for freeing the returned line buffer.
- */
-static ssize_t
-readline(int fd, char **lineptr)
-{
-	char *buf = NULL;
-	char *new_buf;
-	size_t buf_size = 0;
-	size_t len = 0;
-	ssize_t nr;
-	char ch;
-
-	nr = read(fd, &ch, 1);
-	while (nr == 1 && ch != '\n') {
-		if (len == buf_size) {
-			buf_size += READLINE_BUFFER_SIZE;
-			new_buf = (char*) realloc(buf, buf_size);
-			if (new_buf == NULL) {
-				free(buf);
-				errno = ENOMEM;
-				return -1;
-			}
-			buf = new_buf;
-		}
-
-		buf[len++] = ch;
-		nr = read(fd, &ch, 1);
-	}
-
-	if (nr == 0) {  /* EOF */
-		free(buf);
-		errno = EPIPE;
-		return -1;
-	}
-
-	if (nr == -1) {
-		free(buf);
-		return -1;  /* errno already set by 'read' */
-	}
-
-	/* Ignore \r (if any) before \n */
-	if (len > 0 && buf[len-1] == '\r') {
-		--len;
-	}
-
-	/* If necessary, make room for the null terminator */
-	if (len == buf_size) {
-		new_buf = (char*) realloc(buf, ++buf_size);
-		if (new_buf == NULL) {
-			free(buf);
-			errno = ENOMEM;
-			return -1;
-		}
-		buf = new_buf;
-	}
-
-	buf[len] = '\0';
-	*lineptr = buf;
-	return len;
-}
-
 static rsRetVal
 lineToStatusCode(wrkrInstanceData_t *pWrkrData, const char* line)
 {
 	DEFiRet;
+
+	/* strip leading dots (.) from the line, so the program can use them as a keep-alive mechanism */
+	while(line[0] == '.') {
+		++line;
+	}
 
 	if(strcmp(line, "OK") == 0) {
 		iRet = RS_RET_OK;
@@ -510,41 +454,104 @@ lineToStatusCode(wrkrInstanceData_t *pWrkrData, const char* line)
 	} else {
 		/* anything else is considered a recoverable error */
 		DBGPRINTF("omprog: program '%s' returned: %s\n", pWrkrData->pData->szBinary, line);
+		if(pWrkrData->pData->bReportFailures) {
+			LogMsg(0, NO_ERRCODE, LOG_WARNING, "omprog: program '%s' returned: %s",
+					pWrkrData->pData->szBinary, line);
+		}
 		iRet = RS_RET_SUSPENDED;
 	}
 	RETiRet;
 }
 
 static rsRetVal
-readPipe(wrkrInstanceData_t *pWrkrData)
+readStatus(wrkrInstanceData_t *pWrkrData)
 {
-	char *line = NULL;
-	ssize_t lineLen;
-	char errStr[1024];
+	struct pollfd fdToPoll[1];
+	int numReady;
+	char lineBuf[RESPONSE_LINE_BUFFER_SIZE];
+	ssize_t lenRead;
+	size_t offset = 0;
+	int lineEnded = 0;
 	DEFiRet;
 
-	lineLen = readline(pWrkrData->fdPipeIn, &line);
-	if (lineLen == -1) {
-		if (errno == EPIPE) {
-			DBGPRINTF("omprog: program '%s' terminated, will be restarted\n",
-					pWrkrData->pData->szBinary);
-			/* force restart in tryResume() */
-			cleanupChild(pWrkrData);
-		} else {
-			DBGPRINTF("omprog: error %d reading from pipe: %s\n", errno,
-				   rs_strerror_r(errno, errStr, sizeof(errStr)));
+	fdToPoll[0].fd = pWrkrData->fdPipeIn;
+	fdToPoll[0].events = POLLIN;
+
+	do {
+		numReady = poll(fdToPoll, 1, pWrkrData->pData->lConfirmTimeout);
+		if(numReady == -1) {
+			if(errno == EINTR) {
+				continue;  /* call interrupted: retry poll */
+			}
+			LogError(errno, RS_RET_SYS_ERR, "omprog: error polling for response from program");
+			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
+
+		if(numReady == 0) {  /* timeout reached */
+			LogMsg(0, RS_RET_TIMED_OUT, LOG_WARNING, "omprog: program '%s' (pid %d) did not respond "
+					"within timeout (%ld ms); will be restarted", pWrkrData->pData->szBinary,
+					pWrkrData->pid, pWrkrData->pData->lConfirmTimeout);
+			terminateChild(pWrkrData);
+			ABORT_FINALIZE(RS_RET_SUSPENDED);
+		}
+
+		lenRead = read(pWrkrData->fdPipeIn, lineBuf + offset, sizeof(lineBuf) - offset - 1);
+		if(lenRead == -1) {
+			if(errno == EINTR) {
+				continue;  /* call interrupted: retry poll + read */
+			}
+			LogError(errno, RS_RET_READ_ERR, "omprog: error reading response from program");
+			ABORT_FINALIZE(RS_RET_SUSPENDED);
+		}
+
+		if(lenRead == 0) {
+			LogMsg(0, RS_RET_READ_ERR, LOG_WARNING, "omprog: program '%s' (pid %d) terminated; "
+					"will be restarted", pWrkrData->pData->szBinary, pWrkrData->pid);
+			cleanupChild(pWrkrData);
+			ABORT_FINALIZE(RS_RET_SUSPENDED);
+		}
+
+		offset += lenRead;
+		lineBuf[offset] = '\0';
+		lineEnded = (lineBuf[offset-1] == '\n');
+
+		/* check that the program has not returned multiple lines. This should not occur if
+		 * the program honors the specified interface. Otherwise, we force a restart of the
+		 * program, since we have probably lost synchronism with it.
+		 */
+		if(!lineEnded && strchr(lineBuf + offset - lenRead, '\n') != NULL) {
+			DBGPRINTF("omprog: program '%s' returned: %s\n", pWrkrData->pData->szBinary, lineBuf);
+			LogMsg(0, NO_ERRCODE, LOG_WARNING, "omprog: program '%s' returned a multiline response; "
+					"will be restarted", pWrkrData->pData->szBinary);
+			if(pWrkrData->pData->bReportFailures) {
+				LogMsg(0, NO_ERRCODE, LOG_WARNING, "omprog: program '%s' returned: %s",
+						pWrkrData->pData->szBinary, lineBuf);
+			}
+			terminateChild(pWrkrData);
+			ABORT_FINALIZE(RS_RET_SUSPENDED);
+		}
+	} while(!lineEnded && offset < sizeof(lineBuf) - 1);
+
+	if(!lineEnded) {
+		DBGPRINTF("omprog: program '%s' returned: %s\n", pWrkrData->pData->szBinary, lineBuf);
+		LogMsg(0, NO_ERRCODE, LOG_WARNING, "omprog: program '%s' returned a too long response; "
+				"will be restarted", pWrkrData->pData->szBinary);
+		if(pWrkrData->pData->bReportFailures) {
+			LogMsg(0, NO_ERRCODE, LOG_WARNING, "omprog: program '%s' returned: %s",
+					pWrkrData->pData->szBinary, lineBuf);
+		}
+		terminateChild(pWrkrData);
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
-	/* NOTE: coverity does not like CHKiRet() if it is the last thing before
-	 * finalize_it. Reason is that the if() inside that macro than does not
-	 * lead to different code pathes.
+	lineBuf[offset-1] = '\0';  /* strip newline char */
+
+	/* NOTE: coverity does not like CHKiRet() if it is the last thing before finalize_it.
+	 * Reason is that the if() inside that macro than does not lead to different code paths.
 	 */
-	iRet = lineToStatusCode(pWrkrData, line);
+	iRet = lineToStatusCode(pWrkrData, lineBuf);
 
 finalize_it:
-	free(line);
 	RETiRet;
 }
 
@@ -559,7 +566,7 @@ startChild(wrkrInstanceData_t *pWrkrData)
 
 	if(pWrkrData->pData->bConfirmMessages) {
 		/* wait for program to confirm successful initialization */
-		CHKiRet(readPipe(pWrkrData));
+		CHKiRet(readStatus(pWrkrData));
 	}
 
 finalize_it:
@@ -830,11 +837,11 @@ CODESTARTbeginTransaction
 		FINALIZE;
 	}
 
-	CHKiRet(writePipe(pWrkrData, pWrkrData->pData->szBeginTransactionMark));
-	CHKiRet(writePipe(pWrkrData, (uchar*) "\n"));
+	CHKiRet(sendMessage(pWrkrData, pWrkrData->pData->szBeginTransactionMark));
+	CHKiRet(sendMessage(pWrkrData, (uchar*) "\n"));
 
 	if(pWrkrData->pData->bConfirmMessages) {
-		CHKiRet(readPipe(pWrkrData));
+		CHKiRet(readStatus(pWrkrData));
 	}
 finalize_it:
 ENDbeginTransaction
@@ -849,10 +856,10 @@ CODESTARTdoAction
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
-	CHKiRet(writePipe(pWrkrData, ppString[0]));
+	CHKiRet(sendMessage(pWrkrData, ppString[0]));
 
 	if(pWrkrData->pData->bConfirmMessages) {
-		CHKiRet(readPipe(pWrkrData));
+		CHKiRet(readStatus(pWrkrData));
 	} else if(pWrkrData->pData->bUseTransactions) {
 		/* ensure endTransaction will be called */
 		iRet = RS_RET_DEFER_COMMIT;
@@ -871,11 +878,11 @@ CODESTARTendTransaction
 		FINALIZE;
 	}
 
-	CHKiRet(writePipe(pWrkrData, pWrkrData->pData->szCommitTransactionMark));
-	CHKiRet(writePipe(pWrkrData, (uchar*) "\n"));
+	CHKiRet(sendMessage(pWrkrData, pWrkrData->pData->szCommitTransactionMark));
+	CHKiRet(sendMessage(pWrkrData, (uchar*) "\n"));
 
 	if(pWrkrData->pData->bConfirmMessages) {
-		CHKiRet(readPipe(pWrkrData));
+		CHKiRet(readStatus(pWrkrData));
 	}
 finalize_it:
 ENDendTransaction
@@ -921,6 +928,8 @@ setInstParamDefaults(instanceData *pData)
 	pData->aParams = NULL;
 	pData->iParams = 0;
 	pData->bConfirmMessages = 0;
+	pData->lConfirmTimeout = DEFAULT_CONFIRM_TIMEOUT_MS;
+	pData->bReportFailures = 0;
 	pData->bUseTransactions = 0;
 	pData->szBeginTransactionMark = NULL;
 	pData->szCommitTransactionMark = NULL;
@@ -969,6 +978,10 @@ CODESTARTnewActInst
 				pvals[i].val.d.estr));
 		} else if(!strcmp(actpblk.descr[i].name, "confirmMessages")) {
 			pData->bConfirmMessages = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "confirmTimeout")) {
+			pData->lConfirmTimeout = (long) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "reportFailures")) {
+			pData->bReportFailures = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "useTransactions")) {
 			pData->bUseTransactions = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "beginTransactionMark")) {

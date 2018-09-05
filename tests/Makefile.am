@@ -575,6 +575,8 @@ TESTS +=  \
 	omprog-output-capture.sh \
 	omprog-output-capture-mt.sh \
 	omprog-feedback.sh \
+	omprog-feedback-mt.sh \
+	omprog-feedback-timeout.sh \
 	omprog-close-unresponsive.sh \
 	omprog-close-unresponsive-noterm.sh \
 	omprog-restart-terminated.sh \
@@ -1439,7 +1441,9 @@ EXTRA_DIST= \
 	omprog-output-capture-mt.sh \
 	omprog-output-capture-vg.sh \
 	omprog-feedback.sh \
+	omprog-feedback-mt.sh \
 	omprog-feedback-vg.sh \
+	omprog-feedback-timeout.sh \
 	omprog-close-unresponsive.sh \
 	omprog-close-unresponsive-vg.sh \
 	omprog-close-unresponsive-noterm.sh \
@@ -1454,6 +1458,8 @@ EXTRA_DIST= \
 	testsuites/omprog-output-capture-bin.sh \
 	testsuites/omprog-output-capture-mt-bin.py \
 	testsuites/omprog-feedback-bin.sh \
+	testsuites/omprog-feedback-mt-bin.sh \
+	testsuites/omprog-feedback-timeout-bin.sh \
 	testsuites/omprog-close-unresponsive-bin.sh \
 	testsuites/omprog-restart-terminated-bin.sh \
 	testsuites/omprog-transactions-bin.sh \
