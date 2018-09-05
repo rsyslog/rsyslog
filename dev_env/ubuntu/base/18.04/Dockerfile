@@ -20,6 +20,7 @@ RUN 	apt-get update && \
 	gcc \
 	gdb \
 	git \
+	kafkacat \
 	libbson-dev \
 	libcurl4-gnutls-dev \
 	libdbi-dev \
