@@ -25,7 +25,6 @@
  */
 #include "config.h"
 
-#include "rsyslog.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -35,12 +34,14 @@
 #include <pwd.h>
 #include <grp.h>
 
+#include "rsyslog.h"
 #include "cfsysline.h"
 #include "obj.h"
 #include "conf.h"
 #include "errmsg.h"
 #include "srUtils.h"
 #include "unicode-helper.h"
+#include "parserif.h"
 
 
 /* static data */
@@ -605,7 +606,7 @@ doGoneAway(__attribute__((unused)) uchar **pp,
 	   __attribute__((unused)) rsRetVal (*pSetHdlr)(void*, int),
 	   __attribute__((unused)) void *pVal)
 {
-	LogError(0, RS_RET_CMD_GONE_AWAY, "config directive is no longer supported -- ignored");
+	parser_warnmsg("config directive is no longer supported -- ignored");
 	return RS_RET_CMD_GONE_AWAY;
 }
 
