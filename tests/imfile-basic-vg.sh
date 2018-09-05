@@ -32,6 +32,6 @@ startup_vg
 sleep 1
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown_vg
-. $srcdir/diag.sh check_exit_vg
+check_exit_vg
 seq_check 0 49999
 exit_test

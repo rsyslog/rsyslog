@@ -23,7 +23,7 @@ startup_vg
 tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag:msgnum:1\""
 shutdown_when_empty
 wait_shutdown_vg
-. $srcdir/diag.sh check_exit_vg
+check_exit_vg
 
 echo '-{ "x": "a", "sometag": "somevalue" }-' | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then

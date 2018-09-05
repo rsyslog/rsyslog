@@ -29,6 +29,6 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown_vg
-. $srcdir/diag.sh check_exit_vg
+check_exit_vg
 seq_check  0 4999
 exit_test

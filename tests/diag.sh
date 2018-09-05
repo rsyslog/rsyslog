@@ -112,26 +112,21 @@ local0.* ./'${RSYSLOG_DYNNAME}'.HOSTNAME;hostname
 # $1 is the instance id, if given
 function generate_conf() {
 	export TCPFLOOD_PORT="$(get_free_port)"
-	new_port="$(get_free_port)"
 	if [ "$1" == "" ]; then
-		export IMDIAG_PORT=$new_port
 		export TESTCONF_NM="${RSYSLOG_DYNNAME}_" # this basename is also used by instance 2!
 		export RSYSLOG_OUT_LOG="${RSYSLOG_DYNNAME}.out.log"
 		export RSYSLOG2_OUT_LOG="${RSYSLOG_DYNNAME}_2.out.log"
 		export RSYSLOG_PIDBASE="${RSYSLOG_DYNNAME}:" # also used by instance 2!
 		mkdir $RSYSLOG_DYNNAME.spool
-	else
-		export IMDIAG_PORT2=$new_port
 	fi
-	echo imdiag running on port $new_port
-	echo "module(load=\"../plugins/imdiag/.libs/imdiag\")
-global(inputs.timeout.shutdown=\"10000\")
-\$IMDiagServerRun $new_port
+	echo 'module(load="../plugins/imdiag/.libs/imdiag")
+global(inputs.timeout.shutdown="10000")
+$IMDiagListenPortFileName '$RSYSLOG_DYNNAME.imdiag$1.port'
+$IMDiagServerRun 0
 
-:syslogtag, contains, \"rsyslogd\"  ./${RSYSLOG_DYNNAME}$1.started
-###### end of testbench instrumentation part, test conf follows:" > ${TESTCONF_NM}$1.conf
+:syslogtag, contains, "rsyslogd"  ./'${RSYSLOG_DYNNAME}$1'.started
+###### end of testbench instrumentation part, test conf follows:' > ${TESTCONF_NM}$1.conf
 }
-
 
 # add more data to config file. Note: generate_conf must have been called
 # $1 is config fragment, $2 the instance id, if given
@@ -181,6 +176,12 @@ function startup_common() {
 	    CONF_FILE="$srcdir/testsuites/$1"
 	    instance=$2
 	fi
+	# we need to remove the imdiag port file as there are some
+	# tests that start multiple times. These may get the old port
+	# number if the file still exists AND timing is bad so that
+	# imdiag does not genenrate the port file quickly enough on
+	# startup.
+	rm -f $RSYSLOG_DYNNAME.imdiag$instance.port
 	if [ ! -f $CONF_FILE ]; then
 	    echo "ERROR: config file '$CONF_FILE' not found!"
 	    error_exit 1
@@ -209,6 +210,10 @@ function wait_startup_pid() {
 	echo "$1.pid found, pid  `cat $1.pid`"
 }
 
+# special version of wait_startup_pid() for rsyslog startup
+function wait_rsyslog_startup_pid() {
+	wait_startup_pid $RSYSLOG_PIDBASE$1
+}
 
 # wait for startup of an arbitrary process
 # $1 - pid file name
@@ -236,9 +241,26 @@ function wait_process_startup() {
 	fi
 }
 
+# wait for file $1 to exist AND be non-empty
+function wait_file_exists() {
+	i=0
+	while true; do
+		if [ -f $1 -a "$(cat $1)" != "" ]; then
+			break
+		fi
+		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
+		let "i++"
+		if test $i -gt $TB_TIMEOUT_STARTSTOP; then
+		   echo "ABORT! Timeout waiting for file $1"
+		   ls -l $1
+		   error_exit 1
+		fi
+	done
+}
+
 # wait for rsyslogd startup ($1 is the instance)
 function wait_startup() {
-	wait_startup_pid $RSYSLOG_PIDBASE$2
+	wait_rsyslog_startup_pid $1
 	i=0
 	while test ! -f ${RSYSLOG_DYNNAME}$1.started; do
 		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
@@ -256,6 +278,15 @@ function wait_startup() {
 		fi
 	done
 	echo "rsyslogd$1 startup msg seen, pid " `cat $RSYSLOG_PIDBASE$1.pid`
+	wait_file_exists $RSYSLOG_DYNNAME.imdiag$1.port
+	eval export IMDIAG_PORT$1=$(cat $RSYSLOG_DYNNAME.imdiag$1.port)
+	eval PORT=$IMDIAG_PORT$1
+	echo "imdiag$1 port: $PORT"
+	if [ "$PORT" == "" ]; then
+		echo "TESTBENCH ERROR: imdiag port not found!"
+		ls -l $RSYSLOG_DYNNAME*
+		exit 100
+	fi
 }
 
 
@@ -271,22 +302,12 @@ function startup() {
 
 # same as startup_vg, BUT we do NOT wait on the startup message!
 function startup_vg_waitpid_only() {
+	startup_common "$1" "$2"
 	if [ "x$RS_TESTBENCH_LEAK_CHECK" == "x" ]; then
 	    RS_TESTBENCH_LEAK_CHECK=full
 	fi
-	if [ "x$1" == "x" ]; then
-	    CONF_FILE="${TESTCONF_NM}.conf"
-	    echo config $CONF_FILE is:
-	    cat -n $CONF_FILE
-	else
-	    CONF_FILE="$srcdir/testsuites/$1"
-	fi
-	if [ ! -f $CONF_FILE ]; then
-	    echo "ERROR: config file '$CONF_FILE' not found!"
-	    exit 1
-	fi
 	LD_PRELOAD=$RSYSLOG_PRELOAD valgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --suppressions=$srcdir/known_issues.supp --gen-suppressions=all --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=$RS_TESTBENCH_LEAK_CHECK ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$2.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
-	wait_startup_pid $RSYSLOG_PIDBASE$2
+	wait_rsyslog_startup_pid $1
 }
 
 # start rsyslogd with default params under valgrind control. $1 is the config file name to use
@@ -311,7 +332,7 @@ function startup_vg_noleak() {
 function startup_vgthread_waitpid_only() {
 	startup_common "$1" "$2"
 	valgrind --tool=helgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --suppressions=$srcdir/linux_localtime_r.supp --gen-suppressions=all ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$2.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
-	wait_startup_pid $RSYSLOG_PIDBASE$2
+	wait_rsyslog_startup_pid $2
 }
 
 # start rsyslogd with default params under valgrind thread debugger control.
@@ -1427,5 +1448,6 @@ case $1 in
 			exit 77 # no inotify available, skip this test
 		fi
 		;;
-   *)		echo "invalid argument" $1
+   *)		echo "TESTBENCH error: invalid argument" $1
+		exit 100
 esac

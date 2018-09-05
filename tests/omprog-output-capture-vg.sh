@@ -26,5 +26,5 @@ startup_vg
 injectmsg 0 10
 shutdown_when_empty
 wait_shutdown_vg
-. $srcdir/diag.sh check_exit_vg
+check_exit_vg
 exit_test

@@ -1404,7 +1404,6 @@ setTargetPorts(const char *const port_arg)
 
 	char *saveptr;
 	char *ports = strdup(port_arg);
-	printf("ports: %s\n", ports);
 	char *port = strtok_r(ports, ":", &saveptr);
 	while(port != NULL) {
 		if(i == sizeof(targetPort)/sizeof(int)) {

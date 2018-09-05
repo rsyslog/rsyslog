@@ -41,7 +41,6 @@ if ($msg contains "msgnum:") then {
 }
 '
 startup
-wait_startup
 
 echo \[sndrcv_kafka-vg-sender.sh\]: Starting sender instance [imkafka]
 export RSYSLOG_DEBUGLOG="log2"
@@ -77,7 +76,6 @@ action(	name="kafka-fwd"
 	)
 ' 2
 startup_vg 2
-wait_startup 2
 
 echo \[sndrcv_kafka-vg-sender.sh\]: Inject messages into rsyslog sender instance  
 tcpflood -m$TESTMESSAGES -i1
@@ -88,7 +86,7 @@ sleep 5
 echo \[sndrcv_kafka-vg-sender.sh\]: Stopping sender instance [imkafka]
 shutdown_when_empty 2
 wait_shutdown_vg 2
-. $srcdir/diag.sh check_exit_vg 2
+check_exit_vg 2
 
 echo \[sndrcv_kafka-vg-sender.sh\]: Sleep to give rsyslog receiver time to receive data ...
 sleep 20

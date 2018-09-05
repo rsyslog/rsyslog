@@ -22,12 +22,11 @@ $template outfmt,"%msg:F,58:2%\n"
 *.*       action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup_vg
-wait_startup
 tcpflood -t 127.0.0.1 -m 4 -r -M "\"<133>2011-03-01T11:22:12Z host tag msgh ...\""
 tcpflood -t 127.0.0.1 -m 1 -r -M "\"<133>2011-03-01T11:22:12Z host tag msgh ...x\""
 # we need to give rsyslog a little time to settle the receiver
 ./msleep 1500
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown_vg
-. $srcdir/diag.sh check_exit_vg
+check_exit_vg
 exit_test

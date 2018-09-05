@@ -52,7 +52,7 @@ sleep 1
 
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown_vg    # we need to wait until rsyslogd is finished!
-. $srcdir/diag.sh check_exit_vg
+check_exit_vg
 
 # give it time to write the output file
 sleep 1
