@@ -17,7 +17,6 @@ RUN	apt-get install -y \
 	flex \
 	gdb \
 	git \
-	kafkacat \
 	libbson-dev \
 	libcurl4-gnutls-dev \
 	libdbd-mysql \
