@@ -280,12 +280,9 @@ ratelimitAddMsg(ratelimit_t *ratelimit, multi_submit_t *pMultiSub, smsg_t *pMsg)
 			 * at least the previous batch as batch...
 			 */
 			if(pMultiSub->nElem > 0) {
-dbgprintf("RRRRR: ratelimitAddMsg flush multi submit\n");
 				CHKiRet(multiSubmitMsg2(pMultiSub));
 			}
-dbgprintf("RRRRR: ratelimitAddMsg doing singles submit\n");
 			CHKiRet(submitMsg2(pMsg));
-dbgprintf("RRRRR: ratelimitAddMsg done  singles submit\n");
 			FINALIZE;
 		}
 		pMultiSub->ppMsgs[pMultiSub->nElem++] = pMsg;
@@ -294,7 +291,6 @@ dbgprintf("RRRRR: ratelimitAddMsg done  singles submit\n");
 	}
 
 finalize_it:
-dbgprintf("RRRRR: ratelimitAddMsg returns %d\n", iRet);
 	RETiRet;
 }
 
