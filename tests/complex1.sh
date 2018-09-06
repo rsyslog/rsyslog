@@ -4,14 +4,8 @@
 # added 2010-03-16 by Rgerhards
 #
 # This file is part of the rsyslog project, released under ASL 2.0
-
-uname
-if [ `uname` = "SunOS" ] ; then
-   echo "This test currently does not work on all flavors of Solaris."
-   exit 77
-fi
-
 . $srcdir/diag.sh init
+skip_platform "SunOS"  "This test currently does not work on all flavors of Solaris."
 export RSYSLOG_PORT2="$(get_free_port)"
 export RSYSLOG_PORT3="$(get_free_port)"
 generate_conf
@@ -24,7 +18,7 @@ $ModLoad ../plugins/imtcp/.libs/imtcp
 $MainMsgQueueTimeoutShutdown 10000
 
 $template outfmt,"%msg:F,58:3%,%msg:F,58:4%,%msg:F,58:5%\n"
-$template dynfile,"'$RSYSLOG_DYNNAME'.out.%inputname%.%msg:F,58:2%.log"
+$template dynfile,"'$RSYSLOG_DYNNAME'.out.%inputname%.%msg:F,58:2%.log.Z"
 
 ## RULESET with listener
 $Ruleset R13514
@@ -107,8 +101,8 @@ export TCPFLOOD_PORT="$TCPFLOOD_PORT:$RSYSLOG_PORT2:$RSYSLOG_PORT3"
 tcpflood -m40000 -rd400 -P129 -f5 -n3 -c15 -i1
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate
-ls $RSYSLOG_DYNNAME.out.*.log
-. $srcdir/diag.sh setzcat		   # find out which zcat to use
-$ZCAT $RSYSLOG_DYNNAME.out.*.log > $RSYSLOG_OUT_LOG
+ls $RSYSLOG_DYNNAME.out.*.log.Z
+gunzip $RSYSLOG_DYNNAME.out.*.log.Z
+cat $RSYSLOG_DYNNAME.out.*.log > $RSYSLOG_OUT_LOG
 seq_check 1 40000 -E
 exit_test

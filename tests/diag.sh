@@ -1070,13 +1070,6 @@ case $1 in
 		    error_exit 1
 		fi
 		;;
-   'setzcat')   # find out name of zcat tool
-		if [ `uname` == SunOS ]; then
-		   ZCAT=gzcat
-		else
-		   ZCAT=zcat
-		fi
-		;;
    'require-journalctl')   # check if journalctl exists on the system
 		if ! hash journalctl 2>/dev/null ; then
 		    echo "journalctl command missing, skipping test"
