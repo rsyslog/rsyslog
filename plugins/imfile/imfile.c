@@ -62,6 +62,7 @@
 #include "stringbuf.h"
 #include "ruleset.h"
 #include "ratelimit.h"
+#include "srUtils.h"
 #include "parserif.h"
 
 #include <regex.h>
@@ -128,6 +129,7 @@ struct instanceConf_s {
 	int iFacility;
 	int iSeverity;
 	int readTimeout;
+	unsigned delay_perMsg;
 	sbool bRMStateOnDel;
 	uint8_t readMode;
 	uchar *startRegex;
@@ -297,6 +299,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "removestateondelete", eCmdHdlrBinary, 0 },
 	{ "persiststateinterval", eCmdHdlrInt, 0 },
 	{ "deletestateonfiledelete", eCmdHdlrBinary, 0 },
+	{ "delay.message", eCmdHdlrPositiveInt, 0 },
 	{ "addmetadata", eCmdHdlrBinary, 0 },
 	{ "addceetag", eCmdHdlrBinary, 0 },
 	{ "statefile", eCmdHdlrString, CNFPARAM_DEPRECATED },
@@ -1313,6 +1316,11 @@ enqLine(act_obj_t *const act,
 		metadata_values[1] = file_offset;
 		msgAddMultiMetadata(pMsg, metadata_names, metadata_values, 2);
 	}
+
+	if(inst->delay_perMsg) {
+		srSleep(inst->delay_perMsg % 1000000, inst->delay_perMsg / 1000000);
+	}
+
 	ratelimitAddMsg(act->ratelimiter, &act->multiSub, pMsg);
 finalize_it:
 	RETiRet;
@@ -1607,6 +1615,7 @@ createInstance(instanceConf_t **const pinst)
 	inst->freshStartTail = 0;
 	inst->fileNotFoundError = 1;
 	inst->readTimeout = loadModConf->readTimeout;
+	inst->delay_perMsg = 0;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -1812,6 +1821,8 @@ CODESTARTnewInpInst
 			inst->bRMStateOnDel = (sbool) pvals[i].val.d.n; // TODO: duplicate!
 		} else if(!strcmp(inppblk.descr[i].name, "addmetadata")) {
 			inst->addMetadata = (sbool) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "delay.message")) {
+			inst->delay_perMsg = (unsigned) pvals[i].val.d.n;
 		} else if (!strcmp(inppblk.descr[i].name, "addceetag")) {
 			inst->addCeeTag = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "freshstarttail")) {
