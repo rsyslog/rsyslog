@@ -368,6 +368,10 @@ rd_kafka_topic_t** topic) {
 					"topic conf parameter '%s=%s': %s",
 					pData->topicConfParams[i].name,
 					pData->topicConfParams[i].val, errstr);
+			} else {
+				DBGPRINTF("omkafka: setting custom topic configuration parameter '%s=%s': %s",
+					pData->topicConfParams[i].name,
+					pData->topicConfParams[i].val, errstr);
 			}
 			ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 		}
@@ -1101,8 +1105,7 @@ openKafka(instanceData *const __restrict__ pData)
 	/* main conf */
 	rd_kafka_conf_t *const conf = rd_kafka_conf_new();
 	if(conf == NULL) {
-		LogError(0, RS_RET_KAFKA_ERROR,
-			"omkafka: error creating kafka conf obj: %s\n",
+		LogError(0, RS_RET_KAFKA_ERROR, "omkafka: error creating kafka conf obj: %s\n",
 			rd_kafka_err2str(rd_kafka_last_error()));
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	}
@@ -1111,7 +1114,8 @@ openKafka(instanceData *const __restrict__ pData)
 	/* enable kafka debug output */
 	if(rd_kafka_conf_set(conf, "debug", RD_KAFKA_DEBUG_CONTEXTS,
 		errstr, sizeof(errstr)) != RD_KAFKA_CONF_OK) {
-		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+		LogError(0, RS_RET_KAFKA_ERROR, "omkafka: error setting kafka debug option: %s\n", errstr);
+		/* DO NOT ABORT IN THIS CASE! */
 	}
 #endif
 
@@ -1123,8 +1127,12 @@ openKafka(instanceData *const __restrict__ pData)
 			pData->confParams[i].val, errstr, sizeof(errstr))
 	 	   != RD_KAFKA_CONF_OK) {
 			if(pData->bReportErrs) {
-				LogError(0, RS_RET_PARAM_ERROR, "error in kafka "
+				LogError(0, RS_RET_PARAM_ERROR, "error setting custom configuration "
 					"parameter '%s=%s': %s",
+					pData->confParams[i].name,
+					pData->confParams[i].val, errstr);
+			} else {
+				DBGPRINTF("omkafka: error setting custom configuration parameter '%s=%s': %s",
 					pData->confParams[i].name,
 					pData->confParams[i].val, errstr);
 			}

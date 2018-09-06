@@ -324,7 +324,8 @@ checkInstance(instanceConf_t *const inst)
 	/* enable kafka debug output */
 	if(rd_kafka_conf_set(inst->conf, "debug", RD_KAFKA_DEBUG_CONTEXTS,
 		kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
-		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+		LogError(0, RS_RET_KAFKA_ERROR, "imkafka: error setting kafka debug option: %s\n", kafkaErrMsg);
+		/* DO NOT ABORT IN THIS CASE! */
 	}
 #	endif
 
@@ -339,8 +340,12 @@ checkInstance(instanceConf_t *const inst)
 			inst->confParams[i].val,
 			kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
 			if(inst->bReportErrs) {
-				LogError(0, RS_RET_PARAM_ERROR, "imkafka: error in kafka "
+				LogError(0, RS_RET_PARAM_ERROR, "error setting custom configuration "
 					"parameter '%s=%s': %s",
+					inst->confParams[i].name,
+					inst->confParams[i].val, kafkaErrMsg);
+			} else {
+				DBGPRINTF("imkafka: error setting custom configuration parameter '%s=%s': %s",
 					inst->confParams[i].name,
 					inst->confParams[i].val, kafkaErrMsg);
 			}
@@ -814,5 +819,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
-	DBGPRINTF("imkafka: version %s initializing\n", VERSION);
+	DBGPRINTF("imkafka %s using librdkafka version %s, 0x%x\n",
+		VERSION, rd_kafka_version_str(), rd_kafka_version());
+
 ENDmodInit

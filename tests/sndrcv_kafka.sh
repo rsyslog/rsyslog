@@ -66,6 +66,8 @@ echo \[sndrcv_kafka.sh\]: Starting sender instance [omkafka]
 startup
 # ---
 
+# Injection messages now before starting receiver, simply because omkafka will take some time and
+# there is no reason to wait for the receiver to startup first. 
 echo \[sndrcv_kafka.sh\]: Inject messages into rsyslog sender instance
 tcpflood -m$TESTMESSAGES -i1
 
@@ -112,7 +114,7 @@ wait_shutdown 2
 . $srcdir/diag.sh delete-kafka-topic $RANDTOPIC '.dep_wrk' '22181'
 
 # Dump Kafka log | uncomment if needed
-. $srcdir/diag.sh dump-kafka-serverlog
+# . $srcdir/diag.sh dump-kafka-serverlog
 
 echo \[sndrcv_kafka.sh\]: stop kafka instance
 . $srcdir/diag.sh stop-kafka

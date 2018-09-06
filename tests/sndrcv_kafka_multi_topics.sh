@@ -12,7 +12,7 @@ export RANDTOPIC2=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 
 # too much
 #export EXTRA_EXITCHECK=dumpkafkalogs
 echo ===============================================================================
-echo \[sndrcv_kafka_multi_topics.sh\]: Create kafka/zookeeper instance and static topic
+echo Create kafka/zookeeper instance and topics
 . $srcdir/diag.sh download-kafka
 . $srcdir/diag.sh stop-zookeeper
 . $srcdir/diag.sh stop-kafka
@@ -21,10 +21,10 @@ echo \[sndrcv_kafka_multi_topics.sh\]: Create kafka/zookeeper instance and stati
 . $srcdir/diag.sh create-kafka-topic $RANDTOPIC1 '.dep_wrk' '22181'
 . $srcdir/diag.sh create-kafka-topic $RANDTOPIC2 '.dep_wrk' '22181'
 
-echo \[sndrcv_kafka_multi_topics.sh\]: Give Kafka some time to process topic create ...
+echo Give Kafka some time to process topic create ...
 sleep 5
 
-echo \[sndrcv_kafka_fail.sh\]: Init Testbench
+echo Init Testbench
 . $srcdir/diag.sh init
 
 # --- Create omkafka sender config
@@ -85,11 +85,13 @@ local4.* action(	name="kafka-fwd"
 	)
 '
 
-echo \[sndrcv_kafka_multi_topics.sh\]: Starting sender instance [omkafka]
+echo Starting sender instance [omkafka]
 startup
 # ---
 
-echo \[sndrcv_kafka.sh\]: Inject messages into rsyslog sender instance
+# Injection messages now before starting receiver, simply because omkafka will take some time and
+# there is no reason to wait for the receiver to startup first. 
+echo Inject messages into rsyslog sender instance
 tcpflood -m$TESTMESSAGES -i1
 
 # --- Create omkafka receiver config
@@ -130,23 +132,26 @@ if ($msg contains "msgnum:") then {
 }
 ' 2
 
-echo \[sndrcv_kafka_multi_topics.sh\]: Starting receiver instance [imkafka]
+echo Starting receiver instance [imkafka]
 startup 2
 # ---
 
-echo \[sndrcv_kafka.sh\]: Stopping sender  instance [omkafka]
+echo Stopping sender  instance [omkafka]
 shutdown_when_empty
 wait_shutdown
 
-echo \[sndrcv_kafka.sh\]: Stopping receiver instance [imkafka]
+echo Stopping receiver instance [imkafka]
 shutdown_when_empty 2
 wait_shutdown 2
 
-echo \[sndrcv_kafka.sh\]: delete kafka topics
+echo delete kafka topics
 . $srcdir/diag.sh delete-kafka-topic $RANDTOPIC1 '.dep_wrk' '22181'
 . $srcdir/diag.sh delete-kafka-topic $RANDTOPIC2 '.dep_wrk' '22181'
 
-echo \[sndrcv_kafka.sh\]: stop kafka instance
+# Dump Kafka log | uncomment if needed
+. $srcdir/diag.sh dump-kafka-serverlog
+
+echo stop kafka instance
 . $srcdir/diag.sh stop-kafka
 
 # STOP ZOOKEEPER in any case
@@ -154,7 +159,15 @@ echo \[sndrcv_kafka.sh\]: stop kafka instance
 
 # Do the final sequence check
 seq_check 1 $TESTMESSAGES -d
-content_check_with_count "000" $TESTMESSAGESFULL
+
+linecount=$(wc -l < ${RSYSLOG_OUT_LOG})
+if [ $linecount != $TESTMESSAGESFULL ]; then
+	echo "Count error detected in $RSYSLOG_OUT_LOG"
+	echo "number of lines in file: $linecount"
+	error_exit 1 
+else
+	echo "Info: Count correct: $linecount"
+fi
 
 echo success
 exit_test
