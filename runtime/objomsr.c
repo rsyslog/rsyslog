@@ -69,14 +69,16 @@ rsRetVal OMSRconstruct(omodStringRequest_t **ppThis, int iNumEntries)
 	CHKmalloc(pThis = calloc(1, sizeof(omodStringRequest_t)));
 
 	/* got the structure, so fill it */
-	pThis->iNumEntries = iNumEntries;
-	/* allocate string for template name array. The individual strings will be
-	 * allocated as the code progresses (we do not yet know the string sizes)
-	 */
-	CHKmalloc(pThis->ppTplName = calloc(iNumEntries, sizeof(uchar*)));
+	if(iNumEntries > 0) {
+		pThis->iNumEntries = iNumEntries;
+		/* allocate string for template name array. The individual strings will be
+		 * allocated as the code progresses (we do not yet know the string sizes)
+		 */
+		CHKmalloc(pThis->ppTplName = calloc(iNumEntries, sizeof(uchar*)));
 
 	/* allocate the template options array. */
-	CHKmalloc(pThis->piTplOpts = calloc(iNumEntries, sizeof(int)));
+		CHKmalloc(pThis->piTplOpts = calloc(iNumEntries, sizeof(int)));
+	}
 	
 finalize_it:
 	if(iRet != RS_RET_OK) {
