@@ -1121,8 +1121,8 @@ findModule(uchar *pModName, int iModNameLen, modInfo_t **pMod)
  * of modules, but the current implementation at least looks simpler.
  * Note: pvals = NULL means legacy config system
  */
-static rsRetVal
-Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
+static rsRetVal ATTR_NONNULL(1)
+Load(uchar *const pModName, const sbool bConfLoad, struct nvlst *const lst)
 {
 	size_t iPathLen, iModNameLen;
 	int bHasExtension;
@@ -1141,6 +1141,7 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 	uchar *pPathBuf = pathBuf;
 	size_t lenPathBuf = sizeof(pathBuf);
 	rsRetVal localRet;
+	cstr_t *load_err_msg = NULL;
 	DEFiRet;
 
 	assert(pModName != NULL);
@@ -1192,8 +1193,7 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 		FINALIZE;
 	}
 
-	pModDirCurr = (uchar *)((pModDir == NULL) ?
-		      _PATH_MODDIR : (char *)pModDir);
+	pModDirCurr = (uchar *)((pModDir == NULL) ? _PATH_MODDIR : (char *)pModDir);
 	pModDirNext = NULL;
 	pModHdlr    = NULL;
 	iLoadCnt    = 0;
@@ -1269,18 +1269,29 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 			pModHdlr = dlopen((char *) pPathBuf, RTLD_NOW);
 		}
 
+		if(pModHdlr == NULL) {
+			char errmsg[4096];
+			snprintf(errmsg, sizeof(errmsg), "%strying to load module %s: %s",
+				(load_err_msg == NULL) ? "" : "  ////////  ",
+				pPathBuf, dlerror());
+			if(load_err_msg == NULL) {
+				rsCStrConstructFromszStr(&load_err_msg, (uchar*)errmsg);
+			} else {
+				rsCStrAppendStr(load_err_msg, (uchar*)errmsg);
+			}
+		}
+
 		iLoadCnt++;
 	
 	} while(pModHdlr == NULL && *pModName != '/' && pModDirNext);
 
+	if(load_err_msg != NULL) {
+		cstrFinalize(load_err_msg);
+	}
+
 	if(!pModHdlr) {
-		if(iLoadCnt) {
-			LogError(0, RS_RET_MODULE_LOAD_ERR_DLOPEN, "could not load module '%s', dlopen: %s\n",
-					pPathBuf, dlerror());
-		} else {
-			LogError(0, NO_ERRCODE, "could not load module '%s', ModDir was '%s'\n", pPathBuf,
-			                               ((pModDir == NULL) ? _PATH_MODDIR : (char *)pModDir));
-		}
+		LogError(0, RS_RET_MODULE_LOAD_ERR_DLOPEN, "could not load module '%s', errors: %s", pModName,
+			(load_err_msg == NULL) ? "NONE SEEN???" : (const char*) cstrGetSzStrNoNULL(load_err_msg));
 		ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_DLOPEN);
 	}
 	if(!(pModInit = dlsym(pModHdlr, "modInit"))) {
@@ -1289,15 +1300,10 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 		dlclose(pModHdlr);
 		ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_NO_INIT);
 	}
-#ifdef _AIX
-/*  AIXPORT : typecaste address of pModInit  in AIX */
 	if((iRet = doModInit((rsRetVal(*)(int,int*,rsRetVal(**)(),rsRetVal(*)(),struct modInfo_s*))pModInit,
-(uchar*) pModName, pModHdlr, &pModInfo)) != RS_RET_OK) {
-#else
-	if((iRet = doModInit(pModInit, (uchar*) pModName, pModHdlr, &pModInfo)) != RS_RET_OK) {
-#endif
+		(uchar*) pModName, pModHdlr, &pModInfo)) != RS_RET_OK) {
 		LogError(0, RS_RET_MODULE_LOAD_ERR_INIT_FAILED,
-				"could not load module '%s', rsyslog error %d\n", pPathBuf, iRet);
+			"could not load module '%s', rsyslog error %d\n", pPathBuf, iRet);
 		dlclose(pModHdlr);
 		ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_INIT_FAILED);
 	}
@@ -1320,6 +1326,9 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 	}
 
 finalize_it:
+	if(load_err_msg != NULL) {
+		cstrDestruct(&load_err_msg);
+	}
 	if(pPathBuf != pathBuf) /* used malloc()ed memory? */
 		free(pPathBuf);
 	if(iRet != RS_RET_OK)
