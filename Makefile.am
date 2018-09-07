@@ -179,6 +179,10 @@ if ENABLE_ELASTICSEARCH
 SUBDIRS += plugins/omelasticsearch
 endif
 
+if ENABLE_OMHTTP
+SUBDIRS += contrib/omhttp
+endif
+
 if ENABLE_MMSNMPTRAPD
 SUBDIRS += plugins/mmsnmptrapd
 endif
