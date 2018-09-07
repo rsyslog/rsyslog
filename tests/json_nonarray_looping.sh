@@ -38,5 +38,5 @@ startup
 tcpflood -m 1 -I $srcdir/testsuites/json_nonarray_input
 shutdown_when_empty
 wait_shutdown
-. $srcdir/diag.sh assert-content-missing 'quux'
+assert_content_missing 'quux'
 exit_test

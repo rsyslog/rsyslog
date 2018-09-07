@@ -61,11 +61,11 @@ tcpflood -m$NUMBER_OF_MESSAGES
 # Issue some HUP signals to cause the output file to be reopened during
 # writing (not a complete test of this feature, but at least we check it
 # doesn't break the output).
-. $srcdir/diag.sh issue-HUP
+issue_HUP
 ./msleep 1000
-. $srcdir/diag.sh issue-HUP
+issue_HUP
 ./msleep 1000
-. $srcdir/diag.sh issue-HUP
+issue_HUP
 
 shutdown_when_empty
 wait_shutdown
