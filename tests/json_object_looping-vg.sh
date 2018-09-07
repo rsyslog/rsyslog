@@ -61,9 +61,9 @@ check_exit_vg
 content_check 'quux: { "key": "str1", "value": "abc0" }'
 content_check 'quux: { "key": "str2", "value": "def1", "random_key": "str2" }'
 content_check 'quux: { "key": "str3", "value": "ghi2" }'
-. $srcdir/diag.sh assert-content-missing 'quux: { "key": "str4", "value": "jkl3" }'
+assert_content_missing 'quux: { "key": "str4", "value": "jkl3" }'
 content_check 'new: jkl3'
-. $srcdir/diag.sh assert-content-missing 'deleted: ghi2'
+assert_content_missing 'deleted: ghi2'
 content_check 'quux: { "key": "obj", "value": { "bar": { "k1": "important_msg", "k2": "other_msg" } } }'
 custom_content_check 'corge: key: bar val: { "k1": "important_msg", "k2": "other_msg" }' $RSYSLOG_DYNNAME.out.async.log
 custom_content_check 'prefixed_corge: { "key": "bar", "value": { "k1": "important_msg", "k2": "other_msg" } }' $RSYSLOG_DYNNAME.out.prefixed.log

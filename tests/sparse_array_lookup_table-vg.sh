@@ -27,17 +27,17 @@ cp -f $srcdir/testsuites/xlate_sparse_array.lkp_tbl xlate_array.lkp_tbl
 startup_vg
 injectmsg  0 1
 wait_queueempty
-. $srcdir/diag.sh assert-content-missing "foo"
+assert_content_missing "foo"
 injectmsg  0 5
 wait_queueempty
 content_check "msgnum:00000001: foo_old"
 content_check "msgnum:00000002: foo_old"
 content_check "msgnum:00000003: bar_old"
 content_check "msgnum:00000004: bar_old"
-. $srcdir/diag.sh assert-content-missing "baz"
+assert_content_missing "baz"
 cp -f $srcdir/testsuites/xlate_sparse_array_more.lkp_tbl xlate_array.lkp_tbl
-. $srcdir/diag.sh issue-HUP
-. $srcdir/diag.sh await-lookup-table-reload
+issue_HUP
+await_lookup_table_reload
 injectmsg  0 6
 wait_queueempty
 content_check "msgnum:00000000: foo_new"
@@ -47,8 +47,8 @@ content_check "msgnum:00000003: bar_new"
 content_check "msgnum:00000004: baz"
 content_check "msgnum:00000005: baz"
 cp -f $srcdir/testsuites/xlate_sparse_array_more_with_duplicates_and_nomatch.lkp_tbl xlate_array.lkp_tbl
-. $srcdir/diag.sh issue-HUP
-. $srcdir/diag.sh await-lookup-table-reload
+issue_HUP
+await_lookup_table_reload
 injectmsg  0 15
 echo doing shutdown
 shutdown_when_empty

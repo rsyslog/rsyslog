@@ -30,21 +30,21 @@ startup
 # the last message ..002 should cause successful lookup-table reload
 cp -f $srcdir/testsuites/xlate_more.lkp_tbl xlate.lkp_tbl
 injectmsg  0 3
-. $srcdir/diag.sh await-lookup-table-reload
+await_lookup_table_reload
 wait_queueempty
 content_check "msgnum:00000000: foo_old"
 content_check "msgnum:00000001: bar_old"
-. $srcdir/diag.sh assert-content-missing "baz"
+assert_content_missing "baz"
 cp -f $srcdir/testsuites/xlate_more_with_duplicates_and_nomatch.lkp_tbl xlate.lkp_tbl
 injectmsg  0 3
-. $srcdir/diag.sh await-lookup-table-reload
+await_lookup_table_reload
 wait_queueempty
 content_check "msgnum:00000000: foo_new"
 content_check "msgnum:00000001: bar_new"
 content_check "msgnum:00000002: baz"
 rm -f xlate.lkp_tbl # this should lead to unsuccessful reload
 injectmsg  0 3
-. $srcdir/diag.sh await-lookup-table-reload
+await_lookup_table_reload
 wait_queueempty
 injectmsg  0 2
 echo doing shutdown

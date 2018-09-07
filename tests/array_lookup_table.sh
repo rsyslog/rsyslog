@@ -29,18 +29,18 @@ injectmsg  0 3
 wait_queueempty
 content_check "msgnum:00000000: foo_old"
 content_check "msgnum:00000001: bar_old"
-. $srcdir/diag.sh assert-content-missing "baz"
+assert_content_missing "baz"
 cp -f $srcdir/testsuites/xlate_array_more.lkp_tbl xlate_array.lkp_tbl
-. $srcdir/diag.sh issue-HUP
-. $srcdir/diag.sh await-lookup-table-reload
+issue_HUP
+await_lookup_table_reload
 injectmsg  0 3
 wait_queueempty
 content_check "msgnum:00000000: foo_new"
 content_check "msgnum:00000001: bar_new"
 content_check "msgnum:00000002: baz"
 cp -f $srcdir/testsuites/xlate_array_more_with_duplicates_and_nomatch.lkp_tbl xlate_array.lkp_tbl
-. $srcdir/diag.sh issue-HUP
-. $srcdir/diag.sh await-lookup-table-reload
+issue_HUP
+await_lookup_table_reload
 injectmsg  0 12
 echo doing shutdown
 shutdown_when_empty

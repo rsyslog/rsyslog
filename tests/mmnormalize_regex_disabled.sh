@@ -24,5 +24,5 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown 
-. $srcdir/diag.sh assert-content-missing '192' #several ips in input are 192.168.1.0/24
+assert_content_missing '192' #several ips in input are 192.168.1.0/24
 exit_test

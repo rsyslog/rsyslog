@@ -33,7 +33,7 @@ startup
 . $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
 wait_queueempty
 rm $srcdir/${RSYSLOG_DYNNAME}.out.stats.log
-. $srcdir/diag.sh issue-HUP #reopen stats file
+issue_HUP #reopen stats file
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_empty_input
 wait_queueempty
 rst_msleep 1100 # wait for stats flush
