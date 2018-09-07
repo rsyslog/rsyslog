@@ -491,6 +491,32 @@ function wait_shutdown() {
 }
 
 
+# wait for all pending lookup table reloads to complete $1 is the instance.
+function await_lookup_table_reload() {
+	if [ "$1" == "2" ]; then
+		echo AwaitLookupTableReload | $TESTTOOL_DIR/diagtalker -pIMDIAG_PORT2 || error_exit  $?
+	else
+		echo AwaitLookupTableReload | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
+	fi
+}
+
+
+function assert_content_missing() {
+	cat ${RSYSLOG_OUT_LOG} | grep -qF "$1"
+	if [ "$?" -eq "0" ]; then
+		echo content-missing assertion failed, some line matched pattern "'$1'"
+		error_exit 1
+	fi
+}
+
+
+# shut rsyslogd down when main queue is empty. $1 is the instance.
+function issue_HUP() {
+	kill -HUP `cat $RSYSLOG_PIDBASE$1.pid`
+	$TESTTOOL_DIR/msleep 1000
+}
+
+
 # actually, we wait for rsyslog.pid to be deleted. $1 is the instance
 function wait_shutdown_vg() {
 	wait `cat $RSYSLOG_PIDBASE$1.pid`
@@ -881,18 +907,6 @@ case $1 in
 		unset terminated
 		unset out_pid
 		;;
-   'await-lookup-table-reload') # wait for all pending lookup table reloads to complete $2 is the instance.
-		if [ "$2" == "2" ]
-		then
-			echo AwaitLookupTableReload | $TESTTOOL_DIR/diagtalker -pIMDIAG_PORT2 || error_exit  $?
-		else
-			echo AwaitLookupTableReload | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
-		fi
-		;;
-   'issue-HUP') # shut rsyslogd down when main queue is empty. $2 is the instance.
-		kill -HUP `cat $RSYSLOG_PIDBASE$2.pid`
-		$TESTTOOL_DIR/msleep 1000
-		;;
    'shutdown-immediate') # shut rsyslogd down without emptying the queue. $2 is the instance.
 		cp $RSYSLOG_PIDBASE$2.pid $RSYSLOG_PIDBASE$2.pid.save
 		kill `cat $RSYSLOG_PIDBASE$2.pid`
@@ -1058,13 +1072,6 @@ case $1 in
 		    echo content-check failed, not every line matched pattern "'$2'"
 		    echo "file contents:"
 		    cat -n $4
-		    error_exit 1
-		fi
-		;;
-   'assert-content-missing') 
-		cat ${RSYSLOG_OUT_LOG} | grep -qF "$2"
-		if [ "$?" -eq "0" ]; then
-				echo content-missing assertion failed, some line matched pattern "'$2'"
 		    error_exit 1
 		fi
 		;;

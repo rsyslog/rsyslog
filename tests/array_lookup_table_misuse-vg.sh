@@ -27,20 +27,20 @@ cp -f $srcdir/testsuites/xlate_array_misuse.lkp_tbl xlate_array.lkp_tbl
 startup_vg
 injectmsg  0 3
 wait_queueempty
-. $srcdir/diag.sh assert-content-missing "foo"
-. $srcdir/diag.sh assert-content-missing "bar"
-. $srcdir/diag.sh assert-content-missing "baz"
+assert_content_missing "foo"
+assert_content_missing "bar"
+assert_content_missing "baz"
 cp -f $srcdir/testsuites/xlate_array_more_misuse.lkp_tbl xlate_array.lkp_tbl
-. $srcdir/diag.sh issue-HUP
-. $srcdir/diag.sh await-lookup-table-reload
+issue_HUP
+await_lookup_table_reload
 injectmsg  0 3
 wait_queueempty
-. $srcdir/diag.sh assert-content-missing "foo"
-. $srcdir/diag.sh assert-content-missing "bar"
-. $srcdir/diag.sh assert-content-missing "baz"
+assert_content_missing "foo"
+assert_content_missing "bar"
+assert_content_missing "baz"
 cp -f $srcdir/testsuites/xlate_array_more.lkp_tbl xlate_array.lkp_tbl
-. $srcdir/diag.sh issue-HUP
-. $srcdir/diag.sh await-lookup-table-reload
+issue_HUP
+await_lookup_table_reload
 injectmsg  0 3
 echo doing shutdown
 shutdown_when_empty

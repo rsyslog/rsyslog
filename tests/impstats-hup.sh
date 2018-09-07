@@ -15,7 +15,7 @@ ruleset(name="stats") {
 startup
 ./msleep 2000
 mv  $RSYSLOG_OUT_LOG ${RSYSLOG2_OUT_LOG}
-. $srcdir/diag.sh issue-HUP
+issue_HUP
 ./msleep 2000
 shutdown_when_empty
 wait_shutdown

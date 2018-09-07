@@ -30,19 +30,19 @@ injectmsg  0 3
 wait_queueempty
 content_check "msgnum:00000000: 0_foo_old 1_foo_old"
 content_check "msgnum:00000001: 0_bar_old 1_bar_old"
-. $srcdir/diag.sh assert-content-missing "baz"
+assert_content_missing "baz"
 cp -f $srcdir/testsuites/xlate_more.lkp_tbl xlate.lkp_tbl
-. $srcdir/diag.sh issue-HUP
-. $srcdir/diag.sh await-lookup-table-reload
+issue_HUP
+await_lookup_table_reload
 injectmsg  0 3
 wait_queueempty
 content_check "msgnum:00000000: 0_foo_new 1_foo_old"
 content_check "msgnum:00000001: 0_bar_new 1_bar_old"
 content_check "msgnum:00000002: 0_baz"
-. $srcdir/diag.sh assert-content-missing "1_baz"
+assert_content_missing "1_baz"
 cp -f $srcdir/testsuites/xlate_more.lkp_tbl xlate_1.lkp_tbl
-. $srcdir/diag.sh issue-HUP
-. $srcdir/diag.sh await-lookup-table-reload
+issue_HUP
+await_lookup_table_reload
 injectmsg  0 3
 echo doing shutdown
 shutdown_when_empty

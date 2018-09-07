@@ -60,7 +60,7 @@ wait_queueempty
 . $srcdir/diag.sh first-column-sum-check 's/.*metrics_purged=\([0-9]\+\)/\1/g' 'metrics_purged=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
 
 rm ${RSYSLOG_DYNNAME}.out.stats.log
-. $srcdir/diag.sh issue-HUP #reopen stats file
+issue_HUP #reopen stats file
 . $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
 . $srcdir/diag.sh block-stats-flush
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_more_2
