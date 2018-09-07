@@ -1827,8 +1827,25 @@ wait_timeout(void)
 		FD_ZERO(&rfds);
 		FD_SET(SRC_FD, &rfds);
 	}
-	if(!src_exists)
-		select(1, NULL, NULL, NULL, &tvSelectTimeout);
+	if(!src_exists) {
+		/* it looks like select() is NOT interrupted by HUP, even though
+		 * SA_RESTART is not given in the signal setup. As this code is
+		 * not expected to be used in production (when running as a
+		 * service under src control), we simply make a kind of
+		 * "somewhat-busy-wait" algorithm. We compute our own
+		 * timeout value, which we count down to zero. We do this
+		 * in useful subsecond steps.
+		 */
+		const int wait_period = 500000; /* wait period in microseconds */
+		int timeout = janitorInterval * 60 * (1000000 / wait_period);
+		do {
+			if(bFinished || bHadHUP) {
+				break;
+			}
+			srSleep(0, wait_period);
+			timeout--;
+		} while(timeout > 0);
+	}
 	else if(select(SRC_FD + 1, (fd_set *)&rfds, NULL, NULL, &tvSelectTimeout))
 	{
 		if(FD_ISSET(SRC_FD, &rfds))

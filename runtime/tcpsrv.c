@@ -21,7 +21,7 @@
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c[which was
  * licensed under BSD at the time of the rsyslog fork])
  *
- * Copyright 2007-2016 Adiscon GmbH.
+ * Copyright 2007-2018 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -52,6 +52,7 @@
 #include <netdb.h>
 #include <pthread.h>
 #include <sys/types.h>
+#include <signal.h>
 #include <sys/socket.h>
 #if HAVE_FCNTL_H
 #include <fcntl.h>
@@ -669,6 +670,11 @@ static void * ATTR_NONNULL(1)
 wrkr(void *const myself)
 {
 	struct wrkrInfo_s *const me = (struct wrkrInfo_s*) myself;
+
+	/* block signals for this thread */
+	sigset_t sigSet;
+	sigfillset(&sigSet);
+	pthread_sigmask(SIG_SETMASK, &sigSet, NULL);
 	
 	pthread_mutex_lock(&wrkrMut);
 	while(1) {
