@@ -6,20 +6,23 @@ export TESTMESSAGESFULL=1000
 # enable the EXTRA_EXITCHECK only if really needed - otherwise spams the test log
 # too much
 # export EXTRA_EXITCHECK=dumpkafkalogs
+echo Check and Stop previous instances of kafka/zookeeper 
 . $srcdir/diag.sh download-kafka
 . $srcdir/diag.sh stop-zookeeper
 . $srcdir/diag.sh stop-kafka
+
+echo Init Testbench
+. $srcdir/diag.sh init
+
+echo Create kafka/zookeeper instance and topics
 . $srcdir/diag.sh start-zookeeper
 . $srcdir/diag.sh start-kafka
 . $srcdir/diag.sh create-kafka-topic 'static' '.dep_wrk' '22181'
 
-echo \[sndrcv_kafka-vg-sender.sh\]: Give Kafka some time to process topic create ...
+echo Give Kafka some time to process topic create ...
 sleep 5
 
-echo \[sndrcv_kafka-vg-sender.sh\]: Init Testbench
-. $srcdir/diag.sh init
-
-echo \[sndrcv_kafka-vg-sender.sh\]: Starting receiver instance [omkafka]
+echo Starting receiver instance [omkafka]
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
 add_conf '
@@ -42,7 +45,7 @@ if ($msg contains "msgnum:") then {
 '
 startup
 
-echo \[sndrcv_kafka-vg-sender.sh\]: Starting sender instance [imkafka]
+echo Starting sender instance [imkafka]
 export RSYSLOG_DEBUGLOG="log2"
 generate_conf 2
 add_conf '
@@ -69,7 +72,7 @@ action(	name="kafka-fwd"
 	partitions.auto="on"
 	resubmitOnFailure="on"
 	keepFailedMessages="on"
-	failedMsgFile="omkafka-failed.data"
+	failedMsgFile="'$RSYSLOG_OUT_LOG'-failed-'$RANDTOPIC'.data"
 	action.resumeInterval="2"
 	action.resumeRetryCount="10"
 	queue.saveonshutdown="on"
@@ -77,31 +80,31 @@ action(	name="kafka-fwd"
 ' 2
 startup_vg 2
 
-echo \[sndrcv_kafka-vg-sender.sh\]: Inject messages into rsyslog sender instance
+echo Inject messages into rsyslog sender instance
 tcpflood -m$TESTMESSAGES -i1
 
-echo \[sndrcv_kafka-vg-sender.sh\]: Sleep to give rsyslog instances time to process data ...
+echo Sleep to give rsyslog instances time to process data ...
 sleep 5
 
-echo \[sndrcv_kafka-vg-sender.sh\]: Stopping sender instance [imkafka]
+echo Stopping sender instance [imkafka]
 shutdown_when_empty 2
 wait_shutdown_vg 2
 check_exit_vg 2
 
-echo \[sndrcv_kafka-vg-sender.sh\]: Sleep to give rsyslog receiver time to receive data ...
+echo Sleep to give rsyslog receiver time to receive data ...
 sleep 20
 
-echo \[sndrcv_kafka-vg-sender.sh\]: Stopping receiver instance [omkafka]
+echo Stopping receiver instance [omkafka]
 shutdown_when_empty
 wait_shutdown
 
-echo \[sndrcv_kafka-vg-sender.sh\]: delete kafka topics
+echo delete kafka topics
 . $srcdir/diag.sh delete-kafka-topic 'static' '.dep_wrk' '22181'
 
 # Do the final sequence check
 seq_check 1 $TESTMESSAGESFULL -d
 
-echo \[sndrcv_kafka-vg-sender.sh\]: stop kafka instance
+echo stop kafka instance
 . $srcdir/diag.sh stop-kafka
 
 # STOP ZOOKEEPER in any case

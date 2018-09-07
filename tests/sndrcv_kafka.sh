@@ -11,20 +11,22 @@ export RANDTOPIC=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1
 # too much
 # export EXTRA_EXITCHECK=dumpkafkalogs
 echo ===============================================================================
-echo \[sndrcv_kafka.sh\]: Create kafka/zookeeper instance and $RANDTOPIC topic
+echo Check and Stop previous instances of kafka/zookeeper 
 . $srcdir/diag.sh download-kafka
 . $srcdir/diag.sh stop-zookeeper
 . $srcdir/diag.sh stop-kafka
+
+echo Init Testbench
+. $srcdir/diag.sh init
+
+echo Create kafka/zookeeper instance and topics
 . $srcdir/diag.sh start-zookeeper
 . $srcdir/diag.sh start-kafka
 # create new topic
 . $srcdir/diag.sh create-kafka-topic $RANDTOPIC '.dep_wrk' '22181'
 
-echo \[sndrcv_kafka.sh\]: Give Kafka some time to process topic create ...
+echo Give Kafka some time to process topic create ...
 sleep 5
-
-echo \[sndrcv_kafka.sh\]: Init Testbench
-. $srcdir/diag.sh init
 
 # --- Create/Start omkafka sender config
 export RSYSLOG_DEBUGLOG="log"
@@ -55,20 +57,20 @@ local4.* action(	name="kafka-fwd"
 	closeTimeout="60000"
 	resubmitOnFailure="on"
 	keepFailedMessages="on"
-	failedMsgFile="omkafka-failed.data"
+	failedMsgFile="'$RSYSLOG_OUT_LOG'-failed-'$RANDTOPIC'.data"
 	action.resumeInterval="1"
-	action.resumeRetryCount="2"
+	action.resumeRetryCount="10"
 	queue.saveonshutdown="on"
 	)
 '
 
-echo \[sndrcv_kafka.sh\]: Starting sender instance [omkafka]
+echo Starting sender instance [omkafka]
 startup
 # ---
 
 # Injection messages now before starting receiver, simply because omkafka will take some time and
 # there is no reason to wait for the receiver to startup first. 
-echo \[sndrcv_kafka.sh\]: Inject messages into rsyslog sender instance
+echo Inject messages into rsyslog sender instance
 tcpflood -m$TESTMESSAGES -i1
 
 # --- Create/Start imkafka receiver config
@@ -98,15 +100,15 @@ if ($msg contains "msgnum:") then {
 }
 ' 2
 
-echo \[sndrcv_kafka.sh\]: Starting receiver instance [imkafka]
+echo Starting receiver instance [imkafka]
 startup 2
 # ---
 
-echo \[sndrcv_kafka.sh\]: Stopping sender instance [omkafka]
+echo Stopping sender instance [omkafka]
 shutdown_when_empty
 wait_shutdown
 
-echo \[sndrcv_kafka.sh\]: Stopping receiver instance [imkafka]
+echo Stopping receiver instance [imkafka]
 shutdown_when_empty 2
 wait_shutdown 2
 
@@ -116,7 +118,7 @@ wait_shutdown 2
 # Dump Kafka log | uncomment if needed
 # . $srcdir/diag.sh dump-kafka-serverlog
 
-echo \[sndrcv_kafka.sh\]: stop kafka instance
+echo stop kafka instance
 . $srcdir/diag.sh stop-kafka
 
 # STOP ZOOKEEPER in any case

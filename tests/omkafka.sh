@@ -7,26 +7,28 @@ export TESTMESSAGESFULL=$TESTMESSAGES
 # Generate random topic name
 export RANDTOPIC=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
 
-echo \[omkafka.sh\]: Init Testbench 
+# enable the EXTRA_EXITCHECK only if really needed - otherwise spams the test log
+# too much
+#export EXTRA_EXITCHECK=dumpkafkalogs
+echo ===============================================================================
+echo Check and Stop previous instances of kafka/zookeeper 
+. $srcdir/diag.sh download-kafka
+. $srcdir/diag.sh stop-zookeeper
+. $srcdir/diag.sh stop-kafka
+
+echo Init Testbench
 . $srcdir/diag.sh init
 
 # Check for kafkacat
 check_command_available kafkacat
 
-# enable the EXTRA_EXITCHECK only if really needed - otherwise spams the test log
-# too much
-#export EXTRA_EXITCHECK=dumpkafkalogs
-echo ===============================================================================
-echo \[omkafka.sh\]: Create kafka/zookeeper instance and $RANDTOPIC topic
-. $srcdir/diag.sh download-kafka
-. $srcdir/diag.sh stop-zookeeper
-. $srcdir/diag.sh stop-kafka
+echo Create kafka/zookeeper instance and $RANDTOPIC topic
 . $srcdir/diag.sh start-zookeeper
 . $srcdir/diag.sh start-kafka
 # create new topic
 . $srcdir/diag.sh create-kafka-topic $RANDTOPIC '.dep_wrk' '22181'
 
-echo \[omkafka.sh\]: Give Kafka some time to process topic create ...
+echo Give Kafka some time to process topic create ...
 sleep 5
 
 # --- Create/Start omkafka sender config 
@@ -42,10 +44,10 @@ input(type="imtcp" port="'$TCPFLOOD_PORT'")	/* this port for tcpflood! */
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 
 local4.* action(	name="kafka-fwd" 
-	type="omkafka" 
-	topic="'$RANDTOPIC'" 
-	broker="localhost:29092" 
-	template="outfmt" 
+	type="omkafka"
+	topic="'$RANDTOPIC'"
+	broker="localhost:29092"
+	template="outfmt"
 	confParam=[	"compression.codec=none",
 			"socket.timeout.ms=10000",
 			"socket.keepalive.enable=true",
@@ -58,21 +60,21 @@ local4.* action(	name="kafka-fwd"
 	closeTimeout="60000"
 	resubmitOnFailure="on"
 	keepFailedMessages="on"
-	failedMsgFile="omkafka-failed.data"
+	failedMsgFile="'$RSYSLOG_OUT_LOG'-failed-'$RANDTOPIC'.data"
 	action.resumeInterval="1"
 	action.resumeRetryCount="2"
 	queue.saveonshutdown="on"
 	)
 '
 
-echo \[omkafka.sh\]: Starting sender instance [omkafka]
+echo Starting sender instance [omkafka]
 startup
 # --- 
 
-echo \[omkafka.sh\]: Inject messages into rsyslog sender instance  
+echo Inject messages into rsyslog sender instance  
 tcpflood -m$TESTMESSAGES -i1
 
-echo \[omkafka.sh\]: Stopping sender instance [omkafka]
+echo Stopping sender instance [omkafka]
 shutdown_when_empty
 wait_shutdown
 
@@ -85,7 +87,7 @@ kafkacat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%p@%o:%k:%s' > 
 # Dump Kafka log | uncomment if needed
 # . $srcdir/diag.sh dump-kafka-serverlog
 
-echo \[omkafka.sh\]: stop kafka instance
+echo stop kafka instance
 . $srcdir/diag.sh stop-kafka
 
 # STOP ZOOKEEPER in any case

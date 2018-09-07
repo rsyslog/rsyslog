@@ -7,26 +7,28 @@ export TESTMESSAGESFULL=$TESTMESSAGES
 # Generate random topic name
 export RANDTOPIC=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
 
-echo \[imkafka.sh\]: Init Testbench 
+# enable the EXTRA_EXITCHECK only if really needed - otherwise spams the test log
+# too much
+#export EXTRA_EXITCHECK=dumpkafkalogs
+echo ===============================================================================
+echo Create kafka/zookeeper instance and $RANDTOPIC topic
+. $srcdir/diag.sh download-kafka
+. $srcdir/diag.sh stop-zookeeper
+. $srcdir/diag.sh stop-kafka
+
+echo Init Testbench
 . $srcdir/diag.sh init
 
 # Check for kafkacat
 check_command_available kafkacat
 
-# enable the EXTRA_EXITCHECK only if really needed - otherwise spams the test log
-# too much
-#export EXTRA_EXITCHECK=dumpkafkalogs
-echo ===============================================================================
-echo \[imkafka.sh\]: Create kafka/zookeeper instance and $RANDTOPIC topic
-. $srcdir/diag.sh download-kafka
-. $srcdir/diag.sh stop-zookeeper
-. $srcdir/diag.sh stop-kafka
+echo Create kafka/zookeeper instance and $RANDTOPIC topic
 . $srcdir/diag.sh start-zookeeper
 . $srcdir/diag.sh start-kafka
 # create new topic
 . $srcdir/diag.sh create-kafka-topic $RANDTOPIC '.dep_wrk' '22181'
 
-echo \[imkafka.sh\]: Give Kafka some time to process topic create ...
+echo Give Kafka some time to process topic create ...
 sleep 5
 
 # --- Create imkafka receiver config
@@ -37,9 +39,9 @@ main_queue(queue.timeoutactioncompletion="60000" queue.timeoutshutdown="60000")
 
 module(load="../plugins/imkafka/.libs/imkafka")
 /* Polls messages from kafka server!*/
-input(	type="imkafka" 
-	topic="'$RANDTOPIC'" 
-	broker="localhost:29092" 
+input(	type="imkafka"
+	topic="'$RANDTOPIC'"
+	broker="localhost:29092"
 	consumergroup="default"
 	confParam=[ "compression.codec=none",
 		"session.timeout.ms=10000",
@@ -58,7 +60,7 @@ if ($msg contains "msgnum:") then {
 # --- 
 
 # --- Start imkafka receiver config
-echo \[imkafka.sh\]: Starting receiver instance [imkafka]
+echo Starting receiver instance [imkafka]
 startup
 # --- 
 
@@ -69,21 +71,21 @@ do
 	echo " msgnum:$i" >> $RSYSLOG_OUT_LOG.in
 done
 
-echo \[imkafka.sh\]: Inject messages into kafka
+echo Inject messages into kafka
 cat $RSYSLOG_OUT_LOG.in | kafkacat -P -b localhost:29092 -t $RANDTOPIC
 # --- 
 
-echo \[imkafka.sh\]: Give imkafka some time to start...
+echo Give imkafka some time to start...
 sleep 5
 
-echo \[imkafka.sh\]: Stopping sender instance [omkafka]
+echo Stopping sender instance [omkafka]
 shutdown_when_empty
 wait_shutdown
 
 # Delete topic to remove old traces before
 . $srcdir/diag.sh delete-kafka-topic $RANDTOPIC '.dep_wrk' '22181'
 
-echo \[imkafka.sh\]: stop kafka instance
+echo stop kafka instance
 . $srcdir/diag.sh stop-kafka
 
 # STOP ZOOKEEPER in any case

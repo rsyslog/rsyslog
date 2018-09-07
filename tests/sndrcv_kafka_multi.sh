@@ -8,7 +8,7 @@ export TESTMESSAGESFULL=100000
 export RANDTOPIC=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
 
 echo ===============================================================================
-echo \[sndrcv_kafka_multi.sh\]: Create multiple kafka/zookeeper instances and static topic
+echo Check and Stop previous instances of kafka/zookeeper 
 . $srcdir/diag.sh download-kafka
 . $srcdir/diag.sh stop-zookeeper '.dep_wrk1'
 . $srcdir/diag.sh stop-zookeeper '.dep_wrk2'
@@ -16,6 +16,11 @@ echo \[sndrcv_kafka_multi.sh\]: Create multiple kafka/zookeeper instances and st
 . $srcdir/diag.sh stop-kafka '.dep_wrk1'
 . $srcdir/diag.sh stop-kafka '.dep_wrk2'
 . $srcdir/diag.sh stop-kafka '.dep_wrk3'
+
+echo Init Testbench
+. $srcdir/diag.sh init
+
+echo Create kafka/zookeeper instance and topics
 . $srcdir/diag.sh start-zookeeper '.dep_wrk1'
 . $srcdir/diag.sh start-zookeeper '.dep_wrk2'
 . $srcdir/diag.sh start-zookeeper '.dep_wrk3'
@@ -24,11 +29,8 @@ echo \[sndrcv_kafka_multi.sh\]: Create multiple kafka/zookeeper instances and st
 . $srcdir/diag.sh start-kafka '.dep_wrk3'
 . $srcdir/diag.sh create-kafka-topic $RANDTOPIC '.dep_wrk1' '22181'
 
-echo \[sndrcv_kafka_multi.sh\]: Give Kafka some time to process topic create ...
+echo Give Kafka some time to process topic create ...
 sleep 5
-
-echo \[sndrcv_kafka_multi.sh\]: Init Testbench
-. $srcdir/diag.sh init
 
 # --- Create omkafka sender config
 export RSYSLOG_DEBUGLOG="log"
@@ -56,22 +58,26 @@ ruleset(name="omkafka") {
 				"message.send.max.retries=1"]
 		partitions.auto="on"
 		partitions.scheme="random"
+		resubmitOnFailure="on"
+		keepFailedMessages="on"
+		failedMsgFile="'$RSYSLOG_OUT_LOG'-failed-'$RANDTOPIC'.data"
 		closeTimeout="60000"
 		queue.size="1000000"
 		queue.type="LinkedList"
 		action.repeatedmsgcontainsoriginalmsg="off"
 		action.resumeInterval="1"
-		action.resumeRetryCount="2"
+		action.resumeRetryCount="10"
 		action.reportSuspension="on"
 		action.reportSuspensionContinuation="on" )
 }
 
 '
 
-echo \[sndrcv_kafka_multi.sh\]: Starting sender instance [omkafka]
+echo Starting sender instance [omkafka]
 startup
 
-# now inject the messages into instance 2. It will connect to instance 1, and that instance will record the data.
+# Injection messages now before starting receiver, simply because omkafka will take some time and
+# there is no reason to wait for the receiver to startup first. 
 tcpflood -m$TESTMESSAGES -i1
 
 # --- Create omkafka receiver config
@@ -101,21 +107,21 @@ if ($msg contains "msgnum:") then {
 }
 ' 2
 
-echo \[sndrcv_kafka_multi.sh\]: Starting receiver instance [imkafka]
+echo Starting receiver instance [imkafka]
 startup 2
 
-echo \[sndrcv_kafka_multi.sh\]: Stopping sender instance [omkafka]
+echo Stopping sender instance [omkafka]
 shutdown_when_empty
 wait_shutdown
 
-echo \[sndrcv_kafka_multi.sh\]: Stopping receiver instance [imkafka]
+echo Stopping receiver instance [imkafka]
 shutdown_when_empty 2
 wait_shutdown 2
 
-echo \[sndrcv_kafka_multi.sh\]: delete kafka topics
+echo delete kafka topics
 . $srcdir/diag.sh delete-kafka-topic $RANDTOPIC '.dep_wrk1' '22181'
 
-echo \[sndrcv_kafka.sh\]: stop kafka instances
+echo stop kafka instances
 . $srcdir/diag.sh stop-kafka '.dep_wrk1'
 . $srcdir/diag.sh stop-kafka '.dep_wrk2'
 . $srcdir/diag.sh stop-kafka '.dep_wrk3'

@@ -12,10 +12,15 @@ export RANDTOPIC2=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 
 # too much
 #export EXTRA_EXITCHECK=dumpkafkalogs
 echo ===============================================================================
-echo Create kafka/zookeeper instance and topics
+echo Check and Stop previous instances of kafka/zookeeper 
 . $srcdir/diag.sh download-kafka
 . $srcdir/diag.sh stop-zookeeper
 . $srcdir/diag.sh stop-kafka
+
+echo Init Testbench
+. $srcdir/diag.sh init
+
+echo Create kafka/zookeeper instance and topics
 . $srcdir/diag.sh start-zookeeper
 . $srcdir/diag.sh start-kafka
 . $srcdir/diag.sh create-kafka-topic $RANDTOPIC1 '.dep_wrk' '22181'
@@ -23,9 +28,6 @@ echo Create kafka/zookeeper instance and topics
 
 echo Give Kafka some time to process topic create ...
 sleep 5
-
-echo Init Testbench
-. $srcdir/diag.sh init
 
 # --- Create omkafka sender config
 export RSYSLOG_DEBUGLOG="log"
@@ -56,9 +58,9 @@ local4.* action(	name="kafka-fwd"
 	closeTimeout="60000"
 	resubmitOnFailure="on"
 	keepFailedMessages="on"
-	failedMsgFile="omkafka-failed1.data"
+	failedMsgFile="'$RSYSLOG_OUT_LOG'-failed-'$RANDTOPIC1'.data"
 	action.resumeInterval="1"
-	action.resumeRetryCount="2"
+	action.resumeRetryCount="10"
 	queue.saveonshutdown="on"
 	)
 local4.* action(	name="kafka-fwd"
@@ -78,9 +80,9 @@ local4.* action(	name="kafka-fwd"
 	closeTimeout="60000"
 	resubmitOnFailure="on"
 	keepFailedMessages="on"
-	failedMsgFile="omkafka-failed2.data"
+	failedMsgFile="'$RSYSLOG_OUT_LOG'-failed-'$RANDTOPIC2'.data"
 	action.resumeInterval="1"
-	action.resumeRetryCount="2"
+	action.resumeRetryCount="10"
 	queue.saveonshutdown="on"
 	)
 '
@@ -149,7 +151,7 @@ echo delete kafka topics
 . $srcdir/diag.sh delete-kafka-topic $RANDTOPIC2 '.dep_wrk' '22181'
 
 # Dump Kafka log | uncomment if needed
-. $srcdir/diag.sh dump-kafka-serverlog
+# . $srcdir/diag.sh dump-kafka-serverlog
 
 echo stop kafka instance
 . $srcdir/diag.sh stop-kafka
@@ -161,12 +163,12 @@ echo stop kafka instance
 seq_check 1 $TESTMESSAGES -d
 
 linecount=$(wc -l < ${RSYSLOG_OUT_LOG})
-if [ $linecount != $TESTMESSAGESFULL ]; then
+if [ $linecount -ge $TESTMESSAGESFULL ]; then
+	echo "Info: Count correct: $linecount"
+else
 	echo "Count error detected in $RSYSLOG_OUT_LOG"
 	echo "number of lines in file: $linecount"
 	error_exit 1 
-else
-	echo "Info: Count correct: $linecount"
 fi
 
 echo success

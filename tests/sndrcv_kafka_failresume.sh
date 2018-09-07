@@ -9,19 +9,21 @@ export TESTMESSAGESFULL=50000
 export RANDTOPIC=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
 
 echo ===============================================================================
-echo \[sndrcv_kafka_failresume.sh\]: Create kafka/zookeeper instance and static topic
+echo Check and Stop previous instances of kafka/zookeeper 
 . $srcdir/diag.sh download-kafka
 . $srcdir/diag.sh stop-zookeeper
 . $srcdir/diag.sh stop-kafka
+
+echo Init Testbench
+. $srcdir/diag.sh init
+
+echo Create kafka/zookeeper instance and topics
 . $srcdir/diag.sh start-zookeeper
 . $srcdir/diag.sh start-kafka
 . $srcdir/diag.sh create-kafka-topic $RANDTOPIC '.dep_wrk' '22181'
 
-echo \[sndrcv_kafka_failresume.sh\]: Give Kafka some time to process topic create ...
+echo Give Kafka some time to process topic create ...
 sleep 5
-
-echo \[sndrcv_kafka_failresume.sh\]: Init Testbench
-. $srcdir/diag.sh init
 
 # --- Create omkafka receiver config
 export RSYSLOG_DEBUGLOG="log"
@@ -48,7 +50,7 @@ if ($msg contains "msgnum:") then {
 }
 '
 
-echo \[sndrcv_kafka_failresume.sh\]: Starting receiver instance [omkafka]
+echo Starting receiver instance [omkafka]
 startup
 # ---
 
@@ -79,52 +81,52 @@ action(	name="kafka-fwd"
 	partitions.auto="on"
 	resubmitOnFailure="on"
 	keepFailedMessages="on"
-	failedMsgFile="omkafka-failed.data"
-	action.resumeInterval="2"
+	failedMsgFile="'$RSYSLOG_OUT_LOG'-failed-'$RANDTOPIC'.data"
+	action.resumeInterval="1"
 	action.resumeRetryCount="10"
 	queue.saveonshutdown="on"
 	)
 ' 2
 
-echo \[sndrcv_kafka_failresume.sh\]: Starting sender instance [imkafka]
+echo Starting sender instance [imkafka]
 startup 2
 # ---
 
-echo \[sndrcv_kafka_failresume.sh\]: Inject messages into rsyslog sender instance
+echo Inject messages into rsyslog sender instance
 tcpflood -m$TESTMESSAGES -i1
 
-echo \[sndrcv_kafka_failresume.sh\]: Stopping kafka cluster instance
+echo Stopping kafka cluster instance
 . $srcdir/diag.sh stop-kafka
 
-echo \[sndrcv_kafka_failresume.sh\]: Stopping sender instance [imkafka]
+echo Stopping sender instance [imkafka]
 shutdown_when_empty 2
 wait_shutdown 2
 
-echo \[sndrcv_kafka_failresume.sh\]: Starting kafka cluster instance
+echo Starting kafka cluster instance
 . $srcdir/diag.sh start-kafka
 
-echo \[sndrcv_kafka_failresume.sh\]: Sleep to give rsyslog instances time to process data ...
+echo Sleep to give rsyslog instances time to process data ...
 sleep 5
 
-echo \[sndrcv_kafka_failresume.sh\]: Starting sender instance [imkafka]
+echo Starting sender instance [imkafka]
 export RSYSLOG_DEBUGLOG="log3"
 startup 2
 
-echo \[sndrcv_kafka_failresume.sh\]: Sleep to give rsyslog sender time to send data ...
+echo Sleep to give rsyslog sender time to send data ...
 sleep 5
 
-echo \[sndrcv_kafka_failresume.sh\]: Stopping sender instance [imkafka]
+echo Stopping sender instance [imkafka]
 shutdown_when_empty 2
 wait_shutdown 2
 
-echo \[sndrcv_kafka_failresume.sh\]: Stopping receiver instance [omkafka]
+echo Stopping receiver instance [omkafka]
 shutdown_when_empty
 wait_shutdown
 
-echo \[sndrcv_kafka_failresume.sh\]: delete kafka topics
+echo delete kafka topics
 . $srcdir/diag.sh delete-kafka-topic 'static' '.dep_wrk' '22181'
 
-echo \[sndrcv_kafka_failresume.sh\]: stop kafka instance
+echo stop kafka instance
 . $srcdir/diag.sh stop-kafka
 
 # STOP ZOOKEEPER in any case

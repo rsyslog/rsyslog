@@ -109,6 +109,8 @@ local0.* ./'${RSYSLOG_DYNNAME}'.HOSTNAME;hostname
 
 
 # begin a new testconfig
+#	2018-09-07:	Incremented inputs.timeout.shutdown to 60000 because kafka tests may not be 
+#			finished under stress otherwise
 # $1 is the instance id, if given
 function generate_conf() {
 	export TCPFLOOD_PORT="$(get_free_port)"
@@ -120,7 +122,7 @@ function generate_conf() {
 		mkdir $RSYSLOG_DYNNAME.spool
 	fi
 	echo 'module(load="../plugins/imdiag/.libs/imdiag")
-global(inputs.timeout.shutdown="10000")
+global(inputs.timeout.shutdown="60000")
 $IMDiagListenPortFileName '$RSYSLOG_DYNNAME.imdiag$1.port'
 $IMDiagServerRun 0
 
