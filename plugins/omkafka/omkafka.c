@@ -368,6 +368,10 @@ rd_kafka_topic_t** topic) {
 					"topic conf parameter '%s=%s': %s",
 					pData->topicConfParams[i].name,
 					pData->topicConfParams[i].val, errstr);
+			} else {
+				DBGPRINTF("omkafka: setting custom topic configuration parameter '%s=%s': %s",
+					pData->topicConfParams[i].name,
+					pData->topicConfParams[i].val, errstr);
 			}
 			ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 		}
@@ -646,7 +650,7 @@ writeKafka(instanceData *const pData, uchar *const msg,
 #if RD_KAFKA_VERSION >= 0x00090400
 	if (msgTimestamp == NULL) {
 		/* Resubmitted items don't have a timestamp */
-		ttMsgTimestamp = time(NULL);
+		ttMsgTimestamp = 0;
 	} else {
 		ttMsgTimestamp = atoi((char*)msgTimestamp); /* Convert timestamp into int */
 		ttMsgTimestamp *= 1000; /* Timestamp in Milliseconds for kafka */
@@ -661,8 +665,10 @@ writeKafka(instanceData *const pData, uchar *const msg,
 						RD_KAFKA_V_VALUE(msg, strlen((char*)msg)),
 						RD_KAFKA_V_MSGFLAGS(RD_KAFKA_MSG_F_COPY),
 						RD_KAFKA_V_TIMESTAMP(ttMsgTimestamp),
+						RD_KAFKA_V_KEY(NULL, 0),
 						RD_KAFKA_V_END);
 	} else {
+		DBGPRINTF("omkafka: rd_kafka_producev key=%s\n", pData->key);
 		msg_kafka_response = rd_kafka_producev(pData->rk,
 						RD_KAFKA_V_RKT(rkt),
 						RD_KAFKA_V_PARTITION(partition),
@@ -1099,8 +1105,7 @@ openKafka(instanceData *const __restrict__ pData)
 	/* main conf */
 	rd_kafka_conf_t *const conf = rd_kafka_conf_new();
 	if(conf == NULL) {
-		LogError(0, RS_RET_KAFKA_ERROR,
-			"omkafka: error creating kafka conf obj: %s\n",
+		LogError(0, RS_RET_KAFKA_ERROR, "omkafka: error creating kafka conf obj: %s\n",
 			rd_kafka_err2str(rd_kafka_last_error()));
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	}
@@ -1109,7 +1114,8 @@ openKafka(instanceData *const __restrict__ pData)
 	/* enable kafka debug output */
 	if(rd_kafka_conf_set(conf, "debug", RD_KAFKA_DEBUG_CONTEXTS,
 		errstr, sizeof(errstr)) != RD_KAFKA_CONF_OK) {
-		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+		LogError(0, RS_RET_KAFKA_ERROR, "omkafka: error setting kafka debug option: %s\n", errstr);
+		/* DO NOT ABORT IN THIS CASE! */
 	}
 #endif
 
@@ -1121,8 +1127,12 @@ openKafka(instanceData *const __restrict__ pData)
 			pData->confParams[i].val, errstr, sizeof(errstr))
 	 	   != RD_KAFKA_CONF_OK) {
 			if(pData->bReportErrs) {
-				LogError(0, RS_RET_PARAM_ERROR, "error in kafka "
+				LogError(0, RS_RET_PARAM_ERROR, "error setting custom configuration "
 					"parameter '%s=%s': %s",
+					pData->confParams[i].name,
+					pData->confParams[i].val, errstr);
+			} else {
+				DBGPRINTF("omkafka: error setting custom configuration parameter '%s=%s': %s",
 					pData->confParams[i].name,
 					pData->confParams[i].val, errstr);
 			}

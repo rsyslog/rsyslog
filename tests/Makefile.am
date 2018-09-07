@@ -599,11 +599,14 @@ if ENABLE_OMKAFKA
 if ENABLE_IMKAFKA
 if ENABLE_KAFKA_TESTS
 TESTS += \
+	omkafka.sh \
+	imkafka.sh \
 	sndrcv_kafka.sh \
 	sndrcv_kafka_multi_topics.sh
 # Tests below need to be stable first!
 #	sndrcv_kafka_fail.sh \
-#	sndrcv_kafka_failresume.sh
+#	sndrcv_kafka_failresume.sh \
+# needs properly to much mempory on arm devices!
 #	sndrcv_kafka_multi.sh
 if HAVE_VALGRIND
 TESTS += \
@@ -1591,6 +1594,8 @@ EXTRA_DIST= \
 	mysql-actq-mt.sh \
 	mysql-actq-mt-withpause.sh \
 	mysql-actq-mt-withpause-vg.sh \
+	omkafka.sh \
+	imkafka.sh \
 	sndrcv_kafka.sh \
 	sndrcv_kafka_multi_topics.sh \
 	sndrcv_kafka-vg-rcvr.sh \
