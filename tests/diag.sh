@@ -432,24 +432,19 @@ function wait_queueempty() {
 
 # shut rsyslogd down when main queue is empty. $1 is the instance.
 function shutdown_when_empty() {
-	if [ "$1" == "2" ]
-	then
+	if [ "$1" == "2" ]; then
 	   echo Shutting down instance 2
 	else
 	   echo Shutting down instance 1
 	fi
-	ls -l $RSYSLOG_PIDBASE$1.pid 
 	wait_queueempty $1
 	if [ "$RSYSLOG_PIDBASE" == "" ]; then
 		echo "RSYSLOG_PIDBASE is EMPTY! - bug in test? (instance $1)"
 		exit 1
 	fi
-	set -x
-	ls -l $RSYSLOG_PIDBASE$1.pid
 	cp $RSYSLOG_PIDBASE$1.pid $RSYSLOG_PIDBASE$1.pid.save
 	$TESTTOOL_DIR/msleep 500 # wait a bit (think about slow testbench machines!)
 	kill `cat $RSYSLOG_PIDBASE$1.pid` # note: we do not wait for the actual termination!
-	set +x
 }
 
 
@@ -505,6 +500,16 @@ function assert_content_missing() {
 	cat ${RSYSLOG_OUT_LOG} | grep -qF "$1"
 	if [ "$?" -eq "0" ]; then
 		echo content-missing assertion failed, some line matched pattern "'$1'"
+		error_exit 1
+	fi
+}
+
+
+function custom_assert_content_missing() {
+	cat $2 | grep -qF "$1"
+	if [ "$?" -eq "0" ]; then
+		echo content-missing assertion failed, some line in "'$2'" matched pattern "'$1'"
+		cat -n "$2"
 		error_exit 1
 	fi
 }
@@ -1072,13 +1077,6 @@ case $1 in
 		    echo content-check failed, not every line matched pattern "'$2'"
 		    echo "file contents:"
 		    cat -n $4
-		    error_exit 1
-		fi
-		;;
-   'custom-assert-content-missing') 
-		cat $3 | grep -qF "$2"
-		if [ "$?" -eq "0" ]; then
-				echo content-missing assertion failed, some line in "'$3'" matched pattern "'$2'"
 		    error_exit 1
 		fi
 		;;

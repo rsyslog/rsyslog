@@ -54,9 +54,9 @@ echo wait on shutdown
 wait_shutdown_vg
 check_exit_vg
  # because dyn-metrics would be reset before it can accumulate and report high counts, sleep between msg-injection ensures that
-. $srcdir/diag.sh custom-assert-content-missing 'baz=2' "${RSYSLOG_DYNNAME}.out.stats.log"
-. $srcdir/diag.sh custom-assert-content-missing 'foo=2' "${RSYSLOG_DYNNAME}.out.stats.log"
-. $srcdir/diag.sh custom-assert-content-missing 'foo=3' "${RSYSLOG_DYNNAME}.out.stats.log"
+custom_assert_content_missing 'baz=2' "${RSYSLOG_DYNNAME}.out.stats.log"
+custom_assert_content_missing 'foo=2' "${RSYSLOG_DYNNAME}.out.stats.log"
+custom_assert_content_missing 'foo=3' "${RSYSLOG_DYNNAME}.out.stats.log"
 # but actual reported stats (aggregate) should match
 . $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'foo=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
 . $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'bar=' "${RSYSLOG_DYNNAME}.out.stats.log" 1

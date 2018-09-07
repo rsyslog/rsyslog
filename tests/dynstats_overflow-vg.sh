@@ -45,9 +45,9 @@ wait_queueempty
 . $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'bar=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
 . $srcdir/diag.sh first-column-sum-check 's/.*baz=\([0-9]\+\)/\1/g' 'baz=' "${RSYSLOG_DYNNAME}.out.stats.log" 2
 
-. $srcdir/diag.sh custom-assert-content-missing 'quux' "${RSYSLOG_DYNNAME}.out.stats.log"
-. $srcdir/diag.sh custom-assert-content-missing 'corge' "${RSYSLOG_DYNNAME}.out.stats.log"
-. $srcdir/diag.sh custom-assert-content-missing 'grault' "${RSYSLOG_DYNNAME}.out.stats.log"
+custom_assert_content_missing 'quux' "${RSYSLOG_DYNNAME}.out.stats.log"
+custom_assert_content_missing 'corge' "${RSYSLOG_DYNNAME}.out.stats.log"
+custom_assert_content_missing 'grault' "${RSYSLOG_DYNNAME}.out.stats.log"
 
 . $srcdir/diag.sh first-column-sum-check 's/.*new_metric_add=\([0-9]\+\)/\1/g' 'new_metric_add=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
 . $srcdir/diag.sh first-column-sum-check 's/.*ops_overflow=\([0-9]\+\)/\1/g' 'ops_overflow=' "${RSYSLOG_DYNNAME}.out.stats.log" 5
@@ -105,5 +105,5 @@ check_exit_vg
 
 . $srcdir/diag.sh first-column-sum-check 's/.*metrics_purged=\([0-9]\+\)/\1/g' 'metrics_purged=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
 
-. $srcdir/diag.sh custom-assert-content-missing 'foo' "${RSYSLOG_DYNNAME}.out.stats.log"
+custom_assert_content_missing 'foo' "${RSYSLOG_DYNNAME}.out.stats.log"
 exit_test
