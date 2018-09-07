@@ -1,5 +1,6 @@
 ------------------------------------------------------------------------------
 Version 8.38.0 [v8-stable] 2018-09-18
+- AIX: make basic modules work again
 - make rsyslog build on AIX again
   ... at least for a limited set of default modules
 - im[p]tcp: improve error message on connect failure
@@ -43,11 +44,21 @@ Version 8.38.0 [v8-stable] 2018-09-18
   hash.
   closes https://github.com/rsyslog/rsyslog/issues/2530
   closes https://github.com/rsyslog/rsyslog/issues/2231
-- omkafka: better debug information
+- omkafka:
+  * better debug information
+  * Fixed minor issue in omkafka producing wrong kafka timestamps when
+    msgTimestamp was NULL.
+  * Setting RD_KAFKA_V_KEY(NULL, 0) in rd_kafka_producev now when KEY is not
+    configured.
+  * Fixed minor issue when rsyslog is compiled with --enable-debug and
+    librdkafka is too old.
 - omfile bugfix: errant error message when dynafile param needed
   also fixes related message in contributed module omfile-hardened
   closes https://github.com/rsyslog/rsyslog/issues/2975
   Thanks to Frank Bicknell for the patch
+- omhttp: new contribued module
+  Thanks to Christian Tramnitz for contributing it.
+  Some more info at https://github.com/rsyslog/rsyslog/pull/2782
 - bugfix omprog: invalid memory access on partial writes to pipe
   When sending logs to the program, in case of a partial write to the pipe,
   invalid data was sent, or an invalid memory access could occur. (A
@@ -76,6 +87,11 @@ Version 8.38.0 [v8-stable] 2018-09-18
     use dynamic ports and file names, changes to testing tools, etc.
   * kafka tests re-enabled, as they should now no longer be racy. However,
     this has yet to be prooven in practice.
+  * upgrading kafka server version to current
+  * Fixed server configuration issues holding the kafka tests back from working
+  * Fixed some config issues in all sndrcv kafka tests.
+  * Generating dynamically kafka topics now for each kafka test.
+  * Renabled kafka_multi test which runs a test on 3 kafka/zookeeper instances
 ------------------------------------------------------------------------------
 Version 8.37.0 [v8-stable] 2018-08-07
 - build system: add --enable-default-tests ./configure option
