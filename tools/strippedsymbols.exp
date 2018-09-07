@@ -21,3 +21,9 @@ GetGnuTLSLoglevel
 statsRecordSender
 currentTimeMills
 lookupPendingReloadCount
+strmGetPrevWasNL
+strmGetPrevLineSegment
+strmGetPrevMsgSegment
+strmSetReadTimeout
+msgAddMultiMetadata
+strmReadMultiLine
