@@ -54,6 +54,8 @@ rsyslogd_LDFLAGS = -export-dynamic \
 else
 if OS_AIX
 rsyslogd_LDFLAGS = -export-dynamic -bexpall -bE:strippedsymbols.exp
+else # e.g. FreeBSD
+rsyslogd_LDFLAGS = -export-dynamic
 endif # if OS_AIX
 endif # if OS_APPLE
 endif # if OS_LINUX
