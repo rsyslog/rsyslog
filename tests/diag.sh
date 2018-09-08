@@ -244,10 +244,12 @@ function wait_process_startup() {
 }
 
 # wait for file $1 to exist AND be non-empty
+# $1 : file to wait for
+# $2 (optional): error message to show if timeout occurs
 function wait_file_exists() {
 	i=0
 	while true; do
-		if [ -f $1 -a "$(cat $1)" != "" ]; then
+		if [ -f $1 -a "$(cat $1 2> /dev/null)" != "" ]; then
 			break
 		fi
 		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
@@ -255,9 +257,36 @@ function wait_file_exists() {
 		if test $i -gt $TB_TIMEOUT_STARTSTOP; then
 		   echo "ABORT! Timeout waiting for file $1"
 		   ls -l $1
+		   if [ "$2" != "" ]; then
+			echo "$2"
+		   fi
 		   error_exit 1
 		fi
 	done
+}
+
+# kafka special wait function: we wait for the output file in order
+# to ensure Kafka/Zookeeper is actually ready to go. This is NOT
+# a generic check function and must only used with those kafka tests
+# that actually need it.
+function kafka_wait_group_coordinator() {
+echo We are waiting for kafka/zookeper being ready to deliver messages
+wait_file_exists $RSYSLOG_OUT_LOG "
+
+Non-existence of $RSYSLOG_OUT_LOG can be caused
+by a problem inside zookeeper. If debug output in the receiver is enabled, one
+may see this message:
+
+\"GroupCoordinator response error: Broker: Group coordinator not available\"
+
+In this case you may want to do a web search and/or have a look at
+    https://github.com/edenhill/librdkafka/issues/799
+
+The question, of course, is if there is nevertheless a problem in imkafka.
+Usually, the wait we do inside the testbench is sufficient to handle all
+Zookeeper/Kafka startup. So if the issue reoccurs, it is suggested to enable
+debug output in the receiver and check for actual problems.
+"
 }
 
 # wait for rsyslogd startup ($1 is the instance)

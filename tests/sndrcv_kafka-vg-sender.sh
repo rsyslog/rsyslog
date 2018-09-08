@@ -22,7 +22,7 @@ echo Create kafka/zookeeper instance and topics
 echo Give Kafka some time to process topic create ...
 sleep 5
 
-echo Starting receiver instance [omkafka]
+echo Starting receiver instance [imkafka]
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
 add_conf '
@@ -45,15 +45,14 @@ if ($msg contains "msgnum:") then {
 '
 startup
 
-echo Starting sender instance [imkafka]
+echo Starting sender instance [omkafka]
 export RSYSLOG_DEBUGLOG="log2"
 generate_conf 2
 add_conf '
 main_queue(queue.timeoutactioncompletion="10000" queue.timeoutshutdown="60000")
+$imdiagInjectDelayMode full
 
 module(load="../plugins/omkafka/.libs/omkafka")
-module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="'$TCPFLOOD_PORT'")	/* this port for tcpflood! */
 
 template(name="outfmt" type="string" string="%msg%\n")
 
@@ -81,20 +80,22 @@ action(	name="kafka-fwd"
 startup_vg 2
 
 echo Inject messages into rsyslog sender instance
-tcpflood -m$TESTMESSAGES -i1
+injectmsg 1 $TESTMESSAGES
 
 echo Sleep to give rsyslog instances time to process data ...
 sleep 5
 
-echo Stopping sender instance [imkafka]
+echo Stopping sender instance [omkafka]
 shutdown_when_empty 2
 wait_shutdown_vg 2
 check_exit_vg 2
 
-echo Sleep to give rsyslog receiver time to receive data ...
-sleep 20
+# TODO: REMOVE (2018-09-13 rgerhards)
+#echo Sleep to give rsyslog receiver time to receive data ...
+#sleep 20
 
-echo Stopping receiver instance [omkafka]
+echo Stopping receiver instance [imkafka]
+kafka_wait_group_coordinator
 shutdown_when_empty
 wait_shutdown
 
