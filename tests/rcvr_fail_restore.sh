@@ -63,7 +63,7 @@ startup 2
 
 # now inject the messages into instance 2. It will connect to instance 1,
 # and that instance will record the data.
-. $srcdir/diag.sh injectmsg2  1 1000
+injectmsg2  1 1000
 wait_queueempty
 ./msleep 1000 # let things settle down a bit
 
@@ -76,7 +76,7 @@ echo step 2
 shutdown_when_empty
 wait_shutdown
 
-. $srcdir/diag.sh injectmsg2  1001 10000
+injectmsg2  1001 10000
 ./msleep 3000 # make sure some retries happen (retry interval is set to 3 second)
 get_mainqueuesize 2
 ls -l ${RSYSLOG_DYNNAME}.spool
@@ -99,7 +99,7 @@ echo file size to expect is $OLDFILESIZE
 # (but one file continous to exist).
 #
 echo step 4
-. $srcdir/diag.sh injectmsg2  11001 10
+injectmsg2  11001 10
 wait_queueempty 2
 
 # at this point, the queue file shall not have grown. Note
@@ -132,7 +132,7 @@ echo "*** done primary test *** now checking if DA can be restarted"
 shutdown_when_empty
 wait_shutdown
 
-. $srcdir/diag.sh injectmsg2  11011 10000
+injectmsg2  11011 10000
 sleep 1 # we need to wait, otherwise we may be so fast that the receiver
 # comes up before we have finally suspended the action
 get_mainqueuesize 2

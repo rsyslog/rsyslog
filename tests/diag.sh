@@ -352,6 +352,13 @@ function injectmsg() {
 	echo injectmsg $1 $2 $3 $4 | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
 }
 
+# inject messages in INSTANCE 2 via our inject interface (imdiag)
+function injectmsg2() {
+	echo injecting $2 messages
+	echo injectmsg $1 $2 $3 $4 | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
+	# TODO: some return state checking? (does it really make sense here?)
+}
+
 
 # show the current main queue size. $1 is the instance.
 function get_mainqueuesize() {
@@ -920,11 +927,6 @@ case $1 in
    'kill-immediate') # kill rsyslog unconditionally
 		kill -9 `cat $RSYSLOG_PIDBASE.pid`
 		# note: we do not wait for the actual termination!
-		;;
-   'injectmsg2') # inject messages in INSTANCE 2 via our inject interface (imdiag)
-		echo injecting $3 messages
-		echo injectmsg $2 $3 $4 $5 | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
-		# TODO: some return state checking? (does it really make sense here?)
 		;;
     'injectmsg-litteral') # inject litteral-payload  via our inject interface (imdiag)
 		echo injecting msg payload from: $2

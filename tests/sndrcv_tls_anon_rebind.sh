@@ -1,11 +1,9 @@
 #!/bin/bash
+# testing sending and receiving via TLS with anon auth and rebind
 # rgerhards, 2011-04-04
 # This file is part of the rsyslog project, released  under GPLv3
-echo ===============================================================================
-echo \[sndrcv_tls_anon_rebind.sh\]: testing sending and receiving via TLS with anon auth and rebind
-
-# uncomment for debugging support:
 . $srcdir/diag.sh init
+# uncomment for debugging support:
 # start up the instances
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"
@@ -34,7 +32,6 @@ startup
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
 generate_conf 2
-export TCPFLOOD_PORT="$(get_free_port)" # TODO: move to diag.sh
 add_conf '
 global(
 	defaultNetstreamDriverCAFile="'$srcdir/testsuites/x.509/ca.pem'"
@@ -43,10 +40,6 @@ global(
 	defaultNetstreamDriver="gtls"
 )
 
-# Note: no TLS for the listener, this is for tcpflood!
-$ModLoad ../plugins/imtcp/.libs/imtcp
-$InputTCPServerRun '$TCPFLOOD_PORT'
-
 # set up the action
 $ActionSendStreamDriverMode 1 # require TLS for the connection
 $ActionSendStreamDriverAuthMode anon
@@ -54,12 +47,10 @@ $ActionSendTCPRebindInterval 50
 *.*	@@127.0.0.1:'$PORT_RCVR'
 ' 2
 startup 2
-# may be needed by TLS (once we do it): sleep 30
 
 # now inject the messages into instance 2. It will connect to instance 1,
 # and that instance will record the data.
-tcpflood -m25000 -i1
-sleep 5 # make sure all data is received in input buffers
+injectmsg2 1 25000
 # shut down sender when everything is sent, receiver continues to run concurrently
 # may be needed by TLS (once we do it): sleep 60
 shutdown_when_empty 2
@@ -68,9 +59,5 @@ wait_shutdown 2
 shutdown_when_empty
 wait_shutdown
 
-# may be needed by TLS (once we do it): sleep 60
-# do the final check
 seq_check 1 25000
-
-unset PORT_RCVR # TODO: move to exit_test()?
 exit_test
