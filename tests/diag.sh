@@ -608,6 +608,12 @@ function error_exit() {
 		# Dump Kafka log
 		. $srcdir/diag.sh dump-kafka-serverlog
 	fi
+	# output listening ports as a temporay debug measure (2018-09-08 rgerhards)
+	if [ $(uname) == "Linux" ]; then
+		netstat -tlp
+	else
+		netstat
+	fi
 	# we need to do some minimal cleanup so that "make distcheck" does not
 	# complain too much
 	exit $1
