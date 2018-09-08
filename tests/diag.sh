@@ -352,6 +352,13 @@ function injectmsg() {
 	echo injectmsg $1 $2 $3 $4 | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
 }
 
+# inject messages in INSTANCE 2 via our inject interface (imdiag)
+function injectmsg2() {
+	echo injecting $2 messages
+	echo injectmsg $1 $2 $3 $4 | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
+	# TODO: some return state checking? (does it really make sense here?)
+}
+
 
 # show the current main queue size. $1 is the instance.
 function get_mainqueuesize() {
@@ -432,24 +439,19 @@ function wait_queueempty() {
 
 # shut rsyslogd down when main queue is empty. $1 is the instance.
 function shutdown_when_empty() {
-	if [ "$1" == "2" ]
-	then
+	if [ "$1" == "2" ]; then
 	   echo Shutting down instance 2
 	else
 	   echo Shutting down instance 1
 	fi
-	ls -l $RSYSLOG_PIDBASE$1.pid 
 	wait_queueempty $1
 	if [ "$RSYSLOG_PIDBASE" == "" ]; then
 		echo "RSYSLOG_PIDBASE is EMPTY! - bug in test? (instance $1)"
 		exit 1
 	fi
-	set -x
-	ls -l $RSYSLOG_PIDBASE$1.pid
 	cp $RSYSLOG_PIDBASE$1.pid $RSYSLOG_PIDBASE$1.pid.save
 	$TESTTOOL_DIR/msleep 500 # wait a bit (think about slow testbench machines!)
 	kill `cat $RSYSLOG_PIDBASE$1.pid` # note: we do not wait for the actual termination!
-	set +x
 }
 
 
@@ -505,6 +507,16 @@ function assert_content_missing() {
 	cat ${RSYSLOG_OUT_LOG} | grep -qF "$1"
 	if [ "$?" -eq "0" ]; then
 		echo content-missing assertion failed, some line matched pattern "'$1'"
+		error_exit 1
+	fi
+}
+
+
+function custom_assert_content_missing() {
+	cat $2 | grep -qF "$1"
+	if [ "$?" -eq "0" ]; then
+		echo content-missing assertion failed, some line in "'$2'" matched pattern "'$1'"
+		cat -n "$2"
 		error_exit 1
 	fi
 }
@@ -595,6 +607,12 @@ function error_exit() {
 		. $srcdir/diag.sh dump-zookeeper-serverlog
 		# Dump Kafka log
 		. $srcdir/diag.sh dump-kafka-serverlog
+	fi
+	# output listening ports as a temporay debug measure (2018-09-08 rgerhards)
+	if [ $(uname) == "Linux" ]; then
+		netstat -tlp
+	else
+		netstat
 	fi
 	# we need to do some minimal cleanup so that "make distcheck" does not
 	# complain too much
@@ -916,11 +934,6 @@ case $1 in
 		kill -9 `cat $RSYSLOG_PIDBASE.pid`
 		# note: we do not wait for the actual termination!
 		;;
-   'injectmsg2') # inject messages in INSTANCE 2 via our inject interface (imdiag)
-		echo injecting $3 messages
-		echo injectmsg $2 $3 $4 $5 | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
-		# TODO: some return state checking? (does it really make sense here?)
-		;;
     'injectmsg-litteral') # inject litteral-payload  via our inject interface (imdiag)
 		echo injecting msg payload from: $2
     cat $2 | sed -e 's/^/injectmsg litteral /g' | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
@@ -1072,13 +1085,6 @@ case $1 in
 		    echo content-check failed, not every line matched pattern "'$2'"
 		    echo "file contents:"
 		    cat -n $4
-		    error_exit 1
-		fi
-		;;
-   'custom-assert-content-missing') 
-		cat $3 | grep -qF "$2"
-		if [ "$?" -eq "0" ]; then
-				echo content-missing assertion failed, some line in "'$3'" matched pattern "'$2'"
 		    error_exit 1
 		fi
 		;;

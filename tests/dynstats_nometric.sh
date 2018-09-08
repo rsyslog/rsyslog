@@ -42,10 +42,10 @@ shutdown_when_empty
 echo wait on shutdown
 wait_shutdown
 . $srcdir/diag.sh first-column-sum-check 's/.*no_metric=\([0-9]\+\)/\1/g' 'no_metric=' "${RSYSLOG_DYNNAME}.out.stats.log" 5
-. $srcdir/diag.sh custom-assert-content-missing 'foo' "${RSYSLOG_DYNNAME}.out.stats.log"
-. $srcdir/diag.sh custom-assert-content-missing 'bar' "${RSYSLOG_DYNNAME}.out.stats.log"
-. $srcdir/diag.sh custom-assert-content-missing 'baz' "${RSYSLOG_DYNNAME}.out.stats.log"
-. $srcdir/diag.sh custom-assert-content-missing 'corge' "${RSYSLOG_DYNNAME}.out.stats.log"
+custom_assert_content_missing 'foo' "${RSYSLOG_DYNNAME}.out.stats.log"
+custom_assert_content_missing 'bar' "${RSYSLOG_DYNNAME}.out.stats.log"
+custom_assert_content_missing 'baz' "${RSYSLOG_DYNNAME}.out.stats.log"
+custom_assert_content_missing 'corge' "${RSYSLOG_DYNNAME}.out.stats.log"
 custom_content_check 'quux=1' "${RSYSLOG_DYNNAME}.out.stats.log"
 custom_content_check 'grault=1' "${RSYSLOG_DYNNAME}.out.stats.log"
 exit_test
