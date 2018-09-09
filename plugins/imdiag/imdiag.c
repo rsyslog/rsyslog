@@ -631,6 +631,8 @@ CODESTARTmodExit
 
 	/* free some globals to keep valgrind happy */
 	free(pszInputName);
+	free(pszLstnPortFileName);
+	free(pszStrmDrvrAuthMode);
 
 	statsobj.Destruct(&diagStats);
 	sem_destroy(&statsReportingBlocker);
