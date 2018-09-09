@@ -126,6 +126,58 @@ complete its initialization properly.
    <https://github.com/rsyslog/rsyslog/blob/master/plugins/external/INTERFACE.md>`_
 
 
+.. _confirmTimeout:
+
+confirmTimeout
+^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "10000", "no", "none"
+
+.. versionadded:: 8.38.0
+
+Specifies how long rsyslog must wait for the external program to confirm
+each message when confirmMessages_ is set to "on". If the program does not
+send a response within this timeout, it will be restarted (see signalOnClose_,
+closeTimeout_ and killUnresponsive_ for details on the cleanup sequence).
+The value must be expressed in milliseconds and must be greater than zero.
+
+.. seealso::
+
+   `Interface between rsyslog and external output plugins
+   <https://github.com/rsyslog/rsyslog/blob/master/plugins/external/INTERFACE.md>`_
+
+
+.. _reportFailures:
+
+reportFailures
+^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+.. versionadded:: 8.38.0
+
+Specifies whether rsyslog must internally log a warning message whenever the
+program returns an error when confirming a message. The logged message will
+include the error line returned by the program. This parameter is ignored when
+confirmMessages_ is set to "off".
+
+Enabling this flag can be useful to log the problems detected by the program.
+However, the information that can be logged is limited to a short error line,
+and the logs will be tagged as originated by the 'syslog' facility (like the
+rest of rsyslog logs). To avoid these shortcomings, consider the use of the
+output_ parameter to capture the stderr of the program.
+
+
 .. _useTransactions:
 
 useTransactions
@@ -216,14 +268,9 @@ output
 
 .. versionadded:: v8.1.6
 
-Full path of a file where the output of the external program must be saved,
-for debugging purposes.
-
-Note that if the action has multiple worker threads
-(:doc:`queue.workerThreads <../../rainerscript/queue_parameters>` is
-set to a value greater than 1), all threads will write to the file at the
-same time, which will cause the output of the multiple child processes to be
-mixed. When using this parameter, use a single worker thread.
+Full path of a file where the output of the external program will be saved.
+If the file already exists, the output is appended to it. If the file does
+not exist, it is created with the permissions specified by fileCreateMode_.
 
 If confirmMessages_ is set to "off" (the default), both the stdout and
 stderr of the child process are written to the specified file.
@@ -232,17 +279,47 @@ If confirmMessages_ is set to "on", only the stderr of the child is
 written to the specified file (since stdout is used for confirming the
 messages).
 
-.. warning::
+Rsyslog will reopen the file whenever it receives a HUP signal. This allows
+the file to be externally rotated (using a tool like *logrotate*): after
+each rotation of the file, make sure a HUP signal is sent to rsyslogd.
 
-   There is currently a known issue with omprog when this parameter is NOT
-   used: the stderr of the program will be assigned arbitrarily, or closed,
-   which can produce unpredictable results if the program emits something
-   to stderr (`example <https://github.com/rsyslog/rsyslog/issues/2787>`_).
-   As a workaround, it is recommended to explicitly redirect stderr within
-   the program, or to use this parameter. In future versions, omprog will
-   execute the program with stderr redirected to /dev/null when this
-   parameter is not specified. The same considerations apply to stdout
-   when confirmMessages_ is set to "off".
+If the omprog action is configured to use multiple worker threads
+(:doc:`queue.workerThreads <../../rainerscript/queue_parameters>` is
+set to a value greater than 1), the lines written by the various program
+instances will not appear intermingled in the output file, as long as the
+lines do not exceed a certain length and the program writes them to
+stdout/stderr in line-buffered mode. For details, refer to `Interface between
+rsyslog and external output plugins
+<https://github.com/rsyslog/rsyslog/blob/master/plugins/external/INTERFACE.md>`_.
+
+If this parameter is not specified, the output of the program will be
+redirected to ``/dev/null``.
+
+.. note::
+
+   Before version v8.38.0, this parameter was intended for debugging purposes
+   only. Since v8.38.0, the parameter can be used for production.
+
+
+.. _fileCreateMode:
+
+fileCreateMode
+^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "0600", "no", "none"
+
+.. versionadded:: v8.38.0
+
+Permissions the output_ file will be created with, in case the file does not
+exist. The value must be a 4-digit octal number, with the initial digit being
+zero. Please note that the actual permission depends on the rsyslogd process
+umask. If in doubt, use ``$umask 0000`` right at the beginning of the
+configuration file to remove any restrictions.
 
 
 hup.signal
@@ -278,8 +355,8 @@ signalOnClose
 .. versionadded:: 8.23.0
 
 Specifies whether a TERM signal must be sent to the external program before
-closing it (either because the worker thread has been unscheduled, or rsyslog
-is about to shutdown).
+closing it (when either the worker thread has been unscheduled, a restart
+of the program is being forced, or rsyslog is about to shutdown).
 
 If this switch is set to "on", rsyslog will send a TERM signal to the child
 process before closing the pipe. That is, the process will first receive a
@@ -307,9 +384,10 @@ closeTimeout
 .. versionadded:: 8.35.0
 
 Specifies how long rsyslog must wait for the external program to terminate
-after closing the pipe (that is, sending EOF to the stdin of the child
-process). The value must be expressed in milliseconds and must be greater
-than or equal to zero.
+(when either the worker thread has been unscheduled, a restart of the program
+is being forced, or rsyslog is about to shutdown) after closing the pipe,
+that is, after sending EOF to the stdin of the child process. The value must
+be expressed in milliseconds and must be greater than or equal to zero.
 
 See the killUnresponsive_ parameter for more details.
 
@@ -329,8 +407,9 @@ killUnresponsive
 .. versionadded:: 8.35.0
 
 Specifies whether a KILL signal must be sent to the external program in case
-it does not terminate within the timeout indicated by closeTimeout_ (when
-rsyslog is shutting down or the worker thread is being unscheduled).
+it does not terminate within the timeout indicated by closeTimeout_
+(when either the worker thread has been unscheduled, a restart of the program
+is being forced, or rsyslog is about to shutdown).
 
 If signalOnClose_ is set to "on", the default value of ``killUnresponsive``
 is also "on". In this case, the cleanup sequence of the child process is as
@@ -343,15 +422,14 @@ If signalOnClose_ is set to "off", the default value of ``killUnresponsive``
 is also "off". In this case, the child cleanup sequence is as follows: (1) the
 pipe with the child process is closed (the child will receive EOF on stdin),
 (2) rsyslog waits for the child process to terminate during closeTimeout_,
-(3) if the child has not terminated within the timeout, rsyslog ignores it and
-continues with the shutdown (or the unschedule of the worker thread).
+(3) if the child has not terminated within the timeout, rsyslog ignores it.
 
 This parameter can be set to a different value than signalOnClose_, obtaining
 the corresponding variations of cleanup sequences described above.
 
 
 forceSingleInstance
--------------------
+^^^^^^^^^^^^^^^^^^^
 
 .. csv-table::
    :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
@@ -377,15 +455,12 @@ flag to "on". This is useful when the external program uses or accesses
 some kind of shared resource that does not allow concurrent access from
 multiple processes.
 
-.. warning::
+If this flag is enabled, the program instance will be started when rsyslogd
+starts, and will be kept started until shutdown.
 
-   This parameter is currently affected by `this issue
-   <https://github.com/rsyslog/rsyslog/issues/2813>`_ that essentially
-   causes it to have no effect. As a workaround, if you need this
-   behavior, set the
-   :doc:`queue.workerThreads <../../rainerscript/queue_parameters>`
-   parameter to 1 (which is the default value), and do not use a
-   disk-assisted queue for the omprog action.
+.. note::
+
+   Before version v8.38.0, this parameter had no effect.
 
 
 Examples
@@ -396,14 +471,14 @@ Example: command line arguments
 
 In the following example, logs will be sent to a program ``log.sh`` located
 in ``/path/to``. The program will receive the command line arguments
-``-p="value 1"`` and ``--param2="value2"``.
+``p1``, ``p2`` and ``--param3="value 3"``.
 
 .. code-block:: none
 
    module(load="omprog")
 
    action(type="omprog"
-          binary="/path/to/log.sh -p=\"value 1\" --param2=\"value2\""
+          binary="/path/to/log.sh p1 p2 --param3=\"value 3\""
           template="RSYSLOG_TraditionalFileFormat")
 
 
@@ -421,8 +496,11 @@ failures.
 
 If the program cannot write a log to the database, it will return a
 negative confirmation to rsyslog via stdout. Rsyslog will then keep the
-failed log  in the queue, and send it again to the program after 5
-seconds, with infinite retries.
+failed log in the queue, and send it again to the program after 5
+seconds. The program can also write error details to stderr, which will
+be captured by rsyslog and written to ``/var/log/db_forward.log``. If
+no response is received from the program within a 30-second timeout,
+rsyslog will kill and restart it.
 
 .. code-block:: none
 
@@ -432,11 +510,13 @@ seconds, with infinite retries.
           name="db_forward"
           binary="/usr/share/logging/db_forward.py"
           confirmMessages="on"
+          confirmTimeout="30000"
           queue.type="LinkedList"
           queue.saveOnShutdown="on"
           queue.workerThreads="5"
           action.resumeInterval="5"
-          action.resumeRetryCount="-1")
+          killUnresponsive="on"
+          output="/var/log/db_forward.log")
 
 Note that the ``useTransactions`` flag is not used in this example. The
 program stores and confirms each log individually.
