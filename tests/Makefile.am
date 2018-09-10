@@ -942,6 +942,7 @@ TESTS += \
 	imfile-fileNotFoundError-parameter.sh \
 	imfile-error-not-repeated.sh \
 	imfile-truncate.sh \
+	imfile-truncate-multiple.sh \
 	imfile-readmode2.sh \
 	imfile-readmode2-polling.sh \
 	imfile-readmode2-with-persists-data-during-stop.sh \
@@ -1522,6 +1523,7 @@ EXTRA_DIST= \
 	imfile-freshStartTail2.sh \
 	imfile-freshStartTail3.sh \
 	imfile-truncate.sh \
+	imfile-truncate-multiple.sh \
 	imfile-wildcards.sh \
 	imfile-wildcards-dirs.sh \
 	imfile-wildcards-dirs2.sh \

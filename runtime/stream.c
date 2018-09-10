@@ -582,9 +582,9 @@ strmHandleEOFMonitor(strm_t *pThis)
 	ISOBJ_TYPE_assert(pThis, strm);
 	if(stat((char*) pThis->pszCurrFName, &statName) == -1)
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
-	DBGPRINTF("stream checking for file change on '%s', inode %u/%u\n",
-	  pThis->pszCurrFName, (unsigned) pThis->inode,
-	  (unsigned) statName.st_ino);
+	DBGPRINTF("stream checking for file change on '%s', inode %u/%u size %llu/%llu\n",
+		pThis->pszCurrFName, (unsigned) pThis->inode, (unsigned) statName.st_ino,
+		(long long unsigned) pThis->iCurrOffs, (long long unsigned) statName.st_size);
 
 	/* Inode unchanged but file size on disk is less than current offset
 	 * means file was truncated, we also reopen if 'reopenOnTruncate' is on
