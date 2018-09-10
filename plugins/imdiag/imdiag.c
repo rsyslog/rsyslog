@@ -99,6 +99,7 @@ struct modConfData_s {
 	EMPTY_STRUCT;
 };
 
+static flowControl_t injectmsgDelayMode = eFLOWCTL_NO_DELAY;
 static int iTCPSessMax = 20; /* max number of sessions */
 static int iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
 static uchar *pszLstnPortFileName = NULL;
@@ -508,6 +509,26 @@ finalize_it:
 }
 
 
+static rsRetVal
+setInjectDelayMode(void __attribute__((unused)) *pVal, uchar *const pszMode)
+{
+	DEFiRet;
+
+	if(!strcasecmp((char*)pszMode, "no")) {
+		injectmsgDelayMode = eFLOWCTL_NO_DELAY;
+	} else if(!strcasecmp((char*)pszMode, "light")) {
+		injectmsgDelayMode = eFLOWCTL_LIGHT_DELAY;
+	} else if(!strcasecmp((char*)pszMode, "full")) {
+		injectmsgDelayMode = eFLOWCTL_FULL_DELAY;
+	} else {
+		LogError(0, RS_RET_PARAM_ERROR,
+			"imdiag: invalid imdiagInjectDelayMode '%s' - ignored", pszMode);
+	}
+	free(pszMode);
+	RETiRet;
+}
+
+
 static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 {
 	DEFiRet;
@@ -698,6 +719,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("imdiagserverrun"), 0, eCmdHdlrGetWord,
 				   addTCPListener, NULL, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("imdiaginjectdelaymode"), 0, eCmdHdlrGetWord,
+				   setInjectDelayMode, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("imdiagmaxsessions"), 0, eCmdHdlrInt,
 				   NULL, &iTCPSessMax, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("imdiagserverstreamdrivermode"), 0,
@@ -734,7 +757,3 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(statsobj.SetReadNotifier(diagStats, imdiag_statsReadCallback, NULL));
 	CHKiRet(statsobj.ConstructFinalize(diagStats));
 ENDmodInit
-
-
-/* vim:set ai:
- */
