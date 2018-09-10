@@ -955,6 +955,7 @@ TESTS += \
 	imfile-endregex-timeout-none.sh \
 	imfile-endregex-timeout-with-shutdown.sh \
 	imfile-endregex-timeout-with-shutdown-polling.sh \
+	imfile-endmsg.regex.sh \
 	imfile-persist-state-1.sh \
 	imfile-freshStartTail1.sh \
 	imfile-freshStartTail2.sh \
@@ -976,14 +977,27 @@ TESTS += \
 	imfile-growing-file-id.sh \
 	glbl-oversizeMsg-truncate-imfile.sh
 
+if ENABLE_MMNORMALIZE
+TESTS += \
+	imfile-endmsg.regex-with-example.sh
+endif
+
 if HAVE_VALGRIND
 TESTS += \
 	imfile-basic-vg.sh \
 	imfile-endregex-vg.sh \
+	imfile-endmsg.regex-vg.sh \
 	imfile-readmode0-vg.sh \
 	imfile-readmode2-vg.sh \
 	imfile-basic-vgthread.sh
+
+if ENABLE_MMNORMALIZE
+TESTS += \
+	imfile-endmsg.regex-with-example-vg.sh
 endif
+
+endif
+
 endif
 
 if ENABLE_OMTCL
@@ -1517,6 +1531,12 @@ EXTRA_DIST= \
 	imfile-endregex-timeout-none.sh \
 	imfile-endregex-timeout-with-shutdown.sh \
 	imfile-endregex-timeout-with-shutdown-polling.sh \
+	imfile-endmsg.regex.sh \
+	imfile-endmsg.regex-vg.sh \
+	imfile-endmsg.regex-with-example.sh \
+	imfile-endmsg.regex-with-example-vg.sh \
+	imfile-endmsg.regex.crio.rulebase \
+	imfile-endmsg.regex.json.rulebase \
 	imfile-persist-state-1.sh \
 	imfile-freshStartTail1.sh \
 	imfile-freshStartTail2.sh \

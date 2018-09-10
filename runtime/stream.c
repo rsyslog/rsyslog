@@ -942,12 +942,12 @@ strmReadMultiLine_isTimedOut(const strm_t *const __restrict__ pThis)
 
 /* read a multi-line message from a strm file.
  * The multi-line message is terminated based on the user-provided
- * startRegex (Posix ERE). For performance reasons, the regex
+ * startRegex or endRegex (Posix ERE). For performance reasons, the regex
  * must already have been compiled by the user.
  * added 2015-05-12 rgerhards
  */
 rsRetVal
-strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, const sbool bEscapeLF,
+strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *start_preg, regex_t *end_preg, const sbool bEscapeLF,
 	const sbool discardTruncatedMsg, const sbool msgDiscardingError, int64 *const strtOffs)
 {
 	uchar c;
@@ -979,9 +979,14 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, const sbool bEs
 		cstrFinalize(thisLine);
 
 		/* we have a line, now let's assemble the message */
-		const int isMatch = !regexec(preg, (char*)rsCStrGetSzStrNoNULL(thisLine), 0, NULL, 0);
+		const int isStartMatch = start_preg ?
+				!regexec(start_preg, (char*)rsCStrGetSzStrNoNULL(thisLine), 0, NULL, 0) :
+				0;
+		const int isEndMatch = end_preg ?
+				!regexec(end_preg, (char*)rsCStrGetSzStrNoNULL(thisLine), 0, NULL, 0) :
+				0;
 
-		if(isMatch) {
+		if(isStartMatch) {
 			/* in this case, the *previous* message is complete and we are
 			 * at the start of a new one.
 			 */
@@ -1046,6 +1051,19 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, const sbool bEs
 					}
 				}
 			}
+		}
+		if(isEndMatch) {
+			/* in this case, the *current* message is complete and we are
+			 * at the end of it.
+			 */
+			if(pThis->ignoringMsg == 0) {
+				if(pThis->prevMsgSegment != NULL) {
+					finished = 1;
+					*ppCStr = pThis->prevMsgSegment;
+					pThis->prevMsgSegment= NULL;
+				}
+			}
+			pThis->ignoringMsg = 0;
 		}
 		cstrDestruct(&thisLine);
 	} while(finished == 0);
