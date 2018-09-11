@@ -296,9 +296,41 @@ messages is terminated when the next one begins, and
 of a message. As this parameter is using regular expressions, it
 is more flexible than ``readMode`` but at the cost of lower
 performance.
-Note that ``readMode`` and ``startmsg.regex`` cannot both be
+Note that ``readMode`` and ``startmsg.regex`` and ``endmsg.regex`` cannot all be
 defined for the same input.
 
+
+endmsg.regex
+^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+.. versionadded:: 8.38.0
+
+This permits the processing of multi-line messages. When set, a message is
+terminated when ``endmsg.regex`` matches the line that
+identifies the end of a message. As this parameter is using regular
+expressions, it is more flexible than ``readMode`` but at the cost of lower
+performance.
+Note that ``readMode`` and ``startmsg.regex`` and ``endmsg.regex`` cannot all be
+defined for the same input.
+The primary use case for this is multiline container log files which look like
+this:
+
+.. code-block:: none
+
+    date stdout P start of message
+    date stdout P  middle of message
+    date stdout F  end of message
+
+The `F` means this is the line which contains the final part of the message.
+The fully assembled message should be `start of message middle of message end of
+message`.  `endmsg.regex="^[^ ]+ stdout F "` will match.
 
 readTimeout
 ^^^^^^^^^^^
@@ -344,9 +376,10 @@ readMode
    "integer", "0", "no", "``$InputFileReadMode``"
 
 This provides support for processing some standard types of multiline
-messages. It is less flexible than ``startmsg.regex`` but offers higher
-performance than regex processing. Note that ``readMode`` and
-``startmsg.regex`` cannot both be defined for the same input.
+messages. It is less flexible than ``startmsg.regex`` or ``endmsg.regex`` but
+offers higher performance than regex processing. Note that ``readMode`` and
+``startmsg.regex`` and ``endmsg.regex`` cannot all be defined for the same
+input.
 
 The value can range from 0-2 and determines the multiline
 detection method.
