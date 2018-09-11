@@ -752,9 +752,6 @@ CODESTARTrunInput
 		if(glbl.GetGlobalInputTermState() == 0)
 			srSleep(0, 100000);
 	}
-
-	// TODO: Wait for Worker threads to be finished!
-
 	DBGPRINTF("imkafka: terminating upon request of rsyslog core\n");
 finalize_it:
 ENDrunInput

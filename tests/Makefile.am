@@ -604,6 +604,7 @@ if ENABLE_KAFKA_TESTS
 TESTS += \
 	omkafka.sh \
 	imkafka.sh \
+	imkafka_multi_single.sh \
 	sndrcv_kafka.sh \
 	sndrcv_kafka_multi_topics.sh
 # Tests below need to be stable first!
@@ -1624,6 +1625,7 @@ EXTRA_DIST= \
 	mysql-actq-mt-withpause-vg.sh \
 	omkafka.sh \
 	imkafka.sh \
+	imkafka_multi_single.sh \
 	sndrcv_kafka.sh \
 	sndrcv_kafka_multi_topics.sh \
 	sndrcv_kafka-vg-rcvr.sh \
