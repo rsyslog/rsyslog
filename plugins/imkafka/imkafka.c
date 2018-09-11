@@ -61,6 +61,10 @@ DEFobjCurrIf(ruleset)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(statsobj)
 
+/* forward references */
+static void * imkafkawrkr(void *myself);
+
+
 struct kafka_params {
 	const char *name;
 	const char *val;
@@ -107,6 +111,17 @@ struct modConfData_s {
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	uchar *pszBindRuleset;		/* default name of Ruleset to bind to */
 };
+
+/* global data */
+pthread_attr_t wrkrThrdAttr;	/* Attribute for worker threads ; read only after startup */
+static int activeKafkaworkers = 0;
+/* The following structure controls the worker threads. Global data is
+ * needed for their access.
+ */
+static struct kafkaWrkrInfo_s {
+	pthread_t tid;		/* the worker's thread ID */
+	instanceConf_t *inst;	/* Pointer to imkafka instance */
+} *kafkaWrkrInfo;
 
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
@@ -692,17 +707,18 @@ ENDfreeCnf
 /* This function is called to gather input.
  */
 BEGINrunInput
+	int i;
 	instanceConf_t *inst;
 CODESTARTrunInput
 	DBGPRINTF("imkafka: runInput loop started ...\n");
-	int activeListeners = 0;
+	activeKafkaworkers = 0;
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
 		if(inst->rk != NULL) {
-			++activeListeners;
+			++activeKafkaworkers;
 		}
 	}
 
-	if(activeListeners == 0) {
+	if(activeKafkaworkers == 0) {
 		LogError(0, RS_RET_ERR, "imkafka: no active inputs, input does "
 			"not run - there should have been additional error "
 			"messages given previously");
@@ -710,35 +726,34 @@ CODESTARTrunInput
 	}
 
 
-	/* Start endless consumer loop - it is terminated when the thread is
-	 * signalled to do so. This, however, is handled by the framework.
-	 */
-	do {
-		for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
-			if(glbl.GetGlobalInputTermState() == 1)
-				break; /* terminate input! */
+	DBGPRINTF("imkafka: Starting %d imkafka workerthreads\n", activeKafkaworkers);
+	kafkaWrkrInfo = calloc(activeKafkaworkers, sizeof(struct kafkaWrkrInfo_s));
+	if (kafkaWrkrInfo == NULL) {
+		LogError(errno, RS_RET_OUT_OF_MEMORY, "imkafka: worker-info array allocation failed.");
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
 
-			if(inst->rk == NULL) {
-				continue;
-			}
+	/* Start worker threads for each imkafka input source
+	*/
+	i = 0;
+	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
+		/* init worker info structure! */
+		kafkaWrkrInfo[i].inst = inst; /* Set reference pointer */
+		pthread_create(&kafkaWrkrInfo[i].tid, &wrkrThrdAttr, imkafkawrkr, &(kafkaWrkrInfo[i]));
+		i++;
+	}
 
-			// Try to add consumer only if connected! */
-			if(inst->bIsConnected == 1 && inst->bIsSubscribed == 0 ) {
-				addConsumer(runModConf, inst);
-			}
-			if(inst->bIsSubscribed == 1 ) {
-				msgConsume(inst);
-			}
-		}
+	while(glbl.GetGlobalInputTermState() == 0) {
 
 		/* Note: the additional 10000ns wait is vitally important. It guards rsyslog
 		 * against totally hogging the CPU if the users selects a polling interval
 		 * of 0 seconds. It doesn't hurt any other valid scenario. So do not remove.
-		 * rgerhards, 2008-02-14
 		 */
 		if(glbl.GetGlobalInputTermState() == 0)
 			srSleep(0, 100000);
-	} while(glbl.GetGlobalInputTermState() == 0);
+	}
+
+	// TODO: Wait for Worker threads to be finished!
 
 	DBGPRINTF("imkafka: terminating upon request of rsyslog core\n");
 finalize_it:
@@ -758,6 +773,15 @@ ENDwillRun
 
 BEGINafterRun
 CODESTARTafterRun
+	/* Cleanup imkafka worker threads */
+	int i;
+	DBGPRINTF("imkafka: Stopping imkafka workerthreads\n");
+	for(i = 0 ; i < activeKafkaworkers ; ++i) {
+		pthread_join(kafkaWrkrInfo[i].tid, NULL);
+		DBGPRINTF("imkafka: Stopped worker %d\n", i);
+	}
+	free(kafkaWrkrInfo);
+
 	/* do cleanup here */
 	if(pInputName != NULL)
 		prop.Destruct(&pInputName);
@@ -793,6 +817,7 @@ ENDafterRun
 
 BEGINmodExit
 CODESTARTmodExit
+	pthread_attr_destroy(&wrkrThrdAttr);
 	/* release objects we used */
 	objRelease(statsobj, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
@@ -828,7 +853,50 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
+
+	/* initialize "read-only" thread attributes */
+	pthread_attr_init(&wrkrThrdAttr);
+	pthread_attr_setstacksize(&wrkrThrdAttr, 4096*1024);
+
 	DBGPRINTF("imkafka %s using librdkafka version %s, 0x%x\n",
 		VERSION, rd_kafka_version_str(), rd_kafka_version());
-
 ENDmodInit
+
+/*
+*	Workerthread function for a single kafka consomer
+ */
+static void *
+imkafkawrkr(void *myself)
+{
+	struct kafkaWrkrInfo_s *me = (struct kafkaWrkrInfo_s*) myself;
+	DBGPRINTF("imkafka: started kafka consumer workerthread on %s/%s/%s\n",
+		me->inst->topic, me->inst->consumergroup, me->inst->brokers);
+
+	do {
+		if(glbl.GetGlobalInputTermState() == 1)
+			break; /* terminate input! */
+
+		if(me->inst->rk == NULL) {
+			continue;
+		}
+
+		// Try to add consumer only if connected! */
+		if(me->inst->bIsConnected == 1 && me->inst->bIsSubscribed == 0 ) {
+			addConsumer(runModConf, me->inst);
+		}
+		if(me->inst->bIsSubscribed == 1 ) {
+			msgConsume(me->inst);
+		}
+		/* Note: the additional 10000ns wait is vitally important. It guards rsyslog
+		 * against totally hogging the CPU if the users selects a polling interval
+		 * of 0 seconds. It doesn't hurt any other valid scenario. So do not remove.
+		 * rgerhards, 2008-02-14
+		 */
+		if(glbl.GetGlobalInputTermState() == 0)
+			srSleep(0, 100000);
+	} while(glbl.GetGlobalInputTermState() == 0);
+
+	DBGPRINTF("imkafka: stopped kafka consumer workerthread on %s/%s/%s\n",
+		me->inst->topic, me->inst->consumergroup, me->inst->brokers);
+	return NULL;
+}
