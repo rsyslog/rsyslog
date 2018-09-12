@@ -650,13 +650,13 @@ dbgprintf("truncate enter %d\n", isTruncated);
 			pThis->pszCurrFName);
 			/* do NOT exit, we need to re-set offset! */
 	} else {
-		if(lenFrstBlk != pThis->lenFrstBlk) {
-			DBGPRINTF("file '%s': frstblk check sizediff existing %llu, found %llu, "
+		if(lenFrstBlk < pThis->lenFrstBlk) {
+			DBGPRINTF("file '%s': frstblk chck old size %llu < new %llu, "
 				"assuming truncated\n", pThis->pszCurrFName,
 				(unsigned long long) pThis->lenFrstBlk,
 				(unsigned long long) lenFrstBlk);
 			isTruncated = 1;
-		} else if(memcmp(frstBlk, pThis->frstBlk, lenFrstBlk) != 0) {
+		} else if(memcmp(frstBlk, pThis->frstBlk, pThis->lenFrstBlk) != 0) {
 			DBGPRINTF("file '%s': frstblk check data different, size is %llu "
 				"assuming truncated\n", pThis->pszCurrFName,
 				(unsigned long long) lenFrstBlk);
@@ -667,7 +667,7 @@ dbgprintf("existing data: %s\n", pThis->frstBlk);
 				pThis->pszCurrFName);
 		}
 
-		if(isTruncated) {
+		if(isTruncated || lenFrstBlk > pThis->lenFrstBlk) {
 			updateFrstBlkInfo(pThis, frstBlk, lenFrstBlk);
 		}
 	}

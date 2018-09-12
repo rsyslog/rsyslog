@@ -10,6 +10,9 @@ export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
 add_conf '
+global( debug.whitelist="on"
+	debug.files=["imfile.c"])
+
 module(load="../plugins/imfile/.libs/imfile" pollingInterval="1")
 
 input(type="imfile" File="'./$RSYSLOG_DYNNAME'.input" Tag="file:" reopenOnTruncate="on")
@@ -32,7 +35,7 @@ for i in {0..50}; do
 	# check that previous msg injection worked
 	wait_queueempty
 	echo nbr of lines: $(wc -l $RSYSLOG_OUT_LOG)
-	seq_check 0 $(($NUMMSG - 1))
+	seq_check 0 $(($NUMMSG - 1)) -d
 
 	# begin new inject cycle
 	generate_msgs=$(( $i * 50))
@@ -51,5 +54,5 @@ echo generated $NUMMSG messages
 shutdown_when_empty
 wait_shutdown
 
-seq_check 0 $(($NUMMSG - 1))
+seq_check 0 $(($NUMMSG - 1)) -d
 exit_test
