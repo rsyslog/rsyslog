@@ -1286,6 +1286,7 @@ enqLine(act_obj_t *const act,
 		FINALIZE;
 	}
 
+dbgprintf("imfile: enqMsg: %s\n", (char*)rsCStrGetSzStrNoNULL(cstrLine));
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetFlowControlType(pMsg, eFLOWCTL_FULL_DELAY);
 	MsgSetInputName(pMsg, pInputName);
