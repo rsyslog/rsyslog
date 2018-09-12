@@ -1554,6 +1554,7 @@ pollFileReal(act_obj_t *act, cstr_t **pCStr)
 	}
 
 finalize_it:
+	strmUpdateTruncationDetection(act->pStrm);
 	multiSubmitFlush(&act->multiSub);
 
 	if(*pCStr != NULL) {

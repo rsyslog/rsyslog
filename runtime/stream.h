@@ -240,5 +240,6 @@ void strmSetReadTimeout(strm_t *const __restrict__ pThis, const int val);
 const uchar * ATTR_NONNULL() strmGetPrevLineSegment(strm_t *const pThis);
 const uchar * ATTR_NONNULL() strmGetPrevMsgSegment(strm_t *const pThis);
 int ATTR_NONNULL() strmGetPrevWasNL(const strm_t *const pThis);
+rsRetVal ATTR_NONNULL(1) strmUpdateTruncationDetection(strm_t *const pThis);
 
 #endif /* #ifndef STREAM_H_INCLUDED */
