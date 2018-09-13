@@ -611,8 +611,9 @@ TESTS += \
 if HAVE_VALGRIND
 TESTS += \
 	sndrcv_kafka-vg-rcvr.sh
-# re-enable: (see https://github.com/rsyslog/rsyslog/issues/2434)
-# sndrcv_kafka-vg-sender.sh
+#	sndrcv_kafka-vg-sender.sh
+# Note: -sender had some issues. If the re-appear, see
+# see https://github.com/rsyslog/rsyslog/issues/2434
 endif
 endif
 endif
@@ -1599,6 +1600,7 @@ EXTRA_DIST= \
 	sndrcv_kafka.sh \
 	sndrcv_kafka_multi_topics.sh \
 	sndrcv_kafka-vg-rcvr.sh \
+	sndrcv_kafka-vg-sender.sh \
 	testsuites/kafka-server.properties \
 	testsuites/kafka-server.dep_wrk1.properties \
 	testsuites/kafka-server.dep_wrk2.properties \

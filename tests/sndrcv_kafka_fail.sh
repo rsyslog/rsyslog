@@ -65,10 +65,9 @@ export RSYSLOG_DEBUGLOG="log2"
 generate_conf 2
 add_conf '
 main_queue(queue.timeoutactioncompletion="60000" queue.timeoutshutdown="60000")
+$imdiagInjectDelayMode full
 
 module(load="../plugins/omkafka/.libs/omkafka")
-module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="'$TCPFLOOD_PORT'")	/* this port for tcpflood! */
 
 template(name="outfmt" type="string" string="%msg%\n")
 
@@ -101,7 +100,7 @@ startup 2
 # ---
 
 echo Inject messages into rsyslog sender instance
-tcpflood -m$TESTMESSAGES -i1
+injectmsg 1 $TESTMESSAGES
 
 echo Starting kafka cluster instance
 . $srcdir/diag.sh start-kafka

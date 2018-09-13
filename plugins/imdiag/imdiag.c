@@ -227,7 +227,7 @@ doInjectMsg(uchar *szMsg, ratelimit_t *ratelimiter)
 	CHKiRet(msgConstructWithTime(&pMsg, &stTime, ttGenTime));
 	MsgSetRawMsg(pMsg, (char*) szMsg, ustrlen(szMsg));
 	MsgSetInputName(pMsg, pInputName);
-	MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
+	MsgSetFlowControlType(pMsg, injectmsgDelayMode);
 	pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
 	MsgSetRcvFrom(pMsg, pRcvDummy);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pRcvIPDummy));

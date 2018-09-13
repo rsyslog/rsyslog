@@ -17,7 +17,6 @@ echo Check and Stop previous instances of kafka/zookeeper
 . $srcdir/diag.sh stop-kafka '.dep_wrk2'
 . $srcdir/diag.sh stop-kafka '.dep_wrk3'
 
-echo Init Testbench
 . $srcdir/diag.sh init
 
 echo Create kafka/zookeeper instance and topics
@@ -115,6 +114,7 @@ shutdown_when_empty
 wait_shutdown
 
 echo Stopping receiver instance [imkafka]
+kafka_wait_group_coordinator
 shutdown_when_empty 2
 wait_shutdown 2
 

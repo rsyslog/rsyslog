@@ -11,7 +11,6 @@ export RANDTOPIC2=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 
 # enable the EXTRA_EXITCHECK only if really needed - otherwise spams the test log
 # too much
 #export EXTRA_EXITCHECK=dumpkafkalogs
-echo ===============================================================================
 echo Check and Stop previous instances of kafka/zookeeper 
 . $srcdir/diag.sh download-kafka
 . $srcdir/diag.sh stop-zookeeper
@@ -34,10 +33,9 @@ export RSYSLOG_DEBUGLOG="log"
 generate_conf
 add_conf '
 main_queue(queue.timeoutactioncompletion="60000" queue.timeoutshutdown="60000")
+$imdiagInjectDelayMode full
 
 module(load="../plugins/omkafka/.libs/omkafka")
-module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="'$TCPFLOOD_PORT'")	/* this port for tcpflood! */
 
 template(name="outfmt" type="string" string="%msg%\n")
 
@@ -94,7 +92,7 @@ startup
 # Injection messages now before starting receiver, simply because omkafka will take some time and
 # there is no reason to wait for the receiver to startup first. 
 echo Inject messages into rsyslog sender instance
-tcpflood -m$TESTMESSAGES -i1
+injectmsg 1 $TESTMESSAGES
 
 # --- Create omkafka receiver config
 export RSYSLOG_DEBUGLOG="log2"
@@ -143,6 +141,7 @@ shutdown_when_empty
 wait_shutdown
 
 echo Stopping receiver instance [imkafka]
+kafka_wait_group_coordinator
 shutdown_when_empty 2
 wait_shutdown 2
 

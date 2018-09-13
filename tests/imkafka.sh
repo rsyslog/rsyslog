@@ -18,8 +18,6 @@ echo Create kafka/zookeeper instance and $RANDTOPIC topic
 
 echo Init Testbench
 . $srcdir/diag.sh init
-
-# Check for kafkacat
 check_command_available kafkacat
 
 echo Create kafka/zookeeper instance and $RANDTOPIC topic
