@@ -1404,7 +1404,7 @@ addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6)
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pLstn->ctrSessOpen)));
 	STATSCOUNTER_INIT(pLstn->ctrSessOpenErr, pLstn->mutCtrSessOpenErr);
 	CHKiRet(statsobj.AddCounter(pLstn->stats, UCHAR_CONSTANT("sessions.openfailed"),
-		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pLstn->ctrSessErr)));
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pLstn->ctrSessOpenErr)));
 	STATSCOUNTER_INIT(pLstn->ctrSessClose, pLstn->mutCtrSessClose);
 	CHKiRet(statsobj.AddCounter(pLstn->stats, UCHAR_CONSTANT("sessions.closed"),
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pLstn->ctrSessClose)));
