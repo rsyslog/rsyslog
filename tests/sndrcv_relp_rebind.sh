@@ -1,10 +1,9 @@
 #!/bin/bash
 # added 2017-09-29 by Rgerhards
 # This file is part of the rsyslog project, released under ASL 2.0
-echo ====================================================================================
-echo \[sndrcv_relp_rebind.sh\]: testing sending and receiving via relp w/ rebind interval
-# uncomment for debugging support:
 . $srcdir/diag.sh init
+echo testing sending and receiving via relp w/ rebind interval
+# uncomment for debugging support:
 # start up the instances
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"
@@ -25,8 +24,6 @@ generate_conf 2
 export TCPFLOOD_PORT="$(get_free_port)" # TODO: move to diag.sh
 add_conf '
 module(load="../plugins/omrelp/.libs/omrelp")
-module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="'$TCPFLOOD_PORT'")	/* this port for tcpflood! */
 
 # We know that a rebind interval of 1 is NOT what you would normally expect in
 # production. However, this stresses the code the most and we have seen that
@@ -39,19 +36,14 @@ startup 2
 
 # now inject the messages into instance 2. It will connect to instance 1,
 # and that instance will record the data.
-tcpflood -m1000 -i1
-sleep 5 # make sure all data is received in input buffers
-# shut down sender when everything is sent, receiver continues to run concurrently
-# may be needed by TLS (once we do it): sleep 60
+injectmsg 1 1000
+
+# shut down sender
 shutdown_when_empty 2
 wait_shutdown 2
 # now it is time to stop the receiver as well
 shutdown_when_empty
 wait_shutdown
 
-# may be needed by TLS (once we do it): sleep 60
-# do the final check
 seq_check 1 1000
-
-unset PORT_RCVR # TODO: move to exit_test()?
 exit_test
