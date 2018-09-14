@@ -16,6 +16,13 @@ Version 8.38.0 [v8-stable] 2018-09-18
   `start of message middle of message end of message`.
   `startmsg.regex="^[^ ]+ stdout F "` will match.
   Thanks to Richard Megginson for the patch.
+- imkafka: add parameter "parseHostName"
+  This enables imkafka to parse the hostname from log message.
+  Previously that was not possible. It was most likely a bug, but
+  one that users may count on. The new parameter "ParseHostName"
+  (default is off) controls this behaviour. Default is to NOT
+  parse the hostname.
+  Thanks to github user snaix for the contribution.
 - im[p]tcp: improve error message on connect failure
   Now a message with the actual OS error is emitted, making things far
   easier to troubleshoot.
@@ -32,6 +39,10 @@ Version 8.38.0 [v8-stable] 2018-09-18
   The error message now lists all dlopen() errors in depth. This is
   especially useful if the error is due to missing symbols or file
   format errors.
+- core/queue: add error message if queue file cannot be accessed
+  When having a disk-assisted queue without permission to write to the specified
+  queue file an error will now be generated.
+  closes https://github.com/rsyslog/rsyslog/issues/323
 - imtcp/imudp: new option preservecase for managing the case of FROMHOST value
   default is left at current behavior
   see also https://github.com/rsyslog/rsyslog/pull/2774
@@ -87,6 +98,11 @@ Version 8.38.0 [v8-stable] 2018-09-18
 - omhttp: new contribued module
   Thanks to Christian Tramnitz for contributing it.
   Some more info at https://github.com/rsyslog/rsyslog/pull/2782
+- bugfix imptcp: fixed pointers for session counting
+  imptcp open, failedopen, and closed pstats counters were assigned the wrong
+  name, thus pstats values did provide a totally wrong picture of what was
+  going on.
+  Thanks to github user jeverakes for the patch.
 - bugfix omprog: invalid memory access on partial writes to pipe
   When sending logs to the program, in case of a partial write to the pipe,
   invalid data was sent, or an invalid memory access could occur. (A
