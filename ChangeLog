@@ -26,6 +26,9 @@ Version 8.38.0 [v8-stable] 2018-09-18
 - im[p]tcp: improve error message on connect failure
   Now a message with the actual OS error is emitted, making things far
   easier to troubleshoot.
+- imkafka: implement multithreading support for kafka consumers.
+  Each consumer runs in it's own consumer thread now. New tests have also
+  been added for this.
 - omelasticsearch: write all header metadata to $.omes for retries
   Write all of the original request metadata fields to $.omes for
   the retry, if present. This may include all of the following:
@@ -98,6 +101,25 @@ Version 8.38.0 [v8-stable] 2018-09-18
 - omhttp: new contribued module
   Thanks to Christian Tramnitz for contributing it.
   Some more info at https://github.com/rsyslog/rsyslog/pull/2782
+- bugfix pmnormalize/core: several memory leaks, invld property handling
+  - major memory leak which occurred once per message processed
+    So this could lead to OOM. Caused by improper free of json
+    structure
+  - another two major leaks of similar magnitued could occur if
+    "fromhost-ip" and/or "fromhost" properties were set
+  - minor leaks upon termination. these were unproblematic as
+    static and only occured immediately before shutdown.
+    But they triggered memory debugger errors.
+  - fixed test which did not check for mem leaks albeit it should
+  - core invalid handling of the "fromhost" property, if set via
+    the MsgSetPropsViaJSON() call. This was primarily of concern
+    for pmnormalize and mmexternal, and only if these properties
+    were used by either the rulebase or the external program
+    response.
+  Actually, most of the leaks go back to rsyslog core, but that
+  core functionality was not used by other modules in the same
+  way. But if some other would have used it, the effects would
+  have been the same (so be aware if you wrote custom modules).
 - bugfix imptcp: fixed pointers for session counting
   imptcp open, failedopen, and closed pstats counters were assigned the wrong
   name, thus pstats values did provide a totally wrong picture of what was
