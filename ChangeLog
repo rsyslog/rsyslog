@@ -230,6 +230,16 @@ Version 8.37.0 [v8-stable] 2018-08-07
   to specify an address to bind to.
   Based on support added by rsyslog/librelp@96eb5be
   Thanks to Simon Wachter for the patch.
+- omrelp: permit all authmodes; updated tests
+  omrelp for some time limited authentication modes to those
+  that were known. While this was OK, it prevented the easy
+  introduction of new auth modes into librel.
+  This has now been changed; omrelp now checks the validity of
+  the authmode directly via librelp by doing some librelp calls
+  upon processing the configuration.
+  Also, some tests have been updated to check this feature and
+  also ensure that the new librelp mode "certvalid" works
+  (if it is available).
 - regexp.c: reduce lock contention when using glibc.
   When using glibc, we enable per-thread regex to avoid lock contention.
   See:
