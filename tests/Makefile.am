@@ -864,8 +864,10 @@ TESTS += sndrcv_relp.sh \
 if ENABLE_GNUTLS
 TESTS += \
          sndrcv_relp_tls.sh \
+         sndrcv_relp_tls_certvalid.sh \
          sndrcv_relp_tls_prio.sh \
-         relp_tls_certificate_not_found.sh
+         relp_tls_certificate_not_found.sh \
+	 omrelp_wrong_authmode.sh
 endif
 endif
 
@@ -1444,7 +1446,9 @@ EXTRA_DIST= \
 	sndrcv_relp_rebind.sh \
 	sndrcv_relp_tls_prio.sh \
 	sndrcv_relp_tls.sh \
+        sndrcv_relp_tls_certvalid.sh \
 	relp_tls_certificate_not_found.sh \
+	omrelp_wrong_authmode.sh \
 	sndrcv_relp_dflt_pt.sh \
 	sndrcv_udp.sh \
 	imudp_thread_hang.sh \
