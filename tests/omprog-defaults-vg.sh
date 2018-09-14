@@ -15,7 +15,7 @@ template(name="outfmt" type="string" string="%msg%\n")
 :msg, contains, "msgnum:" {
     action(
         type="omprog"
-	binary=`echo $srcdir/testsuites/omprog-defaults-bin.sh param1 param2 param3`
+        binary=`echo $srcdir/testsuites/omprog-defaults-bin.sh p1 p2 p3`
         template="outfmt"
         name="omprog_action"
     )

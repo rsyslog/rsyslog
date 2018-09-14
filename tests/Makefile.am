@@ -581,6 +581,8 @@ TESTS +=  \
 	omprog-close-unresponsive-noterm.sh \
 	omprog-restart-terminated.sh \
 	omprog-restart-terminated-outfile.sh \
+	omprog-single-instance.sh \
+	omprog-single-instance-outfile.sh \
 	omprog-transactions.sh \
 	omprog-transactions-failed-messages.sh \
 	omprog-transactions-failed-commits.sh
@@ -591,6 +593,7 @@ TESTS +=  \
 	omprog-feedback-vg.sh \
 	omprog-close-unresponsive-vg.sh \
 	omprog-restart-terminated-vg.sh \
+	omprog-single-instance-vg.sh \
 	omprog-transactions-vg.sh
 endif
 endif
@@ -1468,6 +1471,9 @@ EXTRA_DIST= \
 	omprog-restart-terminated.sh \
 	omprog-restart-terminated-vg.sh \
 	omprog-restart-terminated-outfile.sh \
+	omprog-single-instance.sh \
+	omprog-single-instance-vg.sh \
+	omprog-single-instance-outfile.sh \
 	omprog-transactions.sh \
 	omprog-transactions-vg.sh \
 	omprog-transactions-failed-messages.sh \
@@ -1480,6 +1486,7 @@ EXTRA_DIST= \
 	testsuites/omprog-feedback-timeout-bin.sh \
 	testsuites/omprog-close-unresponsive-bin.sh \
 	testsuites/omprog-restart-terminated-bin.sh \
+	testsuites/omprog-single-instance-bin.sh \
 	testsuites/omprog-transactions-bin.sh \
 	pipe_noreader.sh \
 	uxsock_simple.sh \

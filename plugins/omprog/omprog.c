@@ -64,6 +64,13 @@ DEF_OMOD_STATIC_DATA
 #define OUTPUT_CAPTURE_BUFFER_SIZE 4096
 #define MAX_FD_TO_CLOSE 65535
 
+typedef struct childProcessCtx {
+	int bIsRunning;		/* is program currently running? 0-no, 1-yes */
+	pid_t pid;			/* pid of currently running child process */
+	int fdPipeOut;		/* fd for sending messages to the program */
+	int fdPipeIn;		/* fd for receiving status messages from the program, or -1 */
+} childProcessCtx_t;
+
 typedef struct outputCaptureCtx {
 	uchar *szFileName;		/* name of file to write the program output to, or NULL */
 	mode_t fCreateMode;		/* output file creation permissions */
@@ -90,21 +97,19 @@ typedef struct _instanceData {
 	int bUseTransactions;	/* send begin/end transaction marks to program? */
 	uchar *szBeginTransactionMark;	/* mark message for begin transaction */
 	uchar *szCommitTransactionMark;	/* mark message for commit transaction */
-	int bForceSingleInst;	/* only a single wrkr instance of program permitted? */
 	int iHUPForward;		/* signal to forward on HUP (or NO_HUP_FORWARD) */
 	int bSignalOnClose;		/* should send SIGTERM to program before closing pipe? */
 	long lCloseTimeout;		/* how long to wait for program to terminate after closing pipe (ms) */
 	int bKillUnresponsive;	/* should send SIGKILL if closeTimeout is reached? */
+	int bForceSingleInst;	/* start only one instance of program, even with multiple workers? */
+	childProcessCtx_t *pSingleChildCtx;		/* child process context when bForceSingleInst=true */
+	pthread_mutex_t *pSingleChildMut;		/* mutex for interacting with single child process */
 	outputCaptureCtx_t outputCaptureCtx;	/* settings and state for the output capture thread */
-	pthread_mutex_t mut;	/* make sure only one instance is active (buggy! - see #2813) */
 } instanceData;
 
 typedef struct wrkrInstanceData {
 	instanceData *pData;
-	pid_t pid;			/* pid of currently running child process */
-	int fdPipeOut;		/* fd for sending messages to the program */
-	int fdPipeIn;		/* fd for receiving status messages from the program, or -1 */
-	int bIsRunning;		/* is program currently running? 0-no, 1-yes */
+	childProcessCtx_t *pChildCtx;	/* child process context (can be equal to pSingleChildCtx) */
 } wrkrInstanceData_t;
 
 typedef struct configSettings_s {
@@ -122,7 +127,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "useTransactions", eCmdHdlrBinary, 0 },
 	{ "beginTransactionMark", eCmdHdlrString, 0 },
 	{ "commitTransactionMark", eCmdHdlrString, 0 },
-	{ "forcesingleinstance", eCmdHdlrBinary, 0 },
+	{ "forceSingleInstance", eCmdHdlrBinary, 0 },
 	{ "hup.signal", eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
 	{ "signalOnClose", eCmdHdlrBinary, 0 },
@@ -239,7 +244,7 @@ failed:
  * rgerhards, 2009-04-01
  */
 static rsRetVal
-openPipe(wrkrInstanceData_t *pWrkrData)
+openPipe(instanceData *pData, childProcessCtx_t *pChildCtx)
 {
 	int pipeStdin[2] = { -1, -1 };
 	int pipeStdout[2] = { -1, -1 };
@@ -253,12 +258,12 @@ openPipe(wrkrInstanceData_t *pWrkrData)
 
 	/* if the 'confirmMessages' setting is enabled, open a pipe to receive
 	   message confirmations from the program */
-	if(pWrkrData->pData->bConfirmMessages && pipe(pipeStdout) == -1) {
+	if(pData->bConfirmMessages && pipe(pipeStdout) == -1) {
 		ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
 	}
 
-	DBGPRINTF("omprog: executing program '%s' with '%d' parameters\n",
-			pWrkrData->pData->szBinary, pWrkrData->pData->iParams);
+	DBGPRINTF("omprog: executing program '%s' with '%d' parameters\n", pData->szBinary,
+			pData->iParams);
 
 	cpid = fork();
 	if(cpid == -1) {
@@ -272,7 +277,7 @@ openPipe(wrkrInstanceData_t *pWrkrData)
 			close(pipeStdout[0]);
 		}
 
-		execBinary(pWrkrData->pData, pipeStdin[0], pipeStdout[1]);
+		execBinary(pData, pipeStdin[0], pipeStdout[1]);
 		/* NO CODE HERE - WILL NEVER BE REACHED! */
 	}
 
@@ -284,14 +289,10 @@ openPipe(wrkrInstanceData_t *pWrkrData)
 		close(pipeStdout[1]);
 	}
 
-	/* we'll send messages to the program via fdPipeOut */
-	pWrkrData->fdPipeOut = pipeStdin[1];
-
-	/* we'll receive message confirmations via fdPipeIn */
-	pWrkrData->fdPipeIn = pipeStdout[0];
-
-	pWrkrData->pid = cpid;
-	pWrkrData->bIsRunning = 1;
+	pChildCtx->fdPipeOut = pipeStdin[1];  /* we'll send messages to the program via this fd */
+	pChildCtx->fdPipeIn = pipeStdout[0];  /* we'll receive message confirmations via this fd */
+	pChildCtx->pid = cpid;
+	pChildCtx->bIsRunning = 1;
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -308,54 +309,54 @@ finalize_it:
 }
 
 static void
-waitForChild(wrkrInstanceData_t *pWrkrData)
+waitForChild(instanceData *pData, childProcessCtx_t *pChildCtx)
 {
 	int status;
 	int ret;
 	long counter;
 
-	counter = pWrkrData->pData->lCloseTimeout / 10;
-	while ((ret = waitpid(pWrkrData->pid, &status, WNOHANG)) == 0 && counter > 0) {
+	counter = pData->lCloseTimeout / 10;
+	while ((ret = waitpid(pChildCtx->pid, &status, WNOHANG)) == 0 && counter > 0) {
 		srSleep(0, 10000);  /* 0 seconds, 10 milliseconds */
 		--counter;
 	}
 
 	if (ret == 0) {  /* timeout reached */
-		if (!pWrkrData->pData->bKillUnresponsive) {
+		if (!pData->bKillUnresponsive) {
 			LogMsg(0, NO_ERRCODE, LOG_WARNING, "omprog: program '%s' (pid %d) did not terminate "
-					"within timeout (%ld ms); ignoring it", pWrkrData->pData->szBinary,
-					pWrkrData->pid, pWrkrData->pData->lCloseTimeout);
+					"within timeout (%ld ms); ignoring it", pData->szBinary, pChildCtx->pid,
+					pData->lCloseTimeout);
 			return;
 		}
 
 		LogMsg(0, NO_ERRCODE, LOG_WARNING, "omprog: program '%s' (pid %d) did not terminate "
-				"within timeout (%ld ms); killing it", pWrkrData->pData->szBinary,
-				pWrkrData->pid, pWrkrData->pData->lCloseTimeout);
-		if (kill(pWrkrData->pid, SIGKILL) == -1) {
+				"within timeout (%ld ms); killing it", pData->szBinary, pChildCtx->pid,
+				pData->lCloseTimeout);
+		if (kill(pChildCtx->pid, SIGKILL) == -1) {
 			LogError(errno, RS_RET_SYS_ERR, "omprog: could not send SIGKILL to child process");
 			return;
 		}
-		ret = waitpid(pWrkrData->pid, &status, 0);
+		ret = waitpid(pChildCtx->pid, &status, 0);
 	}
 
-	if (ret != pWrkrData->pid) {
+	if (ret != pChildCtx->pid) {
 		if (errno == ECHILD) {  /* child reaped by the rsyslogd main loop (see rsyslogd.c) */
 			LogMsg(0, NO_ERRCODE, LOG_INFO, "omprog: program '%s' (pid %d) exited; reaped by main loop",
-					pWrkrData->pData->szBinary, pWrkrData->pid);
+					pData->szBinary, pChildCtx->pid);
 		} else {
 			LogError(errno, RS_RET_SYS_ERR, "omprog: waitpid failed for program '%s' (pid %d)",
-					pWrkrData->pData->szBinary, pWrkrData->pid);
+					pData->szBinary, pChildCtx->pid);
 		}
 	} else {
 		/* check if we should print out some diagnostic information */
 		DBGPRINTF("omprog: waitpid status return for program '%s' (pid %d): %2.2x\n",
-				pWrkrData->pData->szBinary, pWrkrData->pid, status);
+				pData->szBinary, pChildCtx->pid, status);
 		if(WIFEXITED(status)) {
 			LogMsg(0, NO_ERRCODE, LOG_INFO, "omprog: program '%s' (pid %d) exited normally, status %d",
-					pWrkrData->pData->szBinary, pWrkrData->pid, WEXITSTATUS(status));
+					pData->szBinary, pChildCtx->pid, WEXITSTATUS(status));
 		} else if(WIFSIGNALED(status)) {
 			LogMsg(0, NO_ERRCODE, LOG_WARNING, "omprog: program '%s' (pid %d) terminated by signal %d",
-					pWrkrData->pData->szBinary, pWrkrData->pid, WTERMSIG(status));
+					pData->szBinary, pChildCtx->pid, WTERMSIG(status));
 		}
 	}
 }
@@ -363,38 +364,38 @@ waitForChild(wrkrInstanceData_t *pWrkrData)
 /* close pipe and wait for child to terminate
  */
 static void
-cleanupChild(wrkrInstanceData_t *pWrkrData)
+cleanupChild(instanceData *pData, childProcessCtx_t *pChildCtx)
 {
-	assert(pWrkrData->bIsRunning);
+	assert(pChildCtx->bIsRunning);
 
-	if(pWrkrData->fdPipeIn != -1) {
-		close(pWrkrData->fdPipeIn);
-		pWrkrData->fdPipeIn = -1;
+	if(pChildCtx->fdPipeIn != -1) {
+		close(pChildCtx->fdPipeIn);
+		pChildCtx->fdPipeIn = -1;
 	}
-	if(pWrkrData->fdPipeOut != -1) {
-		close(pWrkrData->fdPipeOut);
-		pWrkrData->fdPipeOut = -1;
+	if(pChildCtx->fdPipeOut != -1) {
+		close(pChildCtx->fdPipeOut);
+		pChildCtx->fdPipeOut = -1;
 	}
 
 	/* wait for the child AFTER closing the pipe, so it receives EOF */
-	waitForChild(pWrkrData);
+	waitForChild(pData, pChildCtx);
 
-	pWrkrData->bIsRunning = 0;
+	pChildCtx->bIsRunning = 0;
 }
 
 /* Send SIGTERM to child process if configured to do so, close pipe
  * and wait for child to terminate.
  */
 static void
-terminateChild(wrkrInstanceData_t *pWrkrData)
+terminateChild(instanceData *pData, childProcessCtx_t *pChildCtx)
 {
-	assert(pWrkrData->bIsRunning);
+	assert(pChildCtx->bIsRunning);
 
-	if (pWrkrData->pData->bSignalOnClose) {
-		kill(pWrkrData->pid, SIGTERM);
+	if (pData->bSignalOnClose) {
+		kill(pChildCtx->pid, SIGTERM);
 	}
 
-	cleanupChild(pWrkrData);
+	cleanupChild(pData, pChildCtx);
 }
 
 /* write message to pipe
@@ -403,7 +404,7 @@ terminateChild(wrkrInstanceData_t *pWrkrData)
  * own action queue.
  */
 static rsRetVal
-sendMessage(wrkrInstanceData_t *pWrkrData, uchar *szMsg)
+sendMessage(instanceData *pData, childProcessCtx_t *pChildCtx, uchar *szMsg)
 {
 	size_t len;
 	ssize_t written;
@@ -413,7 +414,7 @@ sendMessage(wrkrInstanceData_t *pWrkrData, uchar *szMsg)
 	len = strlen((char*)szMsg);
 
 	do {
-		written = write(pWrkrData->fdPipeOut, ((char*)szMsg) + offset, len - offset);
+		written = write(pChildCtx->fdPipeOut, ((char*)szMsg) + offset, len - offset);
 		if(written == -1) {
 			if(errno == EINTR) {
 				continue;  /* call interrupted: retry write */
@@ -421,8 +422,8 @@ sendMessage(wrkrInstanceData_t *pWrkrData, uchar *szMsg)
 			if(errno == EPIPE) {
 				LogMsg(0, RS_RET_ERR_WRITE_PIPE, LOG_WARNING,
 						"omprog: program '%s' (pid %d) terminated; will be restarted",
-						pWrkrData->pData->szBinary, pWrkrData->pid);
-				cleanupChild(pWrkrData);  /* force restart in tryResume() */
+						pData->szBinary, pChildCtx->pid);
+				cleanupChild(pData, pChildCtx);  /* force restart in tryResume() */
 				ABORT_FINALIZE(RS_RET_SUSPENDED);
 			}
 			LogError(errno, RS_RET_ERR_WRITE_PIPE, "omprog: error sending message to program");
@@ -436,7 +437,7 @@ finalize_it:
 }
 
 static rsRetVal
-lineToStatusCode(wrkrInstanceData_t *pWrkrData, const char* line)
+lineToStatusCode(instanceData *pData, const char* line)
 {
 	DEFiRet;
 
@@ -453,10 +454,10 @@ lineToStatusCode(wrkrInstanceData_t *pWrkrData, const char* line)
 		iRet = RS_RET_PREVIOUS_COMMITTED;
 	} else {
 		/* anything else is considered a recoverable error */
-		DBGPRINTF("omprog: program '%s' returned: %s\n", pWrkrData->pData->szBinary, line);
-		if(pWrkrData->pData->bReportFailures) {
+		DBGPRINTF("omprog: program '%s' returned: %s\n", pData->szBinary, line);
+		if(pData->bReportFailures) {
 			LogMsg(0, NO_ERRCODE, LOG_WARNING, "omprog: program '%s' returned: %s",
-					pWrkrData->pData->szBinary, line);
+					pData->szBinary, line);
 		}
 		iRet = RS_RET_SUSPENDED;
 	}
@@ -464,7 +465,7 @@ lineToStatusCode(wrkrInstanceData_t *pWrkrData, const char* line)
 }
 
 static rsRetVal
-readStatus(wrkrInstanceData_t *pWrkrData)
+readStatus(instanceData *pData, childProcessCtx_t *pChildCtx)
 {
 	struct pollfd fdToPoll[1];
 	int numReady;
@@ -474,11 +475,11 @@ readStatus(wrkrInstanceData_t *pWrkrData)
 	int lineEnded = 0;
 	DEFiRet;
 
-	fdToPoll[0].fd = pWrkrData->fdPipeIn;
+	fdToPoll[0].fd = pChildCtx->fdPipeIn;
 	fdToPoll[0].events = POLLIN;
 
 	do {
-		numReady = poll(fdToPoll, 1, pWrkrData->pData->lConfirmTimeout);
+		numReady = poll(fdToPoll, 1, pData->lConfirmTimeout);
 		if(numReady == -1) {
 			if(errno == EINTR) {
 				continue;  /* call interrupted: retry poll */
@@ -489,13 +490,13 @@ readStatus(wrkrInstanceData_t *pWrkrData)
 
 		if(numReady == 0) {  /* timeout reached */
 			LogMsg(0, RS_RET_TIMED_OUT, LOG_WARNING, "omprog: program '%s' (pid %d) did not respond "
-					"within timeout (%ld ms); will be restarted", pWrkrData->pData->szBinary,
-					pWrkrData->pid, pWrkrData->pData->lConfirmTimeout);
-			terminateChild(pWrkrData);
+					"within timeout (%ld ms); will be restarted", pData->szBinary, pChildCtx->pid,
+					pData->lConfirmTimeout);
+			terminateChild(pData, pChildCtx);
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 
-		lenRead = read(pWrkrData->fdPipeIn, lineBuf + offset, sizeof(lineBuf) - offset - 1);
+		lenRead = read(pChildCtx->fdPipeIn, lineBuf + offset, sizeof(lineBuf) - offset - 1);
 		if(lenRead == -1) {
 			if(errno == EINTR) {
 				continue;  /* call interrupted: retry poll + read */
@@ -506,8 +507,8 @@ readStatus(wrkrInstanceData_t *pWrkrData)
 
 		if(lenRead == 0) {
 			LogMsg(0, RS_RET_READ_ERR, LOG_WARNING, "omprog: program '%s' (pid %d) terminated; "
-					"will be restarted", pWrkrData->pData->szBinary, pWrkrData->pid);
-			cleanupChild(pWrkrData);
+					"will be restarted", pData->szBinary, pChildCtx->pid);
+			cleanupChild(pData, pChildCtx);
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 
@@ -520,27 +521,27 @@ readStatus(wrkrInstanceData_t *pWrkrData)
 		 * program, since we have probably lost synchronism with it.
 		 */
 		if(!lineEnded && strchr(lineBuf + offset - lenRead, '\n') != NULL) {
-			DBGPRINTF("omprog: program '%s' returned: %s\n", pWrkrData->pData->szBinary, lineBuf);
+			DBGPRINTF("omprog: program '%s' returned: %s\n", pData->szBinary, lineBuf);
 			LogMsg(0, NO_ERRCODE, LOG_WARNING, "omprog: program '%s' returned a multiline response; "
-					"will be restarted", pWrkrData->pData->szBinary);
-			if(pWrkrData->pData->bReportFailures) {
+					"will be restarted", pData->szBinary);
+			if(pData->bReportFailures) {
 				LogMsg(0, NO_ERRCODE, LOG_WARNING, "omprog: program '%s' returned: %s",
-						pWrkrData->pData->szBinary, lineBuf);
+						pData->szBinary, lineBuf);
 			}
-			terminateChild(pWrkrData);
+			terminateChild(pData, pChildCtx);
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 	} while(!lineEnded && offset < sizeof(lineBuf) - 1);
 
 	if(!lineEnded) {
-		DBGPRINTF("omprog: program '%s' returned: %s\n", pWrkrData->pData->szBinary, lineBuf);
+		DBGPRINTF("omprog: program '%s' returned: %s\n", pData->szBinary, lineBuf);
 		LogMsg(0, NO_ERRCODE, LOG_WARNING, "omprog: program '%s' returned a too long response; "
-				"will be restarted", pWrkrData->pData->szBinary);
-		if(pWrkrData->pData->bReportFailures) {
+				"will be restarted", pData->szBinary);
+		if(pData->bReportFailures) {
 			LogMsg(0, NO_ERRCODE, LOG_WARNING, "omprog: program '%s' returned: %s",
-					pWrkrData->pData->szBinary, lineBuf);
+					pData->szBinary, lineBuf);
 		}
-		terminateChild(pWrkrData);
+		terminateChild(pData, pChildCtx);
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
@@ -549,30 +550,47 @@ readStatus(wrkrInstanceData_t *pWrkrData)
 	/* NOTE: coverity does not like CHKiRet() if it is the last thing before finalize_it.
 	 * Reason is that the if() inside that macro than does not lead to different code paths.
 	 */
-	iRet = lineToStatusCode(pWrkrData, lineBuf);
+	iRet = lineToStatusCode(pData, lineBuf);
 
 finalize_it:
 	RETiRet;
 }
 
 static rsRetVal
-startChild(wrkrInstanceData_t *pWrkrData)
+allocChildCtx(childProcessCtx_t **ppChildCtx)
+{
+	childProcessCtx_t *pChildCtx;
+	DEFiRet;
+
+	CHKmalloc(pChildCtx = calloc(1, sizeof(childProcessCtx_t)));
+	pChildCtx->bIsRunning = 0;
+	pChildCtx->pid = -1;
+	pChildCtx->fdPipeOut = -1;
+	pChildCtx->fdPipeIn = -1;
+
+finalize_it:
+	*ppChildCtx = pChildCtx;
+	RETiRet;
+}
+
+static rsRetVal
+startChild(instanceData *pData, childProcessCtx_t *pChildCtx)
 {
 	DEFiRet;
 
-	assert(!pWrkrData->bIsRunning);
+	assert(!pChildCtx->bIsRunning);
 
-	CHKiRet(openPipe(pWrkrData));
+	CHKiRet(openPipe(pData, pChildCtx));
 
-	if(pWrkrData->pData->bConfirmMessages) {
+	if(pData->bConfirmMessages) {
 		/* wait for program to confirm successful initialization */
-		CHKiRet(readStatus(pWrkrData));
+		CHKiRet(readStatus(pData, pChildCtx));
 	}
 
 finalize_it:
-	if (iRet != RS_RET_OK && pWrkrData->bIsRunning) {
+	if(iRet != RS_RET_OK && pChildCtx->bIsRunning) {
 		/* if initialization has failed, terminate program */
-		terminateChild(pWrkrData);
+		terminateChild(pData, pChildCtx);
 	}
 	RETiRet;
 }
@@ -794,18 +812,74 @@ ENDinitConfVars
 
 BEGINcreateInstance
 CODESTARTcreateInstance
-	pthread_mutex_init(&pData->mut, NULL);
+	pData->szBinary = NULL;
+	pData->szTemplateName = NULL;
+	pData->aParams = NULL;
+	pData->iParams = 0;
+	pData->bConfirmMessages = 0;
+	pData->lConfirmTimeout = DEFAULT_CONFIRM_TIMEOUT_MS;
+	pData->bReportFailures = 0;
+	pData->bUseTransactions = 0;
+	pData->szBeginTransactionMark = NULL;
+	pData->szCommitTransactionMark = NULL;
+	pData->iHUPForward = NO_HUP_FORWARD;
+	pData->bSignalOnClose = 0;
+	pData->lCloseTimeout = DEFAULT_CLOSE_TIMEOUT_MS;
+	pData->bKillUnresponsive = -1;
+	pData->bForceSingleInst = 0;
+	pData->pSingleChildCtx = NULL;
+	pData->pSingleChildMut = NULL;
+	pData->outputCaptureCtx.szFileName = NULL;
+	pData->outputCaptureCtx.fCreateMode = 0600;
+	pData->outputCaptureCtx.bIsRunning = 0;
 ENDcreateInstance
+
+
+static rsRetVal
+startInstance(instanceData *pData)
+{
+	DEFiRet;
+
+	if(pData->bUseTransactions && pData->szBeginTransactionMark == NULL) {
+		pData->szBeginTransactionMark = (uchar*)strdup("BEGIN TRANSACTION");
+	}
+	if(pData->bUseTransactions && pData->szCommitTransactionMark == NULL) {
+		pData->szCommitTransactionMark = (uchar*)strdup("COMMIT TRANSACTION");
+	}
+	if(pData->bKillUnresponsive == -1) {  /* default value: bSignalOnClose */
+		pData->bKillUnresponsive = pData->bSignalOnClose;
+	}
+
+	if(pData->outputCaptureCtx.szFileName != NULL) {
+		CHKiRet(startOutputCapture(&pData->outputCaptureCtx));
+	}
+
+	if(pData->bForceSingleInst) {
+		CHKmalloc(pData->pSingleChildMut = malloc(sizeof(pthread_mutex_t)));
+		CHKiConcCtrl(pthread_mutex_init(pData->pSingleChildMut, NULL));
+		CHKiRet(allocChildCtx(&pData->pSingleChildCtx));
+		CHKiRet(startChild(pData, pData->pSingleChildCtx));
+	}
+
+finalize_it:
+	/* no cleanup needed on error: newActInst() will call freeInstance() */
+	RETiRet;
+}
 
 
 BEGINcreateWrkrInstance
 CODESTARTcreateWrkrInstance
-	pWrkrData->pid = -1;
-	pWrkrData->fdPipeOut = -1;
-	pWrkrData->fdPipeIn = -1;
-	pWrkrData->bIsRunning = 0;
+	if(pWrkrData->pData->bForceSingleInst) {
+		pWrkrData->pChildCtx = pData->pSingleChildCtx;
+	} else {
+		CHKiRet(allocChildCtx(&pWrkrData->pChildCtx));
+		CHKiRet(startChild(pWrkrData->pData, pWrkrData->pChildCtx));
+	}
 
-	iRet = startChild(pWrkrData);
+finalize_it:
+	if(iRet != RS_RET_OK && !pWrkrData->pData->bForceSingleInst) {
+		free(pWrkrData->pChildCtx);
+	}
 ENDcreateWrkrInstance
 
 
@@ -824,42 +898,57 @@ ENDdbgPrintInstInfo
 
 BEGINtryResume
 CODESTARTtryResume
-	if (pWrkrData->bIsRunning == 0) {
-		CHKiRet(startChild(pWrkrData));
+	if(pWrkrData->pData->bForceSingleInst) {
+		CHKiConcCtrl(pthread_mutex_lock(pWrkrData->pData->pSingleChildMut));
 	}
+	if(!pWrkrData->pChildCtx->bIsRunning) {
+		CHKiRet(startChild(pWrkrData->pData, pWrkrData->pChildCtx));
+	}
+
 finalize_it:
+	if(pWrkrData->pData->bForceSingleInst) {
+		pthread_mutex_unlock(pWrkrData->pData->pSingleChildMut);
+	}
 ENDtryResume
 
 
 BEGINbeginTransaction
 CODESTARTbeginTransaction
+	if(pWrkrData->pData->bForceSingleInst) {
+		CHKiConcCtrl(pthread_mutex_lock(pWrkrData->pData->pSingleChildMut));
+	}
 	if(!pWrkrData->pData->bUseTransactions) {
 		FINALIZE;
 	}
 
-	CHKiRet(sendMessage(pWrkrData, pWrkrData->pData->szBeginTransactionMark));
-	CHKiRet(sendMessage(pWrkrData, (uchar*) "\n"));
+	CHKiRet(sendMessage(pWrkrData->pData, pWrkrData->pChildCtx,
+			pWrkrData->pData->szBeginTransactionMark));
+	CHKiRet(sendMessage(pWrkrData->pData, pWrkrData->pChildCtx, (uchar*) "\n"));
 
 	if(pWrkrData->pData->bConfirmMessages) {
-		CHKiRet(readStatus(pWrkrData));
+		CHKiRet(readStatus(pWrkrData->pData, pWrkrData->pChildCtx));
 	}
+
 finalize_it:
+	if(pWrkrData->pData->bForceSingleInst) {
+		pthread_mutex_unlock(pWrkrData->pData->pSingleChildMut);
+	}
 ENDbeginTransaction
 
 
 BEGINdoAction
 CODESTARTdoAction
 	if(pWrkrData->pData->bForceSingleInst) {
-		pthread_mutex_lock(&pWrkrData->pData->mut);
+		CHKiConcCtrl(pthread_mutex_lock(pWrkrData->pData->pSingleChildMut));
 	}
-	if(pWrkrData->bIsRunning == 0) {  /* should not occur */
+	if(!pWrkrData->pChildCtx->bIsRunning) {  /* should not occur */
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
-	CHKiRet(sendMessage(pWrkrData, ppString[0]));
+	CHKiRet(sendMessage(pWrkrData->pData, pWrkrData->pChildCtx, ppString[0]));
 
 	if(pWrkrData->pData->bConfirmMessages) {
-		CHKiRet(readStatus(pWrkrData));
+		CHKiRet(readStatus(pWrkrData->pData, pWrkrData->pChildCtx));
 	} else if(pWrkrData->pData->bUseTransactions) {
 		/* ensure endTransaction will be called */
 		iRet = RS_RET_DEFER_COMMIT;
@@ -867,31 +956,42 @@ CODESTARTdoAction
 
 finalize_it:
 	if(pWrkrData->pData->bForceSingleInst) {
-		pthread_mutex_unlock(&pWrkrData->pData->mut);
+		pthread_mutex_unlock(pWrkrData->pData->pSingleChildMut);
 	}
 ENDdoAction
 
 
 BEGINendTransaction
 CODESTARTendTransaction
+	if(pWrkrData->pData->bForceSingleInst) {
+		CHKiConcCtrl(pthread_mutex_lock(pWrkrData->pData->pSingleChildMut));
+	}
 	if(!pWrkrData->pData->bUseTransactions) {
 		FINALIZE;
 	}
 
-	CHKiRet(sendMessage(pWrkrData, pWrkrData->pData->szCommitTransactionMark));
-	CHKiRet(sendMessage(pWrkrData, (uchar*) "\n"));
+	CHKiRet(sendMessage(pWrkrData->pData, pWrkrData->pChildCtx,
+			pWrkrData->pData->szCommitTransactionMark));
+	CHKiRet(sendMessage(pWrkrData->pData, pWrkrData->pChildCtx, (uchar*) "\n"));
 
 	if(pWrkrData->pData->bConfirmMessages) {
-		CHKiRet(readStatus(pWrkrData));
+		CHKiRet(readStatus(pWrkrData->pData, pWrkrData->pChildCtx));
 	}
+
 finalize_it:
+	if(pWrkrData->pData->bForceSingleInst) {
+		pthread_mutex_unlock(pWrkrData->pData->pSingleChildMut);
+	}
 ENDendTransaction
 
 
 BEGINfreeWrkrInstance
 CODESTARTfreeWrkrInstance
-	if (pWrkrData->bIsRunning) {
-		terminateChild(pWrkrData);
+	if(!pWrkrData->pData->bForceSingleInst) {
+		if(pWrkrData->pChildCtx->bIsRunning) {
+			terminateChild(pWrkrData->pData, pWrkrData->pChildCtx);
+		}
+		free(pWrkrData->pChildCtx);
 	}
 ENDfreeWrkrInstance
 
@@ -899,7 +999,17 @@ ENDfreeWrkrInstance
 BEGINfreeInstance
 	int i;
 CODESTARTfreeInstance
-	pthread_mutex_destroy(&pData->mut);
+	if(pData->pSingleChildCtx != NULL) {
+		if(pData->pSingleChildCtx->bIsRunning) {
+			terminateChild(pData, pData->pSingleChildCtx);
+		}
+		free(pData->pSingleChildCtx);
+	}
+
+	if(pData->pSingleChildMut != NULL) {
+		pthread_mutex_destroy(pData->pSingleChildMut);
+		free(pData->pSingleChildMut);
+	}
 
 	if(pData->outputCaptureCtx.bIsRunning) {
 		endOutputCapture(&pData->outputCaptureCtx, pData->lCloseTimeout);
@@ -920,44 +1030,6 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 
-static void
-setInstParamDefaults(instanceData *pData)
-{
-	pData->szBinary = NULL;
-	pData->szTemplateName = NULL;
-	pData->aParams = NULL;
-	pData->iParams = 0;
-	pData->bConfirmMessages = 0;
-	pData->lConfirmTimeout = DEFAULT_CONFIRM_TIMEOUT_MS;
-	pData->bReportFailures = 0;
-	pData->bUseTransactions = 0;
-	pData->szBeginTransactionMark = NULL;
-	pData->szCommitTransactionMark = NULL;
-	pData->bForceSingleInst = 0;
-	pData->iHUPForward = NO_HUP_FORWARD;
-	pData->bSignalOnClose = 0;
-	pData->lCloseTimeout = DEFAULT_CLOSE_TIMEOUT_MS;
-	pData->bKillUnresponsive = -1;
-	pData->outputCaptureCtx.szFileName = NULL;
-	pData->outputCaptureCtx.fCreateMode = 0600;
-	pData->outputCaptureCtx.bIsRunning = 0;
-}
-
-static void
-setInstParamCalcDefaults(instanceData *pData)
-{
-	if(pData->bUseTransactions && pData->szBeginTransactionMark == NULL) {
-		pData->szBeginTransactionMark = (uchar*)strdup("BEGIN TRANSACTION");
-	}
-	if(pData->bUseTransactions && pData->szCommitTransactionMark == NULL) {
-		pData->szCommitTransactionMark = (uchar*)strdup("COMMIT TRANSACTION");
-	}
-	if(pData->bKillUnresponsive == -1) {  /* default value: bSignalOnClose */
-		pData->bKillUnresponsive = pData->bSignalOnClose;
-	}
-}
-
-
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
@@ -967,9 +1039,7 @@ CODESTARTnewActInst
 	}
 
 	CHKiRet(createInstance(&pData));
-	setInstParamDefaults(pData);
 
-	CODE_STD_STRING_REQUESTnewActInst(1)
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
 			continue;
@@ -988,7 +1058,7 @@ CODESTARTnewActInst
 			pData->szBeginTransactionMark = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "commitTransactionMark")) {
 			pData->szCommitTransactionMark = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "forcesingleinstance")) {
+		} else if(!strcmp(actpblk.descr[i].name, "forceSingleInstance")) {
 			pData->bForceSingleInst = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "signalOnClose")) {
 			pData->bSignalOnClose = (int) pvals[i].val.d.n;
@@ -1025,14 +1095,11 @@ CODESTARTnewActInst
 		}
 	}
 
-	setInstParamCalcDefaults(pData);
-	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->szTemplateName == NULL) ?
-						"RSYSLOG_FileFormat" : (char*)pData->szTemplateName),
-						OMSR_NO_RQD_TPL_OPTS));
-	
-	if(pData->outputCaptureCtx.szFileName != NULL) {
-		CHKiRet(startOutputCapture(&pData->outputCaptureCtx));
-	}
+	CODE_STD_STRING_REQUESTnewActInst(1)
+	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup(pData->szTemplateName == NULL ?
+			"RSYSLOG_FileFormat" : (char*)pData->szTemplateName), OMSR_NO_RQD_TPL_OPTS));
+
+	iRet = startInstance(pData);
 
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
@@ -1050,30 +1117,33 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* ok, if we reach this point, we have something for us */
 	p += sizeof(":omprog:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
 	if(cs.szBinary == NULL) {
-		LogError(0, RS_RET_CONF_RQRD_PARAM_MISSING,
-			"no binary to execute specified");
+		LogError(0, RS_RET_CONF_RQRD_PARAM_MISSING, "no binary to execute specified");
 		ABORT_FINALIZE(RS_RET_CONF_RQRD_PARAM_MISSING);
 	}
 
 	CHKiRet(createInstance(&pData));
-
-	if(cs.szBinary == NULL) {
-		LogError(0, RS_RET_CONF_RQRD_PARAM_MISSING,
-			"no binary to execute specified");
-		ABORT_FINALIZE(RS_RET_CONF_RQRD_PARAM_MISSING);
-	}
-
 	CHKmalloc(pData->szBinary = (uchar*) strdup((char*)cs.szBinary));
+
 	/* check if a non-standard template is to be applied */
 	if(*(p-1) == ';')
 		--p;
-	iRet = cflineParseTemplateName(&p, *ppOMSR, 0, 0, (uchar*) "RSYSLOG_FileFormat");
+	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, 0, (uchar*) "RSYSLOG_FileFormat"));
+
+	iRet = startInstance(pData);
+
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 
 BEGINdoHUP
 CODESTARTdoHUP
+	if(pData->bForceSingleInst && pData->iHUPForward != NO_HUP_FORWARD &&
+			pData->pSingleChildCtx->bIsRunning) {
+		DBGPRINTF("omprog: forwarding HUP to program '%s' (pid %d) as signal %d\n",
+				pData->szBinary, pData->pSingleChildCtx->pid, pData->iHUPForward);
+		kill(pData->pSingleChildCtx->pid, pData->iHUPForward);
+	}
+
 	if(pData->outputCaptureCtx.bIsRunning) {
 		closeOutputFile(&pData->outputCaptureCtx);
 	}
@@ -1082,10 +1152,12 @@ ENDdoHUP
 
 BEGINdoHUPWrkr
 CODESTARTdoHUPWrkr
-	DBGPRINTF("omprog: processing HUP for work instance %p, pid %d, forward: %d\n",
-			pWrkrData, (int) pWrkrData->pid, pWrkrData->pData->iHUPForward);
-	if(pWrkrData->pData->iHUPForward != NO_HUP_FORWARD) {
-		kill(pWrkrData->pid, pWrkrData->pData->iHUPForward);
+	if(!pWrkrData->pData->bForceSingleInst && pWrkrData->pData->iHUPForward != NO_HUP_FORWARD &&
+	 		pWrkrData->pChildCtx->bIsRunning) {
+		DBGPRINTF("omprog: forwarding HUP to program '%s' (pid %d) as signal %d\n",
+				pWrkrData->pData->szBinary, pWrkrData->pChildCtx->pid,
+				pWrkrData->pData->iHUPForward);
+		kill(pWrkrData->pChildCtx->pid, pWrkrData->pData->iHUPForward);
 	}
 ENDdoHUPWrkr
 
@@ -1108,9 +1180,10 @@ CODEqueryEtryPt_doHUPWrkr
 ENDqueryEtryPt
 
 
-/* Reset config variables for this module to default values.
+/* Reset legacy config variables for this module to default values.
  */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
+static rsRetVal
+resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	DEFiRet;
 	free(cs.szBinary);
