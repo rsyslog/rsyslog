@@ -92,6 +92,7 @@ struct instanceConf_s {
 	rd_kafka_topic_conf_t *topic_conf;
 	int partition;
 	int bIsSubscribed;
+	int nMsgParsingFlags;
 
 	struct instanceConf_s *next;
 };
@@ -130,6 +131,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "confparam", eCmdHdlrArray, 0 },
 	{ "consumergroup", eCmdHdlrString, 0},
 	{ "ruleset", eCmdHdlrString, 0 },
+	{ "parsehostname", eCmdHdlrBinary, 0 },
 };
 static struct cnfparamblk inppblk =
 	{ CNFPARAMBLK_VERSION,
@@ -176,7 +178,7 @@ DBGPRINTF("imkafka: enqMsg: Msg: %.*s\n", (int)rkmessage->len, (char *)rkmessage
 	MsgSetRawMsg(pMsg, (char*)rkmessage->payload, (int)rkmessage->len);
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
 	MsgSetRuleset(pMsg, inst->pBindRuleset);
-	pMsg->msgFlags  = NEEDS_PARSING; // | PARSE_HOSTNAME;
+	pMsg->msgFlags  = inst->nMsgParsingFlags;
 	/* Optional Fields */
 	if (rkmessage->key_len) {
 		DBGPRINTF("imkafka: enqMsg: Key: %.*s\n", (int)rkmessage->key_len, (char *)rkmessage->key);
@@ -279,6 +281,7 @@ createInstance(instanceConf_t **pinst)
 	inst->confParams = NULL;
 	inst->pBindRuleset = NULL;
 	inst->bReportErrs = 1; /* Fixed for now */
+	inst->nMsgParsingFlags = NEEDS_PARSING;
 	inst->bIsConnected = 0;
 	inst->bIsSubscribed = 0;
 	/* Kafka objects */
@@ -560,6 +563,12 @@ CODESTARTnewInpInst
 			inst->consumergroup = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
 			inst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "parsehostname")) {
+			if (pvals[i].val.d.n) {
+				inst->nMsgParsingFlags = NEEDS_PARSING | PARSE_HOSTNAME;
+			} else {
+				inst->nMsgParsingFlags = NEEDS_PARSING;
+			}
 		} else {
 			dbgprintf("imkafka: program error, non-handled "
 			  "param '%s'\n", inppblk.descr[i].name);
