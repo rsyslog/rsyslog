@@ -163,7 +163,7 @@ struct instanceConf_s {
 	int ratelimitInterval;
 	int ratelimitBurst;
 	uchar *startRegex;
-	regex_t end_preg;	/* compiled version of startRegex */
+	regex_t start_preg;	/* compiled version of startRegex */
 	struct instanceConf_s *next;
 };
 
@@ -990,7 +990,7 @@ processDataRcvd_regexFraming(ptcpsess_t *const __restrict__ pThis,
 	if(c == '\n') {
 		pThis->iCurrLine = pThis->iMsg;
 	} else {
-		const int isMatch = !regexec(&inst->end_preg, (char*)pThis->pMsg+pThis->iCurrLine, 0, NULL, 0);
+		const int isMatch = !regexec(&inst->start_preg, (char*)pThis->pMsg+pThis->iCurrLine, 0, NULL, 0);
 		if(isMatch) {
 			DBGPRINTF("regex match (%d), framing line: %s\n", pThis->iCurrLine, pThis->pMsg);
 			strcpy((char*)pThis->pMsg_save, (char*) pThis->pMsg+pThis->iCurrLine);
@@ -2221,10 +2221,10 @@ CODESTARTnewInpInst
 	}
 
 	if(inst->startRegex != NULL) {
-		const int errcode = regcomp(&inst->end_preg, (char*)inst->startRegex, REG_EXTENDED);
+		const int errcode = regcomp(&inst->start_preg, (char*)inst->startRegex, REG_EXTENDED);
 		if(errcode != 0) {
 			char errbuff[512];
-			regerror(errcode, &inst->end_preg, errbuff, sizeof(errbuff));
+			regerror(errcode, &inst->start_preg, errbuff, sizeof(errbuff));
 			parser_errmsg("imptcp: error in framing.delimiter.regex expansion: %s", errbuff);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
@@ -2381,7 +2381,7 @@ CODESTARTfreeCnf
 		free(inst->pszInputName);
 		free(inst->dfltTZ);
 		if(inst->startRegex != NULL) {
-			regfree(&inst->end_preg);
+			regfree(&inst->start_preg);
 			free(inst->startRegex);
 		}
 		del = inst;

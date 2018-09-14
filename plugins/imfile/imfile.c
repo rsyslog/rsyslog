@@ -133,7 +133,9 @@ struct instanceConf_s {
 	sbool bRMStateOnDel;
 	uint8_t readMode;
 	uchar *startRegex;
-	regex_t end_preg;	/* compiled version of startRegex */
+	uchar *endRegex;
+	regex_t start_preg;	/* compiled version of startRegex */
+	regex_t end_preg;	/* compiled version of endRegex */
 	sbool discardTruncatedMsg;
 	sbool msgDiscardingError;
 	sbool escapeLF;
@@ -289,6 +291,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "ruleset", eCmdHdlrString, 0 },
 	{ "readmode", eCmdHdlrInt, 0 },
 	{ "startmsg.regex", eCmdHdlrString, 0 },
+	{ "endmsg.regex", eCmdHdlrString, 0 },
 	{ "discardtruncatedmsg", eCmdHdlrBinary, 0 },
 	{ "msgdiscardingerror", eCmdHdlrBinary, 0 },
 	{ "escapelf", eCmdHdlrBinary, 0 },
@@ -1520,6 +1523,7 @@ pollFileReal(act_obj_t *act, cstr_t **pCStr)
 	int64 strtOffs;
 	DEFiRet;
 	int nProcessed = 0;
+	regex_t *start_preg = NULL, *end_preg = NULL;
 
 	DBGPRINTF("pollFileReal enter, pStrm %p, name '%s'\n", act->pStrm, act->name);
 	DBGPRINTF("pollFileReal enter, edge %p\n", act->edge);
@@ -1531,15 +1535,18 @@ pollFileReal(act_obj_t *act, cstr_t **pCStr)
 		CHKiRet(openFile(act)); /* open file */
 	}
 
+	start_preg = (inst->startRegex == NULL) ? NULL : &inst->start_preg;
+	end_preg = (inst->endRegex == NULL) ? NULL : &inst->end_preg;
+
 	/* loop below will be exited when strmReadLine() returns EOF */
 	while(glbl.GetGlobalInputTermState() == 0) {
 		if(inst->maxLinesAtOnce != 0 && nProcessed >= inst->maxLinesAtOnce)
 			break;
-		if(inst->startRegex == NULL) {
+		if((start_preg == NULL) && (end_preg == NULL)) {
 			CHKiRet(strm.ReadLine(act->pStrm, pCStr, inst->readMode, inst->escapeLF,
 				inst->trimLineOverBytes, &strtOffs));
 		} else {
-			CHKiRet(strmReadMultiLine(act->pStrm, pCStr, &inst->end_preg,
+			CHKiRet(strmReadMultiLine(act->pStrm, pCStr, start_preg, end_preg,
 				inst->escapeLF, inst->discardTruncatedMsg, inst->msgDiscardingError, &strtOffs));
 		}
 		++nProcessed;
@@ -1605,6 +1612,7 @@ createInstance(instanceConf_t **const pinst)
 	inst->iPersistStateInterval = 0;
 	inst->readMode = 0;
 	inst->startRegex = NULL;
+	inst->endRegex = NULL;
 	inst->discardTruncatedMsg = 0;
 	inst->msgDiscardingError = 1;
 	inst->bRMStateOnDel = 1;
@@ -1813,6 +1821,8 @@ CODESTARTnewInpInst
 			inst->readMode = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "startmsg.regex")) {
 			inst->startRegex = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "endmsg.regex")) {
+			inst->endRegex = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "discardtruncatedmsg")) {
 			inst->discardTruncatedMsg = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "msgdiscardingerror")) {
@@ -1855,19 +1865,31 @@ CODESTARTnewInpInst
 			  "param '%s'\n", inppblk.descr[i].name);
 		}
 	}
-	if(inst->readMode != 0 &&  inst->startRegex != NULL) {
+	i = (inst->readMode > 0) ? 1 : 0;
+	i = (NULL != inst->startRegex) ? (i+1) : i;
+	i = (NULL != inst->endRegex) ? (i+1) : i;
+	if(i > 1) {
 		LogError(0, RS_RET_PARAM_NOT_PERMITTED,
-			"readMode and startmsg.regex cannot be set "
-			"at the same time --- remove one of them");
+			"only one of readMode or startmsg.regex or endmsg.regex can be set "
+			"at the same time");
 			ABORT_FINALIZE(RS_RET_PARAM_NOT_PERMITTED);
 	}
 
 	if(inst->startRegex != NULL) {
-		const int errcode = regcomp(&inst->end_preg, (char*)inst->startRegex, REG_EXTENDED);
+		const int errcode = regcomp(&inst->start_preg, (char*)inst->startRegex, REG_EXTENDED);
+		if(errcode != 0) {
+			char errbuff[512];
+			regerror(errcode, &inst->start_preg, errbuff, sizeof(errbuff));
+			parser_errmsg("imfile: error in startmsg.regex expansion: %s", errbuff);
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+	}
+	if(inst->endRegex != NULL) {
+		const int errcode = regcomp(&inst->end_preg, (char*)inst->endRegex, REG_EXTENDED);
 		if(errcode != 0) {
 			char errbuff[512];
 			regerror(errcode, &inst->end_preg, errbuff, sizeof(errbuff));
-			parser_errmsg("imfile: error in regex expansion: %s", errbuff);
+			parser_errmsg("imfile: error in endmsg.regex expansion: %s", errbuff);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	}
@@ -2072,8 +2094,12 @@ CODESTARTfreeCnf
 		free(inst->pszStateFile);
 		free(inst->pszFileName_forOldStateFile);
 		if(inst->startRegex != NULL) {
-			regfree(&inst->end_preg);
+			regfree(&inst->start_preg);
 			free(inst->startRegex);
+		}
+		if(inst->endRegex != NULL) {
+			regfree(&inst->end_preg);
+			free(inst->endRegex);
 		}
 		del = inst;
 		inst = inst->next;
