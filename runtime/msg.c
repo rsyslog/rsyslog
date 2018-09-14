@@ -4528,6 +4528,7 @@ msgSetPropViaJSON(smsg_t *__restrict__ const pMsg, const char *name, struct json
 	int val;
 	prop_t *propFromHost = NULL;
 	prop_t *propRcvFromIP = NULL;
+	int bNeedFree = 1;
 	DEFiRet;
 
 	/* note: json_object_get_string() manages the memory of the returned
@@ -4572,17 +4573,29 @@ msgSetPropViaJSON(smsg_t *__restrict__ const pMsg, const char *name, struct json
 		MsgSetHOSTNAME(pMsg, (const uchar*)psz, strlen(psz));
 	} else if(!strcmp(name, "fromhost")) {
 		psz = json_object_get_string(json);
-		MsgSetRcvFromStr(pMsg, (const uchar*) psz, 0, &propFromHost);
+		MsgSetRcvFromStr(pMsg, (const uchar*) psz, strlen(psz), &propFromHost);
+		prop.Destruct(&propFromHost);
 	} else if(!strcmp(name, "fromhost-ip")) {
 		psz = json_object_get_string(json);
 		MsgSetRcvFromIPStr(pMsg, (const uchar*)psz, strlen(psz), &propRcvFromIP);
+		prop.Destruct(&propRcvFromIP);
 	} else if(!strcmp(name, "$!")) {
+		/* msgAddJSON expects that it can keep the object without incremeting
+		 * the json reference count. So we MUST NOT free (_put) the object in
+		 * this case. -- rgerhards, 2018-09-14
+		 */
+		bNeedFree = 0;
 		msgAddJSON(pMsg, (uchar*)"!", json, 0, sharedReference);
 	} else {
 		/* we ignore unknown properties */
 		DBGPRINTF("msgSetPropViaJSON: unkonwn property ignored: %s\n",
 			  name);
 	}
+
+	if(bNeedFree) {
+		json_object_put(json);
+	}
+
 	RETiRet;
 }
 
@@ -4648,6 +4661,7 @@ MsgSetPropsViaJSON_Object(smsg_t *__restrict__ const pMsg, struct json_object *j
 {
 	DEFiRet;
 	if(json == NULL || !json_object_is_type(json, json_type_object)) {
+		DBGPRINTF("MsgSetPropsViaJSON_Object: json NULL or not object type\n");
 		ABORT_FINALIZE(RS_RET_JSON_UNUSABLE);
 	}
 	struct json_object_iterator it = json_object_iter_begin(json);

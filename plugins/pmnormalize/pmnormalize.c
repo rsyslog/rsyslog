@@ -3,7 +3,7 @@
  *
  * File begun on 2017-03-03 by Pascal Withopf.
  *
- * Copyright 2014-2017 Adiscon GmbH.
+ * Copyright 2014-2018 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -81,7 +81,6 @@ CODESTARTisCompatibleWithFeature
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
-
 /* create input instance, set default parameters, and
  * add it to the list of instances.
  */
@@ -94,6 +93,7 @@ createInstance(instanceConf_t **pinst)
 	inst->undefPropErr = 0;
 	inst->rulebase = NULL;
 	inst->rule = NULL;
+	inst->ctxln = NULL;
 	*pinst = inst;
 finalize_it:
 	RETiRet;
@@ -146,6 +146,9 @@ finalize_it:
 BEGINfreeParserInst
 CODESTARTfreeParserInst
 	dbgprintf("pmnormalize: free parser instance %p\n", pInst);
+	if(pInst->ctxln != NULL) {
+		ln_exitCtx(pInst->ctxln);
+	}
 ENDfreeParserInst
 
 
@@ -185,6 +188,8 @@ CODESTARTnewParserInst
 				CHKiRet(es_addChar(&rules, '\n'));
 			}
 			inst->rule = (char*)es_str2cstr(rules, NULL);
+			if(rules != NULL)
+				es_deleteStr(rules);
 		} else {
 			LogError(0, RS_RET_INTERNAL_ERROR ,
 				"pmnormalize: program error, non-handled param '%s'",
