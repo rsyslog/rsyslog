@@ -3,6 +3,19 @@ Version 8.38.0 [v8-stable] 2018-09-18
 - AIX: make basic modules work again
 - make rsyslog build on AIX again
   ... at least for a limited set of default modules
+-  imfile: support for endmsg.regex
+  This adds support for endmsg.regex.  It is similar to
+  startmsg.regex except that it matches the line that denotes
+  the end of the message, rather than the start of the next message.
+  This is primarily for container log file use cases such as this:
+      date stdout P start of message
+      date stdout P  middle of message
+      date stdout F  end of message
+  The `F` means this is the line which contains the final part of
+  the message.  The fully assembled message should be
+  `start of message middle of message end of message`.
+  `startmsg.regex="^[^ ]+ stdout F "` will match.
+  Thanks to Richard Megginson for the patch.
 - im[p]tcp: improve error message on connect failure
   Now a message with the actual OS error is emitted, making things far
   easier to troubleshoot.
