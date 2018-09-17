@@ -11,18 +11,18 @@ export TESTMESSAGESFULL=100000
 # Generate random topic name
 export RANDTOPIC=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
 
-# enable the EXTRA_EXITCHECK only if really needed - otherwise spams the test log too much
-#export EXTRA_EXITCHECK=dumpkafkalogs
+# Set EXTRA_EXITCHECK to dump kafka/zookeeperlogfiles on failure only.
+export EXTRA_EXITCHECK=dumpkafkalogs
 export EXTRA_EXIT=kafkamulti
 echo ===============================================================================
 echo Check and Stop previous instances of kafka/zookeeper 
 download_kafka
-stop-zookeeper '.dep_wrk1'
-stop-zookeeper '.dep_wrk2'
-stop-zookeeper '.dep_wrk3'
-stop-kafka '.dep_wrk1'
-stop-kafka '.dep_wrk2'
-stop-kafka '.dep_wrk3'
+stop_zookeeper '.dep_wrk1'
+stop_zookeeper '.dep_wrk2'
+stop_zookeeper '.dep_wrk3'
+stop_kafka '.dep_wrk1'
+stop_kafka '.dep_wrk2'
+stop_kafka '.dep_wrk3'
 
 echo Create kafka/zookeeper instance and topics
 start_zookeeper '.dep_wrk1'

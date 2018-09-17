@@ -12,8 +12,8 @@ export TESTMESSAGESFULL=50000
 # Generate random topic name
 export RANDTOPIC=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
 
-# enable the EXTRA_EXITCHECK only if really needed - otherwise spams the test log too much
-#export EXTRA_EXITCHECK=dumpkafkalogs
+# Set EXTRA_EXITCHECK to dump kafka/zookeeperlogfiles on failure only.
+export EXTRA_EXITCHECK=dumpkafkalogs
 export EXTRA_EXIT=kafka
 echo ===============================================================================
 echo Check and Stop previous instances of kafka/zookeeper 
@@ -96,7 +96,7 @@ echo Inject messages into rsyslog sender instance
 injectmsg 1 $TESTMESSAGES
 
 echo Stopping kafka cluster instance
-stop-kafka
+stop_kafka
 
 echo Stopping sender instance [imkafka]
 shutdown_when_empty 2

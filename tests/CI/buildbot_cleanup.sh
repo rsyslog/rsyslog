@@ -22,3 +22,12 @@ do
 	ps -fp $pid
 	kill -9 $pid || exit 0
 done
+
+# cleanup any pending kafka / zookeeper instances
+for pid in $(ps -eo pid,args|grep -v grep |grep 'dep_wrk' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
+do
+	echo "ERROR: left-over previous kafka/zookeeper instance $pid, killing it"
+	ps -fp $pid
+	pwd
+	kill -9 $pid
+done

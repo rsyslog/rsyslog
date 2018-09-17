@@ -630,13 +630,6 @@ function error_exit() {
 		RSYSLOG_DEBUG=$RSYSLOG_DEBUG_SAVE
 		rm IN_AUTO_DEBUG
 	fi
-	# Extended debug output for dependencies started by testbench
-	if [[ "$EXTRA_EXITCHECK" == 'dumpkafkalogs' ]]; then
-		# Dump Zookeeper log
-		. $srcdir/diag.sh dump-zookeeper-serverlog
-		# Dump Kafka log
-		dump_kafka_serverlog
-	fi
 	# output listening ports as a temporay debug measure (2018-09-08 rgerhards)
 	if [ $(uname) == "Linux" ]; then
 		netstat -tlp
@@ -644,8 +637,16 @@ function error_exit() {
 		netstat
 	fi
 
+	# Extended debug output for dependencies started by testbench
+	if [[ "$EXTRA_EXITCHECK" == 'dumpkafkalogs' ]]; then
+		# Dump Zookeeper log
+		dump_zookeeper_serverlog
+		# Dump Kafka log
+		dump_kafka_serverlog
+	fi
+
 	# Extended Exit handling for kafka / zookeeper instances 
-	kafka_exit_handling
+	kafka_exit_handling "false"
 
 	# we need to do some minimal cleanup so that "make distcheck" does not
 	# complain too much
@@ -737,7 +738,7 @@ function exit_test() {
 	unset TCPFLOOD_EXTRA_OPTS
 
 	# Extended Exit handling for kafka / zookeeper instances 
-	kafka_exit_handling
+	kafka_exit_handling "true"
 
 	printf "Test SUCCESFUL\n"
 	echo  -------------------------------------------------------------------------------
@@ -810,24 +811,23 @@ function kafka_exit_handling() {
 	if [[ "$EXTRA_EXIT" == 'kafka' ]]; then
 		
 		echo stop kafka instance
-		stop_kafka
+		stop_kafka '.dep_wrk' $1
 
 		echo stop zookeeper instance
-		stop_zookeeper
+		stop_zookeeper '.dep_wrk' $1
 	fi
 
 	# Extended Exit handling for kafka / zookeeper instances 
 	if [[ "$EXTRA_EXIT" == 'kafkamulti' ]]; then
-		
 		echo stop kafka instances
-		stop_kafka '.dep_wrk1'
-		stop-kafka '.dep_wrk2'
-		stop-kafka '.dep_wrk3'
+		stop_kafka '.dep_wrk1' $1
+		stop_kafka '.dep_wrk2' $1
+		stop_kafka '.dep_wrk3' $1
 
 		echo stop zookeeper instances
-		stop-zookeeper '.dep_wrk1'
-		stop-zookeeper '.dep_wrk2'
-		stop-zookeeper '.dep_wrk3'
+		stop_zookeeper '.dep_wrk1' $1
+		stop_zookeeper '.dep_wrk2' $1
+		stop_zookeeper '.dep_wrk3' $1
 	fi
 }
 
@@ -875,7 +875,23 @@ function stop_kafka() {
 	else
 		echo "Stopping Kafka instance $1"
 		(cd $dep_work_dir/kafka && ./bin/kafka-server-stop.sh)
-		$TESTTOOL_DIR/msleep 2000
+		if [[ "$2" == 'true' ]]; then
+			$TESTTOOL_DIR/msleep 2000
+			cleanup_kafka $1
+		fi
+	fi
+}
+
+function cleanup_kafka() {
+	if [ "x$1" == "x" ]; then
+		dep_work_dir=$(readlink -f .dep_wrk)
+	else
+		dep_work_dir=$(readlink -f $srcdir/$1)
+	fi
+	if [ ! -d $dep_work_dir/kafka ]; then
+		echo "Kafka work-dir $dep_work_dir/kafka does not exist, no action needed"
+	else
+		echo "Cleanup Kafka instance $1"
 		rm -rf $dep_work_dir/kafka
 	fi
 }
@@ -887,7 +903,18 @@ function stop_zookeeper() {
 		dep_work_dir=$(readlink -f $srcdir/$1)
 	fi
 	(cd $dep_work_dir/zk &> /dev/null && ./bin/zkServer.sh stop)
-	$TESTTOOL_DIR/msleep 2000
+	if [[ "$2" == 'true' ]]; then
+		$TESTTOOL_DIR/msleep 2000
+		cleanup_zookeeper $1
+	fi
+}
+
+function cleanup_zookeeper() {
+	if [ "x$1" == "x" ]; then
+		dep_work_dir=$(readlink -f .dep_wrk)
+	else
+		dep_work_dir=$(readlink -f $srcdir/$1)
+	fi
 	rm -rf $dep_work_dir/zk
 }
 
@@ -1051,6 +1078,17 @@ function dump_kafka_serverlog() {
 	fi
 }
 
+function dump_zookeeper_serverlog() {
+	if [ "x$1" == "x" ]; then
+		dep_work_dir=$(readlink -f .dep_wrk)
+	else
+		dep_work_dir=$(readlink -f $srcdir/$1)
+	fi
+	echo "Dumping zookeeper.out from Zookeeper instance $1"
+	echo "========================================="
+	cat $dep_work_dir/zk/zookeeper.out
+	echo "========================================="
+}
 
 
 case $1 in
@@ -1481,17 +1519,6 @@ case $1 in
 		done
 		$TESTTOOL_DIR/msleep 2000
 		echo ES startup succeeded
-		;;
-	 'dump-zookeeper-serverlog')
-		if [ "x$2" == "x" ]; then
-			dep_work_dir=$(readlink -f .dep_wrk)
-		else
-			dep_work_dir=$(readlink -f $srcdir/$2)
-		fi
-		echo "Dumping zookeeper.out from Zookeeper instance $2"
-		echo "========================================="
-		cat $dep_work_dir/zk/zookeeper.out
-		echo "========================================="
 		;;
 	 'stop-elasticsearch')
 		if [ "x$2" == "x" ]; then

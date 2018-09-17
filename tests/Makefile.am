@@ -614,7 +614,7 @@ TESTS += \
 #	sndrcv_kafka_multi.sh
 if HAVE_VALGRIND
 TESTS += \
-	omkafka-vg.sh
+	omkafka-vg.sh \
 	imkafka-vg.sh
 endif
 endif

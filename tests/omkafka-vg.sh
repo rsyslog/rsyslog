@@ -12,8 +12,8 @@ export TESTMESSAGESFULL=$TESTMESSAGES
 # Generate random topic name
 export RANDTOPIC=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
 
-# enable the EXTRA_EXITCHECK only if really needed - otherwise spams the test log too much
-#export EXTRA_EXITCHECK=dumpkafkalogs
+# Set EXTRA_EXITCHECK to dump kafka/zookeeperlogfiles on failure only.
+export EXTRA_EXITCHECK=dumpkafkalogs
 export EXTRA_EXIT=kafka
 echo ===============================================================================
 echo Check and Stop previous instances of kafka/zookeeper 
@@ -78,10 +78,7 @@ kafkacat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%s'> $RSYSLOG_O
 kafkacat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%p@%o:%k:%s' > $RSYSLOG_OUT_LOG.extra
 
 # Delete topic to remove old traces before
-# delete_kafka_topic $RANDTOPIC '.dep_wrk' '22181'
-
-# Dump Kafka log | uncomment if needed
-# dump_kafka_serverlog
+delete_kafka_topic $RANDTOPIC '.dep_wrk' '22181'
 
 # Do the final sequence check
 seq_check 1 $TESTMESSAGESFULL -d
