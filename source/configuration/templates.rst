@@ -631,31 +631,189 @@ Do NOT use them if, otherwise you may receive a conflict in the future
 (and quite unpredictable behaviour). There is a small set of pre-defined
 templates that you can use without the need to define it:
 
--  **RSYSLOG_TraditionalFileFormat** - the "old style" default log file
-   format with low-precision timestamps
--  **RSYSLOG_FileFormat** - a modern-style logfile format similar to
-   TraditionalFileFormat, both with high-precision timestamps and
-   timezone information
--  **RSYSLOG_TraditionalForwardFormat** - the traditional forwarding format
-   with low-precision timestamps. Most useful if you send messages to
-   other syslogd's or rsyslogd below version 3.12.5.
--  **RSYSLOG_SysklogdFileFormat** - sysklogd compatible log file format. If
-   used with options: ``$SpaceLFOnReceive on``,
-   ``$EscapeControlCharactersOnReceive off``,
-   ``$DropTrailingLFOnReception off``, the log format will conform to sysklogd log format.
--  **RSYSLOG_ForwardFormat** - a new high-precision forwarding format very
-   similar to the traditional one, but with high-precision timestamps
-   and timezone information. Recommended to be used when sending
-   messages to rsyslog 3.12.5 or above.
--  **RSYSLOG_SyslogProtocol23Format** - the format specified in IETF's
-   internet-draft ietf-syslog-protocol-23, which is very close to the actual
-   syslog standard `RFC5424 <https://tools.ietf.org/html/rfc5424>`_ (we couldn't
-   update this template as things were in production for quite some time when
-   RFC5424 was finally approved). This format includes several improvements.
-   You may use this format with all relatively recent versions of rsyslog or syslogd.
--  **RSYSLOG_DebugFormat** - a special format used for troubleshooting
-   property problems. This format is meant to be written to a log file.
-   Do **not** use for production or remote forwarding.
+**RSYSLOG_TraditionalFileFormat** - The "old style" default log file
+format with low-precision timestamps.
+
+.. code-block:: none
+
+   template(name="RSYSLOG_TraditionalFileFormat" type="string"
+        string="%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp% %msg:::drop-last-lf%\n")
+
+**RSYSLOG_FileFormat** - A modern-style logfile format similar to
+TraditionalFileFormat, both with high-precision timestamps and
+timezone information.
+
+.. code-block:: none
+
+   template(name="RSYSLOG_FileFormat" type="list") {
+        property(name="timereported" dateFormat="rfc3339")
+        constant(value=" ")
+        property(name="hostname")
+        constant(value=" ")
+        property(name="syslogtag")
+        constant(value=" ")
+        property(name="msg" spifno1stsp="on")
+        property(name="msg" droplastlf="on")
+        constant(value="\n")
+   }
+
+**RSYSLOG_TraditionalForwardFormat** - The traditional forwarding format
+with low-precision timestamps. Most useful if you send messages to
+other syslogd's or rsyslogd below version 3.12.5.
+
+.. code-block:: none
+
+   template(name="RSYSLOG_TraditionalForwardFormat" type="string"
+        string="<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag:1:32% %msg:::sp-if-no-1st-sp%%msg%")
+
+**RSYSLOG_SysklogdFileFormat** - Sysklogd compatible log file format. If
+used with options: ``$SpaceLFOnReceive on``,
+``$EscapeControlCharactersOnReceive off``, ``$DropTrailingLFOnReception off``,
+the log format will conform to sysklogd log format.
+
+.. code-block:: none
+
+   template(name="RSYSLOG_SysklogdFileFormat" type="string"
+        string="%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg%\n")
+
+**RSYSLOG_ForwardFormat** - a new high-precision forwarding format very
+similar to the traditional one, but with high-precision timestamps
+and timezone information. Recommended to be used when sending
+messages to rsyslog 3.12.5 or above.
+
+.. code-block:: none
+
+   template(name="RSYSLOG_ForwardFormat" type="string"
+        string="<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag:1:32% %msg:::sp-if-no-1st-sp%%msg%")
+
+**RSYSLOG_SyslogProtocol23Format** - the format specified in IETF's
+internet-draft ietf-syslog-protocol-23, which is very close to the actual
+syslog standard `RFC5424 <https://tools.ietf.org/html/rfc5424>`_ (we couldn't
+update this template as things were in production for quite some time when
+RFC5424 was finally approved). This format includes several improvements.
+You may use this format with all relatively recent versions of rsyslog or syslogd.
+
+.. code-block:: none
+
+   template(name="RSYSLOG_SyslogProtocol23Format" type="string"
+        string="<%PRI%>1 %TIMESTAMP:::date-rfc3339% %HOSTNAME% %APP-NAME% %PROCID% %MSGID% %STRUCTURED-DATA% %msg%\n")
+
+**RSYSLOG_DebugFormat** - a special format used for troubleshooting
+property problems. This format is meant to be written to a log file.
+Do **not** use for production or remote forwarding.
+
+.. code-block:: none
+
+   template(name="RYSLOG_DebugFormat" type="list") {
+        constant(value="Debug line with all properties:\nFROMHOST: '")
+        property(name="fromhost")
+        constant(value="', fromhost-ip: '")
+        property(name="fromhost-ip")
+        constant(value="', HOSTNAME: '")
+        property(name="hostname")
+        constant(value="', PRI: )
+        property(name="pri")
+        constant(value=",\nsyslogtag '")
+        property(name="syslogtag")
+        constant(value="', programname: '")
+        property(name="programname")
+        constant(value="', APP-NAME: '")
+        property(name="app-name")
+        constant(value="', PROCID: '")
+        property(name="procid")
+        constant(value="', MSGID: '")
+        property(name="msgid")
+        constant(value="',\nTIMESTAMP: '")
+        property(name="timereported")
+        constant(value="', STRUCTURED-DATA: '")
+        property(name="structured-data")
+        constant(value="',\nmsg: '")
+        property(name="msg")
+        constant(value="'\nescaped msg: '")
+        property(name="msg" controlcharacters="drop")
+        constant(value="'\ninputname: ")
+        property(name="inputname")
+        constant(value=" rawmsg: '")
+        property(name="rawmsg")
+        constant(value="'\n$!:")
+        property(name="$!")
+        constant(value="\n$.:")
+        property(name="$.")
+        constant(value="\n$/:")
+        property(name="$/")
+        constant(value="\n\n")
+   }
+
+**RSYSLOG_WallFmt** - Contains information about the host and the time the
+message was generated and at the end the syslogtag and message itself.
+
+.. code-block:: none
+
+   template(name="RSYSLOG_WallFmt" type="string"
+        string="\r\n\7Message from syslogd@%HOSTNAME% at %timegenerated% ...\r\n%syslogtag%%msg%\n\r")
+
+**RSYSLOG_StdUsrMsgFmt** - The syslogtag followed by the message is returned.
+
+.. code-block:: none
+
+   template(name="RSYSLOG_StdUsrMsgFmt" type="string"
+        string=" %syslogtag%%msg%\n\r")
+
+**RSYSLOG_StdDBFmt** - Generates a insert command with the message
+properties, into table SystemEvents for a mysql database.
+
+.. code-block:: none
+
+   template(name="RSYSLOG_StdDBFmt" type="list") {
+        constant(value="insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag)")
+        constant(value=" values ('")
+        property(name="msg")
+        constant(value="', ")
+        property(name="syslogfacility")
+        constant(value=", '")
+        property(name="hostname")
+        constant(value="', ")
+        property(name="syslogpriority")
+        constant(value=", '")
+        property(name="timereported" dateFormat="date-mysql")
+        constant(value="', '")
+        property(name="timegenerated" dateFormat="date-mysql")
+        constant(value="', ")
+        property(name="iut")
+        constant(value=", '")
+        property(name="syslogtag")
+        constant(value="')")
+   }
+
+**RSYSLOG_StdPgSQLFmt** - Generates a insert command with the message
+properties, into table SystemEvents for a pgsql database.
+
+.. code-block:: none
+
+   template(name="RSYSLOG_StdPgSQLFmt" type="string"
+   string="insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime,
+        ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%',
+        %syslogpriority%, '%timereported:::date-pgsql%', '%timegenerated:::date-pgsql%', %iut%,
+        '%syslogtag%')")
+
+**RSYSLOG_spoofadr** - Generates a message containing nothing more than
+the ip address of the sender.
+
+.. code-block:: none
+
+   template(name="RSYSLOG_spoofadr" type="string" string="%fromhost-ip%")
+
+**RSYSLOG_StdJSONFmt** - Generates a JSON structure containing the message
+properties.
+
+.. code-block:: none
+
+   template(name="RSYSLOG_StdJSONFmt" type="string"
+        string="{\"message\":\"%msg:::json%\",\"fromhost\":\"%HOSTNAME:::json%\",\"facility\":
+                \"%syslogfacility-text%\",\"priority\":\"%syslogpriority-text%\",\"timereported\":
+                \"%timereported:::date-rfc3339%\",\"timegenerated\":
+                \"%timegenerated:::date-rfc3339%\"}")
+
 
 
 See Also
