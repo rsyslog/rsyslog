@@ -1393,7 +1393,7 @@ AC_ARG_ENABLE(relp,
         [enable_relp=no]
 )
 if test "x$enable_relp" = "xyes"; then
-	PKG_CHECK_MODULES(RELP, relp >= 1.2.14)
+	PKG_CHECK_MODULES(RELP, relp >= 1.2.16)
 	AC_DEFINE([ENABLE_RELP], [1], [Indicator that RELP is present])
         save_CFLAGS="$CFLAGS"
         save_LIBS="$LIBS"
