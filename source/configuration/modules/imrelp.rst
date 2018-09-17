@@ -78,6 +78,18 @@ Port
 
 Starts a RELP server on selected port
 
+Address
+^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+Bind the RELP server to that address. If not specified, the server will be
+bound to the wildcard address.
 
 Name
 ^^^^
