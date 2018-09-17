@@ -23,9 +23,6 @@ echo Create kafka/zookeeper instance and topics
 . $srcdir/diag.sh start-kafka
 . $srcdir/diag.sh create-kafka-topic $RANDTOPIC '.dep_wrk' '22181'
 
-echo Give Kafka some time to process topic create ...
-sleep 5
-
 echo Stopping kafka cluster instance
 . $srcdir/diag.sh stop-kafka
 

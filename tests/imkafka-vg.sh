@@ -1,7 +1,7 @@
 #!/bin/bash
 # added 2018-08-29 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
-export TESTMESSAGES=100000
+export TESTMESSAGES=10000
 export TESTMESSAGESFULL=$TESTMESSAGES
 
 # Generate random topic name
@@ -56,12 +56,12 @@ if ($msg contains "msgnum:") then {
 
 # --- Start imkafka receiver config
 echo Starting receiver instance [imkafka]
-startup_vg
+startup
 # --- 
 
 # --- Fill Kafka Server with messages
 # Can properly be done in a better way?!
-for i in {00000001..00100000}
+for i in {00000001..0010000}
 do
 	echo " msgnum:$i" >> $RSYSLOG_OUT_LOG.in
 done
@@ -75,8 +75,7 @@ sleep 5
 
 echo Stopping sender instance [omkafka]
 shutdown_when_empty
-wait_shutdown_vg
-check_exit_vg
+wait_shutdown
 
 # Delete topic to remove old traces before
 . $srcdir/diag.sh delete-kafka-topic $RANDTOPIC '.dep_wrk' '22181'

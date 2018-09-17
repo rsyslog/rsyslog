@@ -24,9 +24,6 @@ echo Create kafka/zookeeper instance and topics
 # create new topic
 . $srcdir/diag.sh create-kafka-topic $RANDTOPIC '.dep_wrk' '22181'
 
-echo Give Kafka some time to process topic create ...
-sleep 5
-
 # --- Create/Start omkafka sender config
 export RSYSLOG_DEBUGLOG="log"
 generate_conf

@@ -1,7 +1,7 @@
 #!/bin/bash
-# added 2018-08-29 by alorbach
+# added 2017-05-03 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
-export TESTMESSAGES=100000
+export TESTMESSAGES=10000
 export TESTMESSAGESFULL=$TESTMESSAGES
 
 # Generate random topic name
@@ -11,7 +11,7 @@ export RANDTOPIC=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1
 # too much
 #export EXTRA_EXITCHECK=dumpkafkalogs
 echo ===============================================================================
-echo Create kafka/zookeeper instance and $RANDTOPIC topic
+echo Check and Stop previous instances of kafka/zookeeper 
 . $srcdir/diag.sh download-kafka
 . $srcdir/diag.sh stop-zookeeper
 . $srcdir/diag.sh stop-kafka
@@ -26,60 +26,61 @@ echo Create kafka/zookeeper instance and $RANDTOPIC topic
 # create new topic
 . $srcdir/diag.sh create-kafka-topic $RANDTOPIC '.dep_wrk' '22181'
 
-# --- Create imkafka receiver config
+# --- Create/Start omkafka sender config 
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
 add_conf '
 main_queue(queue.timeoutactioncompletion="60000" queue.timeoutshutdown="60000")
+$imdiagInjectDelayMode full
 
-module(load="../plugins/imkafka/.libs/imkafka")
-/* Polls messages from kafka server!*/
-input(	type="imkafka"
-	topic="'$RANDTOPIC'"
-	broker="localhost:29092"
-	consumergroup="default"
-	confParam=[ "compression.codec=none",
-		"session.timeout.ms=10000",
-		"socket.timeout.ms=5000",
-		"socket.keepalive.enable=true",
-		"reconnect.backoff.jitter.ms=1000",
-		"enable.partition.eof=false" ]
-	)
+module(load="../plugins/omkafka/.libs/omkafka")
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 
-if ($msg contains "msgnum:") then {
-	action( type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt" )
-}
+local4.* action(	name="kafka-fwd" 
+	type="omkafka"
+	topic="'$RANDTOPIC'"
+	broker="localhost:29092"
+	template="outfmt"
+	confParam=[	"compression.codec=none",
+			"socket.timeout.ms=10000",
+			"socket.keepalive.enable=true",
+			"reconnect.backoff.jitter.ms=1000",
+			"queue.buffering.max.messages=10000",
+			"enable.auto.commit=true",
+			"message.send.max.retries=1"]
+	topicConfParam=["message.timeout.ms=10000"]
+	partitions.auto="on"
+	closeTimeout="60000"
+	resubmitOnFailure="on"
+	keepFailedMessages="on"
+	failedMsgFile="'$RSYSLOG_OUT_LOG'-failed-'$RANDTOPIC'.data"
+	action.resumeInterval="1"
+	action.resumeRetryCount="2"
+	queue.saveonshutdown="on"
+	)
 '
-# --- 
 
-# --- Start imkafka receiver config
-echo Starting receiver instance [imkafka]
+echo Starting sender instance [omkafka]
 startup_vg
 # --- 
 
-# --- Fill Kafka Server with messages
-# Can properly be done in a better way?!
-for i in {00000001..00100000}
-do
-	echo " msgnum:$i" >> $RSYSLOG_OUT_LOG.in
-done
-
-echo Inject messages into kafka
-cat $RSYSLOG_OUT_LOG.in | kafkacat -P -b localhost:29092 -t $RANDTOPIC
-# --- 
-
-echo Give imkafka some time to start...
-sleep 5
+echo Inject messages into rsyslog sender instance  
+injectmsg 1 $TESTMESSAGES
 
 echo Stopping sender instance [omkafka]
 shutdown_when_empty
 wait_shutdown_vg
 check_exit_vg
 
+kafkacat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%s'> $RSYSLOG_OUT_LOG
+kafkacat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%p@%o:%k:%s' > $RSYSLOG_OUT_LOG.extra
+
 # Delete topic to remove old traces before
-. $srcdir/diag.sh delete-kafka-topic $RANDTOPIC '.dep_wrk' '22181'
+# . $srcdir/diag.sh delete-kafka-topic $RANDTOPIC '.dep_wrk' '22181'
+
+# Dump Kafka log | uncomment if needed
+# . $srcdir/diag.sh dump-kafka-serverlog
 
 echo stop kafka instance
 . $srcdir/diag.sh stop-kafka
