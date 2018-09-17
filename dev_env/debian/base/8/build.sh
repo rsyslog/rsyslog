@@ -11,5 +11,5 @@ make -j4
 "
 if [ $? -eq 0 ]; then
 	printf "\nREADY TO PUSH!\n"
-	printf "\ndocker push rsyslog/rsyslog_dev_base_suse:tumbleweed\n"
+	printf "\ndocker push rsyslog/rsyslog_dev_base_debian:8\n"
 fi
