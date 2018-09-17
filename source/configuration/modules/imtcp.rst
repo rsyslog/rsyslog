@@ -310,6 +310,21 @@ information about priority Strings
 `here <https://gnutls.org/manual/html_node/Priority-Strings.html>`_.
 
 
+PreserveCase
+^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "boolean", "on", "no", "none"
+
+.. versionadded:: 8.37.0
+
+This parameter is for controlling the case in fromhost.  If preservecase is set to "off", the case in fromhost is not preserved.  E.g., 'host1.example.org' the message was received from 'Host1.Example.Org'.  Default to "on" for the backword compatibility.
+
+
 Input Parameters
 ----------------
 
@@ -413,6 +428,29 @@ RateLimit.Burst
 
 Specifies the rate-limiting burst in number of messages. Default is
 10,000.
+
+
+listenPortFileName
+^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+.. versionadded:: 8.38.0
+
+With this parameter you can specify the name for a file. In this file the
+port, imtcp is connected to, will be written.
+This parameter was introduced because the testbench works with dynamic ports.
+
+.. note::
+
+   If this parameter is set, 0 will be accepted as the port. Otherwise it
+   is automatically changed to port 514
+
 
 
 .. _imtcp-statistic-counter:

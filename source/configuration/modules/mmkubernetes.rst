@@ -19,14 +19,14 @@ namespace.
 
 .. note::
 
-   This **only** works with log files in `/var/log/containers/*.log`
-   (docker `--log-driver=json-file`), or with journald entries with
+   This **only** works with log files in `/var/log/containers/*.log` (docker
+   `--log-driver=json-file`, or CRI-O log files), or with journald entries with
    message properties `CONTAINER_NAME` and `CONTAINER_ID_FULL` (docker
-   `--log-driver=journald`), and when the application running inside
-   the container writes logs to `stdout`/`stderr`.  This **does not**
-   currently work with other log drivers.
+   `--log-driver=journald`), and when the application running inside the
+   container writes logs to `stdout`/`stderr`.  This **does not** currently
+   work with other log drivers.
 
-For json-file logs, you must use the `imfile` module with the
+For json-file and CRI-O logs, you must use the `imfile` module with the
 `addmetadata="on"` parameter, and the filename must match the
 liblognorm rules specified by the `filenamerules`
 (:ref:`filenamerules`) or `filenamerulebase` (:ref:`filenamerulebase`)
@@ -70,7 +70,7 @@ KubernetesURL
    :widths: auto
    :class: parameter-table
 
-   "word", "https://kubernetes.default.svc.cluster.local:443", "yes", "none"
+   "word", "https://kubernetes.default.svc.cluster.local:443", "no", "none"
 
 The URL of the Kubernetes API server.  Example: `https://localhost:8443`.
 
@@ -90,6 +90,39 @@ Full path and file name of file containing the CA cert of the
 Kubernetes API server cert issuer.  Example: `/etc/rsyslog.d/mmk8s-ca.crt`.
 This parameter is not mandatory if using an `http` scheme instead of `https` in
 `kubernetesurl`, or if using `allowunsignedcerts="yes"`.
+
+.. _mmkubernetes-tls.mycert:
+
+tls.mycert
+^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+This is the full path and file name of the file containing the client cert for
+doing client cert auth against Kubernetes.  This file is in PEM format.  For
+example: `/etc/rsyslog.d/k8s-client-cert.pem`
+
+.. _mmkubernetes-tls.myprivkey:
+
+tls.myprivkey
+^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+This is the full path and file name of the file containing the private key
+corresponding to the cert `tls.mycert` used for doing client cert auth against
+Kubernetes.  This file is in PEM format, and must be unencrypted, so take
+care to secure it properly.  For example: `/etc/rsyslog.d/k8s-client-key.pem`
 
 .. _tokenfile:
 
@@ -248,8 +281,6 @@ match the filename and extract metadata.  The default value is::
     In the above rules, the slashes ``\`` ending each line indicate
     line wrapping - they are not part of the rule.
 
-There are two rules because the `container_hash` is optional.
-
 .. _filenamerulebase:
 
 filenamerulebase
@@ -314,6 +345,76 @@ When processing json-file logs, this is the rulebase used to match the
 CONTAINER_NAME property value and extract metadata.  For the actual rules, see
 :ref:`containerrules`.
 
+.. _mmkubernetes-busyretryinterval:
+
+busyretryinterval
+^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "5", "no", "none"
+
+The number of seconds to wait before retrying operations to the Kubernetes API
+server after receiving a `429 Busy` response.  The default `"5"` means that the
+module will retry the connection every `5` seconds.  Records processed during
+this time will _not_ have any additional metadata associated with them, so you
+will need to handle cases where some of your records have all of the metadata
+and some do not.
+
+If you want to have rsyslog suspend the plugin until the Kubernetes API server
+is available, set `busyretryinterval` to `"0"`.  This will cause the plugin to
+return an error to rsyslog.
+
+.. _mmkubernetes-statistic-counter:
+
+Statistic Counter
+=================
+
+This plugin maintains per-action :doc:`statistics
+<../rsyslog_statistic_counter>`.  The statistic is named
+"mmkubernetes($kubernetesurl)", where `$kubernetesurl` is the
+:ref:`kubernetesurl` setting for the action.
+
+Parameters are:
+
+-  **recordseen** - number of messages seen by the action which the action has
+   determined have Kubernetes metadata associated with them
+
+-  **namespacemetadatasuccess** - the number of times a successful request was
+   made to the Kubernetes API server for namespace metadata.
+
+-  **namespacemetadatanotfound** - the number of times a request to the
+   Kubernetes API server for namespace metadata was returned with a `404 Not
+   Found` error code - the namespace did not exist at that time.
+
+-  **namespacemetadatabusy** - the number of times a request to the Kubernetes
+   API server for namespace metadata was returned with a `429 Busy` error
+   code - the server was too busy to send a proper response.
+
+-  **namespacemetadataerror** - the number of times a request to the Kubernetes
+   API server for namespace metadata was returned with some other error code
+   not handled above.  These are typically "hard" errors which require some
+   sort of intervention to fix e.g. Kubernetes server down, credentials incorrect.
+
+-  **podmetadatasuccess** - the number of times a successful request was made
+   to the Kubernetes API server for pod metadata.
+
+-  **podmetadatanotfound** - the number of times a request to the Kubernetes
+   API server for pod metadata was returned with a `404 Not Found` error code -
+   the pod did not exist at that time.
+
+-  **podmetadatabusy** - the number of times a request to the Kubernetes API
+   server for pod metadata was returned with a `429 Busy` error code - the
+   server was too busy to send a proper response.
+
+-  **podmetadataerror** - the number of times a request to the Kubernetes API
+   server for pod metadata was returned with some other error code not handled
+   above.  These are typically "hard" errors which require some sort of
+   intervention to fix e.g. Kubernetes server down, credentials incorrect.
+
 Fields
 ------
 
@@ -339,6 +440,37 @@ defined in Kubernetes, and depending on the value of the directive
 
 More fields may be added in the future.
 
+Error Handling
+--------------
+If the plugin encounters a `404 Not Found` in response to a request for
+namespace or pod metadata, that is, the pod or namespace is missing, the plugin
+will cache that result, and no metadata will be available for that pod or
+namespace forever.  If the pod or namespace is recreated, you will need to
+restart rsyslog in order to clear the cache and allow it to find that metadata.
+
+If the plugin gets a `429 Busy` response, the plugin will _not_ cache that
+result, and will _not_ add the metadata to the record. This can happen in very
+large Kubernetes clusters when you run into the upper limit on the number of
+concurrent Kubernetes API service connections.  You may have to increase that
+limit.  In the meantime, you can control what the plugin does with those
+records using the :ref:`mmkubernetes-busyretryinterval` setting.  If you want
+to continue to process the records, but with incomplete metadata, set
+`busyretryinterval` to a non-zero value, which will be the number of seconds
+after which mmkubernetes will retry the connection.  The default value is `5`,
+so by default, the plugin will retry the connection every `5` seconds.  If the
+`429` error condition in the Kubernetes API server is brief and transient, this
+means you will have some (hopefully small) number of records without the
+metadata such as the uuids, labels, and annotations, but your pipeline will not
+stop.  If the `429` error condition in the Kubernetes API server is persistent,
+it may require Kubernetes API server administrator intervention to address, and
+you may want to use the `busyretryinterval` value of `"0"`.  This will cause
+the module to return a "hard" error (see below).
+
+For other errors, the plugin will assume they are "hard" errors requiring admin
+intervention, return an error code, and rsyslog will suspend the plugin.  Use
+the :ref:`mmkubernetes-statistic-counter` to monitor for problems getting data
+from the Kubernetes API service.
+
 Example
 -------
 
@@ -350,6 +482,8 @@ get the basic necessary Kubernetes metadata from the filename:
 
     input(type="imfile" file="/var/log/containers/*.log"
           tag="kubernetes" addmetadata="on")
+
+(Add `reopenOnTruncate="on"` if using Docker, not required by CRI-O).
 
 and/or an `imjournal` input for docker journald container logs annotated by
 Kubernetes:

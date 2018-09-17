@@ -111,6 +111,28 @@ InputGSSServerKeepAlive
 Enables or disable keep-alive handling.
 
 
+InputGSSListenPortFileName
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "``$InputGSSListenPortFileName``"
+
+.. versionadded:: 8.38.0
+
+With this parameter you can specify the name for a file. In this file the
+port, imtcp is connected to, will be written.
+This parameter was introduced because the testbench works with dynamic ports.
+
+.. note::
+
+   If this parameter is set, 0 will be accepted as the port. Otherwise it
+   is automatically changed to port 514
+
+
 Caveats/Known Bugs
 ==================
 

@@ -149,6 +149,21 @@ set to 32. It may increase in the future when massive multicore
 processors become available.
 
 
+PreserveCase
+^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "boolean", "off", "no", "none"
+
+.. versionadded:: 8.37.0
+
+This parameter is for controlling the case in fromhost.  If preservecase is set to "on", the case in fromhost is preserved.  E.g., 'Host1.Example.Org' when the message was received from 'Host1.Example.Org'.  Default to "off" for the backword compatibility.
+
+
 .. index:: imudp; input parameters
 
 

@@ -565,7 +565,11 @@ response will be parsed to look for errors, since a bulk request may have some
 records which are successful and some which are failures.  Failed requests will
 be converted back into records and resubmitted back to rsyslog for
 reprocessing.  Each failed request will be resubmitted with a local variable
-called `$.omes`.  This is a hash consisting of the fields from the response.
+called `$.omes`.  This is a hash consisting of the fields from the metadata
+header in the original request, and the fields from the response.  If the same
+field is in the request and response, the value from the field in the *request*
+will be used, to facilitate retries that want to send the exact same request,
+and want to know exactly what was sent.
 See below :ref:`omelasticsearch-retry-example` for an example of how retry
 processing works.
 *NOTE* The retried record will be resubmitted at the "top" of your processing
@@ -581,7 +585,10 @@ redirect retries to.  See :ref:`omelasticsearch-retryruleset` below.
   code - of particular note is `429` - this means Elasticsearch was unable to
   process this bulk record request due to a temporary condition e.g. the bulk
   index thread pool queue is full, and rsyslog should retry the operation.
-* _index, _type, _id - the metadata associated with the request
+* _index, _type, _id, pipeline, _parent - the metadata associated with the
+  request - not all of these fields will be present with every request - for
+  example, if you do not use `"pipelinename"` or `"dynpipelinename"`, there
+  will be no `$.omes!pipeline` field.
 * error - a hash containing one or more, possibly nested, fields containing
   more detailed information about a failure.  Typically there will be fields
   `$.omes!error!type` (a keyword) and `$.omes!error!reason` (a longer string)
@@ -742,10 +749,12 @@ When using `retryfailures="on"` (:ref:`omelasticsearch-retryfailures`), the
 original `Message` object (that is, the original `smsg_t *msg` object) **is not
 available**.  This means none of the metadata associated with that object, such
 as various timestamps, hosts/ip addresses, etc. are not available for the retry
-operation.  The only thing available is the original JSON string sent in the
-original request, and whatever data is returned in the error response, which
-will contain the Elasticsearch metadata about the index, type, and id, and will
-be made available in the `$.omes` fields.  For the message to retry, the code
+operation.  The only thing available are the metadata header (_index, _type,
+_id, pipeline, _parent) and original JSON string sent in the original request,
+and whatever data is returned in the error response.  All of these are made
+available in the `$.omes` fields.  If the same field name exists in the request
+metadata and the response, the field from the request will be used, in order to
+facilitate retrying the exact same request.  For the message to retry, the code
 will take the original JSON string and parse it back into an internal `Message`
 object.  This means you **may need to use a different template** to output
 messages for your retry ruleset.  For example, if you used the following
@@ -769,6 +778,28 @@ template to format the Elasticsearch message for the initial submission:
 You would have to use a different template for the retry, since none of the
 `timereported`, `msg`, etc. fields will have the same values for the retry as
 for the initial try.
+
+Same with the other omelasticsearch parameters which can be constructed with
+templates, such as `"dynpipelinename"`, `"dynsearchindex"`, `"dynsearchtype"`,
+`"dynparent"`, and `"dynbulkid"`.  For example, if you generate the `_id` to
+use in the request, you will want to reuse the same `_id` for each subsequent
+retry:
+
+.. code-block:: none
+
+    template(name="id-template" type="string" string="%$.es_msg_id%")
+    if strlen($.omes!_id) > 0 then {
+        set $.es_msg_id = $.omes!_id;
+    } else {
+        # NOTE: depends on rsyslog being compiled with --enable-uuid
+        set $.es_msg_id = $uuid;
+    }
+    action(type="omelasticsearch" bulkid="id-template" ...)
+
+That is, if this is a retry, `$.omes!_id` will be set, so use that value for
+the bulk id for this record, otherwise, generate a new one with `$uuid`.  Note
+that the template uses the temporary variable `$.es_msg_id` which must be set
+each time, to either `$.omes!_id` or `$uuid`.
 
 Examples
 ========
@@ -893,8 +924,7 @@ ruleset just dumps the records to a file.
 
     module(load="omelasticsearch")
     module(load="omfile")
-    set $!es_record_id = $uuid;
-    template(name="bulkid-template" type="list") { property(name="$!es_record_id") }
+    template(name="bulkid-template" type="list") { property(name="$.es_record_id") }
 
     ruleset(name="error_es") {
 	    action(type="omfile" template="RSYSLOG_DebugFormat" file="es-bulk-errors.log")
@@ -915,6 +945,12 @@ ruleset just dumps the records to a file.
                 stop
             }
             # else fall through to retry operation
+        }
+        if strlen($.omes!_id) > 0 then {
+            set $.es_record_id = $.omes!_id;
+        } else {
+            # NOTE: depends on rsyslog being compiled with --enable-uuid
+            set $.es_record_id = $uuid;
         }
         action(type="omelasticsearch"
                   ...

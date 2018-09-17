@@ -78,6 +78,18 @@ Port
 
 Starts a RELP server on selected port
 
+Address
+^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+Bind the RELP server to that address. If not specified, the server will be
+bound to the wildcard address.
 
 Name
 ^^^^
@@ -189,7 +201,7 @@ TLS.PermittedPeer
 
    "array", "none", "no", "none"
 
-Peer Places access restrictions on this listener. Only peers which
+Peer places access restrictions on this listener. Only peers which
 have been listed in this parameter may connect. The validation bases
 on the certificate the remote peer presents.
 
@@ -208,7 +220,14 @@ this:
    tls.permittedPeer=["SHA1:...1", "SHA1:....2"]
 
 To specify just a single peer, you can either specify the string
-directly or enclose it in braces.
+directly or enclose it in braces. You may also use wildcards to match
+a larger number of permitted peers, e.g. ``*.example.com``.
+
+When using wildcards to match larger number of permitted peers, please
+know that the implementation is simular to Syslog RFC5425 which means:
+This wildcard matches any left-most DNS label in the server name.
+That is, the subject ``*.example.com`` matches the server names ``a.example.com``
+and ``b.example.com``, but does not match ``example.com`` or ``a.b.example.com``.
 
 
 TLS.AuthMode
@@ -236,6 +255,46 @@ done against the certificate's subjectAltName and, as a fallback, the
 subject common name. If the certificate contains multiple names, a
 match on any one of these names is considered good and permits the
 peer to talk to rsyslog.
+
+
+TLS.CaCert
+^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+The CA certificate that is being used to verify the client certificates.
+Has to be configured if TLS.AuthMode is set to "*fingerprint*\ " or "*name"*.
+
+
+TLS.MyCert
+^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+The machine certificate that is being used for TLS communciation.
+
+
+TLS.MyPrivKey
+^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+The machine private key for the configured TLS.MyCert.
 
 
 TLS.PriorityString
