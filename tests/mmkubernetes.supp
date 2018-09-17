@@ -1,0 +1,16 @@
+{
+   mmkubernetes: says hashtables are leaked at shutdown but they are freed - not sure what is the problem here
+   Memcheck:Leak
+   fun:malloc
+   fun:create_hashtable
+   obj:*
+   obj:*
+   fun:doModInit
+   fun:Load
+   fun:UseObj
+   fun:modInit
+   fun:doModInit
+   fun:Load
+   fun:modulesProcessCnf
+   fun:cnfDoObj
+}
