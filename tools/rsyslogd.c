@@ -61,6 +61,17 @@
 #include "dirty.h"
 #include "janitor.h"
 
+/* some global vars we need to differentiate between environments,
+ * for TZ-related things see
+ * https://github.com/rsyslog/rsyslog/issues/2994
+ */
+static int runningInContainer = 0;
+#ifdef OS_LINUX
+static int emitTZWarning = 0;
+#else
+static int emitTZWarning = 1;
+#endif
+
 #if defined(_AIX)
 /* AIXPORT : start
  * The following includes and declarations are for support of the System
@@ -1383,8 +1394,12 @@ initAll(int argc, char **argv)
 		const char *const tz =
 			(access("/etc/localtime", R_OK) == 0) ? "TZ=/etc/localtime" : "TZ=UTC";
 		putenv((char*)tz);
-		LogMsg(0, RS_RET_NO_TZ_SET, LOG_WARNING, "environment variable TZ is not "
-			"set, auto correcting this to %s\n", tz);
+		if(emitTZWarning) {
+			LogMsg(0, RS_RET_NO_TZ_SET, LOG_WARNING, "environment variable TZ is not "
+				"set, auto correcting this to %s", tz);
+		} else {
+			dbgprintf("environment variable TZ is not set, auto correcting this to %s\n", tz);
+		}
 	}
 
 	/* END core initializations - we now come back to carrying out command line options*/
@@ -2077,6 +2092,8 @@ main(int argc, char **argv)
 			"terminate rsyslog\n", VERSION);
 		PidFile = strdup("NONE"); /* disables pid file writing */
 		glblPermitCtlC = 1;
+		runningInContainer = 1;
+		emitTZWarning = 1;
 	} else {
 		/* "dynamic defaults" - non-container case */
 		PidFile = strdup(PATH_PIDFILE);
