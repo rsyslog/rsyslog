@@ -2,6 +2,10 @@
 # added 2017-05-18 by alorbach
 #	This test only tests what happens when kafka cluster fails
 # This file is part of the rsyslog project, released under ASL 2.0
+echo Init Testbench
+. $srcdir/diag.sh init
+
+# *** ==============================================================================
 export TESTMESSAGES=50000
 export TESTMESSAGES2=50001
 export TESTMESSAGESFULL=100000
@@ -9,22 +13,22 @@ export TESTMESSAGESFULL=100000
 # Generate random topic name
 export RANDTOPIC=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
 
+# enable the EXTRA_EXITCHECK only if really needed - otherwise spams the test log too much
+#export EXTRA_EXITCHECK=dumpkafkalogs
+export EXTRA_EXIT=kafka
 echo ===============================================================================
 echo Check and Stop previous instances of kafka/zookeeper 
-. $srcdir/diag.sh download-kafka
-. $srcdir/diag.sh stop-zookeeper
-. $srcdir/diag.sh stop-kafka
-
-echo Init Testbench
-. $srcdir/diag.sh init
+download_kafka
+stop_zookeeper
+stop_kafka
 
 echo Create kafka/zookeeper instance and topics
-. $srcdir/diag.sh start-zookeeper
-. $srcdir/diag.sh start-kafka
-. $srcdir/diag.sh create-kafka-topic $RANDTOPIC '.dep_wrk' '22181'
+start_zookeeper
+start_kafka
+create_kafka_topic $RANDTOPIC '.dep_wrk' '22181'
 
 echo Stopping kafka cluster instance
-. $srcdir/diag.sh stop-kafka
+stop-kafka
 
 # --- Create imkafka receiver config
 export RSYSLOG_DEBUGLOG="log"
@@ -100,7 +104,7 @@ echo Inject messages into rsyslog sender instance
 injectmsg 1 $TESTMESSAGES
 
 echo Starting kafka cluster instance
-. $srcdir/diag.sh start-kafka
+start_kafka
 
 echo Sleep to give rsyslog instances time to process data ...
 sleep 5
@@ -120,13 +124,7 @@ shutdown_when_empty
 wait_shutdown
 
 echo delete kafka topics
-. $srcdir/diag.sh delete-kafka-topic $RANDTOPIC '.dep_wrk' '22181'
-
-echo stop kafka instance
-. $srcdir/diag.sh stop-kafka
-
-# STOP ZOOKEEPER in any case
-. $srcdir/diag.sh stop-zookeeper
+delete_kafka_topic $RANDTOPIC '.dep_wrk' '22181'
 
 # Do the final sequence check
 seq_check2 1 $TESTMESSAGESFULL -d

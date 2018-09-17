@@ -1,28 +1,30 @@
 #!/bin/bash
 # added 2017-05-03 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
+echo Init Testbench
+. $srcdir/diag.sh init
+
+# *** ==============================================================================
 export TESTMESSAGES=100000
 export TESTMESSAGESFULL=100000
 
 # Generate random topic name
 export RANDTOPIC=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
 
-# enable the EXTRA_EXITCHECK only if really needed - otherwise spams the test log
-# too much
-# export EXTRA_EXITCHECK=dumpkafkalogs
+# enable the EXTRA_EXITCHECK only if really needed - otherwise spams the test log too much
+#export EXTRA_EXITCHECK=dumpkafkalogs
+export EXTRA_EXIT=kafka
+echo ===============================================================================
 echo Check and Stop previous instances of kafka/zookeeper 
-. $srcdir/diag.sh download-kafka
-. $srcdir/diag.sh stop-zookeeper
-. $srcdir/diag.sh stop-kafka
-
-echo Init Testbench
-. $srcdir/diag.sh init
+download_kafka
+stop_zookeeper
+stop_kafka
 
 echo Create kafka/zookeeper instance and topics
-. $srcdir/diag.sh start-zookeeper
-. $srcdir/diag.sh start-kafka
+start_zookeeper
+start_kafka
 # create new topic
-. $srcdir/diag.sh create-kafka-topic $RANDTOPIC '.dep_wrk' '22181'
+create_kafka_topic $RANDTOPIC '.dep_wrk' '22181'
 
 # --- Create/Start omkafka sender config
 export RSYSLOG_DEBUGLOG="log"
@@ -109,16 +111,10 @@ shutdown_when_empty 2
 wait_shutdown 2
 
 # Delete topic to remove old traces before
-. $srcdir/diag.sh delete-kafka-topic $RANDTOPIC '.dep_wrk' '22181'
+delete_kafka_topic $RANDTOPIC '.dep_wrk' '22181'
 
 # Dump Kafka log | uncomment if needed
-# . $srcdir/diag.sh dump-kafka-serverlog
-
-echo stop kafka instance
-. $srcdir/diag.sh stop-kafka
-
-# STOP ZOOKEEPER in any case
-. $srcdir/diag.sh stop-zookeeper
+# dump_kafka_serverlog
 
 # Do the final sequence check
 seq_check 1 $TESTMESSAGESFULL -d

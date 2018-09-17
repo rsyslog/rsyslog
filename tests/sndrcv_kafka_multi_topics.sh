@@ -1,6 +1,10 @@
 #!/bin/bash
 # added 2018-08-13 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
+echo Init Testbench
+. $srcdir/diag.sh init
+
+# *** ==============================================================================
 export TESTMESSAGES=50000
 export TESTMESSAGESFULL=100000
 
@@ -8,22 +12,20 @@ export TESTMESSAGESFULL=100000
 export RANDTOPIC1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
 export RANDTOPIC2=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
 
-# enable the EXTRA_EXITCHECK only if really needed - otherwise spams the test log
-# too much
+# enable the EXTRA_EXITCHECK only if really needed - otherwise spams the test log too much
 #export EXTRA_EXITCHECK=dumpkafkalogs
+export EXTRA_EXIT=kafka
+echo ===============================================================================
 echo Check and Stop previous instances of kafka/zookeeper 
-. $srcdir/diag.sh download-kafka
-. $srcdir/diag.sh stop-zookeeper
-. $srcdir/diag.sh stop-kafka
-
-echo Init Testbench
-. $srcdir/diag.sh init
+download_kafka
+stop_zookeeper
+stop_kafka
 
 echo Create kafka/zookeeper instance and topics
-. $srcdir/diag.sh start-zookeeper
-. $srcdir/diag.sh start-kafka
-. $srcdir/diag.sh create-kafka-topic $RANDTOPIC1 '.dep_wrk' '22181'
-. $srcdir/diag.sh create-kafka-topic $RANDTOPIC2 '.dep_wrk' '22181'
+start_zookeeper
+start_kafka
+create_kafka_topic $RANDTOPIC1 '.dep_wrk' '22181'
+create_kafka_topic $RANDTOPIC2 '.dep_wrk' '22181'
 
 # --- Create omkafka sender config
 export RSYSLOG_DEBUGLOG="log"
@@ -143,17 +145,11 @@ shutdown_when_empty 2
 wait_shutdown 2
 
 echo delete kafka topics
-. $srcdir/diag.sh delete-kafka-topic $RANDTOPIC1 '.dep_wrk' '22181'
-. $srcdir/diag.sh delete-kafka-topic $RANDTOPIC2 '.dep_wrk' '22181'
+delete_kafka_topic $RANDTOPIC1 '.dep_wrk' '22181'
+delete_kafka_topic $RANDTOPIC2 '.dep_wrk' '22181'
 
 # Dump Kafka log | uncomment if needed
-# . $srcdir/diag.sh dump-kafka-serverlog
-
-echo stop kafka instance
-. $srcdir/diag.sh stop-kafka
-
-# STOP ZOOKEEPER in any case
-. $srcdir/diag.sh stop-zookeeper
+# dump_kafka_serverlog
 
 # Do the final sequence check
 seq_check 1 $TESTMESSAGES -d

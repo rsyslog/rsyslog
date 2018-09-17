@@ -635,7 +635,7 @@ function error_exit() {
 		# Dump Zookeeper log
 		. $srcdir/diag.sh dump-zookeeper-serverlog
 		# Dump Kafka log
-		. $srcdir/diag.sh dump-kafka-serverlog
+		dump_kafka_serverlog
 	fi
 	# output listening ports as a temporay debug measure (2018-09-08 rgerhards)
 	if [ $(uname) == "Linux" ]; then
@@ -643,6 +643,10 @@ function error_exit() {
 	else
 		netstat
 	fi
+
+	# Extended Exit handling for kafka / zookeeper instances 
+	kafka_exit_handling
+
 	# we need to do some minimal cleanup so that "make distcheck" does not
 	# complain too much
 	exit $1
@@ -731,6 +735,10 @@ function exit_test() {
 	rm -f tmp.qi nocert
 	rm -fr $RSYSLOG_DYNNAME*  # delete all of our dynamic files
 	unset TCPFLOOD_EXTRA_OPTS
+
+	# Extended Exit handling for kafka / zookeeper instances 
+	kafka_exit_handling
+
 	printf "Test SUCCESFUL\n"
 	echo  -------------------------------------------------------------------------------
 }
@@ -795,6 +803,255 @@ dep_work_dir=$(pwd)/.dep_wrk
 #dep_zk_work_dir=$dep_work_dir/zk
 
 #END: ext kafka config
+
+function kafka_exit_handling() {
+
+	# Extended Exit handling for kafka / zookeeper instances 
+	if [[ "$EXTRA_EXIT" == 'kafka' ]]; then
+		
+		echo stop kafka instance
+		stop_kafka
+
+		echo stop zookeeper instance
+		stop_zookeeper
+	fi
+
+	# Extended Exit handling for kafka / zookeeper instances 
+	if [[ "$EXTRA_EXIT" == 'kafkamulti' ]]; then
+		
+		echo stop kafka instances
+		stop_kafka '.dep_wrk1'
+		stop-kafka '.dep_wrk2'
+		stop-kafka '.dep_wrk3'
+
+		echo stop zookeeper instances
+		stop-zookeeper '.dep_wrk1'
+		stop-zookeeper '.dep_wrk2'
+		stop-zookeeper '.dep_wrk3'
+	fi
+}
+
+function download_kafka() {
+	if [ ! -d $dep_cache_dir ]; then
+		echo "Creating dependency cache dir $dep_cache_dir"
+		mkdir $dep_cache_dir
+	fi
+	if [ ! -f $dep_zk_cached_file ]; then
+		echo "Downloading zookeeper"
+		wget -q $dep_zk_url -O $dep_zk_cached_file
+		if [ $? -ne 0 ]
+		then
+			echo error during wget, retry:
+			wget $dep_zk_url -O $dep_zk_cached_file
+			if [ $? -ne 0 ]
+			then
+				error_exit 1
+			fi
+		fi
+	fi
+	if [ ! -f $dep_kafka_cached_file ]; then
+		echo "Downloading kafka"
+		wget -q $dep_kafka_url -O $dep_kafka_cached_file
+		if [ $? -ne 0 ]
+		then
+			echo error during wget, retry:
+			wget $dep_kafka_url -O $dep_kafka_cached_file
+			if [ $? -ne 0 ]
+			then
+				error_exit 1
+			fi
+		fi
+	fi
+}
+
+function stop_kafka() {
+	if [ "x$1" == "x" ]; then
+		dep_work_dir=$(readlink -f .dep_wrk)
+	else
+		dep_work_dir=$(readlink -f $srcdir/$1)
+	fi
+	if [ ! -d $dep_work_dir/kafka ]; then
+		echo "Kafka work-dir $dep_work_dir/kafka does not exist, no action needed"
+	else
+		echo "Stopping Kafka instance $1"
+		(cd $dep_work_dir/kafka && ./bin/kafka-server-stop.sh)
+		$TESTTOOL_DIR/msleep 2000
+		rm -rf $dep_work_dir/kafka
+	fi
+}
+
+function stop_zookeeper() {
+	if [ "x$1" == "x" ]; then
+		dep_work_dir=$(readlink -f .dep_wrk)
+	else
+		dep_work_dir=$(readlink -f $srcdir/$1)
+	fi
+	(cd $dep_work_dir/zk &> /dev/null && ./bin/zkServer.sh stop)
+	$TESTTOOL_DIR/msleep 2000
+	rm -rf $dep_work_dir/zk
+}
+
+function start_zookeeper() {
+	if [ "x$1" == "x" ]; then
+		dep_work_dir=$(readlink -f .dep_wrk)
+		dep_work_tk_config="zoo.cfg"
+	else
+		dep_work_dir=$(readlink -f $srcdir/$1)
+		dep_work_tk_config="zoo$1.cfg"
+	fi
+
+	if [ ! -f $dep_zk_cached_file ]; then
+			echo "Dependency-cache does not have zookeeper package, did you download dependencies?"
+			error_exit 77
+	fi
+	if [ ! -d $dep_work_dir ]; then
+			echo "Creating dependency working directory"
+			mkdir -p $dep_work_dir
+	fi
+	if [ -d $dep_work_dir/zk ]; then
+			(cd $dep_work_dir/zk && ./bin/zkServer.sh stop)
+			$TESTTOOL_DIR/msleep 2000
+	fi
+	rm -rf $dep_work_dir/zk
+	(cd $dep_work_dir && tar -zxvf $dep_zk_cached_file --xform $dep_zk_dir_xform_pattern --show-transformed-names) > /dev/null
+	cp -f $srcdir/testsuites/$dep_work_tk_config $dep_work_dir/zk/conf/zoo.cfg
+	echo "Starting Zookeeper instance $1"
+	(cd $dep_work_dir/zk && ./bin/zkServer.sh start)
+	$TESTTOOL_DIR/msleep 2000
+}
+
+function start_kafka() {
+	# Force IPv4 usage of Kafka!
+	export KAFKA_OPTS="-Djava.net.preferIPv4Stack=True"
+	if [ "x$1" == "x" ]; then
+		dep_work_dir=$(readlink -f .dep_wrk)
+		dep_work_kafka_config="kafka-server.properties"
+	else
+		dep_work_dir=$(readlink -f $1)
+		dep_work_kafka_config="kafka-server$1.properties"
+	fi
+
+	if [ ! -f $dep_kafka_cached_file ]; then
+			echo "Dependency-cache does not have kafka package, did you download dependencies?"
+			error_exit 77
+	fi
+	if [ ! -d $dep_work_dir ]; then
+			echo "Creating dependency working directory"
+			mkdir -p $dep_work_dir
+	fi
+	rm -rf $dep_work_dir/kafka
+	( cd $dep_work_dir && 
+	  tar -zxvf $dep_kafka_cached_file --xform $dep_kafka_dir_xform_pattern --show-transformed-names) > /dev/null
+	cp -f $srcdir/testsuites/$dep_work_kafka_config $dep_work_dir/kafka/config/
+	echo "Starting Kafka instance $dep_work_kafka_config"
+	(cd $dep_work_dir/kafka && ./bin/kafka-server-start.sh -daemon ./config/$dep_work_kafka_config)
+	$TESTTOOL_DIR/msleep 4000
+
+	# Check if kafka instance came up!
+	kafkapid=`ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $1}'`
+	if [[ "" !=  "$kafkapid" ]];
+	then
+		echo "Kafka instance $dep_work_kafka_config started with PID $kafkapid"
+	else
+		echo "Starting Kafka instance $dep_work_kafka_config, SECOND ATTEMPT!"
+		(cd $dep_work_dir/kafka && ./bin/kafka-server-start.sh -daemon ./config/$dep_work_kafka_config)
+		$TESTTOOL_DIR/msleep 4000
+
+		kafkapid=`ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $1}'`
+		if [[ "" !=  "$kafkapid" ]];
+		then
+			echo "Kafka instance $dep_work_kafka_config started with PID $kafkapid"
+		else
+			echo "Failed to start Kafka instance for $dep_work_kafka_config"
+			error_exit 77
+		fi
+	fi
+}
+
+function create_kafka_topic() {
+	if [ "x$2" == "x" ]; then
+		dep_work_dir=$(readlink -f .dep_wrk)
+	else
+		dep_work_dir=$(readlink -f $2)
+	fi
+	if [ "x$3" == "x" ]; then
+		dep_work_port='2181'
+	else
+		dep_work_port=$3
+	fi
+	if [ ! -d $dep_work_dir/kafka ]; then
+			echo "Kafka work-dir $dep_work_dir/kafka does not exist, did you start kafka?"
+			exit 1
+	fi
+	if [ "x$1" == "x" ]; then
+			echo "Topic-name not provided."
+			exit 1
+	fi
+	(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --zookeeper localhost:$dep_work_port/kafka --create --topic $1 --replication-factor 1 --partitions 2 )
+	(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --zookeeper localhost:$dep_work_port/kafka --alter --topic $1 --delete-config retention.ms)
+	(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --zookeeper localhost:$dep_work_port/kafka --alter --topic $1 --delete-config retention.bytes)
+}
+
+function delete_kafka_topic() {
+	if [ "x$2" == "x" ]; then
+		dep_work_dir=$(readlink -f .dep_wrk)
+	else
+		dep_work_dir=$(readlink -f $srcdir/$2)
+	fi
+	if [ "x$3" == "x" ]; then
+		dep_work_port='2181'
+	else
+		dep_work_port=$3
+	fi
+
+	echo "deleting kafka-topic $1"
+	(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --delete --zookeeper localhost:$dep_work_port/kafka --topic $1)
+}
+
+function dump_kafka_topic() {
+	if [ "x$2" == "x" ]; then
+		dep_work_dir=$(readlink -f .dep_wrk)
+		dep_kafka_log_dump=$(readlink -f rsyslog.out.kafka.log)
+	else
+		dep_work_dir=$(readlink -f $srcdir/$2)
+		dep_kafka_log_dump=$(readlink -f rsyslog.out.kafka$2.log)
+	fi
+	if [ "x$3" == "x" ]; then
+		dep_work_port='2181'
+	else
+		dep_work_port=$3
+	fi
+
+	echo "dumping kafka-topic $1"
+	if [ ! -d $dep_work_dir/kafka ]; then
+			echo "Kafka work-dir does not exist, did you start kafka?"
+			exit 1
+	fi
+	if [ "x$1" == "x" ]; then
+			echo "Topic-name not provided."
+			exit 1
+	fi
+
+	(cd $dep_work_dir/kafka && ./bin/kafka-console-consumer.sh --timeout-ms 2000 --from-beginning --zookeeper localhost:$dep_work_port/kafka --topic $1 > $dep_kafka_log_dump)
+}
+
+function dump_kafka_serverlog() {
+	if [ "x$1" == "x" ]; then
+		dep_work_dir=$(readlink -f .dep_wrk)
+	else
+		dep_work_dir=$(readlink -f $srcdir/$1)
+	fi
+	if [ ! -d $dep_work_dir/kafka ]; then
+		echo "Kafka work-dir $dep_work_dir/kafka does not exist, no kafka debuglog"
+	else
+		echo "Dumping server.log from Kafka instance $1"
+		echo "========================================="
+		cat $dep_work_dir/kafka/logs/server.log
+		echo "========================================="
+	fi
+}
+
+
 
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
@@ -1123,38 +1380,6 @@ case $1 in
 		    exit 77
 		fi
 		;;
-   'download-kafka')
-		if [ ! -d $dep_cache_dir ]; then
-			echo "Creating dependency cache dir $dep_cache_dir"
-			mkdir $dep_cache_dir
-		fi
-		if [ ! -f $dep_zk_cached_file ]; then
-			echo "Downloading zookeeper"
-			wget -q $dep_zk_url -O $dep_zk_cached_file
-			if [ $? -ne 0 ]
-			then
-				echo error during wget, retry:
-				wget $dep_zk_url -O $dep_zk_cached_file
-				if [ $? -ne 0 ]
-				then
-					error_exit 1
-				fi
-			fi
-		fi
-		if [ ! -f $dep_kafka_cached_file ]; then
-			echo "Downloading kafka"
-			wget -q $dep_kafka_url -O $dep_kafka_cached_file
-			if [ $? -ne 0 ]
-			then
-				echo error during wget, retry:
-				wget $dep_kafka_url -O $dep_kafka_cached_file
-				if [ $? -ne 0 ]
-				then
-					error_exit 1
-				fi
-			fi
-		fi
-		;;
 	 'download-elasticsearch')
 		if [ ! -d $dep_cache_dir ]; then
 				echo "Creating dependency cache dir $dep_cache_dir"
@@ -1169,80 +1394,6 @@ case $1 in
 					printf "ElasticSearch: satisfying dependency %s from %s\n" "$ES_DOWNLOAD" "$dep_es_url"
 					wget -q $dep_es_url -O $dep_es_cached_file
 				fi
-		fi
-		;;
-	 'start-zookeeper')
-		if [ "x$2" == "x" ]; then
-			dep_work_dir=$(readlink -f .dep_wrk)
-			dep_work_tk_config="zoo.cfg"
-		else
-			dep_work_dir=$(readlink -f $srcdir/$2)
-			dep_work_tk_config="zoo$2.cfg"
-		fi
-
-		if [ ! -f $dep_zk_cached_file ]; then
-				echo "Dependency-cache does not have zookeeper package, did you download dependencies?"
-				exit 77
-		fi
-		if [ ! -d $dep_work_dir ]; then
-				echo "Creating dependency working directory"
-				mkdir -p $dep_work_dir
-		fi
-		if [ -d $dep_work_dir/zk ]; then
-				(cd $dep_work_dir/zk && ./bin/zkServer.sh stop)
-				$TESTTOOL_DIR/msleep 2000
-		fi
-		rm -rf $dep_work_dir/zk
-		(cd $dep_work_dir && tar -zxvf $dep_zk_cached_file --xform $dep_zk_dir_xform_pattern --show-transformed-names) > /dev/null
-		cp -f $srcdir/testsuites/$dep_work_tk_config $dep_work_dir/zk/conf/zoo.cfg
-		echo "Starting Zookeeper instance $2"
-		(cd $dep_work_dir/zk && ./bin/zkServer.sh start)
-		$TESTTOOL_DIR/msleep 2000
-		;;
-	 'start-kafka')
-		# Force IPv4 usage of Kafka!
-		export KAFKA_OPTS="-Djava.net.preferIPv4Stack=True"
-		if [ "x$2" == "x" ]; then
-			dep_work_dir=$(readlink -f .dep_wrk)
-			dep_work_kafka_config="kafka-server.properties"
-		else
-			dep_work_dir=$(readlink -f $2)
-			dep_work_kafka_config="kafka-server$2.properties"
-		fi
-
-		if [ ! -f $dep_kafka_cached_file ]; then
-				echo "Dependency-cache does not have kafka package, did you download dependencies?"
-				exit 77
-		fi
-		if [ ! -d $dep_work_dir ]; then
-				echo "Creating dependency working directory"
-				mkdir -p $dep_work_dir
-		fi
-		rm -rf $dep_work_dir/kafka
-		(cd $dep_work_dir && tar -zxvf $dep_kafka_cached_file --xform $dep_kafka_dir_xform_pattern --show-transformed-names) > /dev/null
-		cp -f $srcdir/testsuites/$dep_work_kafka_config $dep_work_dir/kafka/config/
-		echo "Starting Kafka instance $dep_work_kafka_config"
-		(cd $dep_work_dir/kafka && ./bin/kafka-server-start.sh -daemon ./config/$dep_work_kafka_config)
-		$TESTTOOL_DIR/msleep 4000
-
-		# Check if kafka instance came up!
-		kafkapid=`ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}'`
-		if [[ "" !=  "$kafkapid" ]];
-		then
-			echo "Kafka instance $dep_work_kafka_config started with PID $kafkapid"
-		else
-			echo "Starting Kafka instance $dep_work_kafka_config, SECOND ATTEMPT!"
-			(cd $dep_work_dir/kafka && ./bin/kafka-server-start.sh -daemon ./config/$dep_work_kafka_config)
-			$TESTTOOL_DIR/msleep 4000
-
-			kafkapid=`ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}'`
-			if [[ "" !=  "$kafkapid" ]];
-			then
-				echo "Kafka instance $dep_work_kafka_config started with PID $kafkapid"
-			else
-				echo "Failed to start Kafka instance for $dep_work_kafka_config"
-				error_exit 77
-			fi
 		fi
 		;;
 	 'prepare-elasticsearch') # $2, if set, is the number of additional ES instances
@@ -1331,22 +1482,6 @@ case $1 in
 		$TESTTOOL_DIR/msleep 2000
 		echo ES startup succeeded
 		;;
-	 'dump-kafka-serverlog')
-		if [ "x$2" == "x" ]; then
-			dep_work_dir=$(readlink -f .dep_wrk)
-		else
-			dep_work_dir=$(readlink -f $srcdir/$2)
-		fi
-		if [ ! -d $dep_work_dir/kafka ]; then
-			echo "Kafka work-dir $dep_work_dir/kafka does not exist, no kafka debuglog"
-		else
-			echo "Dumping server.log from Kafka instance $2"
-			echo "========================================="
-			cat $dep_work_dir/kafka/logs/server.log
-			echo "========================================="
-		fi
-		;;
-		
 	 'dump-zookeeper-serverlog')
 		if [ "x$2" == "x" ]; then
 			dep_work_dir=$(readlink -f .dep_wrk)
@@ -1357,31 +1492,6 @@ case $1 in
 		echo "========================================="
 		cat $dep_work_dir/zk/zookeeper.out
 		echo "========================================="
-		;;
-	 'stop-kafka')
-		if [ "x$2" == "x" ]; then
-			dep_work_dir=$(readlink -f .dep_wrk)
-		else
-			dep_work_dir=$(readlink -f $srcdir/$2)
-		fi
-		if [ ! -d $dep_work_dir/kafka ]; then
-			echo "Kafka work-dir $dep_work_dir/kafka does not exist, no action needed"
-		else
-			echo "Stopping Kafka instance $2"
-			(cd $dep_work_dir/kafka && ./bin/kafka-server-stop.sh)
-			$TESTTOOL_DIR/msleep 2000
-			rm -rf $dep_work_dir/kafka
-		fi
-		;;
-	 'stop-zookeeper')
-		if [ "x$2" == "x" ]; then
-			dep_work_dir=$(readlink -f .dep_wrk)
-		else
-			dep_work_dir=$(readlink -f $srcdir/$2)
-		fi
-		(cd $dep_work_dir/zk &> /dev/null && ./bin/zkServer.sh stop)
-		$TESTTOOL_DIR/msleep 2000
-		rm -rf $dep_work_dir/zk
 		;;
 	 'stop-elasticsearch')
 		if [ "x$2" == "x" ]; then
@@ -1404,70 +1514,6 @@ case $1 in
 		. $srcdir/diag.sh stop-elasticsearch
 		rm -f $dep_work_es_pidfile
 		rm -rf $dep_work_dir/es
-		;;
-	 'create-kafka-topic')
-		if [ "x$3" == "x" ]; then
-			dep_work_dir=$(readlink -f .dep_wrk)
-		else
-			dep_work_dir=$(readlink -f $3)
-		fi
-		if [ "x$4" == "x" ]; then
-			dep_work_port='2181'
-		else
-			dep_work_port=$4
-		fi
-		if [ ! -d $dep_work_dir/kafka ]; then
-				echo "Kafka work-dir $dep_work_dir/kafka does not exist, did you start kafka?"
-				exit 1
-		fi
-		if [ "x$2" == "x" ]; then
-				echo "Topic-name not provided."
-				exit 1
-		fi
-		(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --zookeeper localhost:$dep_work_port/kafka --create --topic $2 --replication-factor 1 --partitions 2 )
-		(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --zookeeper localhost:$dep_work_port/kafka --alter --topic $2 --delete-config retention.ms)
-		(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --zookeeper localhost:$dep_work_port/kafka --alter --topic $2 --delete-config retention.bytes)
-		;;
-	 'delete-kafka-topic')
-		if [ "x$3" == "x" ]; then
-			dep_work_dir=$(readlink -f .dep_wrk)
-		else
-			dep_work_dir=$(readlink -f $srcdir/$3)
-		fi
-		if [ "x$4" == "x" ]; then
-			dep_work_port='2181'
-		else
-			dep_work_port=$4
-		fi
-
-		echo "deleting kafka-topic $2"
-		(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --delete --zookeeper localhost:$dep_work_port/kafka --topic $2)
-		;;
-	 'dump-kafka-topic')
-		if [ "x$3" == "x" ]; then
-			dep_work_dir=$(readlink -f .dep_wrk)
-			dep_kafka_log_dump=$(readlink -f rsyslog.out.kafka.log)
-		else
-			dep_work_dir=$(readlink -f $srcdir/$3)
-			dep_kafka_log_dump=$(readlink -f rsyslog.out.kafka$3.log)
-		fi
-		if [ "x$4" == "x" ]; then
-			dep_work_port='2181'
-		else
-			dep_work_port=$4
-		fi
-
-		echo "dumping kafka-topic $2"
-		if [ ! -d $dep_work_dir/kafka ]; then
-				echo "Kafka work-dir does not exist, did you start kafka?"
-				exit 1
-		fi
-		if [ "x$2" == "x" ]; then
-				echo "Topic-name not provided."
-				exit 1
-		fi
-
-		(cd $dep_work_dir/kafka && ./bin/kafka-console-consumer.sh --timeout-ms 2000 --from-beginning --zookeeper localhost:$dep_work_port/kafka --topic $2 > $dep_kafka_log_dump)
 		;;
 	'check-inotify') # Check for inotify/fen support 
 		if [ -n "$(find /usr/include -name 'inotify.h' -print -quit)" ]; then

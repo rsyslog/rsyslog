@@ -1626,7 +1626,9 @@ EXTRA_DIST= \
 	mysql-actq-mt-withpause.sh \
 	mysql-actq-mt-withpause-vg.sh \
 	omkafka.sh \
+	omkafka-vg.sh \
 	imkafka.sh \
+	imkafka-vg.sh \
 	imkafka_multi_single.sh \
 	sndrcv_kafka.sh \
 	sndrcv_kafka_multi_topics.sh \
