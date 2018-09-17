@@ -86,6 +86,19 @@ Version 8.38.0 [v8-stable] 2018-09-18
   The new input parameter delay.message has been added. It specifies
   a delay in microseconds after each line read.
   closes https://github.com/rsyslog/rsyslog/issues/2960
+- core: emit TZ warning on startup not on Linux non-container
+  On Linux it seems common that the TZ variable is NOT properly set.
+  There are some concerns that the warning related to rsyslog correcting
+  this confuses users. It also seems that the corrective action rsyslog
+  takes is right, and so there is no hard need to inform users on that.
+  In Linux containers, however, the warning seems to be useful as the
+  timezone setup there seems to be frequently-enough different and
+  rsyslog's corrective action may not be correct.
+  So we now check if we are running under Linux and not within a container.
+  If so, we do not emit the warning. In all other case, we do. This is
+  based on the assumption that other unixoid systems still should have
+  TZ properly set.
+  closes https://github.com/rsyslog/rsyslog/issues/2994
 - omkafka:
   * better debug information
   * Fixed minor issue in omkafka producing wrong kafka timestamps when
@@ -101,6 +114,27 @@ Version 8.38.0 [v8-stable] 2018-09-18
 - omhttp: new contribued module
   Thanks to Christian Tramnitz for contributing it.
   Some more info at https://github.com/rsyslog/rsyslog/pull/2782
+- mmkubertnetes: action fails preparation cycle if kubernetes API ...
+  ... destroys resource during bootup sequence
+  The plugin was not handling 404 Not Found correctly when looking
+  up pods and namespaces.  In this case, we assume the pod/namespace
+  was deleted, annotate the record with whatever metadata we have,
+  and cache the fact that the pod/namespace is missing so we don't
+  attempt to look it up again.
+  In addition, the plugin was not handling error 429 Busy correctly.
+  In this case, it should also annotate the record with whatever
+  metadata it has, and _not_ cache anything.  By default the plugin
+  will retry every 5 seconds to connect to Kubernetes.  This
+  behavior is controlled by the new config param `busyretryinterval`.
+  This commit also adds impstats counters so that admins can
+  view the state of the plugin to see if the lookups are working
+  or are returning errors.  The stats are reported per-instance
+  or per-action to facilitate using multiple different actions
+  for different Kubernetes servers.
+  This commit also adds support for client cert auth to
+  Kubernetes via the two new config params `tls.mycert` and
+  `tls.myprivkey`.
+  Thanks to Richard Megginson for the patch.
 - bugfix pmnormalize/core: several memory leaks, invld property handling
   - major memory leak which occurred once per message processed
     So this could lead to OOM. Caused by improper free of json
