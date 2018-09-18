@@ -4,7 +4,7 @@ Rsyslog is a real open source project and open to contributions.
 By contributing, you help improve the state of logging as well as improve
 your own professional profile. Contributing is easy, and there are options
 for everyone - you do not need to be a developer.
-
+#this is a test for CI
 -------------------------------------------------------------------------------------
 LEGAL GDPR NOTICE:
 According to the European data protection laws (GDPR), we would like to make you
