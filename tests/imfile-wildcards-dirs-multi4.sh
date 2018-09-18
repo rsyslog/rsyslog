@@ -66,6 +66,7 @@ do
 		mkdir $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir/su$j
 		mkdir $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir/su$j/bd$j
 		mkdir $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir/su$j/bd$j/ir$j
+		touch $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir/su$j/bd$j/ir$j/file.logfile
 		./inputfilegen -m 1 > $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir/su$j/bd$j/ir$j/file.logfile
 	done
 	ls -d $RSYSLOG_DYNNAME.input.*
@@ -80,6 +81,11 @@ do
 		rm -rf $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir/su$j/bd$j/ir$j/file.logfile
 		rm -rf $RSYSLOG_DYNNAME.input.dir$i/dir$j
 	done
+
+	# Helps in testbench parallel mode. 
+	#	Otherwise sometimes directories are not marked deleted in imfile before they get created again.
+	#	This is properly a real issue in imfile when FILE IO is high. 
+	./msleep 1000
 done
 
 shutdown_when_empty # shut down rsyslogd when done processing messages

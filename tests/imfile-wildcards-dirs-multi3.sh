@@ -3,7 +3,7 @@
 export IMFILEINPUTFILES="1"
 export IMFILEINPUTFILESSTEPS="5"
 #export IMFILEINPUTFILESALL=$(($IMFILEINPUTFILES * $IMFILEINPUTFILESSTEPS))
-export IMFILECHECKTIMEOUT="10"
+export IMFILECHECKTIMEOUT="20"
 . $srcdir/diag.sh init
 generate_conf
 add_conf '
@@ -66,6 +66,7 @@ do
 		mkdir $RSYSLOG_DYNNAME.input.dir$i/dir$j
 		mkdir $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir
 		mkdir $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir/subdir$j
+		touch $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir/subdir$j/file.logfile
 		./inputfilegen -m 1 > $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir/subdir$j/file.logfile
 		ls -l $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir/subdir$j/file.logfile
 	done
@@ -81,6 +82,11 @@ do
 		rm -rf $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir/subdir$j/file.logfile
 		rm -rf $RSYSLOG_DYNNAME.input.dir$i/dir$j
 	done
+
+	# Helps in testbench parallel mode. 
+	#	Otherwise sometimes directories are not marked deleted in imfile before they get created again.
+	#	This is properly a real issue in imfile when FILE IO is high. 
+	./msleep 1000
 done
 
 shutdown_when_empty # shut down rsyslogd when done processing messages

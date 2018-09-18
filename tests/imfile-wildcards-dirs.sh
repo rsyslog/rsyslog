@@ -1,6 +1,7 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under GPLv3
 export IMFILEINPUTFILES="10"
+export IMFILECHECKTIMEOUT="20"
 echo [imfile-wildcards-dirs.sh]
 . $srcdir/diag.sh check-inotify
 . $srcdir/diag.sh init
@@ -50,11 +51,19 @@ startup
 for i in `seq 1 $IMFILEINPUTFILES`;
 do
 	mkdir $RSYSLOG_DYNNAME.input.dir$i
+	touch $RSYSLOG_DYNNAME.input.dir$i/file.logfile
 	./inputfilegen -m 1 > $RSYSLOG_DYNNAME.input.dir$i/file.logfile
 done
 ls -d $RSYSLOG_DYNNAME.input.*
 
+# Content check with timeout
+content_check_with_count "HEADER msgnum:00000000:" $IMFILEINPUTFILES $IMFILECHECKTIMEOUT
+
+for i in `seq 1 $IMFILEINPUTFILES`;
+do
+	rm -rf $RSYSLOG_DYNNAME.input.dir$i/
+done
+
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown	# we need to wait until rsyslogd is finished!
-content_check_with_count "HEADER msgnum:00000000:" $IMFILEINPUTFILES
 exit_test

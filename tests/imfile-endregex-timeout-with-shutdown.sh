@@ -1,5 +1,6 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
+export IMFILECHECKTIMEOUT="30"
 . $srcdir/diag.sh init
 . $srcdir/diag.sh check-inotify-only
 generate_conf
@@ -24,7 +25,8 @@ startup
 # to pick up the data (IN MULTIPLE ITERATIONS!)
 echo 'msgnum:0
  msgnum:1' > $RSYSLOG_DYNNAME.input
-./msleep 8000
+content_check_with_count "msgnum:0
+ msgnum:1" 1 $IMFILECHECKTIMEOUT
 echo ' msgnum:2
  msgnum:3' >> $RSYSLOG_DYNNAME.input
 
@@ -36,22 +38,21 @@ startup
 
 # new data
 echo ' msgnum:4' >> $RSYSLOG_DYNNAME.input
-./msleep 8000
+content_check_with_count "msgnum:2
+ msgnum:3
+ msgnum:4" 1 $IMFILECHECKTIMEOUT
+
 echo ' msgnum:5
  msgnum:6' >> $RSYSLOG_DYNNAME.input
-./msleep 8000
+content_check_with_count "msgnum:5
+ msgnum:6" 1 $IMFILECHECKTIMEOUT
+
 
 # the next line terminates our test. It is NOT written to the output file,
 # as imfile waits whether or not there is a follow-up line that it needs
 # to combine.
-#echo 'END OF TEST' >> $RSYSLOG_DYNNAME.input
-#./msleep 2000
+echo 'END OF TEST' >> $RSYSLOG_DYNNAME.input
 
 shutdown_when_empty
 wait_shutdown
-
-EXPECTED='HEADER msgnum:0\\n msgnum:1
-HEADER  msgnum:2\\n msgnum:3\\n msgnum:4
-HEADER  msgnum:5\\n msgnum:6'
-cmp_exact $RSYSLOG_OUT_LOG
 exit_test
