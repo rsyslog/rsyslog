@@ -80,6 +80,24 @@ pod_template = '''{{
   }}
 }}'''
 
+err_template = '''{{
+  "kind": "Status",
+  "apiVersion": "v1",
+  "metadata": {{
+
+  }},
+  "status": "Failure",
+  "message": "{kind} \\\"{objectname}\\\" {err}",
+  "reason": "{reason}",
+  "details": {{
+    "name": "{objectname}",
+    "kind": "{kind}"
+  }},
+  "code": {code}
+}}'''
+
+is_busy = False
+
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
@@ -87,17 +105,38 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         # parse url - either /api/v1/namespaces/$ns_name
         # or
         # /api/v1/namespaces/$ns_name/pods/$pod_name
+        global is_busy
         comps = self.path.split('/')
         status = 400
-        if len(comps) >= 5 and comps[1] == 'api' and comps[2] == 'v1':
-            if len(comps) == 5 and comps[3] == 'namespaces': # namespace
-                resp = ns_template.format(namespace_name=comps[4])
+        if len(comps) >= 5 and comps[1] == 'api' and comps[2] == 'v1' and comps[3] == 'namespaces':
+            resp = None
+            hsh = {'namespace_name':comps[4],'objectname':comps[4],'kind':'namespace'}
+            if len(comps) == 5: # namespace
+                resp_template = ns_template
                 status = 200
-            elif len(comps) == 7 and comps[3] == 'namespaces' and comps[5] == 'pods':
-                resp = pod_template.format(namespace_name=comps[4], pod_name=comps[6])
+            elif len(comps) == 7 and comps[5] == 'pods': # pod
+                hsh['pod_name'] = comps[6]
+                hsh['kind'] = 'pods'
+                hsh['objectname'] = hsh['pod_name']
+                resp_template = pod_template
                 status = 200
             else:
                 resp = '{{"error":"do not recognize {0}"}}'.format(self.path)
+            if hsh['objectname'].endswith('not-found'):
+                status = 404
+                hsh['reason'] = 'NotFound'
+                hsh['err'] = 'not found'
+                resp_template = err_template
+            elif hsh['objectname'].endswith('busy'):
+                is_busy = not is_busy
+                if is_busy:
+                    status = 429
+                    hsh['reason'] = 'Busy'
+                    hsh['err'] = 'server is too busy'
+                    resp_template = err_template
+            if not resp:
+                hsh['code'] = status
+                resp = resp_template.format(**hsh)
         else:
             resp = '{{"error":"do not recognize {0}"}}'.format(self.path)
         if not status == 200:
