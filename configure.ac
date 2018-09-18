@@ -1403,6 +1403,8 @@ if test "x$enable_relp" = "xyes"; then
 
         AC_CHECK_FUNC([relpSrvSetOversizeMode],
                       [AC_DEFINE([HAVE_RELPSRVSETOVERSIZEMODE], [1], [Define if relpSrvSetOversizeMode exists.])])
+        AC_CHECK_FUNC([relpSrvSetLstnAddr],
+                      [AC_DEFINE([HAVE_RELPSRVSETLSTNADDR], [1], [Define if relpSrvSetLstnAddr exists.])])
 
         CFLAGS="$save_CFLAGS"
         LIBS="$save_LIBS"
