@@ -6,7 +6,7 @@ echo Init Testbench
 check_command_available kafkacat
 
 # *** ==============================================================================
-export TESTMESSAGES=100000
+export TESTMESSAGES=10000
 export TESTMESSAGESFULL=$TESTMESSAGES
 
 # Generate random topic name
@@ -24,7 +24,6 @@ stop_kafka
 echo Create kafka/zookeeper instance and $RANDTOPIC topic
 start_zookeeper
 start_kafka
-
 # create new topic
 create_kafka_topic $RANDTOPIC '.dep_wrk' '22181'
 
@@ -58,12 +57,12 @@ if ($msg contains "msgnum:") then {
 
 # --- Start imkafka receiver config
 echo Starting receiver instance [imkafka]
-startup
+startup_vg
 # --- 
 
 # --- Fill Kafka Server with messages
 # Can properly be done in a better way?!
-for i in {00000001..00100000}
+for i in {00000001..0010000}
 do
 	echo " msgnum:$i" >> $RSYSLOG_OUT_LOG.in
 done
@@ -77,7 +76,8 @@ sleep 5
 
 echo Stopping sender instance [omkafka]
 shutdown_when_empty
-wait_shutdown
+wait_shutdown_vg
+check_exit_vg
 
 # Delete topic to remove old traces before
 delete_kafka_topic $RANDTOPIC '.dep_wrk' '22181'

@@ -1,47 +1,40 @@
 #!/bin/bash
 # added 2018-08-29 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
+echo Init Testbench 
+. $srcdir/diag.sh init
+check_command_available kafkacat
+
+# *** ==============================================================================
 export TESTMESSAGES=100000
 export TESTMESSAGESFULL=100000
 
 # Generate random topic name
 export RANDTOPIC=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
 
-echo Init Testbench 
-. $srcdir/diag.sh init
-
-# Check for kafkacat
-check_command_available kafkacat
-
-# enable the EXTRA_EXITCHECK only if really needed - otherwise spams the test log
-# too much
-#export EXTRA_EXITCHECK=dumpkafkalogs
+# Set EXTRA_EXITCHECK to dump kafka/zookeeperlogfiles on failure only.
+export EXTRA_EXITCHECK=dumpkafkalogs
+export EXTRA_EXIT=kafkamulti
 echo ===============================================================================
+echo Check and Stop previous instances of kafka/zookeeper 
+download_kafka
+stop_zookeeper '.dep_wrk1'
+stop_zookeeper '.dep_wrk2'
+stop_zookeeper '.dep_wrk3'
+stop_kafka '.dep_wrk1'
+stop_kafka '.dep_wrk2'
+stop_kafka '.dep_wrk3'
+
 echo Create kafka/zookeeper instance and $RANDTOPIC topic
-. $srcdir/diag.sh download-kafka
-. $srcdir/diag.sh stop-zookeeper '.dep_wrk1'
-. $srcdir/diag.sh stop-zookeeper '.dep_wrk2'
-. $srcdir/diag.sh stop-zookeeper '.dep_wrk3'
-. $srcdir/diag.sh stop-kafka '.dep_wrk1'
-. $srcdir/diag.sh stop-kafka '.dep_wrk2'
-. $srcdir/diag.sh stop-kafka '.dep_wrk3'
-
-echo Create kafka/zookeeper instance and topics
-. $srcdir/diag.sh start-zookeeper '.dep_wrk1'
-. $srcdir/diag.sh start-zookeeper '.dep_wrk2'
-. $srcdir/diag.sh start-zookeeper '.dep_wrk3'
-. $srcdir/diag.sh start-kafka '.dep_wrk1'
-. $srcdir/diag.sh start-kafka '.dep_wrk2'
-. $srcdir/diag.sh start-kafka '.dep_wrk3'
-
-echo Give Kafka some time to sync...
-sleep 5
+start_zookeeper '.dep_wrk1'
+start_zookeeper '.dep_wrk2'
+start_zookeeper '.dep_wrk3'
+start_kafka '.dep_wrk1'
+start_kafka '.dep_wrk2'
+start_kafka '.dep_wrk3'
 
 # create new topic
-. $srcdir/diag.sh create-kafka-topic $RANDTOPIC '.dep_wrk1' '22181'
-
-echo Give Kafka some time to process topic create ...
-sleep 5
+create_kafka_topic $RANDTOPIC '.dep_wrk1' '22181'
 
 # --- Create imkafka receiver config
 export RSYSLOG_DEBUGLOG="log"
@@ -138,15 +131,7 @@ TIMEDIFF=$(echo "$TIMEEND - $TIMESTART" | bc)
 echo "*** imkafka time to process all data: $TIMEDIFF seconds!"
 
 # Delete topic to remove old traces before
-. $srcdir/diag.sh delete-kafka-topic $RANDTOPIC '.dep_wrk1' '22181'
-
-echo \[sndrcv_kafka.sh\]: stop kafka instances
-. $srcdir/diag.sh stop-kafka '.dep_wrk1'
-. $srcdir/diag.sh stop-kafka '.dep_wrk2'
-. $srcdir/diag.sh stop-kafka '.dep_wrk3'
-. $srcdir/diag.sh stop-zookeeper '.dep_wrk1'
-. $srcdir/diag.sh stop-zookeeper '.dep_wrk2'
-. $srcdir/diag.sh stop-zookeeper '.dep_wrk3'
+delete_kafka_topic $RANDTOPIC '.dep_wrk1' '22181'
 
 # Do the final sequence check
 seq_check 1 $TESTMESSAGESFULL -d
