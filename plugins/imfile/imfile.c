@@ -63,6 +63,7 @@
 #include "ruleset.h"
 #include "ratelimit.h"
 #include "srUtils.h"
+#include "datetime.h"
 #include "parserif.h"
 
 #include <regex.h>
@@ -340,6 +341,333 @@ OLD_getStateFileName(const instanceConf_t *const inst,
 			*p = '-';
 	}
 	return buf;
+}
+
+/* check if the current multi line read is timed out
+ * @return 0 - no timeout, something else - timeout
+ */
+static int
+readMultiLine_isTimedOut(const strm_t *const __restrict__ pThis)
+{
+	/* note: order of evaluation is choosen so that the most inexpensive
+	 * processing flow is used.
+	 */
+	DBGPRINTF("readMultiline_isTimedOut: prevMsgSeg %p, readTimeout %d, "
+		"lastRead %lld\n", pThis->prevMsgSegment, pThis->readTimeout,
+		(long long) pThis->lastRead);
+	return(   (pThis->readTimeout)
+	       && (pThis->prevMsgSegment != NULL)
+	       && (getTime(NULL) > pThis->lastRead + pThis->readTimeout) );
+}
+
+/* read a multi-line message from a strm file.
+ * The multi-line message is terminated based on the user-provided
+ * startRegex or endRegex (Posix ERE). For performance reasons, the regex
+ * must already have been compiled by the user.
+ * added 2015-05-12 rgerhards
+ */
+static rsRetVal
+readMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *start_preg, regex_t *end_preg, const sbool bEscapeLF,
+	const sbool discardTruncatedMsg, const sbool msgDiscardingError, int64 *const strtOffs)
+{
+	uchar c;
+	uchar finished = 0;
+	cstr_t *thisLine = NULL;
+	rsRetVal readCharRet;
+	const time_t tCurr = pThis->readTimeout ? getTime(NULL) : 0;
+	int maxMsgSize = glblGetMaxLine();
+	DEFiRet;
+
+	do {
+		CHKiRet(strm.ReadChar(pThis, &c)); /* immediately exit on EOF */
+		pThis->lastRead = tCurr;
+		CHKiRet(cstrConstruct(&thisLine));
+		/* append previous message to current message if necessary */
+		if(pThis->prevLineSegment != NULL) {
+			CHKiRet(cstrAppendCStr(thisLine, pThis->prevLineSegment));
+			cstrDestruct(&pThis->prevLineSegment);
+		}
+
+		while(c != '\n') {
+			CHKiRet(cstrAppendChar(thisLine, c));
+			readCharRet = strm.ReadChar(pThis, &c);
+			if(readCharRet == RS_RET_EOF) {/* end of file reached without \n? */
+				CHKiRet(rsCStrConstructFromCStr(&pThis->prevLineSegment, thisLine));
+			}
+			CHKiRet(readCharRet);
+		}
+		cstrFinalize(thisLine);
+
+		/* we have a line, now let's assemble the message */
+		const int isStartMatch = start_preg ?
+				!regexec(start_preg, (char*)rsCStrGetSzStrNoNULL(thisLine), 0, NULL, 0) :
+				0;
+		const int isEndMatch = end_preg ?
+				!regexec(end_preg, (char*)rsCStrGetSzStrNoNULL(thisLine), 0, NULL, 0) :
+				0;
+
+		if(isStartMatch) {
+			/* in this case, the *previous* message is complete and we are
+			 * at the start of a new one.
+			 */
+			if(pThis->ignoringMsg == 0) {
+				if(pThis->prevMsgSegment != NULL) {
+					/* may be NULL in initial poll! */
+					finished = 1;
+					*ppCStr = pThis->prevMsgSegment;
+				}
+			}
+			CHKiRet(rsCStrConstructFromCStr(&pThis->prevMsgSegment, thisLine));
+			pThis->ignoringMsg = 0;
+		} else {
+			if(pThis->ignoringMsg == 0) {
+				if(pThis->prevMsgSegment == NULL) {
+					/* may be NULL in initial poll or after timeout! */
+					CHKiRet(rsCStrConstructFromCStr(&pThis->prevMsgSegment, thisLine));
+				} else {
+					if(bEscapeLF) {
+						rsCStrAppendStrWithLen(pThis->prevMsgSegment, (uchar*)"\\n", 2);
+					} else {
+						cstrAppendChar(pThis->prevMsgSegment, '\n');
+					}
+
+
+					int currLineLen = cstrLen(thisLine);
+					if(currLineLen > 0) {
+						int len;
+						if((len = cstrLen(pThis->prevMsgSegment) + currLineLen) <
+						maxMsgSize) {
+							CHKiRet(cstrAppendCStr(pThis->prevMsgSegment, thisLine));
+							/* we could do this faster, but for now keep it simple */
+						} else {
+							len = currLineLen-(len-maxMsgSize);
+							for(int z=0; z<len; z++) {
+								cstrAppendChar(pThis->prevMsgSegment,
+								thisLine->pBuf[z]);
+							}
+							finished = 1;
+							*ppCStr = pThis->prevMsgSegment;
+							CHKiRet(rsCStrConstructFromszStr(&pThis->prevMsgSegment,
+								thisLine->pBuf+len));
+							if(discardTruncatedMsg == 1) {
+								pThis->ignoringMsg = 1;
+							}
+							if(msgDiscardingError == 1) {
+								if(discardTruncatedMsg == 1) {
+									LogError(0, RS_RET_ERR,
+									"imfile error: message received is "
+									"larger than max msg size; "
+									"rest of message will not be "
+									"processed");
+								} else {
+									LogError(0, RS_RET_ERR,
+									"imfile error: message received is "
+									"larger than max msg size; message "
+									"will be split and processed as "
+									"another message");
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		if(isEndMatch) {
+			/* in this case, the *current* message is complete and we are
+			 * at the end of it.
+			 */
+			if(pThis->ignoringMsg == 0) {
+				if(pThis->prevMsgSegment != NULL) {
+					finished = 1;
+					*ppCStr = pThis->prevMsgSegment;
+					pThis->prevMsgSegment= NULL;
+				}
+			}
+			pThis->ignoringMsg = 0;
+		}
+		cstrDestruct(&thisLine);
+	} while(finished == 0);
+
+finalize_it:
+	*strtOffs = pThis->strtOffs;
+	if(thisLine != NULL) {
+		cstrDestruct(&thisLine);
+	}
+	if(iRet == RS_RET_OK) {
+		pThis->strtOffs = pThis->iCurrOffs; /* we are at begin of next line */
+		cstrFinalize(*ppCStr);
+	} else {
+		if(   pThis->readTimeout
+		   && (pThis->prevMsgSegment != NULL)
+		   && (tCurr > pThis->lastRead + pThis->readTimeout)) {
+			if(rsCStrConstructFromCStr(ppCStr, pThis->prevMsgSegment) == RS_RET_OK) {
+				cstrFinalize(*ppCStr);
+				cstrDestruct(&pThis->prevMsgSegment);
+				pThis->lastRead = tCurr;
+				pThis->strtOffs = pThis->iCurrOffs; /* we are at begin of next line */
+				dbgprintf("stream: generated msg based on timeout: %s\n",
+					cstrGetSzStrNoNULL(*ppCStr));
+				iRet = RS_RET_OK;
+			}
+		}
+	}
+	RETiRet;
+}
+
+
+/* read a 'paragraph' from a strm file.
+ * A paragraph may be terminated by a LF, by a LFLF, or by LF<not whitespace> depending on the option set.
+ * The termination LF characters are read, but are
+ * not returned in the buffer (it is discared). The caller is responsible for
+ * destruction of the returned CStr object! -- dlang 2010-12-13
+ *
+ * Parameter mode controls legacy multi-line processing:
+ * mode = 0 single line mode (equivalent to ReadLine)
+ * mode = 1 LFLF mode (paragraph, blank line between entries)
+ * mode = 2 LF <not whitespace> mode, a log line starts at the beginning of
+ * a line, but following lines that are indented are part of the same log entry
+ */
+static rsRetVal
+strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
+	uint32_t trimLineOverBytes, int64 *const strtOffs)
+{
+	uchar c;
+	uchar finished;
+	DEFiRet;
+
+	ASSERT(pThis != NULL);
+	ASSERT(ppCStr != NULL);
+
+	CHKiRet(cstrConstruct(ppCStr));
+	CHKiRet(strm.ReadChar(pThis, &c));
+
+	/* append previous message to current message if necessary */
+	if(pThis->prevLineSegment != NULL) {
+		cstrFinalize(pThis->prevLineSegment);
+		dbgprintf("readLine: have previous line segment: '%s'\n",
+			rsCStrGetSzStrNoNULL(pThis->prevLineSegment));
+		CHKiRet(cstrAppendCStr(*ppCStr, pThis->prevLineSegment));
+		cstrDestruct(&pThis->prevLineSegment);
+	}
+	if(mode == 0) {
+		while(c != '\n') {
+			CHKiRet(cstrAppendChar(*ppCStr, c));
+			CHKiRet(strm.ReadChar(pThis, &c));
+		}
+		if (trimLineOverBytes > 0 && (uint32_t) cstrLen(*ppCStr) > trimLineOverBytes) {
+			/* Truncate long line at trimLineOverBytes position */
+			dbgprintf("Truncate long line at %u, mode %d\n", trimLineOverBytes, mode);
+			rsCStrTruncate(*ppCStr, cstrLen(*ppCStr) - trimLineOverBytes);
+			cstrAppendChar(*ppCStr, '\n');
+		}
+		cstrFinalize(*ppCStr);
+	} else if(mode == 1) {
+		finished=0;
+		while(finished == 0){
+			if(c != '\n') {
+				CHKiRet(cstrAppendChar(*ppCStr, c));
+				CHKiRet(strm.ReadChar(pThis, &c));
+				pThis->bPrevWasNL = 0;
+			} else {
+				if ((((*ppCStr)->iStrLen) > 0) ){
+					if(pThis->bPrevWasNL) {
+						rsCStrTruncate(*ppCStr, (bEscapeLF) ? 4 : 1);
+						/* remove the prior newline */
+						finished=1;
+					} else {
+						if(bEscapeLF) {
+							CHKiRet(rsCStrAppendStrWithLen(*ppCStr, (uchar*)"#012",
+							sizeof("#012")-1));
+						} else {
+							CHKiRet(cstrAppendChar(*ppCStr, c));
+						}
+						CHKiRet(strm.ReadChar(pThis, &c));
+						pThis->bPrevWasNL = 1;
+					}
+				} else {
+					finished=1;  /* this is a blank line, a \n with nothing since
+							the last complete record */
+				}
+			}
+		}
+		cstrFinalize(*ppCStr);
+		pThis->bPrevWasNL = 0;
+	} else if(mode == 2) {
+		/* indented follow-up lines */
+		finished=0;
+		while(finished == 0){
+			if ((*ppCStr)->iStrLen == 0){
+				if(c != '\n') {
+				/* nothing in the buffer, and it's not a newline, add it to the buffer */
+					CHKiRet(cstrAppendChar(*ppCStr, c));
+					CHKiRet(strm.ReadChar(pThis, &c));
+				} else {
+					finished=1;  /* this is a blank line, a \n with nothing since the
+							last complete record */
+				}
+			} else {
+				if(pThis->bPrevWasNL) {
+					if ((c == ' ') || (c == '\t')){
+						CHKiRet(cstrAppendChar(*ppCStr, c));
+						CHKiRet(strm.ReadChar(pThis, &c));
+						pThis->bPrevWasNL = 0;
+					} else {
+						/* clean things up by putting the character we just read back into
+						 * the input buffer and removing the LF character that is
+						 * currently at the
+						 * end of the output string */
+						CHKiRet(strm.UnreadChar(pThis, c));
+						rsCStrTruncate(*ppCStr, (bEscapeLF) ? 4 : 1);
+						finished=1;
+					}
+				} else { /* not the first character after a newline, add it to the buffer */
+					if(c == '\n') {
+						pThis->bPrevWasNL = 1;
+						if(bEscapeLF) {
+							CHKiRet(rsCStrAppendStrWithLen(*ppCStr, (uchar*)"#012",
+							sizeof("#012")-1));
+						} else {
+							CHKiRet(cstrAppendChar(*ppCStr, c));
+						}
+					} else {
+						CHKiRet(cstrAppendChar(*ppCStr, c));
+					}
+					CHKiRet(strm.ReadChar(pThis, &c));
+				}
+			}
+		}
+		if (trimLineOverBytes > 0 && (uint32_t) cstrLen(*ppCStr) > trimLineOverBytes) {
+			/* Truncate long line at trimLineOverBytes position */
+			dbgprintf("Truncate long line at %u, mode %d\n", trimLineOverBytes, mode);
+			rsCStrTruncate(*ppCStr, cstrLen(*ppCStr) - trimLineOverBytes);
+			cstrAppendChar(*ppCStr, '\n');
+		}
+		cstrFinalize(*ppCStr);
+		pThis->bPrevWasNL = 0;
+	}
+
+finalize_it:
+	if(iRet == RS_RET_OK) {
+		if(strtOffs != NULL) {
+			*strtOffs = pThis->strtOffs;
+		}
+		pThis->strtOffs = pThis->iCurrOffs; /* we are at begin of next line */
+	} else {
+		if(*ppCStr != NULL) {
+			if(cstrLen(*ppCStr) > 0) {
+			/* we may have an empty string in an unsuccesfull poll or after restart! */
+				if(rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr) != RS_RET_OK) {
+					/* we cannot do anything against this, but we can at least
+					 * ensure we do not have any follow-on errors.
+					 */
+					 pThis->prevLineSegment = NULL;
+				}
+			}
+			cstrDestruct(ppCStr);
+		}
+	}
+
+	RETiRet;
 }
 
 /* try to open an old-style state file for given file. If the state file does not
@@ -880,7 +1208,7 @@ poll_timeouts(fs_edge_t *const edge)
 	if(edge->is_file) {
 		act_obj_t *act;
 		for(act = edge->active ; act != NULL ; act = act->next) {
-			if(strmReadMultiLine_isTimedOut(act->pStrm)) {
+			if(readMultiLine_isTimedOut(act->pStrm)) {
 				DBGPRINTF("timeout occured on %s\n", act->name);
 				pollFile(act);
 			}
@@ -1543,10 +1871,10 @@ pollFileReal(act_obj_t *act, cstr_t **pCStr)
 		if(inst->maxLinesAtOnce != 0 && nProcessed >= inst->maxLinesAtOnce)
 			break;
 		if((start_preg == NULL) && (end_preg == NULL)) {
-			CHKiRet(strm.ReadLine(act->pStrm, pCStr, inst->readMode, inst->escapeLF,
+			CHKiRet(strmReadLine(act->pStrm, pCStr, inst->readMode, inst->escapeLF,
 				inst->trimLineOverBytes, &strtOffs));
 		} else {
-			CHKiRet(strmReadMultiLine(act->pStrm, pCStr, start_preg, end_preg,
+			CHKiRet(readMultiLine(act->pStrm, pCStr, start_preg, end_preg,
 				inst->escapeLF, inst->discardTruncatedMsg, inst->msgDiscardingError, &strtOffs));
 		}
 		++nProcessed;
