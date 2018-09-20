@@ -381,9 +381,11 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	}
 
 	CHKiRet(relpEngineListnerConstruct(pRelpEngine, &pSrv));
-	CHKiRet(relpSrvSetLstnPort(pSrv, inst->pszBindPort));
-	CHKiRet(relpSrvSetLstnAddr(pSrv, inst->pszBindAddr));
 	CHKiRet(relpSrvSetMaxDataSize(pSrv, inst->maxDataSize));
+	CHKiRet(relpSrvSetLstnPort(pSrv, inst->pszBindPort));
+	#if defined(HAVE_RELPSRVSETLSTNADDR)
+		CHKiRet(relpSrvSetLstnAddr(pSrv, inst->pszBindAddr));
+	#endif
 
 #ifdef HAVE_RELPSRVSETOVERSIZEMODE
 	CHKiRet(relpSrvSetOversizeMode(pSrv, inst->oversizeMode));
@@ -505,7 +507,13 @@ CODESTARTnewInpInst
 		if(!strcmp(inppblk.descr[i].name, "port")) {
 			inst->pszBindPort = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "address")) {
-			inst->pszBindAddr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			#if defined(HAVE_RELPSRVSETLSTNADDR)
+				inst->pszBindAddr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			#else
+				parser_errmsg("imrelp: librelp does not support input parameter 'address'; "
+					"it probably is too old (1.2.16 should be fine); ignoring setting now, "
+					"listening on all interfaces");
+			#endif
 		} else if(!strcmp(inppblk.descr[i].name, "name")) {
 			inst->pszInputName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
