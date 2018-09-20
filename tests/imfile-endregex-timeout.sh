@@ -1,8 +1,9 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
-export IMFILECHECKTIMEOUT="30"
 . $srcdir/diag.sh init
 . $srcdir/diag.sh check-inotify-only
+export IMFILECHECKTIMEOUT="30"
+
 generate_conf
 add_conf '
 module(load="../plugins/imfile/.libs/imfile" timeoutGranularity="1")

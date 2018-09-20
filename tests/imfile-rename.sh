@@ -1,11 +1,11 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under GPLv3
+. $srcdir/diag.sh check-inotify-only
+. $srcdir/diag.sh init
 export TESTMESSAGES=10000
 export RETRIES=50
 export TESTMESSAGESFULL=19999
-echo [imfile-rename.sh]
-. $srcdir/diag.sh check-inotify-only
-. $srcdir/diag.sh init
+
 generate_conf
 add_conf '
 $WorkDirectory '$RSYSLOG_DYNNAME'.spool

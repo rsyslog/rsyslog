@@ -1,11 +1,12 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under GPLv3
+. $srcdir/diag.sh init
+. $srcdir/diag.sh check-inotify-only
 export IMFILEINPUTFILES="10"
 export IMFILEINPUTFILESSTEPS="5"
 #export IMFILEINPUTFILESALL=$(($IMFILEINPUTFILES * $IMFILEINPUTFILESSTEPS))
 export IMFILECHECKTIMEOUT="20"
-. $srcdir/diag.sh init
-. $srcdir/diag.sh check-inotify-only
+
 generate_conf
 add_conf '
 $WorkDirectory '$RSYSLOG_DYNNAME'.spool

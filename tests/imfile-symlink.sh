@@ -4,11 +4,12 @@
 # are recorded with correct corresponding metadata (name of symlink 
 # matching configuration).
 # This is part of the rsyslog testbench, released under ASL 2.0
+. $srcdir/diag.sh init
+. $srcdir/diag.sh check-inotify
 export IMFILEINPUTFILES="10"
 export IMFILELASTINPUTLINES="3"
 export IMFILECHECKTIMEOUT="20"
-. $srcdir/diag.sh init
-. $srcdir/diag.sh check-inotify
+
 # generate input files first. Note that rsyslog processes it as
 # soon as it start up (so the file should exist at that point).
 generate_conf

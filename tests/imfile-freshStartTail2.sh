@@ -1,8 +1,9 @@
 #!/bin/bash
 # add 2018-05-17 by Pascal Withopf, released under ASL 2.0
-export IMFILECHECKTIMEOUT="60"
 . $srcdir/diag.sh init
 . $srcdir/diag.sh check-inotify
+export IMFILECHECKTIMEOUT="60"
+
 generate_conf
 add_conf '
 module(load="../plugins/imfile/.libs/imfile")

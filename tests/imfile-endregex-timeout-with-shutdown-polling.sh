@@ -2,6 +2,7 @@
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 . $srcdir/diag.sh init
 export IMFILECHECKTIMEOUT="20"
+
 generate_conf
 add_conf '
 module(load="../plugins/imfile/.libs/imfile" mode="polling" pollingInterval="1")

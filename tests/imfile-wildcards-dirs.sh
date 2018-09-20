@@ -1,10 +1,10 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under GPLv3
-export IMFILEINPUTFILES="10"
-export IMFILECHECKTIMEOUT="20"
-echo [imfile-wildcards-dirs.sh]
 . $srcdir/diag.sh check-inotify
 . $srcdir/diag.sh init
+export IMFILEINPUTFILES="10"
+export IMFILECHECKTIMEOUT="20"
+
 generate_conf
 add_conf '
 $WorkDirectory '$RSYSLOG_DYNNAME'.spool

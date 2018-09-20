@@ -1,11 +1,11 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under GPLv3
+. $srcdir/diag.sh init
+#. $srcdir/diag.sh check-inotify-only
 export IMFILEINPUTFILES="8" #"8"
 export IMFILEINPUTFILESSTEPS="5" #"5"
 #export IMFILEINPUTFILESALL=$(($IMFILEINPUTFILES * $IMFILEINPUTFILESSTEPS))
 export IMFILECHECKTIMEOUT="20"
-. $srcdir/diag.sh init
-#. $srcdir/diag.sh check-inotify-only
 # generate input files first. Note that rsyslog processes it as
 # soon as it start up (so the file should exist at that point).
 
