@@ -1,5 +1,15 @@
 ------------------------------------------------------------------------------
 Version 8.39.0 [v8-stable] 2018-10-30
+- bugfix imrelp: do not fail build if librelp does not have relpSrvSetLstnAddr
+  closes https://github.com/rsyslog/rsyslog/issues/2938
+- CI:
+  * testbench: improve plumbing for kafka tests
+    - Removed all sleeps where possible.
+    - Moved all kafka start/stop/download logic into functions.
+    - Moved kafka/zookeeper stop into error_exit and exit_test.
+    - Kafka/Zookeeper cleanup only done on success now.
+    - Kafka/Zookeeper logfiles automatically dumped on error_exit only now.
+    - Added cleanup for Kafka/Zookeeper instances into CI/buildbot_cleanup.sh
 ------------------------------------------------------------------------------
 Version 8.38.0 [v8-stable] 2018-09-18
 - AIX: make basic modules work again
