@@ -1770,6 +1770,8 @@ EXTRA_DIST= \
 	travis/trusty.supp \
 	linux_localtime_r.supp \
 	CI/centos6-9.supp \
+	CI/centos7.supp \
+	CI/gcov.supp \
 	json_var_case.sh \
 	cfg.sh \
 	empty-prop-comparison.sh \
