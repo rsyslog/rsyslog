@@ -211,7 +211,9 @@ confirmed by returning ``OK``, and the individual messages by returning
 
 .. warning::
 
-   There is currently a `known issue
+   This feature is currently **experimental**. It could change in future releases
+   without keeping backwards compatibility with existing configurations or the
+   specified interface. There is also a `known issue
    <https://github.com/rsyslog/rsyslog/issues/2420>`_ with the use of
    transactions together with ``confirmMessages=on``.
 
