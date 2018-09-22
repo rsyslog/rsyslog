@@ -10,6 +10,12 @@ Version 8.39.0 [v8-stable] 2018-10-30
     - Kafka/Zookeeper cleanup only done on success now.
     - Kafka/Zookeeper logfiles automatically dumped on error_exit only now.
     - Added cleanup for Kafka/Zookeeper instances into CI/buildbot_cleanup.sh
+  * testbench: fix incompatibility of one omprog test with Python3
+    Python3 writes to stderr immediately, and this caused the
+    captured output to differ with respect to Python2. Simplified
+    the test to do a single write to stderr. Also a cast to int
+    was needed when calculating 'numRepeats'.
+    closes https://github.com/rsyslog/rsyslog/issues/3030
 ------------------------------------------------------------------------------
 Version 8.38.0 [v8-stable] 2018-09-18
 - AIX: make basic modules work again
