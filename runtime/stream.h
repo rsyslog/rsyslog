@@ -124,6 +124,7 @@ typedef struct strm_s {
 	ino_t inode;	/* current inode for files being monitored (undefined else) */
 	uchar *pszCurrFName; /* name of current file (if open) */
 	uchar *pIOBuf;	/* the iobuffer currently in use to gather data */
+	char *pIOBuf_truncation; /* iobuffer used during trucation detection block re-reads */
 	size_t iBufPtrMax;	/* current max Ptr in Buffer (if partial read!) */
 	size_t iBufPtr;	/* pointer into current buffer */
 	int iUngetC;	/* char set via UngetChar() call or -1 if none set */

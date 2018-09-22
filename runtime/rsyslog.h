@@ -221,9 +221,9 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	/* begin regular error codes */
 	RS_RET_NOT_IMPLEMENTED = -7,	/**< implementation is missing (probably internal error or lazyness ;)) */
 	RS_RET_OUT_OF_MEMORY = -6,	/**< memory allocation failed */
-	RS_RET_PROVIDED_BUFFER_TOO_SMALL = -50,
-/*< the caller provided a buffer, but the called function sees the size of this buffer is too small -
-operation not carried out */
+	RS_RET_PROVIDED_BUFFER_TOO_SMALL = -50, /*< the caller provided a buffer, but the called function sees
+						  the size of this buffer is too small - operation not carried out */
+	RS_RET_FILE_TRUNCATED = -51,	/**< (input) file was truncated, not an error but a status */
 	RS_RET_TRUE = -3,		/**< to indicate a true state (can be used as TRUE, legacy) */
 	RS_RET_FALSE = -2,		/**< to indicate a false state (can be used as FALSE, legacy) */
 	RS_RET_NO_IRET = -8,	/**< This is a trick for the debuging system - it means no iRet is provided  */
