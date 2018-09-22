@@ -1,1 +1,15 @@
 comment: off
+
+coverage:
+  # to get things started, let's aim at a lower goal. This actually helps
+  # to find those areas that we need to concentrate on.
+  range: 50..75
+
+ignore:
+  # will be removed soon: https://github.com/rsyslog/rsyslog/issues/2103
+  - "contrib/imczmq"
+  - "contrib/omczmq"
+
+  # we are currently unable to provide test environment for these:
+  - "plugins/imgssapi"
+  - "plugins/omgssapi"
