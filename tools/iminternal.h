@@ -40,7 +40,6 @@ typedef struct iminternal_s iminternal_t;
 rsRetVal modInitIminternal(void);
 rsRetVal modExitIminternal(void);
 rsRetVal iminternalAddMsg(smsg_t *pMsg);
-rsRetVal iminternalHaveMsgReady(int* pbHaveOne);
 rsRetVal iminternalRemoveMsg(smsg_t **ppMsg);
 
 #endif /* #ifndef IMINTERNAL_H_INCLUDED */

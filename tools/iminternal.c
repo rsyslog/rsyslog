@@ -151,18 +151,6 @@ finalize_it:
 	RETiRet;
 }
 
-/* tell the caller if we have any messages ready for processing.
- * 0 means we have none, everything else means there is at least
- * one message ready.
- */
-rsRetVal iminternalHaveMsgReady(int* pbHaveOne)
-{
-	pthread_mutex_lock(&mutList);
-	const rsRetVal iRet = llGetNumElts(&llMsgs, pbHaveOne);
-	pthread_mutex_unlock(&mutList);
-	return iRet;
-}
-
 
 /* initialize the iminternal subsystem
  * must be called once at the start of the program
