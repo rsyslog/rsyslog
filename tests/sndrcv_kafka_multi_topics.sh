@@ -1,27 +1,24 @@
 #!/bin/bash
 # added 2018-08-13 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
-echo Init Testbench
 . $srcdir/diag.sh init
 
-# *** ==============================================================================
 export TESTMESSAGES=50000
 export TESTMESSAGESFULL=100000
 
 # Generate random topic name
-export RANDTOPIC1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
-export RANDTOPIC2=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
+export RANDTOPIC1=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 8 | head -n 1)
+export RANDTOPIC2=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 8 | head -n 1)
 
 # Set EXTRA_EXITCHECK to dump kafka/zookeeperlogfiles on failure only.
 export EXTRA_EXITCHECK=dumpkafkalogs
 export EXTRA_EXIT=kafka
-echo ===============================================================================
-echo Check and Stop previous instances of kafka/zookeeper 
+echo STEP: Check and Stop previous instances of kafka/zookeeper
 download_kafka
 stop_zookeeper
 stop_kafka
 
-echo Create kafka/zookeeper instance and topics
+echo STEP: Create kafka/zookeeper instance and topics
 start_zookeeper
 start_kafka
 create_kafka_topic $RANDTOPIC1 '.dep_wrk' '22181'
@@ -84,13 +81,13 @@ local4.* action(	name="kafka-fwd"
 	)
 '
 
-echo Starting sender instance [omkafka]
+echo STEP: Starting sender instance [omkafka]
 startup
 # ---
 
 # Injection messages now before starting receiver, simply because omkafka will take some time and
 # there is no reason to wait for the receiver to startup first. 
-echo Inject messages into rsyslog sender instance
+echo STEP: Inject messages into rsyslog sender instance
 injectmsg 1 $TESTMESSAGES
 
 # --- Create omkafka receiver config
@@ -131,20 +128,20 @@ if ($msg contains "msgnum:") then {
 }
 ' 2
 
-echo Starting receiver instance [imkafka]
+echo STEP: Starting receiver instance [imkafka]
 startup 2
 # ---
 
-echo Stopping sender  instance [omkafka]
+echo STEP: Stopping sender  instance [omkafka]
 shutdown_when_empty
 wait_shutdown
 
-echo Stopping receiver instance [imkafka]
+echo STEP: Stopping receiver instance [imkafka]
 kafka_wait_group_coordinator
 shutdown_when_empty 2
 wait_shutdown 2
 
-echo delete kafka topics
+echo STEP: delete kafka topics
 delete_kafka_topic $RANDTOPIC1 '.dep_wrk' '22181'
 delete_kafka_topic $RANDTOPIC2 '.dep_wrk' '22181'
 
