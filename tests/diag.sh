@@ -1014,7 +1014,19 @@ function create_kafka_topic() {
 			echo "Topic-name not provided."
 			exit 1
 	fi
-	(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --zookeeper localhost:$dep_work_port/kafka --create --topic $1 --replication-factor 1 --partitions 2 )
+
+	#some new plubming just for working on https://github.com/rsyslog/rsyslog/issues/3045
+	text=$(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --zookeeper localhost:$dep_work_port/kafka --create --topic $1 --replication-factor 1 --partitions 2 )
+echo ======================================================================
+cat -n <<< $text
+echo ======================================================================
+	grep "Error .* Replication factor:" <<<"$text"
+	if [ $? -ne 1 ]; then
+		echo FAIL: kafka had error message:
+		cat -n <<< $text
+		error_exit 1
+	fi
+
 	(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --zookeeper localhost:$dep_work_port/kafka --alter --topic $1 --delete-config retention.ms)
 	(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --zookeeper localhost:$dep_work_port/kafka --alter --topic $1 --delete-config retention.bytes)
 }
