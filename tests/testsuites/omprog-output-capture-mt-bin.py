@@ -10,7 +10,7 @@ linePrefix = "[{0:09d}] ".format(os.getpid())
 logLine = sys.stdin.readline()
 while logLine:
     logLine = logLine.strip()
-    numRepeats = lineLength / len(logLine)
+    numRepeats = int(lineLength / len(logLine))
     lineToStdout = (linePrefix + "[stdout] " + logLine*numRepeats)[:lineLength]
     lineToStderr = (linePrefix + "[stderr] " + logLine*numRepeats)[:lineLength]
 
@@ -22,16 +22,13 @@ while logLine:
     # size of the block buffer is generally greater than PIPE_BUF).
     sys.stdout.write(lineToStdout + "\n")
 
-    # Write to stderr using two writes. Since stderr is unbuffered, each write will be written
-    # immediately to the pipe, and this will cause intermingled lines in the output file.
-    # However, we avoid this by executing this script with 'stdbuf -eL', which forces line
-    # buffering for stderr. We could alternatively do a single write.
-    sys.stderr.write(lineToStderr)
-    sys.stderr.write("\n")
+    # Write to stderr using a single write. Since stderr is unbuffered, each write will be
+    # written immediately (and atomically) to the pipe.
+    sys.stderr.write(lineToStderr + "\n")
 
-    # Note: In future versions of Python3, stderr will possibly be line buffered (see
-    # https://bugs.python.org/issue13601).
-    # Note: When writing to stderr using the Python logging module, it seems that line
+    # Note (FTR): In future versions of Python3, stderr will possibly be line buffered (see
+    # https://bugs.python.org/issue13601). The previous write will also be atomic in this case.
+    # Note (FTR): When writing to stderr using the Python logging module, it seems that line
     # buffering is also used (although this could depend on the Python version).
 
     logLine = sys.stdin.readline()

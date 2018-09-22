@@ -24,7 +24,7 @@ else
     LINE_LENGTH=511   # 512 minus 1 byte (for the newline char)
 fi
 
-export command_line="/usr/bin/stdbuf -oL -eL $srcdir/testsuites/omprog-output-capture-mt-bin.py $LINE_LENGTH"
+export command_line="/usr/bin/stdbuf -oL $srcdir/testsuites/omprog-output-capture-mt-bin.py $LINE_LENGTH"
 
 check_command_available stdbuf
 generate_conf
