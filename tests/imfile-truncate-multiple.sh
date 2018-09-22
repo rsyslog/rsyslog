@@ -1,0 +1,58 @@
+#!/bin/bash
+# this test checks truncation mode, and does so with multiple truncations of
+# the input file.
+# It also needs a larger load, which shall be sufficient to do begin of file
+# checks as well as should support file id hash generation.
+# addd 2016-10-06 by RGerhards, released under ASL 2.0
+. $srcdir/diag.sh init
+. $srcdir/diag.sh check-inotify
+export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
+export RSYSLOG_DEBUGLOG="log"
+generate_conf
+add_conf '
+global( debug.whitelist="on"
+	debug.files=["imfile.c"])
+
+module(load="../plugins/imfile/.libs/imfile" pollingInterval="1")
+
+input(type="imfile" File="'./$RSYSLOG_DYNNAME'.input" Tag="file:" reopenOnTruncate="on")
+
+template(name="outfmt" type="string" string="%msg:F,58:2%\n")
+if $msg contains "msgnum:" then
+	action( type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+'
+
+# write the beginning of the file
+NUMMSG=1000
+./inputfilegen -m 1000 -i0 > $RSYSLOG_DYNNAME.input
+ls -li $RSYSLOG_DYNNAME.input
+inode=$(ls -i $RSYSLOG_DYNNAME.input | awk '{ print $1;}' )
+echo inode $inode
+
+startup
+
+for i in {0..50}; do
+	# check that previous msg injection worked
+	wait_queueempty
+	echo nbr of lines: $(wc -l $RSYSLOG_OUT_LOG)
+	seq_check 0 $(($NUMMSG - 1)) -d
+
+	# begin new inject cycle
+	generate_msgs=$(( $i * 50))
+	echo generating $NUMMSG .. $(($NUMMSG + $generate_msgs -1))
+	./inputfilegen -m$generate_msgs -i$NUMMSG > $RSYSLOG_DYNNAME.input
+	let NUMMSG=NUMMSG+generate_msgs
+	if [  $inode -ne $(ls -i $RSYSLOG_DYNNAME.input | awk '{ print $1;}' ) ]; then
+		echo FAIL testbench did not keep same inode number, expected $inode
+		ls -li $RSYSLOG_DYNNAME.input
+		exit 100
+	fi
+done
+
+echo generated $NUMMSG messages
+
+shutdown_when_empty
+wait_shutdown
+
+seq_check 0 $(($NUMMSG - 1)) -d
+exit_test

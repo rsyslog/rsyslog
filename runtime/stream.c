@@ -562,6 +562,135 @@ finalize_it:
 }
 
 
+/* helper t strmFileIsTruncated */
+static void ATTR_NONNULL()
+updateFrstBlkInfo(strm_t *const pThis, const char *const frstBlk, const ssize_t lenFrstBlk)
+{
+dbgprintf("truncate: updateFrstBlkInfo\n");
+	pThis->lenFrstBlk = lenFrstBlk;
+	memcpy(pThis->frstBlk, frstBlk, lenFrstBlk);
+}
+
+/* read frstBlk info */
+static rsRetVal ATTR_NONNULL()
+strmReadFrstBlkInfo(strm_t *const pThis, ssize_t *const lenFrstBlk, char *frstBlk)
+{
+	off64_t currPos;
+	off64_t r;
+	DEFiRet;
+	
+dbgprintf("readFrstBlkInfo enter \n");
+	if(!pThis->bReopenOnTruncate) {
+		goto done;
+	}
+
+	currPos = lseek64(pThis->fd, 0, SEEK_CUR);
+	if(currPos < 0) {
+		LogError(errno, RS_RET_IO_ERROR, "imfile: error obtaining current file "
+			"offset for %s cannot read first blk info",
+			pThis->pszCurrFName);
+		goto done;
+	}
+	r = lseek64(pThis->fd, 0, SEEK_SET);
+	if(r < 0) {
+		LogError(errno, RS_RET_IO_ERROR, "imfile: error setting file offset for %s"
+			"to zero, cannot read first blk info",
+			pThis->pszCurrFName);
+		goto done;
+	}
+
+	/* the actual check */
+	*lenFrstBlk = read(pThis->fd, frstBlk, FILE_FRSTBLK_SIZE);
+*(frstBlk+FILE_FRSTBLK_SIZE) = 0;
+dbgprintf("readFrstBlkInfo, size %lld (old %lld), memcmp %d: %s\n", (long long) (*lenFrstBlk), (long long) pThis->lenFrstBlk, memcmp(frstBlk, pThis->frstBlk, *lenFrstBlk), frstBlk);
+	if(*lenFrstBlk < 0) {
+		LogError(errno, RS_RET_IO_ERROR, "imfile: error reading first data block for %s",
+			pThis->pszCurrFName);
+			/* do NOT exit, we need to re-set offset! */
+	} else {
+		//if(pThis->needInitFrstBlk) {
+		if(pThis->lenFrstBlk == 0) {
+			pThis->needInitFrstBlk = 0;
+			updateFrstBlkInfo(pThis, frstBlk, *lenFrstBlk);
+		}
+	}
+
+	/* done, now restore offset */
+	r = lseek64(pThis->fd, currPos, SEEK_SET);
+	if(r < 0) {
+		LogError(errno, RS_RET_IO_ERROR, "imfile: error setting file offset for %s"
+			"back to needed value, message will probably be duplicated",
+			pThis->pszCurrFName);
+	}
+done:
+	dbgprintf("truncate readFrstBlkInfo exitn\n");
+	RETiRet;
+}
+
+/* check if file has been truncated
+ * if an error occurs, we treat this as "not truncated".
+ */
+static int ATTR_NONNULL(1)
+strmFileIsTruncated(strm_t *const pThis)
+{
+	int isTruncated = 0;
+	ssize_t lenFrstBlk;
+	char frstBlk[FILE_FRSTBLK_SIZE+1];
+	
+dbgprintf("truncate enter %d\n", isTruncated);
+	if(!pThis->bReopenOnTruncate) {
+		goto done;
+	}
+
+	/* the actual check */
+	strmReadFrstBlkInfo(pThis, &lenFrstBlk, frstBlk);
+	if(lenFrstBlk < 0) {
+		LogError(errno, RS_RET_IO_ERROR, "imfile: error reading first data block for %s"
+			"in truncation check, assuming unchanged",
+			pThis->pszCurrFName);
+			/* do NOT exit, we need to re-set offset! */
+	} else {
+		if(lenFrstBlk < pThis->lenFrstBlk) {
+			DBGPRINTF("file '%s': frstblk chck old size %llu < new %llu, "
+				"assuming truncated\n", pThis->pszCurrFName,
+				(unsigned long long) pThis->lenFrstBlk,
+				(unsigned long long) lenFrstBlk);
+			isTruncated = 1;
+		} else if(memcmp(frstBlk, pThis->frstBlk, pThis->lenFrstBlk) != 0) {
+			DBGPRINTF("file '%s': frstblk check data different, size is %llu "
+				"assuming truncated\n", pThis->pszCurrFName,
+				(unsigned long long) lenFrstBlk);
+dbgprintf("existing data: %s\n", pThis->frstBlk);
+			isTruncated = 1;
+		} else {
+			DBGPRINTF("file '%s' looks non-truncated after frstblk check\n",
+				pThis->pszCurrFName);
+		}
+
+		if(isTruncated || lenFrstBlk > pThis->lenFrstBlk) {
+			updateFrstBlkInfo(pThis, frstBlk, lenFrstBlk);
+		}
+	}
+
+done:
+	dbgprintf("truncate ret %d\n", isTruncated);
+	return isTruncated;
+}
+
+rsRetVal ATTR_NONNULL(1)
+strmUpdateTruncationDetection(strm_t *const pThis)
+{
+	ssize_t lenFrstBlk;
+	char frstBlk[FILE_FRSTBLK_SIZE+1];
+	DEFiRet;
+	if(pThis->bReopenOnTruncate) {
+		strmReadFrstBlkInfo(pThis, &lenFrstBlk, frstBlk);
+		updateFrstBlkInfo(pThis, frstBlk, lenFrstBlk);
+	}
+	RETiRet;
+}
+
+
 /* handle the eof case for monitored files.
  * If we are monitoring a file, someone may have rotated it. In this case, we
  * also need to close it and reopen it under the same name.
@@ -582,15 +711,17 @@ strmHandleEOFMonitor(strm_t *pThis)
 	ISOBJ_TYPE_assert(pThis, strm);
 	if(stat((char*) pThis->pszCurrFName, &statName) == -1)
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
-	DBGPRINTF("stream checking for file change on '%s', inode %u/%u\n",
-	  pThis->pszCurrFName, (unsigned) pThis->inode,
-	  (unsigned) statName.st_ino);
+	DBGPRINTF("stream checking for file change on '%s', inode %u/%u size %llu/%llu\n",
+		pThis->pszCurrFName, (unsigned) pThis->inode, (unsigned) statName.st_ino,
+		(long long unsigned) pThis->iCurrOffs, (long long unsigned) statName.st_size);
 
 	/* Inode unchanged but file size on disk is less than current offset
 	 * means file was truncated, we also reopen if 'reopenOnTruncate' is on
 	 */
+	//if (pThis->inode != statName.st_ino
+	//	  || (pThis->bReopenOnTruncate && statName.st_size < pThis->iCurrOffs)) {
 	if (pThis->inode != statName.st_ino
-		  || (pThis->bReopenOnTruncate && statName.st_size < pThis->iCurrOffs)) {
+		  || strmFileIsTruncated(pThis)) {
 		DBGPRINTF("we had a file change on '%s'\n", pThis->pszCurrFName);
 		CHKiRet(strmCloseFile(pThis));
 		CHKiRet(strmOpenFile(pThis));
@@ -1111,6 +1242,7 @@ BEGINobjConstruct(strm) /* be sure to specify the object type also in END macro!
 	pThis->strtOffs = 0;
 	pThis->ignoringMsg = 0;
 	pThis->bPrevWasNL = 0;
+	pThis->needInitFrstBlk = 1;
 	pThis->fileNotFoundError = 1;
 	pThis->noRepeatedErrorOutput = 0;
 	pThis->lastRead = getTime(NULL);

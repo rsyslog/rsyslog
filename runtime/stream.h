@@ -91,6 +91,8 @@ typedef enum {				/* when extending, do NOT change existing modes! */
 	STREAMMODE_WRITE_APPEND = 4
 } strmMode_t;
 
+#define FILE_FRSTBLK_SIZE 1024	/* size of block we use to detect if the file has been
+				 * truncated and thus changed. */
 #define STREAM_ASYNC_NUMBUFS 2 /* must be a power of 2 -- TODO: make configurable */
 /* The strm_t data structure */
 typedef struct strm_s {
@@ -164,6 +166,11 @@ typedef struct strm_s {
 	int fileNotFoundError;
 	int noRepeatedErrorOutput; /* if a file is missing the Error is only given once */
 	int ignoringMsg;
+	/* support for truncation detection by looking at first block of file */
+	// TODO: persist
+	int needInitFrstBlk; /* need to init frstBlk (info never read)? */
+	int lenFrstBlk;
+	char frstBlk[FILE_FRSTBLK_SIZE];	/* actual first block data */
 } strm_t;
 
 
@@ -233,5 +240,6 @@ void strmSetReadTimeout(strm_t *const __restrict__ pThis, const int val);
 const uchar * ATTR_NONNULL() strmGetPrevLineSegment(strm_t *const pThis);
 const uchar * ATTR_NONNULL() strmGetPrevMsgSegment(strm_t *const pThis);
 int ATTR_NONNULL() strmGetPrevWasNL(const strm_t *const pThis);
+rsRetVal ATTR_NONNULL(1) strmUpdateTruncationDetection(strm_t *const pThis);
 
 #endif /* #ifndef STREAM_H_INCLUDED */

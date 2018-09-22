@@ -1289,6 +1289,7 @@ enqLine(act_obj_t *const act,
 		FINALIZE;
 	}
 
+dbgprintf("imfile: enqMsg: %s\n", (char*)rsCStrGetSzStrNoNULL(cstrLine));
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetFlowControlType(pMsg, eFLOWCTL_FULL_DELAY);
 	MsgSetInputName(pMsg, pInputName);
@@ -1560,6 +1561,7 @@ pollFileReal(act_obj_t *act, cstr_t **pCStr)
 	}
 
 finalize_it:
+	strmUpdateTruncationDetection(act->pStrm);
 	multiSubmitFlush(&act->multiSub);
 
 	if(*pCStr != NULL) {
