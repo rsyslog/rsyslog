@@ -360,8 +360,8 @@ CheckFileChange(strm_t *pThis)
 	CHKiRet(strmSetCurrFName(pThis));
 	if(stat((char*) pThis->pszCurrFName, &statName) == -1)
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
-	DBGPRINTF("stream/after deserialize checking for file change on '%s', "
-		"inode %u/%u, size/currOffs %llu/%llu\n",
+	DBGPRINTF("CheckFileChange: stream/after deserialize checking for file change "
+		"on '%s', inode %u/%u, size/currOffs %llu/%llu\n",
 		pThis->pszCurrFName, (unsigned) pThis->inode,
 		(unsigned) statName.st_ino,
 		(long long unsigned) statName.st_size,
@@ -574,8 +574,8 @@ finalize_it:
  * circumstances). So starting as of now, we only check the inode number and
  * a file change is detected only if the inode changes. -- rgerhards, 2011-01-10
  */
-static rsRetVal
-strmHandleEOFMonitor(strm_t *pThis)
+static rsRetVal ATTR_NONNULL()
+strmHandleEOFMonitor(strm_t *const pThis)
 {
 	DEFiRet;
 	struct stat statName;
@@ -583,7 +583,7 @@ strmHandleEOFMonitor(strm_t *pThis)
 	ISOBJ_TYPE_assert(pThis, strm);
 	if(stat((char*) pThis->pszCurrFName, &statName) == -1)
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
-	DBGPRINTF("stream checking for file change on '%s', inode %u/%u size %llu/%llu\n",
+	DBGPRINTF("strmHandleEOFMonitor: stream checking for file change on '%s', inode %u/%u size %llu/%llu\n",
 		pThis->pszCurrFName, (unsigned) pThis->inode, (unsigned) statName.st_ino,
 		(long long unsigned) pThis->iCurrOffs, (long long unsigned) statName.st_size);
 
@@ -611,8 +611,8 @@ finalize_it:
  * try to open the next one.
  * rgerhards, 2008-02-13
  */
-static rsRetVal
-strmHandleEOF(strm_t *pThis)
+static rsRetVal ATTR_NONNULL()
+strmHandleEOF(strm_t *const pThis)
 {
 	DEFiRet;
 
@@ -629,7 +629,13 @@ strmHandleEOF(strm_t *pThis)
 			CHKiRet(strmNextFile(pThis));
 			break;
 		case STREAMTYPE_FILE_MONITOR:
-			CHKiRet(strmHandleEOFMonitor(pThis));
+			DBGOPRINT((obj_t*) pThis, "file '%s' (%d) EOF, rotationCheck %d\n",
+				pThis->pszCurrFName, pThis->fd, pThis->rotationCheck);
+			if(pThis->rotationCheck == STRM_ROTATION_DO_CHECK) {
+				CHKiRet(strmHandleEOFMonitor(pThis));
+			} else {
+				ABORT_FINALIZE(RS_RET_EOF);
+			}
 			break;
 	}
 
@@ -687,9 +693,6 @@ checkTruncation(strm_t *const pThis)
 		iRet = rereadTruncated(pThis, "cannot seek backward to begin of last block");
 		FINALIZE;
 	}
-dbgprintf("checkTruncation seek backwrds: %d\n", ret);
-currpos = lseek64(pThis->fd, 0, SEEK_CUR);
-dbgprintf("checkTruncation in actual processing, NEW currpos %d, backseek is %d\n", (int)currpos, (int) backseek);
 
 	const ssize_t lenRead = read(pThis->fd, pThis->pIOBuf_truncation, pThis->iBufPtrMax);
 	dbgprintf("checkTruncation proof-read: %d bytes\n", (int) lenRead);
@@ -861,7 +864,7 @@ static rsRetVal strmUnreadChar(strm_t *pThis, uchar c)
  * a line, but following lines that are indented are part of the same log entry
  */
 static rsRetVal
-strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
+strmReadLine(strm_t *const pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
 	uint32_t trimLineOverBytes, int64 *const strtOffs)
 {
 	uchar c;
@@ -2147,14 +2150,25 @@ DEFpropSetMeth(strm, cryprov, cryprov_if_t*)
 DEFpropSetMeth(strm, cryprovData, void*)
 
 /* sets timeout in seconds */
-void
+void ATTR_NONNULL()
 strmSetReadTimeout(strm_t *const __restrict__ pThis, const int val)
 {
+	ISOBJ_TYPE_assert(pThis, strm);
 	pThis->readTimeout = val;
 }
 
-static rsRetVal strmSetbDeleteOnClose(strm_t *pThis, int val)
+void ATTR_NONNULL()
+strmSet_checkRotation(strm_t *const pThis, const int val) {
+	ISOBJ_TYPE_assert(pThis, strm);
+	assert(val == STRM_ROTATION_DO_CHECK || val == STRM_ROTATION_DO_NOT_CHECK);
+	pThis->rotationCheck = val;
+}
+
+
+static rsRetVal ATTR_NONNULL()
+strmSetbDeleteOnClose(strm_t *const pThis, const int val)
 {
+	ISOBJ_TYPE_assert(pThis, strm);
 	pThis->bDeleteOnClose = val;
 	if(pThis->cryprov != NULL) {
 		pThis->cryprov->SetDeleteOnClose(pThis->cryprovFileData, pThis->bDeleteOnClose);
@@ -2162,15 +2176,19 @@ static rsRetVal strmSetbDeleteOnClose(strm_t *pThis, int val)
 	return RS_RET_OK;
 }
 
-static rsRetVal strmSetiMaxFiles(strm_t *pThis, int iNewVal)
+static rsRetVal ATTR_NONNULL()
+strmSetiMaxFiles(strm_t *const pThis, const int iNewVal)
 {
+	ISOBJ_TYPE_assert(pThis, strm);
 	pThis->iMaxFiles = iNewVal;
 	pThis->iFileNumDigits = getNumberDigits(iNewVal);
 	return RS_RET_OK;
 }
 
-static rsRetVal strmSetFileNotFoundError(strm_t *pThis, int pFileNotFoundError)
+static rsRetVal ATTR_NONNULL()
+strmSetFileNotFoundError(strm_t *const pThis, const int pFileNotFoundError)
 {
+	ISOBJ_TYPE_assert(pThis, strm);
 	pThis->fileNotFoundError = pFileNotFoundError;
 	return RS_RET_OK;
 }

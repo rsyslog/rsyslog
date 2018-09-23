@@ -740,8 +740,19 @@ detect_updates(fs_edge_t *const edge)
 			act_obj_unlink(act);
 			restart = 1;
 			break;
+		} else if(fileInfo.st_ino != act->ino) {
+			DBGPRINTF("file '%s' inode changed from %llu to %llu, unlinking from "
+				"internal lists\n", act->name, (long long unsigned) act->ino,
+				(long long unsigned) fileInfo.st_ino);
+			if(act->pStrm != NULL) {
+				/* we do no need to re-set later, as act_obj_unlink
+				 * will destroy the strm obj */
+				strmSet_checkRotation(act->pStrm, STRM_ROTATION_DO_NOT_CHECK);
+			}
+			act_obj_unlink(act);
+			restart = 1;
+			break;
 		}
-		// TODO: add inode check for change notification!
 
 	}
 
@@ -993,10 +1004,10 @@ chk_active(const act_obj_t *act, const act_obj_t *const deleted)
 /* unlink act object from linked list and then
  * destruct it.
  */
-static void //ATTR_NONNULL()
+static void ATTR_NONNULL()
 act_obj_unlink(act_obj_t *act)
 {
-	DBGPRINTF("act_obj_unlink %p: %s\n", act, act->name);
+	DBGPRINTF("act_obj_unlink %p: %s, pStrm %p\n", act, act->name, act->pStrm);
 	if(act->prev == NULL) {
 		act->edge->active = act->next;
 	} else {

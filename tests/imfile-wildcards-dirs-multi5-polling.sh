@@ -1,11 +1,9 @@
 #!/bin/bash
-# This is part of the rsyslog testbench, licensed under GPLv3
-export IMFILEINPUTFILES="8" #"8"
-export IMFILEINPUTFILESSTEPS="5" #"5"
-#export IMFILEINPUTFILESALL=$(($IMFILEINPUTFILES * $IMFILEINPUTFILESSTEPS))
-export IMFILECHECKTIMEOUT="5"
+# This is part of the rsyslog testbench, licensed under ASL 2.0
 . $srcdir/diag.sh init
-#. $srcdir/diag.sh check-inotify-only
+export IMFILEINPUTFILES="8"
+export IMFILEINPUTFILESSTEPS="5"
+export IMFILECHECKTIMEOUT="5"
 # generate input files first. Note that rsyslog processes it as
 # soon as it start up (so the file should exist at that point).
 
@@ -13,7 +11,7 @@ export IMFILECHECKTIMEOUT="5"
 generate_conf
 add_conf '
 global( debug.whitelist="on"
-	debug.files=["imfile.c"])
+	debug.files=["imfile.c", "stream.c"])
 #	debug.files=["rainerscript.c", "ratelimit.c", "ruleset.c", "main Q",
 #	"msg.c", "../action.c", "imdiag.c"])
 
@@ -46,30 +44,28 @@ if $msg contains "msgnum:" then
 
 startup
 
-for j in `seq 1 $IMFILEINPUTFILESSTEPS`;
-do
+for j in $(seq 1 $IMFILEINPUTFILESSTEPS); do
+	cp log log.$j
 	echo "Loop Num $j"
 
 	for i in `seq 1 $IMFILEINPUTFILES`;
 	do
 		mkdir $RSYSLOG_DYNNAME.input.dir$i
 		mkdir $RSYSLOG_DYNNAME.input.dir$i/dir$i
-		./inputfilegen -m 1 > $RSYSLOG_DYNNAME.input.dir$i/dir$i/file.logfile
+		./inputfilegen -i $j -m 1 > $RSYSLOG_DYNNAME.input.dir$i/dir$i/file.logfile
 	done
 
 	ls -d $RSYSLOG_DYNNAME.input.*
 	
 	# Check correct amount of input files each time
-	let IMFILEINPUTFILESALL=$(($IMFILEINPUTFILES * $j))
-	content_check_with_count "HEADER msgnum:00000000:" $IMFILEINPUTFILESALL $IMFILECHECKTIMEOUT
-
+	let IMFILEINPUTFILESALL=$((IMFILEINPUTFILES * j))
+	content_check_with_count "HEADER msgnum:000000" $IMFILEINPUTFILESALL $IMFILECHECKTIMEOUT
 	# Delete all but first!
 	for i in `seq 1 $IMFILEINPUTFILES`;
 	do
 		rm -rf $RSYSLOG_DYNNAME.input.dir$i/dir$i/file.logfile
 		rm -rf $RSYSLOG_DYNNAME.input.dir$i
 	done
-
 done
 
 shutdown_when_empty # shut down rsyslogd when done processing messages
