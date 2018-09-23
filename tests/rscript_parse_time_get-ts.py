@@ -12,7 +12,7 @@
 # year (depending on whether it is December or not).
 #   - For example:
 #        * If today is December 13th 2017 and we get passed the date/time
-#          string "Jan  4 01:00:00", we assume that it is for the next 
+#          string "Jan  4 01:00:00", we assume that it is for the next
 #          year (2018).
 #        * If today is October 5th 2017, and we get passed the date/time
 #          string "Nov  5 01:10:11", we assume that it is for this year.
@@ -70,7 +70,7 @@ def estimate_year(cy, cm, im):
 	return cy;
 
 # A quick and dirty unit test to validate that our
-# estimate_year() function is working as it should. 
+# estimate_year() function is working as it should.
 def self_test():
 
     # Where the incoming month is within one month
@@ -85,7 +85,7 @@ def self_test():
 
     # These tests validate months that are MORE than
     # one month in the future OR are before the current
-    # month. If, numerically, the month comes after the 
+    # month. If, numerically, the month comes after the
     # current month, it's assumed to be for the year
     # PRIOR, otherwise it's assumed to be from THIS year.
     do_test("estimate_year(2017, NOV, JAN)", 2017)
