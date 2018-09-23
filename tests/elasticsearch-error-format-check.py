@@ -20,7 +20,7 @@ def checkDefaultErrorFile():
                         print reqItem
                         print "Unknown item found"
                         sys.exit(1)
-                
+              
             elif item == "reply":
                 for replyItem in json_data[item]:
                     if replyItem == "items":
@@ -56,12 +56,12 @@ def checkErrorOnlyFile():
             if item == "request":
                 print json_data[item]
                 indexCount = str(json_data[item]).count('\"_index\":')
-                
-                
+              
+              
             elif item == "url":
                 print "url found"
-                
-            
+              
+          
             elif item == "reply":
                 print json_data[item]
                 replyCount = str(json_data[item]).count('\"_index\":')
@@ -103,20 +103,20 @@ def checkErrorInterleaved():
                             sys.exit(9)
                     if replyCount != indexCount :
                         sys.exit(8)
-            
-                
-                
+          
+              
+              
             elif item == "url":
                 print "url found"
-                
-            
-           
+              
+          
+         
 
             else:
                 print item
                 print "Unknown item found"
                 sys.exit(4)
-    
+  
     return 0
 
 def checkInterleaved():

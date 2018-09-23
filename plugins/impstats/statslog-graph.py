@@ -3,11 +3,11 @@
 
 # 	* Copyright (C) 2013-2018 Adiscon GmbH.
 #	* This file is part of RSyslog
-#	* 
-#	* This script processes csv stats logfiles created by statslog-splitter.py and creates graphs 
+#	*
+#	* This script processes csv stats logfiles created by statslog-splitter.py and creates graphs
 #	* Dependecies:	- python pip		-> Needed to install python packages
 #	*		- python cairosvg	-> Needed for PNG converting support!
-#	*		- Install python packages using this command: 
+#	*		- Install python packages using this command:
 #	*		pip install CairoSVG tinycss cssselect pygal
 #	*
 
@@ -15,7 +15,7 @@ import sys
 import datetime
 import time
 #import os
-import pygal 
+import pygal
 
 # Set default variables
 szInput = ""
@@ -41,8 +41,8 @@ aMajorXData = []
 aCounters = None
 
 # Helper variables
-nDataRecordCound = 0 
-nLineCount = 0 
+nDataRecordCound = 0
+nLineCount = 0
 iStartSeconds = 0
 
 
@@ -53,7 +53,7 @@ for arg in sys.argv: # [-4:]:
 	elif arg.find("--outputfile=") != -1:
 		szOutputFile = arg[13:]
 	elif arg.find("--maxdataxlabel=") != -1:
-		nMaxDataCount = int(arg[16:]) 
+		nMaxDataCount = int(arg[16:])
 	elif arg.find("--xlabeldatetime") != -1:
 		bUseDateTime = True
 	elif arg.find("--xlabelseconds") != -1:
@@ -81,7 +81,7 @@ for arg in sys.argv: # [-4:]:
 	elif arg.find("--h") != -1 or arg.find("-h") != -1 or arg.find("--help") != -1:
 		bHelpOutput = True
 
-if bHelpOutput == True: 
+if bHelpOutput == True:
 	print "\n\nStatslog-graph command line options:"
 	print "======================================="
 	print "	--input=<filename>	Contains the path and filename of your impstats logfile. "
@@ -105,19 +105,19 @@ if bHelpOutput == True:
 	print "\n	Sampleline: ./statslog-graph.py --input=imuxsock.csv --outputfile=/home/user/csvgraphs/imuxsock.svg"
 else:
 	# Generate output filename
-	if len(szInput) > 0: 
+	if len(szInput) > 0:
 		# Only set output filename if not specified
-		if len(szOutputFile) == 0: 
+		if len(szOutputFile) == 0:
 			if szInput.rfind(".") == -1:
 				szOutputFile += szInput + ".svg"
-			else: 
+			else:
 				szOutputFile += szInput[:-4] + ".svg"
 	else:
 		print "Error, no input file specified!"
 		sys.exit(0)
 
 	# Generate Counters Array if necessary
-	if len(szCounters) > 0: 
+	if len(szCounters) > 0:
 		aCounters = szCounters.strip().split(";")
 
 	# Open Errorlog on init
@@ -127,10 +127,10 @@ else:
 	with open(szInput) as inputfile:
 		aLineDataPrev = [] # Helper variable for previous line!
 		for line in inputfile:
-			if nLineCount == 0: 
+			if nLineCount == 0:
 				aFields = line.strip().split(";")
 				# remove last item if empty
-				if len(aFields[len(aFields)-1]) == 0: 
+				if len(aFields[len(aFields)-1]) == 0:
 					aFields.pop()
 
 				#print aFields
@@ -142,22 +142,22 @@ else:
 			else:
 				aLineData = line.strip().split(";")
 				# remove last item if empty
-				if len(aLineData[len(aLineData)-1]) == 0: 
+				if len(aLineData[len(aLineData)-1]) == 0:
 					aLineData.pop()
 
 				# Loop Through line data
 				iFieldNum = 0
 				for field in aFields:
 					if iFieldNum == 0:
-						if bUseDateTime: 
+						if bUseDateTime:
 							aData[field].append( datetime.datetime.strptime(aLineData[iFieldNum],"%Y/%b/%d %H:%M:%S") )
 						else:
 							# Convert Time String into UNIX Timestamp
 							myDateTime = datetime.datetime.strptime(aLineData[iFieldNum],"%Y/%b/%d %H:%M:%S")
 							iTimeStamp = int(time.mktime(myDateTime.timetuple()))
 
-							# Init Start Seconds 
-							if iStartSeconds == 0: 	 
+							# Init Start Seconds
+							if iStartSeconds == 0: 	
 								iStartSeconds = iTimeStamp
 
 							# Set data field
@@ -192,13 +192,13 @@ else:
 						aData[field].append( aLineData[iFieldNum] )
 
 					iFieldNum += 1
-					# print aData[field[nLineCount]] 
+					# print aData[field[nLineCount]]
 				
 				# Increment counter
 				nDataRecordCound += 1
 
-				# in case deltas need to be calculated, Store current line into previous line 
-				if bChartCalcDelta: 
+				# in case deltas need to be calculated, Store current line into previous line
+				if bChartCalcDelta:
 					aLineDataPrev = aLineData
 
 			# Increment counter
@@ -207,13 +207,13 @@ else:
 	#		if nLineCount > 25:
 	#			break
 
-	#	if nMaxDataCount > 0: 
+	#	if nMaxDataCount > 0:
 	#		# Check if we need to reduce the data amount
 	#		nTotalDataCount = len( aData[aFields[0]] )
 	#		nDataStepCount = nTotalDataCount / (nMaxDataCount)
 	#		if nTotalDataCount > nMaxDataCount:
 	#			for iDataNum in reversed(range(0, nTotalDataCount)):
-	#				# Remove all entries who 
+	#				# Remove all entries who
 	#				if iDataNum % nDataStepCount == 0:
 	#					aMajorXData.append( aData[aFields[0]][iDataNum] )
 			
@@ -228,7 +228,7 @@ else:
 	chartCfg.show_legend = True
 	chartCfg.human_readable = True
 	chartCfg.pretty_print=True
-	if bFilledLineChart: 
+	if bFilledLineChart:
 		chartCfg.fill = True
 	else:
 		chartCfg.fill = False
@@ -237,7 +237,7 @@ else:
 	chartCfg.x_label_rotation = 45
 	chartCfg.include_x_axis = True
 	chartCfg.show_dots=False
-	if nMaxDataCount > 0: 
+	if nMaxDataCount > 0:
 		chartCfg.show_minor_x_labels=False
 		chartCfg.x_labels_major_count=nMaxDataCount
 	#chartCfg.style = DefaultStyle #LightSolarizedStyle
@@ -245,11 +245,11 @@ else:
 	chartCfg.print_values = True #False
 	chartCfg.print_zeroes = True
 	chartCfg.no_data_text = "All values are 0"
-	if bLogarithmicChart: 
+	if bLogarithmicChart:
 		chartCfg.logarithmic=True	# Makes chart Y-Axis data more readable
 	
 	# remove first item if configured!
-	if bDeltaIgnoreFirstValue: 
+	if bDeltaIgnoreFirstValue:
 		for iChartNum in range(3, len(aFields) ):
 			if aCounters is None or aFields[iChartNum] in aCounters:
 				aData[ aFields[iChartNum] ].pop(0)
@@ -259,17 +259,17 @@ else:
 		myChart = pygal.Line(chartCfg)
 		myChart.title = 'Line Chart of "' + szChartName + '"'
 		myChart.x_title = "Time elasped in seconds"
-		myChart.x_labels = map(str, aData[aFields[0]] ) 
+		myChart.x_labels = map(str, aData[aFields[0]] )
 #		myChart.x_labels_major = map(str, aMajorXData )
 		for iChartNum in range(3, len(aFields) ):
 			if aCounters is None or aFields[iChartNum] in aCounters:
 				myChart.add(aFields[iChartNum], aData[ aFields[iChartNum] ])  # Add some values
 	# Create BarChart
-	elif bBarChart: 
+	elif bBarChart:
 		myChart = pygal.Bar(chartCfg)
 		myChart.title = 'Bar Chart of "' + szChartName + '"'
 		myChart.x_title = "Time elasped in seconds"
-		myChart.x_labels = map(str, aData[aFields[0]] ) 
+		myChart.x_labels = map(str, aData[aFields[0]] )
 #		myChart.x_labels_major = map(str, aMajorXData )
 		for iChartNum in range(3, len(aFields) ):
 			if aCounters is None or aFields[iChartNum] in aCounters:
@@ -278,10 +278,10 @@ else:
 #			myChart.add(aFields[iChartNum], aData[ aFields[iChartNum] ])  # Add some values
 	
 	# Render Chart now and output to file!
-	if bConvertPng: 
+	if bConvertPng:
 		szPngFileName = szOutputFile[:-4] + ".png"
 		myChart.render_to_png(szPngFileName)
-	else: 
+	else:
 		myChart.render_to_file(szOutputFile)
 
 	# Finished
