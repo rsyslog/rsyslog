@@ -1015,18 +1015,28 @@ function create_kafka_topic() {
 			exit 1
 	fi
 
-	#some new plubming just for working on https://github.com/rsyslog/rsyslog/issues/3045
-	text=$(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --zookeeper localhost:$dep_work_port/kafka --create --topic $1 --replication-factor 1 --partitions 2 )
-echo ======================================================================
-cat -n <<< $text
-echo ======================================================================
-	grep "Error .* Replication factor:" <<<"$text"
-	if [ $? -ne 1 ]; then
-		echo FAIL: kafka had error message:
-		cat -n <<< $text
-		error_exit 1
-	fi
+	# we need to make sure replication has is working. So let's loop until no more
+	# errors (or timeout) - see also: https://github.com/rsyslog/rsyslog/issues/3045
+	i=0
+	while true; do
+		text=$(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --zookeeper localhost:$dep_work_port/kafka --create --topic $1 --replication-factor 1 --partitions 2 )
+		grep "Error.* larger than available brokers: 0" <<<"$text"
+		res=$?
+		echo RESULT GREP: $res
+		if [ $res -ne 0 ]; then
+			echo looks like brokers are available - continue...
+			break
+		fi
+		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
+		let "i++"
+		if test $i -gt $TB_TIMEOUT_STARTSTOP; then
+			echo "ABORT! Timeout waiting for kafka brokers, last message:"
+			cat -n <<< $text
+			error_exit 1
+		fi
+	done
 
+	# we *assume* now all goes well
 	(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --zookeeper localhost:$dep_work_port/kafka --alter --topic $1 --delete-config retention.ms)
 	(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --zookeeper localhost:$dep_work_port/kafka --alter --topic $1 --delete-config retention.bytes)
 }
