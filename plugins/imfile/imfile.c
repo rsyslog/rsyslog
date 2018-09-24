@@ -915,9 +915,6 @@ act_obj_destroy(act_obj_t *const act, const int is_deleted)
 			}
 		}
 	}
-	if(act->ratelimiter != NULL) {
-		ratelimitDestruct(act->ratelimiter);
-	}
 	if(act->pStrm != NULL) {
 		const instanceConf_t *const inst = act->edge->instarr[0];// TODO: same file, multiple instances?
 		pollFile(act); /* get any left-over data */
@@ -933,6 +930,9 @@ act_obj_destroy(act_obj_t *const act, const int is_deleted)
 			DBGPRINTF("act_obj_destroy: deleting state file %s\n", statefn);
 			unlink((char*)statefn);
 		}
+	}
+	if(act->ratelimiter != NULL) {
+		ratelimitDestruct(act->ratelimiter);
 	}
 	#ifdef HAVE_INOTIFY_INIT
 	if(act->wd != -1) {
@@ -1525,7 +1525,7 @@ pollFileReal(act_obj_t *act, cstr_t **pCStr)
 	int nProcessed = 0;
 	regex_t *start_preg = NULL, *end_preg = NULL;
 
-	DBGPRINTF("pollFileReal enter, pStrm %p, name '%s'\n", act->pStrm, act->name);
+	DBGPRINTF("pollFileReal enter, act %p, pStrm %p, name '%s'\n", act, act->pStrm, act->name);
 	DBGPRINTF("pollFileReal enter, edge %p\n", act->edge);
 	DBGPRINTF("pollFileReal enter, edge->instarr %p\n", act->edge->instarr);
 
