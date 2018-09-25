@@ -345,6 +345,11 @@ endif # HAVE_VALGRIND
 endif # ENABLE_DEFAULT_TESTS
 
 
+if ENABLE_MAIL
+TESTS +=  \
+	ommail_errmsg_no_params.sh
+endif # if ENABLE_MAIL
+
 if ENABLE_MMANON
 TESTS +=  \
 	mmanon_random_32_ipv4.sh \
@@ -1177,6 +1182,7 @@ EXTRA_DIST= \
 	rs-cnum.sh \
 	rs-int2hex.sh \
 	rs-substring.sh \
+	ommail_errmsg_no_params.sh \
 	mmanon_random_32_ipv4.sh \
 	mmanon_random_cons_32_ipv4.sh \
 	mmanon_recognize_ipv4.sh \
