@@ -22,3 +22,19 @@ do
 	ps -fp $pid
 	kill -9 $pid || exit 0
 done
+
+# now the same for mmkubernetes_test_server
+for pid in $(ps -eo pid,args|grep '[k]afka' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
+do
+	echo "ERROR: left-over previous instance $pid, killing it"
+	ps -fp $pid
+	kill -9 $pid || exit 0
+done
+
+# now the same for mmkubernetes_test_server
+for pid in $(ps -eo pid,args|grep '[z]ookeeper' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
+do
+	echo "ERROR: left-over previous instance $pid, killing it"
+	ps -fp $pid
+	kill -9 $pid || exit 0
+done
