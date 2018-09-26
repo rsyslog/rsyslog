@@ -176,6 +176,11 @@ _transactions_), instead of individually. For a general explanation on how
 rsyslog handles the batching of messages, see
 http://www.rsyslog.com/doc/v8-stable/development/dev_oplugins.html.
 
+_**Warning:**
+This feature is currently **experimental**. It could change in future releases
+without keeping backwards compatibility with existing configurations or the
+interface described below._
+
 How to process the messages in batches (transactions)
 -----------------------------------------------------
 To enable transactions, set the `useTransactions` flag to `on` in the `omprog`
