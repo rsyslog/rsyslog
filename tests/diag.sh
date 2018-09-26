@@ -975,7 +975,7 @@ function start_kafka() {
 	$TESTTOOL_DIR/msleep 4000
 
 	# Check if kafka instance came up!
-	kafkapid=`ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $1}'`
+	kafkapid=$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $1}')
 	if [[ "" !=  "$kafkapid" ]];
 	then
 		echo "Kafka instance $dep_work_kafka_config started with PID $kafkapid"
@@ -984,7 +984,7 @@ function start_kafka() {
 		(cd $dep_work_dir/kafka && ./bin/kafka-server-start.sh -daemon ./config/$dep_work_kafka_config)
 		$TESTTOOL_DIR/msleep 4000
 
-		kafkapid=`ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $1}'`
+		kafkapid=$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $1}')
 		if [[ "" !=  "$kafkapid" ]];
 		then
 			echo "Kafka instance $dep_work_kafka_config started with PID $kafkapid"
@@ -1017,6 +1017,8 @@ function create_kafka_topic() {
 
 	# we need to make sure replication has is working. So let's loop until no more
 	# errors (or timeout) - see also: https://github.com/rsyslog/rsyslog/issues/3045
+	timeout_ready=100 # roughly 10 sec
+	is_retry=0
 	i=0
 	while true; do
 		text=$(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --zookeeper localhost:$dep_work_port/kafka --create --topic $1 --replication-factor 1 --partitions 2 )
@@ -1029,10 +1031,19 @@ function create_kafka_topic() {
 		fi
 		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
 		let "i++"
-		if test $i -gt $TB_TIMEOUT_STARTSTOP; then
-			echo "ABORT! Timeout waiting for kafka brokers, last message:"
+		if test $i -gt $timeout_ready; then
+			echo "ENV ERROR: kafka brokers did not come up:"
 			cat -n <<< $text
-			error_exit 1
+			if [ $is_retry == 1 ]; then
+				echo "SKIPing test as the env is not ready for it"
+				exit 77
+			fi
+			echo "RETRYING kafka startup, doing shutdown and startup"
+			stop_zookeeper; stop_kafka
+			start_zookeeper; start_kafka
+			echo "READY for RETRY"
+			is_retry=1
+			i=0
 		fi
 	done
 
