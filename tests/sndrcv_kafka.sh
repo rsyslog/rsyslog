@@ -1,8 +1,10 @@
 #!/bin/bash
 # added 2017-05-03 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
-echo Init Testbench
 . $srcdir/diag.sh init
+echo Test very unstable, thus skipping
+echo see https://github.com/rsyslog/rsyslog/issues/3057
+exit 77
 
 # *** ==============================================================================
 export TESTMESSAGES=100000
