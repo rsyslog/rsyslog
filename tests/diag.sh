@@ -1293,7 +1293,7 @@ case $1 in
 		;;
     'injectmsg-litteral') # inject litteral-payload  via our inject interface (imdiag)
 		echo injecting msg payload from: $2
-    cat $2 | sed -e 's/^/injectmsg litteral /g' | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
+		sed -e 's/^/injectmsg litteral /g' < "$2" | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
 		# TODO: some return state checking? (does it really make sense here?)
 		;;
    'check-mainq-spool') # check if mainqueue spool files exist, if not abort (we just check .qi).
@@ -1400,7 +1400,7 @@ case $1 in
 		prev_purged=$(cat $2 | grep -F 'origin=dynstats' | grep -F "${3}.purge_triggered=" | sed -e 's/.\+.purge_triggered=//g' | awk '{s+=$1} END {print s}')
 		new_purged=$prev_purged
 		while [[ "x$prev_purged" == "x$new_purged" ]]; do
-				new_purged=$(cat $2 | grep -F 'origin=dynstats' | grep -F "${3}.purge_triggered=" | sed -e 's/.\+\.purge_triggered=//g' | awk '{s+=$1} END {print s}') # busy spin, because it allows as close timing-coordination in actual test run as possible
+				new_purged=$(grep -F 'origin=dynstats' < "$2" | grep -F "${3}.purge_triggered=" | sed -e 's/.\+\.purge_triggered=//g' | awk '{s+=$1} END {print s}') # busy spin, because it allows as close timing-coordination in actual test run as possible
 				$TESTTOOL_DIR/msleep 10
 		done
 		echo "dyn-stats reset for bucket ${3} registered"
@@ -1579,7 +1579,7 @@ case $1 in
 		if [ -n "$(find /usr/include -name 'inotify.h' -print -quit)" ]; then
 			echo [inotify mode]
 		elif [ -n "$(find /usr/include/sys/ -name 'port.h' -print -quit)" ]; then
-			cat /usr/include/sys/port.h | grep -qF "PORT_SOURCE_FILE" 
+			grep -qF "PORT_SOURCE_FILE" < /usr/include/sys/port.h
 			if [ "$?" -ne "0" ]; then
 				echo [port.h found but FEN API not implemented , skipping...]
 				exit 77 # FEN API not available, skip this test
