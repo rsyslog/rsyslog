@@ -91,6 +91,10 @@ typedef enum {				/* when extending, do NOT change existing modes! */
 	STREAMMODE_WRITE_APPEND = 4
 } strmMode_t;
 
+/* settings for stream rotation (applies not to all processing modes!) */
+#define	STRM_ROTATION_DO_CHECK		0
+#define	STRM_ROTATION_DO_NOT_CHECK	1
+
 #define STREAM_ASYNC_NUMBUFS 2 /* must be a power of 2 -- TODO: make configurable */
 /* The strm_t data structure */
 typedef struct strm_s {
@@ -114,6 +118,7 @@ typedef struct strm_s {
 	sbool bDisabled; /* should file no longer be written to? (currently set only if omfile file size limit fails) */
 	sbool bSync;	/* sync this file after every write? */
 	sbool bReopenOnTruncate;
+	int rotationCheck; /* rotation check mode */
 	size_t sIOBufSize;/* size of IO buffer */
 	uchar *pszDir; /* Directory */
 	int lenDir;
@@ -234,5 +239,6 @@ void strmSetReadTimeout(strm_t *const __restrict__ pThis, const int val);
 const uchar * ATTR_NONNULL() strmGetPrevLineSegment(strm_t *const pThis);
 const uchar * ATTR_NONNULL() strmGetPrevMsgSegment(strm_t *const pThis);
 int ATTR_NONNULL() strmGetPrevWasNL(const strm_t *const pThis);
+void ATTR_NONNULL() strmSet_checkRotation(strm_t *const pThis, const int val);
 
 #endif /* #ifndef STREAM_H_INCLUDED */
