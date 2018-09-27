@@ -549,9 +549,6 @@ TESTS +=  \
 if ENABLE_IP
 TESTS += tcp_forwarding_ns_tpl.sh
 endif
-if ENABLE_RELP
-TESTS += sndrcv_relp_dflt_pt.sh
-endif
 if HAVE_VALGRIND
 TESTS +=  \
 	mmexternal-SegFault-empty-jroot-vg.sh
@@ -865,6 +862,7 @@ TESTS += sndrcv_relp.sh \
 	 imrelp-long-msg.sh \
 	 imrelp-oversizeMode-truncate.sh \
 	 imrelp-oversizeMode-accept.sh \
+	 sndrcv_relp_dflt_pt.sh \
 	 glbl-oversizeMsg-log.sh \
 	 glbl-oversizeMsg-truncate.sh \
 	 glbl-oversizeMsg-split.sh
