@@ -344,6 +344,10 @@ TESTS +=  \
 endif # HAVE_VALGRIND
 endif # ENABLE_DEFAULT_TESTS
 
+if ENABLE_SNMP
+TESTS +=  \
+	omsnmp_errmsg_no_params.sh
+endif # if ENABLE_SNMP
 
 if ENABLE_MAIL
 TESTS +=  \
@@ -1182,6 +1186,7 @@ EXTRA_DIST= \
 	rs-cnum.sh \
 	rs-int2hex.sh \
 	rs-substring.sh \
+	omsnmp_errmsg_no_params.sh \
 	ommail_errmsg_no_params.sh \
 	mmanon_random_32_ipv4.sh \
 	mmanon_random_cons_32_ipv4.sh \
