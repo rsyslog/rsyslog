@@ -37,6 +37,12 @@ Version 8.39.0 [v8-stable] 2018-10-30
     the test to do a single write to stderr. Also a cast to int
     was needed when calculating 'numRepeats'.
     closes https://github.com/rsyslog/rsyslog/issues/3030
+  * testbench: fixed imfile parallel issues
+   - Fixed timing issues in some imfile wildcard/regex tests
+   - Added touch command in imfile wildcard tests to make sure directories
+     exist before files are created in it if IO is under stress.
+   - changed content checking in some tests to use "content_check_with_count"
+     with check timeouts instead of using fixed sleeptimes.
   * testbench: new basic tests
     These ensure that for some modules that did not have any tests at all
     we have at least a minimal coverage (module loads, activates, is able
