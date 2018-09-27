@@ -1,10 +1,11 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under GPLv3
+. $srcdir/diag.sh init
 export IMFILEINPUTFILES="1"
 export IMFILEINPUTFILESSTEPS="5"
 #export IMFILEINPUTFILESALL=$(($IMFILEINPUTFILES * $IMFILEINPUTFILESSTEPS))
 export IMFILECHECKTIMEOUT="20"
-. $srcdir/diag.sh init
+
 generate_conf
 add_conf '
 $WorkDirectory '$RSYSLOG_DYNNAME'.spool
@@ -62,6 +63,7 @@ do
 		echo "Make $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir"
 		mkdir $RSYSLOG_DYNNAME.input.dir$i/dir$j
 		mkdir $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir
+		touch $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir/file.logfile
 		./inputfilegen -m 1 > $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir/file.logfile
 	done
 	ls -d $RSYSLOG_DYNNAME.input.*
@@ -76,6 +78,11 @@ do
 		rm -rf $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir/file.logfile
 		rm -rr $RSYSLOG_DYNNAME.input.dir$i/dir$j
 	done
+
+	# Helps in testbench parallel mode. 
+	#	Otherwise sometimes directories are not marked deleted in imfile before they get created again.
+	#	This is properly a real issue in imfile when FILE IO is high. 
+	./msleep 1000
 done
 
 shutdown_when_empty # shut down rsyslogd when done processing messages

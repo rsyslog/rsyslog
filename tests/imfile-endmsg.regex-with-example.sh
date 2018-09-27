@@ -1,10 +1,11 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 # This test tests imfile endmsg.regex.
-echo ======================================================================
-echo [imfile-endmsg.regex.sh]
-. $srcdir/diag.sh check-inotify
 . $srcdir/diag.sh init
+. $srcdir/diag.sh check-inotify
+export IMFILECHECKTIMEOUT="20"
+export IMFILELASTINPUTLINES="6"
+
 generate_conf
 add_conf '
 module(load="../plugins/imfile/.libs/imfile")
@@ -105,6 +106,8 @@ echo '{"time":"date", "stream":"stdout", "log":"msgnum:6\n"}' >> $RSYSLOG_DYNNAM
 echo 'date stdout P msgnum:7' >> $RSYSLOG_DYNNAME.crio.input
 echo '{"time":"date", "stream":"stdout", "log":"msgnum:7"}' >> $RSYSLOG_DYNNAME.json.input
 
+content_check_with_count "$RSYSLOG_DYNNAME" $IMFILELASTINPUTLINES $IMFILECHECKTIMEOUT
+
 shutdown_when_empty # shut down rsyslogd when done processing messages
 if [ "x${USE_VALGRIND:-false}" == "xtrue" ] ; then
 	wait_shutdown_vg
@@ -121,8 +124,8 @@ sleep 1
 NUMLINES=$(wc -l $RSYSLOG_OUT_LOG | awk '{print $1}' 2>/dev/null)
 
 rc=0
-if [ ! $NUMLINES -eq 6 ]; then
-  echo "ERROR: expecting 6 lines, got $NUMLINES"
+if [ ! $NUMLINES -eq $IMFILELASTINPUTLINES ]; then
+  echo "ERROR: expecting $IMFILELASTINPUTLINES lines, got $NUMLINES"
   rc=1
 fi
 

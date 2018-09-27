@@ -52,6 +52,7 @@ for j in $(seq 1 $IMFILEINPUTFILESSTEPS); do
 	do
 		mkdir $RSYSLOG_DYNNAME.input.dir$i
 		mkdir $RSYSLOG_DYNNAME.input.dir$i/dir$i
+		# proposed by AL - why? touch $RSYSLOG_DYNNAME.input.dir$i/dir$i/file.logfile
 		./inputfilegen -i $j -m 1 > $RSYSLOG_DYNNAME.input.dir$i/dir$i/file.logfile
 	done
 

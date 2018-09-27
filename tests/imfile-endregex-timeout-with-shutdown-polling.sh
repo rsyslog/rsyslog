@@ -1,6 +1,8 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 . $srcdir/diag.sh init
+export IMFILECHECKTIMEOUT="20"
+
 generate_conf
 add_conf '
 module(load="../plugins/imfile/.libs/imfile" mode="polling" pollingInterval="1")
@@ -28,8 +30,9 @@ startup
 # we need to sleep a bit between writes to give imfile a chance
 # to pick up the data (IN MULTIPLE ITERATIONS!)
 echo 'msgnum:0
- msgnum:1' > $RSYSLOG_DYNNAME.input
-./msleep 8000
+ msgnum:1' > $RSYSLOG_DYNNAME.input	 
+content_check_with_count 'msgnum:0
+ msgnum:1' 1 $IMFILECHECKTIMEOUT
 echo ' msgnum:2
  msgnum:3' >> $RSYSLOG_DYNNAME.input
 
@@ -45,27 +48,15 @@ startup
 
 # new data
 echo ' msgnum:4' >> $RSYSLOG_DYNNAME.input
-./msleep 8000
+content_check_with_count 'msgnum:2
+ msgnum:3
+ msgnum:4' 1 $IMFILECHECKTIMEOUT
+
 echo ' msgnum:5
  msgnum:6' >> $RSYSLOG_DYNNAME.input
-./msleep 8000
-
-# the next line terminates our test. It is NOT written to the output file,
-# as imfile waits whether or not there is a follow-up line that it needs
-# to combine.
-#echo 'END OF TEST' >> $RSYSLOG_DYNNAME.input
-#./msleep 2000
+content_check_with_count 'msgnum:5
+ msgnum:6' 1 $IMFILECHECKTIMEOUT
 
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown    # we need to wait until rsyslogd is finished!
-
-printf 'HEADER msgnum:0\\\\n msgnum:1
-HEADER  msgnum:2\\\\n msgnum:3\\\\n msgnum:4
-HEADER  msgnum:5\\\\n msgnum:6\n' | cmp - $RSYSLOG_OUT_LOG
-if [ ! $? -eq 0 ]; then
-  echo "invalid multiline message generated, $RSYSLOG_OUT_LOG is:"
-  cat $RSYSLOG_OUT_LOG
-  error_exit 1
-fi;
-
 exit_test
