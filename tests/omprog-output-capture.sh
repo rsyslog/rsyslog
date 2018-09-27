@@ -26,7 +26,7 @@ injectmsg 0 10
 shutdown_when_empty
 wait_shutdown
 
-EXPECTED="[stdout] Starting
+export EXPECTED="[stdout] Starting
 [stderr] Starting
 [stdout] Received msgnum:00000000:
 [stderr] Received msgnum:00000000:

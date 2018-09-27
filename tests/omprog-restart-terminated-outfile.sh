@@ -83,7 +83,7 @@ end_fd_count=$(lsof -p $pid | wc -l)
 shutdown_when_empty
 wait_shutdown
 
-EXPECTED="Starting
+export EXPECTED="Starting
 Received msgnum:00000000:
 Received msgnum:00000001:
 Received msgnum:00000002:
@@ -108,7 +108,7 @@ Terminating normally"
 
 cmp_exact $RSYSLOG_OUT_LOG
 
-EXPECTED="[stderr] Starting
+export EXPECTED="[stderr] Starting
 [stderr] Received msgnum:00000000:
 [stderr] Received msgnum:00000001:
 [stderr] Received msgnum:00000002:

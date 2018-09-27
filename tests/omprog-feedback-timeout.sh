@@ -31,7 +31,7 @@ injectmsg 0 10
 shutdown_when_empty
 wait_shutdown
 
-EXPECTED="Starting
+export EXPECTED="Starting
 <= OK
 => msgnum:00000000:
 <= OK

@@ -26,7 +26,7 @@ shutdown_when_empty
 wait_shutdown_vg
 check_exit_vg
 
-EXPECTED='host: ubuntu, fromhost: ubuntu, ip: 127.0.0.1, tag: tag1, pri: 189, syslogfacility: 23, syslogseverity: 5 msg: this is a test message
+export EXPECTED='host: ubuntu, fromhost: ubuntu, ip: 127.0.0.1, tag: tag1, pri: 189, syslogfacility: 23, syslogseverity: 5 msg: this is a test message
 host: debian, fromhost: debian, ip: 255.255.255.255, tag: tag2, pri: 112, syslogfacility: 14, syslogseverity: 0 msg: this is a test message
 host: centos, fromhost: centos, ip: 192.168.0.9, tag: tag3, pri: 177, syslogfacility: 22, syslogseverity: 1 msg: this is a test message'
 cmp_exact $RSYSLOG_OUT_LOG

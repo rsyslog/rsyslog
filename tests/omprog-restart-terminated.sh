@@ -85,7 +85,7 @@ child_lsof=$(lsof -a -d 0-65535 -p $(get_child_pid) | awk '$4 != "255r" { print 
 shutdown_when_empty
 wait_shutdown
 
-EXPECTED="Starting
+export EXPECTED="Starting
 Received msgnum:00000000:
 Received msgnum:00000001:
 Received msgnum:00000002:

@@ -15,6 +15,6 @@ tcpflood -m 1 -M "\"<133>2011-03-01T11:22:12Z host tag/with/slashes msgh ...x\""
 tcpflood -m1
 shutdown_when_empty
 wait_shutdown
-EXPECTED="tag/with/slashes,tag"
+export EXPECTED="tag/with/slashes,tag"
 cmp_exact $RSYSLOG_OUT_LOG
 exit_test

@@ -37,7 +37,7 @@ injectmsg 0 10
 shutdown_when_empty
 wait_shutdown
 
-EXPECTED="Starting with parameters: p1 p2 p3
+export EXPECTED="Starting with parameters: p1 p2 p3
 Received msgnum:00000000:
 Received msgnum:00000001:
 Received msgnum:00000002:

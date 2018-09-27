@@ -20,7 +20,7 @@ startup
 tcpflood -m1
 shutdown_when_empty
 wait_shutdown
-EXPECTED='{ "a": "TEST-overwritten" }'
+export EXPECTED='{ "a": "TEST-overwritten" }'
 echo "$EXPECTED" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
 	echo "FAIL:  $RSYSLOG_OUT_LOG content invalid:"
