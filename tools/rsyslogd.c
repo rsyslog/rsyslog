@@ -2049,6 +2049,7 @@ deinitAll(void)
 	rsrtExit(); /* runtime MUST always be deinitialized LAST (except for debug system) */
 	DBGPRINTF("Clean shutdown completed, bye\n");
 
+	errmsgExit();
 	/* dbgClassExit MUST be the last one, because it de-inits the debug system */
 	dbgClassExit();
 
