@@ -400,7 +400,7 @@ function get_mainqueuesize() {
 
 # grep for (partial) content. $1 is the content to check for
 function content_check() {
-	cat ${RSYSLOG_OUT_LOG} | grep -qF "$1"
+	grep -qF "$1" < ${RSYSLOG_OUT_LOG}
 	if [ "$?" -ne "0" ]; then
 	    printf "\n============================================================\n"
 	    echo FAIL: content_check failed to find "'$1'", content is
@@ -422,7 +422,7 @@ function content_check_with_count() {
 	while [  $timecounter -lt $timeoutend ]; do
 		let timecounter=timecounter+1
 
-		count=$(cat ${RSYSLOG_OUT_LOG} | grep -F "$1" | wc -l)
+		count=$(grep -F "$1" <${RSYSLOG_OUT_LOG} | wc -l)
 
 		if [ $count -eq $2 ]; then
 			echo content_check_with_count success, \"$1\" occured $2 times
@@ -446,7 +446,7 @@ function content_check_with_count() {
 
 
 function custom_content_check() {
-	cat $2 | grep -qF "$1"
+	grep -qF "$1" < $2
 	if [ "$?" -ne "0" ]; then
 	    echo FAIL: custom_content_check failed to find "'$1'" inside "'$2'"
 	    echo "file contents:"
@@ -559,7 +559,7 @@ function await_lookup_table_reload() {
 
 
 function assert_content_missing() {
-	cat ${RSYSLOG_OUT_LOG} | grep -qF "$1"
+	grep -qF "$1" < ${RSYSLOG_OUT_LOG}
 	if [ "$?" -eq "0" ]; then
 		echo content-missing assertion failed, some line matched pattern "'$1'"
 		error_exit 1
@@ -568,7 +568,7 @@ function assert_content_missing() {
 
 
 function custom_assert_content_missing() {
-	cat $2 | grep -qF "$1"
+	grep -qF "$1" < $2
 	if [ "$?" -eq "0" ]; then
 		echo content-missing assertion failed, some line in "'$2'" matched pattern "'$1'"
 		cat -n "$2"
@@ -1405,10 +1405,10 @@ case $1 in
 				echo waiting for stats file "'$2'" to be created
 				$TESTTOOL_DIR/msleep 100
 		done
-		prev_count=$(cat $2 | grep 'BEGIN$' | wc -l)
+		prev_count=$(grep 'BEGIN$' <$2 | wc -l)
 		new_count=$prev_count
 		while [[ "x$prev_count" == "x$new_count" ]]; do
-				new_count=$(cat $2 | grep 'BEGIN$' | wc -l) # busy spin, because it allows as close timing-coordination in actual test run as possible
+				new_count=$(grep 'BEGIN$' <$2 | wc -l) # busy spin, because it allows as close timing-coordination in actual test run as possible
 		done
 		echo "stats push registered"
 		;;
@@ -1418,7 +1418,7 @@ case $1 in
 				echo waiting for stats file "'$2'" to be created
 				$TESTTOOL_DIR/msleep 100
 		done
-		prev_purged=$(cat $2 | grep -F 'origin=dynstats' | grep -F "${3}.purge_triggered=" | sed -e 's/.\+.purge_triggered=//g' | awk '{s+=$1} END {print s}')
+		prev_purged=$(grep -F 'origin=dynstats' < $2 | grep -F "${3}.purge_triggered=" | sed -e 's/.\+.purge_triggered=//g' | awk '{s+=$1} END {print s}')
 		new_purged=$prev_purged
 		while [[ "x$prev_purged" == "x$new_purged" ]]; do
 				new_purged=$(grep -F 'origin=dynstats' < "$2" | grep -F "${3}.purge_triggered=" | sed -e 's/.\+\.purge_triggered=//g' | awk '{s+=$1} END {print s}') # busy spin, because it allows as close timing-coordination in actual test run as possible
@@ -1439,7 +1439,7 @@ case $1 in
 #		fi
 #		;;
    'first-column-sum-check') 
-		sum=$(cat $4 | grep $3 | sed -e $2 | awk '{s+=$1} END {print s}')
+		sum=$(grep $3 < $4 | sed -e $2 | awk '{s+=$1} END {print s}')
 		if [ "x${sum}" != "x$5" ]; then
 		    printf "\n============================================================\n"
 		    echo FAIL: sum of first column with edit-expr "'$2'" run over lines from file "'$4'" matched by "'$3'" equals "'$sum'" which is NOT equal to EXPECTED value of "'$5'"
@@ -1449,7 +1449,7 @@ case $1 in
 		fi
 		;;
    'assert-first-column-sum-greater-than') 
-		sum=$(cat $4 | grep $3 | sed -e $2 | awk '{s+=$1} END {print s}')
+		sum=$(grep $3 <$4| sed -e $2 | awk '{s+=$1} END {print s}')
 		if [ ! $sum -gt $5 ]; then
 		    echo sum of first column with edit-expr "'$2'" run over lines from file "'$4'" matched by "'$3'" equals "'$sum'" which is smaller than expected lower-limit of "'$5'"
 		    echo "file contents:"
@@ -1458,7 +1458,7 @@ case $1 in
 		fi
 		;;
    'content-pattern-check') 
-		cat ${RSYSLOG_OUT_LOG} | grep -q "$2"
+		grep -q "$2" < ${RSYSLOG_OUT_LOG}
 		if [ "$?" -ne "0" ]; then
 		    echo content-check failed, not every line matched pattern "'$2'"
 		    echo "file contents:"
