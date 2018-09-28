@@ -17,6 +17,6 @@ touch nocert # it is not important that this is a real cert, it just must exist!
 startup
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
-EXPECTED="no .* private key file"
+export EXPECTED="no .* private key file"
 . $srcdir/diag.sh grep-check
 exit_test

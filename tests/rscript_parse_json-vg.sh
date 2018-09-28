@@ -20,7 +20,7 @@ wait_shutdown_vg
 check_exit_vg
 
 # Our fixed and calculated expected results
-EXPECTED='{ "parsed": { "c1": "data" } }'
+export EXPECTED='{ "parsed": { "c1": "data" } }'
 echo $EXPECTED | cmp - $RSYSLOG_OUT_LOG
 if [[ $? -ne 0 ]]; then
   printf "Invalid function output detected!\n"

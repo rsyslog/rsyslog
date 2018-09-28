@@ -14,6 +14,6 @@ startup
 injectmsg 0 1
 shutdown_when_empty
 wait_shutdown
-EXPECTED='"@version": "1"'
+export EXPECTED='"@version": "1"'
 cmp_exact $RSYSLOG_OUT_LOG
 exit_test
