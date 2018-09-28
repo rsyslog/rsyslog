@@ -132,6 +132,20 @@ RUN	cd helper-projects && \
 # uninstall (in case the user wants to go back to system-default)
 	cd ..
 
+# other manual installs
+# kafkacat
+RUN	cd helper-projects \
+	&& git clone https://github.com/edenhill/kafkacat \
+	&& cd kafkacat \
+	&& (unset CFLAGS; ./configure --prefix=/usr --CFLAGS="-g" ; make -j2) \
+	&& make install \
+	&& cd .. \
+	&& rm -r kafkacat \
+	&& cd ..
+# Note: we do NOT delete the source as we may need it to
+# uninstall (in case the user wants to go back to system-default)
+
+
 # next ENV is specifically for running scan-build - so we do not need to
 # change scripts if at a later time we can move on to a newer version
 #ENV SCAN_BUILD=scan-build \
