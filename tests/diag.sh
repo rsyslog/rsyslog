@@ -483,6 +483,12 @@ function shutdown_when_empty() {
 	kill `cat $RSYSLOG_PIDBASE$1.pid` # note: we do not wait for the actual termination!
 }
 
+# shut rsyslogd down without emptying the queue. $2 is the instance.
+function shutdown_immediate() {
+	cp $RSYSLOG_PIDBASE$2.pid $RSYSLOG_PIDBASE$2.pid.save
+	kill $(cat $RSYSLOG_PIDBASE$2.pid)
+}
+
 
 # actually, we wait for rsyslog.pid to be deleted.
 # $1 is the instance
@@ -1281,11 +1287,6 @@ case $1 in
 		done
 		unset terminated
 		unset out_pid
-		;;
-   'shutdown-immediate') # shut rsyslogd down without emptying the queue. $2 is the instance.
-		cp $RSYSLOG_PIDBASE$2.pid $RSYSLOG_PIDBASE$2.pid.save
-		kill `cat $RSYSLOG_PIDBASE$2.pid`
-		# note: we do not wait for the actual termination!
 		;;
    'kill-immediate') # kill rsyslog unconditionally
 		kill -9 `cat $RSYSLOG_PIDBASE.pid`

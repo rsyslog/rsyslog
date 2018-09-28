@@ -15,6 +15,6 @@ input(type="imudp" Address="127.0.0.1" Port="20514")
 '
 startup
 ./msleep 1000
-. $srcdir/diag.sh shutdown-immediate
+shutdown_immediate
 wait_shutdown
 exit_test

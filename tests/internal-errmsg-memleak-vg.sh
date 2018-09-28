@@ -31,7 +31,7 @@ action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG`)
 '
 startup_vg_waitpid_only
 ./msleep 500 # wait a bit so that the error message can be emitted
-. $srcdir/diag.sh shutdown-immediate
+shutdown_immediate
 wait_shutdown_vg
 
 exit_test
