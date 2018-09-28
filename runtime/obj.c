@@ -1387,7 +1387,6 @@ objClassExit(void)
 	cfsyslineExit(pModInfo);
 	varClassExit(pModInfo);
 #endif
-	errmsgClassExit();
 	moduleClassExit();
 	RETiRet;
 }
@@ -1426,7 +1425,6 @@ objClassInit(modInfo_t *pModInfo)
 	CHKiRet(objGetObjInterface(&obj)); /* get ourselves ;) */
 
 	/* init classes we use (limit to as few as possible!) */
-	CHKiRet(errmsgClassInit(pModInfo));
 	CHKiRet(datetimeClassInit(pModInfo));
 	CHKiRet(cfsyslineInit());
 	CHKiRet(varClassInit(pModInfo));
