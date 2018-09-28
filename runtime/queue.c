@@ -450,6 +450,20 @@ StartDA(qqueue_t *pThis)
 	CHKiRet(qqueueSettoQShutdown(pThis->pqDA, pThis->toQShutdown));
 	CHKiRet(qqueueSetiHighWtrMrk(pThis->pqDA, 0));
 	CHKiRet(qqueueSetiDiscardMrk(pThis->pqDA, 0));
+	if(pThis->useCryprov) {
+		/* hand over cryprov to DA queue - in-mem queue does no longer need it
+		 * and DA queue will be kept active from now on until termination.
+		 */
+		pThis->pqDA->useCryprov = pThis->useCryprov;
+		pThis->pqDA->cryprov = pThis->cryprov;
+		pThis->pqDA->cryprovData = pThis->cryprovData;
+		pThis->pqDA->cryprovNameFull = pThis->cryprovNameFull;
+		/* reset memory queue parameters */
+		pThis->useCryprov = 0;
+		/* pThis->cryprov cannot and need not be reset, is structure */
+		pThis->cryprovData = NULL;
+		pThis->cryprovNameFull = NULL;
+	}
 
 	iRet = qqueueStart(pThis->pqDA);
 	/* file not found is expected, that means it is no previous QIF available */

@@ -556,7 +556,13 @@ finalize_it:
 /* We use random numbers to initiate the IV. Rsyslog runtime will ensure
  * we get a sufficiently large number.
  */
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wunknown-attributes"
+#endif
 static rsRetVal
+#if defined(__clang__)
+__attribute__((no_sanitize("shift"))) /* IV shift causes known overflow */
+#endif
 seedIV(gcryfile gf, uchar **iv)
 {
 	long rndnum = 0; /* keep compiler happy -- this value is always overriden */
