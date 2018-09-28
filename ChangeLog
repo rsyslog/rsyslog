@@ -12,6 +12,11 @@ Version 8.39.0 [v8-stable] 2018-10-30
   should be much smaller and, more importantly, imfile should not stall.
   see also https://github.com/rsyslog/rsyslog/issues/2659
   see also https://github.com/rsyslog/rsyslog/issues/1605
+- errmsg: remove no longer needed code
+  refectored code (over a long time) so that object-ish style is no longer
+  needed and could now finally be removed; We also refactored the last
+  component (omhttp contrib module) that used the old interface.
+  closes https://github.com/rsyslog/rsyslog/issues/1684
 - bugfix imfile: file change was not reliably detected
   A change in the inode was not detected under all circumstances,
   most importantly not in some logrotate cases.
