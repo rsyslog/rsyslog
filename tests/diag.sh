@@ -455,6 +455,26 @@ function custom_content_check() {
 	fi
 }
 
+# check that given content $1 is not present in file $2 (default: RSYSLOG_OUTLOG)
+# regular expressions may be used
+function check_not_present() {
+
+	if [ "$2" == "" ]; then
+		file=$RSYSLOG_OUT_LOG
+	else
+		file="$2"
+	fi
+	grep -q "$1" < "$file"
+	if [ "$?" -eq "0" ]; then
+		echo FAIL: check_not present found
+		echo $1
+		echo inside file $file
+		echo sample:
+		grep "$1" < "$file" | head -10 | cat -n
+		error_exit 1
+	fi
+}
+
 
 # wait for main message queue to be empty. $1 is the instance.
 function wait_queueempty() {
