@@ -44,8 +44,8 @@ grep "omrelp error: invalid authmode" $RSYSLOG_DYNNAME.errmsgs > /dev/null
 if [ $? -eq 0 ]; then
         echo "SKIP: librelp does not support "certvalid" auth mode"
 	# mini-cleanup to not leave dangling processes
-	. $srcdir/diag.sh shutdown-immediate 2
-	. $srcdir/diag.sh shutdown-immediate
+	shutdown_immediate 2
+	shutdown_immediate
 	rm $RSYSLOG_DYNNAME* &> /dev/null
 	exit 77
 fi

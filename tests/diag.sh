@@ -455,6 +455,26 @@ function custom_content_check() {
 	fi
 }
 
+# check that given content $1 is not present in file $2 (default: RSYSLOG_OUTLOG)
+# regular expressions may be used
+function check_not_present() {
+
+	if [ "$2" == "" ]; then
+		file=$RSYSLOG_OUT_LOG
+	else
+		file="$2"
+	fi
+	grep "$1" < "$file"
+	if [ "$?" -eq "0" ]; then
+		echo FAIL: check_not present found
+		echo $1
+		echo inside file $file
+		echo sample:
+		grep "$1" < "$file" | head -10 | cat -n
+		error_exit 1
+	fi
+}
+
 
 # wait for main message queue to be empty. $1 is the instance.
 function wait_queueempty() {
@@ -481,6 +501,12 @@ function shutdown_when_empty() {
 	cp $RSYSLOG_PIDBASE$1.pid $RSYSLOG_PIDBASE$1.pid.save
 	$TESTTOOL_DIR/msleep 500 # wait a bit (think about slow testbench machines!)
 	kill `cat $RSYSLOG_PIDBASE$1.pid` # note: we do not wait for the actual termination!
+}
+
+# shut rsyslogd down without emptying the queue. $2 is the instance.
+function shutdown_immediate() {
+	cp $RSYSLOG_PIDBASE$2.pid $RSYSLOG_PIDBASE$2.pid.save
+	kill $(cat $RSYSLOG_PIDBASE$2.pid)
 }
 
 
@@ -1281,11 +1307,6 @@ case $1 in
 		done
 		unset terminated
 		unset out_pid
-		;;
-   'shutdown-immediate') # shut rsyslogd down without emptying the queue. $2 is the instance.
-		cp $RSYSLOG_PIDBASE$2.pid $RSYSLOG_PIDBASE$2.pid.save
-		kill `cat $RSYSLOG_PIDBASE$2.pid`
-		# note: we do not wait for the actual termination!
 		;;
    'kill-immediate') # kill rsyslog unconditionally
 		kill -9 `cat $RSYSLOG_PIDBASE.pid`

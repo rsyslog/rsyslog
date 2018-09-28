@@ -35,7 +35,7 @@ echo "*.*     :omtesting:sleep 0 1000" > ${RSYSLOG_DYNNAME}work-delay.conf
 # inject 5000 msgs, so that we do not hit the high watermark
 startup
 injectmsg 0 5000
-. $srcdir/diag.sh shutdown-immediate
+shutdown_immediate
 wait_shutdown
 . $srcdir/diag.sh check-mainq-spool
 
