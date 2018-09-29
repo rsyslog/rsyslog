@@ -2,16 +2,16 @@
 # added 2017-05-03 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
 . $srcdir/diag.sh init
-echo Test very unstable, thus skipping
-echo see https://github.com/rsyslog/rsyslog/issues/3057
-exit 77
+#echo Test very unstable, thus skipping
+#echo see https://github.com/rsyslog/rsyslog/issues/3057
+#exit 77
 
 # *** ==============================================================================
 export TESTMESSAGES=100000
 export TESTMESSAGESFULL=100000
 
 # Generate random topic name
-export RANDTOPIC=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
+export RANDTOPIC=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 8 | head -n 1)
 
 # Set EXTRA_EXITCHECK to dump kafka/zookeeperlogfiles on failure only.
 export EXTRA_EXITCHECK=dumpkafkalogs
@@ -39,7 +39,8 @@ module(load="../plugins/omkafka/.libs/omkafka")
 
 template(name="outfmt" type="string" string="%msg%\n")
 
-local4.* action(	name="kafka-fwd"
+local4.* {
+	action(	name="kafka-fwd"
 	type="omkafka"
 	topic="'$RANDTOPIC'"
 	broker="localhost:29092"
@@ -61,6 +62,10 @@ local4.* action(	name="kafka-fwd"
 	action.resumeRetryCount="10"
 	queue.saveonshutdown="on"
 	)
+	stop
+}
+
+action( type="omfile" file="'$RSYSLOG_DYNNAME.snd.othermsg'")
 '
 
 echo Starting sender instance [omkafka]
@@ -96,6 +101,8 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 
 if ($msg contains "msgnum:") then {
 	action( type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt" )
+} else {
+	action( type="omfile" file="'$RSYSLOG_DYNNAME.rcv.othermsg'")
 }
 ' 2
 
@@ -118,7 +125,9 @@ delete_kafka_topic $RANDTOPIC '.dep_wrk' '22181'
 # Dump Kafka log | uncomment if needed
 # dump_kafka_serverlog
 
-# Do the final sequence check
+kafka_check_broken_broker $RSYSLOG_DYNNAME.snd.othermsg
+kafka_check_broken_broker $RSYSLOG_DYNNAME.rcv.othermsg
+
 seq_check 1 $TESTMESSAGESFULL -d
 
 echo success
