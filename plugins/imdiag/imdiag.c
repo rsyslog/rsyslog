@@ -354,6 +354,21 @@ finalize_it:
 	RETiRet;
 }
 
+static rsRetVal
+enableDebug(tcps_sess_t *pSess)
+{
+	DEFiRet;
+
+	Debug = DEBUG_FULL;
+	debugging_on = 1;
+	dbgprintf("Note: debug turned on via imdiag\n");
+
+	CHKiRet(sendResponse(pSess, "debug enabled\n"));
+
+finalize_it:
+	RETiRet;
+}
+
 static void
 imdiag_statsReadCallback(statsobj_t __attribute__((unused)) *const ignore_stats,
 	void __attribute__((unused)) *const ignore_ctx)
@@ -484,6 +499,8 @@ OnMsgReceived(tcps_sess_t *pSess, uchar *pRcv, int iLenMsg)
 		CHKiRet(blockStatsReporting(pSess));
 	} else if(!ustrcmp(cmdBuf, UCHAR_CONSTANT("awaitstatsreport"))) {
 		CHKiRet(awaitStatsReport(pszMsg, pSess));
+	} else if(!ustrcmp(cmdBuf, UCHAR_CONSTANT("enabledebug"))) {
+		CHKiRet(enableDebug(pSess));
 	} else {
 		dbgprintf("imdiag unkown command '%s'\n", cmdBuf);
 		CHKiRet(sendResponse(pSess, "unkown command '%s'\n", cmdBuf));
