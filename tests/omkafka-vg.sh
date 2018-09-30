@@ -1,7 +1,6 @@
 #!/bin/bash
 # added 2017-05-03 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
-echo Init Testbench
 . $srcdir/diag.sh init
 check_command_available kafkacat
 
@@ -10,7 +9,7 @@ export TESTMESSAGES=10000
 export TESTMESSAGESFULL=$TESTMESSAGES
 
 # Generate random topic name
-export RANDTOPIC=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
+export RANDTOPIC=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 8 | head -n 1)
 
 # Set EXTRA_EXITCHECK to dump kafka/zookeeperlogfiles on failure only.
 export EXTRA_EXITCHECK=dumpkafkalogs
@@ -38,7 +37,8 @@ module(load="../plugins/omkafka/.libs/omkafka")
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 
-local4.* action(	name="kafka-fwd" 
+local4.* {
+	action(	name="kafka-fwd" 
 	type="omkafka"
 	topic="'$RANDTOPIC'"
 	broker="localhost:29092"
@@ -60,13 +60,16 @@ local4.* action(	name="kafka-fwd"
 	action.resumeRetryCount="2"
 	queue.saveonshutdown="on"
 	)
+	stop
+}
+
+action( type="omfile" file="'$RSYSLOG_DYNNAME.othermsg'")
 '
 
 echo Starting sender instance [omkafka]
 startup_vg
 # --- 
 
-echo Inject messages into rsyslog sender instance  
 injectmsg 1 $TESTMESSAGES
 
 echo Stopping sender instance [omkafka]
@@ -80,7 +83,7 @@ kafkacat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%p@%o:%k:%s' > 
 # Delete topic to remove old traces before
 delete_kafka_topic $RANDTOPIC '.dep_wrk' '22181'
 
-# Do the final sequence check
+kafka_check_broken_broker $RSYSLOG_DYNNAME.othermsg
 seq_check 1 $TESTMESSAGESFULL -d
 
 echo success

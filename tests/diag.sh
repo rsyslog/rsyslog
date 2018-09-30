@@ -289,6 +289,16 @@ debug output in the receiver and check for actual problems.
 "
 }
 
+# check if kafka itself failed. $1 is the message file name.
+function kafka_check_broken_broker() {
+	grep -q "Broker transport failure" < "$1"
+	if [ "$?" -eq "0" ]; then
+		echo environment-induced test error - kafka broker failed - skipping test
+		cat -n $1
+		exit 77
+	fi
+}
+
 # wait for rsyslogd startup ($1 is the instance)
 function wait_startup() {
 	wait_rsyslog_startup_pid $1
@@ -686,10 +696,20 @@ function error_exit() {
 function seq_check() {
 	$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${RSYSLOG_OUT_LOG} | ./chkseq -s$1 -e$2 $3 $4 $5 $6 $7
 	if [ "$?" -ne "0" ]; then
+		$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${RSYSLOG_OUT_LOG} > $RSYSLOG_DYNNAME.error.log
 		echo "sequence error detected in $RSYSLOG_OUT_LOG"
 		echo "number of lines in file: $(wc -l $RSYSLOG_OUT_LOG)"
-		echo "sorted data has been placed in error.log"
-		$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${RSYSLOG_OUT_LOG} > error.log
+		echo "sorted data has been placed in error.log, first 10 lines are:"
+		cat -n $RSYSLOG_DYNNAME.error.log | head -10
+		echo "---last 10 lines are:"
+		cat -n $RSYSLOG_DYNNAME.error.log | tail -10
+		echo "UNSORTED data, first 10 lines are:"
+		cat -n $RSYSLOG_OUT_LOG | head -10
+		echo "---last 10 lines are:"
+		cat -n $RSYSLOG_OUT_LOG | tail -10
+		# for interactive testing, create a static filename. We know this may get
+		# mangled during a parallel test run
+		mv -f $RSYSLOG_DYNNAME.error.log error.log
 		error_exit 1 
 	fi
 }

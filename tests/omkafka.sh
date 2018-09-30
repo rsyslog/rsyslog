@@ -1,7 +1,6 @@
 #!/bin/bash
 # added 2017-05-03 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
-echo Init Testbench
 . $srcdir/diag.sh init
 check_command_available kafkacat
 
@@ -10,7 +9,7 @@ export TESTMESSAGES=100000
 export TESTMESSAGESFULL=$TESTMESSAGES
 
 # Generate random topic name
-export RANDTOPIC=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)
+export RANDTOPIC=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 8 | head -n 1)
 
 # Set EXTRA_EXITCHECK to dump kafka/zookeeperlogfiles on failure only.
 export EXTRA_EXITCHECK=dumpkafkalogs
@@ -59,6 +58,10 @@ local4.* action(	name="kafka-fwd"
 	action.resumeRetryCount="2"
 	queue.saveonshutdown="on"
 	)
+	stop
+}
+
+action( type="omfile" file="'$RSYSLOG_DYNNAME.othermsg'")
 '
 
 echo Starting sender instance [omkafka]
@@ -81,8 +84,7 @@ delete_kafka_topic $RANDTOPIC '.dep_wrk' '22181'
 # Dump Kafka log | uncomment if needed
 # dump_kafka_serverlog
 
-# Do the final sequence check
+kafka_check_broken_broker $RSYSLOG_DYNNAME.othermsg
 seq_check 1 $TESTMESSAGESFULL -d
 
-echo success
 exit_test
