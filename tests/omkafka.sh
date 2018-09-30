@@ -36,7 +36,8 @@ module(load="../plugins/omkafka/.libs/omkafka")
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 
-local4.* action(	name="kafka-fwd" 
+local4.* {
+	action(	name="kafka-fwd"
 	type="omkafka"
 	topic="'$RANDTOPIC'"
 	broker="localhost:29092"
