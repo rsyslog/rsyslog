@@ -918,6 +918,23 @@ fi
 AM_CONDITIONAL(ENABLE_ELASTICSEARCH, test x$enable_elasticsearch = xyes)
 
 
+# clickhouse support
+AC_ARG_ENABLE(clickhouse,
+        [AS_HELP_STRING([--enable-clickhouse],[Enable clickhouse output module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_clickhouse="yes" ;;
+          no) enable_clickhouse="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-clickhouse) ;;
+         esac],
+        [enable_clickhouse=no]
+)
+if test "x$enable_clickhouse" = "xyes"; then
+	PKG_CHECK_MODULES([CURL], [libcurl])
+	LT_LIB_M
+fi
+AM_CONDITIONAL(ENABLE_CLICKHOUSE, test x$enable_clickhouse = xyes)
+
+
 # omhttp support
 AC_ARG_ENABLE(omhttp,
         [AS_HELP_STRING([--enable-omhttp],[Enable http output module @<:@default=no@:>@])],
@@ -951,6 +968,20 @@ AC_ARG_ENABLE(elasticsearch_tests,
 )
 AM_CONDITIONAL(ENABLE_ELASTICSEARCH_TESTS, test x$enable_elasticsearch_tests = xyes)
 AM_CONDITIONAL(ENABLE_ELASTICSEARCH_TESTS_MINIMAL, test x$enable_elasticsearch_tests = xminimal -o x$enable_elasticsearch_tests = xyes)
+
+
+# capability to enable clickhouse testbench tests. This requries that a test
+# environment is present on the local (127.0.0.1) machine. 
+AC_ARG_ENABLE(clickhouse_tests,
+        [AS_HELP_STRING([--enable-clickhouse-tests],[enable Elasticsearch specific tests in testbench @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_clickhouse_tests="yes" ;;
+          no) enable_clickhouse_tests="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-clickhouse-tests) ;;
+         esac],
+        [enable_clickhouse_tests=no]
+)
+AM_CONDITIONAL(ENABLE_CLICKHOUSE_TESTS, test x$enable_clickhouse_tests = xyes)
 
 
 # openssl support
@@ -2344,6 +2375,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/mmfields/Makefile \
 		plugins/mmpstrucdata/Makefile \
 		plugins/omelasticsearch/Makefile \
+		plugins/omclickhouse/Makefile \
 		plugins/mmsnmptrapd/Makefile \
 		plugins/pmlastmsg/Makefile \
 		plugins/mmdblookup/Makefile \
@@ -2414,6 +2446,7 @@ echo "    omstdout module will be compiled:         $enable_omstdout"
 echo "    omjournal module will be compiled:        $enable_omjournal"
 echo "    omhdfs module will be compiled:           $enable_omhdfs"
 echo "    omelasticsearch module will be compiled:  $enable_elasticsearch"
+echo "    omclickhouse module will be compiled:     $enable_clickhouse"
 echo "    omhttp module will be compiled:           $enable_omhttp"
 echo "    omruleset module will be compiled:        $enable_omruleset"
 echo "    omudpspoof module will be compiled:       $enable_omudpspoof"
@@ -2478,6 +2511,7 @@ echo "    Testbench libfaketime tests enabled:      $enable_libfaketime"
 echo "    Extended Testbench enabled:               $enable_extended_tests"
 echo "    MySQL Tests enabled:                      $enable_mysql_tests"
 echo "    Elasticsearch Tests:                      $enable_elasticsearch_tests"
+echo "    ClickHouse Tests:                         $enable_clickhouse_tests"
 echo "    PostgreSQL Tests enabled:                 $enable_pgsql_tests"
 echo "    Kafka Tests enabled:                      $enable_kafka_tests"
 echo "    systemd journal tests enabled:            $enable_journal_tests"
