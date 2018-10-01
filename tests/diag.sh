@@ -212,7 +212,7 @@ function wait_startup_pid() {
 		   error_exit 1
 		fi
 	done
-	echo "$1.pid found, pid  `cat $1.pid`"
+	echo "$1.pid found, pid  $(cat $1.pid)"
 }
 
 # special version of wait_startup_pid() for rsyslog startup
@@ -242,7 +242,7 @@ function wait_process_startup() {
 			   error_exit 1
 			fi
 		done
-		echo "$2 seen, associated pid " `cat $1.pid`
+		echo "$2 seen, associated pid " $(cat $1.pid)
 	fi
 }
 
@@ -308,7 +308,7 @@ function wait_startup() {
 	i=0
 	while test ! -f ${RSYSLOG_DYNNAME}$1.started; do
 		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
-		ps -p `cat $RSYSLOG_PIDBASE$1.pid` &> /dev/null
+		ps -p $(cat $RSYSLOG_PIDBASE$1.pid) &> /dev/null
 		if [ $? -ne 0 ]
 		then
 		   echo "ABORT! rsyslog pid no longer active during startup!"
@@ -321,7 +321,7 @@ function wait_startup() {
 		   error_exit 1
 		fi
 	done
-	echo "rsyslogd$1 startup msg seen, pid " `cat $RSYSLOG_PIDBASE$1.pid`
+	echo "rsyslogd$1 startup msg seen, pid " $(cat $RSYSLOG_PIDBASE$1.pid)
 	wait_file_exists $RSYSLOG_DYNNAME.imdiag$1.port
 	eval export IMDIAG_PORT$1=$(cat $RSYSLOG_DYNNAME.imdiag$1.port)
 	eval PORT=$IMDIAG_PORT$1
@@ -513,7 +513,7 @@ function shutdown_when_empty() {
 	fi
 	cp $RSYSLOG_PIDBASE$1.pid $RSYSLOG_PIDBASE$1.pid.save
 	$TESTTOOL_DIR/msleep 500 # wait a bit (think about slow testbench machines!)
-	kill `cat $RSYSLOG_PIDBASE$1.pid` # note: we do not wait for the actual termination!
+	kill $(cat $RSYSLOG_PIDBASE$1.pid) # note: we do not wait for the actual termination!
 }
 
 # shut rsyslogd down without emptying the queue. $2 is the instance.
@@ -527,7 +527,7 @@ function shutdown_immediate() {
 # $1 is the instance
 function wait_shutdown() {
 	i=0
-	out_pid=`cat $RSYSLOG_PIDBASE$1.pid.save`
+	out_pid=$(cat $RSYSLOG_PIDBASE$1.pid.save)
 	echo wait on shutdown of $out_pid
 	if [[ "x$out_pid" == "x" ]]
 	then
@@ -601,14 +601,14 @@ function custom_assert_content_missing() {
 
 # shut rsyslogd down when main queue is empty. $1 is the instance.
 function issue_HUP() {
-	kill -HUP `cat $RSYSLOG_PIDBASE$1.pid`
+	kill -HUP $(cat $RSYSLOG_PIDBASE$1.pid)
 	$TESTTOOL_DIR/msleep 1000
 }
 
 
 # actually, we wait for rsyslog.pid to be deleted. $1 is the instance
 function wait_shutdown_vg() {
-	wait `cat $RSYSLOG_PIDBASE$1.pid`
+	wait $(cat $RSYSLOG_PIDBASE$1.pid)
 	export RSYSLOGD_EXIT=$?
 	echo rsyslogd run exited with $RSYSLOGD_EXIT
 	if [ -e vgcore.* ]; then
@@ -636,7 +636,7 @@ function error_exit() {
 	then
 		echo trying to obtain crash location info
 		echo note: this may not be the correct file, check it
-		CORE=`ls core*`
+		CORE=$(ls core*)
 		echo "bt" >> gdb.in
 		echo "q" >> gdb.in
 		gdb ../tools/rsyslogd $CORE -batch -x gdb.in
@@ -648,7 +648,7 @@ function error_exit() {
 		then
 			echo trying to analyze core for main rsyslogd binary
 			echo note: this may not be the correct file, check it
-			CORE=`ls core*`
+			CORE=$(ls core*)
 			#echo "set pagination off" >gdb.in
 			#echo "core $CORE" >>gdb.in
 			echo "bt" >> gdb.in
@@ -1342,7 +1342,7 @@ case $1 in
 		unset out_pid
 		;;
    'kill-immediate') # kill rsyslog unconditionally
-		kill -9 `cat $RSYSLOG_PIDBASE.pid`
+		kill -9 $(cat $RSYSLOG_PIDBASE.pid)
 		# note: we do not wait for the actual termination!
 		;;
     'injectmsg-litteral') # inject litteral-payload  via our inject interface (imdiag)
@@ -1587,14 +1587,14 @@ case $1 in
 		# THIS IS THE ACTUAL START of ES
 		$dep_work_dir/es/bin/elasticsearch -p $dep_work_es_pidfile -d
 		$TESTTOOL_DIR/msleep 2000
-		echo "Starting instance $2 started with PID" `cat $dep_work_es_pidfile`
+		echo "Starting instance $2 started with PID" $(cat $dep_work_es_pidfile)
 
 		# Wait for startup with hardcoded timeout
 		timeoutend=60
 		timeseconds=0
 		# Loop until elasticsearch port is reachable or until
 		# timeout is reached!
-		until [ "`curl --silent --show-error --connect-timeout 1 http://localhost:${ES_PORT:-19200} | grep 'rsyslog-testbench'`" != "" ]; do
+		until [ "$(curl --silent --show-error --connect-timeout 1 http://localhost:${ES_PORT:-19200} | grep 'rsyslog-testbench')" != "" ]; do
 			echo "--- waiting for ES startup: $timeseconds seconds"
 			$TESTTOOL_DIR/msleep 1000
 			let "timeseconds = $timeseconds + 1"
