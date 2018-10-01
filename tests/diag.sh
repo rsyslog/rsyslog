@@ -199,13 +199,16 @@ function wait_startup_pid() {
 		error_exit 100
 	fi
 	i=0
+	start_timeout="$(date)"
 	while test ! -f $1.pid; do
 		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
 		let "i++"
 		if test $i -gt $TB_TIMEOUT_STARTSTOP
 		then
-		   ps -f
 		   echo "ABORT! Timeout waiting on startup (pid file $1.pid)"
+		   echo "Wait initiated $start_timeout, now $(date)"
+		   ls -l $1.pid
+		   ps -fp $(cat $1.pid)
 		   error_exit 1
 		fi
 	done
@@ -226,7 +229,7 @@ function wait_process_startup() {
 	if [ "$2" != "" ]; then
 		while test ! -f "$2"; do
 			$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
-			ps -p `cat $1.pid` &> /dev/null
+			ps -p $(cat $1.pid) &> /dev/null
 			if [ $? -ne 0 ]
 			then
 			   echo "ABORT! pid in $1 no longer active during startup!"
@@ -532,10 +535,10 @@ function wait_shutdown() {
 	else
 		terminated=0
 	fi
+	start_timeout="$(date)"
 	while [[ $terminated -eq 0 ]]; do
 		ps -p $out_pid &> /dev/null
-		if [[ $? != 0 ]]
-		then
+		if [[ $? != 0 ]]; then
 			terminated=1
 		fi
 		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
@@ -543,9 +546,18 @@ function wait_shutdown() {
 		if test $i -gt $TB_TIMEOUT_STARTSTOP
 		then
 		   echo "ABORT! Timeout waiting on shutdown"
+		   echo "Wait initiated $start_timeout, now $(date)"
+		   ps -fp $out_pid
 		   echo "Instance is possibly still running and may need"
 		   echo "manual cleanup."
-		   exit 1
+		   echo "TRYING TO capture status via gdb from hanging process"
+		   gdb ../tools/rsyslogd <<< "attach $out_pid
+inf thr
+thread apply all bt
+quit"
+		   echo "trying to kill -9 process"
+		   kill -9 $out_pid
+		   error_exit 1
 		fi
 	done
 	unset terminated
@@ -1302,12 +1314,12 @@ case $1 in
    'wait-pid-termination')  # wait for the pid in pid $2 to terminate, abort on timeout
 		i=0
 		out_pid=$2
-		if [[ "x$out_pid" == "x" ]]
-		then
+		if [[ "x$out_pid" == "x" ]]; then
 			terminated=1
 		else
 			terminated=0
 		fi
+		start_timeout="$(date)"
 		while [[ $terminated -eq 0 ]]; do
 			ps -p $out_pid &> /dev/null
 			if [[ $? != 0 ]]
@@ -1319,10 +1331,11 @@ case $1 in
 			if test $i -gt $TB_TIMEOUT_STARTSTOP
 			then
 			   echo "ABORT! Timeout waiting on shutdown"
-			   echo "on PID file $2"
+			   echo "Wait initiated $start_timeout, now $(date)"
+			   ps -fp $out_pid
 			   echo "Instance is possibly still running and may need"
 			   echo "manual cleanup."
-			   exit 1
+			   error_exit 1
 			fi
 		done
 		unset terminated
