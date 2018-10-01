@@ -136,6 +136,7 @@ TESTS +=  \
 	imtcp_incomplete_frame_at_end.sh \
 	queue-encryption-disk.sh \
 	queue-encryption-disk_keyfile.sh \
+	queue-encryption-disk_keyprog.sh \
 	queue-encryption-da.sh \
 	daqueue-persist.sh \
 	daqueue-invld-qi.sh \
@@ -1435,6 +1436,7 @@ EXTRA_DIST= \
 	rcvr_fail_restore.sh \
 	queue-encryption-disk.sh \
 	queue-encryption-disk_keyfile.sh \
+	queue-encryption-disk_keyprog.sh \
 	queue-encryption-da.sh \
 	daqueue-dirty-shutdown.sh \
 	daqueue-invld-qi.sh \
