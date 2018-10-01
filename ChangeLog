@@ -58,6 +58,9 @@ Version 8.39.0 [v8-stable] 2018-10-30
     much sense. Modules:
     - ommail
   - testbench: new tests for disk queue encryption
+  - testbench: improved auto-diagnostics for hanging instance
+  - testbench: hardened kafka test against failing kafka subsyste,
+    not in 100% of the cases, but at least in some that frequently occur
 ------------------------------------------------------------------------------
 Version 8.38.0 [v8-stable] 2018-09-18
 - AIX: make basic modules work again
