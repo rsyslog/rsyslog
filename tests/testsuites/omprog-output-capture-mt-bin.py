@@ -2,7 +2,6 @@
 
 import sys
 import os
-import logging
 
 lineLength = int(sys.argv[1])
 linePrefix = "[{0:09d}] ".format(os.getpid())
