@@ -1,3 +1,4 @@
+#!/bin/bash
 # This is a sample file for environment settings on Fedora 13
 # that made me compile & run omhdfs. I really *hate* the way
 # java uses environment variables... Hopefully this file will

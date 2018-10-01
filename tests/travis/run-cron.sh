@@ -1,3 +1,4 @@
+#!/bin/bash
 # this perform a travis cron job
 #set -x
 

@@ -1,3 +1,4 @@
+#!/bin/bash
 set -e
 export CFLAGS="-g -Wall -Wextra -O2"
 autoreconf -fvi
