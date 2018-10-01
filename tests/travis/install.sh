@@ -1,3 +1,4 @@
+#!/bin/bash
 # this installs some components that we cannot install any other way
 source /etc/lsb-release
 

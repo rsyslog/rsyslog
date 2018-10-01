@@ -1,3 +1,4 @@
+#!/bin/bash
 # run compile-only tests under Travis
 # This is specifically written to support Travis CI
 set -e
