@@ -149,8 +149,7 @@ else
 fi
 
 if [ -f ${RSYSLOG_DYNNAME}.spool/es-stats.log ] ; then
-	cat ${RSYSLOG_DYNNAME}.spool/es-stats.log | \
-	python -c '
+	python < ${RSYSLOG_DYNNAME}.spool/es-stats.log -c '
 import sys,json
 success = int(sys.argv[1])
 badarg = int(sys.argv[2])
