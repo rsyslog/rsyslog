@@ -26,9 +26,6 @@ specified via $template legacy statements.
    are available.
 
 
-TODO: :doc:`rsyslog properties reference <properties>` for a list of which
-
-
 Template processing
 ===================
 
