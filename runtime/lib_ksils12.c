@@ -1278,7 +1278,7 @@ static void process_requests(rsksictx ctx, KSI_CTX *ksi_ctx, FILE* outfile) {
 	if (!outfile)
 		goto signing_failed;
 
-	if(!lastItem || item->type != QITEM_SIGNATURE_REQUEST)
+	if(!lastItem || lastItem->type != QITEM_SIGNATURE_REQUEST)
 		return;
 
 	if(lastItem->arg == NULL) {
