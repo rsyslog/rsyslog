@@ -346,6 +346,8 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		CHKmalloc(inst->pszBindRuleset = ustrdup(cs.pszBindRuleset));
 	}
 	inst->pBindRuleset = NULL;
+
+	inst->bEnableLstn = -1; /* all ok, ready to start up */
 finalize_it:
 	free(pNewVal);
 	RETiRet;

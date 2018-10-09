@@ -861,6 +861,7 @@ if ENABLE_RELP
 TESTS += sndrcv_relp.sh \
 	 sndrcv_relp_rebind.sh \
 	 imrelp-basic.sh \
+	 imrelp-basic-oldstyle.sh \
 	 imrelp-manyconn.sh \
 	 imrelp-maxDataSize-error.sh \
 	 imrelp-long-msg.sh \
@@ -1451,6 +1452,7 @@ EXTRA_DIST= \
 	sndrcv_failover.sh \
 	sndrcv.sh \
 	imrelp-basic.sh \
+	imrelp-basic-oldstyle.sh \
 	imrelp-manyconn.sh \
 	imrelp-maxDataSize-error.sh \
 	imrelp-long-msg.sh \
