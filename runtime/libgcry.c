@@ -463,6 +463,7 @@ void
 rsgcryCtxDel(gcryctx ctx)
 {
 	if(ctx != NULL) {
+		free(ctx->key);
 		free(ctx);
 	}
 }
