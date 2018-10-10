@@ -552,6 +552,7 @@ function wait_shutdown() {
 		   echo "manual cleanup."
 		   echo "TRYING TO capture status via gdb from hanging process"
 		   gdb ../tools/rsyslogd <<< "attach $out_pid
+set pagination off
 inf thr
 thread apply all bt
 quit"
