@@ -480,7 +480,10 @@ wtpStartWrkr(wtp_t *pThis)
 	 */
 	do {
 		d_pthread_cond_wait(&pThis->condThrdInitDone, &pThis->mutWtp);
-	} while(wtiGetState(pWti) != WRKTHRD_RUNNING);
+	} while((iState = wtiGetState(pWti)) == WRKTHRD_INITIALIZING);
+	DBGPRINTF("%s: new worker finished initialization with state %d, num workers now %d\n",
+		wtpGetDbgHdr(pThis), iState,
+		ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
 
 finalize_it:
 	d_pthread_mutex_unlock(&pThis->mutWtp);
