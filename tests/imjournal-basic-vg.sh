@@ -39,7 +39,7 @@ if [ $? -ne 0 ]; then
         exit 77
 fi
 
-cat $RSYSLOG_OUT_LOG | fgrep -qF "$TESTMSG"
+fgrep -qF "$TESTMSG" < $RSYSLOG_OUT_LOG
 if [ $? -ne 0 ]; then
   echo "FAIL:  $RSYSLOG_OUT_LOG content (tail -n200):"
   tail -n200 $RSYSLOG_OUT_LOG
