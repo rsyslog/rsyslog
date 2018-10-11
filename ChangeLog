@@ -17,6 +17,17 @@ Version 8.39.0 [v8-stable] 2018-10-30
   needed and could now finally be removed; We also refactored the last
   component (omhttp contrib module) that used the old interface.
   closes https://github.com/rsyslog/rsyslog/issues/1684
+- bugfix core: potential hang on rsyslog termination
+  The root cause was a deadlock during worker startup. This could
+  happen for example when a DA queue needed to persist data during
+  shutdown.
+  Fail condition:
+  * startup request for a new worker
+  * initialization of that worker
+  * immediate detection that the worker can or must shutdown
+  * main thread waiting for worker running state, which it skips,
+    and so the main thread hangs inside a loop
+  closes https://github.com/rsyslog/rsyslog/issues/3094
 - bugfix imfile: file change was not reliably detected
   A change in the inode was not detected under all circumstances,
   most importantly not in some logrotate cases.
