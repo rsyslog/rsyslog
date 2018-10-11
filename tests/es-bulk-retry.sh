@@ -122,7 +122,7 @@ rc=$?
 . $srcdir/diag.sh cleanup-elasticsearch
 
 if [ -f work ] ; then
-	cat work | \
+	< work  \
 	python -c '
 import sys,json
 records = int(sys.argv[1])
