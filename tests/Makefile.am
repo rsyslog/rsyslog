@@ -55,6 +55,7 @@ if ENABLE_DEFAULT_TESTS
 TESTS +=  \
 	empty-hostname.sh \
 	hostname-getaddrinfo-fail.sh \
+	msleep_usage_output.sh \
 	prop-programname.sh \
 	prop-programname-with-slashes.sh \
 	hostname-with-slash-pmrfc5424.sh \
@@ -1198,6 +1199,7 @@ EXTRA_DIST= \
 	omsnmp_errmsg_no_params.sh \
 	ommail_errmsg_no_params.sh \
 	mmutf8fix_no_error.sh \
+	msleep_usage_output.sh \
 	mmanon_random_32_ipv4.sh \
 	mmanon_random_cons_32_ipv4.sh \
 	mmanon_recognize_ipv4.sh \
