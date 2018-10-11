@@ -457,11 +457,13 @@ StartDA(qqueue_t *pThis)
 		pThis->pqDA->useCryprov = pThis->useCryprov;
 		pThis->pqDA->cryprov = pThis->cryprov;
 		pThis->pqDA->cryprovData = pThis->cryprovData;
+		pThis->pqDA->cryprovName = pThis->cryprovName;
 		pThis->pqDA->cryprovNameFull = pThis->cryprovNameFull;
 		/* reset memory queue parameters */
 		pThis->useCryprov = 0;
 		/* pThis->cryprov cannot and need not be reset, is structure */
 		pThis->cryprovData = NULL;
+		pThis->cryprovName = NULL;
 		pThis->cryprovNameFull = NULL;
 	}
 
