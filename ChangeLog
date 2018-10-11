@@ -17,6 +17,18 @@ Version 8.39.0 [v8-stable] 2018-10-30
   needed and could now finally be removed; We also refactored the last
   component (omhttp contrib module) that used the old interface.
   closes https://github.com/rsyslog/rsyslog/issues/1684
+- bugfix imrelp: regression with legacy configuration startup fail
+  Startup of a relp listener failed if legacy configuration was used.
+  caused by commit: 32b71daa8aadb8f16fe0ca2945e54d593f47a824
+  closes https://github.com/rsyslog/rsyslog/issues/3106
+- bugfix gcry crypto driver: small memleak
+  If a crypto key is specified directly via the key="" parameter,
+  the storage for that key is not freed, causing a small memleak.
+  Note that the problem occurs only once per context, so this
+  should not cause real issues. Even more so, as specifying a
+  key directly is meant only for testing purposes and is strongly
+  discouraged for production use.
+  Detected by internal testing, no actual fail case known.
 - bugfix core: potential hang on rsyslog termination
   The root cause was a deadlock during worker startup. This could
   happen for example when a DA queue needed to persist data during
