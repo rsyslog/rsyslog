@@ -353,6 +353,11 @@ TESTS +=  \
 	omsnmp_errmsg_no_params.sh
 endif # if ENABLE_SNMP
 
+if ENABLE_MMUTF8FIX
+TESTS +=  \
+	mmutf8fix_no_error.sh
+endif # if ENABLE_MAIL
+
 if ENABLE_MAIL
 TESTS +=  \
 	ommail_errmsg_no_params.sh
@@ -1191,6 +1196,7 @@ EXTRA_DIST= \
 	rs-substring.sh \
 	omsnmp_errmsg_no_params.sh \
 	ommail_errmsg_no_params.sh \
+	mmutf8fix_no_error.sh \
 	mmanon_random_32_ipv4.sh \
 	mmanon_random_cons_32_ipv4.sh \
 	mmanon_recognize_ipv4.sh \
