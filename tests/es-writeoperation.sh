@@ -100,8 +100,7 @@ shutdown_when_empty
 wait_shutdown
 . $srcdir/diag.sh es-getdata 1 $ES_PORT
 
-cat work | \
-	python -c '
+python <work -c '
 import sys,json
 hsh = json.load(sys.stdin)
 try:

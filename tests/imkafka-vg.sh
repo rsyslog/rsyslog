@@ -68,7 +68,7 @@ do
 done
 
 echo Inject messages into kafka
-cat $RSYSLOG_OUT_LOG.in | kafkacat -P -b localhost:29092 -t $RANDTOPIC
+kafkacat <$RSYSLOG_OUT_LOG.in  -P -b localhost:29092 -t $RANDTOPIC
 # --- 
 
 echo Give imkafka some time to start...
