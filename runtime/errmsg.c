@@ -144,13 +144,12 @@ LogError(const int iErrno, const int iErrCode, const char *fmt, ... )
 {
 	va_list ap;
 	char buf[2048];
-	size_t lenBuf;
+	int lenBuf;
 	
 	va_start(ap, fmt);
 	lenBuf = vsnprintf(buf, sizeof(buf), fmt, ap);
-	if(lenBuf >= sizeof(buf)) {
-		/* if our buffer was too small, we simply truncate. */
-		lenBuf--;
+	if(lenBuf < 0) {
+		strncpy(buf, "error message lost due to problem with vsnprintf", sizeof(buf));
 	}
 	va_end(ap);
 	buf[sizeof(buf) - 1] = '\0'; /* just to be on the safe side... */
@@ -173,13 +172,12 @@ LogMsg(const int iErrno, const int iErrCode, const int severity, const char *fmt
 {
 	va_list ap;
 	char buf[2048];
-	size_t lenBuf;
+	int lenBuf;
 	
 	va_start(ap, fmt);
 	lenBuf = vsnprintf(buf, sizeof(buf), fmt, ap);
-	if(lenBuf >= sizeof(buf)) {
-		/* if our buffer was too small, we simply truncate. */
-		lenBuf--;
+	if(lenBuf < 0) {
+		strncpy(buf, "error message lost due to problem with vsnprintf", sizeof(buf));
 	}
 	va_end(ap);
 	buf[sizeof(buf) - 1] = '\0'; /* just to be on the safe side... */
