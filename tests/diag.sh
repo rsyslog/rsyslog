@@ -697,11 +697,20 @@ function error_exit() {
 	# Extended Exit handling for kafka / zookeeper instances 
 	kafka_exit_handling "false"
 
+	# Report error to rsyslog testbench stats
+	if [[ $1 == 1 ]]; then
+		error_stats
+	fi
+
 	# we need to do some minimal cleanup so that "make distcheck" does not
 	# complain too much
 	exit $1
 }
 
+# Helper function to call Adiscon test error script
+function error_stats() {
+	wget $RSYSLOG_STATSURL\?Testname=$RSYSLOG_TESTNAME\&Testenv=$PWD\&Testmachine=$HOSTNAME\&rndstr=jnxv8i34u78fg23
+}
 
 # do the usual sequence check to see if everything was properly received.
 # $4... are just to have the abilit to pass in more options...
@@ -1294,6 +1303,10 @@ case $1 in
 		export IMDIAG_PORT=13500
 		export IMDIAG_PORT2=13501
 		export TCPFLOOD_PORT=13514
+
+		# Extra Variables for Test statistic reporting
+		export RSYSLOG_TESTNAME=$(basename $0)
+		export RSYSLOG_STATSURL="http://build.rsyslog.com/testbench-failedtest.php"
 
 		# we create one file with the test name, so that we know what was
 		# left over if "make distcheck" complains
