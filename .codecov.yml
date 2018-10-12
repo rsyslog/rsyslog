@@ -4,6 +4,10 @@ coverage:
   # to get things started, let's aim at a lower goal. This actually helps
   # to find those areas that we need to concentrate on.
   range: 50..75
+  # the next 2 lines few hopefully help us avoid CI fail due to slightly
+  # different execution pathes (if not, remove) -- rgerhards, 2018-10-12
+  precision: 0
+  round: up
 
 ignore:
   # will be removed soon: https://github.com/rsyslog/rsyslog/issues/2103
@@ -18,5 +22,5 @@ ignore:
   # that would require a service registration
   # see also: https://github.com/rsyslog/rsyslog/issues/3073
   - "runtime/lib_ksi_queue.c"
-  - "runtime/lib_ksi.c"
-  - "runtime/ lmsig_ksi-ls12.c"
+  - "runtime/lib_ksil212.c"
+  - "runtime/lmsig_ksi-ls12.c"
