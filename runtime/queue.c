@@ -941,9 +941,9 @@ static rsRetVal qDestructDisk(qqueue_t *pThis)
 {
 	DEFiRet;
 	
-	ASSERT(pThis != NULL);
 
 	free(pThis->pszQIFNam);
+	ASSERT(pThis != NULL);
 	if(pThis->tVars.disk.pWrite != NULL) {
 		int64 currOffs;
 		strm.GetCurrOffset(pThis->tVars.disk.pWrite, &currOffs);
