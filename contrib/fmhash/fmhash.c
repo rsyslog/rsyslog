@@ -189,12 +189,13 @@ hash_wrapper3(struct svar *__restrict__ const sourceVal, struct svar *__restrict
 	if(mod == 0) {
 		parser_warnmsg("fmhash: hashXXmod(string, mod)/hash64mod(string, mod, seed) invalid"
 				", 'mod' is zero, , defaulting hash value to 0");
-		mod = 1;
 		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 	}
 
 	CHKiRet((hcontext->hash_wrapper_1_2(sourceVal, seedVal, hcontext, xhash)));
-	(*xhash) = (*xhash) % mod;
+	if(mod != 0) {
+		(*xhash) = (*xhash) % mod;
+	}
 	DBGPRINTF("fmhash: hashXXmod generated hash-mod %" PRIu64 ".", (*xhash));
 finalize_it:
 	RETiRet;
