@@ -963,13 +963,14 @@ static rsRetVal qDestructDisk(qqueue_t *pThis)
 	RETiRet;
 }
 
-static rsRetVal qAddDisk(qqueue_t *pThis, smsg_t* pMsg)
+static rsRetVal ATTR_NONNULL(1,2)
+qAddDisk(qqueue_t *const pThis, smsg_t* pMsg)
 {
 	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, qqueue);
+	ISOBJ_TYPE_assert(pMsg, msg);
 	number_t nWriteCount;
 	const int oldfile = strmGetCurrFileNum(pThis->tVars.disk.pWrite);
-
-	ASSERT(pThis != NULL);
 
 	CHKiRet(strm.SetWCntr(pThis->tVars.disk.pWrite, &nWriteCount));
 	CHKiRet((objSerialize(pMsg))(pMsg, pThis->tVars.disk.pWrite));
@@ -1378,16 +1379,16 @@ cancelWorkers(qqueue_t *pThis)
  * longer, because we no longer can persist the queue in parallel to waiting
  * on worker timeouts.
  */
-rsRetVal
+rsRetVal ATTR_NONNULL(1)
 qqueueShutdownWorkers(qqueue_t *const pThis)
 {
 	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, qqueue);
 
 	if(pThis->qType == QUEUETYPE_DIRECT) {
 		FINALIZE;
 	}
 
-	ISOBJ_TYPE_assert(pThis, qqueue);
 	ASSERT(pThis->pqParent == NULL); /* detect invalid calling sequence */
 
 	DBGOPRINT((obj_t*) pThis, "initiating worker thread shutdown sequence %p\n", pThis);
