@@ -52,6 +52,9 @@ Version 8.39.0 [v8-stable] 2018-10-30
 - bugfix queue subsystem: DA queue did ignore encryption settings
   closes https://github.com/rsyslog/rsyslog/issues/3066
   closes https://github.com/rsyslog/rsyslog/issues/2575
+- bugfix KSI: lmsig-ksils12 module skips signing the last block
+  Thanks to Allan Park for the patch.
+  closes https://github.com/rsyslog/rsyslog/issues/3105
 - CI:
   * some small improvements in testbench plumbing
     e.g. (`cmd` replaced by $(cmd), removed useless use of cat, ...)
