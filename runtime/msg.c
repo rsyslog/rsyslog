@@ -2625,28 +2625,8 @@ getProgramName(smsg_t *const pM, const sbool bLockMutex)
 }
 
 
-/* This function tries to emulate APPNAME if it is not present. Its
- * main use is when we have received a log record via legacy syslog and
- * now would like to send out the same one via syslog-protocol.
- * MUST be called with the Msg Lock locked!
- */
-static void ATTR_NONNULL(1)
-tryEmulateAPPNAME(smsg_t *const pM, const sbool bLockMutex)
-{
-	assert(pM != NULL);
-	if(pM->pCSAPPNAME != NULL)
-		return; /* we are already done */
-
-	if(msgGetProtocolVersion(pM) == 0) {
-		/* only then it makes sense to emulate */
-		MsgSetAPPNAME(pM, (char*)getProgramName(pM, bLockMutex));
-	}
-}
-
-
 
 /* check if we have a APPNAME, and, if not, try to aquire/emulate it.
- * This must be called WITHOUT the message lock being held.
  * rgerhards, 2009-06-26
  */
 static void ATTR_NONNULL(1)
@@ -2657,8 +2637,12 @@ prepareAPPNAME(smsg_t *const pM, const sbool bLockMutex)
 			MsgLock(pM);
 
 		/* re-query as things might have changed during locking */
-		if(pM->pCSAPPNAME == NULL)
-			tryEmulateAPPNAME(pM, MUTEX_ALREADY_LOCKED);
+		if(pM->pCSAPPNAME == NULL) {
+			if(msgGetProtocolVersion(pM) == 0) {
+				/* only then it makes sense to emulate */
+				MsgSetAPPNAME(pM, (char*)getProgramName(pM, MUTEX_ALREADY_LOCKED));
+			}
+		}
 
 		if(bLockMutex == LOCK_MUTEX)
 			MsgUnlock(pM);
