@@ -55,6 +55,9 @@ Version 8.39.0 [v8-stable] 2018-10-30
 - bugfix KSI: lmsig-ksils12 module skips signing the last block
   Thanks to Allan Park for the patch.
   closes https://github.com/rsyslog/rsyslog/issues/3105
+- bugfix fmhash: function hash64mod sometimes returned wrong result
+  Thanks to Harshvardhan Shrivastava for providing the patch
+  closes https://github.com/rsyslog/rsyslog/issues/3025
 - CI:
   * some small improvements in testbench plumbing
     e.g. (`cmd` replaced by $(cmd), removed useless use of cat, ...)
