@@ -463,8 +463,8 @@ finalize_it:
 /* Function to handle received messages. This is our core function!
  * rgerhards, 2009-05-24
  */
-static rsRetVal
-OnMsgReceived(tcps_sess_t *pSess, uchar *pRcv, int iLenMsg)
+static rsRetVal ATTR_NONNULL()
+OnMsgReceived(tcps_sess_t *const pSess, uchar *const pRcv, const int iLenMsg)
 {
 	uchar *pszMsg;
 	uchar *pToFree = NULL;
@@ -507,8 +507,7 @@ OnMsgReceived(tcps_sess_t *pSess, uchar *pRcv, int iLenMsg)
 	}
 
 finalize_it:
-	if(pToFree != NULL)
-		free(pToFree);
+	free(pToFree);
 	RETiRet;
 }
 
