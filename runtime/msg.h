@@ -202,7 +202,7 @@ rsRetVal MsgReplaceMSG(smsg_t *pThis, const uchar* pszMSG, int lenMSG);
 uchar *MsgGetProp(smsg_t *pMsg, struct templateEntry *pTpe, msgPropDescr_t *pProp,
 		  rs_size_t *pPropLen, unsigned short *pbMustBeFreed, struct syslogTime *ttNow);
 uchar *getRcvFrom(smsg_t *pM);
-void getTAG(smsg_t *pM, uchar **ppBuf, int *piLen);
+void getTAG(smsg_t *pM, uchar **ppBuf, int *piLen, sbool);
 const char *getTimeReported(smsg_t *pM, enum tplFormatTypes eFmt);
 const char *getPRI(smsg_t *pMsg);
 int getPRIi(const smsg_t * const pM);

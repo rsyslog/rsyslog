@@ -238,7 +238,7 @@ BEGINdoAction_NoStrings
 	instanceData *pData;
 CODESTARTdoAction
 	pData = pWrkrData->pData;
-	getTAG(pMsg, &pszTag, &lenTAG);
+	getTAG(pMsg, &pszTag, &lenTAG, LOCK_MUTEX);
 	if(strncmp((char*)pszTag, (char*)pData->pszTagID, pData->lenTagID)) {
 		DBGPRINTF("tag '%s' not matching, mmsnmptrapd ignoring this message\n",
 			  pszTag);
