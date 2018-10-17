@@ -1379,16 +1379,16 @@ cancelWorkers(qqueue_t *pThis)
  * longer, because we no longer can persist the queue in parallel to waiting
  * on worker timeouts.
  */
-rsRetVal
+rsRetVal ATTR_NONNULL(1)
 qqueueShutdownWorkers(qqueue_t *const pThis)
 {
 	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, qqueue);
 
 	if(pThis->qType == QUEUETYPE_DIRECT) {
 		FINALIZE;
 	}
 
-	ISOBJ_TYPE_assert(pThis, qqueue);
 	ASSERT(pThis->pqParent == NULL); /* detect invalid calling sequence */
 
 	DBGOPRINT((obj_t*) pThis, "initiating worker thread shutdown sequence %p\n", pThis);
