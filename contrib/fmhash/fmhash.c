@@ -59,15 +59,14 @@ typedef struct hash_context_s hash_context_t;
 typedef hash_t (*hash_impl)(const void*, size_t, seed_t);
 
 typedef rsRetVal (*hash_wrapper_2)(struct svar *__restrict__ const
-		, struct svar *__restrict__ const, hash_context_t*);
+		, struct svar *__restrict__ const, hash_context_t*, hash_t*);
 typedef rsRetVal (*hash_wrapper_3)(struct svar *__restrict__ const, struct svar *__restrict__ const
-		, struct svar *__restrict__ const, hash_context_t*);
+		, struct svar *__restrict__ const, hash_context_t*, hash_t*);
 
 struct hash_context_s {
 	hash_impl hashXX;
 	hash_wrapper_2 hash_wrapper_1_2;
 	hash_wrapper_3 hash_wrapper_2_3;
-	hash_t xhash;
 };
 
 /*
@@ -149,7 +148,7 @@ hash64(const void* input, size_t len, seed_t seed) {
 
 static rsRetVal
 hash_wrapper2(struct svar *__restrict__ const sourceVal
-		, struct svar *__restrict__ const seedVal, hash_context_t* hcontext) {
+		, struct svar *__restrict__ const seedVal, hash_context_t* hcontext, hash_t* xhash) {
 	DEFiRet;
 	int freeHashStr = 0, success = 0;
 	char *hashStr = NULL;
@@ -159,16 +158,15 @@ hash_wrapper2(struct svar *__restrict__ const sourceVal
 		if (!success) {
 			parser_warnmsg("fmhash: hashXX(string, seed) didn't get a valid 'seed' limit"
 					", defaulting hash value to 0");
-			iRet = RS_RET_ERR;
-			FINALIZE;
+			ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 		}
 	}
 
 	hashStr = (char*)var2CString(sourceVal, &freeHashStr);
 	size_t len = strlen(hashStr);
-	hcontext->xhash = hcontext->hashXX(hashStr, len, seed);
+	(*xhash) = hcontext->hashXX(hashStr, len, seed);
 	DBGPRINTF("fmhash: hashXX generated hash %" PRIu64 " for string(%.*s)"
-			, hcontext->xhash, (int)len, hashStr);
+			, (*xhash), (int)len, hashStr);
 finalize_it:
 	if (freeHashStr) {
 		free(hashStr);
@@ -178,29 +176,27 @@ finalize_it:
 
 static rsRetVal
 hash_wrapper3(struct svar *__restrict__ const sourceVal, struct svar *__restrict__ const modVal
-		, struct svar *__restrict__ const seedVal, hash_context_t* hcontext) {
+		, struct svar *__restrict__ const seedVal, hash_context_t* hcontext, hash_t* xhash) {
 
 	DEFiRet;
 	int success = 0;
-	hash_t xhash = 0;
 	hash_t mod = var2Number(modVal, &success);
 	if (! success) {
 		parser_warnmsg("fmhash: hashXXmod(string, mod)/hash64mod(string, mod, seed) didn't"
 				" get a valid 'mod' limit, defaulting hash value to 0");
-		iRet = RS_RET_ERR;
-		FINALIZE;
+		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 	}
 	if(mod == 0) {
 		parser_warnmsg("fmhash: hashXXmod(string, mod)/hash64mod(string, mod, seed) invalid"
 				", 'mod' is zero, , defaulting hash value to 0");
-		iRet = RS_RET_ERR;
-		FINALIZE;
+		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 	}
 
-	CHKiRet((hcontext->hash_wrapper_1_2(sourceVal, seedVal, hcontext)));
-	xhash = hcontext->xhash % mod;
-	DBGPRINTF("fmhash: hashXXmod generated hash-mod %" PRIu64 ".", xhash);
-	hcontext->xhash = xhash;
+	CHKiRet((hcontext->hash_wrapper_1_2(sourceVal, seedVal, hcontext, xhash)));
+	if(mod != 0) {
+		(*xhash) = (*xhash) % mod;
+	}
+	DBGPRINTF("fmhash: hashXXmod generated hash-mod %" PRIu64 ".", (*xhash));
 finalize_it:
 	RETiRet;
 }
@@ -210,7 +206,6 @@ init_hash32_context(hash_context_t* hash32_context) {
 	hash32_context->hashXX = hash32;
 	hash32_context->hash_wrapper_1_2 = hash_wrapper2;
 	hash32_context->hash_wrapper_2_3 = hash_wrapper3;
-	hash32_context->xhash = 0;
 };
 
 static void
@@ -218,7 +213,6 @@ init_hash64_context(hash_context_t* hash64_context) {
 	hash64_context->hashXX = hash64;
 	hash64_context->hash_wrapper_1_2 = hash_wrapper2;
 	hash64_context->hash_wrapper_2_3 = hash_wrapper3;
-	hash64_context->xhash = 0;
 };
 
 static void ATTR_NONNULL()
@@ -228,6 +222,7 @@ fmHashXX(struct cnffunc *__restrict__ const func, struct svar *__restrict__ cons
 	struct svar hashStrVal;
 	struct svar seedVal;
 	hash_context_t* hcontext = NULL;
+	hash_t xhash = 0;
 	cnfexprEval(func->expr[0], &hashStrVal, usrptr, pWti);
 	if(func->nParams == 2) cnfexprEval(func->expr[1], &seedVal, usrptr, pWti);
 	ret->d.n = 0;
@@ -235,8 +230,8 @@ fmHashXX(struct cnffunc *__restrict__ const func, struct svar *__restrict__ cons
 	hcontext = (hash_context_t*) func->funcdata;
 	CHKiRet((hcontext->hash_wrapper_1_2(&hashStrVal
 			, (func->nParams == 2 ? &seedVal : NULL)
-			, hcontext)));
-	ret->d.n = hcontext->xhash;
+			, hcontext, &xhash)));
+	ret->d.n = xhash;
 finalize_it:
 	varFreeMembers(&hashStrVal);
 	if(func->nParams == 2) varFreeMembers(&seedVal);
@@ -251,6 +246,7 @@ fmHashXXmod(struct cnffunc *__restrict__ const func, struct svar *__restrict__ c
 	struct svar modVal;
 	struct svar seedVal;
 	hash_context_t* hcontext = NULL;
+	hash_t xhash = 0;
 	cnfexprEval(func->expr[0], &hashStrVal, usrptr, pWti);
 	cnfexprEval(func->expr[1], &modVal, usrptr, pWti);
 	if(func->nParams == 3) cnfexprEval(func->expr[2], &seedVal, usrptr, pWti);
@@ -259,12 +255,20 @@ fmHashXXmod(struct cnffunc *__restrict__ const func, struct svar *__restrict__ c
 	hcontext = (hash_context_t*) func->funcdata;
 	CHKiRet((hcontext->hash_wrapper_2_3(&hashStrVal
 			, &modVal, func->nParams > 2 ? &seedVal : NULL
-			, hcontext)));
-	ret->d.n = hcontext->xhash;
+			, hcontext, &xhash)));
+	ret->d.n = xhash;
 finalize_it:
 	varFreeMembers(&hashStrVal);
 	varFreeMembers(&modVal);
 	if(func->nParams == 3) varFreeMembers(&seedVal);
+}
+
+static inline sbool check_param_count_hash(unsigned short nParams) {
+	return (nParams != 1 && nParams != 2);
+}
+
+static inline sbool check_param_count_hashmod(unsigned short nParams) {
+	return (nParams != 2 && nParams != 3);
 }
 
 static rsRetVal ATTR_NONNULL(1)
@@ -272,11 +276,10 @@ init_fmHash64(struct cnffunc *const func)
 {
 	DEFiRet;
 	hash_context_t *hash_context = NULL;
-	if(func->nParams < 1) {
+	if(check_param_count_hash(func->nParams)) {
 		parser_errmsg("fmhash: hash64(string) / hash64(string, seed)"
 				" insufficient params.\n");
-		iRet = RS_RET_ERR;
-		FINALIZE;
+		ABORT_FINALIZE(RS_RET_INVLD_NBR_ARGUMENTS);
 	}
 	func->destructable_funcdata = 1;
 	CHKmalloc(hash_context = calloc(1, sizeof(hash_context_t)));
@@ -292,11 +295,10 @@ init_fmHash64mod(struct cnffunc *const func)
 {
 	DEFiRet;
 	hash_context_t *hash_context = NULL;
-	if(func->nParams < 2) {
+	if(check_param_count_hashmod(func->nParams)) {
 		parser_errmsg("fmhash: hash64mod(string, mod)/hash64mod(string, mod, seed)"
 				" insufficient params.\n");
-		iRet = RS_RET_ERR;
-		FINALIZE;
+		ABORT_FINALIZE(RS_RET_INVLD_NBR_ARGUMENTS);
 	}
 	func->destructable_funcdata = 1;
 	CHKmalloc(hash_context = calloc(1, sizeof(hash_context_t)));
@@ -311,11 +313,10 @@ init_fmHash32(struct cnffunc *const func)
 {
 	DEFiRet;
 	hash_context_t *hash_context = NULL;
-	if(func->nParams < 1) {
+	if(check_param_count_hash(func->nParams)) {
 		parser_errmsg("fmhash: hash32(string) / hash32(string, seed)"
 				" insufficient params.\n");
-		iRet = RS_RET_ERR;
-		FINALIZE;
+		ABORT_FINALIZE(RS_RET_INVLD_NBR_ARGUMENTS);
 	}
 	func->destructable_funcdata = 1;
 	CHKmalloc(hash_context = calloc(1, sizeof(hash_context_t)));
@@ -331,11 +332,10 @@ init_fmHash32mod(struct cnffunc *const func)
 {
 	DEFiRet;
 	hash_context_t *hash_context = NULL;
-	if(func->nParams < 2) {
+	if(check_param_count_hashmod(func->nParams)) {
 		parser_errmsg("fmhash: hash32mod(string, mod)/hash32mod(string, mod, seed)"
 				" insufficient params.\n");
-		iRet = RS_RET_ERR;
-		FINALIZE;
+		ABORT_FINALIZE(RS_RET_INVLD_NBR_ARGUMENTS);
 	}
 	func->destructable_funcdata = 1;
 	CHKmalloc(hash_context = calloc(1, sizeof(hash_context_t)));
