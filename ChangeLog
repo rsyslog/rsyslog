@@ -29,6 +29,7 @@ Version 8.39.0 [v8-stable] 2018-10-30
   key directly is meant only for testing purposes and is strongly
   discouraged for production use.
   Detected by internal testing, no actual fail case known.
+- core bugfix: regex compile error messages could be incorrect
 - bugfix core: potential hang on rsyslog termination
   The root cause was a deadlock during worker startup. This could
   happen for example when a DA queue needed to persist data during
