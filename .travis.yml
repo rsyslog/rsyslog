@@ -12,7 +12,8 @@ compiler:
 
 env:
   global:
-    secure: DsTuVAZg5omWT652Xnz/ZG20nJ5ShdTDXPQA01HscUhjAzcuMYsCPp889QoLip+3O5yYH6/oH2WprQA6ZQQMt+7idNRo6ennu7tPQiHEBm/lK2Yq1W6r6tOb1zmSalbIVWV2cGTdKOOuHAatgmp/L70WjOlCrtLvPT+JQ9AkzLU=
+    - secure: DsTuVAZg5omWT652Xnz/ZG20nJ5ShdTDXPQA01HscUhjAzcuMYsCPp889QoLip+3O5yYH6/oH2WprQA6ZQQMt+7idNRo6ennu7tPQiHEBm/lK2Yq1W6r6tOb1zmSalbIVWV2cGTdKOOuHAatgmp/L70WjOlCrtLvPT+JQ9AkzLU=
+    - RSYSLOG_STATSURL="http://build.rsyslog.com/testbench-failedtest.php"
 
 addons:
   apt:
