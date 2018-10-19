@@ -258,7 +258,7 @@ send_non_template_message(smsg_t *const __restrict__ pMsg)
 	int sev;
 
 	MsgGetSeverity(pMsg, &sev);
-	getTAG(pMsg, &tag, &lenTag);
+	getTAG(pMsg, &tag, &lenTag, LOCK_MUTEX);
 	/* we can use more properties here, but let's see if there
 	* is some real user interest. We can always add later...
 	*/

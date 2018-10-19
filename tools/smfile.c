@@ -77,7 +77,7 @@ CODESTARTstrgen
 	lenTimeStamp = ustrlen(pTimeStamp);
 	pHOSTNAME = (uchar*) getHOSTNAME(pMsg);
 	lenHOSTNAME = getHOSTNAMELen(pMsg);
-	getTAG(pMsg, &pTAG, &lenTAG);
+	getTAG(pMsg, &pTAG, &lenTAG, LOCK_MUTEX);
 	pMSG = getMSG(pMsg);
 	lenMSG = getMSGLen(pMsg);
 

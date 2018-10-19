@@ -76,7 +76,7 @@ CODESTARTstrgen
 	pTimeStamp = (uchar*) getTimeReported(pMsg, tplFmtRFC3164Date);
 	pHOSTNAME = (uchar*) getHOSTNAME(pMsg);
 	lenHOSTNAME = getHOSTNAMELen(pMsg);
-	getTAG(pMsg, &pTAG, &lenTAG);
+	getTAG(pMsg, &pTAG, &lenTAG, LOCK_MUTEX);
 	if(lenTAG > 32)
 		lenTAG = 32; /* for forwarding, a max of 32 chars is permitted (RFC!) */
 	pMSG = getMSG(pMsg);

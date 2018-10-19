@@ -151,6 +151,7 @@ TESTS +=  \
 	rulesetmultiqueue-v6.sh \
 	manytcp.sh \
 	rsf_getenv.sh \
+	msg-deadlock-headerless-noappname.sh \
 	imtcp_conndrop.sh \
 	imtcp_addtlframedelim.sh \
 	imtcp_no_octet_counted.sh \
@@ -1420,6 +1421,7 @@ EXTRA_DIST= \
 	testsuites/spframingfix.testdata \
 	imtcp_spframingfix.sh \
 	imptcp_spframingfix.sh \
+	msg-deadlock-headerless-noappname.sh \
 	imtcp_conndrop.sh \
 	imtcp_conndrop_tls.sh \
 	imtcp_conndrop_tls-vg.sh \

@@ -2348,7 +2348,7 @@ msgGetJSONMESG(smsg_t *__restrict__ const pMsg)
 	jval = json_object_new_string(getHOSTNAME(pMsg));
 	json_object_object_add(json, "hostname", jval);
 
-	getTAG(pMsg, &pRes, &bufLen);
+	getTAG(pMsg, &pRes, &bufLen, LOCK_MUTEX);
 	jval = json_object_new_string((char*)pRes);
 	json_object_object_add(json, "syslogtag", jval);
 
@@ -2456,8 +2456,8 @@ void MsgSetTAG(smsg_t *__restrict__ const pMsg, const uchar* pszBuf, const size_
  * if there is a TAG and, if not, if it can emulate it.
  * rgerhards, 2005-11-24
  */
-static void
-tryEmulateTAG(smsg_t * const pM, sbool bLockMutex)
+static void ATTR_NONNULL(1)
+tryEmulateTAG(smsg_t *const pM, const sbool bLockMutex)
 {
 	size_t lenTAG;
 	uchar bufTAG[CONF_TAG_MAXSIZE];
@@ -2491,15 +2491,15 @@ tryEmulateTAG(smsg_t * const pM, sbool bLockMutex)
 }
 
 
-void
-getTAG(smsg_t * const pM, uchar **ppBuf, int *piLen)
+void ATTR_NONNULL(2,3)
+getTAG(smsg_t * const pM, uchar **const ppBuf, int *const piLen, const sbool bLockMutex)
 {
 	if(pM == NULL) {
 		*ppBuf = UCHAR_CONSTANT("");
 		*piLen = 0;
 	} else {
 		if(pM->iLenTAG == 0)
-			tryEmulateTAG(pM, LOCK_MUTEX);
+			tryEmulateTAG(pM, bLockMutex);
 		if(pM->iLenTAG == 0) {
 			*ppBuf = UCHAR_CONSTANT("");
 			*piLen = 0;
@@ -2600,13 +2600,14 @@ MsgGetStructuredData(smsg_t * const pM, uchar **pBuf, rs_size_t *len)
 /* get the "programname" as sz string
  * rgerhards, 2005-10-19
  */
-uchar *getProgramName(smsg_t * const pM, sbool bLockMutex)
+uchar * ATTR_NONNULL(1)
+getProgramName(smsg_t *const pM, const sbool bLockMutex)
 {
 	if(pM->iLenPROGNAME == -1) {
 		if(pM->iLenTAG == 0) {
 			uchar *pRes;
 			rs_size_t bufLen = -1;
-			getTAG(pM, &pRes, &bufLen);
+			getTAG(pM, &pRes, &bufLen, bLockMutex);
 		}
 
 		if(bLockMutex == LOCK_MUTEX) {
@@ -2624,38 +2625,24 @@ uchar *getProgramName(smsg_t * const pM, sbool bLockMutex)
 }
 
 
-/* This function tries to emulate APPNAME if it is not present. Its
- * main use is when we have received a log record via legacy syslog and
- * now would like to send out the same one via syslog-protocol.
- * MUST be called with the Msg Lock locked!
- */
-static void tryEmulateAPPNAME(smsg_t * const pM)
-{
-	assert(pM != NULL);
-	if(pM->pCSAPPNAME != NULL)
-		return; /* we are already done */
-
-	if(msgGetProtocolVersion(pM) == 0) {
-		/* only then it makes sense to emulate */
-		MsgSetAPPNAME(pM, (char*)getProgramName(pM, MUTEX_ALREADY_LOCKED));
-	}
-}
-
-
 
 /* check if we have a APPNAME, and, if not, try to aquire/emulate it.
- * This must be called WITHOUT the message lock being held.
  * rgerhards, 2009-06-26
  */
-static void prepareAPPNAME(smsg_t * const pM, sbool bLockMutex)
+static void ATTR_NONNULL(1)
+prepareAPPNAME(smsg_t *const pM, const sbool bLockMutex)
 {
 	if(pM->pCSAPPNAME == NULL) {
 		if(bLockMutex == LOCK_MUTEX)
 			MsgLock(pM);
 
 		/* re-query as things might have changed during locking */
-		if(pM->pCSAPPNAME == NULL)
-			tryEmulateAPPNAME(pM);
+		if(pM->pCSAPPNAME == NULL) {
+			if(msgGetProtocolVersion(pM) == 0) {
+				/* only then it makes sense to emulate */
+				MsgSetAPPNAME(pM, (char*)getProgramName(pM, MUTEX_ALREADY_LOCKED));
+			}
+		}
 
 		if(bLockMutex == LOCK_MUTEX)
 			MsgUnlock(pM);
@@ -3522,7 +3509,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			bufLen = getHOSTNAMELen(pMsg);
 			break;
 		case PROP_SYSLOGTAG:
-			getTAG(pMsg, &pRes, &bufLen);
+			getTAG(pMsg, &pRes, &bufLen, LOCK_MUTEX);
 			break;
 		case PROP_RAWMSG:
 			getRawMsg(pMsg, &pRes, &bufLen);
