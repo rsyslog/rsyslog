@@ -350,10 +350,30 @@ This is done as follows:
    $ thread apply all bt full
    $ q # quits gdb
 
+The same method can be applied to a running rsyslog process that suffers
+from a lock condition. E.g. if you experience that rsyslog is no longer
+forwarding log messages, but this cannot be reproduced in our lab. Using 
+gdb to review the state of the active threads may be an option to see 
+which thread is causing the problem (e.g. by locking itself or being in a
+wait state).
+
+Again, basically the same steps can be applied. But, instead of using a 
+core file, we will require the currently used PID. So make sure to acquire
+the PID before executing gdb.
+
+::
+
+   $ gdb /path/to/rsyslogd
+   $ attach PID # numerical value
+   $ info thread
+   $ thread apply all bt full
+   $ q # quits gdb
+
 Then please send all information that gdb spit out to the development
 team. It is best to first ask on the forum or mailing list on how to do
 that. The developers will keep in contact with you and, I fear, will
 probably ask for other things as well ;)
+
 
 Note that we strive for highest reliability of the engine even in
 unusual deployment scenarios. Unfortunately, this is hard to achieve,
