@@ -709,7 +709,10 @@ function error_exit() {
 
 # Helper function to call Adiscon test error script
 function error_stats() {
-	wget $RSYSLOG_STATSURL\?Testname=$RSYSLOG_TESTNAME\&Testenv=$PWD\&Testmachine=$HOSTNAME\&rndstr=jnxv8i34u78fg23
+	if [ "$RSYSLOG_STATSURL" != "" ]; then
+		echo reporting failure to $RSYSLOG_STATSURL
+		wget -nv $RSYSLOG_STATSURL\?Testname=$RSYSLOG_TESTNAME\&Testenv=$PWD\&Testmachine=$HOSTNAME\&rndstr=jnxv8i34u78fg23
+	fi
 }
 
 # do the usual sequence check to see if everything was properly received.
@@ -1306,7 +1309,6 @@ case $1 in
 
 		# Extra Variables for Test statistic reporting
 		export RSYSLOG_TESTNAME=$(basename $0)
-		export RSYSLOG_STATSURL="http://build.rsyslog.com/testbench-failedtest.php"
 
 		# we create one file with the test name, so that we know what was
 		# left over if "make distcheck" complains
