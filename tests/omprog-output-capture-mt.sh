@@ -11,7 +11,7 @@
 # 'omprog-output-capture-mt-bin.py' for alternatives).
 . $srcdir/diag.sh init
 uname
-if [ `uname` = "SunOS" ] ; then
+if [ $(uname) = "SunOS" ] ; then
    echo "This test currently does not work on all flavors of Solaris (problems with Python?)."
    exit 77
 fi

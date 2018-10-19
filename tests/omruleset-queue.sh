@@ -11,7 +11,7 @@ echo ===========================================================================
 echo \[omruleset-queue.sh\]: test for omruleset functionality with a ruleset queue
 
 uname
-if [ `uname` = "SunOS" ] ; then
+if [ $(uname) = "SunOS" ] ; then
    echo "This test currently does not work on all flavors of Solaris."
    exit 77
 fi

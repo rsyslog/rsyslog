@@ -19,7 +19,7 @@ action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 '
 
 uname
-if [ `uname` = "FreeBSD" ] ; then
+if [ $(uname) = "FreeBSD" ] ; then
    echo "This test currently does not work on FreeBSD."
    exit 77
 fi

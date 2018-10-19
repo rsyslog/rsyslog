@@ -2,7 +2,7 @@
 echo \[imuxsock_ccmiddle_syssock.sh\]: test trailing LF handling in imuxsock
 
 uname
-if [ `uname` = "SunOS" ] ; then
+if [ $(uname) = "SunOS" ] ; then
    echo "Solaris: FIX ME"
    exit 77
 fi
