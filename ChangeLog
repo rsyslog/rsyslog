@@ -452,6 +452,10 @@ Version 8.37.0 [v8-stable] 2018-08-07
   it does not properly free memory returned by glob(). This is a cosmetic
   bug as the process terminates within the next few milliseconds. However,
   it causes memory analyzer reports and thus makes CI fail.
+- bugfix core msg: potential deadlock (and rsyslog hang)
+  can happen e.g. with headerless messages when app-name
+  property is used
+  closes https://github.com/rsyslog/rsyslog/issues/3135
 - bugfix core: do not abort startup on problems setting scheduling policy
   rsyslog creates a default scheduling policy on startup. This code
   invalidly used CHKiRet (our exception handler) to check pthreads
