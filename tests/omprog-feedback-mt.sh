@@ -15,7 +15,7 @@ export command_line=`echo $srcdir/testsuites/omprog-feedback-mt-bin.sh $ERROR_RA
 . $srcdir/diag.sh init
 
 uname
-if [ `uname` = "SunOS" ] ; then
+if [ $(uname) = "SunOS" ] ; then
     # On Solaris, this test causes rsyslog to hang for unknown reasons
     echo "Solaris: FIX ME"
     exit 77

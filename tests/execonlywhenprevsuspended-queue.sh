@@ -4,7 +4,7 @@ echo ===========================================================================
 echo \[execonlywhenprevsuspended-queue.sh\]: test execonly...suspended functionality with action on its own queue
 
 uname
-if [ `uname` = "SunOS" ] ; then
+if [ $(uname) = "SunOS" ] ; then
    echo "This test currently does not work on all flavors of Solaris."
    exit 77
 fi

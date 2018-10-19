@@ -8,7 +8,7 @@
 # add 2017-02-08 by Rainer Gerhards, released under ASL 2.0
 
 uname
-if [ `uname` = "SunOS" ] ; then
+if [ $(uname) = "SunOS" ] ; then
    echo "This test currently does not work on all flavors of Solaris."
    exit 77
 fi

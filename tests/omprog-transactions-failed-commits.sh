@@ -8,7 +8,7 @@
 . $srcdir/diag.sh init
 
 uname
-if [ `uname` = "SunOS" ] ; then
+if [ $(uname) = "SunOS" ] ; then
     # On Solaris, this test causes rsyslog to hang. This is presumably due
     # to issue #2356 in the rsyslog core, which doesn't seem completely
     # corrected. TODO: re-enable this test when the issue is corrected.

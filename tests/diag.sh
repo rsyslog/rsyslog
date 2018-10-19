@@ -256,7 +256,7 @@ function wait_file_exists() {
 			break
 		fi
 		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
-		let "i++"
+		((i++))
 		if test $i -gt $TB_TIMEOUT_STARTSTOP; then
 		   echo "ABORT! Timeout waiting for file $1"
 		   ls -l $1
@@ -1626,7 +1626,7 @@ case $1 in
 		fi
 		if [ -d $dep_work_dir/es ]; then
 			if [ -e $dep_work_es_pidfile ]; then
-				es_pid = $(cat $dep_work_es_pidfile)
+				es_pid=$(cat $dep_work_es_pidfile)
 				kill -SIGTERM $es_pid
 				. $srcdir/diag.sh wait-pid-termination $es_pid
 			fi
@@ -1677,7 +1677,7 @@ case $1 in
 		until [ "$(curl --silent --show-error --connect-timeout 1 http://localhost:${ES_PORT:-19200} | grep 'rsyslog-testbench')" != "" ]; do
 			echo "--- waiting for ES startup: $timeseconds seconds"
 			$TESTTOOL_DIR/msleep 1000
-			let "timeseconds = $timeseconds + 1"
+			let "timeseconds=$timeseconds + 1"
 
 			if [ "$timeseconds" -gt "$timeoutend" ]; then 
 				echo "--- TIMEOUT ( $timeseconds ) reached!!!"

@@ -2,7 +2,7 @@
 # Copyright (C) 2015-03-04 by rainer gerhards, released under ASL 2.0
 
 uname
-if [ `uname` = "FreeBSD" ] ; then
+if [ $(uname) = "FreeBSD" ] ; then
    echo "This test currently does not work on FreeBSD."
    exit 77
 fi
@@ -11,7 +11,7 @@ echo ======================================================================
 echo \[imuxsock_logger_parserchain.sh\]: test imuxsock
 
 uname
-if [ `uname` = "SunOS" ] ; then
+if [ $(uname) = "SunOS" ] ; then
    echo "Solaris: FIX ME LOGGER"
    exit 77
 fi

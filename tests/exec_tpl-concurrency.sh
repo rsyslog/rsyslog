@@ -6,7 +6,7 @@ echo ===========================================================================
 echo \[exec_tpl-concurrency.sh\]: testing concurrency of exec_template w variables
 
 uname
-if [ `uname` = "SunOS" ] ; then
+if [ $(uname) = "SunOS" ] ; then
    echo "This test currently does not work on all flavors of Solaris."
    exit 77
 fi
