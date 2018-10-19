@@ -75,11 +75,14 @@ struct wtp_s {
 /* some symbolic constants for easier reference */
 
 
+#define DENY_WORKER_START_DURING_SHUTDOWN	0
+#define PERMIT_WORKER_START_DURING_SHUTDOWN	1
+
 /* prototypes */
 rsRetVal wtpConstruct(wtp_t **ppThis);
 rsRetVal wtpConstructFinalize(wtp_t *pThis);
 rsRetVal wtpDestruct(wtp_t **ppThis);
-rsRetVal wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr);
+rsRetVal wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr, const int permit_during_shutdown);
 rsRetVal wtpProcessThrdChanges(wtp_t *pThis);
 rsRetVal wtpChkStopWrkr(wtp_t *pThis, int bLockUsrMutex);
 rsRetVal wtpSetState(wtp_t *pThis, wtpState_t iNewState);

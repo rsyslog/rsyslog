@@ -8,7 +8,7 @@
  * (and in the web doc set on http://www.rsyslog.com/doc). Be sure to read it
  * if you are getting aquainted to the object.
  *
- * Copyright 2008-2017 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -440,8 +440,8 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 
 
 /* start a new worker */
-static rsRetVal
-wtpStartWrkr(wtp_t *pThis)
+static rsRetVal ATTR_NONNULL()
+wtpStartWrkr(wtp_t *const pThis, const int permit_during_shutdown)
 {
 	wti_t *pWti;
 	int i;
@@ -449,6 +449,16 @@ wtpStartWrkr(wtp_t *pThis)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, wtp);
+
+	const wtpState_t wtpState = (wtpState_t) ATOMIC_FETCH_32BIT((int*)&pThis->wtpState, &pThis->mutWtpState);
+	if(wtpState != wtpState_RUNNING && !permit_during_shutdown) {
+		DBGPRINTF("%s: worker start requested during shutdown - ignored\n", wtpGetDbgHdr(pThis));
+		if(dbgTimeoutToStderr) {
+			fprintf(stderr, "rsyslogd debug: %s: worker start requested during shutdown - ignored\n",
+				wtpGetDbgHdr(pThis));
+		}
+		return RS_RET_ERR; /* exceptional case, but really makes sense here! */
+	}
 
 	d_pthread_mutex_lock(&pThis->mutWtp);
 
@@ -497,10 +507,12 @@ finalize_it:
  * higher than one, and no worker is started, the "busy" condition is signaled to awake a worker.
  * So the caller can assume that there is at least one worker re-checking if there is "work to do"
  * after this function call.
- * rgerhards, 2008-01-21
+ * Parameter "permit_during_shutdown" if true, permits worker starts while the system is
+ * in shutdown state. The prime use case for this is persisting disk queues in enqueue only
+ * mode, which is activated during shutdown.
  */
-rsRetVal
-wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr)
+rsRetVal ATTR_NONNULL()
+wtpAdviseMaxWorkers(wtp_t *const pThis, int nMaxWrkr, const int permit_during_shutdown)
 {
 	DEFiRet;
 	int nMissing; /* number workers missing to run */
@@ -527,7 +539,7 @@ wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr)
 		}
 		/* start the rqtd nbr of workers */
 		for(i = 0 ; i < nMissing ; ++i) {
-			CHKiRet(wtpStartWrkr(pThis));
+			CHKiRet(wtpStartWrkr(pThis, permit_during_shutdown));
 		}
 	} else {
 		/* we have needed number of workers, but they may be sleeping */
