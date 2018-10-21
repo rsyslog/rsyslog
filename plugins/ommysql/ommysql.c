@@ -173,7 +173,7 @@ static void reportDBError(wrkrInstanceData_t *pWrkrData, int bSilent)
 		LogError(0, NO_ERRCODE, "ommysql: unknown DB error occured - could not obtain MySQL handle");
 	} else { /* we can ask mysql for the error description... */
 		uMySQLErrno = mysql_errno(pWrkrData->hmysql);
-		snprintf(errMsg, sizeof(errMsg), "db error (%d): %s\n", uMySQLErrno,
+		snprintf(errMsg, sizeof(errMsg), "db error (%u): %s\n", uMySQLErrno,
 			mysql_error(pWrkrData->hmysql));
 		if(bSilent || uMySQLErrno == pWrkrData->uLastMySQLErrno)
 			dbgprintf("mysql, DBError(silent): %s\n", errMsg);
