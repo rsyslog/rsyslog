@@ -27,3 +27,4 @@ strmGetPrevMsgSegment
 strmSetReadTimeout
 msgAddMultiMetadata
 strmReadMultiLine
+strmSet_checkRotation
