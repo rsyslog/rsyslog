@@ -283,8 +283,8 @@ doPhysOpen(strm_t *pThis)
 	DBGPRINTF("file '%s' opened as #%d with mode %d\n", pThis->pszCurrFName,
 		  pThis->fd, (int) pThis->tOpenMode);
 	if(pThis->fd == -1) {
-		const rsRetVal errcode = (errno_save == ENOENT)
-			? RS_RET_FILE_NOT_FOUND : RS_RET_FILE_OPEN_ERROR;
+		const rsRetVal errcode = (errno_save == ENOENT) ? RS_RET_FILE_NOT_FOUND
+			: RS_RET_FILE_OPEN_ERROR;
 		if(pThis->fileNotFoundError) {
 			if(pThis->noRepeatedErrorOutput == 0) {
 				LogError(errno_save, errcode, "file '%s': open error", pThis->pszCurrFName);
