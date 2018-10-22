@@ -101,7 +101,7 @@ genCopies()
 	lnnbr = 1;
 	for(i = 0 ; i < nCopies ; ++i) {
 		if(i % 10000 == 0)
-			fprintf(stderr, "copyrun %d\n", i);
+			fprintf(stderr, "copyrun %lld\n", i);
 		if(waitusecs && (i % batchsize == 0)) {
 			usleep(waitusecs);
 		}
