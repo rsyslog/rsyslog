@@ -35,7 +35,7 @@ fi
 
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown	# we need to wait until rsyslogd is finished!
-LEN="$(cat "${RSYSLOG_OUT_LOG}" | wc -c)"
+LEN="$(wc <${RSYSLOG_OUT_LOG} -c)"
 if [ "$LEN" -lt "124000" ]; then
   echo "imptcp_uds.sh failed, should have logged at least 124k characters in a single line"
   error_exit
