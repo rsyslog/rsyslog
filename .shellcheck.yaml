@@ -1,0 +1,2 @@
+ignored:
+  - SC2181 # we need support for old Solaris 10
