@@ -799,6 +799,7 @@ qqueueTryLoadPersistedInfo(qqueue_t *pThis)
 	if(stat((char*) pThis->pszQIFNam, &stat_buf) == -1) {
 		if(errno == ENOENT) {
 			DBGOPRINT((obj_t*) pThis, "clean startup, no .qi file found\n");
+			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 		} else {
 			LogError(errno, RS_RET_IO_ERROR, "queue: %s: error %d could not access .qi file",
 					obj.GetName((obj_t*) pThis), errno);
