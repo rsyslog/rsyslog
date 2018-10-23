@@ -198,7 +198,7 @@ function cmp_exact() {
 	if [ $? -ne 0 ]; then
 		echo "invalid response generated"
 		echo "################# $1 is:"
-		cat -n ${RSYSLOG_OUT_LOG}
+		cat -n $1
 		echo "################# EXPECTED was:"
 		printf '%s\n' "$EXPECTED" | cat -n -
 		printf '\n#################### diff is:\n'
@@ -479,11 +479,10 @@ function get_mainqueuesize() {
 # grep for (partial) content. $1 is the content to check for, $2 the file to check
 function content_check() {
 	file=${2:-$RSYSLOG_OUT_LOG}
-	grep -qF -- "$1" < "$file"
-	if [ "$?" -ne "0" ]; then
+	if ! grep -qF "$1" < "${file}"; then
 	    printf '\n============================================================\n'
 	    printf 'FILE "%s" content:\n' "$file"
-	    cat -n ${RSYSLOG_OUT_LOG}
+	    cat -n ${file}
 	    printf 'FAIL: content_check failed to find "%s"\n' "$1"
 	    error_exit 1
 	fi
@@ -684,11 +683,26 @@ function wait_shutdown_vg() {
 	fi
 }
 
+function check_file_exists() {
+	if [ ! -f "$1" ]; then
+		printf 'FAIL: file "%s" must exist, but does not\n' "$1"
+		error_exit 1
+	fi
+}
+
+function check_file_not_exists() {
+	if [ -f "$1" ]; then
+		printf 'FILE %s CONTENT:\n' "$1"
+		cat -n -- "$1"
+		printf 'FAIL: file "%s" must NOT exist, but does\n' "$1"
+		error_exit 1
+	fi
+}
 
 # check exit code for valgrind error
 function check_exit_vg(){
 	if [ "$RSYSLOGD_EXIT" -eq "10" ]; then
-		echo "valgrind run FAILED with exceptions - terminating"
+		printf 'valgrind run FAILED with exceptions - terminating\n'
 		error_exit 1
 	fi
 }

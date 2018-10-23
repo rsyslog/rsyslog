@@ -54,6 +54,9 @@ TESTS = $(TESTRUNS)
 
 if ENABLE_DEFAULT_TESTS
 TESTS +=  \
+	operatingstate-basic.sh \
+	operatingstate-empty.sh \
+	operatingstate-unclean.sh \
 	empty-hostname.sh \
 	hostname-getaddrinfo-fail.sh \
 	msleep_usage_output.sh \
@@ -1070,6 +1073,9 @@ distclean-local:
 	rm -rf .dep_cache .dep_wrk
 
 EXTRA_DIST= \
+	operatingstate-basic.sh \
+	operatingstate-empty.sh \
+	operatingstate-unclean.sh \
 	internal-errmsg-memleak-vg.sh \
 	glbl-oversizeMsg-log-vg.sh \
 	empty-hostname.sh \
