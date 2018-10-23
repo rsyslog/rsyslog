@@ -13,7 +13,7 @@
 # the simplest way forward.
 #
 # This is part of the rsyslog testbench, licensed under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 skip_platform "AIX" "we cannot preload required dummy lib"
 skip_platform "SunOS" "there seems to be an issue with LD_PRELOAD libraries"
 skip_platform "FreeBSD" "temporarily disabled until we know what is wrong, \

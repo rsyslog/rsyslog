@@ -8,7 +8,7 @@
 echo ===============================================================================
 echo \[rsf_getenv.sh\]: testing RainerScript getenv\(\) function
 export MSGNUM="msgnum:"
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp

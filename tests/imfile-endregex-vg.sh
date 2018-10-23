@@ -9,7 +9,7 @@ fi
 
 echo ======================================================================
 echo [imfile-endregex.sh]
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/imfile/.libs/imfile")

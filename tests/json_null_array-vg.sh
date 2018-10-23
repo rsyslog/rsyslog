@@ -10,7 +10,7 @@ fi
 
 echo ===============================================================================
 echo \[json_null_array.sh\]: test for json containung \"null\" value
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/mmjsonparse/.libs/mmjsonparse")

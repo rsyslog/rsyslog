@@ -6,7 +6,7 @@ echo \[sndrcv_tls_ossl_anon_ipv6.sh\]: testing sending and receiving via TLS wit
 . $srcdir/diag.sh check-ipv6-available
 
 # uncomment for debugging support:
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 # start up the instances
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"

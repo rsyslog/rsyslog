@@ -1,7 +1,7 @@
 #!/bin/bash
 # a very basic test for omjournal.
 # addd 2016-03-18 by RGerhards, released under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh require-journalctl
 generate_conf
 add_conf '

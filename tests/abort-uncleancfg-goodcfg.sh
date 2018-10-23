@@ -4,7 +4,7 @@
 echo ===============================================================================
 echo \[abort-uncleancfg-goodcfg.sh\]: testing abort on unclean configuration
 echo "testing a good Configuration verification run"
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $AbortOnUncleanConfig on

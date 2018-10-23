@@ -1,5 +1,5 @@
 #!/bin/bash
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf "\$IncludeConfig ${srcdir}/testsuites/incltest.d/include.conf
 "

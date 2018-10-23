@@ -1,7 +1,7 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 global(environment=["http_proxy=http://127.0.0.1", "SECOND=OK OK"])

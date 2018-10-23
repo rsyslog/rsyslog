@@ -1,6 +1,6 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh check-inotify-only
 export IMFILECHECKTIMEOUT="30"
 

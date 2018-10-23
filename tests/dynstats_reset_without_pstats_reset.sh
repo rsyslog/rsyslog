@@ -10,7 +10,7 @@ fi
 
 echo ===============================================================================
 echo \[dynstats_reset_without_pstats_reset.sh\]: test to ensure correctness of stats-ctr reset when pstats reset is turned off
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 ruleset(name="stats") {

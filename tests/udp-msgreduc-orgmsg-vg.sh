@@ -11,7 +11,7 @@ fi
 
 echo ===============================================================================
 echo \[udp-msgreduc-orgmsg-vg.sh\]: testing msg reduction via udp, with org message
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/imudp/.libs/imudp

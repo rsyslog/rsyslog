@@ -3,7 +3,7 @@
 # in all testbench tests and does not need its individual test
 # (actually it is here tested via template() and action() as well...
 # added 2018-01-22 by Rainer Gerhards; Released under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 export DO_STOP=on
 generate_conf
 add_conf '

@@ -4,7 +4,7 @@
 # in any case, so we do not need to add any extra new test dir.
 # added 2009-11-30 by Rgerhards
 # This file is part of the rsyslog project, released under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 # set spool locations and switch queue to disk-only mode

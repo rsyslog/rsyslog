@@ -1,6 +1,6 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 export DEAD_PORT=4  # a port unassigned by IANA and very unlikely to be used
 generate_conf
 add_conf '

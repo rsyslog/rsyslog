@@ -10,7 +10,7 @@ fi
 
 echo ===============================================================================
 echo \[dynstats_overflow-vg.sh\]: test for gathering stats when metrics exceed provisioned capacity
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 ruleset(name="stats") {

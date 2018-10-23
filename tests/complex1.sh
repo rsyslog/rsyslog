@@ -4,7 +4,7 @@
 # added 2010-03-16 by Rgerhards
 #
 # This file is part of the rsyslog project, released under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 skip_platform "SunOS"  "This test currently does not work on all flavors of Solaris."
 export RSYSLOG_PORT2="$(get_free_port)"
 export RSYSLOG_PORT3="$(get_free_port)"

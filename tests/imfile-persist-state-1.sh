@@ -1,7 +1,7 @@
 #!/bin/bash
 # added 2016-11-02 by rgerhards
 # This is part of the rsyslog testbench, licensed under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh check-inotify
 generate_conf
 add_conf '

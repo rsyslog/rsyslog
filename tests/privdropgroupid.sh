@@ -3,7 +3,7 @@
 . $srcdir/privdrop_common.sh
 rsyslog_testbench_setup_testuser
 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 global(privdrop.group.keepsupplemental="on")

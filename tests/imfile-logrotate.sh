@@ -1,7 +1,7 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 . $srcdir/diag.sh check-inotify-only
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 check_command_available logrotate
 
 export TESTMESSAGES=10000

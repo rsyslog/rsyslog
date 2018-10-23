@@ -2,7 +2,7 @@
 # test many concurrent tcp connections
 echo ====================================================================================
 echo TEST: \[manyptcp.sh\]: test imptcp with large connection count
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/imptcp/.libs/imptcp

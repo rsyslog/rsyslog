@@ -5,7 +5,7 @@
 # program when signalOnClose=on, closes the pipe, and kills the
 # child if unresponsive.
 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/omprog/.libs/omprog")

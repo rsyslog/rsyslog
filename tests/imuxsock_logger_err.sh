@@ -2,7 +2,7 @@
 # this is primarily a safeguard to ensure the imuxsock tests basically work
 # added 2014-12-04 by Rainer Gerhards, licensed under ASL 2.0
 echo \[imuxsock_logger.sh\]: test imuxsock
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/imuxsock/.libs/imuxsock" sysSock.use="off")

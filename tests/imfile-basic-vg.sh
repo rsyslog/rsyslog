@@ -8,7 +8,7 @@ if [ $(uname) = "FreeBSD" ] ; then
 fi
 
 echo [imfile-basic.sh]
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/imfile/.libs/imfile

@@ -5,7 +5,7 @@
 # NOTE: we intentionally use obsolete legacy style so that we can check
 # that it still works. DO NOT CONVERT/REMOVE! -- rgerhards, 2018-08-01
 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 export PORT_TCP="$(get_free_port)"
 generate_conf
 # be careful: bash expansion is used below --> you need to escape!

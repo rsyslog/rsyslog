@@ -4,7 +4,7 @@
 # check the "default port"
 # added 2013-12-10 by Rgerhards
 # This file is part of the rsyslog project, released under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 relp_port=$(./omrelp_dflt_port)
 if [ $relp_port -lt 1024 ]; then
     if [ "$EUID" -ne 0 ]; then

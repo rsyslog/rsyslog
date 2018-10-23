@@ -15,7 +15,7 @@ fi
 
 # create the pipe and start a background process that copies data from 
 # it to the "regular" work file
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $MainMsgQueueTimeoutShutdown 10000

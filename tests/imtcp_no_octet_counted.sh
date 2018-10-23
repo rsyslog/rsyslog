@@ -2,7 +2,7 @@
 # This file is part of the rsyslog project, released  under GPLv3
 echo ====================================================================================
 echo TEST: \[imtcp_no_octet_counted.sh\]: test imtcp with octet counted framing disabled
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")

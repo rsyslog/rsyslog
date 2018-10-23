@@ -5,7 +5,7 @@
 # parameters, with the external program returning an error on certain
 # transaction commits.
 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 
 uname
 if [ $(uname) = "SunOS" ] ; then

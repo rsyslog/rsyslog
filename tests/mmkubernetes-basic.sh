@@ -9,7 +9,7 @@
 # trick. -- rgerhards, 2018-07-21
 #export RSYSLOG_DEBUG="debug"
 USE_VALGRIND=false
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 check_command_available timeout
 pwd=$( pwd )
 k8s_srv_port=$( get_free_port )

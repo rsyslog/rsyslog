@@ -10,7 +10,7 @@ fi
 
 echo ===============================================================================
 echo \[multiple_lookup_table-vg.sh\]: test for multiple lookup-table and HUP based reloading of it
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 lookup_table(name="xlate_0" file="xlate.lkp_tbl")

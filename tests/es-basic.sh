@@ -7,7 +7,7 @@ export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
 . $srcdir/diag.sh start-elasticsearch
 
 #  Starting actual testbench
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh es-init
 generate_conf
 add_conf '

@@ -10,7 +10,7 @@ fi
 
 echo ===============================================================================
 echo \[array_lookup_table-vg.sh\]: test cleanup for array lookup-table and HUP based reloading of it
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 lookup_table(name="xlate" file="xlate_array.lkp_tbl")

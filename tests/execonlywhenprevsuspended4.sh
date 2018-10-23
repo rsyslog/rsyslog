@@ -4,7 +4,7 @@
 # rgerhards, 2010-06-24
 echo ===============================================================================
 echo \[execonlywhenprevsuspended4.sh\]: test execonly..suspended multi backup action
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 # omtesting provides the ability to cause "SUSPENDED" action state

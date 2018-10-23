@@ -3,7 +3,7 @@
 
 # This test tests the 'output' setting of omprog when the feedback
 # feature is not used (confirmMessages=off).
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/omprog/.libs/omprog")

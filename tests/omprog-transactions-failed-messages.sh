@@ -5,7 +5,7 @@
 # parameters, with the external program returning an error on certain
 # messages.
 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/omprog/.libs/omprog")

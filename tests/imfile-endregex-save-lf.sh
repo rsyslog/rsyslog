@@ -5,7 +5,7 @@
 echo ======================================================================
 echo [imfile-endregex-save-lf.sh]
 . $srcdir/diag.sh check-inotify
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/imfile/.libs/imfile")

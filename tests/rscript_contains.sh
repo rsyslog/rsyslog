@@ -1,7 +1,7 @@
 #!/bin/bash
 # added 2012-09-14 by rgerhards
 # This file is part of the rsyslog project, released under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $template outfmt,"%msg:F,58:2%\n"

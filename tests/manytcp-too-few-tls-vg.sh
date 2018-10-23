@@ -8,7 +8,7 @@ if [ $(uname) = "FreeBSD" ] ; then
 fi
 
 echo \[manytcp-too-few-tls.sh\]: test concurrent tcp connections
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp

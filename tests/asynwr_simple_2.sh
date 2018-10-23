@@ -5,7 +5,7 @@
 # This file is part of the rsyslog project, released  under GPLv3
 echo ===============================================================================
 echo TEST: \[asynwr_simple_2.sh\]: simple test for async file writing
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp

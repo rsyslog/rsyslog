@@ -5,7 +5,7 @@ echo ===========================================================================
 echo \[sndrcv_udp_nonstdpt_v6.sh\]: testing sending and receiving via udp
 
 # uncomment for debugging support:
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 # start up the instances
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"

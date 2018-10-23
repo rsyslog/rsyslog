@@ -1,7 +1,7 @@
 #!/bin/bash
 # Copyright 2014-11-20 by Rainer Gerhards
 # This file is part of the rsyslog project, released  under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 export TCPFLOOD_PORT2="$(get_free_port)"
 generate_conf
 add_conf '

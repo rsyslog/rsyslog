@@ -4,7 +4,7 @@
 #. $srcdir/sndrcv_drvr.sh sndrcv_relp 50000
 
 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 ########## receiver ##########
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="log"

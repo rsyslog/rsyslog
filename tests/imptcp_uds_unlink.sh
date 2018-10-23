@@ -1,5 +1,5 @@
 #!/bin/bash
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 # First make sure we don't unlink if not asked to
 rm -f "$srcdir/testbench_socket"
 echo "nope" > "$srcdir/testbench_socket"
@@ -24,7 +24,7 @@ exit_test
 # Now make sure we unlink if asked to
 echo "ok" > "$srcdir/testbench_socket"
 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 global(MaxMessageSize="124k")

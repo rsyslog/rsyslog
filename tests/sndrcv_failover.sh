@@ -7,7 +7,7 @@
 # location to the conf file.
 # added 2011-06-20 by Rgerhards
 # This file is part of the rsyslog project, released under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 
 # uncomment for debugging support:
 # start up the instances

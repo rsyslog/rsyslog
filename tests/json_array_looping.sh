@@ -2,7 +2,7 @@
 # added 2014-11-11 by singh.janmejay
 # basic test for looping over json array
 # This file is part of the rsyslog project, released under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 template(name="garply" type="string" string="garply: %$.garply%\n")

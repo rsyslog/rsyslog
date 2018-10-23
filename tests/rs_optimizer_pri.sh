@@ -7,7 +7,7 @@
 # rgerhards, 2013-11-20
 echo ===============================================================================
 echo \[rs_optimizer_pri.sh\]: testing RainerScript PRI optimizer
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")

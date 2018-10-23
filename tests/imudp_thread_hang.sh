@@ -5,7 +5,7 @@
 # not properly terminated.
 # Copyright 2014 by Rainer Gerhards, licensed under ASL 2.0
 echo \[imudp_thread_hang\]: a situation where imudp caused a hang
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $WorkDirectory '$RSYSLOG_DYNNAME'.spool

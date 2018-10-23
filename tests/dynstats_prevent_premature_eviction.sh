@@ -10,7 +10,7 @@ fi
 
 echo ===============================================================================
 echo \[dynstats_prevent_premature_eviction.sh\]: test for ensuring metrics are not evicted before unused-ttl
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 ruleset(name="stats") {

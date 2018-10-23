@@ -15,7 +15,7 @@ if [ $(uname) = "SunOS" ] ; then
    exit 77
 fi
 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/imuxsock/.libs/imuxsock" sysSock.use="off")

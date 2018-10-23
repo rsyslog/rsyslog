@@ -12,7 +12,7 @@ if [ $(uname) = "SunOS" ] ; then
    exit 77
 fi
 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 export RSYSLOG_PORT2="$(get_free_port)"
 export RSYSLOG_PORT3="$(get_free_port)"
 generate_conf

@@ -3,7 +3,7 @@
 # addd 2016-01-12 by RGerhards, released under ASL 2.0
 # requires faketime
 echo \[now_family_utc\]: test \$NOW family of system properties
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp

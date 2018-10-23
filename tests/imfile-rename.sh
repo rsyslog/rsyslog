@@ -1,7 +1,7 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under GPLv3
 . $srcdir/diag.sh check-inotify-only
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 export TESTMESSAGES=10000
 export RETRIES=50
 export TESTMESSAGESFULL=19999

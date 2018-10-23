@@ -1,6 +1,6 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 template(name="outfmt" type="string" string="%$!src_geoip%\n")

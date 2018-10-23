@@ -1,6 +1,6 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under GPLv3
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 export IMFILEINPUTFILES="8" #"8"
 export IMFILEINPUTFILESSTEPS="5" #"5"
 #export IMFILEINPUTFILESALL=$(($IMFILEINPUTFILES * $IMFILEINPUTFILESSTEPS))

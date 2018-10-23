@@ -6,7 +6,7 @@
 # as batching can (validly) cause a larger loss in the non-writable
 # file
 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 global(umask="0077")

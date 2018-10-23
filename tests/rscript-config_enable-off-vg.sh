@@ -1,6 +1,6 @@
 #!/bin/bash
 # added 2018-01-22 by Rainer Gerhards; Released under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 export DO_STOP=off
 generate_conf
 add_conf '

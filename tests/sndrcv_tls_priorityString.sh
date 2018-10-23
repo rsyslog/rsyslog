@@ -6,7 +6,7 @@ echo \[sndrcv_tls_priorityString.sh\]: testing sending and receiving via TLS wit
 echo NOTE: When this test fails, it could be due to the priorityString being outdated!
 
 # uncomment for debugging support:
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 # start up the instances
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"

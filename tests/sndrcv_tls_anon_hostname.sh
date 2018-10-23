@@ -5,7 +5,7 @@ echo ===========================================================================
 echo \[sndrcv_tls_anon_hostname.sh\]: testing sending and receiving via TLS with anon auth using hostname SNI
 
 # uncomment for debugging support:
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 # start up the instances
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"

@@ -2,7 +2,7 @@
 # add 2016-11-22 by Pascal Withopf, released under ASL 2.0
 echo [imfile-file-not-found-error.sh]
 . $srcdir/diag.sh check-inotify
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/imfile/.libs/imfile")

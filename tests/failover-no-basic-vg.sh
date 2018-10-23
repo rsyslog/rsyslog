@@ -9,7 +9,7 @@ fi
 
 echo ===============================================================================
 echo \[failover-no-basic.sh\]: basic test for failover functionality - no failover
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $RepeatedMsgReduction off

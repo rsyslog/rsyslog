@@ -9,7 +9,7 @@ fi
 
 echo ===============================================================================
 echo \[failover-basic.sh\]: basic test for failover functionality
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $template outfmt,"%msg:F,58:2%\n"

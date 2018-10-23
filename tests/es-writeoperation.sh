@@ -6,7 +6,7 @@
 . $srcdir/diag.sh start-elasticsearch
 
 #  Starting actual testbench
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 template(name="tpl" type="string"

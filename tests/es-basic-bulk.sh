@@ -7,7 +7,7 @@ export ES_PORT=19200
 . $srcdir/diag.sh prepare-elasticsearch
 . $srcdir/diag.sh start-elasticsearch
 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh es-init
 generate_conf
 add_conf '

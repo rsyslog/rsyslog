@@ -1,7 +1,7 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under GPLv3
 echo [imfile-basic.sh]
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/imfile/.libs/imfile

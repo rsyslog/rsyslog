@@ -10,7 +10,7 @@ fi
 
 echo ===============================================================================
 echo \[lookup_table_no_hup_reload-vg.sh\]: test for lookup-table with HUP based reloading disabled with valgrind
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 lookup_table(name="xlate" file="xlate.lkp_tbl" reloadOnHUP="off")

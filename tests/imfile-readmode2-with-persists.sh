@@ -3,7 +3,7 @@
 echo ======================================================================
 echo [imfile-readmode2-with-persists.sh]
 . $srcdir/diag.sh check-inotify
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 global(workDirectory="'${RSYSLOG_DYNNAME}'.spool")

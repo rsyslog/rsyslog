@@ -5,7 +5,7 @@
 # rgerhards, 2010-06-23
 echo =====================================================================================
 echo \[execonlywhenprevsuspended.sh\]: test execonly...suspended functionality simple case
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 main_queue(queue.workerthreads="1") 

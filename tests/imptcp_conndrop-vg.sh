@@ -3,7 +3,7 @@
 # Copyright (C) 2014 Rainer Gerhards -- 2014-11-14
 echo ====================================================================================
 echo TEST: \[imptcp_conndrop-vg.sh\]: test imptcp with random connection drops
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $MaxMessageSize 10k

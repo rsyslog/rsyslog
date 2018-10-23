@@ -1,7 +1,7 @@
 #!/bin/bash
 # added 2011-02-28 by Rgerhards
 # This file is part of the rsyslog project, released  under GPLv3
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 
 uname
 if [ $(uname) = "FreeBSD" ] ; then

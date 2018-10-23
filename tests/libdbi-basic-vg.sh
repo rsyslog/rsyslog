@@ -4,7 +4,7 @@
 # itself seems to have a memory leak
 echo ===============================================================================
 echo \[libdbi-basic.sh\]: basic test for libdbi-basic functionality via mysql
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/omlibdbi/.libs/omlibdbi

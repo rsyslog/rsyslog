@@ -5,7 +5,7 @@
 echo =====================================================================================
 echo \[execonlywhenprevsuspended-nonsusp-queue\]: test execonly...suspended functionality with non-suspended action and queue
 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 main_queue(queue.workerthreads="1") 

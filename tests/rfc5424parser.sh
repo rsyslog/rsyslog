@@ -3,7 +3,7 @@
 # rgerhards, 2013-11-22
 echo ===============================================================================
 echo \[rfc5424parser.sh\]: testing mmpstrucdata
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")

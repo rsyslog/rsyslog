@@ -1,6 +1,6 @@
 #!/bin/bash
 # added 2018-04-16 by Rainer Gerhards, released under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 template(name="outfmt" type="string" string="%$.msgnum%\n")

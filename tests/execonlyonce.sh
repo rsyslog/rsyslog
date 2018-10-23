@@ -9,7 +9,7 @@
 # This file is part of the rsyslog project, released  under GPLv3
 echo ===============================================================================
 echo \[execonlyonce.sh\]: test for the $ActionExecOnlyOnceEveryInterval directive
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp

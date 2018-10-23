@@ -1,7 +1,7 @@
 #!/bin/bash
 # Added 2017-12-16 by Stephen Workman, released under ASL 2.0
 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")

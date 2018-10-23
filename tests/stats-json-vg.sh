@@ -10,7 +10,7 @@ fi
 
 echo ===============================================================================
 echo \[stats-json-vg.sh\]: test for verifying stats are reported correctly json format with valgrind
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 ruleset(name="stats") {

@@ -1,7 +1,7 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under GPLv3
 . $srcdir/diag.sh check-inotify
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 export IMFILEINPUTFILES="10"
 export IMFILECHECKTIMEOUT="20"
 

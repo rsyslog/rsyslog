@@ -7,7 +7,7 @@
 # uncomment for debugging support:
 echo ===============================================================================
 echo \[badqi.sh\]: test startup with invalid .qi file
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp

@@ -1,5 +1,5 @@
 #!/bin/bash
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 mysql --user=rsyslog --password=testbench < testsuites/mysql-truncate.sql
 generate_conf
 add_conf '

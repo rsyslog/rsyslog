@@ -10,7 +10,7 @@ fi
 
 echo ===============================================================================
 echo \[unused_lookup_table.sh\]: test for ensuring clean destruction of lookup-table even when it is never used
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 lookup_table(name="xlate" file="xlate.lkp_tbl")

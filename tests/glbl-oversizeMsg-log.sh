@@ -1,6 +1,6 @@
 #!/bin/bash
 # add 2018-05-03 by PascalWithopf, released under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 ./have_relpSrvSetOversizeMode
 if [ $? -eq 1 ]; then
   echo "imrelp parameter oversizeMode not available. Test stopped"

@@ -1,6 +1,6 @@
 #!/bin/bash
 # add 2017-09-21 by Pascal Withopf, released under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 global(

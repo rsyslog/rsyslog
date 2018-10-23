@@ -1,6 +1,6 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under GPLv3
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh check-inotify-only
 generate_conf
 add_conf '

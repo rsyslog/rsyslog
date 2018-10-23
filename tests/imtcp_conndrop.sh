@@ -12,7 +12,7 @@ fi
 
 echo ====================================================================================
 echo TEST: \[imtcp_conndrop.sh\]: test imtcp with random connection drops
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $MaxMessageSize 10k
