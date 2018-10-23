@@ -899,13 +899,15 @@ rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr)
 		i = 0;
 		for(lstn = lcnfRoot ; nfds && lstn != NULL ; lstn = lstn->next) {
 			assert(i < nfd);
-			if(glbl.GetGlobalInputTermState() == 1)
-				ABORT_FINALIZE(RS_RET_FORCE_TERM); /* terminate input! */
-			if(pollfds[i].revents & POLLIN) {
-		       		processSocket(pWrkr, lstn, &frominetPrev, &bIsPermitted);
-				--nfds;
+			if(lstn->sock != -1) {
+				if(glbl.GetGlobalInputTermState() == 1)
+					ABORT_FINALIZE(RS_RET_FORCE_TERM); /* terminate input! */
+				if(pollfds[i].revents & POLLIN) {
+					processSocket(pWrkr, lstn, &frominetPrev, &bIsPermitted);
+					--nfds;
+				}
+				++i;
 			}
-			++i;
 	       }
 	       /* end of a run, back to loop for next recv() */
 	}
