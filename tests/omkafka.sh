@@ -4,17 +4,14 @@
 . $srcdir/diag.sh init
 check_command_available kafkacat
 
-# *** ==============================================================================
 export TESTMESSAGES=100000
 export TESTMESSAGESFULL=$TESTMESSAGES
 
-# Generate random topic name
 export RANDTOPIC=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 8 | head -n 1)
 
 # Set EXTRA_EXITCHECK to dump kafka/zookeeperlogfiles on failure only.
 export EXTRA_EXITCHECK=dumpkafkalogs
 export EXTRA_EXIT=kafka
-echo ===============================================================================
 echo Check and Stop previous instances of kafka/zookeeper 
 download_kafka
 stop_zookeeper
@@ -59,6 +56,7 @@ local4.* {
 	action.resumeRetryCount="2"
 	queue.saveonshutdown="on"
 	)
+	action( type="omfile" file="'$RSYSLOG_OUT_LOG'")
 	stop
 }
 
@@ -67,17 +65,48 @@ action( type="omfile" file="'$RSYSLOG_DYNNAME.othermsg'")
 
 echo Starting sender instance [omkafka]
 startup
-# --- 
 
 echo Inject messages into rsyslog sender instance  
 injectmsg 1 $TESTMESSAGES
+
+$srcdir/diag.sh wait-file-lines  $RSYSLOG_OUT_LOG $TESTMESSAGESFULL 100
+
+# experimental: wait until kafkacat receives everything
+
+timeoutend=25
+timecounter=0
+
+while [ $timecounter -lt $timeoutend ]; do
+	(( timecounter++ ))
+
+	kafkacat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%s' > $RSYSLOG_OUT_LOG
+	count=$(wc -l < ${RSYSLOG_OUT_LOG})
+	if [ $count -eq $TESTMESSAGESFULL ]; then
+		printf '**** wait-kafka-lines success, have %d lines ****\n\n' "$TESTMESSAGESFULL"
+		break
+	else
+		if [ "x$timecounter" == "x$timeoutend" ]; then
+			echo wait-kafka-lines failed, expected $TESTMESSAGESFULL got $count
+			shutdown_when_empty
+			wait_shutdown
+			error_exit 1
+		else
+			echo wait-file-lines not yet there, currently $count lines
+			printf '\n'
+			$TESTTOOL_DIR/msleep 1000
+		fi
+	fi
+done
+unset count
+
+#end experimental
 
 echo Stopping sender instance [omkafka]
 shutdown_when_empty
 wait_shutdown
 
-kafkacat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%s'> $RSYSLOG_OUT_LOG
-kafkacat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%p@%o:%k:%s' > $RSYSLOG_OUT_LOG.extra
+#kafkacat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%s' > $RSYSLOG_OUT_LOG
+#kafkacat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%p@%o:%k:%s' > $RSYSLOG_OUT_LOG.extra
 
 # Delete topic to remove old traces before
 delete_kafka_topic $RANDTOPIC '.dep_wrk' '22181'
