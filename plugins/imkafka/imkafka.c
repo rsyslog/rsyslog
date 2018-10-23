@@ -704,8 +704,45 @@ CODESTARTfreeCnf
 ENDfreeCnf
 
 
-/* This function is called to gather input.
- */
+/* Cleanup imkafka worker threads */
+static void
+shutdownKafkaWorkers(void)
+{
+	int i;
+	instanceConf_t *inst;
+
+	assert(kafkaWrkrInfo != NULL);
+
+	DBGPRINTF("imkafka: waiting on imkafka workerthread termination\n");
+	for(i = 0 ; i < activeKafkaworkers ; ++i) {
+		pthread_join(kafkaWrkrInfo[i].tid, NULL);
+		DBGPRINTF("imkafka: Stopped worker %d\n", i);
+	}
+	free(kafkaWrkrInfo);
+	kafkaWrkrInfo = NULL;
+
+	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
+		DBGPRINTF("imkafka: stop consuming %s/%s/%s\n",
+			inst->topic, inst->consumergroup, inst->brokers);
+		rd_kafka_consumer_close(inst->rk); /* Close the consumer, committing final offsets, etc. */
+		rd_kafka_destroy(inst->rk); /* Destroy handle object */
+		DBGPRINTF("imkafka: stopped consuming %s/%s/%s\n",
+			inst->topic, inst->consumergroup, inst->brokers);
+
+		#if RD_KAFKA_VERSION < 0x00090001
+		/* Wait for kafka being destroyed in old API */
+		if (rd_kafka_wait_destroyed(10000) < 0)	{
+			DBGPRINTF("imkafka: error, rd_kafka_destroy did not finish after grace "
+				"timeout (10s)!\n");
+		} else {
+			DBGPRINTF("imkafka: rd_kafka_destroy successfully finished\n");
+		}
+		#endif
+	}
+}
+
+
+/* This function is called to gather input.  */
 BEGINrunInput
 	int i;
 	instanceConf_t *inst;
@@ -753,6 +790,14 @@ CODESTARTrunInput
 			srSleep(0, 100000);
 	}
 	DBGPRINTF("imkafka: terminating upon request of rsyslog core\n");
+
+	/* we need to shutdown kafak worker threads here because this operation can
+	 * potentially block (e.g. when no kafka broker is available!). If this
+	 * happens in runInput, the rsyslog core can cancel our thread. However,
+	 * in afterRun this is not possible, because the core does not assume it
+	 * can block there. -- rgerhards, 2018-10-23
+	 */
+	shutdownKafkaWorkers();
 finalize_it:
 ENDrunInput
 
@@ -763,52 +808,15 @@ CODESTARTwillRun
 	CHKiRet(prop.Construct(&pInputName));
 	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imkafka"), sizeof("imkafka") - 1));
 	CHKiRet(prop.ConstructFinalize(pInputName));
-
 finalize_it:
 ENDwillRun
 
 
 BEGINafterRun
 CODESTARTafterRun
-	/* Cleanup imkafka worker threads */
-	int i;
-	DBGPRINTF("imkafka: Stopping imkafka workerthreads\n");
-	for(i = 0 ; i < activeKafkaworkers ; ++i) {
-		pthread_join(kafkaWrkrInfo[i].tid, NULL);
-		DBGPRINTF("imkafka: Stopped worker %d\n", i);
-	}
-	free(kafkaWrkrInfo);
-
-	/* do cleanup here */
 	if(pInputName != NULL)
 		prop.Destruct(&pInputName);
 
-	/* kafka cleanup */
-	instanceConf_t *inst;
-	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
-		DBGPRINTF("imkafka: afterRun stop consuming %s/%s/%s\n",
-			inst->topic, inst->consumergroup, inst->brokers);
-
-		/* 1) Close the consumer, committing final offsets, etc. */
-		rd_kafka_consumer_close(inst->rk);
-
-		/* 2) Destroy handle object */
-		rd_kafka_destroy(inst->rk);
-
-		DBGPRINTF("imkafka: afterRun stopped consuming %s/%s/%s\n",
-			inst->topic, inst->consumergroup, inst->brokers);
-
-#	if RD_KAFKA_VERSION < 0x00090001
-	/* Wait for kafka being destroyed in old API */
-	if (rd_kafka_wait_destroyed(10000) < 0)	{
-		DBGPRINTF("imkafka: error, rd_kafka_destroy did not finish after grace "
-			"timeout (10s)!\n");
-	} else {
-		DBGPRINTF("imkafka: rd_kafka_destroy successfully finished\n");
-	}
-#	endif
-
-	}
 ENDafterRun
 
 
