@@ -1,6 +1,6 @@
 #!/bin/bash
 # added 2018-01-22 by Rainer Gerhards; Released under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 INCLFILE="${srcdir}/testsuites/include-std-omfile-action.conf"
 export CONF_SNIPPET=`cat $INCLFILE`

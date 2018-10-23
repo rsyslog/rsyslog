@@ -5,7 +5,7 @@
 # parameter. Checks that no file descriptors are leaked across restarts
 # of the program when stderr is being captured to a file.
 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 check_command_available lsof
 
 generate_conf

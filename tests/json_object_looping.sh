@@ -3,7 +3,7 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 echo ===============================================================================
 echo \[json_object_looping.sh\]: basic test for looping over json object / associative-array
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 template(name="garply" type="string" string="garply: %$.garply%\n")

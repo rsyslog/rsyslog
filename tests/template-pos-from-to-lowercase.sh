@@ -1,7 +1,7 @@
 #!/bin/bash
 # test many concurrent tcp connections
 # addd 2016-03-28 by RGerhards, released under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")

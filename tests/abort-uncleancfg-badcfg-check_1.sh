@@ -5,7 +5,7 @@
 echo ===============================================================================
 echo \[abort-uncleancfg-badcfg_1.sh\]: testing abort on unclean configuration
 echo "testing a bad Configuration verification run"
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 ../tools/rsyslogd  -C -N1 -f$srcdir/testsuites/abort-uncleancfg-badcfg_1.conf -M../runtime/.libs:../.libs
 if [ $? == 0 ]; then
    echo "Error: config check should fail"

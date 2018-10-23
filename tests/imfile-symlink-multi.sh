@@ -3,7 +3,7 @@
 # to single file and checks that message is reported once for each symlink
 # with correct corresponding metadata.
 # This is part of the rsyslog testbench, released under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh check-inotify
 export IMFILEINPUTFILES="10"
 

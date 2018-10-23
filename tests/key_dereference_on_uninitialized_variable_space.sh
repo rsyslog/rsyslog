@@ -3,7 +3,7 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 echo ===============================================================================
 echo \[key_dereference_on_uninitialized_variable_space.sh\]: test to dereference key from a not-yet-created cee or local json-object
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 template(name="corge" type="string" string="cee:%$!%\n")

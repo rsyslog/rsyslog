@@ -1,7 +1,7 @@
 #!/bin/bash
 # added 2018-09-13 by PascalWithopf
 # This file is part of the rsyslog project, released under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"

@@ -1,7 +1,7 @@
 #!/bin/bash
 # rgerhards, 2016-02-02 released under ASL 2.0
 echo \[imuxsock_logger_ruleset.sh\]: test imuxsock with ruleset definition
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/imuxsock/.libs/imuxsock" sysSock.use="off")

@@ -8,7 +8,7 @@ export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
 
 #  Starting actual testbench
 # TODO: move up,
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 template(name="tpl" type="string"

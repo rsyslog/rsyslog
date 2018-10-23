@@ -6,7 +6,7 @@ export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
 . $srcdir/diag.sh prepare-elasticsearch
 . $srcdir/diag.sh start-elasticsearch
 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh es-init
 curl -H 'Content-Type: application/json' -XPUT localhost:19200/rsyslog_testbench/ -d '{
   "mappings": {

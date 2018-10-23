@@ -12,7 +12,7 @@ ERROR_RATE_PERCENT=1      # percentage of logs to be retried
 
 export command_line=`echo $srcdir/testsuites/omprog-feedback-mt-bin.sh $ERROR_RATE_PERCENT`
 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 
 uname
 if [ $(uname) = "SunOS" ] ; then

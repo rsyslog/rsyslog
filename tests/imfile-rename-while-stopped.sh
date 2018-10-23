@@ -5,7 +5,7 @@ export RETRIES=10
 export TESTMESSAGESFULL=19999
 echo [imfile-rename.sh]
 . $srcdir/diag.sh check-inotify-only
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $WorkDirectory '$RSYSLOG_DYNNAME'.spool

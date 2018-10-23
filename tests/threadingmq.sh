@@ -8,7 +8,7 @@
 # should be covered by this test here.
 # rgerhards, 2009-06-26
 echo \[threadingmq.sh\]: main queue concurrency
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $MainMsgQueueTimeoutShutdown 1

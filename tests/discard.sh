@@ -7,7 +7,7 @@
 # uncomment for debugging support:
 echo ===============================================================================
 echo \[discard.sh\]: testing discard functionality
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp

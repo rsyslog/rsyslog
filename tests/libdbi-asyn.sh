@@ -2,7 +2,7 @@
 # This file is part of the rsyslog project, released under GPLv3
 echo ===============================================================================
 echo \[libdbi-asyn.sh\]: asyn test for libdbi functionality
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/omlibdbi/.libs/omlibdbi

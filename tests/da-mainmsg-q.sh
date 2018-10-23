@@ -10,7 +10,7 @@
 # This file is part of the rsyslog project, released  under GPLv3
 echo ===============================================================================
 echo "[da-mainmsg-q.sh]: testing main message queue in DA mode (going to disk)"
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp

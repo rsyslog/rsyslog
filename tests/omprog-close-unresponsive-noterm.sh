@@ -4,7 +4,7 @@
 # This test checks that omprog does NOT send a TERM signal to the
 # external program when signalOnClose=off, closes the pipe, and kills
 # the unresponsive child if killUnresponsive=on.
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/omprog/.libs/omprog")

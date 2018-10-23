@@ -4,7 +4,7 @@
 # are recorded with correct corresponding metadata (name of symlink 
 # matching configuration).
 # This is part of the rsyslog testbench, released under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh check-inotify
 export IMFILEINPUTFILES="10"
 export IMFILELASTINPUTLINES="3"

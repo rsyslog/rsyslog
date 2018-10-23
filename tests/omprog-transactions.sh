@@ -5,7 +5,7 @@
 # parameters, with the external program successfully confirming all messages
 # and transactions.
 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/omprog/.libs/omprog")

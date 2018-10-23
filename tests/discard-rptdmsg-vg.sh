@@ -9,7 +9,7 @@ fi
 
 echo ===============================================================================
 echo \[discard-rptdmsg.sh\]: testing discard-rptdmsg functionality
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp

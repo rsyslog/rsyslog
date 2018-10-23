@@ -2,7 +2,7 @@
 # testing sending and receiving via TLS with anon auth and rebind
 # rgerhards, 2011-04-04
 # This file is part of the rsyslog project, released  under GPLv3
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 # uncomment for debugging support:
 # start up the instances
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"

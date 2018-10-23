@@ -10,7 +10,7 @@ fi
 
 echo ===============================================================================
 echo \[lookup_table-vg.sh\]: test for clean destory of lookup-table, when lookup-fn is used
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 lookup_table(name="xlate" file="xlate.lkp_tbl" reloadOnHUP="on")

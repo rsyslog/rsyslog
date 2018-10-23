@@ -24,7 +24,7 @@
 # added 2009-11-11 by Rgerhards
 # This file is part of the rsyslog project, released  under GPLv3
 # uncomment for debugging support:
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 # start up the instances
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"

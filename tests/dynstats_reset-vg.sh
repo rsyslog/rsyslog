@@ -10,7 +10,7 @@ fi
 
 echo ===============================================================================
 echo \[dynstats_reset-vg.sh\]: test for gathering stats with a known-dyn-metrics reset in-between
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 ruleset(name="stats") {

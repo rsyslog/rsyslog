@@ -1,5 +1,5 @@
 #!/bin/bash
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 env|grep src
 echo ac_top_srcdir: $ac_top_srcdir

@@ -5,7 +5,7 @@
 export TCPFLOOD_EXTRA_OPTS="-M'msg:msg: 1:2, 3:4, 5:6, 7:8 b test'"
 echo ===============================================================================
 echo \[msgvar-concurrency-array.sh\]: testing concurrency of local variables
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/mmnormalize/.libs/mmnormalize")

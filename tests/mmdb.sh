@@ -6,7 +6,7 @@ echo \[mmdb.sh\]: test for mmdb
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout"
 #export RSYSLOG_DEBUGLOG="log"
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 template(name="outfmt" type="string" string="%$!iplocation%\n")

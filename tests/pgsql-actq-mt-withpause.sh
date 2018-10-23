@@ -1,7 +1,7 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 
 psql -h localhost -U postgres -f testsuites/pgsql-basic.sql
 

@@ -3,7 +3,7 @@
 # reliably deduce from the outside if it really worked.
 # addd 2016-03-03 by RGerhards, released under ASL 2.0
 echo \[glbl-unloadmodules\]: 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 global(debug.unloadModules="off")

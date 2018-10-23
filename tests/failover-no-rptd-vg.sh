@@ -1,7 +1,7 @@
 #!/bin/bash
 # rptd test for failover functionality - no failover
 # This file is part of the rsyslog project, released under GPLv3
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $RepeatedMsgReduction on

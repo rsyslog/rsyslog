@@ -5,7 +5,7 @@ echo ===========================================================================
 echo \[sndrcv_tls_anon_ipv6.sh\]: testing sending and receiving via TLS with anon auth using bare ipv6, no SNI
 
 # uncomment for debugging support:
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 # start up the instances
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"

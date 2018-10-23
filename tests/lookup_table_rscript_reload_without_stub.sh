@@ -10,7 +10,7 @@ fi
 
 echo ===============================================================================
 echo \[lookup_table_rscript_reload_without_stub.sh\]: test for lookup-table reload by rscript-stmt without stub
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 lookup_table(name="xlate" file="xlate.lkp_tbl")

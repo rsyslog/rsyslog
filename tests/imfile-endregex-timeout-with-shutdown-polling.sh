@@ -1,6 +1,6 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 export IMFILECHECKTIMEOUT="20"
 
 generate_conf

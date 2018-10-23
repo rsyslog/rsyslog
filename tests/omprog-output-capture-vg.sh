@@ -5,7 +5,7 @@
 # problems using valgrind. Note it is not necessary to repeat the
 # rest of checks (this simplifies the maintenance of the tests).
 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/omprog/.libs/omprog")

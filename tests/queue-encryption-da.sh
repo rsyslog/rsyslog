@@ -1,6 +1,6 @@
 #!/bin/bash
 # addd 2018-09-28 by RGerhards, released under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/omtesting/.libs/omtesting")

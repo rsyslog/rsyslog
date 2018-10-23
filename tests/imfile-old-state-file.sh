@@ -7,7 +7,7 @@
 # exactly what shall happen.
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 # added 2018-03-29 by rgerhards
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh check-inotify
 generate_conf
 add_conf '

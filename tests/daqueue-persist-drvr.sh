@@ -6,7 +6,7 @@
 # added 2009-05-27 by Rgerhards
 # This file is part of the rsyslog project, released  under ASL 2.0
 # uncomment for debugging support:
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp

@@ -7,7 +7,7 @@
 # This file is part of the rsyslog project, released  under GPLv3
 echo ===============================================================================
 echo TEST: \[asynwr_timeout.sh\]: test async file writing timeout writes
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp

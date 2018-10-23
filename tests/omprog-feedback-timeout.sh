@@ -6,7 +6,7 @@
 # feedback before the configured 'confirmTimeout'. Also tests the
 # keep-alive feature.
 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/omprog/.libs/omprog")

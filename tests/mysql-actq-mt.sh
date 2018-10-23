@@ -2,7 +2,7 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 echo ===============================================================================
 echo \[mysql-act-mt.sh\]: test for mysql with multithread actionq
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/ommysql/.libs/ommysql")

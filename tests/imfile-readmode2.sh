@@ -3,7 +3,7 @@
 #export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction stdout"
 #export RSYSLOG_DEBUGLOG="log"
 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh check-inotify
 generate_conf
 add_conf '

@@ -11,7 +11,7 @@ fi
 
 echo ===============================================================================
 echo \[udp-msgreduc-vg.sh\]: testing imtcp multiple listeners
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/imudp/.libs/imudp

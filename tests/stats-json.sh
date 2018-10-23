@@ -2,7 +2,7 @@
 # added 2016-03-30 by singh.janmejay
 # test for verifying stats are reported correctly json format
 # This file is part of the rsyslog project, released under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 ruleset(name="stats") {

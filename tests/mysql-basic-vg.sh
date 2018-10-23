@@ -2,7 +2,7 @@
 # This file is part of the rsyslog project, released under GPLv3
 echo ===============================================================================
 echo \[mysql-basic-vg.sh\]: basic test for mysql-basic functionality/valgrind
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/ommysql/.libs/ommysql

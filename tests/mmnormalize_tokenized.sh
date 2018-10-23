@@ -3,7 +3,7 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 echo ===============================================================================
 echo \[mmnormalize_tokenized.sh\]: test for mmnormalize tokenized field_type
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 template(name="ips" type="string" string="%$.ips%\n")

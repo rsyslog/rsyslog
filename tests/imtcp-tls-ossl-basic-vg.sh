@@ -1,7 +1,7 @@
 #!/bin/bash
 # added 2018-04-27 by alorbach
 # This file is part of the rsyslog project, released  under GPLv3
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 global(	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"

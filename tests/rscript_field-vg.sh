@@ -10,7 +10,7 @@ fi
 
 echo ===============================================================================
 echo \[rscript_field-vg.sh\]: testing rainerscript field\(\) function
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 template(name="outfmt" type="list") {

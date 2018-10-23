@@ -10,7 +10,7 @@ RSYSLOG_KSI_DEBUG="-s"
 RSYSLOG_KSI_LOG="ksi-sample.log"
 
 echo \[ksi-verify-short.sh\]: testing rsgtutil verify function - short options
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 
 echo "running rsgtutil command with short options"
 ../tools/rsgtutil $RSYSLOG_KSI_DEBUG -t -P $RSYSLOG_KSI_BIN $srcdir/testsuites/$RSYSLOG_KSI_LOG

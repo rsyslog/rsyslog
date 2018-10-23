@@ -6,7 +6,7 @@ echo \[sndrcv_tls_ossl_anon_rebind.sh\]: testing sending and receiving via TLS w
 #valgrind="valgrind"
 
 # uncomment for debugging support:
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 # start up the instances
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"

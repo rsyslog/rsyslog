@@ -1,5 +1,5 @@
 #!/bin/bash
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")

@@ -1,6 +1,6 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 # name is 400 chars long --> too long

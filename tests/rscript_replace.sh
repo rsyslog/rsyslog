@@ -3,7 +3,7 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 echo ===============================================================================
 echo \[rscript_replace.sh\]: test for replace script-function
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 template(name="outfmt" type="string" string="%$.replaced_msg%\n")

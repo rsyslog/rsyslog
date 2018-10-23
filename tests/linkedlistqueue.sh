@@ -2,7 +2,7 @@
 # Test for Linkedlist queue mode
 # added 2009-05-20 by rgerhards
 # This file is part of the rsyslog project, released  under GPLv3
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp

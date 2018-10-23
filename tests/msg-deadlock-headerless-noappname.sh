@@ -2,7 +2,7 @@
 # this checks against a situation where a deadlock was caused in
 # practice.
 # added 2018-10-17 by Jan Gerhards, released under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")

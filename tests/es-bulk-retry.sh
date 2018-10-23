@@ -11,7 +11,7 @@ thread_pool.bulk.size: 1
 EOF
 . $srcdir/diag.sh start-elasticsearch
 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/impstats/.libs/impstats" interval="1"

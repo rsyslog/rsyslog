@@ -3,7 +3,7 @@
 # addd 2016-02-23 by RGerhards, released under ASL 2.0
 # requires faketime
 echo \[now-utc-casecmp\]: test \$year-utc, \$month-utc, \$day-utc
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 
 . $srcdir/faketime_common.sh
 

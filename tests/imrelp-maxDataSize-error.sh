@@ -1,7 +1,7 @@
 #!/bin/bash
 # add 2018-04-26 by Pascal Withopf, released under ASL 2.0
 echo [imrelp-maxDataSize-error.sh]
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/imrelp/.libs/imrelp")

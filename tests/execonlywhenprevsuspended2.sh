@@ -6,7 +6,7 @@
 # rgerhards, 2010-06-23
 echo ===============================================================================
 echo \[execonlywhenprevsuspended2.sh\]: test execonly...suspended functionality
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 # omtesting provides the ability to cause "SUSPENDED" action state

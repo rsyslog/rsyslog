@@ -3,7 +3,7 @@
 # This file is part of the rsyslog project, released  under GPLv3
 echo ===============================================================================
 echo \[imtcp-tls-basic.sh\]: testing imtcp in TLS mode - basic test
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp

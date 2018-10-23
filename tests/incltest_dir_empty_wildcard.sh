@@ -2,7 +2,7 @@
 # This test checks if an empty includeConfig directory causes problems. It
 # should not, as this is a valid situation that by default exists on many
 # distros.
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf "\$IncludeConfig ${srcdir}/testsuites/incltest.d/*.conf-not-there
 "

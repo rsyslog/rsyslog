@@ -5,7 +5,7 @@
 # from creating additional tests
 # requires faketime
 echo \[timegenerated-uxtimestamp\]: check valid dates with uxtimestamp format
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 
 . $srcdir/faketime_common.sh
 

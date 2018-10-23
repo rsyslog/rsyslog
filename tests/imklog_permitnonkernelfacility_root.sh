@@ -6,7 +6,7 @@ if [ "$EUID" -ne 0 ]; then
     exit 77 # Not root, skip this test
 fi
 service rsyslog stop
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/imklog/.libs/imklog" permitnonkernelfacility="on")

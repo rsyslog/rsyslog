@@ -10,7 +10,7 @@ fi
 
 echo ===============================================================================
 echo \[mmpstrucdata.sh\]: testing mmpstrucdata
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/mmpstrucdata/.libs/mmpstrucdata")

@@ -12,7 +12,7 @@ fi
 
 echo ===============================================================================
 echo \[mmpstrucdata-invalid.sh\]: testing mmpstrucdata with invalid SD
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/mmpstrucdata/.libs/mmpstrucdata")

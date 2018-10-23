@@ -6,7 +6,7 @@ echo This test must be run as root with no other active syslogd
 if [ "$EUID" -ne 0 ]; then
     exit 77 # Not root, skip this test
 fi
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/imuxsock/.libs/imuxsock

@@ -3,7 +3,7 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 echo ===============================================================================
 echo \[mmnormalize_regex.sh\]: test for mmnormalize regex field_type
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 template(name="hosts_and_ports" type="string" string="host and port list: %$!hps%\n")

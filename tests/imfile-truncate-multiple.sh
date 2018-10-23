@@ -4,7 +4,7 @@
 # It also needs a larger load, which shall be sufficient to do begin of file
 # checks as well as should support file id hash generation.
 # addd 2016-10-06 by RGerhards, released under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh check-inotify
 export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 export RSYSLOG_DEBUGLOG="log"

@@ -6,7 +6,7 @@ echo ======================================================================
 # Check if inotify header exist
 echo [imfile-discard-truncated-line.sh]
 . $srcdir/diag.sh check-inotify
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $MaxMessageSize 128

@@ -3,7 +3,7 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 echo ===============================================================================
 echo \[json_array_subscripting.sh\]: basic test for json array subscripting
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 template(name="outfmt" type="string" string="msg: %$!foo[1]% | %$.quux% | %$.corge% | %$.grault% | %$!foo[3]!bar[1]!baz%\n")

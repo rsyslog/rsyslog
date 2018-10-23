@@ -14,7 +14,7 @@ fi
 export TCPFLOOD_EXTRA_OPTS="-b1 -W1"
 
 # uncomment for debugging support:
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 # start up the instances
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"

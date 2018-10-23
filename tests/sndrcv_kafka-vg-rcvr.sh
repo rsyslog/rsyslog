@@ -13,7 +13,7 @@ echo Check and Stop previous instances of kafka/zookeeper
 . $srcdir/diag.sh stop-kafka
 
 echo Init Testbench
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 
 echo Create kafka/zookeeper instance and topics
 . $srcdir/diag.sh start-zookeeper

@@ -8,7 +8,7 @@
 # This file is part of the rsyslog project, released  under GPLv3
 echo ===============================================================================
 echo TEST: \[asynwr_tinybuf.sh\]: test async file writing with 1-byte buffer
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp

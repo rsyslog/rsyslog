@@ -10,7 +10,7 @@ fi
 
 echo ===============================================================================
 echo \[json_array_looping-vg.sh\]: basic test for looping over json array with valgrind
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 template(name="garply" type="string" string="garply: %$.garply%\n")

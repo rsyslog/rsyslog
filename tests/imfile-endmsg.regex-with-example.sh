@@ -1,7 +1,7 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 # This test tests imfile endmsg.regex.
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh check-inotify
 export IMFILECHECKTIMEOUT="20"
 export IMFILELASTINPUTLINES="6"

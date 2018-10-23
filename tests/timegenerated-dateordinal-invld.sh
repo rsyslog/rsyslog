@@ -5,7 +5,7 @@
 # instead provide the defined return value (0)
 # requires faketime
 echo \[timegenerated-dateordinal-invld\]: check invalid dates with ordinal format
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 
 . $srcdir/faketime_common.sh
 

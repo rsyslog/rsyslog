@@ -16,7 +16,7 @@
 # (default value of closeTimeout), which should be sufficient for the
 # program to write its output.
 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/omprog/.libs/omprog")

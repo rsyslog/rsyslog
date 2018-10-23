@@ -2,7 +2,7 @@
 # added 2015-03-02 by singh.janmejay
 # test to assert attempt to iterate upon a non-array json-object fails gracefully
 # This file is part of the rsyslog project, released under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 template(name="garply" type="string" string="garply: %$.garply%\n")

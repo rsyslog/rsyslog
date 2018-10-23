@@ -10,7 +10,7 @@ fi
 
 echo ===============================================================================
 echo \[dynstats-vg.sh\]: test for gathering stats over dynamic metric names with valgrind
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 ruleset(name="stats") {

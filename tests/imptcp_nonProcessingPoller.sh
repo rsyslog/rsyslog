@@ -4,7 +4,7 @@
 # This file is part of the rsyslog project, released  under GPLv3
 echo ====================================================================================
 echo TEST: \[imptcp_nonProcessingPoller.sh\]: test imptcp with poller driven processing disabled
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $MaxMessageSize 10k

@@ -10,7 +10,7 @@ RSYSLOG_KSI_DEBUG="--show-verified"
 RSYSLOG_KSI_LOG="ksi-sample.log"
 
 echo \[ksi-verify-long.sh\]: testing rsgtutil verify function - long options
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 
 echo "running rsgtutil command with long options"
 ../tools/rsgtutil $RSYSLOG_KSI_DEBUG --verify --publications-server $RSYSLOG_KSI_BIN $srcdir/testsuites/$RSYSLOG_KSI_LOG

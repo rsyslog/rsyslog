@@ -1,6 +1,6 @@
 #!/bin/bash
 # adddd 2018-04-16 by PascalWithopf, released under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 global(maxMessageSize="214800")

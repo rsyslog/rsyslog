@@ -62,7 +62,7 @@ rfc3164_11_r=$($getts "$rfc3164_11")
 rfc3164_12="Dec 25 20:00:00"
 rfc3164_12_r=$($getts "$rfc3164_12")
 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")

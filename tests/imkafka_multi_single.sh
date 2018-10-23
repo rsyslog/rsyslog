@@ -2,7 +2,7 @@
 # added 2018-08-29 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
 echo Init Testbench 
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 check_command_available kafkacat
 
 # *** ==============================================================================

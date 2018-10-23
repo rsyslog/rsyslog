@@ -3,7 +3,7 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 echo ===========================================================================================
 echo \[json_var_case.sh\]: test for JSON upper and lower case variables, and leading underscores
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 global(variables.casesensitive="on")

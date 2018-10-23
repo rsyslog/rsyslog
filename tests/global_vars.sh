@@ -4,7 +4,7 @@
 # This file is part of the rsyslog project, released  under ASL 2.0
 echo ===============================================================================
 echo \[global_vars.sh\]: testing global variable support
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $MainMsgQueueTimeoutShutdown 10000

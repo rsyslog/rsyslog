@@ -12,7 +12,7 @@
 # This file is part of the rsyslog project, released under GPLv3
 echo ===============================================================================
 echo \[omruleset.sh\]: basic test for omruleset functionality
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/omruleset/.libs/omruleset

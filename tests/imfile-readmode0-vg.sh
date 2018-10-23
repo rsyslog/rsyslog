@@ -1,7 +1,7 @@
 #!/bin/bash
 # Tests for processing of partial lines in read mode 0
 # This is part of the rsyslog testbench, licensed under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/imfile/.libs/imfile")

@@ -1,7 +1,7 @@
 #!/bin/bash
 # added 2017-09-29 by Rgerhards
 # This file is part of the rsyslog project, released under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 echo testing sending and receiving via relp w/ rebind interval
 # uncomment for debugging support:
 # start up the instances

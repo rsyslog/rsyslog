@@ -7,7 +7,7 @@
 # omprog is going to write to the pipe (to send a message to the
 # program), and when omprog is going to read from the pipe (when it
 # is expecting the program to confirm the last message).
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 check_command_available lsof
 
 generate_conf

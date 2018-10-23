@@ -2,7 +2,7 @@
 # added 2015-12-02 by singh.janmejay
 # test for sparse-array lookup-table and HUP based reloading of it
 # This file is part of the rsyslog project, released under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 uname
 if [ $(uname) = "FreeBSD" ] ; then
    echo "This test currently does not work on FreeBSD."

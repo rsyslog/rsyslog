@@ -11,7 +11,7 @@ fi
 
 echo ===============================================================================
 echo \[tcp-msgreduc-vg.sh\]: testing msg reduction via UDP
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp

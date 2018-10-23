@@ -7,7 +7,7 @@
 # This file is part of the rsyslog project, released  under GPLv3
 # uncomment for debugging support:
 echo testing memory queue persisting to disk, mode $1
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp

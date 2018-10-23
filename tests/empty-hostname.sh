@@ -8,7 +8,7 @@
 # hardcoded default of "localhost-empty-hostname" is used.
 # Note that the test may fail if the library is not properly preloaded.
 # This is part of the rsyslog testbench, licensed under ASL 2.0
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 skip_platform "AIX" "we cannot preload required dummy lib"
 generate_conf
 add_conf '

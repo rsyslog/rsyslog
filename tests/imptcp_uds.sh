@@ -1,7 +1,7 @@
 #!/bin/bash
 echo ======================================================================
 echo \[imptcp_uds.sh\]: test imptcp unix domain socket
-. $srcdir/diag.sh init
+. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 global(MaxMessageSize="124k")
