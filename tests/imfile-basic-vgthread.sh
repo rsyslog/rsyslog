@@ -1,13 +1,9 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-uname
-if [ $(uname) = "FreeBSD" ] ; then
-   echo "This test currently does not work on FreeBSD."
-   exit 77
-fi
+skip_platform "FreeBSD" "This test currently does not work on FreeBSD."
 
-grep "\.el6\." <<< $(uname -a)
+grep '\.el6\.' <<< $(uname -a)
 if [ "$?" == "0" ]; then
 	echo "CentOS 6 detected, adding valgrind suppressions"
 	export RS_TEST_VALGRIND_EXTRA_OPTS="--suppressions=${srcdir}/imfile-basic-vgthread.supp"

@@ -25,9 +25,9 @@ shutdown_when_empty
 wait_shutdown
 cmp testsuites/action-tx-errfile.result ${RSYSLOG2_OUT_LOG}
 if [ ! $? -eq 0 ]; then
-  printf "errorfile does not contain excpected result. Expected:\n\n"
+  printf 'errorfile does not contain excpected result. Expected:\n\n'
   cat testsuites/action-tx-errfile.result 
-  printf "\nActual:\n\n"
+  printf '\nActual:\n\n'
   cat ${RSYSLOG2_OUT_LOG}
   error_exit 1
 fi;
