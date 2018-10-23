@@ -4,13 +4,7 @@
 # and read back, but it does not test the transition from
 # memory to disk mode for DA queues.
 # added 2009-04-17 by Rgerhards
-# This file is part of the rsyslog project, released  under GPLv3
-# uncomment for debugging support:
-echo ===============================================================================
-echo \[diskqueue.sh\]: testing queue disk-only mode
-# uncomment for debugging support:
-#export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
-#export RSYSLOG_DEBUGLOG="log"
+# This file is part of the rsyslog project, released under ASL 2.0
 . $srcdir/diag.sh init
 generate_conf
 add_conf '
@@ -25,13 +19,16 @@ $MainMsgQueueType disk
 
 $template outfmt,"%msg:F,58:2%\n"
 template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!
-:msg, contains, "msgnum:" ?dynfile;outfmt
+if ($msg contains "msgnum:") then
+	?dynfile;outfmt
+else
+	action(type="omfile" file="'$RSYSLOG_DYNNAME.syslog.log'")
 '
 startup
 # 20000 messages should be enough - the disk test is slow enough ;)
-sleep 4
 tcpflood -m20000
-shutdown_when_empty # shut down rsyslogd when done processing messages
+shutdown_when_empty
 wait_shutdown
 seq_check 0 19999
+check_not_present "spool.* open error" $RSYSLOG_DYNNAME.syslog.log
 exit_test

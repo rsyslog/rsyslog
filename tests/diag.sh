@@ -471,7 +471,6 @@ function custom_content_check() {
 # check that given content $1 is not present in file $2 (default: RSYSLOG_OUTLOG)
 # regular expressions may be used
 function check_not_present() {
-
 	if [ "$2" == "" ]; then
 		file=$RSYSLOG_OUT_LOG
 	else
@@ -481,9 +480,9 @@ function check_not_present() {
 	if [ "$?" -eq "0" ]; then
 		echo FAIL: check_not present found
 		echo $1
-		echo inside file $file
-		echo sample:
-		grep "$1" < "$file" | head -10 | cat -n
+		echo inside file $file of $(wc -l < $file) lines
+		echo samples:
+		cat -n "$file" | grep "$1" | head -10
 		error_exit 1
 	fi
 }
