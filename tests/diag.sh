@@ -10,6 +10,13 @@
 #
 # This file can be customized to environment specifics via environment
 # variables:
+# SUDO		either blank, or the command to use for sudo (usually "sudo").
+#		This env var is sometimes used to increase the chance that we
+#		get extra information, e.g. when trying to analyze running
+#		processes. Bottom line: if sudo is possible and you are OK with
+#		the testbench utilizing this, use
+#		export SUDO=sudo
+#		to activate the extra functionality.
 # RS_SORTCMD    Sort command to use (must support $RS_SORT_NUMERIC_OPT option). If unset,
 #		"sort" is used. E.g. Solaris needs "gsort"
 # RS_SORT_NUMERIC_OPT option to use for numerical sort, If unset "-g" is used.
@@ -17,6 +24,10 @@
 #               E.g. Solaris needs "gcmp"
 # RS_HEADCMD    head command to use. If unset, "head" is used.
 #               E.g. Solaris needs "ghead"
+# RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT
+#		global input timeout shutdown, default 60000 (60) sec. This should
+#		only be set specifically if there is good need to do so, e.g. if
+#		a test needs to timeout.
 #
 
 # environment variables:
@@ -113,6 +124,9 @@ local0.* ./'${RSYSLOG_DYNNAME}'.HOSTNAME;hostname
 #			finished under stress otherwise
 # $1 is the instance id, if given
 function generate_conf() {
+	if [ "$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT" == "" ]; then
+		RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT="60000"
+	fi
 	export TCPFLOOD_PORT="$(get_free_port)"
 	if [ "$1" == "" ]; then
 		export TESTCONF_NM="${RSYSLOG_DYNNAME}_" # this basename is also used by instance 2!
@@ -122,7 +136,7 @@ function generate_conf() {
 		mkdir $RSYSLOG_DYNNAME.spool
 	fi
 	echo 'module(load="../plugins/imdiag/.libs/imdiag")
-global(inputs.timeout.shutdown="60000")
+global(inputs.timeout.shutdown="'$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT'")
 $IMDiagListenPortFileName '$RSYSLOG_DYNNAME.imdiag$1.port'
 $IMDiagServerRun 0
 
@@ -337,9 +351,16 @@ function wait_startup() {
 # start rsyslogd with default params. $1 is the config file name to use
 # returns only after successful startup, $2 is the instance (blank or 2!)
 # RS_REDIR maybe set to redirect rsyslog output
+# env var RSTB_DAEMONIZE" == "YES" means rsyslogd shall daemonize itself;
+# any other value or unset means it does not do that.
 function startup() {
 	startup_common "$1" "$2"
-	eval LD_PRELOAD=$RSYSLOG_PRELOAD $valgrind ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$instance.pid -M../runtime/.libs:../.libs -f$CONF_FILE $RS_REDIR &
+	if [ "$RSTB_DAEMONIZE" == "YES" ]; then
+		n_option=""
+	else
+		n_option="-n"
+	fi
+	eval LD_PRELOAD=$RSYSLOG_PRELOAD $valgrind ../tools/rsyslogd -C $n_option -i$RSYSLOG_PIDBASE$instance.pid -M../runtime/.libs:../.libs -f$CONF_FILE $RS_REDIR &
 	wait_startup $instance
 }
 
@@ -551,7 +572,7 @@ function wait_shutdown() {
 		   echo "Instance is possibly still running and may need"
 		   echo "manual cleanup."
 		   echo "TRYING TO capture status via gdb from hanging process"
-		   gdb ../tools/rsyslogd <<< "attach $out_pid
+		   $SUDO gdb ../tools/rsyslogd <<< "attach $out_pid
 set pagination off
 inf thr
 thread apply all bt
