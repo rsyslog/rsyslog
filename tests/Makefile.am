@@ -622,6 +622,7 @@ if ENABLE_KAFKA_TESTS
 TESTS += \
 	omkafka.sh \
 	imkafka.sh \
+	imkafka-hang-on-no-kafka.sh \
 	imkafka_multi_single.sh \
 	sndrcv_kafka.sh \
 	sndrcv_kafka_multi_topics.sh
@@ -1662,6 +1663,7 @@ EXTRA_DIST= \
 	mysql-actq-mt-withpause-vg.sh \
 	omkafka.sh \
 	omkafka-vg.sh \
+	imkafka-hang-on-no-kafka.sh \
 	imkafka.sh \
 	imkafka-vg.sh \
 	imkafka_multi_single.sh \
