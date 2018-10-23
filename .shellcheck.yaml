@@ -1,2 +1,5 @@
 ignored:
   - SC2181 # we need support for old Solaris 10
+
+  # things we do not (currently) care about
+  - SC2086
