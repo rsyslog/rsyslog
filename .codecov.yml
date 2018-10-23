@@ -6,7 +6,7 @@ coverage:
   range: 50..75
   # the next 2 lines few hopefully help us avoid CI fail due to slightly
   # different execution pathes (if not, remove) -- rgerhards, 2018-10-12
-  precision: 0
+  precision: 1
   round: up
 
 ignore:
@@ -22,5 +22,5 @@ ignore:
   # that would require a service registration
   # see also: https://github.com/rsyslog/rsyslog/issues/3073
   - "runtime/lib_ksi_queue.c"
-  - "runtime/lib_ksil212.c"
+  - "runtime/lib_ksils12.c"
   - "runtime/lmsig_ksi-ls12.c"
