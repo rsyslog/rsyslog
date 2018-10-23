@@ -17,6 +17,15 @@ Version 8.39.0 [v8-stable] 2018-10-30
   needed and could now finally be removed; We also refactored the last
   component (omhttp contrib module) that used the old interface.
   closes https://github.com/rsyslog/rsyslog/issues/1684
+- queue bugfix: invalid error message on queue startup
+  due to some old regression (commit not exactly identified, but for
+  sure a regression, 9 years ago it was correct) an error message
+  is emitted when no .qi file exists on startup of the queue, which
+  is a normal condition.
+  Actually, the code should not have tried to open the .qi file in
+  the first place because it detected that it did not exist. That
+  (necessary) shortcut had been removed a while ago.
+  closes https://github.com/rsyslog/rsyslog/issues/3117
 - bugfix imrelp: regression with legacy configuration startup fail
   Startup of a relp listener failed if legacy configuration was used.
   caused by commit: 32b71daa8aadb8f16fe0ca2945e54d593f47a824
