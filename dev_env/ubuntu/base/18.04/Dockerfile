@@ -48,6 +48,7 @@ RUN 	apt-get update && \
 	python-docutils  \
 	python-pip \
 	software-properties-common \
+	sudo \
 	uuid-dev \
 	valgrind \
 	vim \
@@ -73,11 +74,13 @@ WORKDIR /home/devel
 VOLUME /rsyslog
 RUN groupadd rsyslog \
     && useradd -g rsyslog  -s /bin/bash rsyslog \
-    && echo "rsyslog ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+    && echo "rsyslog ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
+    && echo "buildbot ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 ADD setup-system.sh setup-system.sh
 ENV	PKG_CONFIG_PATH=/usr/local/lib/pkgconfig \
 	LD_LIBRARY_PATH=/usr/local/lib \
-	DEBIAN_FRONTEND=
+	DEBIAN_FRONTEND= \
+	SUDO="sudo -S"
 
 # Install any needed packages
 RUN	./setup-system.sh
