@@ -30,6 +30,12 @@ Version 8.39.0 [v8-stable] 2018-10-30
   Startup of a relp listener failed if legacy configuration was used.
   caused by commit: 32b71daa8aadb8f16fe0ca2945e54d593f47a824
   closes https://github.com/rsyslog/rsyslog/issues/3106
+- bugfix imudp: stall of connection and/or potential segfault
+  There was a regression in 493279b790a8cdace8ccbc2c5136985e820dd2fa.
+  This regression may cause stop (or delay) of reception from some systems
+  and may also caus a segfault. Triggering condition is that at least
+  one listener could not be created.
+  Thanks to Jens Låås for the patch.
 - bugfix gcry crypto driver: small memleak
   If a crypto key is specified directly via the key="" parameter,
   the storage for that key is not freed, causing a small memleak.
