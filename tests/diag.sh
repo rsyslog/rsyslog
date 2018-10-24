@@ -1502,7 +1502,7 @@ case $1 in
 		timecounter=0
 
 		while [  $timecounter -lt $timeoutend ]; do
-			let timecounter=timecounter+1
+			(( timecounter++ ))
 
 			count=$(wc -l < ${RSYSLOG_OUT_LOG})
 			if [ $count -eq $3 ]; then
