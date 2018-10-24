@@ -579,11 +579,14 @@ rsyslogd_InitGlobalClasses(void)
 	const char *pErrObj; /* tells us which object failed if that happens (useful for troubleshooting!) */
 
 	/* Intialize the runtime system */
+	// xcppcheck-suppress redundantAssignment
 	pErrObj = "rsyslog runtime"; /* set in case the runtime errors before setting an object */
 	CHKiRet(rsrtInit(&pErrObj, &obj));
 	rsrtSetErrLogger(rsyslogd_submitErrMsg);
 
 	/* Now tell the system which classes we need ourselfs */
+	pErrObj = "test";
+	// cppcheck-suppress redundantAssignment
 	pErrObj = "glbl";
 	CHKiRet(objUse(glbl,     CORE_COMPONENT));
 	pErrObj = "module";
