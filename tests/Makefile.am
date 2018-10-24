@@ -312,6 +312,7 @@ TESTS +=  \
 	include-obj-outside-control-flow-vg.sh \
 	include-obj-in-if-vg.sh \
 	include-obj-text-vg.sh \
+	queue-encryption-disk_keyfile-vg.sh \
 	rscript_parse_json-vg.sh \
 	rscript_backticks-vg.sh \
 	rscript-config_enable-off-vg.sh \
@@ -1450,6 +1451,7 @@ EXTRA_DIST= \
 	rcvr_fail_restore.sh \
 	queue-encryption-disk.sh \
 	queue-encryption-disk_keyfile.sh \
+	queue-encryption-disk_keyfile-vg.sh \
 	queue-encryption-disk_keyprog.sh \
 	queue-encryption-da.sh \
 	daqueue-dirty-shutdown.sh \

@@ -481,17 +481,18 @@ addPadding(gcryfile pF, uchar *buf, size_t *plen)
 	(*plen)+= nPad;
 }
 
-static void
-removePadding(uchar *buf, size_t *plen)
+static void ATTR_NONNULL()
+removePadding(uchar *const buf, size_t *const plen)
 {
-	unsigned len = (unsigned) *plen;
-	unsigned iSrc, iDst;
-	uchar *frstNUL;
+	const size_t len = *plen;
+	size_t iSrc, iDst;
 
-	frstNUL = (uchar*)strchr((char*)buf, 0x00);
-	if(frstNUL == NULL)
-		goto done;
-	iDst = iSrc = frstNUL - buf;
+	iSrc = 0;
+	/* skip to first NUL */
+	while(iSrc < len && buf[iSrc] == '\0') {
+		++iSrc;
+	}
+	iDst = iSrc;
 
 	while(iSrc < len) {
 		if(buf[iSrc] != 0x00)
@@ -500,7 +501,6 @@ removePadding(uchar *buf, size_t *plen)
 	}
 
 	*plen = iDst;
-done:	return;
 }
 
 /* returns 0 on succes, positive if key length does not match and key
