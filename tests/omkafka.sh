@@ -73,7 +73,7 @@ $srcdir/diag.sh wait-file-lines  $RSYSLOG_OUT_LOG $TESTMESSAGESFULL 100
 
 # experimental: wait until kafkacat receives everything
 
-timeoutend=25
+timeoutend=100
 timecounter=0
 
 while [ $timecounter -lt $timeoutend ]; do
