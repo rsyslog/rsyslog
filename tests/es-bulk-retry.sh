@@ -1,5 +1,6 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
+. ${srcdir:=.}/diag.sh init
 export ES_PORT=19200
 . $srcdir/diag.sh download-elasticsearch
 . $srcdir/diag.sh stop-elasticsearch
@@ -11,7 +12,6 @@ thread_pool.bulk.size: 1
 EOF
 . $srcdir/diag.sh start-elasticsearch
 
-. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/impstats/.libs/impstats" interval="1"
@@ -108,6 +108,7 @@ numrecords=100
 success=50
 badarg=50
 injectmsg 0 $numrecords
+sleep 2
 shutdown_when_empty
 if [ "x${USE_VALGRIND:-false}" == "xtrue" ] ; then
 	wait_shutdown_vg
@@ -136,15 +137,15 @@ for item in json.load(sys.stdin)["hits"]["hits"]:
 	if msgnum in expectedrecs:
 		del expectedrecs[msgnum]
 	else:
-		print "Error: found unexpected msgnum {} in record".format(msgnum)
+		print "FAIL: found unexpected msgnum {} in record".format(msgnum)
 		rc = 1
 for item in expectedrecs:
-	print "Error: msgnum {} was missing in Elasticsearch".format(item)
+	print "FAIL: msgnum {} was missing in Elasticsearch".format(item)
 	rc = 1
 sys.exit(rc)
-' $success || { rc=$?; echo error: did not find expected records in Elasticsearch; }
+' $success || { rc=$?; errmsg="FAIL: did not find expected records in Elasticsearch"; }
 else
-	echo error: elasticsearch output file work not found
+	errmsg="FAIL: elasticsearch output file work not found"
 	rc=1
 fi
 
@@ -168,9 +169,9 @@ assert(actualsuccess == success)
 assert(actualbadarg == badarg)
 assert(actualrej > 0)
 assert(actualsuccess + actualbadarg + actualrej == actualsubmitted)
-' $success $badarg || { rc=$?; echo error: expected responses not found in ${RSYSLOG_DYNNAME}.spool/es-stats.log; }
+' $success $badarg || { rc=$?; errmsg="FAIL: expected responses not found in ${RSYSLOG_DYNNAME}.spool/es-stats.log"; }
 else
-	echo error: stats file ${RSYSLOG_DYNNAME}.spool/es-stats.log not found
+	errmsg="FAIL: stats file ${RSYSLOG_DYNNAME}.spool/es-stats.log not found"
 	rc=1
 fi
 
@@ -178,30 +179,30 @@ if [ -f ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log ] ; then
 	found=0
 	for ii in $(seq --format="x%08.f" 1 2 $(expr 2 \* $badarg)) ; do
 		if grep -q '^[$][!]:{.*"msgnum": "'$ii'"' ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log ; then
-			found=$( expr $found + 1 )
+			(( found++ ))
 		else
-			echo error: missing message $ii in ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log
+			errmsg="FAIL: missing message $ii in ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log"
 			rc=1
 		fi
 	done
 	if [ $found -ne $badarg ] ; then
-		echo error: found only $found of $badarg messages in ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log
+		errmsg="FAIL: found only $found of $badarg messages in ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log"
 		rc=1
 	fi
 	if grep -q '^[$][.]:{.*"omes": {' ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log ; then
 		:
 	else
-		echo error: es response info not found in ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log
+		errmsg="FAIL: es response info not found in ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log"
 		rc=1
 	fi
 	if grep -q '^[$][.]:{.*"status": 400' ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log ; then
 		:
 	else
-		echo error: status 400 not found in ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log
+		errmsg="FAIL: status 400 not found in ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log"
 		rc=1
 	fi
 else
-	echo error: bulk error file ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log not found
+	errmsg="FAIL: bulk error file ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log not found"
 	rc=1
 fi
 
@@ -215,7 +216,8 @@ else
 	if [ -f ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log ] ; then
 		cat ${RSYSLOG_DYNNAME}.spool/es-bulk-errors.log
 	fi
-	error_exit 1 stacktrace
+	printf '\n%s\n' "$errmsg"
+	error_exit 1
 fi
 
 exit_test
