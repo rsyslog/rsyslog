@@ -41,7 +41,6 @@ typedef struct var_s {
 		es_str_t *str;
 		cstr_t *pStr;
 		syslogTime_t vSyslogTime;
-
 	} val;
 } var_t;
 

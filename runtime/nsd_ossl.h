@@ -78,7 +78,6 @@ struct nsd_ossl_s {
 //	BIO *acc;		/* OpenSSL main BIO obj */
 	SSL *ssl;		/* OpenSSL main SSL obj */
 	osslSslState_t sslState;/**< what must we retry? */
-
 };
 
 /* interface is defined in nsd.h, we just implement it! */
