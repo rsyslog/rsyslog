@@ -8,6 +8,6 @@ if [ $? == 0 ]; then
    echo "Error: config check should fail"
    error_exit 1
 fi
-printf "unclean config lead to exit, as expected - OK\n"
+printf 'unclean config lead to exit, as expected - OK\n'
 exit_test
 

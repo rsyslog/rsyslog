@@ -35,9 +35,9 @@ export EXPECTED='{ "rfc3164": "Oct  5 01:10:11", "rfc3339": "2017-10-05T01:10:11
 cmp <(echo "$EXPECTED") $RSYSLOG_OUT_LOG
 
 if [[ $? -ne 0 ]]; then
-  printf "Invalid function output detected!\n"
+  printf 'Invalid function output detected!\n'
   printf "Expected: $EXPECTED\n"
-  printf "Got:      "
+  printf 'Got:      '
   cat $RSYSLOG_OUT_LOG
   error_exit 1
 fi;

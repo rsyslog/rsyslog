@@ -24,7 +24,7 @@ echo "$EXPECTED" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
-  printf "expected was\n"
+  printf 'expected was\n'
   echo "$EXPECTED"
   error_exit  1
 fi;

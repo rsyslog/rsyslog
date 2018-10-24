@@ -100,7 +100,7 @@ function skip_platform() {
 
 
 function setvar_RS_HOSTNAME() {
-	printf "### Obtaining HOSTNAME (prequisite, not actual test) ###\n"
+	printf '### Obtaining HOSTNAME (prequisite, not actual test) ###\n'
 	generate_conf
 	add_conf 'module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="'$TCPFLOOD_PORT'")
@@ -147,7 +147,7 @@ $IMDiagServerRun 0
 # add more data to config file. Note: generate_conf must have been called
 # $1 is config fragment, $2 the instance id, if given
 function add_conf() {
-	printf "%s" "$1" >> ${TESTCONF_NM}$2.conf
+	printf '%s' "$1" >> ${TESTCONF_NM}$2.conf
 }
 
 
@@ -164,18 +164,18 @@ function cmp_exact() {
 		error_exit  1
 	fi
 	if [ "$EXPECTED" == "" ]; then
-		printf "Testbench ERROR, cmp_exact() needs to have env var EXPECTED set!\n"
+		printf 'Testbench ERROR, cmp_exact() needs to have env var EXPECTED set!\n'
 		error_exit  1
 	fi
-	printf "%s\n" "$EXPECTED" | cmp - "$1"
+	printf '%s\n' "$EXPECTED" | cmp - "$1"
 	if [ $? -ne 0 ]; then
 		echo "invalid response generated"
 		echo "################# $1 is:"
 		cat -n ${RSYSLOG_OUT_LOG}
 		echo "################# EXPECTED was:"
-		printf "%s\n" "$EXPECTED" | cat -n -
-		printf "\n#################### diff is:\n"
-		printf "%s\n" "$EXPECTED" | diff - "$1"
+		printf '%s\n' "$EXPECTED" | cat -n -
+		printf '\n#################### diff is:\n'
+		printf '%s\n' "$EXPECTED" | diff - "$1"
 		error_exit  1
 	fi;
 }
@@ -436,7 +436,7 @@ function get_mainqueuesize() {
 function content_check() {
 	grep -qF "$1" < ${RSYSLOG_OUT_LOG}
 	if [ "$?" -ne "0" ]; then
-	    printf "\n============================================================\n"
+	    printf '\n============================================================\n'
 	    echo FAIL: content_check failed to find "'$1'", content is
 	    cat -n ${RSYSLOG_OUT_LOG}
 	    error_exit 1
@@ -831,7 +831,7 @@ function exit_test() {
 	# Extended Exit handling for kafka / zookeeper instances 
 	kafka_exit_handling "true"
 
-	printf "Test SUCCESFUL\n"
+	printf 'Test SUCCESFUL\n'
 	echo  -------------------------------------------------------------------------------
 }
 
@@ -1576,7 +1576,7 @@ case $1 in
    'first-column-sum-check') 
 		sum=$(grep $3 < $4 | sed -e $2 | awk '{s+=$1} END {print s}')
 		if [ "x${sum}" != "x$5" ]; then
-		    printf "\n============================================================\n"
+		    printf '\n============================================================\n'
 		    echo FAIL: sum of first column with edit-expr "'$2'" run over lines from file "'$4'" matched by "'$3'" equals "'$sum'" which is NOT equal to EXPECTED value of "'$5'"
 		    echo "file contents:"
 		    cat $4
@@ -1614,11 +1614,11 @@ case $1 in
 		fi
 		if [ ! -f $dep_es_cached_file ]; then
 				if [ -f /local_dep_cache/$ES_DOWNLOAD ]; then
-					printf "ElasticSearch: satisfying dependency %s from system cache.\n" "$ES_DOWNLOAD"
+					printf 'ElasticSearch: satisfying dependency %s from system cache.\n' "$ES_DOWNLOAD"
 					cp /local_dep_cache/$ES_DOWNLOAD $dep_es_cached_file
 				else
 					dep_es_url="https://artifacts.elastic.co/downloads/elasticsearch/$ES_DOWNLOAD"
-					printf "ElasticSearch: satisfying dependency %s from %s\n" "$ES_DOWNLOAD" "$dep_es_url"
+					printf 'ElasticSearch: satisfying dependency %s from %s\n' "$ES_DOWNLOAD" "$dep_es_url"
 					wget -q $dep_es_url -O $dep_es_cached_file
 				fi
 		fi
@@ -1719,7 +1719,7 @@ case $1 in
 		fi
 		if [ -e $dep_work_es_pidfile ]; then
 			es_pid=$(cat $dep_work_es_pidfile)
-			printf "stopping ES with pid %d\n" $es_pid
+			printf 'stopping ES with pid %d\n' $es_pid
 			kill -SIGTERM $es_pid
 			. $srcdir/diag.sh wait-pid-termination $es_pid
 		fi
