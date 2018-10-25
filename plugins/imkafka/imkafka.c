@@ -599,7 +599,6 @@ CODESTARTnewInpInst
 	DBGPRINTF("imkafka: newInpIns brokers=%s, topic=%s, consumergroup=%s\n",
 		inst->brokers, inst->topic, inst->consumergroup);
 
-	iRet = checkInstance(inst);
 finalize_it:
 CODE_STD_FINALIZERnewInpInst
 	cnfparamvalsDestruct(pvals, &inppblk);
@@ -680,6 +679,9 @@ ENDactivateCnfPrePrivDrop
 
 BEGINactivateCnf
 CODESTARTactivateCnf
+	for(instanceConf_t *inst = pModConf->root ; inst != NULL ; inst = inst->next) {
+		iRet = checkInstance(inst);
+	}
 ENDactivateCnf
 
 
