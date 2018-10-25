@@ -7,8 +7,8 @@ srcdir=`dirname $0`
 test -z "$srcdir" && srcdir=.
 
 (test -f $srcdir/configure.ac) || {
-    echo -n "**Error**: Directory "\`$srcdir\'" does not look like the"
-    echo " top-level package directory"
+    printf '**Error**: Directory "%s" does not look like the\n' "$srcdir"
+    printf ' top-level package directory'
     exit 1
 }
 
@@ -30,5 +30,3 @@ if test x$NOCONFIGURE = x; then
 else
   echo Skipping configure process.
 fi
-
-
