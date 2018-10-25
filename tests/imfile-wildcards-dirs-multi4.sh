@@ -50,13 +50,13 @@ if $msg contains "msgnum:" then
 # Start rsyslog now before adding more files
 startup
 
-for i in `seq 1 $IMFILEINPUTFILES`;
+for i in $(seq 1 $IMFILEINPUTFILES);
 do
 	echo "Make $RSYSLOG_DYNNAME.input.dir$i"
 	mkdir $RSYSLOG_DYNNAME.input.dir$i
 done
 
-for j in `seq 1 $IMFILEINPUTFILESSTEPS`;
+for j in $(seq 1 $IMFILEINPUTFILESSTEPS);
 do
 	echo "Loop Num $j"
 	for i in `seq 1 $IMFILEINPUTFILES`;
