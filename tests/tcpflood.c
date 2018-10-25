@@ -1610,6 +1610,11 @@ int main(int argc, char *argv[])
 	}
 
 	if(transport == TP_TLS) {
+		if(tlsKeyFile == NULL || tlsCertFile == NULL) {
+			printf("error: transport TLS is specified (-Ttls), -z and -Z must also "
+				"be specified\n");
+			exit(1);
+		}
 		initTLS();
 	} else if(transport == TP_RELP_PLAIN) {
 		#ifdef ENABLE_RELP

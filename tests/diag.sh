@@ -452,7 +452,7 @@ function get_mainqueuesize() {
 # grep for (partial) content. $1 is the content to check for, $2 the file to check
 function content_check() {
 	file=${2:-$RSYSLOG_OUT_LOG}
-	grep -qF "$1" < "$file"
+	grep -qF -- "$1" < "$file"
 	if [ "$?" -ne "0" ]; then
 	    printf '\n============================================================\n'
 	    printf 'FILE "%s" content:\n' "$file"
