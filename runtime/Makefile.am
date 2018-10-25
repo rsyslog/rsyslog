@@ -153,13 +153,6 @@ lmnetstrms_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBLOGGING_STDLOG_C
 lmnetstrms_la_LDFLAGS = -module -avoid-version $(LIBLOGGING_STDLOG_LIBS)
 lmnetstrms_la_LIBADD =
 
-# generic stream server framework
-pkglib_LTLIBRARIES += lmstrmsrv.la
-lmstrmsrv_la_SOURCES = strmsrv.c strmsrv.h strms_sess.c strms_sess.h
-lmstrmsrv_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBLOGGING_STDLOG_CFLAGS)
-lmstrmsrv_la_LDFLAGS = -module -avoid-version $(LIBLOGGING_STDLOG_LIBS)
-lmstrmsrv_la_LIBADD =
-
 # netstream drivers
 
 # plain tcp driver - main driver
