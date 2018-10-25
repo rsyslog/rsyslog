@@ -59,7 +59,7 @@ ls -d $RSYSLOG_DYNNAME.input.*
 # Content check with timeout
 content_check_with_count "HEADER msgnum:00000000:" $IMFILEINPUTFILES $IMFILECHECKTIMEOUT
 
-for i in `seq 1 $IMFILEINPUTFILES`;
+for i in $(seq 1 $IMFILEINPUTFILES);
 do
 	rm -rf $RSYSLOG_DYNNAME.input.dir$i/
 done
