@@ -805,7 +805,12 @@ rsksiSetHashFunction(rsksictx ctx, char *algName) {
 		report(ctx, "Hash function '%s' unknown - using default", algName);
 		ctx->hashAlg = KSI_HASHALG_SHA2_256;
 	} else {
-		ctx->hashAlg = id;
+		if(!KSI_isHashAlgorithmTrusted(id)) {
+			report(ctx, "Hash function '%s' is not trusted - using default", algName);
+			ctx->hashAlg = KSI_HASHALG_SHA2_256;
+		}
+		else
+			ctx->hashAlg = id;
 	}
 
 	if ((r = KSI_DataHasher_open(ctx->ksi_ctx, ctx->hashAlg, &ctx->hasher)) != KSI_OK) {
@@ -823,7 +828,12 @@ rsksiSetHmacFunction(rsksictx ctx, char *algName) {
 		report(ctx, "HMAC function '%s' unknown - using default", algName);
 		ctx->hmacAlg = KSI_HASHALG_SHA2_256;
 	} else {
-		ctx->hmacAlg = id;
+		if(!KSI_isHashAlgorithmTrusted(id)) {
+			report(ctx, "HMAC function '%s' is not trusted - using default", algName);
+			ctx->hmacAlg = KSI_HASHALG_SHA2_256;
+		}
+		else
+			ctx->hmacAlg = id;
 	}
 	return 0;
 }
