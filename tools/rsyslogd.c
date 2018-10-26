@@ -2033,8 +2033,7 @@ deinitAll(void)
 	 * modules. As such, they are not yet cleared.  */
 	unregCfSysLineHdlrs();
 
-	/*dbgPrintAllDebugInfo();
-	/ * this is the last spot where this can be done - below output modules are unloaded! */
+	/* this is the last spot where this can be done - below output modules are unloaded! */
 
 	parserClassExit();
 	rsconfClassExit();

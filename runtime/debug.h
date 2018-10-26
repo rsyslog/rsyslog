@@ -92,19 +92,7 @@ rsRetVal dbgClassInit(void);
 rsRetVal dbgClassExit(void);
 void dbgSetDebugFile(uchar *fn);
 void dbgSetDebugLevel(int level);
-void sigsegvHdlr(int signum);
-int dbgMutexLock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
-int dbgMutexTryLock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
-int dbgMutexUnlock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
-int dbgCondWait(pthread_cond_t *cond, pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
-int dbgCondTimedWait(pthread_cond_t *cond, pthread_mutex_t *pmut, const struct timespec *abstime,
-	dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
-void dbgFree(void *pMem, dbgFuncDB_t *pFuncDB, int ln, int iStackPtr);
-int dbgEntrFunc(dbgFuncDB_t **ppFuncDB, const char *file, const char *func, int line);
-void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore, int iRet);
-void dbgSetExecLocation(int iStackPtr, int line);
 void dbgSetThrdName(uchar *pszName);
-void dbgPrintAllDebugInfo(void);
 void dbgOutputTID(char* name);
 int dbgGetDbglogFd(void);
 
