@@ -316,6 +316,23 @@ function kafka_check_broken_broker() {
 	fi
 }
 
+# inject messages via kafkacat tool (for imkafka tests)
+# $1 == "--wait" means wait for rsyslog to receive TESTMESSAGES lines in RSYSLOG_OUT_LOG
+# $TESTMESSAGES contains number of messages to inject
+# $RANDTOPIC contains topic to produce to
+function injectmsg_kafkacat() {
+	if [ "$TESTMESSAGES" == "" ]; then
+		printf 'TESTBENCH ERROR: TESTMESSAGES env var not set!\n'
+		error_exit 1
+	fi
+	for ((i=1 ; i<=TESTMESSAGES ; i++)); do
+		printf ' msgnum:%8.8d\n' $i; \
+	done | kafkacat -P -b localhost:29092 -t $RANDTOPIC
+	if [ "$1" == "--wait" ]; then
+		$srcdir/diag.sh wait-file-lines $RSYSLOG_OUT_LOG $TESTMESSAGES ${RETRIES:-200}
+	fi
+}
+
 # wait for rsyslogd startup ($1 is the instance)
 function wait_startup() {
 	wait_rsyslog_startup_pid $1
@@ -1271,6 +1288,8 @@ function dump_kafka_serverlog() {
 		echo "========================================="
 		cat $dep_work_dir/kafka/logs/server.log
 		echo "========================================="
+		printf 'non-info is:\n'
+		grep --invert-match '^\[.* INFO ' $dep_work_dir/kafka/logs/server.log | grep '^\['
 	fi
 }
 
@@ -1284,6 +1303,8 @@ function dump_zookeeper_serverlog() {
 	echo "========================================="
 	cat $dep_work_dir/zk/zookeeper.out
 	echo "========================================="
+	printf 'non-info is:\n'
+	grep --invert-match '^\[.* INFO ' $dep_work_dir/zk/zookeeper.out | grep '^\['
 }
 
 
@@ -1500,11 +1521,7 @@ case $1 in
 		;;
    'wait-file-lines') 
 		# $2 filename, $3 expected nbr of lines, $4 nbr of tries
-		if [ "$4" == "" ]; then
-			timeoutend=1
-		else
-			timeoutend=$4
-		fi
+		timeoutend=${4:-1}
 		timecounter=0
 
 		while [  $timecounter -lt $timeoutend ]; do
@@ -1518,7 +1535,7 @@ case $1 in
 				break
 			else
 				if [ "x$timecounter" == "x$timeoutend" ]; then
-					echo wait-file-lines failed, expected $3 got $count
+					echo wait-file-lines failed, expected $3 got $count after $timeoutend retries
 					shutdown_when_empty
 					wait_shutdown
 					error_exit 1

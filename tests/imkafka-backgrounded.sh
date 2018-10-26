@@ -7,8 +7,8 @@ check_command_available kafkacat
 export TESTMESSAGES=100000
 export RANDTOPIC=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 8 | head -n 1)
 # Set EXTRA_EXITCHECK to dump kafka/zookeeperlogfiles on failure only.
-#export EXTRA_EXITCHECK=dumpkafkalogs
-#export EXTRA_EXIT=kafka
+export EXTRA_EXITCHECK=dumpkafkalogs
+export EXTRA_EXIT=kafka
 
 echo Check and Stop previous instances of kafka/zookeeper
 download_kafka
@@ -19,10 +19,8 @@ echo Create kafka/zookeeper instance and $RANDTOPIC topic
 start_zookeeper
 start_kafka
 
-# create new topic
 create_kafka_topic $RANDTOPIC '.dep_wrk' '22181'
 
-# --- Create imkafka receiver config
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
 add_conf '
@@ -51,17 +49,7 @@ if ($msg contains "msgnum:") then {
 export RSTB_DAEMONIZE="YES"
 startup
 
-for i in {00000001..00100000}; do
-	echo " msgnum:$i" >> $RSYSLOG_DYNNAME.in
-done
-
-echo Inject messages into kafka
-kafkacat -P -b localhost:29092 -t $RANDTOPIC < $RSYSLOG_DYNNAME.in
-
-echo Give imkafka some time to start...
-sleep 5
-
-echo Stopping sender instance [omkafka]
+injectmsg_kafkacat --wait
 shutdown_when_empty
 wait_shutdown
 
