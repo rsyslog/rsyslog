@@ -5,22 +5,18 @@
 check_command_available kafkacat
 
 export TESTMESSAGES=1000
-
-export RANDTOPIC=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 8 | head -n 1)
-
 # Set EXTRA_EXITCHECK to dump kafka/zookeeperlogfiles on failure only.
 export EXTRA_EXITCHECK=dumpkafkalogs
 export EXTRA_EXIT=kafka
 
+export RANDTOPIC=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 8 | head -n 1)
+
 download_kafka
 stop_zookeeper
 stop_kafka
-
-echo Create kafka/zookeeper instance and $RANDTOPIC topic
 start_zookeeper
 start_kafka
 
-# --- Create imkafka receiver config
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
 add_conf '
@@ -49,9 +45,7 @@ startup
 
 # We inject messages, even though we know this will not work. The reason
 # is that we want to ensure we do not get a segfault in such an error case
-for ((i=1 ; i<=TESTMESSAGES ; i++)); do
-	printf ' msgnum:%8.8d\n' $i; \
-done | kafkacat -P -b localhost:29092 -t $RANDTOPIC
+injectmsg_kafkacat
 
 shutdown_when_empty
 wait_shutdown

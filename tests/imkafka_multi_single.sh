@@ -1,34 +1,24 @@
 #!/bin/bash
 # added 2018-08-29 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
-echo Init Testbench 
 . ${srcdir:=.}/diag.sh init
 check_command_available kafkacat
 
-# *** ==============================================================================
 export TESTMESSAGES=100000
-export TESTMESSAGESFULL=100000
-
-# Generate random topic name
-export RANDTOPIC=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 8 | head -n 1)
-
 # Set EXTRA_EXITCHECK to dump kafka/zookeeperlogfiles on failure only.
-export EXTRA_EXITCHECK=dumpkafkalogs
-export EXTRA_EXIT=kafka
-echo ===============================================================================
-echo Check and Stop previous instances of kafka/zookeeper 
+#export EXTRA_EXITCHECK=dumpkafkalogs
+#export EXTRA_EXIT=kafka
+
 download_kafka
 stop_zookeeper
 stop_kafka
-
-echo Create kafka/zookeeper instance and $RANDTOPIC topic
 start_zookeeper
 start_kafka
 
-# create new topic
+export RANDTOPIC=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 8 | head -n 1)
+
 create_kafka_topic $RANDTOPIC '.dep_wrk' '22181'
 
-# --- Create imkafka receiver config
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
 add_conf '
@@ -139,42 +129,22 @@ if ($msg contains "msgnum:") then {
 }
 '
 
-# Start imkafka receiver config
-echo Starting receiver instance [imkafka]
 startup
-# --- 
 
-# Messure Starttime
 TIMESTART=$(date +%s.%N)
 
-# --- Fill Kafka Server with messages
-# Can properly be done in a better way?!
-for i in {00000001..00100000}
-do
-	echo " msgnum:$i" >> $RSYSLOG_OUT_LOG.in
-done
-
-echo Inject messages into kafka
-kafkacat <$RSYSLOG_OUT_LOG.in  -P -b localhost:29092 -t $RANDTOPIC
-# --- 
-
-echo Give imkafka some time to start...
-sleep 5
-
-echo Stopping sender instance [omkafka]
+injectmsg_kafkacat
+# special case: number of test messages differs from file output
+$srcdir/diag.sh wait-file-lines $RSYSLOG_OUT_LOG $((TESTMESSAGES * 8)) ${RETRIES:-200}
 shutdown_when_empty
 wait_shutdown
 
-# Messure Endtime
 TIMEEND=$(date +%s.%N)
 TIMEDIFF=$(echo "$TIMEEND - $TIMESTART" | bc)
 echo "*** imkafka time to process all data: $TIMEDIFF seconds!"
 
-# Delete topic to remove old traces before
 delete_kafka_topic $RANDTOPIC '.dep_wrk' '22181'
 
-# Do the final sequence check
-seq_check 1 $TESTMESSAGESFULL -d
+seq_check 1 $TESTMESSAGES -d
 
-echo success
 exit_test

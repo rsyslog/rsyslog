@@ -16,7 +16,6 @@ stop_kafka
 start_zookeeper
 start_kafka
 
-# --- Create imkafka receiver config
 generate_conf
 add_conf '
 main_queue(queue.timeoutactioncompletion="60000" queue.timeoutshutdown="60000")
@@ -44,12 +43,7 @@ if ($msg contains "msgnum:") then {
 '
 startup
 
-for ((i=1 ; i<=TESTMESSAGES ; i++)); do
-	printf ' msgnum:%8.8d\n' $i; \
-done | kafkacat -P -b localhost:29092 -t $RANDTOPIC
-rst_msleep 1000 # give kafkacat a chance to startup (we need to wait anyhow)
-$srcdir/diag.sh wait-file-lines $RSYSLOG_OUT_LOG $TESTMESSAGES ${RETRIES:-100}
-
+injectmsg_kafkacat --wait
 shutdown_when_empty
 wait_shutdown
 
