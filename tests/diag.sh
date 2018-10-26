@@ -432,13 +432,15 @@ function get_mainqueuesize() {
 	fi
 }
 
-# grep for (partial) content. $1 is the content to check for
+# grep for (partial) content. $1 is the content to check for, $2 the file to check
 function content_check() {
-	grep -qF "$1" < ${RSYSLOG_OUT_LOG}
+	file=${2:-$RSYSLOG_OUT_LOG}
+	grep -qF "$1" < "$file"
 	if [ "$?" -ne "0" ]; then
 	    printf '\n============================================================\n'
-	    echo FAIL: content_check failed to find "'$1'", content is
+	    printf 'FILE "%s" content:\n' "$file"
 	    cat -n ${RSYSLOG_OUT_LOG}
+	    printf 'FAIL: content_check failed to find "%s"\n' "$1"
 	    error_exit 1
 	fi
 }
@@ -739,6 +741,10 @@ function error_stats() {
 # $4... are just to have the abilit to pass in more options...
 # add -v to chkseq if you need more verbose output
 function seq_check() {
+	if [ ! -f "$RSYSLOG_OUT_LOG" ]; then
+		printf 'FAIL: %s does not exist in seq_check!\n' "$RSYSLOG_OUT_LOG"
+		error_exit 1
+	fi
 	$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${RSYSLOG_OUT_LOG} | ./chkseq -s$1 -e$2 $3 $4 $5 $6 $7
 	if [ "$?" -ne "0" ]; then
 		$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${RSYSLOG_OUT_LOG} > $RSYSLOG_DYNNAME.error.log
@@ -1504,8 +1510,10 @@ case $1 in
 		while [  $timecounter -lt $timeoutend ]; do
 			(( timecounter++ ))
 
-			count=$(wc -l < ${RSYSLOG_OUT_LOG})
-			if [ $count -eq $3 ]; then
+			if [ -f "$RSYSLOG_OUT_LOG" ]; then
+				count=$(wc -l < "$RSYSLOG_OUT_LOG")
+			fi
+			if [ ${count:=0} -eq $3 ]; then
 				echo wait-file-lines success, have $3 lines
 				break
 			else

@@ -349,6 +349,7 @@ prepareBackground(const int parentPipeFD)
 {
 	DBGPRINTF("rsyslogd: in child, finalizing initialization\n");
 
+	dbgTimeoutToStderr = 0; /* we loose stderr when backgrounding! */
 	int r = setsid();
 	if(r == -1) {
 		char err[1024];

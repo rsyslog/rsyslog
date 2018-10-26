@@ -625,6 +625,10 @@ TESTS += \
 	omkafka.sh \
 	imkafka.sh \
 	imkafka-hang-on-no-kafka.sh \
+	imkafka-hang-other-action-on-no-kafka.sh \
+	imkafka-backgrounded.sh \
+	imkafka-config-err-ruleset.sh \
+	imkafka-config-err-param.sh \
 	imkafka_multi_single.sh \
 	sndrcv_kafka.sh \
 	sndrcv_kafka_multi_topics.sh
@@ -1668,6 +1672,10 @@ EXTRA_DIST= \
 	omkafka.sh \
 	omkafka-vg.sh \
 	imkafka-hang-on-no-kafka.sh \
+	imkafka-hang-other-action-on-no-kafka.sh \
+	imkafka-backgrounded.sh \
+	imkafka-config-err-ruleset.sh \
+	imkafka-config-err-param.sh \
 	imkafka.sh \
 	imkafka-vg.sh \
 	imkafka_multi_single.sh \
