@@ -59,6 +59,11 @@ Version 8.39.0 [v8-stable] 2018-10-30
   * main thread waiting for worker running state, which it skips,
     and so the main thread hangs inside a loop
   closes https://github.com/rsyslog/rsyslog/issues/3094
+-  bugfix imkafka: system hang when backgrounded
+  imkafka intializes librdkafka too early (before the fork). This leads
+  to hangs in various parts of the system - not only im imkafka but
+  other functions as well (e.g. getaddrinfo() calls).
+  closes https://github.com/rsyslog/rsyslog/issues/3180
 - bugfix imfile: file change was not reliably detected
   A change in the inode was not detected under all circumstances,
   most importantly not in some logrotate cases.
@@ -77,6 +82,13 @@ Version 8.39.0 [v8-stable] 2018-10-30
 - bugfix fmhash: function hash64mod sometimes returned wrong result
   Thanks to Harshvardhan Shrivastava for providing the patch
   closes https://github.com/rsyslog/rsyslog/issues/3025
+- bugfix core/debug: data written to random fd 2 under some debug settings
+  This happens only during auto-backgrouding, where we cannot any longer
+  access stderr. Whatever is opened with fd2 receives some debug messages.
+  Note that the specific feature is usually turned on only in CI runs.
+- cleanup: removed no longer needed code
+  Code that was unused for quite a while or did not really belong to the
+  project identified and removed.
 - CI:
   * some small improvements in testbench plumbing
     e.g. (`cmd` replaced by $(cmd), removed useless use of cat, ...)
@@ -87,6 +99,7 @@ Version 8.39.0 [v8-stable] 2018-10-30
     - Kafka/Zookeeper cleanup only done on success now.
     - Kafka/Zookeeper logfiles automatically dumped on error_exit only now.
     - Added cleanup for Kafka/Zookeeper instances into CI/buildbot_cleanup.sh
+    - added new tests
   * testbench: fix incompatibility of one omprog test with Python3
     Python3 writes to stderr immediately, and this caused the
     captured output to differ with respect to Python2. Simplified
