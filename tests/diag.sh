@@ -29,6 +29,12 @@
 #		only be set specifically if there is good need to do so, e.g. if
 #		a test needs to timeout.
 #
+#
+# EXIT STATES
+# 0 - ok
+# 1 - FAIL
+# 77 - SKIP
+# 100 - Testbench failure
 
 # environment variables:
 # USE_AUTO_DEBUG "on" --> enables automatic debugging, anything else
@@ -98,6 +104,25 @@ function skip_platform() {
 		exit 77
 	fi
 
+}
+
+
+# set special tests status. States ($1) are:
+# unreliable -- as the name says, test does not work reliably; $2 must be github issue URL
+#               depending on CI configuration, "unreliable" tests are skipped and not failed
+#               or not executed at all. Test reports may also be amended to github issue.
+function test_status() {
+	if [ "$1" == "unreliable" ]; then
+		if [ "$2" == "" ]; then
+			printf 'TESTBENCH_ERROR: github issue URL must be given\n'
+			error_exit 100
+		fi
+		export TEST_STATUS="$1"
+		export TEST_GITHUB_ISSUE="$2"
+	else
+		printf 'TESTBENCH_ERROR: test_status "%s" unknown\n' "$1"
+		error_exit 100
+	fi
 }
 
 
@@ -673,7 +698,6 @@ function check_exit_vg(){
 # for systems like Travis-CI where we cannot debug on the machine itself.
 # our $1 is the to-be-used exit code. if $2 is "stacktrace", call gdb.
 function error_exit() {
-	#env
 	if [ -e core* ]
 	then
 		echo trying to obtain crash location info
@@ -743,9 +767,15 @@ function error_exit() {
 		error_stats
 	fi
 
-	# we need to do some minimal cleanup so that "make distcheck" does not
-	# complain too much
-	exit $1
+	if [ "$TEST_STATUS" == "unreliable" ] && [ "$1" -ne 100 ]; then
+		# TODO: log github issue
+		printf 'Test flagged as unreliable, exiting with 77 (skip). Original\n'
+		printf 'exit code was %d\n' $1
+		printf 'GitHub ISSUE: %s\n' "$TEST_GITHUB_ISSUE"
+		exit 77
+	else
+		exit $1
+	fi
 }
 
 # Helper function to call Adiscon test error script

@@ -2,6 +2,7 @@
 # added 2017-05-03 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+test_status unreliable 'https://github.com/rsyslog/rsyslog/issues/3197'
 check_command_available kafkacat
 
 export TESTMESSAGES=100000
