@@ -33,7 +33,7 @@ echo "0" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
-  date -d @`cat $RSYSLOG_OUT_LOG`
+  date -d @$(cat $RSYSLOG_OUT_LOG)
   exit 1
 fi;
 
@@ -48,7 +48,7 @@ echo "0" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
-  date -d @`cat $RSYSLOG_OUT_LOG`
+  date -d @$(cat $RSYSLOG_OUT_LOG)
   exit 1
 fi;
 
@@ -63,7 +63,7 @@ echo "0" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
-  date -d @`cat $RSYSLOG_OUT_LOG`
+  date -d @$(cat $RSYSLOG_OUT_LOG)
   exit 1
 fi;
 
@@ -78,7 +78,7 @@ echo "0" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
-  date -d @`cat $RSYSLOG_OUT_LOG`
+  date -d @$(cat $RSYSLOG_OUT_LOG)
   exit 1
 fi;
 
