@@ -6,8 +6,6 @@
 # addd 2016-10-06 by RGerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh check-inotify
-export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
-export RSYSLOG_DEBUGLOG="log"
 generate_conf
 add_conf '
 module(load="../plugins/imfile/.libs/imfile" pollingInterval="1")
@@ -30,15 +28,14 @@ startup
 
 for i in {0..50}; do
 	# check that previous msg injection worked
-	wait_queueempty
-	echo nbr of lines: $(wc -l $RSYSLOG_OUT_LOG)
+	$srcdir/diag.sh wait-file-lines  $RSYSLOG_OUT_LOG $NUMMSG 100
 	seq_check 0 $((NUMMSG - 1))
 
 	# begin new inject cycle
 	generate_msgs=$(( i * 50))
 	echo generating $NUMMSG .. $((NUMMSG + generate_msgs -1))
 	./inputfilegen -m$generate_msgs -i$NUMMSG > $RSYSLOG_DYNNAME.input
-	let NUMMSG=NUMMSG+generate_msgs
+	(( NUMMSG=NUMMSG+generate_msgs ))
 	if [  $inode -ne $(ls -i $RSYSLOG_DYNNAME.input | awk '{ print $1;}' ) ]; then
 		echo FAIL testbench did not keep same inode number, expected $inode
 		ls -li $RSYSLOG_DYNNAME.input
