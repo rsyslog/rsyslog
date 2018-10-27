@@ -107,17 +107,6 @@ dbgprintf("nsdsel_ossl: rtryOsslErr=%d ... \n", pNsdOSSL->rtryOsslErr);
 				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 			}
 
-			/*
-			# define SSL_NOTHING            1
-			# define SSL_WRITING            2
-			# define SSL_READING            3
-			# define SSL_X509_LOOKUP        4
-			iwant = SSL_want(pNsdOSSL->ssl);
-			if(iwant == SSL_READING) {
-			} else if(iwant == SSL_WRITING) {
-			} else {
-			}
-			*/
 		} else {
 			dbgprintf("nsdsel_ossl: rtryCall=%d, nothing to do ... \n",
 				pNsdOSSL->rtryCall);

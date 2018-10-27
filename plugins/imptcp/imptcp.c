@@ -464,8 +464,6 @@ static rsRetVal startupUXSrv(ptcpsrv_t *pSrv) {
 		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 	}
 
-//	dbgprintf("pascal: listenportfilename = %s\n", pSrv->pszLstnPortFileName);
-
 	if (listen(sock, pSrv->socketBacklog) < 0) {
 		LogError(errno, RS_RET_ERR_CRE_AFUX, "imptcp: unix socket listen error");
 		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);

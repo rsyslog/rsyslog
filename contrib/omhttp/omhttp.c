@@ -923,10 +923,8 @@ getDataRetryFailures(context *ctx,int itemStatus,char *request,char *response,
 {
 	DEFiRet;
 	fjson_object *omes = NULL;
-//	fjson_object *jo = NULL;
 	struct json_object_iterator it = json_object_iter_begin(response_item);
 	struct json_object_iterator itEnd = json_object_iter_end(response_item);
-//	const char *optype = NULL;
 	smsg_t *msg = NULL;
 
 	(void)response;
@@ -935,15 +933,6 @@ getDataRetryFailures(context *ctx,int itemStatus,char *request,char *response,
 	CHKmalloc(msg);
 	/* add status as local variables */
 	omes = json_object_new_object();
-
-//	if (!json_object_iter_equal(&it, &itEnd))
-//		optype = json_object_iter_peek_name(&it);
-/*	if (optype) {
-		jo = json_object_new_string(optype);
-	} else {
-		jo = json_object_new_string("unknown");
-	}
-*/
 
 	/* add response_body fields to local var omes */
 	it = json_object_iter_begin(response_body);

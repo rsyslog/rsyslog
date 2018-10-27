@@ -148,7 +148,6 @@ ENDinterface(tpl)
 PROTOTYPEObj(tpl);
 
 
-//struct template* tplConstruct(void);
 struct template *tplAddLine(rsconf_t *conf, const char* pName, unsigned char** pRestOfConfLine);
 struct template *tplFind(rsconf_t *conf, char *pName, int iLenName);
 int tplGetEntryCount(struct template *pTpl);

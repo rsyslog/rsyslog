@@ -608,8 +608,6 @@ rsyslogd_InitGlobalClasses(void)
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	pErrObj = "ruleset";
 	CHKiRet(objUse(ruleset,  CORE_COMPONENT));
-	/*pErrObj = "conf";
-	CHKiRet(objUse(conf,     CORE_COMPONENT));*/
 	pErrObj = "prop";
 	CHKiRet(objUse(prop,     CORE_COMPONENT));
 	pErrObj = "parser";

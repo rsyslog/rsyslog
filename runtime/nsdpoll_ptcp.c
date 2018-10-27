@@ -70,7 +70,6 @@ addEvent(nsdpoll_ptcp_t *pThis, int id, void *pUsr, int mode, nsd_ptcp_t *pSock,
 	pNew->pUsr = pUsr;
 	pNew->pSock = pSock;
 	pNew->event.events = 0; /* TODO: at some time we should be able to use EPOLLET */
-	//pNew->event.events = EPOLLET;
 	if(mode & NSDPOLL_IN)
 		pNew->event.events |= EPOLLIN;
 	if(mode & NSDPOLL_OUT)
