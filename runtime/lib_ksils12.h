@@ -90,7 +90,9 @@ struct rsksictx_s {
 	bool thread_started;
 	uint8_t disabled; /* permits to disable the plugin --> set to 1 */
 	ksifile ksi;
-	bool debug;
+	char *debugFileName;
+	int debugLevel;
+	FILE *debugFile;
 	uint64_t max_requests;
 	void (*errFunc)(void *, unsigned char*);
 	void (*logFunc)(void *, unsigned char*);
@@ -183,8 +185,10 @@ struct rsksistatefile {
 #define rsksiSetDirGID(ctx, val) ((ctx)->dirGID = val)
 #define rsksiSetCreateMode(ctx, val) ((ctx)->fCreateMode= val)
 #define rsksiSetDirCreateMode(ctx, val) ((ctx)->fDirCreateMode = val)
-#define rsksiSetDebug(ctx, val) ((ctx)->debug = val)
+#define rsksiSetDebugLevel(ctx, val) ((ctx)->debugLevel = val)
 
+
+int rsksiSetDebugFile(rsksictx ctx, char *val);
 int rsksiSetAggregator(rsksictx ctx, char *uri, char *loginid, char *key);
 int rsksiSetHashFunction(rsksictx ctx, char *algName);
 int rsksiSetHmacFunction(rsksictx ctx, char *algName);
