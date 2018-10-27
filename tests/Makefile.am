@@ -14,6 +14,7 @@ CLEANFILES=\
 	rsyslog.input-symlink.log rsyslog-link.*.log targets \
 	HOSTNAME \
 	rstb_* \
+	zookeeper.pid \
 	tmp.qi nocert
 
 CLEANFILES+= \

@@ -26,6 +26,10 @@ create_kafka_topic $RANDTOPIC '.dep_wrk' '22181'
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
 add_conf '
+# impstats in order to gain insight into error cases
+module(load="../plugins/impstats/.libs/impstats"
+	log.file="'$RSYSLOG_DYNNAME.pstats'"
+	interval="1" log.syslog="off")
 main_queue(queue.timeoutactioncompletion="60000" queue.timeoutshutdown="60000")
 $imdiagInjectDelayMode full
 
@@ -92,7 +96,10 @@ while [ $timecounter -lt $timeoutend ]; do
 			error_exit 1
 		else
 			echo wait-file-lines not yet there, currently $count lines
+printf 'pstats data:\n'
+cat $RSYSLOG_DYNNAME.pstats
 			printf '\n'
+
 			$TESTTOOL_DIR/msleep 1000
 		fi
 	fi
