@@ -40,6 +40,8 @@
 # TCPFLOOD_EXTRA_OPTS   enables to set extra options for tcpflood, usually
 #                       used in tests that have a common driver where it
 #                       is too hard to set these options otherwise
+# CONFIG
+export ZOOPIDFILE="$(pwd)/zookeeper.pid"
 
 #valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
 
@@ -214,31 +216,31 @@ function wait_startup_pid() {
 	fi
 	i=0
 	start_timeout="$(date)"
-	while test ! -f $1.pid; do
+	while test ! -f $1; do
 		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
 		let "i++"
 		if test $i -gt $TB_TIMEOUT_STARTSTOP
 		then
-		   echo "ABORT! Timeout waiting on startup (pid file $1.pid)"
+		   echo "ABORT! Timeout waiting on startup (pid file $1)"
 		   echo "Wait initiated $start_timeout, now $(date)"
-		   ls -l $1.pid
-		   ps -fp $(cat $1.pid)
+		   ls -l $1
+		   ps -fp $(cat $1)
 		   error_exit 1
 		fi
 	done
-	echo "$1.pid found, pid  $(cat $1.pid)"
+	printf '%s1 found, pid %s\n' "$1" "$(cat $1)"
 }
 
 # special version of wait_startup_pid() for rsyslog startup
 function wait_rsyslog_startup_pid() {
-	wait_startup_pid $RSYSLOG_PIDBASE$1
+	wait_startup_pid $RSYSLOG_PIDBASE$1.pid
 }
 
 # wait for startup of an arbitrary process
 # $1 - pid file name
 # $2 - startup file name (optional, only checked if given)
 function wait_process_startup() {
-	wait_startup_pid $1
+	wait_startup_pid $1.pid
 	i=0
 	if [ "$2" != "" ]; then
 		while test ! -f "$2"; do
@@ -1124,7 +1126,7 @@ function start_zookeeper() {
 	cp -f $srcdir/testsuites/$dep_work_tk_config $dep_work_dir/zk/conf/zoo.cfg
 	echo "Starting Zookeeper instance $1"
 	(cd $dep_work_dir/zk && ./bin/zkServer.sh start)
-	$TESTTOOL_DIR/msleep 2000
+	wait_startup_pid "$ZOOPIDFILE"
 }
 
 function start_kafka() {
@@ -1150,6 +1152,7 @@ function start_kafka() {
 	( cd $dep_work_dir && 
 	  tar -zxvf $dep_kafka_cached_file --xform $dep_kafka_dir_xform_pattern --show-transformed-names) > /dev/null
 	cp -f $srcdir/testsuites/$dep_work_kafka_config $dep_work_dir/kafka/config/
+	#if [ "$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')" != "" ]; then
 	echo "Starting Kafka instance $dep_work_kafka_config"
 	(cd $dep_work_dir/kafka && ./bin/kafka-server-start.sh -daemon ./config/$dep_work_kafka_config)
 	$TESTTOOL_DIR/msleep 4000
