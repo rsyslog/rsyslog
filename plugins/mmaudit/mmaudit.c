@@ -126,7 +126,6 @@ parseName(uchar **buf, char *name, unsigned lenName)
 	--lenName; /* reserve space for '\0' */
 	i = 0;
 	while(**buf && **buf != '=' && lenName) {
-//dbgprintf("parseNAme, buf: %s\n", *buf);
 		name[i++] = **buf;
 		++(*buf), --lenName;
 	}
@@ -157,7 +156,6 @@ parseValue(uchar **buf, char *val, unsigned lenval)
 	}
 
 	while(**buf && **buf != termc && lenval) {
-//dbgprintf("parseValue, termc '%c', buf: %s\n", termc, *buf);
 		val[i++] = **buf;
 		++(*buf), --lenval;
 	}

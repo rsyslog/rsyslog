@@ -154,7 +154,6 @@ CODESTARTparse
 	p2target = p2parse;
 
 	while(p2parse < msgend) {
-	    /* dbgprintf("state: %d char: %c p2parse: %16x p2target: %16x\n", state, *p2parse, p2parse, p2target); */
 	    switch(state) {
 	        case STATE_FIELD_START:
 	            switch(*p2parse) {

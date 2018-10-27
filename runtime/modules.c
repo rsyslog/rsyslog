@@ -1006,9 +1006,6 @@ modUnlinkAndDestroy(modInfo_t **ppThis)
 		if(pThis->uRefCnt > 0) {
 			dbgprintf("module %s NOT unloaded because it still has a refcount of %u\n",
 				  pThis->pszName, pThis->uRefCnt);
-#			ifdef DEBUG
-			//modUsrPrintAll();
-#			endif
 			ABORT_FINALIZE(RS_RET_MODULE_STILL_REFERENCED);
 		}
 	}

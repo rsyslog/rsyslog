@@ -97,7 +97,6 @@ struct action_s {
 rsRetVal actionConstruct(action_t **ppThis);
 rsRetVal actionConstructFinalize(action_t *pThis, struct nvlst *lst);
 rsRetVal actionDestruct(action_t *pThis);
-//rsRetVal actionDbgPrint(action_t *pThis);
 rsRetVal actionSetGlobalResumeInterval(int iNewVal);
 rsRetVal actionDoAction(action_t *pAction);
 rsRetVal actionWriteToAction(action_t *pAction, smsg_t *pMsg, wti_t*);

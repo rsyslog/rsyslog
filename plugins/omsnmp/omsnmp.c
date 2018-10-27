@@ -51,11 +51,6 @@ MODULE_CNFNAME("omsnmp")
  */
 DEF_OMOD_STATIC_DATA
 
-/* Default static snmp OID's */
-/*unused
-static oid             objid_enterprise[] = { 1, 3, 6, 1, 4, 1, 3, 1, 1 };
-static oid             objid_sysdescr[] = { 1, 3, 6, 1, 2, 1, 1, 1, 0 };
-*/
 static oid             objid_snmptrap[] = { 1, 3, 6, 1, 6, 3, 1, 1, 4, 1, 0 };
 static oid             objid_sysuptime[] = { 1, 3, 6, 1, 2, 1, 1, 3, 0 };
 
@@ -322,7 +317,6 @@ static rsRetVal omsnmp_sendsnmp(wrkrInstanceData_t *pWrkrData, uchar *psz)
 	}
 
 	/* SET TRAP PARAMETER for SyslogMessage! */
-/*	dbgprintf( "omsnmp_sendsnmp: SyslogMessage '%s'\n", psz );*/
 
 	/* First create new OID object */
 	if (snmp_parse_oid(pData->szSyslogMessageOID == NULL ?
