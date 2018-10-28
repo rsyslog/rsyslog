@@ -4,12 +4,14 @@ coverage:
   # to get things started, let's aim at a lower goal. This actually helps
   # to find those areas that we need to concentrate on.
   range: 50..75
-  # the next 2 lines few hopefully help us avoid CI fail due to slightly
-  # different execution pathes (if not, remove) -- rgerhards, 2018-10-12
-  precision: 1
-  round: up
+  status:
+    project:
+      default:
+        target: auto
+        threshold: .2
 
 ignore:
+  # different execution pathes (if not, remove) -- rgerhards, 2018-10-12
   # will be removed soon: https://github.com/rsyslog/rsyslog/issues/2103
   - "contrib/imczmq"
   - "contrib/omczmq"
