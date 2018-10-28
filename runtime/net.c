@@ -793,7 +793,6 @@ PrintAllowedSenders(int iListToPrint)
 	struct AllowedSenders *pSender;
 	uchar szIP[64];
 	
-#ifdef _AIX
 #ifdef USE_GSSAPI
 	assert((iListToPrint == 1) || (iListToPrint == 2) || (iListToPrint == 3));
 	dbgprintf("Allowed %s Senders:\n",
@@ -806,20 +805,6 @@ PrintAllowedSenders(int iListToPrint)
 	       (iListToPrint == 1) ? "UDP" :
 	       "TCP");
 #endif /* USE_GSSAPI */
-#else /* _AIX */
-	assert((iListToPrint == 1) || (iListToPrint == 2)
-#ifdef USE_GSSAPI
-	       || (iListToPrint == 3)
-#endif
-	       );
-
-	dbgprintf("Allowed %s Senders:\n",
-	       (iListToPrint == 1) ? "UDP" :
-#ifdef USE_GSSAPI
-	       (iListToPrint == 3) ? "GSS" :
-#endif
-	       "TCP");
-#endif /* End of _AIX */
 
 	pSender = (iListToPrint == 1) ? pAllowedSenders_UDP :
 #ifdef USE_GSSAPI
