@@ -56,7 +56,6 @@ if ENABLE_DEFAULT_TESTS
 TESTS +=  \
 	empty-hostname.sh \
 	hostname-getaddrinfo-fail.sh \
-	tcpflood_wrong_option_output.sh \
 	msleep_usage_output.sh \
 	prop-programname.sh \
 	prop-programname-with-slashes.sh \
@@ -310,6 +309,7 @@ TESTS +=  \
 	parsertest-snare_ccoff_udp2.sh
 if HAVE_VALGRIND
 TESTS +=  \
+	tcpflood_wrong_option_output.sh \
 	include-obj-outside-control-flow-vg.sh \
 	include-obj-in-if-vg.sh \
 	include-obj-text-vg.sh \
