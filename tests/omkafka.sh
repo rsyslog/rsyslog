@@ -5,6 +5,7 @@
 test_status unreliable 'https://github.com/rsyslog/rsyslog/issues/3197'
 check_command_available kafkacat
 
+export KEEP_KAFKA_RUNNING="YES"
 export TESTMESSAGES=100000
 export TESTMESSAGESFULL=$TESTMESSAGES
 

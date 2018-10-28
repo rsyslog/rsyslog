@@ -2,11 +2,7 @@
 # added 2017-05-03 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-#echo Test very unstable, thus skipping
-#echo see https://github.com/rsyslog/rsyslog/issues/3057
-#exit 77
-
-# *** ==============================================================================
+export KEEP_KAFKA_RUNNING="YES"
 export TESTMESSAGES=100000
 export TESTMESSAGESFULL=100000
 
@@ -16,19 +12,15 @@ export RANDTOPIC=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 8 | head -n 1)
 # Set EXTRA_EXITCHECK to dump kafka/zookeeperlogfiles on failure only.
 export EXTRA_EXITCHECK=dumpkafkalogs
 export EXTRA_EXIT=kafka
-echo ===============================================================================
-echo Check and Stop previous instances of kafka/zookeeper 
+
 download_kafka
 stop_zookeeper
 stop_kafka
-
-echo Create kafka/zookeeper instance and topics
 start_zookeeper
 start_kafka
-# create new topic
+
 create_kafka_topic $RANDTOPIC '.dep_wrk' '22181'
 
-# --- Create/Start omkafka sender config
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
 add_conf '
@@ -119,7 +111,6 @@ kafka_wait_group_coordinator
 shutdown_when_empty 2
 wait_shutdown 2
 
-# Delete topic to remove old traces before
 delete_kafka_topic $RANDTOPIC '.dep_wrk' '22181'
 
 # Dump Kafka log | uncomment if needed

@@ -3,6 +3,7 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 check_command_available kafkacat
+export KEEP_KAFKA_RUNNING="YES"
 
 export TESTMESSAGES=100000
 export RANDTOPIC=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 8 | head -n 1)
