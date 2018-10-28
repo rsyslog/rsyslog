@@ -47,7 +47,11 @@ Version 8.39.0 [v8-stable] 2018-10-30
 - fix potential misadressing in encryption subsystem
   could happen if e.g. disk queues were encrypted
   not seen in practice but caught by testbench test
-- core bugfix: regex compile error messages could be incorrect
+- ksi subsystem changes
+  * enhance debug logging
+  * disable unsafe SHA1 algorithm
+  Thanks to Allan Park for the patch.
+- bugfix core: regex compile error messages could be incorrect
 - bugfix core: potential hang on rsyslog termination
   The root cause was a deadlock during worker startup. This could
   happen for example when a DA queue needed to persist data during
@@ -124,6 +128,8 @@ Version 8.39.0 [v8-stable] 2018-10-30
     not in 100% of the cases, but at least in some that frequently occur
   - failing tests now report failure status so that we can get stats
     on unreliable tests
+  - testbench tooling: fix incorrect tcpflood TLS parameter check
+    could lead to segfault when started
 ------------------------------------------------------------------------------
 Version 8.38.0 [v8-stable] 2018-09-18
 - AIX: make basic modules work again
