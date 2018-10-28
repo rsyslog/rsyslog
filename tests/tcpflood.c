@@ -210,7 +210,6 @@ static gnutls_certificate_credentials_t tlscred;
 /* Main OpenSSL CTX pointer */
 static SSL_CTX *ctx;
 static SSL **sslArray;
-// static DH *pDH;
 #endif
 
 /* variables for managing multi-threaded operations */
@@ -369,7 +368,7 @@ int openConnections(void)
 	if(bShowProgress)
 		if(write(1, "      open connections", sizeof("      open connections")-1)){}
 #	if defined(ENABLE_OPENSSL)
-	sslArray = calloc(numConnections, sizeof(sslArray));
+	sslArray = calloc(numConnections, sizeof(SSL *));
 #	elif defined(ENABLE_GNUTLS)
 	sessArray = calloc(numConnections, sizeof(gnutls_session_t));
 #	endif
