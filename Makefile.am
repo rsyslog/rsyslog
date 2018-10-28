@@ -464,6 +464,9 @@ endif
 if ENABLE_OMJOURNAL
 DISTCHECK_CONFIGURE_FLAGS+= --enable-omjournal
 endif
+if ENABLE_JOURNAL_TESTS
+DISTCHECK_CONFIGURE_FLAGS+= --enable-journal-tests
+endif
 
 if ENABLE_IMCZMQ
 DISTCHECK_CONFIGURE_FLAGS+= --enable-imczmq
