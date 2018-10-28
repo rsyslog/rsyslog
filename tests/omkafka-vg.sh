@@ -4,7 +4,7 @@
 . ${srcdir:=.}/diag.sh init
 check_command_available kafkacat
 
-# *** ==============================================================================
+export KEEP_KAFKA_RUNNING="YES"
 export TESTMESSAGES=10000
 export TESTMESSAGESFULL=$TESTMESSAGES
 

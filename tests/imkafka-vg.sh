@@ -5,6 +5,7 @@ echo Init Testbench
 . ${srcdir:=.}/diag.sh init
 check_command_available kafkacat
 
+export KEEP_KAFKA_RUNNING="YES"
 export TESTMESSAGES=100000
 export TESTMESSAGESFULL=$TESTMESSAGES
 # Set EXTRA_EXITCHECK to dump kafka/zookeeperlogfiles on failure only.

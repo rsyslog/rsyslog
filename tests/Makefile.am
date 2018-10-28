@@ -625,11 +625,11 @@ if ENABLE_KAFKA_TESTS
 TESTS += \
 	omkafka.sh \
 	imkafka.sh \
-	imkafka-hang-on-no-kafka.sh \
-	imkafka-hang-other-action-on-no-kafka.sh \
 	imkafka-backgrounded.sh \
 	imkafka-config-err-ruleset.sh \
 	imkafka-config-err-param.sh \
+	imkafka-hang-on-no-kafka.sh \
+	imkafka-hang-other-action-on-no-kafka.sh \
 	imkafka_multi_single.sh \
 	sndrcv_kafka.sh \
 	sndrcv_kafka_multi_topics.sh

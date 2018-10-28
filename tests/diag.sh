@@ -1011,6 +1011,9 @@ function download_kafka() {
 }
 
 function stop_kafka() {
+	if [ "$KEEP_KAFKA_RUNNING" == "YES" ]; then
+		return
+	fi
 	i=0
 	if [ "x$1" == "x" ]; then
 		dep_work_dir=$(readlink -f .dep_wrk)
@@ -1026,7 +1029,7 @@ function stop_kafka() {
 	if [ ! -d $dep_work_dir/kafka ]; then
 		echo "Kafka work-dir $dep_work_dir/kafka does not exist, no action needed"
 	else
-		# Get kafka pid instance
+		# shellcheck disable=SC2009  - we do not grep on the process name!
 		kafkapid=$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')
 
 		echo "Stopping Kafka instance $1 ($dep_work_kafka_config/$kafkapid)"
@@ -1034,7 +1037,7 @@ function stop_kafka() {
 
 		# Check if kafka instance went down!
 		while true; do
-#echo "waiting for propper shutdown for $dep_work_kafka_config / $kafkapid "
+			# shellcheck disable=SC2009  - we do not grep on the process name!
 			kafkapid=$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')
 			if [[ "" !=  "$kafkapid" ]]; then
 				$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
@@ -1072,6 +1075,9 @@ function cleanup_kafka() {
 }
 
 function stop_zookeeper() {
+	if [ "$KEEP_KAFKA_RUNNING" == "YES" ]; then
+		return
+	fi
 	i=0
 	if [ "x$1" == "x" ]; then
 		dep_work_dir=$(readlink -f .dep_wrk)
@@ -1097,7 +1103,6 @@ function stop_zookeeper() {
 		zkpid=$(ps aux | grep -i $dep_work_tk_config | grep java | grep -v grep | awk '{print $2}')
 		if [[ "" !=  "$zkpid" ]]; then
 			while true; do
-#echo "waiting for propper shutdown for $dep_work_tk_config / $zkpid "
 				zkpid=$(ps aux | grep -i $dep_work_tk_config | grep java | grep -v grep | awk '{print $2}')
 				if [[ "" !=  "$zkpid" ]]; then
 					$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
@@ -1108,7 +1113,6 @@ function stop_zookeeper() {
 					fi
 					let "i++"
 				else
-					# Break the loop
 					break
 				fi
 			done
@@ -1118,6 +1122,7 @@ function stop_zookeeper() {
 			# Prozess shutdown, do cleanup now
 			cleanup_zookeeper $1
 		fi
+		rm "$ZOOPIDFILE"
 	fi
 }
 
@@ -1131,6 +1136,10 @@ function cleanup_zookeeper() {
 }
 
 function start_zookeeper() {
+	if [ "$KEEP_KAFKA_RUNNING" == "YES" ] && [ -f "$ZOOPIDFILE" ]; then
+		printf 'zookeeper already runing, no need to start\n'
+		return
+	fi
 	if [ "x$1" == "x" ]; then
 		dep_work_dir=$(readlink -f .dep_wrk)
 		dep_work_tk_config="zoo.cfg"
@@ -1170,6 +1179,14 @@ function start_kafka() {
 		dep_work_kafka_config="kafka-server$1.properties"
 	fi
 
+
+	# shellcheck disable=SC2009  - we do not grep on the process name!
+	kafkapid=$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')
+	if [ "$KEEP_KAFKA_RUNNING" == "YES" ] && [ "$kafkapid" != "" ]; then
+		printf 'kafka already runing, no need to start\n'
+		return
+	fi
+
 	if [ ! -f $dep_kafka_cached_file ]; then
 			echo "Dependency-cache does not have kafka package, did you download dependencies?"
 			error_exit 77
@@ -1188,6 +1205,7 @@ function start_kafka() {
 	$TESTTOOL_DIR/msleep 4000
 
 	# Check if kafka instance came up!
+	# shellcheck disable=SC2009  - we do not grep on the process name!
 	kafkapid=$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')
 	if [[ "" !=  "$kafkapid" ]];
 	then
@@ -1197,6 +1215,7 @@ function start_kafka() {
 		(cd $dep_work_dir/kafka && ./bin/kafka-server-start.sh -daemon ./config/$dep_work_kafka_config)
 		$TESTTOOL_DIR/msleep 4000
 
+		# shellcheck disable=SC2009  - we do not grep on the process name!
 		kafkapid=$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')
 		if [[ "" !=  "$kafkapid" ]];
 		then
