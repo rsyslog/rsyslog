@@ -26,8 +26,15 @@ The following parameters can be set:
   also automaticaly turned "on".
 
 - **workDirectory**
+
+  Sets the directory that rsyslog uses for work files, e.g. imfile state
+  or queue spool files.
+
 - **dropMsgsWithMaliciousDNSPtrRecords**
+
 - **localHostname**
+  Permits to overwrite the local host hostname.
+
 - **preserveFQDN**
 - **defaultNetstreamDriverCAFile**
 
@@ -414,3 +421,19 @@ The following parameters can be set:
   the input is inside a lengthy operation, but should generally be tried to
   avoid. On busy systems it may make sense to increase that timeout. This
   especially seems to be the case with containers.
+
+- **operatingStateFile** [string, filename], default unset, available 8.39.0+
+
+  The operatingStateFile, as the name says, provides information about rsyslog
+  operating state. It can be useful for troubleshooting.
+
+  If this parameter is not set, an operating state file will not be writen. If
+  it is set, the file will be written **and** used to detect unclean shutdown.
+  Upon startup, rsyslog checks if the last recorded line contains the "clean
+  shutdown notification". If so, the file is deleted and re-written with new
+  operating state. If the notification cannot be found, rsyslog assumes unclean
+  shutdown and complains about this state. In this case the operating state file
+  is renamed to "<configured-name>.previous" and a new file is started under the
+  configured name for the current run. This permits the administrator to check the
+  previous operating state file for helpful information on why the system shut
+  down unclean.
