@@ -26,9 +26,6 @@ specified via $template legacy statements.
    are available.
 
 
-TODO: :doc:`rsyslog properties reference <properties>` for a list of which
-
-
 Template processing
 ===================
 
@@ -627,9 +624,9 @@ Reserved Template Names
 -----------------------
 
 Template names beginning with "RSYSLOG\_" are reserved for rsyslog use.
-Do NOT use them if, otherwise you may receive a conflict in the future
+Do NOT use them, otherwise you may cause conflicts in the future
 (and quite unpredictable behaviour). There is a small set of pre-defined
-templates that you can use without the need to define it:
+templates that you can use without the need to define them:
 
 **RSYSLOG_TraditionalFileFormat** - The "old style" default log file
 format with low-precision timestamps.
