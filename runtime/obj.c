@@ -1127,10 +1127,7 @@ FindObjInfo(const char *const __restrict__ strOID, objInfo_t **ppInfo)
 	*ppInfo = arrObjInfo[i];
 
 finalize_it:
-	if(iRet == RS_RET_OK) {
-		/* DEV DEBUG ONLY dbgprintf("caller requested object '%s', found at index %d\n", (*ppInfo)->pszID, i);*/
-		/*EMPTY BY INTENSION*/;
-	} else {
+	if(iRet != RS_RET_OK) {
 		dbgprintf("caller requested object '%s', not found (iRet %d)\n", strOID, iRet);
 	}
 

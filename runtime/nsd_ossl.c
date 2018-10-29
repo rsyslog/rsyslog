@@ -426,9 +426,6 @@ osslGlblInit(void)
 	SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv3);		/* Disable insecure SSLv3 Protocol */
 	SSL_CTX_sess_set_cache_size(ctx,1024);			/* TODO: make configurable? */
 
-	/* TODO: DO ONLY SUPPORT DEFAULT CIPHERS YET
-	SSL_CTX_set_cipher_list(ctx,"ALL");			Support all ciphers */
-// TODO MORE NEEDED 	SSL_CTX_set_ecdh_auto(ctx, 1);
 	/* Enable Support for automatic EC temporary key parameter selection. */
 
 	/* Set default VERIFY Options for OpenSSL CTX - and CALLBACK */
