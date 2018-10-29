@@ -1573,7 +1573,7 @@ case $1 in
 		;;
    'wait-file-lines') 
 		# $2 filename, $3 expected nbr of lines, $4 nbr of tries
-		timeoutend=${4:-1}
+		timeoutend=${4:-200}
 		timecounter=0
 
 		while [  $timecounter -lt $timeoutend ]; do
