@@ -763,9 +763,7 @@ function error_exit() {
 	kafka_exit_handling "false"
 
 	# Report error to rsyslog testbench stats
-	if [[ $1 == 1 ]]; then
-		error_stats
-	fi
+	error_stats
 
 	if [ "$TEST_STATUS" == "unreliable" ] && [ "$1" -ne 100 ]; then
 		# TODO: log github issue
