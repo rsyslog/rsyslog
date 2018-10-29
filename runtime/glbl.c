@@ -51,6 +51,7 @@
 #include "parserif.h"
 #include "rainerscript.h"
 #include "srUtils.h"
+#include "operatingstate.h"
 #include "net.h"
 #include "rsconf.h"
 
@@ -131,6 +132,7 @@ size_t glblDbgFilesNum = 0;
 int glblDbgWhitelist = 1;
 int glblPermitCtlC = 0;
 int glblInputTimeoutShutdown = 1000; /* input shutdown timeout in ms */
+static const uchar * operatingStateFile = NULL;
 
 uint64_t glblDevOptions = 0; /* to be used by developers only */
 
@@ -149,6 +151,7 @@ static int ntzinfos;
 /* tables for interfacing with the v6 config system */
 static struct cnfparamdescr cnfparamdescr[] = {
 	{ "workdirectory", eCmdHdlrString, 0 },
+	{ "operatingstatefile", eCmdHdlrString, 0 },
 	{ "dropmsgswithmaliciousdnsptrrecords", eCmdHdlrBinary, 0 },
 	{ "localhostname", eCmdHdlrGetWord, 0 },
 	{ "preservefqdn", eCmdHdlrBinary, 0 },
@@ -587,6 +590,11 @@ glblGetOversizeMsgErrorFile(void)
 	return oversizeMsgErrorFile;
 }
 
+const uchar*
+glblGetOperatingStateFile(void)
+{
+	return operatingStateFile;
+}
 
 /* return the mode with which oversize messages will be put forward
  */
@@ -855,6 +863,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	oversizeMsgInputMode = glblOversizeMsgInputMode_Accept;
 	free(pszWorkDir);
 	pszWorkDir = NULL;
+	free((void*)operatingStateFile);
+	operatingStateFile = NULL;
 	bDropMalPTRMsgs = 0;
 	bPreserveFQDN = 0;
 	iMaxLine = 8192;
@@ -1076,6 +1086,15 @@ glblProcessCnf(struct cnfobj *o)
 			stdlog_hdl = stdlog_open("rsyslogd", 0, STDLOG_SYSLOG,
 					(char*) stdlog_chanspec);
 #endif
+		} else if(!strcmp(paramblk.descr[i].name, "operatingstatefile")) {
+			if(operatingStateFile != NULL) {
+				LogError(errno, RS_RET_PARAM_ERROR,
+					"error: operatingStateFile already set to '%s' - "
+					"new valule ignored", operatingStateFile);
+			} else {
+				operatingStateFile = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+				osf_open();
+			}
 		}
 	}
 done:	return;

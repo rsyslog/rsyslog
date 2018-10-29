@@ -153,6 +153,7 @@ int GetGnuTLSLoglevel(void);
 int glblGetMaxLine(void);
 int bs_arrcmp_glblDbgFiles(const void *s1, const void *s2);
 uchar* glblGetOversizeMsgErrorFile(void);
+const uchar* glblGetOperatingStateFile(void);
 int glblGetOversizeMsgInputMode(void);
 int glblReportOversizeMessage(void);
 

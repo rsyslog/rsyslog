@@ -47,6 +47,8 @@ librsyslog_la_SOURCES = \
 	srUtils.h \
 	errmsg.c \
 	errmsg.h \
+	operatingstate.c \
+	operatingstate.h \
 	debug.c \
 	debug.h \
 	obj.c \

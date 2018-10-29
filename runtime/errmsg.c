@@ -42,6 +42,7 @@
 #include "obj.h"
 #include "msg.h"
 #include "errmsg.h"
+#include "operatingstate.h"
 #include "srUtils.h"
 #include "stringbuf.h"
 
@@ -91,6 +92,7 @@ doLogMsg(const int iErrno, const int iErrCode,  const int severity, const char *
 	char errStr[1024];
 	
 	dbgprintf("Called LogMsg, msg: %s\n", msg);
+	osf_write(OSF_TAG_MSG, msg);
 
 	if(iErrno != 0) {
 		rs_strerror_r(iErrno, errStr, sizeof(errStr));

@@ -58,6 +58,7 @@
 #include "rsconf.h"
 #include "cfsysline.h"
 #include "datetime.h"
+#include "operatingstate.h"
 #include "dirty.h"
 #include "janitor.h"
 
@@ -2123,5 +2124,6 @@ main(int argc, char **argv)
 #ifdef ENABLE_LIBLOGGING_STDLOG
 	stdlog_close(stdlog_hdl);
 #endif
+	osf_close();
 	return 0;
 }
