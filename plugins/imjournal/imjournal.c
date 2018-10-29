@@ -118,7 +118,7 @@ static const char *pidFieldName;	/* read-only after startup */
 static int bPidFallBack;
 static ratelimit_t *ratelimiter = NULL;
 static sd_journal *j;
-static int j_inotify_fd;
+static sbool reloaded = 0;
 static struct {
 	statsobj_t *stats;
 	STATSCOUNTER_DEF(ctrSubmitted, mutCtrSubmitted)
@@ -149,8 +149,6 @@ static rsRetVal openJournal(void) {
 	if ((r = sd_journal_get_fd(j)) < 0) {
 		LogError(-r, RS_RET_IO_ERROR, "imjournal: sd_journal_get_fd() failed");
 		iRet = RS_RET_IO_ERROR;
-	} else {
-		j_inotify_fd = r;
 	}
 	RETiRet;
 }
@@ -160,7 +158,6 @@ static void closeJournal(void) {
 		persistJournalState();
 	}
 	sd_journal_close(j);
-	j_inotify_fd = 0;
 }
 
 
@@ -527,7 +524,7 @@ pollJournal(void)
 	int err;
 
 	err = sd_journal_wait(j, POLL_TIMEOUT);
-	if (err == SD_JOURNAL_INVALIDATE) {
+	if (err == SD_JOURNAL_INVALIDATE && !reloaded) {
 		STATSCOUNTER_INC(statsCounter.ctrRotations, statsCounter.mutCtrRotations);
 		closeJournal();
 
@@ -540,6 +537,10 @@ pollJournal(void)
 			iRet = loadJournalState();
 		}
 		LogMsg(0, RS_RET_OK, LOG_NOTICE, "imjournal: journal reloaded...");
+		reloaded = 1;
+	}
+	else {
+		reloaded = 0;
 	}
 
 finalize_it:
@@ -729,7 +730,7 @@ CODESTARTrunInput
 
 		if (r == 0) {
 			/* No new messages, wait for activity. */
-			if (pollJournal() != RS_RET_OK) {
+			if (pollJournal() != RS_RET_OK && !reloaded) {
 				tryRecover();
 			}
 			continue;
