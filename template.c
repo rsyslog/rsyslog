@@ -2176,19 +2176,14 @@ void tplDeleteNew(rsconf_t *conf)
 	conf->templates.lastStatic->pNext = NULL;
 	conf->templates.last = conf->templates.lastStatic;
 	while(pTpl != NULL) {
-		/* dbgprintf("Delete Template: Name='%s'\n ", pTpl->pszName == NULL? "NULL" : pTpl->pszName);*/
 		pTpe = pTpl->pEntryRoot;
 		while(pTpe != NULL) {
 			pTpeDel = pTpe;
 			pTpe = pTpe->pNext;
-			/*dbgprintf("\tDelete Entry(%x): type %d, ", (unsigned) pTpeDel, pTpeDel->eEntryType);*/
 			switch(pTpeDel->eEntryType) {
 			case UNDEFINED:
-				/*dbgprintf("(UNDEFINED)");*/
 				break;
 			case CONSTANT:
-				/*dbgprintf("(CONSTANT), value: '%s'",
-					pTpeDel->data.constant.pConstant);*/
 				free(pTpeDel->data.constant.pConstant);
 				break;
 			case FIELD:
@@ -2203,7 +2198,6 @@ void tplDeleteNew(rsconf_t *conf)
 				msgPropDescrDestruct(&pTpeDel->data.field.msgProp);
 				break;
 			}
-			/*dbgprintf("\n");*/
 			free(pTpeDel);
 		}
 		pTplDel = pTpl;

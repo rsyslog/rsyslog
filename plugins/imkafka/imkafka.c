@@ -203,10 +203,6 @@ DBGPRINTF("imkafka: enqMsg: Msg: %.*s\n", (int)rkmessage->len, (char *)rkmessage
 
 	CHKiRet(submitMsg2(pMsg));
 
-/* useful?
-	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
-	ratelimitAddMsg(pLstn->ratelimiter, &pLstn->multiSub, pMsg);
-*/
 finalize_it:
 	RETiRet;
 }
@@ -282,7 +278,6 @@ done:
 static rsRetVal
 createInstance(instanceConf_t **pinst)
 {
-/*	rd_kafka_conf_res_t res = RD_KAFKA_CONF_UNKNOWN;*/
 	instanceConf_t *inst;
 	DEFiRet;
 	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));

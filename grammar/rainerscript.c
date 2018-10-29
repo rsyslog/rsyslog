@@ -4034,7 +4034,6 @@ void
 cnfstmtPrint(struct cnfstmt *root, int indent)
 {
 	struct cnfstmt *stmt;
-	//dbgprintf("stmt %p, indent %d, type '%c'\n", expr, indent, expr->nodetype);
 	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
 		cnfstmtPrintOnly(stmt, indent, 1);
 	}
