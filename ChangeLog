@@ -12,6 +12,11 @@ Version 8.39.0 [v8-stable] 2018-10-30
   should be much smaller and, more importantly, imfile should not stall.
   see also https://github.com/rsyslog/rsyslog/issues/2659
   see also https://github.com/rsyslog/rsyslog/issues/1605
+- imjournal: work around journald excessive reloading behavior
+  This is workaround for possible imjournal interaction with systemd
+  where journal invalidate fix is not present. The code tries to
+  detect SD_JOURNAL_INVALIDATE loop and not reload after each call.
+  Thanks to Jiri Vymazal for the patch.
 - errmsg: remove no longer needed code
   refectored code (over a long time) so that object-ish style is no longer
   needed and could now finally be removed; We also refactored the last
@@ -93,6 +98,8 @@ Version 8.39.0 [v8-stable] 2018-10-30
 - cleanup: removed no longer needed code
   Code that was unused for quite a while or did not really belong to the
   project identified and removed.
+- overall code cleanup
+  e.g. remove unused code, replace bad bash constructs, etc...
 - CI:
   * some small improvements in testbench plumbing
     e.g. (`cmd` replaced by $(cmd), removed useless use of cat, ...)
