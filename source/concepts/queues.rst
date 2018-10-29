@@ -59,10 +59,9 @@ queue has been created (to provide a clean environment for the next
 action).
 
 Not all queues necessarily support the full set of queue configuration
-parameters, because not all are applicable. For example, in current
-output module design, actions do not support multi-threading.
-Consequently, the number of worker threads is fixed to one for action
-queues and can not be changed.
+parameters, because not all are applicable. For example, disk queues
+always have exactly one worker thread. This cannot be overriden by
+configuration parameters. Tries to do so are ignored.
 
 Queue Modes
 -----------
