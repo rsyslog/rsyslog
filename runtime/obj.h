@@ -21,7 +21,7 @@
  *
  * pThis always references to a pointer of the object.
  *
- * Copyright 2008-2012 Adiscon GmbH.
+ * Copyright 2008-2018 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -123,7 +123,6 @@ rsRetVal objDeserializeWithMethods(void *ppObj, uchar *pszTypeExpected, int lenT
 rsRetVal (*fFixup)(obj_t*,void*), void *pUsr, rsRetVal (*objConstruct)(), rsRetVal (*objConstructFinalize)(),
 rsRetVal (*objDeserialize)());
 rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm);
-rsRetVal objDeserializeDummy(obj_t *pObj, strm_t *pStrm);
 uchar *objGetName(obj_t *pThis);
 
 
