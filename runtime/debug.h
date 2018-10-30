@@ -1,9 +1,8 @@
 /* debug.h
  *
- * Definitions for the debug and run-time analysis support module.
- * Contains a lot of macros.
+ * Definitions for the debug module.
  *
- * Copyright 2008-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -37,54 +36,6 @@ extern int Debug;		/* debug flag  - read-only after startup */
 extern int debugging_on;	 /* read-only, except on sig USR1 */
 extern int stddbg; /* the handle for regular debug output, set to stdout if not forking, -1 otherwise */
 extern int dbgTimeoutToStderr;
-
-/* data types */
-
-/* the function database. It is used as a static var inside each function. That provides
- * us the fast access to it that we need to make the instrumentation work. It's address
- * also serves as a unique function identifier and can be used inside other structures
- * to refer to the function (e.g. for pretty-printing names).
- * rgerhards, 2008-01-24
- */
-typedef struct dbgFuncDBmutInfoEntry_s {
-	pthread_mutex_t *pmut;
-	int lockLn; /* line where it was locked (inside our func): -1 means mutex is not locked */
-	pthread_t thrd; /* thrd where the mutex was locked */
-	unsigned long lInvocation; /* invocation (unique during program run!) of this function that locked the mutex */
-} dbgFuncDBmutInfoEntry_t;
-typedef struct dbgFuncDB_s {
-	unsigned magic;
-	unsigned long nTimesCalled;
-	char *func;
-	char *file;
-	int line;
-	dbgFuncDBmutInfoEntry_t mutInfo[5];
-	/* remember to update the initializer if you add anything or change the order! */
-} dbgFuncDB_t;
-#define dbgFUNCDB_MAGIC 0xA1B2C3D4
-#define dbgFuncDB_t_INITIALIZER \
-	{ \
-	.magic = dbgFUNCDB_MAGIC,\
-	.nTimesCalled = 0,\
-	.func = __func__, \
-	.file = __FILE__, \
-	.line = __LINE__ \
-	}
-
-/* the structure below was originally just the thread's call stack, but it has
- * a bit evolved over time. So we have now ended up with the fact that it
- * all debug info we know about the thread.
- */
-typedef struct dbgCallStack_s {
-	pthread_t thrd;
-	dbgFuncDB_t *callStack[500];
-	int lastLine[500]; /* last line where code execution was seen */
-	int stackPtr;
-	int stackPtrMax;
-	char *pszThrdName;
-	struct dbgCallStack_s *pNext;
-	struct dbgCallStack_s *pPrev;
-} dbgThrdInfo_t;
 
 
 /* prototypes */
@@ -128,11 +79,6 @@ extern int altdbg;	/* and the handle for alternate debug output */
 
 /* this macro is needed to support old, no longer used --enable-memcheck setting (now we use ASAN/valgrind!) */
 #define MALLOC(x) malloc(x)
-
-#define MUTOP_LOCKWAIT		1
-#define MUTOP_LOCK		2
-#define MUTOP_UNLOCK		3
-#define MUTOP_TRYLOCK		4
 
 /* things originally introduced for now removed rtinst */
 #define d_pthread_mutex_lock(x)     pthread_mutex_lock(x)
