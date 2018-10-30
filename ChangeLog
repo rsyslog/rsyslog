@@ -1,5 +1,8 @@
 ------------------------------------------------------------------------------
 Version 8.40.0 [v8-stable] 2018-12-11
+-  CI
+   * testbench: grep failed when string starting with "-" was used
+     The search term was mistakenly interpreted as an option.
 ------------------------------------------------------------------------------
 Version 8.39.0 [v8-stable] 2018-10-30
 - imfile: improve truncation detection
