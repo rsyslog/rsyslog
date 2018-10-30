@@ -117,7 +117,7 @@ AddParserToList(parserList_t **ppListRoot, parser_t *pParser)
 	parserList_t *pTail;
 	DEFiRet;
 
-	CHKmalloc(pThis = MALLOC(sizeof(parserList_t)));
+	CHKmalloc(pThis = malloc(sizeof(parserList_t)));
 	pThis->pParser = pParser;
 	pThis->pNext = NULL;
 
@@ -333,7 +333,7 @@ static rsRetVal uncompressMessage(smsg_t *pMsg)
 		 */
 		int ret;
 		iLenDefBuf = glbl.GetMaxLine();
-		CHKmalloc(deflateBuf = MALLOC(iLenDefBuf + 1));
+		CHKmalloc(deflateBuf = malloc(iLenDefBuf + 1));
 		ret = uncompress((uchar *) deflateBuf, &iLenDefBuf, (uchar *) pszMsg+1, lenMsg-1);
 		DBGPRINTF("Compressed message uncompressed with status %d, length: new %ld, old %d.\n",
 		        ret, (long) iLenDefBuf, (int) (lenMsg-1));
@@ -463,7 +463,7 @@ SanitizeMsg(smsg_t *pMsg)
 	if(maxDest < sizeof(szSanBuf))
 		pDst = szSanBuf;
 	else
-		CHKmalloc(pDst = MALLOC(maxDest + 1));
+		CHKmalloc(pDst = malloc(maxDest + 1));
 	if(iSrc > 0) {
 		iSrc--; /* go back to where everything is OK */
 		if(iSrc > maxDest) {

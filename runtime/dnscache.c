@@ -405,7 +405,7 @@ addEntry(struct sockaddr_storage *const addr, dnscache_entry_t **const pEtry)
 	}
 
 	/* entry still does not exist, so add it */
-	CHKmalloc(etry = MALLOC(sizeof(dnscache_entry_t)));
+	CHKmalloc(etry = malloc(sizeof(dnscache_entry_t)));
 	CHKmalloc(keybuf = malloc(sizeof(struct sockaddr_storage)));
 	CHKiRet(resolveAddr(addr, etry));
 	memcpy(&etry->addr, addr, SALEN((struct sockaddr*) addr));

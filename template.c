@@ -1025,7 +1025,7 @@ do_Parameter(uchar **pp, struct template *pTpl)
 				/* We get here ONLY if the regex end was found */
 				longitud = regex_end - p;
 				/* Malloc for the regex string */
-				regex_char = (unsigned char *) MALLOC(longitud + 1);
+				regex_char = (unsigned char *) malloc(longitud + 1);
 				if(regex_char == NULL) {
 					dbgprintf("Could not allocate memory for template parameter!\n");
 					pTpe->data.field.has_regex = 0;
@@ -1237,7 +1237,7 @@ struct template *tplAddLine(rsconf_t *conf, const char* pName, uchar** ppRestOfC
 	
 	DBGPRINTF("tplAddLine processing template '%s'\n", pName);
 	pTpl->iLenName = strlen(pName);
-	pTpl->pszName = (char*) MALLOC(pTpl->iLenName + 1);
+	pTpl->pszName = (char*) malloc(pTpl->iLenName + 1);
 	if(pTpl->pszName == NULL) {
 		dbgprintf("tplAddLine could not alloc memory for template name!");
 		pTpl->iLenName = 0;
@@ -2113,7 +2113,6 @@ void tplDeleteAll(rsconf_t *conf)
 {
 	struct template *pTpl, *pTplDel;
 	struct templateEntry *pTpe, *pTpeDel;
-	BEGINfunc
 
 	pTpl = conf->templates.root;
 	while(pTpl != NULL) {
@@ -2155,7 +2154,6 @@ void tplDeleteAll(rsconf_t *conf)
 			msgPropDescrDestruct(&pTplDel->subtree);
 		free(pTplDel);
 	}
-	ENDfunc
 }
 
 
@@ -2167,7 +2165,6 @@ void tplDeleteNew(rsconf_t *conf)
 	struct template *pTpl, *pTplDel;
 	struct templateEntry *pTpe, *pTpeDel;
 
-	BEGINfunc
 
 	if(conf->templates.root == NULL || conf->templates.lastStatic == NULL)
 		return;
@@ -2207,7 +2204,6 @@ void tplDeleteNew(rsconf_t *conf)
 			msgPropDescrDestruct(&pTplDel->subtree);
 		free(pTplDel);
 	}
-	ENDfunc
 }
 
 /* Store the pointer to the last hardcoded teplate */

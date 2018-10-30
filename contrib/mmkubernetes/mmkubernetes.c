@@ -966,7 +966,7 @@ CODESTARTnewActInst
 		} else if(!strcmp(actpblk.descr[i].name, "srcmetadatapath")) {
 			msgPropDescrDestruct(pData->srcMetadataDescr);
 			free(pData->srcMetadataDescr);
-			CHKmalloc(pData->srcMetadataDescr = MALLOC(sizeof(msgPropDescr_t)));
+			CHKmalloc(pData->srcMetadataDescr = malloc(sizeof(msgPropDescr_t)));
 			srcMetadataPath = es_str2cstr(pvals[i].val.d.estr, NULL);
 			CHKiRet(msgPropDescrFill(pData->srcMetadataDescr, (uchar *)srcMetadataPath,
 				strlen(srcMetadataPath)));
@@ -1119,7 +1119,7 @@ CODESTARTnewActInst
 		}
 	}
 	if(pData->srcMetadataDescr == NULL) {
-		CHKmalloc(pData->srcMetadataDescr = MALLOC(sizeof(msgPropDescr_t)));
+		CHKmalloc(pData->srcMetadataDescr = malloc(sizeof(msgPropDescr_t)));
 		CHKiRet(msgPropDescrFill(pData->srcMetadataDescr, loadModConf->srcMetadataPath,
 			strlen((char *)loadModConf->srcMetadataPath)));
 	}
@@ -1143,10 +1143,10 @@ CODESTARTnewActInst
 	if(pData->de_dot_separator)
 		pData->de_dot_separator_len = strlen((const char *)pData->de_dot_separator);
 
-	CHKmalloc(pData->contNameDescr = MALLOC(sizeof(msgPropDescr_t)));
+	CHKmalloc(pData->contNameDescr = malloc(sizeof(msgPropDescr_t)));
 	CHKiRet(msgPropDescrFill(pData->contNameDescr, (uchar*) DFLT_CONTAINER_NAME,
 			strlen(DFLT_CONTAINER_NAME)));
-	CHKmalloc(pData->contIdFullDescr = MALLOC(sizeof(msgPropDescr_t)));
+	CHKmalloc(pData->contIdFullDescr = malloc(sizeof(msgPropDescr_t)));
 	CHKiRet(msgPropDescrFill(pData->contIdFullDescr, (uchar*) DFLT_CONTAINER_ID_FULL,
 			strlen(DFLT_CONTAINER_NAME)));
 

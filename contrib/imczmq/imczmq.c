@@ -117,7 +117,7 @@ static void setDefaults(instanceConf_t* iconf) {
 static rsRetVal createInstance(instanceConf_t** pinst) {
 	DEFiRet;
 	instanceConf_t* inst;
-	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
+	CHKmalloc(inst = malloc(sizeof(instanceConf_t)));
 	
 	setDefaults(inst);
 	
@@ -138,7 +138,7 @@ static rsRetVal addListener(instanceConf_t* iconf){
 	
 	DBGPRINTF("imczmq: addListener called..\n");
 	struct listener_t* pData = NULL;
-	CHKmalloc(pData=(struct listener_t*)MALLOC(sizeof(struct listener_t)));
+	CHKmalloc(pData=(struct listener_t*)malloc(sizeof(struct listener_t)));
 	pData->ruleset = iconf->pBindRuleset;
 
 	pData->sock = zsock_new(iconf->sockType);

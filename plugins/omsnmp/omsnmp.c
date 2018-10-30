@@ -262,7 +262,7 @@ static rsRetVal omsnmp_sendsnmp(wrkrInstanceData_t *pWrkrData, uchar *psz)
 	}
 	
 	/* String should not be NULL */
-	ASSERT(psz != NULL);
+	assert(psz != NULL);
 	dbgprintf( "omsnmp_sendsnmp: ENTER - Syslogmessage = '%s'\n", (char*)psz);
 
 	/* If SNMP Version1 is configured !*/
@@ -277,7 +277,7 @@ static rsRetVal omsnmp_sendsnmp(wrkrInstanceData_t *pWrkrData, uchar *psz)
 					"failed '%s' with error '%s' \n", pData->szSyslogMessageOID, strErr);
 			ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
 		}
-		CHKmalloc(pdu->enterprise = (oid *) MALLOC(enterpriseoidlen * sizeof(oid)));
+		CHKmalloc(pdu->enterprise = (oid *) malloc(enterpriseoidlen * sizeof(oid)));
 		memcpy(pdu->enterprise, enterpriseoid, enterpriseoidlen * sizeof(oid));
 		pdu->enterprise_length = enterpriseoidlen;
 

@@ -102,7 +102,7 @@ AddStrgenToList(strgenList_t **ppListRoot, strgen_t *pStrgen)
 	strgenList_t *pTail;
 	DEFiRet;
 
-	CHKmalloc(pThis = MALLOC(sizeof(strgenList_t)));
+	CHKmalloc(pThis = malloc(sizeof(strgenList_t)));
 	pThis->pStrgen = pStrgen;
 	pThis->pNext = NULL;
 

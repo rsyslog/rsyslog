@@ -208,7 +208,7 @@ struct outchannel *ochAddLine(char* pName, uchar** ppRestOfConfLine)
 		return NULL;
 	
 	pOch->iLenName = strlen(pName);
-	pOch->pszName = (char*) MALLOC(pOch->iLenName + 1);
+	pOch->pszName = (char*) malloc(pOch->iLenName + 1);
 	if(pOch->pszName == NULL) {
 		dbgprintf("ochAddLine could not alloc memory for outchannel name!");
 		pOch->iLenName = 0;

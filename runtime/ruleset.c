@@ -1042,7 +1042,7 @@ doRulesetAddParser(ruleset_t *pRuleset, uchar *pName)
 	DBGPRINTF("added parser '%s' to ruleset '%s'\n", pName, pRuleset->pszName);
 
 finalize_it:
-	d_free(pName); /* no longer needed */
+	free(pName); /* no longer needed */
 
 	RETiRet;
 }

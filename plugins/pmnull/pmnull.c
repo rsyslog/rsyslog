@@ -86,7 +86,7 @@ createInstance(instanceConf_t **pinst)
 {
 	instanceConf_t *inst;
 	DEFiRet;
-	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
+	CHKmalloc(inst = malloc(sizeof(instanceConf_t)));
 	inst->tag = NULL;
 	*pinst = inst;
 finalize_it:

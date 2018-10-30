@@ -196,7 +196,7 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent)
 	instanceData *pData;
 	DEFiRet;
 
-	ASSERT(pWrkrData->hmysql == NULL);
+	assert(pWrkrData->hmysql == NULL);
 	pData = pWrkrData->pData;
 	pWrkrData->hmysql = mysql_init(NULL);
 	if(pWrkrData->hmysql == NULL) {

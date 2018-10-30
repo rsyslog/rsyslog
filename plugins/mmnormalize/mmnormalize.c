@@ -402,7 +402,7 @@ CODESTARTnewActInst
 			                "mmnormalize: 'variable' param can't be used with 'useRawMsg'. "
 			                "Ignoring 'variable', will use raw message.");
 		} else {
-			CHKmalloc(pData->varDescr = MALLOC(sizeof(msgPropDescr_t)));
+			CHKmalloc(pData->varDescr = malloc(sizeof(msgPropDescr_t)));
 			CHKiRet(msgPropDescrFill(pData->varDescr, (uchar*) varName, strlen(varName)));
 		}
 		free(varName);

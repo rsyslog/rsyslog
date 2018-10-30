@@ -51,7 +51,6 @@
 
 #include "rsyslog.h"
 #include "debug.h"
-#include "atomic.h"
 #include "cfsysline.h"
 #include "obj.h"
 
@@ -87,11 +86,10 @@ dbgOutputTID(char* name __attribute__((unused)))
 
 
 /* build a string with the thread name. If none is set, the thread ID is
- * used instead. Caller must provide buffer space. 
- * rgerhards 2008-01-23
+ * used instead. Caller must provide buffer space.
  */
 static void ATTR_NONNULL()
-dbgGetThrdName(char *const pszBuf, const size_t lenBuf, const pthread_t thrdID) 
+dbgGetThrdName(char *const pszBuf, const size_t lenBuf, const pthread_t thrdID)
 {
 	assert(pszBuf != NULL);
 
@@ -105,7 +103,8 @@ dbgGetThrdName(char *const pszBuf, const size_t lenBuf, const pthread_t thrdID)
 
 
 /* set a name for the current thread */
-void dbgSetThrdName(uchar *pszName)
+void ATTR_NONNULL()
+dbgSetThrdName(const uchar *const pszName)
 {
 	(void) pthread_setspecific(keyThrdName, strdup((char*) pszName));
 }
@@ -315,23 +314,22 @@ r_dbgprintf(const char *srcname, const char *fmt, ...)
  * otherwise. 0 means there are NO MORE options to be
  * processed. -- rgerhards, 2008-02-28
  */
-static int
-dbgGetRTOptNamVal(uchar **ppszOpt, uchar **ppOptName)
+static int ATTR_NONNULL()
+dbgGetRTOptNamVal(const uchar **const ppszOpt, uchar **const ppOptName)
 {
 	int bRet = 0;
-	uchar *p;
+	const uchar *p = *ppszOpt;
 	size_t i;
 	static uchar optname[128] = "";
 
 	assert(ppszOpt != NULL);
 	assert(*ppszOpt != NULL);
 
-	p = *ppszOpt;
 	/* skip whitespace */
 	while(*p && isspace(*p))
 		++p;
 
-	/* name - up until whitespace */
+	/* name: up until whitespace */
 	i = 0;
 	while(i < (sizeof(optname) - 1) && *p && !isspace(*p)) {
 		optname[i++] = *p++;
@@ -364,7 +362,7 @@ dbgGetDbglogFd(void)
 static void
 dbgGetRuntimeOptions(void)
 {
-	uchar *pszOpts;
+	const uchar *pszOpts;
 	uchar *optname;
 
 	/* set some defaults */

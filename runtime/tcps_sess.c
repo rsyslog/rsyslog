@@ -69,7 +69,7 @@ BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END m
 		pThis->inputState = eAtStrtFram; /* indicate frame header expected */
 		pThis->eFraming = TCP_FRAMING_OCTET_STUFFING; /* just make sure... */
 		/* now allocate the message reception buffer */
-		CHKmalloc(pThis->pMsg = (uchar*) MALLOC(glbl.GetMaxLine() + 1));
+		CHKmalloc(pThis->pMsg = (uchar*) malloc(glbl.GetMaxLine() + 1));
 finalize_it:
 ENDobjConstruct(tcps_sess)
 

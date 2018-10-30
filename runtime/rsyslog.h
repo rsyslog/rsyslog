@@ -574,8 +574,8 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 #define CHKmalloc(operation) if((operation) == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY)
 /* macro below is used in conjunction with CHKiRet_Hdlr, else use ABORT_FINALIZE */
 #define FINALIZE goto finalize_it;
-#define DEFiRet BEGINfunc rsRetVal iRet = RS_RET_OK
-#define RETiRet do{ ENDfuncIRet return iRet; }while(0)
+#define DEFiRet rsRetVal iRet = RS_RET_OK
+#define RETiRet return iRet
 
 #define ABORT_FINALIZE(errCode)			\
 	do {					\

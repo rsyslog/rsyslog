@@ -936,7 +936,6 @@ formatTimestamp3339(struct syslogTime *ts, char* pBuf)
 	int secfrac;
 	short digit;
 
-	BEGINfunc
 	assert(ts != NULL);
 	assert(pBuf != NULL);
 
@@ -994,7 +993,6 @@ formatTimestamp3339(struct syslogTime *ts, char* pBuf)
 
 	pBuf[iBuf] = '\0';
 
-	ENDfunc
 	return iBuf;
 }
 

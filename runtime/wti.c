@@ -273,7 +273,6 @@ wtiWorkerCancelCleanup(void *arg)
 	wti_t *pThis = (wti_t*) arg;
 	wtp_t *pWtp;
 
-	BEGINfunc
 	ISOBJ_TYPE_assert(pThis, wti);
 	pWtp = pThis->pWtp;
 	ISOBJ_TYPE_assert(pWtp, wtp);
@@ -282,7 +281,6 @@ wtiWorkerCancelCleanup(void *arg)
 	pWtp->pfObjProcessed(pWtp->pUsr, pThis);
 	DBGPRINTF("%s: done cancelation cleanup handler.\n", wtiGetDbgHdr(pThis));
 	
-	ENDfunc
 }
 
 
@@ -296,7 +294,6 @@ doIdleProcessing(wti_t *pThis, wtp_t *pWtp, int *pbInactivityTOOccured)
 {
 	struct timespec t;
 
-	BEGINfunc
 	DBGPRINTF("%s: worker IDLE, waiting for work.\n", wtiGetDbgHdr(pThis));
 
 	if(pThis->bAlwaysRunning) {
@@ -310,7 +307,6 @@ doIdleProcessing(wti_t *pThis, wtp_t *pWtp, int *pbInactivityTOOccured)
 		}
 	}
 	DBGOPRINT((obj_t*) pThis, "worker awoke from idle processing\n");
-	ENDfunc
 }
 
 
@@ -452,7 +448,7 @@ wtiSetDbgHdr(wti_t *pThis, uchar *pszMsg, size_t lenMsg)
 		free(pThis->pszDbgHdr);
 	}
 
-	if((pThis->pszDbgHdr = MALLOC(lenMsg + 1)) == NULL)
+	if((pThis->pszDbgHdr = malloc(lenMsg + 1)) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	memcpy(pThis->pszDbgHdr, pszMsg, lenMsg + 1); /* always think about the \0! */

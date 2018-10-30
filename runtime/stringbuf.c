@@ -93,7 +93,7 @@ rsCStrConstructFromszStr(cstr_t **const ppThis, const uchar *const sz)
 
 	pThis->iStrLen = strlen((char *) sz);
 	pThis->iBufSize = strlen((char *) sz) + 1;
-	if((pThis->pBuf = (uchar*) MALLOC(pThis->iBufSize)) == NULL) {
+	if((pThis->pBuf = (uchar*) malloc(pThis->iBufSize)) == NULL) {
 		RSFREEOBJ(pThis);
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
@@ -132,7 +132,7 @@ rsCStrConstructFromszStrv(cstr_t **const ppThis, const char *const fmt, va_list 
 	pThis->iStrLen = len;
 	pThis->iBufSize = len + 1;
 	len++; /* account for the \0 written by vsnprintf */
-	if((pThis->pBuf = (uchar*) MALLOC(pThis->iBufSize)) == NULL) {
+	if((pThis->pBuf = (uchar*) malloc(pThis->iBufSize)) == NULL) {
 		RSFREEOBJ(pThis);
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
@@ -173,7 +173,7 @@ cstrConstructFromESStr(cstr_t **const ppThis, es_str_t *const str)
 
 	pThis->iStrLen = es_strlen(str);
 	pThis->iBufSize = pThis->iStrLen + 1;
-	if((pThis->pBuf = (uchar*) MALLOC(pThis->iBufSize)) == NULL) {
+	if((pThis->pBuf = (uchar*) malloc(pThis->iBufSize)) == NULL) {
 		RSFREEOBJ(pThis);
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
@@ -202,7 +202,7 @@ rsCStrConstructFromCStr(cstr_t **const ppThis, const cstr_t *const pFrom)
 	if(pFrom->iStrLen > 0) {
 		pThis->iStrLen = pFrom->iStrLen;
 		pThis->iBufSize = pFrom->iStrLen + 1;
-		if((pThis->pBuf = (uchar*) MALLOC(pThis->iBufSize)) == NULL) {
+		if((pThis->pBuf = (uchar*) malloc(pThis->iBufSize)) == NULL) {
 			RSFREEOBJ(pThis);
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		}
@@ -439,7 +439,7 @@ rsRetVal cstrConvSzStrAndDestruct(cstr_t **ppThis, uchar **ppSz, int bRetNULL)
 
 	if(pThis->pBuf == NULL) {
 		if(bRetNULL == 0) {
-			CHKmalloc(pRetBuf = MALLOC(1));
+			CHKmalloc(pRetBuf = malloc(1));
 			*pRetBuf = '\0';
 		} else {
 			pRetBuf = NULL;

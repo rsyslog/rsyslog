@@ -43,7 +43,7 @@ rsRetVal dbgClassInit(void);
 rsRetVal dbgClassExit(void);
 void dbgSetDebugFile(uchar *fn);
 void dbgSetDebugLevel(int level);
-void dbgSetThrdName(uchar *pszName);
+void dbgSetThrdName(const uchar *pszName);
 void dbgOutputTID(char* name);
 int dbgGetDbglogFd(void);
 
@@ -68,23 +68,11 @@ extern int altdbg;	/* and the handle for alternate debug output */
 #define dbgprintf(...) r_dbgprintf(__FILE__, __VA_ARGS__)
 #define dbgoprint(...) r_dbgoprint(__FILE__, __VA_ARGS__)
 
-/* things originally introduced for now remove rtinst */
-#define BEGINfunc
-#define ENDfunc
-#define ENDfuncIRet
-#define ASSERT(x) assert(x)
-#define RUNLOG
-#define RUNLOG_VAR(fmt, x)
-#define RUNLOG_STR(str)
-
-/* this macro is needed to support old, no longer used --enable-memcheck setting (now we use ASAN/valgrind!) */
-#define MALLOC(x) malloc(x)
-
 /* things originally introduced for now removed rtinst */
 #define d_pthread_mutex_lock(x)     pthread_mutex_lock(x)
 #define d_pthread_mutex_trylock(x)  pthread_mutex_trylock(x)
 #define d_pthread_mutex_unlock(x)   pthread_mutex_unlock(x)
 #define d_pthread_cond_wait(cond, mut)   pthread_cond_wait(cond, mut)
 #define d_pthread_cond_timedwait(cond, mut, to)   pthread_cond_timedwait(cond, mut, to)
-#define d_free(x)      free(x)
+
 #endif /* #ifndef DEBUG_H_INCLUDED */

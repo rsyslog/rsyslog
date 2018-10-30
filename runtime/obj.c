@@ -1078,7 +1078,6 @@ objGetName(obj_t *const pThis)
 	uchar *ret;
 	uchar szName[128];
 
-	BEGINfunc
 	ISOBJ_assert(pThis);
 
 	if(pThis->pszName == NULL) {
@@ -1096,7 +1095,6 @@ objGetName(obj_t *const pThis)
 		ret = pThis->pszName;
 	}
 
-	ENDfunc
 	return ret;
 }
 

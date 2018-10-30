@@ -129,7 +129,6 @@ modUsrAdd(modInfo_t *pThis, const char *pszUsr)
 {
 	modUsr_t *pUsr;
 
-	BEGINfunc
 	if((pUsr = calloc(1, sizeof(modUsr_t))) == NULL)
 		goto finalize_it;
 
@@ -144,7 +143,7 @@ modUsrAdd(modInfo_t *pThis, const char *pszUsr)
 	pThis->pModUsrRoot = pUsr;
 
 finalize_it:
-	ENDfunc;
+	return;
 }
 
 
@@ -206,13 +205,11 @@ modUsrPrintAll(void)
 {
 	modInfo_t *pMod;
 
-	BEGINfunc
 	for(pMod = pLoadedModules ; pMod != NULL ; pMod = pMod->pNext) {
 		dbgprintf("printing users of loadable module %s, refcount %u, ptr %p, type %d\n",
 		pMod->pszName, pMod->uRefCnt, pMod, pMod->eType);
 		modUsrPrint(pMod);
 	}
-	ENDfunc
 }
 
 #endif /* #ifdef DEBUG */
@@ -396,7 +393,7 @@ readyModForCnf(modInfo_t *pThis, cfgmodules_etry_t **ppNew, cfgmodules_etry_t **
 	 * pass it a pointer which it can populate with a pointer to its module conf.
 	 */
 
-	CHKmalloc(pNew = MALLOC(sizeof(cfgmodules_etry_t)));
+	CHKmalloc(pNew = malloc(sizeof(cfgmodules_etry_t)));
 	pNew->canActivate = 1;
 	pNew->next = NULL;
 	pNew->pMod = pThis;

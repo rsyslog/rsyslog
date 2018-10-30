@@ -219,7 +219,7 @@ tdlAdd(qqueue_t *pQueue, qDeqID deqID, int nElemDeq)
 	ISOBJ_TYPE_assert(pQueue, qqueue);
 	assert(pQueue->toDeleteLst != NULL);
 
-	CHKmalloc(pNew = MALLOC(sizeof(toDeleteLst_t)));
+	CHKmalloc(pNew = malloc(sizeof(toDeleteLst_t)));
 	pNew->deqID = deqID;
 	pNew->nElemDeq = nElemDeq;
 
@@ -337,9 +337,8 @@ getLogicalQueueSize(qqueue_t *pThis)
 static void queueDrain(qqueue_t *pThis)
 {
 	smsg_t *pMsg;
-	ASSERT(pThis != NULL);
+	assert(pThis != NULL);
 
-	BEGINfunc
 	DBGOPRINT((obj_t*) pThis, "queue (type %d) will lose %d messages, destroying...\n",
 		pThis->qType, pThis->iQueueSize);
 	/* iQueueSize is not decremented by qDel(), so we need to do it ourselves */
@@ -350,7 +349,6 @@ static void queueDrain(qqueue_t *pThis)
 		}
 		pThis->qDel(pThis);
 	}
-	ENDfunc
 }
 
 
@@ -555,12 +553,12 @@ static rsRetVal qConstructFixedArray(qqueue_t *pThis)
 {
 	DEFiRet;
 
-	ASSERT(pThis != NULL);
+	assert(pThis != NULL);
 
 	if(pThis->iMaxQueueSize == 0)
 		ABORT_FINALIZE(RS_RET_QSIZE_ZERO);
 
-	if((pThis->tVars.farray.pBuf = MALLOC(sizeof(void *) * pThis->iMaxQueueSize)) == NULL) {
+	if((pThis->tVars.farray.pBuf = malloc(sizeof(void *) * pThis->iMaxQueueSize)) == NULL) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 
@@ -579,7 +577,7 @@ static rsRetVal qDestructFixedArray(qqueue_t *pThis)
 {
 	DEFiRet;
 	
-	ASSERT(pThis != NULL);
+	assert(pThis != NULL);
 
 	queueDrain(pThis); /* discard any remaining queue entries */
 	free(pThis->tVars.farray.pBuf);
@@ -592,7 +590,7 @@ static rsRetVal qAddFixedArray(qqueue_t *pThis, smsg_t* in)
 {
 	DEFiRet;
 
-	ASSERT(pThis != NULL);
+	assert(pThis != NULL);
 	pThis->tVars.farray.pBuf[pThis->tVars.farray.tail] = in;
 	pThis->tVars.farray.tail++;
 	if (pThis->tVars.farray.tail == pThis->iMaxQueueSize)
@@ -606,7 +604,7 @@ static rsRetVal qDeqFixedArray(qqueue_t *pThis, smsg_t **out)
 {
 	DEFiRet;
 
-	ASSERT(pThis != NULL);
+	assert(pThis != NULL);
 	*out = (void*) pThis->tVars.farray.pBuf[pThis->tVars.farray.deqhead];
 
 	pThis->tVars.farray.deqhead++;
@@ -621,7 +619,7 @@ static rsRetVal qDelFixedArray(qqueue_t *pThis)
 {
 	DEFiRet;
 
-	ASSERT(pThis != NULL);
+	assert(pThis != NULL);
 
 	pThis->tVars.farray.head++;
 	if (pThis->tVars.farray.head == pThis->iMaxQueueSize)
@@ -638,7 +636,7 @@ static rsRetVal qConstructLinkedList(qqueue_t *pThis)
 {
 	DEFiRet;
 
-	ASSERT(pThis != NULL);
+	assert(pThis != NULL);
 
 	pThis->tVars.linklist.pDeqRoot = NULL;
 	pThis->tVars.linklist.pDelRoot = NULL;
@@ -668,7 +666,7 @@ static rsRetVal qAddLinkedList(qqueue_t *pThis, smsg_t* pMsg)
 	qLinkedList_t *pEntry;
 	DEFiRet;
 
-	CHKmalloc((pEntry = (qLinkedList_t*) MALLOC(sizeof(qLinkedList_t))));
+	CHKmalloc((pEntry = (qLinkedList_t*) malloc(sizeof(qLinkedList_t))));
 
 	pEntry->pNext = NULL;
 	pEntry->pMsg = pMsg;
@@ -871,7 +869,7 @@ static rsRetVal qConstructDisk(qqueue_t *pThis)
 	DEFiRet;
 	int bRestarted = 0;
 
-	ASSERT(pThis != NULL);
+	assert(pThis != NULL);
 
 	/* and now check if there is some persistent information that needs to be read in */
 	iRet = qqueueTryLoadPersistedInfo(pThis);
@@ -943,7 +941,7 @@ static rsRetVal qDestructDisk(qqueue_t *pThis)
 {
 	DEFiRet;
 	
-	ASSERT(pThis != NULL);
+	assert(pThis != NULL);
 
 	free(pThis->pszQIFNam);
 	if(pThis->tVars.disk.pWrite != NULL) {
@@ -1044,7 +1042,7 @@ static rsRetVal qAddDirectWithWti(qqueue_t *pThis, smsg_t* pMsg, wti_t *pWti)
 	DEFiRet;
 
 	//TODO: init batchObj (states _OK and new fields -- CHECK)
-	ASSERT(pThis != NULL);
+	assert(pThis != NULL);
 
 	/* calling the consumer is quite different here than it is from a worker thread */
 	/* we need to provide the consumer's return value back to the caller because in direct
@@ -1096,7 +1094,7 @@ qqueueAdd(qqueue_t *pThis, smsg_t *pMsg)
 {
 	DEFiRet;
 
-	ASSERT(pThis != NULL);
+	assert(pThis != NULL);
 
 	static int msgCnt = 0;
 
@@ -1138,7 +1136,7 @@ qqueueDeq(qqueue_t *pThis, smsg_t **ppMsg)
 {
 	DEFiRet;
 
-	ASSERT(pThis != NULL);
+	assert(pThis != NULL);
 
 	/* we do NOT abort if we encounter an error, because otherwise the queue
 	 * will not be decremented, what will most probably result in an endless loop.
@@ -1173,7 +1171,7 @@ tryShutdownWorkersWithinQueueTimeout(qqueue_t *const pThis)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
-	ASSERT(pThis->pqParent == NULL); /* detect invalid calling sequence */
+	assert(pThis->pqParent == NULL); /* detect invalid calling sequence */
 
 	if(pThis->bIsDA) {
 		/* We need to lock the mutex, as otherwise we may have a race that prevents
@@ -1250,7 +1248,7 @@ tryShutdownWorkersWithinActionTimeout(qqueue_t *pThis)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
-	ASSERT(pThis->pqParent == NULL); /* detect invalid calling sequence */
+	assert(pThis->pqParent == NULL); /* detect invalid calling sequence */
 
 	/* instruct workers to finish ASAP, even if still work exists */
 	DBGOPRINT((obj_t*) pThis, "trying to shutdown workers within Action Timeout");
@@ -1392,7 +1390,7 @@ qqueueShutdownWorkers(qqueue_t *const pThis)
 		FINALIZE;
 	}
 
-	ASSERT(pThis->pqParent == NULL); /* detect invalid calling sequence */
+	assert(pThis->pqParent == NULL); /* detect invalid calling sequence */
 
 	DBGOPRINT((obj_t*) pThis, "initiating worker thread shutdown sequence %p\n", pThis);
 
@@ -1431,9 +1429,9 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThread
 	qqueue_t *pThis;
 	const uchar *const workDir = glblGetWorkDirRaw();
 
-	ASSERT(ppThis != NULL);
-	ASSERT(pConsumer != NULL);
-	ASSERT(iWorkerThreads >= 0);
+	assert(ppThis != NULL);
+	assert(pConsumer != NULL);
+	assert(iWorkerThreads >= 0);
 
 	CHKmalloc(pThis = (qqueue_t *)calloc(1, sizeof(qqueue_t)));
 
@@ -2246,7 +2244,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	uchar *qName;
 	size_t lenBuf;
 
-	ASSERT(pThis != NULL);
+	assert(pThis != NULL);
 
 	dbgoprint((obj_t*) pThis, "starting queue\n");
 
@@ -2416,7 +2414,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	 * influenced by properties which might have been set after queueConstruct ()
 	 */
 	if(pThis->pqParent == NULL) {
-		CHKmalloc(pThis->mut = (pthread_mutex_t *) MALLOC (sizeof (pthread_mutex_t)));
+		CHKmalloc(pThis->mut = (pthread_mutex_t *) malloc (sizeof (pthread_mutex_t)));
 		pthread_mutex_init(pThis->mut, NULL);
 	} else {
 		/* child queue, we need to use parent's mutex */
@@ -2540,7 +2538,7 @@ qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 	strm_t *psQIF = NULL; /* Queue Info File */
 	char errStr[1024];
 
-	ASSERT(pThis != NULL);
+	assert(pThis != NULL);
 
 	if(pThis->qType != QUEUETYPE_DISK) {
 		if(getPhysicalQueueSize(pThis) > 0) {
@@ -2828,7 +2826,7 @@ qqueueSetFilePrefix(qqueue_t *pThis, uchar *pszPrefix, size_t iLenPrefix)
 	if(pszPrefix == NULL) /* just unset the prefix! */
 		ABORT_FINALIZE(RS_RET_OK);
 
-	if((pThis->pszFilePrefix = MALLOC(iLenPrefix + 1)) == NULL)
+	if((pThis->pszFilePrefix = malloc(iLenPrefix + 1)) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	memcpy(pThis->pszFilePrefix, pszPrefix, iLenPrefix + 1);
 	pThis->lenFilePrefix = iLenPrefix;
@@ -3320,7 +3318,7 @@ static rsRetVal qqueueSetProperty(qqueue_t *pThis, var_t *pProp)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
-	ASSERT(pProp != NULL);
+	assert(pProp != NULL);
 
 	if(isProp("iQueueSize")) {
 		pThis->iQueueSize = pProp->val.num;

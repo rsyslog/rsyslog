@@ -190,7 +190,7 @@ static int recv_token(int s, gss_buffer_t tok)
 	       | lenbuf[3]);
 	tok->length = ntohl(len);
 
-	tok->value = (char *) MALLOC(tok->length ? tok->length : 1);
+	tok->value = (char *) malloc(tok->length ? tok->length : 1);
 	if (tok->length && tok->value == NULL) {
 		LogError(0, NO_ERRCODE, "Out of memory allocating token data\n");
 		return -1;

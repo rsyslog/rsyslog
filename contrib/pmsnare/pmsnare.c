@@ -114,13 +114,13 @@ struct instanceConf_s {
 static rsRetVal createInstance(instanceConf_t **pinst) {
 	instanceConf_t *inst;
 	DEFiRet;
-	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
+	CHKmalloc(inst = malloc(sizeof(instanceConf_t)));
 	inst->next = NULL;
 	*pinst = inst;
 	
 	/*  Add to list of instances. */
 	if(modInstances == NULL) {
-		CHKmalloc(modInstances = MALLOC(sizeof(modInstances_t)));
+		CHKmalloc(modInstances = malloc(sizeof(modInstances_t)));
 		modInstances->tail = modInstances->root = NULL;
 	}
 	if (modInstances->tail == NULL) {

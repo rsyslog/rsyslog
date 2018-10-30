@@ -145,7 +145,6 @@ static rsRetVal createInstance(instanceData **ppData)\
 #define CODESTARTcreateInstance \
 	if((pData = calloc(1, sizeof(instanceData))) == NULL) {\
 		*ppData = NULL;\
-		ENDfunc \
 		return RS_RET_OUT_OF_MEMORY;\
 	}
 
@@ -189,7 +188,6 @@ static rsRetVal createWrkrInstance(wrkrInstanceData_t **ppWrkrData, instanceData
 #define CODESTARTcreateWrkrInstance \
 	if((pWrkrData = calloc(1, sizeof(wrkrInstanceData_t))) == NULL) {\
 		*ppWrkrData = NULL;\
-		ENDfunc \
 		return RS_RET_OUT_OF_MEMORY;\
 	} \
 	pWrkrData->pData = pData;
@@ -222,7 +220,6 @@ static rsRetVal freeWrkrInstance(void* pd)\
 static rsRetVal isCompatibleWithFeature(syslogFeature __attribute__((unused)) eFeat)\
 {\
 	rsRetVal iRet = RS_RET_INCOMPATIBLE; \
-	BEGINfunc
 
 #define CODESTARTisCompatibleWithFeature
 
@@ -532,7 +529,6 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 
 #define CODESTARTqueryEtryPt \
 	if((name == NULL) || (pEtryPoint == NULL)) {\
-		ENDfunc \
 		return RS_RET_PARAM_ERROR;\
 	} \
 	*pEtryPoint = NULL;
@@ -809,7 +805,6 @@ modInfo_t __attribute__((unused)) *pModInfo)\
 	iRet = pHostQueryEtryPt((uchar*)"objGetObjInterface", &pObjGetObjInterface); \
 	if((iRet != RS_RET_OK) || (pQueryEtryPt == NULL) || (ipIFVersProvided == NULL) || \
 		(pObjGetObjInterface == NULL)) { \
-		ENDfunc \
 		return (iRet == RS_RET_OK) ? RS_RET_PARAM_ERROR : iRet; \
 	} \
 	/* now get the obj interface so that we can access other objects */ \
@@ -895,7 +890,6 @@ static rsRetVal beginCnfLoad(modConfData_t **ptr, __attribute__((unused)) rsconf
 #define CODESTARTbeginCnfLoad \
 	if((pModConf = calloc(1, sizeof(modConfData_t))) == NULL) {\
 		*ptr = NULL;\
-		ENDfunc \
 		return RS_RET_OUT_OF_MEMORY;\
 	}
 

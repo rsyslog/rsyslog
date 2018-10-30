@@ -627,7 +627,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		tmp = ++p;
 		for(i=0 ; *p && isdigit((int) *p) ; ++p, ++i)
 			/* SKIP AND COUNT */;
-		pData->port = MALLOC(i + 1);
+		pData->port = malloc(i + 1);
 		if(pData->port == NULL) {
 			LogError(0, NO_ERRCODE, "Could not get memory to store relp port, "
 				 "using default port, results may not be what you intend\n");

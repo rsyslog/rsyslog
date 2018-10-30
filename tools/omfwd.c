@@ -988,7 +988,7 @@ processMsg(wrkrInstanceData_t *__restrict__ const pWrkrData,
 		uLongf destLen = iMaxLine + iMaxLine/100 +12; /* recommended value from zlib doc */
 		uLong srcLen = l;
 		int ret;
-		CHKmalloc(out = (Bytef*) MALLOC(destLen));
+		CHKmalloc(out = (Bytef*) malloc(destLen));
 		out[0] = 'z';
 		out[1] = '\0';
 		ret = compress2((Bytef*) out+1, &destLen, (Bytef*) psz,
@@ -1436,7 +1436,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		tmp = ++p;
 		for(i=0 ; *p && isdigit((int) *p) ; ++p, ++i)
 			/* SKIP AND COUNT */;
-		pData->port = MALLOC(i + 1);
+		pData->port = malloc(i + 1);
 		if(pData->port == NULL) {
 			LogError(0, NO_ERRCODE, "Could not get memory to store syslog forwarding port, "
 				 "using default port, results may not be what you intend");
