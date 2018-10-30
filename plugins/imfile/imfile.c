@@ -707,9 +707,6 @@ act_obj_add(fs_edge_t *const edge, const char *const name, const int is_file,
 	}
 	act->next = edge->active;
 	edge->active = act;
-//dbgprintf("printout of fs tree after act_obj_add for '%s'\n", name);
-//fs_node_print(runModConf->conf_tree, 0);
-//dbg_wdmapPrint("wdmap after act_obj_add");
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(act != NULL) {
@@ -1017,9 +1014,6 @@ act_obj_unlink(act_obj_t *act)
 	}
 	act_obj_destroy(act, 1);
 	act = NULL;
-//dbgprintf("printout of fs tree post unlink\n");
-//fs_node_print(runModConf->conf_tree, 0);
-//dbg_wdmapPrint("wdmap after");
 }
 
 static void
@@ -2428,7 +2422,6 @@ do_fen(void)
 			if(act->edge->is_file) {
 				pollFile(act);
 			} else {
-				// curr: fs_node_walk(act->edge->parent, poll_tree);
 				fs_node_walk(act->edge->node, poll_tree);
 			}
 		}
