@@ -1,6 +1,16 @@
 ------------------------------------------------------------------------------
 Version 8.40.0 [v8-stable] 2018-12-11
--  CI
+- cleanup: remove no longer needed --enable-rtinst code
+  configure option --enable-rtinst is gone-away since a while, but there were
+  still some supporting code left. It required careful anaylsis what could
+  actually be removed. This is now done and the code fully cleaned up. This
+  greatly simplifies the code and also makes it better readable for
+  developers which are not deep inside the rsyslog code base.
+  As a positive side effect, we could eliminate mutex calls inside
+  the debug system. This means we are more likely to reproduce race
+  conditions in runs with debugging enabled.
+  closes https://github.com/rsyslog/rsyslog/issues/2211
+- CI
    * testbench: grep failed when string starting with "-" was used
      The search term was mistakenly interpreted as an option.
 ------------------------------------------------------------------------------
