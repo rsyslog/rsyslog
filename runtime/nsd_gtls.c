@@ -208,20 +208,16 @@ gtlsLoadOurCertKey(nsd_gtls_t *pThis)
 		ABORTgnutls;
 	}
 	pThis->bOurCertIsInit = 1;
-	free(data.data);
-	data.data = NULL;
 
 	/* try load private key */
 	CHKiRet(readFile(keyFile, &data));
 	CHKgnutls(gnutls_x509_privkey_init(&pThis->ourKey));
 	pThis->bOurKeyIsInit = 1;
 	CHKgnutls(gnutls_x509_privkey_import(pThis->ourKey, &data, GNUTLS_X509_FMT_PEM));
-	free(data.data);
 
 finalize_it:
+	free(data.data);
 	if(iRet != RS_RET_OK) {
-		if(data.data != NULL)
-			free(data.data);
 		if(pThis->bOurCertIsInit) {
 			for(unsigned i=0; i<pThis->nOurCerts; ++i) {
 				gnutls_x509_crt_deinit(pThis->pOurCerts[i]);
