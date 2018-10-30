@@ -1,4 +1,6 @@
 ------------------------------------------------------------------------------
+Version 8.40.0 [v8-stable] 2018-12-11
+------------------------------------------------------------------------------
 Version 8.39.0 [v8-stable] 2018-10-30
 - imfile: improve truncation detection
   previously, truncation was only detected at end of file. Especially with
