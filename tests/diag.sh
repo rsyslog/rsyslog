@@ -479,7 +479,7 @@ function get_mainqueuesize() {
 # grep for (partial) content. $1 is the content to check for, $2 the file to check
 function content_check() {
 	file=${2:-$RSYSLOG_OUT_LOG}
-	if ! grep -qF "$1" < "${file}"; then
+	if ! grep -qF -- "$1" < "${file}"; then
 	    printf '\n============================================================\n'
 	    printf 'FILE "%s" content:\n' "$file"
 	    cat -n ${file}
@@ -501,7 +501,7 @@ function content_check_with_count() {
 	while [  $timecounter -lt $timeoutend ]; do
 		let timecounter=timecounter+1
 
-		count=$(grep -F "$1" <${RSYSLOG_OUT_LOG} | wc -l)
+		count=$(grep -c -F -- "$1" <${RSYSLOG_OUT_LOG})
 
 		if [ $count -eq $2 ]; then
 			echo content_check_with_count success, \"$1\" occured $2 times
@@ -525,7 +525,7 @@ function content_check_with_count() {
 
 
 function custom_content_check() {
-	grep -qF "$1" < $2
+	grep -qF -- "$1" < $2
 	if [ "$?" -ne "0" ]; then
 	    echo FAIL: custom_content_check failed to find "'$1'" inside "'$2'"
 	    echo "file contents:"
@@ -542,13 +542,13 @@ function check_not_present() {
 	else
 		file="$2"
 	fi
-	grep -q "$1" < "$file"
+	grep -q -- "$1" < "$file"
 	if [ "$?" -eq "0" ]; then
 		echo FAIL: check_not present found
 		echo $1
 		echo inside file $file of $(wc -l < $file) lines
 		echo samples:
-		cat -n "$file" | grep "$1" | head -10
+		cat -n "$file" | grep -- "$1" | head -10
 		error_exit 1
 	fi
 }
@@ -647,7 +647,7 @@ function await_lookup_table_reload() {
 
 
 function assert_content_missing() {
-	grep -qF "$1" < ${RSYSLOG_OUT_LOG}
+	grep -qF -- "$1" < ${RSYSLOG_OUT_LOG}
 	if [ "$?" -eq "0" ]; then
 		echo content-missing assertion failed, some line matched pattern "'$1'"
 		error_exit 1
@@ -656,7 +656,7 @@ function assert_content_missing() {
 
 
 function custom_assert_content_missing() {
-	grep -qF "$1" < $2
+	grep -qF -- "$1" < $2
 	if [ "$?" -eq "0" ]; then
 		echo content-missing assertion failed, some line in "'$2'" matched pattern "'$1'"
 		cat -n "$2"
