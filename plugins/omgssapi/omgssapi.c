@@ -211,7 +211,7 @@ static rsRetVal TCPSendGSSInit(void *pvData)
 
 	base = (cs.gss_base_service_name == NULL) ? "host" : cs.gss_base_service_name;
 	out_tok.length = strlen(pData->f_hname) + strlen(base) + 2;
-	CHKmalloc(out_tok.value = MALLOC(out_tok.length));
+	CHKmalloc(out_tok.value = malloc(out_tok.length));
 	strcpy(out_tok.value, base);
 	strcat(out_tok.value, "@");
 	strcat(out_tok.value, pData->f_hname);
@@ -435,7 +435,7 @@ CODESTARTdoAction
 			uLong srcLen = l;
 			int ret;
 			/* TODO: optimize malloc sequence? -- rgerhards, 2008-09-02 */
-			CHKmalloc(out = (Bytef*) MALLOC(iMaxLine + iMaxLine/100 + 12));
+			CHKmalloc(out = (Bytef*) malloc(iMaxLine + iMaxLine/100 + 12));
 			out[0] = 'z';
 			out[1] = '\0';
 			ret = compress2((Bytef*) out+1, &destLen, (Bytef*) psz,
@@ -577,7 +577,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		tmp = ++p;
 		for(i=0 ; *p && isdigit((int) *p) ; ++p, ++i)
 			/* SKIP AND COUNT */;
-		pData->port = MALLOC(i + 1);
+		pData->port = malloc(i + 1);
 		if(pData->port == NULL) {
 			LogError(0, NO_ERRCODE, "Could not get memory to store syslog forwarding port, "
 				 "using default port, results may not be what you intend\n");

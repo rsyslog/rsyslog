@@ -135,7 +135,7 @@ wtpConstructFinalize(wtp_t *pThis)
 	/* alloc and construct workers - this can only be done in finalizer as we previously do
 	 * not know the max number of workers
 	 */
-	CHKmalloc(pThis->pWrkr = MALLOC(sizeof(wti_t*) * pThis->iNumWorkerThreads));
+	CHKmalloc(pThis->pWrkr = malloc(sizeof(wti_t*) * pThis->iNumWorkerThreads));
 	
 	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
 		CHKiRet(wtiConstruct(&pThis->pWrkr[i]));
@@ -320,7 +320,6 @@ wtpWrkrExecCleanup(wti_t *pWti)
 {
 	wtp_t *pThis;
 
-	BEGINfunc
 	ISOBJ_TYPE_assert(pWti, wti);
 	pThis = pWti->pWtp;
 	ISOBJ_TYPE_assert(pThis, wtp);
@@ -341,7 +340,6 @@ wtpWrkrExecCleanup(wti_t *pWti)
 			wtpGetDbgHdr(pThis), (unsigned long) pWti, numWorkersNow);
 	}
 
-	ENDfunc
 }
 
 
@@ -354,7 +352,6 @@ wtpWrkrExecCancelCleanup(void *arg)
 	wti_t *pWti = (wti_t*) arg;
 	wtp_t *pThis;
 
-	BEGINfunc
 	ISOBJ_TYPE_assert(pWti, wti);
 	pThis = pWti->pWtp;
 	ISOBJ_TYPE_assert(pThis, wtp);
@@ -363,11 +360,6 @@ wtpWrkrExecCancelCleanup(void *arg)
 
 	wtpWrkrExecCleanup(pWti);
 
-	ENDfunc
-	/* NOTE: we must call ENDfunc FIRST, because otherwise the schedule may activate the main
-	 * thread after the broadcast, which could destroy the debug class, resulting in a potential
-	 * segfault. So we need to do the broadcast as actually the last action in our processing
-	 */
 	pthread_cond_broadcast(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
 }
 
@@ -390,7 +382,6 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	uchar thrdName[32] = "rs:";
 #	endif
 
-	BEGINfunc
 	ISOBJ_TYPE_assert(pWti, wti);
 	pThis = pWti->pWtp;
 	ISOBJ_TYPE_assert(pThis, wtp);
@@ -425,11 +416,6 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	pthread_cleanup_push(mutexCancelCleanup, &pThis->mutWtp);
 	wtpWrkrExecCleanup(pWti);
 
-	ENDfunc
-	/* NOTE: we must call ENDfunc FIRST, because otherwise the schedule may activate the main
-	 * thread after the broadcast, which could destroy the debug class, resulting in a potential
-	 * segfault. So we need to do the broadcast as actually the last action in our processing
-	 */
 	pthread_cond_broadcast(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
 	pthread_cleanup_pop(1); /* unlock mutex */
 	pthread_exit(0);
@@ -591,7 +577,7 @@ wtpSetDbgHdr(wtp_t *pThis, uchar *pszMsg, size_t lenMsg)
 		pThis->pszDbgHdr = NULL;
 	}
 
-	if((pThis->pszDbgHdr = MALLOC(lenMsg + 1)) == NULL)
+	if((pThis->pszDbgHdr = malloc(lenMsg + 1)) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	memcpy(pThis->pszDbgHdr, pszMsg, lenMsg + 1); /* always think about the \0! */

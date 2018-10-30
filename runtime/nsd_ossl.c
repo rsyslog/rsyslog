@@ -1352,7 +1352,7 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr)
 
 	if(pThis->pszRcvBuf == NULL) {
 		/* we have no buffer, so we need to malloc one */
-		CHKmalloc(pThis->pszRcvBuf = MALLOC(NSD_OSSL_MAX_RCVBUF));
+		CHKmalloc(pThis->pszRcvBuf = malloc(NSD_OSSL_MAX_RCVBUF));
 		pThis->lenRcvBuf = -1;
 	}
 

@@ -84,7 +84,7 @@ static rsRetVal SetString(prop_t *pThis, const uchar *psz, const int len)
 	if(len < CONF_PROP_BUFSIZE) {
 		memcpy(pThis->szVal.sz, psz, len + 1);
 	} else {
-		CHKmalloc(pThis->szVal.psz = MALLOC(len + 1));
+		CHKmalloc(pThis->szVal.psz = malloc(len + 1));
 		memcpy(pThis->szVal.psz, psz, len + 1);
 	}
 
@@ -103,7 +103,6 @@ static int GetStringLen(prop_t *pThis)
 /* get string */
 static rsRetVal GetString(prop_t *pThis, uchar **ppsz, int *plen)
 {
-	BEGINfunc
 	ISOBJ_TYPE_assert(pThis, prop);
 	if(pThis->len < CONF_PROP_BUFSIZE) {
 		*ppsz = pThis->szVal.sz;
@@ -111,7 +110,6 @@ static rsRetVal GetString(prop_t *pThis, uchar **ppsz, int *plen)
 		*ppsz = pThis->szVal.psz;
 	}
 	*plen = pThis->len;
-	ENDfunc
 	return RS_RET_OK;
 }
 

@@ -102,8 +102,8 @@ doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 	uchar szName[512];
 	uchar *pModName;
 
-	ASSERT(pp != NULL);
-	ASSERT(*pp != NULL);
+	assert(pp != NULL);
+	assert(*pp != NULL);
 
 	skipWhiteSpace(pp); /* skip over any whitespace */
 	if(getSubString(pp, (char*) szName, sizeof(szName), ' ')  != 0) {
@@ -161,9 +161,9 @@ doNameLine(uchar **pp, void* pVal)
 	enum eDirective eDir;
 	char szName[128];
 
-	ASSERT(pp != NULL);
+	assert(pp != NULL);
 	p = *pp;
-	ASSERT(p != NULL);
+	assert(p != NULL);
 
 	eDir = (enum eDirective) pVal;	/* this time, it actually is NOT a pointer! */
 
@@ -219,7 +219,7 @@ cfsysline(uchar *p)
 	DEFiRet;
 	uchar szCmd[64];
 
-	ASSERT(p != NULL);
+	assert(p != NULL);
 	errno = 0;
 	if(getSubString(&p, (char*) szCmd, sizeof(szCmd), ' ')  != 0) {
 		LogError(0, RS_RET_NOT_FOUND, "Invalid $-configline "
@@ -264,9 +264,9 @@ rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEn
 	cstr_t *pStrB = NULL;
 	DEFiRet;
 
-	ASSERT(pp != NULL);
-	ASSERT(*pp != NULL);
-	ASSERT(pOMSR != NULL);
+	assert(pp != NULL);
+	assert(*pp != NULL);
+	assert(pOMSR != NULL);
 
 	p =*pp;
 	/* a template must follow - search it and complain, if not found */
@@ -329,7 +329,7 @@ cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int 
 	int i;
 	DEFiRet;
 
-	ASSERT(pOMSR != NULL);
+	assert(pOMSR != NULL);
 
 	pName = pFileName;
 	i = 1; /* we start at 1 so that we reseve space for the '\0'! */
@@ -360,7 +360,7 @@ rsRetVal DecodePRIFilter(uchar *pline, uchar pmask[])
 	uchar xbuf[200];
 	DEFiRet;
 
-	ASSERT(pline != NULL);
+	assert(pline != NULL);
 
 	dbgprintf("Decoding traditional PRI filter '%s'\n", pline);
 
@@ -502,8 +502,8 @@ rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
 	void *pModData;
 	DEFiRet;
 
-	ASSERT(p != NULL);
-	ASSERT(ppAction != NULL);
+	assert(p != NULL);
+	assert(ppAction != NULL);
 
 	/* loop through all modules and see if one picks up the line */
 	node = module.GetNxtCnfType(conf, NULL, eMOD_OUT);

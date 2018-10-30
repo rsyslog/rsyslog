@@ -234,7 +234,7 @@ getPartition(instanceData *const __restrict__ pData)
 
 /* must always be called with appropriate locks taken */
 static void
-d_free_topic(rd_kafka_topic_t **topic)
+free_topic(rd_kafka_topic_t **topic)
 {
 	if (*topic != NULL) {
 		DBGPRINTF("omkafka: closing topic %s\n", rd_kafka_topic_name(*topic));
@@ -280,7 +280,7 @@ failedmsg_entry_construct(const char *const msg, const size_t msglen, const char
 static void
 closeTopic(instanceData *__restrict__ const pData)
 {
-	d_free_topic(&pData->pTopic);
+	free_topic(&pData->pTopic);
 }
 
 /* these dynaTopic* functions are only slightly modified versions of those found in omfile.c.
@@ -295,7 +295,7 @@ dynaTopicDelCacheEntry(instanceData *__restrict__ const pData, const int iEntry,
 {
 	dynaTopicCacheEntry **pCache = pData->dynCache;
 	DEFiRet;
-	ASSERT(pCache != NULL);
+	assert(pCache != NULL);
 
 	if(pCache[iEntry] == NULL)
 		FINALIZE;
@@ -305,7 +305,7 @@ dynaTopicDelCacheEntry(instanceData *__restrict__ const pData, const int iEntry,
 		pCache[iEntry]->pName == NULL ? UCHAR_CONSTANT("[OPEN FAILED]") : pCache[iEntry]->pName);
 
 	if(pCache[iEntry]->pName != NULL) {
-		d_free(pCache[iEntry]->pName);
+		free(pCache[iEntry]->pName);
 		pCache[iEntry]->pName = NULL;
 	}
 
@@ -313,7 +313,7 @@ dynaTopicDelCacheEntry(instanceData *__restrict__ const pData, const int iEntry,
 
 	if(bFreeEntry) {
 		pthread_rwlock_destroy(&pCache[iEntry]->lock);
-		d_free(pCache[iEntry]);
+		free(pCache[iEntry]);
 		pCache[iEntry] = NULL;
 	}
 
@@ -326,16 +326,14 @@ static void
 dynaTopicFreeCacheEntries(instanceData *__restrict__ const pData)
 {
 	register int i;
-	ASSERT(pData != NULL);
+	assert(pData != NULL);
 
-	BEGINfunc;
 	pthread_mutex_lock(&pData->mutDynCache);
 	for(i = 0 ; i < pData->iCurrCacheSize ; ++i) {
 		dynaTopicDelCacheEntry(pData, i, 1);
 	}
 	pData->iCurrElt = -1; /* invalidate current element */
 	pthread_mutex_unlock(&pData->mutDynCache);
-	ENDfunc;
 }
 
 /* create the topic object */
@@ -423,8 +421,8 @@ prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict_
 	dynaTopicCacheEntry *entry = NULL;
 	rd_kafka_topic_t *tmpTopic = NULL;
 	DEFiRet;
-	ASSERT(pData != NULL);
-	ASSERT(newTopicName != NULL);
+	assert(pData != NULL);
+	assert(newTopicName != NULL);
 
 	pCache = pData->dynCache;
 	/* first check, if we still have the current topic */
@@ -503,7 +501,7 @@ prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict_
 	}
 
 	if((pCache[iFirstFree]->pName = ustrdup(newTopicName)) == NULL) {
-		d_free_topic(&tmpTopic);
+		free_topic(&tmpTopic);
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	pCache[iFirstFree]->pTopic = tmpTopic;
@@ -1453,7 +1451,7 @@ CODESTARTfreeInstance
 	pthread_rwlock_wrlock(&pData->rkLock);
 	closeKafka(pData);
 	if(pData->dynaTopic && pData->dynCache != NULL) {
-		d_free(pData->dynCache);
+		free(pData->dynCache);
 		pData->dynCache = NULL;
 	}
 	/* Persist failed messages */

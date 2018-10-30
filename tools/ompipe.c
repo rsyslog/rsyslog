@@ -175,7 +175,7 @@ static rsRetVal writePipe(uchar **ppString, instanceData *pData)
 	int iLenWritten;
 	DEFiRet;
 
-	ASSERT(pData != NULL);
+	assert(pData != NULL);
 
 	if(pData->fd == -1) {
 		rsRetVal iRetLocal;
@@ -381,14 +381,12 @@ CODESTARTparseSelectorAct
 	 */
 	if(*p == '|') {
 		if((iRet = createInstance(&pData)) != RS_RET_OK) {
-			ENDfunc
 			return iRet; /* this can not use RET_iRet! */
 		}
 	} else {
 		/* this is not clean, but we need it for the time being
 		 * TODO: remove when cleaning up modularization
 		 */
-		ENDfunc
 		return RS_RET_CONFLINE_UNPROCESSED;
 	}
 

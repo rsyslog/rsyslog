@@ -1,8 +1,6 @@
 /* debug.c
  *
- * This file proides debug and run time error analysis support. Some of the
- * settings are very performance intense and my be turned off during a release
- * build.
+ * This file proides debug support.
  *
  * File begun on 2008-01-22 by RGerhards
  *
@@ -53,7 +51,6 @@
 
 #include "rsyslog.h"
 #include "debug.h"
-#include "atomic.h"
 #include "cfsysline.h"
 #include "obj.h"
 
@@ -63,139 +60,14 @@ DEFobjCurrIf(obj)
 int Debug = DEBUG_OFF;		/* debug flag  - read-only after startup */
 int debugging_on = 0;	 /* read-only, except on sig USR1 */
 int dbgTimeoutToStderr = 0;
-static int bLogFuncFlow = 0; /* shall the function entry and exit be logged to the debug log? */
-static int bLogAllocFree = 0; /* shall calls to (m/c)alloc and free be logged to the debug log? */
-static int bPrintFuncDBOnExit = 0; /* shall the function entry and exit be logged to the debug log? */
-static int bPrintMutexAction = 0; /* shall mutex calls be printed to the debug log? */
 static int bPrintTime = 1;	/* print a timestamp together with debug message */
-static int bPrintAllDebugOnExit = 0;
-static int bAbortTrace = 1;	/* print a trace after SIGABRT or SIGSEGV */
 static int bOutputTidToStderr = 0;/* output TID to stderr on thread creation */
 char *pszAltDbgFileName = NULL; /* if set, debug output is *also* sent to here */
 int altdbg = -1;	/* and the handle for alternate debug output */
 int stddbg = 1; /* the handle for regular debug output, set to stdout if not forking, -1 otherwise */
 static uint64_t dummy_errcount = 0; /* just to avoid some static analyzer complaints */
+static pthread_key_t keyThrdName;
 
-/* list of files/objects that should be printed */
-typedef struct dbgPrintName_s {
-	uchar *pName;
-	struct dbgPrintName_s *pNext;
-} dbgPrintName_t;
-
-
-/* forward definitions */
-static void dbgGetThrdName(char *pszBuf, size_t lenBuf, pthread_t thrd, int bIncludeNumID);
-static dbgThrdInfo_t *dbgGetThrdInfo(void);
-
-
-/* This lists are single-linked and members are added at the top */
-static dbgPrintName_t *printNameFileRoot = NULL;
-
-
-/* list of all known FuncDBs. We use a special list, because it must only be single-linked. As
- * functions never disappear, we only need to add elements when we see a new one and never need
- * to remove anything. For this, we simply add at the top, which saves us a Last pointer. The goal
- * is to use as few memory as possible.
- */
-typedef struct dbgFuncDBListEntry_s {
-	dbgFuncDB_t *pFuncDB;
-	struct dbgFuncDBListEntry_s *pNext;
-} dbgFuncDBListEntry_t;
-dbgFuncDBListEntry_t *pFuncDBListRoot;
-
-static pthread_mutex_t mutFuncDBList;
-
-typedef struct dbgMutLog_s {
-	struct dbgMutLog_s *pNext;
-	struct dbgMutLog_s *pPrev;
-	pthread_mutex_t *mut;
-	pthread_t thrd;
-	dbgFuncDB_t *pFuncDB;
-	int lockLn;	/* the actual line where the mutex was locked */
-	short mutexOp;
-} dbgMutLog_t;
-
-
-static dbgThrdInfo_t *dbgCallStackListRoot = NULL;
-static dbgThrdInfo_t *dbgCallStackListLast = NULL;
-static pthread_mutex_t mutCallStack;
-
-static pthread_mutex_t mutdbgprint;
-
-static pthread_key_t keyCallStack;
-
-
-/* we do not have templates, so we use some macros to create linked list handlers
- * for the several types
- * DLL means "doubly linked list"
- * rgerhards, 2008-01-23
- */
-#define DLL_Del(type, pThis) \
-	if(pThis->pPrev != NULL) \
-		pThis->pPrev->pNext = pThis->pNext; \
-	if(pThis->pNext != NULL) \
-		pThis->pNext->pPrev = pThis->pPrev; \
-	if(pThis == dbg##type##ListRoot) \
-		dbg##type##ListRoot = pThis->pNext; \
-	if(pThis == dbg##type##ListLast) \
-		dbg##type##ListLast = pThis->pPrev; \
-	free(pThis);
-
-#define DLL_Add(type, pThis) \
-		if(dbg##type##ListRoot == NULL) { \
-			dbg##type##ListRoot = pThis; \
-			dbg##type##ListLast = pThis; \
-		} else { \
-			pThis->pPrev = dbg##type##ListLast; \
-			dbg##type##ListLast->pNext = pThis; \
-			dbg##type##ListLast = pThis; \
-		}
-
-/* we need to do our own mutex cancel cleanup handler as it shall not
- * be subject to the debugging instrumentation (that would probably run us
- * into an infinite loop
- */
-static void dbgMutexCancelCleanupHdlr(void *pmut)
-{
-	pthread_mutex_unlock((pthread_mutex_t*) pmut);
-}
-
-
-/* ------------------------- mutex tracking code ------------------------- */
-
-/* ------------------------- FuncDB utility functions ------------------------- */
-
-#define SIZE_FUNCDB_MUTEX_TABLE(pFuncDB) ((int) (sizeof(pFuncDB->mutInfo) / sizeof(dbgFuncDBmutInfoEntry_t)))
-
-/* print a FuncDB
- */
-static void dbgFuncDBPrint(dbgFuncDB_t *pFuncDB)
-{
-	assert(pFuncDB != NULL);
-	assert(pFuncDB->magic == dbgFUNCDB_MAGIC);
-	/* make output suitable for sorting on invocation count */
-	dbgprintf("%10.10ld times called: %s:%d:%s\n", pFuncDB->nTimesCalled, pFuncDB->file, pFuncDB->line,
-		pFuncDB->func);
-}
-
-
-/* print all funcdb entries
- */
-static void dbgFuncDBPrintAll(void)
-{
-	dbgFuncDBListEntry_t *pFuncDBList;
-	int nFuncs = 0;
-
-	for(pFuncDBList = pFuncDBListRoot ; pFuncDBList != NULL ; pFuncDBList = pFuncDBList->pNext) {
-		dbgFuncDBPrint(pFuncDBList->pFuncDB);
-		nFuncs++;
-	}
-
-	dbgprintf("%d unique functions called\n", nFuncs);
-}
-
-
-/* ------------------------- END FuncDB utility functions ------------------------- */
 
 /* output the current thread ID to "relevant" places
  * (what "relevant" means is determinded by various ways)
@@ -213,152 +85,47 @@ dbgOutputTID(char* name __attribute__((unused)))
 }
 
 
-/* ------------------------- end mutex tracking code ------------------------- */
-
-
-/* ------------------------- thread tracking code ------------------------- */
-
-/* get ptr to call stack - if none exists, create a new stack
- */
-static dbgThrdInfo_t *dbgGetThrdInfo(void)
-{
-	dbgThrdInfo_t *pThrd;
-
-	pthread_mutex_lock(&mutCallStack);
-	if((pThrd = pthread_getspecific(keyCallStack)) == NULL) {
-		/* construct object */
-		if((pThrd = calloc(1, sizeof(dbgThrdInfo_t))) != NULL) {
-			pThrd->thrd = pthread_self();
-			(void) pthread_setspecific(keyCallStack, pThrd);
-			DLL_Add(CallStack, pThrd);
-		}
-	}
-	pthread_mutex_unlock(&mutCallStack);
-	return pThrd;
-}
-
-
-
-/* find a specific thread ID. It must be present, else something is wrong
- */
-static dbgThrdInfo_t *
-dbgFindThrd(pthread_t thrd)
-{
-	dbgThrdInfo_t *pThrd;
-
-	for(pThrd = dbgCallStackListRoot ; pThrd != NULL ; pThrd = pThrd->pNext) {
-		if(pThrd->thrd == thrd)
-			break;
-	}
-	return pThrd;
-}
-
-
 /* build a string with the thread name. If none is set, the thread ID is
- * used instead. Caller must provide buffer space. If bIncludeNumID is set
- * to 1, the numerical ID is always included.
- * rgerhards 2008-01-23
+ * used instead. Caller must provide buffer space.
  */
-static void dbgGetThrdName(char *pszBuf, size_t lenBuf, pthread_t thrd, int bIncludeNumID)
+static void ATTR_NONNULL()
+dbgGetThrdName(char *const pszBuf, const size_t lenBuf, const pthread_t thrdID)
 {
-	dbgThrdInfo_t *pThrd;
-
 	assert(pszBuf != NULL);
 
-	pThrd = dbgFindThrd(thrd);
-
-	if(pThrd == 0 || pThrd->pszThrdName == NULL) {
-		/* no thread name, use numeric value  */
-		snprintf(pszBuf, lenBuf, "%lx", (long) thrd);
+	const char *const thrdName = pthread_getspecific(keyThrdName);
+	if(thrdName == NULL) {
+		snprintf(pszBuf, lenBuf, "%lx", (long) thrdID);
 	} else {
-		if(bIncludeNumID) {
-			snprintf(pszBuf, lenBuf, "%-15s (%lx)", pThrd->pszThrdName, (long) thrd);
-		} else {
-			snprintf(pszBuf, lenBuf, "%-15s", pThrd->pszThrdName);
-		}
+		snprintf(pszBuf, lenBuf, "%-15s", thrdName);
 	}
 }
 
 
-/* set a name for the current thread. The caller provided string is duplicated.
- * Note: we must lock the "dbgprint" mutex, because dbgprint() uses the thread
- * name and we could get a race (and abort) in cases where both are executed in
- * parallel and we free or incompletely-copy the string.
+/* set a name for the current thread */
+void ATTR_NONNULL()
+dbgSetThrdName(const uchar *const pszName)
+{
+	(void) pthread_setspecific(keyThrdName, strdup((char*) pszName));
+}
+
+
+/* destructor for thread name (called by pthreads!) */
+static void dbgThrdNameDestruct(void *arg)
+{
+	free(arg);
+}
+
+
+/* write the debug message. This is a helper to dbgprintf and dbgoprint which
+ * contains common code. added 2008-09-26 rgerhards
+ * Note: We need to split the function due to the bad nature of POSIX
+ * cancel cleanup handlers.
  */
-void dbgSetThrdName(uchar *pszName)
+static void DBGL_UNUSED
+dbgprint(obj_t *pObj, char *pszMsg, const char *pszFileName, const size_t lenMsg)
 {
-	pthread_mutex_lock(&mutdbgprint);
-	dbgThrdInfo_t *pThrd = dbgGetThrdInfo();
-	if(pThrd->pszThrdName != NULL)
-		free(pThrd->pszThrdName);
-	pThrd->pszThrdName = strdup((char*)pszName);
-	pthread_mutex_unlock(&mutdbgprint);
-}
-
-
-/* destructor for a call stack object */
-static void dbgCallStackDestruct(void *arg)
-{
-	dbgThrdInfo_t *pThrd = (dbgThrdInfo_t*) arg;
-
-	dbgprintf("destructor for debug call stack %p called\n", pThrd);
-	if(pThrd->pszThrdName != NULL) {
-		free(pThrd->pszThrdName);
-	}
-
-	pthread_mutex_lock(&mutCallStack);
-	DLL_Del(CallStack, pThrd);
-	pthread_mutex_unlock(&mutCallStack);
-}
-
-
-/* print a thread's call stack
- */
-static void dbgCallStackPrint(dbgThrdInfo_t *pThrd)
-{
-	int i;
-	char pszThrdName[64];
-
-	pthread_mutex_lock(&mutCallStack);
-	dbgGetThrdName(pszThrdName, sizeof(pszThrdName), pThrd->thrd, 1);
-	dbgprintf("\n");
-	dbgprintf("Recorded Call Order for Thread '%s':\n", pszThrdName);
-	for(i = 0 ; i < pThrd->stackPtr ; i++) {
-		dbgprintf("%d: %s:%d:%s:\n", i, pThrd->callStack[i]->file, pThrd->lastLine[i],
-			pThrd->callStack[i]->func);
-	}
-	dbgprintf("maximum number of nested calls for this thread: %d.\n", pThrd->stackPtrMax);
-	dbgprintf("NOTE: not all calls may have been recorded, code does not currently guarantee that!\n");
-	pthread_mutex_unlock(&mutCallStack);
-}
-
-/* print all threads call stacks
- */
-static void dbgCallStackPrintAll(void)
-{
-	dbgThrdInfo_t *pThrd;
-	/* stack info */
-	for(pThrd = dbgCallStackListRoot ; pThrd != NULL ; pThrd = pThrd->pNext) {
-		dbgCallStackPrint(pThrd);
-	}
-}
-
-static
-void dbgPrintAllDebugInfo(void)
-{
-	dbgCallStackPrintAll();
-	if(bPrintFuncDBOnExit)
-		dbgFuncDBPrintAll();
-}
-
-
-/* actually write the debug message. This is a separate fuction because the cleanup_push/_pop
- * interface otherwise is unsafe to use (generates compiler warnings at least).
- * 2009-05-20 rgerhards
- */
-static void
-do_dbgprint(uchar *pszObjName, char *pszMsg, const char *pszFileName, size_t lenMsg)
-{
+	uchar *pszObjName = NULL;
 	static pthread_t ptLastThrdID = 0;
 	static int bWasNL = 0;
 	char pszThrdName[64]; /* 64 is to be on the safe side, anything over 20 is bad... */
@@ -371,7 +138,10 @@ do_dbgprint(uchar *pszObjName, char *pszMsg, const char *pszFileName, size_t len
 	struct timeval tv;
 #	endif
 
-#if 1
+	if(pObj != NULL) {
+		pszObjName = obj.GetName(pObj);
+	}
+
 	/* The bWasNL handler does not really work. It works if no thread
 	 * switching occurs during non-NL messages. Else, things are messed
 	 * up. Anyhow, it works well enough to provide useful help during
@@ -389,10 +159,7 @@ do_dbgprint(uchar *pszObjName, char *pszMsg, const char *pszFileName, size_t len
 		ptLastThrdID = pthread_self();
 	}
 
-	/* do not cache the thread name, as the caller might have changed it
-	 * TODO: optimized, invalidate cache when new name is set
-	 */
-	dbgGetThrdName(pszThrdName, sizeof(pszThrdName), ptLastThrdID, 0);
+	dbgGetThrdName(pszThrdName, sizeof(pszThrdName), ptLastThrdID);
 
 	if(bWasNL) {
 		if(bPrintTime) {
@@ -422,7 +189,6 @@ do_dbgprint(uchar *pszObjName, char *pszMsg, const char *pszFileName, size_t len
 			"%s: ", pszFileName);
 		offsWriteBuf += lenWriteBuf;
 	}
-#endif
 	if(lenMsg > sizeof(pszWriteBuf) - offsWriteBuf)
 		lenCopy = sizeof(pszWriteBuf) - offsWriteBuf;
 	else
@@ -447,42 +213,10 @@ do_dbgprint(uchar *pszObjName, char *pszMsg, const char *pszFileName, size_t len
 	bWasNL = (pszMsg[lenMsg - 1] == '\n') ? 1 : 0;
 }
 
-static void
-dbgprintfWithCancelHdlr(uchar *const pszObjName, char *pszMsg,
-	const char *pszFileName, const size_t lenMsg)
-{
-	pthread_mutex_lock(&mutdbgprint);
-	pthread_cleanup_push(dbgMutexCancelCleanupHdlr, &mutdbgprint);
-	do_dbgprint(pszObjName, pszMsg, pszFileName, lenMsg);
-	pthread_cleanup_pop(1);
-}
-/* write the debug message. This is a helper to dbgprintf and dbgoprint which
- * contains common code. added 2008-09-26 rgerhards
- * Note: We need to split the function due to the bad nature of POSIX
- * cancel cleanup handlers.
- */
-static void DBGL_UNUSED
-dbgprint(obj_t *pObj, char *pszMsg, const char *pszFileName, const size_t lenMsg)
-{
-	uchar *pszObjName = NULL;
-
-	/* we must get the object name before we lock the mutex, because the object
-	 * potentially calls back into us. If we locked the mutex, we would deadlock
-	 * ourselfs. On the other hand, the GetName call needs not to be protected, as
-	 * this thread has a valid reference. If such an object is deleted by another
-	 * thread, we are in much more trouble than just for dbgprint(). -- rgerhards, 2008-09-26
-	 */
-	if(pObj != NULL) {
-		pszObjName = obj.GetName(pObj);
-	}
-
-	dbgprintfWithCancelHdlr(pszObjName, pszMsg, pszFileName, lenMsg);
-}
 
 static int DBGL_UNUSED
 checkDbgFile(const char *srcname)
 {
-
 	if(glblDbgFilesNum == 0) {
 		return 1;
 	}
@@ -520,16 +254,6 @@ r_dbgoprint( const char *srcname, obj_t *pObj, const char *fmt, ...)
 	if(!checkDbgFile(srcname)) {
 		return;
 	}
-
-	/* a quick and very dirty hack to enable us to display just from those objects
-	 * that we are interested in. So far, this must be changed at compile time (and
-	 * chances are great it is commented out while you read it. Later, this shall
-	 * be selectable via the environment. -- rgerhards, 2008-02-20
-	 */
-#if 0
-	if(objGetObjID(pObj) != OBJexpr)
-		return;
-#endif
 
 	va_start(ap, fmt);
 	lenWriteBuf = vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
@@ -582,15 +306,6 @@ r_dbgprintf(const char *srcname, const char *fmt, ...)
 }
 #endif
 
-
-/* Handler for SIGUSR2. Dumps all available debug output
- */
-static void sigusr2Hdlr(int __attribute__((unused)) signum)
-{
-	dbgprintf("SIGUSR2 received, dumping debug information\n");
-	dbgPrintAllDebugInfo();
-}
-
 /* support system to set debug options at runtime */
 
 
@@ -599,77 +314,36 @@ static void sigusr2Hdlr(int __attribute__((unused)) signum)
  * otherwise. 0 means there are NO MORE options to be
  * processed. -- rgerhards, 2008-02-28
  */
-static int
-dbgGetRTOptNamVal(uchar **ppszOpt, uchar **ppOptName, uchar **ppOptVal)
+static int ATTR_NONNULL()
+dbgGetRTOptNamVal(const uchar **const ppszOpt, uchar **const ppOptName)
 {
 	int bRet = 0;
-	uchar *p;
+	const uchar *p = *ppszOpt;
 	size_t i;
-	static uchar optname[128]; /* not thread- or reentrant-safe, but that      */
-	static uchar optval[1024]; /* doesn't matter (called only once at startup) */
+	static uchar optname[128] = "";
 
 	assert(ppszOpt != NULL);
 	assert(*ppszOpt != NULL);
 
-	/* make sure we have some initial values */
-	optname[0] = '\0';
-	optval[0] = '\0';
-
-	p = *ppszOpt;
 	/* skip whitespace */
 	while(*p && isspace(*p))
 		++p;
 
-	/* name - up until '=' or whitespace */
+	/* name: up until whitespace */
 	i = 0;
-	while(i < (sizeof(optname) - 1) && *p && *p != '=' && !isspace(*p)) {
+	while(i < (sizeof(optname) - 1) && *p && !isspace(*p)) {
 		optname[i++] = *p++;
 	}
 
 	if(i > 0) {
 		bRet = 1;
 		optname[i] = '\0';
-		if(*p == '=') {
-			/* we have a value, get it */
-			++p;
-			i = 0;
-			while(i < (sizeof(optval) - 1) && *p && !isspace(*p)) {
-				optval[i++] = *p++;
-			}
-			optval[i] = '\0';
-		}
 	}
 
 	/* done */
 	*ppszOpt = p;
 	*ppOptName = optname;
-	*ppOptVal = optval;
 	return bRet;
-}
-
-
-/* create new PrintName list entry and add it to list (they will never
- * be removed. -- rgerhards, 2008-02-28
- */
-static void
-dbgPrintNameAdd(uchar *pName, dbgPrintName_t **ppRoot)
-{
-	dbgPrintName_t *pEntry;
-
-	if((pEntry = calloc(1, sizeof(dbgPrintName_t))) == NULL) {
-		fprintf(stderr, "ERROR: out of memory during debug setup\n");
-		exit(1);
-	}
-
-	if((pEntry->pName = (uchar*) strdup((char*) pName)) == NULL) {
-		fprintf(stderr, "ERROR: out of memory during debug setup\n");
-		exit(1);
-	}
-
-	if(*ppRoot != NULL) {
-		pEntry->pNext = *ppRoot; /* we enqueue at the front */
-	}
-	*ppRoot = pEntry;
 }
 
 
@@ -688,31 +362,24 @@ dbgGetDbglogFd(void)
 static void
 dbgGetRuntimeOptions(void)
 {
-	uchar *pszOpts;
-	uchar *optval;
+	const uchar *pszOpts;
 	uchar *optname;
 
 	/* set some defaults */
 	if((pszOpts = (uchar*) getenv("RSYSLOG_DEBUG")) != NULL) {
 		/* we have options set, so let's process them */
-		while(dbgGetRTOptNamVal(&pszOpts, &optname, &optval)) {
+		while(dbgGetRTOptNamVal(&pszOpts, &optname)) {
 			if(!strcasecmp((char*)optname, "help")) {
 				fprintf(stderr,
 					"rsyslogd " VERSION " runtime debug support - help requested, "
 					"rsyslog terminates\n\nenvironment variables:\n"
-					"addional logfile: export RSYSLOG_DEBUGFILE=\"/path/to/file\"\n"
+					"additional logfile: export RSYSLOG_DEBUGFILE=\"/path/to/file\"\n"
 					"to set: export RSYSLOG_DEBUG=\"cmd cmd cmd\"\n\n"
 					"Commands are (all case-insensitive):\n"
-					"help (this list, terminates rsyslogd\n"
-					"LogFuncFlow\n"
-					"LogAllocFree (very partly implemented)\n"
-					"PrintFuncDB\n"
-					"PrintMutexAction\n"
-					"PrintAllDebugInfoOnExit (not yet implemented)\n"
+					"help (this list, terminates rsyslogd)\n"
 					"NoLogTimestamp\n"
-					"Nostdoout\n"
+					"Nostdout\n"
 					"OutputTidToStderr\n"
-					"filetrace=file (may be provided multiple times)\n"
 					"DebugOnDemand - enables debugging on USR1, but does not turn on output\n"
 					"\nSee debug.html in your doc set or http://www.rsyslog.com for details\n");
 				exit(1);
@@ -729,36 +396,15 @@ dbgGetRuntimeOptions(void)
 				dbgprintf("Note: debug on demand turned on via configuraton file, "
 					  "use USR1 signal to activate.\n");
 				debugging_on = 0;
-			} else if(!strcasecmp((char*)optname, "logfuncflow")) {
-				bLogFuncFlow = 1;
-			} else if(!strcasecmp((char*)optname, "logallocfree")) {
-				bLogAllocFree = 1;
-			} else if(!strcasecmp((char*)optname, "printfuncdb")) {
-				bPrintFuncDBOnExit = 1;
-			} else if(!strcasecmp((char*)optname, "printmutexaction")) {
-				bPrintMutexAction = 1;
-			} else if(!strcasecmp((char*)optname, "printalldebuginfoonexit")) {
-				bPrintAllDebugOnExit = 1;
 			} else if(!strcasecmp((char*)optname, "nologtimestamp")) {
 				bPrintTime = 0;
 			} else if(!strcasecmp((char*)optname, "nostdout")) {
 				stddbg = -1;
-			} else if(!strcasecmp((char*)optname, "noaborttrace")) {
-				bAbortTrace = 0;
 			} else if(!strcasecmp((char*)optname, "outputtidtostderr")) {
 				bOutputTidToStderr = 1;
-			} else if(!strcasecmp((char*)optname, "filetrace")) {
-				if(*optval == '\0') {
-					fprintf(stderr, "rsyslogd " VERSION " error: logfile debug option requires "
-					"filename, e.g. \"logfile=debug.c\"\n");
-					exit(1);
-				} else {
-					/* create new entry and add it to list */
-					dbgPrintNameAdd(optval, &printNameFileRoot);
-				}
 			} else {
-				fprintf(stderr, "rsyslogd " VERSION " error: invalid debug option '%s', "
-					"value '%s' - ignored\n", optval, optname);
+				fprintf(stderr, "rsyslogd " VERSION " error: invalid debug option '%s' "
+					"- ignored\n", optname);
 			}
 		}
 	}
@@ -788,38 +434,16 @@ dbgSetDebugFile(uchar *fn)
 
 rsRetVal dbgClassInit(void)
 {
-	pthread_mutexattr_t mutAttr;
 	rsRetVal iRet;	/* do not use DEFiRet, as this makes calls into the debug system! */
 
-	struct sigaction sigAct;
-	sigset_t sigSet;
 	
-	(void) pthread_key_create(&keyCallStack, dbgCallStackDestruct); /* MUST be the first action done! */
-
-	/* the mutexes must be recursive, because it may be called from within
-	 * signal handlers, which can lead to a hang if the signal interrupted dbgprintf
-	 * (yes, we have really seen that situation in practice!). -- rgerhards, 2013-05-17
-	 */
-	pthread_mutexattr_init(&mutAttr);
-	pthread_mutexattr_settype(&mutAttr, PTHREAD_MUTEX_RECURSIVE);
-	pthread_mutex_init(&mutFuncDBList, &mutAttr);
-	pthread_mutex_init(&mutCallStack, &mutAttr);
-	pthread_mutex_init(&mutdbgprint, &mutAttr);
+	(void) pthread_key_create(&keyThrdName, dbgThrdNameDestruct);
 
 	/* while we try not to use any of the real rsyslog code (to avoid infinite loops), we
 	 * need to have the ability to query object names. Thus, we need to obtain a pointer to
 	 * the object interface. -- rgerhards, 2008-02-29
 	 */
 	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
-
-	memset(&sigAct, 0, sizeof (sigAct));
-	sigemptyset(&sigAct.sa_mask);
-	sigAct.sa_handler = sigusr2Hdlr;
-	sigaction(SIGUSR2, &sigAct, NULL);
-
-	sigemptyset(&sigSet);
-	sigaddset(&sigSet, SIGUSR2);
-	pthread_sigmask(SIG_UNBLOCK, &sigSet, NULL);
 
 	const char *dbgto2stderr;
 	dbgto2stderr = getenv("RSYSLOG_DEBUG_TIMEOUTS_TO_STDERR");
@@ -848,27 +472,8 @@ finalize_it:
 
 rsRetVal dbgClassExit(void)
 {
-	dbgFuncDBListEntry_t *pFuncDBListEtry, *pToDel;
-	pthread_key_delete(keyCallStack);
-
-	if(bPrintAllDebugOnExit)
-		dbgPrintAllDebugInfo();
-
+	pthread_key_delete(keyThrdName);
 	if(altdbg != -1)
 		close(altdbg);
-
-	/* now free all of our memory to make the memory debugger happy... */
-	pFuncDBListEtry = pFuncDBListRoot;
-	while(pFuncDBListEtry != NULL) {
-		pToDel = pFuncDBListEtry;
-		pFuncDBListEtry = pFuncDBListEtry->pNext;
-		free(pToDel->pFuncDB->file);
-		free(pToDel->pFuncDB->func);
-		free(pToDel->pFuncDB);
-		free(pToDel);
-	}
-
 	return RS_RET_OK;
 }
-/* vi:set ai:
- */

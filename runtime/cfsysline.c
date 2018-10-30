@@ -477,9 +477,9 @@ getWord(uchar **pp, cstr_t **ppStrB)
 	DEFiRet;
 	uchar *p;
 
-	ASSERT(pp != NULL);
-	ASSERT(*pp != NULL);
-	ASSERT(ppStrB != NULL);
+	assert(pp != NULL);
+	assert(*pp != NULL);
+	assert(ppStrB != NULL);
 
 	CHKiRet(cstrConstruct(ppStrB));
 
@@ -521,8 +521,8 @@ static rsRetVal doGetWord(uchar **pp, rsRetVal (*pSetHdlr)(void*, uchar*), void 
 	cstr_t *pStrB = NULL;
 	uchar *pNewVal;
 
-	ASSERT(pp != NULL);
-	ASSERT(*pp != NULL);
+	assert(pp != NULL);
+	assert(*pp != NULL);
 
 	CHKiRet(getWord(pp, &pStrB));
 	CHKiRet(cstrConvSzStrAndDestruct(&pStrB, &pNewVal, 0));
@@ -565,8 +565,8 @@ doSyslogName(uchar **pp, rsRetVal (*pSetHdlr)(void*, int),
 	cstr_t *pStrB;
 	int iNewVal;
 
-	ASSERT(pp != NULL);
-	ASSERT(*pp != NULL);
+	assert(pp != NULL);
+	assert(*pp != NULL);
 
 	CHKiRet(getWord(pp, &pStrB)); /* get word */
 	iNewVal = decodeSyslogName(cstrGetSzStrNoNULL(pStrB), pNameTable);
@@ -630,7 +630,7 @@ doSeverity(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal)
  */
 static rsRetVal cslchDestruct(void *pThis)
 {
-	ASSERT(pThis != NULL);
+	assert(pThis != NULL);
 	free(pThis);
 	
 	return RS_RET_OK;

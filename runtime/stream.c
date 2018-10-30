@@ -221,8 +221,8 @@ doSizeLimitProcessing(strm_t *pThis)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, strm);
-	ASSERT(pThis->iSizeLimit != 0);
-	ASSERT(pThis->fd != -1);
+	assert(pThis->iSizeLimit != 0);
+	assert(pThis->fd != -1);
 
 	if(pThis->iCurrOffs >= pThis->iSizeLimit) {
 		/* strmCloseFile() destroys the current file name, so we
@@ -384,7 +384,7 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 	DEFiRet;
 	off_t offset;
 
-	ASSERT(pThis != NULL);
+	assert(pThis != NULL);
 
 	if(pThis->fd != -1)
 		ABORT_FINALIZE(RS_RET_OK);
@@ -439,7 +439,6 @@ finalize_it:
 static void
 strmWaitAsyncWriterDone(strm_t *pThis)
 {
-	BEGINfunc
 	if(pThis->bAsyncWrite) {
 		/* awake writer thread and make it write out everything */
 		while(pThis->iCnt > 0) {
@@ -447,7 +446,6 @@ strmWaitAsyncWriterDone(strm_t *pThis)
 			d_pthread_cond_wait(&pThis->isEmpty, &pThis->mut);
 		}
 	}
-	ENDfunc
 }
 
 
@@ -464,7 +462,7 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 	off64_t currOffs;
 	DEFiRet;
 
-	ASSERT(pThis != NULL);
+	assert(pThis != NULL);
 	DBGOPRINT((obj_t*) pThis, "file %d(%s) closing, bDeleteOnClose %d\n", pThis->fd,
 		getFileDebugName(pThis), pThis->bDeleteOnClose);
 
@@ -806,8 +804,8 @@ static rsRetVal strmReadChar(strm_t *pThis, uchar *pC)
 	int padBytes = 0; /* in crypto mode, we may have some padding (non-data) bytes */
 	DEFiRet;
 	
-	ASSERT(pThis != NULL);
-	ASSERT(pC != NULL);
+	assert(pThis != NULL);
+	assert(pC != NULL);
 
 	/* DEV debug only: DBGOPRINT((obj_t*) pThis, "strmRead index %zd, max %zd\n", pThis->iBufPtr,
 	pThis->iBufPtrMax); */
@@ -840,8 +838,8 @@ finalize_it:
  */
 static rsRetVal strmUnreadChar(strm_t *pThis, uchar c)
 {
-	ASSERT(pThis != NULL);
-	ASSERT(pThis->iUngetC == -1);
+	assert(pThis != NULL);
+	assert(pThis->iUngetC == -1);
 	pThis->iUngetC = c;
 	--pThis->iCurrOffs; /* one less octet read - NOTE: this can cause problems if we got a file change
 	and immediately do an unread and the file is on a buffer boundary and the stream is then persisted.
@@ -871,8 +869,8 @@ strmReadLine(strm_t *const pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF
 	uchar finished;
 	DEFiRet;
 
-	ASSERT(pThis != NULL);
-	ASSERT(ppCStr != NULL);
+	assert(pThis != NULL);
+	assert(ppCStr != NULL);
 
 	CHKiRet(cstrConstruct(ppCStr));
 	CHKiRet(strmReadChar(pThis, &c));
@@ -1209,7 +1207,7 @@ static rsRetVal strmConstructFinalize(strm_t *pThis)
 	int i;
 	DEFiRet;
 
-	ASSERT(pThis != NULL);
+	assert(pThis != NULL);
 
 	pThis->iBufPtrMax = 0; /* results in immediate read request */
 	if(pThis->iZipLevel) { /* do we need a zip buf? */
@@ -1223,7 +1221,7 @@ static rsRetVal strmConstructFinalize(strm_t *pThis)
 			 * to make sure we can write out everything with a SINGLE api call!
 			 * We add another 128 bytes to take care of the gzip header and "all eventualities".
 			 */
-			CHKmalloc(pThis->pZipBuf = (Bytef*) MALLOC(pThis->sIOBufSize + 128));
+			CHKmalloc(pThis->pZipBuf = (Bytef*) malloc(pThis->sIOBufSize + 128));
 		}
 	}
 
@@ -1256,7 +1254,7 @@ static rsRetVal strmConstructFinalize(strm_t *pThis)
 		pthread_cond_init(&pThis->isEmpty, 0);
 		pThis->iCnt = pThis->iEnq = pThis->iDeq = 0;
 		for(i = 0 ; i < STREAM_ASYNC_NUMBUFS ; ++i) {
-			CHKmalloc(pThis->asyncBuf[i].pBuf = (uchar*) MALLOC(pThis->sIOBufSize));
+			CHKmalloc(pThis->asyncBuf[i].pBuf = (uchar*) malloc(pThis->sIOBufSize));
 		}
 		pThis->pIOBuf = pThis->asyncBuf[0].pBuf;
 		pThis->bStopWriter = 0;
@@ -1266,8 +1264,8 @@ static rsRetVal strmConstructFinalize(strm_t *pThis)
 			DBGPRINTF("ERROR: stream %p cold not create writer thread\n", pThis);
 	} else {
 		/* we work synchronously, so we need to alloc a fixed pIOBuf */
-		CHKmalloc(pThis->pIOBuf = (uchar*) MALLOC(pThis->sIOBufSize));
-		CHKmalloc(pThis->pIOBuf_truncation = (char*) MALLOC(pThis->sIOBufSize));
+		CHKmalloc(pThis->pIOBuf = (uchar*) malloc(pThis->sIOBufSize));
+		CHKmalloc(pThis->pIOBuf_truncation = (char*) malloc(pThis->sIOBufSize));
 	}
 
 finalize_it:
@@ -1281,12 +1279,10 @@ finalize_it:
 static void
 stopWriter(strm_t *pThis)
 {
-	BEGINfunc
 	pThis->bStopWriter = 1;
 	pthread_cond_signal(&pThis->notEmpty);
 	d_pthread_mutex_unlock(&pThis->mut);
 	pthread_join(pThis->writerThreadID, NULL);
-	ENDfunc
 }
 
 
@@ -1540,7 +1536,7 @@ strmSchedWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf, const int bFlushZip)
 {
 	DEFiRet;
 
-	ASSERT(pThis != NULL);
+	assert(pThis != NULL);
 
 	/* we need to reset the buffer pointer BEFORE calling the actual write
 	 * function. Otherwise, in circular mode, the write function will
@@ -1579,7 +1575,6 @@ asyncWriterThread(void *pPtr)
 	uchar thrdName[256] = "rs:";
 	ISOBJ_TYPE_assert(pThis, strm);
 
-	BEGINfunc
 	ustrncpy(thrdName+3, pThis->pszFName, sizeof(thrdName)-4);
 	dbgOutputTID((char*)thrdName);
 #	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
@@ -1650,7 +1645,6 @@ asyncWriterThread(void *pPtr)
 	/* Not reached */
 
 finalize_it:
-	ENDfunc
 	return NULL; /* to keep pthreads happy */
 }
 
@@ -1856,7 +1850,7 @@ strmFlushInternal(strm_t *pThis, int bFlushZip)
 {
 	DEFiRet;
 
-	ASSERT(pThis != NULL);
+	assert(pThis != NULL);
 	DBGOPRINT((obj_t*) pThis, "strmFlushinternal: file %d(%s) flush, buflen %ld%s\n", pThis->fd,
 		  getFileDebugName(pThis),
 		  (long) pThis->iBufPtr, (pThis->iBufPtr == 0) ? " (no need to flush)" : "");
@@ -1880,7 +1874,7 @@ strmFlush(strm_t *pThis)
 {
 	DEFiRet;
 
-	ASSERT(pThis != NULL);
+	assert(pThis != NULL);
 
 	if(pThis->bAsyncWrite)
 		d_pthread_mutex_lock(&pThis->mut);
@@ -2015,7 +2009,7 @@ static rsRetVal strmWriteChar(strm_t *__restrict__ const pThis, const uchar c)
 {
 	DEFiRet;
 
-	ASSERT(pThis != NULL);
+	assert(pThis != NULL);
 
 	if(pThis->bAsyncWrite)
 		d_pthread_mutex_lock(&pThis->mut);
@@ -2049,7 +2043,7 @@ static rsRetVal strmWriteLong(strm_t *__restrict__ const pThis, const long i)
 	DEFiRet;
 	uchar szBuf[32];
 
-	ASSERT(pThis != NULL);
+	assert(pThis != NULL);
 
 	CHKiRet(srUtilItoA((char*)szBuf, sizeof(szBuf), i));
 	CHKiRet(strmWrite(pThis, szBuf, strlen((char*)szBuf)));
@@ -2082,8 +2076,8 @@ strmWrite(strm_t *__restrict__ const pThis, const uchar *__restrict__ const pBuf
 	size_t iWrite;
 	size_t iOffset;
 
-	ASSERT(pThis != NULL);
-	ASSERT(pBuf != NULL);
+	assert(pThis != NULL);
+	assert(pBuf != NULL);
 
 /* DEV DEBUG ONLY DBGPRINTF("strmWrite(%p[%s], '%65.65s', %ld);,
 disabled %d, sizelim %ld, size %lld\n", pThis, pThis->pszCurrFName, pBuf,(long) lenBuf,
@@ -2204,8 +2198,8 @@ strmSetFName(strm_t *pThis, uchar *pszName, size_t iLenName)
 {
 	DEFiRet;
 
-	ASSERT(pThis != NULL);
-	ASSERT(pszName != NULL);
+	assert(pThis != NULL);
+	assert(pszName != NULL);
 	
 	if(iLenName < 1)
 		ABORT_FINALIZE(RS_RET_FILE_PREFIX_MISSING);
@@ -2213,7 +2207,7 @@ strmSetFName(strm_t *pThis, uchar *pszName, size_t iLenName)
 	if(pThis->pszFName != NULL)
 		free(pThis->pszFName);
 
-	if((pThis->pszFName = MALLOC(iLenName + 1)) == NULL)
+	if((pThis->pszFName = malloc(iLenName + 1)) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	memcpy(pThis->pszFName, pszName, iLenName + 1); /* always think about the \0! */
@@ -2234,13 +2228,13 @@ strmSetDir(strm_t *pThis, uchar *pszDir, size_t iLenDir)
 {
 	DEFiRet;
 
-	ASSERT(pThis != NULL);
-	ASSERT(pszDir != NULL);
+	assert(pThis != NULL);
+	assert(pszDir != NULL);
 	
 	if(iLenDir < 1)
 		ABORT_FINALIZE(RS_RET_FILE_PREFIX_MISSING);
 
-	CHKmalloc(pThis->pszDir = MALLOC(iLenDir + 1));
+	CHKmalloc(pThis->pszDir = malloc(iLenDir + 1));
 
 	memcpy(pThis->pszDir, pszDir, iLenDir + 1); /* always think about the \0! */
 	pThis->lenDir = iLenDir;
@@ -2274,8 +2268,8 @@ finalize_it:
  */
 static rsRetVal strmRecordBegin(strm_t *pThis)
 {
-	ASSERT(pThis != NULL);
-	ASSERT(pThis->bInRecord == 0);
+	assert(pThis != NULL);
+	assert(pThis->bInRecord == 0);
 	pThis->bInRecord = 1;
 	return RS_RET_OK;
 }
@@ -2283,8 +2277,8 @@ static rsRetVal strmRecordBegin(strm_t *pThis)
 static rsRetVal strmRecordEnd(strm_t *pThis)
 {
 	DEFiRet;
-	ASSERT(pThis != NULL);
-	ASSERT(pThis->bInRecord == 1);
+	assert(pThis != NULL);
+	assert(pThis->bInRecord == 1);
 
 	pThis->bInRecord = 0;
 	iRet = strmCheckNextOutputFile(pThis); /* check if we need to switch files */
@@ -2434,7 +2428,7 @@ static rsRetVal strmSetProperty(strm_t *pThis, var_t *pProp)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, strm);
-	ASSERT(pProp != NULL);
+	assert(pProp != NULL);
 
 	if(isProp("sType")) {
 		CHKiRet(strmSetsType(pThis, (strmType_t) pProp->val.num));
@@ -2486,7 +2480,7 @@ strmGetCurrOffset(strm_t *pThis, int64 *pOffs)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, strm);
-	ASSERT(pOffs != NULL);
+	assert(pOffs != NULL);
 
 	*pOffs = pThis->iCurrOffs;
 

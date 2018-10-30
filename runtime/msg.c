@@ -532,14 +532,12 @@ finalize_it:
 void
 getInputName(const smsg_t * const pM, uchar **ppsz, int *const plen)
 {
-	BEGINfunc
 	if(pM == NULL || pM->pInputName == NULL) {
 		*ppsz = UCHAR_CONSTANT("");
 		*plen = 0;
 	} else {
 		prop.GetString(pM->pInputName, ppsz, plen);
 	}
-	ENDfunc
 }
 
 
@@ -548,7 +546,6 @@ getRcvFromIP(smsg_t * const pM)
 {
 	uchar *psz;
 	int len;
-	BEGINfunc
 	if(pM == NULL) {
 		psz = UCHAR_CONSTANT("");
 	} else {
@@ -558,7 +555,6 @@ getRcvFromIP(smsg_t * const pM)
 		else
 			prop.GetString(pM->pRcvFromIP, &psz, &len);
 	}
-	ENDfunc
 	return psz;
 }
 
@@ -824,7 +820,7 @@ msgBaseConstruct(smsg_t **ppThis)
 	smsg_t *pM;
 
 	assert(ppThis != NULL);
-	CHKmalloc(pM = MALLOC(sizeof(smsg_t)));
+	CHKmalloc(pM = malloc(sizeof(smsg_t)));
 	objConstructSetObjInfo(pM); /* intialize object helper entities */
 
 	/* initialize members in ORDER they appear in structure (think "cache line"!) */
@@ -1088,7 +1084,6 @@ smsg_t* MsgDup(smsg_t* pOld)
 
 	assert(pOld != NULL);
 
-	BEGINfunc
 	if(msgConstructWithTime(&pNew, &pOld->tTIMESTAMP, pOld->ttGenTime) != RS_RET_OK) {
 		return NULL;
 	}
@@ -1175,7 +1170,6 @@ smsg_t* MsgDup(smsg_t* pOld)
 	 * if they are needed once again. So we let them re-create if needed.
 	 */
 
-	ENDfunc
 	return pNew;
 }
 #undef tmpCOPYSZ
@@ -1604,7 +1598,7 @@ static void msgSetUUID(smsg_t * const pM)
 	dbgprintf("[MsgSetUUID] START, lenRes %llu\n", (long long unsigned) lenRes);
 	assert(pM != NULL);
 
-	if((pM->pszUUID = (uchar*) MALLOC(lenRes)) == NULL) {
+	if((pM->pszUUID = (uchar*) malloc(lenRes)) == NULL) {
 		pM->pszUUID = (uchar *)"";
 	} else {
 		pthread_mutex_lock(&mutUUID);
@@ -1762,7 +1756,6 @@ getPRI(smsg_t * const pM)
 const char *
 getTimeReported(smsg_t * const pM, enum tplFormatTypes eFmt)
 {
-	BEGINfunc
 	if(pM == NULL)
 		return "";
 
@@ -1781,7 +1774,7 @@ getTimeReported(smsg_t * const pM, enum tplFormatTypes eFmt)
 	case tplFmtMySQLDate:
 		MsgLock(pM);
 		if(pM->pszTIMESTAMP_MySQL == NULL) {
-			if((pM->pszTIMESTAMP_MySQL = MALLOC(15)) == NULL) {
+			if((pM->pszTIMESTAMP_MySQL = malloc(15)) == NULL) {
 				MsgUnlock(pM);
 				return "";
 			}
@@ -1792,7 +1785,7 @@ getTimeReported(smsg_t * const pM, enum tplFormatTypes eFmt)
 	case tplFmtPgSQLDate:
 		MsgLock(pM);
 		if(pM->pszTIMESTAMP_PgSQL == NULL) {
-			if((pM->pszTIMESTAMP_PgSQL = MALLOC(21)) == NULL) {
+			if((pM->pszTIMESTAMP_PgSQL = malloc(21)) == NULL) {
 				MsgUnlock(pM);
 				return "";
 			}
@@ -1855,7 +1848,6 @@ getTimeReported(smsg_t * const pM, enum tplFormatTypes eFmt)
 	case tplFmtWeek:
 		return two_digits[getWeek(&pM->tTIMESTAMP)];
 	}
-	ENDfunc
 	return "INVALID eFmt OPTION!";
 }
 
@@ -1867,45 +1859,44 @@ static const char *getTimeUTC(struct syslogTime *const __restrict__ pTmIn,
 {
 	struct syslogTime tUTC;
 	char *retbuf = NULL;
-	BEGINfunc
 
 	timeConvertToUTC(pTmIn, &tUTC);
 	struct syslogTime *const pTm = &tUTC;
 
 	switch(eFmt) {
 	case tplFmtDefault:
-		if((retbuf = MALLOC(16)) != NULL) {
+		if((retbuf = malloc(16)) != NULL) {
 			datetime.formatTimestamp3164(pTm, retbuf, 0);
 		}
 		break;
 	case tplFmtMySQLDate:
-		if((retbuf = MALLOC(15)) != NULL) {
+		if((retbuf = malloc(15)) != NULL) {
 			datetime.formatTimestampToMySQL(pTm, retbuf);
 		}
 		break;
 	case tplFmtPgSQLDate:
-		if((retbuf = MALLOC(21)) != NULL) {
+		if((retbuf = malloc(21)) != NULL) {
 			datetime.formatTimestampToPgSQL(pTm, retbuf);
 		}
 		break;
 	case tplFmtRFC3164Date:
 	case tplFmtRFC3164BuggyDate:
-		if((retbuf = MALLOC(16)) != NULL) {
+		if((retbuf = malloc(16)) != NULL) {
 			datetime.formatTimestamp3164(pTm, retbuf, (eFmt == tplFmtRFC3164BuggyDate));
 		}
 		break;
 	case tplFmtRFC3339Date:
-		if((retbuf = MALLOC(33)) != NULL) {
+		if((retbuf = malloc(33)) != NULL) {
 			datetime.formatTimestamp3339(pTm, retbuf);
 		}
 		break;
 	case tplFmtUnixDate:
-		if((retbuf = MALLOC(12)) != NULL) {
+		if((retbuf = malloc(12)) != NULL) {
 			datetime.formatTimestampUnix(pTm, retbuf);
 		}
 		break;
 	case tplFmtSecFrac:
-		if((retbuf = MALLOC(7)) != NULL) {
+		if((retbuf = malloc(7)) != NULL) {
 			datetime.formatTimestampSecFrac(pTm, retbuf);
 		}
 		break;
@@ -1959,7 +1950,6 @@ static const char *getTimeUTC(struct syslogTime *const __restrict__ pTmIn,
 	} else {
 		*pbMustBeFreed = 1;
 	}
-	ENDfunc
 	return retbuf;
 }
 
@@ -1967,7 +1957,6 @@ static const char *
 getTimeGenerated(smsg_t *const __restrict__ pM,
 	const enum tplFormatTypes eFmt)
 {
-	BEGINfunc
 	struct syslogTime *const pTm = &pM->tRcvdAt;
 	if(pM == NULL)
 		return "";
@@ -1976,7 +1965,7 @@ getTimeGenerated(smsg_t *const __restrict__ pM,
 	case tplFmtDefault:
 		MsgLock(pM);
 		if(pM->pszRcvdAt3164 == NULL) {
-			if((pM->pszRcvdAt3164 = MALLOC(16)) == NULL) {
+			if((pM->pszRcvdAt3164 = malloc(16)) == NULL) {
 				MsgUnlock(pM);
 				return "";
 			}
@@ -1987,7 +1976,7 @@ getTimeGenerated(smsg_t *const __restrict__ pM,
 	case tplFmtMySQLDate:
 		MsgLock(pM);
 		if(pM->pszRcvdAt_MySQL == NULL) {
-			if((pM->pszRcvdAt_MySQL = MALLOC(15)) == NULL) {
+			if((pM->pszRcvdAt_MySQL = malloc(15)) == NULL) {
 				MsgUnlock(pM);
 				return "";
 			}
@@ -1998,7 +1987,7 @@ getTimeGenerated(smsg_t *const __restrict__ pM,
 	case tplFmtPgSQLDate:
 		MsgLock(pM);
 		if(pM->pszRcvdAt_PgSQL == NULL) {
-			if((pM->pszRcvdAt_PgSQL = MALLOC(21)) == NULL) {
+			if((pM->pszRcvdAt_PgSQL = malloc(21)) == NULL) {
 				MsgUnlock(pM);
 				return "";
 			}
@@ -2010,7 +1999,7 @@ getTimeGenerated(smsg_t *const __restrict__ pM,
 	case tplFmtRFC3164BuggyDate:
 		MsgLock(pM);
 		if(pM->pszRcvdAt3164 == NULL) {
-			if((pM->pszRcvdAt3164 = MALLOC(16)) == NULL) {
+			if((pM->pszRcvdAt3164 = malloc(16)) == NULL) {
 					MsgUnlock(pM);
 					return "";
 				}
@@ -2022,7 +2011,7 @@ getTimeGenerated(smsg_t *const __restrict__ pM,
 	case tplFmtRFC3339Date:
 		MsgLock(pM);
 		if(pM->pszRcvdAt3339 == NULL) {
-			if((pM->pszRcvdAt3339 = MALLOC(33)) == NULL) {
+			if((pM->pszRcvdAt3339 = malloc(33)) == NULL) {
 				MsgUnlock(pM);
 				return "";
 			}
@@ -2077,7 +2066,6 @@ getTimeGenerated(smsg_t *const __restrict__ pM,
 	case tplFmtWeek:
 		return two_digits[getWeek(pTm)];
 	}
-	ENDfunc
 	return "INVALID eFmt OPTION!";
 }
 
@@ -2434,7 +2422,7 @@ void MsgSetTAG(smsg_t *__restrict__ const pMsg, const uchar* pszBuf, const size_
 		/* small enough: use fixed buffer (faster!) */
 		pBuf = pMsg->TAG.szBuf;
 	} else {
-		if((pBuf = (uchar*) MALLOC(pMsg->iLenTAG + 1)) == NULL) {
+		if((pBuf = (uchar*) malloc(pMsg->iLenTAG + 1)) == NULL) {
 			/* truncate message, better than completely loosing it... */
 			pBuf = pMsg->TAG.szBuf;
 			pMsg->iLenTAG = CONF_TAG_BUFSIZE - 1;
@@ -2551,7 +2539,6 @@ uchar *getRcvFrom(smsg_t * const pM)
 {
 	uchar *psz;
 	int len;
-	BEGINfunc
 
 	if(pM == NULL) {
 		psz = UCHAR_CONSTANT("");
@@ -2562,7 +2549,6 @@ uchar *getRcvFrom(smsg_t * const pM)
 		else
 			prop.GetString(pM->rcvFrom.pRcvFrom, &psz, &len);
 	}
-	ENDfunc
 	return psz;
 }
 
@@ -2761,10 +2747,8 @@ rsRetVal MsgSetRcvFromIP(smsg_t *pThis, prop_t *new)
 {
 	assert(pThis != NULL);
 
-	BEGINfunc
 	prop.AddRef(new);
 	MsgSetRcvFromIPWithoutAddRef(pThis, new);
-	ENDfunc
 	return RS_RET_OK;
 }
 
@@ -2810,7 +2794,7 @@ void MsgSetHOSTNAME(smsg_t *pThis, const uchar* pszHOSTNAME, const int lenHOSTNA
 	if(pThis->iLenHOSTNAME < CONF_HOSTNAME_BUFSIZE) {
 		/* small enough: use fixed buffer (faster!) */
 		pThis->pszHOSTNAME = pThis->szHOSTNAME;
-	} else if((pThis->pszHOSTNAME = (uchar*) MALLOC(pThis->iLenHOSTNAME + 1)) == NULL) {
+	} else if((pThis->pszHOSTNAME = (uchar*) malloc(pThis->iLenHOSTNAME + 1)) == NULL) {
 		/* truncate message, better than completely loosing it... */
 		pThis->pszHOSTNAME = pThis->szHOSTNAME;
 		pThis->iLenHOSTNAME = CONF_HOSTNAME_BUFSIZE - 1;
@@ -2862,7 +2846,7 @@ rsRetVal MsgReplaceMSG(smsg_t *pThis, const uchar* pszMSG, int lenMSG)
 	lenNew = pThis->iLenRawMsg + lenMSG - pThis->iLenMSG;
 	if(lenMSG > pThis->iLenMSG && lenNew >= CONF_RAWMSG_BUFSIZE) {
 		/*  we have lost our "bet" and need to alloc a new buffer ;) */
-		CHKmalloc(bufNew = MALLOC(lenNew + 1));
+		CHKmalloc(bufNew = malloc(lenNew + 1));
 		memcpy(bufNew, pThis->pszRawMsg, pThis->offMSG);
 		if(pThis->pszRawMsg != pThis->szRawMsg)
 			free(pThis->pszRawMsg);
@@ -2918,7 +2902,7 @@ MsgSetRawMsg(smsg_t *const pThis, const char*const pszRawMsg, const size_t lenMs
 	if(pThis->iLenRawMsg < CONF_RAWMSG_BUFSIZE) {
 		/* small enough: use fixed buffer (faster!) */
 		pThis->pszRawMsg = pThis->szRawMsg;
-	} else if((pThis->pszRawMsg = (uchar*) MALLOC(pThis->iLenRawMsg + 1)) == NULL) {
+	} else if((pThis->pszRawMsg = (uchar*) malloc(pThis->iLenRawMsg + 1)) == NULL) {
 		/* truncate message, better than completely loosing it... */
 		pThis->pszRawMsg = pThis->szRawMsg;
 		pThis->iLenRawMsg = CONF_RAWMSG_BUFSIZE - 1;
@@ -2955,7 +2939,7 @@ textpri(const smsg_t *const __restrict__ pMsg)
 	int lenfac = len_syslog_fac_names[pMsg->iFacility];
 	int lensev = len_syslog_severity_names[pMsg->iSeverity];
 	int totlen = lenfac + 1 + lensev + 1;
-	char *pRes = MALLOC(totlen);
+	char *pRes = malloc(totlen);
 	if(pRes != NULL) {
 		memcpy(pRes, syslog_fac_names[pMsg->iFacility], lenfac);
 		pRes[lenfac] = '.';
@@ -2979,7 +2963,7 @@ static uchar *getNOW(eNOWType eNow, struct syslogTime *t, const int inUTC)
 	uchar *pBuf;
 	struct syslogTime tt;
 
-	if((pBuf = (uchar*) MALLOC(tmpBUFSIZE)) == NULL) {
+	if((pBuf = (uchar*) malloc(tmpBUFSIZE)) == NULL) {
 		return NULL;
 	}
 
@@ -3472,7 +3456,6 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 	enum tplFormatTypes datefmt;
 	int bDateInUTC;
 
-	BEGINfunc
 	assert(pMsg != NULL);
 	assert(pbMustBeFreed != NULL);
 
@@ -3774,7 +3757,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			{
 			struct timespec tp;
 
-			if((pRes = (uchar*) MALLOC(32)) == NULL) {
+			if((pRes = (uchar*) malloc(32)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			}
 
@@ -3794,7 +3777,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			{
 			struct sysinfo s_info;
 
-			if((pRes = (uchar*) MALLOC(32)) == NULL) {
+			if((pRes = (uchar*) malloc(32)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			}
 
@@ -3873,7 +3856,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			/* we got our end pointer, now do the copy */
 			/* TODO: code copied from below, this is a candidate for a separate function */
 			iLen = pFldEnd - pFld + 1; /* the +1 is for an actual char, NOT \0! */
-			pBufStart = pBuf = MALLOC(iLen + 1);
+			pBufStart = pBuf = malloc(iLen + 1);
 			if(pBuf == NULL) {
 				if(*pbMustBeFreed == 1)
 					free(pRes);
@@ -3992,7 +3975,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 
 					iLenBuf = pmatch[pTpe->data.field.iSubMatchToUse].rm_eo
 						  - pmatch[pTpe->data.field.iSubMatchToUse].rm_so;
-					pB = MALLOC(iLenBuf + 1);
+					pB = malloc(iLenBuf + 1);
 
 					if (pB == NULL) {
 						if (*pbMustBeFreed == 1)
@@ -4067,7 +4050,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 					iTo = bufLen - 1;
 
 			iLen = iTo - iFrom + 1; /* the +1 is for an actual char, NOT \0! */
-			pBufStart = pBuf = MALLOC(iLen + 1);
+			pBufStart = pBuf = malloc(iLen + 1);
 			if(pBuf == NULL) {
 				if(*pbMustBeFreed == 1)
 					free(pRes);
@@ -4125,7 +4108,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			uchar *pBStart;
 			uchar *pB;
 			uchar *pSrc;
-			pBStart = pB = MALLOC(bufLen + 1);
+			pBStart = pB = malloc(bufLen + 1);
 			if(pB == NULL) {
 				if(*pbMustBeFreed == 1)
 					free(pRes);
@@ -4171,7 +4154,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			}
 
 			if(bDropped) {
-				pDst = pDstStart = MALLOC(iLenBuf + 1);
+				pDst = pDstStart = malloc(iLenBuf + 1);
 				if(pDst == NULL) {
 					if(*pbMustBeFreed == 1)
 						free(pRes);
@@ -4206,7 +4189,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			} else {
 				if(bufLen == -1)
 					bufLen = ustrlen(pRes);
-				pDst = pDstStart = MALLOC(bufLen + 1);
+				pDst = pDstStart = malloc(bufLen + 1);
 				if(pDst == NULL) {
 					if(*pbMustBeFreed == 1)
 						free(pRes);
@@ -4246,7 +4229,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 				int i;
 
 				iLenBuf += iNumCC * 4;
-				pBStart = pB = MALLOC(iLenBuf + 1);
+				pBStart = pB = malloc(iLenBuf + 1);
 				if(pB == NULL) {
 					if(*pbMustBeFreed == 1)
 						free(pRes);
@@ -4290,7 +4273,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			}
 
 			if(bDropped) {
-				pDst = pDstStart = MALLOC(iLenBuf + 1);
+				pDst = pDstStart = malloc(iLenBuf + 1);
 				if(pDst == NULL) {
 					if(*pbMustBeFreed == 1)
 						free(pRes);
@@ -4325,7 +4308,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			} else {
 				if(bufLen == -1)
 					bufLen = ustrlen(pRes);
-				pDst = pDstStart = MALLOC(bufLen + 1);
+				pDst = pDstStart = malloc(bufLen + 1);
 				if(pDst == NULL) {
 					if(*pbMustBeFreed == 1)
 						free(pRes);
@@ -4381,7 +4364,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			/* check if we need to obtain a private copy */
 			if(*pbMustBeFreed == 0) {
 				/* ok, original copy, need a private one */
-				pB = MALLOC(iLn + 1);
+				pB = malloc(iLn + 1);
 				if(pB == NULL) {
 					RET_OUT_OF_MEMORY;
 				}
@@ -4468,7 +4451,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			bufLen = ustrlen(pRes);
 		iBufLen = bufLen;
 		/* the malloc may be optimized, we currently use the worst case... */
-		pBStart = pDst = MALLOC(2 * iBufLen + 3);
+		pBStart = pDst = malloc(2 * iBufLen + 3);
 		if(pDst == NULL) {
 			if(*pbMustBeFreed == 1)
 				free(pRes);
@@ -4500,7 +4483,6 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 
 	*pPropLen = (bufLen == -1) ? (int) ustrlen(pRes) : bufLen;
 
-	ENDfunc
 	return(pRes);
 }
 

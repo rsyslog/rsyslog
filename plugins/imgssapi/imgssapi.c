@@ -182,7 +182,6 @@ isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void *pUsrSrv, void*p
 	gss_sess_t *pGSess;
 	char allowedMethods = 0;
 
-	BEGINfunc
 	assert(pUsrSrv != NULL);
 	pGSrv = (gsssrv_t*) pUsrSrv;
 	pGSess = (gss_sess_t*) pUsrSess;
@@ -195,7 +194,6 @@ isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void *pUsrSrv, void*p
 		allowedMethods |= ALLOWEDMETHOD_GSS;
 	if(allowedMethods && pGSess != NULL)
 		pGSess->allowedMethods = allowedMethods;
-	ENDfunc
 	return allowedMethods;
 }
 
@@ -436,7 +434,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 	if(allowedMethods & ALLOWEDMETHOD_GSS) {
 		int ret = 0;
 		const size_t bufsize = glbl.GetMaxLine();
-		CHKmalloc(buf = (char*) MALLOC(bufsize + 1));
+		CHKmalloc(buf = (char*) malloc(bufsize + 1));
 
 		prop.GetString(pSess->fromHostIP, &pszPeer, &lenPeer);
 

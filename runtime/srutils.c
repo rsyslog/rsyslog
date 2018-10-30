@@ -172,7 +172,7 @@ uchar *srUtilStrDup(uchar *pOld, size_t len)
 
 	assert(pOld != NULL);
 	
-	if((pNew = MALLOC(len + 1)) != NULL)
+	if((pNew = malloc(len + 1)) != NULL)
 		memcpy(pNew, pOld, len + 1);
 
 	return pNew;
@@ -212,7 +212,7 @@ static int real_makeFileParentDirs(const uchar *const szFile, const size_t lenFi
 	assert(lenFile > 0);
 
 	len = lenFile + 1; /* add one for '\0'-byte */
-	if((pszWork = MALLOC(len)) == NULL)
+	if((pszWork = malloc(len)) == NULL)
 		return -1;
 	memcpy(pszWork, szFile, len);
 	for(p = pszWork+1 ; *p ; p++)
@@ -378,7 +378,7 @@ rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *
 	}
 
 	lenName = lenDirName + 1 + lenFName + lenBuf + 1; /* last +1 for \0 char! */
-	if((pName = MALLOC(lenName)) == NULL)
+	if((pName = malloc(lenName)) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	
 	/* got memory, now construct string */
@@ -431,7 +431,6 @@ timeoutComp(struct timespec *pt, long iTimeout)
 	struct timeval tv;
 #	endif
 
-	BEGINfunc
 	assert(pt != NULL);
 	/* compute timeout */
 
@@ -449,7 +448,6 @@ timeoutComp(struct timespec *pt, long iTimeout)
 		pt->tv_nsec -= 1000000000;
 		++pt->tv_sec;
 	}
-	ENDfunc
 	return RS_RET_OK; /* so far, this is static... */
 }
 
@@ -487,7 +485,6 @@ timeoutVal(struct timespec *pt)
 	struct timeval tv;
 #	endif
 
-	BEGINfunc
 	assert(pt != NULL);
 	/* compute timeout */
 #	if _POSIX_TIMERS > 0
@@ -504,7 +501,6 @@ timeoutVal(struct timespec *pt)
 	if(iTimeout < 0)
 		iTimeout = 0;
 
-	ENDfunc
 	return iTimeout;
 }
 
@@ -515,10 +511,8 @@ timeoutVal(struct timespec *pt)
 void
 mutexCancelCleanup(void *arg)
 {
-	BEGINfunc
 	assert(arg != NULL);
 	d_pthread_mutex_unlock((pthread_mutex_t*) arg);
-	ENDfunc
 }
 
 
@@ -532,11 +526,9 @@ srSleep(int iSeconds, int iuSeconds)
 {
 	struct timeval tvSelectTimeout;
 
-	BEGINfunc
 	tvSelectTimeout.tv_sec = iSeconds;
 	tvSelectTimeout.tv_usec = iuSeconds; /* micro seconds */
 	select(0, NULL, NULL, NULL, &tvSelectTimeout);
-	ENDfunc
 }
 
 
@@ -582,8 +574,8 @@ int decodeSyslogName(uchar *name, syslogName_t *codetab)
 	register uchar *p;
 	uchar buf[80];
 
-	ASSERT(name != NULL);
-	ASSERT(codetab != NULL);
+	assert(name != NULL);
+	assert(codetab != NULL);
 
 	DBGPRINTF("symbolic name: %s", name);
 	if(isdigit((int) *name)) {

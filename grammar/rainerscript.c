@@ -256,7 +256,7 @@ DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
 	int iOffset; /* for compare operations */
 	DEFiRet;
 
-	ASSERT(pline != NULL);
+	assert(pline != NULL);
 
 	DBGPRINTF("Decoding property-based filter '%s'\n", pline);
 
@@ -1514,7 +1514,7 @@ doExtractFieldByChar(uchar *str, uchar delim, const int matchnbr, uchar **resstr
 		allocLen += (3 - (iLen % 4));
 		/*older versions of valgrind have a problem with strlen inspecting 4-bytes at a time*/
 #		endif
-		CHKmalloc(pBuf = MALLOC(allocLen));
+		CHKmalloc(pBuf = malloc(allocLen));
 		/* now copy */
 		memcpy(pBuf, pFld, iLen);
 		pBuf[iLen] = '\0'; /* terminate it */
@@ -1562,7 +1562,7 @@ doExtractFieldByStr(uchar *str, char *delim, const rs_size_t lenDelim, const int
 			iLen = pFldEnd - pFld;
 		}
 		/* we got our end pointer, now do the copy */
-		CHKmalloc(pBuf = MALLOC(iLen + 1));
+		CHKmalloc(pBuf = malloc(iLen + 1));
 		/* now copy */
 		memcpy(pBuf, pFld, iLen);
 		pBuf[iLen] = '\0'; /* terminate it */

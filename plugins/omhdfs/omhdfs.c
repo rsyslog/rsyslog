@@ -212,7 +212,7 @@ filePrepare(file_t *pFile)
 	/* file does not exist, create it (and eventually parent directories */
 	if(1) { // check if bCreateDirs
 		len = ustrlen(pFile->name) + 1;
-		CHKmalloc(pszWork = MALLOC(len));
+		CHKmalloc(pszWork = malloc(len));
 		memcpy(pszWork, pFile->name, len);
 		for(p = pszWork+1 ; *p ; p++)
 			if(*p == '/') {

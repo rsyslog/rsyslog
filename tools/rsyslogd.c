@@ -1173,7 +1173,7 @@ bufOptAdd(char opt, char *arg)
 	DEFiRet;
 	bufOpt_t *pBuf;
 
-	if((pBuf = MALLOC(sizeof(bufOpt_t))) == NULL)
+	if((pBuf = malloc(sizeof(bufOpt_t))) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	pBuf->optchar = opt;
@@ -1657,7 +1657,6 @@ finalize_it:
 		exit(1);
 	}
 
-	ENDfunc
 }
 
 
@@ -1739,9 +1738,7 @@ finalize_it:
  */
 DEFFUNC_llExecFunc(doHUPActions)
 {
-	BEGINfunc
 	actionCallHUPHdlr((action_t*) pData);
-	ENDfunc
 	return RS_RET_OK; /* we ignore errors, we can not do anything either way */
 }
 
@@ -1920,7 +1917,6 @@ mainloop(void)
 {
 	time_t tTime;
 
-	BEGINfunc
 
 	do {
 		processImInternal();
@@ -1953,7 +1949,6 @@ mainloop(void)
 		}
 
 	} while(!bFinished); /* end do ... while() */
-	ENDfunc
 }
 
 /* Finalize and destruct all actions.

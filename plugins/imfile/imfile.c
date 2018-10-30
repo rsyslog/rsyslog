@@ -695,7 +695,7 @@ act_obj_add(fs_edge_t *const edge, const char *const name, const int is_file,
 	if(is_file && !is_symlink) {
 		const instanceConf_t *const inst = edge->instarr[0];// TODO: same file, multiple instances?
 		CHKiRet(ratelimitNew(&act->ratelimiter, "imfile", name));
-		CHKmalloc(act->multiSub.ppMsgs = MALLOC(inst->nMultiSub * sizeof(smsg_t *)));
+		CHKmalloc(act->multiSub.ppMsgs = malloc(inst->nMultiSub * sizeof(smsg_t *)));
 		act->multiSub.maxElem = inst->nMultiSub;
 		act->multiSub.nElem = 0;
 		pollFile(act);
@@ -1274,7 +1274,7 @@ enqLine(act_obj_t *const act,
 		/* Make sure we account for terminating null byte */
 		size_t ceeMsgSize = msgLen + CONST_LEN_CEE_COOKIE + 1;
 		char *ceeMsg;
-		CHKmalloc(ceeMsg = MALLOC(ceeMsgSize));
+		CHKmalloc(ceeMsg = malloc(ceeMsgSize));
 		strcpy(ceeMsg, CONST_CEE_COOKIE);
 		strcat(ceeMsg, (char*)rsCStrGetSzStrNoNULL(cstrLine));
 		MsgSetRawMsg(pMsg, ceeMsg, ceeMsgSize);
@@ -1486,11 +1486,9 @@ finalize_it:
  */
 static void pollFileCancelCleanup(void *pArg)
 {
-	BEGINfunc;
 	cstr_t **ppCStr = (cstr_t**) pArg;
 	if(*ppCStr != NULL)
 		rsCStrDestruct(ppCStr);
-	ENDfunc;
 }
 
 
@@ -1574,7 +1572,7 @@ createInstance(instanceConf_t **const pinst)
 {
 	instanceConf_t *inst;
 	DEFiRet;
-	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
+	CHKmalloc(inst = malloc(sizeof(instanceConf_t)));
 	inst->next = NULL;
 	inst->pBindRuleset = NULL;
 

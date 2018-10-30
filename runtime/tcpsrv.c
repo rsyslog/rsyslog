@@ -283,7 +283,6 @@ TCPSessGetNxtSess(tcpsrv_t *pThis, int iCurr)
 {
 	register int i;
 
-	BEGINfunc
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	assert(pThis->pSessions != NULL);
 	for(i = iCurr + 1 ; i < pThis->iSessMax ; ++i) {
@@ -291,7 +290,6 @@ TCPSessGetNxtSess(tcpsrv_t *pThis, int iCurr)
 			break;
 	}
 
-	ENDfunc
 	return((i < pThis->iSessMax) ? i : -1);
 }
 

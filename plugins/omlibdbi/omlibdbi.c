@@ -182,7 +182,7 @@ ENDisCompatibleWithFeature
  */
 static void closeConn(instanceData *pData)
 {
-	ASSERT(pData != NULL);
+	assert(pData != NULL);
 	if(pData->conn != NULL) {	/* just to be on the safe side... */
 		dbi_conn_close(pData->conn);
 		pData->conn = NULL;
@@ -220,8 +220,7 @@ reportDBError(instanceData *pData, int bSilent)
 	char errMsg[1024];
 	const char *pszDbiErr;
 
-	BEGINfunc
-	ASSERT(pData != NULL);
+	assert(pData != NULL);
 
 	/* output log message */
 	errno = 0;
@@ -238,7 +237,6 @@ reportDBError(instanceData *pData, int bSilent)
 		}
 	}
 
-	ENDfunc
 }
 
 
@@ -249,8 +247,8 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 	DEFiRet;
 	int iDrvrsLoaded;
 
-	ASSERT(pData != NULL);
-	ASSERT(pData->conn == NULL);
+	assert(pData != NULL);
+	assert(pData->conn == NULL);
 
 	if(bDbiInitialized == 0) {
 		/* we need to init libdbi first */
@@ -327,8 +325,8 @@ writeDB(const uchar *psz, instanceData *const __restrict__ pData)
 	DEFiRet;
 	dbi_result dbiRes = NULL;
 
-	ASSERT(psz != NULL);
-	ASSERT(pData != NULL);
+	assert(psz != NULL);
+	assert(pData != NULL);
 
 	/* see if we are ready to proceed */
 	if(pData->conn == NULL) {

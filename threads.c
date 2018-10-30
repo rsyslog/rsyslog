@@ -254,7 +254,6 @@ thrdStarter(void *const arg)
 	pthread_cond_signal(&pThis->condThrdTerm);
 	d_pthread_mutex_unlock(&pThis->mutThrd);
 
-	ENDfunc
 	pthread_exit(0);
 }
 /* Start a new thread and add it to the list of currently

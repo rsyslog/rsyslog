@@ -325,7 +325,7 @@ FillRemHost(nsd_ptcp_t *pThis, struct sockaddr_storage *pAddr)
 	 * (side note: we may hold on to these values for quite a while, thus we trim their
 	 * memory consumption)
 	 */
-	if((pThis->pRemHostName = MALLOC(prop.GetStringLen(fqdn)+1)) == NULL)
+	if((pThis->pRemHostName = malloc(prop.GetStringLen(fqdn)+1)) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	memcpy(pThis->pRemHostName, propGetSzStr(fqdn), prop.GetStringLen(fqdn)+1);
 	prop.Destruct(&fqdn);

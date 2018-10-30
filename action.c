@@ -316,7 +316,7 @@ actionResetQueueParams(void)
 
 	cs.glbliActionResumeRetryCount = 0;		/* I guess it is smart to reset this one, too */
 
-	d_free(cs.pszActionQFName);
+	free(cs.pszActionQFName);
 	cs.pszActionQFName = NULL;			/* prefix for the main message queue file */
 
 	RETiRet;
@@ -329,7 +329,7 @@ actionResetQueueParams(void)
 rsRetVal actionDestruct(action_t * const pThis)
 {
 	DEFiRet;
-	ASSERT(pThis != NULL);
+	assert(pThis != NULL);
 
 	if(!strcmp((char*)modGetName(pThis->pMod), "builtin:omdiscard")) {
 		/* discard actions will be optimized out */
@@ -355,13 +355,13 @@ rsRetVal actionDestruct(action_t * const pThis)
 	pthread_mutex_destroy(&pThis->mutAction);
 	pthread_mutex_destroy(&pThis->mutWrkrDataTable);
 	free((void*)pThis->pszErrFile);
-	d_free(pThis->pszName);
-	d_free(pThis->ppTpl);
-	d_free(pThis->peParamPassing);
-	d_free(pThis->wrkrDataTable);
+	free(pThis->pszName);
+	free(pThis->ppTpl);
+	free(pThis->peParamPassing);
+	free(pThis->wrkrDataTable);
 
 finalize_it:
-	d_free(pThis);
+	free(pThis);
 	RETiRet;
 }
 
@@ -389,7 +389,7 @@ rsRetVal actionConstruct(action_t **ppThis)
 	DEFiRet;
 	action_t *pThis;
 
-	ASSERT(ppThis != NULL);
+	assert(ppThis != NULL);
 	
 	CHKmalloc(pThis = (action_t*) calloc(1, sizeof(action_t)));
 	pThis->iResumeInterval = 30;
@@ -785,7 +785,7 @@ actionDoRetry(action_t * const pThis, wti_t * const pWti)
 	int bTreatOKasSusp;
 	DEFiRet;
 
-	ASSERT(pThis != NULL);
+	assert(pThis != NULL);
 
 	iRetries = 0;
 	while((*pWti->pbShutdownImmediate == 0) && getActionState(pWti, pThis) == ACT_STATE_RTRY) {
@@ -1602,7 +1602,7 @@ actionCallHUPHdlr(action_t * const pAction)
 {
 	DEFiRet;
 
-	ASSERT(pAction != NULL);
+	assert(pAction != NULL);
 	DBGPRINTF("Action %p checks HUP hdlr, act level: %p, wrkr level %p\n",
 		pAction, pAction->pMod->doHUP, pAction->pMod->doHUPWrkr);
 
@@ -1657,7 +1657,7 @@ static rsRetVal setActionQueType(void __attribute__((unused)) *pVal, uchar *pszT
 		LogError(0, RS_RET_INVALID_PARAMS, "unknown actionqueue parameter: %s", (char *) pszType);
 		iRet = RS_RET_INVALID_PARAMS;
 	}
-	d_free(pszType); /* no longer needed */
+	free(pszType); /* no longer needed */
 
 	RETiRet;
 }
@@ -1826,7 +1826,6 @@ DEFFUNC_llExecFunc(doActivateActions)
 {
 	rsRetVal localRet;
 	action_t * const pThis = (action_t*) pData;
-	BEGINfunc
 	localRet = qqueueStart(pThis->pQueue);
 	if(localRet != RS_RET_OK) {
 		LogError(0, localRet, "error starting up action queue");
@@ -1838,7 +1837,6 @@ DEFFUNC_llExecFunc(doActivateActions)
 	}
 	DBGPRINTF("Action %s[%p]: queue %p started\n", modGetName(pThis->pMod),
 		  pThis, pThis->pQueue);
-	ENDfunc
 	return RS_RET_OK; /* we ignore errors, we can not do anything either way */
 }
 

@@ -101,7 +101,7 @@ createInstance(instanceConf_t **pinst)
 {
 	instanceConf_t *inst;
 	DEFiRet;
-	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
+	CHKmalloc(inst = malloc(sizeof(instanceConf_t)));
 	inst->bDetectYearAfterTimestamp = 0;
 	inst->bPermitSquareBracketsInHostname = 0;
 	inst->bPermitSlashesInHostname = 0;

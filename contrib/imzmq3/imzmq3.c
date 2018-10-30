@@ -279,7 +279,7 @@ static rsRetVal parseSubscriptions(char* subscribes, sublist** subList){
 	DEFiRet;
 
 	/* create empty list */
-	CHKmalloc(*subList = (sublist*)MALLOC(sizeof(sublist)));
+	CHKmalloc(*subList = (sublist*)malloc(sizeof(sublist)));
 	head = *subList;
 	head->next = NULL;
 	head->subscribe=NULL;
@@ -288,7 +288,7 @@ static rsRetVal parseSubscriptions(char* subscribes, sublist** subList){
 	if(tok) {
 	    head->subscribe=strdup(tok);
 	    for(tok=strtok(NULL, ","); tok!=NULL;tok=strtok(NULL, ",")) {
-	        CHKmalloc(currentSub->next = (sublist*)MALLOC(sizeof(sublist)));
+	        CHKmalloc(currentSub->next = (sublist*)malloc(sizeof(sublist)));
 	        currentSub=currentSub->next;
 	        currentSub->subscribe=strdup(tok);
 	        currentSub->next=NULL;
@@ -435,7 +435,7 @@ static rsRetVal createSocket(instanceConf_t* info, void** sock) {
 static rsRetVal createInstance(instanceConf_t** pinst) {
 	DEFiRet;
 	instanceConf_t* inst;
-	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
+	CHKmalloc(inst = malloc(sizeof(instanceConf_t)));
 
 	/* set defaults into new instance config struct */
 	setDefaults(inst);
@@ -527,7 +527,7 @@ static rsRetVal addListener(instanceConf_t* inst){
 	CHKiRet(createSocket(inst, &sock));
 
 	/* now create new lstn_s struct */
-	CHKmalloc(newcnfinfo=(struct lstn_s*)MALLOC(sizeof(struct lstn_s)));
+	CHKmalloc(newcnfinfo=(struct lstn_s*)malloc(sizeof(struct lstn_s)));
 	newcnfinfo->next = NULL;
 	newcnfinfo->sock = sock;
 	newcnfinfo->pRuleset = inst->pBindRuleset;
@@ -607,10 +607,10 @@ static rsRetVal rcv_loop(thrdInfo_t* pThrd){
 	/* make arrays of pollitems, pollerdata so they are easy to delete later */
 
 	/* create the poll items*/
-	CHKmalloc(items = (zmq_pollitem_t*)MALLOC(sizeof(zmq_pollitem_t)*n_items));
+	CHKmalloc(items = (zmq_pollitem_t*)malloc(sizeof(zmq_pollitem_t)*n_items));
 
 	/* create poller data (stuff to pass into the zmq closure called when we get a message)*/
-	CHKmalloc(pollerData = (poller_data*)MALLOC(sizeof(poller_data)*n_items));
+	CHKmalloc(pollerData = (poller_data*)malloc(sizeof(poller_data)*n_items));
 
 	/* loop through and initialize the poll items and poller_data arrays...*/
 	for(i=0, current = lcnfRoot; current != NULL; current = current->next, i++) {

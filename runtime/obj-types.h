@@ -98,12 +98,12 @@ struct obj_s {	/* the dummy struct that each derived class can be casted to */
 		obj_t objData
 #	define ISOBJ_assert(pObj) \
 		do { \
-		ASSERT((pObj) != NULL); \
-		ASSERT((unsigned) ((obj_t*)(pObj))->iObjCooCKiE == (unsigned) 0xBADEFEE); \
+		assert((pObj) != NULL); \
+		assert((unsigned) ((obj_t*)(pObj))->iObjCooCKiE == (unsigned) 0xBADEFEE); \
 		} while(0);
 #	define ISOBJ_TYPE_assert(pObj, objType) \
 		do { \
-		ASSERT(pObj != NULL); \
+		assert(pObj != NULL); \
 		if(strcmp((char*)(((obj_t*)pObj)->pObjInfo->pszID), #objType)) { \
 			dbgprintf("%s:%d ISOBJ assert failure: invalid object type, expected '%s' " \
 				  "actual '%s', cookie: %X\n", __FILE__, __LINE__, #objType, \
@@ -114,7 +114,7 @@ struct obj_s {	/* the dummy struct that each derived class can be casted to */
 			fflush(stderr); \
 			assert(!strcmp((char*)(((obj_t*)pObj)->pObjInfo->pszID), #objType)); \
 		} \
-		ASSERT((unsigned) ((obj_t*)(pObj))->iObjCooCKiE == (unsigned) 0xBADEFEE); \
+		assert((unsigned) ((obj_t*)(pObj))->iObjCooCKiE == (unsigned) 0xBADEFEE); \
 		} while(0)
 	/* now the same for pointers to "regular" objects (like wrkrInstanceData) */
 #	define PTR_ASSERT_DEF unsigned int _Assert_type;
@@ -262,7 +262,7 @@ rsRetVal objName##ClassExit(void) \
 		DEFiRet; \
 		obj##_t *pThis; \
 	 \
-		ASSERT(ppThis != NULL); \
+		assert(ppThis != NULL); \
 	 \
 		if((pThis = (obj##_t *)calloc(1, sizeof(obj##_t))) == NULL) { \
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY); \
@@ -309,7 +309,7 @@ rsRetVal objName##ClassExit(void) \
 		OBJ##_t *pThis;
 
 #define CODESTARTobjDestruct(OBJ) \
-		ASSERT(ppThis != NULL); \
+		assert(ppThis != NULL); \
 		pThis = *ppThis; \
 		ISOBJ_TYPE_assert(pThis, OBJ);
 
@@ -349,7 +349,7 @@ rsRetVal objName##ClassExit(void) \
 		DEFiRet; \
 
 #define CODESTARTobjDebugPrint(obj) \
-		ASSERT(pThis != NULL); \
+		assert(pThis != NULL); \
 		ISOBJ_TYPE_assert(pThis, obj); \
 
 #define ENDobjDebugPrint(obj) \
@@ -384,7 +384,7 @@ rsRetVal objName##ClassExit(void) \
 		DEFiRet; \
 
 #define CODESTARTobjQueryInterface(obj) \
-		ASSERT(pIf != NULL);
+		assert(pIf != NULL);
 
 #define ENDobjQueryInterface(obj) \
 		RETiRet; \
