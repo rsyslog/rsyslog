@@ -177,6 +177,15 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	\
 	--enable-testbench
 
+# mysql support
+RUN	apt-get update && \
+	apt-get install -y \
+	mysql-server
+RUN	mkdir -p /var/run/mysqld && \
+	chown mysql:mysql /var/run/mysqld
+ENV	MYSQLD_START_CMD="sudo mysqld_safe" \
+        MYSQLD_STOP_CMD="sudo kill $(sudo cat /var/run/mysqld/mysqld.pid)"
+
 # module needs fixes: --enable-kmsg
 WORKDIR /rsyslog
 USER rsyslog
