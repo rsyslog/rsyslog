@@ -322,7 +322,6 @@ DISTCHECK_CONFIGURE_FLAGS+= \
 	--enable-testbench \
 	--enable-valgrind
 # currently not supported in make distcheck:
-# --enable-mysql-tests
 # --enable-pgsql-tests 
 # --enable-extended-tests --> should probably never be enabled due to runtime
 
@@ -431,6 +430,9 @@ endif
 
 if ENABLE_MYSQL
 DISTCHECK_CONFIGURE_FLAGS+= --enable-mysql
+endif
+if ENABLE_MYSQL_TESTS
+DISTCHECK_CONFIGURE_FLAGS+= --enable-mysql-tests
 endif
 
 if ENABLE_ELASTICSEARCH
