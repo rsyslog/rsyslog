@@ -5,7 +5,7 @@
  * \date    2003-09-09
  *          Coding begun.
  *
- * Copyright 2003-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2003-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -102,20 +102,4 @@ long long currentTimeMills(void);
 rsRetVal ATTR_NONNULL() split_binary_parameters(uchar **const szBinary,
 	char ***const aParams, int *const iParams, es_str_t *const param_binary);
 
-/* mutex operations */
-/* some useful constants */
-#define DEFVARS_mutexProtection\
-	int bLockedOpIsLocked=0
-#define BEGIN_MTX_PROTECTED_OPERATIONS(mut, bMustLock) \
-	if(bMustLock == LOCK_MUTEX) { \
-		d_pthread_mutex_lock(mut); \
-		assert(bLockedOpIsLocked == 0); \
-		bLockedOpIsLocked = 1; \
-	}
-#define END_MTX_PROTECTED_OPERATIONS(mut) \
-	if(bLockedOpIsLocked) { \
-		d_pthread_mutex_unlock(mut); \
-		bLockedOpIsLocked = 0; \
-	}
-
-#endif
+#endif /* #ifndef __SRUTILS_H_INCLUDED__ */
