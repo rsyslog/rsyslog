@@ -498,15 +498,18 @@ finalize_it:
  * If this function fails (should not happen), DA mode is not turned on.
  * rgerhards, 2008-01-16
  */
-static rsRetVal
-InitDA(qqueue_t *pThis, int bLockMutex)
+static rsRetVal ATTR_NONNULL()
+InitDA(qqueue_t *const pThis, const int bLockMutex)
 {
 	DEFiRet;
-	DEFVARS_mutexProtection;
 	uchar pszBuf[64];
 	size_t lenBuf;
 
-	BEGIN_MTX_PROTECTED_OPERATIONS(pThis->mut, bLockMutex);
+	ISOBJ_TYPE_assert(pThis, qqueue);
+	if(bLockMutex == LOCK_MUTEX) {
+		d_pthread_mutex_lock(pThis->mut);
+	}
+
 	/* check if we already have a DA worker pool. If not, initiate one. Please note that the
 	 * pool is created on first need but never again destructed (until the queue is). This
 	 * is intentional. We assume that when we need it once, we may also need it on another
@@ -534,7 +537,9 @@ InitDA(qqueue_t *pThis, int bLockMutex)
 	}
 
 finalize_it:
-	END_MTX_PROTECTED_OPERATIONS(pThis->mut);
+	if(bLockMutex == LOCK_MUTEX) {
+		d_pthread_mutex_unlock(pThis->mut);
+	}
 	RETiRet;
 }
 
