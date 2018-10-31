@@ -507,6 +507,7 @@ endif
 
 if ENABLE_MYSQL_TESTS
 TESTS +=  \
+	mysqld-start.sh \
 	mysql-basic.sh \
 	mysql-basic-cnf6.sh \
 	mysql-asyn.sh \
@@ -515,6 +516,7 @@ TESTS +=  \
 	action-tx-single-processing.sh \
 	action-tx-errfile.sh
 
+mysql-basic.log: mysqld-start.log
 mysql-basic-cnf6.log: mysql-basic.log
 mysql-asyn.log: mysql-basic-cnf6.log
 mysql-actq-mt.log: mysql-asyn.log
@@ -546,6 +548,7 @@ TESTS +=  \
 libdbi-basic-vg.log: libdbi-asyn.log
 endif
 endif
+TESTS += mysqld-stop.sh
 endif #  MYSQL_TESTS
 
 if ENABLE_FMHTTP
@@ -1671,6 +1674,8 @@ EXTRA_DIST= \
 	testsuites/mysql-select-msg.sql \
 	libdbi-basic.sh \
 	libdbi-asyn.sh \
+	mysqld-start.sh \
+	mysqld-stop.sh \
 	mysql-basic.sh \
 	mysql-basic-cnf6.sh \
 	mysql-basic-vg.sh \
