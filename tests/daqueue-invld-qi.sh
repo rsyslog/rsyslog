@@ -1,13 +1,8 @@
 #!/bin/bash
-# This file is part of the rsyslog project, released  under ASL 2.0
-
-uname
-if [ $(uname) = "SunOS" ] ; then
-   echo "This test currently does not work on all flavors of Solaris."
-   exit 77
-fi
-
+# This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+skip_platform "SunOS"  "This test currently does not work on all flavors of Solaris."
+
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
@@ -40,7 +35,7 @@ startup
 injectmsg 0 10000
 shutdown_immediate
 wait_shutdown
-. $srcdir/diag.sh check-mainq-spool
+check_mainq_spool
 ./mangle_qi -d -q ${RSYSLOG_DYNNAME}.spool/mainq.qi > tmp.qi
 mv tmp.qi ${RSYSLOG_DYNNAME}.spool/mainq.qi
 

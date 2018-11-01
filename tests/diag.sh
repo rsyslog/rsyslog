@@ -196,13 +196,13 @@ function cmp_exact() {
 	fi
 	printf '%s\n' "$EXPECTED" | cmp - "$1"
 	if [ $? -ne 0 ]; then
-		echo "invalid response generated"
-		echo "################# $1 is:"
+		printf 'invalid response generated\n'
+		printf '################# %s is:\n' "$1"
 		cat -n $1
-		echo "################# EXPECTED was:"
-		printf '%s\n' "$EXPECTED" | cat -n -
+		printf '################# EXPECTED was:\n'
+		cat -n <<< "$EXPECTED"
 		printf '\n#################### diff is:\n'
-		printf '%s\n' "$EXPECTED" | diff - "$1"
+		diff - "$1" <<< "$EXPECTED"
 		error_exit  1
 	fi;
 }
@@ -243,10 +243,10 @@ function wait_startup_pid() {
 	start_timeout="$(date)"
 	while test ! -f $1; do
 		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
-		let "i++"
+		(( i++ ))
 		if test $i -gt $TB_TIMEOUT_STARTSTOP
 		then
-		   echo "ABORT! Timeout waiting on startup (pid file $1)"
+		   printf 'ABORT! Timeout waiting on startup (pid file %s1)' "$1"
 		   echo "Wait initiated $start_timeout, now $(date)"
 		   ls -l $1
 		   ps -fp $(cat $1)
@@ -276,7 +276,7 @@ function wait_process_startup() {
 			   echo "ABORT! pid in $1 no longer active during startup!"
 			   error_exit 1
 			fi
-			let "i++"
+			(( i++ ))
 			if test $i -gt $TB_TIMEOUT_STARTSTOP
 			then
 			   echo "ABORT! Timeout waiting on file '$2'"
@@ -372,7 +372,7 @@ function wait_startup() {
 		   echo "ABORT! rsyslog pid no longer active during startup!"
 		   error_exit 1 stacktrace
 		fi
-		let "i++"
+		(( i++ ))
 		if test $i -gt $TB_TIMEOUT_STARTSTOP
 		then
 		   echo "ABORT! Timeout waiting on startup ('${RSYSLOG_DYNNAME}.started' file)"
@@ -499,7 +499,7 @@ function content_check_with_count() {
 	timecounter=0
 
 	while [  $timecounter -lt $timeoutend ]; do
-		let timecounter=timecounter+1
+		(( timecounter=timecounter+1 ))
 
 		count=$(grep -c -F -- "$1" <${RSYSLOG_OUT_LOG})
 
@@ -549,6 +549,19 @@ function check_not_present() {
 		echo inside file $file of $(wc -l < $file) lines
 		echo samples:
 		cat -n "$file" | grep -- "$1" | head -10
+		error_exit 1
+	fi
+}
+
+
+# check if mainqueue spool files exist, if not abort (we just check .qi).
+check_mainq_spool() {
+	printf 'There must exist some files now:\n'
+	ls -l $RSYSLOG_DYNNAME.spool
+	printf '.qi file:\n'
+	cat $RSYSLOG_DYNNAME.spool/mainq.qi
+	if [ ! -f $RSYSLOG_DYNNAME.spool/mainq.qi ]; then
+		printf 'error: mainq.qi does not exist where expected to do so!\n'
 		error_exit 1
 	fi
 }
@@ -607,7 +620,7 @@ function wait_shutdown() {
 			terminated=1
 		fi
 		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
-		let "i++"
+		(( i++ ))
 		if test $i -gt $TB_TIMEOUT_STARTSTOP
 		then
 		   echo "ABORT! Timeout waiting on shutdown"
@@ -1058,7 +1071,7 @@ function stop_kafka() {
 					kill -9 $kafkapid
 					break
 				fi
-				let "i++"
+				(( i++ ))
 			else
 				# Break the loop
 				break
@@ -1123,7 +1136,7 @@ function stop_zookeeper() {
 						kill -9 $zkpid
 						break
 					fi
-					let "i++"
+					(( i++ ))
 				else
 					break
 				fi
@@ -1274,7 +1287,7 @@ function create_kafka_topic() {
 			break
 		fi
 		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
-		let "i++"
+		(( i++ ))
 		if test $i -gt $timeout_ready; then
 			echo "ENV ERROR: kafka brokers did not come up:"
 			cat -n <<< $text
@@ -1405,7 +1418,7 @@ case $1 in
 		# some default names (later to be set in other parts, once we support fully
 		# parallel tests)
 		export RSYSLOG_DFLT_LOG_INTERNAL=1 # testbench needs internal messages logged internally!
-		if [ "$SYSLOG_DYNNAME" != "" ]; then
+		if [ "$RSYSLOG_DYNNAME" != "" ]; then
 			echo "FAIL: \$RSYSLOG_DYNNAME already set in init"
 			echo "hint: was init accidently called twice?"
 			exit 2
@@ -1520,7 +1533,7 @@ case $1 in
 				terminated=1
 			fi
 			$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
-			let "i++"
+			(( i++ ))
 			if test $i -gt $TB_TIMEOUT_STARTSTOP
 			then
 			   echo "ABORT! Timeout waiting on shutdown"
@@ -1542,16 +1555,6 @@ case $1 in
 		echo injecting msg payload from: $2
 		sed -e 's/^/injectmsg litteral /g' < "$2" | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
 		# TODO: some return state checking? (does it really make sense here?)
-		;;
-   'check-mainq-spool') # check if mainqueue spool files exist, if not abort (we just check .qi).
-		echo There must exist some files now:
-		ls -l $RSYSLOG_DYNNAME.spool
-		echo .qi file:
-		cat $RSYSLOG_DYNNAME.spool/mainq.qi
-		if test ! -f $RSYSLOG_DYNNAME.spool/mainq.qi; then
-		  echo "error: mainq.qi does not exist where expected to do so!"
-		  error_exit 1
-		fi
 		;;
    'assert-equal')
 		if [ "x$4" == "x" ]; then
@@ -1788,7 +1791,7 @@ case $1 in
 		until [ "$(curl --silent --show-error --connect-timeout 1 http://localhost:${ES_PORT:-19200} | grep 'rsyslog-testbench')" != "" ]; do
 			echo "--- waiting for ES startup: $timeseconds seconds"
 			$TESTTOOL_DIR/msleep 1000
-			let "timeseconds=$timeseconds + 1"
+			(( timeseconds=timeseconds + 1 ))
 
 			if [ "$timeseconds" -gt "$timeoutend" ]; then 
 				echo "--- TIMEOUT ( $timeseconds ) reached!!!"
