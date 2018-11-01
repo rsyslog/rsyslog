@@ -724,6 +724,10 @@ function check_exit_vg(){
 # try to gather as much information as possible. That's most important
 # for systems like Travis-CI where we cannot debug on the machine itself.
 # our $1 is the to-be-used exit code. if $2 is "stacktrace", call gdb.
+#
+# NOTE: if a function test_error_exit_handler is defined, error_exit will
+#       call it immeditely before termination. This may be used to cleanup
+#       some things or emit additional diagnostic information.
 function error_exit() {
 	if [ -e core* ]
 	then
@@ -791,6 +795,10 @@ function error_exit() {
 
 	# Report error to rsyslog testbench stats
 	error_stats
+
+	if [ "$(type -t test_error_exit_handler)" == "function" ]; then
+		test_error_exit_handler
+	fi
 
 	if [ "$TEST_STATUS" == "unreliable" ] && [ "$1" -ne 100 ]; then
 		# TODO: log github issue
@@ -913,6 +921,7 @@ function exit_test() {
 
 	printf 'Test SUCCESFUL\n'
 	echo  -------------------------------------------------------------------------------
+	exit 0
 }
 
 # finds a free port that we can bind a listener to

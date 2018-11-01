@@ -1,7 +1,6 @@
 #!/bin/bash
-# This file is part of the rsyslog project, released under GPLv3
-echo ===============================================================================
-echo \[mysql-asyn.sh\]: asyn test for mysql functionality
+# This file is part of the rsyslog project, released under ASL 2.0
+# asyn test for mysql functionality
 . ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
