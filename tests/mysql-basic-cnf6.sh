@@ -11,12 +11,12 @@ if $msg contains "msgnum" then {
 	       db="Syslog" uid="rsyslog" pwd="testbench")
 }
 '
-mysql --user=rsyslog --password=testbench < testsuites/mysql-truncate.sql
+mysql --user=rsyslog --password=testbench < ${srcdir}/testsuites/mysql-truncate.sql
 startup
 injectmsg  0 5000
 shutdown_when_empty
 wait_shutdown 
 # note "-s" is requried to suppress the select "field header"
-mysql -s --user=rsyslog --password=testbench < testsuites/mysql-select-msg.sql > $RSYSLOG_OUT_LOG
+mysql -s --user=rsyslog --password=testbench < ${srcdir}/testsuites/mysql-select-msg.sql > $RSYSLOG_OUT_LOG
 seq_check  0 4999
 exit_test

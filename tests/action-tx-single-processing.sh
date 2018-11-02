@@ -1,6 +1,6 @@
 #!/bin/bash
 . ${srcdir:=.}/diag.sh init
-mysql --user=rsyslog --password=testbench < testsuites/mysql-truncate.sql
+mysql --user=rsyslog --password=testbench < ${srcdir}/testsuites/mysql-truncate.sql
 generate_conf
 add_conf '
 $ModLoad ../plugins/ommysql/.libs/ommysql
@@ -16,7 +16,6 @@ if($msg contains "msgnum:") then {
 	} else {
 		set $/cntr = 0;
 	}
-	action(type="omfile" file="tmp" template="tpl2")
 	action(type="ommysql" name="mysql_action" server="127.0.0.1" template="tpl"
 	       db="Syslog" uid="rsyslog" pwd="testbench")
 }
@@ -27,6 +26,6 @@ injectmsg 0 5000
 shutdown_when_empty
 wait_shutdown
 # note "-s" is requried to suppress the select "field header"
-mysql -s --user=rsyslog --password=testbench < testsuites/mysql-select-msg.sql > $RSYSLOG_OUT_LOG
+mysql -s --user=rsyslog --password=testbench < ${srcdir}/testsuites/mysql-select-msg.sql > $RSYSLOG_OUT_LOG
 seq_check  0 4999 -i2
 exit_test
