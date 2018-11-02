@@ -320,6 +320,7 @@ TESTS +=  \
 	queue-encryption-disk_keyfile-vg.sh \
 	rscript_parse_json-vg.sh \
 	rscript_backticks-vg.sh \
+	rscript_backticks_empty_envvar-vg.sh \
 	rscript-config_enable-off-vg.sh \
 	prop-jsonmesg-vg.sh \
 	mmexternal-SegFault-vg.sh \
@@ -1212,6 +1213,7 @@ EXTRA_DIST= \
 	rscript_parse_json.sh \
 	rscript_parse_json-vg.sh \
 	rscript_backticks-vg.sh \
+	rscript_backticks_empty_envvar-vg.sh \
 	rscript_previous_action_suspended.sh \
 	rscript_str2num_negative.sh \
 	rs-cnum.sh \
