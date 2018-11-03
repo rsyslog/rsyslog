@@ -37,7 +37,14 @@ rsyslogd_SOURCES = \
 	iminternal.h \
 	\
 	../dirty.h
-rsyslogd_CPPFLAGS =  $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBLOGGING_STDLOG_CFLAGS) -DSD_EXPORT_SYMBOLS
+rsyslogd_CPPFLAGS =  $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
+
+if ENABLE_LIBLOGGING_STDLOG
+rsyslogd_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
+endif
+
+rsyslogd_CPPFLAGS += -DSD_EXPORT_SYMBOLS
+
 # note: it looks like librsyslog.la must be explicitely given on LDDADD,
 # otherwise dependencies are not properly calculated (resulting in a
 # potentially incomplete build, a problem we had several times...)
