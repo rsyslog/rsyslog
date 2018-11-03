@@ -4,10 +4,9 @@
 # fast shutdown and then re-start the engine to process the 
 # remaining data.
 # added 2009-05-27 by Rgerhards
-# This file is part of the rsyslog project, released  under GPLv3
+# This file is part of the rsyslog project, released under ASL 2.0
 # uncomment for debugging support:
 echo testing memory queue persisting to disk, mode $1
-. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
@@ -37,7 +36,7 @@ startup
 injectmsg 0 5000
 shutdown_immediate
 wait_shutdown
-. $srcdir/diag.sh check-mainq-spool
+check_mainq_spool
 
 # restart engine and have rest processed
 #remove delay
@@ -45,7 +44,7 @@ echo "#" > ${RSYSLOG_DYNNAME}work-delay.conf
 startup
 shutdown_when_empty # shut down rsyslogd when done processing messages
 ./msleep 1000
-$srcdir/diag.sh wait-shutdown
+wait_shutdown
 # note: we need to permit duplicate messages, as due to the forced
 # shutdown some messages may be flagged as "unprocessed" while they
 # actually were processed. This is inline with rsyslog's philosophy

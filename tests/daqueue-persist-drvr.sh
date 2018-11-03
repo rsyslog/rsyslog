@@ -40,7 +40,7 @@ startup
 injectmsg 0 10000
 shutdown_immediate
 wait_shutdown
-. $srcdir/diag.sh check-mainq-spool
+check_mainq_spool
 
 echo "Enter phase 2, rsyslogd restart"
 
