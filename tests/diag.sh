@@ -28,6 +28,14 @@
 #		global input timeout shutdown, default 60000 (60) sec. This should
 #		only be set specifically if there is good need to do so, e.g. if
 #		a test needs to timeout.
+# USE_VALGRIND  if set to "YES", the test will be run under valgrind control, with
+#               "default" settings (memcheck including leak check, termination on error).
+#		This permits to have valgrind and non-valgrind versions of the same test
+#		without the need to write it twice: just have a 2-liner -vg.sh which
+#		does:
+#			export USE_VALGRIND="YES"
+#			source original-test.sh
+#		sample can be seen in imjournal-basic[.vg].sh
 #
 #
 # EXIT STATES
@@ -397,7 +405,11 @@ function wait_startup() {
 # RS_REDIR maybe set to redirect rsyslog output
 # env var RSTB_DAEMONIZE" == "YES" means rsyslogd shall daemonize itself;
 # any other value or unset means it does not do that.
-function startup() {
+startup() {
+	if [ "$USE_VALGRIND" == "YES" ]; then
+		startup_vg "$1" "$2"
+		return
+	fi
 	startup_common "$1" "$2"
 	if [ "$RSTB_DAEMONIZE" == "YES" ]; then
 		n_option=""
@@ -421,7 +433,7 @@ function startup_vg_waitpid_only() {
 
 # start rsyslogd with default params under valgrind control. $1 is the config file name to use
 # returns only after successful startup, $2 is the instance (blank or 2!)
-function startup_vg() {
+startup_vg() {
 		startup_vg_waitpid_only $1 $2
 		wait_startup $2
 		echo startup_vg still running
@@ -432,13 +444,13 @@ function startup_vg() {
 # that) we don't can influence and where we cannot provide suppressions as
 # they are platform-dependent. In that case, we can't test for leak checks
 # (obviously), but we can check for access violations, what still is useful.
-function startup_vg_noleak() {
+startup_vg_noleak() {
 	RS_TESTBENCH_LEAK_CHECK=no
 	startup_vg $*
 }
 
 # same as startup-vgthread, BUT we do NOT wait on the startup message!
-function startup_vgthread_waitpid_only() {
+startup_vgthread_waitpid_only() {
 	startup_common "$1" "$2"
 	valgrind --tool=helgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --suppressions=$srcdir/linux_localtime_r.supp ${EXTRA_VALGRIND_SUPPRESSIONS:-} --suppressions=$srcdir/CI/gcov.supp --gen-suppressions=all ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$2.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
 	wait_rsyslog_startup_pid $2
@@ -569,6 +581,46 @@ check_mainq_spool() {
 	fi
 }
 
+# general helper for imjournal tests: check that we got hold of the
+# injected test message. This is pretty lengthy as the journal has played
+# "a bit" with us and also seems to sometimes have a heavy latency in
+# forwarding messages. So let's centralize the check code.
+#
+# $TESTMSG must contain the test message
+check_journal_testmsg_received() {
+	printf 'checking that journal indeed contains test message - may take a short while...\n'
+	# search reverse, gets us to our message (much) faster .... if it is there...
+	journalctl -a -r | grep -qF "$TESTMSG"
+	if [ $? -ne 0 ]; then
+		print 'SKIP: cannot read journal - our testmessage not found via journalctl\n'
+		exit 77
+	fi
+	printf 'journal contains test message\n'
+
+	echo "INFO: $(wc -l < $RSYSLOG_OUT_LOG) lines in $RSYSLOG_OUT_LOG"
+
+	grep -qF "$TESTMSG" < $RSYSLOG_OUT_LOG
+	if [ $? -ne 0 ]; then
+	  echo "FAIL:  $RSYSLOG_OUT_LOG content (tail -n200):"
+	  tail -n200 $RSYSLOG_OUT_LOG
+	  echo "======="
+	  echo "searching journal for testbench messages:"
+	  journalctl -a | grep -qF "TestBenCH-RSYSLog imjournal"
+	  echo "======="
+	  echo "NOTE: showing only last 200 lines, may be insufficient on busy systems!"
+	  echo "last entries from journal:"
+	  journalctl -an 200
+	  echo "======="
+	  echo "NOTE: showing only last 200 lines, may be insufficient on busy systems!"
+	  echo "However, the test check all of the journal, we are just limiting the output"
+	  echo "to 200 lines to not spam CI systems too much."
+	  echo "======="
+	  echo "FAIL: imjournal test message could not be found!"
+	  echo "Expected message content was:"
+	  echo "$TESTMSG"
+	  error_exit 1
+	fi;
+}
 
 # wait for main message queue to be empty. $1 is the instance.
 function wait_queueempty() {
@@ -598,19 +650,24 @@ function shutdown_when_empty() {
 }
 
 # shut rsyslogd down without emptying the queue. $2 is the instance.
-function shutdown_immediate() {
-	cp $RSYSLOG_PIDBASE$2.pid $RSYSLOG_PIDBASE$2.pid.save
-	kill $(cat $RSYSLOG_PIDBASE$2.pid)
+shutdown_immediate() {
+	pidfile=$RSYSLOG_PIDBASE${1:-}.pid
+	cp $pidfile $pidfile.save
+	kill $(cat $pidfile)
 }
 
 
 # actually, we wait for rsyslog.pid to be deleted.
 # $1 is the instance
-function wait_shutdown() {
+wait_shutdown() {
+	if [ "$USE_VALGRIND" == "YES" ]; then
+		wait_shutdown_vg "$1"
+		return
+	fi
 	i=0
 	out_pid=$(cat $RSYSLOG_PIDBASE$1.pid.save)
 	echo wait on shutdown of $out_pid
-	if [[ "x$out_pid" == "x" ]]
+	if [[ "$out_pid" == "" ]]
 	then
 		terminated=1
 	else
@@ -718,13 +775,18 @@ function issue_HUP() {
 
 
 # actually, we wait for rsyslog.pid to be deleted. $1 is the instance
-function wait_shutdown_vg() {
+wait_shutdown_vg() {
 	wait $(cat $RSYSLOG_PIDBASE$1.pid)
 	export RSYSLOGD_EXIT=$?
 	echo rsyslogd run exited with $RSYSLOGD_EXIT
-	if [ -e vgcore.* ]; then
-	   echo "ABORT! core file exists"
+
+	if [ $(ls vgcore.* 2> /dev/null | wc -l) -gt 0 ]; then
+	   printf 'ABORT! core file exists:\n'
+	   ls -l vgcore.*
 	   error_exit 1
+	fi
+	if [ "$USE_VALGRIND" == "YES" ]; then
+		check_exit_vg
 	fi
 }
 
@@ -745,12 +807,26 @@ function check_file_not_exists() {
 }
 
 # check exit code for valgrind error
-function check_exit_vg(){
+check_exit_vg(){
 	if [ "$RSYSLOGD_EXIT" -eq "10" ]; then
 		printf 'valgrind run FAILED with exceptions - terminating\n'
 		error_exit 1
 	fi
 }
+
+
+# do cleanup during exit processing
+do_cleanup() {
+	if [ "$(type -t test_error_exit_handler)" == "function" ]; then
+		test_error_exit_handler
+	fi
+
+	if [ -f $RSYSLOG_PIDBASE.pid ]; then
+		printf 'rsyslog pid file still exists, trying to shutdown...\n'
+		shutdown_immediate ""
+	fi
+}
+
 
 # this is called if we had an error and need to abort. Here, we
 # try to gather as much information as possible. That's most important
@@ -760,7 +836,7 @@ function check_exit_vg(){
 # NOTE: if a function test_error_exit_handler is defined, error_exit will
 #       call it immeditely before termination. This may be used to cleanup
 #       some things or emit additional diagnostic information.
-function error_exit() {
+error_exit() {
 	if [ -e core* ]
 	then
 		echo trying to obtain crash location info
@@ -825,12 +901,8 @@ function error_exit() {
 	# Extended Exit handling for kafka / zookeeper instances 
 	kafka_exit_handling "false"
 
-	# Report error to rsyslog testbench stats
-	error_stats
-
-	if [ "$(type -t test_error_exit_handler)" == "function" ]; then
-		test_error_exit_handler
-	fi
+	error_stats # Report error to rsyslog testbench stats
+	do_cleanup
 
 	if [ "$TEST_STATUS" == "unreliable" ] && [ "$1" -ne 100 ]; then
 		# TODO: log github issue
@@ -842,6 +914,14 @@ function error_exit() {
 		exit $1
 	fi
 }
+
+
+# skip a test; do cleanup when we detect it is necessary
+skip_test(){
+	do_cleanup
+	exit 77
+}
+
 
 # Helper function to call Adiscon test error script
 function error_stats() {
