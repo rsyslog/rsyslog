@@ -10,6 +10,12 @@ Version 8.40.0 [v8-stable] 2018-12-11
   the debug system. This means we are more likely to reproduce race
   conditions in runs with debugging enabled.
   closes https://github.com/rsyslog/rsyslog/issues/2211
+- config: fix segfault in backticks "echo" expansion of undefined variables
+  The bug was introduced in commit abe0434 (config: enhance backticks "echo"
+  capability). The getenv() result passed to strlen() and es_addBuf() may be
+  NULL if the environment variable does not exist, resulting in a segfault.
+  Thanks to Julien Thomas for the patch.
+  fixes https://github.com/rsyslog/rsyslog/issues/3006
 - bugfix build system: "make distcheck" did not work for mysql tests
 - bugfix build system: don't link liblogging-stdlog when available but not enabled
   When liblogging-stdlog was available but configure option "--disable-liblogging-stdlog"
