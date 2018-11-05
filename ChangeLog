@@ -10,12 +10,19 @@ Version 8.40.0 [v8-stable] 2018-12-11
   the debug system. This means we are more likely to reproduce race
   conditions in runs with debugging enabled.
   closes https://github.com/rsyslog/rsyslog/issues/2211
+- bugfix build system: "make distcheck" did not work for mysql tests
 - CI
+   * made mysql-based tests (ommysql and omlibdbi) work inside containers
    * testbench: grep failed when string starting with "-" was used
      The search term was mistakenly interpreted as an option.
    * testbench: support auto-start/-stop of mysqld
      This is required to run mysql/mariadb tests inside containers.
      closes https://github.com/rsyslog/rsyslog/issues/3223
+   * improve bash coding style and fix a some bug in testbench
+     - duplicate diag.sh init call was not detected due to typo
+     - queue-persits test did not work correctly
+     - some general testbench framework improvements
+     issues found be shellcheck, fixes brought up other work to do
 ------------------------------------------------------------------------------
 Version 8.39.0 [v8-stable] 2018-10-30
 - imfile: improve truncation detection
