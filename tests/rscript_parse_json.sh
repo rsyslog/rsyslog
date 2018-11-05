@@ -18,15 +18,7 @@ tcpflood -m1
 shutdown_when_empty
 wait_shutdown
 
-# Our fixed and calculated expected results
 export EXPECTED='{ "parsed": { "c1": "data" } }'
-echo $EXPECTED | cmp - $RSYSLOG_OUT_LOG
-if [[ $? -ne 0 ]]; then
-  printf "Invalid function output detected!\n"
-  printf "expected:\n$EXPECTED\n"
-  printf "rsyslog.out is:\n"
-  cat $RSYSLOG_OUT_LOG
-  error_exit 1
-fi;
+cmp_exact $RSYSLOG_OUT_LOG
 
 exit_test

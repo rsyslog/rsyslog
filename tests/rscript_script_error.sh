@@ -25,13 +25,6 @@ wait_shutdown
 
 # Our fixed and calculated expected results
 export EXPECTED='{ "valid": { "serial": 1507165811, "error": 0 }, "invalid": { "serial": 0, "error": 1 }, "valid2": { "serial": 1507165811, "error": 0 } }'
-echo $EXPECTED | cmp - $RSYSLOG_OUT_LOG
-if [[ $? -ne 0 ]]; then
-  printf "Invalid function output detected!\n"
-  printf "expected:\n$EXPECTED\n"
-  printf "rsyslog.out is:\n"
-  cat $RSYSLOG_OUT_LOG
-  error_exit 1
-fi;
+cmp_exact $RSYSLOG_OUT_LOG
 
 exit_test
