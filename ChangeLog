@@ -11,6 +11,12 @@ Version 8.40.0 [v8-stable] 2018-12-11
   conditions in runs with debugging enabled.
   closes https://github.com/rsyslog/rsyslog/issues/2211
 - bugfix build system: "make distcheck" did not work for mysql tests
+- bugfix build system: don't link liblogging-stdlog when available but not enabled
+  When liblogging-stdlog was available but configure option "--disable-liblogging-stdlog"
+  was set, rsyslog was still linking against liblogging-stdlog.
+  This commit will ensure that rsyslog will only link against liblogging-stdlog when
+  "--enable-liblogging-stdlog" was set.
+  see also: https://bugs.gentoo.org/667836
 - CI
    * made mysql-based tests (ommysql and omlibdbi) work inside containers
    * testbench: grep failed when string starting with "-" was used
