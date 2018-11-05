@@ -496,20 +496,16 @@ function content_check() {
 }
 
 
-function content_check_with_count() {
-	# content check variables for Timeout
-	if [ "x$3" == "x" ]; then
-		timeoutend=1
-	else
-		timeoutend=$3
-	fi
-	timecounter=0
 
+# $1 - content to check for
+# $2 - number of times content must appear
+# $3 - timeout (default: 1)
+function content_check_with_count() {
+	timeoutend=${3:-1}
+	timecounter=0
 	while [  $timecounter -lt $timeoutend ]; do
 		(( timecounter=timecounter+1 ))
-
 		count=$(grep -c -F -- "$1" <${RSYSLOG_OUT_LOG})
-
 		if [ $count -eq $2 ]; then
 			echo content_check_with_count success, \"$1\" occured $2 times
 			break
