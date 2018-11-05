@@ -41,7 +41,7 @@ startup 2
 tcpflood -m500 -i1
 
 # wait in data received
-$srcdir/diag.sh wait-file-lines $RSYSLOG_OUT_LOG 500 $TB_TIMEOUT_STARTSTOP
+wait_file_lines $RSYSLOG_OUT_LOG 500 $TB_TIMEOUT_STARTSTOP
 
 # shut down sender when everything is sent, receiver continues to run concurrently
 shutdown_when_empty 2

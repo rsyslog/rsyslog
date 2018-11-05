@@ -75,7 +75,7 @@ startup
 echo Inject messages into rsyslog sender instance  
 injectmsg 1 $TESTMESSAGES
 
-$srcdir/diag.sh wait-file-lines  $RSYSLOG_OUT_LOG $TESTMESSAGESFULL 100
+wait_file_lines $RSYSLOG_OUT_LOG $TESTMESSAGESFULL 100
 
 # experimental: wait until kafkacat receives everything
 

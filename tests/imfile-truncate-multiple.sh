@@ -21,14 +21,14 @@ if $msg contains "msgnum:" then
 NUMMSG=1000
 ./inputfilegen -m 1000 -i0 > $RSYSLOG_DYNNAME.input
 ls -li $RSYSLOG_DYNNAME.input
-inode=$(ls -i $RSYSLOG_DYNNAME.input | awk '{ print $1;}' )
+inode=$(get_inode $RSYSLOG_DYNNAME.input )
 echo inode $inode
 
 startup
 
 for i in {0..50}; do
 	# check that previous msg injection worked
-	$srcdir/diag.sh wait-file-lines  $RSYSLOG_OUT_LOG $NUMMSG 100
+	wait_file_lines  $RSYSLOG_OUT_LOG $NUMMSG 100
 	seq_check 0 $((NUMMSG - 1))
 
 	# begin new inject cycle
@@ -36,7 +36,7 @@ for i in {0..50}; do
 	echo generating $NUMMSG .. $((NUMMSG + generate_msgs -1))
 	./inputfilegen -m$generate_msgs -i$NUMMSG > $RSYSLOG_DYNNAME.input
 	(( NUMMSG=NUMMSG+generate_msgs ))
-	if [  $inode -ne $(ls -i $RSYSLOG_DYNNAME.input | awk '{ print $1;}' ) ]; then
+	if [  $inode -ne $( get_inode $RSYSLOG_DYNNAME.input ) ]; then
 		echo FAIL testbench did not keep same inode number, expected $inode
 		ls -li $RSYSLOG_DYNNAME.input
 		exit 100

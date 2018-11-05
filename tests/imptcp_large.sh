@@ -18,7 +18,7 @@ ruleset(name="testing") {
 startup
 # send messages of 10.000bytes plus header max, randomized
 tcpflood -c5 -m20000 -r -d10000
-. $srcdir/diag.sh wait-file-lines $RSYSLOG_OUT_LOG 20000
+wait_file_lines$RSYSLOG_OUT_LOG 20000
 shutdown_when_empty
 wait_shutdown
 seq_check 0 19999 -E
