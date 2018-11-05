@@ -57,7 +57,7 @@ ls -l $RSYSLOG_DYNNAME.input*
 startup
 
 # Wait until testmessages are processed by imfile!
-. $srcdir/diag.sh wait-file-lines  $RSYSLOG_OUT_LOG $TESTMESSAGES $RETRIES
+wait_file_lines $RSYSLOG_OUT_LOG $TESTMESSAGES $RETRIES
 
 # Logrotate on logfile
 logrotate -f $RSYSLOG_DYNNAME.logrotate
@@ -70,7 +70,7 @@ echo ls ${RSYSLOG_DYNNAME}.spool:
 ls -l ${RSYSLOG_DYNNAME}.spool
 
 let msgcount="2* $TESTMESSAGES"
-. $srcdir/diag.sh wait-file-lines  $RSYSLOG_OUT_LOG $msgcount $RETRIES
+wait_file_lines $RSYSLOG_OUT_LOG $msgcount $RETRIES
 
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown	# we need to wait until rsyslogd is finished!

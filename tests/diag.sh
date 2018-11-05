@@ -356,7 +356,7 @@ function injectmsg_kafkacat() {
 		printf ' msgnum:%8.8d\n' $i; \
 	done | kafkacat -P -b localhost:29092 -t $RANDTOPIC
 	if [ "$1" == "--wait" ]; then
-		$srcdir/diag.sh wait-file-lines $RSYSLOG_OUT_LOG $TESTMESSAGES ${RETRIES:-200}
+		wait_file_lines $RSYSLOG_OUT_LOG $TESTMESSAGES ${RETRIES:-200}
 	fi
 }
 
@@ -658,6 +658,35 @@ function await_lookup_table_reload() {
 	fi
 }
 
+# $1 filename, $2 expected nbr of lines, $3 nbr of tries
+wait_file_lines() {
+	timeoutend=${3:-200}
+	timecounter=0
+
+	while [  $timecounter -lt $timeoutend ]; do
+		(( timecounter++ ))
+
+		if [ -f "$RSYSLOG_OUT_LOG" ]; then
+			count=$(wc -l < "$RSYSLOG_OUT_LOG")
+		fi
+		if [ ${count:=0} -eq $2 ]; then
+			echo wait_file_lines success, have $2 lines
+			break
+		else
+			if [ "x$timecounter" == "x$timeoutend" ]; then
+				echo wait_file_lines failed, expected $2 got $count after $timeoutend retries
+				shutdown_when_empty
+				wait_shutdown
+				error_exit 1
+			else
+				echo wait_file_lines not yet there, expected $2, current $count lines
+				$TESTTOOL_DIR/msleep 200
+			fi
+		fi
+	done
+	unset count
+}
+
 
 function assert_content_missing() {
 	grep -qF -- "$1" < ${RSYSLOG_OUT_LOG}
@@ -932,6 +961,17 @@ function exit_test() {
 function get_free_port() {
 python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()'
 }
+
+
+# return the inode number of file $1; file MUST exist
+get_inode() {
+	if [ ! -f "$1" ]; then
+		printf 'FAIL: file "%s" does not exist in get_inode\n' "$1"
+		error_exit 100
+	fi
+	stat -c '%i' "$1"
+}
+
 
 # check if command $1 is available - will exit 77 when not OK
 function check_command_available() {
@@ -1594,34 +1634,6 @@ case $1 in
 		  echo "$EXPECTED"
 		error_exit 1
 		fi;
-		;;
-   'wait-file-lines') 
-		# $2 filename, $3 expected nbr of lines, $4 nbr of tries
-		timeoutend=${4:-200}
-		timecounter=0
-
-		while [  $timecounter -lt $timeoutend ]; do
-			(( timecounter++ ))
-
-			if [ -f "$RSYSLOG_OUT_LOG" ]; then
-				count=$(wc -l < "$RSYSLOG_OUT_LOG")
-			fi
-			if [ ${count:=0} -eq $3 ]; then
-				echo wait-file-lines success, have $3 lines
-				break
-			else
-				if [ "x$timecounter" == "x$timeoutend" ]; then
-					echo wait-file-lines failed, expected $3 got $count after $timeoutend retries
-					shutdown_when_empty
-					wait_shutdown
-					error_exit 1
-				else
-					echo wait-file-lines not yet there, currently $count lines
-					$TESTTOOL_DIR/msleep 200
-				fi
-			fi
-		done
-		unset count
 		;;
 	 'block-stats-flush')
 		echo blocking stats flush

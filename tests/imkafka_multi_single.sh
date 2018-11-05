@@ -136,7 +136,7 @@ TIMESTART=$(date +%s.%N)
 
 injectmsg_kafkacat
 # special case: number of test messages differs from file output
-$srcdir/diag.sh wait-file-lines $RSYSLOG_OUT_LOG $((TESTMESSAGES * 8)) ${RETRIES:-200}
+wait_file_lines $RSYSLOG_OUT_LOG $((TESTMESSAGES * 8)) ${RETRIES:-200}
 shutdown_when_empty
 wait_shutdown
 
