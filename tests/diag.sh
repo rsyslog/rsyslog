@@ -79,7 +79,7 @@ function rsyslog_testbench_test_url_access() {
     fi
 
     if [ -n "${missing_requirements}" ]; then
-        echo ${missing_requirements}
+        printf '%s\n' "${missing_requirements}"
         exit 77
     fi
 
