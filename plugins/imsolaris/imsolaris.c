@@ -83,6 +83,7 @@
 #include "msg.h"
 #include "prop.h"
 #include "sun_cddl.h"
+#include "datetime.h"
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
@@ -96,6 +97,7 @@ MODULE_CNFNAME("imsolaris")
 DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
+DEFobjCurrIf(datetime)
 
 
 /* config settings */
@@ -180,6 +182,7 @@ readLog(int fd, uchar *pRcv, int iMaxLine)
 	struct strbuf data;
 	struct strbuf ctl;
 	struct log_ctl hdr;
+	struct timeval tim;
 	int flags;
 	smsg_t *pMsg;
 	int ret;
@@ -209,7 +212,12 @@ readLog(int fd, uchar *pRcv, int iMaxLine)
 		MsgSetRawMsg(pMsg, (char*)pRcv, strlen((char*)pRcv));
 		MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 		msgSetPRI(pMsg, hdr.pri);
-		pMsg->msgFlags = NEEDS_PARSING | NO_PRI_IN_RAW;
+		pMsg->msgFlags = NEEDS_PARSING | NO_PRI_IN_RAW | IGNDATE;
+
+		/* Construct timestamp from msg ctl struct */
+		tim.tv_usec = 0;
+		tim.tv_sec = hdr.ttime;
+		datetime.timeval2syslogTime(&tim, &pMsg->tRcvdAt, TIME_IN_LOCALTIME);
 		CHKiRet(submitMsg(pMsg));
 	}
 
@@ -384,6 +392,7 @@ CODESTARTmodExit
 	sun_delete_doorfiles();
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
+	objRelease(datetime, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -413,6 +422,7 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
+	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
 	DBGPRINTF("imsolaris version %s initializing\n", PACKAGE_VERSION);
 
