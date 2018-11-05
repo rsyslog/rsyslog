@@ -402,6 +402,10 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	dbgOutputTID((char*)thrdName);
 #	endif
 
+// TESTBENCH bughunt - remove when done! 2018-11-05 rgerhards
+if(dbgTimeoutToStderr) {
+	fprintf(stderr, "%s: worker started\n", wtpGetDbgHdr(pThis));
+}
 	/* let the parent know we're done with initialization */
 	d_pthread_mutex_lock(&pThis->mutWtp);
 	wtiSetState(pWti, WRKTHRD_RUNNING);
@@ -467,6 +471,12 @@ wtpStartWrkr(wtp_t *const pThis, const int permit_during_shutdown)
 	iState = pthread_create(&(pWti->thrdID), &pThis->attrThrd,wtpWorker, (void*) pWti);
 	ATOMIC_INC(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd); /* we got one more! */
 
+// TESTBENCH bughunt - remove when done! 2018-11-05 rgerhards
+if(dbgTimeoutToStderr) {
+	fprintf(stderr, "%s: started with state %d, num workers now %d\n",
+		wtpGetDbgHdr(pThis), iState,
+		ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
+}
 	DBGPRINTF("%s: started with state %d, num workers now %d\n",
 		wtpGetDbgHdr(pThis), iState,
 		ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
