@@ -681,10 +681,10 @@ int sendMessages(struct instdata *inst)
 			#endif
 		}
 		if(lenSend != lenBuf) {
-			printf("\r%5.5d\n", i);
+			printf("\r%5.5u\n", i);
 			fflush(stdout);
 			test_rs_strerror_r(error_number, errStr, sizeof(errStr));
-			printf("send() failed \"%s\" at socket %d, index %d, msgNum %lld\n",
+			printf("send() failed \"%s\" at socket %d, index %u, msgNum %lld\n",
 				   errStr, sockArray[socknum], i, inst->numSent);
 			fflush(stderr);
 
@@ -692,7 +692,7 @@ int sendMessages(struct instdata *inst)
 		}
 		if(i % show_progress_interval == 0) {
 			if(bShowProgress)
-				printf("\r%8.8d", i);
+				printf("\r%8.8u", i);
 		}
 		if(!runMultithreaded && bRandConnDrop) {
 			/* if we need to randomly drop connections, see if we
@@ -727,7 +727,7 @@ int sendMessages(struct instdata *inst)
 		lenSend = sendTLS(socknum, sendBuf, offsSendBuf);
 	}
 	if(!bSilent)
-		printf("\r%8.8d %s sent\n", i, statusText);
+		printf("\r%8.8u %s sent\n", i, statusText);
 
 	return 0;
 }
@@ -858,9 +858,9 @@ endTiming(struct timeval *tvStart, struct runstats *stats)
 
 	if(!bSilent || bStatsRecords) {
 		if(bCSVoutput) {
-			printf("%ld.%3.3ld\n", runtime / 1000, runtime % 1000);
+			printf("%lu.%3.3ld\n", runtime / 1000, runtime % 1000);
 		} else {
-			printf("runtime: %ld.%3.3ld\n", runtime / 1000, runtime % 1000);
+			printf("runtime: %lu.%3.3ld\n", runtime / 1000, runtime % 1000);
 		}
 	}
 }
