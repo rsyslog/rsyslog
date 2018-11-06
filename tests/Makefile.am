@@ -820,6 +820,7 @@ TESTS +=  \
 endif
 if HAVE_VALGRIND
 TESTS +=  \
+	mmjsonparse_extra_data-vg.sh \
 	json_null_array-vg.sh \
 	json_object_looping-vg.sh \
 	json_array_looping-vg.sh \
@@ -1773,6 +1774,7 @@ EXTRA_DIST= \
 	json_null-vg.sh \
 	json_null_array.sh \
 	json_null_array-vg.sh \
+	mmjsonparse_extra_data-vg.sh \
 	mmnormalize_regex.sh \
 	testsuites/mmnormalize_regex.rulebase \
 	testsuites/regex_input \
