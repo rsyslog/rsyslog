@@ -65,6 +65,7 @@ Version 8.40.0 [v8-stable] 2018-12-11
          test SKIP but still reports the failure
        * new exitcode, logurl stats reporting fields
        * report buildbot builder (if provided) in failure report
+   * testbench: add test for mmjsonparse with unparsable data
 ------------------------------------------------------------------------------
 Version 8.39.0 [v8-stable] 2018-10-30
 - imfile: improve truncation detection
