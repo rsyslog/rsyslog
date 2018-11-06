@@ -43,6 +43,9 @@
 # 1 - FAIL
 # 77 - SKIP
 # 100 - Testbench failure
+# 177 - internal state: test failed, but in a way that makes us strongly believe
+#       this is caused by environment. This will lead to exit 77 (SKIP), but report
+#       the failure if failure reporting is active
 
 # environment variables:
 # USE_AUTO_DEBUG "on" --> enables automatic debugging, anything else
@@ -901,7 +904,7 @@ error_exit() {
 	# Extended Exit handling for kafka / zookeeper instances 
 	kafka_exit_handling "false"
 
-	error_stats # Report error to rsyslog testbench stats
+	error_stats $1 # Report error to rsyslog testbench stats
 	do_cleanup
 
 	if [ "$TEST_STATUS" == "unreliable" ] && [ "$1" -ne 100 ]; then
@@ -911,6 +914,9 @@ error_exit() {
 		printf 'GitHub ISSUE: %s\n' "$TEST_GITHUB_ISSUE"
 		exit 77
 	else
+		if [ "$1" -eq 177 ]; then
+			exit 77
+		fi
 		exit $1
 	fi
 }
@@ -924,10 +930,11 @@ skip_test(){
 
 
 # Helper function to call Adiscon test error script
+# $1 is the exit code
 function error_stats() {
 	if [ "$RSYSLOG_STATSURL" != "" ]; then
 		echo reporting failure to $RSYSLOG_STATSURL
-		wget -nv $RSYSLOG_STATSURL\?Testname=$RSYSLOG_TESTNAME\&Testenv=$PWD\&Testmachine=$HOSTNAME\&rndstr=jnxv8i34u78fg23
+		wget -nv $RSYSLOG_STATSURL\?Testname=$RSYSLOG_TESTNAME\&Testenv=${VCS_SLUG:-$PWD}\&Testmachine=$HOSTNAME\&exitcode=${1:-1}\&logurl=${CI_BUILD_URL:-}\&rndstr=jnxv8i34u78fg23
 	fi
 }
 

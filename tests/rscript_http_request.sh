@@ -20,9 +20,19 @@ if $msg contains "msgnum:" then {
 '
 startup
 tcpflood -m10
+wait_file_lines $RSYSLOG_OUT_LOG 10 200
 shutdown_when_empty
 wait_shutdown
-echo '{ "reply": "msgnum:00000000:" }
+
+# check for things that look like http failures
+if grep -q "DOCTYPE" "$RSYSLOG_OUT_LOG" ; then
+	printf 'SKIP: looks like we have problems with the upstream http server:\n'
+	cat -n "$RSYSLOG_OUT_LOG"
+	printf '\n'
+	error_exit 177
+fi
+
+export EXPECTED='{ "reply": "msgnum:00000000:" }
 { "reply": "msgnum:00000001:" }
 { "reply": "msgnum:00000002:" }
 { "reply": "msgnum:00000003:" }
@@ -31,11 +41,7 @@ echo '{ "reply": "msgnum:00000000:" }
 { "reply": "msgnum:00000006:" }
 { "reply": "msgnum:00000007:" }
 { "reply": "msgnum:00000008:" }
-{ "reply": "msgnum:00000009:" }' | cmp - $RSYSLOG_OUT_LOG
-if [ ! $? -eq 0 ]; then
-  echo "invalid function output detected, $RSYSLOG_OUT_LOG is:"
-  cat $RSYSLOG_OUT_LOG
-  error_exit 1
-fi;
+{ "reply": "msgnum:00000009:" }'
+cmp_exact  $RSYSLOG_OUT_LOG
 exit_test
 
