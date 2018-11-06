@@ -427,22 +427,23 @@ forkRsyslog(void)
 		perror("error creating rsyslog \"fork pipe\" - terminating");
 		exit(1);
 	}
-	/* AIXPORT : src support start */
-#if defined(_AIX)
-	if(!src_exists)
-	{
-#endif
-	/* AIXPORT : src support end */
-	cpid = fork();
-	if(cpid == -1) {
-		perror("error forking rsyslogd process - terminating");
-		exit(1);
+	#if defined(_AIX)
+	if(!src_exists) {
+	#endif
+		cpid = fork();
+		if(cpid == -1) {
+			perror("error forking rsyslogd process - terminating");
+			exit(1);
+		}
+	#if defined(_AIX)
+	} else {
+		/* note: I added this hoping it is right - but I am not really
+		 * sure. Maybe we should just terminate in that case.
+		 * rgerhards, 2018-10-30
+		 */
+		cpid = -1;
 	}
-	/* AIXPORT : src support start */
-#if defined(_AIX)
-	}
-#endif
-	/* AIXPORT : src support end */
+	#endif
 
 	if(cpid == 0) {
 		prepareBackground(pipefd[1]);
