@@ -16,6 +16,14 @@ Version 8.40.0 [v8-stable] 2018-12-11
   NULL if the environment variable does not exist, resulting in a segfault.
   Thanks to Julien Thomas for the patch.
   fixes https://github.com/rsyslog/rsyslog/issues/3006
+- bugfix imsolaris: message timestamps on Solaris
+  On Solaris messages don't have their time directly in the raw body but in
+  a separate log_ctl structure which is currently not used.
+  When message is logged and processed, rsyslogd gives it current time because
+  it ignores the actual one. That means that old messages (e.g. from system
+  reboot) get timestamp of processing instead of the reboot itself (it is
+  not a problem for live logging where now is used anyway).
+  Thanks to Jakub Kulik for the patch.
 - bugfix build system: "make distcheck" did not work for mysql tests
 - bugfix build system: don't link liblogging-stdlog when available but not enabled
   When liblogging-stdlog was available but configure option "--disable-liblogging-stdlog"
