@@ -35,6 +35,18 @@ Version 8.40.0 [v8-stable] 2018-12-11
      - queue-persits test did not work correctly
      - some general testbench framework improvements
      issues found be shellcheck, fixes brought up other work to do
+   * testbench: improve journal tests and testbench framework
+     improving both style and reliability of journal tests; along that way
+     also improve testbench framework:
+     - do cleanup on error_exit and skip
+     - explicit skip handler (vs exit 77)
+       this permits us to do better cleanup
+     - new testbench functions for journal-specific functionality
+       reduce code duplication and make things easier to maintain in the
+       future
+     - provide a way to do valgrind and non-valgrind tests with a single
+       test file
+     see also https://github.com/rsyslog/rsyslog/issues/2564
 ------------------------------------------------------------------------------
 Version 8.39.0 [v8-stable] 2018-10-30
 - imfile: improve truncation detection
