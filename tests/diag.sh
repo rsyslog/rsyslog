@@ -345,12 +345,19 @@ debug output in the receiver and check for actual problems.
 }
 
 # check if kafka itself failed. $1 is the message file name.
-function kafka_check_broken_broker() {
-	grep -q "Broker transport failure" < "$1"
-	if [ "$?" -eq "0" ]; then
-		echo environment-induced test error - kafka broker failed - skipping test
-		cat -n $1
-		exit 77
+kafka_check_broken_broker() {
+	failed=0
+	if grep "Broker transport failure" < "$1" ; then
+		failed=1
+	fi
+	if grep "broker connections are down" < "$1" ; then
+		failed=1
+	fi
+	if [ $failed -eq 1 ]; then
+		printf '\n\nenvironment-induced test error - kafka broker failed - skipping test\n'
+		printf 'content of %s:\n' "$1"
+		cat -n "$1"
+		error_exit 177
 	fi
 }
 
@@ -909,8 +916,7 @@ error_exit() {
 
 	if [ "$TEST_STATUS" == "unreliable" ] && [ "$1" -ne 100 ]; then
 		# TODO: log github issue
-		printf 'Test flagged as unreliable, exiting with 77 (skip). Original\n'
-		printf 'exit code was %d\n' $1
+		printf 'Test flagged as unreliable, exiting with SKIP. Original exit code was %d\n' "$1"
 		printf 'GitHub ISSUE: %s\n' "$TEST_GITHUB_ISSUE"
 		exit 77
 	else
@@ -1305,8 +1311,14 @@ function cleanup_zookeeper() {
 
 function start_zookeeper() {
 	if [ "$KEEP_KAFKA_RUNNING" == "YES" ] && [ -f "$ZOOPIDFILE" ]; then
-		printf 'zookeeper already runing, no need to start\n'
-		return
+		if kill -0 "$(cat "$ZOOPIDFILE")"; then
+			printf 'zookeeper already runing, no need to start\n'
+			return
+		else
+			printf 'INFO: zookeper pidfile %s exists, but zookeeper not runing\n' "$ZOOPIDFILE"
+			printf 'deleting pid file\n'
+			rm -f "$ZOOPIDFILE"
+		fi
 	fi
 	if [ "x$1" == "x" ]; then
 		dep_work_dir=$(readlink -f .dep_wrk)
@@ -1424,7 +1436,6 @@ function create_kafka_topic() {
 		text=$(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --zookeeper localhost:$dep_work_port/kafka --create --topic $1 --replication-factor 1 --partitions 2 )
 		grep "Error.* larger than available brokers: 0" <<<"$text"
 		res=$?
-		echo RESULT GREP: $res
 		if [ $res -ne 0 ]; then
 			echo looks like brokers are available - continue...
 			break
@@ -1436,7 +1447,7 @@ function create_kafka_topic() {
 			cat -n <<< $text
 			if [ $is_retry == 1 ]; then
 				echo "SKIPing test as the env is not ready for it"
-				exit 77
+				exit 177
 			fi
 			echo "RETRYING kafka startup, doing shutdown and startup"
 			stop_zookeeper; stop_kafka
