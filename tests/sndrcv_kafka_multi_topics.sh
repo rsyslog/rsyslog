@@ -79,6 +79,8 @@ local4.* action(	name="kafka-fwd"
 	action.resumeRetryCount="10"
 	queue.saveonshutdown="on"
 	)
+
+syslog.* action(type="omfile" file="'$RSYSLOG_DYNNAME.sender.syslog'")
 '
 
 echo STEP: Starting sender instance [omkafka]
@@ -126,6 +128,8 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 if ($msg contains "msgnum:") then {
 	action( type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt" )
 }
+
+syslog.* action(type="omfile" file="'$RSYSLOG_DYNNAME.receiver.syslog'")
 ' 2
 
 echo STEP: Starting receiver instance [imkafka]
@@ -144,6 +148,9 @@ wait_shutdown 2
 echo STEP: delete kafka topics
 delete_kafka_topic $RANDTOPIC1 '.dep_wrk' '22181'
 delete_kafka_topic $RANDTOPIC2 '.dep_wrk' '22181'
+
+kafka_check_broken_broker "$RSYSLOG_DYNNAME.sender.syslog"
+kafka_check_broken_broker "$RSYSLOG_DYNNAME.receiver.syslog"
 
 # Dump Kafka log | uncomment if needed
 # dump_kafka_serverlog
