@@ -1,5 +1,8 @@
 ------------------------------------------------------------------------------
 Version 8.40.0 [v8-stable] 2018-12-11
+- openssl driver: improved error messages
+  also fixes misleading wording of some error messages
+  closes https://github.com/rsyslog/rsyslog/issues/3238
 - cleanup: remove no longer needed --enable-rtinst code
   configure option --enable-rtinst is gone-away since a while, but there were
   still some supporting code left. It required careful anaylsis what could
