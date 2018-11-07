@@ -72,6 +72,7 @@ export ZOOPIDFILE="$(pwd)/zookeeper.pid"
 #export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 #export RSYSLOG_DEBUGLOG="log"
 TB_TIMEOUT_STARTSTOP=400 # timeout for start/stop rsyslogd in tenths (!) of a second 400 => 40 sec
+TB_TEST_TIMEOUT=60  # number of seconds after which test checks timeout (eg. waits)
 # note that 40sec for the startup should be sufficient even on very slow machines. we changed this from 2min on 2017-12-12
 export RSYSLOG_DEBUG_TIMEOUTS_TO_STDERR="on"  # we want to know when we loose messages due to timeouts
 if [ "$srcdir" == "" ]; then
@@ -358,7 +359,11 @@ function kafka_check_broken_broker() {
 # $1 == "--wait" means wait for rsyslog to receive TESTMESSAGES lines in RSYSLOG_OUT_LOG
 # $TESTMESSAGES contains number of messages to inject
 # $RANDTOPIC contains topic to produce to
-function injectmsg_kafkacat() {
+injectmsg_kafkacat() {
+	if [ "$1" == "--wait" ]; then
+		wait="YES"
+		shift
+	fi
 	if [ "$TESTMESSAGES" == "" ]; then
 		printf 'TESTBENCH ERROR: TESTMESSAGES env var not set!\n'
 		error_exit 1
@@ -366,8 +371,8 @@ function injectmsg_kafkacat() {
 	for ((i=1 ; i<=TESTMESSAGES ; i++)); do
 		printf ' msgnum:%8.8d\n' $i; \
 	done | kafkacat -P -b localhost:29092 -t $RANDTOPIC
-	if [ "$1" == "--wait" ]; then
-		wait_file_lines $RSYSLOG_OUT_LOG $TESTMESSAGES ${RETRIES:-200}
+	if [ "$wait" == "YES" ]; then
+		wait_seq_check "$@"
 	fi
 }
 
@@ -751,6 +756,35 @@ wait_file_lines() {
 }
 
 
+# wait until seq_check succeeds. This is used to synchronize various
+# testbench timing-related issues, most importantly rsyslog shutdown
+# all parameters are passed to seq_check
+wait_seq_check() {
+	timeoutend=$(( $(date +%s) + TB_TEST_TIMEOUT ))
+
+	while true ; do
+		if [ -f "$RSYSLOG_OUT_LOG" ]; then
+			count=$(wc -l < "$RSYSLOG_OUT_LOG")
+		fi
+		seq_check --check-only "$@" &>/dev/null
+		ret=$?
+		if [ $ret == 0 ]; then
+			printf 'wait_seq_check success (%d lines)\n' "$count"
+			break
+		else
+			if [ $(date +%s) -ge $timeoutend  ]; then
+				printf 'wait_seq_check failed, no success before timeout\n'
+				error_exit 1
+			else
+				printf 'wait_seq_check waiting (%d lines)\n' $count
+				$TESTTOOL_DIR/msleep 500
+			fi
+		fi
+	done
+	unset count
+}
+
+
 function assert_content_missing() {
 	grep -qF -- "$1" < ${RSYSLOG_OUT_LOG}
 	if [ "$?" -eq "0" ]; then
@@ -827,6 +861,14 @@ do_cleanup() {
 	if [ -f $RSYSLOG_PIDBASE.pid ]; then
 		printf 'rsyslog pid file still exists, trying to shutdown...\n'
 		shutdown_immediate ""
+	fi
+	if [ -f ${RSYSLOG_PIDBASE}1.pid ]; then
+		printf 'rsyslog pid file still exists, trying to shutdown...\n'
+		shutdown_immediate 1
+	fi
+	if [ -f ${RSYSLOG_PIDBASE}2.pid ]; then
+		printf 'rsyslog pid file still exists, trying to shutdown...\n'
+		shutdown_immediate 2
 	fi
 }
 
@@ -945,13 +987,27 @@ function error_stats() {
 # do the usual sequence check to see if everything was properly received.
 # $4... are just to have the abilit to pass in more options...
 # add -v to chkseq if you need more verbose output
-function seq_check() {
+# argument --check-only can be used to simply do a check without abort in fail case
+seq_check() {
+	if [ "$1" == "--check-only" ]; then
+		check_only="YES"
+		shift
+	else
+		check_only="NO"
+	fi
 	if [ ! -f "$RSYSLOG_OUT_LOG" ]; then
+		if [ "$check_only"  == "YES" ]; then
+			return 1
+		fi
 		printf 'FAIL: %s does not exist in seq_check!\n' "$RSYSLOG_OUT_LOG"
 		error_exit 1
 	fi
 	$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${RSYSLOG_OUT_LOG} | ./chkseq -s$1 -e$2 $3 $4 $5 $6 $7
-	if [ "$?" -ne "0" ]; then
+	ret=$?
+	if [ "$check_only"  == "YES" ]; then
+		return $ret
+	fi
+	if [ $ret -ne 0 ]; then
 		$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${RSYSLOG_OUT_LOG} > $RSYSLOG_DYNNAME.error.log
 		echo "sequence error detected in $RSYSLOG_OUT_LOG"
 		echo "number of lines in file: $(wc -l $RSYSLOG_OUT_LOG)"
@@ -968,6 +1024,7 @@ function seq_check() {
 		mv -f $RSYSLOG_DYNNAME.error.log error.log
 		error_exit 1 
 	fi
+	return 0
 }
 
 

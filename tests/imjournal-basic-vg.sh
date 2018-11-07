@@ -1,3 +1,3 @@
 #!/bin/bash
 export USE_VALGRIND="YES"
-source imjournal-basic.sh
+source ${srcdir:-.}/imjournal-basic.sh

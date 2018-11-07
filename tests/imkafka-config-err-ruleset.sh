@@ -44,7 +44,7 @@ if ($msg contains "msgnum:") then {
 '
 startup
 
-injectmsg_kafkacat --wait
+injectmsg_kafkacat --wait 1 $TESTMESSAGES -d
 shutdown_when_empty
 wait_shutdown
 

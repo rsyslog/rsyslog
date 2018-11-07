@@ -45,12 +45,8 @@ if ($msg contains "msgnum:") then {
 	action( type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt" )
 }
 '
-# --- 
-
-# --- Start imkafka receiver config
 startup
-
-injectmsg_kafkacat --wait
+injectmsg_kafkacat --wait 1 $TESTMESSAGESFULL -d
 shutdown_when_empty
 wait_shutdown
 
