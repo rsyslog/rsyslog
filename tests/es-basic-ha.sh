@@ -32,7 +32,7 @@ wait_queueempty
 . $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
 shutdown_when_empty
 wait_shutdown 
-. $srcdir/diag.sh es-getdata 100 19200
+es_getdata 100 19200
 seq_check  0 99
 # The configuration makes every other request from message #3 fail checkConn (N/2-1)
 custom_content_check '"failed.checkConn": 49' "${RSYSLOG_DYNNAME}.out.stats.log"

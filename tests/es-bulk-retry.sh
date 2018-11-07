@@ -1,6 +1,7 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+#export USE_VALGRIND="YES" # to enable this to run under valgrind
 export ES_PORT=19200
 . $srcdir/diag.sh download-elasticsearch
 . $srcdir/diag.sh stop-elasticsearch
@@ -95,11 +96,7 @@ curl -s -H 'Content-Type: application/json' -XPUT localhost:${ES_PORT:-19200}/rs
 ' | python -mjson.tool
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="debug.log"
-if [ "x${USE_VALGRIND:-false}" == "xtrue" ] ; then
-	startup_vg
-else
-	startup
-fi
+startup
 if [ -n "${USE_GDB:-}" ] ; then
 	echo attach gdb here
 	sleep 54321 || :
@@ -109,21 +106,17 @@ success=50
 badarg=50
 injectmsg 0 $numrecords
 sleep 2
+# TODO: wait-grep for $success line appearing in pstats log
 shutdown_when_empty
-if [ "x${USE_VALGRIND:-false}" == "xtrue" ] ; then
-	wait_shutdown_vg
-	check_exit_vg
-else
-	wait_shutdown
-fi
-. $srcdir/diag.sh es-getdata $numrecords $ES_PORT
+wait_shutdown
+es_getdata $numrecords $ES_PORT
 rc=$?
 
 . $srcdir/diag.sh stop-elasticsearch
 . $srcdir/diag.sh cleanup-elasticsearch
 
-if [ -f work ] ; then
-	< work  \
+if [ -f $RSYSLOG_DYNNAME.work ] ; then
+	< $RSYSLOG_DYNNAME.work  \
 	python -c '
 import sys,json
 records = int(sys.argv[1])
@@ -158,7 +151,7 @@ sys.exit(rc)
 		echo "good - no missing or unexpected records were found in Elasticsearch"
 	fi
 else
-	errmsg="FAIL: elasticsearch output file work not found"
+	errmsg="FAIL: elasticsearch output file $RSYSLOG_DYNNAME.work not found"
 	rc=1
 fi
 

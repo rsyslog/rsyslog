@@ -26,7 +26,7 @@ injectmsg  0 100
 wait_queueempty
 shutdown_when_empty
 wait_shutdown_vg
-. $srcdir/diag.sh es-getdata 100 $ES_PORT
+es_getdata 100 $ES_PORT
 seq_check  0 99
 . $srcdir/diag.sh stop-elasticsearch
 . $srcdir/diag.sh cleanup-elasticsearch

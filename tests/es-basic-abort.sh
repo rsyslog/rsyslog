@@ -38,7 +38,7 @@ echo start elasticsearch...
 shutdown_when_empty
 wait_shutdown
 ./msleep 1000 # ES might need some time to maintain index...
-. $srcdir/diag.sh es-getdata 10000 19200
+es_getdata 10000 19200
 . $srcdir/diag.sh stop-elasticsearch
 
 seq_check  0 9999 -d
