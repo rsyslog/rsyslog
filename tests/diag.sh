@@ -74,11 +74,8 @@ export ZOOPIDFILE="$(pwd)/zookeeper.pid"
 TB_TIMEOUT_STARTSTOP=400 # timeout for start/stop rsyslogd in tenths (!) of a second 400 => 40 sec
 # note that 40sec for the startup should be sufficient even on very slow machines. we changed this from 2min on 2017-12-12
 export RSYSLOG_DEBUG_TIMEOUTS_TO_STDERR="on"  # we want to know when we loose messages due to timeouts
-if [ "$srcdir" == "" ]; then
-	printf "\$srcdir not set, for a manual build, do 'export srcdir=\$(pwd)'\n"
-fi
 if [ "$TESTTOOL_DIR" == "" ]; then
-	export TESTTOOL_DIR="$srcdir"
+	export TESTTOOL_DIR="${srcdir:-.}"
 fi
 
 # newer functionality is preferrably introduced via bash functions
@@ -198,12 +195,12 @@ function rst_msleep() {
 # $1 is file to compare
 function cmp_exact() {
 	if [ "$1" == "" ]; then
-		printf "Testbench ERROR, cmp_exact() needs filename as \$1\n"
-		error_exit  1
+		printf 'Testbench ERROR, cmp_exact() needs filename as %s\n' "$1"
+		error_exit 100
 	fi
 	if [ "$EXPECTED" == "" ]; then
 		printf 'Testbench ERROR, cmp_exact() needs to have env var EXPECTED set!\n'
-		error_exit  1
+		error_exit 100
 	fi
 	printf '%s\n' "$EXPECTED" | cmp - "$1"
 	if [ $? -ne 0 ]; then
@@ -449,7 +446,7 @@ startup_vg() {
 # (obviously), but we can check for access violations, what still is useful.
 startup_vg_noleak() {
 	RS_TESTBENCH_LEAK_CHECK=no
-	startup_vg $*
+	startup_vg "$@"
 }
 
 # same as startup-vgthread, BUT we do NOT wait on the startup message!
@@ -1582,7 +1579,7 @@ case $1 in
 		touch $RSYSLOG_DYNNAME-$(basename $0).test_id
 
 		if [ -z $RS_SORTCMD ]; then
-			RS_SORTCMD=sort
+			RS_SORTCMD="sort"
 		fi
 		if [ -z $RS_SORT_NUMERIC_OPT ]; then
 			if [ "$(uname)" == "AIX" ]; then
@@ -1592,10 +1589,10 @@ case $1 in
 			fi
 		fi
 		if [ -z $RS_CMPCMD ]; then
-			RS_CMPCMD=cmp
+			RS_CMPCMD="cmp"
 		fi
 		if [ -z $RS_HEADCMD ]; then
-			RS_HEADCMD=head
+			RS_HEADCMD="head"
 		fi
 		ulimit -c unlimited  &> /dev/null # at least try to get core dumps
 		echo "------------------------------------------------------------"
@@ -1750,7 +1747,8 @@ case $1 in
 		prev_count=$(grep 'BEGIN$' <$2 | wc -l)
 		new_count=$prev_count
 		while [[ "x$prev_count" == "x$new_count" ]]; do
-				new_count=$(grep 'BEGIN$' <$2 | wc -l) # busy spin, because it allows as close timing-coordination in actual test run as possible
+				# busy spin, because it allows as close timing-coordination in actual test run as possible
+				new_count=$(grep -c'BEGIN$' <"$2")
 		done
 		echo "stats push registered"
 		;;
@@ -1768,18 +1766,6 @@ case $1 in
 		done
 		echo "dyn-stats reset for bucket ${3} registered"
 		;;
-# note needed at the moment, but let's keep it in a little, 2018-09-03 rgerhards
-#   'content-check-regex')
-#		# this does a content check which permits regex
-#		grep "$2" $3 -q
-#		if [ "$?" -ne "0" ]; then
-#		    echo "----------------------------------------------------------------------"
-#		    echo FAIL: content-check-regex failed to find "'$2'" inside "'$3'"
-#		    echo "file contents:"
-#		    cat $3
-#		    error_exit 1
-#		fi
-#		;;
    'first-column-sum-check') 
 		sum=$(grep $3 < $4 | sed -e $2 | awk '{s+=$1} END {print s}')
 		if [ "x${sum}" != "x$5" ]; then
