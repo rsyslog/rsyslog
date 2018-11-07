@@ -935,7 +935,9 @@ skip_test(){
 # Helper function to call rsyslog project test error script
 # $1 is the exit code
 function error_stats() {
-	if [ "$RSYSLOG_STATSURL" != "" ]; then
+	if [ "$RSYSLOG_STATSURL" == "" ]; then
+		printf 'not reporting failure as RSYSLOG_STATSURL is not set\n'
+	else
 		echo reporting failure to $RSYSLOG_STATSURL
 		testname=$(./urlencode.py "$RSYSLOG_TESTNAME")
 		testenv=$(./urlencode.py "${VCS_SLUG:-$PWD}")
