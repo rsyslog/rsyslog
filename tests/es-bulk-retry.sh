@@ -127,8 +127,12 @@ if [ -f work ] ; then
 	python -c '
 import sys,json
 records = int(sys.argv[1])
+extra_recs = open(sys.argv[2], "w")
+missing_recs = open(sys.argv[3], "w")
 expectedrecs = {}
 rc = 0
+nextra = 0
+nmissing = 0
 for ii in xrange(0, records*2, 2):
 	ss = "{:08}".format(ii)
 	expectedrecs[ss] = ss
@@ -137,13 +141,22 @@ for item in json.load(sys.stdin)["hits"]["hits"]:
 	if msgnum in expectedrecs:
 		del expectedrecs[msgnum]
 	else:
-		print "FAIL: found unexpected msgnum {} in record".format(msgnum)
-		rc = 1
+		extra_recs.write("FAIL: found unexpected msgnum {} in record\n".format(msgnum))
+		nextra += 1
 for item in expectedrecs:
-	print "FAIL: msgnum {} was missing in Elasticsearch".format(item)
+	missing_recs.write("FAIL: msgnum {} was missing in Elasticsearch\n".format(item))
+	nmissing += 1
+if nextra > 0:
+	print("FAIL: Found {} unexpected records - see {} for the full list.".format(nextra, sys.argv[2]))
+	rc = 1
+if nmissing > 0:
+	print("FAIL: Found {} missing records - see {} for the full list.".format(nmissing, sys.argv[3]))
 	rc = 1
 sys.exit(rc)
-' $success || { rc=$?; errmsg="FAIL: did not find expected records in Elasticsearch"; }
+' $success ${RSYSLOG_DYNNAME}.spool/extra_records ${RSYSLOG_DYNNAME}.spool/missing_records || { rc=$?; errmsg="FAIL: found unexpected or missing records in Elasticsearch"; }
+	if [ $rc = 0 ] ; then
+		echo "good - no missing or unexpected records were found in Elasticsearch"
+	fi
 else
 	errmsg="FAIL: elasticsearch output file work not found"
 	rc=1
@@ -155,6 +168,7 @@ import sys,json
 success = int(sys.argv[1])
 badarg = int(sys.argv[2])
 lasthsh = {}
+rc = 0
 for line in sys.stdin:
 	jstart = line.find("{")
 	if jstart >= 0:
@@ -165,11 +179,23 @@ actualsuccess = lasthsh["response.success"]
 actualbadarg = lasthsh["response.badargument"]
 actualrej = lasthsh["response.bulkrejection"]
 actualsubmitted = lasthsh["submitted"]
-assert(actualsuccess == success)
-assert(actualbadarg == badarg)
-assert(actualrej > 0)
-assert(actualsuccess + actualbadarg + actualrej == actualsubmitted)
+if actualsuccess != success:
+	print("FAIL: expected {} successful responses but omelasticsearch stats reported {}".format(success, actualsuccess))
+	rc = 1
+if actualbadarg != badarg:
+	print("FAIL: expected {} bad argument errors but omelasticsearch stats reported {}".format(badarg, actualbadarg))
+	rc = 1
+if actualrej == 0:
+	print("FAIL: there were no bulk index rejections reported by Elasticsearch")
+	rc = 1
+if actualsuccess + actualbadarg + actualrej != actualsubmitted:
+	print("FAIL: The sum of the number of successful responses and bad argument errors and bulk index rejections {} did not equal the number of requests actually submitted to Elasticsearch {}".format(actualsuccess + actualbadarg + actualrej, actualsubmitted))
+	rc = 1
+sys.exit(rc)
 ' $success $badarg || { rc=$?; errmsg="FAIL: expected responses not found in ${RSYSLOG_DYNNAME}.spool/es-stats.log"; }
+	if [ $rc = 0 ] ; then
+		echo "good - all expected stats were found in Elasticsearch stats file ${RSYSLOG_DYNNAME}.spool/es-stats.log"
+	fi
 else
 	errmsg="FAIL: stats file ${RSYSLOG_DYNNAME}.spool/es-stats.log not found"
 	rc=1
