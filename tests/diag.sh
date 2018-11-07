@@ -929,12 +929,16 @@ skip_test(){
 }
 
 
-# Helper function to call Adiscon test error script
+# Helper function to call rsyslog project test error script
 # $1 is the exit code
 function error_stats() {
 	if [ "$RSYSLOG_STATSURL" != "" ]; then
 		echo reporting failure to $RSYSLOG_STATSURL
-		wget -nv $RSYSLOG_STATSURL\?Testname=$RSYSLOG_TESTNAME\&Testenv=${VCS_SLUG:-$PWD}\&Testmachine=$HOSTNAME\&exitcode=${1:-1}\&logurl=${CI_BUILD_URL:-}\&rndstr=jnxv8i34u78fg23
+		testname=$(./urlencode.py "$RSYSLOG_TESTNAME")
+		testenv=$(./urlencode.py "${VCS_SLUG:-$PWD}")
+		testmachine=$(./urlencode.py "$HOSTNAME")
+		logurl=$(./urlencode.py "${CI_BUILD_URL:-}")
+		wget -nv $RSYSLOG_STATSURL\?Testname=$testname\&Testenv=$testenv\&Testmachine=$testmachine\&exitcode=${1:-1}\&logurl=$logurl\&rndstr=jnxv8i34u78fg23
 	fi
 }
 
