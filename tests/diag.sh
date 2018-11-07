@@ -733,12 +733,13 @@ await_lookup_table_reload() {
 wait_file_lines() {
 	timeoutend=${3:-200}
 	timecounter=0
+	file=${1:-$RSYSLOG_OUT_LOG}
 
 	while [  $timecounter -lt $timeoutend ]; do
 		(( timecounter++ ))
 
-		if [ -f "$RSYSLOG_OUT_LOG" ]; then
-			count=$(wc -l < "$RSYSLOG_OUT_LOG")
+		if [ -f "$file" ]; then
+			count=$(wc -l < "$file")
 		fi
 		if [ ${count:=0} -eq $2 ]; then
 			echo wait_file_lines success, have $2 lines
