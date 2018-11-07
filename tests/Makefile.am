@@ -871,7 +871,11 @@ TESTS +=  \
 	sndrcv_tls_ossl_anon_rebind.sh \
 	imtcp-tls-ossl-x509valid.sh \
 	imtcp-tls-ossl-x509name.sh \
-	imtcp-tls-ossl-x509fingerprint.sh
+	imtcp-tls-ossl-x509fingerprint.sh \
+	imtcp-tls-ossl-error-ca.sh \
+	imtcp-tls-ossl-error-cert.sh \
+	imtcp-tls-ossl-error-key.sh \
+	imtcp-tls-ossl-error-key2.sh
 if HAVE_VALGRIND
 TESTS += \
 	imtcp-tls-ossl-basic-vg.sh
@@ -1116,6 +1120,9 @@ EXTRA_DIST= \
 	tls-certs/ca.pem \
 	tls-certs/cert.pem \
 	tls-certs/key.pem \
+	tls-certs/ca-fail.pem \
+	tls-certs/cert-fail.pem \
+	tls-certs/key-fail.pem \
 	testsuites/x.509/ca.pem \
 	testsuites/x.509/ca-key.pem \
 	testsuites/x.509/client-cert.pem \
@@ -1423,6 +1430,10 @@ EXTRA_DIST= \
 	imtcp-tls-ossl-x509name.sh \
 	imtcp-tls-ossl-x509fingerprint.sh \
 	imtcp-tls-ossl-basic-vg.sh \
+	imtcp-tls-ossl-error-ca.sh \
+	imtcp-tls-ossl-error-cert.sh \
+	imtcp-tls-ossl-error-key.sh \
+	imtcp-tls-ossl-error-key2.sh \
 	manytcp.sh \
 	manyptcp.sh \
 	imptcp-NUL.sh \
