@@ -317,13 +317,12 @@ r_dbgprintf(const char *srcname, const char *fmt, ...)
 static int ATTR_NONNULL()
 dbgGetRTOptNamVal(const uchar **const ppszOpt, uchar **const ppOptName)
 {
+	assert(ppszOpt != NULL);
+	assert(*ppszOpt != NULL);
 	int bRet = 0;
 	const uchar *p = *ppszOpt;
 	size_t i;
 	static uchar optname[128] = "";
-
-	assert(ppszOpt != NULL);
-	assert(*ppszOpt != NULL);
 
 	/* skip whitespace */
 	while(*p && isspace(*p))
