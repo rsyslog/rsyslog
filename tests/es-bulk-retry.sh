@@ -1,8 +1,11 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-#export USE_VALGRIND="YES" # to enable this to run under valgrind
+
 export ES_PORT=19200
+export NUMMESSAGES=100
+#export USE_VALGRIND="YES" # to enable this to run under valgrind
+
 download_elasticsearch
 prepare_elasticsearch
 # change settings to cause bulk rejection errors
@@ -100,15 +103,13 @@ if [ -n "${USE_GDB:-}" ] ; then
 	echo attach gdb here
 	sleep 54321 || :
 fi
-numrecords=100
 success=50
 badarg=50
-injectmsg 0 $numrecords
-sleep 2
-# TODO: wait-grep for $success line appearing in pstats log
+injectmsg 0 $NUMMESSAGES
+wait_content '"response.success": 50' $RSYSLOG_DYNNAME.spool/es-stats.log
 shutdown_when_empty
 wait_shutdown
-es_getdata $numrecords $ES_PORT
+es_getdata $NUMMESSAGES $ES_PORT
 rc=$?
 
 stop_elasticsearch

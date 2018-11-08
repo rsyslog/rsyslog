@@ -820,6 +820,38 @@ wait_seq_check() {
 }
 
 
+# wait until some content appears in the specified file.
+# This is used to synchronize various
+# testbench timing-related issues, most importantly rsyslog shutdown
+# all parameters are passed to seq_check
+# $1 - content to search for
+# $2 - file to check
+wait_content() {
+	file=${2:-$RSYSLOG_OUT_LOG}
+	timeoutend=$(( $(date +%s) + TB_TEST_TIMEOUT ))
+	count=0
+
+	while true ; do
+		if [ -f "$file" ]; then
+			count=$(wc -l < "$file")
+			if grep -q "$1" < "$file"; then
+				printf 'expected content found, continue test (%d lines)\n' "$count"
+				break
+			fi
+		fi
+		if [ $(date +%s) -ge $timeoutend  ]; then
+			printf 'wait_content failed, no success before timeout (%d lines)\n' "$count"
+			printf 'searched content was:\n%s\n' "$1"
+			error_exit 1
+		else
+			printf 'wait_content still waiting... (%d lines)\n' "$count"
+			$TESTTOOL_DIR/msleep 500
+		fi
+	done
+	unset count
+}
+
+
 assert_content_missing() {
 	grep -qF -- "$1" < ${RSYSLOG_OUT_LOG}
 	if [ "$?" -eq "0" ]; then
