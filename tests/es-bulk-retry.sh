@@ -11,7 +11,7 @@ cat >> $dep_work_dir/es/config/elasticsearch.yml <<EOF
 thread_pool.bulk.queue_size: 1
 thread_pool.bulk.size: 1
 EOF
-. $srcdir/diag.sh start-elasticsearch
+start_elasticsearch
 
 generate_conf
 add_conf '
@@ -113,7 +113,7 @@ es_getdata $numrecords $ES_PORT
 rc=$?
 
 stop_elasticsearch
-. $srcdir/diag.sh cleanup-elasticsearch
+cleanup_elasticsearch
 
 if [ -f $RSYSLOG_DYNNAME.work ] ; then
 	< $RSYSLOG_DYNNAME.work  \

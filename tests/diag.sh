@@ -653,7 +653,7 @@ shutdown_when_empty() {
 	wait_queueempty $1
 	if [ "$RSYSLOG_PIDBASE" == "" ]; then
 		echo "RSYSLOG_PIDBASE is EMPTY! - bug in test? (instance $1)"
-		exit 1
+		error_exit 1
 	fi
 	cp $RSYSLOG_PIDBASE$1.pid $RSYSLOG_PIDBASE$1.pid.save
 	$TESTTOOL_DIR/msleep 500 # wait a bit (think about slow testbench machines!)
@@ -1659,6 +1659,41 @@ prepare_elasticsearch() {
 }
 
 
+# $2, if set, is the number of additional ES instances
+start_elasticsearch() {
+	# Heap Size (limit to 128MB for testbench! defaults is way to HIGH)
+	export ES_JAVA_OPTS="-Xms128m -Xmx128m"
+
+	dep_work_dir=$(readlink -f .dep_wrk)
+	dep_work_es_config="es.yml"
+	dep_work_es_pidfile="$(pwd)/es.pid"
+	echo "Starting ElasticSearch"
+
+	# THIS IS THE ACTUAL START of ES
+	$dep_work_dir/es/bin/elasticsearch -p $dep_work_es_pidfile -d
+	$TESTTOOL_DIR/msleep 2000
+	# TODO: wait pidfile!
+	printf 'elasticsearch pid is %s\n' "$(cat $dep_work_es_pidfile)"
+
+	# Wait for startup with hardcoded timeout
+	timeoutend=60
+	timeseconds=0
+	# Loop until elasticsearch port is reachable or until
+	# timeout is reached!
+	until [ "$(curl --silent --show-error --connect-timeout 1 http://localhost:${ES_PORT:-19200} | grep 'rsyslog-testbench')" != "" ]; do
+		echo "--- waiting for ES startup: $timeseconds seconds"
+		$TESTTOOL_DIR/msleep 1000
+		(( timeseconds=timeseconds + 1 ))
+
+		if [ "$timeseconds" -gt "$timeoutend" ]; then 
+			echo "--- TIMEOUT ( $timeseconds ) reached!!!"
+			error_exit 1
+		fi
+	done
+	$TESTTOOL_DIR/msleep 2000
+	echo ES startup succeeded
+}
+
 # read data from ES to a local file so that we can process
 # $1 - number of records (ES does not return all records unless you tell it explicitely).
 # $2 - ES port
@@ -1677,6 +1712,21 @@ stop_elasticsearch() {
 		kill -SIGTERM $es_pid
 		. $srcdir/diag.sh wait-pid-termination $es_pid
 	fi
+}
+
+# cleanup es leftovers when it is being stopped
+cleanup_elasticsearch() {
+		dep_work_dir=$(readlink -f .dep_wrk)
+		dep_work_es_pidfile="es.pid"
+		stop_elasticsearch
+		rm -f $dep_work_es_pidfile
+		rm -rf $dep_work_dir/es
+}
+
+# initialize local Elasticsearch *testbench* instance for the next
+# test. NOTE: do NOT put anything useful on that instance!
+init_elasticsearch() {
+	curl --silent -XDELETE localhost:${ES_PORT:-9200}/rsyslog_testbench
 }
 
 
@@ -1791,10 +1841,6 @@ case $1 in
 			echo this test requires an active IPv6 stack, which we do not have here
 			exit 77
 		fi
-		;;
-   'es-init')   # initialize local Elasticsearch *testbench* instance for the next
-                # test. NOTE: do NOT put anything useful on that instance!
-		curl --silent -XDELETE localhost:${ES_PORT:-9200}/rsyslog_testbench
 		;;
    'getpid')
 		pid=$(cat $RSYSLOG_PIDBASE$2.pid)
@@ -1941,51 +1987,6 @@ case $1 in
 		    echo "journalctl command missing, skipping test"
 		    exit 77
 		fi
-		;;
-	 'start-elasticsearch') # $2, if set, is the number of additional ES instances
-		# Heap Size (limit to 128MB for testbench! defaults is way to HIGH)
-		export ES_JAVA_OPTS="-Xms128m -Xmx128m"
-
-		pwd
-		if [ "x$2" == "x" ]; then
-			dep_work_dir=$(readlink -f .dep_wrk)
-			dep_work_es_config="es.yml"
-			dep_work_es_pidfile="$(pwd)/es.pid"
-		else
-			dep_work_dir=$(readlink -f $srcdir/$2)
-			dep_work_es_config="es$2.yml"
-			dep_work_es_pidfile="es$2.pid"
-		fi
-		echo "Starting ElasticSearch instance $2"
-		# THIS IS THE ACTUAL START of ES
-		$dep_work_dir/es/bin/elasticsearch -p $dep_work_es_pidfile -d
-		$TESTTOOL_DIR/msleep 2000
-		echo "Starting instance $2 started with PID" $(cat $dep_work_es_pidfile)
-
-		# Wait for startup with hardcoded timeout
-		timeoutend=60
-		timeseconds=0
-		# Loop until elasticsearch port is reachable or until
-		# timeout is reached!
-		until [ "$(curl --silent --show-error --connect-timeout 1 http://localhost:${ES_PORT:-19200} | grep 'rsyslog-testbench')" != "" ]; do
-			echo "--- waiting for ES startup: $timeseconds seconds"
-			$TESTTOOL_DIR/msleep 1000
-			(( timeseconds=timeseconds + 1 ))
-
-			if [ "$timeseconds" -gt "$timeoutend" ]; then 
-				echo "--- TIMEOUT ( $timeseconds ) reached!!!"
-		                error_exit 1
-			fi
-		done
-		$TESTTOOL_DIR/msleep 2000
-		echo ES startup succeeded
-		;;
-	 'cleanup-elasticsearch')
-		dep_work_dir=$(readlink -f .dep_wrk)
-		dep_work_es_pidfile="es.pid"
-		stop_elasticsearch
-		rm -f $dep_work_es_pidfile
-		rm -rf $dep_work_dir/es
 		;;
 	'check-inotify') # Check for inotify/fen support 
 		if [ -n "$(find /usr/include -name 'inotify.h' -print -quit)" ]; then

@@ -1,13 +1,13 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
+. ${srcdir:=.}/diag.sh init
 export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
 download_elasticsearch
 stop_elasticsearch
 prepare_elasticsearch
-. $srcdir/diag.sh start-elasticsearch
+start_elasticsearch
 
-. ${srcdir:=.}/diag.sh init
-. $srcdir/diag.sh es-init
+init_elasticsearch
 curl -H 'Content-Type: application/json' -XPUT localhost:19200/rsyslog_testbench/ -d '{
   "mappings": {
     "test-type": {
@@ -45,5 +45,5 @@ then
     echo "error: error file does not exist!"
     exit 1
 fi
-. $srcdir/diag.sh cleanup-elasticsearch
+cleanup_elasticsearch
 exit_test

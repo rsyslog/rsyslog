@@ -1,13 +1,13 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
+. ${srcdir:=.}/diag.sh init
 export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
 download_elasticsearch
 stop_elasticsearch
 prepare_elasticsearch
-. $srcdir/diag.sh start-elasticsearch
+start_elasticsearch
 
-. ${srcdir:=.}/diag.sh init
-. $srcdir/diag.sh es-init
+init_elasticsearch
 echo '{ "name" : "foo" }
 {"name": bar"}
 {"name": "baz"}
@@ -48,11 +48,10 @@ wait_shutdown
 rm -f inESData.inputfile
 
 python $srcdir/elasticsearch-error-format-check.py default
-
 if [ $? -ne 0 ]
 then
     echo "error: Format for error file different! " $?
-    exit 1
+    error_exit 1
 fi
-. $srcdir/diag.sh cleanup-elasticsearch
+cleanup_elasticsearch
 exit_test

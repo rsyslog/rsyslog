@@ -1,12 +1,11 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
+. ${srcdir:=.}/diag.sh init
 download_elasticsearch
 stop_elasticsearch
 prepare_elasticsearch
-. $srcdir/diag.sh start-elasticsearch
+start_elasticsearch
 
-#  Starting actual testbench
-. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 template(name="tpl" type="string"
@@ -91,7 +90,7 @@ action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 
 export ES_PORT=19200
-. $srcdir/diag.sh es-init
+init_elasticsearch
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="debug.log"
 startup
@@ -122,5 +121,5 @@ else
 fi
 
 stop_elasticsearch
-. $srcdir/diag.sh cleanup-elasticsearch
+cleanup_elasticsearch
 exit_test

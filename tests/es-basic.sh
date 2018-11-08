@@ -7,7 +7,8 @@ export NUMMESSAGES=1000 #10000
 download_elasticsearch
 stop_elasticsearch
 prepare_elasticsearch
-. $srcdir/diag.sh start-elasticsearch
+start_elasticsearch
+init_elasticsearch
 
 generate_conf
 add_conf '
@@ -27,8 +28,9 @@ startup
 injectmsg  0 $NUMMESSAGES
 shutdown_when_empty
 wait_shutdown 
+
 es_getdata $NUMMESSAGES 19200
 stop_elasticsearch
 seq_check  0 $(( NUMMESSAGES - 1 ))
-. $srcdir/diag.sh cleanup-elasticsearch
+cleanup_elasticsearch
 exit_test

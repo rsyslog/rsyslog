@@ -1,13 +1,13 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
+. ${srcdir:=.}/diag.sh init
 export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
 download_elasticsearch
 stop_elasticsearch
 prepare_elasticsearch
-. $srcdir/diag.sh start-elasticsearch
+start_elasticsearch
 
-. ${srcdir:=.}/diag.sh init
-. $srcdir/diag.sh es-init
+init_elasticsearch
 generate_conf
 add_conf '
 template(name="tpl" type="string"
@@ -36,5 +36,5 @@ es_getdata 100 19200
 seq_check  0 99
 # The configuration makes every other request from message #3 fail checkConn (N/2-1)
 custom_content_check '"failed.checkConn": 49' "${RSYSLOG_DYNNAME}.out.stats.log"
-. $srcdir/diag.sh cleanup-elasticsearch
+cleanup_elasticsearch
 exit_test
