@@ -50,7 +50,7 @@ if ($msg contains "msgnum:") then {
 export RSTB_DAEMONIZE="YES"
 startup
 
-injectmsg_kafkacat --wait
+injectmsg_kafkacat --wait 1 $TESTMESSAGES -d
 shutdown_when_empty
 wait_shutdown
 
