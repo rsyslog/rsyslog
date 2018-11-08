@@ -1,14 +1,11 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
-export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
-. $srcdir/diag.sh download-elasticsearch
-. $srcdir/diag.sh stop-elasticsearch
-. $srcdir/diag.sh prepare-elasticsearch
-. $srcdir/diag.sh start-elasticsearch
-
-#  Starting actual testbench
-# TODO: move up,
 . ${srcdir:=.}/diag.sh init
+export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
+download_elasticsearch
+prepare_elasticsearch
+start_elasticsearch
+
 generate_conf
 add_conf '
 template(name="tpl" type="string"
@@ -29,18 +26,18 @@ startup
 injectmsg  0 10000
 ./msleep 500
 echo stop elasticsearch...
-. $srcdir/diag.sh stop-elasticsearch
+stop_elasticsearch
 echo start elasticsearch...
-. $srcdir/diag.sh start-elasticsearch
+start_elasticsearch
 ./msleep 5000
-. $srcdir/diag.sh stop-elasticsearch
-. $srcdir/diag.sh start-elasticsearch
+stop_elasticsearch
+start_elasticsearch
 shutdown_when_empty
 wait_shutdown
 ./msleep 1000 # ES might need some time to maintain index...
 es_getdata 10000 19200
-. $srcdir/diag.sh stop-elasticsearch
+stop_elasticsearch
 
 seq_check  0 9999 -d
-. $srcdir/diag.sh cleanup-elasticsearch
+cleanup_elasticsearch
 exit_test

@@ -146,8 +146,8 @@ local0.* ./'${RSYSLOG_DYNNAME}'.HOSTNAME;hostname
 	rm -f "${RSYSLOG_DYNNAME}.HOSTNAME"
 	startup
 	tcpflood -m1 -M "\"<128>\""
-	shutdown_when_empty # shut down rsyslogd when done processing messages
-	wait_shutdown	# we need to wait until rsyslogd is finished!
+	shutdown_when_empty
+	wait_shutdown
 	export RS_HOSTNAME="$(cat ${RSYSLOG_DYNNAME}.HOSTNAME)"
 	rm -f "${RSYSLOG_DYNNAME}.HOSTNAME"
 	echo HOSTNAME is: $RS_HOSTNAME
@@ -293,6 +293,37 @@ wait_process_startup() {
 		done
 		echo "$2 seen, associated pid " $(cat $1.pid)
 	fi
+}
+
+
+# wait for the pid in $1 to terminate, abort on timeout
+wait_pid_termination() {
+		out_pid="$1"
+		if [[ "$out_pid" == "" ]]; then
+			printf 'TESTBENCH error: pidfile name not specified in wait_pid_termination\n'
+			error_exit 100
+		fi
+		i=0
+		terminated=0
+		start_timeout="$(date)"
+		while [[ $terminated -eq 0 ]]; do
+			ps -p $out_pid &> /dev/null
+			if [[ $? != 0 ]]; then
+				terminated=1
+			fi
+			$TESTTOOL_DIR/msleep 100
+			(( i++ ))
+			if test $i -gt $TB_TIMEOUT_STARTSTOP ; then
+			   echo "ABORT! Timeout waiting on shutdown"
+			   echo "Wait initiated $start_timeout, now $(date)"
+			   ps -fp $out_pid
+			   echo "Instance is possibly still running and may need"
+			   echo "manual cleanup."
+			   error_exit 1
+			fi
+		done
+		unset terminated
+		unset out_pid
 }
 
 # wait for file $1 to exist AND be non-empty
@@ -653,7 +684,7 @@ shutdown_when_empty() {
 	wait_queueempty $1
 	if [ "$RSYSLOG_PIDBASE" == "" ]; then
 		echo "RSYSLOG_PIDBASE is EMPTY! - bug in test? (instance $1)"
-		exit 1
+		error_exit 1
 	fi
 	cp $RSYSLOG_PIDBASE$1.pid $RSYSLOG_PIDBASE$1.pid.save
 	$TESTTOOL_DIR/msleep 500 # wait a bit (think about slow testbench machines!)
@@ -1595,12 +1626,140 @@ dump_zookeeper_serverlog() {
 }
 
 
+# download elasticsearch files, if necessary
+download_elasticsearch() {
+	if [ ! -d $dep_cache_dir ]; then
+		echo "Creating dependency cache dir $dep_cache_dir"
+		mkdir $dep_cache_dir
+	fi
+	if [ ! -f $dep_es_cached_file ]; then
+		if [ -f /local_dep_cache/$ES_DOWNLOAD ]; then
+			printf 'ElasticSearch: satisfying dependency %s from system cache.\n' "$ES_DOWNLOAD"
+			cp /local_dep_cache/$ES_DOWNLOAD $dep_es_cached_file
+		else
+			dep_es_url="https://artifacts.elastic.co/downloads/elasticsearch/$ES_DOWNLOAD"
+			printf 'ElasticSearch: satisfying dependency %s from %s\n' "$ES_DOWNLOAD" "$dep_es_url"
+			wget -q $dep_es_url -O $dep_es_cached_file
+		fi
+	fi
+}
+
+
+# prepare eleasticsearch execution environment
+# this also stops any previous elasticsearch instance, if found
+prepare_elasticsearch() {
+	stop_elasticsearch # stop if it is still running
+	# Heap Size (limit to 128MB for testbench! default is way to HIGH)
+	export ES_JAVA_OPTS="-Xms128m -Xmx128m"
+
+	dep_work_dir=$(readlink -f .dep_wrk)
+	dep_work_es_config="es.yml"
+	dep_work_es_pidfile="es.pid"
+
+	if [ ! -f $dep_es_cached_file ]; then
+		echo "Dependency-cache does not have elasticsearch package, did "
+		echo "you download dependencies?"
+		error_exit 100
+	fi
+	if [ ! -d $dep_work_dir ]; then
+		echo "Creating dependency working directory"
+		mkdir -p $dep_work_dir
+	fi
+	if [ -d $dep_work_dir/es ]; then
+		if [ -e $dep_work_es_pidfile ]; then
+			es_pid=$(cat $dep_work_es_pidfile)
+			kill -SIGTERM $es_pid
+			wait_pid_termination $es_pid
+		fi
+	fi
+	rm -rf $dep_work_dir/es
+	echo TEST USES ELASTICSEARCH BINARY $dep_es_cached_file
+	(cd $dep_work_dir && tar -zxf $dep_es_cached_file --xform $dep_es_dir_xform_pattern --show-transformed-names) > /dev/null
+	if [ -n "${ES_PORT:-}" ] ; then
+		rm -f $dep_work_dir/es/config/elasticsearch.yml
+		sed "s/^http.port:.*\$/http.port: ${ES_PORT}/" $srcdir/testsuites/$dep_work_es_config > $dep_work_dir/es/config/elasticsearch.yml
+	else
+		cp -f $srcdir/testsuites/$dep_work_es_config $dep_work_dir/es/config/elasticsearch.yml
+	fi
+
+	if [ ! -d $dep_work_dir/es/data ]; then
+			echo "Creating elastic search directories"
+			mkdir -p $dep_work_dir/es/data
+			mkdir -p $dep_work_dir/es/logs
+			mkdir -p $dep_work_dir/es/tmp
+	fi
+	echo ElasticSearch prepared for use in test.
+}
+
+
+# $2, if set, is the number of additional ES instances
+start_elasticsearch() {
+	# Heap Size (limit to 128MB for testbench! defaults is way to HIGH)
+	export ES_JAVA_OPTS="-Xms128m -Xmx128m"
+
+	dep_work_dir=$(readlink -f .dep_wrk)
+	dep_work_es_config="es.yml"
+	dep_work_es_pidfile="$(pwd)/es.pid"
+	echo "Starting ElasticSearch"
+
+	# THIS IS THE ACTUAL START of ES
+	$dep_work_dir/es/bin/elasticsearch -p $dep_work_es_pidfile -d
+	$TESTTOOL_DIR/msleep 2000
+	# TODO: wait pidfile!
+	printf 'elasticsearch pid is %s\n' "$(cat $dep_work_es_pidfile)"
+
+	# Wait for startup with hardcoded timeout
+	timeoutend=60
+	timeseconds=0
+	# Loop until elasticsearch port is reachable or until
+	# timeout is reached!
+	until [ "$(curl --silent --show-error --connect-timeout 1 http://localhost:${ES_PORT:-19200} | grep 'rsyslog-testbench')" != "" ]; do
+		echo "--- waiting for ES startup: $timeseconds seconds"
+		$TESTTOOL_DIR/msleep 1000
+		(( timeseconds=timeseconds + 1 ))
+
+		if [ "$timeseconds" -gt "$timeoutend" ]; then 
+			echo "--- TIMEOUT ( $timeseconds ) reached!!!"
+			error_exit 1
+		fi
+	done
+	$TESTTOOL_DIR/msleep 2000
+	echo ES startup succeeded
+}
+
 # read data from ES to a local file so that we can process
 # $1 - number of records (ES does not return all records unless you tell it explicitely).
 # $2 - ES port
 es_getdata() {
 	curl --silent localhost:${2:-9200}/rsyslog_testbench/_search?size=$1 > $RSYSLOG_DYNNAME.work
 	python $srcdir/es_response_get_msgnum.py > ${RSYSLOG_OUT_LOG}
+}
+
+
+stop_elasticsearch() {
+	dep_work_dir=$(readlink -f $srcdir)
+	dep_work_es_pidfile="es.pid"
+	if [ -e $dep_work_es_pidfile ]; then
+		es_pid=$(cat $dep_work_es_pidfile)
+		printf 'stopping ES with pid %d\n' $es_pid
+		kill -SIGTERM $es_pid
+		wait_pid_termination $es_pid
+	fi
+}
+
+# cleanup es leftovers when it is being stopped
+cleanup_elasticsearch() {
+		dep_work_dir=$(readlink -f .dep_wrk)
+		dep_work_es_pidfile="es.pid"
+		stop_elasticsearch
+		rm -f $dep_work_es_pidfile
+		rm -rf $dep_work_dir/es
+}
+
+# initialize local Elasticsearch *testbench* instance for the next
+# test. NOTE: do NOT put anything useful on that instance!
+init_elasticsearch() {
+	curl --silent -XDELETE localhost:${ES_PORT:-9200}/rsyslog_testbench
 }
 
 
@@ -1716,42 +1875,8 @@ case $1 in
 			exit 77
 		fi
 		;;
-   'es-init')   # initialize local Elasticsearch *testbench* instance for the next
-                # test. NOTE: do NOT put anything useful on that instance!
-		curl --silent -XDELETE localhost:${ES_PORT:-9200}/rsyslog_testbench
-		;;
    'getpid')
 		pid=$(cat $RSYSLOG_PIDBASE$2.pid)
-		;;
-   'wait-pid-termination')  # wait for the pid in pid $2 to terminate, abort on timeout
-		i=0
-		out_pid=$2
-		if [[ "x$out_pid" == "x" ]]; then
-			terminated=1
-		else
-			terminated=0
-		fi
-		start_timeout="$(date)"
-		while [[ $terminated -eq 0 ]]; do
-			ps -p $out_pid &> /dev/null
-			if [[ $? != 0 ]]
-			then
-				terminated=1
-			fi
-			$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
-			(( i++ ))
-			if test $i -gt $TB_TIMEOUT_STARTSTOP
-			then
-			   echo "ABORT! Timeout waiting on shutdown"
-			   echo "Wait initiated $start_timeout, now $(date)"
-			   ps -fp $out_pid
-			   echo "Instance is possibly still running and may need"
-			   echo "manual cleanup."
-			   error_exit 1
-			fi
-		done
-		unset terminated
-		unset out_pid
 		;;
    'kill-immediate') # kill rsyslog unconditionally
 		kill -9 $(cat $RSYSLOG_PIDBASE.pid)
@@ -1865,130 +1990,6 @@ case $1 in
 		    echo "journalctl command missing, skipping test"
 		    exit 77
 		fi
-		;;
-	 'download-elasticsearch')
-		if [ ! -d $dep_cache_dir ]; then
-				echo "Creating dependency cache dir $dep_cache_dir"
-				mkdir $dep_cache_dir
-		fi
-		if [ ! -f $dep_es_cached_file ]; then
-				if [ -f /local_dep_cache/$ES_DOWNLOAD ]; then
-					printf 'ElasticSearch: satisfying dependency %s from system cache.\n' "$ES_DOWNLOAD"
-					cp /local_dep_cache/$ES_DOWNLOAD $dep_es_cached_file
-				else
-					dep_es_url="https://artifacts.elastic.co/downloads/elasticsearch/$ES_DOWNLOAD"
-					printf 'ElasticSearch: satisfying dependency %s from %s\n' "$ES_DOWNLOAD" "$dep_es_url"
-					wget -q $dep_es_url -O $dep_es_cached_file
-				fi
-		fi
-		;;
-	 'prepare-elasticsearch') # $2, if set, is the number of additional ES instances
-		# Heap Size (limit to 128MB for testbench! defaults is way to HIGH)
-		export ES_JAVA_OPTS="-Xms128m -Xmx128m"
-
-		if [ "x$2" == "x" ]; then
-			dep_work_dir=$(readlink -f .dep_wrk)
-			dep_work_es_config="es.yml"
-			dep_work_es_pidfile="es.pid"
-		else
-			dep_work_dir=$(readlink -f $srcdir/$2)
-			dep_work_es_config="es$2.yml"
-			dep_work_es_pidfile="es$2.pid"
-		fi
-
-		if [ ! -f $dep_es_cached_file ]; then
-				echo "Dependency-cache does not have elasticsearch package, did "
-				echo "you download dependencies?"
-		                error_exit 1
-		fi
-		if [ ! -d $dep_work_dir ]; then
-				echo "Creating dependency working directory"
-				mkdir -p $dep_work_dir
-		fi
-		if [ -d $dep_work_dir/es ]; then
-			if [ -e $dep_work_es_pidfile ]; then
-				es_pid=$(cat $dep_work_es_pidfile)
-				kill -SIGTERM $es_pid
-				. $srcdir/diag.sh wait-pid-termination $es_pid
-			fi
-		fi
-		rm -rf $dep_work_dir/es
-		echo TEST USES ELASTICSEARCH BINARY $dep_es_cached_file
-		(cd $dep_work_dir && tar -zxf $dep_es_cached_file --xform $dep_es_dir_xform_pattern --show-transformed-names) > /dev/null
-		if [ -n "${ES_PORT:-}" ] ; then
-			rm -f $dep_work_dir/es/config/elasticsearch.yml
-			sed "s/^http.port:.*\$/http.port: ${ES_PORT}/" $srcdir/testsuites/$dep_work_es_config > $dep_work_dir/es/config/elasticsearch.yml
-		else
-			cp -f $srcdir/testsuites/$dep_work_es_config $dep_work_dir/es/config/elasticsearch.yml
-		fi
-
-		if [ ! -d $dep_work_dir/es/data ]; then
-				echo "Creating elastic search directories"
-				mkdir -p $dep_work_dir/es/data
-				mkdir -p $dep_work_dir/es/logs
-				mkdir -p $dep_work_dir/es/tmp
-		fi
-		echo ElasticSearch prepared for use in test.
-		;;
-	 'start-elasticsearch') # $2, if set, is the number of additional ES instances
-		# Heap Size (limit to 128MB for testbench! defaults is way to HIGH)
-		export ES_JAVA_OPTS="-Xms128m -Xmx128m"
-
-		pwd
-		if [ "x$2" == "x" ]; then
-			dep_work_dir=$(readlink -f .dep_wrk)
-			dep_work_es_config="es.yml"
-			dep_work_es_pidfile="$(pwd)/es.pid"
-		else
-			dep_work_dir=$(readlink -f $srcdir/$2)
-			dep_work_es_config="es$2.yml"
-			dep_work_es_pidfile="es$2.pid"
-		fi
-		echo "Starting ElasticSearch instance $2"
-		# THIS IS THE ACTUAL START of ES
-		$dep_work_dir/es/bin/elasticsearch -p $dep_work_es_pidfile -d
-		$TESTTOOL_DIR/msleep 2000
-		echo "Starting instance $2 started with PID" $(cat $dep_work_es_pidfile)
-
-		# Wait for startup with hardcoded timeout
-		timeoutend=60
-		timeseconds=0
-		# Loop until elasticsearch port is reachable or until
-		# timeout is reached!
-		until [ "$(curl --silent --show-error --connect-timeout 1 http://localhost:${ES_PORT:-19200} | grep 'rsyslog-testbench')" != "" ]; do
-			echo "--- waiting for ES startup: $timeseconds seconds"
-			$TESTTOOL_DIR/msleep 1000
-			(( timeseconds=timeseconds + 1 ))
-
-			if [ "$timeseconds" -gt "$timeoutend" ]; then 
-				echo "--- TIMEOUT ( $timeseconds ) reached!!!"
-		                error_exit 1
-			fi
-		done
-		$TESTTOOL_DIR/msleep 2000
-		echo ES startup succeeded
-		;;
-	 'stop-elasticsearch')
-		if [ "x$2" == "x" ]; then
-			dep_work_dir=$(readlink -f .dep_wrk)
-			dep_work_es_pidfile="es.pid"
-		else
-			dep_work_dir=$(readlink -f $srcdir/$2)
-			dep_work_es_pidfile="es$2.pid"
-		fi
-		if [ -e $dep_work_es_pidfile ]; then
-			es_pid=$(cat $dep_work_es_pidfile)
-			printf 'stopping ES with pid %d\n' $es_pid
-			kill -SIGTERM $es_pid
-			. $srcdir/diag.sh wait-pid-termination $es_pid
-		fi
-		;;
-	 'cleanup-elasticsearch')
-		dep_work_dir=$(readlink -f .dep_wrk)
-		dep_work_es_pidfile="es.pid"
-		. $srcdir/diag.sh stop-elasticsearch
-		rm -f $dep_work_es_pidfile
-		rm -rf $dep_work_dir/es
 		;;
 	'check-inotify') # Check for inotify/fen support 
 		if [ -n "$(find /usr/include -name 'inotify.h' -print -quit)" ]; then
