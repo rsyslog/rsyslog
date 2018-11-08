@@ -2,9 +2,9 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
 export ES_PORT=19200
-. $srcdir/diag.sh download-elasticsearch
-. $srcdir/diag.sh stop-elasticsearch
-. $srcdir/diag.sh prepare-elasticsearch
+download_elasticsearch
+stop_elasticsearch
+prepare_elasticsearch
 . $srcdir/diag.sh start-elasticsearch
 
 . ${srcdir:=.}/diag.sh init
@@ -32,6 +32,6 @@ then
     exit 1
 fi
 seq_check  0 9999
-. $srcdir/diag.sh stop-elasticsearch
+stop_elasticsearch
 . $srcdir/diag.sh cleanup-elasticsearch
 exit_test

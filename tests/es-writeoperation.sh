@@ -1,8 +1,8 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
-. $srcdir/diag.sh download-elasticsearch
-. $srcdir/diag.sh stop-elasticsearch
-. $srcdir/diag.sh prepare-elasticsearch
+download_elasticsearch
+stop_elasticsearch
+prepare_elasticsearch
 . $srcdir/diag.sh start-elasticsearch
 
 #  Starting actual testbench
@@ -121,6 +121,6 @@ else
 	error_exit 1
 fi
 
-. $srcdir/diag.sh stop-elasticsearch
+stop_elasticsearch
 . $srcdir/diag.sh cleanup-elasticsearch
 exit_test

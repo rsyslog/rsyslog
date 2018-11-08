@@ -146,8 +146,8 @@ local0.* ./'${RSYSLOG_DYNNAME}'.HOSTNAME;hostname
 	rm -f "${RSYSLOG_DYNNAME}.HOSTNAME"
 	startup
 	tcpflood -m1 -M "\"<128>\""
-	shutdown_when_empty # shut down rsyslogd when done processing messages
-	wait_shutdown	# we need to wait until rsyslogd is finished!
+	shutdown_when_empty
+	wait_shutdown
 	export RS_HOSTNAME="$(cat ${RSYSLOG_DYNNAME}.HOSTNAME)"
 	rm -f "${RSYSLOG_DYNNAME}.HOSTNAME"
 	echo HOSTNAME is: $RS_HOSTNAME
@@ -1594,12 +1594,89 @@ dump_zookeeper_serverlog() {
 }
 
 
+# download elasticsearch files, if necessary
+download_elasticsearch() {
+	if [ ! -d $dep_cache_dir ]; then
+		echo "Creating dependency cache dir $dep_cache_dir"
+		mkdir $dep_cache_dir
+	fi
+	if [ ! -f $dep_es_cached_file ]; then
+		if [ -f /local_dep_cache/$ES_DOWNLOAD ]; then
+			printf 'ElasticSearch: satisfying dependency %s from system cache.\n' "$ES_DOWNLOAD"
+			cp /local_dep_cache/$ES_DOWNLOAD $dep_es_cached_file
+		else
+			dep_es_url="https://artifacts.elastic.co/downloads/elasticsearch/$ES_DOWNLOAD"
+			printf 'ElasticSearch: satisfying dependency %s from %s\n' "$ES_DOWNLOAD" "$dep_es_url"
+			wget -q $dep_es_url -O $dep_es_cached_file
+		fi
+	fi
+}
+
+
+# prepare eleasticsearch execution environment
+# this also stops any previous elasticsearch instance, if found
+prepare_elasticsearch() {
+	# Heap Size (limit to 128MB for testbench! default is way to HIGH)
+	export ES_JAVA_OPTS="-Xms128m -Xmx128m"
+
+	dep_work_dir=$(readlink -f .dep_wrk)
+	dep_work_es_config="es.yml"
+	dep_work_es_pidfile="es.pid"
+
+	if [ ! -f $dep_es_cached_file ]; then
+		echo "Dependency-cache does not have elasticsearch package, did "
+		echo "you download dependencies?"
+		error_exit 100
+	fi
+	if [ ! -d $dep_work_dir ]; then
+		echo "Creating dependency working directory"
+		mkdir -p $dep_work_dir
+	fi
+	if [ -d $dep_work_dir/es ]; then
+		if [ -e $dep_work_es_pidfile ]; then
+			es_pid=$(cat $dep_work_es_pidfile)
+			kill -SIGTERM $es_pid
+			. $srcdir/diag.sh wait-pid-termination $es_pid
+		fi
+	fi
+	rm -rf $dep_work_dir/es
+	echo TEST USES ELASTICSEARCH BINARY $dep_es_cached_file
+	(cd $dep_work_dir && tar -zxf $dep_es_cached_file --xform $dep_es_dir_xform_pattern --show-transformed-names) > /dev/null
+	if [ -n "${ES_PORT:-}" ] ; then
+		rm -f $dep_work_dir/es/config/elasticsearch.yml
+		sed "s/^http.port:.*\$/http.port: ${ES_PORT}/" $srcdir/testsuites/$dep_work_es_config > $dep_work_dir/es/config/elasticsearch.yml
+	else
+		cp -f $srcdir/testsuites/$dep_work_es_config $dep_work_dir/es/config/elasticsearch.yml
+	fi
+
+	if [ ! -d $dep_work_dir/es/data ]; then
+			echo "Creating elastic search directories"
+			mkdir -p $dep_work_dir/es/data
+			mkdir -p $dep_work_dir/es/logs
+			mkdir -p $dep_work_dir/es/tmp
+	fi
+	echo ElasticSearch prepared for use in test.
+}
+
+
 # read data from ES to a local file so that we can process
 # $1 - number of records (ES does not return all records unless you tell it explicitely).
 # $2 - ES port
 es_getdata() {
 	curl --silent localhost:${2:-9200}/rsyslog_testbench/_search?size=$1 > $RSYSLOG_DYNNAME.work
 	python $srcdir/es_response_get_msgnum.py > ${RSYSLOG_OUT_LOG}
+}
+
+
+stop_elasticsearch() {
+	dep_work_dir=$(readlink -f $srcdir/$2)
+	dep_work_es_pidfile="es$2.pid"
+	if [ -e $dep_work_es_pidfile ]; then
+		es_pid=$(cat $dep_work_es_pidfile)
+		printf 'stopping ES with pid %d\n' $es_pid
+		kill -SIGTERM $es_pid
+		. $srcdir/diag.sh wait-pid-termination $es_pid
+	fi
 }
 
 
@@ -1865,70 +1942,6 @@ case $1 in
 		    exit 77
 		fi
 		;;
-	 'download-elasticsearch')
-		if [ ! -d $dep_cache_dir ]; then
-				echo "Creating dependency cache dir $dep_cache_dir"
-				mkdir $dep_cache_dir
-		fi
-		if [ ! -f $dep_es_cached_file ]; then
-				if [ -f /local_dep_cache/$ES_DOWNLOAD ]; then
-					printf 'ElasticSearch: satisfying dependency %s from system cache.\n' "$ES_DOWNLOAD"
-					cp /local_dep_cache/$ES_DOWNLOAD $dep_es_cached_file
-				else
-					dep_es_url="https://artifacts.elastic.co/downloads/elasticsearch/$ES_DOWNLOAD"
-					printf 'ElasticSearch: satisfying dependency %s from %s\n' "$ES_DOWNLOAD" "$dep_es_url"
-					wget -q $dep_es_url -O $dep_es_cached_file
-				fi
-		fi
-		;;
-	 'prepare-elasticsearch') # $2, if set, is the number of additional ES instances
-		# Heap Size (limit to 128MB for testbench! defaults is way to HIGH)
-		export ES_JAVA_OPTS="-Xms128m -Xmx128m"
-
-		if [ "x$2" == "x" ]; then
-			dep_work_dir=$(readlink -f .dep_wrk)
-			dep_work_es_config="es.yml"
-			dep_work_es_pidfile="es.pid"
-		else
-			dep_work_dir=$(readlink -f $srcdir/$2)
-			dep_work_es_config="es$2.yml"
-			dep_work_es_pidfile="es$2.pid"
-		fi
-
-		if [ ! -f $dep_es_cached_file ]; then
-				echo "Dependency-cache does not have elasticsearch package, did "
-				echo "you download dependencies?"
-		                error_exit 1
-		fi
-		if [ ! -d $dep_work_dir ]; then
-				echo "Creating dependency working directory"
-				mkdir -p $dep_work_dir
-		fi
-		if [ -d $dep_work_dir/es ]; then
-			if [ -e $dep_work_es_pidfile ]; then
-				es_pid=$(cat $dep_work_es_pidfile)
-				kill -SIGTERM $es_pid
-				. $srcdir/diag.sh wait-pid-termination $es_pid
-			fi
-		fi
-		rm -rf $dep_work_dir/es
-		echo TEST USES ELASTICSEARCH BINARY $dep_es_cached_file
-		(cd $dep_work_dir && tar -zxf $dep_es_cached_file --xform $dep_es_dir_xform_pattern --show-transformed-names) > /dev/null
-		if [ -n "${ES_PORT:-}" ] ; then
-			rm -f $dep_work_dir/es/config/elasticsearch.yml
-			sed "s/^http.port:.*\$/http.port: ${ES_PORT}/" $srcdir/testsuites/$dep_work_es_config > $dep_work_dir/es/config/elasticsearch.yml
-		else
-			cp -f $srcdir/testsuites/$dep_work_es_config $dep_work_dir/es/config/elasticsearch.yml
-		fi
-
-		if [ ! -d $dep_work_dir/es/data ]; then
-				echo "Creating elastic search directories"
-				mkdir -p $dep_work_dir/es/data
-				mkdir -p $dep_work_dir/es/logs
-				mkdir -p $dep_work_dir/es/tmp
-		fi
-		echo ElasticSearch prepared for use in test.
-		;;
 	 'start-elasticsearch') # $2, if set, is the number of additional ES instances
 		# Heap Size (limit to 128MB for testbench! defaults is way to HIGH)
 		export ES_JAVA_OPTS="-Xms128m -Xmx128m"
@@ -1967,25 +1980,10 @@ case $1 in
 		$TESTTOOL_DIR/msleep 2000
 		echo ES startup succeeded
 		;;
-	 'stop-elasticsearch')
-		if [ "x$2" == "x" ]; then
-			dep_work_dir=$(readlink -f .dep_wrk)
-			dep_work_es_pidfile="es.pid"
-		else
-			dep_work_dir=$(readlink -f $srcdir/$2)
-			dep_work_es_pidfile="es$2.pid"
-		fi
-		if [ -e $dep_work_es_pidfile ]; then
-			es_pid=$(cat $dep_work_es_pidfile)
-			printf 'stopping ES with pid %d\n' $es_pid
-			kill -SIGTERM $es_pid
-			. $srcdir/diag.sh wait-pid-termination $es_pid
-		fi
-		;;
 	 'cleanup-elasticsearch')
 		dep_work_dir=$(readlink -f .dep_wrk)
 		dep_work_es_pidfile="es.pid"
-		. $srcdir/diag.sh stop-elasticsearch
+		stop_elasticsearch
 		rm -f $dep_work_es_pidfile
 		rm -rf $dep_work_dir/es
 		;;

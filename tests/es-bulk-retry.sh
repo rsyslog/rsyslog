@@ -3,9 +3,9 @@
 . ${srcdir:=.}/diag.sh init
 #export USE_VALGRIND="YES" # to enable this to run under valgrind
 export ES_PORT=19200
-. $srcdir/diag.sh download-elasticsearch
-. $srcdir/diag.sh stop-elasticsearch
-. $srcdir/diag.sh prepare-elasticsearch
+download_elasticsearch
+stop_elasticsearch
+prepare_elasticsearch
 # change settings to cause bulk rejection errors
 cat >> $dep_work_dir/es/config/elasticsearch.yml <<EOF
 thread_pool.bulk.queue_size: 1
@@ -112,7 +112,7 @@ wait_shutdown
 es_getdata $numrecords $ES_PORT
 rc=$?
 
-. $srcdir/diag.sh stop-elasticsearch
+stop_elasticsearch
 . $srcdir/diag.sh cleanup-elasticsearch
 
 if [ -f $RSYSLOG_DYNNAME.work ] ; then
