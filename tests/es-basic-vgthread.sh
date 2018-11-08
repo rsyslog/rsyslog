@@ -4,7 +4,6 @@
 export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
 export ES_PORT=19200
 download_elasticsearch
-stop_elasticsearch
 prepare_elasticsearch
 start_elasticsearch
 
@@ -30,6 +29,5 @@ wait_shutdown_vg
 check_exit_vg
 es_getdata 10000 $ES_PORT
 seq_check  0 9999
-stop_elasticsearch
 cleanup_elasticsearch
 exit_test

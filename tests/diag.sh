@@ -1616,6 +1616,7 @@ download_elasticsearch() {
 # prepare eleasticsearch execution environment
 # this also stops any previous elasticsearch instance, if found
 prepare_elasticsearch() {
+	stop_elasticsearch # stop if it is still running
 	# Heap Size (limit to 128MB for testbench! default is way to HIGH)
 	export ES_JAVA_OPTS="-Xms128m -Xmx128m"
 
@@ -1704,7 +1705,7 @@ es_getdata() {
 
 
 stop_elasticsearch() {
-	dep_work_dir=$(readlink -f $srcdir/$2)
+	dep_work_dir=$(readlink -f $srcdir)
 	dep_work_es_pidfile="es$2.pid"
 	if [ -e $dep_work_es_pidfile ]; then
 		es_pid=$(cat $dep_work_es_pidfile)

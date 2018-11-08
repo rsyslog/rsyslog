@@ -3,7 +3,6 @@
 . ${srcdir:=.}/diag.sh init
 export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
 download_elasticsearch
-stop_elasticsearch
 prepare_elasticsearch
 start_elasticsearch
 
@@ -26,7 +25,6 @@ injectmsg  0 10000
 shutdown_when_empty
 wait_shutdown 
 es_getdata 10000 19200
-stop_elasticsearch
 
 seq_check  0 9999
 cleanup_elasticsearch
