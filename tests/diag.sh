@@ -295,6 +295,37 @@ wait_process_startup() {
 	fi
 }
 
+
+# wait for the pid in $1 to terminate, abort on timeout
+wait_pid_termination() {
+		out_pid="$1"
+		if [[ "$out_pid" == "" ]]; then
+			printf 'TESTBENCH error: pidfile name not specified in wait_pid_termination\n'
+			error_exit 100
+		fi
+		i=0
+		terminated=0
+		start_timeout="$(date)"
+		while [[ $terminated -eq 0 ]]; do
+			ps -p $out_pid &> /dev/null
+			if [[ $? != 0 ]]; then
+				terminated=1
+			fi
+			$TESTTOOL_DIR/msleep 100
+			(( i++ ))
+			if test $i -gt $TB_TIMEOUT_STARTSTOP ; then
+			   echo "ABORT! Timeout waiting on shutdown"
+			   echo "Wait initiated $start_timeout, now $(date)"
+			   ps -fp $out_pid
+			   echo "Instance is possibly still running and may need"
+			   echo "manual cleanup."
+			   error_exit 1
+			fi
+		done
+		unset terminated
+		unset out_pid
+}
+
 # wait for file $1 to exist AND be non-empty
 # $1 : file to wait for
 # $2 (optional): error message to show if timeout occurs
@@ -1637,7 +1668,7 @@ prepare_elasticsearch() {
 		if [ -e $dep_work_es_pidfile ]; then
 			es_pid=$(cat $dep_work_es_pidfile)
 			kill -SIGTERM $es_pid
-			. $srcdir/diag.sh wait-pid-termination $es_pid
+			wait_pid_termination $es_pid
 		fi
 	fi
 	rm -rf $dep_work_dir/es
@@ -1706,12 +1737,12 @@ es_getdata() {
 
 stop_elasticsearch() {
 	dep_work_dir=$(readlink -f $srcdir)
-	dep_work_es_pidfile="es$2.pid"
+	dep_work_es_pidfile="es.pid"
 	if [ -e $dep_work_es_pidfile ]; then
 		es_pid=$(cat $dep_work_es_pidfile)
 		printf 'stopping ES with pid %d\n' $es_pid
 		kill -SIGTERM $es_pid
-		. $srcdir/diag.sh wait-pid-termination $es_pid
+		wait_pid_termination $es_pid
 	fi
 }
 
@@ -1845,36 +1876,6 @@ case $1 in
 		;;
    'getpid')
 		pid=$(cat $RSYSLOG_PIDBASE$2.pid)
-		;;
-   'wait-pid-termination')  # wait for the pid in pid $2 to terminate, abort on timeout
-		i=0
-		out_pid=$2
-		if [[ "x$out_pid" == "x" ]]; then
-			terminated=1
-		else
-			terminated=0
-		fi
-		start_timeout="$(date)"
-		while [[ $terminated -eq 0 ]]; do
-			ps -p $out_pid &> /dev/null
-			if [[ $? != 0 ]]
-			then
-				terminated=1
-			fi
-			$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
-			(( i++ ))
-			if test $i -gt $TB_TIMEOUT_STARTSTOP
-			then
-			   echo "ABORT! Timeout waiting on shutdown"
-			   echo "Wait initiated $start_timeout, now $(date)"
-			   ps -fp $out_pid
-			   echo "Instance is possibly still running and may need"
-			   echo "manual cleanup."
-			   error_exit 1
-			fi
-		done
-		unset terminated
-		unset out_pid
 		;;
    'kill-immediate') # kill rsyslog unconditionally
 		kill -9 $(cat $RSYSLOG_PIDBASE.pid)

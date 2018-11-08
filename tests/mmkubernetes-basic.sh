@@ -104,7 +104,7 @@ else
 	wait_shutdown
 fi
 kill $BGPROCESS
-. $srcdir/diag.sh wait-pid-termination ${RSYSLOG_DYNNAME}${testsrv}.pid
+wait_pid_termination ${RSYSLOG_DYNNAME}${testsrv}.pid
 
 rc=0
 # for each record in mmkubernetes-basic.out.json, see if the matching
