@@ -26,7 +26,7 @@ startup
 injectmsg  0 10000
 shutdown_when_empty
 wait_shutdown 
-. $srcdir/diag.sh es-getdata 10000 19200
+es_getdata 10000 19200
 . $srcdir/diag.sh stop-elasticsearch
 
 seq_check  0 9999

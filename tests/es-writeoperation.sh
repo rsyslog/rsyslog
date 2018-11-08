@@ -98,9 +98,9 @@ startup
 injectmsg  0 1
 shutdown_when_empty
 wait_shutdown
-. $srcdir/diag.sh es-getdata 1 $ES_PORT
+es_getdata 1 $ES_PORT
 
-python <work -c '
+python <$RSYSLOG_DYNNAME.work -c '
 import sys,json
 hsh = json.load(sys.stdin)
 try:

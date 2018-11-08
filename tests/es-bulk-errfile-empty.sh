@@ -26,7 +26,7 @@ startup
 injectmsg  0 10000
 shutdown_when_empty
 wait_shutdown 
-. $srcdir/diag.sh es-getdata 10000 $ES_PORT
+es_getdata 10000 $ES_PORT
 if [ -f ${RSYSLOG_DYNNAME}.errorfile ]
 then
     echo "error: error file exists!"

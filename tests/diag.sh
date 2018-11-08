@@ -81,7 +81,7 @@ fi
 
 # newer functionality is preferrably introduced via bash functions
 # rgerhards, 2018-07-03
-function rsyslog_testbench_test_url_access() {
+rsyslog_testbench_test_url_access() {
     local missing_requirements=
     if ! hash curl 2>/dev/null ; then
         missing_requirements="'curl' is missing in PATH; Make sure you have cURL installed! Skipping test ..."
@@ -102,13 +102,12 @@ function rsyslog_testbench_test_url_access() {
 }
 
 # function to skip a test on a specific platform
-# $1 is what we check in uname, $2 (optioal) is a reason message
-function skip_platform() {
+# $1 is what we check in uname, $2 (optional) is a reason message
+skip_platform() {
 	if [ "$(uname)" == "$1" ]; then
-		echo "uname $(uname)"
-		echo "test does not work under $1"
+		printf 'platform is "%" - test does not work under "%s"\n' "$(uname $(uname))" "$1"
 		if [ "$2" != "" ]; then
-			echo "reason: $2"
+			printf 'reason: %s\n' "$2"
 		fi
 		exit 77
 	fi
@@ -120,7 +119,7 @@ function skip_platform() {
 # unreliable -- as the name says, test does not work reliably; $2 must be github issue URL
 #               depending on CI configuration, "unreliable" tests are skipped and not failed
 #               or not executed at all. Test reports may also be amended to github issue.
-function test_status() {
+test_status() {
 	if [ "$1" == "unreliable" ]; then
 		if [ "$2" == "" ]; then
 			printf 'TESTBENCH_ERROR: github issue URL must be given\n'
@@ -135,7 +134,7 @@ function test_status() {
 }
 
 
-function setvar_RS_HOSTNAME() {
+setvar_RS_HOSTNAME() {
 	printf '### Obtaining HOSTNAME (prequisite, not actual test) ###\n'
 	generate_conf
 	add_conf 'module(load="../plugins/imtcp/.libs/imtcp")
@@ -159,7 +158,7 @@ local0.* ./'${RSYSLOG_DYNNAME}'.HOSTNAME;hostname
 #	2018-09-07:	Incremented inputs.timeout.shutdown to 60000 because kafka tests may not be 
 #			finished under stress otherwise
 # $1 is the instance id, if given
-function generate_conf() {
+generate_conf() {
 	if [ "$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT" == "" ]; then
 		RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT="60000"
 	fi
@@ -182,19 +181,19 @@ $IMDiagServerRun 0
 
 # add more data to config file. Note: generate_conf must have been called
 # $1 is config fragment, $2 the instance id, if given
-function add_conf() {
+add_conf() {
 	printf '%s' "$1" >> ${TESTCONF_NM}$2.conf
 }
 
 
-function rst_msleep() {
+rst_msleep() {
 	$TESTTOOL_DIR/msleep $1
 }
 
 
 # compare file to expected exact content
 # $1 is file to compare
-function cmp_exact() {
+cmp_exact() {
 	if [ "$1" == "" ]; then
 		printf 'Testbench ERROR, cmp_exact() needs filename as %s\n' "$1"
 		error_exit 100
@@ -217,7 +216,7 @@ function cmp_exact() {
 }
 
 # code common to all startup...() functions
-function startup_common() {
+startup_common() {
 	instance=
 	if [ "$1" == "2" ]; then
 	    CONF_FILE="${TESTCONF_NM}2.conf"
@@ -243,7 +242,7 @@ function startup_common() {
 }
 
 # wait for appearance of a specific pid file, given as $1
-function wait_startup_pid() {
+wait_startup_pid() {
 	if [ "$1" == "" ]; then
 		echo "FAIL: testbench bug: wait_startup_called without \$1"
 		error_exit 100
@@ -266,14 +265,14 @@ function wait_startup_pid() {
 }
 
 # special version of wait_startup_pid() for rsyslog startup
-function wait_rsyslog_startup_pid() {
+wait_rsyslog_startup_pid() {
 	wait_startup_pid $RSYSLOG_PIDBASE$1.pid
 }
 
 # wait for startup of an arbitrary process
 # $1 - pid file name
 # $2 - startup file name (optional, only checked if given)
-function wait_process_startup() {
+wait_process_startup() {
 	wait_startup_pid $1.pid
 	i=0
 	if [ "$2" != "" ]; then
@@ -299,7 +298,7 @@ function wait_process_startup() {
 # wait for file $1 to exist AND be non-empty
 # $1 : file to wait for
 # $2 (optional): error message to show if timeout occurs
-function wait_file_exists() {
+wait_file_exists() {
 	i=0
 	while true; do
 		if [ -f $1 -a "$(cat $1 2> /dev/null)" != "" ]; then
@@ -322,7 +321,7 @@ function wait_file_exists() {
 # to ensure Kafka/Zookeeper is actually ready to go. This is NOT
 # a generic check function and must only used with those kafka tests
 # that actually need it.
-function kafka_wait_group_coordinator() {
+kafka_wait_group_coordinator() {
 echo We are waiting for kafka/zookeper being ready to deliver messages
 wait_file_exists $RSYSLOG_OUT_LOG "
 
@@ -381,7 +380,7 @@ injectmsg_kafkacat() {
 }
 
 # wait for rsyslogd startup ($1 is the instance)
-function wait_startup() {
+wait_startup() {
 	wait_rsyslog_startup_pid $1
 	i=0
 	while test ! -f ${RSYSLOG_DYNNAME}$1.started; do
@@ -434,7 +433,7 @@ startup() {
 
 
 # same as startup_vg, BUT we do NOT wait on the startup message!
-function startup_vg_waitpid_only() {
+startup_vg_waitpid_only() {
 	startup_common "$1" "$2"
 	if [ "x$RS_TESTBENCH_LEAK_CHECK" == "x" ]; then
 	    RS_TESTBENCH_LEAK_CHECK=full
@@ -471,20 +470,20 @@ startup_vgthread_waitpid_only() {
 # start rsyslogd with default params under valgrind thread debugger control.
 # $1 is the config file name to use, $2 is the instance (blank or 2!)
 # returns only after successful startup
-function startup_vgthread() {
+startup_vgthread() {
 	startup_vgthread_waitpid_only $1 $2
 	wait_startup $2
 }
 
 
 # inject messages via our inject interface (imdiag)
-function injectmsg() {
+injectmsg() {
 	echo injecting $2 messages
 	echo injectmsg $1 $2 $3 $4 | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
 }
 
 # inject messages in INSTANCE 2 via our inject interface (imdiag)
-function injectmsg2() {
+injectmsg2() {
 	echo injecting $2 messages
 	echo injectmsg $1 $2 $3 $4 | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
 	# TODO: some return state checking? (does it really make sense here?)
@@ -492,7 +491,7 @@ function injectmsg2() {
 
 
 # show the current main queue size. $1 is the instance.
-function get_mainqueuesize() {
+get_mainqueuesize() {
 	if [ "$1" == "2" ]; then
 		echo getmainmsgqueuesize | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
 	else
@@ -502,7 +501,7 @@ function get_mainqueuesize() {
 
 # grep for (partial) content. $1 is the content to check for, $2 the file to check
 # option --regex is understood, in which case $1 is a regex
-function content_check() {
+content_check() {
 	if [ "$1" == "--regex" ]; then
 		grep_opt=
 		shift
@@ -524,7 +523,7 @@ function content_check() {
 # $1 - content to check for
 # $2 - number of times content must appear
 # $3 - timeout (default: 1)
-function content_check_with_count() {
+content_check_with_count() {
 	timeoutend=${3:-1}
 	timecounter=0
 	while [  $timecounter -lt $timeoutend ]; do
@@ -551,7 +550,7 @@ function content_check_with_count() {
 }
 
 
-function custom_content_check() {
+custom_content_check() {
 	grep -qF -- "$1" < $2
 	if [ "$?" -ne "0" ]; then
 	    echo FAIL: custom_content_check failed to find "'$1'" inside "'$2'"
@@ -563,7 +562,7 @@ function custom_content_check() {
 
 # check that given content $1 is not present in file $2 (default: RSYSLOG_OUTLOG)
 # regular expressions may be used
-function check_not_present() {
+check_not_present() {
 	if [ "$2" == "" ]; then
 		file=$RSYSLOG_OUT_LOG
 	else
@@ -635,7 +634,7 @@ check_journal_testmsg_received() {
 }
 
 # wait for main message queue to be empty. $1 is the instance.
-function wait_queueempty() {
+wait_queueempty() {
 	if [ "$1" == "2" ]; then
 		echo WaitMainQueueEmpty | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
 	else
@@ -645,7 +644,7 @@ function wait_queueempty() {
 
 
 # shut rsyslogd down when main queue is empty. $1 is the instance.
-function shutdown_when_empty() {
+shutdown_when_empty() {
 	if [ "$1" == "2" ]; then
 	   echo Shutting down instance 2
 	else
@@ -722,7 +721,7 @@ quit"
 
 
 # wait for all pending lookup table reloads to complete $1 is the instance.
-function await_lookup_table_reload() {
+await_lookup_table_reload() {
 	if [ "$1" == "2" ]; then
 		echo AwaitLookupTableReload | $TESTTOOL_DIR/diagtalker -pIMDIAG_PORT2 || error_exit  $?
 	else
@@ -789,7 +788,7 @@ wait_seq_check() {
 }
 
 
-function assert_content_missing() {
+assert_content_missing() {
 	grep -qF -- "$1" < ${RSYSLOG_OUT_LOG}
 	if [ "$?" -eq "0" ]; then
 		echo content-missing assertion failed, some line matched pattern "'$1'"
@@ -798,7 +797,7 @@ function assert_content_missing() {
 }
 
 
-function custom_assert_content_missing() {
+custom_assert_content_missing() {
 	grep -qF -- "$1" < $2
 	if [ "$?" -eq "0" ]; then
 		echo content-missing assertion failed, some line in "'$2'" matched pattern "'$1'"
@@ -809,7 +808,7 @@ function custom_assert_content_missing() {
 
 
 # shut rsyslogd down when main queue is empty. $1 is the instance.
-function issue_HUP() {
+issue_HUP() {
 	kill -HUP $(cat $RSYSLOG_PIDBASE$1.pid)
 	$TESTTOOL_DIR/msleep 1000
 }
@@ -831,14 +830,14 @@ wait_shutdown_vg() {
 	fi
 }
 
-function check_file_exists() {
+check_file_exists() {
 	if [ ! -f "$1" ]; then
 		printf 'FAIL: file "%s" must exist, but does not\n' "$1"
 		error_exit 1
 	fi
 }
 
-function check_file_not_exists() {
+check_file_not_exists() {
 	if [ -f "$1" ]; then
 		printf 'FILE %s CONTENT:\n' "$1"
 		cat -n -- "$1"
@@ -976,15 +975,15 @@ skip_test(){
 
 # Helper function to call rsyslog project test error script
 # $1 is the exit code
-function error_stats() {
+error_stats() {
 	if [ "$RSYSLOG_STATSURL" == "" ]; then
 		printf 'not reporting failure as RSYSLOG_STATSURL is not set\n'
 	else
 		echo reporting failure to $RSYSLOG_STATSURL
-		testname=$(./urlencode.py "$RSYSLOG_TESTNAME")
-		testenv=$(./urlencode.py "${VCS_SLUG:-$PWD}")
-		testmachine=$(./urlencode.py "$HOSTNAME")
-		logurl=$(./urlencode.py "${CI_BUILD_URL:-}")
+		testname=$($TESTTOOL_DIR/urlencode.py "$RSYSLOG_TESTNAME")
+		testenv=$($TESTTOOL_DIR/urlencode.py "${VCS_SLUG:-$PWD}")
+		testmachine=$($TESTTOOL_DIR/urlencode.py "$HOSTNAME")
+		logurl=$($TESTTOOL_DIR/urlencode.py "${CI_BUILD_URL:-}")
 		wget -nv $RSYSLOG_STATSURL\?Testname=$testname\&Testenv=$testenv\&Testmachine=$testmachine\&exitcode=${1:-1}\&logurl=$logurl\&rndstr=jnxv8i34u78fg23
 	fi
 }
@@ -1038,7 +1037,7 @@ seq_check() {
 # breaking a lot of exitings test cases, so we preferred to duplicate the code here.
 # $4... are just to have the abilit to pass in more options...
 # add -v to chkseq if you need more verbose output
-function seq_check2() {
+seq_check2() {
 	$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${RSYSLOG2_OUT_LOG}  | ./chkseq -s$1 -e$2 $3 $4 $5 $6 $7
 	if [ "$?" -ne "0" ]; then
 		echo "sequence error detected"
@@ -1049,7 +1048,7 @@ function seq_check2() {
 
 # do the usual sequence check, but for gzip files
 # $4... are just to have the abilit to pass in more options...
-function gzip_seq_check() {
+gzip_seq_check() {
 	ls -l ${RSYSLOG_OUT_LOG}
 	gunzip < ${RSYSLOG_OUT_LOG} | $RS_SORTCMD $RS_SORT_NUMERIC_OPT | ./chkseq -v -s$1 -e$2 $3 $4 $5 $6 $7
 	if [ "$?" -ne "0" ]; then
@@ -1060,7 +1059,7 @@ function gzip_seq_check() {
 
 
 # do a tcpflood run and check if it worked params are passed to tcpflood
-function tcpflood() {
+tcpflood() {
 	eval ./tcpflood -p$TCPFLOOD_PORT "$@" $TCPFLOOD_EXTRA_OPTS
 	if [ "$?" -ne "0" ]; then
 		echo "error during tcpflood on port ${TCPFLOOD_PORT}! see ${RSYSLOG_OUT_LOG}.save for what was written"
@@ -1072,7 +1071,7 @@ function tcpflood() {
 
 # cleanup
 # detect any left-over hanging instance
-function exit_test() {
+exit_test() {
 	nhanging=0
 	#for pid in $(ps -eo pid,args|grep '/tools/[r]syslogd ' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
 	#do
@@ -1114,7 +1113,7 @@ function exit_test() {
 # just after us and grab the same port. However, in practice it seems
 # to work pretty well. In any case, we should probably call this as
 # late as possible before the usage of the port.
-function get_free_port() {
+get_free_port() {
 python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()'
 }
 
@@ -1130,7 +1129,7 @@ get_inode() {
 
 
 # check if command $1 is available - will exit 77 when not OK
-function check_command_available() {
+check_command_available() {
 	command -v $1
 	if [ $? -ne 0 ] ; then
 		echo Testbench requires unavailable command: $1
@@ -1143,7 +1142,7 @@ function check_command_available() {
 # seqchk. This is needed for some operations where we need the sort
 # result for some preprocessing. Note that a later seqchk will sort
 # again, but that's not an issue.
-function presort() {
+presort() {
 	rm -f $RSYSLOG_DYNNAME.presort
 	$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${RSYSLOG_OUT_LOG} > $RSYSLOG_DYNNAME.presort
 }
@@ -1181,7 +1180,7 @@ dep_work_dir=$(pwd)/.dep_wrk
 
 #END: ext kafka config
 
-function kafka_exit_handling() {
+kafka_exit_handling() {
 
 	# Extended Exit handling for kafka / zookeeper instances 
 	if [[ "$EXTRA_EXIT" == 'kafka' ]]; then
@@ -1207,7 +1206,7 @@ function kafka_exit_handling() {
 	fi
 }
 
-function download_kafka() {
+download_kafka() {
 	if [ ! -d $dep_cache_dir ]; then
 		echo "Creating dependency cache dir $dep_cache_dir"
 		mkdir $dep_cache_dir
@@ -1240,7 +1239,7 @@ function download_kafka() {
 	fi
 }
 
-function stop_kafka() {
+stop_kafka() {
 	if [ "$KEEP_KAFKA_RUNNING" == "YES" ]; then
 		return
 	fi
@@ -1290,7 +1289,7 @@ function stop_kafka() {
 	fi
 }
 
-function cleanup_kafka() {
+cleanup_kafka() {
 	if [ "x$1" == "x" ]; then
 		dep_work_dir=$(readlink -f .dep_wrk)
 	else
@@ -1304,7 +1303,7 @@ function cleanup_kafka() {
 	fi
 }
 
-function stop_zookeeper() {
+stop_zookeeper() {
 	if [ "$KEEP_KAFKA_RUNNING" == "YES" ]; then
 		return
 	fi
@@ -1356,7 +1355,7 @@ function stop_zookeeper() {
 	fi
 }
 
-function cleanup_zookeeper() {
+cleanup_zookeeper() {
 	if [ "x$1" == "x" ]; then
 		dep_work_dir=$(readlink -f .dep_wrk)
 	else
@@ -1365,7 +1364,7 @@ function cleanup_zookeeper() {
 	rm -rf $dep_work_dir/zk
 }
 
-function start_zookeeper() {
+start_zookeeper() {
 	if [ "$KEEP_KAFKA_RUNNING" == "YES" ] && [ -f "$ZOOPIDFILE" ]; then
 		if kill -0 "$(cat "$ZOOPIDFILE")"; then
 			printf 'zookeeper already runing, no need to start\n'
@@ -1404,7 +1403,7 @@ function start_zookeeper() {
 	wait_startup_pid "$ZOOPIDFILE"
 }
 
-function start_kafka() {
+start_kafka() {
 	# Force IPv4 usage of Kafka!
 	export KAFKA_OPTS="-Djava.net.preferIPv4Stack=True"
 	if [ "x$1" == "x" ]; then
@@ -1463,7 +1462,7 @@ function start_kafka() {
 	fi
 }
 
-function create_kafka_topic() {
+create_kafka_topic() {
 	if [ "x$2" == "x" ]; then
 		dep_work_dir=$(readlink -f .dep_wrk)
 	else
@@ -1519,7 +1518,7 @@ function create_kafka_topic() {
 	(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --zookeeper localhost:$dep_work_port/kafka --alter --topic $1 --delete-config retention.bytes)
 }
 
-function delete_kafka_topic() {
+delete_kafka_topic() {
 	if [ "x$2" == "x" ]; then
 		dep_work_dir=$(readlink -f .dep_wrk)
 	else
@@ -1535,7 +1534,7 @@ function delete_kafka_topic() {
 	(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --delete --zookeeper localhost:$dep_work_port/kafka --topic $1)
 }
 
-function dump_kafka_topic() {
+dump_kafka_topic() {
 	if [ "x$2" == "x" ]; then
 		dep_work_dir=$(readlink -f .dep_wrk)
 		dep_kafka_log_dump=$(readlink -f rsyslog.out.kafka.log)
@@ -1562,7 +1561,7 @@ function dump_kafka_topic() {
 	(cd $dep_work_dir/kafka && ./bin/kafka-console-consumer.sh --timeout-ms 2000 --from-beginning --zookeeper localhost:$dep_work_port/kafka --topic $1 > $dep_kafka_log_dump)
 }
 
-function dump_kafka_serverlog() {
+dump_kafka_serverlog() {
 	if [ "x$1" == "x" ]; then
 		dep_work_dir=$(readlink -f .dep_wrk)
 	else
@@ -1580,7 +1579,7 @@ function dump_kafka_serverlog() {
 	fi
 }
 
-function dump_zookeeper_serverlog() {
+dump_zookeeper_serverlog() {
 	if [ "x$1" == "x" ]; then
 		dep_work_dir=$(readlink -f .dep_wrk)
 	else
@@ -1592,6 +1591,15 @@ function dump_zookeeper_serverlog() {
 	echo "========================================="
 	printf 'non-info is:\n'
 	grep --invert-match '^\[.* INFO ' $dep_work_dir/zk/zookeeper.out | grep '^\['
+}
+
+
+# read data from ES to a local file so that we can process
+# $1 - number of records (ES does not return all records unless you tell it explicitely).
+# $2 - ES port
+es_getdata() {
+	curl --silent localhost:${2:-9200}/rsyslog_testbench/_search?size=$1 > $RSYSLOG_DYNNAME.work
+	python $srcdir/es_response_get_msgnum.py > ${RSYSLOG_OUT_LOG}
 }
 
 
@@ -1710,19 +1718,6 @@ case $1 in
    'es-init')   # initialize local Elasticsearch *testbench* instance for the next
                 # test. NOTE: do NOT put anything useful on that instance!
 		curl --silent -XDELETE localhost:${ES_PORT:-9200}/rsyslog_testbench
-		;;
-   'es-getdata') # read data from ES to a local file so that we can process
-		if [ "x$3" == "x" ]; then
-			es_get_port=9200
-		else
-			es_get_port=$3
-		fi
-
-   		# it with out regular tooling.
-		# Note: param 2 MUST be number of records to read (ES does
-		# not return the full set unless you tell it explicitely).
-		curl --silent localhost:$es_get_port/rsyslog_testbench/_search?size=$2 > work
-		python $srcdir/es_response_get_msgnum.py > ${RSYSLOG_OUT_LOG}
 		;;
    'getpid')
 		pid=$(cat $RSYSLOG_PIDBASE$2.pid)
