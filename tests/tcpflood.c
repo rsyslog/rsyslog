@@ -1267,7 +1267,6 @@ static void
 closeTLSSess(int i)
 {
 	int r;
-	printf("closeTLSSess: closing SSL Session ...\n");
 	r = SSL_shutdown(sslArray[i]);
 	SSL_free(sslArray[i]);
 }
