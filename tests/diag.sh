@@ -404,7 +404,11 @@ injectmsg_kafkacat() {
 	fi
 	for ((i=1 ; i<=TESTMESSAGES ; i++)); do
 		printf ' msgnum:%8.8d\n' $i; \
-	done | kafkacat -P -b localhost:29092 -t $RANDTOPIC
+	done | kafkacat -P -b localhost:29092 -t $RANDTOPIC 2>&1 | tee >$RSYSLOG_DYNNAME.kafkacat.log
+	if grep -q "All broker connections are down" $RSYSLOG_DYNNAME.kafkacat.log ; then
+		printf 'SKIP: kafka has malfunctioned\n'
+		error_exit 177
+	fi
 	if [ "$wait" == "YES" ]; then
 		wait_seq_check "$@"
 	fi
