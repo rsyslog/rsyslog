@@ -69,6 +69,13 @@ Version 8.40.0 [v8-stable] 2018-12-11
        * new exitcode, logurl stats reporting fields
        * report buildbot builder (if provided) in failure report
    * testbench: add test for mmjsonparse with unparsable data
+   * testbench: make es-bulk-retry test more reliable
+     We now no longer depend on a fixed 'sleep' command but rather
+     check the output file for what we expect. This is much more
+     robust on slow test machines.
+     We believe this closes the below-mentioned issue. If not, it
+     should be re-opened.
+     closes https://github.com/rsyslog/rsyslog/issues/3104
 ------------------------------------------------------------------------------
 Version 8.39.0 [v8-stable] 2018-10-30
 - imfile: improve truncation detection
