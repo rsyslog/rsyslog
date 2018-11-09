@@ -324,6 +324,10 @@ wtpWrkrExecCleanup(wti_t *pWti)
 	pThis = pWti->pWtp;
 	ISOBJ_TYPE_assert(pThis, wtp);
 
+// TESTBENCH bughunt - remove when done! 2018-11-05 rgerhards
+if(dbgTimeoutToStderr) {
+fprintf(stderr, "%s: enter WrkrExecCleanup\n", wtpGetDbgHdr(pThis));
+}
 	/* the order of the next two statements is important! */
 	wtiSetState(pWti, WRKTHRD_STOPPED);
 	ATOMIC_DEC(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
@@ -339,7 +343,6 @@ wtpWrkrExecCleanup(wti_t *pWti)
 			"%s: worker thread %lx terminated, now %d active worker threads",
 			wtpGetDbgHdr(pThis), (unsigned long) pWti, numWorkersNow);
 	}
-
 }
 
 
@@ -404,7 +407,7 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 
 // TESTBENCH bughunt - remove when done! 2018-11-05 rgerhards
 if(dbgTimeoutToStderr) {
-	fprintf(stderr, "%s: worker started\n", wtpGetDbgHdr(pThis));
+	fprintf(stderr, "%s: worker %p started\n", wtpGetDbgHdr(pThis), pThis);
 }
 	/* let the parent know we're done with initialization */
 	d_pthread_mutex_lock(&pThis->mutWtp);
@@ -422,6 +425,10 @@ if(dbgTimeoutToStderr) {
 
 	pthread_cond_broadcast(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
 	pthread_cleanup_pop(1); /* unlock mutex */
+// TESTBENCH bughunt - remove when done! 2018-11-05 rgerhards
+if(dbgTimeoutToStderr) {
+	fprintf(stderr, "worker %p exiting\n", pThis);
+}
 	pthread_exit(0);
 }
 #if !defined(_AIX)
@@ -440,6 +447,12 @@ wtpStartWrkr(wtp_t *const pThis, const int permit_during_shutdown)
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 
+// TESTBENCH bughunt - remove when done! 2018-11-05 rgerhards
+if(dbgTimeoutToStderr) {
+	fprintf(stderr, "%s: worker start requested, num workers currently %d\n",
+		wtpGetDbgHdr(pThis),
+		ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
+}
 	const wtpState_t wtpState = (wtpState_t) ATOMIC_FETCH_32BIT((int*)&pThis->wtpState, &pThis->mutWtpState);
 	if(wtpState != wtpState_RUNNING && !permit_during_shutdown) {
 		DBGPRINTF("%s: worker start requested during shutdown - ignored\n", wtpGetDbgHdr(pThis));
@@ -468,12 +481,12 @@ wtpStartWrkr(wtp_t *const pThis, const int permit_during_shutdown)
 
 	pWti = pThis->pWrkr[i];
 	wtiSetState(pWti, WRKTHRD_INITIALIZING);
-	iState = pthread_create(&(pWti->thrdID), &pThis->attrThrd,wtpWorker, (void*) pWti);
+	iState = pthread_create(&(pWti->thrdID), &pThis->attrThrd, wtpWorker, (void*) pWti);
 	ATOMIC_INC(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd); /* we got one more! */
 
 // TESTBENCH bughunt - remove when done! 2018-11-05 rgerhards
 if(dbgTimeoutToStderr) {
-	fprintf(stderr, "%s: started with state %d, num workers now %d\n",
+	fprintf(stderr, "%s: wrkr start initiated with state %d, num workers now %d\n",
 		wtpGetDbgHdr(pThis), iState,
 		ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
 }
@@ -490,6 +503,12 @@ if(dbgTimeoutToStderr) {
 	DBGPRINTF("%s: new worker finished initialization with state %d, num workers now %d\n",
 		wtpGetDbgHdr(pThis), iState,
 		ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
+// TESTBENCH bughunt - remove when done! 2018-11-05 rgerhards
+if(dbgTimeoutToStderr) {
+	fprintf(stderr, "%s: started with state %d, num workers now %d\n",
+		wtpGetDbgHdr(pThis), iState,
+		ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
+}
 
 finalize_it:
 	d_pthread_mutex_unlock(&pThis->mutWtp);
