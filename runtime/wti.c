@@ -166,6 +166,7 @@ wtiCancelThrd(wti_t *pThis, const uchar *const cancelobj)
 				cancelobj);
 		}
 		pthread_cancel(pThis->thrdID);
+		pthread_kill(pThis->thrdID, SIGTTIN);
 		DBGPRINTF("cooperative worker termination failed, using cancellation...\n");
 		DBGOPRINT((obj_t*) pThis, "canceling worker thread\n");
 		pthread_cancel(pThis->thrdID);
