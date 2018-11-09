@@ -384,6 +384,7 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	uchar *pszDbgHdr;
 	uchar thrdName[32] = "rs:";
 #	endif
+	pthread_detach(pthread_self());
 
 	ISOBJ_TYPE_assert(pWti, wti);
 	pThis = pWti->pWtp;
