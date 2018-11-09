@@ -773,7 +773,20 @@ await_lookup_table_reload() {
 # $1 filename, default $RSYSLOG_OUT_LOG
 # $2 expected nbr of lines, default $NUMMESSAGES
 # $3 nbr of tries, default 200
+# options (need to be specified in THIS ORDER if multiple given):
+# --delay ms - if given, delay to use between retries
+# --abort-on-oversize - error_exit if more lines than expected are present
 wait_file_lines() {
+	delay=200
+	if [ "$1" == "--delay" ]; then
+		delay="$2"
+		shift 2
+	fi
+	abort_oversize=NO
+	if [ "$1" == "--abort-on-oversize" ]; then
+		abort_oversize="YES"
+		shift
+	fi
 	timeoutend=${3:-200}
 	timecounter=0
 	file=${1:-$RSYSLOG_OUT_LOG}
@@ -785,6 +798,10 @@ wait_file_lines() {
 		if [ -f "$file" ]; then
 			count=$(wc -l < "$file")
 		fi
+		if [ $abort_oversize == "YES" ] && [ ${count:=0} -gt $waitlines ]; then
+			printf 'FAIL: wait_file_lines, too many lines, expected %d, current %s\n'  $waitlines $count
+			error_exit 1
+		fi
 		if [ ${count:=0} -eq $waitlines ]; then
 			echo wait_file_lines success, have $waitlines lines
 			break
@@ -795,8 +812,8 @@ wait_file_lines() {
 				wait_shutdown
 				error_exit 1
 			else
-				echo wait_file_lines not yet there, expected $waitlines, current $count lines
-				$TESTTOOL_DIR/msleep 200
+				echo wait_file_lines waiting, expected $waitlines, current $count lines
+				$TESTTOOL_DIR/msleep $delay
 			fi
 		fi
 	done
