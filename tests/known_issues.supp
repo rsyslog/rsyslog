@@ -1,0 +1,8 @@
+{
+   <dlcose-missing-to-enable-debug-symbol-display_NOT_A_LEAK>
+   Memcheck:Leak
+   ...
+   fun:dlopen*
+   ...
+}
+
