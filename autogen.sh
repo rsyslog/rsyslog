@@ -3,7 +3,7 @@
 # Licensed under ASL 2.0 (as of email conversation with original
 # author Michael Biebl on 2016-12-04).
 
-srcdir=`dirname $0`
+srcdir=$(dirname $0)
 test -z "$srcdir" && srcdir=.
 
 (test -f $srcdir/configure.ac) || {
