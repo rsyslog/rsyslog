@@ -674,7 +674,7 @@ static rsRetVal ATTR_NONNULL()
 checkTruncation(strm_t *const pThis)
 {
 	DEFiRet;
-	int ret;
+	off64_t ret;
 	off64_t newpos;
 	assert(pThis->bReopenOnTruncate);
 
