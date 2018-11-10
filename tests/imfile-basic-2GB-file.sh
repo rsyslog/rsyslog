@@ -5,6 +5,7 @@
 # adds a couple of messages to get it over 2GiB.
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+skip_platform "FreeBSD" "FIXME: check default of 'inotify' mode"
 generate_conf
 add_conf '
 module(load="../plugins/imfile/.libs/imfile")
@@ -21,7 +22,7 @@ startup
 ls -lh $RSYSLOG_DYNNAME.input
 export NUMMESSAGES="$(cat $RSYSLOG_DYNNAME.msgcnt)"
 
-wait_file_lines --delay 2500 --abort-on-oversize "$RSYSLOG_OUT_LOG" $NUMMESSAGES 500
+wait_file_lines --delay 2500 --abort-on-oversize "$RSYSLOG_OUT_LOG" $NUMMESSAGES 1000
 
 # add one message --> exactly 2GB
 ./inputfilegen -m1 -d47 -i$NUMMESSAGES>> $RSYSLOG_DYNNAME.input
