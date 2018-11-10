@@ -115,6 +115,12 @@ skip_platform() {
 }
 
 
+# a consistent format to output testbench timestamps
+tb_timestamp() {
+	date +%H:%M:%S
+}
+
+
 # set special tests status. States ($1) are:
 # unreliable -- as the name says, test does not work reliably; $2 must be github issue URL
 #               depending on CI configuration, "unreliable" tests are skipped and not failed
@@ -404,7 +410,11 @@ injectmsg_kafkacat() {
 	fi
 	for ((i=1 ; i<=TESTMESSAGES ; i++)); do
 		printf ' msgnum:%8.8d\n' $i; \
-	done | kafkacat -P -b localhost:29092 -t $RANDTOPIC
+	done | kafkacat -P -b localhost:29092 -t $RANDTOPIC 2>&1 | tee >$RSYSLOG_DYNNAME.kafkacat.log
+	if grep -q "All broker connections are down" $RSYSLOG_DYNNAME.kafkacat.log ; then
+		printf 'SKIP: kafka has malfunctioned\n'
+		error_exit 177
+	fi
 	if [ "$wait" == "YES" ]; then
 		wait_seq_check "$@"
 	fi
@@ -708,7 +718,7 @@ wait_shutdown() {
 	fi
 	i=0
 	out_pid=$(cat $RSYSLOG_PIDBASE$1.pid.save)
-	echo wait on shutdown of $out_pid
+	printf '%s wait on shutdown of %s\n' "$(tb_timestamp)" "$out_pid"
 	if [[ "$out_pid" == "" ]]
 	then
 		terminated=1
@@ -1864,16 +1874,16 @@ case $1 in
 		if [ -z $RS_HEADCMD ]; then
 			RS_HEADCMD="head"
 		fi
-		ulimit -c unlimited  &> /dev/null # at least try to get core dumps
-		echo "------------------------------------------------------------"
-		echo "Test: $0"
-		echo "------------------------------------------------------------"
 		# we assume TZ is set, else most test will fail. So let's ensure
 		# this really is the case
 		if [ -z $TZ ]; then
 			echo "testbench: TZ env var not set, setting it to UTC"
 			export TZ=UTC
 		fi
+		ulimit -c unlimited  &> /dev/null # at least try to get core dumps
+		printf '------------------------------------------------------------\n'
+		printf '%s Test: %s\n' "$(tb_timestamp)" "$0"
+		printf '------------------------------------------------------------\n'
 		rm -f xlate*.lkp_tbl
 		rm -f log log* # RSyslog debug output 
 		rm -f work 
