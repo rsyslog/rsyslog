@@ -1905,16 +1905,14 @@ BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
 CODESTARTsetModCnf
-	/* new style config has different default! */
-#if defined(OS_SOLARIS)
-	#if defined (HAVE_PORT_SOURCE_FILE) /* use FEN on Solaris if available */
+	#if defined(HAVE_PORT_SOURCE_FILE)
+		/* this means we are on Solaris, so inotify is not there */
 		loadModConf->opMode = OPMODE_FEN;
+	#elif defined(HAVE_INOTIFY_INIT)
+		loadModConf->opMode = OPMODE_INOTIFY;
 	#else
 		loadModConf->opMode = OPMODE_POLLING;
 	#endif
-#else
-	loadModConf->opMode = OPMODE_INOTIFY;
-#endif
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
 		LogError(0, RS_RET_MISSING_CNFPARAMS, "imfile: error processing module "
