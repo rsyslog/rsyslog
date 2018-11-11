@@ -2,6 +2,7 @@
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 skip_platform "FreeBSD" "This test currently does not work on FreeBSD."
+export NUMMESSAGES=50000
 
 grep '\.el6\.' <<< $(uname -a)
 if [ "$?" == "0" ]; then
@@ -30,9 +31,10 @@ $template outfmt,"%msg:F,58:2%\n"
 ls -l $RSYSLOG_DYNNAME.input
 
 startup_vgthread
+wait_file_lines
 shutdown_when_empty
 wait_shutdown_vg
 check_exit_vg
 
-seq_check 0 49999
+seq_check
 exit_test

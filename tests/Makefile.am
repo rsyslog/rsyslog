@@ -983,6 +983,7 @@ endif
 if ENABLE_IMFILE
 TESTS += \
 	imfile-basic.sh \
+	imfile-basic-legacy.sh \
 	imfile-discard-truncated-line.sh \
 	imfile-truncate-line.sh \
 	imfile-file-not-found-error.sh \
@@ -1599,6 +1600,7 @@ EXTRA_DIST= \
 	imfile-endregex.sh \
 	imfile-endregex-vg.sh \
 	imfile-basic.sh \
+	imfile-basic-legacy.sh \
 	imfile-discard-truncated-line.sh \
 	imfile-truncate-line.sh \
 	imfile-file-not-found-error.sh \
