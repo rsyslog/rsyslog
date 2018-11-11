@@ -978,6 +978,11 @@ if ENABLE_EXTENDED_TESTS
 # random.sh is temporarily disabled as it needs some work
 # to rsyslog core to complete in reasonable time
 #TESTS += random.sh
+if ENABLE_IMFILE
+TESTS += \
+	imfile-basic-2GB-file.sh \
+	imfile-truncate-2GB-file.sh
+endif # ENABLE_IMFILE
 endif
 
 if ENABLE_IMFILE
@@ -1601,6 +1606,8 @@ EXTRA_DIST= \
 	imfile-endregex-vg.sh \
 	imfile-basic.sh \
 	imfile-basic-legacy.sh \
+	imfile-basic-2GB-file.sh \
+	imfile-truncate-2GB-file.sh \
 	imfile-discard-truncated-line.sh \
 	imfile-truncate-line.sh \
 	imfile-file-not-found-error.sh \

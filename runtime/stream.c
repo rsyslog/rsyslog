@@ -644,11 +644,11 @@ finalize_it:
 
 /* helper to checkTruncation */
 static rsRetVal ATTR_NONNULL()
-rereadTruncated(strm_t *const pThis, const char *const reason, const long long data)
+rereadTruncated(strm_t *const pThis, const int err_no, const char *const reason, const long long data)
 {
 	DEFiRet;
 
-	LogMsg(errno, RS_RET_FILE_TRUNCATED, LOG_WARNING, "file '%s': truncation detected, "
+	LogMsg(err_no, RS_RET_FILE_TRUNCATED, LOG_WARNING, "file '%s': truncation detected, "
 		"(%s) - re-start reading from beginning (data %lld)",
 		pThis->pszCurrFName, reason, data);
 	DBGPRINTF("checkTruncation, file %s last buffer CHANGED\n", pThis->pszCurrFName);
@@ -675,48 +675,38 @@ checkTruncation(strm_t *const pThis)
 {
 	DEFiRet;
 	off64_t ret;
-	off64_t newpos;
 	assert(pThis->bReopenOnTruncate);
+	assert(pThis->fd != -1);
 
 	DBGPRINTF("checkTruncation, file %s, iBufPtrMax %zd\n", pThis->pszCurrFName, pThis->iBufPtrMax);
 	if(pThis->iBufPtrMax == 0) {
 		FINALIZE;
 	}
 
-	const off64_t currpos = lseek64(pThis->fd, 0, SEEK_CUR);
-	if(currpos < 0) {
-		iRet = rereadTruncated(pThis, "cannot obtain current position", 0);
-		FINALIZE;
+	if(Debug && debugging_on) { /* costly operation, so make sure we need it */
+		dbgprintf("checkTruncation, currpos %lld\n",
+			(long long) lseek(pThis->fd, 0, SEEK_CUR));
 	}
 
-	newpos = currpos - (off64_t) pThis->iBufPtrMax;
-	dbgprintf("checkTruncation in actual processing, currpos %lld, newpos is %lld\n",
-		(long long) currpos, (long long) newpos);
-	if(newpos < 0) {
-		LogError(0, RS_RET_INTERNAL_ERROR, "program bug: file '%s': newpos < 0 --> %lld, "
-			"currpos %lld, iBufPtrMax %lld",
-			pThis->pszCurrFName, (long long) newpos, (long long) currpos,
-			(long long) pThis->iBufPtrMax);
-		FINALIZE;
-	}
-
-	ret = lseek64(pThis->fd, newpos, SEEK_SET);
+	const off64_t backseek = -1 * (off64_t) pThis->iBufPtrMax;
+	ret = lseek64(pThis->fd, backseek, SEEK_CUR);
 	if(ret < 0) {
-		iRet = rereadTruncated(pThis, "cannot seek backward to begin of last block", newpos);
+		iRet = rereadTruncated(pThis, errno,
+			"cannot seek backward to begin of last block", backseek);
 		FINALIZE;
 	}
 
 	const ssize_t lenRead = read(pThis->fd, pThis->pIOBuf_truncation, pThis->iBufPtrMax);
-	dbgprintf("checkTruncation proof-read: %d bytes\n", (int) lenRead);
-	if(lenRead < 0) {
-		iRet = rereadTruncated(pThis, "last block could not be re-read", pThis->iBufPtrMax);
+	if(lenRead != (ssize_t) pThis->iBufPtrMax) {
+		iRet = rereadTruncated(pThis, errno,
+			"last block could not be re-read", lenRead);
 		FINALIZE;
 	}
 
 	if(!memcmp(pThis->pIOBuf_truncation, pThis->pIOBuf, pThis->iBufPtrMax)) {
 		DBGPRINTF("checkTruncation, file %s last buffer unchanged\n", pThis->pszCurrFName);
 	} else {
-		iRet = rereadTruncated(pThis, "last block data different", 0);
+		iRet = rereadTruncated(pThis, errno, "last block data different", 0);
 	}
 
 finalize_it:
@@ -1906,7 +1896,8 @@ finalize_it:
  * is invalidated.
  * rgerhards, 2008-01-12
  */
-static rsRetVal strmSeek(strm_t *pThis, off64_t offs)
+static rsRetVal ATTR_NONNULL()
+strmSeek(strm_t *pThis, const off64_t offs)
 {
 	DEFiRet;
 
@@ -1917,11 +1908,12 @@ static rsRetVal strmSeek(strm_t *pThis, off64_t offs)
 	} else {
 		CHKiRet(strmFlushInternal(pThis, 0));
 	}
-	long long i;
 	DBGOPRINT((obj_t*) pThis, "file %d seek, pos %llu\n", pThis->fd, (long long unsigned) offs);
-	i = lseek64(pThis->fd, offs, SEEK_SET);
+	const off64_t i = lseek64(pThis->fd, offs, SEEK_SET);
 	if(i != offs) {
-		DBGPRINTF("strmSeek: error %lld seeking to offset %lld\n", i, (long long) offs);
+		LogError(errno, RS_RET_IO_ERROR, "file %s: unexpected error seeking to "
+			"offset %lld (ret %lld) - further malfunctions may happen",
+			pThis->pszCurrFName, (long long) i, (long long) offs);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 	pThis->strtOffs = pThis->iCurrOffs = offs; /* we are now at *this* offset */

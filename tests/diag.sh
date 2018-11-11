@@ -772,31 +772,46 @@ await_lookup_table_reload() {
 
 # $1 filename, default $RSYSLOG_OUT_LOG
 # $2 expected nbr of lines, default $NUMMESSAGES
-# $3 nbr of tries, default 200
+# $3 timout in seconds
+# options (need to be specified in THIS ORDER if multiple given):
+# --delay ms - if given, delay to use between retries
+# --abort-on-oversize - error_exit if more lines than expected are present
 wait_file_lines() {
-	timeoutend=${3:-200}
-	timecounter=0
+	delay=200
+	if [ "$1" == "--delay" ]; then
+		delay="$2"
+		shift 2
+	fi
+	abort_oversize=NO
+	if [ "$1" == "--abort-on-oversize" ]; then
+		abort_oversize="YES"
+		shift
+	fi
+	timeout=${3:-$TB_TEST_TIMEOUT}
+	timeoutbegin=$(date +%s)
+	timeoutend=$(( timeoutbegin + timeout ))
+	# TODO: change this to support odl mode, if needed: timeoutend=${3:-200}
 	file=${1:-$RSYSLOG_OUT_LOG}
 	waitlines=${2:-$NUMMESSAGES}
 
-	while [  $timecounter -lt $timeoutend ]; do
-		(( timecounter++ ))
-
+	while true ; do
 		if [ -f "$file" ]; then
 			count=$(wc -l < "$file")
 		fi
+		if [ $abort_oversize == "YES" ] && [ ${count:=0} -gt $waitlines ]; then
+			printf 'FAIL: wait_file_lines, too many lines, expected %d, current %s, took %s seconds\n'  $waitlines $count, "$(( $(date +%s) - timeoutbegin ))"
+			error_exit 1
+		fi
 		if [ ${count:=0} -eq $waitlines ]; then
-			echo wait_file_lines success, have $waitlines lines
+			echo wait_file_lines success, have $waitlines lines, took $(( $(date +%s) - timeoutbegin )) seconds
 			break
 		else
-			if [ "x$timecounter" == "x$timeoutend" ]; then
-				echo wait_file_lines failed, expected $waitlines got $count after $timeoutend retries
-				shutdown_when_empty
-				wait_shutdown
+			if [ $(date +%s) -ge $timeoutend  ]; then
+				echo wait_file_lines failed, expected $waitlines got $count after $timeoutend retries, took $(( $(date +%s) - timeoutbegin )) seconds
 				error_exit 1
 			else
-				echo wait_file_lines not yet there, expected $waitlines, current $count lines
-				$TESTTOOL_DIR/msleep 200
+				echo $(date +%H:%M:%S) wait_file_lines waiting, expected $waitlines, current $count lines
+				$TESTTOOL_DIR/msleep $delay
 			fi
 		fi
 	done
