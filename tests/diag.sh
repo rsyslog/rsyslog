@@ -227,7 +227,7 @@ startup_common() {
 	if [ "$1" == "2" ]; then
 	    CONF_FILE="${TESTCONF_NM}2.conf"
 	    instance=2
-	elif [ "$1" == "" -o "$1" == "1" ]; then
+	elif [ "$1" == "" ] || [ "$1" == "1" ]; then
 	    CONF_FILE="${TESTCONF_NM}.conf"
 	else
 	    CONF_FILE="$srcdir/testsuites/$1"
@@ -267,7 +267,7 @@ wait_startup_pid() {
 		   error_exit 1
 		fi
 	done
-	printf '%s1 found, pid %s\n' "$1" "$(cat $1)"
+	printf '%s found, pid %s\n' "$1" "$(cat $1)"
 }
 
 # special version of wait_startup_pid() for rsyslog startup
@@ -338,7 +338,7 @@ wait_pid_termination() {
 wait_file_exists() {
 	i=0
 	while true; do
-		if [ -f $1 -a "$(cat $1 2> /dev/null)" != "" ]; then
+		if [ -f $1 ] && [ "$(cat $1 2> /dev/null)" != "" ]; then
 			break
 		fi
 		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
@@ -770,11 +770,14 @@ await_lookup_table_reload() {
 	fi
 }
 
-# $1 filename, $2 expected nbr of lines, $3 nbr of tries
+# $1 filename, default $RSYSLOG_OUT_LOG
+# $2 expected nbr of lines, default $NUMMESSAGES
+# $3 nbr of tries, default 200
 wait_file_lines() {
 	timeoutend=${3:-200}
 	timecounter=0
 	file=${1:-$RSYSLOG_OUT_LOG}
+	waitlines=${2:-$NUMMESSAGES}
 
 	while [  $timecounter -lt $timeoutend ]; do
 		(( timecounter++ ))
@@ -782,17 +785,17 @@ wait_file_lines() {
 		if [ -f "$file" ]; then
 			count=$(wc -l < "$file")
 		fi
-		if [ ${count:=0} -eq $2 ]; then
-			echo wait_file_lines success, have $2 lines
+		if [ ${count:=0} -eq $waitlines ]; then
+			echo wait_file_lines success, have $waitlines lines
 			break
 		else
 			if [ "x$timecounter" == "x$timeoutend" ]; then
-				echo wait_file_lines failed, expected $2 got $count after $timeoutend retries
+				echo wait_file_lines failed, expected $waitlines got $count after $timeoutend retries
 				shutdown_when_empty
 				wait_shutdown
 				error_exit 1
 			else
-				echo wait_file_lines not yet there, expected $2, current $count lines
+				echo wait_file_lines not yet there, expected $waitlines, current $count lines
 				$TESTTOOL_DIR/msleep 200
 			fi
 		fi
@@ -1073,6 +1076,18 @@ seq_check() {
 	else
 		check_only="NO"
 	fi
+	if [ "$1" == "" ]; then
+		if [ "$NUMMESSAGES" == "" ]; then
+			printf 'FAIL: seq_check called without parameters but NUMMESSAGES is unset!\n'
+			error_exit 100
+		fi
+		# use default parameters
+		startnum=0
+		endnum=$(( NUMMESSAGES - 1 ))
+	else
+		startnum=$1
+		endnum=$2
+	fi
 	if [ ! -f "$RSYSLOG_OUT_LOG" ]; then
 		if [ "$check_only"  == "YES" ]; then
 			return 1
@@ -1080,7 +1095,7 @@ seq_check() {
 		printf 'FAIL: %s does not exist in seq_check!\n' "$RSYSLOG_OUT_LOG"
 		error_exit 1
 	fi
-	$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${RSYSLOG_OUT_LOG} | ./chkseq -s$1 -e$2 $3 $4 $5 $6 $7
+	$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${RSYSLOG_OUT_LOG} | ./chkseq -s$startnum -e$endnum $3 $4 $5 $6 $7
 	ret=$?
 	if [ "$check_only"  == "YES" ]; then
 		return $ret
@@ -1913,7 +1928,7 @@ case $1 in
    'check-ipv6-available')   # check if IPv6  - will exit 77 when not OK
 		ifconfig -a |grep ::1
 		if [ $? -ne 0 ] ; then
-			echo this test requires an active IPv6 stack, which we do not have here
+			printf 'this test requires an active IPv6 stack, which we do not have here\n'
 			exit 77
 		fi
 		;;
