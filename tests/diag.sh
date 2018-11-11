@@ -686,11 +686,7 @@ wait_queueempty() {
 
 # shut rsyslogd down when main queue is empty. $1 is the instance.
 shutdown_when_empty() {
-	if [ "$1" == "2" ]; then
-	   echo Shutting down instance 2
-	else
-	   echo Shutting down instance 1
-	fi
+	echo Shutting down instance ${1:-1}
 	wait_queueempty $1
 	if [ "$RSYSLOG_PIDBASE" == "" ]; then
 		echo "RSYSLOG_PIDBASE is EMPTY! - bug in test? (instance $1)"
