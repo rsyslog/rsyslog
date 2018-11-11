@@ -1203,7 +1203,7 @@ exit_test() {
 	# Extended Exit handling for kafka / zookeeper instances 
 	kafka_exit_handling "true"
 
-	printf 'Test SUCCESFUL\n'
+	printf '%s Test %s SUCCESFUL (took %s seconds)\n' "$(tb_timestamp)" "$0" "$(( $(date +%s) - TB_STARTTEST ))"
 	echo  -------------------------------------------------------------------------------
 	exit 0
 }
@@ -1907,9 +1907,10 @@ case $1 in
 			export TZ=UTC
 		fi
 		ulimit -c unlimited  &> /dev/null # at least try to get core dumps
-		printf '------------------------------------------------------------\n'
+		export TB_STARTTEST=$(date +%s)
+		printf '%s\n' '------------------------------------------------------------'
 		printf '%s Test: %s\n' "$(tb_timestamp)" "$0"
-		printf '------------------------------------------------------------\n'
+		printf '%s\n' '------------------------------------------------------------'
 		rm -f xlate*.lkp_tbl
 		rm -f log log* # RSyslog debug output 
 		rm -f work 
