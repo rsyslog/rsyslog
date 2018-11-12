@@ -72,7 +72,7 @@ export ZOOPIDFILE="$(pwd)/zookeeper.pid"
 #export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 #export RSYSLOG_DEBUGLOG="log"
 TB_TIMEOUT_STARTSTOP=400 # timeout for start/stop rsyslogd in tenths (!) of a second 400 => 40 sec
-TB_TEST_TIMEOUT=60  # number of seconds after which test checks timeout (eg. waits)
+TB_TEST_TIMEOUT=90  # number of seconds after which test checks timeout (eg. waits)
 # note that 40sec for the startup should be sufficient even on very slow machines. we changed this from 2min on 2017-12-12
 export RSYSLOG_DEBUG_TIMEOUTS_TO_STDERR="on"  # we want to know when we loose messages due to timeouts
 if [ "$TESTTOOL_DIR" == "" ]; then
@@ -120,6 +120,19 @@ tb_timestamp() {
 	date +%H:%M:%S
 }
 
+# override the test timeout, but only if the new value is higher
+# than the previous one. This is necessary for slow test systems
+# $1 is timeout in seconds
+override_test_timeout() {
+	if [ "${1:=0}" == "" ]; then
+		printf 'FAIL: invalid testbench call, override_test_timeout needs value\n'
+		error_exit 100
+	fi
+	if [ "$1" -gt "$TB_TEST_TIMEOUT" ]; then
+		TB_TEST_TIMEOUT=$1
+		printf 'info: TB_TEST_TIMEOUT increased to %s\n' "$TB_TEST_TIMEOUT"
+	fi
+}
 
 # set special tests status. States ($1) are:
 # unreliable -- as the name says, test does not work reliably; $2 must be github issue URL
@@ -1069,7 +1082,7 @@ error_stats() {
 		testenv=$($srcdir/urlencode.py "${VCS_SLUG:-$PWD}")
 		testmachine=$($srcdir/urlencode.py "$HOSTNAME")
 		logurl=$($srcdir/urlencode.py "${CI_BUILD_URL:-}")
-		wget -nv $RSYSLOG_STATSURL\?Testname=$testname\&Testenv=$testenv\&Testmachine=$testmachine\&exitcode=${1:-1}\&logurl=$logurl\&rndstr=jnxv8i34u78fg23
+		wget -nv -O/dev/null $RSYSLOG_STATSURL\?Testname=$testname\&Testenv=$testenv\&Testmachine=$testmachine\&exitcode=${1:-1}\&logurl=$logurl\&rndstr=jnxv8i34u78fg23
 	fi
 }
 
