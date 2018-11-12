@@ -4,6 +4,7 @@
 
 export ES_PORT=19200
 export NUMMESSAGES=100
+override_test_timeout 120
 #export USE_VALGRIND="YES" # to enable this to run under valgrind
 
 download_elasticsearch
