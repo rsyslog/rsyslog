@@ -1085,7 +1085,7 @@ error_stats() {
 		testenv=$($srcdir/urlencode.py "${VCS_SLUG:-$PWD}")
 		testmachine=$($srcdir/urlencode.py "$HOSTNAME")
 		logurl=$($srcdir/urlencode.py "${CI_BUILD_URL:-}")
-		wget -nv $RSYSLOG_STATSURL\?Testname=$testname\&Testenv=$testenv\&Testmachine=$testmachine\&exitcode=${1:-1}\&logurl=$logurl\&rndstr=jnxv8i34u78fg23
+		wget -nv -O/dev/null $RSYSLOG_STATSURL\?Testname=$testname\&Testenv=$testenv\&Testmachine=$testmachine\&exitcode=${1:-1}\&logurl=$logurl\&rndstr=jnxv8i34u78fg23
 	fi
 }
 
