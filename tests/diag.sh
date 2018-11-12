@@ -142,7 +142,7 @@ test_status() {
 
 setvar_RS_HOSTNAME() {
 	printf '### Obtaining HOSTNAME (prequisite, not actual test) ###\n'
-	generate_conf
+	generate_conf ""
 	add_conf 'module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="'$TCPFLOOD_PORT'")
 
@@ -153,7 +153,7 @@ local0.* ./'${RSYSLOG_DYNNAME}'.HOSTNAME;hostname
 	startup
 	tcpflood -m1 -M "\"<128>\""
 	shutdown_when_empty
-	wait_shutdown
+	wait_shutdown ""
 	export RS_HOSTNAME="$(cat ${RSYSLOG_DYNNAME}.HOSTNAME)"
 	rm -f "${RSYSLOG_DYNNAME}.HOSTNAME"
 	echo HOSTNAME is: $RS_HOSTNAME
@@ -575,8 +575,8 @@ content_check_with_count() {
 			break
 		else
 			if [ "x$timecounter" == "x$timeoutend" ]; then
-				shutdown_when_empty
-				wait_shutdown
+				shutdown_when_empty ""
+				wait_shutdown ""
 
 				echo content_check_with_count failed, expected \"$1\" to occur $2 times, but found it $count times
 				echo file ${RSYSLOG_OUT_LOG} content is:
@@ -749,9 +749,8 @@ quit"
 	done
 	unset terminated
 	unset out_pid
-	if [ -e core.* ]
-	then
-	   echo "ABORT! core file exists"
+	if [ "$(ls core.* 2>/dev/null)" != "" ]; then
+	   printf 'ABORT! core file exists (maybe from a parallel run!)\n'
 	   error_exit  1
 	fi
 }
@@ -973,8 +972,7 @@ do_cleanup() {
 #       call it immeditely before termination. This may be used to cleanup
 #       some things or emit additional diagnostic information.
 error_exit() {
-	if [ -e core* ]
-	then
+	if [ "$(ls core* 2>/dev/null)" != "" ]; then
 		echo trying to obtain crash location info
 		echo note: this may not be the correct file, check it
 		CORE=$(ls core*)
@@ -985,8 +983,7 @@ error_exit() {
 		rm gdb.in
 	fi
 	if [[ "$2" == 'stacktrace' || ( ! -e IN_AUTO_DEBUG &&  "$USE_AUTO_DEBUG" == 'on' ) ]]; then
-		if [ -e core* ]
-		then
+		if [ "$(ls core* 2>/dev/null)" != "" ]; then
 			echo trying to analyze core for main rsyslogd binary
 			echo note: this may not be the correct file, check it
 			CORE=$(ls core*)
@@ -1605,8 +1602,8 @@ create_kafka_topic() {
 				exit 177
 			fi
 			echo "RETRYING kafka startup, doing shutdown and startup"
-			stop_zookeeper; stop_kafka
-			start_zookeeper; start_kafka
+			stop_zookeeper ""; stop_kafka ""
+			start_zookeeper ""; start_kafka ""
 			echo "READY for RETRY"
 			is_retry=1
 			i=0
