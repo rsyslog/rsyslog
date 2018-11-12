@@ -105,7 +105,6 @@ BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! 
 	pthread_attr_setschedparam(&pThis->attrThrd, &default_sched_param);
 	pthread_attr_setinheritsched(&pThis->attrThrd, PTHREAD_EXPLICIT_SCHED);
 #endif
-	pthread_attr_setdetachstate(&pThis->attrThrd, PTHREAD_CREATE_DETACHED);
 	/* set all function pointers to "not implemented" dummy so that we can safely call them */
 	pThis->pfChkStopWrkr = (rsRetVal (*)(void*,int))NotImplementedDummy_voidp_int;
 	pThis->pfGetDeqBatchSize = (rsRetVal (*)(void*,int*))NotImplementedDummy_voidp_intp;
@@ -195,6 +194,16 @@ wtpSetState(wtp_t *pThis, wtpState_t iNewState)
 	return RS_RET_OK;
 }
 
+/* join terminated worker threads */
+static void ATTR_NONNULL()
+wtpJoinTerminatedWrkr(wtp_t *const pThis)
+{
+	int i;
+	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
+		wtiJoinThrd(pThis->pWrkr[i]);
+	}
+}
+
 
 /* check if the worker shall shutdown (1 = yes, 0 = no)
  * Note: there may be two mutexes locked, the bLockUsrMutex is the one in our "user"
@@ -252,6 +261,7 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 	wtpSetState(pThis, tShutdownCmd);
 	/* awake workers in retry loop */
 	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
+		wtpJoinTerminatedWrkr(pThis);
 		pthread_cond_signal(&pThis->pWrkr[i]->pcondBusy);
 		wtiWakeupThrd(pThis->pWrkr[i]);
 	}
@@ -262,6 +272,7 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 	pthread_cleanup_push(mutexCancelCleanup, &pThis->mutWtp);
 	bTimedOut = 0;
 	while(pThis->iCurNumWrkThrd > 0 && !bTimedOut) {
+		wtpJoinTerminatedWrkr(pThis);
 		DBGPRINTF("%s: waiting %ldms on worker thread termination, %d still running\n",
 			   wtpGetDbgHdr(pThis), timeoutVal(ptTimeout),
 			   ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
@@ -326,10 +337,10 @@ wtpWrkrExecCleanup(wti_t *pWti)
 
 // TESTBENCH bughunt - remove when done! 2018-11-05 rgerhards
 if(dbgTimeoutToStderr) {
-fprintf(stderr, "%s: enter WrkrExecCleanup\n", wtpGetDbgHdr(pThis));
+	fprintf(stderr, "rsyslog debug: %s: enter WrkrExecCleanup\n", wtiGetDbgHdr(pWti));
 }
 	/* the order of the next two statements is important! */
-	wtiSetState(pWti, WRKTHRD_STOPPED);
+	wtiSetState(pWti, WRKTHRD_WAIT_JOIN);
 	ATOMIC_DEC(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
 
 	/* note: numWorkersNow is only for message generation, so we do not try
@@ -384,7 +395,6 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	uchar *pszDbgHdr;
 	uchar thrdName[32] = "rs:";
 #	endif
-	pthread_detach(pthread_self());
 
 	ISOBJ_TYPE_assert(pWti, wti);
 	pThis = pWti->pWtp;
@@ -408,7 +418,7 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 
 // TESTBENCH bughunt - remove when done! 2018-11-05 rgerhards
 if(dbgTimeoutToStderr) {
-	fprintf(stderr, "%s: worker %p started\n", wtpGetDbgHdr(pThis), pThis);
+	fprintf(stderr, "rsyslog debug: %s: worker %p started\n", wtpGetDbgHdr(pThis), pThis);
 }
 	/* let the parent know we're done with initialization */
 	d_pthread_mutex_lock(&pThis->mutWtp);
@@ -426,10 +436,9 @@ if(dbgTimeoutToStderr) {
 
 	pthread_cond_broadcast(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
 	pthread_cleanup_pop(1); /* unlock mutex */
-// TESTBENCH bughunt - remove when done! 2018-11-05 rgerhards
-if(dbgTimeoutToStderr) {
-	fprintf(stderr, "worker %p exiting\n", pThis);
-}
+	if(dbgTimeoutToStderr) {
+		fprintf(stderr, "rsyslog debug: %s: worker exiting\n", wtiGetDbgHdr(pWti));
+	}
 	pthread_exit(0);
 }
 #if !defined(_AIX)
@@ -458,7 +467,7 @@ if(dbgTimeoutToStderr) {
 	if(wtpState != wtpState_RUNNING && !permit_during_shutdown) {
 		DBGPRINTF("%s: worker start requested during shutdown - ignored\n", wtpGetDbgHdr(pThis));
 		if(dbgTimeoutToStderr) {
-			fprintf(stderr, "rsyslogd debug: %s: worker start requested during shutdown - ignored\n",
+			fprintf(stderr, "rsyslog debug: %s: worker start requested during shutdown - ignored\n",
 				wtpGetDbgHdr(pThis));
 		}
 		return RS_RET_ERR; /* exceptional case, but really makes sense here! */
@@ -466,6 +475,7 @@ if(dbgTimeoutToStderr) {
 
 	d_pthread_mutex_lock(&pThis->mutWtp);
 
+	wtpJoinTerminatedWrkr(pThis);
 	/* find free spot in thread table. */
 	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
 		if(wtiGetState(pThis->pWrkr[i]) == WRKTHRD_STOPPED) {
@@ -506,7 +516,7 @@ if(dbgTimeoutToStderr) {
 		ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
 // TESTBENCH bughunt - remove when done! 2018-11-05 rgerhards
 if(dbgTimeoutToStderr) {
-	fprintf(stderr, "%s: started with state %d, num workers now %d\n",
+	fprintf(stderr, "rsyslog debug: %s: started with state %d, num workers now %d\n",
 		wtpGetDbgHdr(pThis), iState,
 		ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
 }
