@@ -686,11 +686,7 @@ wait_queueempty() {
 
 # shut rsyslogd down when main queue is empty. $1 is the instance.
 shutdown_when_empty() {
-	if [ "$1" == "2" ]; then
-	   echo Shutting down instance 2
-	else
-	   echo Shutting down instance 1
-	fi
+	echo Shutting down instance ${1:-1}
 	wait_queueempty $1
 	if [ "$RSYSLOG_PIDBASE" == "" ]; then
 		echo "RSYSLOG_PIDBASE is EMPTY! - bug in test? (instance $1)"
@@ -1207,7 +1203,7 @@ exit_test() {
 	# Extended Exit handling for kafka / zookeeper instances 
 	kafka_exit_handling "true"
 
-	printf 'Test SUCCESFUL\n'
+	printf '%s Test %s SUCCESFUL (took %s seconds)\n' "$(tb_timestamp)" "$0" "$(( $(date +%s) - TB_STARTTEST ))"
 	echo  -------------------------------------------------------------------------------
 	exit 0
 }
@@ -1911,9 +1907,10 @@ case $1 in
 			export TZ=UTC
 		fi
 		ulimit -c unlimited  &> /dev/null # at least try to get core dumps
-		printf '------------------------------------------------------------\n'
+		export TB_STARTTEST=$(date +%s)
+		printf '%s\n' '------------------------------------------------------------'
 		printf '%s Test: %s\n' "$(tb_timestamp)" "$0"
-		printf '------------------------------------------------------------\n'
+		printf '%s\n' '------------------------------------------------------------'
 		rm -f xlate*.lkp_tbl
 		rm -f log log* # RSyslog debug output 
 		rm -f work 

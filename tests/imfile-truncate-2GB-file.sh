@@ -5,7 +5,6 @@
 # adds a couple of messages to get it over 2GiB.
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-skip_platform "FreeBSD" "FIXME: check default of 'inotify' mode"
 generate_conf
 add_conf '
 module(load="../plugins/imfile/.libs/imfile")
