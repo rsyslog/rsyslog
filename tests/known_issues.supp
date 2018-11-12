@@ -5,11 +5,3 @@
    fun:dlopen*
    ...
 }
-
-{
-   This seems to be a problem in pthreads, see https://github.com/rsyslog/rsyslog/issues/2902
-   Memcheck:Leak
-   ...
-   fun:pthread_create@@*
-   ...
-}

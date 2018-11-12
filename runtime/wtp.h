@@ -1,6 +1,6 @@
 /* Definition of the worker thread pool (wtp) object.
  *
- * Copyright 2008-2012 Adiscon GmbH.
+ * Copyright 2008-2018 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -33,6 +33,7 @@
 #define WRKTHRD_STOPPED  	0
 #define WRKTHRD_INITIALIZING	1
 #define WRKTHRD_RUNNING		3
+#define WRKTHRD_WAIT_JOIN	7
 
 
 /* possible states of a worker thread pool */

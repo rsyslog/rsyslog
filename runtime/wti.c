@@ -9,7 +9,7 @@
  * (and in the web doc set on http://www.rsyslog.com/doc). Be sure to read it
  * if you are getting aquainted to the object.
  *
- * Copyright 2008-2017 Adiscon GmbH.
+ * Copyright 2008-2018 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -62,8 +62,8 @@ pthread_key_t thrd_wti_key;
 /* get the header for debug messages
  * The caller must NOT free or otherwise modify the returned string!
  */
-static uchar *
-wtiGetDbgHdr(wti_t *pThis)
+uchar * ATTR_NONNULL()
+wtiGetDbgHdr(const wti_t *const pThis)
 {
 	ISOBJ_TYPE_assert(pThis, wti);
 
@@ -83,6 +83,28 @@ wtiGetState(wti_t *pThis)
 	return ATOMIC_FETCH_32BIT(&pThis->bIsRunning, &pThis->mutIsRunning);
 }
 
+/* join terminated worker thread
+ * This may be called in any thread state, it will be a NOP if the
+ * thread is not to join.
+ */
+void ATTR_NONNULL()
+wtiJoinThrd(wti_t *const pThis)
+{
+	ISOBJ_TYPE_assert(pThis, wti);
+	if(wtiGetState(pThis) == WRKTHRD_WAIT_JOIN) {
+		DBGPRINTF("%s: joining terminated worker\n", wtiGetDbgHdr(pThis));
+		if(pthread_join(pThis->thrdID, NULL) != 0) {
+			LogMsg(errno, RS_RET_INTERNAL_ERROR, LOG_WARNING,
+				"rsyslog bug? wti cannot join terminated wrkr");
+		}
+		DBGPRINTF("%s: worker fully terminated\n", wtiGetDbgHdr(pThis));
+		wtiSetState(pThis, WRKTHRD_STOPPED);
+		if(dbgTimeoutToStderr) {
+			fprintf(stderr, "rsyslog debug: %s: thread joined\n",
+				wtiGetDbgHdr(pThis));
+		}
+	}
+}
 
 /* Set this thread to "always running" state (can not be unset)
  * rgerhards, 2009-07-20
@@ -122,7 +144,6 @@ wtiWakeupThrd(wti_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, wti);
 
-
 	if(wtiGetState(pThis)) {
 		/* we first try the cooperative "cancel" interface */
 		pthread_kill(pThis->thrdID, SIGTTIN);
@@ -149,20 +170,22 @@ wtiCancelThrd(wti_t *pThis, const uchar *const cancelobj)
 
 	ISOBJ_TYPE_assert(pThis, wti);
 
-	if(wtiGetState(pThis)) {
+	wtiJoinThrd(pThis);
+	if(wtiGetState(pThis) != WRKTHRD_STOPPED) {
 		LogMsg(0, RS_RET_ERR, LOG_WARNING, "%s: need to do cooperative cancellation "
 			"- some data may be lost, increase timeout?", cancelobj);
 		/* we first try the cooperative "cancel" interface */
 		pthread_kill(pThis->thrdID, SIGTTIN);
 		DBGPRINTF("sent SIGTTIN to worker thread %p, giving it a chance to terminate\n",
 			(void *) pThis->thrdID);
-		srSleep(0, 10000);
+		srSleep(0, 50000);
+		wtiJoinThrd(pThis);
 	}
 
-	if(wtiGetState(pThis)) {
+	if(wtiGetState(pThis) != WRKTHRD_STOPPED) {
 		LogMsg(0, RS_RET_ERR, LOG_WARNING, "%s: need to do hard cancellation", cancelobj);
 		if(dbgTimeoutToStderr) {
-			fprintf(stderr, "rsyslogd debug: %s: need to do hard cancellation\n",
+			fprintf(stderr, "rsyslog debug: %s: need to do hard cancellation\n",
 				cancelobj);
 		}
 		pthread_cancel(pThis->thrdID);
@@ -176,6 +199,7 @@ wtiCancelThrd(wti_t *pThis, const uchar *const cancelobj)
 		}
 	}
 
+	wtiJoinThrd(pThis);
 	RETiRet;
 }
 
@@ -211,6 +235,16 @@ finalize_it:
 /* Destructor */
 BEGINobjDestruct(wti) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(wti)
+	if(wtiGetState(pThis) != WRKTHRD_STOPPED) {
+		DBGPRINTF("%s: rsyslog bug: worker not stopped during shutdown\n",
+			wtiGetDbgHdr(pThis));
+		if(dbgTimeoutToStderr) {
+			fprintf(stderr, "RSYSLOG BUG: %s: worker not stopped during shutdown\n",
+				wtiGetDbgHdr(pThis));
+		} else {
+			assert(wtiGetState(pThis) == WRKTHRD_STOPPED);
+		}
+	}
 	/* actual destruction */
 	batchFree(&pThis->batch);
 	free(pThis->actWrkrInfo);
@@ -417,7 +451,7 @@ wtiWorker(wti_t *__restrict__ const pThis)
 	/* indicate termination */
 	pthread_cleanup_pop(0); /* remove cleanup handler */
 	pthread_setcancelstate(iCancelStateSave, NULL);
-	dbgprintf("wti %p: worker exiting\n", pThis);
+	dbgprintf("wti %p: exiting\n", pThis);
 
 	RETiRet;
 }
