@@ -753,9 +753,8 @@ quit"
 	done
 	unset terminated
 	unset out_pid
-	if [ -e core.* ]
-	then
-	   echo "ABORT! core file exists"
+	if [ "$(ls core.* 2>/dev/null)" != "" ]; then
+	   printf 'ABORT! core file exists (maybe from a parallel run!)\n'
 	   error_exit  1
 	fi
 }
@@ -977,8 +976,7 @@ do_cleanup() {
 #       call it immeditely before termination. This may be used to cleanup
 #       some things or emit additional diagnostic information.
 error_exit() {
-	if [ -e core* ]
-	then
+	if [ "$(ls core* 2>/dev/null)" != "" ]; then
 		echo trying to obtain crash location info
 		echo note: this may not be the correct file, check it
 		CORE=$(ls core*)
@@ -989,8 +987,7 @@ error_exit() {
 		rm gdb.in
 	fi
 	if [[ "$2" == 'stacktrace' || ( ! -e IN_AUTO_DEBUG &&  "$USE_AUTO_DEBUG" == 'on' ) ]]; then
-		if [ -e core* ]
-		then
+		if [ "$(ls core* 2>/dev/null)" != "" ]; then
 			echo trying to analyze core for main rsyslogd binary
 			echo note: this may not be the correct file, check it
 			CORE=$(ls core*)
