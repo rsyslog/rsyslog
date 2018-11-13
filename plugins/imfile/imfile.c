@@ -67,6 +67,14 @@
 
 #include <regex.h>
 
+/* some platforms do not have large file support :( */
+#ifndef O_LARGEFILE
+#  define O_LARGEFILE 0
+#endif
+#ifndef HAVE_LSEEK64
+#  define lseek64(fd, offset, whence) lseek(fd, offset, whence)
+#endif
+
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("imfile")
@@ -1425,8 +1433,6 @@ static rsRetVal
 openFileWithoutStateFile(act_obj_t *const act)
 {
 	DEFiRet;
-	struct stat stat_buf;
-
 	const instanceConf_t *const inst = act->edge->instarr[0];// TODO: same file, multiple instances?
 
 	DBGPRINTF("clean startup withOUT state file for '%s'\n", act->name);
@@ -1442,9 +1448,16 @@ openFileWithoutStateFile(act_obj_t *const act)
 	/* As a state file not exist, this is a fresh start. seek to file end
 	 * when freshStartTail is on.
 	 */
-	if(inst->freshStartTail){
-		if(stat((char*) act->name, &stat_buf) != -1) {
-			act->pStrm->iCurrOffs = stat_buf.st_size;
+	if(inst->freshStartTail) {
+		const int fd = open(act->name, O_RDONLY | O_CLOEXEC);
+		if(fd >= 0) {
+			act->pStrm->iCurrOffs = lseek64(fd, 0, SEEK_END);
+			if(act->pStrm->iCurrOffs < 0) {
+				act->pStrm->iCurrOffs = 0;
+				LogError(errno, RS_RET_ERR, "imfile: could not query current "
+					"file size for %s - 'freshStartTail' option will "
+					"be ignored, starting at begin of file", inst->pszFileName);
+			}
 			CHKiRet(strm.SeekCurrOffs(act->pStrm));
 		}
 	}
