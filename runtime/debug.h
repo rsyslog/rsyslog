@@ -68,10 +68,16 @@ extern int altdbg;	/* and the handle for alternate debug output */
 #define dbgprintf(...) r_dbgprintf(__FILE__, __VA_ARGS__)
 #define dbgoprint(...) r_dbgoprint(__FILE__, __VA_ARGS__)
 
+#define d_mutop_check(x, operation) { \
+	const int mutop__r = operation(x); \
+	if(mutop__r != 0) { \
+		LogError(mutop__r, RS_RET_INTERNAL_ERROR, "%s %p failed", #operation, (x)); \
+	} \
+}
 /* things originally introduced for now removed rtinst */
-#define d_pthread_mutex_lock(x)     pthread_mutex_lock(x)
-#define d_pthread_mutex_trylock(x)  pthread_mutex_trylock(x)
-#define d_pthread_mutex_unlock(x)   pthread_mutex_unlock(x)
+#define d_pthread_mutex_lock(x)     d_mutop_check((x), pthread_mutex_lock)
+#define d_pthread_mutex_trylock(x)  d_mutop_check((x), pthread_mutex_trylock)
+#define d_pthread_mutex_unlock(x)   d_mutop_check((x), pthread_mutex_unlock)
 #define d_pthread_cond_wait(cond, mut)   pthread_cond_wait(cond, mut)
 #define d_pthread_cond_timedwait(cond, mut, to)   pthread_cond_timedwait(cond, mut, to)
 
