@@ -163,7 +163,7 @@ $template hostname,"%hostname%"
 local0.* ./'${RSYSLOG_DYNNAME}'.HOSTNAME;hostname
 '
 	rm -f "${RSYSLOG_DYNNAME}.HOSTNAME"
-	startup
+	startup ""
 	tcpflood -m1 -M "\"<128>\""
 	shutdown_when_empty
 	wait_shutdown ""
@@ -920,7 +920,7 @@ wait_shutdown_vg() {
 	export RSYSLOGD_EXIT=$?
 	echo rsyslogd run exited with $RSYSLOGD_EXIT
 
-	if [ $(ls vgcore.* 2> /dev/null | wc -l) -gt 0 ]; then
+	if [ "$(ls vgcore.* 2>/dev/null)" != "" ]; then
 	   printf 'ABORT! core file exists:\n'
 	   ls -l vgcore.*
 	   error_exit 1
@@ -997,20 +997,17 @@ error_exit() {
 	fi
 	if [[ "$2" == 'stacktrace' || ( ! -e IN_AUTO_DEBUG &&  "$USE_AUTO_DEBUG" == 'on' ) ]]; then
 		if [ "$(ls core* 2>/dev/null)" != "" ]; then
-			echo trying to analyze core for main rsyslogd binary
-			echo note: this may not be the correct file, check it
 			CORE=$(ls core*)
-			#echo "set pagination off" >gdb.in
-			#echo "core $CORE" >>gdb.in
-			echo "bt" >> gdb.in
-			echo "echo === THREAD INFO ===" >> gdb.in
-			echo "info thread" >> gdb.in
-			echo "echo === thread apply all bt full ===" >> gdb.in
-			echo "thread apply all bt full" >> gdb.in
-			echo "q" >> gdb.in
-			gdb ../tools/rsyslogd $CORE -batch -x gdb.in
-			CORE=
-			rm gdb.in
+			printf 'trying to analyze core "%s" for main rsyslogd binary\n' "$CORE"
+			printf 'note: this may not be the correct file, check it\n'
+			$SUDO gdb ../tools/rsyslogd "$CORE" -batch <<- EOF
+				bt
+				echo === THREAD INFO ===
+				info thread
+				echo === thread apply all bt full ===
+				thread apply all bt full
+				q
+				EOF
 		fi
 	fi
 	if [[ ! -e IN_AUTO_DEBUG &&  "$USE_AUTO_DEBUG" == 'on' ]]; then
@@ -2014,7 +2011,7 @@ case $1 in
 				echo waiting for stats file "'$2'" to be created
 				$TESTTOOL_DIR/msleep 100
 		done
-		prev_count=$(grep 'BEGIN$' <$2 | wc -l)
+		prev_count=$(grep -c 'BEGIN$' <$2)
 		new_count=$prev_count
 		while [[ "x$prev_count" == "x$new_count" ]]; do
 				# busy spin, because it allows as close timing-coordination in actual test run as possible
