@@ -1,7 +1,7 @@
 $ActionExecOnlyWhenPreviousIsSuspended
 --------------------------------------
 
-**Type:** global configuration parameter
+**Type:** action configuration parameter
 
 **Default:** off
 
