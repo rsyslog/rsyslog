@@ -426,7 +426,7 @@ if(dbgTimeoutToStderr) {
 
 	wtiWorker(pWti);
 	pthread_cleanup_pop(0);
-	d_pthread_mutex_lock(&pThis->mutWtp);
+	pthread_mutex_lock(&pThis->mutWtp);
 	pthread_cleanup_push(mutexCancelCleanup, &pThis->mutWtp);
 	wtpWrkrExecCleanup(pWti);
 
