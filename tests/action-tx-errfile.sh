@@ -23,6 +23,7 @@ if((not($msg contains "error")) and ($msg contains "msgnum:")) then {
 '
 startup
 injectmsg 0 50
+wait_file_lines "$RSYSLOG2_OUT_LOG" 25
 shutdown_when_empty
 wait_shutdown
 export EXPECTED="$(cat ${srcdir}/testsuites/action-tx-errfile.result)"
