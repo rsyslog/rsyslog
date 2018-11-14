@@ -30,6 +30,12 @@ The following parameters can be set:
   Sets the directory that rsyslog uses for work files, e.g. imfile state
   or queue spool files.
 
+- **umask** available 8.26.0+
+
+  Sets the rsyslogd process' umask.  If not specified, the system-provided default
+  is used.  The value given must always be a 4-digit octal number, with the initial
+  digit being zero.
+
 - **dropMsgsWithMaliciousDNSPtrRecords**
 
 - **localHostname**
@@ -106,13 +112,13 @@ The following parameters can be set:
 
 .. _global_janitorInterval:
 
-- **janitor.interval** [minutes], available since 8.3.3
+- **janitor.interval** [minutes], available 8.3.3+
 
   Sets the interval at which the
   :doc:`janitor process <../concepts/janitor>`
   runs.
 
-- **debug.onShutdown** available in 7.5.8+
+- **debug.onShutdown** available 7.5.8+
 
   If enabled ("on"), rsyslog will log debug messages when a system
   shutdown is requested. This can be used to track issues that happen
@@ -121,13 +127,13 @@ The following parameters can be set:
   Note that for this option to be useful, the debug.logFile parameter
   must also be set (or the respective environment variable).
 
-- **debug.logFile** available in 7.5.8+
+- **debug.logFile** available 7.5.8+
 
   This is used to specify the debug log file name. It is used for all
   debug output. Please note that the RSYSLOG\_DEBUGLOG environment
   variable always **overrides** the value of debug.logFile.
 
-- **net.ipprotocol** available in 8.6.0+
+- **net.ipprotocol** available 8.6.0+
 
   This permits to instruct rsyslog to use IPv4 or IPv6 only. Possible
   values are "unspecified", in which case both protocols are used,
@@ -137,7 +143,7 @@ The following parameters can be set:
   Note: this replaces the former *-4* and *-6* rsyslogd command line
   options.
 
-- **net.aclAddHostnameOnFail** available in 8.6.0+
+- **net.aclAddHostnameOnFail** available 8.6.0+
 
   If "on", during ACL processing, hostnames are resolved to IP addresses for
   performance reasons. If DNS fails during that process, the hostname
@@ -146,26 +152,26 @@ The following parameters can be set:
 
   The default is "off".
 
-- **net.aclResolveHostname** available in 8.6.0+
+- **net.aclResolveHostname** available 8.6.0+
 
   If "off", do not resolve hostnames to IP addresses during ACL processing.
 
   The default is "on".
 
-- **net.enableDNS** [on/off] available in 8.6.0+
+- **net.enableDNS** [on/off] available 8.6.0+
 
   **Default:** on
 
   Can be used to turn DNS name resolution on or off.
 
-- **net.permitACLWarning** [on/off] available in 8.6.0+
+- **net.permitACLWarning** [on/off] available 8.6.0+
 
   **Default:** on
 
   If "off", suppress warnings issued when messages are received
   from non-authorized machines (those, that are in no AllowedSender list).
 
-- **parser.parseHostnameAndTag** [on/off] available in 8.6.0+
+- **parser.parseHostnameAndTag** [on/off] available 8.6.0+
 
   **Default:** on
 
@@ -177,7 +183,7 @@ The following parameters can be set:
   It is highly suggested to change this setting to "off" only if you
   know exactly why you are doing this.
 
-- **parser.permitSlashInProgramName** [on/off] available in 8.25.0+
+- **parser.permitSlashInProgramName** [on/off] available 8.25.0+
 
   **Default:** off
 
