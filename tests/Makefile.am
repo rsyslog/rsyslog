@@ -890,6 +890,7 @@ endif
 if ENABLE_RELP
 TESTS += sndrcv_relp.sh \
 	 sndrcv_relp_rebind.sh \
+	 omrelp_errmsg_no_connect.sh \
 	 imrelp-basic.sh \
 	 imrelp-basic-oldstyle.sh \
 	 imrelp-manyconn.sh \
@@ -1506,6 +1507,7 @@ EXTRA_DIST= \
 	sndrcv_drvr_noexit.sh \
 	sndrcv_failover.sh \
 	sndrcv.sh \
+	omrelp_errmsg_no_connect.sh \
 	imrelp-basic.sh \
 	imrelp-basic-oldstyle.sh \
 	imrelp-manyconn.sh \
