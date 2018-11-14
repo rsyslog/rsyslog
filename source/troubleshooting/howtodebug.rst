@@ -44,13 +44,12 @@ Notes
 -----
 
 - Having debug output enabled, the debug file will grow very quickly. Make sure
-to not have it enabled permanently. The file will eventually fill up the disk.
+  to not have it enabled permanently. The file will eventually fill up the disk.
 - Debug mode is not to be used in a productive environment as a permanent setting.
-It will affect the processing and performance.
-
+  It will affect the processing and performance.
 
 See Also
 --------
 
--  :doc:`Lookup tables <../troubleshooting/>`
+- :doc:`Troubleshooting <../troubleshooting/troubleshoot>` doc page.
 
