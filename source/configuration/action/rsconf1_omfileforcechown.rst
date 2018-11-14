@@ -1,7 +1,7 @@
 $omfileForceChown
 -----------------
 
-**Type:** global configuration parameter
+**Type:** action configuration parameter
 
 **Parameter Values:** boolean (on/off, yes/no)
 
