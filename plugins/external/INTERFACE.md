@@ -173,8 +173,7 @@ Batching of Messages (Transactions)
 ===================================
 You can write a plugin that processes the messages in batches (also called
 _transactions_), instead of individually. For a general explanation on how
-rsyslog handles the batching of messages, see
-http://www.rsyslog.com/doc/v8-stable/development/dev_oplugins.html.
+rsyslog handles the batching of messages, see [dev-oplugins].
 
 _**Warning:**
 This feature is currently **experimental**. It could change in future releases
@@ -338,3 +337,5 @@ Implementation
 --------------
 The plugin interface is implemented via the "mmexternal" native plugin. See its
 documentation on how to tie your plugin into rsyslog's procesing flow.
+
+[dev-oplugins]: http://www.rsyslog.com/doc/v8-stable/development/dev_oplugins.html
