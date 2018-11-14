@@ -380,7 +380,7 @@ dbgGetRuntimeOptions(void)
 					"Nostdout\n"
 					"OutputTidToStderr\n"
 					"DebugOnDemand - enables debugging on USR1, but does not turn on output\n"
-					"\nSee debug.html in your doc set or http://www.rsyslog.com for details\n");
+					"\nSee debug.html in your doc set or https://www.rsyslog.com for details\n");
 				exit(1);
 			} else if(!strcasecmp((char*)optname, "debug")) {
 				/* this is earlier in the process than the -d option, as such it

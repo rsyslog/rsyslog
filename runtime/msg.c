@@ -5098,58 +5098,58 @@ msgPropDescrFill(msgPropDescr_t *pProp, uchar *name, int nameLen)
 		/* now try to find some common error causes */
 		if(!strcasecmp((char*)name, "myhostname"))
 			parser_errmsg("did you mean '$myhostname' instead of '%s'? "
-				"See also: http://www.rsyslog.com/rsyslog-info-1/", name);
+				"See also: https://www.rsyslog.com/rsyslog-info-1/", name);
 		else if(!strcasecmp((char*)name, "bom"))
 			parser_errmsg("did you mean '$bom' instead of '%s'?"
-				"See also: http://www.rsyslog.com/rsyslog-info-1/", name);
+				"See also: https://www.rsyslog.com/rsyslog-info-1/", name);
 		else if(!strcasecmp((char*)name, "now"))
 			parser_errmsg("did you mean '$now' instead of '%s'?"
-				"See also: http://www.rsyslog.com/rsyslog-info-1/", name);
+				"See also: https://www.rsyslog.com/rsyslog-info-1/", name);
 		else if(!strcasecmp((char*)name, "year"))
 			parser_errmsg("did you mean '$year' instead of '%s'?"
-				"See also: http://www.rsyslog.com/rsyslog-info-1/", name);
+				"See also: https://www.rsyslog.com/rsyslog-info-1/", name);
 		else if(!strcasecmp((char*)name, "month"))
 			parser_errmsg("did you mean '$month' instead of '%s'?"
-				"See also: http://www.rsyslog.com/rsyslog-info-1/", name);
+				"See also: https://www.rsyslog.com/rsyslog-info-1/", name);
 		else if(!strcasecmp((char*)name, "day"))
 			parser_errmsg("did you mean '$day' instead of '%s'?"
-				"See also: http://www.rsyslog.com/rsyslog-info-1/", name);
+				"See also: https://www.rsyslog.com/rsyslog-info-1/", name);
 		else if(!strcasecmp((char*)name, "hour"))
 			parser_errmsg("did you mean '$hour' instead of '%s'?"
-				"See also: http://www.rsyslog.com/rsyslog-info-1/", name);
+				"See also: https://www.rsyslog.com/rsyslog-info-1/", name);
 		else if(!strcasecmp((char*)name, "hhour"))
 			parser_errmsg("did you mean '$hhour' instead of '%s'?"
-				"See also: http://www.rsyslog.com/rsyslog-info-1/", name);
+				"See also: https://www.rsyslog.com/rsyslog-info-1/", name);
 		else if(!strcasecmp((char*)name, "qhour"))
 			parser_errmsg("did you mean '$qhour' instead of '%s'?"
-				"See also: http://www.rsyslog.com/rsyslog-info-1/", name);
+				"See also: https://www.rsyslog.com/rsyslog-info-1/", name);
 		else if(!strcasecmp((char*)name, "minute"))
 			parser_errmsg("did you mean '$minute' instead of '%s'?"
-				"See also: http://www.rsyslog.com/rsyslog-info-1/", name);
+				"See also: https://www.rsyslog.com/rsyslog-info-1/", name);
 		else if(!strcasecmp((char*)name, "now-utc"))
 			parser_errmsg("did you mean '$now-utc' instead of '%s'?"
-				"See also: http://www.rsyslog.com/rsyslog-info-1/", name);
+				"See also: https://www.rsyslog.com/rsyslog-info-1/", name);
 		else if(!strcasecmp((char*)name, "year-utc"))
 			parser_errmsg("did you mean '$year-utc' instead of '%s'?"
-				"See also: http://www.rsyslog.com/rsyslog-info-1/", name);
+				"See also: https://www.rsyslog.com/rsyslog-info-1/", name);
 		else if(!strcasecmp((char*)name, "month-utc"))
 			parser_errmsg("did you mean '$month-utc' instead of '%s'?"
-				"See also: http://www.rsyslog.com/rsyslog-info-1/", name);
+				"See also: https://www.rsyslog.com/rsyslog-info-1/", name);
 		else if(!strcasecmp((char*)name, "day-utc"))
 			parser_errmsg("did you mean '$day-utc' instead of '%s'?"
-				"See also: http://www.rsyslog.com/rsyslog-info-1/", name);
+				"See also: https://www.rsyslog.com/rsyslog-info-1/", name);
 		else if(!strcasecmp((char*)name, "hour-utc"))
 			parser_errmsg("did you mean '$hour-utc' instead of '%s'?"
-				"See also: http://www.rsyslog.com/rsyslog-info-1/", name);
+				"See also: https://www.rsyslog.com/rsyslog-info-1/", name);
 		else if(!strcasecmp((char*)name, "hhour-utc"))
 			parser_errmsg("did you mean '$hhour-utc' instead of '%s'?"
-				"See also: http://www.rsyslog.com/rsyslog-info-1/", name);
+				"See also: https://www.rsyslog.com/rsyslog-info-1/", name);
 		else if(!strcasecmp((char*)name, "qhour-utc"))
 			parser_errmsg("did you mean '$qhour-utc' instead of '%s'?"
-				"See also: http://www.rsyslog.com/rsyslog-info-1/", name);
+				"See also: https://www.rsyslog.com/rsyslog-info-1/", name);
 		else if(!strcasecmp((char*)name, "minute-utc"))
 			parser_errmsg("did you mean '$minute-utc' instead of '%s'?"
-				"See also: http://www.rsyslog.com/rsyslog-info-1/", name);
+				"See also: https://www.rsyslog.com/rsyslog-info-1/", name);
 		ABORT_FINALIZE(RS_RET_INVLD_PROP);
 	}
 	if(id == PROP_CEE || id == PROP_LOCAL_VAR || id == PROP_GLOBAL_VAR) {

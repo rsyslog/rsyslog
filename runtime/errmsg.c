@@ -99,14 +99,14 @@ doLogMsg(const int iErrno, const int iErrCode,  const int severity, const char *
 		if(iErrCode == NO_ERRCODE || iErrCode == RS_RET_ERR) {
 			snprintf(buf, sizeof(buf), "%s: %s [v%s]", msg, errStr, VERSION);
 		} else {
-			snprintf(buf, sizeof(buf), "%s: %s [v%s try http://www.rsyslog.com/e/%d ]",
+			snprintf(buf, sizeof(buf), "%s: %s [v%s try https://www.rsyslog.com/e/%d ]",
 				msg, errStr, VERSION, iErrCode * -1);
 		}
 	} else {
 		if(iErrCode == NO_ERRCODE || iErrCode == RS_RET_ERR) {
 			snprintf(buf, sizeof(buf), "%s [v%s]", msg, VERSION);
 		} else {
-			snprintf(buf, sizeof(buf), "%s [v%s try http://www.rsyslog.com/e/%d ]", msg,
+			snprintf(buf, sizeof(buf), "%s [v%s try https://www.rsyslog.com/e/%d ]", msg,
 				VERSION, iErrCode * -1);
 		}
 	}

@@ -5,7 +5,7 @@
  * File begun on 2008-01-03 by RGerhards
  *
  * There is some in-depth documentation available in doc/dev_queue.html
- * (and in the web doc set on http://www.rsyslog.com/doc/). Be sure to read it
+ * (and in the web doc set on https://www.rsyslog.com/doc/). Be sure to read it
  * if you are getting aquainted to the object.
  *
  * NOTE: as of 2009-04-22, I have begin to remove the qqueue* prefix from static
@@ -2314,7 +2314,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	   && (pThis->qType == QUEUETYPE_LINKEDLIST || pThis->qType == QUEUETYPE_FIXED_ARRAY)) {
 		LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "Note: queue.size=\"%d\" is very "
 			"low and can lead to unpredictable results. See also "
-			"http://www.rsyslog.com/lower-bound-for-queue-sizes/",
+			"https://www.rsyslog.com/lower-bound-for-queue-sizes/",
 			pThis->iMaxQueueSize);
 	}
 

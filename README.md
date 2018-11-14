@@ -34,13 +34,13 @@ development and as such only offer old versions. To solve that problem, we have
 created packages for current versions ourselves.
 
 They are available for:
- * RPM-based systems: http://www.rsyslog.com/rhelcentos-rpms/
- * Ubuntu: http://www.rsyslog.com/ubuntu-repository/
- * Debian: http://www.rsyslog.com/debian-repository/
+ * RPM-based systems: https://www.rsyslog.com/rhelcentos-rpms/
+ * Ubuntu: https://www.rsyslog.com/ubuntu-repository/
+ * Debian: https://www.rsyslog.com/debian-repository/
 
 Building from Source
 --------------------
-Follow the instructions at: http://www.rsyslog.com/doc/build_from_repo.html
+Follow the instructions at: https://www.rsyslog.com/doc/build_from_repo.html
 
 ### Build Environment
 
@@ -140,7 +140,7 @@ Documentation
 The main rsyslog documentation is available in HTML format. To read
 it, point your web browser to ./doc/manual.html. Alternatively,
 you can view the documentation for *the most recent rsyslog version*
-online at: http://www.rsyslog.com/doc/
+online at: https://www.rsyslog.com/doc/
 
 Project Philosophy
 ==================

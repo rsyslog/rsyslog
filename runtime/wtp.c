@@ -5,7 +5,7 @@
  * File begun on 2008-01-20 by RGerhards
  *
  * There is some in-depth documentation available in doc/dev_queue.html
- * (and in the web doc set on http://www.rsyslog.com/doc/). Be sure to read it
+ * (and in the web doc set on https://www.rsyslog.com/doc/). Be sure to read it
  * if you are getting aquainted to the object.
  *
  * Copyright 2008-2018 Rainer Gerhards and Adiscon GmbH.

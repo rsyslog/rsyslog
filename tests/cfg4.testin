@@ -6,7 +6,7 @@
 # it contains a reasonable complex config sample.
 
 # if you experience problems, check
-# http://www.rsyslog.com/troubleshoot for assistance
+# https://www.rsyslog.com/troubleshoot for assistance
 
 # rsyslog v3: load input modules
 # If you do not load inputs, nothing happens!

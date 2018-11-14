@@ -10,7 +10,7 @@
  * *****************************************************
  *
  * Please visit the rsyslog project at
- * http://www.rsyslog.com
+ * https://www.rsyslog.com
  * to learn more about it and discuss any questions you may have.
  *
  * rsyslog had initially been forked from the sysklogd project.

@@ -3039,7 +3039,7 @@ Version 8.21.0 [v8-stable] 2016-08-23
      rsyslog.conf (method 1). Note that the environment variable must be
      set in your **startup script**.
   For more information, please visit
-  http://www.rsyslog.com/rsyslog-error-reporting-improved/
+  https://www.rsyslog.com/rsyslog-error-reporting-improved/
 - slightly improved TLS syslog error messages
 - queue subsystem: improved robustness
   The .qi file is now persisted whenever an existing queue file is fully
@@ -5942,7 +5942,7 @@ Version 7.1.1  [devel] 2012-09-11
   including if ... then ... else ... constructs. This is a big change
   and it obviously has a lot of bug potential.
 - BSD-style (filter) blocks are no longer supported
-  see http://www.rsyslog.com/g/BSD for details and solution
+  see https://www.rsyslog.com/g/BSD for details and solution
 - imuxsock now stores trusted properties by default in the CEE root
   This was done in order to keep compatible with other implementations of
   the lumberjack schema
@@ -8626,7 +8626,7 @@ Version 4.1.3  [DEVEL] (rgerhards), 2008-12-17
 Version 4.1.2  [DEVEL] (rgerhards), 2008-12-04
 - bugfix: code did not compile without zlib
 - security bugfix: $AllowedSender was not honored, all senders were
-  permitted instead (see http://www.rsyslog.com/Article322.phtml)
+  permitted instead (see https://www.rsyslog.com/Article322.phtml)
 - security fix: imudp emitted a message when a non-permitted sender
   tried to send a message to it. This behaviour is operator-configurable.
   If enabled, a message was emitted each time. That way an attacker could
@@ -8795,7 +8795,7 @@ Version 3.21.9 [BETA] (rgerhards), 2008-12-04
 Version 3.21.8  [BETA] (rgerhards), 2008-12-04
 - bugfix: imklog did not compile on FreeBSD
 - security bugfix: $AllowedSender was not honored, all senders were
-  permitted instead (see http://www.rsyslog.com/Article322.phtml)
+  permitted instead (see https://www.rsyslog.com/Article322.phtml)
 - merged in all other changes from 3.20.1 (see there)
 ---------------------------------------------------------------------------
 Version 3.21.7  [BETA] (rgerhards), 2008-11-11
@@ -9185,7 +9185,7 @@ Version 3.18.7 (rgerhards), 2008-12-??
 ---------------------------------------------------------------------------
 Version 3.18.6 (rgerhards), 2008-12-08
 - security bugfix: $AllowedSender was not honored, all senders were
-  permitted instead (see http://www.rsyslog.com/Article322.phtml)
+  permitted instead (see https://www.rsyslog.com/Article322.phtml)
   (backport from v3-stable, v3.20.9)
 - minor bugfix: dual close() call on tcp session closure
 ---------------------------------------------------------------------------
