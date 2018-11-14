@@ -99,6 +99,7 @@ typedef struct wrkrInstanceData {
 	instanceData *pData;
 	int bInitialConnect; /* is this the initial connection request of our module? (0-no, 1-yes) */
 	int bIsConnected; /* currently connected to server? 0 - no, 1 - yes */
+	int bIsSuspended; /* currently suspended (than no more error messages) */
 	relpClt_t *pRelpClt; /* relp client for this instance */
 	unsigned nSent; /* number msgs sent - for rebind support */
 } wrkrInstanceData_t;
@@ -478,18 +479,22 @@ doConnect(wrkrInstanceData_t *const pWrkrData)
 		pWrkrData->bIsConnected = 1;
 	} else if(iRet == RELP_RET_ERR_NO_TLS) {
 		LogError(0, iRet, "omrelp: Could not connect, librelp does NOT "
-				"does not support TLS (most probably GnuTLS lib "
+				"support TLS (most probably GnuTLS lib "
 				"is too old)!");
 		FINALIZE;
 	} else if(iRet == RELP_RET_ERR_NO_TLS_AUTH) {
-		LogError(0, iRet,
-				"omrelp: could not activate relp TLS with "
+		LogError(0, iRet, "omrelp: could not activate relp TLS with "
 				"authentication, librelp does not support it "
 				"(most probably GnuTLS lib is too old)! "
 				"Note: anonymous TLS is probably supported.");
 		FINALIZE;
 	} else {
+		if(pWrkrData->bIsSuspended == 0) {
+			LogError(0, RS_RET_RELP_ERR, "omrelp: could not connect to "
+				"remote server, librelp error %d", iRet);
+		}
 		pWrkrData->bIsConnected = 0;
+		pWrkrData->bIsSuspended = 1;
 		iRet = RS_RET_SUSPENDED;
 	}
 
@@ -556,8 +561,11 @@ CODESTARTdoAction
 	/* forward */
 	ret = relpCltSendSyslog(pWrkrData->pRelpClt, (uchar*) pMsg, lenMsg);
 	if(ret != RELP_RET_OK) {
-		/* error! */
-		dbgprintf("error forwarding via relp, suspending\n");
+		LogError(0, RS_RET_RELP_ERR, "librelp error %d%s forwarding "
+				"to server %s:%s - suspending\n", ret,
+				(ret == RELP_RET_SESSION_BROKEN) ?
+					"[connection broken]" : "",
+				pData->target, getRelpPt(pData));
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
@@ -575,6 +583,8 @@ finalize_it:
 		 * rsyslog generally accepts and prefers over message loss.
 		 */
 		iRet = RS_RET_PREVIOUS_COMMITTED;
+	} else if(iRet == RS_RET_SUSPENDED) {
+		pWrkrData->bIsSuspended = 1;
 	}
 ENDdoAction
 
