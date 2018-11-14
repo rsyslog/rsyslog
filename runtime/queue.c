@@ -5,7 +5,7 @@
  * File begun on 2008-01-03 by RGerhards
  *
  * There is some in-depth documentation available in doc/dev_queue.html
- * (and in the web doc set on http://www.rsyslog.com/doc). Be sure to read it
+ * (and in the web doc set on http://www.rsyslog.com/doc/). Be sure to read it
  * if you are getting aquainted to the object.
  *
  * NOTE: as of 2009-04-22, I have begin to remove the qqueue* prefix from static

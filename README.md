@@ -140,7 +140,7 @@ Documentation
 The main rsyslog documentation is available in HTML format. To read
 it, point your web browser to ./doc/manual.html. Alternatively,
 you can view the documentation for *the most recent rsyslog version*
-online at: http://www.rsyslog.com/doc
+online at: http://www.rsyslog.com/doc/
 
 Project Philosophy
 ==================

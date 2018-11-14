@@ -196,7 +196,7 @@ rsyslogd_usage(void)
 			"use \"man rsyslogd\" for details. To run rsyslog "
 			"interactively, use \"rsyslogd -n\"\n"
 			"to run it in debug mode use \"rsyslogd -dn\"\n"
-			"For further information see http://www.rsyslog.com/doc\n");
+			"For further information see http://www.rsyslog.com/doc/\n");
 	exit(1); /* "good" exit - done to terminate usage() */
 }
 
