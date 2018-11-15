@@ -61,6 +61,7 @@ TESTS +=  \
 	hostname-getaddrinfo-fail.sh \
 	msleep_usage_output.sh \
 	mangle_qi_usage_output.sh \
+	minitcpsrv_usage_output.sh \
 	test_id_usage_output.sh \
 	prop-programname.sh \
 	prop-programname-with-slashes.sh \
@@ -1242,6 +1243,7 @@ EXTRA_DIST= \
 	tcpflood_wrong_option_output.sh \
 	msleep_usage_output.sh \
 	mangle_qi_usage_output.sh \
+	minitcpsrv_usage_output.sh \
 	test_id_usage_output.sh \
 	mmanon_with_debug.sh \
 	mmanon_random_32_ipv4.sh \
