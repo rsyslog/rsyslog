@@ -19,7 +19,7 @@ $InputTCPServerRun '$TCPFLOOD_PORT'
 template(name="outfmt" type="string"
 	 string="%timegenerated:::date-unixtimestamp%\n")
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
-			         file=`echo $RSYSLOG_OUT_LOG`)
+			         file="'$RSYSLOG_OUT_LOG'")
 '
 
 
@@ -33,7 +33,7 @@ echo "0" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
-  date -d @`cat $RSYSLOG_OUT_LOG`
+  date -d @$(pwd $RSYSLOG_OUT_LOG)
   exit 1
 fi;
 
@@ -48,7 +48,7 @@ echo "951912000" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
-  date -d @`cat $RSYSLOG_OUT_LOG`
+  date -d @$(pwd $RSYSLOG_OUT_LOG)
   exit 1
 fi;
 
@@ -63,7 +63,7 @@ echo "1451649600" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
-  date -d @`cat $RSYSLOG_OUT_LOG`
+  date -d @$(pwd $RSYSLOG_OUT_LOG)
   exit 1
 fi;
 
@@ -78,7 +78,7 @@ echo "1456747200" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
-  date -d @`cat $RSYSLOG_OUT_LOG`
+  date -d @$(pwd $RSYSLOG_OUT_LOG)
   exit 1
 fi;
 
@@ -93,7 +93,7 @@ echo "1456833600" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
-  date -d @`cat $RSYSLOG_OUT_LOG`
+  date -d @$(pwd $RSYSLOG_OUT_LOG)
   exit 1
 fi;
 
@@ -108,7 +108,7 @@ echo "1457006400" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
-  date -d @`cat $RSYSLOG_OUT_LOG`
+  date -d @$(pwd $RSYSLOG_OUT_LOG)
   exit 1
 fi;
 
@@ -123,7 +123,7 @@ echo "1483185600" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
-  date -d @`cat $RSYSLOG_OUT_LOG`
+  date -d @$(pwd $RSYSLOG_OUT_LOG)
   exit 1
 fi;
 
@@ -138,7 +138,7 @@ echo "1483272000" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
-  date -d @`cat $RSYSLOG_OUT_LOG`
+  date -d @$(pwd $RSYSLOG_OUT_LOG)
   exit 1
 fi;
 
@@ -153,7 +153,7 @@ echo "1583064000" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
-  date -d @`cat $RSYSLOG_OUT_LOG`
+  date -d @$(pwd $RSYSLOG_OUT_LOG)
   exit 1
 fi;
 
@@ -168,7 +168,7 @@ echo "2145960000" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
-  date -d @`cat $RSYSLOG_OUT_LOG`
+  date -d @$(pwd $RSYSLOG_OUT_LOG)
   exit 1
 fi;
 
@@ -184,7 +184,7 @@ echo "2209032000" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
-  date -d @`cat $RSYSLOG_OUT_LOG`
+  date -d @$(pwd $RSYSLOG_OUT_LOG)
   exit 1
 fi;
 
@@ -198,7 +198,7 @@ wait_shutdown
 echo "4102488000" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
-  date -d @`cat $RSYSLOG_OUT_LOG`
+  date -d @$(pwd $RSYSLOG_OUT_LOG)
   cat $RSYSLOG_OUT_LOG
   exit 1
 fi;
