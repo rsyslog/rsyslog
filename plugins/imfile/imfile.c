@@ -869,7 +869,7 @@ poll_tree(fs_edge_t *const chld)
 					"directory - ignored", file);
 				continue;
 			}
-			if(chld->is_file != is_file) {
+			if(!issymlink && (chld->is_file != is_file)) {
 				LogMsg(0, RS_RET_ERR, LOG_WARNING,
 					"imfile: '%s' is %s but %s expected - ignored",
 					file, (is_file) ? "FILE" : "DIRECTORY",
