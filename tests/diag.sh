@@ -36,6 +36,8 @@
 #			export USE_VALGRIND="YES"
 #			source original-test.sh
 #		sample can be seen in imjournal-basic[.vg].sh
+#		You may also use USE_VALGRIND="YES-NOLEAK" to request valgrind without
+#		leakcheck (this sometimes is needed).
 #
 #
 # EXIT STATES
@@ -471,6 +473,9 @@ startup() {
 	if [ "$USE_VALGRIND" == "YES" ]; then
 		startup_vg "$1" "$2"
 		return
+	elif [ "$USE_VALGRIND" == "YES-NOLEAK" ]; then
+		startup_vg_noleak "$1" "$2"
+		return
 	fi
 	startup_common "$1" "$2"
 	if [ "$RSTB_DAEMONIZE" == "YES" ]; then
@@ -718,7 +723,7 @@ shutdown_immediate() {
 # actually, we wait for rsyslog.pid to be deleted.
 # $1 is the instance
 wait_shutdown() {
-	if [ "$USE_VALGRIND" == "YES" ]; then
+	if [ "$USE_VALGRIND" == "YES" ] || [ "$USE_VALGRIND" == "YES-NOLEAK" ]; then
 		wait_shutdown_vg "$1"
 		return
 	fi
@@ -922,7 +927,7 @@ wait_shutdown_vg() {
 	   ls -l vgcore.*
 	   error_exit 1
 	fi
-	if [ "$USE_VALGRIND" == "YES" ]; then
+	if [ "$USE_VALGRIND" == "YES" ] || [ "$USE_VALGRIND" == "YES-NOLEAK" ]; then
 		check_exit_vg
 	fi
 }
