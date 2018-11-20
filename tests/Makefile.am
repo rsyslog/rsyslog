@@ -401,6 +401,7 @@ endif # if ENABLE_MMANON
 if ENABLE_ELASTICSEARCH_TESTS
 TESTS +=  \
 	es-basic-server.sh \
+	es-execOnlyWhenPreviousSuspended.sh \
 	es-maxbytes-bulk.sh \
 	es-basic-errfile-empty.sh \
 	es-basic-errfile-popul.sh \
@@ -1397,6 +1398,7 @@ EXTRA_DIST= \
 	es-basic.sh \
 	es-basic-vgthread.sh \
 	es-basic-server.sh \
+	es-execOnlyWhenPreviousSuspended.sh \
 	es-basic-ha.sh \
 	es-basic-bulk.sh \
 	es-basic-errfile-empty.sh \
