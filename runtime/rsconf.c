@@ -505,7 +505,7 @@ void cnfDoBSDTag(char *ln)
 	DBGPRINTF("cnf:global:BSD tag: %s\n", ln);
 	LogError(0, RS_RET_BSD_BLOCKS_UNSUPPORTED,
 			"BSD-style blocks are no longer supported in rsyslog, "
-			"see http://www.rsyslog.com/g/BSD for details and a "
+			"see https://www.rsyslog.com/g/BSD for details and a "
 			"solution (Block '%s')", ln);
 	free(ln);
 }
@@ -515,7 +515,7 @@ void cnfDoBSDHost(char *ln)
 	DBGPRINTF("cnf:global:BSD host: %s\n", ln);
 	LogError(0, RS_RET_BSD_BLOCKS_UNSUPPORTED,
 			"BSD-style blocks are no longer supported in rsyslog, "
-			"see http://www.rsyslog.com/g/BSD for details and a "
+			"see https://www.rsyslog.com/g/BSD for details and a "
 			"solution (Block '%s')", ln);
 	free(ln);
 }

@@ -173,8 +173,7 @@ Batching of Messages (Transactions)
 ===================================
 You can write a plugin that processes the messages in batches (also called
 _transactions_), instead of individually. For a general explanation on how
-rsyslog handles the batching of messages, see
-http://www.rsyslog.com/doc/v8-stable/development/dev_oplugins.html.
+rsyslog handles the batching of messages, see [dev-oplugins].
 
 _**Warning:**
 This feature is currently **experimental**. It could change in future releases
@@ -227,7 +226,7 @@ status codes (which the plugin must write to stdout):
 * `DEFER_COMMIT`
 * `PREVIOUS_COMMITTED`
 
-Refer to http://www.rsyslog.com/doc/v8-stable/development/dev_oplugins.html
+Refer to https://www.rsyslog.com/doc/v8-stable/development/dev_oplugins.html
 for an explanation on the meaning of these status codes. You will typically
 need to return the `DEFER_COMMIT` status code, since the other codes imply a
 partial commit, and do not guarantee that the `COMMIT TRANSACTION` will be
@@ -338,3 +337,5 @@ Implementation
 --------------
 The plugin interface is implemented via the "mmexternal" native plugin. See its
 documentation on how to tie your plugin into rsyslog's procesing flow.
+
+[dev-oplugins]: https://www.rsyslog.com/doc/v8-stable/development/dev_oplugins.html
