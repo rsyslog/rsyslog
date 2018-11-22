@@ -550,6 +550,11 @@ get_mainqueuesize() {
 	fi
 }
 
+# get pid of rsyslog instance $1
+getpid() {
+		printf '%s' "$(cat $RSYSLOG_PIDBASE$1.pid)"
+}
+
 # grep for (partial) content. $1 is the content to check for, $2 the file to check
 # option --regex is understood, in which case $1 is a regex
 content_check() {
@@ -1939,9 +1944,6 @@ case $1 in
 			printf 'this test requires an active IPv6 stack, which we do not have here\n'
 			exit 77
 		fi
-		;;
-   'getpid')
-		pid=$(cat $RSYSLOG_PIDBASE$2.pid)
 		;;
    'kill-immediate') # kill rsyslog unconditionally
 		kill -9 $(cat $RSYSLOG_PIDBASE.pid)
