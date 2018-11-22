@@ -4,6 +4,7 @@
 # messages and sends them to the unix socket. Datagram sockets are being used.
 # added 2010-08-06 by Rgerhards
 . ${srcdir:=.}/diag.sh init
+check_command_available timeout
 
 uname
 if [ $(uname) = "FreeBSD" ] ; then
@@ -22,7 +23,7 @@ $template outfmt,"%msg:F,58:2%\n"
 $OMUXSockSocket '$RSYSLOG_DYNNAME'-testbench-dgram-uxsock
 :msg, contains, "msgnum:" :omuxsock:;outfmt
 '
-./uxsockrcvr -s$RSYSLOG_DYNNAME-testbench-dgram-uxsock -o $RSYSLOG_OUT_LOG -t 60 &
+timeout 30s ./uxsockrcvr -s$RSYSLOG_DYNNAME-testbench-dgram-uxsock -o $RSYSLOG_OUT_LOG -t 60 &
 BGPROCESS=$!
 echo background uxsockrcvr process id is $BGPROCESS
 
