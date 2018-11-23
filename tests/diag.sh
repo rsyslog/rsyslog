@@ -550,6 +550,11 @@ get_mainqueuesize() {
 	fi
 }
 
+# get pid of rsyslog instance $1
+getpid() {
+		printf '%s' "$(cat $RSYSLOG_PIDBASE$1.pid)"
+}
+
 # grep for (partial) content. $1 is the content to check for, $2 the file to check
 # option --regex is understood, in which case $1 is a regex
 content_check() {
@@ -1855,14 +1860,6 @@ case $1 in
 			#pwd
 			#kill -9 $pid
 		#done
-		# cleanup hanging uxsockrcvr processes
-		for pid in $(ps -eo pid,args|grep 'uxsockrcvr' |grep -v grep |sed -e 's/\( *\)\([0-9]*\).*/\2/');
-		do
-			echo "ERROR: left-over previous uxsockrcvr instance $pid, killing it"
-			ps -fp $pid
-			pwd
-			kill -9 $pid
-		done
 		# end cleanup
 
 		# some default names (later to be set in other parts, once we support fully
@@ -1947,9 +1944,6 @@ case $1 in
 			printf 'this test requires an active IPv6 stack, which we do not have here\n'
 			exit 77
 		fi
-		;;
-   'getpid')
-		pid=$(cat $RSYSLOG_PIDBASE$2.pid)
 		;;
    'kill-immediate') # kill rsyslog unconditionally
 		kill -9 $(cat $RSYSLOG_PIDBASE.pid)

@@ -49,7 +49,7 @@ startup
 injectmsg 0 1
 wait_queueempty
 
-. $srcdir/diag.sh getpid
+pid=$(getpid)
 start_fd_count=$(lsof -p $pid | wc -l)
 
 injectmsg 1 1
