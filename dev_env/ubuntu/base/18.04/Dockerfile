@@ -18,6 +18,7 @@ RUN 	apt-get update && \
 	faketime libdbd-mysql \
 	flex \
 	gcc \
+	gcc-8 \
 	gdb \
 	git \
 	libbson-dev \
@@ -53,7 +54,6 @@ RUN 	apt-get update && \
 	valgrind \
 	vim \
 	wget \
-	wget \
 	zlib1g-dev
 ENV	REBUILD=1
 RUN	echo "deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_18.04/ ./" > /etc/apt/sources.list.d/0mq.list && \
@@ -70,13 +70,20 @@ RUN	echo "deb http://download.opensuse.org/repositories/network:/messaging:/zero
 	libfastjson-dev \
 	liblogging-stdlog-dev \
 	liblognorm-dev
-WORKDIR /home/devel
-VOLUME /rsyslog
-RUN groupadd rsyslog \
-    && useradd -g rsyslog  -s /bin/bash rsyslog \
-    && echo "rsyslog ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
-    && echo "buildbot ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-ADD setup-system.sh setup-system.sh
+WORKDIR	/home/devel
+VOLUME	/rsyslog
+RUN	groupadd rsyslog \
+	&& useradd -g rsyslog  -s /bin/bash rsyslog \
+	&& echo "rsyslog ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
+	&& echo "buildbot ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# mysql needs a little help:
+RUN	mkdir -p /var/run/mysqld && \
+	chown mysql:mysql /var/run/mysqld
+ENV	MYSQLD_START_CMD="sudo mysqld_safe" \
+        MYSQLD_STOP_CMD="sudo kill $(sudo cat /var/run/mysqld/mysqld.pid)"
+
+ADD	setup-system.sh setup-system.sh
 ENV	PKG_CONFIG_PATH=/usr/local/lib/pkgconfig \
 	LD_LIBRARY_PATH=/usr/local/lib \
 	DEBIAN_FRONTEND= \
@@ -146,6 +153,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-mmsnmptrapd \
 	--enable-mmutf8fix \
 	--enable-mysql \
+	--enable-mysql-tests \
 	--enable-omamqp1 \
 	--enable-omczmq \
 	--enable-omhiredis \
@@ -177,15 +185,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	\
 	--enable-testbench
 
-# mysql support
-RUN	apt-get update && \
-	apt-get install -y \
-	mysql-server
-RUN	mkdir -p /var/run/mysqld && \
-	chown mysql:mysql /var/run/mysqld
-ENV	MYSQLD_START_CMD="sudo mysqld_safe" \
-        MYSQLD_STOP_CMD="sudo kill $(sudo cat /var/run/mysqld/mysqld.pid)"
-
 # module needs fixes: --enable-kmsg
-WORKDIR /rsyslog
-USER rsyslog
+VOLUME	/var/lib/mysql
+WORKDIR	/rsyslog
+USER	rsyslog
