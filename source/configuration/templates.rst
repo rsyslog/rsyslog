@@ -197,18 +197,24 @@ property or modifying it. It supports the following parameters:
 
 -  **dateformat** - Date format to use (only for date-related properties).
    `Here <property_replacer.html#property-options>`_ you can find a list of all
-   property options.
+   property options. **TODO:** right now, the property replacer documentation
+   contains property format options for string templates, only. The formats for
+   non-string templates differ. For example, date format options in string
+   templates start with "date-" whereas those in property statements do not
+   (e.g. "date-year" vs. just "year"). The technical reason behind this is
+   that inside string templates, the option must include what it applies
+   to whereas with the explicit format that is part of the parameter name.
 
    To create a customised format you can use multiple property options
-   together. The following example would result in **YYYY-MM-DD**.
+   together. The following example would result in **YYYY-MM-DD**:
 
 .. code-block:: none
 
-    property(name="timereported" dateformat="date-year")
+    property(name="timereported" dateformat="year")
     constant(value="-")
-    property(name="timereported" dateformat="date-month")
+    property(name="timereported" dateformat="month")
     constant(value="-")
-    property(name="timereported" dateformat="date-day")
+    property(name="timereported" dateformat="day")
 
 -  **date.inUTC** - date shall be shown in UTC (please note that this
    requires a bit more performance due to the necessary conversions)
