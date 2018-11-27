@@ -2278,6 +2278,45 @@ void tplPrintList(rsconf_t *conf)
 				case tplFmtRFC3164BuggyDate:
 					dbgprintf("[Format as buggy RFC3164-Date] ");
 					break;
+				case tplFmtWDayName:
+					dbgprintf("[Format as weekday name] ");
+					break;
+				case tplFmtYear:
+					dbgprintf("[Format as year] ");
+					break;
+				case tplFmtMonth:
+					dbgprintf("[Format as month] ");
+					break;
+				case tplFmtDay:
+					dbgprintf("[Format as day] ");
+					break;
+				case tplFmtHour:
+					dbgprintf("[Format as hour] ");
+					break;
+				case tplFmtMinute:
+					dbgprintf("[Format as minute] ");
+					break;
+				case tplFmtSecond:
+					dbgprintf("[Format as second] ");
+					break;
+				case tplFmtTZOffsHour:
+					dbgprintf("[Format as offset hour] ");
+					break;
+				case tplFmtTZOffsMin:
+					dbgprintf("[Format as offset minute] ");
+					break;
+				case tplFmtTZOffsDirection:
+					dbgprintf("[Format as offset direction] ");
+					break;
+				case tplFmtWDay:
+					dbgprintf("[Format as weekday] ");
+					break;
+				case tplFmtOrdinal:
+					dbgprintf("[Format as ordinal] ");
+					break;
+				case tplFmtWeek:
+					dbgprintf("[Format as week] ");
+					break;
 				default:
 					dbgprintf("[UNKNOWN eDateFormat %d] ", pTpe->data.field.eDateFormat);
 				}
