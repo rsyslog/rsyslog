@@ -50,6 +50,7 @@ Version 8.40.0 [v8-stable] 2018-12-11
   invalidly flagged as "UNKNOWN". This is primarily a cosmetic
   problem and has no effect other than puzzling folks looking at
   the debug log.
+- bugfix omhttp: did not compile on some platforms
 - CI
    * made mysql-based tests (ommysql and omlibdbi) work inside containers
    * testbench: grep failed when string starting with "-" was used
