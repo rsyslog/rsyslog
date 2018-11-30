@@ -8,7 +8,9 @@ coverage:
     project:
       default:
         target: auto
-        threshold: .2
+        threshold: .5
+    patch:
+      threshold: null
 
 ignore:
   # different execution pathes (if not, remove) -- rgerhards, 2018-10-12
