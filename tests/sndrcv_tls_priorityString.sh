@@ -1,23 +1,22 @@
 #!/bin/bash
 # Pascal Withopf, 2017-07-25
+# testing sending and receiving via TLS with anon auth
+# NOTE: When this test fails, it could be due to the priorityString being outdated!
 # This file is part of the rsyslog project, released  under ASL 2.0
-echo ===============================================================================
-echo \[sndrcv_tls_priorityString.sh\]: testing sending and receiving via TLS with anon auth
-echo NOTE: When this test fails, it could be due to the priorityString being outdated!
-
-# uncomment for debugging support:
 . ${srcdir:=.}/diag.sh init
-# start up the instances
+export NUMMESSAGES=2500
+# uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
+# start up the instances
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
 export PORT_RCVR="$(get_free_port)"
 add_conf '
 # certificates
 global(
-	defaultNetstreamDriverCAFile="'$srcdir/testsuites/x.509/ca.pem'"
-	defaultNetstreamDriverCertFile="'$srcdir/testsuites/x.509/client-cert.pem'"
-	defaultNetstreamDriverKeyFile="'$srcdir/testsuites/x.509/client-key.pem'"
+	defaultNetstreamDriverCAFile="'$srcdir'/testsuites/x.509/ca.pem"
+	defaultNetstreamDriverCertFile="'$srcdir'/testsuites/x.509/client-cert.pem"
+	defaultNetstreamDriverKeyFile="'$srcdir'/testsuites/x.509/client-key.pem"
 	defaultNetstreamDriver="gtls"
 )
 module(load="../plugins/imtcp/.libs/imtcp" StreamDriver.Name="gtls" StreamDriver.Mode="1"
@@ -52,23 +51,18 @@ action(type="omfwd" Target="127.0.0.1" port="'$PORT_RCVR'" Protocol="tcp" stream
 	gnutlsprioritystring="NORMAL:-MD5")
 ' 2
 startup 2
-# may be needed by TLS (once we do it): sleep 30
 
 # now inject the messages into instance 2. It will connect to instance 1,
 # and that instance will record the data.
-tcpflood -m2500 -i1
-sleep 5 # make sure all data is received in input buffers
+tcpflood -m$NUMMESSAGES -i1
 # shut down sender when everything is sent, receiver continues to run concurrently
-# may be needed by TLS (once we do it): sleep 60
 shutdown_when_empty 2
 wait_shutdown 2
+
+wait_file_lines
 # now it is time to stop the receiver as well
 shutdown_when_empty
 wait_shutdown
 
-# may be needed by TLS (once we do it): sleep 60
-# do the final check
-seq_check 1 2500
-
-unset PORT_RCVR # TODO: move to exit_test()?
+seq_check 1 $NUMMESSAGES
 exit_test

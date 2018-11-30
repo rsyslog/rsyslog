@@ -52,7 +52,6 @@ startup 2
 # and that instance will record the data.
 injectmsg2 1 25000
 # shut down sender when everything is sent, receiver continues to run concurrently
-# may be needed by TLS (once we do it): sleep 60
 shutdown_when_empty 2
 wait_shutdown 2
 # now it is time to stop the receiver as well

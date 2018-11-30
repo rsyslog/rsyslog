@@ -4,6 +4,7 @@
 # added 2015-10-17 by singh.janmejay
 # This file is part of the rsyslog project, released  under GPLv3
 . ${srcdir:=.}/diag.sh init
+export NUMMESSAGES=20000
 generate_conf
 add_conf '$MaxMessageSize 10k
 template(name="outfmt" type="string" string="%msg:F,58:2%,%msg:F,58:3%,%msg:F,58:4%\n")
@@ -16,9 +17,10 @@ if (prifilt("local0.*")) then {
 }
 '
 export RS_REDIR="2>/dev/null"
-startup 1
-tcpflood -c1 -m20000 -r -d100000 -P129 -O
+startup
+tcpflood -c1 -m$NUMMESSAGES -r -d100000 -P129 -O
+wait_file_lines
 shutdown_when_empty
 wait_shutdown
-seq_check 0 19999 -E -T
+seq_check 0 $((NUMMESSAGES - 1)) -E -T
 exit_test
