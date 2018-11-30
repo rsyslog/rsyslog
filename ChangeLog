@@ -42,6 +42,14 @@ Version 8.40.0 [v8-stable] 2018-12-11
   This commit will ensure that rsyslog will only link against liblogging-stdlog when
   "--enable-liblogging-stdlog" was set.
   see also: https://bugs.gentoo.org/667836
+- bugfix RainerScript: abs() could return negative value, now in range [0..max]
+  Thanks to Harshvardhan Shrivastava for providing the patch
+- bugfix debug output: date property options output wrongly
+  inside debug logging, the date property options were not all
+  properly converted into strings. Some of the newer ones were
+  invalidly flagged as "UNKNOWN". This is primarily a cosmetic
+  problem and has no effect other than puzzling folks looking at
+  the debug log.
 - CI
    * made mysql-based tests (ommysql and omlibdbi) work inside containers
    * testbench: grep failed when string starting with "-" was used
