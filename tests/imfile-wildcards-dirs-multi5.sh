@@ -45,11 +45,11 @@ mkdir $RSYSLOG_DYNNAME.input.dir1
 
 startup
 
-for j in `seq 1 $IMFILEINPUTFILESSTEPS`;
+for j in $(seq 1 $IMFILEINPUTFILESSTEPS);
 do
 	echo "Loop Num $j"
 
-	for i in `seq 1 $IMFILEINPUTFILES`;
+	for i in $(seq 1 $IMFILEINPUTFILES);
 	do
 		mkdir $RSYSLOG_DYNNAME.input.dir$i
 		mkdir $RSYSLOG_DYNNAME.input.dir$i/dir$i
@@ -64,7 +64,7 @@ do
 	content_check_with_count "HEADER msgnum:00000000:" $IMFILEINPUTFILESALL $IMFILECHECKTIMEOUT
 
 	# Delete all but first!
-	for i in `seq 1 $IMFILEINPUTFILES`;
+	for i in $(seq 1 $IMFILEINPUTFILES);
 	do
 		# slow systems (NFS) do not reliably do rm -r (unfortunately...)
 		rm -rf $RSYSLOG_DYNNAME.input.dir$i/dir$i/file.logfile
