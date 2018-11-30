@@ -27,17 +27,21 @@ if $msg contains "msgnum:" then {
 
 	action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="tpl2"
 		action.execOnlyWhenPreviousIsSuspended="on")
+
+	# this action just to count processed messages
+	action(type="omfile" file="'$RSYSLOG_DYNNAME'.syncfile")
 }
 '
 startup
 injectmsg  0 $NUMMESSAGES
-./msleep 3000
+wait_file_lines $RSYSLOG_DYNNAME.syncfile $NUMMESSAGES
 stop_elasticsearch
 ./msleep 1000
 injectmsg  $NUMMESSAGES 1
+wait_file_lines $RSYSLOG_DYNNAME.syncfile $((NUMMESSAGES + 1))
 wait_queueempty
 injectmsg  $(( NUMMESSAGES + 1 )) $NUMMESSAGES
-./msleep 3000
+wait_file_lines $RSYSLOG_DYNNAME.syncfile $((NUMMESSAGES + 1 + NUMMESSAGES))
 start_elasticsearch
 
 shutdown_when_empty
