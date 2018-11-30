@@ -194,7 +194,8 @@ wtiCancelThrd(wti_t *pThis, const uchar *const cancelobj)
 		DBGOPRINT((obj_t*) pThis, "canceling worker thread\n");
 		pthread_cancel(pThis->thrdID);
 		/* now wait until the thread terminates... */
-		while(wtiGetState(pThis)) {
+		while(wtiGetState(pThis) != WRKTHRD_STOPPED && wtiGetState(pThis) != WRKTHRD_WAIT_JOIN) {
+			DBGOPRINT((obj_t*) pThis, "waiting on termination, state %d\n", wtiGetState(pThis));
 			srSleep(0, 10000);
 		}
 	}
