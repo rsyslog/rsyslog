@@ -88,6 +88,7 @@ struct modConfData_s {
 	sbool bLogToSyslog;
 	sbool bResetCtrs;
 	sbool bBracketing;
+	long warn_maxmem;	/* if non-zero, emit warn msg when mem use over value */
 	char *logfile;
 	sbool configSetViaV2Method;
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
@@ -109,6 +110,7 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "resetcounters", eCmdHdlrBinary, 0 },
 	{ "log.file", eCmdHdlrGetWord, 0 },
 	{ "format", eCmdHdlrGetWord, 0 },
+	{ "warn.max.memory", eCmdHdlrSize, 0 },
 	{ "ruleset", eCmdHdlrString, 0 }
 };
 static struct cnfparamblk modpblk =
@@ -316,8 +318,16 @@ generateStatsMsgs(void)
 #	ifdef OS_LINUX
 	countOpenFiles();
 #	endif
+
+	if(runModConf->warn_maxmem != 0 && ru.ru_maxrss >= runModConf->warn_maxmem) {
+		LogMsg(0, RS_RET_OK, LOG_WARNING, "impstats: rsyslog memory consumption of %ld "
+			"KiB is above configured warning limit of %ld KiB",
+			ru.ru_maxrss, runModConf->warn_maxmem);
+	}
+
 	st_ru_utime = ru.ru_utime.tv_sec * 1000000 + ru.ru_utime.tv_usec;
 	st_ru_stime = ru.ru_stime.tv_sec * 1000000 + ru.ru_stime.tv_usec;
+
 	st_ru_maxrss = ru.ru_maxrss;
 	st_ru_minflt = ru.ru_minflt;
 	st_ru_majflt = ru.ru_majflt;
@@ -400,6 +410,8 @@ CODESTARTsetModCnf
 						mode);
 			}
 			free(mode);
+		} else if(!strcmp(modpblk.descr[i].name, "warn.max.memory")) {
+			loadModConf->warn_maxmem = (long) pvals[i].val.d.n / 1024;
 		} else if(!strcmp(modpblk.descr[i].name, "ruleset")) {
 			loadModConf->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
