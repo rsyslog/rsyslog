@@ -1,9 +1,7 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 # This test tests imfile endmsg.regex.
-USE_VALGRIND=true
-echo ======================================================================
-echo [imfile-endmsg.regex.sh]
+export USE_VALGRIND="YES"
 . $srcdir/diag.sh check-inotify
 . ${srcdir:=.}/diag.sh init
 generate_conf
@@ -62,11 +60,7 @@ if $msg contains "msgnum:" then
    template="outfmt"
  )
 '
-if [ "x${USE_VALGRIND:-false}" == "xtrue" ] ; then
-	startup_vg
-else
-	startup
-fi
+startup
 if [ -n "${USE_GDB:-}" ] ; then
 	echo attach gdb here
 	sleep 54321 || :
@@ -80,12 +74,11 @@ echo '{"time":"date", "stream":"stdout", "log":"msgnum:1\n"}' >> $RSYSLOG_DYNNAM
 echo 'date stdout F msgnum:2' >> $RSYSLOG_DYNNAME.crio.input
 echo '{"time":"date", "stream":"stdout", "log":"msgnum:2\n"}' >> $RSYSLOG_DYNNAME.json.input
 
-# sleep a little to give rsyslog a chance to begin processing
 if [ -n "${USE_GDB:-}" ] ; then
 	sleep 54321 || :
-else
-	sleep 1
 fi
+
+wait_file_lines $RSYSLOG_OUT_LOG 4
 
 echo 'date stdout P msgnum:3' >> $RSYSLOG_DYNNAME.crio.input
 echo '{"time":"date", "stream":"stdout", "log":"msgnum:3"}' >> $RSYSLOG_DYNNAME.json.input
@@ -98,24 +91,21 @@ echo '{"time":"date", "stream":"stdout", "log":"msgnum:5"}' >> $RSYSLOG_DYNNAME.
 if [ -n "${USE_GDB:-}" ] ; then
 	sleep 54321 || :
 else
-	sleep 1
+	sleep 1 # of course, this is racy
 fi
+# so we do at least wait for the queue to be empty - this should work in hopefully most cases
+wait_queueempty
 
 echo 'date stdout F msgnum:6' >> $RSYSLOG_DYNNAME.crio.input
 echo '{"time":"date", "stream":"stdout", "log":"msgnum:6\n"}' >> $RSYSLOG_DYNNAME.json.input
 echo 'date stdout P msgnum:7' >> $RSYSLOG_DYNNAME.crio.input
 echo '{"time":"date", "stream":"stdout", "log":"msgnum:7"}' >> $RSYSLOG_DYNNAME.json.input
 
-shutdown_when_empty # shut down rsyslogd when done processing messages
-if [ "x${USE_VALGRIND:-false}" == "xtrue" ] ; then
-	wait_shutdown_vg
-	check_exit_vg
-else
-	wait_shutdown    # we need to wait until rsyslogd is finished!
-fi
+wait_file_lines $RSYSLOG_OUT_LOG 6
 
-# give it time to write the output file
-sleep 1
+shutdown_when_empty
+wait_shutdown
+
 
 ## check if we have the correct number of messages
 
@@ -124,6 +114,7 @@ NUMLINES=$(wc -l $RSYSLOG_OUT_LOG | awk '{print $1}' 2>/dev/null)
 rc=0
 if [ ! $NUMLINES -eq 6 ]; then
   echo "ERROR: expecting 6 lines, got $NUMLINES"
+  cat -n $RSYSLOG_OUT_LOG
   rc=1
 fi
 
@@ -145,7 +136,7 @@ done
 
 if [ $rc -ne 0 ]; then
     cat $RSYSLOG_OUT_LOG
-    exit 1
+    error_exit 1
 fi
 
 ## if we got here, all is good :)

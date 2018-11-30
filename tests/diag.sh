@@ -590,7 +590,7 @@ content_check_with_count() {
 	while [  $timecounter -lt $timeoutend ]; do
 		(( timecounter=timecounter+1 ))
 		count=$(grep -c -F -- "$1" <${RSYSLOG_OUT_LOG})
-		if [ $count -eq $2 ]; then
+		if [ ${count:=0} -eq $2 ]; then
 			echo content_check_with_count success, \"$1\" occured $2 times
 			break
 		else
@@ -598,7 +598,7 @@ content_check_with_count() {
 				shutdown_when_empty ""
 				wait_shutdown ""
 
-				echo content_check_with_count failed, expected \"$1\" to occur $2 times, but found it $count times
+				echo content_check_with_count failed, expected \"$1\" to occur $2 times, but found it "$count" times
 				echo file ${RSYSLOG_OUT_LOG} content is:
 				sort < ${RSYSLOG_OUT_LOG}
 				error_exit 1

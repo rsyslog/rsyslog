@@ -411,7 +411,8 @@ TESTS +=  \
 	es-writeoperation.sh
 
 es-basic-server.log: es-basic-bulk.log
-es-maxbytes-bulk.log: es-basic-server.log
+es-execOnlyWhenPreviousSuspended: es-basic-server.log
+es-maxbytes-bulk.log: es-execOnlyWhenPreviousSuspended.log
 es-basic-errfile-empty.log: es-maxbytes-bulk.log
 es-basic-errfile-popul.log: es-basic-errfile-empty.log
 es-bulk-errfile-empty.log: es-basic-errfile-popul.log
