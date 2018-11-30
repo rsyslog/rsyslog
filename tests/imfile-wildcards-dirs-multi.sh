@@ -52,11 +52,11 @@ if $msg contains "msgnum:" then
 # Start rsyslog now before adding more files
 startup
 
-for j in `seq 1 $IMFILEINPUTFILESSTEPS`;
+for j in $(seq 1 $IMFILEINPUTFILESSTEPS);
 do
 	echo "Loop Num $j"
 
-	for i in `seq 1 $IMFILEINPUTFILES`;
+	for i in $(seq 1 $IMFILEINPUTFILES);
 	do
 		mkdir $RSYSLOG_DYNNAME.input.dir$i
 		mkdir $RSYSLOG_DYNNAME.input.dir$i/dir$i
@@ -71,7 +71,7 @@ do
 	content_check_with_count "HEADER msgnum:00000000:" $IMFILEINPUTFILESALL $IMFILECHECKTIMEOUT
 
 	# Delete all but first!
-	for i in `seq 1 $IMFILEINPUTFILES`;
+	for i in $(seq 1 $IMFILEINPUTFILES);
 	do
 		rm -rf $RSYSLOG_DYNNAME.input.dir$i/dir$i/file.logfile
 		rm -rf $RSYSLOG_DYNNAME.input.dir$i/dir$i/

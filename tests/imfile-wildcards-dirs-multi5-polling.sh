@@ -48,7 +48,7 @@ for j in $(seq 1 $IMFILEINPUTFILESSTEPS); do
 	cp log log.$j
 	echo "Loop Num $j"
 
-	for i in `seq 1 $IMFILEINPUTFILES`;
+	for i in $(seq 1 $IMFILEINPUTFILES);
 	do
 		mkdir $RSYSLOG_DYNNAME.input.dir$i
 		mkdir $RSYSLOG_DYNNAME.input.dir$i/dir$i
@@ -62,7 +62,7 @@ for j in $(seq 1 $IMFILEINPUTFILESSTEPS); do
 	let IMFILEINPUTFILESALL=$((IMFILEINPUTFILES * j))
 	content_check_with_count "HEADER msgnum:000000" $IMFILEINPUTFILESALL $IMFILECHECKTIMEOUT
 	# Delete all but first!
-	for i in `seq 1 $IMFILEINPUTFILES`;
+	for i in $(seq 1 $IMFILEINPUTFILES);
 	do
 		rm -rf $RSYSLOG_DYNNAME.input.dir$i/dir$i/file.logfile
 		rm -rf $RSYSLOG_DYNNAME.input.dir$i
