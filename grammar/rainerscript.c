@@ -1834,7 +1834,7 @@ doFunct_RandomGen(struct cnffunc *__restrict__ const func,
 		retVal = 0;
 		goto done;
 	}
-	x = randomNumber();
+	x = labs(randomNumber());
 	if (max > MAX_RANDOM_NUMBER) {
 		DBGPRINTF("rainerscript: desired random-number range [0 - %lld] "
 			"is wider than supported limit of [0 - %d)\n",
