@@ -7,6 +7,7 @@
 # omprog is going to write to the pipe (to send a message to the
 # program), and when omprog is going to read from the pipe (when it
 # is expecting the program to confirm the last message).
+
 . ${srcdir:=.}/diag.sh init
 check_command_available lsof
 
@@ -29,6 +30,10 @@ template(name="outfmt" type="string" string="%msg%\n")
         action.reportSuspensionContinuation="on"
         signalOnClose="off"
     )
+}
+
+syslog.* {
+    action(type="omfile" template="outfmt" file=`echo $RSYSLOG2_OUT_LOG`)
 }
 '
 
@@ -58,14 +63,16 @@ injectmsg 1 1
 injectmsg 2 1
 wait_queueempty
 
-kill -s USR1 $(get_child_pid)
+child_pid_1=$(get_child_pid)
+kill -s USR1 $child_pid_1
 ./msleep 100
 
 injectmsg 3 1
 injectmsg 4 1
 wait_queueempty
 
-kill -s TERM $(get_child_pid)
+child_pid_2=$(get_child_pid)
+kill -s TERM $child_pid_2
 ./msleep 100
 
 injectmsg 5 1
@@ -73,7 +80,8 @@ injectmsg 6 1
 injectmsg 7 1
 wait_queueempty
 
-kill -s USR1 $(get_child_pid)
+child_pid_3=$(get_child_pid)
+kill -s KILL $child_pid_3
 ./msleep 100
 
 injectmsg 8 1
@@ -81,7 +89,8 @@ injectmsg 9 1
 wait_queueempty
 
 end_fd_count=$(lsof -p $pid | wc -l)
-child_lsof=$(lsof -a -d 0-65535 -p $(get_child_pid) | awk '$4 != "255r" { print $4 " " $9 }')
+child_pid_4=$(get_child_pid)
+child_lsof=$(lsof -a -d 0-65535 -p $child_pid_4 | awk '$4 != "255r" { print $4 " " $9 }')
 
 shutdown_when_empty
 wait_shutdown
@@ -101,14 +110,10 @@ Starting
 Received msgnum:00000005:
 Received msgnum:00000006:
 Received msgnum:00000007:
-Received SIGUSR1, will terminate after the next message
-Received msgnum:00000008:
-Terminating without confirming the last message
 Starting
 Received msgnum:00000008:
 Received msgnum:00000009:
 Terminating normally"
-
 cmp_exact $RSYSLOG_OUT_LOG
 
 if [[ "$start_fd_count" != "$end_fd_count" ]]; then
@@ -136,5 +141,15 @@ if [[ "$child_lsof" != "$EXPECTED_CHILD_LSOF" && "$child_lsof" != "$EXPECTED_CHI
     echo "$child_lsof"
     error_exit 1
 fi
+
+# Check also that child process terminations are reported correctly.
+# When the reportChildProcessExits global parameter is "errors" (the default),
+# only non-zero exit codes are reported.
+content_check "(pid $child_pid_1) terminated; will be restarted" $RSYSLOG2_OUT_LOG
+custom_assert_content_missing "(pid $child_pid_1) exited with status" $RSYSLOG2_OUT_LOG
+content_check "(pid $child_pid_2) terminated; will be restarted" $RSYSLOG2_OUT_LOG
+content_check "(pid $child_pid_2) exited with status 1" $RSYSLOG2_OUT_LOG
+content_check "(pid $child_pid_3) terminated; will be restarted" $RSYSLOG2_OUT_LOG
+content_check "(pid $child_pid_3) terminated by signal 9" $RSYSLOG2_OUT_LOG
 
 exit_test

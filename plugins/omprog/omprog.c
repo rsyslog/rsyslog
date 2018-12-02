@@ -46,6 +46,7 @@
 #include "module-template.h"
 #include "errmsg.h"
 #include "cfsysline.h"
+#include "glbl.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -336,28 +337,14 @@ waitForChild(instanceData *pData, childProcessCtx_t *pChildCtx)
 			LogError(errno, RS_RET_SYS_ERR, "omprog: could not send SIGKILL to child process");
 			return;
 		}
+
 		ret = waitpid(pChildCtx->pid, &status, 0);
 	}
 
-	if (ret != pChildCtx->pid) {
-		if (errno == ECHILD) {  /* child reaped by the rsyslogd main loop (see rsyslogd.c) */
-			LogMsg(0, NO_ERRCODE, LOG_INFO, "omprog: program '%s' (pid %d) exited; reaped by main loop",
-					pData->szBinary, pChildCtx->pid);
-		} else {
-			LogError(errno, RS_RET_SYS_ERR, "omprog: waitpid failed for program '%s' (pid %d)",
-					pData->szBinary, pChildCtx->pid);
-		}
-	} else {
-		/* check if we should print out some diagnostic information */
-		DBGPRINTF("omprog: waitpid status return for program '%s' (pid %d): %2.2x\n",
-				pData->szBinary, pChildCtx->pid, status);
-		if(WIFEXITED(status)) {
-			LogMsg(0, NO_ERRCODE, LOG_INFO, "omprog: program '%s' (pid %d) exited normally, status %d",
-					pData->szBinary, pChildCtx->pid, WEXITSTATUS(status));
-		} else if(WIFSIGNALED(status)) {
-			LogMsg(0, NO_ERRCODE, LOG_WARNING, "omprog: program '%s' (pid %d) terminated by signal %d",
-					pData->szBinary, pChildCtx->pid, WTERMSIG(status));
-		}
+	/* waitpid will fail with errno == ECHILD if the child process has already
+	   been reaped by the rsyslogd main loop (see rsyslogd.c) */
+	if(ret == pChildCtx->pid) {
+		glblReportChildProcessExit(pData->szBinary, pChildCtx->pid, status);
 	}
 }
 

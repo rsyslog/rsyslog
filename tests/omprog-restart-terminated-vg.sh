@@ -63,7 +63,7 @@ injectmsg 6 1
 injectmsg 7 1
 wait_queueempty
 
-kill -s USR1 $(get_child_pid)
+kill -s KILL $(get_child_pid)
 ./msleep 100
 
 injectmsg 8 1

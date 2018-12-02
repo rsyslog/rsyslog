@@ -47,6 +47,7 @@
 #include "srUtils.h"
 #include "obj.h"
 #include "errmsg.h"
+#include "glbl.h"
 
 #if _POSIX_TIMERS <= 0
 #include <sys/time.h>
@@ -286,17 +287,22 @@ int execProg(uchar *program, int bWait, uchar *arg)
 	}
 
 	if(pid) {       /* Parent */
-		if(bWait)
-			if(waitpid(pid, NULL, 0) == -1)
-				if(errno != ECHILD) {
-					/* we do not use logerror(), because
-					 * that might bring us into an endless
-					 * loop. At some time, we may
-					 * reconsider this behaviour.
-					 */
-					dbgprintf("could not wait on child after executing '%s'",
-					        (char*)program);
-				}
+		if(bWait) {
+			/* waitpid will fail with errno == ECHILD if the child process has already
+			   been reaped by the rsyslogd main loop (see rsyslogd.c) */
+			int status;
+			if(waitpid(pid, &status, 0) == pid) {
+				glblReportChildProcessExit(program, pid, status);
+			} else if(errno != ECHILD) {
+				/* we do not use logerror(), because
+				* that might bring us into an endless
+				* loop. At some time, we may
+				* reconsider this behaviour.
+				*/
+				dbgprintf("could not wait on child after executing '%s'",
+						(char*)program);
+			}
+		}
 		return pid;
 	}
 	/* Child */
