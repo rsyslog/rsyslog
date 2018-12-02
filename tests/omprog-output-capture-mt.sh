@@ -10,13 +10,8 @@
 # Coreutils is used to force line buffering in a Python program (see
 # 'omprog-output-capture-mt-bin.py' for alternatives).
 . ${srcdir:=.}/diag.sh init
-uname
-if [ $(uname) = "SunOS" ] ; then
-   echo "This test currently does not work on all flavors of Solaris (problems with Python?)."
-   exit 77
-fi
-
-NUMBER_OF_MESSAGES=20000   # number of logs to send
+skip_platform "SunOS" "This test currently does not work on all flavors of Solaris (problems with Python?)."
+export NUMMESSAGES=20000   # number of logs to send
 
 if [[ "$(uname)" == "Linux" ]]; then
     LINE_LENGTH=4095   # 4KB minus 1 byte (for the newline char)
@@ -56,7 +51,7 @@ main_queue(
 }
 '
 startup
-tcpflood -m$NUMBER_OF_MESSAGES
+tcpflood -m$NUMMESSAGES
 
 # Issue some HUP signals to cause the output file to be reopened during
 # writing (not a complete test of this feature, but at least we check it
@@ -66,7 +61,7 @@ issue_HUP
 issue_HUP
 ./msleep 1000
 issue_HUP
-
+wait_file_lines "$RSYSLOG_OUT_LOG" $((NUMMESSAGES * 2))
 shutdown_when_empty
 wait_shutdown
 
@@ -80,8 +75,8 @@ while IFS= read -r line; do
     fi
 done < $RSYSLOG_OUT_LOG
 
-if (( $line_num != $(($NUMBER_OF_MESSAGES * 2)) )); then
-    echo "unexpected number of lines in captured output: $line_num (expected: $(($NUMBER_OF_MESSAGES * 2)))"
+if (( line_num != NUMMESSAGES * 2 )); then
+    echo "unexpected number of lines in captured output: $line_num (expected: $((NUMMESSAGES * 2)))"
     error_exit 1
 fi
 
