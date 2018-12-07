@@ -9,8 +9,11 @@ module(load="../plugins/imfile/.libs/imfile")
 input(type="imfile" File="./'$RSYSLOG_DYNNAME'.input" Tag="file:" reopenOnTruncate="on")
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
-if $msg contains "msgnum:" then
+if $msg contains "msgnum:" then {
 	action( type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+} else {
+	action( type="omfile" file="'$RSYSLOG_DYNNAME'.rsyslog")
+}
 '
 
 # write the beginning of the file
@@ -30,6 +33,9 @@ msgnum:4' >> $RSYSLOG_DYNNAME.input
 
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown
+
+printf 'Messages from rsyslog itself:\n'
+cat -n $RSYSLOG_DYNNAME.rsyslog
 
 seq_check 0 4
 exit_test
