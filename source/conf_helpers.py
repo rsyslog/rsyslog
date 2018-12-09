@@ -78,7 +78,7 @@ def get_next_stable_version():
 def get_current_commit_hash():
     """Return commit hash string"""
 
-    commit_hash = subprocess.check_output(['git', 'log', "--pretty=format:'%h'", 'HEAD', '-n1']).decode("utf-8")
+    commit_hash = subprocess.check_output(['git', 'log', '--pretty=format:%h', 'HEAD', '-n1']).decode("utf-8")
 
     return commit_hash
 

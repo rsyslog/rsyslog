@@ -1,7 +1,7 @@
 $ActionResumeInterval
 ---------------------
 
-**Type:** global configuration parameter
+**Type:** action configuration parameter
 
 **Default:** 30
 

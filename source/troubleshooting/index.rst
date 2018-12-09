@@ -16,3 +16,4 @@ General Procedure
 
    debug
    troubleshoot
+   howtodebug

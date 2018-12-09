@@ -324,8 +324,16 @@ dynaFileCacheSize
 
    "integer", "10", "no", "``$DynaFileCacheSize``"
 
-Applies only if dynamic filenames are used.
-Specifies the number of DynaFiles that will be kept open.
+This parameter specifies the maximum size of the cache for
+dynamically-generated file names (dynafile= parmeter).
+This setting specifies how many open file handles should
+be cached. If, for example, the file name is generated with the hostname
+in it and you have 100 different hosts, a cache size of 100 would ensure
+that files are opened once and then stay open. This can be a great way
+to increase performance. If the cache size is lower than the number of
+different files, the least recently used one is discarded (and the file
+closed).
+
 Note that this is a per-action value, so if you have
 multiple dynafile actions, each of them have their individual caches
 (which means the numbers sum up). Ideally, the cache size exactly

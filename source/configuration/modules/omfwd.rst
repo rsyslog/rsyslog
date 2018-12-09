@@ -174,26 +174,24 @@ TCP_Framing
 
    "word", "traditional", "no", "none"
 
-Framing-Mode to be for forwarding. This affects only TCP-based
-protocols. It is ignored for UDP. In protocol engineering,
-"framing" means how multiple messages over the same connection
-are separated. Usually, this is transparent to users. Unfortunately,
-the early syslog protocol evolved, and so there are cases where users
-need to specify the framing. The traditional framing is
-nontransparent. With it, messages are end when a LF (aka "line
-break", "return") is encountered, and the next message starts
-immediately after the LF. If multi-line messages are received, these
-are essentially broken up into multiple message, usually with all but
-the first message segment being incorrectly formatted. The
-octet-counting framing solves this issue. With it, each message is
-prefixed with the actual message length, so that a receivers knows
-exactly where the message ends. Multi-line messages cause no problem
-here. This mode is very close to the method described in RFC5425 for
-TLS-enabled syslog. Unfortunately, only few syslogd implementations
-support octet-counted framing. As such, the traditional framing is
-set as default, even though it has defects. If it is known that the
-receiver supports octet-counted framing, it is suggested to use that
-framing mode.
+Framing-Mode to be used for forwarding, either "traditional" or
+"octet-counted". This affects only TCP-based protocols, it is ignored for UDP.
+In protocol engineering, "framing" means how multiple messages over the same
+connection are separated. Usually, this is transparent to users. Unfortunately,
+the early syslog protocol evolved and so there are cases where users need to
+specify the framing. The "traditional" framing is nontransparent. With it,
+messages end when an LF (aka "line break", "return") is encountered, and the
+next message starts immediately after the LF. If multi-line messages are
+received, these are essentially broken up into multiple message, usually with
+all but the first message segment being incorrectly formatted. The
+"octet-counted" framing solves this issue. With it, each message is prefixed
+with the actual message length, so that a receiver knows exactly where the
+message ends. Multi-line messages cause no problem here. This mode is very
+close to the method described in RFC5425 for TLS-enabled syslog. Unfortunately,
+only few syslogd implementations support "octet-counted" framing. As such, the
+"traditional" framing is set as default, even though it has defects. If it is
+known that the receiver supports "octet-counted" framing, it is suggested to
+use that framing mode.
 
 
 TCP_FrameDelimiter
