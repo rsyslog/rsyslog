@@ -142,10 +142,6 @@ TESTS +=  \
 	imtcp-NUL-rawmsg.sh \
 	imtcp-multiport.sh \
 	imtcp_incomplete_frame_at_end.sh \
-	queue-encryption-disk.sh \
-	queue-encryption-disk_keyfile.sh \
-	queue-encryption-disk_keyprog.sh \
-	queue-encryption-da.sh \
 	daqueue-persist.sh \
 	daqueue-invld-qi.sh \
 	daqueue-dirty-shutdown.sh \
@@ -313,6 +309,13 @@ TESTS +=  \
 	parsertest-parse-nodate-udp.sh \
 	parsertest-snare_ccoff_udp.sh \
 	parsertest-snare_ccoff_udp2.sh
+if ENABLE_LIBGCRYPT
+TESTS +=  \
+	queue-encryption-disk.sh \
+	queue-encryption-disk_keyfile.sh \
+	queue-encryption-disk_keyprog.sh \
+	queue-encryption-da.sh
+endif # ENABLE_LIBGCRYPT
 if HAVE_VALGRIND
 TESTS +=  \
 	tcpflood_wrong_option_output.sh \
