@@ -7,12 +7,6 @@ to hunt for program or plugin bugs. However, there are several
 occasions where debug log has proven to be quite helpful in finding
 out configuration issues.
 
-Part of debug supports is activated by
-adding the ``--enable-rtinst`` ./configure option ("rtinst" means runtime
-instrumentation). Turning debugging on obviously costs some performance
-(in some cases considerable). For typical cases, runtime instrumentation
-is *not* required.
-
 Signals supported
 -----------------
 
@@ -21,10 +15,6 @@ to work, rsyslogd must be running with debugging enabled, either via the
 -d command line switch or the environment options specified below. It is
 **not** required that rsyslog was compiled with debugging enabled (but
 depending on the settings this may lead to better debug info).
-
-**SIGUSR2** - outputs debug information (including active threads and a
-call stack) for the state when SIGUSR2 was received. This is a one-time
-output. Can be sent as often as the user likes.
 
 **Note:** this signal **may go away** in later releases and may be
 replaced by something else.
@@ -87,23 +77,14 @@ environment variables force one to change distro-specific configuration
 files, whereas regular configuration directives would fit nicely into
 the one central rsyslog.conf.
 
-The problem here is that many settings of the debug system must be
-initialized before the full rsyslog engine starts up. At that point,
-there is no such thing like rsyslog.conf or the objects needed to
-process it present in an running instance. And even if we would enable
-to change settings some time later, that would mean that we can not
-correctly monitor (and debug) the initial startup phase of rsyslogd.
-What makes matters worse is that during this startup phase (and never
-again later!) some of the base debug structure needs to be created, at
-least if the build is configured for that (many of these things only
-happen in --enable-rtinst mode). So if we do not initialize the debug
-system **before** actually starting up the rsyslog core, we get a number
-of data structures wrong.
+Historically environment variables were necessary to initialize so-called
+"rtinst" mode. This mode no longer exists, as the OS tools have improved.
+Using environment variables still has the benefit that the work right from
+initialization of rsyslogd. Most importantly, this is before the rsyslog.conf
+is read.
 
-For these reasons, we utilize environment variables to initialize and
-configure the debugging system. We understand this may be somewhat
-painful, but now you know there are at least some good reasons for doing
-so.
+If that is no issue, rsyslog.conf global statements can be used to enable
+debug mode and provide some settings.
 
 HOWEVER, if you have a too hard time to set debug instructions using the
 environment variables, there is a cure, described in the next paragraph.
@@ -156,10 +137,9 @@ On a typical system, you can signal rsyslogd as follows:
 
 ::
 
-    kill -USR1 `cat /var/run/rsyslogd.pid`
+    kill -USR1 $(cat /var/run/rsyslogd.pid)
 
-Important: there are backticks around the "cat"-command. If you use the
-regular quote it won't work. The debug log will show whether debug
+The debug log will show whether debug
 logging has been turned on or off. There is no other indication of the
 status.
 
@@ -177,21 +157,6 @@ note that with this rsyslog version we cannot obtain any debug
 information on events that happened *before* debug logging was turned
 on.
 
-If an instance hangs, it is possible to obtain some useful information
-about the current threads and their calling stack by sending SIGUSR2.
-However, the usefulness of that information is very much depending on
-rsyslog compile-time settings, must importantly the --enable-rtinst
-configure flag. Note that activating this option causes additional
-overhead and slows down rsyslgod considerable. So if you do that, you
-need to check if it is capable to handle the workload. Also, threading
-behavior is modified by the runtime instrumentation.
-
-Sending SIGUSR2 writes new process state information to the log file
-each time it is sent. So it may be useful to do that from time to time.
-It probably is most useful if the process seems to hang, in which case
-it may (may!) be able to output some diagnostic information on the
-current processing state. In that case, turning on the mutex debugging
-options (see above) is probably useful.
 
 Interpreting the Logs
 ---------------------
@@ -217,7 +182,7 @@ an instance running with debug log enabled runs much slower than one
 without. An attacker may use this to place carry out a denial-of-service
 attack or try to hide some information from the log file. As such, it is
 suggested to enable DebugOnDemand mode only for a reason. Note that when
-no debug mode is enabled, SIGUSR1 and SIGUSR2 are completely ignored.
+no debug mode is enabled, SIGUSR1 is completely ignored.
 
 When running in any of the debug modes (including on demand mode), an
 interactive instance of rsyslogd can be aborted by pressing ctl-c.
