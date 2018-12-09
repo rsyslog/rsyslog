@@ -13,16 +13,17 @@ template(name="outfmt" type="string" string="%msg%\n")
 :msg, contains, "msgnum:" {
     action(
         type="omprog"
-	    binary=`echo $srcdir/testsuites/omprog-output-capture-bin.sh`
+	    binary="'$srcdir'/testsuites/omprog-output-capture-bin.sh"
         template="outfmt"
         name="omprog_action"
-        output=`echo $RSYSLOG_OUT_LOG`
+        output="'$RSYSLOG_OUT_LOG'"
         fileCreateMode="0644"  # default is 0600
     )
 }
 '
 startup
 injectmsg 0 10
+wait_file_lines "$RSYSLOG_OUT_LOG" 22
 shutdown_when_empty
 wait_shutdown
 
@@ -50,7 +51,6 @@ export EXPECTED="[stdout] Starting
 [stderr] Received msgnum:00000009:
 [stdout] Terminating normally
 [stderr] Terminating normally"
-
 cmp_exact $RSYSLOG_OUT_LOG
 
 exit_test
