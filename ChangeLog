@@ -57,6 +57,8 @@ Version 8.40.0 [v8-stable] 2018-12-11
 - bugfix omhttp: did not compile on some platforms
 - CI
    * made mysql-based tests (ommysql and omlibdbi) work inside containers
+   * bugfix testbench: do not execute libgcrypt tests if disabled
+     closes https://github.com/rsyslog/rsyslog/issues/3228
    * testbench: grep failed when string starting with "-" was used
      The search term was mistakenly interpreted as an option.
    * testbench: support auto-start/-stop of mysqld
