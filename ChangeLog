@@ -1,4 +1,6 @@
 ------------------------------------------------------------------------------
+Version 8.41.0 [v8-stable] 2019-01-22
+------------------------------------------------------------------------------
 Version 8.40.0 [v8-stable] 2018-12-11
 - openssl driver: improved error messages
   also fixes misleading wording of some error messages
