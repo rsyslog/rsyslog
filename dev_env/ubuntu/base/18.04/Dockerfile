@@ -40,6 +40,7 @@ RUN 	apt-get update && \
 	libsystemd-dev \
 	libtokyocabinet-dev \
 	libtool \
+	libtool-bin \
 	lsof \
 	make \
 	mysql-server \
