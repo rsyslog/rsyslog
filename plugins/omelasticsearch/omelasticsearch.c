@@ -268,8 +268,7 @@ CODESTARTfreeInstance
 	free(pData->serverBaseUrls);
 	free(pData->uid);
 	free(pData->pwd);
-	if (pData->authBuf != NULL)
-		free(pData->authBuf);
+	free(pData->authBuf);
 	free(pData->searchIndex);
 	free(pData->searchType);
 	free(pData->pipelineName);
