@@ -59,9 +59,13 @@ RUN 	apt-get update && \
 ENV	REBUILD=1
 RUN	echo "deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_18.04/ ./" > /etc/apt/sources.list.d/0mq.list && \
 	wget -nv -O - http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_18.04/Release.key | apt-key add - && \
+	echo "deb http://repo.yandex.ru/clickhouse/deb/stable/ main/" > /etc/apt/sources.list.d/clickhouse.list && \
+	apt-key adv --keyserver keyserver.ubuntu.com --recv E0C56BD4 && \
  	add-apt-repository ppa:adiscon/v8-stable -y && \
 	apt-get update -y && \
 	apt-get install -y  \
+	clickhouse-client \
+	clickhouse-server \
 	libczmq-dev \
 	libqpid-proton8-dev \
 	tcl-dev \
@@ -83,6 +87,10 @@ RUN	mkdir -p /var/run/mysqld && \
 	chown mysql:mysql /var/run/mysqld
 ENV	MYSQLD_START_CMD="sudo mysqld_safe" \
         MYSQLD_STOP_CMD="sudo kill $(sudo cat /var/run/mysqld/mysqld.pid)"
+
+# and so does clickhouse
+ENV	CLICKHOUSE_START_CMD="sudo clickhouse-server --config-file=/etc/clickhouse-server/config.xml" \
+	CLICKHOUSE_STOP_CMD="sudo kill $(pidof clickhouse-server)"
 
 ADD	setup-system.sh setup-system.sh
 ENV	PKG_CONFIG_PATH=/usr/local/lib/pkgconfig \
@@ -109,7 +117,7 @@ RUN	cd helper-projects \
 # create dependency cache
 RUN	mkdir /local_dep_cache && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch && \
-	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.1.tar.gz && \
+	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.3.1.tar.gz -O /local_dep_cache/elasticsearch-6.3.1.tar.gz
 # tell tests which are the newester versions, so they can be checked without the need
 # to adjust test sources.
@@ -122,6 +130,7 @@ ENV	SCAN_BUILD=scan-build \
 	ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-6.0/bin/llvm-symbolizer
 
 ENV RSYSLOG_CONFIGURE_OPTIONS \
+	--enable-clickhouse \
 	--enable-elasticsearch \
 	--enable-elasticsearch-tests \
 	--enable-gnutls \
