@@ -101,6 +101,12 @@ DEFobjCurrIf(datetime)
 #define DFLT_CONTAINER_ID_FULL "$!CONTAINER_ID_FULL" /* name of variable holding CONTAINER_ID_FULL value */
 #define DFLT_KUBERNETES_URL "https://kubernetes.default.svc.cluster.local:443"
 #define DFLT_BUSY_RETRY_INTERVAL 5 /* retry every 5 seconds */
+#define DFLT_SSL_PARTIAL_CHAIN 0 /* disallow X509_V_FLAG_PARTIAL_CHAIN by default */
+
+/* only support setting the partial chain flag on openssl platforms that have the define */
+#if defined(ENABLE_OPENSSL) && defined(X509_V_FLAG_PARTIAL_CHAIN)
+#define SUPPORT_SSL_PARTIAL_CHAIN 1
+#endif
 
 static struct cache_s {
 	const uchar *kbUrl;
@@ -137,6 +143,7 @@ struct modConfData_s {
 	char *contRules; /* lognorm rules for CONTAINER_NAME value match */
 	uchar *contRulebase; /* lognorm rulebase filename for CONTAINER_NAME value match */
 	int busyRetryInterval; /* how to handle 429 response - 0 means error, non-zero means retry every N seconds */
+	sbool sslPartialChain; /* if true, allow using intermediate certs without root certs */
 };
 
 /* action (instance) configuration data */
@@ -164,6 +171,7 @@ typedef struct _instanceData {
 	msgPropDescr_t *contIdFullDescr; /* CONTAINER_ID_FULL field */
 	struct cache_s *cache;
 	int busyRetryInterval; /* how to handle 429 response - 0 means error, non-zero means retry every N seconds */
+	sbool sslPartialChain; /* if true, allow using intermediate certs without root certs */
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -200,7 +208,8 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "de_dot_separator", eCmdHdlrString, 0 },
 	{ "filenamerulebase", eCmdHdlrString, 0 },
 	{ "containerrulebase", eCmdHdlrString, 0 },
-	{ "busyretryinterval", eCmdHdlrInt, 0 }
+	{ "busyretryinterval", eCmdHdlrInt, 0 },
+	{ "sslpartialchain", eCmdHdlrBinary, 0 }
 #if HAVE_LOADSAMPLESFROMSTRING == 1
 	,
 	{ "filenamerules", eCmdHdlrArray, 0 },
@@ -229,7 +238,8 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "de_dot_separator", eCmdHdlrString, 0 },
 	{ "filenamerulebase", eCmdHdlrString, 0 },
 	{ "containerrulebase", eCmdHdlrString, 0 },
-	{ "busyretryinterval", eCmdHdlrInt, 0 }
+	{ "busyretryinterval", eCmdHdlrInt, 0 },
+	{ "sslpartialchain", eCmdHdlrBinary, 0 }
 #if HAVE_LOADSAMPLESFROMSTRING == 1
 	,
 	{ "filenamerules", eCmdHdlrArray, 0 },
@@ -540,6 +550,7 @@ CODESTARTsetModCnf
 
 	loadModConf->de_dot = DFLT_DE_DOT;
 	loadModConf->busyRetryInterval = DFLT_BUSY_RETRY_INTERVAL;
+	loadModConf->sslPartialChain = DFLT_SSL_PARTIAL_CHAIN;
 	for(i = 0 ; i < modpblk.nParams ; ++i) {
 		if(!pvals[i].bUsed) {
 			continue;
@@ -667,6 +678,13 @@ CODESTARTsetModCnf
 			}
 		} else if(!strcmp(modpblk.descr[i].name, "busyretryinterval")) {
 			loadModConf->busyRetryInterval = pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "sslpartialchain")) {
+#if defined(SUPPORT_SSL_PARTIAL_CHAIN)
+			loadModConf->sslPartialChain = pvals[i].val.d.n;
+#else
+			LogMsg(0, RS_RET_VALUE_NOT_IN_THIS_MODE, LOG_INFO,
+					"sslpartialchain is only supported for OpenSSL\n");
+#endif
 		} else {
 			dbgprintf("mmkubernetes: program error, non-handled "
 				"param '%s' in module() block\n", modpblk.descr[i].name);
@@ -767,6 +785,24 @@ finalize_it:
 	return size * nmemb;
 }
 
+#if defined(SUPPORT_SSL_PARTIAL_CHAIN)
+static CURLcode set_ssl_partial_chain(CURL *curl, void *ssl_ctx, void *userptr)
+{
+	(void)userptr; /* currently unused */
+	CURLcode rv = CURLE_ABORTED_BY_CALLBACK;
+	X509_STORE *store = NULL;
+
+	store = SSL_CTX_get_cert_store((SSL_CTX *)ssl_ctx);
+	if(!store)
+		goto finalize_it;
+	if(!X509_STORE_set_flags(store, X509_V_FLAG_PARTIAL_CHAIN))
+		goto finalize_it;
+	rv = CURLE_OK;
+finalize_it:
+	return rv;
+}
+#endif
+
 BEGINcreateWrkrInstance
 CODESTARTcreateWrkrInstance
 	CURL *ctx;
@@ -858,7 +894,12 @@ CODESTARTcreateWrkrInstance
 		curl_easy_setopt(ctx, CURLOPT_SSLKEY, pWrkrData->pData->myPrivKeyFile);
 	if(pWrkrData->pData->allowUnsignedCerts)
 		curl_easy_setopt(ctx, CURLOPT_SSL_VERIFYPEER, 0);
-
+#if defined(SUPPORT_SSL_PARTIAL_CHAIN)
+	if(pWrkrData->pData->sslPartialChain) {
+		curl_easy_setopt(ctx, CURLOPT_SSL_CTX_FUNCTION, set_ssl_partial_chain);
+		curl_easy_setopt(ctx, CURLOPT_SSL_CTX_DATA, NULL);
+	}
+#endif
 	pWrkrData->curlCtx = ctx;
 finalize_it:
 	free(token);
@@ -957,6 +998,7 @@ CODESTARTnewActInst
 	pData->de_dot = loadModConf->de_dot;
 	pData->allowUnsignedCerts = loadModConf->allowUnsignedCerts;
 	pData->busyRetryInterval = loadModConf->busyRetryInterval;
+	pData->sslPartialChain = loadModConf->sslPartialChain;
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
 		if(!pvals[i].bUsed) {
 			continue;
@@ -1087,6 +1129,13 @@ CODESTARTnewActInst
 			}
 		} else if(!strcmp(actpblk.descr[i].name, "busyretryinterval")) {
 			pData->busyRetryInterval = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "sslpartialchain")) {
+#if defined(SUPPORT_SSL_PARTIAL_CHAIN)
+			pData->sslPartialChain = pvals[i].val.d.n;
+#else
+			LogMsg(0, RS_RET_VALUE_NOT_IN_THIS_MODE, LOG_INFO,
+					"sslpartialchain is only supported for OpenSSL\n");
+#endif
 		} else {
 			dbgprintf("mmkubernetes: program error, non-handled "
 				"param '%s' in action() block\n", actpblk.descr[i].name);
