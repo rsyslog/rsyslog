@@ -19,7 +19,7 @@ RUN	zypper --non-interactive install \
 	gdb \
 	git \
 	hiredis-devel \
-	java-10-openjdk-devel \
+	java-11-openjdk-devel \
 	krb5-devel \
 	libcurl-devel \
 	libczmq4 \
