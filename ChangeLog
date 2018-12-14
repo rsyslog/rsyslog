@@ -2,6 +2,17 @@
 Version 8.41.0 [v8-stable] 2019-01-22
 ------------------------------------------------------------------------------
 Version 8.40.0 [v8-stable] 2018-12-11
+- mmkubernetes: add support for sslpartialchain for openssl
+  If `"on"`, this will set the OpenSSL certificate store flag
+  `X509_V_FLAG_PARTIAL_CHAIN`.   This will allow you to verify the Kubernetes API
+  server cert with only an intermediate CA cert in your local trust store, rather
+  than having to have the entire intermediate CA + root CA chain in your local
+  trust store.  See also `man s_client` - the `-partial_chain` flag.
+  This option is only available if rsyslog was built with support for OpenSSL and
+  only if the `X509_V_FLAG_PARTIAL_CHAIN` flag is available.  If you attempt to
+  set this parameter on other platforms, you will get an `INFO` level log
+  message.  This was done so that you could use the same configuration on
+  different platforms.
 - openssl driver: improved error messages
   also fixes misleading wording of some error messages
   closes https://github.com/rsyslog/rsyslog/issues/3238
