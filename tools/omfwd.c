@@ -1450,7 +1450,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(pData->port == NULL) {
 		CHKmalloc(pData->port = strdup("514"));
 	}
-	
+
 	/* now skip to template */
 	while(*p && *p != ';'  && *p != '#' && !isspace((int) *p))
 		++p; /*JUST SKIP*/

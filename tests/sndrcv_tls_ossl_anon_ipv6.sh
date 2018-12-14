@@ -18,8 +18,8 @@ global(
 	defaultNetstreamDriverCertFile="'$srcdir/testsuites/x.509/client-cert.pem'"
 	defaultNetstreamDriverKeyFile="'$srcdir/testsuites/x.509/client-key.pem'"
 	defaultNetstreamDriver="ossl"
-#	debug.whitelist="on"
-#	debug.files=["nsd_ossl.c", "tcpsrv.c", "nsdsel_ossl.c", "nsdpoll_ptcp.c", "dnscache.c"]
+	debug.whitelist="off"
+	debug.files=["rainerscript.c", "ruleset.c"]
 )
 
 module(	load="../plugins/imtcp/.libs/imtcp"
@@ -45,8 +45,8 @@ global(
 	defaultNetstreamDriverCertFile="'$srcdir/testsuites/x.509/client-cert.pem'"
 	defaultNetstreamDriverKeyFile="'$srcdir/testsuites/x.509/client-key.pem'"
 	defaultNetstreamDriver="ossl"
-	debug.whitelist="on"
-	debug.files=["nsd_ossl.c", "tcpsrv.c", "nsdsel_ossl.c", "nsdpoll_ptcp.c", "dnscache.c"]
+	debug.whitelist="off"
+	debug.files=["rainerscript.c", "ruleset.c"]
 )
 
 # Note: no TLS for the listener, this is for tcpflood!
@@ -65,11 +65,9 @@ startup 2
 # and that instance will record the data.
 tcpflood -m$NUMMESSAGES -i1
 
-
-sleep 5 # work-around because of
+# sleep 5 # work-around because of
 #this should actually work: https://github.com/rsyslog/rsyslog/issues/3325
-# wait_file_lines
-
+wait_file_lines
 
 # shut down sender when everything is sent, receiver continues to run concurrently
 shutdown_when_empty 2

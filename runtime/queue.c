@@ -581,7 +581,7 @@ finalize_it:
 static rsRetVal qDestructFixedArray(qqueue_t *pThis)
 {
 	DEFiRet;
-	
+
 	assert(pThis != NULL);
 
 	queueDrain(pThis); /* discard any remaining queue entries */
@@ -820,7 +820,7 @@ qqueueTryLoadPersistedInfo(qqueue_t *pThis)
 
 	/* first, we try to read the property bag for ourselfs */
 	CHKiRet(obj.DeserializePropBag((obj_t*) pThis, psQIF));
-	
+
 	/* then the stream objects (same order as when persisted!) */
 	CHKiRet(obj.Deserialize(&pThis->tVars.disk.pWrite, (uchar*) "strm", psQIF,
 			       (rsRetVal(*)(obj_t*,void*))qqueueLoadPersStrmInfoFixup, pThis));
@@ -945,7 +945,7 @@ finalize_it:
 static rsRetVal qDestructDisk(qqueue_t *pThis)
 {
 	DEFiRet;
-	
+
 	assert(pThis != NULL);
 
 	free(pThis->pszQIFNam);
@@ -2617,7 +2617,7 @@ qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 			ABORT_FINALIZE(RS_RET_RENAME_TMP_QI_ERROR);
 		}
 	}
-	
+
 	/* tell the input file object that it must not delete the file on close if the queue
 	 * is non-empty - but only if we are not during a simple checkpoint
 	 */
@@ -2849,7 +2849,7 @@ qqueueSetMaxFileSize(qqueue_t *pThis, size_t iMaxFileSize)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
-	
+
 	if(iMaxFileSize < 1024) {
 		ABORT_FINALIZE(RS_RET_VALUE_TOO_LOW);
 	}

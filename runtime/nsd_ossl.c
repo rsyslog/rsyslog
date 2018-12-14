@@ -469,9 +469,29 @@ osslRecordRecv(nsd_ossl_t *pThis)
 
 	lenRcvd = SSL_read(pThis->ssl, pThis->pszRcvBuf, NSD_OSSL_MAX_RCVBUF);
 	if(lenRcvd > 0) {
+		DBGPRINTF("osslRecordRecv: SSL_read received %zd bytes\n", lenRcvd);
 		pThis->lenRcvBuf = lenRcvd;
 		pThis->ptrRcvBuf = 0;
+
+		/* Check for additional data in SSL buffer */
+		int iBytesLeft = SSL_pending(pThis->ssl);
+		if (iBytesLeft > 0 ){
+			DBGPRINTF("osslRecordRecv: %d Bytes pending after SSL_Read, expand buffer.\n", iBytesLeft);
+			/* realloc buffer size and preserve char content */
+			CHKmalloc(pThis->pszRcvBuf = realloc(pThis->pszRcvBuf, NSD_OSSL_MAX_RCVBUF+iBytesLeft));
+
+			/* 2nd read will read missing bytes from the current SSL Packet */
+			lenRcvd = SSL_read(pThis->ssl, pThis->pszRcvBuf+NSD_OSSL_MAX_RCVBUF, iBytesLeft);
+			if(lenRcvd > 0) {
+				DBGPRINTF("osslRecordRecv: 2nd SSL_read received %zd bytes\n",
+					(NSD_OSSL_MAX_RCVBUF+lenRcvd));
+				pThis->lenRcvBuf = NSD_OSSL_MAX_RCVBUF+lenRcvd;
+			} else {
+				goto sslerr;
+			}
+		}
 	} else {
+sslerr:
 		err = SSL_get_error(pThis->ssl, lenRcvd);
 		if(	err == SSL_ERROR_ZERO_RETURN ) {
 			DBGPRINTF("osslRecordRecv: SSL_ERROR_ZERO_RETURN received, connection may closed already\n");
