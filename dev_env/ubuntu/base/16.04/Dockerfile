@@ -55,6 +55,8 @@ RUN	apt-get install -y \
 RUN     add-apt-repository ppa:adiscon/v8-stable -y && \
 	add-apt-repository ppa:qpid/released -y && \
 	add-apt-repository ppa:ubuntu-toolchain-r/test -y && \
+	echo "deb http://repo.yandex.ru/clickhouse/deb/stable/ main/" > /etc/apt/sources.list.d/clickhouse.list && \
+	apt-key adv --keyserver keyserver.ubuntu.com --recv E0C56BD4 && \
 	echo "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-5.0 main" > /etc/apt/sources.list.d/llvm.list && \
 	wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key| apt-key add - && \
 	echo "deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_16.04/ ./" > /etc/apt/sources.list.d/0mq.list && \
@@ -63,6 +65,8 @@ RUN     add-apt-repository ppa:adiscon/v8-stable -y && \
 
 RUN	apt-get update -y && \
 	apt-get install -y \
+	clickhouse-client \
+	clickhouse-server \
 	libestr-dev \
 	librelp-dev \
 	libqpid-proton10-dev \
@@ -97,12 +101,18 @@ RUN	mkdir /local_dep_cache && \
 # to adjust test sources.
 ENV	ELASTICSEARCH_NEWEST="elasticsearch-6.3.1.tar.gz"
 
+# tell CI env how to handle clickhouse
+ENV	CLICKHOUSE_START_CMD="sudo clickhouse-server --config-file=/etc/clickhouse-server/config.xml" \
+	CLICKHOUSE_STOP_CMD="sudo kill $(pidof clickhouse-server)"
+
 # next ENV is specifically for running scan-build - so we do not need to
 # change scripts if at a later time we can move on to a newer version
 ENV SCAN_BUILD=scan-build \
     SCAN_BUILD_CC=clang-5.0
 
 ENV RSYSLOG_CONFIGURE_OPTIONS \
+	--enable-clickhouse \
+	--enable-clickhouse-tests \
 	--enable-elasticsearch \
 	--enable-elasticsearch-tests \
 	--enable-gnutls \

@@ -75,6 +75,8 @@ RUN	echo "deb http://download.opensuse.org/repositories/network:/messaging:/zero
 	libfastjson-dev \
 	liblogging-stdlog-dev \
 	liblognorm-dev
+RUN	sed -i 's/<yandex>/<yandex>\n    <core_dump><size_limit>0<\/size_limit><\/core_dump>/g' \
+		/etc/clickhouse-server/config.xml
 WORKDIR	/home/devel
 VOLUME	/rsyslog
 RUN	groupadd rsyslog \
@@ -131,6 +133,7 @@ ENV	SCAN_BUILD=scan-build \
 
 ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-clickhouse \
+	--enable-clickhouse-tests \
 	--enable-elasticsearch \
 	--enable-elasticsearch-tests \
 	--enable-gnutls \
