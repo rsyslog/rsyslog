@@ -752,6 +752,7 @@ if ENABLE_KAFKA_TESTS
 TESTS += \
 	kafka-selftest.sh \
 	omkafka.sh \
+	omkafkadynakey.sh \
 	imkafka.sh \
 	imkafka-backgrounded.sh \
 	imkafka-config-err-ruleset.sh \
@@ -1905,6 +1906,7 @@ EXTRA_DIST= \
 	mysql-actq-mt-withpause-vg.sh \
 	kafka-selftest.sh \
 	omkafka.sh \
+	omkafkadynakey.sh \
 	omkafka-vg.sh \
 	imkafka-hang-on-no-kafka.sh \
 	imkafka-hang-other-action-on-no-kafka.sh \
