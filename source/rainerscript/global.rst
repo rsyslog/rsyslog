@@ -203,6 +203,16 @@ The following parameters can be set:
   ``app/foo[1234]`` will result in a ``programname`` value of
   ``app/foo``.
 
+- **parser.escapeControlCharacterTab** [on/off] available since 8.7.0
+
+  **Default:** on
+
+  If set to "off", the TAB control character (US-ASCII HT) will not be
+  escaped. If set to "on", it will be escaped to the sequence "#011".
+  Note that escaping is the traditional behavior and existing scripts
+  may get into trouble if this is changed to "off".
+
+
 - **senders.keepTrack** [on/off] available 8.17.0+
 
   **Default:** off
