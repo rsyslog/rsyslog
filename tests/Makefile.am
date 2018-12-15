@@ -934,6 +934,7 @@ TESTS += \
 	tabescape_dflt-udp.sh \
 	tabescape_off.sh \
 	tabescape_off-udp.sh \
+	tabescape_on.sh \
 	inputname-imtcp.sh \
 	fieldtest.sh \
 	fieldtest-udp.sh \
@@ -1685,6 +1686,7 @@ EXTRA_DIST= \
 	tabescape_dflt-udp.sh \
 	tabescape_off.sh \
 	tabescape_off-udp.sh \
+	tabescape_on.sh \
 	dircreate_dflt.sh \
 	dircreate_off.sh \
 	imuxsock_logger_parserchain.sh \
