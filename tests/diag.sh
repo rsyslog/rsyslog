@@ -213,25 +213,26 @@ rst_msleep() {
 
 
 # compare file to expected exact content
-# $1 is file to compare
+# $1 is file to compare, default $RSYSLOG_OUT_LOG
 cmp_exact() {
-	if [ "$1" == "" ]; then
-		printf 'Testbench ERROR, cmp_exact() needs filename as %s\n' "$1"
+	filename=${1:-"$RSYSLOG_OUT_LOG"}
+	if [ "$filename" == "" ]; then
+		printf 'Testbench ERROR, cmp_exact() does not have a filename at ALL!\n'
 		error_exit 100
 	fi
 	if [ "$EXPECTED" == "" ]; then
 		printf 'Testbench ERROR, cmp_exact() needs to have env var EXPECTED set!\n'
 		error_exit 100
 	fi
-	printf '%s\n' "$EXPECTED" | cmp - "$1"
+	printf '%s\n' "$EXPECTED" | cmp - "$filename"
 	if [ $? -ne 0 ]; then
 		printf 'invalid response generated\n'
-		printf '################# %s is:\n' "$1"
-		cat -n $1
+		printf '################# %s is:\n' "$filename"
+		cat -n $filename
 		printf '################# EXPECTED was:\n'
 		cat -n <<< "$EXPECTED"
 		printf '\n#################### diff is:\n'
-		diff - "$1" <<< "$EXPECTED"
+		diff - "$filename" <<< "$EXPECTED"
 		error_exit  1
 	fi;
 }
