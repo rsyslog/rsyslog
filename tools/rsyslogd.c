@@ -516,8 +516,8 @@ tellChildReady(const int pipefd, const char *const msg)
 static void
 printVersion(void)
 {
-	printf("rsyslogd %s, ", VERSION);
-	printf("compiled with:\n");
+	printf("rsyslogd  " VERSION " (aka %4d.%2.2d) compiled with:\n",
+		2000 + VERSION_YEAR, VERSION_MONTH);
 	printf("\tPLATFORM:\t\t\t\t%s\n", PLATFORM_ID);
 	printf("\tPLATFORM (lsb_release -d):\t\t%s\n", PLATFORM_ID_LSB);
 #ifdef FEATURE_REGEXP
