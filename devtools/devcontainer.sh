@@ -17,14 +17,14 @@ if [ "$RSYSLOG_HOME" == "" ]; then
 fi
 
 if [ -z "$RSYSLOG_DEV_CONTAINER" ]; then
-	RSYSLOG_DEV_CONTAINER=`cat $RSYSLOG_HOME/devtools/default_dev_container`
+	RSYSLOG_DEV_CONTAINER=$(cat $RSYSLOG_HOME/devtools/default_dev_container)
 fi
 
 printf "/rsyslog is mapped to $RSYSLOG_HOME\n"
 printf "pulling container...\n"
 docker pull $RSYSLOG_DEV_CONTAINER
 docker run $ti \
-	-u `id -u`:`id -g` \
+	-u $(id -u):$(id -g) \
 	-e RSYSLOG_CONFIGURE_OPTIONS_EXTRA \
 	-e CC \
 	-e CFLAGS \

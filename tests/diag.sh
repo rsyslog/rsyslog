@@ -107,7 +107,7 @@ rsyslog_testbench_test_url_access() {
 # $1 is what we check in uname, $2 (optional) is a reason message
 skip_platform() {
 	if [ "$(uname)" == "$1" ]; then
-		printf 'platform is "%" - test does not work under "%s"\n' "$(uname $(uname))" "$1"
+		printf 'platform is "%s" - test does not work under "%s"\n' "$(uname)" "$1"
 		if [ "$2" != "" ]; then
 			printf 'reason: %s\n' "$2"
 		fi
