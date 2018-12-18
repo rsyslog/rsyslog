@@ -1,7 +1,6 @@
 #!/bin/bash
+# test for mysql with multithread actionq
 # This file is part of the rsyslog project, released under ASL 2.0
-echo ===============================================================================
-echo \[mysql-act-mt.sh\]: test for mysql with multithread actionq
 . ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
@@ -15,6 +14,7 @@ module(load="../plugins/ommysql/.libs/ommysql")
 	queue.workerthreadMinimumMessages="500"
 	queue.timeoutWorkerthreadShutdown="1000"
 	queue.timeoutEnqueue="10000"
+	queue.timeoutShutdown="30000"
 	)
 } 
 '
