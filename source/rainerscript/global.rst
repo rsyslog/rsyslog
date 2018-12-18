@@ -367,7 +367,7 @@ The following parameters can be set:
   providing the ability to see initial error messages. Might also be
   useful for some practical deployments.
 
-- **variables.caseSensitve** [boolean (on/off)] available 8.30.0+
+- **variables.caseSensitive** [boolean (on/off)] available 8.30.0+
 
   **Default:** off
 
