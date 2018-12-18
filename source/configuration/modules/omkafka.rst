@@ -75,7 +75,7 @@ be assigned to a partition based on the key.
 
 
 DynaKey
-^^^^^^^^^
+^^^^^^^
 
 .. csv-table::
    :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
@@ -151,8 +151,8 @@ topic, load will be distributed fairly evenly.
 If set, it will override any other partitioning scheme configured.
 
 
-Partitons.number
-^^^^^^^^^^^^^^^^
+Partitions.number
+^^^^^^^^^^^^^^^^^
 
 .. csv-table::
    :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
