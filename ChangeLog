@@ -1,5 +1,16 @@
 ------------------------------------------------------------------------------
 Version 8.41.0 [v8-stable] 2019-01-22
+- bugfix tls subsystem: Receiver hang due to insufficient TLS buffersize.
+  gtls and ossl driver used a default buffersize of 8KiB to store received
+  TLS packets. When tls read returned more than buffersize, the additional
+  buffer was not processed until new data arrived on the socket again.
+  TLS RFCs require up to 16KiB+1 buffer size for a single TLS record.
+  closes https://github.com/rsyslog/rsyslog/issues/3325
+- CI
+  - further improve testbench robustness against slow machines
+  - testbench: add tests for parser.EscapeControlCharacterTab global option
+  - testbench: Updated all expired x.509 certs
+    Closes https://github.com/rsyslog/rsyslog/issues/3348
 ------------------------------------------------------------------------------
 Version 8.40.0 [v8-stable] 2018-12-11
 - mmkubernetes: add support for sslpartialchain for openssl
