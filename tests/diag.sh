@@ -790,8 +790,11 @@ await_lookup_table_reload() {
 # $2 expected nbr of lines, default $NUMMESSAGES
 # $3 timout in seconds
 # options (need to be specified in THIS ORDER if multiple given):
-# --delay ms - if given, delay to use between retries
-# --abort-on-oversize - error_exit if more lines than expected are present
+# --delay ms              -- if given, delay to use between retries
+# --abort-on-oversize     -- error_exit if more lines than expected are present
+# --count-function func   -- function to call to obtain current count
+#                    this permits to override the default predicate and makes
+#                    the wait really universally usable.
 wait_file_lines() {
 	delay=200
 	if [ "$1" == "--delay" ]; then
@@ -803,6 +806,11 @@ wait_file_lines() {
 		abort_oversize="YES"
 		shift
 	fi
+	count_function=
+	if [ "$1" == "--count-function" ]; then
+		count_function="$2"
+		shift 2
+	fi
 	timeout=${3:-$TB_TEST_TIMEOUT}
 	timeoutbegin=$(date +%s)
 	timeoutend=$(( timeoutbegin + timeout ))
@@ -811,14 +819,26 @@ wait_file_lines() {
 	waitlines=${2:-$NUMMESSAGES}
 
 	while true ; do
-		if [ -f "$file" ]; then
-			count=$(wc -l < "$file")
+		count=0
+		if [ "$count_function" == "" ]; then
+			if [ -f "$file" ]; then
+				count=$(wc -l < "$file")
+			fi
+		else
+			count=$($count_function)
 		fi
-		if [ $abort_oversize == "YES" ] && [ ${count:=0} -gt $waitlines ]; then
-			printf 'FAIL: wait_file_lines, too many lines, expected %d, current %s, took %s seconds\n'  $waitlines $count, "$(( $(date +%s) - timeoutbegin ))"
-			error_exit 1
+		if [ ${count} -gt $waitlines ]; then
+			if [ $abort_oversize == "YES" ] && [ ${count} -gt $waitlines ]; then
+				printf 'FAIL: wait_file_lines, too many lines, expected %d, current %s, took %s seconds\n' \
+					$waitlines $count "$(( $(date +%s) - timeoutbegin ))"
+				error_exit 1
+			else
+				printf 'wait_file_lines success, target %d or more lines, have %d, took %d seconds\n' \
+					"$waitlines" $count "$(( $(date +%s) - timeoutbegin ))"
+				return
+			fi
 		fi
-		if [ ${count:=0} -eq $waitlines ]; then
+		if [ ${count} -eq $waitlines ]; then
 			echo wait_file_lines success, have $waitlines lines, took $(( $(date +%s) - timeoutbegin )) seconds
 			break
 		else
@@ -831,8 +851,9 @@ wait_file_lines() {
 			fi
 		fi
 	done
-	unset count
 }
+
+
 
 
 # wait until seq_check succeeds. This is used to synchronize various
