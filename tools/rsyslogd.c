@@ -1225,6 +1225,11 @@ static void
 hdlr_sighup(void)
 {
 	bHadHUP = 1;
+	/* at least on FreeBSD we seem not to necessarily awake the main thread.
+	 * So let's do it explicitely.
+	 */
+	dbgprintf("awaking mainthread on HUP\n");
+	pthread_kill(mainthread, SIGTTIN);
 }
 
 static void
@@ -1939,7 +1944,6 @@ mainloop(void)
 	do {
 		processImInternal();
 		wait_timeout();
-
 		if(bChildDied) {
 			reapChild();
 			bChildDied = 0;
