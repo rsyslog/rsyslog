@@ -1,12 +1,10 @@
 #!/bin/bash
 # rgerhards, 2011-04-04
 # This file is part of the rsyslog project, released  under ASL 2.0
-echo ===============================================================================
-echo \[sndrcv_tls_anon_hostname.sh\]: testing sending and receiving via TLS with anon auth using hostname SNI
-
-# uncomment for debugging support:
 . ${srcdir:=.}/diag.sh init
+export NUMMESSAGES=25000
 # start up the instances
+# uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
@@ -53,23 +51,17 @@ $ActionSendStreamDriverAuthMode anon
 *.*	@@localhost:'$PORT_RCVR'
 ' 2
 startup 2
-# may be needed by TLS (once we do it): sleep 30
 
 # now inject the messages into instance 2. It will connect to instance 1,
 # and that instance will record the data.
-tcpflood -m25000 -i1
-sleep 5 # make sure all data is received in input buffers
+tcpflood -m$NUMMESSAGES -i1
+wait_file_lines
 # shut down sender when everything is sent, receiver continues to run concurrently
-# may be needed by TLS (once we do it): sleep 60
 shutdown_when_empty 2
 wait_shutdown 2
 # now it is time to stop the receiver as well
 shutdown_when_empty
 wait_shutdown
 
-# may be needed by TLS (once we do it): sleep 60
-# do the final check
-seq_check 1 25000
-
-unset PORT_RCVR # TODO: move to exit_test()?
+seq_check 1 $NUMMESSAGES
 exit_test

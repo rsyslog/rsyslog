@@ -32,7 +32,6 @@ module(load="../plugins/omrelp/.libs/omrelp")
 action(type="omrelp" protocol="tcp" target="127.0.0.1" port="'$PORT_RCVR'" rebindinterval="1")
 ' 2
 startup 2
-# may be needed by TLS (once we do it): sleep 30
 
 # now inject the messages into instance 2. It will connect to instance 1,
 # and that instance will record the data.

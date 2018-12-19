@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd interface for GnuTLS.
  *
- * Copyright (C) 2007-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright (C) 2007-2018 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -538,11 +538,34 @@ gtlsRecordRecv(nsd_gtls_t *pThis)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+	DBGPRINTF("gtlsRecordRecv: start\n");
+
 	lenRcvd = gnutls_record_recv(pThis->sess, pThis->pszRcvBuf, NSD_GTLS_MAX_RCVBUF);
 	if(lenRcvd >= 0) {
+		DBGPRINTF("gtlsRecordRecv: gnutls_record_recv received %zd bytes\n", lenRcvd);
 		pThis->lenRcvBuf = lenRcvd;
 		pThis->ptrRcvBuf = 0;
+
+		/* Check for additional data in SSL buffer */
+		size_t stBytesLeft = gnutls_record_check_pending(pThis->sess);
+		if (stBytesLeft > 0 ){
+			DBGPRINTF("gtlsRecordRecv: %zd Bytes pending after gnutls_record_recv, expand buffer.\n",
+				stBytesLeft);
+			/* realloc buffer size and preserve char content */
+			CHKmalloc(pThis->pszRcvBuf = realloc(pThis->pszRcvBuf, NSD_GTLS_MAX_RCVBUF+stBytesLeft));
+
+			/* 2nd read will read missing bytes from the current SSL Packet */
+			lenRcvd = gnutls_record_recv(pThis->sess, pThis->pszRcvBuf+NSD_GTLS_MAX_RCVBUF, stBytesLeft);
+			if(lenRcvd > 0) {
+				DBGPRINTF("gtlsRecordRecv: 2nd SSL_read received %zd bytes\n",
+					(NSD_GTLS_MAX_RCVBUF+lenRcvd));
+				pThis->lenRcvBuf = NSD_GTLS_MAX_RCVBUF+lenRcvd;
+			} else {
+				goto sslerr;
+			}
+		}
 	} else if(lenRcvd == GNUTLS_E_AGAIN || lenRcvd == GNUTLS_E_INTERRUPTED) {
+sslerr:
 		pThis->rtryCall = gtlsRtry_recv;
 		dbgprintf("GnuTLS receive requires a retry (this most probably is OK and no error condition)\n");
 		ABORT_FINALIZE(RS_RET_RETRY);
@@ -1448,6 +1471,7 @@ CheckConnection(nsd_t __attribute__((unused)) *pNsd)
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
+	dbgprintf("CheckConnection for %p\n", pNsd);
 	return nsd_ptcp.CheckConnection(pThis->pTcp);
 }
 

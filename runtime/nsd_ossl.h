@@ -25,7 +25,7 @@
 
 #include "nsd.h"
 
-#define NSD_OSSL_MAX_RCVBUF 8 * 1024 /* max size of buffer for message reception */
+#define NSD_OSSL_MAX_RCVBUF 16 * 1024 + 1/* TLS RFC 8449: max size of buffer for message reception */
 
 typedef enum {
 	osslRtry_None = 0,	/**< no call needs to be retried */

@@ -83,6 +83,9 @@ Add(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp)
 
 	ISOBJ_TYPE_assert(pThis, nsdsel_ossl);
 	ISOBJ_TYPE_assert(pNsdOSSL, nsd_ossl);
+
+DBGPRINTF("Add on nsd %p:\n", pNsdOSSL);
+
 	if(pNsdOSSL->iMode == 1) {
 		if(waitOp == NSDSEL_RD && osslHasRcvInBuffer(pNsdOSSL)) {
 			++pThis->iBufferRcvReady;
@@ -197,6 +200,8 @@ IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
 
 	ISOBJ_TYPE_assert(pThis, nsdsel_ossl);
 	ISOBJ_TYPE_assert(pNsdOSSL, nsd_ossl);
+
+DBGPRINTF("nsdsel_ossl IsReady EINTR\n");
 	if(pNsdOSSL->iMode == 1) {
 		if(waitOp == NSDSEL_RD && osslHasRcvInBuffer(pNsdOSSL)) {
 			*pbIsReady = 1;
