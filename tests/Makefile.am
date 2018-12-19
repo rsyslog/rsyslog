@@ -322,7 +322,6 @@ TESTS +=  \
 	include-obj-outside-control-flow-vg.sh \
 	include-obj-in-if-vg.sh \
 	include-obj-text-vg.sh \
-	queue-encryption-disk_keyfile-vg.sh \
 	rscript_parse_json-vg.sh \
 	rscript_backticks-vg.sh \
 	rscript_backticks_empty_envvar-vg.sh \
@@ -360,6 +359,10 @@ TESTS +=  \
 	threadingmq.sh \
 	threadingmqaq.sh \
 	rscript_trim-vg.sh
+if ENABLE_LIBGCRYPT
+TESTS +=  \
+	queue-encryption-disk_keyfile-vg.sh
+endif # ENABLE_LIBGCRYPT
 endif # HAVE_VALGRIND
 endif # ENABLE_DEFAULT_TESTS
 
