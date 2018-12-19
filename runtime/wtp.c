@@ -437,7 +437,7 @@ if(dbgTimeoutToStderr) {
 	pthread_cond_broadcast(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
 	pthread_cleanup_pop(1); /* unlock mutex */
 	if(dbgTimeoutToStderr) {
-		fprintf(stderr, "rsyslog debug: %s: worker exiting\n", wtiGetDbgHdr(pWti));
+		fprintf(stderr, "rsyslog debug: %p: worker exiting\n", pWti);
 	}
 	pthread_exit(0);
 }
