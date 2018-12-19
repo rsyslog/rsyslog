@@ -1898,9 +1898,9 @@ case $1 in
 			exit 2
 		fi
 		export RSYSLOG_DYNNAME="rstb_$(./test_id $(basename $0))"
-		export RSYSLOG2_OUT_LOG=rsyslog2.out.log # TODO: remove
-		export RSYSLOG_OUT_LOG=rsyslog.out.log # TODO: remove
-		export RSYSLOG_PIDBASE="rsyslog" # TODO: remove
+		export RSYSLOG_OUT_LOG="${RSYSLOG_DYNNAME}.out.log"
+		export RSYSLOG2_OUT_LOG="${RSYSLOG_DYNNAME}_2.out.log"
+		export RSYSLOG_PIDBASE="${RSYSLOG_DYNNAME}:" # also used by instance 2!
 		export IMDIAG_PORT=13500
 		export IMDIAG_PORT2=13501
 		export TCPFLOOD_PORT=13514
