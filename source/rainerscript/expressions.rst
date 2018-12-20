@@ -22,4 +22,4 @@ suggest to use "!=" or "<>". Both are exactly the same and are provided
 so that you can pick whichever you like best. So inquality of a and b
 should be tested as "a <> b". The "not" operator should be reserved to
 cases where it actually is needed to form a complex boolean expression.
-In those cases, parenthesis are highly recommended.
+In those cases, parentheses are highly recommended.
