@@ -3,7 +3,7 @@
 . $srcdir/diag.sh check-inotify
 . ${srcdir:=.}/diag.sh init
 export IMFILEINPUTFILES="10"
-export IMFILECHECKTIMEOUT="20"
+export IMFILECHECKTIMEOUT="60"
 
 generate_conf
 add_conf '

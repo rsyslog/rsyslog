@@ -3,7 +3,7 @@
 . ${srcdir:=.}/diag.sh init
 export IMFILEINPUTFILES="8"
 export IMFILEINPUTFILESSTEPS="5"
-export IMFILECHECKTIMEOUT="5"
+export IMFILECHECKTIMEOUT="15"
 # generate input files first. Note that rsyslog processes it as
 # soon as it start up (so the file should exist at that point).
 

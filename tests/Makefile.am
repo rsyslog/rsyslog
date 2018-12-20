@@ -1735,7 +1735,6 @@ EXTRA_DIST= \
 	badqi.sh \
 	bad_qi/dbq.qi \
 	execonlyonce.sh \
-	testsuites/execonlyonce.data \
 	execonlywhenprevsuspended.sh \
 	execonlywhenprevsuspended2.sh \
 	execonlywhenprevsuspended3.sh \

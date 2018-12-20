@@ -6,9 +6,7 @@
 # have arrived.
 # The once interval must be set to 3 seconds in the config file.
 # added 2009-11-12 by Rgerhards
-# This file is part of the rsyslog project, released  under GPLv3
-echo ===============================================================================
-echo \[execonlyonce.sh\]: test for the $ActionExecOnlyOnceEveryInterval directive
+# This file is part of the rsyslog project, released  under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
@@ -17,25 +15,20 @@ $MainMsgQueueTimeoutShutdown 10000
 $InputTCPServerRun '$TCPFLOOD_PORT'
 
 $template outfmt,"%msg:F,58:2%\n"
-template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!
+template(name="dynfile" type="string" string="'$RSYSLOG_OUT_LOG'")
 $ActionExecOnlyOnceEveryInterval 3
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
 startup
 tcpflood -m10 -i1
-# now wait until the interval definitely expires
-sleep 4 # one more than the once inerval!
+# now wait until the interval definitely expires (at least we hope so...)
+sleep 5
 # and inject another couple of messages
 tcpflood -m10 -i100
-shutdown_when_empty # shut down rsyslogd when done processing messages
+shutdown_when_empty
 wait_shutdown
 
-# now we need your custom logic to see if the result is equal to the
-# expected result
-cmp $RSYSLOG_OUT_LOG testsuites/execonlyonce.data
-if [ $? -eq 1 ]
-then
-	echo "ERROR, output not as expected"
-	exit 1
-fi
+export EXPECTED="00000001
+00000100"
+cmp_exact
 exit_test

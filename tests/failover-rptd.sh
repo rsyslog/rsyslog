@@ -1,23 +1,21 @@
 #!/bin/bash
-# This file is part of the rsyslog project, released under GPLv3
-echo ===============================================================================
-echo \[failover-rptd.sh\]: rptd test for failover functionality
+# rptd test for failover functionality
+# This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+NUMMESSAGES=5000
 generate_conf
 add_conf '
 $RepeatedMsgReduction on
 
 $template outfmt,"%msg:F,58:2%\n"
 # note: the target server shall not be available!
-:msg, contains, "msgnum:" @@127.0.0.1:13514
+:msg, contains, "msgnum:" @@127.0.0.1:'$TCPFLOOD_PORT'
 $ActionExecOnlyWhenPreviousIsSuspended on
-& ./'"${RSYSLOG_OUT_LOG}"';outfmt
+& ./'$RSYSLOG_OUT_LOG';outfmt
 '
 startup
-injectmsg  0 5000
-echo doing shutdown
+injectmsg 0 $NUMMESSAGES
 shutdown_when_empty
-echo wait on shutdown
 wait_shutdown 
-seq_check  0 4999
+seq_check
 exit_test

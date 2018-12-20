@@ -3,7 +3,7 @@
 # This test tests imfile endmsg.regex.
 . ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh check-inotify
-export IMFILECHECKTIMEOUT="20"
+export IMFILECHECKTIMEOUT="60"
 export IMFILELASTINPUTLINES="6"
 
 generate_conf

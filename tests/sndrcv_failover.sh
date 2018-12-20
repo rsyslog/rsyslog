@@ -12,6 +12,7 @@
 # uncomment for debugging support:
 # start up the instances
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
+NUMMESSAGES=50000
 export DEAD_PORT=4  # a port unassigned by IANA and very unlikely to be used
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
@@ -29,7 +30,6 @@ startup
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
 generate_conf 2
-export TCPFLOOD_PORT="$(get_free_port)" # TODO: move to diag.sh
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
 # this listener is for message generation by the test framework!
@@ -45,8 +45,8 @@ startup 2
 
 # now inject the messages into instance 2. It will connect to instance 1,
 # and that instance will record the data.
-tcpflood -m50000 -i1
-sleep 5 # make sure all data is received in input buffers
+tcpflood -m$NUMMESSAGES -i1
+wait_file_lines
 # shut down sender when everything is sent, receiver continues to run concurrently
 shutdown_when_empty 2
 wait_shutdown 2
@@ -55,9 +55,7 @@ shutdown_when_empty
 wait_shutdown
 
 # do the final check
-seq_check 1 50000
-
-unset PORT_RCVR # TODO: move to exit_test()?
+seq_check 1 $NUMMESSAGES
 
 ls -l ${RSYSLOG_DYNNAME}.empty
 if [[ -s ${RSYSLOG_DYNNAME}.empty ]] ; then

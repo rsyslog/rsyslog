@@ -54,6 +54,7 @@
 #include "operatingstate.h"
 #include "net.h"
 #include "rsconf.h"
+#include "queue.h"
 
 /* some defaults */
 #ifndef DFLT_NETSTRM_DRVR
@@ -201,6 +202,10 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "internalmsg.ratelimit.burst", eCmdHdlrPositiveInt, 0 },
 	{ "errormessagestostderr.maxnumber", eCmdHdlrPositiveInt, 0 },
 	{ "shutdown.enable.ctlc", eCmdHdlrBinary, 0 },
+	{ "default.action.queue.timeoutshutdown", eCmdHdlrInt, 0 },
+	{ "default.action.queue.timeoutactioncompletion", eCmdHdlrInt, 0 },
+	{ "default.action.queue.timeoutenqueue", eCmdHdlrInt, 0 },
+	{ "default.action.queue.timeoutworkerthreadshutdown", eCmdHdlrInt, 0 },
 	{ "debug.files", eCmdHdlrArray, 0 },
 	{ "debug.whitelist", eCmdHdlrBinary, 0 }
 };
@@ -1385,6 +1390,14 @@ glblDoneLoadCnf(void)
 		        loadConf->globals.umask = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "shutdown.enable.ctlc")) {
 		        glblPermitCtlC = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "default.action.queue.timeoutshutdown")) {
+			actq_dflt_toQShutdown = cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "default.action.queue.timeoutactioncompletion")) {
+			actq_dflt_toActShutdown = cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "default.action.queue.timeoutenqueue")) {
+			actq_dflt_toEnq = cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "default.action.queue.timeoutworkerthreadshutdown")) {
+			actq_dflt_toWrkShutdown = cnfparamvals[i].val.d.n;
 		} else {
 			dbgprintf("glblDoneLoadCnf: program error, non-handled "
 			  "param '%s'\n", paramblk.descr[i].name);
