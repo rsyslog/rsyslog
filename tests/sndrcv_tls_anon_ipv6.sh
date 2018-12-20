@@ -36,10 +36,12 @@ export RSYSLOG_DEBUGLOG="log2"
 generate_conf 2
 export TCPFLOOD_PORT="$(get_free_port)" # TODO: move to diag.sh
 add_conf '
-# certificates
-$DefaultNetstreamDriverCAFile testsuites/x.509/ca.pem
-$DefaultNetstreamDriverCertFile testsuites/x.509/client-cert.pem
-$DefaultNetstreamDriverKeyFile testsuites/x.509/client-key.pem
+global(
+	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
+	defaultNetstreamDriverCertFile="'$srcdir/tls-certs/cert.pem'"
+	defaultNetstreamDriverKeyFile="'$srcdir/tls-certs/key.pem'"
+	defaultNetstreamDriver="gtls"
+)
 
 # Note: no TLS for the listener, this is for tcpflood!
 $ModLoad ../plugins/imtcp/.libs/imtcp
