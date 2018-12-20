@@ -1,5 +1,5 @@
 rsyslog code style
-=================
+==================
 
 **Note**: code style is still under construction. This guide lists
 some basic style requirements.
