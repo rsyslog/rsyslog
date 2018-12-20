@@ -1,5 +1,12 @@
 ------------------------------------------------------------------------------
 Version 8.41.0 [v8-stable] 2019-01-22
+- omclickhouse: new output module for clickhouse
+  This output module adds the posibility to send
+  INSERT querys to a Clickhouse database. See doc for details.
+  The messages are sent via a REST interface.
+  This commit also adds support of the testbench
+  for clickhouse tests, as well as  various tests.
+  Closes https://github.com/rsyslog/rsyslog/issues/2272
 - bugfix tls subsystem: Receiver hang due to insufficient TLS buffersize.
   gtls and ossl driver used a default buffersize of 8KiB to store received
   TLS packets. When tls read returned more than buffersize, the additional
