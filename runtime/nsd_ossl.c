@@ -221,34 +221,48 @@ int verify_callback(int status, X509_STORE_CTX *store)
 	char szdbgdata2[256];
 
 	if(status == 0) {
-		dbgprintf("verify_callback: certificate validation failed!\n");
-
+		/* Retrieve all needed pointers */
 		X509 *cert = X509_STORE_CTX_get_current_cert(store);
 		int depth = X509_STORE_CTX_get_error_depth(store);
 		int err = X509_STORE_CTX_get_error(store);
+		SSL* ssl = X509_STORE_CTX_get_ex_data(store, SSL_get_ex_data_X509_STORE_CTX_idx());
+		int iVerifyMode = SSL_get_verify_mode(ssl);
+
+		dbgprintf("verify_callback: Certificate validation failed, Mode (%d)!\n", iVerifyMode);
+
 		X509_NAME_oneline(X509_get_issuer_name(cert), szdbgdata1, sizeof(szdbgdata1));
 		X509_NAME_oneline(RSYSLOG_X509_NAME_oneline(cert), szdbgdata2, sizeof(szdbgdata2));
 
-		/* Log Warning only on EXPIRED */
-		if (err == X509_V_OK || err == X509_V_ERR_CERT_HAS_EXPIRED) {
-			LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
-				"Certificate warning at depth: %d \n\t"
-				"issuer  = %s\n\t"
-				"subject = %s\n\t"
-				"err %d:%s",
-				depth, szdbgdata1, szdbgdata2, err, X509_verify_cert_error_string(err));
+		if (iVerifyMode != SSL_VERIFY_NONE) {
+			/* TODO: Create setting:
+			*	permitExpiredCerts="on|off|warn"
+			* Log Warning when EXPIRED cert only
+			*/
+			if (err == X509_V_OK || err == X509_V_ERR_CERT_HAS_EXPIRED) {
+				LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
+					"Certificate warning at depth: %d \n\t"
+					"issuer  = %s\n\t"
+					"subject = %s\n\t"
+					"err %d:%s",
+					depth, szdbgdata1, szdbgdata2, err, X509_verify_cert_error_string(err));
 
-			/* Set Status to OK*/
-			status = 1;
+				/* Set Status to OK*/
+				status = 1;
+			} else {
+				LogError(0, RS_RET_NO_ERRCODE,
+					"Certificate error at depth: %d \n\t"
+					"issuer  = %s\n\t"
+					"subject = %s\n\t"
+					"err %d:%s",
+					depth, szdbgdata1, szdbgdata2, err, X509_verify_cert_error_string(err));
+			}
 		} else {
-			LogError(0, RS_RET_NO_ERRCODE,
-				"Certificate error at depth: %d \n\t"
+			dbgprintf("verify_callback: Certificate validation DISABLED but Error at depth: %d \n\t"
 				"issuer  = %s\n\t"
 				"subject = %s\n\t"
-				"err %d:%s",
-				depth, szdbgdata1, szdbgdata2, err, X509_verify_cert_error_string(err));
+				"err %d:%s\n", depth, szdbgdata1, szdbgdata2,
+				err, X509_verify_cert_error_string(err));
 		}
-
 	}
 
 	return status;
@@ -531,7 +545,7 @@ osslInitSession(nsd_ossl_t *pThis) /* , nsd_ossl_t *pServer) */
 	}
 
 	if (pThis->authMode != OSSL_AUTH_CERTANON) {
-		dbgprintf("osslInitSession: enable certificate checking\n");
+		dbgprintf("osslInitSession: enable certificate checking (Mode=%d)n", pThis->authMode);
 		/* Enable certificate valid checking */
 		SSL_set_verify(pThis->ssl, SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
 		SSL_set_verify_depth(pThis->ssl, 4);
@@ -984,6 +998,8 @@ SetAuthMode(nsd_t *pNsd, uchar *mode)
 		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
 	}
 
+	dbgprintf("SetAuthMode: Set Mode %s/%d\n", mode, pThis->authMode);
+
 /* TODO: clear stored IDs! */
 
 finalize_it:
@@ -1307,9 +1323,9 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	}
 
 	/* If we reach this point, we are in TLS mode */
-	CHKiRet(osslInitSession(pNew));
 	pNew->authMode = pThis->authMode;
 	pNew->pPermPeers = pThis->pPermPeers;
+	CHKiRet(osslInitSession(pNew));
 
 	/* We now do the handshake */
 	CHKiRet(osslHandshakeCheck(pNew));

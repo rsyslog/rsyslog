@@ -41,9 +41,9 @@ generate_conf 2
 export TCPFLOOD_PORT="$(get_free_port)"
 add_conf '
 global(	
-	defaultNetstreamDriverCAFile="'$srcdir/testsuites/x.509/ca.pem'"
-	defaultNetstreamDriverCertFile="'$srcdir/testsuites/x.509/client-cert.pem'"
-	defaultNetstreamDriverKeyFile="'$srcdir/testsuites/x.509/client-key.pem'"
+	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
+	defaultNetstreamDriverCertFile="'$srcdir/tls-certs/cert.pem'"
+	defaultNetstreamDriverKeyFile="'$srcdir/tls-certs/key.pem'"
 	defaultNetstreamDriver="ossl"
 	debug.whitelist="off"
 	debug.files=["rainerscript.c", "ruleset.c"]
