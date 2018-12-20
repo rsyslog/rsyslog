@@ -183,6 +183,9 @@ generate_conf() {
 	if [ "$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT" == "" ]; then
 		RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT="60000"
 	fi
+	if [ "$RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN" == "" ]; then
+		RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN="20000"
+	fi
 	export TCPFLOOD_PORT="$(get_free_port)"
 	if [ "$1" == "" ]; then
 		export TESTCONF_NM="${RSYSLOG_DYNNAME}_" # this basename is also used by instance 2!
@@ -192,7 +195,8 @@ generate_conf() {
 		mkdir $RSYSLOG_DYNNAME.spool
 	fi
 	echo 'module(load="../plugins/imdiag/.libs/imdiag")
-global(inputs.timeout.shutdown="'$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT'")
+global(inputs.timeout.shutdown="'$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT'"
+       default.action.queue.timeoutshutdown="'$RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN'")
 $IMDiagListenPortFileName '$RSYSLOG_DYNNAME.imdiag$1.port'
 $IMDiagServerRun 0
 

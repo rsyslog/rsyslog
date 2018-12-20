@@ -82,6 +82,13 @@ DEFobjCurrIf(statsobj)
 unsigned int iOverallQueueSize = 0;
 #endif
 
+/* overridable default values (via global config) */
+int actq_dflt_toQShutdown = 0;		/* queue shutdown */
+int actq_dflt_toActShutdown = 1000;	/* action shutdown (in phase 2) */
+int actq_dflt_toEnq = 2000;		/* timeout for queue enque */
+int actq_dflt_toWrkShutdown = 60000;	/* timeout for worker thread shutdown */
+
+
 /* forward-definitions */
 static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg);
 static rsRetVal qqueueChkPersist(qqueue_t *pThis, int nUpdates);
@@ -1495,10 +1502,10 @@ qqueueSetDefaultsActionQueue(qqueue_t *pThis)
 	pThis->iMaxFileSize = 1024*1024;
 	pThis->iPersistUpdCnt = 0;		/* persist queue info every n updates */
 	pThis->bSyncQueueFiles = 0;
-	pThis->toQShutdown = 0;			/* queue shutdown */
-	pThis->toActShutdown = 1000;		/* action shutdown (in phase 2) */
-	pThis->toEnq = 2000;			/* timeout for queue enque */
-	pThis->toWrkShutdown = 60000;		/* timeout for worker thread shutdown */
+	pThis->toQShutdown = actq_dflt_toQShutdown;	/* queue shutdown */
+	pThis->toActShutdown = actq_dflt_toActShutdown;	/* action shutdown (in phase 2) */
+	pThis->toEnq = actq_dflt_toEnq;			/* timeout for queue enque */
+	pThis->toWrkShutdown = actq_dflt_toWrkShutdown;	/* timeout for worker thread shutdown */
 	pThis->iMinMsgsPerWrkr = -1;		/* minimum messages per worker needed to start a new one */
 	pThis->bSaveOnShutdown = 1;		/* save queue on shutdown (when DA enabled)? */
 	pThis->sizeOnDiskMax = 0;		/* unlimited */
