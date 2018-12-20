@@ -405,6 +405,49 @@ TESTS +=  \
 	mmanon_random_cons_128_ipembedded.sh
 endif # if ENABLE_MMANON
 
+if ENABLE_CLICKHOUSE_TESTS
+TESTS +=  \
+	clickhouse-start.sh \
+	clickhouse-basic.sh \
+	clickhouse-load.sh \
+	clickhouse-bulk.sh \
+	clickhouse-bulk-load.sh \
+	clickhouse-limited-batch.sh \
+	clickhouse-select.sh \
+	clickhouse-errorfile.sh \
+	clickhouse-wrong-quotation-marks.sh \
+	clickhouse-wrong-template-option.sh \
+	clickhouse-wrong-insert-syntax.sh
+
+clickhouse-basic.log: clickhouse-start.log
+clickhouse-load.log: clickhouse-basic.log
+clickhouse-bulk.log: clickhouse-load.log
+clickhouse-bulk-load.log: clickhouse-bulk.log
+clickhouse-limited-batch.log: clickhouse-bulk-load.log
+clickhouse-select.log: clickhouse-limited-batch.log
+clickhouse-errorfile.log: clickhouse-select.log
+clickhouse-wrong-quotation-marks.log: clickhouse-errorfile.log
+clickhouse-wrong-template-option.log: clickhouse-wrong-quotation-marks.log
+clickhouse-wrong-insert-syntax.log: clickhouse-wrong-template-option.log
+
+if HAVE_VALGRIND
+TESTS +=  \
+	clickhouse-basic-vg.sh \
+	clickhouse-load-vg.sh \
+	clickhouse-bulk-vg.sh \
+	clickhouse-bulk-load-vg.sh
+
+clickhouse-basic-vg.log: clickhouse-wrong-insert-syntax.log
+clickhouse-load-vg.log: clickhouse-basic-vg.log
+clickhouse-bulk-vg.log: clickhouse-load-vg.log
+clickhouse-bulk-load-vg.log: clickhouse-bulk-vg.log
+endif # VALGRIND
+
+TESTS += clickhouse-stop.sh
+endif # CLICKHOUSE_TESTS
+
+
+
 if ENABLE_ELASTICSEARCH_TESTS
 TESTS +=  \
 	es-basic-server.sh \
@@ -1402,6 +1445,22 @@ EXTRA_DIST= \
 	incltest_dir_empty_wildcard.sh \
 	incltest_dir_wildcard.sh \
 	testsuites/es.yml \
+	clickhouse-start.sh \
+	clickhouse-stop.sh \
+	clickhouse-basic.sh \
+	clickhouse-load.sh \
+	clickhouse-bulk.sh \
+	clickhouse-bulk-load.sh \
+	clickhouse-limited-batch.sh \
+	clickhouse-select.sh \
+	clickhouse-wrong-quotation-marks.sh \
+	clickhouse-wrong-template-option.sh \
+	clickhouse-errorfile.sh \
+	clickhouse-wrong-insert-syntax.sh \
+	clickhouse-basic-vg.sh \
+	clickhouse-load-vg.sh \
+	clickhouse-bulk-vg.sh \
+	clickhouse-bulk-load-vg.sh \
 	es_response_get_msgnum.py \
 	elasticsearch-error-format-check.py \
 	es-basic-es6.0.sh \
@@ -1919,6 +1978,7 @@ EXTRA_DIST= \
 	pgsql-template-cnf6-vg.sh \
 	pgsql-actq-mt-withpause-vg.sh \
 	../devtools/prep-mysql-db.sh \
+	../devtools/prepare_clickhouse.sh \
 	mmkubernetes-basic.sh \
 	mmkubernetes-basic-vg.sh \
 	mmkubernetes_test_server.py \
