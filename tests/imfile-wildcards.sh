@@ -4,7 +4,7 @@
 . $srcdir/diag.sh check-inotify
 export IMFILEINPUTFILES="10"
 export IMFILELASTINPUTLINES="3"
-export IMFILECHECKTIMEOUT="20"
+export IMFILECHECKTIMEOUT="60"
 
 generate_conf
 add_conf '

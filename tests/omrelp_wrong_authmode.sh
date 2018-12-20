@@ -8,7 +8,10 @@ module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="13514" ruleset="ruleset")
 
 ruleset(name="ruleset") {
-	action(type="omrelp" target="127.0.0.1" port="10514" tls="on" tls.authMode="INVALID_AUTH_MODE" tls.caCert="tls-certs/ca.pem" tls.myCert="tls-certs/cert.pem" tls.myPrivKey="tls-certs/key.pem" tls.permittedPeer=["rsyslog-test-root-ca"])
+	action(type="omrelp" target="127.0.0.1" port="'$TCPFLOOD_PORT'"
+	tls="on" tls.authMode="INVALID_AUTH_MODE" tls.caCert="tls-certs/ca.pem"
+	tls.myCert="tls-certs/cert.pem" tls.myPrivKey="tls-certs/key.pem"
+	tls.permittedPeer=["rsyslog-test-root-ca"])
 }
 
 action(type="omfile" file="'$RSYSLOG_OUT_LOG'")

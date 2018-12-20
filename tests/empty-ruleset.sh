@@ -12,13 +12,12 @@ input(type="imtcp" port="'$TCPFLOOD_PORT'" ruleset="real")
 input(type="imtcp" port="'$TCPFLOOD_PORT2'" ruleset="empty")
 
 $template outfmt,"%msg:F,58:2%\n"
-template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!
 
 ruleset(name="empty") {
 }
 
 ruleset(name="real") {
-	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+	action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 }
 '
 startup

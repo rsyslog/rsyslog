@@ -186,6 +186,9 @@ generate_conf() {
 	if [ "$RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN" == "" ]; then
 		RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN="20000"
 	fi
+	if [ "$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE" == "" ]; then
+		RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE="20000"
+	fi
 	export TCPFLOOD_PORT="$(get_free_port)"
 	if [ "$1" == "" ]; then
 		export TESTCONF_NM="${RSYSLOG_DYNNAME}_" # this basename is also used by instance 2!
@@ -196,7 +199,8 @@ generate_conf() {
 	fi
 	echo 'module(load="../plugins/imdiag/.libs/imdiag")
 global(inputs.timeout.shutdown="'$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT'"
-       default.action.queue.timeoutshutdown="'$RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN'")
+       default.action.queue.timeoutshutdown="'$RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN'"
+       default.action.queue.timeoutEnqueue="'$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE'")
 $IMDiagListenPortFileName '$RSYSLOG_DYNNAME.imdiag$1.port'
 $IMDiagServerRun 0
 
@@ -1080,17 +1084,19 @@ error_exit() {
 	error_stats $1 # Report error to rsyslog testbench stats
 	do_cleanup
 
+	exitval=$1
 	if [ "$TEST_STATUS" == "unreliable" ] && [ "$1" -ne 100 ]; then
 		# TODO: log github issue
 		printf 'Test flagged as unreliable, exiting with SKIP. Original exit code was %d\n' "$1"
 		printf 'GitHub ISSUE: %s\n' "$TEST_GITHUB_ISSUE"
-		exit 77
+		exitval=77
 	else
 		if [ "$1" -eq 177 ]; then
-			exit 77
+			exitval=77
 		fi
-		exit $1
 	fi
+	printf '%s Test %s FAILED (took %s seconds)\n' "$(tb_timestamp)" "$0" "$(( $(date +%s) - TB_STARTTEST ))"
+	exit $exitval
 }
 
 

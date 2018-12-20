@@ -27,8 +27,6 @@ add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/omprog/.libs/omprog")
 
-input(type="imtcp" port="'$TCPFLOOD_PORT'")
-
 template(name="outfmt" type="string" string="%msg%\n")
 
 main_queue(
@@ -51,7 +49,7 @@ main_queue(
 }
 '
 startup
-tcpflood -m$NUMMESSAGES
+injectmsg 0 $NUMMESSAGES
 
 # Issue some HUP signals to cause the output file to be reopened during
 # writing (not a complete test of this feature, but at least we check it

@@ -22,11 +22,12 @@
 # left as an excercise for future (devel) releases. -- rgerhards, 2009-11-11
 #
 # added 2009-11-11 by Rgerhards
-# This file is part of the rsyslog project, released  under GPLv3
-# uncomment for debugging support:
+# This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-# start up the instances
+# uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
+
+# start up the instances
 export RSYSLOG_DEBUGLOG="log"
 startup $1_rcvr.conf 
 export RSYSLOG_DEBUGLOG="log2"

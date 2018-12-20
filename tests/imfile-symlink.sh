@@ -8,7 +8,7 @@
 . $srcdir/diag.sh check-inotify
 export IMFILEINPUTFILES="10"
 export IMFILELASTINPUTLINES="3"
-export IMFILECHECKTIMEOUT="20"
+export IMFILECHECKTIMEOUT="60"
 
 # generate input files first. Note that rsyslog processes it as
 # soon as it start up (so the file should exist at that point).

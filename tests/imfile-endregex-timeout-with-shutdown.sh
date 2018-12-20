@@ -2,7 +2,7 @@
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh check-inotify-only
-export IMFILECHECKTIMEOUT="30"
+export IMFILECHECKTIMEOUT="60"
 
 generate_conf
 add_conf '
