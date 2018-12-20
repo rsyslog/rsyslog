@@ -7,12 +7,19 @@ Version 8.41.0 [v8-stable] 2019-01-22
   This commit also adds support of the testbench
   for clickhouse tests, as well as  various tests.
   Closes https://github.com/rsyslog/rsyslog/issues/2272
+- bugfix ossl TLS driver: fixed authentication mode anon
+  authentication mode "anon" was not properly supported in ossl TLS
+  driver; if selected, did still require a full certificate.
+  closes: https://github.com/rsyslog/rsyslog/issues/3037
 - bugfix tls subsystem: Receiver hang due to insufficient TLS buffersize.
   gtls and ossl driver used a default buffersize of 8KiB to store received
   TLS packets. When tls read returned more than buffersize, the additional
   buffer was not processed until new data arrived on the socket again.
   TLS RFCs require up to 16KiB+1 buffer size for a single TLS record.
   closes https://github.com/rsyslog/rsyslog/issues/3325
+- testbench bugfix: TLS syslog tests for "anon" mode were broken
+  They did not detect when "anon" mode was not properly supported by the
+  drivers.
 - CI
   - further improve testbench robustness against slow machines
   - testbench: add tests for parser.EscapeControlCharacterTab global option
