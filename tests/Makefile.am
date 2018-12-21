@@ -52,6 +52,78 @@ check_PROGRAMS += journal_print
 endif
 TESTS = $(TESTRUNS)
 
+if ENABLE_ELASTICSEARCH_TESTS_MINIMAL
+TESTS +=  \
+	es-basic.sh \
+	es-basic-es6.0.sh \
+	es-basic-bulk.sh
+es-basic-es6.0.log: es-basic.log
+es-basic-bulk.log: es-basic-es6.0.log
+if HAVE_VALGRIND
+TESTS += \
+	es-basic-vg.sh \
+	es-basic-vgthread.sh
+es-basic-vg.log: es-basic-bulk.log
+es-basic-vgthread.log: es-basic-vg.log
+# for next if block:
+es-basic-server.log: es-basic-vgthread.log
+endif
+endif
+
+if ENABLE_ELASTICSEARCH_TESTS
+TESTS +=  \
+	es-basic-server.sh \
+	es-execOnlyWhenPreviousSuspended.sh \
+	es-maxbytes-bulk.sh \
+	es-basic-errfile-empty.sh \
+	es-basic-errfile-popul.sh \
+	es-bulk-errfile-empty.sh \
+	es-bulk-errfile-popul.sh \
+	es-writeoperation.sh
+
+es-basic-server.log: es-basic-bulk.log
+es-execOnlyWhenPreviousSuspended.log: es-basic-server.log
+es-maxbytes-bulk.log: es-execOnlyWhenPreviousSuspended.log
+es-basic-errfile-empty.log: es-maxbytes-bulk.log
+es-basic-errfile-popul.log: es-basic-errfile-empty.log
+es-bulk-errfile-empty.log: es-basic-errfile-popul.log
+es-bulk-errfile-popul.log: es-bulk-errfile-empty.log
+es-writeoperation.log: es-bulk-errfile-popul.log
+
+if ENABLE_IMPSTATS
+TESTS +=  \
+	es-basic-ha.sh \
+	es-bulk-retry.sh
+
+es-basic-ha.log: es-writeoperation.log
+es-bulk-retry.log: es-basic-ha.log
+endif
+if ENABLE_IMFILE
+TESTS +=  \
+	es-bulk-errfile-popul-def-format.sh \
+	es-bulk-errfile-popul-erronly.sh \
+	es-bulk-errfile-popul-erronly-interleaved.sh \
+	es-bulk-errfile-popul-def-interleaved.sh
+
+es-bulk-errfile-popul-def-format.log: es-bulk-retry.log
+es-bulk-errfile-popul-erronly.log: es-bulk-errfile-popul-def-format.log
+es-bulk-errfile-popul-erronly-interleaved.log: es-bulk-errfile-popul-erronly.log
+es-bulk-errfile-popul-def-interleaved.log: es-bulk-errfile-popul-erronly-interleaved.log
+endif
+if HAVE_VALGRIND
+TESTS +=  \
+	es-basic-bulk-vg.sh \
+	es-basic-ha-vg.sh
+
+es-basic-bulk-vg.log: es-writeoperation.log
+es-basic-bulk-vg.log: es-bulk-retry.log
+es-basic-bulk-vg.log: es-bulk-errfile-popul-def-interleaved.log
+es-basic-ha-vg.log: es-basic-bulk-vg.log
+endif
+endif # if ENABLE_ELASTICSEARCH_TESTS
+
+
+
 if ENABLE_DEFAULT_TESTS
 TESTS +=  \
 	operatingstate-basic.sh \
@@ -292,7 +364,7 @@ TESTS +=  \
 	lookup_table_rscript_reload.sh \
 	lookup_table_rscript_reload_without_stub.sh \
 	include-obj-text-from-file.sh \
-	multiple_lookup_tables.sh
+	multiple_lookup_tables.sh \
 	parsertest-parse1.sh \
 	parsertest-parse1-udp.sh \
 	parsertest-parse2.sh \
@@ -429,6 +501,7 @@ clickhouse-errorfile.log: clickhouse-select.log
 clickhouse-wrong-quotation-marks.log: clickhouse-errorfile.log
 clickhouse-wrong-template-option.log: clickhouse-wrong-quotation-marks.log
 clickhouse-wrong-insert-syntax.log: clickhouse-wrong-template-option.log
+clickhouse-stop.log: clickhouse-wrong-insert-syntax.log
 
 if HAVE_VALGRIND
 TESTS +=  \
@@ -441,64 +514,12 @@ clickhouse-basic-vg.log: clickhouse-wrong-insert-syntax.log
 clickhouse-load-vg.log: clickhouse-basic-vg.log
 clickhouse-bulk-vg.log: clickhouse-load-vg.log
 clickhouse-bulk-load-vg.log: clickhouse-bulk-vg.log
+clickhouse-stop.log: clickhouse-bulk-load-vg.log
 endif # VALGRIND
 
 TESTS += clickhouse-stop.sh
 endif # CLICKHOUSE_TESTS
 
-
-
-if ENABLE_ELASTICSEARCH_TESTS
-TESTS +=  \
-	es-basic-server.sh \
-	es-execOnlyWhenPreviousSuspended.sh \
-	es-maxbytes-bulk.sh \
-	es-basic-errfile-empty.sh \
-	es-basic-errfile-popul.sh \
-	es-bulk-errfile-empty.sh \
-	es-bulk-errfile-popul.sh \
-	es-writeoperation.sh
-
-es-basic-server.log: es-basic-bulk.log
-es-execOnlyWhenPreviousSuspended: es-basic-server.log
-es-maxbytes-bulk.log: es-execOnlyWhenPreviousSuspended.log
-es-basic-errfile-empty.log: es-maxbytes-bulk.log
-es-basic-errfile-popul.log: es-basic-errfile-empty.log
-es-bulk-errfile-empty.log: es-basic-errfile-popul.log
-es-bulk-errfile-popul.log: es-bulk-errfile-empty.log
-es-writeoperation.log: es-bulk-errfile-popul.log
-
-if ENABLE_IMPSTATS
-TESTS +=  \
-	es-basic-ha.sh \
-	es-bulk-retry.sh
-
-es-basic-ha.log: es-writeoperation.log
-es-bulk-retry.log: es-basic-ha.log
-endif
-if ENABLE_IMFILE
-TESTS +=  \
-	es-bulk-errfile-popul-def-format.sh \
-	es-bulk-errfile-popul-erronly.sh \
-	es-bulk-errfile-popul-erronly-interleaved.sh \
-	es-bulk-errfile-popul-def-interleaved.sh
-
-es-bulk-errfile-popul-def-format.log: es-bulk-retry.log
-es-bulk-errfile-popul-erronly.log: es-bulk-errfile-popul-def-format.log
-es-bulk-errfile-popul-erronly-interleaved.log: es-bulk-errfile-popul-erronly.log
-es-bulk-errfile-popul-def-interleaved.log: es-bulk-errfile-popul-erronly-interleaved.log
-endif
-if HAVE_VALGRIND
-TESTS +=  \
-	es-basic-bulk-vg.sh \
-	es-basic-ha-vg.sh
-
-es-basic-bulk-vg.log: es-writeoperation.log
-es-basic-bulk-vg.log: es-bulk-retry.log
-es-basic-bulk-vg.log: es-bulk-errfile-popul-def-interleaved.log
-es-basic-ha-vg.log: es-basic-bulk-vg.log
-endif
-endif # if ENABLE_ELASTICSEARCH_TESTS
 
 if ENABLE_LIBFAKETIME
 TESTS +=  \
@@ -578,6 +599,8 @@ mysql-actq-mt-withpause.log: mysql-actq-mt.log
 action-tx-single-processing.log: mysql-actq-mt-withpause.log
 action-tx-errfile.log: action-tx-single-processing.log
 
+mysqld-stop.log: action-tx-errfile.log
+
 if HAVE_VALGRIND
 TESTS +=  \
 	mysql-basic-vg.sh \
@@ -588,6 +611,7 @@ mysql-asyn-vg.log: mysql-basic-vg.log
 mysql-actq-mt-withpause-vg.log: mysql-asyn-vg.log
 
 libdbi-basic.log: mysql-actq-mt-withpause-vg.log # for next block!
+mysqld-stop.log: mysql-actq-mt-withpause-vg.log
 endif
 
 if ENABLE_OMLIBDBI # we piggy-back on MYSQL_TESTS as we need the same environment
@@ -596,10 +620,12 @@ TESTS +=  \
 	libdbi-asyn.sh
 libdbi-basic.log: action-tx-errfile.log
 libdbi-asyn.log: libdbi-basic.log
+mysqld-stop.log: libdbi-asyn.log
 if HAVE_VALGRIND
 TESTS +=  \
 	libdbi-basic-vg.sh
 libdbi-basic-vg.log: libdbi-asyn.log
+mysqld-stop.log: libdbi-basic-vg.log
 endif
 endif
 TESTS += mysqld-stop.sh
@@ -700,10 +726,24 @@ TESTS += \
 #	sndrcv_kafka_failresume.sh \
 # needs properly to much mempory on arm devices!
 #	sndrcv_kafka_multi.sh
+omkafka.log: kafka-selftest.log
+imkafka.log: omkafka.log
+imkafka-backgrounded.log: imkafka.log
+imkafka-config-err-ruleset.log: imkafka-backgrounded.log
+imkafka-config-err-param.log: imkafka-config-err-ruleset.log
+imkafka-hang-on-no-kafka.log: imkafka-config-err-param.log
+imkafka-hang-other-action-on-no-kafka.log: imkafka-hang-on-no-kafka.log
+imkafka_multi_single.log: imkafka-hang-other-action-on-no-kafka.log
+sndrcv_kafka.log: imkafka_multi_single.log
+sndrcv_kafka_multi_topics.log: sndrcv_kafka.log
+
 if HAVE_VALGRIND
 TESTS += \
 	omkafka-vg.sh \
 	imkafka-vg.sh
+
+omkafka-vg.log: sndrcv_kafka_multi_topics.log
+imkafka-vg.log: omkafka-vg.log
 endif
 endif
 endif
@@ -770,24 +810,6 @@ TESTS +=  \
 	rscript_hash64-vg.sh
 endif # ENABLE_FMHASH
 endif # HAVE_VALGRIND
-endif
-
-if ENABLE_ELASTICSEARCH_TESTS_MINIMAL
-TESTS +=  \
-	es-basic.sh \
-	es-basic-es6.0.sh \
-	es-basic-bulk.sh
-es-basic-es6.0.log: es-basic.log
-es-basic-bulk.log: es-basic-es6.0.log
-if HAVE_VALGRIND
-TESTS += \
-	es-basic-vg.sh \
-	es-basic-vgthread.sh
-es-basic-vg.log: es-basic-bulk.log
-es-basic-vgthread.log: es-basic-vg.log
-# for next if block:
-es-basic-server.log: es-basic-vgthread.log
-endif
 endif
 
 if ENABLE_MMPSTRUCDATA
