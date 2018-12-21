@@ -847,7 +847,7 @@ wait_file_lines() {
 			fi
 		fi
 		if [ ${count} -eq $waitlines ]; then
-			echo wait_file_lines success, have $waitlines lines, took $(( $(date +%s) - timeoutbegin )) seconds
+			echo wait_file_lines success, have $waitlines lines, took $(( $(date +%s) - timeoutbegin )) seconds, file "$file"
 			break
 		else
 			if [ $(date +%s) -ge $timeoutend  ]; then
