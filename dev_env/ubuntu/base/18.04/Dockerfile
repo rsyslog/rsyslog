@@ -75,6 +75,16 @@ RUN	echo "deb http://download.opensuse.org/repositories/network:/messaging:/zero
 	libfastjson-dev \
 	liblogging-stdlog-dev \
 	liblognorm-dev
+# clang devel version
+RUN	echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic main" > /etc/apt/sources.list.d/llvm8.list && \
+	echo "deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic main" >> /etc/apt/sources.list.d/llvm8.list && \
+	wget -nv -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
+	apt-get update -y && \
+	apt-get install -y \
+	clang-8 \
+	lldb-8 \
+	lld-8
+
 RUN	sed -i 's/<yandex>/<yandex>\n    <core_dump><size_limit>0<\/size_limit><\/core_dump>/g' \
 		/etc/clickhouse-server/config.xml
 WORKDIR	/home/devel
