@@ -109,6 +109,10 @@ CODESTARTobjDestruct(netstrms)
 		free(pThis->pszDrvrAuthMode);
 		pThis->pszDrvrAuthMode = NULL;
 	}
+	if(pThis->pszDrvrPermitExpiredCerts != NULL) {
+		free(pThis->pszDrvrPermitExpiredCerts);
+		pThis->pszDrvrPermitExpiredCerts = NULL;
+	}
 	if(pThis->pBaseDrvrName != NULL) {
 		free(pThis->pBaseDrvrName);
 		pThis->pBaseDrvrName = NULL;
@@ -186,6 +190,8 @@ SetDrvrAuthMode(netstrms_t *pThis, uchar *mode)
 finalize_it:
 	RETiRet;
 }
+
+
 /* return the driver auth mode
  * We use non-standard calling conventions because it makes an awful lot
  * of sense here.
@@ -196,6 +202,31 @@ GetDrvrAuthMode(netstrms_t *pThis)
 {
 	ISOBJ_TYPE_assert(pThis, netstrms);
 	return pThis->pszDrvrAuthMode;
+}
+
+
+/* return the driver permitexpiredcerts mode
+ * We use non-standard calling conventions because it makes an awful lot
+ * of sense here.
+ * alorbach, 2018-12-21
+ */
+static uchar*
+GetDrvrPermitExpiredCerts(netstrms_t *pThis)
+{
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	return pThis->pszDrvrPermitExpiredCerts;
+}
+
+/* set the driver permitexpiredcerts mode -- alorbach, 2018-12-20
+ */
+static rsRetVal
+SetDrvrPermitExpiredCerts(netstrms_t *pThis, uchar *mode)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	CHKmalloc(pThis->pszDrvrPermitExpiredCerts = (uchar*)strdup((char*)mode));
+finalize_it:
+	RETiRet;
 }
 
 
@@ -267,7 +298,7 @@ CreateStrm(netstrms_t *pThis, netstrm_t **ppStrm)
 	 */
 	memcpy(&pStrm->Drvr, &pThis->Drvr, sizeof(pThis->Drvr));
 	pStrm->pNS = pThis;
-	
+
 	*ppStrm = pStrm;
 
 finalize_it:
@@ -300,6 +331,8 @@ CODESTARTobjQueryInterface(netstrms)
 	pIf->GetDrvrMode = GetDrvrMode;
 	pIf->SetDrvrAuthMode = SetDrvrAuthMode;
 	pIf->GetDrvrAuthMode = GetDrvrAuthMode;
+	pIf->SetDrvrPermitExpiredCerts = SetDrvrPermitExpiredCerts;
+	pIf->GetDrvrPermitExpiredCerts = GetDrvrPermitExpiredCerts;
 	pIf->SetDrvrGnutlsPriorityString = SetDrvrGnutlsPriorityString;
 	pIf->GetDrvrGnutlsPriorityString = GetDrvrGnutlsPriorityString;
 	pIf->SetDrvrPermPeers = SetDrvrPermPeers;

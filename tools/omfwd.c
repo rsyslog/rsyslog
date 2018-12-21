@@ -80,6 +80,7 @@ typedef struct _instanceData {
 	uchar 	*tplName;	/* name of assigned template */
 	uchar *pszStrmDrvr;
 	uchar *pszStrmDrvrAuthMode;
+	uchar *pszStrmDrvrPermitExpiredCerts;
 	permittedPeers_t *pPermPeers;
 	int iStrmDrvrMode;
 	char	*target;
@@ -139,7 +140,8 @@ typedef struct configSettings_s {
 	uchar *pszStrmDrvr; /* name of the stream driver to use */
 	int iStrmDrvrMode; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
 	int bResendLastOnRecon; /* should the last message be re-sent on a successful reconnect? */
-	uchar *pszStrmDrvrAuthMode; /* authentication mode to use */
+	uchar *pszStrmDrvrAuthMode;		/* authentication mode to use */
+	uchar *pszStrmDrvrPermitExpiredCerts;	/* control how to handly expired certificates */
 	int iTCPRebindInterval;	/* support for automatic re-binding (load balancers!). 0 - no rebind */
 	int iUDPRebindInterval;	/* support for automatic re-binding (load balancers!). 0 - no rebind */
 	int bKeepAlive;
@@ -395,6 +397,7 @@ BEGINfreeInstance
 CODESTARTfreeInstance
 	free(pData->pszStrmDrvr);
 	free(pData->pszStrmDrvrAuthMode);
+	free(pData->pszStrmDrvrPermitExpiredCerts);
 	free(pData->port);
 	free(pData->networkNamespace);
 	free(pData->target);
@@ -749,6 +752,11 @@ static rsRetVal TCPSendInit(void *pvData)
 		if(pData->pszStrmDrvrAuthMode != NULL) {
 			CHKiRet(netstrm.SetDrvrAuthMode(pWrkrData->pNetstrm, pData->pszStrmDrvrAuthMode));
 		}
+		if(pData->pszStrmDrvrPermitExpiredCerts != NULL) {
+			CHKiRet(netstrm.SetDrvrPermitExpiredCerts(pWrkrData->pNetstrm,
+				pData->pszStrmDrvrPermitExpiredCerts));
+		}
+
 		if(pData->pPermPeers != NULL) {
 			CHKiRet(netstrm.SetDrvrPermPeers(pWrkrData->pNetstrm, pData->pPermPeers));
 		}
@@ -1109,6 +1117,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->tcp_framingDelimiter = '\n';
 	pData->pszStrmDrvr = NULL;
 	pData->pszStrmDrvrAuthMode = NULL;
+	pData->pszStrmDrvrPermitExpiredCerts = NULL;
 	pData->iStrmDrvrMode = 0;
 	pData->iRebindInterval = 0;
 	pData->bKeepAlive = 0;
@@ -1213,6 +1222,8 @@ CODESTARTnewActInst
 			pData->iStrmDrvrMode = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "streamdriverauthmode")) {
 			pData->pszStrmDrvrAuthMode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "streamdriver.permitexpiredcerts")) {
+			pData->pszStrmDrvrPermitExpiredCerts = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "streamdriverpermittedpeers")) {
 			uchar *start, *str;
 			uchar *p;

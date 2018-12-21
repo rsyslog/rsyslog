@@ -60,6 +60,7 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*GetRemoteIP)(nsd_t *pThis, prop_t **ip);
 	rsRetVal (*SetMode)(nsd_t *pThis, int mode); /* sets a driver specific mode - see driver doc for details */
 	rsRetVal (*SetAuthMode)(nsd_t *pThis, uchar*); /* sets a driver specific mode - see driver doc for details */
+	rsRetVal (*SetPermitExpiredCerts)(nsd_t *pThis, uchar*); /* sets a driver specific permitexpiredcerts mode */
 	rsRetVal (*SetPermPeers)(nsd_t *pThis, permittedPeers_t*); /* sets driver permitted peers for auth needs */
 	rsRetVal (*CheckConnection)(nsd_t *pThis);	/* This is a trick mostly for plain tcp syslog */
 	rsRetVal (*GetSock)(nsd_t *pThis, int *pSock);

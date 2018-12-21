@@ -903,11 +903,14 @@ endif
 if ENABLE_GNUTLS
 TESTS +=  \
 	imtcp_conndrop_tls.sh \
+	sndrcv_tls_anon_rebind.sh \
 	sndrcv_tls_anon_hostname.sh \
 	sndrcv_tls_anon_ipv4.sh \
+	sndrcv_tls_anon_ipv6.sh \
 	sndrcv_tls_priorityString.sh \
-	imtcp-tls-basic.sh \
-	sndrcv_tls_anon_rebind.sh
+	sndrcv_tls_certvalid.sh \
+	sndrcv_tls_certvalid_expired.sh \
+	imtcp-tls-basic.sh
 if HAVE_VALGRIND
 TESTS += \
 	imtcp-tls-basic-vg.sh \
@@ -922,6 +925,8 @@ TESTS +=  \
 	sndrcv_tls_ossl_anon_ipv4.sh \
 	sndrcv_tls_ossl_anon_ipv6.sh \
 	sndrcv_tls_ossl_anon_rebind.sh \
+	sndrcv_tls_ossl_certvalid.sh \
+	sndrcv_tls_ossl_certvalid_expired.sh \
 	imtcp-tls-ossl-x509valid.sh \
 	imtcp-tls-ossl-x509name.sh \
 	imtcp-tls-ossl-x509fingerprint.sh \
@@ -1190,6 +1195,8 @@ EXTRA_DIST= \
 	testsuites/x.509/client-key.pem \
 	testsuites/x.509/machine-cert.pem \
 	testsuites/x.509/machine-key.pem \
+	testsuites/x.509/client-expired-cert.pem \
+	testsuites/x.509/client-expired-key.pem \
 	cfg.sh \
 	cfg1.cfgtest \
 	cfg1.testin \
@@ -1506,6 +1513,8 @@ EXTRA_DIST= \
 	sndrcv_tls_ossl_anon_ipv4.sh \
 	sndrcv_tls_ossl_anon_ipv6.sh \
 	sndrcv_tls_ossl_anon_rebind.sh \
+	sndrcv_tls_ossl_certvalid.sh \
+	sndrcv_tls_ossl_certvalid_expired.sh \
 	imtcp-tls-ossl-x509valid.sh \
 	imtcp-tls-ossl-x509name.sh \
 	imtcp-tls-ossl-x509fingerprint.sh \
@@ -1945,6 +1954,8 @@ EXTRA_DIST= \
 	sndrcv_tls_anon_ipv4.sh \
 	sndrcv_tls_anon_ipv6.sh \
 	sndrcv_tls_priorityString.sh \
+	sndrcv_tls_certvalid.sh \
+	sndrcv_tls_certvalid_expired.sh \
 	omtcl.sh \
 	omtcl.tcl \
 	pmsnare-default.sh \

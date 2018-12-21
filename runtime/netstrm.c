@@ -200,6 +200,17 @@ SetDrvrAuthMode(netstrm_t *pThis, uchar *mode)
 }
 
 
+/* set the driver permitexpiredcerts mode -- alorbach, 2018-12-20
+ */
+static rsRetVal
+SetDrvrPermitExpiredCerts(netstrm_t *pThis, uchar *mode)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	iRet = pThis->Drvr.SetPermitExpiredCerts(pThis->pDrvrData, mode);
+	RETiRet;
+}
+
 /* set the driver's permitted peers -- rgerhards, 2008-05-19 */
 static rsRetVal
 SetDrvrPermPeers(netstrm_t *pThis, permittedPeers_t *pPermPeers)
@@ -385,6 +396,7 @@ CODESTARTobjQueryInterface(netstrm)
 	pIf->GetRemAddr = GetRemAddr;
 	pIf->SetDrvrMode = SetDrvrMode;
 	pIf->SetDrvrAuthMode = SetDrvrAuthMode;
+	pIf->SetDrvrPermitExpiredCerts = SetDrvrPermitExpiredCerts;
 	pIf->SetDrvrPermPeers = SetDrvrPermPeers;
 	pIf->CheckConnection = CheckConnection;
 	pIf->GetSock = GetSock;
