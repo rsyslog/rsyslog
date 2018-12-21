@@ -31,6 +31,6 @@ wait_file_lines $RSYSLOG_DYNNAME.syncfile
 shutdown_when_empty
 wait_shutdown 
 es_getdata $NUMMESSAGES $ES_PORT
-seq_check  0 9999
+seq_check
 cleanup_elasticsearch
 exit_test
