@@ -7,6 +7,13 @@ Version 8.41.0 [v8-stable] 2019-01-22
   This commit also adds support of the testbench
   for clickhouse tests, as well as  various tests.
   Closes https://github.com/rsyslog/rsyslog/issues/2272
+- tls(ossl/gtls): add new Option "StreamDriver.PermitExpiredCerts"
+  The new Option can have one of the following values:
+  on = Expired certificates are allowed
+  off = Expired certificates are not allowed
+  warn = Expired certificates are allowed but warning will be logged (Default)
+  Includes necessary tests to validate new code.
+  closes https://github.com/rsyslog/rsyslog/issues/3364
 - bugfix ossl TLS driver: fixed authentication mode anon
   authentication mode "anon" was not properly supported in ossl TLS
   driver; if selected, did still require a full certificate.
