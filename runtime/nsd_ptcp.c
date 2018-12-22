@@ -175,6 +175,24 @@ finalize_it:
 }
 
 
+/* Set the PermitExpiredCerts mode. not supported in ptcp
+ * alorbach, 2018-12-20
+ */
+static rsRetVal
+SetPermitExpiredCerts(nsd_t __attribute__((unused)) *pNsd, uchar *mode)
+{
+	DEFiRet;
+	if(mode != NULL) {
+		LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: permitexpiredcerts settingnot supported by "
+				"ptcp netstream driver");
+		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* Set priorityString
  * PascalWithopf 2017-08-18 */
 static rsRetVal
@@ -594,6 +612,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		CHKiRet(pNS->Drvr.SetSock(pNewNsd, sock));
 		CHKiRet(pNS->Drvr.SetMode(pNewNsd, netstrms.GetDrvrMode(pNS)));
 		CHKiRet(pNS->Drvr.SetAuthMode(pNewNsd, netstrms.GetDrvrAuthMode(pNS)));
+		CHKiRet(pNS->Drvr.SetPermitExpiredCerts(pNewNsd, netstrms.GetDrvrPermitExpiredCerts(pNS)));
 		CHKiRet(pNS->Drvr.SetPermPeers(pNewNsd, netstrms.GetDrvrPermPeers(pNS)));
 		CHKiRet(pNS->Drvr.SetGnutlsPriorityString(pNewNsd, netstrms.GetDrvrGnutlsPriorityString(pNS)));
 		CHKiRet(netstrms.CreateStrm(pNS, &pNewStrm));
@@ -927,6 +946,7 @@ CODESTARTobjQueryInterface(nsd_ptcp)
 	pIf->SetSock = SetSock;
 	pIf->SetMode = SetMode;
 	pIf->SetAuthMode = SetAuthMode;
+	pIf->SetPermitExpiredCerts = SetPermitExpiredCerts;
 	pIf->SetGnutlsPriorityString = SetGnutlsPriorityString;
 	pIf->SetPermPeers = SetPermPeers;
 	pIf->Rcv = Rcv;

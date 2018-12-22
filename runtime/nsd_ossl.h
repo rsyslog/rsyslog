@@ -55,6 +55,11 @@ struct nsd_ossl_s {
 		OSSL_AUTH_CERTVALID = 2,
 		OSSL_AUTH_CERTANON = 3
 	} authMode;
+	enum {
+		OSSL_EXPIRED_PERMIT = 0,
+		OSSL_EXPIRED_DENY = 1,
+		OSSL_EXPIRED_WARN = 2
+	} permitExpiredCerts;
 	osslRtryCall_t rtryCall;/**< what must we retry? */
 	int rtryOsslErr;	/**< store ssl error code into like SSL_ERROR_WANT_READ or SSL_ERROR_WANT_WRITE */
 	int bIsInitiator;	/**< 0 if socket is the server end (listener), 1 if it is the initiator */

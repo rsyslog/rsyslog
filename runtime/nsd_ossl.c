@@ -227,6 +227,8 @@ int verify_callback(int status, X509_STORE_CTX *store)
 		int err = X509_STORE_CTX_get_error(store);
 		SSL* ssl = X509_STORE_CTX_get_ex_data(store, SSL_get_ex_data_X509_STORE_CTX_idx());
 		int iVerifyMode = SSL_get_verify_mode(ssl);
+		nsd_ossl_t *pThis = (nsd_ossl_t*) SSL_get_ex_data(ssl, 0);
+		assert(pThis != NULL);
 
 		dbgprintf("verify_callback: Certificate validation failed, Mode (%d)!\n", iVerifyMode);
 
@@ -234,21 +236,41 @@ int verify_callback(int status, X509_STORE_CTX *store)
 		X509_NAME_oneline(RSYSLOG_X509_NAME_oneline(cert), szdbgdata2, sizeof(szdbgdata2));
 
 		if (iVerifyMode != SSL_VERIFY_NONE) {
-			/* TODO: Create setting:
-			*	permitExpiredCerts="on|off|warn"
-			* Log Warning when EXPIRED cert only
-			*/
+			/* Handle expired Certificates **/
 			if (err == X509_V_OK || err == X509_V_ERR_CERT_HAS_EXPIRED) {
-				LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
-					"Certificate warning at depth: %d \n\t"
-					"issuer  = %s\n\t"
-					"subject = %s\n\t"
-					"err %d:%s",
-					depth, szdbgdata1, szdbgdata2, err, X509_verify_cert_error_string(err));
+				if (pThis->permitExpiredCerts == OSSL_EXPIRED_PERMIT) {
+					dbgprintf("verify_callback: EXPIRED cert but PERMITTED at depth: %d \n\t"
+						"issuer  = %s\n\t"
+						"subject = %s\n\t"
+						"err %d:%s\n", depth, szdbgdata1, szdbgdata2,
+						err, X509_verify_cert_error_string(err));
 
-				/* Set Status to OK*/
-				status = 1;
+					/* Set Status to OK*/
+					status = 1;
+				}
+				else if (pThis->permitExpiredCerts == OSSL_EXPIRED_WARN) {
+					LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
+						"Certificate EXPIRED warning at depth: %d \n\t"
+						"issuer  = %s\n\t"
+						"subject = %s\n\t"
+						"err %d:%s",
+						depth, szdbgdata1, szdbgdata2,
+						err, X509_verify_cert_error_string(err));
+
+					/* Set Status to OK*/
+					status = 1;
+				}
+				else /* also default - if (pThis->permitExpiredCerts == OSSL_EXPIRED_DENY)*/ {
+					LogError(0, RS_RET_NO_ERRCODE,
+						"Certificate EXPIRED at depth: %d \n\t"
+						"issuer  = %s\n\t"
+						"subject = %s\n\t"
+						"err %d:%s",
+						depth, szdbgdata1, szdbgdata2,
+						err, X509_verify_cert_error_string(err));
+				}
 			} else {
+				/* all other error codes cause failure */
 				LogError(0, RS_RET_NO_ERRCODE,
 					"Certificate error at depth: %d \n\t"
 					"issuer  = %s\n\t"
@@ -257,11 +279,15 @@ int verify_callback(int status, X509_STORE_CTX *store)
 					depth, szdbgdata1, szdbgdata2, err, X509_verify_cert_error_string(err));
 			}
 		} else {
+			/* do not verify certs in ANON mode, just log into debug */
 			dbgprintf("verify_callback: Certificate validation DISABLED but Error at depth: %d \n\t"
 				"issuer  = %s\n\t"
 				"subject = %s\n\t"
 				"err %d:%s\n", depth, szdbgdata1, szdbgdata2,
 				err, X509_verify_cert_error_string(err));
+
+			/* Set Status to OK*/
+			status = 1;
 		}
 	}
 
@@ -810,9 +836,19 @@ osslChkPeerCertValidity(nsd_ossl_t *pThis)
 	iVerErr = SSL_get_verify_result(pThis->ssl);
 	if (iVerErr != X509_V_OK) {
 		if (iVerErr == X509_V_ERR_CERT_HAS_EXPIRED) {
-			LogError(0, RS_RET_CERT_EXPIRED, "not permitted to talk to peer: certificate expired: %s",
-				X509_verify_cert_error_string(iVerErr));
-			ABORT_FINALIZE(RS_RET_CERT_EXPIRED);
+			if (pThis->permitExpiredCerts == OSSL_EXPIRED_DENY) {
+				LogError(0, RS_RET_CERT_EXPIRED,
+					"CertValidity check - not permitted to talk to peer: certificate expired: %s",
+					X509_verify_cert_error_string(iVerErr));
+				ABORT_FINALIZE(RS_RET_CERT_EXPIRED);
+			} else if (pThis->permitExpiredCerts == OSSL_EXPIRED_WARN) {
+				LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
+					"CertValidity check - warning talking to peer: certificate expired: %s",
+					X509_verify_cert_error_string(iVerErr));
+			} else {
+				dbgprintf("osslChkPeerCertValidity: talking to peer: certificate expired: %s",
+					X509_verify_cert_error_string(iVerErr));
+			}/* Else do nothing */
 		} else {
 			LogError(0, RS_RET_CERT_INVALID, "not permitted to talk to peer: "
 				"certificate validation failed: %s", X509_verify_cert_error_string(iVerErr));
@@ -999,6 +1035,41 @@ SetAuthMode(nsd_t *pNsd, uchar *mode)
 	}
 
 	dbgprintf("SetAuthMode: Set Mode %s/%d\n", mode, pThis->authMode);
+
+/* TODO: clear stored IDs! */
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* Set the PermitExpiredCerts mode. For us, the following is supported:
+ * on - fail if certificate is expired
+ * off - ignore expired certificates
+ * warn - warn if certificate is expired
+ * alorbach, 2018-12-20
+ */
+static rsRetVal
+SetPermitExpiredCerts(nsd_t *pNsd, uchar *mode)
+{
+	DEFiRet;
+	nsd_ossl_t *pThis = (nsd_ossl_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_ossl);
+	/* default is set to warn! */
+	if(mode == NULL || !strcasecmp((char*)mode, "warn")) {
+		pThis->permitExpiredCerts = OSSL_EXPIRED_WARN;
+	} else if(!strcasecmp((char*) mode, "off")) {
+		pThis->permitExpiredCerts = OSSL_EXPIRED_DENY;
+	} else if(!strcasecmp((char*) mode, "on")) {
+		pThis->permitExpiredCerts = OSSL_EXPIRED_PERMIT;
+	} else {
+		LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: permitexpiredcerts mode '%s' not supported by "
+				"ossl netstream driver", mode);
+		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+	}
+
+	dbgprintf("SetPermitExpiredCerts: Set Mode %s/%d\n", mode, pThis->permitExpiredCerts);
 
 /* TODO: clear stored IDs! */
 
@@ -1324,8 +1395,12 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 
 	/* If we reach this point, we are in TLS mode */
 	pNew->authMode = pThis->authMode;
+	pNew->permitExpiredCerts = pThis->permitExpiredCerts;
 	pNew->pPermPeers = pThis->pPermPeers;
 	CHKiRet(osslInitSession(pNew));
+
+	/* Store nsd_ossl_t* reference in SSL obj */
+	SSL_set_ex_data(pNew->ssl, 0, pThis);
 
 	/* We now do the handshake */
 	CHKiRet(osslHandshakeCheck(pNew));
@@ -1532,8 +1607,8 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 {
 	DEFiRet;
 	DBGPRINTF("openssl: entering Connect family=%d, device=%s\n", family, device);
-	nsd_ossl_t*pThis = (nsd_ossl_t*) pNsd;
-	nsd_ptcp_t *pPtcp = (nsd_ptcp_t*) pThis->pTcp;
+	nsd_ossl_t* pThis = (nsd_ossl_t*) pNsd;
+	nsd_ptcp_t* pPtcp = (nsd_ptcp_t*) pThis->pTcp;
 
 	BIO *conn;
 
@@ -1570,6 +1645,9 @@ BIO_set_nbio( conn, 1 );
 	SSL_set_connect_state(pThis->ssl); /*sets ssl to work in client mode.*/
 	pThis->sslState = osslClient; /*set Client state */
 	pThis->bHaveSess = 1;
+
+	/* Store nsd_ossl_t* reference in SSL obj */
+	SSL_set_ex_data(pThis->ssl, 0, pThis);
 
 	/* We now do the handshake */
 	iRet = osslHandshakeCheck(pThis);
@@ -1621,6 +1699,7 @@ CODESTARTobjQueryInterface(nsd_ossl)
 	pIf->SetSock = SetSock;
 	pIf->SetMode = SetMode;
 	pIf->SetAuthMode = SetAuthMode;
+	pIf->SetPermitExpiredCerts = SetPermitExpiredCerts;
 	pIf->SetPermPeers =SetPermPeers;
 	pIf->CheckConnection = CheckConnection;
 	pIf->GetRemoteHName = GetRemoteHName;

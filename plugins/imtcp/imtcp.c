@@ -103,6 +103,7 @@ static struct configSettings_s {
 	int bPreserveCase;
 	uchar *gnutlsPriorityString;
 	uchar *pszStrmDrvrAuthMode;
+	uchar *pszStrmDrvrPermitExpiredCerts;
 	uchar *pszInputName;
 	uchar *pszBindRuleset;
 	uchar *lstnIP;			/* which IP we should listen on? */
@@ -144,6 +145,7 @@ struct modConfData_s {
 	uchar *gnutlsPriorityString;
 	uchar *pszStrmDrvrName; /* stream driver to use */
 	uchar *pszStrmDrvrAuthMode; /* authentication mode to use */
+	uchar *pszStrmDrvrPermitExpiredCerts; /* control how to handly expired certificates */
 	struct cnfarray *permittedPeers;
 	sbool configSetViaV2Method;
 	sbool bPreserveCase; /* preserve case of fromhost; true by default */
@@ -166,6 +168,7 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "maxlisteners", eCmdHdlrPositiveInt, 0 },
 	{ "streamdriver.mode", eCmdHdlrNonNegInt, 0 },
 	{ "streamdriver.authmode", eCmdHdlrString, 0 },
+	{ "streamdriver.permitexpiredcerts", eCmdHdlrString, 0 },
 	{ "streamdriver.name", eCmdHdlrString, 0 },
 	{ "permittedpeer", eCmdHdlrArray, 0 },
 	{ "keepalive", eCmdHdlrBinary, 0 },
@@ -378,6 +381,9 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 		if(modConf->pszStrmDrvrAuthMode != NULL) {
 			CHKiRet(tcpsrv.SetDrvrAuthMode(pOurTcpsrv, modConf->pszStrmDrvrAuthMode));
 		}
+		if(modConf->pszStrmDrvrPermitExpiredCerts != NULL) {
+			CHKiRet(tcpsrv.SetDrvrPermitExpiredCerts(pOurTcpsrv, modConf->pszStrmDrvrPermitExpiredCerts));
+		}
 		if(pPermPeersRoot != NULL) {
 			CHKiRet(tcpsrv.SetDrvrPermPeers(pOurTcpsrv, pPermPeersRoot));
 		}
@@ -485,6 +491,7 @@ CODESTARTbeginCnfLoad
 	loadModConf->gnutlsPriorityString = NULL;
 	loadModConf->pszStrmDrvrName = NULL;
 	loadModConf->pszStrmDrvrAuthMode = NULL;
+	loadModConf->pszStrmDrvrPermitExpiredCerts = NULL;
 	loadModConf->permittedPeers = NULL;
 	loadModConf->configSetViaV2Method = 0;
 	loadModConf->bPreserveCase = 1; /* default to true */
@@ -554,6 +561,8 @@ CODESTARTsetModCnf
 			loadModConf->iStrmDrvrMode = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.authmode")) {
 			loadModConf->pszStrmDrvrAuthMode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.permitexpiredcerts")) {
+			loadModConf->pszStrmDrvrPermitExpiredCerts = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.name")) {
 			loadModConf->pszStrmDrvrName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "permittedpeer")) {
@@ -667,6 +676,7 @@ BEGINfreeCnf
 CODESTARTfreeCnf
 	free(pModConf->pszStrmDrvrName);
 	free(pModConf->pszStrmDrvrAuthMode);
+	free(pModConf->pszStrmDrvrPermitExpiredCerts);
 	if(pModConf->permittedPeers != NULL) {
 		cnfarrayContentDestruct(pModConf->permittedPeers);
 		free(pModConf->permittedPeers);

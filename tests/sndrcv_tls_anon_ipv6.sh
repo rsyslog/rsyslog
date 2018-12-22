@@ -3,6 +3,7 @@
 # testing sending and receiving via TLS with anon auth using bare ipv6, no SNI
 # This file is part of the rsyslog project, released  under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+. $srcdir/diag.sh check-ipv6-available
 export NUMMESSAGES=25000
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"

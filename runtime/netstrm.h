@@ -50,6 +50,7 @@ BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*GetRemoteIP)(netstrm_t *pThis, prop_t **ip);
 	rsRetVal (*SetDrvrMode)(netstrm_t *pThis, int iMode);
 	rsRetVal (*SetDrvrAuthMode)(netstrm_t *pThis, uchar*);
+	rsRetVal (*SetDrvrPermitExpiredCerts)(netstrm_t *pThis, uchar*);
 	rsRetVal (*SetDrvrPermPeers)(netstrm_t *pThis, permittedPeers_t*);
 	rsRetVal (*CheckConnection)(netstrm_t *pThis);	/* This is a trick mostly for plain tcp syslog */
 	/* the GetSock() below is a hack to make imgssapi work. In the long term,

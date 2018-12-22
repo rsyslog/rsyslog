@@ -33,6 +33,7 @@ struct netstrms_s {
 	uchar *pDrvrName;	/**< full base driver name (set when driver is loaded) */
 	int iDrvrMode;		/**< current default driver mode */
 	uchar *pszDrvrAuthMode;	/**< current driver authentication mode */
+	uchar *pszDrvrPermitExpiredCerts;/**< current driver setting for handlign expired certs */
 	uchar *gnutlsPriorityString; /**< priorityString for connection */
 	permittedPeers_t *pPermPeers;/**< current driver's permitted peers */
 
@@ -49,9 +50,11 @@ BEGINinterface(netstrms) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetDrvrName)(netstrms_t *pThis, uchar *pszName);
 	rsRetVal (*SetDrvrMode)(netstrms_t *pThis, int iMode);
 	rsRetVal (*SetDrvrAuthMode)(netstrms_t *pThis, uchar*);
+	rsRetVal (*SetDrvrPermitExpiredCerts)(netstrms_t *pThis, uchar*);
 	rsRetVal (*SetDrvrPermPeers)(netstrms_t *pThis, permittedPeers_t*);
 	int      (*GetDrvrMode)(netstrms_t *pThis);
 	uchar*   (*GetDrvrAuthMode)(netstrms_t *pThis);
+	uchar*   (*GetDrvrPermitExpiredCerts)(netstrms_t *pThis);
 	permittedPeers_t* (*GetDrvrPermPeers)(netstrms_t *pThis);
 	rsRetVal (*SetDrvrGnutlsPriorityString)(netstrms_t *pThis, uchar*);
 	uchar*   (*GetDrvrGnutlsPriorityString)(netstrms_t *pThis);
