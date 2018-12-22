@@ -1,5 +1,5 @@
 #!/bin/bash
-# added 2018-04-27 by alorbach
+# added 2018-12-22 by Rainer Gerhards
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=10
@@ -13,7 +13,7 @@ global(	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
 )
 
 module(	load="../plugins/imtcp/.libs/imtcp"
-	StreamDriver.Name="ossl"
+	StreamDriver.Name="gtls"
 	StreamDriver.Mode="1"
 	StreamDriver.AuthMode="x509/fingerprint" 
 	PermittedPeer=["SHA1:5C:C6:62:D5:9D:25:9F:BC:F3:CB:61:FA:D2:B3:8B:61:88:D7:06:C3"]

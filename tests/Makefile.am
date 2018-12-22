@@ -932,6 +932,10 @@ TESTS +=  \
 	sndrcv_tls_priorityString.sh \
 	sndrcv_tls_certvalid.sh \
 	sndrcv_tls_certvalid_expired.sh \
+	imtcp-tls-gtls-x509fingerprint-invld.sh \
+	imtcp-tls-gtls-x509fingerprint.sh \
+	imtcp-tls-gtls-x509name-invld.sh \
+	imtcp-tls-gtls-x509name.sh \
 	imtcp-tls-basic.sh
 if HAVE_VALGRIND
 TESTS += \
@@ -1524,6 +1528,10 @@ EXTRA_DIST= \
 	imtcp-msg-truncation-on-number2.sh \
 	imtcp-NUL.sh \
 	imtcp-NUL-rawmsg.sh \
+	imtcp-tls-gtls-x509fingerprint-invld.sh \
+	imtcp-tls-gtls-x509fingerprint.sh \
+	imtcp-tls-gtls-x509name-invld.sh \
+	imtcp-tls-gtls-x509name.sh \
 	imtcp-tls-basic.sh \
 	imtcp-tls-basic-vg.sh \
 	imtcp_incomplete_frame_at_end.sh \
