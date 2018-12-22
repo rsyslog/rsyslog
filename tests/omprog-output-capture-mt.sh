@@ -24,7 +24,6 @@ export command_line="/usr/bin/stdbuf -oL $srcdir/testsuites/omprog-output-captur
 check_command_available stdbuf
 generate_conf
 add_conf '
-module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/omprog/.libs/omprog")
 
 template(name="outfmt" type="string" string="%msg%\n")
