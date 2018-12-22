@@ -1,9 +1,10 @@
 #!/bin/bash
+# test imptcp with random connection drops
 # This file is part of the rsyslog project, released  under ASL 2.0
 # Copyright (C) 2014 Rainer Gerhards -- 2014-11-14
-echo ====================================================================================
-echo TEST: \[imptcp_conndrop-vg.sh\]: test imptcp with random connection drops
 . ${srcdir:=.}/diag.sh init
+export NUMMESSAGES=10000 # even if it is slow, we use a large number to be
+	# sure to have sufficient connection drops
 generate_conf
 add_conf '
 $MaxMessageSize 10k
@@ -21,10 +22,10 @@ local0.* ?dynfile;outfmt
 '
 startup_vg
 # 100 byte messages to gain more practical data use
-tcpflood -c20 -m50000 -r -d100 -P129 -D
+tcpflood -c20 -m$NUMMESSAGES -r -d100 -P129 -D
 sleep 10 # due to large messages, we need this time for the tcp receiver to settle...
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown_vg    # and wait for it to terminate
 check_exit_vg
-seq_check 0 49999 -E
+seq_check 0 $(( NUMMESSAGES - 1 ))  -E
 exit_test

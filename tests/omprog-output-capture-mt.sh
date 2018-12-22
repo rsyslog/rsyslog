@@ -19,6 +19,13 @@ else
 fi
 
 export command_line="$srcdir/testsuites/omprog-output-capture-mt-bin.py $LINE_LENGTH"
+empty_check() {
+	if [ $(wc -l < "$RSYSLOG_OUT_LOG") -eq $((NUMMESSAGES * 2)) ]; then
+		return 0
+	fi
+	return 1
+}
+export QUEUE_EMPTY_CHECK_FUNC=empty_check
 
 generate_conf
 add_conf '
@@ -57,7 +64,7 @@ issue_HUP
 ./msleep 1000
 issue_HUP
 
-wait_file_lines "$RSYSLOG_OUT_LOG" $((NUMMESSAGES * 2))
+#wait_file_lines "$RSYSLOG_OUT_LOG" $((NUMMESSAGES * 2))
 shutdown_when_empty
 wait_shutdown
 

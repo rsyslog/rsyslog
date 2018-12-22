@@ -142,7 +142,7 @@ if [ "x$CHECK" == "xYES" ]
 then
     set +e  # begin testbench, here we do not want to abort
     devtools/prep-mysql-db.sh  # prepare mysql for testbench
-    make check
+    make -j2 check
     ALL_OK=$?
     if [ -f tests/test-suite.log ]
     then
@@ -158,5 +158,5 @@ then
     #make distcheck
 fi
 
-if [ "x$STAT_AN" == "xYES" ] ; then make clean; CFLAGS="-O2"; ./configure $CONFIG_FLAGS ; fi
+if [ "x$STAT_AN" == "xYES" ] ; then make clean; export CFLAGS="-O2"; ./configure $CONFIG_FLAGS ; fi
 if [ "x$STAT_AN" == "xYES" ] ; then $SCAN_BUILD --use-cc $CC --status-bugs make -j ; fi
