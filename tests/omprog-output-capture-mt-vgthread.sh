@@ -49,7 +49,7 @@ main_queue(
 }
 '
 export RSYSLOGD_EXTRA_PROG="timeout 8m "
-startup
+startup_vgthread
 injectmsg 0 $NUMMESSAGES
 
 # Issue some HUP signals to cause the output file to be reopened during
@@ -60,9 +60,10 @@ issue_HUP
 issue_HUP
 ./msleep 1000
 issue_HUP
-wait_file_lines "$RSYSLOG_OUT_LOG" $((NUMMESSAGES * 2))
+#wait_file_lines "$RSYSLOG_OUT_LOG" $((NUMMESSAGES * 2))
 shutdown_when_empty
-wait_shutdown
+wait_shutdown_vg
+check_exit_vg
 
 line_num=0
 while IFS= read -r line; do

@@ -682,6 +682,7 @@ TESTS +=  \
 	omprog-defaults.sh \
 	omprog-output-capture.sh \
 	omprog-output-capture-mt.sh \
+omprog-output-capture-mt-vgthread.sh \
 	omprog-feedback.sh \
 	omprog-feedback-mt.sh \
 	omprog-feedback-timeout.sh \
@@ -1645,6 +1646,7 @@ EXTRA_DIST= \
 	omprog-defaults-vg.sh \
 	omprog-output-capture.sh \
 	omprog-output-capture-mt.sh \
+omprog-output-capture-mt-vgthread.sh \
 	omprog-output-capture-vg.sh \
 	omprog-feedback.sh \
 	omprog-feedback-mt.sh \
