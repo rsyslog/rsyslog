@@ -2,7 +2,9 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[8.41.0.master],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[8.1901.0.master],[rsyslog@lists.adiscon.com])
+AC_DEFINE(VERSION_YEAR, 19, [year part of real rsyslog version])
+AC_DEFINE(VERSION_MONTH, 1, [monthmontht of real rsyslog version])
 
 # AIXPORT START: Detect the underlying OS
 unamestr=$(uname)
