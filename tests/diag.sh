@@ -1251,6 +1251,9 @@ exit_test() {
 
 	printf '%s Test %s SUCCESFUL (took %s seconds)\n' "$(tb_timestamp)" "$0" "$(( $(date +%s) - TB_STARTTEST ))"
 	echo  -------------------------------------------------------------------------------
+	ps -ef
+	echo NOW ONLY WITH RSYSLOG
+	ps -ef|grep rsyslog
 	exit 0
 }
 
