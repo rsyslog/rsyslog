@@ -1383,6 +1383,7 @@ tryTTYRecover(strm_t *pThis, int err)
 	if(err == ERR_TTYHUP || err == ENXIO || err == EIO) {
 #endif /* __FreeBSD__ */
 		close(pThis->fd);
+		pThis->fd = -1;
 		CHKiRet(doPhysOpen(pThis));
 	}
 
@@ -1441,6 +1442,7 @@ doWriteCall(strm_t *pThis, uchar *pBuf, size_t *pLenBuf)
 			} else if( !pThis->bIsTTY && ( err == ENOTCONN  || err == EIO )) {
 				/* Failure for network file system, thus file needs to be closed and reopened. */
 				close(pThis->fd);
+				pThis->fd = -1;
 				CHKiRet(doPhysOpen(pThis));
 			} else {
 				if(pThis->bIsTTY) {
