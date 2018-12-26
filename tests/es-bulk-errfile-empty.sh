@@ -28,7 +28,7 @@ module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 '
 startup
 injectmsg  0 $NUMMESSAGES
-wait_file_lines $RSYSLOG_DYNNAME.syncfile
+#wait_file_lines $RSYSLOG_DYNNAME.syncfile
 shutdown_when_empty
 wait_shutdown 
 es_getdata $NUMMESSAGES $ES_PORT

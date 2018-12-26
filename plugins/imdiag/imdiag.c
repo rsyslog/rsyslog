@@ -321,6 +321,7 @@ waitMainQEmpty(tcps_sess_t *pSess)
 			++nempty;
 		else
 			nempty = 0;
+fprintf(stderr, "imdiag: wait q_empty: qsize %d nempty %d\n", OverallQueueSize, nempty);
 		if(nempty > max_empty_checks)
 			break;
 		if(iPrint++ % 500 == 0)

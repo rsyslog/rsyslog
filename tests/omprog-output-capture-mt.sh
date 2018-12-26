@@ -58,7 +58,7 @@ issue_HUP
 issue_HUP
 ./msleep 1000
 issue_HUP
-wait_file_lines "$RSYSLOG_OUT_LOG" $((NUMMESSAGES * 2))
+#wait_file_lines "$RSYSLOG_OUT_LOG" $((NUMMESSAGES * 2))
 shutdown_when_empty
 wait_shutdown
 
