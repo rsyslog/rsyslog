@@ -130,14 +130,14 @@ CODESTARTparse
 
 	/* check msg length */
 	p2parse++;
-	if ((p2parse > msgend) || ((msgend - p2parse) < sizeof(uint64))) {
+	if ((p2parse > msgend) || ((msgend - p2parse) < (int)sizeof(uint64))) {
 	    dbgprintf("not a PAN-OS syslog message: too short\n");
 	    ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
 
 	/* check log type */
 	log_type = *((uint64 *)p2parse);
-	for(j = 0; j < NUM_LOG_TYPES; j++) {
+	for(j = 0; j < (int)NUM_LOG_TYPES; j++) {
 	    if ((log_type & log_types[j].mask) == log_types[j].value)
 	        break;
 	}
