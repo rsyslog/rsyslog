@@ -7,26 +7,17 @@
 # (1 second) causes a very low throughput; we need to set a very low error
 # rate to avoid the test lasting too much.
 
-NUMBER_OF_MESSAGES=10000  # number of logs to send
-ERROR_RATE_PERCENT=1      # percentage of logs to be retried
-
-export command_line=`echo $srcdir/testsuites/omprog-feedback-mt-bin.sh $ERROR_RATE_PERCENT`
-
 . ${srcdir:=.}/diag.sh init
+skip_platform "SunOS" "On Solaris, this test causes rsyslog to hang for unknown reasons"
 
-uname
-if [ $(uname) = "SunOS" ] ; then
-    # On Solaris, this test causes rsyslog to hang for unknown reasons
-    echo "Solaris: FIX ME"
-    exit 77
-fi
+NUMMESSAGES=10000       # number of logs to send
+ERROR_RATE_PERCENT=1    # percentage of logs to be retried
+
+export command_line="$srcdir/testsuites/omprog-feedback-mt-bin.sh $ERROR_RATE_PERCENT"
 
 generate_conf
 add_conf '
-module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/omprog/.libs/omprog")
-
-input(type="imtcp" port="'$TCPFLOOD_PORT'")
 
 template(name="outfmt" type="string" string="%msg%\n")
 
@@ -44,21 +35,14 @@ main_queue(
         queue.type="LinkedList"  # use a dedicated queue
         queue.workerThreads="10"  # ...with multiple workers
         queue.size="10000"  # ...high capacity (default is 1000)
-        queue.timeoutShutdown="30000"  # ...and a long shutdown timeout
+        queue.timeoutShutdown="60000"  # ...and a long shutdown timeout
         action.resumeInterval="1"  # retry interval: 1 second
     )
 }
 '
 startup
-tcpflood -m$NUMBER_OF_MESSAGES
+injectmsg 0 $NUMMESSAGES
+wait_file_lines --abort-on-oversize "$RSYSLOG_OUT_LOG" $NUMMESSAGES
 shutdown_when_empty
 wait_shutdown
-
-# Note: we use awk here to remove leading spaces returned by wc on FreeBSD
-line_count=$(wc -l < ${RSYSLOG_OUT_LOG} | awk '{print $1}')
-if [[ $line_count != $NUMBER_OF_MESSAGES ]]; then
-    echo "unexpected line count in omprog script output: $line_count (expected: $NUMBER_OF_MESSAGES)"
-    error_exit 1
-fi
-
 exit_test

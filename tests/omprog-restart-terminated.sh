@@ -7,6 +7,7 @@
 # omprog is going to write to the pipe (to send a message to the
 # program), and when omprog is going to read from the pipe (when it
 # is expecting the program to confirm the last message).
+
 . ${srcdir:=.}/diag.sh init
 check_command_available lsof
 
@@ -38,11 +39,11 @@ cp -f $srcdir/testsuites/omprog-restart-terminated-bin.sh $RSYSLOG_DYNNAME.ompro
 # On Solaris 10, the output of ps is truncated for long process names; use /usr/ucb/ps instead:
 if [[ $(uname) = "SunOS" && $(uname -r) = "5.10" ]]; then
     function get_child_pid {
-        echo $(/usr/ucb/ps -awwx | grep "$RSYSLOG_DYNNAME.[o]mprog-restart-terminated-bin.sh" | awk '{ print $1 }')
+        /usr/ucb/ps -awwx | grep "$RSYSLOG_DYNNAME.[o]mprog-restart-terminated-bin.sh" | awk '{ print $1 }'
     }
 else
     function get_child_pid {
-        echo $(ps -ef | grep "$RSYSLOG_DYNNAME.[o]mprog-restart-terminated-bin.sh" | awk '{ print $2 }')
+        ps -ef | grep "$RSYSLOG_DYNNAME.[o]mprog-restart-terminated-bin.sh" | awk '{ print $2 }'
     }
 fi
 
