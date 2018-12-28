@@ -2,6 +2,9 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
+export ES_PORT=19200
+export NUMMESSAGES=2000 # slow test
+export QUEUE_EMPTY_CHECK_FUNC=es_shutdown_empty_check
 download_elasticsearch
 prepare_elasticsearch
 start_elasticsearch
@@ -21,11 +24,10 @@ if $msg contains "msgnum:" then
 	       searchIndex="rsyslog_testbench")
 '
 startup
-injectmsg  0 10000
+injectmsg
 shutdown_when_empty
 wait_shutdown 
-es_getdata 10000 19200
-
-seq_check  0 9999
+es_getdata
+seq_check
 cleanup_elasticsearch
 exit_test

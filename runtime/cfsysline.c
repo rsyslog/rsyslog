@@ -752,6 +752,7 @@ static rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine)
 	case eCmdHdlrArray:
 	case eCmdHdlrQueueType:
 	default:
+		dbgprintf("error: command handler type %d not implemented in legacy system\n", pThis->eType);
 		iRet = RS_RET_NOT_IMPLEMENTED;
 		goto finalize_it;
 	}

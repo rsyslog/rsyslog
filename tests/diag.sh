@@ -45,6 +45,7 @@
 # 1 - FAIL
 # 77 - SKIP
 # 100 - Testbench failure
+export TB_ERR_TIMEOUT=101
 # 177 - internal state: test failed, but in a way that makes us strongly believe
 #       this is caused by environment. This will lead to exit 77 (SKIP), but report
 #       the failure if failure reporting is active
@@ -74,8 +75,10 @@ export ZOOPIDFILE="$(pwd)/zookeeper.pid"
 #export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 #export RSYSLOG_DEBUGLOG="log"
 TB_TIMEOUT_STARTSTOP=400 # timeout for start/stop rsyslogd in tenths (!) of a second 400 => 40 sec
-TB_TEST_TIMEOUT=90  # number of seconds after which test checks timeout (eg. waits)
 # note that 40sec for the startup should be sufficient even on very slow machines. we changed this from 2min on 2017-12-12
+TB_TEST_TIMEOUT=90  # number of seconds after which test checks timeout (eg. waits)
+TB_TEST_MAX_RUNTIME=500 # maximum runtuime in seconds for a test; testbench will abort test
+			# after that time (iff it has a chance to, not strictly enforced)
 export RSYSLOG_DEBUG_TIMEOUTS_TO_STDERR="on"  # we want to know when we loose messages due to timeouts
 if [ "$TESTTOOL_DIR" == "" ]; then
 	export TESTTOOL_DIR="${srcdir:-.}"
@@ -119,7 +122,7 @@ skip_platform() {
 
 # a consistent format to output testbench timestamps
 tb_timestamp() {
-	date +%H:%M:%S
+	printf '%s[%s] ' "$(date +%H:%M:%S)" "$(( $(date +%s) - TB_STARTTEST ))"
 }
 
 # override the test timeout, but only if the new value is higher
@@ -203,6 +206,7 @@ global(inputs.timeout.shutdown="'$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT'"
        default.action.queue.timeoutEnqueue="'$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE'")
 $IMDiagListenPortFileName '$RSYSLOG_DYNNAME.imdiag$1.port'
 $IMDiagServerRun 0
+$IMDiagAbortTimeout '$TB_TEST_MAX_RUNTIME'
 
 :syslogtag, contains, "rsyslogd"  ./'${RSYSLOG_DYNNAME}$1'.started
 ###### end of testbench instrumentation part, test conf follows:' > ${TESTCONF_NM}$1.conf
@@ -460,7 +464,7 @@ wait_startup() {
 		   error_exit 1
 		fi
 	done
-	echo "rsyslogd$1 startup msg seen, pid " $(cat $RSYSLOG_PIDBASE$1.pid)
+	echo "$(tb_timestamp) rsyslogd$1 startup msg seen, pid " $(cat $RSYSLOG_PIDBASE$1.pid)
 	wait_file_exists $RSYSLOG_DYNNAME.imdiag$1.port
 	eval export IMDIAG_PORT$1=$(cat $RSYSLOG_DYNNAME.imdiag$1.port)
 	eval PORT=$IMDIAG_PORT$1
@@ -500,8 +504,8 @@ startup() {
 # same as startup_vg, BUT we do NOT wait on the startup message!
 startup_vg_waitpid_only() {
 	startup_common "$1" "$2"
-	if [ "x$RS_TESTBENCH_LEAK_CHECK" == "x" ]; then
-	    RS_TESTBENCH_LEAK_CHECK=full
+	if [ "$RS_TESTBENCH_LEAK_CHECK" == "" ]; then
+		RS_TESTBENCH_LEAK_CHECK=full
 	fi
 	LD_PRELOAD=$RSYSLOG_PRELOAD valgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --suppressions=$srcdir/known_issues.supp ${EXTRA_VALGRIND_SUPPRESSIONS:-} --gen-suppressions=all --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=$RS_TESTBENCH_LEAK_CHECK ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$2.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
 	wait_rsyslog_startup_pid $1
@@ -543,8 +547,9 @@ startup_vgthread() {
 
 # inject messages via our inject interface (imdiag)
 injectmsg() {
-	echo injecting $2 messages
-	echo injectmsg $1 $2 $3 $4 | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
+	msgs=${2:-$NUMMESSAGES}
+	echo injecting $msgs messages
+	echo injectmsg ${1:-0} $msgs $3 $4 | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
 }
 
 # inject messages in INSTANCE 2 via our inject interface (imdiag)
@@ -704,12 +709,26 @@ check_journal_testmsg_received() {
 }
 
 # wait for main message queue to be empty. $1 is the instance.
+# we run in a loop to ensure rsyslog is *really* finished when a
+# function for the "finished predicate" is defined. This is done
+# by setting env var QUEUE_EMPTY_CHECK_FUNCTION to the bash
+# function name.
 wait_queueempty() {
-	if [ "$1" == "2" ]; then
-		echo WaitMainQueueEmpty | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
-	else
-		echo WaitMainQueueEmpty | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
-	fi
+	while [ $(date +%s) -le $(( TB_STARTTEST + TB_TEST_MAX_RUNTIME )) ]; do
+		if [ "$1" == "2" ]; then
+			echo WaitMainQueueEmpty | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
+		else
+			echo WaitMainQueueEmpty | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
+		fi
+		if [ "$QUEUE_EMPTY_CHECK_FUNC" == "" ]; then
+			return
+		else
+			if $QUEUE_EMPTY_CHECK_FUNC ; then
+				return
+			fi
+		fi
+	done
+	error_exit $TB_ERR_TIMEOUT
 }
 
 
@@ -1022,6 +1041,9 @@ do_cleanup() {
 #       call it immeditely before termination. This may be used to cleanup
 #       some things or emit additional diagnostic information.
 error_exit() {
+	if [ $1 -eq $TB_ERR_TIMEOUT ]; then
+		printf '%s Test %s exceeded max runtime of %d seconds\n' "$(tb_timestamp)" "$0" $TB_TEST_MAX_RUNTIME
+	fi
 	if [ "$(ls core* 2>/dev/null)" != "" ]; then
 		echo trying to obtain crash location info
 		echo note: this may not be the correct file, check it
@@ -1276,10 +1298,20 @@ get_inode() {
 
 # check if command $1 is available - will exit 77 when not OK
 check_command_available() {
-	command -v $1
-	if [ $? -ne 0 ] ; then
-		echo Testbench requires unavailable command: $1
-		exit 77
+	have_cmd=0
+	if [ "$1" == "timeout" ]; then
+		if timeout --version &>/dev/null ; then
+			have_cmd=1
+		fi
+	else
+		command -v $1
+		if [ $? -eq 0 ]; then
+			have_cmd=1
+		fi
+	fi
+	if [ $have_cmd -eq 0 ] ; then
+		printf 'Testbench requires unavailable command: %s\n' "$1"
+		exit 77 # do NOT error_exit here!
 	fi
 }
 
@@ -1845,8 +1877,22 @@ start_elasticsearch() {
 # $1 - number of records (ES does not return all records unless you tell it explicitely).
 # $2 - ES port
 es_getdata() {
-	curl --silent localhost:${2:-9200}/rsyslog_testbench/_search?size=$1 > $RSYSLOG_DYNNAME.work
+	curl --silent localhost:${2:-$ES_PORT}/rsyslog_testbench/_search?size=${1:-$NUMMESSAGES} > $RSYSLOG_DYNNAME.work
 	python $srcdir/es_response_get_msgnum.py > ${RSYSLOG_OUT_LOG}
+}
+
+# a standard method to support shutdown & queue empty check for a wide range
+# of elasticsearch tests. This works if we assume that ES has delivered messages
+# to the default location.
+es_shutdown_empty_check() {
+	es_getdata $NUMMESSAGES $ES_PORT
+	lines=$(wc -l < "$RSYSLOG_OUT_LOG")
+	if [ "$lines"  -eq $NUMMESSAGES ]; then
+		printf '%s es_shutdown_empty_check: success, have %d lines\n' "$(tb_timestamp)" $lines
+		return 0
+	fi
+	printf '%s es_shutdown_empty_check: have %d lines, expecting %d\n' "$(tb_timestamp)" $lines $NUMMESSAGES
+	return 1
 }
 
 

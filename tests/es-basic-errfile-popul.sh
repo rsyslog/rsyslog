@@ -2,6 +2,8 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
+export ES_PORT=19200
+export NUMMESSAGES=1000 # slow test, thus low number - large number is NOT necessary
 download_elasticsearch
 prepare_elasticsearch
 start_elasticsearch
@@ -37,7 +39,7 @@ module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 				 errorFile="./'${RSYSLOG_DYNNAME}'.errorfile")
 '
 startup
-injectmsg  0 1000
+injectmsg
 shutdown_when_empty
 wait_shutdown 
 if [ ! -f ${RSYSLOG_DYNNAME}.errorfile ]

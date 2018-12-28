@@ -3,6 +3,8 @@
 . ${srcdir:=.}/diag.sh init
 export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
 export ES_PORT=19200
+export NUMMESSAGES=1500 # slow test, thus low number - large number is NOT necessary
+export QUEUE_EMPTY_CHECK_FUNC=es_shutdown_empty_check
 download_elasticsearch
 prepare_elasticsearch
 start_elasticsearch
@@ -21,15 +23,15 @@ module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 				 errorFile="./'${RSYSLOG_DYNNAME}.errorfile'")
 '
 startup
-injectmsg  0 10000
+injectmsg
 shutdown_when_empty
 wait_shutdown 
-es_getdata 10000 $ES_PORT
+es_getdata
 if [ -f ${RSYSLOG_DYNNAME}.errorfile ]
 then
     echo "error: error file exists!"
-    exit 1
+    error_exit 1
 fi
-seq_check  0 9999
+seq_check
 cleanup_elasticsearch
 exit_test

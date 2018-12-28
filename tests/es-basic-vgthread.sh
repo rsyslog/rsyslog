@@ -3,6 +3,7 @@
 . ${srcdir:=.}/diag.sh init
 export ES_PORT=19200
 export NUMMESSAGES=5000 # test is pretty slow, so use a low number
+export QUEUE_EMPTY_CHECK_FUNC=es_shutdown_empty_check
 download_elasticsearch
 prepare_elasticsearch
 start_elasticsearch
@@ -21,18 +22,14 @@ if $msg contains "msgnum:" then {
 	       serverport=`echo $ES_PORT`
 	       template="tpl"
 	       searchIndex="rsyslog_testbench")
-
-	# this action just to count processed messages
-	action(type="omfile" file="'$RSYSLOG_DYNNAME'.syncfile")
 }
 '
 startup_vgthread
-injectmsg 0 $NUMMESSAGES
-wait_file_lines --delay 500 $RSYSLOG_DYNNAME.syncfile $NUMMESSAGES 500
+injectmsg
 shutdown_when_empty
 wait_shutdown_vg 
 check_exit_vg
-es_getdata $NUMMESSAGES $ES_PORT
-seq_check  0 $((NUMMESSAGES - 1))
+es_getdata
+seq_check
 cleanup_elasticsearch
 exit_test
