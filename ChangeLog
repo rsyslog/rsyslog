@@ -39,6 +39,22 @@ Version 8.41.0 [v8-stable] 2019-01-22
     Only system which explicitly enable this CI aid are affected (running in debug
     mode alone is NOT sufficient).
     This is a regression from 8.40.0.
+  - testbench: improve robustness against slow CI, gen. improvements
+    * add an overall timeout value for tests - if running longer,
+      testbench framework tries to FAIL and end test. Note that
+      this is not bullet-proof and not intended to be so.
+    * guard against hanging rsyslog instances via a new imdiag
+      feature to abort after n number of seconds; among others,
+      this guards as against timeout-cancel in CI, which is always
+      pretty hard to diagnose - now we see these errors in test-suite.log
+    * fix a bug in tcp zip test, which actually did not use zip mode
+    * experimnentalls add debug output to better understand
+      shutdown_when_empty operation; goal is to improve understanding
+      and then remove that code again.
+    * improve shutdown predicate for a couple of tests
+    * made travis run make check with two parallel threads, for which
+      we seem ready now. Nevertheless, it's still experimental and we
+      may roll this back if required.
 ------------------------------------------------------------------------------
 Version 8.40.0 [v8-stable] 2018-12-11
 - mmkubernetes: add support for sslpartialchain for openssl
