@@ -84,6 +84,7 @@ typedef struct instanceConf_s {
 	uchar *authBuf;
 	uchar *tplName;
 	sbool useHttps;
+	sbool allowUnsignedCerts;
 	int fdErrFile;
 	uchar *errorFile;
 	sbool bulkmode;
@@ -125,6 +126,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "pwd", eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
 	{ "usehttps", eCmdHdlrBinary, 0 },
+	{ "allowunsignedcerts", eCmdHdlrBinary, 0 },
 	{ "errorfile", eCmdHdlrGetWord, 0 },
 	{ "bulkmode", eCmdHdlrBinary, 0 },
 	{ "maxbytes", eCmdHdlrSize, 0 },
@@ -218,6 +220,7 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tpwd='%s'\n", pData->pwd);
 	dbgprintf("\ttemplate='%s'\n", pData->tplName);
 	dbgprintf("\tusehttps='%d'\n", pData->useHttps);
+	dbgprintf("\tallowunsignedcerts='%d'\n", pData->allowUnsignedCerts);
 	dbgprintf("\terrorFile='%s'\n", pData->errorFile);
 	dbgprintf("\tbulkmode='%d'\n", pData->bulkmode);
 	dbgprintf("\tmaxbytes='%zu'\n", pData->maxbytes);
@@ -562,6 +565,7 @@ setInstParamDefaults(instanceData *const pData)
 	pData->authBuf = NULL;
 	pData->tplName = NULL;
 	pData->useHttps = 1;
+	pData->allowUnsignedCerts = 1;
 	pData->errorFile = NULL;
 	pData->bulkmode = 1;
 	pData->maxbytes = 104857600; //100MB
@@ -596,6 +600,8 @@ curlSetupCommon(wrkrInstanceData_t *const pWrkrData, CURL *const handle)
 	curl_easy_setopt(handle, CURLOPT_NOSIGNAL, TRUE);
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, curlResult);
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, pWrkrData);
+	if(pWrkrData->pData->allowUnsignedCerts)
+		curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, FALSE);
 	if(pWrkrData->pData->authBuf != NULL) {
 		curl_easy_setopt(handle, CURLOPT_USERPWD, pWrkrData->pData->authBuf);
 		curl_easy_setopt(handle, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
@@ -758,6 +764,8 @@ CODESTARTnewActInst
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "usehttps")) {
 			pData->useHttps = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "allowunsignedcerts")) {
+			pData->allowUnsignedCerts = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "errorfile")) {
 			pData->errorFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "bulkmode")) {
