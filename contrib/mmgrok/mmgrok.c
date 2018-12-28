@@ -248,13 +248,11 @@ parse_result_store(const grok_match_t gm,instanceData *pData)
 
 	    grok_match_walk_init(&gm); //grok API
 
-	    while(grok_match_walk_next(&gm,&pname,&pname_len,&pdata,&pdata_len) == 0)
-	    {
+	    while(grok_match_walk_next(&gm,&pname,&pname_len,&pdata,&pdata_len) == 0) {
 	        /* parse key and value type from patterns */
 	        key = strchr(pname,':');
 	
-	        if(key!=NULL)
-	        {
+	        if(key!=NULL) {
 	            int key_len;
 	            result_t *result = g_new0(result_t,1);
 	            key_len = pname_len - ((key+1) - pname);
@@ -262,14 +260,14 @@ parse_result_store(const grok_match_t gm,instanceData *pData)
 	            pname_len = key_len;
 	            type = strchr(key,':');
 	            int type_len;
-	            if(type!=NULL)
-	            {
+	            if(type != NULL) {
 	                key_len = (type - key);
 	                type = type+1;
 	                type_len = pname_len - key_len -1;
-	                sprintf(type,"%.*s",type_len,type);
-	            }
-	            else{type = (char*)"null";}
+			type[type_len] = '\0';
+	            } else {
+		    	type = (char*)"null";
+		    }
 	            /* store parse result into list */
 	            result->key = key;
 	            result->key_len = key_len;
