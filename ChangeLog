@@ -14,6 +14,13 @@ Version 8.41.0 [v8-stable] 2019-01-22
   warn = Expired certificates are allowed but warning will be logged (Default)
   Includes necessary tests to validate new code.
   closes https://github.com/rsyslog/rsyslog/issues/3364
+- build system: add capability to turn off helgrind tests
+  we add configure switch --enable-helgrind. We need to turn helgrind off
+  when we use clang coverage instrumentation. The instrumentation injects
+  mt-unsafe counter updates which we seem to be unable to suppress.
+  Note: for gcc this was possible, because they all occured in a utility
+  function. For clang, they are inlined so we get many -and changing- violations.
+  see also https://github.com/rsyslog/rsyslog/issues/3361#issuecomment-450502569
 - bugfix ossl TLS driver: fixed authentication mode anon
   authentication mode "anon" was not properly supported in ossl TLS
   driver; if selected, did still require a full certificate.
