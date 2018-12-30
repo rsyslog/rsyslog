@@ -1578,6 +1578,18 @@ else
 fi
 AM_CONDITIONAL([HAVE_VALGRIND], [test "x$with_valgrind_testbench" != "xno" && test "x$VALGRIND" != "xno"])
 
+# ability to disable helgrind tests - we at least need this for
+# clang coverage reports, where we cannot suppress the races
+AC_ARG_ENABLE(helgrind,
+        [AS_HELP_STRING([--enable-helgrind],[valgrind helgrind enabled @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_helgrind="yes" ;;
+          no) enable_helgrind="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-helgrind) ;;
+         esac],
+        [enable_helgrind=yes]
+)
+AM_CONDITIONAL(ENABLE_HELGRIND, test x$enable_helgrind = xyes)
 
 # settings for the file input module
 AC_ARG_ENABLE(imfile,
@@ -2508,6 +2520,8 @@ echo
 echo "---{ debugging support }---"
 echo "    distcheck workaround enabled:             $enable_distcheck_workaround"
 echo "    Testbench enabled:                        $enable_testbench"
+echo "    valgrind tests enabled:                   $with_valgrind_testbench"
+echo "    valgrind helgrind tests enabled:          $enable_helgrind"
 echo "    Default tests enabled:                    $enable_default_tests"
 echo "    Testbench libfaketime tests enabled:      $enable_libfaketime"
 echo "    Extended Testbench enabled:               $enable_extended_tests"

@@ -59,16 +59,22 @@ TESTS +=  \
 	es-basic-bulk.sh
 es-basic-es6.0.log: es-basic.log
 es-basic-bulk.log: es-basic-es6.0.log
+es-basic-server.log: es-basic-bulk.log
 if HAVE_VALGRIND
 TESTS += \
-	es-basic-vg.sh \
-	es-basic-vgthread.sh
+	es-basic-vg.sh
 es-basic-vg.log: es-basic-bulk.log
+# for next if block:
+es-basic-server.log: es-basic-vg.log
+if ENABLE_HELGRIND
+TESTS += \
+	es-basic-vgthread.sh
 es-basic-vgthread.log: es-basic-vg.log
 # for next if block:
 es-basic-server.log: es-basic-vgthread.log
-endif
-endif
+endif # ENABLE_HELGRIND
+endif # HAVE_VALGRIND
+endif # ENABLE_ELASTICSEARCH_TESTS_MINIMAL
 
 if ENABLE_ELASTICSEARCH_TESTS
 TESTS +=  \
@@ -1129,17 +1135,21 @@ TESTS += \
 	imfile-endregex-vg.sh \
 	imfile-endmsg.regex-vg.sh \
 	imfile-readmode0-vg.sh \
-	imfile-readmode2-vg.sh \
+	imfile-readmode2-vg.sh
+
+if ENABLE_HELGRIND
+TESTS += \
 	imfile-basic-vgthread.sh
+endif #  ENABLE_HELGRIND
 
 if ENABLE_MMNORMALIZE
 TESTS += \
 	imfile-endmsg.regex-with-example-vg.sh
-endif
+endif # ENABLE_MMNORMALIZE
 
-endif
+endif # HAVE_VALGRIND
 
-endif
+endif # ENABLE_IMFILE
 
 if ENABLE_OMTCL
 TESTS += \
