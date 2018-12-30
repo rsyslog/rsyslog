@@ -116,7 +116,7 @@ def checkErrorInterleaved():
                 print item
                 print "Unknown item found"
                 sys.exit(4)
-  
+
     return 0
 
 def checkInterleaved():

@@ -331,7 +331,7 @@ else:
 	
 
 	print "	End analyzing logdata"
-	
+
 	print"Begin showing found problems."
 	if len(aPossibleProblems) > 0:
 		# Output all found problems!

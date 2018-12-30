@@ -157,7 +157,7 @@ else:
 							iTimeStamp = int(time.mktime(myDateTime.timetuple()))
 
 							# Init Start Seconds
-							if iStartSeconds == 0: 	
+							if iStartSeconds == 0:
 								iStartSeconds = iTimeStamp
 
 							# Set data field
@@ -276,7 +276,7 @@ else:
 				myChart.add(aFields[iChartNum], aData[ aFields[iChartNum] ])  # Add some values
 #		for iChartNum in range(3, len(aFields) ):
 #			myChart.add(aFields[iChartNum], aData[ aFields[iChartNum] ])  # Add some values
-	
+
 	# Render Chart now and output to file!
 	if bConvertPng:
 		szPngFileName = szOutputFile[:-4] + ".png"
