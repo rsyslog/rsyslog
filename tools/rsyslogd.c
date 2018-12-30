@@ -1908,6 +1908,21 @@ wait_timeout(void)
 #endif /* AIXPORT : SRC end */
 }
 
+
+static void
+reapChild(void)
+{
+	pid_t child;
+	do {
+		int status;
+		child = waitpid(-1, &status, WNOHANG);
+		if(child != -1 && child != 0) {
+			glblReportChildProcessExit(NULL, child, status);
+		}
+	} while(child > 0);
+}
+
+
 /* This is the main processing loop. It is called after successful initialization.
  * When it returns, the syslogd terminates.
  * Its sole function is to provide some housekeeping things. The real work is done
@@ -1918,21 +1933,12 @@ mainloop(void)
 {
 	time_t tTime;
 
-
 	do {
 		processImInternal();
 		wait_timeout();
+
 		if(bChildDied) {
-			pid_t child;
-			do {
-				child = waitpid(-1, NULL, WNOHANG);
-				DBGPRINTF("rsyslogd: mainloop waitpid (with-no-hang) returned %u\n",
-					(unsigned) child);
-				if (child != -1 && child != 0) {
-					LogMsg(0, RS_RET_OK, LOG_INFO, "Child %d has terminated, reaped "
-						"by main-loop.", (unsigned) child);
-				}
-			} while(child > 0);
+			reapChild();
 			bChildDied = 0;
 		}
 

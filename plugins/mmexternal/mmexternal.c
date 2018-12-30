@@ -40,6 +40,7 @@
 #include "msg.h"
 #include "errmsg.h"
 #include "cfsysline.h"
+#include "glbl.h"
 
 
 MODULE_TYPE_OUTPUT
@@ -384,26 +385,15 @@ cleanup(wrkrInstanceData_t *pWrkrData)
 {
 	int status;
 	int ret;
-	char errStr[1024];
 	DEFiRet;
 
 	assert(pWrkrData->bIsRunning == 1);
 	ret = waitpid(pWrkrData->pid, &status, 0);
-	if(ret != pWrkrData->pid) {
-		/* if waitpid() fails, we can not do much - try to ignore it... */
-		DBGPRINTF("mmexternal: waitpid() returned state %d[%s], future malfunction may happen\n", ret,
-			   rs_strerror_r(errno, errStr, sizeof(errStr)));
-	} else {
-		/* check if we should print out some diagnostic information */
-		DBGPRINTF("mmexternal: waitpid status return for program '%s': %2.2x\n",
-			  pWrkrData->pData->szBinary, status);
-		if(WIFEXITED(status)) {
-			LogError(0, NO_ERRCODE, "program '%s' exited normally, state %d",
-					pWrkrData->pData->szBinary, WEXITSTATUS(status));
-		} else if(WIFSIGNALED(status)) {
-			LogError(0, NO_ERRCODE, "program '%s' terminated by signal %d.",
-					pWrkrData->pData->szBinary, WTERMSIG(status));
-		}
+
+	/* waitpid will fail with errno == ECHILD if the child process has already
+	   been reaped by the rsyslogd main loop (see rsyslogd.c) */
+	if(ret == pWrkrData->pid) {
+		glblReportChildProcessExit(pWrkrData->pData->szBinary, pWrkrData->pid, status);
 	}
 
 	if(pWrkrData->fdOutput != -1) {
@@ -448,7 +438,6 @@ callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, smsg_t *__restrict
 	int lenWrite;
 	int writeOffset;
 	int i_iov;
-	char errStr[1024];
 	struct iovec iov[2];
 	int bFreeInputstr = 1; /* we must only free if it does not point to msg-obj mem! */
 	const uchar *inputstr = NULL; /* string to be processed by external program */
@@ -482,15 +471,15 @@ callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, smsg_t *__restrict
 		if(lenWritten == -1) {
 			switch(errno) {
 			case EPIPE:
-				DBGPRINTF("mmexternal: program '%s' terminated, trying to restart\n",
-					  pWrkrData->pData->szBinary);
+				LogMsg(0, RS_RET_ERR_WRITE_PIPE, LOG_WARNING,
+						"mmexternal: program '%s' (pid %d) terminated; will be restarted",
+						pWrkrData->pData->szBinary, pWrkrData->pid);
 				CHKiRet(cleanup(pWrkrData));
 				CHKiRet(tryRestart(pWrkrData));
 				writeOffset = 0;
 				break;
 			default:
-				DBGPRINTF("mmexternal: error %d writing to pipe: %s\n", errno,
-					   rs_strerror_r(errno, errStr, sizeof(errStr)));
+				LogError(errno, RS_RET_ERR_WRITE_PIPE, "mmexternal: error sending message to program");
 				ABORT_FINALIZE(RS_RET_ERR_WRITE_PIPE);
 				break;
 			}

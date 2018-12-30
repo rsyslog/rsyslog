@@ -34,7 +34,7 @@ while [[ -n "$log_line" ]]; do
         # Terminate prematurely by closing pipe, without confirming the message
         echo "Terminating without confirming the last message" >> $outfile
         >&2 echo "[stderr] Terminating without confirming the last message"
-        exit 1
+        exit 0
     fi
 
     # Tell rsyslog we are ready to process the next message
