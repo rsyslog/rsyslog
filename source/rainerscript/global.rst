@@ -410,7 +410,7 @@ The following parameters can be set:
 
   - truncate: Oversized messages will be truncated.
   - split: Oversized messages will be split and the rest of the message will
-    be send in another message.
+    be sent in another message.
   - accept: Oversized messages will still be accepted.
 
 - **oversizemsg.report** [boolean (on/off)] available 8.35.0+
@@ -453,3 +453,29 @@ The following parameters can be set:
   configured name for the current run. This permits the administrator to check the
   previous operating state file for helpful information on why the system shut
   down unclean.
+
+- **reportChildProcessExits** [none|errors|all], default "errors", available
+  8.1901.0+
+
+  Tells rsyslog whether and when to log a message (under *syslog.\**) when a
+  child process terminates. The available modes are:
+
+  - none: Do not report any child process termination.
+  - errors: Only report the termination of child processes that have exited with
+    a non-zero exit code, or that have been terminated by a signal.
+  - all: Report all child process terminations.
+
+  The logged message will be one of the following:
+  
+  - "program 'x' (pid n) exited with status s" (with "info" severity if the
+    status is zero, and "warning" severity otherwise)
+  - "program 'x' (pid n) terminated by signal s" (with "warning" severity)
+
+  In some cases, the program name is not included in the message (but only the PID).
+
+  Normally, if a child process terminates prematurely for some reason, rsyslog will
+  also report some specific error message the next time it interacts with the process
+  (for example, in the case of a process started by omprog, if omprog cannot send a
+  message to the process because the pipe is broken, it will report an error
+  indicating this). This specific error message (if any) is not affected by this
+  global setting.
