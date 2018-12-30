@@ -36,6 +36,13 @@ Version 8.41.0 [v8-stable] 2019-01-22
   Note: for gcc this was possible, because they all occured in a utility
   function. For clang, they are inlined so we get many -and changing- violations.
   see also https://github.com/rsyslog/rsyslog/issues/3361#issuecomment-450502569
+- bugfix omusrmsg: don't overwrite previous set _PATH_DEV value
+  Since commit 56ace5e418d149af27586c7c1264fccfbc6badf1, omusrmsg was broken
+  because "memcpy()" is not a suitable substitute for "strncat()" in this
+  context, it is actually replacing the previous added content.
+  Bug: https://bugs.gentoo.org/673004
+  Closes: https://github.com/rsyslog/rsyslog/issues/3346
+  Thanks to Thomas D. (whissi) for the patch.
 - bugfix ossl TLS driver: fixed authentication mode anon
   authentication mode "anon" was not properly supported in ossl TLS
   driver; if selected, did still require a full certificate.
@@ -46,6 +53,8 @@ Version 8.41.0 [v8-stable] 2019-01-22
   buffer was not processed until new data arrived on the socket again.
   TLS RFCs require up to 16KiB+1 buffer size for a single TLS record.
   closes https://github.com/rsyslog/rsyslog/issues/3325
+- bugfix pmpanngfw: build issue due to non-matching data types in comparison
+  Thanks to Narasimha Datta for the patch.
 - testbench bugfix: TLS syslog tests for "anon" mode were broken
   They did not detect when "anon" mode was not properly supported by the
   drivers.
