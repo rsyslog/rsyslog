@@ -14,6 +14,21 @@ Version 8.41.0 [v8-stable] 2019-01-22
   warn = Expired certificates are allowed but warning will be logged (Default)
   Includes necessary tests to validate new code.
   closes https://github.com/rsyslog/rsyslog/issues/3364
+- report child process exit status according to config parameter
+  Add new global setting 'reportChildProcessExits' with possible values
+  'none|errors|all' (default 'errors'), and new global function
+  'glblReportChildProcessExit' to report the exit status of a child
+  process according to the setting.
+  Invoke the report function whenever rsyslog reaps a child, namely in:
+  - rsyslogd.c (SIGCHLD signal handler)
+  - omprog
+  - mmexternal
+  - srutils.c (execProg function, invoked from stream.c and omshell)
+  Remove redundant "reaped by main loop" info log in omprog.
+  Promote debug message in mmexternal indicating that the child has
+  terminated prematurely to a warning log, like in omprog.
+  closes https://github.com/rsyslog/rsyslog/issues/3281
+  Thanks to Joan Sala for contributing this.
 - build system: add capability to turn off helgrind tests
   we add configure switch --enable-helgrind. We need to turn helgrind off
   when we use clang coverage instrumentation. The instrumentation injects
