@@ -20,5 +20,11 @@ sleep 10
 #wait_startup_pid /var/run/clickhouse-server/clickhouse-server.pid
 printf 'preparing clickhouse for testbench use...\n'
 $SUDO ${srcdir}/../devtools/prepare_clickhouse.sh
+clickhouse-client --query="select 1"
+rc=$?
+if [ $rc -ne 0 ]; then
+	printf 'clickhouse failed to start, exit code %d\n' $rc
+	error_exit 100
+fi
 printf 'done, clickhouse ready for testbench\n'
 exit_test
