@@ -81,6 +81,7 @@ typedef struct instanceConf_s {
 	int port;
 	uchar *user;
 	uchar *pwd;
+	long healthCheckTimeout;
 	uchar *authBuf;
 	uchar *tplName;
 	sbool useHttps;
@@ -123,6 +124,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "port", eCmdHdlrInt, 0 },
 	{ "user", eCmdHdlrGetWord, 0 },
 	{ "pwd", eCmdHdlrGetWord, 0 },
+	{ "healthchecktimeout", eCmdHdlrInt, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
 	{ "usehttps", eCmdHdlrBinary, 0 },
 	{ "errorfile", eCmdHdlrGetWord, 0 },
@@ -216,6 +218,7 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tport='%d'\n", pData->port);
 	dbgprintf("\tuser='%s'\n", pData->user);
 	dbgprintf("\tpwd='%s'\n", pData->pwd);
+	dbgprintf("\thealthCheckTimeout=%lu\n", pData->healthCheckTimeout);
 	dbgprintf("\ttemplate='%s'\n", pData->tplName);
 	dbgprintf("\tusehttps='%d'\n", pData->useHttps);
 	dbgprintf("\terrorFile='%s'\n", pData->errorFile);
@@ -227,9 +230,51 @@ CODESTARTdbgPrintInstInfo
 ENDdbgPrintInstInfo
 
 
+/* checks if connection to clickhouse can be established
+ */
+static rsRetVal ATTR_NONNULL()
+checkConn(wrkrInstanceData_t *const pWrkrData)
+{
+	CURL *curl;
+	CURLcode res;
+	char errbuf[CURL_ERROR_SIZE] = "";
+	const char* healthCheckMessage ="SELECT 1";
+	DEFiRet;
+
+	pWrkrData->reply = NULL;
+	pWrkrData->replyLen = 0;
+	curl = pWrkrData->curlCheckConnHandle;
+	
+
+	curl_easy_setopt(curl, CURLOPT_URL, pWrkrData->restURL);
+	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, healthCheckMessage);
+	curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strlen(healthCheckMessage));
+	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
+	res = curl_easy_perform(curl);
+
+	if (res == CURLE_OK) {
+		DBGPRINTF("omclickhouse: checkConn completed with success\n");
+		ABORT_FINALIZE(RS_RET_OK);
+	}
+
+	DBGPRINTF("omclickhouse: checkConn failed: %s\n",
+		curl_easy_strerror(res));
+
+	LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
+		"omclickhouse: checkConn failed.");
+	ABORT_FINALIZE(RS_RET_SUSPENDED);
+
+finalize_it:
+	free(pWrkrData->reply);
+	pWrkrData->reply = NULL; /* don't leave dangling pointer */
+	RETiRet;
+}
+
+
 BEGINtryResume
 CODESTARTtryResume
 	dbgprintf("omclickhouse: tryResume called\n");
+	iRet = checkConn(pWrkrData);
 ENDtryResume
 
 
@@ -559,6 +604,7 @@ setInstParamDefaults(instanceData *const pData)
 	pData->port = 8123;
 	pData->user = NULL;
 	pData->pwd = NULL;
+	pData->healthCheckTimeout = 3500;
 	pData->authBuf = NULL;
 	pData->tplName = NULL;
 	pData->useHttps = 1;
@@ -614,6 +660,16 @@ curlSetupCommon(wrkrInstanceData_t *const pWrkrData, CURL *const handle)
 	curl_easy_setopt(handle, CURLOPT_VERBOSE, TRUE); */
 }
 
+
+static void ATTR_NONNULL()
+curlCheckConnSetup(wrkrInstanceData_t *const pWrkrData)
+{
+	curlSetupCommon(pWrkrData, pWrkrData->curlCheckConnHandle);
+	curl_easy_setopt(pWrkrData->curlCheckConnHandle,
+		CURLOPT_TIMEOUT_MS, pWrkrData->pData->healthCheckTimeout);
+}
+
+
 static void ATTR_NONNULL(1)
 curlPostSetup(wrkrInstanceData_t *const pWrkrData)
 {
@@ -630,6 +686,9 @@ curlSetup(wrkrInstanceData_t *const pWrkrData)
 	pWrkrData->curlHeader = curl_slist_append(NULL, CONTENT_JSON);
 	CHKmalloc(pWrkrData->curlPostHandle = curl_easy_init());
 	curlPostSetup(pWrkrData);
+
+	CHKmalloc(pWrkrData->curlCheckConnHandle = curl_easy_init());
+	curlCheckConnSetup(pWrkrData);
 
 finalize_it:
 	if(iRet != RS_RET_OK && pWrkrData->curlPostHandle != NULL) {
@@ -754,6 +813,8 @@ CODESTARTnewActInst
 			pData->user = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "pwd")) {
 			pData->pwd = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "healthchecktimeout")) {
+			pData->healthCheckTimeout = (long) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "usehttps")) {
