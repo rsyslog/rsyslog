@@ -999,7 +999,11 @@ TESTS += \
          sndrcv_relp_tls_prio.sh \
          relp_tls_certificate_not_found.sh \
 	 omrelp_wrong_authmode.sh
-endif
+endif # ENABLE_GNUTLS
+if HAVE_VALGRIND
+TESTS += \
+	 imrelp-manyconn-vg.sh
+endif # HAVE_VALGRIND
 endif
 
 if ENABLE_OMUDPSPOOF
@@ -1633,6 +1637,7 @@ EXTRA_DIST= \
 	imrelp-basic.sh \
 	imrelp-basic-oldstyle.sh \
 	imrelp-manyconn.sh \
+	imrelp-manyconn-vg.sh \
 	imrelp-maxDataSize-error.sh \
 	imrelp-long-msg.sh \
 	imrelp-oversizeMode-truncate.sh \
