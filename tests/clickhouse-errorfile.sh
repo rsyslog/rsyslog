@@ -24,8 +24,7 @@ tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag: msgnum:NoInteger\""
 shutdown_when_empty
 wait_shutdown
 
-export EXPECTED="{ \"request\": { \"url\": \"http:\\/\\/localhost:8123\\/\", \"postdata\": \"INSERT INTO rsyslog.errorfile (id, severity, facility, timestamp, ipaddress, tag, message) VALUES (NoInteger, 1, 16, '1520643600', '127.0.0.1', 'tag:', ' msgnum:NoInteger')\" }, \"reply\": \"Code: 47, e.displayText() = DB::Exception: Unknown identifier: NoInteger, e.what() = DB::Exception\\n\" }"
-cmp_exact $RSYSLOG_OUT_LOG
+content_check --regex "msgnum:NoInteger.*DB::Exception: Unknown identifier"
 
 clickhouse-client --query="DROP TABLE rsyslog.errorfile"
 exit_test
