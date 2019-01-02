@@ -50,7 +50,7 @@ check_PROGRAMS = $(TESTRUNS) ourtail tcpflood chkseq msleep randomgen \
 if ENABLE_IMJOURNAL
 check_PROGRAMS += journal_print
 endif
-TESTS = $(TESTRUNS)
+TESTS = aborter.sh $(TESTRUNS)
 
 if ENABLE_ELASTICSEARCH_TESTS_MINIMAL
 TESTS +=  \
