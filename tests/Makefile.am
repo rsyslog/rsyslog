@@ -485,7 +485,6 @@ endif # if ENABLE_MMANON
 
 if ENABLE_CLICKHOUSE_TESTS
 TESTS +=  \
-	clickhouse-start.sh \
 	clickhouse-basic.sh \
 	clickhouse-load.sh \
 	clickhouse-bulk.sh \
@@ -497,7 +496,6 @@ TESTS +=  \
 	clickhouse-wrong-template-option.sh \
 	clickhouse-wrong-insert-syntax.sh
 
-clickhouse-basic.log: clickhouse-start.log
 clickhouse-load.log: clickhouse-basic.log
 clickhouse-bulk.log: clickhouse-load.log
 clickhouse-bulk-load.log: clickhouse-bulk.log
