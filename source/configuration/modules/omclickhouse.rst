@@ -185,6 +185,35 @@ Note that e.g. after search index reconfiguration (e.g. dropping the mandatory
 attribute) a resubmit may be succesful.
 
 
+allowUnsignedCerts
+^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "on", "no", "none"
+
+The module accepts connections to servers, which have unsigned certificates.
+If this parameter is disabled, the module will verify whether the certificates
+are authentic.
+
+
+healthCheckTimeout
+^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "int", "3500", "no", "none"
+
+This parameter sets the timeout for checking the availability
+of ClickHouse. Value is given in milliseconds.
+
+
 .. _omclickhouse-statistic-counter:
 
 Statistic Counter
