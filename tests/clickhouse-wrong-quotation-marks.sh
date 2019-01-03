@@ -14,7 +14,7 @@ add_conf '")
 
 
 :syslogtag, contains, "tag" action(type="omclickhouse" server="localhost"
-					usehttps="off" bulkmode="off"
+					port="8443" bulkmode="off"
 					user="default" pwd="" template="outfmt")
 '
 

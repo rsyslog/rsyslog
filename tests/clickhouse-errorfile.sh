@@ -12,7 +12,7 @@ add_conf "'%timereported:::date-unixtimestamp%', '%fromhost-ip%', '%syslogtag%',
 add_conf '")
 
 
-:syslogtag, contains, "tag" action(type="omclickhouse" server="localhost" usehttps="off"
+:syslogtag, contains, "tag" action(type="omclickhouse" server="localhost" port="8443"
 					user="default" pwd="" template="outfmt"
 					bulkmode="off" errorfile="'$RSYSLOG_OUT_LOG'")
 '

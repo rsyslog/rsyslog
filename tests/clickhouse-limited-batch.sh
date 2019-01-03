@@ -15,7 +15,7 @@ add_conf "'%fromhost-ip%', '%msg:F,58:2%')"
 add_conf '")
 
 
-:syslogtag, contains, "tag" action(type="omclickhouse" server="localhost" usehttps="off"
+:syslogtag, contains, "tag" action(type="omclickhouse" server="localhost" port="8443"
 					user="default" pwd="" template="outfmt"
 					maxbytes="1k")
 '
