@@ -85,8 +85,27 @@ RUN	echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic main" > /etc/apt
 	lldb-8 \
 	lld-8
 
+# create dependency cache
+RUN	mkdir /local_dep_cache && \
+	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch-5.6.9.tar.gz && \
+	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz && \
+	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.3.1.tar.gz -O /local_dep_cache/elasticsearch-6.3.1.tar.gz
+# tell tests which are the newester versions, so they can be checked without the need
+# to adjust test sources.
+ENV	ELASTICSEARCH_NEWEST="elasticsearch-6.3.1.tar.gz"
+
+
+# for clickhouse, the container requires some pre-generated files for TLS. generate them via
+# openssl req -subj "/CN=localhost" -new -newkey rsa:2048 -days 365 -nodes -x509 -keyout clickhouse.server.key -out clickhouse.server.crt
+# openssl dhparam -out clickhouse.dhparam.pem 2048
+COPY	clickhouse.dhparam.pem /etc/clickhouse-server/dhparam.pem
+COPY	clickhouse.server.crt /etc/clickhouse-server/server.crt
+COPY	clickhouse.server.key /etc/clickhouse-server/server.key
 RUN	sed -i 's/<yandex>/<yandex>\n    <core_dump><size_limit>0<\/size_limit><\/core_dump>/g' \
+		/etc/clickhouse-server/config.xml && \
+	sed -i 's/<tcp_port>9000<\/tcp_port>/<tcp_port>9000<\/tcp_port>\n    <https_port>8443<\/https_port>/g' \
 		/etc/clickhouse-server/config.xml
+
 WORKDIR	/home/devel
 VOLUME	/rsyslog
 RUN	groupadd rsyslog \
@@ -124,16 +143,6 @@ RUN	cd helper-projects \
 	&& cd ..
 # Note: we do NOT delete the source as we may need it to
 # uninstall (in case the user wants to go back to system-default)
-
-
-# create dependency cache
-RUN	mkdir /local_dep_cache && \
-	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch && \
-	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz && \
-	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.3.1.tar.gz -O /local_dep_cache/elasticsearch-6.3.1.tar.gz
-# tell tests which are the newester versions, so they can be checked without the need
-# to adjust test sources.
-ENV	ELASTICSEARCH_NEWEST="elasticsearch-6.3.1.tar.gz"
 
 # next ENV is specifically for running scan-build - so we do not need to
 # change scripts if at a later time we can move on to a newer version
