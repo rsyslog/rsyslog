@@ -485,6 +485,7 @@ endif # if ENABLE_MMANON
 
 if ENABLE_CLICKHOUSE_TESTS
 TESTS +=  \
+	clickhouse-retry-error.sh \
 	clickhouse-start.sh \
 	clickhouse-basic.sh \
 	clickhouse-load.sh \
@@ -497,6 +498,7 @@ TESTS +=  \
 	clickhouse-wrong-template-option.sh \
 	clickhouse-wrong-insert-syntax.sh
 
+clickhouse-start.log: clickhouse-retry-error.log
 clickhouse-basic.log: clickhouse-start.log
 clickhouse-load.log: clickhouse-basic.log
 clickhouse-bulk.log: clickhouse-load.log
@@ -1492,6 +1494,7 @@ EXTRA_DIST= \
 	incltest_dir_empty_wildcard.sh \
 	incltest_dir_wildcard.sh \
 	testsuites/es.yml \
+	clickhouse-retry-error.sh \
 	clickhouse-start.sh \
 	clickhouse-stop.sh \
 	clickhouse-basic.sh \
