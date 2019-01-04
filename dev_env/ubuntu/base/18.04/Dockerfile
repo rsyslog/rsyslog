@@ -41,6 +41,7 @@ RUN 	apt-get update && \
 	libtokyocabinet-dev \
 	libtool \
 	libtool-bin \
+	logrotate \
 	lsof \
 	make \
 	mysql-server \
@@ -157,8 +158,10 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-elasticsearch-tests \
 	--enable-gnutls \
 	--enable-gssapi-krb5 \
-	--enable-imczmq \
+	--enable-imczmq=no \
 	--enable-imdiag \
+	--enable-imdocker \
+	--enable-imdocker-tests \
 	--enable-imfile \
 	--enable-imjournal \
 	--enable-imkafka \
@@ -187,7 +190,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-mysql \
 	--enable-mysql-tests \
 	--enable-omamqp1 \
-	--enable-omczmq \
+	--enable-omczmq=no \
 	--enable-omhiredis \
 	--enable-omhiredis \
 	--enable-omhttpfs \
