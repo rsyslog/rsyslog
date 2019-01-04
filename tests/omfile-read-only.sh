@@ -35,5 +35,5 @@ wait_shutdown
 presort
 let firstnum=$((10#`$RS_HEADCMD -n1 $RSYSLOG_DYNNAME.presort`))
 echo "info: first message expected to be number $firstnum, using that value."
-seq_check $firstnum $(($messages-1))
+seq_check $firstnum $((messages-1))
 exit_test
