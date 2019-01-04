@@ -10,7 +10,14 @@
 
 . ${srcdir:=.}/diag.sh init
 skip_platform "SunOS" "This test currently does not work on all flavors of Solaris (problems with Python?)"
-export NUMMESSAGES=20000   # number of logs to send
+if [ "$CC" == "gcc" ] && [[ "$CFLAGS" == *"-coverage"* ]]; then
+	printf 'This test does not work with gcc coverage instrumentation\n'
+	printf 'It will hang, but we do not know why. See\n'
+	printf 'https://github.com/rsyslog/rsyslog/issues/3361\n'
+	exit 77
+fi
+
+export NUMMESSAGES=20000
 
 if [[ "$(uname)" == "Linux" ]]; then
     LINE_LENGTH=4095   # 4KB minus 1 byte (for the newline char)
