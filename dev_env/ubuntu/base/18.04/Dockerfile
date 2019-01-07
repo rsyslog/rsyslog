@@ -58,24 +58,34 @@ RUN 	apt-get update && \
 	wget \
 	zlib1g-dev
 ENV	REBUILD=1
-RUN	echo "deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_18.04/ ./" > /etc/apt/sources.list.d/0mq.list && \
-	wget -nv -O - http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_18.04/Release.key | apt-key add - && \
-	echo "deb http://repo.yandex.ru/clickhouse/deb/stable/ main/" > /etc/apt/sources.list.d/clickhouse.list && \
-	apt-key adv --keyserver keyserver.ubuntu.com --recv E0C56BD4 && \
+# Adiscon/rsyslog components
+RUN	apt-key adv --keyserver keyserver.ubuntu.com --recv E0C56BD4 && \
  	add-apt-repository ppa:adiscon/v8-stable -y && \
 	apt-get update -y && \
 	apt-get install -y  \
-	clickhouse-client \
-	clickhouse-server \
-	libczmq-dev \
-	libqpid-proton8-dev \
-	tcl-dev \
-	libsodium-dev \
 	libestr-dev \
 	librelp-dev \
 	libfastjson-dev \
 	liblogging-stdlog-dev \
 	liblognorm-dev
+# 0mq (currently not needed, but we keep it in just in case)
+#RUN	echo "deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_18.04/ ./" > /etc/apt/sources.list.d/0mq.list && \
+#	wget -nv -O - http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_18.04/Release.key | apt-key add - && \
+#	echo "deb http://repo.yandex.ru/clickhouse/deb/stable/ main/" > /etc/apt/sources.list.d/clickhouse.list && \
+RUN	apt-get update -y && \
+	apt-get install -y  \
+	libczmq-dev \
+	libqpid-proton8-dev \
+	tcl-dev \
+	libsodium-dev
+# clickhouse
+RUN	echo "deb http://repo.yandex.ru/clickhouse/deb/stable/ main/" > /etc/apt/sources.list.d/clickhouse.list && \
+	apt-key adv --keyserver keyserver.ubuntu.com --recv E0C56BD4 && \
+ 	add-apt-repository ppa:adiscon/v8-stable -y && \
+	apt-get update -y && \
+	apt-get install -y  \
+	clickhouse-client \
+	clickhouse-server
 # clang devel version
 RUN	echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic main" > /etc/apt/sources.list.d/llvm8.list && \
 	echo "deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic main" >> /etc/apt/sources.list.d/llvm8.list && \
@@ -158,7 +168,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-elasticsearch-tests \
 	--enable-gnutls \
 	--enable-gssapi-krb5 \
-	--enable-imczmq=no \
+	--enable-imczmq \
 	--enable-imdiag \
 	--enable-imdocker \
 	--enable-imdocker-tests \
@@ -190,7 +200,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-mysql \
 	--enable-mysql-tests \
 	--enable-omamqp1 \
-	--enable-omczmq=no \
+	--enable-omczmq \
 	--enable-omhiredis \
 	--enable-omhiredis \
 	--enable-omhttpfs \
