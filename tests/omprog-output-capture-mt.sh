@@ -70,7 +70,7 @@ wait_shutdown
 
 line_num=0
 while IFS= read -r line; do
-    let "line_num++"
+    ((line_num++))
     if [[ ${#line} != $LINE_LENGTH ]]; then
         echo "intermingled line in captured output: line: $line_num, length: ${#line} (expected: $LINE_LENGTH)"
         echo "$line"

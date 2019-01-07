@@ -52,7 +52,7 @@ wait_shutdown
 EXPECTED_LINE_LENGTH=25    # example line: 'Received msgnum:00009880:'
 line_num=0
 while IFS= read -r line; do
-    let "line_num++"
+    ((line_num++))
     if [[ $line_num == 1 ]]; then
         if [[ "$line" != "Starting" ]]; then
             echo "unexpected first line in output: $line"

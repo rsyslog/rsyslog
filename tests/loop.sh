@@ -15,14 +15,14 @@ while [ $RUN -le $MAXRUN ]; do
      echo "###### RUN: " $RUN "success" $SUCCESS "fail" $FAIL
      $1
      if [ "$?" -ne "0" ]; then
-     	 let FAIL+=1
+     	 ((FAIL++))
 	 echo "FAIL!"
 	 #vi work
          exit 1
      else
-     	let SUCCESS+=1
+     	((SUCCESS++))
      fi
-     let RUN+=1
+     ((RUN++))
 done
 echo
 echo "Nbr success: " $SUCCESS
