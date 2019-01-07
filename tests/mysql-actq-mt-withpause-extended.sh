@@ -23,7 +23,7 @@ mysql --user=rsyslog --password=testbench < ${srcdir}/testsuites/mysql-truncate.
 startup
 
 
-let "strtnum = 0"
+strtnum=0
 for i in {1..50}
 do
    echo "running iteration $i, startnum: $strtnum"

@@ -104,7 +104,7 @@ while IFS= read -r line; do
         fi
         status_expected=true;
     fi
-    let "line_num++"
+    ((line_num++))
 done < $RSYSLOG_OUT_LOG
 
 if [[ -z "$error" && "$transaction_state" != "NONE" ]]; then
