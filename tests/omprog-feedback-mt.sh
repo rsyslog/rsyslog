@@ -6,9 +6,14 @@
 # confirmed as failed by the program). Note: the action retry interval
 # (1 second) causes a very low throughput; we need to set a very low error
 # rate to avoid the test lasting too much.
-
 . ${srcdir:=.}/diag.sh init
 skip_platform "SunOS" "On Solaris, this test causes rsyslog to hang for unknown reasons"
+if [ "$CC" == "gcc" ] && [[ "$CFLAGS" == *"-coverage"* ]]; then
+	printf 'This test does not work with gcc coverage instrumentation\n'
+	printf 'It will hang, but we do not know why. See\n'
+	printf 'https://github.com/rsyslog/rsyslog/issues/3361\n'
+	exit 77
+fi
 
 NUMMESSAGES=10000       # number of logs to send
 ERROR_RATE_PERCENT=1    # percentage of logs to be retried
