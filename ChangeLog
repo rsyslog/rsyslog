@@ -86,6 +86,13 @@ Version 8.41.0 [v8-stable] 2019-01-22
     * made travis run make check with two parallel threads, for which
       we seem ready now. Nevertheless, it's still experimental and we
       may roll this back if required.
+    * testbench: disable omprog tests that hang under coverage instrumentation
+      When gcc coverage instrumentation is used, these tests hang. They work
+      with clang coverage instrumentation, but for some reason clang does not
+      give us full reports (at least not when used together with CodeCov.io).
+      We have tried to troubleshoot this for hours and hours - now is time to
+      give up until someone comes up with a bright idea. So we make the affected
+      tests skip themselves when they detect gcc with coverage instrumentation.
 ------------------------------------------------------------------------------
 Version 8.40.0 [v8-stable] 2018-12-11
 - mmkubernetes: add support for sslpartialchain for openssl
