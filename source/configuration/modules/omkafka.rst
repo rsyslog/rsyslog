@@ -191,6 +191,22 @@ the error file is kept open from when the first error occured up
 until rsyslog is terminated or received a HUP signal.
 
 
+statsFile
+^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+If set, the contents of the JSON object containing the full librdkafka
+statistics will be written to the file specified. The file will be
+updated based on the statistics.interval.ms confparam value, which must
+also be set.
+
+
 ConfParam
 ^^^^^^^^^
 
