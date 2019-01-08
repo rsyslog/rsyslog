@@ -204,6 +204,7 @@ generate_conf() {
 global(inputs.timeout.shutdown="'$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT'"
        default.action.queue.timeoutshutdown="'$RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN'"
        default.action.queue.timeoutEnqueue="'$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE'")
+$MainmsgQueueTimeoutEnqueue 20000 # use legacy-style so that we can override if needed
 $IMDiagListenPortFileName '$RSYSLOG_DYNNAME.imdiag$1.port'
 $IMDiagServerRun 0
 $IMDiagAbortTimeout '$TB_TEST_MAX_RUNTIME'
