@@ -5,8 +5,7 @@
 # see also https://github.com/rsyslog/rsyslog/issues/1658
 # Copyright (C) 2017 by Rainer Gerhards, released under ASL 2.0 (2017-07-11)
 . ${srcdir:=.}/diag.sh init
-skip_platform "FreeBSD" "FreeBSD logger does not support -d (datagram) option"
-skip_platform "SunOS" "Solaris logger does not support -d (datagram) option"
+check_logger_has_option_d
 generate_conf
 add_conf '
 module(load="../plugins/imuxsock/.libs/imuxsock" sysSock.use="off")

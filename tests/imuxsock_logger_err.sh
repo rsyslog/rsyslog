@@ -3,6 +3,7 @@
 # added 2014-12-04 by Rainer Gerhards, licensed under ASL 2.0
 echo \[imuxsock_logger.sh\]: test imuxsock
 . ${srcdir:=.}/diag.sh init
+check_logger_has_option_d
 generate_conf
 add_conf '
 module(load="../plugins/imuxsock/.libs/imuxsock" sysSock.use="off")
