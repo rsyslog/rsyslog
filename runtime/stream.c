@@ -1416,7 +1416,7 @@ doWriteCall(strm_t *pThis, uchar *pBuf, size_t *pLenBuf)
 	pWriteBuf = (char*) pBuf;
 	iTotalWritten = 0;
 	do {
-#ifdef __FreeBSD__
+		#ifdef __FreeBSD__
 		if (pThis->bIsTTY && !pThis->iZipLevel && !pThis->cryprov) {
 			char *pNl = NULL;
 			if (crnlNow == 0) pNl = strchr(pWriteBuf, '\n');
@@ -1429,29 +1429,40 @@ doWriteCall(strm_t *pThis, uchar *pBuf, size_t *pLenBuf)
 				}
 			} else iWritten = write(pThis->fd, pWriteBuf, pNl ? pNl - pWriteBuf : lenBuf);
 		} else
-#endif /* __FreeBSD__ */
+		#endif /* __FreeBSD__ */
 		iWritten = write(pThis->fd, pWriteBuf, lenBuf);
 		if(iWritten < 0) {
 			const int err = errno;
 			iWritten = 0; /* we have written NO bytes! */
-			if(err != EINTR) {
-				LogError(err, RS_RET_IO_ERROR, "file '%d' write error", pThis->fd);
-			}
-			if(err == EINTR) {
-				/*NO ERROR, just continue */;
-			} else if( !pThis->bIsTTY && ( err == ENOTCONN  || err == EIO )) {
-				/* Failure for network file system, thus file needs to be closed and reopened. */
-				close(pThis->fd);
+			if(err == EBADF) {
+				LogError(err, RS_RET_IO_ERROR, "file %s: fd %d no longer valid, recovery by "
+					"reopen; if you see this, consider reporting at "
+					"https://github.com/rsyslog/rsyslog/issues/3404 "
+					"so that we know when it happens. Include output of uname -a. "
+					"OS error reason", pThis->pszCurrFName, pThis->fd);
 				pThis->fd = -1;
 				CHKiRet(doPhysOpen(pThis));
 			} else {
-				if(pThis->bIsTTY) {
-					CHKiRet(tryTTYRecover(pThis, err));
+				if(err != EINTR) {
+					LogError(err, RS_RET_IO_ERROR, "file '%d' write error", pThis->fd);
+				}
+				if(err == EINTR) {
+					/*NO ERROR, just continue */;
+				} else if( !pThis->bIsTTY && ( err == ENOTCONN || err == EIO )) {
+					/* Failure for network file system, thus file needs to be closed
+					 * and reopened. */
+					close(pThis->fd);
+					pThis->fd = -1;
+					CHKiRet(doPhysOpen(pThis));
 				} else {
-					ABORT_FINALIZE(RS_RET_IO_ERROR);
-					/* Would it make sense to cover more error cases? So far, I
-					 * do not see good reason to do so.
-					 */
+					if(pThis->bIsTTY) {
+						CHKiRet(tryTTYRecover(pThis, err));
+					} else {
+						ABORT_FINALIZE(RS_RET_IO_ERROR);
+						/* Would it make sense to cover more error cases? So far, I
+						 * do not see good reason to do so.
+						 */
+					}
 				}
 			}
 	 	}
@@ -2564,6 +2575,3 @@ BEGINObjClassInit(strm, 1, OBJ_IS_CORE_MODULE)
 	OBJSetMethodHandler(objMethod_SETPROPERTY, strmSetProperty);
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, strmConstructFinalize);
 ENDObjClassInit(strm)
-
-/* vi:set ai:
- */
