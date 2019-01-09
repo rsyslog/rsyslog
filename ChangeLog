@@ -55,6 +55,40 @@ Version 8.41.0 [v8-stable] 2019-01-22
   closes https://github.com/rsyslog/rsyslog/issues/3325
 - bugfix pmpanngfw: build issue due to non-matching data types in comparison
   Thanks to Narasimha Datta for the patch.
+- omfile: work-around for "Bad file descriptor" errors
+  This works-around an issue we can reproduce e.g. via the
+  imtcp-tls-ossl-x509fingerprint.sh test. Here, omfile gets a write
+  error with reason EBADF. So far, I was not able to see an actual
+  coding error. However I traced this down to a multithreaded race
+  on open and close calls. I am very surprised to see this type
+  of issue, as I think the kernel guarantees that it does not happen.
+  Here is what I see in strace -f:
+  openssl accepts a socket:
+  [pid 66386] accept(4, {sa_family=AF_INET, sin_port=htons(59054), sin_addr=inet_addr("127.0.0.1")}, [128->16]) = 10
+  then, it works a bit with that socket, detects a failure and shuts it down. Sometimes, at the very same instant omfile on another thread tries to open on output file. Then the following happens:
+  [pid 66386] close(10)                   = 0
+  [pid 66389] openat(AT_FDCWD, "./rstb_356100_31fa9d20.out.log", O_WRONLY|O_CREAT|O_NOCTTY|O_APPEND|O_CLOEXEC, 0644 <unfinished ...>
+  [pid 66386] close(10 <unfinished ...>
+  [pid 66389] <... openat resumed> )      = 10
+  [pid 66386] <... close resumed> )       = 0
+  [pid 66386] poll([{fd=4, events=POLLIN}, {fd=5, events=POLLIN}], 2, -1 <unfinished ...>
+  [pid 66389] write(2, "file './rstb_356100_31fa9d20.out"..., 66file './rstb_356100_31fa9d20.out.log' opened as #10 with mode 420
+  ) = 66
+  [pid 66389] ioctl(10, TCGETS, 0x7f59aeb89540) = -1 EBADF (Bad file descriptor)
+  This is **literally** from the log, without deleting or reordering
+  lines. I read it so that there is a race between `open` and `close`
+  where fd 10 is reused, but seemingly closed - resulting in the `EBADF`
+  While it smells like a kernel issue, it may be a well-hidden program
+  bug - if so, one I currently do not find. HOWEVER, this commit
+  works around the issue by reopening the file when we receive EBADF.
+  That's the best thing to do in that case, especially if it really is
+  a kernel bug. Data loss should not occur, as the previous writes
+  succeeded in that case.
+  The backdraw of this work-around is that it only "fixes" omfile. In
+  theory every part of rsyslog can be affected by this issues (queue
+  files, for example). So this is not to be considered a final solution
+  of the root issues (but a big step forward for known problem cases).
+  see also https://github.com/rsyslog/rsyslog/issues/3404
 - testbench bugfix: TLS syslog tests for "anon" mode were broken
   They did not detect when "anon" mode was not properly supported by the
   drivers.
