@@ -28,6 +28,7 @@ input(type="imfile"
 	Severity="error"
 	Facility="local7"
 	addMetadata="on"
+	reopenOnTruncate="on"
 )
 
 $template outfmt,"%msg:F,58:2%\n"
@@ -48,6 +49,7 @@ echo '"./'$RSYSLOG_DYNNAME'.input.*.log"
 	missingok
 	notifempty
 	compress
+	copytruncate
 }' > $RSYSLOG_DYNNAME.logrotate
 
 # generate input file first.

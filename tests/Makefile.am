@@ -1127,6 +1127,8 @@ TESTS += \
 	imfile-symlink.sh \
 	imfile-symlink-multi.sh \
 	imfile-logrotate.sh \
+	imfile-logrotate-copytruncate.sh \
+	imfile-logrotate-nocopytruncate.sh \
 	imfile-growing-file-id.sh \
 	glbl-oversizeMsg-truncate-imfile.sh
 
@@ -1780,6 +1782,8 @@ EXTRA_DIST= \
 	imfile-symlink.sh \
 	imfile-symlink-multi.sh \
 	imfile-logrotate.sh \
+	imfile-logrotate-copytruncate.sh \
+	imfile-logrotate-nocopytruncate.sh \
 	imfile-growing-file-id.sh \
 	glbl-oversizeMsg-truncate-imfile.sh \
 	dynfile_invld_async.sh \
