@@ -547,6 +547,7 @@ startup_vgthread() {
 
 
 # inject messages via our inject interface (imdiag)
+# $1 is start message number, env var NUMMESSAGES is number of messages to inject
 injectmsg() {
 	msgs=${2:-$NUMMESSAGES}
 	echo injecting $msgs messages

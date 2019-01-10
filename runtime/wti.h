@@ -103,6 +103,7 @@ rsRetVal wtiSetState(wti_t * const pThis, int bNew);
 rsRetVal wtiWakeupThrd(wti_t * const pThis);
 int wtiGetState(wti_t * const pThis);
 wti_t *wtiGetDummy(void);
+int ATTR_NONNULL() wtiWaitNonEmpty(wti_t *const pThis, const struct timespec timeout);
 PROTOTYPEObjClassInit(wti);
 PROTOTYPEObjClassExit(wti);
 PROTOTYPEpropSetMeth(wti, pszDbgHdr, uchar*);

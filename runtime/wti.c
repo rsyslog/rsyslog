@@ -9,7 +9,7 @@
  * (and in the web doc set on https://www.rsyslog.com/doc/). Be sure to read it
  * if you are getting aquainted to the object.
  *
- * Copyright 2008-2018 Adiscon GmbH.
+ * Copyright 2008-2019 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -321,12 +321,35 @@ wtiWorkerCancelCleanup(void *arg)
 
 
 /* wait for queue to become non-empty or timeout
+ * this is introduced as helper to support queue minimum batch sizes, but may
+ * also be used for other cases. This function waits until the queue is non-empty
+ * or a timeout occurs. The timeout must be passed in as absolute value.
+ * @returns 0 if timeout occurs (queue still empty), something else otherwise
+ */
+int ATTR_NONNULL()
+wtiWaitNonEmpty(wti_t *const pThis, const struct timespec timeout)
+{
+	wtp_t *__restrict__ const pWtp = pThis->pWtp;
+	int r;
+
+	DBGOPRINT((obj_t*) pThis, "waiting on queue to become non-empty\n");
+	if(d_pthread_cond_timedwait(&pThis->pcondBusy, pWtp->pmutUsr, &timeout) != 0) {
+		r = 0;
+	} else {
+		r = 1;
+	}
+	DBGOPRINT((obj_t*) pThis, "waited on queue to become non-empty, result %d\n", r);
+	return r;
+}
+
+
+/* wait for queue to become non-empty or timeout
  * helper to wtiWorker. Note the the predicate is
  * re-tested by the caller, so it is OK to NOT do it here.
  * rgerhards, 2009-05-20
  */
-static void
-doIdleProcessing(wti_t *pThis, wtp_t *pWtp, int *pbInactivityTOOccured)
+static void ATTR_NONNULL()
+doIdleProcessing(wti_t *const pThis, wtp_t *const pWtp, int *const pbInactivityTOOccured)
 {
 	struct timespec t;
 
@@ -549,6 +572,3 @@ BEGINObjClassInit(wti, 1, OBJ_IS_CORE_MODULE) /* one is the object version (most
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 ENDObjClassInit(wti)
-
-/* vi:set ai:
- */

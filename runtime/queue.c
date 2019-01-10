@@ -12,7 +12,7 @@
  * function names - this makes it really hard to read and does not provide much
  * benefit, at least I (now) think so...
  *
- * Copyright 2008-2018 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2019 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -83,7 +83,7 @@ unsigned int iOverallQueueSize = 0;
 #endif
 
 /* overridable default values (via global config) */
-int actq_dflt_toQShutdown = 0;		/* queue shutdown */
+int actq_dflt_toQShutdown = 10;		/* queue shutdown */
 int actq_dflt_toActShutdown = 1000;	/* action shutdown (in phase 2) */
 int actq_dflt_toEnq = 2000;		/* timeout for queue enque */
 int actq_dflt_toWrkShutdown = 60000;	/* timeout for worker thread shutdown */
@@ -120,6 +120,8 @@ static struct cnfparamdescr cnfpdescr[] = {
 	{ "queue.spooldirectory", eCmdHdlrGetWord, 0 },
 	{ "queue.size", eCmdHdlrSize, 0 },
 	{ "queue.dequeuebatchsize", eCmdHdlrInt, 0 },
+	{ "queue.mindequeuebatchsize", eCmdHdlrInt, 0 },
+	{ "queue.mindequeuebatchsize.timeout", eCmdHdlrInt, 0 },
 	{ "queue.maxdiskspace", eCmdHdlrSize, 0 },
 	{ "queue.highwatermark", eCmdHdlrInt, 0 },
 	{ "queue.lowwatermark", eCmdHdlrInt, 0 },
@@ -285,6 +287,8 @@ qqueueDbgPrint(qqueue_t *pThis)
 		(pThis->pszFilePrefix == NULL) ? "[NONE]" : (char*)pThis->pszFilePrefix);
 	dbgoprint((obj_t*) pThis, "queue.size: %d\n", pThis->iMaxQueueSize);
 	dbgoprint((obj_t*) pThis, "queue.dequeuebatchsize: %d\n", pThis->iDeqBatchSize);
+	dbgoprint((obj_t*) pThis, "queue.mindequeuebatchsize: %d\n", pThis->iMinDeqBatchSize);
+	dbgoprint((obj_t*) pThis, "queue.mindequeuebatchsize.timeout: %d\n", pThis->toMinDeqBatchSize);
 	dbgoprint((obj_t*) pThis, "queue.maxdiskspace: %lld\n", pThis->sizeOnDiskMax);
 	dbgoprint((obj_t*) pThis, "queue.highwatermark: %d\n", pThis->iHighWtrMrk);
 	dbgoprint((obj_t*) pThis, "queue.lowwatermark: %d\n", pThis->iLowWtrMrk);
@@ -1467,6 +1471,7 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThread
 	pThis->iNumWorkerThreads = iWorkerThreads;
 	pThis->iDeqtWinToHr = 25; /* disable time-windowed dequeuing by default */
 	pThis->iDeqBatchSize = 8; /* conservative default, should still provide good performance */
+	pThis->iMinDeqBatchSize = 0; /* conservative default, should still provide good performance */
 
 	pThis->pszFilePrefix = NULL;
 	pThis->qType = qType;
@@ -1494,6 +1499,8 @@ qqueueSetDefaultsActionQueue(qqueue_t *pThis)
 	pThis->qType = QUEUETYPE_DIRECT;	/* type of the main message queue above */
 	pThis->iMaxQueueSize = 1000;		/* size of the main message queue above */
 	pThis->iDeqBatchSize = 128; 		/* default batch size */
+	pThis->iMinDeqBatchSize = 0;
+	pThis->toMinDeqBatchSize = 1000;
 	pThis->iHighWtrMrk = -1;		/* high water mark for disk-assisted queues */
 	pThis->iLowWtrMrk = -1;			/* low water mark for disk-assisted queues */
 	pThis->iDiscardMrk = -1;		/* begin to discard messages */
@@ -1525,6 +1532,8 @@ qqueueSetDefaultsRulesetQueue(qqueue_t *pThis)
 	pThis->qType = QUEUETYPE_FIXED_ARRAY;	/* type of the main message queue above */
 	pThis->iMaxQueueSize = 50000;		/* size of the main message queue above */
 	pThis->iDeqBatchSize = 1024; 		/* default batch size */
+	pThis->iMinDeqBatchSize = 0;
+	pThis->toMinDeqBatchSize = 1000;
 	pThis->iHighWtrMrk = -1;		/* high water mark for disk-assisted queues */
 	pThis->iLowWtrMrk = -1;			/* low water mark for disk-assisted queues */
 	pThis->iDiscardMrk = -1;		/* begin to discard messages */
@@ -1736,13 +1745,16 @@ DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch)
  * This must only be called when the queue mutex is LOOKED, otherwise serious
  * malfunction will happen.
  */
-static rsRetVal
-DequeueConsumableElements(qqueue_t *pThis, wti_t *pWti, int *piRemainingQueueSize, int *const pSkippedMsgs)
+static rsRetVal ATTR_NONNULL()
+DequeueConsumableElements(qqueue_t *const pThis, wti_t *const pWti,
+	int *const piRemainingQueueSize, int *const pSkippedMsgs)
 {
 	int nDequeued;
 	int nDiscarded;
 	int nDeleted;
 	int iQueueSize;
+	int keep_running = 1;
+	struct timespec timeout;
 	smsg_t *pMsg;
 	rsRetVal localRet;
 	DEFiRet;
@@ -1753,6 +1765,12 @@ DequeueConsumableElements(qqueue_t *pThis, wti_t *pWti, int *piRemainingQueueSiz
 	nDequeued = nDiscarded = 0;
 	if(pThis->qType == QUEUETYPE_DISK) {
 		pThis->tVars.disk.deqFileNumIn = strmGetCurrFileNum(pThis->tVars.disk.pReadDeq);
+	}
+
+	/* work-around clang static analyzer false positive, we need a const value */
+	const int iMinDeqBatchSize = pThis->iMinDeqBatchSize;
+	if(iMinDeqBatchSize > 0) {
+		timeoutComp(&timeout, pThis->toMinDeqBatchSize);/* get absolute timeout */
 	}
 
 	while((iQueueSize = getLogicalQueueSize(pThis)) > 0 && nDequeued < pThis->iDeqBatchSize) {
@@ -1804,6 +1822,25 @@ DequeueConsumableElements(qqueue_t *pThis, wti_t *pWti, int *piRemainingQueueSiz
 		pWti->batch.pElem[nDequeued].pMsg = pMsg;
 		pWti->batch.eltState[nDequeued] = BATCH_STATE_RDY;
 		++nDequeued;
+		if(nDequeued < iMinDeqBatchSize && getLogicalQueueSize(pThis) == 0) {
+			while(!pThis->bShutdownImmediate
+				&& keep_running
+				&& nDequeued < iMinDeqBatchSize
+				&& getLogicalQueueSize(pThis) == 0) {
+				dbgprintf("%s minDeqBatchSize doing wait, batch is %d messages, "
+					"queue size %d\n", obj.GetName((obj_t*) pThis),
+					nDequeued, getLogicalQueueSize(pThis));
+				if(wtiWaitNonEmpty(pWti, timeout) == 0) { /* timeout? */
+					DBGPRINTF("%s minDeqBatchSize timeout, batch is %d messages\n",
+						obj.GetName((obj_t*) pThis), nDequeued);
+					keep_running = 0;
+				}
+			}
+		}
+		if(keep_running) {
+			keep_running = ((iQueueSize = getLogicalQueueSize(pThis)) > 0
+				&& nDequeued < pThis->iDeqBatchSize);
+		}
 	}
 
 	if(pThis->qType == QUEUETYPE_DISK) {
@@ -2454,13 +2491,14 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 
 	DBGOPRINT((obj_t*) pThis, "params: type %d, enq-only %d, disk assisted %d, spoolDir '%s', maxFileSz %lld, "
 			          "maxQSize %d, lqsize %d, pqsize %d, child %d, full delay %d, "
-				  "light delay %d, deq batch size %d, high wtrmrk %d, low wtrmrk %d, "
+				  "light delay %d, deq batch size %d, min deq batch size %d, "
+				  "high wtrmrk %d, low wtrmrk %d, "
 				  "discardmrk %d, max wrkr %d, min msgs f. wrkr %d\n",
 		  pThis->qType, pThis->bEnqOnly, pThis->bIsDA, pThis->pszSpoolDir,
 		  pThis->iMaxFileSize, pThis->iMaxQueueSize,
 		  getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis),
 		  pThis->pqParent == NULL ? 0 : 1, pThis->iFullDlyMrk, pThis->iLightDlyMrk,
-		  pThis->iDeqBatchSize, pThis->iHighWtrMrk, pThis->iLowWtrMrk,
+		  pThis->iDeqBatchSize, pThis->iMinDeqBatchSize, pThis->iHighWtrMrk, pThis->iLowWtrMrk,
 		  pThis->iDiscardMrk, pThis->iNumWorkerThreads, pThis->iMinMsgsPerWrkr);
 
 	pThis->bQueueStarted = 1;
@@ -3219,6 +3257,10 @@ qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst)
 			pThis->iMaxQueueSize = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "queue.dequeuebatchsize")) {
 			pThis->iDeqBatchSize = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "queue.mindequeuebatchsize")) {
+			pThis->iMinDeqBatchSize = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "queue.mindequeuebatchsize.timeout")) {
+			pThis->toMinDeqBatchSize = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "queue.maxdiskspace")) {
 			pThis->sizeOnDiskMax = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "queue.highwatermark")) {
@@ -3315,6 +3357,7 @@ DEFpropSetMeth(qqueue, bSaveOnShutdown, int)
 DEFpropSetMeth(qqueue, pAction, action_t*)
 DEFpropSetMeth(qqueue, iDeqSlowdown, int)
 DEFpropSetMeth(qqueue, iDeqBatchSize, int)
+DEFpropSetMeth(qqueue, iMinDeqBatchSize, int)
 DEFpropSetMeth(qqueue, sizeOnDiskMax, int64)
 DEFpropSetMeth(qqueue, iSmpInterval, int)
 

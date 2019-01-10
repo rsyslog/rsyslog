@@ -204,6 +204,8 @@ TESTS +=  \
 	tcp_forwarding_tpl.sh \
 	tcp_forwarding_dflt_tpl.sh \
 	tcp_forwarding_retries.sh \
+	queue-minbatch.sh \
+	queue-minbatch-queuefull.sh \
 	arrayqueue.sh \
 	global_vars.sh \
 	no-parser-errmsg.sh \
@@ -1294,6 +1296,8 @@ EXTRA_DIST= \
 	diskq-rfc5424.sh \
 	diskqueue-full.sh \
 	diskqueue.sh \
+	queue-minbatch.sh \
+	queue-minbatch-queuefull.sh \
 	arrayqueue.sh \
 	include-obj-text-from-file.sh \
 	include-obj-outside-control-flow-vg.sh \
