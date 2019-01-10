@@ -139,20 +139,12 @@ if ENABLE_OMHIREDIS
 SUBDIRS += contrib/omhiredis
 endif
 
-if ENABLE_OMZMQ3
-SUBDIRS += contrib/omzmq3
-endif
-
 if ENABLE_OMCZMQ
 SUBDIRS += contrib/omczmq
 endif
 
 if ENABLE_OMRABBITMQ
 SUBDIRS += contrib/omrabbitmq
-endif
-
-if ENABLE_IMZMQ3
-SUBDIRS += contrib/imzmq3
 endif
 
 if ENABLE_IMCZMQ
@@ -362,8 +354,6 @@ if ENABLE_OMPROG
 DISTCHECK_CONFIGURE_FLAGS+= --enable-omprog 
 endif
 
-# Note: [io]mzmq3 cannot be built any longer, according to Brian Knox they require an
-# outdated version of the client lib. So we do not bother any longer about them.
 if ENABLE_GSSAPI
 DISTCHECK_CONFIGURE_FLAGS+= --enable-gssapi-krb5
 endif
