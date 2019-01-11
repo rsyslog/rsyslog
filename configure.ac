@@ -2051,22 +2051,6 @@ fi
 AM_CONDITIONAL(ENABLE_OMMONGODB, test x$enable_ommongodb = xyes)
 # end of mongodb code
 
-# BEGIN ZMQ3 INPUT SUPPORT
-AC_ARG_ENABLE(imzmq3,
-        [AS_HELP_STRING([--enable-imzmq3],[Compiles imzmq3 output module @<:@default=no@:>@])],
-        [case "${enableval}" in
-         yes) enable_imzmq3="yes" ;;
-          no) enable_imzmq3="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imzmq3) ;;
-         esac],
-        [enable_imzmq3=no]
-)
-if test "x$enable_imzmq3" = "xyes"; then
-	PKG_CHECK_MODULES(CZMQ, libczmq >= 1.1.0)
-fi
-AM_CONDITIONAL(ENABLE_IMZMQ3, test x$enable_imzmq3 = xyes)
-
-# END ZMQ3 INPUT SUPPORT
 
 # BEGIN CZMQ INPUT SUPPORT
 AC_ARG_ENABLE(imczmq,
@@ -2085,22 +2069,6 @@ AM_CONDITIONAL(ENABLE_IMCZMQ, test x$enable_imczmq = xyes)
 
 # END CZMQ INPUT
 
-# BEGIN ZMQ3 OUTPUT SUPPORT
-AC_ARG_ENABLE(omzmq3,
-        [AS_HELP_STRING([--enable-omzmq3],[Compiles omzmq3 output module @<:@default=no@:>@])],
-        [case "${enableval}" in
-         yes) enable_omzmq3="yes" ;;
-          no) enable_omzmq3="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omzmq3) ;;
-         esac],
-        [enable_omzmq3=no]
-)
-if test "x$enable_omzmq3" = "xyes"; then
-	PKG_CHECK_MODULES(CZMQ, libczmq >= 1.1.0)
-fi
-AM_CONDITIONAL(ENABLE_OMZMQ3, test x$enable_omzmq3 = xyes)
-
-# END ZMQ3 SUPPORT
 
 # BEGIN CZMQ OUTPUT SUPPORT
 AC_ARG_ENABLE(omczmq,
@@ -2108,7 +2076,7 @@ AC_ARG_ENABLE(omczmq,
         [case "${enableval}" in
          yes) enable_omczmq="yes" ;;
           no) enable_omczmq="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omzmq3) ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omczmq) ;;
          esac],
         [enable_omczmq=no]
 )
@@ -2403,9 +2371,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/imkmsg/Makefile \
 		contrib/mmgrok/Makefile \
 		contrib/mmcount/Makefile \
-		contrib/omzmq3/Makefile \
 		contrib/omczmq/Makefile \
-		contrib/imzmq3/Makefile \
 		contrib/imczmq/Makefile \
 		contrib/mmsequence/Makefile \
 		contrib/mmrfc5424addhmac/Makefile \
@@ -2447,7 +2413,6 @@ echo "    imdiag enabled:                           $enable_imdiag"
 echo "    file input module enabled:                $enable_imfile"
 echo "    Solaris input module enabled:             $enable_imsolaris"
 echo "    periodic statistics module enabled:       $enable_impstats"
-echo "    imzmq3 input module enabled:              $enable_imzmq3"
 echo "    imczmq input module enabled:              $enable_imczmq"
 echo "    imjournal input module enabled:           $enable_imjournal"
 echo "    imkafka module will be compiled:          $enable_imkafka"
@@ -2465,7 +2430,6 @@ echo "    omhttp module will be compiled:           $enable_omhttp"
 echo "    omruleset module will be compiled:        $enable_omruleset"
 echo "    omudpspoof module will be compiled:       $enable_omudpspoof"
 echo "    omuxsock module will be compiled:         $enable_omuxsock"
-echo "    omzmq3 module will be compiled:           $enable_omzmq3"
 echo "    omczmq module will be compiled:           $enable_omczmq"
 echo "    omrabbitmq module will be compiled:       $enable_omrabbitmq"
 echo "    omhttpfs module will be compiled:         $enable_omhttpfs"
