@@ -36,6 +36,15 @@ Version 8.41.0 [v8-stable] 2019-01-22
   Note: for gcc this was possible, because they all occured in a utility
   function. For clang, they are inlined so we get many -and changing- violations.
   see also https://github.com/rsyslog/rsyslog/issues/3361#issuecomment-450502569
+- imzmq3/omzmq3: remove modules
+  according to @brianknox (their author) these modules are outdated:
+  https://twitter.com/taotetek/status/931860786959540224
+  They are replaced by imczmq/omczmq and are no longer maintained. We put a
+  deprication notice into the modules a year ago, and now it finally is time
+  to remove them. They do NOT build in any case, except if very old versions
+  of the 0mq ecosystem are used.
+  see also https://github.com/rsyslog/rsyslog/issues/2100
+  closes https://github.com/rsyslog/rsyslog/issues/2103
 - bugfix omusrmsg: don't overwrite previous set _PATH_DEV value
   Since commit 56ace5e418d149af27586c7c1264fccfbc6badf1, omusrmsg was broken
   because "memcpy()" is not a suitable substitute for "strncat()" in this
@@ -127,6 +136,7 @@ Version 8.41.0 [v8-stable] 2019-01-22
       We have tried to troubleshoot this for hours and hours - now is time to
       give up until someone comes up with a bright idea. So we make the affected
       tests skip themselves when they detect gcc with coverage instrumentation.
+   * testbench: add new test for imfile and logrotate in copytruncate mode
 ------------------------------------------------------------------------------
 Version 8.40.0 [v8-stable] 2018-12-11
 - mmkubernetes: add support for sslpartialchain for openssl
