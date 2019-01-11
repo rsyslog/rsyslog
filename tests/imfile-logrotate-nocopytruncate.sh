@@ -48,6 +48,7 @@ echo '"./'$RSYSLOG_DYNNAME'.input.*.log"
 	missingok
 	notifempty
 	compress
+	nocopytruncate
 }' > $RSYSLOG_DYNNAME.logrotate
 
 # generate input file first.
