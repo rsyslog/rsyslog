@@ -132,7 +132,7 @@ Note: parameter names are case-insensitive.
 
 -  **action.resumeInterval** integer
 
-   Sets the ActionResumeInterval for the action. The interval provided
+   Sets the action's resume interval. The interval provided
    is always in seconds. Thus, multiply by 60 if you need minutes and
    3,600 if you need hours (not recommended). When an action is
    suspended (e.g. destination can not be connected), the action is
@@ -140,10 +140,20 @@ Note: parameter names are case-insensitive.
    multiple retries fail, the interval is automatically extended. This
    is to prevent excessive resource use for retries. After each 10
    retries, the interval is extended by itself. To be precise, the 
-   actual interval is (numRetries / 10 + 1) * Action.ResumeInterval.
+   actual interval is `(numRetries / 10 + 1) * action.resumeInterval`.
    Using the default value of 30, this means that on the 10th try the
    suspension interval will be 60 (seconds) and after the 100th try
    it will be 330 (seconds).
+
+-  **action.resumeIntervalMax** integer
+
+   Default: 1800 (30 minutes)
+
+   This sets an upper limit on the growth of action.resumeInterval.
+   No wait will be larger than the value configured here. Going higher
+   than the default is only recommended if you know that a system may
+   be offline for an extended period of time **and** if it is acceptable
+   that it may take quite long to detect it came online again.
 
 - **action.reportSuspension** on/off
 
