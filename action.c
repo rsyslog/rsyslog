@@ -221,7 +221,8 @@ static struct cnfparamblk pblk =
 
 
 /* primarily a helper for debug purposes, get human-readble name of state */
-/* currently not needed, but may be useful in the future!
+/* currently not needed, but may be useful in the future! */
+#if 0
 static const char *
 batchState2String(const batch_state_t state)
 {
@@ -240,7 +241,7 @@ batchState2String(const batch_state_t state)
 		return "ERROR, batch state not known!";
 	}
 }
-*/
+#endif // #if 0
 
 /* ------------------------------ methods ------------------------------ */
 
