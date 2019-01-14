@@ -351,12 +351,12 @@ queue.timeoutshutdown
    :widths: auto
    :class: parameter-table
 
-   "integer", "0/1500", "no", "``$ActionQueueTimeoutShutdown``"
+   "integer", "10/1500", "no", "``$ActionQueueTimeoutShutdown``"
 
 If a queue that still contains messages is terminated it will wait the
 specified time interval for the worker thread to finish.
 The time is specfied in milliseconds (1000ms is 1sec).
-Default for action queues is 0, for ruleset queues it is 1500.
+Default for action queues is 10, for ruleset queues it is 1500.
 
 
 queue.timeoutActionCompletion
