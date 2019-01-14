@@ -53,6 +53,7 @@ struct action_s {
 	int	iSecsExecOnceInterval; /* if non-zero, minimum seconds to wait until action is executed again */
 	time_t	ttResumeRtry;	/* when is it time to retry the resume? */
 	int	iResumeInterval;/* resume interval for this action */
+	int	iResumeIntervalMax;/* maximum resume interval for this action --> -1: unbounded */
 	int	iResumeRetryCount;/* how often shall we retry a suspended action? (-1 --> eternal) */
 	int	iNbrNoExec;	/* number of matches that did not yet yield to an exec */
 	int	iExecEveryNthOccur;/* execute this action only every n-th occurence (with n=0,1 -> always) */

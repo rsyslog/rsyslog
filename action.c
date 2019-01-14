@@ -209,6 +209,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "action.resumeretrycount", eCmdHdlrInt, 0 }, /* legacy: actionresumeretrycount */
 	{ "action.reportsuspension", eCmdHdlrBinary, 0 },
 	{ "action.reportsuspensioncontinuation", eCmdHdlrBinary, 0 },
+	{ "action.resumeintervalmax", eCmdHdlrPositiveInt, 0 },
 	{ "action.resumeinterval", eCmdHdlrInt, 0 },
 	{ "action.copymsg", eCmdHdlrBinary, 0 }
 };
@@ -393,6 +394,7 @@ rsRetVal actionConstruct(action_t **ppThis)
 	
 	CHKmalloc(pThis = (action_t*) calloc(1, sizeof(action_t)));
 	pThis->iResumeInterval = 30;
+	pThis->iResumeIntervalMax = 1800; /* max interval default is half an hour */
 	pThis->iResumeRetryCount = 0;
 	pThis->pszName = NULL;
 	pThis->pszErrFile = NULL;
@@ -738,6 +740,9 @@ actionSuspend(action_t * const pThis, wti_t * const pWti)
 	 */
 	datetime.GetTime(&ttNow);
 	suspendDuration = pThis->iResumeInterval * (getActionNbrResRtry(pWti, pThis) / 10 + 1);
+	if(pThis->iResumeIntervalMax > 0 && suspendDuration > pThis->iResumeIntervalMax) {
+		suspendDuration = pThis->iResumeIntervalMax;
+	}
 	pThis->ttResumeRtry = ttNow + suspendDuration;
 	actionSetState(pThis, pWti, ACT_STATE_SUSP);
 	pThis->ctrSuspendDuration += suspendDuration;
@@ -1940,6 +1945,8 @@ actionApplyCnfParam(action_t * const pAction, struct cnfparamvals * const pvals)
 			pAction->bCopyMsg = (int) pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "action.resumeinterval")) {
 			pAction->iResumeInterval = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "action.resumeintervalMax")) {
+			pAction->iResumeIntervalMax = pvals[i].val.d.n;
 		} else {
 			dbgprintf("action: program error, non-handled "
 			  "param '%s'\n", pblk.descr[i].name);
