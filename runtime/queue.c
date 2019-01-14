@@ -83,7 +83,7 @@ unsigned int iOverallQueueSize = 0;
 #endif
 
 /* overridable default values (via global config) */
-int actq_dflt_toQShutdown = 0;		/* queue shutdown */
+int actq_dflt_toQShutdown = 10;		/* queue shutdown */
 int actq_dflt_toActShutdown = 1000;	/* action shutdown (in phase 2) */
 int actq_dflt_toEnq = 2000;		/* timeout for queue enque */
 int actq_dflt_toWrkShutdown = 60000;	/* timeout for worker thread shutdown */
