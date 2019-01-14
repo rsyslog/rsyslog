@@ -1,5 +1,15 @@
 ------------------------------------------------------------------------------
-Version 8.41.0 [v8-stable] 2019-01-22
+Version 8.1901.0 (aka 2019.01) 2019-01-22
+- change queue.timeoutshutdown default to 10 for action queues
+  The previous default of 0 gave action queues no real chance to
+  shutdown - at the time they were applied, they were usually already
+  expired (computing the absolute timeout took a small amount of time).
+  So we change this now to 10ms, which still is very quick but gives
+  the queue at least a chance to shutdown itself. That in turn
+  smoothens the whole shutdown process.
+  If a very large number of action queues is used this may lead
+  to a very slightly longer shutdown time, albeit this is very
+  improbable.
 - omclickhouse: new output module for clickhouse
   This output module adds the posibility to send
   INSERT querys to a Clickhouse database. See doc for details.
