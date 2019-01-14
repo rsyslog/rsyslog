@@ -970,7 +970,8 @@ do_rd_kafka_destroy(instanceData *const __restrict__ pData)
 			if (flushStatus == RD_KAFKA_RESP_ERR_NO_ERROR) {
 				DBGPRINTF("omkafka: onDestroyflushed remaining '%d' messages "
 					"to kafka topic '%s'\n", queuedCount,
-					rd_kafka_topic_name(pData->pTopic));
+					(pData->pTopic == NULL ? "NULL" : rd_kafka_topic_name(pData->pTopic))
+					);
 
 				/* Trigger callbacks a last time before shutdown */
 				const int callbacksCalled = rd_kafka_poll(pData->rk, 0); /* call callbacks */
@@ -983,7 +984,7 @@ do_rd_kafka_destroy(instanceData *const __restrict__ pData)
 						"Failed to send remaing '%d' messages to "
 						"topic '%s' on shutdown with error: '%s'",
 						queuedCount,
-						rd_kafka_topic_name(pData->pTopic),
+						(pData->pTopic == NULL ? "NULL" : rd_kafka_topic_name(pData->pTopic)),
 						rd_kafka_err2str(flushStatus));
 			}
 		} else {
@@ -1601,6 +1602,7 @@ static void
 setInstParamDefaults(instanceData *pData)
 {
 	pData->topic = NULL;
+	pData->pTopic = NULL;
 	pData->dynaTopic = 0;
 	pData->iDynaTopicCacheSize = 50;
 	pData->brokers = NULL;
