@@ -1065,15 +1065,6 @@ modUnloadAndDestructAll(eModLinkType_t modLinkTypesToUnload)
 		}
 	}
 
-#	ifdef DEBUG
-	/* DEV DEBUG only!
-		if(pLoadedModules != NULL) {
-			dbgprintf("modules still loaded after module.UnloadAndDestructAll:\n");
-			modUsrPrintAll();
-		}
-	*/
-#	endif
-
 	RETiRet;
 }
 

@@ -836,8 +836,6 @@ RunSelect(tcpsrv_t *pThis, nsd_epworkset_t workset[], size_t sizeWorkset)
 					processWorkset(pThis, NULL, iWorkset, workset);
 					iWorkset = 0;
 				}
-				//DBGPRINTF("New connect on NSD %p.\n", pThis->ppLstn[i]);
-				//SessAccept(pThis, pThis->ppLstnPort[i], &pNewSess, pThis->ppLstn[i]);
 				--nfds; /* indicate we have processed one */
 			}
 		}
