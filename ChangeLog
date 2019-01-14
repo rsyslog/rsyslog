@@ -103,6 +103,10 @@ Version 8.41.0 [v8-stable] 2019-01-22
   files, for example). So this is not to be considered a final solution
   of the root issues (but a big step forward for known problem cases).
   see also https://github.com/rsyslog/rsyslog/issues/3404
+- omkafka bugfix: segfault when running in debug mode using dynamic topics
+  This should only affect test environments, as debug mode is not
+  suitable for production (and really does not work when running for
+  extended period of time).
 - testbench bugfix: TLS syslog tests for "anon" mode were broken
   They did not detect when "anon" mode was not properly supported by the
   drivers.
@@ -142,6 +146,7 @@ Version 8.41.0 [v8-stable] 2019-01-22
       give up until someone comes up with a bright idea. So we make the affected
       tests skip themselves when they detect gcc with coverage instrumentation.
    * testbench: add new test for imfile and logrotate in copytruncate mode
+   * testbench: add new omkafka tests for dynamic topics
 ------------------------------------------------------------------------------
 Version 8.40.0 [v8-stable] 2018-12-11
 - mmkubernetes: add support for sslpartialchain for openssl
