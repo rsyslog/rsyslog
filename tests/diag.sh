@@ -938,6 +938,7 @@ wait_content() {
 			error_exit 1
 		else
 			printf 'wait_content still waiting... (%d lines)\n' "$count"
+			tail "$file"
 			$TESTTOOL_DIR/msleep 500
 		fi
 	done
