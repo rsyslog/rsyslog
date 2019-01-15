@@ -947,7 +947,7 @@ long BIO_debug_callback(BIO *bio, int cmd, const char __attribute__((unused)) *a
 	if (BIO_CB_RETURN & cmd)
 	r = ret;
 
-	printf("tcpdump: openssl debugmsg: BIO[%p]: ", (void *)bio);
+	printf("tcpflood: openssl debugmsg: BIO[%p]: ", (void *)bio);
 
 	switch (cmd) {
 	case BIO_CB_FREE:
@@ -1022,12 +1022,12 @@ void osslLastSSLErrorMsg(int ret, SSL *ssl, const char* pszCallSource)
 	long iMyRet = SSL_get_error(ssl, ret);
 
 	/* Check which kind of error we have */
-	printf("tcpdump: openssl error '%s' with error code=%ld\n", pszCallSource, iMyRet);
+	printf("tcpflood: openssl error '%s' with error code=%ld\n", pszCallSource, iMyRet);
 	if(iMyRet == SSL_ERROR_SSL) {
 		/* Loop through errors */
 		while ((un_error = ERR_peek_last_error()) != 0){
 			ERR_error_string_n(un_error, psz, 256);
-			printf("tcpdump: Errorstack: %s\n", psz);
+			printf("tcpflood: Errorstack: %s\n", psz);
 		}
 
 	} else if(iMyRet == SSL_ERROR_SYSCALL){
@@ -1039,16 +1039,16 @@ void osslLastSSLErrorMsg(int ret, SSL *ssl, const char* pszCallSource)
 			} else {
 				ERR_error_string_n(iMyRet, psz, 256);
 			}
-			printf("tcpdump: SysErr: %s\n", psz);
+			printf("tcpflood: SysErr: %s\n", psz);
 		} else {
 			/* Loop through errors */
 			while ((un_error = ERR_peek_last_error()) != 0){
 				ERR_error_string_n(un_error, psz, 256);
-				printf("tcpdump: Errorstack: %s\n", psz);
+				printf("tcpflood: Errorstack: %s\n", psz);
 			}
 		}
 	} else {
-		printf("tcpdump: Unknown SSL Error in '%s' (%d), SSL_get_error: %ld\n",
+		printf("tcpflood: Unknown SSL Error in '%s' (%d), SSL_get_error: %ld\n",
 			pszCallSource, ret, iMyRet);
 	}
 }
@@ -1059,7 +1059,7 @@ int verify_callback(int status, X509_STORE_CTX *store)
 	char szdbgdata2[256];
 
 	if(status == 0) {
-		printf("tcpdump: verify_callback certificate validation failed!\n");
+		printf("tcpflood: verify_callback certificate validation failed!\n");
 
 		X509 *cert = X509_STORE_CTX_get_current_cert(store);
 		int depth = X509_STORE_CTX_get_error_depth(store);
@@ -1070,7 +1070,7 @@ int verify_callback(int status, X509_STORE_CTX *store)
 		/* Log Warning only on EXPIRED */
 		if (err == X509_V_OK || err == X509_V_ERR_CERT_HAS_EXPIRED) {
 			printf(
-				"tcpdump: Certificate warning at depth: %d \n\t"
+				"tcpflood: Certificate warning at depth: %d \n\t"
 				"issuer  = %s\n\t"
 				"subject = %s\n\t"
 				"err %d:%s\n",
@@ -1080,7 +1080,7 @@ int verify_callback(int status, X509_STORE_CTX *store)
 			status = 1;
 		} else {
 			printf(
-				"tcpdump: Certificate error at depth: %d \n\t"
+				"tcpflood: Certificate error at depth: %d \n\t"
 				"issuer  = %s\n\t"
 				"subject = %s\n\t"
 				"err %d:%s\n",
@@ -1100,7 +1100,7 @@ initTLS(void)
 
 	/* Setup OpenSSL library */
 	if( /*(opensslh_THREAD_setup() == 0) || */ !SSL_library_init()) {
-		printf("tcpdump: error openSSL initialization failed!\n");
+		printf("tcpflood: error openSSL initialization failed!\n");
 		exit(1);
 	}
 
@@ -1113,19 +1113,19 @@ initTLS(void)
 	ctx = SSL_CTX_new(SSLv23_method());
 
 	if(tlsCAFile != NULL && SSL_CTX_load_verify_locations(ctx, tlsCAFile, NULL) != 1) {
-		printf("tcpdump: Error, Failed loading CA certificate"
+		printf("tcpflood: Error, Failed loading CA certificate"
 				" Is the file at the right path? And do we have the permissions?");
 		exit(1);
 	}
 	if(SSL_CTX_use_certificate_file(ctx, tlsCertFile, SSL_FILETYPE_PEM) != 1) {
-		printf("tcpdump: error cert file could not be accessed -- have you mixed up key and certificate?\n");
+		printf("tcpflood: error cert file could not be accessed -- have you mixed up key and certificate?\n");
 		printf("If in doubt, try swapping the files in -z/-Z\n");
 		printf("Certifcate is: '%s'\n", tlsCertFile);
 		printf("Key        is: '%s'\n", tlsKeyFile);
 		exit(1);
 	}
 	if(SSL_CTX_use_PrivateKey_file(ctx, tlsKeyFile, SSL_FILETYPE_PEM) != 1) {
-		printf("tcpdump: error key file could not be accessed -- have you mixed up key and certificate?\n");
+		printf("tcpflood: error key file could not be accessed -- have you mixed up key and certificate?\n");
 		printf("If in doubt, try swapping the files in -z/-Z\n");
 		printf("Certifcate is: '%s'\n", tlsCertFile);
 		printf("Key        is: '%s'\n", tlsKeyFile);
