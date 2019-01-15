@@ -69,11 +69,17 @@ DEFobjCurrIf(net)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(nsd_ptcp)
 
-
+/* Static Helper variables for certless communication */
 static int bGlblSrvrInitDone = 0;	/**< 0 - server global init not yet done, 1 - already done */
+static gnutls_anon_client_credentials_t anoncred;	/**< client anon credentials */
+static gnutls_anon_server_credentials_t anoncredSrv;	/**< server anon credentials */
+static int dhBits = 2048;	/**< number of bits for Diffie-Hellman key */
+
 
 static pthread_mutex_t mutGtlsStrerror;
 /*< a mutex protecting the potentially non-reentrant gtlStrerror() function */
+
+static gnutls_dh_params_t dh_params; /**< server DH parameters for anon mode */
 
 /* a macro to abort if GnuTLS error is not acceptable. We split this off from
  * CHKgnutls() to avoid some Coverity report in cases where we know GnuTLS
@@ -194,7 +200,7 @@ gtlsLoadOurCertKey(nsd_gtls_t *pThis)
 		 * may be well acceptable. In other cases, we will see some
 		 * more error messages down the road. -- rgerhards, 2008-07-02
 		 */
-		dbgprintf("our certificate is not set, file name values are cert: '%s', key: '%s'\n",
+		dbgprintf("gtlsLoadOurCertKey our certificate is not set, file name values are cert: '%s', key: '%s'\n",
 			  certFile, keyFile);
 		ABORT_FINALIZE(RS_RET_CERTLESS);
 	}
@@ -218,8 +224,14 @@ gtlsLoadOurCertKey(nsd_gtls_t *pThis)
 	CHKgnutls(gnutls_x509_privkey_import(pThis->ourKey, &data, GNUTLS_X509_FMT_PEM));
 	free(data.data);
 
+
 finalize_it:
-	if(iRet != RS_RET_OK) {
+	if(iRet == RS_RET_CERTLESS) {
+		dbgprintf("gtlsLoadOurCertKey certless mode\n");
+		pThis->bOurCertIsInit = 0;
+		pThis->bOurKeyIsInit = 0;
+	} else if(iRet != RS_RET_OK) {
+		dbgprintf("gtlsLoadOurCertKey error exit\n");
 		if(data.data != NULL)
 			free(data.data);
 		if(pThis->bOurCertIsInit) {
@@ -232,6 +244,8 @@ finalize_it:
 			gnutls_x509_privkey_deinit(pThis->ourKey);
 			pThis->bOurKeyIsInit = 0;
 		}
+	} else {
+		dbgprintf("gtlsLoadOurCertKey Successfully Loaded cert '%s' and key: '%s'\n", certFile, keyFile);
 	}
 	RETiRet;
 }
@@ -601,16 +615,19 @@ gtlsAddOurCert(void)
 	dbgprintf("GTLS certificate file: '%s'\n", certFile);
 	dbgprintf("GTLS key file: '%s'\n", keyFile);
 	if(certFile == NULL) {
-		LogError(0, RS_RET_CERT_MISSING, "error: certificate file is not set, cannot "
-				"continue");
-		ABORT_FINALIZE(RS_RET_CERT_MISSING);
+		LogMsg(0, RS_RET_CERT_MISSING, LOG_WARNING, "warning: certificate file is not set, forcing to "
+				"anon mode");
 	}
 	if(keyFile == NULL) {
-		LogError(0, RS_RET_CERTKEY_MISSING, "error: key file is not set, cannot "
-				"continue");
-		ABORT_FINALIZE(RS_RET_CERTKEY_MISSING);
+		LogMsg(0, RS_RET_CERTKEY_MISSING, LOG_WARNING, "warning: key file is not set, forcing to "
+				"anon mode");
 	}
-	CHKgnutls(gnutls_certificate_set_x509_key_file(xcred, (char*)certFile, (char*)keyFile, GNUTLS_X509_FMT_PEM));
+
+	/* set certificate in gnutls */
+	if(certFile != NULL && keyFile != NULL) {
+		CHKgnutls(gnutls_certificate_set_x509_key_file(xcred, (char*)certFile, (char*)keyFile,
+			GNUTLS_X509_FMT_PEM));
+	}
 
 finalize_it:
 	if(iRet != RS_RET_OK && iRet != RS_RET_CERT_MISSING && iRet != RS_RET_CERTKEY_MISSING) {
@@ -670,6 +687,17 @@ gtlsGlblInit(void)
 		/* 0 (no) to 9 (most), 10 everything */
 	}
 
+	/* Init Anon cipher helpers */
+	CHKgnutls(gnutls_dh_params_init(&dh_params));
+	CHKgnutls(gnutls_dh_params_generate2(dh_params, dhBits));
+
+	/* Allocate ANON Client Cred */
+	CHKgnutls(gnutls_anon_allocate_client_credentials(&anoncred));
+
+	/* Allocate ANON Server Cred */
+	CHKgnutls(gnutls_anon_allocate_server_credentials(&anoncredSrv));
+	gnutls_anon_set_server_dh_params(anoncredSrv, dh_params);
+
 finalize_it:
 	RETiRet;
 }
@@ -678,34 +706,42 @@ static rsRetVal
 gtlsInitSession(nsd_gtls_t *pThis)
 {
 	DEFiRet;
-	int gnuRet;
+	int gnuRet = 0;
 	gnutls_session_t session;
 
 	gnutls_init(&session, GNUTLS_SERVER);
 	pThis->bHaveSess = 1;
 	pThis->bIsInitiator = 0;
-
-	/* avoid calling all the priority functions, since the defaults are adequate. */
-
-	CHKgnutls(gnutls_credentials_set(session, GNUTLS_CRD_CERTIFICATE, xcred));
-
-	/* request client certificate if any.  */
-	gnutls_certificate_server_set_request( session, GNUTLS_CERT_REQUEST);
-
 	pThis->sess = session;
 
+	/* Moved CertKey Loading to top */
 #	if HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION
 	/* store a pointer to ourselfs (needed by callback) */
 	gnutls_session_set_ptr(pThis->sess, (void*)pThis);
 	iRet = gtlsLoadOurCertKey(pThis); /* first load .pem files */
 	if(iRet == RS_RET_OK) {
 		gnutls_certificate_set_retrieve_function(xcred, gtlsClientCertCallback);
-	} else if(iRet != RS_RET_CERTLESS) {
-		FINALIZE; /* we have an error case! */
+	} else if(iRet == RS_RET_CERTLESS) {
+		dbgprintf("gtlsInitSession: certless mode, not able to load own certs\n");
+	} else {
+		ABORT_FINALIZE(iRet); /* we have an error case! */
 	}
 #	endif
 
+	/* avoid calling all the priority functions, since the defaults are adequate. */
+	CHKgnutls(gnutls_credentials_set(pThis->sess, GNUTLS_CRD_CERTIFICATE, xcred));
+	CHKgnutls(gnutls_credentials_set(pThis->sess, GNUTLS_CRD_ANON, anoncredSrv));
+	gnutls_dh_set_prime_bits(pThis->sess, dhBits);
+
+	/* request client certificate if any.  */
+	gnutls_certificate_server_set_request( pThis->sess, GNUTLS_CERT_REQUEST);
+
+
 finalize_it:
+	if(iRet != RS_RET_OK && iRet != RS_RET_CERTLESS) {
+		LogError(0, iRet, "gtlsInitSession failed to INIT Session %d", gnuRet);
+	}
+
 	RETiRet;
 }
 
@@ -1322,6 +1358,7 @@ SetAuthMode(nsd_t *pNsd, uchar *mode)
 		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
 	}
 
+	dbgprintf("SetAuthMode to %s\n", mode);
 /* TODO: clear stored IDs! */
 
 finalize_it:
@@ -1400,6 +1437,7 @@ SetGnutlsPriorityString(nsd_t *pNsd, uchar *gnutlsPriorityString)
 
 	ISOBJ_TYPE_assert((pThis), nsd_gtls);
 	pThis->gnutlsPriorityString = gnutlsPriorityString;
+	dbgprintf("gnutlsPriorityString: set to '%s'\n", gnutlsPriorityString);
 	RETiRet;
 }
 
@@ -1594,14 +1632,28 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	}
 
 	/* if we reach this point, we are in TLS mode */
-	CHKiRet(gtlsInitSession(pNew));
+	iRet = gtlsInitSession(pNew);
+	if (iRet != RS_RET_OK) {
+		if (iRet == RS_RET_CERTLESS) {
+			dbgprintf("AcceptConnReq certless mode\n");
+			/* Set status to OK */
+			iRet = RS_RET_OK;
+		} else {
+			goto finalize_it;
+		}
+	}
 	gtlsSetTransportPtr(pNew, ((nsd_ptcp_t*) (pNew->pTcp))->sock);
 	pNew->authMode = pThis->authMode;
 	pNew->permitExpiredCerts = pThis->permitExpiredCerts;
 	pNew->pPermPeers = pThis->pPermPeers;
 	pNew->gnutlsPriorityString = pThis->gnutlsPriorityString;
+
+	dbgprintf("AcceptConnReq bOurCertIsInit=%hu bOurKeyIsInit=%hu \n",
+		pNew->bOurCertIsInit, pNew->bOurKeyIsInit);
+
 	/* here is the priorityString set */
 	if(pNew->gnutlsPriorityString != NULL) {
+		dbgprintf("AcceptConnReq setting configured priority string (ciphers)\n");
 		if(gnutls_priority_set_direct(pNew->sess,
 					(const char*) pNew->gnutlsPriorityString,
 					&error_position)==GNUTLS_E_INVALID_REQUEST) {
@@ -1609,8 +1661,15 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 					" Priority String: \"%s\"\n", error_position);
 		}
 	} else {
-		/* Use default priorities */
-		CHKgnutls(gnutls_set_default_priority(pNew->sess));
+		if(pThis->authMode == GTLS_AUTH_CERTANON || pThis->bOurCertIsInit == 0) {
+			/* Allow ANON Ciphers */
+			dbgprintf("AcceptConnReq setting anon ciphers\n");	 // +ANON-ECDH:
+			CHKgnutls(gnutls_priority_set_direct(pNew->sess, "NORMAL:+ANON-DH:+COMP-ALL", &error_position));
+		} else {
+			/* Use default priorities */
+			dbgprintf("AcceptConnReq setting default ciphers\n");
+			CHKgnutls(gnutls_set_default_priority(pNew->sess));
+		}
 	}
 
 	/* we now do the handshake. This is a bit complicated, because we are
@@ -1838,6 +1897,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	static const int cert_type_priority[2] = { GNUTLS_CRT_X509, 0 };
 #	endif
 	DEFiRet;
+	dbgprintf("Connect to %s:%s\n", host, port);
 
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 	assert(port != NULL);
@@ -1868,12 +1928,16 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 #		else
 		gnutls_certificate_client_set_retrieve_function(xcred, gtlsClientCertCallback);
 #		endif
-	} else if(iRet != RS_RET_CERTLESS) {
-		FINALIZE; /* we have an error case! */
+	} else if(iRet == RS_RET_CERTLESS) {
+		dbgprintf("Connect: certless mode, not able to load own certs\n");
+	} else {
+		LogError(0, iRet, "Connect failed to INIT Session %d", gnuRet);
+		ABORT_FINALIZE(iRet);; /* we have an error case! */
 	}
 
 	/*priority string setzen*/
 	if(pThis->gnutlsPriorityString != NULL) {
+		dbgprintf("Connect: setting configured priority string (ciphers)\n");
 		if(gnutls_priority_set_direct(pThis->sess,
 					(const char*) pThis->gnutlsPriorityString,
 					&error_position)==GNUTLS_E_INVALID_REQUEST) {
@@ -1881,8 +1945,16 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 					" Priority String: \"%s\"\n", error_position);
 		}
 	} else {
-		/* Use default priorities */
-		CHKgnutls(gnutls_set_default_priority(pThis->sess));
+		if(pThis->authMode == GTLS_AUTH_CERTANON || pThis->bOurCertIsInit == 0) {
+			/* Allow ANON Ciphers */
+			dbgprintf("Connect: Allow anon ciphers\n");		  // +ANON-ECDH:
+			CHKgnutls(gnutls_priority_set_direct(pThis->sess, "NORMAL:+ANON-DH:+COMP-ALL",
+				&error_position));
+		} else {
+			/* Use default priorities */
+			dbgprintf("Connect: setting default ciphers\n");
+			CHKgnutls(gnutls_set_default_priority(pThis->sess));
+		}
 	}
 
 #	ifdef HAVE_GNUTLS_CERTIFICATE_TYPE_SET_PRIORITY
@@ -1902,6 +1974,8 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 
 	/* put the x509 credentials to the current session */
 	CHKgnutls(gnutls_credentials_set(pThis->sess, GNUTLS_CRD_CERTIFICATE, xcred));
+	CHKgnutls(gnutls_credentials_set(pThis->sess, GNUTLS_CRD_ANON, anoncred));
+	gnutls_dh_set_prime_bits(pThis->sess, dhBits);
 
 	/* assign the socket to GnuTls */
 	CHKiRet(nsd_ptcp.GetSock(pThis->pTcp, &sock));

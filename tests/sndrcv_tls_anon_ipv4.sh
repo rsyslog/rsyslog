@@ -48,10 +48,14 @@ $ModLoad ../plugins/imtcp/.libs/imtcp
 input(	type="imtcp" port="'$TCPFLOOD_PORT'" )
 
 # set up the action
-$DefaultNetstreamDriver gtls # use gtls netstream driver
-$ActionSendStreamDriverMode 1 # require TLS for the connection
-$ActionSendStreamDriverAuthMode anon
-*.*	@@127.0.0.1:'$PORT_RCVR'
+action(	type="omfwd"
+	protocol="tcp"
+	target="127.0.0.1"
+	port="'$PORT_RCVR'"
+	StreamDriver="gtls"
+	StreamDriverMode="1"
+	StreamDriverAuthMode="anon"
+	)
 ' 2
 startup 2
 
