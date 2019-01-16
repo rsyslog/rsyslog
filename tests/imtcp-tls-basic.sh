@@ -21,7 +21,7 @@ $template outfmt,"%msg:F,58:2%\n"
 :msg, contains, "msgnum:" action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
-tcpflood -p$TCPFLOOD_PORT -m$NUMMESSAGES -Ttls -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem
+tcpflood -p$TCPFLOOD_PORT -m$NUMMESSAGES -Ttls -x$srcdir/tls-certs/ca.pem -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem
 shutdown_when_empty
 wait_shutdown
 seq_check

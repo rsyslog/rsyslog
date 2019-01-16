@@ -2,7 +2,7 @@
 # Test imtcp/TLS with many dropping connections
 # added 2011-06-09 by Rgerhards
 #
-# This file is part of the rsyslog project, released  under GPLv3
+# This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
@@ -30,7 +30,7 @@ echo \$DefaultNetstreamDriverCertFile $srcdir/tls-certs/cert.pem >>$RSYSLOG_DYNN
 echo \$DefaultNetstreamDriverKeyFile $srcdir/tls-certs/key.pem   >>$RSYSLOG_DYNNAME.rsyslog.conf.tlscert
 startup
 # 100 byte messages to gain more practical data use
-tcpflood -c20 -p'$TCPFLOOD_PORT' -m50000 -r -d100 -P129 -D -l0.995 -Ttls -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem
+tcpflood -c20 -p'$TCPFLOOD_PORT' -m50000 -r -d100 -P129 -D -l0.995 -Ttls -x$srcdir/tls-certs/ca.pem -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem
 sleep 5 # due to large messages, we need this time for the tcp receiver to settle...
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate
