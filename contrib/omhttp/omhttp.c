@@ -419,7 +419,7 @@ checkConn(wrkrInstanceData_t *const pWrkrData)
 
 		es_emptyStr(urlBuf);
 		r = es_addBuf(&urlBuf, serverUrl, strlen(serverUrl));
-		if(r == 0)
+		if(r == 0 && checkPath != NULL)
 			r = es_addBuf(&urlBuf, checkPath, sizeof(checkPath)-1);
 		if(r == 0)
 			healthUrl = es_str2cstr(urlBuf, NULL);
@@ -506,7 +506,11 @@ setPostURL(wrkrInstanceData_t *const pWrkrData, uchar **const tpls)
 	}
 
 	getRestPath(pData, tpls, &restPath);
-	r = es_addBuf(&url, (char*)restPath, ustrlen(restPath));
+
+	r = 0;
+	if (restPath != NULL)
+		r = es_addBuf(&url, (char*)restPath, ustrlen(restPath));
+
 	if(r != 0) {
 		LogError(0, RS_RET_ERR, "omhttp: failure in creating restURL, "
 				"error code: %d", r);
