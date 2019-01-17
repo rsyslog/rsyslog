@@ -18,7 +18,7 @@ fi
 sudo dpkg -i autoconf-archive_20170928-1adiscon1_all.deb
 rm autoconf-archive_20170928-1adiscon1_all.deb
 
-sudo apt-get install build-essential automake pkg-config libtool autoconf autotools-dev gdb valgrind libdbi-dev libsnmp-dev libmysqlclient-dev postgresql-client libglib2.0-dev libtokyocabinet-dev zlib1g-dev uuid-dev libgcrypt11-dev bison flex libcurl4-openssl-dev python-docutils openjdk-7-jdk wget libkrb5-dev libsodium-dev libczmq-dev libnet1-dev
+sudo apt-get install build-essential automake pkg-config libtool autoconf autotools-dev gdb valgrind libdbi-dev libsnmp-dev libmysqlclient-dev postgresql-client libglib2.0-dev libtokyocabinet-dev zlib1g-dev uuid-dev libgcrypt11-dev bison flex libcurl4-openssl-dev python-docutils openjdk-7-jdk wget libkrb5-dev libnet1-dev
 
 if [ "x$GROK" == "xYES" ]; then sudo apt-get install -qq libgrok1 libgrok-dev ; fi
 sudo apt-get install -qq --force-yes libestr-dev librelp-dev libfastjson-dev liblogging-stdlog-dev \
