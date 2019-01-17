@@ -25,6 +25,6 @@ wait_shutdown	# we need to wait until rsyslogd is finished!
 cmp $RSYSLOG_OUT_LOG $srcdir/resultdata/imuxsock_ccmiddle.log
 if [ ! $? -eq 0 ]; then
   echo "imuxsock_ccmiddle_root.sh failed"
-  exit 1
+  error_exit 1
 fi;
 exit_test

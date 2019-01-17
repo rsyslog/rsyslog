@@ -32,7 +32,7 @@ cmp $RSYSLOG_OUT_LOG $srcdir/resultdata/imuxsock_traillf.log
 if [ ! $? -eq 0 ]; then
   echo "imuxsock_traillf_syssock failed"
   echo "contents of $RSYSLOG_OUT_LOG:"
-  echo \"`cat $RSYSLOG_OUT_LOG`\"
+  echo \"$(cat $RSYSLOG_OUT_LOG)\"
   echo expected:
   echo \"`cat $srcdir/resultdata/imuxsock_traillf.log`\"
   exit 1

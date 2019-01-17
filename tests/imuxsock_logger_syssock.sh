@@ -1,22 +1,10 @@
 #!/bin/bash
+# test trailing LF handling in imuxsock
 # note: we use the system socket, but assign a different name to
 # it. This is not 100% the same thing as running as root, but it
 # is pretty close to it. -- rgerhards, 201602-19
-
-echo \[imuxsock_logger_syssock.sh\]: test trailing LF handling in imuxsock
-
-uname
-if [ $(uname) = "FreeBSD" ] ; then
-   echo "This test currently does not work on FreeBSD."
-   exit 77
-fi
-
-if [ $(uname) = "SunOS" ] ; then
-   echo "Solaris: FIX ME LOGGER"
-   exit 77
-fi
-
 . ${srcdir:=.}/diag.sh init
+check_logger_has_option_d
 generate_conf
 add_conf '
 module(load="../plugins/imuxsock/.libs/imuxsock"
@@ -36,7 +24,7 @@ cmp $RSYSLOG_OUT_LOG $srcdir/resultdata/imuxsock_logger.log
 if [ ! $? -eq 0 ]; then
   echo "imuxsock_logger_syssock.sh failed"
   echo "contents of $RSYSLOG_OUT_LOG:"
-  echo \"`cat $RSYSLOG_OUT_LOG`\"
-  exit 1
+  echo \"$(cat $RSYSLOG_OUT_LOG)\"
+  error_exit 1
 fi;
 exit_test

@@ -636,7 +636,7 @@ custom_content_check() {
 	fi
 }
 
-# check that given content $1 is not present in file $2 (default: RSYSLOG_OUTLOG)
+# check that given content $1 is not present in file $2 (default: RSYSLOG_OUT_LOG)
 # regular expressions may be used
 check_not_present() {
 	if [ "$2" == "" ]; then
@@ -1295,6 +1295,14 @@ get_inode() {
 		error_exit 100
 	fi
 	stat -c '%i' "$1"
+}
+
+
+# check that logger supports -d option, if not skip test
+# right now this is a bit dirty, we check distros which do not support it
+check_logger_has_option_d() {
+	skip_platform "FreeBSD"  "We need logger -p option, which we do not have on FreeBSD"
+	skip_platform "SunOS"  "We need logger -p option, which we do not have on (all flavors of) Solaris"
 }
 
 
