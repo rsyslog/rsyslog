@@ -131,6 +131,12 @@ Version 8.1901.0 (aka 2019.01) 2019-01-22
   least the error messages indicate this. Thankfully tcpdump is BSD licensed,
   so this should not be a big issue. Nevertheless, the incorect program name
   in error messages needs to be corrected, and this is what this commit does.
+- tcpflood bugfix: tool did not terminate on certificate error
+  when tcpflood detected a certificate error, it reported an
+  error message but did not abort. This could make errors undetectable
+  during CI runs.
+  also fix tests which did not properly provide CA cert (which than
+  caused the error).
 - CI
   - further improve testbench robustness against slow machines
   - testbench: add tests for parser.EscapeControlCharacterTab global option
