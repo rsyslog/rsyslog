@@ -1085,7 +1085,7 @@ int verify_callback(int status, X509_STORE_CTX *store)
 				"subject = %s\n\t"
 				"err %d:%s\n",
 				depth, szdbgdata1, szdbgdata2, err, X509_verify_cert_error_string(err));
-//			exit(1);
+			exit(1);
 		}
 	}
 	return status;
@@ -1546,7 +1546,9 @@ int main(int argc, char *argv[])
 #			if defined(ENABLE_OPENSSL)
 				tlsCAFile = optarg;
 #			else
-				fprintf(stderr, "-x CAFile not supported \n");
+				fprintf(stderr, "-x CAFile not supported in GnuTLS mode - ignored.\n"
+					"Note: we do NOT VERIFY the remote peer when compiled for GnuTLS.\n"
+					"When compiled for OpenSSL, we do.\n");
 #			endif
 				break;
 		case 'z':	tlsKeyFile = optarg;
