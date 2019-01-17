@@ -117,6 +117,8 @@ Version 8.1901.0 (aka 2019.01) 2019-01-22
   files, for example). So this is not to be considered a final solution
   of the root issues (but a big step forward for known problem cases).
   see also https://github.com/rsyslog/rsyslog/issues/3404
+- omhttp bugfix: segfault due to NULL pointer access
+  many thanks to Gerardo Puerta for the patch
 - omkafka bugfix: segfault when running in debug mode using dynamic topics
   This should only affect test environments, as debug mode is not
   suitable for production (and really does not work when running for
