@@ -937,6 +937,8 @@ TESTS +=  \
 	sndrcv_tls_anon_hostname.sh \
 	sndrcv_tls_anon_ipv4.sh \
 	sndrcv_tls_anon_ipv6.sh \
+	sndrcv_tls_certless_clientonly.sh \
+	sndrcv_tls_certless_clientonly-legacy.sh \
 	sndrcv_tls_priorityString.sh \
 	sndrcv_tls_certvalid.sh \
 	sndrcv_tls_certvalid_expired.sh \
@@ -2008,6 +2010,8 @@ EXTRA_DIST= \
 	sndrcv_tls_priorityString.sh \
 	sndrcv_tls_certvalid.sh \
 	sndrcv_tls_certvalid_expired.sh \
+	sndrcv_tls_certless_clientonly.sh \
+	sndrcv_tls_certless_clientonly-legacy.sh \
 	omtcl.sh \
 	omtcl.tcl \
 	pmsnare-default.sh \
