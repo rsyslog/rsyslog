@@ -47,9 +47,11 @@ check_PROGRAMS = $(TESTRUNS) ourtail tcpflood chkseq msleep randomgen \
 	mangle_qi \
 	have_relpSrvSetOversizeMode \
 	test_id
+if ENABLE_JOURNAL_TESTS
 if ENABLE_IMJOURNAL
 check_PROGRAMS += journal_print
 endif
+endif # if ENABLE_JOURNAL_TESTS
 TESTS = $(TESTRUNS)
 
 if ENABLE_ELASTICSEARCH_TESTS_MINIMAL

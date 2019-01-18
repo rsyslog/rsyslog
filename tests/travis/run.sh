@@ -83,7 +83,6 @@ else
 	--enable-mmsnmptrapd \
 	--enable-gnutls \
 	--enable-openssl \
-	--enable-gt-ksi \
 	--enable-libdbi \
 	--enable-omhttpfs \
 	--enable-elasticsearch \
@@ -94,7 +93,6 @@ else
 	--enable-mmcount \
 	--enable-gssapi-krb5 \
 	--enable-omhiredis \
-	--enable-imczmq --enable-omczmq \
 	--enable-usertools \
 	--enable-pmnull \
 	--enable-pmnormalize \

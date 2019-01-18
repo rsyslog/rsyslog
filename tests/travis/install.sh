@@ -18,7 +18,7 @@ fi
 sudo dpkg -i autoconf-archive_20170928-1adiscon1_all.deb
 rm autoconf-archive_20170928-1adiscon1_all.deb
 
-sudo apt-get install build-essential automake pkg-config libtool autoconf autotools-dev gdb valgrind libdbi-dev libsnmp-dev libmysqlclient-dev postgresql-client libglib2.0-dev libtokyocabinet-dev zlib1g-dev uuid-dev libgcrypt11-dev bison flex libcurl4-openssl-dev python-docutils openjdk-7-jdk wget libkrb5-dev libsodium-dev libczmq-dev libnet1-dev
+sudo apt-get install build-essential automake pkg-config libtool autoconf autotools-dev gdb valgrind libdbi-dev libsnmp-dev libmysqlclient-dev postgresql-client libglib2.0-dev libtokyocabinet-dev zlib1g-dev uuid-dev libgcrypt11-dev bison flex libcurl4-openssl-dev python-docutils openjdk-7-jdk wget libkrb5-dev libnet1-dev
 
 if [ "x$GROK" == "xYES" ]; then sudo apt-get install -qq libgrok1 libgrok-dev ; fi
 sudo apt-get install -qq --force-yes libestr-dev librelp-dev libfastjson-dev liblogging-stdlog-dev \
@@ -78,7 +78,7 @@ wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add - &&\
 sudo apt-get update -yy  &&\
 sudo apt-get install clang-5.0 clang-tools-5.0; fi
 
-if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then CLANG_PKG="clang-5.0"; SCAN_BUILD="scan-build-5.0"; else CLANG_PKG="clang"; SCAN_BUILD="scan-build"; fi
+if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then export CLANG_PKG="clang-5.0"; export SCAN_BUILD="scan-build-5.0"; else export CLANG_PKG="clang"; export SCAN_BUILD="scan-build"; fi
 if [ "$CC" == "clang" ]; then export NO_VALGRIND="--without-valgrind-testbench"; fi
 if [ "$CC" == "clang" ]; then sudo apt-get install -qq $CLANG_PKG ; fi
 
