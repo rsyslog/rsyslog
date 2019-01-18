@@ -85,6 +85,11 @@ static int bGlblSrvrInitDone = 0;	/**< 0 - server global init not yet done, 1 - 
 /* Main OpenSSL CTX pointer */
 static SSL_CTX *ctx;
 
+/* Static Helper variables for CERT status */
+short bHaveCA;
+short bHaveCert;
+short bHaveKey;
+
 /*--------------------------------------MT OpenSSL helpers ------------------------------------------*/
 static MUTEX_TYPE *mutex_buf = NULL;
 
@@ -427,25 +432,32 @@ osslGlblInit(void)
 	/* Setup certificates */
 	caFile = (const char *) glbl.GetDfltNetstrmDrvrCAF();
 	if(caFile == NULL) {
-		LogError(0, RS_RET_CA_CERT_MISSING, "Error: CA certificate is not set, cannot continue");
-		ABORT_FINALIZE(RS_RET_CA_CERT_MISSING);
+		LogMsg(0, RS_RET_CA_CERT_MISSING, LOG_WARNING,
+			"Error: CA certificate is not set - only ANON Encryption possible");
+		bHaveCA = 0;
+	} else {
+		bHaveCA	= 1;
 	}
 	certFile = (const char *) glbl.GetDfltNetstrmDrvrCertFile();
 	if(certFile == NULL) {
-		LogError(0, RS_RET_CERT_MISSING, "Error: Certificate file is not set, cannot continue");
-		ABORT_FINALIZE(RS_RET_CERT_MISSING);
-
+		LogMsg(0, RS_RET_CERT_MISSING, LOG_WARNING,
+			"Error: Certificate file is not set - only ANON Encryption possible");
+		bHaveCert = 0;
+	} else {
+		bHaveCert = 1;
 	}
 	keyFile = (const char *) glbl.GetDfltNetstrmDrvrKeyFile();
 	if(keyFile == NULL) {
-		LogError(0, RS_RET_CERTKEY_MISSING, "Error: Key file is not set, cannot continue");
-		ABORT_FINALIZE(RS_RET_CERTKEY_MISSING);
-
+		LogMsg(0, RS_RET_CERTKEY_MISSING, LOG_WARNING,
+			"Error: Key file is not set - only ANON Encryption possible");
+		bHaveKey = 0;
+	} else {
+		bHaveKey = 1;
 	}
 
 	/* Create main CTX Object */
 	ctx = SSL_CTX_new(SSLv23_method());
-	if(SSL_CTX_load_verify_locations(ctx, caFile, NULL) != 1) {
+	if(bHaveCA == 1 && SSL_CTX_load_verify_locations(ctx, caFile, NULL) != 1) {
 		LogError(0, RS_RET_TLS_CERT_ERR, "Error: CA certificate could not be accessed. "
 				"Check at least: 1) file path is correct, 2) file exist, "
 				"3) permissions are correct, 4) file content is correct. "
@@ -453,7 +465,7 @@ osslGlblInit(void)
 		osslLastSSLErrorMsg(0, NULL, LOG_ERR, "osslGlblInit");
 		ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
 	}
-	if(SSL_CTX_use_certificate_file(ctx, certFile, SSL_FILETYPE_PEM) != 1) {
+	if(bHaveCert == 1 && SSL_CTX_use_certificate_file(ctx, certFile, SSL_FILETYPE_PEM) != 1) {
 		LogError(0, RS_RET_TLS_CERT_ERR, "Error: Certificate could not be accessed. "
 				"Check at least: 1) file path is correct, 2) file exist, "
 				"3) permissions are correct, 4) file content is correct. "
@@ -461,7 +473,7 @@ osslGlblInit(void)
 		osslLastSSLErrorMsg(0, NULL, LOG_ERR, "osslGlblInit");
 		ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
 	}
-	if(SSL_CTX_use_PrivateKey_file(ctx, keyFile, SSL_FILETYPE_PEM) != 1) {
+	if(bHaveKey == 1 && SSL_CTX_use_PrivateKey_file(ctx, keyFile, SSL_FILETYPE_PEM) != 1) {
 		LogError(0, RS_RET_TLS_KEY_ERR , "Error: Key could not be accessed. "
 				"Check at least: 1) file path is correct, 2) file exist, "
 				"3) permissions are correct, 4) file content is correct. "
@@ -475,7 +487,15 @@ osslGlblInit(void)
 	SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv3);		/* Disable insecure SSLv3 Protocol */
 	SSL_CTX_sess_set_cache_size(ctx,1024);			/* TODO: make configurable? */
 
+	#if OPENSSL_VERSION_NUMBER >= 0x10002000L
 	/* Enable Support for automatic EC temporary key parameter selection. */
+	SSL_CTX_set_ecdh_auto(ctx, 1);
+	#else
+	dbgprintf("relpTcpInitTLS: openssl to old, cannot use SSL_CTX_set_ecdh_auto."
+		"Using SSL_CTX_set_tmp_ecdh with NID_X9_62_prime256v1/() instead.\n");
+	SSL_CTX_set_tmp_ecdh(ctx, EC_KEY_new_by_curve_name(NID_X9_62_prime256v1));
+	#endif
+
 
 	/* Set default VERIFY Options for OpenSSL CTX - and CALLBACK */
 	SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, verify_callback);
@@ -563,6 +583,7 @@ osslInitSession(nsd_ossl_t *pThis) /* , nsd_ossl_t *pServer) */
 {
 	DEFiRet;
 	BIO *client;
+	char pristringBuf[4096];
 
 	nsd_ptcp_t *pPtcp = (nsd_ptcp_t*) pThis->pTcp;
 
@@ -575,6 +596,22 @@ osslInitSession(nsd_ossl_t *pThis) /* , nsd_ossl_t *pServer) */
 		/* Enable certificate valid checking */
 		SSL_set_verify(pThis->ssl, SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
 		SSL_set_verify_depth(pThis->ssl, 4);
+	} else {
+		/* Allow ANON Ciphers */
+		#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+		 /* NOTE: do never use: +eNULL, it DISABLES encryption! */
+		strncpy(pristringBuf, "ALL:+COMPLEMENTOFDEFAULT:+ADH:+ECDH:+aNULL@SECLEVEL=0",
+			sizeof(pristringBuf));
+		#else
+		strncpy(pristringBuf, "ALL:+COMPLEMENTOFDEFAULT:+ADH:+ECDH:+aNULL",
+			sizeof(pristringBuf));
+		#endif
+
+		dbgprintf("osslInitSession: setting anon ciphers: %s\n", pristringBuf);
+		if ( SSL_set_cipher_list(pThis->ssl, pristringBuf) == 0 ){
+			dbgprintf("osslInitSession: Error setting ciphers '%s'\n", pristringBuf);
+			ABORT_FINALIZE(RS_RET_SYS_ERR);
+		}
 	}
 
 	/* Create BIO from ptcp socket! */
@@ -1609,8 +1646,8 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	DBGPRINTF("openssl: entering Connect family=%d, device=%s\n", family, device);
 	nsd_ossl_t* pThis = (nsd_ossl_t*) pNsd;
 	nsd_ptcp_t* pPtcp = (nsd_ptcp_t*) pThis->pTcp;
-
 	BIO *conn;
+	char pristringBuf[4096];
 
 	ISOBJ_TYPE_assert(pThis, nsd_ossl);
 	assert(port != NULL);
@@ -1628,6 +1665,35 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	conn = BIO_new_socket(pPtcp->sock, BIO_CLOSE /*BIO_NOCLOSE*/);
 	dbgprintf("Connect: Init conn BIO[%p] done\n", (void *)conn);
 
+	/*if we reach this point we are in tls mode */
+	DBGPRINTF("Connect: TLS Mode\n");
+	if(!(pThis->ssl = SSL_new(ctx))) {
+		osslLastSSLErrorMsg(0, pThis->ssl, LOG_ERR, "Connect");
+		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
+	}
+
+	if (pThis->authMode != OSSL_AUTH_CERTANON) {
+		dbgprintf("Connect: enable certificate checking (Mode=%d)n", pThis->authMode);
+		/* Enable certificate valid checking */
+		SSL_set_verify(pThis->ssl, SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
+		SSL_set_verify_depth(pThis->ssl, 4);
+	} else {
+		/* Allow ANON Ciphers */
+		#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+		 /* NOTE: do never use: +eNULL, it DISABLES encryption! */
+		strncpy(pristringBuf, "ALL:+COMPLEMENTOFDEFAULT:+ADH:+ECDH:+aNULL@SECLEVEL=0",
+			sizeof(pristringBuf));
+		#else
+		strncpy(pristringBuf, "ALL:+COMPLEMENTOFDEFAULT:+ADH:+ECDH:+aNULL",
+			sizeof(pristringBuf));
+		#endif
+
+		dbgprintf("Connect: setting anon ciphers: %s\n", pristringBuf);
+		if ( SSL_set_cipher_list(pThis->ssl, pristringBuf) == 0 ){
+			dbgprintf("Connect: Error setting ciphers '%s'\n", pristringBuf);
+			ABORT_FINALIZE(RS_RET_SYS_ERR);
+		}
+	}
 
 	/* Set debug Callback for client BIO as well! */
 	BIO_set_callback(conn, BIO_debug_callback);
@@ -1635,12 +1701,6 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 /* TODO: still needed? Set to NON blocking ! */
 BIO_set_nbio( conn, 1 );
 
-	/*if we reach this point we are in tls mode */
-	DBGPRINTF("Connect: TLS Mode\n");
-	if(!(pThis->ssl = SSL_new(ctx))) {
-		osslLastSSLErrorMsg(0, pThis->ssl, LOG_ERR, "Connect");
-		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
-	}
 	SSL_set_bio(pThis->ssl, conn, conn);
 	SSL_set_connect_state(pThis->ssl); /*sets ssl to work in client mode.*/
 	pThis->sslState = osslClient; /*set Client state */
