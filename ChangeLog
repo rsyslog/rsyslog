@@ -137,6 +137,21 @@ Version 8.1901.0 (aka 2019.01) 2019-01-22
   during CI runs.
   also fix tests which did not properly provide CA cert (which than
   caused the error).
+- testbench: fix issues with journal testing
+  The configure/Makefile checks were not correct, leading to the
+  build of journal components when not necessary, even if not
+  supported by the platform. Thus lead to invald build and test
+  failures.
+- testbench: add tests for "certless" tcp/tls
+  This adds a test to ensure that a client without certificate can
+  connect to a server with certificates. So it is not exactly
+  "certless".
+  The prime intent of this test is to match config suggestions given
+  by log hosting companies (like loggly) and so ensure that we do
+  not accidently break them. This is espcially important as the
+  capability for certless clients was not properly documented and
+  also become forgotten by the rsyslog team.
+  see also https://github.com/rsyslog/rsyslog/issues/3413
 - CI
   - further improve testbench robustness against slow machines
   - testbench: add tests for parser.EscapeControlCharacterTab global option
@@ -174,6 +189,15 @@ Version 8.1901.0 (aka 2019.01) 2019-01-22
       tests skip themselves when they detect gcc with coverage instrumentation.
    * testbench: add new test for imfile and logrotate in copytruncate mode
    * testbench: add new omkafka tests for dynamic topics
+   * travis: do no longer run 0mq tests
+     This often causes trouble when the packages are rebuild by the 0mq project
+     (which happens frequently). We already do intensive testing of the 0mq
+     components in the buildbot infrastructure, where we use dedicated containers.
+     This is reliable, as the containers already contain everything needed and so
+     do not need to reach out to the 0mq package archives. In the light of this,
+     let's save us the trouble of Travis failures. The only downside is that
+     users cannot pre-test with their local Travis when modifying 0mq modules,
+     which is quite acceptable.
 ------------------------------------------------------------------------------
 Version 8.40.0 [v8-stable] 2018-12-11
 - mmkubernetes: add support for sslpartialchain for openssl
