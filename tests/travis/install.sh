@@ -78,7 +78,7 @@ wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add - &&\
 sudo apt-get update -yy  &&\
 sudo apt-get install clang-5.0 clang-tools-5.0; fi
 
-if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then CLANG_PKG="clang-5.0"; SCAN_BUILD="scan-build-5.0"; else CLANG_PKG="clang"; SCAN_BUILD="scan-build"; fi
+if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then export CLANG_PKG="clang-5.0"; export SCAN_BUILD="scan-build-5.0"; else export CLANG_PKG="clang"; export SCAN_BUILD="scan-build"; fi
 if [ "$CC" == "clang" ]; then export NO_VALGRIND="--without-valgrind-testbench"; fi
 if [ "$CC" == "clang" ]; then sudo apt-get install -qq $CLANG_PKG ; fi
 
