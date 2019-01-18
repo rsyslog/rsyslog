@@ -277,9 +277,11 @@ struct scriptFunct {
 
 
 /* future extensions
+<code>
 struct x {
 	int nodetype;
 };
+</code>
 */
 
 
