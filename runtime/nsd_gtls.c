@@ -73,7 +73,7 @@ DEFobjCurrIf(nsd_ptcp)
 static int bGlblSrvrInitDone = 0;	/**< 0 - server global init not yet done, 1 - already done */
 static gnutls_anon_client_credentials_t anoncred;	/**< client anon credentials */
 static gnutls_anon_server_credentials_t anoncredSrv;	/**< server anon credentials */
-static int dhBits = 2048;	/**< number of bits for Diffie-Hellman key */
+static int dhBits = 1024;	/**< number of bits for Diffie-Hellman key */
 
 
 static pthread_mutex_t mutGtlsStrerror;

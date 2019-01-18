@@ -1,6 +1,6 @@
 #!/bin/bash
 # alorbach, 2019-01-16
-# testing sending and receiving via TLS (gtls) certless client only, server uses cert but ANON Mode. 
+# testing sending and receiving via TLS (gtls) certless both way. 
 # This file is part of the rsyslog project, released  under ASL 2.0
 
 # uncomment for debugging support:
@@ -14,8 +14,6 @@ export PORT_RCVR="$(get_free_port)"
 add_conf '
 global(
 	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
-	defaultNetstreamDriverCertFile="'$srcdir/tls-certs/cert.pem'"
-	defaultNetstreamDriverKeyFile="'$srcdir/tls-certs/key.pem'"
 	defaultNetstreamDriver="gtls"
 )
 

@@ -86,9 +86,9 @@ static int bGlblSrvrInitDone = 0;	/**< 0 - server global init not yet done, 1 - 
 static SSL_CTX *ctx;
 
 /* Static Helper variables for CERT status */
-short bHaveCA;
-short bHaveCert;
-short bHaveKey;
+static short bHaveCA;
+static short bHaveCert;
+static short bHaveKey;
 
 /*--------------------------------------MT OpenSSL helpers ------------------------------------------*/
 static MUTEX_TYPE *mutex_buf = NULL;

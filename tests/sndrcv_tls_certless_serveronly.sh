@@ -1,11 +1,11 @@
 #!/bin/bash
 # alorbach, 2019-01-16
-# testing sending and receiving via TLS (gtls) certless client only, server uses cert but ANON Mode. 
+# testing sending and receiving via TLS (gtls) certless servre only, client uses cert but ANON Mode. 
 # This file is part of the rsyslog project, released  under ASL 2.0
 
 # uncomment for debugging support:
 . ${srcdir:=.}/diag.sh init
-export NUMMESSAGES=25000
+export NUMMESSAGES=25 #000
 # start up the instances
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"
@@ -14,8 +14,6 @@ export PORT_RCVR="$(get_free_port)"
 add_conf '
 global(
 	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
-	defaultNetstreamDriverCertFile="'$srcdir/tls-certs/cert.pem'"
-	defaultNetstreamDriverKeyFile="'$srcdir/tls-certs/key.pem'"
 	defaultNetstreamDriver="gtls"
 )
 
@@ -38,6 +36,8 @@ export TCPFLOOD_PORT="$(get_free_port)" # TODO: move to diag.sh
 add_conf '
 global(
 	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
+	defaultNetstreamDriverCertFile="'$srcdir/tls-certs/cert.pem'"
+	defaultNetstreamDriverKeyFile="'$srcdir/tls-certs/key.pem'"
 )
 
 # Note: no TLS for the listener, this is for tcpflood!

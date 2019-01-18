@@ -971,6 +971,8 @@ TESTS +=  \
 	sndrcv_tls_anon_ipv6.sh \
 	sndrcv_tls_certless_clientonly.sh \
 	sndrcv_tls_certless_clientonly-legacy.sh \
+	sndrcv_tls_certless.sh \
+	sndrcv_tls_certless_serveronly.sh \
 	sndrcv_tls_priorityString.sh \
 	sndrcv_tls_certvalid.sh \
 	sndrcv_tls_certvalid_expired.sh \
@@ -993,6 +995,9 @@ TESTS +=  \
 	sndrcv_tls_ossl_anon_ipv4.sh \
 	sndrcv_tls_ossl_anon_ipv6.sh \
 	sndrcv_tls_ossl_anon_rebind.sh \
+	sndrcv_tls_ossl_certless.sh \
+	sndrcv_tls_ossl_certless_clientonly.sh \
+	sndrcv_tls_ossl_certless_serveronly.sh \
 	sndrcv_tls_ossl_certvalid.sh \
 	sndrcv_tls_ossl_certvalid_expired.sh \
 	imtcp-tls-ossl-x509valid.sh \
@@ -2056,6 +2061,11 @@ EXTRA_DIST= \
 	sndrcv_tls_certvalid_expired.sh \
 	sndrcv_tls_certless_clientonly.sh \
 	sndrcv_tls_certless_clientonly-legacy.sh \
+	sndrcv_tls_certless.sh \
+	sndrcv_tls_certless_serveronly.sh \
+	sndrcv_tls_ossl_certless.sh \
+	sndrcv_tls_ossl_certless_clientonly.sh \
+	sndrcv_tls_ossl_certless_serveronly.sh \
 	omtcl.sh \
 	omtcl.tcl \
 	pmsnare-default.sh \
