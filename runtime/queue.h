@@ -90,6 +90,8 @@ struct queue_s {
 	toDeleteLst_t *toDeleteLst;/* this queue's to-delete list */
 	int	toEnq;		/* enqueue timeout */
 	int	iDeqBatchSize;	/* max number of elements that shall be dequeued at once */
+	int	iMinDeqBatchSize;/* min number of elements that shall be dequeued at once */
+	int	toMinDeqBatchSize;/* timeout for MinDeqBatchSize, in ms */
 	/* rate limiting settings (will be expanded) */
 	int	iDeqSlowdown; /* slow down dequeue by specified nbr of microseconds */
 	/* end rate limiting */
