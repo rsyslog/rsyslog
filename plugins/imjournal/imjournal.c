@@ -449,6 +449,7 @@ readjournal(void)
 finalize_it:
 	free(sys_iden_help);
 	free(message);
+	free(c);
 	RETiRet;
 }
 
@@ -470,6 +471,7 @@ persistJournalState(void)
 		}
 	} else {
 		int ret;
+		free(last_cursor);
 		if ((ret = sd_journal_get_cursor(j, &last_cursor))) {
 			LogError(-ret, RS_RET_ERR, "imjournal: sd_journal_get_cursor() failed");
 			ABORT_FINALIZE(RS_RET_ERR);
@@ -630,6 +632,7 @@ loadJournalState(void)
 						iRet = RS_RET_ERR;
 					}
 				}
+				free(tmp_cursor);
 			}
 		} else {
 			LogError(0, RS_RET_IO_ERROR, "imjournal: "
@@ -843,6 +846,7 @@ BEGINfreeCnf
 CODESTARTfreeCnf
 	free(cs.stateFile);
 	free(cs.usePid);
+	free(last_cursor);
 	statsobj.Destruct(&(statsCounter.stats));
 ENDfreeCnf
 
