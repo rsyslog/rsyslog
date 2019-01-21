@@ -1,5 +1,9 @@
 ------------------------------------------------------------------------------
 Version 8.1901.0 (aka 2019.01) 2019-01-22
+- new version scheme: 8.yymm.0 - version now depends on release data
+  see also https://rainer.gerhards.net/2018/12/rsyslog-version-numbering-change.html
+- queue: add support for minimum batch sizes
+  closes https://github.com/rsyslog/rsyslog/issues/495
 - change queue.timeoutshutdown default to 10 for action queues
   The previous default of 0 gave action queues no real chance to
   shutdown - at the time they were applied, they were usually already
