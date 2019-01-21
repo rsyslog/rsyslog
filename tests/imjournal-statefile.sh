@@ -6,52 +6,53 @@
 # test in case message does not make it even to journal which may 
 # sometimes happen in some environments.
 # addd 2017-10-25 by RGerhards, released under ASL 2.0
-
 . ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh require-journalctl
 generate_conf
 add_conf '
+global(workDirectory="'$RSYSLOG_DYNNAME.spool'")
 module(load="../plugins/imjournal/.libs/imjournal" StateFile="imjournal.state"
-	RateLimit.Burst="1000000")
+	# we turn off rate-limiting, else we may miss our test message:
+	RateLimit.interval="0"
+       )
 
 template(name="outfmt" type="string" string="%msg%\n")
 action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
 '
-TESTMSG="TestBenCH-RSYSLog imjournal This is a test message - $(date +%s)"
+TESTMSG="TestBenCH-RSYSLog imjournal This is a test message - $(date +%s) - $RSYSLOG_DYNNAME"
 ./journal_print "$TESTMSG"
 if [ $? -ne 0 ]; then
         echo "SKIP: failed to put test into journal."
-        exit 77
+        error_exit 77
 fi
 journalctl -an 200 | fgrep -qF "$TESTMSG"
 if [ $? -ne 0 ]; then
         echo "SKIP: cannot read journal."
-        exit 77
+        error_exit 77
 fi
 # do first run to process all the stuff already in journal db
 startup
-./msleep 500
-shutdown_when_empty # shut down rsyslogd when done processing messages
+
+# give the journal ~5 minutes to forward the message, see
+# https://github.com/rsyslog/rsyslog/issues/2564#issuecomment-435849660
+content_check_with_count "$TESTMSG" 1 300
+
+shutdown_when_empty
 wait_shutdown
+
+printf '%s first rsyslogd run done, now restarting\n' "$(tb_timestamp)"
+
 #now do a second which should NOT capture testmsg again
+# craft new testmessage as shutdown condition:
+TESTMSG2="TestBenCH-RSYSLog imjournal This is a test message 2 - $(date +%s) - $RSYSLOG_DYNNAME"
 startup
-./msleep 500
-shutdown_when_empty # shut down rsyslogd when done processing messages
+./journal_print "$TESTMSG2"
+content_check_with_count "$TESTMSG2" 1 300
+shutdown_when_empty
 wait_shutdown
-COUNT= fgrep "$TESTMSG" < $RSYSLOG_OUT_LOG | wc -l
-if [ $COUNT -ne 1 ]; then
-  echo "FAIL: message found $COUNT times (expected 1)"
-  echo " $RSYSLOG_OUT_LOG content (tail -n200):"
-  tail -n200 $RSYSLOG_OUT_LOG
-  echo "======="
-  echo "last entries from journal:"
-  journalctl -an 200
-  echo "======="
-  echo "NOTE: last 200 lines may be insufficient on busy systems!"
-  echo "======="
-  echo "FAIL: imjournal test message could not be found!"
-  echo "Expected message content was:"
-  echo "$TESTMSG"
-  error_exit 1
-fi;
+
+printf '%s both rsyslogd runs finished, doing final result check\n' "$(tb_timestamp)"
+
+# now check the original one is there
+content_count_check "$TESTMSG" 1
 exit_test
