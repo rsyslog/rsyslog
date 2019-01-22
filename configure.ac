@@ -1471,8 +1471,9 @@ AM_CONDITIONAL(ENABLE_KSI_LS12, test x$enable_ksi_ls12 = xyes)
 # liblogging-stdlog support
 # we use liblogging-stdlog inside the testbench, which is why we need to check for it in any case
 PKG_CHECK_MODULES(LIBLOGGING_STDLOG, liblogging-stdlog >= 1.0.3,
-	AC_DEFINE(HAVE_LIBLOGGING_STDLOG, 1, [Define to 1 if liblogging-stdlog is available.]),
-	[AC_MSG_NOTICE([liblogging-stdlog not found, parts of the testbench will not run])]
+        [AC_DEFINE(HAVE_LIBLOGGING_STDLOG, 1, [Define to 1 if liblogging-stdlog is available.])
+        found_liblogging_stdlog="yes"],
+        [AC_MSG_NOTICE([liblogging-stdlog not found, parts of the testbench will not run])]
 )
 
 AC_ARG_ENABLE(liblogging-stdlog,
@@ -1484,7 +1485,7 @@ AC_ARG_ENABLE(liblogging-stdlog,
          esac],
         [enable_liblogging_stdlog=no]
 )
-if test "x$enable_liblogging_stdlog" = "xyes" -a "x$HAVE_LIBLOGGING_STDLOG" != "x1"; then
+if test "x$enable_liblogging_stdlog" = "xyes" -a "x$found_liblogging_stdlog" != "xyes"; then
 	AC_MSG_ERROR(--enable-liblogging-stdlog set but liblogging-stdlog was not found)
 fi
 AM_CONDITIONAL(ENABLE_LIBLOGGING_STDLOG, [test "x$enable_liblogging_stdlog" = "xyes"])

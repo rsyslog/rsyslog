@@ -46,8 +46,9 @@ Follow the instructions at: https://www.rsyslog.com/doc/build_from_repo.html
 
 In general, you need
 
+* pkg-config
 * libestr
-* liblogging (stdlog component)
+* liblogging (stdlog component, for testbench)
 
 It is best to build these from source.
 
@@ -91,6 +92,24 @@ For KSI, from the Adiscon PPA:
 ```
 sudo apt-get install libksi0 libksi-devel
 ```
+
+#### Debian
+
+```
+sudo apt install build-essential pkg-config libestr-dev libfastjson-dev zlib1g-dev uuid-dev libgcrypt20-dev libcurl4-gnutls-dev zlib1g-dev liblogging-stdlog-dev liblogging-stdlog-dev flex bison
+```
+
+*Note:* For certain libraries version requirements might be higher,
+in that case adding debian backports repositories might help.
+For example installing with apt libfastjson-dev -t stretch-backports.
+
+
+Aditional packages for other modules:
+```
+libdbi-dev libmysqlclient-dev postgresql-client libpq-dev libnet-dev librdkafka-dev libgrok-dev libgrok1 libgrok-dev libpcre3-dev libtokyocabinet-dev libglib2.0-dev libmongo-client-dev
+```
+
+
 
 #### openSUSE 13
 
