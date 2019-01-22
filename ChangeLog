@@ -1,6 +1,6 @@
 ------------------------------------------------------------------------------
 Version 8.1901.0 (aka 2019.01) 2019-01-22
-- new version scheme: 8.yymm.0 - version now depends on release data
+- new version scheme: 8.yymm.0 - version now depends on release date
   see also https://rainer.gerhards.net/2018/12/rsyslog-version-numbering-change.html
 - queue: add support for minimum batch sizes
   closes https://github.com/rsyslog/rsyslog/issues/495
