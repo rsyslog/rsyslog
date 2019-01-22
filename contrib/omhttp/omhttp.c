@@ -43,6 +43,7 @@
 #include <unistd.h>
 #endif
 #include <json.h>
+#include <zlib.h>
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
@@ -54,6 +55,7 @@
 #include "obj-types.h"
 #include "ratelimit.h"
 #include "ruleset.h"
+#include "statsobj.h"
 
 #ifndef O_LARGEFILE
 #  define O_LARGEFILE 0
@@ -67,10 +69,35 @@ MODULE_CNFNAME("omhttp")
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(prop)
 DEFobjCurrIf(ruleset)
+DEFobjCurrIf(statsobj)
+
+statsobj_t *httpStats;
+STATSCOUNTER_DEF(ctrMessagesSubmitted, mutCtrMessagesSubmitted); // Number of message submitted to module
+STATSCOUNTER_DEF(ctrMessagesSuccess, mutCtrMessagesSuccess); // Number of messages successfully sent
+STATSCOUNTER_DEF(ctrMessagesFail, mutCtrMessagesFail); // Number of messages that failed to send
+STATSCOUNTER_DEF(ctrMessagesRetry, mutCtrMessagesRetry); // Number of messages requeued for retry
+STATSCOUNTER_DEF(ctrHttpRequestCount, mutCtrHttpRequestCount); // Number of attempted HTTP requests
+STATSCOUNTER_DEF(ctrHttpRequestSuccess, mutCtrHttpRequestSuccess); // Number of successful HTTP requests
+STATSCOUNTER_DEF(ctrHttpRequestFail, mutCtrHttpRequestFail); // Number of failed HTTP req, 4XX+ are NOT failures
+STATSCOUNTER_DEF(ctrHttpStatusSuccess, mutCtrHttpStatusSuccess); // Number of requests returning 1XX/2XX status
+STATSCOUNTER_DEF(ctrHttpStatusFail, mutCtrHttpStatusFail); // Number of requests returning 300+ status
 
 static prop_t *pInputName = NULL;
 
 #define WRKR_DATA_TYPE_ES 0xBADF0001
+
+#define HTTP_HEADER_CONTENT_JSON "Content-Type: application/json; charset=utf-8"
+#define HTTP_HEADER_CONTENT_TEXT "Content-Type: text/plain"
+#define HTTP_HEADER_CONTENT_KAFKA "Content-Type: application/vnd.kafka.v1+json"
+#define HTTP_HEADER_ENCODING_GZIP "Content-Encoding: gzip"
+#define HTTP_HEADER_EXPECT_EMPTY "Expect:"
+
+#define VALID_BATCH_FORMATS "newline jsonarray kafkarest"
+typedef enum batchFormat_e {
+	FMT_NEWLINE,
+	FMT_JSONARRAY,
+	FMT_KAFKAREST
+} batchFormat_t;
 
 /* REST API uses this URL:
  * https://<hostName>:<restPort>/restPath
@@ -86,6 +113,8 @@ typedef struct instanceConf_s {
 	uchar *uid;
 	uchar *pwd;
 	uchar *authBuf;
+	uchar *httpcontenttype;
+	uchar *headerContentTypeBuf;
 	uchar *httpheaderkey;
 	uchar *httpheadervalue;
 	uchar *headerBuf;
@@ -93,16 +122,20 @@ typedef struct instanceConf_s {
 	uchar *checkPath;
 	uchar *tplName;
 	uchar *errorFile;
-	sbool errorOnly;
-	sbool bulkmode;
-	sbool interleaved;
+	sbool batchMode;
+	uchar *batchFormatName;
+	batchFormat_t batchFormat;
 	sbool dynRestPath;
-	size_t maxbytes;
+	size_t maxBatchBytes;
+	size_t maxBatchSize;
+	sbool compress;
+	int compressionLevel;	/* Compression level for zlib, default=-1, fastest=1, best=9, none=0*/
 	sbool useHttps;
 	sbool allowUnsignedCerts;
 	uchar *caCertFile;
 	uchar *myCertFile;
 	uchar *myPrivKeyFile;
+	sbool reloadOnHup;
 	sbool retryFailures;
 	int ratelimitInterval;
 	int ratelimitBurst;
@@ -112,7 +145,6 @@ typedef struct instanceConf_s {
 	ruleset_t *retryRuleset;
 	struct instanceConf_s *next;
 } instanceData;
-
 
 struct modConfData_s {
 	rsconf_t *pConf;		/* our overall config object */
@@ -126,16 +158,23 @@ typedef struct wrkrInstanceData {
 	int serverIndex;
 	int replyLen;
 	char *reply;
+	long httpStatusCode;	/* http status code of response */
 	CURL	*curlCheckConnHandle;	/* libcurl session handle for checking the server connection */
 	CURL	*curlPostHandle;	/* libcurl session handle for posting data to the server */
 	HEADER	*curlHeader;	/* json POST request info */
 	uchar *restURL;		/* last used URL for error reporting */
+	sbool bzInitDone;
+	z_stream zstrm; /* zip stream to use for gzip http compression */
 	struct {
-		es_str_t *data;
-		int nmemb;	/* number of messages in batch (for statistics counting) */
-		uchar *currTpl1;
-		uchar *currTpl2;
+		uchar **data; /* array of strings, this will be batched up lazily */
+		size_t sizeBytes; /* total length of this batch in bytes */
+		size_t nmemb;	/* number of messages in batch (for statistics counting) */
 	} batch;
+	struct {
+		uchar *buf;
+		size_t curLen;
+		size_t len;
+	} compressCtx;
 } wrkrInstanceData_t;
 
 /* tables for interfacing with the v6 config system */
@@ -144,27 +183,35 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "server", eCmdHdlrArray, 0 },
 	{ "serverport", eCmdHdlrInt, 0 },
 	{ "healthchecktimeout", eCmdHdlrInt, 0 },
+	{ "httpcontenttype", eCmdHdlrGetWord, 0 },
 	{ "httpheaderkey", eCmdHdlrGetWord, 0 },
 	{ "httpheadervalue", eCmdHdlrGetWord, 0 },
 	{ "uid", eCmdHdlrGetWord, 0 },
 	{ "pwd", eCmdHdlrGetWord, 0 },
 	{ "restpath", eCmdHdlrGetWord, 0 },
 	{ "dynrestpath", eCmdHdlrBinary, 0 },
-	{ "bulkmode", eCmdHdlrBinary, 0 },
+	{ "bulkmode", eCmdHdlrBinary, 0 }, /* batch and bulkmode are synonyms */
+	{ "batch", eCmdHdlrBinary, 0 },
+	{ "batch.format", eCmdHdlrGetWord, 0 },
 	{ "maxbytes", eCmdHdlrSize, 0 },
+	{ "batch.maxbytes", eCmdHdlrSize, 0 }, /* maxbytes and batch.maxbytes are synonyms */
+	{ "batch.maxsize", eCmdHdlrSize, 0 },
+	{ "compress", eCmdHdlrBinary, 0 },
+	{ "compress.level", eCmdHdlrInt, 0 },
 	{ "usehttps", eCmdHdlrBinary, 0 },
 	{ "errorfile", eCmdHdlrGetWord, 0 },
-	{ "erroronly", eCmdHdlrBinary, 0 },
-	{ "interleaved", eCmdHdlrBinary, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
 	{ "allowunsignedcerts", eCmdHdlrBinary, 0 },
 	{ "tls.cacert", eCmdHdlrString, 0 },
 	{ "tls.mycert", eCmdHdlrString, 0 },
 	{ "tls.myprivkey", eCmdHdlrString, 0 },
+	{ "reloadonhup", eCmdHdlrBinary, 0 },
+	{ "retry", eCmdHdlrBinary, 0 }, /* retry and retryfailures are synonyms */
 	{ "retryfailures", eCmdHdlrBinary, 0 },
+	{ "retry.ruleset", eCmdHdlrString, 0 }, /* retry.ruleset and retryruleset are synonyms */
+	{ "retryruleset", eCmdHdlrString, 0 },
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
 	{ "ratelimit.burst", eCmdHdlrInt, 0 },
-	{ "retryruleset", eCmdHdlrString, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -173,6 +220,23 @@ static struct cnfparamblk actpblk =
 	};
 
 static rsRetVal curlSetup(wrkrInstanceData_t *pWrkrData);
+static void curlCleanup(wrkrInstanceData_t *pWrkrData);
+
+/* compressCtx functions */
+static void ATTR_NONNULL()
+initCompressCtx(wrkrInstanceData_t *pWrkrData);
+
+static void ATTR_NONNULL()
+freeCompressCtx(wrkrInstanceData_t *pWrkrData);
+
+static rsRetVal ATTR_NONNULL()
+resetCompressCtx(wrkrInstanceData_t *pWrkrData, size_t len);
+
+static rsRetVal ATTR_NONNULL()
+growCompressCtx(wrkrInstanceData_t *pWrkrData, size_t newLen);
+
+static rsRetVal ATTR_NONNULL()
+appendCompressCtx(wrkrInstanceData_t *pWrkrData, uchar *srcBuf, size_t srcLen);
 
 BEGINcreateInstance
 CODESTARTcreateInstance
@@ -187,23 +251,29 @@ CODESTARTcreateInstance
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
+uchar **batchData;
 CODESTARTcreateWrkrInstance
 	PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
 	pWrkrData->curlHeader = NULL;
 	pWrkrData->curlPostHandle = NULL;
 	pWrkrData->curlCheckConnHandle = NULL;
 	pWrkrData->serverIndex = 0;
+	pWrkrData->httpStatusCode = 0;
 	pWrkrData->restURL = NULL;
-	if(pData->bulkmode) {
-		pWrkrData->batch.currTpl1 = NULL;
-		pWrkrData->batch.currTpl2 = NULL;
-		if((pWrkrData->batch.data = es_newStr(1024)) == NULL) {
+	pWrkrData->bzInitDone = 0;
+	if(pData->batchMode) {
+		pWrkrData->batch.nmemb = 0;
+		pWrkrData->batch.sizeBytes = 0;
+		batchData = (uchar **) malloc(pData->maxBatchSize * sizeof(uchar *));
+		if (batchData == NULL) {
 			LogError(0, RS_RET_OUT_OF_MEMORY,
-				"omhttp: error creating batch string "
-			        "turned off bulk mode\n");
-			pData->bulkmode = 0; /* at least it works */
+				"omhttp: cannot allocate memory for batch queue turning off batch mode\n");
+			pData->batchMode = 0; /* at least it works */
+		} else {
+			pWrkrData->batch.data = batchData;
 		}
 	}
+	initCompressCtx(pWrkrData);
 	iRet = curlSetup(pWrkrData);
 ENDcreateWrkrInstance
 
@@ -223,6 +293,9 @@ CODESTARTfreeInstance
 		free(pData->serverBaseUrls[i]);
 	free(pData->serverBaseUrls);
 	free(pData->uid);
+	free(pData->httpcontenttype);
+	if (pData->headerContentTypeBuf != NULL)
+		free(pData->headerContentTypeBuf);
 	free(pData->httpheaderkey);
 	free(pData->httpheadervalue);
 	free(pData->pwd);
@@ -233,7 +306,8 @@ CODESTARTfreeInstance
 	free(pData->restPath);
 	free(pData->checkPath);
 	free(pData->tplName);
-	free(pData->errorFile);
+	if (pData->errorFile != NULL)
+		free(pData->errorFile);
 	free(pData->caCertFile);
 	free(pData->myCertFile);
 	free(pData->myPrivKeyFile);
@@ -244,23 +318,20 @@ ENDfreeInstance
 
 BEGINfreeWrkrInstance
 CODESTARTfreeWrkrInstance
-	if(pWrkrData->curlHeader != NULL) {
-		curl_slist_free_all(pWrkrData->curlHeader);
-		pWrkrData->curlHeader = NULL;
-	}
-	if(pWrkrData->curlCheckConnHandle != NULL) {
-		curl_easy_cleanup(pWrkrData->curlCheckConnHandle);
-		pWrkrData->curlCheckConnHandle = NULL;
-	}
-	if(pWrkrData->curlPostHandle != NULL) {
-		curl_easy_cleanup(pWrkrData->curlPostHandle);
-		pWrkrData->curlPostHandle = NULL;
-	}
+	curlCleanup(pWrkrData);
 	if (pWrkrData->restURL != NULL) {
 		free(pWrkrData->restURL);
 		pWrkrData->restURL = NULL;
 	}
-	es_deleteStr(pWrkrData->batch.data);
+	if (pWrkrData->batch.data != NULL) {
+		free(pWrkrData->batch.data);
+		pWrkrData->batch.data = NULL;
+	}
+	if (pWrkrData->bzInitDone)
+		deflateEnd(&pWrkrData->zstrm);
+	freeCompressCtx(pWrkrData);
+
+
 ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
@@ -276,6 +347,8 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("]\n");
 	dbgprintf("\tdefaultPort=%d\n", pData->defaultPort);
 	dbgprintf("\tuid='%s'\n", pData->uid == NULL ? (uchar*)"(not configured)" : pData->uid);
+	dbgprintf("\thttp.contenttype='%s'\n", pData->httpcontenttype == NULL ?
+		(uchar*)"(not configured)" : pData->httpcontenttype);
 	dbgprintf("\thttpheaderkey='%s'\n", pData->httpheaderkey == NULL ?
 		(uchar*)"(not configured)" : pData->httpheaderkey);
 	dbgprintf("\thttpheadervalue='%s'\n", pData->httpheadervalue == NULL ?
@@ -285,16 +358,21 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tcheck path='%s'\n", pData->checkPath);
 	dbgprintf("\tdynamic rest path=%d\n", pData->dynRestPath);
 	dbgprintf("\tuse https=%d\n", pData->useHttps);
-	dbgprintf("\tmaxbytes=%zu\n", pData->maxbytes);
+	dbgprintf("\tbatch=%d\n", pData->batchMode);
+	dbgprintf("\tbatch.format='%s'\n", pData->batchFormatName);
+	dbgprintf("\tbatch.maxbytes=%zu\n", pData->maxBatchBytes);
+	dbgprintf("\tbatch.maxsize=%zu\n", pData->maxBatchSize);
+	dbgprintf("\tcompress=%d\n", pData->compress);
+	dbgprintf("\tcompress.level=%d\n", pData->compressionLevel);
 	dbgprintf("\tallowUnsignedCerts=%d\n", pData->allowUnsignedCerts);
 	dbgprintf("\terrorfile='%s'\n", pData->errorFile == NULL ?
 		(uchar*)"(not configured)" : pData->errorFile);
-	dbgprintf("\terroronly=%d\n", pData->errorOnly);
-	dbgprintf("\tinterleaved=%d\n", pData->interleaved);
 	dbgprintf("\ttls.cacert='%s'\n", pData->caCertFile);
 	dbgprintf("\ttls.mycert='%s'\n", pData->myCertFile);
 	dbgprintf("\ttls.myprivkey='%s'\n", pData->myPrivKeyFile);
-	dbgprintf("\tretryfailures='%d'\n", pData->retryFailures);
+	dbgprintf("\treloadonhup='%d'\n", pData->reloadOnHup);
+	dbgprintf("\tretry='%d'\n", pData->retryFailures);
+	dbgprintf("\tretry.ruleset='%s'\n", pData->retryRulesetName);
 	dbgprintf("\tratelimit.interval='%d'\n", pData->ratelimitInterval);
 	dbgprintf("\tratelimit.burst='%d'\n", pData->ratelimitBurst);
 ENDdbgPrintInstInfo
@@ -349,8 +427,8 @@ computeBaseUrl(const char*const serverParam,
 	}
 
 	/* Find where the hostname/ip of the server starts. If the scheme is not specified
-	  in the uri, start the buffer with a scheme corresponding to the useHttps parameter.
-	*/
+	 * in the uri, start the buffer with a scheme corresponding to the useHttps parameter.
+	 */
 	if (strcasestr(serverParam, SCHEME_HTTP))
 		host = serverParam + strlen(SCHEME_HTTP);
 	else if (strcasestr(serverParam, SCHEME_HTTPS))
@@ -395,13 +473,18 @@ checkConn(wrkrInstanceData_t *const pWrkrData)
 {
 	CURL *curl;
 	CURLcode res;
-	es_str_t *urlBuf;
+	es_str_t *urlBuf = NULL;
 	char* healthUrl;
 	char* serverUrl;
 	char* checkPath;
 	int i;
 	int r;
 	DEFiRet;
+
+	if (pWrkrData->pData->checkPath == NULL) {
+		DBGPRINTF("omhttp: checkConn no health check uri configured skipping it\n");
+		FINALIZE;
+	}
 
 	pWrkrData->reply = NULL;
 	pWrkrData->replyLen = 0;
@@ -452,7 +535,8 @@ checkConn(wrkrInstanceData_t *const pWrkrData)
 finalize_it:
 	if(urlBuf != NULL)
 		es_deleteStr(urlBuf);
-	free(pWrkrData->reply);
+	if (pWrkrData->reply != NULL)
+		free(pWrkrData->reply);
 	pWrkrData->reply = NULL; /* don't leave dangling pointer */
 	RETiRet;
 }
@@ -530,525 +614,62 @@ finalize_it:
 	RETiRet;
 }
 
-
-/* this method does not directly submit but builds a batch instead. It
- * may submit, if we have dynamic restPath and the current restPath changes.
- */
-static rsRetVal
-buildBatch(wrkrInstanceData_t *pWrkrData, uchar *message)
-{
-	int length = strlen((char *)message);
-	int r=0;
-	DEFiRet;
-
-	if(r == 0) r = es_addBuf(&pWrkrData->batch.data, (char*)message, length);
-	if(r == 0) r = es_addBuf(&pWrkrData->batch.data, "\n", sizeof("\n")-1);
-	if(r != 0) {
-		LogError(0, RS_RET_ERR,
-			"omhttp: growing batch failed with code %d", r);
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
-	++pWrkrData->batch.nmemb;
-	iRet = RS_RET_OK;
-
-finalize_it:
-	RETiRet;
-}
-
 /*
  * Dumps entire bulk request and response in error log
+ * {
+ *	"request": {
+ *	 	"url": "https://url.com:443/path",
+ *	 	"postdata": "mypayload" }
+ *	 "response" : {
+ *	 	"status": 400,
+ *	 	"response": "error string" }
+ * }
  */
 static rsRetVal
-getDataErrorDefault(wrkrInstanceData_t *pWrkrData,fjson_object **pReplyRoot,uchar *reqmsg,char **rendered)
+renderJsonErrorMessage(wrkrInstanceData_t *pWrkrData, uchar *reqmsg, char **rendered)
 {
 	DEFiRet;
-	fjson_object *req=NULL;
-	fjson_object *errRoot=NULL;
-	fjson_object *replyRoot = *pReplyRoot;
+	fjson_object *req = NULL;
+	fjson_object *res = NULL;
+	fjson_object *errRoot = NULL;
 
-	if((req=fjson_object_new_object()) == NULL) ABORT_FINALIZE(RS_RET_ERR);
-	fjson_object_object_add(req, "url", fjson_object_new_string((char*)pWrkrData->restURL));
-	fjson_object_object_add(req, "postdata", fjson_object_new_string((char*)reqmsg));
+	if ((req = fjson_object_new_object()) == NULL)
+		ABORT_FINALIZE(RS_RET_ERR);
+	fjson_object_object_add(req, "url", fjson_object_new_string((char *)pWrkrData->restURL));
+	fjson_object_object_add(req, "postdata", fjson_object_new_string((char *)reqmsg));
 
-	if((errRoot=fjson_object_new_object()) == NULL) ABORT_FINALIZE(RS_RET_ERR);
+	if ((res = fjson_object_new_object()) == NULL) {
+		fjson_object_put(req); // cleanup request object
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	#define ERR_MSG_NULL "NULL: curl request failed or no response"
+	fjson_object_object_add(res, "status", fjson_object_new_int(pWrkrData->httpStatusCode));
+	if (pWrkrData->reply == NULL) {
+		fjson_object_object_add(res, "message",
+			fjson_object_new_string_len(ERR_MSG_NULL, strlen(ERR_MSG_NULL)));
+	} else {
+		fjson_object_object_add(res, "message",
+			fjson_object_new_string_len(pWrkrData->reply, pWrkrData->replyLen));
+	}
+
+	if ((errRoot = fjson_object_new_object()) == NULL) {
+		fjson_object_put(req); // cleanup request object
+		fjson_object_put(res); // cleanup response object
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
 	fjson_object_object_add(errRoot, "request", req);
-	fjson_object_object_add(errRoot, "reply", replyRoot);
-	*rendered = strdup((char*)fjson_object_to_json_string(errRoot));
+	fjson_object_object_add(errRoot, "response", res);
 
-	req=NULL;
-	fjson_object_put(errRoot);
-
-	*pReplyRoot = NULL; /* tell caller not to delete once again! */
-
-	finalize_it:
-		fjson_object_put(req);
-		RETiRet;
-}
-
-/*
- * Sets bulkRequestNextSectionStart pointer to next sections start in the buffer pointed by bulkRequest.
- * Sections are marked by { and }
- */
-static rsRetVal
-getSection(const char* bulkRequest, const char **bulkRequestNextSectionStart )
-{
-		DEFiRet;
-		char* idx =0;
-		if( (idx = strchr(bulkRequest,'\n')) != 0)/*intermediate section*/
-		{
-			*bulkRequestNextSectionStart = ++idx;
-		}
-		else
-		{
-			*bulkRequestNextSectionStart=0;
-			ABORT_FINALIZE(RS_RET_ERR);
-		}
-
-	     finalize_it:
-	     	  RETiRet;
-}
-
-/*
- * Sets the new string in singleRequest for one request in bulkRequest
- * and sets lastLocation pointer to the location till which bulkrequest has been parsed.
- * (used as input to make function thread safe.)
- */
-static rsRetVal
-getSingleRequest(const char* bulkRequest, char** singleRequest, const char **lastLocation)
-{
-	DEFiRet;
-	const char *req = bulkRequest;
-	const char *start = bulkRequest;
-	if (getSection(req,&req)!=RS_RET_OK)
-		ABORT_FINALIZE(RS_RET_ERR);
-
-	if (getSection(req,&req)!=RS_RET_OK)
-			ABORT_FINALIZE(RS_RET_ERR);
-
-	CHKmalloc(*singleRequest = (char*) calloc (req - start+ 1 + 1,1));
-	/* (req - start+ 1 == length of data + 1 for terminal char)*/
-	memcpy(*singleRequest,start,req - start);
-	*lastLocation=req;
+	*rendered = strdup((char *) fjson_object_to_json_string(errRoot));
 
 finalize_it:
+	if (errRoot != NULL)
+		fjson_object_put(errRoot);
+
 	RETiRet;
 }
-
-/*
- * check the status of response from API
- */
-static int checkReplyStatus(fjson_object* ok) {
-	return (ok == NULL || !fjson_object_is_type(ok, fjson_type_int) || fjson_object_get_int(ok) < 0 ||
-		fjson_object_get_int(ok) > 299);
-}
-
-/*
- * Context object for error file content creation or status check
- * response_item - the full {"create":{"_index":"idxname",.....}}
- * response_body - the inner hash of the response_item - {"_index":"idxname",...}
- * status - the "status" field from the inner hash - "status":500
- *          should be able to use fjson_object_get_int(status) to get the http result code
- */
-typedef struct exeContext{
-	int statusCheckOnly;
-	fjson_object *errRoot;
-	rsRetVal (*prepareErrorFileContent)(struct exeContext *ctx,int itemStatus,char *request,char *response,
-			fjson_object *response_item, fjson_object *response_body, fjson_object *status);
-	ratelimit_t *ratelimiter;
-	ruleset_t *retryRuleset;
-	struct json_tokener *jTokener;
-} context;
-
-/*
- * get content to be written in error file using context passed
- */
-static rsRetVal
-parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,fjson_object **pReplyRoot,uchar *reqmsg,context *ctx)
-{
-	DEFiRet;
-	fjson_object *replyRoot = *pReplyRoot;
-	int i;
-	int numitems = 0;
-	fjson_object *items=NULL, *jo_errors = NULL;
-	int errors = 0;
-
-	if(fjson_object_object_get_ex(replyRoot, "errors", &jo_errors)) {
-		errors = fjson_object_get_boolean(jo_errors);
-		if (!errors && pWrkrData->pData->retryFailures) {
-			return RS_RET_OK;
-		}
-	}
-	/*iterate over items*/
-	if(!fjson_object_object_get_ex(replyRoot, "items", &items)) {
-		DBGPRINTF("omhttp: no items found in response\n");
-	} else {
-		numitems = fjson_object_array_length(items);
-	}
-
-	if (reqmsg) {
-		DBGPRINTF("omhttp: Entire request %s\n", reqmsg);
-	} else {
-		DBGPRINTF("omhttp: Empty request\n");
-	}
-	const char *lastReqRead= (char*)reqmsg;
-
-	DBGPRINTF("omhttp: %d items in reply\n", numitems);
-	for(i = 0 ; i < numitems ; ++i) {
-
-		fjson_object *item=NULL;
-		fjson_object *result=NULL;
-		fjson_object *ok=NULL;
-		int itemStatus=0;
-		item = fjson_object_array_get_idx(items, i);
-		if(item == NULL)  {
-			LogError(0, RS_RET_DATAFAIL,
-				"omhttp: error in http reply: "
-				"cannot obtain reply array item %d", i);
-			ABORT_FINALIZE(RS_RET_DATAFAIL);
-		}
-
-		fjson_object_object_get_ex(result, "status", &ok);
-		if(ok == NULL) {
-			DBGPRINTF("omhttp: no status response received\n");
-		} else {
-			itemStatus = checkReplyStatus(ok);
-		}
-
-		char *request =0;
-		char *response =0;
-		if(ctx->statusCheckOnly || (NULL == lastReqRead)) {
-			if(itemStatus) {
-				DBGPRINTF("omhttp: error in http reply: item %d, "
-					"status is %d\n", i, fjson_object_get_int(ok));
-				DBGPRINTF("omhttp: status check found error.\n");
-				ABORT_FINALIZE(RS_RET_DATAFAIL);
-			}
-
-		} else {
-			if(getSingleRequest(lastReqRead,&request,&lastReqRead) != RS_RET_OK) {
-				DBGPRINTF("omhttp: Couldn't get post request\n");
-				ABORT_FINALIZE(RS_RET_ERR);
-			}
-			response = (char*)fjson_object_to_json_string_ext(result, FJSON_TO_STRING_PLAIN);
-
-			if(response==NULL) {
-				free(request);/*as its has been assigned.*/
-				DBGPRINTF("omhttp: Error getting fjson_object_to_string_ext. Cannot "
-					"continue\n");
-				ABORT_FINALIZE(RS_RET_ERR);
-			}
-
-			/*call the context*/
-			rsRetVal ret = ctx->prepareErrorFileContent(ctx, itemStatus, request,
-					response, item, result, ok);
-
-			/*free memory in any case*/
-			free(request);
-
-			if(ret != RS_RET_OK) {
-				DBGPRINTF("omhttp: Error in preparing errorfileContent. Cannot continue\n");
-				ABORT_FINALIZE(RS_RET_ERR);
-			}
-		}
-	}
-
-finalize_it:
-	RETiRet;
-}
-
-/*
- * Dumps only failed requests of bulk insert
- */
-static rsRetVal
-getDataErrorOnly(context *ctx,int itemStatus,char *request,char *response,
-		fjson_object *response_item, fjson_object *response_body, fjson_object *status)
-{
-	DEFiRet;
-	(void)response_item; /* unused */
-	(void)response_body; /* unused */
-	(void)status; /* unused */
-	if(itemStatus) {
-		fjson_object *onlyErrorResponses =NULL;
-		fjson_object *onlyErrorRequests=NULL;
-
-		if(!fjson_object_object_get_ex(ctx->errRoot, "reply", &onlyErrorResponses)) {
-			DBGPRINTF("omhttp: Failed to get reply json array. Invalid context. Cannot "
-				"continue\n");
-			ABORT_FINALIZE(RS_RET_ERR);
-		}
-		fjson_object_array_add(onlyErrorResponses, fjson_object_new_string(response));
-
-		if(!fjson_object_object_get_ex(ctx->errRoot, "request", &onlyErrorRequests)) {
-			DBGPRINTF("omhttp: Failed to get request json array. Invalid context. Cannot "
-				"continue\n");
-			ABORT_FINALIZE(RS_RET_ERR);
-		}
-
-		fjson_object_array_add(onlyErrorRequests, fjson_object_new_string(request));
-
-	}
-
-finalize_it:
-	RETiRet;
-}
-
-/*
- * Dumps all requests of bulk insert interleaved with request and response
- */
-
-static rsRetVal
-getDataInterleaved(context *ctx,
-	int __attribute__((unused)) itemStatus,
-	char *request,
-	char *response,
-	fjson_object *response_item,
-	fjson_object *response_body,
-	fjson_object *status
-)
-{
-	DEFiRet;
-	(void)response_item; /* unused */
-	(void)response_body; /* unused */
-	(void)status; /* unused */
-	fjson_object *interleaved =NULL;
-	if(!fjson_object_object_get_ex(ctx->errRoot, "response", &interleaved)) {
-		DBGPRINTF("omhttp: Failed to get response json array. Invalid context. Cannot continue\n");
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
-
-	fjson_object *interleavedNode=NULL;
-	/*create interleaved node that has req and response json data*/
-	if((interleavedNode=fjson_object_new_object()) == NULL)
-	{
-		DBGPRINTF("omhttp: Failed to create interleaved node. Cann't continue\n");
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
-	fjson_object_object_add(interleavedNode,"request", fjson_object_new_string(request));
-	fjson_object_object_add(interleavedNode,"reply", fjson_object_new_string(response));
-
-	fjson_object_array_add(interleaved, interleavedNode);
-
-
-
-	finalize_it:
-		RETiRet;
-}
-
-
-/*
- * Dumps only failed requests of bulk insert interleaved with request and response
- */
-
-static rsRetVal
-getDataErrorOnlyInterleaved(context *ctx,int itemStatus,char *request,char *response,
-		fjson_object *response_item, fjson_object *response_body, fjson_object *status)
-{
-	DEFiRet;
-	if (itemStatus) {
-		if(getDataInterleaved(ctx, itemStatus,request,response,
-				response_item, response_body, status)!= RS_RET_OK) {
-			ABORT_FINALIZE(RS_RET_ERR);
-		}
-	}
-
-	finalize_it:
-		RETiRet;
-}
-
-/* request string looks like this:
- * "{\"create\":{\"_index\": \"rsyslog_testbench\",\"_type\":\"test-type\",
- *   \"_id\":\"FAEAFC0D17C847DA8BD6F47BC5B3800A\"}}\n
- * {\"msgnum\":\"x00000000\",\"viaq_msg_id\":\"FAEAFC0D17C847DA8BD6F47BC5B3800A\"}\n"
- * we don't want the meta header, only the data part
- * start = first \n + 1
- * end = last \n
- */
-static rsRetVal
-createMsgFromRequest(const char *request, context *ctx, smsg_t **msg)
-{
-	DEFiRet;
-	fjson_object *jo_msg = NULL;
-	const char *datastart, *dataend;
-	size_t datalen;
-	enum json_tokener_error json_error;
-
-	*msg = NULL;
-	if (!(datastart = strchr(request, '\n')) || (datastart[1] != '{')) {
-		LogError(0, RS_RET_ERR,
-			"omhttp: malformed original request - "
-			"could not find start of original data [%s]",
-			request);
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
-	datastart++; /* advance to '{' */
-	if (!(dataend = strchr(datastart, '\n')) || (dataend[1] != '\0')) {
-		LogError(0, RS_RET_ERR,
-			"omhttp: malformed original request - "
-			"could not find end of original data [%s]",
-			request);
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
-	datalen = dataend - datastart;
-	json_tokener_reset(ctx->jTokener);
-	fjson_object *jo_request = json_tokener_parse_ex(ctx->jTokener, datastart, datalen);
-	json_error = fjson_tokener_get_error(ctx->jTokener);
-	if (!jo_request || (json_error != fjson_tokener_success)) {
-		LogError(0, RS_RET_ERR,
-			"omhttp: parse error [%s] - could not convert original "
-			"request JSON back into JSON object [%s]",
-			fjson_tokener_error_desc(json_error), request);
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
-
-	CHKiRet(msgConstruct(msg));
-	MsgSetFlowControlType(*msg, eFLOWCTL_FULL_DELAY);
-	MsgSetInputName(*msg, pInputName);
-	if (fjson_object_object_get_ex(jo_request, "message", &jo_msg)) {
-		const char *rawmsg = json_object_get_string(jo_msg);
-		const size_t msgLen = (size_t)json_object_get_string_len(jo_msg);
-		MsgSetRawMsg(*msg, rawmsg, msgLen);
-	} else {
-		MsgSetRawMsg(*msg, request, strlen(request));
-	}
-	MsgSetMSGoffs(*msg, 0);	/* we do not have a header... */
-	CHKiRet(msgAddJSON(*msg, (uchar*)"!", jo_request, 0, 0));
-
-	finalize_it:
-		RETiRet;
-
-}
-
-
-static rsRetVal
-getDataRetryFailures(context *ctx,int itemStatus,char *request,char *response,
-		fjson_object *response_item, fjson_object *response_body,
-		fjson_object *status __attribute__((unused)))
-{
-	DEFiRet;
-	fjson_object *omes = NULL;
-	struct json_object_iterator it = json_object_iter_begin(response_item);
-	struct json_object_iterator itEnd = json_object_iter_end(response_item);
-	smsg_t *msg = NULL;
-
-	(void)response;
-	(void)itemStatus;
-	CHKiRet(createMsgFromRequest(request, ctx, &msg));
-	CHKmalloc(msg);
-	/* add status as local variables */
-	omes = json_object_new_object();
-
-	/* add response_body fields to local var omes */
-	it = json_object_iter_begin(response_body);
-	itEnd = json_object_iter_end(response_body);
-	while (!json_object_iter_equal(&it, &itEnd)) {
-		json_object_object_add(omes, json_object_iter_peek_name(&it),
-			json_object_get(json_object_iter_peek_value(&it)));
-		json_object_iter_next(&it);
-	}
-	CHKiRet(msgAddJSON(msg, (uchar*)".omes", omes, 0, 0));
-	omes = NULL;
-	MsgSetRuleset(msg, ctx->retryRuleset);
-	CHKiRet(ratelimitAddMsg(ctx->ratelimiter, NULL, msg));
-finalize_it:
-	if (omes)
-		json_object_put(omes);
-	RETiRet;
-}
-
-/*
- * get erroronly context
- */
-static rsRetVal
-initializeErrorOnlyConext(wrkrInstanceData_t *pWrkrData,context *ctx){
-	DEFiRet;
-	ctx->statusCheckOnly=0;
-	fjson_object *errRoot=NULL;
-	fjson_object *onlyErrorResponses =NULL;
-	fjson_object *onlyErrorRequests=NULL;
-	if((errRoot=fjson_object_new_object()) == NULL) ABORT_FINALIZE(RS_RET_ERR);
-
-	if((onlyErrorResponses=fjson_object_new_array()) == NULL) {
-		fjson_object_put(errRoot);
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
-	if((onlyErrorRequests=fjson_object_new_array()) == NULL) {
-		fjson_object_put(errRoot);
-		fjson_object_put(onlyErrorResponses);
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
-
-	fjson_object_object_add(errRoot, "url", fjson_object_new_string((char*)pWrkrData->restURL));
-	fjson_object_object_add(errRoot,"request",onlyErrorRequests);
-	fjson_object_object_add(errRoot, "reply", onlyErrorResponses);
-	ctx->errRoot = errRoot;
-	ctx->prepareErrorFileContent= &getDataErrorOnly;
-	finalize_it:
-		RETiRet;
-}
-
-/*
- * get interleaved context
- */
-static rsRetVal
-initializeInterleavedConext(wrkrInstanceData_t *pWrkrData,context *ctx){
-	DEFiRet;
-	ctx->statusCheckOnly=0;
-	fjson_object *errRoot=NULL;
-	fjson_object *interleaved =NULL;
-	if((errRoot=fjson_object_new_object()) == NULL) ABORT_FINALIZE(RS_RET_ERR);
-	if((interleaved=fjson_object_new_array()) == NULL) {
-		fjson_object_put(errRoot);
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
-
-
-	fjson_object_object_add(errRoot, "url", fjson_object_new_string((char*)pWrkrData->restURL));
-	fjson_object_object_add(errRoot,"response",interleaved);
-	ctx->errRoot = errRoot;
-	ctx->prepareErrorFileContent= &getDataInterleaved;
-	finalize_it:
-		RETiRet;
-}
-
-/*get interleaved context*/
-static rsRetVal
-initializeErrorInterleavedConext(wrkrInstanceData_t *pWrkrData,context *ctx){
-	DEFiRet;
-	ctx->statusCheckOnly=0;
-	fjson_object *errRoot=NULL;
-	fjson_object *interleaved =NULL;
-	if((errRoot=fjson_object_new_object()) == NULL) ABORT_FINALIZE(RS_RET_ERR);
-	if((interleaved=fjson_object_new_array()) == NULL) {
-		fjson_object_put(errRoot);
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
-
-
-	fjson_object_object_add(errRoot, "url", fjson_object_new_string((char*)pWrkrData->restURL));
-	fjson_object_object_add(errRoot,"response",interleaved);
-	ctx->errRoot = errRoot;
-	ctx->prepareErrorFileContent= &getDataErrorOnlyInterleaved;
-	finalize_it:
-		RETiRet;
-}
-
-/*get retry failures context*/
-static rsRetVal
-initializeRetryFailuresContext(wrkrInstanceData_t *pWrkrData,context *ctx){
-	DEFiRet;
-	ctx->statusCheckOnly=0;
-	fjson_object *errRoot=NULL;
-	if((errRoot=fjson_object_new_object()) == NULL) ABORT_FINALIZE(RS_RET_ERR);
-
-
-	fjson_object_object_add(errRoot, "url", fjson_object_new_string((char*)pWrkrData->restURL));
-	ctx->errRoot = errRoot;
-	ctx->prepareErrorFileContent= &getDataRetryFailures;
-	CHKmalloc(ctx->jTokener = json_tokener_new());
-	finalize_it:
-		RETiRet;
-}
-
 
 /* write data error request/replies to separate error file
  * Note: we open the file but never close it before exit. If it
@@ -1056,75 +677,25 @@ initializeRetryFailuresContext(wrkrInstanceData_t *pWrkrData,context *ctx){
  */
 static rsRetVal ATTR_NONNULL()
 writeDataError(wrkrInstanceData_t *const pWrkrData,
-	instanceData *const pData, fjson_object **const pReplyRoot,
-	uchar *const reqmsg)
+	instanceData *const pData, uchar *const reqmsg)
 {
 	char *rendered = NULL;
 	size_t toWrite;
 	ssize_t wrRet;
 	sbool bMutLocked = 0;
-	context ctx;
-	ctx.errRoot=0;
-	ctx.ratelimiter = pWrkrData->pData->ratelimiter;
-	ctx.retryRuleset = pWrkrData->pData->retryRuleset;
-	ctx.jTokener = NULL;
+
 	DEFiRet;
 
 	if(pData->errorFile == NULL) {
 		DBGPRINTF("omhttp: no local error logger defined - "
-		          "ignoring REST error information\n");
+			"ignoring REST error information\n");
 		FINALIZE;
 	}
 
 	pthread_mutex_lock(&pData->mutErrFile);
 	bMutLocked = 1;
 
-	DBGPRINTF("omhttp: error file mode: erroronly='%d' errorInterleaved='%d'\n",
-		pData->errorOnly, pData->interleaved);
-
-	if(pData->interleaved ==0 && pData->errorOnly ==0)/*default write*/
-	{
-		if(getDataErrorDefault(pWrkrData,pReplyRoot, reqmsg, &rendered) != RS_RET_OK) {
-			ABORT_FINALIZE(RS_RET_ERR);
-		}
-	} else {
-		/*get correct context.*/
-		if(pData->interleaved && pData->errorOnly)
-		{
-			if(initializeErrorInterleavedConext(pWrkrData, &ctx) != RS_RET_OK) {
-				DBGPRINTF("omhttp: error initializing error interleaved context.\n");
-				ABORT_FINALIZE(RS_RET_ERR);
-			}
-
-		} else if(pData->errorOnly) {
-			if(initializeErrorOnlyConext(pWrkrData, &ctx) != RS_RET_OK) {
-
-				DBGPRINTF("omhttp: error initializing error only context.\n");
-				ABORT_FINALIZE(RS_RET_ERR);
-			}
-		} else if(pData->interleaved) {
-			if(initializeInterleavedConext(pWrkrData, &ctx) != RS_RET_OK) {
-				DBGPRINTF("omhttp: error initializing error interleaved context.\n");
-				ABORT_FINALIZE(RS_RET_ERR);
-			}
-		} else if(pData->retryFailures) {
-			if(initializeRetryFailuresContext(pWrkrData, &ctx) != RS_RET_OK) {
-				DBGPRINTF("omhttp: error initializing retry failures context.\n");
-				ABORT_FINALIZE(RS_RET_ERR);
-			}
-		} else {
-			DBGPRINTF("omhttp: None of the modes match file write. No data to write.\n");
-			ABORT_FINALIZE(RS_RET_ERR);
-		}
-
-		/*execute context*/
-		if(parseRequestAndResponseForContext(pWrkrData, pReplyRoot, reqmsg, &ctx)!= RS_RET_OK) {
-			DBGPRINTF("omhttp: error creating file content.\n");
-			ABORT_FINALIZE(RS_RET_ERR);
-		}
-		CHKmalloc(rendered = strdup((char*)fjson_object_to_json_string(ctx.errRoot)));
-	}
-
+	CHKiRet(renderJsonErrorMessage(pWrkrData, reqmsg, &rendered));
 
 	if(pData->fdErrFile == -1) {
 		pData->fdErrFile = open((char*)pData->errorFile,
@@ -1157,97 +728,343 @@ finalize_it:
 	if(bMutLocked)
 		pthread_mutex_unlock(&pData->mutErrFile);
 	free(rendered);
-	fjson_object_put(ctx.errRoot);
-	if (ctx.jTokener)
-		json_tokener_free(ctx.jTokener);
 	RETiRet;
 }
-
 
 static rsRetVal
-checkResultBulkmode(wrkrInstanceData_t *pWrkrData, fjson_object *root, uchar *reqmsg)
+queueBatchOnRetryRuleset(wrkrInstanceData_t *const pWrkrData, instanceData *const pData)
 {
+	uchar *msgData;
+	smsg_t *pMsg;
 	DEFiRet;
-	context ctx;
-	ctx.errRoot = 0;
-	ctx.ratelimiter = pWrkrData->pData->ratelimiter;
-	ctx.retryRuleset = pWrkrData->pData->retryRuleset;
-	ctx.statusCheckOnly=1;
-	ctx.jTokener = NULL;
-	if (pWrkrData->pData->retryFailures) {
-		ctx.statusCheckOnly=0;
-		CHKiRet(initializeRetryFailuresContext(pWrkrData, &ctx));
+
+	if (pData->retryRuleset == NULL) {
+		LogError(0, RS_RET_ERR, "omhttp: queueBatchOnRetryRuleset invalid call with a NULL retryRuleset");
+		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
-	if(parseRequestAndResponseForContext(pWrkrData,&root,reqmsg,&ctx)!= RS_RET_OK) {
-		DBGPRINTF("omhttp: error found in http reply\n");
-		ABORT_FINALIZE(RS_RET_DATAFAIL);
-	}
+	for (size_t i = 0; i < pWrkrData->batch.nmemb; i++) {
+		msgData = pWrkrData->batch.data[i];
+		DBGPRINTF("omhttp: queueBatchOnRetryRuleset putting message '%s' into retry ruleset '%s'\n",
+			msgData, pData->retryRulesetName);
 
+		// Construct the message object
+		CHKiRet(msgConstruct(&pMsg));
+		CHKiRet(MsgSetFlowControlType(pMsg, eFLOWCTL_FULL_DELAY));
+		MsgSetInputName(pMsg, pInputName);
+		MsgSetRawMsg(pMsg, (const char *)msgData, ustrlen(msgData));
+		MsgSetMSGoffs(pMsg, 0); // No header
+		MsgSetTAG(pMsg, (const uchar *)"omhttp-retry", 12);
+
+		// And place it on the retry ruleset
+		MsgSetRuleset(pMsg, pData->retryRuleset);
+		ratelimitAddMsg(pData->ratelimiter, NULL, pMsg);
+
+		// Count here in case not entire batch succeeds
+		STATSCOUNTER_INC(ctrMessagesRetry, mutCtrMessagesRetry);
+	}
 finalize_it:
-	fjson_object_put(ctx.errRoot);
-	if (ctx.jTokener)
-		json_tokener_free(ctx.jTokener);
 	RETiRet;
 }
-
 
 static rsRetVal
 checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg)
 {
-	fjson_object *root;
-	fjson_object *status;
+	instanceData *pData;
+	long statusCode;
+	size_t numMessages;
 	DEFiRet;
 
-	root = fjson_tokener_parse(pWrkrData->reply);
-	if(root == NULL) {
-		LogMsg(0, RS_RET_ERR, LOG_WARNING,
-			"omhttp: could not parse JSON result");
-		ABORT_FINALIZE(RS_RET_ERR);
+	pData = pWrkrData->pData;
+	statusCode = pWrkrData->httpStatusCode;
+
+	if (pData->batchMode) {
+		numMessages = pWrkrData->batch.nmemb;
+	} else {
+		numMessages = 1;
 	}
 
-	if(pWrkrData->pData->bulkmode) {
-		iRet = checkResultBulkmode(pWrkrData, root, reqmsg);
+	// 500+ errors return RS_RET_SUSPENDED if NOT batchMode and should be retried
+	// status 0 is the default and the request failed for some reason, retry this too
+	// 400-499 are malformed input and should not be retried just logged instead
+	if (statusCode == 0) {
+		// request failed, suspend or retry
+		STATSCOUNTER_ADD(ctrMessagesFail, mutCtrMessagesFail, numMessages);
+		iRet = RS_RET_SUSPENDED;
+	} else if (statusCode >= 500) {
+		// server error, suspend or retry
+		STATSCOUNTER_INC(ctrHttpStatusFail, mutCtrHttpStatusFail);
+		STATSCOUNTER_ADD(ctrMessagesFail, mutCtrMessagesFail, numMessages);
+		iRet = RS_RET_SUSPENDED;
+	} else if (statusCode >= 300) {
+		// redirection or client error, NO suspend nor retry
+		STATSCOUNTER_INC(ctrHttpStatusFail, mutCtrHttpStatusFail);
+		STATSCOUNTER_ADD(ctrMessagesFail, mutCtrMessagesFail, numMessages);
+		iRet = RS_RET_DATAFAIL;
 	} else {
-		if(fjson_object_object_get_ex(root, "status", &status)) {
-			iRet = RS_RET_DATAFAIL;
+		// success, normal state
+		// includes 2XX (success like 200-OK)
+		// includes 1XX (informational like 100-Continue)
+		STATSCOUNTER_INC(ctrHttpStatusSuccess, mutCtrHttpStatusSuccess);
+		STATSCOUNTER_ADD(ctrMessagesSuccess, mutCtrMessagesSuccess, numMessages);
+		iRet = RS_RET_OK;
+	}
+
+	if (iRet != RS_RET_OK) {
+		LogMsg(0, iRet, LOG_ERR, "omhttp: checkResult error http status code: %ld reply: %s",
+			statusCode, pWrkrData->reply != NULL ? pWrkrData->reply : "NULL");
+
+		writeDataError(pWrkrData, pWrkrData->pData, reqmsg);
+
+		if (iRet == RS_RET_DATAFAIL)
+			ABORT_FINALIZE(iRet);
+
+		if (pData->batchMode && pData->maxBatchSize > 1) {
+			// Write each message back to retry ruleset if configured
+			if (pData->retryFailures && pData->retryRuleset != NULL) {
+				// Retry stats counted inside this function call
+				iRet = queueBatchOnRetryRuleset(pWrkrData, pData);
+				if (iRet != RS_RET_OK) {
+					LogMsg(0, iRet, LOG_ERR,
+						"omhttp: checkResult error while queueing to retry ruleset"
+						"some messages may be lost");
+				}
+			}
+			iRet = RS_RET_OK; // We've done all we can tell rsyslog to carry on
 		}
 	}
 
-	/* Note: we ignore errors writing the error file, as we cannot handle
-	 * these in any case.
-	 */
-	if(iRet == RS_RET_DATAFAIL) {
-		writeDataError(pWrkrData, pWrkrData->pData, &root, reqmsg);
-		iRet = RS_RET_OK; /* we have handled the problem! */
-	}
-
 finalize_it:
-	if(root != NULL)
-		fjson_object_put(root);
 	RETiRet;
 }
 
-static void ATTR_NONNULL()
-initializeBatch(wrkrInstanceData_t *pWrkrData)
+/* Compress a buffer before sending using zlib. Based on code from tools/omfwd.c
+ * Initialize the zstrm object for gzip compression, using this init function.
+ * deflateInit2(z_stream strm, int level, int method,
+ *                             int windowBits, int memLevel, int strategy);
+ * strm: the zlib stream held in pWrkrData
+ * level: the compression level held in pData
+ * method: the operation constant Z_DEFLATED
+ * windowBits: the size of the compression window 15 = log_2(32768)
+ *     to configure as gzip add 16 to windowBits (w | 16) for final value 31
+ * memLevel: the memory optimization level 8 is default)
+ * strategy: using Z_DEFAULT_STRATEGY is default
+ */
+static rsRetVal
+compressHttpPayload(wrkrInstanceData_t *pWrkrData, uchar *message, unsigned len)
 {
-	es_emptyStr(pWrkrData->batch.data);
-	pWrkrData->batch.nmemb = 0;
+	int zRet;
+	unsigned outavail;
+	uchar zipBuf[32*1024];
+
+	DEFiRet;
+
+	if (!pWrkrData->bzInitDone) {
+		pWrkrData->zstrm.zalloc = Z_NULL;
+		pWrkrData->zstrm.zfree = Z_NULL;
+		pWrkrData->zstrm.opaque = Z_NULL;
+		zRet = deflateInit2(&pWrkrData->zstrm, pWrkrData->pData->compressionLevel,
+			Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY);
+		if (zRet != Z_OK) {
+			DBGPRINTF("omhttp: compressHttpPayload error %d returned from zlib/deflateInit2()\n", zRet);
+			ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+		}
+		pWrkrData->bzInitDone = 1;
+	}
+
+	CHKiRet(resetCompressCtx(pWrkrData, len));
+
+	/* now doing the compression */
+	pWrkrData->zstrm.next_in = (Bytef*) message;
+	pWrkrData->zstrm.avail_in = len;
+	/* run deflate() on buffer until everything has been compressed */
+	do {
+		DBGPRINTF("omhttp: compressHttpPayload in deflate() loop, avail_in %d, total_in %ld\n",
+				pWrkrData->zstrm.avail_in, pWrkrData->zstrm.total_in);
+		pWrkrData->zstrm.avail_out = sizeof(zipBuf);
+		pWrkrData->zstrm.next_out = zipBuf;
+
+		zRet = deflate(&pWrkrData->zstrm, Z_NO_FLUSH);
+		DBGPRINTF("omhttp: compressHttpPayload after deflate, ret %d, avail_out %d\n",
+				zRet, pWrkrData->zstrm.avail_out);
+		if (zRet != Z_OK)
+			ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+		outavail = sizeof(zipBuf) - pWrkrData->zstrm.avail_out;
+		if (outavail != 0)
+			CHKiRet(appendCompressCtx(pWrkrData, zipBuf, outavail));
+
+	} while (pWrkrData->zstrm.avail_out == 0);
+
+	/* run deflate again with Z_FINISH with no new input */
+	pWrkrData->zstrm.avail_in = 0;
+	do {
+		pWrkrData->zstrm.avail_out = sizeof(zipBuf);
+		pWrkrData->zstrm.next_out = zipBuf;
+		zRet = deflate(&pWrkrData->zstrm, Z_FINISH); /* returns Z_STREAM_END == 1 */
+		outavail = sizeof(zipBuf) - pWrkrData->zstrm.avail_out;
+		if (outavail != 0)
+			CHKiRet(appendCompressCtx(pWrkrData, zipBuf, outavail));
+
+	} while (pWrkrData->zstrm.avail_out == 0);
+
+finalize_it:
+	if (pWrkrData->bzInitDone)
+		deflateEnd(&pWrkrData->zstrm);
+	pWrkrData->bzInitDone = 0;
+	RETiRet;
+
 }
+
+static void ATTR_NONNULL()
+initCompressCtx(wrkrInstanceData_t *pWrkrData)
+{
+	pWrkrData->compressCtx.buf = NULL;
+	pWrkrData->compressCtx.curLen = 0;
+	pWrkrData->compressCtx.len = 0;
+}
+
+static void ATTR_NONNULL()
+freeCompressCtx(wrkrInstanceData_t *pWrkrData)
+{
+	if (pWrkrData->compressCtx.buf != NULL) {
+		free(pWrkrData->compressCtx.buf);
+		pWrkrData->compressCtx.buf = NULL;
+	}
+}
+
+
+static rsRetVal ATTR_NONNULL()
+resetCompressCtx(wrkrInstanceData_t *pWrkrData, size_t len)
+{
+	DEFiRet;
+	pWrkrData->compressCtx.curLen = 0;
+	pWrkrData->compressCtx.len = len;
+	CHKiRet(growCompressCtx(pWrkrData, len));
+
+finalize_it:
+	if (iRet != RS_RET_OK)
+		freeCompressCtx(pWrkrData);
+	RETiRet;
+}
+
+static rsRetVal ATTR_NONNULL()
+growCompressCtx(wrkrInstanceData_t *pWrkrData, size_t newLen)
+{
+	DEFiRet;
+	if (pWrkrData->compressCtx.buf == NULL) {
+		CHKmalloc(pWrkrData->compressCtx.buf = (uchar *)malloc(sizeof(uchar)*newLen));
+	} else {
+		CHKmalloc(pWrkrData->compressCtx.buf = (uchar *)realloc(pWrkrData->compressCtx.buf,
+			sizeof(uchar)*newLen));
+	}
+	pWrkrData->compressCtx.len = newLen;
+finalize_it:
+	RETiRet;
+
+}
+
+static rsRetVal ATTR_NONNULL()
+appendCompressCtx(wrkrInstanceData_t *pWrkrData, uchar *srcBuf, size_t srcLen)
+{
+	size_t newLen;
+	DEFiRet;
+	newLen = pWrkrData->compressCtx.curLen + srcLen;
+	if (newLen > pWrkrData->compressCtx.len)
+		CHKiRet(growCompressCtx(pWrkrData, newLen));
+
+	memcpy(pWrkrData->compressCtx.buf + pWrkrData->compressCtx.curLen,
+		srcBuf, srcLen);
+	pWrkrData->compressCtx.curLen = newLen;
+finalize_it:
+	if (iRet != RS_RET_OK)
+		freeCompressCtx(pWrkrData);
+	RETiRet;
+}
+
+/* Some duplicate code to curlSetup, but we need to add the gzip content-encoding
+ * header at runtime, and if the compression fails, we do not want to send it.
+ * Additionally, the curlCheckConnHandle should not be configured with a gzip header.
+ */
+static rsRetVal ATTR_NONNULL()
+buildCurlHeaders(wrkrInstanceData_t *pWrkrData, sbool contentEncodeGzip)
+{
+	struct curl_slist *slist = NULL;
+
+	DEFiRet;
+
+	if (pWrkrData->pData->httpcontenttype != NULL) {
+		// If content type specified use it, otherwise use a sane default
+		slist = curl_slist_append(slist, (char *)pWrkrData->pData->headerContentTypeBuf);
+	} else {
+		if (pWrkrData->pData->batchMode) {
+			// If in batch mode, use the approprate content type header for the format,
+			// defaulting to text/plain with newline
+			switch (pWrkrData->pData->batchFormat) {
+				case FMT_JSONARRAY:
+					slist = curl_slist_append(slist, HTTP_HEADER_CONTENT_JSON);
+					break;
+				case FMT_KAFKAREST:
+					slist = curl_slist_append(slist, HTTP_HEADER_CONTENT_KAFKA);
+					break;
+				case FMT_NEWLINE:
+					slist = curl_slist_append(slist, HTTP_HEADER_CONTENT_TEXT);
+					break;
+				default:
+					slist = curl_slist_append(slist, HTTP_HEADER_CONTENT_TEXT);
+			}
+		} else {
+			// Otherwise non batch, presume most users are sending JSON
+			slist = curl_slist_append(slist, HTTP_HEADER_CONTENT_JSON);
+		}
+	}
+
+	CHKmalloc(slist);
+
+	// Configured headers..
+	if (pWrkrData->pData->headerBuf != NULL) {
+		slist = curl_slist_append(slist, (char *)pWrkrData->pData->headerBuf);
+		CHKmalloc(slist);
+	}
+
+	// When sending more than 1Kb, libcurl automatically sends an Except: 100-Continue header
+	// and will wait 1s for a response, could make this configurable but for now disable
+	slist = curl_slist_append(slist, HTTP_HEADER_EXPECT_EMPTY);
+	CHKmalloc(slist);
+
+	if (contentEncodeGzip) {
+		slist = curl_slist_append(slist, HTTP_HEADER_ENCODING_GZIP);
+		CHKmalloc(slist);
+	}
+
+	if (pWrkrData->curlHeader != NULL)
+		curl_slist_free_all(pWrkrData->curlHeader);
+
+	pWrkrData->curlHeader = slist;
+
+finalize_it:
+	if (iRet != RS_RET_OK) {
+		curl_slist_free_all(slist);
+		LogError(0, iRet, "omhttp: error allocating curl header slist, using previous one");
+	}
+	RETiRet;
+}
+
+
 
 static rsRetVal ATTR_NONNULL(1, 2)
 curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls,
 		const int nmsgs __attribute__((unused)))
 {
-	CURLcode code;
+	CURLcode curlCode;
 	CURL *const curl = pWrkrData->curlPostHandle;
 	char errbuf[CURL_ERROR_SIZE] = "";
+
+	char *postData;
+	int postLen;
+	sbool compressed;
 	DEFiRet;
 
 	PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
-
-	pWrkrData->reply = NULL;
-	pWrkrData->replyLen = 0;
 
 	if(pWrkrData->pData->numServers > 1) {
 		/* needs to be called to support ES HA feature */
@@ -1257,59 +1074,315 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls
 
 	pWrkrData->reply = NULL;
 	pWrkrData->replyLen = 0;
+	pWrkrData->httpStatusCode = 0;
 
-	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, (char *)message);
-	curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, msglen);
-	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
-	code = curl_easy_perform(curl);
-	DBGPRINTF("curl returned %lld\n", (long long) code);
-	if (code != CURLE_OK && code != CURLE_HTTP_RETURNED_ERROR) {
-		LogError(0, RS_RET_SUSPENDED,
-			"omhttp: we are suspending ourselfs due "
-			"to server failure %lld: %s", (long long) code, errbuf);
-		ABORT_FINALIZE(RS_RET_SUSPENDED);
+	postData = (char *)message;
+	postLen = msglen;
+	compressed = 0;
+
+	if (pWrkrData->pData->compress) {
+		iRet = compressHttpPayload(pWrkrData, message, msglen);
+		if (iRet != RS_RET_OK) {
+			LogError(0, iRet, "omhttp: curlPost error while compressing, will default to uncompressed");
+			iRet = RS_RET_OK;
+		} else {
+			postData = (char *)pWrkrData->compressCtx.buf;
+			postLen = pWrkrData->compressCtx.curLen;
+			compressed = 1;
+			DBGPRINTF("omhttp: curlPost compressed %d to %d bytes\n", msglen, postLen);
+		}
 	}
 
+	buildCurlHeaders(pWrkrData, compressed);
+
+	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postData);
+	curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, postLen);
+	curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_HTTPHEADER, pWrkrData->curlHeader);
+	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
+
+	curlCode = curl_easy_perform(curl);
+	DBGPRINTF("omhttp: curlPost curl returned %lld\n", (long long) curlCode);
+	STATSCOUNTER_INC(ctrHttpRequestCount, mutCtrHttpRequestCount);
+
+	if (curlCode != CURLE_OK) {
+		STATSCOUNTER_INC(ctrHttpRequestFail, mutCtrHttpRequestFail);
+		LogError(0, RS_RET_SUSPENDED,
+			"omhttp: suspending ourselves due to server failure %lld: %s",
+			(long long) curlCode, errbuf);
+		// Check the result here too and retry if needed, then we should suspend
+		// Usually in batch mode we clobber any iRet values, but probably not a great
+		// idea to keep hitting a dead server. The http status code will be 0 at this point.
+		iRet = checkResult(pWrkrData, message);
+		ABORT_FINALIZE(RS_RET_SUSPENDED);
+	} else {
+		STATSCOUNTER_INC(ctrHttpRequestSuccess, mutCtrHttpRequestSuccess);
+	}
+
+	// Grab the HTTP Response code
+	curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &pWrkrData->httpStatusCode);
 	if(pWrkrData->reply == NULL) {
-		DBGPRINTF("omhttp: pWrkrData reply==NULL, replyLen = '%d'\n",
+		DBGPRINTF("omhttp: curlPost pWrkrData reply==NULL, replyLen = '%d'\n",
 			pWrkrData->replyLen);
 	} else {
-		DBGPRINTF("omhttp: pWrkrData replyLen = '%d'\n", pWrkrData->replyLen);
+		DBGPRINTF("omhttp: curlPost pWrkrData replyLen = '%d'\n", pWrkrData->replyLen);
 		if(pWrkrData->replyLen > 0) {
 			pWrkrData->reply[pWrkrData->replyLen] = '\0';
 			/* Append 0 Byte if replyLen is above 0 - byte has been reserved in malloc */
 		}
 		//TODO: replyLen++? because 0 Byte is appended
-		DBGPRINTF("omhttp: pWrkrData reply: '%s'\n", pWrkrData->reply);
-		CHKiRet(checkResult(pWrkrData, message));
+		DBGPRINTF("omhttp: curlPost pWrkrData reply: '%s'\n", pWrkrData->reply);
 	}
+	CHKiRet(checkResult(pWrkrData, message));
 
 finalize_it:
 	incrementServerIndex(pWrkrData);
-	free(pWrkrData->reply);
-	pWrkrData->reply = NULL; /* don't leave dangling pointer */
+	if (pWrkrData->reply != NULL) {
+		free(pWrkrData->reply);
+		pWrkrData->reply = NULL; /* don't leave dangling pointer */
+	}
+	RETiRet;
+}
+
+/* Build a JSON batch that conforms to the Kafka Rest Proxy format.
+ * See https://docs.confluent.io/current/kafka-rest/docs/quickstart.html for more info.
+ * Want {"records": [{"value": "message1"}, {"value": "message2"}]}
+ */
+static rsRetVal
+serializeBatchKafkaRest(wrkrInstanceData_t *pWrkrData, char **batchBuf)
+{
+	fjson_object *batchArray = NULL;
+	fjson_object *recordObj = NULL;
+	fjson_object *valueObj = NULL;
+	fjson_object *msgObj = NULL;
+
+	size_t numMessages = pWrkrData->batch.nmemb;
+	size_t sizeTotal = pWrkrData->batch.sizeBytes + numMessages + 1; // messages + brackets + commas
+	DBGPRINTF("omhttp: serializeBatchKafkaRest numMessages=%zd sizeTotal=%zd\n", numMessages, sizeTotal);
+
+	DEFiRet;
+
+	batchArray = fjson_object_new_array();
+	if (batchArray == NULL) {
+		LogError(0, RS_RET_ERR, "omhttp: serializeBatchKafkaRest failed to create array");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	for (size_t i = 0; i < numMessages; i++) {
+		valueObj = fjson_object_new_object();
+		if (valueObj == NULL) {
+			fjson_object_put(batchArray); // cleanup
+			LogError(0, RS_RET_ERR, "omhttp: serializeBatchKafkaRest failed to create value object");
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+
+		msgObj = fjson_tokener_parse((char *) pWrkrData->batch.data[i]);
+		if (msgObj == NULL) {
+			LogError(0, NO_ERRCODE,
+				"omhttp: serializeBatchKafkaRest failed to parse %s as json ignoring it",
+				pWrkrData->batch.data[i]);
+			continue;
+		}
+		fjson_object_object_add(valueObj, "value", msgObj);
+		fjson_object_array_add(batchArray, valueObj);
+	}
+
+	recordObj = fjson_object_new_object();
+	if (recordObj == NULL) {
+		fjson_object_put(batchArray); // cleanup
+		LogError(0, RS_RET_ERR, "omhttp: serializeBatchKafkaRest failed to create record object");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	fjson_object_object_add(recordObj, "records", batchArray);
+
+	const char *batchString = fjson_object_to_json_string_ext(recordObj, FJSON_TO_STRING_PLAIN);
+	*batchBuf = strndup(batchString, strlen(batchString));
+
+finalize_it:
+	if (recordObj != NULL) {
+		fjson_object_put(recordObj);
+		recordObj = NULL;
+	}
+
+	RETiRet;
+}
+
+/* Build a JSON batch by placing each element in an array.
+ */
+static rsRetVal
+serializeBatchJsonArray(wrkrInstanceData_t *pWrkrData, char **batchBuf)
+{
+	fjson_object *batchArray = NULL;
+	fjson_object *msgObj = NULL;
+	size_t numMessages = pWrkrData->batch.nmemb;
+	size_t sizeTotal = pWrkrData->batch.sizeBytes + numMessages + 1; // messages + brackets + commas
+	DBGPRINTF("omhttp: serializeBatchJsonArray numMessages=%zd sizeTotal=%zd\n", numMessages, sizeTotal);
+
+	DEFiRet;
+
+	batchArray = fjson_object_new_array();
+	if (batchArray == NULL) {
+		LogError(0, RS_RET_ERR, "omhttp: serializeBatchJsonArray failed to create array");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	for (size_t i = 0; i < numMessages; i++) {
+		msgObj = fjson_tokener_parse((char *) pWrkrData->batch.data[i]);
+		if (msgObj == NULL) {
+			LogError(0, NO_ERRCODE,
+				"omhttp: serializeBatchJsonArray failed to parse %s as json, ignoring it",
+				pWrkrData->batch.data[i]);
+			continue;
+		}
+		fjson_object_array_add(batchArray, msgObj);
+	}
+
+	const char *batchString = fjson_object_to_json_string_ext(batchArray, FJSON_TO_STRING_PLAIN);
+	*batchBuf = strndup(batchString, strlen(batchString));
+
+finalize_it:
+	if (batchArray != NULL) {
+		fjson_object_put(batchArray);
+		batchArray = NULL;
+	}
+	RETiRet;
+}
+
+/* Build a batch by joining each element with a newline character.
+ */
+static rsRetVal
+serializeBatchNewline(wrkrInstanceData_t *pWrkrData, char **batchBuf)
+{
+	DEFiRet;
+	size_t numMessages = pWrkrData->batch.nmemb;
+	size_t sizeTotal = pWrkrData->batch.sizeBytes + numMessages; // message + newline + null term
+	int r = 0;
+
+	DBGPRINTF("omhttp: serializeBatchNewline numMessages=%zd sizeTotal=%zd\n", numMessages, sizeTotal);
+
+	es_str_t *batchString = es_newStr(1024);
+
+	if (batchString == NULL)
+		ABORT_FINALIZE(RS_RET_ERR);
+
+	for (size_t i = 0; i < numMessages; i++) {
+		size_t nToCopy = ustrlen(pWrkrData->batch.data[i]);
+		if (r == 0) r = es_addBuf(&batchString, (char *)pWrkrData->batch.data[i], nToCopy);
+		if (i == numMessages - 1) break;
+		if (r == 0) r = es_addChar(&batchString, '\n');
+	}
+
+	if (r == 0) *batchBuf = (char *) es_str2cstr(batchString, NULL);
+
+	if (r != 0 || *batchBuf== NULL) {
+		LogError(0, RS_RET_ERR, "omhttp: serializeBatchNewline failed to build batch string");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+finalize_it:
+	if (batchString != NULL)
+		es_deleteStr(batchString);
+
+	RETiRet;
+}
+
+/* Return the final batch size in bytes for each serialization method.
+ * Used to decide if a batch should be flushed early.
+ */
+static size_t
+computeBatchSize(wrkrInstanceData_t *pWrkrData)
+{
+	size_t extraBytes = 0;
+	size_t sizeBytes = pWrkrData->batch.sizeBytes;
+	size_t numMessages = pWrkrData->batch.nmemb;
+
+	switch (pWrkrData->pData->batchFormat) {
+		case FMT_JSONARRAY:
+			// square brackets, commas between each message
+			// 2 + numMessages - 1 = numMessages + 1
+			extraBytes = numMessages + 1;
+			break;
+		case FMT_KAFKAREST:
+			// '{}', '[]', '"records":'= 2 + 2 + 10 = 14
+			// '{"value":}' for each message = n * 10
+			extraBytes = (numMessages * 10) + 14;
+			break;
+		case FMT_NEWLINE:
+			// newlines between each message
+			extraBytes = numMessages - 1;
+			break;
+		default:
+			// newlines between each message
+			extraBytes = numMessages - 1;
+	}
+
+	return sizeBytes + extraBytes + 1; // plus a null
+}
+
+static void ATTR_NONNULL()
+initializeBatch(wrkrInstanceData_t *pWrkrData)
+{
+	pWrkrData->batch.sizeBytes = 0;
+	pWrkrData->batch.nmemb = 0;
+}
+
+/* Adds a message to this worker's batch
+ */
+static rsRetVal
+buildBatch(wrkrInstanceData_t *pWrkrData, uchar *message)
+{
+	DEFiRet;
+
+	if (pWrkrData->batch.nmemb >= pWrkrData->pData->maxBatchSize) {
+		LogError(0, RS_RET_ERR, "omhttp: buildBatch something has gone wrong,"
+			"number of messages in batch is bigger than the max batch size, bailing");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	pWrkrData->batch.data[pWrkrData->batch.nmemb] = message;
+	pWrkrData->batch.sizeBytes += strlen((char *)message);
+	pWrkrData->batch.nmemb++;
+
+finalize_it:
 	RETiRet;
 }
 
 static rsRetVal
 submitBatch(wrkrInstanceData_t *pWrkrData)
 {
-	char *cstr = NULL;
 	DEFiRet;
+	char *batchBuf = NULL;
 
-	cstr = es_str2cstr(pWrkrData->batch.data, NULL);
-	dbgprintf("omhttp: submitBatch, batch: '%s'\n", cstr);
+	switch (pWrkrData->pData->batchFormat) {
+		case FMT_JSONARRAY:
+			iRet = serializeBatchJsonArray(pWrkrData, &batchBuf);
+			break;
+		case FMT_KAFKAREST:
+			iRet = serializeBatchKafkaRest(pWrkrData, &batchBuf);
+			break;
+		case FMT_NEWLINE:
+			iRet = serializeBatchNewline(pWrkrData, &batchBuf);
+			break;
+		default:
+			iRet = serializeBatchNewline(pWrkrData, &batchBuf);
+	}
 
-	CHKiRet(curlPost(pWrkrData, (uchar*) cstr, strlen(cstr), NULL, pWrkrData->batch.nmemb));
+	if (iRet != RS_RET_OK || batchBuf == NULL)
+		ABORT_FINALIZE(iRet);
+
+	DBGPRINTF("omhttp: submitBatch, batch: '%s'\n", batchBuf);
+
+	CHKiRet(curlPost(pWrkrData, (uchar*) batchBuf, strlen(batchBuf),
+		NULL, pWrkrData->batch.nmemb));
 
 finalize_it:
-	free(cstr);
+	if (batchBuf != NULL)
+		free(batchBuf);
 	RETiRet;
 }
 
 BEGINbeginTransaction
 CODESTARTbeginTransaction
-	if(!pWrkrData->pData->bulkmode) {
+	if(!pWrkrData->pData->batchMode) {
 		FINALIZE;
 	}
 
@@ -1318,20 +1391,45 @@ finalize_it:
 ENDbeginTransaction
 
 BEGINdoAction
+size_t nBytes;
+sbool submit;
 CODESTARTdoAction
 
-	if(pWrkrData->pData->bulkmode) {
-		const size_t nBytes = ustrlen((char *)ppString[0]) + sizeof("\n")-1 ;
+	STATSCOUNTER_INC(ctrMessagesSubmitted, mutCtrMessagesSubmitted);
 
-		/* If max bytes is set and this next message will put us over the limit,
-		* submit the current buffer and reset */
-		if(pWrkrData->pData->maxbytes > 0
-			&& es_strlen(pWrkrData->batch.data) + nBytes > pWrkrData->pData->maxbytes ) {
-			dbgprintf("omhttp: maxbytes limit reached, submitting partial "
-			"batch of %d elements.\n", pWrkrData->batch.nmemb);
+	if (pWrkrData->pData->batchMode) {
+		/* If the maxbatchsize is 1, then build and immediately post a batch with 1 element.
+		 * This mode will play nicely with rsyslog's action.resumeRetryCount logic.
+		 */
+		if (pWrkrData->pData->maxBatchSize == 1) {
+			initializeBatch(pWrkrData);
+			CHKiRet(buildBatch(pWrkrData, ppString[0]));
+			CHKiRet(submitBatch(pWrkrData));
+			FINALIZE;
+		}
+
+		/* We should submit if any of these conditions are true
+		 * 1. Total batch size > pWrkrData->pData->maxBatchSize
+		 * 2. Total bytes > pWrkrData->pData->maxBatchBytes
+		 */
+		nBytes = ustrlen((char *)ppString[0]) - 1 ;
+		submit = 0;
+
+		if (pWrkrData->batch.nmemb >= pWrkrData->pData->maxBatchSize) {
+			submit = 1;
+			DBGPRINTF("omhttp: maxbatchsize limit reached submitting batch of %zd elements.\n",
+				pWrkrData->batch.nmemb);
+		} else if (computeBatchSize(pWrkrData) + nBytes > pWrkrData->pData->maxBatchBytes) {
+			submit = 1;
+			DBGPRINTF("omhttp: maxbytes limit reached submitting partial batch of %zd elements.\n",
+				pWrkrData->batch.nmemb);
+		}
+
+		if (submit) {
 			CHKiRet(submitBatch(pWrkrData));
 			initializeBatch(pWrkrData);
 		}
+
 		CHKiRet(buildBatch(pWrkrData, ppString[0]));
 
 		/* If there is only one item in the batch, all previous items have been
@@ -1340,8 +1438,7 @@ CODESTARTdoAction
 		 * are not replayed should a failure occur anywhere else in the transaction. */
 		iRet = pWrkrData->batch.nmemb == 1 ? RS_RET_PREVIOUS_COMMITTED : RS_RET_DEFER_COMMIT;
 	} else {
-		CHKiRet(curlPost(pWrkrData, ppString[0], strlen((char*)ppString[0]),
-		                 ppString, 1));
+		CHKiRet(curlPost(pWrkrData, ppString[0], strlen((char*)ppString[0]), ppString, 1));
 	}
 finalize_it:
 ENDdoAction
@@ -1350,10 +1447,10 @@ ENDdoAction
 BEGINendTransaction
 CODESTARTendTransaction
 	/* End Transaction only if batch data is not empty */
-	if (pWrkrData->batch.data != NULL && pWrkrData->batch.nmemb > 0) {
+	if (pWrkrData->batch.nmemb > 0) {
 		CHKiRet(submitBatch(pWrkrData));
 	} else {
-		dbgprintf("omhttp: endTransaction, pWrkrData->batch.data is NULL, "
+		dbgprintf("omhttp: endTransaction, pWrkrData->batch.nmemb = 0, "
 			"nothing to send. \n");
 	}
 finalize_it:
@@ -1362,7 +1459,8 @@ ENDendTransaction
 /* Creates authentication header uid:pwd
  */
 static rsRetVal
-computeAuthHeader(char* uid, char* pwd, uchar** authBuf) {
+computeAuthHeader(char* uid, char* pwd, uchar** authBuf)
+{
 	int r;
 	DEFiRet;
 
@@ -1390,7 +1488,8 @@ finalize_it:
 }
 
 static rsRetVal
-computeApiHeader(char* key, char* value, uchar** headerBuf) {
+computeApiHeader(char* key, char* value, uchar** headerBuf)
+{
 	int r;
 	DEFiRet;
 
@@ -1457,22 +1556,40 @@ curlPostSetup(wrkrInstanceData_t *const pWrkrData)
 	PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
 	curlSetupCommon(pWrkrData, pWrkrData->curlPostHandle);
 	curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_POST, 1);
+	CURLcode cRet;
+	/* Enable TCP keep-alive for this transfer */
+	cRet = curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_TCP_KEEPALIVE, 1L);
+	if (cRet != CURLE_OK)
+		DBGPRINTF("omhttp: curlPostSetup unknown option CURLOPT_TCP_KEEPALIVE\n");
+	/* keep-alive idle time to 120 seconds */
+	cRet = curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_TCP_KEEPIDLE, 120L);
+	if (cRet != CURLE_OK)
+		DBGPRINTF("omhttp: curlPostSetup unknown option CURLOPT_TCP_KEEPIDLE\n");
+	/* interval time between keep-alive probes: 60 seconds */
+	cRet = curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_TCP_KEEPINTVL, 60L);
+	if (cRet != CURLE_OK)
+		DBGPRINTF("omhttp: curlPostSetup unknown option CURLOPT_TCP_KEEPINTVL\n");
 }
-
-#define CONTENT_JSON "Content-Type: application/json; charset=utf-8"
 
 static rsRetVal ATTR_NONNULL()
 curlSetup(wrkrInstanceData_t *const pWrkrData)
 {
-	struct curl_slist *slist=NULL;
+	struct curl_slist *slist = NULL;
 
 	DEFiRet;
-	slist = curl_slist_append(slist, CONTENT_JSON);
-	if (pWrkrData->pData->headerBuf != NULL) {
-		slist = curl_slist_append(slist, (char*) pWrkrData->pData->headerBuf);
+	if (pWrkrData->pData->httpcontenttype != NULL) {
+		slist = curl_slist_append(slist, (char *)pWrkrData->pData->headerContentTypeBuf);
+	} else {
+		slist = curl_slist_append(slist, HTTP_HEADER_CONTENT_JSON);
 	}
+	if (pWrkrData->pData->headerBuf != NULL) {
+		slist = curl_slist_append(slist, (char *)pWrkrData->pData->headerBuf);
+	}
+	// When sending more than 1Kb, libcurl automatically sends an Except: 100-Continue header
+	// and will wait 1s for a response, could make this configurable but for now disable
+	slist = curl_slist_append(slist, HTTP_HEADER_EXPECT_EMPTY);
 	pWrkrData->curlHeader = slist;
-	CHKmalloc(pWrkrData->curlPostHandle = curl_easy_init());;
+	CHKmalloc(pWrkrData->curlPostHandle = curl_easy_init());
 	curlPostSetup(pWrkrData);
 
 	CHKmalloc(pWrkrData->curlCheckConnHandle = curl_easy_init());
@@ -1487,12 +1604,31 @@ finalize_it:
 }
 
 static void ATTR_NONNULL()
+curlCleanup(wrkrInstanceData_t *const pWrkrData)
+{
+	if (pWrkrData->curlHeader != NULL) {
+		curl_slist_free_all(pWrkrData->curlHeader);
+		pWrkrData->curlHeader = NULL;
+	}
+	if (pWrkrData->curlCheckConnHandle != NULL) {
+		curl_easy_cleanup(pWrkrData->curlCheckConnHandle);
+		pWrkrData->curlCheckConnHandle = NULL;
+	}
+	if (pWrkrData->curlPostHandle != NULL) {
+		curl_easy_cleanup(pWrkrData->curlPostHandle);
+		pWrkrData->curlPostHandle = NULL;
+	}
+}
+
+static void ATTR_NONNULL()
 setInstParamDefaults(instanceData *const pData)
 {
 	pData->serverBaseUrls = NULL;
 	pData->defaultPort = 443;
 	pData->healthCheckTimeout = 3500;
 	pData->uid = NULL;
+	pData->httpcontenttype = NULL;
+	pData->headerContentTypeBuf = NULL;
 	pData->httpheaderkey = NULL;
 	pData->httpheadervalue = NULL;
 	pData->pwd = NULL;
@@ -1500,17 +1636,21 @@ setInstParamDefaults(instanceData *const pData)
 	pData->restPath = NULL;
 	pData->checkPath = NULL;
 	pData->dynRestPath = 0;
-	pData->bulkmode = 1;
+	pData->batchMode = 0;
+	pData->batchFormatName = (uchar *)"newline";
+	pData->batchFormat = FMT_NEWLINE;
 	pData->useHttps = 1;
-	pData->maxbytes = 10485760; //i.e. 10 MB Is the default max message size for AWS API Gateway
+	pData->maxBatchBytes = 10485760; //i.e. 10 MB Is the default max message size for AWS API Gateway
+	pData->maxBatchSize = 100; // 100 messages
+	pData->compress = 0; // off
+	pData->compressionLevel = -1; // default compression
 	pData->allowUnsignedCerts = 0;
 	pData->tplName = NULL;
 	pData->errorFile = NULL;
-	pData->errorOnly=0;
-	pData->interleaved=0;
 	pData->caCertFile = NULL;
 	pData->myCertFile = NULL;
 	pData->myPrivKeyFile = NULL;
+	pData->reloadOnHup= 0;
 	pData->retryFailures = 0;
 	pData->ratelimitBurst = 20000;
 	pData->ratelimitInterval = 600;
@@ -1527,6 +1667,8 @@ BEGINnewActInst
 	int iNumTpls;
 	FILE *fp;
 	char errStr[1024];
+	char *batchFormatName;
+	int compressionLevel = -1;
 CODESTARTnewActInst
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -1542,16 +1684,14 @@ CODESTARTnewActInst
 			servers = pvals[i].val.d.ar;
 		} else if(!strcmp(actpblk.descr[i].name, "errorfile")) {
 			pData->errorFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "erroronly")) {
-			pData->errorOnly = pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "interleaved")) {
-			pData->interleaved = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "serverport")) {
 			pData->defaultPort = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "healthchecktimeout")) {
 			pData->healthCheckTimeout = (long) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "uid")) {
 			pData->uid = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "http.contenttype")) {
+			pData->httpcontenttype = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "httpheaderkey")) {
 			pData->httpheaderkey = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "httpheadervalue")) {
@@ -1564,10 +1704,40 @@ CODESTARTnewActInst
 			pData->checkPath = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "dynrestpath")) {
 			pData->dynRestPath = pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "bulkmode")) {
-			pData->bulkmode = pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "maxbytes")) {
-			pData->maxbytes = (size_t) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "bulkmode") ||
+				!strcmp(actpblk.descr[i].name, "batch")) {
+			pData->batchMode = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "batch.format")) {
+			batchFormatName = es_str2cstr(pvals[i].val.d.estr, NULL);
+			if (strstr(VALID_BATCH_FORMATS, batchFormatName) != NULL) {
+				pData->batchFormatName = (uchar *)batchFormatName;
+				if (!strcmp(batchFormatName, "newline")) {
+					pData->batchFormat = FMT_NEWLINE;
+				} else if (!strcmp(batchFormatName, "jsonarray")) {
+					pData->batchFormat = FMT_JSONARRAY;
+				} else if (!strcmp(batchFormatName, "kafkarest")) {
+					pData->batchFormat = FMT_KAFKAREST;
+				}
+			} else {
+				LogError(0, NO_ERRCODE, "error: 'batch.format' %s unknown defaulting to 'newline'",
+					batchFormatName);
+			}
+		} else if(!strcmp(actpblk.descr[i].name, "maxbytes") ||
+				!strcmp(actpblk.descr[i].name, "batch.maxbytes")) {
+			pData->maxBatchBytes = (size_t) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "batch.maxsize")) {
+			pData->maxBatchSize = (size_t) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "compress")) {
+			pData->compress = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "compress.level")) {
+			compressionLevel = pvals[i].val.d.n;
+			if (compressionLevel == -1 || (compressionLevel >= 0 && compressionLevel < 10)) {
+				pData->compressionLevel = compressionLevel;
+			} else {
+				LogError(0, NO_ERRCODE, "omhttp: invalid compress.level %d using default instead,"
+					"valid levels are -1 and 0-9",
+					compressionLevel);
+			}
 		} else if(!strcmp(actpblk.descr[i].name, "allowunsignedcerts")) {
 			pData->allowUnsignedCerts = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "usehttps")) {
@@ -1607,14 +1777,18 @@ CODESTARTnewActInst
 			} else {
 				fclose(fp);
 			}
-		} else if(!strcmp(actpblk.descr[i].name, "retryfailures")) {
+		} else if(!strcmp(actpblk.descr[i].name, "reloadonhup")) {
+			pData->reloadOnHup= pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "retryfailures") ||
+				!strcmp(actpblk.descr[i].name, "retry")) {
 			pData->retryFailures = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "retryruleset") ||
+				!strcmp(actpblk.descr[i].name, "retry.ruleset")) {
+			pData->retryRulesetName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "ratelimit.burst")) {
 			pData->ratelimitBurst = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "ratelimit.interval")) {
 			pData->ratelimitInterval = (int) pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "retryruleset")) {
-			pData->retryRulesetName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			LogError(0, RS_RET_INTERNAL_ERROR, "omhttp: program error, "
 				"non-handled param '%s'", actpblk.descr[i].name);
@@ -1642,6 +1816,9 @@ CODESTARTnewActInst
 
 	if (pData->uid != NULL)
 		CHKiRet(computeAuthHeader((char*) pData->uid, (char*) pData->pwd, &pData->authBuf));
+	if (pData->httpcontenttype != NULL)
+		CHKiRet(computeApiHeader((char*) "Content-Type",
+				(char*) pData->httpcontenttype, &pData->headerContentTypeBuf));
 	if (pData->httpheaderkey != NULL)
 		CHKiRet(computeApiHeader((char*) pData->httpheaderkey,
 				(char*) pData->httpheadervalue, &pData->headerBuf));
@@ -1771,13 +1948,28 @@ CODESTARTfreeCnf
 ENDfreeCnf
 
 
+// HUP handling for the instance...
 BEGINdoHUP
 CODESTARTdoHUP
-	if(pData->fdErrFile != -1) {
+	pthread_mutex_lock(&pData->mutErrFile);
+	if (pData->fdErrFile != -1) {
 		close(pData->fdErrFile);
 		pData->fdErrFile = -1;
 	}
+	pthread_mutex_unlock(&pData->mutErrFile);
 ENDdoHUP
+
+
+// HUP handling for the worker...
+BEGINdoHUPWrkr
+CODESTARTdoHUPWrkr
+	if (pWrkrData->pData->reloadOnHup) {
+		LogMsg(0, NO_ERRCODE, LOG_INFO, "omhttp: received HUP reloading curl handles");
+		curlCleanup(pWrkrData);
+		CHKiRet(curlSetup(pWrkrData));
+	}
+finalize_it:
+ENDdoHUPWrkr
 
 
 BEGINmodExit
@@ -1787,6 +1979,8 @@ CODESTARTmodExit
 	curl_global_cleanup();
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
+	objRelease(statsobj, CORE_COMPONENT);
+	statsobj.Destruct(&httpStats);
 ENDmodExit
 
 NO_LEGACY_CONF_parseSelectorAct
@@ -1798,6 +1992,7 @@ CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_doHUP
+CODEqueryEtryPt_doHUPWrkr /* Load the worker HUP handling code */
 CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
 CODEqueryEtryPt_STD_CONF2_QUERIES
 ENDqueryEtryPt
@@ -1809,6 +2004,49 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
+	CHKiRet(objUse(statsobj, CORE_COMPONENT));
+
+	CHKiRet(statsobj.Construct(&httpStats));
+	CHKiRet(statsobj.SetName(httpStats, (uchar *)"omhttp"));
+	CHKiRet(statsobj.SetOrigin(httpStats, (uchar*)"omhttp"));
+
+	STATSCOUNTER_INIT(ctrMessagesSubmitted, mutCtrMessagesSubmitted);
+	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"messages.submitted",
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrMessagesSubmitted));
+
+	STATSCOUNTER_INIT(ctrMessagesSuccess, mutCtrMessagesSuccess);
+	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"messages.success",
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrMessagesSuccess));
+
+	STATSCOUNTER_INIT(ctrMessagesFail, mutCtrMessagesFail);
+	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"messages.fail",
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrMessagesFail));
+
+	STATSCOUNTER_INIT(ctrMessagesRetry, mutCtrMessagesRetry);
+	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"messages.retry",
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrMessagesRetry));
+
+	STATSCOUNTER_INIT(ctrHttpRequestCount, mutCtrHttpRequestCount);
+	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.count",
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrHttpRequestCount));
+
+	STATSCOUNTER_INIT(ctrHttpRequestSuccess, mutCtrHttpRequestSuccess);
+	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.success",
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrHttpRequestSuccess));
+
+	STATSCOUNTER_INIT(ctrHttpRequestFail, mutCtrHttpRequestFail);
+	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.fail",
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrHttpRequestFail));
+
+	STATSCOUNTER_INIT(ctrHttpStatusSuccess, mutCtrHttpStatusSuccess);
+	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.status.success",
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrHttpStatusSuccess));
+
+	STATSCOUNTER_INIT(ctrHttpStatusFail, mutCtrHttpStatusFail);
+	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.status.fail",
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrHttpStatusFail));
+
+	CHKiRet(statsobj.ConstructFinalize(httpStats));
 
 	if (curl_global_init(CURL_GLOBAL_ALL) != 0) {
 		LogError(0, RS_RET_OBJ_CREATION_FAILED, "CURL fail. -http disabled");
