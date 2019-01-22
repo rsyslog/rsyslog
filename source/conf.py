@@ -94,8 +94,8 @@ rst_epilog = """
 ###############################################################################
 
 
-version = '8.40'
-release = '8.40.0'
+version = '8.1901'
+release = '8.1901.0'
 
 
 # For this to be true, it means that we are not attempting to build from
