@@ -368,6 +368,35 @@ If you want to have rsyslog suspend the plugin until the Kubernetes API server
 is available, set `busyretryinterval` to `"0"`.  This will cause the plugin to
 return an error to rsyslog.
 
+.. _mmkubernetes-sslpartialchain:
+
+sslpartialchain
+^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "boolean", "off", "no", "none"
+
+This option is only available if rsyslog was built with support for OpenSSL and
+only if the `X509_V_FLAG_PARTIAL_CHAIN` flag is available.  If you attempt to
+set this parameter on other platforms, you will get an `INFO` level log
+message.  This was done so that you could use the same configuration on
+different platforms.
+If `"on"`, this will set the OpenSSL certificate store flag
+`X509_V_FLAG_PARTIAL_CHAIN`.   This will allow you to verify the Kubernetes API
+server cert with only an intermediate CA cert in your local trust store, rather
+than having to have the entire intermediate CA + root CA chain in your local
+trust store.  See also `man s_client` - the `-partial_chain` flag.
+If you get errors like this, you probably need to set `sslpartialchain="on"`:
+
+.. code-block:: none
+
+    rsyslogd: mmkubernetes: failed to connect to [https://...url...] -
+    60:Peer certificate cannot be authenticated with given CA certificates
+
 .. _mmkubernetes-statistic-counter:
 
 Statistic Counter

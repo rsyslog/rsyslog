@@ -251,6 +251,26 @@ selected AuthMode and
 PermittedPeers may not be set in anonymous modes.
 
 
+StreamDriver.PermitExpiredCerts
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "warn", "no", "none"
+
+Controls how expired certificates will be handeled when stream driver is in TLS mode.
+It can have one of the following values:
+
+-  on = Expired certificates are allowed
+
+-  off = Expired certificates are not allowed
+
+-  warn = Expired certificates are allowed but warning will be logged (Default due legacy support)
+
+
 PermittedPeer
 ^^^^^^^^^^^^^
 

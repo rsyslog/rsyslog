@@ -82,7 +82,7 @@ which makes its use more intuitive. You may precede every priority with an
 equation sign ("=") to specify that syslogd should only refer to this single
 priority and not this priority and all higher priorities.
 
-You may also precide the priority with an exclamation mark ("!") if you want
+You may also precede the priority with an exclamation mark ("!") if you want
 syslogd to ignore this priority and all higher priorities. You may even use
 both, the exclamation mark and the equation sign if you want syslogd to ignore
 only this single priority. If you use both extensions then the exclamation

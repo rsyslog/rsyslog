@@ -108,11 +108,55 @@ queue.dequeueBatchSize
 
    "integer", "128/1024", "no", "``$ActionQueueDequeueBatchSize``"
 
-Specifies the batch size for dequeue operations. This setting affects performance.
+Specifies the maximum batch size for dequeue operations. This setting affects performance.
 As a rule of thumb, larger batch sizes (up to a environment-induced upper limit)
 provide better performance. For the average system, there usually should be no need
 to adjust batch sizes as the defaults are sufficient. The default for ruleset queues
 is 1024 and for action queues 128.
+
+Note that this only specifies the **maximum** batch size. Batches will be slower if
+rsyslog does not have as many messages inside the queue at time of dequeuing it.
+If you want to set a minimum Batch size as well, you can use `queue.minDequeueBatchSize`.
+
+
+queue.minDequeueBatchSize
+-------------------------
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "0", "no", "none"
+
+Specifies the **minimum** batch size for dequeue operations. This setting is especially
+useful with outputs like ElasticSearch or ClickHouse, where you want to limit the
+number of HTTP requests. With this setting, the queue engine waits up to
+`queue.minDequeueBatchSize.timeout` milliseconds when there are fewer messages
+currently queued. Note that the minimum batch size cannot be larger than the
+configured maximum batch size. If so, it is automatically adjusted to
+match the maximum. So if in doubt, you need to specify both parameters.
+
+
+queue.minDequeueBatchSize.timeout
+---------------------------------
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "1000", "no", "none"
+
+This parameter is only meaningful if use together with `queue.minDequeueBatchSize`,
+otherwise it is ignored. It specifies the amout of time (in milliseconds) rsyslogs
+waits for new
+messages so that the minimum batch size can be reached. After this period, the
+batch is processed, *even if it is below minimum size*. This capability exists to
+prevent having messages stalled in an incomplete batch just because no new
+messages arrive. We would expect that it usually makes little sense to set it
+to higher than 60.000 (60 seconds), but this is permitted. Just be warned that
+this potentially delays log processing for that long.
 
 
 queue.maxDiskSpace
@@ -351,12 +395,12 @@ queue.timeoutshutdown
    :widths: auto
    :class: parameter-table
 
-   "integer", "0/1500", "no", "``$ActionQueueTimeoutShutdown``"
+   "integer", "10/1500", "no", "``$ActionQueueTimeoutShutdown``"
 
 If a queue that still contains messages is terminated it will wait the
 specified time interval for the worker thread to finish.
 The time is specfied in milliseconds (1000ms is 1sec).
-Default for action queues is 0, for ruleset queues it is 1500.
+Default for action queues is 10, for ruleset queues it is 1500.
 
 
 queue.timeoutActionCompletion
