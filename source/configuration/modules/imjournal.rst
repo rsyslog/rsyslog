@@ -106,13 +106,17 @@ applied. If more than ratelimit.burst messages are read during that
 interval, further messages up to the end of the interval are
 discarded. The number of messages discarded is emitted at the end of
 the interval (if there were any discards).
-Setting this to value zero turns off ratelimiting. Note that it is
-**not recommended to turn of ratelimiting**, except that you know for
+
+**Setting this value to 0 turns off ratelimiting.**
+
+Note that it is *not recommended to turn off ratelimiting*,
+except that you know for
 sure journal database entries will never be corrupted. Without
 ratelimiting, a corrupted systemd journal database may cause a kind
-of denial of service (we are stressing this point as multiple users
-have reported us such problems with the journal database -
-information current as of June 2013).
+of denial of service We are stressing this point as multiple users
+have reported us such problems with the journal database - in June
+of 2013 and occasionally also after this time (up until the time of
+this writing in January 2019).
 
 
 Ratelimit.Burst
