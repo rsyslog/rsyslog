@@ -1,0 +1,95 @@
+#!/usr/bin/env python
+
+try:
+    from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer # Python 2
+except ImportError:
+    from http.server import BaseHTTPRequestHandler, HTTPServer # Python 3
+
+import argparse
+import json
+import os
+
+# Keep track of data received at each path
+data = {}
+
+metadata = {'posts': 0, 'fail_after': 0, 'fail_every': -1}
+
+
+class MyHandler(BaseHTTPRequestHandler):
+    """
+    POST'd data is kept in the data global dict.
+    Keys are the path, values are the raw received data.
+    Two post requests to <host>:<port>/post/endpoint means data looks like...
+        {"/post/endpoint": ["{\"msgnum\":\"00001\"}", "{\"msgnum\":\"00001\"}"]}
+
+    GET requests return all data posted to that endpoint as a json list.
+    Note that rsyslog usually sends escaped json data, so some parsing may be needed.
+    A get request for <host>:<post>/post/endpoint responds with...
+        ["{\"msgnum\":\"00001\"}", "{\"msgnum\":\"00001\"}"]
+    """
+
+    def do_POST(self):
+        metadata['posts'] += 1
+
+        if metadata['fail_with_400_after'] != -1 and metadata['posts'] > metadata['fail_with_400_after']:
+            self.send_response(400)
+            self.end_headers()
+            self.wfile.write('BAD REQUEST')
+            return
+
+        if metadata['posts'] > 1 and metadata['fail_every'] != -1 and metadata['posts'] % metadata['fail_every'] == 0:
+            self.send_response(500)
+            self.end_headers()
+            self.wfile.write('INTERNAL ERROR')
+            return
+
+        content_length = int(self.headers['Content-Length'])
+        post_data = self.rfile.read(content_length)
+
+        if self.path not in data:
+            data[self.path] = []
+        data[self.path].append(post_data)
+
+        res = json.dumps({'msg': 'ok'})
+
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Content-Length', len(res))
+        self.end_headers()
+
+        self.wfile.write(res)
+        return
+
+    def do_GET(self):
+        if self.path in data:
+            result = data[self.path]
+        else:
+            result = []
+
+        res = json.dumps(result)
+
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Content-Length', len(res))
+        self.end_headers()
+
+        self.wfile.write(res)
+        return
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Archive and delete core app log files')
+    parser.add_argument('-p', '--port', action='store', type=int, default=8080, help='port')
+    parser.add_argument('-i', '--interface', action='store', type=str, default='localhost', help='port')
+    parser.add_argument('--fail-after', action='store', type=int, default=0, help='start failing after n posts')
+    parser.add_argument('--fail-every', action='store', type=int, default=-1, help='fail every n posts')
+    parser.add_argument('--fail-with-400-after', action='store', type=int, default=-1, help='fail with 400 after n posts')
+    args = parser.parse_args()
+    metadata['fail_after'] = args.fail_after
+    metadata['fail_every'] = args.fail_every
+    metadata['fail_with_400_after'] = args.fail_with_400_after
+    server = HTTPServer((args.interface, args.port), MyHandler)
+    pid = os.getpid()
+    print('starting omhttp test server at {interface}:{port} with pid {pid}'
+          .format(interface=args.interface, port=args.port, pid=pid))
+    server.serve_forever()

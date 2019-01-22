@@ -718,6 +718,17 @@ TESTS +=  \
 endif
 endif
 
+if ENABLE_OMHTTP
+TESTS +=  \
+	 omhttp-basic.sh \
+	 omhttp-fail-often.sh \
+	 omhttp-batch-fail-with-400.sh \
+	 omhttp-batch-jsonarray.sh \
+	 omhttp-batch-jsonarray-fail-often.sh \
+	 omhttp-batch-kafkarest.sh \
+	 omhttp-batch-kafkarest-fail-often.sh
+endif
+
 if ENABLE_OMKAFKA
 if ENABLE_IMKAFKA
 if ENABLE_KAFKA_TESTS
