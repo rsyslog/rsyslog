@@ -1,16 +1,20 @@
 #!/bin/bash
-# alorbach, 2019-01-16
-# This file is part of the rsyslog project, released  under ASL 2.0
+# all we want to test is if certless communication works. So we do
+# not need to send many messages.
+# This test checks legacy statements which are often given as 
+# This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-export NUMMESSAGES=100
+export NUMMESSAGES=5000
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
+# receiver
 export PORT_RCVR="$(get_free_port)"
 add_conf '
-global(
-	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
+global( defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
+	defaultNetstreamDriverCertFile="'$srcdir/tls-certs/cert.pem'"
+	defaultNetstreamDriverKeyFile="'$srcdir/tls-certs/key.pem'"
 	defaultNetstreamDriver="gtls"
 )
 
@@ -22,34 +26,27 @@ module(	load="../plugins/imtcp/.libs/imtcp"
 input(	type="imtcp" port="'$PORT_RCVR'" )
 
 $template outfmt,"%msg:F,58:2%\n"
-$template dynfile,"'$RSYSLOG_OUT_LOG'" # trick to use relative path names!
-:msg, contains, "msgnum:" ?dynfile;outfmt
+:msg, contains, "msgnum:" action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
+
+# sender
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
 generate_conf 2
-export TCPFLOOD_PORT="$(get_free_port)" 
+#export TCPFLOOD_PORT="$(get_free_port)"
 add_conf '
-global(
-	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
-	defaultNetstreamDriverCertFile="'$srcdir/tls-certs/cert.pem'"
-	defaultNetstreamDriverKeyFile="'$srcdir/tls-certs/key.pem'"
-)
-
 # Note: no TLS for the listener, this is for tcpflood!
 $ModLoad ../plugins/imtcp/.libs/imtcp
-input(	type="imtcp" port="'$TCPFLOOD_PORT'" )
+input(type="imtcp" port="'$TCPFLOOD_PORT'")
 
-# set up the action
-action(	type="omfwd"
-	protocol="tcp"
-	target="127.0.0.1"
-	port="'$PORT_RCVR'"
-	StreamDriver="gtls"
-	StreamDriverMode="1"
-	StreamDriverAuthMode="anon"
-	)
+# NOTE: do NOT change legacy statements - they are used intentionally
+$DefaultNetstreamDriverCAFile '$srcdir/tls-certs/ca.pem'
+$ActionSendStreamDriver gtls
+$ActionSendStreamDriverMode 1
+$ActionSendStreamDriverAuthMode x509/name
+$ActionSendStreamDriverPermittedPeer *.rsyslog.com
+*.* @@localhost:'$PORT_RCVR'
 ' 2
 startup 2
 

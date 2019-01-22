@@ -2,7 +2,7 @@
 # alorbach, 2019-01-16
 # This file is part of the rsyslog project, released  under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-export NUMMESSAGES=100
+export NUMMESSAGES=1000
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"
@@ -11,11 +11,12 @@ export PORT_RCVR="$(get_free_port)"
 add_conf '
 global(
 	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
-	defaultNetstreamDriver="gtls"
+	defaultNetstreamDriverCertFile="'$srcdir/tls-certs/cert.pem'"
+	defaultNetstreamDriverKeyFile="'$srcdir/tls-certs/key.pem'"
 )
 
 module(	load="../plugins/imtcp/.libs/imtcp"
-	StreamDriver.Name="gtls"
+	StreamDriver.Name="ossl"
 	StreamDriver.Mode="1"
 	StreamDriver.AuthMode="anon" )
 # then SENDER sends to this port (not tcpflood!)
@@ -31,15 +32,12 @@ export RSYSLOG_DEBUGLOG="log2"
 generate_conf 2
 export TCPFLOOD_PORT="$(get_free_port)" 
 add_conf '
-global(
-	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
-	defaultNetstreamDriverCertFile="'$srcdir/tls-certs/cert.pem'"
-	defaultNetstreamDriverKeyFile="'$srcdir/tls-certs/key.pem'"
+global( defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
 )
 
 # Note: no TLS for the listener, this is for tcpflood!
-$ModLoad ../plugins/imtcp/.libs/imtcp
-input(	type="imtcp" port="'$TCPFLOOD_PORT'" )
+module(	load="../plugins/imtcp/.libs/imtcp")
+input( type="imtcp" port="'$TCPFLOOD_PORT'")
 
 # set up the action
 action(	type="omfwd"

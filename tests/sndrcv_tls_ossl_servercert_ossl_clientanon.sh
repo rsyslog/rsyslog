@@ -1,12 +1,9 @@
 #!/bin/bash
 # alorbach, 2019-01-16
-# testing sending and receiving via TLS (gtls) certless client only, server uses cert but ANON Mode. 
 # This file is part of the rsyslog project, released  under ASL 2.0
-
-# uncomment for debugging support:
 . ${srcdir:=.}/diag.sh init
-export NUMMESSAGES=25000
-# start up the instances
+export NUMMESSAGES=1000
+# uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
@@ -16,11 +13,10 @@ global(
 	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
 	defaultNetstreamDriverCertFile="'$srcdir/tls-certs/cert.pem'"
 	defaultNetstreamDriverKeyFile="'$srcdir/tls-certs/key.pem'"
-	defaultNetstreamDriver="gtls"
 )
 
 module(	load="../plugins/imtcp/.libs/imtcp"
-	StreamDriver.Name="gtls"
+	StreamDriver.Name="ossl"
 	StreamDriver.Mode="1"
 	StreamDriver.AuthMode="anon" )
 # then SENDER sends to this port (not tcpflood!)
@@ -34,14 +30,13 @@ startup
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
 generate_conf 2
-export TCPFLOOD_PORT="$(get_free_port)" # TODO: move to diag.sh
+export TCPFLOOD_PORT="$(get_free_port)" 
 add_conf '
-global(
-	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
+global(	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
 )
 
 # Note: no TLS for the listener, this is for tcpflood!
-$ModLoad ../plugins/imtcp/.libs/imtcp
+module(	load="../plugins/imtcp/.libs/imtcp")
 input(	type="imtcp" port="'$TCPFLOOD_PORT'" )
 
 # set up the action
@@ -49,9 +44,9 @@ action(	type="omfwd"
 	protocol="tcp"
 	target="127.0.0.1"
 	port="'$PORT_RCVR'"
-	StreamDriver="gtls"
+	StreamDriver="ossl"
 	StreamDriverMode="1"
-	StreamDriverAuthMode="anon"
+	StreamDriverAuthMode="x509/certvalid"
 	)
 ' 2
 startup 2

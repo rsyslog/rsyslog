@@ -2,7 +2,7 @@
 # alorbach, 2019-01-16
 # This file is part of the rsyslog project, released  under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-export NUMMESSAGES=100
+export NUMMESSAGES=1000
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"
@@ -11,13 +11,12 @@ export PORT_RCVR="$(get_free_port)"
 add_conf '
 global(
 	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
-	defaultNetstreamDriver="gtls"
 )
 
 module(	load="../plugins/imtcp/.libs/imtcp"
 	StreamDriver.Name="gtls"
 	StreamDriver.Mode="1"
-	StreamDriver.AuthMode="anon" )
+	StreamDriver.AuthMode="x509/certvalid" )
 # then SENDER sends to this port (not tcpflood!)
 input(	type="imtcp" port="'$PORT_RCVR'" )
 
@@ -46,7 +45,7 @@ action(	type="omfwd"
 	protocol="tcp"
 	target="127.0.0.1"
 	port="'$PORT_RCVR'"
-	StreamDriver="gtls"
+	StreamDriver="ossl"
 	StreamDriverMode="1"
 	StreamDriverAuthMode="anon"
 	)

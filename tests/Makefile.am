@@ -207,8 +207,6 @@ TESTS +=  \
 	tcp_forwarding_tpl.sh \
 	tcp_forwarding_dflt_tpl.sh \
 	tcp_forwarding_retries.sh \
-	queue-minbatch.sh \
-	queue-minbatch-queuefull.sh \
 	arrayqueue.sh \
 	global_vars.sh \
 	no-parser-errmsg.sh \
@@ -969,10 +967,9 @@ TESTS +=  \
 	sndrcv_tls_anon_hostname.sh \
 	sndrcv_tls_anon_ipv4.sh \
 	sndrcv_tls_anon_ipv6.sh \
-	sndrcv_tls_certless_clientonly.sh \
-	sndrcv_tls_certless_clientonly-legacy.sh \
-	sndrcv_tls_certless.sh \
-	sndrcv_tls_certless_serveronly.sh \
+	sndrcv_tls_gtls_servercert_gtls_clientanon.sh \
+	sndrcv_tls_gtls_servercert_gtls_clientanon_legacy.sh \
+	sndrcv_tls_gtls_serveranon_gtls_clientanon.sh \
 	sndrcv_tls_priorityString.sh \
 	sndrcv_tls_certvalid.sh \
 	sndrcv_tls_certvalid_expired.sh \
@@ -995,9 +992,8 @@ TESTS +=  \
 	sndrcv_tls_ossl_anon_ipv4.sh \
 	sndrcv_tls_ossl_anon_ipv6.sh \
 	sndrcv_tls_ossl_anon_rebind.sh \
-	sndrcv_tls_ossl_certless.sh \
-	sndrcv_tls_ossl_certless_clientonly.sh \
-	sndrcv_tls_ossl_certless_serveronly.sh \
+	sndrcv_tls_ossl_serveranon_ossl_clientanon.sh \
+	sndrcv_tls_ossl_servercert_ossl_clientanon.sh \
 	sndrcv_tls_ossl_certvalid.sh \
 	sndrcv_tls_ossl_certvalid_expired.sh \
 	imtcp-tls-ossl-x509valid.sh \
@@ -1013,6 +1009,15 @@ TESTS += \
 endif
 endif
 
+if ENABLE_GNUTLS
+if ENABLE_OPENSSL
+TESTS +=  \
+	sndrcv_tls_ossl_servercert_gtls_clientanon.sh \
+	sndrcv_tls_ossl_serveranon_gtls_clientanon.sh \
+	sndrcv_tls_gtls_servercert_ossl_clientanon.sh \
+	sndrcv_tls_gtls_serveranon_ossl_clientanon.sh
+endif
+endif
 
 if ENABLE_OMUXSOCK
 TESTS += uxsock_simple.sh
@@ -1337,8 +1342,6 @@ EXTRA_DIST= \
 	diskq-rfc5424.sh \
 	diskqueue-full.sh \
 	diskqueue.sh \
-	queue-minbatch.sh \
-	queue-minbatch-queuefull.sh \
 	arrayqueue.sh \
 	include-obj-text-from-file.sh \
 	include-obj-outside-control-flow-vg.sh \
@@ -2059,13 +2062,15 @@ EXTRA_DIST= \
 	sndrcv_tls_priorityString.sh \
 	sndrcv_tls_certvalid.sh \
 	sndrcv_tls_certvalid_expired.sh \
-	sndrcv_tls_certless_clientonly.sh \
-	sndrcv_tls_certless_clientonly-legacy.sh \
-	sndrcv_tls_certless.sh \
-	sndrcv_tls_certless_serveronly.sh \
-	sndrcv_tls_ossl_certless.sh \
-	sndrcv_tls_ossl_certless_clientonly.sh \
-	sndrcv_tls_ossl_certless_serveronly.sh \
+	sndrcv_tls_gtls_servercert_gtls_clientanon.sh \
+	sndrcv_tls_gtls_servercert_gtls_clientanon_legacy.sh \
+	sndrcv_tls_gtls_serveranon_gtls_clientanon.sh \
+	sndrcv_tls_ossl_serveranon_ossl_clientanon.sh \
+	sndrcv_tls_ossl_servercert_ossl_clientanon.sh \
+	sndrcv_tls_ossl_servercert_gtls_clientanon.sh \
+	sndrcv_tls_ossl_serveranon_gtls_clientanon.sh \
+	sndrcv_tls_gtls_servercert_ossl_clientanon.sh \
+	sndrcv_tls_gtls_serveranon_ossl_clientanon.sh \
 	omtcl.sh \
 	omtcl.tcl \
 	pmsnare-default.sh \

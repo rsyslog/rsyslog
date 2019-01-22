@@ -20,6 +20,8 @@ global(
 	defaultNetstreamDriverCertFile=`echo $srcdir/testsuites/x.509/client-cert.pem`
 	defaultNetstreamDriverKeyFile=`echo $srcdir/testsuites/x.509/client-key.pem`
 	defaultNetstreamDriver="gtls"
+	debug.whitelist="on"
+	debug.files=["nsd_ossl.c", "tcpsrv.c", "nsdsel_ossl.c", "nsdpoll_ptcp.c", "dnscache.c"]
 )
 
 $InputTCPServerStreamDriverMode 1
@@ -32,7 +34,7 @@ template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to
 '
 startup_vg
 # the config file specifies exactly 1100 connections
-tcpflood -c1000 -m40000
+tcpflood -c1000 -m40000 -Ttls -x$srcdir/testsuites/x.509/ca.pem -Z$srcdir/testsuites/x.509/client-cert.pem -z$srcdir/testsuites/x.509/client-key.pem
 # the sleep below is needed to prevent too-early termination of the tcp listener
 sleep 1
 shutdown_when_empty # shut down rsyslogd when done processing messages
