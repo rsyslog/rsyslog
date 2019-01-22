@@ -880,7 +880,7 @@ createMsgFromRequest(const char *request, context *ctx, smsg_t **msg)
 			request);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	datastart++; /* advance to { */
+	datastart++; /* advance to '{' */
 	if (!(dataend = strchr(datastart, '\n')) || (dataend[1] != '\0')) {
 		LogError(0, RS_RET_ERR,
 			"omhttp: malformed original request - "
