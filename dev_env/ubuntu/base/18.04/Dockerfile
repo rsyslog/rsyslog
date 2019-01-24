@@ -35,6 +35,7 @@ RUN 	apt-get update && \
 	libmongoc-dev \
 	libmysqlclient-dev \
 	libnet1-dev \
+	libpcap-dev \
 	libsnmp-dev \
 	libssl-dev libsasl2-dev \
 	libsystemd-dev \
@@ -87,14 +88,16 @@ RUN	echo "deb http://repo.yandex.ru/clickhouse/deb/stable/ main/" > /etc/apt/sou
 	clickhouse-client \
 	clickhouse-server
 # clang devel version
-RUN	echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic main" > /etc/apt/sources.list.d/llvm8.list && \
+RUN	echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-8 main" > /etc/apt/sources.list.d/llvm8.list && \
+	echo "deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-8 main" >> /etc/apt/sources.list.d/llvm8.list && \
+	echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic main" >> /etc/apt/sources.list.d/llvm8.list && \
 	echo "deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic main" >> /etc/apt/sources.list.d/llvm8.list && \
 	wget -nv -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
 	apt-get update -y && \
 	apt-get install -y \
 	clang-8 \
 	lldb-8 \
-	lld-8
+	lld-8 # version 9 currently has a conflict!
 
 # create dependency cache
 RUN	mkdir /local_dep_cache && \
@@ -176,6 +179,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-imjournal \
 	--enable-imkafka \
 	--enable-impstats \
+	--enable-impcap \
 	--enable-imptcp \
 	--enable-kafka-tests \
 	--enable-ksi-ls12 \
@@ -185,6 +189,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-mail \
 	--enable-mmanon \
 	--enable-mmaudit \
+	--enable-mmcapture \
 	--enable-mmcount \
 	--enable-mmdblookup \
 	--enable-mmfields \
@@ -204,6 +209,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-omhiredis \
 	--enable-omhiredis \
 	--enable-omhttpfs \
+	--enable-omhttp \
 	--enable-omjournal \
 	--enable-omkafka \
 	--enable-ommongodb \
