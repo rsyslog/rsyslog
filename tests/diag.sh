@@ -596,6 +596,32 @@ content_check() {
 }
 
 
+# grep for (partial) content. this checks the count of the content
+# $1 is the content to check for
+# $2 required count
+# $3 the file to check (if default not used)
+# option --regex is understood, in which case $1 is a regex
+content_count_check() {
+	if [ "$1" == "--regex" ]; then
+		grep_opt=
+		shift
+	else
+		grep_opt=-F
+	fi
+	file=${3:-$RSYSLOG_OUT_LOG}
+	count=$(grep -c -F -- "$1" <${RSYSLOG_OUT_LOG})
+	if [ ${count:=0} -ne "$2" ]; then
+	    grep -c -F -- "$1" <${RSYSLOG_OUT_LOG}
+	    printf '\n============================================================\n'
+	    printf 'FILE "%s" content:\n' "$file"
+	    cat -n ${file}
+	    printf 'FAIL: content count required %d but was %d\n' "$2" $count
+	    printf 'FAIL: content_check failed to find "%s"\n' "$1"
+	    error_exit 1
+	fi
+}
+
+
 
 # $1 - content to check for
 # $2 - number of times content must appear
@@ -610,16 +636,26 @@ content_check_with_count() {
 			echo content_check_with_count success, \"$1\" occured $2 times
 			break
 		else
-			if [ "x$timecounter" == "x$timeoutend" ]; then
+			if [ "$timecounter" == "$timeoutend" ]; then
 				shutdown_when_empty ""
 				wait_shutdown ""
 
 				echo content_check_with_count failed, expected \"$1\" to occur $2 times, but found it "$count" times
-				echo file ${RSYSLOG_OUT_LOG} content is:
-				sort < ${RSYSLOG_OUT_LOG}
+				echo file $RSYSLOG_OUT_LOG content is:
+				if [ $(wc -l < "$RSYSLOG_OUT_LOG") -gt 10000 ]; then
+					printf 'truncation, we have %d lines, which is way too much\n' \
+						$(wc -l < "$RSYSLOG_OUT_LOG")
+					printf 'showing first and last 5000 lines\n'
+					head -n 5000 < "$RSYSLOG_OUT_LOG"
+					print '\n ... CUT ..................................................\n\n'
+					tail -n 5000 < "$RSYSLOG_OUT_LOG"
+				else
+					cat -n "$RSYSLOG_OUT_LOG"
+				fi
 				error_exit 1
 			else
-				echo content_check_with_count have $count, wait for $2 times $1...
+				printf 'content_check_with_count have %d, wait for %d times (%d lines), msg: %s\n' \
+					"$count" "$2" $(wc -l < "$RSYSLOG_OUT_LOG") "$1"
 				$TESTTOOL_DIR/msleep 1000
 			fi
 		fi

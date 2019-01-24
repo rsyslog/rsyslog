@@ -676,7 +676,8 @@ TESTS +=  \
 	imjournal-statefile.sh
 if HAVE_VALGRIND
 TESTS +=  \
-	imjournal-basic-vg.sh
+	imjournal-basic-vg.sh \
+	imjournal-statefile-vg.sh
 endif
 endif
 
@@ -1440,6 +1441,7 @@ EXTRA_DIST= \
 	faketime_common.sh \
 	imjournal-basic.sh \
 	imjournal-statefile.sh \
+	imjournal-statefile-vg.sh \
 	imjournal-basic-vg.sh \
 	omjournal-abort-template.sh \
 	omjournal-abort-no-template.sh \
