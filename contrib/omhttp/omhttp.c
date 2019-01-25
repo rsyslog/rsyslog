@@ -190,11 +190,9 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "pwd", eCmdHdlrGetWord, 0 },
 	{ "restpath", eCmdHdlrGetWord, 0 },
 	{ "dynrestpath", eCmdHdlrBinary, 0 },
-	{ "bulkmode", eCmdHdlrBinary, 0 }, /* batch and bulkmode are synonyms */
 	{ "batch", eCmdHdlrBinary, 0 },
 	{ "batch.format", eCmdHdlrGetWord, 0 },
-	{ "maxbytes", eCmdHdlrSize, 0 },
-	{ "batch.maxbytes", eCmdHdlrSize, 0 }, /* maxbytes and batch.maxbytes are synonyms */
+	{ "batch.maxbytes", eCmdHdlrSize, 0 },
 	{ "batch.maxsize", eCmdHdlrSize, 0 },
 	{ "compress", eCmdHdlrBinary, 0 },
 	{ "compress.level", eCmdHdlrInt, 0 },
@@ -206,10 +204,8 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "tls.mycert", eCmdHdlrString, 0 },
 	{ "tls.myprivkey", eCmdHdlrString, 0 },
 	{ "reloadonhup", eCmdHdlrBinary, 0 },
-	{ "retry", eCmdHdlrBinary, 0 }, /* retry and retryfailures are synonyms */
-	{ "retryfailures", eCmdHdlrBinary, 0 },
-	{ "retry.ruleset", eCmdHdlrString, 0 }, /* retry.ruleset and retryruleset are synonyms */
-	{ "retryruleset", eCmdHdlrString, 0 },
+	{ "retry", eCmdHdlrBinary, 0 },
+	{ "retry.ruleset", eCmdHdlrString, 0 },
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
 	{ "ratelimit.burst", eCmdHdlrInt, 0 },
 };
@@ -294,20 +290,16 @@ CODESTARTfreeInstance
 	free(pData->serverBaseUrls);
 	free(pData->uid);
 	free(pData->httpcontenttype);
-	if (pData->headerContentTypeBuf != NULL)
-		free(pData->headerContentTypeBuf);
+	free(pData->headerContentTypeBuf);
 	free(pData->httpheaderkey);
 	free(pData->httpheadervalue);
 	free(pData->pwd);
-	if (pData->authBuf != NULL)
-		free(pData->authBuf);
-	if (pData->headerBuf != NULL)
+	free(pData->authBuf);
 	free(pData->headerBuf);
 	free(pData->restPath);
 	free(pData->checkPath);
 	free(pData->tplName);
-	if (pData->errorFile != NULL)
-		free(pData->errorFile);
+	free(pData->errorFile);
 	free(pData->caCertFile);
 	free(pData->myCertFile);
 	free(pData->myPrivKeyFile);
@@ -319,18 +311,16 @@ ENDfreeInstance
 BEGINfreeWrkrInstance
 CODESTARTfreeWrkrInstance
 	curlCleanup(pWrkrData);
-	if (pWrkrData->restURL != NULL) {
-		free(pWrkrData->restURL);
-		pWrkrData->restURL = NULL;
-	}
-	if (pWrkrData->batch.data != NULL) {
-		free(pWrkrData->batch.data);
-		pWrkrData->batch.data = NULL;
-	}
-	if (pWrkrData->bzInitDone)
+
+	free(pWrkrData->restURL);
+	pWrkrData->restURL = NULL;
+
+	free(pWrkrData->batch.data);
+	pWrkrData->batch.data = NULL;
+
+  if (pWrkrData->bzInitDone)
 		deflateEnd(&pWrkrData->zstrm);
 	freeCompressCtx(pWrkrData);
-
 
 ENDfreeWrkrInstance
 
@@ -347,7 +337,7 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("]\n");
 	dbgprintf("\tdefaultPort=%d\n", pData->defaultPort);
 	dbgprintf("\tuid='%s'\n", pData->uid == NULL ? (uchar*)"(not configured)" : pData->uid);
-	dbgprintf("\thttp.contenttype='%s'\n", pData->httpcontenttype == NULL ?
+	dbgprintf("\thttpcontenttype='%s'\n", pData->httpcontenttype == NULL ?
 		(uchar*)"(not configured)" : pData->httpcontenttype);
 	dbgprintf("\thttpheaderkey='%s'\n", pData->httpheaderkey == NULL ?
 		(uchar*)"(not configured)" : pData->httpheaderkey);
@@ -535,8 +525,8 @@ checkConn(wrkrInstanceData_t *const pWrkrData)
 finalize_it:
 	if(urlBuf != NULL)
 		es_deleteStr(urlBuf);
-	if (pWrkrData->reply != NULL)
-		free(pWrkrData->reply);
+
+	free(pWrkrData->reply);
 	pWrkrData->reply = NULL; /* don't leave dangling pointer */
 	RETiRet;
 }
@@ -900,7 +890,7 @@ compressHttpPayload(wrkrInstanceData_t *pWrkrData, uchar *message, unsigned len)
 	do {
 		pWrkrData->zstrm.avail_out = sizeof(zipBuf);
 		pWrkrData->zstrm.next_out = zipBuf;
-		zRet = deflate(&pWrkrData->zstrm, Z_FINISH); /* returns Z_STREAM_END == 1 */
+		deflate(&pWrkrData->zstrm, Z_FINISH); /* returns Z_STREAM_END == 1 */
 		outavail = sizeof(zipBuf) - pWrkrData->zstrm.avail_out;
 		if (outavail != 0)
 			CHKiRet(appendCompressCtx(pWrkrData, zipBuf, outavail));
@@ -1084,7 +1074,6 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls
 		iRet = compressHttpPayload(pWrkrData, message, msglen);
 		if (iRet != RS_RET_OK) {
 			LogError(0, iRet, "omhttp: curlPost error while compressing, will default to uncompressed");
-			iRet = RS_RET_OK;
 		} else {
 			postData = (char *)pWrkrData->compressCtx.buf;
 			postLen = pWrkrData->compressCtx.curLen;
@@ -1112,7 +1101,7 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls
 		// Check the result here too and retry if needed, then we should suspend
 		// Usually in batch mode we clobber any iRet values, but probably not a great
 		// idea to keep hitting a dead server. The http status code will be 0 at this point.
-		iRet = checkResult(pWrkrData, message);
+		checkResult(pWrkrData, message);
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	} else {
 		STATSCOUNTER_INC(ctrHttpRequestSuccess, mutCtrHttpRequestSuccess);
@@ -1690,7 +1679,7 @@ CODESTARTnewActInst
 			pData->healthCheckTimeout = (long) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "uid")) {
 			pData->uid = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "http.contenttype")) {
+		} else if(!strcmp(actpblk.descr[i].name, "httpcontenttype")) {
 			pData->httpcontenttype = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "httpheaderkey")) {
 			pData->httpheaderkey = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
@@ -1704,8 +1693,7 @@ CODESTARTnewActInst
 			pData->checkPath = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "dynrestpath")) {
 			pData->dynRestPath = pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "bulkmode") ||
-				!strcmp(actpblk.descr[i].name, "batch")) {
+		} else if(!strcmp(actpblk.descr[i].name, "batch")) {
 			pData->batchMode = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "batch.format")) {
 			batchFormatName = es_str2cstr(pvals[i].val.d.estr, NULL);
@@ -1722,8 +1710,7 @@ CODESTARTnewActInst
 				LogError(0, NO_ERRCODE, "error: 'batch.format' %s unknown defaulting to 'newline'",
 					batchFormatName);
 			}
-		} else if(!strcmp(actpblk.descr[i].name, "maxbytes") ||
-				!strcmp(actpblk.descr[i].name, "batch.maxbytes")) {
+		} else if(!strcmp(actpblk.descr[i].name, "batch.maxbytes")) {
 			pData->maxBatchBytes = (size_t) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "batch.maxsize")) {
 			pData->maxBatchSize = (size_t) pvals[i].val.d.n;
@@ -1779,11 +1766,9 @@ CODESTARTnewActInst
 			}
 		} else if(!strcmp(actpblk.descr[i].name, "reloadonhup")) {
 			pData->reloadOnHup= pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "retryfailures") ||
-				!strcmp(actpblk.descr[i].name, "retry")) {
+		} else if(!strcmp(actpblk.descr[i].name, "retry")) {
 			pData->retryFailures = pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "retryruleset") ||
-				!strcmp(actpblk.descr[i].name, "retry.ruleset")) {
+		} else if(!strcmp(actpblk.descr[i].name, "retry.ruleset")) {
 			pData->retryRulesetName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "ratelimit.burst")) {
 			pData->ratelimitBurst = (int) pvals[i].val.d.n;
@@ -1928,7 +1913,7 @@ CODESTARTcheckCnf
 		if (inst->retryRulesetName) {
 			localRet = ruleset.GetRuleset(pModConf->pConf, &pRuleset, inst->retryRulesetName);
 			if(localRet == RS_RET_NOT_FOUND) {
-				LogError(0, localRet, "omhttp: retryruleset '%s' not found - "
+				LogError(0, localRet, "omhttp: retry.ruleset '%s' not found - "
 						"no retry ruleset will be used", inst->retryRulesetName);
 			} else {
 				inst->retryRuleset = pRuleset;
