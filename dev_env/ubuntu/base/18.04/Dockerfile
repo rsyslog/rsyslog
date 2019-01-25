@@ -134,6 +134,7 @@ ENV	MYSQLD_START_CMD="sudo mysqld_safe" \
         MYSQLD_STOP_CMD="sudo kill $(sudo cat /var/run/mysqld/mysqld.pid)"
 
 # and so does clickhouse
+RUN	chown root:root /var/lib/clickhouse
 ENV	CLICKHOUSE_START_CMD="sudo clickhouse-server --config-file=/etc/clickhouse-server/config.xml" \
 	CLICKHOUSE_STOP_CMD="sudo kill $(pidof clickhouse-server)"
 
@@ -161,7 +162,7 @@ RUN	cd helper-projects \
 # next ENV is specifically for running scan-build - so we do not need to
 # change scripts if at a later time we can move on to a newer version
 ENV	SCAN_BUILD=scan-build \
-	SCAN_BUILD_CC=clang-6.0 \
+	SCAN_BUILD_CC=clang-8 \
 	ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-6.0/bin/llvm-symbolizer
 
 ENV RSYSLOG_CONFIGURE_OPTIONS \
