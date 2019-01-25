@@ -32,6 +32,7 @@ RUN	apt-get install -y \
 	libmongoc-dev \
 	libmysqlclient-dev \
 	libnet1-dev \
+	libpcap-dev \
 	libpq-dev \
 	libsasl2-dev \
 	libsnmp-dev \
@@ -122,6 +123,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-imfile \
 	--enable-imjournal \
 	--enable-imkafka \
+	--enable-impcap \
 	--enable-impstats \
 	--enable-imptcp \
 	--enable-kafka-tests \
@@ -133,6 +135,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-mail \
 	--enable-mmanon \
 	--enable-mmaudit \
+	--enable-mmcapture \
 	--enable-mmcount \
 	--enable-mmdblookup \
 	--enable-mmfields \
@@ -149,6 +152,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-omamqp1 \
 	--enable-omczmq \
 	--enable-omhiredis \
+	--enable-omhttp \
 	--enable-omhttpfs \
 	--enable-omjournal \
 	--enable-omkafka \
