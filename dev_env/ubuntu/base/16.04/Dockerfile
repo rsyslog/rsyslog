@@ -33,6 +33,7 @@ RUN	apt-get install -y \
 	libmysqlclient-dev \
 	libnet1-dev \
 	libpcap-dev \
+	libpgm-dev \
 	libpq-dev \
 	libsasl2-dev \
 	libsnmp-dev \
@@ -47,6 +48,7 @@ RUN	apt-get install -y \
 	python-docutils \
 	python-software-properties \
 	software-properties-common \
+	sudo \
 	tcl-dev \
 	uuid-dev \
 	valgrind \
@@ -59,10 +61,11 @@ RUN     add-apt-repository ppa:adiscon/v8-stable -y && \
 	echo "deb http://repo.yandex.ru/clickhouse/deb/stable/ main/" > /etc/apt/sources.list.d/clickhouse.list && \
 	apt-key adv --keyserver keyserver.ubuntu.com --recv E0C56BD4 && \
 	echo "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-5.0 main" > /etc/apt/sources.list.d/llvm.list && \
-	wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key| apt-key add - && \
-	echo "deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_16.04/ ./" > /etc/apt/sources.list.d/0mq.list && \
-	wget -O - http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_16.04/Release.key | apt-key add -
+	wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key| apt-key add -
 # note: ppa:ubuntu-toolchain-r/test is currently the best repo for gcc-7 we can find...
+# disable 0mq PPA, see https://github.com/zeromq/czmq/issues/1983
+	#echo "deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_16.04/ ./" > /etc/apt/sources.list.d/0mq.list && \
+	#wget -O - http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_16.04/Release.key | apt-key add -
 
 RUN	apt-get update -y && \
 	apt-get install -y \
@@ -80,11 +83,23 @@ RUN	apt-get update -y && \
 	clang-tools-5.0 \
 	liblognorm-dev
 
+# for clickhouse, the container requires some pre-generated files for TLS. generate them via
+# openssl req -subj "/CN=localhost" -new -newkey rsa:2048 -days 365 -nodes -x509 -keyout clickhouse.server.key -out clickhouse.server.crt
+# openssl dhparam -out clickhouse.dhparam.pem 2048
+COPY	clickhouse.dhparam.pem /etc/clickhouse-server/dhparam.pem
+COPY	clickhouse.server.crt /etc/clickhouse-server/server.crt
+COPY	clickhouse.server.key /etc/clickhouse-server/server.key
+RUN	sed -i 's/<yandex>/<yandex>\n    <core_dump><size_limit>0<\/size_limit><\/core_dump>/g' \
+		/etc/clickhouse-server/config.xml && \
+	sed -i 's/<tcp_port>9000<\/tcp_port>/<tcp_port>9000<\/tcp_port>\n    <https_port>8443<\/https_port>/g' \
+		/etc/clickhouse-server/config.xml
+
 WORKDIR	/home/devel
 VOLUME	/rsyslog
 RUN	groupadd rsyslog \
 	&& useradd -g rsyslog  -s /bin/bash rsyslog \
-	&& echo "rsyslog ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+	&& echo "rsyslog ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
+	&& echo "buildbot ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 ADD	setup-system.sh setup-system.sh
 ENV	PKG_CONFIG_PATH=/usr/local/lib/pkgconfig \
 	LD_LIBRARY_PATH=/usr/local/lib \
@@ -103,8 +118,9 @@ RUN	mkdir /local_dep_cache && \
 ENV	ELASTICSEARCH_NEWEST="elasticsearch-6.3.1.tar.gz"
 
 # tell CI env how to handle clickhouse
-ENV	CLICKHOUSE_START_CMD="sudo clickhouse-server --config-file=/etc/clickhouse-server/config.xml" \
-	CLICKHOUSE_STOP_CMD="sudo kill $(pidof clickhouse-server)"
+RUN	chown root:root /var/lib/clickhouse
+ENV	CLICKHOUSE_START_CMD="sudo -S clickhouse-server --config-file=/etc/clickhouse-server/config.xml" \
+	CLICKHOUSE_STOP_CMD="sudo -S kill $(pidof clickhouse-server)"
 
 # next ENV is specifically for running scan-build - so we do not need to
 # change scripts if at a later time we can move on to a newer version
@@ -136,6 +152,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-mmanon \
 	--enable-mmaudit \
 	--enable-mmcapture \
+	--enable-mmcapture \
 	--enable-mmcount \
 	--enable-mmdblookup \
 	--enable-mmfields \
@@ -152,6 +169,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-omamqp1 \
 	--enable-omczmq \
 	--enable-omhiredis \
+	--enable-omhttp \
 	--enable-omhttp \
 	--enable-omhttpfs \
 	--enable-omjournal \
