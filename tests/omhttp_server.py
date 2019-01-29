@@ -1,18 +1,20 @@
 #!/usr/bin/env python
 
+import argparse
+import json
+import os
+import zlib
+import base64
+
 try:
     from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer # Python 2
 except ImportError:
     from http.server import BaseHTTPRequestHandler, HTTPServer # Python 3
 
-import argparse
-import json
-import os
-
 # Keep track of data received at each path
 data = {}
 
-metadata = {'posts': 0, 'fail_after': 0, 'fail_every': -1}
+metadata = {'posts': 0, 'fail_after': 0, 'fail_every': -1, 'decompress': False, 'userpwd': ''}
 
 
 class MyHandler(BaseHTTPRequestHandler):
@@ -28,8 +30,32 @@ class MyHandler(BaseHTTPRequestHandler):
         ["{\"msgnum\":\"00001\"}", "{\"msgnum\":\"00001\"}"]
     """
 
+    def validate_auth(self):
+        # header format for basic authentication
+        # 'Authorization: Basic <base 64 encoded uid:pwd>'
+        if 'Authorization' not in self.headers:
+            self.send_response(401)
+            self.end_headers()
+            self.wfile.write('missing "Authorization" header')
+            return False
+
+        auth_header = self.headers['Authorization']
+        _, b64userpwd = auth_header.split()
+        userpwd = base64.b64decode(b64userpwd)
+        if userpwd != metadata['userpwd']:
+            self.send_response(401)
+            self.end_headers()
+            self.wfile.write('invalid auth: {0}'.format(userpwd))
+            return False
+
+        return True
+
     def do_POST(self):
         metadata['posts'] += 1
+
+        if metadata['userpwd']:
+            if not self.validate_auth():
+                return
 
         if metadata['fail_with_400_after'] != -1 and metadata['posts'] > metadata['fail_with_400_after']:
             self.send_response(400)
@@ -44,7 +70,12 @@ class MyHandler(BaseHTTPRequestHandler):
             return
 
         content_length = int(self.headers['Content-Length'])
-        post_data = self.rfile.read(content_length)
+        raw_data = self.rfile.read(content_length)
+
+        if metadata['decompress']:
+            post_data = zlib.decompress(raw_data, 31)
+        else:
+            post_data = raw_data
 
         if self.path not in data:
             data[self.path] = []
@@ -84,10 +115,14 @@ if __name__ == '__main__':
     parser.add_argument('--fail-after', action='store', type=int, default=0, help='start failing after n posts')
     parser.add_argument('--fail-every', action='store', type=int, default=-1, help='fail every n posts')
     parser.add_argument('--fail-with-400-after', action='store', type=int, default=-1, help='fail with 400 after n posts')
+    parser.add_argument('--decompress', action='store_true', default=False, help='decompress posted data')
+    parser.add_argument('--userpwd', action='store', default='', help='only accept this user:password combination')
     args = parser.parse_args()
     metadata['fail_after'] = args.fail_after
     metadata['fail_every'] = args.fail_every
     metadata['fail_with_400_after'] = args.fail_with_400_after
+    metadata['decompress'] = args.decompress
+    metadata['userpwd'] = args.userpwd
     server = HTTPServer((args.interface, args.port), MyHandler)
     pid = os.getpid()
     print('starting omhttp test server at {interface}:{port} with pid {pid}'

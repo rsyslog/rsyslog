@@ -1948,9 +1948,8 @@ omhttp_start_server() {
         omhttp_server_port="$1"
     fi
 
-    dep_work_dir=$(readlink -f .dep_wrk)
     # Create work directory for parallel tests
-    omhttp_work_dir=${dep_work_dir}/omhttp_$RSYSLOG_DYNNAME
+    omhttp_work_dir=$RSYSLOG_DYNNAME/omhttp
 
     omhttp_server_pidfile="${omhttp_work_dir}/omhttp_server.pid"
     omhttp_server_logfile="${omhttp_work_dir}/omhttp_server.log"
@@ -1972,8 +1971,7 @@ omhttp_start_server() {
 
 omhttp_stop_server() {
     # Args: None
-    dep_work_dir=$(readlink -f .dep_wrk)
-    omhttp_work_dir=${dep_work_dir}/omhttp_$RSYSLOG_DYNNAME
+    omhttp_work_dir=$RSYSLOG_DYNNAME/omhttp
     if [ ! -d $omhttp_work_dir ]; then
         echo "omhttp server $omhttp_work_dir does not exist, no action needed"
     else

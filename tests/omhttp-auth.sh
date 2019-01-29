@@ -4,29 +4,24 @@
 #  Starting actual testbench
 . ${srcdir:=.}/diag.sh init
 
-port="$(get_free_port)"
-omhttp_start_server $port --fail-every 1000
+export NUMMESSAGES=100
 
-error_file=$(pwd)/$RSYSLOG_DYNNAME.omhttp.error.log
-rm -f $error_file
+port="$(get_free_port)"
+omhttp_start_server $port --userpwd="bob:bobbackwards"
 
 generate_conf
 add_conf '
-#$DebugLevel 2
-module(load="../contrib/omhttp/.libs/omhttp")
-
-main_queue(queue.dequeueBatchSize="2048")
-
 template(name="tpl" type="string"
 	 string="{\"msgnum\":\"%msg:F,58:2%\"}")
+
+module(load="../contrib/omhttp/.libs/omhttp")
 
 if $msg contains "msgnum:" then
 	action(
 		# Payload
-		action.resumeRetryCount="-1"
 		name="my_http_action"
 		type="omhttp"
-		errorfile="'$error_file'"
+		errorfile="'$RSYSLOG_DYNNAME/omhttp.error.log'"
 		template="tpl"
 
 		server="localhost"
@@ -36,13 +31,15 @@ if $msg contains "msgnum:" then
 
 		# Auth
 		usehttps="off"
-  )
+		uid="bob"
+		pwd="bobbackwards"
+    )
 '
 startup
-injectmsg  0 10000
+injectmsg
 shutdown_when_empty
 wait_shutdown
 omhttp_get_data $port my/endpoint
 omhttp_stop_server
-seq_check  0 9999
+seq_check
 exit_test

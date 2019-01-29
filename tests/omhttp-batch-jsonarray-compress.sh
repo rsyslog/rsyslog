@@ -7,7 +7,7 @@
 export NUMMESSAGES=50000
 
 port="$(get_free_port)"
-omhttp_start_server $port
+omhttp_start_server $port --decompress
 
 generate_conf
 add_conf '
@@ -30,8 +30,9 @@ if $msg contains "msgnum:" then
 		serverport="'$port'"
 		restpath="my/endpoint"
 		batch="on"
-		batch.format="newline"
-		batch.maxsize="100"
+		batch.format="jsonarray"
+		batch.maxsize="1000"
+		compress="on"
 
 		# Auth
 		usehttps="off"
@@ -41,7 +42,7 @@ startup
 injectmsg
 shutdown_when_empty
 wait_shutdown
-omhttp_get_data $port my/endpoint newline
+omhttp_get_data $port my/endpoint jsonarray
 omhttp_stop_server
 seq_check
 exit_test

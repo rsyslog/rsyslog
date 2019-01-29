@@ -4,15 +4,13 @@
 #  Starting actual testbench
 . ${srcdir:=.}/diag.sh init
 
+export NUMMESSAGES=50000
+
 port="$(get_free_port)"
 omhttp_start_server $port --fail-every 100
 
-error_file=$(pwd)/$RSYSLOG_DYNNAME.omhttp.error.log
-rm -f $error_file
-
 generate_conf
 add_conf '
-#$DebugLevel 2
 module(load="../contrib/omhttp/.libs/omhttp")
 
 main_queue(queue.dequeueBatchSize="2048")
@@ -27,7 +25,7 @@ ruleset(name="ruleset_omhttp_retry") {
     action(
         name="action_omhttp"
         type="omhttp"
-        errorfile="'$error_file'"
+        errorfile="'$RSYSLOG_DYNNAME/omhttp.error.log'"
         template="tpl_echo"
 
         server="localhost"
@@ -35,7 +33,7 @@ ruleset(name="ruleset_omhttp_retry") {
         restpath="my/endpoint"
         batch="on"
         batch.maxsize="100"
-        batch.format="kafkarest"
+        batch.format="jsonarray"
 
         retry="on"
         retry.ruleset="ruleset_omhttp_retry"
@@ -49,7 +47,7 @@ ruleset(name="ruleset_omhttp") {
     action(
         name="action_omhttp"
         type="omhttp"
-        errorfile="'$error_file'"
+        errorfile="'$RSYSLOG_DYNNAME/omhttp.error.log'"
         template="tpl"
 
         server="localhost"
@@ -57,7 +55,7 @@ ruleset(name="ruleset_omhttp") {
         restpath="my/endpoint"
         batch="on"
         batch.maxsize="100"
-        batch.format="kafkarest"
+        batch.format="jsonarray"
 
         retry="on"
         retry.ruleset="ruleset_omhttp_retry"
@@ -71,10 +69,10 @@ if $msg contains "msgnum:" then
     call ruleset_omhttp
 '
 startup
-injectmsg  0 50000
+injectmsg
 shutdown_when_empty
 wait_shutdown
-omhttp_get_data $port my/endpoint kafkarest
+omhttp_get_data $port my/endpoint jsonarray
 omhttp_stop_server
-seq_check  0 49999
+seq_check
 exit_test

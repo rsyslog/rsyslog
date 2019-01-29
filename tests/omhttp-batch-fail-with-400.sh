@@ -7,12 +7,8 @@
 port="$(get_free_port)"
 omhttp_start_server $port --fail-with-400-after 1000
 
-error_file=$(pwd)/$RSYSLOG_DYNNAME.omhttp.error.log
-rm -f $error_file
-
 generate_conf
 add_conf '
-#$DebugLevel 2
 module(load="../contrib/omhttp/.libs/omhttp")
 
 main_queue(queue.dequeueBatchSize="2048")
@@ -28,7 +24,7 @@ ruleset(name="ruleset_omhttp") {
     action(
         name="action_omhttp"
         type="omhttp"
-        errorfile="'$error_file'"
+        errorfile="'$RSYSLOG_DYNNAME/omhttp.error.log'"
         template="tpl"
 
         server="localhost"

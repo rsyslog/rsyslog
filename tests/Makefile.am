@@ -721,12 +721,15 @@ endif
 if ENABLE_OMHTTP
 TESTS +=  \
 	 omhttp-basic.sh \
-	 omhttp-fail-often.sh \
+	 omhttp-retry.sh \
+	 omhttp-auth.sh \
 	 omhttp-batch-fail-with-400.sh \
 	 omhttp-batch-jsonarray.sh \
-	 omhttp-batch-jsonarray-fail-often.sh \
+	 omhttp-batch-jsonarray-retry.sh \
+	 omhttp-batch-jsonarray-compress.sh \
 	 omhttp-batch-kafkarest.sh \
-	 omhttp-batch-kafkarest-fail-often.sh
+	 omhttp-batch-kafkarest-retry.sh \
+	 omhttp-batch-newline.sh
 endif
 
 if ENABLE_OMKAFKA

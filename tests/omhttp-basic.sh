@@ -4,15 +4,13 @@
 #  Starting actual testbench
 . ${srcdir:=.}/diag.sh init
 
+export NUMMESSAGES=10000
+
 port="$(get_free_port)"
 omhttp_start_server $port
 
-error_file=$(pwd)/$RSYSLOG_DYNNAME.omhttp.error.log
-rm -f $error_file
-
 generate_conf
 add_conf '
-#$DebugLevel 2
 template(name="tpl" type="string"
 	 string="{\"msgnum\":\"%msg:F,58:2%\"}")
 
@@ -23,7 +21,7 @@ if $msg contains "msgnum:" then
 		# Payload
 		name="my_http_action"
 		type="omhttp"
-		errorfile="'$error_file'"
+		errorfile="'$RSYSLOG_DYNNAME/omhttp.error.log'"
 		template="tpl"
 
 		server="localhost"
@@ -36,10 +34,10 @@ if $msg contains "msgnum:" then
     )
 '
 startup
-injectmsg  0 10000
+injectmsg
 shutdown_when_empty
 wait_shutdown
 omhttp_get_data $port my/endpoint
 omhttp_stop_server
-seq_check  0 9999
+seq_check
 exit_test

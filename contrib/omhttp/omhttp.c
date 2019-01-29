@@ -318,7 +318,7 @@ CODESTARTfreeWrkrInstance
 	free(pWrkrData->batch.data);
 	pWrkrData->batch.data = NULL;
 
-  if (pWrkrData->bzInitDone)
+	if (pWrkrData->bzInitDone)
 		deflateEnd(&pWrkrData->zstrm);
 	freeCompressCtx(pWrkrData);
 
