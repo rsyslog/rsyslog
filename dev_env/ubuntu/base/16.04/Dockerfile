@@ -33,7 +33,6 @@ RUN	apt-get install -y \
 	libmysqlclient-dev \
 	libnet1-dev \
 	libpcap-dev \
-	libpgm-dev \
 	libpq-dev \
 	libsasl2-dev \
 	libsnmp-dev \
@@ -61,11 +60,10 @@ RUN     add-apt-repository ppa:adiscon/v8-stable -y && \
 	echo "deb http://repo.yandex.ru/clickhouse/deb/stable/ main/" > /etc/apt/sources.list.d/clickhouse.list && \
 	apt-key adv --keyserver keyserver.ubuntu.com --recv E0C56BD4 && \
 	echo "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-5.0 main" > /etc/apt/sources.list.d/llvm.list && \
+	echo "deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_16.04/ ./" > /etc/apt/sources.list.d/0mq.list && \
+	wget -O - http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_16.04/Release.key | apt-key add - && \
 	wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key| apt-key add -
 # note: ppa:ubuntu-toolchain-r/test is currently the best repo for gcc-7 we can find...
-# disable 0mq PPA, see https://github.com/zeromq/czmq/issues/1983
-	#echo "deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_16.04/ ./" > /etc/apt/sources.list.d/0mq.list && \
-	#wget -O - http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_16.04/Release.key | apt-key add -
 
 RUN	apt-get update -y && \
 	apt-get install -y \
