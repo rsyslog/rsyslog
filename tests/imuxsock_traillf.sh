@@ -27,7 +27,7 @@ if [ ! $? -eq 0 ]; then
   echo "contents of $RSYSLOG_OUT_LOG:"
   echo \"$(cat $RSYSLOG_OUT_LOG)\"
   echo expected:
-  echo \"`cat $srcdir/resultdata/imuxsock_traillf.log`\"
+  echo \"$(cat $srcdir/resultdata/imuxsock_traillf.log)\"
   error_exit 1
 fi;
 exit_test
