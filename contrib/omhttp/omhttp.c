@@ -1289,20 +1289,21 @@ computeBatchSize(wrkrInstanceData_t *pWrkrData)
 		case FMT_JSONARRAY:
 			// square brackets, commas between each message
 			// 2 + numMessages - 1 = numMessages + 1
-			extraBytes = numMessages + 1;
+			extraBytes = numMessages > 0 ? numMessages + 1 : 2;
 			break;
 		case FMT_KAFKAREST:
 			// '{}', '[]', '"records":'= 2 + 2 + 10 = 14
 			// '{"value":}' for each message = n * 10
+			// numMessages == 0 handled implicitly in multiplication
 			extraBytes = (numMessages * 10) + 14;
 			break;
 		case FMT_NEWLINE:
 			// newlines between each message
-			extraBytes = numMessages - 1;
+			extraBytes = numMessages > 0 ? numMessages - 1 : 0;
 			break;
 		default:
 			// newlines between each message
-			extraBytes = numMessages - 1;
+			extraBytes = numMessages > 0 ? numMessages - 1 : 0;
 	}
 
 	return sizeBytes + extraBytes + 1; // plus a null
