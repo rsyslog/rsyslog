@@ -1,7 +1,7 @@
 /* ommongodb.c
  * Output module for mongodb.
  *
- * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2019 Rainer Gerhards and Adiscon GmbH.
  *
  * Copyright 2017 Jeremie Jourdin and Hugo Soszynski and aDvens
  * Remove deprecated libmongo-client and use libmongoc (mongo-c-driver)
@@ -682,7 +682,7 @@ CODESTARTnewActInst
 		 * Formatting string "by hand" is a lot faster on execution than a snprintf for example.
 		 */
 		CHKmalloc(pData->uristr = malloc(uri_len + 1));
-		tmp = stpncpy(pData->uristr, "mongodb://", 10);
+		tmp = stpncpy(pData->uristr, "mongodb://", 11);
 		if(pData->uid && pData->pwd){
 			dbgprintf("ommongodb: Adding uid & pwd to uristr.\n");
 			tmp = stpncpy(tmp, pData->uid, uid);
@@ -702,9 +702,9 @@ CODESTARTnewActInst
 		if(pData->ssl_ca && pData->ssl_cert){
 			dbgprintf("ommongodb: Adding ssl to uristr.\n");
 			if(pData->uid && pData->pwd)
-				tmp = stpncpy(tmp, "&ssl=true", 9);
+				tmp = stpncpy(tmp, "&ssl=true", 10);
 			else
-				tmp = stpncpy(tmp, "?ssl=true", 9);
+				tmp = stpncpy(tmp, "?ssl=true", 10);
 		}
 		*tmp = '\0';
 	}
