@@ -106,7 +106,7 @@ shutdown_when_empty
 wait_shutdown
 
 # now the spool directory must be empty
-spoolFiles=`ls ${RSYSLOG_DYNNAME}.spool/`
+spoolFiles=$(ls ${RSYSLOG_DYNNAME}.spool/)
 
 if [[ ! -z $spoolFiles ]]; then
     echo "FAIL: spool directory is not empty!"
