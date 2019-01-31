@@ -18,6 +18,7 @@ RUN	zypper --non-interactive install \
 	gcc \
 	gdb \
 	git \
+	gzip \
 	hiredis-devel \
 	java-11-openjdk-devel \
 	krb5-devel \
@@ -33,6 +34,7 @@ RUN	zypper --non-interactive install \
 	libmysqlclient-devel \
 	libnet-devel \
 	libopenssl-devel \
+	libpcap-devel \
 	libqpid-proton10 \
 	libtool \
 	libuuid-devel \
@@ -57,6 +59,7 @@ RUN	zypper --non-interactive install \
 RUN	zypper --non-interactive addrepo https://download.opensuse.org/repositories/network:messaging:zeromq:release-stable/openSUSE_Tumbleweed/network:messaging:zeromq:release-stable.repo && \
 	zypper --non-interactive --gpg-auto-import-keys refresh && \
 	zypper --non-interactive install \
+	openpgm-devel \
 	czmq \
 	czmq-devel
 
@@ -217,6 +220,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-imjournal \
 	--enable-imkafka \
 	--enable-impstats \
+	--enable-impcap \
 	--enable-imptcp \
 	--enable-kafka-tests \
 	--enable-ksi-ls12 \
@@ -227,6 +231,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-mmanon \
 	--enable-mmaudit \
 	--enable-mmcount \
+	--enable-mmcapture \
 	--enable-mmfields \
 	--enable-mmjsonparse \
 	--enable-mmkubernetes \
@@ -240,6 +245,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-omamqp1 \
 	--enable-omhiredis \
 	--enable-omhiredis \
+	--enable-omhttp \
 	--enable-omhttpfs \
 	--enable-omjournal \
 	--enable-omkafka \
