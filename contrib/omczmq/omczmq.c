@@ -119,6 +119,7 @@ static struct cnfparamblk actpblk = {
 
 static rsRetVal initCZMQ(instanceData* pData) {
 	DEFiRet;
+	int rc;
 	putenv((char*)"ZSYS_SIGHANDLER=false");
 	pData->sock = zsock_new(pData->sockType);
 	if(!pData->sock) {
@@ -193,7 +194,7 @@ static rsRetVal initCZMQ(instanceData* pData) {
 			break;
 	}
 
-	int rc = zsock_attach(pData->sock, pData->sockEndpoints, pData->serverish);
+	rc = zsock_attach(pData->sock, pData->sockEndpoints, pData->serverish);
 	if(rc == -1) {
 		LogError(0, NO_ERRCODE, "zsock_attach to %s failed",
 				pData->sockEndpoints);
