@@ -1,5 +1,13 @@
 ------------------------------------------------------------------------------
 Version 8.1903.0 (aka 2019.03) 2019-03-05
+- imptcp bugfix: overly long socket bind path can lead to segfault
+  if the `path` input parameter is overly long (e.g. more than 108
+  characters on some platforms) a non-terminated string is generated
+  and then passed to OS API. This can lead to all sorts of problems
+  including segfault.
+  We detected that based on gcc-8 warnings during code inspection.
+  No real-world problem case is known.
+- ommongodb bugfix: improper stpncpy() calls
 ------------------------------------------------------------------------------
 Version 8.1901.0 (aka 2019.01) 2019-01-22
 - new version scheme: 8.yymm.0 - version now depends on release date
