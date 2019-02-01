@@ -125,6 +125,7 @@ typedef struct instanceConf_s {
 	sbool batchMode;
 	uchar *batchFormatName;
 	batchFormat_t batchFormat;
+	sbool bFreeBatchFormatName;
 	sbool dynRestPath;
 	size_t maxBatchBytes;
 	size_t maxBatchSize;
@@ -306,6 +307,8 @@ CODESTARTfreeInstance
 	free(pData->retryRulesetName);
 	if (pData->ratelimiter != NULL)
 		ratelimitDestruct(pData->ratelimiter);
+	if (pData->bFreeBatchFormatName)
+		free(pData->batchFormatName);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
@@ -1628,6 +1631,7 @@ setInstParamDefaults(instanceData *const pData)
 	pData->batchMode = 0;
 	pData->batchFormatName = (uchar *)"newline";
 	pData->batchFormat = FMT_NEWLINE;
+	pData->bFreeBatchFormatName = 0;
 	pData->useHttps = 1;
 	pData->maxBatchBytes = 10485760; //i.e. 10 MB Is the default max message size for AWS API Gateway
 	pData->maxBatchSize = 100; // 100 messages
@@ -1699,6 +1703,7 @@ CODESTARTnewActInst
 			batchFormatName = es_str2cstr(pvals[i].val.d.estr, NULL);
 			if (strstr(VALID_BATCH_FORMATS, batchFormatName) != NULL) {
 				pData->batchFormatName = (uchar *)batchFormatName;
+				pData->bFreeBatchFormatName = 1;
 				if (!strcmp(batchFormatName, "newline")) {
 					pData->batchFormat = FMT_NEWLINE;
 				} else if (!strcmp(batchFormatName, "jsonarray")) {
