@@ -704,7 +704,7 @@ CODESTARTnewActInst
 			if(pData->uid && pData->pwd)
 				tmp = stpncpy(tmp, "&ssl=true", 10);
 			else
-				tmp = stpncpy(tmp, "?ssl=true", 10);
+				tmp = stpncpy(tmp, "?ssl=true", 9);
 		}
 		*tmp = '\0';
 	}
