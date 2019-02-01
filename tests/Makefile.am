@@ -720,16 +720,26 @@ endif
 
 if ENABLE_OMHTTP
 TESTS +=  \
-	 omhttp-basic.sh \
-	 omhttp-retry.sh \
-	 omhttp-auth.sh \
-	 omhttp-batch-fail-with-400.sh \
-	 omhttp-batch-jsonarray.sh \
-	 omhttp-batch-jsonarray-retry.sh \
-	 omhttp-batch-jsonarray-compress.sh \
-	 omhttp-batch-kafkarest.sh \
-	 omhttp-batch-kafkarest-retry.sh \
-	 omhttp-batch-newline.sh
+	omhttp-auth.sh \
+	omhttp-basic.sh \
+	omhttp-batch-fail-with-400.sh \
+	omhttp-batch-jsonarray-compress.sh \
+	omhttp-batch-jsonarray-retry.sh \
+	omhttp-batch-jsonarray.sh \
+	omhttp-batch-kafkarest-retry.sh \
+	omhttp-batch-kafkarest.sh \
+	omhttp-batch-newline.sh \
+	omhttp-retry.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	omhttp-auth-vg.sh \
+	omhttp-basic-vg.sh \
+	omhttp-batch-jsonarray-compress-vg.sh \
+	omhttp-batch-jsonarray-retry-vg.sh \
+	omhttp-batch-jsonarray-vg.sh \
+	omhttp-batch-kafkarest-retry-vg.sh \
+	omhttp-retry-vg.sh
+endif
 endif
 
 if ENABLE_OMKAFKA
