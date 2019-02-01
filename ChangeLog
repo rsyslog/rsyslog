@@ -8,6 +8,7 @@ Version 8.1903.0 (aka 2019.03) 2019-03-05
   We detected that based on gcc-8 warnings during code inspection.
   No real-world problem case is known.
 - ommongodb bugfix: improper stpncpy() calls
+- testbench: mmdb valgrind tests failed is srcdir env was not set
 ------------------------------------------------------------------------------
 Version 8.1901.0 (aka 2019.01) 2019-01-22
 - new version scheme: 8.yymm.0 - version now depends on release date
