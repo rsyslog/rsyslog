@@ -714,7 +714,7 @@ Do **not** use for production or remote forwarding.
         property(name="fromhost-ip")
         constant(value="', HOSTNAME: '")
         property(name="hostname")
-        constant(value="', PRI: )
+        constant(value="', PRI: '")
         property(name="pri")
         constant(value=",\nsyslogtag '")
         property(name="syslogtag")
