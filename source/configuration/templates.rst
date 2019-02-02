@@ -707,7 +707,7 @@ Do **not** use for production or remote forwarding.
 
 .. code-block:: none
 
-   template(name="RYSLOG_DebugFormat" type="list") {
+   template(name="RSYSLOG_DebugFormat" type="list") {
         constant(value="Debug line with all properties:\nFROMHOST: '")
         property(name="fromhost")
         constant(value="', fromhost-ip: '")
