@@ -175,16 +175,22 @@ TLS.PermittedPeer
 
    "array", "none", "no", "none"
 
+Note: this parameter is mandatory depending on the value of
+`TLS.AuthMode` but the code does currently not check this.
+
 Peer Places access restrictions on this forwarder. Only peers which
 have been listed in this parameter may be connected to. This guards
 against rouge servers and man-in-the-middle attacks. The validation
 bases on the certficate the remote peer presents.
 
-The *peer* parameter lists permitted certificate fingerprints. Note
-that it is an array parameter, so either a single or multiple
-fingerprints can be listed. When a non-permitted peer is connected
-to, the refusal is logged together with it's fingerprint. So if the
-administrator knows this was a valid request, he can simple add the
+This contains either remote system names or fingerprints, depending
+on the value of parameter `TLS.AuthMode`. One or more values may be
+entered.
+
+When a non-permitted peer is connected to, the refusal is logged
+together with the given remote peer identify. This is especially
+useful in *fingerprint* authentication mode: if the
+administrator knows this was a valid request, he can simply add the
 fingerprint by copy and paste from the logfile to rsyslog.conf. It
 must be noted, though, that this situation should usually not happen
 after initial client setup and administrators should be alert in this
@@ -205,6 +211,20 @@ this:
 To specify just a single peer, you can either specify the string
 directly or enclose it in braces.
 
+Note that in *name* authentication mode wildcards are supported.
+This can be done as follows:
+
+.. code-block:: none
+
+   tls.permittedPeer="*.example.com"
+
+Of course, there can also be multiple names used, some with and
+some without wildcards:
+
+.. code-block:: none
+
+   tls.permittedPeer=["*.example.com", "srv1.example.net", "srv2.example.net"]
+
 
 TLS.AuthMode
 ^^^^^^^^^^^^
@@ -217,16 +237,20 @@ TLS.AuthMode
    "string", "none", "no", "none"
 
 Sets the mode used for mutual authentication. Supported values are
-either "*fingerprint*\ " or "*name"*. Fingerprint mode basically is
+either "*fingerprint*" or "*name*". Fingerprint mode basically is
 what SSH does. It does not require a full PKI to be present, instead
 self-signed certs can be used on all peers. Even if a CA certificate
 is given, the validity of the peer cert is NOT verified against it.
 Only the certificate fingerprint counts.
+
 In "name" mode, certificate validation happens. Here, the matching is
 done against the certificate's subjectAltName and, as a fallback, the
 subject common name. If the certificate contains multiple names, a
 match on any one of these names is considered good and permits the
 peer to talk to rsyslog.
+
+The permittedn names or fingerprints are configured via
+`TLS.PermittedPeer`.
 
 
 TLS.CaCert
