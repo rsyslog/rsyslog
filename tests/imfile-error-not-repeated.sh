@@ -33,7 +33,7 @@ if [ $? -ne 0 ]; then
         error_exit 1
 fi
 
-if [ `grep "No such file or directory" ${RSYSLOG2_OUT_LOG} | wc -l` -ne 1 ]; then
+if [ $(grep "No such file or directory" ${RSYSLOG2_OUT_LOG} | wc -l) -ne 1 ]; then
 	echo "FAIL: expected error message is put out multiple times. ${RSYSLOG2_OUT_LOG} is:"
 	cat ${RSYSLOG2_OUT_LOG}
 	error_exit 1
