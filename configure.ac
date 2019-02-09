@@ -1438,6 +1438,8 @@ if test "x$enable_relp" = "xyes"; then
                       [AC_DEFINE([HAVE_RELPSRVSETOVERSIZEMODE], [1], [Define if relpSrvSetOversizeMode exists.])])
         AC_CHECK_FUNC([relpSrvSetLstnAddr],
                       [AC_DEFINE([HAVE_RELPSRVSETLSTNADDR], [1], [Define if relpSrvSetLstnAddr exists.])])
+        AC_CHECK_FUNC([relpEngineSetTLSLibByName],
+                      [AC_DEFINE([HAVE_RELPENGINESETTLSLIBBYNAME], [1], [Define if relpEngineSetTLSLibByName exists.])])
 
         CFLAGS="$save_CFLAGS"
         LIBS="$save_LIBS"

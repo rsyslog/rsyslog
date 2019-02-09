@@ -4,7 +4,7 @@
  *
  * File begun on 2008-03-13 by RGerhards
  *
- * Copyright 2008-2018 Adiscon GmbH.
+ * Copyright 2008-2019 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -122,6 +122,7 @@ struct instanceConf_s {
 struct modConfData_s {
 	rsconf_t *pConf;		/* our overall config object */
 	instanceConf_t *root, *tail;
+	const char *tlslib;
 	uchar *pszBindRuleset;		/* default name of Ruleset to bind to */
 };
 
@@ -131,6 +132,7 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current lo
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {
 	{ "ruleset", eCmdHdlrGetWord, 0 },
+	{ "tls.tlslib", eCmdHdlrString, 0 }
 };
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -380,6 +382,15 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 		if (!glbl.GetDisableDNS()) {
 			CHKiRet(relpEngineSetDnsLookupMode(pRelpEngine, 1));
 		}
+		#if defined(HAVE_RELPENGINESETTLSLIBBYNAME)
+			if(modConf->tlslib != NULL) {
+				if(relpEngineSetTLSLibByName(pRelpEngine, modConf->tlslib) != RELP_RET_OK) {
+					LogMsg(0, RS_RET_CONF_PARAM_INVLD, LOG_WARNING,
+						"imrelp: tlslib '%s' not accepted as valid by librelp - using default",
+						modConf->tlslib);
+				}
+			}
+		#endif
 	}
 
 	CHKiRet(relpEngineListnerConstruct(pRelpEngine, &pSrv));
@@ -639,6 +650,7 @@ CODESTARTbeginCnfLoad
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	pModConf->pszBindRuleset = NULL;
+	pModConf->tlslib = NULL;
 	/* init legacy config variables */
 	cs.pszBindRuleset = NULL;
 	bLegacyCnfModGlobalsPermitted = 1;
@@ -666,6 +678,14 @@ CODESTARTsetModCnf
 			continue;
 		if(!strcmp(modpblk.descr[i].name, "ruleset")) {
 			loadModConf->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(modpblk.descr[i].name, "tls.tlslib")) {
+			#if defined(HAVE_RELPENGINESETTLSLIBBYNAME)
+				loadModConf->tlslib = es_str2cstr(pvals[i].val.d.estr, NULL);
+			#else
+				LogError(0, RS_RET_NOT_IMPLEMENTED,
+					"warning: parameter tls.tlslib ignored - librelp does not support "
+					"this API call. Using whatever librelp was compiled with.");
+			#endif
 		} else {
 			dbgprintf("imrelp: program error, non-handled "
 			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
@@ -891,7 +911,3 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
-
-
-/* vim:set ai:
- */
