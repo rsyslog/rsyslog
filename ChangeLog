@@ -1,5 +1,8 @@
 ------------------------------------------------------------------------------
 Version 8.1903.0 (aka 2019.03) 2019-03-05
+- omhttp: rewritten with large feature enhancements
+  Many thanks to Gabriel Intrator for this work. Gabriel also has adopted the
+  module and plans to support it in the future.
 - imptcp bugfix: overly long socket bind path can lead to segfault
   if the `path` input parameter is overly long (e.g. more than 108
   characters on some platforms) a non-terminated string is generated
