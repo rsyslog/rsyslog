@@ -9,9 +9,9 @@
  * is managed using the name of the file. A "glob" allows the module to identify
  * "to be treated" files. The module can be configured either to deleted the
  * the file on success either to rename the file on success. The size limit is
- * fixed by rsyslog max message size global parameter. All files big than this
- * limit produce a message which references it as "too big" and its new location
- * The "too big" files are also renamed to keep them available.
+ * fixed by rsyslog max message size global parameter. All files larger than this
+ * limit produce a message which references it as "too large" and its new location
+ * The "too large" files are also renamed to keep them available.
  *
  * This modules allows to centralize batch reports with other standard logs and
  * performance monitoring in a single repository (ElasticSearch, HDFS, ...). This
@@ -50,11 +50,11 @@
 #ifdef HAVE_SYS_STAT_H
 #	include <sys/stat.h>
 #endif
-#include "rsyslog.h"		/* error codes etc... */
+#include "rsyslog.h"  /* error codes etc... */
 #include "dirty.h"
-#include "cfsysline.h"		/* access to config file objects */
-#include "module-template.h"	/* generic module interface code - very important, read it! */
-#include "srUtils.h"		/* some utility functions */
+#include "cfsysline.h"  /* access to config file objects */
+#include "module-template.h"
+#include "srUtils.h" /* some utility functions */
 #include "msg.h"
 #include "errmsg.h"
 #include "glbl.h"
@@ -67,31 +67,25 @@
 
 #include <regex.h>
 
-MODULE_TYPE_INPUT	/* must be present for input modules, do not remove */
+MODULE_TYPE_INPUT /* must be present for input modules, do not remove */
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("imbatchreport")
 
 /* defines */
 
 /* Module static data */
-DEF_IMOD_STATIC_DATA	/* must be present, starts static data */
+DEF_IMOD_STATIC_DATA /* must be present, starts static data */
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(ruleset)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(prop)
 
 
-/* static int bLegacyCnfModGlobalsPermitted;/ * are legacy module-global config parameters permitted? */
 #define BUFFER_MINSIZE 150
-#define FILE_TOO_BIG "File too big !"
-#define FILE_TOO_BIG_LEN 14
+#define FILE_TOO_LARGE "File too large !"
+#define FILE_TOO_LARGE_LEN 16
 
-#define NUM_MULTISUB 1024 /* default max number of submits */
 #define DFLT_PollInterval 10
-
-#define INIT_FILE_TAB_SIZE 4 /* default file table size - is extended as needed, use 2^x value */
-#define INIT_FILE_IN_DIR_TAB_SIZE 1 /* initial size for "associated files tab" in directory table */
-#define INIT_WDMAP_TAB_SIZE 1 /* default wdMap table size - is extended as needed, use 2^x value */
 
 #define ADD_METADATA_UNSPECIFIED -1
 
@@ -111,7 +105,7 @@ struct instanceConf_s {
 	uchar *pszBindRuleset;
 	int iFacility;
 	int iSeverity;
-	char *ff_regex; 
+	char *ff_regex;
 		/* Full treatment : this should contain a regex applied on filename. The matching
 		part is then replaced with ff_replace to put the file out of scan criteria */
 	regex_t ff_preg;
@@ -373,8 +367,9 @@ static rsRetVal pollFile(instanceConf_t *pInst)
 												(char*)local_program,
 												"\"");
 										if (struct_field)
-											local_program_len = struct_field -
-													local_program;
+											local_program_len =
+												struct_field -
+												local_program;
 										else
 											local_program = (uchar*)"-";
 									}
@@ -390,14 +385,14 @@ static rsRetVal pollFile(instanceConf_t *pInst)
 
 							if (file_len > fixedModConf.msg_size)
 							{
-								if ((size_t)(structured_data_len + FILE_TOO_BIG_LEN) >
+								if ((size_t)(structured_data_len + FILE_TOO_LARGE_LEN) >
 										fixedModConf.msg_size)
 								{
 									LogError(0, RS_RET_INVALID_PARAMS,
 										"pollFile : the msg_size options (%lu)"
-										" is really too small even to handle batch"
-										" reports notification of %ld octets "
-										"(file too large)",
+										" is really too small even to handle"
+										" batch reports notification of %ld"
+										" octets (file too large)",
 										fixedModConf.msg_size,
 											60 + fixedModConf.lhostname +
 												pInst->lenTag +
@@ -420,16 +415,16 @@ static rsRetVal pollFile(instanceConf_t *pInst)
 
 								toolarge = 1;
 
-								start = (uchar*)FILE_TOO_BIG;
+								start = (uchar*)FILE_TOO_LARGE;
 
-								msg_len = FILE_TOO_BIG_LEN;
+								msg_len = FILE_TOO_LARGE_LEN;
 							}
 							else
 							{
 								if (file_len > file_in_buffer)
 								{
 									size_t file_to_read = file_len -
-											file_in_buffer, 
+											file_in_buffer,
 											buffer_used = 0, r;
 									start = fixedModConf.buffer_minsize -
 												file_to_read;
@@ -472,9 +467,10 @@ static rsRetVal pollFile(instanceConf_t *pInst)
 								if (pInst->action == action_rename || toolarge)
 								{
 									char *pszNewFName =
-											(char*)malloc(strlen(pszCurrFName)+
-												pInst->filename_oversize);
-									memcpy(pszNewFName, pszCurrFName, matches[0].rm_so);
+										(char*)malloc(strlen(pszCurrFName)+
+											pInst->filename_oversize);
+									memcpy(pszNewFName, pszCurrFName,
+											matches[0].rm_so);
 									strcpy((char*)pszNewFName + matches[0].rm_so,
 										(toolarge) ? pInst->ff_reject :
 											pInst->ff_rename);
@@ -482,13 +478,15 @@ static rsRetVal pollFile(instanceConf_t *pInst)
 									if (rename(pszCurrFName, pszNewFName))
 									{
 										LogError(0, RS_RET_STREAM_DISABLED,
-												"imbatchreport: module stops because it was"
-												" unable to rename form %s to %s.",
+												"imbatchreport: module stops"
+												" because it was unable to "
+												"rename form %s to %s.",
 												pszCurrFName , pszNewFName);
 										pInst->must_stop = 1;
 									}
 									else
-										DBGPRINTF("imbatchreport : file %s sent and renamed to %s.\n", 
+										DBGPRINTF("imbatchreport : file %s sent "
+													"and renamed to %s.\n", 
 													pszCurrFName, pszNewFName);
 									free(pszNewFName);
 								}
@@ -497,12 +495,14 @@ static rsRetVal pollFile(instanceConf_t *pInst)
 									if (unlink(pszCurrFName))
 									{
 										LogError(0, RS_RET_STREAM_DISABLED,
-											"imbatchreport: module stops because it was unable "
-											"to delete %s.", pszCurrFName);
+											"imbatchreport: module stops because"
+											" it was unable to delete %s."
+											, pszCurrFName);
 										pInst->must_stop = 1;
 									}
 									else
-										DBGPRINTF("imbatchreport : file %s sent and deleted\n",
+										DBGPRINTF("imbatchreport : file %s"
+												"sent and deleted\n",
 												pszCurrFName);
 								}
 							}
@@ -514,20 +514,23 @@ static rsRetVal pollFile(instanceConf_t *pInst)
 							pInst->fd = 0;
 
 							char *pszNewFName = (char*)malloc(strlen(pszCurrFName)+
-															pInst->filename_oversize);
+											pInst->filename_oversize);
 							memcpy(pszNewFName, pszCurrFName, matches[0].rm_so);
-							strcpy((char*)pszNewFName + matches[0].rm_so, pInst->ff_reject);
+							strcpy((char*)pszNewFName + matches[0].rm_so,
+									pInst->ff_reject);
 
 							if (rename(pszCurrFName, pszNewFName))
 							{
 								LogError(0, RS_RET_STREAM_DISABLED,
-									"imbatchreport: module stops because it was unable to "
-									"rename form %s to %s.", pszCurrFName , pszNewFName);
+									"imbatchreport: module stops because it"
+									" was unable to rename form %s to %s.",
+									pszCurrFName , pszNewFName);
 								pInst->must_stop = 1;
 							}
 							else
-								DBGPRINTF("imbatchreport : file %s renamed to %s due to error "
-									"while reading it.\n", pszCurrFName, pszNewFName);
+								DBGPRINTF("imbatchreport : file %s renamed to"
+									" %s due to error while reading it.\n",
+									pszCurrFName, pszNewFName);
 							free(pszNewFName);
 
 						} /* if (file_in_buffer == msg_len) */
@@ -723,21 +726,23 @@ CODESTARTnewInpInst
 					inst->ff_reject = strdup(inst->ff_reject);
 					inst->len_reject = strlen(inst->ff_reject);
 
-					if (inst->len_reject && regcomp(&inst->ff_preg, (char*)inst->ff_regex,
+					if (inst->len_reject && regcomp(&inst->ff_preg,
+							(char*)inst->ff_regex,
 							REG_EXTENDED))
 					{
 						inst->len_reject = 0;
 						LogError(0, RS_RET_SYNTAX_ERROR,
-							"The first part of 'rename' parameter does not contain a valid regex");
+							"The first part of 'rename' parameter does not"
+							" contain a valid regex");
 						ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
 					}
 				}
 			}
 			if (inst->len_reject == 0)
 			{
-				LogError(0, RS_RET_PARAM_ERROR,
-					"'rename' must specify THREE parameters separated by exactly ONE space "
-					"! The second parameter can be a null string to get this use a '-'.");
+				LogError(0, RS_RET_PARAM_ERROR, "'rename' must specify THREE "
+					"parameters separated by exactly ONE space ! The second "
+					"parameter can be a null string to get this use a '-'.");
 					ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 			}
 
@@ -769,7 +774,8 @@ CODESTARTnewInpInst
 				{
 					inst->len_reject = 0;
 					LogError(0, RS_RET_SYNTAX_ERROR,
-						"The first part of 'delete' parameter does not contain a valid regex");
+						"The first part of 'delete' parameter does not"
+						" contain a valid regex");
 					  ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
 				}
 
@@ -778,7 +784,8 @@ CODESTARTnewInpInst
 			if (inst->len_reject == 0)
 			{
 				LogError(0, RS_RET_PARAM_ERROR,
-					"'delete' must specify TWO parameters separated by exactly ONE space !");
+					"'delete' must specify TWO parameters separated by"
+					" exactly ONE space !");
 					ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 			}
 			inst->action = action_delete;
