@@ -34,7 +34,9 @@
 #include "config.h"
 #include <stdint.h>
 #include <stddef.h>
+#ifndef _AIX
 #include <typedefs.h>
+#endif
 #include <sys/types.h>
 #include <string.h>
 #ifdef USE_HASH_XXHASH

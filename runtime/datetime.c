@@ -103,13 +103,11 @@ timeval2syslogTime(struct timeval *tp, struct syslogTime *t, const int inUTC)
 	struct tm tmBuf;
 	long lBias;
 	time_t secs;
-/* AIXPORT : fix build error : "tm_gmtoff" is not a member of "struct tm"
- *           Choose the HPUX code path, only for this function.
- *           This is achieved by adding a check to _AIX wherever _hpux is checked
+/* AIXPORT : bug fix: manage properly the time zones to calculate bias
  */
 
 
-#if defined(__hpux) || defined(_AIX)
+#if defined(__hpux)
 	struct timezone tz;
 #	endif
 	secs = tp->tv_sec;
@@ -121,6 +119,7 @@ timeval2syslogTime(struct timeval *tp, struct syslogTime *t, const int inUTC)
 	t->year = tm->tm_year + 1900;
 	t->month = tm->tm_mon + 1;
 	t->day = tm->tm_mday;
+	t->wday = tm->tm_wday;
 	t->hour = tm->tm_hour;
 	t->minute = tm->tm_min;
 	t->second = tm->tm_sec;
@@ -136,8 +135,11 @@ timeval2syslogTime(struct timeval *tp, struct syslogTime *t, const int inUTC)
 			 * It is UTC - localtime, which is the opposite sign of mins east of GMT.
 			 */
 			lBias = -(tm->tm_isdst ? altzone : timezone);
-#		elif defined(__hpux)|| defined(_AIX)
+#		elif defined(__hpux)
 			lBias = tz.tz_dsttime ? - tz.tz_minuteswest : 0;
+#		elif defined(_AIX)
+			if (tm->tm_isdst) tzset();
+			lBias = tm->tm_isdst ? - timezone : 0;
 #		else
 			lBias = tm->tm_gmtoff;
 #		endif
@@ -474,7 +476,7 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr,
 	int secfracPrecision;
 	char tzstring[16];
 	char OffsetMode = '\0';	/* UTC offset: \0 -> indicate no update */
-	char OffsetHour = 0;	/* UTC offset in hours */
+	char OffsetHour = '\0';	/* UTC offset in hours */
 	int OffsetMinute = 0;	/* UTC offset in minutes */
 	/* end variables to temporarily hold time information while we parse */
 	int lenStr;

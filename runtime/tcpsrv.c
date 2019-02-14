@@ -76,7 +76,7 @@
 #include "ratelimit.h"
 #include "unicode-helper.h"
 
-#if !defined(_AIX)
+#ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wswitch-enum"
 #endif
 
@@ -775,7 +775,7 @@ finalize_it:
  * This variant here is only used if we need to work with a netstream driver
  * that does not support epoll().
  */
-#if !defined(_AIX)
+#ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wempty-body"
 #endif
 static rsRetVal
@@ -881,7 +881,7 @@ finalize_it: /* this is a very special case - this time only we do not exit the 
 
 	RETiRet;
 }
-#if !defined(_AIX)
+#ifdef __GNUC__
 #pragma GCC diagnostic warning "-Wempty-body"
 #endif
 
@@ -1088,11 +1088,7 @@ SetCBRcvData(tcpsrv_t *pThis, rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, 
 }
 
 static rsRetVal
-#ifdef _AIX
 SetCBOnListenDeinit(tcpsrv_t *pThis, rsRetVal (*pCB)(void*))
-#else
-SetCBOnListenDeinit(tcpsrv_t *pThis, int (*pCB)(void*))
-#endif
 {
 	DEFiRet;
 	pThis->pOnListenDeinit = pCB;

@@ -238,7 +238,7 @@ finalize_it:
 }
 
 
-#if !defined(_AIX)
+#ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wempty-body"
 #endif
 /* Send a shutdown command to all workers and see if they terminate.
@@ -296,7 +296,7 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 	
 	RETiRet;
 }
-#if !defined(_AIX)
+#ifdef __GNUC__
 #pragma GCC diagnostic warning "-Wempty-body"
 #endif
 
@@ -382,7 +382,7 @@ wtpWrkrExecCancelCleanup(void *arg)
  * wti worker.
  * rgerhards, 2008-01-21
  */
-#if !defined(_AIX)
+#ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wempty-body"
 #endif
 static void *
@@ -440,8 +440,9 @@ if(dbgTimeoutToStderr) {
 		fprintf(stderr, "rsyslog debug: %p: worker exiting\n", pWti);
 	}
 	pthread_exit(0);
+	return NULL; /* To suppress warning */
 }
-#if !defined(_AIX)
+#ifdef __GNUC__
 #pragma GCC diagnostic warning "-Wempty-body"
 #endif
 

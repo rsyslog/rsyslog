@@ -31,7 +31,7 @@
 %top{
 #ifndef __clang_analyzer__ /* this is not really our code */
 #include "config.h"
-#if !defined(_AIX)
+#ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wsign-compare"
 #pragma GCC diagnostic ignored "-Wmissing-noreturn"
 #endif

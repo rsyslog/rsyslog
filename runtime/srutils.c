@@ -96,6 +96,10 @@ syslogName_t	syslogFacNames[] = {
 	{"syslog",       LOG_SYSLOG},
 	{"user",         LOG_USER},
 	{"uucp",         LOG_UUCP},
+#if defined(_AIX)  /* AIXPORT : These are necessary for AIX */
+	{ "caa",         LOG_CAA },
+	{ "aso",         LOG_ASO },
+#endif
 #if defined(LOG_FTP)
 	{"ftp",          LOG_FTP},
 #endif
@@ -357,7 +361,7 @@ void skipWhiteSpace(uchar **pp)
  * to use as few space as possible.
  * rgerhards, 2008-01-03
  */
-#if !defined(_AIX)
+#ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
 #endif
@@ -404,7 +408,7 @@ rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *
 finalize_it:
 	RETiRet;
 }
-#if !defined(_AIX)
+#ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif
 

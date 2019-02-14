@@ -158,6 +158,8 @@ struct msg {
 /* rawmsg does not include a PRI (Solaris!), but PRI is already set correctly in the msg object */
 #define PRESERVE_CASE	0x200
 /* preserve case in fromhost */
+#define KEEP_FORMAT     0x400
+/* rawmsg has to be send by ouputs module as is */
 
 /* (syslog) protocol types */
 #define MSG_LEGACY_PROTOCOL 0

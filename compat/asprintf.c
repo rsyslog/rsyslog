@@ -1,21 +1,17 @@
-/* This file ensure that is at least one symbol in our compat
- * convenience library. Otherwise, at least the Solaris linker
- * bails out with an error message like this:
+/* compatibility file for systems without asprintf.
  *
- * ld: elf error: file ../compat/.libs/compat.a: elf_getarsym
- *
- * Copyright 2016 Rainer Gerhards and Adiscon
+ * Copyright 2015 Rainer Gerhards and Adiscon
  *
  * This file is part of rsyslog.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * 
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,6 +19,35 @@
  * limitations under the License.
  */
 #include "config.h"
-#if defined(OS_SOLARIS) || defined(__xlc__)
-int SOLARIS_and_XLC_wants_a_symbol_inside_the_lib;
+#ifndef HAVE_ASPRINTF
+
+#include <stdlib.h>
+#include <stdarg.h>
+#include <stdio.h>
+int asprintf(char **strp, const char *fmt, ...)
+{
+  va_list ap;
+  int len;
+
+  va_start(ap, fmt);
+  len = vsnprintf(NULL, 0, fmt, ap);
+  va_end(ap);
+
+  *strp = malloc(len+1);
+  if (!*strp) {
+    return -1;
+  }
+
+  va_start(ap, fmt);
+  vsnprintf(*strp, len+1, fmt, ap);
+  va_end(ap);
+
+  (*strp)[len] = 0;
+  return len;
+}
+#else
+/* XLC needs at least one method in source file even static to compile */
+#ifdef __xlc__
+static void dummy() {}
 #endif
+#endif /* #ifndef HAVE_ASPRINTF */

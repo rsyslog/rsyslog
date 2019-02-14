@@ -86,6 +86,8 @@ static struct cnfparamblk pblk =
 	};
 
 
+typedef rsRetVal (*pModInit_t)(int,int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_t*);
+
 /* we provide a set of dummy functions for modules that do not support the
  * some interfaces.
  * On the commit feature: As the modules do not support it, they commit each message they
@@ -562,8 +564,7 @@ finalize_it:
  * everything needed to fully initialize the module.
  */
 static rsRetVal
-doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_t*),
-	  uchar *name, void *pModHdlr, modInfo_t **pNewModule)
+doModInit(pModInit_t modInit, uchar *name, void *pModHdlr, modInfo_t **pNewModule)
 {
 	rsRetVal localRet;
 	modInfo_t *pNew = NULL;
@@ -689,12 +690,7 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			pNew->mod.om.supportsTX = 1;
 			localRet = (*pNew->modQueryEtryPt)((uchar*)"beginTransaction", &pNew->mod.om.beginTransaction);
 			if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {
-#ifdef _AIX
-/* AIXPORT : typecaste the return type for AIX */
-				pNew->mod.om.beginTransaction = (rsRetVal(*)(void*))dummyBeginTransaction;
-#else
 				pNew->mod.om.beginTransaction = dummyBeginTransaction;
-#endif
 				pNew->mod.om.supportsTX = 0;
 			} else if(localRet != RS_RET_OK) {
 				ABORT_FINALIZE(localRet);
@@ -745,12 +741,7 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			localRet = (*pNew->modQueryEtryPt)((uchar*)"endTransaction",
 				   &pNew->mod.om.endTransaction);
 			if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {
-#ifdef _AIX
-/* AIXPORT : typecaste the return type for AIX */
-				pNew->mod.om.endTransaction = (rsRetVal(*)(void*))dummyEndTransaction;
-#else
 				pNew->mod.om.endTransaction = dummyEndTransaction;
-#endif
 			} else if(localRet != RS_RET_OK) {
 				ABORT_FINALIZE(localRet);
 			}
@@ -918,21 +909,10 @@ static void modPrintList(void)
 								    NULL :  pMod->mod.om.newActInst);
 			dbgprintf("\ttryResume:          %p\n", pMod->tryResume);
 			dbgprintf("\tdoHUP:              %p\n", pMod->doHUP);
-#ifdef _AIX
-/* AIXPORT : typecaste the return type in AIX  */
-			dbgprintf("\tBeginTransaction:   %p\n",
-((pMod->mod.om.beginTransaction == (rsRetVal (*) (void*))dummyBeginTransaction) ?
+			dbgprintf("\tBeginTransaction:   %p\n", ((pMod->mod.om.beginTransaction == dummyBeginTransaction) ?
 								   NULL :  pMod->mod.om.beginTransaction));
-			dbgprintf("\tEndTransaction:     %p\n",
-			((pMod->mod.om.endTransaction == (rsRetVal (*)(void*))dummyEndTransaction) ?
-				NULL :  pMod->mod.om.endTransaction));
-#else
-			dbgprintf("\tBeginTransaction:   %p\n",
-				((pMod->mod.om.beginTransaction == dummyBeginTransaction) ?
-				NULL :  pMod->mod.om.beginTransaction));
 			dbgprintf("\tEndTransaction:     %p\n", ((pMod->mod.om.endTransaction == dummyEndTransaction) ?
-				NULL :  pMod->mod.om.endTransaction));
-#endif
+								   NULL :  pMod->mod.om.endTransaction));
 			break;
 		case eMOD_IN:
 			dbgprintf("Input Module Entry Points\n");
@@ -1111,7 +1091,8 @@ Load(uchar *const pModName, const sbool bConfLoad, struct nvlst *const lst)
 {
 	size_t iPathLen, iModNameLen;
 	int bHasExtension;
-	void *pModHdlr, *pModInit;
+  void *pModHdlr;
+	pModInit_t pModInit;
 	modInfo_t *pModInfo;
 	cfgmodules_etry_t *pNew = NULL;
 	cfgmodules_etry_t *pLast = NULL;
@@ -1279,14 +1260,13 @@ Load(uchar *const pModName, const sbool bConfLoad, struct nvlst *const lst)
 			(load_err_msg == NULL) ? "NONE SEEN???" : (const char*) cstrGetSzStrNoNULL(load_err_msg));
 		ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_DLOPEN);
 	}
-	if(!(pModInit = dlsym(pModHdlr, "modInit"))) {
+	if(!(pModInit = (pModInit_t)dlsym(pModHdlr, "modInit"))) {
 		LogError(0, RS_RET_MODULE_LOAD_ERR_NO_INIT,
 			 	"could not load module '%s', dlsym: %s\n", pPathBuf, dlerror());
 		dlclose(pModHdlr);
 		ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_NO_INIT);
 	}
-	if((iRet = doModInit((rsRetVal(*)(int,int*,rsRetVal(**)(),rsRetVal(*)(),struct modInfo_s*))pModInit,
-		(uchar*) pModName, pModHdlr, &pModInfo)) != RS_RET_OK) {
+	if((iRet = doModInit(pModInit, (uchar*) pModName, pModHdlr, &pModInfo)) != RS_RET_OK) {
 		LogError(0, RS_RET_MODULE_LOAD_ERR_INIT_FAILED,
 			"could not load module '%s', rsyslog error %d\n", pPathBuf, iRet);
 		dlclose(pModHdlr);

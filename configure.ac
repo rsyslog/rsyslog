@@ -6,35 +6,31 @@ AC_INIT([rsyslog],[8.1903.0.master],[rsyslog@lists.adiscon.com])
 AC_DEFINE(VERSION_YEAR, 19, [year part of real rsyslog version])
 AC_DEFINE(VERSION_MONTH, 1, [month part of real rsyslog version])
 
-# AIXPORT START: Detect the underlying OS
-unamestr=$(uname)
-AM_CONDITIONAL([AIX], [test x$unamestr = xAIX])
-if test "$unamestr" = "AIX"; then
-	export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/usr/lib/pkgconfig"
-	LIBS="-lbsd -lsrc"
-	CPPFLAGS="-D_THREAD_SAFE -D_BSD43 -D_AIX"
-	CFLAGS="-D_AIX"
-	LDFLAGS="-qcpluscmt -brtl "
-	LIBESTR_LIBS="-L/usr/lib/ -lestr"
-	LIBESTR_CFLAGS="-I/usr/include"
-	LIBLOGGING_STDLOG_LIBS="-L/usr/lib/ -llogging-stdlog"
-	LIBLOGGING_STDLOG_CFLAGS="-I/usr/include"
-	GNUTLS_LIBS="-L/usr/lib/ -lgnutls"
-	GNUTLS_CFLAGS="-I/usr/include"
-	RELP_LIBS="-L/usr/lib/ -lrelp"
-	RELP_CFLAGS="-I/usr/include"
-	CC="xlc_r"
-	AC_PREFIX_DEFAULT(/usr)
-	export  ac_cv_func_malloc_0_nonnull=yes
-	export ac_cv_func_realloc_0_nonnull=yes
-fi
-# AIXPORT END
-
-# change to the one below if Travis has a timeout
-#AM_INIT_AUTOMAKE([subdir-objects serial-tests])
 AM_INIT_AUTOMAKE([subdir-objects])
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
+
+unamestr=$(uname)
+if test "$unamestr" = "AIX"; then
+	AC_ARG_ENABLE(aix64bits,
+		[AS_HELP_STRING([--enable-aix64bits],[Enable compilation of rsyslog using 64 bits @<:@default=no@:>@])],
+	        [case "${enableval}" in
+	         yes) enable_aix64bits="yes" ;;
+	          no) enable_aix64bits="no" ;;
+	           *) AC_MSG_ERROR(bad value ${enableval} for --enable-aix64bits) ;;
+	         esac],
+		[enable_aix64bits=no]
+	)
+
+	CFLAGS="$CFLAGS -D_LINUX_SOURCE_COMPAT"
+	LDFLAGS="-brtl"
+	if test "x$enable_aix64bits" == "xyes"; then
+		CFLAGS="$CFLAGS -q64"
+		LDFLAGS="$LDFLAGS -b64"
+		AR_CFLAGS="-X64 $AR_CFLAGS"
+		NM="$(which nm) -X64 rcu"
+	fi
+fi
 
 AC_CONFIG_SRCDIR([ChangeLog])
 AC_CONFIG_MACRO_DIR([m4])
@@ -80,6 +76,17 @@ else
 fi
 
 PKG_PROG_PKG_CONFIG
+
+AC_ARG_VAR(CONF_FILE_PATH, Configuration file path (default : /etc/rsyslog.conf))
+if test "$ac_cv_env_CONF_FILE_PATH_set" = "set"; then
+	AC_DEFINE_UNQUOTED(PATH_CONFFILE,  "${ac_cv_env_CONF_FILE_PATH_value}", "Configuration file path (default : /etc/rsyslog.conf)")
+fi 
+
+AC_ARG_VAR(PID_FILE_PATH, Pid file path (default : /var/run/rsyslogd.pid))
+if test "$ac_cv_env_PID_FILE_PATH_set" = "set"; then
+	AC_DEFINE_UNQUOTED(PATH_PIDFILE,  "${ac_cv_env_PID_FILE_PATH_value}", "Pid file path (default : /var/run/rsyslogd.pid)")
+fi 
+
 
 # modules we require
 PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.9)
@@ -178,7 +185,7 @@ AC_CHECK_HEADERS([malloc.h],[],[],[
      #endif
   ]
 ])
-AC_CHECK_HEADERS([fcntl.h locale.h netdb.h netinet/in.h paths.h stddef.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/stat.h sys/inotify.h unistd.h utmp.h utmpx.h sys/epoll.h sys/prctl.h sys/select.h])
+AC_CHECK_HEADERS([fcntl.h locale.h netdb.h netinet/in.h paths.h stddef.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/stat.h unistd.h utmp.h utmpx.h sys/epoll.h sys/prctl.h sys/select.h getopt.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -211,9 +218,13 @@ AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_STRERROR_R
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([flock inotify_init recvmmsg basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setsid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r getline malloc_trim prctl epoll_create epoll_create1 fdatasync syscall lseek64])
+AC_CHECK_FUNCS([flock recvmmsg basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setsid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r getline malloc_trim prctl epoll_create epoll_create1 fdatasync syscall lseek64])
 AC_CHECK_FUNC([setns], [AC_DEFINE([HAVE_SETNS], [1], [Define if setns exists.])])
 AC_CHECK_TYPES([off64_t])
+
+AC_CHECK_HEADERS([sys/inotify.h], [rsyslog_sysinotify=yes])
+AC_CHECK_FUNCS([inotify_init], [rsyslog_inotify_init=yes])
+AM_CONDITIONAL(ENABLE_INOTIFY, test x$rsyslog_sysinotify = xyes -a x$rsyslog_inotify_init = xyes)
 
 # getifaddrs is in libc (mostly) or in libsocket (eg Solaris 11) or not defined (eg Solaris 10)
 AC_SEARCH_LIBS([getifaddrs], [socket], [AC_DEFINE(HAVE_GETIFADDRS, [1], [set define])])
@@ -246,6 +257,8 @@ AC_TRY_COMPILE([
 	AC_MSG_RESULT(no; defined as 64)
 )
 
+# check if GNU's ld is used
+
 # Check for __builtin_expect()
 AC_MSG_CHECKING([for __builtin_expect()])
 AC_LINK_IFELSE([AC_LANG_PROGRAM(, return __builtin_expect(main != 0, 1))],
@@ -253,8 +266,6 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM(, return __builtin_expect(main != 0, 1))],
                           Define to 1 if compiler supports __builtin_expect)
                 AC_MSG_RESULT([yes])],
                [AC_MSG_RESULT([no])])
-
-
 
 # check for availability of atomic operations
 # Note: this switch is primarily for the testbench, so that we can try
@@ -423,29 +434,29 @@ AM_CONDITIONAL(ENABLE_ROOT_TESTS, test x$enable_root_tests = xyes)
 if test "$os_type" != "solaris"
 then
 	AC_CHECK_HEADERS(
-	    [pthread.h],
-	    [
-	      AC_CHECK_LIB(
-		[pthread],
-		[pthread_create],
+		[pthread.h],
 		[
-		  PTHREADS_LIBS="-lpthread"
-		  if test "$unamestr" = "AIX"; then
-			  PTHREADS_CFLAGS="-lpthreads" 
-		  else
-			  case "${os_type}" in
-			  solaris) PTHREADS_CFLAGS="-pthreads -std=c99" ;;
-			  *)       PTHREADS_CFLAGS="-pthread" ;;
-			  esac
-		  fi
-		  AC_SUBST(PTHREADS_LIBS)
-		  AC_SUBST(PTHREADS_CFLAGS)
+			AC_CHECK_LIB(
+				[pthread],
+				[pthread_create],
+				[
+					PTHREADS_LIBS="-lpthread"
+					if test "$unamestr" = "AIX"; then
+					case "${CC}" in
+						*xlc*|*xlC*) PTHREADS_CFLAGS="-qthreaded" ;;
+						*) PTHREADS_CFLAGS="-lpthreads" ;;
+					esac
+					else
+						PTHREADS_CFLAGS="-pthread"
+					fi
+					AC_SUBST(PTHREADS_LIBS)
+					AC_SUBST(PTHREADS_CFLAGS)
+				],
+				[AC_MSG_FAILURE([pthread is missing])],
+				[-lpthread]
+			)
 		],
-		[AC_MSG_FAILURE([pthread is missing])],
-		[-lpthread]
-	      )
-	    ],
-	    [AC_MSG_FAILURE([pthread is missing])]
+		[AC_MSG_FAILURE([pthread is missing])]
 	)
 fi
 
@@ -499,6 +510,9 @@ if test "$rsyslog_have_pthread_setschedparam" = "yes" -a "$rsyslog_have_sched_h"
 	LIBS=$save_LIBS
 fi
 
+if test "$unamestr" = "AIX"; then
+enable_klog="no"
+else
 # klog
 AC_ARG_ENABLE(klog,
         [AS_HELP_STRING([--enable-klog],[Integrated klog functionality @<:@default=yes@:>@])],
@@ -509,6 +523,7 @@ AC_ARG_ENABLE(klog,
          esac],
         [enable_klog="yes"]
 )
+fi
 AM_CONDITIONAL(ENABLE_IMKLOG, test x$enable_klog = xyes)
 AM_CONDITIONAL(ENABLE_IMKLOG_BSD, test x$os_type = xbsd)
 AM_CONDITIONAL(ENABLE_IMKLOG_LINUX, test x$os_type = xlinux)
@@ -1621,6 +1636,55 @@ fi
 AM_CONDITIONAL(ENABLE_IMFILE, test x$enable_imfile = xyes)
 
 
+# settings for the batch report input module
+AC_ARG_ENABLE(imbatchreport,
+        [AS_HELP_STRING([--enable-imbatchreport],[batch report input module enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_imbatchreport="yes" ;;
+          no) enable_imbatchreport="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imbatchreport) ;;
+         esac],
+        [enable_imbatchreport=no]
+)
+AM_CONDITIONAL(ENABLE_IMBATCHREPORT, test x$enable_imbatchreport = xyes)
+
+
+# settings for the external program input module
+AC_ARG_ENABLE(improg,
+        [AS_HELP_STRING([--enable-improg],[external program input module enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_improg="yes" ;;
+          no) enable_improg="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-improg) ;;
+         esac],
+        [enable_improg=no]
+)
+AM_CONDITIONAL(ENABLE_IMPROG, test x$enable_improg = xyes)
+
+# settings for the db2diag parser module
+AC_ARG_ENABLE(pmdb2diag,
+        [AS_HELP_STRING([--enable-pmdb2diag],[db2diag parser module enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_pmdb2diag="yes" ;;
+          no) enable_pmdb2diag="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pmdb2diag) ;;
+         esac],
+        [enable_pmdb2diag=no]
+)
+AM_CONDITIONAL(ENABLE_PMDB2DIAG, test x$enable_pmdb2diag = xyes)
+
+# settings for the tuxedo ULOG input module
+AC_ARG_ENABLE(imtuxedoulog,
+        [AS_HELP_STRING([--enable-imtuxedoulog],[tuxedo ULOG input module enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_imtuxedoulog="yes" ;;
+          no) enable_imtuxedoulog="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imtuxedoulog) ;;
+         esac],
+        [enable_imtuxedoulog=no]
+)
+AM_CONDITIONAL(ENABLE_IMTUXEDOULOG, test x$enable_imtuxedoulog = xyes)
+
 # settings for the door input module (under solaris, thus default off)
 AC_ARG_ENABLE(imsolaris,
         [AS_HELP_STRING([--enable-imsolaris],[solaris input module enabled @<:@default=no@:>@])],
@@ -2379,6 +2443,10 @@ AC_CONFIG_FILES([Makefile \
 		contrib/pmcisconames/Makefile \
 		contrib/omhttpfs/Makefile \
 		contrib/omamqp1/Makefile \
+		contrib/imbatchreport/Makefile \
+		contrib/pmdb2diag/Makefile \
+		contrib/improg/Makefile \
+		contrib/imtuxedoulog/Makefile \
 		contrib/omtcl/Makefile \
 		contrib/omfile-hardened/Makefile \
 		contrib/mmkubernetes/Makefile \
@@ -2406,7 +2474,9 @@ echo "    kafka static linking enabled:             $enable_kafka_static"
 echo "    atomic operations enabled:                $enable_atomic_operations"
 echo
 echo "---{ input plugins }---"
+if test "$unamestr" != "AIX"; then
 echo "    Klog functionality enabled:               $enable_klog ($os_type)"
+fi
 echo "    /dev/kmsg functionality enabled:          $enable_kmsg"
 echo "    plain tcp input module enabled:           $enable_imptcp"
 echo "    imdiag enabled:                           $enable_imdiag"
@@ -2416,6 +2486,9 @@ echo "    periodic statistics module enabled:       $enable_impstats"
 echo "    imczmq input module enabled:              $enable_imczmq"
 echo "    imjournal input module enabled:           $enable_imjournal"
 echo "    imkafka module will be compiled:          $enable_imkafka"
+echo "    imbatchreport input module enabled:       $enable_imbatchreport"
+echo "    improg input module enabled:              $enable_improg"
+echo "    imtuxedoulog module will be compiled:     $enable_imtuxedoulog"
 echo
 echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
@@ -2445,6 +2518,7 @@ echo "    pmnull module will be compiled:           $enable_pmnull"
 echo "    pmnormalize module will be compiled:      $enable_pmnormalize"
 echo "    pmaixforwardedfrom module w.be compiled:  $enable_pmaixforwardedfrom"
 echo "    pmsnare module will be compiled:          $enable_pmsnare"
+echo "    pmdb2diag module will be compiled:        $enable_pmdb2diag"
 echo "    pmpanngfw module will be compiled:        $enable_pmpanngfw"
 echo
 echo "---{ message modification modules }---"
@@ -2500,4 +2574,4 @@ echo "    (total) debugless mode enabled:           $enable_debugless"
 echo "    Diagnostic tools enabled:                 $enable_diagtools"
 echo "    End-User tools enabled:                   $enable_usertools"
 echo "    Valgrind support settings enabled:        $enable_valgrind"
-echo
+echo 

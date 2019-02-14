@@ -286,6 +286,26 @@ if ENABLE_OMAMQP1
 SUBDIRS += contrib/omamqp1
 endif
 
+# imbatchreport
+if ENABLE_IMBATCHREPORT
+SUBDIRS += contrib/imbatchreport
+endif
+
+# imdb2diag
+if ENABLE_PMDB2DIAG
+SUBDIRS += contrib/pmdb2diag
+endif
+
+# improg
+if ENABLE_IMPROG
+SUBDIRS += contrib/improg
+endif
+
+# imtuxedoulog
+if ENABLE_IMTUXEDOULOG
+SUBDIRS += contrib/imtuxedoulog
+endif
+
 # omtcl
 if ENABLE_OMTCL
 SUBDIRS += contrib/omtcl

@@ -48,7 +48,7 @@
 #include "parserif.h"
 #include "unicode-helper.h"
 
-#if !defined(_AIX)
+#ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wswitch-enum"
 #endif
 /* static data */
@@ -1634,7 +1634,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"rfc3339", sizeof("rfc3339")-1)) {
 				datefmt = tplFmtRFC3339Date;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"unixtimestamp",
-			sizeof("unixtimestamp")-1)) {
+				sizeof("unixtimestamp")-1)) {
 				datefmt = tplFmtUnixDate;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"subseconds", sizeof("subseconds")-1)) {
 				datefmt = tplFmtSecFrac;

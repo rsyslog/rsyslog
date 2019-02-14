@@ -36,7 +36,7 @@
 #include <time.h>
 #include <json.h>
 /* we need this to avoid issues with older versions of libbson */
-#ifndef AIX
+#ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"
 #pragma GCC diagnostic ignored "-Wunknown-attributes"
@@ -44,7 +44,7 @@
 #endif
 #include <mongoc.h>
 #include <bson.h>
-#ifndef AIX
+#ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif
 

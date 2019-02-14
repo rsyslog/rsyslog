@@ -305,6 +305,10 @@ BEGINObjClassInit(nsdpoll_ptcp, 1, OBJ_IS_CORE_MODULE) /* class, version */
 
 	/* set our own handlers */
 ENDObjClassInit(nsdpoll_ptcp)
+#else
+    
+static void dummy() {}
+
 #endif /* #ifdef HAVE_EPOLL_CREATE this module requires epoll! */
 
 /* vi:set ai:

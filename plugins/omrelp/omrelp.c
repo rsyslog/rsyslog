@@ -146,7 +146,7 @@ ENDinitConfVars
  * is not a really bright idea, but kept for backward compatibility).
  */
 
-#if !defined(_AIX)
+#ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
 #endif
 static void __attribute__((format(printf, 1, 2)))
@@ -165,7 +165,7 @@ omrelp_dbgprintf(const char *fmt, ...)
 	va_end(ap);
 	r_dbgprintf("omrelp.c", "%s", pszWriteBuf);
 }
-#if !defined(_AIX)
+#ifdef __GNUC__
 #pragma GCC diagnostic warning "-Wformat-nonliteral"
 #endif
 

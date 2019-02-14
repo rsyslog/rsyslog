@@ -84,7 +84,9 @@ static prop_t *pInputName = NULL;
  * best solution, but real-world experience might tell us a
  * different truth ;)
  */
+#ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 static void OnReceive(srAPIObj __attribute__((unused)) *pMyAPI, srSLMGObj* pSLMG)
 {
 	uchar *pszRawMsg;

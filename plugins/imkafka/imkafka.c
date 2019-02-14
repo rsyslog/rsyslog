@@ -23,7 +23,6 @@
  * limitations under the License.
  */
 #include "config.h"
-#include "rsyslog.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -34,6 +33,8 @@
 #include <pthread.h>
 #include <sys/uio.h>
 #include <librdkafka/rdkafka.h>
+
+#include "rsyslog.h"
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"

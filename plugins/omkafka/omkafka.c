@@ -20,7 +20,6 @@
  * limitations under the License.
  */
 #include "config.h"
-#include "rsyslog.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -38,6 +37,8 @@
 #endif
 #include <unistd.h>
 #include <librdkafka/rdkafka.h>
+
+#include "rsyslog.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "template.h"
@@ -79,6 +80,66 @@ STATSCOUNTER_DEF(ctrKafkaRespAuth, mutCtrKafkaRespAuth);
 STATSCOUNTER_DEF(ctrKafkaRespOther, mutCtrKafkaRespOther);
 
 #define MAX_ERRMSG 1024 /* max size of error messages that we support */
+
+#ifndef SLIST_INIT
+#define SLIST_INIT(head) do {           \
+  (head)->slh_first = NULL;        \
+} while (/*CONSTCOND*/0)
+#endif
+
+#ifndef SLIST_ENTRY
+#define SLIST_ENTRY(type)           \
+  struct {                \
+    struct type *sle_next;  /* next element */      \
+  }
+#endif
+
+#ifndef SLIST_HEAD
+#define SLIST_HEAD(name, type)            \
+struct name {               \
+  struct type *slh_first; /* first element */     \
+}
+#endif
+
+#ifndef SLIST_INSERT_HEAD
+#define SLIST_INSERT_HEAD(head, elm, field) do {      \
+  (elm)->field.sle_next = (head)->slh_first;      \
+  (head)->slh_first = (elm);          \
+} while (/*CONSTCOND*/0)
+#endif
+
+#ifndef SLIST_REMOVE_HEAD
+#define SLIST_REMOVE_HEAD(head, field) do {       \
+  (head)->slh_first = (head)->slh_first->field.sle_next;    \
+} while (/*CONSTCOND*/0)
+#endif
+
+#ifndef SLIST_FIRST
+#define SLIST_FIRST(head) ((head)->slh_first)
+#endif
+
+#ifndef SLIST_NEXT
+#define SLIST_NEXT(elm, field)  ((elm)->field.sle_next)
+#endif
+
+#ifndef SLIST_EMPTY
+#define SLIST_EMPTY(head) ((head)->slh_first == NULL)
+#endif
+
+#ifndef SLIST_REMOVE
+#define SLIST_REMOVE(head, elm, type, field) do {     \
+  if ((head)->slh_first == (elm)) {       \
+    SLIST_REMOVE_HEAD((head), field);     \
+  }               \
+  else {                \
+    struct type *curelm = (head)->slh_first;    \
+    while(curelm->field.sle_next != (elm))      \
+      curelm = curelm->field.sle_next;    \
+    curelm->field.sle_next =        \
+        curelm->field.sle_next->field.sle_next;   \
+  }               \
+} while (/*CONSTCOND*/0)
+#endif
 
 #define NO_FIXED_PARTITION -1	/* signifies that no fixed partition config exists */
 
