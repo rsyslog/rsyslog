@@ -327,12 +327,14 @@ static rsRetVal pollFile(instanceConf_t *pInst)
 						lseek(pInst->fd, -msg_len, SEEK_END);
 
 						file_in_buffer = read(pInst->fd, fixedModConf.buffer_minsize, msg_len);
-						DBGPRINTF("imbatchreport : file end read %ld %ld\n", file_in_buffer, msg_len);
+						DBGPRINTF("imbatchreport : file end read %ld %ld\n",
+									file_in_buffer, msg_len);
 
 
 						if (file_in_buffer == msg_len)
 						{
-							for (; msg_len && fixedModConf.buffer_minsize[msg_len-1] == '\n'; msg_len--)
+							for (; msg_len && fixedModConf.buffer_minsize[msg_len-1] == '\n';
+									msg_len--)
 								;
 
 							if (fixedModConf.buffer_minsize[msg_len-1] == ']')
@@ -385,11 +387,13 @@ static rsRetVal pollFile(instanceConf_t *pInst)
 								if ((size_t)(structured_data_len + FILE_TOO_BIG_LEN) >
 										fixedModConf.msg_size)
 								{
-									LogError(0, RS_RET_INVALID_PARAMS, "pollFile : the msg_size options"
-											" (%lu) is really too small even to handle batch reports"
-											" notification of %ld octets (file too large)",
-											fixedModConf.msg_size,
-											60 + fixedModConf.lhostname + pInst->lenTag + structured_data_len);
+									LogError(0, RS_RET_INVALID_PARAMS,
+										"pollFile : the msg_size options"
+										" (%lu) is really too small even to handle batch reports"
+										" notification of %ld octets (file too large)",
+										fixedModConf.msg_size,
+										60 + fixedModConf.lhostname + pInst->lenTag + 
+												structured_data_len);
 									pInst->must_stop = 1;
 
 									close(pInst->fd);
@@ -400,9 +404,11 @@ static rsRetVal pollFile(instanceConf_t *pInst)
 								}
 
 								LogError(0, RS_RET_INVALID_PARAMS,
-											"pollFile : the batch report is too large (rejecting) filename=%s,"
-											"max_size=%lu, msg_size=%ld",
-											pszCurrFName,fixedModConf.msg_size, file_len);
+									"pollFile : the batch report is too "
+									"large (rejecting) filename=%s,"
+									"max_size=%lu, msg_size=%ld",
+									pszCurrFName, fixedModConf.msg_size,
+									file_len);
 
 								toolarge = 1;
 
@@ -451,7 +457,8 @@ static rsRetVal pollFile(instanceConf_t *pInst)
 							{
 								if (pInst->action == action_rename || toolarge)
 								{
-									char *pszNewFName = (char*)malloc(strlen(pszCurrFName)+pInst->filename_oversize);
+									char *pszNewFName = (char*)malloc(strlen(pszCurrFName)+
+												pInst->filename_oversize);
 									memcpy(pszNewFName, pszCurrFName, matches[0].rm_so);
 									strcpy((char*)pszNewFName + matches[0].rm_so,
 												 (toolarge) ? pInst->ff_reject : pInst->ff_rename);
@@ -474,12 +481,13 @@ static rsRetVal pollFile(instanceConf_t *pInst)
 									if (unlink(pszCurrFName))
 									{
 										LogError(0, RS_RET_STREAM_DISABLED,
-												"imbatchreport: module stops because it was unable to delete %s.",
-												pszCurrFName);
+											"imbatchreport: module stops because it was unable "
+											"to delete %s.", pszCurrFName);
 										pInst->must_stop = 1;
 									}
 									else
-										DBGPRINTF("imbatchreport : file %s sent and deleted\n", pszCurrFName);
+										DBGPRINTF("imbatchreport : file %s sent and deleted\n",
+												pszCurrFName);
 								}
 							}
 						} /* if (file_in_buffer == msg_len) */
@@ -489,20 +497,21 @@ static rsRetVal pollFile(instanceConf_t *pInst)
 							close(pInst->fd);
 							pInst->fd = 0;
 
-							char *pszNewFName = (char*)malloc(strlen(pszCurrFName)+pInst->filename_oversize);
+							char *pszNewFName = (char*)malloc(strlen(pszCurrFName)+
+															pInst->filename_oversize);
 							memcpy(pszNewFName, pszCurrFName, matches[0].rm_so);
 							strcpy((char*)pszNewFName + matches[0].rm_so, pInst->ff_reject);
 
 							if (rename(pszCurrFName, pszNewFName))
 							{
 								LogError(0, RS_RET_STREAM_DISABLED,
-										"imbatchreport: module stops because it was unable to rename form %s to %s.",
-										pszCurrFName , pszNewFName);
+									"imbatchreport: module stops because it was unable to "
+									"rename form %s to %s.", pszCurrFName , pszNewFName);
 								pInst->must_stop = 1;
 							}
 							else
-								DBGPRINTF("imbatchreport : file %s renamed to %s due to error while reading it.\n", 
-											pszCurrFName, pszNewFName);
+								DBGPRINTF("imbatchreport : file %s renamed to %s due to error "
+									"while reading it.\n", pszCurrFName, pszNewFName);
 							free(pszNewFName);
 
 						} /* if (file_in_buffer == msg_len) */
@@ -698,20 +707,21 @@ CODESTARTnewInpInst
 					inst->ff_reject = strdup(inst->ff_reject);
 					inst->len_reject = strlen(inst->ff_reject);
 
-					if (inst->len_reject && regcomp(&inst->ff_preg, (char*)inst->ff_regex, REG_EXTENDED))
+					if (inst->len_reject && regcomp(&inst->ff_preg, (char*)inst->ff_regex,
+							REG_EXTENDED))
 					{
-					  inst->len_reject = 0;
-					  LogError(0, RS_RET_SYNTAX_ERROR,
+						inst->len_reject = 0;
+						LogError(0, RS_RET_SYNTAX_ERROR,
 							"The first part of 'rename' parameter does not contain a valid regex");
-							ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
+						ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
 					}
 				}
 			}
 			if (inst->len_reject == 0)
 			{
 				LogError(0, RS_RET_PARAM_ERROR,
-					"'rename' must specify THREE parameters separated by exactly ONE space ! The second "
-					"parameter can be a null string to get this use a '-'.");
+					"'rename' must specify THREE parameters separated by exactly ONE space "
+					"! The second parameter can be a null string to get this use a '-'.");
 					ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 			}
 
@@ -738,11 +748,12 @@ CODESTARTnewInpInst
 				inst->ff_reject = strdup(inst->ff_reject);
 				inst->len_reject = strlen(inst->ff_reject);
 
-				if (inst->len_reject && regcomp(&inst->ff_preg, (char*)inst->ff_regex, REG_EXTENDED))
+				if (inst->len_reject && regcomp(&inst->ff_preg,
+						(char*)inst->ff_regex, REG_EXTENDED))
 				{
 					inst->len_reject = 0;
 					LogError(0, RS_RET_SYNTAX_ERROR,
-							"The first part of 'delete' parameter does not contain a valid regex");
+						"The first part of 'delete' parameter does not contain a valid regex");
 					  ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
 				}
 

@@ -348,7 +348,8 @@ static void* run_connection_routine(void* arg)
 					/* if 3 tries */
 					if (self->serverActive->failures == 3) {
 						/* on usual server switch to backup server */
-						if (self->serverActive == &self->serverPrefered && self->serverRescue.s.host)
+						if (self->serverActive == &self->serverPrefered &&
+								self->serverRescue.s.host)
 							self->serverActive = &self->serverRescue;
 					}
 				}
@@ -357,7 +358,8 @@ static void* run_connection_routine(void* arg)
 	
 			if (self->a_conn == NULL)
 			{
-				LogError(0, RS_RET_RABBITMQ_CONN_ERR, "omrabbitmq module connection failed 3 times on each server.");
+				LogError(0, RS_RET_RABBITMQ_CONN_ERR, "omrabbitmq module connection failed "
+						"3 times on each server.");
 			}
 			else
 			{
@@ -383,17 +385,19 @@ static void* run_connection_routine(void* arg)
 
 						result = amqp_simple_wait_frame_noblock(self->a_conn, &frame, &delay);
 
-						/* if connected to rescue server then check if usual server is alive. if so
-						 * then disconnect from rescue */
+						/* if connected to rescue server then check if usual server is alive.
+						 * if so then disconnect from rescue */
 						if (result == AMQP_STATUS_TIMEOUT &&
-							(new_conn = tryConnection(self, &(self->serverPrefered.s))) != NULL) {
+								(new_conn = tryConnection(self, &(self->serverPrefered.s)))
+								!= NULL) {
 							amqp_connection_state_t old_conn = self->a_conn;
 							d_pthread_mutex_lock(&self->send_mutex);
 							self->a_conn = new_conn;
 							self->serverActive = &self->serverPrefered;
 							self->serverActive->failures = 0;
 							d_pthread_mutex_unlock(&self->send_mutex);
-							DBGPRINTF("omrabbitmq module %d: reconnects to usual server.\n", self->iidx);
+							DBGPRINTF("omrabbitmq module %d: reconnects to usual server.\n",
+										self->iidx);
 							amqp_connection_close(old_conn, 200);
 							amqp_destroy_connection(old_conn);
 						}
@@ -411,25 +415,25 @@ static void* run_connection_routine(void* arg)
 					case AMQP_STATUS_TIMEOUT:
 						break;
 					case AMQP_STATUS_NO_MEMORY:
-						LogError(0, RS_RET_OUT_OF_MEMORY, "omrabbitmq module %d/%d: no memory : aborting module.",
-							self->iidx, self->widx);
+						LogError(0, RS_RET_OUT_OF_MEMORY, "omrabbitmq module %d/%d: no memory "
+							": aborting module.", self->iidx, self->widx);
 						go_on = 0; /* non recoverable error let's go out */
 						connected = 0;
 						state_out = RS_RET_DISABLE_ACTION;
 						break;
 					case AMQP_STATUS_BAD_AMQP_DATA:
-						LogError(0, RS_RET_RABBITMQ_CONN_ERR, "omrabbitmq module %d/%d: bad data received : "
-								"reconnect.", self->iidx, self->widx);
+						LogError(0, RS_RET_RABBITMQ_CONN_ERR, "omrabbitmq module %d/%d: bad "
+							"data received : reconnect.", self->iidx, self->widx);
 						connected = 0;
 						break;
 					case AMQP_STATUS_SOCKET_ERROR:
-						LogError(0, RS_RET_RABBITMQ_CONN_ERR, "omrabbitmq module %d/%d: Socket error : reconnect.",
-								self->iidx, self->widx);
+						LogError(0, RS_RET_RABBITMQ_CONN_ERR, "omrabbitmq module %d/%d: Socket"
+							" error : reconnect.", self->iidx, self->widx);
 						connected = 0;
 						break;
 					case AMQP_STATUS_CONNECTION_CLOSED:
-						LogError(0, RS_RET_OUT_OF_MEMORY, "omrabbitmq module %d/%d: Connection closed : reconnect.",
-								self->iidx, self->widx);
+						LogError(0, RS_RET_OUT_OF_MEMORY, "omrabbitmq module %d/%d: Connection"
+							" closed : reconnect.", self->iidx, self->widx);
 						connected = 0;
 						break;
 					case AMQP_STATUS_OK:
@@ -444,29 +448,35 @@ static void* run_connection_routine(void* arg)
 								go_on = 0;
 								break;
 							case AMQP_CHANNEL_CLOSE_METHOD:
-								LogMsg(0, RS_RET_OK, LOG_WARNING, "omrabbitmq module %d/%d: Close Channel Received (%X).",
+								LogMsg(0, RS_RET_OK, LOG_WARNING,
+										"omrabbitmq module %d/%d: Close Channel Received (%X).",
 										self->iidx, self->widx, frame.payload.method.id);
 								{
 									amqp_channel_close_ok_t req;
 									req.dummy = '\0';
 									// send the method
-									amqp_send_method(self->a_conn, frame.channel, AMQP_CHANNEL_CLOSE_OK_METHOD, &req);
+									amqp_send_method(self->a_conn, frame.channel,
+												AMQP_CHANNEL_CLOSE_OK_METHOD, &req);
 								}
 								break;
 							case AMQP_CONNECTION_CLOSE_METHOD:
-								LogMsg(0, RS_RET_OK, LOG_WARNING, "omrabbitmq module %d/%d: Close Connection "
-										"Received (%X).", self->iidx, self->widx, frame.payload.method.id);
+								LogMsg(0, RS_RET_OK, LOG_WARNING,
+										"omrabbitmq module %d/%d: Close Connection Received (%X).",
+										self->iidx, self->widx, frame.payload.method.id);
 								{
 								 amqp_connection_close_ok_t req;
 								 req.dummy = '\0';
 								 // send the method
-								 amqp_send_method(self->a_conn, frame.channel, AMQP_CONNECTION_CLOSE_OK_METHOD, &req);
+								 amqp_send_method(self->a_conn, frame.channel,
+										AMQP_CONNECTION_CLOSE_OK_METHOD, &req);
 								}
 								connected = 0;
 								break;
 							default :
-								LogMsg(0, RS_RET_OK, LOG_WARNING, "omrabbitmq module %d/%d: unmanaged amqp method"
-											" received (%X) : ignored.", self->iidx, self->widx, frame.payload.method.id);
+								LogMsg(0, RS_RET_OK, LOG_WARNING,
+									"omrabbitmq module %d/%d: unmanaged amqp method"
+									" received (%X) : ignored.",
+									self->iidx, self->widx, frame.payload.method.id);
 							} /* switch (frame.payload.method.id) */
 						}
 						break;
@@ -576,8 +586,9 @@ typedef struct _msg2amqp_props_ {
 	int flag;
 	} msg2amqp_props_t;
 
-static rsRetVal publishRabbitMQ(wrkrInstanceData_t *self, amqp_bytes_t exchange, amqp_bytes_t routing_key, 
-		amqp_basic_properties_t *p_amqp_props, amqp_bytes_t body_bytes)
+static rsRetVal publishRabbitMQ(wrkrInstanceData_t *self, amqp_bytes_t exchange, 
+		amqp_bytes_t routing_key, amqp_basic_properties_t *p_amqp_props,
+		amqp_bytes_t body_bytes)
 {
 	DEFiRet;
 	d_pthread_mutex_lock(&self->send_mutex);
@@ -655,7 +666,8 @@ CODESTARTdoAction
 			pProp.id = prop_list[i].id;
 			valLen[i] = 0;
 			mustBeFreed[i] = 0;
-			val[i] = (uchar*)MsgGetProp(msg, NULL, &pProp, &(valLen[i]), &(mustBeFreed[i]), NULL);
+			val[i] = (uchar*)MsgGetProp(msg, NULL, &pProp, &(valLen[i]),
+						&(mustBeFreed[i]), NULL);
 			if (val[i] && *val[i])
 			{
 				if (prop_list[i].name && amqp_props.headers.entries)
@@ -678,10 +690,10 @@ CODESTARTdoAction
 
 		/* CHKiRet could not be used because we need to release allocations */
 		iRet = publishRabbitMQ(pWrkrData, pWrkrData->pData->exchange,
-					(pWrkrData->pData->routing_key_template)?
-						cstring_bytes((char*)ppString[pWrkrData->pData->idx_routing_key_template]) :
-						pWrkrData->pData->routing_key,
-					&amqp_props, body_bytes);
+				(pWrkrData->pData->routing_key_template)?
+					cstring_bytes((char*)ppString[pWrkrData->pData->idx_routing_key_template])
+					: pWrkrData->pData->routing_key,
+				&amqp_props, body_bytes);
 
 		for (i=0; i<len; i++)
 			if (mustBeFreed[i]) free(val[i]);
@@ -690,10 +702,10 @@ CODESTARTdoAction
 	{
 		/* As CHKiRet could not be used earlier, iRet is directly used again */
 		iRet = publishRabbitMQ(pWrkrData, pWrkrData->pData->exchange,
-					(pWrkrData->pData->routing_key_template)?
-						cstring_bytes((char*)ppString[pWrkrData->pData->idx_routing_key_template]) :
-						pWrkrData->pData->routing_key,
-					amqp_props_msg, body_bytes);
+				(pWrkrData->pData->routing_key_template)?
+					cstring_bytes((char*)ppString[pWrkrData->pData->idx_routing_key_template])
+					: pWrkrData->pData->routing_key,
+				amqp_props_msg, body_bytes);
 	}
 
 ENDdoAction
@@ -888,7 +900,8 @@ CODESTARTnewActInst
 	}
 
 	/* first if a template for message body is set let verify its existence */
-	if (pData->body_template && tplFind(ourConf, (char*)pData->body_template, strlen((char*)pData->body_template)) == NULL)
+	if (pData->body_template && tplFind(ourConf, (char*)pData->body_template, strlen((char*)pData->body_template))
+		== NULL)
 	{
 		LogError(0, RS_RET_CONF_PARAM_INVLD, "omrabbitmq module %d : template '%s' used for body does not exist !",
 				pData->iidx, pData->body_template);
