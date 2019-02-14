@@ -279,262 +279,262 @@ static rsRetVal pollFile(instanceConf_t *pInst)
 
 				if (!stat(pszCurrFName, &fstate) && S_ISREG(fstate.st_mode) )
 				{
-					regmatch_t matches[1];
+				  regmatch_t matches[1];
 
-					if (regexec(&pInst->ff_preg, pszCurrFName, 1, matches, 0))
-					{ /* as this test was already made on glob's file search it
-					   * must not be possible but let's check it anyway */
-						LogError(0, RS_RET_INVALID_PARAMS,
-								"imbatchreport: regex does not match to "
-								"filename: Aborting module to avoid loops.");
-						pInst->must_stop = TRUE;
+				  if (regexec(&pInst->ff_preg, pszCurrFName, 1, matches, 0))
+				  { /* as this test was already made on glob's file search it
+				     * must not be possible but let's check it anyway */
+				    LogError(0, RS_RET_INVALID_PARAMS,
+				      "imbatchreport: regex does not match to "
+				      "filename: Aborting module to avoid loops.");
+				      pInst->must_stop = TRUE;
 
-						globfree(&res);
-						return RS_RET_INVALID_PARAMS;
-					}
+				    globfree(&res);
+				    return RS_RET_INVALID_PARAMS;
+				  }
 
-					pInst->fd = open(pszCurrFName, O_NOCTTY | O_RDONLY |
-							O_NONBLOCK | O_LARGEFILE, 0);
+				  pInst->fd = open(pszCurrFName, O_NOCTTY | O_RDONLY |
+				        O_NONBLOCK | O_LARGEFILE, 0);
 
-					if (pInst->fd > 0)
-					{
-						size_t file_len, file_in_buffer, msg_len;
-						char *filename;
+				  if (pInst->fd > 0)
+				  {
+				    size_t file_len, file_in_buffer, msg_len;
+				    char *filename;
 
-						uchar *local_program = (uchar*)"-";
-						size_t local_program_len = 1;
+				    uchar *local_program = (uchar*)"-";
+				    size_t local_program_len = 1;
 
-						time_t start_ts = fstate.st_ctim.tv_sec;
+				    time_t start_ts = fstate.st_ctim.tv_sec;
 
-						file_len = lseek(pInst->fd, 0, SEEK_END);
+				    file_len = lseek(pInst->fd, 0, SEEK_END);
 
-						filename = strrchr(pszCurrFName, '/');
-						if (filename)
-							filename++;
-						else
-							filename = pszCurrFName;
+				    filename = strrchr(pszCurrFName, '/');
+				    if (filename)
+				      filename++;
+				    else
+				      filename = pszCurrFName;
 
-						/* First read the end of the file to get Structured Data */
+				    /* First read the end of the file to get Structured Data */
 
-						msg_len = (file_len < BUFFER_MINSIZE) ? file_len : BUFFER_MINSIZE;
+				    msg_len = (file_len < BUFFER_MINSIZE) ? file_len : BUFFER_MINSIZE;
 
-						lseek(pInst->fd, -msg_len, SEEK_END);
+				    lseek(pInst->fd, -msg_len, SEEK_END);
 
-						file_in_buffer = read(pInst->fd, fixedModConf.buffer_minsize, msg_len);
-						DBGPRINTF("imbatchreport : file end read %ld %ld\n",
-									file_in_buffer, msg_len);
+				    file_in_buffer = read(pInst->fd, fixedModConf.buffer_minsize, msg_len);
+				    DBGPRINTF("imbatchreport : file end read %ld %ld\n",
+				          file_in_buffer, msg_len);
 
 
-						if (file_in_buffer == msg_len)
-						{
-							for (; msg_len && fixedModConf.buffer_minsize[msg_len-1]
-									== '\n'; msg_len--)
-								;
+				    if (file_in_buffer == msg_len)
+				    {
+				      for (; msg_len && fixedModConf.buffer_minsize[msg_len-1]
+				          == '\n'; msg_len--)
+				        ;
 
-							if (fixedModConf.buffer_minsize[msg_len-1] == ']')
-							{ /* We read the last part of the report to get
-							   * structured data */
+				      if (fixedModConf.buffer_minsize[msg_len-1] == ']')
+				      { /* We read the last part of the report to get
+				         * structured data */
 
-								for (structured_data =
-										fixedModConf.buffer_minsize + msg_len,
-										structured_data_len = 0;
-									structured_data >= fixedModConf.buffer_minsize
-										&& *structured_data != '[';
-									structured_data--, structured_data_len++)
-									;
+				        for (structured_data =
+				            fixedModConf.buffer_minsize + msg_len,
+				            structured_data_len = 0;
+				          structured_data >= fixedModConf.buffer_minsize
+				            && *structured_data != '[';
+				          structured_data--, structured_data_len++)
+				          ;
 
-								if (*structured_data == '[')
-								{
-									uchar *struct_field = (uchar*)strstr((char*)
-											structured_data, "START="), v;
-									if (struct_field)
-									{
-										start_ts = 0;
-										for (struct_field += 7;
-											(v = *struct_field -
-												(uchar)'0') <= 9;
-											struct_field++ )
-											start_ts = start_ts*10 + v;
-									}
+				        if (*structured_data == '[')
+				        {
+				          uchar *struct_field = (uchar*)strstr((char*)
+				              structured_data, "START="), v;
+				          if (struct_field)
+				          {
+				            start_ts = 0;
+				            for (struct_field += 7;
+				              (v = *struct_field -
+				                (uchar)'0') <= 9;
+				              struct_field++ )
+				              start_ts = start_ts*10 + v;
+				          }
 
-									struct_field = (uchar*)strstr(
-											(char*)structured_data,
-											"KSH=\"");
-									if (struct_field)
-									{
-										local_program = struct_field + 5;
-										struct_field = (uchar*)strstr(
-												(char*)local_program,
-												"\"");
-										if (struct_field)
-											local_program_len =
-												struct_field -
-												local_program;
-										else
-											local_program = (uchar*)"-";
-									}
+				          struct_field = (uchar*)strstr(
+				              (char*)structured_data,
+				              "KSH=\"");
+				          if (struct_field)
+				          {
+				            local_program = struct_field + 5;
+				            struct_field = (uchar*)strstr(
+				                (char*)local_program,
+				                "\"");
+				            if (struct_field)
+				              local_program_len =
+				                struct_field -
+				                local_program;
+				            else
+				              local_program = (uchar*)"-";
+				          }
 
-									msg_len -= structured_data_len;
-								}
-								else
-								{
-									structured_data = NULL;
-									structured_data_len = 0;
-								}
-							} /* if (fixedModConf.buffer_minsize[msg_len -1] == ']') */
+				          msg_len -= structured_data_len;
+				        }
+				        else
+				        {
+				          structured_data = NULL;
+				          structured_data_len = 0;
+				        }
+				      } /* if (fixedModConf.buffer_minsize[msg_len -1] == ']') */
 
-							if (file_len > fixedModConf.msg_size)
-							{
-								if ((size_t)(structured_data_len + FILE_TOO_LARGE_LEN) >
-										fixedModConf.msg_size)
-								{
-									LogError(0, RS_RET_INVALID_PARAMS,
-										"pollFile : the msg_size options (%lu)"
-										" is really too small even to handle"
-										" batch reports notification of %ld"
-										" octets (file too large)",
-										fixedModConf.msg_size,
-											60 + fixedModConf.lhostname +
-												pInst->lenTag +
-												structured_data_len);
-									pInst->must_stop = 1;
+				      if (file_len > fixedModConf.msg_size)
+				      {
+				        if ((size_t)(structured_data_len + FILE_TOO_LARGE_LEN) >
+				            fixedModConf.msg_size)
+				        {
+				          LogError(0, RS_RET_INVALID_PARAMS,
+				            "pollFile : the msg_size options (%lu)"
+				            " is really too small even to handle"
+				            " batch reports notification of %ld"
+				            " octets (file too large)",
+				            fixedModConf.msg_size,
+				              60 + fixedModConf.lhostname +
+				                pInst->lenTag +
+				                structured_data_len);
+				          pInst->must_stop = 1;
 
-									close(pInst->fd);
-									pInst->fd = -1;
+				          close(pInst->fd);
+				          pInst->fd = -1;
 
-									globfree(&res);
-									return RS_RET_INVALID_PARAMS;
-								}
+				          globfree(&res);
+				          return RS_RET_INVALID_PARAMS;
+				        }
 
-								LogError(0, RS_RET_INVALID_PARAMS,
-									"pollFile : the batch report is too "
-									"large (rejecting) filename=%s,"
-									"max_size=%lu, msg_size=%ld",
-									pszCurrFName, fixedModConf.msg_size,
-									file_len);
+				        LogError(0, RS_RET_INVALID_PARAMS,
+				          "pollFile : the batch report is too "
+				          "large (rejecting) filename=%s,"
+				          "max_size=%lu, msg_size=%ld",
+				          pszCurrFName, fixedModConf.msg_size,
+				          file_len);
 
-								toolarge = 1;
+				        toolarge = 1;
 
-								start = (uchar*)FILE_TOO_LARGE;
+				        start = (uchar*)FILE_TOO_LARGE;
 
-								msg_len = FILE_TOO_LARGE_LEN;
-							}
-							else
-							{
-								if (file_len > file_in_buffer)
-								{
-									size_t file_to_read = file_len -
-											file_in_buffer,
-											buffer_used = 0, r;
-									start = fixedModConf.buffer_minsize -
-												file_to_read;
+				        msg_len = FILE_TOO_LARGE_LEN;
+				      }
+				      else
+				      {
+				        if (file_len > file_in_buffer)
+				        {
+				          size_t file_to_read = file_len -
+				              file_in_buffer,
+				              buffer_used = 0, r;
+				          start = fixedModConf.buffer_minsize -
+				                file_to_read;
 
-									lseek(pInst->fd, 0, SEEK_SET);
+				          lseek(pInst->fd, 0, SEEK_SET);
 
-									do
-									{
-										r = read(pInst->fd, start + buffer_used,
-											file_to_read - buffer_used);
-										buffer_used += r;
-									}
-									while (r && file_to_read > buffer_used);
+				          do
+				          {
+				            r = read(pInst->fd, start + buffer_used,
+				              file_to_read - buffer_used);
+				            buffer_used += r;
+				          }
+				          while (r && file_to_read > buffer_used);
 
-									msg_len += file_to_read;
+				          msg_len += file_to_read;
 
-								}
-								else
-									start = fixedModConf.buffer_minsize;
+				        }
+				        else
+				          start = fixedModConf.buffer_minsize;
 
-								for (uchar*p=start+msg_len; p>=start; p--)
-									if (!*p) *p = ' ';
-							}
+				        for (uchar*p=start+msg_len; p>=start; p--)
+				          if (!*p) *p = ' ';
+				      }
 
-							close(pInst->fd);
-							pInst->fd = 0;
+				      close(pInst->fd);
+				      pInst->fd = 0;
 
-							struct timeval tv;
+				      struct timeval tv;
 
-							tv.tv_sec = fstate.st_mtime;
-							tv.tv_usec = fstate.st_mtim.tv_nsec / 1000;
+				      tv.tv_sec = fstate.st_mtime;
+				      tv.tv_usec = fstate.st_mtim.tv_nsec / 1000;
 
-							if (send_msg(pInst, start, (start[msg_len]=='\n') ?
-									msg_len : msg_len+1,
-									&tv, start_ts, structured_data,
-									structured_data_len,
-									local_program, local_program_len,
-									(uchar*)pszCurrFName) == RS_RET_OK)
-							{
-								if (pInst->action == action_rename || toolarge)
-								{
-									char *pszNewFName =
-										(char*)malloc(strlen(pszCurrFName)+
-											pInst->filename_oversize);
-									memcpy(pszNewFName, pszCurrFName,
-											matches[0].rm_so);
-									strcpy((char*)pszNewFName + matches[0].rm_so,
-										(toolarge) ? pInst->ff_reject :
-											pInst->ff_rename);
+				      if (send_msg(pInst, start, (start[msg_len]=='\n') ?
+				          msg_len : msg_len+1,
+				          &tv, start_ts, structured_data,
+				          structured_data_len,
+				          local_program, local_program_len,
+				          (uchar*)pszCurrFName) == RS_RET_OK)
+				      {
+				        if (pInst->action == action_rename || toolarge)
+				        {
+				          char *pszNewFName =
+				            (char*)malloc(strlen(pszCurrFName)+
+				              pInst->filename_oversize);
+				          memcpy(pszNewFName, pszCurrFName,
+				              matches[0].rm_so);
+				          strcpy((char*)pszNewFName + matches[0].rm_so,
+				            (toolarge) ? pInst->ff_reject :
+				              pInst->ff_rename);
 
-									if (rename(pszCurrFName, pszNewFName))
-									{
-										LogError(0, RS_RET_STREAM_DISABLED,
-												"imbatchreport: module stops"
-												" because it was unable to "
-												"rename form %s to %s.",
-												pszCurrFName , pszNewFName);
-										pInst->must_stop = 1;
-									}
-									else
-										DBGPRINTF("imbatchreport : file %s sent "
-													"and renamed to %s.\n", 
-													pszCurrFName, pszNewFName);
-									free(pszNewFName);
-								}
-								else
-								{
-									if (unlink(pszCurrFName))
-									{
-										LogError(0, RS_RET_STREAM_DISABLED,
-											"imbatchreport: module stops because"
-											" it was unable to delete %s."
-											, pszCurrFName);
-										pInst->must_stop = 1;
-									}
-									else
-										DBGPRINTF("imbatchreport : file %s"
-												"sent and deleted\n",
-												pszCurrFName);
-								}
-							}
-						} /* if (file_in_buffer == msg_len) */
-						else
-						{ /* if (file_in_buffer == msg_len) */
-							/* failed to read end of file so rename it */
-							close(pInst->fd);
-							pInst->fd = 0;
+				          if (rename(pszCurrFName, pszNewFName))
+				          {
+				            LogError(0, RS_RET_STREAM_DISABLED,
+				                "imbatchreport: module stops"
+				                " because it was unable to "
+				                "rename form %s to %s.",
+				                pszCurrFName , pszNewFName);
+				            pInst->must_stop = 1;
+				          }
+				          else
+				            DBGPRINTF("imbatchreport : file %s sent "
+				                  "and renamed to %s.\n", 
+				                  pszCurrFName, pszNewFName);
+				          free(pszNewFName);
+				        }
+				        else
+				        {
+				          if (unlink(pszCurrFName))
+				          {
+				            LogError(0, RS_RET_STREAM_DISABLED,
+				              "imbatchreport: module stops because"
+				              " it was unable to delete %s."
+				              , pszCurrFName);
+				            pInst->must_stop = 1;
+				          }
+				          else
+				            DBGPRINTF("imbatchreport : file %s"
+				                "sent and deleted\n",
+				                pszCurrFName);
+				        }
+				      }
+				    } /* if (file_in_buffer == msg_len) */
+				    else
+				    { /* if (file_in_buffer == msg_len) */
+				      /* failed to read end of file so rename it */
+				      close(pInst->fd);
+				      pInst->fd = 0;
 
-							char *pszNewFName = (char*)malloc(strlen(pszCurrFName)+
-											pInst->filename_oversize);
-							memcpy(pszNewFName, pszCurrFName, matches[0].rm_so);
-							strcpy((char*)pszNewFName + matches[0].rm_so,
-									pInst->ff_reject);
+				      char *pszNewFName = (char*)malloc(strlen(pszCurrFName)+
+				              pInst->filename_oversize);
+				      memcpy(pszNewFName, pszCurrFName, matches[0].rm_so);
+				      strcpy((char*)pszNewFName + matches[0].rm_so,
+				          pInst->ff_reject);
 
-							if (rename(pszCurrFName, pszNewFName))
-							{
-								LogError(0, RS_RET_STREAM_DISABLED,
-									"imbatchreport: module stops because it"
-									" was unable to rename form %s to %s.",
-									pszCurrFName , pszNewFName);
-								pInst->must_stop = 1;
-							}
-							else
-								DBGPRINTF("imbatchreport : file %s renamed to"
-									" %s due to error while reading it.\n",
-									pszCurrFName, pszNewFName);
-							free(pszNewFName);
+				      if (rename(pszCurrFName, pszNewFName))
+				      {
+				        LogError(0, RS_RET_STREAM_DISABLED,
+				          "imbatchreport: module stops because it"
+				          " was unable to rename form %s to %s.",
+				          pszCurrFName , pszNewFName);
+				        pInst->must_stop = 1;
+				      }
+				      else
+				        DBGPRINTF("imbatchreport : file %s renamed to"
+				          " %s due to error while reading it.\n",
+				          pszCurrFName, pszNewFName);
+				      free(pszNewFName);
 
-						} /* if (file_in_buffer == msg_len) */
-					} /* if (pInst->fd > 0) */
+				    } /* if (file_in_buffer == msg_len) */
+				  } /* if (pInst->fd > 0) */
 				} /* if stat */
 			} /* for */
 		} /* glob */
@@ -699,7 +699,7 @@ CODESTARTnewInpInst
 			if (inst->action == action_delete)
 			{
 				LogError(0, RS_RET_PARAM_ERROR,
-					"'rename' and 'delete' are exclusive !");
+				  "'rename' and 'delete' are exclusive !");
 				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 			}
 
@@ -711,39 +711,39 @@ CODESTARTnewInpInst
 				*inst->ff_rename++ = '\0';
 				if ((inst->ff_reject = strchr(inst->ff_rename, ' ')) != NULL ) {
 
-					*inst->ff_reject++ = '\0';
-					temp = strchr(inst->ff_reject, ' ');
-					if (temp) *temp = '\0';
+				  *inst->ff_reject++ = '\0';
+				  temp = strchr(inst->ff_reject, ' ');
+				  if (temp) *temp = '\0';
 
-					if (strcmp(inst->ff_rename, "-")){
-					  inst->ff_rename = strdup(inst->ff_rename);
-					  inst->len_rename = strlen(inst->ff_rename);
-					}else{
-					  inst->ff_rename = strdup("");
-					  inst->len_rename = 0;
-					}
+				  if (strcmp(inst->ff_rename, "-")){
+				    inst->ff_rename = strdup(inst->ff_rename);
+				    inst->len_rename = strlen(inst->ff_rename);
+				  }else{
+				    inst->ff_rename = strdup("");
+				    inst->len_rename = 0;
+				  }
 
-					inst->ff_reject = strdup(inst->ff_reject);
-					inst->len_reject = strlen(inst->ff_reject);
+				  inst->ff_reject = strdup(inst->ff_reject);
+				  inst->len_reject = strlen(inst->ff_reject);
 
-					if (inst->len_reject && regcomp(&inst->ff_preg,
-							(char*)inst->ff_regex,
-							REG_EXTENDED))
-					{
-						inst->len_reject = 0;
-						LogError(0, RS_RET_SYNTAX_ERROR,
-							"The first part of 'rename' parameter does not"
-							" contain a valid regex");
-						ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
-					}
+				  if (inst->len_reject && regcomp(&inst->ff_preg,
+				      (char*)inst->ff_regex,
+				      REG_EXTENDED))
+				  {
+				    inst->len_reject = 0;
+				    LogError(0, RS_RET_SYNTAX_ERROR,
+				      "The first part of 'rename' parameter does not"
+				      " contain a valid regex");
+				    ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
+				  }
 				}
 			}
 			if (inst->len_reject == 0)
 			{
 				LogError(0, RS_RET_PARAM_ERROR, "'rename' must specify THREE "
-					"parameters separated by exactly ONE space ! The second "
-					"parameter can be a null string to get this use a '-'.");
-					ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+				  "parameters separated by exactly ONE space ! The second "
+				  "parameter can be a null string to get this use a '-'.");
+				  ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 			}
 
 			inst->action = action_rename;
@@ -752,8 +752,8 @@ CODESTARTnewInpInst
 			if (inst->action == action_rename)
 			{
 				LogError(0, RS_RET_PARAM_ERROR,
-					"'rename' and 'delete' are exclusive !");
-					ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+				  "'rename' and 'delete' are exclusive !");
+				  ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 			}
 
 			inst->ff_regex = es_str2cstr(pvals[i].val.d.estr, NULL);
@@ -770,13 +770,13 @@ CODESTARTnewInpInst
 				inst->len_reject = strlen(inst->ff_reject);
 
 				if (inst->len_reject && regcomp(&inst->ff_preg,
-						(char*)inst->ff_regex, REG_EXTENDED))
+				    (char*)inst->ff_regex, REG_EXTENDED))
 				{
-					inst->len_reject = 0;
-					LogError(0, RS_RET_SYNTAX_ERROR,
-						"The first part of 'delete' parameter does not"
-						" contain a valid regex");
-					  ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
+				  inst->len_reject = 0;
+				  LogError(0, RS_RET_SYNTAX_ERROR,
+				    "The first part of 'delete' parameter does not"
+				    " contain a valid regex");
+				  ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
 				}
 
 			}
@@ -784,9 +784,9 @@ CODESTARTnewInpInst
 			if (inst->len_reject == 0)
 			{
 				LogError(0, RS_RET_PARAM_ERROR,
-					"'delete' must specify TWO parameters separated by"
-					" exactly ONE space !");
-					ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+				  "'delete' must specify TWO parameters separated by"
+				  " exactly ONE space !");
+				  ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 			}
 			inst->action = action_delete;
 
@@ -926,7 +926,7 @@ CODESTARTrunInput
 		for(pInst = fixedModConf.root ; pInst != NULL ; pInst = pInst->next) {
 			if (pInst->goon) {
 				if(glbl.GetGlobalInputTermState() == 1)
-					break;
+				  break;
 				pollFile(pInst);
 			}
 		}
