@@ -683,7 +683,7 @@ CODESTARTsetModCnf
 				loadModConf->tlslib = es_str2cstr(pvals[i].val.d.estr, NULL);
 			#else
 				LogError(0, RS_RET_NOT_IMPLEMENTED,
-					"warning: parameter tls.tlslib ignored - librelp does not support "
+					"imrelp warning: parameter tls.tlslib ignored - librelp does not support "
 					"this API call. Using whatever librelp was compiled with.");
 			#endif
 		} else {

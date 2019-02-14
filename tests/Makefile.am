@@ -999,6 +999,7 @@ TESTS += sndrcv_relp.sh \
 	 imrelp-oversizeMode-truncate.sh \
 	 imrelp-oversizeMode-accept.sh \
 	 imrelp-invld-tlslib.sh \
+	 omrelp-invld-tlslib.sh \
 	 sndrcv_relp_dflt_pt.sh \
 	 glbl-oversizeMsg-log.sh \
 	 glbl-oversizeMsg-truncate.sh \
@@ -1662,6 +1663,7 @@ EXTRA_DIST= \
 	imrelp-oversizeMode-truncate.sh \
 	imrelp-oversizeMode-accept.sh \
 	imrelp-invld-tlslib.sh \
+	omrelp-invld-tlslib.sh \
 	glbl-oversizeMsg-log.sh \
 	glbl-oversizeMsg-truncate.sh \
 	glbl-oversizeMsg-split.sh \
