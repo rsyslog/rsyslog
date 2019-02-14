@@ -17,6 +17,9 @@ Version 8.1903.0 (aka 2019.03) 2019-03-05
 - improg new contribution: input module to use external program as input datas
 - imtuxedoulog new contribution: input module to consume Tuxedo ULOG files
 - pmdb2diag new contribution: parser module for DB2 diag logs
+- omhttp: rewritten with large feature enhancements
+  Many thanks to Gabriel Intrator for this work. Gabriel also has adopted the
+  module and plans to support it in the future.
 - imptcp bugfix: overly long socket bind path can lead to segfault
   if the `path` input parameter is overly long (e.g. more than 108
   characters on some platforms) a non-terminated string is generated
