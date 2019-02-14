@@ -59,32 +59,32 @@
 #include "ratelimit.h"
 
 struct instanceConf_s {
-  uchar *pszUlogBaseName;
-  uchar *pszCurrFName;
-  struct tm currTm;
-  uchar *pszTag;
-  size_t lenTag;
-  uchar *pszStructuredDataName;
-  size_t lenStructuredDataName;
-  uchar *pszStateFile;
-  uchar *pszBindRuleset;
-  int nMultiSub;
-  int iPersistStateInterval;
-  int iFacility;
-  int iSeverity;
-  strm_t *pStrm;  /* its stream (NULL if not assigned) */
-  int maxLinesAtOnce;
-  ruleset_t *pBindRuleset;  /* ruleset to bind listener to (use system default if unspecified) */
-  ratelimit_t *ratelimiter;
-  multi_submit_t multiSub;
-  int nRecords;
-  struct instanceConf_s *next;
-  struct instanceConf_s *prev;
+	uchar *pszUlogBaseName;
+	uchar *pszCurrFName;
+	struct tm currTm;
+	uchar *pszTag;
+	size_t lenTag;
+	uchar *pszStructuredDataName;
+	size_t lenStructuredDataName;
+	uchar *pszStateFile;
+	uchar *pszBindRuleset;
+	int nMultiSub;
+	int iPersistStateInterval;
+	int iFacility;
+	int iSeverity;
+	strm_t *pStrm;	/* its stream (NULL if not assigned) */
+	int maxLinesAtOnce;
+	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
+	ratelimit_t *ratelimiter;
+	multi_submit_t multiSub;
+	int nRecords;
+	struct instanceConf_s *next;
+	struct instanceConf_s *prev;
 };
 
 /* config variables */
 struct modConfData_s {
-  rsconf_t *pConf;  /* our overall config object */
+	rsconf_t *pConf;  /* our overall config object */
 };
 
 static instanceConf_t *confRoot = NULL;
@@ -132,9 +132,9 @@ DEFobjCurrIf(ruleset)
 #pragma pack(push,1)
 #endif
 typedef
-  union {
-    uint64_t ui64;
-    uchar uc[8];
+	union {
+		uint64_t ui64;
+		uchar uc[8];
 } date6_t;
 #pragma pack(pop)
 
@@ -157,20 +157,20 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "structureddataname", eCmdHdlrString, 0},
 	{ "ruleset", eCmdHdlrString, 0 },
 	{ "maxlinesatonce", eCmdHdlrInt, 0 },
-  { "persiststateinterval", eCmdHdlrInt, 0 },
+	{ "persiststateinterval", eCmdHdlrInt, 0 },
 	{ "maxsubmitatonce", eCmdHdlrInt, 0 }
 };
 static struct cnfparamblk inppblk =
 	{ CNFPARAMBLK_VERSION,
-	  sizeof(inppdescr)/sizeof(struct cnfparamdescr),
-	  inppdescr
+		sizeof(inppdescr)/sizeof(struct cnfparamdescr),
+		inppdescr
 	};
 
 #include "im-helper.h" /* must be included AFTER the type definitions! */
 
 static uchar * mkFileNameWithTime(instanceConf_t *in)
 {
-  uchar out[MAXFNAME];
+	uchar out[MAXFNAME];
 	struct timeval tp;
 #if defined(__hpux)
 	struct timezone tz;
@@ -180,7 +180,7 @@ static uchar * mkFileNameWithTime(instanceConf_t *in)
 #endif
 	localtime_r(&tp.tv_sec, &(in->currTm));
 	snprintf((char*)out, MAXFNAME, "%s.%02d%02d%02d", (char*)in->pszUlogBaseName,
-	         in->currTm.tm_mon+1, in->currTm.tm_mday, in->currTm.tm_year % 100);
+			in->currTm.tm_mon+1, in->currTm.tm_mday, in->currTm.tm_year % 100);
 	return ustrdup(out);
 }
 
@@ -197,7 +197,7 @@ static int getFullStateFileName(uchar* pszstatefile, uchar* pszout, int ilenout)
 
 	/* Construct file name */
 	lenout = snprintf((char*)pszout, ilenout, "%s/%s",
-			     (char*) (pszworkdir == NULL ? "." : (char*) pszworkdir), (char*)pszstatefile);
+					(char*) (pszworkdir == NULL ? "." : (char*) pszworkdir), (char*)pszstatefile);
 
 	/* return out length */
 	return lenout;
@@ -209,9 +209,9 @@ static int getFullStateFileName(uchar* pszstatefile, uchar* pszout, int ilenout)
  * RETURN VALUE!
  */
 static uchar * ATTR_NONNULL(2) getStateFileName(instanceConf_t *const __restrict__ pInst,
-	 	 uchar *const __restrict__ buf,
-		 const size_t lenbuf,
-		 const uchar *pszFileName)
+		uchar *const __restrict__ buf,
+		const size_t lenbuf,
+		const uchar *pszFileName)
 {
 	uchar *ret;
 
@@ -235,121 +235,109 @@ static uchar * ATTR_NONNULL(2) getStateFileName(instanceConf_t *const __restrict
 }
 
 static rsRetVal parseMsg(smsg_t *pMsg, char *rawMsg, size_t msgLen,
-                         instanceConf_t *const __restrict__ pInst) {
-  char *prog, *host, *text, *ecid, *t;
-  char *newMsg;
-  int lprog, lcid;
+						instanceConf_t *const __restrict__ pInst) {
+	char *prog, *host, *text, *ecid, *t;
+	char *newMsg;
+	int lprog, lcid;
 
-  dbgprintf("Message will now be parsed.\n");
-/*
+	dbgprintf("Message will now be parsed.\n");
 
-Case 1 :
-105211.704.host___!IMSproxiCSFI4EC.26607818.1.0: ECID <000003GBORvD4iopwSXBiW01xG2M00001n>: 4563628752 ; I ;TPSUCCESS service
-           ^host  ^prog                lprog>          ^ecid                              ^text
+	host = rawMsg + ((rawMsg[10] == '.') ? 11 : 10);
 
-Case 2 :
-011458.705.sic-tst-tmsl1!LMS.5243392.772.3: TSAM_CAT:305: WARN: (23498) times logon TSAM Plus manager fail
-           ^host        ^prog     lprog>  ^text
-ecid is ignored in this case
+	date6_t t1, t2;
+	t1.ui64 = be64toh(*((uint64_t*)rawMsg)) >> 16;
+	uint64_t t3 = (t1.ui64 & 0x0000F0F0F0F0F0F0) ^ 0x0000303030303030; /* check that every char is like 0x3N what ever is N */
+	t2.ui64 = t1.ui64 & 0x00000F0F0F0F0F0F; /* we keep only the n part of 0xMN what ever is M */
 
- */
-
-  host = rawMsg + ((rawMsg[10] == '.') ? 11 : 10);
-
-  date6_t t1, t2;
-  t1.ui64 = be64toh(*((uint64_t*)rawMsg)) >> 16;
-  uint64_t t3 = (t1.ui64 & 0x0000F0F0F0F0F0F0) ^ 0x0000303030303030; /* check that every char is like 0x3N what ever is N */
-  t2.ui64 = t1.ui64 & 0x00000F0F0F0F0F0F; /* we keep only the n part of 0xMN what ever is M */
-
-  /* so just check that t2 is 0 and each N part is not more than 9 */
-  if (t3 || t2.UC0 > 9 || t2.UC1 > 9 || t2.UC2 > 9
-    || t2.UC3 > 9 || t2.UC4 > 9 || t2.UC5 > 9
-    || host[-1] != '.'
-    || (prog = memchr(host, '!', msgLen-(host - rawMsg))) == NULL
-    || (ecid = memchr(prog, ':', msgLen-(prog - rawMsg))) == NULL)
-  {
-    return -2;
-  }
+	/* so just check that t2 is 0 and each N part is not more than 9 */
+	if (t3 || t2.UC0 > 9 || t2.UC1 > 9 || t2.UC2 > 9
+		|| t2.UC3 > 9 || t2.UC4 > 9 || t2.UC5 > 9
+		|| host[-1] != '.'
+		|| (prog = memchr(host, '!', msgLen-(host - rawMsg))) == NULL
+		|| (ecid = memchr(prog, ':', msgLen-(prog - rawMsg))) == NULL)
+	{
+		return -2;
+	}
 
 
-  pMsg->tTIMESTAMP.year = pInst->currTm.tm_year + 1900;
-  pMsg->tTIMESTAMP.month = pInst->currTm.tm_mon + 1;
-  pMsg->tTIMESTAMP.day = pInst->currTm.tm_mday;
-  pMsg->tTIMESTAMP.hour = t2.UC0 * 10 + t2.UC1;
-  pMsg->tTIMESTAMP.minute = t2.UC2 * 10 + t2.UC3;
-  pMsg->tTIMESTAMP.second = t2.UC4 * 10 + t2.UC5;
-  pMsg->tTIMESTAMP.OffsetMode = syslogTz.OffsetMode;
-  pMsg->tTIMESTAMP.OffsetHour = syslogTz.OffsetHour;
-  pMsg->tTIMESTAMP.OffsetMinute = syslogTz.OffsetMinute;
+	pMsg->tTIMESTAMP.year = pInst->currTm.tm_year + 1900;
+	pMsg->tTIMESTAMP.month = pInst->currTm.tm_mon + 1;
+	pMsg->tTIMESTAMP.day = pInst->currTm.tm_mday;
+	pMsg->tTIMESTAMP.hour = t2.UC0 * 10 + t2.UC1;
+	pMsg->tTIMESTAMP.minute = t2.UC2 * 10 + t2.UC3;
+	pMsg->tTIMESTAMP.second = t2.UC4 * 10 + t2.UC5;
+	pMsg->tTIMESTAMP.OffsetMode = syslogTz.OffsetMode;
+	pMsg->tTIMESTAMP.OffsetHour = syslogTz.OffsetHour;
+	pMsg->tTIMESTAMP.OffsetMinute = syslogTz.OffsetMinute;
 
-  pMsg->tTIMESTAMP.secfrac = atoi(rawMsg+7);
-  pMsg->tTIMESTAMP.secfracPrecision = (rawMsg[9]=='.') ? 2 : 3;
+	pMsg->tTIMESTAMP.secfrac = atoi(rawMsg+7);
+	pMsg->tTIMESTAMP.secfracPrecision = (rawMsg[9]=='.') ? 2 : 3;
 
-  prog++;
+	prog++;
 
-  for (t = ecid; t>prog && *t!='.'; t--)
-  {}
+	for (t = ecid; t>prog && *t!='.'; t--)
+	{}
 
-  lprog = t - prog;
+	lprog = t - prog;
 
-  ecid += 2;
+	ecid += 2;
 
-  if (*((uint32_t*)ecid) == ECID && (text = memchr(ecid + 4, ':', msgLen-(ecid-rawMsg)-4)) != NULL)
-  {
-    ecid  += 6;
-    lcid  = text - ecid - 1;
-    if (lcid>64) lcid = 64;
-    text++;
-  }
-  else
-  {
-    text = ecid;
-    lcid = 0;
-  }
+	if (*((uint32_t*)ecid) == ECID && (text = memchr(ecid + 4, ':', msgLen-(ecid-rawMsg)-4)) != NULL)
+	{
+		ecid += 6;
+		lcid = text - ecid - 1;
+		if (lcid>64) lcid = 64;
+		text++;
+	}
+	else
+	{
+		text = ecid;
+		lcid = 0;
+	}
 
-  msgLen -= text - rawMsg;
+	msgLen -= text - rawMsg;
 
-  if ((newMsg = (char*)alloca(msgLen)) == NULL)
-    return -3;
+	if ((newMsg = (char*)alloca(msgLen)) == NULL)
+		return -3;
 
-  MsgSetHOSTNAME(pMsg, (const uchar*)host, prog - host - 1);
+	MsgSetHOSTNAME(pMsg, (const uchar*)host, prog - host - 1);
 
-  if (lprog > 0)
-  {
-    prog[lprog] = '\0';
-    MsgSetPROCID(pMsg, prog);
-  }
+	if (lprog > 0)
+	{
+		prog[lprog] = '\0';
+		MsgSetPROCID(pMsg, prog);
+	}
 
-  if (lcid)
-  {
-    int lenSDN;
-    ecid[lcid] = '\0';
-    MsgSetMSGID(pMsg, ecid);
+	if (lcid)
+	{
+		int lenSDN;
+		ecid[lcid] = '\0';
+		MsgSetMSGID(pMsg, ecid);
 
-    uchar *structData;
-    if (pInst->lenStructuredDataName != 0) {
-      structData = (uchar*)alloca(lcid + 10 + pInst->lenStructuredDataName);
-      *structData = '[';
-      memcpy(structData + 1, pInst->pszStructuredDataName, pInst->lenStructuredDataName);
-      memcpy(structData + 1 + pInst->lenStructuredDataName, " ECID=\"", 7);
-      lenSDN = 8 + pInst->lenStructuredDataName;
-    }else{
-      structData = (uchar*)alloca(lcid+11);
-      memcpy(structData, "[M ECID=\"", 9);
-      lenSDN = 9;
-    }
-    memcpy(structData+lenSDN, ecid, lcid);
-    structData[lenSDN+lcid]=(uchar)'\"';
-    structData[lenSDN+lcid]=(uchar)']';
+		uchar *structData;
+		if (pInst->lenStructuredDataName != 0) {
+			structData = (uchar*)alloca(lcid + 10 + pInst->lenStructuredDataName);
+			*structData = '[';
+			memcpy(structData + 1, pInst->pszStructuredDataName, pInst->lenStructuredDataName);
+			memcpy(structData + 1 + pInst->lenStructuredDataName, " ECID=\"", 7);
+			lenSDN = 8 + pInst->lenStructuredDataName;
+		}else{
+			structData = (uchar*)alloca(lcid+11);
+			memcpy(structData, "[M ECID=\"", 9);
+			lenSDN = 9;
+		}
+		memcpy(structData+lenSDN, ecid, lcid);
+		structData[lenSDN+lcid]=(uchar)'\"';
+		structData[lenSDN+lcid]=(uchar)']';
 
-    MsgAddToStructuredData(pMsg, structData, lenSDN + lcid + 2);
-  }
+		MsgAddToStructuredData(pMsg, structData, lenSDN + lcid + 2);
+	}
 
-  memcpy(newMsg, text, msgLen);
-  MsgSetRawMsg(pMsg, newMsg, msgLen);
-  MsgSetMSGoffs(pMsg, 0);
+	memcpy(newMsg, text, msgLen);
+	MsgSetRawMsg(pMsg, newMsg, msgLen);
+	MsgSetMSGoffs(pMsg, 0);
 
-  return 0;
+	return 0;
 }
 
 /* enqueue the read file line as a message. The provided string is
@@ -371,13 +359,13 @@ static rsRetVal enqLine(instanceConf_t *const __restrict__ pInst,
 	CHKiRet(msgConstruct(&pMsg));
 
 	if (parseMsg(pMsg, (char*)rsCStrGetSzStrNoNULL(cstrLine), msgLen, pInst)) {
-	  msgDestruct(&pMsg);
-	  FINALIZE;
+		msgDestruct(&pMsg);
+		FINALIZE;
 	}
 
 	MsgSetFlowControlType(pMsg, eFLOWCTL_FULL_DELAY);
 	MsgSetInputName(pMsg, pInputName);
-  MsgSetAPPNAME(pMsg, (const char*)pInst->pszTag);
+	MsgSetAPPNAME(pMsg, (const char*)pInst->pszTag);
 	MsgSetTAG(pMsg, pInst->pszTag, pInst->lenTag);
 	msgSetPRI(pMsg, pInst->iFacility | pInst->iSeverity);
 	MsgSetRuleset(pMsg, pInst->pBindRuleset);
@@ -401,7 +389,7 @@ static rsRetVal ATTR_NONNULL(1) openFileWithStateFile(instanceConf_t *const __re
 
 	uchar *const statefn = getStateFileName(pInst, statefile, sizeof(statefile), NULL);
 	DBGPRINTF("trying to open state for '%s', state file '%s'\n",
-		  pInst->pszUlogBaseName, statefn);
+			pInst->pszUlogBaseName, statefn);
 
 	/* Get full path and file name */
 	lenSFNam = getFullStateFileName(statefn, pszSFNam, sizeof(pszSFNam));
@@ -415,7 +403,7 @@ static rsRetVal ATTR_NONNULL(1) openFileWithStateFile(instanceConf_t *const __re
 			char errStr[1024];
 			rs_strerror_r(errno, errStr, sizeof(errStr));
 			DBGPRINTF("error trying to access state file for '%s':%s\n",
-			          pInst->pszUlogBaseName, errStr);
+					pInst->pszUlogBaseName, errStr);
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
 	}
@@ -432,16 +420,16 @@ static rsRetVal ATTR_NONNULL(1) openFileWithStateFile(instanceConf_t *const __re
 	/* read back in the object */
 	CHKiRet(obj.Deserialize(&pInst->pStrm, (uchar*) "strm", psSF, NULL, pInst));
 	DBGPRINTF("deserialized state file, state file base name '%s', "
-		  "configured base name '%s'\n", pInst->pStrm->pszFName,
-		  pInst->pszUlogBaseName);
+			"configured base name '%s'\n", pInst->pStrm->pszFName,
+			pInst->pszUlogBaseName);
 	if(ustrcmp(pInst->pStrm->pszFName, pInst->pszCurrFName)) {
-    LogError(0, RS_RET_STATEFILE_WRONG_FNAME, "imtuxedoulog: state file '%s' "
-        "contains file name '%s', but is used for file '%s'. State "
-        "file deleted, starting from begin of file.",
-        pszSFNam, pInst->pStrm->pszFName, pInst->pszCurrFName);
+		LogError(0, RS_RET_STATEFILE_WRONG_FNAME, "imtuxedoulog: state file '%s' "
+				"contains file name '%s', but is used for file '%s'. State "
+				"file deleted, starting from begin of file.",
+				pszSFNam, pInst->pStrm->pszFName, pInst->pszCurrFName);
 
-    unlink((char*)pszSFNam);
-    ABORT_FINALIZE(RS_RET_STATEFILE_WRONG_FNAME);
+		unlink((char*)pszSFNam);
+		ABORT_FINALIZE(RS_RET_STATEFILE_WRONG_FNAME);
 	}
 
 	strm.CheckFileChange(pInst->pStrm);
@@ -504,41 +492,41 @@ finalize_it:
  */
 static rsRetVal persistStrmState(instanceConf_t *pInst)
 {
-  DEFiRet;
-  strm_t *psSF = NULL; /* state file (stream) */
-  size_t lenDir;
-  uchar statefile[MAXFNAME];
+	DEFiRet;
+	strm_t *psSF = NULL; /* state file (stream) */
+	size_t lenDir;
+	uchar statefile[MAXFNAME];
 
-  uchar *const statefn = getStateFileName(pInst, statefile, sizeof(statefile), NULL);
-  DBGPRINTF("persisting state for '%s' to file '%s'\n",
-      pInst->pszUlogBaseName, statefn);
-  CHKiRet(strm.Construct(&psSF));
-  lenDir = ustrlen(glbl.GetWorkDir());
-  if(lenDir > 0)
-    CHKiRet(strm.SetDir(psSF, glbl.GetWorkDir(), lenDir));
-  CHKiRet(strm.SettOperationsMode(psSF, STREAMMODE_WRITE_TRUNC));
-  CHKiRet(strm.SetsType(psSF, STREAMTYPE_FILE_SINGLE));
-  CHKiRet(strm.SetFName(psSF, statefn, strlen((char*) statefn)));
-  CHKiRet(strm.SetFileNotFoundError(psSF, 1));
-  CHKiRet(strm.ConstructFinalize(psSF));
+	uchar *const statefn = getStateFileName(pInst, statefile, sizeof(statefile), NULL);
+	DBGPRINTF("persisting state for '%s' to file '%s'\n",
+			pInst->pszUlogBaseName, statefn);
+	CHKiRet(strm.Construct(&psSF));
+	lenDir = ustrlen(glbl.GetWorkDir());
+	if(lenDir > 0)
+		CHKiRet(strm.SetDir(psSF, glbl.GetWorkDir(), lenDir));
+	CHKiRet(strm.SettOperationsMode(psSF, STREAMMODE_WRITE_TRUNC));
+	CHKiRet(strm.SetsType(psSF, STREAMTYPE_FILE_SINGLE));
+	CHKiRet(strm.SetFName(psSF, statefn, strlen((char*) statefn)));
+	CHKiRet(strm.SetFileNotFoundError(psSF, 1));
+	CHKiRet(strm.ConstructFinalize(psSF));
 
-  CHKiRet(strm.Serialize(pInst->pStrm, psSF));
-  CHKiRet(strm.Flush(psSF));
+	CHKiRet(strm.Serialize(pInst->pStrm, psSF));
+	CHKiRet(strm.Flush(psSF));
 
-  CHKiRet(strm.Destruct(&psSF));
+	CHKiRet(strm.Destruct(&psSF));
 
 finalize_it:
-  if(psSF != NULL)
-    strm.Destruct(&psSF);
+	if(psSF != NULL)
+		strm.Destruct(&psSF);
 
-  if(iRet != RS_RET_OK) {
-    LogError(0, iRet, "imtuxedoulog: could not persist state "
-        "file %s - data may be repeated on next "
-        "startup. Is WorkDirectory set?",
-        statefn);
-  }
+	if(iRet != RS_RET_OK) {
+		LogError(0, iRet, "imtuxedoulog: could not persist state "
+				"file %s - data may be repeated on next "
+				"startup. Is WorkDirectory set?",
+				statefn);
+	}
 
-  RETiRet;
+	RETiRet;
 }
 
 /* The following is a cancel cleanup handler for strmReadLine(). It is necessary in case
@@ -566,7 +554,7 @@ static rsRetVal ATTR_NONNULL(1, 3) pollFileReal(instanceConf_t *pInst, int *pbHa
 	while(glbl.GetGlobalInputTermState() == 0) {
 		if(pInst->maxLinesAtOnce != 0 && nProcessed >= pInst->maxLinesAtOnce)
 			break;
-    CHKiRet(strm.ReadLine(pInst->pStrm, pCStr, 0, 0, -1, NULL));
+		CHKiRet(strm.ReadLine(pInst->pStrm, pCStr, 0, 0, -1, NULL));
 		++nProcessed;
 		if(pbHadFileData != NULL)
 			*pbHadFileData = 1; /* this is just a flag, so set it and forget it */
@@ -616,7 +604,7 @@ static rsRetVal ATTR_NONNULL(1) createInstance(instanceConf_t **const pinst)
 	inst->ratelimiter = NULL;
 
 	inst->pszBindRuleset = NULL;
-  inst->pszUlogBaseName = NULL;
+	inst->pszUlogBaseName = NULL;
 	inst->pszCurrFName = NULL;
 	inst->pszTag = NULL;
 	inst->pszStructuredDataName = NULL;
@@ -668,19 +656,19 @@ int ATTR_NONNULL() getBasename(uchar *const __restrict__ basen, uchar *const __r
 static rsRetVal ATTR_NONNULL() lstnAdd(instanceConf_t *pInst)
 {
 	DEFiRet;
-  CHKiRet(ratelimitNew(&pInst->ratelimiter, "imtuxedoulog", (char*)pInst->pszUlogBaseName));
-  CHKmalloc(pInst->multiSub.ppMsgs = malloc(pInst->nMultiSub * sizeof(smsg_t *)));
-  pInst->multiSub.maxElem = pInst->nMultiSub;
-  pInst->multiSub.nElem = 0;
+	CHKiRet(ratelimitNew(&pInst->ratelimiter, "imtuxedoulog", (char*)pInst->pszUlogBaseName));
+	CHKmalloc(pInst->multiSub.ppMsgs = malloc(pInst->nMultiSub * sizeof(smsg_t *)));
+	pInst->multiSub.maxElem = pInst->nMultiSub;
+	pInst->multiSub.nElem = 0;
 
 	/* insert it at the begin of the list */
 	pInst->prev = NULL;
-  pInst->next = confRoot;
+	pInst->next = confRoot;
 
-  if (confRoot != NULL)
-    confRoot->prev = pInst;
+	if (confRoot != NULL)
+		confRoot->prev = pInst;
 
-  confRoot = pInst;
+	confRoot = pInst;
 
 finalize_it:
 	RETiRet;
@@ -695,21 +683,21 @@ void ATTR_NONNULL(1) lstnDel(instanceConf_t *pInst)
 		strm.Destruct(&(pInst->pStrm));
 	}
 	if (pInst->ratelimiter != NULL)
-	  ratelimitDestruct(pInst->ratelimiter);
+		ratelimitDestruct(pInst->ratelimiter);
 	if (pInst->multiSub.ppMsgs != NULL)
-	  free(pInst->multiSub.ppMsgs);
+		free(pInst->multiSub.ppMsgs);
 
-  free(pInst->pszUlogBaseName);
-  if (pInst->pszCurrFName != NULL)
-    free(pInst->pszCurrFName);
-  if (pInst->pszTag)
-    free(pInst->pszTag);
-  if (pInst->pszStructuredDataName)
-    free(pInst->pszStructuredDataName);
+	free(pInst->pszUlogBaseName);
+	if (pInst->pszCurrFName != NULL)
+		free(pInst->pszCurrFName);
+	if (pInst->pszTag)
+		free(pInst->pszTag);
+	if (pInst->pszStructuredDataName)
+		free(pInst->pszStructuredDataName);
 	if (pInst->pszStateFile)
-	  free(pInst->pszStateFile);
-  if (pInst->pszBindRuleset != NULL)
-    free(pInst->pszBindRuleset);
+		free(pInst->pszStateFile);
+	if (pInst->pszBindRuleset != NULL)
+		free(pInst->pszBindRuleset);
 	free(pInst);
 }
 
@@ -718,7 +706,7 @@ void ATTR_NONNULL(1) lstnDel(instanceConf_t *pInst)
 static rsRetVal do_polling(void)
 {
 	int bHadFileData; /* were there at least one file with data during this run? */
-  struct stat sb;
+	struct stat sb;
 	DEFiRet;
 	while(glbl.GetGlobalInputTermState() == 0) {
 		do {
@@ -727,36 +715,36 @@ static rsRetVal do_polling(void)
 			for(pInst = confRoot ; pInst != NULL ; pInst = pInst->next) {
 				uchar *temp = mkFileNameWithTime(pInst);
 
-        DBGPRINTF("imtuxedoulog: do_polling start '%s' / '%s'\n", pInst->pszUlogBaseName, temp);
-        /*
-         * Is the file name is different : a rotation time is reached
-         * If so, then it the new file exists ? and is a file ?
-         */
-        if (temp && stat((const char*)temp, &sb) == 0 && S_ISREG(sb.st_mode) &&
-              (pInst->pszCurrFName == NULL || strcmp((char*)temp, (char*)pInst->pszCurrFName) != 0))
-        {
-          DBGPRINTF("imtuxedoulog: timed file : rotation reach switching form '%s' to '%s' !",
-              (char*)pInst->pszUlogBaseName, temp );
+				DBGPRINTF("imtuxedoulog: do_polling start '%s' / '%s'\n", pInst->pszUlogBaseName, temp);
+				/*
+				 * Is the file name is different : a rotation time is reached
+				 * If so, then it the new file exists ? and is a file ?
+				 */
+				if (temp && stat((const char*)temp, &sb) == 0 && S_ISREG(sb.st_mode) &&
+							(pInst->pszCurrFName == NULL || strcmp((char*)temp, (char*)pInst->pszCurrFName) != 0))
+				{
+					DBGPRINTF("imtuxedoulog: timed file : rotation reach switching form '%s' to '%s' !",
+							(char*)pInst->pszUlogBaseName, temp );
 
-          /* first of all change the listener datas */
-          if (pInst->pszCurrFName != NULL) {
-            free(pInst->pszCurrFName);
-            strm.Destruct(&pInst->pStrm);
-          }
-          pInst->pszCurrFName = temp;
-          temp = NULL;
+					/* first of all change the listener datas */
+					if (pInst->pszCurrFName != NULL) {
+						free(pInst->pszCurrFName);
+						strm.Destruct(&pInst->pStrm);
+					}
+					pInst->pszCurrFName = temp;
+					temp = NULL;
 
-          /* And finish by destroy the stream object, so the next polling will recreate
-           * it based on new data.
-           */
-          if(glbl.GetGlobalInputTermState() == 1)
-            break; /* terminate input! */
-        }
-        if (temp) free(temp);
+					/* And finish by destroy the stream object, so the next polling will recreate
+					 * it based on new data.
+					 */
+					if(glbl.GetGlobalInputTermState() == 1)
+						break; /* terminate input! */
+				}
+				if (temp) free(temp);
 
-        /* let's poll the new file immediately */
-        if (pInst->pszCurrFName != NULL)
-          pollFile(pInst, &bHadFileData);
+				/* let's poll the new file immediately */
+				if (pInst->pszCurrFName != NULL)
+					pollFile(pInst, &bHadFileData);
 
 				DBGPRINTF("imtuxedoulog: do_polling end for '%s'\n", pInst->pszUlogBaseName);
 				if (pInst->iPersistStateInterval == -1)
@@ -820,7 +808,7 @@ CODESTARTnewInpInst
 			inst->nMultiSub = pvals[i].val.d.n;
 		} else {
 			DBGPRINTF("program error, non-handled "
-			  "param '%s'\n", inppblk.descr[i].name);
+				"param '%s'\n", inppblk.descr[i].name);
 		}
 	}
 	if(inst->pszUlogBaseName == NULL) {
@@ -830,8 +818,8 @@ CODESTARTnewInpInst
 	}
 
 	if ((iRet = lstnAdd(inst)) != RS_RET_OK) {
-	  lstnDel(inst);
-	  ABORT_FINALIZE(iRet);
+		lstnDel(inst);
+		ABORT_FINALIZE(iRet);
 	}
 
 finalize_it:
@@ -841,7 +829,7 @@ ENDnewInpInst
 
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
-  pModConf->pConf = pConf;
+	pModConf->pConf = pConf;
 ENDbeginCnfLoad
 
 BEGINendCnfLoad
@@ -851,9 +839,9 @@ ENDendCnfLoad
 BEGINcheckCnf
 instanceConf_t *inst;
 CODESTARTcheckCnf
-  for(inst = confRoot ; inst != NULL ; inst = inst->next) {
-    std_checkRuleset(pModConf , inst);
-  }
+	for(inst = confRoot ; inst != NULL ; inst = inst->next) {
+		std_checkRuleset(pModConf , inst);
+	}
 ENDcheckCnf
 
 BEGINactivateCnf
@@ -900,8 +888,8 @@ ENDwillRun
 BEGINafterRun
 CODESTARTafterRun
 	while(confRoot != NULL) {
-	  instanceConf_t *inst = confRoot;
-	  confRoot = confRoot->next;
+		instanceConf_t *inst = confRoot;
+		confRoot = confRoot->next;
 		lstnDel(inst);
 	}
 

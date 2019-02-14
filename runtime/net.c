@@ -790,7 +790,7 @@ finalize_it:
 static void
 PrintAllowedSenders(int iListToPrint)
 {
-	static char *SENDER_TEXT[] = { "", "UDP", "TCP", "GSS" };
+	static const char *SENDER_TEXT[] = { "", "UDP", "TCP", "GSS" };
 	struct AllowedSenders *pSender;
 	uchar szIP[64];
 #ifdef USE_GSSAPI
@@ -815,8 +815,8 @@ PrintAllowedSenders(int iListToPrint)
 				dbgprintf ("\t%s\n", pSender->allowedSender.addr.HostWildcard);
 			else {
 				if(mygetnameinfo (pSender->allowedSender.addr.NetAddr,
-						     SALEN(pSender->allowedSender.addr.NetAddr),
-						     (char*)szIP, 64, NULL, 0, NI_NUMERICHOST) == 0) {
+							SALEN(pSender->allowedSender.addr.NetAddr),
+							(char*)szIP, 64, NULL, 0, NI_NUMERICHOST) == 0) {
 					dbgprintf ("\t%s/%u\n", szIP, pSender->SignificantBits);
 				} else {
 					/* getnameinfo() failed - but as this is only a

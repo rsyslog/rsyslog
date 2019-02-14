@@ -143,33 +143,33 @@ CODESTARTparse2
 		pMsg->tTIMESTAMP.OffsetHour = tz / 60;
 		pMsg->tTIMESTAMP.OffsetMinute = tz % 60;
 
-    pid = (char*)pMsg->pszRawMsg + pInst->levelpos + levels_len[i] + 11;
-    if (pid>=end) ABORT_FINALIZE(0);
-    lpid = strchr(pid, ' ') - pid;
+	pid = (char*)pMsg->pszRawMsg + pInst->levelpos + levels_len[i] + 11;
+	if (pid>=end) ABORT_FINALIZE(0);
+	lpid = strchr(pid, ' ') - pid;
 
-    prog = pid + 49;
-    if (prog>=end) ABORT_FINALIZE(0);
+	prog = pid + 49;
+	if (prog>=end) ABORT_FINALIZE(0);
 
-    e = strchr(prog, ' ');
-    if (e && e>=end) ABORT_FINALIZE(0);
+	e = strchr(prog, ' ');
+	if (e && e>=end) ABORT_FINALIZE(0);
 
-    f = strchr(prog, '\\');
-    if (!f || f>=end) ABORT_FINALIZE(0);
+	f = strchr(prog, '\\');
+	if (!f || f>=end) ABORT_FINALIZE(0);
 
-    lprog = (e && e<f) ? e-prog : f-prog;
-    lprog = (CONF_PROGNAME_BUFSIZE-1 < lprog) ? CONF_PROGNAME_BUFSIZE-1 : lprog;
+	lprog = (e && e<f) ? e-prog : f-prog;
+	lprog = (CONF_PROGNAME_BUFSIZE-1 < lprog) ? CONF_PROGNAME_BUFSIZE-1 : lprog;
 
-    strncpy((char*)pMsg->PROGNAME.szBuf, prog, lprog);
-    pMsg->PROGNAME.szBuf[lprog] = '\0';
+	strncpy((char*)pMsg->PROGNAME.szBuf, prog, lprog);
+	pMsg->PROGNAME.szBuf[lprog] = '\0';
 
-    snprintf(procid, 128, "%.*s.%.*s", lprog, prog, lpid, pid);
-    MsgSetPROCID(pMsg, procid);
+	snprintf(procid, 128, "%.*s.%.*s", lprog, prog, lpid, pid);
+	MsgSetPROCID(pMsg, procid);
 
-    pProp.id = PROP_SYSLOGTAG;
-    val = (char*)MsgGetProp(pMsg, NULL, &pProp, &valLen, &mustBeFreed, NULL);
-    MsgSetAPPNAME(pMsg, val);
-    if (mustBeFreed)
-      free(val);
+	pProp.id = PROP_SYSLOGTAG;
+	val = (char*)MsgGetProp(pMsg, NULL, &pProp, &valLen, &mustBeFreed, NULL);
+	MsgSetAPPNAME(pMsg, val);
+	if (mustBeFreed)
+		free(val);
 	}
 
 finalize_it:
