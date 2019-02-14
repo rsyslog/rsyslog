@@ -1969,6 +1969,97 @@ init_elasticsearch() {
 	curl --silent -XDELETE localhost:${ES_PORT:-9200}/rsyslog_testbench
 }
 
+omhttp_start_server() {
+    # Args: 1=port 2=server args
+    # Args 2 and up are passed along as is to omhttp_server.py
+    omhttp_server_py=$srcdir/omhttp_server.py
+    if [ ! -f $omhttp_server_py ]; then
+        echo "Cannot find ${omhttp_server_py} for omhttp test"
+        error_exit 1
+    fi
+
+    if [ "x$1" == "x" ]; then
+        omhttp_server_port="8080"
+    else
+        omhttp_server_port="$1"
+    fi
+
+    # Create work directory for parallel tests
+    omhttp_work_dir=$RSYSLOG_DYNNAME/omhttp
+
+    omhttp_server_pidfile="${omhttp_work_dir}/omhttp_server.pid"
+    omhttp_server_logfile="${omhttp_work_dir}/omhttp_server.log"
+    mkdir -p ${omhttp_work_dir}
+
+    server_args="-p $omhttp_server_port ${*:2}"
+
+    python ${omhttp_server_py} ${server_args} >> ${omhttp_server_logfile} 2>&1 &
+    if [ ! $? -eq 0 ]; then
+        echo "Failed to start omhttp test server."
+        rm -rf $omhttp_work_dir
+        error_exit 1
+    fi
+
+    omhttp_server_pid=$!
+    echo ${omhttp_server_pid} > ${omhttp_server_pidfile}
+    echo "Started omhttp test server with args ${server_args} with pid ${omhttp_server_pid}"
+}
+
+omhttp_stop_server() {
+    # Args: None
+    omhttp_work_dir=$RSYSLOG_DYNNAME/omhttp
+    if [ ! -d $omhttp_work_dir ]; then
+        echo "omhttp server $omhttp_work_dir does not exist, no action needed"
+    else
+        echo "Stopping omhttp server"
+        kill -9 $(cat ${omhttp_work_dir}/omhttp_server.pid) > /dev/null 2>&1
+        rm -rf $omhttp_work_dir
+    fi
+}
+
+omhttp_get_data() {
+    # Args: 1=port 2=endpoint 3=batchformat(optional)
+    if [ "x$1" == "x" ]; then
+        omhttp_server_port=8080
+    else
+        omhttp_server_port=$1
+    fi
+
+    if [ "x$2" == "x" ]; then
+        omhttp_path=""
+    else
+        omhttp_path=$2
+    fi
+
+    # The test server returns a json encoded array of strings containing whatever omhttp sent to it in each request
+    python_init="import json, sys; dat = json.load(sys.stdin)"
+    python_print="print('\n'.join(out))"
+    if [ "x$3" == "x" ]; then
+        # dat = ['{"msgnum":"1"}, '{"msgnum":"2"}', '{"msgnum":"3"}', '{"msgnum":"4"}']
+        python_parse="$python_init; out = [json.loads(l)['msgnum'] for l in dat]; $python_print"
+    else
+       if [ "x$3" == "xjsonarray" ]; then
+            # dat = ['[{"msgnum":"1"},{"msgnum":"2"}]', '[{"msgnum":"3"},{"msgnum":"4"}]']
+            python_parse="$python_init; out = [l['msgnum'] for a in dat for l in json.loads(a)]; $python_print"
+        elif [ "x$3" == "xnewline" ]; then
+            # dat = ['{"msgnum":"1"}\n{"msgnum":"2"}', '{"msgnum":"3"}\n{"msgnum":"4"}']
+            python_parse="$python_init; out = [json.loads(l)['msgnum'] for a in dat for l in a.split('\n')]; $python_print"
+        elif [ "x$3" == "xkafkarest" ]; then
+            # dat = ['{"records":[{"value":{"msgnum":"1"}},{"value":{"msgnum":"2"}}]}',
+            #        '{"records":[{"value":{"msgnum":"3"}},{"value":{"msgnum":"4"}}]}']
+            python_parse="$python_init; out = [l['value']['msgnum'] for a in dat for l in json.loads(a)['records']]; $python_print"
+        else
+            # use newline parsing as default
+            python_parse="$python_init; out = [json.loads(l)['msgnum'] for a in dat for l in a.split('\n')]; $python_print"
+        fi
+
+    fi
+    
+    omhttp_url="localhost:${omhttp_server_port}/${omhttp_path}"
+    curl -s ${omhttp_url} \
+        | python -c "${python_parse}" | sort -n \
+        > ${RSYSLOG_OUT_LOG}
+}
 
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
