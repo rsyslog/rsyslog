@@ -909,10 +909,10 @@ static void modPrintList(void)
 								    NULL :  pMod->mod.om.newActInst);
 			dbgprintf("\ttryResume:          %p\n", pMod->tryResume);
 			dbgprintf("\tdoHUP:              %p\n", pMod->doHUP);
-			dbgprintf("\tBeginTransaction:   %p\n", ((pMod->mod.om.beginTransaction == dummyBeginTransaction) ?
-								   NULL :  pMod->mod.om.beginTransaction));
-			dbgprintf("\tEndTransaction:     %p\n", ((pMod->mod.om.endTransaction == dummyEndTransaction) ?
-								   NULL :  pMod->mod.om.endTransaction));
+			dbgprintf("\tBeginTransaction:   %p\n", ((pMod->mod.om.beginTransaction ==
+								dummyBeginTransaction) ? NULL :  pMod->mod.om.beginTransaction));
+			dbgprintf("\tEndTransaction:     %p\n", ((pMod->mod.om.endTransaction ==
+								dummyEndTransaction) ? NULL :  pMod->mod.om.endTransaction));
 			break;
 		case eMOD_IN:
 			dbgprintf("Input Module Entry Points\n");
@@ -1091,7 +1091,7 @@ Load(uchar *const pModName, const sbool bConfLoad, struct nvlst *const lst)
 {
 	size_t iPathLen, iModNameLen;
 	int bHasExtension;
-  void *pModHdlr;
+	void *pModHdlr;
 	pModInit_t pModInit;
 	modInfo_t *pModInfo;
 	cfgmodules_etry_t *pNew = NULL;

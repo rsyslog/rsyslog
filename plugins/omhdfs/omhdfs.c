@@ -360,7 +360,7 @@ finalize_it:
 static rsRetVal
 addData(instanceData *pData, uchar *buf)
 {
-  size_t len;
+	size_t len;
 	DEFiRet;
 
 	len = strlen((char*)buf);

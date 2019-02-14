@@ -335,9 +335,10 @@ static rsRetVal pollFile(instanceConf_t *pInst)
 							if (fixedModConf.buffer_minsize[msg_len-1] == ']')
 							{ /* We read the last part of the report to get structured data */
 
-								for (structured_data = fixedModConf.buffer_minsize + msg_len, structured_data_len = 0;
-											structured_data >= fixedModConf.buffer_minsize && *structured_data != '[';
-											structured_data--, structured_data_len++)
+								for (structured_data = fixedModConf.buffer_minsize + msg_len, 
+											structured_data_len = 0;
+									structured_data >= fixedModConf.buffer_minsize && *structured_data != '[';
+									structured_data--, structured_data_len++)
 									;
 
 								if (*structured_data == '[')
@@ -346,7 +347,8 @@ static rsRetVal pollFile(instanceConf_t *pInst)
 									if (struct_field)
 									{
 										start_ts = 0;
-										for (struct_field += 7; (v = *struct_field - (uchar)'0') <= 9; struct_field++ )
+										for (struct_field += 7; (v = *struct_field - (uchar)'0') <= 9; 
+													struct_field++ )
 											start_ts = start_ts*10 + v;
 
 									}

@@ -83,34 +83,34 @@ STATSCOUNTER_DEF(ctrKafkaRespOther, mutCtrKafkaRespOther);
 
 #ifndef SLIST_INIT
 #define SLIST_INIT(head) do {           \
-  (head)->slh_first = NULL;        \
+	(head)->slh_first = NULL;        \
 } while (/*CONSTCOND*/0)
 #endif
 
 #ifndef SLIST_ENTRY
 #define SLIST_ENTRY(type)           \
-  struct {                \
-    struct type *sle_next;  /* next element */      \
-  }
+	struct {                \
+		struct type *sle_next;  /* next element */      \
+	}
 #endif
 
 #ifndef SLIST_HEAD
 #define SLIST_HEAD(name, type)            \
 struct name {               \
-  struct type *slh_first; /* first element */     \
+	struct type *slh_first; /* first element */     \
 }
 #endif
 
 #ifndef SLIST_INSERT_HEAD
 #define SLIST_INSERT_HEAD(head, elm, field) do {      \
-  (elm)->field.sle_next = (head)->slh_first;      \
-  (head)->slh_first = (elm);          \
+	(elm)->field.sle_next = (head)->slh_first;      \
+	(head)->slh_first = (elm);          \
 } while (/*CONSTCOND*/0)
 #endif
 
 #ifndef SLIST_REMOVE_HEAD
 #define SLIST_REMOVE_HEAD(head, field) do {       \
-  (head)->slh_first = (head)->slh_first->field.sle_next;    \
+	(head)->slh_first = (head)->slh_first->field.sle_next;    \
 } while (/*CONSTCOND*/0)
 #endif
 
@@ -128,16 +128,15 @@ struct name {               \
 
 #ifndef SLIST_REMOVE
 #define SLIST_REMOVE(head, elm, type, field) do {     \
-  if ((head)->slh_first == (elm)) {       \
-    SLIST_REMOVE_HEAD((head), field);     \
-  }               \
-  else {                \
-    struct type *curelm = (head)->slh_first;    \
-    while(curelm->field.sle_next != (elm))      \
-      curelm = curelm->field.sle_next;    \
-    curelm->field.sle_next =        \
-        curelm->field.sle_next->field.sle_next;   \
-  }               \
+		if ((head)->slh_first == (elm)) {       \
+			SLIST_REMOVE_HEAD((head), field);     \
+		}               \
+	else {                \
+		struct type *curelm = (head)->slh_first;    \
+		while(curelm->field.sle_next != (elm))      \
+			curelm = curelm->field.sle_next;    \
+		curelm->field.sle_next = curelm->field.sle_next->field.sle_next;   \
+	}               \
 } while (/*CONSTCOND*/0)
 #endif
 

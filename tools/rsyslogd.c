@@ -127,13 +127,11 @@ dosrcpacket(msgno, txt, len)
 
 static void aix_close_it(int i)
 {
-  if(src_exists)
-  {
-    if(i != SRC_FD)
-      (void)close(i);
-  }
-  else
-    close(i);
+	if(src_exists) {
+		if(i != SRC_FD)
+			(void)close(i);
+	} else
+		close(i);
 }
 
 
@@ -419,11 +417,11 @@ forkRsyslog(void)
 		exit(1);
 	}
 	AIX_SRC_EXISTS_IF /* AIXPORT */
-    cpid = fork();
-    if(cpid == -1) {
-      perror("error forking rsyslogd process - terminating");
-      exit(1);
-    }
+	cpid = fork();
+	if(cpid == -1) {
+		perror("error forking rsyslogd process - terminating");
+		exit(1);
+	}
 	AIX_SRC_EXISTS_FI /* AIXPORT */
 
 	if(cpid == 0) {
@@ -549,8 +547,9 @@ printVersion(void)
 	/* we keep the following message to so that users don't need
 	 * to wonder.
 	 */
-  printf("\tConfig file:\t\t\t\t" PATH_CONFFILE "\n");
-  printf("\tPID file:\t\t\t\t" PATH_PIDFILE "%s\n", PATH_PIDFILE[0]!='/'?" (relative to global workingdirectory)":"");
+	printf("\tConfig file:\t\t\t\t" PATH_CONFFILE "\n");
+	printf("\tPID file:\t\t\t\t" PATH_PIDFILE "%s\n", PATH_PIDFILE[0]!='/'?" 
+			(relative to global workingdirectory)":"");
 	printf("\tNumber of Bits in RainerScript integers: 64\n");
 	printf("\nSee https://www.rsyslog.com for more information.\n");
 }
@@ -1856,8 +1855,8 @@ wait_timeout(void)
 					switch(srcpacket.subreq.action)
 					{
 					case START:
-						dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support this option.\n",
-										sizeof(struct srcrep));
+						dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support this "
+										"option.\n", sizeof(struct srcrep));
 						break;
 					case STOP:
 						if (srcpacket.subreq.object == SUBSYSTEM) {

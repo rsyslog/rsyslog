@@ -154,7 +154,7 @@ struct instanceConf_s {
 	sbool fileNotFoundError;
 	int maxLinesAtOnce;
 	uint32_t trimLineOverBytes;
-  int msgFlag;
+	int msgFlag;
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	struct instanceConf_s *next;
 };
@@ -1306,7 +1306,7 @@ enqLine(act_obj_t *const act,
 		srSleep(inst->delay_perMsg % 1000000, inst->delay_perMsg / 1000000);
 	}
 
-  pMsg->msgFlags = pMsg->msgFlags | inst->msgFlag;
+	pMsg->msgFlags = pMsg->msgFlags | inst->msgFlag;
 
 	ratelimitAddMsg(act->ratelimiter, &act->multiSub, pMsg);
 finalize_it:

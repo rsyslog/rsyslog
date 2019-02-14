@@ -84,9 +84,10 @@ typedef struct {
 	time_t return_check_interval;      /* time interval between usual server health checks */
 	time_t half_return_check_interval; /* for computing */
 	time_t quick_oscillation_interval; /* time interval below which the service is not stable */
-	int quick_oscillation_max;                /* number of quick oscillation after which the connection is kept on backup */
-	time_t graceful_interval;          /* time interval the connection is kept on backup after which the usual server check restarts */
-	int quick_oscillation_count;              /* current number of simultaneous quick oscillation detected */
+	int quick_oscillation_max; /* number of quick oscillation after which the connection is kept on backup */
+	time_t graceful_interval; /* time interval the connection is kept on backup after which the usual server
+							   * check restarts */
+	int quick_oscillation_count; /* current number of simultaneous quick oscillation detected */
 } failback_t;
 
 typedef struct _instanceData {
@@ -208,7 +209,8 @@ static void init_failback(failback_t *fb, char *str)
 	fb->half_return_check_interval = fb->return_check_interval / 2;
 	fb->quick_oscillation_interval = (value[1]) ? value[1] : (fb->return_check_interval / 10);
 	fb->quick_oscillation_max = (value[2]) ? (int)(value[2]) : 3;
-	fb->graceful_interval = (value[3]) ? value[3] : (fb->return_check_interval * 60) - fb->half_return_check_interval;
+	fb->graceful_interval = (value[3]) ? value[3] : (fb->return_check_interval * 60) -
+							fb->half_return_check_interval;
 	fb->quick_oscillation_count = 0;
 }
 
@@ -381,8 +383,10 @@ static void* run_connection_routine(void* arg)
 
 						result = amqp_simple_wait_frame_noblock(self->a_conn, &frame, &delay);
 
-						/* if connected to rescue server then check if usual server is alive. if so then disconnect from rescue */
-						if (result == AMQP_STATUS_TIMEOUT && (new_conn = tryConnection(self, &(self->serverPrefered.s))) != NULL) {
+						/* if connected to rescue server then check if usual server is alive. if so
+						 * then disconnect from rescue */
+						if (result == AMQP_STATUS_TIMEOUT &&
+							(new_conn = tryConnection(self, &(self->serverPrefered.s))) != NULL) {
 							amqp_connection_state_t old_conn = self->a_conn;
 							d_pthread_mutex_lock(&self->send_mutex);
 							self->a_conn = new_conn;
@@ -407,21 +411,25 @@ static void* run_connection_routine(void* arg)
 					case AMQP_STATUS_TIMEOUT:
 						break;
 					case AMQP_STATUS_NO_MEMORY:
-						LogError(0, RS_RET_OUT_OF_MEMORY, "omrabbitmq module %d/%d: no memory : aborting module.", self->iidx, self->widx);
+						LogError(0, RS_RET_OUT_OF_MEMORY, "omrabbitmq module %d/%d: no memory : aborting module.",
+							self->iidx, self->widx);
 						go_on = 0; /* non recoverable error let's go out */
 						connected = 0;
 						state_out = RS_RET_DISABLE_ACTION;
 						break;
 					case AMQP_STATUS_BAD_AMQP_DATA:
-						LogError(0, RS_RET_RABBITMQ_CONN_ERR, "omrabbitmq module %d/%d: bad data received : reconnect.", self->iidx, self->widx);
+						LogError(0, RS_RET_RABBITMQ_CONN_ERR, "omrabbitmq module %d/%d: bad data received : "
+								"reconnect.", self->iidx, self->widx);
 						connected = 0;
 						break;
 					case AMQP_STATUS_SOCKET_ERROR:
-						LogError(0, RS_RET_RABBITMQ_CONN_ERR, "omrabbitmq module %d/%d: Socket error : reconnect.", self->iidx, self->widx);
+						LogError(0, RS_RET_RABBITMQ_CONN_ERR, "omrabbitmq module %d/%d: Socket error : reconnect.",
+								self->iidx, self->widx);
 						connected = 0;
 						break;
 					case AMQP_STATUS_CONNECTION_CLOSED:
-						LogError(0, RS_RET_OUT_OF_MEMORY, "omrabbitmq module %d/%d: Connection closed : reconnect.", self->iidx, self->widx);
+						LogError(0, RS_RET_OUT_OF_MEMORY, "omrabbitmq module %d/%d: Connection closed : reconnect.",
+								self->iidx, self->widx);
 						connected = 0;
 						break;
 					case AMQP_STATUS_OK:
@@ -436,7 +444,8 @@ static void* run_connection_routine(void* arg)
 								go_on = 0;
 								break;
 							case AMQP_CHANNEL_CLOSE_METHOD:
-								LogMsg(0, RS_RET_OK, LOG_WARNING, "omrabbitmq module %d/%d: Close Channel Received (%X).", self->iidx, self->widx, frame.payload.method.id);
+								LogMsg(0, RS_RET_OK, LOG_WARNING, "omrabbitmq module %d/%d: Close Channel Received (%X).",
+										self->iidx, self->widx, frame.payload.method.id);
 								{
 									amqp_channel_close_ok_t req;
 									req.dummy = '\0';
@@ -445,7 +454,8 @@ static void* run_connection_routine(void* arg)
 								}
 								break;
 							case AMQP_CONNECTION_CLOSE_METHOD:
-								LogMsg(0, RS_RET_OK, LOG_WARNING, "omrabbitmq module %d/%d: Close Connection Received (%X).", self->iidx, self->widx, frame.payload.method.id);
+								LogMsg(0, RS_RET_OK, LOG_WARNING, "omrabbitmq module %d/%d: Close Connection "
+										"Received (%X).", self->iidx, self->widx, frame.payload.method.id);
 								{
 								 amqp_connection_close_ok_t req;
 								 req.dummy = '\0';
@@ -455,7 +465,8 @@ static void* run_connection_routine(void* arg)
 								connected = 0;
 								break;
 							default :
-								LogMsg(0, RS_RET_OK, LOG_WARNING, "omrabbitmq module %d/%d: unmanaged amqp method received (%X) : ignored.", self->iidx, self->widx, frame.payload.method.id);
+								LogMsg(0, RS_RET_OK, LOG_WARNING, "omrabbitmq module %d/%d: unmanaged amqp method"
+											" received (%X) : ignored.", self->iidx, self->widx, frame.payload.method.id);
 							} /* switch (frame.payload.method.id) */
 						}
 						break;
@@ -741,7 +752,8 @@ CODESTARTdbgPrintInstInfo
 		dbgprintf("\t\tusual server check interval=%ld s", pData->failback_policy.return_check_interval);
 		dbgprintf("\t\tquick oscillation limit=%ld s", pData->failback_policy.quick_oscillation_interval);
 		dbgprintf("\t\tmax number of oscillation=%d s", pData->failback_policy.quick_oscillation_max);
-		dbgprintf("\t\tgraceful interval after quick oscillation detection=%ld s", pData->failback_policy.graceful_interval);
+		dbgprintf("\t\tgraceful interval after quick oscillation detection=%ld s", 
+				pData->failback_policy.graceful_interval);
 	}else{
 		dbgprintf("\thost='%s' \n", pData->server1.host);
 		dbgprintf("\tport=%d\n", pData->server1.port);
@@ -759,7 +771,8 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tdurable=%d\n", pData->durable);
 	dbgprintf("\tpopulate_properties=%s\n", (pData->populate_properties)?"ON":"OFF");
 	dbgprintf((pData->delivery_mode == 1) ? "\tdelivery_mode=TRANSIENT\n": "\tdelivery_mode=PERSISTANT\n");
-	dbgprintf((pData->expiration.len == 0) ? "\texpiration=UNLIMITED\n" : "\texpiration=%*s\n", (int)pData->expiration.len, (char*) pData->expiration.bytes);
+	dbgprintf((pData->expiration.len == 0) ? "\texpiration=UNLIMITED\n" : "\texpiration=%*s\n", 
+			(int)pData->expiration.len, (char*) pData->expiration.bytes);
 ENDdbgPrintInstInfo
 
 BEGINnewActInst
@@ -829,14 +842,16 @@ CODESTARTnewActInst
 		} else if (!strcmp(actpblk.descr[i].name, "durable")) {
 			pData->durable = (int) pvals[i].val.d.n;
 		} else {
-		  LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module %d: program error, non-handled param '%s'\n", pData->iidx, actpblk.descr[i].name);
+		  LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module %d: program error, non-handled param '%s'\n", 
+					pData->iidx, actpblk.descr[i].name);
 		}
 	}
 
 	/* let's check config validity */
 
 	/* first if a template for routing_key is set let verify its existence */
-	if (pData->routing_key_template && tplFind(ourConf, (char*)pData->routing_key_template, strlen((char*)pData->routing_key_template)) == NULL)
+	if (pData->routing_key_template && tplFind(ourConf, (char*)pData->routing_key_template,
+					strlen((char*)pData->routing_key_template)) == NULL)
 	{
 		LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module %d : template '%s' used for routing key does not exist !",
 				            pData->iidx, pData->routing_key_template);
@@ -845,26 +860,30 @@ CODESTARTnewActInst
 
 	/* an exchange must be defined */
 	if (pData->exchange.bytes == NULL) {
-		LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module %d disabled: parameter exchange must be specified", pData->iidx);
+		LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module %d disabled: parameter exchange must be specified",
+					pData->iidx);
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 
 	/* a static or a template's routing_key must be defined */
 	if (pData->routing_key.bytes == NULL && pData->routing_key_template == NULL) {
-		LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module %d disabled: one of parameters routing_key or routing_key_template must be specified", pData->iidx);
+		LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module %d disabled: one of parameters routing_key or "
+						"routing_key_template must be specified", pData->iidx);
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 
 	/* a valid delivery mode must be defined : a 0 means that an invalid value has been done */
 	if (!pData->delivery_mode)
 	{
-		LogError(0, RS_RET_CONF_PARAM_INVLD, "omrabbitmq module %d disabled: parameters delivery_mode must be TRANSIENT or PERSISTANT (default)", pData->iidx);
+		LogError(0, RS_RET_CONF_PARAM_INVLD, "omrabbitmq module %d disabled: parameters delivery_mode must be "
+				"TRANSIENT or PERSISTANT (default)", pData->iidx);
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 
 	/* an expiration must be positive */
 	if (expiration < 0) {
-		LogError(0, RS_RET_CONF_PARAM_INVLD, "omrabbitmq module %d disabled: parameters expiration must be a positive integer", pData->iidx);
+		LogError(0, RS_RET_CONF_PARAM_INVLD, "omrabbitmq module %d disabled: parameters expiration must be a "
+		" positive integer", pData->iidx);
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 
@@ -877,7 +896,8 @@ CODESTARTnewActInst
 	}
 
 	/* Let's define the size of the doAction tab */
-	CODE_STD_STRING_REQUESTnewActInst(1 + ((pData->routing_key_template) ? 1 : 0) + ((pData->body_template && *pData->body_template == '\0') ? 0 : 1));
+	CODE_STD_STRING_REQUESTnewActInst(1 + ((pData->routing_key_template) ? 1 : 0) + 
+					((pData->body_template && *pData->body_template == '\0') ? 0 : 1));
 
 	/* Set the plain text message props */
 	memset(&pData->amqp_props_plaintext, 0, sizeof(amqp_basic_properties_t));
@@ -916,7 +936,8 @@ CODESTARTnewActInst
 	else if (*pData->body_template)
 	{
 		pData->idx_body_template = pData->idx_routing_key_template + 1;
-		CHKiRet(OMSRsetEntry(*ppOMSR, pData->idx_body_template, (uchar*)strdup((const char *)pData->body_template),  OMSR_NO_RQD_TPL_OPTS));
+		CHKiRet(OMSRsetEntry(*ppOMSR, pData->idx_body_template, (uchar*)strdup((const char *)pData->body_template),
+					OMSR_NO_RQD_TPL_OPTS));
 		pData->amqp_props_tpl_type.content_type = amqp_cstring_bytes((pData->content_type)
 		                                                             ? pData->content_type
 		                                                             : (char*)pData->body_template);
