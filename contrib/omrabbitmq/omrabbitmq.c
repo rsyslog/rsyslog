@@ -586,7 +586,7 @@ typedef struct _msg2amqp_props_ {
 	int flag;
 	} msg2amqp_props_t;
 
-static rsRetVal publishRabbitMQ(wrkrInstanceData_t *self, amqp_bytes_t exchange, 
+static rsRetVal publishRabbitMQ(wrkrInstanceData_t *self, amqp_bytes_t exchange,			
 		amqp_bytes_t routing_key, amqp_basic_properties_t *p_amqp_props,
 		amqp_bytes_t body_bytes)
 {
@@ -690,10 +690,10 @@ CODESTARTdoAction
 
 		/* CHKiRet could not be used because we need to release allocations */
 		iRet = publishRabbitMQ(pWrkrData, pWrkrData->pData->exchange,
-				(pWrkrData->pData->routing_key_template)?
-					cstring_bytes((char*)ppString[pWrkrData->pData->idx_routing_key_template])
-					: pWrkrData->pData->routing_key,
-				&amqp_props, body_bytes);
+			(pWrkrData->pData->routing_key_template)?
+				cstring_bytes((char*)ppString[pWrkrData->pData->idx_routing_key_template])
+				: pWrkrData->pData->routing_key,
+			&amqp_props, body_bytes);
 
 		for (i=0; i<len; i++)
 			if (mustBeFreed[i]) free(val[i]);
@@ -702,10 +702,10 @@ CODESTARTdoAction
 	{
 		/* As CHKiRet could not be used earlier, iRet is directly used again */
 		iRet = publishRabbitMQ(pWrkrData, pWrkrData->pData->exchange,
-				(pWrkrData->pData->routing_key_template)?
-					cstring_bytes((char*)ppString[pWrkrData->pData->idx_routing_key_template])
-					: pWrkrData->pData->routing_key,
-				amqp_props_msg, body_bytes);
+			(pWrkrData->pData->routing_key_template)?
+				cstring_bytes((char*)ppString[pWrkrData->pData->idx_routing_key_template])
+				: pWrkrData->pData->routing_key,
+			amqp_props_msg, body_bytes);
 	}
 
 ENDdoAction
@@ -761,10 +761,13 @@ CODESTARTdbgPrintInstInfo
 		dbgprintf("\thost2='%s' \n", pData->server2.host);
 		dbgprintf("\tport2=%d\n", pData->server2.port);
 		dbgprintf("\tfailback policy :");
-		dbgprintf("\t\tusual server check interval=%ld s", pData->failback_policy.return_check_interval);
-		dbgprintf("\t\tquick oscillation limit=%ld s", pData->failback_policy.quick_oscillation_interval);
-		dbgprintf("\t\tmax number of oscillation=%d s", pData->failback_policy.quick_oscillation_max);
-		dbgprintf("\t\tgraceful interval after quick oscillation detection=%ld s", 
+		dbgprintf("\t\tusual server check interval=%ld s",
+				pData->failback_policy.return_check_interval);
+		dbgprintf("\t\tquick oscillation limit=%ld s",
+				pData->failback_policy.quick_oscillation_interval);
+		dbgprintf("\t\tmax number of oscillation=%d s",
+				pData->failback_policy.quick_oscillation_max);
+		dbgprintf("\t\tgraceful interval after quick oscillation detection=%ld s",			
 				pData->failback_policy.graceful_interval);
 	}else{
 		dbgprintf("\thost='%s' \n", pData->server1.host);
@@ -774,16 +777,20 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tuser='%s'\n",  pData->user == NULL ? "(not configured)" : pData->user);
 	dbgprintf("\tpassword=(%sconfigured)\n", pData->password == NULL ? "not " : "");
 
-	dbgprintf("\texchange='%*s'\n", (int)pData->exchange.len, (char*)pData->exchange.bytes);
-	dbgprintf("\trouting_key='%*s'\n", (int)pData->routing_key.len, (char*) pData->routing_key.bytes);
+	dbgprintf("\texchange='%*s'\n", (int)pData->exchange.len,
+				(char*)pData->exchange.bytes);
+	dbgprintf("\trouting_key='%*s'\n", (int)pData->routing_key.len,
+				(char*) pData->routing_key.bytes);
 	dbgprintf("\trouting_key_template='%s'\n", pData->routing_key_template);
 	dbgprintf("\tbody_template='%s'\n", pData->body_template);
 	dbgprintf("\texchange_type='%s'\n", pData->exchange_type);
 	dbgprintf("\tauto_delete=%d\n", pData->auto_delete);
 	dbgprintf("\tdurable=%d\n", pData->durable);
 	dbgprintf("\tpopulate_properties=%s\n", (pData->populate_properties)?"ON":"OFF");
-	dbgprintf((pData->delivery_mode == 1) ? "\tdelivery_mode=TRANSIENT\n": "\tdelivery_mode=PERSISTANT\n");
-	dbgprintf((pData->expiration.len == 0) ? "\texpiration=UNLIMITED\n" : "\texpiration=%*s\n", 
+	dbgprintf((pData->delivery_mode == 1) ? "\tdelivery_mode=TRANSIENT\n":
+			"\tdelivery_mode=PERSISTANT\n");
+	dbgprintf((pData->expiration.len == 0) ? "\texpiration=UNLIMITED\n" :
+			"\texpiration=%*s\n",			
 			(int)pData->expiration.len, (char*) pData->expiration.bytes);
 ENDdbgPrintInstInfo
 
@@ -854,7 +861,8 @@ CODESTARTnewActInst
 		} else if (!strcmp(actpblk.descr[i].name, "durable")) {
 			pData->durable = (int) pvals[i].val.d.n;
 		} else {
-		  LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module %d: program error, non-handled param '%s'\n", 
+		  LogError(0, RS_RET_INVALID_PARAMS,
+					"omrabbitmq module %d: program error, non-handled param '%s'\n",			
 					pData->iidx, actpblk.descr[i].name);
 		}
 	}
@@ -865,57 +873,66 @@ CODESTARTnewActInst
 	if (pData->routing_key_template && tplFind(ourConf, (char*)pData->routing_key_template,
 					strlen((char*)pData->routing_key_template)) == NULL)
 	{
-		LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module %d : template '%s' used for routing key does not exist !",
-				            pData->iidx, pData->routing_key_template);
+		LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module %d : template '%s'"
+				" used for routing key does not exist !",
+				pData->iidx, pData->routing_key_template);
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 
 	/* an exchange must be defined */
 	if (pData->exchange.bytes == NULL) {
-		LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module %d disabled: parameter exchange must be specified",
+		LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module %d disabled: parameter "
+					"exchange must be specified",
 					pData->iidx);
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 
 	/* a static or a template's routing_key must be defined */
 	if (pData->routing_key.bytes == NULL && pData->routing_key_template == NULL) {
-		LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module %d disabled: one of parameters routing_key or "
+		LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module %d disabled: "
+						"one of parameters routing_key or "
 						"routing_key_template must be specified", pData->iidx);
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 
-	/* a valid delivery mode must be defined : a 0 means that an invalid value has been done */
+	/* a valid delivery mode must be defined : a 0 means that an invalid value
+	 * has been done */
 	if (!pData->delivery_mode)
 	{
-		LogError(0, RS_RET_CONF_PARAM_INVLD, "omrabbitmq module %d disabled: parameters delivery_mode must be "
+		LogError(0, RS_RET_CONF_PARAM_INVLD, "omrabbitmq module %d disabled: "
+				"parameters delivery_mode must be "
 				"TRANSIENT or PERSISTANT (default)", pData->iidx);
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 
 	/* an expiration must be positive */
 	if (expiration < 0) {
-		LogError(0, RS_RET_CONF_PARAM_INVLD, "omrabbitmq module %d disabled: parameters expiration must be a "
-		" positive integer", pData->iidx);
+		LogError(0, RS_RET_CONF_PARAM_INVLD, "omrabbitmq module %d disabled:"
+				"parameters expiration must be a  positive integer", pData->iidx);
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 
 	/* first if a template for message body is set let verify its existence */
-	if (pData->body_template && tplFind(ourConf, (char*)pData->body_template, strlen((char*)pData->body_template))
+	if (pData->body_template && tplFind(ourConf, (char*)pData->body_template,
+				strlen((char*)pData->body_template))
 		== NULL)
 	{
-		LogError(0, RS_RET_CONF_PARAM_INVLD, "omrabbitmq module %d : template '%s' used for body does not exist !",
+		LogError(0, RS_RET_CONF_PARAM_INVLD, "omrabbitmq module %d : template '%s'"
+				" used for body does not exist !",
 				pData->iidx, pData->body_template);
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 
 	/* Let's define the size of the doAction tab */
-	CODE_STD_STRING_REQUESTnewActInst(1 + ((pData->routing_key_template) ? 1 : 0) + 
+	CODE_STD_STRING_REQUESTnewActInst(1 + ((pData->routing_key_template) ? 1 : 0) +			
 					((pData->body_template && *pData->body_template == '\0') ? 0 : 1));
 
 	/* Set the plain text message props */
 	memset(&pData->amqp_props_plaintext, 0, sizeof(amqp_basic_properties_t));
-	pData->amqp_props_plaintext._flags = AMQP_BASIC_DELIVERY_MODE_FLAG | AMQP_BASIC_CONTENT_TYPE_FLAG;
-	pData->amqp_props_plaintext.delivery_mode = pData->delivery_mode; /* persistent delivery mode */
+	pData->amqp_props_plaintext._flags =
+				AMQP_BASIC_DELIVERY_MODE_FLAG | AMQP_BASIC_CONTENT_TYPE_FLAG;
+	pData->amqp_props_plaintext.delivery_mode = pData->delivery_mode;
+			/* persistent delivery mode */
 	pData->amqp_props_plaintext.content_type = amqp_cstring_bytes("plain/text");
 	if (pData->expiration.len)
 	{
@@ -923,7 +940,8 @@ CODESTARTnewActInst
 		pData->amqp_props_plaintext.expiration = pData->expiration;
 	}
 
-	memcpy(&pData->amqp_props_tpl_type, &pData->amqp_props_plaintext, sizeof(amqp_basic_properties_t));
+	memcpy(&pData->amqp_props_tpl_type, &pData->amqp_props_plaintext,
+			sizeof(amqp_basic_properties_t));
 
 	/* The first position of doAction tab will contain the internal message */
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
@@ -932,33 +950,41 @@ CODESTARTnewActInst
 	if (pData->routing_key_template)
 	{
 		pData->idx_routing_key_template = 1;
-		CHKiRet(OMSRsetEntry(*ppOMSR, 1, (uchar*)strdup((const char *)pData->routing_key_template), OMSR_NO_RQD_TPL_OPTS));
+		CHKiRet(OMSRsetEntry(*ppOMSR, 1,
+			(uchar*)strdup((const char *)pData->routing_key_template),
+			OMSR_NO_RQD_TPL_OPTS));
 	}
 
-	/* if pData->body_template is NULL (not defined) then let's use former json format
-	 * if pData->body_template is not an empty string then let's use it. In this case the content type is defined either
-	 *  by the template name or the user defined content_type if set
-	 * otherwise raw data (unformatted) are sent this is done setting pData->idx_body_template to 0 */
+	/* if pData->body_template is NULL (not defined) then let's use former
+	 * json format if pData->body_template is not an empty string then let's
+	 * use it. In this case the content type is defined either
+	 * by the template name or the user defined content_type if set
+	 * otherwise raw data (unformatted) are sent this is done setting
+	 * pData->idx_body_template to 0 */
 	if (pData->body_template == NULL)
 	{ /* no template */
 		DBGPRINTF("Body_template is using default StdJSONFmt definition.\n");
 		pData->idx_body_template = pData->idx_routing_key_template + 1;
-		CHKiRet(OMSRsetEntry(*ppOMSR, pData->idx_body_template, (uchar*)strdup(" StdJSONFmt"), OMSR_NO_RQD_TPL_OPTS));
+		CHKiRet(OMSRsetEntry(*ppOMSR, pData->idx_body_template,
+				(uchar*)strdup(" StdJSONFmt"), OMSR_NO_RQD_TPL_OPTS));
 		pData->amqp_props_tpl_type.content_type = amqp_cstring_bytes("application/json");
 	}
 	else if (*pData->body_template)
 	{
 		pData->idx_body_template = pData->idx_routing_key_template + 1;
-		CHKiRet(OMSRsetEntry(*ppOMSR, pData->idx_body_template, (uchar*)strdup((const char *)pData->body_template),
+		CHKiRet(OMSRsetEntry(*ppOMSR, pData->idx_body_template,
+					(uchar*)strdup((const char *)pData->body_template),
 					OMSR_NO_RQD_TPL_OPTS));
-		pData->amqp_props_tpl_type.content_type = amqp_cstring_bytes((pData->content_type)
-		                                                             ? pData->content_type
-		                                                             : (char*)pData->body_template);
+		pData->amqp_props_tpl_type.content_type = amqp_cstring_bytes(
+										(pData->content_type)
+										 ? pData->content_type
+										 : (char*)pData->body_template);
 	}else{
 		pData->idx_body_template = 0;
-		pData->amqp_props_tpl_type.content_type = amqp_cstring_bytes((pData->content_type)
-		                                                             ? pData->content_type
-		                                                             :"raw");
+		pData->amqp_props_tpl_type.content_type = amqp_cstring_bytes(
+						(pData->content_type)
+						 ? pData->content_type
+						 :"raw");
 	}
 
 	/* treatment of the server parameter
@@ -1029,12 +1055,15 @@ CODESTARTcreateWrkrInstance
 	pWrkrData->iidx = pData->iidx;
 	pWrkrData->widx = ++pData->nbWrkr;
 
-	memcpy(&(pWrkrData->failback_policy), &(pData->failback_policy), sizeof(failback_t));
+	memcpy(&(pWrkrData->failback_policy), &(pData->failback_policy),
+			sizeof(failback_t));
 
 	if (pData->server2.host && *pData->server2.host) {
 		time_t odd = time(NULL) % 2;
-		memcpy(&(pWrkrData->serverPrefered.s), (odd) ? &pData->server1 :  &pData->server2, sizeof(server_t));
-		memcpy(&(pWrkrData->serverRescue.s), (odd) ? &pData->server2 :  &pData->server1, sizeof(server_t));
+		memcpy(&(pWrkrData->serverPrefered.s), (odd) ?
+				&pData->server1 : &pData->server2, sizeof(server_t));
+		memcpy(&(pWrkrData->serverRescue.s), (odd) ?
+				&pData->server2 : &pData->server1, sizeof(server_t));
 	}else{
 		memcpy(&(pWrkrData->serverPrefered.s), &pData->server1, sizeof(server_t));
 	}

@@ -307,7 +307,7 @@ BEGINObjClassInit(nsdpoll_ptcp, 1, OBJ_IS_CORE_MODULE) /* class, version */
 ENDObjClassInit(nsdpoll_ptcp)
 #else
 
-static void dummy() {}
+static void dummy(void) {}
 
 #endif /* #ifdef HAVE_EPOLL_CREATE this module requires epoll! */
 
