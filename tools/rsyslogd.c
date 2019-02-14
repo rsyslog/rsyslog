@@ -548,8 +548,8 @@ printVersion(void)
 	 * to wonder.
 	 */
 	printf("\tConfig file:\t\t\t\t" PATH_CONFFILE "\n");
-	printf("\tPID file:\t\t\t\t" PATH_PIDFILE "%s\n", PATH_PIDFILE[0]!='/'?" 
-			(relative to global workingdirectory)":"");
+	printf("\tPID file:\t\t\t\t" PATH_PIDFILE "%s\n", PATH_PIDFILE[0]!='/'?
+			"(relative to global workingdirectory)":"");
 	printf("\tNumber of Bits in RainerScript integers: 64\n");
 	printf("\nSee https://www.rsyslog.com for more information.\n");
 }

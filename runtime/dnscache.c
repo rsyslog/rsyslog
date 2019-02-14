@@ -75,7 +75,7 @@ static prop_t *staticErrValue;
 /* Our hash function.
  * TODO: check how well it performs on socket addresses!
  */
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized" /* TODO: how can we fix these warnings? */
 #endif
@@ -101,7 +101,7 @@ hash_from_key_fn(void *k)
 
 	return hashval;
 }
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic pop
 #endif
 

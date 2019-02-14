@@ -111,8 +111,9 @@ struct instanceConf_s {
 	uchar *pszBindRuleset;
 	int iFacility;
 	int iSeverity;
-	char *ff_regex; /* Full treatment : this should contain a regex applied on filename. The matching
-						part is then replaced with ff_replace to put the file out of scan criteria */
+	char *ff_regex; 
+		/* Full treatment : this should contain a regex applied on filename. The matching
+		part is then replaced with ff_replace to put the file out of scan criteria */
 	regex_t ff_preg;
 
 	char *ff_rename;
@@ -122,7 +123,8 @@ struct instanceConf_s {
 	int len_reject;
 
 	int filename_oversize;
-	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
+	ruleset_t *pBindRuleset;
+		/* ruleset to bind listener to (use system default if unspecified) */
 
 	ratelimit_t *ratelimiter;
 
@@ -147,10 +149,12 @@ typedef struct myConfData_s {
 
 	uchar *buffer;
 	uchar *buffer_minsize;
-	int iPollInterval;  /* number of seconds to sleep when there was no file activity */
+	int iPollInterval;
+	/* number of seconds to sleep when there was no file activity */
 } myConfData_t;
 
-static myConfData_t fixedModConf;/* modConf ptr to use for the current load process */
+/* modConf ptr to use for the current load process */
+static myConfData_t fixedModConf;
 
 /* config variables */
 struct modConfData_s {
@@ -261,9 +265,6 @@ static rsRetVal pollFile(instanceConf_t *pInst)
 	int toolarge;
 	pInst->fd = 0;
 
-	/* Note: we must do pthread_cleanup_push() immediately, because the POXIS macros
-	 * otherwise do not work if I include the _cleanup_pop() inside an if... -- rgerhards, 2008-08-14
-	 */
 	pthread_cleanup_push(pollFileCancelCleanup, pInst);
 
 	/* loop below will be exited when strmReadLine() returns EOF */
@@ -287,17 +288,19 @@ static rsRetVal pollFile(instanceConf_t *pInst)
 					regmatch_t matches[1];
 
 					if (regexec(&pInst->ff_preg, pszCurrFName, 1, matches, 0))
-					{ /* as this test was already made on glob's file search it 
-						* must not be possible but let's check it anyway */
-						LogError(0, RS_RET_INVALID_PARAMS, 
-								"imbatchreport: regex does not match to filename: Aborting module to avoid loops.");
+					{ /* as this test was already made on glob's file search it
+					   * must not be possible but let's check it anyway */
+						LogError(0, RS_RET_INVALID_PARAMS,
+								"imbatchreport: regex does not match to "
+								"filename: Aborting module to avoid loops.");
 						pInst->must_stop = TRUE;
 
 						globfree(&res);
 						return RS_RET_INVALID_PARAMS;
 					}
 
-					pInst->fd = open(pszCurrFName, O_NOCTTY | O_RDONLY | O_NONBLOCK | O_LARGEFILE, 0);
+					pInst->fd = open(pszCurrFName, O_NOCTTY | O_RDONLY |
+							O_NONBLOCK | O_LARGEFILE, 0);
 
 					if (pInst->fd > 0)
 					{
@@ -337,27 +340,31 @@ static rsRetVal pollFile(instanceConf_t *pInst)
 
 								for (structured_data = fixedModConf.buffer_minsize + msg_len, 
 											structured_data_len = 0;
-									structured_data >= fixedModConf.buffer_minsize && *structured_data != '[';
+									structured_data >= fixedModConf.buffer_minsize &&
+											*structured_data != '[';
 									structured_data--, structured_data_len++)
 									;
 
 								if (*structured_data == '[')
 								{
-									uchar *struct_field = (uchar*)strstr((char*)structured_data, "START="), v;
+									uchar *struct_field = (uchar*)strstr((char*)
+											structured_data, "START="), v;
 									if (struct_field)
 									{
 										start_ts = 0;
-										for (struct_field += 7; (v = *struct_field - (uchar)'0') <= 9; 
-													struct_field++ )
+										for (struct_field += 7;
+												(v = *struct_field - (uchar)'0') <= 9;
+												struct_field++ )
 											start_ts = start_ts*10 + v;
-
 									}
 
-									struct_field = (uchar*)strstr((char*)structured_data, "KSH=\"");
+									struct_field = (uchar*)strstr((char*)structured_data,
+										"KSH=\"");
 									if (struct_field)
 									{
 										local_program = struct_field + 5;
-										struct_field = (uchar*)strstr((char*)local_program, "\"");
+										struct_field = (uchar*)strstr((char*)local_program,
+												"\"");
 										if (struct_field)
 											local_program_len = struct_field - local_program;
 										else
@@ -375,12 +382,14 @@ static rsRetVal pollFile(instanceConf_t *pInst)
 
 							if (file_len > fixedModConf.msg_size)
 							{
-								if ((size_t)(structured_data_len + FILE_TOO_BIG_LEN) > fixedModConf.msg_size)
+								if ((size_t)(structured_data_len + FILE_TOO_BIG_LEN) >
+										fixedModConf.msg_size)
 								{
-									LogError(0, RS_RET_INVALID_PARAMS, "pollFile : the msg_size options (%lu) is"
-											"really too small even to handle batch reports notification of %ld "
-											"octets (file too large)", fixedModConf.msg_size,
-											60 + fixedModConf.lhostname + pInst->lenTag  + structured_data_len);
+									LogError(0, RS_RET_INVALID_PARAMS, "pollFile : the msg_size options"
+											" (%lu) is really too small even to handle batch reports"
+											" notification of %ld octets (file too large)",
+											fixedModConf.msg_size,
+											60 + fixedModConf.lhostname + pInst->lenTag + structured_data_len);
 									pInst->must_stop = 1;
 
 									close(pInst->fd);
@@ -759,9 +768,11 @@ CODESTARTnewInpInst
 			ABORT_FINALIZE(RS_RET_PARAM_NOT_PERMITTED);
 	}
 
-	inst->filename_oversize = (inst->len_rename > inst->len_reject) ? inst->len_rename : inst->len_reject;
+	inst->filename_oversize = (inst->len_rename > inst->len_reject) ?
+			inst->len_rename : inst->len_reject;
 
-	CHKiRet(ratelimitNew(&inst->ratelimiter, "imbatchreport", (char*)inst->pszFollow_glob));
+	CHKiRet(ratelimitNew(&inst->ratelimiter, "imbatchreport",
+			(char*)inst->pszFollow_glob));
 
 	inst->goon = 1;
 
@@ -903,12 +914,14 @@ ENDrunInput
 BEGINwillRun
 CODESTARTwillRun
 	CHKiRet(prop.Construct(&pInputName));
-	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imbatchreport"), sizeof("imbatchreport") - 1));
+	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imbatchreport"),
+			sizeof("imbatchreport") - 1));
 	CHKiRet(prop.ConstructFinalize(pInputName));
 
 	fixedModConf.msg_size = glbl.GetMaxLine();
 
-	size_t alloc_s = ((fixedModConf.msg_size > BUFFER_MINSIZE) ? fixedModConf.msg_size : BUFFER_MINSIZE) + 1;
+	size_t alloc_s = ((fixedModConf.msg_size > BUFFER_MINSIZE) ? fixedModConf.msg_size
+			: BUFFER_MINSIZE) + 1;
 
 	CHKmalloc(fixedModConf.buffer = (uchar*)malloc(alloc_s));
 
@@ -981,7 +994,8 @@ ENDmodInit
 
 
 static inline void
-std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst)
+std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf,
+			instanceConf_t *inst)
 {
 	LogError(0, NO_ERRCODE, "imbatchreport: ruleset '%s' for %s not found - "
 			"using default ruleset instead", inst->pszBindRuleset,

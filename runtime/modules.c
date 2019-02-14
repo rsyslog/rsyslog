@@ -906,13 +906,13 @@ static void modPrintList(void)
 			dbgprintf("\tdoAction:           %p\n", pMod->mod.om.doAction);
 			dbgprintf("\tparseSelectorAct:   %p\n", pMod->mod.om.parseSelectorAct);
 			dbgprintf("\tnewActInst:         %p\n", (pMod->mod.om.newActInst == dummynewActInst) ?
-								    NULL :  pMod->mod.om.newActInst);
+						NULL :  pMod->mod.om.newActInst);
 			dbgprintf("\ttryResume:          %p\n", pMod->tryResume);
 			dbgprintf("\tdoHUP:              %p\n", pMod->doHUP);
 			dbgprintf("\tBeginTransaction:   %p\n", ((pMod->mod.om.beginTransaction ==
-								dummyBeginTransaction) ? NULL :  pMod->mod.om.beginTransaction));
+						dummyBeginTransaction) ? NULL :  pMod->mod.om.beginTransaction));
 			dbgprintf("\tEndTransaction:     %p\n", ((pMod->mod.om.endTransaction ==
-								dummyEndTransaction) ? NULL :  pMod->mod.om.endTransaction));
+						dummyEndTransaction) ? NULL :  pMod->mod.om.endTransaction));
 			break;
 		case eMOD_IN:
 			dbgprintf("Input Module Entry Points\n");

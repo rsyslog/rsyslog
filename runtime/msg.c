@@ -2965,7 +2965,8 @@ textpri(const smsg_t *const __restrict__ pMsg)
  * can not allocate memory, it returns a NULL pointer.
  * Added 2007-07-10 rgerhards
  */
-typedef enum ENOWType { NOW_NOW, NOW_YEAR, NOW_MONTH, NOW_DAY, NOW_HOUR, NOW_HHOUR, NOW_QHOUR, NOW_MINUTE, NOW_WDAY } eNOWType;
+typedef enum ENOWType { NOW_NOW, NOW_YEAR, NOW_MONTH, NOW_DAY, NOW_HOUR,
+		NOW_HHOUR, NOW_QHOUR, NOW_MINUTE, NOW_WDAY } eNOWType;
 #define tmpBUFSIZE 16	/* size of formatting buffer */
 static uchar *getNOW(eNOWType eNow, struct syslogTime *t, const int inUTC)
 {
@@ -3016,9 +3017,9 @@ static uchar *getNOW(eNOWType eNow, struct syslogTime *t, const int inUTC)
 	case NOW_MINUTE:
 		memcpy(pBuf, two_digits[(int)t->minute], 3);
 		break;
-  case NOW_WDAY:
-    memcpy(pBuf, one_digit[(int)t->wday], 2);
-    break;
+	case NOW_WDAY:
+		memcpy(pBuf, one_digit[(int)t->wday], 2);
+		break;
 	}
 
 	return(pBuf);
