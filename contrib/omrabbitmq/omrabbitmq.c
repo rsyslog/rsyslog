@@ -565,7 +565,8 @@ typedef struct _msg2amqp_props_ {
 	int flag;
 	} msg2amqp_props_t;
 
-static rsRetVal publishRabbitMQ(wrkrInstanceData_t *self, amqp_bytes_t exchange, amqp_bytes_t routing_key, amqp_basic_properties_t *p_amqp_props, amqp_bytes_t body_bytes)
+static rsRetVal publishRabbitMQ(wrkrInstanceData_t *self, amqp_bytes_t exchange, amqp_bytes_t routing_key, 
+		amqp_basic_properties_t *p_amqp_props, amqp_bytes_t body_bytes)
 {
 	DEFiRet;
 	d_pthread_mutex_lock(&self->send_mutex);
@@ -666,8 +667,10 @@ CODESTARTdoAction
 
 		/* CHKiRet could not be used because we need to release allocations */
 		iRet = publishRabbitMQ(pWrkrData, pWrkrData->pData->exchange,
-		                       (pWrkrData->pData->routing_key_template)? cstring_bytes((char*)ppString[pWrkrData->pData->idx_routing_key_template]) : pWrkrData->pData->routing_key,
-		                       &amqp_props, body_bytes);
+					(pWrkrData->pData->routing_key_template)?
+						cstring_bytes((char*)ppString[pWrkrData->pData->idx_routing_key_template]) :
+						pWrkrData->pData->routing_key,
+					&amqp_props, body_bytes);
 
 		for (i=0; i<len; i++)
 			if (mustBeFreed[i]) free(val[i]);
@@ -676,8 +679,10 @@ CODESTARTdoAction
 	{
 		/* As CHKiRet could not be used earlier, iRet is directly used again */
 		iRet = publishRabbitMQ(pWrkrData, pWrkrData->pData->exchange,
-		                       (pWrkrData->pData->routing_key_template)? cstring_bytes((char*)ppString[pWrkrData->pData->idx_routing_key_template]) : pWrkrData->pData->routing_key,
-		                       amqp_props_msg, body_bytes);
+					(pWrkrData->pData->routing_key_template)?
+						cstring_bytes((char*)ppString[pWrkrData->pData->idx_routing_key_template]) :
+						pWrkrData->pData->routing_key,
+					amqp_props_msg, body_bytes);
 	}
 
 ENDdoAction

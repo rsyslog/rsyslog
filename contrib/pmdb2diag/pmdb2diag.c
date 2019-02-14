@@ -90,12 +90,12 @@ BEGINparse2
 	int32_t lv, *p;
 	struct tm tm;
 	char *ms, *t, *e, *f, *prog, *pid, *val, *end;
-  int lprog, lpid;
+	int lprog, lpid;
 	int32_t* nlevels = (int32_t*)levels;
-  msgPropDescr_t pProp;
-  rs_size_t valLen;
-  unsigned short mustBeFreed;
-  char procid[128];
+	msgPropDescr_t pProp;
+	rs_size_t valLen;
+	unsigned short mustBeFreed;
+	char procid[128];
 CODESTARTparse2
 	assert(pMsg != NULL);
 	assert(pMsg->pszRawMsg != NULL);
@@ -116,7 +116,7 @@ CODESTARTparse2
 	if (i < 8)
 		pMsg->iSeverity = i;
 	else
-    ABORT_FINALIZE(0);
+		ABORT_FINALIZE(0);
 
 	t = (char*)pMsg->pszRawMsg + pMsg->offAfterPRI + pInst->timepos;
 
@@ -199,7 +199,7 @@ BEGINnewParserInst
 	struct cnfparamvals *pvals = NULL;
 	int i;
 CODESTARTnewParserInst
-  inst = NULL;
+	inst = NULL;
 
 	DBGPRINTF("newParserInst (pmdb2diag)\n");
 	CHKiRet(createInstance(&inst));

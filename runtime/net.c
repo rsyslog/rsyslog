@@ -783,6 +783,7 @@ finalize_it:
 }
 
 
+static const char *SENDER_TEXT[4] = { "", "UDP", "TCP", "GSS" };
 /* Print an allowed sender list. The caller must tell us which one.
  * iListToPrint = 1 means UDP, 2 means TCP
  * rgerhards, 2005-09-27
@@ -790,7 +791,6 @@ finalize_it:
 static void
 PrintAllowedSenders(int iListToPrint)
 {
-	static const char *SENDER_TEXT[] = { "", "UDP", "TCP", "GSS" };
 	struct AllowedSenders *pSender;
 	uchar szIP[64];
 #ifdef USE_GSSAPI
