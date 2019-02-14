@@ -333,17 +333,19 @@ static rsRetVal pollFile(instanceConf_t *pInst)
 
 						if (file_in_buffer == msg_len)
 						{
-							for (; msg_len && fixedModConf.buffer_minsize[msg_len-1] == '\n';
-									msg_len--)
+							for (; msg_len && fixedModConf.buffer_minsize[msg_len-1]
+									== '\n'; msg_len--)
 								;
 
 							if (fixedModConf.buffer_minsize[msg_len-1] == ']')
-							{ /* We read the last part of the report to get structured data */
+							{ /* We read the last part of the report to get
+							   * structured data */
 
-								for (structured_data = fixedModConf.buffer_minsize + msg_len, 
-											structured_data_len = 0;
-									structured_data >= fixedModConf.buffer_minsize &&
-											*structured_data != '[';
+								for (structured_data =
+										fixedModConf.buffer_minsize + msg_len,
+										structured_data_len = 0;
+									structured_data >= fixedModConf.buffer_minsize
+										&& *structured_data != '[';
 									structured_data--, structured_data_len++)
 									;
 
@@ -355,20 +357,24 @@ static rsRetVal pollFile(instanceConf_t *pInst)
 									{
 										start_ts = 0;
 										for (struct_field += 7;
-												(v = *struct_field - (uchar)'0') <= 9;
-												struct_field++ )
+											(v = *struct_field -
+												(uchar)'0') <= 9;
+											struct_field++ )
 											start_ts = start_ts*10 + v;
 									}
 
-									struct_field = (uchar*)strstr((char*)structured_data,
-										"KSH=\"");
+									struct_field = (uchar*)strstr(
+											(char*)structured_data,
+											"KSH=\"");
 									if (struct_field)
 									{
 										local_program = struct_field + 5;
-										struct_field = (uchar*)strstr((char*)local_program,
+										struct_field = (uchar*)strstr(
+												(char*)local_program,
 												"\"");
 										if (struct_field)
-											local_program_len = struct_field - local_program;
+											local_program_len = struct_field -
+													local_program;
 										else
 											local_program = (uchar*)"-";
 									}
@@ -388,11 +394,13 @@ static rsRetVal pollFile(instanceConf_t *pInst)
 										fixedModConf.msg_size)
 								{
 									LogError(0, RS_RET_INVALID_PARAMS,
-										"pollFile : the msg_size options"
-										" (%lu) is really too small even to handle batch reports"
-										" notification of %ld octets (file too large)",
+										"pollFile : the msg_size options (%lu)"
+										" is really too small even to handle batch"
+										" reports notification of %ld octets "
+										"(file too large)",
 										fixedModConf.msg_size,
-										60 + fixedModConf.lhostname + pInst->lenTag + 
+											60 + fixedModConf.lhostname +
+												pInst->lenTag +
 												structured_data_len);
 									pInst->must_stop = 1;
 
@@ -420,14 +428,18 @@ static rsRetVal pollFile(instanceConf_t *pInst)
 							{
 								if (file_len > file_in_buffer)
 								{
-									size_t file_to_read = file_len - file_in_buffer, buffer_used = 0, r;
-									start = fixedModConf.buffer_minsize - file_to_read;
+									size_t file_to_read = file_len -
+											file_in_buffer, 
+											buffer_used = 0, r;
+									start = fixedModConf.buffer_minsize -
+												file_to_read;
 
 									lseek(pInst->fd, 0, SEEK_SET);
 
 									do
 									{
-										r = read(pInst->fd, start + buffer_used, file_to_read - buffer_used);
+										r = read(pInst->fd, start + buffer_used,
+											file_to_read - buffer_used);
 										buffer_used += r;
 									}
 									while (r && file_to_read > buffer_used);
@@ -450,18 +462,22 @@ static rsRetVal pollFile(instanceConf_t *pInst)
 							tv.tv_sec = fstate.st_mtime;
 							tv.tv_usec = fstate.st_mtim.tv_nsec / 1000;
 
-							if (send_msg(pInst, start, (start[msg_len]=='\n') ? msg_len : msg_len+1,
-									&tv, start_ts, structured_data, structured_data_len,
+							if (send_msg(pInst, start, (start[msg_len]=='\n') ?
+									msg_len : msg_len+1,
+									&tv, start_ts, structured_data,
+									structured_data_len,
 									local_program, local_program_len,
 									(uchar*)pszCurrFName) == RS_RET_OK)
 							{
 								if (pInst->action == action_rename || toolarge)
 								{
-									char *pszNewFName = (char*)malloc(strlen(pszCurrFName)+
+									char *pszNewFName =
+											(char*)malloc(strlen(pszCurrFName)+
 												pInst->filename_oversize);
 									memcpy(pszNewFName, pszCurrFName, matches[0].rm_so);
 									strcpy((char*)pszNewFName + matches[0].rm_so,
-												 (toolarge) ? pInst->ff_reject : pInst->ff_rename);
+										(toolarge) ? pInst->ff_reject :
+											pInst->ff_rename);
 
 									if (rename(pszCurrFName, pszNewFName))
 									{

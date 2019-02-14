@@ -246,7 +246,7 @@ static rsRetVal parseMsg(smsg_t *pMsg, char *rawMsg, size_t msgLen,
 
 	date6_t t1, t2;
 	t1.ui64 = be64toh(*((uint64_t*)rawMsg)) >> 16;
-	uint64_t t3 = (t1.ui64 & 0x0000F0F0F0F0F0F0) ^ 0x0000303030303030; 
+	uint64_t t3 = (t1.ui64 & 0x0000F0F0F0F0F0F0) ^ 0x0000303030303030;
 		/* check that every char is like 0x3N what ever is N */
 	t2.ui64 = t1.ui64 & 0x00000F0F0F0F0F0F; /* we keep only the n part of 0xMN what ever is M */
 
@@ -722,7 +722,7 @@ static rsRetVal do_polling(void)
 				 * If so, then it the new file exists ? and is a file ?
 				 */
 				if (temp && stat((const char*)temp, &sb) == 0 && S_ISREG(sb.st_mode) &&
-						(pInst->pszCurrFName == NULL || 
+						(pInst->pszCurrFName == NULL ||
 						strcmp((char*)temp,(char*)pInst->pszCurrFName) != 0))
 				{
 					DBGPRINTF("imtuxedoulog: timed file : rotation reach "

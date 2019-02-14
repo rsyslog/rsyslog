@@ -388,7 +388,8 @@ static void* run_connection_routine(void* arg)
 						/* if connected to rescue server then check if usual server is alive.
 						 * if so then disconnect from rescue */
 						if (result == AMQP_STATUS_TIMEOUT &&
-								(new_conn = tryConnection(self, &(self->serverPrefered.s)))
+								(new_conn = tryConnection(self,
+										&(self->serverPrefered.s)))
 								!= NULL) {
 							amqp_connection_state_t old_conn = self->a_conn;
 							d_pthread_mutex_lock(&self->send_mutex);
@@ -449,20 +450,24 @@ static void* run_connection_routine(void* arg)
 								break;
 							case AMQP_CHANNEL_CLOSE_METHOD:
 								LogMsg(0, RS_RET_OK, LOG_WARNING,
-										"omrabbitmq module %d/%d: Close Channel Received (%X).",
-										self->iidx, self->widx, frame.payload.method.id);
+										"omrabbitmq module %d/%d: "
+										"Close Channel Received (%X).",
+										self->iidx, self->widx,
+										frame.payload.method.id);
 								{
 									amqp_channel_close_ok_t req;
 									req.dummy = '\0';
 									// send the method
 									amqp_send_method(self->a_conn, frame.channel,
-												AMQP_CHANNEL_CLOSE_OK_METHOD, &req);
+										AMQP_CHANNEL_CLOSE_OK_METHOD, &req);
 								}
 								break;
 							case AMQP_CONNECTION_CLOSE_METHOD:
 								LogMsg(0, RS_RET_OK, LOG_WARNING,
-										"omrabbitmq module %d/%d: Close Connection Received (%X).",
-										self->iidx, self->widx, frame.payload.method.id);
+										"omrabbitmq module %d/%d: Close "
+										"Connection Received (%X).",
+										self->iidx, self->widx,
+										frame.payload.method.id);
 								{
 								 amqp_connection_close_ok_t req;
 								 req.dummy = '\0';
@@ -476,7 +481,8 @@ static void* run_connection_routine(void* arg)
 								LogMsg(0, RS_RET_OK, LOG_WARNING,
 									"omrabbitmq module %d/%d: unmanaged amqp method"
 									" received (%X) : ignored.",
-									self->iidx, self->widx, frame.payload.method.id);
+									self->iidx, self->widx,
+									frame.payload.method.id);
 							} /* switch (frame.payload.method.id) */
 						}
 						break;
@@ -586,7 +592,7 @@ typedef struct _msg2amqp_props_ {
 	int flag;
 	} msg2amqp_props_t;
 
-static rsRetVal publishRabbitMQ(wrkrInstanceData_t *self, amqp_bytes_t exchange,			
+static rsRetVal publishRabbitMQ(wrkrInstanceData_t *self, amqp_bytes_t exchange,
 		amqp_bytes_t routing_key, amqp_basic_properties_t *p_amqp_props,
 		amqp_bytes_t body_bytes)
 {
@@ -767,7 +773,7 @@ CODESTARTdbgPrintInstInfo
 				pData->failback_policy.quick_oscillation_interval);
 		dbgprintf("\t\tmax number of oscillation=%d s",
 				pData->failback_policy.quick_oscillation_max);
-		dbgprintf("\t\tgraceful interval after quick oscillation detection=%ld s",			
+		dbgprintf("\t\tgraceful interval after quick oscillation detection=%ld s",
 				pData->failback_policy.graceful_interval);
 	}else{
 		dbgprintf("\thost='%s' \n", pData->server1.host);
@@ -790,7 +796,7 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf((pData->delivery_mode == 1) ? "\tdelivery_mode=TRANSIENT\n":
 			"\tdelivery_mode=PERSISTANT\n");
 	dbgprintf((pData->expiration.len == 0) ? "\texpiration=UNLIMITED\n" :
-			"\texpiration=%*s\n",			
+			"\texpiration=%*s\n",
 			(int)pData->expiration.len, (char*) pData->expiration.bytes);
 ENDdbgPrintInstInfo
 
@@ -861,9 +867,9 @@ CODESTARTnewActInst
 		} else if (!strcmp(actpblk.descr[i].name, "durable")) {
 			pData->durable = (int) pvals[i].val.d.n;
 		} else {
-		  LogError(0, RS_RET_INVALID_PARAMS,
-					"omrabbitmq module %d: program error, non-handled param '%s'\n",			
-					pData->iidx, actpblk.descr[i].name);
+			LogError(0, RS_RET_INVALID_PARAMS,
+				"omrabbitmq module %d: program error, non-handled param '%s'\n",
+				pData->iidx, actpblk.descr[i].name);
 		}
 	}
 
@@ -924,7 +930,7 @@ CODESTARTnewActInst
 	}
 
 	/* Let's define the size of the doAction tab */
-	CODE_STD_STRING_REQUESTnewActInst(1 + ((pData->routing_key_template) ? 1 : 0) +			
+	CODE_STD_STRING_REQUESTnewActInst(1 + ((pData->routing_key_template) ? 1 : 0) +
 					((pData->body_template && *pData->body_template == '\0') ? 0 : 1));
 
 	/* Set the plain text message props */
