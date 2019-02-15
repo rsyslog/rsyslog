@@ -1343,6 +1343,14 @@ check_logger_has_option_d() {
 }
 
 
+require_relpEngineSetTLSLibByName() {
+	./have_relpEngineSetTLSLibByName
+	if [ $? -eq 1 ]; then
+	  echo "relpEngineSetTLSLibByName API not available. Test stopped"
+	  exit 77
+	fi;
+}
+
 # check if command $1 is available - will exit 77 when not OK
 check_command_available() {
 	have_cmd=0

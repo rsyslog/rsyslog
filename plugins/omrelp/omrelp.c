@@ -16,7 +16,7 @@
  *
  * File begun on 2008-03-13 by RGerhards
  *
- * Copyright 2008-2016 Adiscon GmbH.
+ * Copyright 2008-2019 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -52,6 +52,7 @@
 #include "glbl.h"
 #include "errmsg.h"
 #include "debug.h"
+#include "parserif.h"
 #include "unicode-helper.h"
 
 #ifndef RELP_DFLT_PT
@@ -111,7 +112,24 @@ static configSettings_t __attribute__((unused)) cs;
 
 static rsRetVal doCreateRelpClient(instanceData *pData, relpClt_t **pRelpClt);
 
+struct modConfData_s {
+	rsconf_t *pConf;	/* our overall config object */
+	const char  *tlslib;
+};
+
+static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
+static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
+
 /* tables for interfacing with the v6 config system */
+/* module-global parameters */
+static struct cnfparamdescr modpdescr[] = {
+	{ "tls.tlslib", eCmdHdlrString, 0 }
+};
+static struct cnfparamblk modpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(modpdescr)/sizeof(struct cnfparamdescr),
+	  modpdescr
+	};
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
 	{ "target", eCmdHdlrGetWord, 1 },
@@ -256,6 +274,25 @@ finalize_it:
 	RETiRet;
 }
 
+BEGINendCnfLoad
+CODESTARTendCnfLoad
+	loadModConf = NULL;
+	runModConf = pModConf;
+ENDendCnfLoad
+
+BEGINcheckCnf
+CODESTARTcheckCnf
+ENDcheckCnf
+
+BEGINactivateCnf
+CODESTARTactivateCnf
+ENDactivateCnf
+
+BEGINfreeCnf
+CODESTARTfreeCnf
+	free((void*)pModConf->tlslib);
+ENDfreeCnf
+
 BEGINcreateInstance
 CODESTARTcreateInstance
 	pData->sizeWindow = 0;
@@ -334,6 +371,61 @@ setInstParamDefaults(instanceData *pData)
 	pData->permittedPeers.nmemb = 0;
 }
 
+BEGINbeginCnfLoad
+CODESTARTbeginCnfLoad
+	loadModConf = pModConf;
+	pModConf->tlslib = NULL;
+	/* create our relp engine */
+	CHKiRet(relpEngineConstruct(&pRelpEngine));
+	CHKiRet(relpEngineSetDbgprint(pRelpEngine, (void (*)(char *, ...))omrelp_dbgprintf));
+	CHKiRet(relpEngineSetOnAuthErr(pRelpEngine, onAuthErr));
+	CHKiRet(relpEngineSetOnGenericErr(pRelpEngine, onGenericErr));
+	CHKiRet(relpEngineSetOnErr(pRelpEngine, onErr));
+	CHKiRet(relpEngineSetEnableCmd(pRelpEngine, (uchar*) "syslog", eRelpCmdState_Required));
+finalize_it:
+ENDbeginCnfLoad
+
+BEGINsetModCnf
+	struct cnfparamvals *pvals = NULL;
+	int i;
+CODESTARTsetModCnf
+	pvals = nvlstGetParams(lst, &modpblk, NULL);
+	if(pvals == NULL) {
+		parser_errmsg("imrelp: error processing module config parameters [module(...)]");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(Debug) {
+		dbgprintf("module (global) param blk for omrelp:\n");
+		cnfparamsPrint(&modpblk, pvals);
+	}
+
+	for(i = 0 ; i < modpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed) {
+			continue;
+		}
+		if(!strcmp(modpblk.descr[i].name, "tls.tlslib")) {
+			#if defined(HAVE_RELPENGINESETTLSLIBBYNAME)
+				loadModConf->tlslib = es_str2cstr(pvals[i].val.d.estr, NULL);
+				if(relpEngineSetTLSLibByName(pRelpEngine, loadModConf->tlslib) != RELP_RET_OK) {
+					LogMsg(0, RS_RET_CONF_PARAM_INVLD, LOG_WARNING,
+						"omrelp: tlslib '%s' not accepted as valid by librelp - using default",
+						loadModConf->tlslib);
+				}
+			#else
+				LogError(0, RS_RET_NOT_IMPLEMENTED,
+					"omrelp warning: parameter tls.tlslib ignored - librelp does not support "
+					"this API call. Using whatever librelp was compiled with.");
+			#endif
+		} else {
+			dbgprintf("imfile: program error, non-handled "
+			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
+		}
+	}
+finalize_it:
+	if(pvals != NULL)
+		cnfparamvalsDestruct(pvals, &modpblk);
+ENDsetModCnf
 
 BEGINnewActInst
 	struct cnfparamvals *pvals;
@@ -690,8 +782,10 @@ BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
+CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_TXIF_OMOD_QUERIES
 CODEqueryEtryPt_SetShutdownImmdtPtr
 ENDqueryEtryPt
@@ -702,14 +796,6 @@ CODESTARTmodInit
 INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	/* create our relp engine */
-	CHKiRet(relpEngineConstruct(&pRelpEngine));
-	CHKiRet(relpEngineSetDbgprint(pRelpEngine, (void (*)(char *, ...))omrelp_dbgprintf));
-	CHKiRet(relpEngineSetOnAuthErr(pRelpEngine, onAuthErr));
-	CHKiRet(relpEngineSetOnGenericErr(pRelpEngine, onGenericErr));
-	CHKiRet(relpEngineSetOnErr(pRelpEngine, onErr));
-	CHKiRet(relpEngineSetEnableCmd(pRelpEngine, (uchar*) "syslog", eRelpCmdState_Required));
-
 	/* tell which objects we need */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 ENDmodInit
