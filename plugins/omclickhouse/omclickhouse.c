@@ -429,6 +429,10 @@ computeBulkMessage(const wrkrInstanceData_t *const pWrkrData,
 	const uchar *const message, char **newMessage)
 {
 	size_t r = 0;
+	if(!strstr((const char*)message, "VALUES")) {
+		return r;
+	}
+
 	if(pWrkrData->batch.nmemb != 0) {
 		*newMessage = strchr(strstr((const char*)message, "VALUES"), '(');
 		r = strlen(*newMessage);
@@ -564,6 +568,13 @@ CODESTARTdoAction
 
 	if(pWrkrData->pData->bulkmode) {
 		const size_t nBytes = computeBulkMessage(pWrkrData, ppString[0], &batchPart);
+
+		if(nBytes==0) {
+			LogError(0, RS_RET_ERR, "omclickhouse: Incorrect Message template: "
+				"Message suspended: %s", (char*)ppString[0]);
+		      	ABORT_FINALIZE(RS_RET_ERR);
+		}
+
 		dbgprintf("pascal: doAction: message: %s\n", batchPart);
 
 		/* If max bytes is set and this next message will put us over the limit,
