@@ -61,22 +61,20 @@ TESTS +=  \
 	es-basic-bulk.sh
 es-basic-es6.0.log: es-basic.log
 es-basic-bulk.log: es-basic-es6.0.log
+es-basic-server.log: es-basic-bulk.log
 if HAVE_VALGRIND
 TESTS += \
 	es-basic-vg.sh
 es-basic-vg.log: es-basic-bulk.log
 # for next if block:
+es-basic-server.log: es-basic-vg.log
 if ENABLE_HELGRIND
 TESTS += \
 	es-basic-vgthread.sh
 es-basic-vgthread.log: es-basic-vg.log
 # for next if block:
 es-basic-server.log: es-basic-vgthread.log
-else  # ENABLE_HELGRIND
-es-basic-server.log: es-basic-vg.log
 endif # ENABLE_HELGRIND
-else  # HAVE_VALGRIND
-es-basic-server.log: es-basic-bulk.log
 endif # HAVE_VALGRIND
 endif # ENABLE_ELASTICSEARCH_TESTS_MINIMAL
 
@@ -515,6 +513,7 @@ clickhouse-errorfile.log: clickhouse-select.log
 clickhouse-wrong-quotation-marks.log: clickhouse-errorfile.log
 clickhouse-wrong-template-option.log: clickhouse-wrong-quotation-marks.log
 clickhouse-wrong-insert-syntax.log: clickhouse-wrong-template-option.log
+clickhouse-stop.log: clickhouse-wrong-insert-syntax.log
 
 if HAVE_VALGRIND
 TESTS +=  \
@@ -528,8 +527,6 @@ clickhouse-load-vg.log: clickhouse-basic-vg.log
 clickhouse-bulk-vg.log: clickhouse-load-vg.log
 clickhouse-bulk-load-vg.log: clickhouse-bulk-vg.log
 clickhouse-stop.log: clickhouse-bulk-load-vg.log
-else  # VALGRIND
-clickhouse-stop.log: clickhouse-wrong-insert-syntax.log
 endif # VALGRIND
 
 TESTS += clickhouse-stop.sh
@@ -614,6 +611,8 @@ mysql-actq-mt-withpause.log: mysql-actq-mt.log
 action-tx-single-processing.log: mysql-actq-mt-withpause.log
 action-tx-errfile.log: action-tx-single-processing.log
 
+mysqld-stop.log: action-tx-errfile.log
+
 if HAVE_VALGRIND
 TESTS +=  \
 	mysql-basic-vg.sh \
@@ -624,30 +623,23 @@ mysql-asyn-vg.log: mysql-basic-vg.log
 mysql-actq-mt-withpause-vg.log: mysql-asyn-vg.log
 
 libdbi-basic.log: mysql-actq-mt-withpause-vg.log # for next block!
+mysqld-stop.log: mysql-actq-mt-withpause-vg.log
 endif
 
- if ENABLE_OMLIBDBI # we piggy-back on MYSQL_TESTS as we need the same environment
- TESTS +=  \
- 	libdbi-basic.sh \
- 	libdbi-asyn.sh
- libdbi-basic.log: action-tx-errfile.log
- libdbi-asyn.log: libdbi-basic.log
-  if HAVE_VALGRIND
-  TESTS +=  \
-  	libdbi-basic-vg.sh
-  libdbi-basic-vg.log: libdbi-asyn.log
-  mysqld-stop.log: libdbi-basic-vg.log mysql-actq-mt-withpause-vg.log
-  else
-  mysqld-stop.log: libdbi-asyn.log action-tx-errfile.log
-  endif
-
- else
-  if HAVE_VALGRIND
-  mysqld-stop.log: mysql-actq-mt-withpause-vg.log
-  else
-  mysqld-stop.log: action-tx-errfile.log
-  endif
- endif
+if ENABLE_OMLIBDBI # we piggy-back on MYSQL_TESTS as we need the same environment
+TESTS +=  \
+	libdbi-basic.sh \
+	libdbi-asyn.sh
+libdbi-basic.log: action-tx-errfile.log
+libdbi-asyn.log: libdbi-basic.log
+mysqld-stop.log: libdbi-asyn.log
+if HAVE_VALGRIND
+TESTS +=  \
+	libdbi-basic-vg.sh
+libdbi-basic-vg.log: libdbi-asyn.log
+mysqld-stop.log: libdbi-basic-vg.log
+endif
+endif
 TESTS += mysqld-stop.sh
 endif #  MYSQL_TESTS
 

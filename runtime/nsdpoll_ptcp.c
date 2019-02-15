@@ -307,7 +307,9 @@ BEGINObjClassInit(nsdpoll_ptcp, 1, OBJ_IS_CORE_MODULE) /* class, version */
 ENDObjClassInit(nsdpoll_ptcp)
 #else
 
+#ifdef __xlc__ /* Xlc require some code, even unused, in source file*/
 static void dummy(void) {}
+#endif
 
 #endif /* #ifdef HAVE_EPOLL_CREATE this module requires epoll! */
 
