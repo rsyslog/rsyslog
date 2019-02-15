@@ -5094,11 +5094,12 @@ MsgAddToStructuredData(smsg_t * const pMsg, uchar *toadd, rs_size_t len)
 {
 	uchar *newptr;
 	rs_size_t newlen;
+	int empty;
 	DEFiRet;
-	newlen = (pMsg->pszStrucData == NULL || pMsg->pszStrucData[0] == '-')
-	                ? len : pMsg->lenStrucData + len;
+	empty = pMsg->pszStrucData == NULL || pMsg->pszStrucData[0] == '-';
+	newlen = (empty) ? len : pMsg->lenStrucData + len;
 	CHKmalloc(newptr = (uchar*) realloc(pMsg->pszStrucData, newlen+1));
-	if(pMsg->pszStrucData == NULL || pMsg->pszStrucData[0] == '-') { /* empty? */
+	if(empty) {
 		memcpy(newptr, toadd, len);
 	} else {
 		memcpy(newptr+pMsg->lenStrucData, toadd, len);

@@ -1,6 +1,0 @@
-This module allows rsyslog to spawn an external command and consume message
-from a pipe (stdout of the external process)
-Optionally, the module manage the external program through keyword sent to
-it using a another pipe
-
-An operational sample can be found @ "github.com/phduveau/jsonperfmon"
