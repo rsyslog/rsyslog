@@ -498,11 +498,11 @@ SanitizeMsg(smsg_t *pMsg)
 					case '\b':
 						pDst[iDst++] = 'b';
 						break;
-#ifndef __xlc__
+					#ifndef __xlc__
 					case '\e':
 						pDst[iDst++] = 'e';
 						break;
-#endif
+					#endif
 					case '\f':
 						pDst[iDst++] = 'f';
 						break;

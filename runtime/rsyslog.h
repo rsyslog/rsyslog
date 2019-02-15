@@ -56,7 +56,7 @@
 
 	/* define a couple of attributes to improve cross-platform builds */
 	#if __GNUC__ > 6
-	#define CASE_FALLTHROUGH __attribute__((fallthrough));
+		#define CASE_FALLTHROUGH __attribute__((fallthrough));
 	#else
 		#define CASE_FALLTHROUGH
 	#endif

@@ -490,7 +490,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 			continue;
 		}
 
-#ifdef IPV6_V6ONLY
+		#ifdef IPV6_V6ONLY
 		if(r->ai_family == AF_INET6) {
 			isIPv6 = 1;
 			int iOn = 1;
@@ -501,7 +501,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 				continue;
 			}
 		}
-#endif
+		#endif
 		if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on)) < 0 ) {
 			dbgprintf("error %d setting tcp socket option\n", errno);
 			close(sock);
@@ -527,7 +527,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		/* We need to enable BSD compatibility. Otherwise an attacker
 		 * could flood our log files by sending us tons of ICMP errors.
 		 */
-#if !defined(_AIX) && !defined(BSD)
+		#if !defined(_AIX) && !defined(BSD)
 		if(net.should_use_so_bsdcompat()) {
 			if (setsockopt(sock, SOL_SOCKET, SO_BSDCOMPAT,
 					(char *) &on, sizeof(on)) < 0) {
@@ -537,12 +537,12 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 				continue;
 			}
 		}
-#endif
+		#endif
 
 		if( (bind(sock, r->ai_addr, r->ai_addrlen) < 0)
-#ifndef IPV6_V6ONLY
+		#ifndef IPV6_V6ONLY
 			&& (errno != EADDRINUSE)
-#endif
+		#endif
 		   ) {
 			/* TODO: check if *we* bound the socket - else we *have* an error! */
 			char errStr[1024];

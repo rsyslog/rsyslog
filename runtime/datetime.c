@@ -103,9 +103,6 @@ timeval2syslogTime(struct timeval *tp, struct syslogTime *t, const int inUTC)
 	struct tm tmBuf;
 	long lBias;
 	time_t secs;
-/* AIXPORT : bug fix: manage properly the time zones to calculate bias
- */
-
 
 #if defined(__hpux)
 	struct timezone tz;
@@ -138,8 +135,12 @@ timeval2syslogTime(struct timeval *tp, struct syslogTime *t, const int inUTC)
 #		elif defined(__hpux)
 			lBias = tz.tz_dsttime ? - tz.tz_minuteswest : 0;
 #		elif defined(_AIX)
+			/* AIXPORT : IBM documentation notice that 'extern long timezone'
+			 * is setted after calling tzset.
+			 * Recent version of AIX, localtime_r call inside tzset.
+			 */
 			if (tm->tm_isdst) tzset();
-			lBias = tm->tm_isdst ? - timezone : 0;
+			lBias = - timezone;
 #		else
 			lBias = tm->tm_gmtoff;
 #		endif
