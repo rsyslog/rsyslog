@@ -1,6 +1,6 @@
-# omprog: Program integration output module
+# omrabbitmq: Program integration output module
 
-| **Module Name:** | **omprog** |
+| **Module Name:** | **omrabbitmq** |
 |---------------|--------------|
 | **Authors:**  | Jean-Philippe Hilaire <jean-philippe.hilaire@pmu.fr> & Philippe Duveau <philippe.duveau@free.fr> |
 
