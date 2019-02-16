@@ -15,99 +15,98 @@ To successfully compile omrabbitmq module you need [rabbitmq-c](https://github.c
 
     ./configure --enable-omrabbitmq ...
 
-## Configuration Parameters
+## Configuration Parameters / Action Parameters
 
-### Action Parameters
-#### host
+### host
 | Parameter | Type | Mandatory | Value | Default 
 |---|---|---|---|---
 |host|string|yes|"hostname\[:port\]\[ hostname2\[:port2\]\]"|  
 
 rabbitmq server(s). See HA configuration
 
-#### port
+### port
 | Parameter | Type | Mandatory | Value | Default 
 |---|---|---|---|---
 |port|string|no|"port"|"5672"
 
-#### virtual\_host
+### virtual\_host
 | Parameter | Type | Mandatory | Value | Default 
 |---|---|---|---|---
 |virtual\_host|string|yes|"path"| 
 
 virtual message broker
 
-#### user
+### user
 | Parameter | Type | Mandatory | Value | Default 
 |---|---|---|---|---
 |user|string|yes|"user"| 
 
 user name
 
-#### password
+### password
 | Parameter | Type | Mandatory | Value | Default 
 |---|---|---|---|---
 |password|string|yes|"password"| 
 
 user password
 
-#### exchange
+### exchange
 | Type | Mandatory | Value | Default 
 |---|---|---|---
 |string|no|"name"|
 
 exchange name
 
-#### routing\_key
+### routing\_key
 | Type | Mandatory | Value | Default 
 |---|---|---|---
 |string|no|"name"| 
 
 value of routing key
 
-#### routing\_key\_template
+### routing\_key\_template
 | Type | Mandatory | Value | Default 
 |---|---|---|---
 |string|no|"template"| 
 
 template used to compute the routing key
 
-#### body\_template
+### body\_template
 | Type | Mandatory | Value | Default 
 |---|---|---|---
 |string|no|"template"|StdJSONFmt
 
 template used to compute the message body. If the template is an empty string the sent message will be %rawmsg%
 
-#### delivery\_mode
+### delivery\_mode
 | Type | Mandatory | Value | Default 
 |---|---|---|---
 |string|no|"TRANSIENT\|PERSISTANT"|"TRANSIENT"
 
 persistance of the message in the broker
 
-#### expiration
+### expiration
 | Type | Mandatory | Value | Default 
 |---|---|---|---
 |string|no|"milliseconds"| no expiration
 
 ttl of the amqp message
 
-#### populate\_properties
+### populate\_properties
 | Type | Mandatory | Value | Default 
 |---|---|---|---
 |populate_properties|binary|no||off
 
 fill timestamp, appid, msgid, hostname (cutsom header) with message informations
 
-#### content\_type
+### content\_type
 | Type | Mandatory | Value | Default 
 |---|---|---|---
 |string|no|"value"| 
 
 content type as a MIME value
 
-#### recover\_policy
+### recover\_policy
 | Type | Mandatory | Value | Default 
 |---|---|---|---
 |string|no|"check\_interval;short\_failure_interval; short\_failure\_nb\_max;graceful\_interval"|"60;6;3;600"
