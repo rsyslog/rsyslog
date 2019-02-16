@@ -95,6 +95,8 @@ Version 8.1904.0 (aka 2019.04) 2019-04-16
   closes https://github.com/rsyslog/rsyslog/issues/1108
 ------------------------------------------------------------------------------
 Version 8.1903.0 (aka 2019.03) 2019-03-05
+- omrabbitmq: add features (RabbitMQ HA management, templatize routing_key, 
+  populate amqp message headers, delivery_mode and expiration parameters) 
 - improg: create input module to use external program as input datas
 - imtuxedoulog: create input module to consume Tuxedo ULOG files
 - omhttp: rewritten with large feature enhancements
