@@ -274,7 +274,7 @@ static int amqp_authenticate(wrkrInstanceData_t *self, amqp_connection_state_t a
 /* This method establish a new connection
  * @self pointer on the worker datas
  * @server pointer on the server datas (preferred or backup)
- * @return the 
+ * @return the connection state or NULL on error
  */
 static amqp_connection_state_t tryConnection(wrkrInstanceData_t *self, server_t *server)
 {
@@ -410,7 +410,7 @@ static void* run_connection_routine(void* arg)
 								(new_conn = tryConnection(self,
 										&(self->serverPrefered.s)))
 								!= NULL) {
-							/* connection is re-established to preferred server so 
+							/* connection is re-established to preferred server so
 							 * swap connections */
 							amqp_connection_state_t old_conn = self->a_conn;
 
