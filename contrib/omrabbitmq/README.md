@@ -1,4 +1,4 @@
-# omrabbitmq: Program integration output module
+# omrabbitmq: RabbitMQ integration output module
 
 | **Module Name:** | **omrabbitmq** |
 |---------------|--------------|
