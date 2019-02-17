@@ -491,16 +491,16 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		}
 
 		#ifdef IPV6_V6ONLY
-		if(r->ai_family == AF_INET6) {
-			isIPv6 = 1;
-			int iOn = 1;
-			if(setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY,
-			      (char *)&iOn, sizeof (iOn)) < 0) {
-				close(sock);
-				sock = -1;
-				continue;
+			if(r->ai_family == AF_INET6) {
+				isIPv6 = 1;
+				int iOn = 1;
+				if(setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY,
+					(char *)&iOn, sizeof (iOn)) < 0) {
+					close(sock);
+					sock = -1;
+					continue;
+				}
 			}
-		}
 		#endif
 		if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on)) < 0 ) {
 			dbgprintf("error %d setting tcp socket option\n", errno);
@@ -528,15 +528,15 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		 * could flood our log files by sending us tons of ICMP errors.
 		 */
 		#if !defined(_AIX) && !defined(BSD)
-		if(net.should_use_so_bsdcompat()) {
-			if (setsockopt(sock, SOL_SOCKET, SO_BSDCOMPAT,
-					(char *) &on, sizeof(on)) < 0) {
-				LogError(errno, NO_ERRCODE, "TCP setsockopt(BSDCOMPAT)");
-				close(sock);
-				sock = -1;
-				continue;
+			if(net.should_use_so_bsdcompat()) {
+				if (setsockopt(sock, SOL_SOCKET, SO_BSDCOMPAT,
+						(char *) &on, sizeof(on)) < 0) {
+					LogError(errno, NO_ERRCODE, "TCP setsockopt(BSDCOMPAT)");
+					close(sock);
+					sock = -1;
+					continue;
+				}
 			}
-		}
 		#endif
 
 		if( (bind(sock, r->ai_addr, r->ai_addrlen) < 0)
