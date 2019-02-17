@@ -320,6 +320,11 @@ if ENABLE_MMTAGHOSTNAME
 SUBDIRS += contrib/mmtaghostname
 endif
 
+# imdb2diag
+if ENABLE_PMDB2DIAG
+SUBDIRS += contrib/pmdb2diag
+endif
+
 # tests are added as last element, because tests may need different
 # modules that need to be generated first
 SUBDIRS += tests

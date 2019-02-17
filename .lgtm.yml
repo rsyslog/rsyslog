@@ -60,6 +60,7 @@ extraction:
           --enable-mmtaghostname
           --enable-imbatchreport
           --enable-imdocker
+          --enable-pmdb2diag
 
 queries:
   - include: cpp/commented-out-code

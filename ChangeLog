@@ -97,6 +97,7 @@ Version 8.1903.0 (aka 2019.03) 2019-03-05
 - omhttp: rewritten with large feature enhancements
   Many thanks to Gabriel Intrator for this work. Gabriel also has adopted the
   module and plans to support it in the future.
+- pmdb2diag: create parser module for DB2 diag logs
 - TLS subsystem: add support for certless communication
   both openssl and GnuTLS drivers have been updated to support certless
   communications. In this case e.g. Diffie-Helman is used.
