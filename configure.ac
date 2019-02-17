@@ -1623,6 +1623,18 @@ fi
 AM_CONDITIONAL(ENABLE_IMFILE, test x$enable_imfile = xyes)
 
 
+# settings for the external program input module
+AC_ARG_ENABLE(improg,
+        [AS_HELP_STRING([--enable-improg],[external program input module enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_improg="yes" ;;
+          no) enable_improg="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-improg) ;;
+         esac],
+        [enable_improg=no]
+)
+AM_CONDITIONAL(ENABLE_IMPROG, test x$enable_improg = xyes)
+
 # settings for the door input module (under solaris, thus default off)
 AC_ARG_ENABLE(imsolaris,
         [AS_HELP_STRING([--enable-imsolaris],[solaris input module enabled @<:@default=no@:>@])],
@@ -2384,6 +2396,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/omtcl/Makefile \
 		contrib/omfile-hardened/Makefile \
 		contrib/mmkubernetes/Makefile \
+		contrib/improg/Makefile \
 		tests/Makefile])
 AC_OUTPUT
 
@@ -2418,6 +2431,7 @@ echo "    periodic statistics module enabled:       $enable_impstats"
 echo "    imczmq input module enabled:              $enable_imczmq"
 echo "    imjournal input module enabled:           $enable_imjournal"
 echo "    imkafka module will be compiled:          $enable_imkafka"
+echo "    improg input module enabled:              $enable_improg"
 echo
 echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
