@@ -467,8 +467,8 @@ static void* run_connection_routine(void* arg)
 						/* perhaps not a frame type so ignore it */
 						if (frm.frame_type == AMQP_FRAME_METHOD)
 						{
-							amqp_channel_close_ok_t channel_close_ok;
-							amqp_connection_close_ok_t connection_close_ok;
+							amqp_channel_close_ok_t chan_cls_ok;
+							amqp_connection_close_ok_t conn_cls_ok;
 							/* now handle frames from the server */
 							switch (frm.payload.method.id)
 							{
@@ -485,10 +485,10 @@ static void* run_connection_routine(void* arg)
 									"/%d: Close Channel Received (%X).",
 									self->iidx, self->widx, frm.payload.method.id);
 								 /* answer the server request */
-								channel_close_ok.dummy = '\0';
+								chan_cls_ok.dummy = '\0';
 								/* send the method */
 								amqp_send_method(self->a_conn, frm.channel,
-									AMQP_CHANNEL_CLOSE_OK_METHOD, &channel_close_ok);
+									AMQP_CHANNEL_CLOSE_OK_METHOD, &chan_cls_ok);
 								break;
 							case AMQP_CONNECTION_CLOSE_METHOD:
 								/* the server want to close the connection */
@@ -496,9 +496,9 @@ static void* run_connection_routine(void* arg)
 									"%d/%d: Close Connection Received (%X).",
 									self->iidx, self->widx,frm.payload.method.id);
 								/* answer the server request */
-								connection_close_ok.dummy = '\0';
+								conn_cls_ok.dummy = '\0';
 								amqp_send_method(self->a_conn, frm.channel,
-									AMQP_CONNECTION_CLOSE_OK_METHOD, &connection_close_ok);
+									AMQP_CONNECTION_CLOSE_OK_METHOD, &conn_cls_ok);
 								connected = 0;
 								break;
 							default :
