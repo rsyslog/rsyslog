@@ -648,7 +648,8 @@ BEGINdoAction
 	int iLen;
 CODESTARTdoAction
 	/* The first element is a smsg_t pointer */
-	smsg_t *msg = (smsg_t*)(*pMsgData);
+	smsg_t **pMsg = (smsg_t **)pMsgData;
+	smsg_t *msg = pMsg[0];
 
 	amqp_bytes_t body_bytes;
 	amqp_basic_properties_t *amqp_props_msg;
