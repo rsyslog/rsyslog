@@ -62,6 +62,10 @@ MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("improg")
 
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wunused-result"
+#endif /* if __GNUC__ >= 8 */
+
 struct instanceConf_s {
 	uchar *pszBinary;    /* name of external program to call */
 	char **aParams;     /* optional parameters to pass to external program */
@@ -403,7 +407,7 @@ static rsRetVal readChild(instanceConf_t *const pInst){
 			enqLine(pInst);
 			/* if confirm required then send an ACK to the program */
 			if (pInst->bConfirmMessages) {
-				c = (char)write(pInst->fdPipeToChild,"ACK\n",sizeof("ACK\n")-1);
+				write(pInst->fdPipeToChild,"ACK\n",sizeof("ACK\n")-1);
 			}
 			rsCStrTruncate(pInst->ppCStr, 0);
 		} else {
@@ -582,7 +586,7 @@ CODESTARTrunInput
 
 	for(pInst = confRoot ; pInst != NULL ; pInst = pInst->next) {
 		if (pInst->bIsRunning && pInst->fdPipeToChild > 0){
-			retval = write(pInst->fdPipeToChild, "START\n", sizeof("START\n")-1);
+			write(pInst->fdPipeToChild, "START\n", sizeof("START\n")-1);
 			DBGPRINTF("Sending START to %s\n", pInst->pszBinary);
 		}
 	}
@@ -627,7 +631,7 @@ CODESTARTafterRun
 		nextInst = pInst->next;
 
 		if (pInst->bIsRunning){
-			int a = write(pInst->fdPipeToChild, "STOP\n", strlen("STOP\n"));
+			write(pInst->fdPipeToChild, "STOP\n", strlen("STOP\n"));
 			terminateChild(pInst);
 		}
 
