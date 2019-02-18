@@ -1241,6 +1241,17 @@ endif
 endif
 endif
 
+if ENABLE_IMTUXEDOULOG
+TESTS +=  \
+	imtuxedoulog_errmsg_no_params.sh \
+	imtuxedoulog_data.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	imtuxedoulog_errmsg_no_params-vg.sh
+endif # ENABLE_IMTUXEDOULOG
+endif
+
+
 # test samples...
 #empty-hostname.log: hostname-getaddrinfo-fail.log
 #hostname-getaddrinfo-fail.log: empty-hostname.log
