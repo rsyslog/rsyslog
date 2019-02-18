@@ -304,6 +304,64 @@ static amqp_connection_state_t tryConnection(wrkrInstanceData_t *self, server_t 
 	return NULL;
 }
 
+static int manage_connection(wrkrInstanceData_t *self, 	amqp_frame_t *pFrame)
+{
+	int result;
+
+	d_pthread_mutex_unlock(&self->send_mutex);
+
+	do {
+		if (self->serverActive == &self->serverBackup)
+		{
+			amqp_connection_state_t new_conn;
+			struct timeval delay;
+
+			/* The worker is connected to the backup server.
+			 * next_check function compute the delay before trying to recover
+			 * the connection to the preferred server according to recover_policy
+			 */
+			delay.tv_sec = next_check(&self->recover_policy, self->last_failback);
+			delay.tv_usec = 0;
+
+			result = amqp_simple_wait_frame_noblock(self->a_conn, pFrame, &delay);
+
+			/* if connected to backup server then check if usual server is alive.
+			 * if so then disconnect from backup */
+			if (result == AMQP_STATUS_TIMEOUT &&
+					(new_conn = tryConnection(self,
+							&(self->serverPrefered.s)))
+					!= NULL) {
+				/* connection is re-established to preferred server so
+				 * swap connections */
+				amqp_connection_state_t old_conn = self->a_conn;
+
+				/* now lock to avoid message publishing. */
+				d_pthread_mutex_lock(&self->send_mutex);
+				self->a_conn = new_conn;
+				self->serverActive = &self->serverPrefered;
+				self->serverActive->failures = 0;
+				d_pthread_mutex_unlock(&self->send_mutex);
+				/* back to unlock mode */
+
+				DBGPRINTF("omrabbitmq module %d: reconnects to usual server.\n",
+							self->iidx);
+				amqp_connection_close(old_conn, 200);
+				amqp_destroy_connection(old_conn);
+			}
+
+		} else {
+
+			result = amqp_simple_wait_frame(self->a_conn, pFrame);
+
+		}
+	} while(result == AMQP_STATUS_TIMEOUT);
+
+	/* now lock the mutex to avoid message publishing. */
+	d_pthread_mutex_lock(&self->send_mutex);
+
+	return result;
+}
+
 /* run_connection_routine is the thread monitoring of the rabbitmq connection.
  * This method manage reconnection to preferred and backup servers apply the recover_policy
  */
@@ -342,180 +400,154 @@ static void* run_connection_routine(void* arg)
 
 		self->a_conn = NULL;
 
-		if (self->go_on)
-		{
-			if (self->serverActive == &self->serverBackup) {
-				self->serverBackup.failures = 0;
-				self->serverPrefered.failures = 0;
-				self->serverActive = &self->serverPrefered;
-			}
-
-			struct timeval delay;
-			delay.tv_sec = 1;
-			delay.tv_usec = 0;
-
-			do {
-				if ((self->a_conn = tryConnection(self, &(self->serverActive->s))) != NULL) {
-					self->serverActive->failures = 0;
-				} else {
-					self->serverActive->failures++;
-
-					/* if 3 tries */
-					if (self->serverActive->failures == 3) {
-						/* on usual server switch to backup server */
-						if (self->serverActive == &self->serverPrefered &&
-								self->serverBackup.s.host)
-							self->serverActive = &self->serverBackup;
-					}
-				}
-			}
-			while (self->a_conn == NULL && self->serverActive->failures < 3);
-
-			if (self->a_conn == NULL)
-			{
-				LogError(0, RS_RET_RABBITMQ_CONN_ERR, "omrabbitmq module connection failed "
-						"3 times on each server.");
-			}
-			else
-			{
-				int connected = 1;
-
-				DBGPRINTF("omrabbitmq module %d: connected.\n", self->iidx);
-
-				self->state = RS_RET_OK;
-
-				if (self->serverActive == &self->serverBackup)
-					self->last_failback = time(NULL);
-
-				while (connected) // this loop is used to manage a connection
-				{
-					d_pthread_mutex_unlock(&self->send_mutex);
-
-					if (self->serverActive == &self->serverBackup)
-					{
-						amqp_connection_state_t new_conn;
-
-						/* The worker is connected to the backup server.
-						 * next_check function compute the delay before trying to recover
-						 * the connection to the preferred server according to recover_policy
-						 */
-						delay.tv_sec = next_check(&self->recover_policy, self->last_failback);
-						delay.tv_usec = 0;
-
-						result = amqp_simple_wait_frame_noblock(self->a_conn, &frm, &delay);
-
-						/* if connected to backup server then check if usual server is alive.
-						 * if so then disconnect from backup */
-						if (result == AMQP_STATUS_TIMEOUT &&
-								(new_conn = tryConnection(self,
-										&(self->serverPrefered.s)))
-								!= NULL) {
-							/* connection is re-established to preferred server so
-							 * swap connections */
-							amqp_connection_state_t old_conn = self->a_conn;
-
-							/* now lock to avoid message publishing. */
-							d_pthread_mutex_lock(&self->send_mutex);
-							self->a_conn = new_conn;
-							self->serverActive = &self->serverPrefered;
-							self->serverActive->failures = 0;
-							d_pthread_mutex_unlock(&self->send_mutex);
-							/* back to unlock mode */
-
-							DBGPRINTF("omrabbitmq module %d: reconnects to usual server.\n",
-										self->iidx);
-							amqp_connection_close(old_conn, 200);
-							amqp_destroy_connection(old_conn);
-						}
-
-					} else {
-
-						result = amqp_simple_wait_frame(self->a_conn, &frm);
-
-					}
-
-					/* now lock the mutex to avoid message publishing. */
-					d_pthread_mutex_lock(&self->send_mutex);
-
-					switch (result)
-					{
-					case AMQP_STATUS_TIMEOUT:
-						break;
-					case AMQP_STATUS_NO_MEMORY:
-						LogError(0, RS_RET_OUT_OF_MEMORY, "omrabbitmq module %d/%d: no memory "
-							": aborting module.", self->iidx, self->widx);
-						go_on = 0; /* non recoverable error let's go out */
-						connected = 0;
-						state_out = RS_RET_DISABLE_ACTION;
-						break;
-					case AMQP_STATUS_BAD_AMQP_DATA:
-						LogError(0, RS_RET_RABBITMQ_CONN_ERR, "omrabbitmq module %d/%d: bad "
-							"data received : reconnect.", self->iidx, self->widx);
-						connected = 0;
-						break;
-					case AMQP_STATUS_SOCKET_ERROR:
-						LogError(0, RS_RET_RABBITMQ_CONN_ERR, "omrabbitmq module %d/%d: Socket"
-							" error : reconnect.", self->iidx, self->widx);
-						connected = 0;
-						break;
-					case AMQP_STATUS_CONNECTION_CLOSED:
-						LogError(0, RS_RET_OUT_OF_MEMORY, "omrabbitmq module %d/%d: Connection"
-							" closed : reconnect.", self->iidx, self->widx);
-						connected = 0;
-						break;
-					case AMQP_STATUS_OK:
-						/* perhaps not a frame type so ignore it */
-						if (frm.frame_type == AMQP_FRAME_METHOD)
-						{
-							amqp_channel_close_ok_t chan_cls_ok;
-							amqp_connection_close_ok_t conn_cls_ok;
-							/* now handle frames from the server */
-							switch (frm.payload.method.id)
-							{
-							case AMQP_CONNECTION_CLOSE_OK_METHOD:
-								/* We asked to close the connection and server
-								 has responded to us */
-								connected = 0;
-								go_on = 0;
-								break;
-							case AMQP_CHANNEL_CLOSE_METHOD:
-								/* the server wants to close the channel. Next will
-								 * be the connection */
-								LogMsg(0, RS_RET_OK, LOG_WARNING,"omrabbitmq module %d"
-									"/%d: Close Channel Received (%X).",
-									self->iidx, self->widx, frm.payload.method.id);
-								 /* answer the server request */
-								chan_cls_ok.dummy = '\0';
-								/* send the method */
-								amqp_send_method(self->a_conn, frm.channel,
-									AMQP_CHANNEL_CLOSE_OK_METHOD, &chan_cls_ok);
-								break;
-							case AMQP_CONNECTION_CLOSE_METHOD:
-								/* the server want to close the connection */
-								LogMsg(0, RS_RET_OK, LOG_WARNING, "omrabbitmq module "
-									"%d/%d: Close Connection Received (%X).",
-									self->iidx, self->widx,frm.payload.method.id);
-								/* answer the server request */
-								conn_cls_ok.dummy = '\0';
-								amqp_send_method(self->a_conn, frm.channel,
-									AMQP_CONNECTION_CLOSE_OK_METHOD, &conn_cls_ok);
-								connected = 0;
-								break;
-							default :
-								LogMsg(0, RS_RET_OK, LOG_WARNING, "omrabbitmq module %d"
-								  "/%d: unmanaged amqp method received (%X) : ignored.",
-								  self->iidx, self->widx,frm.payload.method.id);
-							} /* switch (frm.payload.method.id) */
-						}
-						break;
-					} /* switch (result) */
-				} /* if (frm.frame_type == AMQP_FRAME_METHOD) */
-			} /* if (sockfd_ret != AMQP_STATUS_OK) */
-		} /* if (go_on) */
-		else
+		if (!self->go_on)
 		{
 			go_on = 0;
 			state_out = RS_RET_DISABLE_ACTION;
+			continue; /* lets go back to wile (go_on) and leave cleanly */
+		}
+
+		if (self->serverActive == &self->serverBackup) {
+			self->serverBackup.failures = 0;
+			self->serverPrefered.failures = 0;
+			self->serverActive = &self->serverPrefered;
+		}
+
+		do { /* this loop tries 3 times per server before switching servers */
+			if ((self->a_conn = tryConnection(self, &(self->serverActive->s))) != NULL) {
+				self->serverActive->failures = 0;
+			} else {
+				/* set 1 second before retry */
+				struct timeval delay;
+
+				delay.tv_sec = 1;
+				delay.tv_usec = 0;
+
+				self->serverActive->failures++;
+
+				/* if 3 tries */
+				if (self->serverActive->failures == 3) {
+
+					if (!self->serverBackup.s.host || self->serverBackup.failures == 3)
+					{
+						LogError(0, RS_RET_RABBITMQ_CONN_ERR, "omrabbitmq module connection "
+								"failed 3 times on each server.");
+					}
+
+					if (self->serverActive == &self->serverBackup) {
+						self->serverBackup.failures = 0;
+						self->serverPrefered.failures = 0;
+						self->serverActive = &self->serverPrefered;
+					} else {
+						/* on usual server switch to backup server */
+						if (self->serverBackup.s.host)
+							self->serverActive = &self->serverBackup;
+						else
+							self->serverPrefered.failures = 0;
+					}
+					/* set 5 second before new round trip */
+					delay.tv_sec = 5;
+				}
+				select(0,NULL,NULL,NULL,&delay);
+			}
+		}
+		while (self->a_conn == NULL && self->go_on);
+
+		if (!self->go_on)
+		{
+			go_on = 0;
+			state_out = RS_RET_DISABLE_ACTION;
+			continue; /* lets go back to wile (go_on) and leave cleanly */
+		}
+
+		int connected = 1;
+
+		DBGPRINTF("omrabbitmq module %d: connected.\n", self->iidx);
+
+		self->state = RS_RET_OK;
+
+		if (self->serverActive == &self->serverBackup)
+			self->last_failback = time(NULL);
+
+		while (connected) // this loop is used to manage an established connection
+		{
+
+			result = manage_connection(self, &frm);
+
+			switch (result)
+			{
+			case AMQP_STATUS_NO_MEMORY:
+				LogError(0, RS_RET_OUT_OF_MEMORY, "omrabbitmq module %d/%d: no memory "
+					": aborting module.", self->iidx, self->widx);
+				go_on = 0; /* non recoverable error let's go out */
+				connected = 0;
+				state_out = RS_RET_DISABLE_ACTION;
+				break;
+			case AMQP_STATUS_BAD_AMQP_DATA:
+				LogError(0, RS_RET_RABBITMQ_CONN_ERR, "omrabbitmq module %d/%d: bad "
+					"data received : reconnect.", self->iidx, self->widx);
+				connected = 0;
+				break;
+			case AMQP_STATUS_SOCKET_ERROR:
+				LogError(0, RS_RET_RABBITMQ_CONN_ERR, "omrabbitmq module %d/%d: Socket"
+					" error : reconnect.", self->iidx, self->widx);
+				connected = 0;
+				break;
+			case AMQP_STATUS_CONNECTION_CLOSED:
+				LogError(0, RS_RET_OUT_OF_MEMORY, "omrabbitmq module %d/%d: Connection"
+					" closed : reconnect.", self->iidx, self->widx);
+				connected = 0;
+				break;
+			case AMQP_STATUS_OK:
+				/* perhaps not a frame type so ignore it */
+				if (frm.frame_type == AMQP_FRAME_METHOD)
+				{
+					amqp_channel_close_ok_t chan_cls_ok;
+					amqp_connection_close_ok_t conn_cls_ok;
+					amqp_method_number_t id = frm.payload.method.id;
+					amqp_channel_t ch = frm.channel;
+					/* now handle frames from the server */
+					switch (id)
+					{
+					case AMQP_CONNECTION_CLOSE_OK_METHOD:
+
+						/* We asked to close the connection and server has responded to us */
+						connected = 0;
+						go_on = 0;
+						break;
+
+					case AMQP_CHANNEL_CLOSE_METHOD:
+
+						/* the server wants to close the channel then the connection */
+						LogMsg(0, RS_RET_OK, LOG_WARNING,"omrabbitmq module %d/%d: "
+							"Close Channel Received (%X).", self->iidx, self->widx, id);
+						 /* answer the server request & send the method */
+						chan_cls_ok.dummy = '\0';
+						id = AMQP_CHANNEL_CLOSE_OK_METHOD;
+						amqp_send_method(self->a_conn, frm.channel, id, &chan_cls_ok);
+						break;
+
+					case AMQP_CONNECTION_CLOSE_METHOD:
+
+						/* the server want to close the connection */
+						LogMsg(0, RS_RET_OK, LOG_WARNING, "omrabbitmq module %d/%d: "
+							"Close Connection Received (%X).", self->iidx, self->widx, id);
+						/* answer the server request */
+						conn_cls_ok.dummy = '\0';
+						id = AMQP_CONNECTION_CLOSE_OK_METHOD;
+						amqp_send_method(self->a_conn, ch, id, &conn_cls_ok);
+						connected = 0;
+						break;
+
+					default :
+
+						LogMsg(0, RS_RET_OK, LOG_WARNING, "omrabbitmq module %d/%d: "
+							"Unmanaged amqp method received (%X) : ignored.",
+							self->iidx, self->widx, id);
+					} /* switch (frm.payload.method.id) */
+				} /* if (frm.frame_type == AMQP_FRAME_METHOD) */
+				break;
+			} /* switch (result) */
 		}
 	}
 	self->state = state_out;
