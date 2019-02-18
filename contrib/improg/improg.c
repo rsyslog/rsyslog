@@ -403,7 +403,7 @@ static rsRetVal readChild(instanceConf_t *const pInst){
 			enqLine(pInst);
 			/* if confirm required then send an ACK to the program */
 			if (pInst->bConfirmMessages) {
-				write(pInst->fdPipeToChild,"ACK\n",sizeof("ACK\n")-1);
+				c = (char)write(pInst->fdPipeToChild,"ACK\n",sizeof("ACK\n")-1);
 			}
 			rsCStrTruncate(pInst->ppCStr, 0);
 		} else {
@@ -495,7 +495,7 @@ static void ATTR_NONNULL(1) lstnFree(instanceConf_t *pInst)
 /* read  */
 BEGINnewInpInst
 	struct cnfparamvals *pvals;
-	instanceConf_t *pInst;
+	instanceConf_t *pInst = NULL;
 	int i;
 CODESTARTnewInpInst
 	DBGPRINTF("newInpInst (improg)\n");
@@ -582,7 +582,7 @@ CODESTARTrunInput
 
 	for(pInst = confRoot ; pInst != NULL ; pInst = pInst->next) {
 		if (pInst->bIsRunning && pInst->fdPipeToChild > 0){
-			write(pInst->fdPipeToChild, "START\n", sizeof("START\n")-1);
+			retval = write(pInst->fdPipeToChild, "START\n", sizeof("START\n")-1);
 			DBGPRINTF("Sending START to %s\n", pInst->pszBinary);
 		}
 	}
@@ -627,7 +627,7 @@ CODESTARTafterRun
 		nextInst = pInst->next;
 
 		if (pInst->bIsRunning){
-			write(pInst->fdPipeToChild, "STOP\n", strlen("STOP\n"));
+			int a = write(pInst->fdPipeToChild, "STOP\n", strlen("STOP\n"));
 			terminateChild(pInst);
 		}
 
