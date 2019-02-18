@@ -473,7 +473,7 @@ finalize_it:
 }
 
 /* delete a listener object */
-void ATTR_NONNULL(1) lstnFree(instanceConf_t *pInst)
+static void ATTR_NONNULL(1) lstnFree(instanceConf_t *pInst)
 {
 	DBGPRINTF("lstnFree called for %s\n", pInst->pszBinary);
 	if (pInst->ratelimiter != NULL)
