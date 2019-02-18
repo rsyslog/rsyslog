@@ -407,7 +407,8 @@ static rsRetVal readChild(instanceConf_t *const pInst){
 			enqLine(pInst);
 			/* if confirm required then send an ACK to the program */
 			if (pInst->bConfirmMessages) {
-				write(pInst->fdPipeToChild,"ACK\n",sizeof("ACK\n")-1);
+				if (write(pInst->fdPipeToChild,"ACK\n",sizeof("ACK\n")-1) <= 0)
+					LogMsg(0, NO_ERRCODE, LOG_WARNING, "improg: pipe to child seems to be closed.");
 			}
 			rsCStrTruncate(pInst->ppCStr, 0);
 		} else {
@@ -586,7 +587,8 @@ CODESTARTrunInput
 
 	for(pInst = confRoot ; pInst != NULL ; pInst = pInst->next) {
 		if (pInst->bIsRunning && pInst->fdPipeToChild > 0){
-			write(pInst->fdPipeToChild, "START\n", sizeof("START\n")-1);
+			if (write(pInst->fdPipeToChild, "START\n", sizeof("START\n")-1)  <= 0)
+				LogMsg(0, NO_ERRCODE, LOG_WARNING, "improg: pipe to child seems to be closed.");
 			DBGPRINTF("Sending START to %s\n", pInst->pszBinary);
 		}
 	}
@@ -631,7 +633,8 @@ CODESTARTafterRun
 		nextInst = pInst->next;
 
 		if (pInst->bIsRunning){
-			write(pInst->fdPipeToChild, "STOP\n", strlen("STOP\n"));
+			if (write(pInst->fdPipeToChild, "STOP\n", strlen("STOP\n")) <= 0)
+				LogMsg(0, NO_ERRCODE, LOG_WARNING, "improg: pipe to child seems to be closed.");
 			terminateChild(pInst);
 		}
 
