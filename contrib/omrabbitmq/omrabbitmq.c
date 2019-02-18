@@ -467,8 +467,8 @@ static void* run_connection_routine(void* arg)
 						/* perhaps not a frame type so ignore it */
 						if (frm.frame_type == AMQP_FRAME_METHOD)
 						{
-							amqp_channel_close_ok_t req;
-							amqp_connection_close_ok_t req;
+							amqp_channel_close_ok_t channel_close_ok;
+							amqp_connection_close_ok_t connection_close_ok;
 							/* now handle frames from the server */
 							switch (frm.payload.method.id)
 							{
@@ -485,20 +485,20 @@ static void* run_connection_routine(void* arg)
 									"/%d: Close Channel Received (%X).",
 									self->iidx, self->widx, frm.payload.method.id);
 								 /* answer the server request */
-								req.dummy = '\0';
+								channel_close_ok.dummy = '\0';
 								/* send the method */
 								amqp_send_method(self->a_conn, frm.channel,
-									AMQP_CHANNEL_CLOSE_OK_METHOD, &req);
+									AMQP_CHANNEL_CLOSE_OK_METHOD, &channel_close_ok);
 								break;
 							case AMQP_CONNECTION_CLOSE_METHOD:
 								/* the server want to close the connection */
 								LogMsg(0, RS_RET_OK, LOG_WARNING, "omrabbitmq module "
 									"%d/%d: Close Connection Received (%X).",
-									self->iidx, elf->widx,frm.payload.method.id);
+									self->iidx, self->widx,frm.payload.method.id);
 								/* answer the server request */
-								req.dummy = '\0';
+								connection_close_ok.dummy = '\0';
 								amqp_send_method(self->a_conn, frm.channel,
-									AMQP_CONNECTION_CLOSE_OK_METHOD, &req);
+									AMQP_CONNECTION_CLOSE_OK_METHOD, &connection_close_ok);
 								connected = 0;
 								break;
 							default :
@@ -570,7 +570,7 @@ static void closeAMQPConnection(wrkrInstanceData_t *self)
 	void *ret;
 
 	req.reply_code = 200;
-	req.reply_text.bytes = "200";
+	req.reply_text.bytes = (void*)"200";
 	req.reply_text.len = 3;
 	req.class_id = 0;
 	req.method_id = 0;
@@ -615,7 +615,7 @@ static int manage_error(int x, char const *context)
 
 typedef struct _msg2amqp_props_ {
 	propid_t id;
-	char *name;
+	const char *name;
 	amqp_bytes_t *standardprop;
 	int flag;
 	} msg2amqp_props_t;
@@ -648,7 +648,7 @@ BEGINdoAction
 	int iLen;
 CODESTARTdoAction
 	/* The first element is a smsg_t pointer */
-	smsg_t *msg = (smsg_t*)ppString[0];
+	smsg_t *msg = (smsg_t*)(*pMsgData);
 
 	amqp_bytes_t body_bytes;
 	amqp_basic_properties_t *amqp_props_msg;
@@ -676,7 +676,7 @@ CODESTARTdoAction
 		memcpy(&amqp_props, amqp_props_msg, sizeof(amqp_basic_properties_t));
 
 		/* list and mapping of smsg to amqp properties */
-		static msg2amqp_props_t prop_list[] = {
+		msg2amqp_props_t prop_list[] = {
 			{ PROP_SYSLOGFACILITY_TEXT, "facility",  NULL, 0 },
 			{ PROP_SYSLOGSEVERITY_TEXT, "severity",  NULL, 0 },
 			{ PROP_TIMESTAMP, "timestamp", NULL, 0 },
