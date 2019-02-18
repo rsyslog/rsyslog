@@ -53,7 +53,6 @@ Command line : external program and arguments
 Tag
 ^^^
 
-
 .. csv-table::
   :header: "type", "mandatory", "format", "default"
   :widths: auto
@@ -67,7 +66,6 @@ value, like so: ``tag="myTagValue:"``.
 
 Facility
 ^^^^^^^^
-
 
 .. csv-table::
   :header: "type", "mandatory", "format", "default"
@@ -83,7 +81,6 @@ specified in textual form (e.g. ``local0``, ``local1``, ...) or as numbers (e.g.
 Severity
 ^^^^^^^^
 
-
 .. csv-table::
   :header: "type", "mandatory", "format", "default"
   :widths: auto
@@ -97,7 +94,6 @@ for ``info``). Textual form is suggested.
 
 confirmMessages
 ^^^^^^^^^^^^^^^
-
 
 .. csv-table::
   :header: "type", "mandatory", "format", "default"
@@ -117,7 +113,6 @@ Also, the program receives a ``STOP`` when rsyslog ask the module to stop.
 signalOnClose
 ^^^^^^^^^^^^^
 
-
 .. csv-table::
   :header: "type", "mandatory", "format", "default"
   :widths: auto
@@ -131,7 +126,6 @@ of the program is being forced, or rsyslog is about to shutdown).
 
 closeTimeout
 ^^^^^^^^^^^^
-
 
 .. csv-table::
   :header: "type", "mandatory", "format", "default"
@@ -147,7 +141,6 @@ is being forced, or rsyslog is about to shutdown).
 
 killUnresponsive
 ^^^^^^^^^^^^^^^^
-
 
 .. csv-table::
   :header: "type", "mandatory", "format", "default"
@@ -169,3 +162,5 @@ Stop sequence
 3. The pipes with the child process are closed (the child will receive EOF on stdin),
 4. Then, rsyslog waits for the child process to terminate during closeTimeout, 
 5. If the child has not terminated within the timeout, a KILL signal is sent to it.
+
+
