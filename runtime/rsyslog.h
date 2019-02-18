@@ -549,6 +549,9 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_POLL_ERR = -2444, /**< error in poll() system call */
 	RS_RET_OVERSIZE_MSG = -2445, /**< message is too long (above configured max) */
 	RS_RET_TLS_KEY_ERR = -2446, /**< TLS KEY has problems */
+	RS_RET_RABBITMQ_CONN_ERR = -2447, /**< RabbitMQ Connection error */
+	RS_RET_RABBITMQ_LOGIN_ERR = -2448, /**< RabbitMQ Login error */
+	RS_RET_RABBITMQ_CHANNEL_ERR = -2449, /**< RabbitMQ Connection error */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
