@@ -47,7 +47,7 @@
  *      each inidividual line has the runtime of one test
  *      the last line has 0 in field 1, followed by numberRuns,TotalRuntime,
  *      Average,min,max
- * -T   transport to use. Currently supported: "udp", "tcp" (default), "tls" (tcp+tls), relp-plain
+ * -T   transport to use. Currently supported: "udp", "tcp" (default), "tls" (tcp+tls), relp-plain, relp-tls
  *      Note: UDP supports a single target port, only
  * -W	wait time between sending batches of messages, in microseconds (Default: 0)
  * -b   number of messages within a batch (default: 100,000,000 millions)
@@ -57,6 +57,8 @@
  * -x	CA Cert File for verification (TLS Mode / OpenSSL only)
  * -z	private key file for TLS mode
  * -Z	cert (public key) file for TLS mode
+ * -a	Authentication Mode for relp-tls
+ * -E	Permitted Peer for relp-tls
  * -L	loglevel to use for GnuTLS troubleshooting (0-off to 10-all, 0 default)
  * -j	format message in json, parameter is JSON cookie
  * -O	Use octate-count framing
@@ -197,6 +199,8 @@ static int numThrds = 1;	/* number of threads to use */
 static char *tlsCAFile = NULL;
 static char *tlsCertFile = NULL;
 static char *tlsKeyFile = NULL;
+static char *relpAuthMode = NULL;
+static char *relpPermittedPeer = NULL;
 static int tlsLogLevel = 0;
 static char *jsonCookie = NULL; /* if non-NULL, use JSON format with this cookie */
 static int octateCountFramed = 0;
@@ -240,7 +244,7 @@ struct runstats {
 static int udpsock;			/* socket for sending in UDP mode */
 static struct sockaddr_in udpRcvr;	/* remote receiver in UDP mode */
 
-static enum { TP_UDP, TP_TCP, TP_TLS, TP_RELP_PLAIN } transport = TP_TCP;
+static enum { TP_UDP, TP_TCP, TP_TLS, TP_RELP_PLAIN, TP_RELP_TLS } transport = TP_TCP;
 
 /* forward definitions */
 static void initTLSSess(int);
@@ -305,13 +309,40 @@ int openConn(int *fd, const int connIdx)
 	} else {
 		port = targetPort[0];
 	}
-	if(transport == TP_RELP_PLAIN) {
+	if(transport == TP_RELP_PLAIN || transport == TP_RELP_TLS) {
 		#ifdef ENABLE_RELP
 		relpRetVal relp_r;
 		relpClt_t *relpClt;
 		char relpPort[16];
 		snprintf(relpPort, sizeof(relpPort), "%d", port);
 		CHKRELP(relpEngineCltConstruct(pRelpEngine, &relpClt));
+		if(transport == TP_RELP_TLS) {
+			if(relpCltEnableTLS(relpClt) != RELP_RET_OK) {
+				fprintf(stderr, "error while enabling TLS for relp\n");
+				exit(1);
+			}
+			if(relpAuthMode != NULL && relpCltSetAuthMode(relpClt, relpAuthMode) != RELP_RET_OK) {
+				fprintf(stderr, "could not set Relp Authentication mode: %s\n", relpAuthMode);
+				exit(1);
+			}
+			if(tlsCAFile != NULL && relpCltSetCACert(relpClt, tlsCAFile) != RELP_RET_OK) {
+				fprintf(stderr, "could not set CA File: %s\n", tlsCAFile);
+				exit(1);
+			}
+			if(tlsCertFile != NULL && relpCltSetOwnCert(relpClt, tlsCertFile) != RELP_RET_OK) {
+				fprintf(stderr, "could not set Cert File: %s\n", tlsCertFile);
+				exit(1);
+			}
+			if(tlsKeyFile != NULL && relpCltSetPrivKey(relpClt, tlsKeyFile) != RELP_RET_OK) {
+				fprintf(stderr, "could not set Key File: %s\n", tlsKeyFile);
+				exit(1);
+			}
+			if(relpPermittedPeer != NULL && relpCltAddPermittedPeer(relpClt, relpPermittedPeer)
+					!= RELP_RET_OK) {
+				fprintf(stderr, "could not set Permitted Peer: %s\n", relpPermittedPeer);
+				exit(1);
+			}
+		}
 		relpCltArray[connIdx] = relpClt;
 		relp_r = relpCltConnect(relpCltArray[connIdx], 2,
 			(unsigned char*)relpPort, (unsigned char*)targetIP);
@@ -374,7 +405,7 @@ int openConnections(void)
 #	endif
 	sockArray = calloc(numConnections, sizeof(int));
 	#ifdef ENABLE_RELP
-	if(transport == TP_RELP_PLAIN)
+	if(transport == TP_RELP_PLAIN || transport == TP_RELP_TLS)
 		relpCltArray = calloc(numConnections, sizeof(relpClt_t*));
 	#endif
 	for(i = 0 ; i < numConnections ; ++i) {
@@ -394,7 +425,7 @@ int openConnections(void)
 					 * other functionality has a chance to do
 					 * at least something.
 					 */
-					if(transport == TP_RELP_PLAIN) {
+					if(transport == TP_RELP_PLAIN || transport == TP_RELP_TLS) {
 						#ifdef ENABLE_RELP
 						CHKRELP(relpEngineCltDestruct(pRelpEngine,
 							relpCltArray+i));
@@ -454,7 +485,7 @@ void closeConnections(void)
 			lenMsg = sprintf(msgBuf, "\r%5.5d", i);
 			if(write(1, msgBuf, lenMsg)){}
 		}
-		if(transport == TP_RELP_PLAIN) {
+		if(transport == TP_RELP_PLAIN || transport == TP_RELP_TLS) {
 			#ifdef ENABLE_RELP
 			relpRetVal relpr;
 			if(sockArray[i] != -1) {
@@ -659,7 +690,7 @@ int sendMessages(struct instdata *inst)
 				memcpy(sendBuf, buf, lenBuf);
 				offsSendBuf = lenBuf;
 			}
-		} else if(transport == TP_RELP_PLAIN) {
+		} else if(transport == TP_RELP_PLAIN || transport == TP_RELP_TLS) {
 			#ifdef ENABLE_RELP
 			relpRetVal relp_ret;
 			if(sockArray[socknum] == -1) {
@@ -1440,7 +1471,7 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, buf, _IONBF, 48);
 
-	while((opt = getopt(argc, argv, "b:ef:F:t:p:c:C:m:i:I:P:d:Dn:l:L:M:rsBR:S:T:x:XW:yYz:Z:j:Ov")) != -1) {
+	while((opt = getopt(argc, argv, "a:b:E:ef:F:t:c:C:m:i:I:P:p:d:Dn:l:L:M:rsBR:S:T:x:XW:yYz:Z:j:Ov")) != -1) {
 		switch (opt) {
 		case 'b':	batchsize = atoll(optarg);
 				break;
@@ -1531,10 +1562,24 @@ int main(int argc, char *argv[])
 							"if desired)\n");
 						exit(1);
 #					endif
+				} else if(!strcmp(optarg, "relp-tls")) {
+#					if defined(ENABLE_RELP)
+						transport = TP_RELP_TLS;
+#					else
+						fprintf(stderr, "compiled without RELP support: "
+							"\"-Trelp-tls\" not supported!\n"
+							"(add --enable-relp to ./configure options "
+							"if desired)\n");
+						exit(1);
+#					endif
 				} else {
 					fprintf(stderr, "unknown transport '%s'\n", optarg);
 					exit(1);
 				}
+				break;
+		case 'a':	relpAuthMode = optarg;
+				break;
+		case 'E':	relpPermittedPeer = optarg;
 				break;
 		case 'W':	waittime = atoi(optarg);
 				break;
@@ -1542,14 +1587,7 @@ int main(int argc, char *argv[])
 				break;
 		case 'y':	useRFC5424Format = 1;
 				break;
-		case 'x':
-#			if defined(ENABLE_OPENSSL)
-				tlsCAFile = optarg;
-#			else
-				fprintf(stderr, "-x CAFile not supported in GnuTLS mode - ignored.\n"
-					"Note: we do NOT VERIFY the remote peer when compiled for GnuTLS.\n"
-					"When compiled for OpenSSL, we do.\n");
-#			endif
+		case 'x':	tlsCAFile = optarg;
 				break;
 		case 'z':	tlsKeyFile = optarg;
 				break;
@@ -1568,6 +1606,14 @@ int main(int argc, char *argv[])
 	const char *const ci_env = getenv("CI");
 	if(ci_env != NULL && !strcmp(ci_env, "true")) {
 		bSilent = 1;	/* auto-apply silent option during CI runs */
+	}
+
+	if(tlsCAFile != NULL && transport != TP_RELP_TLS) {
+		#if !defined(ENABLE_OPENSSL)
+			fprintf(stderr, "-x CAFile not supported in GnuTLS mode - ignored.\n"
+				"Note: we do NOT VERIFY the remote peer when compiled for GnuTLS.\n"
+				"When compiled for OpenSSL, we do.\n");
+		#endif
 	}
 
 	if(bStatsRecords && waittime) {
@@ -1602,7 +1648,7 @@ int main(int argc, char *argv[])
 	}
 
 	if(tlsKeyFile != NULL || tlsCertFile != NULL) {
-		if(transport != TP_TLS) {
+		if(transport != TP_TLS && transport != TP_RELP_TLS) {
 			printf("error: TLS certificates were specified, but TLS is NOT enabled: "
 					"To enable TLS use parameter -Ttls\n");
 			exit(1);
@@ -1616,7 +1662,7 @@ int main(int argc, char *argv[])
 			exit(1);
 		}
 		initTLS();
-	} else if(transport == TP_RELP_PLAIN) {
+	} else if(transport == TP_RELP_PLAIN || transport == TP_RELP_TLS) {
 		#ifdef ENABLE_RELP
 		initRELP_PLAIN();
 		#endif
@@ -1635,7 +1681,7 @@ int main(int argc, char *argv[])
 	closeConnections(); /* this is important so that we do not finish too early! */
 
 	#ifdef ENABLE_RELP
-	if(transport == TP_RELP_PLAIN) {
+	if(transport == TP_RELP_PLAIN || transport == TP_RELP_TLS) {
 		CHKRELP(relpEngineDestruct(&pRelpEngine));
 	}
 	#endif
