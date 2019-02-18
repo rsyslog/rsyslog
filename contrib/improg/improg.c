@@ -62,10 +62,6 @@ MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("improg")
 
-#if __GNUC__ >= 8
-#pragma GCC diagnostic ignored "-Wunused-result"
-#endif /* if __GNUC__ >= 8 */
-
 struct instanceConf_s {
 	uchar *pszBinary;    /* name of external program to call */
 	char **aParams;     /* optional parameters to pass to external program */
