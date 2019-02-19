@@ -9,6 +9,7 @@ main_queue(queue.filename="mainq"
 	queue.type="disk"
 	queue.maxDiskSpace="4m"
 	queue.maxfilesize="1m"
+	queue.timeoutshutdown="20000"
 	queue.timeoutenqueue="300000"
 	queue.lowwatermark="5000"
 
