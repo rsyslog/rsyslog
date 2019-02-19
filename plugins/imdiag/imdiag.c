@@ -605,6 +605,7 @@ timeoutGuard(ATTR_UNUSED void *arg)
 {
 	assert(abortTimeout != -1);
 	sigset_t sigSet;
+	time_t strtTO;
 	time_t endTO;
 
 	/* block all signals except SIGTTIN and SIGSEGV */
@@ -614,8 +615,8 @@ timeoutGuard(ATTR_UNUSED void *arg)
 
 	dbgprintf("timeoutGuard: timeout %d seconds, time %lld\n", abortTimeout, (long long) time(NULL));
 
-	time(&endTO);
-	endTO += abortTimeout;
+	time(&strtTO);
+	endTO = strtTO + abortTimeout;
 
 	while(1) {
 		int to = endTO - time(NULL);
@@ -633,8 +634,8 @@ timeoutGuard(ATTR_UNUSED void *arg)
 	dbgprintf("timeoutGuard: sleep expired, aborting\n");
 	/* note: we use fprintf to stderr intentionally! */
 	fprintf(stderr, "timeoutGuard: rsyslog still active after expiry of guard "
-		"period (endTO %lld, time now %lld) - initiating abort()\n",
-		(long long) endTO, (long long) time(NULL));
+		"period (strtTO %lld, endTO %lld, time now %lld, diff %lld) - initiating abort()\n",
+		(long long) strtTO, (long long) endTO, (long long) time(NULL), (long long) (time(NULL) - strtTO));
 	fflush(stderr);
 	abort();
 }
