@@ -113,7 +113,7 @@ static uchar template_StdJSONFmt[] = "\"{\\\"message\\\":\\\"%msg:::json%\\\",\\
 "%timegenerated:::date-rfc3339%\\\"}\"";
 static uchar template_StdClickHouseFmt[] = "\"INSERT INTO rsyslog.SystemEvents (severity, facility, "
 "timestamp, hostname, tag, message) VALUES (%syslogseverity%, %syslogfacility%, "
-"'%timereported:::date-unixtimestamp%', '%hostname%', '%syslogtag%', '%msg%')\"";
+"'%timereported:::date-unixtimestamp%', '%hostname%', '%syslogtag%', '%msg%')\",STDSQL";
 /* end templates */
 
 /* tables for interfacing with the v6 config system (as far as we need to) */
