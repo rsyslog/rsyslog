@@ -371,11 +371,10 @@ checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg)
 {
 	DEFiRet;
 
-	if(strstr(pWrkrData->reply, "e.what() = DB::Exception") != NULL) {
+	if(strstr(pWrkrData->reply, " = DB::Exception") != NULL) {
 		dbgprintf("omclickhouse: action failed with error: %s\n", pWrkrData->reply);
 		iRet = RS_RET_DATAFAIL;
 	}
-
 
 	if(iRet == RS_RET_DATAFAIL) {
 		STATSCOUNTER_INC(indexFail, mutIndexFail);
