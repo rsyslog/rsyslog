@@ -36,6 +36,7 @@ RUN 	apt-get update && \
 	libmysqlclient-dev \
 	libnet1-dev \
 	libpcap-dev \
+	librabbitmq-dev \
 	libsnmp-dev \
 	libssl-dev libsasl2-dev \
 	libsystemd-dev \
@@ -179,8 +180,9 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-imfile \
 	--enable-imjournal \
 	--enable-imkafka \
-	--enable-impstats \
 	--enable-impcap \
+	--enable-improg \
+	--enable-impstats \
 	--enable-imptcp \
 	--enable-kafka-tests \
 	--enable-ksi-ls12 \
@@ -215,6 +217,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-omkafka \
 	--enable-ommongodb \
 	--enable-omprog \
+	--enable-omrabbitmq \
 	--enable-omrelp-default-port=13515 \
 	--enable-omruleset \
 	--enable-omstdout \
