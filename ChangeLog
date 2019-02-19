@@ -20,6 +20,19 @@ Version 8.1903.0 (aka 2019.03) 2019-03-05
 - omhttp: rewritten with large feature enhancements
   Many thanks to Gabriel Intrator for this work. Gabriel also has adopted the
   module and plans to support it in the future.
+- imrelp/omrelp: add capability to specify tlslib for librelp
+  closes https://github.com/rsyslog/rsyslog/issues/3451
+- omclickhouse bugfix: default template unusable
+  STDSQL option added to the default template used in output module of clickhouse
+  Thanks to gagandeep trivedi for the patch.
+- omclickhouse "bugfix": work-around failed error detection
+  omclickhouse uses a questionable method to check if a request generated
+  an error. We have seen the method to fail when we slightly upgraded clickhouse
+  server in CI testing.
+  This commit makes the method a bit more reliable without really fixing it.
+  But it's at least a short-term solution.
+  This should be changed to a proper status check. I assume such is possible.
+  see also https://github.com/rsyslog/rsyslog/issues/3485
 - imptcp bugfix: overly long socket bind path can lead to segfault
   if the `path` input parameter is overly long (e.g. more than 108
   characters on some platforms) a non-terminated string is generated
@@ -28,6 +41,9 @@ Version 8.1903.0 (aka 2019.03) 2019-03-05
   We detected that based on gcc-8 warnings during code inspection.
   No real-world problem case is known.
 - ommongodb bugfix: improper stpncpy() calls
+- testbench tcpflood: add new transport option relp-tls
+  Tcpflood can now send messages via relp with tls support.
+  closes https://github.com/rsyslog/rsyslog/issues/3448
 - testbench: mmdb valgrind tests failed is srcdir env was not set
 ------------------------------------------------------------------------------
 Version 8.1901.0 (aka 2019.01) 2019-01-22

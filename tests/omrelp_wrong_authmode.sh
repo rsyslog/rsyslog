@@ -19,12 +19,5 @@ action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 startup
 shutdown_when_empty
 wait_shutdown
-
-grep "omrelp.* invalid auth.*mode .*INVALID_AUTH_MODE" $RSYSLOG_OUT_LOG > /dev/null
-if [ $? -ne 0 ]; then
-        echo "FAIL: expected error message from missing input file not found. $RSYSLOG_OUT_LOG is:"
-        cat -n $RSYSLOG_OUT_LOG
-        error_exit 1
-fi
-
+content_check --regex "omrelp.* invalid auth.*mode .*INVALID_AUTH_MODE"
 exit_test

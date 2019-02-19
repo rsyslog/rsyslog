@@ -119,9 +119,8 @@
 #ifdef _AIX
 #define cs legacy_cs
 #endif
-#ifdef __GNUC__
-#pragma GCC diagnostic ignored "-Wswitch-enum"
-#endif
+
+PRAGMA_INGORE_Wswitch_enum
 
 #ifndef O_LARGEFILE
 #define O_LARGEFILE 0
@@ -1020,10 +1019,9 @@ finalize_it:
 
 
 /* the #pragmas can go away when we have disable array-passing mode */
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-align"
-#endif
+
+PRAGMA_DIAGNOSTIC_PUSH
+PRAGMA_IGNORE_Wcast_align
 void
 releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ const pWti, int action_destruct)
 {
@@ -1058,9 +1056,8 @@ releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ 
 
 	return;
 }
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
+
+PRAGMA_DIAGNOSTIC_POP
 
 
 /* This is used in resume processing. We only finally know that a resume
@@ -1787,9 +1784,9 @@ finalize_it:
 /* Call configured action, most complex case with all features supported (and thus slow).
  * rgerhards, 2010-06-08
  */
-#ifdef __GNUC__
-#pragma GCC diagnostic ignored "-Wempty-body"
-#endif
+
+PRAGMA_DIAGNOSTIC_PUSH;
+PRAGMA_IGNORE_Wempty_body;
 static rsRetVal
 doSubmitToActionQComplex(action_t * const pAction, wti_t * const pWti, smsg_t *pMsg)
 {
@@ -1818,9 +1815,7 @@ finalize_it:
 
 	RETiRet;
 }
-#ifdef __GNUC__
-#pragma GCC diagnostic warning "-Wempty-body"
-#endif
+PRAGMA_DIAGNOSTIC_POP
 
 
 /* helper to activateActions, it activates a specific action.

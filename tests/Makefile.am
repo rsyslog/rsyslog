@@ -46,6 +46,7 @@ check_PROGRAMS = $(TESTRUNS) ourtail tcpflood chkseq msleep randomgen \
 	omrelp_dflt_port \
 	mangle_qi \
 	have_relpSrvSetOversizeMode \
+	have_relpEngineSetTLSLibByName \
 	test_id
 if ENABLE_JOURNAL_TESTS
 if ENABLE_IMJOURNAL
@@ -1021,6 +1022,8 @@ TESTS += sndrcv_relp.sh \
 	 imrelp-long-msg.sh \
 	 imrelp-oversizeMode-truncate.sh \
 	 imrelp-oversizeMode-accept.sh \
+	 imrelp-invld-tlslib.sh \
+	 omrelp-invld-tlslib.sh \
 	 sndrcv_relp_dflt_pt.sh \
 	 glbl-oversizeMsg-log.sh \
 	 glbl-oversizeMsg-truncate.sh \
@@ -1031,10 +1034,12 @@ TESTS += \
          sndrcv_relp_tls_certvalid.sh \
          sndrcv_relp_tls_prio.sh \
          relp_tls_certificate_not_found.sh \
-	 omrelp_wrong_authmode.sh
+	 omrelp_wrong_authmode.sh \
+	 imrelp-tls.sh
 endif # ENABLE_GNUTLS
 if HAVE_VALGRIND
 TESTS += \
+	 imrelp-basic-vg.sh \
 	 imrelp-manyconn-vg.sh
 endif # HAVE_VALGRIND
 endif
@@ -1674,6 +1679,7 @@ EXTRA_DIST= \
 	sndrcv.sh \
 	omrelp_errmsg_no_connect.sh \
 	imrelp-basic.sh \
+	imrelp-basic-vg.sh \
 	imrelp-basic-oldstyle.sh \
 	imrelp-manyconn.sh \
 	imrelp-manyconn-vg.sh \
@@ -1681,6 +1687,8 @@ EXTRA_DIST= \
 	imrelp-long-msg.sh \
 	imrelp-oversizeMode-truncate.sh \
 	imrelp-oversizeMode-accept.sh \
+	imrelp-invld-tlslib.sh \
+	omrelp-invld-tlslib.sh \
 	glbl-oversizeMsg-log.sh \
 	glbl-oversizeMsg-truncate.sh \
 	glbl-oversizeMsg-split.sh \
@@ -1691,6 +1699,7 @@ EXTRA_DIST= \
         sndrcv_relp_tls_certvalid.sh \
 	relp_tls_certificate_not_found.sh \
 	omrelp_wrong_authmode.sh \
+	imrelp-tls.sh \
 	sndrcv_relp_dflt_pt.sh \
 	sndrcv_udp.sh \
 	imudp_thread_hang.sh \
@@ -2095,6 +2104,7 @@ omrelp_dflt_port_SOURCES = omrelp_dflt_port.c
 mangle_qi_SOURCES = mangle_qi.c
 chkseq_SOURCES = chkseq.c
 have_relpSrvSetOversizeMode = have_relpSrvSetOversizeMode.c
+have_relpEngineSetTLSLibByName = have_relpEngineSetTLSLibByName.c
 test_id_SOURCES = test_id.c
 
 uxsockrcvr_SOURCES = uxsockrcvr.c
