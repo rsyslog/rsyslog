@@ -238,9 +238,8 @@ finalize_it:
 }
 
 
-#if !defined(_AIX)
-#pragma GCC diagnostic ignored "-Wempty-body"
-#endif
+PRAGMA_DIAGNOSTIC_PUSH
+PRAGMA_IGNORE_Wempty_body
 /* Send a shutdown command to all workers and see if they terminate.
  * A timeout may be specified. This function may also be called with
  * the current number of workers being 0, in which case it does not
@@ -296,9 +295,7 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 	
 	RETiRet;
 }
-#if !defined(_AIX)
-#pragma GCC diagnostic warning "-Wempty-body"
-#endif
+PRAGMA_DIAGNOSTIC_POP
 
 
 /* Unconditionally cancel all running worker threads.
@@ -382,9 +379,8 @@ wtpWrkrExecCancelCleanup(void *arg)
  * wti worker.
  * rgerhards, 2008-01-21
  */
-#if !defined(_AIX)
-#pragma GCC diagnostic ignored "-Wempty-body"
-#endif
+PRAGMA_DIAGNOSTIC_PUSH
+PRAGMA_IGNORE_Wempty_body
 static void *
 wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in wtp! */
 {
@@ -441,9 +437,7 @@ if(dbgTimeoutToStderr) {
 	}
 	pthread_exit(0);
 }
-#if !defined(_AIX)
-#pragma GCC diagnostic warning "-Wempty-body"
-#endif
+PRAGMA_DIAGNOSTIC_POP
 
 
 /* start a new worker */
