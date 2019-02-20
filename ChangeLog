@@ -28,6 +28,7 @@ Version 8.1903.0 (aka 2019.03) 2019-03-05
   Tcpflood can now send messages via relp with tls support.
   closes https://github.com/rsyslog/rsyslog/issues/3448
 - testbench: mmdb valgrind tests failed is srcdir env was not set
+- testbench: add omclickhouse tests
 ------------------------------------------------------------------------------
 Version 8.1901.0 (aka 2019.01) 2019-01-22
 - new version scheme: 8.yymm.0 - version now depends on release date
