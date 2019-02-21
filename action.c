@@ -95,9 +95,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#ifdef _AIX
-#include <pthread.h>
-#endif
 #include <json.h>
 
 #include "rsyslog.h"
