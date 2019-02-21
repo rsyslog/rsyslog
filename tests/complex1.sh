@@ -26,7 +26,7 @@ $template dynfile,"'$RSYSLOG_DYNNAME'.out.%inputname%.%msg:F,58:2%.log.Z"
 $Ruleset R13514
 # queue params:
 $ActionQueueTimeoutShutdown 60000
-$ActionQueueTimeoutEnqueue 5000
+$ActionQueueTimeoutEnqueue 15000
 $ActionQueueSize 5000
 $ActionQueueSaveOnShutdown on
 $ActionQueueHighWaterMark 4900
