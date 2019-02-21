@@ -77,8 +77,12 @@ export ZOOPIDFILE="$(pwd)/zookeeper.pid"
 TB_TIMEOUT_STARTSTOP=400 # timeout for start/stop rsyslogd in tenths (!) of a second 400 => 40 sec
 # note that 40sec for the startup should be sufficient even on very slow machines. we changed this from 2min on 2017-12-12
 TB_TEST_TIMEOUT=90  # number of seconds after which test checks timeout (eg. waits)
-TB_TEST_MAX_RUNTIME=500 # maximum runtuime in seconds for a test; testbench will abort test
+TB_TEST_MAX_RUNTIME=580 # maximum runtuime in seconds for a test; testbench will abort test
 			# after that time (iff it has a chance to, not strictly enforced)
+			# Note: 580 is slightly below the rsyslog-ci required max non-stdout writing timeout
+			# This is usually at 600 (10 minutes) and processes will be force-terminated if they
+			# go over it. This is especially bad because we do not receive notifications in this
+			# case.
 export RSYSLOG_DEBUG_TIMEOUTS_TO_STDERR="on"  # we want to know when we loose messages due to timeouts
 if [ "$TESTTOOL_DIR" == "" ]; then
 	export TESTTOOL_DIR="${srcdir:-.}"
