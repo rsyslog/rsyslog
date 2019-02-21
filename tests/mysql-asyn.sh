@@ -6,7 +6,7 @@ generate_conf
 add_conf '
 $ModLoad ../plugins/ommysql/.libs/ommysql
 $ActionQueueType LinkedList
-$ActionQueueTimeoutEnqueue 10000 # 10 second to make sure we do not loose due to action q full
+$ActionQueueTimeoutEnqueue 20000
 :msg, contains, "msgnum:" :ommysql:127.0.0.1,Syslog,rsyslog,testbench;
 '
 mysql --user=rsyslog --password=testbench < ${srcdir}/testsuites/mysql-truncate.sql

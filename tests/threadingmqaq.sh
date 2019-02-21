@@ -30,7 +30,7 @@ $OMFileIOBufferSize 256k
 # This time, also run the action queue detached
 $ActionQueueWorkerThreadMinimumMessages 10
 $ActionQueueWorkerThreads 5
-$ActionQueueTimeoutEnqueue 500
+$ActionQueueTimeoutEnqueue 10000
 $ActionQueueType LinkedList
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '

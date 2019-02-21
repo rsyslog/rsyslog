@@ -93,12 +93,7 @@ int actq_dflt_toWrkShutdown = 60000;	/* timeout for worker thread shutdown */
 static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg);
 static rsRetVal qqueueChkPersist(qqueue_t *pThis, int nUpdates);
 static rsRetVal RateLimiter(qqueue_t *pThis);
-/*  AIXPORT : return type mismatch corrected */
-#if defined (_AIX)
 static rsRetVal qqueueChkStopWrkrDA(qqueue_t *pThis);
-#else
-static int qqueueChkStopWrkrDA(qqueue_t *pThis);
-#endif
 static rsRetVal GetDeqBatchSize(qqueue_t *pThis, int *pVal);
 static rsRetVal ConsumerDA(qqueue_t *pThis, wti_t *pWti);
 static rsRetVal batchProcessed(qqueue_t *pThis, wti_t *pWti);

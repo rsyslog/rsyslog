@@ -589,7 +589,7 @@ rsksi_tlvDecodeHASH_STEP(tlvrecord_t *rec, uint16_t *pstrtidx, block_hashstep_t 
 	uint16_t strtidx = 0;
 	tlvrecord_t subrec;
 	*blhashstep = NULL; /* Set to NULL by default first */
-	
+
 	/* Init HashStep */
 	block_hashstep_t *hashstep = NULL;
 	if((hashstep = calloc(1, sizeof(block_hashstep_t))) == NULL) {
@@ -646,7 +646,7 @@ rsksi_tlvDecodeHASH_CHAIN(tlvrecord_t *rec, block_hashchain_t **blhashchain)
 
 	/* Extract hash chain */
 	CHKr(rsksi_tlvDecodeREC_HASH(rec, &strtidx, &(hashchain->rec_hash)));
-	
+
 	/* Loop until all Steps have been processed */
 	while(rec->tlvlen > strtidx) {
 		CHKr(rsksi_tlvDecodeHASH_STEP(rec, &strtidx, &(hashchain->hashsteps[hashchain->stepCount++])));
@@ -797,7 +797,7 @@ rsksi_tlvDecodeEXCERPT_SIG(tlvrecord_t *rec, block_sig_t **blocksig)
 		r = RSGTE_OOM;
 		goto done;
 	}
-	
+
 	/* Read signature now */
 	if(!(rec->tlvtype == 0x0905)) { r = RSGTE_INVLTYP; goto done; }
 	bs->recCount = 0;
@@ -1390,7 +1390,7 @@ done:
 	} else {
 		goto done2;
 	}
-	
+
 	/* Copy Count back! */
 	(*bs)->recCount = nRecs;
 
@@ -1864,17 +1864,17 @@ rsksi_vrfy_nextHashChain(ksifile ksi, block_sig_t *bs, FILE *sigfp, unsigned cha
 	tlvrecord_t tlvrec;
 	block_hashchain_t *hashchain = NULL;
 	uint8_t uiLevelCorr = 0;
-	
+
 	/* Check for next valid tlvrecord */
 	if ((r = rsksi_tlvrd(sigfp, &tlvrec, &obj)) != 0) goto done;
 	if (tlvrec.tlvtype != 0x0907) {
 		r = RSGTE_INVLTYP;
 		goto done;
 	}
-	
+
 	/* Convert Pointer to block_hashchain_t*/
 	hashchain = (block_hashchain_t*)obj;
-	
+
 	/* Verify Hash Alg */
 	if(hashchain->rec_hash.hashID != hashIdentifierKSI(ksi->hashAlg)) {
 		reportError(r, ectx);
@@ -1977,7 +1977,7 @@ rsksi_vrfy_nextHashChain(ksifile ksi, block_sig_t *bs, FILE *sigfp, unsigned cha
 		if(rsksi_read_debug) printf("debug: rsksi_vrfy_nextHashChain:\t KSI_Signature_verify "
 			"was successfull\n");
 	}
-	
+
 	/* Verify Roothash against Signature */
 	ksistate = KSI_Signature_verifyDataHash(sig, ksi->ctx->ksi_ctx, root_hash);
 	if (ksistate != KSI_OK) {
@@ -2356,7 +2356,7 @@ int rsksi_ConvertSigFile(FILE *oldsigfp, FILE *newsigfp, int verbose)
 	imprint_t *imp = NULL;
 	tlvrecord_t rec;
 	tlvrecord_t subrec;
-	
+
 	/* For signature convert*/
 	int i;
 	uint16_t strtidx = 0;
@@ -2469,7 +2469,7 @@ int rsksi_ConvertSigFile(FILE *oldsigfp, FILE *newsigfp, int verbose)
 					bs->sigID = SIGID_RFC3161;
 					if((bs->sig.der.data = (uint8_t*)malloc(bs->sig.der.len)) == NULL) {
 						r=RSGTE_OOM;goto donedecode;
-}
+					}
 					memcpy(bs->sig.der.data, subrec.data, bs->sig.der.len);
 
 					/* Debug output */
@@ -2578,7 +2578,7 @@ int rsksi_WriteHashChain(FILE *newsigfp, block_hashchain_t *hashchain, int verbo
 	if(rsksi_read_debug)
 		printf("debug: rsksi_WriteHashChain:\t\t NEW HashChain started with %lld Chains\n",
 		(long long unsigned)hashchain->stepCount);
-	
+
 	/* Error Check */
 	if (hashchain == NULL ||
 		hashchain->rec_hash.data == NULL ||
@@ -2592,9 +2592,9 @@ int rsksi_WriteHashChain(FILE *newsigfp, block_hashchain_t *hashchain, int verbo
 
 	/* Total Length of Hash Chain */
 	tlvlen =	/*4 +  ???? */
-	2 + 1 + hashchain->rec_hash.len	/* rec-hash */ +
-	((2 + 2 + tlvlenLevelCorr + 2 + 1 + hashchain->hashsteps[0]->sib_hash.len) * hashchain->stepCount);
-	/* Count of all left/right chains*/
+		2 + 1 + hashchain->rec_hash.len	/* rec-hash */ +
+		((2 + 2 + tlvlenLevelCorr + 2 + 1 + hashchain->hashsteps[0]->sib_hash.len) * hashchain->stepCount);
+		/* Count of all left/right chains*/
 	if(rsksi_read_debug) printf("debug: rsksi_WriteHashChain:\t\t tlvlen=%d \n", tlvlen);
 
 	/* Start hash chain for one log record */

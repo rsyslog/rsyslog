@@ -25,7 +25,6 @@
  * limitations under the License.
  */
 #include "config.h"
-#include "rsyslog.h"
 #include <stdio.h>
 #include <syslog.h>
 #include <stdarg.h>
@@ -39,6 +38,8 @@
 #include <sys/wait.h>
 #include <pthread.h>
 #include <poll.h>
+
+#include "rsyslog.h"
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
