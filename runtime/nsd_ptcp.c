@@ -427,10 +427,8 @@ finalize_it:
  * number of sessions permitted.
  * rgerhards, 2008-04-22
  */
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-align"
-#endif
+PRAGMA_DIAGNOSTIC_PUSH
+PRAGMA_IGNORE_Wcast_align
 static rsRetVal
 LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax,
@@ -656,10 +654,7 @@ finalize_it:
 
 	RETiRet;
 }
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
-
+PRAGMA_DIAGNOSTIC_POP
 
 /* receive data from a tcp socket
  * The lenBuf parameter must contain the max buffer size on entry and contains

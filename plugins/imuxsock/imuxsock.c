@@ -553,7 +553,7 @@ openLogSocket(lstn_t *pLstn)
 	if (sd_fds > 0) {
 		/* Check if the current socket is a systemd activated one.
 		 * If so, just use it.
-		*/
+		 */
 		int fd;
 
 		for (fd = SD_LISTEN_FDS_START; fd < SD_LISTEN_FDS_START + sd_fds; fd++) {

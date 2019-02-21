@@ -1741,7 +1741,7 @@ actionWriteToAction(action_t * const pAction, smsg_t *pMsg, wti_t * const pWti)
 		   }
 		if(pAction->iNbrNoExec < pAction->iExecEveryNthOccur - 1) {
 			++pAction->iNbrNoExec;
-			DBGPRINTF("action %p passed %d times to execution - less than needed - discarding\n",
+			DBGPRINTF("action %p passed %d times to execution - less than configured - discarding\n",
 			  pAction, pAction->iNbrNoExec);
 			FINALIZE;
 		} else {

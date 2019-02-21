@@ -39,10 +39,7 @@
 #include "dirty.h"
 #include "unicode-helper.h"
 
-#ifdef __GNUC__
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
-
+PRAGMA_IGNORE_Wdeprecated_declarations
 /* definitions for objects we access */
 DEFobjStaticHelpers
 DEFobjCurrIf(glbl)

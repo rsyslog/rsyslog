@@ -76,10 +76,7 @@
 #include "ratelimit.h"
 #include "unicode-helper.h"
 
-#ifdef __GNUC__
-#pragma GCC diagnostic ignored "-Wswitch-enum"
-#endif
-
+PRAGMA_INGORE_Wswitch_enum
 MODULE_TYPE_LIB
 MODULE_TYPE_NOKEEP
 
@@ -775,9 +772,8 @@ finalize_it:
  * This variant here is only used if we need to work with a netstream driver
  * that does not support epoll().
  */
-#ifdef __GNUC__
-#pragma GCC diagnostic ignored "-Wempty-body"
-#endif
+PRAGMA_DIAGNOSTIC_PUSH
+PRAGMA_IGNORE_Wempty_body
 static rsRetVal
 RunSelect(tcpsrv_t *pThis, nsd_epworkset_t workset[], size_t sizeWorkset)
 {
@@ -881,9 +877,7 @@ finalize_it: /* this is a very special case - this time only we do not exit the 
 
 	RETiRet;
 }
-#ifdef __GNUC__
-#pragma GCC diagnostic warning "-Wempty-body"
-#endif
+PRAGMA_DIAGNOSTIC_POP
 
 
 /* This function is called to gather input. It tries doing that via the epoll()

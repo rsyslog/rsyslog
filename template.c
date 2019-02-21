@@ -48,9 +48,7 @@
 #include "parserif.h"
 #include "unicode-helper.h"
 
-#ifdef __GNUC__
-#pragma GCC diagnostic ignored "-Wswitch-enum"
-#endif
+PRAGMA_INGORE_Wswitch_enum
 /* static data */
 DEFobjCurrIf(obj)
 DEFobjCurrIf(strgen)
