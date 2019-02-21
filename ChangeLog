@@ -1,5 +1,7 @@
 ------------------------------------------------------------------------------
 Version 8.1903.0 (aka 2019.03) 2019-03-05
+- omrabbitmq: add features (RabbitMQ HA management, templatize routing_key, 
+  populate amqp message headers, delivery_mode and expiration parameters) 
 - omhttp: rewritten with large feature enhancements
   Many thanks to Gabriel Intrator for this work. Gabriel also has adopted the
   module and plans to support it in the future.
