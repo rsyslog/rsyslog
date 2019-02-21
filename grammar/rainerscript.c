@@ -56,9 +56,7 @@
 #include "unicode-helper.h"
 #include "errmsg.h"
 
-#if !defined(_AIX)
-#pragma GCC diagnostic ignored "-Wswitch-enum"
-#endif
+PRAGMA_INGORE_Wswitch_enum
 
 DEFobjCurrIf(obj)
 DEFobjCurrIf(regexp)

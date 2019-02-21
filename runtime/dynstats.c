@@ -499,7 +499,7 @@ finalize_it:
 	RETiRet;
 }
 
-#if !defined(__clang__)
+#if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized" /* TODO: how can we fix these warnings? */
 #endif
@@ -580,7 +580,7 @@ finalize_it:
 	}
 	RETiRet;
 }
-#if !defined(__clang__)
+#if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic pop
 #endif
 
@@ -615,7 +615,7 @@ finalize_it:
 	if (iRet != RS_RET_OK) {
 		if (iRet == RS_RET_NOENTRY) {
 			/* NOTE: this is not tested (because it requires very strong orchestration to
-			gurantee contended lock for testing) */
+			guarantee contended lock for testing) */
 			STATSCOUNTER_INC(b->ctrOpsIgnored, b->mutCtrOpsIgnored);
 		} else {
 			STATSCOUNTER_INC(b->ctrOpsOverflow, b->mutCtrOpsOverflow);

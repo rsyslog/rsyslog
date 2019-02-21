@@ -7,7 +7,7 @@ add_conf '
 $ModLoad ../plugins/omlibdbi/.libs/omlibdbi
 
 $ActionQueueType LinkedList
-$ActionQueueTimeoutEnqueue 2000
+$ActionQueueTimeoutEnqueue 15000
 
 $ActionLibdbiDriver mysql
 $ActionLibdbiHost 127.0.0.1

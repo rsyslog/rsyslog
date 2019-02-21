@@ -82,6 +82,7 @@ struct syslogTime {
 	intTiny timeType;	/* 0 - unitinialized , 1 - RFC 3164, 2 - syslog-protocol */
 	intTiny month;
 	intTiny day;
+	intTiny wday;
 	intTiny hour; /* 24 hour clock */
 	intTiny minute;
 	intTiny second;

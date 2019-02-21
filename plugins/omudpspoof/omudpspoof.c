@@ -355,8 +355,10 @@ ENDdbgPrintInstInfo
  * instance ever is calling libnet code.
  * rgehards, 2007-12-20
  */
+#ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-align"
+#endif
 static rsRetVal
 UDPSend(wrkrInstanceData_t *pWrkrData, uchar *pszSourcename, char *msg, size_t len)
 {
@@ -526,8 +528,9 @@ finalize_it:
 	}
 	RETiRet;
 }
+#ifdef _GNUC__
 #pragma GCC diagnostic pop
-
+#endif
 
 /* try to resume connection if it is not ready
  * rgerhards, 2007-08-02

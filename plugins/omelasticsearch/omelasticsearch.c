@@ -446,7 +446,7 @@ checkConn(wrkrInstanceData_t *const pWrkrData)
 	CURL *curl;
 	CURLcode res;
 	es_str_t *urlBuf;
-	char* healthUrl;
+	char* healthUrl = NULL;
 	char* serverUrl;
 	int i;
 	int r;
