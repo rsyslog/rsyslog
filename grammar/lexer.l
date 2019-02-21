@@ -44,6 +44,9 @@
 #include "srUtils.h"
 #include "parserif.h"
 
+PRAGMA_IGNORE_Wsign_compare
+PRAGMA_IGNORE_Wmissing_noreturn
+
 /* TODO: move this to a better modules, refactor -- rgerhards, 2018-01-22 */
 static char *
 read_file(const char *const filename)
