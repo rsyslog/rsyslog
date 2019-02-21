@@ -1,5 +1,22 @@
 ------------------------------------------------------------------------------
 Version 8.1903.0 (aka 2019.03) 2019-03-05
+- general refactoring: change GCC pragmas condition base on compiler instead
+  of os (_AIX). This allows to compile with gcc and IBM xlc on different os
+  without warnings on unknown pragmas with IBM xlc.
+- AIX port: add AIX linking extensions on many plugins and contibutions to
+  allow building them on this os.
+- template: add Time-Related System Property $wday which is the day of week
+  This allow to get a week based rotation of log as AIX does.
+- core bugfix for AIX: timeval2syslogTime now handle the bias according to
+  local time zone as documented by IBM.
+- core feature: add the ability to forward message through ouput module without
+  altering it. omrabbitmq is aware of this new flag.
+- imfile feature: add configuration parameter to force parsing of read logs
+- imbatchreport: new contribution module to handle batch result file as a
+  single log
+- improg new contribution: input module to use external program as input datas
+- imtuxedoulog new contribution: input module to consume Tuxedo ULOG files
+- pmdb2diag new contribution: parser module for DB2 diag logs
 - omhttp: rewritten with large feature enhancements
   Many thanks to Gabriel Intrator for this work. Gabriel also has adopted the
   module and plans to support it in the future.

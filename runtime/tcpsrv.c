@@ -77,7 +77,6 @@
 #include "unicode-helper.h"
 
 PRAGMA_INGORE_Wswitch_enum
-
 MODULE_TYPE_LIB
 MODULE_TYPE_NOKEEP
 
@@ -1083,11 +1082,7 @@ SetCBRcvData(tcpsrv_t *pThis, rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, 
 }
 
 static rsRetVal
-#ifdef _AIX
 SetCBOnListenDeinit(tcpsrv_t *pThis, rsRetVal (*pCB)(void*))
-#else
-SetCBOnListenDeinit(tcpsrv_t *pThis, int (*pCB)(void*))
-#endif
 {
 	DEFiRet;
 	pThis->pOnListenDeinit = pCB;

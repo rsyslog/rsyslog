@@ -89,7 +89,7 @@ BEGINparse
 	uchar *f3_commas[3];
 	int cur_comma = 0;
 	uint64 log_type;
-	int j;
+	unsigned int j;
 CODESTARTparse
 	#define CSV_DELIMITER '\t'
 	#define STATE_FIELD_START 0

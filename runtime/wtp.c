@@ -436,9 +436,9 @@ if(dbgTimeoutToStderr) {
 		fprintf(stderr, "rsyslog debug: %p: worker exiting\n", pWti);
 	}
 	pthread_exit(0);
+	return NULL; /* To suppress warning */
 }
 PRAGMA_DIAGNOSTIC_POP
-
 
 /* start a new worker */
 static rsRetVal ATTR_NONNULL()

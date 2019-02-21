@@ -26,18 +26,15 @@
 #ifndef INCLUDED_TYPEDEFS_H
 #define INCLUDED_TYPEDEFS_H
 
-#ifndef _AIX
 #include <stdint.h>
-#endif
-#ifdef _AIX
-#include "config.h"
-#endif
 #if defined(__FreeBSD__) || !defined(HAVE_LSEEK64)
 #include <sys/types.h>
 #endif
 
 /* some universal fixed size integer defines ... */
+#ifndef _AIX
 typedef long long int64;
+#endif
 typedef long long unsigned uint64;
 typedef int64 number_t; /* type to use for numbers - TODO: maybe an autoconf option? */
 typedef char intTiny; 	/* 0..127! */
@@ -238,6 +235,8 @@ typedef uintTiny	propid_t;
 #define PROP_SYS_HHOUR_UTC		167
 #define PROP_SYS_QHOUR_UTC		168
 #define PROP_SYS_MINUTE_UTC		169
+#define PROP_SYS_WDAY      170
+#define PROP_SYS_WDAY_UTC     171
 #define PROP_CEE			200
 #define PROP_CEE_ALL_JSON		201
 #define PROP_LOCAL_VAR			202
