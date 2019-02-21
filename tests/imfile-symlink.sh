@@ -36,21 +36,19 @@ if $msg contains "msgnum:" then
 	action( type="omfile" file="'${RSYSLOG_OUT_LOG}'" template="outfmt")
 '
 
-imfilebefore=$RSYSLOG_DYNNAME.input-symlink.log
-./inputfilegen -m 1 > $imfilebefore
+./inputfilegen -m 1 > $RSYSLOG_DYNNAME.input-symlink.log
 mkdir $RSYSLOG_DYNNAME.targets
 
 # Start rsyslog now before adding more files
 startup
 
-for i in `seq 2 $IMFILEINPUTFILES`;
+for i in $(seq 2 $IMFILEINPUTFILES);
 do
-	cp $imfilebefore $RSYSLOG_DYNNAME.targets/$i.log
+	./inputfilegen -m 1 > $RSYSLOG_DYNNAME.targets/$i.log
 	ln -s $RSYSLOG_DYNNAME.targets/$i.log rsyslog-link.$i.log
 	ln -s rsyslog-link.$i.log $RSYSLOG_DYNNAME.input.$i.log
-	imfilebefore="$RSYSLOG_DYNNAME.targets/$i.log"
-	# Wait little for correct timing
-	./msleep 50
+	# wait until this file has been processed
+	content_check_with_count "HEADER msgnum:00000000:" $i $IMFILECHECKTIMEOUT
 done
 
 # Content check with timeout
@@ -62,6 +60,6 @@ ls -l $RSYSLOG_DYNNAME.input.* rsyslog-link.* $RSYSLOG_DYNNAME.targets
 # Content check with timeout
 content_check_with_count "input.11.log" $IMFILELASTINPUTLINES $IMFILECHECKTIMEOUT
 
-shutdown_when_empty # shut down rsyslogd when done processing messages
-wait_shutdown        # we need to wait until rsyslogd is finished!
+shutdown_when_empty
+wait_shutdown
 exit_test
