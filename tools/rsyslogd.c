@@ -78,6 +78,11 @@ static int emitTZWarning = 1;
  * The following includes and declarations are for support of the System
  * Resource Controller (SRC) .
  */
+#include <sys/select.h>
+/* AIXPORT : start*/
+#define SRC_FD          13
+#define SRCMSG          (sizeof(srcpacket))
+
 static void deinitAll(void);
 #include <spc.h>
 static  struct srcreq srcpacket;
@@ -93,10 +98,6 @@ char    progname[128];
 static int rc;
 static socklen_t addrsz;
 static struct sockaddr srcaddr;
-static int ch;
-extern int optind;
-extern char *optarg;
-static  struct filed *f;
 int src_exists =  TRUE;
 /* src end */
 
@@ -121,6 +122,24 @@ dosrcpacket(msgno, txt, len)
 	srcsrpy(srchdr, (char *)&reply, len, cont);
 }
 
+#define  AIX_SRC_EXISTS_IF if(!src_exists) {
+#define  AIX_SRC_EXISTS_FI   }
+
+static void aix_close_it(int i)
+{
+	if(src_exists) {
+		if(i != SRC_FD)
+			(void)close(i);
+	} else
+		close(i);
+}
+
+
+#else
+
+#define  AIX_SRC_EXISTS_IF
+#define  AIX_SRC_EXISTS_FI
+#define  aix_close_it(x) close(x)
 #endif
 
 /* AIXPORT : end  */
@@ -139,8 +158,6 @@ DEFobjCurrIf(glbl)
 /* imports from syslogd.c, these should go away over time (as we
  * migrate/replace more and more code to ASL 2.0).
  */
-extern int realMain(int argc, char **argv);
-void syslogdInit(void);
 char **syslogd_crunch_list(char *list);
 /* end syslogd.c imports */
 extern int yydebug; /* interface to flex */
@@ -159,6 +176,10 @@ void rsyslogdDoDie(int sig);
 #endif /*_AIX*/
 #endif
 
+#ifndef PATH_CONFFILE
+#	define PATH_CONFFILE "/etc/rsyslog.conf"
+#endif
+
 /* global data items */
 static int bChildDied;
 static int bHadHUP;
@@ -173,7 +194,7 @@ int iConfigVerify = 0;	/* is this just a config verify run? */
 rsconf_t *ourConf = NULL;	/* our config object */
 int MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
 ratelimit_t *dflt_ratelimiter = NULL; /* ratelimiter for submits without explicit one */
-uchar *ConfFile = (uchar*) "/etc/rsyslog.conf";
+uchar *ConfFile = (uchar*) PATH_CONFFILE;
 int bHaveMainQueue = 0;/* set to 1 if the main queue - in queueing mode - is available
 			* If the main queue is either not yet ready or not running in
 			* queueing mode (mode DIRECT!), then this is set to 0.
@@ -250,37 +271,15 @@ writePidFile(void)
 	DEFiRet;
 
 	const char *tmpPidFile;
-#if defined(_AIX)
-	int  pidfile_namelen = 0;
-#endif
 
 	if(!strcmp(PidFile, NO_PIDFILE)) {
 		FINALIZE;
 	}
-
-#ifndef _AIX
 	if(asprintf((char **)&tmpPidFile, "%s.tmp", PidFile) == -1) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	if(tmpPidFile == NULL)
 		tmpPidFile = PidFile;
-#else
-	/* Since above code uses format as  "%s.tmp"
-	* pidfile_namelen will be
-	* length of string "PidFile" + 1 + length of string ".tmp"
-	*/
-	pidfile_namelen = strlen(PidFile)+ strlen(".tmp") + 1;
-	tmpPidFile=(char *)malloc(sizeof(char)*pidfile_namelen);
-	if(tmpPidFile == NULL)
-		tmpPidFile = PidFile;
-	else
-	{
-		memset((void *)tmpPidFile,NULL,pidfile_namelen);
-		if(snprintf((char* restrict)tmpPidFile, pidfile_namelen, "%s.tmp", PidFile) >= pidfile_namelen)
-				ABORT_FINALIZE(RS_RET_ERR);
-	}
-
-#endif
 	DBGPRINTF("rsyslogd: writing pidfile '%s'.\n", tmpPidFile);
 	if((fp = fopen((char*) tmpPidFile, "w")) == NULL) {
 		perror("rsyslogd: error writing pid file (creation stage)\n");
@@ -392,17 +391,7 @@ prepareBackground(const int parentPipeFD)
 	close(0);
 	for(int i = beginClose ; i <= endClose ; ++i) {
 		if((i != dbgGetDbglogFd()) && (i != parentPipeFD)) {
-/* AIXPORT : src support start */
-#if defined(_AIX)
-			if(src_exists)
-			{
-				if(i != SRC_FD)
-					(void)close(i);
-			}
-			else
-#endif
-/* AIXPORT : src support end */
-				close(i);
+			  aix_close_it(i); /* AIXPORT */
 		}
 	}
 }
@@ -427,23 +416,13 @@ forkRsyslog(void)
 		perror("error creating rsyslog \"fork pipe\" - terminating");
 		exit(1);
 	}
-	#if defined(_AIX)
-	if(!src_exists) {
-	#endif
-		cpid = fork();
-		if(cpid == -1) {
-			perror("error forking rsyslogd process - terminating");
-			exit(1);
-		}
-	#if defined(_AIX)
-	} else {
-		/* note: I added this hoping it is right - but I am not really
-		 * sure. Maybe we should just terminate in that case.
-		 * rgerhards, 2018-10-30
-		 */
-		cpid = -1;
+	AIX_SRC_EXISTS_IF /* AIXPORT */
+	cpid = fork();
+	if(cpid == -1) {
+		perror("error forking rsyslogd process - terminating");
+		exit(1);
 	}
-	#endif
+	AIX_SRC_EXISTS_FI /* AIXPORT */
 
 	if(cpid == 0) {
 		prepareBackground(pipefd[1]);
@@ -568,6 +547,9 @@ printVersion(void)
 	/* we keep the following message to so that users don't need
 	 * to wonder.
 	 */
+	printf("\tConfig file:\t\t\t\t" PATH_CONFFILE "\n");
+	printf("\tPID file:\t\t\t\t" PATH_PIDFILE "%s\n", PATH_PIDFILE[0]!='/'?
+			"(relative to global workingdirectory)":"");
 	printf("\tNumber of Bits in RainerScript integers: 64\n");
 	printf("\nSee https://www.rsyslog.com for more information.\n");
 }
@@ -1316,9 +1298,9 @@ initAll(int argc, char **argv)
 	 * rgerhards, 2008-04-04
 	 */
 #if defined(_AIX)
-	while((ch = getopt(argc, argv, "46ACDdf:i:l:M:nN:qQs:S:T:u:vwxR")) != EOF) {
+	while((ch = getopt(argc, argv, "46ACDdf:hi:l:M:nN:qQs:S:T:u:vwxR")) != EOF) {
 #else
-	while((ch = getopt(argc, argv, "46ACDdf:i:l:M:nN:qQs:S:T:u:vwx")) != EOF) {
+	while((ch = getopt(argc, argv, "46ACDdf:hi:l:M:nN:qQs:S:T:u:vwx")) != EOF) {
 #endif
 		switch((char)ch) {
 		case '4':
@@ -1358,6 +1340,7 @@ initAll(int argc, char **argv)
 		case 'v': /* MUST be carried out immediately! */
 			printVersion();
 			exit(0); /* exit for -v option - so this is a "good one" */
+		case 'h':
 		case '?':
 		default:
 			rsyslogd_usage();
@@ -1495,8 +1478,8 @@ initAll(int argc, char **argv)
 			}
 			if(chdir("/") != 0) {
 				perror("chdir");
-		                exit(1);
-		            }
+				exit(1);
+			}
 			break;
 		case 'u':		/* misc user settings */
 			iHelperUOpt = (arg == NULL) ? 0 : atoi(arg);
@@ -1530,6 +1513,7 @@ initAll(int argc, char **argv)
 				 "configuration parameter instead.\n");
 			glbl.SetDisableDNS(1);
 			break;
+		case 'h':
 		case '?':
 		default:
 			rsyslogd_usage();
@@ -1824,22 +1808,12 @@ rsyslogdDoDie(int sig)
 static void
 wait_timeout(void)
 {
-#if defined(_AIX) /* AIXPORT :  SRC support start */
-	char buf[256];
-	fd_set rfds;
-#endif /* AIXPORT : src end */
 	struct timeval tvSelectTimeout;
 
 	tvSelectTimeout.tv_sec = janitorInterval * 60; /* interval is in minutes! */
 	tvSelectTimeout.tv_usec = 0;
-#ifndef _AIX
-	select(1, NULL, NULL, NULL, &tvSelectTimeout);
-#else /* AIXPORT :  SRC support start */
-	if(src_exists)
-	{
-		FD_ZERO(&rfds);
-		FD_SET(SRC_FD, &rfds);
-	}
+
+#ifdef _AIX
 	if(!src_exists) {
 		/* it looks like select() is NOT interrupted by HUP, even though
 		 * SA_RESTART is not given in the signal setup. As this code is
@@ -1858,53 +1832,62 @@ wait_timeout(void)
 			srSleep(0, wait_period);
 			timeout--;
 		} while(timeout > 0);
-	}
-	else if(select(SRC_FD + 1, (fd_set *)&rfds, NULL, NULL, &tvSelectTimeout))
-	{
-		if(FD_ISSET(SRC_FD, &rfds))
+	} else {
+		char buf[256];
+		fd_set rfds;
+
+		FD_ZERO(&rfds);
+		FD_SET(SRC_FD, &rfds);
+		if(select(SRC_FD + 1, (fd_set *)&rfds, NULL, NULL, &tvSelectTimeout))
 		{
-			rc = recvfrom(SRC_FD, &srcpacket, SRCMSG, 0, &srcaddr, &addrsz);
-			if(rc < 0)
-			if (errno != EINTR)
+			if(FD_ISSET(SRC_FD, &rfds))
 			{
-				fprintf(stderr,"%s: ERROR: '%d' recvfrom\n", progname,errno);
-				exit(1); //TODO: this needs to be handled gracefully
-			} else { /* punt on short read */
-				return;
-			}
+				rc = recvfrom(SRC_FD, &srcpacket, SRCMSG, 0, &srcaddr, &addrsz);
+				if(rc < 0) {
+					if (errno != EINTR)
+					{
+						fprintf(stderr,"%s: ERROR: '%d' recvfrom\n", progname,errno);
+						exit(1); //TODO: this needs to be handled gracefully
+					} else { /* punt on short read */
+						return;
+					}
 
-			switch(srcpacket.subreq.action)
-			{
-				case START:
-					dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support this option.\n",
-							sizeof(struct srcrep));
-				break;
-				case STOP:
-					if (srcpacket.subreq.object == SUBSYSTEM) {
-						dosrcpacket(SRC_OK,NULL,sizeof(struct srcrep));
-						(void) snprintf(buf, sizeof(buf) / sizeof(char), " [origin "
-							"software=\"rsyslogd\" " "swVersion=\"" VERSION \
-							"\" x-pid=\"%d\" x-info=\"https://www.rsyslog.com\"]"
-							" exiting due to stopsrc.",
-							(int) glblGetOurPid());
-						errno = 0;
-						logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
-						return ;
-					} else
-						dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support "
-								"this option.\n",sizeof(struct srcrep));
-				break;
-				case REFRESH:
-					dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support this "
+					switch(srcpacket.subreq.action)
+					{
+					case START:
+						dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support this "
+										"option.\n", sizeof(struct srcrep));
+						break;
+					case STOP:
+						if (srcpacket.subreq.object == SUBSYSTEM) {
+							dosrcpacket(SRC_OK,NULL,sizeof(struct srcrep));
+							(void) snprintf(buf, sizeof(buf) / sizeof(char), " [origin "
+								"software=\"rsyslogd\" " "swVersion=\"" VERSION \
+								"\" x-pid=\"%d\" x-info=\"https://www.rsyslog.com\"]"
+								" exiting due to stopsrc.",
+								(int) glblGetOurPid());
+							errno = 0;
+							logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
+							return ;
+						} else
+							dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support "
+									"this option.\n",sizeof(struct srcrep));
+						break;
+					case REFRESH:
+						dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support this "
 								"option.\n", sizeof(struct srcrep));
-				break;
-				default:
-					dosrcpacket(SRC_SUBICMD,NULL,sizeof(struct srcrep));
-				break;
+						break;
+					default:
+						dosrcpacket(SRC_SUBICMD,NULL,sizeof(struct srcrep));
+						break;
 
+					}
+				}
 			}
 		}
 	}
+#else
+	select(1, NULL, NULL, NULL, &tvSelectTimeout);
 #endif /* AIXPORT : SRC end */
 }
 

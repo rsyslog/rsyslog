@@ -25,7 +25,6 @@
  * limitations under the License.
  */
 #include "config.h"
-#include "rsyslog.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -36,6 +35,8 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <json.h>
+
+#include "rsyslog.h"
 #include "conf.h"
 #include "syslogd-types.h"
 #include "template.h"

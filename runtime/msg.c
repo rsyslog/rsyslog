@@ -43,10 +43,10 @@
 #include <libestr.h>
 #include <json.h>
 #ifdef HAVE_MALLOC_H
-#include <malloc.h>
+#  include <malloc.h>
 #endif
 #ifdef USE_LIBUUID
-#include <uuid/uuid.h>
+#  include <uuid/uuid.h>
 #endif
 #include <errno.h>
 #include "rsyslog.h"
@@ -375,10 +375,10 @@ static char hexdigit[16] =
 
 #if defined(_AIX)
 /* AIXPORT : replace facility names with aso and caa only for AIX */
-static char *syslog_fac_names[LOG_NFACILITIES] = { "kern", "user", "mail", "daemon", "auth", "syslog", "lpr",
-			"news", "uucp", "cron", "authpriv", "ftp", "aso", "audit",
-			"alert", "caa", "local0", "local1", "local2", "local3",
-			"local4", "local5", "local6", "local7", "invld"    };
+static const char *syslog_fac_names[LOG_NFACILITIES] = { "kern", "user", "mail", "daemon", "auth", "syslog", "lpr",
+							"news", "uucp", "cron", "authpriv", "ftp", "aso", "audit",
+							"alert", "caa", "local0", "local1", "local2", "local3",
+							"local4", "local5", "local6", "local7", "invld"    };
 /* length of the facility names string (for optimizatiions) */
 static short len_syslog_fac_names[LOG_NFACILITIES] = { 4, 4, 4, 6, 4, 6, 3,
 							4, 4, 4, 8, 3, 3, 5,
@@ -388,14 +388,14 @@ static short len_syslog_fac_names[LOG_NFACILITIES] = { 4, 4, 4, 6, 4, 6, 3,
 #else
 /*syslog facility names (as of RFC5424) */
 static const char *syslog_fac_names[LOG_NFACILITIES] = { "kern", "user", "mail", "daemon", "auth", "syslog", "lpr",
-			    	      "news", "uucp", "cron", "authpriv", "ftp", "ntp", "audit",
-			    	      "alert", "clock", "local0", "local1", "local2", "local3",
-			    	      "local4", "local5", "local6", "local7", "invld" };
+							"news", "uucp", "cron", "authpriv", "ftp", "ntp", "audit",
+							"alert", "clock", "local0", "local1", "local2", "local3",
+							"local4", "local5", "local6", "local7", "invld" };
 /* length of the facility names string (for optimizatiions) */
 static short len_syslog_fac_names[LOG_NFACILITIES] = { 4, 4, 4, 6, 4, 6, 3,
-			    	          4, 4, 4, 8, 3, 3, 5,
-			    	          5, 5, 6, 6, 6, 6,
-			    	          6, 6, 6, 6, 5 };
+							4, 4, 4, 8, 3, 3, 5,
+							5, 5, 6, 6, 6, 6,
+							6, 6, 6, 6, 5 };
 #endif
 
 /* table of severity names (in numerical order)*/
@@ -640,6 +640,8 @@ propNameToID(uchar *pName, propid_t *pPropID)
 		*pPropID = PROP_SYS_QHOUR;
 	} else if(!strcasecmp((char*) pName, "$MINUTE")) {
 		*pPropID = PROP_SYS_MINUTE;
+	} else if(!strcasecmp((char*) pName, "$WDAY")) {
+		*pPropID = PROP_SYS_WDAY;
 	} else if(!strcasecmp((char*) pName, "$now-utc")) {
 		*pPropID = PROP_SYS_NOW_UTC;
 	} else if(!strcasecmp((char*) pName, "$year-utc")) {
@@ -656,6 +658,8 @@ propNameToID(uchar *pName, propid_t *pPropID)
 		*pPropID = PROP_SYS_QHOUR_UTC;
 	} else if(!strcasecmp((char*) pName, "$minute-utc")) {
 		*pPropID = PROP_SYS_MINUTE_UTC;
+	} else if(!strcasecmp((char*) pName, "$wday-utc")) {
+		*pPropID = PROP_SYS_WDAY_UTC;
 	} else if(!strcasecmp((char*) pName, "$MYHOSTNAME")) {
 		*pPropID = PROP_SYS_MYHOSTNAME;
 	} else if(!strcasecmp((char*) pName, "$!all-json")) {
@@ -772,6 +776,10 @@ uchar *propIDToName(propid_t propID)
 			return UCHAR_CONSTANT("$QHOUR-UTC");
 		case PROP_SYS_MINUTE_UTC:
 			return UCHAR_CONSTANT("$MINUTE-UTC");
+		case PROP_SYS_WDAY:
+			return UCHAR_CONSTANT("$WDAY");
+		case PROP_SYS_WDAY_UTC:
+			return UCHAR_CONSTANT("$WDAY-UTC");
 		case PROP_SYS_MYHOSTNAME:
 			return UCHAR_CONSTANT("$MYHOSTNAME");
 		case PROP_CEE_ALL_JSON:
@@ -849,6 +857,7 @@ msgBaseConstruct(smsg_t **ppThis)
 	pM->pszTIMESTAMP_MySQL = NULL;
 	pM->pszTIMESTAMP_PgSQL = NULL;
 	pM->pszStrucData = NULL;
+	pM->lenStrucData = 0;
 	pM->pCSAPPNAME = NULL;
 	pM->pCSPROCID = NULL;
 	pM->pCSMSGID = NULL;
@@ -2956,7 +2965,8 @@ textpri(const smsg_t *const __restrict__ pMsg)
  * can not allocate memory, it returns a NULL pointer.
  * Added 2007-07-10 rgerhards
  */
-typedef enum ENOWType { NOW_NOW, NOW_YEAR, NOW_MONTH, NOW_DAY, NOW_HOUR, NOW_HHOUR, NOW_QHOUR, NOW_MINUTE } eNOWType;
+typedef enum ENOWType { NOW_NOW, NOW_YEAR, NOW_MONTH, NOW_DAY, NOW_HOUR,
+		NOW_HHOUR, NOW_QHOUR, NOW_MINUTE, NOW_WDAY } eNOWType;
 #define tmpBUFSIZE 16	/* size of formatting buffer */
 static uchar *getNOW(eNOWType eNow, struct syslogTime *t, const int inUTC)
 {
@@ -3006,6 +3016,9 @@ static uchar *getNOW(eNOWType eNow, struct syslogTime *t, const int inUTC)
 		break;
 	case NOW_MINUTE:
 		memcpy(pBuf, two_digits[(int)t->minute], 3);
+		break;
+	case NOW_WDAY:
+		memcpy(pBuf, one_digit[(int)t->wday], 2);
 		break;
 	}
 
@@ -3699,6 +3712,22 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			break;
 		case PROP_SYS_MINUTE_UTC:
 			if((pRes = getNOW(NOW_MINUTE, ttNow, TIME_IN_UTC)) == NULL) {
+				RET_OUT_OF_MEMORY;
+			} else {
+				*pbMustBeFreed = 1;
+				bufLen = 2;
+			}
+			break;
+		case PROP_SYS_WDAY:
+			if((pRes = getNOW(NOW_WDAY, ttNow, TIME_IN_LOCALTIME)) == NULL) {
+				RET_OUT_OF_MEMORY;
+			} else {
+				*pbMustBeFreed = 1;
+				bufLen = 2;
+			}
+			break;
+		case PROP_SYS_WDAY_UTC:
+			if((pRes = getNOW(NOW_WDAY, ttNow, TIME_IN_UTC)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			} else {
 				*pbMustBeFreed = 1;
@@ -5065,15 +5094,17 @@ MsgAddToStructuredData(smsg_t * const pMsg, uchar *toadd, rs_size_t len)
 {
 	uchar *newptr;
 	rs_size_t newlen;
+	int empty;
 	DEFiRet;
-	newlen = (pMsg->pszStrucData[0] == '-') ? len : pMsg->lenStrucData + len;
+	empty = pMsg->pszStrucData == NULL || pMsg->pszStrucData[0] == '-';
+	newlen = (empty) ? len : pMsg->lenStrucData + len;
 	CHKmalloc(newptr = (uchar*) realloc(pMsg->pszStrucData, newlen+1));
-	pMsg->pszStrucData = newptr;
-	if(pMsg->pszStrucData[0] == '-') { /* empty? */
-		memcpy(pMsg->pszStrucData, toadd, len);
+	if(empty) {
+		memcpy(newptr, toadd, len);
 	} else {
-		memcpy(pMsg->pszStrucData+pMsg->lenStrucData, toadd, len);
+		memcpy(newptr+pMsg->lenStrucData, toadd, len);
 	}
+	pMsg->pszStrucData = newptr;
 	pMsg->pszStrucData[newlen] = '\0';
 	pMsg->lenStrucData = newlen;
 finalize_it:

@@ -693,14 +693,14 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 			        LogError(0, NO_ERRCODE, "DNS error: Can't resolve \"%s\"", iAllow->addr.HostWildcard);
 
 				if (ACLAddHostnameOnFail) {
-				        LogError(0, NO_ERRCODE, "Adding hostname \"%s\" to ACL as a wildcard "
-					"entry.", iAllow->addr.HostWildcard);
-				        iRet = AddAllowedSenderEntry(ppRoot, ppLast, iAllow, iSignificantBits);
+					LogError(0, NO_ERRCODE, "Adding hostname \"%s\" to ACL as a wildcard "
+						"entry.", iAllow->addr.HostWildcard);
+					iRet = AddAllowedSenderEntry(ppRoot, ppLast, iAllow, iSignificantBits);
 					FINALIZE;
 				} else {
-				        LogError(0, NO_ERRCODE, "Hostname \"%s\" WON\'T be added to ACL.",
-							iAllow->addr.HostWildcard);
-				        ABORT_FINALIZE(RS_RET_NOENTRY);
+					LogError(0, NO_ERRCODE, "Hostname \"%s\" WON\'T be added to ACL.",
+						iAllow->addr.HostWildcard);
+					ABORT_FINALIZE(RS_RET_NOENTRY);
 				}
 			}
 
@@ -783,6 +783,7 @@ finalize_it:
 }
 
 
+static const char *SENDER_TEXT[4] = { "", "UDP", "TCP", "GSS" };
 /* Print an allowed sender list. The caller must tell us which one.
  * iListToPrint = 1 means UDP, 2 means TCP
  * rgerhards, 2005-09-27
@@ -792,19 +793,14 @@ PrintAllowedSenders(int iListToPrint)
 {
 	struct AllowedSenders *pSender;
 	uchar szIP[64];
-	
 #ifdef USE_GSSAPI
-	assert((iListToPrint == 1) || (iListToPrint == 2) || (iListToPrint == 3));
-	dbgprintf("Allowed %s Senders:\n",
-	       (iListToPrint == 1) ? "UDP" :
-	       (iListToPrint == 3) ? "GSS" :
-	       "TCP");
+#define iListToPrint_MAX 3
 #else
-	assert((iListToPrint == 1) || (iListToPrint == 2));
-	dbgprintf("Allowed %s Senders:\n",
-	       (iListToPrint == 1) ? "UDP" :
-	       "TCP");
-#endif /* USE_GSSAPI */
+#define iListToPrint_MAX 2
+#endif
+	assert((iListToPrint > 0) && (iListToPrint <= iListToPrint_MAX));
+	
+	dbgprintf("Allowed %s Senders:\n", SENDER_TEXT[iListToPrint]);
 
 	pSender = (iListToPrint == 1) ? pAllowedSenders_UDP :
 #ifdef USE_GSSAPI
@@ -819,8 +815,8 @@ PrintAllowedSenders(int iListToPrint)
 				dbgprintf ("\t%s\n", pSender->allowedSender.addr.HostWildcard);
 			else {
 				if(mygetnameinfo (pSender->allowedSender.addr.NetAddr,
-						     SALEN(pSender->allowedSender.addr.NetAddr),
-						     (char*)szIP, 64, NULL, 0, NI_NUMERICHOST) == 0) {
+							SALEN(pSender->allowedSender.addr.NetAddr),
+							(char*)szIP, 64, NULL, 0, NI_NUMERICHOST) == 0) {
 					dbgprintf ("\t%s/%u\n", szIP, pSender->SignificantBits);
 				} else {
 					/* getnameinfo() failed - but as this is only a
@@ -893,11 +889,11 @@ addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
 			return(iRet);
 		}
 		if((iRet = AddAllowedSender(ppRoot, ppLast, uIP, iBits)) != RS_RET_OK) {
-		        if(iRet == RS_RET_NOENTRY) {
-			        LogError(0, iRet, "Error %d adding allowed sender entry "
-					    "- ignoring.", iRet);
-		        } else {
-			        LogError(0, iRet, "Error %d adding allowed sender entry "
+			if(iRet == RS_RET_NOENTRY) {
+				LogError(0, iRet, "Error %d adding allowed sender entry "
+				    "- ignoring.", iRet);
+			} else {
+				LogError(0, iRet, "Error %d adding allowed sender entry "
 					    "- terminating, nothing more will be added.", iRet);
 				rsParsDestruct(pPars);
 				free(uIP);
@@ -985,6 +981,7 @@ MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr *pFrom, const char
 				/* Unsupported AF */
 				return 0;
 			}
+			/* fallthrough */
 		default:
 			/* Unsupported AF */
 			return 0;
@@ -1070,14 +1067,14 @@ should_use_so_bsdcompat(void)
 		 * where the first three are unsigned integers and the last
 		 * is an arbitrary string. We only care about the first two. */
 		if (sscanf(myutsname.release, "%u.%u", &version, &patchlevel) != 2) {
-		    dbgprintf("uname: unexpected release '%s'\r\n",
-			    myutsname.release);
-		    return 1;
+			dbgprintf("uname: unexpected release '%s'\r\n",
+				myutsname.release);
+			return 1;
 		}
 		/* SO_BSCOMPAT is deprecated and triggers warnings in 2.5
-		   kernels. It is a no-op in 2.4 but not in 2.2 kernels. */
+		 * kernels. It is a no-op in 2.4 but not in 2.2 kernels. */
 		if (version > 2 || (version == 2 && patchlevel >= 5))
-		    so_bsdcompat_is_obsolete = 1;
+			so_bsdcompat_is_obsolete = 1;
 	}
 	return !so_bsdcompat_is_obsolete;
 #else	/* #ifndef OS_BSD */
@@ -1098,18 +1095,22 @@ debugListenInfo(int fd, char *type)
 {
 	const char *szFamily;
 	int port;
-	struct sockaddr_storage sa;
-	socklen_t saLen = sizeof(sa);
+	union {
+	  struct sockaddr_storage sa;
+	  struct sockaddr_in sa4;
+	  struct sockaddr_in6 sa6;
+	} sockaddr;
+	socklen_t saLen = sizeof(sockaddr.sa);
 
-	if(getsockname(fd, (struct sockaddr *) &sa, &saLen) == 0) {
-		switch(sa.ss_family) {
+	if(getsockname(fd, (struct sockaddr *) &sockaddr.sa, &saLen) == 0) {
+		switch(sockaddr.sa.ss_family) {
 		case PF_INET:
 			szFamily = "IPv4";
-			port = ntohs(((struct sockaddr_in *) &sa)->sin_port);
+			port = ntohs(sockaddr.sa4.sin_port);
 			break;
 		case PF_INET6:
 			szFamily = "IPv6";
-			port = ntohs(((struct sockaddr_in6 *) &sa)->sin6_port);
+			port = ntohs(sockaddr.sa6.sin6_port);
 			break;
 		default:
 			szFamily = "other";
@@ -1230,8 +1231,8 @@ closeUDPListenSockets(int *pSockArr)
 
 	assert(pSockArr != NULL);
 	if(pSockArr != NULL) {
-	        for (i = 0; i < *pSockArr; i++)
-	                close(pSockArr[i+1]);
+		for (i = 0; i < *pSockArr; i++)
+			close(pSockArr[i+1]);
 		free(pSockArr);
 	}
 }
@@ -1310,8 +1311,8 @@ create_single_udp_socket(int *const s, /* socket */
 	 * could flood our log files by sending us tons of ICMP errors.
 	 */
 	/* AIXPORT : SO_BSDCOMPAT socket option is depricated, and its usage
-	* has been discontinued on most unixes, AIX does not support this option,
-	* hence avoid the call.
+	 * has been discontinued on most unixes, AIX does not support this option,
+	 * hence avoid the call.
 	*/
 #	if !defined(OS_BSD) && !defined(__hpux)  && !defined(_AIX)
 	if (should_use_so_bsdcompat()) {

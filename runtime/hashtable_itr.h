@@ -53,7 +53,7 @@ hashtable_iterator_remove(struct hashtable_itr *itr);
 /*****************************************************************************/
 /* search - overwrite the supplied iterator, to point to the entry
  *          matching the supplied key.
- *	    h points to the hashtable to be searched.
+ *          h points to the hashtable to be searched.
  *          returns zero if not found. */
 int
 hashtable_iterator_search(struct hashtable_itr *itr,

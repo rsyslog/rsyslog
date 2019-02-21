@@ -498,7 +498,7 @@ SanitizeMsg(smsg_t *pMsg)
 					case '\b':
 						pDst[iDst++] = 'b';
 						break;
-					case '\e':
+					case '\x1b': /* equivalent to '\e' which is not accepted by XLC */
 						pDst[iDst++] = 'e';
 						break;
 					case '\f':

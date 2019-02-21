@@ -25,58 +25,65 @@
  */
 #ifndef INCLUDED_RSYSLOG_H
 #define INCLUDED_RSYSLOG_H
-#ifndef _AIX
-#pragma GCC diagnostic ignored "-Wdeclaration-after-statement"
-#pragma GCC diagnostic ignored "-Wredundant-decls" // TODO: remove!
-#pragma GCC diagnostic ignored "-Wstrict-prototypes" // TODO: remove!
-#pragma GCC diagnostic ignored "-Wswitch-default" // TODO: remove!
-#if __GNUC__ >= 8
-/* GCC, starting at least with version 8, is now really overdoing with it's
- * warning messages. We turn those off that either cause an enormous amount
- * of false positives or flag perfectly legal code as problematic.
- */
-/* That one causes warnings when we use variable buffers for error
- * messages which may be truncated in the very unlikely case of all
- * vars using max value. If going over the max size, the engine will
- * most likely truncate due to max message size anyhow. Also, sizing
- * the buffers for max-max message size is a wast of (stack) memory.
- */
-#pragma GCC diagnostic ignored "-Wformat-truncation"
-/* The next one flags variable initializations within out exception handling
- * (iRet system) as problematic, even though variables are not used in those
- * cases. This would be a good diagnostic if gcc would actually check that
- * a variable is used uninitialized. Unfortunately it does not do that. But
- * the static analyzers we use as part of CI do, so we are covered in any
- * case.
- * Unfortunately ignoring this diagnostic leads to two more info lines
- * being emitted where nobody knows what the mean and why they appear :-(
- */
-#pragma GCC diagnostic ignored "-Wjump-misses-init"
-#endif /* if __GNUC__ >= 8 */
-#endif /* ifndef AIX */
+#ifdef __GNUC__
+	#pragma GCC diagnostic ignored "-Wdeclaration-after-statement"
+	#pragma GCC diagnostic ignored "-Wredundant-decls" // TODO: remove!
+	#pragma GCC diagnostic ignored "-Wstrict-prototypes" // TODO: remove!
+	#pragma GCC diagnostic ignored "-Wswitch-default" // TODO: remove!
+	#if __GNUC__ >= 8
+		/* GCC, starting at least with version 8, is now really overdoing with it's
+		 * warning messages. We turn those off that either cause an enormous amount
+		 * of false positives or flag perfectly legal code as problematic.
+		 */
+		/* That one causes warnings when we use variable buffers for error
+		 * messages which may be truncated in the very unlikely case of all
+		 * vars using max value. If going over the max size, the engine will
+		 * most likely truncate due to max message size anyhow. Also, sizing
+		 * the buffers for max-max message size is a wast of (stack) memory.
+		 */
+		#pragma GCC diagnostic ignored "-Wformat-truncation"
+		/* The next one flags variable initializations within out exception handling
+		 * (iRet system) as problematic, even though variables are not used in those
+		 * cases. This would be a good diagnostic if gcc would actually check that
+		 * a variable is used uninitialized. Unfortunately it does not do that. But
+		 * the static analyzers we use as part of CI do, so we are covered in any
+		 * case.
+		 * Unfortunately ignoring this diagnostic leads to two more info lines
+		 * being emitted where nobody knows what the mean and why they appear :-(
+		 */
+		#pragma GCC diagnostic ignored "-Wjump-misses-init"
+	#endif /* if __GNUC__ >= 8 */
 
-#include <pthread.h>
-#include "typedefs.h"
+	/* define a couple of attributes to improve cross-platform builds */
+	#if __GNUC__ > 6
+		#define CASE_FALLTHROUGH __attribute__((fallthrough));
+	#else
+		#define CASE_FALLTHROUGH
+	#endif
+
+	#define ATTR_NORETURN __attribute__ ((noreturn))
+	#define ATTR_UNUSED __attribute__((unused))
+	#define ATTR_NONNULL(...) __attribute__((nonnull(__VA_ARGS__)))
+
+#else /* ifdef __GNUC__ */
+
+	#define CASE_FALLTHROUGH
+	#define ATTR_NORETURN
+	#define ATTR_UNUSED
+	#define ATTR_NONNULL(...)
+
+#endif /* ifdef __GNUC__ */
 
 #if defined(_AIX)
 #include <sys/select.h>
 /* AIXPORT : start*/
 #define SRC_FD          13
 #define SRCMSG          (sizeof(srcpacket))
-extern int src_exists;
 #endif
 /* src end */
 
-/* define a couple of attributes to improve cross-platform builds */
-#if __GNUC__ > 6
-	#define CASE_FALLTHROUGH __attribute__((fallthrough));
-#else
-	#define CASE_FALLTHROUGH
-#endif
-
-#define ATTR_NORETURN __attribute__ ((noreturn))
-#define ATTR_UNUSED __attribute__((unused))
-#define ATTR_NONNULL(...) __attribute__((nonnull(__VA_ARGS__)))
+#include <pthread.h>
+#include "typedefs.h"
 
 #if defined(__GNUC__)
 	#define PRAGMA_INGORE_Wswitch_enum	_Pragma("GCC diagnostic ignored \"-Wswitch-enum\"")
@@ -708,7 +715,7 @@ struct actWrkrIParams {
 #  define  __attribute__(x)  /*NOTHING*/
 #endif
 
-#ifndef O_CLOEXEC
+#if !defined(O_CLOEXEC) && !defined(_AIX)
 /* of course, this limits the functionality... */
 #  define O_CLOEXEC 0
 #endif

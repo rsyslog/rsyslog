@@ -459,7 +459,7 @@ build_ArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar *name) {
 	uint32_t i;
 	struct json_object *jrow, *jindex, *jvalue;
 	uchar *canonicalValueRef;
-	uint32_t prev_index, index;
+	uint32_t prev_index, _index;
 	uint8_t prev_index_set;
 	uint32_index_val_t *indexes = NULL;
 	DEFiRet;
@@ -484,16 +484,16 @@ build_ArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar *name) {
 		}
 		qsort(indexes, pThis->nmemb, sizeof(uint32_index_val_t), qs_arrcmp_uint32_index_val);
 		for(i = 0; i < pThis->nmemb; i++) {
-			index = indexes[i].index;
+			_index = indexes[i].index;
 			if (prev_index_set == 0) {
-				prev_index = index;
+				prev_index = _index;
 				prev_index_set = 1;
-				pThis->table.arr->first_key = index;
+				pThis->table.arr->first_key = _index;
 			} else {
-				if (index != ++prev_index) {
+				if (_index != ++prev_index) {
 					LogError(0, RS_RET_INVALID_VALUE, "'array' lookup table name: '%s' "
 					"has non-contiguous members between index '%d' and '%d'",
-									name, prev_index, index);
+									name, prev_index, _index);
 					ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 				}
 			}

@@ -88,7 +88,7 @@ typedef struct {
 typedef struct _instanceData {
 	file_t *pFile;
 	uchar ioBuf[64*1024];
-	unsigned offsBuf;
+	size_t offsBuf;
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -360,7 +360,7 @@ finalize_it:
 static rsRetVal
 addData(instanceData *pData, uchar *buf)
 {
-	unsigned len;
+	size_t len;
 	DEFiRet;
 
 	len = strlen((char*)buf);

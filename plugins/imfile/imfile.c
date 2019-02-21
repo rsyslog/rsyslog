@@ -154,6 +154,7 @@ struct instanceConf_s {
 	sbool fileNotFoundError;
 	int maxLinesAtOnce;
 	uint32_t trimLineOverBytes;
+	int msgFlag;
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	struct instanceConf_s *next;
 };
@@ -316,7 +317,8 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "statefile", eCmdHdlrString, CNFPARAM_DEPRECATED },
 	{ "readtimeout", eCmdHdlrPositiveInt, 0 },
 	{ "freshstarttail", eCmdHdlrBinary, 0},
-	{ "filenotfounderror", eCmdHdlrBinary, 0}
+	{ "filenotfounderror", eCmdHdlrBinary, 0},
+	{ "needparse", eCmdHdlrBinary, 0}
 };
 static struct cnfparamblk inppblk =
 	{ CNFPARAMBLK_VERSION,
@@ -1304,6 +1306,8 @@ enqLine(act_obj_t *const act,
 		srSleep(inst->delay_perMsg % 1000000, inst->delay_perMsg / 1000000);
 	}
 
+	pMsg->msgFlags = pMsg->msgFlags | inst->msgFlag;
+
 	ratelimitAddMsg(act->ratelimiter, &act->multiSub, pMsg);
 finalize_it:
 	RETiRet;
@@ -1607,6 +1611,7 @@ createInstance(instanceConf_t **const pinst)
 	inst->fileNotFoundError = 1;
 	inst->readTimeout = loadModConf->readTimeout;
 	inst->delay_perMsg = 0;
+	inst->msgFlag = 0;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -1751,6 +1756,7 @@ addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->addCeeTag = 0;
 	inst->bRMStateOnDel = 0;
 	inst->readTimeout = loadModConf->readTimeout;
+	inst->msgFlag = 0;
 
 	CHKiRet(checkInstance(inst));
 
@@ -1843,6 +1849,8 @@ CODESTARTnewInpInst
 			inst->nMultiSub = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "readtimeout")) {
 			inst->readTimeout = pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "needparse")) {
+			inst->msgFlag = pvals[i].val.d.n ? NEEDS_PARSING : 0;
 		} else {
 			DBGPRINTF("program error, non-handled "
 			  "param '%s'\n", inppblk.descr[i].name);

@@ -96,6 +96,10 @@ syslogName_t	syslogFacNames[] = {
 	{"syslog",       LOG_SYSLOG},
 	{"user",         LOG_USER},
 	{"uucp",         LOG_UUCP},
+#if defined(_AIX)  /* AIXPORT : These are necessary for AIX */
+	{ "caa",         LOG_CAA },
+	{ "aso",         LOG_ASO },
+#endif
 #if defined(LOG_FTP)
 	{"ftp",          LOG_FTP},
 #endif
