@@ -31,10 +31,6 @@
 %top{
 #ifndef __clang_analyzer__ /* this is not really our code */
 #include "config.h"
-#if !defined(__GCC__)
-#pragma GCC diagnostic ignored "-Wsign-compare"
-#pragma GCC diagnostic ignored "-Wmissing-noreturn"
-#endif
 }
 
 %{
@@ -47,6 +43,9 @@
 #include "rsyslog.h"
 #include "srUtils.h"
 #include "parserif.h"
+
+PRAGMA_IGNORE_Wsign_compare
+PRAGMA_IGNORE_Wmissing_noreturn
 
 /* TODO: move this to a better modules, refactor -- rgerhards, 2018-01-22 */
 static char *
