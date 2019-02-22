@@ -15,6 +15,13 @@ Version 8.1903.0 (aka 2019.03) 2019-03-05
 - core bugfix for AIX: timeval2syslogTime now handle the bias according to
   local time zone as documented by IBM.
 - imfile feature: add configuration parameter to force parsing of read logs
+- imczmq bugfix:
+  Release zframe following read from socket
+  Make the 0MQ frame pointer local to the receive loop and destroy the
+  frame as soon as the contents have been copied. This avoids:
+  * a memory leak should the receive loop execute more than once
+  * referencing an un-initialised value during cleanup (finalize_it)
+  Thanks to Mark Gillott for the patch.
 - omclickhouse bugfix: default template unusable
   STDSQL option added to the default template used in output module of clickhouse
   Thanks to gagandeep trivedi for the patch.
