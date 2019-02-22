@@ -62,6 +62,8 @@
 #include "lib_ksils12.h"
 #include "lib_ksi_queue.h"
 
+PRAGMA_IGNORE_Wdeprecated_declarations // we need this for KSI
+
 #ifndef VERSION
 #define VERSION "no-version"
 #endif
