@@ -35,20 +35,17 @@
 #include <stdint.h>
 #include <time.h>
 #include <json.h>
+#include "rsyslog.h"
 /* we need this to avoid issues with older versions of libbson */
-#ifndef AIX
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpragmas"
-#pragma GCC diagnostic ignored "-Wunknown-attributes"
-#pragma GCC diagnostic ignored "-Wexpansion-to-defined"
-#endif
+PRAGMA_DIAGNOSTIC_PUSH
+PRAGMA_IGNORE_Wpragmas
+PRAGMA_IGNORE_Wunknown_warning_option
+PRAGMA_IGNORE_Wunknown_attribute
+PRAGMA_IGNORE_Wexpansion_to_defined
 #include <mongoc.h>
 #include <bson.h>
-#ifndef AIX
-#pragma GCC diagnostic pop
-#endif
+PRAGMA_DIAGNOSTIC_POP
 
-#include "rsyslog.h"
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"

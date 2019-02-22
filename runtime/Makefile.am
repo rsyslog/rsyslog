@@ -98,7 +98,7 @@ librsyslog_la_SOURCES = \
 	../outchannel.c \
 	../outchannel.h \
 	../template.c \
-	../template.h#
+	../template.h
 # the files with ../ we need to work on - so that they either become part of the
 # runtime or will no longer be needed. -- rgerhards, 2008-06-13
 #
@@ -145,7 +145,7 @@ endif
 pkglib_LTLIBRARIES += lmzlibw.la
 lmzlibw_la_SOURCES = zlibw.c zlibw.h
 lmzlibw_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
-lmzlibw_la_LDFLAGS = -module -avoid-version
+lmzlibw_la_LDFLAGS = -module -avoid-version $(ZLIB_LIBS)
 lmzlibw_la_LIBADD = 
 
 if ENABLE_LIBLOGGING_STDLOG

@@ -103,23 +103,6 @@
 #include "dnscache.h"
 #include "ratelimit.h"
 
-/* forward defintions from rsyslogd.c (ASL 2.0 code) */
-extern ratelimit_t *internalMsg_ratelimiter;
-extern uchar *ConfFile;
-extern ratelimit_t *dflt_ratelimiter;
-extern void rsyslogd_usage(void);
-extern rsRetVal rsyslogdInit(void);
-extern void rsyslogd_destructAllActions(void);
-extern void rsyslogd_sigttin_handler();
-extern int forkRsyslog(void);
-void rsyslogd_submitErrMsg(const int severity, const int iErr, const uchar *msg);
-rsRetVal rsyslogd_InitGlobalClasses(void);
-rsRetVal rsyslogd_InitStdRatelimiters(void);
-rsRetVal rsyslogdInit(void);
-void rsyslogdDebugSwitch();
-void rsyslogdDoDie(int sig);
-
-
 #define LIST_DELIMITER	':'		/* delimiter between two hosts */
 /* rgerhards, 2005-10-24: crunch_list is called only during option processing. So
  * it is never called once rsyslogd is running. This code

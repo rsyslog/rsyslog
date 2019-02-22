@@ -173,9 +173,8 @@ static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config para
 
 /* ------------------------------ callbacks ------------------------------ */
 
-#if !defined(_AIX)
-#pragma GCC diagnostic ignored "-Wformat-nonliteral"
-#endif
+PRAGMA_DIAGNOSTIC_PUSH
+PRAGMA_IGNORE_Wformat_nonliteral
 static void __attribute__((format(printf, 1, 2)))
 imrelp_dbgprintf(const char *fmt, ...)
 {
@@ -193,10 +192,7 @@ imrelp_dbgprintf(const char *fmt, ...)
 	va_end(ap);
 	r_dbgprintf("imrelp.c", "%s", pszWriteBuf);
 }
-#if !defined(_AIX)
-#pragma GCC diagnostic warning "-Wformat-nonliteral"
-#endif
-
+PRAGMA_DIAGNOSTIC_POP
 
 static void
 onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)

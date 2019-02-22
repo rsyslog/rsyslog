@@ -427,8 +427,8 @@ finalize_it:
  * number of sessions permitted.
  * rgerhards, 2008-04-22
  */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-align"
+PRAGMA_DIAGNOSTIC_PUSH
+PRAGMA_IGNORE_Wcast_align
 static rsRetVal
 LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax,
@@ -493,7 +493,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 				isIPv6 = 1;
 				int iOn = 1;
 				if(setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY,
-				      (char *)&iOn, sizeof (iOn)) < 0) {
+					(char *)&iOn, sizeof (iOn)) < 0) {
 					close(sock);
 					sock = -1;
 					continue;
@@ -537,11 +537,11 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 			}
 		#endif
 
-	        if( (bind(sock, r->ai_addr, r->ai_addrlen) < 0)
-			#ifndef IPV6_V6ONLY
+		if( (bind(sock, r->ai_addr, r->ai_addrlen) < 0)
+		#ifndef IPV6_V6ONLY
 			&& (errno != EADDRINUSE)
-			#endif
-	           ) {
+		#endif
+		   ) {
 			/* TODO: check if *we* bound the socket - else we *have* an error! */
 			char errStr[1024];
 			rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -564,10 +564,12 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 			(((struct sockaddr_in6*)r->ai_addr)->sin6_port) :
 			(((struct sockaddr_in*)r->ai_addr)->sin_port) ;
 		if(currport == 0) {
-			if(getsockname(sock, r->ai_addr, &r->ai_addrlen) == -1) {
+			socklen_t socklen_r = r->ai_addrlen;
+			if(getsockname(sock, r->ai_addr, &socklen_r) == -1) {
 				LogError(errno, NO_ERRCODE, "nsd_ptcp: ListenPortFileName: getsockname:"
 						"error while trying to get socket");
 			}
+			r->ai_addrlen = socklen_r;
 			port_override = (isIPv6) ?
 				(((struct sockaddr_in6*)r->ai_addr)->sin6_port) :
 				(((struct sockaddr_in*)r->ai_addr)->sin_port) ;
@@ -597,7 +599,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 				   iSessMax / 10 + 5);
 			if(listen(sock, 32) < 0) {
 				dbgprintf("tcp listen error %d, suspending\n", errno);
-	                	close(sock);
+				close(sock);
 				sock = -1;
 				continue;
 			}
@@ -652,7 +654,7 @@ finalize_it:
 
 	RETiRet;
 }
-#pragma GCC diagnostic pop
+PRAGMA_DIAGNOSTIC_POP
 
 /* receive data from a tcp socket
  * The lenBuf parameter must contain the max buffer size on entry and contains

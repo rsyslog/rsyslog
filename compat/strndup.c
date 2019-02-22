@@ -36,5 +36,9 @@ strndup(const char *s, size_t n)
 	new_s[n] = '\0';
 	return new_s;
 }
-
+#else
+/* XLC needs at least one method in source file even static to compile */
+#ifdef __xlc__
+static void dummy() {}
+#endif
 #endif /* #ifndef HAVE_STRNDUP */
