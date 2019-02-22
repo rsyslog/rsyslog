@@ -138,8 +138,10 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-imjournal \
 	--enable-imkafka \
 	--enable-impcap \
+	--enable-improg \
 	--enable-impstats \
 	--enable-imptcp \
+	--enable-imtuxedoulog \
 	--enable-kafka-tests \
 	--disable-kmsg \
 	--enable-ksi-ls12 \
@@ -185,6 +187,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-pmaixforwardedfrom \
 	--enable-pmciscoios \
 	--enable-pmcisconames \
+	--enable-pmdb2diag \
 	--enable-pmlastmsg \
 	--enable-pmnormalize \
 	--enable-pmnull \

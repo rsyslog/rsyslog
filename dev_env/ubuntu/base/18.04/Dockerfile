@@ -184,6 +184,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-improg \
 	--enable-impstats \
 	--enable-imptcp \
+	--enable-imtuxedoulog \
 	--enable-kafka-tests \
 	--enable-ksi-ls12 \
 	--enable-libdbi \
@@ -229,6 +230,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-pmaixforwardedfrom \
 	--enable-pmciscoios \
 	--enable-pmcisconames \
+	--enable-pmdb2diag \
 	--enable-pmlastmsg \
 	--enable-pmnormalize \
 	--enable-pmnull \
