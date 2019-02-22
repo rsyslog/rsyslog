@@ -2,10 +2,10 @@
 # Test imptcp with many dropping connections
 # added 2010-08-10 by Rgerhards
 #
-# This file is part of the rsyslog project, released  under GPLv3
-echo ====================================================================================
-echo TEST: \[imptcp_conndrop.sh\]: test imptcp with random connection drops
+# This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+export NUMMESSAGES=${NUMMESSAGES:-50000} # permit valgrind test to override value
+export TB_TEST_MAX_RUNTIME=${TB_TEST_MAX_RUNTIME:-700} # connection drops are very slow...
 generate_conf
 add_conf '
 $MaxMessageSize 10k
@@ -15,17 +15,16 @@ $MainMsgQueueTimeoutShutdown 10000
 $InputPTCPServerRun '$TCPFLOOD_PORT'
 
 $template outfmt,"%msg:F,58:2%,%msg:F,58:3%,%msg:F,58:4%\n"
-template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!
-$OMFileFlushOnTXEnd off
+template(name="dynfile" type="string" string="'$RSYSLOG_OUT_LOG'")
 $OMFileFlushInterval 2
 $OMFileIOBufferSize 256k
 local0.* ?dynfile;outfmt
 '
 startup
 # 100 byte messages to gain more practical data use
-tcpflood -c20 -m50000 -r -d100 -P129 -D
-sleep 10 # due to large messages, we need this time for the tcp receiver to settle...
-shutdown_when_empty # shut down rsyslogd when done processing messages
-wait_shutdown       # and wait for it to terminate
-seq_check 0 49999 -E
+tcpflood -c20 -m$NUMMESSAGES -r -d100 -P129 -D
+wait_file_lines
+shutdown_when_empty
+wait_shutdown
+seq_check 0 $((NUMMESSAGES - 1)) -E
 exit_test
