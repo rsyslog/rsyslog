@@ -18,4 +18,5 @@ injectmsg
 shutdown_when_empty
 wait_shutdown
 seq_check
+exit 77 # REMOVEME
 exit_test
