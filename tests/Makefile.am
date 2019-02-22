@@ -1167,6 +1167,8 @@ TESTS += \
 	imfile-logrotate.sh \
 	imfile-logrotate-copytruncate.sh \
 	imfile-logrotate-nocopytruncate.sh \
+	imfile-logrotate-multiple.sh \
+	imfile-logrotate-multiple-polling.sh \
 	imfile-growing-file-id.sh \
 	glbl-oversizeMsg-truncate-imfile.sh
 
@@ -1830,6 +1832,8 @@ EXTRA_DIST= \
 	imfile-logrotate.sh \
 	imfile-logrotate-copytruncate.sh \
 	imfile-logrotate-nocopytruncate.sh \
+	imfile-logrotate-multiple.sh \
+	imfile-logrotate-multiple-polling.sh \
 	imfile-growing-file-id.sh \
 	glbl-oversizeMsg-truncate-imfile.sh \
 	dynfile_invld_async.sh \

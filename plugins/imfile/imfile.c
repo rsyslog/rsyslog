@@ -130,8 +130,9 @@ struct instanceConf_s {
 	uchar *pszFileBaseName;
 	uchar *pszTag;
 	size_t lenTag;
-	uchar *pszStateFile;
 	uchar *pszBindRuleset;
+	uchar *pszStateFile;
+	sbool stateFileAlwaysRemove;
 	int nMultiSub;
 	int iPersistStateInterval;
 	int iFacility;
@@ -219,6 +220,7 @@ static int ATTR_NONNULL() getFullStateFileName(const uchar *const, const char *c
 #define OPMODE_POLLING 0
 #define OPMODE_INOTIFY 1
 #define OPMODE_FEN 2
+
 
 /* config variables */
 struct modConfData_s {
@@ -315,6 +317,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "addmetadata", eCmdHdlrBinary, 0 },
 	{ "addceetag", eCmdHdlrBinary, 0 },
 	{ "statefile", eCmdHdlrString, CNFPARAM_DEPRECATED },
+	{ "statefilealwaysremove", eCmdHdlrBinary, 0 },
 	{ "readtimeout", eCmdHdlrPositiveInt, 0 },
 	{ "freshstarttail", eCmdHdlrBinary, 0},
 	{ "filenotfounderror", eCmdHdlrBinary, 0},
@@ -671,7 +674,7 @@ act_obj_add(fs_edge_t *const edge, const char *const name, const int is_file,
 	act_obj_t *act;
 	char basename[MAXFNAME];
 	DEFiRet;
-	
+
 	DBGPRINTF("act_obj_add: edge %p, name '%s' (source '%s')\n", edge, name, source? source : "---");
 	for(act = edge->active ; act != NULL ; act = act->next) {
 		if(!strcmp(act->name, name)) {
@@ -944,7 +947,12 @@ act_obj_destroy(act_obj_t *const act, const int is_deleted)
 		persistStrmState(act);
 		strm.Destruct(&act->pStrm);
 		/* we delete state file after destruct in case strm obj initiated a write */
-		if(is_deleted && !act->in_move && inst->bRMStateOnDel) {
+
+		if (	is_deleted &&
+			inst->bRMStateOnDel &&
+			(	inst->stateFileAlwaysRemove == 1 ||
+				!act->in_move )
+			) {
 			DBGPRINTF("act_obj_destroy: deleting state file %s\n", statefn);
 			unlink((char*)statefn);
 		}
@@ -1591,6 +1599,7 @@ createInstance(instanceConf_t **const pinst)
 	inst->pszFileName = NULL;
 	inst->pszTag = NULL;
 	inst->pszStateFile = NULL;
+	inst->stateFileAlwaysRemove = 0;
 	inst->nMultiSub = NUM_MULTISUB;
 	inst->iSeverity = 5;
 	inst->iFacility = 128;
@@ -1796,6 +1805,8 @@ CODESTARTnewInpInst
 			inst->pszFileName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "statefile")) {
 			inst->pszStateFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "statefilealwaysremove")) {
+			inst->stateFileAlwaysRemove = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "removestateondelete")) {
 			inst->bRMStateOnDel = (uint8_t) pvals[i].val.d.n; // TODO: duplicate!
 		} else if(!strcmp(inppblk.descr[i].name, "tag")) {
@@ -2221,13 +2232,13 @@ flag_in_move(fs_edge_t *const edge, const char *name_moved)
 	act_obj_t *act;
 
 	for(act = edge->active ; act != NULL ; act = act->next) {
-		DBGPRINTF("checking active object %s\n", act->basename);
+		DBGPRINTF("flag_in_move: checking active object %s\n", act->basename);
 		if(!strcmp(act->basename, name_moved)){
 			DBGPRINTF("found file\n");
 			act->in_move = 1;
 			break;
 		} else {
-			DBGPRINTF("name check fails, '%s' != '%s'\n", act->basename, name_moved);
+			DBGPRINTF("flag_in_move: name check fails, '%s' != '%s'\n", act->basename, name_moved);
 		}
 	}
 	if (!act && edge->next) {
