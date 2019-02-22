@@ -23,22 +23,18 @@
 #uncomment the following if you want a log for step 1 of this test
 #export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 #export RSYSLOG_DEBUGLOG="log"
-
 . ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/omtesting/.libs/omtesting")
 
 # set spool locations and switch queue to disk-only mode
-$WorkDirectory '$RSYSLOG_DYNNAME'.spool
+global(workDirectory="'${RSYSLOG_DYNNAME}'.spool")
 main_queue(queue.filename="mainq" queue.saveonshutdown="on"
            queue.timeoutshutdown="1" queue.maxfilesize="1m"
 	   queue.timeoutworkerthreadshutdown="500" queue.size="200000"
 	   )
 
-$template outfmt,"%msg:F,58:2%\n"
-template(name="dynfile" type="string" string="'$RSYSLOG_OUT_LOG'")
-#:msg, contains, "msgnum:" ?dynfile;outfmt
 :msg, contains, "msgnum:" :omtesting:sleep 10 0
 '
 startup
@@ -48,7 +44,7 @@ ls ${RSYSLOG_DYNNAME}.spool
 shutdown_immediate # shut down without the ability to fully persist state
 ./msleep 750	# simulate an os timeout (let it run a *very short* bit, else it's done ;))
 echo spool files immediately after shutdown \(but before kill\):
-ls ${RSYSLOG_DYNNAME}.spool
+ls -l ${RSYSLOG_DYNNAME}.spool
 
 
 . $srcdir/diag.sh kill-immediate   # do not give it sufficient time to shutdown
@@ -56,7 +52,7 @@ wait_shutdown
 rm -f $RSYSLOG_PIDBASE.pid # as we kill, rsyslog does not itself cleanup the pid file
 
 echo spool files after kill:
-ls ${RSYSLOG_DYNNAME}.spool
+ls -l ${RSYSLOG_DYNNAME}.spool
 
 if [ ! -f ${RSYSLOG_DYNNAME}.spool/mainq.qi ]; then
     echo "FAIL: .qi file does not exist!"
@@ -76,8 +72,8 @@ cat ${RSYSLOG_DYNNAME}.spool/mainq.qi
 #export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 #export RSYSLOG_DEBUGLOG="log2"
 
-echo RSYSLOG RESTART
-# special case: we need to preserve out dynamic settings, as generate_conf
+printf 'RSYSLOG RESTART\n\n'
+# special case: we need to preserve our dynamic settings, as generate_conf
 # overwrites them. TODO: handle this in diag.sh
 RSYSLOG_DYNNAME_SAVE="$RSYSLOG_DYNNAME"
 RSYSLOG_OUT_LOG_SAVE="$RSYSLOG_OUT_LOG"
@@ -87,16 +83,14 @@ RSYSLOG_DYNNAME="$RSYSLOG_DYNNAME_SAVE"
 add_conf '
 module(load="../plugins/omtesting/.libs/omtesting")
 
-# set spool locations and switch queue to disk-only mode
-$WorkDirectory '$RSYSLOG_DYNNAME'.spool
+global(workDirectory="'${RSYSLOG_DYNNAME}'.spool")
 main_queue(queue.filename="mainq" queue.saveonshutdown="on"
-           queue.timeoutshutdown="1" queue.maxfilesize="1m"
+           queue.maxfilesize="1m" # note: now regular shutdown timeout!
 	   queue.timeoutworkerthreadshutdown="500" queue.size="200000"
 	   )
 
 $template outfmt,"%msg:F,58:2%\n"
-template(name="dynfile" type="string" string="'$RSYSLOG_OUT_LOG'")
-:msg, contains, "msgnum:" ?dynfile;outfmt
+action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
 #wait_queueempty
@@ -119,7 +113,4 @@ if [ ! -f  $RSYSLOG_OUT_LOG ]; then
     echo "FAIL: no output data gathered (no ${RSYSLOG_OUT_LOG})!"
     error_exit 1
 fi
-
-#seq_check 0 19999 # so far this does not look doable (see comment above)
-
 exit_test
