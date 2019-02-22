@@ -1139,12 +1139,13 @@ ENDcreateWrkrInstance
 BEGINfreeWrkrInstance
 CODESTARTfreeWrkrInstance
 
-	closeAMQPConnection(pWrkrData);
+	if (pWrkrData != NULL) {
+		closeAMQPConnection(pWrkrData);
 
-	pthread_mutex_destroy(&pWrkrData->send_mutex);
-	pthread_mutex_destroy(&pWrkrData->cond_mutex);
-	pthread_cond_destroy(&pWrkrData->cond);
-
+		pthread_mutex_destroy(&(pWrkrData->send_mutex));
+		pthread_mutex_destroy(&(pWrkrData->cond_mutex));
+		pthread_cond_destroy(&(pWrkrData->cond));
+	}
 ENDfreeWrkrInstance
 
 BEGINqueryEtryPt
