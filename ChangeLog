@@ -39,6 +39,15 @@ Version 8.1903.0 (aka 2019.03) 2019-03-05
   closes https://github.com/rsyslog/rsyslog/issues/3448
 - testbench: mmdb valgrind tests failed is srcdir env was not set
 - testbench: add omclickhouse tests
+- testbench bugfix: daqueue-dirty-shutdown test
+  This test occasionally failed with left-over spool files. As far as we
+  have analyzed, this is due to the use of an invalid shutdown timeout
+  (very short) in the second phase of the test. It looks like this is
+  actually a copy&paste error from phase one. Behaviour of rsyslog was
+  correct, but the test itself created a false positive.
+  We have corrected the timeout now and also modernized the test
+  a bit.
+  closes https://github.com/rsyslog/rsyslog/issues/2122
 ------------------------------------------------------------------------------
 Version 8.1901.0 (aka 2019.01) 2019-01-22
 - new version scheme: 8.yymm.0 - version now depends on release date
