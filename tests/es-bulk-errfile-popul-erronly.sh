@@ -33,7 +33,7 @@ ruleset(name="foo") {
 	 searchType="test-type"
 	 serverport="19200"
 	 bulkmode="on"
-	 errorFile="./'${RSYSLOG_DYNNAME}'.errorfile"
+	 errorFile="'${RSYSLOG_DYNNAME}'.errorfile"
 	 erroronly="on")
 }
 
@@ -53,7 +53,7 @@ python $srcdir/elasticsearch-error-format-check.py erroronly
 if [ $? -ne 0 ]
 then
     echo "error: Format for error file different! " $?
-    exit 1
+    error_exit 1
 fi
 cleanup_elasticsearch
 exit_test
