@@ -207,6 +207,8 @@ TESTS +=  \
 	tcp_forwarding_tpl.sh \
 	tcp_forwarding_dflt_tpl.sh \
 	tcp_forwarding_retries.sh \
+	queue-minbatch.sh \
+	queue-minbatch-queuefull.sh \
 	arrayqueue.sh \
 	global_vars.sh \
 	no-parser-errmsg.sh \
@@ -967,6 +969,7 @@ TESTS +=  \
 	sndrcv_tls_anon_hostname.sh \
 	sndrcv_tls_anon_ipv4.sh \
 	sndrcv_tls_anon_ipv6.sh \
+	sndrcv_tls_certless_clientonly.sh \
 	sndrcv_tls_gtls_servercert_gtls_clientanon.sh \
 	sndrcv_tls_gtls_servercert_gtls_clientanon_legacy.sh \
 	sndrcv_tls_gtls_serveranon_gtls_clientanon.sh \
@@ -1305,6 +1308,8 @@ EXTRA_DIST= \
 	tcp_forwarding_ns_tpl.sh \
 	tcp_forwarding_dflt_tpl.sh \
 	tcp_forwarding_retries.sh \
+	queue-minbatch.sh \
+	queue-minbatch-queuefull.sh \
 	killrsyslog.sh \
 	parsertest-parse1.sh \
 	parsertest-parse1-udp.sh \
@@ -2062,6 +2067,7 @@ EXTRA_DIST= \
 	sndrcv_tls_priorityString.sh \
 	sndrcv_tls_certvalid.sh \
 	sndrcv_tls_certvalid_expired.sh \
+	sndrcv_tls_certless_clientonly.sh \
 	sndrcv_tls_gtls_servercert_gtls_clientanon.sh \
 	sndrcv_tls_gtls_servercert_gtls_clientanon_legacy.sh \
 	sndrcv_tls_gtls_serveranon_gtls_clientanon.sh \
