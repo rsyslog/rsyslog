@@ -173,6 +173,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-elasticsearch-tests \
 	--enable-gnutls \
 	--enable-gssapi-krb5 \
+	--enable-imbatchreport \
 	--enable-imczmq \
 	--enable-imdiag \
 	--enable-imdocker \
