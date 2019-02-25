@@ -34,6 +34,7 @@ RUN	apt-get install -y \
 	libnet1-dev \
 	libpcap-dev \
 	libpq-dev \
+	librabbitmq-dev \
 	libsasl2-dev \
 	libsnmp-dev \
 	libssl-dev \
@@ -132,6 +133,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-elasticsearch-tests \
 	--enable-gnutls \
 	--enable-gssapi-krb5 \
+	--enable-imbatchreport \
 	--enable-imczmq \
 	--enable-imdiag \
 	--enable-imfile \
@@ -176,6 +178,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-omkafka \
 	--enable-ommongodb \
 	--enable-omprog \
+	--enable-omrabbitmq \
 	--enable-omrelp-default-port=13515 \
 	--enable-omruleset \
 	--enable-omstdout \
