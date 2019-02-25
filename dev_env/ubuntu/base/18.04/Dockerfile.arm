@@ -35,6 +35,7 @@ RUN 	apt-get update && \
 	libmongoc-dev \
 	libmysqlclient-dev \
 	libnet1-dev \
+	libpcap-dev \
 	libsnmp-dev \
 	libssl-dev libsasl2-dev \
 	libsystemd-dev \
@@ -126,13 +127,16 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-elasticsearch-tests \
 	--enable-gnutls \
 	--enable-gssapi-krb5 \
+	--enable-imbatchreport \
 	--enable-imczmq \
 	--enable-imdiag \
 	--enable-imfile \
 	--enable-imjournal \
 	--enable-imkafka \
+	--enable-impcap \
 	--enable-impstats \
 	--enable-imptcp \
+	--enable-imtuxedoulog \
 	--enable-kafka-tests \
 	--enable-ksi-ls12 \
 	--enable-libdbi \
@@ -142,6 +146,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-mmanon \
 	--enable-mmaudit \
 	--enable-mmcount \
+	--enable-mmcapture \
 	--enable-mmdblookup \
 	--enable-mmfields \
 	--enable-mmgrok \
@@ -160,6 +165,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-omhiredis \
 	--enable-omhiredis \
 	--enable-omhttpfs \
+	--enable-omhttp \
 	--enable-omjournal \
 	--enable-omkafka \
 	--enable-ommongodb \
@@ -174,6 +180,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-pgsql \
 	--enable-pmaixforwardedfrom \
 	--enable-pmciscoios \
+	--enable-pmdb2diag \
 	--enable-pmcisconames \
 	--enable-pmlastmsg \
 	--enable-pmnormalize \
