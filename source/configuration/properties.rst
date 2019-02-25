@@ -254,6 +254,9 @@ may have different time stamp. To avoid this, use *timegenerated* instead.
 **$day**
   The current day of the month (2-digit)
 
+**$wday**
+  The current week day as defined by 'gmtime()'. 0=Sunday, ..., 6=Saturday
+
 **$hour**
   The current hour in military (24 hour) time (2-digit)
 
