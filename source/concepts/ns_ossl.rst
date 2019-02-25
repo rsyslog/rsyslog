@@ -56,5 +56,17 @@ Supported Authentication Modes
    "anon" does not permit to authenticate the remote peer. As such,
    this mode is vulnerable to man in the middle attacks as well as
    unauthorized access. It is recommended NOT to use this mode.
+   A certificate / key does not need to be configured in this authmode.
+
+.. note::
+
+   **Anon mode changes in:** v8.190 (or above)
+
+   -  Anonymous Ciphers (DH and ECDH) are available in ANON mode.
+   -  Server does not require a certificate anymore in anon mode.
+   -  If Server has a certificate and the Client does not, the highest possible
+      ciphers will be selected.
+   -  If both Server and Client do not have a certificate, the highest available
+      anon cipher will be used.
 
 
