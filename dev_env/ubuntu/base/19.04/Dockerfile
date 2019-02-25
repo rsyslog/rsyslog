@@ -76,17 +76,18 @@ RUN	apt-key adv --keyserver keyserver.ubuntu.com --recv E0C56BD4 && \
 RUN	apt-get update -y && \
 	apt-get install -y  \
 	libczmq-dev \
-	libqpid-proton8-dev \
+	libqpid-proton11-dev \
 	tcl-dev \
 	libsodium-dev
 # clickhouse
-RUN	echo "deb http://repo.yandex.ru/clickhouse/deb/stable/ main/" > /etc/apt/sources.list.d/clickhouse.list && \
-	apt-key adv --keyserver keyserver.ubuntu.com --recv E0C56BD4 && \
- 	add-apt-repository ppa:adiscon/v8-stable -y && \
-	apt-get update -y && \
-	apt-get install -y  \
-	clickhouse-client \
-	clickhouse-server
+#RUN	echo "deb http://repo.yandex.ru/clickhouse/deb/stable/ main/" > /etc/apt/sources.list.d/clickhouse.list && \
+#	apt-key adv --keyserver keyserver.ubuntu.com --recv E0C56BD4 && \
+# 	add-apt-repository ppa:adiscon/v8-stable -y && \
+#	apt-get update -y && \
+#	apt-get install -y  \
+#	clickhouse-client \
+#	clickhouse-server
+
 # clang devel version
 RUN	echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic main" > /etc/apt/sources.list.d/llvm8.list && \
 	echo "deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic main" >> /etc/apt/sources.list.d/llvm8.list && \
@@ -110,13 +111,13 @@ ENV	ELASTICSEARCH_NEWEST="elasticsearch-6.3.1.tar.gz"
 # for clickhouse, the container requires some pre-generated files for TLS. generate them via
 # openssl req -subj "/CN=localhost" -new -newkey rsa:2048 -days 365 -nodes -x509 -keyout clickhouse.server.key -out clickhouse.server.crt
 # openssl dhparam -out clickhouse.dhparam.pem 2048
-COPY	clickhouse.dhparam.pem /etc/clickhouse-server/dhparam.pem
-COPY	clickhouse.server.crt /etc/clickhouse-server/server.crt
-COPY	clickhouse.server.key /etc/clickhouse-server/server.key
-RUN	sed -i 's/<yandex>/<yandex>\n    <core_dump><size_limit>0<\/size_limit><\/core_dump>/g' \
-		/etc/clickhouse-server/config.xml && \
-	sed -i 's/<tcp_port>9000<\/tcp_port>/<tcp_port>9000<\/tcp_port>\n    <https_port>8443<\/https_port>/g' \
-		/etc/clickhouse-server/config.xml
+#COPY	clickhouse.dhparam.pem /etc/clickhouse-server/dhparam.pem
+#COPY	clickhouse.server.crt /etc/clickhouse-server/server.crt
+#COPY	clickhouse.server.key /etc/clickhouse-server/server.key
+#RUN	sed -i 's/<yandex>/<yandex>\n    <core_dump><size_limit>0<\/size_limit><\/core_dump>/g' \
+#		/etc/clickhouse-server/config.xml && \
+#	sed -i 's/<tcp_port>9000<\/tcp_port>/<tcp_port>9000<\/tcp_port>\n    <https_port>8443<\/https_port>/g' \
+#		/etc/clickhouse-server/config.xml
 
 WORKDIR	/home/devel
 VOLUME	/rsyslog
@@ -132,9 +133,9 @@ ENV	MYSQLD_START_CMD="sudo mysqld_safe" \
         MYSQLD_STOP_CMD="sudo kill $(sudo cat /var/run/mysqld/mysqld.pid)"
 
 # and so does clickhouse
-RUN	chown root:root /var/lib/clickhouse
-ENV	CLICKHOUSE_START_CMD="sudo clickhouse-server --config-file=/etc/clickhouse-server/config.xml" \
-	CLICKHOUSE_STOP_CMD="sudo kill $(pidof clickhouse-server)"
+#RUN	chown root:root /var/lib/clickhouse
+#ENV	CLICKHOUSE_START_CMD="sudo clickhouse-server --config-file=/etc/clickhouse-server/config.xml" \
+#	CLICKHOUSE_STOP_CMD="sudo kill $(pidof clickhouse-server)"
 
 ADD	setup-system.sh setup-system.sh
 ENV	PKG_CONFIG_PATH=/usr/local/lib/pkgconfig \
@@ -165,11 +166,12 @@ ENV	SCAN_BUILD=scan-build \
 
 ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-clickhouse \
-	--enable-clickhouse-tests \
+	--enable-clickhouse-tests=no \
 	--enable-elasticsearch \
 	--enable-elasticsearch-tests \
 	--enable-gnutls \
 	--enable-gssapi-krb5 \
+	--enable-imbatchreport \
 	--enable-imczmq \
 	--enable-imdiag \
 	--enable-imdocker \
