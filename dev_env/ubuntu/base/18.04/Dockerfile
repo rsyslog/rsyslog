@@ -36,6 +36,7 @@ RUN 	apt-get update && \
 	libmysqlclient-dev \
 	libnet1-dev \
 	libpcap-dev \
+	librabbitmq-dev \
 	libsnmp-dev \
 	libssl-dev libsasl2-dev \
 	libsystemd-dev \
@@ -172,6 +173,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-elasticsearch-tests \
 	--enable-gnutls \
 	--enable-gssapi-krb5 \
+	--enable-imbatchreport \
 	--enable-imczmq \
 	--enable-imdiag \
 	--enable-imdocker \
@@ -179,9 +181,11 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-imfile \
 	--enable-imjournal \
 	--enable-imkafka \
-	--enable-impstats \
 	--enable-impcap \
+	--enable-improg \
+	--enable-impstats \
 	--enable-imptcp \
+	--enable-imtuxedoulog \
 	--enable-kafka-tests \
 	--enable-ksi-ls12 \
 	--enable-libdbi \
@@ -215,6 +219,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-omkafka \
 	--enable-ommongodb \
 	--enable-omprog \
+	--enable-omrabbitmq \
 	--enable-omrelp-default-port=13515 \
 	--enable-omruleset \
 	--enable-omstdout \
@@ -226,6 +231,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-pmaixforwardedfrom \
 	--enable-pmciscoios \
 	--enable-pmcisconames \
+	--enable-pmdb2diag \
 	--enable-pmlastmsg \
 	--enable-pmnormalize \
 	--enable-pmnull \
