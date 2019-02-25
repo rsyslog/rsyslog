@@ -190,7 +190,7 @@ void checkGoneAwaySenders(time_t);
 
 #define STATSCOUNTER_DEC(ctr, mut) \
 	if(GatherStats) \
-		ATOMIC_DEC_uint64(&ctr, mut);
+		ATOMIC_DEC_uint64(&ctr, &mut);
 
 /* the next macro works only if the variable is already guarded
  * by mutex (or the users risks a wrong result). It is assumed

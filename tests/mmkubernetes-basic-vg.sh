@@ -149,7 +149,9 @@ k8s_srv_port = sys.argv[1]
 expected = {"name": "mmkubernetes(http://localhost:{0})".format(k8s_srv_port),
     "origin": "mmkubernetes", "recordseen": 12, "namespacemetadatasuccess": 9,
 	"namespacemetadatanotfound": 1, "namespacemetadatabusy": 1, "namespacemetadataerror": 0,
-	"podmetadatasuccess": 9, "podmetadatanotfound": 1, "podmetadatabusy": 2, "podmetadataerror": 0 }
+	"podmetadatasuccess": 9, "podmetadatanotfound": 1, "podmetadatabusy": 2, "podmetadataerror": 0,
+	"namespacecachenumentries": 10, "podcachenumentries": 10, "namespacecachehits": 1,
+	"podcachehits": 0, "namespacecachemisses": 11, "podcachemisses": 12 }
 actual = {}
 for line in sys.stdin:
 	jstart = line.find("{")
