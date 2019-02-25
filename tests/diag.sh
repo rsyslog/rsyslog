@@ -286,7 +286,6 @@ wait_startup_pid() {
 		echo "FAIL: testbench bug: wait_startup_called without \$1"
 		error_exit 100
 	fi
-	start_timeout="$(date)"
 	while test ! -f $1; do
 		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
 		if [ $(date +%s) -gt $(( TB_STARTTEST + TB_TEST_MAX_RUNTIME )) ]; then
@@ -337,16 +336,13 @@ wait_pid_termination() {
 			printf 'TESTBENCH error: pidfile name not specified in wait_pid_termination\n'
 			error_exit 100
 		fi
-		i=0
 		terminated=0
-		start_timeout="$(date)"
 		while [[ $terminated -eq 0 ]]; do
 			ps -p $out_pid &> /dev/null
 			if [[ $? != 0 ]]; then
 				terminated=1
 			fi
 			$TESTTOOL_DIR/msleep 100
-			(( i++ ))
 			if [ $(date +%s) -gt $(( TB_STARTTEST + TB_TEST_MAX_RUNTIME )) ]; then
 			   printf '%s ABORT! Timeout waiting on shutdown (pid %s)\n' "$(tb_timestamp)" $out_pid
 			   ps -fp $out_pid
@@ -446,7 +442,6 @@ injectmsg_kafkacat() {
 # wait for rsyslogd startup ($1 is the instance)
 wait_startup() {
 	wait_rsyslog_startup_pid $1
-	i=0
 	while test ! -f ${RSYSLOG_DYNNAME}$1.started; do
 		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
 		ps -p $(cat $RSYSLOG_PIDBASE$1.pid) &> /dev/null
@@ -455,7 +450,6 @@ wait_startup() {
 		   echo "ABORT! rsyslog pid no longer active during startup!"
 		   error_exit 1 stacktrace
 		fi
-		(( i++ ))
 		if [ $(date +%s) -gt $(( TB_STARTTEST + TB_TEST_MAX_RUNTIME )) ]; then
 		   printf '%s ABORT! Timeout waiting startup file %s\n' "$(tb_timestamp)" "${RSYSLOG_DYNNAME}.started"
 		   error_exit 1
@@ -794,7 +788,6 @@ wait_shutdown() {
 		wait_shutdown_vg "$1"
 		return
 	fi
-	i=0
 	out_pid=$(cat $RSYSLOG_PIDBASE$1.pid.save)
 	printf '%s wait on shutdown of %s\n' "$(tb_timestamp)" "$out_pid"
 	if [[ "$out_pid" == "" ]]
@@ -803,18 +796,14 @@ wait_shutdown() {
 	else
 		terminated=0
 	fi
-	start_timeout="$(date)"
 	while [[ $terminated -eq 0 ]]; do
 		ps -p $out_pid &> /dev/null
 		if [[ $? != 0 ]]; then
 			terminated=1
 		fi
 		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
-		(( i++ ))
-		if test $i -gt $TB_TIMEOUT_STARTSTOP
-		then
-		   echo "ABORT! Timeout waiting on shutdown"
-		   echo "Wait initiated $start_timeout, now $(date)"
+		if [ $(date +%s) -gt $(( TB_STARTTEST + TB_TEST_MAX_RUNTIME )) ]; then
+		   printf '%s wait_shutdown ABORT! Timeout waiting on shutdown (pid %s)\n' "$(tb_timestamp)" $out_pid
 		   ps -fp $out_pid
 		   echo "Instance is possibly still running and may need"
 		   echo "manual cleanup."

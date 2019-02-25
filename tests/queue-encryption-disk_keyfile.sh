@@ -22,7 +22,7 @@ template(name="outfmt" type="string"
 
 :omtesting:sleep 0 5000
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
-			         file=`echo $RSYSLOG_OUT_LOG`)
+			         file="'$RSYSLOG_OUT_LOG'")
 '
 printf "1234567890123456" > $RSYSLOG_DYNNAME.keyfile
 startup
