@@ -34,6 +34,7 @@ RUN	apt-get install -y \
 	libnet1-dev \
 	libpcap-dev \
 	libpq-dev \
+	librabbitmq-dev \
 	libsasl2-dev \
 	libsnmp-dev \
 	libssl-dev \
@@ -132,14 +133,17 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-elasticsearch-tests \
 	--enable-gnutls \
 	--enable-gssapi-krb5 \
+	--enable-imbatchreport \
 	--enable-imczmq \
 	--enable-imdiag \
 	--enable-imfile \
 	--enable-imjournal \
 	--enable-imkafka \
 	--enable-impcap \
+	--enable-improg \
 	--enable-impstats \
 	--enable-imptcp \
+	--enable-imtuxedoulog \
 	--enable-kafka-tests \
 	--disable-kmsg \
 	--enable-ksi-ls12 \
@@ -174,6 +178,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-omkafka \
 	--enable-ommongodb \
 	--enable-omprog \
+	--enable-omrabbitmq \
 	--enable-omrelp-default-port=13515 \
 	--enable-omruleset \
 	--enable-omstdout \
@@ -185,6 +190,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-pmaixforwardedfrom \
 	--enable-pmciscoios \
 	--enable-pmcisconames \
+	--enable-pmdb2diag \
 	--enable-pmlastmsg \
 	--enable-pmnormalize \
 	--enable-pmnull \
