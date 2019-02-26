@@ -215,13 +215,16 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-elasticsearch \
 	--enable-elasticsearch-tests \
 	--enable-gnutls \
+	--enable-imbatchreport \
 	--enable-imdiag \
+	--enable-imdocker \
 	--enable-imfile \
 	--enable-imjournal \
 	--enable-imkafka \
 	--enable-impstats \
 	--enable-impcap \
 	--enable-imptcp \
+	--enable-imtuxedoulog \
 	--enable-kafka-tests \
 	--enable-ksi-ls12 \
 	--enable-libdbi \
