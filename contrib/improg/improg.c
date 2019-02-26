@@ -42,6 +42,14 @@
 #include <pthread.h>
 #include <poll.h>
 
+/* Very strange error on solaris 11 LOG_CRON already defined here.
+ * It is redefined in rsyslog.h
+ * The error also appeared with module omprog but the warning is
+ * accepted without generated an error
+ */
+#ifdef LOG_CRON
+#undef LOG_CRON
+#endif
 
 #include "rsyslog.h"
 #include "conf.h"
@@ -254,7 +262,7 @@ static rsRetVal openPipe(instanceConf_t *pInst)
 		/* NO CODE HERE - WILL NEVER BE REACHED! */
 	}
 
-	DBGPRINTF("improg: child has pid %d\n", (int) cpid);
+	DBGPRINTF("improg: child has pid %ld\n", (long int) cpid);
 
 	/* close the pipe ends that the parent doesn't need */
 	close(pipeFromChild[1]);
@@ -299,14 +307,14 @@ static void waitForChild(instanceConf_t *pInst)
 
 	if (ret == 0) {  /* timeout reached */
 		if (!pInst->bKillUnresponsive) {
-			LogMsg(0, NO_ERRCODE, LOG_WARNING, "improg: program '%s' (pid %d) did not terminate "
-					"within timeout (%ld ms); ignoring it", pInst->pszBinary, pInst->pid,
+			LogMsg(0, NO_ERRCODE, LOG_WARNING, "improg: program '%s' (pid %ld) did not terminate "
+					"within timeout (%ld ms); ignoring it", pInst->pszBinary, (long int)pInst->pid,
 					pInst->lCloseTimeout);
 			return;
 		}
 
-		LogMsg(0, NO_ERRCODE, LOG_WARNING, "improg: program '%s' (pid %d) did not terminate "
-				"within timeout (%ld ms); killing it", pInst->pszBinary, pInst->pid,
+		LogMsg(0, NO_ERRCODE, LOG_WARNING, "improg: program '%s' (pid %ld) did not terminate "
+				"within timeout (%ld ms); killing it", pInst->pszBinary, (long int)pInst->pid,
 				pInst->lCloseTimeout);
 		if (kill(pInst->pid, SIGKILL) == -1) {
 			LogError(errno, RS_RET_SYS_ERR, "improg: could not send SIGKILL to child process");
