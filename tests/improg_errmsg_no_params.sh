@@ -6,7 +6,7 @@ add_conf '
 module(load="../contrib/improg/.libs/improg")
 
 input(type="improg")
-action(type="omfile" file="'$RSYSLOG_OUT_LOG'outfmt")
+action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 '
 
 startup
