@@ -112,6 +112,8 @@ static instanceConf_t *confRoot = NULL;
 static fd_set rfds;
 static int nfds = 0;
 
+extern char **environ; /* POSIX environment ptr, by std not in a header... (see man 7 environ) */
+
 static inline void
 std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *pInst)
 {
