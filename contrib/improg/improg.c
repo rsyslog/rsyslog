@@ -552,13 +552,12 @@ CODESTARTnewInpInst
 	CHKiRet(cstrConstruct(&pInst->ppCStr));
 
 	if ((iRet = lstnAdd(pInst)) != RS_RET_OK) {
-		lstnFree(pInst);
 		ABORT_FINALIZE(iRet);
 	}
 
 finalize_it:
 CODE_STD_FINALIZERnewInpInst
-	if (iRet != RS_RET_OK)
+	if (pInst && iRet != RS_RET_OK)
 		lstnFree(pInst);
 	cnfparamvalsDestruct(pvals, &inppblk);
 ENDnewInpInst
