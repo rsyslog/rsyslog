@@ -126,5 +126,6 @@ main(int argc, char *argv[])
 			errout("write");
 	}
 	/* let the OS do the cleanup */
+	fprintf(stderr, "minitcpsrv terminates itself\n");
 	return 0;
 }

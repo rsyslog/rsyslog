@@ -54,15 +54,19 @@ rsyslogd_LDADD = ../grammar/libgrammar.la ../runtime/librsyslog.la ../compat/com
 if OS_LINUX
 rsyslogd_LDFLAGS = -export-dynamic \
 	#-Wl,--whole-archive,$(top_builddir)/runtime/.libs/librsyslog.a,--no-whole-archive
+exports_list_file =
 else
 if OS_APPLE
 rsyslogd_LDFLAGS = -export-dynamic \
 	-Wl,$(top_builddir)/runtime/.libs/librsyslog.a
+exports_list_file =
 else
 if OS_AIX
-rsyslogd_LDFLAGS = -export-dynamic -bexpall -bE:strippedsymbols.exp
+rsyslogd_LDFLAGS = -brtl -bexpall -f"aix_exports_list" -lsrc
+exports_list_file = aix_exports_list
 else # e.g. FreeBSD
 rsyslogd_LDFLAGS = -export-dynamic
+exports_list_file =
 endif # if OS_AIX
 endif # if OS_APPLE
 endif # if OS_LINUX
@@ -70,6 +74,8 @@ endif # if OS_LINUX
 EXTRA_DIST = $(man_MANS) \
 	rscryutil.rst \
 	recover_qi.pl
+
+EXTRA_rsyslogd_DEPENDENCIES = $(exports_list_file)
 
 if ENABLE_LIBLOGGING_STDLOG
 rsyslogd_LDADD += $(LIBLOGGING_STDLOG_LIBS)
@@ -105,3 +111,8 @@ EXTRA_DIST+= rscryutil.1
 endif
 endif
 endif
+
+aix_exports_list:
+	echo "$(top_builddir)/runtime/.libs/librsyslog_la-*.o" > $@
+	echo "$(top_builddir)/.libs/librsyslog_la-*.o" >> $@
+	echo "$(top_builddir)/grammar/.libs/libgrammar_la-*.o" >> $@

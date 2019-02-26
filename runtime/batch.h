@@ -126,7 +126,4 @@ finalize_it:
 	RETiRet;
 }
 
-#ifdef _AIX
-#endif
-
 #endif /* #ifndef BATCH_H_INCLUDED */

@@ -282,21 +282,17 @@ wait_startup_pid() {
 		echo "FAIL: testbench bug: wait_startup_called without \$1"
 		error_exit 100
 	fi
-	i=0
 	start_timeout="$(date)"
 	while test ! -f $1; do
 		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
-		(( i++ ))
-		if test $i -gt $TB_TIMEOUT_STARTSTOP
-		then
-		   printf 'ABORT! Timeout waiting on startup (pid file %s1)' "$1"
-		   echo "Wait initiated $start_timeout, now $(date)"
-		   ls -l $1
-		   ps -fp $(cat $1)
+		if [ $(date +%s) -gt $(( TB_STARTTEST + TB_TEST_MAX_RUNTIME )) ]; then
+		   printf '%s ABORT! Timeout waiting on startup (pid file %s)\n' "$(tb_timestamp)" "$1"
+		   ls -l "$1"
+		   ps -fp $(cat "$1")
 		   error_exit 1
 		fi
 	done
-	printf '%s found, pid %s\n' "$1" "$(cat $1)"
+	printf '%s %s found, pid %s\n' "$(tb_timestamp)" "$1" "$(cat $1)"
 }
 
 # special version of wait_startup_pid() for rsyslog startup
@@ -320,13 +316,12 @@ wait_process_startup() {
 			   error_exit 1
 			fi
 			(( i++ ))
-			if test $i -gt $TB_TIMEOUT_STARTSTOP
-			then
-			   echo "ABORT! Timeout waiting on file '$2'"
+			if [ $(date +%s) -gt $(( TB_STARTTEST + TB_TEST_MAX_RUNTIME )) ]; then
+			   printf '%s ABORT! Timeout waiting on file %s\n' "$(tb_timestamp)" "$2"
 			   error_exit 1
 			fi
 		done
-		echo "$2 seen, associated pid " $(cat $1.pid)
+		printf '%s %s seen, associated pid %s\n' "$(tb_timestamp)" "$2" "$(cat $1)"
 	fi
 }
 
@@ -348,12 +343,10 @@ wait_pid_termination() {
 			fi
 			$TESTTOOL_DIR/msleep 100
 			(( i++ ))
-			if test $i -gt $TB_TIMEOUT_STARTSTOP ; then
-			   echo "ABORT! Timeout waiting on shutdown"
-			   echo "Wait initiated $start_timeout, now $(date)"
+			if [ $(date +%s) -gt $(( TB_STARTTEST + TB_TEST_MAX_RUNTIME )) ]; then
+			   printf '%s ABORT! Timeout waiting on shutdown (pid %s)\n' "$(tb_timestamp)" $out_pid
 			   ps -fp $out_pid
-			   echo "Instance is possibly still running and may need"
-			   echo "manual cleanup."
+			   printf 'Instance is possibly still running and may need manual cleanup.\n'
 			   error_exit 1
 			fi
 		done
@@ -459,9 +452,8 @@ wait_startup() {
 		   error_exit 1 stacktrace
 		fi
 		(( i++ ))
-		if test $i -gt $TB_TIMEOUT_STARTSTOP
-		then
-		   echo "ABORT! Timeout waiting on startup ('${RSYSLOG_DYNNAME}.started' file)"
+		if [ $(date +%s) -gt $(( TB_STARTTEST + TB_TEST_MAX_RUNTIME )) ]; then
+		   printf '%s ABORT! Timeout waiting startup file %s\n' "$(tb_timestamp)" "${RSYSLOG_DYNNAME}.started"
 		   error_exit 1
 		fi
 	done

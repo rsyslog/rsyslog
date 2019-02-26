@@ -494,8 +494,8 @@ finalize_it:
  * Does NOT yet accept/process any incoming data (but binds ports). Hint: this
  * code is to be executed before dropping privileges.
  */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-align"
+PRAGMA_DIAGNOSTIC_PUSH
+PRAGMA_IGNORE_Wcast_align
 static rsRetVal
 startupSrv(ptcpsrv_t *pSrv)
 {
@@ -670,7 +670,7 @@ finalize_it:
 
 	RETiRet;
 }
-#pragma GCC diagnostic pop
+PRAGMA_DIAGNOSTIC_POP
 
 /* Set pRemHost based on the address provided. This is to be called upon accept()ing
  * a connection request. It must be provided by the socket we received the

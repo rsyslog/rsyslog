@@ -375,9 +375,8 @@ doIdleProcessing(wti_t *const pThis, wtp_t *const pWtp, int *const pbInactivityT
  * long (during shutdown). So what we do is block cancellation, and every
  * consumer must enable it during the periods where it is safe.
  */
-#if !defined(_AIX)
-#pragma GCC diagnostic ignored "-Wempty-body"
-#endif
+PRAGMA_DIAGNOSTIC_PUSH
+PRAGMA_IGNORE_Wempty_body
 rsRetVal
 wtiWorker(wti_t *__restrict__ const pThis)
 {
@@ -479,9 +478,7 @@ wtiWorker(wti_t *__restrict__ const pThis)
 
 	RETiRet;
 }
-#if !defined(_AIX)
-#pragma GCC diagnostic warning "-Wempty-body"
-#endif
+PRAGMA_DIAGNOSTIC_POP
 
 
 /* some simple object access methods */
