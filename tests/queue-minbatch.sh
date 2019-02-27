@@ -2,6 +2,7 @@
 # added 2019-01-10 by RGerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 generate_conf
+skip_platform "SunOS"  "This test currently does not work on Solaris - see https://github.com/rsyslog/rsyslog/issues/3513"
 add_conf '
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
