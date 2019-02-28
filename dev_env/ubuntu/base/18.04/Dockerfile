@@ -177,7 +177,6 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-imczmq \
 	--enable-imdiag \
 	--enable-imdocker \
-	--enable-imdocker-tests \
 	--enable-imfile \
 	--enable-imjournal \
 	--enable-imkafka \
@@ -244,6 +243,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-testbench
 
 # module needs fixes: --enable-kmsg
+# --enable-imdocker-tests is not supported as it needs to run on docker HOST
 VOLUME	/var/lib/mysql
 WORKDIR	/rsyslog
 USER	rsyslog
