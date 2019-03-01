@@ -1228,6 +1228,12 @@ TESTS += \
 	 omtcl.sh
 endif
 
+if ENABLE_MMTAGHOSTNAME
+TESTS += \
+	mmtaghostname_tag.sh \
+	mmtaghostname_server.sh
+endif
+
 if ENABLE_MMKUBERNETES
 if ENABLE_MMJSONPARSE
 if ENABLE_IMFILE

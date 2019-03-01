@@ -2289,6 +2289,20 @@ AM_CONDITIONAL(ENABLE_MMKUBERNETES, test x$enable_mmkubernetes = xyes)
 
 # END Kubernetes metadata support
 
+
+# mmtaghostname
+AC_ARG_ENABLE(mmtaghostname,
+        [AS_HELP_STRING([--enable-mmtaghostname],[Enable Tag and Hostname messages' modifier @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mmtaghostname="yes" ;;
+          no) enable_mmtaghostname="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmtaghostname) ;;
+         esac],
+        [enable_mmtaghostname=no]
+)
+AM_CONDITIONAL(ENABLE_MMTAGHOSTNAME, test x$enable_mmtaghostname = xyes)
+#END mmtaghostname
+
 # man pages
 have_to_generate_man_pages="no"
 git_src_have_to_generate_man_pages="yes" # default to use when building from git source
@@ -2425,6 +2439,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/mmkubernetes/Makefile \
 		contrib/imtuxedoulog/Makefile \
 		contrib/improg/Makefile \
+		contrib/mmtaghostname/Makefile \
 		tests/Makefile])
 AC_OUTPUT
 
@@ -2508,6 +2523,7 @@ echo "    mmdblookup enabled:                       $enable_mmdblookup"
 echo "    mmfields enabled:                         $enable_mmfields"
 echo "    mmrm1stspace module enabled:              $enable_mmrm1stspace"
 echo "    mmkubernetes enabled:                     $enable_mmkubernetes"
+echo "    mmtaghostname enabled:                    $enable_mmtaghostname"
 echo
 echo "---{ database support }---"
 echo "    MySql support enabled:                    $enable_mysql"
