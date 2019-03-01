@@ -2250,6 +2250,20 @@ AM_CONDITIONAL(ENABLE_MMKUBERNETES, test x$enable_mmkubernetes = xyes)
 
 # END Kubernetes metadata support
 
+
+# mmnull
+AC_ARG_ENABLE(mmsequence,
+        [AS_HELP_STRING([--enable-mmnull],[Enable Tag and Hostname messages' modifier @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mmnull="yes" ;;
+          no) enable_mmnull="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmnull) ;;
+         esac],
+        [enable_mmnull=no]
+)
+AM_CONDITIONAL(ENABLE_MMNULL, test x$enable_mmnull = xyes)
+#END mmnull
+
 # man pages
 have_to_generate_man_pages="no"
 git_src_have_to_generate_man_pages="yes" # default to use when building from git source
@@ -2384,6 +2398,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/omtcl/Makefile \
 		contrib/omfile-hardened/Makefile \
 		contrib/mmkubernetes/Makefile \
+		contrib/mmnull/Makefile \
 		tests/Makefile])
 AC_OUTPUT
 
@@ -2463,6 +2478,7 @@ echo "    mmdblookup enabled:                       $enable_mmdblookup"
 echo "    mmfields enabled:                         $enable_mmfields"
 echo "    mmrm1stspace module enabled:              $enable_mmrm1stspace"
 echo "    mmkubernetes enabled:                     $enable_mmkubernetes"
+echo "    mmnull enabled:                           $enable_mmnull"
 echo
 echo "---{ database support }---"
 echo "    MySql support enabled:                    $enable_mysql"
