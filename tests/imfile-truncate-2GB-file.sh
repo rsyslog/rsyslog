@@ -5,6 +5,7 @@
 # adds a couple of messages to get it over 2GiB.
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+export TB_TEST_MAX_RUNTIME=1200 # test is very slow as it works on large files
 generate_conf
 add_conf '
 module(load="../plugins/imfile/.libs/imfile")
