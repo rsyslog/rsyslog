@@ -3,6 +3,14 @@ Version 8.1903.0 (aka 2019.03) 2019-03-05
 - omhttp: rewritten with large feature enhancements
   Many thanks to Gabriel Intrator for this work. Gabriel also has adopted the
   module and plans to support it in the future.
+- TLS subsystem: add support for certless communication
+  both openssl and GnuTLS drivers have been updated to support certless
+  communications. In this case e.g. Diffie-Helman is used.
+  NOTE: this is an insecure mode, as it does NOT guard against
+  man-in-the-middle attacks. We implemented it because of the large demand,
+  not because we think it makes sense to use this mode. We strongly recommend
+  against it.
+  closes https://github.com/rsyslog/rsyslog/issues/1068
 - imrelp/omrelp: add capability to specify tlslib for librelp
   closes https://github.com/rsyslog/rsyslog/issues/3451
 - build system: introduce a better way to handle compiler pragmas
@@ -46,6 +54,8 @@ Version 8.1903.0 (aka 2019.03) 2019-03-05
   closes https://github.com/rsyslog/rsyslog/issues/3448
 - testbench: mmdb valgrind tests failed is srcdir env was not set
 - testbench: add omclickhouse tests
+- testbench bugfix: some long-running tests had too low runtime allowance
+  closes https://github.com/rsyslog/rsyslog/issues/3493
 - testbench bugfix: daqueue-dirty-shutdown test
   This test occasionally failed with left-over spool files. As far as we
   have analyzed, this is due to the use of an invalid shutdown timeout
