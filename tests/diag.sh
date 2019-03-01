@@ -1141,7 +1141,7 @@ error_exit() {
 			exitval=77
 		fi
 	fi
-	printf '%s Test %s FAILED (took %s seconds)\n' "$(tb_timestamp)" "$0" "$(( $(date +%s) - TB_STARTTEST ))"
+	printf '%s FAIL: Test %s (took %s seconds)\n' "$(tb_timestamp)" "$0" "$(( $(date +%s) - TB_STARTTEST ))"
 	exit $exitval
 }
 

@@ -96,7 +96,7 @@ static uchar * oversizeMsgErrorFile = NULL;		/* File where oversize messages are
 static int oversizeMsgInputMode = 0;	/* Mode which oversize messages will be forwarded */
 static int reportOversizeMsg = 1;	/* shall error messages be generated for oversize messages? */
 static int reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
-static int iGnuTLSLoglevel = 0;
+static int iGnuTLSLoglevel = 0;		/* Sets GNUTLS Debug Level */
 static int iDefPFFamily = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both) */
 static int bDropMalPTRMsgs = 0;/* Drop messages which have malicious PTR records during DNS lookup */
 static int option_DisallowWarning = 1;	/* complain if message from disallowed sender is received */
@@ -1099,7 +1099,7 @@ glblProcessTimezone(struct cnfobj *o)
 		parser_errmsg("timezone offset outside of supported range (hours 0..12, minutes 0..59)");
 		goto done;
 	}
-	
+
 	addTimezoneInfo(id, offsMode, offsHour, offsMin);
 
 done:

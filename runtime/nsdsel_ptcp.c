@@ -109,13 +109,14 @@ Select(nsdsel_t *const pNsdsel, int *const piNumReady)
 	ISOBJ_TYPE_assert(pThis, nsdsel_ptcp);
 	assert(piNumReady != NULL);
 
-	assert(pThis->currfds >= 1);
+	/* Output debug first*/
 	if(Debug) {
 		dbgprintf("--------<NSDSEL_PTCP> calling poll, active fds (%d): ", pThis->currfds);
 		for(uint32_t i = 0; i <= pThis->currfds; ++i)
 			dbgprintf("%d ", pThis->fds[i].fd);
 		dbgprintf("\n");
 	}
+	assert(pThis->currfds >= 1);
 
 	/* now do the select */
 	*piNumReady = poll(pThis->fds, pThis->currfds, -1);

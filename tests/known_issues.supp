@@ -5,3 +5,19 @@
    fun:dlopen*
    ...
 }
+
+{
+   <CentOS 6 GnuTLS memleak - well some older GnuTLS version actually>
+   Memcheck:Leak
+   fun:malloc
+   fun:CRYPTO_malloc
+   fun:EC_KEY_new
+   fun:EC_KEY_new_by_curve_name
+   fun:SetAuthMode
+   fun:LstnInit
+   fun:create_tcp_socket
+   fun:tcpsrvConstructFinalize
+   fun:activate
+   fun:initAll
+   fun:main
+}
