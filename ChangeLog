@@ -20,6 +20,11 @@ Version 8.1903.0 (aka 2019.03) 2019-03-05
   allow building them on this os.
 - template: add Time-Related System Property $wday which is the day of week
   This allow to get a week based rotation of log as AIX does.
+- core bugfix: enlarged msg offset types for bigger structured messages
+  using a large enough (dozens of kBs) structured message
+  it is possible to overflow the signed short type which leads
+  to rsyslog crash. (applies to msg.c, the message object)
+  Thanks to Jiri Vymazal for the patch.
 - core bugfix for AIX: timeval2syslogTime now handle the bias according to
   local time zone as documented by IBM.
 - imfile feature: add configuration parameter to force parsing of read logs
