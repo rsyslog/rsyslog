@@ -1649,6 +1649,37 @@ if test "x$enable_imfile" = "xyes"; then
 fi
 AM_CONDITIONAL(ENABLE_IMFILE, test x$enable_imfile = xyes)
 
+# settings for the docker log input module
+AC_ARG_ENABLE(imdocker,
+        [AS_HELP_STRING([--enable-imdocker],[input docker module enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_imdocker="yes" ;;
+          no) enable_imdocker="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imdocker) ;;
+         esac],
+        [enable_imdocker=no]
+)
+if test "x$enable_imdocker" = "xyes"; then
+	AC_CHECK_HEADERS([curl/curl.h])
+	PKG_CHECK_MODULES([CURL], [libcurl >= 7.40.0])
+fi
+AM_CONDITIONAL(ENABLE_IMDOCKER, test x$enable_imdocker = xyes)
+
+AC_ARG_ENABLE(imdocker-tests,
+        [AS_HELP_STRING([--enable-imdocker-tests],[Enable imdocker tests @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_imdocker_tests="yes" ;;
+          no) enable_imdocker_tests="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imdocker-tests) ;;
+         esac],
+        [enable_imdocker_tests=no]
+)
+
+if test "x$enable_imdocker_tests" = "xyes"; then
+        CFLAGS="$CFLAGS -DENABLE_IMDOCKER_UNIT_TESTS"
+fi
+AM_CONDITIONAL(ENABLE_IMDOCKER_TESTS, test x$enable_imdocker_tests = xyes)
+
 
 # settings for the tuxedo ULOG input module
 AC_ARG_ENABLE(imtuxedoulog,
@@ -2453,6 +2484,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/imtuxedoulog/Makefile \
 		contrib/improg/Makefile \
 		contrib/mmtaghostname/Makefile \
+		contrib/imdocker/Makefile \
 		tests/Makefile])
 AC_OUTPUT
 
@@ -2484,6 +2516,7 @@ echo "    /dev/kmsg functionality enabled:          $enable_kmsg"
 echo "    plain tcp input module enabled:           $enable_imptcp"
 echo "    imdiag enabled:                           $enable_imdiag"
 echo "    file input module enabled:                $enable_imfile"
+echo "    docker log input module enabled:          $enable_imdocker"
 echo "    Solaris input module enabled:             $enable_imsolaris"
 echo "    periodic statistics module enabled:       $enable_impstats"
 echo "    imczmq input module enabled:              $enable_imczmq"
@@ -2571,6 +2604,7 @@ echo "    Elasticsearch Tests:                      $enable_elasticsearch_tests"
 echo "    ClickHouse Tests:                         $enable_clickhouse_tests"
 echo "    PostgreSQL Tests enabled:                 $enable_pgsql_tests"
 echo "    Kafka Tests enabled:                      $enable_kafka_tests"
+echo "    Imdocker Tests enabled:                   $enable_imdocker_tests"
 echo "    systemd journal tests enabled:            $enable_journal_tests"
 echo "    Debug mode enabled:                       $enable_debug"
 echo "    (total) debugless mode enabled:           $enable_debugless"

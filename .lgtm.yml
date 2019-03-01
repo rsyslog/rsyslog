@@ -59,6 +59,7 @@ extraction:
           --enable-imtuxedoulog
           --enable-mmtaghostname
           --enable-imbatchreport
+          --enable-imdocker
 
 queries:
   - include: cpp/commented-out-code
