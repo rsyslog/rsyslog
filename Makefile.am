@@ -296,6 +296,11 @@ if ENABLE_MMKUBERNETES
 SUBDIRS += contrib/mmkubernetes
 endif
 
+# mmnull
+if ENABLE_MMNULL
+SUBDIRS += contrib/mmnull
+endif
+
 # tests are added as last element, because tests may need different
 # modules that need to be generated first
 SUBDIRS += tests
