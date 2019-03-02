@@ -44,8 +44,8 @@ DEFobjCurrIf(glbl)
 static struct cnfparamdescr cnfpdescr[] = {
 	{ "sig.hashfunction", eCmdHdlrGetWord, 0 },
 	{ "sig.aggregator.url", eCmdHdlrGetWord, CNFPARAM_REQUIRED},
-	{ "sig.aggregator.user", eCmdHdlrGetWord, CNFPARAM_REQUIRED},
-	{ "sig.aggregator.key", eCmdHdlrGetWord, CNFPARAM_REQUIRED},
+	{ "sig.aggregator.user", eCmdHdlrGetWord, 0},
+	{ "sig.aggregator.key", eCmdHdlrGetWord, 0},
 	{ "sig.aggregator.hmacAlg", eCmdHdlrGetWord, 0 },
 	{ "sig.block.levelLimit", eCmdHdlrSize, CNFPARAM_REQUIRED},
 	{ "sig.block.timeLimit", eCmdHdlrInt, 0},
@@ -228,6 +228,7 @@ finalize_it:
 	free(ag_loginid);
 	free(ag_key);
 	free(hash);
+	free(hmac);
 
 	if(pvals != NULL)
 		cnfparamvalsDestruct(pvals, &pblk);

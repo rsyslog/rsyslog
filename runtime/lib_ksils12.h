@@ -73,6 +73,7 @@ struct rsksictx_s {
 	uint8_t bKeepTreeHashes;
 	uint64_t blockLevelLimit;
 	uint32_t blockTimeLimit;
+	uint32_t effectiveBlockLevelLimit; /* level limit adjusted by gateway settings */
 	uint8_t syncMode;
 	uid_t	fileUID;	/* IDs for creation */
 	uid_t	dirUID;
@@ -83,6 +84,8 @@ struct rsksictx_s {
 	char* aggregatorUri;
 	char* aggregatorId;
 	char* aggregatorKey;
+	char* aggregatorEndpoints[KSI_CTX_HA_MAX_SUBSERVICES];
+	int aggregatorEndpointCount;
 	char* random_source;
 	pthread_mutex_t module_lock;
 	pthread_t signer_thread;
@@ -172,7 +175,7 @@ struct rsksistatefile {
 #define RSGTE_INTERNAL 27 /* Internal error */
 
 #define getIVLenKSI(bh) (hashOutputLengthOctetsKSI((bh)->hashID))
-#define rsksiSetBlockLevelLimit(ctx, limit) ((ctx)->blockLevelLimit = limit)
+#define rsksiSetBlockLevelLimit(ctx, limit) ((ctx)->blockLevelLimit = (ctx)->effectiveBlockLevelLimit = limit)
 #define rsksiSetBlockTimeLimit(ctx, limit) ((ctx)->blockTimeLimit = limit)
 #define rsksiSetKeepRecordHashes(ctx, val) ((ctx)->bKeepRecordHashes = val)
 #define rsksiSetKeepTreeHashes(ctx, val) ((ctx)->bKeepTreeHashes = val)
