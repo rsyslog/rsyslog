@@ -91,4 +91,12 @@ rsRetVal gtlsRecordRecv(nsd_gtls_t *pThis);
 /* the name of our library binary */
 #define LM_NSD_GTLS_FILENAME "lmnsd_gtls"
 
+#if GNUTLS_VERSION_NUMBER <= 0x00030000
+#define GTLS_ANON_PRIO_NOTLSV13 "NORMAL:-VERS-TLS1.3:+ANON-DH:+COMP-ALL"
+#define GTLS_ANON_PRIO "NORMAL:+ANON-DH:+COMP-ALL"
+#else
+#define GTLS_ANON_PRIO_NOTLSV13 "NORMAL:-VERS-TLS1.3:+ANON-DH:+ANON-ECDH:+COMP-ALL"
+#define GTLS_ANON_PRIO "NORMAL:+ANON-DH:+ANON-ECDH:+COMP-ALL"
+#endif
+
 #endif /* #ifndef INCLUDED_NSD_GTLS_H */

@@ -7,9 +7,7 @@
 # We add a few messages after the initial run, just so that we can
 # check everything recovers from DA mode correctly.
 # added 2009-04-22 by Rgerhards
-# This file is part of the rsyslog project, released  under GPLv3
-echo ===============================================================================
-echo "[da-mainmsg-q.sh]: testing main message queue in DA mode (going to disk)"
+# This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
@@ -34,21 +32,18 @@ template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to
 startup
 
 # part1: send first 50 messages (in memory, only)
-#tcpflood 127.0.0.1 '$TCPFLOOD_PORT' 1 50
 injectmsg 0 50
-wait_queueempty # let queue drain for this test case
+wait_file_lines $RSYSLOG_OUT_LOG 50 # let queue drain for this test case
 
 # part 2: send bunch of messages. This should trigger DA mode
-#injectmsg 50 20000
 injectmsg 50 2000
 ls -l ${RSYSLOG_DYNNAME}.spool	 # for manual review
+wait_file_lines $RSYSLOG_OUT_LOG 2050 # wait to ensure DA queue is "empty"
 
 # send another handful
 injectmsg 2050 50
-#sleep 1 # we need this so that rsyslogd can receive all outstanding messages
 
-# clean up and check test result
-shutdown_when_empty # shut down rsyslogd when done processing messages
+shutdown_when_empty
 wait_shutdown
 seq_check  0 2099
 exit_test
