@@ -5,6 +5,14 @@ Version 8.1903.0 (aka 2019.03) 2019-03-05
 - omhttp: rewritten with large feature enhancements
   Many thanks to Gabriel Intrator for this work. Gabriel also has adopted the
   module and plans to support it in the future.
+- TLS subsystem: add support for certless communication
+  both openssl and GnuTLS drivers have been updated to support certless
+  communications. In this case e.g. Diffie-Helman is used.
+  NOTE: this is an insecure mode, as it does NOT guard against
+  man-in-the-middle attacks. We implemented it because of the large demand,
+  not because we think it makes sense to use this mode. We strongly recommend
+  against it.
+  closes https://github.com/rsyslog/rsyslog/issues/1068
 - imrelp/omrelp: add capability to specify tlslib for librelp
   closes https://github.com/rsyslog/rsyslog/issues/3451
 - build system: introduce a better way to handle compiler pragmas
@@ -14,9 +22,21 @@ Version 8.1903.0 (aka 2019.03) 2019-03-05
   allow building them on this os.
 - template: add Time-Related System Property $wday which is the day of week
   This allow to get a week based rotation of log as AIX does.
+- core bugfix: enlarged msg offset types for bigger structured messages
+  using a large enough (dozens of kBs) structured message
+  it is possible to overflow the signed short type which leads
+  to rsyslog crash. (applies to msg.c, the message object)
+  Thanks to Jiri Vymazal for the patch.
 - core bugfix for AIX: timeval2syslogTime now handle the bias according to
   local time zone as documented by IBM.
 - imfile feature: add configuration parameter to force parsing of read logs
+- imczmq bugfix:
+  Release zframe following read from socket
+  Make the 0MQ frame pointer local to the receive loop and destroy the
+  frame as soon as the contents have been copied. This avoids:
+  * a memory leak should the receive loop execute more than once
+  * referencing an un-initialised value during cleanup (finalize_it)
+  Thanks to Mark Gillott for the patch.
 - omclickhouse bugfix: default template unusable
   STDSQL option added to the default template used in output module of clickhouse
   Thanks to gagandeep trivedi for the patch.
@@ -41,6 +61,17 @@ Version 8.1903.0 (aka 2019.03) 2019-03-05
   closes https://github.com/rsyslog/rsyslog/issues/3448
 - testbench: mmdb valgrind tests failed is srcdir env was not set
 - testbench: add omclickhouse tests
+- testbench bugfix: some long-running tests had too low runtime allowance
+  closes https://github.com/rsyslog/rsyslog/issues/3493
+- testbench bugfix: daqueue-dirty-shutdown test
+  This test occasionally failed with left-over spool files. As far as we
+  have analyzed, this is due to the use of an invalid shutdown timeout
+  (very short) in the second phase of the test. It looks like this is
+  actually a copy&paste error from phase one. Behaviour of rsyslog was
+  correct, but the test itself created a false positive.
+  We have corrected the timeout now and also modernized the test
+  a bit.
+  closes https://github.com/rsyslog/rsyslog/issues/2122
 ------------------------------------------------------------------------------
 Version 8.1901.0 (aka 2019.01) 2019-01-22
 - new version scheme: 8.yymm.0 - version now depends on release date

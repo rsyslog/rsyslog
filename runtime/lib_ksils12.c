@@ -854,8 +854,8 @@ done:
 int
 rsksiSetHashFunction(rsksictx ctx, char *algName) {
 	int r, id = KSI_getHashAlgorithmByName(algName);
-	if (id == KSI_HASHALG_INVALID) {
-		report(ctx, "Hash function '%s' unknown - using default", algName);
+	if (!KSI_isHashAlgorithmSupported(id)) {
+		report(ctx, "Hash function '%s' is not supported - using default", algName);
 		ctx->hashAlg = KSI_HASHALG_SHA2_256;
 	} else {
 		if(!KSI_isHashAlgorithmTrusted(id)) {
@@ -877,8 +877,8 @@ rsksiSetHashFunction(rsksictx ctx, char *algName) {
 int
 rsksiSetHmacFunction(rsksictx ctx, char *algName) {
 	int id = KSI_getHashAlgorithmByName(algName);
-	if (id == KSI_HASHALG_INVALID) {
-		report(ctx, "HMAC function '%s' unknown - using default", algName);
+	if (!KSI_isHashAlgorithmSupported(id)) {
+		report(ctx, "HMAC function '%s' is not supported - using default", algName);
 		ctx->hmacAlg = KSI_HASHALG_SHA2_256;
 	} else {
 		if(!KSI_isHashAlgorithmTrusted(id)) {
