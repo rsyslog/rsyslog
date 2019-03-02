@@ -29,6 +29,7 @@ RUN	apt-get install -y \
 	liblz4-dev \
 	libmysqlclient-dev \
 	libnet1-dev \
+	libpcap-dev \
 	libpq-dev \
 	libsasl2-dev \
 	libsnmp-dev \
@@ -219,13 +220,17 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-elasticsearch-tests \
 	--enable-gnutls \
 	--enable-gssapi-krb5 \
+	--enable-imbatchreport \
 	--disable-imczmq \
 	--enable-imdiag \
 	--enable-imfile \
 	--enable-imjournal \
 	--disable-imkafka \
 	--enable-impstats \
+	--enable-improg \
 	--enable-imptcp \
+	--enable-impcap \
+	--enable-imtuxedolog \
 	--disable-kafka-tests \
 	--disable-kmsg \
 	--enable-ksi-ls12 \
@@ -246,6 +251,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-mmrm1stspace \
 	--enable-mmsequence \
 	--enable-mmsnmptrapd \
+	--enable-mmtaghostname \
 	--enable-mmutf8fix \
 	--enable-mysql \
 	--disable-omamqp1 \
@@ -267,6 +273,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-pmaixforwardedfrom \
 	--enable-pmciscoios \
 	--enable-pmcisconames \
+	--enable-pmdb2diag \
 	--enable-pmlastmsg \
 	--enable-pmnormalize \
 	--enable-pmnull \

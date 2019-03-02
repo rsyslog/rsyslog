@@ -33,6 +33,7 @@ RUN	yum -y update && \
 	libgcrypt-devel \
 	libmaxminddb-devel \
 	libnet libnet-devel \
+	libpcap-devel \
 	libstdc++ \
 	libtool \
 	libuuid-devel \
@@ -156,13 +157,17 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-elasticsearch-tests \
 	--enable-gnutls \
 	--enable-gssapi-krb5 \
+	--enable-imbatchreport \
 	--enable-imczmq \
 	--enable-imdiag \
 	--enable-imfile \
 	--enable-imjournal \
 	--enable-imkafka \
 	--enable-impstats \
+	--enable-improg \
 	--enable-imptcp \
+	--enable-impcap \
+	--enable-imtuxedolog \
 	--enable-kafka-tests \
 	--enable-ksi-ls12 \
 	--enable-libdbi \
@@ -181,6 +186,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-mmrm1stspace \
 	--enable-mmsequence \
 	--enable-mmsnmptrapd \
+	--enable-mmtaghostname \
 	--enable-mmutf8fix \
 	--enable-mysql \
 	--enable-omamqp1 \
@@ -200,8 +206,8 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-omuxsock \
 	--enable-openssl \
 	--enable-pgsql \
-	--enable-pmaixforwardedfrom \
 	--enable-pmciscoios \
+	--enable-pmdb2diag \
 	--enable-pmcisconames \
 	--enable-pmlastmsg \
 	--enable-pmnormalize \
