@@ -693,6 +693,15 @@ TESTS +=  \
 endif
 endif #if ENABLE_JOURNAL_TESTS
 
+if ENABLE_IMPROG
+TESTS +=  \
+	improg_errmsg_no_params.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	improg_errmsg_no_params-vg.sh
+endif # ENABLE_IMPROG
+endif
+
 if ENABLE_OMPROG
 TESTS +=  \
 	omprog-defaults.sh \
@@ -1728,6 +1737,8 @@ EXTRA_DIST= \
 	action-tx-errfile.sh \
 	testsuites/action-tx-errfile.result \
 	pipeaction.sh \
+	improg_errmsg_no_params.sh \
+	improg_errmsg_no_params-vg.sh \
 	omprog-defaults.sh \
 	omprog-defaults-vg.sh \
 	omprog-output-capture.sh \
