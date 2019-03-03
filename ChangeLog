@@ -20,6 +20,12 @@ Version 8.1903.0 (aka 2019.03) 2019-03-05
   allow building them on this os.
 - template: add Time-Related System Property $wday which is the day of week
   This allow to get a week based rotation of log as AIX does.
+- ksi subsystem: add high avalability mode
+  Note: ksi subsystem now REQUIRES libksi 3.19.0 or above
+  Thanks to Allan Park for the patch.
+  closes https://github.com/rsyslog/rsyslog/issues/3338
+- omhttp bugfix: header items could not have spaces in them
+  Thanks to Nathan Brown for the patch.
 - core bugfix: enlarged msg offset types for bigger structured messages
   using a large enough (dozens of kBs) structured message
   it is possible to overflow the signed short type which leads

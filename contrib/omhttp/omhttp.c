@@ -186,7 +186,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "healthchecktimeout", eCmdHdlrInt, 0 },
 	{ "httpcontenttype", eCmdHdlrGetWord, 0 },
 	{ "httpheaderkey", eCmdHdlrGetWord, 0 },
-	{ "httpheadervalue", eCmdHdlrGetWord, 0 },
+	{ "httpheadervalue", eCmdHdlrString, 0 },
 	{ "uid", eCmdHdlrGetWord, 0 },
 	{ "pwd", eCmdHdlrGetWord, 0 },
 	{ "restpath", eCmdHdlrGetWord, 0 },
