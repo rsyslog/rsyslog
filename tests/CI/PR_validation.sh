@@ -21,7 +21,7 @@ if [ $(wc -l < gitlog) -ge 5 ]; then
 	EOF
 	exitcode=1
 fi
-if grep "Merge from" gitlog; then
+if grep "Merge " gitlog; then
 	cat <<- EOF
 	This feature branch contains merge commits. This almost always indicates that it
 	contains unwanted merges where a rebase should have been applied.
