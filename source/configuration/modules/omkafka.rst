@@ -74,6 +74,20 @@ If a key is provided and partitions.auto="on" is set, then all messages will
 be assigned to a partition based on the key.
 
 
+DynaKey
+^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+If set, the key parameter becomes a template for the key to base the
+partitioning on. 
+
+
 DynaTopic
 ^^^^^^^^^
 
@@ -137,8 +151,8 @@ topic, load will be distributed fairly evenly.
 If set, it will override any other partitioning scheme configured.
 
 
-Partitons.number
-^^^^^^^^^^^^^^^^
+Partitions.number
+^^^^^^^^^^^^^^^^^
 
 .. csv-table::
    :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
