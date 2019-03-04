@@ -908,7 +908,7 @@ poll_timeouts(fs_edge_t *const edge)
 	if(edge->is_file) {
 		act_obj_t *act;
 		for(act = edge->active ; act != NULL ; act = act->next) {
-			if(strmReadMultiLine_isTimedOut(act->pStrm)) {
+			if(act->pStrm && strmReadMultiLine_isTimedOut(act->pStrm)) {
 				DBGPRINTF("timeout occured on %s\n", act->name);
 				pollFile(act);
 			}
