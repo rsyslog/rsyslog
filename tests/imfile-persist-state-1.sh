@@ -22,9 +22,9 @@ if $msg contains "msgnum:" then
 '
 # generate input file first. Note that rsyslog processes it as
 # soon as it start up (so the file should exist at that point).
-./inputfilegen 5 4000 > $RSYSLOG_DYNNAME.input
+./inputfilegen -m5 -d4000 > $RSYSLOG_DYNNAME.input
 startup
-shutdown_when_empty # shut down rsyslogd when done processing messages
-wait_shutdown	# we need to wait until rsyslogd is finished!
+shutdown_when_empty
+wait_shutdown
 seq_check 0 3
 exit_test

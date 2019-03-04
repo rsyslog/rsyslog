@@ -180,8 +180,10 @@ struct act_obj_s {
 #endif
 	time_t timeoutBase; /* what time to calculate the timeout against? */
 	/* file dynamic data */
+	char file_id[FILE_ID_HASH_SIZE]; /* file id for this entry, once we could obtain it */
 	int in_move;	/* workaround for inotify move: if set, state file must not be deleted */
 	ino_t ino;	/* current inode nbr */
+	int fd;		/* fd to file in order to obtain file_id (needs to be preserved across move) */
 	strm_t *pStrm;	/* its stream (NULL if not assigned) */
 	int nRecords; /**< How many records did we process before persisting the stream? */
 	ratelimit_t *ratelimiter;
@@ -682,6 +684,12 @@ act_obj_add(fs_edge_t *const edge, const char *const name, const int is_file,
 			}
 		}
 	}
+	DBGPRINTF("need to add new active object '%s' in '%s' - checking if accessible\n", name, edge->path);
+	const int fd = open(name, O_RDONLY | O_CLOEXEC);
+	if(fd < 0) {
+		LogMsg(errno, RS_RET_ERR, LOG_WARNING, "imfile: error accessing file '%s'", name);
+		FINALIZE;
+	}
 	DBGPRINTF("add new active object '%s' in '%s'\n", name, edge->path);
 	CHKmalloc(act = calloc(sizeof(act_obj_t), 1));
 	CHKmalloc(act->name = strdup(name));
@@ -692,6 +700,8 @@ act_obj_add(fs_edge_t *const edge, const char *const name, const int is_file,
 	}
 	act->edge = edge;
 	act->ino = ino;
+	act->fd = fd;
+	act->file_id[0] = '\0';
 	act->is_symlink = is_symlink;
 	if (source) { /* we are target of symlink */
 		CHKmalloc(act->source_name = strdup(source));
@@ -898,7 +908,7 @@ poll_timeouts(fs_edge_t *const edge)
 	if(edge->is_file) {
 		act_obj_t *act;
 		for(act = edge->active ; act != NULL ; act = act->next) {
-			if(strmReadMultiLine_isTimedOut(act->pStrm)) {
+			if(act->pStrm && strmReadMultiLine_isTimedOut(act->pStrm)) {
 				DBGPRINTF("timeout occured on %s\n", act->name);
 				pollFile(act);
 			}
@@ -957,6 +967,9 @@ act_obj_destroy(act_obj_t *const act, const int is_deleted)
 		wdmapDel(act->wd);
 	}
 	#endif
+	if(act->fd >= 0) {
+		close(act->fd);
+	}
 	#if defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE)
 	if(act->pfinf != NULL) {
 		free(act->pfinf->fobj.fo_name);
@@ -1210,24 +1223,24 @@ get_file_id_hash(const char *data, size_t lendata,
 
 /* this returns the file-id for a given file
  */
-static void ATTR_NONNULL(1, 2)
-getFileID(const act_obj_t *const act, char *const buf, const size_t lenbuf)
+static void ATTR_NONNULL(1)
+getFileID(act_obj_t *const act)
 {
-	*buf = '\0'; /* default: empty hash, only set if file has sufficient data */
-	const int fd = open(act->name, O_RDONLY | O_CLOEXEC);
-	if(fd >= 0) {
-		char filedata[FILE_ID_SIZE];
-		const int r = read(fd, filedata, FILE_ID_SIZE);
-		if(r == FILE_ID_SIZE) {
-			get_file_id_hash(filedata, sizeof(filedata), buf, lenbuf);
-		} else {
-			DBGPRINTF("getFileID partial or error read, ret %d\n", r);
-		}
-		close(fd);
-	} else {
-		DBGPRINTF("getFileID open %s failed\n", act->name);
+	if(act->file_id[0] != '\0') {
+		return; /* everything already done */
 	}
-	DBGPRINTF("getFileID for '%s', file_id_hash '%s'\n", act->name, buf);
+	assert(act->fd >= 0); /* fd must have been opened at act_obj_t creation! */
+	char filedata[FILE_ID_SIZE];
+	const int r = read(act->fd, filedata, FILE_ID_SIZE);
+	if(r == FILE_ID_SIZE) {
+		get_file_id_hash(filedata, sizeof(filedata), act->file_id, sizeof(act->file_id));
+		dbgprintf("file_id '%s' obtained, closing monitoring file handle\n", act->file_id);
+		close(act->fd); /* we will never go here! */
+		act->fd = -1;
+	} else {
+		DBGPRINTF("getFileID partial or error read, ret %d\n", r);
+	}
+	DBGPRINTF("getFileID for '%s', file_id_hash '%s'\n", act->name, act->file_id);
 }
 
 /* this generates a state file name suitable for the given file. To avoid
@@ -1244,7 +1257,7 @@ getStateFileName(const act_obj_t *const act,
 {
 	DBGPRINTF("getStateFileName for '%s'\n", act->name);
 	snprintf((char*)buf, lenbuf - 1, "imfile-state:%lld", (long long) act->ino);
-	DBGPRINTF("getStateFileName:  stat file name now is %s\n", buf);
+	DBGPRINTF("getStateFileName:  state file name now is %s\n", buf);
 	return buf;
 }
 
@@ -1321,21 +1334,20 @@ openFileWithStateFile(act_obj_t *const act)
 	DEFiRet;
 	uchar pszSFNam[MAXFNAME];
 	uchar statefile[MAXFNAME];
-	char file_id[FILE_ID_HASH_SIZE];
 	int fd = -1;
 	const instanceConf_t *const inst = act->edge->instarr[0];// TODO: same file, multiple instances?
 
 	uchar *const statefn = getStateFileName(act, statefile, sizeof(statefile));
-	getFileID(act, file_id, sizeof(file_id));
+	getFileID(act);
 
-	getFullStateFileName(statefn, file_id, pszSFNam, sizeof(pszSFNam));
+	getFullStateFileName(statefn, act->file_id, pszSFNam, sizeof(pszSFNam));
 	DBGPRINTF("trying to open state for '%s', state file '%s'\n", act->name, pszSFNam);
 
 	/* check if the file exists */
 	fd = open((char*)pszSFNam, O_CLOEXEC | O_NOCTTY | O_RDONLY, 0600);
 	if(fd < 0) {
 		if(errno == ENOENT) {
-			if(file_id[0] != '\0') {
+			if(act->file_id[0] != '\0') {
 				const char *pszSFNamHash = strdup((const char*)pszSFNam);
 				CHKmalloc(pszSFNamHash);
 				DBGPRINTF("state file %s for %s does not exist - trying to see if "
@@ -1343,6 +1355,8 @@ openFileWithStateFile(act_obj_t *const act)
 				getFullStateFileName(statefn, "", pszSFNam, sizeof(pszSFNam));
 				fd = open((char*)pszSFNam, O_CLOEXEC | O_NOCTTY | O_RDONLY, 0600);
 				if(fd >= 0) {
+					dbgprintf("found inode-only state file, renaming it now that we "
+						"know the file_id, new name: %s\n", pszSFNamHash);
 					/* we now can use identify the file, so let's rename it */
 					if(rename((const char*)pszSFNam, pszSFNamHash) != 0) {
 						LogError(errno, RS_RET_IO_ERROR,
@@ -1509,6 +1523,7 @@ pollFileReal(act_obj_t *act, cstr_t **pCStr)
 {
 	int64 strtOffs;
 	DEFiRet;
+	int64_t startOffs = 0;
 	int nProcessed = 0;
 	regex_t *start_preg = NULL, *end_preg = NULL;
 
@@ -1525,6 +1540,7 @@ pollFileReal(act_obj_t *act, cstr_t **pCStr)
 	start_preg = (inst->startRegex == NULL) ? NULL : &inst->start_preg;
 	end_preg = (inst->endRegex == NULL) ? NULL : &inst->end_preg;
 
+	startOffs = act->pStrm->iCurrOffs;
 	/* loop below will be exited when strmReadLine() returns EOF */
 	while(glbl.GetGlobalInputTermState() == 0) {
 		if(inst->maxLinesAtOnce != 0 && nProcessed >= inst->maxLinesAtOnce)
@@ -1537,6 +1553,12 @@ pollFileReal(act_obj_t *act, cstr_t **pCStr)
 				inst->escapeLF, inst->discardTruncatedMsg, inst->msgDiscardingError, &strtOffs));
 		}
 		++nProcessed;
+		if(startOffs < FILE_ID_SIZE && act->pStrm->iCurrOffs >= FILE_ID_SIZE) {
+			dbgprintf("initiating state file write as sufficient data is now present; file=%s\n",
+				act->name);
+			persistStrmState(act);
+			startOffs = act->pStrm->iCurrOffs; /* disable check */
+		}
 		runModConf->bHadFileData = 1; /* this is just a flag, so set it and forget it */
 		CHKiRet(enqLine(act, *pCStr, strtOffs)); /* process line */
 		rsCStrDestruct(pCStr); /* discard string (must be done by us!) */
@@ -2549,13 +2571,12 @@ static rsRetVal ATTR_NONNULL()
 persistStrmState(act_obj_t *const act)
 {
 	DEFiRet;
-	char file_id[FILE_ID_HASH_SIZE];
 	uchar statefile[MAXFNAME];
 	uchar statefname[MAXFNAME];
 
 	uchar *const statefn = getStateFileName(act, statefile, sizeof(statefile));
-	getFileID(act, file_id, sizeof(file_id));
-	getFullStateFileName(statefn, file_id, statefname, sizeof(statefname));
+	getFileID(act);
+	getFullStateFileName(statefn, act->file_id, statefname, sizeof(statefname));
 	DBGPRINTF("persisting state for '%s', state file '%s'\n", act->name, statefname);
 
 	struct json_object *jval = NULL;
