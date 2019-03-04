@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[8.1903.0.master],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[8.1903.0],[rsyslog@lists.adiscon.com])
 AC_DEFINE(VERSION_YEAR, 19, [year part of real rsyslog version])
 AC_DEFINE(VERSION_MONTH, 1, [month part of real rsyslog version])
 
