@@ -17,6 +17,11 @@ Version 8.1903.0 (aka 2019.03) 2019-03-05
 - build system: introduce a better way to handle compiler pragmas
   we now use macros and _Pragma(). This requires less code lines and is more
   portable.
+- omkafka: add support for dynamic keys
+  A new configuration property "dynaKey" is added that, when "on", changes the
+  value of property "key" to a template names instead of a constant value.
+  This is similar in approach to the DynaTopic implementation.
+  Thanks to Ludo Brands for the patch.
 - AIX port: add AIX linking extensions on many plugins and contibutions to
   allow building them on this os.
 - template: add Time-Related System Property $wday which is the day of week
@@ -25,6 +30,19 @@ Version 8.1903.0 (aka 2019.03) 2019-03-05
   Note: ksi subsystem now REQUIRES libksi 3.19.0 or above
   Thanks to Allan Park for the patch.
   closes https://github.com/rsyslog/rsyslog/issues/3338
+- imfile bugfix: file reader could get stuck
+  State file handling was invalid. When a file was moved and re-created
+  rsyslog could use the file_id if the new file to write the old files'
+  state file. This could make the file reader stuck until it reached the
+  previous offset. Depending on file sizes this could never happen AND
+  would cause large message loss. This situation was timing dependent
+  (a race) and most frequently occurred under log rotation. In polling
+  mode the bug was less likely, but could also occur.
+  closes: https://github.com/rsyslog/rsyslog/issues/3465
+  closes: https://github.com/rsyslog/rsyslog/issues/3468
+- imfile bugfix: potential segfault when working with directories or symlinks
+  see also https://github.com/rsyslog/rsyslog/pull/3496
+  Thanks to Nelson Yen for the patch
 - omhttp bugfix: header items could not have spaces in them
   Thanks to Nathan Brown for the patch.
 - core bugfix: enlarged msg offset types for bigger structured messages
