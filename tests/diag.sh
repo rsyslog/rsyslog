@@ -1285,7 +1285,7 @@ exit_test() {
 	rm -f rsyslog.action.*.include
 	rm -f work rsyslog.out.* xlate*.lkp_tbl
 	rm -rf test-logdir stat-file1
-	rm -f rsyslog.conf.tlscert stat-file1 rsyslog.empty imfile-state*
+	rm -f rsyslog.conf.tlscert stat-file1 rsyslog.empty imfile-state:*
 	rm -rf rsyslog-link.*.log targets
 	rm -f ${TESTCONF_NM}.conf
 	rm -f tmp.qi nocert
@@ -1316,7 +1316,7 @@ get_inode() {
 		printf 'FAIL: file "%s" does not exist in get_inode\n' "$1"
 		error_exit 100
 	fi
-	stat -c '%i' "$1"
+	python -c 'import os; import stat; print os.lstat("'$1'")[stat.ST_INO]'
 }
 
 
@@ -2130,7 +2130,7 @@ case $1 in
 		rm -f log log* # RSyslog debug output 
 		rm -f work 
 		rm -rf test-logdir stat-file1
-		rm -f rsyslog.empty imfile-state* omkafka-failed.data
+		rm -f rsyslog.empty imfile-state:* omkafka-failed.data
 		rm -rf rsyslog-link.*.log targets
 		rm -f tmp.qi nocert
 		rm -f core.* vgcore.* core*

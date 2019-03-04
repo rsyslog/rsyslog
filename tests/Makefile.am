@@ -10,7 +10,7 @@ CLEANFILES=\
 	work \
 	test-spool test-logdir stat-file1 \
 	rsyslog.pipe rsyslog.input.* \
-	rsyslog.input rsyslog.input.* imfile-state* omkafka-failed.data \
+	rsyslog.input rsyslog.input.* imfile-state:* omkafka-failed.data \
 	rsyslog.input-symlink.log rsyslog-link.*.log targets \
 	HOSTNAME \
 	rstb_* \
@@ -1168,6 +1168,8 @@ TESTS += \
 	imfile-endregex-timeout-with-shutdown.sh \
 	imfile-endregex-timeout-with-shutdown-polling.sh \
 	imfile-endmsg.regex.sh \
+	imfile-statefile-no-file_id.sh \
+	imfile-statefile-no-file_id-TO-file_id.sh \
 	imfile-persist-state-1.sh \
 	imfile-freshStartTail1.sh \
 	imfile-freshStartTail2.sh \
@@ -1187,6 +1189,7 @@ TESTS += \
 	imfile-symlink.sh \
 	imfile-symlink-multi.sh \
 	imfile-logrotate.sh \
+	imfile-logrotate-multiple.sh \
 	imfile-logrotate-copytruncate.sh \
 	imfile-logrotate-nocopytruncate.sh \
 	imfile-growing-file-id.sh \
@@ -1831,6 +1834,8 @@ EXTRA_DIST= \
 	imfile-endmsg.regex-with-example-vg.sh \
 	imfile-endmsg.regex.crio.rulebase \
 	imfile-endmsg.regex.json.rulebase \
+	imfile-statefile-no-file_id.sh \
+	imfile-statefile-no-file_id-TO-file_id.sh \
 	imfile-persist-state-1.sh \
 	imfile-freshStartTail1.sh \
 	imfile-freshStartTail2.sh \
@@ -1854,6 +1859,7 @@ EXTRA_DIST= \
 	imfile-logrotate.sh \
 	imfile-logrotate-copytruncate.sh \
 	imfile-logrotate-nocopytruncate.sh \
+	imfile-logrotate-multiple.sh \
 	imfile-growing-file-id.sh \
 	glbl-oversizeMsg-truncate-imfile.sh \
 	dynfile_invld_async.sh \
