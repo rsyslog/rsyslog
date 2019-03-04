@@ -1,4 +1,6 @@
 ------------------------------------------------------------------------------
+Version 8.1904.0 (aka 2019.04) 2019-04-16
+------------------------------------------------------------------------------
 Version 8.1903.0 (aka 2019.03) 2019-03-05
 - improg: create input module to use external program as input datas
 - omhttp: rewritten with large feature enhancements
