@@ -5,50 +5,16 @@ By contributing, you help improve the state of logging as well as improve
 your own professional profile. Contributing is easy, and there are options
 for everyone - you do not need to be a developer.
 
--------------------------------------------------------------------------------------
-LEGAL GDPR NOTICE:
-According to the European data protection laws (GDPR), we would like to make you
-aware that contributing to rsyslog via git will permanently store the
-name and email address you provide as well as the actual commit and the
-time and date you made it inside git's version history. This is inevitable,
-because it is a main feature git. If you are concerned about your
-privacy, we strongly recommend to use
-
---author "anonymous <gdpr@example.com>"
-
-together with your commit. Also please do NOT sign your commit in this case,
-as that potentially could lead back to you. Please note that if you use your
-real identity, the GDPR grants you the right to have this information removed
-later. However, we have valid reasons why we cannot remove that information
-later on. The reasons are:
-
-* this would break git history and make future merges unworkable
-* the rsyslog projects has legitimate interest to keep a permanent record of the
-  contributor identity, once given, for
-  - copyright verification
-  - being able to provide proof should a malicious commit be made
-
-Please also note that your commit is public and as such will potentially be
-processed by many third-parties. Git's distributed nature makes it impossible
-to track where exactly your commit, and thus your personal data, will be stored
-and be processed. If you would not like to accept this risk, please do either
-commit anonymously or refrain from contributing to the rsyslog project.
-
--------------------------------------------------------------------------------------
-
-With that legal stuff said, let's get to the real thing:
-
 These are many ways to contribute to the project:
  * become a rsyslog ambassador and let other people know about rsyslog and how to utilize it for best results. Help rsyslog getting backlinks, be present on Internet news sites or at meetings you attend.
  * help others by offering support on
-   * the rsyslog forums at http://kb.monitorware.com/rsyslog-f40.html
+   * the rsyslog's github home at https://github.com/rsyslog/rsyslog
    * the rsyslog mailing list at http://lists.adiscon.net/mailman/listinfo/rsyslog
  * help with the documentation; you can either contribute
    * to the [rsyslog doc directory](https://github.com/rsyslog/rsyslog/tree/master/doc), which is shown on http://rsyslog.com/doc
    * to the rsyslog project web site -- just ask us for account creation
-   * on the rsyslog wiki at http://wiki.rsyslog.com/
  * become a bug-hunter and help with testing rsyslog development releases
- * help driving the rsyslog infrastructure with its web sites, wikis and the like
+ * help driving the rsyslog infrastructure with its web sites and the like
  * help creating packages
  * or, obviously, help with rsyslog code development
 
@@ -67,8 +33,8 @@ they are now ready for merging.
 If you just want/need to do a temporary experiment, you may open a PR, flag it
 as "EXPERIMENT - DO NOT MERGE", let the CI tests run, check results and close
 the PR thereafter. This prevents unnecessary cluttering of the open PR list.
-We will take the liberty to close such PRs if they are left open for more
-than a day or two.
+We will take the liberty to close such PRs if they are left open for an
+extended period of time.
 
 Please note, though, that the rsyslog repo is fully set up to use Travis CI.
 Travis covers about 95% of all essential testing. So we highly recommend
@@ -87,6 +53,7 @@ In order to ensure good code quality, after applying the path the code must
 - new functionality must have associated
   * testbench tests
   * doc additions in the rsyslog-doc sister project
+- be [sufficiently squashed](https://rainer.gerhards.net/2019/03/squash-your-pull-requests.html)
 
 ### Testbench Coverage
 
@@ -114,6 +81,7 @@ in question. We have done this in some few cases ourselves, and if someone
 can fix the root cause, we would appreciate help. But, again, this is a
 last resort which should normally not be used.
 
+Please read [on the importance of static analysis and why we request you to work around false positives](https://rainer.gerhards.net/2018/06/why-static-code-analysis.html).
 
 ### Continuous Integration Testing
 
@@ -158,6 +126,39 @@ Please address pull requests against the master branch.
 
 ## Testbench coding Tips
 
-- the "cmp" command requires two parameters to work reliably accross multiple
-  platforms. Using "cmp - file" make you compare stdin, as in:
-  echo "test" | cmp - rsyslog.out.log
+- look for similar tests and use them as copy template. Be sure to update
+  comments as well.
+- see ./tests/diag.sh -- this is the base testing framework and it contains
+  many functions you can use inside your tests
+- keep test cases simple and focussed on one topic. Otherwise it is hard to
+  address test failures when they happen in the future.
+
+-------------------------------------------------------------------------------------
+LEGAL GDPR NOTICE:
+According to the European data protection laws (GDPR), we would like to make you
+aware that contributing to rsyslog via git will permanently store the
+name and email address you provide as well as the actual commit and the
+time and date you made it inside git's version history. This is inevitable,
+because it is a main feature git. If you are concerned about your
+privacy, we strongly recommend to use
+
+--author "anonymous <gdpr@example.com>"
+
+together with your commit. Also please do NOT sign your commit in this case,
+as that potentially could lead back to you. Please note that if you use your
+real identity, the GDPR grants you the right to have this information removed
+later. However, we have valid reasons why we cannot remove that information
+later on. The reasons are:
+
+* this would break git history and make future merges unworkable
+* the rsyslog projects has legitimate interest to keep a permanent record of the
+  contributor identity, once given, for
+  - copyright verification
+  - being able to provide proof should a malicious commit be made
+
+Please also note that your commit is public and as such will potentially be
+processed by many third-parties. Git's distributed nature makes it impossible
+to track where exactly your commit, and thus your personal data, will be stored
+and be processed. If you would not like to accept this risk, please do either
+commit anonymously or refrain from contributing to the rsyslog project.
+-------------------------------------------------------------------------------------
