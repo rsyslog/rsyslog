@@ -135,7 +135,7 @@ static char *last_cursor = NULL;
 
 #define J_PROCESS_PERIOD 1024  /* Call sd_journal_process() every 1,024 records */
 
-static rsRetVal persistJournalState(void);
+static rsRetVal persistJournalState(int trySave);
 static rsRetVal loadJournalState(void);
 
 static rsRetVal openJournal(void) {
@@ -153,9 +153,10 @@ static rsRetVal openJournal(void) {
 	RETiRet;
 }
 
-static void closeJournal(void) {
+/* trySave shoulod only be true if there is no journald error preceeding this call */
+static void closeJournal(int trySave) {
 	if (cs.stateFile) { /* can't persist without a state file */
-		persistJournalState();
+		persistJournalState(trySave);
 	}
 	sd_journal_close(j);
 }
@@ -436,8 +437,7 @@ readjournal(void)
 
 	if (cs.bWorkAroundJournalBug) {
 		/* save journal cursor (at this point we can be sure it is valid) */
-		sd_journal_get_cursor(j, &c);
-		if (c) {
+		if (!sd_journal_get_cursor(j, &c)) {
 			free(last_cursor);
 			last_cursor = c;
 		}
@@ -449,15 +449,16 @@ readjournal(void)
 finalize_it:
 	free(sys_iden_help);
 	free(message);
-	free(c);
 	RETiRet;
 }
 
 
-/* This function gets journal cursor and saves it into state file
+/* This function gets journal cursor and saves it into state file.
+ * If WorkAroundJournalBug option is turned on it does use cursor saved previously.
+ * If it is false and if "trySave" is false it skips altogether.
  */
 static rsRetVal
-persistJournalState(void)
+persistJournalState(int trySave)
 {
 	DEFiRet;
 	FILE *sf; /* state file */
@@ -469,7 +470,7 @@ persistJournalState(void)
 		if (!last_cursor) {
 			ABORT_FINALIZE(RS_RET_OK);
 		}
-	} else {
+	} else if (trySave) {
 		int ret;
 		free(last_cursor);
 		if ((ret = sd_journal_get_cursor(j, &last_cursor))) {
@@ -477,6 +478,8 @@ persistJournalState(void)
 			last_cursor = NULL;
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
+	} else { /* not trying to get cursor out of invalid journal state */
+		ABORT_FINALIZE(RS_RET_OK);
 	}
 
 	/* we create a temporary name by adding a ".tmp"
@@ -529,14 +532,23 @@ pollJournal(void)
 	err = sd_journal_wait(j, POLL_TIMEOUT);
 	if (err == SD_JOURNAL_INVALIDATE && !reloaded) {
 		STATSCOUNTER_INC(statsCounter.ctrRotations, statsCounter.mutCtrRotations);
-		closeJournal();
+		closeJournal(0);
 
 		iRet = openJournal();
 		if (iRet != RS_RET_OK) {
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 
-		if (cs.stateFile) {
+		/* If we have locally saved cursor there is no need to read it from state file */
+		if (cs.bWorkAroundJournalBug && last_cursor)
+		{
+			if (sd_journal_seek_cursor(j, last_cursor) != 0) {
+				LogError(0, RS_RET_ERR, "imjournal: "
+					"couldn't seek to cursor `%s'\n", last_cursor);
+			iRet = RS_RET_ERR;
+			}
+		}
+		else if (cs.stateFile) {
 			iRet = loadJournalState();
 		}
 		LogMsg(0, RS_RET_OK, LOG_NOTICE, "imjournal: journal reloaded...");
@@ -668,10 +680,9 @@ finalize_it:
 
 static void
 tryRecover(void) {
-	LogMsg(0, RS_RET_OK, LOG_INFO, "imjournal: trying to recover from unexpected "
-		"journal error");
+	LogMsg(0, RS_RET_OK, LOG_INFO, "imjournal: trying to recover from journal error");
 	STATSCOUNTER_INC(statsCounter.ctrRecoveryAttempts, statsCounter.mutCtrRecoveryAttempts);
-	closeJournal();
+	closeJournal(0);
 	srSleep(10, 0);	// do not hammer machine with too-frequent retries
 	openJournal();
 }
@@ -768,7 +779,7 @@ CODESTARTrunInput
 		if (cs.stateFile) { /* can't persist without a state file */
 			/* TODO: This could use some finer metric. */
 			if ((count % cs.iPersistStateInterval) == 0) {
-				persistJournalState();
+				persistJournalState(1);
 			}
 		}
 	}
@@ -790,7 +801,7 @@ CODESTARTbeginCnfLoad
 	cs.iDfltFacility = DFLT_FACILITY;
 	cs.bUseJnlPID = -1;
 	cs.usePid = NULL;
-	cs.bWorkAroundJournalBug = 0;
+	cs.bWorkAroundJournalBug = 1;
 ENDbeginCnfLoad
 
 
@@ -860,7 +871,7 @@ ENDwillRun
 /* close journal */
 BEGINafterRun
 CODESTARTafterRun
-	closeJournal();
+	closeJournal(1);
 	ratelimitDestruct(ratelimiter);
 ENDafterRun
 
