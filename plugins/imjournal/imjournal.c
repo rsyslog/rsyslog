@@ -474,6 +474,7 @@ persistJournalState(void)
 		free(last_cursor);
 		if ((ret = sd_journal_get_cursor(j, &last_cursor))) {
 			LogError(-ret, RS_RET_ERR, "imjournal: sd_journal_get_cursor() failed");
+			last_cursor = NULL;
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	}
