@@ -3,6 +3,7 @@
 . ${srcdir:=.}/diag.sh init
 skip_platform "FreeBSD"  "This test currently does not work on FreeBSD"
 export NUMMESSAGES=100000
+export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf
 add_conf '
 module(load="../plugins/imrelp/.libs/imrelp")
