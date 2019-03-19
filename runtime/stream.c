@@ -1399,7 +1399,7 @@ finalize_it:
  * the number of bytes actually written.
  * rgerhards, 2009-06-08
  */
-static rsRetVal
+static rsRetVal ATTR_NONNULL(1,2,3)
 doWriteCall(strm_t *pThis, uchar *pBuf, size_t *pLenBuf)
 {
 	ssize_t lenBuf;
@@ -1444,7 +1444,9 @@ doWriteCall(strm_t *pThis, uchar *pBuf, size_t *pLenBuf)
 				CHKiRet(doPhysOpen(pThis));
 			} else {
 				if(err != EINTR) {
-					LogError(err, RS_RET_IO_ERROR, "file '%d' write error", pThis->fd);
+					LogError(err, RS_RET_IO_ERROR, "file '%s'[%d] write error - see "
+						"https://www.rsyslog.com/solving-rsyslog-write-errors/ for help "
+						"OS error", pThis->pszCurrFName, pThis->fd);
 				}
 				if(err == EINTR) {
 					/*NO ERROR, just continue */;
