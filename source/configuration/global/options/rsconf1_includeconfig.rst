@@ -1,6 +1,15 @@
 $IncludeConfig
 --------------
 
+.. warning::
+
+   This legacy directive has been superseeded by the rsyslog
+   :doc:`include() <../../../rainerscript/include>`
+   configuration object.
+   While it is save to use the legacy statement, we highly
+   recommend to use it's modern counterpart. Among others,
+   the `include()` object provides enhanced functionality.
+
 **Type:** global configuration parameter
 
 **Default:**
