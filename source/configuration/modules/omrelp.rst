@@ -28,6 +28,38 @@ Configuration Parameters
 
    Parameter names are case-insensitive.
 
+Module Parameters
+-----------------
+
+tls.tlslib
+^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+.. versionadded:: 8.1903.0
+
+Permits to specify the TLS library used by librelp.
+All relp protocol operations or actually performed by librelp and
+not rsyslog itself.  This value specified is directly passed down to
+librelp. Depending on librelp version and build parameters, supported
+tls libraries differ (or TLS may not be supported at all). In this case
+rsyslog emits an error message.
+
+Usually, the following options should be available: "openssl", "gnutls".
+
+Note that "gnutls" is the current default for historic reasons. We actually
+recommend to use "openssl". It provides better error messages and accepts
+a wider range of certificate types.
+
+If you have problems with the default setting, we recommend to swich to
+"openssl".
+
+
 Action Parameters
 -----------------
 
@@ -343,6 +375,28 @@ port 2514).
 
    module(load="omrelp")
    action(type="omrelp" target="centralserv" port="2514")
+
+
+Sending msgs with omrelp via TLS
+------------------------------------
+
+This is the same as the previous example but uses TLS (via OpenSSL) for
+operations.
+
+Certificate files must exist at configured locations. Note that authmode
+"certvalid" is not very strong - you may want to use a different one for
+actual deployments. For details, see parameter descriptions.
+
+.. code-block:: none
+
+   module(load="omrelp" tls.tlslib="openssl")
+   action(type="omrelp"
+		target="centralserv" port="2514" tls="on"
+		tls.cacert="tls-certs/ca.pem"
+		tls.mycert="tls-certs/cert.pem"
+		tls.myprivkey="tls-certs/key.pem"
+		tls.authmode="certvalid"
+		tls.permittedpeer="rsyslog")
 
 
 |FmtObsoleteName| directives

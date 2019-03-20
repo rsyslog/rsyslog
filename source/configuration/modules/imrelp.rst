@@ -62,6 +62,34 @@ Ruleset
 Binds the specified ruleset to **all** RELP listeners. This can be
 overridden at the instance level.
 
+tls.tlslib
+^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+.. versionadded:: 8.1903.0
+
+Permits to specify the TLS library used by librelp.
+All relp protocol operations or actually performed by librelp and
+not rsyslog itself.  This value specified is directly passed down to
+librelp. Depending on librelp version and build parameters, supported
+tls libraries differ (or TLS may not be supported at all). In this case
+rsyslog emits an error message.
+
+Usually, the following options should be available: "openssl", "gnutls".
+
+Note that "gnutls" is the current default for historic reasons. We actually
+recommend to use "openssl". It provides better error messages and accepts
+a wider range of certificate types.
+
+If you have problems with the default setting, we recommend to swich to
+"openssl".
+
 
 Input Parameters
 ----------------
@@ -440,11 +468,33 @@ Examples
 Example 1
 ---------
 
-This sets up a RELP server on port 20514 with a max message size of 10,000 bytes.
+This sets up a RELP server on port 2514 with a max message size of 10,000 bytes.
 
 .. code-block:: none
 
    module(load="imrelp") # needs to be done just once
-   input(type="imrelp" port="20514" maxDataSize="10k")
+   input(type="imrelp" port="2514" maxDataSize="10k")
 
+
+
+Receive RELP traffic via TLS
+----------------------------
+
+This receives RELP traffic via tls using the recommended "openssl" library.
+Except for encryption support the scenario is the same as in Example 1.
+
+Certificate files must exist at configured locations. Note that authmode
+"certvalid" is not very strong - you may want to use a different one for
+actual deployments. For details, see parameter descriptions.
+
+.. code-block:: none
+
+   module(load="imrelp" tls.tlslib="openssl")
+   input(type="imrelp" port="2514" maxDataSize="10k"
+                tls="on"
+		tls.cacert="/tls-certs/ca.pem"
+		tls.mycert="/tls-certs/cert.pem"
+		tls.myprivkey="/tls-certs/key.pem"
+		tls.authmode="certvalid"
+		tls.permittedpeer="rsyslog")
 
