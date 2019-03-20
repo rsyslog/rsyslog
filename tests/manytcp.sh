@@ -1,26 +1,15 @@
 #!/bin/bash
 # test many concurrent tcp connections
-
-uname
-if [ $(uname) = "FreeBSD" ] ; then
-   echo "This test currently does not work on FreeBSD."
-   exit 77
-fi
-
-echo \[manytcp.sh\]: test concurrent tcp connections
-
-uname
-if [ $(uname) = "SunOS" ] ; then
-   echo "Solaris: FIX ME"
-   exit 77
-fi
-
 . ${srcdir:=.}/diag.sh init
+skip_platform "FreeBSD"  "This test currently does not work on FreeBSD"
+skip_platform "SunOS"  "timing on connection establishment is different on solaris and makes this test fail"
+export NUMMESSAGES=40000
+export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
 $MainMsgQueueTimeoutShutdown 10000
-$MaxOpenFiles 2000
+$MaxOpenFiles 2100
 $InputTCPMaxSessions 1100
 $InputTCPServerRun '$TCPFLOOD_PORT'
 
@@ -29,11 +18,12 @@ template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
 startup
-# the config file specifies exactly 1100 connections
-tcpflood -c-1100 -m40000
-# the sleep below is needed to prevent too-early termination of the tcp listener
-sleep 1
-shutdown_when_empty # shut down rsyslogd when done processing messages
-wait_shutdown	# we need to wait until rsyslogd is finished!
-seq_check 0 39999
+# we first send a single message so that the output file is opened. Otherwise, we may
+# use up all file handles for tcp connections and so the output file could eventually
+# not be opened. 2019-03-18 rgerhards
+tcpflood -m1
+tcpflood -c-2000 -i1 -m $((NUMMESSAGES - 1 ))
+shutdown_when_empty
+wait_shutdown
+seq_check
 exit_test
