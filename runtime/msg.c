@@ -7,7 +7,7 @@
  * of the "old" message code without any modifications. However, it
  * helps to have things at the right place one we go to the meat of it.
  *
- * Copyright 2007-2018 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2019 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -66,6 +66,8 @@
 #include "rsconf.h"
 #include "parserif.h"
 #include "errmsg.h"
+
+#define DEV_DEBUG 0	/* set to 1 to enable very verbose developer debugging messages */
 
 /* inlines */
 extern void msgSetPRI(smsg_t *const __restrict__ pMsg, syslog_pri_t pri);
@@ -430,13 +432,17 @@ void getRawMsgAfterPRI(smsg_t * const pM, uchar **pBuf, int *piLen);
 static inline void
 MsgLock(smsg_t *pThis)
 {
-	/* DEV debug only! dbgprintf("MsgLock(0x%lx)\n", (unsigned long) pThis); */
+	#if DEV_DEBUG == 1
+	dbgprintf("MsgLock(0x%lx)\n", (unsigned long) pThis);
+	#endif
 	pthread_mutex_lock(&pThis->mut);
 }
 static inline void
 MsgUnlock(smsg_t *pThis)
 {
-	/* DEV debug only! dbgprintf("MsgUnlock(0x%lx)\n", (unsigned long) pThis); */
+	#if DEV_DEBUG == 1
+	dbgprintf("MsgUnlock(0x%lx)\n", (unsigned long) pThis);
+	#endif
 	pthread_mutex_unlock(&pThis->mut);
 }
 
@@ -880,7 +886,9 @@ msgBaseConstruct(smsg_t **ppThis)
 	pM->pszUUID = NULL;
 	pthread_mutex_init(&pM->mut, NULL);
 
-	/* DEV debugging only! dbgprintf("msgConstruct\t0x%x, ref 1\n", (int)pM);*/
+	#if DEV_DEBUG == 1
+	dbgprintf("msgConstruct\t0x%x, ref 1\n", (int)pM);
+	#endif
 
 	*ppThis = pM;
 
@@ -974,8 +982,10 @@ rsRetVal msgDestruct(smsg_t **ppThis)
 	int currCnt;
 #	endif
 CODESTARTobjDestruct(msg)
-	/* DEV Debugging only ! dbgprintf("msgDestruct\t0x%lx, "
-		"Ref now: %d\n", (unsigned long)pThis, pThis->iRefCount - 1); */
+	#if DEV_DEBUG == 1
+	dbgprintf("msgDestruct\t0x%lx, "
+		"Ref now: %d\n", (unsigned long)pThis, pThis->iRefCount - 1);
+	#endif
 #	ifdef HAVE_ATOMIC_BUILTINS
 		currRefCount = ATOMIC_DEC_AND_FETCH(&pThis->iRefCount, NULL);
 #	else
@@ -984,8 +994,10 @@ CODESTARTobjDestruct(msg)
 # 	endif
 	if(currRefCount == 0)
 	{
-		/* DEV Debugging Only! dbgprintf("msgDestruct\t0x%lx, RefCount now 0,
-			doing DESTROY\n", (unsigned long)pThis); */
+		#if DEV_DEBUG == 1
+		dbgprintf("msgDestruct\t0x%lx, RefCount now 0, doing DESTROY\n",
+			(unsigned long)pThis);
+		#endif
 		if(pThis->pszRawMsg != pThis->szRawMsg)
 			free(pThis->pszRawMsg);
 		freeTAG(pThis);
@@ -1454,7 +1466,9 @@ smsg_t *MsgAddRef(smsg_t * const pM)
 		pM->iRefCount++;
 		MsgUnlock(pM);
 #	endif
-	/* DEV debugging only! dbgprintf("MsgAddRef\t0x%x done, Ref now: %d\n", (int)pM, pM->iRefCount);*/
+	#if DEV_DEBUG == 1
+	dbgprintf("MsgAddRef\t0x%x done, Ref now: %d\n", (int)pM, pM->iRefCount);
+	#endif
 	return(pM);
 }
 

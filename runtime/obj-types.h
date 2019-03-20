@@ -5,7 +5,7 @@
  * that loop somehow and I've done that by moving the typedefs
  * into this file here.
  *
- * Copyright 2008-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2019 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -152,7 +152,6 @@ struct obj_s {	/* the dummy struct that each derived class can be casted to */
 #define DEFpropSetMethPTR(obj, prop, dataType)\
 	rsRetVal obj##Set##prop(obj##_t *pThis, dataType *pVal)\
 	{ \
-		/* DEV debug: dbgprintf("%sSet%s()\n", #obj, #prop); */\
 		pThis->prop = pVal; \
 		return RS_RET_OK; \
 	}
@@ -161,7 +160,6 @@ struct obj_s {	/* the dummy struct that each derived class can be casted to */
 #define DEFpropSetMethFP(obj, prop, dataType)\
 	rsRetVal obj##Set##prop(obj##_t *pThis, dataType)\
 	{ \
-		/* DEV debug: dbgprintf("%sSet%s()\n", #obj, #prop); */\
 		pThis->prop = pVal; \
 		return RS_RET_OK; \
 	}
@@ -171,7 +169,6 @@ struct obj_s {	/* the dummy struct that each derived class can be casted to */
 	rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal);\
 	rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal)\
 	{ \
-		/* DEV debug: dbgprintf("%sSet%s()\n", #obj, #prop); */\
 		pThis->prop = pVal; \
 		return RS_RET_OK; \
 	}

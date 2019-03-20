@@ -11,7 +11,7 @@
  * e.g. search. Further refactoring and simplificytin may make
  * sense.
  *
- * Copyright (C) 2005-2018 Adiscon GmbH
+ * Copyright (C) 2005-2019 Adiscon GmbH
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -44,6 +44,8 @@
 #include "regexp.h"
 #include "errmsg.h"
 #include "unicode-helper.h"
+
+#define DEV_DEBUG 0	/* set to 1 to enable very verbose developer debugging messages */
 
 
 /* ################################################################# *
@@ -252,7 +254,9 @@ rsCStrExtendBuf(cstr_t *const __restrict__ pThis, const size_t iMinNeeded)
 	}
 	iNewSize += pThis->iBufSize; /* add current size */
 
-	/* DEV debugging only: dbgprintf("extending string buffer, old %d, new %d\n", pThis->iBufSize, iNewSize); */
+	#if DEV_DEBUG == 1
+	dbgprintf("extending string buffer, old %d, new %d\n", pThis->iBufSize, iNewSize);
+	#endif
 	CHKmalloc(pNewBuf = (uchar*) realloc(pThis->pBuf, iNewSize));
 	pThis->iBufSize = iNewSize;
 	pThis->pBuf = pNewBuf;
