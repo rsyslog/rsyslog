@@ -48,7 +48,7 @@
  *
  * File begun on 2008-01-04 by RGerhards
  *
- * Copyright 2008-2018 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2019 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -74,6 +74,8 @@
 #include <ctype.h>
 #include <assert.h>
 #include <pthread.h>
+
+#define DEV_DEBUG 0	/* set to 1 to enable very verbose developer debugging messages */
 
 /* how many objects are supported by rsyslogd? */
 #define OBJ_NUM_IDS 100 /* TODO change to a linked list?  info: 16 were currently in use 2008-02-29 */
@@ -1132,8 +1134,10 @@ RegisterObj(uchar *pszObjName, objInfo_t *pInfo)
 	if(i >= OBJ_NUM_IDS) ABORT_FINALIZE(RS_RET_OBJ_REGISTRY_OUT_OF_SPACE);
 
 	arrObjInfo[i] = pInfo;
-	/* DEV debug only: dbgprintf("object '%s' successfully registered with
-	index %d, qIF %p\n", pszObjName, i, pInfo->QueryIF); */
+	#if DEV_DEBUG == 1
+	dbgprintf("object '%s' successfully registered with "
+		"index %d, qIF %p\n", pszObjName, i, pInfo->QueryIF);
+	#endif
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -1172,7 +1176,9 @@ UnregisterObj(uchar *pszObjName)
 		ABORT_FINALIZE(RS_RET_OBJ_NOT_REGISTERED);
 
 	InfoDestruct(&arrObjInfo[i]);
-	/* DEV debug only: dbgprintf("object '%s' successfully unregistered with index %d\n", pszObjName, i); */
+	#if DEV_DEBUG == 1
+	dbgprintf("object '%s' successfully unregistered with index %d\n", pszObjName, i);
+	#endif
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -1195,8 +1201,10 @@ UseObj(const char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 	objInfo_t *pObjInfo;
 
 
-	/* DEV debug only: dbgprintf("source file %s requests object '%s',
-	ifIsLoaded %d\n", srcFile, pObjName, pIf->ifIsLoaded); */
+	#if DEV_DEBUG == 1
+	dbgprintf("source file %s requests object '%s', "
+		" ifIsLoaded %d\n", srcFile, pObjName, pIf->ifIsLoaded);
+	#endif
 	pthread_mutex_lock(&mutObjGlobalOp);
 
 	if(pIf->ifIsLoaded == 1) {
@@ -1399,6 +1407,3 @@ objClassInit(modInfo_t *pModInfo)
 finalize_it:
 	RETiRet;
 }
-
-/* vi:set ai:
- */
