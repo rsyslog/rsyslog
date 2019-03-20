@@ -12,6 +12,32 @@ stored elsewhere into the configuration.
    This configuration option deprecates the older ``$IncludeConfig``
    |FmtObsoleteName| format directive.
 
+How it Works
+============
+
+The rsyslog include object is modelled after the usual "include" directive
+in programming and script languages (e.g. \#include in C).
+
+If you are not familiar with this, compare it to copy and paste: whenever
+rsyslog finds an include object, in copies the text from that include file
+at the exact position where the include is specified and removes the include
+text.
+
+Now remember that rsyslog's configuration statements are depending on the
+position inside the configuration. It is important if a statement occurs
+before or after another one. This is similar how other configuration files
+work and also the same concept that almost all programming and script
+languages have.
+
+If you use includes in rsyslog, you must think about the position at which
+the include text is inserted. This is especially important if you use
+statements like `stop`. If given at the wrong spot, they will not work as
+intended.
+
+If in doubt, or if you have issues, it probably is best NOT to use includes.
+This makes it far more obvious to understand what happens. Once solved, you
+may then change back to includes again.
+
 
 Parameters
 ==========
