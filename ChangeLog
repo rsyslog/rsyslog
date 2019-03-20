@@ -1,5 +1,8 @@
 ------------------------------------------------------------------------------
 Version 8.1904.0 (aka 2019.04) 2019-04-16
+- omfile: provide more helpful error message on file write errors
+  now contains actual file name plus a link to probable causes for this type
+  of problem
 - imjournal bugfix: potential segfault on some API failure returns
   In one case there was possibility of free()'d value of journal
   cursor not being reset, causing double-free and crash later on.
