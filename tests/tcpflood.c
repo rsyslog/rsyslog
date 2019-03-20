@@ -1,6 +1,10 @@
 /* Opens a large number of tcp connections and sends
  * messages over them. This is used for stress-testing.
  *
+ * NOTE: the following part is actually the SPEC (or call it man page).
+ * It's not random comments. So if the code behavior does not match what
+ * is written here, it should be considered a bug.
+ *
  * Params
  * -t	target address (default 127.0.0.1)
  * -p	target port(s) (default 13514), multiple via port1:port2:port3...
@@ -67,7 +71,7 @@
  *
  * Part of the testbench for rsyslog.
  *
- * Copyright 2009-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2019 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -1634,9 +1638,11 @@ int main(int argc, char *argv[])
 		if(setrlimit(RLIMIT_NOFILE, &maxFiles) < 0) {
 			perror("setrlimit to increase file handles failed");
 			fprintf(stderr,
-			        "could net set sufficiently large number of "
+			        "could not set sufficiently large number of "
 			        "open files for required connection count!\n");
-			exit(1);
+			if(!softLimitConnections) {
+				exit(1);
+			}
 		}
 	}
 
