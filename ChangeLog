@@ -4,6 +4,14 @@ Version 8.1904.0 (aka 2019.04) 2019-04-16
   In one case there was possibility of free()'d value of journal
   cursor not being reset, causing double-free and crash later on.
   closes https://github.com/rsyslog/rsyslog/issues/3537
+- testbench: change manytcp.sh to use a larger connection count again
+  not sure why it was reduced, maybe related to
+  https://github.com/rsyslog/rsyslog/issues/1108
+  also, modernize this and another test
+- tcpflood bugfix: make soft connection limit work again
+  It looks like the soft limit became defunct when tcpflood was enhanced to
+  request more open file handles from OS.
+  closes https://github.com/rsyslog/rsyslog/issues/1108
 ------------------------------------------------------------------------------
 Version 8.1903.0 (aka 2019.03) 2019-03-05
 - improg: create input module to use external program as input datas
