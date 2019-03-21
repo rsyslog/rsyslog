@@ -1,4 +1,4 @@
-FROM rsyslog/rsyslog_dev_base_ubuntu-arm:18.04
+FROM rsyslog/rsyslog_dev_base_ubuntu:18.04
 USER root
 RUN apt-get update && apt-get install -y \
    python-dev \

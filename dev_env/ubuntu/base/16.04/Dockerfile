@@ -156,6 +156,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-mmcapture \
 	--enable-mmcapture \
 	--enable-mmcount \
+	--enable-mmdarwin \
 	--enable-mmdblookup \
 	--enable-mmfields \
 	--enable-mmgrok \

@@ -34,6 +34,7 @@ RUN	yum -y update && \
 	libmaxminddb-devel \
 	libnet libnet-devel \
 	libpcap-devel \
+	librabbitmq-devel \
 	libstdc++ \
 	libtool \
 	libuuid-devel \
@@ -177,6 +178,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-mmanon \
 	--enable-mmaudit \
 	--enable-mmcount \
+	--enable-mmdarwin \
 	--enable-mmdblookup \
 	--enable-mmfields \
 	--enable-mmjsonparse \
@@ -198,6 +200,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-omkafka \
 	--enable-ommongodb \
 	--enable-omprog \
+	--enable-omrabbitmq \
 	--enable-omrelp-default-port=13515 \
 	--enable-omruleset \
 	--enable-omstdout \
