@@ -9,6 +9,13 @@ Version 8.1904.0 (aka 2019.04) 2019-04-16
   In one case there was possibility of free()'d value of journal
   cursor not being reset, causing double-free and crash later on.
   closes https://github.com/rsyslog/rsyslog/issues/3537
+- openssl subsystem bugfix: better error handling
+  Handling of SSL_ERROR_SYSCALL has been hardened.
+  Handling for SSL_Shutdown errors has been corrected.
+  Also fixed SSL Shutdown handling in tcpflood (openssl code).
+  If SSL_Shutdown returns error, we call SSL_read as described in
+  the documentation to do a bidirectional shutdown.
+  Closes https://github.com/rsyslog/rsyslog/issues/3561
 - omamqp: fix build errors
   They occur on some, newer, platforms. We do not really fix them, but rather
   make the compiler ignore them. This is not really good, but the module is
