@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -63,6 +62,7 @@
 
 /* work-around issues in this contributed module */
 #pragma GCC diagnostic ignored "-Wswitch-enum"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
