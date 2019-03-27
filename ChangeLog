@@ -3,6 +3,8 @@ Version 8.1904.0 (aka 2019.04) 2019-04-16
 - omfile: provide more helpful error message on file write errors
   now contains actual file name plus a link to probable causes for this type
   of problem
+- imtuxedolog: new input module for Tuxedu ULOG
+  Thanks to Philippe Duveau for the contribution.
 - omkafka bugfix: build failure due to inconsistent type
   failes depending on platform and settings; was somehow undetected by CI
 - imjournal bugfix: potential segfault on some API failure returns
