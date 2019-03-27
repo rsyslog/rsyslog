@@ -16,6 +16,15 @@ Version 8.1904.0 (aka 2019.04) 2019-04-16
   If SSL_Shutdown returns error, we call SSL_read as described in
   the documentation to do a bidirectional shutdown.
   Closes https://github.com/rsyslog/rsyslog/issues/3561
+- imjournal bugfix: Fetching journal cursor only for valid journal
+  The sd_journal_get_cursor() got called regradless of previous
+  retcodes from other jorunal calls which flooded logs with journald
+  errors. Now skipping the call in case of previous journal call
+  non-zero result. Fixed success checking of get_cursor() call
+  to eliminate double-free possibility.
+  Also, making WorkAroundJournalBug true by default, as there were no
+  confirmed performance regressions for a quite long time.
+  Thanks to Jiri Vymazal for the patch.
 - omamqp: fix build errors
   They occur on some, newer, platforms. We do not really fix them, but rather
   make the compiler ignore them. This is not really good, but the module is
