@@ -296,6 +296,11 @@ if ENABLE_MMKUBERNETES
 SUBDIRS += contrib/mmkubernetes
 endif
 
+# imtuxedoulog
+if ENABLE_IMTUXEDOULOG
+SUBDIRS += contrib/imtuxedoulog
+endif
+
 # improg
 if ENABLE_IMPROG
 SUBDIRS += contrib/improg

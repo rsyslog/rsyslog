@@ -1638,6 +1638,18 @@ fi
 AM_CONDITIONAL(ENABLE_IMFILE, test x$enable_imfile = xyes)
 
 
+# settings for the tuxedo ULOG input module
+AC_ARG_ENABLE(imtuxedoulog,
+        [AS_HELP_STRING([--enable-imtuxedoulog],[tuxedo ULOG input module enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_imtuxedoulog="yes" ;;
+          no) enable_imtuxedoulog="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imtuxedoulog) ;;
+         esac],
+        [enable_imtuxedoulog=no]
+)
+AM_CONDITIONAL(ENABLE_IMTUXEDOULOG, test x$enable_imtuxedoulog = xyes)
+
 # settings for the external program input module
 AC_ARG_ENABLE(improg,
         [AS_HELP_STRING([--enable-improg],[external program input module enabled @<:@default=no@:>@])],
@@ -2411,6 +2423,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/omtcl/Makefile \
 		contrib/omfile-hardened/Makefile \
 		contrib/mmkubernetes/Makefile \
+		contrib/imtuxedoulog/Makefile \
 		contrib/improg/Makefile \
 		tests/Makefile])
 AC_OUTPUT
@@ -2448,6 +2461,7 @@ echo "    periodic statistics module enabled:       $enable_impstats"
 echo "    imczmq input module enabled:              $enable_imczmq"
 echo "    imjournal input module enabled:           $enable_imjournal"
 echo "    imkafka module will be compiled:          $enable_imkafka"
+echo "    imtuxedoulog module will be compiled:     $enable_imtuxedoulog"
 echo "    improg input module enabled:              $enable_improg"
 echo
 echo "---{ output plugins }---"

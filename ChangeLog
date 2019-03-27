@@ -40,6 +40,7 @@ Version 8.1904.0 (aka 2019.04) 2019-04-16
 ------------------------------------------------------------------------------
 Version 8.1903.0 (aka 2019.03) 2019-03-05
 - improg: create input module to use external program as input datas
+- imtuxedoulog: create input module to consume Tuxedo ULOG files
 - omhttp: rewritten with large feature enhancements
   Many thanks to Gabriel Intrator for this work. Gabriel also has adopted the
   module and plans to support it in the future.
