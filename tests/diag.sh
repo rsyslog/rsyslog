@@ -1372,12 +1372,8 @@ dep_cache_dir=$(pwd)/.dep_cache
 dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.13/zookeeper-3.4.13.tar.gz
 dep_zk_cached_file=$dep_cache_dir/zookeeper-3.4.13.tar.gz
 
-# byANDRE: We stay with kafka 0.10.x for now. Newer Kafka Versions have changes that
-#	makes creating testbench with single kafka instances difficult.
-# old version -> dep_kafka_url=http://www-us.apache.org/dist/kafka/0.10.2.2/kafka_2.12-0.10.2.2.tgz
-# old version -> dep_kafka_cached_file=$dep_cache_dir/kafka_2.12-0.10.2.2.tgz
-dep_kafka_url=http://www-us.apache.org/dist/kafka/2.0.0/kafka_2.11-2.0.0.tgz
-dep_kafka_cached_file=$dep_cache_dir/kafka_2.11-2.0.0.tgz
+dep_kafka_url=http://www-us.apache.org/dist/kafka/2.2.0/kafka_2.12-2.2.0.tgz
+dep_kafka_cached_file=$dep_cache_dir/kafka_2.12-2.2.0.tgz
 
 if [ -z "$ES_DOWNLOAD" ]; then
 	export ES_DOWNLOAD=elasticsearch-5.6.9.tar.gz
@@ -1451,6 +1447,7 @@ download_kafka() {
 			wget $dep_kafka_url -O $dep_kafka_cached_file
 			if [ $? -ne 0 ]
 			then
+				rm $dep_kafka_cached_file # a 0-size file may be left over
 				error_exit 1
 			fi
 		fi
@@ -1622,6 +1619,8 @@ start_zookeeper() {
 }
 
 start_kafka() {
+	printf '%s starting kafka\n' "$(tb_timestamp)"
+
 	# Force IPv4 usage of Kafka!
 	export KAFKA_OPTS="-Djava.net.preferIPv4Stack=True"
 	if [ "x$1" == "x" ]; then
@@ -1631,7 +1630,6 @@ start_kafka() {
 		dep_work_dir=$(readlink -f $1)
 		dep_work_kafka_config="kafka-server$1.properties"
 	fi
-
 
 	# shellcheck disable=SC2009  - we do not grep on the process name!
 	kafkapid=$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')
