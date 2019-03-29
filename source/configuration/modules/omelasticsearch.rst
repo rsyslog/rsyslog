@@ -801,6 +801,15 @@ the bulk id for this record, otherwise, generate a new one with `$uuid`.  Note
 that the template uses the temporary variable `$.es_msg_id` which must be set
 each time, to either `$.omes!_id` or `$uuid`.
 
+The `rawmsg` field is a special case.  If the original request had a field
+called `message`, then when constructing the new message from the original to
+retry, the `rawmsg` message property will be set to the value of the `message`
+field.  Otherwise, the `rawmsg` property value will be set to the entire
+original request - the data part, not the metadata.  In previous versions,
+without the `message` field, the `rawmsg` property was set to the value of the
+data plus the Elasticsearch metadata, which caused problems with retries.  See
+`rsyslog issue 3573 <https://github.com/rsyslog/rsyslog/issues/3573>`_
+
 Examples
 ========
 
