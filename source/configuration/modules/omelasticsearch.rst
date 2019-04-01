@@ -675,6 +675,28 @@ this parameter has no effect.  Specifies the maximum number of messages that
 can be emitted within the ratelimit.interval interval. For futher information,
 see description there.
 
+.. _omelasticsearch-rebindinterval:
+
+rebindinterval
+^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "-1", "no", "none"
+
+This parameter tells omelasticsearch to close the connection and reconnect
+to Elasticsearch after this many operations have been submitted.  The default
+value `-1` means that omelasticsearch will not reconnect.  A value greater
+than `-1` tells omelasticsearch, after this many operations have been
+submitted to Elasticsearch, to drop the connection and establish a new
+connection.  This is useful when rsyslog connects to multiple Elasticsearch
+nodes through a router or load balancer, and you need to periodically drop
+and reestablish connections to help the router balance the connections.  Use
+the counter `rebinds` to monitor the number of times this has happened.
+
 .. _omelasticsearch-statistic-counter:
 
 Statistic Counter
@@ -728,6 +750,9 @@ The following counters are available when `retryfailures="on"` is used:
 -  **response.other** - number of times omelasticsearch received a
    response not recognized as one of the above responses, typically some other
    `4xx` or `5xx` http status.
+
+-  **rebinds** - if using `rebindinterval` this will be the number of
+   times omelasticsearch has reconnected to Elasticsearch
 
 **The fail.httprequests and fail.http counters reflect only failures that
 omelasticsearch detected.** Once it detects problems, it (usually, depends on
