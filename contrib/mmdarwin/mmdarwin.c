@@ -407,13 +407,13 @@ CODESTARTnewActInst
 		}  else if (!strcmp(actpblk.descr[i].name, "response")) {
 			char *response = es_str2cstr(pvals[i].val.d.estr, NULL);
 
-			if (!strcmp(response, "no") != 0) {
+			if (!(strcmp(response, "no") != 0)) {
 				pData->response = DARWIN_RESPONSE_SEND_NO;
-			} else if (!strcmp(response, "back") != 0) {
+			} else if (!(strcmp(response, "back") != 0)) {
 				pData->response = DARWIN_RESPONSE_SEND_BACK;
-			} else if (!strcmp(response, "darwin") != 0) {
+			} else if (!(strcmp(response, "darwin") != 0)) {
 				pData->response = DARWIN_RESPONSE_SEND_DARWIN;
-			} else if (!strcmp(response, "both") != 0) {
+			} else if (!(strcmp(response, "both") != 0)) {
 				pData->response = DARWIN_RESPONSE_SEND_BOTH;
 			} else {
 				dbgprintf(
