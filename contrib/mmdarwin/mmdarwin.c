@@ -679,7 +679,8 @@ CODESTARTdoAction
 
 	if (charProcessed < 0 || (unsigned int)charProcessed >= bufferSize) {
 		dbgprintf(
-			"mmdarwin::doAction:: warning: the certitude was truncated (only %zu characters were written)\n",
+			"mmdarwin::doAction:: warning: the certitude was truncated "
+			"(only %zu characters were written)\n",
 			bufferSize
 		);
 	}
