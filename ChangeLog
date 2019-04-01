@@ -8,6 +8,9 @@ Version 8.1904.0 (aka 2019.04) 2019-04-16
   rsyslog and/or add a tag to messages received from input modules without
   tag parameter.
   Thanks to Philippe Duveau for the contribution.
+- imbatchreport: new contributed input module
+  This input module manage batches' reports : complete file as a single log.
+  Thanks to Philippe Duveau for the contribution.
 - imtuxedolog: new contributed input module for Tuxedu ULOG
   Thanks to Philippe Duveau for the contribution.
 - omkafka bugfix: build failure due to inconsistent type
