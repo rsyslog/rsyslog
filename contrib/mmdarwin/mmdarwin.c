@@ -559,8 +559,8 @@ CODESTARTdoAction
 					stringBuffer = tmpStringBuffer;
 				} else {
 					dbgprintf(
-						"mmdarwin::doAction:: error: something went wrong while
-						reallocating stringBuffer\n"
+						"mmdarwin::doAction:: error: something went wrong while "
+						"reallocating stringBuffer\n"
 					);
 					/* stringBuffer is still allocated, but we will free it later */
 					goto finalize_it;
