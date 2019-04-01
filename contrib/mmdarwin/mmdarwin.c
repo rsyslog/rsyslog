@@ -416,7 +416,10 @@ CODESTARTnewActInst
 			} else if (!strcmp(response, "both") != 0) {
 				pData->response = DARWIN_RESPONSE_SEND_BOTH;
 			} else {
-				dbgprintf("mmdarwin::newActInst:: invalid 'response' value: %s. 'No response' set.\n", response);
+				dbgprintf(
+					"mmdarwin::newActInst:: invalid 'response' value: %s. 'No response' set.\n",
+					response
+				);
 
 				pData->response = DARWIN_RESPONSE_SEND_NO;
 			}
@@ -440,7 +443,9 @@ CODESTARTnewActInst
 				if (*param == ':') {
 					char *b = strchr(param+1, ':');
 					if (b == NULL) {
-						parser_errmsg("mmdarwin::newActInst:: missing closing colon: '%s'", param);
+						parser_errmsg(
+							"mmdarwin::newActInst:: missing closing colon: '%s'", param
+						);
 						ABORT_FINALIZE(RS_RET_ERR);
 					}
 
@@ -460,7 +465,9 @@ CODESTARTnewActInst
 			}
 
 		} else {
-			dbgprintf("mmdarwin::newActInst:: program error, non-handled param '%s'\n", actpblk.descr[i].name);
+			dbgprintf(
+				"mmdarwin::newActInst:: program error, non-handled param '%s'\n", actpblk.descr[i].name
+			);
 		}
 	}
 
@@ -538,8 +545,11 @@ CODESTARTdoAction
 		/* case 2: dynamic field. We retrieve its value from the JSON logline and forward it to Darwin */
 		} else {
 			if (bufferSize < fieldSize) {
-				dbgprintf("mmdarwin::doAction:: reallocating stringBuffer. Current size is %zu. Size needed is %zu\n",
-						  bufferSize, fieldSize);
+				dbgprintf(
+					"mmdarwin::doAction:: reallocating stringBuffer. "
+					"Current size is %zu. Size needed is %zu\n",
+					bufferSize, fieldSize
+				);
 
 				while (bufferSize < fieldSize) bufferSize += INITIAL_BUFFER_SIZE;
 
@@ -548,7 +558,10 @@ CODESTARTdoAction
 				if ((tmpStringBuffer = realloc(stringBuffer, bufferSize * sizeof(char)))) {
 					stringBuffer = tmpStringBuffer;
 				} else {
-					dbgprintf("mmdarwin::doAction:: error: something went wrong while reallocating stringBuffer\n");
+					dbgprintf(
+						"mmdarwin::doAction:: error: something went wrong while
+						reallocating stringBuffer\n"
+					);
 					/* stringBuffer is still allocated, but we will free it later */
 					goto finalize_it;
 				}
@@ -585,7 +598,9 @@ CODESTARTdoAction
 		header.body_elements_sizes[i] = strlen(pFieldValueString);
 
 		if (bodySize + header.body_elements_sizes[i] >= bufferBodySize) {
-			while (bodySize + header.body_elements_sizes[i] >= bufferBodySize) bufferBodySize += INITIAL_BUFFER_SIZE;
+			while (bodySize + header.body_elements_sizes[i] >= bufferBodySize) {
+				bufferBodySize += INITIAL_BUFFER_SIZE;
+			}
 
 			char *tmpStringBuffer = realloc(body, bufferBodySize * sizeof(char) + 1);
 
@@ -663,8 +678,10 @@ CODESTARTdoAction
 	int charProcessed = snprintf(stringBuffer, bufferSize, "%d", response.certitude);
 
 	if (charProcessed < 0 || (unsigned int)charProcessed >= bufferSize) {
-		dbgprintf("mmdarwin::doAction:: warning: the certitude was truncated (only %zu characters were written)\n",
-				  bufferSize);
+		dbgprintf(
+			"mmdarwin::doAction:: warning: the certitude was truncated (only %zu characters were written)\n",
+			bufferSize
+		);
 	}
 	dbgprintf("mmdarwin::doAction:: certitude obtained: %s\n", stringBuffer);
 

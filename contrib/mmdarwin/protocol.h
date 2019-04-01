@@ -78,16 +78,26 @@ enum darwin_ip_type {
 ///
 /// \struct darwin_filter_packet_t
 typedef struct {
-	enum darwin_packet_type type; //!< The type of information sent.
-	enum darwin_filter_response_type response; //!< Whom the response will be sent to.
-	enum darwin_ip_type     ip_type; //!< The type of the IP, either v4 or v6.
-	struct in_addr          ip; //!< Contain an IPv4 if ip_type indicates it. May be uninitialized otherwise.
-	struct in6_addr         ip6; //!< Contain an IPv6 if ip_type indicates it. May be uninitialized otherwise.
-	long                    filter_code; //!< The unique identifier code of a filter.
-	unsigned int            certitude; //!< The score or the certitude of the module. May be used to pass other info in specific cases.
-	size_t                  body_size; //!< The complete size of the the parameters to be sent (if needed).
-	size_t                  body_elements_number; //!< The number of parameters to be sent (if needed).
-	size_t                  body_elements_sizes[MAX_BODY_ELEMENTS]; //!< An array containing the size of each parameters to be sent.
+	//!< The type of information sent.
+	enum darwin_packet_type type;
+	//!< Whom the response will be sent to.
+	enum darwin_filter_response_type response;
+	//!< The type of the IP, either v4 or v6.
+	enum darwin_ip_type     ip_type;
+	//!< Contain an IPv4 if ip_type indicates it. May be uninitialized otherwise.
+	struct in_addr          ip;
+	//!< Contain an IPv6 if ip_type indicates it. May be uninitialized otherwise.
+	struct in6_addr         ip6;
+	//!< The unique identifier code of a filter.
+	long                    filter_code;
+	//!< The score or the certitude of the module. May be used to pass other info in specific cases.
+	unsigned int            certitude;
+	//!< The complete size of the the parameters to be sent (if needed).
+	size_t                  body_size;
+	//!< The number of parameters to be sent (if needed).
+	size_t                  body_elements_number;
+	//!< An array containing the size of each parameters to be sent.
+	size_t                  body_elements_sizes[MAX_BODY_ELEMENTS];
 } darwin_filter_packet_t;
 
 #ifdef __cplusplus
