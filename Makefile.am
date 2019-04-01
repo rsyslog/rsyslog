@@ -286,6 +286,11 @@ if ENABLE_OMAMQP1
 SUBDIRS += contrib/omamqp1
 endif
 
+# imbatchreport
+if ENABLE_IMBATCHREPORT
+SUBDIRS += contrib/imbatchreport
+endif
+
 # omtcl
 if ENABLE_OMTCL
 SUBDIRS += contrib/omtcl

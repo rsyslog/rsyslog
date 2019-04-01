@@ -1223,6 +1223,31 @@ endif # HAVE_VALGRIND
 
 endif # ENABLE_IMFILE
 
+if ENABLE_IMBATCHREPORT
+TESTS +=  \
+	imbatchreport_errmsg_no_params.sh \
+	imbatchreport_errmsg_glob_not_regular.sh \
+	imbatchreport_errmsg_glob_dir_fake.sh \
+	imbatchreport_errmsg_glob_dir_not_dir.sh \
+	imbatchreport_errmsg_regex.match.reject.sh \
+	imbatchreport_errmsg_regex.match.rename.sh \
+	imbatchreport_errmsg_regex.nomatch.sh \
+	imbatchreport_errmsg_not_supported1.sh \
+	imbatchreport_errmsg_not_supported2.sh \
+	imbatchreport_errmsg_not_supported3.sh \
+	imbatchreport_errmsg_delete_params.sh \
+	imbatchreport_errmsg_rename_params.sh \
+	imbatchreport_delete_success.sh \
+	imbatchreport_delete_structdata.sh \
+	imbatchreport_rename_success.sh \
+	imbatchreport_delete_toolarge.sh \
+	imbatchreport_rename_toolarge.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	imbatchreport_errmsg_no_params-vg.sh
+endif # ENABLE_IMBATCHREPORT
+endif
+
 if ENABLE_OMTCL
 TESTS += \
 	 omtcl.sh

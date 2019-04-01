@@ -1609,6 +1609,18 @@ AC_ARG_ENABLE(helgrind,
 )
 AM_CONDITIONAL(ENABLE_HELGRIND, test x$enable_helgrind = xyes)
 
+# settings for the batch report input module
+AC_ARG_ENABLE(imbatchreport,
+        [AS_HELP_STRING([--enable-imbatchreport],[batch report input module enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_imbatchreport="yes" ;;
+          no) enable_imbatchreport="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imbatchreport) ;;
+         esac],
+        [enable_imbatchreport=no]
+)
+AM_CONDITIONAL(ENABLE_IMBATCHREPORT, test x$enable_imbatchreport = xyes)
+
 # settings for the file input module
 AC_ARG_ENABLE(imfile,
         [AS_HELP_STRING([--enable-imfile],[file input module enabled @<:@default=no@:>@])],
@@ -2435,6 +2447,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/omhttpfs/Makefile \
 		contrib/omamqp1/Makefile \
 		contrib/omtcl/Makefile \
+		contrib/imbatchreport/Makefile \
 		contrib/omfile-hardened/Makefile \
 		contrib/mmkubernetes/Makefile \
 		contrib/imtuxedoulog/Makefile \
@@ -2475,6 +2488,7 @@ echo "    Solaris input module enabled:             $enable_imsolaris"
 echo "    periodic statistics module enabled:       $enable_impstats"
 echo "    imczmq input module enabled:              $enable_imczmq"
 echo "    imjournal input module enabled:           $enable_imjournal"
+echo "    imbatchreport input module enabled:       $enable_imbatchreport"
 echo "    imkafka module will be compiled:          $enable_imkafka"
 echo "    imtuxedoulog module will be compiled:     $enable_imtuxedoulog"
 echo "    improg input module enabled:              $enable_improg"
