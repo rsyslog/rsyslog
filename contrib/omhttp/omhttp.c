@@ -133,6 +133,7 @@ typedef struct instanceConf_s {
 	int compressionLevel;	/* Compression level for zlib, default=-1, fastest=1, best=9, none=0*/
 	sbool useHttps;
 	sbool allowUnsignedCerts;
+	sbool skipVerifyHost;
 	uchar *caCertFile;
 	uchar *myCertFile;
 	uchar *myPrivKeyFile;
@@ -201,6 +202,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "errorfile", eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
 	{ "allowunsignedcerts", eCmdHdlrBinary, 0 },
+	{ "skipverifyhost", eCmdHdlrBinary, 0 },
 	{ "tls.cacert", eCmdHdlrString, 0 },
 	{ "tls.mycert", eCmdHdlrString, 0 },
 	{ "tls.myprivkey", eCmdHdlrString, 0 },
@@ -358,6 +360,7 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tcompress=%d\n", pData->compress);
 	dbgprintf("\tcompress.level=%d\n", pData->compressionLevel);
 	dbgprintf("\tallowUnsignedCerts=%d\n", pData->allowUnsignedCerts);
+	dbgprintf("\tskipVerifyHost=%d\n", pData->skipVerifyHost);
 	dbgprintf("\terrorfile='%s'\n", pData->errorFile == NULL ?
 		(uchar*)"(not configured)" : pData->errorFile);
 	dbgprintf("\ttls.cacert='%s'\n", pData->caCertFile);
@@ -1520,6 +1523,8 @@ curlSetupCommon(wrkrInstanceData_t *const pWrkrData, CURL *const handle)
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, pWrkrData);
 	if(pWrkrData->pData->allowUnsignedCerts)
 		curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, FALSE);
+	if(pWrkrData->pData->skipVerifyHost)
+		curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, FALSE);
 	if(pWrkrData->pData->authBuf != NULL) {
 		curl_easy_setopt(handle, CURLOPT_USERPWD, pWrkrData->pData->authBuf);
 		curl_easy_setopt(handle, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
@@ -1639,6 +1644,7 @@ setInstParamDefaults(instanceData *const pData)
 	pData->compress = 0; // off
 	pData->compressionLevel = -1; // default compression
 	pData->allowUnsignedCerts = 0;
+	pData->skipVerifyHost = 0;
 	pData->tplName = NULL;
 	pData->errorFile = NULL;
 	pData->caCertFile = NULL;
@@ -1733,6 +1739,8 @@ CODESTARTnewActInst
 			}
 		} else if(!strcmp(actpblk.descr[i].name, "allowunsignedcerts")) {
 			pData->allowUnsignedCerts = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "skipverifyhost")) {
+			pData->skipVerifyHost = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "usehttps")) {
 			pData->useHttps = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {

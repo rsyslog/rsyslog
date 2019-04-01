@@ -135,6 +135,7 @@ typedef struct instanceConf_s {
 	size_t maxbytes;
 	sbool useHttps;
 	sbool allowUnsignedCerts;
+	sbool skipVerifyHost;
 	uchar *caCertFile;
 	uchar *myCertFile;
 	uchar *myPrivKeyFile;
@@ -201,6 +202,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "dynpipelinename", eCmdHdlrBinary, 0 },
 	{ "bulkid", eCmdHdlrGetWord, 0 },
 	{ "allowunsignedcerts", eCmdHdlrBinary, 0 },
+	{ "skipverifyhost", eCmdHdlrBinary, 0 },
 	{ "tls.cacert", eCmdHdlrString, 0 },
 	{ "tls.mycert", eCmdHdlrString, 0 },
 	{ "tls.myprivkey", eCmdHdlrString, 0 },
@@ -333,6 +335,7 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tbulkmode=%d\n", pData->bulkmode);
 	dbgprintf("\tmaxbytes=%zu\n", pData->maxbytes);
 	dbgprintf("\tallowUnsignedCerts=%d\n", pData->allowUnsignedCerts);
+	dbgprintf("\tskipVerifyHost=%d\n", pData->skipVerifyHost);
 	dbgprintf("\terrorfile='%s'\n", pData->errorFile == NULL ?
 		(uchar*)"(not configured)" : pData->errorFile);
 	dbgprintf("\terroronly=%d\n", pData->errorOnly);
@@ -1678,6 +1681,8 @@ curlSetupCommon(wrkrInstanceData_t *const pWrkrData, CURL *const handle)
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, pWrkrData);
 	if(pWrkrData->pData->allowUnsignedCerts)
 		curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, FALSE);
+	if(pWrkrData->pData->skipVerifyHost)
+		curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, FALSE);
 	if(pWrkrData->pData->authBuf != NULL) {
 		curl_easy_setopt(handle, CURLOPT_USERPWD, pWrkrData->pData->authBuf);
 		curl_easy_setopt(handle, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
@@ -1752,6 +1757,7 @@ setInstParamDefaults(instanceData *const pData)
 	pData->bulkmode = 0;
 	pData->maxbytes = 104857600; //100 MB Is the default max message size that ships with ElasticSearch
 	pData->allowUnsignedCerts = 0;
+	pData->skipVerifyHost = 0;
 	pData->tplName = NULL;
 	pData->errorFile = NULL;
 	pData->errorOnly=0;
@@ -1827,6 +1833,8 @@ CODESTARTnewActInst
 			pData->maxbytes = (size_t) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "allowunsignedcerts")) {
 			pData->allowUnsignedCerts = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "skipverifyhost")) {
+			pData->skipVerifyHost = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "timeout")) {
 			pData->timeout = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "usehttps")) {
