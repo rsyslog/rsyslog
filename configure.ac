@@ -80,12 +80,12 @@ PKG_PROG_PKG_CONFIG
 AC_ARG_VAR(CONF_FILE_PATH, Configuration file path (default : /etc/rsyslog.conf))
 if test "$ac_cv_env_CONF_FILE_PATH_set" = "set"; then
 	AC_DEFINE_UNQUOTED(PATH_CONFFILE,  "${ac_cv_env_CONF_FILE_PATH_value}", "Configuration file path (default : /etc/rsyslog.conf)")
-fi 
+fi
 
 AC_ARG_VAR(PID_FILE_PATH, Pid file path (default : /var/run/rsyslogd.pid))
 if test "$ac_cv_env_PID_FILE_PATH_set" = "set"; then
 	AC_DEFINE_UNQUOTED(PATH_PIDFILE,  "${ac_cv_env_PID_FILE_PATH_value}", "Pid file path (default : /var/run/rsyslogd.pid)")
-fi 
+fi
 
 
 # modules we require
@@ -251,7 +251,7 @@ AC_TRY_COMPILE([
 	AC_MSG_RESULT(yes)
 	,
 	# note: we use 1024 here, which should be far more than needed by any system. If that's too low, we simply
-	# life with the need to change it. Most of the code doesn't need it anyways, but there are a few places 
+	# life with the need to change it. Most of the code doesn't need it anyways, but there are a few places
 	# where it actually is needed and it makes no sense to change them.
 	AC_DEFINE(MAXHOSTNAMELEN, 1024, [Define with a value if your <sys/param.h> does not define MAXHOSTNAMELEN])
 	AC_MSG_RESULT(no; defined as 64)
@@ -375,13 +375,13 @@ AC_ARG_ENABLE(fmhash-xxhash,
 AM_CONDITIONAL(ENABLE_FMHASH, [test "x$enable_fmhash" = "xyes" || test "x$enable_fmhash_xxhash" = "xyes"])
 
 AM_CONDITIONAL(ENABLE_FMHASH_XXHASH, test x$enable_fmhash_xxhash = xyes)
-if test "$enable_fmhash_xxhash" = "yes"; then  
+if test "$enable_fmhash_xxhash" = "yes"; then
 	AC_CHECK_LIB([xxhash], [XXH64], [
 		AC_CHECK_HEADER([xxhash.h], [
 			AC_DEFINE(USE_HASH_XXHASH, 1,
 				  [Using XXHASH for hash64.])
 			HASH_XXHASH_LIBS="-lxxhash"
-			AC_SUBST(HASH_XXHASH_LIBS)], 
+			AC_SUBST(HASH_XXHASH_LIBS)],
 			[AC_MSG_ERROR([Unable to add XXHASH support for hash64.])])
 	])
 fi
@@ -402,7 +402,7 @@ case "${os_type}" in
 solaris) GSSLIB=gss ;;
 *)       GSSLIB=gssapi_krb5 ;;
 esac
-  
+
 if test $enable_gssapi_krb5 = yes; then
 	AC_CHECK_LIB($GSSLIB, gss_acquire_cred, [
 		AC_CHECK_HEADER(gssapi/gssapi.h, [
@@ -692,7 +692,7 @@ AC_ARG_ENABLE(debug_symbols,
 )
 
 
-# total debugless: highest performance, but no way at all to enable debug 
+# total debugless: highest performance, but no way at all to enable debug
 # logging
 AC_ARG_ENABLE(debugless,
         [AS_HELP_STRING([--enable-debugless],[Enable runtime instrumentation mode @<:@default=no@:>@])],
@@ -970,7 +970,7 @@ AM_CONDITIONAL(ENABLE_OMHTTP, test x$enable_omhttp = xyes)
 
 
 # capability to enable elasticsearch testbench tests. This requries that an ES test
-# environment is present on the local (127.0.0.1) machine. 
+# environment is present on the local (127.0.0.1) machine.
 # we support a "minimal" mode to take care of travis where we cannot run all tests
 # due to runtime constraints
 AC_ARG_ENABLE(elasticsearch_tests,
@@ -988,7 +988,7 @@ AM_CONDITIONAL(ENABLE_ELASTICSEARCH_TESTS_MINIMAL, test x$enable_elasticsearch_t
 
 
 # capability to enable clickhouse testbench tests. This requries that a test
-# environment is present on the local (127.0.0.1) machine. 
+# environment is present on the local (127.0.0.1) machine.
 AC_ARG_ENABLE(clickhouse_tests,
         [AS_HELP_STRING([--enable-clickhouse-tests],[enable Elasticsearch specific tests in testbench @<:@default=no@:>@])],
         [case "${enableval}" in
@@ -2409,7 +2409,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/mmsnmptrapd/Makefile \
 		plugins/pmlastmsg/Makefile \
 		plugins/mmdblookup/Makefile \
-                plugins/mmdarwin/Makefile \
+    contrib/mmdarwin/Makefile \
 		contrib/omhttp/Makefile \
 		contrib/fmhash/Makefile \
 		contrib/pmsnare/Makefile \
