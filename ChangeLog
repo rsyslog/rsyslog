@@ -3,6 +3,13 @@ Version 8.1904.0 (aka 2019.04) 2019-04-16
 - omfile: provide more helpful error message on file write errors
   now contains actual file name plus a link to probable causes for this type
   of problem
+- omelasticsearch: new parameter skipverifyhost
+  Add ability to specify the libcurl CURLOPT_SSL_VERIFYHOST
+  option to skip verification of the hostname in the peer cert.
+  WARNING: This option is insecure, and should only be used
+  for testing. The default value is off, meaning, the hostname
+  will be verified by default.
+  Thanks to Richard Megginson for the patch.
 - mmtaghostname: new contributed module
   This module allows to force hostname after parsing to the localhostname of
   rsyslog and/or add a tag to messages received from input modules without
