@@ -567,8 +567,17 @@ getpid() {
 }
 
 # grep for (partial) content. $1 is the content to check for, $2 the file to check
+# option --check-only just returns success/fail but does not terminate on fail
+#    this is meant for checking during queue shutdown processing.
 # option --regex is understood, in which case $1 is a regex
 content_check() {
+	if [ "$1" == "--check-only" ]; then
+		check_only="yes"
+		shift
+	else
+		check_only="no"
+	fi
+	echo check_only: $check_only
 	if [ "$1" == "--regex" ]; then
 		grep_opt=
 		shift
@@ -577,11 +586,18 @@ content_check() {
 	fi
 	file=${2:-$RSYSLOG_OUT_LOG}
 	if ! grep -q  $grep_opt -- "$1" < "${file}"; then
+	    if [ "$check_only" == "yes" ]; then
+		printf 'content_check did not yet succeed\n'
+	    return 1
+	    fi
 	    printf '\n============================================================\n'
 	    printf 'FILE "%s" content:\n' "$file"
 	    cat -n ${file}
 	    printf 'FAIL: content_check failed to find "%s"\n' "$1"
 	    error_exit 1
+	fi
+	if [ "$check_only" == "yes" ]; then
+	    return 0
 	fi
 }
 

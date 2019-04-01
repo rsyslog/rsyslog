@@ -8,7 +8,7 @@ REBIND_INTERVAL=100 # should be enough to run several times for $NUMMESSAGES
 
 queue_empty_check() {
 	es_shutdown_empty_check && \
-	content_check --regex '"name": "omelasticsearch".*"submitted": '$NUMMESSAGES \
+	content_check --check-only --regex '"name": "omelasticsearch".*"submitted": '$NUMMESSAGES \
 		$RSYSLOG_DYNNAME.spool/omelasticsearch-stats.log
 }
 export QUEUE_EMPTY_CHECK_FUNC=queue_empty_check
