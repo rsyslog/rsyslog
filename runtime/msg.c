@@ -845,7 +845,7 @@ msgBaseConstruct(smsg_t **ppThis)
 	pM->iFacility = LOG_INVLD;
 	pM->iLenPROGNAME = -1;
 	pM->offAfterPRI = 0;
-	pM->offMSG = 0;
+	pM->offMSG = -1;
 	pM->iProtocolVersion = 0;
 	pM->msgFlags = 0;
 	pM->iLenRawMsg = 0;
@@ -1264,7 +1264,7 @@ static rsRetVal MsgSerialize(smsg_t *pThis, strm_t *pStrm)
 	/* offset must be serialized after pszRawMsg, because we need that to obtain the correct
 	 * MSG size.
 	 */
-	objSerializeSCALAR(pStrm, offMSG, SHORT);
+	objSerializeSCALAR(pStrm, offMSG, INT);
 
 	CHKiRet(obj.EndSerialize(pStrm));
 
@@ -2181,7 +2181,7 @@ MsgSetFlowControlType(smsg_t * const pMsg, flowControl_t eFlowCtl)
  * rgerhards, 2009-06-16
  */
 rsRetVal
-MsgSetAfterPRIOffs(smsg_t * const pMsg, uint32_t offs)
+MsgSetAfterPRIOffs(smsg_t * const pMsg, int offs)
 {
 	assert(pMsg != NULL);
 	pMsg->offAfterPRI = offs;
@@ -2833,11 +2833,11 @@ void MsgSetHOSTNAME(smsg_t *pThis, const uchar* pszHOSTNAME, const int lenHOSTNA
  * (exactly by one). This can happen if we have a message that does not
  * contain any MSG part.
  */
-void MsgSetMSGoffs(smsg_t * const pMsg, uint32_t offs)
+void MsgSetMSGoffs(smsg_t * const pMsg, int offs)
 {
 	ISOBJ_TYPE_assert(pMsg, msg);
 	pMsg->offMSG = offs;
-	if(offs > (uint32_t)pMsg->iLenRawMsg) {
+	if(offs > pMsg->iLenRawMsg) {
 		assert((int)offs - 1 == pMsg->iLenRawMsg);
 		pMsg->iLenMSG = 0;
 	} else {
@@ -2934,7 +2934,7 @@ MsgSetRawMsg(smsg_t *const pThis, const char*const pszRawMsg, const size_t lenMs
 	memcpy(pThis->pszRawMsg, pszRawMsg, pThis->iLenRawMsg);
 	pThis->pszRawMsg[pThis->iLenRawMsg] = '\0'; /* this also works with truncation! */
 	/* correct other information */
-	if((uint32_t)pThis->iLenRawMsg > pThis->offMSG)
+	if(pThis->iLenRawMsg > pThis->offMSG)
 		pThis->iLenMSG += deltaSize;
 	else
 		pThis->iLenMSG = 0;
