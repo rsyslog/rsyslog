@@ -163,6 +163,7 @@ char *test_rs_strerror_r(int errnum, char *buf, size_t buflen) {
 
 #define MAX_EXTRADATA_LEN 200*1024
 #define MAX_SENDBUF 2 * MAX_EXTRADATA_LEN
+#define MAX_RCVBUF 16 * 1024 + 1/* TLS RFC 8449: max size of buffer for message reception */
 
 static char *targetIP = "127.0.0.1";
 static char *msgPRI = "167";
@@ -508,8 +509,9 @@ void closeConnections(void)
 				ling.l_onoff = 1;
 				ling.l_linger = 1;
 				setsockopt(sockArray[i], SOL_SOCKET, SO_LINGER, &ling, sizeof(ling));
-				if(transport == TP_TLS)
+				if(transport == TP_TLS) {
 					closeTLSSess(i);
+				}
 				close(sockArray[i]);
 			}
 		}
@@ -1303,6 +1305,14 @@ closeTLSSess(int i)
 {
 	int r;
 	r = SSL_shutdown(sslArray[i]);
+	if (r <= 0){
+		/* Shutdown not finished, call SSL_read to do a bidirectional shutdown, see doc for more:
+		*	https://www.openssl.org/docs/man1.1.1/man3/SSL_shutdown.html
+		*/
+		char rcvBuf[MAX_RCVBUF];
+		SSL_read(sslArray[i], rcvBuf, MAX_RCVBUF);
+
+	}
 	SSL_free(sslArray[i]);
 }
 #	elif defined(ENABLE_GNUTLS)

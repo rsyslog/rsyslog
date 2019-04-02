@@ -81,6 +81,7 @@ STATSCOUNTER_DEF(indexDuplicate, mutIndexDuplicate)
 STATSCOUNTER_DEF(indexBadArgument, mutIndexBadArgument)
 STATSCOUNTER_DEF(indexBulkRejection, mutIndexBulkRejection)
 STATSCOUNTER_DEF(indexOtherResponse, mutIndexOtherResponse)
+STATSCOUNTER_DEF(rebinds, mutRebinds)
 
 static prop_t *pInputName = NULL;
 
@@ -100,6 +101,8 @@ typedef enum {
 } es_write_ops_t;
 
 #define WRKR_DATA_TYPE_ES 0xBADF0001
+
+#define DEFAULT_REBIND_INTERVAL -1
 
 /* REST API for elasticsearch hits this URL:
  * http://<hostName>:<restPort>/<searchIndex>/<searchType>
@@ -135,6 +138,7 @@ typedef struct instanceConf_s {
 	size_t maxbytes;
 	sbool useHttps;
 	sbool allowUnsignedCerts;
+	sbool skipVerifyHost;
 	uchar *caCertFile;
 	uchar *myCertFile;
 	uchar *myPrivKeyFile;
@@ -146,6 +150,7 @@ typedef struct instanceConf_s {
 	ratelimit_t *ratelimiter;
 	uchar *retryRulesetName;
 	ruleset_t *retryRuleset;
+	int rebindInterval;
 	struct instanceConf_s *next;
 } instanceData;
 
@@ -171,6 +176,7 @@ typedef struct wrkrInstanceData {
 		uchar *currTpl1;
 		uchar *currTpl2;
 	} batch;
+	int nOperations; /* counter used with rebindInterval */
 } wrkrInstanceData_t;
 
 /* tables for interfacing with the v6 config system */
@@ -201,6 +207,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "dynpipelinename", eCmdHdlrBinary, 0 },
 	{ "bulkid", eCmdHdlrGetWord, 0 },
 	{ "allowunsignedcerts", eCmdHdlrBinary, 0 },
+	{ "skipverifyhost", eCmdHdlrBinary, 0 },
 	{ "tls.cacert", eCmdHdlrString, 0 },
 	{ "tls.mycert", eCmdHdlrString, 0 },
 	{ "tls.myprivkey", eCmdHdlrString, 0 },
@@ -208,7 +215,8 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "retryfailures", eCmdHdlrBinary, 0 },
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
 	{ "ratelimit.burst", eCmdHdlrInt, 0 },
-	{ "retryruleset", eCmdHdlrString, 0 }
+	{ "retryruleset", eCmdHdlrString, 0 },
+	{ "rebindinterval", eCmdHdlrInt, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -228,6 +236,7 @@ CODESTARTcreateInstance
 	pData->ratelimiter = NULL;
 	pData->retryRulesetName = NULL;
 	pData->retryRuleset = NULL;
+	pData->rebindInterval = DEFAULT_REBIND_INTERVAL;
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
@@ -248,6 +257,7 @@ CODESTARTcreateWrkrInstance
 			pData->bulkmode = 0; /* at least it works */
 		}
 	}
+	pWrkrData->nOperations = 0;
 	iRet = curlSetup(pWrkrData);
 ENDcreateWrkrInstance
 
@@ -333,6 +343,7 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tbulkmode=%d\n", pData->bulkmode);
 	dbgprintf("\tmaxbytes=%zu\n", pData->maxbytes);
 	dbgprintf("\tallowUnsignedCerts=%d\n", pData->allowUnsignedCerts);
+	dbgprintf("\tskipVerifyHost=%d\n", pData->skipVerifyHost);
 	dbgprintf("\terrorfile='%s'\n", pData->errorFile == NULL ?
 		(uchar*)"(not configured)" : pData->errorFile);
 	dbgprintf("\terroronly=%d\n", pData->errorOnly);
@@ -346,6 +357,7 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tretryfailures='%d'\n", pData->retryFailures);
 	dbgprintf("\tratelimit.interval='%d'\n", pData->ratelimitInterval);
 	dbgprintf("\tratelimit.burst='%d'\n", pData->ratelimitBurst);
+	dbgprintf("\trebindinterval='%d'\n", pData->rebindInterval);
 ENDdbgPrintInstInfo
 
 
@@ -1528,6 +1540,16 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls
 	pWrkrData->reply = NULL;
 	pWrkrData->replyLen = 0;
 
+	if ((pWrkrData->pData->rebindInterval > -1) &&
+		(pWrkrData->nOperations > pWrkrData->pData->rebindInterval)) {
+		curl_easy_setopt(curl, CURLOPT_FRESH_CONNECT, 1);
+		pWrkrData->nOperations = 0;
+		STATSCOUNTER_INC(rebinds, mutRebinds);
+	} else {
+		/* by default, reuse existing connections */
+		curl_easy_setopt(curl, CURLOPT_FRESH_CONNECT, 0);
+	}
+
 	if(pWrkrData->pData->numServers > 1) {
 		/* needs to be called to support ES HA feature */
 		CHKiRet(checkConn(pWrkrData));
@@ -1550,6 +1572,9 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls
 			"to server failure %lld: %s", (long long) code, errbuf);
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
+
+	if (pWrkrData->pData->rebindInterval > -1)
+		pWrkrData->nOperations++;
 
 	if(pWrkrData->reply == NULL) {
 		DBGPRINTF("omelasticsearch: pWrkrData reply==NULL, replyLen = '%d'\n",
@@ -1678,6 +1703,8 @@ curlSetupCommon(wrkrInstanceData_t *const pWrkrData, CURL *const handle)
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, pWrkrData);
 	if(pWrkrData->pData->allowUnsignedCerts)
 		curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, FALSE);
+	if(pWrkrData->pData->skipVerifyHost)
+		curl_easy_setopt(handle, CURLOPT_SSL_VERIFYHOST, FALSE);
 	if(pWrkrData->pData->authBuf != NULL) {
 		curl_easy_setopt(handle, CURLOPT_USERPWD, pWrkrData->pData->authBuf);
 		curl_easy_setopt(handle, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
@@ -1752,6 +1779,7 @@ setInstParamDefaults(instanceData *const pData)
 	pData->bulkmode = 0;
 	pData->maxbytes = 104857600; //100 MB Is the default max message size that ships with ElasticSearch
 	pData->allowUnsignedCerts = 0;
+	pData->skipVerifyHost = 0;
 	pData->tplName = NULL;
 	pData->errorFile = NULL;
 	pData->errorOnly=0;
@@ -1768,6 +1796,7 @@ setInstParamDefaults(instanceData *const pData)
 	pData->ratelimiter = NULL;
 	pData->retryRulesetName = NULL;
 	pData->retryRuleset = NULL;
+	pData->rebindInterval = DEFAULT_REBIND_INTERVAL;
 }
 
 BEGINnewActInst
@@ -1827,6 +1856,8 @@ CODESTARTnewActInst
 			pData->maxbytes = (size_t) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "allowunsignedcerts")) {
 			pData->allowUnsignedCerts = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "skipverifyhost")) {
+			pData->skipVerifyHost = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "timeout")) {
 			pData->timeout = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "usehttps")) {
@@ -1891,6 +1922,8 @@ CODESTARTnewActInst
 			pData->ratelimitInterval = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "retryruleset")) {
 			pData->retryRulesetName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "rebindinterval")) {
+			pData->rebindInterval = (int) pvals[i].val.d.n;
 		} else {
 			LogError(0, RS_RET_INTERNAL_ERROR, "omelasticsearch: program error, "
 				"non-handled param '%s'", actpblk.descr[i].name);
@@ -2182,6 +2215,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 	STATSCOUNTER_INIT(indexOtherResponse, mutIndexOtherResponse);
 	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"response.other",
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &indexOtherResponse));
+	STATSCOUNTER_INIT(rebinds, mutRebinds);
+	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"rebinds",
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &rebinds));
 	CHKiRet(statsobj.ConstructFinalize(indexStats));
 	CHKiRet(prop.Construct(&pInputName));
 	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("omelasticsearch"), sizeof("omelasticsearch") - 1));

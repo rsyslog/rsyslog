@@ -34,9 +34,14 @@ if [ "$MERGE" == "YES" ]; then
     set -e
 fi
 
+if [ "$IMDOCKER" == "YES" ]; then
+	export IMDOCKER_OPT="--enable-imdocker --enable-imdocker-tests"
+fi
+
 set -e
 if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then SCAN_BUILD="scan-build-5.0"; CC=clang-5.0; else SCAN_BUILD="scan-build"; fi
 
+set +e
 ls -l *.tar.gz
 rm -f *.tar.gz # safety check: we must not have tarballs at this stage
 if [ "x$BUILD_FROM_TARBALL" == "xYES" ]; then
@@ -51,54 +56,64 @@ if [ "x$BUILD_FROM_TARBALL" == "xYES" ]; then
 	ls -ld rsyslog*
 	cd rsyslog*
 	export JOURNAL_OPT=
+	export IMDOCKER_OPT=
 	export DEFAULT_CONFIG_FLAGS="--disable-fmhttp"
 	echo "============================== DONE unpacking =============================="
 else
-	export DEFAULT_CONFIG_FLAGS="
-	--enable-imfile \
-	--enable-impstats \
-	--enable-mmrm1stspace \
-	--enable-imptcp \
-	--enable-mmanon \
-	--enable-mmaudit \
-	--enable-mmfields \
-	--enable-mmjsonparse \
-	--enable-mmpstrucdata \
-	--enable-mmsequence \
-	--enable-mmutf8fix \
-	--enable-mail \
-	--enable-omprog \
-	--enable-omruleset \
-	--enable-omuxsock \
-	--enable-pmaixforwardedfrom \
-	--enable-pmciscoios \
-	--enable-pmcisconames \
-	--enable-pmlastmsg \
-	--enable-pmsnare \
-	--enable-libgcrypt \
-	--enable-mmnormalize \
-	--enable-omudpspoof \
-	--enable-relp --enable-omrelp-default-port=13515 \
-	--enable-snmp \
-	--enable-mmsnmptrapd \
-	--enable-gnutls \
-	--enable-openssl \
-	--enable-libdbi \
-	--enable-omhttpfs \
-	--enable-elasticsearch \
-	--enable-omhttp \
-	--enable-ommongodb \
-	--enable-omtcl \
-	--enable-mmdblookup \
-	--enable-mmcount \
-	--enable-gssapi-krb5 \
-	--enable-omhiredis \
-	--enable-usertools \
-	--enable-pmnull \
-	--enable-pmnormalize \
-	"
+	if [ "$MINIMAL_BUILD" == "YES" ]; then
+		export DEFAULT_CONFIG_FLAGS="
+		--disable-ommongodb
+		"
+	else
+		export DEFAULT_CONFIG_FLAGS="
+		--enable-imfile \
+		--enable-impstats \
+		--enable-mmrm1stspace \
+		--enable-imptcp \
+		--enable-mmanon \
+		--enable-mmaudit \
+		--enable-mmfields \
+		--enable-mmjsonparse \
+		--enable-mmpstrucdata \
+		--enable-mmsequence \
+		--enable-mmutf8fix \
+		--enable-mail \
+		--enable-omprog \
+		--enable-omruleset \
+		--enable-omuxsock \
+		--enable-pmaixforwardedfrom \
+		--enable-pmciscoios \
+		--enable-pmcisconames \
+		--enable-pmlastmsg \
+		--enable-pmsnare \
+		--enable-libgcrypt \
+		--enable-mmnormalize \
+		--enable-omudpspoof \
+		--enable-relp --enable-omrelp-default-port=13515 \
+		--enable-snmp \
+		--enable-mmsnmptrapd \
+		--enable-gnutls \
+		--enable-openssl \
+		--enable-libdbi \
+		--enable-omhttpfs \
+		--enable-elasticsearch \
+		--enable-omhttp \
+		--enable-ommongodb \
+		--enable-omtcl \
+		--enable-mmdblookup \
+		--enable-mmcount \
+		--enable-gssapi-krb5 \
+		--enable-omhiredis \
+		--enable-usertools \
+		--enable-pmnull \
+		--enable-pmnormalize \
+		--enable-pgsql --enable-pgsql-tests \
+		--enable-mysql --enable-mysql-tests \
+		"
+	fi
 fi
 pwd
+set -e
 autoreconf --force --verbose --install
 if [ "x$GROK" == "xYES" ]; then export GROK="--enable-mmgrok"; fi
 if [ "x$ESTEST" == "xYES" ]; then export ES_TEST_CONFIGURE_OPT="--enable-elasticsearch-tests=minimal" ; fi
@@ -106,10 +121,13 @@ if [ "x$ESTEST" == "xYES" ]; then export ES_TEST_CONFIGURE_OPT="--enable-elastic
 if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then export CC="clang-3.6"; fi
 $CC -v
 
-if [ "$DISTRIB_CODENAME" != "precise" ]; then AMQP1="--enable-omamqp1"; fi
+echo EXTRA_CONFIGURE: $EXTRA_CONFIGURE
+
+if [ "$DISTRIB_CODENAME" == "trusty" ]; then AMQP1="--enable-omamqp1"; fi
 export CONFIG_FLAGS="$CONFIGURE_FLAGS \
 	$EXTRA_CONFIGURE \
 	$JOURNAL_OPT \
+	$IMDOCKER_OPT \
 	$HIREDIS_OPT \
 	$ENABLE_KAFKA \
 	$ENABLE_DEBUGLESS \
@@ -122,17 +140,18 @@ export CONFIG_FLAGS="$CONFIGURE_FLAGS \
 	--enable-valgrind \
 	--enable-testbench \
 	--enable-omstdout \
-	--enable-imdiag \
-	--enable-pgsql --enable-pgsql-tests \
-	--enable-mysql --enable-mysql-tests"
+	--enable-imdiag"
 
+echo CONFIG_FLAGS: $CONFIG_FLAGS
 
 echo "============================== flags set =============================="
 env | grep CONFIG
 echo "============================== flags end =============================="
 # Note: [io]mzmq3 cannot be built any longer, according to Brian Knox they require an
 # outdated version of the client lib. So we do not bother any longer about them.
+set -xv
 ./configure  $CONFIG_FLAGS
+set +xv
 export USE_AUTO_DEBUG="off" # set to "on" to enable this for travis
 make -j
 

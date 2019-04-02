@@ -3,10 +3,57 @@ Version 8.1904.0 (aka 2019.04) 2019-04-16
 - omfile: provide more helpful error message on file write errors
   now contains actual file name plus a link to probable causes for this type
   of problem
+- omelasticsearch: new parameter rebindinterval
+  Thanks to Richard Megginson for the patch.
+- omelasticsearch: new parameter skipverifyhost
+  Add ability to specify the libcurl CURLOPT_SSL_VERIFYHOST
+  option to skip verification of the hostname in the peer cert.
+  WARNING: This option is insecure, and should only be used
+  for testing. The default value is off, meaning, the hostname
+  will be verified by default.
+  Thanks to Richard Megginson for the patch.
+- imdocker: new contributed module
+  imdocker will get (docker) container logs from a host as well as filling
+  out some basic container metadata as id, name, image, labels.
+  Thanks to Nelson Yen for the contribution.
+- mmtaghostname: new contributed module
+  This module allows to force hostname after parsing to the localhostname of
+  rsyslog and/or add a tag to messages received from input modules without
+  tag parameter.
+  Thanks to Philippe Duveau for the contribution.
+- imbatchreport: new contributed input module
+  This input module manage batches' reports : complete file as a single log.
+  Thanks to Philippe Duveau for the contribution.
+- imtuxedolog: new contributed input module for Tuxedu ULOG
+  Thanks to Philippe Duveau for the contribution.
+- msg object bugfix: regression from 1255a67
+  closes https://github.com/rsyslog/rsyslog/issues/3570
+- omkafka bugfix: build failure due to inconsistent type
+  failes depending on platform and settings; was somehow undetected by CI
 - imjournal bugfix: potential segfault on some API failure returns
   In one case there was possibility of free()'d value of journal
   cursor not being reset, causing double-free and crash later on.
   closes https://github.com/rsyslog/rsyslog/issues/3537
+- openssl subsystem bugfix: better error handling
+  Handling of SSL_ERROR_SYSCALL has been hardened.
+  Handling for SSL_Shutdown errors has been corrected.
+  Also fixed SSL Shutdown handling in tcpflood (openssl code).
+  If SSL_Shutdown returns error, we call SSL_read as described in
+  the documentation to do a bidirectional shutdown.
+  Closes https://github.com/rsyslog/rsyslog/issues/3561
+- imjournal bugfix: Fetching journal cursor only for valid journal
+  The sd_journal_get_cursor() got called regradless of previous
+  retcodes from other jorunal calls which flooded logs with journald
+  errors. Now skipping the call in case of previous journal call
+  non-zero result. Fixed success checking of get_cursor() call
+  to eliminate double-free possibility.
+  Also, making WorkAroundJournalBug true by default, as there were no
+  confirmed performance regressions for a quite long time.
+  Thanks to Jiri Vymazal for the patch.
+- omamqp: fix build errors
+  They occur on some, newer, platforms. We do not really fix them, but rather
+  make the compiler ignore them. This is not really good, but the module is
+  contributed and so that's for now the best thing we can do.
 - testbench: change manytcp.sh to use a larger connection count again
   not sure why it was reduced, maybe related to
   https://github.com/rsyslog/rsyslog/issues/1108
@@ -18,6 +65,7 @@ Version 8.1904.0 (aka 2019.04) 2019-04-16
 ------------------------------------------------------------------------------
 Version 8.1903.0 (aka 2019.03) 2019-03-05
 - improg: create input module to use external program as input datas
+- imtuxedoulog: create input module to consume Tuxedo ULOG files
 - omhttp: rewritten with large feature enhancements
   Many thanks to Gabriel Intrator for this work. Gabriel also has adopted the
   module and plans to support it in the future.

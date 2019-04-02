@@ -809,6 +809,24 @@ endif
 endif
 endif
 
+if ENABLE_IMDOCKER
+if ENABLE_IMDOCKER_TESTS
+TESTS += \
+	imdocker-unittests.sh \
+	imdocker-basic.sh \
+	imdocker-long-logline.sh \
+	imdocker-new-logs-from-start.sh \
+	imdocker-multi-line.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	imdocker-basic-vg.sh \
+	imdocker-long-logline-vg.sh \
+	imdocker-new-logs-from-start-vg.sh \
+	imdocker-multi-line-vg.sh
+endif # HAVE_VALGRIND
+endif # ENABLE_IMDOCKER_TESTS
+endif # ENABLE_IMDOCKER
+
 if ENABLE_IMPSTATS
 TESTS +=  \
 	impstats-hup.sh \
@@ -1233,9 +1251,40 @@ endif # HAVE_VALGRIND
 
 endif # ENABLE_IMFILE
 
+if ENABLE_IMBATCHREPORT
+TESTS +=  \
+	imbatchreport_errmsg_no_params.sh \
+	imbatchreport_errmsg_glob_not_regular.sh \
+	imbatchreport_errmsg_glob_dir_fake.sh \
+	imbatchreport_errmsg_glob_dir_not_dir.sh \
+	imbatchreport_errmsg_regex.match.reject.sh \
+	imbatchreport_errmsg_regex.match.rename.sh \
+	imbatchreport_errmsg_regex.nomatch.sh \
+	imbatchreport_errmsg_not_supported1.sh \
+	imbatchreport_errmsg_not_supported2.sh \
+	imbatchreport_errmsg_not_supported3.sh \
+	imbatchreport_errmsg_delete_params.sh \
+	imbatchreport_errmsg_rename_params.sh \
+	imbatchreport_delete_success.sh \
+	imbatchreport_delete_structdata.sh \
+	imbatchreport_rename_success.sh \
+	imbatchreport_delete_toolarge.sh \
+	imbatchreport_rename_toolarge.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	imbatchreport_errmsg_no_params-vg.sh
+endif # ENABLE_IMBATCHREPORT
+endif
+
 if ENABLE_OMTCL
 TESTS += \
 	 omtcl.sh
+endif
+
+if ENABLE_MMTAGHOSTNAME
+TESTS += \
+	mmtaghostname_tag.sh \
+	mmtaghostname_server.sh
 endif
 
 if ENABLE_MMKUBERNETES
@@ -1250,6 +1299,17 @@ endif
 endif
 endif
 endif
+
+if ENABLE_IMTUXEDOULOG
+TESTS +=  \
+	imtuxedoulog_errmsg_no_params.sh \
+	imtuxedoulog_data.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	imtuxedoulog_errmsg_no_params-vg.sh
+endif # ENABLE_IMTUXEDOULOG
+endif
+
 
 # test samples...
 #empty-hostname.log: hostname-getaddrinfo-fail.log
@@ -2147,6 +2207,15 @@ EXTRA_DIST= \
 	mmkubernetes_test_server.py \
 	mmkubernetes-basic.out.json \
 	es-writeoperation.sh \
+	imdocker-unittests.sh \
+	imdocker-basic.sh \
+	imdocker-basic-vg.sh \
+	imdocker-long-logline.sh \
+	imdocker-long-logline-vg.sh \
+	imdocker-new-logs-from-start.sh \
+	imdocker-new-logs-from-start-vg.sh \
+	imdocker-multi-line.sh \
+	imdocker-multi-line-vg.sh \
 	testsuites/incltest.d/include.conf \
 	testsuites/abort-uncleancfg-goodcfg.conf \
 	testsuites/include-std-omfile-action.conf \

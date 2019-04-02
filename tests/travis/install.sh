@@ -8,17 +8,23 @@ sudo apt-get install -qq faketime libdbd-mysql
 sudo add-apt-repository ppa:qpid/released -y
 sudo apt-get update
 
-# update autoconf-archive (no good enough packets available)
-# this one built by whissi
-wget --no-verbose http://build.rsyslog.com/CI/autoconf-archive_20170928-1adiscon1_all.deb
-if [ $? -ne 0 ]; then
-	echo Download autoconf-archive failed!
-	exit 1
-fi
-sudo dpkg -i autoconf-archive_20170928-1adiscon1_all.deb
-rm autoconf-archive_20170928-1adiscon1_all.deb
+if [ "$DISTRIB_CODENAME" != "xenial" ]; then
+	# update autoconf-archive (no good enough packets available)
+	# this one built by whissi
+	wget --no-verbose http://build.rsyslog.com/CI/autoconf-archive_20170928-1adiscon1_all.deb
+	if [ $? -ne 0 ]; then
+		echo Download autoconf-archive failed!
+		exit 1
+	fi
+	sudo dpkg -i autoconf-archive_20170928-1adiscon1_all.deb
+	rm autoconf-archive_20170928-1adiscon1_all.deb
 
-sudo apt-get install build-essential automake pkg-config libtool autoconf autotools-dev gdb valgrind libdbi-dev libsnmp-dev libmysqlclient-dev postgresql-client libglib2.0-dev libtokyocabinet-dev zlib1g-dev uuid-dev libgcrypt11-dev bison flex libcurl4-openssl-dev python-docutils openjdk-7-jdk wget libkrb5-dev libnet1-dev
+	sudo apt-get install openjdk-7-jdk
+fi
+if [ "$DISTRIB_CODENAME" == "xenial" ]; then
+	sudo apt-get install libgnutls28-dev
+fi
+sudo apt-get install build-essential automake pkg-config libtool autoconf autotools-dev gdb valgrind libdbi-dev libsnmp-dev libmysqlclient-dev postgresql-client libglib2.0-dev libtokyocabinet-dev zlib1g-dev uuid-dev libgcrypt11-dev bison flex libcurl4-openssl-dev python-docutils wget libkrb5-dev libnet1-dev
 
 if [ "x$GROK" == "xYES" ]; then sudo apt-get install -qq libgrok1 libgrok-dev ; fi
 sudo apt-get install -qq --force-yes libestr-dev librelp-dev libfastjson-dev liblogging-stdlog-dev \
@@ -71,7 +77,16 @@ fi
 if [ "x$ESTEST" == "xYES" ]; then sudo apt-get install -qq elasticsearch ; fi
 if [ "$DISTRIB_CODENAME" == "trusty" ]; then sudo apt-get install -qq libhiredis-dev; export HIREDIS_OPT="--enable-omhiredis"; fi
 if [ "$DISTRIB_CODENAME" == "trusty" ]; then sudo apt-get install -qq libsystemd-journal-dev; export JOURNAL_OPT="--enable-imjournal --enable-omjournal"; fi
-if [ "$DISTRIB_CODENAME" != "precise" ]; then sudo apt-get install -qq --force-yes libqpid-proton3-dev ;fi
+if [ "$DISTRIB_CODENAME" == "trusty" ] || [ "$DISTRIB_CODENAME" == "precise" ]; then
+	export IMDOCKER_OPT=
+else
+	if [ "x$IMDOKER" == "xYES" ]; then
+#    git clone https://github.com/curl/curl.git > /dev/null
+#    (cd curl; ./buildconf; ./configure; make -j2 > /dev/null; sudo make install > /dev/null;)
+		export IMDOCKER_OPT="--enable-imdocker --enable-imdocker-tests";
+	fi
+fi
+if [ "$DISTRIB_CODENAME" == "trusty" ]; then sudo apt-get install -qq --force-yes libqpid-proton3-dev ;fi
 if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y && \
 sudo bash -c "echo \"deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-5.0 main\" > /etc/apt/sources.list.d/llvm.list" &&\
 wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add - &&\

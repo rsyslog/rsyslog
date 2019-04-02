@@ -187,6 +187,10 @@ if ENABLE_IMFILE
 SUBDIRS += plugins/imfile
 endif
 
+if ENABLE_IMDOCKER
+SUBDIRS += contrib/imdocker
+endif
+
 if ENABLE_IMPTCP
 SUBDIRS += plugins/imptcp
 endif
@@ -289,6 +293,11 @@ if ENABLE_OMAMQP1
 SUBDIRS += contrib/omamqp1
 endif
 
+# imbatchreport
+if ENABLE_IMBATCHREPORT
+SUBDIRS += contrib/imbatchreport
+endif
+
 # omtcl
 if ENABLE_OMTCL
 SUBDIRS += contrib/omtcl
@@ -299,9 +308,19 @@ if ENABLE_MMKUBERNETES
 SUBDIRS += contrib/mmkubernetes
 endif
 
+# imtuxedoulog
+if ENABLE_IMTUXEDOULOG
+SUBDIRS += contrib/imtuxedoulog
+endif
+
 # improg
 if ENABLE_IMPROG
 SUBDIRS += contrib/improg
+endif
+
+# mmtaghostname
+if ENABLE_MMTAGHOSTNAME
+SUBDIRS += contrib/mmtaghostname
 endif
 
 # tests are added as last element, because tests may need different
@@ -492,6 +511,10 @@ endif
 
 if ENABLE_IMFILE
 DISTCHECK_CONFIGURE_FLAGS+= --enable-imfile
+endif
+
+if ENABLE_IMDOCKER
+DISTCHECK_CONFIGURE_FLAGS+= --enable-imdocker
 endif
 
 if ENABLE_DISTCHECK_WORKAROUND
