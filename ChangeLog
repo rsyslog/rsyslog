@@ -5,6 +5,10 @@ Version 8.1904.0 (aka 2019.04) 2019-04-16
   of problem
 - omelasticsearch: new parameter rebindinterval
   Thanks to Richard Megginson for the patch.
+- imdocker: new contributed module
+  imdocker will get (docker) container logs from a host as well as filling
+  out some basic container metadata as id, name, image, labels.
+  Thanks to Nelson Yen for the contribution.
 - mmtaghostname: new contributed module
   This module allows to force hostname after parsing to the localhostname of
   rsyslog and/or add a tag to messages received from input modules without
