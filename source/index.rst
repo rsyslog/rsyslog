@@ -63,6 +63,15 @@ doesn't require a lot of time - even a single mouse click helps. Learn
 
 .. _Sponsor's Page: http://www.rsyslog.com/sponsors
 
+Contributing to the docs
+------------------------
+
+This documentation is hosted on `github
+<https://github.com/rsyslog/rsyslog-doc>`_. If you find something to be
+improved, please feel free to fork and file a patch request with your
+improvements. There is also a Button 'Edit in GitHub' on every documentation
+page beginning with the main `docs page
+<https://www.rsyslog.com/doc/v8-stable/>`_ that allows easy access.
 
 .. only:: dev
 
