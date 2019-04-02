@@ -702,6 +702,14 @@ TESTS +=  \
 endif # ENABLE_IMPROG
 endif
 
+if ENABLE_MMDARWIN
+TESTS +=  \
+	mmdarwin_errmsg_no_params.sh
+if HAVE_VALGRIND
+TESTS += 
+endif # HAVE_VALGRIND
+endif # ENABLE_IMPROG
+
 if ENABLE_OMPROG
 TESTS +=  \
 	omprog-defaults.sh \
