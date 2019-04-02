@@ -141,10 +141,8 @@ static rsRetVal openSocket(instanceData *pData) {
 	dbgprintf("mmdarwin::openSocket:: connecting to Darwin...\n");
 
 	if (connect(pData->sock, (struct sockaddr *)&pData->addr, sizeof(struct sockaddr_un)) == -1) {
-		char errStr[1024];
-		int eno = errno;
-		DBGPRINTF("mmdarwin::openSocket:: error %d connecting to Darwin: %s.\n",
-				  eno, rs_strerror_r(eno, errStr, sizeof(errStr)));
+		LogError(errno, RS_RET_NO_SOCKET, "mmdarwin::openSocket:: error connecting to Darwin "
+			"via socket '%s'", pData->pSockName);
 		pData->sock = INVLD_SOCK;
 		ABORT_FINALIZE(RS_RET_NO_SOCKET);
 	}
