@@ -1206,6 +1206,7 @@ TESTS += \
 	imfile-rename-while-stopped.sh \
 	imfile-rename.sh \
 	imfile-symlink.sh \
+	imfile-symlink-long.sh \
 	imfile-symlink-multi.sh \
 	imfile-logrotate.sh \
 	imfile-logrotate-multiple.sh \
@@ -1917,6 +1918,7 @@ EXTRA_DIST= \
 	imfile-rename.sh \
 	imfile-symlink.sh \
 	imfile-symlink-multi.sh \
+	imfile-symlink-long.sh \
 	imfile-logrotate.sh \
 	imfile-logrotate-copytruncate.sh \
 	imfile-logrotate-nocopytruncate.sh \
