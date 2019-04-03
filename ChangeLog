@@ -55,6 +55,13 @@ Version 8.1904.0 (aka 2019.04) 2019-04-16
   In one case there was possibility of free()'d value of journal
   cursor not being reset, causing double-free and crash later on.
   closes https://github.com/rsyslog/rsyslog/issues/3537
+- potential bugfix in TLS subsystems: no response to TLS close_notify
+  During connection broken check we now do a 32-byte receive buffer peek
+  in contrast to the 1-byte peek we did so far. While we have no indication
+  why this should actually fix the issue, there have been reports it indeed
+  does. For that reason we apply the patch and see what happens in the future.
+  Thanks to Arild Nilsen for the patch.
+  potentially closes https://github.com/rsyslog/rsyslog/pull/3535
 - openssl subsystem bugfix: better error handling
   Handling of SSL_ERROR_SYSCALL has been hardened.
   Handling for SSL_Shutdown errors has been corrected.
