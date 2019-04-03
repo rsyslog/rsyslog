@@ -413,6 +413,63 @@ If you get errors like this, you probably need to set `sslpartialchain="on"`:
     rsyslogd: mmkubernetes: failed to connect to [https://...url...] -
     60:Peer certificate cannot be authenticated with given CA certificates
 
+.. _mmkubernetes-cacheexpireinterval:
+
+cacheexpireinterval
+^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "-1", "no", "none"
+
+This parameter allows you to expire entries from the metadata cache.  The
+values are:
+
+- -1 (default) - disables metadata cache expiration
+- 0 - check cache for expired entries before every cache lookup
+- 1 or higher - the number is a number of seconds - check the cache
+  for expired entries every this many seconds, when processing an
+  entry
+
+The cache is only checked if processing a record from Kubernetes.  There
+isn't some sort of housekeeping thread that continually runs cleaning up
+the cache.  When an record from Kubernetes is processed:
+
+If `cacheexpireinterval` is -1, then do not check for cache expiration.
+If `cacheexpireinterval` is 0, then check for cache expiration.
+If `cacheexpireinterval` is greater than 0, check for cache expiration
+if the last time we checked was more than this many seconds ago.
+
+When cache expiration is checked, it will delete all cache entries which
+have a ttl less than or equal to the current time.  The cache entry ttl
+is set using the `cacheentryttl`.
+
+.. _mmkubernetes-cacheentryttl:
+
+cacheentryttl
+^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "3600", "no", "none"
+
+This parameter allows you to set the maximum age (time-to-live, or ttl) of
+an entry in the metadata cache.  The value is in seconds.  The default value
+is `3600` (one hour).  When cache expiration is checked, if a cache entry
+has a ttl less than or equal to the current time, it will be removed from
+the cache.
+
+This option is only used if `cacheexpireinterval` is 0 or greater.
+
+This value must be 0 or greater, otherwise, if `cacheexpireinterval` is 0
+or greater, you will get an error.
+
 .. _mmkubernetes-statistic-counter:
 
 Statistic Counter
@@ -459,6 +516,23 @@ Parameters are:
    server for pod metadata was returned with some other error code not handled
    above.  These are typically "hard" errors which require some sort of
    intervention to fix e.g. Kubernetes server down, credentials incorrect.
+
+-  **podcachenumentries** - the number of entries in the pod metadata cache.
+
+-  **namespacecachenumentries** - the number of entries in the namespace metadata
+   cache.
+
+-  **podcachehits** - the number of times a requested entry was found in the
+   pod metadata cache.
+
+-  **namespacecachehits** - the number of times a requested entry was found in the
+   namespace metadata cache.
+
+-  **podcachemisses** - the number of times a requested entry was not found in the
+   pod metadata cache, and had to be requested from Kubernetes.
+
+-  **namespacecachemisses** - the number of times a requested entry was not found
+   in the namespace metadata cache, and had to be requested from Kubernetes.
 
 Fields
 ------
