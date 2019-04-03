@@ -55,6 +55,7 @@
 #include "statsobj.h"
 #include "regexp.h"
 #include "hashtable.h"
+#include "hashtable_itr.h"
 #include "srUtils.h"
 #include "unicode-helper.h"
 #include "datetime.h"
@@ -102,18 +103,28 @@ DEFobjCurrIf(datetime)
 #define DFLT_KUBERNETES_URL "https://kubernetes.default.svc.cluster.local:443"
 #define DFLT_BUSY_RETRY_INTERVAL 5 /* retry every 5 seconds */
 #define DFLT_SSL_PARTIAL_CHAIN 0 /* disallow X509_V_FLAG_PARTIAL_CHAIN by default */
+#define DFLT_CACHE_ENTRY_TTL 3600 /* delete entries from the cache older than 3600 seconds */
+#define DFLT_CACHE_EXPIRE_INTERVAL -1 /* delete all expired entries from the cache every N seconds
+					 -1 disables cache expiration/ttl checking
+					 0 means - run cache expiration for every record */
 
 /* only support setting the partial chain flag on openssl platforms that have the define */
 #if defined(ENABLE_OPENSSL) && defined(X509_V_FLAG_PARTIAL_CHAIN)
 #define SUPPORT_SSL_PARTIAL_CHAIN 1
 #endif
 
+struct cache_entry_s {
+	time_t ttl; /* when this entry should expire */
+	void *data; /* the user data */
+};
+
 static struct cache_s {
 	const uchar *kbUrl;
 	struct hashtable *mdHt;
 	struct hashtable *nsHt;
 	pthread_mutex_t *cacheMtx;
-	int lastBusyTime;
+	int lastBusyTime; /* when we got the last busy response from kubernetes */
+	time_t expirationTime; /* if cache expiration checking is enable, time to check for expiration */
 } **caches;
 
 typedef struct {
@@ -145,6 +156,8 @@ struct modConfData_s {
 	uchar *contRulebase; /* lognorm rulebase filename for CONTAINER_NAME value match */
 	int busyRetryInterval; /* how to handle 429 response - 0 means error, non-zero means retry every N seconds */
 	sbool sslPartialChain; /* if true, allow using intermediate certs without root certs */
+	int cacheEntryTTL; /* delete entries from the cache if they are older than this many seconds */
+	int cacheExpireInterval; /* delete all expired entries from the cache every this many seconds */
 };
 
 /* action (instance) configuration data */
@@ -174,6 +187,8 @@ typedef struct _instanceData {
 	struct cache_s *cache;
 	int busyRetryInterval; /* how to handle 429 response - 0 means error, non-zero means retry every N seconds */
 	sbool sslPartialChain; /* if true, allow using intermediate certs without root certs */
+	int cacheEntryTTL; /* delete entries from the cache if they are older than this many seconds */
+	int cacheExpireInterval; /* delete all expired entries from the cache every this many seconds */
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -183,15 +198,22 @@ typedef struct wrkrInstanceData {
 	char *curlRply;
 	size_t curlRplyLen;
 	statsobj_t *stats; /* stats for this instance */
-	STATSCOUNTER_DEF(k8sRecordSeen, mutK8sRecordSeen)
-	STATSCOUNTER_DEF(namespaceMetadataSuccess, mutNamespaceMetadataSuccess)
-	STATSCOUNTER_DEF(namespaceMetadataNotFound, mutNamespaceMetadataNotFound)
-	STATSCOUNTER_DEF(namespaceMetadataBusy, mutNamespaceMetadataBusy)
-	STATSCOUNTER_DEF(namespaceMetadataError, mutNamespaceMetadataError)
-	STATSCOUNTER_DEF(podMetadataSuccess, mutPodMetadataSuccess)
-	STATSCOUNTER_DEF(podMetadataNotFound, mutPodMetadataNotFound)
-	STATSCOUNTER_DEF(podMetadataBusy, mutPodMetadataBusy)
-	STATSCOUNTER_DEF(podMetadataError, mutPodMetadataError)
+	STATSCOUNTER_DEF(k8sRecordSeen, mutK8sRecordSeen);
+	STATSCOUNTER_DEF(namespaceMetadataSuccess, mutNamespaceMetadataSuccess);
+	STATSCOUNTER_DEF(namespaceMetadataNotFound, mutNamespaceMetadataNotFound);
+	STATSCOUNTER_DEF(namespaceMetadataBusy, mutNamespaceMetadataBusy);
+	STATSCOUNTER_DEF(namespaceMetadataError, mutNamespaceMetadataError);
+	STATSCOUNTER_DEF(podMetadataSuccess, mutPodMetadataSuccess);
+	STATSCOUNTER_DEF(podMetadataNotFound, mutPodMetadataNotFound);
+	STATSCOUNTER_DEF(podMetadataBusy, mutPodMetadataBusy);
+	STATSCOUNTER_DEF(podMetadataError, mutPodMetadataError);
+	STATSCOUNTER_DEF(podCacheNumEntries, mutPodCacheNumEntries);
+	STATSCOUNTER_DEF(namespaceCacheNumEntries, mutNamespaceCacheNumEntries);
+	STATSCOUNTER_DEF(podCacheHits, mutPodCacheHits);
+	STATSCOUNTER_DEF(namespaceCacheHits, mutNamespaceCacheHits);
+	/* cache misses should correspond to metadata success, busy, etc. k8s api calls */
+	STATSCOUNTER_DEF(podCacheMisses, mutPodCacheMisses);
+	STATSCOUNTER_DEF(namespaceCacheMisses, mutNamespaceCacheMisses);
 } wrkrInstanceData_t;
 
 /* module parameters (v6 config format) */
@@ -212,7 +234,9 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "filenamerulebase", eCmdHdlrString, 0 },
 	{ "containerrulebase", eCmdHdlrString, 0 },
 	{ "busyretryinterval", eCmdHdlrInt, 0 },
-	{ "sslpartialchain", eCmdHdlrBinary, 0 }
+	{ "sslpartialchain", eCmdHdlrBinary, 0 },
+	{ "cacheentryttl", eCmdHdlrInt, 0 },
+	{ "cacheexpireinterval", eCmdHdlrInt, 0 }
 #if HAVE_LOADSAMPLESFROMSTRING == 1
 	,
 	{ "filenamerules", eCmdHdlrArray, 0 },
@@ -243,7 +267,9 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "filenamerulebase", eCmdHdlrString, 0 },
 	{ "containerrulebase", eCmdHdlrString, 0 },
 	{ "busyretryinterval", eCmdHdlrInt, 0 },
-	{ "sslpartialchain", eCmdHdlrBinary, 0 }
+	{ "sslpartialchain", eCmdHdlrBinary, 0 },
+	{ "cacheentryttl", eCmdHdlrInt, 0 },
+	{ "cacheexpireinterval", eCmdHdlrInt, 0 }
 #if HAVE_LOADSAMPLESFROMSTRING == 1
 	,
 	{ "filenamerules", eCmdHdlrArray, 0 },
@@ -555,6 +581,8 @@ CODESTARTsetModCnf
 	loadModConf->de_dot = DFLT_DE_DOT;
 	loadModConf->busyRetryInterval = DFLT_BUSY_RETRY_INTERVAL;
 	loadModConf->sslPartialChain = DFLT_SSL_PARTIAL_CHAIN;
+	loadModConf->cacheEntryTTL = DFLT_CACHE_ENTRY_TTL;
+	loadModConf->cacheExpireInterval = DFLT_CACHE_EXPIRE_INTERVAL;
 	for(i = 0 ; i < modpblk.nParams ; ++i) {
 		if(!pvals[i].bUsed) {
 			continue;
@@ -691,6 +719,10 @@ CODESTARTsetModCnf
 			LogMsg(0, RS_RET_VALUE_NOT_IN_THIS_MODE, LOG_INFO,
 					"sslpartialchain is only supported for OpenSSL\n");
 #endif
+		} else if(!strcmp(modpblk.descr[i].name, "cacheentryttl")) {
+			loadModConf->cacheEntryTTL = pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "cacheexpireinterval")) {
+			loadModConf->cacheExpireInterval = pvals[i].val.d.n;
 		} else {
 			dbgprintf("mmkubernetes: program error, non-handled "
 				"param '%s' in module() block\n", modpblk.descr[i].name);
@@ -710,6 +742,16 @@ CODESTARTsetModCnf
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 #endif
+
+	if ((loadModConf->cacheExpireInterval > -1)) {
+		if ((loadModConf->cacheEntryTTL < 0)) {
+			LogError(0, RS_RET_CONFIG_ERROR,
+					"mmkubernetes: cacheentryttl value [%d] is invalid - "
+					"value must be 0 or greater",
+					loadModConf->cacheEntryTTL);
+			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+		}
+	}
 
 	/* set defaults */
 	if(loadModConf->srcMetadataPath == NULL)
@@ -854,6 +896,24 @@ CODESTARTcreateWrkrInstance
 	STATSCOUNTER_INIT(pWrkrData->podMetadataError, pWrkrData->mutPodMetadataError);
 	CHKiRet(statsobj.AddCounter(pWrkrData->stats, UCHAR_CONSTANT("podmetadataerror"),
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pWrkrData->podMetadataError)));
+	STATSCOUNTER_INIT(pWrkrData->namespaceCacheNumEntries, pWrkrData->mutNamespaceCacheNumEntries);
+	CHKiRet(statsobj.AddCounter(pWrkrData->stats, UCHAR_CONSTANT("namespacecachenumentries"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pWrkrData->namespaceCacheNumEntries)));
+	STATSCOUNTER_INIT(pWrkrData->podCacheNumEntries, pWrkrData->mutPodCacheNumEntries);
+	CHKiRet(statsobj.AddCounter(pWrkrData->stats, UCHAR_CONSTANT("podcachenumentries"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pWrkrData->podCacheNumEntries)));
+	STATSCOUNTER_INIT(pWrkrData->namespaceCacheHits, pWrkrData->mutNamespaceCacheHits);
+	CHKiRet(statsobj.AddCounter(pWrkrData->stats, UCHAR_CONSTANT("namespacecachehits"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pWrkrData->namespaceCacheHits)));
+	STATSCOUNTER_INIT(pWrkrData->podCacheHits, pWrkrData->mutPodCacheHits);
+	CHKiRet(statsobj.AddCounter(pWrkrData->stats, UCHAR_CONSTANT("podcachehits"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pWrkrData->podCacheHits)));
+	STATSCOUNTER_INIT(pWrkrData->namespaceCacheMisses, pWrkrData->mutNamespaceCacheMisses);
+	CHKiRet(statsobj.AddCounter(pWrkrData->stats, UCHAR_CONSTANT("namespacecachemisses"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pWrkrData->namespaceCacheMisses)));
+	STATSCOUNTER_INIT(pWrkrData->podCacheMisses, pWrkrData->mutPodCacheMisses);
+	CHKiRet(statsobj.AddCounter(pWrkrData->stats, UCHAR_CONSTANT("podcachemisses"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pWrkrData->podCacheMisses)));
 	CHKiRet(statsobj.ConstructFinalize(pWrkrData->stats));
 
 	hdr = curl_slist_append(hdr, "Content-Type: text/json; charset=utf-8");
@@ -938,31 +998,68 @@ hashtable_json_object_put(void *jso)
 {
 	json_object_put((struct fjson_object *)jso);
 }
-static struct cache_s *
-cacheNew(const uchar *const url)
-{
-	struct cache_s *cache;
 
-	if (NULL == (cache = calloc(1, sizeof(struct cache_s)))) {
-		FINALIZE;
+static void
+cache_entry_free(struct cache_entry_s *cache_entry)
+{
+	if (NULL != cache_entry) {
+		if (cache_entry->data) {
+			hashtable_json_object_put(cache_entry->data);
+			cache_entry->data = NULL;
+		}
+		free(cache_entry);
 	}
-	cache->kbUrl = url;
-	cache->mdHt = create_hashtable(100, hash_from_string,
-		key_equals_string, hashtable_json_object_put);
-	cache->nsHt = create_hashtable(100, hash_from_string,
-		key_equals_string, hashtable_json_object_put);
+}
+
+static void
+cache_entry_free_raw(void *cache_entry_void)
+{
+	cache_entry_free((struct cache_entry_s *)cache_entry_void);
+}
+
+static struct cache_s *
+cacheNew(instanceData *pData)
+{
+	DEFiRet;
+	struct cache_s *cache = NULL;
+	time_t now;
+	int need_mutex_destroy = 0;
+
+	CHKmalloc(cache = (struct cache_s *)calloc(1, sizeof(struct cache_s)));
+	CHKmalloc(cache->cacheMtx = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t)));
+	CHKmalloc(cache->mdHt = create_hashtable(100, hash_from_string,
+		key_equals_string, cache_entry_free_raw));
+	CHKmalloc(cache->nsHt = create_hashtable(100, hash_from_string,
+		key_equals_string, cache_entry_free_raw));
+	CHKiConcCtrl(pthread_mutex_init(cache->cacheMtx, NULL));
+	need_mutex_destroy = 1;
+	datetime.GetTime(&now);
+	cache->kbUrl = pData->kubernetesUrl;
+	cache->expirationTime = 0;
+	if (pData->cacheExpireInterval > -1)
+		cache->expirationTime = pData->cacheExpireInterval + pData->cacheEntryTTL + now;
+	cache->lastBusyTime = 0;
 	dbgprintf("mmkubernetes: created cache mdht [%p] nsht [%p]\n",
 			cache->mdHt, cache->nsHt);
-	cache->cacheMtx = malloc(sizeof(pthread_mutex_t));
-	if (!cache->mdHt || !cache->nsHt || !cache->cacheMtx) {
-		free (cache);
-		cache = NULL;
-		FINALIZE;
-	}
-	pthread_mutex_init(cache->cacheMtx, NULL);
-	cache->lastBusyTime = 0;
 
 finalize_it:
+	if (iRet != RS_RET_OK) {
+	        LogError(errno, iRet, "mmkubernetes: cacheNew: unable to create metadata cache for %s",
+	                 pData->kubernetesUrl);
+		if (cache) {
+			if (cache->mdHt)
+				hashtable_destroy(cache->mdHt, 1);
+			if (cache->nsHt)
+				hashtable_destroy(cache->nsHt, 1);
+			if (cache->cacheMtx) {
+				if (need_mutex_destroy)
+					pthread_mutex_destroy(cache->cacheMtx);
+				free(cache->cacheMtx);
+			}
+			free(cache);
+			cache = NULL;
+		}
+	}
 	return cache;
 }
 
@@ -974,6 +1071,182 @@ static void cacheFree(struct cache_s *cache)
 	pthread_mutex_destroy(cache->cacheMtx);
 	free(cache->cacheMtx);
 	free(cache);
+}
+
+/* must be called with cache->cacheMtx held */
+/* assumes caller has reference to jso (json_object_get or is a new object) */
+static struct cache_entry_s *cache_entry_new(time_t ttl, struct fjson_object *jso)
+{
+	DEFiRet;
+	struct cache_entry_s *cache_entry = NULL;
+
+	CHKmalloc(cache_entry = malloc(sizeof(struct cache_entry_s)));
+	cache_entry->ttl = ttl;
+	cache_entry->data = (void *)jso;
+finalize_it:
+	if (iRet) {
+		free(cache_entry);
+		cache_entry = NULL;
+	}
+	return cache_entry;
+}
+
+static int cache_delete_expired_entries(wrkrInstanceData_t *pWrkrData, int isnsmd, time_t now)
+{
+	struct hashtable *ht = isnsmd ? pWrkrData->pData->cache->nsHt : pWrkrData->pData->cache->mdHt;
+	struct hashtable_itr *itr = NULL;
+	int more;
+
+	if ((pWrkrData->pData->cacheExpireInterval < 0) || (now < pWrkrData->pData->cache->expirationTime)) {
+		return 0; /* not enabled or not time yet */
+	}
+
+	/* set next expiration time */
+	pWrkrData->pData->cache->expirationTime = now + pWrkrData->pData->cacheExpireInterval;
+
+	if (hashtable_count(ht) < 1)
+		return 1; /* expire interval hit but nothing to do */
+
+	itr = hashtable_iterator(ht);
+	if (NULL == itr)
+		return 1; /* expire interval hit but nothing to do - err? */
+
+	do {
+		struct cache_entry_s *cache_entry = (struct cache_entry_s *)hashtable_iterator_value(itr);
+
+		if (now >= cache_entry->ttl) {
+			cache_entry_free(cache_entry);
+			if (isnsmd) {
+				STATSCOUNTER_DEC(pWrkrData->namespaceCacheNumEntries,
+						 pWrkrData->mutNamespaceCacheNumEntries);
+			} else {
+				STATSCOUNTER_DEC(pWrkrData->podCacheNumEntries,
+						 pWrkrData->mutPodCacheNumEntries);
+			}
+			more = hashtable_iterator_remove(itr);
+		} else {
+			more = hashtable_iterator_advance(itr);
+		}
+	} while (more);
+	free(itr);
+	dbgprintf("mmkubernetes: cache_delete_expired_entries: cleaned [%s] cache - size is now [%llu]\n",
+		  isnsmd ? "namespace" : "pod",
+		  isnsmd ? pWrkrData->namespaceCacheNumEntries : pWrkrData->podCacheNumEntries);
+	return 1;
+}
+
+/* must be called with cache->cacheMtx held */
+static struct fjson_object *
+cache_entry_get(wrkrInstanceData_t *pWrkrData,
+		int isnsmd, const char *key, time_t now)
+{
+	struct fjson_object *jso = NULL;
+	struct cache_entry_s *cache_entry = NULL;
+	int checkttl = 1;
+	struct hashtable *ht = isnsmd ? pWrkrData->pData->cache->nsHt : pWrkrData->pData->cache->mdHt;
+
+	/* see if it is time for a general cache expiration */
+	if (cache_delete_expired_entries(pWrkrData, isnsmd, now))
+		checkttl = 0; /* no need to check ttl now */
+	cache_entry = (struct cache_entry_s *)hashtable_search(ht, (void *)key);
+	if (cache_entry && checkttl && (now >= cache_entry->ttl)) {
+		cache_entry = (struct cache_entry_s *)hashtable_remove(ht, (void *)key);
+		if (isnsmd) {
+			STATSCOUNTER_DEC(pWrkrData->namespaceCacheNumEntries,
+					 pWrkrData->mutNamespaceCacheNumEntries);
+		} else {
+			STATSCOUNTER_DEC(pWrkrData->podCacheNumEntries,
+					 pWrkrData->mutPodCacheNumEntries);
+		}
+		cache_entry_free(cache_entry);
+		cache_entry = NULL;
+	}
+	if (cache_entry) {
+		jso = (struct fjson_object *)cache_entry->data;
+		if (isnsmd) {
+			STATSCOUNTER_INC(pWrkrData->namespaceCacheHits,
+					 pWrkrData->mutNamespaceCacheHits);
+		} else {
+			STATSCOUNTER_INC(pWrkrData->podCacheHits,
+					 pWrkrData->mutPodCacheHits);
+		}
+		dbgprintf("mmkubernetes: cache_entry_get: cache hit for [%s] cache key [%s] - hits is now [%llu]\n",
+			  isnsmd ? "namespace" : "pod", key,
+			  isnsmd ? pWrkrData->namespaceCacheHits : pWrkrData->podCacheHits);
+	} else {
+		if (isnsmd) {
+			STATSCOUNTER_INC(pWrkrData->namespaceCacheMisses,
+					 pWrkrData->mutNamespaceCacheMisses);
+		} else {
+			STATSCOUNTER_INC(pWrkrData->podCacheMisses,
+					 pWrkrData->mutPodCacheMisses);
+		}
+		dbgprintf("mmkubernetes: cache_entry_get: cache miss for [%s] cache key [%s] - misses is now [%llu]\n",
+			  isnsmd ? "namespace" : "pod", key,
+			  isnsmd ? pWrkrData->namespaceCacheMisses : pWrkrData->podCacheMisses);
+	}
+
+	return jso;
+}
+
+/* must be called with cache->cacheMtx held */
+/* key is passed in - caller must copy or otherwise ensure it is ok to pass off
+ * ownership
+ */
+static rsRetVal
+cache_entry_add(wrkrInstanceData_t *pWrkrData,
+		int isnsmd, const char *key, struct fjson_object *jso, time_t now)
+{
+	DEFiRet;
+	struct cache_entry_s *cache_entry = NULL;
+	struct hashtable *ht = isnsmd ? pWrkrData->pData->cache->nsHt : pWrkrData->pData->cache->mdHt;
+
+	/* see if it is time for a general cache expiration */
+	(void)cache_delete_expired_entries(pWrkrData, isnsmd, now);
+	CHKmalloc(cache_entry = cache_entry_new(now + pWrkrData->pData->cacheEntryTTL, jso));
+	if (cache_entry) {
+		if (!hashtable_insert(ht, (void *)key, cache_entry))
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+
+		if (isnsmd) {
+			STATSCOUNTER_INC(pWrkrData->namespaceCacheNumEntries,
+					 pWrkrData->mutNamespaceCacheNumEntries);
+		} else {
+			STATSCOUNTER_INC(pWrkrData->podCacheNumEntries,
+					 pWrkrData->mutPodCacheNumEntries);
+		}
+		cache_entry = NULL;
+	}
+finalize_it:
+	if (cache_entry)
+		cache_entry_free(cache_entry);
+	return iRet;
+}
+
+/* must be called with cache->cacheMtx held */
+static struct fjson_object *cache_entry_get_md(wrkrInstanceData_t *pWrkrData, const char *key, time_t now)
+{
+	return cache_entry_get(pWrkrData, 0, key, now);
+}
+
+/* must be called with cache->cacheMtx held */
+static struct fjson_object *cache_entry_get_nsmd(wrkrInstanceData_t *pWrkrData, const char *key, time_t now)
+{
+	return cache_entry_get(pWrkrData, 1, key, now);
+}
+
+/* must be called with cache->cacheMtx held */
+static rsRetVal cache_entry_add_md(wrkrInstanceData_t *pWrkrData, const char *key,
+				   struct fjson_object *jso, time_t now)
+{
+	return cache_entry_add(pWrkrData, 0, key, jso, now);
+}
+
+/* must be called with cache->cacheMtx held */
+static rsRetVal cache_entry_add_nsmd(wrkrInstanceData_t *pWrkrData, const char *key,
+				     struct fjson_object *jso, time_t now)
+{
+	return cache_entry_add(pWrkrData, 1, key, jso, now);
 }
 
 
@@ -1008,6 +1281,8 @@ CODESTARTnewActInst
 	pData->skipVerifyHost = loadModConf->skipVerifyHost;
 	pData->busyRetryInterval = loadModConf->busyRetryInterval;
 	pData->sslPartialChain = loadModConf->sslPartialChain;
+	pData->cacheEntryTTL = loadModConf->cacheEntryTTL;
+	pData->cacheExpireInterval = loadModConf->cacheExpireInterval;
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
 		if(!pvals[i].bUsed) {
 			continue;
@@ -1147,6 +1422,10 @@ CODESTARTnewActInst
 			LogMsg(0, RS_RET_VALUE_NOT_IN_THIS_MODE, LOG_INFO,
 					"sslpartialchain is only supported for OpenSSL\n");
 #endif
+		} else if(!strcmp(actpblk.descr[i].name, "cacheentryttl")) {
+			pData->cacheEntryTTL = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "cacheexpireinterval")) {
+			pData->cacheExpireInterval = pvals[i].val.d.n;
 		} else {
 			dbgprintf("mmkubernetes: program error, non-handled "
 				"param '%s' in action() block\n", actpblk.descr[i].name);
@@ -1170,6 +1449,16 @@ CODESTARTnewActInst
 			loadModConf->fnRules, loadModConf->fnRulebase));
 	CHKiRet(set_lnctx(&pData->contCtxln, pData->contRules, pData->contRulebase,
 			loadModConf->contRules, loadModConf->contRulebase));
+
+	if ((pData->cacheExpireInterval > -1)) {
+		if ((pData->cacheEntryTTL < 0)) {
+			LogError(0, RS_RET_CONFIG_ERROR,
+					"mmkubernetes: cacheentryttl value [%d] is invalid - "
+					"value must be 0 or greater",
+					pData->cacheEntryTTL);
+			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+		}
+	}
 
 	if(pData->kubernetesUrl == NULL) {
 		if(loadModConf->kubernetesUrl == NULL) {
@@ -1218,7 +1507,7 @@ CODESTARTnewActInst
 	if(caches[i] != NULL) {
 		pData->cache = caches[i];
 	} else {
-		CHKmalloc(pData->cache = cacheNew(pData->kubernetesUrl));
+		CHKmalloc(pData->cache = cacheNew(pData));
 
 		CHKmalloc(caches = realloc(caches, (i + 2) * sizeof(struct cache_s *)));
 		caches[i] = pData->cache;
@@ -1313,6 +1602,8 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tcontainerrules='%s'\n", pData->contRules);
 #endif
 	dbgprintf("\tbusyretryinterval='%d'\n", pData->busyRetryInterval);
+	dbgprintf("\tcacheentryttl='%d'\n", pData->cacheEntryTTL);
+	dbgprintf("\tcacheexpireinterval='%d'\n", pData->cacheExpireInterval);
 ENDdbgPrintInstInfo
 
 
@@ -1418,7 +1709,7 @@ finalize_it:
 
 
 static rsRetVal
-queryKB(wrkrInstanceData_t *pWrkrData, char *url, struct json_object **rply)
+queryKB(wrkrInstanceData_t *pWrkrData, char *url, time_t now, struct json_object **rply)
 {
 	DEFiRet;
 	CURLcode ccode;
@@ -1427,8 +1718,6 @@ queryKB(wrkrInstanceData_t *pWrkrData, char *url, struct json_object **rply)
 	long resp_code = 400;
 
 	if (pWrkrData->pData->cache->lastBusyTime) {
-		time_t now;
-		datetime.GetTime(&now);
 		now -= pWrkrData->pData->cache->lastBusyTime;
 		if (now < pWrkrData->pData->busyRetryInterval) {
 			LogMsg(0, RS_RET_RETRY, LOG_DEBUG,
@@ -1483,8 +1772,6 @@ queryKB(wrkrInstanceData_t *pWrkrData, char *url, struct json_object **rply)
 	}
 	if(resp_code == 429) {
 		if (pWrkrData->pData->busyRetryInterval) {
-			time_t now;
-			datetime.GetTime(&now);
 			pWrkrData->pData->cache->lastBusyTime = now;
 		}
 
@@ -1544,11 +1831,14 @@ BEGINdoAction
 	struct json_object *jMetadata = NULL, *jMetadataCopy = NULL, *jMsgMeta = NULL,
 			*jo = NULL;
 	int add_pod_metadata = 1;
+	time_t now;
+
 CODESTARTdoAction
 	CHKiRet_Hdlr(extractMsgMetadata(pMsg, pWrkrData->pData, &jMsgMeta)) {
 		ABORT_FINALIZE((iRet == RS_RET_NOT_FOUND) ? RS_RET_OK : iRet);
 	}
 
+	datetime.GetTime(&now);
 	STATSCOUNTER_INC(pWrkrData->k8sRecordSeen, pWrkrData->mutK8sRecordSeen);
 
 	if (fjson_object_object_get_ex(jMsgMeta, "pod_name", &jo))
@@ -1573,14 +1863,14 @@ CODESTARTdoAction
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	pthread_mutex_lock(pWrkrData->pData->cache->cacheMtx);
-	jMetadata = hashtable_search(pWrkrData->pData->cache->mdHt, mdKey);
+	jMetadata = cache_entry_get_md(pWrkrData, mdKey, now);
 
 	if(jMetadata == NULL) {
 		char *url = NULL;
 		struct json_object *jReply = NULL, *jo2 = NULL, *jNsMeta = NULL, *jPodData = NULL;
 
 		/* check cache for namespace metadata */
-		jNsMeta = hashtable_search(pWrkrData->pData->cache->nsHt, (char *)ns);
+		jNsMeta = cache_entry_get_nsmd(pWrkrData, (const char *)ns, now);
 
 		if(jNsMeta == NULL) {
 			/* query kubernetes for namespace info */
@@ -1591,7 +1881,7 @@ CODESTARTdoAction
 				pthread_mutex_unlock(pWrkrData->pData->cache->cacheMtx);
 				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 			}
-			iRet = queryKB(pWrkrData, url, &jReply);
+			iRet = queryKB(pWrkrData, url, now, &jReply);
 			free(url);
 			if (iRet == RS_RET_NOT_FOUND) {
 				/* negative cache namespace - make a dummy empty namespace metadata object */
@@ -1634,7 +1924,8 @@ CODESTARTdoAction
 			}
 
 			if(jNsMeta) {
-				hashtable_insert(pWrkrData->pData->cache->nsHt, strdup(ns), jNsMeta);
+				if ((iRet = cache_entry_add_nsmd(pWrkrData, strdup(ns), jNsMeta, now)))
+					ABORT_FINALIZE(iRet);
 			}
 			json_object_put(jReply);
 			jReply = NULL;
@@ -1646,7 +1937,7 @@ CODESTARTdoAction
 			pthread_mutex_unlock(pWrkrData->pData->cache->cacheMtx);
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		}
-		iRet = queryKB(pWrkrData, url, &jReply);
+		iRet = queryKB(pWrkrData, url, now, &jReply);
 		free(url);
 		if (iRet == RS_RET_NOT_FOUND) {
 			/* negative cache pod - make a dummy empty pod metadata object */
@@ -1717,7 +2008,8 @@ CODESTARTdoAction
 		json_object_object_add(jMetadata, "docker", jo);
 
 		if (add_pod_metadata) {
-			hashtable_insert(pWrkrData->pData->cache->mdHt, mdKey, jMetadata);
+			if ((iRet = cache_entry_add_md(pWrkrData, mdKey, jMetadata, now)))
+				ABORT_FINALIZE(iRet);
 			mdKey = NULL;
 		}
 	}

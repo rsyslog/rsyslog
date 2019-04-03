@@ -221,7 +221,7 @@
 #ifdef HAVE_ATOMIC_BUILTINS64
 #	define ATOMIC_INC_uint64(data, phlpmut) ((void) __sync_fetch_and_add(data, 1))
 #	define ATOMIC_ADD_uint64(data, phlpmut, value) ((void) __sync_fetch_and_add(data, value))
-#	define ATOMIC_DEC_unit64(data, phlpmut) ((void) __sync_sub_and_fetch(data, 1))
+#	define ATOMIC_DEC_uint64(data, phlpmut) ((void) __sync_sub_and_fetch(data, 1))
 #	define ATOMIC_INC_AND_FETCH_uint64(data, phlpmut) __sync_fetch_and_add(data, 1)
 
 #	define DEF_ATOMIC_HELPER_MUT64(x)
