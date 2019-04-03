@@ -12,6 +12,27 @@ Version 8.1904.0 (aka 2019.04) 2019-04-16
   for testing. The default value is off, meaning, the hostname
   will be verified by default.
   Thanks to Richard Megginson for the patch.
+- mmkubernetes - support for metadata cache expiration
+  New parameters for mmkubernetes (module and action):
+  * `cacheexpireinterval`
+    If `cacheexpireinterval` is -1, then do not check for cache expiration.
+    If `cacheexpireinterval` is 0, then check for cache expiration.
+    If `cacheexpireinterval` is greater than 0, check for cache expiration
+    if the last time we checked was more than this many seconds ago.
+  * `cacheentryttl` - maximum age in seconds for cache entries
+  New statistics counters:
+  * `podcachenumentries` - the number of entries in the pod metadata cache.
+  * `namespacecachenumentries` - the number of entries in the namespace
+      metadata cache.
+  * `podcachehits` - the number of times a requested entry was found in the
+      pod metadata cache.
+  * `namespacecachehits` - the number of times a requested entry was found
+      in the namespace metadata cache.
+  * `podcachemisses` - the number of times a requested entry was not found
+      in the pod metadata cache, and had to be requested from Kubernetes.
+  * `namespacecachemisses` - the number of times a requested entry was not
+      found in the namespace metadata cache, and had to be requested from
+      Kubernetes.
 - imdocker: new contributed module
   imdocker will get (docker) container logs from a host as well as filling
   out some basic container metadata as id, name, image, labels.
