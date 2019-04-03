@@ -222,6 +222,22 @@ If `"on"`, this will set the curl `CURLOPT_SSL_VERIFYPEER` option to
 `0`.  You are strongly discouraged to set this to `"on"`.  It is
 primarily useful only for debugging or testing.
 
+.. _skipverifyhost:
+
+skipverifyhost
+^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "boolean", "off", "no", "none"
+
+If `"on"`, this will set the curl `CURLOPT_SSL_VERIFYHOST` option to
+`0`.  You are strongly discouraged to set this to `"on"`.  It is
+primarily useful only for debugging or testing.
+
 .. _de_dot:
 
 de_dot
