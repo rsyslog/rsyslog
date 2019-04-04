@@ -207,8 +207,10 @@ void osslLastSSLErrorMsg(int ret, SSL *ssl, int severity, const char* pszCallSou
 		if(iSSLErr == SSL_ERROR_SSL) {
 			LogMsg(0, RS_RET_NO_ERRCODE, severity, "SSL_ERROR_SSL in '%s'", pszCallSource);
 		} else if(iSSLErr == SSL_ERROR_SYSCALL){
+			/* SSL doc says: For socket I/O on Unix systems, consult errno for details, so it
+			* is save to use errno in this case */
+			LogMsg(errno, RS_RET_NO_ERRCODE, severity, "SSL_ERROR_SYSCALL in '%s'", pszCallSource);
 
-			LogMsg(0, RS_RET_NO_ERRCODE, severity, "SSL_ERROR_SYSCALL in '%s'", pszCallSource);
 		} else {
 			LogMsg(0, RS_RET_NO_ERRCODE, severity, "SSL_ERROR_UNKNOWN in '%s', SSL_get_error: '%s(%d)'",
 				pszCallSource, ERR_error_string(iSSLErr, NULL), iSSLErr);
