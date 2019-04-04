@@ -695,10 +695,15 @@ endif #if ENABLE_JOURNAL_TESTS
 
 if ENABLE_IMPROG
 TESTS +=  \
-	improg_errmsg_no_params.sh
+	improg_errmsg_no_params.sh \
+	improg_prog_simple.sh \
+	improg_prog_confirm.sh \
+	improg_prog_confirm_killonclose.sh \
+	improg_prog_killonclose.sh
 if HAVE_VALGRIND
 TESTS +=  \
-	improg_errmsg_no_params-vg.sh
+	improg_errmsg_no_params-vg.sh \
+	improg_prog_simple-vg.sh
 endif # ENABLE_IMPROG
 endif
 
@@ -1792,7 +1797,7 @@ EXTRA_DIST= \
 	sndrcv_relp_rebind.sh \
 	sndrcv_relp_tls_prio.sh \
 	sndrcv_relp_tls.sh \
-        sndrcv_relp_tls_certvalid.sh \
+	sndrcv_relp_tls_certvalid.sh \
 	relp_tls_certificate_not_found.sh \
 	omrelp_wrong_authmode.sh \
 	imrelp-tls.sh \
@@ -1808,8 +1813,14 @@ EXTRA_DIST= \
 	action-tx-errfile.sh \
 	testsuites/action-tx-errfile.result \
 	pipeaction.sh \
+	improg-simul.sh \
 	improg_errmsg_no_params.sh \
 	improg_errmsg_no_params-vg.sh \
+	improg_prog_simple.sh \
+	improg_prog_confirm.sh \
+	improg_prog_confirm_killonclose.sh \
+	improg_prog_killonclose.sh \
+	improg_prog_simple-vg.sh \
 	omhttp-auth.sh \
 	omhttp-basic.sh \
 	omhttp-batch-fail-with-400.sh \
