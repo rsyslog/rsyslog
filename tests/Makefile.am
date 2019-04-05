@@ -1129,6 +1129,11 @@ TESTS += \
 	omruleset-queue.sh
 endif
 
+if ENABLE_PMDB2DIAG
+TESTS += \
+	pmdb2diag_parse.sh
+endif
+
 if ENABLE_PMSNARE
 TESTS += \
 	pmsnare-default.sh \

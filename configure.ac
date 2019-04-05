@@ -1621,6 +1621,18 @@ AC_ARG_ENABLE(imbatchreport,
 )
 AM_CONDITIONAL(ENABLE_IMBATCHREPORT, test x$enable_imbatchreport = xyes)
 
+# settings for the db2diag parser module
+AC_ARG_ENABLE(pmdb2diag,
+        [AS_HELP_STRING([--enable-pmdb2diag],[db2diag parser module enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_pmdb2diag="yes" ;;
+          no) enable_pmdb2diag="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pmdb2diag) ;;
+         esac],
+        [enable_pmdb2diag=no]
+)
+AM_CONDITIONAL(ENABLE_PMDB2DIAG, test x$enable_pmdb2diag = xyes)
+
 # settings for the file input module
 AC_ARG_ENABLE(imfile,
         [AS_HELP_STRING([--enable-imfile],[file input module enabled @<:@default=no@:>@])],
@@ -2485,6 +2497,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/improg/Makefile \
 		contrib/mmtaghostname/Makefile \
 		contrib/imdocker/Makefile \
+		contrib/pmdb2diag/Makefile \
 		tests/Makefile])
 AC_OUTPUT
 
@@ -2554,6 +2567,7 @@ echo "    pmnull module will be compiled:           $enable_pmnull"
 echo "    pmnormalize module will be compiled:      $enable_pmnormalize"
 echo "    pmaixforwardedfrom module w.be compiled:  $enable_pmaixforwardedfrom"
 echo "    pmsnare module will be compiled:          $enable_pmsnare"
+echo "    pmdb2diag module will be compiled:        $enable_pmdb2diag"
 echo "    pmpanngfw module will be compiled:        $enable_pmpanngfw"
 echo
 echo "---{ message modification modules }---"
