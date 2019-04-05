@@ -684,12 +684,12 @@ act_obj_add(fs_edge_t *const edge, const char *const name, const int is_file,
 			}
 		}
 	}
-	DBGPRINTF("need to add new active object '%s' in '%s' - checking if accessible\n", name, edge->path);
-	const int fd = open(name, O_RDONLY | O_CLOEXEC);
-	if(fd < 0) {
-		LogMsg(errno, RS_RET_ERR, LOG_WARNING, "imfile: error accessing file '%s'", name);
-		FINALIZE;
-	}
+	//DBGPRINTF("need to add new active object '%s' in '%s' - checking if accessible\n", name, edge->path);
+	//const int fd = open(name, O_RDONLY | O_CLOEXEC);
+	//if(fd < 0) {
+	//	LogMsg(errno, RS_RET_ERR, LOG_WARNING, "imfile: error accessing file '%s'", name);
+	//	FINALIZE;
+	//}
 	DBGPRINTF("add new active object '%s' in '%s'\n", name, edge->path);
 	CHKmalloc(act = calloc(sizeof(act_obj_t), 1));
 	CHKmalloc(act->name = strdup(name));
@@ -700,7 +700,7 @@ act_obj_add(fs_edge_t *const edge, const char *const name, const int is_file,
 	}
 	act->edge = edge;
 	act->ino = ino;
-	act->fd = fd;
+	//act->fd = fd;
 	act->file_id[0] = '\0';
 	act->is_symlink = is_symlink;
 	if (source) { /* we are target of symlink */
@@ -826,10 +826,10 @@ process_symlink(fs_edge_t *const chld, const char *symlink)
 					"imfile: process_symlink: cannot stat directory '%s' - ignored", parent);
 				FINALIZE;
 			}
-			if (chld->parent->root->edges) {
+			//if (chld->parent->root->edges) {
 				DBGPRINTF("process_symlink: adding parent '%s' of target '%s'\n", parent, target);
 				act_obj_add(chld->parent->root->edges, parent, 0, fileInfo.st_ino, 0, NULL);
-			}
+			//}
 		}
 	}
 
