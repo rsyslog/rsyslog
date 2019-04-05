@@ -801,8 +801,8 @@ endif
 
 if ENABLE_IMDOCKER
 if ENABLE_IMDOCKER_TESTS
+#imdocker-unittests.sh  defunct, see https://github.com/rsyslog/rsyslog/issues/3596
 TESTS += \
-	imdocker-unittests.sh \
 	imdocker-basic.sh \
 	imdocker-long-logline.sh \
 	imdocker-new-logs-from-start.sh \

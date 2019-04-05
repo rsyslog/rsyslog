@@ -5,13 +5,13 @@
 . ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
+$DebugLevel 2
+$DebugFile '$RSYSLOG_OUT_LOG'
 module(load="../contrib/imdocker/.libs/imdocker")
 '
 
-# enable debug output
-export RS_REDIR=-d
-startup > $RSYSLOG_OUT_LOG
-wait_shutdown
+startup
+shutdown_when_empty
 
 grep "\\[imdocker unit test\\] all unit tests pass\\."  $RSYSLOG_OUT_LOG > /dev/null
 if [ $? -ne 0 ]; then
