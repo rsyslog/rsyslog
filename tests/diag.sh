@@ -838,6 +838,8 @@ quit"
 	unset out_pid
 	if [ "$(ls core.* 2>/dev/null)" != "" ]; then
 	   printf 'ABORT! core file exists (maybe from a parallel run!)\n'
+	   pwd
+	   ls -l core.*
 	   error_exit  1
 	fi
 }
