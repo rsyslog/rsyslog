@@ -1334,7 +1334,7 @@ get_inode() {
 		printf 'FAIL: file "%s" does not exist in get_inode\n' "$1"
 		error_exit 100
 	fi
-	python -c 'import os; import stat; print os.lstat("'$1'")[stat.ST_INO]'
+	python -c 'import os; import stat; print(os.lstat("'$1'")[stat.ST_INO])'
 }
 
 
