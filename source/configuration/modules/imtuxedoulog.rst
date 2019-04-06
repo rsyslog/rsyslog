@@ -19,8 +19,8 @@ Tuxedo create an ULOG file each new log of the day this file is defined
 - a suffix based on the date ".MMDDYY"
 
 This module is a copy of the polling mode of imfile but the file name is
-computed each polling. The previous one is closed to avoid to much active
-file descriptor simultaneously.
+computed each polling. The previous one is closed to limit the number of
+opened file descriptor simultaneously.
 
 Another particularity of ULOG is that the lines contains only the time in
 day. So the module use the date in filename and time in log to fill log
@@ -102,7 +102,7 @@ PersistStateInterval
    :widths: auto
    :class: parameter-table
 
-   "integer", "0", "no", "``$InputFilePersistStateInterval``"
+   "integer", "0", "no", 
 
 Specifies how often the state file shall be written when processing
 the input file. The **default** value is 0, which means a new state
@@ -122,23 +122,11 @@ MaxLinesAtOnce
    :widths: auto
    :class: parameter-table
 
-   "integer", "0", "no", "``$InputFileMaxLinesAtOnce``"
+   "integer", "0", "no", 
 
-This is a legacy setting that only is supported in *polling* mode.
-In *inotify* mode, it is fixed at 0 and all attempts to configure
-a different value will be ignored, but will generate an error
-message.
-
-Please note that future versions of imfile may not support this
-parameter at all. So it is suggested to not use it.
-
-In *polling* mode, if set to 0, each file will be fully processed and
-then processing switches to the next file. If it is set to any other
-value, a maximum of [number] lines is processed in sequence for each file,
-and then the file is switched. This provides a kind of mutiplexing
-the load of multiple files and probably leads to a more natural
-distribution of events when multiple busy files are monitored. For
-*polling* mode, the **default** is 10240.
+If set to 0, the file will be fully processed. If it is set to any other
+value, a maximum of [number] lines is processed in sequence. The **default**
+is 10240.
 
 MaxSubmitAtOnce
 ^^^^^^^^^^^^^^^
@@ -151,7 +139,7 @@ MaxSubmitAtOnce
    "integer", "1024", "no", "none"
 
 This is an expert option. It can be used to set the maximum input
-batch size that imfile can generate. The **default** is 1024, which
+batch size that the module can generate. The **default** is 1024, which
 is suitable for a wide range of applications. Be sure to understand
 rsyslog message batch processing before you modify this option. If
 you do not know what this doc here talks about, this is a good

@@ -11,19 +11,23 @@ improg: Program integration input module
 Purpose
 =======
 
-This module allows rsyslog to spawn an external command and consume message
-from a pipe (stdout of the external process).
+This module allows rsyslog to spawn external command(s) and consume message
+from pipe(s) (stdout of the external process).
 
 **Limitation:** `select()` seems not to support usage of `printf(...)` or
 `fprintf(stdout,...)`. Only `write(STDOUT_FILENO,...)` seems to be efficient.
 
 The imput module consume pipes form all external programs in a mono-threaded
-`runInput` method. This means that data treatment is serial.
+`runInput` method. This means that data treatments will be serialized.
 
 Optionally, the module manage the external program through keyword sent to
-it using a another pipe.
+it using a second pipe to stdin of the external process.
 
-An operational sample can be found @ "github.com/phduveau/jsonperfmon"
+An operational sample in C can be found @ "github.com/phduveau/jsonperfmon"
+
+Also a bash's script is provided as tests/improg-simul.sh. The `echo` and `read` (built-in) can be used to communicate with the module.
+External commands can not be used to communicate. `printf` is unable to send data directly to the module but can used through a variable and `echo`.
+
 
 Compile
 =======

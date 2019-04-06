@@ -207,7 +207,7 @@ cases.
         programkey="SHELL" timestampkey="START"
      )
 
-The example show the delete action. All files corresponding to 
+The example show the rename action. All files corresponding to 
 "/test/\*.ok" will be treated as batch reports and will be renamed
 from <file>.ok to <file>.sent on success or 
 renamed from <file>.ok to <file>.rejected in other cases.
