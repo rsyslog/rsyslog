@@ -1150,7 +1150,8 @@ createMsgFromRequest(const char *request, context *ctx, smsg_t **msg, fjson_obje
 		const size_t msgLen = (size_t)json_object_get_string_len(jo_msg);
 		MsgSetRawMsg(*msg, rawmsg, msgLen);
 	} else {
-		MsgSetRawMsg(*msg, request, strlen(request));
+		/* use entire data part of request as rawmsg */
+		MsgSetRawMsg(*msg, datastart, datalen);
 	}
 	MsgSetMSGoffs(*msg, 0);	/* we do not have a header... */
 	MsgSetTAG(*msg, (const uchar *)"omes", 4);
