@@ -419,6 +419,10 @@ if ENABLE_LIBGCRYPT
 DISTCHECK_CONFIGURE_FLAGS+= --enable-libgcrypt
 endif
 
+if ENABLE_OMHTTP
+DISTCHECK_CONFIGURE_FLAGS+= --enable-omhttp
+endif
+
 if ENABLE_OMHTTPFS
 DISTCHECK_CONFIGURE_FLAGS+= --enable-omhttpfs
 endif
