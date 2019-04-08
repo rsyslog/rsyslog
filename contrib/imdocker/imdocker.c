@@ -63,8 +63,7 @@ MODULE_CNFNAME("imdocker")
 extern int Debug;
 
 #define USE_MULTI_LINE
-//#define ENABLE_DEBUG_BYTE_BUFFER
-//#define ENABLE_IMDOCKER_UNIT_TESTS
+#undef ENABLE_DEBUG_BYTE_BUFFER
 
 /* defines */
 #define DOCKER_TAG_NAME                     "docker:"
@@ -87,10 +86,6 @@ extern int Debug;
 
 #define DFLT_SEVERITY pri2sev(LOG_INFO)
 #define DFLT_FACILITY pri2fac(LOG_USER)
-
-#ifdef ENABLE_IMDOCKER_UNIT_TESTS
-#include "imdocker_unit_tests.h"
-#endif
 
 enum {
 	dst_invalid = -1,
@@ -213,11 +208,6 @@ static size_t imdocker_container_list_curlCB(void *data, size_t size, size_t nme
 static size_t imdocker_container_logs_curlCB(void *data, size_t size, size_t nmemb, void *buffer);
 static sbool get_stream_info(const uchar* data, size_t size, int8_t *stream_type, size_t *payload_size);
 static int8_t is_valid_stream_type(int8_t stream_type);
-
-/* unit tests */
-#ifdef ENABLE_IMDOCKER_UNIT_TESTS
-static void UnitTests_imdocker_run(void);
-#endif
 
 /* Module static data */
 DEF_IMOD_STATIC_DATA
@@ -935,9 +925,6 @@ ENDendCnfLoad
 
 BEGINcheckCnf
 CODESTARTcheckCnf
-#ifdef ENABLE_IMDOCKER_UNIT_TESTS
-	UnitTests_imdocker_run();
-#endif
 ENDcheckCnf
 
 BEGINactivateCnf
@@ -1395,85 +1382,6 @@ finalize_it:
 	}
 	return realsize;
 }
-
-#ifdef ENABLE_IMDOCKER_UNIT_TESTS
-/*
- * Following checks the imdocker_container_logs_curlCB(), which is the callback from
- * curl to stream the container log data.
- */
-static unit_test_data_t* s_current_test=NULL;
-static sbool s_unit_test_submit_successful=0;
-
-static void
-unit_test_init(unit_test_data_t *data) {
-	s_current_test = data;
-	s_unit_test_submit_successful=0;
-}
-
-static rsRetVal
-UnitTestSubmitMsg(docker_cont_logs_inst_t __attribute__((unused)) *pInst,
-		docker_cont_logs_buf_t *pBufData, const uchar* __attribute__((unused)) pszTag) {
-	assert(pszTag);
-
-	if (s_current_test->reference_text_len != pBufData->buf->len) {
-		DBGPRINTF("[imdocker unit test] TEST FAILURE, reference_text length does not match!\n");
-		assert(0);
-		return RS_RET_ERR;
-	}
-	if (strcmp(s_current_test->reference_text, (char*)pBufData->buf->data) != 0) {
-		DBGPRINTF("[imdocker unit test] TEST FAILURE, reference_text does not match!\n");
-		assert(0);
-		return RS_RET_ERR;
-	}
-	s_unit_test_submit_successful=1;
-
-	return RS_RET_OK;
-}
-
-static sbool
-UnitTestInput_imdocker_container_logs_curlCB(unit_test_data_t *data, docker_cont_logs_inst_t *pInst) {
-	for (size_t i = 0; i < data->frame_count; i++) {
-		size_t bytes = imdocker_container_logs_curlCB((void*)&data->test_frames[i].frame,
-				data->test_frames[i].size, 1, pInst);
-		if (bytes != data->test_frames[i].size) {
-			DBGPRINTF("[imdocker unit test] TEST FAILURE - mismatch bytes consumed: %lu, expected: %lu.\n",
-					bytes, data->test_frames[i].size);
-			s_unit_test_submit_successful = 0;
-		}
-	}
-	return s_unit_test_submit_successful;
-}
-
-static sbool
-UnitTest_imdocker_container_logs_curlCB(unit_test_data_t *test_data) {
-	docker_cont_logs_inst_t *pInst=NULL;
-	dockerContLogsInstNew(&pInst, "dummy_instance", NULL, UnitTestSubmitMsg);
-	dbgprintf("[imdocker unit test] '%s'...\n", test_data->name);
-	unit_test_init(test_data);
-	if (UnitTestInput_imdocker_container_logs_curlCB(test_data, pInst)) {
-		dbgprintf("[imdocker unit test] '%s' Passed.\n", test_data->name);
-	} else {
-		assert(0);
-		dbgprintf("[imdocker unit test] '%s' Failed.\n", test_data->name);
-		s_unit_test_submit_successful=0;
-	}
-	dockerContLogsInstDestruct(pInst);
-	return s_unit_test_submit_successful;
-}
-
-static void
-UnitTests_imdocker_run(void) {
-	DBGPRINTF("[imdocker unit test] Running unit tests...\n");
-	/* run all unit tests */
-	if (!UnitTest_imdocker_container_logs_curlCB(&unit_test_simple)) {
-		return;
-	}
-	if (!UnitTest_imdocker_container_logs_curlCB(&unit_test_large)) {
-		return;
-	}
-	DBGPRINTF("[imdocker unit test] all unit tests pass.\n");
-}
-#endif
 
 CURLcode docker_get(imdocker_req_t *req, const char* url) {
 	CURLcode ccode;

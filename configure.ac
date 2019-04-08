@@ -1687,9 +1687,6 @@ AC_ARG_ENABLE(imdocker-tests,
         [enable_imdocker_tests=no]
 )
 
-if test "x$enable_imdocker_tests" = "xyes"; then
-        CFLAGS="$CFLAGS -DENABLE_IMDOCKER_UNIT_TESTS"
-fi
 AM_CONDITIONAL(ENABLE_IMDOCKER_TESTS, test x$enable_imdocker_tests = xyes)
 
 
