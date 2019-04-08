@@ -36,6 +36,7 @@ RUN	dnf -y update && \
 	libmaxminddb-devel \
 	libnet \
 	libnet-devel \
+	librabbitmq-devel \
 	libtool \
 	libuuid-devel \
 	lsof \
@@ -151,6 +152,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-mmanon \
 	--enable-mmaudit \
 	--enable-mmcount \
+	--enable-mmdarwin \
 	--enable-mmdblookup \
 	--enable-mmfields \
 	--enable-mmjsonparse \
@@ -171,6 +173,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-omkafka \
 	--enable-ommongodb \
 	--enable-omprog \
+	--enable-omrabbitmq \
 	--enable-omrelp-default-port=13515 \
 	--enable-omruleset \
 	--enable-omstdout \
@@ -191,6 +194,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-usertools \
 	--enable-valgrind \
 	\
+	--enable-compile-warning=error \
 	--enable-testbench
 
 # build errors at the moment: --enable-kmsg 

@@ -36,6 +36,7 @@ RUN 	apt-get update && \
 	libmysqlclient-dev \
 	libnet1-dev \
 	libpcap-dev \
+	librabbitmq-dev \
 	libsnmp-dev \
 	libssl-dev libsasl2-dev \
 	libsystemd-dev \
@@ -165,6 +166,7 @@ ENV	SCAN_BUILD=scan-build \
 	ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-6.0/bin/llvm-symbolizer
 
 ENV RSYSLOG_CONFIGURE_OPTIONS \
+	--enable-compile-warning=error \
 	--enable-clickhouse \
 	--enable-clickhouse-tests=no \
 	--enable-elasticsearch \
@@ -192,6 +194,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-mmaudit \
 	--enable-mmcapture \
 	--enable-mmcount \
+	--enable-mmdarwin \
 	--enable-mmdblookup \
 	--enable-mmfields \
 	--enable-mmgrok \
@@ -215,6 +218,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-omkafka \
 	--enable-ommongodb \
 	--enable-omprog \
+	--enable-omrabbitmq \
 	--enable-omrelp-default-port=13515 \
 	--enable-omruleset \
 	--enable-omstdout \
