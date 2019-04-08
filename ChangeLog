@@ -12,6 +12,16 @@ Version 8.1904.0 (aka 2019.04) 2019-04-16
   for testing. The default value is off, meaning, the hostname
   will be verified by default.
   Thanks to Richard Megginson for the patch.
+- omelasticsearch: set rawmsg to data from original request
+  Previously, when constructing the message to submit for a retry
+  for an original request, if the original request did not contain
+  the field `message`, the system property `rawmsg` was set to
+  the entire metadata + data from the original request.  This was
+  causing problems with Elasticsearch.  This patch changes
+  the code so that the `rawmsg` will be set to only the data part
+  of the original request if there is no `message` field.
+  closes https://github.com/rsyslog/rsyslog/issues/3573
+  Thanks to Richard Megginson for the patch.
 - mmkubernetes - support for metadata cache expiration
   New parameters for mmkubernetes (module and action):
   * `cacheexpireinterval`
