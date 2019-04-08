@@ -786,9 +786,6 @@ dockerContainerInfoNew(docker_container_info_t **ppThis) {
 	*ppThis = pThis;
 
 finalize_it:
-	if (iRet != RS_RET_OK && pThis) {
-		dockerContainerInfoDestruct(pThis);
-	}
 	RETiRet;
 }
 
@@ -1365,15 +1362,10 @@ imdocker_container_logs_curlCB(void *data, size_t size, size_t nmemb, void *buff
 	}
 
 	/* allocate the expected payload size */
-	if (pDataBuf) {
-		CHKiRet(dockerContLogsBufWrite(pDataBuf, pread, write_size));
-		if (pDataBuf->bytes_remaining == 0) {
-			DBGPRINTF("%s() - write size is same as payload_size\n", __FUNCTION__);
-			/* NOTE: We do see if a log line gets extended beyond 16K
-			 * if (mem->data[mem->len-1] == imdocker_eol_char)
-			 */
-			req->submitMsg(pInst, pDataBuf, (const uchar*)DOCKER_TAG_NAME);
-		}
+	CHKiRet(dockerContLogsBufWrite(pDataBuf, pread, write_size));
+	if (pDataBuf->bytes_remaining == 0) {
+		DBGPRINTF("%s() - write size is same as payload_size\n", __FUNCTION__);
+		req->submitMsg(pInst, pDataBuf, (const uchar*)DOCKER_TAG_NAME);
 	}
 
 finalize_it:
