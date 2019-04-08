@@ -93,6 +93,9 @@ Version 8.1904.0 (aka 2019.04) 2019-04-16
   It looks like the soft limit became defunct when tcpflood was enhanced to
   request more open file handles from OS.
   closes https://github.com/rsyslog/rsyslog/issues/1108
+- testbench bugfix: omhttp tests were not run during "make distcheck"
+- build system bugfix: omhttp test files were not included in dist tarball
+  Thanks to Thomas D. (whissi) for the patch.
 ------------------------------------------------------------------------------
 Version 8.1903.0 (aka 2019.03) 2019-03-05
 - improg: create input module to use external program as input datas
