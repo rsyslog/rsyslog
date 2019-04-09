@@ -57,6 +57,8 @@ Version 8.1904.0 (aka 2019.04) 2019-04-16
   Thanks to Philippe Duveau for the contribution.
 - imtuxedolog: new contributed input module for Tuxedu ULOG
   Thanks to Philippe Duveau for the contribution.
+- improg bugfix: some memory leaks
+  Thanks to Philippe Duveau for the contribution.
 - msg object bugfix: regression from 1255a67
   closes https://github.com/rsyslog/rsyslog/issues/3570
 - omkafka bugfix: build failure due to inconsistent type
