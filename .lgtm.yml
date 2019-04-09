@@ -61,6 +61,7 @@ extraction:
           --enable-imbatchreport
           --enable-imdocker
           --enable-pmdb2diag
+          --enable-omrabbitmq
 
 queries:
   - include: cpp/commented-out-code

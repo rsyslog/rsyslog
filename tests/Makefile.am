@@ -821,6 +821,35 @@ endif # HAVE_VALGRIND
 endif # ENABLE_IMDOCKER_TESTS
 endif # ENABLE_IMDOCKER
 
+if ENABLE_OMRABBITMQ
+check_PROGRAMS += miniamqpsrvr
+miniamqpsrvr_SOURCES = miniamqpsrvr.c
+miniamqpsrvr_CPPFLAGS = $(PTHREADS_CFLAGS) $(RABBITMQ_CFLAGS) $(RSRT_CFLAGS)
+miniamqpsrvr_LDADD = $(SOL_LIBS) $(PTHREADS_LIBS)
+
+TESTS +=  \
+	omrabbitmq_no_params.sh \
+	omrabbitmq_params_missing0.sh \
+	omrabbitmq_params_missing1.sh \
+	omrabbitmq_params_missing2.sh \
+	omrabbitmq_params_invalid0.sh \
+	omrabbitmq_params_invalid1.sh \
+	omrabbitmq_params_invalid2.sh \
+	omrabbitmq_params_invalid3.sh \
+	omrabbitmq_data_1server.sh \
+	omrabbitmq_data_2servers.sh \
+	omrabbitmq_error_server0.sh \
+	omrabbitmq_error_server1.sh \
+	omrabbitmq_error_server2.sh \
+	omrabbitmq_error_server3.sh \
+	omrabbitmq_json.sh \
+	omrabbitmq_raw.sh
+if HAVE_VALGRIND
+TESTS += \
+	omrabbitmq_data_1server-vg.sh
+endif # HAVE_VALGRIND
+endif # ENABLE_OMRABBITMQ
+
 if ENABLE_IMPSTATS
 TESTS +=  \
 	impstats-hup.sh \
@@ -1518,6 +1547,23 @@ EXTRA_DIST= \
 	omfile-whitespace-filename.sh \
 	omfile-read-only.sh \
 	omfile_both_files_set.sh \
+	omrabbitmq_no_params.sh \
+	omrabbitmq_params_missing0.sh \
+	omrabbitmq_params_missing1.sh \
+	omrabbitmq_params_missing2.sh \
+	omrabbitmq_params_invalid0.sh \
+	omrabbitmq_params_invalid1.sh \
+	omrabbitmq_params_invalid2.sh \
+	omrabbitmq_params_invalid3.sh \
+	omrabbitmq_data_1server.sh \
+	omrabbitmq_data_1server-vg.sh \
+	omrabbitmq_data_2servers.sh \
+	omrabbitmq_error_server0.sh \
+	omrabbitmq_error_server1.sh \
+	omrabbitmq_error_server2.sh \
+	omrabbitmq_error_server3.sh \
+	omrabbitmq_json.sh \
+	omrabbitmq_raw.sh \
 	msgvar-concurrency.sh \
 	msgvar-concurrency-array.sh \
 	testsuites/msgvar-concurrency-array.rulebase \
