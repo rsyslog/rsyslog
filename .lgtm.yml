@@ -4,7 +4,7 @@ extraction:
       packages:
         - python-docutils
         - tcl-dev
-    
+
     configure:
       command:
         - autoreconf -fvi
@@ -61,6 +61,8 @@ extraction:
           --enable-imbatchreport
           --enable-imdocker
           --enable-mmdarwin
+          --enable-pmdb2diag
+          --enable-omrabbitmq
 
 queries:
   - include: cpp/commented-out-code

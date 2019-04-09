@@ -902,7 +902,7 @@ CheckConnection(nsd_t *pNsd)
 
 	rc = recv(pThis->sock, msgbuf, 1, MSG_DONTWAIT | MSG_PEEK);
 	if(rc == 0 && errno != EAGAIN) {
-		dbgprintf("CheckConnection detected broken connection - closing it\n");
+		dbgprintf("CheckConnection detected broken connection - closing it (rc %d, errno %d)\n", rc, errno);
 		/* in this case, the remote peer had shut down the connection and we
 		 * need to close our side, too.
 		 */

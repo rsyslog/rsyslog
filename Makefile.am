@@ -323,6 +323,11 @@ if ENABLE_MMTAGHOSTNAME
 SUBDIRS += contrib/mmtaghostname
 endif
 
+# imdb2diag
+if ENABLE_PMDB2DIAG
+SUBDIRS += contrib/pmdb2diag
+endif
+
 # tests are added as last element, because tests may need different
 # modules that need to be generated first
 SUBDIRS += tests
@@ -377,6 +382,10 @@ DISTCHECK_CONFIGURE_FLAGS+= \
 
 endif  # if ENABLE_DEFAULT_TESTS
 
+if ENABLE_IMPROG
+DISTCHECK_CONFIGURE_FLAGS+= --enable-improg
+endif
+
 if ENABLE_OMPROG
 DISTCHECK_CONFIGURE_FLAGS+= --enable-omprog
 endif
@@ -419,6 +428,10 @@ endif
 
 if ENABLE_LIBGCRYPT
 DISTCHECK_CONFIGURE_FLAGS+= --enable-libgcrypt
+endif
+
+if ENABLE_OMHTTP
+DISTCHECK_CONFIGURE_FLAGS+= --enable-omhttp
 endif
 
 if ENABLE_OMHTTPFS
@@ -515,6 +528,10 @@ endif
 
 if ENABLE_IMDOCKER
 DISTCHECK_CONFIGURE_FLAGS+= --enable-imdocker
+endif
+
+if ENABLE_OMRABBITMQ
+DISTCHECK_CONFIGURE_FLAGS+= --enable-omrabbitmq
 endif
 
 if ENABLE_DISTCHECK_WORKAROUND

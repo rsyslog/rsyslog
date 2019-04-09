@@ -22,17 +22,28 @@ module(load="../plugins/impstats/.libs/impstats" interval="1"
 	   log.file="'$RSYSLOG_DYNNAME'.spool/es-stats.log" log.syslog="off" format="cee")
 
 set $.msgnum = field($msg, 58, 2);
-set $.testval = cnum($.msgnum % 2);
+set $.testval = cnum($.msgnum % 4);
+
 if $.testval == 0 then {
 	# these should be successful
 	set $!msgnum = $.msgnum;
+	set $.extrafield = "notmessage";
+} else if $.testval == 1 then {
+	# these should cause "hard" errors
+	set $!msgnum = "x" & $.msgnum;
+	set $.extrafield = "notmessage";
+} else if $.testval == 2 then {
+	# these should be successful
+	set $!msgnum = $.msgnum;
+	set $.extrafield = "message";
 } else {
 	# these should cause "hard" errors
 	set $!msgnum = "x" & $.msgnum;
+	set $.extrafield = "message";
 }
 
 template(name="tpl" type="string"
-    string="{\"msgnum\":\"%$!msgnum%\"}")
+    string="{\"msgnum\":\"%$!msgnum%\",\"%$.extrafield%\":\"extrafieldvalue\"}")
 
 module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 
@@ -43,39 +54,46 @@ ruleset(name="error_es") {
 }
 
 ruleset(name="try_es") {
+	set $.sendrec = 1;
 	if strlen($.omes!status) > 0 then {
 		# retry case
 		if ($.omes!status == 200) or ($.omes!status == 201) or (($.omes!status == 409) and ($.omes!writeoperation == "create")) then {
-			stop # successful
+			reset $.sendrec = 0; # successful
 		}
 		if ($.omes!writeoperation == "unknown") or (strlen($.omes!error!type) == 0) or (strlen($.omes!error!reason) == 0) then {
 			call error_es
-			stop
+			reset $.sendrec = 0;
 		}
 		if ($.omes!status == 400) or ($.omes!status < 200) then {
 			call error_es
-			stop
+			reset $.sendrec = 0;
 		}
-		# else fall through to retry operation
+		if strlen($!notmessage) > 0 then {
+			set $.extrafield = "notmessage";
+		} else {
+			set $.extrafield = "message";
+		}
 	}
-	if strlen($.omes!_id) > 0 then {
-		set $.es_msg_id = $.omes!_id;
-	} else {
-		# NOTE: in production code, use $uuid - depends on rsyslog being compiled with --enable-uuid
-		set $.es_msg_id = $.msgnum;
+	if $.sendrec == 1 then {
+		if strlen($.omes!_id) > 0 then {
+			set $.es_msg_id = $.omes!_id;
+		} else {
+			# NOTE: in production code, use $uuid - depends on rsyslog being compiled with --enable-uuid
+			set $.es_msg_id = $.msgnum;
+		}
+		action(type="omelasticsearch"
+		       server="127.0.0.1"
+		       serverport="'${ES_PORT:-19200}'"
+		       template="tpl"
+		       writeoperation="create"
+		       bulkid="id-template"
+		       dynbulkid="on"
+		       bulkmode="on"
+		       retryfailures="on"
+		       retryruleset="try_es"
+		       searchType="test-type"
+		       searchIndex="rsyslog_testbench")
 	}
-	action(type="omelasticsearch"
-	       server="127.0.0.1"
-	       serverport="'${ES_PORT:-19200}'"
-	       template="tpl"
-	       writeoperation="create"
-	       bulkid="id-template"
-	       dynbulkid="on"
-	       bulkmode="on"
-	       retryfailures="on"
-	       retryruleset="try_es"
-	       searchType="test-type"
-	       searchIndex="rsyslog_testbench")
 }
 
 if $msg contains "msgnum:" then {
