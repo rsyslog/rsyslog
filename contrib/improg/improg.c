@@ -219,6 +219,9 @@ failed:
 	openlog("rsyslogd", 0, LOG_SYSLOG);
 	syslog(LOG_ERR, "improg: failed to execute program '%s': %s\n",
 			pInst->pszBinary, errStr);
+	/* let's print the error to stderr for test bench purposes */
+	fprintf(stderr, "improg: failed to execute program '%s': %s\n",
+			pInst->pszBinary, errStr);
 	exit(1);
 }
 
@@ -337,10 +340,6 @@ static void waitForChild(instanceConf_t *pInst)
 static void terminateChild(instanceConf_t *pInst)
 {
 	if(pInst->bIsRunning) {
-
-		if (pInst->bSignalOnClose) {
-			kill(pInst->pid, SIGTERM);
-		}
 
 		if(pInst->fdPipeFromChild != -1) {
 			close(pInst->fdPipeFromChild);
@@ -496,6 +495,9 @@ static void ATTR_NONNULL(1) lstnFree(instanceConf_t *pInst)
 	if (pInst->pszBindRuleset != NULL)
 		free(pInst->pszBindRuleset);
 	if (pInst->aParams) {
+		int i;
+		for (i = 0;pInst->aParams[i]; i++)
+			free(pInst->aParams[i]);
 		free(pInst->aParams);
 	}
 	if (pInst->ppCStr)
@@ -599,14 +601,14 @@ CODESTARTrunInput
 	}
 
 	/* main module loop */
+	tv.tv_usec = 1000;
 	while (glbl.GetGlobalInputTermState() == 0)
 	{
 		fd_set temp;
 		memcpy(&temp, &rfds, sizeof(fd_set));
 		tv.tv_sec = 0;
-		tv.tv_usec = 1000000;
 
-		/* wait for external data or 1 second */
+		/* wait for external data or 0.1 second */
 		retval = select(nfds, &temp, NULL, NULL, &tv);
 
 		/* retval is the number of fd with data to read */
@@ -619,6 +621,7 @@ CODESTARTrunInput
 				}
 			}
 		}
+		tv.tv_usec = 100000;
 	}
 	DBGPRINTF("terminating upon request of rsyslog core\n");
 ENDrunInput
@@ -637,9 +640,17 @@ CODESTARTafterRun
 	while(pInst != NULL) {
 		nextInst = pInst->next;
 
-		if (pInst->bIsRunning){
-			if (write(pInst->fdPipeToChild, "STOP\n", strlen("STOP\n")) <= 0)
-				LogMsg(0, NO_ERRCODE, LOG_WARNING, "improg: pipe to child seems to be closed.");
+		if (pInst->bIsRunning) {
+			if (pInst->bSignalOnClose) {
+				kill(pInst->pid, SIGTERM);
+				LogMsg(0, NO_ERRCODE, LOG_INFO, "%s SIGTERM signaled.", pInst->aParams[0]);
+			}
+			if (pInst->fdPipeToChild > 0){
+				if (write(pInst->fdPipeToChild, "STOP\n", strlen("STOP\n")) <= 0 &&
+						!pInst->bSignalOnClose)
+					LogMsg(0, NO_ERRCODE, LOG_WARNING,
+							"improg: pipe to child seems to be closed.");
+			}
 			terminateChild(pInst);
 		}
 
