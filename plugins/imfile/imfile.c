@@ -2045,6 +2045,14 @@ ENDendCnfLoad
 BEGINcheckCnf
 	instanceConf_t *inst;
 CODESTARTcheckCnf
+	if(ustrlen(glbl.GetWorkDir()) == 0) {
+		/* this intentionally is an error message */
+		LogError(0, RS_RET_NO_WRKDIR_SET,
+			"imfile: no working directory set, imfile will create "
+			"state files in the current working directory (probably "
+			"the root dir). Use global(workDirectory=\"/some/path\") "
+			"to set the working directory");
+	}
 	for(inst = pModConf->root ; inst != NULL ; inst = inst->next) {
 		std_checkRuleset(pModConf, inst);
 	}
