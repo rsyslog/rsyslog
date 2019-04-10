@@ -71,7 +71,7 @@ struct nsd_ossl_s {
 				 * set to 1 and changed to 0 after the first report. It is changed back to 1 after
 				 * one successful authentication. */
 	permittedPeers_t *pPermPeers; /* permitted peers */
-
+	uchar *gnutlsPriorityString;	/* gnutls priority string */
 	short	bOurCertIsInit;	/**< 1 if our certificate is initialized and must be deinit on destruction */
 	short	bOurKeyIsInit;	/**< 1 if our private key is initialized and must be deinit on destruction */
 	char *pszRcvBuf;

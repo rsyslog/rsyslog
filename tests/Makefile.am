@@ -1060,6 +1060,7 @@ TESTS +=  \
 	sndrcv_tls_ossl_servercert_ossl_clientanon.sh \
 	sndrcv_tls_ossl_certvalid.sh \
 	sndrcv_tls_ossl_certvalid_expired.sh \
+	sndrcv_tls_ossl_certvalid_tlscommand.sh \
 	imtcp-tls-ossl-x509valid.sh \
 	imtcp-tls-ossl-x509name.sh \
 	imtcp-tls-ossl-x509fingerprint.sh \
@@ -1749,6 +1750,7 @@ EXTRA_DIST= \
 	sndrcv_tls_ossl_anon_rebind.sh \
 	sndrcv_tls_ossl_certvalid.sh \
 	sndrcv_tls_ossl_certvalid_expired.sh \
+	sndrcv_tls_ossl_certvalid_tlscommand.sh \
 	imtcp-tls-ossl-x509valid.sh \
 	imtcp-tls-ossl-x509name.sh \
 	imtcp-tls-ossl-x509fingerprint.sh \
