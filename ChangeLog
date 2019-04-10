@@ -3,6 +3,13 @@ Version 8.1904.0 (aka 2019.04) 2019-04-16
 - omfile: provide more helpful error message on file write errors
   now contains actual file name plus a link to probable causes for this type
   of problem
+- imfile: emit error on startup if no working directory is set
+  When the work directory has not been set or is invalid, state files
+  are created in the root of the file system. This is neither expected
+  nor desirable. We now complain loudly about this fact. For backwards
+  compatibility reasons, we still need to support running imfile in
+  this case.
+  closes https://github.com/rsyslog/rsyslog/issues/1296
 - omelasticsearch: new parameter rebindinterval
   Thanks to Richard Megginson for the patch.
 - omelasticsearch: new parameter skipverifyhost
@@ -61,6 +68,16 @@ Version 8.1904.0 (aka 2019.04) 2019-04-16
   Thanks to Philippe Duveau for the contribution.
 - msg object bugfix: regression from 1255a67
   closes https://github.com/rsyslog/rsyslog/issues/3570
+- pmnormalize: fix memory leaks, improve tests
+  This patch fixes a set of problems plus provides more and enhanced
+  tests for the module.
+  Most important problem was a memory leak that occured when a message
+  could not be passed at all. For each message that could not be parsed
+  memory of at least the size the message is leaked. Depending on
+  traffic pattern this can quickly lead to OOM. Note, however, that
+  this leak was never reported - it was discovered as part of code
+  review.
+  closes https://github.com/rsyslog/rsyslog/issues/2007
 - omkafka bugfix: build failure due to inconsistent type
   failes depending on platform and settings; was somehow undetected by CI
 - imjournal bugfix: potential segfault on some API failure returns
