@@ -943,10 +943,19 @@ endif
 if ENABLE_PMNORMALIZE
 TESTS +=  \
 	pmnormalize-basic.sh \
-	pmnormalize-rule.sh
+	pmnormalize-invld-rulebase.sh \
+	pmnormalize-rule.sh \
+	pmnormalize-rule_and_rulebase.sh \
+	pmnormalize-neither_rule_rulebase.sh \
+	pmnormalize-rule_invld-data.sh
 if HAVE_VALGRIND
 TESTS += \
-	pmnormalize-rule-vg.sh
+	pmnormalize-basic-vg.sh \
+	pmnormalize-invld-rulebase-vg.sh \
+	pmnormalize-rule-vg.sh \
+	pmnormalize-rule_and_rulebase-vg.sh \
+	pmnormalize-neither_rule_rulebase-vg.sh \
+	pmnormalize-rule_invld-data-vg.sh
 endif
 endif
 
@@ -1642,10 +1651,19 @@ EXTRA_DIST= \
 	mmnormalize_processing_test2.sh \
 	mmnormalize_processing_test3.sh \
 	mmnormalize_processing_test4.sh \
-	pmnormalize-rule.sh \
-	pmnormalize-rule-vg.sh\
-	testsuites/pmnormalize_basic.rulebase \
 	pmnormalize-basic.sh \
+	pmnormalize-rule.sh \
+	pmnormalize-rule_and_rulebase.sh \
+	pmnormalize-neither_rule_rulebase.sh \
+	pmnormalize-invld-rulebase.sh \
+	pmnormalize-rule_invld-data.sh \
+	testsuites/pmnormalize_basic.rulebase \
+	pmnormalize-basic-vg.sh \
+	pmnormalize-rule-vg.sh\
+	pmnormalize-rule_and_rulebase-vg.sh \
+	pmnormalize-neither_rule_rulebase-vg.sh \
+	pmnormalize-invld-rulebase-vg.sh \
+	pmnormalize-rule_invld-data-vg.sh \
 	rawmsg-after-pri.sh \
 	rs_optimizer_pri.sh \
 	rscript_prifilt.sh \
