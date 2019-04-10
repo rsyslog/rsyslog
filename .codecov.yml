@@ -1,3 +1,6 @@
+# note: codecov doc is hard to navigate. The info on SPLITTING UP PROJECTS
+# can be found here: https://docs.codecov.io/docs/commit-status
+# This link also contains helpful other config info not easily found.
 comment: off
 
 coverage:
@@ -9,6 +12,8 @@ coverage:
       default:
         target: auto
         threshold: .5
+      contrib:
+        paths: contrib
     patch:
       threshold: null
 
