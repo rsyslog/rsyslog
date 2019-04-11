@@ -577,7 +577,6 @@ content_check() {
 	else
 		check_only="no"
 	fi
-	echo check_only: $check_only
 	if [ "$1" == "--regex" ]; then
 		grep_opt=
 		shift
