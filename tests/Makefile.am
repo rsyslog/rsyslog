@@ -963,7 +963,13 @@ if ENABLE_MMNORMALIZE
 TESTS += msgvar-concurrency-array.sh \
 	msgvar-concurrency-array-event.tags.sh \
 	mmnormalize_rule_from_string.sh \
-	mmnormalize_rule_from_array.sh
+	mmnormalize_rule_from_array.sh \
+	mmnormalize_parsesuccess.sh
+
+if HAVE_VALGRIND
+TESTS += \
+	mmnormalize_parsesuccess-vg.sh
+endif
 
 if ENABLE_IMPTCP
 TESTS +=  \
@@ -977,7 +983,7 @@ if LOGNORM_REGEX_SUPPORTED
 TESTS += \
 	mmnormalize_regex.sh
 endif
-endif
+endif # ENABLE_MMNORMALIZE
 
 if ENABLE_MMJSONPARSE
 TESTS += \
@@ -1642,6 +1648,8 @@ EXTRA_DIST= \
 	timereported-utc-legacy.sh \
 	timereported-utc-vg.sh \
 	mmrm1stspace-basic.sh \
+	mmnormalize_parsesuccess.sh \
+	mmnormalize_parsesuccess-vg.sh \
 	mmnormalize_rule_from_string.sh \
 	mmnormalize_rule_from_array.sh \
 	pmnull-basic.sh \
