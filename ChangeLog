@@ -64,6 +64,10 @@ Version 8.1904.0 (aka 2019.04) 2019-04-16
   Thanks to Philippe Duveau for the contribution.
 - imtuxedolog: new contributed input module for Tuxedu ULOG
   Thanks to Philippe Duveau for the contribution.
+- openssl network driver: Added support setting openssl configcommands
+  We are using the gnutlsPriorityString setting variable, to pass
+  configuration commands to openssl.
+  closes: https://github.com/rsyslog/rsyslog/issues/3605
 - improg bugfix: some memory leaks
   Thanks to Philippe Duveau for the contribution.
 - msg object bugfix: regression from 1255a67
