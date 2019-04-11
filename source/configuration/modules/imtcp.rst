@@ -323,11 +323,44 @@ gnutlsPriorityString
 
 .. versionadded:: 8.29.0
 
-The GnuTLS priority strings specify the TLS session's handshake algorithms and
+This strings setting is used to configure driver specific properties.
+Historically, the setting was only meant for gnutls driver. However
+with version v8.1905.0 and higher, the setting can also be used to set openssl configuration commands.
+
+For GNUTls, the setting specifies the TLS session's handshake algorithms and
 options. These strings are intended as a user-specified override of the library
 defaults. If this parameter is NULL, the default settings are used. More
 information about priority Strings
-`here <https://gnutls.org/manual/html_node/Priority-Strings.html>`_.
+`here <https://gnutls.org/manual/html_node/Priority-Strings.html>`_
+
+For OpenSSL, the setting can be used to pass configuration commands to openssl libray.
+OpenSSL Version 1.0.2 or higher is required for this feature.
+A list of possible commands and their valid values can be found in the documentation:
+https://www.openssl.org/docs/man1.0.2/man3/SSL_CONF_cmd.html
+
+The setting can be single or multiline, each configuration command is separated by linefeed (\n).
+Command and value are separated by equal sign (=). Here are a few samples:
+
+Example 1
+---------
+
+This will allow all protocols except for SSv2 and SSLv3:
+
+.. code-block:: none
+
+   gnutlsPriorityString="Protocol=ALL,-SSLv2,-SSLv3"
+
+
+Example 2
+---------
+
+This will allow all protocols except for SSv2, SSLv3 and TLSv1.
+It will also set the minimum protocol to TLSv1.2
+
+.. code-block:: none
+
+   gnutlsPriorityString="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1
+   MinProtocol=TLSv1.2"
 
 
 PreserveCase
