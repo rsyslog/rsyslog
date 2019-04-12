@@ -300,6 +300,8 @@ resubmitOnFailure
 If enabled, failed messages will be resubmit automatically when kafka is able to send
 messages again. To prevent message loss, this option should be enabled.
 
+**Note:** Messages that are rejected by kafka due to exceeding the maximum configured
+message size, are automatically dropped. These errors are not retriable.
 
 KeepFailedMessages
 ^^^^^^^^^^^^^^^^^^
