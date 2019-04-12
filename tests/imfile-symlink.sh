@@ -44,11 +44,15 @@ startup
 
 for i in $(seq 2 $IMFILEINPUTFILES);
 do
+	printf '\ncreating %s\n' $RSYSLOG_DYNNAME.targets/$i.log
+	set -x
 	./inputfilegen -m 1 -i $((i-1)) > $RSYSLOG_DYNNAME.targets/$i.log
-	ln -s $RSYSLOG_DYNNAME.targets/$i.log rsyslog-link.$i.log
-	ln -s rsyslog-link.$i.log $RSYSLOG_DYNNAME.input.$i.log
+	ls -l $RSYSLOG_DYNNAME.targets/$i.log
+	ln -sv $RSYSLOG_DYNNAME.targets/$i.log rsyslog-link.$i.log
+	ln -sv rsyslog-link.$i.log $RSYSLOG_DYNNAME.input.$i.log
 	printf '%s generated file %s\n' "$(tb_timestamp)" "$i"
 	ls -l rsyslog-link.$i.log
+	set +x
 	# wait until this file has been processed
 	content_check_with_count "HEADER msgnum:000000" $i $IMFILECHECKTIMEOUT
 done
