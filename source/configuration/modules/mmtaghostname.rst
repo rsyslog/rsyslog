@@ -80,7 +80,7 @@ the HOSTNAME is overwritten and a tag is setted.
 
     module(load='mmtaghostname')
     module(load='imudp')
-    global(localhostname="salls-front")
+    global(localhostname="sales-front")
     
     ruleset(name="TagUDP" parser=[ "rsyslog.rfc5424" ]) {
         action(type="mmtaghostname" tag="front" forcelocalhostname="on")
