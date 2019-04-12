@@ -68,6 +68,10 @@ Version 8.1904.0 (aka 2019.04) 2019-04-16
   We are using the gnutlsPriorityString setting variable, to pass
   configuration commands to openssl.
   closes: https://github.com/rsyslog/rsyslog/issues/3605
+- omkafka: drop messages rejected due to being too large
+  Drop messages that were rejected due to
+  'RD_KAFKA_RESP_ERR_MSG_SIZE_TOO_LARGE' error
+  Thanks to Nelson Yen for the patch
 - improg bugfix: some memory leaks
   Thanks to Philippe Duveau for the contribution.
 - msg object bugfix: regression from 1255a67
