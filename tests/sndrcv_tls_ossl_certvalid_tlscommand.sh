@@ -1,11 +1,7 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
-
-# uncomment for debugging support:
 . ${srcdir:=.}/diag.sh init
 # start up the instances
-#export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
-export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.receiver.debuglog"
 generate_conf
 export PORT_RCVR="$(get_free_port)"
 add_conf '
@@ -22,9 +18,7 @@ module(	load="../plugins/imtcp/.libs/imtcp"
 	StreamDriver.Mode="1"
 	StreamDriver.AuthMode="x509/certvalid"
 	StreamDriver.PermitExpiredCerts="off"
-	gnutlsPriorityString="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1,-TLSv1.2
-	MinProtocol=TLSv1.1
-	Options=Bugs"
+	gnutlsPriorityString="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1,-TLSv1.2\nMinProtocol=TLSv1.1\nOptions=Bugs"
 	)
 input(	type="imtcp"
 	port="'$PORT_RCVR'" )
@@ -33,9 +27,7 @@ action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 '
 startup
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.sender.debuglog"
-#valgrind="valgrind"
 generate_conf 2
-export TCPFLOOD_PORT="$(get_free_port)" # TODO: move to diag.sh
 add_conf '
 global(	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
 	defaultNetstreamDriverCertFile="'$srcdir/tls-certs/cert.pem'"
@@ -43,11 +35,6 @@ global(	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
 	defaultNetstreamDriver="ossl"
 )
 
-# Note: no TLS for the listener, this is for tcpflood!
-$ModLoad ../plugins/imtcp/.libs/imtcp
-$InputTCPServerRun '$TCPFLOOD_PORT'
-
-# set up the action
 action(	type="omfwd"
 	protocol="tcp"
 	target="127.0.0.1"
@@ -61,14 +48,16 @@ startup 2
 
 # now inject the messages into instance 2. It will connect to instance 1,
 # and that instance will record the data.
-tcpflood -m1 -i1
-# sleep 5 # make sure all data is received in input buffers
-# shut down sender when everything is sent, receiver continues to run concurrently
+injectmsg 0 1
 shutdown_when_empty 2
 wait_shutdown 2
 # now it is time to stop the receiver as well
 shutdown_when_empty
 wait_shutdown
+
+# IMPORTANT: this test will generate many error messsages. This is exactly it's
+# intent. So do not think something is wrong. The content_check below checks
+# these error codes.
 
 content_check --check-only "OpenSSL Version to old"
 ret=$?
@@ -80,7 +69,4 @@ else
 	content_check "OpenSSL Error Stack:"
 fi
 
-
-
-unset PORT_RCVR # TODO: move to exit_test()?
 exit_test

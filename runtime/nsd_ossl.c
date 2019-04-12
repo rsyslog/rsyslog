@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd interface for OpenSSL.
  *
- * Copyright 2018-2018 Adiscon GmbH.
+ * Copyright 2018-2019 Adiscon GmbH.
  * Author: Andre Lorbach
  *
  * This file is part of the rsyslog runtime library.
@@ -707,14 +707,8 @@ osslChkPeerFingerprint(nsd_ossl_t *pThis, X509 *pCert)
 	bFoundPositiveMatch = 0;
 	pPeer = pThis->pPermPeers;
 	while(pPeer != NULL && !bFoundPositiveMatch) {
-/* // VERBOSE
-dbgprintf("osslChkPeerFingerprint: Compare '%s'  against Peerfingerprint '%s'\n",
-	pPeer->pszID, cstrGetSzStrNoNULL(pstrFingerprint));
-*/
 		if(!rsCStrSzStrCmp(pstrFingerprint, pPeer->pszID, strlen((char*) pPeer->pszID))) {
-// VERBOSE
-dbgprintf("osslChkPeerFingerprint: peer's certificate MATCH found: %s\n", pPeer->pszID);
-
+			dbgprintf("osslChkPeerFingerprint: peer's certificate MATCH found: %s\n", pPeer->pszID);
 			bFoundPositiveMatch = 1;
 		} else {
 			pPeer = pPeer->pNext;
@@ -767,10 +761,6 @@ osslChkOnePeerName(nsd_ossl_t *pThis, X509 *pCert, uchar *pszPeerID, int *pbFoun
 	if(pThis->pPermPeers) { /* do we have configured peer IDs? */
 		pPeer = pThis->pPermPeers;
 		while(pPeer != NULL) {
-/* // VERBOSE
-dbgprintf("osslChkOnePeerName: Compare '%s'  against Peercert '%s'\n",
-	pPeer->pszID, x509name);
-*/
 			CHKiRet(net.PermittedPeerWildcardMatch(pPeer, pszPeerID, pbFoundPositiveMatch));
 			if(*pbFoundPositiveMatch)
 				break;
@@ -1074,7 +1064,7 @@ ENDobjDestruct(nsd_ossl)
  * rgerhards, 2008-04-28
  */
 static rsRetVal
-SetMode(nsd_t *pNsd, int mode)
+SetMode(nsd_t *pNsd, const int mode)
 {
 	DEFiRet;
 	nsd_ossl_t *pThis = (nsd_ossl_t*) pNsd;
@@ -1098,7 +1088,7 @@ SetMode(nsd_t *pNsd, int mode)
  * rgerhards, 2008-05-16
  */
 static rsRetVal
-SetAuthMode(nsd_t *pNsd, uchar *mode)
+SetAuthMode(nsd_t *const pNsd, uchar *const mode)
 {
 	DEFiRet;
 	nsd_ossl_t *pThis = (nsd_ossl_t*) pNsd;
@@ -1660,12 +1650,6 @@ Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 				err != SSL_ERROR_WANT_WRITE) {
 				/* Output error and abort */
 				osslLastSSLErrorMsg(iSent, pThis->ssl, LOG_ERR, "Send");
-/*
-				LogError(0, RS_RET_NO_ERRCODE, "Error while sending data: "
-						"[%d] %s", err, ERR_error_string(err, NULL));
-				LogError(0, RS_RET_NO_ERRCODE, "Error is: %s",
-						ERR_reason_error_string(err));
-*/
 				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 			} else {
 				/* Check for SSL Shutdown */
@@ -1969,5 +1953,3 @@ CODESTARTmodInit
 	CHKiRet(nsd_osslClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 	CHKiRet(nsdsel_osslClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 ENDmodInit
-/* vi:set ai:
- */
