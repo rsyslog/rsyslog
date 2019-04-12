@@ -804,7 +804,9 @@ writeKafka(instanceData *const pData,  uchar *const key, uchar *const msg,
 		updateKafkaFailureCounts(msg_kafka_response);
 
 		/* Put into kafka queue, again if configured! */
-		if (pData->bResubmitOnFailure && b_do_resubmit) {
+		if (pData->bResubmitOnFailure &&
+				b_do_resubmit &&
+				msg_kafka_response != RD_KAFKA_RESP_ERR_MSG_SIZE_TOO_LARGE) {
 			DBGPRINTF("omkafka: Failed to produce to topic '%s' (rd_kafka_producev)"
 				"partition %d: '%d/%s' - adding MSG '%s' to failed for RETRY!\n",
 				rd_kafka_topic_name(rkt), partition, msg_kafka_response,
@@ -833,7 +835,9 @@ writeKafka(instanceData *const pData,  uchar *const key, uchar *const msg,
 		updateKafkaFailureCounts(msg_kafka_response);
 
 		/* Put into kafka queue, again if configured! */
-		if (pData->bResubmitOnFailure && b_do_resubmit) {
+		if (pData->bResubmitOnFailure &&
+				b_do_resubmit &&
+				msg_kafka_response != RD_KAFKA_RESP_ERR_MSG_SIZE_TOO_LARGE) {
 		   	DBGPRINTF("omkafka: Failed to produce to topic '%s' (rd_kafka_produce)"
 				"partition %d: '%d/%s' - adding MSG '%s' KEY '%s' to failed for RETRY!\n",
 				rd_kafka_topic_name(rkt), partition, msg_kafka_response,
