@@ -438,6 +438,13 @@ The following parameters can be set:
   avoid. On busy systems it may make sense to increase that timeout. This
   especially seems to be the case with containers.
 
+- **default.action.queue.timeoutshutdown** [numeric] available 8.1901.0+
+- **default.action.queue.timeoutactioncompletion** [numeric] available 8.1901.0+
+- **default.action.queue.timeoutenqueue** [numeric] available 8.1901.0+
+- **default.action.queue.timeoutworkerthreadshutdown** [numeric] available 8.1901.0+
+
+  These parameters set global queue defaults for the respective queue settings.
+
 - **reverselookup.cache.default.ttl** [numeric, seconds] available 8.1904.0+
 
   Rsyslog includes a cache for ip-address-to-hostname lookups. This is most
