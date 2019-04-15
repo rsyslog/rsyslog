@@ -7,7 +7,7 @@
  *
  * Module begun 2008-04-16 by Rainer Gerhards
  *
- * Copyright 2008-2018 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2019 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -56,6 +56,7 @@
 #include "net.h"
 #include "rsconf.h"
 #include "queue.h"
+#include "dnscache.h"
 
 #define REPORT_CHILD_PROCESS_EXITS_NONE 0
 #define REPORT_CHILD_PROCESS_EXITS_ERRORS 1
@@ -213,6 +214,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "default.action.queue.timeoutactioncompletion", eCmdHdlrInt, 0 },
 	{ "default.action.queue.timeoutenqueue", eCmdHdlrInt, 0 },
 	{ "default.action.queue.timeoutworkerthreadshutdown", eCmdHdlrInt, 0 },
+	{ "reverselookup.cache.default.ttl", eCmdHdlrNonNegInt, 0 },
 	{ "debug.files", eCmdHdlrArray, 0 },
 	{ "debug.whitelist", eCmdHdlrBinary, 0 }
 };
@@ -1464,6 +1466,8 @@ glblDoneLoadCnf(void)
 			actq_dflt_toEnq = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "default.action.queue.timeoutworkerthreadshutdown")) {
 			actq_dflt_toWrkShutdown = cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "reverselookup.cache.default.ttl")) {
+			dnscacheDefaultTTL = cnfparamvals[i].val.d.n;
 		} else {
 			dbgprintf("glblDoneLoadCnf: program error, non-handled "
 				"param '%s'\n", paramblk.descr[i].name);

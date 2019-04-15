@@ -160,6 +160,7 @@ TESTS +=  \
 	glbl_setenv_err_too_long.sh \
 	glbl_setenv.sh \
 	nested-call-shutdown.sh \
+	dnscache-TTL-0.sh \
 	invalid_nested_include.sh \
 	omfwd-keepalive.sh \
 	omfile-read-only-errmsg.sh \
@@ -404,6 +405,7 @@ endif # ENABLE_LIBGCRYPT
 if HAVE_VALGRIND
 TESTS +=  \
 	tcpflood_wrong_option_output.sh \
+	dnscache-TTL-0-vg.sh \
 	include-obj-outside-control-flow-vg.sh \
 	include-obj-in-if-vg.sh \
 	include-obj-text-vg.sh \
@@ -1377,6 +1379,8 @@ distclean-local:
 
 EXTRA_DIST= \
 	urlencode.py \
+	dnscache-TTL-0.sh \
+	dnscache-TTL-0-vg.sh \
 	operatingstate-basic.sh \
 	operatingstate-empty.sh \
 	operatingstate-unclean.sh \
