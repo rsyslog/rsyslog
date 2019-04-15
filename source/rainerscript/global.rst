@@ -438,6 +438,22 @@ The following parameters can be set:
   avoid. On busy systems it may make sense to increase that timeout. This
   especially seems to be the case with containers.
 
+- **reverselookup.cache.default.ttl** [numeric, seconds] available 8.1904.0+
+
+  Rsyslog includes a cache for ip-address-to-hostname lookups. This is most
+  useful for inputs without a connection. imudp is the prime example.
+  This settings permits to specify after which period (in seconds) an
+  entry expires. Upon expiration the entry will be discarded and re-queried.
+  The **default** value is 24 hours.
+  To never cache entries, set the parameter to 0, which will make cache
+  entries expire immediately. Note that especially with imudp this can
+  cause huge performance degredation and potentially also message loss.
+
+  Note: for many years rsyslog did **not** timeout cache entries at all. This
+  only occasionally caused issues. We assume that the once-every-24-hrs
+  default value is a very good compromise between performance and
+  keeping reverse lookup information current.
+
 - **operatingStateFile** [string, filename], default unset, available 8.39.0+
 
   The operatingStateFile, as the name says, provides information about rsyslog
