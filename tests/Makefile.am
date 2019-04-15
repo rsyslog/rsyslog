@@ -1068,6 +1068,7 @@ endif
 if ENABLE_OPENSSL
 TESTS +=  \
 	imtcp-tls-ossl-basic.sh \
+	imtcp-tls-ossl-basic-tlscommands.sh \
 	sndrcv_tls_ossl_anon_ipv4.sh \
 	sndrcv_tls_ossl_anon_ipv6.sh \
 	sndrcv_tls_ossl_anon_rebind.sh \
@@ -1771,6 +1772,7 @@ EXTRA_DIST= \
 	udp-msgreduc-vg.sh \
 	manytcp-too-few-tls-vg.sh \
 	imtcp-tls-ossl-basic.sh \
+	imtcp-tls-ossl-basic-tlscommands.sh \
 	sndrcv_tls_ossl_anon_ipv4.sh \
 	sndrcv_tls_ossl_anon_ipv6.sh \
 	sndrcv_tls_ossl_anon_rebind.sh \
