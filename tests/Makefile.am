@@ -308,6 +308,8 @@ TESTS +=  \
 	failover-rptd.sh \
 	failover-no-rptd.sh \
 	failover-no-basic.sh \
+	suspend-via-file.sh \
+	externalstate-failed-rcvr.sh \
 	rcvr_fail_restore.sh \
 	rscript_contains.sh \
 	rscript_bare_var_root.sh \
@@ -1830,6 +1832,8 @@ EXTRA_DIST= \
 	failover-basic-vg.sh \
 	failover-async.sh \
 	failover-double.sh \
+	suspend-via-file.sh \
+	externalstate-failed-rcvr.sh \
 	discard-rptdmsg.sh \
 	discard-rptdmsg-vg.sh \
 	discard-allmark.sh \
