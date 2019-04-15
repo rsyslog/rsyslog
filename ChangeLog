@@ -10,6 +10,11 @@ Version 8.1904.0 (aka 2019.04) 2019-04-16
   compatibility reasons, we still need to support running imfile in
   this case.
   closes https://github.com/rsyslog/rsyslog/issues/1296
+- dnscache: add global parameter dnscache.default.ttl
+  This permits to control default TTL for cache entries. If set
+  to 0, the DNS cache is effectively disabled.
+  closes https://github.com/rsyslog/rsyslog/issues/49
+  closes https://github.com/rsyslog/rsyslog/issues/1487
 - omelasticsearch: new parameter rebindinterval
   Thanks to Richard Megginson for the patch.
 - omelasticsearch: new parameter skipverifyhost
@@ -72,6 +77,17 @@ Version 8.1904.0 (aka 2019.04) 2019-04-16
   Drop messages that were rejected due to
   'RD_KAFKA_RESP_ERR_MSG_SIZE_TOO_LARGE' error
   Thanks to Nelson Yen for the patch
+- core/action: implement capability to resume/suspend via external file
+  It has been reported that some TCP receivers exists that accept syslog tcp
+  messages at any rate, even if they do not manage to actually process them.
+  Instead, they silently drop the message. This behavior is not configurable.
+  All in all, it can lead to considerate message loss.
+  To support such use cases, we need to provide an ability to externally
+  trigger actions suspension and resumption.
+  We do this via a configured file which contains the status of the action.
+  Rsyslog periodically reads the file and if it contains "SUSPEND", it
+  suspend the action (and likewise for resume).
+  closes https://github.com/rsyslog/rsyslog/issues/2924
 - improg bugfix: some memory leaks
   Thanks to Philippe Duveau for the contribution.
 - msg object bugfix: regression from 1255a67
@@ -224,6 +240,8 @@ Version 8.1903.0 (aka 2019.03) 2019-03-05
   We have corrected the timeout now and also modernized the test
   a bit.
   closes https://github.com/rsyslog/rsyslog/issues/2122
+- testbench bugfix: some omhttp tests had compatibility issues with Python 3
+  Thanks to Thomas D. (whissi) for the patch.
 ------------------------------------------------------------------------------
 Version 8.1901.0 (aka 2019.01) 2019-01-22
 - new version scheme: 8.yymm.0 - version now depends on release date
