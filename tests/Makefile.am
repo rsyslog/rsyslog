@@ -1145,6 +1145,7 @@ endif
 
 if ENABLE_OMUDPSPOOF
 TESTS += \
+	omudpspoof_errmsg_no_params.sh \
 	sndrcv_omudpspoof.sh \
 	sndrcv_omudpspoof_nonstdpt.sh
 endif
@@ -1893,6 +1894,7 @@ EXTRA_DIST= \
 	imudp_thread_hang.sh \
 	sndrcv_udp_nonstdpt.sh \
 	sndrcv_udp_nonstdpt_v6.sh \
+	omudpspoof_errmsg_no_params.sh \
 	sndrcv_omudpspoof.sh \
 	sndrcv_omudpspoof_nonstdpt.sh \
 	sndrcv_gzip.sh \
