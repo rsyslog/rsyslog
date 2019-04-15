@@ -138,6 +138,7 @@ TESTS +=  \
 	operatingstate-basic.sh \
 	operatingstate-empty.sh \
 	operatingstate-unclean.sh \
+	smtradfile.sh \
 	empty-hostname.sh \
 	hostname-getaddrinfo-fail.sh \
 	msleep_usage_output.sh \
@@ -405,6 +406,7 @@ endif # ENABLE_LIBGCRYPT
 if HAVE_VALGRIND
 TESTS +=  \
 	tcpflood_wrong_option_output.sh \
+	smtradfile-vg.sh \
 	dnscache-TTL-0-vg.sh \
 	include-obj-outside-control-flow-vg.sh \
 	include-obj-in-if-vg.sh \
@@ -1381,6 +1383,8 @@ EXTRA_DIST= \
 	urlencode.py \
 	dnscache-TTL-0.sh \
 	dnscache-TTL-0-vg.sh \
+	smtradfile.sh \
+	smtradfile-vg.sh \
 	operatingstate-basic.sh \
 	operatingstate-empty.sh \
 	operatingstate-unclean.sh \
