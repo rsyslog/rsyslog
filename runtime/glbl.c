@@ -214,7 +214,8 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "default.action.queue.timeoutactioncompletion", eCmdHdlrInt, 0 },
 	{ "default.action.queue.timeoutenqueue", eCmdHdlrInt, 0 },
 	{ "default.action.queue.timeoutworkerthreadshutdown", eCmdHdlrInt, 0 },
-	{ "reverselookup.cache.default.ttl", eCmdHdlrNonNegInt, 0 },
+	{ "reverselookup.cache.ttl.default", eCmdHdlrNonNegInt, 0 },
+	{ "reverselookup.cache.ttl.enable", eCmdHdlrBinary, 0 },
 	{ "debug.files", eCmdHdlrArray, 0 },
 	{ "debug.whitelist", eCmdHdlrBinary, 0 }
 };
@@ -1466,8 +1467,10 @@ glblDoneLoadCnf(void)
 			actq_dflt_toEnq = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "default.action.queue.timeoutworkerthreadshutdown")) {
 			actq_dflt_toWrkShutdown = cnfparamvals[i].val.d.n;
-		} else if(!strcmp(paramblk.descr[i].name, "reverselookup.cache.default.ttl")) {
+		} else if(!strcmp(paramblk.descr[i].name, "reverselookup.cache.ttl.default")) {
 			dnscacheDefaultTTL = cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "reverselookup.cache.ttl.enable")) {
+			dnscacheEnableTTL = cnfparamvals[i].val.d.n;
 		} else {
 			dbgprintf("glblDoneLoadCnf: program error, non-handled "
 				"param '%s'\n", paramblk.descr[i].name);

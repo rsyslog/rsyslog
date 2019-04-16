@@ -65,6 +65,7 @@ struct dnscache_s {
 typedef struct dnscache_s dnscache_t;
 
 unsigned dnscacheDefaultTTL = 24 * 60 * 60; /* 24 hrs default TTL */
+int dnscacheEnableTTL = 0; /* expire entries or not (0) ? */
 
 
 /* static data */
@@ -177,32 +178,6 @@ dnscacheDeinit(void)
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 	RETiRet;
-}
-
-
-static dnscache_entry_t*
-findEntry(struct sockaddr_storage *const addr)
-{
-	dnscache_entry_t *etry = hashtable_search(dnsCache.ht, addr);
-	if(etry == NULL) {
-		goto done;
-	}
-
-	if(etry->validUntil <= time(NULL)) {
-		DBGPRINTF("hashtable: entry timed out, discarding it; "
-			"valid until %lld, now %lld\n",
-			(long long) etry->validUntil, (long long) time(NULL));
-		dnscache_entry_t *const deleted = hashtable_remove(dnsCache.ht, addr);
-		if(deleted != etry) {
-			LogError(0, RS_RET_INTERNAL_ERROR, "dnscache %d: removed different "
-				"hashtable entry than expected - please report issue; "
-				"rsyslog version is %s", __LINE__, VERSION);
-		}
-		entryDestruct(etry);
-		etry = NULL;
-	}
-done:
-	return etry;
 }
 
 
@@ -388,7 +363,6 @@ finalize_it:
 		error = 1; /* trigger hostname copies below! */
 	}
 
-	/* we need to create the inputName property (only once during our lifetime) */
 	prop.CreateStringProp(&etry->ip, (uchar*)szIP, strlen(szIP));
 
 	if(error || glbl.GetDisableDNS()) {
@@ -409,81 +383,67 @@ static rsRetVal ATTR_NONNULL()
 addEntry(struct sockaddr_storage *const addr, dnscache_entry_t **const pEtry)
 {
 	int r;
-	struct sockaddr_storage *keybuf = NULL;
 	dnscache_entry_t *etry = NULL;
 	DEFiRet;
 
-	pthread_rwlock_unlock(&dnsCache.rwlock);
-	pthread_rwlock_wrlock(&dnsCache.rwlock);
-	/* first check, if the entry was added in the mean time */
-	etry = findEntry(addr);
-	if(etry != NULL) {
-		FINALIZE;
-	}
-
 	/* entry still does not exist, so add it */
 	CHKmalloc(etry = malloc(sizeof(dnscache_entry_t)));
-	CHKmalloc(keybuf = malloc(sizeof(struct sockaddr_storage)));
-	CHKiRet(resolveAddr(addr, etry));
+	resolveAddr(addr, etry);
+	assert(etry != NULL);
 	memcpy(&etry->addr, addr, SALEN((struct sockaddr*) addr));
 	etry->nUsed = 0;
-	etry->validUntil = time(NULL) + dnscacheDefaultTTL;
+	if(dnscacheEnableTTL) {
+		etry->validUntil = time(NULL) + dnscacheDefaultTTL;
+	}
 
+	struct sockaddr_storage *keybuf;
+	CHKmalloc(keybuf = malloc(sizeof(struct sockaddr_storage)));
 	memcpy(keybuf, addr, sizeof(struct sockaddr_storage));
 
 	r = hashtable_insert(dnsCache.ht, keybuf, etry);
-	keybuf = NULL;
 	if(r == 0) {
 		DBGPRINTF("dnscache: inserting element failed\n");
 	}
+	*pEtry = etry;
 
 finalize_it:
-	pthread_rwlock_unlock(&dnsCache.rwlock);
-	pthread_rwlock_rdlock(&dnsCache.rwlock);
-	if(iRet == RS_RET_OK) {
-		*pEtry = etry;
-	} else {
-		free(keybuf);
-		free(etry); /* Note: sub-fields cannot be populated in this case */
-	}
 	RETiRet;
 }
 
 
-/* validate if an entry is still valid and, if not, re-query it.
- * In the initial implementation, this is a dummy!
- * TODO: implement!
- */
-static inline rsRetVal
-validateEntry(dnscache_entry_t __attribute__((unused)) *etry, struct sockaddr_storage __attribute__((unused)) *addr)
-{
-	return RS_RET_OK;
-}
-
-
-/* This is the main function: it looks up an entry and returns it's name
- * and IP address. If the entry is not yet inside the cache, it is added.
- * If the entry can not be resolved, an error is reported back. If fqdn
- * or fqdnLowerCase are NULL, they are not set.
- */
-rsRetVal ATTR_NONNULL(1, 5)
-dnscacheLookup(struct sockaddr_storage *const addr,
+static rsRetVal ATTR_NONNULL(1, 5)
+findEntry(struct sockaddr_storage *const addr,
 	prop_t **const fqdn, prop_t **const fqdnLowerCase,
 	prop_t **const localName, prop_t **const ip)
 {
-	dnscache_entry_t *etry;
 	DEFiRet;
 
 	pthread_rwlock_rdlock(&dnsCache.rwlock);
-	do {
-		etry = findEntry(addr);
-		dbgprintf("dnscache: entry %p found\n", etry);
-		if(etry == NULL) {
+	dnscache_entry_t * etry = hashtable_search(dnsCache.ht, addr);
+	DBGPRINTF("findEntry: 1st lookup found %p\n", etry);
+
+	if(etry == NULL || (dnscacheEnableTTL && (etry->validUntil <= time(NULL)))) {
+		pthread_rwlock_unlock(&dnsCache.rwlock);
+		pthread_rwlock_wrlock(&dnsCache.rwlock);
+		etry = hashtable_search(dnsCache.ht, addr); /* re-query, might have changed */
+		DBGPRINTF("findEntry: 2nd lookup found %p\n", etry);
+		if(etry == NULL || (dnscacheEnableTTL && (etry->validUntil <= time(NULL)))) {
+			if(etry != NULL) {
+				DBGPRINTF("hashtable: entry timed out, discarding it; "
+					"valid until %lld, now %lld\n",
+					(long long) etry->validUntil, (long long) time(NULL));
+				dnscache_entry_t *const deleted = hashtable_remove(dnsCache.ht, addr);
+				if(deleted != etry) {
+					LogError(0, RS_RET_INTERNAL_ERROR, "dnscache %d: removed different "
+						"hashtable entry than expected - please report issue; "
+						"rsyslog version is %s", __LINE__, VERSION);
+				}
+				entryDestruct(etry);
+			}
+			/* now entry doesn't exist in any case, so let's (re)create it */
 			CHKiRet(addEntry(addr, &etry));
-		} else {
-			CHKiRet(validateEntry(etry, addr));
 		}
-	} while(etry == NULL);
+	}
 
 	prop.AddRef(etry->ip);
 	*ip = etry->ip;
@@ -502,7 +462,25 @@ dnscacheLookup(struct sockaddr_storage *const addr,
 
 finalize_it:
 	pthread_rwlock_unlock(&dnsCache.rwlock);
-	if(iRet != RS_RET_OK && iRet != RS_RET_ADDRESS_UNKNOWN) {
+	RETiRet;
+}
+
+
+/* This is the main function: it looks up an entry and returns it's name
+ * and IP address. If the entry is not yet inside the cache, it is added.
+ * If the entry can not be resolved, an error is reported back. If fqdn
+ * or fqdnLowerCase are NULL, they are not set.
+ */
+rsRetVal ATTR_NONNULL(1, 5)
+dnscacheLookup(struct sockaddr_storage *const addr,
+	prop_t **const fqdn, prop_t **const fqdnLowerCase,
+	prop_t **const localName, prop_t **const ip)
+{
+	DEFiRet;
+
+	iRet = findEntry(addr, fqdn, fqdnLowerCase, localName, ip);
+
+	if(iRet != RS_RET_OK) {
 		DBGPRINTF("dnscacheLookup failed with iRet %d\n", iRet);
 		prop.AddRef(staticErrValue);
 		*ip = staticErrValue;
