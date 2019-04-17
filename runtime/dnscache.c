@@ -207,7 +207,6 @@ setLocalHostName(dnscache_entry_t *etry)
 {
 	uchar *fqdnLower;
 	uchar *p;
-	int count;
 	int i;
 	uchar hostbuf[NI_MAXHOST];
 
@@ -229,36 +228,6 @@ setLocalHostName(dnscache_entry_t *etry)
 	i = p - fqdnLower; /* length of hostname */
 	memcpy(hostbuf, fqdnLower, i);
 	hostbuf[i] = '\0';
-	/* now check if we belong to any of the domain names that were specified
-	 * in the -s command line option. If so, remove and we are done.
-	 */
-	if(glbl.GetStripDomains() != NULL) {
-		count=0;
-		while(glbl.GetStripDomains()[count]) {
-			if(strcmp((char*)(p + 1), glbl.GetStripDomains()[count]) == 0) {
-				prop.CreateStringProp(&etry->localName, hostbuf, i);
-				goto done;
-			}
-			count++;
-		}
-	}
-	/* if we reach this point, we have not found any domain we should strip. Now
-	 * we try and see if the host itself is listed in the -l command line option
-	 * and so should be stripped also. If so, we do it and return. Please note that
-	 * -l list FQDNs, not just the hostname part. If it did just list the hostname, the
-	 * door would be wide-open for all kinds of mixing up of hosts. Because of this,
-	 * you'll see comparison against the full string (pszHostFQDN) below.
-	 */
-	if(glbl.GetLocalHosts() != NULL) {
-		count=0;
-		while(glbl.GetLocalHosts()[count]) {
-			if(!strcmp((char*)fqdnLower, (char*)glbl.GetLocalHosts()[count])) {
-				prop.CreateStringProp(&etry->localName, hostbuf, i);
-				goto done;
-			}
-			count++;
-		}
-	}
 
 	/* at this point, we have not found anything, so we again use the
 	 * already-created complete full name property.
