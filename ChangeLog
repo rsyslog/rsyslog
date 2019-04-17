@@ -1,5 +1,8 @@
 ------------------------------------------------------------------------------
 Version 8.1905.0 (aka 2019.05) 2019-05-28
+- dnscache: fix very unlikely memory leak
+  This fixes a memory leak that can only occur under OOM conditions.
+  Detected by Coverity Scan, CID 203717
 ------------------------------------------------------------------------------
 Version 8.1904.0 (aka 2019.04) 2019-04-16
 - omfile: provide more helpful error message on file write errors
