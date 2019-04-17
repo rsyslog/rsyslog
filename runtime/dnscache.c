@@ -387,6 +387,8 @@ addEntry(struct sockaddr_storage *const addr, dnscache_entry_t **const pEtry)
 	DEFiRet;
 
 	/* entry still does not exist, so add it */
+	struct sockaddr_storage *const keybuf =  malloc(sizeof(struct sockaddr_storage));
+	CHKmalloc(keybuf);
 	CHKmalloc(etry = malloc(sizeof(dnscache_entry_t)));
 	resolveAddr(addr, etry);
 	assert(etry != NULL);
@@ -396,8 +398,6 @@ addEntry(struct sockaddr_storage *const addr, dnscache_entry_t **const pEtry)
 		etry->validUntil = time(NULL) + dnscacheDefaultTTL;
 	}
 
-	struct sockaddr_storage *keybuf;
-	CHKmalloc(keybuf = malloc(sizeof(struct sockaddr_storage)));
 	memcpy(keybuf, addr, sizeof(struct sockaddr_storage));
 
 	r = hashtable_insert(dnsCache.ht, keybuf, etry);
@@ -407,6 +407,9 @@ addEntry(struct sockaddr_storage *const addr, dnscache_entry_t **const pEtry)
 	*pEtry = etry;
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		free(keybuf);
+	}
 	RETiRet;
 }
 
