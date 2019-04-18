@@ -155,11 +155,6 @@ DEFobjCurrIf(module)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(glbl)
 
-/* imports from syslogd.c, these should go away over time (as we
- * migrate/replace more and more code to ASL 2.0).
- */
-char **syslogd_crunch_list(char *list);
-/* end syslogd.c imports */
 extern int yydebug; /* interface to flex */
 
 
@@ -1298,9 +1293,9 @@ initAll(int argc, char **argv)
 	 * rgerhards, 2008-04-04
 	 */
 #if defined(_AIX)
-	while((ch = getopt(argc, argv, "46ACDdf:hi:l:M:nN:qQs:S:T:u:vwxR")) != EOF) {
+	while((ch = getopt(argc, argv, "46ACDdf:hi:M:nN:qQS:T:u:vwxR")) != EOF) {
 #else
-	while((ch = getopt(argc, argv, "46ACDdf:hi:l:M:nN:qQs:S:T:u:vwx")) != EOF) {
+	while((ch = getopt(argc, argv, "46ACDdf:hi:M:nN:qQS:T:u:vwx")) != EOF) {
 #endif
 		switch((char)ch) {
 		case '4':
@@ -1308,12 +1303,10 @@ initAll(int argc, char **argv)
 		case 'A':
 		case 'f': /* configuration file */
 		case 'i': /* pid file name */
-		case 'l':
 		case 'n': /* don't fork */
 		case 'N': /* enable config verify mode */
 		case 'q': /* add hostname if DNS resolving has failed */
 		case 'Q': /* dont resolve hostnames in ACL to IPs */
-		case 's':
 		case 'S': /* Source IP for local client to be used on multihomed host */
 		case 'T': /* chroot on startup (primarily for testing) */
 		case 'u': /* misc user settings */
@@ -1426,16 +1419,6 @@ initAll(int argc, char **argv)
 			free((void*)PidFile);
 			PidFile = arg;
 			break;
-		case 'l':
-			fprintf (stderr, "rsyslogd: the -l command line option will go away "
-				 "soon.\n Make yourself heard on the rsyslog mailing "
-				 "list if you need it any longer.\n");
-			if(glbl.GetLocalHosts() != NULL) {
-				fprintf (stderr, "rsyslogd: Only one -l argument allowed, the first one is taken.\n");
-			} else {
-				glbl.SetLocalHosts(syslogd_crunch_list(arg));
-			}
-			break;
 		case 'n':		/* don't fork */
 			doFork = 0;
 			break;
@@ -1454,16 +1437,6 @@ initAll(int argc, char **argv)
 				 "configuration parameter instead.\n");
 		        *(net.pACLDontResolve) = 1;
 		        break;
-		case 's':
-			fprintf (stderr, "rsyslogd: the -s command line option will go away "
-				 "soon.\n Make yourself heard on the rsyslog mailing "
-				 "list if you need it any longer.\n");
-			if(glbl.GetStripDomains() != NULL) {
-				fprintf (stderr, "rsyslogd: Only one -s argument allowed, the first one is taken.\n");
-			} else {
-				glbl.SetStripDomains(syslogd_crunch_list(arg));
-			}
-			break;
 		case 'T':/* chroot() immediately at program startup, but only for testing, NOT security yet */
 			if(arg == NULL) {
 				/* note this case should already be handled by getopt,
