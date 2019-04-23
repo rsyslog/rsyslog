@@ -14,8 +14,18 @@ Purpose
 When a message is received it is tried to match a set of parsers to get
 properties populated. This parser module sets all attributes to "" but rawmsg.
 There usually should be no need to use this module. It may be useful to
-process certain known-not-syslog messages.
+process certain known-non-syslog messages.
 
+The pmnull module was originally written as some people thought it would
+be nice to save 0.05% of  time by not unnecessarily parsing the message.
+We even doubt it is that amount of performance enhancement as the properties
+need to be populated in any case, so the saving is really minimal (but exists).
+
+**If you just want to transmit or store messages exactly in the format that
+they arrived in you do not need pmnull!** You can use the `rawmsg` property::
+
+	template(name="asReceived" type="string" string="%rawmsg%")
+	action(type="omfwd" target="server.example.net" template="asReceived")
 
 Configuration Parameters
 ========================
