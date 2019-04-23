@@ -82,6 +82,8 @@ DEFobjCurrIf(statsobj)
 unsigned int iOverallQueueSize = 0;
 #endif
 
+#define OVERSIZE_QUEUE_WATERMARK 500000 /* when is a queue considered to be "overly large"? */
+
 /* overridable default values (via global config) */
 int actq_dflt_toQShutdown = 10;		/* queue shutdown */
 int actq_dflt_toActShutdown = 1000;	/* action shutdown (in phase 2) */
@@ -3250,6 +3252,12 @@ qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst)
 			}
 		} else if(!strcmp(pblk.descr[i].name, "queue.size")) {
 			pThis->iMaxQueueSize = pvals[i].val.d.n;
+			if(pThis->iMaxQueueSize > OVERSIZE_QUEUE_WATERMARK) {
+				parser_errmsg("queue.size=%d is very large - is this "
+					"really intended? More info at "
+					"https://www.rsyslog.com/avoid-overly-large-in-memory-queues/",
+					pThis->iMaxQueueSize);
+			}
 		} else if(!strcmp(pblk.descr[i].name, "queue.dequeuebatchsize")) {
 			pThis->iDeqBatchSize = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "queue.mindequeuebatchsize")) {

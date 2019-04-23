@@ -209,6 +209,7 @@ TESTS +=  \
 	tcp_forwarding_tpl.sh \
 	tcp_forwarding_dflt_tpl.sh \
 	tcp_forwarding_retries.sh \
+	queue_errmsg-oversize.sh \
 	queue-minbatch.sh \
 	queue-minbatch-queuefull.sh \
 	arrayqueue.sh \
@@ -1449,6 +1450,7 @@ EXTRA_DIST= \
 	tcp_forwarding_ns_tpl.sh \
 	tcp_forwarding_dflt_tpl.sh \
 	tcp_forwarding_retries.sh \
+	queue_errmsg-oversize.sh \
 	queue-minbatch.sh \
 	queue-minbatch-queuefull.sh \
 	killrsyslog.sh \
