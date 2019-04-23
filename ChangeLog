@@ -1,5 +1,12 @@
 ------------------------------------------------------------------------------
 Version 8.1905.0 (aka 2019.05) 2019-05-28
+- core: emit a warning message for ultra-large queue size definitions
+  We see error reports from users who have configured excessively large queues
+  and receive an OOM condition or other problems.
+  With that patcjh we generate a warnomg message if a queue is configured very
+  large. "Very large" is defined to be in excess of 500000 messages.
+  see also https://github.com/rsyslog/rsyslog/issues/3314
+  closes https://github.com/rsyslog/rsyslog/issues/3334
 - dnscache: fix very unlikely memory leak
   This fixes a memory leak that can only occur under OOM conditions.
   Detected by Coverity Scan, CID 203717
