@@ -267,13 +267,19 @@ PersistStateInterval
 
 Specifies how often the state file shall be written when processing
 the input file. The **default** value is 0, which means a new state
-file is only written when the monitored files is being closed (end of
+file is at least being written when the monitored files is being closed (end of
 rsyslogd execution). Any other value n means that the state file is
-written every time n file lines have been processed. This setting can
+written at least every time n file lines have been processed. This setting can
 be used to guard against message duplication due to fatal errors
 (like power fail). Note that this setting affects imfile performance,
 especially when set to a low value. Frequently writing the state file
 is very time consuming.
+
+Note further that rsyslog may write state files
+more frequently. This happens if rsyslog has some reason to do so.
+There is intentionally no more precise description of when state files
+are being written, as this is an implementation detail and may change
+as needed.
 
 **Note: If this parameter is not set, state files are not created.**
 
@@ -692,17 +698,12 @@ working directory is configurable via the ``global(workDirectory)``
 **Note**: The ``PersistStateInterval`` parameter must be set, otherwise state
 files will NOT be created.
 
-To avoid problems with duplicate state files, rsyslog automatically
-generates state file names according to the following scheme:
+Rsyslog automatically generates state file names. These state file
+names will begin with the string ``imfile-state:`` and be followed
+by some suffix rsyslog generates.
 
-- the string "imfile-state:" is added before the actual file name,
-  which includes the full path
-- the full name is prepended after that string, but all occurrences
-  of "/" are replaced by "-" to facilitate handling of these files
-
-As a concrete example, consider file ``/var/log/applog`` is
-being monitored. The corresponding state file will be named
-``imfile-state:-var-log-applog``.
+There is intentionally no more precise description of when state file
+naming, as this is an implementation detail and may change as needed.
 
 Note that it is possible to set a fixed state file name via the
 deprecated ``stateFile`` parameter. It is suggested to avoid this, as
@@ -715,10 +716,12 @@ However, the detection simply checks for the presence of "*"
 and as such it will not cover more complex cases.
 
 Note that when the ``global(workDirectory)`` |FmtAdvancedName| format
-parameter is not set or set to a non-writable location, the state file
+parameter is points to a non-writable location, the state file
 **will not be generated**. In those cases, the file content will always
 be completely re-sent by imfile, because the module does not know that it
-already processed parts of that file.
+already processed parts of that file. if The parameter is not set to all, it
+defaults to the file system root, which may or may not be writable by
+the rsyslog process.
 
 
 .. _WildCards:
@@ -748,23 +751,10 @@ WildCards
 
 
 
-
-
-
-
-
-
-
-
-
-
-
 Caveats/Known Bugs
 ==================
 
-* currently, wildcards are only supported in inotify mode
-* read modes other than "0" currently seem to have issues in
-  inotify mode
+* symlink may not always be properly processed
 
 Configuration Examples
 ======================
