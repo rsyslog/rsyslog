@@ -24,7 +24,7 @@ Lines starting with a hash mark ("#") and empty lines are ignored.
 
 This variant of syslogd is able to understand a slightly extended syntax
 compared to the original BSD syslogd. One rule may be divided into several
-lines if the leading line is terminated with an backslash ("\\").
+lines if the leading line is terminated with an backslash ("\\\\").
 
 SELECTORS
 =========
@@ -101,7 +101,7 @@ Regular File
 Typically messages are logged to real files. The filename is specified with an
 absolute pathname.
 
-You may prefix each entry with a minus sign ("-") to avoid syncing the file
+You may prefix each entry with a minus sign ("\\-") to avoid syncing the file
 after each log message. Note that you might lose information if the system
 crashes right after a write attempt. Nevertheless this might give you back
 some performance, especially if you run programs that use logging in a very
@@ -167,7 +167,7 @@ configuration. Hopefully they answer all questions about configuring this
 
   # Store critical stuff in critical
   #
-  \*.=crit;kern.none   /var/adm/critical
+  *.=crit;kern.none   /var/adm/critical
 
 This will store all messages of priority crit in the file
 ``/var/adm/critical``, with the exception of any kernel messages.
@@ -178,7 +178,7 @@ This will store all messages of priority crit in the file
    # critical messages and higher ones also go
    # to another host and to the console
    #
-   kern.\*      /var/adm/kernel
+   kern.*      /var/adm/kernel
    kern.crit     @finlandia
    kern.crit     /dev/console
    kern.info;kern.!err   /var/adm/kernel-info
