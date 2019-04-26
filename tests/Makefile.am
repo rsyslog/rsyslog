@@ -359,6 +359,7 @@ TESTS +=  \
 	rscript_previous_action_suspended.sh \
 	rscript_str2num_negative.sh \
 	rscript-config_enable-on.sh \
+	config_output-o-option.sh \
 	rs-cnum.sh \
 	rs-substring.sh \
 	rs-int2hex.sh \
@@ -1496,6 +1497,7 @@ EXTRA_DIST= \
 	include-obj-outside-control-flow-vg.sh \
 	include-obj-in-if-vg.sh \
 	include-obj-text-vg.sh \
+	config_output-o-option.sh \
 	rscript-config_enable-off-vg.sh \
 	rscript-config_enable-on.sh \
 	rscript_http_request.sh \

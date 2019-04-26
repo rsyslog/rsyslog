@@ -5,11 +5,8 @@ generate_conf
 add_conf '
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 
-if $msg contains "msgnum:" then {'
-add_conf "
-	include(file=\"${srcdir}/testsuites/include-std-omfile-actio*.conf\")
-"
-add_conf '
+if $msg contains "msgnum:" then {
+	include(file="'${srcdir}'/testsuites/include-std-omfile-actio*.conf")
 	continue
 }
 '

@@ -3,7 +3,7 @@
  * because it was either written from scratch by me (rgerhards) or
  * contributors who agreed to ASL 2.0.
  *
- * Copyright 2004-2018 Rainer Gerhards and Adiscon
+ * Copyright 2004-2019 Rainer Gerhards and Adiscon
  *
  * This file is part of rsyslog.
  *
@@ -61,6 +61,7 @@
 #include "operatingstate.h"
 #include "dirty.h"
 #include "janitor.h"
+#include "parserif.h"
 
 /* some global vars we need to differentiate between environments,
  * for TZ-related things see
@@ -1293,9 +1294,9 @@ initAll(int argc, char **argv)
 	 * rgerhards, 2008-04-04
 	 */
 #if defined(_AIX)
-	while((ch = getopt(argc, argv, "46ACDdf:hi:M:nN:qQS:T:u:vwxR")) != EOF) {
+	while((ch = getopt(argc, argv, "46ACDdf:hi:M:nN:o:qQS:T:u:vwxR")) != EOF) {
 #else
-	while((ch = getopt(argc, argv, "46ACDdf:hi:M:nN:qQS:T:u:vwx")) != EOF) {
+	while((ch = getopt(argc, argv, "46ACDdf:hi:M:nN:o:qQS:T:u:vwx")) != EOF) {
 #endif
 		switch((char)ch) {
 		case '4':
@@ -1312,6 +1313,7 @@ initAll(int argc, char **argv)
 		case 'u': /* misc user settings */
 		case 'w': /* disable disallowed host warnings */
 		case 'C':
+		case 'o': /* write output config file */
 		case 'x': /* disable dns for remote messages */
 			CHKiRet(bufOptAdd(ch, optarg));
 			break;
@@ -1425,6 +1427,28 @@ initAll(int argc, char **argv)
 		case 'N':		/* enable config verify mode */
 			iConfigVerify = (arg == NULL) ? 0 : atoi(arg);
 			break;
+		case 'o':
+			if(arg == NULL || !strcmp(arg, "-")) {
+				fp_rs_full_conf_output = stdout;
+			} else {
+				fp_rs_full_conf_output = fopen(arg, "w");
+			}
+			if(fp_rs_full_conf_output == NULL) {
+				perror(arg);
+				fprintf (stderr, "rsyslogd: cannot open config output file %s - "
+					"-o option will be ignored\n", arg);
+			} else {
+				time_t tTime;
+				struct tm tp;
+				datetime.GetTime(&tTime);
+				localtime_r(&tTime, &tp);
+				fprintf(fp_rs_full_conf_output,
+					"## full conf created by rsyslog version %s at "
+					"%4.4d-%2.2d-%2.2d %2.2d:%2.2d:%2.2d ##\n",
+					VERSION, tp.tm_year + 1900, tp.tm_mon + 1, tp.tm_mday,
+					tp.tm_hour, tp.tm_min, tp.tm_sec);
+			}
+			break;
 		case 'q':               /* add hostname if DNS resolving has failed */
 			fprintf (stderr, "rsyslogd: the -q command line option will go away "
 				 "soon.\nPlease use the global(net.aclAddHostnameOnFail=\"on\") "
@@ -1504,6 +1528,13 @@ initAll(int argc, char **argv)
 
 	resetErrMsgsFlag();
 	localRet = rsconf.Load(&ourConf, ConfFile);
+
+	if(fp_rs_full_conf_output != NULL) {
+		if(fp_rs_full_conf_output != stdout) {
+			fclose(fp_rs_full_conf_output);
+		}
+		fp_rs_full_conf_output = NULL;
+	}
 
 	/* check for "hard" errors that needs us to abort in any case */
 	if(   (localRet == RS_RET_CONF_FILE_NOT_FOUND)

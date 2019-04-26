@@ -328,7 +328,6 @@ struct funcData_prifilt {
 
 void varFreeMembers(const struct svar *r);
 rsRetVal addMod2List(const int version, struct scriptFunct *functArray);
-int cnfParseBuffer(char *buf, unsigned lenBuf);
 void readConfFile(FILE *fp, es_str_t **str);
 struct objlst* objlstNew(struct cnfobj *obj);
 void objlstDestruct(struct objlst *lst);
