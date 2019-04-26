@@ -184,6 +184,31 @@ happen when nothing is left to be processed.
 **We recommend to use inotify mode.**
 
 
+statefile.directory
+^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "global(WorkDirectory) value", "no", "none"
+
+.. versionadded:: 8.1905.0
+
+This parameter permits to specify a dedicated directory for the storage of
+imfile state files. An absolute path name should be specified (e.g.
+`/var/rsyslog/imfilestate`). This permits to keep imfile state files separate
+from other rsyslog work items.
+
+If not specified the global `workDirectory` setting is used.
+
+**Important: The directory must exist before rsyslog is started.** Also,
+rsyslog needs write permissions to work correctly. Keep in mind that this
+also might require SELinux definitions (or similar for other enhanced security
+systems).
+
+
 Input Parameters
 ----------------
 
