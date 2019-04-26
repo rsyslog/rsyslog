@@ -22,5 +22,5 @@ wait_file_lines
 shutdown_when_empty
 wait_shutdown
 seq_check
-content_check "imfile: no working directory set" $RSYSLOG_DYNNAME.othermsgs
+content_check "imfile: no working or state file directory set" $RSYSLOG_DYNNAME.othermsgs
 exit_test

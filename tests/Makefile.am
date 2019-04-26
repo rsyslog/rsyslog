@@ -1252,6 +1252,7 @@ TESTS += \
 	imfile-endmsg.regex.sh \
 	imfile-statefile-no-file_id.sh \
 	imfile-statefile-no-file_id-TO-file_id.sh \
+	imfile-statefile-directory.sh \
 	imfile-persist-state-1.sh \
 	imfile-freshStartTail1.sh \
 	imfile-freshStartTail2.sh \
@@ -2024,6 +2025,7 @@ EXTRA_DIST= \
 	imfile-endmsg.regex.json.rulebase \
 	imfile-statefile-no-file_id.sh \
 	imfile-statefile-no-file_id-TO-file_id.sh \
+	imfile-statefile-directory.sh \
 	imfile-persist-state-1.sh \
 	imfile-freshStartTail1.sh \
 	imfile-freshStartTail2.sh \

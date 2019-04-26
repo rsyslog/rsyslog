@@ -5,7 +5,7 @@
  *
  * Work originally begun on 2008-02-01 by Rainer Gerhards
  *
- * Copyright 2008-2018 Adiscon GmbH.
+ * Copyright 2008-2019 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -232,6 +232,7 @@ struct modConfData_s {
 	fs_node_t *conf_tree;
 	uint8_t opMode;
 	sbool configSetViaV2Method;
+	uchar *stateFileDirectory;
 	sbool sortFiles;
 	sbool normalizePath;	/* normalize file system pathes (all start with root dir) */
 	sbool haveReadTimeouts;	/* use special processing if read timeouts exist */
@@ -243,7 +244,8 @@ struct modConfData_s {
 				 */
 };
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
-static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
+static modConfData_t *runModConf = NULL;/* modConf ptr to use for run process */
+static modConfData_t *currModConf = NULL;/* modConf ptr to CURRENT mod conf (run or load) */
 
 
 #ifdef HAVE_INOTIFY_INIT
@@ -284,6 +286,7 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "readtimeout", eCmdHdlrPositiveInt, 0 },
 	{ "timeoutgranularity", eCmdHdlrPositiveInt, 0 },
 	{ "sortfiles", eCmdHdlrBinary, 0 },
+	{ "statefile.directory", eCmdHdlrString, 0 },
 	{ "normalizepath", eCmdHdlrBinary, 0 },
 	{ "mode", eCmdHdlrGetWord, 0 }
 };
@@ -353,6 +356,21 @@ OLD_getStateFileName(const instanceConf_t *const inst,
 	}
 	return buf;
 }
+
+
+static const uchar *
+getStateFileDir(void)
+{
+	const uchar *wrkdir;
+	assert(currModConf != NULL);
+	if(currModConf->stateFileDirectory == NULL) {
+		wrkdir = glblGetWorkDirRaw();
+	} else {
+		wrkdir = currModConf->stateFileDirectory;
+	}
+	return(wrkdir);
+}
+
 
 /* try to open an old-style state file for given file. If the state file does not
  * exist or cannot be read, an error is returned.
@@ -1161,7 +1179,7 @@ finalize_it:
 }
 
 
-/* Helper function to combine statefile and workdir
+/* Helper function to combine statefile and state file directory
  * This function is guranteed to work only on config data and DOES NOT
  * open or otherwise modify disk file state.
  */
@@ -1172,14 +1190,14 @@ getFullStateFileName(const uchar *const pszstatefile,
 	const size_t ilenout)
 {
 	int lenout;
-	const uchar* pszworkdir;
+	const uchar* pszstatedir;
 
 	/* Get Raw Workdir, if it is NULL we need to propper handle it */
-	pszworkdir = glblGetWorkDirRaw();
+	pszstatedir = getStateFileDir();
 
 	/* Construct file name */
 	lenout = snprintf((char*)pszout, ilenout, "%s/%s%s%s",
-		(char*) (pszworkdir == NULL ? "." : (char*) pszworkdir), (char*)pszstatefile,
+		(char*) (pszstatedir == NULL ? "." : (char*) pszstatedir), (char*)pszstatefile,
 		(*file_id == '\0') ? "" : ":", file_id);
 
 	/* return out length */
@@ -1917,6 +1935,7 @@ ENDnewInpInst
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
 	loadModConf = pModConf;
+	currModConf = pModConf;
 	pModConf->pConf = pConf;
 	/* init our settings */
 	loadModConf->opMode = OPMODE_POLLING;
@@ -1927,6 +1946,7 @@ CODESTARTbeginCnfLoad
 	loadModConf->haveReadTimeouts = 0; /* default: no timeout */
 	loadModConf->normalizePath = 1;
 	loadModConf->sortFiles = GLOB_NOSORT;
+	loadModConf->stateFileDirectory = NULL;
 	loadModConf->conf_tree = calloc(sizeof(fs_node_t), 1);
 	loadModConf->conf_tree->edges = NULL;
 	bLegacyCnfModGlobalsPermitted = 1;
@@ -1980,6 +2000,8 @@ CODESTARTsetModCnf
 			loadModConf->timeoutGranularity = (int) pvals[i].val.d.n * 1000;
 		} else if(!strcmp(modpblk.descr[i].name, "sortfiles")) {
 			loadModConf->sortFiles = ((sbool) pvals[i].val.d.n) ? 0 : GLOB_NOSORT;
+		} else if(!strcmp(modpblk.descr[i].name, "statefile.directory")) {
+			loadModConf->stateFileDirectory = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "normalizepath")) {
 			loadModConf->normalizePath = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "mode")) {
@@ -2045,10 +2067,10 @@ ENDendCnfLoad
 BEGINcheckCnf
 	instanceConf_t *inst;
 CODESTARTcheckCnf
-	if(ustrlen(glbl.GetWorkDir()) == 0) {
+	if(getStateFileDir() == NULL) {
 		/* this intentionally is an error message */
 		LogError(0, RS_RET_NO_WRKDIR_SET,
-			"imfile: no working directory set, imfile will create "
+			"imfile: no working or state file directory set, imfile will create "
 			"state files in the current working directory (probably "
 			"the root dir). Use global(workDirectory=\"/some/path\") "
 			"to set the working directory");
@@ -2072,6 +2094,7 @@ BEGINactivateCnf
 	instanceConf_t *inst;
 CODESTARTactivateCnf
 	runModConf = pModConf;
+	currModConf = pModConf;
 	if(runModConf->root == NULL) {
 		LogError(0, NO_ERRCODE, "imfile: no file monitors configured, "
 				"input not activated.\n");
