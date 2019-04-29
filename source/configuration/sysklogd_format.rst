@@ -99,13 +99,9 @@ Regular File
 ------------
 
 Typically messages are logged to real files. The filename is specified with an
-absolute pathname.
-
-You may prefix each entry with a minus sign ("\\-") to avoid syncing the file
-after each log message. Note that you might lose information if the system
-crashes right after a write attempt. Nevertheless this might give you back
-some performance, especially if you run programs that use logging in a very
-verbose manner.
+absolute pathname. It may be specifed as a file name relative to rsyslog's
+working directory if the filename starts with "." or "..". However, this is
+dangerous and should be avoided.
 
 Named Pipes
 -----------
