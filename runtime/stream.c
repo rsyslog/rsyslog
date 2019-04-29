@@ -2090,7 +2090,7 @@ finalize_it:
  * free byte left. This came up during a code walkthrough and was considered
  * worth nothing. -- rgerhards, 2010-03-10
  */
-static rsRetVal
+static rsRetVal ATTR_NONNULL(1,2)
 strmWrite(strm_t *__restrict__ const pThis, const uchar *__restrict__ const pBuf, size_t lenBuf)
 {
 	DEFiRet;
@@ -2100,9 +2100,6 @@ strmWrite(strm_t *__restrict__ const pThis, const uchar *__restrict__ const pBuf
 	assert(pThis != NULL);
 	assert(pBuf != NULL);
 
-/* DEV DEBUG ONLY DBGPRINTF("strmWrite(%p[%s], '%65.65s', %ld);,
-disabled %d, sizelim %ld, size %lld\n", pThis, pThis->pszCurrFName, pBuf,(long) lenBuf,
-pThis->bDisabled, (long) pThis->iSizeLimit, (long long) pThis->iCurrOffs); */
 	if(pThis->bDisabled)
 		ABORT_FINALIZE(RS_RET_STREAM_DISABLED);
 
