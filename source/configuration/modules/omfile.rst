@@ -435,6 +435,10 @@ and should be switched to "off" for that use case.
 Also note that the default -on- is primarily an aid to preserve the
 traditional syslogd behaviour.
 
+If you are using dynamic file names (dynafiles), flushes can actually
+happen more frequently. In this case, a flush can also happen when
+the file name changes within a transaction.
+
 
 ioBufferSize
 ^^^^^^^^^^^^
