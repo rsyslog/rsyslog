@@ -47,6 +47,8 @@
 PRAGMA_IGNORE_Wsign_compare
 PRAGMA_IGNORE_Wmissing_noreturn
 
+FILE *fp_rs_full_conf_output = NULL;
+
 /* TODO: move this to a better modules, refactor -- rgerhards, 2018-01-22 */
 static char *
 read_file(const char *const filename)
@@ -212,8 +214,9 @@ struct bufstack {
 char *cnfcurrfn;			/* name of currently processed file */
 
 int popfile(void);
-int cnfSetLexFile(char *fname);
+int cnfSetLexFile(const char *fname);
 
+static void cnfPrintToken(const char *token);
 extern int yydebug;
 
 /* somehow, I need these prototype even though the headers are 
@@ -230,33 +233,33 @@ int fileno(FILE *stream);
 %%
 
  /* keywords */
-"if"				{ BEGIN EXPR; return IF; }
-"foreach"			{ BEGIN EXPR; return FOREACH; }
-"reload_lookup_table"		{ BEGIN IN_PROCEDURE_CALL; return RELOAD_LOOKUP_TABLE_PROCEDURE; }
-<IN_PROCEDURE_CALL>"("		{ return yytext[0]; }
+"if"				{ cnfPrintToken(yytext); BEGIN EXPR; return IF; }
+"foreach"			{ cnfPrintToken(yytext); BEGIN EXPR; return FOREACH; }
+"reload_lookup_table"		{ cnfPrintToken(yytext); BEGIN IN_PROCEDURE_CALL; return RELOAD_LOOKUP_TABLE_PROCEDURE; }
+<IN_PROCEDURE_CALL>"("		{ cnfPrintToken(yytext); return yytext[0]; }
 <IN_PROCEDURE_CALL>\'([^'\\]|\\['"\\$bntr]|\\x[0-9a-f][0-9a-f]|\\[0-7][0-7][0-7])*\'	 {
-				   yytext[yyleng-1] = '\0';
+				  cnfPrintToken(yytext);  yytext[yyleng-1] = '\0';
 				   unescapeStr((uchar*)yytext+1, yyleng-2);
 				   yylval.estr = es_newStrFromBuf(yytext+1, strlen(yytext)-1);
 				   return STRING; }
 <IN_PROCEDURE_CALL>\"([^"\\$]|\\["'\\$bntr]|\\x[0-9a-f][0-9a-f]|\\[0-7][0-7][0-7])*\" {
-				   yytext[yyleng-1] = '\0';
+				   cnfPrintToken(yytext); yytext[yyleng-1] = '\0';
 				   unescapeStr((uchar*)yytext+1, yyleng-2);
 				   yylval.estr = es_newStrFromBuf(yytext+1, strlen(yytext)-1);
 				   return STRING; }
-<IN_PROCEDURE_CALL>"," 		{ return yytext[0]; }
-<IN_PROCEDURE_CALL>")" 		{ BEGIN INITIAL; return yytext[0]; }
-<IN_PROCEDURE_CALL>[ \t\n]* 		{  }
-<IN_PROCEDURE_CALL>. 		{ parser_errmsg("invalid character '%s' in expression "
+<IN_PROCEDURE_CALL>"," 		{ cnfPrintToken(yytext); return yytext[0]; }
+<IN_PROCEDURE_CALL>")" 		{ cnfPrintToken(yytext); BEGIN INITIAL; return yytext[0]; }
+<IN_PROCEDURE_CALL>[ \t\n]* 		{cnfPrintToken(yytext);   }
+<IN_PROCEDURE_CALL>. 		{ cnfPrintToken(yytext); parser_errmsg("invalid character '%s' in expression "
 					        "- is there an invalid escape sequence somewhere?",
 						yytext); }
-<EXPR>"("			{ BEGIN EXPR; return yytext[0]; }
-<EXPR>"then"			{ BEGIN INITIAL; return THEN; }
-<EXPR>"do"			{ BEGIN INITIAL; return DO; }
-<EXPR>";"			{ BEGIN INITIAL; return ';'; }
-<EXPR>"or"			{ return OR; }
-<EXPR>"and"			{ return AND; }
-<EXPR>"not"			{ return NOT; }
+<EXPR>"("			{ cnfPrintToken(yytext); BEGIN EXPR; return yytext[0]; }
+<EXPR>"then"			{ cnfPrintToken(yytext); BEGIN INITIAL; return THEN; }
+<EXPR>"do"			{ cnfPrintToken(yytext); BEGIN INITIAL; return DO; }
+<EXPR>";"			{ cnfPrintToken(yytext); BEGIN INITIAL; return ';'; }
+<EXPR>"or"			{ cnfPrintToken(yytext); return OR; }
+<EXPR>"and"			{ cnfPrintToken(yytext); return AND; }
+<EXPR>"not"			{ cnfPrintToken(yytext); return NOT; }
 <EXPR>"=" |
 <EXPR>"," |
 <EXPR>"*" |
@@ -267,145 +270,145 @@ int fileno(FILE *stream);
 <EXPR>"-" |
 <EXPR>"[" |
 <EXPR>"]" |
-<EXPR>")"			{ return yytext[0]; }
-<EXPR>"=="			{ return CMP_EQ; }
-<EXPR>"<="			{ return CMP_LE; }
-<EXPR>">="			{ return CMP_GE; }
+<EXPR>")"			{ cnfPrintToken(yytext); return yytext[0]; }
+<EXPR>"=="			{ cnfPrintToken(yytext); return CMP_EQ; }
+<EXPR>"<="			{ cnfPrintToken(yytext); return CMP_LE; }
+<EXPR>">="			{ cnfPrintToken(yytext); return CMP_GE; }
 <EXPR>"!=" |
-<EXPR>"<>"			{ return CMP_NE; }
-<EXPR>"<"			{ return CMP_LT; }
-<EXPR>">"			{ return CMP_GT; }
-<EXPR>"contains"		{ return CMP_CONTAINS; }
-<EXPR>"in"		        { return ITERATOR_ASSIGNMENT; }
-<EXPR>"contains_i"		{ return CMP_CONTAINSI; }
-<EXPR>"startswith"		{ return CMP_STARTSWITH; }
-<EXPR>"startswith_i"		{ return CMP_STARTSWITHI; }
+<EXPR>"<>"			{ cnfPrintToken(yytext); return CMP_NE; }
+<EXPR>"<"			{ cnfPrintToken(yytext); return CMP_LT; }
+<EXPR>">"			{ cnfPrintToken(yytext); return CMP_GT; }
+<EXPR>"contains"		{ cnfPrintToken(yytext); return CMP_CONTAINS; }
+<EXPR>"in"		        { cnfPrintToken(yytext); return ITERATOR_ASSIGNMENT; }
+<EXPR>"contains_i"		{ cnfPrintToken(yytext); return CMP_CONTAINSI; }
+<EXPR>"startswith"		{ cnfPrintToken(yytext); return CMP_STARTSWITH; }
+<EXPR>"startswith_i"		{ cnfPrintToken(yytext); return CMP_STARTSWITHI; }
 <EXPR>0[0-7]+ |			/* octal number */
 <EXPR>0x[0-9a-f]+ |		/* hex number, following rule is dec; strtoll handles all! */
-<EXPR>([1-9][0-9]*|0)		{ yylval.n = strtoll(yytext, NULL, 0); return NUMBER; }
-<EXPR>\$[$!./]{0,1}[@a-z_]*[!@a-z0-9\-_\.\[\]]*	{ yylval.s = strdup(yytext+1); return VAR; }
+<EXPR>([1-9][0-9]*|0)		{ cnfPrintToken(yytext); yylval.n = strtoll(yytext, NULL, 0); return NUMBER; }
+<EXPR>\$[$!./]{0,1}[@a-z_]*[!@a-z0-9\-_\.\[\]]*	{ cnfPrintToken(yytext); yylval.s = strdup(yytext+1); return VAR; }
 <EXPR>\'([^'\\]|\\['"\\$bntr]|\\x[0-9a-f][0-9a-f]|\\[0-7][0-7][0-7])*\'	 {
-				   yytext[yyleng-1] = '\0';
+				   cnfPrintToken(yytext); yytext[yyleng-1] = '\0';
 				   unescapeStr((uchar*)yytext+1, yyleng-2);
 				   yylval.estr = es_newStrFromBuf(yytext+1, strlen(yytext)-1);
 				   return STRING; }
 <EXPR>`([^`\\]|\\['`"\\bntr]|\\x[0-9a-f][0-9a-f]|\\[0-7][0-7][0-7])*`	 {
-				   yytext[yyleng-1] = '\0';
+				   cnfPrintToken(yytext); yytext[yyleng-1] = '\0';
 				   unescapeStr((uchar*)yytext+1, yyleng-2);
 				   yylval.estr = expand_backticks(yytext+1);
 				   return STRING; }
 <EXPR>\"([^"\\$]|\\["'\\$bntr]|\\x[0-9a-f][0-9a-f]|\\[0-7][0-7][0-7])*\" {
-				   yytext[yyleng-1] = '\0';
+				   cnfPrintToken(yytext); yytext[yyleng-1] = '\0';
 				   unescapeStr((uchar*)yytext+1, yyleng-2);
 				   yylval.estr = es_newStrFromBuf(yytext+1, strlen(yytext)-1);
 				   return STRING; }
-<EXPR>[ \t\n]
-<EXPR>[a-z][a-z0-9_]*		{ yylval.estr = es_newStrFromCStr(yytext, yyleng);
+<EXPR>[ \t\n]			{ cnfPrintToken(yytext); }
+<EXPR>[a-z][a-z0-9_]*		{ cnfPrintToken(yytext); yylval.estr = es_newStrFromCStr(yytext, yyleng);
 				  return FUNC; }
-<EXPR>.				{ parser_errmsg("invalid character '%s' in expression "
+<EXPR>.				{ cnfPrintToken(yytext); parser_errmsg("invalid character '%s' in expression "
 					        "- is there an invalid escape sequence somewhere?",
 						yytext); }
 <INCALL>[ \t\n]
-<INCALL>.			{ parser_errmsg("invalid character '%s' in 'call' statement"
+<INCALL>.			{ cnfPrintToken(yytext); parser_errmsg("invalid character '%s' in 'call' statement"
 					        "- is there an invalid escape sequence somewhere?",
 						yytext); }
-<INCALL>[a-zA-Z][a-zA-Z0-9\-_\.]*	{ yylval.estr = es_newStrFromCStr(yytext, yyleng);
+<INCALL>[a-zA-Z][a-zA-Z0-9\-_\.]*	{ cnfPrintToken(yytext); yylval.estr = es_newStrFromCStr(yytext, yyleng);
 				  BEGIN INITIAL;
 				  return NAME; }
-"&"				{ return '&'; }
-"{"				{ return '{'; }
-"}"				{ return '}'; }
-"stop"				{ return STOP; }
-"else"				{ return ELSE; }
-"call"				{ BEGIN INCALL; return CALL; }
-"call_indirect"			{ BEGIN EXPR; return CALL_INDIRECT; }
-"set"				{ BEGIN EXPR; return SET; }
-"reset"				{ BEGIN EXPR; return RESET; }
-"unset"				{ BEGIN EXPR; return UNSET; }
-"continue"			{ return CONTINUE; }
+"&"				{ cnfPrintToken(yytext); return '&'; }
+"{"				{ cnfPrintToken(yytext); return '{'; }
+"}"				{ cnfPrintToken(yytext); return '}'; }
+"stop"				{ cnfPrintToken(yytext); return STOP; }
+"else"				{ cnfPrintToken(yytext); return ELSE; }
+"call"				{ cnfPrintToken(yytext); BEGIN INCALL; return CALL; }
+"call_indirect"			{ cnfPrintToken(yytext); BEGIN EXPR; return CALL_INDIRECT; }
+"set"				{ cnfPrintToken(yytext); BEGIN EXPR; return SET; }
+"reset"				{ cnfPrintToken(yytext); BEGIN EXPR; return RESET; }
+"unset"				{ cnfPrintToken(yytext); BEGIN EXPR; return UNSET; }
+"continue"			{ cnfPrintToken(yytext); return CONTINUE; }
  /* line number support because the "preprocessor" combines lines and so needs
   * to tell us the real source line.
   */
-"preprocfilelinenumber("	{ BEGIN LINENO; }
-<LINENO>[0-9]+			{ yylineno = atoi(yytext) - 1; }
-<LINENO>")"			{ BEGIN INITIAL; }
+"preprocfilelinenumber("	{ cnfPrintToken(yytext); BEGIN LINENO; }
+<LINENO>[0-9]+			{ cnfPrintToken(yytext); yylineno = atoi(yytext) - 1; }
+<LINENO>")"			{ cnfPrintToken(yytext); BEGIN INITIAL; }
 <LINENO>.|\n
  /* $IncludeConfig must be detected as part of CFSYSLINE, because this is
   * always the longest match :-(
   */
 <INCL>.|\n
-<INCL>[^ \t\n]+			{ if(cnfDoInclude(yytext, 0) != 0)
+<INCL>[^ \t\n]+			{ cnfPrintToken(yytext); if(cnfDoInclude(yytext, 0) != 0)
 					yyterminate();
 				  BEGIN INITIAL; }
-"main_queue"[ \n\t]*"("		{ yylval.objType = CNFOBJ_MAINQ;
+"main_queue"[ \n\t]*"("		{ cnfPrintToken(yytext); yylval.objType = CNFOBJ_MAINQ;
 				  BEGIN INOBJ; return BEGINOBJ; }
-"timezone"[ \n\t]*"("		{ yylval.objType = CNFOBJ_TIMEZONE;
+"timezone"[ \n\t]*"("		{ cnfPrintToken(yytext); yylval.objType = CNFOBJ_TIMEZONE;
 				  BEGIN INOBJ; return BEGINOBJ; }
-"parser"[ \n\t]*"("		{ yylval.objType = CNFOBJ_PARSER;
+"parser"[ \n\t]*"("		{ cnfPrintToken(yytext); yylval.objType = CNFOBJ_PARSER;
 				  BEGIN INOBJ; return BEGINOBJ; }
-"global"[ \n\t]*"("		{ yylval.objType = CNFOBJ_GLOBAL;
+"global"[ \n\t]*"("		{ cnfPrintToken(yytext); yylval.objType = CNFOBJ_GLOBAL;
 				  BEGIN INOBJ; return BEGINOBJ; }
-"template"[ \n\t]*"("		{ yylval.objType = CNFOBJ_TPL;
+"template"[ \n\t]*"("		{ cnfPrintToken(yytext); yylval.objType = CNFOBJ_TPL;
 				  BEGIN INOBJ; return BEGIN_TPL; }
-"ruleset"[ \n\t]*"("		{ yylval.objType = CNFOBJ_RULESET;
+"ruleset"[ \n\t]*"("		{ cnfPrintToken(yytext); yylval.objType = CNFOBJ_RULESET;
 				  BEGIN INOBJ; return BEGIN_RULESET; }
-"property"[ \n\t]*"("		{ yylval.objType = CNFOBJ_PROPERTY;
+"property"[ \n\t]*"("		{ cnfPrintToken(yytext); yylval.objType = CNFOBJ_PROPERTY;
 				  BEGIN INOBJ; return BEGIN_PROPERTY; }
-"constant"[ \n\t]*"("		{ yylval.objType = CNFOBJ_CONSTANT;
+"constant"[ \n\t]*"("		{ cnfPrintToken(yytext); yylval.objType = CNFOBJ_CONSTANT;
 				  BEGIN INOBJ; return BEGIN_CONSTANT; }
-"input"[ \n\t]*"("		{ yylval.objType = CNFOBJ_INPUT;
+"input"[ \n\t]*"("		{ cnfPrintToken(yytext); yylval.objType = CNFOBJ_INPUT;
 				  BEGIN INOBJ; return BEGINOBJ; }
-"module"[ \n\t]*"("		{ yylval.objType = CNFOBJ_MODULE;
+"module"[ \n\t]*"("		{ cnfPrintToken(yytext); yylval.objType = CNFOBJ_MODULE;
 				  BEGIN INOBJ; return BEGINOBJ; }
-"lookup_table"[ \n\t]*"("	{ yylval.objType = CNFOBJ_LOOKUP_TABLE;
+"lookup_table"[ \n\t]*"("	{ cnfPrintToken(yytext); yylval.objType = CNFOBJ_LOOKUP_TABLE;
 				  BEGIN INOBJ; return BEGINOBJ; }
-"dyn_stats"[ \n\t]*"("		{ yylval.objType = CNFOBJ_DYN_STATS;
+"dyn_stats"[ \n\t]*"("		{ cnfPrintToken(yytext); yylval.objType = CNFOBJ_DYN_STATS;
 				  BEGIN INOBJ; return BEGINOBJ; }
-"include"[ \n\t]*"("		{ BEGIN INOBJ; return BEGIN_INCLUDE; }
-"action"[ \n\t]*"("		{ BEGIN INOBJ; return BEGIN_ACTION; }
+"include"[ \n\t]*"("		{ cnfPrintToken(yytext); BEGIN INOBJ; return BEGIN_INCLUDE; }
+"action"[ \n\t]*"("		{ cnfPrintToken(yytext); BEGIN INOBJ; return BEGIN_ACTION; }
 ^[ \t]*:\$?[a-z\-]+[ ]*,[ ]*!?[a-z]+[ ]*,[ ]*\"(\\\"|[^\"])*\"	{
-				  yylval.s = strdup(rmLeadingSpace(yytext));
+				  cnfPrintToken(yytext); yylval.s = strdup(rmLeadingSpace(yytext));
 				  dbgprintf("lexer: propfilt is '%s'\n", yylval.s);
 				  return PROPFILT;
 				  }
-^[ \t]*[\*a-z][\*a-z]*[0-7]*[\.,][,!=;\.\*a-z0-7]+ { yylval.s = strdup(rmLeadingSpace(yytext)); return PRIFILT; }
+^[ \t]*[\*a-z][\*a-z]*[0-7]*[\.,][,!=;\.\*a-z0-7]+ { cnfPrintToken(yytext); yylval.s = strdup(rmLeadingSpace(yytext)); return PRIFILT; }
 "~" |
 "*" |
 \-\/[^*][^\n]* |
 \/[^*][^\n]* |
 :[a-z0-9]+:[^\n]* |
 [\|\.\-\@\^?~>][^\n]+ |
-[a-z0-9_][a-z0-9_\-\+,;]*	{ yylval.s = yytext; return LEGACY_ACTION; }
-<INOBJ>")"			{ BEGIN INITIAL; return ENDOBJ; }
-<INOBJ>[a-z][a-z0-9_\.]*	{ yylval.estr = es_newStrFromCStr(yytext, yyleng);
+[a-z0-9_][a-z0-9_\-\+,;]*	{ cnfPrintToken(yytext); yylval.s = yytext; return LEGACY_ACTION; }
+<INOBJ>")"			{ cnfPrintToken(yytext); BEGIN INITIAL; return ENDOBJ; }
+<INOBJ>[a-z][a-z0-9_\.]*	{ cnfPrintToken(yytext); yylval.estr = es_newStrFromCStr(yytext, yyleng);
 				  return NAME; }
 <INOBJ>"," |
 <INOBJ>"[" |
 <INOBJ>"]" |
-<INOBJ>"="			{ return(yytext[0]); }
+<INOBJ>"="			{ cnfPrintToken(yytext); return(yytext[0]); }
 <INOBJ>\"([^"\\]|\\['"?\\abfnrtv]|\\[0-7]{1,3})*\" {
-				   yytext[yyleng-1] = '\0';
+				   cnfPrintToken(yytext); yytext[yyleng-1] = '\0';
 				   unescapeStr((uchar*)yytext+1, yyleng-2);
 				   yylval.estr = es_newStrFromBuf(yytext+1, strlen(yytext)-1);
 				   return STRING; }
 <INOBJ>`([^`\\]|\\['`?\\abfnrtv]|\\[0-7]{1,3})*` {
-				   yytext[yyleng-1] = '\0';
+				   cnfPrintToken(yytext); yytext[yyleng-1] = '\0';
 				   unescapeStr((uchar*)yytext+1, yyleng-2);
 				   yylval.estr = expand_backticks(yytext+1);
 				   return STRING; }
 				  /*yylval.estr = es_newStrFromBuf(yytext+1, yyleng-2);
 				  return VALUE; }*/
-"/*"				{ preCommentState = YY_START; BEGIN COMMENT; }
-<INOBJ>"/*"			{ preCommentState = YY_START; BEGIN COMMENT; }
-<EXPR>"/*"			{ preCommentState = YY_START; BEGIN COMMENT; }
-<COMMENT>"*/"			{ BEGIN preCommentState; }
+"/*"				{ cnfPrintToken(yytext); preCommentState = YY_START; BEGIN COMMENT; }
+<INOBJ>"/*"			{ cnfPrintToken(yytext); preCommentState = YY_START; BEGIN COMMENT; }
+<EXPR>"/*"			{ cnfPrintToken(yytext); preCommentState = YY_START; BEGIN COMMENT; }
+<COMMENT>"*/"			{ cnfPrintToken(yytext); BEGIN preCommentState; }
 <COMMENT>([^*]|\n)+|.
 <INOBJ>#.*$	/* skip comments in input */
-<INOBJ>[ \n\t]
-<INOBJ>.			{ parser_errmsg("invalid character '%s' in object definition "
+<INOBJ>[ \n\t] { cnfPrintToken(yytext); }
+<INOBJ>.			{ cnfPrintToken(yytext); parser_errmsg("invalid character '%s' in object definition "
 					        "- is there an invalid escape sequence somewhere?",
 						yytext); }
-\$[a-z]+.*$			{ /* see comment on $IncludeConfig above */
+\$[a-z]+.*$			{ cnfPrintToken(yytext); /* see comment on $IncludeConfig above */
 				  if(!strncasecmp(yytext, "$includeconfig ", 14)) {
 					yyless((yy_size_t)14);
 				  	BEGIN INCL;
@@ -416,43 +419,24 @@ int fileno(FILE *stream);
 					  cnfDoCfsysline(strdup(yytext)); 
 				  }
 				}
-![^ \t\n]+[ \t]*$		{ yylval.s = strdup(yytext); return BSD_TAG_SELECTOR; }
-[+-]\*[ \t\n]*#.*$		{ yylval.s = strdup(yytext); return BSD_HOST_SELECTOR; }
-[+-]\*[ \t\n]*$			{ yylval.s = strdup(yytext); return BSD_HOST_SELECTOR; }
-^[ \t]*[+-][a-z0-9.:-]+[ \t]*$	{ yylval.s = strdup(yytext); return BSD_HOST_SELECTOR; }
-\#.*\n	/* skip comments in input */
-[\n\t ]	/* drop whitespace */
-.				{ parser_errmsg("invalid character '%s' "
+![^ \t\n]+[ \t]*$		{ cnfPrintToken(yytext); yylval.s = strdup(yytext); return BSD_TAG_SELECTOR; }
+[+-]\*[ \t\n]*#.*$		{ cnfPrintToken(yytext); yylval.s = strdup(yytext); return BSD_HOST_SELECTOR; }
+[+-]\*[ \t\n]*$			{ cnfPrintToken(yytext); yylval.s = strdup(yytext); return BSD_HOST_SELECTOR; }
+^[ \t]*[+-][a-z0-9.:-]+[ \t]*$	{ cnfPrintToken(yytext); yylval.s = strdup(yytext); return BSD_HOST_SELECTOR; }
+\#.*\n	{cnfPrintToken(yytext); }/* skip comments in input */
+[\n\t ]	{cnfPrintToken(yytext); }/* drop whitespace */
+.				{ cnfPrintToken(yytext); parser_errmsg("invalid character '%s' "
 					        "- is there an invalid escape sequence somewhere?",
 						yytext); }
 <<EOF>>				{ if(popfile() != 0) yyterminate(); }
 
 %%
-int
-cnfParseBuffer(char *buf, unsigned lenBuf)
+static void cnfPrintToken(const char *token)
 {
-	struct bufstack *bs;
-	int r = 0;
-	yydebug = 1;
-	BEGIN INITIAL;
-	/* maintain stack */
-	if((bs = malloc(sizeof(struct bufstack))) == NULL) {
-		r = 1;
-		goto done;
+	if(fp_rs_full_conf_output != NULL) {
+		fprintf(fp_rs_full_conf_output, "%s", token);
 	}
-
-	if(currbs != NULL)
-		currbs->lineno = yylineno;
-	bs->prev = currbs;
-	bs->fn = strdup("*buffer*");
-	bs->bs = yy_scan_buffer(buf, lenBuf);
-	bs->estr = NULL;
-	currbs = bs;
-	cnfcurrfn = bs->fn;
-	yylineno = 1;
-done:	return r;
 }
-
 
 /* add config file or text the the stack of config objects to be
  * processed.
@@ -479,12 +463,17 @@ cnfAddConfigBuffer(es_str_t *const str, const char *const cnfobj_name)
 	bs->prev = currbs;
 	bs->fn = strdup(cnfobj_name);
 	yy_size_t lll = es_strlen(str);
+	/* NOTE: yy_scan_buffer() does an automatic yy_switch_to_buffer to the new buffer */
 	bs->bs = yy_scan_buffer((char*)es_getBufAddr(str), lll);
 	bs->estr = str; /* needed so we can free it later */
 	currbs = bs;
 	cnfcurrfn = bs->fn;
 	yylineno = 1;
 	dbgprintf("config parser: pushed config fragment on top of stack: %s\n", cnfobj_name);
+
+	if(fp_rs_full_conf_output != NULL) {
+		fprintf(fp_rs_full_conf_output, "\n##### BEGIN CONFIG: %s\n", cnfcurrfn);
+	}
 
 done:
 	if(r != 0) {
@@ -498,7 +487,7 @@ done:
  * note: in case of error, errno must be kept valid!
  */
 int
-cnfSetLexFile(char *fname)
+cnfSetLexFile(const char *const fname)
 {
 	es_str_t *str = NULL;
 	struct bufstack *bs;
@@ -539,6 +528,10 @@ int
 popfile(void)
 {
 	struct bufstack *bs = currbs;
+
+	if(fp_rs_full_conf_output != NULL) {
+		fprintf(fp_rs_full_conf_output, "\n##### END   CONFIG: %s\n", cnfcurrfn);
+	}
 
 	if(bs == NULL)
 		return 1;

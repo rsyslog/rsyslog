@@ -1,7 +1,7 @@
 .\" Copyright 2004-2014 Rainer Gerhards and Adiscon for the rsyslog modifications
 .\" May be distributed under the GNU General Public License
 .\"
-.TH RSYSLOGD 8 "02 Dec 2014" "Version 8.6.0" "Linux System Administration"
+.TH RSYSLOGD 8 "28 May 2014" "Version 8.1905.0" "Linux System Administration"
 .SH NAME
 rsyslogd \- reliable and extended syslogd 
 .SH SYNOPSIS
@@ -17,6 +17,9 @@ rsyslogd \- reliable and extended syslogd
 .RB [ " \-n " ]
 .RB [ " \-N "
 .I level
+]
+.RB [ " \-o "
+.I fullconf
 ]
 .RB [ " \-C " ]
 .RB [ " \-v " ]
@@ -112,6 +115,15 @@ The level argument modifies behaviour. Currently, 0 is the same as
 not specifying the -N option at all (so this makes limited sense) and
 1 actually activates the code. Later, higher levels will mean more
 verbosity (this is a forward-compatibility option).
+.TP
+.B "\-o " "fullconf"
+Generates a consolidated config file
+.I fullconf
+that contains all of rsyslog's configuration in a single file. Include
+files are exploded into that file in exactly the way rsyslog sees them.
+This option is useful for troubleshooting, especially if problems with
+the order of action processing is suspected. It may also be used to
+check for "unexepectedly" included config content.
 .TP
 .BI "\-C"
 This prevents rsyslogd from changing to the root directory. This
