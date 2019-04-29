@@ -1,20 +1,17 @@
 troubleshooting problems
 ========================
 
-**Having trouble with** `rsyslog <http://www.rsyslog.com>`_? This page
+**Having trouble with** `rsyslog <https://www.rsyslog.com>`_? This page
 provides some tips on where to look for help and what to do if you need
 to ask for assistance. This page is continuously being expanded.
 
 Useful troubleshooting resources are:
 
--  The `rsyslog documentation <http://www.rsyslog.com/doc>`_ - note that
+-  The `rsyslog documentation <https://www.rsyslog.com/doc>`_ - note that
    the online version always covers the most recent development version.
    However, there is a version-specific doc set in each tarball. If you
    installed rsyslog from a package, there usually is a rsyslog-doc
    package, that often needs to be installed separately.
-
--  The `rsyslog wiki <http://wiki.rsyslog.com>`_ provides user tips and
-   experiences.
 
 -  Check the `rsyslog github issue tracker <https://github.com/rsyslog/rsyslog/issues>`_ and 
    `the bugzilla <http://bugzilla.adiscon.com>`_ to see if your
@@ -85,6 +82,22 @@ If you would like to check just an include file, instead use:
 ::
 
  $ /path/to/rsyslogd -f/path/to/config-file -N3
+
+Sometimes problems are rooted in config include files, and especially the
+order in which they are processed. To troubleshoot these kinds of issues, you
+can use the rsyslogd `-o` option: it permits to specify a file that shall
+receive a full copy of rsyslog's current configuration **as rsyslog sees it**.
+This means all include file content is directly inside that file at
+exactly the spot where rsyslog sees it. The output file is almost a
+verbatim copy of the original full rsyslog config. For troubleshooting
+purposes it additionally contains comment lines that indicate where
+content from specifc include files begins and ends. The include file
+is correctly named in these comments.
+
+This option can be used together with `-N`. Again, it is best to run
+rsyslog interactively. Do as such::
+
+ $ /path/to/rsyslogd -f/path/to/config-file -N3 -o /path/to/full-conf-file
 
 
 Checking Connection Problems
