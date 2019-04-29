@@ -158,29 +158,17 @@ CA cert. 
     ::
 
         # certificate files - just CA for a client
-	global(
-	DefaultNetstreamDriverCAFile="/path/to/contrib/gnutls/ca.pem"
-	)
+	global(DefaultNetstreamDriverCAFile="/path/to/contrib/gnutls/ca.pem")
 
         # set up the action for all messages
-	action(
-	type="omfwd"
-	protocol="tcp"
-	port="10514"
-	StreamDriver="gtls"
-	StreamDriverMode="1"
-	StreamDriverAuthMode="anon"
-	)
+	action(type="omfwd" protocol="tcp" port="10514"
+	       StreamDriver="gtls" StreamDriverMode="1" StreamDriverAuthMode="anon")
 
-Note that we use the regular TCP forwarding syntax (@@) here. There is
+Note that we use the regular TCP forwarding action here. There is
 nothing special, because the encryption is handled by the netstream
 driver. So I have just forwarded every message (\*.\*) for simplicity -
 you can use any of rsyslog's filtering capabilities (like
-expression-based filters or regular expressions). Note that the "(o)"
-part is not strictly necessary. It selects octet-based framing, which
-provides compatibility to IETF's syslog-transport-tls draft. Besides
-compatibility, this is also a more reliable transfer mode, so I suggest
-to always use it.
+expression-based filters or regular expressions).
 
 Done
 ~~~~
