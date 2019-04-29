@@ -1,5 +1,12 @@
 ------------------------------------------------------------------------------
 Version 8.1905.0 (aka 2019.05) 2019-05-28
+- add capability to write full config file (-o cmdline option)
+  Introduces the capability to create an output config file that explodes
+  all "includes" into a single file. This provides a much better overview
+  of how exactly the configuration is crafted. That could often be a great
+  troubleshooting aid.
+  This commit also contains some slight not-really-related cleanup.
+  closes https://github.com/rsyslog/rsyslog/issues/3634
 - core: emit a warning message for ultra-large queue size definitions
   We see error reports from users who have configured excessively large queues
   and receive an OOM condition or other problems.
