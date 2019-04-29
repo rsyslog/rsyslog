@@ -153,9 +153,12 @@ machine:
 
 ::
 
-    $DefaultNetstreamDriverCAFile /home/rger/proj/rsyslog/sample/ca.pem
-    $DefaultNetstreamDriverCertFile /home/rger/proj/rsyslog/sample/machine-cert.pem
-    $DefaultNetstreamDriverKeyFile /home/rger/proj/rsyslog/sample/machine-key.pem
+	global(
+	DefaultNetstreamDriver="gtls"
+	DefaultNetstreamDriverCAFile="/path/to/contrib/gnutls/ca.pem"
+        DefaultNetstreamDriverCertFile="/path/to/contrib/gnutls/cert.pem"
+        DefaultNetstreamDriverKeyFile="/path/to/contrib/gnutls/key.pem"
+	)
 
 **Never provide anyone with ca-key.pem!** Also, make sure nobody but the
 machine in question gets hold of key.pem.

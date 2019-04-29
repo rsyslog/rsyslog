@@ -43,7 +43,7 @@ the server to accept messages from systems whose names match
 
 ::
 
-    $InputTCPServerStreamDriverPermittedPeer *.example.net
+    PermittedPeer["*.example.net"]
 
 This will match zuse.example.net and turing.example.net, but NOT
 pascal.otherdepartment.example.net. If the later would be desired, you
@@ -51,9 +51,7 @@ can (and need) to include additional permitted peer config statements:
 
 ::
 
-    $InputTCPServerStreamDriverPermittedPeer *.example.net
-    $InputTCPServerStreamDriverPermittedPeer *.otherdepartment.example.net
-    $InputTCPServerStreamDriverPermittedPeer *.example.com
+    PermittedPeer["*.example.net","*.otherdepartment.example.net","*.example.com"]
 
 As can be seen with example.com, the different permitted peers need NOT
 to be in a single domain tree. Also, individual machines can be
@@ -62,9 +60,7 @@ talk to the server, you can achieve this by:
 
 ::
 
-    $InputTCPServerStreamDriverPermittedPeer zuse.example.net
-    $InputTCPServerStreamDriverPermittedPeer turing.example.net
-    $InputTCPServerStreamDriverPermittedPeer ada.example.net
+    PermittedPeer["zuse.example.net","turing.example.net","ada.example.net"]
 
 As an extension to the (upcoming) IETF syslog/tls standard, you can
 specify some text together with a domain component wildcard. So
@@ -94,21 +90,26 @@ only other source accepted is messages from the server itself.
 
 ::
 
-    $ModLoad imuxsock # local messages
-    $ModLoad imtcp # TCP listener
+    module(load="imuxsock") # local messages
+    module(load="imtcp" # TCP listener
+	StreamDriver.Name="gtls"
+	StreamDriver.Mode="1" # run driver in TLS-only mode
+	StreamDriver.Authmode="anon"
+	)
 
-    # make gtls driver the default
-    $DefaultNetstreamDriver gtls
+    # make gtls driver the default and set certificate files
+    global(
+	DefaultNetstreamDriver="gtls"
+	DefaultNetstreamDriverCAFile="/path/to/contrib/gnutls/ca.pem"
+        DefaultNetstreamDriverCertFile="/path/to/contrib/gnutls/cert.pem"
+        DefaultNetstreamDriverKeyFile="/path/to/contrib/gnutls/key.pem"
+	)	
 
-    # certificate files
-    $DefaultNetstreamDriverCAFile /rsyslog/protected/ca.pem
-    $DefaultNetstreamDriverCertFile /rsyslog/protected/machine-cert.pem
-    $DefaultNetstreamDriverKeyFile /rsyslog/protected/machine-key.pem
-
-    $InputTCPServerStreamDriverAuthMode x509/name
-    $InputTCPServerStreamDriverPermittedPeer *.example.net
-    $InputTCPServerStreamDriverMode 1 # run driver in TLS-only mode
-    $InputTCPServerRun 10514 # start up listener at port 10514
+	# start up listener at port 10514
+	input(
+	type="imtcp"
+	port="10514"
+	)
 
 **Be sure to safeguard at least the private key (machine-key.pem)!** If
 some third party obtains it, you security is broken!

@@ -59,22 +59,31 @@ we do not show any rules to write local files. Feel free to add them.
 ::
 
     # start a UDP listener for the remote router
-    $ModLoad imudp    # load UDP server plugin
+    module(load="imudp")   # load UDP server plugin
     $AllowedSender UDP, 192.0.2.1 # permit only the router
-    $UDPServerRun 514 # listen on default syslog UDP port 514
+    input(type="imudp"
+    port="514" # listen on default syslog UDP port 514
+    )
 
-    # make gtls driver the default
-    $DefaultNetstreamDriver gtls
+    # make gtls driver the default and set certificate files
+    global(
+    DefaultNetstreamDriver="gtls"
+    DefaultNetstreamDriverCAFile="/path/to/contrib/gnutls/ca.pem"
+    DefaultNetstreamDriverCertFile="/path/to/contrib/gnutls/cert.pem"
+    DefaultNetstreamDriverKeyFile="/path/to/contrib/gnutls/key.pem"
+    )
 
-    # certificate files
-    $DefaultNetstreamDriverCAFile /rsyslog/protected/ca.pem
-    $DefaultNetstreamDriverCertFile /rsyslog/protected/machine-cert.pem
-    $DefaultNetstreamDriverKeyFile /rsyslog/protected/machine-key.pem
-
-    $ActionSendStreamDriverAuthMode x509/name
-    $ActionSendStreamDriverPermittedPeer central.example.net
-    $ActionSendStreamDriverMode 1 # run driver in TLS-only mode
-    *.* @@central.example.net:10514 # forward everything to remote server
+    # set up the action for all messages
+    action(
+    type="omfwd"
+    target="central.example.net"
+    protocol="tcp"
+    port="10514"
+    StreamDriver="gtls"
+    StreamDriverMode="1" # run driver in TLS-only mode
+    StreamDriverAuthMode="x509/name"
+    StreamDriverPermittedPeers="central.example.net"
+    )
 
 **Be sure to safeguard at least the private key (machine-key.pem)!** If
 some third party obtains it, you security is broken!
