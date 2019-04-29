@@ -120,19 +120,27 @@ follows:
 
     ::
 
-        # make gtls driver the default
-        $DefaultNetstreamDriver gtls
+        # make gtls driver the default and set certificate files
+	global(
+	DefaultNetstreamDriver="gtls"
+	DefaultNetstreamDriverCAFile="/path/to/contrib/gnutls/ca.pem"
+        DefaultNetstreamDriverCertFile="/path/to/contrib/gnutls/cert.pem"
+        DefaultNetstreamDriverKeyFile="/path/to/contrib/gnutls/key.pem"
+	)	
 
-        # certificate files
-        $DefaultNetstreamDriverCAFile /path/to/contrib/gnutls/ca.pem
-        $DefaultNetstreamDriverCertFile /path/to/contrib/gnutls/cert.pem
-        $DefaultNetstreamDriverKeyFile /path/to/contrib/gnutls/key.pem
+	# load TCP listener
+	module(
+	load="imtcp" 
+	StreamDriver.Name="gtls"
+	StreamDriver.Mode="1" 
+	StreamDriver.Authmode="anon"
+	)
 
-        $ModLoad imtcp # load TCP listener
-
-        $InputTCPServerStreamDriverMode 1 # run driver in TLS-only mode
-        $InputTCPServerStreamDriverAuthMode anon # client is NOT authenticated
-        $InputTCPServerRun 10514 # start up listener at port 10514
+	# start up listener at port 10514
+	input(
+	type="imtcp"
+	port="10514"
+	)
 
 This is all you need to do. You can use the rest of your rsyslog.conf
 together with this configuration. The way messages are received does not
@@ -150,13 +158,19 @@ CA cert. 
     ::
 
         # certificate files - just CA for a client
-        $DefaultNetstreamDriverCAFile /path/to/contrib/gnutls/ca.pem
+	global(
+	DefaultNetstreamDriverCAFile="/path/to/contrib/gnutls/ca.pem"
+	)
 
-        # set up the action
-        $DefaultNetstreamDriver gtls # use gtls netstream driver
-        $ActionSendStreamDriverMode 1 # require TLS for the connection
-        $ActionSendStreamDriverAuthMode anon # server is NOT authenticated
-        *.* @@(o)server.example.net:10514 # send (all) messages
+        # set up the action for all messages
+	action(
+	type="omfwd"
+	protocol="tcp"
+	port="10514"
+	StreamDriver="gtls"
+	StreamDriverMode="1"
+	StreamDriverAuthMode="anon"
+	)
 
 Note that we use the regular TCP forwarding syntax (@@) here. There is
 nothing special, because the encryption is handled by the netstream

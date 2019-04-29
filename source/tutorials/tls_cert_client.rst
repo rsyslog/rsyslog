@@ -44,18 +44,25 @@ we do not show any rules to write local files. Feel free to add them.
 
 ::
 
-    # make gtls driver the default
-    $DefaultNetstreamDriver gtls
+    # make gtls driver the default and set certificate files
+    global(
+    DefaultNetstreamDriver="gtls"
+    DefaultNetstreamDriverCAFile="/path/to/contrib/gnutls/ca.pem"
+    DefaultNetstreamDriverCertFile="/path/to/contrib/gnutls/cert.pem"
+    DefaultNetstreamDriverKeyFile="/path/to/contrib/gnutls/key.pem"
+    )
 
-    # certificate files
-    $DefaultNetstreamDriverCAFile /rsyslog/protected/ca.pem
-    $DefaultNetstreamDriverCertFile /rsyslog/protected/machine-cert.pem
-    $DefaultNetstreamDriverKeyFile /rsyslog/protected/machine-key.pem
-
-    $ActionSendStreamDriverAuthMode x509/name
-    $ActionSendStreamDriverPermittedPeer central.example.net
-    $ActionSendStreamDriverMode 1 # run driver in TLS-only mode
-    *.* @@central.example.net:10514 # forward everything to remote server
+    # set up the action for all messages
+    action(
+    type="omfwd"
+    target="central.example.net"
+    protocol="tcp"
+    port="10514"
+    StreamDriver="gtls"
+    StreamDriverMode="1" # run driver in TLS-only mode
+    StreamDriverAuthMode="x509/name"
+    StreamDriverPermittedPeers="central.example.net"
+    )
 
 Note: the example above forwards every message to the remote server. Of
 course, you can use the normal filters to restrict the set of
