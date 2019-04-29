@@ -21,7 +21,7 @@ And don't forget about the `rsyslog mailing
 list <http://lists.adiscon.net/mailman/listinfo/rsyslog>`_. If you are
 interested in the "backstage", you may find
 `Rainer <http://www.gerhards.net/rainer>`_'s
-`blog <http://blog.gerhards.net/>`_ an interesting read (filter on
+`blog <https://rainer.gerhards.net/>`_ an interesting read (filter on
 syslog and rsyslog tags). Or meet `Rainer Gerhards at
 Facebook <http://www.facebook.com/people/Rainer-Gerhards/1349393098>`_
 or `Google+ <https://plus.google.com/112402185904751517878/posts>`_. If

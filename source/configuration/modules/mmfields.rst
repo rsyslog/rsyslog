@@ -4,7 +4,7 @@ Fields Extraction Module (mmfields)
 
 ===========================  ===========================================================================
 **Module Name:**             **mmfields**
-**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+**Author:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
 **Available since:**         7.5.1
 ===========================  ===========================================================================
 

@@ -66,7 +66,7 @@ also be used:
   *.emerg  action(type="omusrmsg" users="john")
 
 In Rainer's blog, there is more
-`background information on why omusrmsg needed to be changed <http://blog.gerhards.net/2011/07/why-omusrmsg-is-evil-and-how-it-is.html>`_
+`background information on why omusrmsg needed to be changed <https://rainer.gerhards.net/2011/07/why-omusrmsg-is-evil-and-how-it-is.html>`_
 available.
 
 omruleset and discard (~) action are deprecated

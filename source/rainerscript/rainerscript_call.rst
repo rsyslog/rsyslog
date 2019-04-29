@@ -39,5 +39,5 @@ related links
 -------------
 
 -  `Blog posting announcing "call" statement (with
-   sample) <http://blog.gerhards.net/2012/10/how-to-use-rsyslogs-ruleset-and-call.html>`_
+   sample) <https://rainer.gerhards.net/2012/10/how-to-use-rsyslogs-ruleset-and-call.html>`_
 

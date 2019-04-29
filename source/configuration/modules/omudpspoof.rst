@@ -4,7 +4,7 @@ omudpspoof: UDP spoofing output module
 
 ===========================  ===========================================================================
 **Module Name:**             **omudpspoof**
-**Author:**                  David Lang <david@lang.hm> and `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+**Author:**                  David Lang <david@lang.hm> and `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
 **Available Since:**         5.1.3
 ===========================  ===========================================================================
 

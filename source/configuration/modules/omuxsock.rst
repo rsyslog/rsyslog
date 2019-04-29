@@ -4,7 +4,7 @@ omuxsock: Unix sockets Output Module
 
 ===========================  ===========================================================================
 **Module Name:**             **omuxsock**
-**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+**Author:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
 **Available since:**         4.7.3, 5.5.7
 ===========================  ===========================================================================
 

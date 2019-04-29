@@ -23,7 +23,7 @@ The imput module consume pipes form all external programs in a mono-threaded
 Optionally, the module manage the external program through keyword sent to
 it using a second pipe to stdin of the external process.
 
-An operational sample in C can be found @ "github.com/phduveau/jsonperfmon"
+An operational sample in C can be found @ "github.com/pduveau/jsonperfmon"
 
 Also a bash's script is provided as tests/improg-simul.sh. The `echo` and `read` (built-in) can be used to communicate with the module.
 External commands can not be used to communicate. `printf` is unable to send data directly to the module but can used through a variable and `echo`.

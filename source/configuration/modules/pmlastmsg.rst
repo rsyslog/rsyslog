@@ -4,7 +4,7 @@ pmlastmsg: last message repeated n times
 
 ===========================  ===========================================================================
 **Module Name:**             **pmlastmsg**
-**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+**Author:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
 **Available Since:**         5.5.6
 ===========================  ===========================================================================
 

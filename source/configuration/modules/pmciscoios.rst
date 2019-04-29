@@ -4,7 +4,7 @@ pmciscoios
 
 ===========================  ===========================================================================
 **Module Name:**             **pmciscoios**
-**Author:**                  `Rainer Gerhards <http://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+**Author:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
 **Available since:**         8.3.4+
 ===========================  ===========================================================================
 
