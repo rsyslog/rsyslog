@@ -4,7 +4,9 @@ omhttp: HTTP Output Module
 
 ===========================  ===========================================================================
 **Module Name:**             **omhttp**
-**Author:**                  `Christian Tramnitz <https://github.com/ctramnitz/>`_
+**Module Type:**             **contributed** - not maintained by rsyslog core team
+**Current Mainainer:**       `Gabriel Intrator <https://github.com/gintrator/>`_
+Original Author:             `Christian Tramnitz <https://github.com/ctramnitz/>`_
 ===========================  ===========================================================================
 
 .. warning::
