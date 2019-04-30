@@ -146,11 +146,11 @@ for line in sys.stdin:
 	if jstart >= 0:
 		hsh = json.loads(line[jstart:])
 		if hsh.get("origin") == "mmkubernetes" and hsh["recordseen"] in expectedvalues:
-		    expected = expectedvalues[hsh["recordseen"]]
-		    for key in expected:
+			expected = expectedvalues[hsh["recordseen"]]
+			for key in expected:
 				if not expected[key] == hsh.get(key):
-				  "Error: expected value [%s] not equal to actual value [%s] in record [%d] for stat [%s]".format(
-				    str(expected[key]), str(hsh[key]), hsh["recordseen"], key)
+					print("Error: expected value [%s] not equal to actual value [%s] in record [%d] for stat [%s]".format(
+					str(expected[key]), str(hsh[key]), hsh["recordseen"], key))
 ' || { rc=$?; echo error: expected stats not found in ${RSYSLOG_DYNNAME}.spool/mmkubernetes-stats.log; }
 else
 	echo error: stats file ${RSYSLOG_DYNNAME}.spool/mmkubernetes-stats.log not found

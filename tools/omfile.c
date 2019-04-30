@@ -663,7 +663,7 @@ finalize_it:
  * be written.
  * This is a helper to writeFile(). rgerhards, 2007-07-03
  */
-static rsRetVal
+static rsRetVal ATTR_NONNULL()
 prepareDynFile(instanceData *__restrict__ const pData, const uchar *__restrict__ const newFileName)
 {
 	uint64 ctOldest; /* "timestamp" of oldest element */
@@ -689,7 +689,17 @@ prepareDynFile(instanceData *__restrict__ const pData, const uchar *__restrict__
 		FINALIZE;
 	}
 
-	/* ok, no luck. Now let's search the table if we find a matching spot.
+	/* ok, no luck - current file cannot be re-used */
+
+	/* if we need to flush (at least) on TXEnd, we need to flush now - because
+	 * we do not know if we will otherwise come back to this file to flush it
+	 * at end of TX. see https://github.com/rsyslog/rsyslog/issues/2502
+	 */
+	if(pData->bFlushOnTXEnd && pData->pStrm != NULL) {
+		CHKiRet(strm.Flush(pData->pStrm));
+	}
+
+	/* Now let's search the table if we find a matching spot.
 	 * While doing so, we also prepare for creation of a new one.
 	 */
 	pData->iCurrElt = -1;	/* invalid current element pointer */

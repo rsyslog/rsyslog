@@ -580,6 +580,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_RABBITMQ_CONN_ERR = -2447, /**< RabbitMQ Connection error */
 	RS_RET_RABBITMQ_LOGIN_ERR = -2448, /**< RabbitMQ Login error */
 	RS_RET_RABBITMQ_CHANNEL_ERR = -2449, /**< RabbitMQ Connection error */
+	RS_RET_NO_WRKDIR_SET = -2450, /**< working directory not set, but desired by functionality */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

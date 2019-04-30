@@ -577,7 +577,6 @@ content_check() {
 	else
 		check_only="no"
 	fi
-	echo check_only: $check_only
 	if [ "$1" == "--regex" ]; then
 		grep_opt=
 		shift
@@ -755,7 +754,7 @@ check_journal_testmsg_received() {
 # wait for main message queue to be empty. $1 is the instance.
 # we run in a loop to ensure rsyslog is *really* finished when a
 # function for the "finished predicate" is defined. This is done
-# by setting env var QUEUE_EMPTY_CHECK_FUNCTION to the bash
+# by setting env var QUEUE_EMPTY_CHECK_FUNC to the bash
 # function name.
 wait_queueempty() {
 	while [ $(date +%s) -le $(( TB_STARTTEST + TB_TEST_MAX_RUNTIME )) ]; do
@@ -934,7 +933,7 @@ wait_seq_check() {
 		if [ -f "$RSYSLOG_OUT_LOG" ]; then
 			count=$(wc -l < "$RSYSLOG_OUT_LOG")
 		fi
-		seq_check --check-only "$@" &>/dev/null
+		seq_check --check-only "$@" #&>/dev/null
 		ret=$?
 		if [ $ret == 0 ]; then
 			printf 'wait_seq_check success (%d lines)\n' "$count"
@@ -1190,7 +1189,11 @@ error_stats() {
 # $4... are just to have the abilit to pass in more options...
 # add -v to chkseq if you need more verbose output
 # argument --check-only can be used to simply do a check without abort in fail case
+# env var SEQ_CHECK_FILE permits to override file name to check
 seq_check() {
+	if [ "$SEQ_CHECK_FILE" == "" ]; then
+		SEQ_CHECK_FILE="$RSYSLOG_OUT_LOG"
+	fi
 	if [ "$1" == "--check-only" ]; then
 		check_only="YES"
 		shift
@@ -1209,30 +1212,30 @@ seq_check() {
 		startnum=$1
 		endnum=$2
 	fi
-	if [ ! -f "$RSYSLOG_OUT_LOG" ]; then
+	if [ ! -f "$SEQ_CHECK_FILE" ]; then
 		if [ "$check_only"  == "YES" ]; then
 			return 1
 		fi
-		printf 'FAIL: %s does not exist in seq_check!\n' "$RSYSLOG_OUT_LOG"
+		printf 'FAIL: %s does not exist in seq_check!\n' "$SEQ_CHECK_FILE"
 		error_exit 1
 	fi
-	$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${RSYSLOG_OUT_LOG} | ./chkseq -s$startnum -e$endnum $3 $4 $5 $6 $7
+	$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${SEQ_CHECK_FILE} | ./chkseq -s$startnum -e$endnum $3 $4 $5 $6 $7
 	ret=$?
 	if [ "$check_only"  == "YES" ]; then
 		return $ret
 	fi
 	if [ $ret -ne 0 ]; then
-		$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${RSYSLOG_OUT_LOG} > $RSYSLOG_DYNNAME.error.log
-		echo "sequence error detected in $RSYSLOG_OUT_LOG"
-		echo "number of lines in file: $(wc -l $RSYSLOG_OUT_LOG)"
+		$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${SEQ_CHECK_FILE} > $RSYSLOG_DYNNAME.error.log
+		echo "sequence error detected in $SEQ_CHECK_FILE"
+		echo "number of lines in file: $(wc -l $SEQ_CHECK_FILE)"
 		echo "sorted data has been placed in error.log, first 10 lines are:"
 		cat -n $RSYSLOG_DYNNAME.error.log | head -10
 		echo "---last 10 lines are:"
 		cat -n $RSYSLOG_DYNNAME.error.log | tail -10
 		echo "UNSORTED data, first 10 lines are:"
-		cat -n $RSYSLOG_OUT_LOG | head -10
+		cat -n $SEQ_CHECK_FILE | head -10
 		echo "---last 10 lines are:"
-		cat -n $RSYSLOG_OUT_LOG | tail -10
+		cat -n $SEQ_CHECK_FILE | tail -10
 		# for interactive testing, create a static filename. We know this may get
 		# mangled during a parallel test run
 		mv -f $RSYSLOG_DYNNAME.error.log error.log
@@ -1270,11 +1273,26 @@ gzip_seq_check() {
 
 # do a tcpflood run and check if it worked params are passed to tcpflood
 tcpflood() {
+	if [ "$1" == "--check-only" ]; then
+		check_only="yes"
+		shift
+	else
+		check_only="no"
+	fi
+
 	eval ./tcpflood -p$TCPFLOOD_PORT "$@" $TCPFLOOD_EXTRA_OPTS
-	if [ "$?" -ne "0" ]; then
-		echo "error during tcpflood on port ${TCPFLOOD_PORT}! see ${RSYSLOG_OUT_LOG}.save for what was written"
-		cp ${RSYSLOG_OUT_LOG} ${RSYSLOG_OUT_LOG}.save
-		error_exit 1 stacktrace
+	res=$?
+	if [ "$check_only" == "yes" ]; then
+		if [ "$res" -ne "0" ]; then
+			echo "error during tcpflood on port ${TCPFLOOD_PORT}! see ${RSYSLOG_OUT_LOG}.save for what was written"
+			cp ${RSYSLOG_OUT_LOG} ${RSYSLOG_OUT_LOG}.save
+			error_exit 1 stacktrace
+		fi
+	else
+		if [ "$res" -ne "0" ]; then
+			echo "error during tcpflood on port ${TCPFLOOD_PORT}! But test continues..."
+		fi
+		return 0
 	fi
 }
 
@@ -1334,7 +1352,7 @@ get_inode() {
 		printf 'FAIL: file "%s" does not exist in get_inode\n' "$1"
 		error_exit 100
 	fi
-	python -c 'import os; import stat; print os.lstat("'$1'")[stat.ST_INO]'
+	python -c 'import os; import stat; print(os.lstat("'$1'")[stat.ST_INO])'
 }
 
 

@@ -78,6 +78,8 @@ struct action_s {
 	const char *pszErrFile;
 	int fdErrFile;
 	pthread_mutex_t mutErrFile;
+	/* external stat file system */
+	const char *pszExternalStateFile;
 	/* for per-worker HUP processing */
 	pthread_mutex_t mutWrkrDataTable; /* protects table structures */
 	void **wrkrDataTable;

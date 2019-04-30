@@ -3,7 +3,7 @@
  *
  * File begun on 2017-03-03 by Pascal Withopf.
  *
- * Copyright 2014-2018 Adiscon GmbH.
+ * Copyright 2014-2019 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -123,18 +123,14 @@ buildInstance(instanceConf_t *inst)
 
 	if(inst->rule != NULL && inst->rulebase == NULL) {
 		if(ln_loadSamplesFromString(inst->ctxln, inst->rule) !=0) {
-			LogError(0, RS_RET_NO_RULEBASE, "error: normalization rulebase '%s' "
-					"could not be loaded cannot activate action", inst->rulebase);
-			ln_exitCtx(inst->ctxln);
+			LogError(0, RS_RET_NO_RULEBASE, "error: normalization rules '%s' "
+					"could not be loaded, cannot activate action", inst->rule);
 			ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD);
 		}
-		free(inst->rule);
-		inst->rule = NULL;
 	} else if(inst->rulebase != NULL && inst->rule == NULL) {
 		if(ln_loadSamples(inst->ctxln, (char*) inst->rulebase) != 0) {
 			LogError(0, RS_RET_NO_RULEBASE, "error: normalization rulebase '%s' "
-					"could not be loaded cannot activate action", inst->rulebase);
-			ln_exitCtx(inst->ctxln);
+					"could not be loaded, cannot activate action", inst->rulebase);
 			ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD);
 		}
 	}
@@ -146,6 +142,8 @@ finalize_it:
 BEGINfreeParserInst
 CODESTARTfreeParserInst
 	dbgprintf("pmnormalize: free parser instance %p\n", pInst);
+	free(pInst->rulebase);
+	free(pInst->rule);
 	if(pInst->ctxln != NULL) {
 		ln_exitCtx(pInst->ctxln);
 	}
@@ -197,12 +195,14 @@ CODESTARTnewParserInst
 		}
 	}
 	if(!inst->rulebase && !inst->rule) {
-		LogError(0, RS_RET_CONFIG_ERROR, "pmnormalize: rulebase needed. "
-				"Use option rulebase or rule.");
+		LogError(0, RS_RET_CONFIG_ERROR, "pmnormalize: you need to specify "
+				"either parameter 'rule' or 'rulebase'.");
+		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 	if(inst->rulebase && inst->rule) {
-		LogError(0, RS_RET_CONFIG_ERROR, "pmnormalize: only one rulebase "
-				"possible, rulebase can't be used with rule");
+		LogError(0, RS_RET_CONFIG_ERROR, "pmnormalize: you need to specify "
+				"one of the parameters 'rule' and 'rulebase', but not both");
+		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 
 	iRet = buildInstance(inst);
@@ -233,6 +233,7 @@ CODESTARTparse2
 			LogError(0, RS_RET_ERR, "error %d during ln_normalize; "
 					"json: %s\n", r, fjson_object_to_json_string(json));
 		}
+		fjson_object_put(json);
 	} else {
 		iRet = MsgSetPropsViaJSON_Object(pMsg, json);
 	}

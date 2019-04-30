@@ -138,6 +138,7 @@ TESTS +=  \
 	operatingstate-basic.sh \
 	operatingstate-empty.sh \
 	operatingstate-unclean.sh \
+	smtradfile.sh \
 	empty-hostname.sh \
 	hostname-getaddrinfo-fail.sh \
 	msleep_usage_output.sh \
@@ -160,6 +161,7 @@ TESTS +=  \
 	glbl_setenv_err_too_long.sh \
 	glbl_setenv.sh \
 	nested-call-shutdown.sh \
+	dnscache-TTL-0.sh \
 	invalid_nested_include.sh \
 	omfwd-keepalive.sh \
 	omfile-read-only-errmsg.sh \
@@ -207,6 +209,7 @@ TESTS +=  \
 	tcp_forwarding_tpl.sh \
 	tcp_forwarding_dflt_tpl.sh \
 	tcp_forwarding_retries.sh \
+	queue_errmsg-oversize.sh \
 	queue-minbatch.sh \
 	queue-minbatch-queuefull.sh \
 	arrayqueue.sh \
@@ -308,6 +311,8 @@ TESTS +=  \
 	failover-rptd.sh \
 	failover-no-rptd.sh \
 	failover-no-basic.sh \
+	suspend-via-file.sh \
+	externalstate-failed-rcvr.sh \
 	rcvr_fail_restore.sh \
 	rscript_contains.sh \
 	rscript_bare_var_root.sh \
@@ -354,6 +359,7 @@ TESTS +=  \
 	rscript_previous_action_suspended.sh \
 	rscript_str2num_negative.sh \
 	rscript-config_enable-on.sh \
+	config_output-o-option.sh \
 	rs-cnum.sh \
 	rs-substring.sh \
 	rs-int2hex.sh \
@@ -402,6 +408,8 @@ endif # ENABLE_LIBGCRYPT
 if HAVE_VALGRIND
 TESTS +=  \
 	tcpflood_wrong_option_output.sh \
+	smtradfile-vg.sh \
+	dnscache-TTL-0-vg.sh \
 	include-obj-outside-control-flow-vg.sh \
 	include-obj-in-if-vg.sh \
 	include-obj-text-vg.sh \
@@ -953,10 +961,19 @@ endif
 if ENABLE_PMNORMALIZE
 TESTS +=  \
 	pmnormalize-basic.sh \
-	pmnormalize-rule.sh
+	pmnormalize-invld-rulebase.sh \
+	pmnormalize-rule.sh \
+	pmnormalize-rule_and_rulebase.sh \
+	pmnormalize-neither_rule_rulebase.sh \
+	pmnormalize-rule_invld-data.sh
 if HAVE_VALGRIND
 TESTS += \
-	pmnormalize-rule-vg.sh
+	pmnormalize-basic-vg.sh \
+	pmnormalize-invld-rulebase-vg.sh \
+	pmnormalize-rule-vg.sh \
+	pmnormalize-rule_and_rulebase-vg.sh \
+	pmnormalize-neither_rule_rulebase-vg.sh \
+	pmnormalize-rule_invld-data-vg.sh
 endif
 endif
 
@@ -964,7 +981,13 @@ if ENABLE_MMNORMALIZE
 TESTS += msgvar-concurrency-array.sh \
 	msgvar-concurrency-array-event.tags.sh \
 	mmnormalize_rule_from_string.sh \
-	mmnormalize_rule_from_array.sh
+	mmnormalize_rule_from_array.sh \
+	mmnormalize_parsesuccess.sh
+
+if HAVE_VALGRIND
+TESTS += \
+	mmnormalize_parsesuccess-vg.sh
+endif
 
 if ENABLE_IMPTCP
 TESTS +=  \
@@ -978,7 +1001,7 @@ if LOGNORM_REGEX_SUPPORTED
 TESTS += \
 	mmnormalize_regex.sh
 endif
-endif
+endif # ENABLE_MMNORMALIZE
 
 if ENABLE_MMJSONPARSE
 TESTS += \
@@ -1063,6 +1086,7 @@ endif
 if ENABLE_OPENSSL
 TESTS +=  \
 	imtcp-tls-ossl-basic.sh \
+	imtcp-tls-ossl-basic-tlscommands.sh \
 	sndrcv_tls_ossl_anon_ipv4.sh \
 	sndrcv_tls_ossl_anon_ipv6.sh \
 	sndrcv_tls_ossl_anon_rebind.sh \
@@ -1070,6 +1094,7 @@ TESTS +=  \
 	sndrcv_tls_ossl_servercert_ossl_clientanon.sh \
 	sndrcv_tls_ossl_certvalid.sh \
 	sndrcv_tls_ossl_certvalid_expired.sh \
+	sndrcv_tls_ossl_certvalid_tlscommand.sh \
 	imtcp-tls-ossl-x509valid.sh \
 	imtcp-tls-ossl-x509name.sh \
 	imtcp-tls-ossl-x509fingerprint.sh \
@@ -1132,6 +1157,7 @@ endif
 
 if ENABLE_OMUDPSPOOF
 TESTS += \
+	omudpspoof_errmsg_no_params.sh \
 	sndrcv_omudpspoof.sh \
 	sndrcv_omudpspoof_nonstdpt.sh
 endif
@@ -1237,6 +1263,7 @@ TESTS += \
 	imfile-endmsg.regex.sh \
 	imfile-statefile-no-file_id.sh \
 	imfile-statefile-no-file_id-TO-file_id.sh \
+	imfile-statefile-directory.sh \
 	imfile-persist-state-1.sh \
 	imfile-freshStartTail1.sh \
 	imfile-freshStartTail2.sh \
@@ -1368,6 +1395,10 @@ distclean-local:
 
 EXTRA_DIST= \
 	urlencode.py \
+	dnscache-TTL-0.sh \
+	dnscache-TTL-0-vg.sh \
+	smtradfile.sh \
+	smtradfile-vg.sh \
 	operatingstate-basic.sh \
 	operatingstate-empty.sh \
 	operatingstate-unclean.sh \
@@ -1431,6 +1462,7 @@ EXTRA_DIST= \
 	tcp_forwarding_ns_tpl.sh \
 	tcp_forwarding_dflt_tpl.sh \
 	tcp_forwarding_retries.sh \
+	queue_errmsg-oversize.sh \
 	queue-minbatch.sh \
 	queue-minbatch-queuefull.sh \
 	killrsyslog.sh \
@@ -1475,6 +1507,7 @@ EXTRA_DIST= \
 	include-obj-outside-control-flow-vg.sh \
 	include-obj-in-if-vg.sh \
 	include-obj-text-vg.sh \
+	config_output-o-option.sh \
 	rscript-config_enable-off-vg.sh \
 	rscript-config_enable-on.sh \
 	rscript_http_request.sh \
@@ -1645,6 +1678,8 @@ EXTRA_DIST= \
 	timereported-utc-legacy.sh \
 	timereported-utc-vg.sh \
 	mmrm1stspace-basic.sh \
+	mmnormalize_parsesuccess.sh \
+	mmnormalize_parsesuccess-vg.sh \
 	mmnormalize_rule_from_string.sh \
 	mmnormalize_rule_from_array.sh \
 	pmnull-basic.sh \
@@ -1655,10 +1690,19 @@ EXTRA_DIST= \
 	mmnormalize_processing_test2.sh \
 	mmnormalize_processing_test3.sh \
 	mmnormalize_processing_test4.sh \
-	pmnormalize-rule.sh \
-	pmnormalize-rule-vg.sh\
-	testsuites/pmnormalize_basic.rulebase \
 	pmnormalize-basic.sh \
+	pmnormalize-rule.sh \
+	pmnormalize-rule_and_rulebase.sh \
+	pmnormalize-neither_rule_rulebase.sh \
+	pmnormalize-invld-rulebase.sh \
+	pmnormalize-rule_invld-data.sh \
+	testsuites/pmnormalize_basic.rulebase \
+	pmnormalize-basic-vg.sh \
+	pmnormalize-rule-vg.sh\
+	pmnormalize-rule_and_rulebase-vg.sh \
+	pmnormalize-neither_rule_rulebase-vg.sh \
+	pmnormalize-invld-rulebase-vg.sh \
+	pmnormalize-rule_invld-data-vg.sh \
 	rawmsg-after-pri.sh \
 	rs_optimizer_pri.sh \
 	rscript_prifilt.sh \
@@ -1757,11 +1801,13 @@ EXTRA_DIST= \
 	udp-msgreduc-vg.sh \
 	manytcp-too-few-tls-vg.sh \
 	imtcp-tls-ossl-basic.sh \
+	imtcp-tls-ossl-basic-tlscommands.sh \
 	sndrcv_tls_ossl_anon_ipv4.sh \
 	sndrcv_tls_ossl_anon_ipv6.sh \
 	sndrcv_tls_ossl_anon_rebind.sh \
 	sndrcv_tls_ossl_certvalid.sh \
 	sndrcv_tls_ossl_certvalid_expired.sh \
+	sndrcv_tls_ossl_certvalid_tlscommand.sh \
 	imtcp-tls-ossl-x509valid.sh \
 	imtcp-tls-ossl-x509name.sh \
 	imtcp-tls-ossl-x509fingerprint.sh \
@@ -1813,6 +1859,8 @@ EXTRA_DIST= \
 	failover-basic-vg.sh \
 	failover-async.sh \
 	failover-double.sh \
+	suspend-via-file.sh \
+	externalstate-failed-rcvr.sh \
 	discard-rptdmsg.sh \
 	discard-rptdmsg-vg.sh \
 	discard-allmark.sh \
@@ -1864,6 +1912,7 @@ EXTRA_DIST= \
 	imudp_thread_hang.sh \
 	sndrcv_udp_nonstdpt.sh \
 	sndrcv_udp_nonstdpt_v6.sh \
+	omudpspoof_errmsg_no_params.sh \
 	sndrcv_omudpspoof.sh \
 	sndrcv_omudpspoof_nonstdpt.sh \
 	sndrcv_gzip.sh \
@@ -1991,6 +2040,7 @@ EXTRA_DIST= \
 	imfile-endmsg.regex.json.rulebase \
 	imfile-statefile-no-file_id.sh \
 	imfile-statefile-no-file_id-TO-file_id.sh \
+	imfile-statefile-directory.sh \
 	imfile-persist-state-1.sh \
 	imfile-freshStartTail1.sh \
 	imfile-freshStartTail2.sh \
