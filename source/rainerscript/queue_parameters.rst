@@ -4,7 +4,6 @@ General Queue Parameters
 
 ===========================  ===========================================================================
 **Authors:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>;
-                              Pascal Withopf <pwithopf@adiscon.com>
 ===========================  ===========================================================================
 
 
@@ -229,7 +228,7 @@ fulldelaymark BELOW the highwatermark makes the queue never activate
 disk mode for delayable inputs. So this is probably not what you want.
 
 
-queue.lightDelaymark
+queue.lightDelayMark
 --------------------
 
 .. csv-table::
@@ -239,7 +238,17 @@ queue.lightDelaymark
 
    "integer", "70% of queue.size", "no", "none"
 
-If this mark is reached the sender will be throttled if possible.
+If this mark is reached the sender will be throttled if possible. The
+main idea to do this is leave some space inside the queue for inputs
+like UDP which cannot be throttled - and so any data arriving at
+"queue full" would be discarded.
+
+If the special value `0` is used, `queue.LightDelayMark` will be set
+to the value of `queue.size`. This effectively **disables** light delay
+functionality. This is useful if a queue is not used by non-delayable
+inputs like UDP. The special value was introduced in rsyslog 8.1904.0
+and is **not** available in earlier versions. There, you can achive the
+same result by setting `queue.LightDelayMark` to a very large value.
 
 
 queue.discardMark
