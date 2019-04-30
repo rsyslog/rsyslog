@@ -1428,6 +1428,12 @@ initAll(int argc, char **argv)
 			iConfigVerify = (arg == NULL) ? 0 : atoi(arg);
 			break;
 		case 'o':
+			if(fp_rs_full_conf_output != NULL) {
+				fprintf(stderr, "warning: -o option given multiple times. Now "
+					"using value %s\n", (arg == NULL) ? "-" : arg);
+				fclose(fp_rs_full_conf_output);
+				fp_rs_full_conf_output = NULL;
+			}
 			if(arg == NULL || !strcmp(arg, "-")) {
 				fp_rs_full_conf_output = stdout;
 			} else {

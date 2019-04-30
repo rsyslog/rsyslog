@@ -14,6 +14,17 @@ Version 8.1905.0 (aka 2019.05) 2019-05-28
   large. "Very large" is defined to be in excess of 500000 messages.
   see also https://github.com/rsyslog/rsyslog/issues/3314
   closes https://github.com/rsyslog/rsyslog/issues/3334
+- imtcp bugfix: oversize message truncation causes log to be garbled
+  The actual problem is in the tcpserver component. However, the prime user
+  is imtcp and so users will likely experience this as imtcp problem.
+  When a too-long message is truncated, the byte after the truncation
+  position becomes the first byte of the next message. This will garble
+  the next messages and in almost all cases render it is syslog-incompliant.
+  The same problem does NOT occur when the message is split.
+  This commit fixes the issue. It also includes a testbench fix.
+  Unfortunately the test for exactly this feature was not properly
+  crafted and so could not detect the problem.
+  closes https://github.com/rsyslog/rsyslog/issues/3580
 - omfile bugfix: FlushOnTXEnd does not work reliably with dynafiles
   The flush was only done to the last dynafile in use at end of
   transactions. Dynafiles that were also modified during the
