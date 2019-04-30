@@ -348,9 +348,9 @@ Close(tcps_sess_t *pThis)
  * the end result to the queue. Introducing this function fixes a long-term bug ;)
  * rgerhards, 2008-03-14
  */
-static rsRetVal
+static rsRetVal ATTR_NONNULL(1)
 processDataRcvd(tcps_sess_t *pThis,
-	char c,
+	const char c,
 	struct syslogTime *stTime,
 	const time_t ttGenTime,
 	multi_submit_t *pMultiSub,
@@ -434,18 +434,14 @@ processDataRcvd(tcps_sess_t *pThis,
 		assert(pThis->inputState == eInMsg);
 		if(pThis->iMsg >= iMaxLine) {
 			/* emergency, we now need to flush, no matter if we are at end of message or not... */
-			DBGPRINTF("error: message received is larger than max msg size, we split it\n");
+			DBGPRINTF("error: message received is larger than max msg size, we %s it\n",
+				pThis->pSrv->discardTruncatedMsg == 1 ? "truncate" : "split");
 			defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
 			++(*pnMsgs);
 			if(pThis->pSrv->discardTruncatedMsg == 1) {
 				pThis->inputState = eInMsgTruncating;
+				FINALIZE;
 			}
-			/* configuration parameter discardTruncatedMsg controlls
-			 * if rest of message is being processed
-			 * 0 = off
-			 * 1 = on
-			 * Pascal Withopf, 2017-04-21
-			 */
 		}
 
 		if((   ((c == '\n') && !pThis->pSrv->bDisableLFDelim)
