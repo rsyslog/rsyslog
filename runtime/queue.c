@@ -2436,6 +2436,11 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 				(pThis->iMaxQueueSize == 1) ? 1 : pThis->iMaxQueueSize - 1;
 		}
 	}
+
+	if(pThis->iLightDlyMrk == 0) {
+		pThis->iLightDlyMrk = pThis->iMaxQueueSize;
+	}
+
 	if(pThis->iLightDlyMrk == -1 || pThis->iLightDlyMrk > pThis->iMaxQueueSize) {
 		pThis->iLightDlyMrk = (pThis->iMaxQueueSize / 100) * 70;
 		if(pThis->iLightDlyMrk == 0) {
