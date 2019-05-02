@@ -7,6 +7,13 @@ Version 8.1905.0 (aka 2019.05) 2019-05-28
   troubleshooting aid.
   This commit also contains some slight not-really-related cleanup.
   closes https://github.com/rsyslog/rsyslog/issues/3634
+- queue subsystem: permit to disable "light delay mark"
+  New semantic: if lightDelayMark is 0, it is set to the max queue
+  size, effectively disabling the "light delay" functionality.
+  Thanks to Yury Bushmelev to mentioning issues related to light
+  delay mark and propsing the solution (which actually is what
+  this commit does).
+  closes https://github.com/rsyslog/rsyslog/issues/1778
 - core: emit a warning message for ultra-large queue size definitions
   We see error reports from users who have configured excessively large queues
   and receive an OOM condition or other problems.
