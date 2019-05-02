@@ -211,6 +211,7 @@ void qqueueSetDefaultsRulesetQueue(qqueue_t *pThis);
 void qqueueSetDefaultsActionQueue(qqueue_t *pThis);
 void qqueueDbgPrint(qqueue_t *pThis);
 rsRetVal qqueueShutdownWorkers(qqueue_t *pThis);
+void qqueueDoneLoadCnf(void);
 
 PROTOTYPEObjClassInit(qqueue);
 PROTOTYPEpropSetMeth(qqueue, iPersistUpdCnt, int);

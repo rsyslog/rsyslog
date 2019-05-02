@@ -635,6 +635,7 @@ static inline rsRetVal
 tellCoreConfigLoadDone(void)
 {
 	DBGPRINTF("telling rsyslog core that config load for %p is done\n", loadConf);
+	qqueueDoneLoadCnf();
 	return glblDoneLoadCnf();
 }
 
