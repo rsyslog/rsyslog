@@ -16,6 +16,14 @@ This module is similar to the regular UDP forwarder, but permits to
 spoof the sender address. Also, it enables to circle through a number of
 source ports.
 
+**Important**: This module **requires root permissions**. This is a hard
+requirement because raw socket access is necessary to fake UDP sender
+addresses. As such, rsyslog cannot drop privileges if this module is
+to be used. Ensure that you do **not** use `$PrivDropToUser` or
+`$PrivDropToGroup`. Many distro default configurations (notably Ubuntu)
+contain these statments. You need to remove or comment them out if you
+want to use `omudpspoof`.
+
 
 Configuration Parameters
 ========================
