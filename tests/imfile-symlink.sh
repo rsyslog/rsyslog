@@ -45,20 +45,18 @@ startup
 for i in $(seq 2 $IMFILEINPUTFILES);
 do
 	printf '\ncreating %s\n' $RSYSLOG_DYNNAME.targets/$i.log
-	set -x
 	./inputfilegen -m 1 -i $((i-1)) > $RSYSLOG_DYNNAME.targets/$i.log
 	ls -l $RSYSLOG_DYNNAME.targets/$i.log
-	ln -sv $RSYSLOG_DYNNAME.targets/$i.log rsyslog-link.$i.log
-	ln -sv rsyslog-link.$i.log $RSYSLOG_DYNNAME.input.$i.log
+	ln -sv $RSYSLOG_DYNNAME.targets/$i.log $RSYSLOG_DYNNAME.link.$i.log
+	ln -sv $RSYSLOG_DYNNAME.link.$i.log $RSYSLOG_DYNNAME.input.$i.log
 	printf '%s generated file %s\n' "$(tb_timestamp)" "$i"
-	ls -l rsyslog-link.$i.log
-	set +x
+	ls -l $RSYSLOG_DYNNAME.link.$i.log
 	# wait until this file has been processed
 	content_check_with_count "HEADER msgnum:000000" $i $IMFILECHECKTIMEOUT
 done
 
 ./inputfilegen -m $IMFILELASTINPUTLINES > $RSYSLOG_DYNNAME.input.$((IMFILEINPUTFILES + 1)).log
-ls -l $RSYSLOG_DYNNAME.input.* rsyslog-link.* $RSYSLOG_DYNNAME.targets
+ls -l $RSYSLOG_DYNNAME.input.* $RSYSLOG_DYNNAME.link.* $RSYSLOG_DYNNAME.targets
 
 # Content check with timeout
 content_check_with_count "input.11.log" $IMFILELASTINPUTLINES $IMFILECHECKTIMEOUT
