@@ -59,6 +59,15 @@ Version 8.1905.0 (aka 2019.05) 2019-05-28
 - dnscache bufix: very unlikely memory leak
   This fixes a memory leak that can only occur under OOM conditions.
   Detected by Coverity Scan, CID 203717
+- testbench bugfix: imfile-symlink test failed w/ parallel test run
+  The test sometimes failed. It used a symlinkl to a hardcoded name
+  rsyslog-link.*.log. This symlink was created but then disappears.
+  The reason is that upon (every!) test exit, rsyslog-link.*.log is
+  deleted. So a parallel test running the exit procedure just at the
+  "right" time can removed that file.
+  The bug is that the file name should be created using the tests's
+  dynamic name. This is done now.
+  closes https://github.com/rsyslog/rsyslog/issues/3550
 ------------------------------------------------------------------------------
 Version 8.1904.0 (aka 2019.04) 2019-04-16
 - omfile: provide more helpful error message on file write errors
