@@ -235,6 +235,7 @@ TESTS +=  \
 	diskqueue.sh \
 	diskqueue-fsync.sh \
 	diskqueue-full.sh \
+	diskqueue-non-unique-prefix.sh \
 	rulesetmultiqueue.sh \
 	rulesetmultiqueue-v6.sh \
 	manytcp.sh \
@@ -1492,6 +1493,7 @@ EXTRA_DIST= \
 	diskq-rfc5424.sh \
 	diskqueue-full.sh \
 	diskqueue.sh \
+	diskqueue-non-unique-prefix.sh \
 	arrayqueue.sh \
 	include-obj-text-from-file.sh \
 	include-obj-outside-control-flow-vg.sh \

@@ -149,6 +149,14 @@ static struct cnfparamblk pblk =
 	  cnfpdescr
 	};
 
+/* support to detect duplicate queue file names */
+struct queue_filename {
+	struct queue_filename *next;
+	const char *dirname;
+	const char *filename;
+};
+struct queue_filename *queue_filename_root = NULL;
+
 /* debug aid */
 #if 0
 static inline void displayBatchState(batch_t *pBatch)
@@ -160,6 +168,21 @@ static inline void displayBatchState(batch_t *pBatch)
 }
 #endif
 static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint);
+
+/* do cleanup when config is loaded */
+void qqueueDoneLoadCnf(void)
+{
+	struct queue_filename *next, *del;
+	next = queue_filename_root;
+	while(next != NULL) {
+		del = next;
+		next = next->next;
+		free((void*) del->filename);
+		free((void*) del->dirname);
+		free((void*) del);
+	}
+}
+
 
 /***********************************************************************
  * we need a private data structure, the "to-delete" list. As C does
@@ -3216,6 +3239,47 @@ finalize_it:
 	RETiRet;
 }
 
+/* check the the queue file name is unique. */
+static rsRetVal ATTR_NONNULL()
+checkUniqueDiskFile(qqueue_t *const pThis)
+{
+	DEFiRet;
+	struct queue_filename *queue_fn_curr = queue_filename_root;
+	struct queue_filename *newetry = NULL;
+	const char *const curr_dirname = (pThis->pszSpoolDir == NULL) ? "" : (char*)pThis->pszSpoolDir;
+
+	if(pThis->pszFilePrefix == NULL) {
+		FINALIZE; /* no disk queue! */
+	}
+
+	while(queue_fn_curr != NULL) {
+		if(!strcmp((const char*) pThis->pszFilePrefix, queue_fn_curr->filename) &&
+			!strcmp(curr_dirname, queue_fn_curr->dirname)) {
+			parser_errmsg("queue directory '%s' and file name prefix '%s' already used. "
+				"This is not possible. Please make it unique.",
+				curr_dirname, pThis->pszFilePrefix);
+			ABORT_FINALIZE(RS_RET_ERR_QUEUE_FN_DUP);
+			}
+		queue_fn_curr = queue_fn_curr->next;
+	}
+
+	/* name ok, so let's add it to the list */
+	CHKmalloc(newetry = calloc(1, sizeof(struct queue_filename)));
+	CHKmalloc(newetry->filename = strdup((char*) pThis->pszFilePrefix));
+	CHKmalloc(newetry->dirname = strdup(curr_dirname));
+	newetry->next = queue_filename_root;
+	queue_filename_root = newetry;
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(newetry != NULL) {
+			free((void*)newetry->filename);
+			free((void*)newetry);
+		}
+	}
+	RETiRet;
+}
+
 /* apply all params from param block to queue. Must be called before
  * finalizing. This supports the v6 config system. Defaults were already
  * set during queue creation. The pvals object is destructed by this
@@ -3318,6 +3382,9 @@ qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst)
 			  "param '%s'\n", pblk.descr[i].name);
 		}
 	}
+
+	checkUniqueDiskFile(pThis);
+
 	if(pThis->qType == QUEUETYPE_DISK) {
 		if(pThis->pszFilePrefix == NULL) {
 			LogError(0, RS_RET_QUEUE_DISK_NO_FN, "error on queue '%s', disk mode selected, but "
