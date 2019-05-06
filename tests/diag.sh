@@ -1322,7 +1322,6 @@ exit_test() {
 	rm -f work rsyslog.out.* xlate*.lkp_tbl
 	rm -rf test-logdir stat-file1
 	rm -f rsyslog.conf.tlscert stat-file1 rsyslog.empty imfile-state:*
-	rm -rf rsyslog-link.*.log targets
 	rm -f ${TESTCONF_NM}.conf
 	rm -f tmp.qi nocert
 	rm -fr $RSYSLOG_DYNNAME*  # delete all of our dynamic files
@@ -2165,7 +2164,6 @@ case $1 in
 		rm -f work 
 		rm -rf test-logdir stat-file1
 		rm -f rsyslog.empty imfile-state:* omkafka-failed.data
-		rm -rf rsyslog-link.*.log targets
 		rm -f tmp.qi nocert
 		rm -f core.* vgcore.* core*
 		# Note: rsyslog.action.*.include must NOT be deleted, as it
