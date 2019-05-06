@@ -1,5 +1,15 @@
 ------------------------------------------------------------------------------
 Version 8.1905.0 (aka 2019.05) 2019-05-28
+- config processing: check disk queue file is unique
+  If the same name is specified for multiple queues, the queue files
+  will become corrupted. This commit adds a check during config parsing.
+  If duplicate names are detected the config parser errors out and the
+  related object is not created.
+  Note: this may look to a change-of-behaviour to some users. However,
+  this never worked and it was pure luck that these users did not run
+  into big problems (e.g. DA queues were never going to disk at the
+  same time). So it is acceptable to error out in this hard error case.
+  closes https://github.com/rsyslog/rsyslog/issues/1385
 - add capability to write full config file (-o cmdline option)
   Introduces the capability to create an output config file that explodes
   all "includes" into a single file. This provides a much better overview
@@ -41,6 +51,11 @@ Version 8.1905.0 (aka 2019.05) 2019-05-28
   This commit also contains a bit of cosmetic cleanup inside
   the file stream class.
   closes https://github.com/rsyslog/rsyslog/issues/2502
+- lmcry_gcry build bugfix: was not always properly build
+  Due to an invalid definition in build system this seems to have not
+  been correctly build on at least some platforms (but it worked on
+  others as it passed CI testing). This has now been corrected.
+  Thanks to Remi Locherer for the patch.
 - dnscache bufix: very unlikely memory leak
   This fixes a memory leak that can only occur under OOM conditions.
   Detected by Coverity Scan, CID 203717
