@@ -843,11 +843,11 @@ submitMsgWithDfltRatelimiter(smsg_t *pMsg)
 static void
 logmsgInternal_doWrite(smsg_t *pMsg)
 {
-	if(bProcessInternalMessages) {
-		submitMsg2(pMsg);
-	} else {
-		const int pri = getPRIi(pMsg);
-		if(pri <= glblIntMsgsSeverityFilter) {
+	const int pri = getPRIi(pMsg);
+	if(pri % 8 <= glblIntMsgsSeverityFilter) {
+		if(bProcessInternalMessages) {
+			submitMsg2(pMsg);
+		} else {
 			uchar *const msg = getMSG(pMsg);
 			#ifdef ENABLE_LIBLOGGING_STDLOG
 			/* the "emit only once" rate limiter is quick and dirty and not
@@ -867,9 +867,9 @@ logmsgInternal_doWrite(smsg_t *pMsg)
 			#else
 			syslog(pri, "%s", msg);
 			#endif
+			/* we have emitted the message and must destruct it */
+			msgDestruct(&pMsg);
 		}
-		/* we have emitted the message and must destruct it */
-		msgDestruct(&pMsg);
 	}
 }
 
@@ -2115,8 +2115,11 @@ main(int argc, char **argv)
 #endif
 	DBGPRINTF("max message size: %d\n", glblGetMaxLine());
 	DBGPRINTF("----RSYSLOGD INITIALIZED\n");
+	LogMsg(0, RS_RET_OK, LOG_DEBUG, "rsyslogd fully started up and initialized "
+		"- begin actual processing");
 
 	mainloop();
+	LogMsg(0, RS_RET_OK, LOG_DEBUG, "rsyslogd shutting down");
 	deinitAll();
 #ifdef ENABLE_LIBLOGGING_STDLOG
 	stdlog_close(stdlog_hdl);

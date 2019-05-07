@@ -82,7 +82,9 @@ stdlog_channel_t stdlog_hdl = NULL;	/* handle to be used for stdlog */
 #endif
 
 static struct cnfobj *mainqCnfObj = NULL;/* main queue object, to be used later in startup sequence */
-#define DFLT_INT_MSGS_SEV_FILTER 4		 /* Warning level and more important */
+#ifndef DFLT_INT_MSGS_SEV_FILTER
+	#define DFLT_INT_MSGS_SEV_FILTER 6	/* Warning level and more important */
+#endif
 int glblIntMsgsSeverityFilter = DFLT_INT_MSGS_SEV_FILTER;/* filter for logging internal messages by syslog sev. */
 int bProcessInternalMessages = 0;	/* Should rsyslog itself process internal messages?
 					 * 1 - yes
