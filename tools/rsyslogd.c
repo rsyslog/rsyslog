@@ -847,25 +847,27 @@ logmsgInternal_doWrite(smsg_t *pMsg)
 		submitMsg2(pMsg);
 	} else {
 		const int pri = getPRIi(pMsg);
-		uchar *const msg = getMSG(pMsg);
-#		ifdef ENABLE_LIBLOGGING_STDLOG
-		/* the "emit only once" rate limiter is quick and dirty and not
-		 * thread safe. However, that's no problem for the current intend
-		 * and it is not justified to create more robust code for the
-		 * functionality. -- rgerhards, 2018-05-14
-		 */
-		static warnmsg_emitted = 0;
-		if(warnmsg_emitted == 0) {
-			stdlog_log(stdlog_hdl, LOG_WARNING, "%s",
-				"RSYSLOG WARNING: liblogging-stdlog "
-				"functionality will go away soon. For details see "
-				"https://github.com/rsyslog/rsyslog/issues/2706");
-			warnmsg_emitted = 1;
+		if(pri <= glblIntMsgsSeverityFilter) {
+			uchar *const msg = getMSG(pMsg);
+			#ifdef ENABLE_LIBLOGGING_STDLOG
+			/* the "emit only once" rate limiter is quick and dirty and not
+			 * thread safe. However, that's no problem for the current intend
+			 * and it is not justified to create more robust code for the
+			 * functionality. -- rgerhards, 2018-05-14
+			 */
+			static warnmsg_emitted = 0;
+			if(warnmsg_emitted == 0) {
+				stdlog_log(stdlog_hdl, LOG_WARNING, "%s",
+					"RSYSLOG WARNING: liblogging-stdlog "
+					"functionality will go away soon. For details see "
+					"https://github.com/rsyslog/rsyslog/issues/2706");
+				warnmsg_emitted = 1;
+			}
+			stdlog_log(stdlog_hdl, pri2sev(pri), "%s", (char*)msg);
+			#else
+			syslog(pri, "%s", msg);
+			#endif
 		}
-		stdlog_log(stdlog_hdl, pri2sev(pri), "%s", (char*)msg);
-#		else
-		syslog(pri, "%s", msg);
-#		endif
 		/* we have emitted the message and must destruct it */
 		msgDestruct(&pMsg);
 	}
