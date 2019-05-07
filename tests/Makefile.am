@@ -153,6 +153,7 @@ TESTS +=  \
 	hostname-with-slash-dflt-slash-valid.sh \
 	stop-localvar.sh \
 	stop-msgvar.sh \
+	glbl-internalmsg_severity-info-shown.sh \
 	glbl-umask.sh \
 	glbl-unloadmodules.sh \
 	glbl-invld-param.sh \
@@ -1394,6 +1395,7 @@ EXTRA_DIST= \
 	operatingstate-empty.sh \
 	operatingstate-unclean.sh \
 	internal-errmsg-memleak-vg.sh \
+	glbl-internalmsg_severity-info-shown.sh \
 	glbl-oversizeMsg-log-vg.sh \
 	empty-hostname.sh \
 	hostname-getaddrinfo-fail.sh \
