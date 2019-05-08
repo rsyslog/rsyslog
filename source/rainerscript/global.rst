@@ -357,6 +357,32 @@ The following parameters can be set:
   regular user. Also, many settings (e.g. debug) are also available as
   configuration objects.
 
+- **internalmsg.severity** [syslog severity value] available 8.1905.0+
+
+  **Default:** info
+
+  This permits to limit which internal messages are emitted by rsyslog. This
+  is especially useful if internal messages are reported to systemd journal,
+  which is the default on journal systems. In that case there is no other
+  ability to filter out messages before they are logged by the journal.
+
+  While any syslog severity value can be used, the most useful ones are
+
+  * `error`, to see only error messages but ignore anything else
+  * `warn`, to also see warning messages (highly recommended)
+  * `info`, to also see informational messages like events generated
+     by DA queues status checks. This is the default as the informational
+     messages often provide valuable information.
+  * `debug`, to see all messages, including only those interesting for
+     debugging. While this is still considerably lower volume than a
+     rsyslog developer debug log, this can be quite verbose. Selecting
+     `debug` without hard need thus is **not** recommended.
+
+  We expect that users are most often interested in limiting verboseness
+  to warning messages. This can be done e.g. via::
+
+    global(internalmsg.severity="warn")
+
 - **errorMessagesToStderr.maxNumber** [positive integer] available 8.30.0+
 
   **Default:** unlimited
