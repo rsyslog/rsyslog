@@ -228,6 +228,7 @@ TESTS +=  \
 	imtcp-NUL-rawmsg.sh \
 	imtcp-multiport.sh \
 	imtcp_incomplete_frame_at_end.sh \
+	da-queue-persist.sh \
 	daqueue-persist.sh \
 	daqueue-invld-qi.sh \
 	daqueue-dirty-shutdown.sh \
@@ -1861,6 +1862,7 @@ EXTRA_DIST= \
 	queue-encryption-disk_keyfile-vg.sh \
 	queue-encryption-disk_keyprog.sh \
 	queue-encryption-da.sh \
+	da-queue-persist.sh \
 	daqueue-dirty-shutdown.sh \
 	daqueue-invld-qi.sh \
 	daqueue-persist.sh \
