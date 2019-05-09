@@ -31,6 +31,27 @@ Version 8.1905.0 (aka 2019.05) 2019-05-28
   large. "Very large" is defined to be in excess of 500000 messages.
   see also https://github.com/rsyslog/rsyslog/issues/3314
   closes https://github.com/rsyslog/rsyslog/issues/3334
+- new global config parameter "internalmsg.severity"
+  permits to specify a severity filter for internal message. Only
+  messages with this severity level or more severe are logged.
+  Orignally this was done in rsyslog.conf as usual: you can filter
+  rsyslog messages on severity, just like any other. But with systemd,
+  we now emit primarily to the journal, and this is outside of rsyslog's
+  rule engine and so regular filters do not apply (at least in regard
+  to the journal). Logging to journal is good, because finally
+  folks begin to see the messages (traditional distro configs discard
+  them, for whatever is the reason).
+  This commit implements a global setting for a severity-based filter
+  for internal messages, before submitted to journal. So it's not 100%
+  of what rsyslog can do, but at least some way to customize.
+  see also https://github.com/rsyslog/rsyslog/issues/3639
+- core portability bugfix: harden shutdown processing on FreeBSD
+  On FreeBSD, rsyslog does not always terminate immediately on SIGTEM.
+  Root cause seems to be that SIGTERM is delivered differently under
+  FreeBSD. This causes the main thread to not be awaken, and so it
+  takes until the next janitor interval to come back to life - which
+  can be far too long. Fixed this bug explicitley awaking the main
+  thread.
 - imtcp bugfix: oversize message truncation causes log to be garbled
   The actual problem is in the tcpserver component. However, the prime user
   is imtcp and so users will likely experience this as imtcp problem.
