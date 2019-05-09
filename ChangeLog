@@ -10,6 +10,13 @@ Version 8.1905.0 (aka 2019.05) 2019-05-28
   into big problems (e.g. DA queues were never going to disk at the
   same time). So it is acceptable to error out in this hard error case.
   closes https://github.com/rsyslog/rsyslog/issues/1385
+- global config: new parameters for ruleset queue defaults
+  specifically:
+  * default.ruleset.queue.timeoutshutdown
+  * default.ruleset.queue.timeoutactioncompletion
+  * default.ruleset.queue.timeoutenqueue
+  * default.ruleset.queue.timeoutworkerthreadshutdown
+  closes https://github.com/rsyslog/rsyslog/issues/3656
 - add capability to write full config file (-o cmdline option)
   Introduces the capability to create an output config file that explodes
   all "includes" into a single file. This provides a much better overview
