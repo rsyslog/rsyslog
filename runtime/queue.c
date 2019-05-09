@@ -879,6 +879,10 @@ qqueueTryLoadPersistedInfo(qqueue_t *pThis)
 	 * deleted when we are done with the persisted information.
 	 */
 	pThis->bNeedDelQIF = 1;
+	LogMsg(0, RS_RET_OK, LOG_INFO, "%s: queue files exist on disk, re-starting with "
+		"%d messages. This will keep the disk queue file open, details: "
+		"https://rainer.gerhards.net/2013/07/rsyslog-why-disk-assisted-queues-keep-a-file-open.html",
+		objGetName((obj_t*) pThis), getLogicalQueueSize(pThis));
 
 finalize_it:
 	if(psQIF != NULL)
@@ -2792,8 +2796,19 @@ CODESTARTobjDestruct(qqueue)
 		   && pThis->pWtpReg != NULL)
 			qqueueShutdownWorkers(pThis);
 
-		if(pThis->bIsDA && getPhysicalQueueSize(pThis) > 0 && pThis->bSaveOnShutdown) {
-			CHKiRet(DoSaveOnShutdown(pThis));
+		if(pThis->bIsDA && getPhysicalQueueSize(pThis) > 0){
+			if(pThis->bSaveOnShutdown) {
+				LogMsg(0, RS_RET_TIMED_OUT, LOG_INFO,
+					"%s: queue holds %d messages after shutdown of workers. "
+					"queue.saveonshutdown is set, so data will now be spooled to disk",
+					objGetName((obj_t*) pThis), getPhysicalQueueSize(pThis));
+				CHKiRet(DoSaveOnShutdown(pThis));
+			} else {
+				LogMsg(0, RS_RET_TIMED_OUT, LOG_WARNING,
+					"%s: queue holds %d messages after shutdown of workers. "
+					"queue.saveonshutdown is NOT set, so data will be discarded.",
+					objGetName((obj_t*) pThis), getPhysicalQueueSize(pThis));
+			}
 		}
 
 		/* finally destruct our (regular) worker thread pool
