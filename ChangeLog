@@ -24,6 +24,11 @@ Version 8.1905.0 (aka 2019.05) 2019-05-28
   delay mark and propsing the solution (which actually is what
   this commit does).
   closes https://github.com/rsyslog/rsyslog/issues/1778
+- queue subsystem: provide better user status messages
+  The queue subsystem now provides additional information messages which
+  may help a regular user to maintain system healt. Most importantly,
+  DA queues now output when they persist queue data at end of run and
+  when they restart the queue based on persisted data.
 - core: emit a warning message for ultra-large queue size definitions
   We see error reports from users who have configured excessively large queues
   and receive an OOM condition or other problems.
