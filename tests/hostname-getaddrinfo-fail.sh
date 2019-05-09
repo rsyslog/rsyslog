@@ -15,9 +15,6 @@
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 skip_platform "AIX" "we cannot preload required dummy lib"
-skip_platform "SunOS" "there seems to be an issue with LD_PRELOAD libraries"
-skip_platform "FreeBSD" "temporarily disabled until we know what is wrong, \
-see https://github.com/rsyslog/rsyslog/issues/2833"
 
 echo 'action(type="omfile" file="'$RSYSLOG_DYNNAME'.out.log")' > ${RSYSLOG_DYNNAME}.conf 
 LD_PRELOAD=".libs/liboverride_gethostname_nonfqdn.so:.libs/liboverride_getaddrinfo.so" \
@@ -28,7 +25,7 @@ kill $(cat $RSYSLOG_DYNNAME.pid )
 
 grep " nonfqdn " < $RSYSLOG_DYNNAME.out.log
 if [ ! $? -eq 0 ]; then
-  echo "expected hostnaame \"nonfqdn\" not found in logs, $RSYSLOG_DYNNAME.out.log is:"
+  echo "expected hostname \"nonfqdn\" not found in logs, $RSYSLOG_DYNNAME.out.log is:"
   cat $RSYSLOG_DYNNAME.out.log
   error_exit 1
 fi;
