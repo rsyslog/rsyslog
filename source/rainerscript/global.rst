@@ -528,3 +528,21 @@ The following parameters can be set:
   message to the process because the pipe is broken, it will report an error
   indicating this). This specific error message (if any) is not affected by this
   global setting.
+
+
+- **default.ruleset.queue.timeoutshutdown**
+- **default.ruleset.queue.timeoutactioncompletion**
+- **default.ruleset.queue.timeoutenqueue**
+- **default.ruleset.queue.timeoutworkerthreadshutdown**
+
+  Sets default parameters for ruleset queues. See queue doc for the meaning of
+  the individual settings.
+
+
+- **default.action.queue.timeoutshutdown**
+- **default.action.queue.timeoutactioncompletion**
+- **default.action.queue.timeoutenqueue**
+- **default.action.queue.timeoutworkerthreadshutdown**
+
+  Sets default parameters for action queues. See queue doc for the meaning of
+  the individual settings.
