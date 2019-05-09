@@ -153,6 +153,7 @@ TESTS +=  \
 	hostname-with-slash-dflt-slash-valid.sh \
 	stop-localvar.sh \
 	stop-msgvar.sh \
+	glbl-ruleset-queue-defaults.sh \
 	glbl-internalmsg_severity-info-shown.sh \
 	glbl-internalmsg_severity-debug-shown.sh \
 	glbl-internalmsg_severity-debug-not_shown.sh \
@@ -1398,6 +1399,7 @@ EXTRA_DIST= \
 	operatingstate-empty.sh \
 	operatingstate-unclean.sh \
 	internal-errmsg-memleak-vg.sh \
+	glbl-ruleset-queue-defaults.sh \
 	glbl-internalmsg_severity-info-shown.sh \
 	glbl-internalmsg_severity-debug-shown.sh \
 	glbl-internalmsg_severity-debug-not_shown.sh \

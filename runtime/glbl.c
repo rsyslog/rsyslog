@@ -219,6 +219,10 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "default.action.queue.timeoutactioncompletion", eCmdHdlrInt, 0 },
 	{ "default.action.queue.timeoutenqueue", eCmdHdlrInt, 0 },
 	{ "default.action.queue.timeoutworkerthreadshutdown", eCmdHdlrInt, 0 },
+	{ "default.ruleset.queue.timeoutshutdown", eCmdHdlrInt, 0 },
+	{ "default.ruleset.queue.timeoutactioncompletion", eCmdHdlrInt, 0 },
+	{ "default.ruleset.queue.timeoutenqueue", eCmdHdlrInt, 0 },
+	{ "default.ruleset.queue.timeoutworkerthreadshutdown", eCmdHdlrInt, 0 },
 	{ "reverselookup.cache.ttl.default", eCmdHdlrNonNegInt, 0 },
 	{ "reverselookup.cache.ttl.enable", eCmdHdlrBinary, 0 },
 	{ "debug.files", eCmdHdlrArray, 0 },
@@ -1478,6 +1482,14 @@ glblDoneLoadCnf(void)
 			actq_dflt_toEnq = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "default.action.queue.timeoutworkerthreadshutdown")) {
 			actq_dflt_toWrkShutdown = cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "default.ruleset.queue.timeoutshutdown")) {
+			ruleset_dflt_toQShutdown = cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "default.ruleset.queue.timeoutactioncompletion")) {
+			ruleset_dflt_toActShutdown = cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "default.ruleset.queue.timeoutenqueue")) {
+			ruleset_dflt_toEnq = cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "default.ruleset.queue.timeoutworkerthreadshutdown")) {
+			ruleset_dflt_toWrkShutdown = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "reverselookup.cache.ttl.default")) {
 			dnscacheDefaultTTL = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "reverselookup.cache.ttl.enable")) {
