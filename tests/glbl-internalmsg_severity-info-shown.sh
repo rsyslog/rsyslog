@@ -3,7 +3,6 @@
 # lookup table as a simple sample to get such a message.
 # addd 2019-05-07 by RGerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-skip_platform "FreeBSD"  "Test hangs, as rsyslogd mainloop seems not to be woken when SIGTERM is sent - evaluate root cause later"
 generate_conf
 add_conf '
 global(internalmsg.severity="info")
