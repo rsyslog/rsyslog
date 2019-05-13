@@ -1,8 +1,6 @@
 #!/bin/bash
 # added 2018-04-27 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
-echo FIXME! Rainer knowns the problem cause
-exit 77
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=10
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.receiver.debuglog"

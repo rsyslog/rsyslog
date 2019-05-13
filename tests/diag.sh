@@ -1284,15 +1284,15 @@ tcpflood() {
 	res=$?
 	if [ "$check_only" == "yes" ]; then
 		if [ "$res" -ne "0" ]; then
+			echo "error during tcpflood on port ${TCPFLOOD_PORT}! But test continues..."
+		fi
+		return 0
+	else
+		if [ "$res" -ne "0" ]; then
 			echo "error during tcpflood on port ${TCPFLOOD_PORT}! see ${RSYSLOG_OUT_LOG}.save for what was written"
 			cp ${RSYSLOG_OUT_LOG} ${RSYSLOG_OUT_LOG}.save
 			error_exit 1 stacktrace
 		fi
-	else
-		if [ "$res" -ne "0" ]; then
-			echo "error during tcpflood on port ${TCPFLOOD_PORT}! But test continues..."
-		fi
-		return 0
 	fi
 }
 
