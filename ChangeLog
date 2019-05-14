@@ -57,6 +57,13 @@ Version 8.1905.0 (aka 2019.05) 2019-05-28
   for internal messages, before submitted to journal. So it's not 100%
   of what rsyslog can do, but at least some way to customize.
   see also https://github.com/rsyslog/rsyslog/issues/3639
+- config processing bugfix: error messages if config.enabled="off" is used
+  Using config.enabled="off" could lead to error messages on
+  "parameter xxx not known", which were invalid. They occured
+  because the config handler expected them to be used, which
+  was not the case due to being disabled.
+  This commit fixes that issue.
+  closes https://github.com/rsyslog/rsyslog/issues/2520
 - core portability bugfix: harden shutdown processing on FreeBSD
   On FreeBSD, rsyslog does not always terminate immediately on SIGTEM.
   Root cause seems to be that SIGTERM is delivered differently under
@@ -92,6 +99,10 @@ Version 8.1905.0 (aka 2019.05) 2019-05-28
 - dnscache bufix: very unlikely memory leak
   This fixes a memory leak that can only occur under OOM conditions.
   Detected by Coverity Scan, CID 203717
+- testbench bugfix: wrong parameter check in diag.sh (tcpflood())
+  When first parameter is check_only, the tcpflood funtion shall not
+  abort the test itself (The fail is intended if this option is set).
+  closes issue #3625
 - testbench bugfix: imfile-symlink test failed w/ parallel test run
   The test sometimes failed. It used a symlinkl to a hardcoded name
   rsyslog-link.*.log. This symlink was created but then disappears.
