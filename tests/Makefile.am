@@ -1283,7 +1283,8 @@ TESTS += \
 	imfile-logrotate-copytruncate.sh \
 	imfile-logrotate-nocopytruncate.sh \
 	imfile-growing-file-id.sh \
-	glbl-oversizeMsg-truncate-imfile.sh
+	glbl-oversizeMsg-truncate-imfile.sh \
+	config_enabled-off.sh
 
 if ENABLE_MMNORMALIZE
 TESTS += \
@@ -1404,6 +1405,7 @@ EXTRA_DIST= \
 	glbl-internalmsg_severity-debug-shown.sh \
 	glbl-internalmsg_severity-debug-not_shown.sh \
 	glbl-oversizeMsg-log-vg.sh \
+	config_enabled-off.sh \
 	empty-hostname.sh \
 	hostname-getaddrinfo-fail.sh \
 	hostname-with-slash-pmrfc5424.sh \
