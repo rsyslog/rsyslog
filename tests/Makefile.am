@@ -180,6 +180,7 @@ TESTS +=  \
 	privdropuserid.sh \
 	privdropgroup.sh \
 	privdropgroupid.sh \
+	json-nonstring.sh \
 	template-json.sh \
 	template-pure-json.sh \
 	template-pos-from-to.sh \
@@ -1629,6 +1630,7 @@ EXTRA_DIST= \
 	privdropuserid.sh \
 	privdropgroup.sh \
 	privdropgroupid.sh \
+	json-nonstring.sh \
 	template-json.sh \
 	template-pure-json.sh \
 	template-pos-from-to.sh \

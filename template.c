@@ -94,6 +94,8 @@ static struct cnfparamdescr cnfparamdescrProperty[] = {
 	{ "regex.submatch", eCmdHdlrInt, 0 },
 	{ "droplastlf", eCmdHdlrBinary, 0 },
 	{ "fixedwidth", eCmdHdlrBinary, 0 },
+	{ "datatype", eCmdHdlrString, 0 },
+	{ "onempty", eCmdHdlrString, 0 },
 	{ "mandatory", eCmdHdlrBinary, 0 },
 	{ "spifno1stsp", eCmdHdlrBinary, 0 }
 };
@@ -1464,6 +1466,8 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	int bPosRelativeToEnd = 0;
 	int bDateInUTC = 0;
 	int bCompressSP = 0;
+	unsigned dataType = TPE_DATATYPE_STRING;
+	unsigned onEmpty = TPE_DATAEMPTY_KEEP;
 	char *re_expr = NULL;
 	struct cnfparamvals *pvals = NULL;
 	enum {F_NONE, F_CSV, F_JSON, F_JSONF, F_JSONR, F_JSONFR} formatType = F_NONE;
@@ -1488,6 +1492,36 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 			continue;
 		if(!strcmp(pblkProperty.descr[i].name, "name")) {
 			name = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(pblkProperty.descr[i].name, "datatype")) {
+			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"string", sizeof("string")-1)) {
+				dataType = TPE_DATATYPE_STRING;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"number", sizeof("number")-1)) {
+				dataType = TPE_DATATYPE_NUMBER;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"bool", sizeof("bool")-1)) {
+				dataType = TPE_DATATYPE_BOOL;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"auto", sizeof("auto")-1)) {
+				dataType = TPE_DATATYPE_AUTO;
+			} else {
+				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				LogError(0, RS_RET_ERR, "invalid dataType '%s' for property",
+					typeStr);
+				free(typeStr);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+		} else if(!strcmp(pblkProperty.descr[i].name, "onempty")) {
+			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"keep", sizeof("keep")-1)) {
+				onEmpty = TPE_DATAEMPTY_KEEP;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"skip", sizeof("skip")-1)) {
+				onEmpty = TPE_DATAEMPTY_SKIP;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"null", sizeof("null")-1)) {
+				onEmpty = TPE_DATAEMPTY_NULL;
+			} else {
+				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				LogError(0, RS_RET_ERR, "invalid onEmpty value '%s' for property",
+					typeStr);
+				free(typeStr);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
 		} else if(!strcmp(pblkProperty.descr[i].name, "droplastlf")) {
 			droplastlf = pvals[i].val.d.n;
 			bComplexProcessing = 1;
@@ -1718,6 +1752,8 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	pTpe->data.field.options.bSPIffNo1stSP = spifno1stsp;
 	pTpe->data.field.options.bMandatory = mandatory;
 	pTpe->data.field.options.bFixedWidth = fixedwidth;
+	pTpe->data.field.options.dataType = dataType;
+	pTpe->data.field.options.onEmpty = onEmpty;
 	pTpe->data.field.eCaseConv = caseconv;
 	switch(formatType) {
 	case F_NONE:

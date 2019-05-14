@@ -3398,23 +3398,69 @@ finalize_it:
  * that makes any sense from a performance PoV - definitely
  * something to consider at a later stage. rgerhards, 2012-04-19
  */
-static rsRetVal
-jsonField(struct templateEntry *pTpe, uchar **ppRes, unsigned short *pbMustBeFreed, int *pBufLen, int escapeAll)
+static rsRetVal ATTR_NONNULL()
+jsonField(const struct templateEntry *const pTpe,
+	uchar **const ppRes,
+	unsigned short *const pbMustBeFreed,
+	int *const pBufLen,
+	int escapeAll)
 {
 	unsigned buflen;
 	uchar *pSrc;
 	es_str_t *dst = NULL;
+	int is_numeric = 1;
 	DEFiRet;
 
 	pSrc = *ppRes;
 	buflen = (*pBufLen == -1) ? (int) ustrlen(pSrc) : *pBufLen;
+dbgprintf("jsonEncode: datatype: %u, onEmpty: %u val %*s\n", (unsigned) pTpe->data.field.options.dataType,
+(unsigned) pTpe->data.field.options.onEmpty, buflen, pSrc);
+	if(buflen == 0) {
+		if(pTpe->data.field.options.onEmpty == TPE_DATAEMPTY_SKIP) {
+			FINALIZE;
+		}
+		is_numeric = 0;
+	}
 	/* we hope we have only few escapes... */
 	dst = es_newStr(buflen+pTpe->lenFieldName+15);
 	es_addChar(&dst, '"');
 	es_addBuf(&dst, (char*)pTpe->fieldName, pTpe->lenFieldName);
-	es_addBufConstcstr(&dst, "\":\"");
-	CHKiRet(jsonAddVal(pSrc, buflen, &dst, escapeAll));
-	es_addChar(&dst, '"');
+	es_addBufConstcstr(&dst, "\":");
+	if(buflen == 0 && pTpe->data.field.options.onEmpty == TPE_DATAEMPTY_NULL) {
+		es_addBufConstcstr(&dst, "null");
+	} else {
+		if(pTpe->data.field.options.dataType == TPE_DATATYPE_AUTO) {
+			for(unsigned i = 0 ; i < buflen ; ++i) {
+				if(pSrc[i] < '0' || pSrc[i] > '9') {
+					is_numeric = 0;
+					break;
+				}
+			}
+			if(!is_numeric) {
+				es_addChar(&dst, '"');
+			}
+			CHKiRet(jsonAddVal(pSrc, buflen, &dst, escapeAll));
+			if(!is_numeric) {
+				es_addChar(&dst, '"');
+			}
+		} else if(pTpe->data.field.options.dataType == TPE_DATATYPE_STRING) {
+			es_addChar(&dst, '"');
+			CHKiRet(jsonAddVal(pSrc, buflen, &dst, escapeAll));
+			es_addChar(&dst, '"');
+		} else if(pTpe->data.field.options.dataType == TPE_DATATYPE_NUMBER) {
+			if(buflen == 0) {
+				es_addChar(&dst, '0');
+			} else {
+				CHKiRet(jsonAddVal(pSrc, buflen, &dst, escapeAll));
+			}
+		} else if(pTpe->data.field.options.dataType == TPE_DATATYPE_BOOL) {
+			if(buflen == 1 && *pSrc == '0') {
+				es_addBufConstcstr(&dst, "false");
+			} else {
+				es_addBufConstcstr(&dst, "true");
+			}
+		}
+	}
 
 	if(*pbMustBeFreed)
 		free(*ppRes);
