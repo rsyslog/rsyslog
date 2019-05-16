@@ -133,6 +133,15 @@ struct templateEntry {
 				unsigned bFromPosEndRelative: 1;/* is From/To-Pos relative to end of string? */
 				unsigned bFixedWidth: 1;	/* space pad to toChar if string is shorter */
 				unsigned bDateInUTC: 1;		/* should date be expressed in UTC? */
+				#define TPE_DATATYPE_STRING 0
+				#define TPE_DATATYPE_NUMBER 1
+				#define TPE_DATATYPE_BOOL 2
+				#define TPE_DATATYPE_AUTO 3 /* NOTE: bit field values exhausted! */
+				unsigned dataType: 2;
+				#define TPE_DATAEMPTY_KEEP 0
+				#define TPE_DATAEMPTY_SKIP 1
+				#define TPE_DATAEMPTY_NULL 2
+				unsigned onEmpty: 2;
 			} options;		/* options as bit fields */
 		} field;
 	} data;
