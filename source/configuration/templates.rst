@@ -289,6 +289,34 @@ property or modifying it. It supports the following parameters:
 
 -  **spifno1stsp** - expert options for RFC3164 template processing
 
+-  **datatype** - for "jsonf" format ONLY; permits to set a datatype
+   Log messages as string data types natively. Thus every property inside
+   rsyslog is string based. However, in some end systems you need different
+   data types like numbers of boolean. This setting, in jsonf mode, permits
+   to configure a desired data type. Supported data types are:
+
+   - number - value is treated as a JSON number and not enclosed in quotes.
+       If the property is empty, the value 0 is generated.
+   - string - value is a string and enclused in quotes
+   - auto - value is treated as number if numeric and as string otherwise.
+       The current implementation treats only integers as numeric to avoid
+       confusion.
+   - bool - the value is treated as boolean. If it is empty or 0, it will
+     generate "false", else "true".
+
+   If not specified, 'string' datatype is assumed.
+   This is a feature of rsyslog 8.1905.0 or later.
+
+-  **onEmpty** - for "jsonf" format ONLY; specifies how empty values
+   shall be handled. Possible values are:
+
+   - keep - emit the empty element
+   - skip - completely ignore the element, do not emit anything
+   - null - emit a JSON 'null' value
+
+   If not specified, 'keep' is assumed.
+   This is a feature of rsyslog 8.1905.0 or later.
+
 
 Subtree
 -------
@@ -579,10 +607,10 @@ This template
     template(name="outfmt" type="list" option.jsonf="on") {
              property(outname="@timestamp" name="timereported" dateFormat="rfc3339" format="jsonf")
              property(outname="host" name="hostname" format="jsonf")
-             property(outname="severity" name="syslogseverity-text" caseConversion="upper" format="jsonf")
-             property(outname="facility" name="syslogfacility-text" format="jsonf")
+             property(outname="severity" name="syslogseverity" caseConversion="upper" format="jsonf" datatype="number")
+             property(outname="facility" name="syslogfacility" format="jsonf" datatype="number")
              property(outname="syslog-tag" name="syslogtag" format="jsonf")
-             property(outname="source" name="app-name" format="jsonf")
+             property(outname="source" name="app-name" format="jsonf" onEmpty="null")
              property(outname="message" name="msg" format="jsonf")
 
      }
@@ -591,7 +619,7 @@ Generates output similar to this
 
 .. code-block:: none
 
-    {"@timestamp":"2018-03-01T01:00:00+00:00", "host":"172.20.245.8", "severity":"DEBUG", "facility":"local4", "syslog-tag":"tag", "source":"tag", "message":" msgnum:00000000:"}
+    {"@timestamp":"2018-03-01T01:00:00+00:00", "host":"172.20.245.8", "severity":7, "facility":20, "syslog-tag":"tag", "source":"tag", "message":" msgnum:00000000:"}
 
 Pretty-printed this looks like
 
@@ -600,8 +628,8 @@ Pretty-printed this looks like
     {
       "@timestamp": "2018-03-01T01:00:00+00:00",
       "host": "172.20.245.8",
-      "severity": "DEBUG",
-      "facility": "local4",
+      "severity": 7,
+      "facility": 20,
       "syslog-tag": "tag",
       "source": "tag",
       "message": " msgnum:00000000:"
@@ -612,6 +640,13 @@ Pretty-printed this looks like
 
    The output is **not** pretty-printed as this is just waste of resources when
    used in RESTful APIs.
+
+If the "app-name" property is empty, a JSON null value is generated as the `onEmpty="null"`
+parameter is used
+
+.. code-block:: none
+
+    {"@timestamp":"2018-03-01T01:00:00+00:00", "host":"172.20.245.8", "severity":7, "facility":20, "syslog-tag":"tag", "source":null, "message":" msgnum:00000000:"}
 
 
 Creating Dynamic File Names for omfile
