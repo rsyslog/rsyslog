@@ -545,8 +545,10 @@ pollJournal(void)
 			if (sd_journal_seek_cursor(j, last_cursor) != 0) {
 				LogError(0, RS_RET_ERR, "imjournal: "
 					"couldn't seek to cursor `%s'\n", last_cursor);
-			iRet = RS_RET_ERR;
+				iRet = RS_RET_ERR;
 			}
+			/* Need to advance because cursor points at last processed message */
+			sd_journal_next(j);
 		}
 		else if (cs.stateFile) {
 			iRet = loadJournalState();
