@@ -201,6 +201,7 @@ TESTS +=  \
 	fac_invld2.sh \
 	fac_invld3.sh \
 	fac_invld4_rfc5424.sh \
+	rfc5424parser-sp_at_msg_start.sh \
 	compresssp.sh \
 	compresssp-stringtpl.sh \
 	rawmsg-after-pri.sh \
@@ -1537,6 +1538,7 @@ EXTRA_DIST= \
 	timestamp-subseconds.sh \
 	rsf_getenv.sh \
 	diskq-rfc5424.sh \
+	rfc5424parser-sp_at_msg_start.sh \
 	diskqueue-full.sh \
 	diskqueue.sh \
 	diskqueue-non-unique-prefix.sh \
