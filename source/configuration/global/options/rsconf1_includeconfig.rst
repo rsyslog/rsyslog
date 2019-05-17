@@ -42,24 +42,21 @@ functionality <http://sourceforge.net/tracker/index.php?func=detail&aid=1764088&
 Let me quote him:
 
     Say you can add an option
-     $IncludeConfig /etc/rsyslog.d/
-     (which probably would make a good default)
-     to /etc/rsyslog.conf, which would then merge and include all
-    \*.conf files
-     in /etc/rsyslog.d/.
-     This way, a distribution can modify its packages easily to drop a
+    ``$IncludeConfig /etc/rsyslog.d/``
+    (which probably would make a good default)
+    to ``/etc/rsyslog.conf``, which would then merge and include all
+    ``*.conf`` files
+    in ``/etc/rsyslog.d/``.
+    This way, a distribution can modify its packages easily to drop a
     simple
-     config file into this directory upon installation.
-     As an example, the network-manager package could install a simple
+    config file into this directory upon installation.
+    As an example, the network-manager package could install a simple
     config
-     file /etc/rsyslog.d/network-manager.conf which would contain.
-     :programname, contains, "NetworkManager"
-    -/var/log/NetworkManager.log
-     Upon uninstallation, the file could be easily removed again. This
-    approach
-     would be much cleaner and less error prone, than having to munge
-    around
-     with the /etc/rsyslog.conf file directly.
+    file ``/etc/rsyslog.d/network-manager.conf`` which would contain.
+    ``:programname, contains, "NetworkManager" -/var/log/NetworkManager.log``
+    Upon uninstallation, the file could be easily removed again. This
+    approach would be much cleaner and less error prone, than having to munge
+    around with the ``/etc/rsyslog.conf`` file directly.
 
 **Sample:**
 
