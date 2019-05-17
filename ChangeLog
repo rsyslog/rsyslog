@@ -1,4 +1,6 @@
 ------------------------------------------------------------------------------
+Version 8.1907.0 (aka 2019.07) 2019-07-09
+------------------------------------------------------------------------------
 Version 8.1905.0 (aka 2019.05) 2019-05-28
 - templates: add datatype template option for JSON generation
   The new "datatype" and "onEmpty"  template options permits to
