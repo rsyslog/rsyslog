@@ -168,8 +168,8 @@ static int parseRFCStructuredData(uchar **pp2parse, uchar *pResult, int *pLenStr
 			} else if(*p2parse == ']' && *(p2parse+1) == ' ') {
 				/* found end, just need to copy the ] and eat the SP */
 				*pResult++ = *p2parse;
-				p2parse += 2;
-				lenStr -= 2;
+				p2parse += 1;
+				lenStr -= 1;
 				bCont = 0;
 			} else {
 				*pResult++ = *p2parse++;
