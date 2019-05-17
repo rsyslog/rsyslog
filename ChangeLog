@@ -1,5 +1,10 @@
 ------------------------------------------------------------------------------
 Version 8.1905.0 (aka 2019.05) 2019-05-28
+- templates: add datatype template option for JSON generation
+  The new "datatype" and "onEmpty"  template options permits to
+  generate non-string data rather easily. It works together with
+  jsonf formatting, which is what people should use nowadays.
+  closes https://github.com/rsyslog/rsyslog/issues/2827
 - config processing: check disk queue file is unique
   If the same name is specified for multiple queues, the queue files
   will become corrupted. This commit adds a check during config parsing.
