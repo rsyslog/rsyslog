@@ -1,5 +1,7 @@
 ------------------------------------------------------------------------------
 Version 8.1907.0 (aka 2019.07) 2019-07-09
+- rfc5424 parser bugfix: leading space sometimes lost
+  if structured data is present a leading space in MSG field is lost
 ------------------------------------------------------------------------------
 Version 8.1905.0 (aka 2019.05) 2019-05-28
 - templates: add datatype template option for JSON generation
