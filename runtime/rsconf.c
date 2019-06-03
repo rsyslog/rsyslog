@@ -635,7 +635,6 @@ static inline rsRetVal
 tellCoreConfigLoadDone(void)
 {
 	DBGPRINTF("telling rsyslog core that config load for %p is done\n", loadConf);
-	qqueueDoneLoadCnf();
 	return glblDoneLoadCnf();
 }
 
@@ -878,6 +877,7 @@ activate(rsconf_t *cnf)
 	CHKiRet(activateMainQueue());
 	/* finally let the inputs run... */
 	runInputModules();
+	qqueueDoneLoadCnf(); /* we no longer need config-load-only data structures */
 
 	dbgprintf("configuration %p activated\n", cnf);
 
