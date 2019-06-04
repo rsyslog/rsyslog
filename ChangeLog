@@ -1,5 +1,18 @@
 ------------------------------------------------------------------------------
 Version 8.1907.0 (aka 2019.07) 2019-07-09
+- core bugfix: segfault on startup depending on queue file names
+  rsyslog will segfault on startup when a main queue file name has
+  been set and at least on other queue contains a file name. This
+  was cased by too-early freeing config error-detection data
+  structures. It is a regression caused by commit e22fb205a3.
+  Thanks to Wade Simmons for reporting this issue and providing
+  detailled analysis. That greatly helps fixing it quickly.
+  closes https://github.com/rsyslog/rsyslog/issues/3681
+- imjournal bugfix: potential message duplication
+  When journal was preloaded from previously saved cursor it was not advanced
+  to next entry so reading begun from last message which was therefore
+  duplicated.
+  Thanks to Jiri Vymazal for the patch.
 - rfc5424 parser bugfix: leading space sometimes lost
   if structured data is present a leading space in MSG field is lost
 ------------------------------------------------------------------------------
