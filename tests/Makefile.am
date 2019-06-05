@@ -2344,6 +2344,8 @@ EXTRA_DIST= \
 	mmkubernetes-basic.out.json \
 	mmkubernetes-cache-expire.sh \
 	mmkubernetes-cache-expire-vg.sh \
+	mmkubernetes-cache-expire.out.expected \
+	mmkubernetes.supp \
 	es-writeoperation.sh \
 	imdocker-basic.sh \
 	imdocker-basic-vg.sh \
