@@ -1427,6 +1427,30 @@ EXTRA_DIST= \
 	glbl_setenv_err.sh \
 	glbl_setenv_err_too_long.sh \
 	glbl_setenv.sh \
+	imtuxedoulog_errmsg_no_params.sh \
+	imtuxedoulog_data.sh \
+	imtuxedoulog_errmsg_no_params-vg.sh \
+	pmdb2diag_parse.sh \
+	mmtaghostname_tag.sh \
+	mmtaghostname_server.sh \
+	imbatchreport_errmsg_no_params.sh \
+	imbatchreport_errmsg_glob_not_regular.sh \
+	imbatchreport_errmsg_glob_dir_fake.sh \
+	imbatchreport_errmsg_glob_dir_not_dir.sh \
+	imbatchreport_errmsg_regex.match.reject.sh \
+	imbatchreport_errmsg_regex.match.rename.sh \
+	imbatchreport_errmsg_regex.nomatch.sh \
+	imbatchreport_errmsg_not_supported1.sh \
+	imbatchreport_errmsg_not_supported2.sh \
+	imbatchreport_errmsg_not_supported3.sh \
+	imbatchreport_errmsg_delete_params.sh \
+	imbatchreport_errmsg_rename_params.sh \
+	imbatchreport_delete_success.sh \
+	imbatchreport_delete_structdata.sh \
+	imbatchreport_rename_success.sh \
+	imbatchreport_delete_toolarge.sh \
+	imbatchreport_rename_toolarge.sh \
+	imbatchreport_errmsg_no_params-vg.sh \
 	mmexternal-SegFault-vg.sh \
 	mmexternal-SegFault-empty-jroot-vg.sh \
 	testsuites/mmexternal-SegFault-mm-python.py \
