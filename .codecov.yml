@@ -14,6 +14,7 @@ coverage:
         threshold: .5
       contrib:
         paths: contrib
+        threshold: .5
     patch:
        threshold: null
 
