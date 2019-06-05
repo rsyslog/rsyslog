@@ -15,6 +15,11 @@ Version 8.1907.0 (aka 2019.07) 2019-07-09
   Thanks to Jiri Vymazal for the patch.
 - rfc5424 parser bugfix: leading space sometimes lost
   if structured data is present a leading space in MSG field is lost
+- build system bugfix: missing files in distribution tarball
+- testbench
+  * fixed "make distcheck" settings which were missing some modules
+    This lead to incomple "make distcheck" run; some errors were not
+    detected due to that.
 ------------------------------------------------------------------------------
 Version 8.1905.0 (aka 2019.05) 2019-05-28
 - templates: add datatype template option for JSON generation
