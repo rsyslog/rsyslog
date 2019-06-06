@@ -10,6 +10,6 @@ action(type="omfile" file="'$RSYSLOG_OUT_LOG'"
 startup
 shutdown_when_empty
 wait_shutdown
-content_check "queue.size=500001 is very large"
+content_check --regex "warning.*queue.size=500001 is very large"
 
 exit_test
