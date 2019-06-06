@@ -3342,7 +3342,7 @@ qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst)
 		} else if(!strcmp(pblk.descr[i].name, "queue.size")) {
 			pThis->iMaxQueueSize = pvals[i].val.d.n;
 			if(pThis->iMaxQueueSize > OVERSIZE_QUEUE_WATERMARK) {
-				parser_errmsg("queue.size=%d is very large - is this "
+				parser_warnmsg("queue.size=%d is very large - is this "
 					"really intended? More info at "
 					"https://www.rsyslog.com/avoid-overly-large-in-memory-queues/",
 					pThis->iMaxQueueSize);
