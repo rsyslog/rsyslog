@@ -15,6 +15,9 @@ Version 8.1907.0 (aka 2019.07) 2019-07-09
   Thanks to Jiri Vymazal for the patch.
 - rfc5424 parser bugfix: leading space sometimes lost
   if structured data is present a leading space in MSG field is lost
+- queue subsystem bugfix: oversize queue warning message shown as error
+  The warning message was emitted as an error message, which is misleading
+  and may also break some automatted procedures.
 - build system bugfix: missing files in distribution tarball
 - testbench
   * fixed "make distcheck" settings which were missing some modules
