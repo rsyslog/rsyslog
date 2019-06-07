@@ -28,7 +28,6 @@ Actions can then be created using this module.
 Example:
 
     action(type="omamqp1"
-           template="RSYSLOG_TraditionalFileFormat"
            host="localhost:5672"
            target="amq.topic")
 
@@ -41,7 +40,8 @@ The following parameters are recognized by the module:
   necessary to create this target manually.  Example: "amq.topic"
 * username - Optional.  Used by SASL to authenticate with the message bus.
 * password - Optional.  Used by SASL to authenticate with the message bus.
-* template - Logging template used by the action.
+* template - Template to use to format the record.
+  Defaults to `RSYSLOG_FileFormat`
 * idleTimeout - The idle timeout in seconds.  This enables connection
   heartbeats and is used to detect a failed connection to the message
   bus.  Set to zero to disable.
@@ -90,12 +90,18 @@ packages.  Alternatively, you can pull down the Proton code from the
 
 ## Debugging ##
 
-Debug logging can be enabled using the rsyslog debug configuration
-settings.  For example:
+Debug logging can be enabled using the environment variables
+`RSYSLOG_DEBUG` and `RSYSLOG_DEBUGLOG`,
+
+    export RSYSLOG_DEBUG=debug
+    export RSYSLOG_DEBUGLOG=/tmp/rsyslog.debug.log
+
+or with the old-style rsyslog debug configuration settings.  For example:
 
     $DebugFile /tmp/omamqp1-debug.txt
     $DebugLevel 2
 
+There are a number of tracepoints within the omamqp1.c code.
 
 ----
 
@@ -281,3 +287,15 @@ port 5672:
            host="localhost:5672"
            target="Broker/rsyslogd")
 
+# Tests
+
+## Valgrind
+For investigating leaks, valgrind will not give you the full symbols
+in the stack because rsyslog unloads the module before the leak checker
+finishes.  The test adds the following using `add_conf`
+
+	    add_conf '
+    global(debug.unloadModules="off")
+    '
+
+Then you should get a full stacktrace with full symbols.
