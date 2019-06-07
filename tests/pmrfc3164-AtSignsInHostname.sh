@@ -9,7 +9,7 @@ parser(name="custom.rfc3164" type="pmrfc3164" permit.AtSignsInHostname="on")
 template(name="outfmt" type="string" string="-%hostname%-\n")
 
 ruleset(name="customparser" parser="custom.rfc3164") {
-	:syslogtag, contains, "tag" action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
+	action(type="omfile" template="outfmt" file="'$RSYSLOG_OUT_LOG'")
 }
 '
 startup
@@ -19,14 +19,10 @@ tcpflood -m1 -M "\"<129>Mar 10 01:00:00 Hostname3 tag:msgnum:3\""
 tcpflood -m1 -M "\"<129>Mar 10 01:00:00 Hos@name4 tag4:\""
 shutdown_when_empty
 wait_shutdown
-echo '-Hostname1-
+export EXPECTED='-Hostname1-
 -Hostn@me2-
 -Hostname3-
--Hos@name4-' | cmp - $RSYSLOG_OUT_LOG
-if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
-  cat $RSYSLOG_OUT_LOG
-  error_exit  1
-fi;
+-Hos@name4-'
+cmp_exact
 
 exit_test
