@@ -11,7 +11,7 @@ These are many ways to contribute to the project:
    * the rsyslog's github home at https://github.com/rsyslog/rsyslog
    * the rsyslog mailing list at http://lists.adiscon.net/mailman/listinfo/rsyslog
  * help with the documentation; you can either contribute
-   * to the [rsyslog doc directory](https://github.com/rsyslog/rsyslog/tree/master/doc), which is shown on http://rsyslog.com/doc
+   * to the [rsyslog doc directory](https://github.com/rsyslog/rsyslog-doc), which is shown on http://rsyslog.com/doc
    * to the rsyslog project web site -- just ask us for account creation
  * become a bug-hunter and help with testing rsyslog development releases
  * help driving the rsyslog infrastructure with its web sites and the like
