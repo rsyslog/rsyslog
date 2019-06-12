@@ -1,5 +1,12 @@
 ------------------------------------------------------------------------------
 Version 8.1907.0 (aka 2019.07) 2019-07-09
+- omamqp1: port to latest api, add tests
+  This brings omamqp1 up-to-date with the latest qpid-proton-c
+  api version.  This also adds a test for the plugin, to test
+  the basic functionality.  The test requires the user to
+  install qdrouterd and the python qpid-proton library in order
+  to use the simple_recv.py test program.
+  Thanks to Richard Megginson for the patch.
 - core bugfix: segfault on startup depending on queue file names
   rsyslog will segfault on startup when a main queue file name has
   been set and at least on other queue contains a file name. This
