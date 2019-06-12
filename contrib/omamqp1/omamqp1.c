@@ -207,9 +207,9 @@ CODESTARTfreeInstance
 	_shutdown_thread(pData);
 	_clean_config_settings(&pData->config);
 	_clean_thread_ipc(&pData->ipc);
-	if (pData->reactor) pn_decref(pData->reactor);
-	if (pData->handler) pn_decref(pData->handler);
-	if (pData->message) pn_decref(pData->message);
+	if (pData->reactor) pn_reactor_free(pData->reactor);
+	if (pData->handler) pn_handler_free(pData->handler);
+	if (pData->message) pn_message_free(pData->message);
 }
 ENDfreeInstance
 
@@ -249,7 +249,7 @@ CODESTARTbeginTransaction
 	DBGPRINTF("omamqp1: beginTransaction\n");
 	instanceData *pData = pWrkrData->pData;
 	pData->log_count = 0;
-	if (pData->message) pn_decref(pData->message);
+	if (pData->message) pn_message_free(pData->message);
 	pData->message = pn_message();
 	CHKmalloc(pData->message);
 	pn_data_t *body = pn_message_body(pData->message);
@@ -288,10 +288,11 @@ CODESTARTendTransaction
 	pn_message_t *message = pData->message;
 	pData->message = NULL;
 	if (pData->log_count > 0) {
+		DBGPRINTF("omamqp1: sending [%d] records\n", pData->log_count);
 		CHKiRet(_issue_command(&pData->ipc, pData->reactor, COMMAND_SEND, message));
 	} else {
 		DBGPRINTF("omamqp1: no log messages to send\n");
-		pn_decref(message);
+		pn_message_free(message);
 	}
 }
 finalize_it:
@@ -713,7 +714,7 @@ static rsRetVal _issue_command(threadIPC_t *ipc,
 	}
 	iRet = ipc->result;
 	if (ipc->message) {
-	    pn_decref(ipc->message);
+	    pn_message_free(ipc->message);
 	    ipc->message = NULL;
 	}
 
@@ -796,7 +797,6 @@ static void _poll_command(protocolState_t *ps)
 */
 static void *amqp1_thread(void *arg)
 {
-	DBGPRINTF("omamqp1: Protocol thread started\n");
 
 	pn_handler_t *handler = (pn_handler_t *)arg;
 	protocolState_t *ps = PROTOCOL_STATE(handler);
@@ -859,8 +859,6 @@ static void *amqp1_thread(void *arg)
 	        _poll_command(ps);
 	    }
 
-	    DBGPRINTF("omamqp1: reactor finished\n");
-
 	    _abort_command(ps);   // unblock main thread if necessary
 
 	    // delay reconnectDelay seconds before re-connecting:
@@ -871,7 +869,6 @@ static void *amqp1_thread(void *arg)
 	    }
 	}
 	pn_reactor_stop(ps->reactor);
-
 	// stop command is now done:
 	threadIPC_t *ipc = ps->ipc;
 	pthread_mutex_lock(&ipc->lock);

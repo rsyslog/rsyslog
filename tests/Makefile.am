@@ -1376,6 +1376,14 @@ TESTS +=  \
 endif # ENABLE_IMTUXEDOULOG
 endif
 
+if ENABLE_OMAMQP1
+TESTS += \
+	omamqp1-basic.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	omamqp1-basic-vg.sh
+endif
+endif # ENABLE_OMAMQP1
 
 # test samples...
 #empty-hostname.log: hostname-getaddrinfo-fail.log
@@ -2384,7 +2392,10 @@ EXTRA_DIST= \
 	testsuites/include-std-omfile-action.conf \
 	testsuites/invalid.conf \
 	testsuites/valid.conf \
-	testsuites/variable_leading_underscore.conf
+	testsuites/variable_leading_underscore.conf \
+	omamqp1-common.sh \
+	omamqp1-basic.sh \
+	omamqp1-basic-vg.sh
 
 ourtail_SOURCES = ourtail.c
 msleep_SOURCES = msleep.c
