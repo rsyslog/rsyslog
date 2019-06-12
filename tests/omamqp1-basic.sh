@@ -34,9 +34,6 @@ amqp_simple_recv $AMQP_URL amq.rsyslogtest $NUMMESSAGES > $RSYSLOG_DYNNAME.spool
 #export RSYSLOG_DEBUG=debug
 #export RSYSLOG_DEBUGLOG=/tmp/rsyslog.debug.log
 startup
-if [ "${USE_VALGRIND:-}" = YES ] ; then
-	sleep 5 # give server a little extra time to start up
-fi
 if [ -n "${USE_GDB:-}" ] ; then
     echo attach gdb here
     sleep 54321 || :
