@@ -683,11 +683,6 @@ checkTruncation(strm_t *const pThis)
 		FINALIZE;
 	}
 
-	if(Debug && debugging_on) { /* costly operation, so make sure we need it */
-		dbgprintf("checkTruncation, currpos %lld\n",
-			(long long) lseek(pThis->fd, 0, SEEK_CUR));
-	}
-
 	const off64_t backseek = -1 * (off64_t) pThis->iBufPtrMax;
 	ret = lseek64(pThis->fd, backseek, SEEK_CUR);
 	if(ret < 0) {
