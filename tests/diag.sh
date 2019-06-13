@@ -2252,7 +2252,7 @@ case $1 in
 		new_count=$prev_count
 		while [[ "x$prev_count" == "x$new_count" ]]; do
 				# busy spin, because it allows as close timing-coordination in actual test run as possible
-				new_count=$(grep -c'BEGIN$' <"$2")
+				new_count=$(grep -c 'BEGIN$' <"$2")
 		done
 		echo "stats push registered"
 		;;
