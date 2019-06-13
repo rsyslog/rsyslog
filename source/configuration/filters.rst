@@ -291,5 +291,5 @@ Note that regular expressions are currently NOT supported in
 expression-based filters. These will be added later when function
 support is added to the expression engine (the reason is that regular
 expressions will be a separate loadable module, which requires some more
-prequisites before it can be implemented).
+prerequisites before it can be implemented).
 

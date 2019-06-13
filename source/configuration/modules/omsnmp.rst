@@ -116,7 +116,7 @@ TrapOID
 The default value means "ADISCON-MONITORWARE-MIB::syslogtrap".
 
 This configuration parameter is used for **SNMPv2** only.
-This is the OID which defines the trap-type, or notifcation-type
+This is the OID which defines the trap-type, or notification-type
 rsyslog uses to send the trap.
 In order to decode this OID, you will need to have the
 ADISCON-MONITORWARE-MIB and ADISCON-MIB mibs installed on the

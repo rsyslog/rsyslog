@@ -61,7 +61,7 @@ EnsureLFEnding
 
    "binary", "on", "no", "``$ActionOMStdoutEnsureLFEnding``"
 
-Makes sure, that each essage is written with a terminating LF. If the
+Makes sure, that each message is written with a terminating LF. If the
 message contains a trailing LF, none is added. This is needed for the
 automated tests.
 

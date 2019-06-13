@@ -91,7 +91,7 @@ sizes" <http://www.rsyslog.com/lower-bound-for-queue-sizes/>`_.
 
 The default depends on queue type and rsyslog version, if you need
 a specific value, please specify it. Otherwise rsyslog selects what
-it consideres appropriate for the version in question. In rsyslog
+it considers appropriate for the version in question. In rsyslog
 rsyslog 8.30.0, for example, ruleset queues have a default size
 of 50000 and action queues which are configured to be non-direct
 have a size of 1000.
@@ -148,7 +148,7 @@ queue.minDequeueBatchSize.timeout
    "integer", "1000", "no", "none"
 
 This parameter is only meaningful if use together with `queue.minDequeueBatchSize`,
-otherwise it is ignored. It specifies the amout of time (in milliseconds) rsyslogs
+otherwise it is ignored. It specifies the amount of time (in milliseconds) rsyslogs
 waits for new
 messages so that the minimum batch size can be reached. After this period, the
 batch is processed, *even if it is below minimum size*. This capability exists to
@@ -247,7 +247,7 @@ If the special value `0` is used, `queue.LightDelayMark` will be set
 to the value of `queue.size`. This effectively **disables** light delay
 functionality. This is useful if a queue is not used by non-delayable
 inputs like UDP. The special value was introduced in rsyslog 8.1904.0
-and is **not** available in earlier versions. There, you can achive the
+and is **not** available in earlier versions. There, you can achieve the
 same result by setting `queue.LightDelayMark` to a very large value.
 
 
@@ -277,7 +277,7 @@ queue.discardSeverity
    "integer", "8", "no", "``$ActionQueueDiscardSeverity``"
 
 As soon as the threshold of the parameter queue.discardMark is reached
-incoming aswell as queued messages with a priority equal or lower than
+incoming as well as queued messages with a priority equal or lower than
 specified will be erased. With the default no messages will be erased.
 You have to specify a numeric severity value for this parameter.
 
@@ -408,7 +408,7 @@ queue.timeoutshutdown
 
 If a queue that still contains messages is terminated it will wait the
 specified time interval for the worker thread to finish.
-The time is specfied in milliseconds (1000ms is 1sec).
+The time is specified in milliseconds (1000ms is 1sec).
 Default for action queues is 10, for ruleset queues it is 1500.
 
 
@@ -452,7 +452,7 @@ timeout quickly enough:
   would become unresponsive and most probably a hard reset would be
   required.
 * if using imuxsock with imjournal forwarding is active, messages are
-  lost because the journal discards them (more agressive than rsyslog does)
+  lost because the journal discards them (more aggressive than rsyslog does)
 * if using imjournal, the journal will buffer messages. If journal
   runs out of configured space, messages will be discarded. So in this
   mode discarding is moved to a bit later place.
@@ -461,7 +461,7 @@ timeout quickly enough:
 So this setting is provided in order to guard against problematic situations,
 which always will result either in message loss or system hang. For
 action queues, one may debate if it would be better to overflow rapidly
-to the main queue. If so desired, this is easy to acomplish by setting
+to the main queue. If so desired, this is easy to accomplish by setting
 a very large timeout value. The same, of course, is true for the main
 queue, but you have been warned if you do so!
 
@@ -496,7 +496,7 @@ queue.maxFileSize
    "integer", "1m/16m", "no", "``$ActionQueueMaxFileSize``"
 
 Specifies the maximum size for the disk-assisted queue file.
-Parameter can be spezified in Mebibyte or Gibibyte, default for action
+Parameter can be specified in Mebibyte or Gibibyte, default for action
 queues is 1m and for ruleset queues 16m (1m = 1024*1024).
 
 

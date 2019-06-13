@@ -31,7 +31,7 @@ These were essentially the same steps as for any `TLS syslog
 client <tls_cert_client.html>`_. We now need to add the capability to
 forward the router logs:
 
--  make sure that the firewall rules permit message recepetion on UDP
+-  make sure that the firewall rules permit message reception on UDP
    port 514 (if you use a non-standard port for UDP syslog, make sure
    that port number is permitted).
 -  you may want to limit who can send syslog messages via UDP. A great

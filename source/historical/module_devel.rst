@@ -96,7 +96,7 @@ Action Selectors
 ----------------
 
 Modules (and rsyslog) need to know when they are called. For this, there
-must a an action identification in selector lines. There are two
+must an action identification in selector lines. There are two
 syntaxes: the single-character syntax, where a single characters
 identifies a module (e.g. "\*" for a wall message) and the modules
 designator syntax, where the module name is given between colons (e.g.

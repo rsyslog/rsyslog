@@ -78,7 +78,7 @@ as follows:
    values match the verification succeeds, otherwise the message was
    modified.
 
-If you neeed help implementing a verifier function or want to sponsor
+If you need help implementing a verifier function or want to sponsor
 development of a verification tool, please simply email
 `sales@adiscon.com <sales@adiscon.com>`_ for a quote.
 

@@ -20,7 +20,7 @@ is available in the current message, it is probably a good idea to
 return an empty string, which the database layer can turn into a zero.
 
 The other mode is "**FIELD**\ ", in which the complete field is
-returned. This may be useful in cases where absense of a match is
+returned. This may be useful in cases where absence of a match is
 considered a failure and the message that triggered it shall be logged.
 
 If in doubt, **it is highly suggested to use the** `rsyslog online regular

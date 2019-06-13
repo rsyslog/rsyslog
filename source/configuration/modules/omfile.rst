@@ -784,7 +784,7 @@ Caveats/Known Bugs
 
 -  people often report problems that dynafiles are not properly created.
    The common cause for this problem is SELinux rules, which do not permit
-   the create of those files (check generated file names and pathes!). The
+   the create of those files (check generated file names and paths!). The
    same happens for generic permission issues (this is often a problem
    under Ubuntu where permissions are dropped by default)
 

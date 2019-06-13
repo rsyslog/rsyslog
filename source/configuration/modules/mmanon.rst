@@ -161,12 +161,12 @@ ipv6.anonmode
    "word", "zero", "no", "none"
 
 This defines the mode, in which IPv6 addresses will be anonymized.
-There exist the "random", "random-consitent", and "zero" modes.
+There exist the "random", "random-consistent", and "zero" modes.
 
 The modes "random" and "random-consistent" are very similar, in
 that they both anonymize ip-addresses by randomizing the last bits (any
 number) of a given address. However, while "random" mode assigns a new
-random ip-address for every address in a message, "random-consitent" will
+random ip-address for every address in a message, "random-consistent" will
 assign the same randomized address to every instance of the same original address.
 
 The default "zero" mode will do full anonymization of any number
@@ -222,12 +222,12 @@ embeddedipv4.anonmode
    "word", "zero", "no", "none"
 
 This defines the mode, in which IPv6 addresses will be anonymized.
-There exist the "random", "random-consitent", and "zero" modes.
+There exist the "random", "random-consistent", and "zero" modes.
 
 The modes "random" and "random-consistent" are very similar, in
 that they both anonymize ip-addresses by randomizing the last bits (any
 number) of a given address. However, while "random" mode assigns a new
-random ip-address for every address in a message, "random-consitent" will
+random ip-address for every address in a message, "random-consistent" will
 assign the same randomized address to every instance of the same original address.
 
 The default "zero" mode will do full anonymization of any number
@@ -315,7 +315,7 @@ Anonymizing an odd number of bits
 
 The next snippet is also based on the first one, but anonymizes an "odd"
 number of bits, 12. The value of 12 is used by some folks as a
-compromise between keeping privacy and still permiting to gain some more
+compromise between keeping privacy and still permitting to gain some more
 in-depth insight from log files. Note that anonymizing 12 bits may be
 insufficient to fulfill legal requirements (if such exist).
 

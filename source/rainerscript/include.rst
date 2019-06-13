@@ -69,7 +69,7 @@ constants.
 mode
 ----
 
-Affects how mising files are to be handled:
+Affects how missing files are to be handled:
 
 - ``abort-if-missing``, with rsyslog aborting when the file is not present
 - ``required`` *(default)*, with rsyslog emitting an error message but otherwise

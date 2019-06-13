@@ -71,7 +71,7 @@ or [help wanted](https://github.com/rsyslog/rsyslog-doc/labels/help%20wanted)
 ## Requesting feedback/help
 
 While working on changes to the docs, you are encouraged to seek input from
-other members of the community. This can be done via the the mailing list, here
+other members of the community. This can be done via the mailing list, here
 on GitHub by submitting a new issue or (experimentally) by [posting a question
 to Stack Exchange](https://serverfault.com/questions/ask?tags=rsyslog).
 

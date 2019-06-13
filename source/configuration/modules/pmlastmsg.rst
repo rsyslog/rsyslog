@@ -12,7 +12,7 @@ pmlastmsg: last message repeated n times
 Purpose
 =======
 
-Some syslogds are known to emit severily malformed messages with content
+Some syslogds are known to emit severity malformed messages with content
 "last message repeated n times". These messages can mess up message
 reception, as they lead to wrong interpretation with the standard
 RFC3164 parser. Rather than trying to fix this issue in pmrfc3164, we

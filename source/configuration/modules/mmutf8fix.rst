@@ -30,7 +30,7 @@ Some notes are due for proper use of this module. This is a message
 modification module utilizing the action interface, which means you call
 it like an action. This gives great flexibility on the question on when
 and how to call this module. Note that once it has been called, it
-actually modifies the message. The original messsage is then no longer
+actually modifies the message. The original message is then no longer
 available. However, this does **not** change any properties set, used or
 extracted before the modification is done.
 

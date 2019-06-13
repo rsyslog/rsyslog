@@ -25,7 +25,7 @@ Environment Variables
 There are two environment variables that set several debug settings:
 
 -  The "RSYSLOG\_DEBUGLOG" (sample:
-    RSYSLOG\_DEBUGLOG="/path/to/debuglog/debug.log") writes (allmost) all debug
+    RSYSLOG\_DEBUGLOG="/path/to/debuglog/debug.log") writes (almost) all debug
    message to the specified log file in addition to stdout. Some system
    messages (e.g. segfault or abort message) are not written to the file
    as we can not capture them.

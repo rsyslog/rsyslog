@@ -56,7 +56,7 @@ Note that "gnutls" is the current default for historic reasons. We actually
 recommend to use "openssl". It provides better error messages and accepts
 a wider range of certificate types.
 
-If you have problems with the default setting, we recommend to swich to
+If you have problems with the default setting, we recommend to switch to
 "openssl".
 
 
@@ -213,7 +213,7 @@ Note: this parameter is mandatory depending on the value of
 Peer Places access restrictions on this forwarder. Only peers which
 have been listed in this parameter may be connected to. This guards
 against rouge servers and man-in-the-middle attacks. The validation
-bases on the certficate the remote peer presents.
+bases on the certificate the remote peer presents.
 
 This contains either remote system names or fingerprints, depending
 on the value of parameter `TLS.AuthMode`. One or more values may be
@@ -281,7 +281,7 @@ subject common name. If the certificate contains multiple names, a
 match on any one of these names is considered good and permits the
 peer to talk to rsyslog.
 
-The permittedn names or fingerprints are configured via
+The permitted names or fingerprints are configured via
 `TLS.PermittedPeer`.
 
 
@@ -308,7 +308,7 @@ TLS.MyCert
 
    "string", "none", "no", "none"
 
-The machine public certiificate.
+The machine public certificate.
 
 
 TLS.MyPrivKey

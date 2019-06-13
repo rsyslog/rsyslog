@@ -25,7 +25,7 @@ There are different types of lookup tables:
 -  **string** - the value to be looked up is an arbitrary string. Only
    exact some strings match.
 -  **array** - the value to be looked up is an integer number from a
-   consequtive set. The set does not need to start at zero or one, but
+   consecutive set. The set does not need to start at zero or one, but
    there must be no number missing. So, for example 5,6,7,8,9 would be a
    valid set of index values, while 1,2,4,5 would not be (due to missing
    2). A match happens if the requested number is present.
@@ -83,7 +83,7 @@ This is a sample of how an ip-to-office mapping may look like:
             ]
     }
 
-Note: if a different IP comes in, the value "unk" is returend thanks to
+Note: if a different IP comes in, the value "unk" is returned thanks to
 the nomatch parameter in the first line.
 
 RainerScript Statements
@@ -92,7 +92,7 @@ RainerScript Statements
 lookup\_table() Object
 ~~~~~~~~~~~~~~~~~~~~~~
 
-This statement defines and intially loads a lookup table. Its format is
+This statement defines and initially loads a lookup table. Its format is
 as follows:
 
 ::
@@ -142,7 +142,7 @@ Parameters
    defined).
 -  **name** (constant string)
 
-   The lookup table to be used. Note that this must be specificed as a
+   The lookup table to be used. Note that this must be specified as a
    constant. In theory, variable table names could be made possible, but
    their runtime behaviour is not as good as for static names, and we do
    not (yet) see good use cases where dynamic table names could be

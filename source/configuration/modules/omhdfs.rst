@@ -78,14 +78,14 @@ how to do it better, please drop us a line!
 -  In order to build, you need to set these environment variables BEFORE
    running ./configure:
 
-   -  JAVA\_INCLUDES - must have all include pathes that are needed to
-      build JNI C programms, including the -I options necessary for gcc.
+   -  JAVA\_INCLUDES - must have all include paths that are needed to
+      build JNI C programs, including the -I options necessary for gcc.
       An example is
       # export
       JAVA\_INCLUDES="-I/usr/lib/jvm/java-1.6.0-openjdk-1.6.0.0.x86\_64/include
       -I/usr/lib/jvm/java-1.6.0-openjdk-1.6.0.0.x86\_64/include/linux"
-   -  JAVA\_LIBS - must have all library pathes that are needed to build
-      JNI C programms, including the -l/-L options necessary for gcc. An
+   -  JAVA\_LIBS - must have all library paths that are needed to build
+      JNI C programs, including the -l/-L options necessary for gcc. An
       example is
       # export export
       JAVA\_LIBS="-L/usr/java/jdk1.6.0\_21/jre/lib/amd64

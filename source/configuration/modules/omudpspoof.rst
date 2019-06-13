@@ -21,7 +21,7 @@ requirement because raw socket access is necessary to fake UDP sender
 addresses. As such, rsyslog cannot drop privileges if this module is
 to be used. Ensure that you do **not** use `$PrivDropToUser` or
 `$PrivDropToGroup`. Many distro default configurations (notably Ubuntu)
-contain these statments. You need to remove or comment them out if you
+contain these statements. You need to remove or comment them out if you
 want to use `omudpspoof`.
 
 
@@ -47,7 +47,7 @@ Template
 
 This setting instructs omudpspoof to use a template different from
 the default template for all of its actions that do not have a
-template specified explicitely.
+template specified explicitly.
 
 
 Action Parameters
@@ -155,7 +155,7 @@ Template
 
 This setting instructs omudpspoof to use a template different from
 the default template for all of its actions that do not have a
-template specified explicitely.
+template specified explicitly.
 
 
 Caveats/Known Bugs

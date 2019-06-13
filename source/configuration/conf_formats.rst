@@ -67,7 +67,7 @@ likely find it in existing configurations.
 - easy to write
 - safe for use with include files
 
-To continue with the above example, the |FmtAdvancedName| format is preferrable
+To continue with the above example, the |FmtAdvancedName| format is preferable
 if you want to make sure that an offline remote destination will not slow down
 local log file writing. In that case, forwarding is done via:
 
@@ -75,7 +75,7 @@ local log file writing. In that case, forwarding is done via:
 
    mail.err action(type="omfwd" protocol="tcp" queue.type="linkedList")
 
-As can be seen by this example, the |FmtAdvancedName| format permits specifing
+As can be seen by this example, the |FmtAdvancedName| format permits specifying
 additional parameters to fine tune the behavior, whereas the |FmtBasicName|
 format does not provide this level of control.
 

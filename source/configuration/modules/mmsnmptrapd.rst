@@ -63,7 +63,7 @@ Note: parameter names are case-insensitive.
 
 -  **$mmsnmptrapdTag** [tagname]
 
-   tells the module which start string inside the tag to look for. The
+   Tells the module which start string inside the tag to look for. The
    default is "snmptrapd". Note that a slash is automatically added to
    this tag when it comes to matching incoming messages. It MUST not be
    given, except if two slashes are required for whatever reasons (so
@@ -74,7 +74,7 @@ Note: parameter names are case-insensitive.
    as a list. Note that due to the current config system **no
    whitespace** is supported inside the list, so be sure not to use any
    whitespace inside it.
-   The list is constructed of Severtiy-Name/Severity-Value pairs,
+   The list is constructed of Severity-Name/Severity-Value pairs,
    delimited by comma. Severity-Name is a case-sensitive string, e.g.
    "warning" and an associated numerical value (e.g. 4). Possible values
    are in the rage 0..7 and are defined in RFC5424, table 2. The given

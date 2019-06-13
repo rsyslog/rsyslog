@@ -10,7 +10,7 @@ potential development state indication is used. It follows this pattern:
 
 major.minor.patchlevel[-devstate]
 
-where devstate has some forther structure:
+where devstate has some further structure:
 -<releaseReason><releaseNumber>
 
 All stable builds come without the devstate part. All unstable

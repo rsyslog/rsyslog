@@ -92,7 +92,7 @@ The following message properties exist:
 
 **pri-text**
   the PRI part of the message in a textual form with the numerical PRI
-  appended in brackes (e.g. "local0.err<133>")
+  appended in brackets (e.g. "local0.err<133>")
 
 **iut**
   the monitorware InfoUnitType - used when talking to a
@@ -129,8 +129,8 @@ The following message properties exist:
   alias for timereported
 
 **protocol-version**
-  The contents of the PROTCOL-VERSION field from IETF draft
-  draft-ietf-syslog-protcol
+  The contents of the PROTOCOL-VERSION field from IETF draft
+  draft-ietf-syslog-protocol
 
 **structured-data**
   The contents of the STRUCTURED-DATA field from IETF draft

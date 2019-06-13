@@ -32,7 +32,7 @@ Example
 With ascii value of the field delimiter
 ---------------------------------------
 
-Following example returnes the third field delimited by space.
+Following example returns the third field delimited by space.
 In this example $msg will be "field1 field2 field3 field4".
 
 .. code-block:: none
@@ -49,7 +49,7 @@ produces
 With a string as the field delimiter
 ------------------------------------
 
-This example returnes the second field delimited by "#011".
+This example returns the second field delimited by "#011".
 In this example $msg will be "field1#011field2#011field3#011field4".
 
 .. code-block:: none

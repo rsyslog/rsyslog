@@ -53,7 +53,7 @@ container
 
 .. versionadded:: 8.28.0
 
-Specifies the container to be used to store the fields ammended by
+Specifies the container to be used to store the fields amended by
 mmdblookup.
 
 
@@ -98,11 +98,11 @@ fields
 
 Fields that will be appended to processed message. The fields will
 always be appended in the container used by mmdblookup (which may be
-overriden by the "container" parameter on module load).
+overridden by the "container" parameter on module load).
 
 By default, the maxmindb field name is used for variables. This can
-be overriden by specifying a custom name between colons at the
-beginnig of the field name. As usual, bang signs denote path levels.
+be overridden by specifying a custom name between colons at the
+beginning of the field name. As usual, bang signs denote path levels.
 So for example, if you want to extract "!city!names!en" but rename it
 to "cityname", you can use ":cityname:!city!names!en" as field name.
 
@@ -113,7 +113,7 @@ Examples
 Minimum configuration
 ---------------------
 
-This example showes the minimum configuration.
+This example shows the minimum configuration.
 
 .. code-block:: none
 

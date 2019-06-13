@@ -39,7 +39,7 @@ Setting up the system
 ---------------------
 
 For php-syslog-ng, you can follow its usual setup instructions. Just
-skip any steps refering to configure syslog-ng. Make sure you create the
+skip any steps referring to configure syslog-ng. Make sure you create the
 database schema in `MySQL <http://www.mysql.com/>`_. As of this writing,
 the expected schema can be created via this script:
 
@@ -104,7 +104,7 @@ time to rsyslogd's processing (substrings must be extracted). So we take
 a full mysql-formatted timestamp and supply it to MySQL. The sql engine
 in turn discards the unneeded part. It works pretty well. As of my
 understanding, the inefficiency of discarding the unneeded part in MySQL
-is lower than the effciency gain from using the full timestamp in
+is lower than the efficiency gain from using the full timestamp in
 rsyslogd. So it is most probably the best solution.
 
 Please note that rsyslogd knows two different timestamp properties: one
@@ -134,7 +134,7 @@ up in php-syslog-ng.
 Conclusion
 ----------
 
-With minumal effort, you can use php-syslog-ng together with rsyslogd.
+With minimal effort, you can use php-syslog-ng together with rsyslogd.
 For those unfamiliar with syslog-ng, this configuration is probably
 easier to set up then switching to syslog-ng. For existing rsyslogd
 users, php-syslog-ng might be a nice add-on to their logging

@@ -70,7 +70,7 @@ to archive both in order to prove integrity.
 -  **cry.key** <encryption key>
    TESTING AID, NOT FOR PRODUCTION USE. This uses the KEY specified
    inside rsyslog.conf. This is the actual key, and as such this mode is
-   highly insecure. However, it can be useful for intial testing steps.
+   highly insecure. However, it can be useful for initial testing steps.
    This option may be removed in the future.
 
 -  **cry.keyfile** <filename>

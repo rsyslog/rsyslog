@@ -32,7 +32,7 @@ against an erroneous detection of a message as being CEE where it is
 not.
 
 This also means that mmjsonparse currently is NOT a generic JSON parser
-that picks up JSON from whereever it may occur in the message. This is
+that picks up JSON from wherever it may occur in the message. This is
 intentional, but future versions may support config parameters to relax
 the format requirements.
 

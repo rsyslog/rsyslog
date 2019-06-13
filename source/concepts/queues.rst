@@ -60,7 +60,7 @@ action).
 
 Not all queues necessarily support the full set of queue configuration
 parameters, because not all are applicable. For example, disk queues
-always have exactly one worker thread. This cannot be overriden by
+always have exactly one worker thread. This cannot be overridden by
 configuration parameters. Tries to do so are ignored.
 
 Queue Modes
@@ -272,7 +272,7 @@ actually needed.
 The water marks can be set via the "*$<object>QueueHighWatermark*\ "
 and  "*$<object>QueueLowWatermark*\ " configuration file directives.
 Note that these are actual numbers, not percentages. Be sure they make
-sense (also in respect to "*$<object>QueueSize*\ "). Rsyslodg does
+sense (also in respect to "*$<object>QueueSize*\ "). Rsyslogd does
 perform some checks on the numbers provided, and issues warning when
 numbers are "suspicious".
 

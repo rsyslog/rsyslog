@@ -14,7 +14,7 @@ This parameter instructs rsyslogd to replace non US-ASCII characters
 may be useful for some systems. Please note that this escaping breaks
 Unicode and many other encodings. Most importantly, it can be assumed
 that Asian and European characters will be rendered hardly readable by
-this settings. However, it may still be useful when the logs themself
+this settings. However, it may still be useful when the logs themselves
 are primarily in English and only occasionally contain local script. If
 this option is turned on, all control-characters are converted to a
 3-digit octal number and be prefixed with the

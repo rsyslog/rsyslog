@@ -31,7 +31,7 @@ Character Positions
 specify the offset within the string that should be copied. Offset
 counting starts at 1, so if you need to obtain the first 2 characters of
 the message text, you can use this syntax: "%msg:1:2%". If you do not
-whish to specify from and to, but you want to specify options, you still
+wish to specify from and to, but you want to specify options, you still
 need to include the colons. For example, if you would like to convert
 the full message text to lower case, use "%msg:::lowercase%". If you
 would like to extract from a position until the end of the string, you
@@ -49,7 +49,7 @@ the property text that matches the regular expression. An example for a
 property replacer sequence with a regular expression is:
 "%msg:R:.\*Sev:. \\(.\*\\) \\[.\*--end%"
 
-It is possible to specify some parametes after the "R". These are
+It is possible to specify some parameters after the "R". These are
 comma-separated. They are:
 
 R,<regexp-type>,<submatch>,<:doc:`nomatch <nomatch>`\ >,<match-number>
@@ -59,7 +59,7 @@ for extended ones. The string must be given in upper case. The default
 is "BRE" to be consistent with earlier versions of rsyslog that did not
 support ERE. The submatch identifies the submatch to be used with the
 result. A single digit is supported. Match 0 is the full match, while 1
-to 9 are the acutal submatches. The match-number identifies which match
+to 9 are the actual submatches. The match-number identifies which match
 to use, if the expression occurs more than once inside the string.
 Please note that the first match is number 0, the second 1 and so on. Up
 to 10 matches (up to number 9) are supported. Please note that it would
@@ -90,7 +90,7 @@ checker/generator <http://www.rsyslog.com/tool-regex>`_ **online tool
 available.** With that tool, you can check your regular expressions and
 also generate a valid property replacer sequence. Usage of this tool is
 recommended. Depending on the version offered, the tool may not cover
-all subleties that can be done with the property replacer. It
+all subtleties that can be done with the property replacer. It
 concentrates on the most often used cases. So it is still useful to
 hand-craft expressions for demanding environments.
 
@@ -113,7 +113,7 @@ same example with semicolon as delimiter is "%msg:F,59:3%".
 The use of fields does not permit to select substrings, what is rather
 unfortunate. To solve this issue, starting with 6.3.9, fromPos and toPos
 can be specified for strings as well. However, the syntax is quite ugly,
-but it was the only way to integrate this functonality into the
+but it was the only way to integrate this functionality into the
 already-existing system. To do so, use ",fromPos" and ",toPos" during
 field extraction. Let's assume you want to extract the substring from
 position 5 to 9 in the previous example. Then, the syntax is as follows:
@@ -126,7 +126,7 @@ Only upper case works, lower case will return an error. There are no
 white spaces permitted inside the sequence (that will lead to error
 messages and will NOT provide the intended result).
 
-Each occurence of the field delimiter starts a new field. However, if
+Each occurrence of the field delimiter starts a new field. However, if
 you add a plus sign ("+") after the field delimiter, multiple
 delimiters, one immediately after the others, are treated as separate
 fields. This can be useful in cases where the syslog message contains
@@ -188,7 +188,7 @@ options are defined:
   where "fieldname" is given in the *outname* property (or the property name
   if none was assigned) and value is the end result of property replacer operation. 
   Note that value supports all property replacer options, like substrings, case 
-  converson and the like. Values are properly JSON-escaped, however field names are 
+  conversion and the like. Values are properly JSON-escaped, however field names are 
   (currently) not, so it is expected that proper field names are configured.
   The jsonf option cannot be used together with either json or csv options.
 
@@ -211,7 +211,7 @@ options are defined:
   PIX.
 
 **date-utc**
-  convert data to UTC prior to outputing it (available since 8.18.0)
+  convert data to UTC prior to outputting it (available since 8.18.0)
 
 **date-mysql**
   format as mysql date

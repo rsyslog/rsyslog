@@ -14,14 +14,14 @@ Abstract
 
 **In this paper, I describe how to encrypt**
 `syslog <http://www.monitorware.com/en/topics/syslog/>`_ **messages on the
-network.** Encryption is vital to keep the confidiental content of
+network.** Encryption is vital to keep the confidential content of
 syslog messages secure. I describe the overall approach and provide an
 HOWTO do it with the help of `rsyslogd <http://www.rsyslog.com>`_ and
 `stunnel <http://www.stunnel.org>`_.*
 
 Please note that starting with rsyslog 3.19.0, `rsyslog provides native
 TLS/SSL encryption <rsyslog_tls.html>`_ without the need of stunnel. I
-strongly recomend to use that feature instead of stunnel. The stunnel
+strongly recommend to use that feature instead of stunnel. The stunnel
 documentation here is mostly provided for backwards compatibility. New
 deployments are advised to use native TLS mode.\ **
 
@@ -36,7 +36,7 @@ encrypt syslog communication. I will describe one approach in this
 paper.
 
 The most straightforward solution would be that the syslogd itself
-encrypts messages. Unfortuantely, encryption is only standardized in
+encrypts messages. Unfortunately, encryption is only standardized in
 `RFC 3195 <http://www.monitorware.com/Common/en/glossary/rfc3195.php>`_.
 But there is currently no syslogd that implements RFC 3195's encryption
 features, so this route leads to nothing. Another approach would be to
@@ -86,7 +86,7 @@ need to watch out for subtle issues when setting up your system.
 Overall System Setup
 --------------------
 
-In ths paper, I assume two machines, one named "client" and the other
+In this paper, I assume two machines, one named "client" and the other
 named "server". It is obvious that, in practice, you will probably have
 multiple clients but only one server. Syslog traffic shall be
 transmitted via stunnel over the network. Port 60514 is to be used for
@@ -117,7 +117,7 @@ stunnel uses) - there are often security fixes available and often the
 latest fixes are not included in the default package.
 
 In my sample setup, I use only the bare minimum of options. For example,
-I do not make the server check client cerficiates. Also, I do not talk
+I do not make the server check client certificates. Also, I do not talk
 much about certificates at all. If you intend to really secure your
 system, you should probably learn about certificates and how to manage
 and deploy them. This is beyond the scope of this paper. For additional
@@ -126,7 +126,7 @@ information,
 is a good starting point.
 
 You also need to install rsyslogd on both machines. Do this before
-starting with the configuration. You should also familarize yourself
+starting with the configuration. You should also familiarize yourself
 with its configuration file syntax, so that you know which actions you
 can trigger with it. Rsyslogd can work as a drop-in replacement for
 stock `sysklogd <http://www.infodrom.org/projects/sysklogd/>`_. So if
@@ -184,7 +184,7 @@ that it does everything you want. If in doubt, you can simply copy
 /etc/syslog.conf to /etc/rsyslog.conf and you probably have what you
 want. The really important thing in rsyslogd configuration is that you
 must make it listen to tcp port 61514 (remember: this is where stunnel
-send the messages to). Thankfully, this is easy to achive: just add "-t
+send the messages to). Thankfully, this is easy to achieve: just add "-t
 61514" to the rsyslogd startup options in your system startup script.
 After done so, start (or restart) rsyslogd.
 
@@ -224,7 +224,7 @@ running client stunnel instance.
 
 Finally, you need to tell rsyslogd to send data to the remote host. In
 stock syslogd, you do this via the "@host" forwarding directive. The
-same works with rsyslog, but it suppports extensions to use tcp. Add the
+same works with rsyslog, but it supports extensions to use tcp. Add the
 following line to your /etc/rsyslog.conf:
 
     ::
@@ -255,7 +255,7 @@ action going on on your system.
 
 If you have only basic security needs, you can probably just remove the
 debug settings and take the rest of the configuration to production. If
-you are security-sensitve, you should have a look at the various stunnel
+you are security-sensitive, you should have a look at the various stunnel
 settings that help you further secure the system.
 
 Preventing Systems from talking directly to the rsyslog Server
@@ -271,7 +271,7 @@ iptables. Just be sure not to forget it.
 Conclusion
 ----------
 
-With minumal effort, you can set up a secure logging infrastructure
+With minimal effort, you can set up a secure logging infrastructure
 employing ssl encrypted syslog message transmission. As a side note, you
 also have the benefit of reliable tcp delivery which is far less prone
 to message loss than udp.

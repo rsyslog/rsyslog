@@ -47,7 +47,7 @@ a
 
   action.execonlyonceeveryinterval="7200"
 
-in the action definition. Messages sent more frequently are simpy discarded.
+in the action definition. Messages sent more frequently are simply discarded.
 
 
 Configuration Parameters
@@ -164,7 +164,7 @@ Body.Enable
 
 Setting this to "off" permits to exclude the actual message body.
 This may be useful for pager-like devices or cell phone SMS messages.
-The default is "on", which is appropriate for allmost all cases. Turn
+The default is "on", which is appropriate for almost all cases. Turn
 it off only if you know exactly what you do!
 
 
@@ -204,7 +204,7 @@ but you may also be referred to sendmail-mode).
 In theory, ommail should also offer a mode where it uses the sendmail
 utility to send its mail (sendmail-mode). This is somewhat less reliable
 (because we depend on an entity we do not have close control over -
-sendmail). It also requires dramatically more system ressources, as we
+sendmail). It also requires dramatically more system resources, as we
 need to load the external process (but that should be no problem given
 the expected infrequent number of calls into this plugin). The big
 advantage of sendmail mode is that it supports all the bells and

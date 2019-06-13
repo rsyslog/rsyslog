@@ -19,7 +19,7 @@ following types are used:
   These are integers, but support modifier after the number part.
   For example, 1k means 1024. Supported are
   k(ilo), m(ega), g(iga), t(era), p(eta) and e(xa). Lower case letters
-  refer to the traditional binary defintion (e.g. 1m equals 1,048,576)
+  refer to the traditional binary definition (e.g. 1m equals 1,048,576)
   whereas upper case letters refer to their new 1000-based definition (e.g
   1M equals 1,000,000).
 

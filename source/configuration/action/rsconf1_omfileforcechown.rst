@@ -21,7 +21,7 @@ exists outside the scope of rsyslog. Actually, it tries to fix invalid
 ownership/permission settings set by the original file creator.
 
 Rsyslog changes the ownership during initial execution with root
-privileges. When a privelege drop is configured, privileges are dropped
+privileges. When a privilege drop is configured, privileges are dropped
 after the file owner ship is changed. Not that this currently is a
 limitation in rsyslog's privilege drop code, which is on the TODO list
 to be removed. See Caveats section below for the important implications.

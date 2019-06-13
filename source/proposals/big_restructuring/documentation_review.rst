@@ -40,7 +40,7 @@ common scenarios for a specific log sender application.
 Add a Reference Section
 -----------------------
 
-This section would have all the reference configuration of all possibile tags, in both formats, RainerScript
+This section would have all the reference configuration of all possible tags, in both formats, RainerScript
 and legacy.
 
 

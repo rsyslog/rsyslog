@@ -310,7 +310,7 @@ Specifies the value of the inputname property. In older versions,
 this was always "imudp" for all
 listeners, which still is the default. Starting with 7.3.9 it can be
 set to different values for each listener. Note that when a single
-input statement defines multipe listner ports, the inputname will be
+input statement defines multiple listener ports, the inputname will be
 the same for all of them. If you want to differentiate in that case,
 use "name.appendPort" to make them unique. Note that the
 "name" parameter can be an empty string. In that case, the
@@ -331,9 +331,9 @@ Name.appendPort
 
 .. versionadded:: 7.3.9
 
-Appends the port the the inputname property. Note that when no "name" is
+Appends the port the inputname property. Note that when no "name" is
 specified, the default of "imudp" is used and the port is appended to
-that default. So, for example, a listner port of 514 in that case
+that default. So, for example, a listener port of 514 in that case
 will lead to an inputname of "imudp514". The ability to append a port
 is most useful when multiple ports are defined for a single input and
 each of the inputnames shall be unique. Note that there currently is
@@ -351,7 +351,7 @@ DefaultTZ
    "string", "none", "no", "none"
 
 This is an **experimental** parameter; details may change at any
-time and it may also be discoutinued without any early warning.
+time and it may also be discontinued without any early warning.
 Permits to set a default timezone for this listener. This is useful
 when working with legacy syslog (RFC3164 et al) residing in different
 timezones. If set it will be used as timezone for all messages **that
@@ -489,7 +489,7 @@ Example 4
 ---------
 
 In the next example, we set up three listeners at ports 10514, 10515 and
-10516 and assign a listner name of "udp" to it, followed by the port
+10516 and assign a listener name of "udp" to it, followed by the port
 number:
 
 .. code-block:: none

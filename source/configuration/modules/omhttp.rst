@@ -189,9 +189,9 @@ batch
 
    "binary", "off", "no", "none"
 
-Batch and bulkmode do the same thing, bulkmode included for backwards compatability. See the `Message Batching`_ section for a detailed breakdown of how batching is implemented.
+Batch and bulkmode do the same thing, bulkmode included for backwards compatibility. See the `Message Batching`_ section for a detailed breakdown of how batching is implemented.
 
-This parameter activates batching mode, which queues messages and sends them as a single request. There are several related parameters that specify the the format and size of the batch: they are batch.format_, batch.maxbytes_, and batch.maxsize_.
+This parameter activates batching mode, which queues messages and sends them as a single request. There are several related parameters that specify the format and size of the batch: they are batch.format_, batch.maxbytes_, and batch.maxsize_.
 
 Note that rsyslog core is the ultimate authority on when a batch must be submitted, due to the way that batching is implemented. This plugin implements the `output plugin transaction interface <https://www.rsyslog.com/doc/v8-stable/development/dev_oplugins.html#output-plugin-transaction-interface>`_. There may be multiple batches in a single transaction, but a batch will never span multiple transactions. This means that if batch.maxsize_ or batch.maxbytes_ is set very large, you may never actually see batches hit this size. Additionally, the number of messages per transaction is determined by the size of the main, action, and ruleset queues as well.
 
@@ -271,7 +271,7 @@ template
 
 The template to be used for the messages.
 
-Note that in batching mode, this describes the format of *each* invidual message, *not* the format of the resulting batch. Some batch modes require that a template produces valid JSON.
+Note that in batching mode, this describes the format of *each* individual message, *not* the format of the resulting batch. Some batch modes require that a template produces valid JSON.
 
 
 retry
@@ -341,7 +341,7 @@ ratelimit.burst
 
    "integer", "20000", "no", "none"
 
-This parameter sets the rate limiting behavior for the retry.ruleset_. Specifies the maximum number of messages that can be emitted within the ratelimit.interval interval. For futher information, see description there.
+This parameter sets the rate limiting behavior for the retry.ruleset_. Specifies the maximum number of messages that can be emitted within the ratelimit.interval interval. For further information, see description there.
 
 
 errorfile

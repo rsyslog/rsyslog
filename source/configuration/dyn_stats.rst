@@ -22,7 +22,7 @@ dyn_stats(name="<bucket>"...) (object)
    dyn_stats(name="msg_per_host")
 
 Parameters:
-    **name** <string litteral, mandatory> : Name of the bucket.
+    **name** <string literal, mandatory> : Name of the bucket.
 
     **resettable** <on|off, default: on> : Whether or not counters should be reset every time they are reported. This works independent of ``resetCounters`` config parameter in :doc:`modules/impstats`.
 
@@ -44,7 +44,7 @@ dyn_inc("<bucket>", <expr>) (function)
 **Increments** counter identified by value of variable in bucket identified by name.
 
 Parameters:
-    **name** <string litteral, mandatory> : Name of the bucket
+    **name** <string literal, mandatory> : Name of the bucket
     
     **expr** <expression resulting in a string> : Name of counter (this name will be reported by impstats to identify the counter)
     

@@ -385,13 +385,13 @@ later. Specifying a readTimeout will ensure that those "last messages" are
 emitted in a timely manner. In this use case, the "partial" messages being
 processed are actually full messages, so everything is fully correct.
 
-To guard against accidential too-early emission of a (partial) message, the
+To guard against accidental too-early emission of a (partial) message, the
 timeout should be sufficiently large (5 to 10 seconds or more recommended).
 Specifying a value of zero turns off timeout processing. Also note the
 relationship to the *timeoutGranularity* global parameter, which sets the
 lower bound of *readTimeout*.
 
-Setting timeout vaues slightly increases processing time requirements; the
+Setting timeout values slightly increases processing time requirements; the
 effect should only be visible of a very large number of files is being
 monitored.
 
@@ -467,7 +467,7 @@ parameter at all. So it is suggested to not use it.
 In *polling* mode, if set to 0, each file will be fully processed and
 then processing switches to the next file. If it is set to any other
 value, a maximum of [number] lines is processed in sequence for each file,
-and then the file is switched. This provides a kind of mutiplexing
+and then the file is switched. This provides a kind of multiplexing
 the load of multiple files and probably leads to a more natural
 distribution of events when multiple busy files are monitored. For
 *polling* mode, the **default** is 10240.

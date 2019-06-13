@@ -12,7 +12,7 @@ Purpose
 =======
 
 Provides the ability to receive syslog messages via TCP. Encryption is
-natively provided by selecting the approprioate network stream driver
+natively provided by selecting the appropriate network stream driver
 and can also be provided by using `stunnel <rsyslog_stunnel.html>`_ (an
 alternative is the use the `imgssapi <imgssapi.html>`_ module).
 
@@ -61,7 +61,7 @@ DisableLFDelimiter
 
    "binary", "off", "no", "``$InputTCPServerDisableLFDelimiter``"
 
-Industry-strandard plain text tcp syslog uses the LF to delimit
+Industry-standard plain text tcp syslog uses the LF to delimit
 syslog frames. However, some users brought up the case that it may be
 useful to define a different delimiter and totally disable LF as a
 delimiter (the use case named were multi-line messages). This mode is
@@ -174,7 +174,7 @@ bit when the queue becomes near-full. This is done in order to
 preserve some queue space for inputs that can not throttle (like
 UDP), but it may have some undesired effect in some configurations.
 Still, we consider this as a useful setting and thus it is the
-default. To turn the handling off, simply configure that explicitely.
+default. To turn the handling off, simply configure that explicitly.
 
 
 MaxListeners
@@ -261,7 +261,7 @@ StreamDriver.PermitExpiredCerts
 
    "string", "warn", "no", "none"
 
-Controls how expired certificates will be handeled when stream driver is in TLS mode.
+Controls how expired certificates will be handled when stream driver is in TLS mode.
 It can have one of the following values:
 
 -  on = Expired certificates are allowed
@@ -344,7 +344,7 @@ Command and value are separated by equal sign (=). Here are a few samples:
 Example 1
 ---------
 
-This will allow all protocols except for SSv2 and SSLv3:
+This will allow all protocols except for SSLv2 and SSLv3:
 
 .. code-block:: none
 
@@ -354,7 +354,7 @@ This will allow all protocols except for SSv2 and SSLv3:
 Example 2
 ---------
 
-This will allow all protocols except for SSv2, SSLv3 and TLSv1.
+This will allow all protocols except for SSLv2, SSLv3 and TLSv1.
 It will also set the minimum protocol to TLSv1.2
 
 .. code-block:: none
@@ -405,7 +405,7 @@ Address
    "string", "none", "no", "none"
 
 On multi-homed machines, specifies to which local address the
-listerner should be bound.
+listener should be bound.
 
 
 Name

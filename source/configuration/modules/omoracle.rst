@@ -10,9 +10,9 @@ orphaned, the original author does no longer support it.
 **Available since:**: 4.3.0, **does not work with recent rsyslog 
 versions (v7 and up).  Use** :doc:`omlibdbi <omlibdbi>` **instead.**
 An upgrade to the new interfaces is needed. If you would like
-to contribute, please send us a patch or open a guithub pull request.
+to contribute, please send us a patch or open a github pull request.
 
-**Status:**: contributed module, not maitained by rsyslog core authors
+**Status:**: contributed module, not maintained by rsyslog core authors
 
 **Description**:
 

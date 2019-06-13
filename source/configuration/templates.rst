@@ -297,7 +297,7 @@ property or modifying it. It supports the following parameters:
 
    - number - value is treated as a JSON number and not enclosed in quotes.
        If the property is empty, the value 0 is generated.
-   - string - value is a string and enclused in quotes
+   - string - value is a string and enclosed in quotes
    - auto - value is treated as number if numeric and as string otherwise.
        The current implementation treats only integers as numeric to avoid
        confusion.

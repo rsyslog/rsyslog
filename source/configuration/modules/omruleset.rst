@@ -32,9 +32,9 @@ include-ruleset functionality as well as some high-performance
 optimizations (in case the rule sets have the necessary queue
 definitions).
 
-While it leads to a lot of power, this output module offers seamingly
-easy functionaltiy. The complexity (and capablities) arise from how
-everthing can be combined.
+While it leads to a lot of power, this output module offers seemingly
+easy functionality. The complexity (and capabilities) arise from how
+everything can be combined.
 
 With this module, a message can be sent to processing to another
 ruleset. This is somewhat similar to a "#include" in the C programming
@@ -43,8 +43,8 @@ contain its own queue and that a queue can run in various modes.
 
 Note that if no queue is defined in the ruleset, the message is enqueued
 into the main message queue. This most often is not optimal and means
-that message processing may be severely defered. Also note that when the
-ruleset's target queue is full and no free space can be aquired within
+that message processing may be severely deferred. Also note that when the
+ruleset's target queue is full and no free space can be acquired within
 the usual timeout, the message object may actually be lost. This is an
 extreme scenario, but users building an audit-grade system need to know
 this restriction. For regular installations, it should not really be
@@ -78,7 +78,7 @@ before using omruleset!**
    provided to omruleset should be submitted to. This ruleset must
    already have been defined. Note that the directive is automatically
    reset after each :omruleset: action and there is no default. This is
-   done to prevent accidential loops in ruleset definition, what can
+   done to prevent accidental loops in ruleset definition, what can
    happen very quickly. The :omruleset: action will NOT be honored if no
    ruleset name has been defined. As usual, the ruleset name must be
    specified in front of the action that it modifies.
@@ -132,7 +132,7 @@ re-queueing messages back into the main queue.
 High-performance filter condition
 ---------------------------------
 
-The next example is used to creat a high-performance nested and filter
+The next example is used to create a high-performance nested and filter
 condition. Here, it is first checked if the message contains a string
 "error". If so, the message is forwarded to another ruleset which then
 applies some filters. The advantage of this is that we can use
@@ -178,7 +178,7 @@ The current configuration file language is not really adequate for a
 complex construct like omruleset. Unfortunately, more important work is
 currently preventing me from redoing the config language. So use extreme
 care when nesting rulesets and be sure to test-run your config before
-putting it into production, ensuring you have a suffciently large probe
+putting it into production, ensuring you have a sufficiently large probe
 of the traffic run over it. If problems arise, the `rsyslog debug
 log <troubleshoot.html>`_ is your friend.
 

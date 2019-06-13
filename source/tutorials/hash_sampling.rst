@@ -8,7 +8,7 @@ Let's consider the following setup of systems running services and generating lo
 There are three services A, B and C.
 These services work together to create a request processing pipeline.
 User request lands up at system A, which processes the request, generates logs and forwards it to service B.
-B processes the request it recieved from A, generates logs and forwards it to C and so on and so forth.
+B processes the request it received from A, generates logs and forwards it to C and so on and so forth.
 
 ::
 
