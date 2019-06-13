@@ -2271,7 +2271,13 @@ case $1 in
 		echo "dyn-stats reset for bucket ${3} registered"
 		;;
    'first-column-sum-check') 
-		sum=$(grep $3 < $4 | sed -e $2 | awk '{s+=$1} END {print s}')
+		echo grep:
+		grep "$3" < "$4"
+		echo sed:
+		grep "$3" < "$4" | sed -e "$2"
+		echo akw:
+		grep "$3" < "$4" | sed -e "$2" | awk '{s+=$1} END {print s}'
+		sum=$(grep "$3" < "$4" | sed -e "$2" | awk '{s+=$1} END {print s}')
 		if [ "x${sum}" != "x$5" ]; then
 		    printf '\n============================================================\n'
 		    echo FAIL: sum of first column with edit-expr "'$2'" run over lines from file "'$4'" matched by "'$3'" equals "'$sum'" which is NOT equal to EXPECTED value of "'$5'"
