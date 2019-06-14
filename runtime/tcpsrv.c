@@ -556,6 +556,14 @@ RunCancelCleanup(void *arg)
 
 	if (*ppPoll != NULL)
 		nspoll.Destruct(ppPoll);
+
+	/* Wait for any running workers to finish */
+	pthread_mutex_lock(&wrkrMut);
+	DBGPRINTF("tcpsrv terminating, waiting for %d workers\n", wrkrRunning);
+	while(wrkrRunning > 0) {
+		pthread_cond_wait(&wrkrIdle, &wrkrMut);
+	}
+	pthread_mutex_unlock(&wrkrMut);
 }
 
 static void
