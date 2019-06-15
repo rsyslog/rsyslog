@@ -3,7 +3,6 @@
 # added 2015-10-30 by singh.janmejay
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-skip_platform "FreeBSD"  "This test does not work on FreeBSD"
 generate_conf
 add_conf '
 lookup_table(name="xlate" file="'$RSYSLOG_DYNNAME'.xlate_array.lkp_tbl")
