@@ -25,6 +25,9 @@ Version 8.1907.0 (aka 2019.07) 2019-07-09
 - queue subsystem bugfix: oversize queue warning message shown as error
   The warning message was emitted as an error message, which is misleading
   and may also break some automatted procedures.
+- core bugfix: HUP did not work reliable on all platforms
+  most notably not on FreeBSD, maybe others. The reason was obviously
+  different handling of signals in respect to multiple threads.
 - build system bugfix: missing files in distribution tarball
 - testbench
   * fixed "make distcheck" settings which were missing some modules
