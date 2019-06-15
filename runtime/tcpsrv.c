@@ -693,7 +693,6 @@ wrkr(void *const myself)
 			// we need to query me->opSrv to avoid clang static
 			// analyzer false positive! -- rgerhards, 2017-10-23
 			assert(glbl.GetGlobalInputTermState() == 1);
-			--wrkrRunning;
 			break;
 		}
 		pthread_mutex_unlock(&wrkrMut);
