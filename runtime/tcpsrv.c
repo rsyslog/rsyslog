@@ -712,6 +712,20 @@ wrkr(void *const myself)
 	return NULL;
 }
 
+/* This has been factored out from processWorkset() because
+ * pthread_cleanup_push() invokes setjmp() and this triggers the -Wclobbered
+ * warning for the iRet variable.
+ */
+static void
+waitForWorkers(void)
+{
+	pthread_mutex_lock(&wrkrMut);
+	pthread_cleanup_push(mutexCancelCleanup, &wrkrMut);
+	while(wrkrRunning > 0) {
+		pthread_cond_wait(&wrkrIdle, &wrkrMut);
+	}
+	pthread_cleanup_pop(1);
+}
 
 /* Process a workset, that is handle io. We become activated
  * from either select or epoll handler. We split the workload
@@ -734,6 +748,11 @@ processWorkset(tcpsrv_t *pThis, nspoll_t *pPoll, int numEntries, nsd_epworkset_t
 			/* process self, save context switch */
 			iRet = processWorksetItem(pThis, pPoll, workset[numEntries-1].id, workset[numEntries-1].pUsr);
 		} else {
+			/* No cancel handler needed here, since no cancellation
+			 * points are executed while wrkrMut is locked.
+			 *
+			 * Re-evaluate this if you add a DBGPRINTF or something!
+			 */
 			pthread_mutex_lock(&wrkrMut);
 			/* check if there is a free worker */
 			for(i = 0 ; (i < wrkrMax) && ((wrkrInfo[i].pSrv != NULL) || (wrkrInfo[i].enabled == 0)) ; ++i)
@@ -767,11 +786,7 @@ processWorkset(tcpsrv_t *pThis, nspoll_t *pPoll, int numEntries, nsd_epworkset_t
 		 * rest of this module can not handle the concurrency introduced
 		 * by workers running during the epoll call.
 		 */
-		pthread_mutex_lock(&wrkrMut);
-		while(wrkrRunning > 0) {
-			pthread_cond_wait(&wrkrIdle, &wrkrMut);
-		}
-		pthread_mutex_unlock(&wrkrMut);
+		waitForWorkers();
 	}
 
 finalize_it:
