@@ -552,6 +552,15 @@ finalize_it:
 static void
 RunCancelCleanup(void *arg)
 {
+	nspoll_t **ppPoll = (nspoll_t**) arg;
+
+	if (*ppPoll != NULL)
+		nspoll.Destruct(ppPoll);
+}
+
+static void
+RunSelectCancelCleanup(void *arg)
+{
 	nssel_t **ppSel = (nssel_t**) arg;
 
 	if(*ppSel != NULL)
@@ -790,11 +799,7 @@ RunSelect(tcpsrv_t *pThis, nsd_epworkset_t workset[], size_t sizeWorkset)
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
-	/* this is an endless loop - it is terminated by the framework canelling
-	 * this thread. Thus, we also need to instantiate a cancel cleanup handler
-	 * to prevent us from leaking anything. -- rgerhards, 20080-04-24
-	 */
-	pthread_cleanup_push(RunCancelCleanup, (void*) &pSel);
+	pthread_cleanup_push(RunSelectCancelCleanup, (void*) &pSel);
 	while(1) {
 		CHKiRet(nssel.Construct(&pSel));
 		if(pThis->pszDrvrName != NULL)
@@ -874,8 +879,7 @@ finalize_it: /* this is a very special case - this time only we do not exit the 
 		}
 	}
 
-	/* note that this point is usually not reached */
-	pthread_cleanup_pop(1); /* remove cleanup handler */
+	pthread_cleanup_pop(1); /* execute and remove cleanup handler */
 
 	RETiRet;
 }
@@ -910,10 +914,13 @@ Run(tcpsrv_t *pThis)
 	}
 	d_pthread_mutex_unlock(&wrkrMut);
 
-	/* this is an endless loop - it is terminated by the framework canelling
-	 * this thread. Thus, we also need to instantiate a cancel cleanup handler
-	 * to prevent us from leaking anything. -- rgerhards, 20080-04-24
+	/* We try to terminate cleanly, but install a cancellation clean-up
+	 * handler in case we are cancelled.
 	 */
+	pthread_cleanup_push(RunCancelCleanup, (void*) &pPoll);
+	/* Reset iRet to avoid warning about it being clobbered by longjmp */
+	iRet = RS_RET_OK;
+
 	if((localRet = nspoll.Construct(&pPoll)) == RS_RET_OK) {
 		if(pThis->pszDrvrName != NULL)
 			CHKiRet(nspoll.SetDrvrName(pPoll, pThis->pszDrvrName));
@@ -978,8 +985,8 @@ Run(tcpsrv_t *pThis)
 	}
 
 finalize_it:
-	if(pPoll != NULL)
-		nspoll.Destruct(&pPoll);
+	pthread_cleanup_pop(1);
+
 	RETiRet;
 }
 
