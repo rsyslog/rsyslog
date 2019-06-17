@@ -496,7 +496,7 @@ finalize_it:
  * code is to be executed before dropping privileges.
  */
 PRAGMA_DIAGNOSTIC_PUSH
-PRAGMA_IGNORE_Wcast_align
+//PRAGMA_IGNORE_Wcast_align
 static rsRetVal
 startupSrv(ptcpsrv_t *pSrv)
 {

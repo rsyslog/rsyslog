@@ -1149,7 +1149,7 @@ finalize_it:
 /* the #pragmas can go away when we have disable array-passing mode */
 
 PRAGMA_DIAGNOSTIC_PUSH
-PRAGMA_IGNORE_Wcast_align
+//PRAGMA_IGNORE_Wcast_align
 void
 releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ const pWti, int action_destruct)
 {

@@ -357,7 +357,7 @@ ENDdbgPrintInstInfo
  */
 #ifdef __GNUC__
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-align"
+//#pragma GCC diagnostic ignored "-Wcast-align"
 #endif
 static rsRetVal
 UDPSend(wrkrInstanceData_t *pWrkrData, uchar *pszSourcename, char *msg, size_t len)

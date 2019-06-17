@@ -459,7 +459,7 @@ finalize_it:
  * rgerhards, 2008-04-22
  */
 PRAGMA_DIAGNOSTIC_PUSH
-PRAGMA_IGNORE_Wcast_align
+//PRAGMA_IGNORE_Wcast_align
 static rsRetVal
 LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax,

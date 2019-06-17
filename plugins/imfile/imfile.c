@@ -2325,7 +2325,7 @@ done:	return;
 
 /* Monitor files in inotify mode */
 PRAGMA_DIAGNOSTIC_PUSH
-PRAGMA_IGNORE_Wcast_align
+//PRAGMA_IGNORE_Wcast_align
 /* Problem with the warnings: they seem to stem back from the way the API is structured */
 static rsRetVal
 do_inotify(void)
