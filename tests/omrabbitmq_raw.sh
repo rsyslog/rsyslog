@@ -34,7 +34,7 @@ startup
 injectmsg litteral "<167>Mar  1 01:00:00 172.20.245.8 tag msgrmq"
 shutdown_when_empty
 wait_shutdown
-expected=$(printf 'Exchange:in, routing-key:tag.local4.debug, content-type:plain/text, facility:local4, severity:debug, hostname:172.20.245.8, fromhost:127.0.0.1, delivery-mode:transient, expiration:5000, timestamp:OK, app-id:tag, msg:<167>Mar 1 01:00:00 172.20.245.8 tag msgrmq')
+expected=$(printf 'Exchange:in, routing-key:tag.local4.debug, content-type:plain/text, facility:local4, severity:debug, hostname:172.20.245.8, fromhost:127.0.0.1, delivery-mode:transient, expiration:5000, timestamp:OK, app-id:tag, msg:<167>Mar  1 01:00:00 172.20.245.8 tag msgrmq')
 echo ${expected} | cmp - $RSYSLOG_DYNNAME.amqp.log
 if [ ! $? -eq 0 ]; then
   echo "Expected:"
