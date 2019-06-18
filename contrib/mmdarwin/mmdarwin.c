@@ -653,6 +653,9 @@ CODESTARTdoAction
 	[["arg1","arg2","arg3"]]\0
 	To ensure this, we need to check if we can add one character */
 	if (bodySize + 1 >= bufferBodySize) {
+		bufferBodySize += INITIAL_BUFFER_SIZE;
+		tmpStringBuffer = realloc(body, bufferBodySize * sizeof(char) + 1);
+
 		if (tmpStringBuffer) {
 			body = tmpStringBuffer;
 			currentBodyIndex = body + bodySize;
