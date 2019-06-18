@@ -652,7 +652,7 @@ CODESTARTdoAction
 	So, we will replace the last comma, and add a bracket and a null character as well to make it like this:
 	[["arg1","arg2","arg3"]]\0
 	To ensure this, we need to check if we can add one character */
-	if (bodySize + strlen(pFieldValueString) + 1 >= bufferBodySize) {
+	if (bodySize + 1 >= bufferBodySize) {
 		if (tmpStringBuffer) {
 			body = tmpStringBuffer;
 			currentBodyIndex = body + bodySize;
