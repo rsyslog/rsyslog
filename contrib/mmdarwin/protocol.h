@@ -54,7 +54,8 @@ typedef struct {
 	long filter_code; //!< The unique identifier code of a filter.
 	size_t body_size; //!< The complete size of the the parameters to be sent (if needed).
 	size_t certitude_size; //!< The size of the list containing the certitudes.
-	unsigned int certitude_list[DEFAULT_CERTITUDE_LIST_SIZE]; //!< The scores or the certitudes of the module. May be used to pass other info in specific cases.
+	//!< The scores or the certitudes of the module. May be used to pass other info in specific cases.
+	unsigned int certitude_list[DEFAULT_CERTITUDE_LIST_SIZE];
 } darwin_filter_packet_t;
 
 #ifdef __cplusplus
