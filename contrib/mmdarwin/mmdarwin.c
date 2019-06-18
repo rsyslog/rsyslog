@@ -1,17 +1,10 @@
-/* Copyright 2019 Advens
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
-	* http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+/// \file     mmdarwin.c
+/// \authors  gcatto
+/// \version  1.0
+/// \date     08/11/18
+/// \license  GPLv3
+/// \brief    Copyright (c) 2018 Advens. All rights reserved.
+
 #include "config.h"
 #include "rsyslog.h"
 #include <stdio.h>
@@ -149,7 +142,8 @@ static rsRetVal openSocket(instanceData *pData) {
 
 	if (connect(pData->sock, (struct sockaddr *)&pData->addr, sizeof(struct sockaddr_un)) == -1) {
 		LogError(errno, RS_RET_NO_SOCKET, "mmdarwin::openSocket:: error connecting to Darwin "
-			"via socket '%s'", pData->pSockName);
+				"via socket '%s'", pData->pSockName);
+
 		pData->sock = INVLD_SOCK;
 		ABORT_FINALIZE(RS_RET_NO_SOCKET);
 	}
@@ -509,8 +503,8 @@ CODESTARTdoAction
 	dbgprintf("mmdarwin::doAction:: processing log line: '%s'\n", getMSG(pMsg));
 
 	stringBuffer = malloc(sizeof(char) * bufferSize);
-	size_t bodyElementsNumber = pData->fieldList.nmemb;
-	char *body = malloc(sizeof(char) * bufferBodySize * bodyElementsNumber + 1); /* + 1 for '\0' */
+	size_t parametersNumber = pData->fieldList.nmemb;
+	char *body = malloc(sizeof(char) * bufferBodySize * parametersNumber + 1); /* + 1 for '\0' */
 
 	if (stringBuffer == NULL) {
 		dbgprintf("mmdarwin::doAction:: error: something went wrong while allocating stringBuffer\n");
@@ -526,21 +520,22 @@ CODESTARTdoAction
 		goto finalize_it;
 	}
 
-	*body = '\0';
+	*body = '[';
+	*(body + 1) = '[';
+	*(body + 2) = '\0';
 
-	char *currentBodyIndex = body;
+	char *currentBodyIndex = body + 2;
+	dbgprintf("mmdarwin::doAction:: Current body: '%s'\n", body);
 
 	/* the Darwin header to be sent to the filter */
 	darwin_filter_packet_t header = {
 		.type = DARWIN_PACKET_OTHER,
 		.response = pData->response,
 		.filter_code = pData->filterCode,
-		.certitude = 0,
-		.ip_type = DARWIN_IP_UNKNOWN,
 	};
 
 	/* for each field, we add the value in the body */
-	for (int i = 0; i <  pData->fieldList.nmemb; ++i) {
+	for (size_t i = 0; i <  parametersNumber; ++i) {
 		dbgprintf("mmdarwin::doAction:: processing field '%s'\n", pData->fieldList.name[i]);
 		fieldSize = strlen(pData->fieldList.name[i]);
 
@@ -555,6 +550,7 @@ CODESTARTdoAction
 					"Current size is %zu. Size needed is %zu\n",
 					bufferSize, fieldSize
 				);
+
 
 				while (bufferSize < fieldSize) bufferSize += INITIAL_BUFFER_SIZE;
 
@@ -583,14 +579,13 @@ CODESTARTdoAction
 				   So we consider the size to be zero and we continue the processing */
 				dbgprintf("mmdarwin::doAction:: could not extract the json body from the message. "
 						  "rsRetVal error code: %d\n", localRet);
-				header.body_elements_sizes[i] = 0;
 				goto end_processing_field;
 			}
+
 			if (get_json_string(&pFieldValueString, pFieldBody) == 0) {
 				/* for some really weird reason, we couldn't convert our JSON object to a string.
 				   So we consider the size to be zero and we continue the processing */
 				dbgprintf("mmdarwin::doAction:: could not parse the json body to string\n");
-				header.body_elements_sizes[i] = 0;
 				goto end_processing_field;
 			}
 		}
@@ -599,11 +594,11 @@ CODESTARTdoAction
 		dbgprintf("mmdarwin::doAction:: value retrieved from field '%s': '%s'\n", pData->fieldList.name[i],
 				  pFieldValueString);
 
-		/* we set the size for this value... */
-		header.body_elements_sizes[i] = strlen(pFieldValueString);
+		/* "{VALUE}", = " + strlen({VALUE}) + " + , */
+		size_t totalLength = strlen(pFieldValueString) + 3;
 
-		if (bodySize + header.body_elements_sizes[i] >= bufferBodySize) {
-			while (bodySize + header.body_elements_sizes[i] >= bufferBodySize) {
+		if (bodySize + totalLength >= bufferBodySize) {
+			while (bodySize + totalLength >= bufferBodySize) {
 				bufferBodySize += INITIAL_BUFFER_SIZE;
 			}
 
@@ -622,15 +617,54 @@ CODESTARTdoAction
 		}
 
 		/* then, we copy it to our body */
+		*currentBodyIndex = '\"';
+		++currentBodyIndex;
 		currentBodyIndex = stpncpy(currentBodyIndex, pFieldValueString, strlen(pFieldValueString));
+		*currentBodyIndex = '\"';
+		*(currentBodyIndex + 1) = ',';
+		currentBodyIndex += 2;
 		*currentBodyIndex = '\0';
 		bodySize = strlen(body);
+		dbgprintf("mmdarwin::doAction:: Current body: '%s'\n", body);
 
 		end_processing_field:
 			json_object_put(pFieldBody); /* we can free our pFieldBody */
 			pFieldBody = NULL;
 			dbgprintf("mmdarwin::doAction:: ended processing field '%s'\n", pData->fieldList.name[i]);
 	}
+
+
+	++bufferBodySize;
+
+	char *tmpStringBuffer = realloc(body, bufferBodySize * sizeof(char) + 1);
+
+	/* here, we need to replace some characters in the last parameter:
+	the string currently looks like this:
+	[["arg1","arg2","arg3",\0
+	So, we will replace the last comma, and add a bracket and a null character as well to make it like this:
+	[["arg1","arg2","arg3"]]\0
+	To ensure this, we need to check if we can add one character */
+	if (bodySize + strlen(pFieldValueString) + 1 >= bufferBodySize) {
+		if (tmpStringBuffer) {
+			body = tmpStringBuffer;
+			currentBodyIndex = body + bodySize;
+
+			if (bodySize != 0) currentBodyIndex++;
+		} else {
+			dbgprintf("mmdarwin::doAction:: error: something went wrong while reallocating body\n");
+			/* body is still allocated, but we will free it later */
+			goto finalize_it;
+		}
+	} else {
+		currentBodyIndex = body + bodySize + 1;
+	}
+
+	++bodySize;
+
+	*(currentBodyIndex - 2) = ']'; /* we replace the last comma with a bracket */
+	*(currentBodyIndex - 1) = ']'; /* we set the final bracket */
+	*(currentBodyIndex) = '\0';
+	dbgprintf("mmdarwin::doAction:: Current body: '%s'\n", body);
 
 	pthread_mutex_lock(&mutDoAct);
 
@@ -640,7 +674,6 @@ CODESTARTdoAction
 	if ((int) bodySize > maxSize) bodySize = maxSize; /* we truncate, if the message is too long */
 
 	header.body_size = bodySize;
-	header.body_elements_number = bodyElementsNumber;
 	headerSize = sizeof(darwin_filter_packet_t);
 
 	if ((int) headerSize > maxSize) headerSize = maxSize; /* we truncate, if the message is too long */
@@ -649,6 +682,7 @@ CODESTARTdoAction
 	CHKiRet(sendMsg(pWrkrData->pData, &header, headerSize));
 
 	dbgprintf("mmdarwin::doAction:: sending body (cookie/header value) to Darwin\n");
+	dbgprintf("mmdarwin::doAction:: body to be sent: '%s'\n", body);
 	CHKiRet(sendMsg(pWrkrData->pData, body, bodySize));
 
 	/* there is no need to wait for a response that will never come */
@@ -661,12 +695,9 @@ CODESTARTdoAction
 	darwin_filter_packet_t response = {
 		.type = DARWIN_PACKET_OTHER,
 		.response = DARWIN_RESPONSE_SEND_NO,
-		.ip_type = DARWIN_IP_UNKNOWN,
 		.filter_code = DARWIN_FILTER_CODE_NO,
-		.certitude = 10,
 		.body_size = 0,
-		.body_elements_number = 0,
-		.body_elements_sizes = {0}
+		.certitude_size = 0,
 	};
 
 	dbgprintf("mmdarwin::doAction:: receiving from Darwin\n");
@@ -680,7 +711,7 @@ CODESTARTdoAction
 	pthread_mutex_unlock(&mutDoAct);
 
 	/* we cast our certitude to a char* */
-	int charProcessed = snprintf(stringBuffer, bufferSize, "%d", response.certitude);
+	int charProcessed = snprintf(stringBuffer, bufferSize, "%d", response.certitude_list[0]);
 
 	if (charProcessed < 0 || (unsigned int)charProcessed >= bufferSize) {
 		dbgprintf(
@@ -689,8 +720,8 @@ CODESTARTdoAction
 			bufferSize
 		);
 	}
-	dbgprintf("mmdarwin::doAction:: certitude obtained: %s\n", stringBuffer);
 
+	dbgprintf("mmdarwin::doAction:: certitude obtained: %s\n", stringBuffer);
 	dbgprintf("mmdarwin::doAction:: adding certitude to message...\n");
 	struct json_object *pDarwinJSON = json_object_new_object();
 	json_object_object_add(pDarwinJSON, pData->pCertitudeKey, json_object_new_string(stringBuffer));
