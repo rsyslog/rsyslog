@@ -642,19 +642,16 @@ CODESTARTdoAction
 	}
 
 
-	++bufferBodySize;
-
-	char *tmpStringBuffer = realloc(body, bufferBodySize * sizeof(char) + 1);
-
 	/* here, we need to replace some characters in the last parameter:
 	the string currently looks like this:
 	[["arg1","arg2","arg3",\0
 	So, we will replace the last comma, and add a bracket and a null character as well to make it like this:
 	[["arg1","arg2","arg3"]]\0
 	To ensure this, we need to check if we can add one character */
+
 	if (bodySize + 1 >= bufferBodySize) {
 		bufferBodySize += INITIAL_BUFFER_SIZE;
-		tmpStringBuffer = realloc(body, bufferBodySize * sizeof(char) + 1);
+		char *tmpStringBuffer = realloc(body, bufferBodySize * sizeof(char) + 1);
 
 		if (tmpStringBuffer) {
 			body = tmpStringBuffer;
@@ -667,14 +664,14 @@ CODESTARTdoAction
 			goto finalize_it;
 		}
 	} else {
-		currentBodyIndex = body + bodySize + 1;
+		currentBodyIndex = body + bodySize;
 	}
 
 	++bodySize;
 
-	*(currentBodyIndex - 2) = ']'; /* we replace the last comma with a bracket */
-	*(currentBodyIndex - 1) = ']'; /* we set the final bracket */
-	*(currentBodyIndex) = '\0';
+	*(currentBodyIndex - 1) = ']'; /* we replace the last comma with a bracket */
+	*currentBodyIndex = ']'; /* we set the final bracket */
+	*(currentBodyIndex + 1) = '\0';
 	dbgprintf("mmdarwin::doAction:: Current body: '%s'\n", body);
 
 	pthread_mutex_lock(&mutDoAct);
