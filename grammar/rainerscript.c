@@ -1156,7 +1156,7 @@ done:	return r;
  * it is the caller's duty to free it when no longer needed.
  * NULL is returned on error, otherwise a pointer to the vals array.
  */
-struct cnfparamvals*
+struct cnfparamvals* ATTR_NONNULL(2)
 nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 	       struct cnfparamvals *vals)
 {
@@ -1213,8 +1213,12 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 	if((valnode = nvlstFindNameCStr(lst, "config.enabled")) != NULL) {
 		if(es_strbufcmp(valnode->val.d.estr, (unsigned char*) "on", 2)) {
 			dbgprintf("config object disabled by configuration\n");
-			valnode->bUsed = 1;
+			/* flag all params as used to not emit error mssages */
 			bInError = 1;
+			struct nvlst *val;
+			for(val = lst; val != NULL ; val = val->next) {
+				val->bUsed = 1;
+			}
 		}
 	}
 

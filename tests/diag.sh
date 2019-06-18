@@ -1284,15 +1284,15 @@ tcpflood() {
 	res=$?
 	if [ "$check_only" == "yes" ]; then
 		if [ "$res" -ne "0" ]; then
+			echo "error during tcpflood on port ${TCPFLOOD_PORT}! But test continues..."
+		fi
+		return 0
+	else
+		if [ "$res" -ne "0" ]; then
 			echo "error during tcpflood on port ${TCPFLOOD_PORT}! see ${RSYSLOG_OUT_LOG}.save for what was written"
 			cp ${RSYSLOG_OUT_LOG} ${RSYSLOG_OUT_LOG}.save
 			error_exit 1 stacktrace
 		fi
-	else
-		if [ "$res" -ne "0" ]; then
-			echo "error during tcpflood on port ${TCPFLOOD_PORT}! But test continues..."
-		fi
-		return 0
 	fi
 }
 
@@ -1322,7 +1322,6 @@ exit_test() {
 	rm -f work rsyslog.out.* xlate*.lkp_tbl
 	rm -rf test-logdir stat-file1
 	rm -f rsyslog.conf.tlscert stat-file1 rsyslog.empty imfile-state:*
-	rm -rf rsyslog-link.*.log targets
 	rm -f ${TESTCONF_NM}.conf
 	rm -f tmp.qi nocert
 	rm -fr $RSYSLOG_DYNNAME*  # delete all of our dynamic files
@@ -2165,7 +2164,6 @@ case $1 in
 		rm -f work 
 		rm -rf test-logdir stat-file1
 		rm -f rsyslog.empty imfile-state:* omkafka-failed.data
-		rm -rf rsyslog-link.*.log targets
 		rm -f tmp.qi nocert
 		rm -f core.* vgcore.* core*
 		# Note: rsyslog.action.*.include must NOT be deleted, as it
@@ -2254,7 +2252,7 @@ case $1 in
 		new_count=$prev_count
 		while [[ "x$prev_count" == "x$new_count" ]]; do
 				# busy spin, because it allows as close timing-coordination in actual test run as possible
-				new_count=$(grep -c'BEGIN$' <"$2")
+				new_count=$(grep -c 'BEGIN$' <"$2")
 		done
 		echo "stats push registered"
 		;;
@@ -2273,7 +2271,13 @@ case $1 in
 		echo "dyn-stats reset for bucket ${3} registered"
 		;;
    'first-column-sum-check') 
-		sum=$(grep $3 < $4 | sed -e $2 | awk '{s+=$1} END {print s}')
+		echo grep:
+		grep "$3" < "$4"
+		echo sed:
+		grep "$3" < "$4" | sed -e "$2"
+		echo akw:
+		grep "$3" < "$4" | sed -e "$2" | awk '{s+=$1} END {print s}'
+		sum=$(grep "$3" < "$4" | sed -e "$2" | awk '{s+=$1} END {print s}')
 		if [ "x${sum}" != "x$5" ]; then
 		    printf '\n============================================================\n'
 		    echo FAIL: sum of first column with edit-expr "'$2'" run over lines from file "'$4'" matched by "'$3'" equals "'$sum'" which is NOT equal to EXPECTED value of "'$5'"

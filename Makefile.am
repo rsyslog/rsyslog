@@ -522,6 +522,22 @@ if ENABLE_OMCZMQ
 DISTCHECK_CONFIGURE_FLAGS+= --enable-omczmq
 endif
 
+if ENABLE_MMTAGHOSTNAME
+DISTCHECK_CONFIGURE_FLAGS+= --enable-mmtaghostname
+endif
+
+if ENABLE_IMTUXEDOULOG
+DISTCHECK_CONFIGURE_FLAGS+= --enable-imtuxedolog
+endif
+
+if ENABLE_PMDB2DIAG
+DISTCHECK_CONFIGURE_FLAGS+= --enable-pmdb2diag
+endif
+
+if ENABLE_IMBATCHREPORT
+DISTCHECK_CONFIGURE_FLAGS+= --enable-imbatchreport
+endif
+
 if ENABLE_IMFILE
 DISTCHECK_CONFIGURE_FLAGS+= --enable-imfile
 endif
@@ -532,6 +548,14 @@ endif
 
 if ENABLE_OMRABBITMQ
 DISTCHECK_CONFIGURE_FLAGS+= --enable-omrabbitmq
+endif
+
+if ENABLE_MMKUBERNETES
+DISTCHECK_CONFIGURE_FLAGS+= --enable-mmkubernetes
+endif
+
+if ENABLE_OMAMQP1
+DISTCHECK_CONFIGURE_FLAGS+= --enable-omamqp1
 endif
 
 if ENABLE_DISTCHECK_WORKAROUND

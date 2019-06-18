@@ -14,8 +14,9 @@ coverage:
         threshold: .5
       contrib:
         paths: contrib
-#    patch:
-#       threshold: null
+        threshold: .5
+    patch:
+       threshold: null
 
 ignore:
   # different execution pathes (if not, remove) -- rgerhards, 2018-10-12

@@ -7,8 +7,6 @@
 # execute it under "timeout" control, which ensure it always is
 # terminated. It's not a 100% great method, but hopefully does the
 # trick. -- rgerhards, 2018-07-21
-#export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
-export RSYSLOG_DEBUGLOG="debug.log"
 . ${srcdir:=.}/diag.sh init
 check_command_available timeout
 pwd=$( pwd )

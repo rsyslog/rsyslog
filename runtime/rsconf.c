@@ -877,6 +877,7 @@ activate(rsconf_t *cnf)
 	CHKiRet(activateMainQueue());
 	/* finally let the inputs run... */
 	runInputModules();
+	qqueueDoneLoadCnf(); /* we no longer need config-load-only data structures */
 
 	dbgprintf("configuration %p activated\n", cnf);
 

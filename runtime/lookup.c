@@ -1018,7 +1018,8 @@ lookupTableDefProcessCnf(struct cnfobj *o)
 #endif
 #endif
 	CHKiRet(lookupReadFile(lu->self, lu->name, lu->filename));
-	DBGPRINTF("lookup table '%s' loaded from file '%s'\n", lu->name, lu->filename);
+	LogMsg(0, RS_RET_OK, LOG_INFO, "lookup table '%s' loaded from file '%s'",
+		lu->name, lu->filename);
 
 finalize_it:
 #ifdef HAVE_PTHREAD_SETNAME_NP

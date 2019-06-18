@@ -82,6 +82,10 @@ stdlog_channel_t stdlog_hdl = NULL;	/* handle to be used for stdlog */
 #endif
 
 static struct cnfobj *mainqCnfObj = NULL;/* main queue object, to be used later in startup sequence */
+#ifndef DFLT_INT_MSGS_SEV_FILTER
+	#define DFLT_INT_MSGS_SEV_FILTER 6	/* Warning level and more important */
+#endif
+int glblIntMsgsSeverityFilter = DFLT_INT_MSGS_SEV_FILTER;/* filter for logging internal messages by syslog sev. */
 int bProcessInternalMessages = 0;	/* Should rsyslog itself process internal messages?
 					 * 1 - yes
 					 * 0 - send them to libstdlog (e.g. to push to journal) or syslog()
@@ -208,12 +212,17 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "internal.developeronly.options", eCmdHdlrInt, 0 },
 	{ "internalmsg.ratelimit.interval", eCmdHdlrPositiveInt, 0 },
 	{ "internalmsg.ratelimit.burst", eCmdHdlrPositiveInt, 0 },
+	{ "internalmsg.severity", eCmdHdlrSeverity, 0 },
 	{ "errormessagestostderr.maxnumber", eCmdHdlrPositiveInt, 0 },
 	{ "shutdown.enable.ctlc", eCmdHdlrBinary, 0 },
 	{ "default.action.queue.timeoutshutdown", eCmdHdlrInt, 0 },
 	{ "default.action.queue.timeoutactioncompletion", eCmdHdlrInt, 0 },
 	{ "default.action.queue.timeoutenqueue", eCmdHdlrInt, 0 },
 	{ "default.action.queue.timeoutworkerthreadshutdown", eCmdHdlrInt, 0 },
+	{ "default.ruleset.queue.timeoutshutdown", eCmdHdlrInt, 0 },
+	{ "default.ruleset.queue.timeoutactioncompletion", eCmdHdlrInt, 0 },
+	{ "default.ruleset.queue.timeoutenqueue", eCmdHdlrInt, 0 },
+	{ "default.ruleset.queue.timeoutworkerthreadshutdown", eCmdHdlrInt, 0 },
 	{ "reverselookup.cache.ttl.default", eCmdHdlrNonNegInt, 0 },
 	{ "reverselookup.cache.ttl.enable", eCmdHdlrBinary, 0 },
 	{ "debug.files", eCmdHdlrArray, 0 },
@@ -1437,6 +1446,12 @@ glblDoneLoadCnf(void)
 			glblIntMsgRateLimitBurst = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "internalmsg.ratelimit.interval")) {
 			glblIntMsgRateLimitItv = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "internalmsg.severity")) {
+			glblIntMsgsSeverityFilter = (int) cnfparamvals[i].val.d.n;
+			if((glblIntMsgsSeverityFilter < 0) || (glblIntMsgsSeverityFilter > 7)) {
+				parser_errmsg("invalid internalmsg.severity value");
+				glblIntMsgsSeverityFilter = DFLT_INT_MSGS_SEV_FILTER;
+			}
 		} else if(!strcmp(paramblk.descr[i].name, "environment")) {
 			for(int j = 0 ; j <  cnfparamvals[i].val.d.ar->nmemb ; ++j) {
 				char *const var = es_str2cstr(cnfparamvals[i].val.d.ar->arr[j], NULL);
@@ -1467,6 +1482,14 @@ glblDoneLoadCnf(void)
 			actq_dflt_toEnq = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "default.action.queue.timeoutworkerthreadshutdown")) {
 			actq_dflt_toWrkShutdown = cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "default.ruleset.queue.timeoutshutdown")) {
+			ruleset_dflt_toQShutdown = cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "default.ruleset.queue.timeoutactioncompletion")) {
+			ruleset_dflt_toActShutdown = cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "default.ruleset.queue.timeoutenqueue")) {
+			ruleset_dflt_toEnq = cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "default.ruleset.queue.timeoutworkerthreadshutdown")) {
+			ruleset_dflt_toWrkShutdown = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "reverselookup.cache.ttl.default")) {
 			dnscacheDefaultTTL = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "reverselookup.cache.ttl.enable")) {

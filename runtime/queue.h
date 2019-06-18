@@ -1,6 +1,6 @@
 /* Definition of the queue support module.
  *
- * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2019 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -211,6 +211,7 @@ void qqueueSetDefaultsRulesetQueue(qqueue_t *pThis);
 void qqueueSetDefaultsActionQueue(qqueue_t *pThis);
 void qqueueDbgPrint(qqueue_t *pThis);
 rsRetVal qqueueShutdownWorkers(qqueue_t *pThis);
+void qqueueDoneLoadCnf(void);
 
 PROTOTYPEObjClassInit(qqueue);
 PROTOTYPEpropSetMeth(qqueue, iPersistUpdCnt, int);
@@ -240,6 +241,11 @@ extern int actq_dflt_toQShutdown;
 extern int actq_dflt_toActShutdown;
 extern int actq_dflt_toEnq;
 extern int actq_dflt_toWrkShutdown;
+
+extern int ruleset_dflt_toQShutdown;
+extern int ruleset_dflt_toActShutdown;
+extern int ruleset_dflt_toEnq;
+extern int ruleset_dflt_toWrkShutdown;
 
 #ifdef ENABLE_IMDIAG
 extern unsigned int iOverallQueueSize;

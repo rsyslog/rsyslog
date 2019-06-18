@@ -153,6 +153,10 @@ TESTS +=  \
 	hostname-with-slash-dflt-slash-valid.sh \
 	stop-localvar.sh \
 	stop-msgvar.sh \
+	glbl-ruleset-queue-defaults.sh \
+	glbl-internalmsg_severity-info-shown.sh \
+	glbl-internalmsg_severity-debug-shown.sh \
+	glbl-internalmsg_severity-debug-not_shown.sh \
 	glbl-umask.sh \
 	glbl-unloadmodules.sh \
 	glbl-invld-param.sh \
@@ -176,6 +180,7 @@ TESTS +=  \
 	privdropuserid.sh \
 	privdropgroup.sh \
 	privdropgroupid.sh \
+	json-nonstring.sh \
 	template-json.sh \
 	template-pure-json.sh \
 	template-pos-from-to.sh \
@@ -209,7 +214,8 @@ TESTS +=  \
 	tcp_forwarding_tpl.sh \
 	tcp_forwarding_dflt_tpl.sh \
 	tcp_forwarding_retries.sh \
-	queue_errmsg-oversize.sh \
+	mainq_actq_DA.sh \
+	queue_warnmsg-oversize.sh \
 	queue-minbatch.sh \
 	queue-minbatch-queuefull.sh \
 	arrayqueue.sh \
@@ -228,6 +234,7 @@ TESTS +=  \
 	imtcp-NUL-rawmsg.sh \
 	imtcp-multiport.sh \
 	imtcp_incomplete_frame_at_end.sh \
+	da-queue-persist.sh \
 	daqueue-persist.sh \
 	daqueue-invld-qi.sh \
 	daqueue-dirty-shutdown.sh \
@@ -235,6 +242,7 @@ TESTS +=  \
 	diskqueue.sh \
 	diskqueue-fsync.sh \
 	diskqueue-full.sh \
+	diskqueue-non-unique-prefix.sh \
 	rulesetmultiqueue.sh \
 	rulesetmultiqueue-v6.sh \
 	manytcp.sh \
@@ -1287,7 +1295,8 @@ TESTS += \
 	imfile-logrotate-copytruncate.sh \
 	imfile-logrotate-nocopytruncate.sh \
 	imfile-growing-file-id.sh \
-	glbl-oversizeMsg-truncate-imfile.sh
+	glbl-oversizeMsg-truncate-imfile.sh \
+	config_enabled-off.sh
 
 if ENABLE_MMNORMALIZE
 TESTS += \
@@ -1377,6 +1386,14 @@ TESTS +=  \
 endif # ENABLE_IMTUXEDOULOG
 endif
 
+if ENABLE_OMAMQP1
+TESTS += \
+	omamqp1-basic.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	omamqp1-basic-vg.sh
+endif
+endif # ENABLE_OMAMQP1
 
 # test samples...
 #empty-hostname.log: hostname-getaddrinfo-fail.log
@@ -1403,7 +1420,12 @@ EXTRA_DIST= \
 	operatingstate-empty.sh \
 	operatingstate-unclean.sh \
 	internal-errmsg-memleak-vg.sh \
+	glbl-ruleset-queue-defaults.sh \
+	glbl-internalmsg_severity-info-shown.sh \
+	glbl-internalmsg_severity-debug-shown.sh \
+	glbl-internalmsg_severity-debug-not_shown.sh \
 	glbl-oversizeMsg-log-vg.sh \
+	config_enabled-off.sh \
 	empty-hostname.sh \
 	hostname-getaddrinfo-fail.sh \
 	hostname-with-slash-pmrfc5424.sh \
@@ -1423,6 +1445,30 @@ EXTRA_DIST= \
 	glbl_setenv_err.sh \
 	glbl_setenv_err_too_long.sh \
 	glbl_setenv.sh \
+	imtuxedoulog_errmsg_no_params.sh \
+	imtuxedoulog_data.sh \
+	imtuxedoulog_errmsg_no_params-vg.sh \
+	pmdb2diag_parse.sh \
+	mmtaghostname_tag.sh \
+	mmtaghostname_server.sh \
+	imbatchreport_errmsg_no_params.sh \
+	imbatchreport_errmsg_glob_not_regular.sh \
+	imbatchreport_errmsg_glob_dir_fake.sh \
+	imbatchreport_errmsg_glob_dir_not_dir.sh \
+	imbatchreport_errmsg_regex.match.reject.sh \
+	imbatchreport_errmsg_regex.match.rename.sh \
+	imbatchreport_errmsg_regex.nomatch.sh \
+	imbatchreport_errmsg_not_supported1.sh \
+	imbatchreport_errmsg_not_supported2.sh \
+	imbatchreport_errmsg_not_supported3.sh \
+	imbatchreport_errmsg_delete_params.sh \
+	imbatchreport_errmsg_rename_params.sh \
+	imbatchreport_delete_success.sh \
+	imbatchreport_delete_structdata.sh \
+	imbatchreport_rename_success.sh \
+	imbatchreport_delete_toolarge.sh \
+	imbatchreport_rename_toolarge.sh \
+	imbatchreport_errmsg_no_params-vg.sh \
 	mmexternal-SegFault-vg.sh \
 	mmexternal-SegFault-empty-jroot-vg.sh \
 	testsuites/mmexternal-SegFault-mm-python.py \
@@ -1462,7 +1508,8 @@ EXTRA_DIST= \
 	tcp_forwarding_ns_tpl.sh \
 	tcp_forwarding_dflt_tpl.sh \
 	tcp_forwarding_retries.sh \
-	queue_errmsg-oversize.sh \
+	mainq_actq_DA.sh \
+	queue_warnmsg-oversize.sh \
 	queue-minbatch.sh \
 	queue-minbatch-queuefull.sh \
 	killrsyslog.sh \
@@ -1502,6 +1549,7 @@ EXTRA_DIST= \
 	diskq-rfc5424.sh \
 	diskqueue-full.sh \
 	diskqueue.sh \
+	diskqueue-non-unique-prefix.sh \
 	arrayqueue.sh \
 	include-obj-text-from-file.sh \
 	include-obj-outside-control-flow-vg.sh \
@@ -1631,6 +1679,7 @@ EXTRA_DIST= \
 	privdropuserid.sh \
 	privdropgroup.sh \
 	privdropgroupid.sh \
+	json-nonstring.sh \
 	template-json.sh \
 	template-pure-json.sh \
 	template-pos-from-to.sh \
@@ -1872,6 +1921,7 @@ EXTRA_DIST= \
 	queue-encryption-disk_keyfile-vg.sh \
 	queue-encryption-disk_keyprog.sh \
 	queue-encryption-da.sh \
+	da-queue-persist.sh \
 	daqueue-dirty-shutdown.sh \
 	daqueue-invld-qi.sh \
 	daqueue-persist.sh \
@@ -2339,6 +2389,8 @@ EXTRA_DIST= \
 	mmkubernetes-basic.out.json \
 	mmkubernetes-cache-expire.sh \
 	mmkubernetes-cache-expire-vg.sh \
+	mmkubernetes-cache-expire.out.expected \
+	mmkubernetes.supp \
 	es-writeoperation.sh \
 	imdocker-basic.sh \
 	imdocker-basic-vg.sh \
@@ -2353,7 +2405,10 @@ EXTRA_DIST= \
 	testsuites/include-std-omfile-action.conf \
 	testsuites/invalid.conf \
 	testsuites/valid.conf \
-	testsuites/variable_leading_underscore.conf
+	testsuites/variable_leading_underscore.conf \
+	omamqp1-common.sh \
+	omamqp1-basic.sh \
+	omamqp1-basic-vg.sh
 
 ourtail_SOURCES = ourtail.c
 msleep_SOURCES = msleep.c

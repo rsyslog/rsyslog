@@ -691,6 +691,7 @@ act_obj_add(fs_edge_t *const edge, const char *const name, const int is_file,
 	act_obj_t *act;
 	char basename[MAXFNAME];
 	DEFiRet;
+	int fd = -1;
 	
 	DBGPRINTF("act_obj_add: edge %p, name '%s' (source '%s')\n", edge, name, source? source : "---");
 	for(act = edge->active ; act != NULL ; act = act->next) {
@@ -703,7 +704,7 @@ act_obj_add(fs_edge_t *const edge, const char *const name, const int is_file,
 		}
 	}
 	DBGPRINTF("need to add new active object '%s' in '%s' - checking if accessible\n", name, edge->path);
-	const int fd = open(name, O_RDONLY | O_CLOEXEC);
+	fd = open(name, O_RDONLY | O_CLOEXEC);
 	if(fd < 0) {
 		LogMsg(errno, RS_RET_ERR, LOG_WARNING, "imfile: error accessing file '%s'", name);
 		FINALIZE;
@@ -750,6 +751,9 @@ finalize_it:
 		if(act != NULL) {
 			free(act->name);
 			free(act);
+		}
+		if(fd != -1) {
+			close(fd);
 		}
 	}
 	RETiRet;

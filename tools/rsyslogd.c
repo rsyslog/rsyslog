@@ -73,6 +73,7 @@ static int emitTZWarning = 0;
 #else
 static int emitTZWarning = 1;
 #endif
+static pthread_t mainthread = 0;
 
 #if defined(_AIX)
 /* AIXPORT : start
@@ -843,30 +844,34 @@ submitMsgWithDfltRatelimiter(smsg_t *pMsg)
 static void
 logmsgInternal_doWrite(smsg_t *pMsg)
 {
-	if(bProcessInternalMessages) {
-		submitMsg2(pMsg);
-	} else {
-		const int pri = getPRIi(pMsg);
-		uchar *const msg = getMSG(pMsg);
-#		ifdef ENABLE_LIBLOGGING_STDLOG
-		/* the "emit only once" rate limiter is quick and dirty and not
-		 * thread safe. However, that's no problem for the current intend
-		 * and it is not justified to create more robust code for the
-		 * functionality. -- rgerhards, 2018-05-14
-		 */
-		static warnmsg_emitted = 0;
-		if(warnmsg_emitted == 0) {
-			stdlog_log(stdlog_hdl, LOG_WARNING, "%s",
-				"RSYSLOG WARNING: liblogging-stdlog "
-				"functionality will go away soon. For details see "
-				"https://github.com/rsyslog/rsyslog/issues/2706");
-			warnmsg_emitted = 1;
+	const int pri = getPRIi(pMsg);
+	if(pri % 8 <= glblIntMsgsSeverityFilter) {
+		if(bProcessInternalMessages) {
+			submitMsg2(pMsg);
+			pMsg = NULL; /* msg obj handed over; do not destruct */
+		} else {
+			uchar *const msg = getMSG(pMsg);
+			#ifdef ENABLE_LIBLOGGING_STDLOG
+			/* the "emit only once" rate limiter is quick and dirty and not
+			 * thread safe. However, that's no problem for the current intend
+			 * and it is not justified to create more robust code for the
+			 * functionality. -- rgerhards, 2018-05-14
+			 */
+			static warnmsg_emitted = 0;
+			if(warnmsg_emitted == 0) {
+				stdlog_log(stdlog_hdl, LOG_WARNING, "%s",
+					"RSYSLOG WARNING: liblogging-stdlog "
+					"functionality will go away soon. For details see "
+					"https://github.com/rsyslog/rsyslog/issues/2706");
+				warnmsg_emitted = 1;
+			}
+			stdlog_log(stdlog_hdl, pri2sev(pri), "%s", (char*)msg);
+			#else
+			syslog(pri, "%s", msg);
+			#endif
 		}
-		stdlog_log(stdlog_hdl, pri2sev(pri), "%s", (char*)msg);
-#		else
-		syslog(pri, "%s", msg);
-#		endif
-		/* we have emitted the message and must destruct it */
+	}
+	if(pMsg != NULL) {
 		msgDestruct(&pMsg);
 	}
 }
@@ -1220,6 +1225,11 @@ static void
 hdlr_sighup(void)
 {
 	bHadHUP = 1;
+	/* at least on FreeBSD we seem not to necessarily awake the main thread.
+	 * So let's do it explicitely.
+	 */
+	dbgprintf("awaking mainthread on HUP\n");
+	pthread_kill(mainthread, SIGTTIN);
 }
 
 static void
@@ -1790,13 +1800,13 @@ rsyslogdDoDie(int sig)
 	static int iRetries = 0; /* debug aid */
 	dbgprintf(MSG1);
 	if(Debug == DEBUG_FULL) {
-		if(write(1, MSG1, sizeof(MSG1) - 1)) {
+		if(write(1, MSG1, sizeof(MSG1) - 1) == -1) {
 			dbgprintf("%s:%d: write failed\n", __FILE__, __LINE__);
 		}
 	}
 	if(iRetries++ == 4) {
 		if(Debug == DEBUG_FULL) {
-			if(write(1, MSG2, sizeof(MSG2) - 1)) {
+			if(write(1, MSG2, sizeof(MSG2) - 1) == -1) {
 				dbgprintf("%s:%d: write failed\n", __FILE__, __LINE__);
 			}
 		}
@@ -1812,6 +1822,11 @@ rsyslogdDoDie(int sig)
 	}
 #	undef MSG1
 #	undef MSG2
+	/* at least on FreeBSD we seem not to necessarily awake the main thread.
+	 * So let's do it explicitely.
+	 */
+	dbgprintf("awaking mainthread\n");
+	pthread_kill(mainthread, SIGTTIN);
 }
 
 
@@ -1929,7 +1944,6 @@ mainloop(void)
 	do {
 		processImInternal();
 		wait_timeout();
-
 		if(bChildDied) {
 			reapChild();
 			bChildDied = 0;
@@ -2081,6 +2095,7 @@ main(int argc, char **argv)
 		}
 #endif
 
+	mainthread = pthread_self();
 	if((int) getpid() == 1) {
 		fprintf(stderr, "rsyslogd %s: running as pid 1, enabling "
 			"container-specific defaults, press ctl-c to "
@@ -2113,8 +2128,11 @@ main(int argc, char **argv)
 #endif
 	DBGPRINTF("max message size: %d\n", glblGetMaxLine());
 	DBGPRINTF("----RSYSLOGD INITIALIZED\n");
+	LogMsg(0, RS_RET_OK, LOG_DEBUG, "rsyslogd fully started up and initialized "
+		"- begin actual processing");
 
 	mainloop();
+	LogMsg(0, RS_RET_OK, LOG_DEBUG, "rsyslogd shutting down");
 	deinitAll();
 #ifdef ENABLE_LIBLOGGING_STDLOG
 	stdlog_close(stdlog_hdl);
