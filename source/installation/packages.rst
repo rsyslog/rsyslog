@@ -50,7 +50,7 @@ For that reason, rsyslog comes with multiple packages:
   often used and has little dependencies.
 * *feature package* (usually called "rsyslog-feature") - there are
   multiple of these packages. What exactly is available and how it is
-  named depends on the distro. This unfortunately is a bit consistent.
+  named depends on the distro. This unfortunately is a bit inconsistent.
   Usually, it is a good guess that the package is intuitively named,
   e.g. "rsyslog-mysql" for the MySQL component and "rsyslog-elasticsearch"
   for ElasticSearch support. If in doubt, it is suggested to use the
