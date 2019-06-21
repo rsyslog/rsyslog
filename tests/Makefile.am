@@ -173,6 +173,7 @@ TESTS +=  \
 	omfile-whitespace-filename.sh \
 	omfile-read-only.sh \
 	omfile_both_files_set.sh \
+	omfile_hup.sh \
 	msgvar-concurrency.sh \
 	localvar-concurrency.sh \
 	exec_tpl-concurrency.sh \
@@ -281,6 +282,7 @@ TESTS +=  \
 	gzipwr_flushOnTXEnd.sh \
 	gzipwr_large.sh \
 	gzipwr_large_dynfile.sh \
+	gzipwr_hup.sh \
 	dynfile_invld_async.sh \
 	dynfile_invld_sync.sh \
 	dynfile_invalid2.sh \
@@ -415,6 +417,8 @@ TESTS +=  \
 endif # ENABLE_LIBGCRYPT
 if HAVE_VALGRIND
 TESTS +=  \
+	omfile_hup-vg.sh \
+	gzipwr_hup-vg.sh \
 	tcpflood_wrong_option_output.sh \
 	smtradfile-vg.sh \
 	dnscache-TTL-0-vg.sh \
@@ -1623,11 +1627,14 @@ EXTRA_DIST= \
 	stop-localvar.sh \
 	stop-msgvar.sh \
 	omfwd-keepalive.sh \
+	omfile_hup-vg.sh \
+	gzipwr_hup-vg.sh \
 	omfile-read-only-errmsg.sh \
 	omfile-null-filename.sh \
 	omfile-whitespace-filename.sh \
 	omfile-read-only.sh \
 	omfile_both_files_set.sh \
+	omfile_hup.sh \
 	omrabbitmq_no_params.sh \
 	omrabbitmq_params_missing0.sh \
 	omrabbitmq_params_missing1.sh \
@@ -2039,6 +2046,7 @@ EXTRA_DIST= \
 	gzipwr_flushOnTXEnd.sh \
 	gzipwr_large.sh \
 	gzipwr_large_dynfile.sh \
+	gzipwr_hup.sh \
 	complex1.sh \
 	random.sh \
 	testsuites/imfile-old-state-file_imfile-state_.-rsyslog.input \

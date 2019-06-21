@@ -889,7 +889,14 @@ wait_file_lines() {
 		count=0
 		if [ "$count_function" == "" ]; then
 			if [ -f "$file" ]; then
-				count=$(wc -l < "$file")
+				if [ "$COUNT_FILE_IS_ZIPPED" == "yes" ]; then
+					echo zipped
+					issue_HUP ""
+					count=$(gunzip < "$file" | wc -l)
+				else
+					echo NON zipped
+					count=$(wc -l < "$file")
+				fi
 			fi
 		else
 			count=$($count_function)
@@ -928,10 +935,15 @@ wait_file_lines() {
 # all parameters are passed to seq_check
 wait_seq_check() {
 	timeoutend=$(( $(date +%s) + TB_TEST_TIMEOUT ))
+	if [ "$SEQ_CHECK_FILE" == "" ]; then
+		filename="$RSYSLOG_OUT_LOG"
+	else
+		filename="$SEQ_CHECK_FILE"
+	fi
 
 	while true ; do
-		if [ -f "$RSYSLOG_OUT_LOG" ]; then
-			count=$(wc -l < "$RSYSLOG_OUT_LOG")
+		if [ -f "$filename" ]; then
+			count=$(wc -l < "$filename")
 		fi
 		seq_check --check-only "$@" #&>/dev/null
 		ret=$?
@@ -1006,8 +1018,14 @@ custom_assert_content_missing() {
 
 # shut rsyslogd down when main queue is empty. $1 is the instance.
 issue_HUP() {
+	if [ "$1" == "--sleep" ]; then
+		sleeptime="$2"
+		shift 2
+	else
+		sleeptime=1000
+	fi
 	kill -HUP $(cat $RSYSLOG_PIDBASE$1.pid)
-	$TESTTOOL_DIR/msleep 1000
+	$TESTTOOL_DIR/msleep $sleeptime
 }
 
 
@@ -1262,8 +1280,20 @@ seq_check2() {
 # do the usual sequence check, but for gzip files
 # $4... are just to have the abilit to pass in more options...
 gzip_seq_check() {
+	if [ "$1" == "" ]; then
+		if [ "$NUMMESSAGES" == "" ]; then
+			printf 'FAIL: gzip_seq_check called without parameters but NUMMESSAGES is unset!\n'
+			error_exit 100
+		fi
+		# use default parameters
+		startnum=0
+		endnum=$(( NUMMESSAGES - 1 ))
+	else
+		startnum=$1
+		endnum=$2
+	fi
 	ls -l ${RSYSLOG_OUT_LOG}
-	gunzip < ${RSYSLOG_OUT_LOG} | $RS_SORTCMD $RS_SORT_NUMERIC_OPT | ./chkseq -v -s$1 -e$2 $3 $4 $5 $6 $7
+	gunzip < ${RSYSLOG_OUT_LOG} | $RS_SORTCMD $RS_SORT_NUMERIC_OPT | ./chkseq -v -s$startnum -e$endnum $3 $4 $5 $6 $7
 	if [ "$?" -ne "0" ]; then
 		echo "sequence error detected"
 		error_exit 1
