@@ -505,7 +505,9 @@ dynaFileFreeCacheEntries(instanceData *__restrict__ const pData)
 	for(i = 0 ; i < pData->iCurrCacheSize ; ++i) {
 		dynaFileDelCacheEntry(pData, i, 1);
 	}
-	pData->iCurrElt = -1; /* invalidate current element */
+	/* invalidate current element */
+	pData->iCurrElt = -1;
+	pData->pStrm = NULL;
 }
 
 
