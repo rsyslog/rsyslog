@@ -136,6 +136,7 @@ extern int glblIntMsgsSeverityFilter;
  * rgerhards, 2018-04-28
  */
 #define DEV_OPTION_KEEP_RUNNING_ON_HARD_CONF_ERROR 1
+#define DEV_OPTION_8_1905_HANG_TEST 2 // TODO: remove - temporary for bughunt
 extern uint64_t glblDevOptions;
 
 #define glblGetOurPid() glbl_ourpid
