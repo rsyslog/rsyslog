@@ -2215,10 +2215,16 @@ case $1 in
 		;;
 
    'check-ipv6-available')   # check if IPv6  - will exit 77 when not OK
-		ifconfig -a |grep ::1
+		if ip address > /dev/null ; then
+			cmd="ip address"
+		else
+			cmd="ifconfig -a"
+		fi
+		echo command used for ipv6 detection: $cmd
+		$cmd | grep ::1 > /dev/null
 		if [ $? -ne 0 ] ; then
 			printf 'this test requires an active IPv6 stack, which we do not have here\n'
-			exit 77
+			error_exit 77
 		fi
 		;;
    'kill-immediate') # kill rsyslog unconditionally
