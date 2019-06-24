@@ -656,8 +656,6 @@ CODESTARTdoAction
 		if (tmpStringBuffer) {
 			body = tmpStringBuffer;
 			currentBodyIndex = body + bodySize;
-
-			if (bodySize != 0) currentBodyIndex++;
 		} else {
 			dbgprintf("mmdarwin::doAction:: error: something went wrong while reallocating body\n");
 			/* body is still allocated, but we will free it later */
