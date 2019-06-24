@@ -40,7 +40,7 @@ They are available for:
 
 Building from Source
 --------------------
-Follow the instructions at: https://www.rsyslog.com/doc/build_from_repo.html
+Follow the instructions at: https://www.rsyslog.com/doc/v8-stable/installation/build_from_repo.html
 
 ### Build Environment
 
