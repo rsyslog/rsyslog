@@ -217,7 +217,7 @@ of a new line. They have this format:
 
   if expr then action-part-of-selector-line
 
-"if" and "then" are fixed keywords that mus be present. "expr" is a
+"if" and "then" are fixed keywords that must be present. "expr" is a
 (potentially quite complex) expression. So the :doc:`expression
 documentation <../rainerscript/expressions>` for details.
 "action-part-of-selector-line" is an action, just as you know it (e.g.
