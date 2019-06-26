@@ -48,6 +48,11 @@ Version 8.1907.0 (aka 2019.07) 2019-07-09
   * fixed "make distcheck" settings which were missing some modules
     This lead to incomple "make distcheck" run; some errors were not
     detected due to that.
+  * testbench framework: use ip tool instead of outdated ifconfig
+    The framework now first checks if "ip" is available and falls back
+    to "ifconfig" only if this is not the case.
+    Thanks to Michael Biebl for the suggestion.
+    closes https://github.com/rsyslog/rsyslog/issues/3682
 ------------------------------------------------------------------------------
 Version 8.1905.0 (aka 2019.05) 2019-05-28
 - templates: add datatype template option for JSON generation
