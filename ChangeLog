@@ -7,6 +7,12 @@ Version 8.1907.0 (aka 2019.07) 2019-07-09
   install qdrouterd and the python qpid-proton library in order
   to use the simple_recv.py test program.
   Thanks to Richard Megginson for the patch.
+- core bugfix: message duplication copied incorrect timestamp
+  MsgDup() placed timereported into timegenerated property, resulting
+  in invalid property values. Orignal timegenerated was lost. This
+  occured always when a message needed to be duplicated. Most
+  importantly this is the case when queues are used.
+  closes https://github.com/rsyslog/rsyslog/issues/3716
 - core bugfix: segfault on startup depending on queue file names
   rsyslog will segfault on startup when a main queue file name has
   been set and at least on other queue contains a file name. This
