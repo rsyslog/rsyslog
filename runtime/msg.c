@@ -1115,7 +1115,7 @@ smsg_t* MsgDup(smsg_t* pOld)
 	pNew->iFacility = pOld->iFacility;
 	pNew->msgFlags = pOld->msgFlags;
 	pNew->iProtocolVersion = pOld->iProtocolVersion;
-	pNew->ttGenTime = pOld->ttGenTime;
+	pNew->tRcvdAt = pOld->tRcvdAt;
 	pNew->offMSG = pOld->offMSG;
 	pNew->iLenRawMsg = pOld->iLenRawMsg;
 	pNew->iLenMSG = pOld->iLenMSG;
