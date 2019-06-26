@@ -1304,6 +1304,8 @@ CheckConnection(nsd_t __attribute__((unused)) *pNsd)
 {
 	nsd_ossl_t *pThis = (nsd_ossl_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_ossl);
+	nsd_ptcp_t *pThat = (nsd_ptcp_t *) pThis->pTcp;
+	ISOBJ_TYPE_assert(pThat, nsd_ptcp);
 
 	dbgprintf("CheckConnection for %p\n", pNsd);
 	return nsd_ptcp.CheckConnection(pThis->pTcp);
