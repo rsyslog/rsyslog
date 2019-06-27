@@ -431,8 +431,9 @@ computeBulkMessage(const wrkrInstanceData_t *const pWrkrData,
 	const uchar *const message, char **newMessage)
 {
 	size_t r = 0;
-	if(pWrkrData->batch.nmemb != 0) {
-		*newMessage = strchr(strstr((const char*)message, "VALUES"), '(');
+	char *v;
+	if(pWrkrData->batch.nmemb != 0 && (v = strstr((const char *)message, "VALUES")) != NULL) {
+		*newMessage = strchr(v, '(');
 		r = strlen(*newMessage);
 	} else {
 		*newMessage = (char*)message;
