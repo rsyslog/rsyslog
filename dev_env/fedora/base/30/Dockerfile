@@ -24,7 +24,7 @@ RUN	dnf -y update && \
 	gnutls-devel \
 	hiredis \
 	hiredis-devel \
-	hiredis-devel \
+	iproute \
 	java-1.8.0-openjdk \
 	java-1.8.0-openjdk-devel \
 	libcurl-devel \
@@ -80,12 +80,12 @@ RUN	mkdir /local_dep_cache && \
 # to adjust test sources.
 ENV	ELASTICSEARCH_NEWEST="elasticsearch-6.3.1.tar.gz"
 WORKDIR	/home/devel
-VOLUME	/rsyslog
 RUN	groupadd rsyslog \
 	&& adduser -g rsyslog  -s /bin/bash rsyslog \
 	&& echo "rsyslog ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-ADD setup-system.sh setup-system.sh
-ADD common/setup-projects.sh setup-projects.sh
+RUN	mkdir /rsyslog && \
+	chown rsyslog:rsyslog /rsyslog
+VOLUME	/rsyslog
 ENV	PKG_CONFIG_PATH=/usr/local/lib/pkgconfig \
 	LD_LIBRARY_PATH=/usr/local/lib \
 	LIBDIR_PATH=/usr/lib64
@@ -103,6 +103,67 @@ RUN	cd helper-projects && \
 	mv stylecheck /usr/bin/rsyslog_stylecheck && \
 	cd .. && \
 	rm -r codestyle && \
+	cd ..
+
+
+# libestr
+RUN	cd helper-projects && \
+	git clone https://github.com/rsyslog/libestr.git && \
+	cd libestr && \
+	autoreconf -fi && \
+	./configure --prefix=/usr/local && \
+	make -j4 && \
+	make install && \
+	cd .. && \
+	rm -r libestr && \
+	cd ..
+
+# liblogging
+RUN	cd helper-projects && \
+	git clone https://github.com/rsyslog/liblogging.git && \
+	cd liblogging && \
+	autoreconf -fi && \
+	./configure --prefix=/usr --libdir=/usr/lib64 --disable-journal && \
+	make -j4 && \
+	make install && \
+	cd .. && \
+	rm -r liblogging && \
+	cd ..
+
+# liblfastjson
+RUN	cd helper-projects && \
+	git clone https://github.com/rsyslog/libfastjson.git && \
+	cd libfastjson && \
+	autoreconf -fi && \
+	./configure --prefix=/usr --libdir=/usr/lib64 && \
+	make -j4 && \
+	make install && \
+	cd .. && \
+	rm -r libfastjson && \
+	cd ..
+
+# liblognorm
+RUN	cd helper-projects && \
+	git clone https://github.com/rsyslog/liblognorm.git && \
+	cd liblognorm && \
+	autoreconf -fi && \
+	./configure --enable-compile-warnings=yes --prefix=/usr/local && \
+	make -j4 && \
+	make install && \
+	cd .. && \
+	rm -r liblognorm && \
+	cd ..
+
+# librelp
+RUN	cd helper-projects && \
+	git clone https://github.com/rsyslog/librelp.git && \
+	cd librelp && \
+	autoreconf -fi && \
+	./configure --prefix=/usr --enable-compile-warnings=yes --libdir=/usr/lib64 && \
+	make -j4 && \
+	make install && \
+	cd .. && \
+	rm -r librelp && \
 	cd ..
 
 # we need Guardtime libksi here, otherwise we cannot check the KSI component	
@@ -201,7 +262,5 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 # build errors at the moment: --enable-kmsg 
 #	--enable-mmgrok - no package
 
-# Install any needed packages
-RUN	./setup-projects.sh
 WORKDIR	/rsyslog
 USER	rsyslog
