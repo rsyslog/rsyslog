@@ -225,6 +225,7 @@ TESTS +=  \
 	da-mainmsg-q.sh \
 	validation-run.sh \
 	msgdup.sh \
+	msgdup_props.sh \
 	empty-ruleset.sh \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
@@ -1824,6 +1825,7 @@ EXTRA_DIST= \
 	da-mainmsg-q.sh \
 	diskqueue-fsync.sh \
 	msgdup.sh \
+	msgdup_props.sh \
 	empty-ruleset.sh \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
