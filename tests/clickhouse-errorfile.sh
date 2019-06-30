@@ -24,7 +24,7 @@ tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag: msgnum:NoInteger\""
 shutdown_when_empty
 wait_shutdown
 
-content_check --regex "msgnum:NoInteger.*DB::Exception: Unknown identifier"
+content_check --regex "msgnum:NoInteger.*DB::Exception:"
 
 clickhouse-client --query="DROP TABLE rsyslog.errorfile"
 exit_test
