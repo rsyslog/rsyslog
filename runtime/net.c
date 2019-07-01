@@ -1599,9 +1599,6 @@ finalize_it:
  * However, it caches entries in order to avoid too-frequent requery.
  * rgerhards, 2012-03-06
  */
-PRAGMA_DIAGNOSTIC_PUSH
-PRAGMA_IGNORE_Wcast_align /* TODO: how can we fix these warnings? */
-/* Problem with the warnings: they seem to stem back from the way the API is structured */
 static rsRetVal
 getIFIPAddr(uchar *szif, int family, uchar *pszbuf, int lenBuf)
 {
@@ -1612,6 +1609,11 @@ getIFIPAddr(uchar *szif, int family, uchar *pszbuf, int lenBuf)
 	struct ifaddrs * ifaddrs = NULL;
 	struct ifaddrs * ifa;
 #endif
+	union {
+		struct sockaddr *sa;
+		struct sockaddr_in *ipv4;
+		struct sockaddr_in6 *ipv6;
+	} savecast;
 	void * pAddr;
 	DEFiRet;
 
@@ -1622,14 +1624,15 @@ getIFIPAddr(uchar *szif, int family, uchar *pszbuf, int lenBuf)
 	for (ifa = ifaddrs; ifa != NULL; ifa = ifa->ifa_next) {
 		if(strcmp(ifa->ifa_name, (char*)szif))
 			continue;
+		savecast.sa = ifa->ifa_addr;
 		if(   (family == AF_INET6 || family == AF_UNSPEC)
 		   && ifa->ifa_addr->sa_family == AF_INET6) {
-			pAddr = &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
+			pAddr = &(savecast.ipv6->sin6_addr);
 			inet_ntop(AF_INET6, pAddr, (char*)pszbuf, lenBuf);
 			break;
 		} else if(/*   (family == AF_INET || family == AF_UNSPEC)
 		         &&*/ ifa->ifa_addr->sa_family == AF_INET) {
-			pAddr = &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
+			pAddr = &(savecast.ipv4->sin_addr);
 			inet_ntop(AF_INET, pAddr, (char*)pszbuf, lenBuf);
 			break;
 		}
@@ -1645,7 +1648,6 @@ finalize_it:
 	RETiRet;
 
 }
-PRAGMA_DIAGNOSTIC_POP
 
 
 /* queryInterface function
