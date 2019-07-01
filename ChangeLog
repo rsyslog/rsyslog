@@ -7,6 +7,10 @@ Version 8.1907.0 (aka 2019.07) 2019-07-09
   install qdrouterd and the python qpid-proton library in order
   to use the simple_recv.py test program.
   Thanks to Richard Megginson for the patch.
+- omclickhouse bugfix: potential segfault on omclickhouse batchmode
+  segfault happened when the template did not containt the string
+  "VALUES".
+  Thanks to github user wdjwxh for the fix.
 - core bugfix: message duplication copied incorrect timestamp
   MsgDup() placed timereported into timegenerated property, resulting
   in invalid property values. Orignal timegenerated was lost. This
