@@ -25,6 +25,16 @@ Version 8.1907.0 (aka 2019.07) 2019-07-09
   Thanks to Wade Simmons for reporting this issue and providing
   detailled analysis. That greatly helps fixing it quickly.
   closes https://github.com/rsyslog/rsyslog/issues/3681
+- core "bugfix": alignment issue
+  This was not a hard error on current platforms, but a
+  to-be-considered compiler warning regarding invalid alignment.
+  While it works well on current platforms, alignment issues may
+  turn into real issues in future platforms. So we try to fix them
+  if possible. As not only a side-effect this resolves compiler
+  warnings even on current platforms.
+  This fix has some regression potential. If so, the problems
+  may occur during IP address resolution.
+  see also https://github.com/rsyslog/rsyslog/issues/2608
 - omfile bugfix: potential hang/segfault on HUP of dynafile action
   when omfile was HUPed it did not sufficiently clear all dynafile
   cache maintenance data structures. This usually lead to misadressing
