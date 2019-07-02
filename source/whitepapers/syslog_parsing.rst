@@ -16,7 +16,7 @@ Syslog Standardization
 ----------------------
 
 The syslog protocol has not been standardized until relatively
-recently.The first document "smelling" a bit like a standard is
+recently. The first document "smelling" a bit like a standard is
 :rfc:`3164`, which dates back to August
 2001. The problem is that this document is no real standard. It has
 assigned "informational" status by the `IETF <http://www.ietf.org>`_
