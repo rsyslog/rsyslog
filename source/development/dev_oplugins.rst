@@ -27,7 +27,7 @@ itself is not meant for production use. But it is very simplistic and so
 a really good starting point to grasp the core ideas.
 
 In any case, you should also read the comments in
-./runtime/module-template.h. Output plugins are build based on a large
+./runtime/module-template.h. Output plugins are built based on a large
 set of code-generating macros. These macros handle most of the plumbing
 needed by the interface. As long as no special callback to rsyslog is
 needed (it typically is not), an output plugin does not really need to
@@ -362,7 +362,7 @@ Licensing
 
 From the rsyslog point of view, plugins constitute separate projects. As
 such, we think plugins are not required to be compatible with GPLv3.
-However, this is no legal advise. If you intend to release something
+However, this is not legal advise. If you intend to release something
 under a non-GPLV3 compatible license it is probably best to consult with
 your lawyer.
 
