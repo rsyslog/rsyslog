@@ -473,7 +473,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_OK_WARN = -2186, /**<  config part: everything was OK, but a warning message was emitted */
 
 	RS_RET_INVLD_CONF_OBJ= -2200,	/**< invalid config object (e.g. $Begin conf statement) */
-	RS_RET_ERR_LIBEE_INIT = -2201,	/**< cannot obtain libee ctx */
+	/* UNUSED, WAS; RS_RET_ERR_LIBEE_INIT = -2201,	< cannot obtain libee ctx */
 	RS_RET_ERR_LIBLOGNORM_INIT = -2202,/**< cannot obtain liblognorm ctx */
 	RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD = -2203,/**< liblognorm sampledb load failed */
 	RS_RET_CMD_GONE_AWAY = -2204,/**< config directive existed, but no longer supported */

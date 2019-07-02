@@ -1,5 +1,11 @@
 ------------------------------------------------------------------------------
 Version 8.1907.0 (aka 2019.07) 2019-07-09
+NOTE TO MAINTAINERS: libee is not used by rsyslog for quite some while.
+However, we never included this info into the changelog. So if you still
+make rsyslog depend on libee (some do this), you should stop doing so now.
+Libee is dead and no longer been maintained nor hosted by us. Old versions
+can still be found at github for those in need.
+
 - omamqp1: port to latest api, add tests
   This brings omamqp1 up-to-date with the latest qpid-proton-c
   api version.  This also adds a test for the plugin, to test
