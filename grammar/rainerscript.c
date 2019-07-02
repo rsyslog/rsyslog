@@ -3558,6 +3558,7 @@ static struct scriptFunct functions[] = {
 	{"cstr", 1, 1, doFunct_CStr, NULL, NULL},
 	{"cnum", 1, 1, doFunct_CNum, NULL, NULL},
 	{"ip42num", 1, 1, doFunct_Ipv42num, NULL, NULL},
+	{"ipv42num", 1, 1, doFunct_Ipv42num, NULL, NULL},
 	{"re_match", 2, 2, doFunct_ReMatch, initFunc_re_match, regex_destruct},
 	{"re_extract", 5, 5, doFunc_re_extract, initFunc_re_match, regex_destruct},
 	{"field", 3, 3, doFunct_Field, NULL, NULL},
