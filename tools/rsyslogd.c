@@ -1831,12 +1831,12 @@ rsyslogdDoDie(int sig)
 
 
 static void
-wait_timeout(void)
+wait_timeout(const sigset_t *sigmask)
 {
-	struct timeval tvSelectTimeout;
+	struct timespec tvSelectTimeout;
 
 	tvSelectTimeout.tv_sec = janitorInterval * 60; /* interval is in minutes! */
-	tvSelectTimeout.tv_usec = 0;
+	tvSelectTimeout.tv_nsec = 0;
 
 #ifdef _AIX
 	if(!src_exists) {
@@ -1848,13 +1848,16 @@ wait_timeout(void)
 		 * timeout value, which we count down to zero. We do this
 		 * in useful subsecond steps.
 		 */
-		const int wait_period = 500000; /* wait period in microseconds */
-		int timeout = janitorInterval * 60 * (1000000 / wait_period);
+		const long wait_period = 500000000; /* wait period in nanoseconds */
+		int timeout = janitorInterval * 60 * (1000000000 / wait_period);
+
+		tvSelectTimeout.tv_sec = 0;
+		tvSelectTimeout.tv_nsec = wait_period;
 		do {
 			if(bFinished || bHadHUP) {
 				break;
 			}
-			srSleep(0, wait_period);
+			pselect(1, NULL, NULL, NULL, &tvSelectTimeout, sigmask);
 			timeout--;
 		} while(timeout > 0);
 	} else {
@@ -1863,7 +1866,7 @@ wait_timeout(void)
 
 		FD_ZERO(&rfds);
 		FD_SET(SRC_FD, &rfds);
-		if(select(SRC_FD + 1, (fd_set *)&rfds, NULL, NULL, &tvSelectTimeout))
+		if(pselect(SRC_FD + 1, (fd_set *)&rfds, NULL, NULL, &tvSelectTimeout, sigmask))
 		{
 			if(FD_ISSET(SRC_FD, &rfds))
 			{
@@ -1912,7 +1915,7 @@ wait_timeout(void)
 		}
 	}
 #else
-	select(1, NULL, NULL, NULL, &tvSelectTimeout);
+	pselect(1, NULL, NULL, NULL, &tvSelectTimeout, sigmask);
 #endif /* AIXPORT : SRC end */
 }
 
@@ -1940,27 +1943,38 @@ static void
 mainloop(void)
 {
 	time_t tTime;
+	sigset_t origmask;
+	sigset_t sigblockset;
+
+	sigemptyset(&sigblockset);
+	sigaddset(&sigblockset, SIGTERM);
+	sigaddset(&sigblockset, SIGCHLD);
+	sigaddset(&sigblockset, SIGHUP);
 
 	do {
 		processImInternal();
-		wait_timeout();
+
+		pthread_sigmask(SIG_BLOCK, &sigblockset, &origmask);
 		if(bChildDied) {
 			reapChild();
 			bChildDied = 0;
 		}
 
+		if(bHadHUP) {
+			doHUP();
+			bHadHUP = 0;
+		}
+
 		if(bFinished)
 			break;	/* exit as quickly as possible */
+
+		wait_timeout(&origmask);
+		pthread_sigmask(SIG_UNBLOCK, &sigblockset, NULL);
 
 		janitorRun();
 
 		datetime.GetTime(&tTime);
 		checkGoneAwaySenders(tTime);
-
-		if(bHadHUP) {
-			doHUP();
-			bHadHUP = 0;
-		}
 
 	} while(!bFinished); /* end do ... while() */
 }
