@@ -166,7 +166,7 @@ finalize_it:
 }
 
 
-/* parse the audit record and create libee structure
+/* parse the audit record and create json structure
  */
 static rsRetVal
 audit_parse(uchar *buf, struct json_object **jsonRoot)
