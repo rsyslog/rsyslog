@@ -21,6 +21,7 @@ RUN 	apt-get update && \
 	gcc-8 \
 	gdb \
 	git \
+	iproute2 \
 	libbson-dev \
 	libcurl4-gnutls-dev \
 	libdbi-dev \
