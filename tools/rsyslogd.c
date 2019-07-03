@@ -1858,8 +1858,7 @@ wait_timeout(const sigset_t *sigmask)
 				break;
 			}
 			pselect(1, NULL, NULL, NULL, &tvSelectTimeout, sigmask);
-			timeout--;
-		} while(timeout > 0);
+		} while(--timeout > 0);
 	} else {
 		char buf[256];
 		fd_set rfds;
