@@ -1408,7 +1408,7 @@ done:
 
 static rsRetVal
 actionTryRemoveHardErrorsFromBatch(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti,
-	actWrkrIParams_t *const new_iparams, unsigned *new_nMsgs)
+	actWrkrIParams_t **new_iparams, unsigned *new_nMsgs)
 {
 	actWrkrInfo_t *const wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
 	const unsigned nMsgs = wrkrInfo->p.tx.currIParam;
@@ -1423,13 +1423,22 @@ actionTryRemoveHardErrorsFromBatch(action_t *__restrict__ const pThis, wti_t *__
 			sizeof(actWrkrIParams_t) * pThis->iNumTpls);
 		ret = actionTryCommit(pThis, pWti, oneParamSet, 1);
 		if(ret == RS_RET_SUSPENDED) {
-			memcpy(new_iparams + *new_nMsgs, &oneParamSet,
-				sizeof(actWrkrIParams_t) * pThis->iNumTpls);
+			// still failed, need to increase buffer
+			actWrkrIParams_t *resized_new_iparams = NULL;
+			resized_new_iparams = realloc(*new_iparams,
+				((*new_nMsgs)+1) * sizeof(actWrkrIParams_t) * pThis->iNumTpls);
+			if (resized_new_iparams == NULL) {
+				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+			}
+			memcpy(resized_new_iparams + (*new_nMsgs) * pThis->iNumTpls,
+				&oneParamSet, sizeof(actWrkrIParams_t) * pThis->iNumTpls);
+			new_iparams = &resized_new_iparams;
 			++(*new_nMsgs);
 		} else if(ret != RS_RET_OK) {
 			actionWriteErrorFile(pThis, ret, oneParamSet, 1);
 		}
 	}
+finalize_it:
 	RETiRet;
 }
 
@@ -1488,7 +1497,7 @@ DBGPRINTF("actionCommit[%s]: return actionTryCommit %d\n", pThis->pszName, iRet)
 		CHKmalloc(iparams = malloc(sizeof(actWrkrIParams_t) * pThis->iNumTpls
 			* wrkrInfo->p.tx.currIParam));
 		needfree_iparams = 1;
-		actionTryRemoveHardErrorsFromBatch(pThis, pWti, iparams, &nMsgs);
+		actionTryRemoveHardErrorsFromBatch(pThis, pWti, &iparams, &nMsgs);
 	}
 
 	if(nMsgs == 0) {
