@@ -76,6 +76,19 @@ Target
 The target server to connect to.
 
 
+Port
+^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "514", "no", "none"
+
+Name or numerical value of TCP port to use when connecting to target.
+
+
 Template
 ^^^^^^^^
 
