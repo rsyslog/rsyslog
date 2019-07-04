@@ -1630,7 +1630,7 @@ initAll(int argc, char **argv)
 	if(ourConf->globals.bLogStatusMsgs) {
 		char bufStartUpMsg[512];
 		snprintf(bufStartUpMsg, sizeof(bufStartUpMsg),
-			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
+			 "[origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 			 "\" x-pid=\"%d\" x-info=\"https://www.rsyslog.com\"] start",
 			 (int) glblGetOurPid());
 		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
@@ -1765,7 +1765,7 @@ doHUP(void)
 
 	if(ourConf->globals.bLogStatusMsgs) {
 		snprintf(buf, sizeof(buf),
-			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION
+			 "[origin software=\"rsyslogd\" " "swVersion=\"" VERSION
 			 "\" x-pid=\"%d\" x-info=\"https://www.rsyslog.com\"] rsyslogd was HUPed",
 			 (int) glblGetOurPid());
 			errno = 0;
@@ -2004,7 +2004,7 @@ deinitAll(void)
 	/* and THEN send the termination log message (see long comment above) */
 	if(bFinished && runConf->globals.bLogStatusMsgs) {
 		(void) snprintf(buf, sizeof(buf),
-		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
+		 "[origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 		 "\" x-pid=\"%d\" x-info=\"https://www.rsyslog.com\"]" " exiting on signal %d.",
 		 (int) glblGetOurPid(), bFinished);
 		errno = 0;
