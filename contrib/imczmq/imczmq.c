@@ -567,7 +567,7 @@ CODESTARTnewInpInst
 			char *stringType = es_str2cstr(pvals[i].val.d.estr, NULL);
 			if( NULL == stringType ){
 				LogError(0, RS_RET_CONFIG_ERROR,
-					"imczmq: '%s' is invalid sockType", stringType);
+					"imczmq: out of memory error copying sockType param");
 				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 			}
 
