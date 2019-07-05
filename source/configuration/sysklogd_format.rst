@@ -99,7 +99,7 @@ Regular File
 ------------
 
 Typically messages are logged to real files. The filename is specified with an
-absolute pathname. It may be specifed as a file name relative to rsyslog's
+absolute pathname. It may be specified as a file name relative to rsyslog's
 working directory if the filename starts with "." or "..". However, this is
 dangerous and should be avoided.
 

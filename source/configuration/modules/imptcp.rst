@@ -301,7 +301,7 @@ Address
    "string", "none", "no", "``$InputPTCPServerListenIP``"
 
 On multi-homed machines, specifies to which local address the
-listerner should be bound.
+listener should be bound.
 
 
 AddtlFrameDelimiter
@@ -367,7 +367,7 @@ NotifyOnConnectionClose
 
    "binary", "off", "no", "``$InputPTCPServerNotifyOnConnectionClose``"
 
-instructs imptcp to emit a message if a remote peer closes the
+Instructs imptcp to emit a message if a remote peer closes the
 connection.
 
 
@@ -517,7 +517,7 @@ MultiLine
 
    "binary", "off", "no", "none"
 
-Experimental parameter which caues rsyslog to recognise a new message
+Experimental parameter which causes rsyslog to recognise a new message
 only if the line feed is followed by a '<' or if there are no more characters.
 
 

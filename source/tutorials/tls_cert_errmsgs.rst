@@ -67,7 +67,7 @@ by a couple of things, some of them not obvious:
 
 -  You specified a wrong file, which is not actually in .pem format
 -  The file was incorrectly generated
--  I think I have also seen this when I accidentaly swapped private key
+-  I think I have also seen this when I accidentally swapped private key
    files and certificate files. So double-check the type of file you are
    using.
 -  It may even be a result of an access (permission) problem. In theory,

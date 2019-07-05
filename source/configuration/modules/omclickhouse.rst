@@ -129,7 +129,7 @@ maxbytes
 
 When shipping logs with bulkmode **on**, maxbytes specifies the maximum
 size of the request body sent to ClickHouse. Logs are batched until
-either the buffer reaches maxbytes or the the `dequeue batch
+either the buffer reaches maxbytes or the `dequeue batch
 size <http://www.rsyslog.com/doc/node35.html>`_ is reached.
 
 
@@ -179,10 +179,10 @@ included, it is possible to simply resubmit messages from that script.
 error is assumed. However, if we receive negative responses during batch
 processing, we assume an error in the data itself (like a mandatory field is
 not filled in, a format error or something along those lines). Such errors
-cannot be solved by simpy resubmitting the record. As such, they are written
+cannot be solved by simply resubmitting the record. As such, they are written
 to the error file so that the user (script) can examine them and act appropriately.
 Note that e.g. after search index reconfiguration (e.g. dropping the mandatory
-attribute) a resubmit may be succesful.
+attribute) a resubmit may be successful.
 
 
 allowUnsignedCerts
@@ -250,7 +250,7 @@ Parameters are:
 
 -  **fail.clickhouse** - number of failures due to clickhouse error reply; Note that
    this counter does NOT count the number of failed messages but the number of
-   times a failure occured (a potentially much smaller number). Counting messages
+   times a failure occurred (a potentially much smaller number). Counting messages
    would be quite performance-intense and is thus not done.
 
 -  **response.success** - number of records successfully sent in bulk index

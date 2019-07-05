@@ -181,8 +181,8 @@ pipelineName
    "word", "none", "no", "none"
 
 The `ingest node <https://www.elastic.co/guide/en/elasticsearch/reference/current/ingest.html>`_
-pipeline name to be inclued in the request. This allows pre processing
-of events bevor indexing them. By default, events are not send to a pipeline.
+pipeline name to be included in the request. This allows pre processing
+of events before indexing them. By default, events are not send to a pipeline.
 
 
 .. _dynPipelineName:
@@ -332,10 +332,10 @@ maxbytes
 
 When shipping logs with bulkmode_ **on**, maxbytes specifies the maximum
 size of the request body sent to Elasticsearch. Logs are batched until
-either the buffer reaches maxbytes or the the `dequeue batch
+either the buffer reaches maxbytes or the `dequeue batch
 size <http://www.rsyslog.com/doc/node35.html>`_ is reached. In order to
 ensure Elasticsearch does not reject requests due to content length, verify
-this value is set accoring to the `http.max_content_length
+this value is set according to the `http.max_content_length
 <https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-http.html>`_
 setting in Elasticsearch. Defaults to 100m.
 
@@ -435,11 +435,11 @@ included, it is possible to simply resubmit messages from that script.
 error is assumed and the submit is retried. However, if we receive negative
 responses during batch processing, we assume an error in the data itself
 (like a mandatory field is not filled in, a format error or something along
-those lines). Such errors cannot be solved by simpy resubmitting the record.
+those lines). Such errors cannot be solved by simply resubmitting the record.
 As such, they are written to the error file so that the user (script) can
 examine them and act appropriately. Note that e.g. after search index
 reconfiguration (e.g. dropping the mandatory attribute) a resubmit may
-be succesful.
+be successful.
 
 .. _omelasticsearch-tls.cacert:
 
@@ -704,7 +704,7 @@ ratelimit.burst
 
 If `retryfailures` is not `"on"` (:ref:`omelasticsearch-retryfailures`) then
 this parameter has no effect.  Specifies the maximum number of messages that
-can be emitted within the ratelimit.interval interval. For futher information,
+can be emitted within the ratelimit.interval interval. For further information,
 see description there.
 
 .. _omelasticsearch-rebindinterval:
@@ -750,7 +750,7 @@ Parameters are:
 
 -  **fail.es** - number of failures due to elasticsearch error reply; Note that
    this counter does NOT count the number of failed messages but the number of
-   times a failure occured (a potentially much smaller number). Counting messages
+   times a failure occurred (a potentially much smaller number). Counting messages
    would be quite performance-intense and is thus not done.
 
 The following counters are available when `retryfailures="on"` is used:

@@ -58,7 +58,7 @@ permit.slashesInHostname
 .. versionadded:: 8.20.0
 
 This setting tells the parser that hostnames may contain slashes. This
-is useful when messages e.g. from a syslog-ng releay chain are received.
+is useful when messages e.g. from a syslog-ng relay chain are received.
 Syslog-ng puts the various relay hosts via slashes into the hostname
 field.
 

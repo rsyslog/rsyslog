@@ -7,7 +7,7 @@ While the base document focusses on RainerScript format, it
 does not provide samples in legacy format. These are included
 in this document.
 
-**Important:** do **not** use legacy ruleset defintions for new
+**Important:** do **not** use legacy ruleset definitions for new
 configurations. Especially with rulesets, legacy format is extremely
 hard to get right. The information in this page is included in order
 to help you understand already existing configurations using the

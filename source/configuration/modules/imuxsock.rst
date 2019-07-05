@@ -127,7 +127,7 @@ log socket, traditionally ``/dev/log``. Unless disabled by the
 and deleted upon shutdown, according to traditional syslogd behavior.
 
 The behavior of this parameter is different for systemd systems. See the
-the :ref:`imuxsock-systemd-details-label` section for details.
+ :ref:`imuxsock-systemd-details-label` section for details.
 
 
 SysSock.FlowControl
@@ -732,7 +732,7 @@ example, Solaris).
 
 Rsyslog is able to coexist with systemd with minimal changes on the part of the
 local system administrator. While the ``systemd journal`` now assumes full
-control of the the local ``/dev/log`` system log socket, systemd provides
+control of the local ``/dev/log`` system log socket, systemd provides
 access to logging data via the ``/run/systemd/journal/syslog`` log socket.
 This log socket is provided by the ``syslog.socket`` file that is shipped
 with systemd.
@@ -913,7 +913,7 @@ are appended to the end of each message.
 Store in JSON message properties
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The following sample is similiar to the first one, but enables parsing of
+The following sample is similar to the first one, but enables parsing of
 trusted properties, which places the results into JSON/lumberjack variables.
 
 .. code-block:: none

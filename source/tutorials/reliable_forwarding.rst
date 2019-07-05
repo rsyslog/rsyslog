@@ -30,7 +30,7 @@ situations where the server is not reachable. To do so, unsent data
 needs to be buffered at the client while the server is offline. Then,
 once the server is up again, this data is to be sent.
 
-This can easily be acomplished by rsyslog. In rsyslog, every action runs
+This can easily be accomplished by rsyslog. In rsyslog, every action runs
 on its own queue and each queue can be set to buffer data if the action
 is not ready. Of course, you must be able to detect that "the action is
 not ready", which means the remote server is offline. This can be

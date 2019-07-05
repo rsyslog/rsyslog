@@ -47,7 +47,7 @@ Discussion
   side. This had some implications:
 
   - they did not account for the actual message origin, so two processes
-    emitting an equally-looking messsage triggered the repeated message
+    emitting an equally-looking message triggered the repeated message
     reduction code
 
   - repeat message processing could be set on a per-action basis, which

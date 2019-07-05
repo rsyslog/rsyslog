@@ -18,7 +18,7 @@ rsyslog service is started:
 
 The actual file path and name may be changed if required.
 
-Having set the above, when rsyslog is restarted it will produce a contiuous
+Having set the above, when rsyslog is restarted it will produce a continuous
 debug file. 
 
 Debug on Demand

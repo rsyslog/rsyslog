@@ -18,7 +18,7 @@ These statements can be used with all types of actions.
    *rsconf1_repeatedmsgreduction*
 
 -  **$ActionName** <a\_single\_word> - used primarily for documentation,
-   e.g. when generating a configuration graph. Available sice 4.3.1.
+   e.g. when generating a configuration graph. Available since 4.3.1.
 -  **$ActionExecOnlyOnceEveryInterval** <seconds> - execute action only if
    the last execute is at last <seconds> seconds in the past (more info
    in `ommail <ommail.html>`_, but may be used with any action). To
@@ -112,7 +112,7 @@ These statements are specific to omfwd-based actions.
 -  **$ActionForwardDefaultTemplate** [templateName] - sets a new default
    template for UDP and plain TCP forwarding action
 -  **$ActionSendResendLastMsgOnReconnect** <[on/**off**]> specifies if the
-   last message is to be resend when a connecition breaks and has been
+   last message is to be resend when a connection breaks and has been
    reconnected. May increase reliability, but comes at the risk of
    message duplication.
 -  **$ActionSendStreamDriver** <driver basename> just like
@@ -160,7 +160,7 @@ Action queue parameters usually affect the next action and auto-reset
 to defaults thereafter. Most importantly, this means that when a
 "real" (non-direct) queue type is defined, this affects the immediately
 following action, only. The next and all other actions will be
-in "direct" mode (no real queue) if not explicitely specified otherwise.
+in "direct" mode (no real queue) if not explicitly specified otherwise.
 
 -  **$ActionQueueCheckpointInterval** <number>
 -  **$ActionQueueDequeueBatchSize** <number> [default 128]

@@ -87,7 +87,7 @@ Note that "gnutls" is the current default for historic reasons. We actually
 recommend to use "openssl". It provides better error messages and accepts
 a wider range of certificate types.
 
-If you have problems with the default setting, we recommend to swich to
+If you have problems with the default setting, we recommend to switch to
 "openssl".
 
 
@@ -209,7 +209,7 @@ TLS.dhbits
    "integer", "0", "no", "none"
 
 This setting controls how many bits are used for Diffie-Hellman key
-generation. If not set, the librelp default is used. For secrity
+generation. If not set, the librelp default is used. For security
 reasons, at least 1024 bits should be used. Please note that the
 number of bits must be supported by GnuTLS. If an invalid number is
 given, rsyslog will report an error when the listener is started. We
@@ -252,7 +252,7 @@ directly or enclose it in braces. You may also use wildcards to match
 a larger number of permitted peers, e.g. ``*.example.com``.
 
 When using wildcards to match larger number of permitted peers, please
-know that the implementation is simular to Syslog RFC5425 which means:
+know that the implementation is similar to Syslog RFC5425 which means:
 This wildcard matches any left-most DNS label in the server name.
 That is, the subject ``*.example.com`` matches the server names ``a.example.com``
 and ``b.example.com``, but does not match ``example.com`` or ``a.b.example.com``.
@@ -309,7 +309,7 @@ TLS.MyCert
 
    "string", "none", "no", "none"
 
-The machine certificate that is being used for TLS communciation.
+The machine certificate that is being used for TLS communication.
 
 
 TLS.MyPrivKey

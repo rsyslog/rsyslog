@@ -33,5 +33,5 @@ undesired results (but you can try it if you like).
 
 **Sample:**
 
-\*.\* @@primary-syslog.example.com $ActionExecOnlyWhenPreviousIsSuspended on &   @@secondary-1-syslog.example.com    # & is used to have more than one action for &   @@secondary-2-syslog.example.com    # the same selector - the mult-action feature &   /var/log/localbuffer $ActionExecOnlyWhenPreviousIsSuspended off # to re-set it for the next selector
+\*.\* @@primary-syslog.example.com $ActionExecOnlyWhenPreviousIsSuspended on &   @@secondary-1-syslog.example.com    # & is used to have more than one action for &   @@secondary-2-syslog.example.com    # the same selector - the multi-action feature &   /var/log/localbuffer $ActionExecOnlyWhenPreviousIsSuspended off # to re-set it for the next selector
 

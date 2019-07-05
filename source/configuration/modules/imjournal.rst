@@ -16,7 +16,7 @@ Provides the ability to import structured log messages from systemd
 journal to syslog.
 
 Note that this module reads the journal database, what is considered a
-relativly performance-intense operation. As such, the performance of a
+relatively performance-intense operation. As such, the performance of a
 configuration utilizing this module may be notably slower than when
 using `imuxsock <imuxsock.html>`_. The journal provides imuxsock with a
 copy of all "classical" syslog messages, however, it does not provide
@@ -32,7 +32,7 @@ anticipated use cases.
 database corruption, which leads to the journal to return the same data
 endlessly in a tight loop. This results in massive message duplication
 inside rsyslog probably resulting in a denial-of-service when the system
-ressouces get exhausted. This can be somewhat mitigated by using proper
+resources get exhausted. This can be somewhat mitigated by using proper
 rate-limiters, but even then there are spikes of old data which are
 endlessly repeated. By default, ratelimiting is activated and permits to
 process 20,000 messages within 10 minutes, what should be well enough
@@ -130,7 +130,7 @@ Ratelimit.Burst
    "integer", "20000", "no", "``$imjournalRatelimitBurst``"
 
 Specifies the maximum number of messages that can be emitted within
-the ratelimit.interval interval. For futher information, see
+the ratelimit.interval interval. For further information, see
 description there.
 
 
@@ -159,7 +159,7 @@ DefaultSeverity
 
    "severity", "5", "no", "``$ImjournalDefaultSeverity``"
 
-Some messages comming from journald don't have the SYSLOG_PRIORITY
+Some messages coming from journald don't have the SYSLOG_PRIORITY
 field. These are typically the messages logged through journald's
 native API. This option specifies the default severity for these
 messages. Can be given either as a name or a number. Defaults to 'notice'.
@@ -175,7 +175,7 @@ DefaultFacility
 
    "facility", "LOG_USER", "no", "``$ImjournalDefaultFacility``"
 
-Some messages comming from journald don't have the SYSLOG_FACILITY
+Some messages coming from journald don't have the SYSLOG_FACILITY
 field. These are typically the messages logged through journald's
 native API. This option specifies the default facility for these
 messages. Can be given either as a name or a number. Defaults to 'user'.
@@ -217,7 +217,7 @@ Sets the PID source from journal.
 
 *both*
    *imjournal* trying to retrieve SYSLOG_PID first. When it is not
-   available, it is also trying to retrive _PID. When none of them is available,
+   available, it is also trying to retrieve _PID. When none of them is available,
    message is parsed without PID number.
 
 
@@ -271,7 +271,7 @@ The following properties are maintained for each listener:
 
 -  **discarded** - total number of messages that were read but not submitted to main queue due to rate-limiting.
 
--  **failed** - total number of failures to read messges from journal.
+-  **failed** - total number of failures to read messages from journal.
 
 -  **poll_failed** - total number of journal poll failures.
 

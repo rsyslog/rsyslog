@@ -199,7 +199,7 @@ data items:
 
 - **ImageID** - the image id of the container associated with the message.
 
-- **Labels** - all the lables of the container associated with the message in json format.
+- **Labels** - all the labels of the container associated with the message in json format.
 
 **Note**: At the time of this writing, metadata is always enabled.
 

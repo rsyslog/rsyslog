@@ -144,7 +144,7 @@ specified by the **$OmMySQLConfigFile** parameter.
 This will likely only be used where the database administrator
 provides a single configuration file with multiple profiles.
 This configuration parameter is ignored unless **$OmMySQLConfigFile**
-is also used in the rsyslog configration file.
+is also used in the rsyslog configuration file.
 If omitted, the MySQL Client Library default of "client" will be
 used.
 

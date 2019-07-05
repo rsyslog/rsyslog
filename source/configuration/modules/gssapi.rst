@@ -13,7 +13,7 @@ Requirements.
 
 Configuration.
 
-Let's assume there are 3 machines in kerberos Realm:
+Let's assume there are 3 machines in Kerberos Realm:
 
 -  the first is running KDC (Kerberos Authentication Service and Key
    Distribution Center),
@@ -28,7 +28,7 @@ Let's assume there are 3 machines in kerberos Realm:
 
 #. sender@REALM.ORG
 
--  client must have ticket for pricipal sender
+-  client must have ticket for principal sender
 -  REALM.ORG is kerberos Realm
 
 #. host/receiver.mydomain.com@REALM.ORG - service principal

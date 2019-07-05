@@ -27,7 +27,7 @@ itself is not meant for production use. But it is very simplistic and so
 a really good starting point to grasp the core ideas.
 
 In any case, you should also read the comments in
-./runtime/module-template.h. Output plugins are build based on a large
+./runtime/module-template.h. Output plugins are built based on a large
 set of code-generating macros. These macros handle most of the plumbing
 needed by the interface. As long as no special callback to rsyslog is
 needed (it typically is not), an output plugin does not really need to
@@ -248,7 +248,6 @@ So the current
         ProcessMessage()
         endTransaction()
         }
-     
 
 For the **transactional interface**, we now move these implicit
 ``beginTransaction()`` and ``endTransaction(()`` call out of the message
@@ -301,11 +300,11 @@ completed successfully. But they convey additional information about the
 commit status as follows:
 
 +----------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| *RS\_RET\_OK*                    | The record and all previous inside the batch has been commited. *Note:* this definition is what makes integrating plugins without the transaction being/end calls so easy - this is the traditional "success" return state and if every call returns it, there is no need for actually calling ``endTransaction()``, because there is no transaction open).       |
+| *RS\_RET\_OK*                    | The record and all previous inside the batch has been committed. *Note:* this definition is what makes integrating plugins without the transaction being/end calls so easy - this is the traditional "success" return state and if every call returns it, there is no need for actually calling ``endTransaction()``, because there is no transaction open).      |
 +----------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| *RS\_RET\_DEFER\_COMMIT*         | The record has been processed, but is not yet commited. This is the expected state for transactional-aware plugins.                                                                                                                                                                                                                                               |
+| *RS\_RET\_DEFER\_COMMIT*         | The record has been processed, but is not yet committed. This is the expected state for transactional-aware plugins.                                                                                                                                                                                                                                              |
 +----------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| *RS\_RET\_PREVIOUS\_COMMITTED*   | The **previous** record inside the batch has been committed, but the current one not yet. This state is introduced to support sources that fill up buffers and commit once a buffer is completely filled. That may occur halfway in the next record, so it may be important to be able to tell the engine the everything up to the previouos record is commited   |
+| *RS\_RET\_PREVIOUS\_COMMITTED*   | The **previous** record inside the batch has been committed, but the current one not yet. This state is introduced to support sources that fill up buffers and commit once a buffer is completely filled. That may occur halfway in the next record, so it may be important to be able to tell the engine the everything up to the previous record is committed   |
 +----------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 Note that the typical **calling cycle** is ``beginTransaction()``,
@@ -363,11 +362,10 @@ Licensing
 
 From the rsyslog point of view, plugins constitute separate projects. As
 such, we think plugins are not required to be compatible with GPLv3.
-However, this is no legal advise. If you intend to release something
+However, this is not legal advise. If you intend to release something
 under a non-GPLV3 compatible license it is probably best to consult with
 your lawyer.
 
 Most importantly, and this is definite, the rsyslog team does not expect
 or require you to contribute your plugin to the rsyslog project (but of
 course we are happy if you do).
-

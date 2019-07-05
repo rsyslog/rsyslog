@@ -23,11 +23,11 @@ default ruleset.
 Then in the relay systems there is a ruleset which is tied to both TCP and UDP
 listeners, and it receives the messages from the network, cleans them up,
 and sends them on.
-There is no mixing of these two processing paths, so having them as completly
+There is no mixing of these two processing paths, so having them as completely
 separate paths with rulesets tied to the inputs and queues on the rulesets
 makes sense.
 
-A queue on a ruleset tied to one or more inputs can be thought of as a seperate
+A queue on a ruleset tied to one or more inputs can be thought of as a separate
 instance of rsyslog, which processes those logs.
 
 

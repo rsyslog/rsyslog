@@ -10,7 +10,7 @@ library <http://www.gnu.org/software/gnutls/>`_.
 Supported Driver Modes
 ======================
 
--  **0** - unencrypted trasmission (just like `ptcp <ns_ptcp.html>`_ driver)
+-  **0** - unencrypted transmission (just like `ptcp <ns_ptcp.html>`_ driver)
 -  **1** - TLS-protected operation
 
 .. note::

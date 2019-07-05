@@ -74,7 +74,7 @@ present.xr
 
    "binary", "off", "no", "none"
 
-If syslog is recviced from an IOSXR device the syslog format will usually
+If syslog is received from an IOSXR device the syslog format will usually
 start with the RSP/LC/etc that produced the log, then the timestamp.
 It will also contain an additional syslog tag before the standard Cisco
 %TAG, this tag references the process that produced the log.

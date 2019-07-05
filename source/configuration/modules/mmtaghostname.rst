@@ -25,7 +25,7 @@ The purposes are :
   AWS Use case : applications in auto-scaling systems provides logs to rsyslog
   through udp/tcp. As a result of auto-scaling, the name of the host is based
   on an ephemeral IPs (short term meaning). In this situation rsyslog local
-  hostname is generally closed to businesss rule. So replacing hostanme received
+  hostname is generally closed to business rule. So replacing hostanme received
   by the rsyslog local Hostname provide values to the logs collected.
 
 Compile

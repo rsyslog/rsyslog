@@ -145,7 +145,7 @@ delivery\_mode
 
   "string", "no", "TRANSIENT\|PERSISTANT", "TRANSIENT"
 
-persistance of the message in the broker
+persistence of the message in the broker
 
 expiration
 ^^^^^^^^^^
@@ -169,7 +169,7 @@ populate\_properties
 
   "binary", "no", , "off"
 
-fill timestamp, appid, msgid, hostname (cutsom header) with message informations
+fill timestamp, appid, msgid, hostname (custom header) with message informations
 
 content\_type
 ^^^^^^^^^^^^^
@@ -211,10 +211,10 @@ HA configuration
 ================
 
 The module can use two rabbitmq server in a fail-over mode. To configure this mode, the host parameter has to reference the two rabbitmq servers separated by space.
-Each server can be optionaly completed with the port (useful when they are differents).
-One of the servers is choosen on startup as a preferred one. The module connects to this server with a fail-over policy which can be defined through the action parameter "recover_policy".
+Each server can be optionally completed with the port (useful when they are different).
+One of the servers is chosen on startup as a preferred one. The module connects to this server with a fail-over policy which can be defined through the action parameter "recover_policy".
 
-The module launch a back-ground thread to monitor the connection. As soon as the connection fails, the thread retries to restablish the connection and switch to the back-up server if needed to recover the service. While connected to backup server, the thread tries to reconnect to the preferred server using a "recover_policy". This behaviour allow to load balance the client accross the two rabbitmq servers on normal conditions, switch to the running server in case of failure and rebalanced on the two server as soon as the failed server is recovered without restarting clients.
+The module launch a back-ground thread to monitor the connection. As soon as the connection fails, the thread retries to restablish the connection and switch to the back-up server if needed to recover the service. While connected to backup server, the thread tries to reconnect to the preferred server using a "recover_policy". This behaviour allow to load balance the client across the two rabbitmq servers on normal conditions, switch to the running server in case of failure and rebalanced on the two server as soon as the failed server is recovered without restarting clients.
 
 The recover policy is based on 4 parameters :
 
@@ -226,7 +226,7 @@ The recover policy is based on 4 parameters :
 
 - `graceful_interval` is a longer duration used if the rabbitmq server is unstable (default is `check_interval*10`).
 
-The short failures detection is applyed in case of unstable network or server and force to switch to back-up server for at least 'gracefull-interval' avoiding heavy load on the unstable server. This can avoid dramatic scenarios in a multisites deployment.
+The short failures detection is applied in case of unstable network or server and force to switch to back-up server for at least 'graceful-interval' avoiding heavy load on the unstable server. This can avoid dramatic scenarios in a multisites deployment.
 
 Examples
 ========
@@ -283,7 +283,7 @@ Example 3
 
 HA action : 
 
-- High Availibility between `server1:5672` and `server2:1234`
+- High Availability between `server1:5672` and `server2:1234`
 
 - The routing-key is computed
 

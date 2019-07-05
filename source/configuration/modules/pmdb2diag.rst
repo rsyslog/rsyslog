@@ -53,7 +53,7 @@ timepos
 
   "integer", "no", ,"0"
 
-Poisition of the timestamp in the db2 diag log.
+Position of the timestamp in the db2 diag log.
 
 levelpos
 ^^^^^^^^
@@ -65,7 +65,7 @@ levelpos
 
   "integer", "no", ,"59"
 
-Poisition of the severity (level) in the db2 diag log.
+Position of the severity (level) in the db2 diag log.
 
 pidstarttoprogstartshift
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -77,7 +77,7 @@ pidstarttoprogstartshift
 
   "integer", "no", ,"49"
 
-Poisition of the prog related to the pid (form begining to begining) in the db2 diag log.
+Position of the prog related to the pid (form beginning to beginning) in the db2 diag log.
 
 Examples
 ========

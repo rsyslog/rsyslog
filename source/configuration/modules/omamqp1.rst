@@ -342,7 +342,7 @@ SASL.
 
 Here is an example qdrouterd SASL configuration file that allows the
 client to use either the **DIGEST-MD5** or **PLAIN** authentication
-mechanisims and specifies the path to the SASL user credentials
+mechanisms and specifies the path to the SASL user credentials
 database:
 
 .. code-block:: none

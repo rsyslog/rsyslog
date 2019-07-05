@@ -21,14 +21,14 @@ A template that tells you a little more about the message:
 A template for RFC 3164 format:
  $template RFC3164fmt,"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag%%msg%"
 
-A template for the format traditonally used for user messages:
+A template for the format traditionally used for user messages:
  $template usermsg," XXXX%syslogtag%%msg%\\n\\r"
 
-And a template with the traditonal wall-message format:
+And a template with the traditional wall-message format:
  $template wallmsg,"\\r\\n\\7Message from syslogd@%HOSTNAME% at %timegenerated%
  
 A template that can be used for the database write (please note the SQL template option)
- $template MySQLInsert,"insert iut, message, receivedat values
+ $template MySQLInsert,"insert iut, message, received at values
  ('%iut%', '%msg:::UPPERCASE%', '%timegenerated:::date-mysql%')
  into systemevents\\r\\n", SQL
 

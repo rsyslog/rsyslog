@@ -201,7 +201,7 @@ error number and reason string.
 
 The idea behind the error file is that the admin can periodically
 run a script that reads the error file and reacts on it. Note that
-the error file is kept open from when the first error occured up
+the error file is kept open from when the first error occurred up
 until rsyslog is terminated or received a HUP signal.
 
 
@@ -349,14 +349,14 @@ accumulate all action instances. The statistic origin is named "omafka" with fol
 - **topicdynacache.skipped** - count of dynamic topic cache lookups that find an existing topic and
   skip creating a new one.
 
-- **topicdynacache.miss** - count of dynamic topic cache lookps that fail to find an existing topic
+- **topicdynacache.miss** - count of dynamic topic cache lookups that fail to find an existing topic
   and end up creating new ones.
 
 - **topicdynacache.evicted** - count of dynamic topic cache entry evictions.
 
 - **acked** - count of messages that were acknowledged by kafka broker. Note that
   kafka broker provides two levels of delivery acknowledgements depending on topicConfParam:
-  default (acks=1) implies devlivery to the leader only while acks=-1 implies delivery to leader
+  default (acks=1) implies delivery to the leader only while acks=-1 implies delivery to leader
   as well as replication to all brokers.
 
 - **failures_msg_too_large** - count of messages dropped by librdkafka when it failed to
@@ -369,7 +369,7 @@ accumulate all action instances. The statistic origin is named "omafka" with fol
 - **failures_queue_full** - count of messages dropped by librdkafka when its queue becomes
   full. Note that default size of librdkafka queue is 100,000 messages.
 
-- **failures_unknown_partition** - count of messages that librdkafka failed to deliver becuase
+- **failures_unknown_partition** - count of messages that librdkafka failed to deliver because
   broker does not recognize a partition.
 
 - **failures_other** - count of all of the rest of the failures that do not fall in any of
@@ -382,7 +382,7 @@ accumulate all action instances. The statistic origin is named "omafka" with fol
   These messages can be retried depending on retry options.
 
 - **errors_broker_down** - count of messages that librdkafka could not deliver because it thins that
-  broker is not accessible. These messages can be ertried depending on options.
+  broker is not accessible. These messages can be retried depending on options.
 
 - **errors_auth** - count of messages that librdkafka could not deliver due to authentication errors.
   These messages can be retried depending on the options.
@@ -391,17 +391,17 @@ accumulate all action instances. The statistic origin is named "omafka" with fol
 
 - **rtt_avg_usec** - broker round trip time in microseconds averaged over all brokers. It is based
   on the statistics callback window specified through statistics.interval.ms parameter to librdkafka.
-  Averag exclude brokers with less than 100 microseconds rtt.
+  Average exclude brokers with less than 100 microseconds rtt.
 
-- **throttle_avg_msec** - broker throttling time in milliseconds averaged overa all brokers. This is
-  also a part of window statistics delivered by librdkakfka. Averge excludes brokers with zero throttling time.
+- **throttle_avg_msec** - broker throttling time in milliseconds averaged over all brokers. This is
+  also a part of window statistics delivered by librdkakfka. Average excludes brokers with zero throttling time.
 
-- **int_latency_avg_usec** - intranal librdkafka producer queue latency in microsconds averaged other
-  all brokers. This is also part of window statistics and average excludes broers with zero internal latency.
+- **int_latency_avg_usec** - internal librdkafka producer queue latency in microseconds averaged other
+  all brokers. This is also part of window statistics and average excludes brokers with zero internal latency.
 
 Note that three window statics counters are not safe with multiple clients. When statistics callback is
 enabled, for example, by using statics.callback.ms=60000, omkafa will generate an internal log message every
-minute for the corresponing omkafka action:
+minute for the corresponding omkafka action:
 
 .. code-block:: none
 
@@ -409,7 +409,7 @@ minute for the corresponing omkafka action:
 	handler_name=collections.rsyslog.core#producer-1 replyq=0 msg_cnt=30 msg_size=37986 msg_max=100000
 	msg_size_max=1073741824 rtt_avg_usec=41475 throttle_avg_msec=0 int_latency_avg_usec=2943224 [v8.32.0]
 
-For multiple actions using statistics callabck, there will be one such record for each action after specified
+For multiple actions using statistics callback, there will be one such record for each action after specified
 window period. See https://github.com/edenhill/librdkafka/wiki/Statistics for more details on statistics
 callback values.
 

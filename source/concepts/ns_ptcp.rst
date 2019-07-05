@@ -6,7 +6,7 @@ transport without security properties.
 
 Supported Driver Modes
 
--  0 - unencrypted trasmission
+-  0 - unencrypted transmission
 
 Supported Authentication Modes
 

@@ -100,7 +100,7 @@ True Global Directives
    encountered. You should have a good reason for using this directive!
 -  **$LocalHostIPIF** <interface name> - (available since 5.9.6) - if
    provided, the IP of the specified interface (e.g. "eth0") shall be
-   used as fromhost-ip for locall-originating messages. If this
+   used as fromhost-ip for local-originating messages. If this
    directive is not given OR the interface cannot be found (or has no IP
    address), the default of "127.0.0.1" is used. Note that this
    directive can be given only once. Trying to reset will result in an

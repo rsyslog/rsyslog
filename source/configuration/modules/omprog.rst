@@ -36,7 +36,7 @@ retry. If it then works, you know for sure you have a SELinux issue.
 
 Starting with 8.4.0, rsyslogd emits an error message via the ``syslog()``
 API call when there is a problem executing the binary. This can be
-extremely valuable in troubleshooting. For those technically savy:
+extremely valuable in troubleshooting. For those technically savvy:
 when we execute a binary, we need to fork, and we do not have
 full access to rsyslog's usual error-reporting capabilities after the
 fork. As the actual execution must happen after the fork, we cannot
@@ -44,7 +44,7 @@ use the default error logger to emit the error message. As such,
 we use ``syslog()``. In most cases, there is no real difference
 between both methods. However, if you run multiple rsyslog instances,
 the message shows up in that instance that processes the default
-log socket, which may be different from the one where the error occured.
+log socket, which may be different from the one where the error occurred.
 Also, if you redirected the log destination, that redirection may
 not work as expected.
 

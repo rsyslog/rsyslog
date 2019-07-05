@@ -16,7 +16,7 @@ work if the given order is preserved. Re-ordering the directives can
 break configurations and has broken them in practice. If you intend to
 re-order them, please be sure that you fully understand how the
 configuration language works and, most importantly, which statements
-form a block together. Please also note that we understand the the
+form a block together. Please also note that we understand the
 current configuration file format is ugly. However, there has been more
 important work in the way of enhancing it. If you would like to
 contribute some time to improve the config file language, please let us

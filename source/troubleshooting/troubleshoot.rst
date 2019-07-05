@@ -91,7 +91,7 @@ This means all include file content is directly inside that file at
 exactly the spot where rsyslog sees it. The output file is almost a
 verbatim copy of the original full rsyslog config. For troubleshooting
 purposes it additionally contains comment lines that indicate where
-content from specifc include files begins and ends. The include file
+content from specific include files begins and ends. The include file
 is correctly named in these comments.
 
 This option can be used together with `-N`. Again, it is best to run
@@ -146,11 +146,11 @@ To do this test, you need to
 
   - check if you received the test message. Note that you might also
     have received additional messages if the original sender process
-    was not stopped. If you see garbagge, most probably some sender
+    was not stopped. If you see garbage, most probably some sender
     tries to send via TLS.
   - you can stop nc by <ctl>-c
 
-If you did not see the test message arrive at the centeral server,
+If you did not see the test message arrive at the central server,
 the problem is most probably rooted in the network configuration
 or other parts of the system configuration. Things to check are
 - firewall settings

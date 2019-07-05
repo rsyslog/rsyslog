@@ -75,7 +75,7 @@ Edges are labeled with information about when they are taken. For
 filters, the type of filter, but not any specifics, are given. It is
 also indicated if no filter is applied in the configuration file (by
 using a "\*.\*" selector). Edges without labels are unconditionally
-taken. The actions themselfs are labeled with the name of the output
+taken. The actions themselves are labeled with the name of the output
 module that handles them. If provided, the name given via "ActionName"
 is used instead. No further details are provided.
 

@@ -14,7 +14,7 @@ which configures this name to use the parser module with set parameters.
 This is important as the ruleset() object does not support to set parser
 parameters. Instead, if parameters are needed, a proper parser name must
 be defined using the parser() object. A parser name defined via the
-parser() object can be used whereever a parser name can occur.
+parser() object can be used wherever a parser name can occur.
 
 Note that not all message parser modules are supported in the parser()
 object. The reason is that many do not have any user-selectable

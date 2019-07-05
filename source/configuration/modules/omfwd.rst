@@ -226,7 +226,7 @@ Compression level for messages.
 Up until rsyslog 7.5.1, this was the only compression setting that
 rsyslog understood. Starting with 7.5.1, we have different
 compression modes. All of them are affected by the ziplevel. If,
-however, no mode is explicitely set, setting ziplevel also turns on
+however, no mode is explicitly set, setting ziplevel also turns on
 "single" compression mode, so pre 7.5.1 configuration will continue
 to work as expected.
 
@@ -265,7 +265,7 @@ messages, it can be as high as 95+% compression (so only one
 twentieth of data is actually transmitted!). Note that this mode
 introduces extra latency, as data is only sent when the compressor
 emits new compressed data. For typical syslog messages, this can mean
-that some hundered messages may be held in local buffers before they
+that some hundred messages may be held in local buffers before they
 are actually sent. This mode has been introduced in 7.5.1.
 
 **Note: currently only imptcp supports receiving stream-compressed
@@ -296,10 +296,10 @@ network. We have seen cases where for several thousand message not a
 single byte was sent. This is good in the sense that it can happen
 only if we have a great compression ratio. This is most probably a
 very good mode for busy machines which will process several thousand
-messages per second and te resulting short delay will not pose any
+messages per second and the resulting short delay will not pose any
 problems. However, the default is more conservative, while it works
 more "naturally" with even low message traffic. Even in flush mode,
-notable compression should be achivable (but we do not yet have
+notable compression should be achievable (but we do not yet have
 practice reports on actual compression ratios).
 
 
@@ -442,7 +442,7 @@ StreamDriver.PermitExpiredCerts
 
    "string", "warn", "no", "none"
 
-Controls how expired certificates will be handeled when stream driver is in TLS mode.
+Controls how expired certificates will be handled when stream driver is in TLS mode.
 It can have one of the following values:
 
 -  on = Expired certificates are allowed
@@ -540,7 +540,7 @@ option can be used in cases where too-quick sending of UDP messages
 causes message loss (UDP is permitted to drop packets if e.g. a device
 runs out of buffers). Usually, you do not want this delay. The parameter
 was introduced in order to support some testbench tests. Be sure
-to think twice before you use it in producetion.
+to think twice before you use it in production.
 
 
 gnutlsPriorityString
@@ -565,7 +565,7 @@ defaults. If this parameter is NULL, the default settings are used. More
 information about priority Strings
 `here <https://gnutls.org/manual/html_node/Priority-Strings.html>`_.
 
-For OpenSSL, the setting can be used to pass configuration commands to openssl libray.
+For OpenSSL, the setting can be used to pass configuration commands to openssl library.
 OpenSSL Version 1.0.2 or higher is required for this feature.
 A list of possible commands and their valid values can be found in the documentation:
 https://www.openssl.org/docs/man1.0.2/man3/SSL_CONF_cmd.html
@@ -576,7 +576,7 @@ Command and value are separated by equal sign (=). Here are a few samples:
 Example 1
 ---------
 
-This will allow all protocols except for SSv2 and SSLv3:
+This will allow all protocols except for SSLv2 and SSLv3:
 
 .. code-block:: none
 
@@ -586,7 +586,7 @@ This will allow all protocols except for SSv2 and SSLv3:
 Example 2
 ---------
 
-This will allow all protocols except for SSv2, SSLv3 and TLSv1.
+This will allow all protocols except for SSLv2, SSLv3 and TLSv1.
 It will also set the minimum protocol to TLSv1.2
 
 .. code-block:: none

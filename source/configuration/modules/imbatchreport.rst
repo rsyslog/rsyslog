@@ -21,30 +21,30 @@ result file usually named with the name of the batch and its date of execution.
 Those files have sense only when they are complete in one log. When the file is
 collected it becomes useless and, as a statefile, should be deleted or renamed.
 
-This module handle those characterics :
+This module handle those characteristics :
 
 - reads the complete file,
 
 - extracts the structured data from the file (see managing structured data),
 
-- transmit the message to ouput module(s),
+- transmit the message to output module(s),
 
-- action is applied to the file to flag it as treated. Two diffeent actions can be applied: delete or rename the file.
+- action is applied to the file to flag it as treated. Two different actions can be applied: delete or rename the file.
 
 If the file is too large to be handled in the message size defined by rsyslog,
 the file is renamed as a "rejected file". See \$maxMessageSize
 
 **Managing structured data**
 
-As part of the batch summary, the structure datas can be provided in the batch
+As part of the batch summary, the structure data can be provided in the batch
 report file as the last part of the file. 
 
 The last non-space char has to be a closing brace ']' then all chars between
-this char up to the closest opening brace '[' are computed as structured datas.
+this char up to the closest opening brace '[' are computed as structured data.
 
 All the structured data has to be contained in the last 150 chars of the file.
 
-In general, structured data should contain the bacth name (program) and the 
+In general, structured data should contain the batch name (program) and the 
 start timestamp. Those two values can be extract to fill rsyslog message 
 attributes.
 
@@ -127,7 +127,7 @@ DeduplicateSpaces
 
 The parameter modify the way consecutive spaces like chars are managed.
 When it is setted to "on", consecutive spaces like chars are reduced to a single one
-and trailing space like chars are supressed. 
+and trailing space like chars are suppressed. 
 
 Delete
 ^^^^^^
@@ -158,7 +158,7 @@ This parameter informs the module to rename the report to flag it as treated.
 The file is renamed using the <regex> to identify part of the file name that 
 has to be replaced it:
 
-- by <rename> if the file was succesfully treated,
+- by <rename> if the file was successfully treated,
 
 - by <reject> if the file is too large to be sent.
 

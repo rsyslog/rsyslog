@@ -30,7 +30,7 @@ Note: parameter names are case-insensitive.
 
    This names the action. The name is used for statistics gathering
    and documentation. If no name is given, one is dynamically generated
-   based on the occurence of this action inside the rsyslog configuration.
+   based on the occurrence of this action inside the rsyslog configuration.
    Actions are sequentially numbered from 1 to n.
 
 -  **type** string
@@ -427,7 +427,7 @@ compressed.
 Note that IPv6 addresses contain colons. So if an IPv6 address is
 specified in the hostname part, rsyslogd could not detect where the IP
 address ends and where the port starts. There is a syntax extension to
-support this: put squary brackets around the address (e.g. "[2001::1]").
+support this: put square brackets around the address (e.g. "[2001::1]").
 Square brackets also work with real host names and IPv4 addresses, too.
 
 A valid sample to send messages to the IPv6 host 2001::1 at port 515 is
@@ -477,7 +477,7 @@ module's doc on what to supply. The general syntax is as follows:
 :modname:params;template
 
 Currently, the ommysql database output module supports this syntax (in
-addtion to the ">" syntax it traditionally supported). For ommysql, the
+addition to the ">" syntax it traditionally supported). For ommysql, the
 module name is "ommysql" and the params are the traditional ones. The
 ;template part is not module specific, it is generic rsyslog
 functionality available to all modules.
@@ -521,7 +521,7 @@ action is used. This is done by placing the
   $ModLoad ommysql
 
 directive some place above the first use of the database write (we
-recommend doing at the the beginning of the config file).
+recommend doing at the beginning of the config file).
 
 Discard / Stop
 ~~~~~~~~~~~~~~
@@ -548,7 +548,7 @@ For example,
 
 \*.\*   stop
 
-discards everything (ok, you can achive the same by not running rsyslogd
+discards everything (ok, you can archive the same by not running rsyslogd
 at all...).
 
 Note that in legacy configuration the tilde character "~" can also be

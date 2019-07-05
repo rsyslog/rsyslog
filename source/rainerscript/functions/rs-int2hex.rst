@@ -40,7 +40,7 @@ produces
 Negative Integer given
 ----------------------
 
-This example showes the result on a 64-bit system when a negative
+This example shows the result on a 64-bit system when a negative
 integer such as -13 is put into the function.
 
 .. code-block:: none

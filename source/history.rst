@@ -121,7 +121,7 @@ modules, now running on a separate thread each.
 On **January, 2nd 2008**, rsyslog 1.21.2 is re-released as rsyslog
 v2.0.0 stable. This is a major milestone as far as the stable build is
 concerned. v3 is not yet officially announced. Other than the stable v2
-build, v3 will not be backwards compatibile (including missing
+build, v3 will not be backwards compatible (including missing
 compatibility to stock sysklogd) for quite a while. Config file changes
 are required and some command line options do no longer work due to the
 new design.

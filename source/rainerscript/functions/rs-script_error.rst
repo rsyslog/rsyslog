@@ -9,7 +9,7 @@ script_error()
 
 Returns the error state of functions that support it. C-Developers note that this
 is similar to ``errno`` under Linux. The error state corresponds to the function
-immediatly called before. The next function call overrides it.
+immediately called before. The next function call overrides it.
 
 Right now, the value 0 means that that the previous functions succeeded, any other
 value that it failed. In the future, we may have more fine-grain error codes.

@@ -17,8 +17,8 @@ Debugging with tests
 | **export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"**
 | **export RSYSLOG_DEBUGLOG="log"**
 
-| A debug log will be writen now, but remember to put the **#** back again
-| before commiting your changes. Otherwise it won't work.
+| A debug log will be written now, but remember to put the **#** back again
+| before committing your changes. Otherwise it won't work.
 
 Memory debugging
 ----------------
@@ -39,7 +39,7 @@ Valgrind
 Address sanitizer
 ~~~~~~~~~~~~~~~~~
 
-| If you want to use adress sanitizer you need to set your CFLAGS. Use this command:
+| If you want to use address sanitizer you need to set your CFLAGS. Use this command:
 | **export CFLAGS="-g -fsanitizer=address"**
 | After this is done you need to configure and build rsyslog again, otherwise it won't work.
 

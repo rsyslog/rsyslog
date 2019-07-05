@@ -27,7 +27,7 @@ by the shell:
 
 - single quotes
 
-  Values are used unaltered, execept for escape sequences, which are
+  Values are used unaltered, except for escape sequences, which are
   escaped.
 
 - double quotes
@@ -56,7 +56,7 @@ by the shell:
 
     * env SOMEPATH is set to "/var/log/custompath"
     * config is: param=echo $SOMEPATH/myfile
-    * param than is expaned to "/var/log/custompath/myfile"
+    * param than is expanded to "/var/log/custompath/myfile"
 
     Note, however, that some common bash features are not supported.
     Most importantly, `${VAR}` does not work. Also, environment variables

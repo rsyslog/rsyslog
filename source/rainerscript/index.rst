@@ -5,7 +5,7 @@ RainerScript
 well-suited for processing network events and configuring event
 processors.**
 It is the prime configuration language used for rsyslog.
-Please note that RainerScript may not be abreviated as rscript,
+Please note that RainerScript may not be abbreviated as rscript,
 because that's somebody else's trademark.
 
 Some limited RainerScript support is available since rsyslog 3.12.0

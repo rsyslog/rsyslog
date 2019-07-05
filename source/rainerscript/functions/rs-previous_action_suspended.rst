@@ -7,7 +7,7 @@ Purpose
 
 previous_action_suspended()
 
-This boolenan function returns 1 (true) if the previous action is suspended,
+This boolean function returns 1 (true) if the previous action is suspended,
 0 (false) otherwise. It can be used to initiate action that shall happen if
 a function failed. Please note that an action failure may not be immediately
 detected, so the function return value is a bit fuzzy. It is guaranteed, however

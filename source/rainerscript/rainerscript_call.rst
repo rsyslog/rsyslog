@@ -31,8 +31,8 @@ syntax
 ``call rulesetname``
 
 Where "rulesetname" is the name of a ruleset that is defined elsewhere
-inside the configration. If the call is synchronous or asynchronous
-depends on the ruleset parameters. This cannot be overriden by the
+inside the configuration. If the call is synchronous or asynchronous
+depends on the ruleset parameters. This cannot be overridden by the
 "call" statement.
 
 related links

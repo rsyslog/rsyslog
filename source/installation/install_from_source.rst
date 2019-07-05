@@ -83,7 +83,7 @@ the development one, ./configure will fail.
 
 As a concrete example, you may want to build ommysql. It obviously requires
 a package like *mysql-client*, but that is just the regular package and not
-sufficient to buid rsyslog successfully. To do so, you need to also install
+sufficient to build rsyslog successfully. To do so, you need to also install
 something named like *mysql-client-dev*.
 
 Usually, the regular package is

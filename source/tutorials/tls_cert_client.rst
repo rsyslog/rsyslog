@@ -3,7 +3,7 @@ Setting up a client
 
 In this step, we configure a client machine. We from our scenario, we
 use zuse.example.net. You need to do the same steps for all other
-clients, too (in the example, that meanst turng.example.net). The client
+clients, too (in the example, that meanst turing.example.net). The client
 check's the server's identity and talks to it only if it is the expected
 server. This is a very important step. Without it, you would not detect
 man-in-the-middle attacks or simple malicious servers who try to get

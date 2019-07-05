@@ -16,7 +16,7 @@ Syslog Standardization
 ----------------------
 
 The syslog protocol has not been standardized until relatively
-recently.The first document "smelling" a bit like a standard is
+recently. The first document "smelling" a bit like a standard is
 :rfc:`3164`, which dates back to August
 2001. The problem is that this document is no real standard. It has
 assigned "informational" status by the `IETF <http://www.ietf.org>`_
@@ -33,7 +33,7 @@ reference to (informational) RFC 3164 which may be interpreted in a way
 that RFC3195 standardizes the format layed out in RFC 3164 by virtue of
 referencing them. So RFC3195 seems to extend its standardization domain
 to the concepts layed out in RFC 3164 (which is why I tend to find that
-refrence questionable). In that sense, RFC3195 standardizes the format
+reference questionable). In that sense, RFC3195 standardizes the format
 informationally described in RFC3164, Section 4. But it demands it only
 for the scope of RFC3195, which is syslog over BEEP - and NOT syslog
 over UDP. So one may argue whether or not the RFC3164 format could be
@@ -46,7 +46,7 @@ failure).
 Now let's for a short moment assume that RFC3195 would somehow be able
 to demand RFC3164 format for non-BEEP syslog. So we could use RFC3164
 format as a standard. But does that really help? Let's cite RFC 3164,
-right at the begining of section 4 (actually, this is the first
+right at the beginning of section 4 (actually, this is the first
 sentence):
 
     ::
@@ -69,7 +69,7 @@ sentence):
            While this is a valid message, it has extraordinarily little useful
            information.
 
-As you can see, RFC3164 explicitely states that no format at all is
+As you can see, RFC3164 explicitly states that no format at all is
 required.
 
 Now a side-note is due: all of this does not mean that the RFC3164
@@ -129,7 +129,7 @@ message:
 
     <144>Tue Sep 23 11:40:01 taghost sample message
 
-Does it contain a hostname? Mabye. The value "taghost" is a valid
+Does it contain a hostname? Maybe. The value "taghost" is a valid
 hostname. Of course, it is also a valid tag. If it is a hostname, the
 tag's value is "sample" and the msg value is "message". Or is the
 hostname missing, the tag is "taghost" and msg is "sample message"? As a
@@ -141,7 +141,7 @@ One approach is to configure the parser so that it never expects
 hostnames. This becomes problematic if you receive messages from
 multiple devices. Over time, I may implement parser conditionals, but
 this is not yet available and I am not really sure if it is needed
-comlexity...
+complexity...
 
 Things like this, happen. Even more scary formats happen in practice.
 Even from mainstream vendors. For example, I was just asked about this
@@ -157,8 +157,8 @@ intelligence is not sufficient to guess if there is a TAG or not (is
 "[ERROR]" a tag or part of the message). I may not be the smartest guy,
 but don't expect me to program a parser that is smarter than me.
 
-To the best of my konwledge, these vendor's device's syslog format can
-be configured, so it would proabably be a good idea to include a
+To the best of my knowledge, these vendor's device's syslog format can
+be configured, so it would probably be a good idea to include a
 (sufficiently well-formed) timestamp, the sending hostname and (maybe?)
 a tag to make this message well parseable. I will also once again take
 this sample and see if we can apply some guesswork. For example, "[" can
@@ -204,7 +204,7 @@ message is parsed into properties. There are also properties available
 which do not stem back directly to parsing. Most importantly, %fromhost%
 property holds the name of the system rsyslog received the message from.
 In non-relay cases, this can be used instead of hostname. In relay
-cases, there is no cure other than to either fix the orginal sender or
+cases, there is no cure other than to either fix the original sender or
 at least one of the relays in front of the rsyslog instance in question.
 Similarly, you can use %timegenerated% instead of %timereported%.
 Timegenerated is the time the message hit rsyslog for the first time.
