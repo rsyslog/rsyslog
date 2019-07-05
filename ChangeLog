@@ -1,4 +1,4 @@
-------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 Version 8.1907.0 (aka 2019.07) 2019-07-09
 NOTE TO MAINTAINERS: libee is not used by rsyslog for quite some while.
 However, we never included this info into the changelog. So if you still
@@ -6,7 +6,14 @@ make rsyslog depend on libee (some do this), you should stop doing so now.
 Libee is dead and no longer been maintained nor hosted by us. Old versions
 can still be found at github for those in need.
 
+GENERAL NOTE: during 8.1907 scheduled release timeframe we changed the ChangeLog
+format to include the date a change went into master branch. This is to provide
+an easy way to identify which changes went into the respective daily stable.
 
+- 2019-07-05 function bugfix: "ipv42num" misspelled as "ip42mum" (without "v")
+  To fix the issue but keep compatible with existing deployments
+  both function names are now supported.
+  closes https://github.com/rsyslog/rsyslog/issues/3676
 - 2019-07-04 fix leading double space in rsyslog startup messages
   see also https://github.com/rsyslog/rsyslog/issues/2979
 - omamqp1: port to latest api, add tests
