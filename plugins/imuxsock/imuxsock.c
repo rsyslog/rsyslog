@@ -44,6 +44,9 @@
 #ifdef HAVE_LIBSYSTEMD
 #	include <systemd/sd-daemon.h>
 #endif
+#if defined(__FreeBSD__)
+	#include <sys/param.h>
+#endif
 #include "rsyslog.h"
 #include "dirty.h"
 #include "cfsysline.h"
@@ -173,6 +176,11 @@ static int nfd = 1; /* number of active unix sockets  (socket 0 is always reserv
 			socket, even if it is not enabled. */
 static int sd_fds = 0;			/* number of systemd activated sockets */
 
+#if (defined(__FreeBSD__) && (__FreeBSD_version >= 1200061))
+	#define DFLT_bUseSpecialParser 0
+#else
+	#define DFLT_bUseSpecialParser 1
+#endif
 #define DFLT_bCreatePath 0
 #define DFLT_ratelimitInterval 0
 #define DFLT_ratelimitBurst 200
@@ -320,7 +328,7 @@ createInstance(instanceConf_t **pinst)
 	inst->ratelimitBurst = DFLT_ratelimitBurst;
 	inst->ratelimitSeverity = DFLT_ratelimitSeverity;
 	inst->bUseFlowCtl = 0;
-	inst->bUseSpecialParser = 1;
+	inst->bUseSpecialParser = DFLT_bUseSpecialParser;
 	inst->bParseHost = UNSET;
 	inst->bIgnoreTimestamp = 1;
 	inst->bCreatePath = DFLT_bCreatePath;
@@ -1240,7 +1248,7 @@ CODESTARTbeginCnfLoad
 	pModConf->bAnnotateSysSock = 0;
 	pModConf->bParseTrusted = 0;
 	pModConf->bParseHost = UNSET;
-	pModConf->bUseSpecialParser = 1;
+	pModConf->bUseSpecialParser = DFLT_bUseSpecialParser;
 	/* if we do not process internal messages, we will see messages
 	 * from ourselves, and so we need to permit this.
 	 */
