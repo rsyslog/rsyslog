@@ -10,6 +10,12 @@ GENERAL NOTE: during 8.1907 scheduled release timeframe we changed the ChangeLog
 format to include the date a change went into master branch. This is to provide
 an easy way to identify which changes went into the respective daily stable.
 
+- 2019-07-05 imuxsock: support FreeBSD 12 out of the box
+  FreeBSD 12 uses RFC5424 on the system log socket by default. This
+  format is not supported by the special parser used in imuxsock.
+  Thus for FreeBSD the default needs to be changed to use the
+  regular parser chain by default. That is all this commit does.
+  closes https://github.com/rsyslog/rsyslog/issues/3694
 - 2019-07-05 function bugfix: "ipv42num" misspelled as "ip42mum" (without "v")
   To fix the issue but keep compatible with existing deployments
   both function names are now supported.
