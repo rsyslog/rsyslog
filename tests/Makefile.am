@@ -292,6 +292,7 @@ TESTS +=  \
 	queue-persist.sh \
 	pipeaction.sh \
 	execonlyonce.sh \
+	suspend-omfwd-via-file.sh \
 	execonlywhenprevsuspended.sh \
 	execonlywhenprevsuspended2.sh \
 	execonlywhenprevsuspended3.sh \
@@ -2134,6 +2135,7 @@ EXTRA_DIST= \
 	execonlywhenprevsuspended-queue.sh \
 	execonlywhenprevsuspended-nonsusp.sh \
 	execonlywhenprevsuspended-nonsusp-queue.sh \
+	suspend-omfwd-via-file.sh \
 	tabescape_dflt.sh \
 	tabescape_dflt-udp.sh \
 	tabescape_off.sh \

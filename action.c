@@ -687,7 +687,7 @@ static void actionCommitted(action_t * const pThis, wti_t * const pWti)
 /* set action state according to external state file (if configured)
 */
 static rsRetVal
-checkExternalStateFile(action_t *__restrict__ const pThis)
+checkExternalStateFile(const action_t *const pThis, const wti_t *const pWti)
 {
 	char filebuf[1024];
 	int fd = -1;
@@ -715,9 +715,12 @@ checkExternalStateFile(action_t *__restrict__ const pThis)
 	filebuf[r] = '\0';
 	dbgprintf("external state file content: '%s'\n", filebuf);
 	if(!strcmp(filebuf, "SUSPENDED")) {
-		LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
-		      "action '%s' suspended (module '%s') by external state file",
-		      pThis->pszName, pThis->pMod->pszName);
+		const int act_state = getActionState(pWti, pThis);
+		if((act_state != ACT_STATE_RTRY) && (act_state != ACT_STATE_SUSP)) {
+			LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
+				"action '%s' suspended (module '%s') by external state file",
+				pThis->pszName, pThis->pMod->pszName);
+		}
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
@@ -843,7 +846,7 @@ actionDoRetry(action_t * const pThis, wti_t * const pWti)
 	while((*pWti->pbShutdownImmediate == 0) && getActionState(pWti, pThis) == ACT_STATE_RTRY) {
 		DBGPRINTF("actionDoRetry: %s enter loop, iRetries=%d, ResumeInRow %d\n",
 			pThis->pszName, iRetries, getActionResumeInRow(pWti, pThis));
-		iRet = checkExternalStateFile(pThis);
+		iRet = checkExternalStateFile(pThis, pWti);
 		if(iRet == RS_RET_OK) {
 			iRet = pThis->pMod->tryResume(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
 		}
@@ -1206,7 +1209,7 @@ actionCallCommitTransaction(action_t * const pThis,
 	DBGPRINTF("entering actionCallCommitTransaction[%s], state: %s, nMsgs %u\n",
 		  pThis->pszName, getActStateName(pThis, pWti), nparams);
 
-	iRet = checkExternalStateFile(pThis);
+	iRet = checkExternalStateFile(pThis, pWti);
 	if(iRet == RS_RET_OK) {
 		iRet = pThis->pMod->mod.om.commitTransaction(
 			    pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData,
@@ -1450,8 +1453,8 @@ actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 
 	DBGPRINTF("actionCommit[%s]: enter, %d msgs\n", pThis->pszName, wrkrInfo->p.tx.currIParam);
 	if(!pThis->isTransactional ||
-	   pWti->actWrkrInfo[pThis->iActionNbr].p.tx.currIParam == 0 ||
-	   getActionState(pWti, pThis) == ACT_STATE_SUSP
+	   pWti->actWrkrInfo[pThis->iActionNbr].p.tx.currIParam == 0 /* ||
+	   getActionState(pWti, pThis) == ACT_STATE_SUSP */
 	   ) {
 		FINALIZE;
 	}
@@ -1571,7 +1574,7 @@ processMsgMain(action_t *__restrict__ const pAction,
 
 	CHKiRet(prepareDoActionParams(pAction, pWti, pMsg, ttNow));
 
-	if(checkExternalStateFile(pAction) == RS_RET_SUSPENDED) {
+	if(checkExternalStateFile(pAction, pWti) == RS_RET_SUSPENDED) {
 		DBGPRINTF("processMsgMain suspends via external state file\n");
 		actionSuspend(pAction, pWti);
 	}

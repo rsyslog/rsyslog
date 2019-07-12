@@ -58,5 +58,5 @@ wait_shutdown
 export SEQ_CHECK_FILE="$RSYSLOG_OUT_LOG"
 seq_check 2500 4999
 export SEQ_CHECK_FILE="$RSYSLOG2_OUT_LOG"
-seq_check 0 4999
+seq_check 0 4999 -d
 exit_test
