@@ -1,5 +1,6 @@
 patch*
 *~
+*.gc*
 *.iml
 .idea
 .tar.gz
@@ -21,6 +22,8 @@ configure
 libtool
 ltmain.sh
 aclocal.m4
+miniamqpsrvr
+journal_print
 depcomp
 stamp-h1
 INSTALL
@@ -32,7 +35,8 @@ rsyslog.service
 ylwrap
 *.orig
 rg.conf*
-*.swp
+*.sw?
+*.sv?
 *.cache
 # some common names I use during development
 utils
@@ -89,3 +93,5 @@ tests/rstb_*
 .vscode/
 *.sw*
 clang_output_*
+tools/logctl
+tools/rscryutil
