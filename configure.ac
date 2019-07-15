@@ -759,29 +759,31 @@ AC_ARG_ENABLE(mysql,
          esac],
         [enable_mysql=no]
 )
-if test "x$enable_mysql" = "xyes"; then
-  AC_CHECK_PROG(
-    [MYSQL_CONFIG],
-    [mysql_config],
-    [mysql_config],
-    [no],,
-  )
-  if test "x${MYSQL_CONFIG}" = "xno"; then
-    AC_MSG_FAILURE([mysql_config not found - usually a package named mysql-dev, libmysql-dev or similar, is missing - install it to fix this issue])
-  fi
-  AC_CHECK_LIB(
-    [mysqlclient],
-    [mysql_init],
-    [MYSQL_CFLAGS=`$MYSQL_CONFIG --cflags`
-     MYSQL_LIBS=`$MYSQL_CONFIG --libs`
-    ],
-    [AC_MSG_FAILURE([MySQL library is missing])],
-    [`$MYSQL_CONFIG --libs`]
-  )
+AS_IF([test "x$enable_mysql" = "xyes"],[
+  PKG_CHECK_MODULES([MYSQL],[mysqlclient],,[
+    AC_CHECK_PROG(
+      [MYSQL_CONFIG],
+      [mysql_config],
+      [mysql_config],
+      [no],,
+    )
+    AS_IF([test "x${MYSQL_CONFIG}" = "xno"],[
+      AC_MSG_FAILURE([mysql_config not found - usually a package named mysql-dev, libmysql-dev or similar, is missing - install it to fix this issue])
+    ])
+    MYSQL_CFLAGS=`$MYSQL_CONFIG --cflags`
+    MYSQL_LIBS=`$MYSQL_CONFIG --libs`
+  ])
   AC_MSG_CHECKING(if we have mysql_library_init)
   save_CFLAGS="$CFLAGS"
   CFLAGS="$CFLAGS $MYSQL_CFLAGS"
   save_LIBS="$LIBS"
+  AC_CHECK_LIB(
+    [mysqlclient],
+    [mysql_init],
+    ,
+    [AC_MSG_FAILURE([MySQL library is missing])],
+    [$MYSQL_LIBS]
+  )
   LIBS="$LIBS $MYSQL_LIBS"
   AC_TRY_LINK(
     [#include <mysql.h>
@@ -791,7 +793,7 @@ if test "x$enable_mysql" = "xyes"; then
     [have_mysql_library_init=no])
   CFLAGS="$save_CFLAGS"
   LIBS="$save_LIBS"
-fi
+])
 AM_CONDITIONAL(ENABLE_MYSQL, test x$enable_mysql = xyes)
 if test "$have_mysql_library_init" = "yes"; then
   AC_DEFINE([HAVE_MYSQL_LIBRARY_INIT], [1], [mysql_library_init available])
