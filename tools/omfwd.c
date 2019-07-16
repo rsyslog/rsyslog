@@ -557,6 +557,7 @@ TCPSendBufUncompressed(wrkrInstanceData_t *pWrkrData, uchar *buf, unsigned len)
 
 	while(alreadySent != len) {
 		lenSend = len - alreadySent;
+DBGPRINTF("omfwd: TCP sending: %*s\n", (int) lenSend, buf+alreadySent);
 		CHKiRet(netstrm.Send(pWrkrData->pNetstrm, buf+alreadySent, &lenSend));
 		DBGPRINTF("omfwd: TCP sent %ld bytes, requested %u\n", (long) lenSend, len - alreadySent);
 		alreadySent += lenSend;

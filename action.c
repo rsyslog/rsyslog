@@ -1296,7 +1296,10 @@ actionTryCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pW
 	DEFiRet;
 
 	DBGPRINTF("actionTryCommit[%s] enter\n", pThis->pszName);
-	CHKiRet(actionPrepare(pThis, pWti));
+	iRet = actionPrepare(pThis, pWti);
+	if(iRet != RS_RET_OK && iRet != RS_RET_SUSPENDED) {
+		FINALIZE; /* TODO: handle other errors as well --> github issue??? 2019-07-12 */
+	}
 
 	CHKiRet(doTransaction(pThis, pWti, iparams, nparams));
 
@@ -1467,11 +1470,17 @@ actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 	 * than configured (if temporary failure), but this unavoidable and should
 	 * do no real harm. - rgerhards, 2017-10-06
 	 */
-	iRet = actionTryCommit(pThis, pWti, wrkrInfo->p.tx.iparams, wrkrInfo->p.tx.currIParam);
-DBGPRINTF("actionCommit[%s]: return actionTryCommit %d\n", pThis->pszName, iRet);
-	if(iRet == RS_RET_OK) {
-		FINALIZE;
-	}
+	do {
+		iRet = actionTryCommit(pThis, pWti, wrkrInfo->p.tx.iparams, wrkrInfo->p.tx.currIParam);
+	DBGPRINTF("actionCommit[%s]: return actionTryCommit %d\n", pThis->pszName, iRet);
+		if(iRet == RS_RET_OK) {
+			FINALIZE;
+		} else if(iRet == RS_RET_SUSPENDED) {
+			actionTryResume(pThis, pWti);
+		}
+	} while(iRet == RS_RET_SUSPENDED);
+
+	DBGPRINTF("actionCommit[%s]: full batch commit FAILED with iRet %d\n", pThis->pszName, iRet);
 
 	/* check if this was a single-message batch. If it had a datafail error, we
 	 * are done. If it is a multi-message batch, we need to sort out the individual
@@ -1574,10 +1583,12 @@ processMsgMain(action_t *__restrict__ const pAction,
 
 	CHKiRet(prepareDoActionParams(pAction, pWti, pMsg, ttNow));
 
+	#if 0 // TODO: CHECK
 	if(checkExternalStateFile(pAction, pWti) == RS_RET_SUSPENDED) {
 		DBGPRINTF("processMsgMain suspends via external state file\n");
 		actionSuspend(pAction, pWti);
 	}
+	#endif
 
 	if(pAction->isTransactional) {
 		pWti->actWrkrInfo[pAction->iActionNbr].pAction = pAction;
@@ -1585,6 +1596,12 @@ processMsgMain(action_t *__restrict__ const pAction,
 		actionPrepare(pAction, pWti);
 		iRet = getReturnCode(pAction, pWti);
 		FINALIZE;
+	}
+	else {  // TODO KEEP?
+		if(checkExternalStateFile(pAction, pWti) == RS_RET_SUSPENDED) {
+			DBGPRINTF("processMsgMain suspends via external state file\n");
+			actionSuspend(pAction, pWti);
+		}
 	}
 
 	iRet = actionProcessMessage(pAction,
