@@ -50,6 +50,7 @@ typedef struct actWrkrInfo {
 	sbool	bHadAutoCommit;	/* did an auto-commit happen during doAction()? */
 	struct {
 		unsigned actState : 3;
+		unsigned suspViaFile : 1;	/* suspended via external state file? */
 	} flags;
 	union {
 		struct {
@@ -113,6 +114,10 @@ PROTOTYPEpropSetMeth(wti, pWtp, wtp_t*);
 #define getActionState(pWti, pAction) (((uint8_t) (pWti)->actWrkrInfo[(pAction)->iActionNbr].flags.actState))
 #define setActionState(pWti, pAction, newState) ((pWti)->actWrkrInfo[(pAction)->iActionNbr].flags.actState = \
 (newState))
+#define getActionState_suspViaFile(pWti, pAction) (((uint8_t) \
+	(pWti)->actWrkrInfo[(pAction)->iActionNbr].flags.suspViaFile))
+#define setActionState_suspViaFile(pWti, pAction, newState) \
+	((pWti)->actWrkrInfo[(pAction)->iActionNbr].flags.suspViaFile = (newState))
 #define getActionResumeInRow(pWti, pAction) (((pWti)->actWrkrInfo[(pAction)->iActionNbr].uResumeOKinRow))
 #define setActionResumeInRow(pWti, pAction, val) ((pWti)->actWrkrInfo[(pAction)->iActionNbr].uResumeOKinRow = (val))
 #define incActionResumeInRow(pWti, pAction) ((pWti)->actWrkrInfo[(pAction)->iActionNbr].uResumeOKinRow++)

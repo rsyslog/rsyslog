@@ -130,10 +130,12 @@ PRAGMA_INGORE_Wswitch_enum
 #define NO_TIME_PROVIDED 0 /* indicate we do not provide any cached time */
 
 /* forward definitions */
-static rsRetVal processBatchMain(void *pVoid, batch_t *pBatch, wti_t * const pWti);
+static rsRetVal ATTR_NONNULL() processBatchMain(void *pVoid, batch_t *pBatch, wti_t * const pWti);
 static rsRetVal doSubmitToActionQ(action_t * const pAction, wti_t * const pWti, smsg_t*);
 static rsRetVal doSubmitToActionQComplex(action_t * const pAction, wti_t * const pWti, smsg_t*);
 static rsRetVal doSubmitToActionQNotAllMark(action_t * const pAction, wti_t * const pWti, smsg_t*);
+static void ATTR_NONNULL() actionSuspend(action_t * const pThis, wti_t * const pWti);
+static void ATTR_NONNULL() actionRetry(action_t * const pThis, wti_t * const pWti);
 
 /* object static data (once for all instances) */
 DEFobjCurrIf(obj)
@@ -686,8 +688,8 @@ static void actionCommitted(action_t * const pThis, wti_t * const pWti)
 
 /* set action state according to external state file (if configured)
 */
-static rsRetVal
-checkExternalStateFile(action_t *__restrict__ const pThis)
+static rsRetVal ATTR_NONNULL()
+checkExternalStateFile(action_t *const pThis, wti_t *const pWti)
 {
 	char filebuf[1024];
 	int fd = -1;
@@ -718,6 +720,7 @@ checkExternalStateFile(action_t *__restrict__ const pThis)
 		LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
 		      "action '%s' suspended (module '%s') by external state file",
 		      pThis->pszName, pThis->pMod->pszName);
+		actionRetry(pThis, pWti);
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
@@ -725,7 +728,11 @@ finalize_it:
 	if(fd != -1) {
 		close(fd);
 	}
-	DBGPRINTF("done checking external state file, iRet=%d\n", iRet);
+	if(iRet == RS_RET_OK && getActionState_suspViaFile(pWti, pThis) == 1) {
+		/* we need to remove suspended state! */
+		setActionState_suspViaFile(pWti, pThis, 0);
+	}
+	DBGPRINTF("done checking external state file, prevWasSuspended %d, iRet=%d\n", pWti->execState.bPrevWasSuspended, iRet);
 	RETiRet;
 }
 
@@ -753,7 +760,7 @@ setSuspendMessageConfVars(action_t *__restrict__ const pThis)
 /* set action to "rtry" state.
  * rgerhards, 2007-08-02
  */
-static void actionRetry(action_t * const pThis, wti_t * const pWti)
+static void ATTR_NONNULL() actionRetry(action_t * const pThis, wti_t * const pWti)
 {
 	setSuspendMessageConfVars(pThis);
 	actionSetState(pThis, pWti, ACT_STATE_RTRY);
@@ -773,7 +780,7 @@ static void actionRetry(action_t * const pThis, wti_t * const pWti)
  * CPU time. TODO: maybe a config option for that?
  * rgerhards, 2007-08-02
  */
-static void
+static void ATTR_NONNULL()
 actionSuspend(action_t * const pThis, wti_t * const pWti)
 {
 	time_t ttNow;
@@ -843,10 +850,7 @@ actionDoRetry(action_t * const pThis, wti_t * const pWti)
 	while((*pWti->pbShutdownImmediate == 0) && getActionState(pWti, pThis) == ACT_STATE_RTRY) {
 		DBGPRINTF("actionDoRetry: %s enter loop, iRetries=%d, ResumeInRow %d\n",
 			pThis->pszName, iRetries, getActionResumeInRow(pWti, pThis));
-		iRet = checkExternalStateFile(pThis);
-		if(iRet == RS_RET_OK) {
 			iRet = pThis->pMod->tryResume(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
-		}
 		DBGPRINTF("actionDoRetry: %s action->tryResume returned %d\n", pThis->pszName, iRet);
 		if((getActionResumeInRow(pWti, pThis) > 9) && (getActionResumeInRow(pWti, pThis) % 10 == 0)) {
 			bTreatOKasSusp = 1;
@@ -894,6 +898,74 @@ finalize_it:
 	RETiRet;
 }
 
+
+/* special retry handling if disabled via file: simply wait for the file
+ * to indicate whether or not it is ready again
+ */
+static rsRetVal ATTR_NONNULL()
+actionDoRetry_extFile(action_t *const pThis, wti_t *const pWti)
+{
+	int iRetries;
+	int iSleepPeriod;
+	int bTreatOKasSusp;
+	DEFiRet;
+
+	assert(pThis != NULL);
+
+	DBGPRINTF("actionDoRetry_extFile: enter, actionState: %d\n",getActionState(pWti, pThis));
+	iRetries = 0;
+	while((*pWti->pbShutdownImmediate == 0) && getActionState(pWti, pThis) == ACT_STATE_RTRY) {
+		DBGPRINTF("actionDoRetry_extFile: %s enter loop, iRetries=%d, ResumeInRow %d\n",
+			pThis->pszName, iRetries, getActionResumeInRow(pWti, pThis));
+			iRet = checkExternalStateFile(pThis, pWti);
+		DBGPRINTF("actionDoRetry_extFile: %s checkExternalStateFile returned %d\n", pThis->pszName, iRet);
+		if((getActionResumeInRow(pWti, pThis) > 9) && (getActionResumeInRow(pWti, pThis) % 10 == 0)) {
+			bTreatOKasSusp = 1;
+			setActionResumeInRow(pWti, pThis, 0);
+			iRet = RS_RET_SUSPENDED;
+		} else {
+			bTreatOKasSusp = 0;
+		}
+		if((iRet == RS_RET_OK) && (!bTreatOKasSusp)) {
+			DBGPRINTF("actionDoRetry_extFile: %s had success RDY again (iRet=%d)\n",
+				  pThis->pszName, iRet);
+			if(pThis->bReportSuspension) {
+				LogMsg(0, RS_RET_RESUMED, LOG_INFO, "action '%s' "
+					      "resumed (module '%s')",
+					      pThis->pszName, pThis->pMod->pszName);
+			}
+			actionSetState(pThis, pWti, ACT_STATE_RDY);
+		} else if(iRet == RS_RET_SUSPENDED || bTreatOKasSusp) {
+			/* max retries reached? */
+			DBGPRINTF("actionDoRetry_extFile: %s check for max retries, iResumeRetryCount "
+				  "%d, iRetries %d\n",
+				  pThis->pszName, pThis->iResumeRetryCount, iRetries);
+			if((pThis->iResumeRetryCount != -1 && iRetries >= pThis->iResumeRetryCount)) {
+				DBGPRINTF("actionDoRetry_extFile: did not work out, suspending\n");
+				actionSuspend(pThis, pWti);
+				pWti->execState.bPrevWasSuspended = 1;
+				if(getActionNbrResRtry(pWti, pThis) < 20)
+					incActionNbrResRtry(pWti, pThis);
+			} else {
+				++iRetries;
+				iSleepPeriod = pThis->iResumeInterval;
+				srSleep(iSleepPeriod, 0);
+				if(*pWti->pbShutdownImmediate) {
+					ABORT_FINALIZE(RS_RET_FORCE_TERM);
+				}
+			}
+		} else if(iRet == RS_RET_DISABLE_ACTION) {
+			actionDisable(pThis);
+		}
+	}
+
+	if(getActionState(pWti, pThis) == ACT_STATE_RDY) {
+		setActionNbrResRtry(pWti, pThis, 0);
+	}
+
+finalize_it:
+	RETiRet;
+}
 
 static rsRetVal
 actionCheckAndCreateWrkrInstance(action_t * const pThis, const wti_t *const pWti)
@@ -984,11 +1056,12 @@ finalize_it:
  * depending on its current state.
  * rgerhards, 2009-05-07
  */
-static rsRetVal
+static rsRetVal ATTR_NONNULL()
 actionPrepare(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 {
 	DEFiRet;
 
+DBGPRINTF("actionPrepare[%s]: enter\n", pThis->pszName);
 	CHKiRet(actionCheckAndCreateWrkrInstance(pThis, pWti));
 	CHKiRet(actionTryResume(pThis, pWti));
 
@@ -996,6 +1069,12 @@ actionPrepare(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti
 	 * action state accordingly
 	 */
 	if(getActionState(pWti, pThis) == ACT_STATE_RDY) {
+		iRet = checkExternalStateFile(pThis, pWti);
+		if(iRet == RS_RET_SUSPENDED) {
+			DBGPRINTF("actionPrepare[%s]: SUSPENDED via external state file, "
+				"doing retry processing\n", pThis->pszName);
+			CHKiRet(actionDoRetry_extFile(pThis, pWti));
+		}
 		iRet = pThis->pMod->mod.om.beginTransaction(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
 		switch(iRet) {
 			case RS_RET_OK:
@@ -1206,7 +1285,7 @@ actionCallCommitTransaction(action_t * const pThis,
 	DBGPRINTF("entering actionCallCommitTransaction[%s], state: %s, nMsgs %u\n",
 		  pThis->pszName, getActStateName(pThis, pWti), nparams);
 
-	iRet = checkExternalStateFile(pThis);
+	iRet = RS_RET_OK; //checkExternalStateFile(pThis);
 	if(iRet == RS_RET_OK) {
 		iRet = pThis->pMod->mod.om.commitTransaction(
 			    pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData,
@@ -1455,7 +1534,7 @@ actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 		/* if we are suspended, we already tried everything to recover the
 		 * action - and failed. So all we can do here is write the error file.
 		 */
-		actionWriteErrorFile(pThis, iRet, iparams, wrkrInfo->p.tx.currIParam);
+		actionWriteErrorFile(pThis, iRet, wrkrInfo->p.tx.iparams, wrkrInfo->p.tx.currIParam);
 		FINALIZE;
 	}
 	DBGPRINTF("actionCommit[%s]: processing...\n", pThis->pszName);
@@ -1574,11 +1653,6 @@ processMsgMain(action_t *__restrict__ const pAction,
 
 	CHKiRet(prepareDoActionParams(pAction, pWti, pMsg, ttNow));
 
-	if(checkExternalStateFile(pAction) == RS_RET_SUSPENDED) {
-		DBGPRINTF("processMsgMain suspends via external state file\n");
-		actionSuspend(pAction, pWti);
-	}
-
 	if(pAction->isTransactional) {
 		pWti->actWrkrInfo[pAction->iActionNbr].pAction = pAction;
 		DBGPRINTF("action '%s': is transactional - executing in commit phase\n", pAction->pszName);
@@ -1602,7 +1676,7 @@ finalize_it:
 
 /* This entry point is called by the ACTION queue (not main queue!)
  */
-static rsRetVal
+static rsRetVal ATTR_NONNULL()
 processBatchMain(void *__restrict__ const pVoid,
 	batch_t *__restrict__ const pBatch,
 	wti_t *__restrict__ const pWti)
