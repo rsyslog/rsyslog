@@ -732,7 +732,7 @@ finalize_it:
 		/* we need to remove suspended state! */
 		setActionState_suspViaFile(pWti, pThis, 0);
 	}
-	DBGPRINTF("done checking external state file, prevWasSuspended %d, iRet=%d\n", pWti->execState.bPrevWasSuspended, iRet);
+	DBGPRINTF("done checking external state file, iRet=%d\n", iRet);
 	RETiRet;
 }
 
@@ -1275,7 +1275,7 @@ actionCallDoAction(action_t *__restrict__ const pThis,
 
 
 /* call the commitTransaction output plugin entry point */
-static rsRetVal
+static rsRetVal ATTR_NONNULL()
 actionCallCommitTransaction(action_t * const pThis,
 	wti_t *const pWti,
 	actWrkrIParams_t *__restrict__ const iparams, const int nparams)
@@ -1285,15 +1285,12 @@ actionCallCommitTransaction(action_t * const pThis,
 	DBGPRINTF("entering actionCallCommitTransaction[%s], state: %s, nMsgs %u\n",
 		  pThis->pszName, getActStateName(pThis, pWti), nparams);
 
-	iRet = RS_RET_OK; //checkExternalStateFile(pThis);
-	if(iRet == RS_RET_OK) {
-		iRet = pThis->pMod->mod.om.commitTransaction(
-			    pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData,
-			    iparams, nparams);
-		DBGPRINTF("actionCallCommitTransaction[%s] state: %s "
-			"mod commitTransaction returned %d\n",
-			pThis->pszName, getActStateName(pThis, pWti), iRet);
-	}
+	iRet = pThis->pMod->mod.om.commitTransaction(
+		    pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData,
+		    iparams, nparams);
+	DBGPRINTF("actionCallCommitTransaction[%s] state: %s "
+		"mod commitTransaction returned %d\n",
+		pThis->pszName, getActStateName(pThis, pWti), iRet);
 	iRet = handleActionExecResult(pThis, pWti, iRet);
 	RETiRet;
 }
