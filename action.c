@@ -16,7 +16,7 @@
  * - doSubmitToActionQComplex
  *   handles mark message reduction, but in essence calls
  * - actionWriteToAction
- * - qqueueEnqObj
+ * - doSubmitToActionQ
  *   (now queue engine processing)
  * if(pThis->bWriteAllMarkMsgs == RSFALSE)
  * - doSubmitToActionQNotAllMark
@@ -1449,10 +1449,13 @@ actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 	DEFiRet;
 
 	DBGPRINTF("actionCommit[%s]: enter, %d msgs\n", pThis->pszName, wrkrInfo->p.tx.currIParam);
-	if(!pThis->isTransactional ||
-	   pWti->actWrkrInfo[pThis->iActionNbr].p.tx.currIParam == 0 ||
-	   getActionState(pWti, pThis) == ACT_STATE_SUSP
-	   ) {
+	if(!pThis->isTransactional || pWti->actWrkrInfo[pThis->iActionNbr].p.tx.currIParam == 0) {
+		FINALIZE;
+	} else if(getActionState(pWti, pThis) == ACT_STATE_SUSP) {
+		/* if we are suspended, we already tried everything to recover the
+		 * action - and failed. So all we can do here is write the error file.
+		 */
+		actionWriteErrorFile(pThis, iRet, wrkrInfo->p.tx.iparams, wrkrInfo->p.tx.currIParam);
 		FINALIZE;
 	}
 	DBGPRINTF("actionCommit[%s]: processing...\n", pThis->pszName);
@@ -1730,7 +1733,7 @@ static rsRetVal setActionQueType(void __attribute__((unused)) *pVal, uchar *pszT
  * the complex logic has been applied ;)
  * rgerhards, 2010-06-08
  */
-static rsRetVal
+static rsRetVal ATTR_NONNULL()
 doSubmitToActionQ(action_t * const pAction, wti_t * const pWti, smsg_t *pMsg)
 {
 	struct syslogTime ttNow; // TODO: think if we can buffer this in pWti
@@ -1758,8 +1761,8 @@ doSubmitToActionQ(action_t * const pAction, wti_t * const pWti, smsg_t *pMsg)
 		iRet = qqueueEnqMsg(pAction->pQueue, eFLOWCTL_NO_DELAY,
 			pAction->bCopyMsg ? MsgDup(pMsg) : MsgAddRef(pMsg));
 	}
-	pWti->execState.bPrevWasSuspended
-		= (iRet == RS_RET_SUSPENDED || iRet == RS_RET_ACTION_FAILED);
+	pWti->execState.bPrevWasSuspended =
+		(iRet == RS_RET_SUSPENDED || iRet == RS_RET_ACTION_FAILED);
 
 	if (iRet == RS_RET_ACTION_FAILED)	/* Increment failed counter */
 		STATSCOUNTER_INC(pAction->ctrFail, pAction->mutCtrFail);
