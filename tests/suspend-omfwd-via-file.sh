@@ -11,7 +11,7 @@ global( debug.whitelist="on"
 	debug.files=["ruleset.c", "../action.c", "omfwd.c"]
 )
 
-$template outfmt,"%msg:F,58:2%\n"
+template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 
 :msg, contains, "msgnum:" {
 	action(name="forwarder" type="omfwd" template="outfmt"

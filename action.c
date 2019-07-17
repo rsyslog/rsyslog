@@ -776,7 +776,7 @@ static void actionRetry(action_t * const pThis, wti_t * const pWti)
  * CPU time. TODO: maybe a config option for that?
  * rgerhards, 2007-08-02
  */
-static void
+static void ATTR_NONNULL()
 actionSuspend(action_t * const pThis, wti_t * const pWti)
 {
 	time_t ttNow;
@@ -945,11 +945,17 @@ finalize_it:
 /* try to resume an action -- rgerhards, 2007-08-02
  * changed to new action state engine -- rgerhards, 2009-05-07
  */
-static rsRetVal
+static rsRetVal ATTR_NONNULL()
 actionTryResume(action_t * const pThis, wti_t * const pWti)
 {
 	DEFiRet;
 	time_t ttNow = NO_TIME_PROVIDED;
+
+//TODO: probably check suspend state file here!
+	iRet = checkExternalStateFile(pThis, pWti);
+	if(iRet == RS_RET_SUSPENDED) {
+		actionSuspend(pThis, pWti);
+	}
 
 	if(getActionState(pWti, pThis) == ACT_STATE_SUSP) {
 		/* if we are suspended, we need to check if the timeout expired.
@@ -987,7 +993,7 @@ finalize_it:
  * depending on its current state.
  * rgerhards, 2009-05-07
  */
-static rsRetVal
+static rsRetVal ATTR_NONNULL()
 actionPrepare(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 {
 	DEFiRet;
@@ -1253,6 +1259,8 @@ doTransaction(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti
 	int i;
 	DEFiRet;
 
+//TODO: check state file and do retry processing (like readyAction)
+
 	wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
 	if(pThis->pMod->mod.om.commitTransaction != NULL) {
 		DBGPRINTF("doTransaction: have commitTransaction IF, using that, pWrkrInfo %p\n", wrkrInfo);
@@ -1336,6 +1344,7 @@ actionTryCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pW
 	iRet = getReturnCode(pThis, pWti);
 
 finalize_it:
+	DBGPRINTF("actionTryCommit[%s] exit\n", pThis->pszName);
 	RETiRet;
 }
 
@@ -1476,9 +1485,19 @@ actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 		if(iRet == RS_RET_OK) {
 			FINALIZE;
 		} else if(iRet == RS_RET_SUSPENDED) {
-			actionTryResume(pThis, pWti);
+	DBGPRINTF("actionCommit[%s]: checking resume\n", pThis->pszName);
+			iRet = actionDoRetry(pThis, pWti);
+			if(iRet == RS_RET_FORCE_TERM) {
+				ABORT_FINALIZE(RS_RET_FORCE_TERM);
+			} else if(iRet != RS_RET_OK) {
+				nMsgs = wrkrInfo->p.tx.currIParam;
+				actionWriteErrorFile(pThis, iRet, iparams, nMsgs);
+				iRet = RS_RET_OK;
+			}
+			//actionTryResume(pThis, pWti);
 		}
 	} while(iRet == RS_RET_SUSPENDED);
+//hier abbrechen je nach retry count!
 
 	DBGPRINTF("actionCommit[%s]: full batch commit FAILED with iRet %d\n", pThis->pszName, iRet);
 
@@ -1583,6 +1602,8 @@ processMsgMain(action_t *__restrict__ const pAction,
 
 	CHKiRet(prepareDoActionParams(pAction, pWti, pMsg, ttNow));
 
+	// logic: process this only if we are non-transactional.
+	// if we are, move the whole checking to tx commit
 	#if 0 // TODO: CHECK
 	if(checkExternalStateFile(pAction, pWti) == RS_RET_SUSPENDED) {
 		DBGPRINTF("processMsgMain suspends via external state file\n");
@@ -1778,8 +1799,8 @@ doSubmitToActionQ(action_t * const pAction, wti_t * const pWti, smsg_t *pMsg)
 		iRet = qqueueEnqMsg(pAction->pQueue, eFLOWCTL_NO_DELAY,
 			pAction->bCopyMsg ? MsgDup(pMsg) : MsgAddRef(pMsg));
 	}
-	pWti->execState.bPrevWasSuspended
-		= (iRet == RS_RET_SUSPENDED || iRet == RS_RET_ACTION_FAILED);
+	pWti->execState.bPrevWasSuspended =
+		(iRet == RS_RET_SUSPENDED || iRet == RS_RET_ACTION_FAILED);
 
 	if (iRet == RS_RET_ACTION_FAILED)	/* Increment failed counter */
 		STATSCOUNTER_INC(pAction->ctrFail, pAction->mutCtrFail);

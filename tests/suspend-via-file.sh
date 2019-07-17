@@ -13,11 +13,18 @@ check_q_empty_log2() {
 }
 generate_conf
 add_conf '
-$template outfmt,"%msg:F,58:2%\n"
+/* Filter out busy debug output, comment out if needed */
+global( debug.whitelist="on"
+	debug.files=["ruleset.c", "../action.c", "omfwd.c"]
+)
+
+template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 
 :msg, contains, "msgnum:" {
 	action(name="primary" type="omfile" file="'$RSYSLOG2_OUT_LOG'" template="outfmt"
-		action.externalstate.file="'$RSYSLOG_DYNNAME'.STATE" action.resumeinterval="1")
+		action.reportSuspensionContinuation="off"
+		action.externalstate.file="'$RSYSLOG_DYNNAME'.STATE"
+		action.resumeRetryCount="1" action.resumeinterval="1")
 	action(name="failover" type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt"
 		action.execOnlyWhenPreviousIsSuspended="on")
 }
@@ -26,18 +33,22 @@ startup
 
 printf '\n%s %s\n' "$(tb_timestamp)" \
 	'checking that action is active w/o external state file'
-injectmsg 0 2500
+#injectmsg 0 2500
+injectmsg 0 15
 export SEQ_CHECK_FILE="$RSYSLOG2_OUT_LOG"
-export LOG2_EXPECTED_LASTNUM=2499
+#export LOG2_EXPECTED_LASTNUM=2499
+export LOG2_EXPECTED_LASTNUM=14
 export QUEUE_EMPTY_CHECK_FUNC=check_q_empty_log2
 wait_queueempty
 seq_check 0 $LOG2_EXPECTED_LASTNUM # full correctness check
+./msleep 1000
 
 
 printf '\n%s %s\n' "$(tb_timestamp)" \
 	'checking that action becomes suspended via external state file'
 printf "%s" "SUSPENDED" > $RSYSLOG_DYNNAME.STATE
-injectmsg 2500 2500
+#injectmsg 2500 2500
+injectmsg 15 15
 export SEQ_CHECK_FILE="$RSYSLOG_OUT_LOG"
 export QUEUE_EMPTY_CHECK_FUNC=check_q_empty_log1
 wait_queueempty
