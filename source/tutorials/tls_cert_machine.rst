@@ -47,7 +47,7 @@ unique name. If not, you can not apply proper access control.
 
 ::
 
-    [root@rgf9dev sample]# certtool --generate-privkey --outfile key.pem --sec-param 2048
+    [root@rgf9dev sample]# certtool --generate-privkey --outfile key.pem --bits 2048
     Generating a 2048 bit RSA private key...
     [root@rgf9dev sample]# certtool --generate-request --load-privkey key.pem --outfile request.pem
     Generating a PKCS #10 certificate request...
