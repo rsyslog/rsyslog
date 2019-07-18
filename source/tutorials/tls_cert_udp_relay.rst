@@ -78,7 +78,7 @@ we do not show any rules to write local files. Feel free to add them.
     type="omfwd"
     target="central.example.net"
     protocol="tcp"
-    port="10514"
+    port="6514"
     StreamDriver="gtls"
     StreamDriverMode="1" # run driver in TLS-only mode
     StreamDriverAuthMode="x509/name"

@@ -105,10 +105,10 @@ only other source accepted is messages from the server itself.
         DefaultNetstreamDriverKeyFile="/path/to/contrib/gnutls/key.pem"
 	)	
 
-	# start up listener at port 10514
+	# start up listener at port 6514
 	input(
 	type="imtcp"
-	port="10514"
+	port="6514"
 	)
 
 **Be sure to safeguard at least the private key (machine-key.pem)!** If

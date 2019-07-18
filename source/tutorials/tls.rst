@@ -89,12 +89,12 @@ the server. In short, the setup is as follows:
 **Client**
 
 -  forwards messages via plain tcp syslog using gtls netstream driver to
-   central server on port 10514
+   central server on port 6514
 
 **Server**
 
 -  accept incoming messages via plain tcp syslog using gtls netstream
-   driver on port 10514
+   driver on port 6514
 
 Setting up the system
 ---------------------
@@ -136,10 +136,10 @@ follows:
 	StreamDriver.Authmode="anon"
 	)
 
-	# start up listener at port 10514
+	# start up listener at port 6514
 	input(
 	type="imtcp"
-	port="10514"
+	port="6514"
 	)
 
 This is all you need to do. You can use the rest of your rsyslog.conf
@@ -161,7 +161,7 @@ CA cert. 
 	global(DefaultNetstreamDriverCAFile="/path/to/contrib/gnutls/ca.pem")
 
         # set up the action for all messages
-	action(type="omfwd" protocol="tcp" port="10514"
+	action(type="omfwd" protocol="tcp" port="6514"
 	       StreamDriver="gtls" StreamDriverMode="1" StreamDriverAuthMode="anon")
 
 Note that we use the regular TCP forwarding action here. There is
