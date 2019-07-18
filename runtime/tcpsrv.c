@@ -382,7 +382,7 @@ initTCPListener(tcpsrv_t *pThis, tcpLstnPortList_t *pPortEntry)
 
 	// pPortEntry->pszAddr = NULL ==> bind to all interfaces
 	CHKiRet(netstrm.LstnInit(pThis->pNS, (void*)pPortEntry, addTcpLstn, TCPLstnPort,
-	pPortEntry->pszAddr, pThis->iSessMax, pThis->pszLstnPortFileName));
+		pPortEntry->pszAddr, pThis->iSessMax, pThis->pszLstnPortFileName));
 
 finalize_it:
 	RETiRet;
