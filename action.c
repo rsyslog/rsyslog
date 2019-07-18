@@ -728,10 +728,6 @@ finalize_it:
 	if(fd != -1) {
 		close(fd);
 	}
-	if(iRet == RS_RET_OK && getActionState_suspViaFile(pWti, pThis) == 1) {
-		/* we need to remove suspended state! */
-		setActionState_suspViaFile(pWti, pThis, 0);
-	}
 	DBGPRINTF("done checking external state file, iRet=%d\n", iRet);
 	RETiRet;
 }
