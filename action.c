@@ -903,7 +903,6 @@ actionDoRetry_extFile(action_t *const pThis, wti_t *const pWti)
 {
 	int iRetries;
 	int iSleepPeriod;
-	int bTreatOKasSusp;
 	DEFiRet;
 
 	assert(pThis != NULL);
@@ -915,23 +914,16 @@ actionDoRetry_extFile(action_t *const pThis, wti_t *const pWti)
 			pThis->pszName, iRetries, getActionResumeInRow(pWti, pThis));
 			iRet = checkExternalStateFile(pThis, pWti);
 		DBGPRINTF("actionDoRetry_extFile: %s checkExternalStateFile returned %d\n", pThis->pszName, iRet);
-		if((getActionResumeInRow(pWti, pThis) > 9) && (getActionResumeInRow(pWti, pThis) % 10 == 0)) {
-			bTreatOKasSusp = 1;
-			setActionResumeInRow(pWti, pThis, 0);
-			iRet = RS_RET_SUSPENDED;
-		} else {
-			bTreatOKasSusp = 0;
-		}
-		if((iRet == RS_RET_OK) && (!bTreatOKasSusp)) {
+		if(iRet == RS_RET_OK) {
 			DBGPRINTF("actionDoRetry_extFile: %s had success RDY again (iRet=%d)\n",
 				  pThis->pszName, iRet);
 			if(pThis->bReportSuspension) {
 				LogMsg(0, RS_RET_RESUMED, LOG_INFO, "action '%s' "
-					      "resumed (module '%s')",
-					      pThis->pszName, pThis->pMod->pszName);
+				      "resumed (module '%s') via external state file",
+				      pThis->pszName, pThis->pMod->pszName);
 			}
 			actionSetState(pThis, pWti, ACT_STATE_RDY);
-		} else if(iRet == RS_RET_SUSPENDED || bTreatOKasSusp) {
+		} else if(iRet == RS_RET_SUSPENDED) {
 			/* max retries reached? */
 			DBGPRINTF("actionDoRetry_extFile: %s check for max retries, iResumeRetryCount "
 				  "%d, iRetries %d\n",
