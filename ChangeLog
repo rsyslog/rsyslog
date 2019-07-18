@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Version 8.1908.0 (aka 2019.08) 2019-08-20
+- 2019-07-18 core/action: no error file written if act suspended on TX commit
+  when an action was already disabled while the action was tried to be
+  committed, no error file was written. Note that this state is highly
+  unlikely to happen. Most probably, it can only happen if parameter
+  action.externalstate.file is used.
 ----------------------------------------------------------------------------------------
 Version 8.1907.0 (aka 2019.07) 2019-07-09
 NOTE TO MAINTAINERS: libee is not used by rsyslog for quite some while.
