@@ -358,6 +358,7 @@ wait_pid_termination() {
 # $1 : file to wait for
 # $2 (optional): error message to show if timeout occurs
 wait_file_exists() {
+	echo waiting for file $1
 	i=0
 	while true; do
 		if [ -f $1 ] && [ "$(cat $1 2> /dev/null)" != "" ]; then
@@ -491,6 +492,19 @@ startup() {
 	wait_startup $instance
 }
 
+
+# assign TCPFLOOD_PORT from port file
+# $1 - port file
+assign_tcpflood_port() {
+	wait_file_exists "$1"
+	export TCPFLOOD_PORT=$(cat "$1")
+	echo "TCPFLOOD_PORT now: $TCPFLOOD_PORT"
+	if [ "$TCPFLOOD_PORT" == "" ]; then
+		echo "TESTBENCH ERROR: TCPFLOOD_PORT not found!"
+		ls -l $RSYSLOG_DYNNAME*
+		exit 100
+	fi
+}
 
 # same as startup_vg, BUT we do NOT wait on the startup message!
 startup_vg_waitpid_only() {

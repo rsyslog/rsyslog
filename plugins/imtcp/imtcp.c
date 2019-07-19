@@ -400,6 +400,7 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 	CHKiRet(tcpsrv.SetbSPFramingFix(pOurTcpsrv, inst->bSPFramingFix));
 	CHKiRet(tcpsrv.SetLinuxLikeRatelimiters(pOurTcpsrv, inst->ratelimitInterval, inst->ratelimitBurst));
 
+	CHKiRet(tcpsrv.SetLstnPortFileName(pOurTcpsrv, inst->pszLstnPortFileName));
 	if((ustrcmp(inst->pszBindPort, UCHAR_CONSTANT("0")) == 0 && inst->pszLstnPortFileName == NULL)
 			|| ustrcmp(inst->pszBindPort, UCHAR_CONSTANT("0")) < 0) {
 		CHKmalloc(inst->pszBindPort = (uchar*)strdup("514"));
