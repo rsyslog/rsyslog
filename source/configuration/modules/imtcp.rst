@@ -391,7 +391,24 @@ Port
 
    "string", "none", "yes", "``$InputTCPServerRun``"
 
-Starts a TCP server on selected port
+Starts a TCP server on selected port. If port zero is selected, the OS automatically
+assigens a free port. Use `listenPortFileName` in this case to obtain the information
+of which port was assigned.
+
+
+ListenPortFileName
+^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no", "none"
+
+This parameter specifies a file name into which the port number this input listens
+on is written. It is primarily intended for cases when `port` is set to 0 to let
+the OS automatically assign a free port number.
 
 
 Address
