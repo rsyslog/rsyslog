@@ -41,6 +41,7 @@
 #include <sys/stat.h>
 #include <sys/un.h>
 #include <sys/socket.h>
+#include <pthread.h>
 #ifdef HAVE_LIBSYSTEMD
 #	include <systemd/sd-daemon.h>
 #endif
@@ -121,6 +122,30 @@ STATSCOUNTER_DEF(ctrLostRatelimit, mutCtrLostRatelimit)
 STATSCOUNTER_DEF(ctrNumRatelimiters, mutCtrNumRatelimiters)
 
 
+static const struct {
+	const char *str;
+	int type;
+} socketTypes[] = {
+	{ "dgram", SOCK_DGRAM },
+	{ "stream", SOCK_STREAM }
+};
+
+/**
+ * @brief Function takes String and returns corresponding integer for the socket type.
+ * @param socketTypeStr String representing the type of the socket.
+ * @return If successful, returns integer representing the type of the socket, -1 otherwise.
+ */
+static int
+strToSocketType(const char *socketTypeStr)
+{
+	for (unsigned int i = 0; i < sizeof(socketTypes) / sizeof(*socketTypes); ++i) {
+		if (!strcmp(socketTypes[i].str, socketTypeStr)) {
+			return socketTypes[i].type;
+		}
+	}
+	return -1;
+}
+
 /* a very simple "hash function" for process IDs - we simply use the
  * pid itself: it is quite expected that all pids may log some time, but
  * from a collision point of view it is likely that long-running daemons
@@ -162,6 +187,7 @@ typedef struct lstn_s {
 	sbool bUseSysTimeStamp;	/* use timestamp from system (instead of from message) */
 	sbool bUnlink;		/* unlink&re-create socket at start and end of processing */
 	sbool bUseSpecialParser;/* use "canned" log socket parser instead of parser chain? */
+	int socketType;		/* determines the semantics of communication over the socket */
 	ruleset_t *pRuleset;
 } lstn_t;
 static lstn_t *listeners;
@@ -185,6 +211,7 @@ static int sd_fds = 0;			/* number of systemd activated sockets */
 #define DFLT_ratelimitInterval 0
 #define DFLT_ratelimitBurst 200
 #define DFLT_ratelimitSeverity 1			/* do not rate-limit emergency messages */
+#define DFLT_socketType SOCK_DGRAM
 /* config vars for the legacy config system */
 static struct configSettings_s {
 	int bOmitLocalLogging;
@@ -230,6 +257,7 @@ struct instanceConf_s {
 	sbool bParseHost;
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
+	int socketType;			/* determines the semantics of communication over the socket */
 	struct instanceConf_s *next;
 };
 
@@ -298,7 +326,8 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "ruleset", eCmdHdlrString, 0 },
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
 	{ "ratelimit.burst", eCmdHdlrInt, 0 },
-	{ "ratelimit.severity", eCmdHdlrInt, 0 }
+	{ "ratelimit.severity", eCmdHdlrInt, 0 },
+	{ "sockettype", eCmdHdlrString, 0 }
 };
 static struct cnfparamblk inppblk =
 	{ CNFPARAMBLK_VERSION,
@@ -338,6 +367,7 @@ createInstance(instanceConf_t **pinst)
 	inst->bParseTrusted = 0;
 	inst->bDiscardOwnMsgs = bProcessInternalMessages;
 	inst->bUnlink = 1;
+	inst->socketType = DFLT_socketType;
 	inst->next = NULL;
 
 	/* node created, let's add to config */
@@ -448,6 +478,7 @@ addListner(instanceConf_t *inst)
 	listeners[nfd].bUseSysTimeStamp = inst->bUseSysTimeStamp;
 	listeners[nfd].bUseSpecialParser = inst->bUseSpecialParser;
 	listeners[nfd].pRuleset = inst->pBindRuleset;
+	listeners[nfd].socketType = inst->socketType;
 	CHKiRet(ratelimitNew(&listeners[nfd].dflt_ratelimiter, "imuxsock", NULL));
 	ratelimitSetLinuxLike(listeners[nfd].dflt_ratelimiter,
 			      listeners[nfd].ratelimitInterval,
@@ -492,6 +523,76 @@ static rsRetVal discardLogSockets(void)
 	return RS_RET_OK;
 }
 
+/* function prototype */
+static rsRetVal readSocket(lstn_t *pLstn);
+
+/**
+ * @brief Waits and reads incomming messages for connection socket.
+ * @param pLstn Dummy listener for connection.
+ * @return NULL.
+ */
+static void *
+worker(void *pLstn)
+{
+	struct pollfd pfd;
+	memset(&pfd, 0, sizeof(pfd));
+	pfd.fd = ((lstn_t *)pLstn)->fd;
+	pfd.events = POLLIN;
+
+	while (glbl.GetGlobalInputTermState() != 1) {
+		if (poll(&pfd, 1, -1) < 0) {
+			dbgprintf("Poll error on socket with fd=%d\n", ((lstn_t *)pLstn)->fd);
+			break;
+		}
+		readSocket((lstn_t *)pLstn);
+	}
+	close(((lstn_t *)pLstn)->fd);
+	free(pLstn);
+	return NULL;
+}
+
+/**
+ * @brief Waits and accepts new connections.
+ * @param pLstn Stream socket listener.
+ * @return NULL.
+ */
+static void *
+connectionHandler(void *pLstn)
+{
+	/* accept all incoming connections */
+	for (;;) {
+		int cfd = accept(((lstn_t *)pLstn)->fd, NULL, NULL);
+		if (cfd < 0) {
+			dbgprintf("failed to accept connection: %s\n", strerror(errno));
+			break;
+		}
+		if (glbl.GetGlobalInputTermState() == 1) {
+			close(cfd);
+			break; /* terminate input! */
+		}
+		dbgprintf("New connection accepted with fd=%d\n", cfd);
+
+		/* create a dummy listener for connection socket */
+		lstn_t *dummy = malloc(sizeof(lstn_t));
+		if (!dummy) {
+			dbgprintf("failed to allocate memory for dummy listener\n");
+			break;
+		}
+		memcpy(dummy, pLstn, sizeof(lstn_t));
+		dummy->fd = cfd;
+
+		/* read incomming messages in new thread */
+		pthread_t thread_id;
+		if (pthread_create(&thread_id, NULL,  worker, dummy)) {
+			dbgprintf("failed to create worker thread for connection fd=%d\n", cfd);
+			free(dummy);
+			close(cfd);
+			break;
+		}
+	}
+	return NULL;
+}
+
 
 /* used to create a log socket if NOT passed in via systemd.
  */
@@ -521,7 +622,7 @@ createLogSocket(lstn_t *pLstn)
 	}
 	strncpy(sunx.sun_path, (char*)pLstn->sockName, sizeof(sunx.sun_path));
 	sunx.sun_path[sizeof(sunx.sun_path)-1] = '\0';
-	pLstn->fd = socket(AF_UNIX, SOCK_DGRAM, 0);
+	pLstn->fd = socket(AF_UNIX, pLstn->socketType, 0);
 	if(pLstn->fd < 0 ) {
 		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 	}
@@ -530,6 +631,21 @@ createLogSocket(lstn_t *pLstn)
 	}
 	if(chmod((char*)pLstn->sockName, 0666) < 0) {
 		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
+	}
+
+	/*
+	 * Support for stream sockets.
+	 */
+	if (pLstn->socketType == SOCK_STREAM) {
+		/* listen for connections */
+		if (listen(pLstn->fd, SOMAXCONN)) {
+			ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
+		}
+		/* accept connections in a new thread */
+		pthread_t thread_id;
+		if (pthread_create(&thread_id, NULL,  connectionHandler, pLstn)) {
+			ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
+		}
 	}
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -564,7 +680,7 @@ openLogSocket(lstn_t *pLstn)
 		int fd;
 
 		for (fd = SD_LISTEN_FDS_START; fd < SD_LISTEN_FDS_START + sd_fds; fd++) {
-			if( sd_is_socket_unix(fd, SOCK_DGRAM, -1, (const char*) pLstn->sockName, 0) == 1) {
+			if( sd_is_socket_unix(fd, pLstn->socketType, -1, (const char*) pLstn->sockName, 0) == 1) {
 				/* ok, it matches -- just use as is */
 				pLstn->fd = fd;
 
@@ -1102,7 +1218,7 @@ static rsRetVal readSocket(lstn_t *pLstn)
 #if defined (_AIX)
 #define MSG_DONTWAIT    MSG_NONBLOCK
 #endif
-	iRcvd = recvmsg(pLstn->fd, &msgh, MSG_DONTWAIT);
+	iRcvd = recvmsg(pLstn->fd, &msgh, pLstn->socketType == SOCK_STREAM ? 0 : MSG_DONTWAIT);
 
 	DBGPRINTF("Message from UNIX socket: #%d, size %d\n", pLstn->fd, (int) iRcvd);
 	if(iRcvd > 0) {
@@ -1197,6 +1313,7 @@ activateListeners(void)
 		listeners[0].bUseSysTimeStamp = runModConf->bUseSysTimeStamp;
 		listeners[0].flags = runModConf->bIgnoreTimestamp ? IGNDATE : NOFLAG;
 		listeners[0].flowCtl = runModConf->bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
+		listeners[0].socketType = DFLT_socketType;
 		CHKiRet(ratelimitNew(&listeners[0].dflt_ratelimiter, "imuxsock", NULL));
 			ratelimitSetLinuxLike(listeners[0].dflt_ratelimiter,
 			listeners[0].ratelimitInterval,
@@ -1386,6 +1503,14 @@ CODESTARTnewInpInst
 			inst->ratelimitBurst = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.severity")) {
 			inst->ratelimitSeverity = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "sockettype")) {
+			const char *socketTypeStr = (const char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+			int socketType = strToSocketType(socketTypeStr);
+			if (socketType == -1) {
+				dbgprintf("imuxsock: program error, "
+				  "invalid sockettype value '%s'\n", socketTypeStr);
+			}
+			inst->socketType = socketType;
 		} else {
 			dbgprintf("imuxsock: program error, non-handled "
 			  "param '%s'\n", inppblk.descr[i].name);
@@ -1515,7 +1640,7 @@ CODESTARTrunInput
 		pollfds[0].fd = -1;
 	}
 	for (i = startIndexUxLocalSockets; i < nfd; i++) {
-		pollfds[i].fd = listeners[i].fd;
+		pollfds[i].fd = listeners[i].socketType == SOCK_STREAM ? -1 : listeners[i].fd;
 		pollfds[i].events = POLLIN;
 	}
 
