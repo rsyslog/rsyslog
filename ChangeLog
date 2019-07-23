@@ -1,5 +1,12 @@
 ----------------------------------------------------------------------------------------
 Version 8.1908.0 (aka 2019.08) 2019-08-20
+- 2019-07-23 imtcp: enable listenPortFileName parameter
+  this parameter was added, but it had no effect as it was not
+  passed down to the driver layer. This has been fixed. That also
+  now enables us to use dynamically-assigned port, which are
+  very useful for further testbench stabilization. Quite some
+  false positives occurred because the pre-selected port was
+  already in use again when rsyslog started.
 - 2019-07-19 imtcp: enable listenPortFileName parameter
   this parameter was added, but it had no effect as it was not
   passed down to the driver layer. This has been fixed. That also
