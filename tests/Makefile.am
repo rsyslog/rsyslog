@@ -730,6 +730,16 @@ TESTS +=  \
 endif # ENABLE_IMPROG
 endif
 
+if ENABLE_MMDARWIN
+TESTS +=  \
+	mmdarwin_errmsg_no_params.sh \
+	mmdarwin_errmsg_no_sock.sh
+if HAVE_VALGRIND
+TESTS += \
+	mmdarwin_errmsg_no_sock-vg.sh
+endif # HAVE_VALGRIND
+endif # ENABLE_IMPROG
+
 if ENABLE_OMPROG
 TESTS +=  \
 	omprog-defaults.sh \
@@ -1597,6 +1607,9 @@ EXTRA_DIST= \
 	rs-substring.sh \
 	omsnmp_errmsg_no_params.sh \
 	ommail_errmsg_no_params.sh \
+	mmdarwin_errmsg_no_params.sh \
+	mmdarwin_errmsg_no_sock.sh \
+	mmdarwin_errmsg_no_sock-vg.sh \
 	mmutf8fix_no_error.sh \
 	tcpflood_wrong_option_output.sh \
 	msleep_usage_output.sh \

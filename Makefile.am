@@ -1,5 +1,5 @@
 sbin_PROGRAMS =
-pkglib_LTLIBRARIES = 
+pkglib_LTLIBRARIES =
 
 pkgconfigdir = $(libdir)/pkgconfig
 
@@ -212,7 +212,7 @@ SUBDIRS += contrib/fmhash
 endif
 
 if ENABLE_OMKAFKA
-SUBDIRS += plugins/omkafka 
+SUBDIRS += plugins/omkafka
 endif
 
 if ENABLE_IMKAFKA
@@ -267,6 +267,9 @@ if ENABLE_MMDBLOOKUP
 SUBDIRS += plugins/mmdblookup
 endif
 
+if ENABLE_MMDARWIN
+SUBDIRS += contrib/mmdarwin
+endif
 
 if ENABLE_MMFIELDS
 SUBDIRS += plugins/mmfields
@@ -347,7 +350,7 @@ DISTCHECK_CONFIGURE_FLAGS+= \
 	--enable-testbench \
 	--enable-valgrind
 # currently not supported in make distcheck:
-# --enable-pgsql-tests 
+# --enable-pgsql-tests
 # --enable-extended-tests --> should probably never be enabled due to runtime
 
 if ENABLE_DEFAULT_TESTS
@@ -397,6 +400,10 @@ endif
 
 if ENABLE_MMDBLOOKUP
 DISTCHECK_CONFIGURE_FLAGS+= --enable-mmdblookup
+endif
+
+if ENABLE_MMDARWIN
+DISTCHECK_CONFIGURE_FLAGS+= --enable-mmdarwin
 endif
 
 if ENABLE_MMNORMALIZE
