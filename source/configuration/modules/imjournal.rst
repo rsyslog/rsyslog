@@ -245,7 +245,7 @@ WorkAroundJournalBug
    :widths: auto
    :class: parameter-table
 
-   "binary", "off", "no", "none"
+   "binary", "on", "no", "none"
 
 .. versionadded:: 8.37.0
 
@@ -253,6 +253,28 @@ When journald instance rotates its files it is possible that duplicate records
 appear in rsyslog. If you turn on this option imjournal will keep track of cursor
 with each message to work around this problem. Be aware that in some cases this
 might result in imjournal performance hit.
+
+
+FSync
+^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+.. versionadded:: 8.1908.0
+
+When there is a hard crash, power loss or similar abrupt end of rsyslog process,
+there is a risk of state file not being written to persistent storage or possibly
+being corrupted. This then results in imjournal starting reading elsewhere then 
+desired and most probably message duplication. To mitigate this problem you can 
+turn this option on which will force state file writes to persistent physical 
+storage. Please note that fsync calls are costly, so especially with lower 
+PersistStateInterval value, this may present considerable performance hit.
+
 
 .. _imjournal-statistic-counter:
 
