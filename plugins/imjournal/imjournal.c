@@ -99,7 +99,8 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "defaultfacility", eCmdHdlrString, 0 },
 	{ "usepidfromsystem", eCmdHdlrBinary, 0 },
 	{ "usepid", eCmdHdlrString, 0 },
-	{ "workaroundjournalbug", eCmdHdlrBinary, 0 }
+	{ "workaroundjournalbug", eCmdHdlrBinary, 0 },
+	{ "fsync", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
