@@ -109,7 +109,7 @@ Note: parameter names are case-insensitive.
    Note, however, that a failed action may not immediately be detected.
    For more information, see the `rsyslog
    execOnlyWhenPreviousIsSpuspended
-   preciseness <http://www.rsyslog.com/action-execonlywhenpreviousissuspended-preciseness/>`_
+   preciseness <https://www.rsyslog.com/action-execonlywhenpreviousissuspended-preciseness/>`_
    FAQ article.
 
 -  **action.repeatedmsgcontainsoriginalmsg** on/off
@@ -349,7 +349,7 @@ sign ("@"). A single at sign means that messages will be forwarded via
 UDP protocol (the standard for syslog). If you prepend two at signs
 ("@@"), the messages will be transmitted via TCP. Please note that plain
 TCP based syslog is not officially standardized, but most major syslogds
-support it (e.g. syslog-ng or `WinSyslog <http://www.winsyslog.com/>`_).
+support it (e.g. syslog-ng or `WinSyslog <https://www.winsyslog.com/>`_).
 The forwarding action indicator (at-sign) can be followed by one or more
 options. If they are given, they must be immediately (without a space)
 following the final at sign and be enclosed in parenthesis. The
@@ -499,7 +499,7 @@ Database Table
 This allows logging of the message to a database table. Currently, only
 MySQL databases are supported. However, other database drivers will most
 probably be developed as plugins. By default, a
-`MonitorWare <http://www.monitorware.com/>`_-compatible schema is
+`MonitorWare <https://www.mwagent.com/>`_-compatible schema is
 required for this to work. You can create that schema with the
 createDB.SQL file that came with the rsyslog package. You can also
 use any other schema of your liking - you just need to define a proper
