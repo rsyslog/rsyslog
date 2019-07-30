@@ -1143,6 +1143,7 @@ TESTS += sndrcv_relp.sh \
 	 omrelp_errmsg_no_connect.sh \
 	 imrelp-basic.sh \
 	 imrelp-basic-oldstyle.sh \
+	 imrelp-basic-hup.sh \
 	 imrelp-manyconn.sh \
 	 imrelp-maxDataSize-error.sh \
 	 imrelp-long-msg.sh \
@@ -1949,6 +1950,7 @@ EXTRA_DIST= \
 	sndrcv.sh \
 	omrelp_errmsg_no_connect.sh \
 	imrelp-basic.sh \
+	imrelp-basic-hup.sh \
 	imrelp-basic-vg.sh \
 	imrelp-basic-oldstyle.sh \
 	imrelp-manyconn.sh \
