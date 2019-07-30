@@ -122,7 +122,7 @@ static uchar *pszDfltNetstrmDrvr = NULL; /* module name of default netstream dri
 static uchar *pszDfltNetstrmDrvrCAF = NULL; /* default CA file for the netstrm driver */
 static uchar *pszDfltNetstrmDrvrKeyFile = NULL; /* default key file for the netstrm driver (server) */
 static uchar *pszDfltNetstrmDrvrCertFile = NULL; /* default cert file for the netstrm driver (server) */
-static int bTerminateInputs = 0;		/* global switch that inputs shall terminate ASAP (1=> terminate) */
+int bTerminateInputs = 0;		/* global switch that inputs shall terminate ASAP (1=> terminate) */
 static uchar cCCEscapeChar = '#'; /* character to be used to start an escape sequence for control chars */
 static int bDropTrailingLF = 1; /* drop trailing LF's on reception? */
 static int bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
