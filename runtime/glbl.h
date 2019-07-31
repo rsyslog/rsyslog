@@ -127,6 +127,7 @@ extern int glblDbgWhitelist;
 extern int glblPermitCtlC;
 extern int glblInputTimeoutShutdown;
 extern int glblIntMsgsSeverityFilter;
+extern int bTerminateInputs;
 
 /* Developer options enable some strange things for developer-only testing.
  * These should never be enabled in a user build, except if explicitly told
