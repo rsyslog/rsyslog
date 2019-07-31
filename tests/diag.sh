@@ -1042,6 +1042,7 @@ issue_HUP() {
 		sleeptime=1000
 	fi
 	kill -HUP $(cat $RSYSLOG_PIDBASE$1.pid)
+	printf 'HUP issued to pid %d\n' $(cat $RSYSLOG_PIDBASE$1.pid)
 	$TESTTOOL_DIR/msleep $sleeptime
 }
 

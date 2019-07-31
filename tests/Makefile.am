@@ -230,6 +230,7 @@ TESTS +=  \
 	empty-ruleset.sh \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
+	imtcp-basic-hup.sh \
 	imtcp-maxFrameSize.sh \
 	imtcp-msg-truncation-on-number.sh \
 	imtcp-msg-truncation-on-number2.sh \
@@ -929,6 +930,7 @@ TESTS +=  \
 	imptcp_spframingfix.sh \
 	imptcp_nonProcessingPoller.sh \
 	imptcp_veryLargeOctateCountedMessages.sh \
+	imptcp-basic-hup.sh \
 	imptcp-NUL.sh \
 	imptcp-NUL-rawmsg.sh \
 	rscript_random.sh \
@@ -1846,6 +1848,7 @@ EXTRA_DIST= \
 	empty-ruleset.sh \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
+	imtcp-basic-hup.sh \
 	imtcp-maxFrameSize.sh \
 	imtcp-msg-truncation-on-number.sh \
 	imtcp-msg-truncation-on-number2.sh \
@@ -1880,6 +1883,7 @@ EXTRA_DIST= \
 	imtcp-tls-ossl-error-key2.sh \
 	manytcp.sh \
 	manyptcp.sh \
+	imptcp-basic-hup.sh \
 	imptcp-NUL.sh \
 	imptcp-NUL-rawmsg.sh \
 	imptcp_framing_regex.sh \
