@@ -467,12 +467,12 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 		getFileDebugName(pThis), pThis->bDeleteOnClose);
 
 	if(pThis->tOperationsMode != STREAMMODE_READ) {
+		if(pThis->bAsyncWrite) {
+			strmWaitAsyncWriterDone(pThis);
+		}
 		strmFlushInternal(pThis, 0);
 		if(pThis->iZipLevel) {
 			doZipFinish(pThis);
-		}
-		if(pThis->bAsyncWrite) {
-			strmWaitAsyncWriterDone(pThis);
 		}
 	}
 
