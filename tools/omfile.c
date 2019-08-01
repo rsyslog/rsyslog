@@ -475,6 +475,10 @@ dynaFileDelCacheEntry(instanceData *__restrict__ const pData, const int iEntry, 
 	}
 
 	if(pCache[iEntry]->pStrm != NULL) {
+		if(iEntry == pData->iCurrElt) {
+			pData->iCurrElt = -1;
+			pData->pStrm = NULL;
+		}
 		strm.Destruct(&pCache[iEntry]->pStrm);
 		if(pData->useSigprov) {
 			pData->sigprov.OnFileClose(pCache[iEntry]->sigprovFileData);
