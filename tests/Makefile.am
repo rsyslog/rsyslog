@@ -280,6 +280,8 @@ TESTS +=  \
 	abort-uncleancfg-badcfg-check.sh \
 	abort-uncleancfg-badcfg-check_1.sh \
 	variable_leading_underscore.sh \
+	gzipwr_hup_multi_file.sh \
+	gzipwr_hup_single_file.sh \
 	gzipwr_rscript.sh \
 	gzipwr_flushInterval.sh \
 	gzipwr_flushOnTXEnd.sh \
@@ -2066,6 +2068,8 @@ EXTRA_DIST= \
 	abort-uncleancfg-badcfg-check.sh \
 	abort-uncleancfg-badcfg-check_1.sh \
 	variable_leading_underscore.sh \
+	gzipwr_hup_multi_file.sh \
+	gzipwr_hup_single_file.sh \
 	gzipwr_rscript.sh \
 	gzipwr_flushInterval.sh \
 	gzipwr_flushOnTXEnd.sh \
