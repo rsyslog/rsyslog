@@ -328,6 +328,7 @@ int execProg(uchar *program, int bWait, uchar *arg)
 	 * system() way of doing things. rgerhards, 2007-07-20
 	 */
 	perror("exec");
+	fprintf(stderr, "exec program was '%s' with param '%s'\n", program, arg);
 	exit(1); /* not much we can do in this case */
 }
 
