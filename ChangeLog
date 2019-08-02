@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Version 8.1908.0 (aka 2019.08) 2019-08-20
+- 2019-08-02: core/janitor bugfix: properly maintain dynafile cache
+  When the janitor cleans out timed-out files, it does not
+  properly indicate the entry is gone. Especially when running
+  in async mode this can lead to use-after-free and thus
+  memory corruption or segfault.
+  see also https://github.com/rsyslog/rsyslog/issues/3756
 - 2019-08-01: omfile bugfix: race file when async writing is enabled
   This seems to be a long-standing bug, introduced around 7 years ago.
   It became more visible by properly closing files during HUP, which
