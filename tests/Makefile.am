@@ -172,6 +172,7 @@ TESTS +=  \
 	omfile-null-filename.sh \
 	omfile-whitespace-filename.sh \
 	omfile-read-only.sh \
+	omfile-outchannel.sh \
 	omfile_both_files_set.sh \
 	omfile_hup.sh \
 	msgvar-concurrency.sh \
@@ -1653,6 +1654,7 @@ EXTRA_DIST= \
 	omfile-null-filename.sh \
 	omfile-whitespace-filename.sh \
 	omfile-read-only.sh \
+	omfile-outchannel.sh \
 	omfile_both_files_set.sh \
 	omfile_hup.sh \
 	omrabbitmq_no_params.sh \
