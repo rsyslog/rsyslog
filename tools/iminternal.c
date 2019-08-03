@@ -105,7 +105,7 @@ rsRetVal iminternalAddMsg(smsg_t *pMsg)
 	pThis->pMsg = pMsg;
 	CHKiRet(llAppend(&llMsgs,  NULL, (void*) pThis));
 
-	if(bHaveMainQueue) {
+	if(PREFER_FETCH_32BIT(bHaveMainQueue)) {
 		DBGPRINTF("signaling new internal message via SIGTTOU: '%s'\n",
 			pThis->pMsg->pszRawMsg);
 		kill(glblGetOurPid(), SIGTTOU);

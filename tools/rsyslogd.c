@@ -1971,7 +1971,7 @@ static void
 rsyslogd_destructAllActions(void)
 {
 	ruleset.DestructAllActions(runConf);
-	bHaveMainQueue = 0; /* flag that internal messages need to be temporarily stored */
+	PREFER_STORE_0_TO_INT(&bHaveMainQueue); /* flag that internal messages need to be temporarily stored */
 }
 
 
