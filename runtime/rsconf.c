@@ -2,7 +2,7 @@
  *
  * Module begun 2011-04-19 by Rainer Gerhards
  *
- * Copyright 2011-2018 Adiscon GmbH.
+ * Copyright 2011-2019 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -816,7 +816,11 @@ activateMainQueue(void)
 		FINALIZE;
 	}
 
-	bHaveMainQueue = (ourConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DIRECT) ? 0 : 1;
+	if(ourConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DIRECT) {
+		PREFER_STORE_0_TO_INT(&bHaveMainQueue);
+	} else {
+		PREFER_STORE_1_TO_INT(&bHaveMainQueue);
+	}
 	DBGPRINTF("Main processing queue is initialized and running\n");
 finalize_it:
 	glblDestructMainqCnfObj();
