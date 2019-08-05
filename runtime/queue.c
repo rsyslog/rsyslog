@@ -1842,14 +1842,14 @@ DequeueConsumableElements(qqueue_t *const pThis, wti_t *const pWti,
 		localRet = qqueueChkDiscardMsg(pThis, pThis->iQueueSize, pMsg);
 		if(localRet == RS_RET_QUEUE_FULL) {
 			++nDiscarded;
-			continue;
+			pWti->batch.eltState[nDequeued] = BATCH_STATE_DISC;
 		} else if(localRet != RS_RET_OK) {
+			pWti->batch.eltState[nDequeued] = BATCH_STATE_RDY;
+		} else {
 			ABORT_FINALIZE(localRet);
 		}
 
-		/* all well, use this element */
 		pWti->batch.pElem[nDequeued].pMsg = pMsg;
-		pWti->batch.eltState[nDequeued] = BATCH_STATE_RDY;
 		++nDequeued;
 		if(nDequeued < iMinDeqBatchSize && getLogicalQueueSize(pThis) == 0) {
 			while(!pThis->bShutdownImmediate
@@ -1878,12 +1878,12 @@ DequeueConsumableElements(qqueue_t *const pThis, wti_t *const pWti,
 	}
 
 	/* it is sufficient to persist only when the bulk of work is done */
-	qqueueChkPersist(pThis, nDequeued+nDiscarded+nDeleted);
+	qqueueChkPersist(pThis, nDequeued+nDeleted);
 
 	DBGOPRINT((obj_t*) pThis, "dequeued %d consumable elements, szlog %d sz phys %d\n",
 		nDequeued, getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
 	pWti->batch.nElem = nDequeued;
-	pWti->batch.nElemDeq = nDequeued + nDiscarded;
+	pWti->batch.nElemDeq = nDequeued;
 	pWti->batch.deqID = getNextDeqID(pThis);
 	*piRemainingQueueSize = iQueueSize;
 finalize_it:
