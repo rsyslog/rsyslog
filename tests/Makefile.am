@@ -1376,6 +1376,7 @@ endif
 if ENABLE_MMKUBERNETES
 if ENABLE_MMJSONPARSE
 if ENABLE_IMFILE
+if ENABLE_IMPSTATS
 TESTS += \
 	mmkubernetes-basic.sh \
 	mmkubernetes-cache-expire.sh
@@ -1383,6 +1384,7 @@ if HAVE_VALGRIND
 TESTS += \
 	mmkubernetes-basic-vg.sh \
 	mmkubernetes-cache-expire-vg.sh
+endif
 endif
 endif
 endif
