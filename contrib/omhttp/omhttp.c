@@ -191,6 +191,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "uid", eCmdHdlrGetWord, 0 },
 	{ "pwd", eCmdHdlrGetWord, 0 },
 	{ "restpath", eCmdHdlrGetWord, 0 },
+	{ "checkpath", eCmdHdlrGetWord, 0 },
 	{ "dynrestpath", eCmdHdlrBinary, 0 },
 	{ "batch", eCmdHdlrBinary, 0 },
 	{ "batch.format", eCmdHdlrGetWord, 0 },
@@ -220,6 +221,7 @@ static struct cnfparamblk actpblk =
 
 static rsRetVal curlSetup(wrkrInstanceData_t *pWrkrData);
 static void curlCleanup(wrkrInstanceData_t *pWrkrData);
+static void curlCheckConnSetup(wrkrInstanceData_t *const pWrkrData);
 
 /* compressCtx functions */
 static void ATTR_NONNULL()
@@ -499,7 +501,7 @@ checkConn(wrkrInstanceData_t *const pWrkrData)
 		es_emptyStr(urlBuf);
 		r = es_addBuf(&urlBuf, serverUrl, strlen(serverUrl));
 		if(r == 0 && checkPath != NULL)
-			r = es_addBuf(&urlBuf, checkPath, sizeof(checkPath)-1);
+			r = es_addBuf(&urlBuf, checkPath, strlen(checkPath));
 		if(r == 0)
 			healthUrl = es_str2cstr(urlBuf, NULL);
 		if(r != 0 || healthUrl == NULL) {
@@ -508,8 +510,8 @@ checkConn(wrkrInstanceData_t *const pWrkrData)
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 
+		curlCheckConnSetup(pWrkrData);
 		curl_easy_setopt(curl, CURLOPT_URL, healthUrl);
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlResult);
 		res = curl_easy_perform(curl);
 		free(healthUrl);
 

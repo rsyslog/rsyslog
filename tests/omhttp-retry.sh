@@ -30,6 +30,7 @@ if $msg contains "msgnum:" then
 		server="localhost"
 		serverport="'$port'"
 		restpath="my/endpoint"
+		checkpath="ping"
 		batch="off"
 
 		# Auth
