@@ -89,7 +89,8 @@ static SSL_CTX *ctx;
 static short bHaveCA;
 static short bHaveCert;
 static short bHaveKey;
-static short bAnonInit;
+static int bAnonInit;
+static MUTEX_TYPE anonInit_mut = PTHREAD_MUTEX_INITIALIZER;
 
 /*--------------------------------------MT OpenSSL helpers ------------------------------------------*/
 static MUTEX_TYPE *mutex_buf = NULL;
@@ -510,6 +511,7 @@ static rsRetVal
 osslAnonInit(void)
 {
 	DEFiRet;
+	pthread_mutex_lock(&anonInit_mut);
 	if (bAnonInit == 1) {
 		/* we are done */
 		FINALIZE;
@@ -527,6 +529,7 @@ osslAnonInit(void)
 
 	bAnonInit = 1;
 finalize_it:
+	pthread_mutex_unlock(&anonInit_mut);
 	RETiRet;
 }
 
@@ -633,7 +636,7 @@ osslInitSession(nsd_ossl_t *pThis) /* , nsd_ossl_t *pServer) */
 		SSL_set_verify_depth(pThis->ssl, 2);
 	}
 
-	if (bAnonInit == 1) {
+	if (bAnonInit == 1) { /* no mutex needed, read-only after init */
 		/* Allow ANON Ciphers */
 		#if OPENSSL_VERSION_NUMBER >= 0x10100000L
 		 /* NOTE: do never use: +eNULL, it DISABLES encryption! */
@@ -1721,7 +1724,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 		SSL_set_verify_depth(pThis->ssl, 2);
 	}
 
-	if (bAnonInit == 1) {
+	if (bAnonInit == 1) { /* no mutex needed, read-only after init */
 		/* Allow ANON Ciphers */
 		#if OPENSSL_VERSION_NUMBER >= 0x10100000L
 		 /* NOTE: do never use: +eNULL, it DISABLES encryption! */
