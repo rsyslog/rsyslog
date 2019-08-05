@@ -161,7 +161,7 @@ restpath
 
    "word", "none", "no", "none"
 
-The rest path you want to use. Do not include the leading slash character. If the full path looks like "localhost:5000/my/path", restpath should be "my/path.
+The rest path you want to use. Do not include the leading slash character. If the full path looks like "localhost:5000/my/path", restpath should be "my/path".
 
 
 dynrestpath
@@ -177,6 +177,24 @@ dynrestpath
 When this parameter is set to "on" you can specify a template name in the parameter
 restpath instead of the actual path. This way you will be able to use dynamic rest
 paths for your messages based on the template you are using.
+
+
+checkpath
+^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+The health check path you want to use. Do not include the leading slash character. If the full path looks like "localhost:5000/my/path", checkpath should be "my/path".
+When this parameter is set, omhttp utilizes this path to determine if it is safe to resume (from suspend mode) and communicates this status back to rsyslog core.
+This parameter defaults to none, which implies that health checks are not needed, and it is always safe to resume from suspend mode.
+
+**Important** - Note that it is highly recommended to set a valid health check path, as this allows omhttp to better determine whether it is safe to retry.
+See the `rsyslog action queue documentation for more info <https://www.rsyslog.com/doc/v8-stable/configuration/actions.html>`_ regarding general rsyslog suspend and resume behavior.
 
 
 batch
