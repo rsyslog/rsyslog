@@ -150,7 +150,7 @@ uint64_t glblDevOptions = 0; /* to be used by developers only */
 
 pid_t glbl_ourpid;
 #ifndef HAVE_ATOMIC_BUILTINS
-static DEF_ATOMIC_HELPER_MUT(mutTerminateInputs);
+DEF_ATOMIC_HELPER_MUT(mutTerminateInputs);
 #endif
 #ifdef USE_UNLIMITED_SELECT
 static int iFdSetSize = howmany(FD_SETSIZE, __NFDBITS) * sizeof (fd_mask); /* size of select() bitmask in bytes */
