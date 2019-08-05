@@ -168,6 +168,9 @@ TESTS +=  \
 	dnscache-TTL-0.sh \
 	invalid_nested_include.sh \
 	omfwd-keepalive.sh \
+	omusrmsg-noabort-legacy.sh \
+	omusrmsg-errmsg-no-params.sh \
+	omusrmsg-noabort.sh \
 	omfile-module-params.sh \
 	omfile-read-only-errmsg.sh \
 	omfile-null-filename.sh \
@@ -1653,6 +1656,9 @@ EXTRA_DIST= \
 	omfwd-keepalive.sh \
 	omfile_hup-vg.sh \
 	gzipwr_hup-vg.sh \
+	omusrmsg-noabort-legacy.sh \
+	omusrmsg-errmsg-no-params.sh \
+	omusrmsg-noabort.sh \
 	omfile-module-params.sh \
 	omfile-read-only-errmsg.sh \
 	omfile-null-filename.sh \
