@@ -801,8 +801,9 @@ ENDfreeCnf
 static void
 doSIGTTIN(int __attribute__((unused)) sig)
 {
-	DBGPRINTF("imrelp: awoken via SIGTTIN; bTerminateInputs: %d\n", bTerminateInputs);
-	if(bTerminateInputs) {
+	const int bTerminate = ATOMIC_FETCH_32BIT(&bTerminateInputs, &mutTerminateInputs);
+	DBGPRINTF("imrelp: awoken via SIGTTIN; bTerminateInputs: %d\n", bTerminate);
+	if(bTerminate) {
 		relpEngineSetStop(pRelpEngine);
 		DBGPRINTF("imrelp: termination requested via SIGTTIN - telling RELP engine\n");
 	}
