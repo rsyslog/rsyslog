@@ -4,7 +4,6 @@ src:queue.c
 src:omprog.c
 src:lookup.c
 src:rainerscript.c
-src:imptcp.c
 src:imdiag.c
 
 fun:doSIGTTIN
