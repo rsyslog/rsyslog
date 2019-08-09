@@ -54,7 +54,7 @@ if [ "$DISTRIB_CODENAME" == "trusty" ] || [ "$DISTRIB_CODENAME" == "precise" ]; 
 	CC=$SAVE_CC
 	CFLAGS=$SAVE_CFLAGS
 else
-	sudo apt-get install -qq libmaxminddb-dev libmongoc-dev
+	sudo apt-get install -qq libmaxminddb-dev libmongoc-dev libbson-dev
 fi
 
 # As travis has no xenial images, we always need to install librdkafka from source
@@ -73,6 +73,8 @@ if [ "x$GCC" == "xNEWEST" ]; then
 	sudo apt-get install gcc-7 -y -qq
 	export CC=gcc-7
 fi
+
+sudo apt-get install -qq libhiredis-dev # somehow we now need this
 
 if [ "x$ESTEST" == "xYES" ]; then sudo apt-get install -qq elasticsearch ; fi
 if [ "$DISTRIB_CODENAME" == "trusty" ]; then sudo apt-get install -qq libhiredis-dev; export HIREDIS_OPT="--enable-omhiredis"; fi
