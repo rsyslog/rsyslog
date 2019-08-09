@@ -26,9 +26,9 @@ sent to Graylog.
         property(name="hostname")
         constant(value="\",\"short_message\":\"")
         property(name="msg" format="json")
-        constant(value="\",\"timestamp\":\"")
+        constant(value="\",\"timestamp\":")
         property(name="timegenerated" dateformat="unixtimestamp")
-        constant(value="\",\"level\":\"")
+        constant(value=",\"level\":\"")
         property(name="syslogseverity")
         constant(value="\"}")
     }
@@ -46,12 +46,16 @@ action.
 ::
 
     # syslog forwarder via UDP
-    action(type="omfwd" target="graylogserver" port="514" protocol="udp" template="gelf")
+    action(type="omfwd" target="graylogserver" port="12201" protocol="udp" template="gelf")
 
 We now have a syslog forwarding action. This uses the omfwd module. Please
 note that the case above only works for UDP transport. When using TCP, 
-Graylog expects a Nullbyte as message delimiter. This is currently not 
-possible with rsyslog.
+Graylog expects a Nullbyte as message delimiter. So, to use TCP, you need to change delimiter via `TCP_FrameDelimiter <../configuration/modules/omfwd.html#tcp-framedelimiter>`_ option.
+
+::
+
+    # syslog forwarder via TCP
+    action(type="omfwd" target="graylogserver" port="12201" protocol="tcp" template="gelf" TCP_FrameDelimiter="0" KeepAlive="on")
 
 Conclusion
 ----------
