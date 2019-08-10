@@ -464,7 +464,7 @@ static rsRetVal
 persistJournalState(int trySave)
 {
 	DEFiRet;
-	FILE *sf; /* state file */
+	FILE *sf = NULL; /* state file */
 	char tmp_sf[MAXFNAME];
 	size_t n;
 
@@ -502,12 +502,6 @@ persistJournalState(int trySave)
 
 	if(fputs(last_cursor, sf) == EOF) {
 		LogError(errno, RS_RET_IO_ERROR, "imjournal: failed to save cursor to: '%s'", tmp_sf);
-		fclose(sf);
-		ABORT_FINALIZE(RS_RET_IO_ERROR);
-	}
-
-	if (fclose(sf) == EOF) {
-		LogError(errno, RS_RET_IO_ERROR, "imjournal: fclose() failed for path: '%s'", tmp_sf);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 
@@ -535,6 +529,12 @@ persistJournalState(int trySave)
 	}
 
 finalize_it:
+	if (sf != NULL) {
+		if (fclose(sf) == EOF) {
+			LogError(errno, RS_RET_IO_ERROR, "imjournal: fclose() failed for path: '%s'", tmp_sf);
+			iRet = RS_RET_IO_ERROR;
+		}
+	}
 	RETiRet;
 }
 
