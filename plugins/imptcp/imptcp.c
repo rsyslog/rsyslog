@@ -1539,7 +1539,7 @@ done:	RETiRet;
  * exception is duplicated file handles, which we do not create.
  */
 static rsRetVal
-closeSess(ptcpsess_t *pSess)
+closeSess(ptcpsess_t *pSess, epolld_t *const epd)
 {
 	DEFiRet;
 	
@@ -1547,6 +1547,9 @@ closeSess(ptcpsess_t *pSess)
 		doZipFinish(pSess);
 
 	const int sock = pSess->sock;
+	if(epoll_ctl(epollfd, EPOLL_CTL_DEL, sock, &(epd->ev)) != 0) {
+		LogError(errno, RS_RET_EPOLL_CTL_FAILED, "os error during epoll DEL");
+	}
 	close(sock);
 
 	pthread_mutex_lock(&pSess->pLstn->pSrv->mutSessLst);
@@ -1871,7 +1874,7 @@ finalize_it:
  * or close the session.
  */
 static rsRetVal
-sessActivity(ptcpsess_t *const pSess, int *const continue_polling)
+sessActivity(ptcpsess_t *const pSess, int *const continue_polling, epolld_t *const epd)
 {
 	int lenRcv;
 	int lenBuf;
@@ -1904,14 +1907,14 @@ sessActivity(ptcpsess_t *const pSess, int *const continue_polling)
 				LogError(0, RS_RET_PEER_CLOSED_CONN, "imptcp session %d closed by "
 					  	"remote peer %s.", remsock, peerName);
 			}
-			CHKiRet(closeSess(pSess)); /* close may emit more messages in strmzip mode! */
+			CHKiRet(closeSess(pSess, epd)); /* close may emit more messages in strmzip mode! */
 			break;
 		} else {
 			if(CHK_EAGAIN_EWOULDBLOCK)
 				break;
 			DBGPRINTF("imptcp: error on session socket %d - closed.\n", pSess->sock);
 			*continue_polling = 0;
-			closeSess(pSess); /* try clean-up by dropping session */
+			closeSess(pSess, epd); /* try clean-up by dropping session */
 			break;
 		}
 	}
@@ -1926,7 +1929,7 @@ finalize_it:
  * concurrently.
  */
 static void
-processWorkItem(epolld_t *epd)
+processWorkItem(epolld_t *const epd)
 {
 
 	int continue_polling = 1;
@@ -1937,7 +1940,7 @@ processWorkItem(epolld_t *epd)
 		lstnActivity((ptcplstn_t *) epd->ptr);
 		break;
 	case epolld_sess:
-		sessActivity((ptcpsess_t *) epd->ptr, &continue_polling);
+		sessActivity((ptcpsess_t *) epd->ptr, &continue_polling, epd);
 		break;
 	default:
 		LogError(0, RS_RET_INTERNAL_ERROR, "error: invalid epolld_type_t %d after epoll", epd->typ);
