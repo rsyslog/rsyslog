@@ -329,6 +329,7 @@ struct ptcplstn_s {
 	STATSCOUNTER_DEF(ctrSessOpen, mutCtrSessOpen)
 	STATSCOUNTER_DEF(ctrSessOpenErr, mutCtrSessOpenErr)
 	STATSCOUNTER_DEF(ctrSessClose, mutCtrSessClose)
+	DEF_ATOMIC_HELPER_MUT64(mut_rcvdBytes)
 };
 
 
@@ -1295,7 +1296,7 @@ DataRcvd(ptcpsess_t *pThis, char *pData, size_t iLen)
 {
 	struct syslogTime stTime;
 	DEFiRet;
-	pThis->pLstn->rcvdBytes += iLen;
+	ATOMIC_ADD_uint64(&pThis->pLstn->rcvdBytes, &pThis->pLstn->mut_rcvdBytes, iLen);
 	if(pThis->compressionMode >= COMPRESS_STREAM_ALWAYS)
 		iRet =  DataRcvdCompressed(pThis, pData, iLen);
 	else
@@ -1405,6 +1406,7 @@ addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6)
 	 * that they may not be 100% correct */
 	pLstn->rcvdBytes = 0,
 	pLstn->rcvdDecompressed = 0;
+	INIT_ATOMIC_HELPER_MUT64(pLstn->mut_rcvdBytes);
 	CHKiRet(statsobj.AddCounter(pLstn->stats, UCHAR_CONSTANT("bytes.received"),
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pLstn->rcvdBytes)));
 	CHKiRet(statsobj.AddCounter(pLstn->stats, UCHAR_CONSTANT("bytes.decompressed"),
@@ -1835,8 +1837,8 @@ startupServers(void)
 /* process new activity on listener. This means we need to accept a new
  * connection.
  */
-static rsRetVal
-lstnActivity(ptcplstn_t *pLstn)
+static rsRetVal ATTR_NONNULL()
+lstnActivity(ptcplstn_t *const pLstn)
 {
 	int newSock = -1;
 	prop_t *peerName;
@@ -1869,7 +1871,7 @@ finalize_it:
  * or close the session.
  */
 static rsRetVal
-sessActivity(ptcpsess_t *pSess, int *continue_polling)
+sessActivity(ptcpsess_t *const pSess, int *const continue_polling)
 {
 	int lenRcv;
 	int lenBuf;
@@ -1926,6 +1928,7 @@ finalize_it:
 static void
 processWorkItem(epolld_t *epd)
 {
+
 	int continue_polling = 1;
 
 	switch(epd->typ) {
@@ -1937,8 +1940,7 @@ processWorkItem(epolld_t *epd)
 		sessActivity((ptcpsess_t *) epd->ptr, &continue_polling);
 		break;
 	default:
-		LogError(0, RS_RET_INTERNAL_ERROR,
-						"error: invalid epolld_type_t %d after epoll", epd->typ);
+		LogError(0, RS_RET_INTERNAL_ERROR, "error: invalid epolld_type_t %d after epoll", epd->typ);
 		break;
 	}
 	if (continue_polling == 1) {
