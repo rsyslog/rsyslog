@@ -1550,6 +1550,12 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls
 		/* by default, reuse existing connections */
 		curl_easy_setopt(curl, CURLOPT_FRESH_CONNECT, 0);
 	}
+	if ((pWrkrData->pData->rebindInterval > -1) &&
+		(pWrkrData->nOperations == pWrkrData->pData->rebindInterval)) {
+		curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1);
+	} else {
+		curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 0);
+	}
 
 	if(pWrkrData->pData->numServers > 1) {
 		/* needs to be called to support ES HA feature */
