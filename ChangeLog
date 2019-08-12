@@ -1,5 +1,13 @@
 ----------------------------------------------------------------------------------------
 Version 8.1908.0 (aka 2019.08) 2019-08-20
+- 2019-08-12: imptcp bugfix: port="0" parameter did not work as expected
+  when multiple interfaces and/or protocols could be bound, each of
+  them used a different listener ports were assigned. While this is
+  basically correct, it makes things unusable, especially as
+  listenPortFileName will only contain the port number used for
+  the latest listener.
+  This patch now follows the model of nsd_ptcp.c to assign only
+  the first port randomly and then use that port consistently.
 - 2019-08-10: omelasticsearch bugfix: potential ressource leak whith "rebindinterval"
   If the "rebindInterval" parameter was used connections could be linked. This
   was especially the case with small intervals (such as "2"). This is fixed by
