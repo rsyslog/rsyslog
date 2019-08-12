@@ -5,16 +5,18 @@
 generate_conf
 add_conf '
 module(load="../plugins/imptcp/.libs/imptcp")
-input(type="imptcp" port="'$TCPFLOOD_PORT'" notifyonconnectionclose="on" notifyonconnectionopen="on")
+input(type="imptcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port"
+	notifyonconnectionclose="on" notifyonconnectionopen="on")
 
 :msg, contains, "msgnum:" {
 	action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG`)
 }
 
-action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
+action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 
 '
 startup
+assign_tcpflood_port $RSYSLOG_DYNNAME.tcpflood_port
 tcpflood -m1 -M"\"<129>Mar 10 01:00:00 172.20.245.8 tag: msgnum:1\""
 shutdown_when_empty
 wait_shutdown

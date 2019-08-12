@@ -10,13 +10,14 @@ global(maxMessageSize="10k")
 template(name="outfmt" type="string" string="%msg:F,58:2%,%msg:F,58:3%,%msg:F,58:4%\n")
 
 module(load="../plugins/imptcp/.libs/imptcp")
-input(type="imptcp" port="'$TCPFLOOD_PORT'" ruleset="testing")
+input(type="imptcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="testing")
 
 ruleset(name="testing") {
 	action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 }
 '
 startup
+assign_tcpflood_port $RSYSLOG_DYNNAME.tcpflood_port
 # send messages of 10.000bytes plus header max, randomized
 tcpflood -c5 -m$NUMMESSAGES -r -d10000
 wait_file_lines
