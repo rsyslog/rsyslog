@@ -1341,10 +1341,7 @@ addEPollSock(epolld_type_t typ, void *ptr, int sock, epolld_t **pEpd)
 	epd->ev.data.ptr = (void*) epd;
 
 	if(epoll_ctl(epollfd, EPOLL_CTL_ADD, sock, &(epd->ev)) != 0) {
-		char errStr[1024];
-		int eno = errno;
-		LogError(0, RS_RET_EPOLL_CTL_FAILED, "os error (%d) during epoll ADD: %s",
-			        eno, rs_strerror_r(eno, errStr, sizeof(errStr)));
+		LogError(errno, RS_RET_EPOLL_CTL_FAILED, "os error during epoll ADD");
 		ABORT_FINALIZE(RS_RET_EPOLL_CTL_FAILED);
 	}
 
