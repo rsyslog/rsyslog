@@ -508,6 +508,19 @@ assign_tcpflood_port() {
 	fi
 }
 
+# assign RCVR_PORT from port file
+# $1 - port file
+assign_rcvr_port() {
+	wait_file_exists "$1"
+	export RCVR_PORT=$(cat "$1")
+	echo "RCVR_PORT now: $RCVR_PORT"
+	if [ "$RCVR_PORT" == "" ]; then
+		echo "TESTBENCH ERROR: RCVR_PORT not found!"
+		ls -l $RSYSLOG_DYNNAME*
+		exit 100
+	fi
+}
+
 # same as startup_vg, BUT we do NOT wait on the startup message!
 startup_vg_waitpid_only() {
 	startup_common "$1" "$2"
