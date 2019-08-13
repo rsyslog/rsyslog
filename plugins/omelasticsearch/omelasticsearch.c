@@ -272,6 +272,26 @@ BEGINfreeInstance
 CODESTARTfreeInstance
 	if(pData->fdErrFile != -1)
 		close(pData->fdErrFile);
+
+	if(loadModConf != NULL) {
+		/* we keep our instances in our own internal list - this also
+		 * means we need to cleanup that list, else we cause grief.
+		 */
+		instanceData *prev = NULL;
+		for(instanceData *inst = loadModConf->root ; inst != NULL ; inst = inst->next) {
+			if(inst == pData) {
+				if(loadModConf->tail == inst) {
+					loadModConf->tail = prev;
+				}
+				prev->next = inst->next;
+				/* no need to correct inst back to prev - we exit now! */
+				break;
+			} else {
+				prev = inst;
+			}
+		}
+	}
+
 	pthread_mutex_destroy(&pData->mutErrFile);
 	for(i = 0 ; i < pData->numServers ; ++i)
 		free(pData->serverBaseUrls[i]);
