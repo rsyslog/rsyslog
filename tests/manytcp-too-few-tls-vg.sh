@@ -4,7 +4,7 @@
 . ${srcdir:=.}/diag.sh init
 skip_platform "FreeBSD"  "This test does not work on FreeBSD"
 export NUMMESSAGES=40000 # we unfortunately need many messages as we have many connections
-export TB_TEST_MAX_RUNTIME=1200 # this test is VERY slow, so we need to override max runtime
+export TB_TEST_MAX_RUNTIME=1800 # this test is VERY slow, so we need to override max runtime
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
