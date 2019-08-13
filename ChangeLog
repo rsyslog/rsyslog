@@ -1,5 +1,17 @@
 ----------------------------------------------------------------------------------------
 Version 8.1908.0 (aka 2019.08) 2019-08-20
+- 2019-08-13: omelasticsearch bugfix: segfault on unknown retryRuleset
+  omelasticsearch does some "interesting tricks" for an output module.
+  This causes a segfault if the retryRuleset is now known.
+  The action module interface currently expects that all config errors
+  be detected during instance creation. Instead omelasticsearch defers
+  the retry ruleset check to a later state. The reason is that it wants
+  to support the use the same rulesetname it is defined in - and this
+  is not yet available at action parsing.
+  We fix this by ensuring that any deleted instance is properly unlinked
+  from the instance list. One may argue the module interface should get
+  upgrade for such cases, but this is a longer-term approach.
+  closes https://github.com/rsyslog/rsyslog/pull/3796
 - 2019-08-12: imptcp bugfix: port="0" parameter did not work as expected
   when multiple interfaces and/or protocols could be bound, each of
   them used a different listener ports were assigned. While this is
