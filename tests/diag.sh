@@ -38,6 +38,10 @@
 #		sample can be seen in imjournal-basic[.vg].sh
 #		You may also use USE_VALGRIND="YES-NOLEAK" to request valgrind without
 #		leakcheck (this sometimes is needed).
+# ABORT_ALL_ON_TEST_FAIL
+#		if set to "YES" and one test fails, all others are not executed but skipped.
+#		This is useful in long-running CI jobs where we are happy with seeing the
+#		first failure (to save time).
 #
 #
 # EXIT STATES
@@ -961,8 +965,10 @@ wait_seq_check() {
 	fi
 
 	while true ; do
-		if [ -f "$filename" ]; then
-			count=$(wc -l < "$filename")
+		if [ "${filename##.*}" == "gz" ]; then
+			if [ -f "$filename" ]; then
+				count=$(wc -l < "$filename")
+			fi
 		fi
 		seq_check --check-only "$@" #&>/dev/null
 		ret=$?
@@ -1197,6 +1203,9 @@ error_exit() {
 		fi
 	fi
 	printf '%s FAIL: Test %s (took %s seconds)\n' "$(tb_timestamp)" "$0" "$(( $(date +%s) - TB_STARTTEST ))"
+	if [ $exitval -ne 77 ]; then
+		echo $0 > testbench_test_failed_rsyslog
+	fi
 	exit $exitval
 }
 
@@ -1257,23 +1266,35 @@ seq_check() {
 		printf 'FAIL: %s does not exist in seq_check!\n' "$SEQ_CHECK_FILE"
 		error_exit 1
 	fi
-	$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${SEQ_CHECK_FILE} | ./chkseq -s$startnum -e$endnum $3 $4 $5 $6 $7
+	if [ "${SEQ_CHECK_FILE##*.}" == "gz" ]; then
+		gunzip -c "${SEQ_CHECK_FILE}" | $RS_SORTCMD $RS_SORT_NUMERIC_OPT | ./chkseq -s$startnum -e$endnum $3 $4 $5 $6 $7
+	else
+		$RS_SORTCMD $RS_SORT_NUMERIC_OPT < "${SEQ_CHECK_FILE}" | ./chkseq -s$startnum -e$endnum $3 $4 $5 $6 $7
+	fi
 	ret=$?
 	if [ "$check_only"  == "YES" ]; then
+		echo RETURNING $ret
 		return $ret
 	fi
 	if [ $ret -ne 0 ]; then
-		$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${SEQ_CHECK_FILE} > $RSYSLOG_DYNNAME.error.log
+		if [ "${SEQ_CHECK_FILE##*.}" == "gz" ]; then
+			gunzip -c "${SEQ_CHECK_FILE}" | $RS_SORTCMD $RS_SORT_NUMERIC_OPT \
+				| ./chkseq -s$startnum -e$endnum $3 $4 $5 $6 $7 \
+				> $RSYSLOG_DYNNAME.error.log
+		else
+			$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${SEQ_CHECK_FILE} \
+				> $RSYSLOG_DYNNAME.error.log
+		fi
 		echo "sequence error detected in $SEQ_CHECK_FILE"
 		echo "number of lines in file: $(wc -l $SEQ_CHECK_FILE)"
 		echo "sorted data has been placed in error.log, first 10 lines are:"
-		cat -n $RSYSLOG_DYNNAME.error.log | head -10
+		cat -n "$RSYSLOG_DYNNAME.error.log" | head -10
 		echo "---last 10 lines are:"
-		cat -n $RSYSLOG_DYNNAME.error.log | tail -10
+		cat -n "$RSYSLOG_DYNNAME.error.log" | tail -10
 		echo "UNSORTED data, first 10 lines are:"
-		cat -n $SEQ_CHECK_FILE | head -10
+		cat -n "$RSYSLOG_DYNNAME.error.log" | head -10
 		echo "---last 10 lines are:"
-		cat -n $SEQ_CHECK_FILE | tail -10
+		cat -n "$RSYSLOG_DYNNAME.error.log" | tail -10
 		# for interactive testing, create a static filename. We know this may get
 		# mangled during a parallel test run
 		mv -f $RSYSLOG_DYNNAME.error.log error.log
@@ -2162,6 +2183,10 @@ case $1 in
 		# some default names (later to be set in other parts, once we support fully
 		# parallel tests)
 		export RSYSLOG_DFLT_LOG_INTERNAL=1 # testbench needs internal messages logged internally!
+		if [ -f testbench_test_failed_rsyslog ] && [ "$ABORT_ALL_ON_TEST_FAIL" == "YES" ]; then
+			echo NOT RUNNING TEST as previous test $(cat testbench_test_failed_rsyslog) failed.
+			exit 77
+		fi
 		if [ "$RSYSLOG_DYNNAME" != "" ]; then
 			echo "FAIL: \$RSYSLOG_DYNNAME already set in init"
 			echo "hint: was init accidently called twice?"
