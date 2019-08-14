@@ -311,6 +311,7 @@ TESTS +=  \
 	pipe_noreader.sh \
 	dircreate_dflt.sh \
 	dircreate_off.sh \
+	imuxsock_legacy.sh \
 	imuxsock_logger.sh \
 	imuxsock_logger_ruleset.sh \
 	imuxsock_logger_ruleset_ratelimit.sh \
@@ -2180,6 +2181,7 @@ EXTRA_DIST= \
 	tabescape_on.sh \
 	dircreate_dflt.sh \
 	dircreate_off.sh \
+	imuxsock_legacy.sh \
 	imuxsock_logger_parserchain.sh \
 	imuxsock_logger.sh \
 	imuxsock_logger_ruleset.sh \
