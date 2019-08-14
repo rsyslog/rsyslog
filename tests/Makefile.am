@@ -57,6 +57,9 @@ TESTS = $(TESTRUNS)
 
 if ENABLE_ELASTICSEARCH_TESTS_MINIMAL
 TESTS +=  \
+	es-duplicated-ruleset.sh
+# the following test need to be serialized:
+TESTS +=  \
 	es-basic.sh \
 	es-basic-es6.0.sh \
 	es-basic-bulk.sh
@@ -65,6 +68,7 @@ es-basic-bulk.log: es-basic-es6.0.log
 es-basic-server.log: es-basic-bulk.log
 if HAVE_VALGRIND
 TESTS += \
+	es-duplicated-ruleset-vg.sh \
 	es-basic-vg.sh
 es-basic-vg.log: es-basic-bulk.log
 # for next if block:
@@ -1837,6 +1841,8 @@ EXTRA_DIST= \
 	clickhouse-bulk-load-vg.sh \
 	es_response_get_msgnum.py \
 	elasticsearch-error-format-check.py \
+	es-duplicated-ruleset.sh \
+	es-duplicated-ruleset-vg.sh \
 	es-basic-es6.0.sh \
 	es-basic.sh \
 	es-basic-vgthread.sh \
