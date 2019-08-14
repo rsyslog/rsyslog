@@ -124,7 +124,8 @@ static int wrkrRunning;
  */
 static rsRetVal ATTR_NONNULL(1, 2)
 addNewLstnPort(tcpsrv_t *const pThis, const uchar *const pszPort,
-	const int bSuppOctetFram, const uchar *const pszAddr)
+	const int bSuppOctetFram, const uchar *const pszAddr,
+	const uchar *const pszLstnPortFileName)
 {
 	tcpLstnPortList_t *pEntry;
 	uchar statname[64];
@@ -147,6 +148,7 @@ addNewLstnPort(tcpsrv_t *const pThis, const uchar *const pszPort,
 	pEntry->pSrv = pThis;
 	pEntry->pRuleset = pThis->pRuleset;
 	pEntry->bSuppOctetFram = bSuppOctetFram;
+	pEntry->pszLstnPortFileName = pszLstnPortFileName;
 
 	/* we need to create a property */
 	CHKiRet(prop.Construct(&pEntry->pInputName));
@@ -198,11 +200,15 @@ finalize_it:
  * Note: pszPort is handed over to us - the caller MUST NOT free it!
  * rgerhards, 2008-03-20
  */
-static rsRetVal
-configureTCPListen(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram, uchar *pszAddr)
+static rsRetVal ATTR_NONNULL(1,2)
+configureTCPListen(tcpsrv_t *const pThis,
+	const uchar *const pszPort,
+	const int bSuppOctetFram,
+	const uchar *const pszAddr,
+	const uchar *const pszLstnPortFileName)
 {
 	int i;
-	uchar *pPort = pszPort;
+	const uchar *pPort = pszPort;
 	DEFiRet;
 
 	assert(pszPort != NULL);
@@ -215,7 +221,7 @@ configureTCPListen(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram, uchar *p
 	}
 
 	if(i >= 0 && i <= 65535) {
-		CHKiRet(addNewLstnPort(pThis, pszPort, bSuppOctetFram, pszAddr));
+		CHKiRet(addNewLstnPort(pThis, pszPort, bSuppOctetFram, pszAddr, pszLstnPortFileName));
 	} else {
 		LogError(0, NO_ERRCODE, "Invalid TCP listen port %s - ignored.\n", pszPort);
 	}
@@ -382,7 +388,7 @@ initTCPListener(tcpsrv_t *pThis, tcpLstnPortList_t *pPortEntry)
 
 	// pPortEntry->pszAddr = NULL ==> bind to all interfaces
 	CHKiRet(netstrm.LstnInit(pThis->pNS, (void*)pPortEntry, addTcpLstn, TCPLstnPort,
-		pPortEntry->pszAddr, pThis->iSessMax, pThis->pszLstnPortFileName));
+		pPortEntry->pszAddr, pThis->iSessMax, (uchar*)pPortEntry->pszLstnPortFileName));
 
 finalize_it:
 	RETiRet;

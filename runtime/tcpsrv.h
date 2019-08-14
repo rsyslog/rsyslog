@@ -46,6 +46,7 @@ struct tcpLstnPortList_s {
 	ratelimit_t *ratelimiter;
 	uchar dfltTZ[8];		/**< default TZ if none in timestamp; '\0' =No Default */
 	sbool bSPFramingFix;	/**< support work-around for broken Cisco ASA framing? */
+	const uchar *pszLstnPortFileName;	/**< File in which the dynamic port is written */
 	STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
 	tcpLstnPortList_t *pNext;	/**< next port or NULL */
 };
@@ -126,7 +127,8 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(tcpsrv_t **ppThis);
 	rsRetVal (*ConstructFinalize)(tcpsrv_t __attribute__((unused)) *pThis);
 	rsRetVal (*Destruct)(tcpsrv_t **ppThis);
-	rsRetVal (*configureTCPListen)(tcpsrv_t*, uchar *pszPort, int bSuppOctetFram, uchar *pszAddr);
+	rsRetVal (*ATTR_NONNULL(1,2) configureTCPListen)(tcpsrv_t*,
+		const uchar *pszPort, int bSuppOctetFram, const uchar *pszAddr, const uchar *);
 	rsRetVal (*create_tcp_socket)(tcpsrv_t *pThis);
 	rsRetVal (*Run)(tcpsrv_t *pThis);
 	/* set methods */
