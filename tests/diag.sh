@@ -922,11 +922,9 @@ wait_file_lines() {
 		if [ "$count_function" == "" ]; then
 			if [ -f "$file" ]; then
 				if [ "$COUNT_FILE_IS_ZIPPED" == "yes" ]; then
-					echo zipped
 					issue_HUP ""
 					count=$(gunzip < "$file" | wc -l)
 				else
-					echo NON zipped
 					count=$(wc -l < "$file")
 				fi
 			fi
@@ -1185,7 +1183,7 @@ error_exit() {
 	#fi
 
 	# Extended debug output for dependencies started by testbench
-	if [[ "$EXTRA_EXITCHECK" == 'dumpkafkalogs' ]]; then
+	if [ "$EXTRA_EXITCHECK" == 'dumpkafkalogs' ] && [ "$TEST_OUTPUT" == "VERBOSE" ]; then
 		# Dump Zookeeper log
 		dump_zookeeper_serverlog
 		# Dump Kafka log
