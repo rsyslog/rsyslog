@@ -508,17 +508,20 @@ assign_tcpflood_port() {
 	fi
 }
 
-# assign RCVR_PORT from port file
-# $1 - port file
-assign_rcvr_port() {
-	wait_file_exists "$1"
-	export RCVR_PORT=$(cat "$1")
-	echo "RCVR_PORT now: $RCVR_PORT"
-	if [ "$RCVR_PORT" == "" ]; then
-		echo "TESTBENCH ERROR: RCVR_PORT not found!"
+# wait for a file to exist, then export it's content to env var
+# intended to be used for very small files, e.g. listenPort files
+# $1 - env var name
+# $2 - port file
+assign_file_content() {
+	wait_file_exists "$2"
+	content=$(cat "$2")
+	if [ "$content" == "" ]; then
+		echo "TESTBENCH ERROR: get_file content had empty file $2"
 		ls -l $RSYSLOG_DYNNAME*
 		exit 100
 	fi
+	eval export $1="$content"
+	printf 'exported: %s=%s\n' $1 "$content"
 }
 
 # same as startup_vg, BUT we do NOT wait on the startup message!
