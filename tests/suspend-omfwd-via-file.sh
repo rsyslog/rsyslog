@@ -43,7 +43,6 @@ printf '\n%s %s\n' "$(tb_timestamp)" \
 printf "%s" "READY" > $RSYSLOG_DYNNAME.STATE
 
 injectmsg 6000 4000
-#injectmsg 10 90
 #export QUEUE_EMPTY_CHECK_FUNC=check_q_empty_log2
 wait_queueempty
 seq_check

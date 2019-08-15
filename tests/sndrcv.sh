@@ -22,7 +22,7 @@ $template dynfile,"'$RSYSLOG_OUT_LOG'"
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
 startup
-assign_rcvr_port $RSYSLOG_DYNNAME.rcvr_port
+assign_file_content RCVR_PORT "$RSYSLOG_DYNNAME.rcvr_port"
 
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
