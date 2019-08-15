@@ -716,6 +716,14 @@ checkExternalStateFile(action_t *const pThis, wti_t *const pWti)
 
 	filebuf[r] = '\0';
 	dbgprintf("external state file content: '%s'\n", filebuf);
+	/* trim trailing whitespace */
+	for(int j = r-1 ; j > 0 ; --j) {
+		if(filebuf[j] == '\n' || filebuf[j] == '\t' || filebuf[j] == ' ') {
+			filebuf[j] = '\0';
+		} else {
+			break;
+		}
+	}
 	if(!strcmp(filebuf, "SUSPENDED")) {
 		LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
 		      "action '%s' suspended (module '%s') by external state file",

@@ -1,5 +1,6 @@
 #!/bin/bash
-# This tests the action suspension via a file
+# This tests the action suspension via a file; we use a SUSPENDED string
+# with trailing whitespace in this test.
 # This file is part of the rsyslog project, released under ASL 2.0
 # Written 2018-08-13 by Rainer Gerhards
 . ${srcdir:=.}/diag.sh init
@@ -41,7 +42,7 @@ seq_check 0 $LOG2_EXPECTED_LASTNUM # full correctness check
 
 printf '\n%s %s\n' "$(tb_timestamp)" \
 	'STEP 2: checking that action becomes suspended via external state file'
-printf "%s" "SUSPENDED" > $RSYSLOG_DYNNAME.STATE
+printf 'SUSPENDED \n' > $RSYSLOG_DYNNAME.STATE
 injectmsg 2500 2500
 export SEQ_CHECK_FILE="$RSYSLOG_OUT_LOG"
 export QUEUE_EMPTY_CHECK_FUNC=check_q_empty_log1
