@@ -10,7 +10,7 @@ generate_conf
 add_conf '
 module(load="../plugins/mmjsonparse/.libs/mmjsonparse")
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="'$TCPFLOOD_PORT'")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 # we must make sure the template contains a reference to the 
 # data item with null value

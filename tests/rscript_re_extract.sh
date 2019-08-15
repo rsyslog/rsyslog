@@ -9,7 +9,7 @@ add_conf '
 template(name="outfmt" type="string" string="*Number is %$.number%*\n")
 
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="'$TCPFLOOD_PORT'")'
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")'
 add_conf "
 set \$.number = re_extract(\$msg, '.* ([0-9]+)$', 0, 1, 'none');"
 add_conf '

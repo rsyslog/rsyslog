@@ -38,7 +38,7 @@ global(
 
 # Note: no TLS for the listener, this is for tcpflood!
 $ModLoad ../plugins/imtcp/.libs/imtcp
-input(	type="imtcp" port="'$TCPFLOOD_PORT'" )
+input(	type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" )
 
 # set up the action
 action(	type="omfwd"

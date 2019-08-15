@@ -5,7 +5,7 @@
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="'$TCPFLOOD_PORT'")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 template(name="dynafile" type="string" string=`echo $RSYSLOG_OUT_LOG`)
 template(name="outfmt" type="string" string="-%msg%-\n")

@@ -10,7 +10,7 @@ add_conf '
 $MainMsgQueueTimeoutShutdown 10000
 
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="'$TCPFLOOD_PORT'")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 template(name="outfmt" type="string" string="%$/msgnum%\n")
 template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) /* trick to use relative path names! */

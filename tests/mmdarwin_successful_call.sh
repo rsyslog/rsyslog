@@ -24,7 +24,7 @@ template(name="darwin-output" type="list") {
 module(load="../plugins/imptcp/.libs/imptcp")
 module(load="../plugins/mmjsonparse/.libs/mmjsonparse")
 module(load="../contrib/mmdarwin/.libs/mmdarwin")
-input(type="imptcp" port="'$TCPFLOOD_PORT'" ruleset="testing")
+input(type="imptcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="testing")
 
 ruleset(name="testing") {
     action(type="mmjsonparse" cookie="")

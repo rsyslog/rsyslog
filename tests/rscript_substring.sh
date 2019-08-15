@@ -4,7 +4,7 @@
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="'$TCPFLOOD_PORT'")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 set $!str!var1 = substring("", 0, 0);
 set $!str!var2 = substring("test", 0, 4);

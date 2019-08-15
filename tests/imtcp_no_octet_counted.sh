@@ -6,7 +6,7 @@ echo TEST: \[imtcp_no_octet_counted.sh\]: test imtcp with octet counted framing 
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="'$TCPFLOOD_PORT'" ruleset="remote" supportOctetCountedFraming="off")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="remote" supportOctetCountedFraming="off")
 
 template(name="outfmt" type="string" string="%rawmsg%\n")
 ruleset(name="remote") {

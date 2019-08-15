@@ -10,7 +10,7 @@ $MaxMessageSize 10k
 template(name="outfmt" type="string" string="%msg:F,58:2%,%msg:F,58:3%,%msg:F,58:4%\n")
 
 module(load="../plugins/imptcp/.libs/imptcp" threads="32" processOnPoller="off")
-input(type="imptcp" port="'$TCPFLOOD_PORT'")
+input(type="imptcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 if (prifilt("local0.*")) then {
    action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")

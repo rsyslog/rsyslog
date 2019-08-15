@@ -8,7 +8,7 @@ $MaxMessageSize 128
 global(processInternalMessages="on"
 	oversizemsg.input.mode="accept")
 module(load="../plugins/imptcp/.libs/imptcp")
-input(type="imptcp" port="'$TCPFLOOD_PORT'" ruleset="ruleset1")
+input(type="imptcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="ruleset1")
 
 template(name="templ1" type="string" string="%rawmsg%\n")
 ruleset(name="ruleset1") {

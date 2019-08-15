@@ -19,7 +19,7 @@ module(	load="../plugins/imtcp/.libs/imtcp"
 	StreamDriver.AuthMode="x509/fingerprint"
 	PermittedPeer=["SHA1:FF:C6:62:D5:9D:25:9F:BC:F3:CB:61:FA:D2:B3:8B:61:88:D7:06:C3"] # INVALID!
 	)
-input(type="imtcp" port="'$TCPFLOOD_PORT'" )
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" )
 
 action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 '

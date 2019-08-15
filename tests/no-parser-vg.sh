@@ -11,7 +11,7 @@ fi
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="'$TCPFLOOD_PORT'" ruleset="ruleset")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="ruleset")
 ruleset(name="ruleset" parser="rsyslog.rfc5424") {
 	action(type="omfile" file=`echo $RSYSLOG2_OUT_LOG`)
 }

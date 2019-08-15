@@ -8,7 +8,7 @@ template(name="outfmt" type="string" string="%$!src_geoip%\n")
 module(load="../plugins/mmdblookup/.libs/mmdblookup" container="!")
 module(load="../plugins/mmnormalize/.libs/mmnormalize")
 module(load="../plugins/imptcp/.libs/imptcp")
-input(type="imptcp" port="'$TCPFLOOD_PORT'" ruleset="testing")
+input(type="imptcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="testing")
 
 ruleset(name="testing") {
 	action(type="mmnormalize" rulebase=`echo $srcdir/mmdb.rb`)

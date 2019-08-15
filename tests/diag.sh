@@ -172,7 +172,7 @@ setvar_RS_HOSTNAME() {
 	printf '### Obtaining HOSTNAME (prequisite, not actual test) ###\n'
 	generate_conf ""
 	add_conf 'module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="'$TCPFLOOD_PORT'")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 $template hostname,"%hostname%"
 local0.* ./'${RSYSLOG_DYNNAME}'.HOSTNAME;hostname
@@ -474,6 +474,13 @@ wait_startup() {
 	fi
 }
 
+# reassign ports after rsyslog startup; must be called from all
+# functions that startup rsyslog
+reassign_ports() {
+	if grep -q 'listenPortFileName="'$RSYSLOG_DYNNAME'\.tcpflood_port"' $CONF_FILE; then
+		assign_tcpflood_port $RSYSLOG_DYNNAME.tcpflood_port
+	fi
+}
 
 # start rsyslogd with default params. $1 is the config file name to use
 # returns only after successful startup, $2 is the instance (blank or 2!)
@@ -496,6 +503,7 @@ startup() {
 	fi
 	eval LD_PRELOAD=$RSYSLOG_PRELOAD $valgrind ../tools/rsyslogd -C $n_option -i$RSYSLOG_PIDBASE$instance.pid -M../runtime/.libs:../.libs -f$CONF_FILE $RS_REDIR &
 	wait_startup $instance
+	reassign_ports
 }
 
 
@@ -543,7 +551,7 @@ startup_vg_waitpid_only() {
 startup_vg() {
 		startup_vg_waitpid_only $1 $2
 		wait_startup $2
-		echo startup_vg still running
+		reassign_ports
 }
 
 # same as startup-vg, except that --leak-check is set to "none". This
@@ -569,6 +577,7 @@ startup_vgthread_waitpid_only() {
 startup_vgthread() {
 	startup_vgthread_waitpid_only $1 $2
 	wait_startup $2
+	reassign_ports
 }
 
 

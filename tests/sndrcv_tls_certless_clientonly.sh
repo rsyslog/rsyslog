@@ -39,7 +39,7 @@ global(defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'")
 
 # Note: no TLS for the listener, this is for tcpflood!
 $ModLoad ../plugins/imtcp/.libs/imtcp
-input(	type="imtcp" port="'$TCPFLOOD_PORT'" )
+input(	type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" )
 
 action(	type="omfwd" protocol="tcp" target="127.0.0.1" port="'$PORT_RCVR'"
 	StreamDriver="gtls" StreamDriverMode="1" StreamDriverAuthMode="anon")

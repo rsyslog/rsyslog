@@ -6,7 +6,7 @@ add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/mmnormalize/.libs/mmnormalize")
 
-input(type="imtcp" port="'$TCPFLOOD_PORT'" ruleset="norm")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="norm")
 
 template(name="outfmt" type="string" string="%hostname% %syslogtag%\n")
 

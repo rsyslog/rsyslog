@@ -41,7 +41,7 @@ main_queue(queue.timeoutactioncompletion="60000" queue.timeoutshutdown="60000")
 
 module(load="../plugins/omkafka/.libs/omkafka")
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="'$TCPFLOOD_PORT'" Ruleset="omkafka")	/* this port for tcpflood! */
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" Ruleset="omkafka")	/* this port for tcpflood! */
 
 template(name="outfmt" type="string" string="%msg%\n")
 

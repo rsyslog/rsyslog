@@ -10,7 +10,7 @@ template(name="outfmt" type="string" string="%$.hash_no_1% -  %$.hash_no_2%\n")
 
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../contrib/fmhash/.libs/fmhash")
-input(type="imtcp" port="'$TCPFLOOD_PORT'")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 set $.hash_no_1 = hash32("0f9a1d07-a8c9-43a7-a6f7-198dca3d932e");
 set $.hash_no_2 = hash32mod("0f9a1d07-a8c9-43a7-a6f7-198dca3d932e", 100);

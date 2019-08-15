@@ -9,7 +9,7 @@ add_conf '
 template(name="outfmt" type="string" string="%$!nbr%\n")
 
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="'$TCPFLOOD_PORT'")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 if $msg contains "msgnum:" then {
 	set $!nbr = field($msg, 58, 2);

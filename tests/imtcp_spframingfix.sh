@@ -6,7 +6,7 @@ echo TEST: \[imptcp_spframingfix.sh\]: test imptcp in regard to Cisco ASA framin
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="'$TCPFLOOD_PORT'" ruleset="remote" framingfix.cisco.asa="on")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="remote" framingfix.cisco.asa="on")
 
 template(name="outfmt" type="string" string="%rawmsg:6:7%\n")
 ruleset(name="remote") {
