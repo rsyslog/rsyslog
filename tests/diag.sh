@@ -1284,7 +1284,6 @@ seq_check() {
 	fi
 	ret=$?
 	if [ "$check_only"  == "YES" ]; then
-		echo RETURNING $ret
 		return $ret
 	fi
 	if [ $ret -ne 0 ]; then
