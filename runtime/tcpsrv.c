@@ -1013,6 +1013,8 @@ tcpsrvConstructFinalize(tcpsrv_t *pThis)
 	if(pThis->pszDrvrName != NULL)
 		CHKiRet(netstrms.SetDrvrName(pThis->pNS, pThis->pszDrvrName));
 	CHKiRet(netstrms.SetDrvrMode(pThis->pNS, pThis->iDrvrMode));
+	CHKiRet(netstrms.SetDrvrCheckExtendedKeyUsage(pThis->pNS, pThis->DrvrChkExtendedKeyUsage));
+	CHKiRet(netstrms.SetDrvrPrioritizeSAN(pThis->pNS, pThis->DrvrPrioritizeSan));
 	if(pThis->pszDrvrAuthMode != NULL)
 		CHKiRet(netstrms.SetDrvrAuthMode(pThis->pNS, pThis->pszDrvrAuthMode));
 	if(pThis->pszDrvrPermitExpiredCerts != NULL)
@@ -1405,6 +1407,26 @@ SetDrvrPermPeers(tcpsrv_t *pThis, permittedPeers_t *pPermPeers)
 	RETiRet;
 }
 
+/* set the driver cert extended key usage check setting -- jvymazal, 2019-08-16 */
+static rsRetVal
+SetDrvrCheckExtendedKeyUsage(tcpsrv_t *pThis, int ChkExtendedKeyUsage)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	pThis->DrvrChkExtendedKeyUsage = ChkExtendedKeyUsage;
+	RETiRet;
+}
+
+/* set the driver name checking policy -- jvymazal, 2019-08-16 */
+static rsRetVal
+SetDrvrPrioritizeSAN(tcpsrv_t *pThis, int prioritizeSan)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	pThis->DrvrPrioritizeSan = prioritizeSan;
+	RETiRet;
+}
+
 
 /* End of methods to shuffle autentication settings to the driver.;
 
@@ -1522,6 +1544,8 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetLinuxLikeRatelimiters = SetLinuxLikeRatelimiters;
 	pIf->SetNotificationOnRemoteClose = SetNotificationOnRemoteClose;
 	pIf->SetPreserveCase = SetPreserveCase;
+	pIf->SetDrvrCheckExtendedKeyUsage = SetDrvrCheckExtendedKeyUsage;
+	pIf->SetDrvrPrioritizeSAN = SetDrvrPrioritizeSAN;
 
 finalize_it:
 ENDobjQueryInterface(tcpsrv)

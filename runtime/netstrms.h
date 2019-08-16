@@ -33,6 +33,8 @@ struct netstrms_s {
 	uchar *pDrvrName;	/**< full base driver name (set when driver is loaded) */
 	int iDrvrMode;		/**< current default driver mode */
 	uchar *pszDrvrAuthMode;	/**< current driver authentication mode */
+	int DrvrChkExtendedKeyUsage;		/**< if true, verify extended key usage in certs */
+	int DrvrPrioritizeSan;		/**< if true, perform stricter checking of names in certs */
 	uchar *pszDrvrPermitExpiredCerts;/**< current driver setting for handlign expired certs */
 	uchar *gnutlsPriorityString; /**< priorityString for connection */
 	permittedPeers_t *pPermPeers;/**< current driver's permitted peers */
@@ -58,6 +60,10 @@ BEGINinterface(netstrms) /* name must also be changed in ENDinterface macro! */
 	permittedPeers_t* (*GetDrvrPermPeers)(netstrms_t *pThis);
 	rsRetVal (*SetDrvrGnutlsPriorityString)(netstrms_t *pThis, uchar*);
 	uchar*   (*GetDrvrGnutlsPriorityString)(netstrms_t *pThis);
+	rsRetVal (*SetDrvrCheckExtendedKeyUsage)(netstrms_t *pThis, int ChkExtendedKeyUsage);
+	int      (*GetDrvrCheckExtendedKeyUsage)(netstrms_t *pThis);
+	rsRetVal (*SetDrvrPrioritizeSAN)(netstrms_t *pThis, int prioritizeSan);
+	int      (*GetDrvrPrioritizeSAN)(netstrms_t *pThis);
 ENDinterface(netstrms)
 #define netstrmsCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

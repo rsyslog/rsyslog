@@ -150,6 +150,37 @@ finalize_it:
 	RETiRet;
 }
 
+/* Set the driver cert extended key usage check setting, not supported in ptcp.
+ * jvymazal, 2019-08-16
+ */
+static rsRetVal
+SetCheckExtendedKeyUsage(nsd_t __attribute__((unused)) *pNsd, int ChkExtendedKeyUsage)
+{
+	DEFiRet;
+	if(ChkExtendedKeyUsage != 0) {
+		LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: driver ChkExtendedKeyUsage %d "
+				"not supported by ptcp netstream driver", ChkExtendedKeyUsage);
+		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+	}
+finalize_it:
+	RETiRet;
+}
+
+/* Set the driver name checking strictness, not supported in ptcp.
+ * jvymazal, 2019-08-16
+ */
+static rsRetVal
+SetPrioritizeSAN(nsd_t __attribute__((unused)) *pNsd, int prioritizeSan)
+{
+	DEFiRet;
+	if(prioritizeSan != 0) {
+		LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: driver prioritizeSan %d "
+				"not supported by ptcp netstream driver", prioritizeSan);
+		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+	}
+finalize_it:
+	RETiRet;
+}
 
 /* Set the authentication mode. For us, the following is supported:
  * anon - no certificate checks whatsoever (discouraged, but supported)
@@ -613,6 +644,8 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		CHKiRet(pNS->Drvr.Construct(&pNewNsd));
 		CHKiRet(pNS->Drvr.SetSock(pNewNsd, sock));
 		CHKiRet(pNS->Drvr.SetMode(pNewNsd, netstrms.GetDrvrMode(pNS)));
+		CHKiRet(pNS->Drvr.SetCheckExtendedKeyUsage(pNewNsd, netstrms.GetDrvrCheckExtendedKeyUsage(pNS)));
+		CHKiRet(pNS->Drvr.SetPrioritizeSAN(pNewNsd, netstrms.GetDrvrPrioritizeSAN(pNS)));
 		CHKiRet(pNS->Drvr.SetAuthMode(pNewNsd, netstrms.GetDrvrAuthMode(pNS)));
 		CHKiRet(pNS->Drvr.SetPermitExpiredCerts(pNewNsd, netstrms.GetDrvrPermitExpiredCerts(pNS)));
 		CHKiRet(pNS->Drvr.SetPermPeers(pNewNsd, netstrms.GetDrvrPermPeers(pNS)));
@@ -963,6 +996,8 @@ CODESTARTobjQueryInterface(nsd_ptcp)
 	pIf->SetKeepAliveIntvl = SetKeepAliveIntvl;
 	pIf->SetKeepAliveProbes = SetKeepAliveProbes;
 	pIf->SetKeepAliveTime = SetKeepAliveTime;
+	pIf->SetCheckExtendedKeyUsage = SetCheckExtendedKeyUsage;
+	pIf->SetPrioritizeSAN = SetPrioritizeSAN;
 finalize_it:
 ENDobjQueryInterface(nsd_ptcp)
 

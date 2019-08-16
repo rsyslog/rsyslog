@@ -1004,6 +1004,7 @@ gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
 	int iAltName;
 	size_t szAltNameLen;
 	int bFoundPositiveMatch;
+	int bHaveSAN = 0;
 	cstr_t *pStr = NULL;
 	cstr_t *pstrCN = NULL;
 	int gnuRet;
@@ -1023,6 +1024,7 @@ gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
 		if(gnuRet < 0)
 			break;
 		else if(gnuRet == GNUTLS_SAN_DNSNAME) {
+			bHaveSAN = 1;
 			dbgprintf("subject alt dnsName: '%s'\n", szAltName);
 			snprintf((char*)lnBuf, sizeof(lnBuf), "DNSname: %s; ", szAltName);
 			CHKiRet(rsCStrAppendStr(pStr, lnBuf));
@@ -1032,8 +1034,8 @@ gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
 		++iAltName;
 	}
 
-	if(!bFoundPositiveMatch) {
-		/* if we did not succeed so far, we try the CN part of the DN... */
+	/* Check also CN only if not configured per stricter RFC 6125 or no SAN present*/
+	if(!bFoundPositiveMatch && (!pThis->bSANpriority || !bHaveSAN)) {
 		CHKiRet(gtlsGetCN(pCert, &pstrCN));
 		if(pstrCN != NULL) { /* NULL if there was no CN present */
 			dbgprintf("gtls now checking auth for CN '%s'\n", cstrGetSzStrNoNULL(pstrCN));
@@ -1154,8 +1156,23 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 			"peer did not provide a certificate, not permitted to talk to it");
 		ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
 	}
-
-	CHKgnutls(gnutls_certificate_verify_peers2(pThis->sess, &stateCert));
+#ifdef EXTENDED_CERT_CHECK_AVAILABLE
+	if (pThis->dataTypeCheck == GTLS_NONE) {
+#endif
+		CHKgnutls(gnutls_certificate_verify_peers2(pThis->sess, &stateCert));
+#ifdef EXTENDED_CERT_CHECK_AVAILABLE
+	} else { /* we have configured data to check in addition to cert */
+		gnutls_typed_vdata_st data;
+		data.type = GNUTLS_DT_KEY_PURPOSE_OID;
+		if (pThis->bIsInitiator) { /* client mode */
+			data.data = (uchar *)GNUTLS_KP_TLS_WWW_SERVER;
+		} else { /* server mode */
+			data.data = (uchar *)GNUTLS_KP_TLS_WWW_CLIENT;
+		}
+		data.size = ustrlen(data.data);
+		CHKgnutls(gnutls_certificate_verify_peers(pThis->sess, &data, 1, &stateCert));
+	}
+#endif
 
 	if(stateCert & GNUTLS_CERT_INVALID) {
 		/* Default abort code */
@@ -1188,6 +1205,11 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 		} else if(stateCert & GNUTLS_CERT_REVOKED) {
 			pszErrCause = "certificate revoked";
 			bAbort = RSTRUE;
+#ifdef EXTENDED_CERT_CHECK_AVAILABLE
+		} else if(stateCert & GNUTLS_CERT_PURPOSE_MISMATCH) {
+			pszErrCause = "key purpose OID does not match";
+			bAbort = RSTRUE;
+#endif
 		} else {
 			pszErrCause = "GnuTLS returned no specific reason";
 			dbgprintf("GnuTLS returned no specific reason for GNUTLS_CERT_INVALID, certificate "
@@ -1499,6 +1521,53 @@ SetGnutlsPriorityString(nsd_t *pNsd, uchar *gnutlsPriorityString)
 	RETiRet;
 }
 
+/* Set the driver cert extended key usage check setting
+ * 0 - ignore contents of extended key usage
+ * 1 - verify that cert contents is compatible with appropriate OID
+ * jvymazal, 2019-08-16
+ */
+static rsRetVal
+SetCheckExtendedKeyUsage(nsd_t *pNsd, int ChkExtendedKeyUsage)
+{
+	DEFiRet;
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	if(ChkExtendedKeyUsage != 0 && ChkExtendedKeyUsage != 1) {
+		LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: driver ChkExtendedKeyUsage %d "
+				"not supported by gtls netstream driver", ChkExtendedKeyUsage);
+		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+	}
+
+	pThis->dataTypeCheck = ChkExtendedKeyUsage;
+
+finalize_it:
+	RETiRet;
+}
+
+/* Set the driver name checking strictness
+ * 0 - less strict per RFC 5280, section 4.1.2.6 - either SAN or CN match is good
+ * 1 - more strict per RFC 6125 - if any SAN present it must match (CN is ignored)
+ * jvymazal, 2019-08-16
+ */
+static rsRetVal
+SetPrioritizeSAN(nsd_t *pNsd, int prioritizeSan)
+{
+	DEFiRet;
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	if(prioritizeSan != 0 && prioritizeSan != 1) {
+		LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: driver prioritizeSan %d "
+				"not supported by gtls netstream driver", prioritizeSan);
+		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+	}
+
+	pThis->bSANpriority = prioritizeSan;
+
+finalize_it:
+	RETiRet;
+}
 
 /* Provide access to the underlying OS socket. This is primarily
  * useful for other drivers (like nsd_gtls) who utilize ourselfs
@@ -2124,6 +2193,8 @@ CODESTARTobjQueryInterface(nsd_gtls)
 	pIf->SetKeepAliveProbes = SetKeepAliveProbes;
 	pIf->SetKeepAliveTime = SetKeepAliveTime;
 	pIf->SetGnutlsPriorityString = SetGnutlsPriorityString;
+	pIf->SetCheckExtendedKeyUsage = SetCheckExtendedKeyUsage;
+	pIf->SetPrioritizeSAN = SetPrioritizeSAN;
 finalize_it:
 ENDobjQueryInterface(nsd_gtls)
 

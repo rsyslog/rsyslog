@@ -1864,6 +1864,40 @@ SetGnutlsPriorityString(__attribute__((unused)) nsd_t *pNsd, __attribute__((unus
 	RETiRet;
 }
 
+/* Set the driver cert extended key usage check setting, for now it is empty wrapper.
+ * TODO: implement openSSL version
+ * jvymazal, 2019-08-16
+ */
+static rsRetVal
+SetCheckExtendedKeyUsage(nsd_t __attribute__((unused)) *pNsd, int ChkExtendedKeyUsage)
+{
+	DEFiRet;
+	if(ChkExtendedKeyUsage != 0) {
+		LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: driver ChkExtendedKeyUsage %d "
+				"not supported by ossl netstream driver", ChkExtendedKeyUsage);
+		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+	}
+finalize_it:
+	RETiRet;
+}
+
+/* Set the driver name checking strictness, for now it is empty wrapper.
+ * TODO: implement openSSL version
+ * jvymazal, 2019-08-16
+ */
+static rsRetVal
+SetPrioritizeSAN(nsd_t __attribute__((unused)) *pNsd, int prioritizeSan)
+{
+	DEFiRet;
+	if(prioritizeSan != 0) {
+		LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: driver prioritizeSan %d "
+				"not supported by ossl netstream driver", prioritizeSan);
+		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+	}
+finalize_it:
+	RETiRet;
+}
+
 /* queryInterface function */
 BEGINobjQueryInterface(nsd_ossl)
 CODESTARTobjQueryInterface(nsd_ossl)
@@ -1898,6 +1932,8 @@ CODESTARTobjQueryInterface(nsd_ossl)
 	pIf->SetKeepAliveProbes = SetKeepAliveProbes;
 	pIf->SetKeepAliveTime = SetKeepAliveTime;
 	pIf->SetGnutlsPriorityString = SetGnutlsPriorityString; /* we don't NEED this interface! */
+	pIf->SetCheckExtendedKeyUsage = SetCheckExtendedKeyUsage; /* we don't NEED this interface! */
+	pIf->SetPrioritizeSAN = SetPrioritizeSAN; /* we don't NEED this interface! */
 
 finalize_it:
 ENDobjQueryInterface(nsd_ossl)
