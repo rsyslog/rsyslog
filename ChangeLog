@@ -1,5 +1,24 @@
 ----------------------------------------------------------------------------------------
 Version 8.1908.0 (aka 2019.08) 2019-08-20
+- 2019-08-16: core/action: guard action.externalstate.file content against whitspace
+  remove trailing whitespace before checking the status string. This is
+  most important as a line usually ends with \n, which is considered
+  trailing whitespace. Accepting this increases usability.
+- 2019-08-16: imtcp bugfix: multiple listnerPortFile parameter did not work
+  ... because they were treated as module-global. If we had multiple imtcp
+  listeners with multiple port files, only the last filename was always used.
+  closes https://github.com/rsyslog/rsyslog/issues/3817
+- 2019-08-16: testbench: improve testbench plumbing for gzip and fail cases
+  We have added new capabilities to the testbench plumbing to automatically
+  deal with gzip-compressed files. This also permits to use the wait_seq_check
+  function to work for gzip tests as well. The known-timing-sensitive
+  gzipwr_large test now makes use of the new capabilities. This enables us
+  to more reliably detect when we can savely shutdown the tested instance.
+  This commit also adds an ability to "abort" the full testbench run on
+  first test failure. This is especially useful during CI.
+- 2019-08-13: testbench: add test for imuxsock legacy format
+  This was never tested. Ensures we don't accidently break existing
+  configurations.
 - 2019-08-13: omelasticsearch bugfix: segfault on unknown retryRuleset
   omelasticsearch does some "interesting tricks" for an output module.
   This causes a segfault if the retryRuleset is now known.
