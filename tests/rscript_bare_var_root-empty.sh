@@ -6,7 +6,7 @@ generate_conf
 add_conf '
 template(name="outfmt" type="string" string="empty-%$!%-\n")
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="'$TCPFLOOD_PORT'" ruleset="rs")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="rs")
 
 ruleset(name="rs") {
 	set $. = $!;

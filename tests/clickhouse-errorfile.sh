@@ -5,7 +5,7 @@ generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/omclickhouse/.libs/omclickhouse")
-input(type="imtcp" port="'$TCPFLOOD_PORT'")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 template(name="outfmt" option.stdsql="on" type="string" string="INSERT INTO rsyslog.errorfile (id, severity, facility, timestamp, ipaddress, tag, message) VALUES (%msg:F,58:2%, %syslogseverity%, %syslogfacility%, '
 add_conf "'%timereported:::date-unixtimestamp%', '%fromhost-ip%', '%syslogtag%', '%msg%')"

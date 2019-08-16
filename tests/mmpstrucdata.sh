@@ -9,7 +9,7 @@ module(load="../plugins/imtcp/.libs/imtcp")
 
 template(name="outfmt" type="string" string="%$!rfc5424-sd!tcpflood@32473!msgnum%\n")
 
-input(type="imtcp" port="'$TCPFLOOD_PORT'")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 action(type="mmpstrucdata")
 if $msg contains "msgnum" then

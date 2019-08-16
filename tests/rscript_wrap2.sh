@@ -9,7 +9,7 @@ add_conf '
 template(name="outfmt" type="string" string="%$.replaced_msg%\n")
 
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="'$TCPFLOOD_PORT'")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 set $.replaced_msg = wrap("foo says" & $msg, "*" & "*");
 

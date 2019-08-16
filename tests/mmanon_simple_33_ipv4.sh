@@ -8,7 +8,7 @@ template(name="outfmt" type="string" string="%msg%\n")
 
 module(load="../plugins/mmanon/.libs/mmanon")
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="'$TCPFLOOD_PORT'" ruleset="testing")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="testing")
 
 ruleset(name="testing") {
 	action(type="mmanon" ipv4.bits="33" ipv4.mode="simple" ipv4.replacechar="*")

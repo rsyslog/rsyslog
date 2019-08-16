@@ -13,7 +13,7 @@ template(name="numbers" type="string" string="nos: %$!some_nos%\n")
 
 module(load="../plugins/mmnormalize/.libs/mmnormalize" allowRegex="off")
 module(load="../plugins/imptcp/.libs/imptcp")
-input(type="imptcp" port="'$TCPFLOOD_PORT'")
+input(type="imptcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 action(type="mmnormalize" rulebase=`echo $srcdir/testsuites/mmnormalize_regex.rulebase`)
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="hosts_and_ports")

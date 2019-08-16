@@ -5,7 +5,7 @@ generate_conf
 add_conf '
 global(parser.EscapeControlCharacterTab="off")
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="'$TCPFLOOD_PORT'" ruleset="ruleset1")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="ruleset1")
 
 $ErrorMessagesToStderr off
 

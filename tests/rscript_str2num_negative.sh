@@ -4,7 +4,7 @@
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="'$TCPFLOOD_PORT'")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 set $.n = "-1";
 set $!ip!v1 = 1 + $.n;

@@ -6,7 +6,7 @@ add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/pmnormalize/.libs/pmnormalize")
 
-input(type="imtcp" port="'$TCPFLOOD_PORT'" ruleset="ruleset")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="ruleset")
 parser(name="custom.pmnormalize" type="pmnormalize" undefinedPropertyError="on"
 	rule="rule=:<%pri:number%> %fromhost-ip:ipv4% %hostname:word% %syslogtag:char-to:\\x3a%: %msg:rest%")
 

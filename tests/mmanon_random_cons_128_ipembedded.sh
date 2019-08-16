@@ -8,7 +8,7 @@ template(name="filename" type="string" string="'${RSYSLOG_DYNNAME}'.%syslogtag%.
 
 module(load="../plugins/mmanon/.libs/mmanon")
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="'$TCPFLOOD_PORT'" ruleset="testing")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="testing")
 
 ruleset(name="testing") {
 	action(type="mmanon" ipv6.enable="off" ipv4.enable="off" embeddedipv4.anonmode="random-consistent" embeddedipv4.bits="128")

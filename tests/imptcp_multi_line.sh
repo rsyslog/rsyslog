@@ -4,7 +4,7 @@
 generate_conf
 add_conf '
 module(load="../plugins/imptcp/.libs/imptcp")
-input(type="imptcp" port="'$TCPFLOOD_PORT'" ruleset="remote" multiline="on")
+input(type="imptcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="remote" multiline="on")
 
 template(name="outfmt" type="string" string="NEWMSG: %rawmsg%\n")
 ruleset(name="remote") {

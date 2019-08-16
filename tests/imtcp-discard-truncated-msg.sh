@@ -6,7 +6,7 @@ add_conf '
 $MaxMessageSize 128
 global(processInternalMessages="on")
 module(load="../plugins/imtcp/.libs/imtcp" discardTruncatedMsg="on")
-input(type="imtcp" port="'$TCPFLOOD_PORT'" ruleset="ruleset1")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="ruleset1")
 
 template(name="outfmt" type="string" string="%rawmsg%\n")
 ruleset(name="ruleset1") {

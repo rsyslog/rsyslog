@@ -7,7 +7,7 @@ echo "*** string template ****"
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="'$TCPFLOOD_PORT'")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 template(name="outfmt" type="string" string="-%msg:109:116:%-\n")
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
@@ -31,7 +31,7 @@ rm  $RSYSLOG_OUT_LOG # cleanup previous run
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="'$TCPFLOOD_PORT'")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 template(name="outfmt" type="list") {
 	constant(value="-")
 	property(name="msg" position.from="109" position.to="116")
