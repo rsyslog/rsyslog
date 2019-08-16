@@ -10,6 +10,7 @@
 # added 2010-03-18 by Rgerhards
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+export CI_SHUTDOWN_QUEUE_EMPTY_CHECKS=20 # this test is notoriously slow...
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
