@@ -31,6 +31,7 @@ printf '%s %s\n' "$(tb_timestamp)" "output file does not yet exist - GOOD!"
 printf '%s waiting on timeout\n' "$(tb_timestamp)" 
 sleep 30
 printf '%s done waiting on timeout\n' "$(tb_timestamp)" 
+wait_seq_check 0 9
 seq_check 0 9
 
 printf '%s injecting new messages and waiting for shutdown\n' "$(tb_timestamp)" 

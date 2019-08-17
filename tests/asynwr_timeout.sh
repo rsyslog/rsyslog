@@ -6,6 +6,9 @@
 # added 2010-03-09 by Rgerhards
 # This file is part of the rsyslog project, released  under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+# send 35555 messages, make sure file size is not a multiple of
+# 10K, the buffer size!
+export NUMMESSAGES=35555
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
@@ -21,10 +24,12 @@ $OMFileAsyncWriting on
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
 startup
-# send 35555 messages, make sure file size is not a multiple of
-# 10K, the buffer size!
-tcpflood -m 35555
-shutdown_when_empty # shut down rsyslogd when done processing messages
-wait_shutdown       # and wait for it to terminate
-seq_check 0 35554
+tcpflood -m $NUMMESSAGES
+printf 'waiting for timeout to occur\n'
+sleep 6 # GOOD SLEEP - we wait for the timeout!
+printf 'timeout should now have occurred - check file state\n'
+seq_check # mow everthing MUST be persisted
+shutdown_when_empty
+wait_shutdown
+seq_check # just a double-check that nothing is added twice
 exit_test

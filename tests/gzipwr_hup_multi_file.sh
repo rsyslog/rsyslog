@@ -3,7 +3,7 @@
 # Written 2019-06-12 by Rainer Gerhards
 export TEST_MAX_RUNTIME=7200
 . ${srcdir:=.}/diag.sh init
-export NUMMESSAGES=10000 #00 #TODO re-enable large count
+export NUMMESSAGES=100000
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")

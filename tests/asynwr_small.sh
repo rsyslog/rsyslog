@@ -15,6 +15,7 @@
 echo ===============================================================================
 echo TEST: \[asynwr_small.sh\]: test for async file writing for few messages
 . ${srcdir:=.}/diag.sh init
+export CI_SHUTDOWN_QUEUE_EMPTY_CHECKS=20 # this test is notoriously slow...
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp

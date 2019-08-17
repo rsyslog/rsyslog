@@ -8,6 +8,7 @@
 echo ================================================================================
 echo TEST: \[asynwr_deadlock.sh\]: a case known to have caused a deadlock in the past
 . ${srcdir:=.}/diag.sh init
+export CI_SHUTDOWN_QUEUE_EMPTY_CHECKS=20 # this test is notoriously slow...
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp

@@ -988,7 +988,7 @@ wait_seq_check() {
 	fi
 
 	while true ; do
-		if [ "${filename##.*}" == "gz" ]; then
+		if [ "${filename##.*}" != "gz" ]; then
 			if [ -f "$filename" ]; then
 				count=$(wc -l < "$filename")
 			fi

@@ -10,9 +10,10 @@ init_elasticsearch
 echo '{ "name" : "foo" }
 {"name": bar"}
 {"name": "baz"}
-{"name": foz"}' > inESData.inputfile
+{"name": foz"}' > $RSYSLOG_DYNNAME.inESData.inputfile
 generate_conf
 add_conf '
+global(workDirectory="'$RSYSLOG_DYNNAME.spool'")
 # Note: we must mess up with the template, because we can not
 # instruct ES to put further constraints on the data type and
 # values. So we require integer and make sure it is none.
@@ -37,16 +38,14 @@ ruleset(name="foo") {
 	 interleaved="on")
 }
 
-input(type="imfile" File="./inESData.inputfile"
+input(type="imfile" File="'$RSYSLOG_DYNNAME.'inESData.inputfile"
       Tag="foo"
-      StateFile="stat-file1"
       Severity="info"
       ruleset="foo")
 '
 startup
 shutdown_when_empty
 wait_shutdown
-rm -f inESData.inputfile
 
 python $srcdir/elasticsearch-error-format-check.py interleaved
 
