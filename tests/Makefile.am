@@ -238,6 +238,8 @@ TESTS +=  \
 	msgdup_props.sh \
 	empty-ruleset.sh \
 	imtcp-listen-port-file-2.sh \
+	allowed-sender-tcp-ok.sh \
+	allowed-sender-tcp-fail.sh \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
 	imtcp-basic-hup.sh \
@@ -1871,6 +1873,8 @@ EXTRA_DIST= \
 	msgdup_props.sh \
 	empty-ruleset.sh \
 	imtcp-listen-port-file-2.sh \
+	allowed-sender-tcp-ok.sh \
+	allowed-sender-tcp-fail.sh \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
 	imtcp-basic-hup.sh \
