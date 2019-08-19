@@ -1262,14 +1262,14 @@ if ENABLE_EXTENDED_TESTS
 # random.sh is temporarily disabled as it needs some work
 # to rsyslog core to complete in reasonable time
 #TESTS += random.sh
-if ENABLE_IMFILE
+if ENABLE_IMFILE_TESTS
 TESTS += \
 	imfile-basic-2GB-file.sh \
 	imfile-truncate-2GB-file.sh
-endif # ENABLE_IMFILE
+endif # ENABLE_IMFILE_TESTS
 endif
 
-if ENABLE_IMFILE
+if ENABLE_IMFILE_TESTS
 TESTS += \
 	imfile-basic.sh \
 	imfile-basic-legacy.sh \
@@ -1348,7 +1348,7 @@ endif # ENABLE_MMNORMALIZE
 
 endif # HAVE_VALGRIND
 
-endif # ENABLE_IMFILE
+endif # ENABLE_IMFILE_TESTS
 
 if ENABLE_IMBATCHREPORT
 TESTS +=  \

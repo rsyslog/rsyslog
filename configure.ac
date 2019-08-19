@@ -1679,6 +1679,17 @@ if test "x$enable_imfile" = "xyes"; then
 fi
 AM_CONDITIONAL(ENABLE_IMFILE, test x$enable_imfile = xyes)
 
+AC_ARG_ENABLE(imfile-tests,
+        [AS_HELP_STRING([--enable-imfile-tests],[Enable imfile tests @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_imfile_tests="yes" ;;
+          no) enable_imfile_tests="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imfile-tests) ;;
+         esac],
+        [enable_file_tests=no]
+)
+AM_CONDITIONAL(ENABLE_IMFILE_TESTS, test x$enable_imfile_tests = xyes)
+
 # settings for the docker log input module
 AC_ARG_ENABLE(imdocker,
         [AS_HELP_STRING([--enable-imdocker],[input docker module enabled @<:@default=no@:>@])],

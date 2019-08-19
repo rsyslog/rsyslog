@@ -8,6 +8,7 @@
 echo ===============================================================================
 echo TEST: \[asynwr_timeout.sh\]: test async file writing timeout writes
 . ${srcdir:=.}/diag.sh init
+export CI_SHUTDOWN_QUEUE_EMPTY_CHECKS=20 # this test is notoriously slow...
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp

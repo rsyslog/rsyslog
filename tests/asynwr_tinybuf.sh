@@ -9,6 +9,7 @@
 echo ===============================================================================
 echo TEST: \[asynwr_tinybuf.sh\]: test async file writing with 1-byte buffer
 . ${srcdir:=.}/diag.sh init
+export CI_SHUTDOWN_QUEUE_EMPTY_CHECKS=20 # this test is notoriously slow...
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
