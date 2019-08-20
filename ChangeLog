@@ -1,5 +1,13 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.1910.0 (aka 2019.10) 2019-10-01
+- 2019-08-20: core/tcpsrv: potential race on startup/shutdown
+  if the tcpsrv component is started and quickly terminated, it may hang
+  for a short period of time. Also a very small amout of memory is leaked
+  immediately before shutdown. While this leak is irrelevant in practice
+  (the OS clean up the process anyways), it leads to CI failures. The hang,
+  however, can lead to longer than expected shutdown times for rsyslog.
+  The problem can be experienced via imtcp, imgssapi and imdiag (users
+  of affected core component).
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.1908.0 (aka 2019.08) 2019-08-20
 - 2019-08-19: testbench: add test for $allowedSender functionality
