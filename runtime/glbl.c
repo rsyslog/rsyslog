@@ -588,14 +588,22 @@ GetLocalHostIP(void)
 
 
 /* set our local hostname. Free previous hostname, if it was already set.
- * Note that we do now do this in a thread
- * "once in a lifetime" action which can not be undone. -- gerhards, 2009-07-20
+ * Note that we do now do this in a thread. As such, the method here
+ * is NOT 100% clean. If we run into issues, we need to think about
+ * refactoring the whole way we handle the local host name processing.
+ * Possibly using a PROP might be the right solution then.
  */
 static rsRetVal
-SetLocalHostName(uchar *newname)
+SetLocalHostName(uchar *const newname)
 {
-	free(LocalHostName);
-	LocalHostName = newname;
+	uchar *toFree;
+	if(LocalHostName == NULL || strcmp((const char*)LocalHostName, (const char*) newname)) {
+		toFree = LocalHostName;
+		LocalHostName = newname;
+	} else {
+		toFree = newname;
+	}
+	free(toFree);
 	return RS_RET_OK;
 }
 
