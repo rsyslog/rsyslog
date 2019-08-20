@@ -127,7 +127,11 @@ thrdTerminateNonCancel(thrdInfo_t *pThis)
 		}
 		DBGPRINTF("thread %s: initiating termination, timeout %d ms\n",
 			pThis->name, glblInputTimeoutShutdown);
-		pthread_kill(pThis->thrdID, SIGTTIN);
+		const int r = pthread_kill(pThis->thrdID, SIGTTIN);
+		if(r != 0) {
+			LogError(errno, RS_RET_INTERNAL_ERROR, "error terminating thread %s "
+				"this may cause shutdown issues", pThis->name);
+		}
 		ret = d_pthread_cond_timedwait(&pThis->condThrdTerm, &pThis->mutThrd, &tTimeout);
 		if(ret == ETIMEDOUT) {
 			DBGPRINTF("input thread term: timeout expired waiting on thread %s "
