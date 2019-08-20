@@ -139,6 +139,7 @@ endif # if ENABLE_ELASTICSEARCH_TESTS
 
 if ENABLE_DEFAULT_TESTS
 TESTS +=  \
+	immark.sh \
 	operatingstate-basic.sh \
 	operatingstate-empty.sh \
 	operatingstate-unclean.sh \
@@ -1447,6 +1448,7 @@ EXTRA_DIST= \
 	dnscache-TTL-0-vg.sh \
 	smtradfile.sh \
 	smtradfile-vg.sh \
+	immark.sh \
 	operatingstate-basic.sh \
 	operatingstate-empty.sh \
 	operatingstate-unclean.sh \
