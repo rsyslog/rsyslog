@@ -1,0 +1,2 @@
+docker tag rsyslog/rsyslog_dev_buildbot_suse:tumbleweed_previous rsyslog/rsyslog_dev_buildbot_suse:tumbleweed
+docker push rsyslog/rsyslog_dev_buildbot_suse:tumbleweed
