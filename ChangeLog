@@ -1,5 +1,13 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.1910.0 (aka 2019.10) 2019-10-01
+- 2019-08-21: testbench: add basic test for immark
+- 2019-08-20: core: do not unnecessarily set hostname on each HUP
+- 2019-08-20: build system: support cross-platform build for mysql/mariadb
+  rsyslog fails to cross build from source, because it uses mysql_config
+  and mysql_config is unfixably broken for cross compilation. It would be
+  better to use pkg-config. The attached patch makes rsyslog try
+  pkg-config first and fall back to mysql_config.
+  Thanks to Helmut Grohne for providing a base patch.
 - 2019-08-20: core/tcpsrv: potential race on startup/shutdown
   if the tcpsrv component is started and quickly terminated, it may hang
   for a short period of time. Also a very small amout of memory is leaked
