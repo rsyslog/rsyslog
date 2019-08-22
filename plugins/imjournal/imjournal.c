@@ -443,6 +443,8 @@ readjournal(void)
 		if (!sd_journal_get_cursor(j, &c)) {
 			free(last_cursor);
 			last_cursor = c;
+		} else {
+			free(c);
 		}
 	}
 
