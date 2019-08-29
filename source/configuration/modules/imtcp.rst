@@ -271,6 +271,33 @@ It can have one of the following values:
 -  warn = Expired certificates are allowed but warning will be logged (Default due legacy support)
 
 
+StreamDriver.CheckExtendedKeyPurpose
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+Whether to check also purpose value in extended fields part of certificate 
+for compatibility with rsyslog operation. (driver-specific)
+
+
+StreamDriver.PrioritizeSAN
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+Whether to use stricter SAN/CN matching. (driver-specific)
+
+
 PermittedPeer
 ^^^^^^^^^^^^^
 
