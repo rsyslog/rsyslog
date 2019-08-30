@@ -1783,83 +1783,87 @@ SetGnutlsPriorityString(__attribute__((unused)) nsd_t *pNsd, __attribute__((unus
 	nsd_ossl_t* pThis = (nsd_ossl_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_ossl);
 
-#if OPENSSL_VERSION_NUMBER >= 0x10020000L
-	char *pCurrentPos;
-	char *pNextPos;
-	char *pszCmd;
-	char *pszValue;
-	int iConfErr;
-
 	pThis->gnutlsPriorityString = gnutlsPriorityString;
-	dbgprintf("gnutlsPriorityString: set to '%s'\n", gnutlsPriorityString);
 
-	/* Set working pointer */
-	pCurrentPos = (char*) pThis->gnutlsPriorityString;
-	if (pCurrentPos != NULL && strlen(pCurrentPos) > 0) {
-		// Create CTX Config Helper
-		SSL_CONF_CTX *cctx;
-		cctx = SSL_CONF_CTX_new();
-		if (pThis->sslState == osslServer) {
-			SSL_CONF_CTX_set_flags(cctx, SSL_CONF_FLAG_SERVER);
-		} else {
-			SSL_CONF_CTX_set_flags(cctx, SSL_CONF_FLAG_CLIENT);
-		}
-		SSL_CONF_CTX_set_flags(cctx, SSL_CONF_FLAG_FILE);
-		SSL_CONF_CTX_set_flags(cctx, SSL_CONF_FLAG_SHOW_ERRORS);
-		SSL_CONF_CTX_set_ssl_ctx(cctx, ctx);
+	/* Skip function if function is NULL gnutlsPriorityString */
+	if (gnutlsPriorityString == NULL) {
+		RETiRet;
+	} else {
+		dbgprintf("gnutlsPriorityString: set to '%s'\n", gnutlsPriorityString);
+#if OPENSSL_VERSION_NUMBER >= 0x10020000L
+		char *pCurrentPos;
+		char *pNextPos;
+		char *pszCmd;
+		char *pszValue;
+		int iConfErr;
 
-		do
-		{
-			pNextPos = index(pCurrentPos, '=');
-			if (pNextPos != NULL) {
-				while (	*pCurrentPos != '\0' &&
-					(*pCurrentPos == ' ' || *pCurrentPos == '\t') )
-					pCurrentPos++;
-				pszCmd = strndup(pCurrentPos, pNextPos-pCurrentPos);
-				pCurrentPos = pNextPos+1;
-				pNextPos = index(pCurrentPos, '\n');
-				pszValue = (pNextPos == NULL ?
-						strdup(pCurrentPos) :
-						strndup(pCurrentPos, pNextPos - pCurrentPos));
-				pCurrentPos = (pNextPos == NULL ? NULL : pNextPos+1);
+		/* Set working pointer */
+		pCurrentPos = (char*) pThis->gnutlsPriorityString;
+		if (pCurrentPos != NULL && strlen(pCurrentPos) > 0) {
+			// Create CTX Config Helper
+			SSL_CONF_CTX *cctx;
+			cctx = SSL_CONF_CTX_new();
+			if (pThis->sslState == osslServer) {
+				SSL_CONF_CTX_set_flags(cctx, SSL_CONF_FLAG_SERVER);
+			} else {
+				SSL_CONF_CTX_set_flags(cctx, SSL_CONF_FLAG_CLIENT);
+			}
+			SSL_CONF_CTX_set_flags(cctx, SSL_CONF_FLAG_FILE);
+			SSL_CONF_CTX_set_flags(cctx, SSL_CONF_FLAG_SHOW_ERRORS);
+			SSL_CONF_CTX_set_ssl_ctx(cctx, ctx);
 
-				/* Add SSL Conf Command */
-				iConfErr = SSL_CONF_cmd(cctx, pszCmd, pszValue);
-				if (iConfErr > 0) {
-					dbgprintf("gnutlsPriorityString: Successfully added Command '%s':'%s'\n",
-						pszCmd, pszValue);
-				}
-				else {
-					LogError(0, RS_RET_SYS_ERR, "Failed to added Command: %s:'%s' "
+			do
+			{
+				pNextPos = index(pCurrentPos, '=');
+				if (pNextPos != NULL) {
+					while (	*pCurrentPos != '\0' &&
+						(*pCurrentPos == ' ' || *pCurrentPos == '\t') )
+						pCurrentPos++;
+					pszCmd = strndup(pCurrentPos, pNextPos-pCurrentPos);
+					pCurrentPos = pNextPos+1;
+					pNextPos = index(pCurrentPos, '\n');
+					pszValue = (pNextPos == NULL ?
+							strdup(pCurrentPos) :
+							strndup(pCurrentPos, pNextPos - pCurrentPos));
+					pCurrentPos = (pNextPos == NULL ? NULL : pNextPos+1);
+
+					/* Add SSL Conf Command */
+					iConfErr = SSL_CONF_cmd(cctx, pszCmd, pszValue);
+					if (iConfErr > 0) {
+						dbgprintf("gnutlsPriorityString: Successfully added Command "
+							"'%s':'%s'\n",
+							pszCmd, pszValue);
+					}
+					else {
+						LogError(0, RS_RET_SYS_ERR, "Failed to added Command: %s:'%s' "
 							"in gnutlsPriorityString with error '%d'",
 							pszCmd, pszValue, iConfErr);
-				}
+					}
 
-				free(pszCmd);
-				free(pszValue);
-			} else {
-				/* Abort further parsing */
-				pCurrentPos = NULL;
+					free(pszCmd);
+					free(pszValue);
+				} else {
+					/* Abort further parsing */
+					pCurrentPos = NULL;
+				}
+			}
+			while (pCurrentPos != NULL);
+
+			/* Finalize SSL Conf */
+			iConfErr = SSL_CONF_CTX_finish(cctx);
+			if (!iConfErr) {
+				LogError(0, RS_RET_SYS_ERR, "Error: setting openssl command parameters: %s"
+						"Open ssl error info may follow in next messages",
+						pThis->gnutlsPriorityString);
+				osslLastSSLErrorMsg(0, NULL, LOG_ERR, "SetGnutlsPriorityString");
 			}
 		}
-		while (pCurrentPos != NULL);
-
-		/* Finalize SSL Conf */
-		iConfErr = SSL_CONF_CTX_finish(cctx);
-		if (!iConfErr) {
-			LogError(0, RS_RET_SYS_ERR, "Error: setting openssl command parameters: %s"
-					"Open ssl error info may follow in next messages",
-					pThis->gnutlsPriorityString);
-			osslLastSSLErrorMsg(0, NULL, LOG_ERR, "SetGnutlsPriorityString");
-		}
-	}
 #else
-	pThis->gnutlsPriorityString = gnutlsPriorityString;
-	dbgprintf("gnutlsPriorityString: set to '%s'\n", gnutlsPriorityString);
-	LogError(0, RS_RET_SYS_ERR, "Error: OpenSSL Version to old, SSL_CONF_cmd API "
-			" is not supported.");
-
+		dbgprintf("gnutlsPriorityString: set to '%s'\n", gnutlsPriorityString);
+		LogError(0, RS_RET_SYS_ERR, "Warning: OpenSSL Version to old to set gnutlsPriorityString ('%s')"
+			"by SSL_CONF_cmd API", gnutlsPriorityString);
 #endif
+	}
 
 	RETiRet;
 }
