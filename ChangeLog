@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.1910.0 (aka 2019.10) 2019-10-01
+- 2019-09-02: ability to set stricter TLS operation modes
+  - checking of extendedKeyUsage certificate field
+  - stricter checking of certificate name/adresses
+  Thanks to Jiri Vymazal for the patch.
 - 2019-08-21: testbench: add basic test for immark
 - 2019-08-20: core: do not unnecessarily set hostname on each HUP
 - 2019-08-20: build system: support cross-platform build for mysql/mariadb
