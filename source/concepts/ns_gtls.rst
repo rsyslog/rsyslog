@@ -63,3 +63,27 @@ Even in x509/fingerprint mode, both the client and server certificate
 currently must be signed by the same root CA. This is an artifact of the
 underlying GnuTLS library and the way we use it. It is expected that we
 can resolve this issue in the future.
+
+CheckExtendedKeyPurpose
+=======================
+
+-  **off** - by default this binary argument is turned off, which means
+   that Extended Key Usage extension of GNUTls certificates is ignored 
+   in cert validation.
+
+-  **on** - if you turn this option on, it will check that peer's certificate
+   contains the value for GNUTLS_KP_TLS_WWW_SERVER or GNUTLS_KP_TLS_WWW_CLIENT
+   respectively, depending whether we are on sending or receiving end of a
+   connection. 
+
+PrioritizeSAN
+=============
+
+-  **off** - by default this binary argument is turned off, which means
+   that validation of names in certificates goes per older RFC 5280 and either
+   Subject Alternative Name or Common Name match is good and connection is
+   allowed.
+
+-  **on** - if you turn this option on, it will perform stricter name checking
+   as per newer RFC 6125, where, if any SAN is found, contents of CN are 
+   completely ignored and name validity is decided based on SAN only. 
