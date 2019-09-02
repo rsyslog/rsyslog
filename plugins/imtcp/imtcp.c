@@ -131,6 +131,8 @@ struct modConfData_s {
 	int iTCPSessMax; /* max number of sessions */
 	int iTCPLstnMax; /* max number of sessions */
 	int iStrmDrvrMode; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
+	int iStrmDrvrExtendedCertCheck; /* verify also purpose OID in certificate extended field */
+	int iStrmDrvrSANPreference; /* ignore CN when any SAN set */
 	int iAddtlFrameDelim; /* addtl frame delimiter, e.g. for netscreen, default none */
 	int maxFrameSize;
 	int bSuppOctetFram;
@@ -170,6 +172,8 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "streamdriver.authmode", eCmdHdlrString, 0 },
 	{ "streamdriver.permitexpiredcerts", eCmdHdlrString, 0 },
 	{ "streamdriver.name", eCmdHdlrString, 0 },
+	{ "streamdriver.CheckExtendedKeyPurpose", eCmdHdlrBinary, 0 },
+	{ "streamdriver.PrioritizeSAN", eCmdHdlrBinary, 0 },
 	{ "permittedpeer", eCmdHdlrArray, 0 },
 	{ "keepalive", eCmdHdlrBinary, 0 },
 	{ "keepalive.probes", eCmdHdlrPositiveInt, 0 },
@@ -368,6 +372,8 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 		CHKiRet(tcpsrv.SetSessMax(pOurTcpsrv, modConf->iTCPSessMax));
 		CHKiRet(tcpsrv.SetLstnMax(pOurTcpsrv, modConf->iTCPLstnMax));
 		CHKiRet(tcpsrv.SetDrvrMode(pOurTcpsrv, modConf->iStrmDrvrMode));
+		CHKiRet(tcpsrv.SetDrvrCheckExtendedKeyUsage(pOurTcpsrv, modConf->iStrmDrvrExtendedCertCheck));
+		CHKiRet(tcpsrv.SetDrvrPrioritizeSAN(pOurTcpsrv, modConf->iStrmDrvrSANPreference));
 		CHKiRet(tcpsrv.SetUseFlowControl(pOurTcpsrv, modConf->bUseFlowControl));
 		CHKiRet(tcpsrv.SetAddtlFrameDelim(pOurTcpsrv, modConf->iAddtlFrameDelim));
 		CHKiRet(tcpsrv.SetMaxFrameSize(pOurTcpsrv, modConf->maxFrameSize));
@@ -479,6 +485,8 @@ CODESTARTbeginCnfLoad
 	loadModConf->iTCPLstnMax = 20;
 	loadModConf->bSuppOctetFram = 1;
 	loadModConf->iStrmDrvrMode = 0;
+	loadModConf->iStrmDrvrExtendedCertCheck = 0;
+	loadModConf->iStrmDrvrSANPreference = 0;
 	loadModConf->bUseFlowControl = 1;
 	loadModConf->bKeepAlive = 0;
 	loadModConf->iKeepAliveIntvl = 0;
@@ -560,6 +568,10 @@ CODESTARTsetModCnf
 			loadModConf->gnutlsPriorityString = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.mode")) {
 			loadModConf->iStrmDrvrMode = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.CheckExtendedKeyPurpose")) {
+			loadModConf->iStrmDrvrExtendedCertCheck = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.PrioritizeSAN")) {
+			loadModConf->iStrmDrvrSANPreference = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.authmode")) {
 			loadModConf->pszStrmDrvrAuthMode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.permitexpiredcerts")) {

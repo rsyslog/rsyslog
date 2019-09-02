@@ -54,6 +54,11 @@ struct nsd_gtls_s {
 		GTLS_EXPIRED_DENY = 1,
 		GTLS_EXPIRED_WARN = 2
 	} permitExpiredCerts;
+	enum {
+		GTLS_NONE = 0,
+		GTLS_PURPOSE = 1
+	} dataTypeCheck;
+	int bSANpriority; /* if true, we do stricter checking (if any SAN present we do not cehck CN) */
 	gtlsRtryCall_t rtryCall;/**< what must we retry? */
 	int bIsInitiator;	/**< 0 if socket is the server end (listener), 1 if it is the initiator */
 	gnutls_session_t sess;
@@ -97,6 +102,10 @@ rsRetVal gtlsRecordRecv(nsd_gtls_t *pThis);
 #else
 #define GTLS_ANON_PRIO_NOTLSV13 "NORMAL:-VERS-TLS1.3:+ANON-DH:+ANON-ECDH:+COMP-ALL"
 #define GTLS_ANON_PRIO "NORMAL:+ANON-DH:+ANON-ECDH:+COMP-ALL"
+#endif
+
+#if GNUTLS_VERSION_MAJOR > 3 || (GNUTLS_VERSION_MAJOR == 3 && GNUTLS_VERSION_MINOR >=4)
+#define EXTENDED_CERT_CHECK_AVAILABLE
 #endif
 
 #endif /* #ifndef INCLUDED_NSD_GTLS_H */

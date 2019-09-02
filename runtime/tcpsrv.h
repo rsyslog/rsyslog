@@ -62,6 +62,8 @@ struct tcpsrv_s {
 	int iKeepAliveTime;	/**< socket layer KEEPALIVE timeout */
 	netstrms_t *pNS;	/**< pointer to network stream subsystem */
 	int iDrvrMode;		/**< mode of the stream driver to use */
+	int DrvrChkExtendedKeyUsage;		/**< if true, verify extended key usage in certs */
+	int DrvrPrioritizeSan;		/**< if true, perform stricter checking of names in certs */
 	uchar *gnutlsPriorityString;	/**< priority string for gnutls */
 	uchar *pszLstnPortFileName;	/**< File in which the dynamic port is written */
 	uchar *pszDrvrAuthMode;	/**< auth mode of the stream driver to use */
@@ -187,8 +189,11 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetPreserveCase)(tcpsrv_t *pThis, int bPreserveCase);
 	/* added v22 -- File for dynamic Port, 2018-08-29 */
 	rsRetVal (*SetLstnPortFileName)(tcpsrv_t*, uchar*);
+	/* added v23 -- Options for stricter driver behavior, 2019-08-16 */
+	rsRetVal (*SetDrvrCheckExtendedKeyUsage)(tcpsrv_t *pThis, int ChkExtendedKeyUsage);
+	rsRetVal (*SetDrvrPrioritizeSAN)(tcpsrv_t *pThis, int prioritizeSan);
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 22 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 23 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10

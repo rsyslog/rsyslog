@@ -279,6 +279,49 @@ GetDrvrMode(netstrms_t *pThis)
 }
 
 
+/* set the driver cert extended key usage check setting -- jvymazal, 2019-08-16 */
+static rsRetVal
+SetDrvrCheckExtendedKeyUsage(netstrms_t *pThis, int ChkExtendedKeyUsage)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	pThis->DrvrChkExtendedKeyUsage = ChkExtendedKeyUsage;
+	RETiRet;
+}
+
+
+/* return the driver cert extended key usage check setting
+ * jvymazal, 2019-08-16
+ */
+static int
+GetDrvrCheckExtendedKeyUsage(netstrms_t *pThis)
+{
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	return pThis->DrvrChkExtendedKeyUsage;
+}
+
+
+/* set the driver name checking policy -- jvymazal, 2019-08-16 */
+static rsRetVal
+SetDrvrPrioritizeSAN(netstrms_t *pThis, int prioritizeSan)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	pThis->DrvrPrioritizeSan = prioritizeSan;
+	RETiRet;
+}
+
+
+/* return the driver name checking policy
+ * jvymazal, 2019-08-16
+ */
+static int
+GetDrvrPrioritizeSAN(netstrms_t *pThis)
+{
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	return pThis->DrvrPrioritizeSan;
+}
+
 /* create an instance of a netstrm object. It is initialized with default
  * values. The current driver is used. The caller may set netstrm properties
  * and must call ConstructFinalize().
@@ -337,6 +380,10 @@ CODESTARTobjQueryInterface(netstrms)
 	pIf->GetDrvrGnutlsPriorityString = GetDrvrGnutlsPriorityString;
 	pIf->SetDrvrPermPeers = SetDrvrPermPeers;
 	pIf->GetDrvrPermPeers = GetDrvrPermPeers;
+	pIf->SetDrvrCheckExtendedKeyUsage = SetDrvrCheckExtendedKeyUsage;
+	pIf->GetDrvrCheckExtendedKeyUsage = GetDrvrCheckExtendedKeyUsage;
+	pIf->SetDrvrPrioritizeSAN = SetDrvrPrioritizeSAN;
+	pIf->GetDrvrPrioritizeSAN = GetDrvrPrioritizeSAN;
 finalize_it:
 ENDobjQueryInterface(netstrms)
 

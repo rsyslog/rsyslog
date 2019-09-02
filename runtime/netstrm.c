@@ -221,6 +221,26 @@ SetDrvrPermPeers(netstrm_t *pThis, permittedPeers_t *pPermPeers)
 	RETiRet;
 }
 
+/* Mandate also verification of Extended key usage / purpose field */
+static rsRetVal
+SetDrvrCheckExtendedKeyUsage(netstrm_t *pThis, int ChkExtendedKeyUsage)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	iRet = pThis->Drvr.SetCheckExtendedKeyUsage(pThis->pDrvrData, ChkExtendedKeyUsage);
+	RETiRet;
+}
+
+/* Mandate stricter name checking per RFC 6125 - ignoce CN if any SAN present */
+static rsRetVal
+SetDrvrPrioritizeSAN(netstrm_t *pThis, int prioritizeSan)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	iRet = pThis->Drvr.SetPrioritizeSAN(pThis->pDrvrData, prioritizeSan);
+	RETiRet;
+}
+
 
 /* End of methods to shuffle autentication settings to the driver.
  * -------------------------------------------------------------------------- */
@@ -405,6 +425,8 @@ CODESTARTobjQueryInterface(netstrm)
 	pIf->SetKeepAliveTime = SetKeepAliveTime;
 	pIf->SetKeepAliveIntvl = SetKeepAliveIntvl;
 	pIf->SetGnutlsPriorityString = SetGnutlsPriorityString;
+	pIf->SetDrvrCheckExtendedKeyUsage = SetDrvrCheckExtendedKeyUsage;
+	pIf->SetDrvrPrioritizeSAN = SetDrvrPrioritizeSAN;
 finalize_it:
 ENDobjQueryInterface(netstrm)
 
