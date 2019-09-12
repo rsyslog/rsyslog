@@ -13,6 +13,7 @@ Written by `Rainer Gerhards <https://rainer.gerhards.net>`_ (2008-07-03)
    tls_cert_client
    tls_cert_udp_relay
    tls_cert_errmsgs
+   tls_cert_script
 
 Overview
 --------
