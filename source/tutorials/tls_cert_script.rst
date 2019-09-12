@@ -8,31 +8,44 @@ Creating certificates with a script
 Overview
 --------
 
-This small article describes is a quick addon to the TLS guides. It describes in short words, how you can create some quick and dirty certificates for testing. 
+This small article describes is a quick addon to the TLS guides. It describes 
+in short words, how you can create some quick and dirty certificates for 
+testing. 
 
-Disclaimer: When creating certificates with the attached scripts and more or less default configurations, you cannot create secure certificates. You need to use more detailed configuration files to create secure certificates.
+Disclaimer: When creating certificates with the attached scripts and more or 
+less default configurations, you cannot create secure certificates. You need to 
+use more detailed configuration files to create secure certificates.
 
 
 Description
 -----------
 
-We created a few simple scripts and added configuration files from the sample configuration in the certtool man page. You can download them here: :download:`Download Scripts <cert_script.tar.gz>`.
+We created a few simple scripts and added configuration files from the sample 
+configuration in the certtool man page. You can download them here: 
+:download:`Download Scripts <cert_script.tar.gz>`.
 
-The tarball contains 6 files, 3 scripts and 3 configurations. To execute, you must make the scripts executable and have certtool installed via libgnutls.
+The tarball contains 6 files, 3 scripts and 3 configurations. To execute, you 
+must make the scripts executable and have certtool installed via libgnutls.
 
-Script 1 creates the CA key and certificate as outlined in "Setting up the CA"
-Script 2 creates the machine key and certificate for a client.
+Script 1 creates the CA key and certificate as outlined in `Setting up the CA 
+<tls_cert_ca.html>`_
+Script 2 creates the `machine key and certificate <tls_cert_machine.html>`_ for 
+a client.
 Script 3 creates the machine key and certificate for a server.
 
-These scripts can easily be combined into one. But, we decided to go for separate scripts so each step can be repeated separately if needed.
+These scripts can easily be combined into one. But, we decided to go for 
+separate scripts so each step can be repeated separately if needed.
 
-After the scripts are executed, you should have 2 new files per script. Distribute the files to the machines as described before.
+After the scripts are executed, you should have 2 new files per script. 
+Distribute the files to the machines as described before.
 
 
 Example
 -------
 
-Apart from executing the scripts, no extra input is required. All input from manual certificate creating can be done automatically via the configuration template in the cfg files.
+Apart from executing the scripts, no extra input is required. All input from 
+manual certificate creating can be done automatically via the configuration 
+template in the cfg files.
 
 Sample output for the CA certificate generation.
 ::
