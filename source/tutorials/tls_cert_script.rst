@@ -27,11 +27,13 @@ configuration in the certtool man page. You can download them here:
 The tarball contains 6 files, 3 scripts and 3 configurations. To execute, you 
 must make the scripts executable and have certtool installed via libgnutls.
 
-Script 1 creates the CA key and certificate as outlined in `Setting up the CA 
-<tls_cert_ca.html>`_
-Script 2 creates the `machine key and certificate <tls_cert_machine.html>`_ for 
-a client.
-Script 3 creates the machine key and certificate for a server.
+- Script 1 creates the CA key and certificate as outlined in `Setting up the CA 
+  <tls_cert_ca.html>`_
+
+- Script 2 creates the `machine key and certificate <tls_cert_machine.html>`_ for 
+  a client.
+
+- Script 3 creates the machine key and certificate for a server.
 
 These scripts can easily be combined into one. But, we decided to go for 
 separate scripts so each step can be repeated separately if needed.
