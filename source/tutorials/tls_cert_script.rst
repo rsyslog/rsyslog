@@ -12,7 +12,7 @@ This small article describes is a quick addon to the TLS guides. It describes
 in short words, how you can create some quick and dirty certificates for 
 testing. 
 
-Disclaimer: When creating certificates with the attached scripts and more or 
+**Disclaimer**: When creating certificates with the attached scripts and more or 
 less default configurations, you cannot create secure certificates. You need to 
 use more detailed configuration files to create secure certificates.
 
@@ -28,7 +28,7 @@ The tarball contains 6 files, 3 scripts and 3 configurations. To execute, you
 must make the scripts executable and have certtool installed via libgnutls.
 
 Script 1 creates the CA key and certificate as outlined in `Setting up the CA 
-<tls-cert_ca.html>`_
+<tls_cert_ca.html>`_
 Script 2 creates the `machine key and certificate <tls_cert_machine.html>`_ for 
 a client.
 Script 3 creates the machine key and certificate for a server.
