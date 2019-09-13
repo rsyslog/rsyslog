@@ -489,7 +489,7 @@ vulnerable to SQL injection.
 .. code-block:: none
 
    template (name="TraditionalFormat" type="string"
-   string="%timegenerated% %HOSTNAME% %syslogtag%%msg%\\n"
+   string="%timegenerated% %HOSTNAME% %syslogtag%%msg%\\n")
 
 
 Examples
