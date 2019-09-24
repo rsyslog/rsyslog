@@ -845,7 +845,7 @@ msgBaseConstruct(smsg_t **ppThis)
 	pM->iFacility = LOG_INVLD;
 	pM->iLenPROGNAME = -1;
 	pM->offAfterPRI = 0;
-	pM->offMSG = -1;
+	pM->offMSG = 0;
 	pM->iProtocolVersion = 0;
 	pM->msgFlags = 0;
 	pM->iLenRawMsg = 0;
@@ -1253,7 +1253,7 @@ static rsRetVal MsgSerialize(smsg_t *pThis, strm_t *pStrm)
 	objSerializePTR(pStrm, pCSAPPNAME, CSTR);
 	objSerializePTR(pStrm, pCSPROCID, CSTR);
 	objSerializePTR(pStrm, pCSMSGID, CSTR);
-	
+
 	objSerializePTR(pStrm, pszUUID, PSZ);
 
 	if(pThis->pRuleset != NULL) {
@@ -1506,7 +1506,7 @@ static rsRetVal aquirePROCIDFromTAG(smsg_t * const pM)
 		++i;
 	if(!(i < pM->iLenTAG))
 		return RS_RET_OK;	/* no [, so can not emulate... */
-	
+
 	++i; /* skip '[' */
 
 	/* now obtain the PROCID string... */
@@ -2480,7 +2480,7 @@ tryEmulateTAG(smsg_t *const pM, const sbool bLockMutex)
 			MsgUnlock(pM);
 		return; /* done, no need to emulate */
 	}
-	
+
 	if(msgGetProtocolVersion(pM) == 1) {
 		if(!strcmp(getPROCID(pM, MUTEX_ALREADY_LOCKED), "-")) {
 			/* no process ID, use APP-NAME only */
@@ -3893,12 +3893,12 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 		*pPropLen = (bufLen == -1) ? (int) ustrlen(pRes) : bufLen;
 		return pRes;
 	}
-	
+
 	/* Now check if we need to make "temporary" transformations (these
 	 * are transformations that do not go back into the message -
 	 * memory must be allocated for them!).
 	 */
-	
+
 	/* substring extraction */
 	/* first we check if we need to extract by field number
 	 * rgerhards, 2005-12-22
