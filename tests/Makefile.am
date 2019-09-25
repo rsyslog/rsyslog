@@ -1319,7 +1319,8 @@ endif
 
 if ENABLE_PMDB2DIAG
 TESTS += \
-	pmdb2diag_parse.sh
+	pmdb2diag_parse.sh \
+	imudp-pmdb2diag-offset.sh
 endif
 
 if ENABLE_PMSNARE
@@ -1570,6 +1571,7 @@ EXTRA_DIST= \
 	imtuxedoulog_data.sh \
 	imtuxedoulog_errmsg_no_params-vg.sh \
 	pmdb2diag_parse.sh \
+	imudp-pmdb2diag-offset.sh \
 	mmtaghostname_tag.sh \
 	mmtaghostname_server.sh \
 	imbatchreport_errmsg_no_params.sh \
