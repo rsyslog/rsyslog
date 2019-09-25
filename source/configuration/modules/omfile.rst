@@ -352,7 +352,7 @@ zipLevel
 
    "integer", "0", "no", "``$OMFileZipLevel``"
 
-If greater 0, turns on gzip compression of the output file. The
+If greater than 0, turns on gzip compression of the output file. The
 higher the number, the better the compression, but also the more CPU
 is required for zipping.
 
@@ -369,7 +369,7 @@ veryRobustZip
 
 .. versionadded:: 7.3.0
 
-If *zipLevel* is greater 0,
+If *zipLevel* is greater than 0,
 then this setting controls if extra headers are written to make the
 resulting file extra hardened against malfunction. If set to off,
 data appended to previously unclean closed files may not be
@@ -378,6 +378,16 @@ expected to be bearable, and thus "off" is the default mode. The
 extra headers considerably degrade compression, files with this
 option set to "on" may be four to five times as large as files
 processed in "off" mode.
+
+**In order to avoid this degradation in compression** both
+flushOnTXEnd and asyncWriting parameters must be set to "off"
+and also ioBufferSize must be raised from default "4k" value to
+at least "32k". This way a reasonable compression factor is
+maintained, similar to a non-blocked gzip file:
+
+.. code-block:: none
+
+   veryRobustZip="on" ioBufferSize="64k" flushOnTXEnd="off" asyncWriting="off"
 
 
 flushInterval
@@ -452,7 +462,7 @@ ioBufferSize
 
 Size of the buffer used to writing output data. The larger the
 buffer, the potentially better performance is. The default of 4k is
-quite conservative, it is useful to go up to 64k, and 128K if you
+quite conservative, it is useful to go up to 64k, and 128k if you
 used gzip compression (then, even higher sizes may make sense)
 
 
