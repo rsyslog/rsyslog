@@ -4,7 +4,7 @@ imjournal: Systemd Journal Input Module
 
 ===========================  ===========================================================================
 **Module Name:**             **imjournal**
-**Author:**                  Milan Bartos <mbartos@redhat.com> (This module is **not** project-supported)
+**Author:**                  Jiri Vymazal <jvymazal@redhat.com> (This module is **not** project-supported)
 **Available since:**         7.3.11
 ===========================  ===========================================================================
 
@@ -249,10 +249,8 @@ WorkAroundJournalBug
 
 .. versionadded:: 8.37.0
 
-When journald instance rotates its files it is possible that duplicate records 
-appear in rsyslog. If you turn on this option imjournal will keep track of cursor
-with each message to work around this problem. Be aware that in some cases this
-might result in imjournal performance hit.
+**Deprecated.** This option was intended as temporary and has no effect now
+(since 8.1910.0). Left for backwards compatibility only.
 
 
 FSync
@@ -275,6 +273,22 @@ turn this option on which will force state file writes to persistent physical
 storage. Please note that fsync calls are costly, so especially with lower 
 PersistStateInterval value, this may present considerable performance hit.
 
+
+Remote
+^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+.. versionadded:: 8.1910.0
+
+When this option is turned on, imjournal will pull not only all local journal
+files (default behavior), but also any journal files on machine originating from
+remote sources.
 
 .. _imjournal-statistic-counter:
 
