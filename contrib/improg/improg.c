@@ -388,6 +388,7 @@ static rsRetVal enqLine(instanceConf_t *const __restrict__ pInst)
 
 	CHKiRet(msgConstruct(&pMsg));
 
+	MsgSetMSGoffs(pMsg, 0);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetFlowControlType(pMsg, eFLOWCTL_FULL_DELAY);
 	MsgSetInputName(pMsg, pInputName);
@@ -415,7 +416,7 @@ static rsRetVal readChild(instanceConf_t *const pInst){
 				if (write(pInst->fdPipeToChild,"ACK\n",sizeof("ACK\n")-1) <= 0)
 					LogMsg(0, NO_ERRCODE, LOG_WARNING, "improg: pipe to child seems to be closed.");
 			}
-			rsCStrTruncate(pInst->ppCStr, 0);
+			rsCStrTruncate(pInst->ppCStr, rsCStrLen(pInst->ppCStr));
 		} else {
 			cstrAppendChar(pInst->ppCStr, c);
 		}

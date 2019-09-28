@@ -741,7 +741,8 @@ TESTS +=  \
 	improg_prog_simple.sh \
 	improg_prog_confirm.sh \
 	improg_prog_confirm_killonclose.sh \
-	improg_prog_killonclose.sh
+	improg_prog_killonclose.sh \
+	improg_simple_multi.sh
 if HAVE_VALGRIND
 TESTS +=  \
 	improg_errmsg_no_params-vg.sh \
@@ -2025,6 +2026,7 @@ EXTRA_DIST= \
 	testsuites/action-tx-errfile.result \
 	pipeaction.sh \
 	improg-simul.sh \
+	improg-multiline-test.py \
 	improg_errmsg_no_params.sh \
 	improg_errmsg_no_params-vg.sh \
 	improg_prog_simple.sh \
@@ -2032,6 +2034,7 @@ EXTRA_DIST= \
 	improg_prog_confirm_killonclose.sh \
 	improg_prog_killonclose.sh \
 	improg_prog_simple-vg.sh \
+	improg_simple_multi.sh \
 	omhttp-auth.sh \
 	omhttp-basic.sh \
 	omhttp-batch-fail-with-400.sh \
