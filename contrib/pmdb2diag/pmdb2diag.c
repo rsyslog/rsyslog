@@ -134,6 +134,10 @@ CODESTARTparse2
 		ABORT_FINALIZE(0);
 	}
 
+	/* let recheck with the real level len */
+	if(pMsg->iLenRawMsg - (int)pMsg->offAfterPRI < pInst->levelpos+lvl_len)
+		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+
 	DBGPRINTF("db2parse Level %d\n", pMsg->iSeverity);
 
 	end = (char*)pMsg->pszRawMsg + pMsg->iLenRawMsg ;
