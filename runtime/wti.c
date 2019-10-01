@@ -382,7 +382,6 @@ wtiWorker(wti_t *__restrict__ const pThis)
 {
 	wtp_t *__restrict__ const pWtp = pThis->pWtp; /* our worker thread pool -- shortcut */
 	action_t *__restrict__ pAction;
-	int bInactivityTOOccured = 0;
 	rsRetVal localRet;
 	rsRetVal terminateRet;
 	actWrkrInfo_t *__restrict__ wrkrInfo;
@@ -392,6 +391,7 @@ wtiWorker(wti_t *__restrict__ const pThis)
 
 	dbgSetThrdName(pThis->pszDbgHdr);
 	pthread_cleanup_push(wtiWorkerCancelCleanup, pThis);
+	int bInactivityTOOccured = 0;
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 	DBGPRINTF("wti %p: worker starting\n", pThis);
 	/* now we have our identity, on to real processing */

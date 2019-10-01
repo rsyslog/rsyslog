@@ -323,7 +323,7 @@ parserProcessCnf(struct cnfobj *o)
 	parserName = (uchar*)es_str2cstr(pvals[paramIdx].val.d.estr, NULL);
 	if(parser.FindParser(&myparser, parserName) != RS_RET_PARSER_NOT_FOUND) {
 		LogError(0, RS_RET_PARSER_NAME_EXISTS,
-			"parser module name '%s' already exists", cnfModName);
+			"parser module name '%s' already exists", parserName);
 		ABORT_FINALIZE(RS_RET_PARSER_NAME_EXISTS);
 	}
 
