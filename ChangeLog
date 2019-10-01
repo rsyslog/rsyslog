@@ -1,4 +1,6 @@
 ----------------------------------------------------------------------------------------
+Scheduled Release 8.1911.0 (aka 2019.11) 2019-11-12
+----------------------------------------------------------------------------------------
 Scheduled Release 8.1910.0 (aka 2019.10) 2019-10-01
 - 2019-10-01: core bugfix: incorrect error message on duplicate module load
   A Null-pointer was passed to printf instead of the module name.
