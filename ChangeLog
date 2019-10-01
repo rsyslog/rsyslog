@@ -1,5 +1,30 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.1910.0 (aka 2019.10) 2019-10-01
+- 2019-10-01: core bugfix: incorrect error message on duplicate module load
+  A Null-pointer was passed to printf instead of the module name.
+  On some platforms this may lead to a segfault. On most platforms
+  printf check's for NULL pointers and uses the string "(null)"
+  instead.  In any case, the module name is missing from the error message.
+- 2019-10-01: imczmq nitfix: potential NULL ptr in printf on out-of-memory condition
+  very unlikely to happen but if it does without any real issue on most platforms.
+- 2019-10-01: work around some compiler warning messages induced by pthreads API
+- 2019-10-01: core ratelimiting: more verbose message when rate-limiting happens
+  When messages are rate-limited, the error message now also contains the
+  rate limiter setting. This enables the user to more quickly understand what
+  the problem is (especially if default values apply).
+  Thanks to Jiri Vymazal for the patch.
+- 2019-10-01: openssl TLS driver: do not emit unnecessary error message
+  On older openssl versions, an API was missing to set user-defined parameters. If we
+  had such an older version, rsyslog emitted an error message even if the user did
+  not configure such parameters. This has been corrected, so that a message is only
+  emitted if there really is a problem. Based on user feedback the severity has also
+  been downgraded to "warning".
+- 2019-10-01: pmcisconames (contributed module) bugfix: potential misadressing
+- 2019-09-30: pmaixforwardedfrom (contributed module) bugfix: potential misadressing
+- 2019-09-30: pmdb2diag (contributed module) bugfix: Out of bounds issue
+  Add a new sanity check after determining the level len.
+  Thanks to Philippe Duveau for the patch.
+  see also: https://nvd.nist.gov/vuln/detail/CVE-2019-17040
 - 2019-09-02: ability to set stricter TLS operation modes
   - checking of extendedKeyUsage certificate field
   - stricter checking of certificate name/adresses
