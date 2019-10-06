@@ -38,6 +38,54 @@ The older-selector-style filter is well-known, so this may also write it as::
 
 There are ample additional possibilities. We suggest to keep things consistent.
 
+Converting Module Load
+~~~~~~~~~~~~~~~~~~~~~~
+This is very straight-forward. In |FmtObsoleteName| format we use::
+
+    $ModLoad module-name
+
+This is very simply converted to::
+
+    module(load="module-name")
+
+Sometimes modules provide global settings. In |FmtObsoleteName| format these are given in
+individual lines **after** the \$ModLoad. In |FmtAdvancedName| format they are given inside
+the module object. This makes it much clearer which module they belong to and
+that they actually are global parameters (in constrast to per-action or per-listener
+parameters). A typical example is `imtcp`::
+
+   $ModLoad imtcp
+   $InputTCPMaxSession 500
+
+This is converted to::
+
+   module(load="imtcp" maxSessions="500")
+
+Note: in |FmtObsoleteName| format it is possible to provide global parameters more than once.
+In this case it is unclear which one actually applies. For example::
+
+   $ModLoad imtcp
+   $InputTCPMaxSession 500
+   ...
+   *.* /var/log/messages
+   ...
+   $InputTCPMaxSession 200
+
+This is especially problematic if module-global parameters are used multiple times
+in include files.
+
+In |FmtAdvancedName| format this is no longer possible. Module-global parameters can only
+be applied once when the module is loaded. Any attempt to change them afterwards
+results in an error message and will be ignored. The error messages will help you
+find and fix multiple settings. Let us assume "200" is the setting actually intended
+in above config snippet. So it would be converted to::
+
+   module(load="imtcp" maxSessions="200")
+   ...
+   *.* /var/log/messages
+   ...
+
+
 Converting Actions
 ~~~~~~~~~~~~~~~~~~
 In general, you have lines like::
