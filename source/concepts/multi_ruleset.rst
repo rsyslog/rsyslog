@@ -40,7 +40,7 @@ processed, the config file parser looks for the directive
 
 ::
 
-    ruleset(name="rulesetname");
+    ruleset(name="rulesetname")
 
 Where name is any name the user likes (but must not start with
 "RSYSLOG\_", which is the name space reserved for rsyslog use). If it
@@ -82,7 +82,7 @@ Binding to rulesets is input-specific. For imtcp, this is done via the
 
 ::
 
-    input(type="imptcp" port="514" ruleset="rulesetname");
+    input(type="imptcp" port="514" ruleset="rulesetname")
 
 directive. Note that "rulesetname" must be the name of a ruleset that is
 already defined at the time the bind directive is given. There are many
