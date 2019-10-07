@@ -127,11 +127,28 @@ Some concrete examples::
   OLD: *.emerg :omusrmsg:*
   NEW: *.emerg action(type="omusrmsg" users="*")
 
-**NOTE:** Some actions do not have a |FmtBasicName| configuration line. They may
+**NOTE:** Some actions do not have a |FmtBasicName| format configuration line. They may
 only be called via the ``action()`` syntax. Similarly, some very few actions,
 mostly contributed, do not support ``action()`` syntax and thus can only be
 configured via |FmtBasicName| and |FmtObsoleteName|. See module doc for details.
 
+
+Action with Multiple Parameters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In many cases, actions have additional parameters, which also need to be converted. In
+|FmtObsoleteName| format the action parameters are given before the actual action call.
+To convert such constructs, you need to map all |FmtObsoleteName| parameters to |FmtAdvancedName|
+ones. To look these up, you need to turn to three different documentation pages:
+
+* the :doc:`action object <actions>` itself
+* the :doc:`output module <modules/idx_output>` that is called in the action (e.g. omfwd)
+* the :doc:`queue documentation <../rainerscript/queue_parameters>` (if an action queue is used)
+
+To find the parameter in question, you can other do an on-page search via the browser on these
+pages. Often it is very convenient to just use the
+`rsyslog doc search engine <https://www.rsyslog.com/doc/master/search.html?q=>`_:
+Type the |FmtObsoleteName| format statement into the search box. Most often, one of the first
+search results is the matching object description doc page.
 
 Converting Action Chains
 ~~~~~~~~~~~~~~~~~~~~~~~~
