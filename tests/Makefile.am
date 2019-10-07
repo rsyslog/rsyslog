@@ -971,6 +971,7 @@ endif
 if ENABLE_MMPSTRUCDATA
 TESTS +=  \
 	mmpstrucdata.sh \
+	mmpstrucdata-escaping.sh \
 	mmpstrucdata-case.sh
 if HAVE_VALGRIND
 TESTS +=  \
@@ -2257,6 +2258,7 @@ EXTRA_DIST= \
 	testsuites/zoo.dep_wrk2.cfg \
 	testsuites/zoo.dep_wrk3.cfg \
 	mmpstrucdata.sh \
+	mmpstrucdata-escaping.sh \
 	mmpstrucdata-case.sh \
 	mmpstrucdata-vg.sh \
 	mmpstrucdata-invalid-vg.sh \
