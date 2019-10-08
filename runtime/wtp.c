@@ -139,7 +139,15 @@ wtpConstructFinalize(wtp_t *pThis)
 	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
 		CHKiRet(wtiConstruct(&pThis->pWrkr[i]));
 		pWti = pThis->pWrkr[i];
-		lenBuf = snprintf((char*)pszBuf, sizeof(pszBuf), "%s/w%d", wtpGetDbgHdr(pThis), i);
+		lenBuf = snprintf((char*)pszBuf, sizeof(pszBuf), "%.*s/w%d",
+			(int) (sizeof(pszBuf)-6), /* leave 6 chars for \0, "/w" and number: */
+			wtpGetDbgHdr(pThis), i);
+		if(lenBuf >= sizeof(pszBuf)) {
+			LogError(0, RS_RET_INTERNAL_ERROR, "%s:%d debug header too long: %zd - in "
+					"thory this cannot happen - truncating", __FILE__, __LINE__, lenBuf);
+			lenBuf = sizeof(pszBuf)-1;
+			pszBuf[lenBuf] = '\0';
+		}
 		CHKiRet(wtiSetDbgHdr(pWti, pszBuf, lenBuf));
 		CHKiRet(wtiSetpWtp(pWti, pThis));
 		CHKiRet(wtiConstructFinalize(pWti));

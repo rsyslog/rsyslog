@@ -1627,8 +1627,8 @@ finalize_it:
 
 /* Finally remove n elements from the queue store.
  */
-static rsRetVal
-DoDeleteBatchFromQStore(qqueue_t *pThis, int nElem)
+static rsRetVal ATTR_NONNULL(1)
+DoDeleteBatchFromQStore(qqueue_t *const pThis, const int nElem)
 {
 	int i;
 	off64_t bytesDel = 0; /* keep CLANG static anaylzer happy */
@@ -2142,7 +2142,6 @@ ConsumerReg(qqueue_t *pThis, wti_t *pWti)
 	/* we now need to check if we should deliberately delay processing a bit
 	 * and, if so, do that. -- rgerhards, 2008-01-30
 	 */
-//TODO: MULTIQUEUE: the following setting is no longer correct - need to think about how to do that...
 	if(pThis->iDeqSlowdown) {
 		DBGOPRINT((obj_t*) pThis, "sleeping %d microseconds as requested by config params\n",
 			  pThis->iDeqSlowdown);
@@ -2541,7 +2540,15 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 
 	/* create worker thread pools for regular and DA operation.
 	 */
-	lenBuf = snprintf((char*)pszBuf, sizeof(pszBuf), "%s:Reg", obj.GetName((obj_t*) pThis));
+	lenBuf = snprintf((char*)pszBuf, sizeof(pszBuf), "%.*s:Reg",
+		(int) (sizeof(pszBuf)-16),
+		obj.GetName((obj_t*) pThis)); /* leave some room inside the name for suffixes */
+	if(lenBuf >= sizeof(pszBuf)) {
+		LogError(0, RS_RET_INTERNAL_ERROR, "%s:%d debug header too long: %zd - in "
+				"thory this cannot happen - truncating", __FILE__, __LINE__, lenBuf);
+		lenBuf = sizeof(pszBuf)-1;
+		pszBuf[lenBuf] = '\0';
+	}
 	CHKiRet(wtpConstruct		(&pThis->pWtpReg));
 	CHKiRet(wtpSetDbgHdr		(pThis->pWtpReg, pszBuf, lenBuf));
 	CHKiRet(wtpSetpfRateLimiter	(pThis->pWtpReg, (rsRetVal (*)(void *pUsr)) RateLimiter));
