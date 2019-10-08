@@ -14,6 +14,7 @@ if [ $(uname) = "SunOS" ] ; then
 fi
 
 . ${srcdir:=.}/diag.sh init
+export NUMMESSAGES=10
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
@@ -33,9 +34,9 @@ ruleset(name="rs") {
 }
 '
 startup
-tcpflood -m1000 -y
+tcpflood -m$NUMMESSAGES -y
 shutdown_when_empty
 wait_shutdown
-seq_check 0 999
+seq_check
 
 exit_test
