@@ -2,13 +2,6 @@
 # added 2015-11-10 by singh.janmejay
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-
-uname
-if [ $(uname) = "FreeBSD" ] ; then
-   echo "This test currently does not work on FreeBSD."
-   exit 77
-fi
-
 generate_conf
 add_conf '
 ruleset(name="stats") {
@@ -43,7 +36,7 @@ shutdown_when_empty
 echo wait on shutdown
 wait_shutdown
 custom_content_check 'bar=1' "${RSYSLOG_DYNNAME}.out.stats.log"
-. $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'foo=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
-. $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'bar=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
-. $srcdir/diag.sh first-column-sum-check 's/.*baz=\([0-9]\+\)/\1/g' 'baz=' "${RSYSLOG_DYNNAME}.out.stats.log" 2
+first_column_sum_check 's/.*foo=\([0-9]*\)/\1/g' 'foo=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
+first_column_sum_check 's/.*bar=\([0-9]*\)/\1/g' 'bar=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
+first_column_sum_check 's/.*baz=\([0-9]*\)/\1/g' 'baz=' "${RSYSLOG_DYNNAME}.out.stats.log" 2
 exit_test

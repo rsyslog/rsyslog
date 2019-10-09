@@ -34,7 +34,7 @@ echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown
-. $srcdir/diag.sh first-column-sum-check 's/.*no_metric=//g' 'no_metric=' "${RSYSLOG_DYNNAME}.out.stats.log" 5
+first_column_sum_check 's/.*no_metric=//g' 'no_metric=' "${RSYSLOG_DYNNAME}.out.stats.log" 5
 custom_assert_content_missing 'foo' "${RSYSLOG_DYNNAME}.out.stats.log"
 custom_assert_content_missing 'bar' "${RSYSLOG_DYNNAME}.out.stats.log"
 custom_assert_content_missing 'baz' "${RSYSLOG_DYNNAME}.out.stats.log"

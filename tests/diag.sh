@@ -2180,6 +2180,30 @@ omhttp_get_data() {
         > ${RSYSLOG_OUT_LOG}
 }
 
+
+# $1 - replacement string
+# $2 - start search string
+# $3 - file name
+# $4 - expected value
+first_column_sum_check() {
+	set -x
+	echo grep:
+	grep "$2" < "$3"
+	echo sed:
+	grep "$2" < "$3" | sed -e "$1"
+	echo akw:
+	grep "$2" < "$3" | sed -e "$1" | awk '{s+=$1} END {print s}'
+	set +x
+	sum=$(grep "$2" < "$3" | sed -e "$1" | awk '{s+=$1} END {print s}')
+	if [ "x${sum}" != "x$4" ]; then
+	    printf '\n============================================================\n'
+	    echo FAIL: sum of first column with edit-expr "'$1'" run over lines from file "'$3'" matched by "'$2'" equals "'$sum'" which is NOT equal to EXPECTED value of "'$4'"
+	    echo "file contents:"
+	    cat $3
+	    error_exit 1
+	fi
+}
+
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
 		# for (solaris) load debugging, uncomment next 2 lines:
@@ -2372,22 +2396,6 @@ case $1 in
 				$TESTTOOL_DIR/msleep 10
 		done
 		echo "dyn-stats reset for bucket ${3} registered"
-		;;
-   'first-column-sum-check') 
-		echo grep:
-		grep "$3" < "$4"
-		echo sed:
-		grep "$3" < "$4" | sed -e "$2"
-		echo akw:
-		grep "$3" < "$4" | sed -e "$2" | awk '{s+=$1} END {print s}'
-		sum=$(grep "$3" < "$4" | sed -e "$2" | awk '{s+=$1} END {print s}')
-		if [ "x${sum}" != "x$5" ]; then
-		    printf '\n============================================================\n'
-		    echo FAIL: sum of first column with edit-expr "'$2'" run over lines from file "'$4'" matched by "'$3'" equals "'$sum'" which is NOT equal to EXPECTED value of "'$5'"
-		    echo "file contents:"
-		    cat $4
-		    error_exit 1
-		fi
 		;;
    'assert-first-column-sum-greater-than') 
 		sum=$(grep $3 <$4| sed -e $2 | awk '{s+=$1} END {print s}')

@@ -34,17 +34,17 @@ startup_vg
 wait_queueempty
 . $srcdir/diag.sh allow-single-stats-flush-after-block-and-wait-for-it
 
-. $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'foo=' "${RSYSLOG_DYNNAME}.out.stats.log" 5
-. $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'bar=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
-. $srcdir/diag.sh first-column-sum-check 's/.*baz=\([0-9]\+\)/\1/g' 'baz=' "${RSYSLOG_DYNNAME}.out.stats.log" 2
+first_column_sum_check 's/.*foo=\([0-9]*\)/\1/g' 'foo=' "${RSYSLOG_DYNNAME}.out.stats.log" 5
+first_column_sum_check 's/.*bar=\([0-9]*\)/\1/g' 'bar=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
+first_column_sum_check 's/.*baz=\([0-9]*\)/\1/g' 'baz=' "${RSYSLOG_DYNNAME}.out.stats.log" 2
 
 custom_assert_content_missing 'quux' "${RSYSLOG_DYNNAME}.out.stats.log"
 custom_assert_content_missing 'corge' "${RSYSLOG_DYNNAME}.out.stats.log"
 custom_assert_content_missing 'grault' "${RSYSLOG_DYNNAME}.out.stats.log"
 
-. $srcdir/diag.sh first-column-sum-check 's/.*new_metric_add=\([0-9]\+\)/\1/g' 'new_metric_add=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
-. $srcdir/diag.sh first-column-sum-check 's/.*ops_overflow=\([0-9]\+\)/\1/g' 'ops_overflow=' "${RSYSLOG_DYNNAME}.out.stats.log" 5
-. $srcdir/diag.sh first-column-sum-check 's/.*no_metric=\([0-9]\+\)/\1/g' 'no_metric=' "${RSYSLOG_DYNNAME}.out.stats.log" 0
+first_column_sum_check 's/.*new_metric_add=\([0-9]*\)/\1/g' 'new_metric_add=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
+first_column_sum_check 's/.*ops_overflow=\([0-9]*\)/\1/g' 'ops_overflow=' "${RSYSLOG_DYNNAME}.out.stats.log" 5
+first_column_sum_check 's/.*no_metric=\([0-9]*\)/\1/g' 'no_metric=' "${RSYSLOG_DYNNAME}.out.stats.log" 0
 
 #ttl-expiry(2*ttl in worst case, ttl + delta in best) so metric-names reset should have happened
 . $srcdir/diag.sh allow-single-stats-flush-after-block-and-wait-for-it
@@ -52,7 +52,7 @@ custom_assert_content_missing 'grault' "${RSYSLOG_DYNNAME}.out.stats.log"
 
 . $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
 
-. $srcdir/diag.sh first-column-sum-check 's/.*metrics_purged=\([0-9]\+\)/\1/g' 'metrics_purged=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
+first_column_sum_check 's/.*metrics_purged=\([0-9]*\)/\1/g' 'metrics_purged=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
 
 rm ${RSYSLOG_DYNNAME}.out.stats.log
 issue_HUP #reopen stats file
@@ -81,13 +81,13 @@ content_check "quux 016 0"
 content_check "foo 017 -6"
 content_check "corge 018 0"
 
-. $srcdir/diag.sh first-column-sum-check 's/.*corge=\([0-9]\+\)/\1/g' 'corge=' "${RSYSLOG_DYNNAME}.out.stats.log" 2
-. $srcdir/diag.sh first-column-sum-check 's/.*grault=\([0-9]\+\)/\1/g' 'grault=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
-. $srcdir/diag.sh first-column-sum-check 's/.*quux=\([0-9]\+\)/\1/g' 'quux=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
+first_column_sum_check 's/.*corge=\([0-9]*\)/\1/g' 'corge=' "${RSYSLOG_DYNNAME}.out.stats.log" 2
+first_column_sum_check 's/.*grault=\([0-9]*\)/\1/g' 'grault=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
+first_column_sum_check 's/.*quux=\([0-9]*\)/\1/g' 'quux=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
 
-. $srcdir/diag.sh first-column-sum-check 's/.*new_metric_add=\([0-9]\+\)/\1/g' 'new_metric_add=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
-. $srcdir/diag.sh first-column-sum-check 's/.*ops_overflow=\([0-9]\+\)/\1/g' 'ops_overflow=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
-. $srcdir/diag.sh first-column-sum-check 's/.*no_metric=\([0-9]\+\)/\1/g' 'no_metric=' "${RSYSLOG_DYNNAME}.out.stats.log" 0
+first_column_sum_check 's/.*new_metric_add=\([0-9]*\)/\1/g' 'new_metric_add=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
+first_column_sum_check 's/.*ops_overflow=\([0-9]*\)/\1/g' 'ops_overflow=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
+first_column_sum_check 's/.*no_metric=\([0-9]*\)/\1/g' 'no_metric=' "${RSYSLOG_DYNNAME}.out.stats.log" 0
 
 . $srcdir/diag.sh allow-single-stats-flush-after-block-and-wait-for-it
 . $srcdir/diag.sh await-stats-flush-after-block
@@ -96,7 +96,7 @@ shutdown_when_empty
 wait_shutdown_vg
 check_exit_vg
 
-. $srcdir/diag.sh first-column-sum-check 's/.*metrics_purged=\([0-9]\+\)/\1/g' 'metrics_purged=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
+first_column_sum_check 's/.*metrics_purged=\([0-9]*\)/\1/g' 'metrics_purged=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
 
 custom_assert_content_missing 'foo' "${RSYSLOG_DYNNAME}.out.stats.log"
 exit_test
