@@ -1,13 +1,6 @@
 #!/bin/bash
 # added 2016-04-13 by singh.janmejay
 # This file is part of the rsyslog project, released under ASL 2.0
-
-uname
-if [ $(uname) = "FreeBSD" ] ; then
-   echo "This test currently does not work on FreeBSD."
-   exit 77
-fi
-
 echo ===============================================================================
 echo \[dynstats_prevent_premature_eviction-vg.sh\]: test for ensuring metrics are not evicted before unused-ttl with valgrind
 . ${srcdir:=.}/diag.sh init
@@ -56,10 +49,10 @@ custom_content_check 'baz=2' "${RSYSLOG_DYNNAME}.out.stats.log"
 custom_content_check 'bar=1' "${RSYSLOG_DYNNAME}.out.stats.log"
 custom_content_check 'foo=3' "${RSYSLOG_DYNNAME}.out.stats.log"
 # sum is high because accumulators were never reset, and we expect them to last specific number of cycles(when we posted before ttl expiry)
-. $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'foo=' "${RSYSLOG_DYNNAME}.out.stats.log" 6
-. $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'bar=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
-. $srcdir/diag.sh first-column-sum-check 's/.*baz=\([0-9]\+\)/\1/g' 'baz=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
-. $srcdir/diag.sh first-column-sum-check 's/.*new_metric_add=\([0-9]\+\)/\1/g' 'new_metric_add=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
-. $srcdir/diag.sh first-column-sum-check 's/.*ops_overflow=\([0-9]\+\)/\1/g' 'ops_overflow=' "${RSYSLOG_DYNNAME}.out.stats.log" 0
-. $srcdir/diag.sh first-column-sum-check 's/.*no_metric=\([0-9]\+\)/\1/g' 'no_metric=' "${RSYSLOG_DYNNAME}.out.stats.log" 0
+first_column_sum_check 's/.*foo=\([0-9]*\)/\1/g' 'foo=' "${RSYSLOG_DYNNAME}.out.stats.log" 6
+first_column_sum_check 's/.*bar=\([0-9]*\)/\1/g' 'bar=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
+first_column_sum_check 's/.*baz=\([0-9]*\)/\1/g' 'baz=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
+first_column_sum_check 's/.*new_metric_add=\([0-9]*\)/\1/g' 'new_metric_add=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
+first_column_sum_check 's/.*ops_overflow=\([0-9]*\)/\1/g' 'ops_overflow=' "${RSYSLOG_DYNNAME}.out.stats.log" 0
+first_column_sum_check 's/.*no_metric=\([0-9]*\)/\1/g' 'no_metric=' "${RSYSLOG_DYNNAME}.out.stats.log" 0
 exit_test

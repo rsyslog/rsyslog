@@ -1,14 +1,6 @@
 #!/bin/bash
 # added 2015-11-16 by singh.janmejay
 # This file is part of the rsyslog project, released under ASL 2.0
-
-uname
-if [ $(uname) = "FreeBSD" ] ; then
-   echo "This test currently does not work on FreeBSD."
-   exit 77
-fi
-
-echo ===============================================================================
 echo \[dynstats_ctr_reset.sh\]: test to ensure correctness of stats-ctr reset
 . ${srcdir:=.}/diag.sh init
 generate_conf
@@ -47,13 +39,13 @@ echo wait on shutdown
 wait_shutdown
 content_check "foo 006"
 custom_content_check 'bar=1' "${RSYSLOG_DYNNAME}.out.stats.log"
-. $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'msg_stats_resettable_on.\+foo=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
-. $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'msg_stats_resettable_on.\+bar=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
-. $srcdir/diag.sh first-column-sum-check 's/.*baz=\([0-9]\+\)/\1/g' 'msg_stats_resettable_on.\+baz=' "${RSYSLOG_DYNNAME}.out.stats.log" 2
-. $srcdir/diag.sh assert-first-column-sum-greater-than 's/.*foo=\([0-9]\+\)/\1/g' 'msg_stats_resettable_off.\+foo=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
-. $srcdir/diag.sh assert-first-column-sum-greater-than 's/.*bar=\([0-9]\+\)/\1/g' 'msg_stats_resettable_off.\+bar=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
-. $srcdir/diag.sh assert-first-column-sum-greater-than 's/.*baz=\([0-9]\+\)/\1/g' 'msg_stats_resettable_off.\+baz=' "${RSYSLOG_DYNNAME}.out.stats.log" 2
-. $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'msg_stats_resettable_default.\+foo=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
-. $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'msg_stats_resettable_default.\+bar=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
-. $srcdir/diag.sh first-column-sum-check 's/.*baz=\([0-9]\+\)/\1/g' 'msg_stats_resettable_default.\+baz=' "${RSYSLOG_DYNNAME}.out.stats.log" 2
+first_column_sum_check 's/.*foo=\([0-9]*\)/\1/g' 'msg_stats_resettable_on.*foo=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
+first_column_sum_check 's/.*bar=\([0-9]*\)/\1/g' 'msg_stats_resettable_on.*bar=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
+first_column_sum_check 's/.*baz=\([0-9]*\)/\1/g' 'msg_stats_resettable_on.*baz=' "${RSYSLOG_DYNNAME}.out.stats.log" 2
+. $srcdir/diag.sh assert-first-column-sum-greater-than 's/.*foo=\([0-9]*\)/\1/g' 'msg_stats_resettable_off.*foo=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
+. $srcdir/diag.sh assert-first-column-sum-greater-than 's/.*bar=\([0-9]*\)/\1/g' 'msg_stats_resettable_off.*bar=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
+. $srcdir/diag.sh assert-first-column-sum-greater-than 's/.*baz=\([0-9]*\)/\1/g' 'msg_stats_resettable_off.*baz=' "${RSYSLOG_DYNNAME}.out.stats.log" 2
+first_column_sum_check 's/.*foo=\([0-9]*\)/\1/g' 'msg_stats_resettable_default.*foo=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
+first_column_sum_check 's/.*bar=\([0-9]*\)/\1/g' 'msg_stats_resettable_default.*bar=' "${RSYSLOG_DYNNAME}.out.stats.log" 1
+first_column_sum_check 's/.*baz=\([0-9]*\)/\1/g' 'msg_stats_resettable_default.*baz=' "${RSYSLOG_DYNNAME}.out.stats.log" 2
 exit_test

@@ -2,13 +2,6 @@
 # added 2015-11-13 by singh.janmejay
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-
-uname
-if [ $(uname) = "FreeBSD" ] ; then
-   echo "This test currently does not work on FreeBSD."
-   exit 77
-fi
-
 generate_conf
 add_conf '
 ruleset(name="stats") {
@@ -53,11 +46,11 @@ custom_assert_content_missing 'baz=2' "${RSYSLOG_DYNNAME}.out.stats.log"
 custom_assert_content_missing 'foo=2' "${RSYSLOG_DYNNAME}.out.stats.log"
 custom_assert_content_missing 'foo=3' "${RSYSLOG_DYNNAME}.out.stats.log"
 # but actual reported stats (aggregate) should match
-. $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'foo=' ${RSYSLOG_DYNNAME}.out.stats.log 3
-. $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'bar=' ${RSYSLOG_DYNNAME}.out.stats.log 1
-. $srcdir/diag.sh first-column-sum-check 's/.*baz=\([0-9]\+\)/\1/g' 'baz=' ${RSYSLOG_DYNNAME}.out.stats.log 2
-. $srcdir/diag.sh first-column-sum-check 's/.*new_metric_add=\([0-9]\+\)/\1/g' 'new_metric_add=' "${RSYSLOG_DYNNAME}.out.stats.log" 6
-. $srcdir/diag.sh first-column-sum-check 's/.*ops_overflow=\([0-9]\+\)/\1/g' 'ops_overflow=' "${RSYSLOG_DYNNAME}.out.stats.log" 0
-. $srcdir/diag.sh first-column-sum-check 's/.*no_metric=\([0-9]\+\)/\1/g' 'no_metric=' "${RSYSLOG_DYNNAME}.out.stats.log" 0
-. $srcdir/diag.sh first-column-sum-check 's/.*metrics_purged=\([0-9]\+\)/\1/g' 'metrics_purged=' "${RSYSLOG_DYNNAME}.out.stats.log" 6
+first_column_sum_check 's/.*foo=\([0-9]*\)/\1/g' 'foo=' ${RSYSLOG_DYNNAME}.out.stats.log 3
+first_column_sum_check 's/.*bar=\([0-9]*\)/\1/g' 'bar=' ${RSYSLOG_DYNNAME}.out.stats.log 1
+first_column_sum_check 's/.*baz=\([0-9]*\)/\1/g' 'baz=' ${RSYSLOG_DYNNAME}.out.stats.log 2
+first_column_sum_check 's/.*new_metric_add=\([0-9]*\)/\1/g' 'new_metric_add=' "${RSYSLOG_DYNNAME}.out.stats.log" 6
+first_column_sum_check 's/.*ops_overflow=\([0-9]*\)/\1/g' 'ops_overflow=' "${RSYSLOG_DYNNAME}.out.stats.log" 0
+first_column_sum_check 's/.*no_metric=\([0-9]*\)/\1/g' 'no_metric=' "${RSYSLOG_DYNNAME}.out.stats.log" 0
+first_column_sum_check 's/.*metrics_purged=\([0-9]*\)/\1/g' 'metrics_purged=' "${RSYSLOG_DYNNAME}.out.stats.log" 6
 exit_test
