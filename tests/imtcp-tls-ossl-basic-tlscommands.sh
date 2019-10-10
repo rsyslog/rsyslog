@@ -34,10 +34,10 @@ tcpflood --check-only -k "Protocol=ALL,-SSLv2,-SSLv3,-TLSv1,-TLSv1.1,-TLSv1.3" -
 shutdown_when_empty
 wait_shutdown
 
-content_check --check-only "OpenSSL Version to old"
+content_check --check-only "OpenSSL Version too old"
 ret=$?
 if [ $ret == 0 ]; then
-	echo "SKIP: OpenSSL Version to old"
+	echo "SKIP: OpenSSL Version too old"
 	skip_test
 else
 	content_check "wrong version number"

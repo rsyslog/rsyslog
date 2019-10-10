@@ -1860,8 +1860,10 @@ SetGnutlsPriorityString(__attribute__((unused)) nsd_t *pNsd, __attribute__((unus
 		}
 #else
 		dbgprintf("gnutlsPriorityString: set to '%s'\n", gnutlsPriorityString);
-		LogError(0, RS_RET_SYS_ERR, "Warning: OpenSSL Version to old to set gnutlsPriorityString ('%s')"
-			"by SSL_CONF_cmd API", gnutlsPriorityString);
+		LogError(0, RS_RET_SYS_ERR, "Warning: OpenSSL Version too old to set gnutlsPriorityString ('%s')"
+			"by SSL_CONF_cmd API. For more see: "
+			"https://www.rsyslog.com/doc/master/configuration/modules/imtcp.html#gnutlsprioritystring",
+			gnutlsPriorityString);
 #endif
 	}
 

@@ -1235,7 +1235,7 @@ initTLS(void)
 		printf("tcpflood: error, invalid value for -k: %s\n", customConfig);
 	}
 #else
-	printf("tcpflood: error, OpenSSL Version to old, SSL_CONF_cmd API is not supported.");
+	printf("tcpflood: error, OpenSSL Version too old, SSL_CONF_cmd API is not supported.");
 #endif
 
 	}
