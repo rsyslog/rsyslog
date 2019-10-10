@@ -1,5 +1,6 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.1911.0 (aka 2019.11) 2019-11-12
+- 2019-10-10: testbench: add test for mmpstrucdata with RFC5424 escape sequences
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.1910.0 (aka 2019.10) 2019-10-01
 - 2019-10-01: core bugfix: incorrect error message on duplicate module load
