@@ -1,5 +1,17 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.1911.0 (aka 2019.11) 2019-11-12
+- 2019-10-11: core bugfix: potential abort on very long action name
+  The action name is stored in modified form for the debug header and
+  some messages. If it is extremely long, a buffer can be overrun,
+  resulting in misadressing and potential segfault for rsyslog. This
+  can also happen if the action is NOT named, but a custom path to
+  the output module is given and that path is very long. This triggers
+  the same issue because by default the module load path is included
+  in the action name.
+  This patch corrects the problem and trunctates overly long names
+  when being used for name generation.
+  The problem was detected during testbench work. We did never receive
+  a bug report from practice.
 - 2019-10-10: testbench: add test for mmpstrucdata with RFC5424 escape sequences
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.1910.0 (aka 2019.10) 2019-10-01
