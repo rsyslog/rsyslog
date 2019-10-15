@@ -1947,6 +1947,7 @@ rsRetVal
 strmMultiFileSeek(strm_t *pThis, unsigned int FNum, off64_t offs, off64_t *bytesDel)
 {
 	struct stat statBuf;
+	int skipped_files;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, strm);
@@ -1956,33 +1957,38 @@ strmMultiFileSeek(strm_t *pThis, unsigned int FNum, off64_t offs, off64_t *bytes
 		FINALIZE;
 	}
 
-	if(pThis->iCurrFNum != FNum) {
-		/* Note: we assume that no more than one file is skipped - an
-		 * assumption that is being used also by the whole rest of the
-		 * code and most notably the queue subsystem.
-		 */
+	skipped_files = FNum - pThis->iCurrFNum;
+	*bytesDel = 0;
+
+dbgprintf("rger: skip %d,  iCurrFNum %d, FNum %d\n", skipped_files, pThis->iCurrFNum, FNum);
+	while(skipped_files > 0) {
 		CHKiRet(genFileName(&pThis->pszCurrFName, pThis->pszDir, pThis->lenDir,
 				    pThis->pszFName, pThis->lenFName, pThis->iCurrFNum,
 				    pThis->iFileNumDigits));
+		dbgprintf("rger: processing file %s\n", pThis->pszCurrFName);
 		if(stat((char*)pThis->pszCurrFName, &statBuf) != 0) {
 			LogError(errno, RS_RET_IO_ERROR, "unexpected error doing a stat() "
 				"on file %s - further malfunctions may happen",
 				pThis->pszCurrFName);
-			ABORT_FINALIZE(RS_RET_IO_ERROR);
+			/* we do NOT error-terminate here as this could worsen the
+			 * situation. As such, we just keep running and try to delete
+			 * as many files as possible.
+			 */
 		}
-		*bytesDel = statBuf.st_size;
+		*bytesDel += statBuf.st_size;
 		DBGPRINTF("strmMultiFileSeek: detected new filenum, was %u, new %u, "
 			  "deleting '%s' (%lld bytes)\n", pThis->iCurrFNum, FNum,
-			  pThis->pszCurrFName, (long long) *bytesDel);
+			  pThis->pszCurrFName, (long long) statBuf.st_size);
 		unlink((char*)pThis->pszCurrFName);
 		if(pThis->cryprov != NULL)
 			pThis->cryprov->DeleteStateFiles(pThis->pszCurrFName);
 		free(pThis->pszCurrFName);
 		pThis->pszCurrFName = NULL;
-		pThis->iCurrFNum = FNum;
-	} else {
-		*bytesDel = 0;
+		pThis->iCurrFNum++;
+		--skipped_files;
 	}
+	DBGOPRINT((obj_t*) pThis, "strmMultiFileSeek: deleted %lld bytes in this run\n",
+		(long long) *bytesDel);
 	pThis->strtOffs = pThis->iCurrOffs = offs;
 
 finalize_it:

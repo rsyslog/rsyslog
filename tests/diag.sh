@@ -757,6 +757,16 @@ check_mainq_spool() {
 		error_exit 1
 	fi
 }
+# check that no spool file exists. Abort if they do.
+# This situation must exist after a successful termination of rsyslog
+# where the disk queue has properly been drained and shut down.
+check_spool_empty() {
+	if [ "$(ls $RSYSLOG_DYNNAME.spool/* 2> /dev/null)" != "" ]; then
+		printf 'error: spool files exists where they are not permitted to do so:\n'
+		ls -l $RSYSLOG_DYNNAME.spool/*
+		error_exit 1
+	fi
+}
 
 # general helper for imjournal tests: check that we got hold of the
 # injected test message. This is pretty lengthy as the journal has played
