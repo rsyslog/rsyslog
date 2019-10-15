@@ -1,5 +1,12 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.1911.0 (aka 2019.11) 2019-11-12
+- 2019-10-15: imjournal plugin code restructuring, added remote option
+  Decomposed ReadJournal() a bit, also now coupling journald
+  variables in one struct, added few warning messages and debug
+  prints to help with bug hunts in future, also got rid of two
+  needless journald calls. WorkAroundJournalBug now deprecated.
+  Added option to pull journald records from outside local machine.
+  Thanks to Jiri Vymazal for the patch.
 - 2019-10-11: core bugfix: potential abort on very long action name
   The action name is stored in modified form for the debug header and
   some messages. If it is extremely long, a buffer can be overrun,
