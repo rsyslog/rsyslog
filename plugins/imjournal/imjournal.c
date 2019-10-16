@@ -3,7 +3,7 @@
  * To test under Linux:
  * emmit log message into systemd journal
  *
- * Copyright (C) 2008-2017 Adiscon GmbH
+ * Copyright (C) 2008-2019 Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -676,16 +676,6 @@ loadJournalState(void)
 	DBGPRINTF("Loading journal position, at head? %d, reloaded? %d\n",
 			  journalContext.atHead, journalContext.reloaded);
 
-	if (cs.stateFile[0] != '/') {
-		char *new_stateFile;
-		if (-1 == asprintf(&new_stateFile, "%s/%s", (char *)glbl.GetWorkDir(), cs.stateFile)) {
-			LogError(0, RS_RET_OUT_OF_MEMORY, "imjournal: asprintf failed\n");
-			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-		}
-		free (cs.stateFile);
-		cs.stateFile = new_stateFile;
-	}
-
 	/* if state file not exists (on very first run), skip */
 	if (access(cs.stateFile, F_OK|R_OK) == -1 && errno == ENOENT) {
 		if (cs.bIgnorePrevious) {
@@ -885,6 +875,17 @@ ENDbeginCnfLoad
 
 BEGINendCnfLoad
 CODESTARTendCnfLoad
+	/* bad trick to handle old and new style config all in old-style var */
+	if(cs.stateFile != NULL && cs.stateFile[0] != '/') {
+		char *new_stateFile;
+		if (-1 == asprintf(&new_stateFile, "%s/%s", (char *)glbl.GetWorkDir(), cs.stateFile)) {
+			LogError(0, RS_RET_OUT_OF_MEMORY, "imjournal: asprintf failed\n");
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+		}
+		free (cs.stateFile);
+		cs.stateFile = new_stateFile;
+	}
+finalize_it:
 ENDendCnfLoad
 
 
@@ -1031,7 +1032,6 @@ CODESTARTsetModCnf
 				"param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
 		}
 	}
-
 
 finalize_it:
 	if (pvals != NULL)
