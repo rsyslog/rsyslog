@@ -485,6 +485,8 @@ StartDA(qqueue_t *pThis)
 	CHKiRet(qqueueSettoQShutdown(pThis->pqDA, pThis->toQShutdown));
 	CHKiRet(qqueueSetiHighWtrMrk(pThis->pqDA, 0));
 	CHKiRet(qqueueSetiDiscardMrk(pThis->pqDA, 0));
+	pThis->pqDA->iDeqBatchSize = pThis->iDeqBatchSize;
+	pThis->pqDA->iMinDeqBatchSize = pThis->iMinDeqBatchSize;
 	if(pThis->useCryprov) {
 		/* hand over cryprov to DA queue - in-mem queue does no longer need it
 		 * and DA queue will be kept active from now on until termination.
@@ -2301,8 +2303,6 @@ GetDeqBatchSize(qqueue_t *pThis, int *pVal)
 	DEFiRet;
 	assert(pVal != NULL);
 	*pVal = pThis->iDeqBatchSize;
-if(pThis->pqParent != NULL) // TODO: check why we actually do this!
-	*pVal = 16;
 	RETiRet;
 }
 
