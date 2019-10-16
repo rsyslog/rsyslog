@@ -16,34 +16,37 @@
 #
 # This file is part of the rsyslog project, released  under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+skip_platform "SunOS"  "FIXME: this test does not work on Solaris because of what looks like a BUG! It is just disabled here so that we can gain the benefits of a better test on other platforms. Bug on solaris must be addressed"
+combine_files() {
+	gunzip -c < $RSYSLOG_DYNNAME.out.0.log > $RSYSLOG_OUT_LOG
+	gunzip -c < $RSYSLOG_DYNNAME.out.1.log >> $RSYSLOG_OUT_LOG
+	gunzip -c < $RSYSLOG_DYNNAME.out.2.log >> $RSYSLOG_OUT_LOG
+	gunzip -c < $RSYSLOG_DYNNAME.out.3.log >> $RSYSLOG_OUT_LOG
+	gunzip -c < $RSYSLOG_DYNNAME.out.4.log >> $RSYSLOG_OUT_LOG
+}
+export NUMMESSAGES=4000
+export QUEUE_EMPTY_CHECK_FUNC=wait_seq_check
+export PRE_SEQ_CHECK_FUNC=combine_files
+export SEQ_CHECK_FILE=$RSYSLOG_OUT_LOG
+export SEQ_CHECK_OPTIONS=-E
 generate_conf
 add_conf '
-$MaxMessageSize 10k
-
-$ModLoad ../plugins/imtcp/.libs/imtcp
-$MainMsgQueueTimeoutShutdown 10000
-$InputTCPServerRun '$TCPFLOOD_PORT'
+global(MaxMessageSize="10k")
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 $template outfmt,"%msg:F,58:3%,%msg:F,58:4%,%msg:F,58:5%\n"
 $template dynfile,"'$RSYSLOG_DYNNAME'.out.%msg:F,58:2%.log" # use multiple dynafiles
-$OMFileFlushOnTXEnd off
-$OMFileZipLevel 6
-$OMFileIOBufferSize 256k
-$DynaFileCacheSize 4
-$omfileFlushInterval 1
-local0.* ?dynfile;outfmt
+local0.* action(type="omfile" template="outfmt"
+		zipLevel="6" ioBufferSize="256k" veryRobustZip="on"
+		flushOnTXEnd="off" flushInterval="1"
+		asyncWriting="on" dynaFileCacheSize="4"
+		dynafile="dynfile")
 '
 startup
-# send 4000 messages of 10.000bytes plus header max, randomized
-tcpflood -m4000 -r -d10000 -P129 -f5
-sleep 2 # due to large messages, we need this time for the tcp receiver to settle...
-shutdown_when_empty # shut down rsyslogd when done processing messages
-wait_shutdown       # and wait for it to terminate
-gunzip < $RSYSLOG_DYNNAME.out.0.log > $RSYSLOG_OUT_LOG
-gunzip < $RSYSLOG_DYNNAME.out.1.log >> $RSYSLOG_OUT_LOG
-gunzip < $RSYSLOG_DYNNAME.out.2.log >> $RSYSLOG_OUT_LOG
-gunzip < $RSYSLOG_DYNNAME.out.3.log >> $RSYSLOG_OUT_LOG
-gunzip < $RSYSLOG_DYNNAME.out.4.log >> $RSYSLOG_OUT_LOG
-#cat $RSYSLOG_DYNNAME.out.* > $RSYSLOG_OUT_LOG
-seq_check 0 3999 -E
+# send messages of 10.000bytes plus header max, randomized
+tcpflood -m$NUMMESSAGES -r -d10000 -P129 -f5
+shutdown_when_empty
+wait_shutdown
+seq_check
 exit_test

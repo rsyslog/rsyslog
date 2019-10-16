@@ -988,6 +988,9 @@ wait_seq_check() {
 	fi
 
 	while true ; do
+		if [ "$PRE_SEQ_CHECK_FUNC" != "" ]; then
+			$PRE_SEQ_CHECK_FUNC
+		fi
 		if [ "${filename##.*}" != "gz" ]; then
 			if [ -f "$filename" ]; then
 				count=$(wc -l < "$filename")
@@ -1260,6 +1263,7 @@ error_stats() {
 # add -v to chkseq if you need more verbose output
 # argument --check-only can be used to simply do a check without abort in fail case
 # env var SEQ_CHECK_FILE permits to override file name to check
+# env var SEQ_CHECK_OPTIONS provide the ability to add extra options for check program
 seq_check() {
 	if [ "$SEQ_CHECK_FILE" == "" ]; then
 		SEQ_CHECK_FILE="$RSYSLOG_OUT_LOG"
@@ -1292,7 +1296,7 @@ seq_check() {
 	if [ "${SEQ_CHECK_FILE##*.}" == "gz" ]; then
 		gunzip -c "${SEQ_CHECK_FILE}" | $RS_SORTCMD $RS_SORT_NUMERIC_OPT | ./chkseq -s$startnum -e$endnum $3 $4 $5 $6 $7
 	else
-		$RS_SORTCMD $RS_SORT_NUMERIC_OPT < "${SEQ_CHECK_FILE}" | ./chkseq -s$startnum -e$endnum $3 $4 $5 $6 $7
+		$RS_SORTCMD $RS_SORT_NUMERIC_OPT < "${SEQ_CHECK_FILE}" | ./chkseq -s$startnum -e$endnum $3 $4 $5 $6 $7 $SEQ_CHEKC_OPTIONS
 	fi
 	ret=$?
 	if [ "$check_only"  == "YES" ]; then
