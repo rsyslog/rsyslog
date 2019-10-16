@@ -1,5 +1,37 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.1911.0 (aka 2019.11) 2019-11-12
+- 2019-10-16: core queue bugfix: propagate batch size to DA queue
+   This was a long-standing bug where the DA queue always had a fixed small batch
+   size because the setting was not propagated from the memory queue. This also
+   removes a needless and counter-productive "debug aid" which seemed to be in
+   the code for quite some while. It did not cause harm because of the batch
+   size issue.
+- 2019-10-16: testbench: fix unreliable gzipwrite test
+  The test was timing-sensitive as we did not properly check all data
+  was output to the output file - we just relied on sleep periods.
+  This has been changed. Also, we made some changes to the testing
+  framework to fully support sequence checking of multiple ZIP files.
+- 2019-10-16: core queue bugfix: handle multi-queue-file delete correctly
+  Rsyslog may leave some dangling disk queue files under the following
+  conditions:
+  - batch sizes and/or messages are large
+  - queue files are comparatively small
+  - a batch spans more than two queue files (from n to n+m with m>1)
+  In this case, queue files n+1 to (n+m-1) are not deleted. This can
+  lead to problems when the queue is re-opened again. In extreme cases
+  this can also lead to stalled processing when the max disk space is
+  used up by such left-over queue files.
+  Using defaults this scenario is very unlikely, but it can happen,
+  especially when large messages are being processed.
+- 2019-10-16: imjournal: fix regression from yesterday's patch
+  commit 78976a9bc059 introduced a regression that caused writing
+  the journal state file to fail. This happens when the state file
+  is given as relative file name and the working directory is also
+  a relative path. This situation is very uncommon. So most deployments
+  will never experience it. We discovered the issue during CI runs
+  where the trigger condition is given. Note that it also takes
+  multiple times of loading the journal to actually see the bug.
+  see also https://github.com/rsyslog/rsyslog/pull/3878
 - 2019-10-15: imjournal plugin code restructuring, added remote option
   Decomposed ReadJournal() a bit, also now coupling journald
   variables in one struct, added few warning messages and debug
