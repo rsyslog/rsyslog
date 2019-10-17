@@ -1,6 +1,5 @@
 FROM rsyslog/rsyslog_dev_pkg_base_fedora:30
 USER root
-#RUN dnf -y install rhel-release
 RUN dnf -y install  \
    python-devel \
    python-pip
