@@ -1466,7 +1466,9 @@ CODESTARTactivateCnfPrePrivDrop
 	}
 	if(nLstn > 0 || startIndexUxLocalSockets == 0) {
 		DBGPRINTF("imuxsock: allocating memory for %d listeners\n", nLstn);
-		CHKmalloc(listeners = realloc(listeners, (1+nLstn)*sizeof(lstn_t)));
+		lstn_t *const listeners_new = realloc(listeners, (1+nLstn)*sizeof(lstn_t));
+		CHKmalloc(listeners_new);
+		listeners = listeners_new;
 		for(i = 1 ; i < nLstn ; ++i) {
 			listeners[i].sockName = NULL;
 			listeners[i].fd  = -1;
