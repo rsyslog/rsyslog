@@ -1682,7 +1682,7 @@ fi
 AM_CONDITIONAL(ENABLE_IMFILE, test x$enable_imfile = xyes)
 
 AC_ARG_ENABLE(imfile-tests,
-        [AS_HELP_STRING([--enable-imfile-tests],[Enable imfile tests @<:@default=yes@:>@])],
+        [AS_HELP_STRING([--enable-imfile-tests],[Enable imfile tests @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_imfile_tests="yes" ;;
           no) enable_imfile_tests="no" ;;
