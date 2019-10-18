@@ -47,8 +47,7 @@ def onReceive(msg):
 	   reply before the next message is pushed to this module).
 	"""
 	data = json.loads(msg)
-        print json.dumps({"$!": {"sometag": "somevalue"}})
-#	print json.dumps({'msg': msg + "-modified"})
+	print(json.dumps({"$!": {"sometag": "somevalue"}}))
 
 def onExit():
 	""" Do everything that is needed to finish processing (e.g.

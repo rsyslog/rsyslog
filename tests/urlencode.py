@@ -6,6 +6,6 @@ import sys
 import urllib
 
 if len(sys.argv) != 2:
-	print "ERROR: urlencode needs exactly one string as argument"
+	print("ERROR: urlencode needs exactly one string as argument")
 	sys.exit(1)
-print urllib.quote_plus(sys.argv[1])
+print(urllib.quote_plus(sys.argv[1]))
