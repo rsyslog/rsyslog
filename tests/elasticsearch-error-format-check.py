@@ -10,35 +10,35 @@ def checkDefaultErrorFile():
             if item == "request":
                 for reqItem in json_data[item]:
                     if reqItem == "url":
-                        print "url found"
-                        print reqItem
+                        print("url found")
+                        print(reqItem)
                     elif reqItem == "postdata":
-                        print "postdata found"
+                        print("postdata found")
                         indexCount = str(json_data[item]).count('\"_index\":')
-                        print reqItem
+                        print(reqItem)
                     else:
-                        print reqItem
-                        print "Unknown item found"
+                        print(reqItem)
+                        print("Unknown item found")
                         sys.exit(1)
               
             elif item == "reply":
                 for replyItem in json_data[item]:
                     if replyItem == "items":
-                        print json_data[item][replyItem]
+                        print(json_data[item][replyItem])
                         replyCount = str(json_data[item][replyItem]).count('_index')
                     elif replyItem == "errors":
-                        print "error node found"
+                        print("error node found")
                     elif replyItem == "took":
-                        print "took node found"
+                        print("took node found")
                     else:
-                        print replyItem
-                        print "Unknown item found"
+                        print(replyItem)
+                        print("Unknown item found")
                         sys.exit(3)
 
             else:
-                print item
-                print "Unknown item found"
-                print "error"
+                print(item)
+                print("Unknown item found")
+                print("error")
                 sys.exit(4)
     if replyCount == indexCount :
         return 0
@@ -54,22 +54,22 @@ def checkErrorOnlyFile():
         replyCount=0
         for item in json_data:
             if item == "request":
-                print json_data[item]
+                print(json_data[item])
                 indexCount = str(json_data[item]).count('\"_index\":')
               
               
             elif item == "url":
-                print "url found"
+                print("url found")
               
           
             elif item == "reply":
-                print json_data[item]
+                print(json_data[item])
                 replyCount = str(json_data[item]).count('\"_index\":')
 
             else:
-                print item
-                print "Unknown item found"
-                print "error"
+                print(item)
+                print("Unknown item found")
+                print("error")
                 sys.exit(4)
     if replyCount == indexCount :
         return 0
@@ -83,23 +83,23 @@ def checkErrorInterleaved():
         indexCount =0
         replyCount=0
         for item in json_data:
-            print item
+            print(item)
             if item == "response":
                 for responseItem in json_data[item]:
-                    print responseItem
+                    print(responseItem)
                     for res in responseItem:
-                        print res
+                        print(res)
                         if res == "request":
-                            print responseItem[res]
+                            print(responseItem[res])
                             indexCount = str(responseItem[res]).count('\"_index\":')
-                            print "request count ", indexCount
+                            print("request count ", indexCount)
                         elif res == "reply":
-                            print responseItem[res]
+                            print(responseItem[res])
                             replyCount = str(responseItem[res]).count('\"_index\":')
-                            print "reply count ", replyCount
+                            print("reply count ", replyCount)
                         else:
-                            print res
-                            print "Unknown item found"
+                            print(res)
+                            print("Unknown item found")
                             sys.exit(9)
                     if replyCount != indexCount :
                         sys.exit(8)
@@ -107,14 +107,14 @@ def checkErrorInterleaved():
               
               
             elif item == "url":
-                print "url found"
+                print("url found")
               
           
          
 
             else:
-                print item
-                print "Unknown item found"
+                print(item)
+                print("Unknown item found")
                 sys.exit(4)
 
     return 0
@@ -133,5 +133,5 @@ if __name__ == "__main__":
     elif option == "interleaved":
         checkErrorInterleaved()
     else:
-        print "Usage: <script> <default|erroronly|errorinterleaved>"
+        print("Usage: <script> <default|erroronly|errorinterleaved>")
         sys.exit(6)

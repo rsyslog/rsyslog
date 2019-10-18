@@ -17,11 +17,13 @@ if $msg contains "msgnum:" then {
 	action(type="omfile" template="outfmt" file="'$RSYSLOG_OUT_LOG'")
 }
 '
-startup_vg
+startup
+#startup_vg
 tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag:msgnum:1\""
 shutdown_when_empty
-wait_shutdown_vg
-check_exit_vg
+wait_shutdown
+#wait_shutdown_vg
+#check_exit_vg
 
 export EXPECTED='-{ "x": "a", "sometag": "somevalue" }-'
 cmp_exact
