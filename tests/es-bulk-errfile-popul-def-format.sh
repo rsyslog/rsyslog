@@ -45,7 +45,7 @@ startup
 shutdown_when_empty
 wait_shutdown
 
-python $srcdir/elasticsearch-error-format-check.py default
+python3 $srcdir/elasticsearch-error-format-check.py default
 if [ $? -ne 0 ]
 then
     echo "error: Format for error file different! " $?

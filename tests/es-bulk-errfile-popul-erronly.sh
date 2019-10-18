@@ -47,7 +47,7 @@ startup
 shutdown_when_empty
 wait_shutdown
 
-python $srcdir/elasticsearch-error-format-check.py erroronly
+python3 $srcdir/elasticsearch-error-format-check.py erroronly
 
 if [ $? -ne 0 ]
 then

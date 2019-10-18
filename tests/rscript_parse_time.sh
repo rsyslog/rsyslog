@@ -8,7 +8,7 @@
 # we need a method of converting given date/time strings to UNIX timestamps.
 # For that we use an external Python 2.x script to do the job.
 
-getts="python $srcdir/rscript_parse_time_get-ts.py"
+getts="python3 $srcdir/rscript_parse_time_get-ts.py"
 
 # Run the Python script's self-tests
 $getts selftest

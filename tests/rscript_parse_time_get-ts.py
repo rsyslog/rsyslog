@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 # Added 2017-11-05 by Stephen Workman, released under ASL 2.0
 
 #

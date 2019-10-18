@@ -48,7 +48,7 @@ startup
 shutdown_when_empty
 wait_shutdown
 
-python $srcdir/elasticsearch-error-format-check.py errorinterleaved
+python3 $srcdir/elasticsearch-error-format-check.py errorinterleaved
 
 if [ $? -ne 0 ]
 then

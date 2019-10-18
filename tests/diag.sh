@@ -1448,7 +1448,7 @@ exit_test() {
 # to work pretty well. In any case, we should probably call this as
 # late as possible before the usage of the port.
 get_free_port() {
-python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()'
+python3 -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()'
 }
 
 
@@ -1458,7 +1458,7 @@ get_inode() {
 		printf 'FAIL: file "%s" does not exist in get_inode\n' "$1"
 		error_exit 100
 	fi
-	python -c 'import os; import stat; print(os.lstat("'$1'")[stat.ST_INO])'
+	python3 -c 'import os; import stat; print(os.lstat("'$1'")[stat.ST_INO])'
 }
 
 
@@ -2058,7 +2058,7 @@ start_elasticsearch() {
 # $2 - ES port
 es_getdata() {
 	curl --silent localhost:${2:-$ES_PORT}/rsyslog_testbench/_search?size=${1:-$NUMMESSAGES} > $RSYSLOG_DYNNAME.work
-	python $srcdir/es_response_get_msgnum.py > ${RSYSLOG_OUT_LOG}
+	python3 $srcdir/es_response_get_msgnum.py > ${RSYSLOG_OUT_LOG}
 }
 
 # a standard method to support shutdown & queue empty check for a wide range
@@ -2126,7 +2126,7 @@ omhttp_start_server() {
 
     server_args="-p $omhttp_server_port ${*:2}"
 
-    python ${omhttp_server_py} ${server_args} >> ${omhttp_server_logfile} 2>&1 &
+    python3 ${omhttp_server_py} ${server_args} >> ${omhttp_server_logfile} 2>&1 &
     if [ ! $? -eq 0 ]; then
         echo "Failed to start omhttp test server."
         rm -rf $omhttp_work_dir
@@ -2190,7 +2190,7 @@ omhttp_get_data() {
     
     omhttp_url="localhost:${omhttp_server_port}/${omhttp_path}"
     curl -s ${omhttp_url} \
-        | python -c "${python_parse}" | sort -n \
+        | python3 -c "${python_parse}" | sort -n \
         > ${RSYSLOG_OUT_LOG}
 }
 

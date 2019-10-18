@@ -57,7 +57,7 @@ if [ $ii = $timeout ] ; then
 	error_exit 1
 fi
 
-python -c 'import sys
+python3 -c 'import sys
 inp = file(sys.argv[1],"r").read()
 last = 0
 idx = inp.find("msgnum:",last)

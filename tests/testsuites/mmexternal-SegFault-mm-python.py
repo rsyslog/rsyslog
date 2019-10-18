@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 
 """A skeleton for a python rsyslog message modification plugin
    Copyright (C) 2014 by Adiscon GmbH

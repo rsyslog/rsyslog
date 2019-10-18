@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 # a small url encoder for testbench purposes
 # written 2018-11-05 by Rainer Gerhards
 # part of the rsyslog testbench, released under ASL 2.0
