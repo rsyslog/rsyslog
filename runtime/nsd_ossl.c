@@ -564,7 +564,9 @@ osslRecordRecv(nsd_ossl_t *pThis)
 		if (iBytesLeft > 0 ){
 			DBGPRINTF("osslRecordRecv: %d Bytes pending after SSL_Read, expand buffer.\n", iBytesLeft);
 			/* realloc buffer size and preserve char content */
-			CHKmalloc(pThis->pszRcvBuf = realloc(pThis->pszRcvBuf, NSD_OSSL_MAX_RCVBUF+iBytesLeft));
+			char *const newbuf = realloc(pThis->pszRcvBuf, NSD_OSSL_MAX_RCVBUF+iBytesLeft);
+			CHKmalloc(newbuf);
+			pThis->pszRcvBuf = newbuf;
 
 			/* 2nd read will read missing bytes from the current SSL Packet */
 			lenRcvd = SSL_read(pThis->ssl, pThis->pszRcvBuf+NSD_OSSL_MAX_RCVBUF, iBytesLeft);

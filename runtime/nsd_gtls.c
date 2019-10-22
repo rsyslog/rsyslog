@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd interface for GnuTLS.
  *
- * Copyright (C) 2007-2018 Rainer Gerhards and Adiscon GmbH.
+ * Copyright (C) 2007-2019 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -572,7 +572,9 @@ gtlsRecordRecv(nsd_gtls_t *pThis)
 			DBGPRINTF("gtlsRecordRecv: %zd Bytes pending after gnutls_record_recv, expand buffer.\n",
 				stBytesLeft);
 			/* realloc buffer size and preserve char content */
-			CHKmalloc(pThis->pszRcvBuf = realloc(pThis->pszRcvBuf, NSD_GTLS_MAX_RCVBUF+stBytesLeft));
+			char *const newbuf = realloc(pThis->pszRcvBuf, NSD_GTLS_MAX_RCVBUF+stBytesLeft);
+			CHKmalloc(newbuf);
+			pThis->pszRcvBuf = newbuf;
 
 			/* 2nd read will read missing bytes from the current SSL Packet */
 			lenRcvd = gnutls_record_recv(pThis->sess, pThis->pszRcvBuf+NSD_GTLS_MAX_RCVBUF, stBytesLeft);
