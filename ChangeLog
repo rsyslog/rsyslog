@@ -1,5 +1,14 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.1911.0 (aka 2019.11) 2019-11-12
+- 2019-10-22: imfile bugfix: improper use of calloc()
+  could cause problems under extreme memory shortage - very unlikely
+  credits to LGTM.COM for detecting this
+- 2019-10-22: TLS driver bugfix: improper use of calloc()
+  can cause problems under extreme memory shortage - very unlikely
+  credits to LGTM.COM for detecting this
+- 2019-10-22: imuxsock  bugfix: improper use of calloc()
+  can cause problems under extreme memory shortage - very unlikely
+  credits to LGTM.COM for detecting this
 - 2019-10-17: build system bugfix: incorrect default in ./configure help text
   closes https://github.com/rsyslog/rsyslog/issues/3904
   Thanks to Michael Biebl for pointing this out.
