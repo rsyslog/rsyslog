@@ -1301,6 +1301,10 @@ CODESTARTobjDestruct(strm)
 
 	if(pThis->bAsyncWrite) {
 		stopWriter(pThis);
+		if(pThis->fd != -1) {
+			close(pThis->fd);
+			pThis->fd = -1;
+		}
 		pthread_mutex_destroy(&pThis->mut);
 		pthread_cond_destroy(&pThis->notFull);
 		pthread_cond_destroy(&pThis->notEmpty);
