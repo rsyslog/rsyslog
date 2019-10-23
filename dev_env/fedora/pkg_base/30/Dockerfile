@@ -1,6 +1,6 @@
 FROM	fedora:30
 RUN	dnf -y update
-RUN	dnf -y install wget mock git sudo mc vim screen rsync createrepo rpm-sign
+RUN	dnf -y install wget mock git sudo mc vim screen rsync createrepo rpm-sign yum
 RUN	mkdir /private-files
 VOLUME	/private-files
 RUN	useradd pkg --uid 1001 -ms /bin/bash
