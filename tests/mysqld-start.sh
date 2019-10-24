@@ -21,4 +21,5 @@ wait_startup_pid /var/run/mysqld/mysqld.pid
 printf 'preparing mysqld for testbench use...\n'
 $SUDO ${srcdir}/../devtools/prep-mysql-db.sh
 printf 'done, mysql ready for testbench\n'
+exit 77
 exit_test
