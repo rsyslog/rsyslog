@@ -312,6 +312,11 @@ if ENABLE_MMKUBERNETES
 SUBDIRS += contrib/mmkubernetes
 endif
 
+# impcap
+if ENABLE_IMPCAP
+SUBDIRS += contrib/impcap
+endif
+
 # imtuxedoulog
 if ENABLE_IMTUXEDOULOG
 SUBDIRS += contrib/imtuxedoulog
@@ -563,6 +568,10 @@ if ENABLE_IMFILE_TESTS
 DISTCHECK_CONFIGURE_FLAGS+= --enable-imfile-tests
 else
 DISTCHECK_CONFIGURE_FLAGS+= --disable-imfile-tests
+endif
+
+if ENABLE_IMPCAP
+DISTCHECK_CONFIGURE_FLAGS+= --enable-impcap
 endif
 
 if ENABLE_IMDOCKER
