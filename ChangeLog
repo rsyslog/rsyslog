@@ -1,5 +1,23 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.1911.0 (aka 2019.11) 2019-11-12
+- 2019-10-25: omfile bugfix: file handle leak
+  The stream class does not close re-opened file descriptors.
+  This lead to leaking file handles and ultimately to the inability
+  to open any files/sockets/etc as rsyslog ran out of handles.
+  The bug was depending on timing. This involed different OS
+  thread scheduler timing as well as workload. The bug was more
+  common under the following conditions:
+  - async writing of files
+  - dynafiles
+  - not commiting file data at end of transaction
+  However it could be triggerred under other conditions as well.
+  The refactoring done in 8.1908 increased the likelyhood of
+  experienceing this bug. But it was not a real regression, the new
+  code was valid, but changed the timing so that the race was more
+  likely.
+  Thanks to Michael Biebl for reporting this bug and helping to
+  analyze it.
+  closes https://github.com/rsyslog/rsyslog/issues/3885
 - 2019-10-22: imfile bugfix: improper use of calloc()
   could cause problems under extreme memory shortage - very unlikely
   credits to LGTM.COM for detecting this
