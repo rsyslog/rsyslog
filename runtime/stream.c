@@ -448,6 +448,19 @@ strmWaitAsyncWriterDone(strm_t *pThis)
 	}
 }
 
+/* stop the writer thread (we MUST be runnnig asynchronously when this method
+ * is called!). Note that the mutex must be locked! -- rgerhards, 2009-07-06
+ */
+static void
+stopWriter(strm_t *const pThis)
+{
+	pThis->bStopWriter = 1;
+	pthread_cond_signal(&pThis->notEmpty);
+	d_pthread_mutex_unlock(&pThis->mut);
+	pthread_join(pThis->writerThreadID, NULL);
+}
+
+
 
 /* close a strm file
  * Note that the bDeleteOnClose flag is honored. If it is set, the file will be
@@ -474,6 +487,9 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 		if(pThis->iZipLevel) {
 			doZipFinish(pThis);
 		}
+		if(pThis->bAsyncWrite) {
+			stopWriter(pThis);
+		}
 	}
 
 	/* if we have a signature provider, we must make sure that the crypto
@@ -492,6 +508,8 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 	 * against this. -- rgerhards, 2010-03-19
 	 */
 	if(pThis->fd != -1) {
+		DBGOPRINT((obj_t*) pThis, "file %d(%s) closing\n",
+			pThis->fd, getFileDebugName(pThis));
 		currOffs = lseek64(pThis->fd, 0, SEEK_CUR);
 		close(pThis->fd);
 		pThis->fd = -1;
@@ -1272,26 +1290,13 @@ finalize_it:
 }
 
 
-/* stop the writer thread (we MUST be runnnig asynchronously when this method
- * is called!). Note that the mutex must be locked! -- rgerhards, 2009-07-06
- */
-static void
-stopWriter(strm_t *pThis)
-{
-	pThis->bStopWriter = 1;
-	pthread_cond_signal(&pThis->notEmpty);
-	d_pthread_mutex_unlock(&pThis->mut);
-	pthread_join(pThis->writerThreadID, NULL);
-}
-
-
 /* destructor for the strm object */
 BEGINobjDestruct(strm) /* be sure to specify the object type also in END and CODESTART macros! */
 	int i;
 CODESTARTobjDestruct(strm)
 	/* we need to stop the ZIP writer */
 	if(pThis->bAsyncWrite)
-		/* Note: mutex will be unlocked in stopWriter! */
+		/* Note: mutex will be unlocked in strmCloseFile/stopWriter! */
 		d_pthread_mutex_lock(&pThis->mut);
 
 	/* strmClose() will handle read-only files as well as need to open
@@ -1300,7 +1305,6 @@ CODESTARTobjDestruct(strm)
 	strmCloseFile(pThis);
 
 	if(pThis->bAsyncWrite) {
-		stopWriter(pThis);
 		pthread_mutex_destroy(&pThis->mut);
 		pthread_cond_destroy(&pThis->notFull);
 		pthread_cond_destroy(&pThis->notEmpty);
@@ -1659,6 +1663,8 @@ asyncWriterThread(void *pPtr)
 	/* Not reached */
 
 finalize_it:
+	DBGOPRINT((obj_t*) pThis, "file %d(%s) asyncWriterThread terminated\n",
+		pThis->fd, getFileDebugName(pThis));
 	return NULL; /* to keep pthreads happy */
 }
 
@@ -1890,6 +1896,8 @@ strmFlush(strm_t *pThis)
 
 	assert(pThis != NULL);
 
+	DBGOPRINT((obj_t*) pThis, "file %d strmFlush\n", pThis->fd);
+
 	if(pThis->bAsyncWrite)
 		d_pthread_mutex_lock(&pThis->mut);
 	CHKiRet(strmFlushInternal(pThis, 1));
@@ -1960,7 +1968,6 @@ strmMultiFileSeek(strm_t *pThis, unsigned int FNum, off64_t offs, off64_t *bytes
 	skipped_files = FNum - pThis->iCurrFNum;
 	*bytesDel = 0;
 
-dbgprintf("rger: skip %d,  iCurrFNum %d, FNum %d\n", skipped_files, pThis->iCurrFNum, FNum);
 	while(skipped_files > 0) {
 		CHKiRet(genFileName(&pThis->pszCurrFName, pThis->pszDir, pThis->lenDir,
 				    pThis->pszFName, pThis->lenFName, pThis->iCurrFNum,
