@@ -364,7 +364,6 @@ BSONAppendJSONObject(bson_t *doc, const char *name, struct json_object *json)
 			return BSON_APPEND_INT64(doc, name, i);
 	}
 	case json_type_object: {
-
 		if (BSONAppendExtendedJSON(doc, name, json) == TRUE)
 		    return TRUE;
 
@@ -393,12 +392,18 @@ BSONAppendJSONObject(bson_t *doc, const char *name, struct json_object *json)
 		/* Convert text to ISODATE when needed */
 		if (strncmp(name, "date", 5) == 0 || strncmp(name, "time", 5) == 0 ) {
 			struct tm tm;
-			if (strptime(json_object_get_string(json), "%Y-%m-%dT%H:%M:%S:%Z", &tm) != NULL ) {
+			const char *datestr = json_object_get_string(json);
+			if( strptime(datestr, "%Y-%m-%dT%H:%M:%S:%Z", &tm) != NULL ||
+					strptime(datestr, "%Y-%m-%dT%H:%M:%S%Z", &tm) != NULL ||
+					strptime(datestr, "%Y-%m-%dT%H:%M:%SZ", &tm) != NULL) {
+				tm.tm_isdst = -1;
 				time_t epoch;
 				int64 ts;
-				epoch = mktime(&tm) ;
+				epoch = mktime(&tm);
 				ts = 1000 * (int64) epoch;
 				return BSON_APPEND_DATE_TIME (doc, name, ts);
+			} else {
+				DBGPRINTF("Unknown date format of field '%s' : '%s' \n", name, datestr);
 			}
 		}
 		else {
