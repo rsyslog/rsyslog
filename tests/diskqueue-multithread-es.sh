@@ -11,8 +11,8 @@
 # messages actually went to the DA queue.
 # Copyright (C) 2019-10-28 by Rainer Gerhards
 # This file is part of the rsyslog project, released under ASL 2.0
-. ${srcdir:=.}/diag.sh init
 export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
+. ${srcdir:=.}/diag.sh init
 export ES_PORT=19200
 export NUMMESSAGES=25000
 export QUEUE_EMPTY_CHECK_FUNC=es_shutdown_empty_check
