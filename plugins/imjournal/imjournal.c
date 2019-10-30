@@ -158,6 +158,10 @@ static rsRetVal openJournal(void) {
 		LogError(-r, RS_RET_IO_ERROR, "imjournal: sd_journal_open() failed");
 		iRet = RS_RET_IO_ERROR;
 	}
+	if ((r = sd_journal_set_data_threshold(journalContext.j, glbl.GetMaxLine())) < 0) {
+		LogError(-r, RS_RET_IO_ERROR, "imjournal: sd_journal_set_data_threshold() failed");
+		iRet = RS_RET_IO_ERROR;
+	}
 	journalContext.atHead = 1;
 	RETiRet;
 }
