@@ -1088,6 +1088,7 @@ endif
 if ENABLE_MMDBLOOKUP
 TESTS += \
     mmdb.sh \
+    mmdb-space.sh \
     mmdb-container.sh \
     mmdb-container-empty.sh
 if HAVE_VALGRIND
@@ -1821,8 +1822,10 @@ EXTRA_DIST= \
 	mmjsonparse_cim2.sh \
 	mmjsonparse_localvar.sh \
 	mmdb.sh \
+	mmdb-space.sh \
 	mmdb.rb \
 	test.mmdb \
+	with_space.mmdb \
 	mmdb-vg.sh \
 	mmdb-container.sh \
 	mmdb-container-empty.sh \
