@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.1911.0 (aka 2019.11) 2019-11-12
+- 2019-10-30: improg bugfix: allow improg to handle multi-line inputs
+  miscellaneous bug fixes in improg:
+  * properly truncate string after an input event is submitted
+  * set msgoffset to 0.
+  * tests added to check above fixes
+  Thanks to Nelson Yen for the fix.
 - 2019-10-30: mmdblookup bugfix: missing space in city name
   This fixes the issue that spaces in city names are dropped. However, the
   fix is more or less a work-around. As it turns out, the libmaxmindb API
