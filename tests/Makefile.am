@@ -293,6 +293,7 @@ TESTS +=  \
 	asynwr_deadlock_2.sh \
 	asynwr_deadlock2.sh \
 	asynwr_deadlock4.sh \
+	asynwr_dynfile_flushtxend-off.sh \
 	abort-uncleancfg-goodcfg.sh \
 	abort-uncleancfg-goodcfg-check.sh \
 	abort-uncleancfg-badcfg-check.sh \
@@ -2104,6 +2105,7 @@ EXTRA_DIST= \
 	asynwr_deadlock_2.sh \
 	asynwr_deadlock2.sh \
 	asynwr_deadlock4.sh \
+	asynwr_dynfile_flushtxend-off.sh \
 	abort-uncleancfg-goodcfg.sh \
 	abort-uncleancfg-goodcfg-check.sh \
 	abort-uncleancfg-badcfg-check.sh \
