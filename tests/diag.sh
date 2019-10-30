@@ -2057,6 +2057,7 @@ start_elasticsearch() {
 # $1 - number of records (ES does not return all records unless you tell it explicitely).
 # $2 - ES port
 es_getdata() {
+	curl --silent -XPUT --show-error -H 'Content-Type: application/json' "http://localhost:${2:-$ES_PORT}/rsyslog_testbench/_settings" -d '{ "index" : { "max_result_window" : '${1:-$NUMMESSAGES}' } }'
 	curl --silent localhost:${2:-$ES_PORT}/rsyslog_testbench/_search?size=${1:-$NUMMESSAGES} > $RSYSLOG_DYNNAME.work
 	python $srcdir/es_response_get_msgnum.py > ${RSYSLOG_OUT_LOG}
 }

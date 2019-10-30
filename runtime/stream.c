@@ -1957,7 +1957,6 @@ strmMultiFileSeek(strm_t *pThis, unsigned int FNum, off64_t offs, off64_t *bytes
 	struct stat statBuf;
 	int skipped_files;
 	DEFiRet;
-
 	ISOBJ_TYPE_assert(pThis, strm);
 
 	if(FNum == 0 && offs == 0) { /* happens during queue init */

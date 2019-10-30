@@ -490,7 +490,7 @@ DEFpropSetMeth(wti, pWtp, wtp_t*)
  * rgerhards, 2008-01-09
  */
 rsRetVal
-wtiSetDbgHdr(wti_t *pThis, uchar *pszMsg, size_t lenMsg)
+wtiSetDbgHdr(wti_t *pThis, uchar *pszMsg, const size_t lenMsg)
 {
 	DEFiRet;
 

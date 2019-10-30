@@ -411,7 +411,7 @@ qqueueAdviseMaxWorkers(qqueue_t *pThis)
 		}
 		if(getLogicalQueueSize(pThis) == 0) {
 			iMaxWorkers = 0;
-		} else if(pThis->qType == QUEUETYPE_DISK || pThis->iMinMsgsPerWrkr == 0) {
+		} else if(pThis->iMinMsgsPerWrkr == 0) {
 			iMaxWorkers = 1;
 		} else {
 			iMaxWorkers = getLogicalQueueSize(pThis) / pThis->iMinMsgsPerWrkr + 1;
@@ -459,7 +459,7 @@ StartDA(qqueue_t *pThis)
 	ISOBJ_TYPE_assert(pThis, qqueue);
 
 	/* create message queue */
-	CHKiRet(qqueueConstruct(&pThis->pqDA, QUEUETYPE_DISK , 1, 0, pThis->pConsumer));
+	CHKiRet(qqueueConstruct(&pThis->pqDA, QUEUETYPE_DISK, pThis->iNumWorkerThreads, 0, pThis->pConsumer));
 
 	/* give it a name */
 	snprintf((char*) pszDAQName, sizeof(pszDAQName), "%s[DA]", obj.GetName((obj_t*) pThis));
@@ -487,6 +487,8 @@ StartDA(qqueue_t *pThis)
 	CHKiRet(qqueueSetiDiscardMrk(pThis->pqDA, 0));
 	pThis->pqDA->iDeqBatchSize = pThis->iDeqBatchSize;
 	pThis->pqDA->iMinDeqBatchSize = pThis->iMinDeqBatchSize;
+	pThis->pqDA->iMinMsgsPerWrkr = pThis->iMinMsgsPerWrkr;
+	pThis->pqDA->iLowWtrMrk = pThis->iLowWtrMrk;
 	if(pThis->useCryprov) {
 		/* hand over cryprov to DA queue - in-mem queue does no longer need it
 		 * and DA queue will be kept active from now on until termination.
@@ -1167,8 +1169,6 @@ qqueueAdd(qqueue_t *pThis, smsg_t *pMsg)
 				++iOverallQueueSize; /* racy, but we can't wait for a mutex! */
 #			endif
 #		endif
-		DBGOPRINT((obj_t*) pThis, "qqueueAdd: entry added, size now log %d, phys %d entries\n",
-			  getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
 	}
 
 finalize_it:
@@ -1193,8 +1193,8 @@ qqueueDeq(qqueue_t *pThis, smsg_t **ppMsg)
 	iRet = pThis->qDeq(pThis, ppMsg);
 	ATOMIC_INC(&pThis->nLogDeq, &pThis->mutLogDeq);
 
-//	DBGOPRINT((obj_t*) pThis, "entry deleted, size now log %d, phys %d entries\n",
-//		  getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
+	DBGOPRINT((obj_t*) pThis, "entry deleted, size now log %d, phys %d entries, iOverallQueueSize %d\n",
+		  getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis), (int) iOverallQueueSize);
 
 	RETiRet;
 }
@@ -1308,7 +1308,6 @@ tryShutdownWorkersWithinActionTimeout(qqueue_t *pThis)
 		pThis->pqDA->bShutdownImmediate = 1;
 	}
 
-// TODO: make sure we have at minimum a 10ms timeout - workers deserve a chance...
 	/* now give the queue workers a last chance to gracefully shut down (based on action timeout setting) */
 	timeoutComp(&tTimeout, pThis->toActShutdown);
 	DBGOPRINT((obj_t*) pThis, "trying immediate shutdown of regular workers (if any)\n");
@@ -1697,6 +1696,7 @@ DeleteBatchFromQStore(qqueue_t *pThis, batch_t *pBatch)
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	assert(pBatch != NULL);
 
+dbgprintf("rger: deleteBatchFromQStore, nElem %d\n", (int) pBatch->nElem);
 	pTdl = tdlPeek(pThis); /* get current head element */
 	if(pTdl == NULL) { /* to-delete list empty */
 		DoDeleteBatchFromQStore(pThis, pBatch->nElem);
@@ -2260,8 +2260,8 @@ qqueueChkStopWrkrDA(qqueue_t *pThis)
 {
 	DEFiRet;
 
-	/*DBGPRINTF("XXXX: chkStopWrkrDA called, low watermark %d, log Size %d, phys Size %d, bEnqOnly %d\n",
-	pThis->iLowWtrMrk, getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis), pThis->bEnqOnly);*/
+	DBGPRINTF("rger: chkStopWrkrDA called, low watermark %d, log Size %d, phys Size %d, bEnqOnly %d\n",
+	pThis->iLowWtrMrk, getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis), pThis->bEnqOnly);
 	if(pThis->bEnqOnly) {
 		iRet = RS_RET_TERMINATE_WHEN_IDLE;
 	}
@@ -2360,8 +2360,6 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 			pThis->qDeq = qDeqDisk;
 			pThis->qDel = NULL; /* delete for disk handled via special code! */
 			pThis->MultiEnq = qqueueMultiEnqObjNonDirect;
-			/* special handling */
-			pThis->iNumWorkerThreads = 1; /* we need exactly one worker */
 			/* pre-construct file name for .qi file */
 			pThis->lenQIFNam = snprintf((char*)pszQIFNam, sizeof(pszQIFNam),
 				"%s/%s.qi", (char*) pThis->pszSpoolDir, (char*)pThis->pszFilePrefix);
@@ -2455,8 +2453,8 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 		}
 	}
 
-	if(   pThis->iMinMsgsPerWrkr < 1
-	   || pThis->iMinMsgsPerWrkr > pThis->iMaxQueueSize ) {
+	if((pThis->iMinMsgsPerWrkr < 1
+	   || pThis->iMinMsgsPerWrkr > pThis->iMaxQueueSize) ) {
 		pThis->iMinMsgsPerWrkr  = pThis->iMaxQueueSize / pThis->iNumWorkerThreads;
 	}
 
@@ -2532,7 +2530,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 		  getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis),
 		  pThis->pqParent == NULL ? 0 : 1, pThis->iFullDlyMrk, pThis->iLightDlyMrk,
 		  pThis->iDeqBatchSize, pThis->iMinDeqBatchSize, pThis->iHighWtrMrk, pThis->iLowWtrMrk,
-		  pThis->iDiscardMrk, pThis->iNumWorkerThreads, pThis->iMinMsgsPerWrkr);
+		  pThis->iDiscardMrk, (int) pThis->iNumWorkerThreads, (int) pThis->iMinMsgsPerWrkr);
 
 	pThis->bQueueStarted = 1;
 	if(pThis->qType == QUEUETYPE_DIRECT)
@@ -3489,6 +3487,7 @@ static rsRetVal qqueueSetProperty(qqueue_t *pThis, var_t *pProp)
 			ABORT_FINALIZE(RS_RET_QTYPE_MISMATCH);
 	}
 
+dbgprintf("rger: setProperty: iOverallQueueSize %d\n", (int) iOverallQueueSize);
 finalize_it:
 	RETiRet;
 }
