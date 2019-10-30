@@ -1,5 +1,19 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.1911.0 (aka 2019.11) 2019-11-12
+- 2019-10-30: core/queue: provide ability to run diskqueue on multiple threads
+  Up until this release, disk queues could only use a single thread,
+  what limited their performance with outputs like ElasticSearch.
+  Now disk queues can utilize multiple threads just like any other
+  queue type. Most importantly, the disk queue part of a DA queue
+  now inherits the max number of threads from its memory queue
+  counterpart.
+  NOTE: the new multi-threaded DA disk queue is actually a change of
+  behaviour. We have not guarded it by a new config switch as we
+  assume the new behavior is most often exactly within user
+  expectations. In any case, we cannot see any harm from running
+  the disk queue on multiple threads.
+  see also https://github.com/rsyslog/rsyslog/issues/3543
+  closes https://github.com/rsyslog/rsyslog/issues/3833
 - 2019-10-25: omfile bugfix: file handle leak
   The stream class does not close re-opened file descriptors.
   This lead to leaking file handles and ultimately to the inability
