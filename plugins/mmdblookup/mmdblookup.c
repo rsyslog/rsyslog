@@ -297,22 +297,27 @@ ENDtryResume
 void
 str_split(char **membuf)
 {
+	int in_quotes = 0;
 	char *buf  = *membuf;
 	char tempbuf[strlen(buf)];
 	memset(tempbuf, 0, strlen(buf));
 
 	while (*buf++ != '\0') {
-		if (*buf == '\n' || *buf == '\t' || *buf == ' ')
+		if (*buf == '\n' || *buf == '\t' || (*buf == ' ' && !in_quotes))
 			continue;
 		else {
 			if (*buf == '<') {
 				char *p = strchr(buf, '>');
 				buf = buf + (int)(p - buf);
 				strcat(tempbuf, ",");
-			} else if (*buf == '}')
+			} else if (*buf == '}') {
 				strcat(tempbuf, "},");
-			else
+			} else if (*buf == '"') {
+				in_quotes = !in_quotes;
 				strncat(tempbuf, buf, 1);
+			} else {
+				strncat(tempbuf, buf, 1);
+			}
 		}
 	}
 
