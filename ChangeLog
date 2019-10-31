@@ -1,5 +1,16 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.1911.0 (aka 2019.11) 2019-11-12
+- 2019-10-31: imjournal: set the journal data threshold to MaxMessageSize
+  When data is read from the journal using sd_journal_get_data it may be
+  truncated to a certain threshold (64K by default).
+  If the rsyslog MaxMessageSize is larger than the threshold, there is a
+  chance rsyslog will receive incomplete messages from the journal.
+  Empirically, this appears to happen reliably when XZ compression is
+  used by journald. Systems where journald uses LZ4 compression do not
+  appear to suffer this issue reliably--if at all.
+  This change sets the threshold to the MaxMessageSize when the
+  journal is opened.
+  Thanks to Robert Winslow Dalpe for the patch.
 - 2019-10-30: improg bugfix: allow improg to handle multi-line inputs
   miscellaneous bug fixes in improg:
   * properly truncate string after an input event is submitted
