@@ -952,8 +952,9 @@ growCompressCtx(wrkrInstanceData_t *pWrkrData, size_t newLen)
 	if (pWrkrData->compressCtx.buf == NULL) {
 		CHKmalloc(pWrkrData->compressCtx.buf = (uchar *)malloc(sizeof(uchar)*newLen));
 	} else {
-		CHKmalloc(pWrkrData->compressCtx.buf = (uchar *)realloc(pWrkrData->compressCtx.buf,
-			sizeof(uchar)*newLen));
+		uchar *const newbuf = (uchar *)realloc(pWrkrData->compressCtx.buf, sizeof(uchar)*newLen);
+		CHKmalloc(newbuf);
+		pWrkrData->compressCtx.buf = newbuf;
 	}
 	pWrkrData->compressCtx.len = newLen;
 finalize_it:
