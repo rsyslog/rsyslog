@@ -1,5 +1,8 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.1911.0 (aka 2019.11) 2019-11-12
+- 2019-11-01: mmkubernetes bugfix: improper use of realloc()
+  could cause problems under extreme memory shortage - very unlikely
+  credits to LGTM.COM for detecting this
 - 2019-10-31: imjournal: set the journal data threshold to MaxMessageSize
   When data is read from the journal using sd_journal_get_data it may be
   truncated to a certain threshold (64K by default).
