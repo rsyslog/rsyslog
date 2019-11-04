@@ -99,6 +99,7 @@ struct instanceConf_s {
 	int iKeepAliveIntvl;
 	int iKeepAliveProbes;
 	int iKeepAliveTime;
+	flowControl_t flowCtlType;
 	struct {
 		int nmemb;
 		uchar **name;
@@ -152,6 +153,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "keepalive.interval", eCmdHdlrInt, 0 },
 	{ "maxdatasize", eCmdHdlrSize, 0 },
 	{ "oversizemode", eCmdHdlrString, 0 },
+	{ "flowcontrol", eCmdHdlrGetWord, 0 },
 	{ "tls", eCmdHdlrBinary, 0 },
 	{ "tls.permittedpeer", eCmdHdlrArray, 0 },
 	{ "tls.authmode", eCmdHdlrString, 0 },
@@ -239,7 +241,7 @@ onSyslogRcv(void *pUsr, uchar *pHostname, uchar *pIP, uchar *msg, size_t lenMsg)
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetInputName(pMsg, inst->pInputName);
 	MsgSetRawMsg(pMsg, (char*)msg, lenMsg);
-	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
+	MsgSetFlowControlType(pMsg, inst->flowCtlType);
 	MsgSetRuleset(pMsg, inst->pBindRuleset);
 	pMsg->msgFlags  = PARSE_HOSTNAME | NEEDS_PARSING;
 
@@ -290,6 +292,7 @@ createInstance(instanceConf_t **pinst)
 	inst->myCertFile = NULL;
 	inst->myPrivKeyFile = NULL;
 	inst->maxDataSize = 0;
+	inst->flowCtlType = eFLOWCTL_LIGHT_DELAY;
 #ifdef HAVE_RELPSRVSETOVERSIZEMODE
 	inst->oversizeMode = RELP_OVERSIZE_TRUNCATE;
 #endif
@@ -529,6 +532,20 @@ CODESTARTnewInpInst
 			inst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "maxdatasize")) {
 			inst->maxDataSize = (size_t) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "flowcontrol")) {
+			if(!es_strconstcmp(pvals[i].val.d.estr, "none")) {
+				inst->flowCtlType = eFLOWCTL_NO_DELAY;
+			} else if(!es_strconstcmp(pvals[i].val.d.estr, "light")) {
+				inst->flowCtlType = eFLOWCTL_LIGHT_DELAY;
+			} else if(!es_strconstcmp(pvals[i].val.d.estr, "full")) {
+				inst->flowCtlType = eFLOWCTL_FULL_DELAY;
+			} else {
+				const char *const mode = es_str2cstr(pvals[i].val.d.estr, NULL);
+				parser_errmsg("imrelp: wrong flowcontrol parameter "
+					"value '%s', using default: 'light'; possible "
+					"values: 'no', 'light', 'full'\n", mode);
+				free((void*)mode);
+			}
 		} else if(!strcmp(inppblk.descr[i].name, "oversizemode")) {
 #ifdef HAVE_RELPSRVSETOVERSIZEMODE
 			char *mode = es_str2cstr(pvals[i].val.d.estr, NULL);
