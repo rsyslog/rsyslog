@@ -1792,7 +1792,7 @@ SetGnutlsPriorityString(__attribute__((unused)) nsd_t *pNsd, __attribute__((unus
 		RETiRet;
 	} else {
 		dbgprintf("gnutlsPriorityString: set to '%s'\n", gnutlsPriorityString);
-#if OPENSSL_VERSION_NUMBER >= 0x10020000L
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L
 		char *pCurrentPos;
 		char *pNextPos;
 		char *pszCmd;

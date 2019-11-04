@@ -18,7 +18,7 @@ module(	load="../plugins/imtcp/.libs/imtcp"
 	StreamDriver.Mode="1"
 	StreamDriver.AuthMode="x509/certvalid"
 	StreamDriver.PermitExpiredCerts="off"
-	gnutlsPriorityString="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1,-TLSv1.2\nMinProtocol=TLSv1.1\nOptions=Bugs"
+	gnutlsPriorityString="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1,-TLSv1.2\nOptions=Bugs"
 	)
 input(	type="imtcp"
 	port="'$PORT_RCVR'" )
@@ -41,7 +41,7 @@ action(	type="omfwd"
 	port="'$PORT_RCVR'"
 	StreamDriverMode="1"
 	StreamDriverAuthMode="x509/certvalid"
-	gnutlsPriorityString="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1,-TLSv1.1,-TLSv1.3"
+	gnutlsPriorityString="Protocol=-ALL,TLSv1.2"
 )
 ' 2
 startup 2
@@ -65,7 +65,8 @@ if [ $ret == 0 ]; then
 	echo "SKIP: OpenSSL Version too old"
 	skip_test
 else
-	content_check "wrong version number"
+	# Kindly check for a failed session
+	content_check "SSL_ERROR_SSL"
 	content_check "OpenSSL Error Stack:"
 fi
 
