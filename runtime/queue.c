@@ -146,7 +146,8 @@ static struct cnfparamdescr cnfpdescr[] = {
 	{ "queue.dequeuetimebegin", eCmdHdlrInt, 0 },
 	{ "queue.dequeuetimeend", eCmdHdlrInt, 0 },
 	{ "queue.cry.provider", eCmdHdlrGetWord, 0 },
-	{ "queue.samplinginterval", eCmdHdlrInt, 0 }
+	{ "queue.samplinginterval", eCmdHdlrInt, 0 },
+	{ "queue.takeflowctlfrommsg", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk pblk =
 	{ CNFPARAMBLK_VERSION,
@@ -319,6 +320,7 @@ qqueueDbgPrint(qqueue_t *pThis)
 	dbgoprint((obj_t*) pThis, "queue.lowwatermark: %d\n", pThis->iLowWtrMrk);
 	dbgoprint((obj_t*) pThis, "queue.fulldelaymark: %d\n", pThis->iFullDlyMrk);
 	dbgoprint((obj_t*) pThis, "queue.lightdelaymark: %d\n", pThis->iLightDlyMrk);
+	dbgoprint((obj_t*) pThis, "queue.takeflowctlfrommsg: %d\n", pThis->takeFlowCtlFromMsg);
 	dbgoprint((obj_t*) pThis, "queue.discardmark: %d\n", pThis->iDiscardMrk);
 	dbgoprint((obj_t*) pThis, "queue.discardseverity: %d\n", pThis->iDiscardSeverity);
 	dbgoprint((obj_t*) pThis, "queue.checkpointinterval: %d\n", pThis->iPersistUpdCnt);
@@ -1496,6 +1498,7 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThread
 	pThis->iQueueSize = 0;
 	pThis->nLogDeq = 0;
 	pThis->useCryprov = 0;
+	pThis->takeFlowCtlFromMsg = 0;
 	pThis->iMaxQueueSize = iMaxQueueSize;
 	pThis->pConsumer = pConsumer;
 	pThis->iNumWorkerThreads = iWorkerThreads;
@@ -2524,13 +2527,15 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 			          "maxQSize %d, lqsize %d, pqsize %d, child %d, full delay %d, "
 				  "light delay %d, deq batch size %d, min deq batch size %d, "
 				  "high wtrmrk %d, low wtrmrk %d, "
-				  "discardmrk %d, max wrkr %d, min msgs f. wrkr %d\n",
+				  "discardmrk %d, max wrkr %d, min msgs f. wrkr %d "
+				  "takeFlowCtlFromMsg %d\n",
 		  pThis->qType, pThis->bEnqOnly, pThis->bIsDA, pThis->pszSpoolDir,
 		  pThis->iMaxFileSize, pThis->iMaxQueueSize,
 		  getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis),
 		  pThis->pqParent == NULL ? 0 : 1, pThis->iFullDlyMrk, pThis->iLightDlyMrk,
 		  pThis->iDeqBatchSize, pThis->iMinDeqBatchSize, pThis->iHighWtrMrk, pThis->iLowWtrMrk,
-		  pThis->iDiscardMrk, (int) pThis->iNumWorkerThreads, (int) pThis->iMinMsgsPerWrkr);
+		  pThis->iDiscardMrk, (int) pThis->iNumWorkerThreads, (int) pThis->iMinMsgsPerWrkr,
+		  pThis->takeFlowCtlFromMsg);
 
 	pThis->bQueueStarted = 1;
 	if(pThis->qType == QUEUETYPE_DIRECT)
@@ -2992,6 +2997,9 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg)
 	 * result, that non-blockable sources like UDP syslog receive priority in the system.
 	 * It's a side effect, but a good one ;) -- rgerhards, 2008-03-14
 	 */
+	if(unlikely(pThis->takeFlowCtlFromMsg)) { /* recommendation is NOT to use this option */
+		flowCtlType = pMsg->flowCtlType;
+	}
 	if(flowCtlType == eFLOWCTL_FULL_DELAY) {
 		while(pThis->iQueueSize >= pThis->iFullDlyMrk&& ! glbl.GetGlobalInputTermState()) {
 			/* We have a problem during shutdown if we block eternally. In that
@@ -3402,6 +3410,8 @@ qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst)
 			pThis->iDeqtWinToHr = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "queue.samplinginterval")) {
 			pThis->iSmpInterval = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "queue.takeflowctlfrommsg")) {
+			pThis->takeFlowCtlFromMsg = pvals[i].val.d.n;
 		} else {
 			DBGPRINTF("queue: program error, non-handled "
 			  "param '%s'\n", pblk.descr[i].name);
