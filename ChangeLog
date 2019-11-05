@@ -1,5 +1,19 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.1911.0 (aka 2019.11) 2019-11-12
+- 2019-11-05: mmdarwin: Optimisations, new parameters, update to protocol header
+  - use permanent worker-dependent buffers to avoid malloc/free for each entry
+  - move socket structures to worker data, remove global mutex
+  - add log lines for parameters and general workflow
+  - don't send body if empty/incomplete (see new parameters)
+  - don't close/reopen socket every time -> let session open or create new every X entry (see new parameters)
+  - clean up code
+  - added 'send_partial', to let mmdarwin send body if not all fields were retrieved, or not
+    default false = only send complete bodies
+  - added 'socket_max_use' to open new session every X packet, useful for some versions of Darwin (prior to 1.1)
+    default is 0 = do not open new session/keep only one
+  - added 'evt_id' to the darwin header (Darwin v1+ compatibility)
+  Note: mmdarwin is a contributed module
+  Thanks to github user frikilax for the patch.
 - 2019-11-01: mmkubernetes bugfix: improper use of realloc()
   could cause problems under extreme memory shortage - very unlikely
   credits to LGTM.COM for detecting this
