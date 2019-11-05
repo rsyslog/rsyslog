@@ -1191,10 +1191,15 @@ TESTS += \
          sndrcv_relp_tls.sh \
          sndrcv_relp_tls_certvalid.sh \
          sndrcv_relp_tls_prio.sh \
+	 sndrcv_relp_tls_gnutls_name_different_ca.sh \
          relp_tls_certificate_not_found.sh \
 	 omrelp_wrong_authmode.sh \
 	 imrelp-tls.sh
 endif # ENABLE_GNUTLS
+if ENABLE_OPENSSL
+TESTS += \
+	 sndrcv_relp_tls_openssl_name_different_ca.sh
+endif # ENABLE_OPENSSL
 if HAVE_VALGRIND
 TESTS += \
 	 imrelp-basic-vg.sh \
@@ -2024,6 +2029,8 @@ EXTRA_DIST= \
 	sndrcv_relp_tls_prio.sh \
 	sndrcv_relp_tls.sh \
 	sndrcv_relp_tls_certvalid.sh \
+	sndrcv_relp_tls_gnutls_name_different_ca.sh \
+	sndrcv_relp_tls_openssl_name_different_ca.sh \
 	relp_tls_certificate_not_found.sh \
 	omrelp_wrong_authmode.sh \
 	imrelp-tls.sh \
