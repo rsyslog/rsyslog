@@ -1,15 +1,28 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.1911.0 (aka 2019.11) 2019-11-12
+- 2019-11-06: ossl driver bugfix: fix wrong OpenSSL Version check
+  Fix OpenSSL Version check in:
+  - SetGnutlsPriorityString function in nsd_ossl.c
+  - initTLS() function tcpflood.c
+  See https://www.openssl.org/docs/man1.1.0/man3/OPENSSL_VERSION_NUMBER.html
+  for more.
+  This bug lead to not enabling some functionality correctly.
+  Removed "MinProtocol=TLSv1.1" from two testcases because MinProtocol
+  is only supported by OpenSSl 1.1.0 or higher and was not really
+  necessary for the testcases.
+  closes https://github.com/rsyslog/rsyslog/issues/3939
 - 2019-11-05: mmdarwin: Optimisations, new parameters, update to protocol header
   - use permanent worker-dependent buffers to avoid malloc/free for each entry
   - move socket structures to worker data, remove global mutex
   - add log lines for parameters and general workflow
   - don't send body if empty/incomplete (see new parameters)
-  - don't close/reopen socket every time -> let session open or create new every X entry (see new parameters)
+  - don't close/reopen socket every time -> let session open or create new every X
+    entry (see new parameters)
   - clean up code
-  - added 'send_partial', to let mmdarwin send body if not all fields were retrieved, or not
-    default false = only send complete bodies
-  - added 'socket_max_use' to open new session every X packet, useful for some versions of Darwin (prior to 1.1)
+  - added 'send_partial', to let mmdarwin send body if not all fields were
+    retrieved, or not; default false = only send complete bodies
+  - added 'socket_max_use' to open new session every X packet, useful for
+    some versions of Darwin (prior to 1.1)
     default is 0 = do not open new session/keep only one
   - added 'evt_id' to the darwin header (Darwin v1+ compatibility)
   Note: mmdarwin is a contributed module
