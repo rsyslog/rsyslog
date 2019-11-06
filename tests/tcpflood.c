@@ -1181,7 +1181,7 @@ initTLS(void)
 
 	/* Check for Custom Config string */
 	if (customConfig != NULL){
-#if OPENSSL_VERSION_NUMBER >= 0x10020000L
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L
 	char *pCurrentPos;
 	char *pNextPos;
 	char *pszCmd;
