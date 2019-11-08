@@ -20,12 +20,11 @@ You can also browse the following online resources:
 And don't forget about the `rsyslog mailing
 list <http://lists.adiscon.net/mailman/listinfo/rsyslog>`_. If you are
 interested in the "backstage", you may find
-`Rainer <http://www.gerhards.net/rainer>`_'s
+`Rainer <https://rainer.gerhards.net/>`_'s
 `blog <https://rainer.gerhards.net/>`_ an interesting read (filter on
 syslog and rsyslog tags). Or meet `Rainer Gerhards at
-Facebook <http://www.facebook.com/people/Rainer-Gerhards/1349393098>`_
-or `Google+ <https://plus.google.com/112402185904751517878/posts>`_. If
-you would like to use rsyslog source code inside your open source
+Facebook <http://www.facebook.com/people/Rainer-Gerhards/1349393098>`_.
+If you would like to use rsyslog source code inside your open source
 project, you can do that without any restriction as long as your license
 is GPLv3 compatible. If your license is incompatible to GPLv3, you may
 even be still permitted to use rsyslog source code. However, then you
@@ -34,5 +33,5 @@ need to look at the way `rsyslog is licensed <licensing.html>`_.
 Feedback is always welcome, but if you have a support question, please
 do not mail Rainer directly (`why not? <free_support.html>`_) - use the
 `rsyslog mailing
-list <http://lists.adiscon.net/mailman/listinfo/rsyslog>`_ or `rsyslog
-forum <http://kb.monitorware.com/rsyslog-f40.html>`_ instead.
+list <http://lists.adiscon.net/mailman/listinfo/rsyslog>`_ or `github issue
+tracker <https://github.com/rsyslog/rsyslog/issues>`_ instead.
