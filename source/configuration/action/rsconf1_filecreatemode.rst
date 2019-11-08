@@ -28,9 +28,14 @@ $FileCreateMode parameter. Order of lines is vitally important.
 This sample lets rsyslog create files with read and write access only
 for the users it runs under.
 
-The following sample is deemed to be a complete rsyslog.conf:
+The following sample is deemed to be a complete rsyslog.conf::
 
-``$umask 0000 # make sure nothing interferes with the following  definitions *.* /var/log/file-with-0644-default $FileCreateMode 0600 *.* /var/log/file-with-0600 $FileCreateMode 0644 *.* /var/log/file-with-0644``
+  $umask 0000 # make sure nothing interferes with the following definitions
+  *.* /var/log/file-with-0644-default
+  $FileCreateMode 0600
+  *.* /var/log/file-with-0600
+  $FileCreateMode 0644
+  *.* /var/log/file-with-0644
 
 As you can see, open modes depend on position in the config file. Note
 the first line, which is created with the hardcoded default creation
