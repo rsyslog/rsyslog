@@ -39,7 +39,7 @@ rsyslog has come much closer to what it name promises.
 
 The database support was initially included so that our web-based syslog
 interface could be used. This is another open source project which can
-be found under `http://www.phplogcon.org <http://www.phplogcon.org>`_.
+be found under `https://loganalyzer.adiscon.com/ <https://loganalyzer.adiscon.com/>`_.
 We highly recommend having a look at it. It might not work for you if
 you expect thousands of messages per second (because your database won't
 be able to provide adequate performance), but in many cases it is a very
