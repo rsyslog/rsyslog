@@ -1193,8 +1193,8 @@ qqueueDeq(qqueue_t *pThis, smsg_t **ppMsg)
 	iRet = pThis->qDeq(pThis, ppMsg);
 	ATOMIC_INC(&pThis->nLogDeq, &pThis->mutLogDeq);
 
-	DBGOPRINT((obj_t*) pThis, "entry deleted, size now log %d, phys %d entries, iOverallQueueSize %d\n",
-		  getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis), (int) iOverallQueueSize);
+	DBGOPRINT((obj_t*) pThis, "entry deleted, size now log %d, phys %d entries\n",
+		  getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
 
 	RETiRet;
 }
@@ -3487,7 +3487,6 @@ static rsRetVal qqueueSetProperty(qqueue_t *pThis, var_t *pProp)
 			ABORT_FINALIZE(RS_RET_QTYPE_MISMATCH);
 	}
 
-dbgprintf("rger: setProperty: iOverallQueueSize %d\n", (int) iOverallQueueSize);
 finalize_it:
 	RETiRet;
 }
