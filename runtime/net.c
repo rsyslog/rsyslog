@@ -1186,7 +1186,7 @@ getLocalHostname(uchar **ppName)
 
 	char *dot = strstr(hnbuf, ".");
 	struct addrinfo *res = NULL;
-	if(!empty_hostname && dot == NULL) {
+	if(!empty_hostname && dot == NULL && !glbl.GetDisableDNS()) {
 		/* we need to (try) to find the real name via resolver */
 		struct addrinfo flags;
 		memset(&flags, 0, sizeof(flags));
