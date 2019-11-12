@@ -1,5 +1,30 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.1911.0 (aka 2019.11) 2019-11-12
+- 2019-11-12: core queue: add config param "queue.takeFlowCtlFromMsg"
+  This is a fine-tuning option which permits to control whether or not
+  rsyslog shall alays take the flow control setting from the message. If
+  so, non-primary queues may also block when reaching high water mark.
+  This permits to add some synchronous processing to rsyslog core engine.
+  However, it is dangerous, as improper use may make the core engine
+  stall. As such, enabling this option requires very careful planning
+  of the rsyslog configuration and deep understanding of the consequences.
+  Note that the option is applied to individual queues, so a configuration
+  with a large number of queues can (and must if use) be fine-tuned to
+  the exact use case.
+  The rsyslog team strongly recommends to let the option turned off,
+  which is the default setting.
+  see also https://github.com/rsyslog/rsyslog/issues/3941
+- 2019-11-12: imrelp: add new config parameter "flowcontrol"
+  This permits to fine-tune the flowControl parameter. Possible values are
+  "no", "light", and "full". With light being the default and previously
+  only value.
+  Changing the flow control setting may be useful for some rare applications,
+  but be sure to know exactly what you are doing when changing this setting.
+  Most importantly, whole rsyslog may block and become unresponsive if you
+  change flowcontrol to "full". While this may be a desired effect when
+  intentionally trying to make it most unlikely that rsyslog needs to
+  lose/discard messages, usually this is not what you want.
+  see also https://github.com/rsyslog/rsyslog/issues/3941
 - 2019-11-11: imrelp: remove unsafe debug instrumentation
   dbgprintf, which is not signal safe, was called from a signal handler
   to get better understanding during debugging. While this usually works,
