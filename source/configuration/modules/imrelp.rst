@@ -438,6 +438,41 @@ For this parameter the length of the parameter maxDataSize is used.
   message will be put out. Using this option will bring some risks with it.
 
 
+flowControl
+^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "light", "no", "none"
+
+.. versionadded:: 8.1911.0
+
+
+This parameter permits to fine-tune the flowControl parameter.
+Possible values are "no", "light", and "full". With "light" being the default
+and previously only value.
+
+Changing the flow control setting may be useful for some rare applications,
+but be sure to know exactly what you are doing when changing this setting.
+Most importantly, **rsyslog as whole may block and become unresponsive if you
+change flowcontrol to "full"**. While this may be a desired effect when
+intentionally trying to make it most unlikely that rsyslog needs to
+lose/discard messages, usually this is not what you want.
+
+General rule of thumb: **if you do not fully understand what this decription
+here talks about, leave the paramter at default value**.
+
+This part of the
+documentation is intentionally brief, as one needs to have deep understanding
+of rsyslog to evaluate usage of this parameter. If someone has the insight,
+the meaning of this parameter is crystal-clear. If not, that someone will
+most likely make the wrong decision when changing this parameter away
+from the default value.
+
+
 .. _imrelp-statistic-counter:
 
 Statistic Counter
@@ -450,6 +485,7 @@ If the input is given a name, that input name is used instead of "imrelp". This 
 available starting rsyslog 7.5.1
 
 The following properties are maintained for each listener:
+
 -  **submitted** - total number of messages submitted for processing since startup
 
 
