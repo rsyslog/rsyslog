@@ -604,8 +604,12 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
  */
 #ifdef HAVE_BUILTIN_EXCEPT
 #	define CHKiRet(code) if(__builtin_expect(((iRet = code) != RS_RET_OK), 0)) goto finalize_it
+#	define likely(x)      __builtin_expect(!!(x), 1)
+#	define unlikely(x)    __builtin_expect(!!(x), 0)
 #else
 #	define CHKiRet(code) if((iRet = code) != RS_RET_OK) goto finalize_it
+#	define likely(x)      (x)
+#	define unlikely(x)    (x)
 #endif
 
 # define CHKiConcCtrl(code)  { int tmp_CC; \
