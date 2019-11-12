@@ -9,13 +9,14 @@ Darwin connector (mmdarwin)
 
 ================  ===========================================
 **Module Name:**  **mmdarwin**
-**Author:**       Guillaume Catto <guillaume.catto@advens.fr>
+**Author:**       Guillaume Catto <guillaume.catto@advens.fr>,
+                  Theo Bertin <theo.bertin@advens.fr>
 ================  ===========================================
 
 Purpose
 =======
 
-Darwin is an open source Artificial Intelligence Framework for CyberSecurity. The mmdarwin module allows us to call Darwin in order to enrich our JSON-parsed logs with a decision stored in a specific key.
+Darwin is an open source Artificial Intelligence Framework for CyberSecurity. The mmdarwin module allows us to call Darwin in order to enrich our JSON-parsed logs with a score, and/or to allow Darwin to generate alerts.
 
 How to build the module
 =======================
@@ -40,7 +41,7 @@ key
 
    "word", "none", "yes", "none"
 
-The key name used to enrich our logs.
+The key name to use to store the returned data.
 
 For example, given the following log line:
 
@@ -85,7 +86,7 @@ socketpath
 
    "word", "none", "yes", "none"
 
-The Darwin filter socket path to call.
+The Darwin filter socket path to use.
 
 
 response
@@ -96,14 +97,18 @@ response
    :widths: auto
    :class: parameter-table
 
-   "word", "none", "yes", "none"
+   "word", \"no", "no", "none"
 
-Tell the Darwin filter what to do with its decision:
+Tells the Darwin filter what to do next:
 
-* :json:`"no"`: no response will be sent
-* :json:`"back"`: Darwin will send its decision to the caller
-* :json:`"darwin"`: Darwin will send its decision to the next filter
-* :json:`"both"`: Darwin will send its decision to both the caller and the next filter
+* :json:`"no"`: no response will be sent, nothing will be sent to next filter.
+* :json:`"back"`: a score for the input will be returned by the filter, nothing will be forwarded to the next filter.
+* :json:`"darwin"`: the data provided will be forwarded to the next filter (in the format specified in the filter's configuration), no response will be given to mmdarwin.
+* :json:`"both"`: the filter will respond to mmdarwin with the input's score AND forward the data (in the format specified in the filter's configuration) to the next filter.
+
+.. note::
+
+   Please be mindful when setting this parameter, as the called filter will only forward data to the next configured filter if you ask the filter to do so with :json:`"darwin"` or :json:`"both"`, if a next filter if configured but you ask for a :json:`"back"` response, the next filter **WILL NOT** receive anything!
 
 filtercode
 ^^^^^^^^^^
@@ -113,9 +118,10 @@ filtercode
    :widths: auto
    :class: parameter-table
 
-   "word", "none", "yes", "none"
+   "word", "0x00000000", "no", "none"
 
-Each Darwin module has a unique filter code. For example, the code of the injection filter is :json:`"0x696E6A65"`. You need to provide a code corresponding to the filter you want to use.
+Each Darwin module has a unique filter code. For example, the code of the hostlookup filter is :json:`"0x66726570"`.
+This code was mandatory but has now become obsolete. you can leave it as it is.
 
 fields
 ^^^^^^
@@ -156,7 +162,47 @@ and the :json:`"fields"` array:
 
 The parameters sent to Darwin would be :json:`"192.168.1.42"`, :json:`true` and :json:`"rsyslog"`.
 
-Note that the order of the parameters is important. Thus, you have to be careful when providing the fields in the array.
+.. note::
+    The order of the parameters is important. Thus, you have to be careful when providing the fields in the array.
+    Refer to `Darwin documentation`_ to see what each filter requires as parameters.
+
+.. _`Darwin documentation`: https://github.com/VultureProject/darwin/wiki
+
+send_partial
+^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "boolean", "off", "no", "none"
+
+Whether to send to Darwin if not all :json:`"fields"` could be found in the message, or not.
+All current Darwin filters required a strict number (and format) of parameters as input, so they will most likely not process the data if some fields are missing. This should be kept to "off", unless you know what you're doing.
+
+For example, for the following log line:
+
+.. code-block:: json
+
+   {
+       "from": "192.168.1.42",
+       "date": "2012-12-21 00:00:00",
+       "status": "200",
+       "data": {
+           "status": true,
+           "message": "Request processed correctly"
+       }
+   }
+
+and the :json:`"fields"` array:
+
+.. code-block:: none
+
+   ["!from", "!data!status", "!this!field!is!not!in!message"]
+
+the third field won't be found, so the call to Darwin will be dropped.
+
 
 Configuration example
 =====================
@@ -169,15 +215,15 @@ This example shows a possible configuration of mmdarwin.
    module(load="mmjsonparse")
    module(load="mmdarwin")
 
-   input(type="imtcp" port="8042" Ruleset="darwinruleset")
+   input(type="imtcp" port="8042" Ruleset="darwin_ruleset")
 
-   ruleset(name="darwinruleset") {
+   ruleset(name="darwin_ruleset") {
       action(type="mmjsonparse" cookie="")
       action(type="mmdarwin" socketpath="/path/to/reputation_1.sock" fields=["!srcip", "ATTACK;TOR"] key="reputation" response="back" filtercode="0x72657075")
 
-      call darwinoutput
+      call darwin_output
    }
 
-   ruleset(name="darwinoutput") {
+   ruleset(name="darwin_output") {
        action(type="omfile" file="/path/to/darwin_output.log")
    }
