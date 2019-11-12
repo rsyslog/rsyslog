@@ -562,6 +562,35 @@ This parameter specifies the end and "queue.dequeuetimebegin" the begin of the
 time frame. The default 25 disables the time-window.
 
 
+queue.takeFlowCtlFromMsg
+------------------------
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "boolean", "off", "no", "none"
+
+.. versionadded:: 8.1911.0
+
+This is a fine-tuning parameter which permits to control whether or not
+rsyslog shall always take the flow control setting from the message. If
+so, non-primary queues may also **block** when reaching high water mark.
+
+This permits to add some synchronous processing to rsyslog core engine.
+However, **this involves some risk**:  Improper use may make the core engine
+stall. As such, **enabling this parameter requires very careful planning
+of the rsyslog configuration and deep understanding of the consequences**.
+
+Note that the parameter is applied to individual queues, so a configuration
+with a large number of queues can (and must if used) be fine-tuned to
+the exact use case.
+
+**The rsyslog team strongly recommends to let this parameter turned off.**
+
+
+
 Examples
 ========
 
