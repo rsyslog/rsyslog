@@ -88,6 +88,9 @@ typedef struct _instanceData {
 	uchar *caCertFile;
 	uchar *myCertFile;
 	uchar *myPrivKeyFile;
+#if defined(HAVE_RELPENGINESETTLSCFGCMD)
+	uchar *tlscfgcmd;
+#endif
 	uchar *tplName;
 	uchar *localClientIP;
 	struct {
@@ -140,6 +143,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "tls.mycert", eCmdHdlrString, 0 },
 	{ "tls.myprivkey", eCmdHdlrString, 0 },
 	{ "tls.authmode", eCmdHdlrString, 0 },
+	{ "tls.tlscfgcmd", eCmdHdlrString, 0 },
 	{ "tls.permittedpeer", eCmdHdlrArray, 0 },
 	{ "port", eCmdHdlrGetWord, 0 },
 	{ "rebindinterval", eCmdHdlrInt, 0 },
@@ -258,6 +262,12 @@ doCreateRelpClient(instanceData *pData, relpClt_t **pRelpClt)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 		if(relpCltSetPrivKey(*pRelpClt, (char*) pData->myPrivKeyFile) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
+#if defined(HAVE_RELPENGINESETTLSCFGCMD)
+		if (pData->tlscfgcmd != NULL) {
+			if(relpCltSetTlsConfigCmd(*pRelpClt, (char*) pData->tlscfgcmd) != RELP_RET_OK)
+				ABORT_FINALIZE(RS_RET_RELP_ERR);
+		}
+#endif
 		for(i = 0 ; i <  pData->permittedPeers.nmemb ; ++i) {
 			relpCltAddPermittedPeer(*pRelpClt, (char*)pData->permittedPeers.name[i]);
 		}
@@ -305,6 +315,9 @@ CODESTARTcreateInstance
 	pData->caCertFile = NULL;
 	pData->myCertFile = NULL;
 	pData->myPrivKeyFile = NULL;
+#if defined(HAVE_RELPENGINESETTLSCFGCMD)
+	pData->tlscfgcmd = NULL;
+#endif
 	pData->permittedPeers.nmemb = 0;
 ENDcreateInstance
 
@@ -330,6 +343,9 @@ CODESTARTfreeInstance
 	free(pData->caCertFile);
 	free(pData->myCertFile);
 	free(pData->myPrivKeyFile);
+#if defined(HAVE_RELPENGINESETTLSCFGCMD)
+	free(pData->tlscfgcmd);
+#endif
 	if(pData->permittedPeers.name != NULL) {
 		for(i = 0 ; i <  pData->permittedPeers.nmemb ; ++i) {
 			free(pData->permittedPeers.name[i]);
@@ -364,6 +380,9 @@ setInstParamDefaults(instanceData *pData)
 	pData->caCertFile = NULL;
 	pData->myCertFile = NULL;
 	pData->myPrivKeyFile = NULL;
+#if defined(HAVE_RELPENGINESETTLSCFGCMD)
+	pData->tlscfgcmd = NULL;
+#endif
 	pData->permittedPeers.name = NULL;
 	pData->permittedPeers.nmemb = 0;
 }
@@ -498,6 +517,14 @@ CODESTARTnewActInst
 			} else {
 				fclose(fp);
 			}
+		} else if(!strcmp(actpblk.descr[i].name, "tls.tlscfgcmd")) {
+#if defined(HAVE_RELPENGINESETTLSCFGCMD)
+			pData->tlscfgcmd = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+#else
+			LogError(0, RS_RET_NOT_IMPLEMENTED, "omrelp: librelp does not support input parameter "
+				"'tls.tlscfgcmd'; it probably is too old (1.5.0 or higher should be fine); "
+				"ignoring setting now.");
+#endif
 		} else if(!strcmp(actpblk.descr[i].name, "tls.authmode")) {
 			pData->authmode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "tls.permittedpeer")) {
@@ -512,7 +539,7 @@ CODESTARTnewActInst
 			  "param '%s'\n", actpblk.descr[i].name);
 		}
 	}
-	
+
 	CODE_STD_STRING_REQUESTnewActInst(1)
 
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->tplName == NULL) ?
@@ -736,7 +763,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			*(pData->port + i) = '\0';
 		}
 	}
-	
+
 	/* now skip to template */
 	bErr = 0;
 	while(*p && *p != ';') {

@@ -1476,11 +1476,17 @@ if test "x$enable_relp" = "xyes"; then
                       [AC_DEFINE([HAVE_RELPSRVSETLSTNADDR], [1], [Define if relpSrvSetLstnAddr exists.])])
         AC_CHECK_FUNC([relpEngineSetTLSLibByName],
                       [AC_DEFINE([HAVE_RELPENGINESETTLSLIBBYNAME], [1], [Define if relpEngineSetTLSLibByName exists.])])
+        AC_CHECK_FUNC([relpSrvSetTlsConfigCmd],
+                      [AC_DEFINE([HAVE_RELPENGINESETTLSCFGCMD], [1], [Define if relpSrvSetTlsConfigCmd exists.])])
+
+        AC_CHECK_FUNC([relpSrvSetTlsConfigCmd],
+                      [HAVE_RELPENGINESETTLSCFGCMD=1])
 
         CFLAGS="$save_CFLAGS"
         LIBS="$save_LIBS"
 fi
 AM_CONDITIONAL(ENABLE_RELP, test x$enable_relp = xyes)
+AM_CONDITIONAL([USE_RELPENGINESETTLSCFGCMD], [test "x$HAVE_RELPENGINESETTLSCFGCMD" = x1])
 
 # RELP default port
 AC_ARG_ENABLE(omrelp-default-port,
