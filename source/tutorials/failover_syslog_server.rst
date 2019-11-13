@@ -8,7 +8,7 @@ sent to a central syslogd (for consolidation, archival and whatever other
 reasons). A common problem is that messages are lost when the central syslogd 
 goes down.
 Rsyslog has the capability to work with failover servers to prevent message 
-loss. A perquisite is that TCP based syslog or RELP forwarding is used to send
+loss. A prerequisite is that TCP based syslog or RELP forwarding is used to send
 to the central server. The reason is that with UDP there is no reliable way to
 detect the remote system has gone away.
 Let's assume you have a primary and two secondary central servers. Then, you 
