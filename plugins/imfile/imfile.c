@@ -155,6 +155,7 @@ struct instanceConf_s {
 	int maxLinesAtOnce;
 	uint32_t trimLineOverBytes;
 	int msgFlag;
+	uchar *escapeLFString;
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	struct instanceConf_s *next;
 };
@@ -309,6 +310,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "discardtruncatedmsg", eCmdHdlrBinary, 0 },
 	{ "msgdiscardingerror", eCmdHdlrBinary, 0 },
 	{ "escapelf", eCmdHdlrBinary, 0 },
+	{ "escapelf.replacement", eCmdHdlrString, 0 },
 	{ "reopenontruncate", eCmdHdlrBinary, 0 },
 	{ "maxlinesatonce", eCmdHdlrInt, 0 },
 	{ "trimlineoverbytes", eCmdHdlrInt, 0 },
@@ -1574,11 +1576,12 @@ pollFileReal(act_obj_t *act, cstr_t **pCStr)
 		if(inst->maxLinesAtOnce != 0 && nProcessed >= inst->maxLinesAtOnce)
 			break;
 		if((start_preg == NULL) && (end_preg == NULL)) {
-			CHKiRet(strm.ReadLine(act->pStrm, pCStr, inst->readMode, inst->escapeLF,
+			CHKiRet(strm.ReadLine(act->pStrm, pCStr, inst->readMode, inst->escapeLF, inst->escapeLFString,
 				inst->trimLineOverBytes, &strtOffs));
 		} else {
 			CHKiRet(strmReadMultiLine(act->pStrm, pCStr, start_preg, end_preg,
-				inst->escapeLF, inst->discardTruncatedMsg, inst->msgDiscardingError, &strtOffs));
+				inst->escapeLF, inst->escapeLFString, inst->discardTruncatedMsg,
+				inst->msgDiscardingError, &strtOffs));
 		}
 		++nProcessed;
 		if(startOffs < FILE_ID_SIZE && act->pStrm->iCurrOffs >= FILE_ID_SIZE) {
@@ -1654,6 +1657,7 @@ createInstance(instanceConf_t **const pinst)
 	inst->msgDiscardingError = 1;
 	inst->bRMStateOnDel = 1;
 	inst->escapeLF = 1;
+	inst->escapeLFString = NULL;
 	inst->reopenOnTruncate = 0;
 	inst->addMetadata = ADD_METADATA_UNSPECIFIED;
 	inst->addCeeTag = 0;
@@ -1801,6 +1805,7 @@ addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->iPersistStateInterval = cs.iPersistStateInterval;
 	inst->readMode = cs.readMode;
 	inst->escapeLF = 0;
+	inst->escapeLFString = NULL;
 	inst->reopenOnTruncate = 0;
 	inst->addMetadata = 0;
 	inst->addCeeTag = 0;
@@ -1880,6 +1885,8 @@ CODESTARTnewInpInst
 			inst->fileNotFoundError = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "escapelf")) {
 			inst->escapeLF = (sbool) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "escapelf.replacement")) {
+			inst->escapeLFString = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "reopenontruncate")) {
 			inst->reopenOnTruncate = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "maxlinesatonce")) {

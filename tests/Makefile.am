@@ -1306,6 +1306,8 @@ TESTS += \
 	imfile-endregex-timeout-with-shutdown.sh \
 	imfile-endregex-timeout-with-shutdown-polling.sh \
 	imfile-endmsg.regex.sh \
+	imfile-escapelf.replacement.sh \
+	imfile-escapelf.replacement-empty.sh \
 	imfile-statefile-no-file_id.sh \
 	imfile-statefile-no-file_id-TO-file_id.sh \
 	imfile-statefile-directory.sh \

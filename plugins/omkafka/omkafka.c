@@ -1484,7 +1484,7 @@ loadFailedMsgs(instanceData *const __restrict__ pData)
 	CHKiRet(strm.SetFName(pstrmFMSG, pData->failedMsgFile, ustrlen(pData->failedMsgFile)));
 	CHKiRet(strm.ConstructFinalize(pstrmFMSG));
 
-	while(strm.ReadLine(pstrmFMSG, &pCStr, 0, 0, 0, NULL) == RS_RET_OK) {
+	while(strm.ReadLine(pstrmFMSG, &pCStr, 0, 0, NULL, 0, NULL) == RS_RET_OK) {
 		if(rsCStrLen(pCStr) == 0) {
 			/* we do not process empty lines */
 			DBGPRINTF("omkafka: loadFailedMsgs msg was empty!");
