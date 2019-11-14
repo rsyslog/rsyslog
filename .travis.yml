@@ -57,7 +57,6 @@ matrix:
 
      - os: linux
        compiler: "clang"
-       dist: trusty
        services:
          - mysql
          - postgresql
@@ -66,7 +65,6 @@ matrix:
      - os: linux
        compiler: "clang"
        # we run this test without assert() enabled, so that we get "production timing"
-       dist: trusty
        services:
          - mysql
          - postgresql
@@ -77,8 +75,7 @@ matrix:
        services:
          - mysql
          - postgresql
-       env: RUN="run.sh",BUILD_FROM_TARBALL="YES", GROK="YES", CHECK="YES", CFLAGS="-g -O2", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all", EXTRA_CONFIGURE="--disable-default-tests --disable-elasticsearch --disable-impstats --disable-imfile --disable-imptcp --disable-gnutls -disable-openssl --disable-relp --disable-pmsnare --disable-pmlastmsg"
-       dist: trusty
+       env: RUN="run.sh",BUILD_FROM_TARBALL="YES", GROK="YES", CHECK="YES", CFLAGS="-g -O2", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--gen-suppressions=all", EXTRA_CONFIGURE="--disable-default-tests --disable-elasticsearch --disable-impstats --disable-imfile --disable-imptcp --disable-gnutls -disable-openssl --disable-relp --disable-pmsnare --disable-pmlastmsg"
 
 #     - os: linux
 #       compiler: "gcc"
@@ -95,7 +92,6 @@ matrix:
      - os: linux
        # CRON/Coverity entry!
        compiler: "gcc"
-       dist: trusty
        env: RUN="run-cron.sh",DO_COVERITY="YES",DO_CRON="YES", KAFKA="YES", GROK="YES"
 
 
