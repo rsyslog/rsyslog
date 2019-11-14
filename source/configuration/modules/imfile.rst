@@ -442,8 +442,43 @@ consistent with other rsyslog control character escaping. By default,
 escaping is turned on. If you turn it off, make sure you test very
 carefully with all associated tools. Please note that if you intend
 to use plain TCP syslog with embedded LF characters, you need to
-enable octet-counted framing.
-For more details, see Rainer's blog posting on imfile LF escaping.
+enable octet-counted framing. For more details, see
+`Rainer Gerhards' blog posting on imfile LF escaping <https://rainer.gerhards.net/2013/09/imfile-multi-line-messages.html>`_.
+
+
+escapeLF.replacement
+^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "depending on use", "no", "none"
+
+.. versionadded:: 8.2001.0
+
+This parameter works in conjunction with `escapeLF.replacement`. It is only
+honored if `escapeLF.replacement="on"`.
+
+It permits to replace the default escape sequence by a different character
+sequence. The default historically is inconsistent and denpends on which
+functionality is used to read the file. It can be either "#012" or "\\n". If
+you want to retain that default, do not configure this parameter.
+
+If it is configured, any sequence may be used. For example, to replace a LF
+with a simple space, use::
+
+   escapeLF.replacement=" "
+
+It is also possible to configure longer replacements. An example for this is::
+
+   escapeLF.replacement="[LF]"
+
+Finally, it is possible to completely remove the LF. This is done by specifying
+an empty replacement sequence::
+
+   escapeLF.replacement=""
 
 
 MaxLinesAtOnce
@@ -663,7 +698,7 @@ error will be shown upon truncation.
 
 
 needParse
-^^^^^^^^^^^^^^^^^^
+^^^^^^^^^
 
 .. csv-table::
    :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
