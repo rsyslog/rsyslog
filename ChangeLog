@@ -1,4 +1,12 @@
 ----------------------------------------------------------------------------------------
+Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
+- 2019-11-14: imfile: add new input parameter escapeLF.replacement
+  The new parameter permits to specify a replacement to be configured
+  when "escapeLF" is set to "on". Previously, a fixed replacement string
+  was used ("#012"/"\n") depending on circumstances. If the parameter is
+  set to an empty string, the LF is simply discarded.
+  closes https://github.com/rsyslog/rsyslog/issues/3889
+----------------------------------------------------------------------------------------
 Scheduled Release 8.1911.0 (aka 2019.11) 2019-11-12
 - 2019-11-12: core queue: add config param "queue.takeFlowCtlFromMsg"
   This is a fine-tuning option which permits to control whether or not
