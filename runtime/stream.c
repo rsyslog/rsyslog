@@ -878,12 +878,13 @@ static rsRetVal strmUnreadChar(strm_t *pThis, uchar c)
  * mode = 2 LF <not whitespace> mode, a log line starts at the beginning of
  * a line, but following lines that are indented are part of the same log entry
  */
-static rsRetVal
+static rsRetVal ATTR_NONNULL(1, 2)
 strmReadLine(strm_t *const pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
-	uint32_t trimLineOverBytes, int64 *const strtOffs)
+	const uchar *const escapeLFString, uint32_t trimLineOverBytes, int64 *const strtOffs)
 {
 	uchar c;
 	uchar finished;
+	const int escapeLFString_len = (escapeLFString == NULL) ? 3 : strlen((char*) escapeLFString);
 	DEFiRet;
 
 	assert(pThis != NULL);
@@ -921,14 +922,19 @@ strmReadLine(strm_t *const pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF
 				pThis->bPrevWasNL = 0;
 			} else {
 				if ((((*ppCStr)->iStrLen) > 0) ){
-					if(pThis->bPrevWasNL) {
-						rsCStrTruncate(*ppCStr, (bEscapeLF) ? 4 : 1);
+					if(pThis->bPrevWasNL && escapeLFString_len > 0) {
+						rsCStrTruncate(*ppCStr, (bEscapeLF) ? escapeLFString_len : 1);
 						/* remove the prior newline */
 						finished=1;
 					} else {
 						if(bEscapeLF) {
-							CHKiRet(rsCStrAppendStrWithLen(*ppCStr, (uchar*)"#012",
-							sizeof("#012")-1));
+							if(escapeLFString == NULL) {
+								CHKiRet(rsCStrAppendStrWithLen(*ppCStr,
+									(uchar*)"#012", sizeof("#012")-1));
+							} else {
+								CHKiRet(rsCStrAppendStrWithLen(*ppCStr,
+									escapeLFString, escapeLFString_len));
+							}
 						} else {
 							CHKiRet(cstrAppendChar(*ppCStr, c));
 						}
@@ -968,15 +974,22 @@ strmReadLine(strm_t *const pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF
 						 * currently at the
 						 * end of the output string */
 						CHKiRet(strmUnreadChar(pThis, c));
-						rsCStrTruncate(*ppCStr, (bEscapeLF) ? 4 : 1);
+						if(bEscapeLF && escapeLFString_len > 0) {
+							rsCStrTruncate(*ppCStr, (bEscapeLF) ? escapeLFString_len : 1);
+						}
 						finished=1;
 					}
 				} else { /* not the first character after a newline, add it to the buffer */
 					if(c == '\n') {
 						pThis->bPrevWasNL = 1;
-						if(bEscapeLF) {
-							CHKiRet(rsCStrAppendStrWithLen(*ppCStr, (uchar*)"#012",
-							sizeof("#012")-1));
+						if(bEscapeLF && escapeLFString_len > 0) {
+							if(escapeLFString == NULL) {
+								CHKiRet(rsCStrAppendStrWithLen(*ppCStr,
+									(uchar*)"#012", sizeof("#012")-1));
+							} else {
+								CHKiRet(rsCStrAppendStrWithLen(*ppCStr,
+									escapeLFString, escapeLFString_len));
+							}
 						} else {
 							CHKiRet(cstrAppendChar(*ppCStr, c));
 						}
@@ -1044,9 +1057,10 @@ strmReadMultiLine_isTimedOut(const strm_t *const __restrict__ pThis)
  * must already have been compiled by the user.
  * added 2015-05-12 rgerhards
  */
-rsRetVal
+rsRetVal ATTR_NONNULL(1,2)
 strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *start_preg, regex_t *end_preg, const sbool bEscapeLF,
-	const sbool discardTruncatedMsg, const sbool msgDiscardingError, int64 *const strtOffs)
+	const uchar *const escapeLFString, const sbool discardTruncatedMsg, const sbool msgDiscardingError,
+	int64 *const strtOffs)
 {
 	uchar c;
 	uchar finished = 0;
@@ -1104,7 +1118,11 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *start_preg, regex_t *
 					CHKiRet(rsCStrConstructFromCStr(&pThis->prevMsgSegment, thisLine));
 				} else {
 					if(bEscapeLF) {
-						rsCStrAppendStrWithLen(pThis->prevMsgSegment, (uchar*)"\\n", 2);
+						if(escapeLFString == NULL) {
+							rsCStrAppendStrWithLen(pThis->prevMsgSegment, (uchar*)"\\n", 2);
+						} else {
+							rsCStrAppendStr(pThis->prevMsgSegment, escapeLFString);
+						}
 					} else {
 						cstrAppendChar(pThis->prevMsgSegment, '\n');
 					}

@@ -522,7 +522,7 @@ static void pollFileReal(instanceConf_t *pInst, int *pbHadFileData, cstr_t **ppC
 	while(glbl.GetGlobalInputTermState() == 0) {
 		if(pInst->maxLinesAtOnce != 0 && nProcessed >= pInst->maxLinesAtOnce)
 			break;
-		CHKiRet(strm.ReadLine(pInst->pStrm, ppCStr, 0, 0, -1, NULL));
+		CHKiRet(strm.ReadLine(pInst->pStrm, ppCStr, 0, 0, NULL, -1, NULL));
 		++nProcessed;
 		if(pbHadFileData != NULL)
 			*pbHadFileData = 1; /* this is just a flag, so set it and forget it */

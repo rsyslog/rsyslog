@@ -210,7 +210,7 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	INTERFACEpropSetMeth(strm, iFlushInterval, int);
 	INTERFACEpropSetMeth(strm, pszSizeLimitCmd, uchar*);
 	/* v6 added */
-	rsRetVal (*ReadLine)(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
+	rsRetVal (*ReadLine)(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, const uchar *,
 		uint32_t trimLineOverBytes, int64 *const strtOffs);
 	/* v7 added  2012-09-14 */
 	INTERFACEpropSetMeth(strm, bVeryReliableZip, int);
@@ -220,19 +220,21 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	INTERFACEpropSetMeth(strm, cryprov, cryprov_if_t*);
 	INTERFACEpropSetMeth(strm, cryprovData, void*);
 ENDinterface(strm)
-#define strmCURR_IF_VERSION 13 /* increment whenever you change the interface structure! */
+#define strmCURR_IF_VERSION 14 /* increment whenever you change the interface structure! */
 /* V10, 2013-09-10: added new parameter bEscapeLF, changed mode to uint8_t (rgerhards) */
 /* V11, 2015-12-03: added new parameter bReopenOnTruncate */
 /* V12, 2015-12-11: added new parameter trimLineOverBytes, changed mode to uint32_t */
 /* V13, 2017-09-06: added new parameter strtoffs to ReadLine() */
+/* V14, 2019-11-13: added new parameter bEscapeLFString (rgerhards) */
 
 #define strmGetCurrFileNum(pStrm) ((pStrm)->iCurrFNum)
 
 /* prototypes */
 PROTOTYPEObjClassInit(strm);
 rsRetVal strmMultiFileSeek(strm_t *pThis, unsigned int fileNum, off64_t offs, off64_t *bytesDel);
-rsRetVal strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *start_preg, regex_t *end_preg,
-	sbool bEscapeLF, sbool discardTruncatedMsg, sbool msgDiscardingError, int64 *const strtOffs);
+rsRetVal ATTR_NONNULL(1,2) strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *start_preg,
+	regex_t *end_preg, const sbool bEscapeLF, const uchar *const escapeLFString,
+	const sbool discardTruncatedMsg, const sbool msgDiscardingError, int64 *const strtOffs);
 int strmReadMultiLine_isTimedOut(const strm_t *const __restrict__ pThis);
 void strmDebugOutBuf(const strm_t *const pThis);
 void strmSetReadTimeout(strm_t *const __restrict__ pThis, const int val);
