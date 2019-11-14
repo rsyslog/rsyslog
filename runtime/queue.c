@@ -3323,6 +3323,7 @@ qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst)
 {
 	int i;
 	struct cnfparamvals *pvals;
+	int n_params_set = 0;
 	DEFiRet;
 
 	pvals = nvlstGetParams(lst, &pblk, NULL);
@@ -3337,6 +3338,7 @@ qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst)
 	for(i = 0 ; i < pblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
 			continue;
+		n_params_set++;
 		if(!strcmp(pblk.descr[i].name, "queue.filename")) {
 			pThis->pszFilePrefix = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
 			pThis->lenFilePrefix = es_strlen(pvals[i].val.d.estr);
@@ -3386,6 +3388,14 @@ qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst)
 			pThis->bSyncQueueFiles = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "queue.type")) {
 			pThis->qType = (queueType_t) pvals[i].val.d.n;
+			if(pThis->qType == QUEUETYPE_DIRECT) {
+				/* if we have a direct queue, we mimic this param was not set.
+				 * Our prime intent is to make sure we detect when "real" params
+				 * are set on a direct queue, and the type setting is obviously
+				 * not relevant here.
+				 */
+				n_params_set--;
+			}
 		} else if(!strcmp(pblk.descr[i].name, "queue.workerthreads")) {
 			pThis->iNumWorkerThreads = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "queue.timeoutshutdown")) {
@@ -3420,7 +3430,14 @@ qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst)
 
 	checkUniqueDiskFile(pThis);
 
-	if(pThis->qType == QUEUETYPE_DISK) {
+	if(pThis->qType == QUEUETYPE_DIRECT) {
+		if(n_params_set > 0) {
+			LogMsg(0, RS_RET_OK, LOG_WARNING, "warning on queue '%s': "
+				"queue is in direct mode, but parameters have been set. "
+				"These PARAMETERS cannot be applied and WILL BE IGNORED.",
+				obj.GetName((obj_t*) pThis));
+		}
+	} else if(pThis->qType == QUEUETYPE_DISK) {
 		if(pThis->pszFilePrefix == NULL) {
 			LogError(0, RS_RET_QUEUE_DISK_NO_FN, "error on queue '%s', disk mode selected, but "
 					"no queue file name given; queue type changed to 'linkedList'",

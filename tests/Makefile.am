@@ -233,6 +233,8 @@ TESTS +=  \
 	queue_warnmsg-oversize.sh \
 	queue-minbatch.sh \
 	queue-minbatch-queuefull.sh \
+	queue-direct-with-no-params.sh \
+	queue-direct-with-params-given.sh \
 	arrayqueue.sh \
 	global_vars.sh \
 	no-parser-errmsg.sh \
@@ -1554,6 +1556,8 @@ EXTRA_DIST= \
 	queue_warnmsg-oversize.sh \
 	queue-minbatch.sh \
 	queue-minbatch-queuefull.sh \
+	queue-direct-with-no-params.sh \
+	queue-direct-with-params-given.sh \
 	killrsyslog.sh \
 	parsertest-parse1.sh \
 	parsertest-parse1-udp.sh \
