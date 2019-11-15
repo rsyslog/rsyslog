@@ -206,16 +206,16 @@ doCC(instanceData *pData, uchar *msg, int lenMsg)
 
 /* fix an invalid multibyte sequence */
 static void
-fixInvldMBSeq(instanceData *pData, uchar *msg, int lenMsg, int strtIdx, int *endIdx, int8_t seqLen)
+fixInvldMBSeq(instanceData *pData, uchar *msg, int lenMsg, int strtIdx, int cnt)
 {
-	int i;
+	int i, endIdx;
 
-	/* startIdx and seqLen always set if bytesLeft is set,
-	   which is required before this function is called */
-	*endIdx = strtIdx + seqLen;
-	if(*endIdx > lenMsg)
-		*endIdx = lenMsg;
-	for(i = strtIdx ; i < *endIdx ; ++i)
+	/* Actually strtIdx + cnt will not exceed msgLen,
+	   but this check does bring peace of mind */
+	endIdx = strtIdx + cnt;
+	if(endIdx > lenMsg)
+		endIdx = lenMsg;
+	for(i = strtIdx ; i < endIdx ; ++i)
 		msg[i] = pData->replChar;
 }
 
@@ -223,69 +223,78 @@ static void
 doUTF8(instanceData *pData, uchar *msg, int lenMsg)
 {
 	uchar c;
-	int8_t seqLen = 0, bytesLeft = 0;
+	int8_t bytesLeft = 0;
 	uint32_t codepoint;
-	int strtIdx = 0, endIdx = 0;
+	int strtIdx = 0;
 	int i;
 
 	for(i = 0 ; i < lenMsg ; ++i) {
 		c = msg[i];
 		if(bytesLeft) {
 			if((c & 0xc0) != 0x80) {
-				/* sequence invalid, invalidate all bytes
+				/* invalid continuation byte, invalidate all bytes
+				   up to (but not including) the current byte
 				   startIdx is always set if bytesLeft is set */
-				fixInvldMBSeq(pData, msg, lenMsg, strtIdx, &endIdx,
-				              seqLen);
-				i = endIdx - 1;
+				fixInvldMBSeq(pData, msg, lenMsg, strtIdx, i - strtIdx);
 				bytesLeft = 0;
+				goto startOfSequence;
 			} else {
 				codepoint = (codepoint << 6) | (c & 0x3f);
 				--bytesLeft;
 				if(bytesLeft == 0) {
-					/* too-large codepoint? */
-					if(codepoint > 0x10FFFF) {
+					int seqLen = i - strtIdx + 1;
+
+					if (
+					    /* an overlong encoding? (a codepoint must use only
+					       the minimum number of bytes to represent its value) */
+					    (((2 == seqLen) && (codepoint < 0x80)) ||
+					     ((3 == seqLen) && (codepoint < 0x800)) ||
+					     ((4 == seqLen) && (codepoint < 0x10000)))
+					    ||
+					    /* UTF-16 surrogates? */
+					    ((codepoint >= 0xD800) && (codepoint <= 0xDFFF))
+					    ||
+					    /* too-large codepoint? */
+					    (codepoint > 0x10FFFF)
+					) {
 						/* sequence invalid, invalidate all bytes
 						   startIdx is always set if bytesLeft is set */
-						fixInvldMBSeq(pData, msg, lenMsg,
-							      strtIdx, &endIdx,
-							      seqLen);
+						fixInvldMBSeq(pData, msg, lenMsg, strtIdx, seqLen);
 					}
 				}
 			}
 		} else {
+startOfSequence:
 			if((c & 0x80) == 0) {
 				/* 1-byte sequence, US-ASCII */
 				; /* nothing to do, all well */
 			} else if((c & 0xe0) == 0xc0) {
 				/* 2-byte sequence */
-				/* 0xc0 and 0xc1 are illegal */
-				if(c == 0xc0 || c == 0xc1) {
-					msg[i] = pData->replChar;
-				} else {
-					strtIdx = i;
-					seqLen = bytesLeft = 1;
-					codepoint = c & 0x1f;
-				}
+				strtIdx = i;
+				bytesLeft = 1;
+				codepoint = c & 0x1f;
 			} else if((c & 0xf0) == 0xe0) {
 				/* 3-byte sequence */
 				strtIdx = i;
-				seqLen = bytesLeft = 2;
+				bytesLeft = 2;
 				codepoint = c & 0x0f;
 			} else if((c & 0xf8) == 0xf0) {
 				/* 4-byte sequence */
 				strtIdx = i;
-				seqLen = bytesLeft = 3;
+				bytesLeft = 3;
 				codepoint = c & 0x07;
-			} else {   /* invalid (5&6 byte forbidden by RFC3629) */
+			} else {   /* invalid, either:
+				      - stray continuation byte (0x80 <= x <= 0xBF)
+				      - 5&6 byte sequence start (x >= 0xF8) forbidden by RFC3629
+				    */
 				msg[i] = pData->replChar;
 			}
-			if(i+bytesLeft >= lenMsg) {
-				int dummy = lenMsg;
-				/* invalid, as rest of message cannot contain full char */
-				fixInvldMBSeq(pData, msg, lenMsg, strtIdx, &dummy, seqLen);
-				i = lenMsg - 1;
-			}
 		}
+	}
+	if (bytesLeft) {
+		/* invalid, there was not enough bytes to complete a sequence
+		   startIdx is always set if bytesLeft is set */
+		fixInvldMBSeq(pData, msg, lenMsg, strtIdx, i - strtIdx);
 	}
 }
 
