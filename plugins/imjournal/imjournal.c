@@ -759,7 +759,7 @@ tryRecover(void) {
 	LogMsg(0, RS_RET_OK, LOG_INFO, "imjournal: trying to recover from journal error");
 	STATSCOUNTER_INC(statsCounter.ctrRecoveryAttempts, statsCounter.mutCtrRecoveryAttempts);
 	closeJournal();
-	srSleep(10, 0);	// do not hammer machine with too-frequent retries
+	srSleep(0, 200000);	// do not hammer machine with too-frequent retries
 	openJournal();
 }
 
