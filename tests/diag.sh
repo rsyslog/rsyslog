@@ -1304,9 +1304,9 @@ seq_check() {
 		error_exit 1
 	fi
 	if [ "${SEQ_CHECK_FILE##*.}" == "gz" ]; then
-		gunzip -c "${SEQ_CHECK_FILE}" | $RS_SORTCMD $RS_SORT_NUMERIC_OPT | ./chkseq -s$startnum -e$endnum $3 $4 $5 $6 $7
+		gunzip -c "${SEQ_CHECK_FILE}" | $RS_SORTCMD $RS_SORT_NUMERIC_OPT | ./chkseq -s$startnum -e$endnum $3 $4 $5 $6 $7 $SEQ_CHECK_OPTIONS
 	else
-		$RS_SORTCMD $RS_SORT_NUMERIC_OPT < "${SEQ_CHECK_FILE}" | ./chkseq -s$startnum -e$endnum $3 $4 $5 $6 $7 $SEQ_CHEKC_OPTIONS
+		$RS_SORTCMD $RS_SORT_NUMERIC_OPT < "${SEQ_CHECK_FILE}" | ./chkseq -s$startnum -e$endnum $3 $4 $5 $6 $7 $SEQ_CHECK_OPTIONS
 	fi
 	ret=$?
 	if [ "$check_only"  == "YES" ]; then
@@ -1315,7 +1315,7 @@ seq_check() {
 	if [ $ret -ne 0 ]; then
 		if [ "${SEQ_CHECK_FILE##*.}" == "gz" ]; then
 			gunzip -c "${SEQ_CHECK_FILE}" | $RS_SORTCMD $RS_SORT_NUMERIC_OPT \
-				| ./chkseq -s$startnum -e$endnum $3 $4 $5 $6 $7 \
+				| ./chkseq -s$startnum -e$endnum $3 $4 $5 $6 $7 $SEQ_CHECK_OPTIONS \
 				> $RSYSLOG_DYNNAME.error.log
 		else
 			$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${SEQ_CHECK_FILE} \
@@ -2197,6 +2197,37 @@ omhttp_get_data() {
     curl -s ${omhttp_url} \
         | $PYTHON -c "${python_parse}" | sort -n \
         > ${RSYSLOG_OUT_LOG}
+}
+
+
+# prepare MySQL for next test
+# each test receives its own database so that we also can run in parallel
+mysql_prep_for_test() {
+	mysql -u rsyslog --password=testbench -e "CREATE DATABASE $RSYSLOG_DYNNAME; "
+	mysql -u rsyslog --password=testbench --database $RSYSLOG_DYNNAME \
+		-e "CREATE TABLE SystemEvents (ID int unsigned not null auto_increment primary key, CustomerID bigint,ReceivedAt datetime NULL,DeviceReportedTime datetime NULL,Facility smallint NULL,Priority smallint NULL,FromHost varchar(60) NULL,Message text,NTSeverity int NULL,Importance int NULL,EventSource varchar(60),EventUser varchar(60) NULL,EventCategory int NULL,EventID int NULL,EventBinaryData text NULL,MaxAvailable int NULL,CurrUsage int NULL,MinUsage int NULL,MaxUsage int NULL,InfoUnitID int NULL,SysLogTag varchar(60),EventLogType varchar(60),GenericFileName VarChar(60),SystemID int NULL); CREATE TABLE SystemEventsProperties (ID int unsigned not null auto_increment primary key,SystemEventID int NULL,ParamName varchar(255) NULL,ParamValue text NULL);"
+	mysql --user=rsyslog --password=testbench --database $RSYSLOG_DYNNAME \
+		-e "truncate table SystemEvents;"
+	# TEST ONLY:
+	mysql -s --user=rsyslog --password=testbench --database $RSYSLOG_DYNNAME \
+		-e "select substring(Message,9,8) from SystemEvents;"
+	# END TEST
+	printf 'mysql ready for test, database: %s\n' $RSYSLOG_DYNNAME
+}
+
+# get data from mysql DB so that we can do seq_check on it.
+mysql_get_data() {
+	# note "-s" is requried to suppress the select "field header"
+	mysql -s --user=rsyslog --password=testbench --database $RSYSLOG_DYNNAME \
+		-e "select substring(Message,9,8) from SystemEvents;" \
+		> $RSYSLOG_OUT_LOG
+}
+
+# cleanup any temp data from mysql test
+# if we do not do this, we may run out of disk space
+# especially in container environment.
+mysql_cleanup_test() {
+	mysql --user=rsyslog --password=testbench -e "drop database $RSYSLOG_DYNNAME;"
 }
 
 

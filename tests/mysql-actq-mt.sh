@@ -2,13 +2,14 @@
 # test for mysql with multithread actionq
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+export NUMMESSAGES=150000
 generate_conf
 add_conf '
 module(load="../plugins/ommysql/.libs/ommysql")
 
 :msg, contains, "msgnum:" {
 	action(type="ommysql" server="127.0.0.1"
-	db="Syslog" uid="rsyslog" pwd="testbench"
+	db="'$RSYSLOG_DYNNAME'" uid="rsyslog" pwd="testbench"
 	queue.size="10000" queue.type="linkedList"
 	queue.workerthreads="5"
 	queue.workerthreadMinimumMessages="500"
@@ -18,12 +19,12 @@ module(load="../plugins/ommysql/.libs/ommysql")
 	)
 } 
 '
-mysql --user=rsyslog --password=testbench < ${srcdir}/testsuites/mysql-truncate.sql
+mysql_prep_for_test
 startup
-injectmsg  0 150000
+injectmsg
 shutdown_when_empty
 wait_shutdown 
-# note "-s" is requried to suppress the select "field header"
-mysql -s --user=rsyslog --password=testbench < ${srcdir}/testsuites/mysql-select-msg.sql > $RSYSLOG_OUT_LOG
-seq_check  0 149999
+mysql_get_data
+seq_check
+mysql_cleanup_test
 exit_test

@@ -1,20 +1,21 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
-# asyn test for mysql functionality
+# asyn test for mysql functionality (running on async action queue)
 . ${srcdir:=.}/diag.sh init
+export NUMMESSAGES=50000
 generate_conf
 add_conf '
 $ModLoad ../plugins/ommysql/.libs/ommysql
 $ActionQueueType LinkedList
 $ActionQueueTimeoutEnqueue 20000
-:msg, contains, "msgnum:" :ommysql:127.0.0.1,Syslog,rsyslog,testbench;
+:msg, contains, "msgnum:" :ommysql:127.0.0.1,'$RSYSLOG_DYNNAME',rsyslog,testbench;
 '
-mysql --user=rsyslog --password=testbench < ${srcdir}/testsuites/mysql-truncate.sql
+mysql_prep_for_test
 startup
-injectmsg  0 50000
+injectmsg
 shutdown_when_empty
 wait_shutdown 
-# note "-s" is requried to suppress the select "field header"
-mysql -s --user=rsyslog --password=testbench < ${srcdir}/testsuites/mysql-select-msg.sql > $RSYSLOG_OUT_LOG
-seq_check  0 49999
+mysql_get_data
+seq_check
+mysql_cleanup_test
 exit_test

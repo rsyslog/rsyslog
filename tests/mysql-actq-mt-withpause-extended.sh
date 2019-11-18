@@ -39,5 +39,6 @@ shutdown_when_empty
 wait_shutdown 
 # note "-s" is requried to suppress the select "field header"
 mysql -s --user=rsyslog --password=testbench < ${srcdir}/testsuites/mysql-select-msg.sql > $RSYSLOG_OUT_LOG
-seq_check  0 249999
+seq_check
+mysql_cleanup_test
 exit_test

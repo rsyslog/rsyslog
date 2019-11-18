@@ -13,19 +13,18 @@ $ActionLibdbiDriver mysql
 $ActionLibdbiHost 127.0.0.1
 $ActionLibdbiUserName rsyslog
 $ActionLibdbiPassword testbench
-$ActionLibdbiDBName Syslog
+$ActionLibdbiDBName '$RSYSLOG_DYNNAME'
 :msg, contains, "msgnum:" {
 	:omlibdbi:
 	action(type="omfile" file="'$RSYSLOG_DYNNAME'.syncfile")
 }
 '
-mysql --user=rsyslog --password=testbench < ${srcdir}/testsuites/mysql-truncate.sql
+mysql_prep_for_test
 startup
-injectmsg  0 $NUMMESSAGES
+injectmsg
 wait_file_lines $RSYSLOG_DYNNAME.syncfile $NUMMESSAGES 2500
 shutdown_when_empty
 wait_shutdown 
-# note "-s" is requried to suppress the select "field header"
-mysql -s --user=rsyslog --password=testbench < ${srcdir}/testsuites/mysql-select-msg.sql > $RSYSLOG_OUT_LOG
-seq_check  0 $(( NUMMESSAGES - 1 ))
+mysql_get_data
+seq_check
 exit_test
