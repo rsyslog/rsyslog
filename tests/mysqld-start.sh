@@ -5,6 +5,7 @@
 # Copyright (C) 2018 Rainer Gerhards and Adiscon GmbH
 # Released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+ls -l *.log
 if [ "$MYSQLD_START_CMD" == "" ]; then
 	exit_test # no start needed
 fi
@@ -21,4 +22,6 @@ wait_startup_pid /var/run/mysqld/mysqld.pid
 printf 'preparing mysqld for testbench use...\n'
 $SUDO ${srcdir}/../devtools/prep-mysql-db.sh
 printf 'done, mysql ready for testbench\n'
+$SUDO cat /var/log/mysql/error.log
+exit 77
 exit_test

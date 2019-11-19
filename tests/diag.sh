@@ -2221,6 +2221,9 @@ first_column_sum_check() {
 
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
+	ls -l mysql*log
+	sudo cat /var/log/mysql/error.log ## TODO: remove me
+	df -h
 		# for (solaris) load debugging, uncomment next 2 lines:
 		#export LD_DEBUG=all
 		#ldd ../tools/rsyslogd
