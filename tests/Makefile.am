@@ -781,6 +781,7 @@ TESTS +=  \
 	omprog-single-instance.sh \
 	omprog-single-instance-outfile.sh \
 	omprog-transactions.sh \
+	omprog-if-error.sh \
 	omprog-transactions-failed-messages.sh \
 	omprog-transactions-failed-commits.sh
 if HAVE_VALGRIND
@@ -2086,6 +2087,7 @@ EXTRA_DIST= \
 	omprog-single-instance.sh \
 	omprog-single-instance-vg.sh \
 	omprog-single-instance-outfile.sh \
+	omprog-if-error.sh \
 	omprog-transactions.sh \
 	omprog-transactions-vg.sh \
 	omprog-transactions-failed-messages.sh \
