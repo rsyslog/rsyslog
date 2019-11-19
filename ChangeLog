@@ -1,5 +1,33 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
+- 2019-11-19: core queue: emit warning if parameters are set for direct queue
+  Direct queues do not apply queue parameters because they are actually
+  no physical queue. As such, any parameter set is ignored. This can
+  lead to unintentional results.
+  The new code detects this case and warns the user.
+  closes https://github.com/rsyslog/rsyslog/issues/77
+- 2019-11-19: imjournal bugfix: do not wait too long on recovery try
+  When trying to recover journal errors, imjournal waited a hardcoded
+  period of 10s between tries. This was pretty long and could lead to
+  loss of journal data.
+  This commit adjust it to 100ms, which should still be fully sufficient
+  to prevent the journal from "hammering" the CPU.
+  It may be worth considering to make this setting configurable - but
+  let's first see if there is real demand to actually do that.
+  closes https://github.com/rsyslog/rsyslog/issues/3969
+- 2019-11-19: mmutf8fix: enhance handling of incorrect UTF-8 sequences
+  1. Invalid utf8 detection didn't handle 3 and 4-byte overlong encodings (2
+     byte overlong econdings were handled explicitly by rejection E0 and E1
+     start bytes). Unified checks for overlong encodings.
+  2. Surrogates U+D800..U+DFFF are not valid codepoints (Unicode Standard, D92)
+  3. Replacement of characters in invalid 3 or 4-bytes encodings was too
+     eager. It must not replace bytes which are valid UTF-8 sequences. For
+     example, in [0xE0 0xC2 0xA7] sequence the 0xC2 is invalid as a continuation
+     byte, but it starts a valid UTF8 symbol [0xC2 0xA7]. That is, with current
+     code processing the sequence will result in "???" but the correct result is "?§"
+     (provided that the replacement character is "?").
+  4. Various tests for UTF-8 invalid/valid sequences.
+  Thanks to Sergei Turchanov for the patch.
 - 2019-11-14: imfile: add new input parameter escapeLF.replacement
   The new parameter permits to specify a replacement to be configured
   when "escapeLF" is set to "on". Previously, a fixed replacement string
