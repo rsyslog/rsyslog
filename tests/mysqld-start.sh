@@ -5,6 +5,8 @@
 # Copyright (C) 2018 Rainer Gerhards and Adiscon GmbH
 # Released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+echo pre-start
+ps -ef |grep bin.mysqld
 if [ "$MYSQLD_START_CMD" == "" ]; then
 	exit_test # no start needed
 fi
@@ -18,7 +20,10 @@ test_error_exit_handler() {
 printf 'starting mysqld...\n'
 $MYSQLD_START_CMD &
 wait_startup_pid /var/run/mysqld/mysqld.pid
+$SUDO tail -n30 /var/log/mysql/error.log
 printf 'preparing mysqld for testbench use...\n'
 $SUDO ${srcdir}/../devtools/prep-mysql-db.sh
 printf 'done, mysql ready for testbench\n'
+ps -ef |grep bin.mysqld
+exit 77 # we want to see this test's log in any case
 exit_test
