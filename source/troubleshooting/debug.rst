@@ -7,6 +7,8 @@ to hunt for program or plugin bugs. However, there are several
 occasions where debug log has proven to be quite helpful in finding
 out configuration issues.
 
+A :doc:`quick guide can be found here<../troubleshooting/howtodebug>`.
+
 Signals supported
 -----------------
 
@@ -192,4 +194,5 @@ See Also
 
 -  `How to use debug on
    demand <http://www.rsyslog.com/how-to-use-debug-on-demand/>`_
+- :doc:`Quick debug guide<../troubleshooting/howtodebug>`
 
