@@ -52,4 +52,6 @@ See Also
 --------
 
 - :doc:`Troubleshooting <../troubleshooting/troubleshoot>` doc page.
+- :doc:`Debug Support<../troubleshooting/debug>` doc page with more detailed 
+  information.
 
