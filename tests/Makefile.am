@@ -6,7 +6,7 @@ CLEANFILES=\
 	*_*.conf \
 	rsyslog*.started work-*.conf rsyslog.random.data \
 	rsyslog*.pid.save xlate*.lkp_tbl \
-	log log* \
+	log log* *.log \
 	work \
 	test-spool test-logdir stat-file1 \
 	rsyslog.pipe rsyslog.input.* \
