@@ -32,30 +32,7 @@ sudo apt-get install -qq --force-yes libestr-dev librelp-dev libfastjson-dev lib
 	libcurl4-openssl-dev
 sudo apt-get install -qq python-docutils
 
-if [ "$DISTRIB_CODENAME" == "trusty" ] || [ "$DISTRIB_CODENAME" == "precise" ]; then
-	WANT_MAXMIND=1.2.0
-	curl -Ls https://github.com/maxmind/libmaxminddb/releases/download/${WANT_MAXMIND}/libmaxminddb-${WANT_MAXMIND}.tar.gz | tar -xz
-	(cd libmaxminddb-${WANT_MAXMIND} ; ./configure --prefix=/usr CC=gcc CFLAGS="-Wall -Wextra -g -pipe -std=gnu99"  > /dev/null ; make -j2  &>/dev/null ; sudo make install > /dev/null)
-	rm -rf libmaxminddb-${WANT_MAXMIND} # get rid of source, e.g. for line length check
-	
-	SAVE_CFLAGS=$CFLAGS
-	CFLAGS=""
-	SAVE_CC=$CC
-	CC="gcc"
-	sudo apt-get install -qq libssl-dev libsasl2-dev
-	wget --no-verbose https://github.com/mongodb/mongo-c-driver/releases/download/1.8.1/mongo-c-driver-1.8.1.tar.gz
-	tar -xzf mongo-c-driver-1.8.1.tar.gz
-	cd mongo-c-driver-1.8.1/
-	./configure --enable-ssl --disable-automatic-init-and-cleanup > /dev/null
-	make -j > /dev/null
-	sudo make install > /dev/null
-	cd -
-	rm -rf mongo-c-driver-1.8.1
-	CC=$SAVE_CC
-	CFLAGS=$SAVE_CFLAGS
-else
-	sudo apt-get install -qq libmaxminddb-dev libmongoc-dev libbson-dev
-fi
+sudo apt-get install -qq libmaxminddb-dev libmongoc-dev libbson-dev
 
 # As travis has no xenial images, we always need to install librdkafka from source
 if [ "x$KAFKA" == "xYES" ]; then 
@@ -77,25 +54,10 @@ fi
 sudo apt-get install -qq libhiredis-dev # somehow we now need this
 
 if [ "x$ESTEST" == "xYES" ]; then sudo apt-get install -qq elasticsearch ; fi
-if [ "$DISTRIB_CODENAME" == "trusty" ]; then sudo apt-get install -qq libhiredis-dev; export HIREDIS_OPT="--enable-omhiredis"; fi
-if [ "$DISTRIB_CODENAME" == "trusty" ]; then sudo apt-get install -qq libsystemd-journal-dev; export JOURNAL_OPT="--enable-imjournal --enable-omjournal"; fi
-if [ "$DISTRIB_CODENAME" == "trusty" ] || [ "$DISTRIB_CODENAME" == "precise" ]; then
-	export IMDOCKER_OPT=
-else
-	if [ "x$IMDOKER" == "xYES" ]; then
-#    git clone https://github.com/curl/curl.git > /dev/null
-#    (cd curl; ./buildconf; ./configure; make -j2 > /dev/null; sudo make install > /dev/null;)
-		export IMDOCKER_OPT="--enable-imdocker --enable-imdocker-tests";
-	fi
+if [ "x$IMDOKER" == "xYES" ]; then
+	export IMDOCKER_OPT="--enable-imdocker --enable-imdocker-tests";
 fi
-if [ "$DISTRIB_CODENAME" == "trusty" ]; then sudo apt-get install -qq --force-yes libqpid-proton3-dev ;fi
-if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y && \
-sudo bash -c "echo \"deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-5.0 main\" > /etc/apt/sources.list.d/llvm.list" &&\
-wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add - &&\
-sudo apt-get update -yy  &&\
-sudo apt-get install clang-5.0 clang-tools-5.0; fi
 
-if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then export CLANG_PKG="clang-5.0"; export SCAN_BUILD="scan-build-5.0"; else export CLANG_PKG="clang"; export SCAN_BUILD="scan-build"; fi
 if [ "$CC" == "clang" ]; then export NO_VALGRIND="--without-valgrind-testbench"; fi
 if [ "$CC" == "clang" ]; then sudo apt-get install -qq $CLANG_PKG ; fi
 
