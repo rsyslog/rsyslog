@@ -144,8 +144,8 @@ typedef struct instanceConf_s {
 	uchar *myPrivKeyFile;
 	es_write_ops_t writeOperation;
 	sbool retryFailures;
-	int ratelimitInterval;
-	int ratelimitBurst;
+	unsigned int ratelimitInterval;
+	unsigned int ratelimitBurst;
 	/* for retries */
 	ratelimit_t *ratelimiter;
 	uchar *retryRulesetName;
@@ -375,8 +375,8 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\ttls.myprivkey='%s'\n", pData->myPrivKeyFile);
 	dbgprintf("\twriteoperation='%d'\n", pData->writeOperation);
 	dbgprintf("\tretryfailures='%d'\n", pData->retryFailures);
-	dbgprintf("\tratelimit.interval='%d'\n", pData->ratelimitInterval);
-	dbgprintf("\tratelimit.burst='%d'\n", pData->ratelimitBurst);
+	dbgprintf("\tratelimit.interval='%u'\n", pData->ratelimitInterval);
+	dbgprintf("\tratelimit.burst='%u'\n", pData->ratelimitBurst);
 	dbgprintf("\trebindinterval='%d'\n", pData->rebindInterval);
 ENDdbgPrintInstInfo
 
@@ -1944,9 +1944,9 @@ CODESTARTnewActInst
 		} else if(!strcmp(actpblk.descr[i].name, "retryfailures")) {
 			pData->retryFailures = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "ratelimit.burst")) {
-			pData->ratelimitBurst = (int) pvals[i].val.d.n;
+			pData->ratelimitBurst = (unsigned int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "ratelimit.interval")) {
-			pData->ratelimitInterval = (int) pvals[i].val.d.n;
+			pData->ratelimitInterval = (unsigned int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "retryruleset")) {
 			pData->retryRulesetName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "rebindinterval")) {

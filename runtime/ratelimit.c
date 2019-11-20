@@ -162,7 +162,7 @@ withinRatelimit(ratelimit_t *__restrict__ const ratelimit,
 		ratelimit->begin = tt;
 
 	/* resume if we go out of time window or if time has gone backwards */
-	if((tt > ratelimit->begin + ratelimit->interval) || (tt < ratelimit->begin) ) {
+	if((tt > (time_t)(ratelimit->begin + ratelimit->interval)) || (tt < ratelimit->begin) ) {
 		ratelimit->begin = 0;
 		ratelimit->done = 0;
 		tellLostCnt(ratelimit);
@@ -331,7 +331,7 @@ finalize_it:
 
 /* enable linux-like ratelimiting */
 void
-ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned short interval, unsigned burst)
+ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned int interval, unsigned int burst)
 {
 	ratelimit->interval = interval;
 	ratelimit->burst = burst;

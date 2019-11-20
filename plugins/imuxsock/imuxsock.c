@@ -147,8 +147,8 @@ typedef struct lstn_s {
 	int fd;			/* read-only after startup */
 	int flags;		/* should parser parse host name?  read-only after startup */
 	int flowCtl;		/* flow control settings for this socket */
-	int ratelimitInterval;
-	int ratelimitBurst;
+	unsigned int ratelimitInterval;
+	unsigned int ratelimitBurst;
 	ratelimit_t *dflt_ratelimiter;/*ratelimiter to apply if none else is to be used */
 	intTiny ratelimitSev;	/* severity level (and below) for which rate-limiting shall apply */
 	struct hashtable *ht;	/* our hashtable for rate-limiting */
@@ -199,10 +199,10 @@ static struct configSettings_s {
 	int bWritePid;			/* use credentials from recvmsg() and fixup PID in TAG */
 	int bWritePidSysSock;		/* use credentials from recvmsg() and fixup PID in TAG */
 	int bCreatePath;		/* auto-create socket path? */
-	int ratelimitInterval;		/* interval in seconds, 0 = off */
-	int ratelimitIntervalSysSock;
-	int ratelimitBurst;		/* max nbr of messages in interval */
-	int ratelimitBurstSysSock;
+	unsigned int ratelimitInterval;		/* interval in seconds, 0 = off */
+	unsigned int ratelimitIntervalSysSock;
+	unsigned int ratelimitBurst;		/* max nbr of messages in interval */
+	unsigned int ratelimitBurstSysSock;
 	int ratelimitSeverity;
 	int ratelimitSeveritySysSock;
 	int bAnnotate;			/* annotate trusted properties */
@@ -219,8 +219,8 @@ struct instanceConf_s {
 	sbool bWritePid;		/* use credentials from recvmsg() and fixup PID in TAG */
 	sbool bUseSysTimeStamp;		/* use timestamp from system (instead of from message) */
 	int bCreatePath;		/* auto-create socket path? */
-	int ratelimitInterval;		/* interval in seconds, 0 = off */
-	int ratelimitBurst;		/* max nbr of messages in interval */
+	unsigned int ratelimitInterval;		/* interval in seconds, 0 = off */
+	unsigned int ratelimitBurst;		/* max nbr of messages in interval */
 	int ratelimitSeverity;
 	int bAnnotate;			/* annotate trusted properties */
 	int bParseTrusted;		/* parse trusted properties */
@@ -237,8 +237,8 @@ struct modConfData_s {
 	rsconf_t *pConf;		/* our overall config object */
 	instanceConf_t *root, *tail;
 	uchar *pLogSockName;
-	int ratelimitIntervalSysSock;
-	int ratelimitBurstSysSock;
+	unsigned int ratelimitIntervalSysSock;
+	unsigned int ratelimitBurstSysSock;
 	int ratelimitSeveritySysSock;
 	int bAnnotateSysSock;
 	int bParseTrusted;
@@ -1307,9 +1307,9 @@ CODESTARTsetModCnf
 		} else if(!strcmp(modpblk.descr[i].name, "syssock.usepidfromsystem")) {
 			loadModConf->bWritePidSysSock = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "syssock.ratelimit.interval")) {
-			loadModConf->ratelimitIntervalSysSock = (int) pvals[i].val.d.n;
+			loadModConf->ratelimitIntervalSysSock = (unsigned int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "syssock.ratelimit.burst")) {
-			loadModConf->ratelimitBurstSysSock = (int) pvals[i].val.d.n;
+			loadModConf->ratelimitBurstSysSock = (unsigned int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "syssock.ratelimit.severity")) {
 			loadModConf->ratelimitSeveritySysSock = (int) pvals[i].val.d.n;
 		} else {
@@ -1381,9 +1381,9 @@ CODESTARTnewInpInst
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
 			inst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
-			inst->ratelimitInterval = (int) pvals[i].val.d.n;
+			inst->ratelimitInterval = (unsigned int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
-			inst->ratelimitBurst = (int) pvals[i].val.d.n;
+			inst->ratelimitBurst = (unsigned int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.severity")) {
 			inst->ratelimitSeverity = (int) pvals[i].val.d.n;
 		} else {

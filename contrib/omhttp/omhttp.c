@@ -139,8 +139,8 @@ typedef struct instanceConf_s {
 	uchar *myPrivKeyFile;
 	sbool reloadOnHup;
 	sbool retryFailures;
-	int ratelimitInterval;
-	int ratelimitBurst;
+	unsigned int ratelimitInterval;
+	unsigned int ratelimitBurst;
 	/* for retries */
 	ratelimit_t *ratelimiter;
 	uchar *retryRulesetName;
@@ -371,8 +371,8 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\treloadonhup='%d'\n", pData->reloadOnHup);
 	dbgprintf("\tretry='%d'\n", pData->retryFailures);
 	dbgprintf("\tretry.ruleset='%s'\n", pData->retryRulesetName);
-	dbgprintf("\tratelimit.interval='%d'\n", pData->ratelimitInterval);
-	dbgprintf("\tratelimit.burst='%d'\n", pData->ratelimitBurst);
+	dbgprintf("\tratelimit.interval='%u'\n", pData->ratelimitInterval);
+	dbgprintf("\tratelimit.burst='%u'\n", pData->ratelimitBurst);
 ENDdbgPrintInstInfo
 
 
@@ -1788,9 +1788,9 @@ CODESTARTnewActInst
 		} else if(!strcmp(actpblk.descr[i].name, "retry.ruleset")) {
 			pData->retryRulesetName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "ratelimit.burst")) {
-			pData->ratelimitBurst = (int) pvals[i].val.d.n;
+			pData->ratelimitBurst = (unsigned int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "ratelimit.interval")) {
-			pData->ratelimitInterval = (int) pvals[i].val.d.n;
+			pData->ratelimitInterval = (unsigned int) pvals[i].val.d.n;
 		} else {
 			LogError(0, RS_RET_INTERNAL_ERROR, "omhttp: program error, "
 				"non-handled param '%s'", actpblk.descr[i].name);

@@ -73,8 +73,8 @@ struct modConfData_s {
 static struct configSettings_s {
 	char *stateFile;
 	int iPersistStateInterval;
-	int ratelimitInterval;
-	int ratelimitBurst;
+	unsigned int ratelimitInterval;
+	unsigned int ratelimitBurst;
 	int bIgnorePrevious;
 	int bIgnoreNonValidStatefile;
 	int iDfltSeverity;
@@ -768,7 +768,7 @@ BEGINrunInput
 	uint64_t count = 0;
 CODESTARTrunInput
 	CHKiRet(ratelimitNew(&ratelimiter, "imjournal", NULL));
-	dbgprintf("imjournal: ratelimiting burst %d, interval %d\n", cs.ratelimitBurst,
+	dbgprintf("imjournal: ratelimiting burst %u, interval %u\n", cs.ratelimitBurst,
 		  cs.ratelimitInterval);
 	ratelimitSetLinuxLike(ratelimiter, cs.ratelimitInterval, cs.ratelimitBurst);
 	ratelimitSetNoTimeCache(ratelimiter);
@@ -1003,9 +1003,9 @@ CODESTARTsetModCnf
 		} else if (!strcmp(modpblk.descr[i].name, "statefile")) {
 			cs.stateFile = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "ratelimit.burst")) {
-			cs.ratelimitBurst = (int) pvals[i].val.d.n;
+			cs.ratelimitBurst = (unsigned int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "ratelimit.interval")) {
-			cs.ratelimitInterval = (int) pvals[i].val.d.n;
+			cs.ratelimitInterval = (unsigned int) pvals[i].val.d.n;
 		} else if (!strcmp(modpblk.descr[i].name, "ignorepreviousmessages")) {
 			cs.bIgnorePrevious = (int) pvals[i].val.d.n;
 		} else if (!strcmp(modpblk.descr[i].name, "ignorenonvalidstatefile")) {
