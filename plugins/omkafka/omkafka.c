@@ -32,6 +32,7 @@
 #include <sys/uio.h>
 #include <sys/queue.h>
 #include <sys/types.h>
+#include <math.h>
 #ifdef HAVE_SYS_STAT_H
 #	include <sys/stat.h>
 #endif
@@ -2002,6 +2003,7 @@ CODESTARTmodInit
 INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
+	dbgprintf("just because librdkafka needs it, sqrt of 4 is %f\n", sqrt(4.0));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(strm, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
