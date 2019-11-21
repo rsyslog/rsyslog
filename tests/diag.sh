@@ -2182,6 +2182,10 @@ omhttp_get_data() {
             # dat = ['{"records":[{"value":{"msgnum":"1"}},{"value":{"msgnum":"2"}}]}',
             #        '{"records":[{"value":{"msgnum":"3"}},{"value":{"msgnum":"4"}}]}']
             python_parse="$python_init; out = [l['value']['msgnum'] for a in dat for l in json.loads(a)['records']]; $python_print"
+        elif [ "x$3" == "xlokirest" ]; then
+            # dat = ['{"streams":[{"msgnum":"1"},{"msgnum":"2"}]}',
+            #        '{"streams":[{"msgnum":"3"},{"msgnum":"4"}]}']
+            python_parse="$python_init; out = [l['msgnum'] for a in dat for l in json.loads(a)['streams']]; $python_print"
         else
             # use newline parsing as default
             python_parse="$python_init; out = [json.loads(l)['msgnum'] for a in dat for l in a.split('\n')]; $python_print"
