@@ -140,6 +140,7 @@ AM_CONDITIONAL(OS_APPLE, test x$os_type == xapple)
 AM_CONDITIONAL(OS_LINUX, test x$os_type == xlinux)
 AM_CONDITIONAL(OS_AIX, test x$os_type == xaix)
 
+AM_PATH_PYTHON(,, [:])
 
 # Running from git source?
 in_git_src=no
@@ -2527,6 +2528,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/mmtaghostname/Makefile \
 		contrib/imdocker/Makefile \
 		contrib/pmdb2diag/Makefile \
+		tests/set-envvars \
 		tests/Makefile])
 AC_OUTPUT
 

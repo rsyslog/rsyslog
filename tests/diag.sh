@@ -1448,7 +1448,7 @@ exit_test() {
 # to work pretty well. In any case, we should probably call this as
 # late as possible before the usage of the port.
 get_free_port() {
-python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()'
+$PYTHON -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()'
 }
 
 
@@ -1458,7 +1458,7 @@ get_inode() {
 		printf 'FAIL: file "%s" does not exist in get_inode\n' "$1"
 		error_exit 100
 	fi
-	python -c 'import os; import stat; print(os.lstat("'$1'")[stat.ST_INO])'
+	$PYTHON -c 'import os; import stat; print(os.lstat("'$1'")[stat.ST_INO])'
 }
 
 
@@ -2059,7 +2059,7 @@ start_elasticsearch() {
 es_getdata() {
 	curl --silent -XPUT --show-error -H 'Content-Type: application/json' "http://localhost:${2:-$ES_PORT}/rsyslog_testbench/_settings" -d '{ "index" : { "max_result_window" : '${1:-$NUMMESSAGES}' } }'
 	curl --silent localhost:${2:-$ES_PORT}/rsyslog_testbench/_search?size=${1:-$NUMMESSAGES} > $RSYSLOG_DYNNAME.work
-	python $srcdir/es_response_get_msgnum.py > ${RSYSLOG_OUT_LOG}
+	$PYTHON $srcdir/es_response_get_msgnum.py > ${RSYSLOG_OUT_LOG}
 }
 
 # a standard method to support shutdown & queue empty check for a wide range
@@ -2127,7 +2127,7 @@ omhttp_start_server() {
 
     server_args="-p $omhttp_server_port ${*:2}"
 
-    python ${omhttp_server_py} ${server_args} >> ${omhttp_server_logfile} 2>&1 &
+    $PYTHON ${omhttp_server_py} ${server_args} >> ${omhttp_server_logfile} 2>&1 &
     if [ ! $? -eq 0 ]; then
         echo "Failed to start omhttp test server."
         rm -rf $omhttp_work_dir
@@ -2191,7 +2191,7 @@ omhttp_get_data() {
     
     omhttp_url="localhost:${omhttp_server_port}/${omhttp_path}"
     curl -s ${omhttp_url} \
-        | python -c "${python_parse}" | sort -n \
+        | $PYTHON -c "${python_parse}" | sort -n \
         > ${RSYSLOG_OUT_LOG}
 }
 
@@ -2221,6 +2221,13 @@ first_column_sum_check() {
 
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
+		echo pwd: $(pwd)
+		echo srcdir: $srcdir
+		ls -l set-envvars
+		echo find:
+		find $srcdir/.. -name set-envvars
+		source set-envvars
+		# for (solaris) load debugging, uncomment next 2 lines:
 		#export LD_DEBUG=all
 		#ldd ../tools/rsyslogd
 
