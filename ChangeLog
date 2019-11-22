@@ -1,5 +1,18 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
+- 2019-11-22: omhttp: add basic support for Loki Rest
+  Loki is a new message indexer and querier from Grafana Labs. See
+  https://github.com/grafana/loki for details on Loki.
+  This change provides the initial message structure to send bulk message
+  payloads to the Loki Rest endpoint. omhttp, recieved a new bulk message
+  format called lokirest. Additionally, the plugin relies on the user to
+  provide the correct "stream" read message format.
+  A loki template must be json compatible and include a "stream" key of
+  key value tags, and a values key of an array of 2 element arrays, where
+  each 2 element array is the unix epoch in nanoseconds followed by an
+  unstrectured message.
+  An example:
+      template(name="array_loki" type="string" string="{\"stream\":{\"host\":\"%HOSTNAME%\",\"facility\":\"%syslogfacility-text%\",\"priority\":\"%syslogpriority-text%\",\"syslogtag\":\"%syslogtag%\"},\"values\": [[ \"%timegenerated:::date-unixtimestamp%000000000\", \"%msg%\" ]]}")
 - 2019-11-22: testbench: obtain python binary path via AM_PATH_PYTHON
   see also https://github.com/rsyslog/rsyslog/issues/3853
 - 2019-11-22: omprog: detect violation of interface protocol
