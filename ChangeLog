@@ -1,5 +1,29 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
+- 2019-11-22: omprog: detect violation of interface protocol
+  The spec for the omprog interaction with the program it calls specifies
+  that the program receives one message via one line. In other words:
+  it must be a string terminated by LF.
+  However, omprog does currently rely on a proper template to fulfill this
+  requirement, If the template does not provide for the LF, it is never
+  written. For the called program, this looks like it does not receive any
+  input at all. Even if it finally reads data (e.g. due to full buffer),
+  it will not properly be able to discern the messages.
+  This handling is improved with this commit.
+  We cannot just check the template, because at the end of the template
+  may by a non-constant value. As such, we do not know at config load
+  time if there is this problem or not.
+  So the correct approach is to, during runtime, check if each message
+  is properly terminated. For those that are not:
+  * we append a LF, because anything else makes matters worse
+  * log a warning message, at least for a sample of the messages
+  The warning is useful in the (expected most often) case that the template
+  is simply missing the LF. While appending works, it slows down processing.
+  As such the user should be given a chance to correct the config bug.
+  To avoid clutter, the warning is emitted at most once every 30 seconds.
+  This value is hardcoded as we do not envison a need to adjust it. Usually
+  users should quickly fix the template.
+  closes https://github.com/rsyslog/rsyslog/issues/3975
 - 2019-11-19: core queue: emit warning if parameters are set for direct queue
   Direct queues do not apply queue parameters because they are actually
   no physical queue. As such, any parameter set is ignored. This can
