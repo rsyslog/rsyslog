@@ -98,7 +98,7 @@ shutdown_when_empty
 wait_shutdown
 es_getdata 1 $ES_PORT
 
-python <$RSYSLOG_DYNNAME.work -c '
+$PYTHON <$RSYSLOG_DYNNAME.work -c '
 import sys,json
 hsh = json.load(sys.stdin)
 try:

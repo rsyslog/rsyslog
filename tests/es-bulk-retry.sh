@@ -114,7 +114,7 @@ curl -s -H 'Content-Type: application/json' -XPUT localhost:${ES_PORT:-19200}/rs
     }
   }
 }
-' | python -mjson.tool
+' | $PYTHON -mjson.tool
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="debug.log"
 startup
@@ -136,7 +136,7 @@ cleanup_elasticsearch
 
 if [ -f $RSYSLOG_DYNNAME.work ] ; then
 	< $RSYSLOG_DYNNAME.work  \
-	python -c '
+	$PYTHON -c '
 import sys,json
 records = int(sys.argv[1])
 extra_recs = open(sys.argv[2], "w")
@@ -175,7 +175,7 @@ else
 fi
 
 if [ -f ${RSYSLOG_DYNNAME}.spool/es-stats.log ] ; then
-	python < ${RSYSLOG_DYNNAME}.spool/es-stats.log -c '
+	$PYTHON < ${RSYSLOG_DYNNAME}.spool/es-stats.log -c '
 import sys,json
 success = int(sys.argv[1])
 badarg = int(sys.argv[2])

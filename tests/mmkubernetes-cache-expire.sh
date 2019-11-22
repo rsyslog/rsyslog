@@ -38,7 +38,7 @@ action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="mmk8s_template")
 
 testsrv=mmk8s-test-server
 echo starting kubernetes \"emulator\"
-timeout 2m python -u $srcdir/mmkubernetes_test_server.py $k8s_srv_port ${RSYSLOG_DYNNAME}${testsrv}.pid ${RSYSLOG_DYNNAME}${testsrv}.started > ${RSYSLOG_DYNNAME}.spool/mmk8s_srv.log 2>&1 &
+timeout 2m $PYTHON -u $srcdir/mmkubernetes_test_server.py $k8s_srv_port ${RSYSLOG_DYNNAME}${testsrv}.pid ${RSYSLOG_DYNNAME}${testsrv}.started > ${RSYSLOG_DYNNAME}.spool/mmk8s_srv.log 2>&1 &
 BGPROCESS=$!
 wait_process_startup ${RSYSLOG_DYNNAME}${testsrv} ${RSYSLOG_DYNNAME}${testsrv}.started
 echo background mmkubernetes_test_server.py process id is $BGPROCESS
@@ -96,7 +96,7 @@ wait_pid_termination ${RSYSLOG_DYNNAME}${testsrv}.pid
 rc=0
 # for each record in mmkubernetes-cache-expire.out.json, see if the matching
 # record is found in $RSYSLOG_OUT_LOG
-python -c 'import sys,json
+$PYTHON -c 'import sys,json
 k8s_srv_port = sys.argv[3]
 expected = {}
 for hsh in json.load(open(sys.argv[1])):
@@ -126,7 +126,7 @@ sys.exit(rc)
 ' $srcdir/mmkubernetes-cache-expire.out.expected $RSYSLOG_OUT_LOG $k8s_srv_port || rc=$?
 
 if [ -f ${RSYSLOG_DYNNAME}.spool/mmkubernetes-stats.log ] ; then
-	python <${RSYSLOG_DYNNAME}.spool/mmkubernetes-stats.log  -c '
+	$PYTHON <${RSYSLOG_DYNNAME}.spool/mmkubernetes-stats.log  -c '
 import sys,json
 # key is recordseen, value is hash of stats for that record
 expectedvalues = {

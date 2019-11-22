@@ -7,8 +7,9 @@
 # 'date' command on all of our test systems (think FreeBSD, and Solaris),
 # we need a method of converting given date/time strings to UNIX timestamps.
 # For that we use an external Python 2.x script to do the job.
+. ${srcdir:=.}/diag.sh init
 
-getts="python $srcdir/rscript_parse_time_get-ts.py"
+getts="$PYTHON $srcdir/rscript_parse_time_get-ts.py"
 
 # Run the Python script's self-tests
 $getts selftest
@@ -62,7 +63,6 @@ rfc3164_11_r=$($getts "$rfc3164_11")
 rfc3164_12="Dec 25 20:00:00"
 rfc3164_12_r=$($getts "$rfc3164_12")
 
-. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")

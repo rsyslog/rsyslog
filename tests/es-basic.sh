@@ -44,7 +44,7 @@ es_getdata $NUMMESSAGES $ES_PORT
 seq_check  0 $(( NUMMESSAGES - 1 ))
 rc=0
 if [ -f ${RSYSLOG_DYNNAME}.spool/omelasticsearch-stats.log ] ; then
-	python <${RSYSLOG_DYNNAME}.spool/omelasticsearch-stats.log  -c '
+	$PYTHON <${RSYSLOG_DYNNAME}.spool/omelasticsearch-stats.log  -c '
 import sys,json
 nrecs = int(sys.argv[1])
 nrebinds = nrecs/int(sys.argv[2])-1
