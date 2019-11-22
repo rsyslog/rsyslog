@@ -226,7 +226,7 @@ batch.format
 
    "word", "newline", "no", "none"
 
-This parameter specifies how to combine multiple messages into a single batch. Valid options are *newline* (default), *jsonarray*, and *kafkarest*.
+This parameter specifies how to combine multiple messages into a single batch. Valid options are *newline* (default), *jsonarray*, *kafkarest*, and *lokirest*.
 
 Each message on the "Inputs" line is the templated log line that is fed into the omhttp action, and the "Output" line describes the resulting payload sent to the configured HTTP server.
 
@@ -245,6 +245,13 @@ Each message on the "Inputs" line is the templated log line that is fed into the
     Output: [{"msg": "message 1"}, {"msg"": "message 2"}, {"msg": "message 3"}]
 
 3. *kafkarest* - Builds a JSON object that conforms to the `Kafka Rest Proxy specification <https://docs.confluent.io/current/kafka-rest/docs/quickstart.html>`_. This mode requires that each message is parseable JSON, since the plugin parses each message as JSON while building the batch object.
+
+.. code-block:: text
+
+    Inputs: {"stream": {"tag1":"value1"}, values:[[ "%timestamp%", "message 1" ]]} {"stream": {"tag2":"value2"}, values:[[ %timestamp%, "message 2" ]]}
+    Output: {"streams": [{"stream": {"tag1":"value1"}, values:[[ "%timestamp%", "message 1" ]]},{"stream": {"tag2":"value2"}, values:[[ %timestamp%, "message 2" ]]}]}
+
+4. *lokirest* - Builds a JSON object that conforms to the `Loki Rest specification <https://github.com/grafana/loki/blob/master/docs/api.md#post-lokiapiv1push>`_. This mode requires that each message is parseable JSON, since the plugin parses each message as JSON while building the batch object. Additionally, the operator is responsible for providing index keys, and message values.
 
 .. code-block:: text
 
@@ -804,3 +811,35 @@ The following example is a batch usage with a couple retry options
         retry.ruleset="<some_retry_ruleset>"
     )
 
+Example 5
+---------
+
+The following example is a batch action for pushing logs with checking, and queues to Loki.
+
+.. code-block:: text
+
+    module(load="omhttp")
+
+    template(name="loki" type="string" string="{\"stream\":{\"host\":\"%HOSTNAME%\",\"facility\":\"%syslogfacility-text%\",\"priority\":\"%syslogpriority-text%\",\"syslogtag\":\"%syslogtag%\"},\"values\": [[ \"%timegenerated:::date-unixtimestamp%000000000\", \"%msg%\" ]]}")
+
+
+    action(
+        name="loki"
+        type="omhttp"
+        useHttps="off"
+        server="localhost"
+        serverport="3100"
+        checkpath="ready"
+
+        restpath="loki/api/v1/push"
+        template="loki"
+        batch.format="lokirest"
+        batch="on"
+        batch.maxsize="10"
+
+        queue.size="10000" queue.type="linkedList"
+        queue.workerthreads="3"
+        queue.workerthreadMinimumMessages="1000"
+        queue.timeoutWorkerthreadShutdown="500"
+        queue.timeoutEnqueue="10000"
+    )
