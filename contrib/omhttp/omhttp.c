@@ -92,11 +92,12 @@ static prop_t *pInputName = NULL;
 #define HTTP_HEADER_ENCODING_GZIP "Content-Encoding: gzip"
 #define HTTP_HEADER_EXPECT_EMPTY "Expect:"
 
-#define VALID_BATCH_FORMATS "newline jsonarray kafkarest"
+#define VALID_BATCH_FORMATS "newline jsonarray kafkarest lokirest"
 typedef enum batchFormat_e {
 	FMT_NEWLINE,
 	FMT_JSONARRAY,
-	FMT_KAFKAREST
+	FMT_KAFKAREST,
+	FMT_LOKIREST
 } batchFormat_t;
 
 /* REST API uses this URL:
@@ -1008,6 +1009,9 @@ buildCurlHeaders(wrkrInstanceData_t *pWrkrData, sbool contentEncodeGzip)
 				case FMT_NEWLINE:
 					slist = curl_slist_append(slist, HTTP_HEADER_CONTENT_TEXT);
 					break;
+				case FMT_LOKIREST:
+					slist = curl_slist_append(slist, HTTP_HEADER_CONTENT_JSON);
+					break;
 				default:
 					slist = curl_slist_append(slist, HTTP_HEADER_CONTENT_TEXT);
 			}
@@ -1205,6 +1209,64 @@ finalize_it:
 	RETiRet;
 }
 
+static rsRetVal
+serializeBatchLokiRest(wrkrInstanceData_t *pWrkrData, char **batchBuf)
+{
+	fjson_object *batchArray = NULL;
+	fjson_object *recordObj = NULL;
+	fjson_object *valueObj = NULL;
+	fjson_object *msgObj = NULL;
+
+	size_t numMessages = pWrkrData->batch.nmemb;
+	size_t sizeTotal = pWrkrData->batch.sizeBytes + numMessages + 1; // messages + brackets + commas
+	DBGPRINTF("omhttp: serializeBatchLokiRest numMessages=%zd sizeTotal=%zd\n", numMessages, sizeTotal);
+
+	DEFiRet;
+
+	batchArray = fjson_object_new_array();
+	if (batchArray == NULL) {
+		LogError(0, RS_RET_ERR, "omhttp: serializeBatchLokiRest failed to create array");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	for (size_t i = 0; i < numMessages; i++) {
+		valueObj = fjson_object_new_object();
+		if (valueObj == NULL) {
+			fjson_object_put(batchArray); // cleanup
+			LogError(0, RS_RET_ERR, "omhttp: serializeBatchLokiRest failed to create value object");
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+		DBGPRINTF("omhttp: serializeBatchLokiRest parsing message [%s]\n",(char *) pWrkrData->batch.data[i]);
+		msgObj = fjson_tokener_parse((char *) pWrkrData->batch.data[i]);
+		if (msgObj == NULL) {
+			LogError(0, NO_ERRCODE,
+				"omhttp: serializeBatchLokiRest failed to parse %s as json ignoring it",
+				pWrkrData->batch.data[i]);
+			continue;
+		}
+		fjson_object_array_add(batchArray, msgObj);
+	}
+
+	recordObj = fjson_object_new_object();
+	if (recordObj == NULL) {
+		fjson_object_put(batchArray); // cleanup
+		LogError(0, RS_RET_ERR, "omhttp: serializeBatchLokiRest failed to create record object");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	fjson_object_object_add(recordObj, "streams", batchArray);
+
+	const char *batchString = fjson_object_to_json_string_ext(recordObj, FJSON_TO_STRING_PLAIN);
+	*batchBuf = strndup(batchString, strlen(batchString));
+
+finalize_it:
+	if (recordObj != NULL) {
+		fjson_object_put(recordObj);
+		recordObj = NULL;
+	}
+
+	RETiRet;
+}
 /* Build a JSON batch by placing each element in an array.
  */
 static rsRetVal
@@ -1310,6 +1372,14 @@ computeBatchSize(wrkrInstanceData_t *pWrkrData)
 			// newlines between each message
 			extraBytes = numMessages > 0 ? numMessages - 1 : 0;
 			break;
+		case FMT_LOKIREST:
+			// {"streams":[ '{}', '[]', '"streams":' = 14
+			//    {"stream": {key:value}..., "values":[[timestamp: msg1]]},
+			//    {"stream": {key:value}..., "values":[[timestamp: msg2]]}
+			// ]}
+			// message (11) * numMessages + header ( 16 )
+			extraBytes = (numMessages * 2) + 14;
+			break;
 		default:
 			// newlines between each message
 			extraBytes = numMessages > 0 ? numMessages - 1 : 0;
@@ -1357,6 +1427,9 @@ submitBatch(wrkrInstanceData_t *pWrkrData)
 			break;
 		case FMT_KAFKAREST:
 			iRet = serializeBatchKafkaRest(pWrkrData, &batchBuf);
+			break;
+		case FMT_LOKIREST:
+			iRet = serializeBatchLokiRest(pWrkrData, &batchBuf);
 			break;
 		case FMT_NEWLINE:
 			iRet = serializeBatchNewline(pWrkrData, &batchBuf);
@@ -1720,6 +1793,8 @@ CODESTARTnewActInst
 					pData->batchFormat = FMT_JSONARRAY;
 				} else if (!strcmp(batchFormatName, "kafkarest")) {
 					pData->batchFormat = FMT_KAFKAREST;
+				} else if (!strcmp(batchFormatName, "lokirest")) {
+					pData->batchFormat = FMT_LOKIREST;
 				}
 			} else {
 				LogError(0, NO_ERRCODE, "error: 'batch.format' %s unknown defaulting to 'newline'",

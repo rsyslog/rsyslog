@@ -806,6 +806,8 @@ TESTS +=  \
 	omhttp-batch-jsonarray.sh \
 	omhttp-batch-kafkarest-retry.sh \
 	omhttp-batch-kafkarest.sh \
+	omhttp-batch-lokirest-retry.sh \
+	omhttp-batch-lokirest.sh \
 	omhttp-batch-newline.sh \
 	omhttp-retry.sh
 if HAVE_VALGRIND
@@ -816,6 +818,7 @@ TESTS +=  \
 	omhttp-batch-jsonarray-retry-vg.sh \
 	omhttp-batch-jsonarray-vg.sh \
 	omhttp-batch-kafkarest-retry-vg.sh \
+	omhttp-batch-lokirest-retry-vg.sh \
 	omhttp-retry-vg.sh
 endif
 endif
@@ -2060,6 +2063,8 @@ EXTRA_DIST= \
 	omhttp-batch-jsonarray.sh \
 	omhttp-batch-kafkarest-retry.sh \
 	omhttp-batch-kafkarest.sh \
+	omhttp-batch-lokirest-retry.sh \
+	omhttp-batch-lokirest.sh \
 	omhttp-batch-newline.sh \
 	omhttp-retry.sh \
 	omhttp-auth-vg.sh \
@@ -2068,6 +2073,7 @@ EXTRA_DIST= \
 	omhttp-batch-jsonarray-retry-vg.sh \
 	omhttp-batch-jsonarray-vg.sh \
 	omhttp-batch-kafkarest-retry-vg.sh \
+	omhttp-batch-lokirest-retry-vg.sh \
 	omhttp-retry-vg.sh \
 	omhttp_server.py \
 	omprog-defaults.sh \
