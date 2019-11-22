@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
+- 2019-11-22: testbench: obtain python binary path via AM_PATH_PYTHON
+  see also https://github.com/rsyslog/rsyslog/issues/3853
 - 2019-11-22: omprog: detect violation of interface protocol
   The spec for the omprog interaction with the program it calls specifies
   that the program receives one message via one line. In other words:
