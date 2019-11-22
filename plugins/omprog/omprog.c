@@ -107,6 +107,7 @@ typedef struct _instanceData {
 	childProcessCtx_t *pSingleChildCtx;		/* child process context when bForceSingleInst=true */
 	pthread_mutex_t *pSingleChildMut;		/* mutex for interacting with single child process */
 	outputCaptureCtx_t outputCaptureCtx;	/* settings and state for the output capture thread */
+	time_t block_if_err;			/* time until which interface error is not to be shown */
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -392,14 +393,13 @@ terminateChild(instanceData *pData, childProcessCtx_t *pChildCtx)
  * own action queue.
  */
 static rsRetVal
-sendMessage(instanceData *pData, childProcessCtx_t *pChildCtx, uchar *szMsg)
+sendMessage(instanceData *pData, childProcessCtx_t *pChildCtx, const uchar *szMsg)
 {
-	size_t len;
 	ssize_t written;
 	size_t offset = 0;
 	DEFiRet;
 
-	len = strlen((char*)szMsg);
+	const size_t len = strlen((char*)szMsg);
 
 	do {
 		written = write(pChildCtx->fdPipeOut, ((char*)szMsg) + offset, len - offset);
@@ -805,6 +805,7 @@ CODESTARTcreateInstance
 	pData->aParams = NULL;
 	pData->iParams = 0;
 	pData->bConfirmMessages = 0;
+	pData->block_if_err = 0;
 	pData->lConfirmTimeout = DEFAULT_CONFIRM_TIMEOUT_MS;
 	pData->bReportFailures = 0;
 	pData->bUseTransactions = 0;
@@ -933,7 +934,18 @@ CODESTARTdoAction
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
-	CHKiRet(sendMessage(pWrkrData->pData, pWrkrData->pChildCtx, ppString[0]));
+	const uchar *const szMsg = ppString[0];
+	const size_t len = strlen((char*)szMsg);
+	CHKiRet(sendMessage(pWrkrData->pData, pWrkrData->pChildCtx, szMsg));
+	if(szMsg[len-1] != '\n') {
+		const time_t tt = time(NULL);
+		if(tt > pWrkrData->pData->block_if_err) {
+			LogMsg(0, NO_ERRCODE, LOG_WARNING, "omprog: messages must be terminated with \\n "
+				"at end of message, but this message is not: '%s'\n", ppString[0]);
+			pWrkrData->pData->block_if_err = tt + 30;
+		}
+		CHKiRet(sendMessage(pWrkrData->pData, pWrkrData->pChildCtx, (uchar*) "\n"));
+	}
 
 	if(pWrkrData->pData->bConfirmMessages) {
 		CHKiRet(readStatus(pWrkrData->pData, pWrkrData->pChildCtx));
