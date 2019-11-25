@@ -487,6 +487,13 @@ The following parameters can be set:
   default value is a very good compromise between performance and
   keeping reverse lookup information current.
 
+- **reverselookup.cache.ttl.enable** [boolean] available 8.1904.0+
+
+  This configures whether rsyslog expires DNS cache entries (setting "on") or
+  not (setting "off", the default). If configured to "off",
+  *reverselookup.cache.default.ttl* is not in effect. Note that this is the
+  **default**.
+
 - **operatingStateFile** [string, filename], default unset, available 8.39.0+
 
   The operatingStateFile, as the name says, provides information about rsyslog
