@@ -29,6 +29,7 @@
 #include <netinet/in.h>
 #include <sys/time.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #include <netdb.h>
 #include <ctype.h>
 #include <assert.h>
@@ -54,14 +55,18 @@ DEF_OMOD_STATIC_DATA
 static oid             objid_snmptrap[] = { 1, 3, 6, 1, 6, 3, 1, 1, 4, 1, 0 };
 static oid             objid_sysuptime[] = { 1, 3, 6, 1, 2, 1, 1, 3, 0 };
 
+/* 4 */
+#define SNMP_SOURCETEMPLATE "\"%fromhost-ip%\""
+
 
 typedef struct _instanceData {
-	uchar	*szTransport;	/* Transport - Can be udp, tcp, udp6, tcp6 and other types supported by NET-SNMP */
-	uchar	*szTarget;	/* IP/hostname of Snmp Target*/
-	uchar	*szCommunity;	/* Snmp Community */
-	uchar	*szEnterpriseOID;/* Snmp Enterprise OID - default is (1.3.6.1.4.1.3.1.1 = enterprises.cmu.1.1) */
-	uchar	*szSnmpTrapOID;	/* Snmp Trap OID - default is (1.3.6.1.4.1.19406.1.2.1 =
-ADISCON-MONITORWARE-MIB::syslogtrap) */
+	uchar	*szTransport;		/* Transport - Can be udp, tcp, udp6, tcp6 and other types
+					   supported by NET-SNMP */
+	uchar	*szTarget;		/* IP/hostname of Snmp Target*/
+	uchar	*szCommunity;		/* Snmp Community */
+	uchar	*szEnterpriseOID;	/* Snmp Enterprise OID-default is (1.3.6.1.4.1.3.1.1 = enterprises.cmu.1.1) */
+	uchar	*szSnmpTrapOID;		/* Snmp Trap OID - default is (1.3.6.1.4.1.19406.1.2.1 =
+					   ADISCON-MONITORWARE-MIB::syslogtrap) */
 	uchar	*szSyslogMessageOID;	/* Snmp OID used for the Syslog Message:
 	        * default is 1.3.6.1.4.1.19406.1.1.2.1 - ADISCON-MONITORWARE-MIB::syslogMsg
 		* You will need the ADISCON-MONITORWARE-MIB and ADISCON-MIB mibs installed on the receiver
@@ -70,6 +75,8 @@ ADISCON-MONITORWARE-MIB::syslogtrap) */
 		*	http://www.adiscon.org/download/ADISCON-MONITORWARE-MIB.txt
 		*	http://www.adiscon.org/download/ADISCON-MIB.txt
 		*/
+	uchar	*szSnmpV1Source;	/* If PDU source property needs to be overwritten, only valid for SNMPv1*/
+
 	int iPort;			/* Target Port */
 	int iSNMPVersion;		/* SNMP Version to use */
 	int iTrapType;			/* Snmp TrapType or GenericType */
@@ -93,6 +100,8 @@ typedef struct configSettings_s {
 	uchar* pszEnterpriseOID;
 	uchar* pszSnmpTrapOID;
 	uchar* pszSyslogMessageOID;
+	uchar* pszSnmpV1dynSource;	/* If PDU source property needs to be overwritten, only valid for SNMPv1*/
+
 	int iSpecificType;
 	int iTrapType;		/*Default is SNMP_TRAP_ENTERPRISESPECIFIC */
 	/*
@@ -119,6 +128,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "enterpriseoid", eCmdHdlrString, 0 },
 	{ "trapoid", eCmdHdlrString, 0 },
 	{ "messageoid", eCmdHdlrString, 0 },
+	{ "snmpv1dynsource", eCmdHdlrString, 0 },
 	{ "traptype", eCmdHdlrInt, 0 },
 	{ "specifictype", eCmdHdlrInt, 0 },
 	{ "template", eCmdHdlrGetWord, 0 }
@@ -139,6 +149,7 @@ CODESTARTinitConfVars
 	cs.pszEnterpriseOID = NULL;
 	cs.pszSnmpTrapOID = NULL;
 	cs.pszSyslogMessageOID = NULL;
+	cs.pszSnmpV1dynSource = NULL;
 	cs.iSpecificType = 0;
 	cs.iTrapType = SNMP_TRAP_ENTERPRISESPECIFIC;
 ENDinitConfVars
@@ -162,6 +173,7 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("EnterpriseOID: %s\n", pData->szEnterpriseOID);
 	dbgprintf("SnmpTrapOID: %s\n", pData->szSnmpTrapOID);
 	dbgprintf("SyslogMessageOID: %s\n", pData->szSyslogMessageOID);
+	dbgprintf("SnmpV1Source: %s\n", pData->szSnmpV1Source);
 	dbgprintf("TrapType: %d\n", pData->iTrapType);
 	dbgprintf("SpecificType: %d\n", pData->iSpecificType);
 ENDdbgPrintInstInfo
@@ -241,7 +253,7 @@ finalize_it:
 	RETiRet;
 }
 
-static rsRetVal omsnmp_sendsnmp(wrkrInstanceData_t *pWrkrData, uchar *psz)
+static rsRetVal omsnmp_sendsnmp(wrkrInstanceData_t *pWrkrData, uchar *psz, uchar *pszSource)
 {
 	DEFiRet;
 
@@ -253,6 +265,7 @@ static rsRetVal omsnmp_sendsnmp(wrkrInstanceData_t *pWrkrData, uchar *psz)
 	int             status;
 	char            *trap = NULL;
 	const char		*strErr = NULL;
+	struct sockaddr_in srcAddr;
 	instanceData *pData;
 
 	pData = pWrkrData->pData;
@@ -267,6 +280,7 @@ static rsRetVal omsnmp_sendsnmp(wrkrInstanceData_t *pWrkrData, uchar *psz)
 
 	/* If SNMP Version1 is configured !*/
 	if(pWrkrData->snmpsession->version == SNMP_VERSION_1) {
+		dbgprintf( "omsnmp_sendsnmp: Create SNMPv1 Trap - Source = '%s'\n", (char*)pszSource);
 		pdu = snmp_pdu_create(SNMP_MSG_TRAP);
 
 		/* Set enterprise */
@@ -289,12 +303,32 @@ static rsRetVal omsnmp_sendsnmp(wrkrInstanceData_t *pWrkrData, uchar *psz)
 
 		/* Set Updtime */
 		pdu->time = get_uptime();
+
+		/* Set PDU SOurce property if available */
+		if (pszSource != NULL) {
+			srcAddr.sin_addr.s_addr = inet_addr((const char *)pszSource);
+			if (srcAddr.sin_addr.s_addr != INADDR_NONE) {
+				pdu->agent_addr[0] = (srcAddr.sin_addr.s_addr) & 0xFF;
+				pdu->agent_addr[1] = (srcAddr.sin_addr.s_addr >> 8) & 0xFF;
+				pdu->agent_addr[2] = (srcAddr.sin_addr.s_addr >> 16) & 0xFF;
+				pdu->agent_addr[3] = (srcAddr.sin_addr.s_addr >> 24) & 0xFF;
+				dbgprintf( "omsnmp_sendsnmp: SNMPv1 Source Property set to %d.%d.%d.%d\n",
+					(srcAddr.sin_addr.s_addr) & 0xFF,
+					(srcAddr.sin_addr.s_addr >> 8) & 0xFF,
+					(srcAddr.sin_addr.s_addr >> 16) & 0xFF,
+					(srcAddr.sin_addr.s_addr >> 24) & 0xFF);
+			} else {
+				LogError(0, NO_ERRCODE, "omsnmp_sendsnmp: Failed to convert '%s' into a valid IPv4"
+					"address\n", pszSource);
+			}
+		}
 	}
 	/* If SNMP Version2c is configured !*/
 	else if (pWrkrData->snmpsession->version == SNMP_VERSION_2c)
 	{
 		long sysuptime;
 		char csysuptime[20];
+		dbgprintf( "omsnmp_sendsnmp: Create SNMPv2 Trap\n");
 
 		/* Create PDU */
 		pdu = snmp_pdu_create(SNMP_MSG_TRAP2);
@@ -377,7 +411,7 @@ CODESTARTdoAction
 	}
 	
 	/* This will generate and send the SNMP Trap */
-	iRet = omsnmp_sendsnmp(pWrkrData, ppString[0]);
+	iRet = omsnmp_sendsnmp(pWrkrData, ppString[0], ppString[1]);
 finalize_it:
 ENDdoAction
 
@@ -400,6 +434,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->szEnterpriseOID = NULL;
 	pData->szSnmpTrapOID = NULL;
 	pData->szSyslogMessageOID = NULL;
+	pData->szSnmpV1Source = NULL;
 }
 
 BEGINnewActInst
@@ -413,7 +448,7 @@ CODESTARTnewActInst
 	CHKiRet(createInstance(&pData));
 	setInstParamDefaults(pData);
 
-	CODE_STD_STRING_REQUESTnewActInst(1)
+	CODE_STD_STRING_REQUESTnewActInst(2)
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
 			continue;
@@ -435,6 +470,8 @@ CODESTARTnewActInst
 			pData->szSnmpTrapOID = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "messageoid")) {
 			pData->szSyslogMessageOID = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "snmpv1dynsource")) {
+			pData->szSnmpV1Source = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "traptype")) {
 			pData->iTrapType = pvals[i].val.d.n;
 			if(cs.iTrapType < 0 || cs.iTrapType >= 6) {
@@ -459,6 +496,10 @@ CODESTARTnewActInst
 
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->tplName == NULL) ?
 						"RSYSLOG_FileFormat" : (char*)pData->tplName),
+						OMSR_NO_RQD_TPL_OPTS));
+
+	CHKiRet(OMSRsetEntry(*ppOMSR, 1, (uchar*)strdup((pData->szSnmpV1Source == NULL) ?
+						" SNMP_SOURCETEMPLATE" : (char*)pData->szSnmpV1Source),
 						OMSR_NO_RQD_TPL_OPTS));
 
 CODE_STD_FINALIZERnewActInst
@@ -491,8 +532,10 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	pData->szCommunity = (uchar*) ((cs.pszCommunity == NULL) ? NULL : strdup((char*)cs.pszCommunity));
 	pData->szEnterpriseOID = (uchar*) ((cs.pszEnterpriseOID == NULL) ? NULL : strdup((char*)cs.pszEnterpriseOID));
 	pData->szSnmpTrapOID = (uchar*) ((cs.pszSnmpTrapOID == NULL) ? NULL : strdup((char*)cs.pszSnmpTrapOID));
-	pData->szSyslogMessageOID = (uchar*) ((cs.pszSyslogMessageOID == NULL)
-	? NULL : strdup((char*)cs.pszSyslogMessageOID));
+	pData->szSyslogMessageOID = (uchar*) ((cs.pszSyslogMessageOID == NULL) ? NULL :
+		strdup((char*)cs.pszSyslogMessageOID));
+	pData->szSnmpV1Source = (uchar*) ((cs.pszSnmpV1dynSource == NULL) ? NULL :
+		strdup((char*)cs.pszSnmpV1dynSource));
 	pData->iPort = cs.iPort;
 	pData->iSpecificType = cs.iSpecificType;
 	
@@ -517,6 +560,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	dbgprintf("EnterpriseOID: %s\n", pData->szEnterpriseOID);
 	dbgprintf("SnmpTrapOID: %s\n", pData->szSnmpTrapOID);
 	dbgprintf("SyslogMessageOID: %s\n", pData->szSyslogMessageOID);
+	dbgprintf("SnmpV1Source: %s\n", pData->szSnmpV1Source);
 	dbgprintf("TrapType: %d\n", pData->iTrapType);
 	dbgprintf("SpecificType: %d\n", pData->iSpecificType);
 
@@ -548,6 +592,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	cs.pszSnmpTrapOID = NULL;
 	free(cs.pszSyslogMessageOID);
 	cs.pszSyslogMessageOID = NULL;
+	free(cs.pszSnmpV1dynSource);
+	cs.pszSnmpV1dynSource = NULL;
 	cs.iPort = 0;
 	cs.iSNMPVersion = 1;
 	cs.iSpecificType = 0;
@@ -563,6 +609,7 @@ CODESTARTmodExit
 	free(cs.pszEnterpriseOID);
 	free(cs.pszSnmpTrapOID);
 	free(cs.pszSyslogMessageOID);
+	free(cs.pszSnmpV1dynSource);
 
 	/* release what we no longer need */
 ENDmodExit
@@ -579,6 +626,7 @@ ENDqueryEtryPt
 
 BEGINmodInit()
 CODESTARTmodInit
+	uchar *pTmp;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	initConfVars();
@@ -599,12 +647,18 @@ CODEmodInit_QueryRegCFSLineHdlr
 	STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionsnmpsyslogmessageoid", 0, eCmdHdlrGetWord, NULL,
 	&cs.pszSyslogMessageOID, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionsnmpv1dynsource", 0, eCmdHdlrGetWord, NULL,
+	&cs.pszSnmpV1dynSource, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionsnmpspecifictype", 0, eCmdHdlrInt, NULL, &cs.iSpecificType,
 	STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionsnmptraptype", 0, eCmdHdlrInt, NULL, &cs.iTrapType,
 	STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables,
 	NULL, STD_LOADABLE_MODULE_ID));
+
+	DBGPRINTF("omsnmp: Add SNMP_SOURCETEMPLATE to template system ONCE\n");
+	pTmp = (uchar*) SNMP_SOURCETEMPLATE;
+	tplAddLine(ourConf, " SNMP_SOURCETEMPLATE", &pTmp);
 ENDmodInit
 /*
  * vi:set ai:
