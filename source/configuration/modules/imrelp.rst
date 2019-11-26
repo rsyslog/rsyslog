@@ -116,6 +116,8 @@ Address
 
    "string", "none", "no", "none"
 
+.. versionadded:: 8.37.0
+
 Bind the RELP server to that address. If not specified, the server will be
 bound to the wildcard address.
 
