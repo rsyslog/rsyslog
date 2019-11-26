@@ -1495,7 +1495,7 @@ actionTryRemoveHardErrorsFromBatch(action_t *__restrict__ const pThis, wti_t *__
 			sizeof(actWrkrIParams_t) * pThis->iNumTpls);
 		ret = actionTryCommit(pThis, pWti, oneParamSet, 1);
 		if(ret == RS_RET_SUSPENDED) {
-			memcpy(new_iparams + *new_nMsgs, &oneParamSet,
+			memcpy(&actParam(new_iparams, pThis->iNumTpls, 0, 0), &oneParamSet,
 				sizeof(actWrkrIParams_t) * pThis->iNumTpls);
 			++(*new_nMsgs);
 		} else if(ret != RS_RET_OK) {
