@@ -471,7 +471,7 @@ The following parameters can be set:
 
   These parameters set global queue defaults for the respective queue settings.
 
-- **reverselookup.cache.default.ttl** [numeric, seconds] available 8.1904.0+
+- **reverselookup.cache.ttl.default** [numeric, seconds] available 8.1904.0+
 
   Rsyslog includes a cache for ip-address-to-hostname lookups. This is most
   useful for inputs without a connection. imudp is the prime example.
