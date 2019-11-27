@@ -247,6 +247,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 
 # module needs fixes: --enable-kmsg
 # --enable-imdocker-tests is not supported as it needs to run on docker HOST
+RUN	printf '\n' > /var/log/mysql/error.log
 VOLUME	/var/lib/mysql
 WORKDIR	/rsyslog
 USER	rsyslog
