@@ -3,7 +3,6 @@
 . ${srcdir:=.}/diag.sh init
 # start up the instances
 generate_conf
-export PORT_RCVR="$(get_free_port)"
 add_conf '
 global(	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
 	defaultNetstreamDriverCertFile="'$srcdir/tls-certs/cert.pem'"
@@ -20,12 +19,12 @@ module(	load="../plugins/imtcp/.libs/imtcp"
 	StreamDriver.PermitExpiredCerts="off"
 	gnutlsPriorityString="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1,-TLSv1.2\nOptions=Bugs"
 	)
-input(	type="imtcp"
-	port="'$PORT_RCVR'" )
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 '
 startup
+export PORT_RCVR=$TCPFLOOD_PORT # save this, will be rewritten with next config
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.sender.debuglog"
 generate_conf 2
 add_conf '

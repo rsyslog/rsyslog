@@ -22,13 +22,15 @@ module(	load="../plugins/imtcp/.libs/imtcp"
 	StreamDriver.Mode="1"
 	StreamDriver.AuthMode="anon" )
 # then SENDER sends to this port (not tcpflood!)
-input(	type="imtcp" port="'$PORT_RCVR'" )
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 $template outfmt,"%msg:F,58:2%\n"
 $template dynfile,"'$RSYSLOG_OUT_LOG'" # trick to use relative path names!
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
 startup
+export PORT_RCVR=$TCPFLOOD_PORT # save this, will be rewritten with next config
+
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
 generate_conf 2
