@@ -903,6 +903,17 @@ AM_CONDITIONAL(ENABLE_SNMP, test x$enable_snmp = xyes)
 AC_SUBST(SNMP_CFLAGS)
 AC_SUBST(SNMP_LIBS)
 
+# SNMP Test Support
+AC_ARG_ENABLE(snmp-tests,
+        [AS_HELP_STRING([--enable-snmp-tests],[Enable omsnmp tests @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_snmp_tests="yes" ;;
+          no) enable_snmp_tests="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-snmp-tests) ;;
+         esac],
+        [enable_snmp_tests=no]
+)
+AM_CONDITIONAL(ENABLE_SNMP_TESTS, test x$enable_snmp_tests = xyes)
 
 # uuid support
 AC_ARG_ENABLE(uuid,
@@ -2652,6 +2663,7 @@ echo "    PostgreSQL Tests enabled:                 $enable_pgsql_tests"
 echo "    Kafka Tests enabled:                      $enable_kafka_tests"
 echo "    Imdocker Tests enabled:                   $enable_imdocker_tests"
 echo "    systemd journal tests enabled:            $enable_journal_tests"
+echo "    SNMP Tests enabled:                       $enable_snmp_tests"
 echo "    Debug mode enabled:                       $enable_debug"
 echo "    (total) debugless mode enabled:           $enable_debugless"
 echo "    Diagnostic tools enabled:                 $enable_diagtools"

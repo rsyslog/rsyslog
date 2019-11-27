@@ -2254,6 +2254,77 @@ first_column_sum_check() {
 	fi
 }
 
+#
+# Helper functions to start/stop python snmp trap receiver
+#
+snmp_start_trapreceiver() {
+    # Args: 1=port 2=outputfilename
+    # Args 2 and up are passed along as is to snmptrapreceiver.py
+    snmptrapreceiver=$srcdir/snmptrapreceiver.py
+    if [ ! -f ${snmptrapreceiver} ]; then
+        echo "Cannot find ${snmptrapreceiver} for omsnmp test"
+        error_exit 1
+    fi
+
+    if [ "x$1" == "x" ]; then
+        snmp_server_port="10162"
+    else
+        snmp_server_port="$1"
+    fi
+
+    if [ "x$2" == "x" ]; then
+        output_file="${RSYSLOG_DYNNAME}.snmp.out"
+    else
+        output_file="$2"
+    fi
+
+    # Create work directory for parallel tests
+    snmp_work_dir=${RSYSLOG_DYNNAME}/snmptrapreceiver
+
+    snmp_server_pidfile="${snmp_work_dir}/snmp_server.pid"
+    snmp_server_logfile="${snmp_work_dir}/snmp_server.log"
+    mkdir -p ${snmp_work_dir}
+
+    server_args="${snmp_server_port} 127.0.0.1 ${output_file}"
+
+    $PYTHON ${snmptrapreceiver} ${server_args} ${snmp_server_logfile} >> ${snmp_server_logfile} 2>&1 &
+    if [ ! $? -eq 0 ]; then
+        echo "Failed to start snmptrapreceiver."
+        rm -rf ${snmp_work_dir}
+        error_exit 1
+    fi
+
+    snmp_server_pid=$!
+    echo ${snmp_server_pid} > ${snmp_server_pidfile}
+
+    while test ! -s "${snmp_server_logfile}"; do
+	$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
+	if [ $(date +%s) -gt $(( TB_STARTTEST + TB_TEST_MAX_RUNTIME )) ]; then
+	   printf '%s ABORT! Timeout waiting on startup (pid file %s)\n' "$(tb_timestamp)" "$1"
+	   ls -l "$1"
+	   ps -fp $(cat "$1")
+	   snmp_stop_trapreceiver
+	   error_exit 1
+#	else 
+#	   echo "waiting...${snmp_server_logfile}..."
+	fi
+    done
+
+    echo "Started snmptrapreceiver with args ${server_args} with pid ${snmp_server_pid}"
+}
+
+snmp_stop_trapreceiver() {
+    # Args: None
+    snmp_work_dir=${RSYSLOG_DYNNAME}/snmptrapreceiver
+    if [ ! -d ${snmp_work_dir} ]; then
+        echo "snmptrapreceiver server ${snmp_work_dir} does not exist, no action needed"
+    else
+        echo "Stopping snmptrapreceiver server"
+        kill -9 $(cat ${snmp_work_dir}/snmp_server.pid) > /dev/null 2>&1
+        # Done at testexit already!: rm -rf ${snmp_work_dir}
+    fi
+}
+
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
 		echo pwd: $(pwd)
