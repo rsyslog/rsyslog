@@ -1495,7 +1495,7 @@ actionTryRemoveHardErrorsFromBatch(action_t *__restrict__ const pThis, wti_t *__
 			sizeof(actWrkrIParams_t) * pThis->iNumTpls);
 		ret = actionTryCommit(pThis, pWti, oneParamSet, 1);
 		if(ret == RS_RET_SUSPENDED) {
-			memcpy(new_iparams + *new_nMsgs, &oneParamSet,
+			memcpy(new_iparams + (*new_nMsgs * pThis->iNumTpls), &oneParamSet,
 				sizeof(actWrkrIParams_t) * pThis->iNumTpls);
 			++(*new_nMsgs);
 		} else if(ret != RS_RET_OK) {
@@ -1515,7 +1515,7 @@ actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 {
 	actWrkrInfo_t *const wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
 	/* Variables that permit us to override the batch of messages */
-	unsigned nMsgs;
+	unsigned nMsgs = 0;
 	actWrkrIParams_t *iparams = NULL;
 	int needfree_iparams = 0; // work-around for clang static analyzer false positive
 	DEFiRet;
