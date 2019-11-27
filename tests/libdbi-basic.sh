@@ -1,8 +1,8 @@
 #!/bin/bash
-# This file is part of the rsyslog project, released under GPLv3
-echo ===============================================================================
-echo \[libdbi-basic.sh\]: basic test for libdbi-basic functionality via mysql
+# basic test for libdbi-basic functionality via mysql
+# This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+export NUMMESSAGES=5000
 generate_conf
 add_conf '
 $ModLoad ../plugins/omlibdbi/.libs/omlibdbi
@@ -10,15 +10,14 @@ $ActionLibdbiDriver mysql
 $ActionLibdbiHost 127.0.0.1
 $ActionLibdbiUserName rsyslog
 $ActionLibdbiPassword testbench
-$ActionLibdbiDBName Syslog
+$ActionLibdbiDBName '$RSYSLOG_DYNNAME'
 :msg, contains, "msgnum:" :omlibdbi:
 '
-mysql --user=rsyslog --password=testbench < ${srcdir}/testsuites/mysql-truncate.sql
+mysql_prep_for_test
 startup
-injectmsg  0 5000
+injectmsg
 shutdown_when_empty
 wait_shutdown 
-# note "-s" is requried to suppress the select "field header"
-mysql -s --user=rsyslog --password=testbench < ${srcdir}/testsuites/mysql-select-msg.sql > $RSYSLOG_OUT_LOG
-seq_check  0 4999
+mysql_get_data
+seq_check
 exit_test

@@ -655,39 +655,47 @@ TESTS +=  \
 	action-tx-errfile.sh
 
 mysql-basic.log: mysqld-start.log
-mysql-basic-cnf6.log: mysql-basic.log
-mysql-asyn.log: mysql-basic-cnf6.log
-mysql-actq-mt.log: mysql-asyn.log
-mysql-actq-mt-withpause.log: mysql-actq-mt.log
-action-tx-single-processing.log: mysql-actq-mt-withpause.log
-action-tx-errfile.log: action-tx-single-processing.log
+mysql-basic-cnf6.log: mysqld-start.log
+mysql-asyn.log: mysqld-start.log
+mysql-actq-mt.log: mysqld-start.log
+mysql-actq-mt-withpause.log: mysqld-start.log
+action-tx-single-processing.log: mysqld-start.log
+action-tx-errfile.log: mysqld-start.log
 
-mysqld-stop.log: action-tx-errfile.log
+mysqld-stop.log: mysql-basic.log \
+	mysql-basic-cnf6.log \
+	mysql-asyn.log \
+	mysql-actq-mt.log \
+	mysql-actq-mt-withpause.log \
+	action-tx-single-processing.log \
+	action-tx-errfile.log
 
 if HAVE_VALGRIND
 TESTS +=  \
 	mysql-basic-vg.sh \
 	mysql-asyn-vg.sh \
 	mysql-actq-mt-withpause-vg.sh
-mysql-basic-vg.log: action-tx-errfile.log
-mysql-asyn-vg.log: mysql-basic-vg.log
-mysql-actq-mt-withpause-vg.log: mysql-asyn-vg.log
+mysql-basic-vg.log: mysqld-start.log
+mysql-asyn-vg.log: mysqld-start.log
+mysql-actq-mt-withpause-vg.log: mysqld-start.log
 
-libdbi-basic.log: mysql-actq-mt-withpause-vg.log # for next block!
-mysqld-stop.log: mysql-actq-mt-withpause-vg.log
+mysqld-stop.log: mysql-basic-vg.log \
+	mysql-asyn-vg.log \
+	mysql-actq-mt-withpause-vg.log
 endif
 
 if ENABLE_OMLIBDBI # we piggy-back on MYSQL_TESTS as we need the same environment
 TESTS +=  \
 	libdbi-basic.sh \
 	libdbi-asyn.sh
-libdbi-basic.log: action-tx-errfile.log
-libdbi-asyn.log: libdbi-basic.log
-mysqld-stop.log: libdbi-asyn.log
+libdbi-basic.log: mysqld-start.log
+libdbi-asyn.log: mysqld-start.log
+mysqld-stop.log: libdbi-basic.log \
+	libdbi-asyn.log
 if HAVE_VALGRIND
 TESTS +=  \
 	libdbi-basic-vg.sh
-libdbi-basic-vg.log: libdbi-asyn.log
+libdbi-basic-vg.log: mysqld-start.log
 mysqld-stop.log: libdbi-basic-vg.log
 endif
 endif
@@ -1213,9 +1221,9 @@ TESTS += \
 	sndrcv_omudpspoof_nonstdpt.sh
 endif
 
-#disabled as array-passing mode is no longer supported:	omod-if-array.sh 
-#	omod-if-array.sh 
-#	omod-if-array-udp.sh 
+#disabled as array-passing mode is no longer supported:	omod-if-array.sh
+#	omod-if-array.sh
+#	omod-if-array-udp.sh
 if ENABLE_IMPTCP
 TESTS += \
 	tabescape_dflt.sh \
