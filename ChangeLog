@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
+- 2019-11-27: testbench: improve mysql testing support
+  tests can now run in parallel and are hardened against several glitches
 - 2019-11-22: omhttp: add basic support for Loki Rest
   Loki is a new message indexer and querier from Grafana Labs. See
   https://github.com/grafana/loki for details on Loki.
