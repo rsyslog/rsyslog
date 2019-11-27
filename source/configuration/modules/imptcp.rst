@@ -340,7 +340,7 @@ far. Full details can be found at the `Cisco tcp syslog
 anomaly <http://www.rsyslog.com/Article321.phtml>`_ page.
 
 
-SupportOctetCountetFraming
+SupportOctetCountedFraming
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. csv-table::
