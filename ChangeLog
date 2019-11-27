@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
+- 2019-11-27: core bugfix: action on retry mangles messages
+  When a failed action goes into retry, template content is rendered
+  invalid if the action uses more than 1 template.
+  closes https://github.com/rsyslog/rsyslog/issues/3898
+  Thanks to Mikko Kortelainen for the patch.
 - 2019-11-27: testbench: improve mysql testing support
   tests can now run in parallel and are hardened against several glitches
 - 2019-11-22: omhttp: add basic support for Loki Rest
