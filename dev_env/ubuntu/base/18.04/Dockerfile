@@ -53,6 +53,7 @@ RUN 	apt-get update && \
 	postgresql-client libpq-dev \
 	python-docutils  \
 	python-pip \
+	python-pysnmp4 \
 	software-properties-common \
 	sudo \
 	uuid-dev \
@@ -239,6 +240,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-pmsnare \
 	--enable-relp \
 	--enable-snmp \
+	--enable-snmp-tests \
 	--enable-usertools \
 	--enable-valgrind \
 	\

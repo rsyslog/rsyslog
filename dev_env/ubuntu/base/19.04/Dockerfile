@@ -52,6 +52,8 @@ RUN 	apt-get update && \
 	postgresql-client libpq-dev \
 	python-docutils  \
 	python-pip \
+	python-pysnmp4 \
+	snmp-mibs-downloader \
 	software-properties-common \
 	sudo \
 	uuid-dev \
@@ -90,8 +92,8 @@ RUN	apt-get update -y && \
 #	clickhouse-server
 
 # clang devel version
-RUN	echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic main" > /etc/apt/sources.list.d/llvm8.list && \
-	echo "deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic main" >> /etc/apt/sources.list.d/llvm8.list && \
+RUN	echo "deb http://apt.llvm.org/disco/ llvm-toolchain-disco-9 main" > /etc/apt/sources.list.d/llvm8.list && \
+	echo "deb-src http://apt.llvm.org/disco/ llvm-toolchain-disco-9 main" >> /etc/apt/sources.list.d/llvm8.list && \
 	wget -nv -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
 	apt-get update -y && \
 	apt-get install -y \
@@ -236,12 +238,14 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-pmsnare \
 	--enable-relp \
 	--enable-snmp \
+	--enable-snmp-tests \
 	--enable-usertools \
 	--enable-valgrind \
 	\
 	--enable-testbench
 
 # module needs fixes: --enable-kmsg
+RUN	printf '\n' > /var/log/mysql/error.log
 VOLUME	/var/lib/mysql
 WORKDIR	/rsyslog
 USER	rsyslog
