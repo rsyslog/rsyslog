@@ -203,19 +203,10 @@ void osslLastSSLErrorMsg(int ret, SSL *ssl, int severity, const char* pszCallSou
 		iSSLErr = SSL_get_error(ssl, ret);
 
 		/* Output error message */
-		dbgprintf("osslLastSSLErrorMsg: Error '%s(%d)' in '%s' with ret=%d\n",
-			ERR_error_string(iSSLErr, NULL), iSSLErr, pszCallSource, ret);
-		if(iSSLErr == SSL_ERROR_SSL) {
-			LogMsg(0, RS_RET_NO_ERRCODE, severity, "SSL_ERROR_SSL in '%s'", pszCallSource);
-		} else if(iSSLErr == SSL_ERROR_SYSCALL){
-			/* SSL doc says: For socket I/O on Unix systems, consult errno for details, so it
-			* is save to use errno in this case */
-			LogMsg(errno, RS_RET_NO_ERRCODE, severity, "SSL_ERROR_SYSCALL in '%s'", pszCallSource);
-
-		} else {
-			LogMsg(0, RS_RET_NO_ERRCODE, severity, "SSL_ERROR_UNKNOWN in '%s', SSL_get_error: '%s(%d)'",
-				pszCallSource, ERR_error_string(iSSLErr, NULL), iSSLErr);
-		}
+		LogMsg(0, RS_RET_NO_ERRCODE, severity, "%s Error in '%s': '%s(%d)' with ret=%d\n",
+			(iSSLErr == SSL_ERROR_SSL ? "SSL_ERROR_SSL" :
+			(iSSLErr == SSL_ERROR_SYSCALL ? "SSL_ERROR_SYSCALL" : "SSL_ERROR_UNKNOWN")),
+			pszCallSource, ERR_error_string(iSSLErr, NULL), iSSLErr, ret);
 	}
 
 	/* Loop through ERR_get_error */
