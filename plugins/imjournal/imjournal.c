@@ -619,6 +619,10 @@ handleRotation(void)
 	else if (cs.stateFile) {
 		iRet = loadJournalState();
 	}
+	else if (cs.bIgnorePrevious) {
+		/* Seek to the very end of the journal and ignore all older messages. */
+		skipOldMessages();
+	}
 	journalContext.reloaded = 1;
 
 finalize_it:
