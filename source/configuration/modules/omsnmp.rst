@@ -181,6 +181,37 @@ This is the specific trap number. This configuration parameter is
 used for **SNMPv1** only. It has no effect if **SNMPv2** is used.
 
 
+Snmpv1DynSource
+^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "", "no", "none"
+
+.. versionadded:: 8.2001
+
+If set, the source field of the SNMP trap can be overwritten with the a 
+template. The internal default is "%fromhost-ip%". The result should be a 
+valid IPv4 Address. Otherwise setting the source will fail.
+
+Below is a sample template called "dynsource" which you canm use to set the 
+source to a custom property:
+
+.. code-block:: none
+
+   set $!custom_host = $fromhost;
+   template(name="dynsource" type="list") {
+   	property(name="$!custom_host")
+   }
+
+
+This configuration parameter is used for **SNMPv1** only. 
+It has no effect if **SNMPv2** is used.
+
+
 TrapType
 ^^^^^^^^
 
