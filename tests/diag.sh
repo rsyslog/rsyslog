@@ -1260,10 +1260,10 @@ error_stats() {
 		printf 'not reporting failure as RSYSLOG_STATSURL is not set\n'
 	else
 		echo reporting failure to $RSYSLOG_STATSURL
-		testname=$($srcdir/urlencode.py "$RSYSLOG_TESTNAME")
-		testenv=$($srcdir/urlencode.py "${VCS_SLUG:-$PWD}")
-		testmachine=$($srcdir/urlencode.py "$HOSTNAME")
-		logurl=$($srcdir/urlencode.py "${CI_BUILD_URL:-}")
+		testname=$($PYTHON $srcdir/urlencode.py "$RSYSLOG_TESTNAME")
+		testenv=$($PYTHON $srcdir/urlencode.py "${VCS_SLUG:-$PWD}")
+		testmachine=$($PYTHON $srcdir/urlencode.py "$HOSTNAME")
+		logurl=$($PYTHON $srcdir/urlencode.py "${CI_BUILD_URL:-}")
 		wget -nv -O/dev/null $RSYSLOG_STATSURL\?Testname=$testname\&Testenv=$testenv\&Testmachine=$testmachine\&exitcode=${1:-1}\&logurl=$logurl\&rndstr=jnxv8i34u78fg23
 	fi
 }
