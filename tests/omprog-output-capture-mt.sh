@@ -25,7 +25,7 @@ else
     LINE_LENGTH=511   # 512 minus 1 byte (for the newline char)
 fi
 
-export command_line="$srcdir/testsuites/omprog-output-capture-mt-bin.py $LINE_LENGTH"
+export command_line="$PYTHON $srcdir/testsuites/omprog-output-capture-mt-bin.py $LINE_LENGTH"
 empty_check() {
 	if [ $(wc -l < "$RSYSLOG_OUT_LOG") -eq $((NUMMESSAGES * 2)) ]; then
 		return 0

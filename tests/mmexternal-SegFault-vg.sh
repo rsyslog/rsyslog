@@ -13,7 +13,7 @@ template(name="outfmt" type="string" string="-%$!%-\n")
 
 if $msg contains "msgnum:" then {
 	action(type="mmexternal" interface.input="fulljson"
-		binary="'${srcdir}'/testsuites/mmexternal-SegFault-mm-python.py")
+		binary="'$PYTHON' '${srcdir}'/testsuites/mmexternal-SegFault-mm-python.py")
 	action(type="omfile" template="outfmt" file="'$RSYSLOG_OUT_LOG'")
 }
 '
