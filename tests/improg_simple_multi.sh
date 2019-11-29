@@ -6,7 +6,7 @@ add_conf '
 module(load="../contrib/improg/.libs/improg")
 template(name="outfmt" type="string" string="#%msg%#\n")
 input(type="improg" tag="tag" ruleset="ruleset"
-	  binary="'$srcdir'/improg-multiline-test.py"
+	  binary="'$PYTHON' '$srcdir'/improg-multiline-test.py"
 	  confirmmessages="off" closetimeout="2000"
 	 )
 ruleset(name="ruleset") {
