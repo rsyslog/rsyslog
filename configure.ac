@@ -814,24 +814,26 @@ AC_ARG_ENABLE(pgsql,
         [enable_pgsql=no]
 )
 if test "x$enable_pgsql" = "xyes"; then
-  AC_CHECK_PROG(
-    [PG_CONFIG],
-    [pg_config],
-    [pg_config],
-    [no],,,
-  )
-  if test "x${PG_CONFIG}" = "xno"; then
-    AC_MSG_FAILURE([pg_config not found])
-  fi
-  AC_CHECK_LIB(
-    [pq],
-    [PQconnectdb],
-    [PGSQL_CFLAGS="-I`$PG_CONFIG --includedir`"
-     PGSQL_LIBS="-L`$PG_CONFIG --libdir` -lpq"
-    ],
-    [AC_MSG_FAILURE([PgSQL library is missing])],
-    [-L`$PG_CONFIG --libdir`]
-  )
+	PKG_CHECK_MODULES([PGSQL], [libpq],, [
+	  AC_CHECK_PROG(
+	    [PG_CONFIG],
+	    [pg_config],
+	    [pg_config],
+	    [no],,,
+	  )
+	  if test "x${PG_CONFIG}" = "xno"; then
+	    AC_MSG_FAILURE([pg_config not found])
+	  fi
+	  AC_CHECK_LIB(
+	    [pq],
+	    [PQconnectdb],
+	    [PGSQL_CFLAGS="-I`$PG_CONFIG --includedir`"
+	     PGSQL_LIBS="-L`$PG_CONFIG --libdir` -lpq"
+	    ],
+	    [AC_MSG_FAILURE([PgSQL library is missing])],
+	    [-L`$PG_CONFIG --libdir`]
+	  )
+	])
 fi
 AM_CONDITIONAL(ENABLE_PGSQL, test x$enable_pgsql = xyes)
 AC_SUBST(PGSQL_CFLAGS)
