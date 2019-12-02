@@ -160,8 +160,8 @@ struct instanceConf_s {
 	sbool bUnlink;
 	sbool discardTruncatedMsg;
 	sbool flowControl;
-	int ratelimitInterval;
-	int ratelimitBurst;
+	unsigned int ratelimitInterval;
+	unsigned int ratelimitBurst;
 	uchar *startRegex;
 	regex_t start_preg;	/* compiled version of startRegex */
 	struct instanceConf_s *next;
@@ -2214,9 +2214,9 @@ CODESTARTnewInpInst
 		} else if(!strcmp(inppblk.descr[i].name, "defaulttz")) {
 			inst->dfltTZ = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
-			inst->ratelimitBurst = (int) pvals[i].val.d.n;
+			inst->ratelimitBurst = (unsigned int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
-			inst->ratelimitInterval = (int) pvals[i].val.d.n;
+			inst->ratelimitInterval = (unsigned int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "multiline")) {
 			inst->multiLine = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "listenportfilename")) {

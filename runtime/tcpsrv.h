@@ -91,8 +91,8 @@ struct tcpsrv_s {
 	int bDisableLFDelim;	/**< if 1, standard LF frame delimiter is disabled (*very dangerous*) */
 	int discardTruncatedMsg;/**< discard msg part that has been truncated*/
 	sbool bPreserveCase;	/**< preserve case in fromhost */
-	int ratelimitInterval;
-	int ratelimitBurst;
+	unsigned int ratelimitInterval;
+	unsigned int ratelimitBurst;
 	tcps_sess_t **pSessions;/**< array of all of our sessions */
 	void *pUsr;		/**< a user-settable pointer (provides extensibility for "derived classes")*/
 	/* callbacks */
@@ -170,7 +170,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	/* added v11 -- rgerhards, 2011-05-09 */
 	rsRetVal (*SetKeepAlive)(tcpsrv_t*, int);
 	/* added v13 -- rgerhards, 2012-10-15 */
-	rsRetVal (*SetLinuxLikeRatelimiters)(tcpsrv_t *pThis, int interval, int burst);
+	rsRetVal (*SetLinuxLikeRatelimiters)(tcpsrv_t *pThis, unsigned int interval, unsigned int burst);
 	/* added v14 -- rgerhards, 2013-07-28 */
 	rsRetVal (*SetDfltTZ)(tcpsrv_t *pThis, uchar *dfltTZ);
 	/* added v15 -- rgerhards, 2013-09-17 */

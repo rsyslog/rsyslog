@@ -83,8 +83,8 @@ typedef struct configSettings_s {
 	int iFacilIntMsg; /* the facility to use for internal messages (set by driver) */
 	uchar *pszPath;
 	int console_log_level; /* still used for BSD */
-	int ratelimitInterval;
-	int ratelimitBurst;
+	unsigned int ratelimitInterval;
+	unsigned int ratelimitBurst;
 } configSettings_t;
 static configSettings_t cs;
 
@@ -347,9 +347,9 @@ CODESTARTsetModCnf
 		} else if(!strcmp(modpblk.descr[i].name, "internalmsgfacility")) {
 			loadModConf->iFacilIntMsg = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "ratelimitburst")) {
-			loadModConf->ratelimitBurst = (int) pvals[i].val.d.n;
+			loadModConf->ratelimitBurst = (unsigned int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "ratelimitinterval")) {
-			loadModConf->ratelimitInterval = (int) pvals[i].val.d.n;
+			loadModConf->ratelimitInterval = (unsigned int) pvals[i].val.d.n;
 		} else {
 			LogMsg(0, RS_RET_INTERNAL_ERROR, LOG_WARNING,
 				"imklog: RSYSLOG BUG, non-handled param '%s' in "

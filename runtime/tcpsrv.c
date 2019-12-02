@@ -1320,7 +1320,7 @@ finalize_it:
 
 /* Set the linux-like ratelimiter settings */
 static rsRetVal
-SetLinuxLikeRatelimiters(tcpsrv_t *pThis, int ratelimitInterval, int ratelimitBurst)
+SetLinuxLikeRatelimiters(tcpsrv_t *pThis, unsigned int ratelimitInterval, unsigned int ratelimitBurst)
 {
 	DEFiRet;
 	pThis->ratelimitInterval = ratelimitInterval;
