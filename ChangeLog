@@ -1,5 +1,24 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
+- 2019-12-02: imfile bugfix: state file renaming sometimes did not work properly
+  Now checking if file-id changes and reanming - cleaning state file
+  accordingly and always checking and cleaning old inode-only style
+  state files.
+  Thanks to Jiri Vymazal for the patch.
+- 2019-12-02: ratelimit: increase rate limit interval parameter max value
+  The burst parameter in the ratelimit was increased to an unsigned int
+  but the interval remained an unsigned short. While it may be unusual,
+  there is possibly a chance to need to represent an interval longer than
+  about 3/4 of a day.
+  While here, go through and normalize all the various incarnations of
+  rate limiting to be explicitly unsigned int for the burst and interval.
+  Thanks to github user frikilax for the patch.
+- 2019-12-02: ommongodb: Add other supported formats for 'time' and 'date' fields
+  Thanks to github user frikilax for the patch.
+- 2019-12-02: imjournal bugfix: too many messages in error case
+  Under certain error conditions, `ignorePreviousMessages="on"` could be ignored
+  an existing messages be processed.
+  Thanks to github user 3chas3 for the patch.
 - 2019-11-27: core bugfix: action on retry mangles messages
   When a failed action goes into retry, template content is rendered
   invalid if the action uses more than 1 template.
