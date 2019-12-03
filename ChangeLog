@@ -1,5 +1,19 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
+- 2019-12-03: omsnmp bugfix: "traptype" parameter invalidly rejected value 6
+  "Traptype" needs to support values 0 to 6.
+  However, if value 6(ENTERPRISESPECIFIC) was set, an invalid error message
+  was emitted. Otherwise processing was correct.
+  This could lead to problems with automatic config deployment,
+  as valid configurations were invalidly reported as incorrect.
+  That in turn could make a deployment fail.
+  closes https://github.com/rsyslog/rsyslog/issues/3973
+- 2019-12-03: omsnmp: add new parameter "snmpv1dynsource"
+  If set, the source field from SNMPv1 trap can be overwritten
+  with a template, default is "%fromhost-ip%". The content should be a
+  valid IPv4 Address that can be passed to inet_addr(). If the content
+  is not a valid IPv4 Address, the source will not be set.
+  closes: https://github.com/rsyslog/rsyslog/issues/3991
 - 2019-12-02: imfile bugfix: state file renaming sometimes did not work properly
   Now checking if file-id changes and reanming - cleaning state file
   accordingly and always checking and cleaning old inode-only style
