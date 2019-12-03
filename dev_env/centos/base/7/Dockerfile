@@ -48,6 +48,7 @@ RUN	yum -y update && \
 	python-devel \
 	python-docutils \
 	python-sphinx \
+	python-pysnmp \
 	qpid-proton-c-devel \
 	redhat-rpm-config \
 	snappy-devel \
@@ -218,6 +219,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-pmsnare \
 	--enable-relp \
 	--enable-snmp \
+	--enable-snmp-tests \
 	--enable-usertools \
 	--enable-valgrind \
 	\
