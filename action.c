@@ -1517,7 +1517,7 @@ actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 	/* Variables that permit us to override the batch of messages */
 	unsigned nMsgs = 0;
 	actWrkrIParams_t *iparams = NULL;
-	int needfree_iparams = 0; // work-around for clang static analyzer false positive
+	int needfree_iparams ;//= 0; // work-around for clang static analyzer false positive
 	DEFiRet;
 
 	DBGPRINTF("actionCommit[%s]: enter, %d msgs\n", pThis->pszName, wrkrInfo->p.tx.currIParam);
