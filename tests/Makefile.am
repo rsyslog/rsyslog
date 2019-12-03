@@ -500,6 +500,12 @@ endif # ENABLE_DEFAULT_TESTS
 if ENABLE_SNMP
 TESTS +=  \
 	omsnmp_errmsg_no_params.sh
+if ENABLE_SNMP_TESTS
+TESTS +=  \
+	sndrcv_omsnmpv1_udp.sh \
+	sndrcv_omsnmpv1_udp_dynsource.sh \
+	sndrcv_omsnmpv1_udp_invalidoid.sh
+endif # if ENABLE_SNMP_TESTS
 endif # if ENABLE_SNMP
 
 if ENABLE_MMUTF8FIX
@@ -1658,6 +1664,10 @@ EXTRA_DIST= \
 	rs-int2hex.sh \
 	rs-substring.sh \
 	omsnmp_errmsg_no_params.sh \
+	sndrcv_omsnmpv1_udp.sh \
+	sndrcv_omsnmpv1_udp_dynsource.sh \
+	sndrcv_omsnmpv1_udp_invalidoid.sh \
+	snmptrapreceiver.py \
 	ommail_errmsg_no_params.sh \
 	mmdarwin_errmsg_no_params.sh \
 	mmdarwin_errmsg_no_sock.sh \
