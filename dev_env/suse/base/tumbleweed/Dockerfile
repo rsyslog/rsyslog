@@ -46,6 +46,7 @@ RUN	zypper --non-interactive install \
 	python-devel \
 	python-docutils \
 	python-sphinx \
+	python3-pysnmp \
 	qpid-proton \
 	qpid-proton-devel \
 	systemd-devel \
@@ -269,6 +270,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-pmsnare \
 	--enable-relp \
 	--enable-snmp \
+	--enable-snmp-tests \
 	--enable-usertools \
 	--enable-valgrind \
 	--enable-gssapi-krb5 \
@@ -284,5 +286,8 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 # module needs fixes:
 #	--enable-mmgrok
 #	   -> we cannot build, libtokyocabinet dependency is not available as well
+ENV	PKG_CONFIG_PATH=/usr/lib/pkgconfig:/usr/local/lib64/pkgconfig/
 WORKDIR /rsyslog
+ARG	BUILD_TIME
+ENV	CONTAINER_BUILD_TIME=$BUILD_TIME
 USER rsyslog
