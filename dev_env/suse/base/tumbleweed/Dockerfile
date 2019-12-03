@@ -46,9 +46,10 @@ RUN	zypper --non-interactive install \
 	python-devel \
 	python-docutils \
 	python-sphinx \
-	python3-pysnmp \
+	python2-pysnmp \
 	qpid-proton \
 	qpid-proton-devel \
+	sudo \
 	systemd-devel \
 	tcl-devel \
 	util-linux-systemd \
