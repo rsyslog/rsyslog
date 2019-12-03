@@ -200,7 +200,7 @@ omsnmp_initSession(wrkrInstanceData_t *pWrkrData)
 	instanceData *pData;
 	char szTargetAndPort[MAXHOSTNAMELEN+128]; /* work buffer for specifying a full target and port string */
 	DEFiRet;
-	
+
 	/* should not happen, but if session is not cleared yet - we do it now! */
 	if (pWrkrData->snmpsession != NULL)
 		omsnmp_exitSession(pWrkrData);
@@ -215,13 +215,13 @@ omsnmp_initSession(wrkrInstanceData_t *pWrkrData)
 
 	if (setenv("POSIXLY_CORRECT", "1", 1) == -1)
 		ABORT_FINALIZE(RS_RET_ERR);
-	
+
 	snmp_sess_init(&session);
 	session.version = pData->iSNMPVersion;
 	session.callback = NULL; /* NOT NEEDED */
 	session.callback_magic = NULL;
 	session.peername = (char*) szTargetAndPort;
-	
+
 	/* Set SNMP Community */
 	if (session.version == SNMP_VERSION_1 || session.version == SNMP_VERSION_2c) {
 		session.community = (unsigned char *) pData->szCommunity
@@ -260,7 +260,7 @@ static rsRetVal omsnmp_sendsnmp(wrkrInstanceData_t *pWrkrData, uchar *psz)
 	if (pWrkrData->snmpsession == NULL) {
 		CHKiRet(omsnmp_initSession(pWrkrData));
 	}
-	
+
 	/* String should not be NULL */
 	assert(psz != NULL);
 	dbgprintf( "omsnmp_sendsnmp: ENTER - Syslogmessage = '%s'\n", (char*)psz);
@@ -375,7 +375,7 @@ CODESTARTdoAction
 	if (ppString[0] == NULL) {
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
-	
+
 	/* This will generate and send the SNMP Trap */
 	iRet = omsnmp_sendsnmp(pWrkrData, ppString[0]);
 finalize_it:
@@ -437,7 +437,7 @@ CODESTARTnewActInst
 			pData->szSyslogMessageOID = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "traptype")) {
 			pData->iTrapType = pvals[i].val.d.n;
-			if(cs.iTrapType < 0 || cs.iTrapType >= 6) {
+			if(cs.iTrapType < 0 || cs.iTrapType > 6) {
 				parser_errmsg("omsnmp: traptype invalid, setting to ENTERPRISESPECIFIC");
 				pData->iTrapType = SNMP_TRAP_ENTERPRISESPECIFIC;
 			}
@@ -495,7 +495,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	? NULL : strdup((char*)cs.pszSyslogMessageOID));
 	pData->iPort = cs.iPort;
 	pData->iSpecificType = cs.iSpecificType;
-	
+
 	/* Set SNMPVersion */
 	if ( cs.iSNMPVersion < 0 || cs.iSNMPVersion > 1)		/* Set default to 1 if out of range */
 		pData->iSNMPVersion = 1;
