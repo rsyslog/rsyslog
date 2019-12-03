@@ -667,6 +667,7 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 
 	while(*p && *p != '%' && *p != ':') {
 		/* outer loop - until end of options */
+		memset(Buf, 0, sizeof(Buf)); /* silence valgrind warnings */
 		i = 0;
 		while((i < sizeof(Buf)-1) &&
 		      *p && *p != '%' && *p != ':' && *p != ',') {

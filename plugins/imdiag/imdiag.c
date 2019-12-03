@@ -271,6 +271,7 @@ injectMsg(uchar *pszCmd, tcps_sess_t *pSess)
 
 	litteralMsg = NULL;
 
+	memset(wordBuf, 0, sizeof(wordBuf));
 	CHKiRet(ratelimitNew(&ratelimit, "imdiag", "injectmsg"));
 	/* we do not check errors here! */
 	getFirstWord(&pszCmd, wordBuf, sizeof(wordBuf), TO_LOWERCASE);
@@ -434,6 +435,7 @@ awaitStatsReport(uchar *pszCmd, tcps_sess_t *pSess) {
 	int blockAgain = 0;
 	DEFiRet;
 
+	memset(subCmd, 0, sizeof(subCmd));
 	getFirstWord(&pszCmd, subCmd, sizeof(subCmd), TO_LOWERCASE);
 	blockAgain = (ustrcmp(UCHAR_CONSTANT("block_again"), subCmd) == 0);
 	if (statsReportingBlockStartTimeMs > 0) {
@@ -491,11 +493,12 @@ OnMsgReceived(tcps_sess_t *const pSess, uchar *const pRcv, const int iLenMsg)
 	 * WITHOUT a termination \0 char. So we need to convert it to one
 	 * before proceeding.
 	 */
-	CHKmalloc(pszMsg = malloc(iLenMsg + 1));
+	CHKmalloc(pszMsg = calloc(1, iLenMsg + 1));
 	pToFree = pszMsg;
 	memcpy(pszMsg, pRcv, iLenMsg);
 	pszMsg[iLenMsg] = '\0';
 
+	memset(cmdBuf, 0, sizeof(cmdBuf)); /* keep valgrind happy */
 	getFirstWord(&pszMsg, cmdBuf, sizeof(cmdBuf), TO_LOWERCASE);
 
 	dbgprintf("imdiag received command '%s'\n", cmdBuf);
