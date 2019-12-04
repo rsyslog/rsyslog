@@ -601,31 +601,33 @@ handleRotation(void)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
-	/* If we have locally saved cursor there is no need to read it from state file */
-	if (journalContext.cursor)
+	/* outside error scenarios we should always have a cursor available at this point */
+	if (!journalContext.cursor)
 	{
-		if (sd_journal_seek_cursor(journalContext.j, journalContext.cursor) != 0) {
-			LogError(0, RS_RET_ERR, "imjournal: "
-				"couldn't seek to cursor `%s'\n", journalContext.cursor);
-			iRet = RS_RET_ERR;
+		if (cs.stateFile) {
+			iRet = loadJournalState();
 		}
-		journalContext.atHead = 0;
-		/* Need to advance because cursor points at last processed message */
-		if ((r = sd_journal_next(journalContext.j)) < 0) {
-			LogError(-r, RS_RET_ERR, "imjournal: sd_journal_next() failed");
-			iRet = RS_RET_ERR;
+		else if (cs.bIgnorePrevious) {
+			/* Seek to the very end of the journal and ignore all older messages. */
+			iRet = skipOldMessages();
 		}
+		FINALIZE;
 	}
-	else if (cs.stateFile) {
-		iRet = loadJournalState();
+
+	if (sd_journal_seek_cursor(journalContext.j, journalContext.cursor) != 0) {
+		LogError(0, RS_RET_ERR, "imjournal: "
+			"couldn't seek to cursor `%s'\n", journalContext.cursor);
+		iRet = RS_RET_ERR;
 	}
-	else if (cs.bIgnorePrevious) {
-		/* Seek to the very end of the journal and ignore all older messages. */
-		skipOldMessages();
+	journalContext.atHead = 0;
+	/* Need to advance because cursor points at last processed message */
+	if ((r = sd_journal_next(journalContext.j)) < 0) {
+		LogError(-r, RS_RET_ERR, "imjournal: sd_journal_next() failed");
+		iRet = RS_RET_ERR;
 	}
-	journalContext.reloaded = 1;
 
 finalize_it:
+	journalContext.reloaded = 1;
 	RETiRet;
 }
 
