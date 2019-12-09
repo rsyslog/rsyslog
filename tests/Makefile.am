@@ -1355,6 +1355,7 @@ TESTS += \
 	imfile-logrotate-nocopytruncate.sh \
 	imfile-growing-file-id.sh \
 	glbl-oversizeMsg-truncate-imfile.sh \
+	config_enabled-on.sh \
 	config_enabled-off.sh
 
 if ENABLE_MMNORMALIZE
@@ -1488,6 +1489,7 @@ EXTRA_DIST= \
 	glbl-internalmsg_severity-debug-shown.sh \
 	glbl-internalmsg_severity-debug-not_shown.sh \
 	glbl-oversizeMsg-log-vg.sh \
+	config_enabled-on.sh \
 	config_enabled-off.sh \
 	empty-hostname.sh \
 	hostname-getaddrinfo-fail.sh \
