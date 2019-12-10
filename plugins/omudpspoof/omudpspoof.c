@@ -367,7 +367,7 @@ UDPSend(wrkrInstanceData_t *pWrkrData, uchar *pszSourcename, char *msg, size_t l
 	int bSendSuccess;
 	instanceData *pData;
 	struct sockaddr_in *tempaddr,source_ip;
-	libnet_ptag_t ip, ipo;
+	libnet_ptag_t ip;
 	libnet_ptag_t udp;
 	sbool bNeedUnlock = 0;
 	/* hdrOffs = fragmentation flags + offset (in bytes)
@@ -387,7 +387,7 @@ UDPSend(wrkrInstanceData_t *pWrkrData, uchar *pszSourcename, char *msg, size_t l
 		len = 65528;
 	}
 
-	ip = ipo = udp = 0;
+	ip = udp = 0;
 	if(pWrkrData->sourcePort++ >= pData->sourcePortEnd){
 		pWrkrData->sourcePort = pData->sourcePortStart;
 	}

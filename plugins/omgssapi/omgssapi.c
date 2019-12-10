@@ -350,7 +350,6 @@ static rsRetVal doTryResume(instanceData *pData)
 	DEFiRet;
 	struct addrinfo *res;
 	struct addrinfo hints;
-	unsigned e;
 
 	switch (pData->eDestState) {
 	case eDestFORW_SUSP:
@@ -369,8 +368,7 @@ static rsRetVal doTryResume(instanceData *pData)
 		hints.ai_flags = AI_NUMERICSERV;
 		hints.ai_family = glbl.GetDefPFFamily();
 		hints.ai_socktype = SOCK_STREAM;
-		if((e = getaddrinfo(pData->f_hname,
-				    getFwdSyslogPt(pData), &hints, &res)) == 0) {
+		if(getaddrinfo(pData->f_hname, getFwdSyslogPt(pData), &hints, &res) == 0) {
 			dbgprintf("%s found, resuming.\n", pData->f_hname);
 			pData->f_addr = res;
 			pData->eDestState = eDestFORW;
@@ -483,7 +481,6 @@ ENDdoAction
 BEGINparseSelectorAct
 	uchar *q;
 	int i;
-	int error;
 	int bErr;
 	struct addrinfo hints, *res;
 	TCPFRAMINGMODE tcp_framing = TCP_FRAMING_OCTET_STUFFING;
@@ -625,7 +622,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	hints.ai_flags = AI_NUMERICSERV;
 	hints.ai_family = glbl.GetDefPFFamily();
 	hints.ai_socktype = SOCK_STREAM;
-	if( (error = getaddrinfo(pData->f_hname, getFwdSyslogPt(pData), &hints, &res)) != 0) {
+	if(getaddrinfo(pData->f_hname, getFwdSyslogPt(pData), &hints, &res) != 0) {
 		pData->eDestState = eDestFORW_UNKN;
 	} else {
 		pData->eDestState = eDestFORW;

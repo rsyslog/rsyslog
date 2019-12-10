@@ -598,7 +598,6 @@ int TCPSessGSSRecv(tcps_sess_t *pSess, void *buf, size_t buf_len, ssize_t *piLen
 	OM_uint32 maj_stat, min_stat;
 	int fdSess;
 	int     conf_state;
-	int state;
 	gss_sess_t *pGSess;
 
 	assert(pSess->pUsr != NULL);
@@ -606,7 +605,7 @@ int TCPSessGSSRecv(tcps_sess_t *pSess, void *buf, size_t buf_len, ssize_t *piLen
 	pGSess = (gss_sess_t*) pSess->pUsr;
 
 	netstrm.GetSock(pSess->pStrm, &fdSess); // TODO: method access, CHKiRet!
-	if ((state = gssutil.recv_token(fdSess, &xmit_buf)) <= 0)
+	if(gssutil.recv_token(fdSess, &xmit_buf) <= 0)
 		ABORT_FINALIZE(RS_RET_GSS_ERR);
 
 	context = &pGSess->gss_context;

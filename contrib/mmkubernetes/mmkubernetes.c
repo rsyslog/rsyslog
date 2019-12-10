@@ -1195,7 +1195,7 @@ cache_entry_get(wrkrInstanceData_t *pWrkrData,
  */
 static rsRetVal
 cache_entry_add(wrkrInstanceData_t *pWrkrData,
-		int isnsmd, const char *key, struct fjson_object *jso, time_t now)
+		int isnsmd, const char *key, struct fjson_object *jso, time_t now, const int bDupKey)
 {
 	DEFiRet;
 	struct cache_entry_s *cache_entry = NULL;
@@ -1205,7 +1205,7 @@ cache_entry_add(wrkrInstanceData_t *pWrkrData,
 	(void)cache_delete_expired_entries(pWrkrData, isnsmd, now);
 	CHKmalloc(cache_entry = cache_entry_new(now + pWrkrData->pData->cacheEntryTTL, jso));
 	if (cache_entry) {
-		if (!hashtable_insert(ht, (void *)key, cache_entry))
+		if (!hashtable_insert(ht, (void *)(bDupKey ? strdup(key) : key), cache_entry))
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 		if (isnsmd) {
@@ -1239,14 +1239,14 @@ static struct fjson_object *cache_entry_get_nsmd(wrkrInstanceData_t *pWrkrData, 
 static rsRetVal cache_entry_add_md(wrkrInstanceData_t *pWrkrData, const char *key,
 				   struct fjson_object *jso, time_t now)
 {
-	return cache_entry_add(pWrkrData, 0, key, jso, now);
+	return cache_entry_add(pWrkrData, 0, key, jso, now, 0);
 }
 
 /* must be called with cache->cacheMtx held */
 static rsRetVal cache_entry_add_nsmd(wrkrInstanceData_t *pWrkrData, const char *key,
 				     struct fjson_object *jso, time_t now)
 {
-	return cache_entry_add(pWrkrData, 1, key, jso, now);
+	return cache_entry_add(pWrkrData, 1, key, jso, now, 1);
 }
 
 
@@ -1925,8 +1925,9 @@ CODESTARTdoAction
 			}
 
 			if(jNsMeta) {
-				if ((iRet = cache_entry_add_nsmd(pWrkrData, strdup(ns), jNsMeta, now)))
+				if ((iRet = cache_entry_add_nsmd(pWrkrData, ns, jNsMeta, now))) {
 					ABORT_FINALIZE(iRet);
+				}
 			}
 			json_object_put(jReply);
 			jReply = NULL;

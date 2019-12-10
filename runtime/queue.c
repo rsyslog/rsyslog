@@ -1872,8 +1872,8 @@ DequeueConsumableElements(qqueue_t *const pThis, wti_t *const pWti,
 			}
 		}
 		if(keep_running) {
-			keep_running = ((iQueueSize = getLogicalQueueSize(pThis)) > 0
-				&& nDequeued < pThis->iDeqBatchSize);
+			keep_running = (getLogicalQueueSize(pThis) > 0)
+				&& (nDequeued < pThis->iDeqBatchSize);
 		}
 	}
 

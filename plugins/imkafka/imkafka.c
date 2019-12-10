@@ -320,7 +320,6 @@ static rsRetVal ATTR_NONNULL()
 checkInstance(instanceConf_t *const inst)
 {
 	DEFiRet;
-	int nBrokers;
 	char kafkaErrMsg[1024];
 
 	/* main kafka conf */
@@ -431,7 +430,7 @@ checkInstance(instanceConf_t *const inst)
 	#endif
 
 	DBGPRINTF("imkafka: setting brokers: '%s'\n", inst->brokers);
-	if((nBrokers = rd_kafka_brokers_add(inst->rk, (char*)inst->brokers)) == 0) {
+	if(rd_kafka_brokers_add(inst->rk, (char*)inst->brokers) == 0) {
 		if(inst->bReportErrs) {
 			LogError(0, RS_RET_KAFKA_NO_VALID_BROKERS,
 				"imkafka: no valid brokers specified: %s", inst->brokers);
