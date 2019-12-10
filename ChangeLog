@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
+- 2019-12-10: core/config bugfix: false error msg when config.enabled="on" is used
+  When the 'config.enabled="on"' config parameter an invalid error message
+  was emitted that this parameter is not supported. However, it was still
+  applied properly. This commit removes the invalid error message.
+  closes https://github.com/rsyslog/rsyslog/issues/4011
 - 2019-12-03: omsnmp bugfix: "traptype" parameter invalidly rejected value 6
   "Traptype" needs to support values 0 to 6.
   However, if value 6(ENTERPRISESPECIFIC) was set, an invalid error message
