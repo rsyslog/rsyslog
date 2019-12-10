@@ -2327,11 +2327,6 @@ snmp_stop_trapreceiver() {
 
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
-		echo pwd: $(pwd)
-		echo srcdir: $srcdir
-		ls -l set-envvars
-		echo find:
-		find $srcdir/.. -name set-envvars
 		source set-envvars
 		# for (solaris) load debugging, uncomment next 2 lines:
 		#export LD_DEBUG=all
