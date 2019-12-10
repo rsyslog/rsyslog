@@ -1219,6 +1219,8 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 			for(val = lst; val != NULL ; val = val->next) {
 				val->bUsed = 1;
 			}
+		} else {
+			valnode->bUsed = 1;
 		}
 	}
 
