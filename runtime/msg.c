@@ -1242,11 +1242,15 @@ static rsRetVal MsgSerialize(smsg_t *pThis, strm_t *pStrm)
 	psz = pThis->pszStrucData;
 	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszStrucData"), PROPTYPE_PSZ, (void*) psz));
 	if(pThis->json != NULL) {
+		MsgLock(pThis);
 		psz = (uchar*) json_object_get_string(pThis->json);
+		MsgUnlock(pThis);
 		CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("json"), PROPTYPE_PSZ, (void*) psz));
 	}
 	if(pThis->localvars != NULL) {
+		MsgLock(pThis);
 		psz = (uchar*) json_object_get_string(pThis->localvars);
+		MsgUnlock(pThis);
 		CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("localvars"), PROPTYPE_PSZ, (void*) psz));
 	}
 
