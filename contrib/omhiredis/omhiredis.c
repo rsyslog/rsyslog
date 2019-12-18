@@ -52,6 +52,7 @@ DEF_OMOD_STATIC_DATA
 #define OMHIREDIS_MODE_TEMPLATE 0
 #define OMHIREDIS_MODE_QUEUE 1
 #define OMHIREDIS_MODE_PUBLISH 2
+#define OMHIREDIS_MODE_SET 3
 
 /* our instance data.
  * this will be accessable
@@ -64,6 +65,7 @@ typedef struct _instanceData {
 	char *modeDescription; /* mode description */
 	int mode; /* mode constant */
 	uchar *key; /* key for QUEUE and PUBLISH modes */
+	int expiration; /* expiration value for SET/SETEX mode */
 	sbool dynaKey; /* Should we treat the key as a template? */
 	sbool useRPush; /* Should we use RPUSH instead of LPUSH? */
 } instanceData;
@@ -81,6 +83,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "template", eCmdHdlrGetWord, 0 },
 	{ "mode", eCmdHdlrGetWord, 0 },
 	{ "key", eCmdHdlrGetWord, 0 },
+	{ "expiration", eCmdHdlrInt, 0 },
 	{ "dynakey", eCmdHdlrBinary, 0 },
 	{ "userpush", eCmdHdlrBinary, 0 },
 };
@@ -121,6 +124,9 @@ CODESTARTfreeInstance
 	if (pData->server != NULL) {
 		free(pData->server);
 	}
+	free(pData->key);
+	free(pData->modeDescription);
+	free(pData->serverpassword);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
@@ -174,6 +180,9 @@ finalize_it:
 static rsRetVal writeHiredis(uchar* key, uchar *message, wrkrInstanceData_t *pWrkrData)
 {
 	DEFiRet;
+	int rc, expire;
+	size_t msgLen;
+	char *formattedMsg = NULL;
 
 	/* if we do not have a redis connection, call
 	 * initHiredis and try to establish one */
@@ -185,7 +194,6 @@ static rsRetVal writeHiredis(uchar* key, uchar *message, wrkrInstanceData_t *pWr
 	 * happened, in which case abort. otherwise
 	 * increase our current pipeline count
 	 * by 1 and continue. */
-	int rc;
 	switch(pWrkrData->pData->mode) {
 		case OMHIREDIS_MODE_TEMPLATE:
 			rc = redisAppendCommand(pWrkrData->conn, (char*)message);
@@ -197,6 +205,20 @@ static rsRetVal writeHiredis(uchar* key, uchar *message, wrkrInstanceData_t *pWr
 			break;
 		case OMHIREDIS_MODE_PUBLISH:
 			rc = redisAppendCommand(pWrkrData->conn, "PUBLISH %s %s", key, (char*)message);
+			break;
+		case OMHIREDIS_MODE_SET:
+			expire = pWrkrData->pData->expiration;
+
+			if (expire > 0)
+				msgLen = redisFormatCommand(&formattedMsg, "SETEX %s %d %s", key, expire, message);
+			else
+				msgLen = redisFormatCommand(&formattedMsg, "SET %s %s", key, message);
+			if (msgLen)
+				rc = redisAppendFormattedCommand(pWrkrData->conn, formattedMsg, msgLen);
+			else {
+				dbgprintf("omhiredis: could not append SET command\n");
+				rc = REDIS_ERR;
+			}
 			break;
 		default:
 			dbgprintf("omhiredis: mode %d is invalid something is really wrong\n",
@@ -213,6 +235,7 @@ static rsRetVal writeHiredis(uchar* key, uchar *message, wrkrInstanceData_t *pWr
 	}
 
 finalize_it:
+	free(formattedMsg);
 	RETiRet;
 }
 
@@ -287,7 +310,8 @@ setInstParamDefaults(instanceData *pData)
 	pData->serverpassword = NULL;
 	pData->tplName = NULL;
 	pData->mode = OMHIREDIS_MODE_TEMPLATE;
-	pData->modeDescription = (char *)"template";
+	pData->expiration = 0;
+	pData->modeDescription = NULL;
 	pData->key = NULL;
 	pData->useRPush = 0;
 }
@@ -331,12 +355,17 @@ CODESTARTnewActInst
 				pData->mode = OMHIREDIS_MODE_QUEUE;
 			} else if (!strcmp(pData->modeDescription, "publish")) {
 				pData->mode = OMHIREDIS_MODE_PUBLISH;
+			} else if (!strcmp(pData->modeDescription, "set")) {
+				pData->mode = OMHIREDIS_MODE_SET;
 			} else {
 				dbgprintf("omhiredis: unsupported mode %s\n", actpblk.descr[i].name);
 				ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 			}
 		} else if(!strcmp(actpblk.descr[i].name, "key")) {
 			pData->key = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "expiration")) {
+			pData->expiration = pvals[i].val.d.n;
+			dbgprintf("omhiredis: expiration set to %d\n", pData->expiration);
 		} else {
 			dbgprintf("omhiredis: program error, non-handled "
 				"param '%s'\n", actpblk.descr[i].name);
@@ -345,10 +374,16 @@ CODESTARTnewActInst
 
 	dbgprintf("omhiredis: checking config sanity\n");
 
+	if (!pData->modeDescription) {
+		dbgprintf("omhiredis: no mode specified, setting it to 'template'\n");
+		pData->mode = OMHIREDIS_MODE_TEMPLATE;
+	}
+
 	/* check config sanity for selected mode */
 	switch(pData->mode) {
 		case OMHIREDIS_MODE_QUEUE:
 		case OMHIREDIS_MODE_PUBLISH:
+		case OMHIREDIS_MODE_SET:
 			if (pData->key == NULL) {
 				dbgprintf("omhiredis: mode %s requires a key\n", pData->modeDescription);
 				ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -356,6 +391,10 @@ CODESTARTnewActInst
 			if (pData->tplName == NULL) {
 				dbgprintf("omhiredis: using default RSYSLOG_ForwardFormat template\n");
 				CHKmalloc(pData->tplName = ustrdup("RSYSLOG_ForwardFormat"));
+			}
+			if (pData->expiration && strcmp(pData->modeDescription, "set")) {
+				LogError(0, RS_RET_CONF_PARSE_WARNING, "omhiredis: expiration set but mode is not "\
+				"'set', expiration will be ignored");
 			}
 			break;
 		case OMHIREDIS_MODE_TEMPLATE:
