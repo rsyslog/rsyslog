@@ -98,8 +98,14 @@ RUN	echo "deb http://apt.llvm.org/disco/ llvm-toolchain-disco-9 main" > /etc/apt
 	apt-get update -y && \
 	apt-get install -y \
 	clang-9 \
+	clang-tools-9 \
 	lldb-9 \
 	lld-9
+RUN	echo "deb http://apt.llvm.org/disco/ llvm-toolchain-disco main" > /etc/apt/sources.list.d/llvm10.list && \
+	echo "deb-src http://apt.llvm.org/disco/ llvm-toolchain-disco main" >> /etc/apt/sources.list.d/llvm10.list && \
+	wget -nv -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
+	apt-get update -y && \
+	apt-get install -y clang-10 clang-tools-10 clang-10-doc libclang-common-10-dev libclang-10-dev libclang1-10 clang-format-10 python-clang-10 clangd-10
 
 # create dependency cache
 RUN	mkdir /local_dep_cache && \
@@ -163,9 +169,9 @@ RUN	cd helper-projects \
 
 # next ENV is specifically for running scan-build - so we do not need to
 # change scripts if at a later time we can move on to a newer version
-ENV	SCAN_BUILD=scan-build \
-	SCAN_BUILD_CC=clang-8 \
-	ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-6.0/bin/llvm-symbolizer
+ENV	SCAN_BUILD=scan-build-9 \
+	SCAN_BUILD_CC=clang-9 \
+	ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-9/bin/llvm-symbolizer
 
 ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-compile-warning=error \
