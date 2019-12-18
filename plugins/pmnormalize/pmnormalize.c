@@ -210,7 +210,7 @@ finalize_it:
 CODE_STD_FINALIZERnewParserInst
 	if(lst != NULL)
 		cnfparamvalsDestruct(pvals, &parserpblk);
-	if(iRet != RS_RET_OK)
+	if(iRet != RS_RET_OK && inst != NULL)
 		freeParserInst(inst);
 ENDnewParserInst
 

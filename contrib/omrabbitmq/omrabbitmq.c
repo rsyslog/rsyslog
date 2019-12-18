@@ -1039,7 +1039,9 @@ CODESTARTnewActInst
 			if (expiration > 0) {
 				char buf[40];
 				snprintf(buf, 40, "%lld", expiration);
+				#ifndef __clang_analyzer__
 				pData->expiration = cstring_bytes(strdup(buf));
+				#endif
 			}
 		} else if (!strcmp(actpblk.descr[i].name, "body_template")) {
 			pData->body_template = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);

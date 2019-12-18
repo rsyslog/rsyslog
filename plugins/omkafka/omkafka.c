@@ -1226,7 +1226,6 @@ static rsRetVal
 openKafka(instanceData *const __restrict__ pData)
 {
 	char errstr[MAX_ERRMSG];
-	int nBrokers = 0;
 	DEFiRet;
 
 	if(pData->bIsOpen)
@@ -1291,7 +1290,7 @@ openKafka(instanceData *const __restrict__ pData)
 	rd_kafka_conf_set_log_cb(pData->rk, kafkaLogger);
 #	endif
 	DBGPRINTF("omkafka setting brokers: '%s'n", pData->brokers);
-	if((nBrokers = rd_kafka_brokers_add(pData->rk, (char*)pData->brokers)) == 0) {
+	if(rd_kafka_brokers_add(pData->rk, (char*)pData->brokers) == 0) {
 		LogError(0, RS_RET_KAFKA_NO_VALID_BROKERS,
 			"omkafka: no valid brokers specified: %s\n", pData->brokers);
 		ABORT_FINALIZE(RS_RET_KAFKA_NO_VALID_BROKERS);

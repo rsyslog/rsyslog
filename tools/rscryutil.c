@@ -1,6 +1,6 @@
 /* This is a tool for processing rsyslog encrypted log files.
  *
- * Copyright 2013-2016 Adiscon GmbH
+ * Copyright 2013-2019 Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -195,6 +195,7 @@ initCrypt(FILE *eifp)
 	if((r = eiGetIV(eifp, iv, blkLength)) != 0) goto done;
 
 	size_t keyLength = gcry_cipher_get_algo_keylen(cry_algo);
+	assert(cry_key != NULL); /* "fix" clang 10 static analyzer false positive */
 	if(strlen(cry_key) != keyLength) {
 		fprintf(stderr, "invalid key length; key is %u characters, but "
 			"exactly %llu characters are required\n", cry_keylen,
@@ -526,6 +527,7 @@ main(int argc, char *argv[])
 	}
 
 	setKey();
+	assert(cry_key != NULL);
 
 	if(mode == MD_WRITE_KEYFILE) {
 		if(optind != argc) {
@@ -543,6 +545,7 @@ main(int argc, char *argv[])
 		}
 	}
 
+	assert(cry_key != NULL);
 	memset(cry_key, 0, cry_keylen); /* zero-out key store */
 	cry_keylen = 0;
 	return 0;

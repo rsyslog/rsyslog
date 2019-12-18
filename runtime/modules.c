@@ -1298,6 +1298,7 @@ finalize_it:
 		free(pPathBuf);
 	if(iRet != RS_RET_OK)
 		abortCnfUse(&pNew);
+	free(pNew); /* is NULL again if properly consumed, else clean up */
 	pthread_mutex_unlock(&mutObjGlobalOp);
 	RETiRet;
 }
