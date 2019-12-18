@@ -47,6 +47,7 @@ check_PROGRAMS = $(TESTRUNS) ourtail tcpflood chkseq msleep randomgen \
 	mangle_qi \
 	have_relpSrvSetOversizeMode \
 	have_relpEngineSetTLSLibByName \
+	have_relpSrvSetTlsConfigCmd \
 	test_id
 if ENABLE_JOURNAL_TESTS
 if ENABLE_IMJOURNAL
@@ -1212,6 +1213,11 @@ TESTS += \
          relp_tls_certificate_not_found.sh \
 	 omrelp_wrong_authmode.sh \
 	 imrelp-tls.sh
+if USE_RELPENGINESETTLSCFGCMD
+TESTS += \
+	 imrelp-tls-cfgcmd.sh \
+	 sndrcv_relp_tls-cfgcmd.sh
+endif # USE_RELPENGINESETTLSCFGCMD
 endif # ENABLE_GNUTLS
 if HAVE_VALGRIND
 TESTS += \
@@ -2052,6 +2058,8 @@ EXTRA_DIST= \
 	relp_tls_certificate_not_found.sh \
 	omrelp_wrong_authmode.sh \
 	imrelp-tls.sh \
+	imrelp-tls-cfgcmd.sh \
+	sndrcv_relp_tls-cfgcmd.sh \
 	sndrcv_relp_dflt_pt.sh \
 	sndrcv_udp.sh \
 	imudp_thread_hang.sh \
@@ -2525,6 +2533,7 @@ mangle_qi_SOURCES = mangle_qi.c
 chkseq_SOURCES = chkseq.c
 have_relpSrvSetOversizeMode = have_relpSrvSetOversizeMode.c
 have_relpEngineSetTLSLibByName = have_relpEngineSetTLSLibByName.c
+have_relpSrvSetTlsConfigCmd = have_relpSrvSetTlsConfigCmd.c
 test_id_SOURCES = test_id.c
 
 uxsockrcvr_SOURCES = uxsockrcvr.c

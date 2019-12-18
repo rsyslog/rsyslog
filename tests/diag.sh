@@ -1188,6 +1188,14 @@ error_exit() {
 				thread apply all bt full
 				q
 				EOF
+			$SUDO gdb ./tcpflood "$CORE" -batch <<- EOF
+				bt
+				echo === THREAD INFO ===
+				info thread
+				echo === thread apply all bt full ===
+				thread apply all bt full
+				q
+				EOF
 		fi
 	fi
 	if [[ ! -e IN_AUTO_DEBUG &&  "$USE_AUTO_DEBUG" == 'on' ]]; then

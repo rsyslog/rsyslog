@@ -96,6 +96,9 @@ struct instanceConf_s {
 	uchar *caCertFile;
 	uchar *myCertFile;
 	uchar *myPrivKeyFile;
+#if defined(HAVE_RELPENGINESETTLSCFGCMD)
+	uchar *tlscfgcmd;
+#endif
 	int iKeepAliveIntvl;
 	int iKeepAliveProbes;
 	int iKeepAliveTime;
@@ -162,6 +165,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "tls.cacert", eCmdHdlrString, 0 },
 	{ "tls.mycert", eCmdHdlrString, 0 },
 	{ "tls.myprivkey", eCmdHdlrString, 0 },
+	{ "tls.tlscfgcmd", eCmdHdlrString, 0 },
 	{ "tls.compression", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk inppblk =
@@ -291,6 +295,9 @@ createInstance(instanceConf_t **pinst)
 	inst->caCertFile = NULL;
 	inst->myCertFile = NULL;
 	inst->myPrivKeyFile = NULL;
+#if defined(HAVE_RELPENGINESETTLSCFGCMD)
+	inst->tlscfgcmd = NULL;
+#endif
 	inst->maxDataSize = 0;
 	inst->flowCtlType = eFLOWCTL_LIGHT_DELAY;
 #ifdef HAVE_RELPSRVSETOVERSIZEMODE
@@ -459,6 +466,12 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 		if(relpSrvSetPrivKey(pSrv, (char*) inst->myPrivKeyFile) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
+#if defined(HAVE_RELPENGINESETTLSCFGCMD)
+		if (inst->tlscfgcmd != NULL) {
+			if(relpSrvSetTlsConfigCmd(pSrv, (char*) inst->tlscfgcmd) != RELP_RET_OK)
+				ABORT_FINALIZE(RS_RET_RELP_ERR);
+		}
+#endif
 		for(i = 0 ; i <  inst->permittedPeers.nmemb ; ++i) {
 			relpSrvAddPermittedPeer(pSrv, (char*)inst->permittedPeers.name[i]);
 		}
@@ -618,6 +631,13 @@ CODESTARTnewInpInst
 			} else {
 				fclose(fp);
 			}
+		} else if(!strcmp(inppblk.descr[i].name, "tls.tlscfgcmd")) {
+#if defined(HAVE_RELPENGINESETTLSCFGCMD)
+			inst->tlscfgcmd = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+#else
+			parser_errmsg("imrelp: librelp does not support input parameter 'tls.tlscfgcmd'; "
+				"it probably is too old (1.5.0 or higher should be fine); ignoring setting now.");
+#endif
 		} else if(!strcmp(inppblk.descr[i].name, "tls.permittedpeer")) {
 			inst->permittedPeers.nmemb = pvals[i].val.d.ar->nmemb;
 			CHKmalloc(inst->permittedPeers.name =
