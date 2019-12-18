@@ -20,7 +20,7 @@ something like::
 
     mail.info   /var/log/maillog
 
-We suggest you leave it as-is without conversion. Equally, in our opion it is
+We suggest you leave it as-is without conversion. Equally, in our opinion it is
 also fine to add new rules like the above. If you still want to convert, the
 line may look as follows (completely in new format)::
 
