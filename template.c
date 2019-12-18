@@ -684,110 +684,110 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 		/* OK, we got the option, so now lets look what
 		 * it tells us...
 		 */
-		 if(!strcmp((char*)Buf, "date-mysql")) {
+		if(!strcmp((char*)Buf, "date-mysql")) {
 			pTpe->data.field.eDateFormat = tplFmtMySQLDate;
 		} else if(!strcmp((char*)Buf, "date-pgsql")) {
 			pTpe->data.field.eDateFormat = tplFmtPgSQLDate;
-		 } else if(!strcmp((char*)Buf, "date-rfc3164")) {
+		} else if(!strcmp((char*)Buf, "date-rfc3164")) {
 			pTpe->data.field.eDateFormat = tplFmtRFC3164Date;
-		 } else if(!strcmp((char*)Buf, "date-rfc3164-buggyday")) {
+		} else if(!strcmp((char*)Buf, "date-rfc3164-buggyday")) {
 			pTpe->data.field.eDateFormat = tplFmtRFC3164BuggyDate;
-		 } else if(!strcmp((char*)Buf, "date-rfc3339")) {
+		} else if(!strcmp((char*)Buf, "date-rfc3339")) {
 			pTpe->data.field.eDateFormat = tplFmtRFC3339Date;
-		 } else if(!strcmp((char*)Buf, "date-unixtimestamp")) {
+		} else if(!strcmp((char*)Buf, "date-unixtimestamp")) {
 			pTpe->data.field.eDateFormat = tplFmtUnixDate;
-		 } else if(!strcmp((char*)Buf, "date-subseconds")) {
+		} else if(!strcmp((char*)Buf, "date-subseconds")) {
 			pTpe->data.field.eDateFormat = tplFmtSecFrac;
-		 } else if(!strcmp((char*)Buf, "date-wdayname")) {
+		} else if(!strcmp((char*)Buf, "date-wdayname")) {
 			pTpe->data.field.eDateFormat = tplFmtWDayName;
-		 } else if(!strcmp((char*)Buf, "date-wday")) {
+		} else if(!strcmp((char*)Buf, "date-wday")) {
 			pTpe->data.field.eDateFormat = tplFmtWDay;
-		 } else if(!strcmp((char*)Buf, "date-year")) {
+		} else if(!strcmp((char*)Buf, "date-year")) {
 			pTpe->data.field.eDateFormat = tplFmtYear;
-		 } else if(!strcmp((char*)Buf, "date-month")) {
+		} else if(!strcmp((char*)Buf, "date-month")) {
 			pTpe->data.field.eDateFormat = tplFmtMonth;
-		 } else if(!strcmp((char*)Buf, "date-day")) {
+		} else if(!strcmp((char*)Buf, "date-day")) {
 			pTpe->data.field.eDateFormat = tplFmtDay;
-		 } else if(!strcmp((char*)Buf, "date-hour")) {
+		} else if(!strcmp((char*)Buf, "date-hour")) {
 			pTpe->data.field.eDateFormat = tplFmtHour;
-		 } else if(!strcmp((char*)Buf, "date-minute")) {
+		} else if(!strcmp((char*)Buf, "date-minute")) {
 			pTpe->data.field.eDateFormat = tplFmtMinute;
-		 } else if(!strcmp((char*)Buf, "date-second")) {
+		} else if(!strcmp((char*)Buf, "date-second")) {
 			pTpe->data.field.eDateFormat = tplFmtSecond;
-		 } else if(!strcmp((char*)Buf, "date-tzoffshour")) {
+		} else if(!strcmp((char*)Buf, "date-tzoffshour")) {
 			pTpe->data.field.eDateFormat = tplFmtTZOffsHour;
-		 } else if(!strcmp((char*)Buf, "date-tzoffsmin")) {
+		} else if(!strcmp((char*)Buf, "date-tzoffsmin")) {
 			pTpe->data.field.eDateFormat = tplFmtTZOffsMin;
-		 } else if(!strcmp((char*)Buf, "date-tzoffsdirection")) {
+		} else if(!strcmp((char*)Buf, "date-tzoffsdirection")) {
 			pTpe->data.field.eDateFormat = tplFmtTZOffsDirection;
-		 } else if (!strcmp((char*)Buf, "date-ordinal")) {
+		} else if (!strcmp((char*)Buf, "date-ordinal")) {
 			pTpe->data.field.eDateFormat = tplFmtOrdinal;
-		 } else if (!strcmp((char*)Buf, "date-week")) {
+		} else if (!strcmp((char*)Buf, "date-week")) {
 			pTpe->data.field.eDateFormat = tplFmtWeek;
-		 } else if(!strcmp((char*)Buf, "date-utc")) {
+		} else if(!strcmp((char*)Buf, "date-utc")) {
 			pTpe->data.field.options.bDateInUTC = 1;
-		 } else if(!strcmp((char*)Buf, "lowercase")) {
+		} else if(!strcmp((char*)Buf, "lowercase")) {
 			pTpe->data.field.eCaseConv = tplCaseConvLower;
-		 } else if(!strcmp((char*)Buf, "uppercase")) {
+		} else if(!strcmp((char*)Buf, "uppercase")) {
 			pTpe->data.field.eCaseConv = tplCaseConvUpper;
-		 } else if(!strcmp((char*)Buf, "sp-if-no-1st-sp")) {
+		} else if(!strcmp((char*)Buf, "sp-if-no-1st-sp")) {
 			pTpe->data.field.options.bSPIffNo1stSP = 1;
-		 } else if(!strcmp((char*)Buf, "compressspace")) {
+		} else if(!strcmp((char*)Buf, "compressspace")) {
 			pTpe->data.field.options.bCompressSP = 1;
-		 } else if(!strcmp((char*)Buf, "escape-cc")) {
+		} else if(!strcmp((char*)Buf, "escape-cc")) {
 			pTpe->data.field.options.bEscapeCC = 1;
-		 } else if(!strcmp((char*)Buf, "drop-cc")) {
+		} else if(!strcmp((char*)Buf, "drop-cc")) {
 			pTpe->data.field.options.bDropCC = 1;
-		 } else if(!strcmp((char*)Buf, "space-cc")) {
+		} else if(!strcmp((char*)Buf, "space-cc")) {
 			pTpe->data.field.options.bSpaceCC = 1;
-		 } else if(!strcmp((char*)Buf, "drop-last-lf")) {
+		} else if(!strcmp((char*)Buf, "drop-last-lf")) {
 			pTpe->data.field.options.bDropLastLF = 1;
-		 } else if(!strcmp((char*)Buf, "secpath-drop")) {
+		} else if(!strcmp((char*)Buf, "secpath-drop")) {
 			pTpe->data.field.options.bSecPathDrop = 1;
-		 } else if(!strcmp((char*)Buf, "secpath-replace")) {
+		} else if(!strcmp((char*)Buf, "secpath-replace")) {
 			pTpe->data.field.options.bSecPathReplace = 1;
-		 } else if(!strcmp((char*)Buf, "pos-end-relative")) {
+		} else if(!strcmp((char*)Buf, "pos-end-relative")) {
 			pTpe->data.field.options.bFromPosEndRelative = 1;
-		 } else if(!strcmp((char*)Buf, "fixed-width")) {
+		} else if(!strcmp((char*)Buf, "fixed-width")) {
 			pTpe->data.field.options.bFixedWidth = 1;
-		 } else if(!strcmp((char*)Buf, "csv")) {
+		} else if(!strcmp((char*)Buf, "csv")) {
 			if(hasFormat(pTpe)) {
 				LogError(0, NO_ERRCODE, "error: can only specify "
 					"one option out of (json, jsonf, jsonr, jsonfr, csv) - csv ignored");
 			} else {
 				pTpe->data.field.options.bCSV = 1;
 			}
-		 } else if(!strcmp((char*)Buf, "json")) {
+		} else if(!strcmp((char*)Buf, "json")) {
 			if(hasFormat(pTpe)) {
 				LogError(0, NO_ERRCODE, "error: can only specify "
 					"one option out of (json, jsonf, jsonr, jsonfr, csv) - json ignored");
 			} else {
 				pTpe->data.field.options.bJSON = 1;
 			}
-		 } else if(!strcmp((char*)Buf, "jsonf")) {
+		} else if(!strcmp((char*)Buf, "jsonf")) {
 			if(hasFormat(pTpe)) {
 				LogError(0, NO_ERRCODE, "error: can only specify "
 					"one option out of (json, jsonf, jsonr, jsonfr, csv) - jsonf ignored");
 			} else {
 				pTpe->data.field.options.bJSONf = 1;
 			}
-		 } else if(!strcmp((char*)Buf, "jsonr")) {
+		} else if(!strcmp((char*)Buf, "jsonr")) {
 			if(hasFormat(pTpe)) {
 				LogError(0, NO_ERRCODE, "error: can only specify "
 					"one option out of (json, jsonf, jsonr, jsonfr, csv) - jsonr ignored");
 			} else {
 				pTpe->data.field.options.bJSONr = 1;
 			}
-		 } else if(!strcmp((char*)Buf, "jsonfr")) {
+		} else if(!strcmp((char*)Buf, "jsonfr")) {
 			if(hasFormat(pTpe)) {
 				LogError(0, NO_ERRCODE, "error: can only specify "
 					"one option out of (json, jsonf, jsonr, jsonfr, csv) - jsonfr ignored");
 			} else {
 				pTpe->data.field.options.bJSONfr = 1;
 			}
-		 } else if(!strcmp((char*)Buf, "mandatory-field")) {
+		} else if(!strcmp((char*)Buf, "mandatory-field")) {
 			 pTpe->data.field.options.bMandatory = 1;
-		 } else {
+		} else {
 			LogError(0, NO_ERRCODE, "template error: invalid field option '%s' "
 				"specified - ignored", Buf);
 		 }
