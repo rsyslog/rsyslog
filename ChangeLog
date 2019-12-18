@@ -1,5 +1,15 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
+- 2019-12-18: bugfix core: potential segfault in template engine
+  under some circumstances (not entirely clear right now), memory
+  was freed but later re-used as state-tracking structures were not
+  properly maintained. Github issue mentioned below has full details.
+  Thanks to github user snaix for analysing this issue and providing
+  a patch. I am committing as myself as snaix did not disclose his or
+  her identity.
+  closes https://github.com/rsyslog/rsyslog/issues/3019
+  closes https://github.com/rsyslog/rsyslog/issues/4040
+- 2019-12-18: fixed some minor issues detected by clang static analyzer 9
 - 2019-12-10: core/config bugfix: false error msg when config.enabled="on" is used
   When the 'config.enabled="on"' config parameter an invalid error message
   was emitted that this parameter is not supported. However, it was still
