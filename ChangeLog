@@ -1,5 +1,19 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
+- 2019-12-18: relp: Add support setting openssl configuration commands.
+  Add new configuration parameter tls.tlscfgcmd to omrelp and imrelp.
+  (Using relpSrvSetTlsConfigCmd and relpCltSetTlsConfigCmd)
+  OpenSSL Version 1.0.2 or higher is required for this feature.
+  A list of possible commands and their valid values can be found in the
+  documentation: https://www.openssl.org/docs/man1.0.2/man3/SSL_CONF_cmd.html
+  The setting can be single or multiline, each configuration command is
+  separated by linefeed (n). Command and value are separated by
+  equal sign (=). Here are a few samples:
+  tls.tlscfgcmd="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1,-TLSv1.2"
+  tls.tlscfgcmd="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1
+  MinProtocol=TLSv1.2"
+  Add to new testcases for librelp and tlscfgcmd.
+  closes https://github.com/rsyslog/rsyslog/issues/3959
 - 2019-12-18: bugfix core: potential segfault in template engine
   under some circumstances (not entirely clear right now), memory
   was freed but later re-used as state-tracking structures were not
