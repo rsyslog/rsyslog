@@ -11,7 +11,7 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 			         file=`echo $RSYSLOG_OUT_LOG`)
 '
 startup
-tcpflood -p'$TCPFLOOD_PORT' -m10000
+tcpflood -p$TCPFLOOD_PORT -m10000
 shutdown_when_empty
 wait_shutdown
 seq_check 0 9999
