@@ -2131,7 +2131,7 @@ main(int argc, char **argv)
 	LogMsg(0, RS_RET_OK, LOG_DEBUG, "rsyslogd fully started up and initialized "
 		"- begin actual processing");
 
-	mainloop();
+	mainloop(tralala);
 	LogMsg(0, RS_RET_OK, LOG_DEBUG, "rsyslogd shutting down");
 	deinitAll();
 #ifdef ENABLE_LIBLOGGING_STDLOG

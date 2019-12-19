@@ -107,7 +107,6 @@
 /* stems back to sysklogd in whole */
 void untty(void)
 {
-	int i;
 	pid_t pid;
 
 	if(!Debug) {
