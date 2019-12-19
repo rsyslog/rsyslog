@@ -300,6 +300,7 @@ BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
 	int iNumTpls;
+	uchar *keydup = NULL;
 CODESTARTnewActInst
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL)
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -369,6 +370,7 @@ CODESTARTnewActInst
 	iNumTpls = 1;
 
 	if (pData->dynaKey) {
+		assert(pData->key != NULL);
 		iNumTpls = 2;
 	}
 	CODE_STD_STRING_REQUESTnewActInst(iNumTpls);
@@ -376,11 +378,14 @@ CODESTARTnewActInst
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)pData->tplName, OMSR_NO_RQD_TPL_OPTS));
 
 	if (pData->dynaKey) {
+		CHKmalloc(keydup = ustrdup(pData->key));
 		CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->key), OMSR_NO_RQD_TPL_OPTS));
+		keydup = NULL; /* handed over */
 	}
 
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
+	free(keydup);
 ENDnewActInst
 
 
