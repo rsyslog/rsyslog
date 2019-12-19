@@ -548,7 +548,7 @@ For example,
 
 \*.\*   stop
 
-discards everything (ok, you can archive the same by not running rsyslogd
+discards everything (ok, you can achieve the same by not running rsyslogd
 at all...).
 
 Note that in legacy configuration the tilde character "~" can also be
