@@ -229,6 +229,20 @@ This parameter sets the timeout for checking the availability
 of ClickHouse. Value is given in milliseconds.
 
 
+timeout
+^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "int", "0", "no", "none"
+
+This parameter sets the timeout for sending data to ClickHouse.
+Value is given in milliseconds.
+
+
 .. _omclickhouse-statistic-counter:
 
 Statistic Counter
