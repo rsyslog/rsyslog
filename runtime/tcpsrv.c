@@ -1000,6 +1000,7 @@ BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macr
 	pThis->bUseFlowControl = 1;
 	pThis->pszDrvrName = NULL;
 	pThis->bPreserveCase = 1; /* preserve case in fromhost; default to true. */
+	pThis->DrvrTlsVerifyDepth = 0;
 ENDobjConstruct(tcpsrv)
 
 
@@ -1017,6 +1018,7 @@ tcpsrvConstructFinalize(tcpsrv_t *pThis)
 	CHKiRet(netstrms.SetDrvrMode(pThis->pNS, pThis->iDrvrMode));
 	CHKiRet(netstrms.SetDrvrCheckExtendedKeyUsage(pThis->pNS, pThis->DrvrChkExtendedKeyUsage));
 	CHKiRet(netstrms.SetDrvrPrioritizeSAN(pThis->pNS, pThis->DrvrPrioritizeSan));
+	CHKiRet(netstrms.SetDrvrTlsVerifyDepth(pThis->pNS, pThis->DrvrTlsVerifyDepth));
 	if(pThis->pszDrvrAuthMode != NULL)
 		CHKiRet(netstrms.SetDrvrAuthMode(pThis->pNS, pThis->pszDrvrAuthMode));
 	if(pThis->pszDrvrPermitExpiredCerts != NULL)
@@ -1429,6 +1431,15 @@ SetDrvrPrioritizeSAN(tcpsrv_t *pThis, int prioritizeSan)
 	RETiRet;
 }
 
+/* set the driver Set the driver tls  verifyDepth -- alorbach, 2019-12-20 */
+static rsRetVal
+SetDrvrTlsVerifyDepth(tcpsrv_t *pThis, int verifyDepth)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	pThis->DrvrTlsVerifyDepth = verifyDepth;
+	RETiRet;
+}
 
 /* End of methods to shuffle autentication settings to the driver.;
 
@@ -1548,6 +1559,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetPreserveCase = SetPreserveCase;
 	pIf->SetDrvrCheckExtendedKeyUsage = SetDrvrCheckExtendedKeyUsage;
 	pIf->SetDrvrPrioritizeSAN = SetDrvrPrioritizeSAN;
+	pIf->SetDrvrTlsVerifyDepth = SetDrvrTlsVerifyDepth;
 
 finalize_it:
 ENDobjQueryInterface(tcpsrv)

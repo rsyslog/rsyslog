@@ -614,7 +614,6 @@ osslInitSession(nsd_ossl_t *pThis) /* , nsd_ossl_t *pServer) */
 	DEFiRet;
 	BIO *client;
 	char pristringBuf[4096];
-
 	nsd_ptcp_t *pPtcp = (nsd_ptcp_t*) pThis->pTcp;
 
 	if(!(pThis->ssl = SSL_new(ctx))) {
@@ -623,10 +622,13 @@ osslInitSession(nsd_ossl_t *pThis) /* , nsd_ossl_t *pServer) */
 	}
 
 	if (pThis->authMode != OSSL_AUTH_CERTANON) {
-		dbgprintf("osslInitSession: enable certificate checking (Mode=%d)\n", pThis->authMode);
+		dbgprintf("osslInitSession: enable certificate checking (Mode=%d, VerifyDepth=%d)\n",
+			pThis->authMode, pThis->DrvrVerifyDepth);
 		/* Enable certificate valid checking */
 		SSL_set_verify(pThis->ssl, SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
-		SSL_set_verify_depth(pThis->ssl, 2);
+		if (pThis->DrvrVerifyDepth != 0) {
+			SSL_set_verify_depth(pThis->ssl, pThis->DrvrVerifyDepth);
+		}
 	}
 
 	if (bAnonInit == 1) { /* no mutex needed, read-only after init */
@@ -1471,6 +1473,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	pNew->authMode = pThis->authMode;
 	pNew->permitExpiredCerts = pThis->permitExpiredCerts;
 	pNew->pPermPeers = pThis->pPermPeers;
+	pNew->DrvrVerifyDepth = pThis->DrvrVerifyDepth;
 	CHKiRet(osslInitSession(pNew));
 
 	/* Store nsd_ossl_t* reference in SSL obj */
@@ -1711,10 +1714,13 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	}
 
 	if (pThis->authMode != OSSL_AUTH_CERTANON) {
-		dbgprintf("Connect: enable certificate checking (Mode=%d)\n", pThis->authMode);
+		dbgprintf("Connect: enable certificate checking (Mode=%d, VerifyDepth=%d)\n",
+			pThis->authMode, pThis->DrvrVerifyDepth);
 		/* Enable certificate valid checking */
 		SSL_set_verify(pThis->ssl, SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
-		SSL_set_verify_depth(pThis->ssl, 2);
+		if (pThis->DrvrVerifyDepth != 0) {
+			SSL_set_verify_depth(pThis->ssl, pThis->DrvrVerifyDepth);
+		}
 	}
 
 	if (bAnonInit == 1) { /* no mutex needed, read-only after init */
@@ -1897,6 +1903,27 @@ finalize_it:
 	RETiRet;
 }
 
+/* Set the driver tls  verifyDepth
+ * alorbach, 2019-12-20
+ */
+static rsRetVal
+SetTlsVerifyDepth(nsd_t *pNsd, int verifyDepth)
+{
+	DEFiRet;
+	nsd_ossl_t *pThis = (nsd_ossl_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_ossl);
+	if (verifyDepth == 0) {
+		FINALIZE;
+	}
+	assert(verifyDepth >= 2);
+	pThis->DrvrVerifyDepth = verifyDepth;
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* queryInterface function */
 BEGINobjQueryInterface(nsd_ossl)
 CODESTARTobjQueryInterface(nsd_ossl)
@@ -1933,6 +1960,7 @@ CODESTARTobjQueryInterface(nsd_ossl)
 	pIf->SetGnutlsPriorityString = SetGnutlsPriorityString; /* we don't NEED this interface! */
 	pIf->SetCheckExtendedKeyUsage = SetCheckExtendedKeyUsage; /* we don't NEED this interface! */
 	pIf->SetPrioritizeSAN = SetPrioritizeSAN; /* we don't NEED this interface! */
+	pIf->SetTlsVerifyDepth = SetTlsVerifyDepth;
 
 finalize_it:
 ENDobjQueryInterface(nsd_ossl)

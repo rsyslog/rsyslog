@@ -1136,6 +1136,8 @@ endif
 
 if ENABLE_GNUTLS
 TESTS +=  \
+	imtcp-tls-basic.sh \
+	imtcp-tls-basic-verifydepth.sh \
 	imtcp_conndrop_tls.sh \
 	sndrcv_tls_anon_rebind.sh \
 	sndrcv_tls_anon_hostname.sh \
@@ -1151,8 +1153,7 @@ TESTS +=  \
 	imtcp-tls-gtls-x509fingerprint-invld.sh \
 	imtcp-tls-gtls-x509fingerprint.sh \
 	imtcp-tls-gtls-x509name-invld.sh \
-	imtcp-tls-gtls-x509name.sh \
-	imtcp-tls-basic.sh
+	imtcp-tls-gtls-x509name.sh
 if HAVE_VALGRIND
 TESTS += \
 	imtcp-tls-basic-vg.sh \
@@ -1165,6 +1166,8 @@ if ENABLE_OPENSSL
 TESTS +=  \
 	imtcp-tls-ossl-basic.sh \
 	imtcp-tls-ossl-basic-tlscommands.sh \
+	imtcp-tls-ossl-basic-verifydepth.sh \
+	imtcp-tls-ossl-invalid-verifydepth.sh \
 	sndrcv_tls_ossl_anon_ipv4.sh \
 	sndrcv_tls_ossl_anon_ipv6.sh \
 	sndrcv_tls_ossl_anon_rebind.sh \
@@ -1956,6 +1959,7 @@ EXTRA_DIST= \
 	imtcp-tls-gtls-x509name-invld.sh \
 	imtcp-tls-gtls-x509name.sh \
 	imtcp-tls-basic.sh \
+	imtcp-tls-basic-verifydepth.sh \
 	imtcp-tls-basic-vg.sh \
 	imtcp_incomplete_frame_at_end.sh \
 	imtcp-multiport.sh \
@@ -1964,6 +1968,8 @@ EXTRA_DIST= \
 	manytcp-too-few-tls-vg.sh \
 	imtcp-tls-ossl-basic.sh \
 	imtcp-tls-ossl-basic-tlscommands.sh \
+	imtcp-tls-ossl-basic-verifydepth.sh \
+	imtcp-tls-ossl-invalid-verifydepth.sh \
 	sndrcv_tls_ossl_anon_ipv4.sh \
 	sndrcv_tls_ossl_anon_ipv6.sh \
 	sndrcv_tls_ossl_anon_rebind.sh \

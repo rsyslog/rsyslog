@@ -322,6 +322,26 @@ GetDrvrPrioritizeSAN(netstrms_t *pThis)
 	return pThis->DrvrPrioritizeSan;
 }
 
+/* set the driver TlsVerifyDepth -- alorbach, 2019-12-20 */
+static rsRetVal
+SetDrvrTlsVerifyDepth(netstrms_t *pThis, int verifyDepth)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	pThis->DrvrVerifyDepth = verifyDepth;
+	RETiRet;
+}
+
+/* return the driver TlsVerifyDepth
+ * alorbach, 2019-12-20
+ */
+static int
+GetDrvrTlsVerifyDepth(netstrms_t *pThis)
+{
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	return pThis->DrvrVerifyDepth;
+}
+
 /* create an instance of a netstrm object. It is initialized with default
  * values. The current driver is used. The caller may set netstrm properties
  * and must call ConstructFinalize().
@@ -384,6 +404,8 @@ CODESTARTobjQueryInterface(netstrms)
 	pIf->GetDrvrCheckExtendedKeyUsage = GetDrvrCheckExtendedKeyUsage;
 	pIf->SetDrvrPrioritizeSAN = SetDrvrPrioritizeSAN;
 	pIf->GetDrvrPrioritizeSAN = GetDrvrPrioritizeSAN;
+	pIf->SetDrvrTlsVerifyDepth = SetDrvrTlsVerifyDepth;
+	pIf->GetDrvrTlsVerifyDepth = GetDrvrTlsVerifyDepth;
 finalize_it:
 ENDobjQueryInterface(netstrms)
 

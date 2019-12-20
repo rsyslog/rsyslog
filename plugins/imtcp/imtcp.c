@@ -63,6 +63,7 @@
 #include "ruleset.h"
 #include "rainerscript.h"
 #include "net.h" /* for permittedPeers, may be removed when this is removed */
+#include "parserif.h"
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
@@ -133,6 +134,7 @@ struct modConfData_s {
 	int iStrmDrvrMode; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
 	int iStrmDrvrExtendedCertCheck; /* verify also purpose OID in certificate extended field */
 	int iStrmDrvrSANPreference; /* ignore CN when any SAN set */
+	int iStrmTlsVerifyDepth; /**< Verify Depth for certificate chains */
 	int iAddtlFrameDelim; /* addtl frame delimiter, e.g. for netscreen, default none */
 	int maxFrameSize;
 	int bSuppOctetFram;
@@ -174,6 +176,7 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "streamdriver.name", eCmdHdlrString, 0 },
 	{ "streamdriver.CheckExtendedKeyPurpose", eCmdHdlrBinary, 0 },
 	{ "streamdriver.PrioritizeSAN", eCmdHdlrBinary, 0 },
+	{ "streamdriver.TlsVerifyDepth", eCmdHdlrPositiveInt, 0 },
 	{ "permittedpeer", eCmdHdlrArray, 0 },
 	{ "keepalive", eCmdHdlrBinary, 0 },
 	{ "keepalive.probes", eCmdHdlrPositiveInt, 0 },
@@ -374,6 +377,7 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 		CHKiRet(tcpsrv.SetDrvrMode(pOurTcpsrv, modConf->iStrmDrvrMode));
 		CHKiRet(tcpsrv.SetDrvrCheckExtendedKeyUsage(pOurTcpsrv, modConf->iStrmDrvrExtendedCertCheck));
 		CHKiRet(tcpsrv.SetDrvrPrioritizeSAN(pOurTcpsrv, modConf->iStrmDrvrSANPreference));
+		CHKiRet(tcpsrv.SetDrvrTlsVerifyDepth(pOurTcpsrv, modConf->iStrmTlsVerifyDepth));
 		CHKiRet(tcpsrv.SetUseFlowControl(pOurTcpsrv, modConf->bUseFlowControl));
 		CHKiRet(tcpsrv.SetAddtlFrameDelim(pOurTcpsrv, modConf->iAddtlFrameDelim));
 		CHKiRet(tcpsrv.SetMaxFrameSize(pOurTcpsrv, modConf->maxFrameSize));
@@ -487,6 +491,7 @@ CODESTARTbeginCnfLoad
 	loadModConf->iStrmDrvrMode = 0;
 	loadModConf->iStrmDrvrExtendedCertCheck = 0;
 	loadModConf->iStrmDrvrSANPreference = 0;
+	loadModConf->iStrmTlsVerifyDepth = 0;
 	loadModConf->bUseFlowControl = 1;
 	loadModConf->bKeepAlive = 0;
 	loadModConf->iKeepAliveIntvl = 0;
@@ -572,6 +577,13 @@ CODESTARTsetModCnf
 			loadModConf->iStrmDrvrExtendedCertCheck = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.PrioritizeSAN")) {
 			loadModConf->iStrmDrvrSANPreference = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.TlsVerifyDepth")) {
+			if (pvals[i].val.d.n >= 2) {
+				loadModConf->iStrmTlsVerifyDepth = (int) pvals[i].val.d.n;
+			} else {
+				parser_errmsg("streamdriver.TlsVerifyDepth must be 2 or higher but is %d",
+									(int) pvals[i].val.d.n);
+			}
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.authmode")) {
 			loadModConf->pszStrmDrvrAuthMode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.permitexpiredcerts")) {

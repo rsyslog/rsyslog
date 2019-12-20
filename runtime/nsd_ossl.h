@@ -72,6 +72,7 @@ struct nsd_ossl_s {
 				 * one successful authentication. */
 	permittedPeers_t *pPermPeers; /* permitted peers */
 	uchar *gnutlsPriorityString;	/* gnutls priority string */
+	int DrvrVerifyDepth;		/* Verify Depth for certificate chains */
 	short	bOurCertIsInit;	/**< 1 if our certificate is initialized and must be deinit on destruction */
 	short	bOurKeyIsInit;	/**< 1 if our private key is initialized and must be deinit on destruction */
 	char *pszRcvBuf;
