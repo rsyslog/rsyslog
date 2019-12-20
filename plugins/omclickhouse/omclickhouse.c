@@ -82,6 +82,7 @@ typedef struct instanceConf_s {
 	uchar *user;
 	uchar *pwd;
 	long healthCheckTimeout;
+	long timeout;
 	uchar *authBuf;
 	uchar *tplName;
 	sbool useHttps;
@@ -127,6 +128,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "user", eCmdHdlrGetWord, 0 },
 	{ "pwd", eCmdHdlrGetWord, 0 },
 	{ "healthchecktimeout", eCmdHdlrInt, 0 },
+	{ "timeout", eCmdHdlrInt, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
 	{ "usehttps", eCmdHdlrBinary, 0 },
 	{ "allowunsignedcerts", eCmdHdlrBinary, 0 },
@@ -223,6 +225,7 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tuser='%s'\n", pData->user);
 	dbgprintf("\tpwd='%s'\n", pData->pwd);
 	dbgprintf("\thealthCheckTimeout=%lu\n", pData->healthCheckTimeout);
+	dbgprintf("\ttimeout=%lu\n", pData->timeout);
 	dbgprintf("\ttemplate='%s'\n", pData->tplName);
 	dbgprintf("\tusehttps='%d'\n", pData->useHttps);
 	dbgprintf("\tallowunsignedcerts='%d'\n", pData->allowUnsignedCerts);
@@ -614,6 +617,7 @@ setInstParamDefaults(instanceData *const pData)
 	pData->user = NULL;
 	pData->pwd = NULL;
 	pData->healthCheckTimeout = 3500;
+	pData->timeout = 0;
 	pData->authBuf = NULL;
 	pData->tplName = NULL;
 	pData->useHttps = 1;
@@ -690,6 +694,10 @@ curlPostSetup(wrkrInstanceData_t *const pWrkrData)
 {
 	curlSetupCommon(pWrkrData, pWrkrData->curlPostHandle);
 	curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_POST, 1);
+	if(pWrkrData->pData->timeout) {
+		curl_easy_setopt(pWrkrData->curlPostHandle,
+			CURLOPT_TIMEOUT_MS, pWrkrData->pData->timeout);
+	}
 }
 
 #define CONTENT_JSON "Content-Type: application/json; charset=utf-8"
@@ -830,6 +838,8 @@ CODESTARTnewActInst
 			pData->pwd = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "healthchecktimeout")) {
 			pData->healthCheckTimeout = (long) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "timeout")) {
+			pData->timeout = (long) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "usehttps")) {
