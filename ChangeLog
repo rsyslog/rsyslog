@@ -1,5 +1,6 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
+- 2019-12-20: imdocker bugfix: did not compile without atomic operations
 - 2019-12-20: omclickhouse: new parameter "timeout"
   Thanks to Pavlo Bashynskiy for the patch.
 - 2019-12-20: omhiredis: add 'set' mode plus some fixes
