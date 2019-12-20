@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
+- 2019-12-20: omhiredis: add 'set' mode plus some fixes
+  - new mode 'set' to send SET/SETEX commands
+  - new parameter 'expiration' to send SETEX instead of SET commands (only applicable to 'set' mode)
+  - fixes to missing frees
+  Thanks to github user frikilax for the patch.
 - 2019-12-18: relp: Add support setting openssl configuration commands.
   Add new configuration parameter tls.tlscfgcmd to omrelp and imrelp.
   (Using relpSrvSetTlsConfigCmd and relpCltSetTlsConfigCmd)
