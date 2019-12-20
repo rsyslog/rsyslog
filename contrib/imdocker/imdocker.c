@@ -3,6 +3,8 @@
  * Docker API in order to stream all container logs available on a host. Will also
  * update relevant container metadata.
  *
+ * Copyright (C) 2018, 2019 the rsyslog project.
+ *
  * This file is part of rsyslog.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -220,7 +222,7 @@ DEFobjCurrIf(statsobj)
 statsobj_t *modStats;
 STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
 STATSCOUNTER_DEF(ctrLostRatelimit, mutCtrLostRatelimit)
-STATSCOUNTER_DEF(ctrCurlError, mutctrCurlError)
+STATSCOUNTER_DEF(ctrCurlError, mutCtrCurlError)
 
 const char* DFLT_dockerAPIUnixSockAddr  = "/var/run/docker.sock";
 const char* DFLT_dockerAPIAdd           = "http://localhost:2375";
@@ -957,7 +959,7 @@ if (!loadModConf->getContainerLogOptionsWithoutTail) {
 	CHKiRet(statsobj.AddCounter(modStats, UCHAR_CONSTANT("ratelimit.discarded"),
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrLostRatelimit));
 
-	STATSCOUNTER_INIT(ctrCurlError, mutctrCurlError);
+	STATSCOUNTER_INIT(ctrCurlError, mutCtrCurlError);
 	CHKiRet(statsobj.AddCounter(modStats, UCHAR_CONSTANT("curl.errors"),
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrCurlError));
 
