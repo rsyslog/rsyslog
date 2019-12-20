@@ -77,12 +77,16 @@ Mode
 
    "word", "template", "no", "none"
 
-Mode to run the output action in: "queue" or "publish". If not supplied, the
+Mode to run the output action in: "queue", "publish" or "set". If not supplied, the
 original "template" mode is used.
 
 .. note::
 
-   Due to a config parsing bug in 8.13, explicitly setting this to "template" mode will result in a config parsing error.
+   Due to a config parsing bug in 8.13, explicitly setting this to "template" mode will result in a config parsing
+   error.
+
+   If mode is "set", omhiredis will send SET commands. If "expiration" parameter is provided (see parameter below),
+   omhiredis will send SETEX commands.
 
 
 Template
@@ -108,8 +112,21 @@ Key
 
    "word", "none", "no", "none"
 
-Key is required if using "publish" or "queue" mode.
+Key is required if using "publish", "queue" or "set" modes.
 
+
+Dynakey
+^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+If set to "on", the key value will be considered a template by Rsyslog.
+Useful when dynamic key generation is desired.
 
 Userpush
 ^^^^^^^^
@@ -124,13 +141,25 @@ Userpush
 If set to on, use RPUSH instead of LPUSH, if not set or off, use LPUSH.
 
 
+Expiration
+^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "number", "0", "no", "none"
+
+Only applicable with mode "set". Specifies an expiration for the keys set by omhiredis.
+If this parameter is not specified, the value will be 0 so keys will last forever, otherwise they will last for X
+seconds.
+
 Examples
 ========
 
-Example 1
----------
-
-*Mode: template*
+Example 1: Template mode
+------------------------
 
 In "template" mode, the string constructed by the template is sent
 to Redis as a command.
@@ -157,8 +186,8 @@ to Redis as a command.
      template="program_count_tmpl")
 
 
-Example 2
----------
+Results
+^^^^^^^
 
 Here's an example redis-cli session where we HGETALL the counts:
 
@@ -172,10 +201,8 @@ Here's an example redis-cli session where we HGETALL the counts:
    4) "4302"
 
 
-Example 3
----------
-
-*Mode: queue*
+Example 2: Queue mode
+---------------------
 
 In "queue" mode, the syslog message is pushed into a Redis list
 at "key", using the LPUSH command. If a template is not supplied,
@@ -194,8 +221,8 @@ the plugin will default to the RSYSLOG_ForwardFormat template.
      key="my_queue")
 
 
-Example 3
----------
+Results
+^^^^^^^
 
 Here's an example redis-cli session where we RPOP from the queue:
 
@@ -209,10 +236,8 @@ Here's an example redis-cli session where we RPOP from the queue:
    127.0.0.1:6379>
 
 
-Example 4
----------
-
-*Mode: publish*
+Example 3: Publish mode
+-----------------------
 
 In "publish" mode, the syslog message is published to a Redis
 topic set by "key".  If a template is not supplied, the plugin
@@ -231,8 +256,8 @@ will default to the RSYSLOG_ForwardFormat template.
      key="my_channel")
 
 
-Example 5
----------
+Results
+^^^^^^^
 
 Here's an example redis-cli session where we SUBSCRIBE to the topic:
 
@@ -257,3 +282,129 @@ Here's an example redis-cli session where we SUBSCRIBE to the topic:
    3) "<46>2015-09-17T10:55:44.486416-04:00 myhost rsyslogd-pstats: {\"name\":\"imuxsock\",\"origin\":\"imuxsock\",\"submitted\":0,\"ratelimit.discarded\":0,\"ratelimit.numratelimiters\":0}"
 
 
+Example 4: Set mode
+-------------------
+
+In "set" mode, the syslog message is set as a Redis key at "key". If a template is not supplied,
+the plugin will default to the RSYSLOG_ForwardFormat template.
+
+.. code-block:: none
+
+   module(load="omhiredis")
+
+   action(
+     name="set_redis"
+     server="my-redis-server.example.com"
+     serverport="6379"
+     type="omhiredis"
+     mode="set"
+     key="my_key")
+
+
+Results
+^^^^^^^
+Here's an example redis-cli session where we get the key:
+
+.. code-block:: none
+
+   > redis-cli
+
+   127.0.0.1:6379> get my_key
+
+   "<46>2019-12-17T20:16:54.781239+00:00 localhost rsyslogd-pstats: { \"name\": \"main Q\", \"origin\": \"core.queue\",
+   \"size\": 3, \"enqueued\": 7, \"full\": 0, \"discarded.full\": 0, \"discarded.nf\": 0, \"maxqsize\": 3 }"
+
+   127.0.0.1:6379> ttl my_key
+
+   (integer) -1
+
+
+Example 5: Set mode with expiration
+-----------------------------------
+
+In "set" mode when "expiration" is set to a positive integer, the syslog message is set as a Redis key at "key",
+with expiration "expiration".
+If a template is not supplied, the plugin will default to the RSYSLOG_ForwardFormat template.
+
+.. code-block:: none
+
+   module(load="omhiredis")
+
+   action(
+     name="set_redis"
+     server="my-redis-server.example.com"
+     serverport="6379"
+     type="omhiredis"
+     mode="set"
+     key="my_key"
+     expiration="10")
+
+
+Results
+^^^^^^^
+
+Here's an example redis-cli session where we get the key and test the expiration:
+
+.. code-block:: none
+
+   > redis-cli
+
+   127.0.0.1:6379> get my_key
+
+   "<46>2019-12-17T20:16:54.781239+00:00 localhost rsyslogd-pstats: { \"name\": \"main Q\", \"origin\": \"core.queue\",
+   \"size\": 3, \"enqueued\": 7, \"full\": 0, \"discarded.full\": 0, \"discarded.nf\": 0, \"maxqsize\": 3 }"
+
+   127.0.0.1:6379> ttl my_key
+
+   (integer) 10
+
+   127.0.0.1:6379> ttl my_key
+
+   (integer) 3
+
+   127.0.0.1:6379> ttl my_key
+
+   (integer) -2
+
+   127.0.0.1:6379> get my_key
+
+   (nil)
+
+
+Example 6: Set mode with dynamic key
+------------------------------------
+
+In any mode with "key" defined and "dynakey" as "on", the key used during operation will be dynamically generated
+by Rsyslog using templating.
+
+.. code-block:: none
+
+   module(load="omhiredis")
+
+   template(name="example-template" type="string" string="%hostname%")
+
+   action(
+     name="set_redis"
+     server="my-redis-server.example.com"
+     serverport="6379"
+     type="omhiredis"
+     mode="set"
+     key="example-template"
+     dynakey="on")
+
+
+Results
+^^^^^^^
+Here's an example redis-cli session where we get the dynamic key:
+
+.. code-block:: none
+
+   > redis-cli
+
+   127.0.0.1:6379> keys *
+
+   (empty list or set)
+
+   127.0.0.1:6379> keys *
+
+   1) "localhost"
