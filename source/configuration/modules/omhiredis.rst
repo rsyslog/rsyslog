@@ -115,6 +115,19 @@ Key
 Key is required if using "publish", "queue" or "set" modes.
 
 
+Dynakey
+^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+If set to "on", the key value will be considered a template by Rsyslog.
+Useful when dynamic key generation is desired.
+
 Userpush
 ^^^^^^^^
 
@@ -356,3 +369,42 @@ Here's an example redis-cli session where we get the key and test the expiration
    127.0.0.1:6379> get my_key
 
    (nil)
+
+
+Example 6: Set mode with dynamic key
+------------------------------------
+
+In any mode with "key" defined and "dynakey" as "on", the key used during operation will be dynamically generated
+by Rsyslog using templating.
+
+.. code-block:: none
+
+   module(load="omhiredis")
+
+   template(name="example-template" type="string" string="%hostname%")
+
+   action(
+     name="set_redis"
+     server="my-redis-server.example.com"
+     serverport="6379"
+     type="omhiredis"
+     mode="set"
+     key="example-template"
+     dynakey="on")
+
+
+Results
+^^^^^^^
+Here's an example redis-cli session where we get the dynamic key:
+
+.. code-block:: none
+
+   > redis-cli
+
+   127.0.0.1:6379> keys *
+
+   (empty list or set)
+
+   127.0.0.1:6379> keys *
+
+   1) "localhost"
