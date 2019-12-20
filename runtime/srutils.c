@@ -725,6 +725,11 @@ void seedRandomNumber(void)
 	}
 }
 
+int isRandomNumberFd(const int fd)
+{
+	return fd >= 0 && fd == fdURandom;
+}
+
 long int randomNumber(void)
 {
 	long int ret;
@@ -743,6 +748,11 @@ long int randomNumber(void)
 void seedRandomNumber(void)
 {
 	seedRandomInsecureNumber();
+}
+
+int isRandomNumberFd(const int fd)
+{
+	return 0;
 }
 
 long int randomNumber(void)

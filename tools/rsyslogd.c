@@ -387,7 +387,7 @@ prepareBackground(const int parentPipeFD)
 	const int endClose = getdtablesize();
 	close(0);
 	for(int i = beginClose ; i <= endClose ; ++i) {
-		if((i != dbgGetDbglogFd()) && (i != parentPipeFD)) {
+		if((i != dbgGetDbglogFd()) && (i != parentPipeFD) && (!isRandomNumberFd(i))) {
 			  aix_close_it(i); /* AIXPORT */
 		}
 	}
