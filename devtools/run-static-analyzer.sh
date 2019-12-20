@@ -1,6 +1,8 @@
 #!/bin/bash
 cd /rsyslog
 set -e
+echo "SCAN_BUILD_CC: $SCAN_BUILD_CC"
+echo "SCAN_BUILD: $SCAN_BUILD"
 
 if [ -n "$SCAN_BUILD_REPORT_DIR" ]
 then
