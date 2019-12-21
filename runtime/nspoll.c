@@ -43,7 +43,7 @@ DEFobjCurrIf(glbl)
 
 
 /* load our low-level driver. This must be done before any
- * driver-specific functions (allmost all...) can be carried
+ * driver-specific functions (almost all...) can be carried
  * out. Note that the driver's .ifIsLoaded is correctly
  * initialized by calloc() and we depend on that. Please note that
  * we do some name-mangeling. We know that each nsd driver also needs

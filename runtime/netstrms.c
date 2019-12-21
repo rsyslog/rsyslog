@@ -48,7 +48,7 @@ DEFobjCurrIf(netstrm)
 
 
 /* load our low-level driver. This must be done before any
- * driver-specific functions (allmost all...) can be carried
+ * driver-specific functions (almost all...) can be carried
  * out. Note that the driver's .ifIsLoaded is correctly
  * initialized by calloc() and we depend on that.
  * WARNING: this code is mostly identical to similar code in

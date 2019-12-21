@@ -569,7 +569,7 @@ finalize_it:
 }
 
 /* A standard parser to parse out the PRI. This is made available in
- * this module as it is expected that allmost all parsers will need
+ * this module as it is expected that almost all parsers will need
  * that functionality and so they do not need to implement it themsleves.
  */
 static rsRetVal

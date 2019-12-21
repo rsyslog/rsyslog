@@ -18,7 +18,7 @@
  * package - without it, I would have had a much harder start...
  *
  * Please note that while rsyslog started from the sysklogd code base,
- * it nowadays has almost nothing left in common with it. Allmost all
+ * it nowadays has almost nothing left in common with it. Almost all
  * parts of the code have been rewritten.
  *
  * This Project was intiated and is maintained by
