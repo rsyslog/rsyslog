@@ -8692,7 +8692,7 @@ Version 5.5.2  [DEVEL] (rgerhards), 2010-02-05
 - extended testbench
 ---------------------------------------------------------------------------
 Version 5.5.1  [DEVEL] (rgerhards), 2009-11-27
-- introduced the ablity for netstream drivers to utilize an epoll interface
+- introduced the ability for netstream drivers to utilize an epoll interface
   This offers increased performance and removes the select() FDSET size
   limit from imtcp. Note that we fall back to select() if there is no
   epoll netstream drivers. So far, an epoll driver has only been

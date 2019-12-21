@@ -1277,7 +1277,7 @@ error_stats() {
 }
 
 # do the usual sequence check to see if everything was properly received.
-# $4... are just to have the abilit to pass in more options...
+# $4... are just to have the ability to pass in more options...
 # add -v to chkseq if you need more verbose output
 # argument --check-only can be used to simply do a check without abort in fail case
 # env var SEQ_CHECK_FILE permits to override file name to check
@@ -1351,7 +1351,7 @@ seq_check() {
 # do the usual sequence check to see if everything was properly received. This is
 # a duplicateof seq-check, but we could not change its calling conventions without
 # breaking a lot of exitings test cases, so we preferred to duplicate the code here.
-# $4... are just to have the abilit to pass in more options...
+# $4... are just to have the ability to pass in more options...
 # add -v to chkseq if you need more verbose output
 seq_check2() {
 	$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${RSYSLOG2_OUT_LOG}  | ./chkseq -s$1 -e$2 $3 $4 $5 $6 $7
@@ -1363,7 +1363,7 @@ seq_check2() {
 
 
 # do the usual sequence check, but for gzip files
-# $4... are just to have the abilit to pass in more options...
+# $4... are just to have the ability to pass in more options...
 gzip_seq_check() {
 	if [ "$1" == "" ]; then
 		if [ "$NUMMESSAGES" == "" ]; then
