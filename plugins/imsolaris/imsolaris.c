@@ -112,7 +112,7 @@ static char *LogName = NULL;	/* the log socket name TODO: make configurable! */
 /* a function to replace the sun logerror() function.
  * It generates an error message from the supplied string. The main
  * reason for not calling logError directly is that sun_cddl.c does not
- * know or has acces to rsyslog objects (namely errmsg) -- and we do not
+ * know or has access to rsyslog objects (namely errmsg) -- and we do not
  * want to do this effort. -- rgerhards, 2010-04-19
  */
 void
