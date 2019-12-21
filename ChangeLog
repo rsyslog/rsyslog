@@ -2305,7 +2305,7 @@ Version 8.35.0 [v8-stable] 2018-05-15
   * fixed races in some tests; root cause was that default enq timeout was too
     low - we may also see in the future that other tests also need adjustment
     (note that this is not a code problem but rather slow CI environments,
-    so increasing the timeout to get to a stable test state is the absoulutely
+    so increasing the timeout to get to a stable test state is the absolutely
     correct thing to do)
   * enabled some additional useful compiler warnings
   * new test for diskqueue hitting configured disk space limit
