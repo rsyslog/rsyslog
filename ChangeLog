@@ -2879,7 +2879,7 @@ Version 8.32.0 [v8-stable] 2018-01-09
   schemes. For example, a ltrim(" a") could lead to the fault.
 - imklog bugfix: local host IP was hardcoded to 127.0.0.1
   This is now taken from the global localHostIP setting, which is used
-  consistent accross all modules.
+  consistent across all modules.
   Also, the removed (2012?) directive $klogLocalIPIF has been added
   again but directly marked as removed. That way, an informative error
   message is generated if someone tries to use it.

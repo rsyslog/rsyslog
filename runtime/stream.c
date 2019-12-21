@@ -861,7 +861,7 @@ static rsRetVal strmUnreadChar(strm_t *pThis, uchar c)
 	--pThis->iCurrOffs; /* one less octet read - NOTE: this can cause problems if we got a file change
 	and immediately do an unread and the file is on a buffer boundary and the stream is then persisted.
 	With the queue, this can not happen as an Unread is only done on record begin, which is never split
-	accross files. For other cases we accept the very remote risk. -- rgerhards, 2008-01-12 */
+	across files. For other cases we accept the very remote risk. -- rgerhards, 2008-01-12 */
 
 	return RS_RET_OK;
 }
