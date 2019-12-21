@@ -2420,7 +2420,7 @@ Version 8.34.0 [v8-stable] 2018-04-03
   "From my side, I work with thousands of servers centralizing logs to rsyslog
   servers in tcp. All of them are running RHEL 6 and 7. The default rsyslog settings
   in RHEL is TCPKeepAlive off. Since there are thousands of connections on the
-  rsyslog servers, I had to turn the TCPKeepAlive on to setup an agressive policy
+  rsyslog servers, I had to turn the TCPKeepAlive on to setup an aggressive policy
   regarding ghost connections (following firewall tcp-timeout issue). Basically,
   I set up: intvl=10 - probe=5 - time=2 If intvl and time are switched, it won't
   break anything. It will just send 5 more empty tcp packets for 10 seconds (5
@@ -2433,7 +2433,7 @@ Version 8.34.0 [v8-stable] 2018-04-03
   after 5 probe or packet, it will stop. To summarize, I think it won't
   break anything:
   * Keepalive is off by default is many linux distribution
-  * When we enable it, it's to set up an agressive policy. And setting up a
+  * When we enable it, it's to set up an aggressive policy. And setting up a
     10-5-1, 60-5-2, 2-5-60 or 1-20-1 policy is almost the same.
   Bonus: For people setting up their rsyslog from the documentation, it will
   now work as expected."
