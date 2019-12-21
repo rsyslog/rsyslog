@@ -248,7 +248,7 @@ getMsgs(thrdInfo_t *pThrd, int timeout)
 
 	/* we optimize performance: if iMaxLine is below 4K (which it is in almost all
 	 * cases, we use a fixed buffer on the stack. Only if it is higher, heap memory
-	 * is used. We could use alloca() to achive a similar aspect, but there are so
+	 * is used. We could use alloca() to achieve a similar aspect, but there are so
 	 * many issues with alloca() that I do not want to take that route.
 	 * rgerhards, 2008-09-02
 	 */
