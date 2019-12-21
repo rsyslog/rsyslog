@@ -9877,7 +9877,7 @@ version before switching to this one.
 - bugfix: compressed syslog messages could be slightly mis-uncompressed
   if the last byte of the compressed record was a NUL
 - added $UDPServerTimeRequery option which enables to work with
-  less acurate timestamps in favor of performance. This enables querying
+  less accurate timestamps in favor of performance. This enables querying
   of the time only every n-th time if imudp is running in the tight
   receive loop (aka receiving messsages at a high rate)
 - doc bugfix: queue doc had wrong parameter name for setting controlling

@@ -250,7 +250,7 @@ batchState2String(const batch_state_t state)
  * system time is obtained the first time an action needs to know the time
  * and then kept cached inside the action structure. Later requests will
  * always return that very same time. Wile not totally accurate, it is far
- * accurate in most cases and considered "acurate enough" for all cases.
+ * accurate in most cases and considered "accurate enough" for all cases.
  * When changing the threading model, please keep in mind that this
  * logic needs to be changed should we once allow more than one parallel
  * call into the same action (object). As this is currently not supported,
