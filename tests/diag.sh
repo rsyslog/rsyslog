@@ -2422,7 +2422,7 @@ case $1 in
 		# happens in chained test scripts. Delete on exit is fine,
 		# though.
 		# note: TCPFLOOD_EXTRA_OPTS MUST NOT be unset in init, because
-		# some tests need to set it BEFORE calling init to accomodate
+		# some tests need to set it BEFORE calling init to accommodate
 		# their generic test drivers.
 		if [ "$TCPFLOOD_EXTRA_OPTS" != '' ] ; then
 		        echo TCPFLOOD_EXTRA_OPTS set: $TCPFLOOD_EXTRA_OPTS
