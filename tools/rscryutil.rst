@@ -60,7 +60,7 @@ OPTIONS
   steps. This option may be removed in the future.
 
 -a, --algo <algo>
-  Sets the encryption algorightm (cipher) to be used. See below
+  Sets the encryption algorithm (cipher) to be used. See below
   for supported algorithms. The default is "AES128".
 
 -m, --mode <mode>
