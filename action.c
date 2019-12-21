@@ -57,7 +57,7 @@
  * alone is checked at the deq side of the queue (seems to be unavoidable
  * to do it that way), but all other complex conditons (like failover
  * handling) go into the computation of the filter condition. For
- * non-direct queues, we still enqueue only what is acutally necessary.
+ * non-direct queues, we still enqueue only what is actually necessary.
  * Note that in this case the rest of the code must ensure that the filter
  * is set to "true". While this is not perfect and not as simple as
  * we would like to see it, it looks like the best way to tackle that
@@ -834,7 +834,7 @@ actionSuspend(action_t * const pThis, wti_t * const pWti)
  * engine to go into a tight loop. That obviously is not acceptable. As such, we track the
  * count of iterations that a tryResume returning RS_RET_OK is immediately followed by
  * an unsuccessful call to doAction(). If that happens more than 10 times, we assume
- * the return acutally is a RS_RET_SUSPENDED. In order to go through the various
+ * the return actually is a RS_RET_SUSPENDED. In order to go through the various
  * resumption stages, we do this for every 10 requests. This magic number 10 may
  * not be the most appropriate, but it should be thought of a "if nothing else helps"
  * kind of facility: in the first place, the module should return a proper indication

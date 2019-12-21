@@ -2324,7 +2324,7 @@ static const char *getMSGID(smsg_t * const pM)
 	}
 }
 
-/* rgerhards 2012-03-15: set parser success (an integer, acutally bool)
+/* rgerhards 2012-03-15: set parser success (an integer, actually bool)
  */
 void MsgSetParseSuccess(smsg_t * const pMsg, int bSuccess)
 {

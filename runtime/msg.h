@@ -42,7 +42,7 @@
  *
  * Important Note:
  * The message object is used for multiple purposes (once it
- * has been created). Once created, it actully is a read-only
+ * has been created). Once created, it actually is a read-only
  * object (though we do not specifically express this). In order
  * to avoid multiple copies of the same object, we use a
  * reference counter. This counter is set to 1 by the constructer

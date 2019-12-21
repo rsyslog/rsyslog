@@ -4634,7 +4634,7 @@ cnfexprOptimize_CMP_var(struct cnfexpr *expr)
 				parser_errmsg("invalid syslogseverity '%s', expression will always "
 					      "evaluate to FALSE", cstr);
 			} else {
-				/* we can acutally optimize! */
+				/* we can actually optimize! */
 				DBGPRINTF("optimizer: change comparison OP to FUNC prifilt()\n");
 				func = cnffuncNew_prifilt(0);
 				prifiltSetSeverity(func->funcdata, sev, expr->nodetype);

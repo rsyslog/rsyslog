@@ -1221,7 +1221,7 @@ finalize_it:
  * RS_RET_OK, which means the session should be kept open
  * or anything else, which means it must be closed.
  * rgerhards, 2008-03-01
- * As a performance optimization, we pick up the timestamp here. Acutally,
+ * As a performance optimization, we pick up the timestamp here. Actually,
  * this *is* the *correct* reception step for all the data we received, because
  * we have just received a bunch of data! -- rgerhards, 2009-06-16
  * EXTRACT from tcps_sess.c

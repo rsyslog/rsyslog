@@ -134,7 +134,7 @@ extern DEF_ATOMIC_HELPER_MUT(mutTerminateInputs);
 
 /* Developer options enable some strange things for developer-only testing.
  * These should never be enabled in a user build, except if explicitly told
- * by a developer. The options are acutally flags, so they should be powers
+ * by a developer. The options are actually flags, so they should be powers
  * of two. Flag assignment may change between versions, **backward
  * compatibility is NOT necessary**.
  * rgerhards, 2018-04-28

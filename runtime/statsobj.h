@@ -162,7 +162,7 @@ void checkGoneAwaySenders(time_t);
  * provides insight into the inner engine workings without need for
  * additional counters (and their maintenance code). Dual counters
  * MUST NOT be modified by STATSCOUNTER_* functions. Most importantly,
- * it is expected that the actua application code provides proper
+ * it is expected that the actual application code provides proper
  * (enough) synchronized access to these counters. Most importantly,
  * this means they have NO stats-system mutex associated to them.
  *
