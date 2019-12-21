@@ -303,7 +303,7 @@ finalize_it:
 /* This function waits until all queues are drained (size = 0)
  * To make sure it really is drained, we check multiple times. Otherwise we
  * may just see races. Note: it is important to ensure that the size
- * is zero multiple times in succession. Otherwise, we may just accidently
+ * is zero multiple times in succession. Otherwise, we may just accidentally
  * hit a situation where the queue isn't filled for a while (we have seen
  * this in practice, see https://github.com/rsyslog/rsyslog/issues/688).
  * Note: until 2014--07-13, this checked just the main queue. However,

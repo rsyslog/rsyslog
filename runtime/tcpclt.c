@@ -167,7 +167,7 @@ TCPSendBldFrame(tcpclt_t *pThis, char **pmsg, size_t *plen, int *pbMustBeFreed)
 			 * reason is that we a) add one character and b) len does
 			 * not take care of the '\0' byte. Up until today, it was just
 			 * +1 , which caused rsyslogd to sometimes dump core.
-			 * I have added this comment so that the logic is not accidently
+			 * I have added this comment so that the logic is not accidentally
 			 * changed again. rgerhards, 2005-10-25
 			 */
 			if((buf = malloc(len + 2)) == NULL) {

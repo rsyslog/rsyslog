@@ -2365,7 +2365,7 @@ case $1 in
 		fi
 		if [ "$RSYSLOG_DYNNAME" != "" ]; then
 			echo "FAIL: \$RSYSLOG_DYNNAME already set in init"
-			echo "hint: was init accidently called twice?"
+			echo "hint: was init accidentally called twice?"
 			exit 2
 		fi
 		export RSYSLOG_DYNNAME="rstb_$(./test_id $(basename $0))"

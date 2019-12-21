@@ -343,7 +343,7 @@ DISTCHECK_CONFIGURE_FLAGS=
 # a developer must always have an environment where every supporting library
 # is available. If that is not the case, the respective configure option may
 # temporarily be removed below. The intent behind forcing everthing to compile
-# in a make distcheck is so that we detect code that accidently was not updated
+# in a make distcheck is so that we detect code that accidentally was not updated
 # when some global update happened.
 DISTCHECK_CONFIGURE_FLAGS+= \
 	--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir) \

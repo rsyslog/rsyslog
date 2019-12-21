@@ -926,7 +926,7 @@ logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg, int fla
 	char *bufModMsg = NULL; /* buffer for modified message, should we need to modify */
 	DEFiRet;
 
-	/* we first do a path the remove control characters that may have accidently
+	/* we first do a path the remove control characters that may have accidentally
 	 * introduced (program error!). This costs performance, but we do not expect
 	 * to be called very frequently in any case ;) -- rgerhards, 2013-12-19.
 	 */

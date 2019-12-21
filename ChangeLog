@@ -408,7 +408,7 @@ Scheduled Release 8.1908.0 (aka 2019.08) 2019-08-20
   This commit also adds an ability to "abort" the full testbench run on
   first test failure. This is especially useful during CI.
 - 2019-08-13: testbench: add test for imuxsock legacy format
-  This was never tested. Ensures we don't accidently break existing
+  This was never tested. Ensures we don't accidentally break existing
   configurations.
 - 2019-08-13: omelasticsearch bugfix: segfault on unknown retryRuleset
   omelasticsearch does some "interesting tricks" for an output module.
@@ -1126,7 +1126,7 @@ Version 8.1901.0 (aka 2019.01) 2019-01-22
   "certless".
   The prime intent of this test is to match config suggestions given
   by log hosting companies (like loggly) and so ensure that we do
-  not accidently break them. This is espcially important as the
+  not accidentally break them. This is espcially important as the
   capability for certless clients was not properly documented and
   also become forgotten by the rsyslog team.
   see also https://github.com/rsyslog/rsyslog/issues/3413
@@ -1518,7 +1518,7 @@ Version 8.38.0 [v8-stable] 2018-09-18
   closes https://github.com/rsyslog/rsyslog/issues/2468
   Thanks to Joan Sala for contributing this.
 - imfile: implement file-id, used in state file
-  This ensures that files with the same inodes are not accidently treated
+  This ensures that files with the same inodes are not accidentally treated
   as equal, at least within the limits of the file id hash (see doc for
   details).
   We use the siphash reference implementation to generate our non-cryptographic
@@ -2410,7 +2410,7 @@ Version 8.34.0 [v8-stable] 2018-04-03
   out of it and struct cmsghdr insured it was properly aligned.
   The problems were especially visible on alpha and ia64 machines.
   Thanks to Jason Duerstock for the fix.
-- bugfix testbench: some test were accidently not executed
+- bugfix testbench: some test were accidentally not executed
   Thanks to Kasumi Hanazuki for the patch.
 - bugfix tcp subsystem: keepalive settings mixed up
   TCPKeepAliveIntvl and TPCKeepAliveTime were switched. This is now correct and
@@ -5336,7 +5336,7 @@ Version 8.3.4 [v8-devel] 2014-07-11
 - new tzinfo config object -- permits to define time zone offsets
   This is a utility object that currently is being used by some parsers.
 - bugfix: mishandling of input modules not supporting new input instances
-  If they did not support this, accidently the output module part of the
+  If they did not support this, accidentally the output module part of the
   module union was written, leading to unpredictable results. Note: all
   core modules do support this interface, but some contributed or very
   old ones do not.
@@ -5802,7 +5802,7 @@ Version 7.6.4 [v7.6-stable] 2014-09-12
 - bugfix: busy loop in tcp listener when running out of file descriptors
   Thanks to Susant Sahani for the patch.
 - bugfix: mishandling of input modules not supporting new input instances
-  If they did not support this, accidently the output module part of the
+  If they did not support this, accidentally the output module part of the
   module union was written, leading to unpredictable results. Note: all
   core modules do support this interface, but some contributed or very
   old ones do not.
@@ -6507,7 +6507,7 @@ Version 7.3.14  [beta] 2013-05-06
   in module() statement.
   Thanks to Marius Tomaschewski for reporting the bug.
 - bugfix: segfault due to invalid dynafile cache handling
-  Accidently, the old-style cache size parameter was used when the
+  Accidentally, the old-style cache size parameter was used when the
   dynafile cache was created in a RainerScript action. If the old-style
   size was lower than the one actually set, this lead to misadressing
   when the size was overrun, and that could lead to all kinds of
@@ -6794,7 +6794,7 @@ Version 7.2.8  [v7-stable] 2013-0?-??
   in module() statement.
   Thanks to Marius Tomaschewski for reporting the bug.
 - bugfix: segfault due to invalid dynafile cache handling
-  Accidently, the old-style cache size parameter was used when the
+  Accidentally, the old-style cache size parameter was used when the
   dynafile cache was created in a RainerScript action. If the old-style
   size was lower than the one actually set, this lead to misadressing
   when the size was overrun, and that could lead to all kinds of
@@ -6848,7 +6848,7 @@ Version 7.2.7  [v7-stable] 2013-04-17
   To use that functionality, legacy rsyslog.conf syntax had to be used.
   Also, the doc was missing information on the "ParseTrusted" set of
   config directives.
-- bugfix: parameter action.execOnlyWhenPreviousIsSuspended was accidently 
+- bugfix: parameter action.execOnlyWhenPreviousIsSuspended was accidentally 
   of integer-type. For obvious reasons, it needs to be boolean. Note
   that this change can break existing configurations if they circumvented
   the problem by using 0/1 values.
@@ -8727,7 +8727,7 @@ Version 5.4.2  [v5-stable] (rgerhards), 2010-03-??
   but also because plugins may not be totally able to avoid this situation
   (depending on the type of and processing done by the plugin).
 - bugfix: testbench failed when not executed in UTC+1 timezone
-  accidently, the time zone information was kept inside some
+  accidentally, the time zone information was kept inside some
   to-be-checked-for responses
 - temporary bugfix replaced by permanent one for
   message-induced off-by-one error (potential segfault) (see 4.6.2)
@@ -8767,7 +8767,7 @@ Version 5.3.7  [BETA] (rgerhards), 2010-01-27
   a stack-based pointer which lead to destruction of the stack frame and
   thus a segfault on function return.
   Thanks to Michael Biebl for alerting us on this problem.
-- bugfix: hostname accidently set to IP address for some message sources,
+- bugfix: hostname accidentally set to IP address for some message sources,
   for example imudp. Thanks to Anton for reporting this bug. [imported v4]
 - bugfix: ompgsql had problems with transaction support, what actually 
   rendered it unsuable. Thanks to forum user "horhe" for alerting me
@@ -8849,7 +8849,7 @@ Version 5.3.4  [DEVEL] (rgerhards), 2009-11-04
   This offers considerable additional flexibility AND superior performance
   (in cases where multiple inputs now can avoid lock contention)
 - bugfix: correct default for escape ('#') character restored
-  This was accidently changed to '\\', thanks to David Lang for reporting
+  This was accidentally changed to '\\', thanks to David Lang for reporting
 - bugfix(testbench): testcase did not properly wait for rsyslogd shutdown
   thus some unpredictable behavior and a false negative test result
   could occur.
@@ -8996,7 +8996,7 @@ Version 5.1.4  [DEVEL] (rgerhards), 2009-08-20
 - bugfix: discard action caused segfault
 - bugfix: potential segfault in output file writer (omfile)
   In async write mode, we use modular arithmetic to index the output
-  buffer array. However, the counter variables accidently were signed,
+  buffer array. However, the counter variables accidentally were signed,
   thus resulting in negative indizes after integer overflow. That in turn
   could lead to segfaults, but was depending on the memory layout of 
   the instance in question (which in turn depended on a number of
@@ -9279,7 +9279,7 @@ Version 4.6.3  [v4-stable] (rgerhards), 2010-07-07
   means that it looked like no output were written or partial
   lines. Thanks to Michael Biebl for pointing out this bug.
 - bugfix: testbench failed when not executed in UTC+1 timezone
-  accidently, the time zone information was kept inside some
+  accidentally, the time zone information was kept inside some
   to-be-checked-for responses
 - temporary bugfix replaced by permanent one for
   message-induced off-by-one error (potential segfault) (see 4.6.2)
@@ -9457,7 +9457,7 @@ Version 4.5.7  [v4-beta] (rgerhards), 2009-11-18
   Also improved the doc on the debug system.
 - bugfix (kind of): check if TCP connection is still alive if using TLS
   Thanks to Jonathan Bond-Caron for the patch.
-- bugfix: hostname accidently set to IP address for some message sources,
+- bugfix: hostname accidentally set to IP address for some message sources,
   for example imudp. Thanks to Anton for reporting this bug.
 - bugfix [imported from 4.4.3]: $ActionExecOnlyOnceEveryInterval did
   not work.
@@ -9543,7 +9543,7 @@ Version 4.5.2  [v4-beta] (rgerhards), 2009-08-21
   emitted
 - bugfix: potential segfault in output file writer (omfile)
   In async write mode, we use modular arithmetic to index the output
-  buffer array. However, the counter variables accidently were signed,
+  buffer array. However, the counter variables accidentally were signed,
   thus resulting in negative indizes after integer overflow. That in turn
   could lead to segfaults, but was depending on the memory layout of 
   the instance in question (which in turn depended on a number of
@@ -9980,7 +9980,7 @@ Version 3.21.10 [BETA] (rgerhards), 2009-02-02
 - bugfix: inconsistent use of mutex/atomic operations could cause segfault
   details are too many, for full analysis see blog post at:
   http://blog.gerhards.net/2009/01/rsyslog-data-race-analysis.html
-- the string "Do Die" was accidently emited upon exit in non-debug mode
+- the string "Do Die" was accidentally emited upon exit in non-debug mode
   This has now been corrected. Thanks to varmojfekoj for the patch.
 - some legacy options were not correctly processed.
   Thanks to varmojfekoj for the patch.
@@ -10678,12 +10678,12 @@ Version 3.14.1 (rgerhards), 2008-04-04
 - bugfix: some memory leak when queue is runing in disk mode
 ---------------------------------------------------------------------------
 Version 3.14.0 (rgerhards), 2008-04-02
-An interim version was accidently released to the web. It was named 3.14.0.
+An interim version was accidentally released to the web. It was named 3.14.0.
 To avoid confusion, we have not assigned this version number to any
 official release. If you happen to use 3.14.0, please update to 3.14.1.
 ---------------------------------------------------------------------------
 Version 3.13.0-dev0 (rgerhards), 2008-03-31
-- bugfix: accidently set debug option in 3.12.5 reset to production
+- bugfix: accidentally set debug option in 3.12.5 reset to production
   This option prevented dlclose() to be called. It had no real bad effects,
   as the modules were otherwise correctly deinitialized and dlopen()
   supports multiple opens of the same module without any memory footprint.
@@ -11536,7 +11536,7 @@ Version 1.15.0 (RGer), 2007-07-05
 - applied a patch from Bartosz Kuzma to compile cleanly under NetBSD
 - checks for extra (unexpected) characters in system config file lines
   have been added
-- added IPv6 documentation - was accidently missing from CVS
+- added IPv6 documentation - was accidentally missing from CVS
 - begun to change char to unsigned char
 ---------------------------------------------------------------------------
 Version 1.14.2 (RGer), 2007-07-03
@@ -12479,7 +12479,7 @@ Version 1.15.0 (RGer), 2007-07-05
 - applied a patch from Bartosz Kuzma to compile cleanly under NetBSD
 - checks for extra (unexpected) characters in system config file lines
   have been added
-- added IPv6 documentation - was accidently missing from CVS
+- added IPv6 documentation - was accidentally missing from CVS
 - begun to change char to unsigned char
 ---------------------------------------------------------------------------
 Version 1.14.2 (RGer), 2007-07-03
@@ -13422,7 +13422,7 @@ Version 1.15.0 (RGer), 2007-07-05
 - applied a patch from Bartosz Kuzma to compile cleanly under NetBSD
 - checks for extra (unexpected) characters in system config file lines
   have been added
-- added IPv6 documentation - was accidently missing from CVS
+- added IPv6 documentation - was accidentally missing from CVS
 - begun to change char to unsigned char
 ---------------------------------------------------------------------------
 Version 1.14.2 (RGer), 2007-07-03
