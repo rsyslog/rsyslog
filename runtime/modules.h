@@ -111,7 +111,7 @@ struct modInfo_s {
 	rsRetVal (*isCompatibleWithFeature)(syslogFeature);
 	rsRetVal (*freeInstance)(void*);/* called before termination or module unload */
 	rsRetVal (*dbgPrintInstInfo)(void*);/* called before termination or module unload */
-	rsRetVal (*tryResume)(void*);/* called to see if module actin can be resumed now */
+	rsRetVal (*tryResume)(void*);/* called to see if module action can be resumed now */
 	rsRetVal (*modExit)(void);		/* called before termination or module unload */
 	rsRetVal (*modGetID)(void **);		/* get its unique ID from module */
 	rsRetVal (*doHUP)(void *);		/* HUP handler, action level */
