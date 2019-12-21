@@ -83,7 +83,7 @@ Needed packages to build with omhiredis support:
 apt-get update && apt-get install -y build-essential pkg-config libestr-dev libfastjson-dev zlib1g-dev uuid-dev libgcrypt20-dev liblogging-stdlog-dev libhiredis-dev uuid-dev libgcrypt11-dev liblogging-stdlog-dev flex bison
 ```
 
-Aditional packages for other modules:
+Additional packages for other modules:
 ```
 libdbi-dev libmysqlclient-dev postgresql-client libpq-dev libnet-dev librdkafka-dev libgrok-dev libgrok1 libgrok-dev libpcre3-dev libtokyocabinet-dev libglib2.0-dev libmongo-client-dev
 ```
@@ -104,7 +104,7 @@ in that case adding debian backports repositories might help.
 For example installing with apt libfastjson-dev -t stretch-backports.
 
 
-Aditional packages for other modules:
+Additional packages for other modules:
 ```
 libdbi-dev libmysqlclient-dev postgresql-client libpq-dev libnet-dev librdkafka-dev libgrok-dev libgrok1 libgrok-dev libpcre3-dev libtokyocabinet-dev libglib2.0-dev libmongo-client-dev
 ```
