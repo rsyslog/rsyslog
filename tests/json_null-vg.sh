@@ -1,7 +1,7 @@
 #!/bin/bash
 # added 2015-11-17 by rgerhards
 # This file is part of the rsyslog project, released under ASL 2.0
-# Note: the aim of this test is to test against misadressing, so we do
+# Note: the aim of this test is to test against misaddressing, so we do
 # not actually check the output
 
 uname

@@ -328,7 +328,7 @@ Scheduled Release 8.1911.0 (aka 2019.11) 2019-11-12
 - 2019-10-11: core bugfix: potential abort on very long action name
   The action name is stored in modified form for the debug header and
   some messages. If it is extremely long, a buffer can be overrun,
-  resulting in misadressing and potential segfault for rsyslog. This
+  resulting in misaddressing and potential segfault for rsyslog. This
   can also happen if the action is NOT named, but a custom path to
   the output module is given and that path is very long. This triggers
   the same issue because by default the module load path is included
@@ -359,15 +359,15 @@ Scheduled Release 8.1910.0 (aka 2019.10) 2019-10-01
   not configure such parameters. This has been corrected, so that a message is only
   emitted if there really is a problem. Based on user feedback the severity has also
   been downgraded to "warning".
-- 2019-10-01: pmcisconames (contributed module) bugfix: potential misadressing
-- 2019-09-30: pmaixforwardedfrom (contributed module) bugfix: potential misadressing
+- 2019-10-01: pmcisconames (contributed module) bugfix: potential misaddressing
+- 2019-09-30: pmaixforwardedfrom (contributed module) bugfix: potential misaddressing
 - 2019-09-30: pmdb2diag (contributed module) bugfix: Out of bounds issue
   Add a new sanity check after determining the level len.
   Thanks to Philippe Duveau for the patch.
   see also: https://nvd.nist.gov/vuln/detail/CVE-2019-17040
 - 2019-09-02: ability to set stricter TLS operation modes
   - checking of extendedKeyUsage certificate field
-  - stricter checking of certificate name/adresses
+  - stricter checking of certificate name/addresses
   Thanks to Jiri Vymazal for the patch.
 - 2019-08-21: testbench: add basic test for immark
 - 2019-08-20: core: do not unnecessarily set hostname on each HUP
@@ -573,7 +573,7 @@ an easy way to identify which changes went into the respective daily stable.
   see also https://github.com/rsyslog/rsyslog/issues/2608
 - omfile bugfix: potential hang/segfault on HUP of dynafile action
   when omfile was HUPed it did not sufficiently clear all dynafile
-  cache maintenance data structures. This usually lead to misadressing
+  cache maintenance data structures. This usually lead to misaddressing
   and could result in various issues, including a hang of rsyslog
   processing or segfaults. It could also have "no effect" by pure
   luck of not hitting anything important. This actually seems to
@@ -1349,7 +1349,7 @@ Version 8.39.0 [v8-stable] 2018-10-30
   key directly is meant only for testing purposes and is strongly
   discouraged for production use.
   Detected by internal testing, no actual fail case known.
-- fix potential misadressing in encryption subsystem
+- fix potential misaddressing in encryption subsystem
   could happen if e.g. disk queues were encrypted
   not seen in practice but caught by testbench test
 - ksi subsystem changes
@@ -1616,7 +1616,7 @@ Version 8.38.0 [v8-stable] 2018-09-18
   They were stopped watching after being rotated.
   closes https://github.com/rsyslog/rsyslog/issues/2229
   Thanks to Jiri Vymazal for the patch.
-- bugfix imfile: potential misadressing when processing symlinks
+- bugfix imfile: potential misaddressing when processing symlinks
   Fixed parent name when processing symlinks. Detected during code review.
   There was a garbage byte left before which could cause errors down the
   road.
@@ -1995,7 +1995,7 @@ Version 8.36.0 [v8-stable] 2018-06-26
   because of issue #2420. In the future, a 'plugin-with-transactions.py'
   example can be added, ideally once the issue is solved.
   Thanks to Joan Sala for contributing this.
-- core: misadressing when writing disk queue files
+- core: misaddressing when writing disk queue files
   when writing disk queue files during shutdown, access to freed
   memory can occur under these circumstances:
   - action A is processing data, but could not complete it
@@ -2040,14 +2040,14 @@ Version 8.36.0 [v8-stable] 2018-06-26
   closes https://github.com/rsyslog/rsyslog/issues/2743
 - imfile bugfix: double-free on module shutdown
   detected by code review, not seen in practice
-- imfile/core bugfix: potential misadressing in string copy routine
+- imfile/core bugfix: potential misaddressing in string copy routine
   This can be exposed via imfile, as follows:
   - use a regex to process multiline messages
   - configure timeouts
   - make sure imfile reads a partial message
   - wait so that at least one timeout occurs
   - add the message termination sequence
-  This leads to a misadressing, which may have no obvious effects potentially
+  This leads to a misaddressing, which may have no obvious effects potentially
   up to a segfault.
   closes https://github.com/rsyslog/rsyslog/issues/2661
 - imfile bugfix: if freshStartTail is set some initial file lines missing
@@ -2542,9 +2542,9 @@ Version 8.33.0 [v8-stable] 2018-02-20
 - build system bugfix: --disable-libcurl did not work
   Thanks to Dan Molik, Thomas D. (whissi), and Michael Biebl for the patches.
 - fixed build issues on Alpine Linux
-- core bugfix: misadressing in external command parser
+- core bugfix: misaddressing in external command parser
   This parser is used whenever a module (e.g. omprog) needs to process
-  command lines. If command parameters were given, memory misadressing
+  command lines. If command parameters were given, memory misaddressing
   occured. This could lead to a segfault.
   This is a regression in 8.32.0.
   closes https://github.com/rsyslog/rsyslog/issues/2408
@@ -2556,7 +2556,7 @@ Version 8.33.0 [v8-stable] 2018-02-20
   KiB during startup but does not grow during actual message processing.
   This is a regression in 8.32.0.
 - core bugfix: string not properly terminated when RFC5424 MSGID is used
-  This could lead to misadressing when the jsonmesg property was used.
+  This could lead to misaddressing when the jsonmesg property was used.
   closes https://github.com/rsyslog/rsyslog/issues/2396
 - bugfix: strndup() compatibility layer func copies too much
   The function did not obey the upper limit, effectively becoming
@@ -2770,7 +2770,7 @@ Version 8.32.0 [v8-stable] 2018-01-09
   review for the largest size supported among all relevant platforms.
 - core bugfix: undefined behavior due to integer overflow
   when searching strings, we may have an (unsigned) interger overflow
-  which can lead to misadressing.
+  which can lead to misaddressing.
   Detected by clang ubsan.
 - core bugfix: race on LocalHostIP property during startup
   The way the default was set could lead to a race if e.g. two internal
@@ -2803,7 +2803,7 @@ Version 8.32.0 [v8-stable] 2018-01-09
 - parent directory creation function refactored
   This should not cause any change of behavior, but is worth noting in case
   we see a regression not caught by the CI system.
-- mmsnmptrapd bugfix: potential misadressing
+- mmsnmptrapd bugfix: potential misaddressing
   This only occured in situations when the system was totally out of memory.
 - imkafka: fix potential small ressource leak
   If rdkafka handle cannot fully populated, cleanup is added. Previously, we
@@ -2844,7 +2844,7 @@ Version 8.32.0 [v8-stable] 2018-01-09
   to be refactored. The current code assumes that all workers share state information
   including librdkafka handles.
   closes https://github.com/rsyslog/rsyslog/issues/2313
-- omkafka bugfix: potential misadressing
+- omkafka bugfix: potential misaddressing
   The failed message list is improperly cleaned. This is a regression
   from recent commit 4eae19e089b5a83da679fe29398c6b2c10003793, which
   was introduced in 8.31.0.
@@ -2874,7 +2874,7 @@ Version 8.32.0 [v8-stable] 2018-01-09
   Many thanks to Will Storey (github user @horgh) for mentioning this and
   his phantastic help in debugging this rsyslog problem!
 - pmnormalize bugfix: remove unsave "strcat" implementation
-- rainerscript bugfix: ltrim() and rtrim function misadressing
+- rainerscript bugfix: ltrim() and rtrim function misaddressing
   This could lead to a segfault and was triggerred by certain input data
   schemes. For example, a ltrim(" a") could lead to the fault.
 - imklog bugfix: local host IP was hardcoded to 127.0.0.1
@@ -2907,7 +2907,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
   systemd, which is a safe assumption nowadays. This ensures we use the
   fresh interface code and also removes bloat from our project.
   closes https://github.com/rsyslog/rsyslog/issues/1933
-- mmanon: add support for IPv6 adresses with embedded IPv4 address
+- mmanon: add support for IPv6 addresses with embedded IPv4 address
   While this format is uncommon, it may still be present in logs and as
   such should be supported. It is configurable via individual settings,
   though. Especially the number of bits to anonymize may be desired to
@@ -3141,7 +3141,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
 - core bugfix: potential race in variable handling
   Root of variable tree is accessed prior to locking access to it.
   This introduces a race that may result in various kinds of
-  misadressing.
+  misaddressing.
   Found while reviewing code, no bug report exists.
 - core bugfix: potential segfault when shutting down rsyslog
   when rulesets are nested a segfault can occur when shutting down
@@ -3159,7 +3159,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
   be issued (as there are no more workers). So then we can destruct
   the rulesets in any order.
   closes https://github.com/rsyslog/rsyslog/issues/1122
-- core/action bugfix: potential misadressing when processing hard errors
+- core/action bugfix: potential misaddressing when processing hard errors
   For batches that did fail in an output module, the rsyslog core
   tries to find offending messages that generate hard (non-recoverable)
   errors. During this process, the action templates for each message
@@ -3186,8 +3186,8 @@ Version 8.31.0 [v8-stable] 2017-11-28
   This fixes the problem and introduces better error handling and
   better error messages.
   see also https://github.com/rsyslog/rsyslog/issues/1885
-- omelasticsearch: fix memory leak and potential misadressing
-  Commit 96b5fce introduced regressions, leading to potential misadressing
+- omelasticsearch: fix memory leak and potential misaddressing
+  Commit 96b5fce introduced regressions, leading to potential misaddressing
   and a very probable memory leak. This commit fixes the issues and
   hardens the module to better detect some error cases in the
   future.
@@ -3207,9 +3207,9 @@ Version 8.31.0 [v8-stable] 2017-11-28
   not (previously, code needed to be commented in).
   closes https://github.com/rsyslog/rsyslog/issues/1909
 - iczmq bugfix: potential memory leak
-- imptcp bugfix: potential misadressing
+- imptcp bugfix: potential misaddressing
   When during a connection request the remote peer could not be
-  identified, imptcp could misadress memory if it is configured
+  identified, imptcp could misaddress memory if it is configured
   to emit messages on connection open.
   Detected by clang 5.0 static analyzer.
 - imptcp: potential buffer overflow
@@ -3227,13 +3227,13 @@ Version 8.31.0 [v8-stable] 2017-11-28
 - omfwd bugfix: memory leak if network namespaces are used
   very seldom used feature, occurs only during error case
   found by Coverty scan.
-- core: potential misadressing when accessing JSON properties
+- core: potential misaddressing when accessing JSON properties
   When a JSON property is accessed in template processing, memory may
-  have been misadressed or a double-free may occur while obtaining the
+  have been misaddressed or a double-free may occur while obtaining the
   propety.
   This was detected by a Coverty scan.
-- gcry crypto provider bugfixes: potential misadressing and memory leak
-  If the config parameters were invalid, a misadressing could occur. If so,
+- gcry crypto provider bugfixes: potential misaddressing and memory leak
+  If the config parameters were invalid, a misaddressing could occur. If so,
   this happens only during startup.
   Also, a memory leak existed when the crypto provider errored out. This could
   build up if it were used in frequently-changing dynafiles. This was
@@ -3783,7 +3783,7 @@ Version 8.27.0 [v8-stable] 2017-05-16
   descriptor two.
   Thanks to Allan Park for the patch.
 - bugfix core: perform MainqObj destruction only when not NULL already
-  This affects the config object; in theory may lead to misadressing during
+  This affects the config object; in theory may lead to misaddressing during
   config parsing.
   Thanks to github user jvymazal for the patch
 - bugfix core: memory leak when internal messages not processed internally
@@ -3940,7 +3940,7 @@ Version 8.25.0 [v8-stable] 2017-02-21
   happens when it is not set.
   see also https://github.com/rsyslog/rsyslog/issues/1297
 - bugfix core: str2num mishandling empty strings
-  If str2num() receives an empty string, misadressing happens.
+  If str2num() receives an empty string, misaddressing happens.
   This theoretically can lead to a segfault if a RainerScript function
   is used inside the configuration which calls code that could trigger
   this bug.
@@ -4340,7 +4340,7 @@ Version 8.19.0 [v8-stable] 2016-05-31
   * internal API changes to reflect new needs
   * performance improvements
   * miscellaneous minor cleanup
-- fix: potential misadressing in template config processing
+- fix: potential misaddressing in template config processing
   This could cause segfault on startup. Happens when template name shorter
   than two chars and outname is not set. Once we are over startup, things
   work reliably.
@@ -4690,7 +4690,7 @@ Version 8.16.0 [v8-stable] 2016-01-26
   Thanks to Benno Evers for the patch.
 - bugfix: tarball did not include some testbench files
   Thanks to Thomas D. (whissi) for the patch.
-- bugfix: memory misadressing during config parsing string template
+- bugfix: memory misaddressing during config parsing string template
   This occurred if an (invalid) template option larger than 63 characters
   was given.
   Thanks to git hub user c6226 for the patch.
@@ -4826,7 +4826,7 @@ Version 8.14.0 [v8-stable] 2015-11-03
   see also: https://github.com/rsyslog/rsyslog/pull/502
   Thanks to Matthew Wang for the patch.
 - add property "rawmsg-after-pri"
-- bugfix: potential misadresseing in imfile
+- bugfix: potential misaddresseing in imfile
   Could happen when wildcards were used.
   see also https://github.com/rsyslog/rsyslog/issues/532
   see also https://github.com/rsyslog/rsyslog/issues/534
@@ -4915,7 +4915,7 @@ Version 8.12.0 [v8-stable] 2015-08-11
   reattempts to one per the whole path, instead of one per each path
   element.
   This solution was provided by Martin Poole.
-- bugfix parser subsystem: potential misadressing in SanitizeMsg()
+- bugfix parser subsystem: potential misaddressing in SanitizeMsg()
   could lead to a segfault
   Thanks to Tomas Heinrich for the patch.
 - imfile: files moved outside of directory are now (properly) handled
@@ -5092,7 +5092,7 @@ Version 8.8.0 [v8-stable] 2015-02-24
 - bugfix: invalid data size for iMaxLine global property
   It was defined as int, but inside the config system it was declared as
   size type, which uses int64_t. With legacy config statements, this could
-  lead to misadressing, which usually meant the another config variable was
+  lead to misaddressing, which usually meant the another config variable was
   overwritten (depending on memory layout).
   closes https://github.com/rsyslog/rsyslog/issues/205
 - bugfix: negative values for maxMessageSize global parameter were permitted
@@ -6022,7 +6022,7 @@ Version 7.5.6 [devel] 2013-10-29
 - bugfix: segfault if re_extract() function was used and no match found
 - bugfix: omelasticsearch did not compile on platforms without atomic
   instructions
-- bugfix: potential misadressing on startup if property-filter was used
+- bugfix: potential misaddressing on startup if property-filter was used
   This could happen if the property name was longer than 127 chars, a case
   that would not happen in practice.
 - bugfix: invalid property filter was not properly disabled in ruleset
@@ -6304,7 +6304,7 @@ Version 7.4.5  [v7.4-stable] 2013-10-22
   "fix" this "issue" in the devel version first, as the fix is a bit
   too intrusive to do without hard need in the stable version.
 - bugfix: segfault if re_extract() function was used and no match found
-- bugfix: potential misadressing on startup if property-filter was used
+- bugfix: potential misaddressing on startup if property-filter was used
   This could happen if the property name was longer than 127 chars, a case
   that would not happen in practice.
 - bugfix: omelasticsearch: correct failed.http stats counter
@@ -6509,7 +6509,7 @@ Version 7.3.14  [beta] 2013-05-06
 - bugfix: segfault due to invalid dynafile cache handling
   Accidentally, the old-style cache size parameter was used when the
   dynafile cache was created in a RainerScript action. If the old-style
-  size was lower than the one actually set, this lead to misadressing
+  size was lower than the one actually set, this lead to misaddressing
   when the size was overrun, and that could lead to all kinds of
   "interesting things", often in segfaults.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=440
@@ -6796,7 +6796,7 @@ Version 7.2.8  [v7-stable] 2013-0?-??
 - bugfix: segfault due to invalid dynafile cache handling
   Accidentally, the old-style cache size parameter was used when the
   dynafile cache was created in a RainerScript action. If the old-style
-  size was lower than the one actually set, this lead to misadressing
+  size was lower than the one actually set, this lead to misaddressing
   when the size was overrun, and that could lead to all kinds of
   "interesting things", often in segfaults.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=440
@@ -7503,7 +7503,7 @@ Version 6.3.5  [DEVEL] (rgerhards/al), 2011-09-01
 - bugfix: mark message processing did not work correctly
 - imudp&imtcp now report error if no listener at all was defined
   Thanks to Marcin for suggesting this error message.
-- bugfix: potential misadressing in property replacer
+- bugfix: potential misaddressing in property replacer
 ---------------------------------------------------------------------------
 Version 6.3.4  [DEVEL] (rgerhards), 2011-08-02
 - added support for action() config object
@@ -7645,7 +7645,7 @@ Version 6.2.0  [v6-stable], 2012-01-09
 Version 6.1.12  [BETA], 2011-09-01
 - bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
 - bugfix: mark message processing did not work correctly
-- bugfix: potential misadressing in property replacer
+- bugfix: potential misaddressing in property replacer
 - bugfix: memcpy overflow can occur in allowed sender checkig
   if a name is resolved to IPv4-mapped-on-IPv6 address
   Found by Ismail Dönmez at suse
@@ -8028,7 +8028,7 @@ Version 5.9.3  [V5-DEVEL], 2011-09-01
 - added capability to emit config error location info for warnings 
   otherwise, omusrmsg's warning about new config format was not
   accompanied by problem location.
-- bugfix: potential misadressing in property replacer
+- bugfix: potential misaddressing in property replacer
 - bugfix: MSGID corruption in RFC5424 parser under some circumstances
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=275
 - bugfix: The NUL-Byte for the syslogtag was not copied in MsgDup (msg.c)
@@ -8272,11 +8272,11 @@ Version 5.8.5  [V5-stable] (rgerhards/al), 2011-09-01
   even if they were discarded. 
 ---------------------------------------------------------------------------
 Version 5.8.4  [V5-stable] (al), 2011-08-10
-- bugfix: potential misadressing in property replacer
+- bugfix: potential misaddressing in property replacer
 - bugfix: memcpy overflow can occur in allowed sender checkig
   if a name is resolved to IPv4-mapped-on-IPv6 address
   Found by Ismail Dönmez at suse
-- bugfix: potential misadressing in property replacer
+- bugfix: potential misaddressing in property replacer
 - bugfix: MSGID corruption in RFC5424 parser under some circumstances
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=275
 ---------------------------------------------------------------------------
@@ -9112,7 +9112,7 @@ support.
 ---------------------------------------------------------------------------
 Version 4.7.5  [v4-beta], 2011-09-01
 - bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
-- bugfix: potential misadressing in property replacer
+- bugfix: potential misaddressing in property replacer
 - bugfix: The NUL-Byte for the syslogtag was not copied in MsgDup (msg.c)
 ---------------------------------------------------------------------------
 Version 4.7.4  [v4-beta] (rgerhards), 2011-07-11
@@ -9180,7 +9180,7 @@ Version 4.7.0  [v4-devel] (rgerhards), 2010-04-14
 ---------------------------------------------------------------------------
 Version 4.6.8  [v4-stable] (rgerhards), 2011-09-01
 - bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
-- bugfix: potential misadressing in property replacer
+- bugfix: potential misaddressing in property replacer
 - bugfix: memcpy overflow can occur in allowed sender checking
   if a name is resolved to IPv4-mapped-on-IPv6 address
   Found by Ismail Dönmez at suse
@@ -9894,7 +9894,7 @@ Version 3.22.4 [v3-stable] (rgerhards), 2010-??-??
   offset
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=271
 - improved some code based on clang static analyzer results
-- bugfix: potential misadressing in property replacer
+- bugfix: potential misaddressing in property replacer
 - bugfix: improper handling of invalid PRI values
   references: CVE-2014-3634
 ---------------------------------------------------------------------------

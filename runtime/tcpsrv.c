@@ -138,7 +138,7 @@ addNewLstnPort(tcpsrv_t *const pThis, const uchar *const pszPort,
 	CHKmalloc(pEntry->pszPort = ustrdup(pszPort));
 
 	pEntry->pszAddr = NULL;
-	/* only if a bind adress is defined copy it in struct */
+	/* only if a bind address is defined copy it in struct */
 	if (pszAddr != NULL) {
 		CHKmalloc(pEntry->pszAddr = ustrdup(pszAddr));
 	}

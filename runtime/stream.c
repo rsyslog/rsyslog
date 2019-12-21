@@ -421,7 +421,7 @@ finalize_it:
 	} else {
 		if(pThis->pszCurrFName != NULL) {
 			free(pThis->pszCurrFName);
-			pThis->pszCurrFName = NULL; /* just to prevent mis-adressing down the road... */
+			pThis->pszCurrFName = NULL; /* just to prevent mis-addressing down the road... */
 		}
 		if(pThis->fd != -1) {
 			close(pThis->fd);
