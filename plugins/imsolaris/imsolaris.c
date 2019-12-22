@@ -6,7 +6,7 @@
  * that does anything for local message recption.
  *
  * This module is not meant to be used on plaforms other than Solaris. As
- * such, trying to compile it elswhere will probably fail with all sorts
+ * such, trying to compile it elsewhere will probably fail with all sorts
  * of errors.
  *
  * Some notes on the Solaris syslog mechanism:
