@@ -3571,7 +3571,7 @@ Version 8.29.0 [v8-stable] 2017-08-08
   users of the changed functionality are omfwd and omudpspoof. Imudp is unaffected as
   it requests server sockets.
   Note that according to the sendto() man page, there is a second cause for the EAGAIN
-  error, this is when the system temporarily runs out of emphermeral ports. It is not
+  error, this is when the system temporarily runs out of ephemeral ports. It is not
   100% clear if this can also happen in the blocking case. However, if so, we can argue
   this is a case where we really want the default retry logic. So for the time being,
   it is appropriate to not handle EAGAIN in a special case any longer.
