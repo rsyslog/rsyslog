@@ -2292,7 +2292,7 @@ finalize_it:
  * situation (actually quite common), where a single data record should not
  * be split across files. This may be problematic if multiple stream write
  * calls are used to create the record. To support that, we provide the
- * bInRecord status variable. If it is set, no file spliting occurs. Once
+ * bInRecord status variable. If it is set, no file splitting occurs. Once
  * it is set to 0, a check is done if a split is necessary and it then
  * happens. For a record-oriented caller, the proper sequence is:
  *
