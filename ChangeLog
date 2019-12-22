@@ -3030,7 +3030,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
   see also: https://github.com/rsyslog/rsyslog/issues/1885#issuecomment-344882616
 - omelasticsearch bugfix: operational error messages not passed to user
   This lead to sometimes hard to diagnose problem. Note that for obvious
-  raesons the amount of messages from omelasticsearch has increased; this
+  reasons the amount of messages from omelasticsearch has increased; this
   is not a sign of a problem in itself -- but it may reveal problems that
   existed before and went unnoticed. Also note that too-verbose messages
   can be filtered out via regular rsyslog methods (e.g. message discarding
