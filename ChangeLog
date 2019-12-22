@@ -6083,7 +6083,7 @@ Version 7.5.4 [devel] 2013-10-07
   samples, HOWTOs and the like on the main site.
   At the same time, (very) slightly remove memory footprint when
   few listeners are monitored.
-- bugfix: omfwd parameter streamdrivermmode was not properly handled
+- bugfix: omfwd parameter streamdrivermode was not properly handled
   it was always overwritten by whatever value was set via the 
   legacy directive $ActionSendStreamDriverMode
 - imtcp: add streamdriver.name module parameter
