@@ -885,7 +885,7 @@ code_ipv6_int(struct ipv6_int* ip, wrkrInstanceData_t *pWrkrData, int useEmbedde
 }
 
 
-//separate function from recognising ipv6, since the recognition might get more
+//separate function from recognizing ipv6, since the recognition might get more
 //complex. This function always stays
 //the same, since it always gets an valid ipv6 input
 static void
