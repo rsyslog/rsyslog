@@ -3507,7 +3507,7 @@ Version 8.29.0 [v8-stable] 2017-08-08
   have been added.
 - omelasticsearch bugfixes and changed ES5 API support:
   * avoid 404 during health check
-    Omleasticsearch responds differently to HTTP HEAD and GET requests and
+    Omelasticsearch responds differently to HTTP HEAD and GET requests and
     returns correct state only on GET requests. This patch works around
     that ES bug and always does a GET request even when technically a HEAD
     request would be sufficient.
@@ -4001,7 +4001,7 @@ Version 8.24.0 [v8-stable] 2017-01-10
   The _bulk index endpoint on ElasticSearch 5.0 no longer
   ignores the ?replication=async query parameter. It was deprecated
   since 1.5 and silently ignored in 2.x but passing it to a 5.x
-  instance breaks omeleastisearch with a 400 response.
+  instance breaks omelasticsearch with a 400 response.
   closes https://github.com/rsyslog/rsyslog/issues/1250
 - omfwd: Add support for bind-to-device (see below on same for imudp)
 - imudp: Add support for bind-to-device
@@ -4368,7 +4368,7 @@ Version 8.19.0 [v8-stable] 2016-05-31
   previously, this could lead to segfaults on connection timeout
   see also https://github.com/rsyslog/rsyslog/pull/1007
   Thanks to Sai Ke WANG for the patch.
-- bugfix omelasticsearc: some regressions were fixed
+- bugfix omelasticsearch: some regressions were fixed
   * error file was no longer written
   * fix for some potential misaddressings
 - improved wording: gnutls error message points to potential cause

@@ -1979,7 +1979,7 @@ download_elasticsearch() {
 }
 
 
-# prepare eleasticsearch execution environment
+# prepare elasticsearch execution environment
 # this also stops any previous elasticsearch instance, if found
 prepare_elasticsearch() {
 	stop_elasticsearch # stop if it is still running
