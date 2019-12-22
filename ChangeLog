@@ -4132,7 +4132,7 @@ Version 8.23.0 [v8-stable] 2016-11-15
   see also https://github.com/rsyslog/rsyslog/pull/1155
 - bugfix imfile: ReopenOnTruncate processing, file open processing
   This fixes
-   * ReopenOnTrucate was only honored when a state file existed
+   * ReopenOnTruncate was only honored when a state file existed
       see https://github.com/rsyslog/rsyslog/issues/1090
     * open processing could run into a loop
       see https://github.com/rsyslog/rsyslog/issues/1174
