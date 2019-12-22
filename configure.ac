@@ -2425,7 +2425,7 @@ AC_ARG_ENABLE(generate-man-pages,
 # This provides a work-around to use "make distcheck" without
 # running tests (mode used pre 2018-07-02)
 AC_ARG_ENABLE(distcheck-workaround,
-        [AS_HELP_STRING([--enable-distcheck-workaround],[enable to use make distcheck without runing testbench inside it @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-distcheck-workaround],[enable to use make distcheck without running testbench inside it @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_distcheck_workaround="yes" ;;
           no) enable_distcheck_workaround="no" ;;

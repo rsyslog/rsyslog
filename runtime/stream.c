@@ -448,7 +448,7 @@ strmWaitAsyncWriterDone(strm_t *pThis)
 	}
 }
 
-/* stop the writer thread (we MUST be runnnig asynchronously when this method
+/* stop the writer thread (we MUST be running asynchronously when this method
  * is called!). Note that the mutex must be locked! -- rgerhards, 2009-07-06
  */
 static void

@@ -10667,7 +10667,7 @@ Version 3.14.1 (rgerhards), 2008-04-04
   platform problems
 - bugfix: memory leaks in script engine
 - bugfix: $hostname and $fromhost in RainerScript did not work
-- bugfix: some memory leak when queue is runing in disk mode
+- bugfix: some memory leak when queue is running in disk mode
 - man pages improved thanks to varmofekoj and Peter Vrabec
 - We have removed the 32 character size limit (from RFC3164) on the
   tag. This had bad effects on existing environments, as sysklogd didn't
@@ -10675,7 +10675,7 @@ Version 3.14.1 (rgerhards), 2008-04-04
   the full size, but will modify the outputs so that only 32 characters
   max are used by default. If you need large tags in the output, you need
   to provide custom templates.
-- bugfix: some memory leak when queue is runing in disk mode
+- bugfix: some memory leak when queue is running in disk mode
 ---------------------------------------------------------------------------
 Version 3.14.0 (rgerhards), 2008-04-02
 An interim version was accidentally released to the web. It was named 3.14.0.

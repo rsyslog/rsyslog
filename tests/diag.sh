@@ -1732,10 +1732,10 @@ cleanup_zookeeper() {
 start_zookeeper() {
 	if [ "$KEEP_KAFKA_RUNNING" == "YES" ] && [ -f "$ZOOPIDFILE" ]; then
 		if kill -0 "$(cat "$ZOOPIDFILE")"; then
-			printf 'zookeeper already runing, no need to start\n'
+			printf 'zookeeper already running, no need to start\n'
 			return
 		else
-			printf 'INFO: zookeper pidfile %s exists, but zookeeper not runing\n' "$ZOOPIDFILE"
+			printf 'INFO: zookeper pidfile %s exists, but zookeeper not running\n' "$ZOOPIDFILE"
 			printf 'deleting pid file\n'
 			rm -f "$ZOOPIDFILE"
 		fi
@@ -1784,7 +1784,7 @@ start_kafka() {
 	# shellcheck disable=SC2009  - we do not grep on the process name!
 	kafkapid=$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')
 	if [ "$KEEP_KAFKA_RUNNING" == "YES" ] && [ "$kafkapid" != "" ]; then
-		printf 'kafka already runing, no need to start\n'
+		printf 'kafka already running, no need to start\n'
 		return
 	fi
 
