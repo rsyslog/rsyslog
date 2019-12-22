@@ -79,7 +79,7 @@ typedef enum _EHostnameCmpMode EHostnameCmpMode;
  * (but left ultimate decision about packing to compiler)
  */
 struct syslogTime {
-	intTiny timeType;	/* 0 - unitinialized , 1 - RFC 3164, 2 - syslog-protocol */
+	intTiny timeType;	/* 0 - uninitialized , 1 - RFC 3164, 2 - syslog-protocol */
 	intTiny month;
 	intTiny day;
 	intTiny wday;

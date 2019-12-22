@@ -3216,7 +3216,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
   if the local hostname or IP is larger than NI_MAXHOST-1, an internal
   buffer is overflowed. This is irrespective of any input data.
   Detected by Coverity scan, CID 185390
-- core/nsd_gtls: fix potential unitialized data access
+- core/nsd_gtls: fix potential uninitialized data access
   could occur during certificate check
   found by clang 5.0 static analyzer
 - stats bugfix: potential program hang
@@ -3608,7 +3608,7 @@ Version 8.29.0 [v8-stable] 2017-08-08
   executed. It checks the message size and finds that it is below
   CONF_RAWMSG_BUFSIZE, which make it copy the msg object internal buffer
   instead of the dynamically allocated one. That buffer was not written to in
-  the first place, so unitialized data is copied. Note that no segfault can
+  the first place, so uninitialized data is copied. Note that no segfault can
   happen, as the copied location was properly allocated, just not used in
   this processing flow. In the end result, the new message object contains
   garbage data. Whenever the new object is used (e.g. in a async ruleset or
@@ -5169,7 +5169,7 @@ v8.5.0, but in a stable release. For details see immediately below.
 - bugfix: typo in queue configuration parameter
   made parameter unusable
   Thanks to Bojan Smojver for the patch.
-- bugfix: unitialized buffer off-by-one error in hostname generation
+- bugfix: uninitialized buffer off-by-one error in hostname generation
   The DNS cache used uninitialized memory, which could lead to
   invalid hostname generation.
   Thanks to Jarrod Sayers for alerting us and providing analysis and
@@ -5237,7 +5237,7 @@ Version 8.4.3 [v8-stable] 2014-10-??
   closes https://github.com/rsyslog/rsyslog/pull/138
 - bugfix: typo in queue configuration parameter made parameter unusable
   Thanks to Bojan Smojver for the patch.
-- bugfix: unitialized buffer off-by-one error in hostname generation
+- bugfix: uninitialized buffer off-by-one error in hostname generation
   The DNS cache used uninitialized memory, which could lead to
   invalid hostname generation.
   Thanks to Jarrod Sayers for alerting us and providing analysis and
@@ -5703,7 +5703,7 @@ Version 7.6.8 [v7.6-stable] 2014-10-??
 - bugfix imuxsock: possible segfault when SysSock.Use="off"
   Thanks to alexjfisher for reporting this issue.
   closes https://github.com/rsyslog/rsyslog/issues/140
-- bugfix: unitialized buffer off-by-one error in hostname generation
+- bugfix: uninitialized buffer off-by-one error in hostname generation
   The DNS cache used uninitialized memory, which could lead to
   invalid hostname generation.
   Thanks to Jarrod Sayers for alerting us and providing analysis and
@@ -6981,7 +6981,7 @@ Version 7.2.2  [v7-stable] 2012-10-16
 - bugfix: no error msg on invalid field option in legacy/string template
 - bugfix: potential segfault due to invalid param handling in comparisons
   This could happen in RainerScript comparisons (like contains); in some
-  cases an unitialized variable was accessed, which could lead to an
+  cases an uninitialized variable was accessed, which could lead to an
   invalid free and in turn to a segfault.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=372
   Thanks to Georgi Georgiev for reporting this bug and his great help
@@ -8550,7 +8550,7 @@ Version 5.6.3  [V5-STABLE] (rgerhards), 2011-01-26
   became actually visible).
 - bugfix: batch processing flagged invalid message as "bad" under some
   circumstances
-- bugfix: unitialized variable could cause issues under extreme conditions
+- bugfix: uninitialized variable could cause issues under extreme conditions
   plus some minor nits. This was found after a clang static code analyzer
   analysis (great tool, and special thanks to Marcin for telling me about
   it!)
@@ -9804,7 +9804,7 @@ Version 4.1.4  [DEVEL] (rgerhards), 2009-01-29
 - bugfix: inconsistent use of mutex/atomic operations could cause segfault
   details are too many, for full analysis see blog post at:
   http://blog.gerhards.net/2009/01/rsyslog-data-race-analysis.html
-- bugfix: unitialized mutex was used in msg.c:getPRI
+- bugfix: uninitialized mutex was used in msg.c:getPRI
   This was subtle, because getPRI is called as part of the debugging code
   (always executed) in syslogd.c:logmsg.
 - bugfix: $PreserveFQDN was not properly handled for locally emitted
