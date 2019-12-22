@@ -5133,7 +5133,7 @@ v8.5.0, but in a stable release. For details see immediately below.
   For most of them, there are now proper configuration objects. Some few
   will be completely dropped if nobody insists on them.  Additional info at
   http://blog.gerhards.net/2014/11/phasing-out-legacy-command-line-options.html
-- new and enhanced plugins for 0mq. These are currently experimantal.
+- new and enhanced plugins for 0mq. These are currently experimental.
   Thanks to Brian Knox who contributed the modules and is their author.
 - empty rulesets have been permitted. They no longer raise a syntax error.
 - add parameter -N3 to enable config check of partial config file
