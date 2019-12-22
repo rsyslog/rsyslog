@@ -410,7 +410,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_INVLD_NBR_ARGUMENTS = -2112, /**< invalid number of arguments for function call (rainerscript) */
 	RS_RET_INVLD_FUNC = -2113, /**< invalid function name for function call (rainerscript) */
 	RS_RET_DUP_FUNC_NAME = -2114, /**< duplicate function name (rainerscript) */
-	RS_RET_UNKNW_FUNC = -2115, /**< unkown function name (rainerscript) */
+	RS_RET_UNKNW_FUNC = -2115, /**< unknown function name (rainerscript) */
 	RS_RET_ERR_RLIM_NOFILE = -2116, /**< error setting max. nbr open files process limit */
 	RS_RET_ERR_CREAT_PIPE = -2117, /**< error during pipe creation */
 	RS_RET_ERR_FORK = -2118, /**< error during fork() */
@@ -522,8 +522,8 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_EI_NO_EXISTS = -2323,/**< .encinfo file does not exist (status, not necessarily error!)*/
 	RS_RET_EI_WR_ERR = -2324,/**< error writing an .encinfo file */
 	RS_RET_EI_INVLD_FILE = -2325,/**< header indicates the file is no .encinfo file */
-	RS_RET_CRY_INVLD_ALGO = -2326,/**< user specified invalid (unkonwn) crypto algorithm */
-	RS_RET_CRY_INVLD_MODE = -2327,/**< user specified invalid (unkonwn) crypto mode */
+	RS_RET_CRY_INVLD_ALGO = -2326,/**< user specified invalid (unknown) crypto algorithm */
+	RS_RET_CRY_INVLD_MODE = -2327,/**< user specified invalid (unknown) crypto mode */
 	RS_RET_QUEUE_DISK_NO_FN = -2328,/**< disk queue configured, but filename not set */
 	RS_RET_CA_CERT_MISSING = -2329,/**< a CA cert is missing where one is required (e.g. TLS) */
 	RS_RET_CERT_MISSING = -2330,/**< a cert is missing where one is required (e.g. TLS) */

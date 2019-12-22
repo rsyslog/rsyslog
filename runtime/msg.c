@@ -4641,7 +4641,7 @@ msgSetPropViaJSON(smsg_t *__restrict__ const pMsg, const char *name, struct json
 		msgAddJSON(pMsg, (uchar*)"!", json, 0, sharedReference);
 	} else {
 		/* we ignore unknown properties */
-		DBGPRINTF("msgSetPropViaJSON: unkonwn property ignored: %s\n",
+		DBGPRINTF("msgSetPropViaJSON: unknown property ignored: %s\n",
 			  name);
 	}
 

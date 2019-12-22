@@ -518,8 +518,8 @@ OnMsgReceived(tcps_sess_t *const pSess, uchar *const pRcv, const int iLenMsg)
 	} else if(!ustrcmp(cmdBuf, UCHAR_CONSTANT("enabledebug"))) {
 		CHKiRet(enableDebug(pSess));
 	} else {
-		dbgprintf("imdiag unkown command '%s'\n", cmdBuf);
-		CHKiRet(sendResponse(pSess, "unkown command '%s'\n", cmdBuf));
+		dbgprintf("imdiag unknown command '%s'\n", cmdBuf);
+		CHKiRet(sendResponse(pSess, "unknown command '%s'\n", cmdBuf));
 	}
 
 finalize_it:

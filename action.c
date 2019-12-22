@@ -621,7 +621,7 @@ static uchar *getActStateName(action_t * const pThis, wti_t * const pWti)
 		case ACT_STATE_DATAFAIL:
 			return (uchar*) "datafail";
 		default:
-			return (uchar*) "ERROR/UNKNWON";
+			return (uchar*) "ERROR/UNKNOWN";
 	}
 }
 
