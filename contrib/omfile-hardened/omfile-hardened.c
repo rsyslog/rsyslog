@@ -608,7 +608,7 @@ prepareFile(instanceData *__restrict__ const pData, const uchar *__restrict__ co
 		}
 	}
 
-	/* the copies below are clumpsy, but there is no way around given the
+	/* the copies below are clumsy, but there is no way around given the
 	 * anomalies in dirname() and basename() [they MODIFY the provided buffer...]
 	 */
 	uchar szNameBuf[MAXFNAME+1];

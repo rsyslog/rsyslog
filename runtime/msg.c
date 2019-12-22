@@ -1764,7 +1764,7 @@ const char *
 getPRI(smsg_t * const pM)
 {
 	/* PRI is a number in the range 0..191. Thus, we use a simple lookup table to obtain the
-	 * string value. It looks a bit clumpsy here in code ;)
+	 * string value. It looks a bit clumsy here in code ;)
 	 */
 	int iPRI;
 
