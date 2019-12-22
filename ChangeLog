@@ -6398,7 +6398,7 @@ Version 7.4.3  [v7.4-stable] 2013-07-18
   to improper handling in optimizer.
 - bugfix: 100% CPU utilization when DA queue became full
 - bugfix: omlibdbi did not properly close connection on some errors
-  This happened to errors occuring in Begin/End Transaction entry
+  This happened to errors occurring in Begin/End Transaction entry
   points.
 - cosmetic bugfix: file name buffer was not freed on disk queue destruction
   This was an extremely small one-time per run memleak, so nothing of
