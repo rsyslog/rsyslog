@@ -70,7 +70,7 @@ static pthread_key_t keyThrdName;
 
 
 /* output the current thread ID to "relevant" places
- * (what "relevant" means is determinded by various ways)
+ * (what "relevant" means is determined by various ways)
  */
 void
 dbgOutputTID(char* name __attribute__((unused)))
