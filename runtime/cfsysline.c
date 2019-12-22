@@ -435,7 +435,7 @@ finalize_it:
 }
 
 
-/* Parse and process an binary cofig option. pVal must be
+/* Parse and process an binary config option. pVal must be
  * a pointer to an integer which is to receive the option
  * value.
  * rgerhards, 2007-07-15
