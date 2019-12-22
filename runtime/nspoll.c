@@ -46,7 +46,7 @@ DEFobjCurrIf(glbl)
  * driver-specific functions (almost all...) can be carried
  * out. Note that the driver's .ifIsLoaded is correctly
  * initialized by calloc() and we depend on that. Please note that
- * we do some name-mangeling. We know that each nsd driver also needs
+ * we do some name-mangling. We know that each nsd driver also needs
  * a nspoll driver. So we simply append "sel" to the nsd driver name: This,
  * of course, means that the driver name must match these rules, but that
  * shouldn't be a real problem.
