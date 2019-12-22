@@ -67,7 +67,7 @@ struct tcpsrv_s {
 	uchar *gnutlsPriorityString;	/**< priority string for gnutls */
 	uchar *pszLstnPortFileName;	/**< File in which the dynamic port is written */
 	uchar *pszDrvrAuthMode;	/**< auth mode of the stream driver to use */
-	uchar *pszDrvrPermitExpiredCerts;/**< current driver setting for handlign expired certs */
+	uchar *pszDrvrPermitExpiredCerts;/**< current driver setting for handling expired certs */
 	uchar *pszDrvrName;	/**< name of stream driver to use */
 	uchar *pszInputName;	/**< value to be used as input name */
 	uchar *pszOrigin;		/**< module to be used as "origin" (e.g. for pstats) */

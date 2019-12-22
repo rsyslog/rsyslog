@@ -35,7 +35,7 @@ struct netstrms_s {
 	uchar *pszDrvrAuthMode;	/**< current driver authentication mode */
 	int DrvrChkExtendedKeyUsage;		/**< if true, verify extended key usage in certs */
 	int DrvrPrioritizeSan;		/**< if true, perform stricter checking of names in certs */
-	uchar *pszDrvrPermitExpiredCerts;/**< current driver setting for handlign expired certs */
+	uchar *pszDrvrPermitExpiredCerts;/**< current driver setting for handling expired certs */
 	uchar *gnutlsPriorityString; /**< priorityString for connection */
 	permittedPeers_t *pPermPeers;/**< current driver's permitted peers */
 
