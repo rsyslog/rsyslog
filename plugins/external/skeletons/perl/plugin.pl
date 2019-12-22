@@ -78,7 +78,7 @@ while ($keepRunning) {
 		# We seem to have not timeout for select - or do we?
 		if ($STDIN->can_read($pollPeriod)) {
 			$stdInLine = <STDIN>;
-			# Catch EOF, run onRecieve one last time and exit
+			# Catch EOF, run onReceive one last time and exit
 			if (eof()){
 				$keepRunning = 0;
 				last;
