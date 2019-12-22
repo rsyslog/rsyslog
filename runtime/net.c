@@ -1038,7 +1038,7 @@ isAllowedSender(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost)
 
 
 /* The following #ifdef sequence is a small compatibility
- * layer. It tries to work around the different availality
+ * layer. It tries to work around the different availability
  * levels of SO_BSDCOMPAT on linuxes...
  * I borrowed this code from
  *    http://www.erlang.org/ml-archive/erlang-questions/200307/msg00037.html
