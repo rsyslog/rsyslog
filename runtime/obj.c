@@ -1266,7 +1266,7 @@ ReleaseObj(const char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *p
 	pthread_mutex_lock(&mutObjGlobalOp);
 
 	if(pObjFile == NULL)
-		FINALIZE; /* if it is not a lodable module, we do not need to do anything... */
+		FINALIZE; /* if it is not a loadable module, we do not need to do anything... */
 
 	if(pIf->ifIsLoaded == 0) {
 		FINALIZE; /* we are not loaded - this is perfectly OK... */
