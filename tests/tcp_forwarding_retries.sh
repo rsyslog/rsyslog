@@ -3,7 +3,7 @@
 . ${srcdir:=.}/diag.sh init
 
 messages=20000 # how many messages to inject?
-# Note: we need to inject a somewhat larger nubmer of messages in order
+# Note: we need to inject a somewhat larger number of messages in order
 # to ensure that we receive some messages in the actual output file,
 # as batching can (validly) cause a larger loss in the non-writable
 # file
