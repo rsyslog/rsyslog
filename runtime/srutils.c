@@ -615,7 +615,7 @@ int decodeSyslogName(uchar *name, syslogName_t *codetab)
 			separator detected the Pointer points to the next char after the
 			separator. Except if the end of the string is detected ('\n').
 			Then it points to the terminator char.
- * \param pDst		Pointer to the destination array of characters. Here the substing
+ * \param pDst		Pointer to the destination array of characters. Here the substring
 			will be stored.
  * \param DstSize	Maximum numbers of characters to store.
  * \param cSep		Separator char.
