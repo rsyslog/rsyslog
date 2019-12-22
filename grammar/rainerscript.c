@@ -2887,7 +2887,7 @@ cnfexprEval(const struct cnfexpr *__restrict__ const expr,
 
 	DBGPRINTF("eval expr %p, type '%s'\n", expr, tokenToString(expr->nodetype));
 	switch(expr->nodetype) {
-	/* note: comparison operations are extremely similar. The code can be copyied, only
+	/* note: comparison operations are extremely similar. The code can be copied, only
 	 * places flagged with "CMP" need to be changed.
 	 */
 	case CMP_EQ:
