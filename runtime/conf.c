@@ -85,7 +85,7 @@ int bConfStrictScoping = 0;	/* force strict scoping during config processing? */
 /* The following module-global variables are used for building
  * tag and host selector lines during startup and config reload.
  * This is stored as a global variable pool because of its ease. It is
- * also fairly compatible with multi-threading as the stratup code must
+ * also fairly compatible with multi-threading as the startup code must
  * be run in a single thread anyways. So there can be no race conditions.
  * rgerhards 2005-10-18
  */
