@@ -365,7 +365,7 @@ finalize_it:
 }
 
 
-/* Sets the string object to the classigal sz-string provided.
+/* Sets the string object to the classical sz-string provided.
  * Any previously stored vlaue is discarded. If a NULL pointer
  * the the new value (pszNew) is provided, an empty string is
  * created (this is NOT an error!).
