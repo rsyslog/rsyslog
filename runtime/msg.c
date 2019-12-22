@@ -571,7 +571,7 @@ propNameToID(uchar *pName, propid_t *pPropID)
 {
 	DEFiRet;
 
-	/* sometimes there are aliases to the original MonitoWare
+	/* sometimes there are aliases to the original MonitorWare
 	 * property names. These come after || in the ifs below. */
 	if(!strcasecmp((char*) pName, "msg")) {
 		*pPropID = PROP_MSG;
