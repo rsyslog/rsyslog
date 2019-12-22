@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (C) 2016 by Rainer Gerhardds
+# Copyright (C) 2016 by Rainer Gerhards
 # This file is part of the rsyslog project, released  under ASL 2.0
 
 . ${srcdir:=.}/diag.sh init
