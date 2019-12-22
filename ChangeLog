@@ -10708,7 +10708,7 @@ Version 3.12.5 (rgerhards), 2008-03-28
 - added compatibility mode for -a, -o and -p options
 - compatibility mode processing finished
 - changed default file output format to include high-precision timestamps
-- added a buid-in template for previous syslogd file format
+- added a built-in template for previous syslogd file format
 - added new $ActionFileDefaultTemplate directive
 - added support for high-precision timestamps when receiving legacy
   syslog messages
