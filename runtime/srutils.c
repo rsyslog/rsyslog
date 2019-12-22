@@ -273,7 +273,7 @@ int makeFileParentDirs(const uchar *const szFile, const size_t lenFile, const mo
 /* execute a program with a single argument
  * returns child pid if everything ok, 0 on failure. if
  * it fails, errno is set. if it fails after the fork(), the caller
- * can not be notfied for obvious reasons. if bwait is set to 1,
+ * can not be notified for obvious reasons. if bwait is set to 1,
  * the code waits until the child terminates - that potentially takes
  * a lot of time.
  * implemented 2007-07-20 rgerhards
