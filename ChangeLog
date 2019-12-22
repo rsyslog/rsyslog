@@ -6633,7 +6633,7 @@ Version 7.3.8  [devel] 2013-03-18
 Version 7.3.7  [devel] 2013-03-12
 - add support for anonymizing IPv4 addresses
 - add support for writing to the Linux Journal (omjournal)
-- imuxsock: add capability to ignore messages from ourselfes
+- imuxsock: add capability to ignore messages from ourselves
   This helps prevent message routing loops, and is vital to have
   if omjournal is used together with traditional syslog.
 - field() function now supports a string as field delimiter

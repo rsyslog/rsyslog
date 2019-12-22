@@ -366,7 +366,7 @@ getLogicalQueueSize(qqueue_t *pThis)
 /* This function drains the queue in cases where this needs to be done. The most probable
  * reason is a HUP which needs to discard data (because the queue is configured to be lossy).
  * During a shutdown, this is typically not needed, as the OS frees up ressources and does
- * this much quicker than when we clean up ourselvs. -- rgerhards, 2008-10-21
+ * this much quicker than when we clean up ourselves. -- rgerhards, 2008-10-21
  * This function returns void, as it makes no sense to communicate an error back, even if
  * it happens.
  * This functions works "around" the regular deque mechanism, because it is only used to

@@ -151,7 +151,7 @@ withinRatelimit(ratelimit_t *__restrict__ const ratelimit,
 	 * sets the message generation time to the journal timestamp.
 	 * As such, we do not get a proper indication of the actual
 	 * message rate. To prevent this, we need to query local
-	 * system time ourselvs.
+	 * system time ourselves.
 	 */
 	if(ratelimit->bNoTimeCache)
 		tt = time(NULL);

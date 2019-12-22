@@ -65,7 +65,7 @@ File Watches
 - contains active file state
 - one file watch per file per monitor (/dir/abc/a.log sample with two active file entries)
 - multiple entries are not properly supported by inotify (and possibly FEN)
-  --> need to multiplex ourselfes based on single notification 
+  --> need to multiplex ourselves based on single notification 
 
 Dir Watches
 ...........
