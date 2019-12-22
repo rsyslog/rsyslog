@@ -274,7 +274,7 @@ finalize_it:
 /* This should be called before a normal (non forced) close
  * of a TCP session. This function checks if there is any unprocessed
  * message left in the TCP stream. Such a message is probably a
- * fragement. If everything goes well, we must be right at the
+ * fragment. If everything goes well, we must be right at the
  * beginning of a new frame without any data received from it. If
  * not, there is some kind of a framing error. I think I remember that
  * some legacy syslog/TCP implementations have non-LF terminated
