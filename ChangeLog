@@ -2914,9 +2914,9 @@ Version 8.31.0 [v8-stable] 2017-11-28
   be different than in pure IPv6.
 - ommongodb: big refactoring, more or less a feature-enhanced rewrite
   New features are :
-  * Handle TLS connexion to mongodb
+  * Handle TLS connection to mongodb
   * Handle MongoDB Replicasets
-  * Added the 'ssl_ca' and 'ssl_cert' directives to configure tls connexion
+  * Added the 'ssl_ca' and 'ssl_cert' directives to configure tls connection
   * Added 'uristr' directive to configure the connection uri in the form
     of 'mongodb://...'
   Now uses the official mongo-c-driver library instead of the deprecated
