@@ -244,7 +244,7 @@ done:	return;
  * Please see http://www.hmug.org/man/3/getnameinfo.php (under Caveats)
  * for some explanation of the code found below. We do by default not
  * discard message where we detected malicouos DNS PTR records. However,
- * there is a user-configurabel option that will tell us if
+ * there is a user-configurable option that will tell us if
  * we should abort. For this, the return value tells the caller if the
  * message should be processed (1) or discarded (0).
  */

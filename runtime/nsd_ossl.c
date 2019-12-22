@@ -487,7 +487,7 @@ osslGlblInit(void)
 	/* Set default VERIFY Options for OpenSSL CTX - and CALLBACK */
 	SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, verify_callback);
 
-	SSL_CTX_set_timeout(ctx, 30);	/* Default Session Timeout, TODO: Make configureable */
+	SSL_CTX_set_timeout(ctx, 30);	/* Default Session Timeout, TODO: Make configurable */
 	SSL_CTX_set_mode(ctx, SSL_MODE_AUTO_RETRY);
 
 	bGlblSrvrInitDone = 1;
