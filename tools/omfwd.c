@@ -72,7 +72,7 @@ DEFobjCurrIf(netstrm)
 DEFobjCurrIf(tcpclt)
 
 
-/* some local constants (just) for better readybility */
+/* some local constants (just) for better readability */
 #define IS_FLUSH 1
 #define NO_FLUSH 0
 

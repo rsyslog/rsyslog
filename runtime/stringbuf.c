@@ -246,7 +246,7 @@ rsCStrExtendBuf(cstr_t *const __restrict__ pThis, const size_t iMinNeeded)
 		 * leave some room after the absolutely needed one. It also
 		 * reduces memory fragmentation. Note that all of this are
 		 * integer operations (very important to understand what is
-		 * going on)! Parenthesis are for better readibility.
+		 * going on)! Parenthesis are for better readability.
 		 */
 		iNewSize = (iMinNeeded / RS_STRINGBUF_ALLOC_INCREMENT + 1) * RS_STRINGBUF_ALLOC_INCREMENT;
 	} else {
