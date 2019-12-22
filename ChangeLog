@@ -9777,7 +9777,7 @@ Version 4.1.6  [DEVEL] (rgerhards), 2009-04-07
 - improved omfile so that it properly suspends itself if there is an
   i/o or file name generation error. This enables it to be used with
   the full high availability features of rsyslog's engine
-- bugfix: fixed some segaults on Solaris, where vsprintf() does not
+- bugfix: fixed some segfaults on Solaris, where vsprintf() does not
   check for NULL pointers
 - improved performance of regexp-based filters
   Thanks to Arnaud Cornet for providing the idea and initial patch.
