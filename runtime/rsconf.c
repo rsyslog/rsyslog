@@ -105,7 +105,7 @@ static uchar template_StdPgSQLFmt[] = "\"insert into SystemEvents (Message, Faci
 "DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, "
 "'%HOSTNAME%', %syslogpriority%, '%timereported:::date-pgsql%', '%timegenerated:::date-pgsql%', %iut%, "
 "'%syslogtag%')\",STDSQL";
-static uchar template_spoofadr[] = "\"%fromhost-ip%\"";
+static uchar template_spoofaddr[] = "\"%fromhost-ip%\"";
 static uchar template_SysklogdFileFormat[] = "\"%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg%\n\"";
 static uchar template_StdJSONFmt[] = "\"{\\\"message\\\":\\\"%msg:::json%\\\",\\\"fromhost\\\":\\\""
 "%HOSTNAME:::json%\\\",\\\"facility\\\":\\\"%syslogfacility-text%\\\",\\\"priority\\\":\\\""
@@ -1257,7 +1257,7 @@ initLegacyConf(void)
 	tplAddLine(ourConf, " StdJSONFmt", &pTmp);
 	pTmp = template_StdClickHouseFmt;
 	tplAddLine(ourConf, " StdClickHouseFmt", &pTmp);
-	pTmp = template_spoofadr;
+	pTmp = template_spoofaddr;
 	tplLastStaticInit(ourConf, tplAddLine(ourConf, "RSYSLOG_omudpspoofDfltSourceTpl", &pTmp));
 
 finalize_it:
