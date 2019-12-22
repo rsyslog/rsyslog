@@ -1,5 +1,5 @@
 /**\file srUtils.c
- * \brief General utilties that fit nowhere else.
+ * \brief General utilities that fit nowhere else.
  *
  * The namespace for this file is "srUtil".
  *
