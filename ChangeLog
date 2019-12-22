@@ -6445,7 +6445,7 @@ Version 7.4.1  [v7.4-stable] 2013-06-17
   database corruption, when the journal re-sends old data. This is a
   current bug in systemd journal, but we won't outrule this to happen
   in the future again. So it is better to have a safeguard in place.
-  By default, we permit 20,000 messages witin 10 minutes. This may
+  By default, we permit 20,000 messages within 10 minutes. This may
   be a bit restrictive, but given the risk potential it seems reasonable.
   Users requiring larger traffic flows can always adjust the value.
 - bugfix: potential loop in rate limiting
