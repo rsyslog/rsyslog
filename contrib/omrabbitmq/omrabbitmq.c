@@ -730,7 +730,7 @@ static void closeAMQPConnection(wrkrInstanceData_t *self)
 	/* Release the lock */
 	pthread_mutex_unlock(&self->send_mutex);
 
-	/* Now wvait for the thread to stop */
+	/* Now wait for the thread to stop */
 	pthread_join(self->thread, &ret);
 }
 
