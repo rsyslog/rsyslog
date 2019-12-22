@@ -2997,7 +2997,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
   We believe (but could not proof) that this also could lead to a hang of
   the termination process. Thus we claim to close an issue tracker down
   here below, but are not 100% certain it really closes it (we hope for
-  user feedback on this). In any case, the thread debuger showed invalid
+  user feedback on this). In any case, the thread debugger showed invalid
   operations and this has been fixed, so it is useful in any case.
   closes https://github.com/rsyslog/rsyslog/issues/1959
 - core/wtp: potential hang during shutdown
