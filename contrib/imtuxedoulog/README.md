@@ -5,7 +5,7 @@
 This module is created to consume Tuxedo ULOG file. 
 This file has the following characteristics :
 - the file name is compose of a prefix and the date of the file.
-- the lines of logs are produced by call to userlog() tuxedo methode.
+- the lines of logs are produced by call to userlog() tuxedo method.
 - Tuxedo server based on JAVA writes java's exceptions as log lines in
   ULOG file. This version of the module ignores those lines.
 - The ECID (Execution Context ID) is extracted and placed as a structured

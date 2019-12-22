@@ -1273,7 +1273,7 @@ Version 8.40.0 [v8-stable] 2018-12-11
    * testbench: improve framework, harden rscript http test
      - the test now tries to detect unavailable http server, which
        should not result in test failure
-     - equivalent valgrind test changed to new methode, removing code
+     - equivalent valgrind test changed to new method, removing code
        duplication
      - testbench supports
        * new exit code 177, which indicates environment error, makes
