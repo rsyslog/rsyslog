@@ -1658,7 +1658,7 @@ Version 8.37.0 [v8-stable] 2018-08-07
   was flushed
   Thanks to Radovan Sroka for the patch.
 - core: provide a somewhat better default action name
-  We now inlcude the module name (e.g. "omelasticsearch" or "builtin:omfile")
+  We now include the module name (e.g. "omelasticsearch" or "builtin:omfile")
   as part of the name. This is still not perfect, but hopefully a bit
   easier to grasp.
   see also https://github.com/rsyslog/rsyslog/issues/342
@@ -9925,7 +9925,7 @@ Version 3.22.2 [v3-stable] (rgerhards), 2010-08-05
   Thanks to Kiss Gabor for the patch.
 ---------------------------------------------------------------------------
 Version 3.22.1 [v3-stable] (rgerhards), 2009-07-02
-- bugfix: invalid error message issued if $inlcudeConfig was on an empty
+- bugfix: invalid error message issued if $includeConfig was on an empty
   set of files (e.g. *.conf, where none such files existed)
   thanks to Michael Biebl for reporting this bug
 - bugfix: when run in foreground (but not in debug mode), a 
