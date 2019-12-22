@@ -226,7 +226,7 @@ void rsCStrDestruct(cstr_t **const ppThis)
 
 
 /* extend the string buffer if its size is insufficient.
- * Param iMinNeeded is the minumum free space needed. If it is larger
+ * Param iMinNeeded is the minimum free space needed. If it is larger
  * than the default alloc increment, space for at least this amount is
  * allocated. In practice, a bit more is allocated because we envision that
  * some more characters may be added after these.
