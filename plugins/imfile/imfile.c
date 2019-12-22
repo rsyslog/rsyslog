@@ -2315,7 +2315,7 @@ in_processEvent(struct inotify_event *ev)
 	if(ev->mask & (IN_MOVED_FROM | IN_MOVED_TO))  {
 		fs_node_walk(etry->act->edge->node, poll_tree);
 	} else if(etry->act->edge->is_file && !(etry->act->is_symlink)) {
-		in_handleFileEvent(ev, etry); // esentially poll_file()!
+		in_handleFileEvent(ev, etry); // essentially poll_file()!
 	} else {
 		fs_node_walk(etry->act->edge->node, poll_tree);
 	}
