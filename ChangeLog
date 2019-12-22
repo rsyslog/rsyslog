@@ -5389,7 +5389,7 @@ Version 8.3.2 [v8-devel] 2014-05-02
 - bugfix: mmexternal segfault due to invalid free in non-json input mode
   closes: https://github.com/rsyslog/rsyslog/issues/70
 - bugfix: mmexternal segfault when external plugin sent invalid reply
-  ... or no reply at all. This happened if the reply was imporper JSON.
+  ... or no reply at all. This happened if the reply was improper JSON.
   Now, we emit an error message in those cases.
   see also: https://github.com/rsyslog/rsyslog/issues/69
 - bugfix: mmexternal did potentially pass incomplete data to restarted
