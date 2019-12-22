@@ -3,7 +3,7 @@
  *
  * File begun on 2011-06-06 by RGerhards
  * The initial implementation is far from being optimal. The idea is to
- * first get somethting that'S functionally OK, and then evolve the algorithm.
+ * first get something that'S functionally OK, and then evolve the algorithm.
  * In any case, even the initial implementation is far faster than what we had
  * before. -- rgerhards, 2011-06-06
  *

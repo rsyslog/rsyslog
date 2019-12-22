@@ -743,7 +743,7 @@ finalize_it:
  * To do so, it scans the line beginning cookies and waits for the object
  * cookie. If that is found, control is returned. If the store is exhausted,
  * we will receive an RS_RET_EOF error as part of NEXTC, which will also
- * terminate this function. So we may either return with somehting that
+ * terminate this function. So we may either return with something that
  * looks like a valid object or end of store.
  * rgerhards, 2008-01-07
  */
@@ -1037,7 +1037,7 @@ finalize_it:
 
 /* get the object (instance) name
  * Note that we use a non-standard calling convention. Thus function must never
- * fail, else we run into real big problems. So it must make sure that at least someting
+ * fail, else we run into real big problems. So it must make sure that at least something
  * is returned.
  * rgerhards, 2008-01-30
  */
