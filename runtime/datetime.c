@@ -456,7 +456,7 @@ finalize_it:
  * by the tag. So it MUST only be enabled in specialised parsers.
  * subsec, [yyyy] in front, TZSTRING was added in 2014-07-08 rgerhards
  * Similarly, we try to detect a year after the timestamp if
- * bDetectYearAfterTime is set. This is mutally exclusive with bParseTZ.
+ * bDetectYearAfterTime is set. This is mutually exclusive with bParseTZ.
  * Note: bDetectYearAfterTime will misdetect hostnames in the range
  * 2000..2100 as years, so this option should explicitly be turned on
  * and is not meant for general consumption.
