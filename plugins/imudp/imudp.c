@@ -803,7 +803,7 @@ rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr)
 	}
 
 	/* fill the epoll set - we need to do this only once, as the set
-	 * can not change dyamically.
+	 * can not change dynamically.
 	 */
 	i = 0;
 	for(lstn = lcnfRoot ; lstn != NULL ; lstn = lstn->next) {
