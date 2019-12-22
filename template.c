@@ -248,7 +248,7 @@ tplToString(struct template *__restrict__ const pTpl,
 	}
 
 	if(iBuf == iparam->lenBuf) {
-		/* in the weired case of an *empty* template, this can happen.
+		/* in the weird case of an *empty* template, this can happen.
 		 * it is debatable if we should really fix it here or simply
 		 * forbid that case. However, performance toll is minimal, so
 		 * I tend to permit it. -- 2010-11-05 rgerhards

@@ -1,6 +1,6 @@
 /* omstdout.c
  * send all output to stdout - this is primarily a test driver (but may
- * be used for weired use cases). Not tested for robustness!
+ * be used for weird use cases). Not tested for robustness!
  *
  * NOTE: read comments in module-template.h for more specifics!
  *

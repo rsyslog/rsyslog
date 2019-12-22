@@ -11280,7 +11280,7 @@ Version 1.19.6 (rgerhards), 2007-09-11
 Version 1.19.5 (rgerhards), 2007-09-07
 - changed part of the CStr interface so that better error tracking
   is provided and the calling sequence is more intuitive (there were
-  invalid calls based on a too-weired interface)
+  invalid calls based on a too-weird interface)
 - (hopefully) fixed some remaining bugs rooted in wrong use of 
   the CStr class. These could lead to program abort.
 - applied patch by varmojfekoj two fix two potential segfault situations
@@ -12223,7 +12223,7 @@ Version 1.19.6 (rgerhards), 2007-09-11
 Version 1.19.5 (rgerhards), 2007-09-07
 - changed part of the CStr interface so that better error tracking
   is provided and the calling sequence is more intuitive (there were
-  invalid calls based on a too-weired interface)
+  invalid calls based on a too-weird interface)
 - (hopefully) fixed some remaining bugs rooted in wrong use of 
   the CStr class. These could lead to program abort.
 - applied patch by varmojfekoj two fix two potential segfault situations
@@ -13166,7 +13166,7 @@ Version 1.19.6 (rgerhards), 2007-09-11
 Version 1.19.5 (rgerhards), 2007-09-07
 - changed part of the CStr interface so that better error tracking
   is provided and the calling sequence is more intuitive (there were
-  invalid calls based on a too-weired interface)
+  invalid calls based on a too-weird interface)
 - (hopefully) fixed some remaining bugs rooted in wrong use of 
   the CStr class. These could lead to program abort.
 - applied patch by varmojfekoj two fix two potential segfault situations
