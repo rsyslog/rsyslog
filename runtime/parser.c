@@ -102,7 +102,7 @@ DestructParserList(parserList_t **ppListRoot)
 }
 
 
-/* Add a parser to the list. We use a VERY simple and ineffcient algorithm,
+/* Add a parser to the list. We use a VERY simple and inefficient algorithm,
  * but it is employed only for a few milliseconds during config processing. So
  * I prefer to keep it very simple and with simple data structures. Unfortunately,
  * we need to preserve the order, but I don't like to add a tail pointer as that

@@ -9782,7 +9782,7 @@ Version 4.1.6  [DEVEL] (rgerhards), 2009-04-07
 - improved performance of regexp-based filters
   Thanks to Arnaud Cornet for providing the idea and initial patch.
 - added a new way how output plugins may be passed parameters. This is
-  more effcient for some outputs. They new can receive fields not only
+  more efficient for some outputs. They new can receive fields not only
   as a single string but rather in an array where each string is seperated.
 - added (some) developer documentation for output plugin interface
 - bugfix: potential abort with DA queue after high watermark is reached
