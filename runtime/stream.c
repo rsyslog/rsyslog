@@ -2351,7 +2351,7 @@ static rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 	strmFlushInternal(pThis, 0);
 	CHKiRet(obj.BeginSerialize(pStrm, (obj_t*) pThis));
 
-	objSerializeSCALAR(pStrm, iCurrFNum, INT); /* implicit cast is OK for persistance */
+	objSerializeSCALAR(pStrm, iCurrFNum, INT); /* implicit cast is OK for persistence */
 	objSerializePTR(pStrm, pszFName, PSZ);
 	objSerializeSCALAR(pStrm, iMaxFiles, INT);
 	objSerializeSCALAR(pStrm, bDeleteOnClose, INT);
