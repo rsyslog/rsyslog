@@ -10487,7 +10487,7 @@ Version 3.18.1 (rgerhards), 2008-07-21
   (20 minutes) in some code pathes, what looked to the user like mark
   messages were never written.
 - added a new property replacer option "sp-if-no-1st-sp" to cover
-  a problem with RFC 3164 based interpreation of tag separation. While
+  a problem with RFC 3164 based interpretation of tag separation. While
   it is a generic approach, it fixes a format problem introduced in
   3.18.0, where kernel messages no longer had a space after the tag.
   This is done by a modifcation of the default templates.
