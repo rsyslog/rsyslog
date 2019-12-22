@@ -991,7 +991,7 @@ MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr *pFrom, const char
 
 
 /* check if a sender is allowed. The root of the the allowed sender.
- * list must be proveded by the caller. As such, this function can be
+ * list must be provided by the caller. As such, this function can be
  * used to check both UDP and TCP allowed sender lists.
  * returns 1, if the sender is allowed, 0 if not and 2 if we could not
  * obtain a result because we would need a dns name, which we don't have
