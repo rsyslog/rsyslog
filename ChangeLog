@@ -11292,7 +11292,7 @@ Version 1.19.4 (rgerhards/varmojfekoj), 2007-09-04
 - fixed a number of small memory leaks - thanks varmojfekoj for patching
 - fixed an issue with CString class that could lead to rsyslog abort
   in tplToString() - thanks varmojfekoj for patching
-- added a man-version of the config file documenation - thanks to Michel
+- added a man-version of the config file documentation - thanks to Michel
   Samia for providing the man file
 - fixed bug: a template like this causes an infinite loop:
   $template opts,"%programname:::a,b%"
@@ -12235,7 +12235,7 @@ Version 1.19.4 (rgerhards/varmojfekoj), 2007-09-04
 - fixed a number of small memory leaks - thanks varmojfekoj for patching
 - fixed an issue with CString class that could lead to rsyslog abort
   in tplToString() - thanks varmojfekoj for patching
-- added a man-version of the config file documenation - thanks to Michel
+- added a man-version of the config file documentation - thanks to Michel
   Samia for providing the man file
 - fixed bug: a template like this causes an infinite loop:
   $template opts,"%programname:::a,b%"
@@ -13178,7 +13178,7 @@ Version 1.19.4 (rgerhards/varmojfekoj), 2007-09-04
 - fixed a number of small memory leaks - thanks varmojfekoj for patching
 - fixed an issue with CString class that could lead to rsyslog abort
   in tplToString() - thanks varmojfekoj for patching
-- added a man-version of the config file documenation - thanks to Michel
+- added a man-version of the config file documentation - thanks to Michel
   Samia for providing the man file
 - fixed bug: a template like this causes an infinite loop:
   $template opts,"%programname:::a,b%"
