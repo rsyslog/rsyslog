@@ -602,7 +602,7 @@ an easy way to identify which changes went into the respective daily stable.
 - build system bugfix: missing files in distribution tarball
 - testbench
   * fixed "make distcheck" settings which were missing some modules
-    This lead to incomple "make distcheck" run; some errors were not
+    This lead to incomplete "make distcheck" run; some errors were not
     detected due to that.
   * testbench framework: use ip tool instead of outdated ifconfig
     The framework now first checks if "ip" is available and falls back
@@ -5191,7 +5191,7 @@ v8.5.0, but in a stable release. For details see immediately below.
   general, it looks more like a cosmetic issue. For example, with
   MySQL it lead to a small memory but also an annoying message about
   a thread not properly torn down.
-- imttcp was removed because it was an incompleted experimental module
+- imttcp was removed because it was an incomplete experimental module
 - pmrfc3164sd because it was a custom module nobody used
   We used to keep this as a sample inside the tree, but whoever wants
   to look at it can check in older versions inside git.
