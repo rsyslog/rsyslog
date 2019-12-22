@@ -718,7 +718,7 @@ fixPID(uchar *bufTAG, int *lenTag, struct ucred *cred)
 
 
 /* Get an "trusted property" from the system. Returns an empty string if the
- * property can not be obtained. Inspired by similiar functionality inside
+ * property can not be obtained. Inspired by similar functionality inside
  * journald. Currently works with Linux /proc filesystem, only.
  */
 static rsRetVal

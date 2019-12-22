@@ -2549,7 +2549,7 @@ ENDrunInput
 
 /* The function is called by rsyslog before runInput() is called. It is a last chance
  * to set up anything specific. Most importantly, it can be used to tell rsyslog if the
- * input shall run or not. The idea is that if some config settings (or similiar things)
+ * input shall run or not. The idea is that if some config settings (or similar things)
  * are not OK, the input can tell rsyslog it will not execute. To do so, return
  * RS_RET_NO_RUN or a specific error code. If RS_RET_OK is returned, rsyslog will
  * proceed and call the runInput() entry point.

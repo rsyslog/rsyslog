@@ -2036,7 +2036,7 @@ static rsRetVal strmSeekCurrOffs(strm_t *pThis)
 		FINALIZE;
 	}
 
-	/* As the cryprov may use CBC or similiar things, we need to read skip data */
+	/* As the cryprov may use CBC or similar things, we need to read skip data */
 	targetOffs = pThis->iCurrOffs;
 	pThis->strtOffs = pThis->iCurrOffs = 0;
 	DBGOPRINT((obj_t*) pThis, "encrypted, doing skip read of %lld bytes\n",

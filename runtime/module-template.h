@@ -854,7 +854,7 @@ finalize_it:\
 
 /* modExit()
  * This is the counterpart to modInit(). It destroys a module and makes it ready for
- * unloading. It is similiar to freeInstance() for the instance data. Please note that
+ * unloading. It is similar to freeInstance() for the instance data. Please note that
  * this entry point needs to free any module-global data structures and registrations.
  * For example, the CfSysLineHandlers a module has registered need to be unregistered
  * here. This entry point is only called immediately before unloading of the module. So

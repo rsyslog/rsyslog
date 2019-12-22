@@ -6771,7 +6771,7 @@ Version 7.3.1  [devel] 2012-10-19
   tools used it without space. In order to keep interop with lumberjack,
   we now use the cookie without space as well. I hope this can be changed
   in CEE as well when it is released at a later time.
-  Thanks to Miloslav Trmač for pointing this out and a similiar v7 patch.
+  Thanks to Miloslav Trmač for pointing this out and a similar v7 patch.
 - bugfix: imuxsock and imklog truncated head of received message
   This happened only under some circumstances. Thanks to Marius
   Tomaschewski, Florian Piekert and Milan Bartos for their help in
@@ -7055,7 +7055,7 @@ Version 7.1.11  [beta] 2012-10-16
   tools used it without space. In order to keep interop with lumberjack,
   we now use the cookie without space as well. I hope this can be changed
   in CEE as well when it is released at a later time.
-  Thanks to Miloslav Trmač for pointing this out and a similiar v7 patch.
+  Thanks to Miloslav Trmač for pointing this out and a similar v7 patch.
 - added deprecated note to omruleset (plus clue to use "call")
 - added deprecated note to discard action (plus clue to use "stop")
 ---------------------------------------------------------------------------
@@ -7286,7 +7286,7 @@ all these patches here are present in 6.6.0.
   tools used it without space. In order to keep interop with lumberjack,
   we now use the cookie without space as well. I hope this can be changed
   in CEE as well when it is released at a later time.
-  Thanks to Miloslav Trmač for pointing this out and a similiar v7 patch.
+  Thanks to Miloslav Trmač for pointing this out and a similar v7 patch.
 - bugfix: comments inside objects (e.g. action()) were not properly handled
 - bugfix: sysklogd-emulating standard template was no longer present in v6
   This was obviously lost during the transition to the new config format.
@@ -7639,7 +7639,7 @@ Version 6.2.0  [v6-stable], 2012-01-09
 - enhanced module loader to not rely on PATH_MAX
 - imuxsock: added capability to "annotate" messages with "trusted
   information", which contains some properties obtained from the system
-  and as such sure to not be faked. This is inspired by the similiar idea
+  and as such sure to not be faked. This is inspired by the similar idea
   introduced in systemd.
 ---------------------------------------------------------------------------
 Version 6.1.12  [BETA], 2011-09-01
@@ -8009,7 +8009,7 @@ Version 5.9.5  [V5-DEVEL], 2012-01-27
 Version 5.9.4  [V5-DEVEL], 2011-11-29
 - imuxsock: added capability to "annotate" messages with "trusted
   information", which contains some properties obtained from the system
-  and as such sure to not be faked. This is inspired by the similiar idea
+  and as such sure to not be faked. This is inspired by the similar idea
   introduced in systemd.
 - removed dependency on gcrypt for recently-enough GnuTLS
   see: http://bugzilla.adiscon.com/show_bug.cgi?id=289
@@ -9574,7 +9574,7 @@ Version 4.5.1  [DEVEL] (rgerhards), 2009-07-15
   sizes had been specified in the property replacer.
 - added ability for the TCP output action to "rebind" its send socket after
   sending n messages (actually, it re-opens the connection, the name is 
-  used because this is a concept very similiar to $ActionUDPRebindInterval).
+  used because this is a concept very similar to $ActionUDPRebindInterval).
   New config directive $ActionSendTCPRebindInterval added for the purpose.
   By default, rebinding is disabled. This is considered useful for load
   balancers.
