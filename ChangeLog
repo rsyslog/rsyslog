@@ -3373,7 +3373,7 @@ Version 8.30.0 [v8-stable] 2017-10-17
   shall be dropped.
   This logic was temporarily disabled after the switch to the new v8
   transaction interface. Now this bug is fixed and the testbench has been
-  ammended to detect problems in the future.
+  amended to detect problems in the future.
   closes https://github.com/rsyslog/rsyslog/issues/974
 - core/action bugfix: no "action suspended" message during retry processing
   The action engine does not emit "action suspended" messages but "resumed"
