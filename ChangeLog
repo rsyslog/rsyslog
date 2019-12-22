@@ -681,7 +681,7 @@ Version 8.1905.0 (aka 2019.05) 2019-05-28
   This commit fixes that issue.
   closes https://github.com/rsyslog/rsyslog/issues/2520
 - core portability bugfix: harden shutdown processing on FreeBSD
-  On FreeBSD, rsyslog does not always terminate immediately on SIGTEM.
+  On FreeBSD, rsyslog does not always terminate immediately on SIGTERM.
   Root cause seems to be that SIGTERM is delivered differently under
   FreeBSD. This causes the main thread to not be awaken, and so it
   takes until the next janitor interval to come back to life - which
