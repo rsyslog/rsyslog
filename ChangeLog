@@ -11611,7 +11611,7 @@ Version 1.13.2 (RGer), 2007-06-13
 ---------------------------------------------------------------------------
 Version 1.13.1 (RGer), 2007-02-05
 - changed the listen backlog limit to a more reasonable value based on
-  the maximum number of TCP connections configurd (10% + 5) - thanks to Guy
+  the maximum number of TCP connections configured (10% + 5) - thanks to Guy
   Standen for the hint (actually, the limit was 5 and that was a 
   left-over from early testing).
 - fixed a bug in makefile which caused DB-support to be disabled when
@@ -12554,7 +12554,7 @@ Version 1.13.2 (RGer), 2007-06-13
 ---------------------------------------------------------------------------
 Version 1.13.1 (RGer), 2007-02-05
 - changed the listen backlog limit to a more reasonable value based on
-  the maximum number of TCP connections configurd (10% + 5) - thanks to Guy
+  the maximum number of TCP connections configured (10% + 5) - thanks to Guy
   Standen for the hint (actually, the limit was 5 and that was a 
   left-over from early testing).
 - fixed a bug in makefile which caused DB-support to be disabled when
@@ -13497,7 +13497,7 @@ Version 1.13.2 (RGer), 2007-06-13
 ---------------------------------------------------------------------------
 Version 1.13.1 (RGer), 2007-02-05
 - changed the listen backlog limit to a more reasonable value based on
-  the maximum number of TCP connections configurd (10% + 5) - thanks to Guy
+  the maximum number of TCP connections configured (10% + 5) - thanks to Guy
   Standen for the hint (actually, the limit was 5 and that was a 
   left-over from early testing).
 - fixed a bug in makefile which caused DB-support to be disabled when
