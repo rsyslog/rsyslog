@@ -284,7 +284,7 @@ rsRetVal objName##ClassExit(void) \
  * The object is always freed, even if there is some error while
  * Cancellation is blocked during destructors, as this could have fatal
  * side-effects. However, this also means the upper-level object should
- * not perform any lenghty processing.
+ * not perform any lengthy processing.
  * IMPORTANT: if the upper level object requires some situations where the
  * object shall not be destructed (e.g. via reference counting), then
  * it shall set pThis to NULL, which prevents destruction of the
