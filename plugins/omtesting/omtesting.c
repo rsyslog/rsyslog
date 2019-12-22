@@ -299,7 +299,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	} else if(!strcmp((char*) szBuf, "fail")) {
 		/* "fail fail-frequency resume-after"
 		 * fail-frequency specifies how often doAction() fails
-		 * resume-after speicifes how fast tryResume() should come back with success
+		 * resume-after specifies how fast tryResume() should come back with success
 		 * all numbers being "times called"
 		 */
 		/* parse fail-frequency */
