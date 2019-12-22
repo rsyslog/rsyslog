@@ -4226,7 +4226,7 @@ Version 8.22.0 [v8-stable] 2016-10-04
   previously it could loose messages under such conditions.
   Thanks to Bob Gregory for the patch.
 - general cleanup and code improvement
-  mostly guided by compiler warnings induced by newer opensuse builbot
+  mostly guided by compiler warnings induced by newer opensuse buildbot
   environment
 ------------------------------------------------------------------------------
 Version 8.21.0 [v8-stable] 2016-08-23
