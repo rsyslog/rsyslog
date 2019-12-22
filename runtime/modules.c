@@ -356,7 +356,7 @@ addModToGlblList(modInfo_t *pThis)
 
 /* ready module for config processing. this includes checking if the module
  * is already in the config, so this function may return errors. Returns a
- * pointer to the last module inthe current config. That pointer needs to
+ * pointer to the last module in the current config. That pointer needs to
  * be passed to addModToCnfLst() when it is called later in the process.
  */
 rsRetVal
