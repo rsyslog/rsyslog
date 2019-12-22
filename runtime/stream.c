@@ -1019,7 +1019,7 @@ finalize_it:
 	} else {
 		if(*ppCStr != NULL) {
 			if(cstrLen(*ppCStr) > 0) {
-			/* we may have an empty string in an unsuccesfull poll or after restart! */
+			/* we may have an empty string in an unsuccessful poll or after restart! */
 				if(rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr) != RS_RET_OK) {
 					/* we cannot do anything against this, but we can at least
 					 * ensure we do not have any follow-on errors.
