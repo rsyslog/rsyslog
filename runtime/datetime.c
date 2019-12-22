@@ -1196,7 +1196,7 @@ int getWeekdayNbr(struct syslogTime *ts)
 int getOrdinal(struct syslogTime *ts)
 {
 	int yday;
-	time_t thistime;
+	time_t this_time;
 	time_t previousyears;
 	int utcOffset;
 	time_t seconds_into_year;
@@ -1208,7 +1208,7 @@ int getOrdinal(struct syslogTime *ts)
 		goto done;
 	}
 
-	thistime = syslogTime2time_t(ts);
+	this_time = syslogTime2time_t(ts);
 
 	previousyears = (time_t) yearInSecs[ts->year - yearInSec_startYear - 1];
 
@@ -1219,7 +1219,7 @@ int getOrdinal(struct syslogTime *ts)
 	previousyears += utcOffset;
 
 	/* subtract seconds from previous years */
-	seconds_into_year = thistime - previousyears;
+	seconds_into_year = this_time - previousyears;
 
 	/* divide by seconds in a day and truncate to int */
 	yday = seconds_into_year / 86400;
