@@ -7326,7 +7326,7 @@ Version 6.4.1  [V6-STABLE] 2012-09-06
   small risk that this may break some things that relied on the previous
   inconsistency.
   Thanks to Miloslav Trmač for the patch
-- bugfix: omusrsmsg incorrect return state & config warning handling
+- bugfix: omusrmsg incorrect return state & config warning handling
   During config file processing, Omusrmsg often incorrectly returned a
   warning status, even when no warning was present (caused by
   uninitialized variable). Also, the core handled warning messages
