@@ -121,7 +121,7 @@ BEGINinterface(statsobj) /* name must also be changed in ENDinterface macro! */
 ENDinterface(statsobj)
 #define statsobjCURR_IF_VERSION 13 /* increment whenever you change the interface structure! */
 /* Changes
- * v2-v9 rserved for future use in "older" version branches
+ * v2-v9 reserved for future use in "older" version branches
  * v10, 2012-04-01: GetAllStatsLines got fmt parameter
  * v11, 2013-09-07: - add "flags" to AddCounter API
  *                  - GetAllStatsLines got parameter telling if ctrs shall be reset
