@@ -691,7 +691,7 @@ int rsCStrOffsetSzStrCmp(cstr_t *pCS1, size_t iOffset, uchar *psz, size_t iLenSz
  * rsCstrSzStrCmp(pCS, psz, strlen((char*)psz));
  * we are not doing the strlen((char*)) ourselfs as the caller might
  * already know the length and in such cases we can save the
- * overhead of doing it one more time (strelen() is costly!).
+ * overhead of doing it one more time (strlen() is costly!).
  * The bottom line is that the provided length MUST be correct!
  * The to sz string pointer must not be NULL!
  * rgerhards 2005-09-26
