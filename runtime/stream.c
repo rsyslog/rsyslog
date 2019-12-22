@@ -1904,7 +1904,7 @@ strmFlushInternal(strm_t *pThis, int bFlushZip)
 /* flush stream output buffer to persistent storage. This can be called at any time
  * and is automatically called when the output buffer is full. This function is for
  * use by EXTERNAL callers. Do NOT use it internally. It locks the async writer
- * mutex if ther is need to do so.
+ * mutex if there is need to do so.
  * rgerhards, 2010-03-18
  */
 static rsRetVal
