@@ -1306,7 +1306,7 @@ Version 8.39.0 [v8-stable] 2018-10-30
   reading. The new code now also checks during each read. Obviously, there
   is some additional overhead associated with that, but this is unavoidable.
   It still is highly recommended NOT to turn on "reopenOnTruncate" in imfile.
-  Note that there are also inherant reliability issues. There is no way to
+  Note that there are also inherent reliability issues. There is no way to
   "fix" these, as they are caused by races between the process(es) who truncate
   and rsyslog reading the file. But with the new code, the "problem window"
   should be much smaller and, more importantly, imfile should not stall.
