@@ -16,7 +16,7 @@
 #
 # A note on TLS testing: the current testsuite (in git!) already contains
 # TLS test cases. However, getting these test cases correct is not simple.
-# That's not a problem with the code itself, but rater a problem with
+# That's not a problem with the code itself, but rather a problem with
 # synchronization in the test environment. So I have decided to keep the
 # TLS tests in, but not yet actually utilize them. This is most probably
 # left as an exercise for future (devel) releases. -- rgerhards, 2009-11-11
