@@ -563,7 +563,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_SENDER_GONE_AWAY = -2429,/**< warning: sender not seen for configured amount of time */
 	RS_RET_SENDER_APPEARED = -2430,/**< info: new sender appeared */
 	RS_RET_FILE_ALREADY_IN_TABLE = -2431,/**< in imfile: table already contains to be added file */
-	RS_RET_ERR_DROP_PRIV = -2432,/**< error droping privileges */
+	RS_RET_ERR_DROP_PRIV = -2432,/**< error dropping privileges */
 	RS_RET_FILE_OPEN_ERROR = -2433, /**< error other than "not found" occured during open() */
 	RS_RET_RENAME_TMP_QI_ERROR = -2435, /**< renaming temporary .qi file failed */
 	RS_RET_ERR_SETENV = -2436, /**< error setting an environment variable */

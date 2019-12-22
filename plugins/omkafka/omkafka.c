@@ -1511,7 +1511,7 @@ loadFailedMsgs(instanceData *const __restrict__ pData)
 				}
 				SLIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
 			} else {
-				LogError(0, RS_RET_ERR, "omkafka: loadFailedMsgs droping invalid msg found: %s",
+				LogError(0, RS_RET_ERR, "omkafka: loadFailedMsgs dropping invalid msg found: %s",
 					(char*)rsCStrGetSzStrNoNULL(pCStr));
 			}
 		}
