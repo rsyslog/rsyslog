@@ -70,7 +70,7 @@ struct ipv6_int {
 	};
 /* define operation modes we have */
 #define SIMPLE_MODE 0	 /* just overwrite */
-#define REWRITE_MODE 1	 /* rewrite IP address, canoninized */
+#define REWRITE_MODE 1	 /* rewrite IP address, canonized */
 typedef struct _instanceData {
 	struct {
 		sbool enable;
