@@ -623,7 +623,7 @@ ENDObjClassExit(conf)
 BEGINAbstractObjClassInit(conf, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE class also in END MACRO! */
 	/* request objects we use */
 	CHKiRet(objUse(module, CORE_COMPONENT));
-	CHKiRet(objUse(net, LM_NET_FILENAME)); /* TODO: make this dependcy go away! */
+	CHKiRet(objUse(net, LM_NET_FILENAME)); /* TODO: make this dependency go away! */
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 
 	/* These commands will NOT be supported -- the new v6.3 config system provides
