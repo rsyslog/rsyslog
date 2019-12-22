@@ -342,7 +342,7 @@ writeDB(const uchar *psz, instanceData *const __restrict__ pData)
 		if((dbiRes = dbi_conn_query(pData->conn, (const char*)psz)) == NULL) { /* re-try insert */
 			/* we failed, giving up for now */
 			reportDBError(pData, 0);
-			closeConn(pData); /* free ressources */
+			closeConn(pData); /* free resources */
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 	}

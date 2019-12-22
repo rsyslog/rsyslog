@@ -277,7 +277,7 @@ static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, const uchar *const psz
 			/* we failed, giving up for now */
 			DBGPRINTF("ommysql: suspending due to failed write of '%s'\n", psz);
 			reportDBError(pWrkrData, 0);
-			closeMySQL(pWrkrData); /* free ressources */
+			closeMySQL(pWrkrData); /* free resources */
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 	}

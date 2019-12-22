@@ -2022,7 +2022,7 @@ deinitAll(void)
 	qqueueDestruct(&pMsgQueue);
 	pMsgQueue = NULL;
 
-	/* Free ressources and close connections. This includes flushing any remaining
+	/* Free resources and close connections. This includes flushing any remaining
 	 * repeated msgs.
 	 */
 	DBGPRINTF("Terminating outputs...\n");

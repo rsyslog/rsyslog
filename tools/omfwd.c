@@ -1069,7 +1069,7 @@ ENDcommitTransaction
 
 
 /* This function loads TCP support, if not already loaded. It will be called
- * during config processing. To server ressources, TCP support will only
+ * during config processing. To server resources, TCP support will only
  * be loaded if it actually is used. -- rgerhard, 2008-04-17
  */
 static rsRetVal

@@ -159,7 +159,7 @@ static rsRetVal createInstance(instanceData **ppData)\
  * here, e.g. close file, free instance heap memory and the like. Control will
  * not be passed back to the module once this function is finished. Keep in mind,
  * however, that other instances may still be loaded and used. So do not destroy
- * anything that may be used by another instance. If you have such a ressource, you
+ * anything that may be used by another instance. If you have such a resource, you
  * currently need to do the instance counting yourself.
  */
 #define BEGINfreeInstance \
@@ -1084,7 +1084,7 @@ static rsRetVal afterRun(void)\
  * only, but may be made available to other types of plugins in the future.
  * A plugin does not need to define this entry point. If if does, it gets
  * called when a HUP at the action level is to be done. A plugin should register
- * this function so that it can close files, connection or other ressources
+ * this function so that it can close files, connection or other resources
  * on HUP - if it can be assume the user wanted to do this as a part of HUP
  * processing. Note that the name "HUP" has historical reasons, it stems back
  * to the infamous SIGHUP which was sent to restart a syslogd. We still retain

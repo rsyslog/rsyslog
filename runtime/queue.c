@@ -365,7 +365,7 @@ getLogicalQueueSize(qqueue_t *pThis)
 
 /* This function drains the queue in cases where this needs to be done. The most probable
  * reason is a HUP which needs to discard data (because the queue is configured to be lossy).
- * During a shutdown, this is typically not needed, as the OS frees up ressources and does
+ * During a shutdown, this is typically not needed, as the OS frees up resources and does
  * this much quicker than when we clean up ourselves. -- rgerhards, 2008-10-21
  * This function returns void, as it makes no sense to communicate an error back, even if
  * it happens.
@@ -555,7 +555,7 @@ InitDA(qqueue_t *const pThis, const int bLockMutex)
 	/* check if we already have a DA worker pool. If not, initiate one. Please note that the
 	 * pool is created on first need but never again destructed (until the queue is). This
 	 * is intentional. We assume that when we need it once, we may also need it on another
-	 * occasion. Ressources used are quite minimal when no worker is running.
+	 * occasion. Resources used are quite minimal when no worker is running.
 	 * rgerhards, 2008-01-24
 	 * NOTE: this is the DA worker *pool*, not the DA queue!
 	 */

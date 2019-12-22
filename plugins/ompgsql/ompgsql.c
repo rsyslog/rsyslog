@@ -282,7 +282,7 @@ writePgSQL(uchar *psz, wrkrInstanceData_t *pWrkrData)
 		if(bHadError || (PQstatus(pWrkrData->f_hpgsql) != CONNECTION_OK)) {
 			/* we failed, giving up for now */
 			reportDBError(pWrkrData, 0);
-			closePgSQL(pWrkrData); /* free ressources */
+			closePgSQL(pWrkrData); /* free resources */
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 	}

@@ -430,7 +430,7 @@ Scheduled Release 8.1908.0 (aka 2019.08) 2019-08-20
   the latest listener.
   This patch now follows the model of nsd_ptcp.c to assign only
   the first port randomly and then use that port consistently.
-- 2019-08-10: omelasticsearch bugfix: potential ressource leak whith "rebindinterval"
+- 2019-08-10: omelasticsearch bugfix: potential resource leak whith "rebindinterval"
   If the "rebindInterval" parameter was used connections could be linked. This
   was especially the case with small intervals (such as "2"). This is fixed by
   forcing libcurl to close the connection on rebind.
@@ -2805,7 +2805,7 @@ Version 8.32.0 [v8-stable] 2018-01-09
   we see a regression not caught by the CI system.
 - mmsnmptrapd bugfix: potential misaddressing
   This only occured in situations when the system was totally out of memory.
-- imkafka: fix potential small ressource leak
+- imkafka: fix potential small resource leak
   If rdkafka handle cannot fully populated, cleanup is added. Previously, we
   could leak a handle if e.g. no brokers were available. Note that this was
   a cosmetic leak, as proper processing is not possible in any case and the
@@ -3475,7 +3475,7 @@ Version 8.29.0 [v8-stable] 2017-08-08
     - session.closed
 - imtcp: add ability to specify GnuTLS priority string
   This permits to set cipher details on a very low level.
-- impstats: add new ressoure counter "openfiles"
+- impstats: add new resource counter "openfiles"
 - pmnormalize: new parser module
   Parser module that uses liblognorm to parse incoming messages.
 - core/queue: provide informational messages on thread startup and shutdown
@@ -3981,7 +3981,7 @@ Version 8.24.0 [v8-stable] 2017-01-10
   see also: https://github.com/rsyslog/rsyslog/pull/1247
   Thanks to github user purnimam1 and the team at IBM
   Note: the rsyslog project has no AIX platform to ensure that future versions
-  will remain buildable on AIX. If you would like to contribute ressources,
+  will remain buildable on AIX. If you would like to contribute resources,
   please contact the rsyslog team.
 - mmdblookup: new maxminddb lookup message modify plugin
   Thanks to 饶琛琳 (github user chenryn) for the contribution
@@ -6078,7 +6078,7 @@ Version 7.5.4 [devel] 2013-10-07
   * fileCreateMode
 - mmutf8fix: new module to fix invalid UTF-8 sequences
 - imuxsock: handle unlimited number of additional listen sockets
-- doc: improve usability by linking to relevant web ressources
+- doc: improve usability by linking to relevant web resources
   The idea is to enable users to quickly find additional information,
   samples, HOWTOs and the like on the main site.
   At the same time, (very) slightly remove memory footprint when
@@ -7019,7 +7019,7 @@ Version 7.2.1  [v7-stable] 2012-10-29
 - improved syntax error messages by outputting the error token
 - the rsyslog core now suspeneds actions after 10 failures in a row
   This was former the case after 1,000 failures and could cause rsyslog
-  to be spammed/ressources misused. See the v6 compatibility doc for more
+  to be spammed/resources misused. See the v6 compatibility doc for more
   details.
 - ommongodb rate-limits error messages to prevent spamming the syslog
   closes (for v7.2): http://bugzilla.adiscon.com/show_bug.cgi?id=366
@@ -11880,7 +11880,7 @@ Version 0.9.5 (RGer), 2005-08-01
 - the "semicolon bug" actually turned out to be a more generic bug.
   It appeared whenever an invalid template name was given. With some
   selector actions, rsyslogd dumped core, with other it "just" had
-  a small ressource leak with others all worked well. These anomalies
+  a small resource leak with others all worked well. These anomalies
   are now fixed. Note that they only appeared during system initialization
   once the system was running, nothing bad happened.
 - improved error reporting for template errors on startup. They are now
@@ -12823,7 +12823,7 @@ Version 0.9.5 (RGer), 2005-08-01
 - the "semicolon bug" actually turned out to be a more generic bug.
   It appeared whenever an invalid template name was given. With some
   selector actions, rsyslogd dumped core, with other it "just" had
-  a small ressource leak with others all worked well. These anomalies
+  a small resource leak with others all worked well. These anomalies
   are now fixed. Note that they only appeared during system initialization
   once the system was running, nothing bad happened.
 - improved error reporting for template errors on startup. They are now
@@ -13766,7 +13766,7 @@ Version 0.9.5 (RGer), 2005-08-01
 - the "semicolon bug" actually turned out to be a more generic bug.
   It appeared whenever an invalid template name was given. With some
   selector actions, rsyslogd dumped core, with other it "just" had
-  a small ressource leak with others all worked well. These anomalies
+  a small resource leak with others all worked well. These anomalies
   are now fixed. Note that they only appeared during system initialization
   once the system was running, nothing bad happened.
 - improved error reporting for template errors on startup. They are now
