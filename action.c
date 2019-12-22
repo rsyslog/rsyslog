@@ -580,7 +580,7 @@ actionConstructFinalize(action_t *__restrict__ const pThis, struct nvlst *lst)
 	if(pThis->bUsesMsgPassingMode && pThis->pQueue->qType != QUEUETYPE_DIRECT) {
 		parser_warnmsg("module %s with message passing mode uses "
 			"non-direct queue. This most probably leads to undesired "
-			"results. For message modificaton modules (mm*), this means "
+			"results. For message modification modules (mm*), this means "
 			"that they will have no effect - "
 			"see https://www.rsyslog.com/mm-no-queue/", (char*)modGetName(pThis->pMod));
 	}

@@ -10490,7 +10490,7 @@ Version 3.18.1 (rgerhards), 2008-07-21
   a problem with RFC 3164 based interpretation of tag separation. While
   it is a generic approach, it fixes a format problem introduced in
   3.18.0, where kernel messages no longer had a space after the tag.
-  This is done by a modifcation of the default templates.
+  This is done by a modification of the default templates.
   Please note that this may affect some messages where there intentionally
   is no space between the tag and the first character of the message
   content. If so, this needs to be worked around via a specific

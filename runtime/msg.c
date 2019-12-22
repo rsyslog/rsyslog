@@ -4657,7 +4657,7 @@ msgSetPropViaJSON(smsg_t *__restrict__ const pMsg, const char *name, struct json
  * including parsing the JSON string. If an error is detected, the operation
  * is aborted at the time of error. Any modifications made before the
  * error ocurs are still PERSISTED.
- * This function is meant to support the external message modifiction module
+ * This function is meant to support the external message modification module
  * interface. As such, replacing properties is expressively permited. Note that
  * properties which were derived from the message during parsing are NOT
  * updated if the underlying (raw)msg property is changed.
