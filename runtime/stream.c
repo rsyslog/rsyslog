@@ -1353,7 +1353,7 @@ ENDobjDestruct(strm)
 
 
 /* check if we need to open a new file (in output mode only).
- * The decision is based on file size AND record delimition state.
+ * The decision is based on file size AND record delimitation state.
  * This method may also be called on a closed file, in which case
  * it immediately returns.
  */
