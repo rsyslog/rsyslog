@@ -3563,7 +3563,7 @@ Version 8.29.0 [v8-stable] 2017-08-08
   for sending data. Many other output plugins also do blocking wait (e.g. omelasticsearch).
   As such, the real root cause of the trouble is unnecessarily using non-blocking mode,
   and consequently the right solution is to change that.
-  Note that using blocking i/o might change some timeing inside rsyslog, especially
+  Note that using blocking i/o might change some timing inside rsyslog, especially
   during shutdown. So theoretical there is regression potential in that area. However,
   the core is designed to handle that situation (e.g. there is special shutdown code to
   handle the blocking case), so this does not stand against the "proper" solution.
