@@ -1215,7 +1215,7 @@ getConfiguredPartitions()
 		rd_kafka_metadata_destroy(pMetadata);
 	} else {
 		dbgprintf("omkafka: error reading metadata\n");
-		// TODO: handle this gracefull **when** we actually need
+		// TODO: handle this gracefully **when** we actually need
 		// the metadata -- or remove completely. 2014-12-12 rgerhards
 	}
 }
