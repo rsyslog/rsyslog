@@ -559,7 +559,7 @@ an easy way to identify which changes went into the respective daily stable.
   was cased by too-early freeing config error-detection data
   structures. It is a regression caused by commit e22fb205a3.
   Thanks to Wade Simmons for reporting this issue and providing
-  detailled analysis. That greatly helps fixing it quickly.
+  detailed analysis. That greatly helps fixing it quickly.
   closes https://github.com/rsyslog/rsyslog/issues/3681
 - core "bugfix": alignment issue
   This was not a hard error on current platforms, but a
@@ -2084,7 +2084,7 @@ Version 8.36.0 [v8-stable] 2018-06-26
 Version 8.35.0 [v8-stable] 2018-05-15
 - imptcp: add ability to configure socket backlog
   this can be useful under heavy load.
-  For a detailled discussion see https://github.com/rsyslog/rsyslog/pull/2561
+  For a detailed discussion see https://github.com/rsyslog/rsyslog/pull/2561
   Thanks to Maxime Graff for implementing this.
 - omfile: do not permit filename that only consists of whitespace
 - fmhash: new hash function module
@@ -5077,7 +5077,7 @@ Version 8.8.0 [v8-stable] 2015-02-24
 - omkafka: add support for dynamic topics and auto partitioning
   Thanks to Tait Clarridge for the patches.
 - imtcp/imptcp: support for broken Cisco ASA TCP syslog framing
-- omfwd: more detailled error messages in case of UDP send error
+- omfwd: more detailed error messages in case of UDP send error
 - TLS syslog: enable capability to turn on GnuTLS debug logging
   This provides better diagnostics in hard-to-diagnose cases,
   especially when GnuTLS is extra-picky about certificates.
@@ -5815,7 +5815,7 @@ Version 7.6.4 [v7.6-stable] 2014-09-12
   processed the last set passing mode. Note that this was not a problem
   for the plugins provided by the rsyslog git: none of them uses different
   passing modes.
-  Thanks to Tomas Heinrich for providing a very detailled bug report.
+  Thanks to Tomas Heinrich for providing a very detailed bug report.
 - various fixes after coverity scan
   These do not address issues seen in practice but those seen by the tool.
   Some of them may affect practical deployments.
@@ -6143,7 +6143,7 @@ Version 7.5.2 [devel] 2013-07-04
   in a non-default configuration, where the "errorfile" parameter
   was specified. Without that parameter set, the bug could not
   be triggered.
-  Thanks to Markus Vervier and Marius Ionescu for providing a detailled
+  Thanks to Markus Vervier and Marius Ionescu for providing a detailed
   bug report. Special thanks to Markus for coordinating his security
   advisory with us.
 - doc: fixed various typos
@@ -6420,7 +6420,7 @@ Version 7.4.2  [v7.4-stable] 2013-07-04
   in a non-default configuration, where the "errorfile" parameter
   was specified. Without that parameter set, the bug could not
   be triggered.
-  Thanks to Markus Vervier and Marius Ionescu for providing a detailled
+  Thanks to Markus Vervier and Marius Ionescu for providing a detailed
   bug report. Special thanks to Markus for coordinating his security
   advisory with us.
 - bugfix: omrelp potential segfault at startup on invalid config parameters
