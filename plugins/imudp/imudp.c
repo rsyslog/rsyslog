@@ -1221,7 +1221,7 @@ wrkr(void *myself)
 
 	/* Note well: the setting of scheduling parameters will not work
 	 * when we dropped privileges (if the user is not sufficiently
-	 * privileged, of course). Howerver, we can't change the
+	 * privileged, of course). However, we can't change the
 	 * scheduling params in PrePrivDrop(), as at that point our thread
 	 * is not yet created. So at least as an interim solution, we do
 	 * NOT support both setting sched parameters and dropping

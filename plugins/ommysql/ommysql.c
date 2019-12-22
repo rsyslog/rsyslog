@@ -262,7 +262,7 @@ static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, const uchar *const psz
 		/* We assume server error codes are non-recoverable, mainly data errors.
 		 * This also means we need to differentiate between client and server error
 		 * codes. Unfortunately, the API does not provide a specified function for
-		 * this. Howerver, error codes 2000..2999 are currently client error codes.
+		 * this. However, error codes 2000..2999 are currently client error codes.
 		 * So we use this as guideline.
 		 */
 		if(mysql_err < 2000 || mysql_err > 2999) {
