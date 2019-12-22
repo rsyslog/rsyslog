@@ -28,7 +28,7 @@
 #include "stringbuf.h"
 #include <sys/param.h>
 
-/* we use RSTRUE/FALSE to prevent name claches with other packages */
+/* we use RSTRUE/FALSE to prevent name clashes with other packages */
 #define RSFALSE 0
 #define RSTRUE 1
 
