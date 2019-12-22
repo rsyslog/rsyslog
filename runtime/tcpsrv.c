@@ -1609,7 +1609,7 @@ startWorkerPool(void)
 	/* We need to temporarily block all signals because the new thread
 	 * inherits our signal mask. There is a race if we do not block them
 	 * now, and we have seen in practice that this race causes grief.
-	 * So we 1. save the current set, 2. block evertyhing, 3. start
+	 * So we 1. save the current set, 2. block everything, 3. start
 	 * threads, and 4 reset the current set to saved state.
 	 * rgerhards, 2019-08-16
 	 */

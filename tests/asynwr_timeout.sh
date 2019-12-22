@@ -28,7 +28,7 @@ tcpflood -m $NUMMESSAGES
 printf 'waiting for timeout to occur\n'
 sleep 6 # GOOD SLEEP - we wait for the timeout!
 printf 'timeout should now have occurred - check file state\n'
-seq_check # mow everthing MUST be persisted
+seq_check # mow everything MUST be persisted
 shutdown_when_empty
 wait_shutdown
 seq_check # just a double-check that nothing is added twice

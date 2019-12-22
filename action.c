@@ -1571,7 +1571,7 @@ DBGPRINTF("actionCommit[%s]: return actionTryCommit %d\n", pThis->pszName, iRet)
 	}
 
 	if(nMsgs == 0) {
-		ABORT_FINALIZE(RS_RET_OK); // here, we consider everyting OK
+		ABORT_FINALIZE(RS_RET_OK); // here, we consider everything OK
 	}
 
 	/* We still have some messages with suspend error. So now let's do our

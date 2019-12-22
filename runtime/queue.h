@@ -63,7 +63,7 @@ struct queue_s {
 	int	nLogDeq;	/* number of elements currently logically dequeued */
 	int	bShutdownImmediate; /* should all workers cease processing messages? */
 	sbool	bEnqOnly;	/* does queue run in enqueue-only mode (1) or not (0)? */
-	sbool	bSaveOnShutdown;/* persists everthing on shutdown (if DA!)? 1-yes, 0-no */
+	sbool	bSaveOnShutdown;/* persists everything on shutdown (if DA!)? 1-yes, 0-no */
 	sbool	bQueueStarted;	/* has queueStart() been called on this queue? 1-yes, 0-no */
 	sbool	takeFlowCtlFromMsg;/* override enq flow ctl by message property? */
 	int	iQueueSize;	/* Current number of elements in the queue */
