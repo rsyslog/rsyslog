@@ -3868,7 +3868,7 @@ Version 8.26.0 [v8-stable] 2017-04-04
   watch is configured or added dynamically.
   closes https://github.com/rsyslog/rsyslog/issues/1452
 - bugfix: setting net.aclResolveHostname/net.acladdhostnameonfail segfaults
-  When compiling using hardned gcc (gentoo), specifying net.aclResolveHostname
+  When compiling using hardened gcc (gentoo), specifying net.aclResolveHostname
   or net.acladdhostnameonfail results in rsyslogd segfaulting on startup.
   Thanks to Radovan Sroka for the patch.
 - bugfix: immark emitted error messages with text "imuxsock"
