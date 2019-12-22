@@ -3469,7 +3469,7 @@ Version 8.29.0 [v8-stable] 2017-08-08
   This is the case e.g. for oversize messages.
 - imtcp: framing-related error messages now also indicate remote peer
   This is the case e.g. for oversize messages.
-- imptcp: add session statistics conunter
+- imptcp: add session statistics counter
     - session.opened
     - session.openfailed
     - session.closed
