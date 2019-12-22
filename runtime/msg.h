@@ -45,7 +45,7 @@
  * has been created). Once created, it actually is a read-only
  * object (though we do not specifically express this). In order
  * to avoid multiple copies of the same object, we use a
- * reference counter. This counter is set to 1 by the constructer
+ * reference counter. This counter is set to 1 by the constructor
  * and increased by 1 with a call to MsgAddRef(). The destructor
  * checks the reference count. If it is more than 1, only the counter
  * will be decremented. If it is 1, however, the object is actually
