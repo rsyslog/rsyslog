@@ -359,7 +359,7 @@ static struct scriptFunct functions[] = {
 
 BEGINgetFunctArray
 CODESTARTgetFunctArray
-	dbgprintf("Hash: fmhhash\n");
+	dbgprintf("Hash: fmhash\n");
 	*version = 1;
 	*functArray = functions;
 ENDgetFunctArray
