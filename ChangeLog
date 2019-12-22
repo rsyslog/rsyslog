@@ -7788,7 +7788,7 @@ Version 6.1.4  [DEVEL] (rgerhards), 2011-02-18
   for the fix
 ---------------------------------------------------------------------------
 Version 6.1.3  [DEVEL] (rgerhards), 2011-02-01
-- experimental support for monogodb added
+- experimental support for mongodb added
 - added $IMUDPSchedulingPolicy and $IMUDPSchedulingPriority config settings
 - added $LocalHostName config directive
 - improved tcpsrv performance by enabling multiple-entry epoll
