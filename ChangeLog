@@ -984,7 +984,7 @@ Version 8.1901.0 (aka 2019.01) 2019-01-22
   expired (computing the absolute timeout took a small amount of time).
   So we change this now to 10ms, which still is very quick but gives
   the queue at least a chance to shutdown itself. That in turn
-  smoothens the whole shutdown process.
+  smoothes the whole shutdown process.
   If a very large number of action queues is used this may lead
   to a very slightly longer shutdown time, albeit this is very
   improbable.
