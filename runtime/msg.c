@@ -1700,7 +1700,7 @@ getRawMsgAfterPRI(smsg_t * const pM, uchar **pBuf, int *piLen)
 			/* unfortunately, pM->offAfterPRI seems NOT to be
 			 * correct/consistent in all cases. imuxsock and imudp
 			 * seem to have other values than imptcp. Testbench
-			 * covers some of that. As a work-around, we caluculate
+			 * covers some of that. As a work-around, we calculate
 			 * the value ourselfes here. -- rgerhards, 2015-10-09
 			 */
 			size_t offAfterPRI = 0;
