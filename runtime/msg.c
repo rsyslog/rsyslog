@@ -2193,7 +2193,7 @@ MsgSetAfterPRIOffs(smsg_t * const pMsg, int offs)
  * This is not locked, because it either is called during message
  * construction (where we need no locking) or later as part of a function
  * which already obtained the lock. So in general, this function here must
- * only be called when it it safe to do so without it aquiring a lock.
+ * only be called when it it safe to do so without it acquiring a lock.
  */
 rsRetVal MsgSetAPPNAME(smsg_t *__restrict__ const pMsg, const char* pszAPPNAME)
 {
