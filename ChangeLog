@@ -1761,7 +1761,7 @@ Version 8.37.0 [v8-stable] 2018-08-07
   Also a couple of changes to testbench worth mentioning:
   * use cp -f to ensure files can be overwritten in VBUILD
   * fix issue of missing include test file in EXTRA_DIST
-  * new supressions
+  * new suppressions
   * testbench: try to use local system dependency cache
     avoid going to Internet repos if not absolutely necessary. For
     development containers, they should be pre-populated with the

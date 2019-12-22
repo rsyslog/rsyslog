@@ -289,7 +289,7 @@ writePgSQL(uchar *psz, wrkrInstanceData_t *pWrkrData)
 
 finalize_it:
 	if (iRet == RS_RET_OK) {
-		pWrkrData->eLastPgSQLStatus = CONNECTION_OK; /* reset error for error supression */
+		pWrkrData->eLastPgSQLStatus = CONNECTION_OK; /* reset error for error suppression */
 	}
 
 	RETiRet;
@@ -342,7 +342,7 @@ CODESTARTcommitTransaction
 
 finalize_it:
 	if (iRet == RS_RET_OK) {
-		pWrkrData->eLastPgSQLStatus = CONNECTION_OK; /* reset error for error supression */
+		pWrkrData->eLastPgSQLStatus = CONNECTION_OK; /* reset error for error suppression */
 	}
 
 ENDcommitTransaction

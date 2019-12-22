@@ -950,10 +950,10 @@ logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg, int fla
 	 * it here. -- rgerhards, 2008-07-28
 	 * Note that error messages can not be disabled during a config verify. This
 	 * permits us to process unmodified config files which otherwise contain a
-	 * supressor statement.
+	 * suppressor statement.
 	 */
 	int emit_to_stderr = (ourConf == NULL) ? 1 : ourConf->globals.bErrMsgToStderr;
-	int emit_supress_msg = 0;
+	int emit_suppress_msg = 0;
 	if(Debug == DEBUG_FULL || !doFork) {
 		emit_to_stderr = 1;
 	}
@@ -961,7 +961,7 @@ logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg, int fla
 		if(emit_to_stderr && ourConf->globals.maxErrMsgToStderr != -1 && ourConf->globals.maxErrMsgToStderr) {
 			--ourConf->globals.maxErrMsgToStderr;
 			if(ourConf->globals.maxErrMsgToStderr == 0)
-				emit_supress_msg = 1;
+				emit_suppress_msg = 1;
 		} else {
 			emit_to_stderr = 0;
 		}
@@ -971,7 +971,7 @@ logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg, int fla
 			fprintf(stderr, "rsyslogd: %s\n",
 				(bufModMsg == NULL) ? (char*)msg : bufModMsg);
 	}
-	if(emit_supress_msg) {
+	if(emit_suppress_msg) {
 		fprintf(stderr, "rsyslogd: configured max number of error messages "
 			"to stderr reached, further messages will not be output\n"
 			"Consider adjusting\n"

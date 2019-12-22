@@ -284,7 +284,7 @@ static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, const uchar *const psz
 
 finalize_it:
 	if(iRet == RS_RET_OK) {
-		pWrkrData->uLastMySQLErrno = 0; /* reset error for error supression */
+		pWrkrData->uLastMySQLErrno = 0; /* reset error for error suppression */
 	}
 
 	RETiRet;

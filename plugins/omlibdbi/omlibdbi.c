@@ -349,7 +349,7 @@ writeDB(const uchar *psz, instanceData *const __restrict__ pData)
 
 finalize_it:
 	if(iRet == RS_RET_OK) {
-		pData->uLastDBErrno = 0; /* reset error for error supression */
+		pData->uLastDBErrno = 0; /* reset error for error suppression */
 	}
 
 	if(dbiRes != NULL)
