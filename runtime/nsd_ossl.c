@@ -1514,7 +1514,7 @@ finalize_it:
  * even if it is a single byte. As we have a stream, the caller must be prepared
  * to accept messages in any order, so we do not need to take care about this.
  * Please note that the logic also forces us to do some "faking" in select(), as
- * we must provide a fake "is ready for readign" status if we have data inside our
+ * we must provide a fake "is ready for reading" status if we have data inside our
  * buffer. -- rgerhards, 2008-06-23
  */
 static rsRetVal
