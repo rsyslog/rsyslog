@@ -1126,7 +1126,7 @@ Version 8.1901.0 (aka 2019.01) 2019-01-22
   "certless".
   The prime intent of this test is to match config suggestions given
   by log hosting companies (like loggly) and so ensure that we do
-  not accidentally break them. This is espcially important as the
+  not accidentally break them. This is especially important as the
   capability for certless clients was not properly documented and
   also become forgotten by the rsyslog team.
   see also https://github.com/rsyslog/rsyslog/issues/3413
