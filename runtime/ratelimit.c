@@ -221,7 +221,7 @@ ratelimitMsg(ratelimit_t *__restrict__ const ratelimit, smsg_t *pMsg, smsg_t **p
 	}
 
 	/* Only the messages having severity level at or below the
-	 * treshold (the value is >=) are subject to ratelimiting. */
+	 * treshhold (the value is >=) are subject to ratelimiting. */
 	if(ratelimit->interval && (pMsg->iSeverity >= ratelimit->severity)) {
 		char namebuf[512]; /* 256 for FGDN adn 256 for APPNAME should be enough */
 		snprintf(namebuf, sizeof namebuf, "%s:%s", getHOSTNAME(pMsg),

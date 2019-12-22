@@ -139,7 +139,7 @@ getFileDebugName(const strm_t *const pThis)
 
 /* Try to resolve a size limit situation. This is used to support custom-file size handlers
  * for omfile. It first runs the command, and then checks if we are still above the size
- * treshold. Note that this works only with single file names, NOT with circular names.
+ * treshhold. Note that this works only with single file names, NOT with circular names.
  * Note that pszCurrFName can NOT be taken from pThis, because the stream is closed when
  * we are called (and that destroys pszCurrFName, as there is NO CURRENT file name!). So
  * we need to receive the name as a parameter.
