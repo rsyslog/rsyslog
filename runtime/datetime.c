@@ -434,7 +434,7 @@ finalize_it:
  * is guaranteed to be updated only if a new valid timestamp
  * could be obtained (restriction added 2008-09-16 by rgerhards). This
  * also means the caller *must* provide a valid (probably current)
- * timstamp in pTime when calling this function. a 3164 timestamp contains
+ * timestamp in pTime when calling this function. a 3164 timestamp contains
  * only partial information and only that partial information is updated.
  * So the "output timestamp" is a valid timestamp only if the "input
  * timestamp" was valid, too. The is actually an optimization, as it
