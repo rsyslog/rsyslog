@@ -2148,7 +2148,7 @@ rsksi_extendSig(KSI_Signature *sig, ksifile ksi, tlvrecord_t *rec, ksierrctx_t *
 	uint16_t iRd, iWr;
 
 	if(sig==NULL)
-		goto skip_extention;
+		goto skip_extension;
 
 	/* Extend Signature now using KSI API*/
 	rgt = KSI_extendSignature(ksi->ctx->ksi_ctx, sig, &extended);
@@ -2166,7 +2166,7 @@ rsksi_extendSig(KSI_Signature *sig, ksifile ksi, tlvrecord_t *rec, ksierrctx_t *
 		goto done;
 	}
 
-skip_extention:
+skip_extension:
 
 	/* update block_sig tlv record with new extended timestamp */
 	/* we now need to copy all tlv records before the actual der
