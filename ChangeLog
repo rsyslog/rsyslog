@@ -4795,7 +4795,7 @@ Version 8.15.0 [v8-stable] 2015-12-15
   Thanks to Matthew Gabeler-Lee for the patch.
 - bugfix: mmfields leaked memory if very large messages were processed
   detected by clang static analyzer
-- bugfix: mmfields could add garbagge data to field
+- bugfix: mmfields could add garbage data to field
   this happened when very large fields were to be processed.
   Thanks to Peter Portante for reporting this.
 - bugfix: omhttpfs now also compiles with older json-c lib
@@ -9362,7 +9362,7 @@ Version 4.6.2  [v4-stable] (rgerhards), 2010-03-26
 - bugfix: recent patch to fix small memory leak could cause invalid free.
   This could only happen during config file parsing.
 - bugfix(minor): handling of extremely large strings in dbgprintf() fixed
-  Previously, it could lead to garbagge output and, in extreme cases, also
+  Previously, it could lead to garbage output and, in extreme cases, also
   to segfaults. Note: this was a problem only when debug output was 
   actually enabled, so it caused no problem in production use.
 - bugfix(minor): BSD_SO_COMPAT query function had some global vars not
@@ -9931,7 +9931,7 @@ Version 3.22.1 [v3-stable] (rgerhards), 2009-07-02
 - bugfix: when run in foreground (but not in debug mode), a 
   debug message ("DoDie called") was emitted at shutdown. Removed.
   thanks to Michael Biebl for reporting this bug
-- bugfix: some garbagge was emitted to stderr on shutdown. This
+- bugfix: some garbage was emitted to stderr on shutdown. This
   garbage consisted of file names, which were written during 
   startup (key point: not a pointer error)
   thanks to Michael Biebl for reporting this bug
@@ -10208,7 +10208,7 @@ Version 3.20.0 [v3-stable] (rgerhards), 2008-11-05
 Version 3.19.12 [BETA] (rgerhards), 2008-10-16
 - bugfix: subseconds where not correctly extracted from a timestamp
   if that timestamp did not contain any subsecond information (the
-  resulting string was garbagge but should have been "0", what it
+  resulting string was garbage but should have been "0", what it
   now is).
 - increased maximum size of a configuration statement to 4K (was 1K)
 - imported all fixes from the stable branch (quite a lot)

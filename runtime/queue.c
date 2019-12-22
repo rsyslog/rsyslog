@@ -1000,7 +1000,7 @@ static rsRetVal qDestructDisk(qqueue_t *pThis)
 		strm.GetCurrOffset(pThis->tVars.disk.pWrite, &currOffs);
 		if(currOffs == 0) {
 			/* if no data is present, we can (and must!) delete this
-			 * file. Else we can leave garbagge after termination.
+			 * file. Else we can leave garbage after termination.
 			 */
 			strm.SetbDeleteOnClose(pThis->tVars.disk.pWrite, 1);
 		}
