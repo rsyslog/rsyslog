@@ -8964,7 +8964,7 @@ Version 5.1.5  [v5-beta] (rgerhards), 2009-09-11
   even if an action was recently called. This can be useful to use mark
   messages as a kind of heartbeat.
 - added new config option $InputUnixListenSocketCreatePath
-  to permit the auto-creation of pathes to additional log sockets. This
+  to permit the auto-creation of paths to additional log sockets. This
   turns out to be useful if they reside on temporary file systems and
   rsyslogd starts up before the daemons that create these sockets
   (rsyslogd always creates the socket itself if it does not exist).
@@ -9155,7 +9155,7 @@ Version 4.7.0  [v4-devel] (rgerhards), 2010-04-14
 - new: support for Solaris added (but not yet the Solaris door API)
 - added function getenv() to RainerScript
 - added new config option $InputUnixListenSocketCreatePath
-  to permit the auto-creation of pathes to additional log sockets. This
+  to permit the auto-creation of paths to additional log sockets. This
   turns out to be useful if they reside on temporary file systems and
   rsyslogd starts up before the daemons that create these sockets
   (rsyslogd always creates the socket itself if it does not exist).
@@ -9294,7 +9294,7 @@ Version 4.6.3  [v4-stable] (rgerhards), 2010-07-07
 ---------------------------------------------------------------------------
 Version 4.6.2  [v4-stable] (rgerhards), 2010-03-26
 - new feature: "." action type added to support writing files to relative
-  pathes (this is primarily meant as a debug aid)
+  paths (this is primarily meant as a debug aid)
 - added replacements for atomic instructions on systems that do not
   support them. [backport of Stefen Sledz' patch for v5)
 - new feature: $OMFileAsyncWriting directive added
@@ -9768,7 +9768,7 @@ Version 4.1.6  [DEVEL] (rgerhards), 2009-04-07
 - added a parser testing suite (still needs to be extended, but a good
   start)
 - modified $ModLoad statement so that for modules whom's name starts with
-  a dot, no path is prepended (this enables relative-pathes and should
+  a dot, no path is prepended (this enables relative-paths and should
   not break any valid current config)
 - fixed a bug that caused action retries not to work correctly
   situation was only cleared by a restart
@@ -10016,7 +10016,7 @@ Version 3.21.6  [DEVEL] (rgerhards), 2008-10-22
   internal messages could be slightly inconsistent
 - bugfix: (potentially big) memory leak on HUP if queues could not be
   drained before timeout - thanks to David Lang for pointing this out
-- added capability to support multiple module search pathes. Thank
+- added capability to support multiple module search paths. Thank
   to Marius Tomaschewski for providing the patch.
 - bugfix: im3195 did no longer compile
 - improved "make distcheck" by ensuring everything relevant is recompiled
@@ -10484,7 +10484,7 @@ Version 3.18.1 (rgerhards), 2008-07-21
 - bugfix: mark messages were not correctly written to text log files
   the markmessageinterval was not correctly propagated to all places
   where it was needed. This resulted in rsyslog using the default
-  (20 minutes) in some code pathes, what looked to the user like mark
+  (20 minutes) in some code paths, what looked to the user like mark
   messages were never written.
 - added a new property replacer option "sp-if-no-1st-sp" to cover
   a problem with RFC 3164 based interpretation of tag separation. While

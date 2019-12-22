@@ -236,7 +236,7 @@ struct modConfData_s {
 	sbool configSetViaV2Method;
 	uchar *stateFileDirectory;
 	sbool sortFiles;
-	sbool normalizePath;	/* normalize file system pathes (all start with root dir) */
+	sbool normalizePath;	/* normalize file system paths (all start with root dir) */
 	sbool haveReadTimeouts;	/* use special processing if read timeouts exist */
 	sbool bHadFileData;	/* actually a global variable:
 				   1 - last call to pollFile() had data

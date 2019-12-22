@@ -62,7 +62,7 @@ int (*pCmpOp)(void*,void*))
 
 /* llDestroyEltData - destroys a list element
  * It is a separate function as the
- * functionality is needed in multiple code-pathes.
+ * functionality is needed in multiple code-paths.
  */
 static rsRetVal llDestroyElt(linkedList_t *pList, llElt_t *pElt)
 {
