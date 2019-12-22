@@ -422,7 +422,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	}
 
 
-	/* TODO: config vars ininit can be replaced by commented-out code above in v6 */
+	/* TODO: config vars in init can be replaced by commented-out code above in v6 */
 	cs.pszTagName = NULL;
 	cs.pszSeverityMapping = NULL;
 	
