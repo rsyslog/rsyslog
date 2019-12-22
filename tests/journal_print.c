@@ -1,7 +1,7 @@
 /* A testing tool that tries to emit message given as argument
  * to the journal, and, if succeeds (at least per journald retcode).
  * If whole operation is successful there is need to actually check
- * that message is present in journal (also veryfing journal read perms)
+ * that message is present in journal (also verifying journal read perms)
  *
  * Retcodes:	0 - success
  * 		1 - wrong arguments (expects exactly one)
