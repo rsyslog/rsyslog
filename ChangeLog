@@ -712,7 +712,7 @@ Version 8.1905.0 (aka 2019.05) 2019-05-28
   been correctly build on at least some platforms (but it worked on
   others as it passed CI testing). This has now been corrected.
   Thanks to Remi Locherer for the patch.
-- dnscache bufix: very unlikely memory leak
+- dnscache bugfix: very unlikely memory leak
   This fixes a memory leak that can only occur under OOM conditions.
   Detected by Coverity Scan, CID 203717
 - testbench bugfix: wrong parameter check in diag.sh (tcpflood())
@@ -7487,7 +7487,7 @@ Version 6.3.7  [DEVEL] 2012-02-02
 - bugfix: potential abort after reading invalid X.509 certificate
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=290
   Thanks to Tomas Heinrich for the patch
-- bufgix: legacy parsing of some filters did not work correctly
+- bugfix: legacy parsing of some filters did not work correctly
 - bugfix: rsyslog aborted during startup if there is an error in loading
   an action and legacy configuration mode is used
 - bugfix: bsd klog driver did no longer compile
@@ -9807,7 +9807,7 @@ Version 4.1.4  [DEVEL] (rgerhards), 2009-01-29
 - bugfix: unitialized mutex was used in msg.c:getPRI
   This was subtle, because getPRI is called as part of the debugging code
   (always executed) in syslogd.c:logmsg.
-- bufgix: $PreserveFQDN was not properly handled for locally emitted
+- bugfix: $PreserveFQDN was not properly handled for locally emitted
   messages
 ---------------------------------------------------------------------------
 Version 4.1.3  [DEVEL] (rgerhards), 2008-12-17
@@ -10193,7 +10193,7 @@ Version 3.20.1 [v3-stable] (rgerhards), 2008-12-04
   (potential system crash condition)
 - doc update: documented how to specify multiple property replacer
   options + link to new online regex generator tool added
-- minor bufgfix: very small memory leak in gtls netstream driver
+- minor bugfix: very small memory leak in gtls netstream driver
   around a handful of bytes (< 20) for each HUP
 - improved debug output for regular expressions inside property replacer
   RE's seem to be a big trouble spot and I would like to have more
