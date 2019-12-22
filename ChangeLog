@@ -8770,7 +8770,7 @@ Version 5.3.7  [BETA] (rgerhards), 2010-01-27
 - bugfix: hostname accidentally set to IP address for some message sources,
   for example imudp. Thanks to Anton for reporting this bug. [imported v4]
 - bugfix: ompgsql had problems with transaction support, what actually 
-  rendered it unsuable. Thanks to forum user "horhe" for alerting me
+  rendered it unusable. Thanks to forum user "horhe" for alerting me
   on this bug and helping to debug/fix it! [imported from 5.3.6]
 - bugfix: $CreateDirs variable not properly initialized, default thus
   was random (but most often "on") [imported from v3]
@@ -8801,7 +8801,7 @@ Version 5.3.6  [BETA] (rgerhards), 2010-01-13
 - bugfix: $CreateDirs variable not properly initialized, default thus
   was random (but most often "on") [imported from v3]
 - bugfix: ompgsql had problems with transaction support, what actually 
-  rendered it unsuable. Thanks to forum user "horhe" for alerting me
+  rendered it unusable. Thanks to forum user "horhe" for alerting me
   on this bug and helping to debug/fix it!
 - bugfix: memory leak when sending messages in zip-compressed format
   Thanks to Naoya Nakazawa for analyzing this issue and providing a patch.
