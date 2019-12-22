@@ -10721,7 +10721,7 @@ Version 3.12.5 (rgerhards), 2008-03-28
   properly
 - bugfix: QHOUR and HHOUR properties were wrongly calculated
 - bugfix: fixed memory leaks in stream class and imfile
-- bugfix: $ModDir did invalid bounds checking, potential overlow in
+- bugfix: $ModDir did invalid bounds checking, potential overflow in
   dbgprintf() - thanks to varmojfekoj for the patch
 - bugfix: -t and -g legacy options max number of sessions had a wrong
   and much too high value
