@@ -865,7 +865,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 ENDmodInit
 
 /*
-*	Workerthread function for a single kafka consomer
+*	Workerthread function for a single kafka consumer
  */
 static void *
 imkafkawrkr(void *myself)
