@@ -1702,7 +1702,7 @@ Version 8.37.0 [v8-stable] 2018-08-07
   no special test, as the testbench itself requires the functionality
   at several places, so the coverage will be very good even without
   a dedicated test.
-- imrelp: add support for seting address to bind to (#894)
+- imrelp: add support for setting address to bind to (#894)
   This adds a new optional `address` parameter to `imrelp` inputs in order
   to specify an address to bind to.
   Based on support added by rsyslog/librelp@96eb5be

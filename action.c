@@ -2353,7 +2353,7 @@ rsRetVal actionClassInit(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, NULL));
 
-	initConfigVariables(); /* first-time init of config setings */
+	initConfigVariables(); /* first-time init of config settings */
 
 finalize_it:
 	RETiRet;
