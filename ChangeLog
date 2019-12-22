@@ -6260,7 +6260,7 @@ Version 7.4.6  [v7.4-stable] 2013-10-31
   This could happen when one of imklog, imzmq3, imkmsg, impstats,
   imjournal, or imuxsock were under heavy load during a HUP.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=489
-  Thanks to Guy Rozendorn for reporting the problem and Peval Levhshin for
+  Thanks to Guy Rozendorn for reporting the problem and Peval Levshin for
   his analysis.
 - bugfix: imtcp flowControl parameter incorrectly defaulted to "off"
   This could cause message loss on systems under heavy load and was
