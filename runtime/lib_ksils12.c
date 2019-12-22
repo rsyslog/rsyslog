@@ -11,7 +11,7 @@
  *    sigblkFinishKSI
  * sigblkDestruct
  *
- * Obviously, the next call after sigblkFinsh must either be to
+ * Obviously, the next call after sigblkFinish must either be to
  * sigblkInitKSI or sigblkDestruct (if no more signature blocks are
  * to be emitted, e.g. on file close). sigblkDestruct saves state
  * information (most importantly last block hash) and sigblkConstruct
