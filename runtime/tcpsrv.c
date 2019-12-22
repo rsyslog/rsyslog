@@ -1683,7 +1683,7 @@ CODESTARTmodInit
 	 * to the first call of Run(). Reasons for this:
 	 * 1. depending on load order, tcpsrv gets loaded during rsyslog startup BEFORE
 	 *    it forks, in which case the workers would be running in the then-killed parent,
-	 *    leading to a defuncnt child (we actually had this bug).
+	 *    leading to a defunct child (we actually had this bug).
 	 * 2. depending on circumstances, Run() would possibly never be called, in which case
 	 *    the worker threads would be totally useless.
 	 * Note that in order to guarantee a non-racy worker start, we need to guard the
