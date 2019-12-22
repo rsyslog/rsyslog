@@ -1431,7 +1431,7 @@ Version 8.39.0 [v8-stable] 2018-10-30
     - ommail
   - testbench: new tests for disk queue encryption
   - testbench: improved auto-diagnostics for hanging instance
-  - testbench: hardened kafka test against failing kafka subsyste,
+  - testbench: hardened kafka test against failing kafka subsystem,
     not in 100% of the cases, but at least in some that frequently occur
   - failing tests now report failure status so that we can get stats
     on unreliable tests
@@ -3815,7 +3815,7 @@ Version 8.26.0 [v8-stable] 2017-04-04
   in rsyslog.conf. With the new code, this race can never happen again. The new
   code also sets stage for emitting better error messages, especially in places
   where we previously refrained from doing so and messages went only to the
-  debug log. For some file output and queue subsytem related messages, this
+  debug log. For some file output and queue subsystem related messages, this
   is already done, but there is still further work required.
   Note well: this is a redesign of an important core component. While intensely
   tested, this may still have some larger regression potential than usual code
