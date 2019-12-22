@@ -11441,7 +11441,7 @@ Version 1.17.2 (rgerhards), 2007-07-23
   compatibility with sysklogd
 - replaced system() calls with something more reasonable. Please note that
   this might break compatibility with some existing configuration files.
-  We accept this in favour of the gained security.
+  We accept this in favor of the gained security.
 - removed a memory leak that could occur if timegenerated was used in
   RFC 3164 format in templates
 - did some preparation in msg.c for advanced multithreading - placed the
@@ -12384,7 +12384,7 @@ Version 1.17.2 (rgerhards), 2007-07-23
   compatibility with sysklogd
 - replaced system() calls with something more reasonable. Please note that
   this might break compatibility with some existing configuration files.
-  We accept this in favour of the gained security.
+  We accept this in favor of the gained security.
 - removed a memory leak that could occur if timegenerated was used in
   RFC 3164 format in templates
 - did some preparation in msg.c for advanced multithreading - placed the
@@ -13327,7 +13327,7 @@ Version 1.17.2 (rgerhards), 2007-07-23
   compatibility with sysklogd
 - replaced system() calls with something more reasonable. Please note that
   this might break compatibility with some existing configuration files.
-  We accept this in favour of the gained security.
+  We accept this in favor of the gained security.
 - removed a memory leak that could occur if timegenerated was used in
   RFC 3164 format in templates
 - did some preparation in msg.c for advanced multithreading - placed the
