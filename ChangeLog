@@ -2752,7 +2752,7 @@ Version 8.32.0 [v8-stable] 2018-01-09
   would require larger refactoring, which probably is not worth for
   the legacy interface. The current solution is almost as good, as
   the one second sleep has very little overhead on a real system.
-  Thus we have choosen that approach.
+  Thus we have chosen that approach.
   This patch now also ensures that failed messages are properly
   handled and do not cause eternal hang.
   closes https://github.com/rsyslog/rsyslog/issues/2113

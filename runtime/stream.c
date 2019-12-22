@@ -1040,7 +1040,7 @@ finalize_it:
 int
 strmReadMultiLine_isTimedOut(const strm_t *const __restrict__ pThis)
 {
-	/* note: order of evaluation is choosen so that the most inexpensive
+	/* note: order of evaluation is chosen so that the most inexpensive
 	 * processing flow is used.
 	 */
 	DBGPRINTF("strmReadMultiline_isTimedOut: prevMsgSeg %p, readTimeout %d, "
