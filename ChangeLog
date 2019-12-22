@@ -655,7 +655,7 @@ Version 8.1905.0 (aka 2019.05) 2019-05-28
 - core: emit a warning message for ultra-large queue size definitions
   We see error reports from users who have configured excessively large queues
   and receive an OOM condition or other problems.
-  With that patcjh we generate a warnomg message if a queue is configured very
+  With that patch we generate a warnomg message if a queue is configured very
   large. "Very large" is defined to be in excess of 500000 messages.
   see also https://github.com/rsyslog/rsyslog/issues/3314
   closes https://github.com/rsyslog/rsyslog/issues/3334
@@ -14133,7 +14133,7 @@ helpful.
  *	for the idea.
  *
  * Thu Jan 18 11:14:36 CST 1996:  Dr. Wettstein
- *	Added patche from beta-testers to stop compile error.  Also
+ *	Added patch from beta-testers to stop compile error.  Also
  *	added removal of pid file as part of termination cleanup.
  *
  * Wed Feb 14 12:42:09 CST 1996:  Dr. Wettstein
