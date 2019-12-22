@@ -512,7 +512,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * the compression level. If it is not given, 9 (best compression) is
 	 * assumed. An example action statement might be:
 	 * @@(z5,o)127.0.0.1:1400
-	 * Which means send via TCP with medium (5) compresion (z) to the local
+	 * Which means send via TCP with medium (5) compression (z) to the local
 	 * host on port 1400. The '0' option means that octet-couting (as in
 	 * IETF I-D syslog-transport-tls) is to be used for framing (this option
 	 * applies to TCP-based syslog only and is ignored when specified with UDP).
