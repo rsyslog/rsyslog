@@ -394,7 +394,7 @@ finalize_it:
 	RETiRet;
 }
 
-/* this is a special functon for use by the rsyslog disk queue subsystem. It
+/* this is a special function for use by the rsyslog disk queue subsystem. It
  * needs to have the capability to delete state when a queue file is rolled
  * over. This simply generates the file name and deletes it. It must take care
  * of "all" state files, which currently happens to be a single one.

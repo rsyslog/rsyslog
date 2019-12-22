@@ -496,7 +496,7 @@ static rsRetVal discardLogSockets(void)
 /* used to create a log socket if NOT passed in via systemd.
  */
 /* note: the linux SUN_LEN macro uses a sizeof based on a NULL pointer. This
- * triggers UBSan warning. As such, we turn that warning off for the fuction.
+ * triggers UBSan warning. As such, we turn that warning off for the function.
  * As it is OS-provided, there is no way to solve it ourselves. The problem
  * may also exist on other platforms, we have just noticed it on Linux.
  */
