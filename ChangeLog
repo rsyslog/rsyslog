@@ -1318,7 +1318,7 @@ Version 8.39.0 [v8-stable] 2018-10-30
   detect SD_JOURNAL_INVALIDATE loop and not reload after each call.
   Thanks to Jiri Vymazal for the patch.
 - errmsg: remove no longer needed code
-  refectored code (over a long time) so that object-ish style is no longer
+  refactored code (over a long time) so that object-ish style is no longer
   needed and could now finally be removed; We also refactored the last
   component (omhttp contrib module) that used the old interface.
   closes https://github.com/rsyslog/rsyslog/issues/1684
