@@ -94,7 +94,7 @@ ENDinterface(nsd)
 /* interface version 4 added GetRemAddr()
  * interface version 5 added EnableKeepAlive() -- rgerhards, 2009-06-02
  * interface version 6 changed return of CheckConnection from void to rsRetVal -- alorbach, 2012-09-06
- * interface version 7 changed signature ofGetRempoteIP() -- rgerhards, 2013-01-21
+ * interface version 7 changed signature ofGetRemoteIP() -- rgerhards, 2013-01-21
  * interface version 8 added keep alive parameter set functions
  * interface version 9 changed signature of Connect() -- dsa, 2016-11-14
  * interface version 10 added SetGnutlsPriorityString() -- PascalWithopf, 2017-08-08
