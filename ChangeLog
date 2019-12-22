@@ -257,7 +257,7 @@ Scheduled Release 8.1911.0 (aka 2019.11) 2019-11-12
   The stream class does not close re-opened file descriptors.
   This lead to leaking file handles and ultimately to the inability
   to open any files/sockets/etc as rsyslog ran out of handles.
-  The bug was depending on timing. This involed different OS
+  The bug was depending on timing. This involved different OS
   thread scheduler timing as well as workload. The bug was more
   common under the following conditions:
   - async writing of files
