@@ -303,7 +303,7 @@ CODESTARTtryResume
 		if (iRet == RS_RET_OK) {
 			/* the code above seems not to actually connect to the database. As such, we do a
 			 * dummy statement (a pointless select...) to verify the connection and return
-			 * success only when that statemetn succeeds. Note that I am far from being a
+			 * success only when that statement succeeds. Note that I am far from being a
 			 * PostgreSQL expert, so any patch that does the desired result in a more
 			 * intelligent way is highly welcome. -- rgerhards, 2009-12-16
 			 */

@@ -7854,7 +7854,7 @@ expected that interfaces, even new ones, break during the initial
 6.x.y releases.
 *********************************** NOTE **********************************
 
-- added $Begin, $End and $ScriptScoping config scope statments
+- added $Begin, $End and $ScriptScoping config scope statements
   (at this time for actions only).
 - added imptcp, a simplified, Linux-specific and potentially fast
   syslog plain tcp input plugin (NOT supporting TLS!)
