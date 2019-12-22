@@ -1016,7 +1016,7 @@ rsksi_printINT_HASH(FILE *fp, imprint_t *imp, uint8_t verbose)
 
 /**
  * Output a human-readable representation of a block_hdr_t
- * to proviced file pointer. This function is mainly inteded for
+ * to proviced file pointer. This function is mainly intended for
  * debugging purposes or dumping tlv files.
  *
  * @param[in] fp file pointer to send output to
@@ -1043,7 +1043,7 @@ rsksi_printBLOCK_HDR(FILE *fp, block_hdr_t *bh, uint8_t verbose)
 
 /**
  * Output a human-readable representation of a block_sig_t
- * to proviced file pointer. This function is mainly inteded for
+ * to proviced file pointer. This function is mainly intended for
  * debugging purposes or dumping tlv files.
  *
  * @param[in] fp file pointer to send output to
@@ -1064,7 +1064,7 @@ rsksi_printBLOCK_SIG(FILE *fp, block_sig_t *bs, uint8_t verbose)
 
 /**
  * Output a human-readable representation of a block_hashchain_t
- * to proviced file pointer. This function is mainly inteded for
+ * to proviced file pointer. This function is mainly intended for
  * debugging purposes or dumping tlv files.
  *
  * @param[in] fp file pointer to send output to
@@ -1082,7 +1082,7 @@ rsksi_printHASHCHAIN(FILE *fp, block_sig_t *bs, uint8_t verbose)
 
 /**
  * Output a human-readable representation of a block_hashchain_t
- * to proviced file pointer. This function is mainly inteded for
+ * to proviced file pointer. This function is mainly intended for
  * debugging purposes or dumping tlv files.
  *
  * @param[in] fp file pointer to send output to
