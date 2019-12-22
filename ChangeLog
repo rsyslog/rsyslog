@@ -6803,7 +6803,7 @@ Version 7.2.8  [v7-stable] 2013-0?-??
 ----------------------------------------------------------------------------
 Version 7.2.7  [v7-stable] 2013-04-17
 - rsyslogd startup information is now properly conveyed back to init
-  when privileges are beging dropped
+  when privileges are being dropped
   Actually, we have moved termination of the parent in front of the
   priv drop. So it shall work now in all cases. See code comments in
   commit for more details.
