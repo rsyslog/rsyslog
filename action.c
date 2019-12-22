@@ -1398,7 +1398,7 @@ actionTryCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pW
 			default:/* permanent failure of this message - no sense in retrying. This is
 				 * not yet handled (but easy TODO)
 				 */
-				DBGPRINTF("action[%s]: actionTryCommit receveived iRet %d\n",
+				DBGPRINTF("action[%s]: actionTryCommit received iRet %d\n",
 					pThis->pszName, iRet);
 				FINALIZE;
 		}
