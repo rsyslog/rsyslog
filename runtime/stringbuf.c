@@ -418,7 +418,7 @@ cstrGetSzStrNoNULL(cstr_t *const __restrict__ pThis)
  * no memory can be allocated.
  *
  * This is the NEW replacement for rsCStrConvSzStrAndDestruct which does
- * no longer utilize a special buffer but soley works on pBuf (and also
+ * no longer utilize a special buffer but solely works on pBuf (and also
  * assumes that cstrFinalize had been called).
  *
  * Parameters are as follows:
