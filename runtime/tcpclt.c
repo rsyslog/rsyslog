@@ -274,7 +274,7 @@ finalize_it:
  * that purpose. I have added the param "len", because it is known by the
  * caller and so saves us some time. Also, it MUST be given because there
  * may be NULs inside msg so that we can not rely on strlen(). Please note
- * that the restrictions outlined above do not existin in multi-threaded
+ * that the restrictions outlined above do not existing in multi-threaded
  * mode, which we assume will now be most often used. So there is no
  * real issue with the potential message loss in single-threaded builds.
  * rgerhards, 2006-11-30

@@ -28,7 +28,7 @@ View this presentation to learn howto write a plugin in 2 minutes:
     http://www.slideshare.net/rainergerhards1/writing-rsyslog-p
 
 See the [INTERFACE](INTERFACE.md) file. And see the [skeletons](skeletons)
-subdirectory for exisiting ready-to-copy sample plugins that do the
+subdirectory for existing ready-to-copy sample plugins that do the
 necessary plumbing.
 
 Evolving this Interface
