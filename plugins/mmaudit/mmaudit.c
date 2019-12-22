@@ -6,7 +6,7 @@
  *
  * NOTE WELL:
  * Right now, we do not do any trust checks. So it is possible that a
- * malicous user emits something that looks like an audit record and
+ * malicious user emits something that looks like an audit record and
  * tries to fool the system with that. Solving this trust issue is NOT
  * an easy thing to do. This will be worked on, as the lumberjack effort
  * continues. Please consider the module in its current state as a proof

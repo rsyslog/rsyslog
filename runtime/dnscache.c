@@ -243,7 +243,7 @@ done:	return;
  *
  * Please see http://www.hmug.org/man/3/getnameinfo.php (under Caveats)
  * for some explanation of the code found below. We do by default not
- * discard message where we detected malicouos DNS PTR records. However,
+ * discard message where we detected malicious DNS PTR records. However,
  * there is a user-configurable option that will tell us if
  * we should abort. For this, the return value tells the caller if the
  * message should be processed (1) or discarded (0).
@@ -303,7 +303,7 @@ resolveAddr(struct sockaddr_storage *addr, dnscache_entry_t *etry)
 					ABORT_FINALIZE(RS_RET_MALICIOUS_ENTITY);
 				}
 
-				/* Please note: we deal with a malicous entry. Thus, we have crafted
+				/* Please note: we deal with a malicious entry. Thus, we have crafted
 				 * the snprintf() below so that all text is in front of the entry - maybe
 				 * it contains characters that make the message unreadable
 				 * (OK, I admit this is more or less impossible, but I am paranoid...)
