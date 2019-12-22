@@ -14296,7 +14296,7 @@ helpful.
  *	Miettinen <tom@medialab.sonera.net>.
  *
  * Sun May 23 10:08:53 CEST 1999: Martin Schulze <joey@infodrom.north.de>
- *	Removed superflous call to utmpname().  The path to the utmp
+ *	Removed superfluous call to utmpname().  The path to the utmp
  *	file is defined in the used libc and should not be hardcoded
  *	into the syslogd binary referring the system it was compiled on.
  *
