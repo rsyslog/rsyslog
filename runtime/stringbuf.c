@@ -8,7 +8,7 @@
  * input side of rsyslog).
  * It now serves primarily to a) dynamic string creation, b) keep
  * old interfaces supported, and c) some special functionality,
- * e.g. search. Further refactoring and simplificytin may make
+ * e.g. search. Further refactoring and simplification may make
  * sense.
  *
  * Copyright (C) 2005-2019 Adiscon GmbH
