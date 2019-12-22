@@ -1728,13 +1728,13 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		frompos = 0;
 	if(bPosRelativeToEnd) {
 		if(topos > frompos) {
-			LogError(0, RS_RET_ERR, "position.to=%d is higher than postion.from=%d "
+			LogError(0, RS_RET_ERR, "position.to=%d is higher than position.from=%d "
 					"in 'relativeToEnd' mode\n", topos, frompos);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	} else {
 		if(topos < frompos) {
-			LogError(0, RS_RET_ERR, "position.to=%d is lower than postion.from=%d\n",
+			LogError(0, RS_RET_ERR, "position.to=%d is lower than position.from=%d\n",
 				topos, frompos);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}

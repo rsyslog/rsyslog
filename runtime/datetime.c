@@ -318,7 +318,7 @@ ParseTIMESTAMP3339(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr)
 	/* We take the liberty to accept slightly malformed timestamps e.g. in
 	 * the format of 2003-9-1T1:0:0. This doesn't hurt on receiving. Of course,
 	 * with the current state of affairs, we would never run into this code
-	 * here because at postion 11, there is no "T" in such cases ;)
+	 * here because at position 11, there is no "T" in such cases ;)
 	 */
 	if(lenStr == 0 || *pszTS++ != '-' || year < 0 || year >= 2100) {
 		DBGPRINTF("ParseTIMESTAMP3339: invalid year: %d, pszTS: '%c'\n", year, *pszTS);
