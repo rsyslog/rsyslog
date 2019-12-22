@@ -4382,7 +4382,7 @@ Version 8.19.0 [v8-stable] 2016-05-31
 - improvements to the CI environment
   * improvements on the non-raciness of some tests
   * imdiag: avoid races in detecting queue empty status
-    This reslolves cases where the testbench terminated rsyslog too early,
+    This resolves cases where the testbench terminated rsyslog too early,
     resulting in potential message loss and test failure.
   * omkafka has now dynamic tests
     Thanks to Janmejay Singh for implementing them.
