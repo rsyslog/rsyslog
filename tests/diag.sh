@@ -1648,7 +1648,7 @@ stop_kafka() {
 		done
 		
 		if [[ "$2" == 'true' ]]; then
-			# Prozess shutdown, do cleanup now
+			# Process shutdown, do cleanup now
 			cleanup_kafka $1
 		fi
 	fi
@@ -1713,7 +1713,7 @@ stop_zookeeper() {
 		fi
 
 		if [[ "$2" == 'true' ]]; then
-			# Prozess shutdown, do cleanup now
+			# Process shutdown, do cleanup now
 			cleanup_zookeeper $1
 		fi
 		rm "$ZOOPIDFILE"
