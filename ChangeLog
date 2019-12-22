@@ -8714,7 +8714,7 @@ Version 5.5.0  [DEVEL] (rgerhards), 2009-11-18
   the new method has been implemented in a generic way and as such may 
   also be used by other modules in the future.
 - added option to use unlimited-size select() calls
-  Thanks to varmjofekoj for the patch
+  Thanks to varmojfekoj for the patch
   This is not done in imudp, as it natively supports epoll().
 - doc: improved description of what loadable modules can do
 ---------------------------------------------------------------------------
@@ -9168,7 +9168,7 @@ Version 4.7.0  [v4-devel] (rgerhards), 2010-04-14
 - added $EscapeControlCharacterTab config directive
   Thanks to Jonathan Bond-Caron for the patch.
 - added option to use unlimited-size select() calls
-  Thanks to varmjofekoj for the patch
+  Thanks to varmojfekoj for the patch
 - debugondemand mode caused backgrounding to fail - close to a bug, but I'd
   consider the ability to background in this mode a new feature...
 - bugfix (kind of): check if TCP connection is still alive if using TLS
@@ -10202,7 +10202,7 @@ Version 3.20.1 [v3-stable] (rgerhards), 2008-12-04
 ---------------------------------------------------------------------------
 Version 3.20.0 [v3-stable] (rgerhards), 2008-11-05
 - this is the initial release of the 3.19.x branch as a stable release
-- bugfix: double-free in pctp netstream driver. Thank to varmojfeko
+- bugfix: double-free in pctp netstream driver. Thank to varmojfekoj
   for the patch
 ---------------------------------------------------------------------------
 Version 3.19.12 [BETA] (rgerhards), 2008-10-16
@@ -10373,7 +10373,7 @@ Version 3.19.0 (rgerhards), 2008-05-06
 - implemented im3195, the RFC3195 input as a plugin
 - changed directory structure, files are now better organized
 - a lot of cleanup in regard to modularization
-- -c option no longer must be the first option - thanks to varmjofekoj
+- -c option no longer must be the first option - thanks to varmojfekoj
   for the patch
 ---------------------------------------------------------------------------
 Version 3.18.7 (rgerhards), 2008-12-??
@@ -10668,7 +10668,7 @@ Version 3.14.1 (rgerhards), 2008-04-04
 - bugfix: memory leaks in script engine
 - bugfix: $hostname and $fromhost in RainerScript did not work
 - bugfix: some memory leak when queue is running in disk mode
-- man pages improved thanks to varmofekoj and Peter Vrabec
+- man pages improved thanks to varmojfekoj and Peter Vrabec
 - We have removed the 32 character size limit (from RFC3164) on the
   tag. This had bad effects on existing environments, as sysklogd didn't
   obey it either (probably another bug in RFC3164...). We now receive
@@ -11302,7 +11302,7 @@ Version 1.19.4 (rgerhards/varmojfekoj), 2007-09-04
   thanks varmojfekoj for the patch
 ---------------------------------------------------------------------------
 Version 1.19.3 (mmeckelein/varmojfekoj), 2007-08-31
-- small mem leak fixed (after calling parseSelectorAct) - Thx varmojkekoj
+- small mem leak fixed (after calling parseSelectorAct) - Thx varmojfekoj
 - documentation section "Regular File" und "Blocks" updated
 - solved an issue with dynamic file generation - Once again many thanks
   to varmojfekoj
@@ -12245,7 +12245,7 @@ Version 1.19.4 (rgerhards/varmojfekoj), 2007-09-04
   thanks varmojfekoj for the patch
 ---------------------------------------------------------------------------
 Version 1.19.3 (mmeckelein/varmojfekoj), 2007-08-31
-- small mem leak fixed (after calling parseSelectorAct) - Thx varmojkekoj
+- small mem leak fixed (after calling parseSelectorAct) - Thx varmojfekoj
 - documentation section "Regular File" und "Blocks" updated
 - solved an issue with dynamic file generation - Once again many thanks
   to varmojfekoj
@@ -13188,7 +13188,7 @@ Version 1.19.4 (rgerhards/varmojfekoj), 2007-09-04
   thanks varmojfekoj for the patch
 ---------------------------------------------------------------------------
 Version 1.19.3 (mmeckelein/varmojfekoj), 2007-08-31
-- small mem leak fixed (after calling parseSelectorAct) - Thx varmojkekoj
+- small mem leak fixed (after calling parseSelectorAct) - Thx varmojfekoj
 - documentation section "Regular File" und "Blocks" updated
 - solved an issue with dynamic file generation - Once again many thanks
   to varmojfekoj

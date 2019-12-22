@@ -1297,7 +1297,7 @@ initAll(int argc, char **argv)
 	 * the parameters down below in the correct order. For example, we must know the
 	 * value of -M before we can do the init, but at the same time we need to have
 	 * the base classes init before we can process most of the options. Now, with the
-	 * split of functionality, this is no longer a problem. Thanks to varmofekoj for
+	 * split of functionality, this is no longer a problem. Thanks to varmojfekoj for
 	 * suggesting this algo.
 	 * Note: where we just need to set some flags and can do so without knowledge
 	 * of other options, we do this during the initial option processing.

@@ -4222,7 +4222,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 		 * point to static memory or may point into the message object, in which
 		 * case we would actually modify the original property (which of course
 		 * is wrong).
-		 * This was found and fixed by varmojefkoj on 2007-09-11
+		 * This was found and fixed by varmojfekoj on 2007-09-11
 		 */
 		if(pTpe->data.field.options.bDropCC) {
 			int iLenBuf = 0;
