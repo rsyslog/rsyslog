@@ -62,7 +62,7 @@ static pthread_mutex_t mut_regexp;
 // Map a regex_t to its associated uncompiled parameters.
 static struct hashtable *regex_to_uncomp = NULL;
 
-// Map a (regexp_t, pthead_t) to a perthread_regex.
+// Map a (regexp_t, pthread_t) to a perthread_regex.
 static struct hashtable *perthread_regexs = NULL;
 
 
