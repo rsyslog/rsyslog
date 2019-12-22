@@ -6607,7 +6607,7 @@ Version 7.3.9  [devel] 2013-03-27
 - bugfix: build problem on platforms without GLOB_NOMAGIC
 - bugfix: build problems on non-Linux platforms
 - bugfix: stdout/stderr were not closed on forking
-  but were closed when running in the forground - this was just reversed
+  but were closed when running in the foreground - this was just reversed
   of what it should be. This is a regression of a recent change.
 ---------------------------------------------------------------------------
 Version 7.3.8  [devel] 2013-03-18
