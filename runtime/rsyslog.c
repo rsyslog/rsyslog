@@ -31,7 +31,7 @@
  *
  * The rsyslog runtime library is in general reentrant and thread-safe. There
  * are some intentional exceptions (e.g. inside the msg object). These are
- * documented. Any other threading and reentrency issue can be considered a bug.
+ * documented. Any other threading and reentrancy issue can be considered a bug.
  *
  * Module begun 2008-04-16 by Rainer Gerhards
  *
