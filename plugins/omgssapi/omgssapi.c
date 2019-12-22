@@ -533,7 +533,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 					pData->compressionLevel = iLevel;
 				} else {
 					LogError(0, NO_ERRCODE, "Invalid compression level '%c' specified in "
-						 "forwardig action - NOT turning on compression.",
+						 "forwarding action - NOT turning on compression.",
 						 *p);
 				}
 			} else if(*p == 'o') { /* octet-counting based TCP framing? */
