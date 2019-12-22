@@ -1675,7 +1675,7 @@ finalize_it:
 
 /* note that we do not need to evaluate any parameters, as the template pointer
  * is set during initialization().
- * TODO: think if we can keep our buffer; but that may not be trival thinking about
+ * TODO: think if we can keep our buffer; but that may not be trivial thinking about
  *       multiple threads.
  */
 static void
