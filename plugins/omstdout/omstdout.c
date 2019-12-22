@@ -358,7 +358,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	DBGPRINTF("omstdout: array-passing is %ssupported by rsyslog core.\n", bArrayPassingSupported ? "" : "not ");
 
 	if(bArrayPassingSupported) {
-		/* enable config comand only if core supports it */
+		/* enable config command only if core supports it */
 		CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionomstdoutarrayinterface", 0, eCmdHdlrBinary, NULL,
 			                   &cs.bUseArrayInterface, STD_LOADABLE_MODULE_ID));
 	}
