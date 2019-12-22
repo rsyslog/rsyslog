@@ -3353,7 +3353,7 @@ Version 8.30.0 [v8-stable] 2017-10-17
     errors, now we aim to address all of the message-induced error. We assume
     that all server-generated errors are such - mysql API unfortunately does
     not provide a clear indication of what type if error this is and it is
-    out of question to check for hundereds of error codes.
+    out of question to check for hundreds of error codes.
     closes https://github.com/rsyslog/rsyslog/issues/1830
 - ommysql bugfix: do not duplicate entries on failed transaction
   If a multi-message batch contains data errors, messages may be
@@ -10748,7 +10748,7 @@ Version 3.12.4 (rgerhards), 2008-03-25
 - removed a no-longer needed callback from the output module 
   interface. Results in reduced code complexity.
 - bugfix/doc: removed no longer supported -h option from man page
-- bugfix: imklog leaked several hundered KB on each HUP. Thanks to
+- bugfix: imklog leaked several hundred KB on each HUP. Thanks to
   varmojfekoj for the patch
 - bugfix: potential segfault on module unload. Thanks to varmojfekoj for
   the patch
