@@ -7373,7 +7373,7 @@ Version 6.3.11  [BETA] 2012-06-18
   Thanks to Zdenek Salvet for finding this bug and to Bodik for reporting
 ---------------------------------------------------------------------------
 Version 6.3.10  [BETA] 2012-06-04
-- bugfix: delayble source could block action queue, even if there was
+- bugfix: delayable source could block action queue, even if there was
   a disk queue associated with it. The root cause of this problem was
   that it makes no sense to delay messages once they arrive in the 
   action queue - the "input" that is being held in that case is the main
@@ -7921,7 +7921,7 @@ NOTE: this is the new rsyslog v5-stable, incorporating all changes from the
       5.9.x series. In addition to that, it contains the fixes and
       enhancements listed below in this entry.
 
-- bugfix: delayble source could block action queue, even if there was
+- bugfix: delayable source could block action queue, even if there was
   a disk queue associated with it. The root cause of this problem was
   that it makes no sense to delay messages once they arrive in the 
   action queue - the "input" that is being held in that case is the main
@@ -8132,7 +8132,7 @@ Version 5.8.12  [V5-stable] 2012-06-06
 - support for resolving huge groups
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=310
   Thanks to Alec Warner for the patch
-- bugfix: delayble source could block action queue, even if there was
+- bugfix: delayable source could block action queue, even if there was
   a disk queue associated with it. The root cause of this problem was
   that it makes no sense to delay messages once they arrive in the 
   action queue - the "input" that is being held in that case is the main
