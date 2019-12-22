@@ -5172,7 +5172,7 @@ v8.5.0, but in a stable release. For details see immediately below.
 - bugfix: unitialized buffer off-by-one error in hostname generation
   The DNS cache used uninitialized memory, which could lead to
   invalid hostname generation.
-  Thanks to Jarrod Sayers for alerting us and provinding analysis and
+  Thanks to Jarrod Sayers for alerting us and providing analysis and
   patch recommendations.
 - bugfix imuxsock: possible segfault when SysSock.Use="off"
   Thanks to alexjfisher for reporting this issue.
@@ -5240,7 +5240,7 @@ Version 8.4.3 [v8-stable] 2014-10-??
 - bugfix: unitialized buffer off-by-one error in hostname generation
   The DNS cache used uninitialized memory, which could lead to
   invalid hostname generation.
-  Thanks to Jarrod Sayers for alerting us and provinding analysis and
+  Thanks to Jarrod Sayers for alerting us and providing analysis and
   patch recommendations.
 - bugfix imfile: segfault on startup in "inotify" mode
   A segfault happened when more than one file was monitored.
@@ -5706,7 +5706,7 @@ Version 7.6.8 [v7.6-stable] 2014-10-??
 - bugfix: unitialized buffer off-by-one error in hostname generation
   The DNS cache used uninitialized memory, which could lead to
   invalid hostname generation.
-  Thanks to Jarrod Sayers for alerting us and provinding analysis and
+  Thanks to Jarrod Sayers for alerting us and providing analysis and
   patch recommendations.
 - remove zpipe (a testing tool) from --enable-diagtools
   This tool is no longer maintained and currently not used inside the
@@ -6245,7 +6245,7 @@ Version 7.4.7  [v7.4-stable] 2013-12-10
 - bugfix: segfault on startup when certain script constructs are used
   e.g. "if not $msg ..."
 - bugfix: imuxsock: UseSysTimeStamp config parameter did not work correctly
-  Thanks to Tomas Heinrich for alerting us and provinding a solution
+  Thanks to Tomas Heinrich for alerting us and providing a solution
   suggestion.
 - bugfix: $SystemLogUseSysTimeStamp/$SystemLogUsePIDFromSystem did not work
   Thanks to Tomas Heinrich for the patch.
@@ -6341,7 +6341,7 @@ Version 7.4.5  [v7.4-stable] 2013-10-22
   the facility value.
   Thanks to forum user dmunny for reporting this bug.
 - bugfix: small memory leak in imfile when $ResetConfigVariables was used
-  Thanks to Grégory Nuyttens for reporting this bug and providig a fix
+  Thanks to Grégory Nuyttens for reporting this bug and providing a fix
 - bugfix: segfault on startup if TLS was used but no CA cert set
 - bugfix: segfault on startup if TCP TLS was used but no cert or key set
 - bugfix: some more build problems with newer json-c versions
