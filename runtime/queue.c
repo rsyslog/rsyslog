@@ -2548,7 +2548,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 		obj.GetName((obj_t*) pThis)); /* leave some room inside the name for suffixes */
 	if(lenBuf >= sizeof(pszBuf)) {
 		LogError(0, RS_RET_INTERNAL_ERROR, "%s:%d debug header too long: %zd - in "
-				"thory this cannot happen - truncating", __FILE__, __LINE__, lenBuf);
+				"theory this cannot happen - truncating", __FILE__, __LINE__, lenBuf);
 		lenBuf = sizeof(pszBuf)-1;
 		pszBuf[lenBuf] = '\0';
 	}

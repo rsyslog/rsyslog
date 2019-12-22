@@ -144,7 +144,7 @@ wtpConstructFinalize(wtp_t *pThis)
 			wtpGetDbgHdr(pThis), i);
 		if(lenBuf >= sizeof(pszBuf)) {
 			LogError(0, RS_RET_INTERNAL_ERROR, "%s:%d debug header too long: %zd - in "
-					"thory this cannot happen - truncating", __FILE__, __LINE__, lenBuf);
+					"theory this cannot happen - truncating", __FILE__, __LINE__, lenBuf);
 			lenBuf = sizeof(pszBuf)-1;
 			pszBuf[lenBuf] = '\0';
 		}
