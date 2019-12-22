@@ -3,7 +3,7 @@
  * available. If they are not, I am making the necessary provisioning to live without them if
  * they are not available. Please note that you should only use the macros
  * here if you think you can actually live WITHOUT an explicit atomic operation,
- * because in the non-presence of them, we simply do it without atomicitiy.
+ * because in the non-presence of them, we simply do it without atomicity.
  * Which, for word-aligned data types, usually (but only usually!) should work.
  *
  * We are using the functions described in
