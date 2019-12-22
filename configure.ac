@@ -270,10 +270,10 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM(, return __builtin_expect(main != 0, 1))],
 
 # check for availability of atomic operations
 # Note: this switch is primarily for the testbench, so that we can try
-# to build w/o automic operations on systems that actually support them.
+# to build w/o atomic operations on systems that actually support them.
 # Usually, atomic operations should be used when available as this
 # speeds up processig.
-# note that when automic operations are enabled but not available, they
+# note that when atomic operations are enabled but not available, they
 # will silently NOT be used!
 AC_ARG_ENABLE(atomic-operations,
         [AS_HELP_STRING([--enable-atomic-operations],[Enable atomic operation support @<:@default=yes@:>@])],
