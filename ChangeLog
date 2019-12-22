@@ -183,7 +183,7 @@ Scheduled Release 8.1911.0 (aka 2019.11) 2019-11-12
   it can occasionally (5%) lead to a hang during shutdown. We have now
   removed that debug info as it is no longer vital.
   Note: this could only happen during debug runs. Production mode was
-  not affected. As such, this fix is only revelevant to developers.
+  not affected. As such, this fix is only relevant to developers.
   However, it caused some confusion in the following issue tracker.
   see also https://github.com/rsyslog/rsyslog/issues/3941
 - 2019-11-06: ossl driver bugfix: fix wrong OpenSSL Version check
