@@ -201,7 +201,7 @@ uchar *srUtilStrDup(uchar *pOld, size_t len)
  * the creation fails in the similar way, we return an error on that second
  * try because otherwise we would potentially run into an endless loop.
  * loop. -- rgerhards, 2010-03-25
- * The likeliest scenario for a prolonged contest of creating the parent directiories
+ * The likeliest scenario for a prolonged contest of creating the parent directories
  * is within our process space. This can happen with a high probability when two
  * threads, that want to start logging to files within same directory tree, are
  * started close to each other. We should fix what we can. -- nipakoo, 2017-11-25
