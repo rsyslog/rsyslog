@@ -2020,7 +2020,7 @@ Version 8.36.0 [v8-stable] 2018-06-26
   where obviously that part of the problem was not noticed.
   see also https://github.com/rsyslog/rsyslog/issues/1122
   closes https://github.com/rsyslog/rsyslog/issues/2742
-- core: fix message loss on target unavailibility during shutdown
+- core: fix message loss on target unavailability during shutdown
   Triggering condition:
   - action queue in disk mode (or DA)
   - batch is being processed by failed action in retry mode
@@ -4315,7 +4315,7 @@ Version 8.19.0 [v8-stable] 2016-05-31
   please let us know your experience and most importantly any bug
   reports you may have.
   closes https://github.com/rsyslog/rsyslog/issues/89
-- imrelp: better error codes on unvailablity of TLS options
+- imrelp: better error codes on unavailability of TLS options
   Most importantly, we will tell the user in clear words if specific TLS
   options are not available due to too-old GnuTLS.
   closes https://github.com/rsyslog/rsyslog/issues/1019
