@@ -116,7 +116,7 @@ CreateSocket(struct addrinfo *addrDest)
  * syslog-transport-tls-05 (current at the time of this writing). This also
  * eases things when we go ahead and implement that framing. I have now made
  * available two cases where this framing is used: either by explicitly
- * specifying it in the config file or implicitely when sending a compressed
+ * specifying it in the config file or implicitly when sending a compressed
  * message. In the later case, compressed and uncompressed messages within
  * the same session have different framings. If it is explicitly set to
  * octet-counting, only this framing mode is used within the session.
