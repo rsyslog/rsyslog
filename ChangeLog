@@ -3005,7 +3005,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
   while the mutex is locked and there is one worker left, the system
   will hang. The reason is that the cancelled thread could not free the
   mutex that the other needs in order to shut down orderly.
-  Deteced with clang thread sanitizer.
+  Detected with clang thread sanitizer.
 - omfwd bugfix: generate error message on connection failure
 - imtcp bugfix: "streamdriver.mode" parameter could not be set to 0
 - imjournal bugfix: module was defunctional

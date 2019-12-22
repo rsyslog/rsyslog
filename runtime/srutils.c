@@ -613,7 +613,7 @@ int decodeSyslogName(uchar *name, syslogName_t *codetab)
  *
  * \param ppSrc		Pointer to a pointer of the source array of characters. If a
 			separator detected the Pointer points to the next char after the
-			separator. Except if the end of the string is dedected ('\n').
+			separator. Except if the end of the string is detected ('\n').
 			Then it points to the terminator char.
  * \param pDst		Pointer to the destination array of characters. Here the substing
 			will be stored.
