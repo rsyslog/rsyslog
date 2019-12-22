@@ -644,7 +644,7 @@ Version 8.1905.0 (aka 2019.05) 2019-05-28
   New semantic: if lightDelayMark is 0, it is set to the max queue
   size, effectively disabling the "light delay" functionality.
   Thanks to Yury Bushmelev to mentioning issues related to light
-  delay mark and propsing the solution (which actually is what
+  delay mark and proposing the solution (which actually is what
   this commit does).
   closes https://github.com/rsyslog/rsyslog/issues/1778
 - queue subsystem: provide better user status messages
