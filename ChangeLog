@@ -7856,7 +7856,7 @@ expected that interfaces, even new ones, break during the initial
 
 - added $Begin, $End and $ScriptScoping config scope statments
   (at this time for actions only).
-- added imptcp, a simplified, Linux-specific and potentielly fast
+- added imptcp, a simplified, Linux-specific and potentially fast
   syslog plain tcp input plugin (NOT supporting TLS!)
   [ported from v4]
 ---------------------------------------------------------------------------
@@ -9123,7 +9123,7 @@ Version 4.7.4  [v4-beta] (rgerhards), 2011-07-11
 Version 4.7.3  [v4-devel] (rgerhards), 2010-11-25
 - added omuxsock, which permits to write message to local Unix sockets
   this is the counterpart to imuxsock, enabling fast local forwarding
-- added imptcp, a simplified, Linux-specific and potentielly fast
+- added imptcp, a simplified, Linux-specific and potentially fast
   syslog plain tcp input plugin (NOT supporting TLS!)
 - bugfix: a couple of problems that imfile had on some platforms, namely
   Ubuntu (not their fault, but occured there)

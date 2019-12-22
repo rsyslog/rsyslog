@@ -1168,7 +1168,7 @@ Load(uchar *const pModName, const sbool bConfLoad, struct nvlst *const lst)
 			if(lenPathBuf < PATHBUF_OVERHEAD) {
 				if(pPathBuf != pathBuf) /* already malloc()ed memory? */
 					free(pPathBuf);
-				/* we always alloc enough memory for everything we potentiall need to add */
+				/* we always alloc enough memory for everything we potentially need to add */
 				lenPathBuf = PATHBUF_OVERHEAD;
 				CHKmalloc(pPathBuf = malloc(lenPathBuf));
 			}
@@ -1191,7 +1191,7 @@ Load(uchar *const pModName, const sbool bConfLoad, struct nvlst *const lst)
 			} else if(iPathLen > lenPathBuf - PATHBUF_OVERHEAD) {
 				if(pPathBuf != pathBuf) /* already malloc()ed memory? */
 					free(pPathBuf);
-				/* we always alloc enough memory for everything we potentiall need to add */
+				/* we always alloc enough memory for everything we potentially need to add */
 				lenPathBuf = iPathLen + PATHBUF_OVERHEAD;
 				CHKmalloc(pPathBuf = malloc(lenPathBuf));
 			}
