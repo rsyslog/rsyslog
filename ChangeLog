@@ -7421,7 +7421,7 @@ Version 6.3.9  [BETA] 2012-05-22
   problem and providing an initial patch (which my solution is based on,
   I need to add more code to clean the mess up).
 - bugfix: rsyslog did not terminate when delayable inputs were blocked
-  due to unvailable sources. Fixes:
+  due to unavailable sources. Fixes:
   http://bugzilla.adiscon.com/show_bug.cgi?id=299
   Thanks to Marcin M for bringing up this problem and Andre Lorbach
   for helping to reproduce and fix it.
@@ -7614,7 +7614,7 @@ Version 6.2.1  [v6-stable], 2012-05-10
   problem and providing an initial patch (which my solution is based on,
   I need to add more code to clean the mess up).
 - bugfix: rsyslog did not terminate when delayable inputs were blocked
-  due to unvailable sources. Fixes:
+  due to unavailable sources. Fixes:
   http://bugzilla.adiscon.com/show_bug.cgi?id=299
   Thanks to Marcin M for bringing up this problem and Andre Lorbach
   for helping to reproduce and fix it.
@@ -7964,7 +7964,7 @@ Version 5.9.7  [V5-BETA], 2012-05-10
   problem and providing an initial patch (which my solution is based on,
   I need to add more code to clean the mess up).
 - bugfix: rsyslog did not terminate when delayable inputs were blocked
-  due to unvailable sources. Fixes:
+  due to unavailable sources. Fixes:
   http://bugzilla.adiscon.com/show_bug.cgi?id=299
   Thanks to Marcin M for bringing up this problem and Andre Lorbach
   for helping to reproduce and fix it.
@@ -8173,7 +8173,7 @@ Version 5.8.11  [V5-stable] 2012-05-03
   problem and providing an initial patch (which my solution is based on,
   I need to add more code to clean the mess up).
 - bugfix: rsyslog did not terminate when delayable inputs were blocked
-  due to unvailable sources. Fixes:
+  due to unavailable sources. Fixes:
   http://bugzilla.adiscon.com/show_bug.cgi?id=299
   Thanks to Marcin M for bringing up this problem and Andre Lorbach
   for helping to reproduce and fix it.
