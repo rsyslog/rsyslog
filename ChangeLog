@@ -9135,7 +9135,7 @@ Version 4.7.3  [v4-devel] (rgerhards), 2010-11-25
   more robust in regard to fatal failures)
 ---------------------------------------------------------------------------
 Version 4.7.2  [v4-devel] (rgerhards), 2010-05-03
-- bugfix: problems with atomic operations emulaton
+- bugfix: problems with atomic operations emulation
   replaced atomic operation emulation with new code. The previous code
   seemed to have some issue and also limited concurrency severely. The
   whole atomic operation emulation has been rewritten.
