@@ -3,7 +3,7 @@
 # repetetively. It is meant for manual use and not included
 # in any testbench functionality.
 # There are some options commented out, e.g. exit on first
-# failuere. If that option is desired, it must be "commented
+# failure. If that option is desired, it must be "commented
 # in" -- we don't think it's worth to add proper options for that.
 # Copyright (2015) by Rainer Gerhards, released under ASL 2.0
 RUN=1
