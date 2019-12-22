@@ -9440,7 +9440,7 @@ Version 4.5.8  [v4-beta] (rgerhards), 2010-02-10
   regression from introduction of "debug on demand" mode
   Thanks to Michael Biebl for reporting this bug
 - bugfix: blanks inside file names did not terminate file name parsing.
-  This could reslult in the whole rest of a line (including comments)
+  This could result in the whole rest of a line (including comments)
   to be treated as file name in "write to file" actions.
   Thanks to Jack for reporting this issue.
 - bugfix: rsyslog hang when writing to a named pipe which nobody was
