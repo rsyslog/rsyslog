@@ -1336,7 +1336,7 @@ CODESTARTobjDestruct(strm)
 	}
 
 	/* Finally, we can free the resources.
-	 * IMPORTANT: we MUST free this only AFTER the ansyncWriter has been stopped, else
+	 * IMPORTANT: we MUST free this only AFTER the asyncWriter has been stopped, else
 	 * we get random errors...
 	 */
 	if(pThis->prevLineSegment)
