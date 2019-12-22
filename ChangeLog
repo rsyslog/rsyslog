@@ -263,7 +263,7 @@ Scheduled Release 8.1911.0 (aka 2019.11) 2019-11-12
   - async writing of files
   - dynafiles
   - not committing file data at end of transaction
-  However it could be triggerred under other conditions as well.
+  However it could be triggered under other conditions as well.
   The refactoring done in 8.1908 increased the likelihood of
   experiencing this bug. But it was not a real regression, the new
   code was valid, but changed the timing so that the race was more
@@ -2875,7 +2875,7 @@ Version 8.32.0 [v8-stable] 2018-01-09
   his phantastic help in debugging this rsyslog problem!
 - pmnormalize bugfix: remove unsave "strcat" implementation
 - rainerscript bugfix: ltrim() and rtrim function misaddressing
-  This could lead to a segfault and was triggerred by certain input data
+  This could lead to a segfault and was triggered by certain input data
   schemes. For example, a ltrim(" a") could lead to the fault.
 - imklog bugfix: local host IP was hardcoded to 127.0.0.1
   This is now taken from the global localHostIP setting, which is used
@@ -2986,7 +2986,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
   Detected by Coverity scan, CID 185318
 - core/json var subsystem bugfix: segfault in MsgSetPropsViaJSON
   Invalid libfastjson API use lead to double-free. This was most importantly
-  triggerred by mmexternal (but could potentially be triggered by other
+  triggered by mmexternal (but could potentially be triggered by other
   uses as well)
   closes https://github.com/rsyslog/rsyslog/issues/1822
 - core/wrkr threads bugfix: race condition
@@ -3398,7 +3398,7 @@ Version 8.30.0 [v8-stable] 2017-10-17
 - core bugfix: rsyslog aborts if errmsg is generated in early startup
   Note that the segfault can occur only during early startup. Once
   rsyslog has started, everything works reliably. This condition can
-  especially be triggerred by specifying invalid TLS default certificates.
+  especially be triggered by specifying invalid TLS default certificates.
   closes https://github.com/rsyslog/rsyslog/issues/1783
   closes https://github.com/rsyslog/rsyslog/issues/1786
 - core bugfix: informational messages was logged with error severity
