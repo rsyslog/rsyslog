@@ -1270,7 +1270,7 @@ SubmitMsg(docker_cont_logs_inst_t *pInst, docker_cont_logs_buf_t *pBufData, cons
  *
  * Docker sends out data in 16KB sized frames, however with the addition of a header
  * of 8 bytes, a frame may be split into 2 chunks by curl. The 2nd chunk will only
- * contain enough data to complete the frame (8 leftever bytes). Including the header,
+ * contain enough data to complete the frame (8 leftover bytes). Including the header,
  * this amounts to 16 bytes; 8 bytes for the header, and 8 bytes for the remaining frame
  * data.
  *
