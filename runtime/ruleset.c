@@ -569,7 +569,7 @@ finalize_it:
 }
 
 /* The rainerscript execution engine. It is debatable if that would be better
- * contained in grammer/rainerscript.c, HOWEVER, that file focusses primarily
+ * contained in grammar/rainerscript.c, HOWEVER, that file focusses primarily
  * on the parsing and object creation part. So as an actual executor, it is
  * better suited here.
  * rgerhards, 2012-09-04
