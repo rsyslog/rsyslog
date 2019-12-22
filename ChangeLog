@@ -10770,7 +10770,7 @@ Version 3.12.3 (rgerhards), 2008-03-18
 - bugfix: memory leak in imfile
 - bugfix: duplicate public symbol in omfwd and omgssapi could lead to
   segfault. thanks to varmojfekoj for the patch.
-- bugfix: rsyslogd aborted on sigup - thanks to varmojfekoj for the patch
+- bugfix: rsyslogd aborted on sighup - thanks to varmojfekoj for the patch
 - some more internal cleanup ;)
 - begun relp modules, but these are not functional yet
 - Greatly enhanced rsyslogd's file write performance by disabling
