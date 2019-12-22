@@ -374,7 +374,7 @@ setLocalHostIPIF(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	localRet = net.GetIFIPAddr(pNewVal, AF_UNSPEC, myIP, (int) sizeof(myIP));
 	if(localRet != RS_RET_OK) {
 		LogError(0, RS_RET_ERR, "$LocalHostIPIF: IP address for interface "
-				"'%s' cannnot be obtained - ignoring directive", pNewVal);
+				"'%s' cannot be obtained - ignoring directive", pNewVal);
 	} else  {
 		storeLocalHostIPIF(myIP);
 	}

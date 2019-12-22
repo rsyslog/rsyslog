@@ -1024,7 +1024,7 @@ getDataInterleaved(context *ctx,
 	/*create interleaved node that has req and response json data*/
 	if((interleavedNode=fjson_object_new_object()) == NULL)
 	{
-		DBGPRINTF("omelasticsearch: Failed to create interleaved node. Cann't continue\n");
+		DBGPRINTF("omelasticsearch: Failed to create interleaved node. Cannot continue\n");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	fjson_object_object_add(interleavedNode,"request", fjson_object_new_string(request));
