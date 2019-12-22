@@ -4510,7 +4510,7 @@ Version 8.17.0 [v8-stable] 2016-03-08
   back to libjson-c). This should bring an overall performance
   improvement for all operations involving variable processing.
   closes https://github.com/rsyslog/rsyslog/issues/848
-- new experimental feature: lookup table suport
+- new experimental feature: lookup table support
   Note that at this time, this is an experimental feature which is not yet
   fully supported by the rsyslog team. It is introduced in order to gain
   more feedback and to make it available as early as possible because many
@@ -6014,7 +6014,7 @@ Version 7.5.6 [devel] 2013-10-29
 - imudp: support for binding to ruleset added
 - bugfix: segfault if variable was assigned to non-container subtree
   Thanks to Pavel Levshin for the fix
-- bugfix: imuxsock did not suport addtl sockets if syssock was disabled
+- bugfix: imuxsock did not support addtl sockets if syssock was disabled
   Thanks to Pavel Levshin for the fix
 - bugfix: running imupd on multiple threads lead to segfault if recvmmsg
   is available
@@ -10029,7 +10029,7 @@ Version 3.21.5  [DEVEL] (rgerhards), 2008-09-30
   successive field delimiters are treated as a single one.
   Thanks to Zhuang Yuyao for the patch.
 - added message property "inputname", which contains the name of the
-  input (module) that generated it. Presence is depending on suport in
+  input (module) that generated it. Presence is depending on support in
   each input module (else it is blank).
 - added system property "$myhostname", which contains the name of the
   local host as it knows itself.
