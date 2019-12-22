@@ -584,7 +584,7 @@ sslerr:
 
 			/* Output OpenSSL error*/
 			osslLastSSLErrorMsg(lenRcvd, pThis->ssl, LOG_ERR, "osslRecordRecv");
-			/* Check for underlaying socket errors **/
+			/* Check for underlying socket errors **/
 			if (local_errno == ECONNRESET) {
 				DBGPRINTF("osslRecordRecv: Errno %d, connection resetted by peer\n", local_errno);
 				ABORT_FINALIZE(RS_RET_CLOSED);
