@@ -595,7 +595,7 @@ an easy way to identify which changes went into the respective daily stable.
   if structured data is present a leading space in MSG field is lost
 - queue subsystem bugfix: oversize queue warning message shown as error
   The warning message was emitted as an error message, which is misleading
-  and may also break some automatted procedures.
+  and may also break some automated procedures.
 - core bugfix: HUP did not work reliable on all platforms
   most notably not on FreeBSD, maybe others. The reason was obviously
   different handling of signals in respect to multiple threads.
@@ -2799,7 +2799,7 @@ Version 8.32.0 [v8-stable] 2018-01-09
   at the end. This is bad, especially when multiple threads access the same
   string. As always the same data is written, it was not causing real issues
   (except unnecessary cache writes), but it polluted the thread debugger and
-  as such prevent more elaborate automatted tests.
+  as such prevent more elaborate automated tests.
 - parent directory creation function refactored
   This should not cause any change of behavior, but is worth noting in case
   we see a regression not caught by the CI system.
@@ -8700,7 +8700,7 @@ Version 5.5.1  [DEVEL] (rgerhards), 2009-11-27
   proves well in practice AND there is demand.
 - re-implemented $EscapeControlCharacterTab config directive
   Based on Jonathan Bond-Caron's patch for v4. This now also includes some
-  automatted tests.
+  automated tests.
 - bugfix: enabling GSSServer crashes rsyslog startup
   Thanks to Tomas Kubina for the patch [imgssapi]
 - bugfix (kind of): check if TCP connection is still alive if using TLS
