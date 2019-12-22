@@ -4321,7 +4321,7 @@ Version 8.19.0 [v8-stable] 2016-05-31
   closes https://github.com/rsyslog/rsyslog/issues/1019
 - default stack size for inputs has been explicitly set to 4MiB
   for most platforms, this means a reduction from the default of 10MiB, however
-  it may mean an increas for micro-libc's (some may have as low as 80KiB by
+  it may mean an increase for micro-libc's (some may have as low as 80KiB by
   default).
 - testbench: We are now using libfaketime instead of faketime command line
   tool. Make sure you have installed the library and not just the binary!
