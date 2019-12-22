@@ -10072,7 +10072,7 @@ Version 3.21.3  [DEVEL] (rgerhards), 2008-08-13
   This also lead to the addition of two new config directives:
   $ActionExecOnlyEveryNthTime and $ActionExecOnlyEveryNthTimeTimeout
   This feature is useful, for example, for alerting: it permits you to
-  send an alert only after at least n occurences of a specific message
+  send an alert only after at least n occurrences of a specific message
   have been seen by rsyslogd. This protectes against false positives
   due to waiting for additional confirmation.
 - bugfix: IPv6 addresses could not be specified in forwarding actions

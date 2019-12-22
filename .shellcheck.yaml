@@ -3,7 +3,7 @@ ignored:
   - SC2016 # shellcheck does not properly understand our intent, the issue
            # is raised e.g. here in config file creation:
 	   #  binary="'$RSYSLOG_DYNNAME'.omprog-restart-terminated-bin.sh"
-	   # we cannot explicitly permit this on each occurence.
+	   # we cannot explicitly permit this on each occurrence.
 
   # things we do not (currently) care about
   - SC2046

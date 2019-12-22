@@ -711,7 +711,7 @@ int rsCStrSzStrCmp(cstr_t *pCS1, uchar *psz, size_t iLenSz)
 }
 
 
-/* Locate the first occurence of this rsCStr object inside a standard sz string.
+/* Locate the first occurrence of this rsCStr object inside a standard sz string.
  * Returns the offset (0-bound) of this first occurrence. If not found, -1 is
  * returned. Both parameters MUST be given (NULL is not allowed).
  * rgerhards 2005-09-19

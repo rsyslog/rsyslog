@@ -428,7 +428,7 @@ finalize_it:
 
 /* de-serialize an embedded, non-octect-counted string. This is useful
  * for deserializing the object name inside the header. The string is
- * terminated by the first occurence of the ':' character.
+ * terminated by the first occurrence of the ':' character.
  * rgerhards, 2008-02-29
  */
 static rsRetVal

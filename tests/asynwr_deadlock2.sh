@@ -45,7 +45,7 @@
 # Note that "$OMFileFlushOnTXEnd on" is not causing this behavior. We just use it
 # to (quite) reliably cause the failure condition. The failure described above
 # (in version 4.6.1) was also present when the setting was set to "off", but its
-# occurence was very much less probable - because the perquisites are then much
+# occurrence was very much less probable - because the perquisites are then much
 # harder to hit. without it, the test may need to run for several hours before
 # we hit all failure conditions.
 #
