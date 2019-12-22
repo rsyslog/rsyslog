@@ -4760,7 +4760,7 @@ Version 8.15.0 [v8-stable] 2015-12-15
   Thanks to Brian Knox for the contributions.
 - cleanup on code to unset a variable
   under extreme cases (very, very unlikely), the old code could also lead
-  to errornous processing
+  to erroneous processing
 - omelasticsearch: build on FreeBSD
   Thanks to github user c0by for the patch
 - pmciscoios: fix some small issues clang static analyzer detected
@@ -6905,7 +6905,7 @@ Version 7.2.5  [v7-stable] 2013-01-08
   Thanks to Martin Körper for the patch
 - bugfix: doGetFileCreateMode() had invalid validity check ;)
   Thanks to Chandler Latour for the patch.
-- bugfix: mmjsonparse errornously returned action error when no CEE cookie
+- bugfix: mmjsonparse erroneously returned action error when no CEE cookie
   was present.
 ----------------------------------------------------------------------------
 Version 7.2.4  [v7-stable] 2012-12-07
@@ -7077,7 +7077,7 @@ Version 7.1.9  [beta] 2012-10-09
   via the optimizer, as it keeps the actual script execution code small.
 ---------------------------------------------------------------------------
 Version 7.1.8  [beta] 2012-10-02
-- bugfix: ruleset(){} directive errornously changed default ruleset
+- bugfix: ruleset(){} directive erroneously changed default ruleset
   much like the $ruleset legacy conf statement. This potentially lead
   to statements being assigned to the wrong ruleset.
 - improved module doc
@@ -7291,7 +7291,7 @@ all these patches here are present in 6.6.0.
 - bugfix: sysklogd-emulating standard template was no longer present in v6
   This was obviously lost during the transition to the new config format.
   Thanks to Milan Bartos for alerting us and a patch!
-- bugfix: some valid legacy PRI filters were flagged as errornous
+- bugfix: some valid legacy PRI filters were flagged as erroneous
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=358
   This happend to filters of the style "local0,local1.*", where the 
   multiple facilities were comma-separated.
