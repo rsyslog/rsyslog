@@ -6723,7 +6723,7 @@ Version 7.3.4  [devel] 2012-11-23
 - imklog: added KeepKernelTimestamp parameter (import from 5.10.2)
   Thanks to Marius Tomaschewski for the patch.
 - bugfix: improper handling of backslash in string-type template()s
-- bugfix: leading quote (") in string-type template() lead to thight loop
+- bugfix: leading quote (") in string-type template() lead to tight loop
   on startup
 - bugfix: no error msg on invalid field option in legacy/string template
 - bugfix: imklog mistakenly took kernel timestamp subseconds as nanoseconds
@@ -6976,7 +6976,7 @@ Version 7.2.2  [v7-stable] 2012-10-16
 - bugfix: imzmq3 segfault with PULL subscription
   Thanks to Martin Nilsson for the patch.
 - bugfix: improper handling of backslash in string-type template()s
-- bugfix: leading quote (") in string-type template() lead to thight loop
+- bugfix: leading quote (") in string-type template() lead to tight loop
   on startup
 - bugfix: no error msg on invalid field option in legacy/string template
 - bugfix: potential segfault due to invalid param handling in comparisons
@@ -8787,7 +8787,7 @@ Version 5.3.7  [BETA] (rgerhards), 2010-01-27
 ---------------------------------------------------------------------------
 Version 5.3.6  [BETA] (rgerhards), 2010-01-13
 - bugfix: ompgsql did not properly check the server connection in
-  tryResume(), which could lead to rsyslog running in a thight loop
+  tryResume(), which could lead to rsyslog running in a tight loop
 - bugfix: suspension during beginTransaction() was not properly handled
   by rsyslog core
 - bugfix: omfile output was only written when buffer was full, not at
