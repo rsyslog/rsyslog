@@ -42,7 +42,7 @@ struct tcpLstnPortList_s {
 	tcpsrv_t *pSrv;			/**< pointer to higher-level server instance */
 	ruleset_t *pRuleset;		/**< associated ruleset */
 	statsobj_t *stats;		/**< associated stats object */
-	sbool bSuppOctetFram;	/**< do we support octect-counted framing? (if no->legay only!)*/
+	sbool bSuppOctetFram;	/**< do we support octect-counted framing? (if no->legacy only!)*/
 	ratelimit_t *ratelimiter;
 	uchar dfltTZ[8];		/**< default TZ if none in timestamp; '\0' =No Default */
 	sbool bSPFramingFix;	/**< support work-around for broken Cisco ASA framing? */

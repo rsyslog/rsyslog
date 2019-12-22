@@ -170,7 +170,7 @@ CODESTARTfreeParserInst
 ENDfreeParserInst
 
 
-/* parse a legay-formatted syslog message.
+/* parse a legacy-formatted syslog message.
  */
 BEGINparse2
 	uchar *p2parse;

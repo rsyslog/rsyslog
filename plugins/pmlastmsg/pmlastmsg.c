@@ -70,7 +70,7 @@ CODESTARTisCompatibleWithFeature
 ENDisCompatibleWithFeature
 
 
-/* parse a legay-formatted syslog message.
+/* parse a legacy-formatted syslog message.
  */
 BEGINparse
 	uchar *p2parse;
