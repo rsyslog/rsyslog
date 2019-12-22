@@ -94,7 +94,7 @@ typedef struct _instanceData {
 	uchar	*port;
 	uchar	*sourceTpl;
 	int	mtu;
-	u_short sourcePortStart;	/* for sorce port iteration */
+	u_short sourcePortStart;	/* for source port iteration */
 	u_short sourcePortEnd;
 	int	bReportLibnetInitErr; /* help prevent multiple error messages on init err */
 } instanceData;
