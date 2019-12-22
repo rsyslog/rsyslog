@@ -9465,7 +9465,7 @@ Version 4.5.7  [v4-beta] (rgerhards), 2009-11-18
 Version 4.5.6  [v4-beta] (rgerhards), 2009-11-05
 - bugfix: named pipes did no longer work (they always got an open error)
   this was a regression from the omfile rewrite in 4.5.0
-- bugfix(minor): diag function returned wrong queue memeber count
+- bugfix(minor): diag function returned wrong queue member count
   for the main queue if an active DA queue existed. This had no relevance
   to real deployments (assuming they are not running the debug/diagnostic
   module...), but sometimes caused grief and false alerts in the 
