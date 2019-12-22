@@ -3,7 +3,7 @@
  * includes messages from local applications AS WELL AS the kernel log.
  * I first considered to make all of this available via imklog, but that
  * did not lock appropriately on second thought. So I created this module
- * that does anything for local message recption.
+ * that does anything for local message reception.
  *
  * This module is not meant to be used on plaforms other than Solaris. As
  * such, trying to compile it elsewhere will probably fail with all sorts

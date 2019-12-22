@@ -14219,12 +14219,12 @@ helpful.
  *	Neumann <torsten@londo.rhein-main.de> for pointing me to it.
  *
  * Mon Jan 12 19:50:58 CET 1998: Martin Schulze <joey@infodrom.north.de>
- *	Modified debug output concerning remote receiption.
+ *	Modified debug output concerning remote reception.
  *
  * Mon Feb 23 23:32:35 CET 1998: Topi Miettinen <Topi.Miettinen@ml.tele.fi>
  *	Re-worked handling of Unix and UDP sockets to support closing /
  *	opening of them in order to have it open only if it is needed
- *	either for forwarding to a remote host or by receiption from
+ *	either for forwarding to a remote host or by reception from
  *	the network.
  *
  * Wed Feb 25 10:54:09 CET 1998: Martin Schulze <joey@infodrom.north.de>
