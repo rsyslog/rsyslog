@@ -1557,7 +1557,7 @@ Version 8.38.0 [v8-stable] 2018-09-18
 - omhttp: new contributed module
   Thanks to Christian Tramnitz for contributing it.
   Some more info at https://github.com/rsyslog/rsyslog/pull/2782
-- mmkubertnetes: action fails preparation cycle if kubernetes API ...
+- mmkubernetes: action fails preparation cycle if kubernetes API ...
   ... destroys resource during bootup sequence
   The plugin was not handling 404 Not Found correctly when looking
   up pods and namespaces.  In this case, we assume the pod/namespace
