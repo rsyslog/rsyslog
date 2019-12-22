@@ -4933,7 +4933,7 @@ Version 8.12.0 [v8-stable] 2015-08-11
   see also https://github.com/rsyslog/rsyslog/pull/383
   Thanks to Anton Matveenko for the patch
 - testbench: remove raciness from UDP based tests
-- testbench: added bash into all scripts makign it mandatory
+- testbench: added bash into all scripts making it mandatory
 - bugfix testbench: Fixed problem building syslog_caller util when 
   liblogging-stdlog is not available. 
   Thanks to Louis Bouchard for the patch
