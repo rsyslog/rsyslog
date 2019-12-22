@@ -5930,7 +5930,7 @@ This starts a new stable branch based on 7.5.8 plus the following changes:
 Version 7.5.8 [v7-release candidate] 2014-01-09
 - add exec_template() RainerScript function
 - add debug.onShutdown and debug.logFile global parameters
-  These enebale the new "debug on shutdown" mode, which can be used to
+  These enable the new "debug on shutdown" mode, which can be used to
   track hard to find problems that occur during system shutdown.
 - Add directives for numerically specifying GIDs/UIDs
   The already present directives (FileOwner, FileGroup, DirOwner,
