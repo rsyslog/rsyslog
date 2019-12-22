@@ -1,5 +1,5 @@
 /* omuxsock.c
- * This is the implementation of datgram unix domain socket forwarding.
+ * This is the implementation of datagram unix domain socket forwarding.
  *
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
