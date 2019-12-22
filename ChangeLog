@@ -1338,7 +1338,7 @@ Version 8.39.0 [v8-stable] 2018-10-30
 - bugfix imudp: stall of connection and/or potential segfault
   There was a regression in 493279b790a8cdace8ccbc2c5136985e820dd2fa.
   This regression may cause stop (or delay) of reception from some systems
-  and may also caus a segfault. Triggering condition is that at least
+  and may also cause a segfault. Triggering condition is that at least
   one listener could not be created.
   Thanks to Jens Låås for the patch.
 - bugfix gcry crypto driver: small memleak
@@ -7772,7 +7772,7 @@ Version 6.1.4  [DEVEL] (rgerhards), 2011-02-18
 - improved error reporting for $WorkDirectory
   non-existance and other detectable problems are now reported,
   and the work directory is NOT set in this case
-- bugfix: pmsnare causded abort under some conditions
+- bugfix: pmsnare caused abort under some conditions
 - bugfix: abort if imfile reads file line of more than 64KiB
   Thanks to Peter Eisentraut for reporting and analyzing this problem.
   bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=221
@@ -8442,7 +8442,7 @@ Version 5.7.4  [V5-BETA] (rgerhards), 2011-02-17
 - improved error reporting for $WorkDirectory
   non-existance and other detectable problems are now reported,
   and the work directory is NOT set in this case
-- bugfix: pmsnare causded abort under some conditions
+- bugfix: pmsnare caused abort under some conditions
 - bugfix: abort if imfile reads file line of more than 64KiB
   Thanks to Peter Eisentraut for reporting and analyzing this problem.
   bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=221
