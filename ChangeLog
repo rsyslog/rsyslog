@@ -720,7 +720,7 @@ Version 8.1905.0 (aka 2019.05) 2019-05-28
   abort the test itself (The fail is intended if this option is set).
   closes issue #3625
 - testbench bugfix: imfile-symlink test failed w/ parallel test run
-  The test sometimes failed. It used a symlinkl to a hardcoded name
+  The test sometimes failed. It used a symlink to a hardcoded name
   rsyslog-link.*.log. This symlink was created but then disappears.
   The reason is that upon (every!) test exit, rsyslog-link.*.log is
   deleted. So a parallel test running the exit procedure just at the
