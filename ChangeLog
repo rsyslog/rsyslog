@@ -3634,7 +3634,7 @@ Version 8.28.0 [v8-stable] 2017-06-27
   This was necessary because imrelp requires an API introduced in 1.2.14.
 - omfwd: add parameter "tcp_frameDelimiter"
 - omkafka: large refactor of kafka subsystem
-  This offers improvements and greatly increases reliablity.
+  This offers improvements and greatly increases reliability.
   Closes https://github.com/rsyslog/rsyslog/issues/1559
   Closes https://github.com/rsyslog/rsyslog/issues/1584
   Closes https://github.com/rsyslog/rsyslog/issues/1515
