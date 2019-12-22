@@ -147,7 +147,7 @@ struct modConfData_s {
 	uchar *gnutlsPriorityString;
 	uchar *pszStrmDrvrName; /* stream driver to use */
 	uchar *pszStrmDrvrAuthMode; /* authentication mode to use */
-	uchar *pszStrmDrvrPermitExpiredCerts; /* control how to handly expired certificates */
+	uchar *pszStrmDrvrPermitExpiredCerts; /* control how to handle expired certificates */
 	struct cnfarray *permittedPeers;
 	sbool configSetViaV2Method;
 	sbool bPreserveCase; /* preserve case of fromhost; true by default */

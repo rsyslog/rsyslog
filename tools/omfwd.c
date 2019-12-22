@@ -143,7 +143,7 @@ typedef struct configSettings_s {
 	int iStrmDrvrMode; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
 	int bResendLastOnRecon; /* should the last message be re-sent on a successful reconnect? */
 	uchar *pszStrmDrvrAuthMode;		/* authentication mode to use */
-	uchar *pszStrmDrvrPermitExpiredCerts;	/* control how to handly expired certificates */
+	uchar *pszStrmDrvrPermitExpiredCerts;	/* control how to handle expired certificates */
 	int iTCPRebindInterval;	/* support for automatic re-binding (load balancers!). 0 - no rebind */
 	int iUDPRebindInterval;	/* support for automatic re-binding (load balancers!). 0 - no rebind */
 	int bKeepAlive;

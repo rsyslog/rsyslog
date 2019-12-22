@@ -950,7 +950,7 @@ rsRetVal unregCfSysLineHdlrs4Owner(void *pOwnerCookie)
 	iRet = llExecFunc(&llCmdList, unregHdlrsHeadExec, pOwnerCookie);
 	if(iRet == RS_RET_NOT_FOUND) {
 		/* It is not considered an error if a module had no
-		   hanlers registered. */
+		   handlers registered. */
 		iRet = RS_RET_OK;
 	}
 

@@ -3097,7 +3097,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
   Thanks to ~achiketa Prachanda for the patch.
 - imfile: some small performance enhancements
   Thanks to Peter Portante for the patch
-- omfile: hande file open error via SUSPEND mode
+- omfile: handle file open error via SUSPEND mode
   For a while, an open file error lead to suspension as the error was
   not detected by the rule engine. This has changed with fixes
   in 8.30.0. I asked users what they prefer (and expect) and
