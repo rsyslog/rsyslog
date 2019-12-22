@@ -5309,7 +5309,7 @@ includeProcessCnf(struct nvlst *const lst)
 			} else if(!strcmp(md, "optional")) {
 				optional = 1;
 			} else {
-				parser_errmsg("invalid 'mode' paramter: '%s' - ignored", md);
+				parser_errmsg("invalid 'mode' parameter: '%s' - ignored", md);
 			}
 			free((void*)md);
 		} else {

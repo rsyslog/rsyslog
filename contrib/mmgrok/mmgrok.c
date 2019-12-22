@@ -60,7 +60,7 @@ struct modConfData_s{
 static  modConfData_t   *loadModConf = NULL;
 static  modConfData_t   *runModConf   = NULL;
 
-/* action (instance) paramters */
+/* action (instance) parameters */
 static struct cnfparamdescr actpdescr[]={
 	{"patterndir",eCmdHdlrString,0},
 	{"match",eCmdHdlrString,0},

@@ -4533,7 +4533,7 @@ Version 8.17.0 [v8-stable] 2016-03-08
   interval. Note that network-receivers do already guard
   against this, so the new guard only guards against invalid
   system time.
-- imfile: add "trimlineoverbytes" input paramter
+- imfile: add "trimlineoverbytes" input parameter
   Thanks to github user JindongChen for the patch.
 - ommongodb: add support for extended json format for dates
   Thanks to Florian Bücklers for the patch.
