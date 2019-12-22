@@ -10228,7 +10228,7 @@ Version 3.19.10 [BETA] (rgerhards), 2008-07-15
   reporting the bug.
 - bugfix: priority was incorrectly calculated on FreeBSD 7,
   because the LOG_MAKEPRI() C macro has a different meaning there (it
-  is just a simple addition of faciltity and severity). I have changed
+  is just a simple addition of facility and severity). I have changed
   this to use own, consistent, code for PRI calculation. Thank to HKS
   for reporting this bug.
 - bugfix (cosmetical): authorization was not checked when gtls handshake
@@ -10476,7 +10476,7 @@ Version 3.18.1 (rgerhards), 2008-07-21
   mode). This has been corrected. Thank to HKS for point out the problem.
 - bugfix: priority was incorrectly calculated on FreeBSD 7,
   because the LOG_MAKEPRI() C macro has a different meaning there (it
-  is just a simple addition of faciltity and severity). I have changed
+  is just a simple addition of facility and severity). I have changed
   this to use own, consistent, code for PRI calculation. [Backport from
   3.19.10]
 - bugfix: remove PRI part from kernel message if it is present
