@@ -1,4 +1,4 @@
-/* Definitions for the stream-based netstrmsworking class.
+/* Definitions for the stream-based netstrmworking class.
  *
  * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
  *
