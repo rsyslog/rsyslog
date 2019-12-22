@@ -14273,7 +14273,7 @@ helpful.
  *	. sys_errlist --> strerror()
  *
  * Mon Oct 12 20:22:59 CEST 1998: Martin Schulze <joey@infodrom.north.de>
- *	Added support for setutent()/getutent()/endutend() instead of
+ *	Added support for setutent()/getutent()/endutent() instead of
  *	binary reading the UTMP file.  This is the the most portable
  *	way.  This allows /var/run/utmp format to change, even to a
  *	real database or utmp daemon. Also if utmp file locking is
