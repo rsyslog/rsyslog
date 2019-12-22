@@ -333,7 +333,7 @@ Scheduled Release 8.1911.0 (aka 2019.11) 2019-11-12
   the output module is given and that path is very long. This triggers
   the same issue because by default the module load path is included
   in the action name.
-  This patch corrects the problem and trunctates overly long names
+  This patch corrects the problem and truncates overly long names
   when being used for name generation.
   The problem was detected during testbench work. We did never receive
   a bug report from practice.
