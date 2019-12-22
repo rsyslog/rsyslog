@@ -1267,7 +1267,7 @@ finalize_it:
  * get erroronly context
  */
 static rsRetVal
-initializeErrorOnlyConext(wrkrInstanceData_t *pWrkrData,context *ctx){
+initializeErrorOnlyContext(wrkrInstanceData_t *pWrkrData,context *ctx){
 	DEFiRet;
 	ctx->statusCheckOnly=0;
 	fjson_object *errRoot=NULL;
@@ -1298,7 +1298,7 @@ initializeErrorOnlyConext(wrkrInstanceData_t *pWrkrData,context *ctx){
  * get interleaved context
  */
 static rsRetVal
-initializeInterleavedConext(wrkrInstanceData_t *pWrkrData,context *ctx){
+initializeInterleavedContext(wrkrInstanceData_t *pWrkrData,context *ctx){
 	DEFiRet;
 	ctx->statusCheckOnly=0;
 	fjson_object *errRoot=NULL;
@@ -1320,7 +1320,7 @@ initializeInterleavedConext(wrkrInstanceData_t *pWrkrData,context *ctx){
 
 /*get interleaved context*/
 static rsRetVal
-initializeErrorInterleavedConext(wrkrInstanceData_t *pWrkrData,context *ctx){
+initializeErrorInterleavedContext(wrkrInstanceData_t *pWrkrData,context *ctx){
 	DEFiRet;
 	ctx->statusCheckOnly=0;
 	fjson_object *errRoot=NULL;
@@ -1400,19 +1400,19 @@ writeDataError(wrkrInstanceData_t *const pWrkrData,
 		/*get correct context.*/
 		if(pData->interleaved && pData->errorOnly)
 		{
-			if(initializeErrorInterleavedConext(pWrkrData, &ctx) != RS_RET_OK) {
+			if(initializeErrorInterleavedContext(pWrkrData, &ctx) != RS_RET_OK) {
 				DBGPRINTF("omelasticsearch: error initializing error interleaved context.\n");
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 
 		} else if(pData->errorOnly) {
-			if(initializeErrorOnlyConext(pWrkrData, &ctx) != RS_RET_OK) {
+			if(initializeErrorOnlyContext(pWrkrData, &ctx) != RS_RET_OK) {
 
 				DBGPRINTF("omelasticsearch: error initializing error only context.\n");
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 		} else if(pData->interleaved) {
-			if(initializeInterleavedConext(pWrkrData, &ctx) != RS_RET_OK) {
+			if(initializeInterleavedContext(pWrkrData, &ctx) != RS_RET_OK) {
 				DBGPRINTF("omelasticsearch: error initializing error interleaved context.\n");
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
