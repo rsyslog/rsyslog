@@ -11499,7 +11499,7 @@ Version 1.16.0 (RGer/Peter Vrabec), 2007-07-13 - The Friday, 13th Release ;)
   disabled and it terminated
 - added new properties "syslogfacility-text" and "syslogseverity-text"
   thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
-- added the -x option to disable hostname dns reslution
+- added the -x option to disable hostname dns resolution
   thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
 - begun to better modularize syslogd.c - this is an ongoing project; moved
   type definitions to a separate file
@@ -12442,7 +12442,7 @@ Version 1.16.0 (RGer/Peter Vrabec), 2007-07-13 - The Friday, 13th Release ;)
   disabled and it terminated
 - added new properties "syslogfacility-text" and "syslogseverity-text"
   thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
-- added the -x option to disable hostname dns reslution
+- added the -x option to disable hostname dns resolution
   thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
 - begun to better modularize syslogd.c - this is an ongoing project; moved
   type definitions to a separate file
@@ -13385,7 +13385,7 @@ Version 1.16.0 (RGer/Peter Vrabec), 2007-07-13 - The Friday, 13th Release ;)
   disabled and it terminated
 - added new properties "syslogfacility-text" and "syslogseverity-text"
   thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
-- added the -x option to disable hostname dns reslution
+- added the -x option to disable hostname dns resolution
   thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
 - begun to better modularize syslogd.c - this is an ongoing project; moved
   type definitions to a separate file

@@ -707,7 +707,7 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr,
 	if(second < 0 || second > 60)
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
-	/* as an extension e.g. found in CISCO IOS, we support sub-second resultion.
+	/* as an extension e.g. found in CISCO IOS, we support sub-second resolution.
 	 * It's presence is indicated by a dot immediately following the second.
 	 */
 	if(lenStr > 0 && *pszTS == '.') {
