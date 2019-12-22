@@ -2134,7 +2134,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 
 	/* we need to store the hostname as an alternate mean of authentication if no
 	 * permitted peer names are given. Using the hostname is quite useful. It permits
-	 * auto-configuration of security if a commen root cert is present. -- rgerhards, 2008-05-26
+	 * auto-configuration of security if a common root cert is present. -- rgerhards, 2008-05-26
 	 */
 	CHKmalloc(pThis->pszConnectHost = (uchar*)strdup((char*)host));
 
