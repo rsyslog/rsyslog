@@ -30,7 +30,7 @@
  * zstream output.)
  *
  * I had written an old bit of code to do this - the documentation on
- * deflatInit2() was pretty tricky to nail down on this specific feature:
+ * deflateInit2() was pretty tricky to nail down on this specific feature:
  *
  * int deflateInit2 (z_streamp strm, int level, int method, int windowBits,
  * int memLevel, int strategy);
