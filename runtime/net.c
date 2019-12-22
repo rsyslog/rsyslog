@@ -1082,7 +1082,7 @@ should_use_so_bsdcompat(void)
 #endif	/* #ifndef OS_BSD */
 }
 #ifndef SO_BSDCOMPAT
-/* this shall prevent compiler errors due to undfined name */
+/* this shall prevent compiler errors due to undefined name */
 #define SO_BSDCOMPAT 0
 #endif
 
