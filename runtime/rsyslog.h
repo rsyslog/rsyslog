@@ -261,7 +261,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_NO_ERRCODE = -1,		/**< RESERVED for NO_ERRCODE errmsg.logError status name */
 	RS_RET_INCLUDE_ERRNO = 1073741824, /* 2**30  - do NOT use error codes above this! */
 	/* begin regular error codes */
-	RS_RET_NOT_IMPLEMENTED = -7,	/**< implementation is missing (probably internal error or lazyness ;)) */
+	RS_RET_NOT_IMPLEMENTED = -7,	/**< implementation is missing (probably internal error or laziness ;)) */
 	RS_RET_OUT_OF_MEMORY = -6,	/**< memory allocation failed */
 	RS_RET_PROVIDED_BUFFER_TOO_SMALL = -50, /*< the caller provided a buffer, but the called function sees
 						  the size of this buffer is too small - operation not carried out */
