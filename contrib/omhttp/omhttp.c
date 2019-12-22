@@ -997,7 +997,7 @@ buildCurlHeaders(wrkrInstanceData_t *pWrkrData, sbool contentEncodeGzip)
 		slist = curl_slist_append(slist, (char *)pWrkrData->pData->headerContentTypeBuf);
 	} else {
 		if (pWrkrData->pData->batchMode) {
-			// If in batch mode, use the approprate content type header for the format,
+			// If in batch mode, use the appropriate content type header for the format,
 			// defaulting to text/plain with newline
 			switch (pWrkrData->pData->batchFormat) {
 				case FMT_JSONARRAY:
