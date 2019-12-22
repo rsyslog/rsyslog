@@ -1,7 +1,7 @@
 /* imfile.c
  *
  * This is the input module for reading text file data. A text file is a
- * non-binary file who's lines are delemited by the \n character.
+ * non-binary file who's lines are delimited by the \n character.
  *
  * Work originally begun on 2008-02-01 by Rainer Gerhards
  *

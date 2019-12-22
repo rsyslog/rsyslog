@@ -192,7 +192,7 @@ finalize_it:
 
 /* Add a new outchannel line
  * returns pointer to new object if it succeeds, NULL otherwise.
- * An outchannel line is primarily a set of fields delemited by commas.
+ * An outchannel line is primarily a set of fields delimited by commas.
  * There might be some whitespace between the field (but not within)
  * and the commas. This can be removed.
  */

@@ -10,7 +10,7 @@
  *
  * Each parse operation carried out by this package starts from the
  * parse pointer, parses the caller-requested element (e.g. an
- * integer or delemited string) and the update the parse pointer. If
+ * integer or delimited string) and the update the parse pointer. If
  * the caller tries to parse beyond the end of the original string,
  * an error is returned. In general, all functions return a parsRet
  * error code and all require the parseObj to be the first parameter.

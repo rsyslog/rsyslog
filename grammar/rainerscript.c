@@ -1561,7 +1561,7 @@ doExtractFieldByStr(uchar *str, char *delim, const rs_size_t lenDelim, const int
 		pFldEnd = (uchar*) strstr((char*)pFld, delim);
 		if(pFldEnd == NULL) {
 			iLen = strlen((char*) pFld);
-		} else { /* found delmiter!  Note that pFldEnd *is* already on
+		} else { /* found delimiter!  Note that pFldEnd *is* already on
 			  * the first delmi char, we don't need that. */
 			iLen = pFldEnd - pFld;
 		}

@@ -2397,7 +2397,7 @@ void tplPrintList(rsconf_t *conf)
 				  	dbgprintf("[drop last LF in msg] ");
 				}
 				if(pTpe->data.field.has_fields == 1) {
-				  	dbgprintf("[substring, field #%d only (delemiter %d)] ",
+				  	dbgprintf("[substring, field #%d only (delimiter %d)] ",
 						pTpe->data.field.iFieldNr, pTpe->data.field.field_delim);
 				}
 				if(pTpe->data.field.iFromPos != 0 || pTpe->data.field.iToPos != 0) {

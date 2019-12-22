@@ -588,7 +588,7 @@ static rsRetVal objDeserializeHeader(uchar *pszRecType, cstr_t **ppstrID, int* p
 	CHKiRet(objDeserializeEmbedStr(ppstrID, pStrm));
 	CHKiRet(objDeserializeNumber(&oVers, pStrm));
 
-	/* and now we skip over the rest until the delemiting \n */
+	/* and now we skip over the rest until the delimiting \n */
 	NEXTC;
 	while(c != '\n') {
 		NEXTC;

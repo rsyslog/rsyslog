@@ -36,7 +36,7 @@
  * -B   The specified file (-I) is binary. No data processing is done by
  *      tcpflood. If multiple connections are specified, data is read in
  *      chunks and spread across the connections without taking any record
- *      delemiters into account.
+ *      delimiters into account.
  * -C	when input from a file is read, this file is transmitted -C times
  *      (C like cycle, running out of meaningful option switches ;))
  * -D	randomly drop and re-establish connections. Useful for stress-testing
