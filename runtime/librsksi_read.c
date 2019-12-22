@@ -598,7 +598,7 @@ rsksi_tlvDecodeHASH_STEP(tlvrecord_t *rec, uint16_t *pstrtidx, block_hashstep_t 
 	}
 	hashstep->sib_hash.data = NULL;
 
-	/* Get Haststep Subrecord now */
+	/* Get Hashstep Subrecord now */
 	CHKr(rsksi_tlvDecodeSUBREC(rec, pstrtidx, &subrec)); /* Add to external counter */
 	hashstep->direction = subrec.tlvtype; /* TLVType is also the DIRECTION! */
 
