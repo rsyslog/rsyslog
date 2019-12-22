@@ -205,7 +205,7 @@ IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
 		if(waitOp == NSDSEL_RD && gtlsHasRcvInBuffer(pNsdGTLS)) {
 			*pbIsReady = 1;
 			--pThis->iBufferRcvReady; /* one "pseudo-read" less */
-			dbgprintf("nsdl_gtls: dummy read, decermenting %p->iBufRcvReady, now %d\n",
+			dbgprintf("nsdl_gtls: dummy read, decrementing %p->iBufRcvReady, now %d\n",
 				   pThis, pThis->iBufferRcvReady);
 			FINALIZE;
 		}
