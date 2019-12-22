@@ -1695,7 +1695,7 @@ Version 8.37.0 [v8-stable] 2018-08-07
   example:
   env SOMEPATH is set to "/var/log/custompath"
   config is: param=`echo $SOMEPATH/myfile`
-  param than is expaned to "/var/log/custompath/myfile"
+  param than is expanded to "/var/log/custompath/myfile"
   among others, this is also needed inside the testbench to properly
   support "make distcheck".
   Note: testbench tests follows via separate commit. There will be
