@@ -2887,7 +2887,7 @@ Version 8.32.0 [v8-stable] 2018-01-09
 - cleanup: remove obsolete pre-KSI GuardTime signature interface
   this is no longer functional starting Jan 2018 as it reached end of life
   closes https://github.com/rsyslog/rsyslog/issues/2128
-- cleanup: obsolete defintion SOL_TCP replaced by newer IPPROTO_TCP
+- cleanup: obsolete definition SOL_TCP replaced by newer IPPROTO_TCP
   this should not have any effect at all except better portability, but is
   worth mentioning in the ChangeLog nevertheless.
 - lookup tables: fixed undefined behavior detected by UBSan
@@ -5178,7 +5178,7 @@ v8.5.0, but in a stable release. For details see immediately below.
   Thanks to alexjfisher for reporting this issue.
   closes https://github.com/rsyslog/rsyslog/issues/140
 - bugfix: RainerScript: invalid ruleset names were accepted
-  during ruleset defintion, but could of course not be used when
+  during ruleset definition, but could of course not be used when
   e.g. calling a ruleset.
   IMPORTANT: this may cause existing configurations to error out on start,
   as they invalid names could also be used e.g. when assigning rulesets.

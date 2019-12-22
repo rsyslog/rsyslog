@@ -1,4 +1,4 @@
-/* glbl.c - this module holds global defintions and data items.
+/* glbl.c - this module holds global definitions and data items.
  * These are shared among the runtime library. Their use should be
  * limited to cases where it is actually needed. The main intension for
  * implementing them was support for the transistion from v2 to v4

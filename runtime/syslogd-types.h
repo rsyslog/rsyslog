@@ -1,5 +1,5 @@
 /* syslogd-type.h
- * This file contains type defintions used by syslogd and its modules.
+ * This file contains type definitions used by syslogd and its modules.
  * It is a required input for any module.
  *
  * File begun on 2007-07-13 by RGerhards (extracted from syslogd.c)
