@@ -60,7 +60,7 @@
 struct msg {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	flowControl_t flowCtlType;
-	/**< type of flow control we can apply, for enqueueing, needs not to be persisted because
+	/**< type of flow control we can apply, for enqueuing, needs not to be persisted because
 				        once data has entered the queue, this property is no longer needed. */
 	pthread_mutex_t mut;
 	int	iRefCount;	/* reference counter (0 = unused) */

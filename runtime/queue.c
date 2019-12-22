@@ -3086,7 +3086,7 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg)
 				msgDestruct(&pMsg);
 				ABORT_FINALIZE(RS_RET_QUEUE_FULL);
 			}
-		dbgoprint((obj_t*) pThis, "doEnqSingleObject: wait solved queue full condition, enqueing\n");
+		dbgoprint((obj_t*) pThis, "doEnqSingleObject: wait solved queue full condition, enqueuing\n");
 		}
 	}
 

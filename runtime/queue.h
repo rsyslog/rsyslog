@@ -124,7 +124,7 @@ struct queue_s {
 	/* end public entry points */
 	/* synchronization variables */
 	pthread_mutex_t mutThrdMgmt; /* mutex for the queue's thread management */
-	pthread_mutex_t *mut; /* mutex for enqueing and dequeuing messages */
+	pthread_mutex_t *mut; /* mutex for enqueuing and dequeuing messages */
 	pthread_cond_t notFull;
 	pthread_cond_t belowFullDlyWtrMrk; /* below eFLOWCTL_FULL_DELAY watermark */
 	pthread_cond_t belowLightDlyWtrMrk; /* below eFLOWCTL_FULL_DELAY watermark */
