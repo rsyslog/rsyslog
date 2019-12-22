@@ -9205,7 +9205,7 @@ Version 4.6.6  [v4-stable] (rgerhards), 2011-06-24
   that the rest of the batch is properly tried to be enqueued and, if
   not possible, destructed.
 - bugfix: invalid storage type for config variables
-- bugfix: stream driver mode was not correctly set on tcp ouput on big
+- bugfix: stream driver mode was not correctly set on tcp output on big
   endian systems.
   thanks varmojfekoj for the patch
 - bugfix: IPv6-address could not be specified in omrelp

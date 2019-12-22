@@ -7,7 +7,7 @@
 # it quickly. As such the hope is the test will be useful in future again.
 #
 # NOTE WELL: The rsyslog shutdown condition is hard to get 100% right
-# as due to not flushing at transaction end we cannot rely on the oputput
+# as due to not flushing at transaction end we cannot rely on the output
 # file count as we usually do. However, we cannot avoid this as otherwise
 # we loose an important trigger condition.
 # added 2019-10-23 by Rgerhards

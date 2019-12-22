@@ -697,7 +697,7 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 
 /* the following block is to be added for modules that support
  * their config name. This is required for the rsyslog v6 config
- * system, especially for outout modules which do not require
+ * system, especially for output modules which do not require
  * the new set of begin/end config settings.
  */
 #define CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES \
