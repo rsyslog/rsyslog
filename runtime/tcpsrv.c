@@ -790,7 +790,7 @@ RunSelect(tcpsrv_t *pThis, nsd_epworkset_t workset[], size_t sizeWorkset)
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
-	/* this is an endless loop - it is terminated by the framework canelling
+	/* this is an endless loop - it is terminated by the framework cancelling
 	 * this thread. Thus, we also need to instantiate a cancel cleanup handler
 	 * to prevent us from leaking anything. -- rgerhards, 20080-04-24
 	 */
@@ -910,7 +910,7 @@ Run(tcpsrv_t *pThis)
 	}
 	d_pthread_mutex_unlock(&wrkrMut);
 
-	/* this is an endless loop - it is terminated by the framework canelling
+	/* this is an endless loop - it is terminated by the framework cancelling
 	 * this thread. Thus, we also need to instantiate a cancel cleanup handler
 	 * to prevent us from leaking anything. -- rgerhards, 20080-04-24
 	 */
