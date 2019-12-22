@@ -692,7 +692,7 @@ Version 8.1905.0 (aka 2019.05) 2019-05-28
   is imtcp and so users will likely experience this as imtcp problem.
   When a too-long message is truncated, the byte after the truncation
   position becomes the first byte of the next message. This will garble
-  the next messages and in almost all cases render it is syslog-incompliant.
+  the next messages and in almost all cases render it is syslog-noncompliant.
   The same problem does NOT occur when the message is split.
   This commit fixes the issue. It also includes a testbench fix.
   Unfortunately the test for exactly this feature was not properly
