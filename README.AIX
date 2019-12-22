@@ -56,7 +56,7 @@ Note: you need to
 
 AIX HELP
 --------
-* extend a FS assuming there is still pyhsical disk space:
+* extend a FS assuming there is still physical disk space:
   # actual commands used in PDP box
   chfs -s size=200M /tmp
   chfs -a size=4G /home
