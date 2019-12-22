@@ -1,6 +1,6 @@
 /* linkedlist.c
  * This file set implements a generic linked list object. It can be used
- * wherever a linke list is required.
+ * wherever a linked list is required.
  *
  * NOTE: we do not currently provide a constructor and destructor for the
  * object itself as we assume it will always be part of another strucuture.
