@@ -211,7 +211,7 @@ DestructObjSelf(obj_t *pThis)
 }
 
 
-/* --------------- object serializiation / deserialization support --------------- */
+/* --------------- object serialization / deserialization support --------------- */
 
 
 /* serialize the header of an object
@@ -1015,7 +1015,7 @@ finalize_it:
 #undef NEXTC /* undef helper macro */
 
 
-/* --------------- end object serializiation / deserialization support --------------- */
+/* --------------- end object serialization / deserialization support --------------- */
 
 
 /* set the object (instance) name
