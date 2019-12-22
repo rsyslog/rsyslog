@@ -4865,7 +4865,7 @@ Version 8.13.0 [v8-stable] 2015-09-22
 - bugfix: Parallel build issue "cannot find ../runtime/.libs/librsyslog.a:
   No such file or directory" (#479) fixed.
   Thanks to Thomas D. (Whissi) for the patch.
-- bugfix: Added missing mmpstructdata testfiles into makefile.
+- bugfix: Added missing mmpstrucdata testfiles into makefile.
   see also: https://github.com/rsyslog/rsyslog/issues/484
 - bugfix: Reverted FIX for issue #392 as it had unexpected side effects.
   The new fix duplicates the Listener object for static files (like
