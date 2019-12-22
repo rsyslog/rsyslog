@@ -1562,7 +1562,7 @@ doExtractFieldByStr(uchar *str, char *delim, const rs_size_t lenDelim, const int
 		if(pFldEnd == NULL) {
 			iLen = strlen((char*) pFld);
 		} else { /* found delimiter!  Note that pFldEnd *is* already on
-			  * the first delmi char, we don't need that. */
+			  * the first delimiter char, we don't need that. */
 			iLen = pFldEnd - pFld;
 		}
 		/* we got our end pointer, now do the copy */
