@@ -291,7 +291,7 @@ isHmacPresent(instanceData *pData, smsg_t *pMsg)
 	MsgGetStructuredData(pMsg, &sdbuf, &sdlen);
 	found = 0;
 
-	if(sdbuf[0] == '-') /* RFC: struc data is empty! */
+	if(sdbuf[0] == '-') /* RFC: struct data is empty! */
 		goto done;
 
 	i = 0;
