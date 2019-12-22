@@ -1459,7 +1459,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	int frompos = -1;
 	int topos = -1;
 	int fieldnum = -1;
-	int fielddelim = 9; /* default is HT (USACSII 9) */
+	int fielddelim = 9; /* default is HT (USASCII 9) */
 	int fixedwidth = 0;
 	int re_matchToUse = 0;
 	int re_submatchToUse = 0;
