@@ -51,7 +51,7 @@ for arg in sys.argv: # [-4:]:
 	elif arg.find("--evictedalarm=") != -1:
 		nEvictedAlarm = int(arg[15:])
 		if nEvictedAlarm < 0 or nEvictedAlarm > 100:
-			nEvictedAlarm = 5 # Resett to default if value is invalid
+			nEvictedAlarm = 5 # Reset to default if value is invalid
 	elif arg.find("--failedalarm=") != -1:
 		nFailedAlarm = int(arg[14:])
 	elif arg.find("--discardedalarm=") != -1:
