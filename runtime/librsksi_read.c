@@ -1020,7 +1020,7 @@ rsksi_printINT_HASH(FILE *fp, imprint_t *imp, uint8_t verbose)
  * debugging purposes or dumping tlv files.
  *
  * @param[in] fp file pointer to send output to
- * @param[in] bsig ponter to block_hdr_t to output
+ * @param[in] bsig pointer to block_hdr_t to output
  * @param[in] verbose if 0, abbreviate blob hexdump, else complete
  */
 void
@@ -1047,7 +1047,7 @@ rsksi_printBLOCK_HDR(FILE *fp, block_hdr_t *bh, uint8_t verbose)
  * debugging purposes or dumping tlv files.
  *
  * @param[in] fp file pointer to send output to
- * @param[in] bsig ponter to block_sig_t to output
+ * @param[in] bsig pointer to block_sig_t to output
  * @param[in] verbose if 0, abbreviate blob hexdump, else complete
  */
 void
@@ -1068,7 +1068,7 @@ rsksi_printBLOCK_SIG(FILE *fp, block_sig_t *bs, uint8_t verbose)
  * debugging purposes or dumping tlv files.
  *
  * @param[in] fp file pointer to send output to
- * @param[in] bsig ponter to block_sig_t to output
+ * @param[in] bsig pointer to block_sig_t to output
  * @param[in] verbose if 0, abbreviate blob hexdump, else complete
  */
 static void
@@ -1086,7 +1086,7 @@ rsksi_printHASHCHAIN(FILE *fp, block_sig_t *bs, uint8_t verbose)
  * debugging purposes or dumping tlv files.
  *
  * @param[in] fp file pointer to send output to
- * @param[in] hashchain step ponter to block_hashstep_s to output
+ * @param[in] hashchain step pointer to block_hashstep_s to output
  * @param[in] verbose if 0, abbreviate blob hexdump, else complete
  */
 static void
