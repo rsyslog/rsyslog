@@ -740,7 +740,7 @@ rsgcryDecrypt(gcryfile pF, uchar *buf, size_t *len)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	removePadding(buf, len);
-	// TODO: remove dbgprintf once things are sufficently stable -- rgerhards, 2013-05-16
+	// TODO: remove dbgprintf once things are sufficiently stable -- rgerhards, 2013-05-16
 	dbgprintf("libgcry: decrypted, bytesToBlkEnd %lld, buffer is now '%50.50s'\n",
 		(long long) pF->bytesToBlkEnd, buf);
 
