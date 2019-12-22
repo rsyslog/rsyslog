@@ -3137,7 +3137,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
   A NULL pointer could be accessed if there was a problem with the
   timezone parameters.  Affects only startup, once started, no problem
   existed.
-  Detected by Coverty scan; CID 185414
+  Detected by Coverity scan; CID 185414
 - core bugfix: potential race in variable handling
   Root of variable tree is accessed prior to locking access to it.
   This introduces a race that may result in various kinds of
@@ -3223,15 +3223,15 @@ Version 8.31.0 [v8-stable] 2017-11-28
   due to missing unlock. This could only occur if pstats was set to
   CEE-format logging (very uncommon) AND if the system runs out of
   memory (in which case other things go pretty bad as well).
-  found by Coverty scan
+  found by Coverity scan
 - omfwd bugfix: memory leak if network namespaces are used
   very seldom used feature, occurs only during error case
-  found by Coverty scan.
+  found by Coverity scan.
 - core: potential misaddressing when accessing JSON properties
   When a JSON property is accessed in template processing, memory may
   have been misaddressed or a double-free may occur while obtaining the
   propety.
-  This was detected by a Coverty scan.
+  This was detected by a Coverity scan.
 - gcry crypto provider bugfixes: potential misaddressing and memory leak
   If the config parameters were invalid, a misaddressing could occur. If so,
   this happens only during startup.
@@ -3245,7 +3245,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
   Note: while this could potentially lead to a program hang, it affected
   only testbench execution as imdiag is a testbench-only tool.
   Detected by Coverity scan, CID 185348 and 185350
-- fixed several minor and cosmetic issues found by Coverty scan
+- fixed several minor and cosmetic issues found by Coverity scan
   includding false positives. For details see "$ git log". All noteworthy
   issues are seperately mentioned in this ChangeLog. The ones not mentioned
   are for example problems that can only occur during out of memory
@@ -5816,7 +5816,7 @@ Version 7.6.4 [v7.6-stable] 2014-09-12
   for the plugins provided by the rsyslog git: none of them uses different
   passing modes.
   Thanks to Tomas Heinrich for providing a very detailled bug report.
-- various fixes after coverty scan
+- various fixes after coverity scan
   These do not address issues seen in practice but those seen by the tool.
   Some of them may affect practical deployments.
   Thanks to Tomas Heinrich for the patches.
