@@ -3853,7 +3853,7 @@ Version 8.26.0 [v8-stable] 2017-04-04
 - bugfix: build problem on MacOS (not a supported platform)
   Thanks to FX Coudert for the fix.
 - regression fix: in 8.25, str2num() returned error on empty string
-  past behavior was to return 0 in this case; past behavior was reinstanciated
+  past behavior was to return 0 in this case; past behavior was reinstantiated
   Thanks to github user jvymazal for the patch.
 - bugfix omsnmp: improper handling of new-style configuration parameters
   Thanks to Radovan Sroka for the patch.
