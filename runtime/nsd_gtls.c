@@ -1331,7 +1331,7 @@ gtlsEndSess(nsd_gtls_t *pThis)
 }
 
 
-/* a small wrapper for gnutls_transport_set_ptr(). The main intension for
+/* a small wrapper for gnutls_transport_set_ptr(). The main intention for
  * creating this wrapper is to get the annoying "cast to pointer from different
  * size" compiler warning just once. There seems to be no way around it, see:
  * http://lists.gnu.org/archive/html/help-gnutls/2008-05/msg00000.html

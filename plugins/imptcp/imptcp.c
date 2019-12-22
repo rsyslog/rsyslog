@@ -1245,7 +1245,7 @@ DataRcvdUncompressed(ptcpsess_t *pThis, char *pData, size_t iLen, struct syslogT
 	multiSub.nElem = 0;
 
 	 /* We now copy the message to the session buffer. */
-	pEnd = pData + iLen; /* this is one off, which is intensional */
+	pEnd = pData + iLen; /* this is one off, which is intentional */
 
 	while(pData < pEnd) {
 		CHKiRet(processDataRcvd(pThis, &pData, pEnd - pData, stTime, ttGenTime, &multiSub, &nMsgs));

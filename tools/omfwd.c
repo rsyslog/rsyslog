@@ -131,7 +131,7 @@ typedef struct wrkrInstanceData {
 	tcpclt_t *pTCPClt;	/* our tcpclt object */
 	sbool bzInitDone; /* did we do an init of zstrm already? */
 	z_stream zstrm;	/* zip stream to use for tcp compression */
-	uchar sndBuf[16*1024];	/* this is intensionally fixed -- see no good reason to make configurable */
+	uchar sndBuf[16*1024];	/* this is intentionally fixed -- see no good reason to make configurable */
 	unsigned offsSndBuf;	/* next free spot in send buffer */
 	int errsToReport;	/* (remaining) number of errors to report */
 } wrkrInstanceData_t;

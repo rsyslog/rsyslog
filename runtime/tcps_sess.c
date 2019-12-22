@@ -515,7 +515,7 @@ DataRcvd(tcps_sess_t *pThis, char *pData, const size_t iLen)
 	multiSub.nElem = 0;
 
 	 /* We now copy the message to the session buffer. */
-	pEnd = pData + iLen; /* this is one off, which is intensional */
+	pEnd = pData + iLen; /* this is one off, which is intentional */
 
 	while(pData < pEnd) {
 		CHKiRet(processDataRcvd(pThis, *pData++, &stTime, ttGenTime, &multiSub, &nMsgs));

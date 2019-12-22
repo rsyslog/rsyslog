@@ -1,6 +1,6 @@
 /* glbl.c - this module holds global definitions and data items.
  * These are shared among the runtime library. Their use should be
- * limited to cases where it is actually needed. The main intension for
+ * limited to cases where it is actually needed. The main intention for
  * implementing them was support for the transistion from v2 to v4
  * (with fully modular design), but it turned out that there may also
  * be some other good use cases besides backwards-compatibility.
@@ -573,7 +573,7 @@ getDefPFFamily(void)
 
 /* return our local IP.
  * If no local IP is set, "127.0.0.1" is selected *and* set. This
- * is an intensional side effect that we do in order to keep things
+ * is an intentional side effect that we do in order to keep things
  * consistent and avoid config errors (this will make us not accept
  * setting the local IP address once a module has obtained it - so
  * it forces the $LocalHostIPIF directive high up in rsyslog.conf)

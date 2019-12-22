@@ -1,7 +1,7 @@
 /* The datetime object. It contains date and time related functions.
  *
  * Module begun 2008-03-05 by Rainer Gerhards, based on some code
- * from syslogd.c. The main intension was to move code out of syslogd.c
+ * from syslogd.c. The main intention was to move code out of syslogd.c
  * in a useful manner. It is still undecided if all functions will continue
  * to stay here or some will be moved into parser modules (once we have them).
  *
