@@ -2439,7 +2439,7 @@ Version 8.34.0 [v8-stable] 2018-04-03
   now work as expected."
   This was convincing, and we actually think that the fast majority of users set
   up keepalive based on the doc and did never verify it actually worked as
-  excpected. So we think that in all those cases, rsyslog will finally work as
+  expected. So we think that in all those cases, rsyslog will finally work as
   intended. So we consider it justified to "change the behavior" here.
   full discussion in PR: https://github.com/rsyslog/rsyslog/pull/2367
   Thanks to Alexandre Pierret for analyzing the situation and providing the

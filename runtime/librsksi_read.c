@@ -1443,7 +1443,7 @@ done:
  * Read the file header and compare it to the expected value.
  * The file pointer is placed right after the header.
  * @param[in] fp file pointer of tlv file
- * @param[in] excpect expected header (e.g. "LOGSIG10")
+ * @param[in] expect expected header (e.g. "LOGSIG10")
  * @returns 0 if ok, something else otherwise
  */
 int
