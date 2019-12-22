@@ -810,7 +810,7 @@ do_Parameter(uchar **pp, struct template *pTpl)
 #ifdef FEATURE_REGEXP
 	/* APR: variables for regex */
 	rsRetVal iRetLocal;
-	int longitud;
+	int longitude;
 	unsigned char *regex_char;
 	unsigned char *regex_end;
 #endif
@@ -1024,9 +1024,9 @@ do_Parameter(uchar **pp, struct template *pTpl)
 				pTpe->data.field.has_regex = 0;
 			} else {
 				/* We get here ONLY if the regex end was found */
-				longitud = regex_end - p;
+				longitude = regex_end - p;
 				/* Malloc for the regex string */
-				regex_char = (unsigned char *) malloc(longitud + 1);
+				regex_char = (unsigned char *) malloc(longitude + 1);
 				if(regex_char == NULL) {
 					dbgprintf("Could not allocate memory for template parameter!\n");
 					pTpe->data.field.has_regex = 0;
@@ -1034,8 +1034,8 @@ do_Parameter(uchar **pp, struct template *pTpl)
 				}
 
 				/* Get the regex string for compiling later */
-				memcpy(regex_char, p, longitud);
-				regex_char[longitud] = '\0';
+				memcpy(regex_char, p, longitude);
+				regex_char[longitude] = '\0';
 				dbgprintf("debug: regex detected: '%s'\n", regex_char);
 				/* Now i compile the regex */
 				/* Remember that the re is an attribute of the Template entry */
