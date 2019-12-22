@@ -199,28 +199,28 @@ static uchar *getRelpPt(instanceData *pData)
 }
 
 static void
-onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
+onErr(void *pUsr, char *objinfo, char* errmsg, __attribute__((unused)) relpRetVal errcode)
 {
 	wrkrInstanceData_t *pWrkrData = (wrkrInstanceData_t*) pUsr;
 	LogError(0, RS_RET_RELP_AUTH_FAIL, "omrelp[%s:%s]: error '%s', object "
 			" '%s' - action may not work as intended",
-			pWrkrData->pData->target, pWrkrData->pData->port, errmesg, objinfo);
+			pWrkrData->pData->target, pWrkrData->pData->port, errmsg, objinfo);
 }
 
 static void
-onGenericErr(char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
+onGenericErr(char *objinfo, char* errmsg, __attribute__((unused)) relpRetVal errcode)
 {
 	LogError(0, RS_RET_RELP_ERR, "omrelp: librelp error '%s', object "
 			"'%s' - action may not work as intended",
-			errmesg, objinfo);
+			errmsg, objinfo);
 }
 
 static void
-onAuthErr(void *pUsr, char *authinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
+onAuthErr(void *pUsr, char *authinfo, char* errmsg, __attribute__((unused)) relpRetVal errcode)
 {
 	instanceData *pData = ((wrkrInstanceData_t*) pUsr)->pData;
 	LogError(0, RS_RET_RELP_AUTH_FAIL, "omrelp[%s:%s]: authentication error '%s', peer "
-			"is '%s' - DISABLING action", pData->target, pData->port, errmesg, authinfo);
+			"is '%s' - DISABLING action", pData->target, pData->port, errmsg, authinfo);
 	pData->bHadAuthFail = 1;
 }
 

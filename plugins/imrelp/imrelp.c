@@ -201,27 +201,27 @@ imrelp_dbgprintf(const char *fmt, ...)
 PRAGMA_DIAGNOSTIC_POP
 
 static void
-onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
+onErr(void *pUsr, char *objinfo, char* errmsg, __attribute__((unused)) relpRetVal errcode)
 {
 	instanceConf_t *inst = (instanceConf_t*) pUsr;
 	LogError(0, RS_RET_RELP_AUTH_FAIL, "imrelp[%s]: error '%s', object "
 			" '%s' - input may not work as intended",
-			inst->pszBindPort, errmesg, objinfo);
+			inst->pszBindPort, errmsg, objinfo);
 }
 
 static void
-onGenericErr(char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
+onGenericErr(char *objinfo, char* errmsg, __attribute__((unused)) relpRetVal errcode)
 {
 	LogError(0, RS_RET_RELP_ERR, "imrelp: librelp error '%s', object "
-			" '%s' - input may not work as intended", errmesg, objinfo);
+			" '%s' - input may not work as intended", errmsg, objinfo);
 }
 
 static void
-onAuthErr(void *pUsr, char *authinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
+onAuthErr(void *pUsr, char *authinfo, char* errmsg, __attribute__((unused)) relpRetVal errcode)
 {
 	instanceConf_t *inst = (instanceConf_t*) pUsr;
 	LogError(0, RS_RET_RELP_AUTH_FAIL, "imrelp[%s]: authentication error '%s', peer "
-			"is '%s'", inst->pszBindPort, errmesg, authinfo);
+			"is '%s'", inst->pszBindPort, errmsg, authinfo);
 }
 
 /* callback for receiving syslog messages. This function is invoked from the
