@@ -33,7 +33,7 @@ wait_shutdown
 # we still try to kill it in case the test did not connect to it! Note that we
 # do not need an extra wait, as the rsyslog shutdown process should have taken
 # far long enough.
-echo wating on background process
+echo waiting on background process
 kill $BGPROCESS &> /dev/null
 wait $BGPROCESS
 
