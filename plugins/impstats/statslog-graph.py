@@ -41,7 +41,7 @@ aMajorXData = []
 aCounters = None
 
 # Helper variables
-nDataRecordCound = 0
+nDataRecordCount = 0
 nLineCount = 0
 iStartSeconds = 0
 
@@ -195,7 +195,7 @@ else:
 					# print aData[field[nLineCount]]
 				
 				# Increment counter
-				nDataRecordCound += 1
+				nDataRecordCount += 1
 
 				# in case deltas need to be calculated, Store current line into previous line
 				if bChartCalcDelta:
