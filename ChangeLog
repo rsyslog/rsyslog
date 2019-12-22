@@ -52,7 +52,7 @@ Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
   is not a valid IPv4 Address, the source will not be set.
   closes: https://github.com/rsyslog/rsyslog/issues/3991
 - 2019-12-02: imfile bugfix: state file renaming sometimes did not work properly
-  Now checking if file-id changes and reanming - cleaning state file
+  Now checking if file-id changes and renaming - cleaning state file
   accordingly and always checking and cleaning old inode-only style
   state files.
   Thanks to Jiri Vymazal for the patch.
