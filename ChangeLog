@@ -4658,7 +4658,7 @@ Version 8.16.0 [v8-stable] 2016-01-26
   This adds a new "json-elasticsearch" format option which replaces
   those dots by the bang ("!") character. So "discarded.full" becomes
   "discarded!full".
-  This is a workaroud. A method that will provide more control over
+  This is a workaround. A method that will provide more control over
   replacements will be implemented some time in the future. For
   details, see below-quoted issue tracker.
   closes https://github.com/rsyslog/rsyslog/issues/713
