@@ -454,7 +454,7 @@ int main(int argc, char* argv[])
 
 	memset (&opt, 0, sizeof (struct queryopt));
 
-	mongoc_init (); /* Initialisation of mongo-c-driver */
+	mongoc_init (); /* Initialization of mongo-c-driver */
 
 	getoptions (argc, argv, &opt);
 	qu_doc = create_query (&opt); /* create query */

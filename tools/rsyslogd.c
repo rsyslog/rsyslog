@@ -621,7 +621,7 @@ finalize_it:
 		 * messages to stderr. -- rgerhards, 2008-04-02
 		 */
 		fprintf(stderr, "Error during class init for object '%s' - failing...\n", pErrObj);
-		fprintf(stderr, "rsyslogd initializiation failed - global classes could not be initialized.\n"
+		fprintf(stderr, "rsyslogd initialization failed - global classes could not be initialized.\n"
 				"Did you do a \"make install\"?\n"
 				"Suggested action: run rsyslogd with -d -n options to see what exactly "
 				"fails.\n");

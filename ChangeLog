@@ -11881,7 +11881,7 @@ Version 0.9.5 (RGer), 2005-08-01
   It appeared whenever an invalid template name was given. With some
   selector actions, rsyslogd dumped core, with other it "just" had
   a small ressource leak with others all worked well. These anomalies
-  are now fixed. Note that they only appeared during system initaliziation
+  are now fixed. Note that they only appeared during system initialization
   once the system was running, nothing bad happened.
 - improved error reporting for template errors on startup. They are now
   shown on the console and the start-up tty. Formerly, they were only
@@ -12824,7 +12824,7 @@ Version 0.9.5 (RGer), 2005-08-01
   It appeared whenever an invalid template name was given. With some
   selector actions, rsyslogd dumped core, with other it "just" had
   a small ressource leak with others all worked well. These anomalies
-  are now fixed. Note that they only appeared during system initaliziation
+  are now fixed. Note that they only appeared during system initialization
   once the system was running, nothing bad happened.
 - improved error reporting for template errors on startup. They are now
   shown on the console and the start-up tty. Formerly, they were only
@@ -13767,7 +13767,7 @@ Version 0.9.5 (RGer), 2005-08-01
   It appeared whenever an invalid template name was given. With some
   selector actions, rsyslogd dumped core, with other it "just" had
   a small ressource leak with others all worked well. These anomalies
-  are now fixed. Note that they only appeared during system initaliziation
+  are now fixed. Note that they only appeared during system initialization
   once the system was running, nothing bad happened.
 - improved error reporting for template errors on startup. They are now
   shown on the console and the start-up tty. Formerly, they were only

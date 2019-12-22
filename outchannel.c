@@ -47,7 +47,7 @@ struct outchannel* ochConstruct(void)
 	if((pOch = calloc(1, sizeof(struct outchannel))) == NULL)
 		return NULL;
 	
-	/* basic initialisaion is done via calloc() - need to
+	/* basic initialization is done via calloc() - need to
 	 * initialize only values != 0. */
 
 	if(loadConf->och.ochLast == NULL)

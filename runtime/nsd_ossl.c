@@ -139,7 +139,7 @@ void dyn_destroy_function(struct CRYPTO_dynlock_value *l,
 }
 
 /* set up support functions for openssl multi-threading. This must
- * be done at library initialisation. If the function fails,
+ * be done at library initialization. If the function fails,
  * processing can not continue normally. On failure, 0 is
  * returned, on success 1.
  */

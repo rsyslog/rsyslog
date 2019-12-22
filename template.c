@@ -527,7 +527,7 @@ tplConstruct(rsconf_t *conf)
 	if((pTpl = calloc(1, sizeof(struct template))) == NULL)
 		return NULL;
 	
-	/* basic initialisation is done via calloc() - need to
+	/* basic initialization is done via calloc() - need to
 	 * initialize only values != 0. */
 
 	if(conf->templates.last == NULL)	{
