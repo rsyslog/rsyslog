@@ -1,7 +1,7 @@
 /* rsyslog testbench tool to mangle .qi files
  *
  * Copyright (C) 2016 by Rainer Gerhards
- * Released uner ASL 2.0
+ * Released under ASL 2.0
  */
 #include "config.h"
 #include <stdio.h>
