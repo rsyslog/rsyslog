@@ -2769,7 +2769,7 @@ Version 8.32.0 [v8-stable] 2018-01-09
   handled at many places. This has now been uplifted to 4KiB after careful
   review for the largest size supported among all relevant platforms.
 - core bugfix: undefined behavior due to integer overflow
-  when searching strings, we may have an (unsigned) interger overflow
+  when searching strings, we may have an (unsigned) integer overflow
   which can lead to misaddressing.
   Detected by clang ubsan.
 - core bugfix: race on LocalHostIP property during startup
