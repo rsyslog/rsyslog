@@ -9984,7 +9984,7 @@ Version 3.21.10 [BETA] (rgerhards), 2009-02-02
   This has now been corrected. Thanks to varmojfekoj for the patch.
 - some legacy options were not correctly processed.
   Thanks to varmojfekoj for the patch.
-- doc bugfix: v3-compatiblity document had typo in config directive
+- doc bugfix: v3-compatibility document had typo in config directive
   thanks to Andrej for reporting this
 ---------------------------------------------------------------------------
 Version 3.21.9 [BETA] (rgerhards), 2008-12-04
@@ -10162,7 +10162,7 @@ Version 3.20.4 [v3-stable] (rgerhards), 2009-02-09
   longer belongs into it. Thanks to Michael Biebl for pointing this out.
 ---------------------------------------------------------------------------
 Version 3.20.3 [v3-stable] (rgerhards), 2009-01-19
-- doc bugfix: v3-compatiblity document had typo in config directive
+- doc bugfix: v3-compatibility document had typo in config directive
   thanks to Andrej for reporting this
 - fixed a potential segfault condition with $AllowedSender directive
   On HUP, the root pointers were not properly cleaned up. Thanks to
@@ -11582,7 +11582,7 @@ Version 1.13.4 (RGer), 2007-06-18
   textual form (e.g. "syslog.info")
 - added alias "syslogseverity" for "syslogpriority", which is a
   misleading property name that needs to stay for historical
-  reasons (and backward-compatility)
+  reasons (and backward-compatibility)
 - added doc on how to record PRI value in log file
 - enhanced signal handling in klogd, including removal of an unsafe
   call to the logging system during signal handling
@@ -12525,7 +12525,7 @@ Version 1.13.4 (RGer), 2007-06-18
   textual form (e.g. "syslog.info")
 - added alias "syslogseverity" for "syslogpriority", which is a
   misleading property name that needs to stay for historical
-  reasons (and backward-compatility)
+  reasons (and backward-compatibility)
 - added doc on how to record PRI value in log file
 - enhanced signal handling in klogd, including removal of an unsafe
   call to the logging system during signal handling
@@ -13468,7 +13468,7 @@ Version 1.13.4 (RGer), 2007-06-18
   textual form (e.g. "syslog.info")
 - added alias "syslogseverity" for "syslogpriority", which is a
   misleading property name that needs to stay for historical
-  reasons (and backward-compatility)
+  reasons (and backward-compatibility)
 - added doc on how to record PRI value in log file
 - enhanced signal handling in klogd, including removal of an unsafe
   call to the logging system during signal handling
