@@ -1213,7 +1213,7 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 	if((valnode = nvlstFindNameCStr(lst, "config.enabled")) != NULL) {
 		if(es_strbufcmp(valnode->val.d.estr, (unsigned char*) "on", 2)) {
 			dbgprintf("config object disabled by configuration\n");
-			/* flag all params as used to not emit error mssages */
+			/* flag all params as used to not emit error messages */
 			bInError = 1;
 			struct nvlst *val;
 			for(val = lst; val != NULL ; val = val->next) {
