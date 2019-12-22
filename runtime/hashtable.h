@@ -18,7 +18,7 @@ struct hashtable;
  *      k = (struct some_key *)     malloc(sizeof(struct some_key));
  *      v = (struct some_value *)   malloc(sizeof(struct some_value));
  *
- *      (initialise k and v to suitable values)
+ *      (initialize k and v to suitable values)
  *
  *      if (! hashtable_insert(h,k,v) )
  *      {     exit(-1);               }

@@ -933,7 +933,7 @@ Version 8.1903.0 (aka 2019.03) 2019-03-05
   Make the 0MQ frame pointer local to the receive loop and destroy the
   frame as soon as the contents have been copied. This avoids:
   * a memory leak should the receive loop execute more than once
-  * referencing an un-initialised value during cleanup (finalize_it)
+  * referencing an un-initialized value during cleanup (finalize_it)
   Thanks to Mark Gillott for the patch.
 - omclickhouse bugfix: default template unusable
   STDSQL option added to the default template used in output module of clickhouse

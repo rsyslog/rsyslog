@@ -122,7 +122,7 @@ rsrtSetErrLogger(void (*errLogger)(const int, const int, const uchar*))
 }
 
 
-/* globally initialze the runtime system
+/* globally initialize the runtime system
  * NOTE: this is NOT thread safe and must not be called concurrently. If that
  * ever poses a problem, we may use proper mutex calls - not considered needed yet.
  * If ppErrObj is provided, it receives a char pointer to the name of the object that
@@ -189,7 +189,7 @@ rsrtInit(const char **ppErrObj, obj_if_t *pObjIF)
 		}
 #endif
 		if(ppErrObj != NULL) *ppErrObj = "obj";
-		CHKiRet(objClassInit(NULL)); /* *THIS* *MUST* always be the first class initilizer being called! */
+		CHKiRet(objClassInit(NULL)); /* *THIS* *MUST* always be the first class initializer being called! */
 		CHKiRet(objGetObjInterface(pObjIF)); /* this provides the root pointer for all other queries */
 
 		/* initialize core classes. We must be very careful with the order of events. Some
@@ -242,7 +242,7 @@ finalize_it:
 }
 
 
-/* globally de-initialze the runtime system
+/* globally de-initialize the runtime system
  * NOTE: this is NOT thread safe and must not be called concurrently. If that
  * ever poses a problem, we may use proper mutex calls - not considered needed yet.
  * This function must be provided with the caller's obj object pointer. This is
@@ -265,7 +265,7 @@ rsrtExit(void)
 		propClassExit();
 		statsobjClassExit();
 
-		objClassExit(); /* *THIS* *MUST/SHOULD?* always be the first class initilizer being
+		objClassExit(); /* *THIS* *MUST/SHOULD?* always be the first class initializer being
 				called (except debug)! */
 	}
 

@@ -15,7 +15,7 @@
  * sigblkInitKSI or sigblkDestruct (if no more signature blocks are
  * to be emitted, e.g. on file close). sigblkDestruct saves state
  * information (most importantly last block hash) and sigblkConstruct
- * reads (or initilizes if not present) it.
+ * reads (or initializes if not present) it.
  *
  * Copyright 2013-2018 Adiscon GmbH and Guardtime, Inc.
  *

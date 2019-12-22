@@ -111,7 +111,7 @@ batchFree(batch_t * const pBatch) {
 }
 
 
-/* initialiaze a batch "object". The record must already exist,
+/* initialize a batch "object". The record must already exist,
  * we "just" initialize it. The max number of elements must be
  * provided. -- rgerhards, 2010-06-15
  */

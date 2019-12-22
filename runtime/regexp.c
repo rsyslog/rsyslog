@@ -230,7 +230,7 @@ static int _regcomp(regex_t *preg, const char *regex, int cflags) {
 	// Remove previous data if caller forgot to call regfree().
 	remove_uncomp_regexp(preg);
 
-	// Make sure preg itself it correctly initalized.
+	// Make sure preg itself it correctly initialized.
 	ret = regcomp(preg, regex, cflags);
 	if (ret != 0)
 		return ret;
