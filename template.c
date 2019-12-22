@@ -2235,7 +2235,7 @@ void tplDeleteNew(rsconf_t *conf)
 	}
 }
 
-/* Store the pointer to the last hardcoded teplate */
+/* Store the pointer to the last hardcoded template */
 void tplLastStaticInit(rsconf_t *conf, struct template *tpl)
 {
 	conf->templates.lastStatic = tpl;
