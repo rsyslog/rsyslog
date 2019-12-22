@@ -1000,7 +1000,7 @@ formatTimestamp3339(struct syslogTime *ts, char* pBuf)
 }
 
 /**
- * Format a syslogTimestamp to a RFC3164 timestamp sring.
+ * Format a syslogTimestamp to a RFC3164 timestamp string.
  * The caller must provide the timestamp as well as a character
  * buffer that will receive the resulting string. The function
  * returns the size of the timestamp written in bytes (without
