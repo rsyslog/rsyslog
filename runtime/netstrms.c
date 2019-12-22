@@ -1,6 +1,6 @@
 /* netstrms.c
  *
- * Work on this module begung 2008-04-23 by Rainer Gerhards.
+ * Work on this module began 2008-04-23 by Rainer Gerhards.
  *
  * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
  *
