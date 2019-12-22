@@ -273,7 +273,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "template", eCmdHdlrGetWord, 0 },
 	{ "closetimeout", eCmdHdlrPositiveInt, 0 },
 	{ "reopenonhup", eCmdHdlrBinary, 0 },
-	{ "resubmitonfailure", eCmdHdlrBinary, 0 },	/* Resubmit message into kafaj queue on failure */
+	{ "resubmitonfailure", eCmdHdlrBinary, 0 },	/* Resubmit message into kafka queue on failure */
 	{ "keepfailedmessages", eCmdHdlrBinary, 0 },
 	{ "failedmsgfile", eCmdHdlrGetWord, 0 }
 };

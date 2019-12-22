@@ -788,7 +788,7 @@ CODESTARTrunInput
 	}
 	DBGPRINTF("imkafka: terminating upon request of rsyslog core\n");
 
-	/* we need to shutdown kafak worker threads here because this operation can
+	/* we need to shutdown kafka worker threads here because this operation can
 	 * potentially block (e.g. when no kafka broker is available!). If this
 	 * happens in runInput, the rsyslog core can cancel our thread. However,
 	 * in afterRun this is not possible, because the core does not assume it

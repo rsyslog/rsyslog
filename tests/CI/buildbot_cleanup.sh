@@ -24,7 +24,7 @@ do
 	kill -9 $pid || exit 0
 done
 
-# now the same for kafaka
+# now the same for kafka
 for pid in $(ps -eo pid,args|grep '[k]afka' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
 do
 	echo "ERROR: left-over previous instance $pid, killing it"

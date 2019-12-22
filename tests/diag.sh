@@ -1530,7 +1530,7 @@ if [ -z "$ES_DOWNLOAD" ]; then
 fi
 dep_es_cached_file="$dep_cache_dir/$ES_DOWNLOAD"
 
-# kafaka (including Zookeeper)
+# kafka (including Zookeeper)
 dep_kafka_dir_xform_pattern='s#^[^/]\+#kafka#g'
 dep_zk_dir_xform_pattern='s#^[^/]\+#zk#g'
 dep_es_dir_xform_pattern='s#^[^/]\+#es#g'
