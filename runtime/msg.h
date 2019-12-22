@@ -23,7 +23,7 @@
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
  */
-#include "template.h" /* this is a quirk, but these two are too interdependant... */
+#include "template.h" /* this is a quirk, but these two are too interdependent... */
 
 #ifndef	MSG_H_INCLUDED
 #define	MSG_H_INCLUDED 1
