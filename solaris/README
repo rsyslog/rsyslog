@@ -7,7 +7,7 @@ found at the excellent http://www.blastwave.org site.
 PREQUISITES
 It is strongly recommended to use GCC4 with support for
 atomic instructions (if available for the platform). While rsyslog can
-be built without atomic instructin support (and will work well then),
+be built without atomic instruction support (and will work well then),
 it then falls back to POSIX semaphores, which require much more CPU
 time than atomic instructions. Note that even on intel platforms the
 (current, as of 2010-03-25) blastwave gcc4 version targets too-old
