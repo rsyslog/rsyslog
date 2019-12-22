@@ -548,7 +548,7 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 	pData = pWrkrData->pData;
 
 	if(pWrkrData->libnet_handle == NULL) {
-		/* Initialize the libnet library.  Root priviledges are required.
+		/* Initialize the libnet library.  Root privileges are required.
 		 * this initializes a IPv4 socket to use for forging UDP packets.
 		 */
 		pWrkrData->libnet_handle = libnet_init(

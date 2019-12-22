@@ -4431,7 +4431,7 @@ Version 8.18.0 [v8-stable] 2016-04-19
   among others:
   - tests for omjournal added
   - tests for KSI subsystem
-  - tests for priviledge drop statements
+  - tests for privilege drop statements
   - basic test for RELP with TLS
   - some previously disabled tests have been re-enabled
 - dynamic stats subsystem: a couple of smaller changes

@@ -8,7 +8,7 @@
 relp_port=$(./omrelp_dflt_port)
 if [ $relp_port -lt 1024 ]; then
     if [ "$EUID" -ne 0 ]; then
-	echo relp default port $relp_port is priviledged
+	echo relp default port $relp_port is privileged
 	echo need to be root to run this test - skipping
         exit 77
     fi

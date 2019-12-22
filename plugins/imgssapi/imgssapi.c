@@ -705,7 +705,7 @@ ENDfreeCnf
  */
 BEGINrunInput
 CODESTARTrunInput
-	/* This will fail if the priviledges are dropped. Should be
+	/* This will fail if the privileges are dropped. Should be
 	 * moved to the '*activateCnfPrePrivDrop' section eventually.
 	 */
 	actGSSListener(srvPort);
