@@ -231,7 +231,7 @@ finalize_it:
  * us the overhead of the poll.
  * The timeout variable is the timeout to use for poll. During startup,
  * it should be set to 0 (non-blocking) and later to -1 (infinit, blocking).
- * This mimics the (strange) behaviour of the original syslogd.
+ * This mimics the (strange) behavior of the original syslogd.
  * rgerhards, 2010-04-19
  */
 static rsRetVal

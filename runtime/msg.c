@@ -2800,7 +2800,7 @@ finalize_it:
 /* rgerhards 2004-11-09: set HOSTNAME in msg object
  * rgerhards, 2007-06-21:
  * Does not return anything. If an error occurs, the hostname is
- * simply not set. I have changed this behaviour. The only problem
+ * simply not set. I have changed this behavior. The only problem
  * we can run into is memory shortage. If we have such, it is better
  * to loose the hostname than the full message. So we silently ignore
  * that problem and hope that memory will be available the next time

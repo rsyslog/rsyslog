@@ -247,7 +247,7 @@ Scheduled Release 8.1911.0 (aka 2019.11) 2019-11-12
   now inherits the max number of threads from its memory queue
   counterpart.
   NOTE: the new multi-threaded DA disk queue is actually a change of
-  behaviour. We have not guarded it by a new config switch as we
+  behavior. We have not guarded it by a new config switch as we
   assume the new behavior is most often exactly within user
   expectations. In any case, we cannot see any harm from running
   the disk queue on multiple threads.
@@ -621,7 +621,7 @@ Version 8.1905.0 (aka 2019.05) 2019-05-28
   will become corrupted. This commit adds a check during config parsing.
   If duplicate names are detected the config parser errors out and the
   related object is not created.
-  Note: this may look to a change-of-behaviour to some users. However,
+  Note: this may look to a change-of-behavior to some users. However,
   this never worked and it was pure luck that these users did not run
   into big problems (e.g. DA queues were never going to disk at the
   same time). So it is acceptable to error out in this hard error case.
@@ -965,7 +965,7 @@ Version 8.1903.0 (aka 2019.03) 2019-03-05
   This test occasionally failed with left-over spool files. As far as we
   have analyzed, this is due to the use of an invalid shutdown timeout
   (very short) in the second phase of the test. It looks like this is
-  actually a copy&paste error from phase one. Behaviour of rsyslog was
+  actually a copy&paste error from phase one. Behavior of rsyslog was
   correct, but the test itself created a false positive.
   We have corrected the timeout now and also modernized the test
   a bit.
@@ -1463,7 +1463,7 @@ Version 8.38.0 [v8-stable] 2018-09-18
   This enables imkafka to parse the hostname from log message.
   Previously that was not possible. It was most likely a bug, but
   one that users may count on. The new parameter "ParseHostName"
-  (default is off) controls this behaviour. Default is to NOT
+  (default is off) controls this behavior. Default is to NOT
   parse the hostname.
   Thanks to github user snaix for the contribution.
 - im[p]tcp: improve error message on connect failure
@@ -1512,7 +1512,7 @@ Version 8.38.0 [v8-stable] 2018-09-18
   was a regression from 0453b1670fc34c96d31ee7c9a370f0f5ec24744a
   The code was broken roughly 3.5yrs ago, so it looks like the
   issue was little-noticed. This also means that potentially some users
-  may see the bugfix as change of behaviour. If so, just remove
+  may see the bugfix as change of behavior. If so, just remove
   the option.
   closes https://github.com/rsyslog/rsyslog/issues/2813
   closes https://github.com/rsyslog/rsyslog/issues/2468
@@ -1820,7 +1820,7 @@ Version 8.37.0 [v8-stable] 2018-08-07
   closes https://github.com/rsyslog/rsyslog/issues/2855
 - bugfix core: input shutdown timeout not properly applied
   The timeout could be reduced by mutex wait time, which was not the
-  intended behaviour and could lead the the input thread being
+  intended behavior and could lead the the input thread being
   cancelled while it would have been perfectly legal to shut it down
   cleanly.
   Noticed during working on the CI system. May explain some testbench
@@ -1857,7 +1857,7 @@ Version 8.37.0 [v8-stable] 2018-08-07
   for fixing the issue.
 - bugfix omsnmp: invalid traptype was not detected
   this could leave config errors unreported and cause unexpected
-  behaviour
+  behavior
 - bugfix mmkubernetes: default rules use container_name_and_id
   also include rulebase files in dist and fix rule so that dot inside
   pod name is supported.
@@ -2070,7 +2070,7 @@ Version 8.36.0 [v8-stable] 2018-06-26
   As such, the rsyslog team advises against activating the freshStartTail
   option.
   closes https://github.com/rsyslog/rsyslog/issues/2464
-- core: fix undefined behaviour (unsigned computation may lead to value < 0)
+- core: fix undefined behavior (unsigned computation may lead to value < 0)
   This was detected by LLVM UBSAN. On some platforms re-setting the rawmsg
   inside the message object could lead to invalid computation due to the
   fact the the computation was carried out as unsigned and only then
@@ -3276,7 +3276,7 @@ Version 8.30.0 [v8-stable] 2017-10-17
   * when building imjournal, libsystemd-journal >= 234 is now recommended
     This is to support the imjournal enhancement. Note that it is possible
     to build with lower version, but this will degrade imjournal functionality.
-- CHANGE OF BEHAVIOUR: all variables are now case-insensitive by default
+- CHANGE OF BEHAVIOR: all variables are now case-insensitive by default
   Formerly, JSON based variables ($!, $., $/) were case-sensitive.
   Turn old default back on: global(variables.casesensitve="on")
   See ChangeLog entry below for more details.
@@ -3589,7 +3589,7 @@ Version 8.29.0 [v8-stable] 2017-08-08
   closes https://github.com/rsyslog/rsyslog/issues/1663
 - core bugfix: segfault after configuration errors
 - core/queue bugfixes:
-  * Fix behaviour of PersistStateInterval
+  * Fix behavior of PersistStateInterval
     If PersistStateInterval=1, then each log line read should cause the state file
     to be updated, but this was not happening because nRecords was being post-increment.
     Thanks to Anthony Howe for the patch.
@@ -3853,7 +3853,7 @@ Version 8.26.0 [v8-stable] 2017-04-04
 - bugfix: build problem on MacOS (not a supported platform)
   Thanks to FX Coudert for the fix.
 - regression fix: in 8.25, str2num() returned error on empty string
-  past behaviour was to return 0 in this case; past behavior was reinstanciated
+  past behavior was to return 0 in this case; past behavior was reinstanciated
   Thanks to github user jvymazal for the patch.
 - bugfix omsnmp: improper handling of new-style configuration parameters
   Thanks to Radovan Sroka for the patch.
@@ -4230,13 +4230,13 @@ Version 8.22.0 [v8-stable] 2016-10-04
   environment
 ------------------------------------------------------------------------------
 Version 8.21.0 [v8-stable] 2016-08-23
-- CHANGE OF BEHAVIOUR:
+- CHANGE OF BEHAVIOR:
   by default, internal messages are no longer logged via the internal
   bridge to rsyslog but via the syslog() API call [either directly or
   via liblogging). For the typical single-rsyslogd-instance installation this
   is mostly unnoticable (except for some additional latency). If multiple
   instances are run, only the "main" (the one processing system log messages)
-  will see all messages. To return to the old behaviour, do either of those
+  will see all messages. To return to the old behavior, do either of those
   two:
   1) add in rsyslog.conf:
      global(processInternalMessages="on")
@@ -5268,7 +5268,7 @@ Version 8.4.2 [v8-stable] 2014-10-02
   see also: CVE-2014-3683
 - fixed a build problem on some platforms
   Thanks to Olaf for the patch
-- behaviour change: "msg" of messages with invalid PRI set to "rawmsg"
+- behavior change: "msg" of messages with invalid PRI set to "rawmsg"
   When the PRI is invalid, the rest of the header cannot be valid. So
   we move all of it to MSG and do not try to parse it out. Note that
   this is not directly related to the security issue but rather done
@@ -5523,7 +5523,7 @@ This starts a new stable branch based on 8.1.6 plus the following changes:
   This is a regression from an old change (didn't track it down precisely,
   but over a year ago). It used the Forwarding template instead of
   the file template (so we have a full syslog header). This fix corrects
-  it back to previous behaviour, but new scripts that used the wrong
+  it back to previous behavior, but new scripts that used the wrong
   format may now need to have the RSYSLOG_ForwardingFormat template
   explicitely be applied.
   closes: https://github.com/rsyslog/rsyslog/issues/50
@@ -5556,7 +5556,7 @@ Version 8.1.6 [release candidate] 2014-02-20
   See also: https://github.com/rsyslog/rsyslog/issues/27
   Thanks to Alain for the analysis and the patch.
 - ompgsql bugfix: improper handling of auto-backgrounding mode 
-  If rsyslog was set to auto-background itself (default code behaviour, but
+  If rsyslog was set to auto-background itself (default code behavior, but
   many distros now turn it off for good reason), ompgsql could not
   properly connect. This could even lead to a segfault. The core reason
   was that a PG session handle was kept open over a fork, something that
@@ -5579,7 +5579,7 @@ Version 8.1.5 [devel] 2014-01-24
   we have decided to make this the default mode of operation. If not
   desired, it can be turned off via the 'forceSingleInstance="on"'
   action parameter.
-  CHANGE OF BEHAVIOUR: previous versions did always execute only one
+  CHANGE OF BEHAVIOR: previous versions did always execute only one
   instance per action, no matter how many workers were active. If
   your program has special needs, you need to change your configuration.
 - imfile now supports inotify (but must be explicitely turned on)
@@ -5736,7 +5736,7 @@ Version 7.6.7 [v7.6-stable] 2014-10-02
   see also: CVE-2014-3683
 - fixed a build problem on some platforms
   Thanks to Olaf for the patch
-- behaviour change: "msg" of messages with invalid PRI set to "rawmsg"
+- behavior change: "msg" of messages with invalid PRI set to "rawmsg"
   When the PRI is invalid, the rest of the header cannot be valid. So
   we move all of it to MSG and do not try to parse it out. Note that
   this is not directly related to the security issue but rather done
@@ -5810,7 +5810,7 @@ Version 7.6.4 [v7.6-stable] 2014-09-12
   While unlikely, this could cause stability issues even after the
   config phase.
 - bugfix: output modules with parameters with multiple passing modes
-  could caused strange behaviour including aborts
+  could caused strange behavior including aborts
   This was due to the fact that the action module only preserved and
   processed the last set passing mode. Note that this was not a problem
   for the plugins provided by the rsyslog git: none of them uses different
@@ -5843,7 +5843,7 @@ Version 7.6.3 [v7.6-stable] 2014-03-27
   This is a regression from an old change (didn't track it down precisely,
   but over a year ago). It used the Forwarding template instead of
   the file template (so we have a full syslog header). This fix corrects
-  it back to previous behaviour, but new scripts that used the wrong
+  it back to previous behavior, but new scripts that used the wrong
   format may now need to have the RSYSLOG_ForwardingFormat template
   explicitely be applied.
   closes: https://github.com/rsyslog/rsyslog/issues/50
@@ -5920,7 +5920,7 @@ This starts a new stable branch based on 7.5.8 plus the following changes:
   See also: https://github.com/rsyslog/rsyslog/issues/27
   Thanks to Alain for the analysis and the patch.
 - ompgsql bugfix: improper handling of auto-backgrounding mode 
-  If rsyslog was set to auto-background itself (default code behaviour, but
+  If rsyslog was set to auto-background itself (default code behavior, but
   many distros now turn it off for good reason), ompgsql could not
   properly connect. This could even lead to a segfault. The core reason
   was that a PG session handle was kept open over a fork, something that
@@ -6042,7 +6042,7 @@ Version 7.5.5 [devel] 2013-10-16
 - mmanon: removed the check for specific "terminator characters" after 
   last octet. As it turned out, this didn't work in practice as there
   was an enormous set of potential terminator chars -- so removing
-  them was the best thing to do. Note that this may change behaviour of
+  them was the best thing to do. Note that this may change behavior of
   existing installations. Yet, we still consider this an important
   bugfix, that should be applied to the stable branch.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=477
@@ -6100,12 +6100,12 @@ Version 7.5.3 [devel] 2013-09-11
   used. If legacy configuration statements are used, LF escaping is always
   turned off to preserve compatibility.
   NOTE: if input() statements were already used, there is a CHANGE OF
-        BEHAVIOUR: starting with this version, escaping is enabled by
+        BEHAVIOR: starting with this version, escaping is enabled by
 	default. So if you do not want it, you need to add
 	escapeLF="off"
 	to the input statement. Given the trouble LFs cause and the fact
 	that the majority of installations still use legacy config, we
-	considered this behaviour change acceptable and useful.
+	considered this behavior change acceptable and useful.
   see also: http://blog.gerhards.net/2013/09/imfile-multi-line-messages.html
 - add support for global and local variables
 - bugfix: queue file size was not correctly processed
@@ -6198,7 +6198,7 @@ Version 7.4.10  [v7.4-stable] 2014-02-12
   See also: https://github.com/rsyslog/rsyslog/issues/27
   Thanks to Alain for the analysis and the patch.
 - ompgsql bugfix: improper handling of auto-backgrounding mode 
-  If rsyslog was set to auto-background itself (default code behaviour, but
+  If rsyslog was set to auto-background itself (default code behavior, but
   many distros now turn it off for good reason), ompgsql could not
   properly connect. This could even lead to a segfault. The core reason
   was that a PG session handle was kept open over a fork, something that
@@ -6264,7 +6264,7 @@ Version 7.4.6  [v7.4-stable] 2013-10-31
   his analysis.
 - bugfix: imtcp flowControl parameter incorrectly defaulted to "off"
   This could cause message loss on systems under heavy load and was
-  a change-of-behaviour to previous version. This is a regression
+  a change-of-behavior to previous version. This is a regression
   most probably introduced in 5.9.0 (but did not try hard to find the
   exact point of its introduction).
 - now requires libestr 0.1.9 as earlier versions lead to problems with
@@ -6289,7 +6289,7 @@ Version 7.4.5  [v7.4-stable] 2013-10-22
 - mmanon: removed the check for specific "terminator characters" after 
   last octet. As it turned out, this didn't work in practice as there
   was an enormous set of potential terminator chars -- so removing
-  them was the best thing to do. Note that this may change behaviour of
+  them was the best thing to do. Note that this may change behavior of
   existing installations. Yet, we still consider this an important
   bugfix, that should be applied to the stable branch.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=477
@@ -6956,7 +6956,7 @@ Version 7.2.3  [v7-stable] 2012-10-21
   $IncludeConfig /etc/rsyslog.d/*.conf
   and there are no *.conf files in /etc/rsyslog.d (but rsyslog.d exists),
   rsyslogd will emit an error message and terminate. Previous (and expected)
-  behaviour is that an empty file set is no problem. HOWEVER, if the
+  behavior is that an empty file set is no problem. HOWEVER, if the
   directory itself does not exist, this is flagged as an error and will
   load to termination (no startup).
   Unfortunately, this is often the case by default in many distros, so this
@@ -7070,7 +7070,7 @@ Version 7.1.10  [beta] 2012-10-11
 Version 7.1.9  [beta] 2012-10-09
 - bugfix: comments inside objects (e.g. action()) were not properly handled
 - bugfix: in (non)equal comparisons the position of arrays influenced result
-  This behaviour is OK for "contains"-type of comparisons (which have quite
+  This behavior is OK for "contains"-type of comparisons (which have quite
   different semantics), but not for == and <>, which shall be commutative.
   This has been fixed now, so there is no difference any longer if the
   constant string array is the left or right hand operand. We solved this
@@ -7386,7 +7386,7 @@ Version 6.3.10  [BETA] 2012-06-04
   mode to stdout was enabled, debug messages ended up in the first log file
   opened. Currently, stdout logging is completely disabled in forking mode
   (but writing to the debug log file is still possible). This is a change 
-  in behaviour, which is under review. If it causes problems to you,
+  in behavior, which is under review. If it causes problems to you,
   please let us know.
   Thanks to Tomas Heinrich for the patch.
 - bugfix: --enable-smcustbindcdr configure directive did not work
@@ -8153,7 +8153,7 @@ Version 5.8.12  [V5-stable] 2012-06-06
   mode to stdout was enabled, debug messages ended up in the first log file
   opened. Currently, stdout logging is completely disabled in forking mode
   (but writing to the debug log file is still possible). This is a change 
-  in behaviour, which is under review. If it causes problems to you,
+  in behavior, which is under review. If it causes problems to you,
   please let us know.
   Thanks to Tomas Heinrich for the patch.
 - bugfix/tcpflood: sending small test files did not work correctly
@@ -8719,11 +8719,11 @@ Version 5.5.0  [DEVEL] (rgerhards), 2009-11-18
 - doc: improved description of what loadable modules can do
 ---------------------------------------------------------------------------
 Version 5.4.2  [v5-stable] (rgerhards), 2010-03-??
-- bugfix(kind of): output plugin retry behaviour could cause engine to loop
+- bugfix(kind of): output plugin retry behavior could cause engine to loop
   The rsyslog engine did not guard itself against output modules that do
-  not properly convey back the tryResume() behaviour. This then leads to
+  not properly convey back the tryResume() behavior. This then leads to
   what looks like an endless loop. I consider this to be a bug of the 
-  engine not only because it should be hardened against plugin misbehaviour,
+  engine not only because it should be hardened against plugin misbehavior,
   but also because plugins may not be totally able to avoid this situation
   (depending on the type of and processing done by the plugin).
 - bugfix: testbench failed when not executed in UTC+1 timezone
@@ -9834,7 +9834,7 @@ Version 4.1.2  [DEVEL] (rgerhards), 2008-12-04
 - security bugfix: $AllowedSender was not honored, all senders were
   permitted instead (see https://www.rsyslog.com/Article322.phtml)
 - security fix: imudp emitted a message when a non-permitted sender
-  tried to send a message to it. This behaviour is operator-configurable.
+  tried to send a message to it. This behavior is operator-configurable.
   If enabled, a message was emitted each time. That way an attacker could
   effectively fill the disk via this facility. The message is now
   emitted only once in a minute (this currently is a hard-coded limit,
@@ -9991,7 +9991,7 @@ Version 3.21.9 [BETA] (rgerhards), 2008-12-04
 - re-release of 3.21.8 with an additional fix, that could also lead
   to DoS; 3.21.8 has been removed from the official download archives
 - security fix: imudp emitted a message when a non-permitted sender
-  tried to send a message to it. This behaviour is operator-configurable.
+  tried to send a message to it. This behavior is operator-configurable.
   If enabled, a message was emitted each time. That way an attacker could
   effectively fill the disk via this facility. The message is now
   emitted only once in a minute (this currently is a hard-coded limit,
@@ -10173,7 +10173,7 @@ Version 3.20.2 [v3-stable] (rgerhards), 2008-12-04
 - re-release of 3.20.1 with an additional fix, that could also lead
   to DoS; 3.20.1 has been removed from the official download archives
 - security fix: imudp emitted a message when a non-permitted sender
-  tried to send a message to it. This behaviour is operator-configurable.
+  tried to send a message to it. This behavior is operator-configurable.
   If enabled, a message was emitted each time. That way an attacker could
   effectively fill the disk via this facility. The message is now
   emitted only once in a minute (this currently is a hard-coded limit,
@@ -10405,7 +10405,7 @@ Version 3.18.5 (rgerhards), 2008-10-09
   HUP processing.
 - bugfix[minor]: if queue size reached light_delay mark, enqueuing
   could potentially be blocked for a longer period of time, which
-  was not the behaviour desired.
+  was not the behavior desired.
 - doc bugfix: $ActionExecOnlyWhenPreviousIsSuspended was still misspelled
   as $...OnlyIfPrev... in some parts of the documentation. Thanks to 
   Lorenzo M. Catucci for reporting this bug.
@@ -10497,7 +10497,7 @@ Version 3.18.1 (rgerhards), 2008-07-21
   template. However, we consider this scenario to be quite remote and,
   even if it exists, it is not expected that it will actually cause
   problems with log parsers (instead, we assume the new default template
-  behaviour may fix previous problems with log parsers due to the 
+  behavior may fix previous problems with log parsers due to the 
   missing space).
 - bugfix: imklog module was not correctly compiled for GNU/kFreeBSD.
   Thanks to Petr Salinger for the patch
@@ -10825,7 +10825,7 @@ Version 3.12.1 (rgerhards), 2008-03-06
   log with inconsistent timezone information, what messes up the local
   logs (which by default don't even contain time zone information). This
   seems to be consistent with what sysklogd did for the past four years.
-  Alternate behaviour may be desirable if gateway-like processes send
+  Alternate behavior may be desirable if gateway-like processes send
   messages via the local log slot - in this case, it can be enabled
   via the $InputUnixListenSocketIgnoreMsgTimestamp and
   $SystemLogSocketIgnoreMsgTimestamp config directives
@@ -14172,13 +14172,13 @@ helpful.
  *	the init() code.
  *
  * Tue May 28 00:58:45 MET DST 1996:  Martin Schulze
- *	Corrected behaviour of blocking pipes - i.e. the whole system
+ *	Corrected behavior of blocking pipes - i.e. the whole system
  *	hung.  Michael Nonweiler <mrn20@hermes.cam.ac.uk> has sent us
  *	a patch to correct this.  A new logfile type F_PIPE has been
  *	introduced.
  *
  * Mon Feb 3 10:12:15 MET DST 1997:  Martin Schulze
- *	Corrected behaviour of logfiles if the file can't be opened.
+ *	Corrected behavior of logfiles if the file can't be opened.
  *	There was a bug that causes syslogd to try to log into non
  *	existing files which ate cpu power.
  *

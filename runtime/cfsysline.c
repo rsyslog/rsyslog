@@ -990,7 +990,7 @@ rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p)
 		 * reason is that handlers are independent. An error in one
 		 * handler does not necessarily mean that another one will
 		 * fail, too. Later, we might add a config variable to control
-		 * this behaviour (but I am not sure if that is really
+		 * this behavior (but I am not sure if that is really
 		 * necessary). -- rgerhards, 2007-07-31
 		 */
 		pHdlrP = *p;

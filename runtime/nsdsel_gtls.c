@@ -166,7 +166,7 @@ doRetry(nsd_gtls_t *pNsd)
 		default:
 			assert(0); /* this shall not happen! */
 			dbgprintf("ERROR: pNsd->rtryCall invalid in nsdsel_gtls.c:%d\n", __LINE__);
-			gnuRet = 0; /* if it happens, we have at least a defined behaviour... ;) */
+			gnuRet = 0; /* if it happens, we have at least a defined behavior... ;) */
 			break;
 	}
 

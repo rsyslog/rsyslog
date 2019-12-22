@@ -234,7 +234,7 @@ cfsysline(uchar *p)
 
 	/* now check if we have some extra characters left on the line - that
 	 * should not be the case. Whitespace is OK, but everything else should
-	 * trigger a warning (that may be an indication of undesired behaviour).
+	 * trigger a warning (that may be an indication of undesired behavior).
 	 * An exception, of course, are comments (starting with '#').
 	 * rgerhards, 2007-07-04
 	 */

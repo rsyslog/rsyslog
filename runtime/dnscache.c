@@ -288,7 +288,7 @@ resolveAddr(struct sockaddr_storage *addr, dnscache_entry_t *etry)
 				/* OK, we know we have evil. The question now is what to do about
 				 * it. One the one hand, the message might probably be intended
 				 * to harm us. On the other hand, losing the message may also harm us.
-				 * Thus, the behaviour is controlled by the $DropMsgsWithMaliciousDnsPTRRecords
+				 * Thus, the behavior is controlled by the $DropMsgsWithMaliciousDnsPTRRecords
 				 * option. If it tells us we should discard, we do so, else we proceed,
 				 * but log an error message together with it.
 				 * time being, we simply drop the name we obtained and use the IP - that one

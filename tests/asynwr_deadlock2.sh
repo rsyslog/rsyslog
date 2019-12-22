@@ -42,7 +42,7 @@
 # is still being enqueued, but at a slow rate. So if one is patient enough, the load
 # generator will be able to finish. However, rsyslogd will never process the data
 # it received because it is locked in the deadlock caused by #4 above.
-# Note that "$OMFileFlushOnTXEnd on" is not causing this behaviour. We just use it
+# Note that "$OMFileFlushOnTXEnd on" is not causing this behavior. We just use it
 # to (quite) reliably cause the failure condition. The failure described above
 # (in version 4.6.1) was also present when the setting was set to "off", but its
 # occurence was very much less probable - because the perquisites are then much

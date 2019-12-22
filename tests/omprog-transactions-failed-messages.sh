@@ -63,9 +63,9 @@ while IFS= read -r line; do
                 #
                 # TODO: Issue #2420: Deferred messages within a transaction are
                 # not retried by rsyslog.
-                # If that's the expected behaviour, what's then the difference
+                # If that's the expected behavior, what's then the difference
                 # between the RS_RET_OK and the RS_RET_DEFER_COMMIT return codes?
-                # If that's not the expected behaviour, the following lines must
+                # If that's not the expected behavior, the following lines must
                 # be removed when the bug is solved.
                 #
                 # (START OF CODE THAT WILL POSSIBLY NEED TO BE REMOVED)

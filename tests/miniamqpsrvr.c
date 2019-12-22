@@ -190,7 +190,7 @@ errout(const char *reason, int server)
 static ATTR_NORETURN void
 usage(void)
 {
-	fprintf(stderr, "usage: minirmqsrvr -f outfile [-b behaviour] "
+	fprintf(stderr, "usage: minirmqsrvr -f outfile [-b behavior] "
 	        "[-t keep_alive_max] [-w delay_after_fail] [-d]\n");
 	exit (1);
 }
@@ -295,14 +295,14 @@ amqp_srvr(int port, int srvr, int fds, int piperead, int pipewrite)
 	uint64_t body_ui64 = 0;
 	uint32_t props_header_size;
 	uint16_t props_flags;
-	int my_behaviour;
+	int my_behavior;
 	struct timeval tv;
 	fd_set rfds;
 	int nfds = ((piperead > fds)? piperead : fds) + 1;
 
 	int fdc;
 
-	my_behaviour = behaviors & 0x000F;
+	my_behavior = behaviors & 0x000F;
 	behaviors = behaviors >> 4; /* for next server */;
 
 	if(listen(fds, 0) != 0) errout("listen", port);
@@ -324,9 +324,9 @@ amqp_srvr(int port, int srvr, int fds, int piperead, int pipewrite)
 		char c;
 		int l = read(piperead, &c, 1);
 		if (l == 1) {
-			my_behaviour = behaviors & 0x000F;
-			if (my_behaviour != 0) {
-				DBGPRINTF1("Server AMQP %d on port %d switch behaviour", srvr, port);
+			my_behavior = behaviors & 0x000F;
+			if (my_behavior != 0) {
+				DBGPRINTF1("Server AMQP %d on port %d switch behavior", srvr, port);
 			} else {
 				DBGPRINTF1("Server AMQP %d on port %d leaving", srvr, port);
 				if (fpout && fpout != stdout) { fclose(fpout); fpout = NULL; }
@@ -376,7 +376,7 @@ amqp_srvr(int port, int srvr, int fds, int piperead, int pipewrite)
 
 		case AMQP_STARTING: /* starting handshake */
 
-			DBGPRINTF1("Server AMQP %d on port %d type %d connected\n", srvr, port, my_behaviour);
+			DBGPRINTF1("Server AMQP %d on port %d type %d connected\n", srvr, port, my_behavior);
 			DBGPRINTF2("Server %d connection.start\n", srvr);
 			nSent = amqp_write(fdc, connection_start, sizeof(connection_start), frame.ch);
 			break;
@@ -411,7 +411,7 @@ amqp_srvr(int port, int srvr, int fds, int piperead, int pipewrite)
 				nSent = amqp_write(fdc, channel_open_ok,
 				        sizeof(channel_open_ok), frame.ch);
 				DBGPRINTF2("Server %d channel.open\n", srvr);
-				if (my_behaviour == AMQP_BEHAVIOR_NOEXCH) {
+				if (my_behavior == AMQP_BEHAVIOR_NOEXCH) {
 					close(fdc);
 					DBGPRINTF1("Server AMQP %d on port %d stopped\n", srvr, port);
 					fdc = 0;
@@ -421,7 +421,7 @@ amqp_srvr(int port, int srvr, int fds, int piperead, int pipewrite)
 
 			case AMQP_EXCHANGE_DECLARE_METHOD:
 
-				if (my_behaviour == AMQP_BEHAVIOR_BADEXCH) {
+				if (my_behavior == AMQP_BEHAVIOR_BADEXCH) {
 					nSent = amqp_write(fdc, channel_close_ok_on_badexch,
 					        sizeof(channel_close_ok_on_badexch), frame.ch);
 				}else{
@@ -429,7 +429,7 @@ amqp_srvr(int port, int srvr, int fds, int piperead, int pipewrite)
 					        sizeof(exchange_declare_ok), frame.ch);
 				}
 				DBGPRINTF2("Server %d exchange.declare\n", srvr);
-				if (my_behaviour == AMQP_BEHAVIOR_DECEXCH) {
+				if (my_behavior == AMQP_BEHAVIOR_DECEXCH) {
 					close(fdc);
 					DBGPRINTF1("Server AMQP %d on port %d stopped\n", srvr, port);
 					fdc = 0;

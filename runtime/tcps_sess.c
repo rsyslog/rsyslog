@@ -278,7 +278,7 @@ finalize_it:
  * beginning of a new frame without any data received from it. If
  * not, there is some kind of a framing error. I think I remember that
  * some legacy syslog/TCP implementations have non-LF terminated
- * messages at the end of the stream. For now, we allow this behaviour.
+ * messages at the end of the stream. For now, we allow this behavior.
  * Later, it should probably become a configuration option.
  * rgerhards, 2006-12-07
  */

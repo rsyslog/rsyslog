@@ -301,7 +301,7 @@ int execProg(uchar *program, int bWait, uchar *arg)
 				/* we do not use logerror(), because
 				* that might bring us into an endless
 				* loop. At some time, we may
-				* reconsider this behaviour.
+				* reconsider this behavior.
 				*/
 				dbgprintf("could not wait on child after executing '%s'",
 						(char*)program);
