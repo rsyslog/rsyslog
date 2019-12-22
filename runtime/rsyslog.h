@@ -742,7 +742,7 @@ struct actWrkrIParams {
  * because it needs an initialized runtime system (and may at some point in time
  * even be loaded itself). So this is a no-go. What we do is use a single global
  * variable which may be provided with a pointer by the caller. This variable
- * resides in rsyslog.c, the main runtime file. We have not seen any real valule
+ * resides in rsyslog.c, the main runtime file. We have not seen any real value
  * in providing object access functions. If you don't like that, feel free to
  * add them. -- rgerhards, 2008-04-17
  */
