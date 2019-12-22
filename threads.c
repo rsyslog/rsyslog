@@ -250,7 +250,7 @@ thrdStarter(void *const arg)
 	}
 
 	/* signal master control that we exit (we do the mutex lock mostly to
-	 * keep the thread debugger happer, it would not really be necessary with
+	 * keep the thread debugger happy, it would not really be necessary with
 	 * the logic we employ...)
 	 */
 	d_pthread_mutex_lock(&pThis->mutThrd);
