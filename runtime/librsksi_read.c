@@ -1238,7 +1238,7 @@ done:
  * If a caller intends to verify a log file based on the parameters,
  * he must re-read the file from the beginning (we could keep things
  * in memory, but this is impractical for large blocks). In order
- * to facitate this, the function permits to rewind to the original
+ * to facilitate this, the function permits to rewind to the original
  * read location when it is done.
  *
  * @param[in] fp file pointer of tlv file
@@ -1318,7 +1318,7 @@ done:
  * If a caller intends to verify a log file based on the parameters,
  * he must re-read the file from the beginning (we could keep things
  * in memory, but this is impractical for large blocks). In order
- * to facitate this, the function permits to rewind to the original
+ * to facilitate this, the function permits to rewind to the original
  * read location when it is done.
  *
  * @param[in] fp file pointer of tlv file
