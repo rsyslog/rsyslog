@@ -1759,7 +1759,7 @@ Version 8.37.0 [v8-stable] 2018-08-07
   slight improvement for easy interactive use
 - enable better testing via "make distcheck"
   Also a couple of changes to testbench worth mentioning:
-  * use cp -f to ensure files can be overwirtten in VBUILD
+  * use cp -f to ensure files can be overwritten in VBUILD
   * fix issue of missing include test file in EXTRA_DIST
   * new supressions
   * testbench: try to use local system dependency cache
