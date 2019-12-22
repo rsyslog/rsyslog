@@ -1159,7 +1159,7 @@ do_cleanup() {
 # our $1 is the to-be-used exit code. if $2 is "stacktrace", call gdb.
 #
 # NOTE: if a function test_error_exit_handler is defined, error_exit will
-#       call it immeditely before termination. This may be used to cleanup
+#       call it immediately before termination. This may be used to cleanup
 #       some things or emit additional diagnostic information.
 error_exit() {
 	if [ $1 -eq $TB_ERR_TIMEOUT ]; then

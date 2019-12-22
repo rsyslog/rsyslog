@@ -170,7 +170,7 @@ finalize_it:
  * If the string is different (or the pointer NULL), the current property
  * is destructed and a new one created. This can be used to get a specific
  * name in those cases where there is a good chance that the property
- * immediatly previously processed already contained the value we need - in
+ * immediately previously processed already contained the value we need - in
  * which case we save us all the creation overhead by just reusing the already
  * existing property).
  * rgerhards, 2009-07-01

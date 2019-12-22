@@ -359,7 +359,7 @@ CODESTARTparse
 			bufParseTAG[i++] = '-';
 		}
 
-		/* no TAG can only be detected if the message immediatly ends, in which case an empty TAG
+		/* no TAG can only be detected if the message immediately ends, in which case an empty TAG
 		 * is considered OK. So we do not need to check for empty TAG. -- rgerhards, 2009-06-23
 		 */
 		bufParseTAG[i] = '\0';	/* terminate string */
