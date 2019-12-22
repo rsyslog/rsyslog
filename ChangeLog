@@ -10606,7 +10606,7 @@ Version 3.16.0 (rgerhards), 2008-04-24
   some trouble with extensively long hostnames.
 - applied patch from Tiziano Müller to remove some compiler warnings
 - added gssapi overview/howto thanks to Peter Vrabec
-- changed some files to grant LGPLv3 extended persmissions on top of GPLv3
+- changed some files to grant LGPLv3 extended permissions on top of GPLv3
   this also is the first sign of something that will evolve into a
   well-defined "rsyslog runtime library"
 ---------------------------------------------------------------------------
