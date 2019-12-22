@@ -346,7 +346,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		CHKmalloc(pData->pszTagName = malloc(lenTag + 2));
 		memcpy(pData->pszTagName, cs.pszTagName, lenTag);
 		memcpy(pData->pszTagName+lenTag, ":", 2);
-		/* tag ID for comparisions */
+		/* tag ID for comparisons */
 		CHKmalloc(pData->pszTagID = malloc(lenTag + 2));
 		memcpy(pData->pszTagID, cs.pszTagName, lenTag);
 		memcpy(pData->pszTagID+lenTag, "/", 2);

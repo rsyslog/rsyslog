@@ -2777,7 +2777,7 @@ evalVar(struct cnfvar *__restrict__ const var, void *__restrict__ const usrptr,
 
 }
 
-/* perform a string comparision operation against a while array. Semantic is
+/* perform a string comparison operation against a while array. Semantic is
  * that one one comparison is true, the whole construct is true.
  * TODO: we can obviously optimize this process. One idea is to
  * compile a regex, which should work faster than serial comparison.

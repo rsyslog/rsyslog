@@ -6061,7 +6061,7 @@ Version 7.5.5 [devel] 2013-10-16
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=484
   Thanks to micah-at-riseup.net for reporting this bug
 - bugfix: memory leak in mmnormalize
-- bugfix: array-based ==/!= comparisions lead to invalid results
+- bugfix: array-based ==/!= comparisons lead to invalid results
   This was a regression introduced in 7.3.5 bei the PRI optimizer
 ---------------------------------------------------------------------------
 Version 7.5.4 [devel] 2013-10-07
@@ -6327,7 +6327,7 @@ Version 7.4.5  [v7.4-stable] 2013-10-22
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=484
   Thanks to micah-at-riseup.net for reporting this bug
 - bugfix: memory leak in mmnormalize
-- bugfix: array-based ==/!= comparisions lead to invalid results
+- bugfix: array-based ==/!= comparisons lead to invalid results
   This was a regression introduced in 7.3.5 bei the PRI optimizer
 - bugfix: omprog blocked signals to executed programs
   The made it impossible to send signals to programs executed via
