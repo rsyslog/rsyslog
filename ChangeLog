@@ -26,7 +26,7 @@ Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
   under some circumstances (not entirely clear right now), memory
   was freed but later re-used as state-tracking structures were not
   properly maintained. Github issue mentioned below has full details.
-  Thanks to github user snaix for analysing this issue and providing
+  Thanks to github user snaix for analyzing this issue and providing
   a patch. I am committing as myself as snaix did not disclose his or
   her identity.
   closes https://github.com/rsyslog/rsyslog/issues/3019
@@ -7774,7 +7774,7 @@ Version 6.1.4  [DEVEL] (rgerhards), 2011-02-18
   and the work directory is NOT set in this case
 - bugfix: pmsnare causded abort under some conditions
 - bugfix: abort if imfile reads file line of more than 64KiB
-  Thanks to Peter Eisentraut for reporting and analysing this problem.
+  Thanks to Peter Eisentraut for reporting and analyzing this problem.
   bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=221
 - bugfix: queue engine did not properly slow down inputs in FULL_DELAY mode
   when in disk-assisted mode. This especially affected imfile, which
@@ -8444,7 +8444,7 @@ Version 5.7.4  [V5-BETA] (rgerhards), 2011-02-17
   and the work directory is NOT set in this case
 - bugfix: pmsnare causded abort under some conditions
 - bugfix: abort if imfile reads file line of more than 64KiB
-  Thanks to Peter Eisentraut for reporting and analysing this problem.
+  Thanks to Peter Eisentraut for reporting and analyzing this problem.
   bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=221
 - bugfix: queue engine did not properly slow down inputs in FULL_DELAY mode
   when in disk-assisted mode. This especially affected imfile, which
@@ -9238,7 +9238,7 @@ Version 4.6.6  [v4-stable] (rgerhards), 2011-06-24
   this problem can not experienced on Fedora 64 bit OS (which has
   64 bit long's!)
 - bugfix: abort if imfile reads file line of more than 64KiB
-  Thanks to Peter Eisentraut for reporting and analysing this problem.
+  Thanks to Peter Eisentraut for reporting and analyzing this problem.
   bug tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=221
 - bugfix: omlibdbi did not use password from rsyslog.con
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=203
