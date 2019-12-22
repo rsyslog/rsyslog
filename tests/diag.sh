@@ -1214,7 +1214,7 @@ error_exit() {
 		RSYSLOG_DEBUG=$RSYSLOG_DEBUG_SAVE
 		rm IN_AUTO_DEBUG
 	fi
-	# output listening ports as a temporay debug measure (2018-09-08 rgerhards), now disables, but not yet removed (2018-10-22)
+	# output listening ports as a temporary debug measure (2018-09-08 rgerhards), now disables, but not yet removed (2018-10-22)
 	#if [ $(uname) == "Linux" ]; then
 	#	netstat -tlp
 	#else
