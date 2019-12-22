@@ -4608,7 +4608,7 @@ Version 8.17.0 [v8-stable] 2016-03-08
   see also: https://github.com/rsyslog/rsyslog/issues/262
 - bugfix: potential deadlock with heavy variable access
   When making havy use of global, local and message variables, a deadlock
-  could occur. While it is extremly unlikely to happen, we have at least
+  could occur. While it is extremely unlikely to happen, we have at least
   seen one incarnation of this problem in practice.
 - bugfix ommysql: on some platforms, serverport parameter had no effect
   This was caused by an invalid code sequence which's outcome depends on
@@ -4781,7 +4781,7 @@ Version 8.15.0 [v8-stable] 2015-12-15
 - bugfix: solve potential race in creation of additional action workers
   Under extreme circumstances, this could lead to segfault. Note that we
   detected this problem thanks to ASAN address sanitzier in combination
-  with a very exterme testbench test. We do not think that this issue
+  with a very extreme testbench test. We do not think that this issue
   was ever reported in practice.
 - bugfix: potential memory leak in config parsing
   Thanks to github user linmujia for the patch
