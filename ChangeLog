@@ -10949,7 +10949,7 @@ Version 3.11.1 (rgerhards), 2008-02-12
   Thanks to Anders Blomdell fro bringing this to our attention
 - somewhat improved performance of string buffers
 - fixed bug that caused invalid treatment of tabs (HT) in rsyslog.conf
-- bugfix: setting for $EscapeCopntrolCharactersOnReceive was not 
+- bugfix: setting for $EscapeControlCharactersOnReceive was not 
   properly initialized
 - clarified usage of space-cc property replacer option
 - improved abort diagnostic handler
@@ -11114,7 +11114,7 @@ Version 2.0.4 STABLE (rgerhards), 2008-03-27
   quarter-hour logfile rotation
 ---------------------------------------------------------------------------
 Version 2.0.3 STABLE (rgerhards), 2008-03-12
-- bugfix: setting for $EscapeCopntrolCharactersOnReceive was not 
+- bugfix: setting for $EscapeControlCharactersOnReceive was not 
   properly initialized
 - bugfix: resolved potential segfault condition on HUP (extremely
   unlikely to happen in practice), for details see tracker:
@@ -11969,7 +11969,7 @@ Version 3.11.1 (rgerhards), 2008-02-12
   Thanks to Anders Blomdell fro bringing this to our attention
 - somewhat improved performance of string buffers
 - fixed bug that caused invalid treatment of tabs (HT) in rsyslog.conf
-- bugfix: setting for $EscapeCopntrolCharactersOnReceive was not 
+- bugfix: setting for $EscapeControlCharactersOnReceive was not 
   properly initialized
 - clarified usage of space-cc property replacer option
 - improved abort diagnostic handler
@@ -12912,7 +12912,7 @@ Version 3.11.1 (rgerhards), 2008-02-12
   Thanks to Anders Blomdell fro bringing this to our attention
 - somewhat improved performance of string buffers
 - fixed bug that caused invalid treatment of tabs (HT) in rsyslog.conf
-- bugfix: setting for $EscapeCopntrolCharactersOnReceive was not 
+- bugfix: setting for $EscapeControlCharactersOnReceive was not 
   properly initialized
 - clarified usage of space-cc property replacer option
 - improved abort diagnostic handler
