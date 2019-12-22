@@ -1138,7 +1138,7 @@ multiSubmitFlush(multi_submit_t *pMultiSub)
 /* some support for command line option parsing. Any non-trivial options must be
  * buffered until the complete command line has been parsed. This is necessary to
  * prevent dependencies between the options. That, in turn, means we need to have
- * something that is capable of buffering options and there values. The follwing
+ * something that is capable of buffering options and there values. The following
  * functions handle that.
  * rgerhards, 2008-04-04
  */
