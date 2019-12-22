@@ -3743,7 +3743,7 @@ Version 8.27.0 [v8-stable] 2017-05-16
   enough to be a major annoyance.
 - imfile: in inotify mode, add error message if configured file cannot
   be found
-- imfile: add parameter "fileNotFoundError" to optinally disable
+- imfile: add parameter "fileNotFoundError" to optionally disable
   "file not found" error messages
 - core: replaced gethostbyname() with getaddrinfo() call
   Gethostbyname() is generally considered obsolete, is not reentrant and
