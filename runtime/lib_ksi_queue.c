@@ -104,7 +104,7 @@ void ProtectedQueue_free(ProtectedQueue* this) {
 	free(this);
 }
 
-/// Signal stop. All threads waiting in FetchItme will be returned false from FetchItem
+/// Signal stop. All threads waiting in FetchItem will be returned false from FetchItem
 
 void ProtectedQueue_stop(ProtectedQueue* this) {
 	this->bStop = true;
