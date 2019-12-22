@@ -1206,7 +1206,7 @@ hdlr_sigttin_ou(void)
 {
 	/* this is just a dummy to care for our sigttin input
 	 * module cancel interface and sigttou internal message
-	 * notificaton/mainloop wakeup mechanism. The important
+	 * notification/mainloop wakeup mechanism. The important
 	 * point is that it actually does *NOTHING*.
 	 */
 }
