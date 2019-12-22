@@ -1409,7 +1409,7 @@ finalize_it:
 	RETiRet;
 }
 
-/* If a transcation failed, we write the error file (if configured).
+/* If a transaction failed, we write the error file (if configured).
  */
 static void ATTR_NONNULL()
 actionWriteErrorFile(action_t *__restrict__ const pThis, const rsRetVal ret,
