@@ -4523,7 +4523,7 @@ Version 8.17.0 [v8-stable] 2016-03-08
   Thanks to Ken Giusti for this module
 - new set of UTC-based $now family of variables ($now-utc, $year-utc, ...)
 - simplified locking when accessing message and local variables
-  this simlifies the code and slightly increases performance if such
+  this simplifies the code and slightly increases performance if such
   variables are heavily accessed.
 - new global parameter "debug.unloadModules"
   This permits to disable unloading of modules, e.g.  to make valgrind
