@@ -3771,7 +3771,7 @@ Version 8.27.0 [v8-stable] 2017-05-16
 - bugfix core: rate-limit internal messages when going to external log system
   Rate-limiting was only applied to messages processed internally.
   While the external logging system probably also applies rate-limiting,
-  it would be preferrable that rsyslog applies the same policies on
+  it would be preferable that rsyslog applies the same policies on
   internal messages, no matter where they go. This is now the case.
 - bugfix core: when obtaining local hostname, a NULL pointer could be
   accessed. This depends on many factors, among them that no local host
