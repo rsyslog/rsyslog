@@ -270,7 +270,7 @@ finalize_it:
  * write descriptors. This seems not justified, given the expected
  * short life span of this code (and the unlikeliness of this event).
  * rgerhards 2005-07-06
- * This function is now expected to stay. Libloging won't be used for
+ * This function is now expected to stay. Liblogging won't be used for
  * that purpose. I have added the param "len", because it is known by the
  * caller and so saves us some time. Also, it MUST be given because there
  * may be NULs inside msg so that we can not rely on strlen(). Please note
