@@ -494,7 +494,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	/* reserved for pre-v6.5 */
 	RS_RET_DUP_PARAM = -2220, /**< config parameter is given more than once */
 	RS_RET_MODULE_ALREADY_IN_CONF = -2221, /**< module already in current configuration */
-	RS_RET_PARAM_NOT_PERMITTED = -2222, /**< legacy parameter no longer permitted (usally already set by v2) */
+	RS_RET_PARAM_NOT_PERMITTED = -2222, /**< legacy parameter no longer permitted (usually already set by v2) */
 	RS_RET_NO_JSON_PASSING = -2223, /**< rsyslog core does not support JSON-passing plugin API */
 	RS_RET_MOD_NO_INPUT_STMT = -2224, /**< (input) module does not support input() statement */
 	RS_RET_NO_CEE_MSG = -2225, /**< the message being processed is NOT CEE-enhanced */

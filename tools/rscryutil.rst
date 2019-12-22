@@ -175,7 +175,7 @@ Specifying keys directly on the command line (*--key* option) is very
 insecure and should
 not be done, except for testing purposes with test keys. Even then it is
 recommended to use keyfiles, which are also easy to handle during testing.
-Keep in mind that command history is usally be kept by bash and can also
+Keep in mind that command history is usually be kept by bash and can also
 easily be monitored.
 
 Local keyfiles are also a security risk. At a minimum, they should be
