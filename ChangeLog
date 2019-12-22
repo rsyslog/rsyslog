@@ -2602,7 +2602,7 @@ Version 8.32.0 [v8-stable] 2018-01-09
     * add action queue valgrind test
   Thanks to Dan Molik for contributing this great enhancement!
 - build system: removed --enable-rtinst configure option
-  This was a historic debugging option which has been superseeded by
+  This was a historic debugging option which has been superseded by
   newer tools like valgrind, helgrind, ASAN, TSAN, etc...
 - pmrfc3164: support for headerless messages
   pmrfc3164 now detects if the first non-SP, non-HT character is either
@@ -7594,7 +7594,7 @@ Version 6.2.2  [v6-stable], 2012-06-13
 ---------------------------------------------------------------------------
 Version 6.2.1  [v6-stable], 2012-05-10
 - change plugin config interface to be compatible with pre-v6.2 system
-  The functionality was already removed (because it is superseeded by the
+  The functionality was already removed (because it is superseded by the
   v6.3+ config language), but code was still present. I have now removed
   those parts that affect interface. Full removal will happen in v6.3, in
   order to limit potential regressions. However, it was considered useful
