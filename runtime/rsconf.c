@@ -901,7 +901,7 @@ static rsRetVal setActionResumeInterval(void __attribute__((unused)) *pVal, int 
 }
 
 
-/* Switch the default ruleset (that, what servcies bind to if nothing specific
+/* Switch the default ruleset (that, what services bind to if nothing specific
  * is specified).
  * rgerhards, 2009-06-12
  */
