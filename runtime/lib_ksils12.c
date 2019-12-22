@@ -664,7 +664,7 @@ ksiOpenSigFile(ksifile ksi) {
 
 	/* we now need to obtain the last previous hash, so that
 	 * we can continue the hash chain. We do not check for error
-	 * as a state file error can be recovered by graceful degredation.
+	 * as a state file error can be recovered by graceful degradation.
 	 */
 	ksiReadStateFile(ksi);
 
