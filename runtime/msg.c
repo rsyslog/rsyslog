@@ -4909,7 +4909,7 @@ msgAddJSON(smsg_t * const pM, uchar *name, struct json_object *json, int force_r
 	CHKiRet(getJSONRootAndMutexByVarChar(pM, name[0], &jroot, &mut));
 	pthread_mutex_lock(mut);
 
-	if(name[0] == '/') { /* globl var special handling */
+	if(name[0] == '/') { /* global var special handling */
 		if (sharedReference) {
 			given = json;
 			json = jsonDeepCopy(json);

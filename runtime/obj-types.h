@@ -89,7 +89,7 @@ struct obj_s {	/* the dummy struct that each derived class can be casted to */
 };
 
 
-/* macros which must be gloablly-visible (because they are used during definition of
+/* macros which must be globally-visible (because they are used during definition of
  * other objects.
  */
 #ifndef NDEBUG /* this means if debug... */
