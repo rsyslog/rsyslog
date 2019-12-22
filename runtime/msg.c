@@ -4216,7 +4216,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 		/* now do control character dropping/escaping/replacement
 		 * Only one of these can be used. If multiple options are given, the
 		 * result is random (though currently there obviously is an order of
-		 * preferrence, see code below. But this is NOT guaranteed.
+		 * preference, see code below. But this is NOT guaranteed.
 		 * RGerhards, 2006-11-17
 		 * We must copy the strings if we modify them, because they may either
 		 * point to static memory or may point into the message object, in which
