@@ -1249,7 +1249,7 @@ SubmitMsg(docker_cont_logs_inst_t *pInst, docker_cont_logs_buf_t *pBufData, cons
  *
  * Callback function for CURLOPT_WRITEFUNCTION, gets container logs
  *
- * The main container log stream handler. This function is registerred with curl to
+ * The main container log stream handler. This function is registered with curl to
  * as callback to handle container log streaming. It follows the docker stream protocol
  * as described in the docker container logs api. As per docker's api documentation,
  * Docker Stream format:
