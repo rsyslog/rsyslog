@@ -1,7 +1,7 @@
 /* The systemd journal import module
  *
  * To test under Linux:
- * emmit log message into systemd journal
+ * emit log message into systemd journal
  *
  * Copyright (C) 2008-2019 Adiscon GmbH
  *
