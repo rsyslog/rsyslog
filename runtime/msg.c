@@ -4938,7 +4938,7 @@ msgAddJSON(smsg_t * const pM, uchar *name, struct json_object *json, int force_r
 		if(jsonVarExtract(parent, (char*)leaf, &leafnode) == FALSE)
 			leafnode = NULL;
 		/* json-c code indicates we can simply replace a
-		 * json type. Unfortunaltely, this is not documented
+		 * json type. Unfortunately, this is not documented
 		 * as part of the interface spec. We still use it,
 		 * because it speeds up processing. If it does not work
 		 * at some point, use

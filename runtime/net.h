@@ -120,7 +120,7 @@ struct permittedPeerWildcard_s {
 };
 
 /* for fingerprints and hostnames, we need to have a temporary linked list of
- * permitted values. Unforutnately, we must also duplicate this in the netstream
+ * permitted values. Unfortunately, we must also duplicate this in the netstream
  * drivers. However, this is the best interim solution (with the least effort).
  * A clean implementation requires that we have more capable variables and the
  * full-fledged scripting engine available. So we have opted to do the interim

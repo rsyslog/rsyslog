@@ -2525,7 +2525,7 @@ Version 8.33.0 [v8-stable] 2018-02-20
   e.g. for ElasticSearch consumption (or any other REST API)
 - omstdout: support for new-style configuration parameters added
 - core: set TZ on startup if not already set
-  In theory, TZ should be set by the OS. Unfortuantely, this seems
+  In theory, TZ should be set by the OS. Unfortunately, this seems
   to be not the case any longer on many Linux distros. We now check
   it and set it appropriate if not already given.
   Thanks to github user JPvRiel for providing an excellent explanation
