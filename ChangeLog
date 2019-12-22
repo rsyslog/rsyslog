@@ -7224,7 +7224,7 @@ Version 6.5.1  [beta] 2012-10-11
 - added tool "logctl" to handle lumberjack logs in MongoDB
 - imfile ported to new v6 config interface
 - imfile now supports config parameter for maximum number of submits
-  which is a fine-tuning parameter in regard to input baching
+  which is a fine-tuning parameter in regard to input batching
 - added pure JSON output plugin parameter passing mode
 - ommongodb now supports templates
 - bugfix: imtcp could abort on exit due to invalid free()
