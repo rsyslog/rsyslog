@@ -7,7 +7,7 @@
 # happen in our test. So the DA worker pool thread is, depending on
 # timing, started and shut down multiple times. This is not a problem
 # indication!
-# The pstats disply is for manual review - it helps to see how many
+# The pstats display is for manual review - it helps to see how many
 # messages actually went to the DA queue.
 # Copyright (C) 2019-10-28 by Rainer Gerhards
 # This file is part of the rsyslog project, released under ASL 2.0
