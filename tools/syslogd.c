@@ -21,7 +21,7 @@
  * it nowadays has almost nothing left in common with it. Almost all
  * parts of the code have been rewritten.
  *
- * This Project was intiated and is maintained by
+ * This Project was initiated and is maintained by
  * Rainer Gerhards <rgerhards@hq.adiscon.com>.
  *
  * rsyslog - An Enhanced syslogd Replacement.
