@@ -5121,7 +5121,7 @@ Version 8.7.0 [v8-stable] 2015-01-13
 - bugfix: (small) memory leak in omfile's outchannel code
   Thanks to Koral Ilgun for reporting this issue.
 - bugfix: imuxsock did not deactivate some code not supported by platform
-  Among potential other problemns, this caused build failure under Solaris.
+  Among potential other problems, this caused build failure under Solaris.
   Note that this build problem just made a broader problem appear that so
   far always existed but was not visible.
   closes https://github.com/rsyslog/rsyslog/issues/185
