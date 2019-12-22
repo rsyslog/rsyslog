@@ -2551,7 +2551,7 @@ Version 8.33.0 [v8-stable] 2018-02-20
 - core bugfix: small memory leak in external command parser
   This parser is used whenever a module (e.g. omprog) needs to process
   command lines. On each action definitions for actions that use the
-  parser a small amount of memory was leakd. It is an uncritical leak
+  parser a small amount of memory was leaked. It is an uncritical leak
   as it only occurs during config parsing. So it leaks a couple of
   KiB during startup but does not grow during actual message processing.
   This is a regression in 8.32.0.
