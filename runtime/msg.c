@@ -1720,7 +1720,7 @@ getRawMsgAfterPRI(smsg_t * const pM, uchar **pBuf, int *piLen)
 
 
 /* note: setMSGLen() is only for friends who really know what they
- * do. Setting an invalid length can be desasterous!
+ * do. Setting an invalid length can be disastrous!
  */
 void setMSGLen(smsg_t * const pM, int lenMsg)
 {
