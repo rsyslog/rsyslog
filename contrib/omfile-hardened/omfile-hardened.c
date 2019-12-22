@@ -1445,7 +1445,7 @@ BEGINparseSelectorAct
 	uchar fname[MAXFNAME];
 CODESTARTparseSelectorAct
 	/* Note: the indicator sequence permits us to use '$' to signify
-	 * outchannel, what otherwise is not possible due to truely
+	 * outchannel, what otherwise is not possible due to truly
 	 * unresolvable grammar conflicts (*this time no way around*).
 	 * rgerhards, 2011-07-09
 	 */

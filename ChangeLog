@@ -9145,7 +9145,7 @@ Version 4.7.2  [v4-devel] (rgerhards), 2010-05-03
   Thanks to Kiss Gabor for the patch.
 ---------------------------------------------------------------------------
 Version 4.7.1  [v4-devel] (rgerhards), 2010-04-22
-- Solaris support much improved -- was not truely usable in 4.7.0
+- Solaris support much improved -- was not truly usable in 4.7.0
   Solaris is no longer supported in imklog, but rather there is a new
   plugin imsolaris, which is used to pull local log sources on a Solaris
   machine.

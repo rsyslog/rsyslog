@@ -1138,7 +1138,7 @@ qAddDirect(qqueue_t *pThis, smsg_t* pMsg)
 /* generic code to add a queue entry
  * We use some specific code to most efficiently support direct mode
  * queues. This is justified in spite of the gain and the need to do some
- * things truely different. -- rgerhards, 2008-02-12
+ * things truly different. -- rgerhards, 2008-02-12
  */
 static rsRetVal
 qqueueAdd(qqueue_t *pThis, smsg_t *pMsg)
