@@ -292,7 +292,7 @@ klogAfterRun(modConfData_t *const pModConf __attribute__((unused)))
 	if(fklog != -1)
 		close(fklog);
 #	ifdef OS_LINUX
-	/* Turn on logging of messages to console, but only if a log level was speficied */
+	/* Turn on logging of messages to console, but only if a log level was specified */
 	if(pModConf->console_log_level != -1)
 		klogctl(7, NULL, 0);
 #	endif
