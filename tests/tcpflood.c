@@ -1181,14 +1181,14 @@ initTLS(void)
 	if(SSL_CTX_use_certificate_file(ctx, tlsCertFile, SSL_FILETYPE_PEM) != 1) {
 		printf("tcpflood: error cert file could not be accessed -- have you mixed up key and certificate?\n");
 		printf("If in doubt, try swapping the files in -z/-Z\n");
-		printf("Certifcate is: '%s'\n", tlsCertFile);
+		printf("Certificate is: '%s'\n", tlsCertFile);
 		printf("Key        is: '%s'\n", tlsKeyFile);
 		exit(1);
 	}
 	if(SSL_CTX_use_PrivateKey_file(ctx, tlsKeyFile, SSL_FILETYPE_PEM) != 1) {
 		printf("tcpflood: error key file could not be accessed -- have you mixed up key and certificate?\n");
 		printf("If in doubt, try swapping the files in -z/-Z\n");
-		printf("Certifcate is: '%s'\n", tlsCertFile);
+		printf("Certificate is: '%s'\n", tlsCertFile);
 		printf("Key        is: '%s'\n", tlsKeyFile);
 		exit(1);
 	}
@@ -1444,7 +1444,7 @@ initTLS(void)
 	if(r != GNUTLS_E_SUCCESS) {
 		printf("error setting certificate files -- have you mixed up key and certificate?\n");
 		printf("If in doubt, try swapping the files in -z/-Z\n");
-		printf("Certifcate is: '%s'\n", tlsCertFile);
+		printf("Certificate is: '%s'\n", tlsCertFile);
 		printf("Key        is: '%s'\n", tlsKeyFile);
 		gnutls_perror(r);
 		r = gnutls_certificate_set_x509_key_file(tlscred, tlsKeyFile, tlsCertFile,

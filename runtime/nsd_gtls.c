@@ -1415,7 +1415,7 @@ finalize_it:
  * anon - no certificate checks whatsoever (discouraged, but supported)
  * x509/certvalid - (just) check certificate validity
  * x509/fingerprint - certificate fingerprint
- * x509/name - cerfificate name check
+ * x509/name - certificate name check
  * mode == NULL is valid and defaults to x509/name
  * rgerhards, 2008-05-16
  */
