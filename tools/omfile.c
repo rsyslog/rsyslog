@@ -1466,7 +1466,7 @@ CODESTARTparseSelectorAct
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 	}
 
-	/* freeze current paremeters for this action */
+	/* freeze current parameters for this action */
 	pData->iDynaFileCacheSize = cs.iDynaFileCacheSize;
 	pData->fCreateMode = cs.fCreateMode;
 	pData->fDirCreateMode = cs.fDirCreateMode;
