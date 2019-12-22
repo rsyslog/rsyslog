@@ -1151,7 +1151,7 @@ Version 8.1901.0 (aka 2019.01) 2019-01-22
       this guards as against timeout-cancel in CI, which is always
       pretty hard to diagnose - now we see these errors in test-suite.log
     * fix a bug in tcp zip test, which actually did not use zip mode
-    * experimnentalls add debug output to better understand
+    * experimentally add debug output to better understand
       shutdown_when_empty operation; goal is to improve understanding
       and then remove that code again.
     * improve shutdown predicate for a couple of tests
