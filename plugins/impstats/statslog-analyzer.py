@@ -193,7 +193,7 @@ else:
 					bLogProcessed = True
 					
 
-			# Increment Logreged Counter
+			# Increment LogRegEx Counter
 			iLogRegExIndex += 1
 
 			# Abort Loop if processed
