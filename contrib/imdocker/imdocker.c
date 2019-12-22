@@ -862,7 +862,7 @@ CODESTARTsetModCnf
 			loadModConf->listContainersOptions = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "getcontainerlogoptions")) {
 			loadModConf->getContainerLogOptions = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-			/* also intialize the non-tail version */
+			/* also initialize the non-tail version */
 			size_t offset = 0;
 			char buf[256];
 			size_t buf_size = sizeof(buf);

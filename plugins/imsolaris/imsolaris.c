@@ -37,7 +37,7 @@
  * one complete pull cycle on the log socket (until it has no further data
  * available) and only thereafter create the door file and start the "regular"
  * pull cycle. As of my understanding, there is a minimal race between the
- * point where the intial pull cycle has ended and the door file is created,
+ * point where the initial pull cycle has ended and the door file is created,
  * but that race is also present in OpenSolaris syslogd code, so it should
  * not matter that much (plus, I do not know how to avoid it...)
  *

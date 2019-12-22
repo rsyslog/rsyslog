@@ -69,7 +69,7 @@ parserList_t *pParsLstRoot = NULL;
 parserList_t *pDfltParsLst = NULL;
 
 
-/* intialize (but NOT allocate) a parser list. Primarily meant as a hook
+/* initialize (but NOT allocate) a parser list. Primarily meant as a hook
  * which can be used to extend the list in the future. So far, just sets
  * it to NULL.
  */

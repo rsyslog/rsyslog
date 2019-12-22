@@ -57,7 +57,7 @@ static rsRetVal doInit(void) \
 	putenv("RSYSLOG_MODDIR=../runtime/.libs/"); /* this is a bit hackish... */ \
 \
 	dbgClassInit(); \
-	/* Intialize the runtime system */ \
+	/* Initialize the runtime system */ \
 	pErrObj = "rsyslog runtime"; /* set in case the runtime errors before setting an object */ \
 	CHKiRet(rsrtInit(&pErrObj, &obj)); \
 

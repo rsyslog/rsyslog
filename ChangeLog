@@ -1369,7 +1369,7 @@ Version 8.39.0 [v8-stable] 2018-10-30
     and so the main thread hangs inside a loop
   closes https://github.com/rsyslog/rsyslog/issues/3094
 -  bugfix imkafka: system hang when backgrounded
-  imkafka intializes librdkafka too early (before the fork). This leads
+  imkafka initializes librdkafka too early (before the fork). This leads
   to hangs in various parts of the system - not only im imkafka but
   other functions as well (e.g. getaddrinfo() calls).
   closes https://github.com/rsyslog/rsyslog/issues/3180
@@ -2649,7 +2649,7 @@ Version 8.32.0 [v8-stable] 2018-01-09
   over multiple incarnations.
 - mmpstrucdata: new parameter "sd_name.lowercase"
   to permit preserving case for structured data identifiers
-  Special thanks to github user alanrobson for the intial commit that
+  Special thanks to github user alanrobson for the initial commit that
   preseves case (on which we based other work).
 - omfile: add module-global option "dynafile.donotsuspend"
   this permits to enable SUSPENDing dynafile actions. Traditionally,
@@ -10201,7 +10201,7 @@ Version 3.20.1 [v3-stable] (rgerhards), 2008-12-04
   debug strings permanently.
 ---------------------------------------------------------------------------
 Version 3.20.0 [v3-stable] (rgerhards), 2008-11-05
-- this is the inital release of the 3.19.x branch as a stable release
+- this is the initial release of the 3.19.x branch as a stable release
 - bugfix: double-free in pctp netstream driver. Thank to varmojfeko
   for the patch
 ---------------------------------------------------------------------------
@@ -10575,7 +10575,7 @@ Version 3.17.0 (rgerhards), 2008-04-08
   to provide custom templates.
 - changed command line processing. -v, -M, -c options are now parsed
   and processed before all other options. Inter-option dependencies
-  have been relieved. Among others, permits to specify intial module
+  have been relieved. Among others, permits to specify initial module
   load path via -M only (not the environment) which makes it much
   easier to work with non-standard module library locations. Thanks
   to varmojfekoj for suggesting this change. Matches bugzilla bug 55.

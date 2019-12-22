@@ -575,7 +575,7 @@ rsyslogd_InitGlobalClasses(void)
 	DEFiRet;
 	const char *pErrObj; /* tells us which object failed if that happens (useful for troubleshooting!) */
 
-	/* Intialize the runtime system */
+	/* Initialize the runtime system */
 	pErrObj = "rsyslog runtime"; /* set in case the runtime errors before setting an object */
 	CHKiRet(rsrtInit(&pErrObj, &obj));
 	rsrtSetErrLogger(rsyslogd_submitErrMsg);
@@ -596,7 +596,7 @@ rsyslogd_InitGlobalClasses(void)
 	pErrObj = "rsconf";
 	CHKiRet(objUse(rsconf,     CORE_COMPONENT));
 
-	/* intialize some dummy classes that are not part of the runtime */
+	/* initialize some dummy classes that are not part of the runtime */
 	pErrObj = "action";
 	CHKiRet(actionClassInit());
 	pErrObj = "template";
@@ -1300,7 +1300,7 @@ initAll(int argc, char **argv)
 	 * split of functionality, this is no longer a problem. Thanks to varmofekoj for
 	 * suggesting this algo.
 	 * Note: where we just need to set some flags and can do so without knowledge
-	 * of other options, we do this during the inital option processing.
+	 * of other options, we do this during the initial option processing.
 	 * rgerhards, 2008-04-04
 	 */
 #if defined(_AIX)
@@ -1640,7 +1640,7 @@ initAll(int argc, char **argv)
 		CHKiRet(writePidFile());
 	}
 
-	/* END OF INTIALIZATION */
+	/* END OF INITIALIZATION */
 	DBGPRINTF("rsyslogd: initialization completed, transitioning to regular run mode\n");
 
 	if(doFork) {
@@ -2068,7 +2068,7 @@ deinitAll(void)
 }
 
 /* This is the main entry point into rsyslogd. This must be a function in its own
- * right in order to intialize the debug system in a portable way (otherwise we would
+ * right in order to initialize the debug system in a portable way (otherwise we would
  * need to have a statement before variable definitions.
  * rgerhards, 20080-01-28
  */

@@ -551,7 +551,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	   mysql_server_init(0, NULL, NULL)
 #	endif
 	                                   ) {
-		LogError(0, NO_ERRCODE, "ommysql: intializing mysql client failed, plugin "
+		LogError(0, NO_ERRCODE, "ommysql: initializing mysql client failed, plugin "
 		                "can not run");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}

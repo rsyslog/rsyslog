@@ -55,7 +55,7 @@ DEFobjCurrIf(ruleset)
 strgenList_t *pStrgenLstRoot = NULL;
 
 
-/* intialize (but NOT allocate) a strgen list. Primarily meant as a hook
+/* initialize (but NOT allocate) a strgen list. Primarily meant as a hook
  * which can be used to extend the list in the future. So far, just sets
  * it to NULL.
  */
