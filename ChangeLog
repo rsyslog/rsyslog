@@ -989,7 +989,7 @@ Version 8.1901.0 (aka 2019.01) 2019-01-22
   to a very slightly longer shutdown time, albeit this is very
   improbable.
 - omclickhouse: new output module for clickhouse
-  This output module adds the posibility to send
+  This output module adds the possibility to send
   INSERT querys to a Clickhouse database. See doc for details.
   The messages are sent via a REST interface.
   This commit also adds support of the testbench
