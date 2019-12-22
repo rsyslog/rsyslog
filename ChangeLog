@@ -8997,7 +8997,7 @@ Version 5.1.4  [DEVEL] (rgerhards), 2009-08-20
 - bugfix: potential segfault in output file writer (omfile)
   In async write mode, we use modular arithmetic to index the output
   buffer array. However, the counter variables accidentally were signed,
-  thus resulting in negative indizes after integer overflow. That in turn
+  thus resulting in negative indices after integer overflow. That in turn
   could lead to segfaults, but was depending on the memory layout of 
   the instance in question (which in turn depended on a number of
   variables, like compile settings but also configuration). The counters
@@ -9544,7 +9544,7 @@ Version 4.5.2  [v4-beta] (rgerhards), 2009-08-21
 - bugfix: potential segfault in output file writer (omfile)
   In async write mode, we use modular arithmetic to index the output
   buffer array. However, the counter variables accidentally were signed,
-  thus resulting in negative indizes after integer overflow. That in turn
+  thus resulting in negative indices after integer overflow. That in turn
   could lead to segfaults, but was depending on the memory layout of 
   the instance in question (which in turn depended on a number of
   variables, like compile settings but also configuration). The counters
