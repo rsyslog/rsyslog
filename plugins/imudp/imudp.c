@@ -89,7 +89,7 @@ static struct lstn_s {
 
 
 static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config parameters permitted? */
-static int bDoACLCheck;			/* are ACL checks neeed? Cached once immediately before listener startup */
+static int bDoACLCheck;			/* are ACL checks need? Cached once immediately before listener startup */
 static int iMaxLine;			/* maximum UDP message size supported */
 #define BATCH_SIZE_DFLT 32		/* do not overdo, has heavy toll on memory, especially with large msgs */
 #define TIME_REQUERY_DFLT 2

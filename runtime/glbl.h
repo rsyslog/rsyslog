@@ -97,7 +97,7 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	 * at some later stage).
 	 */
 	SIMP_PROP(FdSetSize, int)
-	/* v7: was neeeded to mean v5+v6 - do NOT add anything else for that version! */
+	/* v7: was needed to mean v5+v6 - do NOT add anything else for that version! */
 	/* next change is v9! */
 	/* v8 - 2012-03-21 */
 	prop_t* (*GetLocalHostIP)(void);

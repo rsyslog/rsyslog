@@ -843,7 +843,7 @@ gtlsGetCN(gnutls_x509_crt_t *pCert, cstr_t **ppstrCN)
 	int bFound;
 	cstr_t *pstrCN = NULL;
 	size_t size;
-	/* big var the last, so we hope to have all we usually neeed within one mem cache line */
+	/* big var the last, so we hope to have all we usually need within one mem cache line */
 	uchar szDN[1024]; /* this should really be large enough for any non-malicious case... */
 
 	assert(pCert != NULL);
