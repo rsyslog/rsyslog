@@ -4034,7 +4034,7 @@ Version 8.24.0 [v8-stable] 2017-01-10
   The opcode was not handled, what lead to misleading messages
   in debug log. Since we run debug builds more strictly, it also
   causes an assertion to trigger, thus aborting the test
-- bugfix core: potential dealock on shutdown
+- bugfix core: potential deadlock on shutdown
   could happen when rsyslog was started and quickly shut down OR when
   coincidentally a new thread was spawend "with bad timing" around the time
   of shutdown.
