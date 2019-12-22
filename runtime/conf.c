@@ -332,7 +332,7 @@ cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int 
 	assert(pOMSR != NULL);
 
 	pName = pFileName;
-	i = 1; /* we start at 1 so that we reseve space for the '\0'! */
+	i = 1; /* we start at 1 so that we reserve space for the '\0'! */
 	while(*p && *p != ';' && *p != ' ' && i < MAXFNAME) {
 		*pName++ = *p++;
 		++i;
