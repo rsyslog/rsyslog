@@ -486,7 +486,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 				pGSess->allowedMethods = ALLOWEDMETHOD_TCP;
 				ABORT_FINALIZE(RS_RET_OK); // TODO: define good error codes
 			} else if (ret == 4) {
-				/* The client might has been interupted after sending
+				/* The client might has been interrupted after sending
 				 * the data length (4B), give him another chance.
 				 */
 				srSleep(1, 0);
