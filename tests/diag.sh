@@ -388,7 +388,7 @@ wait_file_exists() {
 # a generic check function and must only used with those kafka tests
 # that actually need it.
 kafka_wait_group_coordinator() {
-echo We are waiting for kafka/zookeper being ready to deliver messages
+echo We are waiting for kafka/zookeeper being ready to deliver messages
 wait_file_exists $RSYSLOG_OUT_LOG "
 
 Non-existence of $RSYSLOG_OUT_LOG can be caused
@@ -1735,7 +1735,7 @@ start_zookeeper() {
 			printf 'zookeeper already running, no need to start\n'
 			return
 		else
-			printf 'INFO: zookeper pidfile %s exists, but zookeeper not running\n' "$ZOOPIDFILE"
+			printf 'INFO: zookeeper pidfile %s exists, but zookeeper not running\n' "$ZOOPIDFILE"
 			printf 'deleting pid file\n'
 			rm -f "$ZOOPIDFILE"
 		fi
