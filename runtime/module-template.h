@@ -156,7 +156,7 @@ static rsRetVal createInstance(instanceData **ppData)\
 /* freeInstance()
  * This is the cleanup function for the module instance. It is called immediately before
  * the module instance is destroyed (unloaded). The module should do any cleanup
- * here, e.g. close file, free instantance heap memory and the like. Control will
+ * here, e.g. close file, free instance heap memory and the like. Control will
  * not be passed back to the module once this function is finished. Keep in mind,
  * however, that other instances may still be loaded and used. So do not destroy
  * anything that may be used by another instance. If you have such a ressource, you

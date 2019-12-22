@@ -234,7 +234,7 @@ finalize_it:
 	RETiRet;
 }
 
-/* This function is called when a new listener instace shall be added to
+/* This function is called when a new listener instance shall be added to
  * the current config object via the legacy config system. It just shuffles
  * all parameters to the listener in-memory instance.
  * rgerhards, 2011-05-04

@@ -71,7 +71,7 @@ typedef struct _instanceData {
 } instanceData;
 
 typedef struct wrkrInstanceData {
-	instanceData *pData; /* instanc data */
+	instanceData *pData; /* instance data */
 	redisContext *conn; /* redis connection */
 	int count; /* count of command sent for current batch */
 } wrkrInstanceData_t;
