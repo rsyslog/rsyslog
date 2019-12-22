@@ -1204,7 +1204,7 @@ smsg_t* MsgDup(smsg_t* pOld)
  * on-disk representation of the message object.
  * We do not serialize the cache properties. We re-create them when needed.
  * This saves us a lot of memory. Performance is no concern, as serializing
- * is a so slow operation that recration of the caches does not count. Also,
+ * is a so slow operation that recreation of the caches does not count. Also,
  * we do not serialize --currently none--, as this is only a helper variable
  * during msg construction - and never again used later.
  * rgerhards, 2008-01-03
