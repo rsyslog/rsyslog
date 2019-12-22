@@ -10,7 +10,7 @@
 # config file name ($2). From that name, the sender and receiver config file
 # names are automatically generated. 
 # So: $1 config file name, $2 number of messages
-# environmet variable TCPFLOOD_EXTRA_OPTIONS is used to slowdown sending when
+# environment variable TCPFLOOD_EXTRA_OPTIONS is used to slowdown sending when
 # using UDP (we've seen problems due to UDP message loss if sending with full
 # speed)
 #

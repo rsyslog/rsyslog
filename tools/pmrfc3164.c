@@ -333,7 +333,7 @@ CODESTARTparse
 		 * a colon is PART of the TAG, while a SP is NOT part of the tag
 		 * (it is CONTENT). Starting 2008-04-04, we have removed the 32 character
 		 * size limit (from RFC3164) on the tag. This had bad effects on existing
-		 * envrionments, as sysklogd didn't obey it either (probably another bug
+		 * environments, as sysklogd didn't obey it either (probably another bug
 		 * in RFC3164...). We now receive the full size, but will modify the
 		 * outputs so that only 32 characters max are used by default.
 		 */
