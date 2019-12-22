@@ -869,7 +869,7 @@ static rsRetVal strmUnreadChar(strm_t *pThis, uchar c)
 /* read a 'paragraph' from a strm file.
  * A paragraph may be terminated by a LF, by a LFLF, or by LF<not whitespace> depending on the option set.
  * The termination LF characters are read, but are
- * not returned in the buffer (it is discared). The caller is responsible for
+ * not returned in the buffer (it is discarded). The caller is responsible for
  * destruction of the returned CStr object! -- dlang 2010-12-13
  *
  * Parameter mode controls legacy multi-line processing:
