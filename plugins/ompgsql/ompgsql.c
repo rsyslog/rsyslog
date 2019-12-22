@@ -453,7 +453,7 @@ CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* first check if this config line is actually for us
 	 * The first test [*p == '>'] can be skipped if a module shall only
-	 * support the newer slection syntax [:modname:]. This is in fact
+	 * support the newer selection syntax [:modname:]. This is in fact
 	 * recommended for new modules. Please note that over time this part
 	 * will be handled by rsyslogd itself, but for the time being it is
 	 * a good compromise to do it at the module level.
