@@ -4607,7 +4607,7 @@ Version 8.17.0 [v8-stable] 2016-03-08
 - bugfix: potential loss of single message at queue shutdown
   see also: https://github.com/rsyslog/rsyslog/issues/262
 - bugfix: potential deadlock with heavy variable access
-  When making havy use of global, local and message variables, a deadlock
+  When making heavy use of global, local and message variables, a deadlock
   could occur. While it is extremely unlikely to happen, we have at least
   seen one incarnation of this problem in practice.
 - bugfix ommysql: on some platforms, serverport parameter had no effect
@@ -4674,7 +4674,7 @@ Version 8.16.0 [v8-stable] 2016-01-26
   This occurs in inotify mode, only.
   Thanks to Zachary Zhao and Peter Portante for the patch.
   closes https://github.com/rsyslog/rsyslog/issues/718
-- bugfix imfile: potential segfault under heavey load.
+- bugfix imfile: potential segfault under heavy load.
   This occurs in inotify mode when using wildcards, only.
   The root cause is dropped IN_IGNOPRED inotify events which be dropped
   in circumstance of high input pressure and frequent rotation, and
