@@ -4372,7 +4372,7 @@ Version 8.19.0 [v8-stable] 2016-05-31
   * error file was no longer written
   * fix for some potential misaddressings
 - improved wording: gnutls error message points to potential cause
-  What GnutTLS returns us is very unspecific and somehwat misleading, so
+  What GnutTLS returns us is very unspecific and somewhat misleading, so
   we point to what it most probably is (broken connect).
   see also https://github.com/rsyslog/rsyslog/issues/846
 - some general code improvements
