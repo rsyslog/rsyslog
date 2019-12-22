@@ -7646,7 +7646,7 @@ Version 6.1.12  [BETA], 2011-09-01
 - bugfix/security: off-by-two bug in legacy syslog parser, CVE-2011-3200
 - bugfix: mark message processing did not work correctly
 - bugfix: potential misaddressing in property replacer
-- bugfix: memcpy overflow can occur in allowed sender checkig
+- bugfix: memcpy overflow can occur in allowed sender checking
   if a name is resolved to IPv4-mapped-on-IPv6 address
   Found by Ismail Dönmez at suse
 - bugfix: The NUL-Byte for the syslogtag was not copied in MsgDup (msg.c)
@@ -8273,7 +8273,7 @@ Version 5.8.5  [V5-stable] (rgerhards/al), 2011-09-01
 ---------------------------------------------------------------------------
 Version 5.8.4  [V5-stable] (al), 2011-08-10
 - bugfix: potential misaddressing in property replacer
-- bugfix: memcpy overflow can occur in allowed sender checkig
+- bugfix: memcpy overflow can occur in allowed sender checking
   if a name is resolved to IPv4-mapped-on-IPv6 address
   Found by Ismail Dönmez at suse
 - bugfix: potential misaddressing in property replacer

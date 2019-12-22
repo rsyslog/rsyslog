@@ -173,7 +173,7 @@ struct queue_s {
 			int nForcePersist;/* force persist of .qi file the next "n" times */
 		} disk;
 	} tVars;
-	sbool	useCryprov;	/* quicker than checkig ptr (1 vs 8 bytes!) */
+	sbool	useCryprov;	/* quicker than checking ptr (1 vs 8 bytes!) */
 	uchar *cryprovName; /* crypto provider to use */
 	cryprov_if_t cryprov;	/* ptr to crypto provider interface */
 	void *cryprovData; /* opaque data ptr for provider use */

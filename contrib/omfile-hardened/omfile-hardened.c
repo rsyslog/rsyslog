@@ -156,12 +156,12 @@ typedef struct _instanceData {
 	sigprov_if_t sigprov;	/* ptr to signature provider interface */
 	void	*sigprovData;	/* opaque data ptr for provider use */
 	void 	*sigprovFileData;/* opaque data ptr for file instance */
-	sbool	useSigprov;	/* quicker than checkig ptr (1 vs 8 bytes!) */
+	sbool	useSigprov;	/* quicker than checking ptr (1 vs 8 bytes!) */
 	uchar 	*cryprovName;	/* crypto provider */
 	uchar 	*cryprovNameFull;/* full internal crypto provider name */
 	void	*cryprovData;	/* opaque data ptr for provider use */
 	cryprov_if_t cryprov;	/* ptr to crypto provider interface */
-	sbool	useCryprov;	/* quicker than checkig ptr (1 vs 8 bytes!) */
+	sbool	useCryprov;	/* quicker than checking ptr (1 vs 8 bytes!) */
 	int	iCurrElt;	/* currently active cache element (-1 = none) */
 	uint	iCurrCacheSize;	/* currently cache size (1-based) */
 	uint	iDynaFileCacheSize; /* size of file handle cache */
