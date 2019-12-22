@@ -1382,7 +1382,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * assumed. An example action statement might be:
 	 * @@(z5,o)127.0.0.1:1400
 	 * Which means send via TCP with medium (5) compression (z) to the local
-	 * host on port 1400. The '0' option means that octet-couting (as in
+	 * host on port 1400. The '0' option means that octet-counting (as in
 	 * IETF I-D syslog-transport-tls) is to be used for framing (this option
 	 * applies to TCP-based syslog only and is ignored when specified with UDP).
 	 * That is not yet implemented.
@@ -1409,7 +1409,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 						 "forwardig action - NOT turning on compression.",
 						 *p);
 				}
-			} else if(*p == 'o') { /* octet-couting based TCP framing? */
+			} else if(*p == 'o') { /* octet-counting based TCP framing? */
 				++p; /* eat */
 				/* no further options settable */
 				tcp_framing = TCP_FRAMING_OCTET_COUNTING;
