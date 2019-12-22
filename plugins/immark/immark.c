@@ -176,7 +176,7 @@ ENDfreeCnf
  * We are running on our own thread, so this is extremely easy: we just
  * sleep MarkInterval seconds and each time we awake, we inject the message.
  * Please note that we do not do the other fancy things that sysklogd
- * (and pre 1.20.2 releases of rsyslog) did in mark procesing. They simply
+ * (and pre 1.20.2 releases of rsyslog) did in mark processing. They simply
  * do not belong here.
  */
 BEGINrunInput

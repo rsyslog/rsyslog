@@ -3754,7 +3754,7 @@ Version 8.27.0 [v8-stable] 2017-05-16
   See also https://github.com/rsyslog/rsyslog/issues/1508
   Thanks to Yury Bushmelev for providing the patch.
 - imuxsock: rate-limiting also uses process name
-  both for the actual limit procesing as well as warning messages emitted
+  both for the actual limit processing as well as warning messages emitted
   see also https://github.com/rsyslog/rsyslog/pull/1520
   Thanks to github user jvymazal for the patch
 - Added new module: KSI log signing ver. 1.2 (lmsig_ksi_ls12)

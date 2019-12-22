@@ -272,7 +272,7 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM(, return __builtin_expect(main != 0, 1))],
 # Note: this switch is primarily for the testbench, so that we can try
 # to build w/o atomic operations on systems that actually support them.
 # Usually, atomic operations should be used when available as this
-# speeds up processig.
+# speeds up processing.
 # note that when atomic operations are enabled but not available, they
 # will silently NOT be used!
 AC_ARG_ENABLE(atomic-operations,

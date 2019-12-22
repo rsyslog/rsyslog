@@ -1242,7 +1242,7 @@ done:
  * read location when it is done.
  *
  * @param[in] fp file pointer of tlv file
- * @param[in] bRewind 0 - do not rewind at end of procesing, 1 - do so
+ * @param[in] bRewind 0 - do not rewind at end of processing, 1 - do so
  * @param[out] bs block signature record
  * @param[out] bHasRecHashes 0 if record hashes are present, 1 otherwise
  * @param[out] bHasIntermedHashes 0 if intermediate hashes are present,
@@ -1322,7 +1322,7 @@ done:
  * read location when it is done.
  *
  * @param[in] fp file pointer of tlv file
- * @param[in] bRewind 0 - do not rewind at end of procesing, 1 - do so
+ * @param[in] bRewind 0 - do not rewind at end of processing, 1 - do so
  * @param[out] bs block signature record
  *
  * @returns 0 if ok, something else otherwise

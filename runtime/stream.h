@@ -136,7 +136,7 @@ typedef struct strm_s {
 	sbool bInRecord;	/* if 1, indicates that we are currently writing a not-yet complete record */
 	int iZipLevel;	/* zip level (0..9). If 0, zip is completely disabled */
 	Bytef *pZipBuf;
-	/* support for async flush procesing */
+	/* support for async flush processing */
 	sbool bAsyncWrite;	/* do asynchronous writes (always if a flush interval is given) */
 	sbool bStopWriter;	/* shall writer thread terminate? */
 	sbool bDoTimedWait;	/* instruct writer thread to do a times wait to support flush timeouts */
