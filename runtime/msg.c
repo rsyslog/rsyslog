@@ -3479,7 +3479,7 @@ finalize_it:
  * is simply to map property names (from MonitorWare) to the
  * message object data fields.
  *
- * In case we need string forms of propertis we do not
+ * In case we need string forms of properties we do not
  * yet have in string form, we do a memory allocation that
  * is sufficiently large (in all cases). Once the string
  * form has been obtained, it is saved until the Msg object
