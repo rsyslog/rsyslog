@@ -219,7 +219,7 @@ CODESTARTparse
 			applyDfltTZ(&pMsg->tTIMESTAMP, pMsg->dfltTZ);
 		/* we are done - parse pointer is moved by ParseTIMESTAMP3164 */;
 	} else if(*p2parse == ' ' && lenMsg > 1) {
-	/* try to see if it is slighly malformed - HP procurve seems to do that sometimes */
+	/* try to see if it is slightly malformed - HP procurve seems to do that sometimes */
 		++p2parse;	/* move over space */
 		--lenMsg;
 		if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg,
