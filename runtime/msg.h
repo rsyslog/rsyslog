@@ -79,13 +79,13 @@ struct msg {
 	uchar	*pszRawMsg;	/* message as it was received on the wire. This is important in case we
 				 * need to preserve cryptographic verifiers.  */
 	uchar	*pszHOSTNAME;	/* HOSTNAME from syslog message */
-	char *pszRcvdAt3164;	/* time as RFC3164 formatted string (always 15 charcters) */
-	char *pszRcvdAt3339;	/* time as RFC3164 formatted string (32 charcters at most) */
-	char *pszRcvdAt_MySQL;	/* rcvdAt as MySQL formatted string (always 14 charcters) */
+	char *pszRcvdAt3164;	/* time as RFC3164 formatted string (always 15 character) */
+	char *pszRcvdAt3339;	/* time as RFC3164 formatted string (32 character at most) */
+	char *pszRcvdAt_MySQL;	/* rcvdAt as MySQL formatted string (always 14 character) */
 	char *pszRcvdAt_PgSQL;  /* rcvdAt as PgSQL formatted string (always 21 characters) */
-	char *pszTIMESTAMP3164;	/* TIMESTAMP as RFC3164 formatted string (always 15 charcters) */
-	char *pszTIMESTAMP3339;	/* TIMESTAMP as RFC3339 formatted string (32 charcters at most) */
-	char *pszTIMESTAMP_MySQL;/* TIMESTAMP as MySQL formatted string (always 14 charcters) */
+	char *pszTIMESTAMP3164;	/* TIMESTAMP as RFC3164 formatted string (always 15 character) */
+	char *pszTIMESTAMP3339;	/* TIMESTAMP as RFC3339 formatted string (32 character at most) */
+	char *pszTIMESTAMP_MySQL;/* TIMESTAMP as MySQL formatted string (always 14 character) */
 	char *pszTIMESTAMP_PgSQL;/* TIMESTAMP as PgSQL formatted string (always 21 characters) */
 	uchar *pszStrucData;    /* STRUCTURED-DATA */
 	uint16_t lenStrucData;	/* (cached) length of STRUCTURED-DATA */

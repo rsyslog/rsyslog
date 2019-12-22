@@ -4291,7 +4291,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 				*pbMustBeFreed = 1;
 			}
 		} else if(pTpe->data.field.options.bEscapeCC) {
-			/* we must first count how many control charactes are
+			/* we must first count how many control characters are
 			 * present, because we need this to compute the new string
 			 * buffer length. While doing so, we also compute the string
 			 * length.

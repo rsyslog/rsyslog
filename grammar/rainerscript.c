@@ -2117,7 +2117,7 @@ doFunct_Ipv42num(struct cnffunc *__restrict__ const func,
 			}
 			break;
 		default:
-			DBGPRINTF("rainerscript: (ipv42num) error: wrong IP-Address format (invalid charakter)\n");
+			DBGPRINTF("rainerscript: (ipv42num) error: wrong IP-Address format (invalid character)\n");
 			goto done;
 		}
 	}
