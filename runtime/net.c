@@ -1533,7 +1533,7 @@ create_udp_socket(uchar *hostname,
  * Also note that we use a non-standard calling interface, as this is much more natural and
  * it looks extremely unlikely that we get an exception of any kind here. What we
  * return is mimiced after memcmp(), and as such useful for building binary trees
- * (the order relation may be a bit arbritrary, but at least it is consistent).
+ * (the order relation may be a bit arbitrary, but at least it is consistent).
  * rgerhards, 2009-09-03
  */
 static int CmpHost(struct sockaddr_storage *s1, struct sockaddr_storage* s2, size_t socklen)
