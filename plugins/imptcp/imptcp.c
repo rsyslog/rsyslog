@@ -95,7 +95,7 @@ DEFobjCurrIf(statsobj)
 /* forward references */
 static void * wrkr(void *myself);
 
-/* unfortunately, on some platforms EAGAIN == EWOULDBOLOCK and so checking against
+/* unfortunately, on some platforms EAGAIN == EWOULDBLOCK and so checking against
  * both of them generates a gcc 8 warning for this reason. We do not want to disable
  * the warning, so we need to work around this via a macro.
  */
@@ -103,7 +103,7 @@ static void * wrkr(void *myself);
 	#define CHK_EAGAIN_EWOULDBLOCK (errno == EAGAIN)
 #else
 	#define CHK_EAGAIN_EWOULDBLOCK (errno == EAGAIN | errno == EWOULDBLOCK)
-#endif /* #if EAGAIN == EWOULDBOLOCK */
+#endif /* #if EAGAIN == EWOULDBLOCK */
 
 #define DFLT_wrkrMax 2
 #define DFLT_inlineDispatchThreshold 1
