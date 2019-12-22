@@ -2006,7 +2006,7 @@ doSubmitToActionQNotAllMark(action_t * const pAction, wti_t * const pWti, smsg_t
 	/* TODO: think about the whole logic. If messages come in out of order, things
 	 * tend to become a bit unreliable. On the other hand, this only happens if we have
 	 * very high traffic, in which this use case here is not really affected (as the
-	 * MarkInterval is pretty corase).
+	 * MarkInterval is pretty coarse).
 	 */
 	/* CAS loop, we write back a bit early, but that's OK... */
 	/* we use reception time, not dequeue time - this is considered more appropriate and
