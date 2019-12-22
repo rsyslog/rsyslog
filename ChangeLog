@@ -6521,7 +6521,7 @@ Version 7.3.13  [beta] 2013-04-29
   Thanks to Vaclav Tomec for providing this module.
 - bugfix: build problem when --enable-encryption was not selected
   Thanks to Michael Biebl for fixing this.
-- doc bugfix: omfile parameter "VeryRobustZip" was documentas as
+- doc bugfix: omfile parameter "VeryRobustZip" was documented as
   "VeryReliableZip"
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=437
   Thanks to Thomas Doll for reporting this.
