@@ -2360,7 +2360,7 @@ Version 8.34.0 [v8-stable] 2018-04-03
     This will further be worked on in upcoming PRs
     see also https://github.com/rsyslog/rsyslog/issues/2231
   - some enhancements were also done to CI tests, most importantly
-    they were made more compatibile with BSD
+    they were made more compatible with BSD
   Note that most of the mentioned bug fixes cannot be applied to older
   versions, as they fix design issues which are solved by the refactoring.
   Thus there are not separate commits for them.
