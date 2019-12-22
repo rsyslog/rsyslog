@@ -1310,7 +1310,7 @@ create_single_udp_socket(int *const s, /* socket */
 	/* We need to enable BSD compatibility. Otherwise an attacker
 	 * could flood our log files by sending us tons of ICMP errors.
 	 */
-	/* AIXPORT : SO_BSDCOMPAT socket option is depricated, and its usage
+	/* AIXPORT : SO_BSDCOMPAT socket option is deprecated, and its usage
 	 * has been discontinued on most unixes, AIX does not support this option,
 	 * hence avoid the call.
 	*/

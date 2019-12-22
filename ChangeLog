@@ -3482,11 +3482,11 @@ Version 8.29.0 [v8-stable] 2017-08-08
   This provides better insight into operational state of rsyslog and is useful
   in monitoring system health. Note that this causes the emission of messages
   not previously seen. They are of syslog.informational priority.
-- omfwd/udp: improve error reporting, depricate maxerrormessages parameter
+- omfwd/udp: improve error reporting, deprecate maxerrormessages parameter
   Generally improved udp-related error messages (e.g. they now contain the
   socket number, which makes it easier to related them to errors reported by
   net.c subsystem).
-  We also depricated (removed) the "maxerrormessages" configuration parameters.
+  We also deprecated (removed) the "maxerrormessages" configuration parameters.
   It provided some very rough rate-limiting capabilities and was introduced
   before we had native rate-limiters. The default was that only the first 5
   error messages were actually reported. For long-running instances, that
@@ -5140,7 +5140,7 @@ v8.5.0, but in a stable release. For details see immediately below.
   Use for config include files. Disables checking if any action exists at
   all.
 - rsyslogd -e option has finally been removed
-  It is deprectated since many years.
+  It is deprecated since many years.
 - testbench improvements
   Testbench is now more robust and has additional tests.
 - testbench is now by default disabled

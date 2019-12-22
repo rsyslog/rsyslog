@@ -792,7 +792,7 @@ CODESTARTrunInput
 		free(cs.usePid);
 		cs.usePid = strdup("system");
 		LogError(0, RS_RET_DEPRECATED,
-			"\"usepidfromsystem\" is depricated, use \"usepid\" instead");
+			"\"usepidfromsystem\" is deprecated, use \"usepid\" instead");
 	}
 
 	if (cs.usePid && (strcmp(cs.usePid, "system") == 0)) {
