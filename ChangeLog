@@ -1198,7 +1198,7 @@ Version 8.40.0 [v8-stable] 2018-12-11
   Thanks to Jiri Vymazal for the patch.
 - cleanup: remove no longer needed --enable-rtinst code
   configure option --enable-rtinst is gone-away since a while, but there were
-  still some supporting code left. It required careful anaylsis what could
+  still some supporting code left. It required careful analysis what could
   actually be removed. This is now done and the code fully cleaned up. This
   greatly simplifies the code and also makes it better readable for
   developers which are not deep inside the rsyslog code base.
