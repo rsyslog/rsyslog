@@ -192,7 +192,7 @@ static inline grok_t *CreateGrok(void)
 {
 	grok_t  *grok = grok_new();
 	if(grok == NULL){
-	    DBGPRINTF("mmgrok: create a grok faile!");
+	    DBGPRINTF("mmgrok: create a grok failed!");
 	    exit(1);
 	}
 	grok_init(grok);
@@ -294,13 +294,13 @@ MotifyLine(char *line,grok_t *grok,instanceData *pData)
 	int compile = grok_compile(grok,pData->pszMatch);
 	if(compile!=GROK_OK)
 	{
-	    DBGPRINTF("mmgrok: grok_compile faile!exit code: %d\n",compile);
+	    DBGPRINTF("mmgrok: grok_compile failed!exit code: %d\n",compile);
 	ABORT_FINALIZE(RS_RET_ERR);
 	}
 	int exe = grok_exec(grok,line,&gm);
 	if(exe!=GROK_OK)
 	{
-	    DBGPRINTF("mmgrok: grok_exec faile!exit code: %d\n",exe);
+	    DBGPRINTF("mmgrok: grok_exec failed!exit code: %d\n",exe);
 	ABORT_FINALIZE(RS_RET_ERR);
 	}
 	parse_result_store(gm,pData);
