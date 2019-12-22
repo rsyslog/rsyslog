@@ -2111,7 +2111,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 	CHKiRet(actionConstruct(&pAction)); /* create action object first */
 	pAction->pMod = pMod;
 	pAction->pModData = pModData;
-	if(actParams == NULL) { /* use legacy systemn */
+	if(actParams == NULL) { /* use legacy system */
 		pAction->pszName = cs.pszActionName;
 		pAction->iResumeInterval = cs.glbliActionResumeInterval;
 		pAction->iResumeRetryCount = cs.glbliActionResumeRetryCount;

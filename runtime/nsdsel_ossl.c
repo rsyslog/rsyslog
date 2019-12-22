@@ -158,7 +158,7 @@ doRetry(nsd_ossl_t *pNsd)
 
 	dbgprintf("doRetry: requested retry of %d operation - executing\n", pNsd->rtryCall);
 
-	/* We follow a common scheme here: first, we do the systen call and
+	/* We follow a common scheme here: first, we do the system call and
 	 * then we check the result. So far, the result is checked after the
 	 * switch, because the result check is the same for all calls. Note that
 	 * this may change once we deal with the read and write calls (but

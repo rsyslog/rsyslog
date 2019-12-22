@@ -1028,7 +1028,7 @@ void dbgPrintCfSysLineHandlers(void)
 	linkedListCookie_t llCookieCmdHdlr;
 	uchar *pKey;
 
-	dbgprintf("Sytem Line Configuration Commands:\n");
+	dbgprintf("System Line Configuration Commands:\n");
 	llCookieCmd = NULL;
 	while(llGetNextElt(&llCmdList, &llCookieCmd, (void*)&pCmd) == RS_RET_OK) {
 		llGetKey(llCookieCmd, (void*) &pKey); /* TODO: using the cookie is NOT clean! */
