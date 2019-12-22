@@ -2073,7 +2073,7 @@ finalize_it:
  * batch. Otherwise, we may not complete it, and then the cancel
  * handler also tries to delete the batch. But then it finds some of
  * the messages already destructed. This was a bug we have seen, especially
- * with disk mode, where a delete takes rather long. Anyhow, the coneptual
+ * with disk mode, where a delete takes rather long. Anyhow, the conceptual
  * problem exists in all queue modes.
  * rgerhards, 2009-05-27
  */
