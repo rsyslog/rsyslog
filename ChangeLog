@@ -10758,7 +10758,7 @@ Version 3.12.4 (rgerhards), 2008-03-25
 ---------------------------------------------------------------------------
 Version 3.12.3 (rgerhards), 2008-03-18
 - added advanced flow control for congestion cases (mode depending on message
-  source and its capablity to be delayed without bad side effects)
+  source and its capability to be delayed without bad side effects)
 - bugfix: $ModDir should not be reset on $ResetConfig - this can cause a lot
   of confusion and there is no real good reason to do so. Also conflicts with
   the new -M option and environment setting.
