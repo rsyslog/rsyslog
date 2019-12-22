@@ -87,7 +87,7 @@ rsRetVal rulesetKeyDestruct(void __attribute__((unused)) *pData);
  */
 #define rulesetGetName(pRuleset) ((pRuleset)->pszName)
 
-/* returns 1 if the ruleset has a queue associtated, 0 if not */
+/* returns 1 if the ruleset has a queue associated, 0 if not */
 #define rulesetHasQueue(pRuleset) ((pRuleset)->pQueue == NULL ? 0 : 1)
 
 
