@@ -5077,7 +5077,7 @@ funcName2Ptr(char *const fname, const unsigned short nParams)
 
 rsRetVal
 addMod2List(const int __attribute__((unused)) version, struct scriptFunct *functArray)
-/*version currently not used, might be needed later for versin check*/
+/*version currently not used, might be needed later for version check*/
 {
 	DEFiRet;
 	int i;
