@@ -271,7 +271,7 @@ BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and
 		dbgPrintCfSysLineHandlers();
 	// TODO: The following code needs to be "streamlined", so far just moved over...
 	dbgprintf("Main queue size %d messages.\n", pThis->globals.mainQ.iMainMsgQueueSize);
-	dbgprintf("Main queue worker threads: %d, wThread shutdown: %d, Perists every %d updates.\n",
+	dbgprintf("Main queue worker threads: %d, wThread shutdown: %d, Persists every %d updates.\n",
 		  pThis->globals.mainQ.iMainMsgQueueNumWorkers,
 		  pThis->globals.mainQ.iMainMsgQtoWrkShutdown, pThis->globals.mainQ.iMainMsgQPersistUpdCnt);
 	dbgprintf("Main queue timeouts: shutdown: %d, action completion shutdown: %d, enq: %d\n",

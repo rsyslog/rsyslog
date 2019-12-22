@@ -76,7 +76,7 @@ struct queue_s {
 	wtp_t	*pWtpReg;
 	action_t *pAction;	/* for action queues, ptr to action object; for main queues unused */
 	int	iUpdsSincePersist;/* nbr of queue updates since the last persist call */
-	int	iPersistUpdCnt;	/* persits queue info after this nbr of updates - 0 -> persist only on shutdown */
+	int	iPersistUpdCnt;	/* persists queue info after this nbr of updates - 0 -> persist only on shutdown */
 	sbool	bSyncQueueFiles;/* if working with files, sync them after each write? */
 	int	iHighWtrMrk;	/* high water mark for disk-assisted memory queues */
 	int	iLowWtrMrk;	/* low water mark for disk-assisted memory queues */

@@ -2852,7 +2852,7 @@ CODESTARTobjDestruct(qqueue)
 			qqueueDestruct(&pThis->pqDA);
 		}
 
-		/* persist the queue (we always do that - queuePersits() does cleanup if the queue is empty)
+		/* persist the queue (we always do that - queuePersists() does cleanup if the queue is empty)
 		 * This handler is most important for disk queues, it will finally persist the necessary
 		 * on-disk structures. In theory, other queueing modes may implement their other (non-DA)
 		 * methods of persisting a queue between runs, but in practice all of this is done via
