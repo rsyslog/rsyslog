@@ -1536,7 +1536,7 @@ actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 	}
 	DBGPRINTF("actionCommit[%s]: processing...\n", pThis->pszName);
 
-	/* we now do one try at commiting the whole batch. Usually, this will
+	/* we now do one try at committing the whole batch. Usually, this will
 	 * succeed. If so, we are happy and done. If not, we dig into the details
 	 * of finding out if we have a non-temporary error and try to handle this
 	 * as well as retry processing. Due to this logic we do a bit more retries

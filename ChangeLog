@@ -262,7 +262,7 @@ Scheduled Release 8.1911.0 (aka 2019.11) 2019-11-12
   common under the following conditions:
   - async writing of files
   - dynafiles
-  - not commiting file data at end of transaction
+  - not committing file data at end of transaction
   However it could be triggerred under other conditions as well.
   The refactoring done in 8.1908 increased the likelyhood of
   experienceing this bug. But it was not a real regression, the new
