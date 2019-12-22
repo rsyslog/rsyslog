@@ -9863,7 +9863,7 @@ version before switching to this one.
 
 - greatly enhanced performance when compared to v3.
 - added configuration directive "HUPisRestart" which enables to configure
-  HUP to be either a full restart or "just" a leightweight way to
+  HUP to be either a full restart or "just" a lightweight way to
   close open files.
 - enhanced legacy syslog parser to detect year if part of the timestamp
   the format is based on what Cisco devices seem to emit.
