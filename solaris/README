@@ -20,7 +20,7 @@ the native Solaris tools. As we need the GNU replacements, this
 must be specified on the ./configure line.
 Also, we must tell the linker where to find the glibc library when
 building the plugins. This is done via the LDFLAGS variable as
-shown below (based on the good information availabe at
+shown below (based on the good information available at
 http://prefetch.net/articles/linkers.badldlibrary.html
 
 The working sample configure sequence I use is:
