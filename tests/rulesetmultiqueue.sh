@@ -59,7 +59,7 @@ tcpflood -c3 -p'$RSYSLOG_PORT2' -m20000 -i20000
 tcpflood -c3 -p'$RSYSLOG_PORT3' -m20000 -i40000
 
 # in this version of the imdiag, we do not have the capability to poll
-# all queues for emptyness. So we do a sleep in the hopes that this will
+# all queues for emptiness. So we do a sleep in the hopes that this will
 # sufficiently drain the queues. This is race, but the best we currently
 # can do... - rgerhards, 2009-11-05
 shutdown_when_empty # shut down rsyslogd when done processing messages
