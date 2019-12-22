@@ -1582,7 +1582,7 @@ Version 8.38.0 [v8-stable] 2018-09-18
   - major memory leak which occurred once per message processed
     So this could lead to OOM. Caused by improper free of json
     structure
-  - another two major leaks of similar magnitued could occur if
+  - another two major leaks of similar magnitude could occur if
     "fromhost-ip" and/or "fromhost" properties were set
   - minor leaks upon termination. these were unproblematic as
     static and only occured immediately before shutdown.
