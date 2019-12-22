@@ -1,7 +1,7 @@
 #!/bin/sh
 # Sample startup script for rsyslogd on FreeBSD.
 # It worked on my machine, but this does not necessarily
-# mean it works on all machines - it's not thouroughly
+# mean it works on all machines - it's not thoroughly
 # tested. Please note that it may also work on other
 # BSD variants, too.
 #

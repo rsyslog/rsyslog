@@ -2,7 +2,7 @@
 # we test the execonly if previous is suspended directive. For this,
 # we have an action that is suspended for all messages but the second.
 # we write two files: one only if the output is suspended and the other one
-# in all cases. This should thouroughly check the logic involved.
+# in all cases. This should thoroughly check the logic involved.
 # rgerhards, 2010-06-23
 echo ===============================================================================
 echo \[execonlywhenprevsuspended2.sh\]: test execonly...suspended functionality

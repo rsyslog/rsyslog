@@ -4427,7 +4427,7 @@ Version 8.18.0 [v8-stable] 2016-04-19
   This module accessed private data members of libfastjson
 - ommongodb: fix json API issues
   This module accessed private data members of libfastjson
-- testbench improvements (more tests and more thourough tests)
+- testbench improvements (more tests and more thorough tests)
   among others:
   - tests for omjournal added
   - tests for KSI subsystem
