@@ -4589,7 +4589,7 @@ Version 8.17.0 [v8-stable] 2016-03-08
   Singh for helping to analyze what was going on.
 - bugfix tcpflood: did not handle connection drops correct in TLS case
   note that tcpflood is a testbench too. The bug caused some testbench
-  instability, but had no effect on deplyments.
+  instability, but had no effect on deployments.
 - bugfix: abort if global parameter value was wrong 
   If so, the abort happened during startup. Once started,
   all was stable.
