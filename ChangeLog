@@ -6409,7 +6409,7 @@ Version 7.4.3  [v7.4-stable] 2013-07-18
 Version 7.4.2  [v7.4-stable] 2013-07-04
 - bugfix: in RFC5425 TLS, multiple wildcards in auth could cause segfault
 - bugfix: RainerScript object required parameters were not properly
-  checked - this clould result to segfaults on startup if parameters
+  checked - this could result to segfaults on startup if parameters
   were missing.
 - bugfix: double-free in omelasticsearch
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=461
