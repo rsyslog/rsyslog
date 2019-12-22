@@ -1438,7 +1438,7 @@ Version 8.39.0 [v8-stable] 2018-10-30
   - testbench tooling: fix incorrect tcpflood TLS parameter check
     could lead to segfault when started
   - bugfix testbench tooling: tcpflood invalid type in calloc (openssl mode)
-    It is unlikley that this has caused a real issue, as long as pointers
+    It is unlikely that this has caused a real issue, as long as pointers
     are all of the same size (what is highly probable).
     detected by cppcheck via Codacy.com
 ------------------------------------------------------------------------------

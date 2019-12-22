@@ -118,7 +118,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(0)
 /* we do not use the macro
  * CODE_STD_FINALIZERparseSelectorAct
  * here as this causes a Coverity ID "false positive" (CID 185431).
- * We don't see an issue with using the copy&pasted code as it is unlikly
+ * We don't see an issue with using the copy&pasted code as it is unlikely
  * to change for this (outdated) module.
  */
 finalize_it: ATTR_UNUSED; /* semi-colon needed according to gcc doc! */
