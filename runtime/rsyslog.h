@@ -302,7 +302,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_NOENTRY = -2004,		/**< do not create an entry for (whatever) - not necessary an error */
 	RS_RET_NO_SQL_STRING = -2005,	/**< string is not suitable for use as SQL */
 	RS_RET_DISABLE_ACTION = -2006,  /**< action requests that it be disabled */
-	RS_RET_SUSPENDED = -2007,  /**< something was suspended, not neccesarily an error */
+	RS_RET_SUSPENDED = -2007,  /**< something was suspended, not necessarily an error */
 	RS_RET_RQD_TPLOPT_MISSING = -2008,/**< a required template option is missing */
 	RS_RET_INVALID_VALUE = -2009,/**< some value is invalid (e.g. user-supplied data) */
 	RS_RET_INVALID_INT = -2010,/**< invalid integer */

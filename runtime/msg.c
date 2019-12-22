@@ -823,7 +823,7 @@ uchar *propIDToName(propid_t propID)
  * NOTE: this constructor does NOT call calloc(), as we have many bytes
  * inside the structure which do not need to be cleared. bzero() will
  * heavily thrash the cache, so we do the init manually (which also
- * is the right thing to do with pointers, as they are not neccessarily
+ * is the right thing to do with pointers, as they are not necessarily
  * a binary 0 on all machines [but today almost always...]).
  * rgerhards, 2008-10-06
  */
