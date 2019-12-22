@@ -665,7 +665,7 @@ CODESTARTnewActInst
 			CHKmalloc(pData->port = (char*)strdup("27017"));
 
 		/* We need to calculate the total length of the connection uri.
-		 * We will let it readable and let gcc do the optimisation for us.
+		 * We will let it readable and let gcc do the optimization for us.
 		 */
 		size_t server = strlen(pData->server);
 		size_t port = strlen(pData->port);

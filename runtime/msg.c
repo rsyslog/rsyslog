@@ -381,7 +381,7 @@ static const char *syslog_fac_names[LOG_NFACILITIES] = { "kern", "user", "mail",
 							"news", "uucp", "cron", "authpriv", "ftp", "aso", "audit",
 							"alert", "caa", "local0", "local1", "local2", "local3",
 							"local4", "local5", "local6", "local7", "invld"    };
-/* length of the facility names string (for optimizatiions) */
+/* length of the facility names string (for optimizations) */
 static short len_syslog_fac_names[LOG_NFACILITIES] = { 4, 4, 4, 6, 4, 6, 3,
 							4, 4, 4, 8, 3, 3, 5,
 							5, 3, 6, 6, 6, 6,
@@ -393,7 +393,7 @@ static const char *syslog_fac_names[LOG_NFACILITIES] = { "kern", "user", "mail",
 							"news", "uucp", "cron", "authpriv", "ftp", "ntp", "audit",
 							"alert", "clock", "local0", "local1", "local2", "local3",
 							"local4", "local5", "local6", "local7", "invld" };
-/* length of the facility names string (for optimizatiions) */
+/* length of the facility names string (for optimizations) */
 static short len_syslog_fac_names[LOG_NFACILITIES] = { 4, 4, 4, 6, 4, 6, 3,
 							4, 4, 4, 8, 3, 3, 5,
 							5, 5, 6, 6, 6, 6,
@@ -4265,7 +4265,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 				/* in this case, we already work on dynamic
 				 * memory, so there is no need to copy it - we can
 				 * modify it in-place without any harm. This is a
-				 * performance optiomization.
+				 * performance optimization.
 				 */
 				for(pDst = pRes; *pDst; pDst++) {
 					if(iscntrl((int) *pDst))

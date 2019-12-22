@@ -197,7 +197,7 @@ Scheduled Release 8.1911.0 (aka 2019.11) 2019-11-12
   is only supported by OpenSSl 1.1.0 or higher and was not really
   necessary for the testcases.
   closes https://github.com/rsyslog/rsyslog/issues/3939
-- 2019-11-05: mmdarwin: Optimisations, new parameters, update to protocol header
+- 2019-11-05: mmdarwin: Optimizations, new parameters, update to protocol header
   - use permanent worker-dependent buffers to avoid malloc/free for each entry
   - move socket structures to worker data, remove global mutex
   - add log lines for parameters and general workflow
