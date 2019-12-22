@@ -6270,7 +6270,7 @@ Version 7.4.6  [v7.4-stable] 2013-10-31
 - now requires libestr 0.1.9 as earlier versions lead to problems with
   number handling in RainerScript
 - bugfix: memory leak in strlen() RainerScript function
-  Thanks to Gregoire Seux for reportig this bug.
+  Thanks to Gregoire Seux for reporting this bug.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=486
 - bugfix: buffer overrun if re_extract function was called for submatch 50
   Thanks to Pavel Levshin for reporting the problem and its location.
@@ -6435,7 +6435,7 @@ Version 7.4.2  [v7.4-stable] 2013-07-04
 - solved build problems on FreeBSD
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=457
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=458
-  Thanks to Christiano for reproting and suggesting patches
+  Thanks to Christiano for reporting and suggesting patches
 - solved build problems on CENTOS5
 ---------------------------------------------------------------------------
 Version 7.4.1  [v7.4-stable] 2013-06-17
