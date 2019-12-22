@@ -44,7 +44,7 @@
 #include "hashtable_itr.h"
 
 
-/* externally-visiable data (see statsobj.h for explanation) */
+/* externally-visible data (see statsobj.h for explanation) */
 int GatherStats = 0;
 
 /* static data */
