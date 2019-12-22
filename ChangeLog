@@ -1634,7 +1634,7 @@ Version 8.38.0 [v8-stable] 2018-09-18
   * Fixed server configuration issues holding the kafka tests back from working
   * Fixed some config issues in all sndrcv kafka tests.
   * Generating dynamically kafka topics now for each kafka test.
-  * Renabled kafka_multi test which runs a test on 3 kafka/zookeeper instances
+  * Reenabled kafka_multi test which runs a test on 3 kafka/zookeeper instances
 ------------------------------------------------------------------------------
 Version 8.37.0 [v8-stable] 2018-08-07
 - build system: add --enable-default-tests ./configure option
