@@ -3740,7 +3740,7 @@ Version 8.27.0 [v8-stable] 2017-05-16
   appeared once in each polling cycle, causing a potentially very large
   amount of error messages. Note that they were usually emitted too
   infrequently to trigger the error message rate limiter, albeit often
-  enough to be a major annoance.
+  enough to be a major annoyance.
 - imfile: in inotify mode, add error message if configured file cannot
   be found
 - imfile: add parameter "fileNotFoundError" to optinally disable
