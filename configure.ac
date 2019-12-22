@@ -985,7 +985,7 @@ fi
 AM_CONDITIONAL(ENABLE_OMHTTP, test x$enable_omhttp = xyes)
 
 
-# capability to enable elasticsearch testbench tests. This requries that an ES test
+# capability to enable elasticsearch testbench tests. This requires that an ES test
 # environment is present on the local (127.0.0.1) machine.
 # we support a "minimal" mode to take care of travis where we cannot run all tests
 # due to runtime constraints
@@ -1003,7 +1003,7 @@ AM_CONDITIONAL(ENABLE_ELASTICSEARCH_TESTS, test x$enable_elasticsearch_tests = x
 AM_CONDITIONAL(ENABLE_ELASTICSEARCH_TESTS_MINIMAL, test x$enable_elasticsearch_tests = xminimal -o x$enable_elasticsearch_tests = xyes)
 
 
-# capability to enable clickhouse testbench tests. This requries that a test
+# capability to enable clickhouse testbench tests. This requires that a test
 # environment is present on the local (127.0.0.1) machine.
 AC_ARG_ENABLE(clickhouse_tests,
         [AS_HELP_STRING([--enable-clickhouse-tests],[enable Elasticsearch specific tests in testbench @<:@default=no@:>@])],
@@ -1154,7 +1154,7 @@ AC_ARG_ENABLE(extended_tests,
 AM_CONDITIONAL(ENABLE_EXTENDED_TESTS, test x$enable_extended_tests = xyes)
 
 
-# capability to enable MySQL testbench tests. This requries that a Syslog database
+# capability to enable MySQL testbench tests. This requires that a Syslog database
 # with the default schema has been created on the local (127.0.0.1) MySQL server and
 # a user "rsyslog" with password "testbench" exists, is able to login with default
 # parameters and has sufficient (read: all) privileges on that database.
@@ -1171,7 +1171,7 @@ AC_ARG_ENABLE(mysql_tests,
 AM_CONDITIONAL(ENABLE_MYSQL_TESTS, test x$enable_mysql_tests = xyes)
 
 
-# capability to enable PostgreSQL testbench tests. This requries that a Syslog database
+# capability to enable PostgreSQL testbench tests. This requires that a Syslog database
 # with the default schema (see plugins/ompgsql/createDB.sql) has been created on the
 # local (127.0.0.1) PostgreSQL server and a user "rsyslog" with password "testbench"
 # exists, is able to login with default parameters and has sufficient (read: all)
