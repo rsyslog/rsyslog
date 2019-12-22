@@ -1141,7 +1141,7 @@ AM_CONDITIONAL(ENABLE_RSYSLOGD, test x$enable_rsyslogd = xyes)
 # for this switch is that some test simply take too long to execute them on a regular
 # basis. So we enable to skip them, while the majority of tests can still be used. The
 # idea is that at least "make distcheck" executes the extended testbench, and also
-# developers should explicitely enable it after important changes. -- rgerhards, 2010-04-12
+# developers should explicitly enable it after important changes. -- rgerhards, 2010-04-12
 AC_ARG_ENABLE(extended_tests,
         [AS_HELP_STRING([--enable-extended-tests],[extended testbench @<:@default=no@:>@])],
         [case "${enableval}" in

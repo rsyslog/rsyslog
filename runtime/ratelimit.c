@@ -344,7 +344,7 @@ ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned int interval, unsigned in
 /* enable thread-safe operations mode. This make sure that
  * a single ratelimiter can be called from multiple threads. As
  * this causes some overhead and is not always required, it needs
- * to be explicitely enabled. This operation cannot be undone
+ * to be explicitly enabled. This operation cannot be undone
  * (think: why should one do that???)
  */
 void

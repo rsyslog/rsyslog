@@ -77,7 +77,7 @@ OPERATION MODES
 
 The operation mode specifies what exactly the tool does with the provided
 files. The default operation mode is "dump", but this may change in the future.
-Thus, it is recommended to always set the operations mode explicitely. If 
+Thus, it is recommended to always set the operations mode explicitly. If 
 multiple operations mode are set on the command line, results are 
 unpredictable.
 

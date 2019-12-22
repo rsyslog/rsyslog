@@ -2062,7 +2062,7 @@ start_elasticsearch() {
 }
 
 # read data from ES to a local file so that we can process
-# $1 - number of records (ES does not return all records unless you tell it explicitely).
+# $1 - number of records (ES does not return all records unless you tell it explicitly).
 # $2 - ES port
 es_getdata() {
 	curl --silent -XPUT --show-error -H 'Content-Type: application/json' "http://localhost:${2:-$ES_PORT}/rsyslog_testbench/_settings" -d '{ "index" : { "max_result_window" : '${1:-$NUMMESSAGES}' } }'

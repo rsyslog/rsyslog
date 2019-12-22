@@ -1,7 +1,7 @@
 #!/bin/bash
 # The sole point of this test is that omusrmsg does not abort.
 # We cannot check the actual outcome, as we would need to be running
-# under root to do this. This test has explicitely been added to ensure
+# under root to do this. This test has explicitly been added to ensure
 # we can do some basic testing even when not running as root. Additional
 # tests may be added for the root case.
 # addd 2018-08-05 by RGerhards, released under ASL 2.0

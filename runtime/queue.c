@@ -2235,7 +2235,7 @@ finalize_it:
 	*	this has not been done so consistently. Andre convinced me that the current
 	*	code is an elegant solution. However, if problems with queue workers and/or
 	*	shutdown come up, this code here should be looked at suspiciously. In those
-	*	cases it may work out to check all status codes explicitely, just to avoid
+	*	cases it may work out to check all status codes explicitly, just to avoid
 	*	a pitfall due to unexpected states being passed on to the caller.
 	*/
 	if(	iRet != RS_RET_OK &&

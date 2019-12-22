@@ -685,7 +685,7 @@ Version 8.1905.0 (aka 2019.05) 2019-05-28
   Root cause seems to be that SIGTERM is delivered differently under
   FreeBSD. This causes the main thread to not be awaken, and so it
   takes until the next janitor interval to come back to life - which
-  can be far too long. Fixed this bug explicitley awaking the main
+  can be far too long. Fixed this bug explicitly awaking the main
   thread.
 - imtcp bugfix: oversize message truncation causes log to be garbled
   The actual problem is in the tcpserver component. However, the prime user
@@ -3075,7 +3075,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
     fixes https://github.com/rsyslog/rsyslog/issues/1991
   * some small memory leaks fixed
     most of them cosmetic or a few bytes statically (not growing as
-    omkafka was used) -- thus we do not mention each one explicitely.
+    omkafka was used) -- thus we do not mention each one explicitly.
     For more details, see git commit log or this pull request:
     https://github.com/rsyslog/rsyslog/pull/2051
 - kafka bugfix: problem on invalid kafka configuration values
@@ -4319,7 +4319,7 @@ Version 8.19.0 [v8-stable] 2016-05-31
   Most importantly, we will tell the user in clear words if specific TLS
   options are not available due to too-old GnuTLS.
   closes https://github.com/rsyslog/rsyslog/issues/1019
-- default stack size for inputs has been explicitely set to 4MiB
+- default stack size for inputs has been explicitly set to 4MiB
   for most platforms, this means a reduction from the default of 10MiB, hower
   it may mean an increas for micro-libc's (some may have as low as 80KiB by
   default).
@@ -4401,7 +4401,7 @@ Version 8.19.0 [v8-stable] 2016-05-31
 Version 8.18.0 [v8-stable] 2016-04-19
 - testbench: When running privdrop tests testbench tries to drop
   user to "rsyslog", "syslog" or "daemon" when running as root and
-  you don't explict set RSYSLOG_TESTUSER environment variable.
+  you don't explicit set RSYSLOG_TESTUSER environment variable.
   Make sure the unprivileged testuser can write into tests/ dir!
 - templates: add option to convert timestamps to UTC
   closes https://github.com/rsyslog/rsyslog/issues/730
@@ -5525,7 +5525,7 @@ This starts a new stable branch based on 8.1.6 plus the following changes:
   the file template (so we have a full syslog header). This fix corrects
   it back to previous behavior, but new scripts that used the wrong
   format may now need to have the RSYSLOG_ForwardingFormat template
-  explicitely be applied.
+  explicitly be applied.
   closes: https://github.com/rsyslog/rsyslog/issues/50
 ---------------------------------------------------------------------------
 Version 8.1.6 [release candidate] 2014-02-20
@@ -5560,7 +5560,7 @@ Version 8.1.6 [release candidate] 2014-02-20
   many distros now turn it off for good reason), ompgsql could not
   properly connect. This could even lead to a segfault. The core reason
   was that a PG session handle was kept open over a fork, something that
-  is explicitely forbidden in the PG API.
+  is explicitly forbidden in the PG API.
   Thanks to Alain for the analysis and the patch.
 - bugfix: ommongodb's template parameter was mandatory but should have
   been optional
@@ -5582,7 +5582,7 @@ Version 8.1.5 [devel] 2014-01-24
   CHANGE OF BEHAVIOR: previous versions did always execute only one
   instance per action, no matter how many workers were active. If
   your program has special needs, you need to change your configuration.
-- imfile now supports inotify (but must be explicitely turned on)
+- imfile now supports inotify (but must be explicitly turned on)
 - imfile no longer has a limit on number of monitored files
 - added ProcessInternalMessages global system parameter
   This permits to inject rsyslog status messages into *another* main
@@ -5695,7 +5695,7 @@ Version 8.1.0 [experimental] 2013-11-15
 - module omruleset is no longer enabled by default.
   Note that it has been deprecated in v7 and been replaced by the "call"
   statement. Also, it can still be build without problems, the option must
-  just explicitely be given.
+  just explicitly be given.
 ---------------------------------------------------------------------------
 Version 7.6.8 [v7.6-stable] 2014-10-??
 - bugfix: typo in queue configuration parameter made parameter unusable
@@ -5845,7 +5845,7 @@ Version 7.6.3 [v7.6-stable] 2014-03-27
   the file template (so we have a full syslog header). This fix corrects
   it back to previous behavior, but new scripts that used the wrong
   format may now need to have the RSYSLOG_ForwardingFormat template
-  explicitely be applied.
+  explicitly be applied.
   closes: https://github.com/rsyslog/rsyslog/issues/50
 - bugfix: ompipe did emit many suspension messages for /dev/xconsole
   (hopefully now) closes: https://github.com/rsyslog/rsyslog/issues/35
@@ -5924,7 +5924,7 @@ This starts a new stable branch based on 7.5.8 plus the following changes:
   many distros now turn it off for good reason), ompgsql could not
   properly connect. This could even lead to a segfault. The core reason
   was that a PG session handle was kept open over a fork, something that
-  is explicitely forbidden in the PG API.
+  is explicitly forbidden in the PG API.
   Thanks to Alain for the analysis and the patch.
 ---------------------------------------------------------------------------
 Version 7.5.8 [v7-release candidate] 2014-01-09
@@ -6202,7 +6202,7 @@ Version 7.4.10  [v7.4-stable] 2014-02-12
   many distros now turn it off for good reason), ompgsql could not
   properly connect. This could even lead to a segfault. The core reason
   was that a PG session handle was kept open over a fork, something that
-  is explicitely forbidden in the PG API.
+  is explicitly forbidden in the PG API.
   Thanks to Alain for the analysis and the patch.
 ---------------------------------------------------------------------------
 Version 7.4.9  [v7.4-stable] 2014-01-22
@@ -9608,7 +9608,7 @@ Version 4.5.0  [DEVEL] (rgerhards), 2009-07-02
   * $OMFileFlushOnTXEnd
   * $MainMsgQueueSyncQueueFiles
   * $ActionQueueSyncQueueFiles
-- done some memory accesses explicitely atomic
+- done some memory accesses explicitly atomic
 - bugfix: subtle (and usually irrelevant) issue in timout processing
   timeout could be one second too early if nanoseconds wrapped
 - set a more sensible timeout for shutdow, now 1.5 seconds to complete
@@ -10735,7 +10735,7 @@ Version 3.12.4 (rgerhards), 2008-03-25
   it in plain old sysklogd syslog.conf format. There is now the
   $ActionFileEnableSync config setting which must be enabled in order to
   support syncing. By default it is off. So even if the old-format config
-  lines request syncing, it is not done unless explicitely enabled. I am
+  lines request syncing, it is not done unless explicitly enabled. I am
   sure this is a very useful change and not a risk at all. I need to think
   if I undo it under compatibility mode, but currently this does not
   happen (I fear a lot of lazy users will run rsyslogd in compatibility
@@ -10781,7 +10781,7 @@ Version 3.12.3 (rgerhards), 2008-03-18
   it in plain old sysklogd syslog.conf format. There is now a new config
   setting which must be enabled in order to support syncing. By default it
   is off. So even if the old-format config lines request syncing, it is
-  not done unless explicitely enabled. I am sure this is a very useful
+  not done unless explicitly enabled. I am sure this is a very useful
   change and not a risk at all. I need to think if I undo it under
   compatibility mode, but currently this does not happen (I fear a lot of
   lazy users will run rsyslogd in compatibility mode, again bringing up

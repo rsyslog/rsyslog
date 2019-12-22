@@ -1226,7 +1226,7 @@ hdlr_sighup(void)
 {
 	bHadHUP = 1;
 	/* at least on FreeBSD we seem not to necessarily awake the main thread.
-	 * So let's do it explicitely.
+	 * So let's do it explicitly.
 	 */
 	dbgprintf("awaking mainthread on HUP\n");
 	pthread_kill(mainthread, SIGTTIN);
@@ -1823,7 +1823,7 @@ rsyslogdDoDie(int sig)
 #	undef MSG1
 #	undef MSG2
 	/* at least on FreeBSD we seem not to necessarily awake the main thread.
-	 * So let's do it explicitely.
+	 * So let's do it explicitly.
 	 */
 	dbgprintf("awaking mainthread\n");
 	pthread_kill(mainthread, SIGTTIN);
