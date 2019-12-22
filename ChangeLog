@@ -8960,7 +8960,7 @@ Version 5.1.6  [v5-beta] (rgerhards), 2009-10-15
 ---------------------------------------------------------------------------
 Version 5.1.5  [v5-beta] (rgerhards), 2009-09-11
 - added new config option $ActionWriteAllMarkMessages
-  this option permites to process mark messages under all circumstances,
+  this option permits to process mark messages under all circumstances,
   even if an action was recently called. This can be useful to use mark
   messages as a kind of heartbeat.
 - added new config option $InputUnixListenSocketCreatePath
