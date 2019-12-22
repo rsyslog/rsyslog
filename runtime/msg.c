@@ -1066,7 +1066,7 @@ CODESTARTobjDestruct(msg)
 ENDobjDestruct(msg)
 
 /* The macros below are used in MsgDup(). I use macros
- * to keep the function code somewhat more readyble. It is my
+ * to keep the function code somewhat more readable. It is my
  * replacement for inline functions in CPP
  */
 #define tmpCOPYSZ(name) \

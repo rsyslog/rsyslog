@@ -220,7 +220,7 @@ static struct cnfparamblk pblk =
 	};
 
 
-/* primarily a helper for debug purposes, get human-readble name of state */
+/* primarily a helper for debug purposes, get human-readable name of state */
 /* currently not needed, but may be useful in the future! */
 #if 0
 static const char *
