@@ -297,12 +297,12 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		pData->iWaitUSeconds = atoi((char*) szBuf);
 		pData->mode = MD_SLEEP;
 	} else if(!strcmp((char*) szBuf, "fail")) {
-		/* "fail fail-freqency resume-after"
+		/* "fail fail-frequency resume-after"
 		 * fail-frequency specifies how often doAction() fails
 		 * resume-after speicifes how fast tryResume() should come back with success
 		 * all numbers being "times called"
 		 */
-		/* parse fail-frequence */
+		/* parse fail-frequency */
 		for(i = 0 ; *p && !isspace(*p) && ((unsigned) i < sizeof(szBuf) - 1) ; ++i) {
 			szBuf[i] = *p++;
 		}
