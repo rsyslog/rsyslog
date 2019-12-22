@@ -275,7 +275,7 @@ startup_common() {
 	# we need to remove the imdiag port file as there are some
 	# tests that start multiple times. These may get the old port
 	# number if the file still exists AND timing is bad so that
-	# imdiag does not genenrate the port file quickly enough on
+	# imdiag does not generate the port file quickly enough on
 	# startup.
 	rm -f $RSYSLOG_DYNNAME.imdiag$instance.port
 	if [ ! -f $CONF_FILE ]; then
