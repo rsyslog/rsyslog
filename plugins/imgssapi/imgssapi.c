@@ -2,7 +2,7 @@
  * This is the implementation of the GSSAPI input module.
  *
  * Note: the root gssapi code was contributed by varmojfekoj and is most often
- * maintened by him. I am just doing the plumbing around it (I event don't have a
+ * maintained by him. I am just doing the plumbing around it (I event don't have a
  * test lab for gssapi yet... ). I am very grateful for this useful code
  * contribution -- rgerhards, 2008-03-05
  *

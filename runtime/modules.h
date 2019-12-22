@@ -7,7 +7,7 @@
  *
  * The loader keeps track of what is loaded. For library modules, it is also
  * used to find objects (libraries) and to obtain the queryInterface function
- * for them. A reference count is maintened for libraries, so that they are
+ * for them. A reference count is maintained for libraries, so that they are
  * unloaded only when nobody still accesses them.
  *
  * File begun on 2007-07-22 by RGerhards

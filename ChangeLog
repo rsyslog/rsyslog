@@ -5605,7 +5605,7 @@ Version 8.1.4 [devel] 2014-01-10
   Thanks to Tomas Heinrich for the patch.
 - bugfix: action commitTransaction() processing did not properly handle
   suspended actions
-- bugfix: omelasticsearch fail.es stats counter was improperly maitained
+- bugfix: omelasticsearch fail.es stats counter was improperly maintained
 ---------------------------------------------------------------------------
 Version 8.1.3 [devel] 2013-12-06
 
