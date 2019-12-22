@@ -146,7 +146,7 @@ dbgprint(obj_t *pObj, char *pszMsg, const char *pszFileName, const size_t lenMsg
 	 * switching occurs during non-NL messages. Else, things are messed
 	 * up. Anyhow, it works well enough to provide useful help during
 	 * getting this up and running. It is questionable if the extra effort
-	 * is worth fixing it, giving the limited appliability. -- rgerhards, 2005-10-25
+	 * is worth fixing it, giving the limited applicability. -- rgerhards, 2005-10-25
 	 * I have decided that it is not worth fixing it - especially as it works
 	 * pretty well. -- rgerhards, 2007-06-15
 	 */
