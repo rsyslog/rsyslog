@@ -3278,7 +3278,7 @@ Version 8.30.0 [v8-stable] 2017-10-17
     to build with lower version, but this will degrade imjournal functionality.
 - CHANGE OF BEHAVIOR: all variables are now case-insensitive by default
   Formerly, JSON based variables ($!, $., $/) were case-sensitive.
-  Turn old default back on: global(variables.casesensitve="on")
+  Turn old default back on: global(variables.casesensitive="on")
   See ChangeLog entry below for more details.
 - core: handle (JSON) variables in case-insensitive way
   The variable system inside rsyslog is JSON based (for easy consumption
@@ -3291,7 +3291,7 @@ Version 8.30.0 [v8-stable] 2017-10-17
   "$!Key" and "$!key" are the same). We do not expect any real problems
   out of this, as key names only differing in case is highly unlikely.
   However, as it is possible we provide a way to enable case-sensitivity
-  via the global(variables.casesensitve="on") global config object.
+  via the global(variables.casesensitive="on") global config object.
   Note that the default is to do case-insensitive matches. The reason
   is that this is the right thing to do in almost all cases, and we do
   not envision any problems at all in existing deployments.
@@ -3363,7 +3363,7 @@ Version 8.30.0 [v8-stable] 2017-10-17
 - imtcp bugfix: parameter priorityString was ignored
   defaults were always used
 - template/bugfix: invalid template option conflict detection
-  This prevented "option.casesenstive" to be used with the SQL and JSON
+  This prevented "option.casesensitive" to be used with the SQL and JSON
   options.
 - core/actions: fix handling of data-induced errors
   Rsyslog core should try to detect data-induced (unrecoverable) errors
