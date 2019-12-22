@@ -87,7 +87,7 @@ Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
   A loki template must be json compatible and include a "stream" key of
   key value tags, and a values key of an array of 2 element arrays, where
   each 2 element array is the unix epoch in nanoseconds followed by an
-  unstrectured message.
+  unstructured message.
   An example:
       template(name="array_loki" type="string" string="{\"stream\":{\"host\":\"%HOSTNAME%\",\"facility\":\"%syslogfacility-text%\",\"priority\":\"%syslogpriority-text%\",\"syslogtag\":\"%syslogtag%\"},\"values\": [[ \"%timegenerated:::date-unixtimestamp%000000000\", \"%msg%\" ]]}")
 - 2019-11-22: testbench: obtain python binary path via AM_PATH_PYTHON
