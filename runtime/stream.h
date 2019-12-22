@@ -15,7 +15,7 @@
  * Most importantly, this class provides generic input and output functions
  * which can directly be used to work with the strms and file output. It
  * provides such useful things like a circular file buffer and, hopefully
- * at a later stage, a lazy writer. The object is also seriazable and thus
+ * at a later stage, a lazy writer. The object is also serializable and thus
  * can easily be persistent. The bottom line is that it makes much sense to
  * use this class whereever possible as its features may grow in the future.
  *
