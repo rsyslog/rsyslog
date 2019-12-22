@@ -626,7 +626,7 @@ startupSrv(ptcpsrv_t *pSrv)
 		 * pick a port that is used by some protocol (well, at least this looks very
 		 * unlikely...). If our assumption is wrong, we should iterate until we find a
 		 * combination that works - it is very unusual to have the same service listen
-		 * on differnt ports on IPv4 and IPv6.
+		 * on different ports on IPv4 and IPv6.
 		 */
 		const int currport = (isIPv6) ?
 			(((struct sockaddr_in6*)r->ai_addr)->sin6_port) :
