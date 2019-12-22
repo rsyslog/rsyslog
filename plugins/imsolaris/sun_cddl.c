@@ -347,7 +347,7 @@ sun_open_door(void)
 
 		if ((DoorFd = door_create(server, 0,
 		    DOOR_REFUSE_DESC)) < 0) {
-		    //???? DOOR_NO_CANEL requires newer libs??? DOOR_REFUSE_DESC | DOOR_NO_CANCEL)) < 0) {
+		    //???? DOOR_NO_CANCEL requires newer libs??? DOOR_REFUSE_DESC | DOOR_NO_CANCEL)) < 0) {
 			err = errno;
 			(void) sprintf(line, "door_create() failed - fatal");
 			DBGPRINTF("open_door: error: %s, errno=%d\n",
