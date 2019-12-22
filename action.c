@@ -55,7 +55,7 @@
  * point of view, but makes the distinction between enq and deq side of
  * the queue a bit hard. The current idea is that the filter condition
  * alone is checked at the deq side of the queue (seems to be unavoidable
- * to do it that way), but all other complex conditons (like failover
+ * to do it that way), but all other complex conditions (like failover
  * handling) go into the computation of the filter condition. For
  * non-direct queues, we still enqueue only what is actually necessary.
  * Note that in this case the rest of the code must ensure that the filter
