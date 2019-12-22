@@ -4749,7 +4749,7 @@ Version 8.15.0 [v8-stable] 2015-12-15
   * omczmq - added ability to set a timeout for sends
   * omczmq - set topics can be in separate frame (default) or part of message
     frame (configurable)
-  * omcmzq - code cleanup
+  * omczmq - code cleanup
   * imczmq - code cleanup
   * imczmq - fixed a couple of cases where vars could be used uninitialized
   * imczmq - ZMQ_ROUTER support
