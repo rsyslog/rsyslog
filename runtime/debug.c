@@ -259,7 +259,7 @@ r_dbgoprint( const char *srcname, obj_t *pObj, const char *fmt, ...)
 	lenWriteBuf = vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
 	va_end(ap);
 	if(lenWriteBuf >= sizeof(pszWriteBuf)) {
-		/* prevent buffer overrruns and garbage display */
+		/* prevent buffer overruns and garbage display */
 		pszWriteBuf[sizeof(pszWriteBuf) - 5] = '.';
 		pszWriteBuf[sizeof(pszWriteBuf) - 4] = '.';
 		pszWriteBuf[sizeof(pszWriteBuf) - 3] = '.';
@@ -294,7 +294,7 @@ r_dbgprintf(const char *srcname, const char *fmt, ...)
 	lenWriteBuf = vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
 	va_end(ap);
 	if(lenWriteBuf >= sizeof(pszWriteBuf)) {
-		/* prevent buffer overrruns and garbage display */
+		/* prevent buffer overruns and garbage display */
 		pszWriteBuf[sizeof(pszWriteBuf) - 5] = '.';
 		pszWriteBuf[sizeof(pszWriteBuf) - 4] = '.';
 		pszWriteBuf[sizeof(pszWriteBuf) - 3] = '.';
