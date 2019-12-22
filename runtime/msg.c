@@ -4859,7 +4859,7 @@ jsonMerge(struct json_object *existing, struct json_object *json)
 			json_object_get(json_object_iter_peek_value(&it)));
 		json_object_iter_next(&it);
 	}
-	/* note: json-c does ref counting. We added all descandants refcounts
+	/* note: json-c does ref counting. We added all descendants refcounts
 	 * in the loop above. So when we now free(_put) the root object, only
 	 * root gets freed().
 	 */
