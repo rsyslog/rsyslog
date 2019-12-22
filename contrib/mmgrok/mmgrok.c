@@ -199,7 +199,7 @@ static inline grok_t *CreateGrok(void)
 	return grok;
 }
 
-/* the parseing is complate message into json */
+/* the parseing is complete message into json */
 static rsRetVal
 smsg_to_json(GList *list,instanceData *pData)
 {
