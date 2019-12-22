@@ -1210,7 +1210,7 @@ Version 8.40.0 [v8-stable] 2018-12-11
   This occurs always if and only if
   - reopenOnTruncate="on" is set
   - file grows over 2GiB in size
-  Then, the data is continously re-sent until the file becomes smaller
+  Then, the data is continuously re-sent until the file becomes smaller
   2GiB (due to truncation) or is deleted.
   It is a regression introduced by 2d15cbc8221e385c5aa821e4a851d7498ed81850
   closes https://github.com/rsyslog/rsyslog/issues/3249

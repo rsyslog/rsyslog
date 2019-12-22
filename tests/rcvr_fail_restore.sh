@@ -96,7 +96,7 @@ echo file size to expect is $OLDFILESIZE
 
 #
 # Step 4: send new data. Queue files are not permitted to grow now
-# (but one file continous to exist).
+# (but one file continuous to exist).
 #
 echo step 4
 injectmsg2  11001 10
