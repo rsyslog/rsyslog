@@ -4633,7 +4633,7 @@ msgSetPropViaJSON(smsg_t *__restrict__ const pMsg, const char *name, struct json
 		MsgSetRcvFromIPStr(pMsg, (const uchar*)psz, strlen(psz), &propRcvFromIP);
 		prop.Destruct(&propRcvFromIP);
 	} else if(!strcmp(name, "$!")) {
-		/* msgAddJSON expects that it can keep the object without incremeting
+		/* msgAddJSON expects that it can keep the object without incrementing
 		 * the json reference count. So we MUST NOT free (_put) the object in
 		 * this case. -- rgerhards, 2018-09-14
 		 */
