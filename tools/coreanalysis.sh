@@ -17,7 +17,7 @@ COREFILES=`ls $DIRECTORY/core* 2> /dev/null`
 
 select COREFILE in $COREFILES
 do
-	echo "Which coredump do you want to analyse? "
+	echo "Which coredump do you want to analyze? "
 	break;
 done
 

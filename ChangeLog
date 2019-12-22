@@ -4569,7 +4569,7 @@ Version 8.17.0 [v8-stable] 2016-03-08
   which checked for specific GNU semantics. As we do not need
   them (we never ask malloc for zero bytes), we can safely
   remove the macros.
-  Note that we routinely run clang static analyer in CI and
+  Note that we routinely run clang static analyzer in CI and
   it also detects such calls as invalid.
   closes https://github.com/rsyslog/rsyslog/issues/834
 - bugfix: unixtimestamp date format was incorrectly computed

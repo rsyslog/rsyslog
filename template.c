@@ -1969,7 +1969,7 @@ tplProcessCnf(struct cnfobj *o)
 		}
 	}
 
-	/* the following check is just for clang static anaylzer: this condition
+	/* the following check is just for clang static analyzer: this condition
 	 * cannot occur if all is setup well, because "name" is a required parameter
 	 * inside the param block and so the code should err out above.
 	 */
