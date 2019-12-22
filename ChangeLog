@@ -4574,7 +4574,7 @@ Version 8.17.0 [v8-stable] 2016-03-08
   closes https://github.com/rsyslog/rsyslog/issues/834
 - bugfix: unixtimestamp date format was incorrectly computed
   The problem happened in leap year from March til then end
-  of year and healed itself at the begining of the next year.
+  of year and healed itself at the beginning of the next year.
   During the problem period, the timestamp was 24 hours too low.
   fixes https://github.com/rsyslog/rsyslog/issues/830
 - bugfix: date-ordinal date format was incorrectly computed

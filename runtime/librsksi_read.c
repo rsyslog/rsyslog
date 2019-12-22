@@ -1236,7 +1236,7 @@ done:
  * purely sequential and variable size, we need to read all records up to
  * the next signature record.
  * If a caller intends to verify a log file based on the parameters,
- * he must re-read the file from the begining (we could keep things
+ * he must re-read the file from the beginning (we could keep things
  * in memory, but this is impractical for large blocks). In order
  * to facitate this, the function permits to rewind to the original
  * read location when it is done.
@@ -1316,7 +1316,7 @@ done:
  * Read Excerpt block parameters. This detects if the block contains
  * hash chains for log records.
  * If a caller intends to verify a log file based on the parameters,
- * he must re-read the file from the begining (we could keep things
+ * he must re-read the file from the beginning (we could keep things
  * in memory, but this is impractical for large blocks). In order
  * to facitate this, the function permits to rewind to the original
  * read location when it is done.

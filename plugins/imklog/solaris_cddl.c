@@ -212,7 +212,7 @@ sun_getkmsg()
 			}
 
 			/* Move the remaining bytes to
-			 * the beginnning of buf.
+			 * the beginning of buf.
 			 */
 
 			remlen = buflen - len;

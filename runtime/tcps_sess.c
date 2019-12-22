@@ -275,7 +275,7 @@ finalize_it:
  * of a TCP session. This function checks if there is any unprocessed
  * message left in the TCP stream. Such a message is probably a
  * fragement. If evrything goes well, we must be right at the
- * beginnig of a new frame without any data received from it. If
+ * beginning of a new frame without any data received from it. If
  * not, there is some kind of a framing error. I think I remember that
  * some legacy syslog/TCP implementations have non-LF terminated
  * messages at the end of the stream. For now, we allow this behaviour.
