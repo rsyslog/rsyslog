@@ -219,7 +219,7 @@
 
 #endif
 
-/* we need to handle 64bit atomics seperately as some platforms have
+/* we need to handle 64bit atomics separately as some platforms have
  * 32 bit atomics, but not 64 bit ones... -- rgerhards, 2010-12-01
  */
 #ifdef HAVE_ATOMIC_BUILTINS64

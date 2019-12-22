@@ -626,7 +626,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 
 	if (!F_ISSET(iAllow->flags, ADDR_NAME)) {
 		if(iSignificantBits == 0)
-			/* we handle this seperatly just to provide a better
+			/* we handle this separately just to provide a better
 			 * error message.
 			 */
 			LogError(0, NO_ERRCODE, "You can not specify 0 bits of the netmask, this would "

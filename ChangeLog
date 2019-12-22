@@ -3247,7 +3247,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
   Detected by Coverity scan, CID 185348 and 185350
 - fixed several minor and cosmetic issues found by Coverity scan
   including false positives. For details see "$ git log". All noteworthy
-  issues are seperately mentioned in this ChangeLog. The ones not mentioned
+  issues are separately mentioned in this ChangeLog. The ones not mentioned
   are for example problems that can only occur during out of memory
   conditions, under which it is extremely likely tha the rsyslog process
   will be killed in any case
@@ -9783,7 +9783,7 @@ Version 4.1.6  [DEVEL] (rgerhards), 2009-04-07
   Thanks to Arnaud Cornet for providing the idea and initial patch.
 - added a new way how output plugins may be passed parameters. This is
   more efficient for some outputs. They new can receive fields not only
-  as a single string but rather in an array where each string is seperated.
+  as a single string but rather in an array where each string is separated.
 - added (some) developer documentation for output plugin interface
 - bugfix: potential abort with DA queue after high watermark is reached
   There exists a race condition that can lead to a segfault. Thanks

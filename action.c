@@ -2048,7 +2048,7 @@ actionApplyCnfParam(action_t * const pAction, struct cnfparamvals * const pvals)
 		if(!strcmp(pblk.descr[i].name, "name")) {
 			pAction->pszName = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(pblk.descr[i].name, "type")) {
-			continue; /* this is handled seperately during module select! */
+			continue; /* this is handled separately during module select! */
 		} else if(!strcmp(pblk.descr[i].name, "action.errorfile")) {
 			pAction->pszErrFile = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(pblk.descr[i].name, "action.externalstate.file")) {

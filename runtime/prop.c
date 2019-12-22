@@ -1,7 +1,7 @@
 /* prop.c - rsyslog's prop object
  *
  * This object is meant to support message properties that are stored
- * seperately from the message. The main intent is to support properties
+ * separately from the message. The main intent is to support properties
  * that are "constant" during a period of time, so that many messages may
  * contain a reference to the same property. It is important, though, that
  * properties are destroyed when they are no longer needed.

@@ -242,7 +242,7 @@ typedef struct epolld_s epolld_t;
 
 /* the ptcp server (listener) object
  * Note that the object contains support for forming a linked list
- * of them. It does not make sense to do this seperately.
+ * of them. It does not make sense to do this separately.
  */
 struct ptcpsrv_s {
 	ptcpsrv_t *pNext;		/* linked list maintenance */
