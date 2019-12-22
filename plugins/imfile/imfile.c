@@ -2212,7 +2212,7 @@ in_dbg_showEv(const struct inotify_event *ev)
 		dbgprintf("INOTIFY event: watch was REMOVED\n");
 	}
 	if(ev->mask & IN_MODIFY) {
-		dbgprintf("INOTIFY event: watch was MODIFID\n");
+		dbgprintf("INOTIFY event: watch was MODIFIED\n");
 	}
 	if(ev->mask & IN_ACCESS) {
 		dbgprintf("INOTIFY event: watch IN_ACCESS\n");
