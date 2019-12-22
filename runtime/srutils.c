@@ -324,7 +324,7 @@ int execProg(uchar *program, int bWait, uchar *arg)
 	 * checking here. However, it can not easily be done. For starters, we
 	 * may run into endless loops if we log to syslog. The next problem is
 	 * that output is typically not seen by the user. For the time being,
-	 * we use no error reporting, which is quite consitent with the old
+	 * we use no error reporting, which is quite consistent with the old
 	 * system() way of doing things. rgerhards, 2007-07-20
 	 */
 	perror("exec");
