@@ -127,7 +127,7 @@ propConstructFinalize(prop_t __attribute__((unused)) *pThis)
 
 
 /* add a new reference. It is VERY IMPORTANT to call this function whenever
- * the property is handed over to some entitiy that later call Destruct() on it.
+ * the property is handed over to some entity that later call Destruct() on it.
  */
 static rsRetVal AddRef(prop_t *pThis)
 {
