@@ -27,7 +27,7 @@ set $.garply = "";
 foreach ($.quux in $!foo) do {
   if ($.quux!key == "str2") then {
     set $.quux!random_key = $.quux!key;
-		unset $!foo; #because it is deep copied, the foreach loop will continue to work, but the action to print "post_sucide_foo" will not see $!foo
+		unset $!foo; #because it is deep copied, the foreach loop will continue to work, but the action to print "post_suicide_foo" will not see $!foo
 	}
   action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="quux")
   foreach ($.corge in $.quux!value) do {
