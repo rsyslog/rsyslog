@@ -3051,7 +3051,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
   * invalid load of failedmsg file on startup if disabled
     error "rsyslogd: omkafka: could not load failed messages from "
     "file (null) error -2027 - failed messages will not be resend."
-    occurs because, depite `keepFailedMessages="off"` as a default,
+    occurs because, despite `keepFailedMessages="off"` as a default,
     omkafka still tries to check for and load a `(none)` file which
     triggers an IO error of sorts according to the 2027 link above.
     Obviously, it probably shouldn't try load the file if
