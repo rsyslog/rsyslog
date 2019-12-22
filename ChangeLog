@@ -2376,7 +2376,7 @@ Version 8.34.0 [v8-stable] 2018-04-03
 - omfile-hardening: new contributed module for "omfile hardened operations"
   This extends omfile with features considered useful for hardening. Comes
   at the expense of performance loss and changed semantics.
-  Thanks to Mikko Kortalainen for contributing this work.
+  Thanks to Mikko Kortelainen for contributing this work.
 - stream/bugfix: memory leak on stream open if filename as already generated
   this can happen if imfile reads a state file. On each open, memory for the
   file name can be lost.
