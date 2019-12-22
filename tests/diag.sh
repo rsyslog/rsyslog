@@ -2225,7 +2225,7 @@ mysql_prep_for_test() {
 
 # get data from mysql DB so that we can do seq_check on it.
 mysql_get_data() {
-	# note "-s" is requried to suppress the select "field header"
+	# note "-s" is required to suppress the select "field header"
 	mysql -s --user=rsyslog --password=testbench --database $RSYSLOG_DYNNAME \
 		-e "select substring(Message,9,8) from SystemEvents;" \
 		> $RSYSLOG_OUT_LOG

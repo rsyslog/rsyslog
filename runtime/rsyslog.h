@@ -571,7 +571,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_JSON_UNUSABLE = -2438, /**< JSON object is NULL or otherwise unusable */
 	RS_RET_OPERATION_STATUS = -2439, /**< operational status (info) message, no error */
 	RS_RET_UDP_MSGSIZE_TOO_LARGE = -2440, /**< a message is too large to be sent via UDP */
-	RS_RET_NON_JSON_PROP = -2441, /**< a non-json property id is provided where a json one is requried */
+	RS_RET_NON_JSON_PROP = -2441, /**< a non-json property id is provided where a json one is required */
 	RS_RET_NO_TZ_SET = -2442, /**< system env var TZ is not set (status msg) */
 	RS_RET_FS_ERR = -2443, /**< file-system error */
 	RS_RET_POLL_ERR = -2444, /**< error in poll() system call */

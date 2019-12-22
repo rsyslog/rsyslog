@@ -194,7 +194,7 @@ finalize_it:
 }
 
 /* add a counter to an object
- * ctrName is duplicated, caller must free it if requried
+ * ctrName is duplicated, caller must free it if required
  * NOTE: The counter is READ-ONLY and MUST NOT be modified (most
  * importantly, it must not be initialized, so the caller must
  * ensure the counter is properly initialized before AddCounter()

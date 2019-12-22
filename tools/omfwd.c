@@ -677,7 +677,7 @@ done:	RETiRet;
 }
 
 
-/* Add frame to send buffer (or send, if requried)
+/* Add frame to send buffer (or send, if required)
  */
 static rsRetVal TCPSendFrame(void *pvData, char *msg, size_t len)
 {
