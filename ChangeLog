@@ -7144,7 +7144,7 @@ Version 7.1.2  [devel] 2012-09-12
 - bugfix: multiple rulesets did no longer work correctly (7.1.1 regression)
 ---------------------------------------------------------------------------
 Version 7.1.1  [devel] 2012-09-11
-- MAJOR NEW FEATURE: rulengine now fully supports nesting
+- MAJOR NEW FEATURE: ruleengine now fully supports nesting
   including if ... then ... else ... constructs. This is a big change
   and it obviously has a lot of bug potential.
 - BSD-style (filter) blocks are no longer supported
