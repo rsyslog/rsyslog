@@ -3889,7 +3889,7 @@ Version 8.26.0 [v8-stable] 2017-04-04
     This reduces testbench output, which is limited under Travis.
   * the libqpid-proton package is no longer available for Ubuntu trusty. As
     such, we disabled its use in Travis on this platform. Right now, this
-    means omaqp1 module is no longer tested on trusty.
+    means omamqp1 module is no longer tested on trusty.
 ------------------------------------------------------------------------------
 Version 8.25.0 [v8-stable] 2017-02-21
 - imfile: add support for wildcards in directory names
@@ -4519,7 +4519,7 @@ Version 8.17.0 [v8-stable] 2016-03-08
 - new feature: dynamic statistics counters
   which may be changed during rule processing
   Thanks to Janmejay Singh for suggesting and implementing this feature
-- new contributed plugin: omampq1 for AMQP 1.0-compliant brokers
+- new contributed plugin: omamqp1 for AMQP 1.0-compliant brokers
   Thanks to Ken Giusti for this module
 - new set of UTC-based $now family of variables ($now-utc, $year-utc, ...)
 - simplified locking when accessing message and local variables
