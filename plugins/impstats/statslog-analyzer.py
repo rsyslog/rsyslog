@@ -5,7 +5,7 @@
 #	* This file is part of RSyslog
 #	*
 #	* This script processes impstats logfiles and searches for abnormalities
-#	* Dependecies:	- python pip		-> Needed to install python packages
+#	* Dependencies:	- python pip		-> Needed to install python packages
 #	*		- python cairosvg	-> Needed for PNG converting support!
 #	*		- Install python packages using this command:
 #	*		pip install CairoSVG tinycss cssselect pygal
