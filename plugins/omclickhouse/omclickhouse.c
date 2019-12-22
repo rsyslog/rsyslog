@@ -675,7 +675,7 @@ curlSetupCommon(wrkrInstanceData_t *const pWrkrData, CURL *const handle)
 	if(pWrkrData->pData->myPrivKeyFile) {
 		curl_easy_setopt(handle, CURLOPT_SSLKEY, pWrkrData->pData->myPrivKeyFile);
 	}
-	/* uncomment for in-dept debuggung:
+	/* uncomment for in-dept debugging:
 	curl_easy_setopt(handle, CURLOPT_VERBOSE, TRUE); */
 }
 

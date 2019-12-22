@@ -268,7 +268,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_FILE_TRUNCATED = -51,	/**< (input) file was truncated, not an error but a status */
 	RS_RET_TRUE = -3,		/**< to indicate a true state (can be used as TRUE, legacy) */
 	RS_RET_FALSE = -2,		/**< to indicate a false state (can be used as FALSE, legacy) */
-	RS_RET_NO_IRET = -8,	/**< This is a trick for the debuging system - it means no iRet is provided  */
+	RS_RET_NO_IRET = -8,	/**< This is a trick for the debugging system - it means no iRet is provided  */
 	RS_RET_VALIDATION_RUN = -9,	/**< indicates a (config) validation run, processing not carried out */
 	RS_RET_ERR = -3000,	/**< generic failure */
 	RS_TRUNCAT_TOO_LARGE = -3001, /**< truncation operation where too many chars should be truncated */
