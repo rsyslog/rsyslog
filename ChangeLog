@@ -5410,7 +5410,7 @@ Version 8.3.1 [v8-devel] 2014-04-24
   is gotten, it is generated when not already present. As we used the
   regular setter, this means that always the uuid was generated, which is
   quite time-consuming. This has now been changed so that it only is
-  generated if it already exists. That also matches more closly the 
+  generated if it already exists. That also matches more closely the 
   semantics, as "jsonmesg" should not make modifications to the message.
   Note that the same applies to "fulljson" passing mode for external
   plugins.
