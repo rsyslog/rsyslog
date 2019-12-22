@@ -11603,7 +11603,7 @@ Version 1.13.3 (RGer), 2007-06-15
 Version 1.13.2 (RGer), 2007-06-13
 - lib order in makefile patched to facilitate static linking - thanks
   to Bennett Todd for providing the patch
-- Integrated a patch from Peter Vrabec (pvrabec@redheat.com):
+- Integrated a patch from Peter Vrabec (pvrabec@redhat.com):
   - added klogd under the name of rklogd (remove dependency on
     original sysklogd package
   - createDB.sql now in UTF
@@ -12546,7 +12546,7 @@ Version 1.13.3 (RGer), 2007-06-15
 Version 1.13.2 (RGer), 2007-06-13
 - lib order in makefile patched to facilitate static linking - thanks
   to Bennett Todd for providing the patch
-- Integrated a patch from Peter Vrabec (pvrabec@redheat.com):
+- Integrated a patch from Peter Vrabec (pvrabec@redhat.com):
   - added klogd under the name of rklogd (remove dependency on
     original sysklogd package
   - createDB.sql now in UTF
@@ -13489,7 +13489,7 @@ Version 1.13.3 (RGer), 2007-06-15
 Version 1.13.2 (RGer), 2007-06-13
 - lib order in makefile patched to facilitate static linking - thanks
   to Bennett Todd for providing the patch
-- Integrated a patch from Peter Vrabec (pvrabec@redheat.com):
+- Integrated a patch from Peter Vrabec (pvrabec@redhat.com):
   - added klogd under the name of rklogd (remove dependency on
     original sysklogd package
   - createDB.sql now in UTF
