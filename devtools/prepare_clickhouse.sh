@@ -3,7 +3,7 @@
 
 
 clickhouse-client --query="CREATE DATABASE rsyslog"
-echo clickouse create database RETURN STATE: $?
+echo clickhouse create database RETURN STATE: $?
 
 # At the moment only the database is created for preperation.
 # Every test creates a table for itself and drops it afterwards.
