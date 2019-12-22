@@ -1,6 +1,6 @@
 #!/bin/bash
 # this is a small helper script used to run testbench tests
-# repetetively. It is meant for manual use and not included
+# repetitively. It is meant for manual use and not included
 # in any testbench functionality.
 # There are some options commented out, e.g. exit on first
 # failure. If that option is desired, it must be "commented
