@@ -639,7 +639,7 @@ finalize_it: /*EMPTY to keep the compiler happy */;
 /* send messages to the tcp connections we keep open. We use
  * a very basic format that helps identify the message
  * (via msgnum:<number>: e.g. msgnum:00000001:). This format is suitable
- * for extracton to field-based properties.
+ * for extraction to field-based properties.
  * The first numConnection messages are sent sequentially, as are the
  * last. All messages in between are sent over random connections.
  * Note that message numbers start at 0.
