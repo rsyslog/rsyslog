@@ -3655,7 +3655,7 @@ Version 8.28.0 [v8-stable] 2017-06-27
   * upgraded from "contrib" to "fully supported" state
   * refactored and simplified code
   * added ability to specify custom names for extracted fields
-  * added ability to spehttp://www.landesrecht-bw.de/jportal/portal/t/6el/page/bsbawueprod.psml/action/portlets.jw.MainAction?p1=0&eventSubmit_doNavigate=searchInSubtreeTOC&showdoccase=1&doc.hl=0&doc.id=jlr-UmwVwGBWrahmen&doc.part=R&toc.poskey=#focuspointcify container name for extracted fields
+  * added ability to specify container name for extracted fields
   * bugfix: fixed multiple memory leaks
 - imptcp: add new parameter "flowControl"
 - imrelp: add "maxDataSize" config parameter
@@ -9298,7 +9298,7 @@ Version 4.6.2  [v4-stable] (rgerhards), 2010-03-26
 - added replacements for atomic instructions on systems that do not
   support them. [backport of Stefen Sledz' patch for v5)
 - new feature: $OMFileAsyncWriting directive added
-  it permits to specifiy if asynchronous writing should be done or not
+  it permits to specify if asynchronous writing should be done or not
 - bugfix(temporary): message-induced off-by-one error (potential segfault)
   Some types of malformed messages could trigger an off-by-one error
   (for example, \0 or \n as the last character, and generally control
