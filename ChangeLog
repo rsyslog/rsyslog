@@ -113,7 +113,7 @@ Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
   is simply missing the LF. While appending works, it slows down processing.
   As such the user should be given a chance to correct the config bug.
   To avoid clutter, the warning is emitted at most once every 30 seconds.
-  This value is hardcoded as we do not envison a need to adjust it. Usually
+  This value is hardcoded as we do not envision a need to adjust it. Usually
   users should quickly fix the template.
   closes https://github.com/rsyslog/rsyslog/issues/3975
 - 2019-11-19: core queue: emit warning if parameters are set for direct queue
@@ -1896,7 +1896,7 @@ Version 8.37.0 [v8-stable] 2018-08-07
     These tests indicated they terminate rsyslog forcefully without
     draining the queues, but then checked if they were drained (all
     messages processed). That does not make sense, and we cannot
-    envison why this was written the first place. So we assume some
+    envision why this was written the first place. So we assume some
     copy&paste problem was the root of that.
   * testbench: refactor tests which used "nettester" tool
     Some old tests are carried out via the nettester tool. This was
