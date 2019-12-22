@@ -73,7 +73,7 @@ int rsgcryAlgoname2Algo(char *const __restrict__ algoname);
 
 #define EIF_MAX_RECTYPE_LEN 31 /* max length of record types */
 #define EIF_MAX_VALUE_LEN 1023 /* max length of value types */
-#define RSGCRY_FILETYPE_NAME "rsyslog-enrcyption-info"
+#define RSGCRY_FILETYPE_NAME "rsyslog-encryption-info"
 #define ENCINFO_SUFFIX ".encinfo"
 
 /* Note: gf may validly be NULL, e.g. if file has not yet been opened! */

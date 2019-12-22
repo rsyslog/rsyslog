@@ -16,7 +16,7 @@
  * types can simply be extended in the future by specifying new
  * types (like "IV") before the colon.
  * To identify a file as rsyslog encryption info file, it must start with
- * the line "FILETYPE:rsyslog-enrcyption-info"
+ * the line "FILETYPE:rsyslog-encryption-info"
  * There are some size constraints: the recordtype must be 31 bytes at
  * most and the actual value (between : and LF) must be 1023 bytes at most.
  *
