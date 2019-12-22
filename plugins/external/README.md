@@ -8,7 +8,7 @@ Why?
 ====
 The prime use case probably is to enable plugin development in languages
 other than C. Often, the high performance of a pure C plugin is not needed,
-simply because the use case does not need it or the destinatin that is
+simply because the use case does not need it or the destination that is
 being connected to is itself "slow enough" that one does not note
 the difference.
 
