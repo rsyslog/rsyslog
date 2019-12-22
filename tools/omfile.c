@@ -452,7 +452,7 @@ finalize_it:
 /* This function deletes an entry from the dynamic file name
  * cache. A pointer to the cache must be passed in as well
  * as the index of the to-be-deleted entry. This index may
- * point to an unallocated entry, in whcih case the
+ * point to an unallocated entry, in which case the
  * function immediately returns. Parameter bFreeEntry is 1
  * if the entry should be free()ed and 0 if not.
  */

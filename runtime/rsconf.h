@@ -87,7 +87,7 @@ struct globals_s {
  * to all code, but they can change value and other objects (like
  * actions) actually copy the value a global had at the time the action
  * was defined. In that sense, a global default is just that, a default,
- * wich can (and will) be changed in the course of config file
+ * which can (and will) be changed in the course of config file
  * processing. Once the config file has been processed, defaults
  * can be dropped. The current code does not do this for simplicity.
  * That is not a problem, because the defaults do not take up much memory.
