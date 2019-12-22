@@ -338,7 +338,7 @@ finalize_it:
 	RETiRet;
 }
 
-/* prepares the background processes (if auto-backbrounding) for
+/* prepares the background processes (if auto-backgrounding) for
  * operation.
  */
 static void

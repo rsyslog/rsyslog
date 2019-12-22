@@ -1392,7 +1392,7 @@ Version 8.39.0 [v8-stable] 2018-10-30
   Thanks to Harshvardhan Shrivastava for providing the patch
   closes https://github.com/rsyslog/rsyslog/issues/3025
 - bugfix core/debug: data written to random fd 2 under some debug settings
-  This happens only during auto-backgrouding, where we cannot any longer
+  This happens only during auto-backgrounding, where we cannot any longer
   access stderr. Whatever is opened with fd2 receives some debug messages.
   Note that the specific feature is usually turned on only in CI runs.
 - cleanup: removed no longer needed code
