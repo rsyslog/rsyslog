@@ -1457,7 +1457,7 @@ process_requests_async(rsksictx ctx, KSI_CTX *ksi_ctx, KSI_AsyncService *as, FIL
 		item = NULL;
 		if(!ProtectedQueue_getItem(ctx->signer_queue, i, (void**)&item) || !item)
 			continue;
-		/* ingore non request queue items */
+		/* ignore non request queue items */
 		if(item->type != QITEM_SIGNATURE_REQUEST)
 			continue;
 

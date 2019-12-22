@@ -76,7 +76,7 @@
 #include "ratelimit.h"
 #include "unicode-helper.h"
 
-PRAGMA_INGORE_Wswitch_enum
+PRAGMA_IGNORE_Wswitch_enum
 MODULE_TYPE_LIB
 MODULE_TYPE_NOKEEP
 

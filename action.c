@@ -121,7 +121,7 @@
 #define cs legacy_cs
 #endif
 
-PRAGMA_INGORE_Wswitch_enum
+PRAGMA_IGNORE_Wswitch_enum
 
 #ifndef O_LARGEFILE
 #define O_LARGEFILE 0

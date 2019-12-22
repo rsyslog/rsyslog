@@ -86,7 +86,7 @@
 #include "typedefs.h"
 
 #if defined(__GNUC__)
-	#define PRAGMA_INGORE_Wswitch_enum	_Pragma("GCC diagnostic ignored \"-Wswitch-enum\"")
+	#define PRAGMA_IGNORE_Wswitch_enum	_Pragma("GCC diagnostic ignored \"-Wswitch-enum\"")
 	#define PRAGMA_IGNORE_Wcast_align	_Pragma("GCC diagnostic ignored \"-Wcast-align\"")
 	#define PRAGMA_IGNORE_Wempty_body	_Pragma("GCC diagnostic ignored \"-Wempty-body\"")
 	#define PRAGMA_IGNORE_Wsign_compare	_Pragma("GCC diagnostic ignored \"-Wsign-compare\"")
@@ -105,7 +105,7 @@
 	#define PRAGMA_DIAGNOSTIC_PUSH		_Pragma("GCC diagnostic push")
 	#define PRAGMA_DIAGNOSTIC_POP		_Pragma("GCC diagnostic pop")
 #else
-	#define PRAGMA_INGORE_Wswitch_enum
+	#define PRAGMA_IGNORE_Wswitch_enum
 	#define PRAGMA_IGNORE_Wcast_align
 	#define PRAGMA_IGNORE_Wsign_compare
 	#define PRAGMA_IGNORE_Wformat_nonliteral

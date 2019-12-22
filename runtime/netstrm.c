@@ -231,7 +231,7 @@ SetDrvrCheckExtendedKeyUsage(netstrm_t *pThis, int ChkExtendedKeyUsage)
 	RETiRet;
 }
 
-/* Mandate stricter name checking per RFC 6125 - ignoce CN if any SAN present */
+/* Mandate stricter name checking per RFC 6125 - ignore CN if any SAN present */
 static rsRetVal
 SetDrvrPrioritizeSAN(netstrm_t *pThis, int prioritizeSan)
 {
