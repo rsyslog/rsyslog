@@ -433,7 +433,7 @@ void ATTR_NONNULL()
 cnfDoObj(struct cnfobj *const o)
 {
 	int bDestructObj = 1;
-	int bChkUnuse = 1;
+	int bChkUnused = 1;
 	assert(o != NULL);
 
 	dbgprintf("cnf:global:obj: ");
@@ -474,7 +474,7 @@ cnfDoObj(struct cnfobj *const o)
 	case CNFOBJ_PROPERTY:
 	case CNFOBJ_CONSTANT:
 		/* these types are processed at a later stage */
-		bChkUnuse = 0;
+		bChkUnused = 0;
 		break;
 	case CNFOBJ_ACTION:
 	default:
@@ -483,7 +483,7 @@ cnfDoObj(struct cnfobj *const o)
 		break;
 	}
 	if(bDestructObj) {
-		if(bChkUnuse)
+		if(bChkUnused)
 			nvlstChkUnused(o->nvlst);
 		cnfobjDestruct(o);
 	 }
