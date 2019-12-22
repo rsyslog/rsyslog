@@ -174,7 +174,7 @@ kafkaLogger(const rd_kafka_t __attribute__((unused)) *rk, int level,
 
 
 /* enqueue the kafka message. The provided string is
- * not freed - thuis must be done by the caller.
+ * not freed - this must be done by the caller.
  */
 static rsRetVal enqMsg(instanceConf_t *const __restrict__ inst,
 			rd_kafka_message_t *const __restrict__ rkmessage)
