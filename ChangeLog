@@ -264,7 +264,7 @@ Scheduled Release 8.1911.0 (aka 2019.11) 2019-11-12
   - dynafiles
   - not committing file data at end of transaction
   However it could be triggerred under other conditions as well.
-  The refactoring done in 8.1908 increased the likelyhood of
+  The refactoring done in 8.1908 increased the likelihood of
   experiencing this bug. But it was not a real regression, the new
   code was valid, but changed the timing so that the race was more
   likely.
@@ -578,10 +578,10 @@ an easy way to identify which changes went into the respective daily stable.
   processing or segfaults. It could also have "no effect" by pure
   luck of not hitting anything important. This actually seems to
   have been the most frequent case.
-  This seems to be a long-standing bug, but the likelyhood of its
+  This seems to be a long-standing bug, but the likelihood of its
   appearance seems to have been increased by commit 62fbef7
   introduced in 8.1905. Note: the commit itself has no regression,
-  just increases the likelyhood to trigger the pre-existing bug.
+  just increases the likelihood to trigger the pre-existing bug.
   special thanks to Alexandre Guédon for his help in analyzing
   the issue - without him, we would probably still not know
   what actually went wrong.
