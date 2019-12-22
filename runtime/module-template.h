@@ -782,7 +782,7 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
  * Later, much more must be done. So far, we only return a pointer
  * to the queryEtryPt() function
  * TODO: do interface version checking & handshaking
- * iIfVersRequetsed is the version of the interface specification that the
+ * iIfVersRequested is the version of the interface specification that the
  * caller would like to see being used. ipIFVersProvided is what we
  * decide to provide.
  * rgerhards, 2007-11-21: see modExit() comment below for important information
