@@ -62,7 +62,7 @@
 #	define INIT_ATOMIC_HELPER_MUT(x)
 #	define DESTROY_ATOMIC_HELPER_MUT(x)
 
-	/* the following operations should preferrably be done atomic, but it is
+	/* the following operations should preferably be done atomic, but it is
 	 * not fatal if not -- that means we can live with some missed updates. So be
 	 * sure to use these macros only if that really does not matter!
 	 */

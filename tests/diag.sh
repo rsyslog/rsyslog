@@ -94,7 +94,7 @@ if [ "$TESTTOOL_DIR" == "" ]; then
 	export TESTTOOL_DIR="${srcdir:-.}"
 fi
 
-# newer functionality is preferrably introduced via bash functions
+# newer functionality is preferably introduced via bash functions
 # rgerhards, 2018-07-03
 rsyslog_testbench_test_url_access() {
     local missing_requirements=
