@@ -3261,7 +3261,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
   * added capability to run elasticsearch tests with
     a) different ElasticSearch versions
     b) independently from OS-installed version
-    This also sets base to enable more elaboreate ES tests
+    This also sets base to enable more elaborate ES tests
   * further relaxed timing of dynstats tests, as they tend to create
     false positives on slow machines
 - CI: improved test coverage on FreeBSD
