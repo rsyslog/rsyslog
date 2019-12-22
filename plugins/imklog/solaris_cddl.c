@@ -58,7 +58,7 @@
  * system-provided (configurable) upper limit. However, it is quite
  * unexpected that Solaris-emitted messages are so long, so it seems
  * acceptable to set a fixed (relatively high) limit for the time
- * being -- and gain some experience with it. -- rgerhars, 2010-04-12
+ * being -- and gain some experience with it. -- rgerhard, 2010-04-12
  */
 #define MAXLINE 4096
 

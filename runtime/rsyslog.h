@@ -773,7 +773,7 @@ void dfltErrLogger(const int, const int, const uchar *errMsg);
 /* TODO: remove this -- this is only for transition of the config system */
 extern rsconf_t *ourConf; /* defined by syslogd.c, a hack for functions that do not
 			     yet receive a copy, so that we can incrementally
-			     compile and change... -- rgerhars, 2011-04-19 */
+			     compile and change... -- rgerhard, 2011-04-19 */
 
 
 /* here we add some stuff from the compatibility layer. A separate include

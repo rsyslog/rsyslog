@@ -406,7 +406,7 @@ static const char *syslog_severity_names[8] = { "emerg", "alert", "crit", "err",
 static short len_syslog_severity_names[8] = { 5, 5, 4, 3, 7, 6, 4, 5 };
 
 /* numerical values as string - this is the most efficient approach to convert severity
- * and facility values to a numerical string... -- rgerhars, 2009-06-17
+ * and facility values to a numerical string... -- rgerhard, 2009-06-17
  */
 
 static const char *syslog_number_names[LOG_NFACILITIES] = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
@@ -1276,7 +1276,7 @@ finalize_it:
 /* This is a helper for MsgDeserialize that re-inits the var object. This
  * whole construct should be replaced, var is really ready to be retired.
  * But as an interim help during refactoring let's introduce this function
- * here (and thus NOT as method of var object!). -- rgerhads, 2012-11-06
+ * here (and thus NOT as method of var object!). -- rgerhards, 2012-11-06
  */
 static void
 reinitVar(var_t *pVar)

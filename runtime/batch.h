@@ -33,7 +33,7 @@
 /* enum for batch states. Actually, we violate a layer here, in that we assume that a batch is used
  * for action processing. So far, this seems acceptable, the status is simply ignored inside the
  * main message queue. But over time, it could potentially be useful to split the two.
- * rgerhad, 2009-05-12
+ * rgerhard, 2009-05-12
  */
 #define BATCH_STATE_RDY  0	/* object ready for processing */
 #define BATCH_STATE_BAD  1	/* unrecoverable failure while processing, do NOT resubmit to same action */

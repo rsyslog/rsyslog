@@ -102,7 +102,7 @@ static rsRetVal thrdDestruct(thrdInfo_t *pThis)
 
 /* terminate a thread via the non-cancel interface
  * This is a separate function as it involves a bit more of code.
- * rgerhads, 2009-10-15
+ * rgerhards, 2009-10-15
  */
 static rsRetVal
 thrdTerminateNonCancel(thrdInfo_t *pThis)

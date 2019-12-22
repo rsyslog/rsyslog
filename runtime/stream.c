@@ -1581,7 +1581,7 @@ strmSchedWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf, const int bFlushZip)
 	 * the end result, we than have a problem (and things are screwed
 	 * up). So we reset the buffer pointer first, and all this can
 	 * not happen. It is safe to do so, because that pointer is NOT
-	 * used inside the write functions. -- rgerhads, 2010-03-10
+	 * used inside the write functions. -- rgerhards, 2010-03-10
 	 */
 	pThis->iBufPtr = 0; /* we are at the begin of a new buffer */
 	if(pThis->bAsyncWrite) {

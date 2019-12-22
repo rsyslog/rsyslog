@@ -62,7 +62,7 @@ ENDinterface(strms_sess)
  * to version v2, rgerhards, 2009-05-22
  * - Data structures changed
  * - SetLstnInfo entry point added
- * version 3, rgerhads, 2013-01-21:
+ * version 3, rgerhards, 2013-01-21:
  * - signature of SetHostIP() changed
  */
 
