@@ -846,7 +846,7 @@ Version 8.1904.0 (aka 2019.04) 2019-04-16
   the documentation to do a bidirectional shutdown.
   Closes https://github.com/rsyslog/rsyslog/issues/3561
 - imjournal bugfix: Fetching journal cursor only for valid journal
-  The sd_journal_get_cursor() got called regradless of previous
+  The sd_journal_get_cursor() got called regardless of previous
   retcodes from other journal calls which flooded logs with journald
   errors. Now skipping the call in case of previous journal call
   non-zero result. Fixed success checking of get_cursor() call
