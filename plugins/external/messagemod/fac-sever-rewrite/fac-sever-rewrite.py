@@ -68,7 +68,7 @@ def onExit():
 -------------------------------------------------------
 This is plumbing that DOES NOT need to be CHANGED
 -------------------------------------------------------
-Implementor's note: Python seems to very aggressively
+Implementer's note: Python seems to very aggressively
 buffer stdouot. The end result was that rsyslog does not
 receive the script's messages in a timely manner (sometimes
 even never, probably due to races). To prevent this, we
