@@ -253,7 +253,7 @@ static modConfData_t *loadModConf = NULL;
 static modConfData_t *runModConf = NULL;
 
 static prop_t *pInputName = NULL;   /* our inputName currently is always "imdocker", and this will hold it */
-static prop_t *pLocalHostIP = NULL; /* a pseudo-constant propterty for 127.0.0.1 */
+static prop_t *pLocalHostIP = NULL; /* a pseudo-constant property for 127.0.0.1 */
 
 static ratelimit_t *ratelimiter = NULL;
 

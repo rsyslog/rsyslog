@@ -5168,7 +5168,7 @@ finalize_it:
 }
 
 
-/* Fill a message propert description. Space must already be alloced
+/* Fill a message property description. Space must already be alloced
  * by the caller. This is for efficiency, as we expect this to happen
  * as part of a larger structure alloc.
  * Note that CEE/LOCAL_VAR properties can come in either as
