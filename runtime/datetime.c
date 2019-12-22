@@ -520,7 +520,7 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr,
 	 *
 	 * 2005-07-18, well sometimes it pays to be a bit more verbose, even in C...
 	 * Fixed a bug that lead to invalid detection of the data. The issue was that
-	 * we had an if(++pszTS == 'x') inside of some of the consturcts below. However,
+	 * we had an if(++pszTS == 'x') inside of some of the constructs below. However,
 	 * there were also some elseifs (doing the same ++), which than obviously did not
 	 * check the orginal character but the next one. Now removed the ++ and put it
 	 * into the statements below. Was a really nasty bug... I didn't detect it before
