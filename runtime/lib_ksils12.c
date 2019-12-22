@@ -865,7 +865,7 @@ done:
 }
 
 
-/* returns 0 on succes, 1 if algo is unknown, 2 is algo has been remove
+/* returns 0 on success, 1 if algo is unknown, 2 is algo has been remove
  * because it is now considered insecure
  */
 int

@@ -503,7 +503,7 @@ removePadding(uchar *const buf, size_t *const plen)
 	*plen = iDst;
 }
 
-/* returns 0 on succes, positive if key length does not match and key
+/* returns 0 on success, positive if key length does not match and key
  * of return value size is required.
  */
 int
