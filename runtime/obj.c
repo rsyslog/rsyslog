@@ -963,7 +963,7 @@ finalize_it:
 
 
 /* De-Serialize an object property bag. As a property bag contains only partial properties,
- * it is not instanciable. Thus, the caller must provide a pointer of an already-instanciated
+ * it is not instantiable. Thus, the caller must provide a pointer of an already-instanciated
  * object of the correct type.
  * Params: Pointer to object (pObj)
  * Pointer to be passed to the function
