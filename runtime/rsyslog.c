@@ -6,7 +6,7 @@
  * Please note that the runtime library tends to be plugin-safe. That is, it must be
  * initialized by calling a global initialization function. However, that
  * function checks if the library is already initialized and, if so, does
- * nothing except incrementing a refeence count. Similarly, the deinit
+ * nothing except incrementing a reference count. Similarly, the deinit
  * function does nothing as long as there are still other users (which
  * is tracked via the refcount). As such, it is safe to call init and
  * exit multiple times, as long as this are always matching calls. This
