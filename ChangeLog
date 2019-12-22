@@ -3383,7 +3383,7 @@ Version 8.30.0 [v8-stable] 2017-10-17
   This patch fixes it so that "suspend" messages are given during retry
   processing. These do not contain a retry timestamp, providing evidence
   that a retry is currently being tried.
-  coses https://github.com/rsyslog/rsyslog/issues/1069
+  closes https://github.com/rsyslog/rsyslog/issues/1069
 - core/ratelimit bugfix: race can lead to segfault
   There was a race in iminternalAddMsg(), where the mutex is
   released and after that the passed message object is accessed.
