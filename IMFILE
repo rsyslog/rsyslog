@@ -89,7 +89,7 @@ Problems
 
 Poll vs. Watch
 --------------
-Polling is always needed (due to watch racieness). So it probably is best to have some generic
+Polling is always needed (due to watch raciness). So it probably is best to have some generic
 poll code, and use watches just to reduce the amount of polling. That also means that
 poll mode can do exactly the same the notification mode can do!
 
