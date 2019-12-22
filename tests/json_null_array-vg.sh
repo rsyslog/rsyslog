@@ -9,7 +9,7 @@ if [ $(uname) = "FreeBSD" ] ; then
 fi
 
 echo ===============================================================================
-echo \[json_null_array.sh\]: test for json containung \"null\" value
+echo \[json_null_array.sh\]: test for json containing \"null\" value
 . ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '

@@ -4,7 +4,7 @@
 # Note: the aim of this test is to test against misaddressing, so we do
 # not actually check the output
 echo ===============================================================================
-echo \[json_null.sh\]: test for json containung \"null\" value
+echo \[json_null.sh\]: test for json containing \"null\" value
 . ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
