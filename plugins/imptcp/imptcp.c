@@ -624,7 +624,7 @@ startupSrv(ptcpsrv_t *pSrv)
 		 * once we got a dynamic port, we will keep it and use it for other protocols
 		 * as well. As of my understanding, this should always work as the OS does not
 		 * pick a port that is used by some protocol (well, at least this looks very
-		 * unlikely...). If our asusmption is wrong, we should iterate until we find a
+		 * unlikely...). If our assumption is wrong, we should iterate until we find a
 		 * combination that works - it is very unusual to have the same service listen
 		 * on differnt ports on IPv4 and IPv6.
 		 */
