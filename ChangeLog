@@ -655,7 +655,7 @@ Version 8.1905.0 (aka 2019.05) 2019-05-28
 - core: emit a warning message for ultra-large queue size definitions
   We see error reports from users who have configured excessively large queues
   and receive an OOM condition or other problems.
-  With that patch we generate a warnomg message if a queue is configured very
+  With that patch we generate a warning message if a queue is configured very
   large. "Very large" is defined to be in excess of 500000 messages.
   see also https://github.com/rsyslog/rsyslog/issues/3314
   closes https://github.com/rsyslog/rsyslog/issues/3334
@@ -1840,7 +1840,7 @@ Version 8.37.0 [v8-stable] 2018-08-07
 - bugfix omhttpfs: fix insecure usage if strncmp()
   consequences not evaluated as this is a contributed module.
   Detected by gcc 8.
-- bugfix mmgrok: cosmetic build issue - compiler warings
+- bugfix mmgrok: cosmetic build issue - compiler warnings
   caused build under gcc 7 to fail with warning
 - bugfix mmkubernetes: stops working with non-kubernetes container names
   When mmkubernetes encounters a record with a CONTAINER_NAME field,
@@ -7027,7 +7027,7 @@ Version 7.2.1  [v7-stable] 2012-10-29
 Version 7.2.0  [v7-stable] 2012-10-22
 This starts a new stable branch based on 7.1.12 plus the following changes:
 - bugfix: imuxsock did not properly honor $LocalHostIPIF
-- omruleset/omdiscard do no longer issue "deprecated" warings, as 7.1
+- omruleset/omdiscard do no longer issue "deprecated" warnings, as 7.1
   grammar does not permit to use the replacements under all circumstances
 ----------------------------------------------------------------------------
 Version 7.1.12  [beta] 2012-10-18

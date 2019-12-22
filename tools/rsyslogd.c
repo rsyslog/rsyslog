@@ -1514,7 +1514,7 @@ initAll(int argc, char **argv)
 		case 'C':
 			bChDirRoot = 0;
 			break;
-		case 'w':		/* disable disallowed host warnigs */
+		case 'w':		/* disable disallowed host warnings */
 			fprintf (stderr, "rsyslogd: the -w command line option will go away "
 				 "soon.\nPlease use the global(net.permitWarning=\"off\") "
 				 "configuration parameter instead.\n");
