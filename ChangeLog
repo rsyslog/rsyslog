@@ -7770,7 +7770,7 @@ Version 6.1.4  [DEVEL] (rgerhards), 2011-02-18
 - enhanced imfile to support non-cancel input termination
 - improved systemd socket activation thanks to Marius Tomaschewski
 - improved error reporting for $WorkDirectory
-  non-existance and other detectable problems are now reported,
+  non-existence and other detectable problems are now reported,
   and the work directory is NOT set in this case
 - bugfix: pmsnare caused abort under some conditions
 - bugfix: abort if imfile reads file line of more than 64KiB
@@ -8440,7 +8440,7 @@ Version 5.7.4  [V5-BETA] (rgerhards), 2011-02-17
 - enhanced imfile to support non-cancel input termination
 - improved systemd socket activation thanks to Marius Tomaschewski
 - improved error reporting for $WorkDirectory
-  non-existance and other detectable problems are now reported,
+  non-existence and other detectable problems are now reported,
   and the work directory is NOT set in this case
 - bugfix: pmsnare caused abort under some conditions
 - bugfix: abort if imfile reads file line of more than 64KiB

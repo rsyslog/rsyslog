@@ -2207,7 +2207,7 @@ done:
 	return r;
 }
 
-/* Verify the existance of the header.
+/* Verify the existence of the header.
  */
 int
 verifyBLOCK_HDRKSI(FILE *sigfp, FILE *nsigfp, tlvrecord_t* tlvrec)
