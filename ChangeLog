@@ -6454,7 +6454,7 @@ Version 7.4.1  [v7.4-stable] 2013-06-17
 - bugfix: potential segfault in imjournal if journal DB is corrupted
 - bugfix: prevent a segfault in imjournal if state file is not defined
 - bugfix imzmq3: potential segfault on startup
-  if no problem happend at startup, everything went fine
+  if no problem happened at startup, everything went fine
   Thanks to Hongfei Cheng and Brian Knox for the patch
 ---------------------------------------------------------------------------
 Version 7.4.0  [v7.4-stable] 2013-06-06
@@ -7293,7 +7293,7 @@ all these patches here are present in 6.6.0.
   Thanks to Milan Bartos for alerting us and a patch!
 - bugfix: some valid legacy PRI filters were flagged as erroneous
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=358
-  This happend to filters of the style "local0,local1.*", where the 
+  This happened to filters of the style "local0,local1.*", where the 
   multiple facilities were comma-separated.
 - bugfix: imuxsock did not properly honor $LocalHostIPIF
 ---------------------------------------------------------------------------
@@ -7703,7 +7703,7 @@ Version 6.1.7  [DEVEL] (rgerhards), 2011-04-15
 - bugfix: enhanced imudp config processing code disabled due to wrong
   merge (affected UDP realtime capabilities)
 - bugfix (kind of): memory leak with tcp reception epoll handler
-  This was an extremely unlikely leak and, if it happend, quite small.
+  This was an extremely unlikely leak and, if it happened, quite small.
   Still it is better to handle this border case.
 - bugfix: IPv6-address could not be specified in omrelp
   this was due to improper parsing of ":"
@@ -8145,7 +8145,7 @@ Version 5.8.12  [V5-stable] 2012-06-06
   full delayable sources somewhat smarter and permits, assuming sufficient
   timouts, to persist message up to the max queue capacity. Also some nits
   in debug instrumentation have been fixed.
-- bugfix/omudpspoof: problems, including abort, happend when run on
+- bugfix/omudpspoof: problems, including abort, happened when run on
   multiple threads. Root cause is that libnet is not thread-safe. 
   omudpspoof now guards libnet calls with their own mutex.
 - bugfix: if debug message could end up in log file when forking
@@ -9029,7 +9029,7 @@ Version 5.1.2  [DEVEL] (rgerhards), 2009-07-08
   working with disk queues
 - some performance enhancements
 - bugfix: abort condition when RecvFrom was not set and message reduction
-  was on. Happend e.g. with imuxsock.
+  was on. Happened e.g. with imuxsock.
 - added $klogConsoleLogLevel directive which permits to set a new
   console log level while rsyslog is active
 - some internal code cleanup
@@ -9566,7 +9566,7 @@ Version 4.5.1  [DEVEL] (rgerhards), 2009-07-15
 - performance enhancement: much faster, up to twice as fast (depending
   on configuration)
 - bugfix: abort condition when RecvFrom was not set and message reduction
-  was on. Happend e.g. with imuxsock.
+  was on. Happened e.g. with imuxsock.
 - added $klogConsoleLogLevel directive which permits to set a new
   console log level while rsyslog is active
 - bugfix: message could be truncated after TAG, often when forwarding
@@ -10853,7 +10853,7 @@ Version 3.11.6 (rgerhards), 2008-02-27
 - improved stability of queue engine
 - bugfix: queue disk file were not properly persisted when 
   immediately after closing an output file rsyslog was stopped
-  or huped (the new output file open must NOT have happend at
+  or huped (the new output file open must NOT have happened at
   that point) - this lead to a sparse and invalid queue file
   which could cause several problems to the engine (unpredictable
   results). This situation should have happened only in very
@@ -11192,7 +11192,7 @@ Version 1.20.1 (rgerhards), 2007-12-12
 - fixed a potential race condition, see link for details:
   http://rgerhards.blogspot.com/2007/12/rsyslog-race-condition.html
   Note that the probability of problems from this bug was very remote
-- fixed a memory leak that happend when PostgreSQL date formats were
+- fixed a memory leak that happened when PostgreSQL date formats were
   used
 ---------------------------------------------------------------------------
 Version 1.20.0 (rgerhards), 2007-12-07
@@ -11382,7 +11382,7 @@ Version 1.17.6 (rgerhards), 2007-08-01
   templates
 - fixed a mem leak in OMSRdestruct - freeing the object itself was
   forgotten - thanks to varmojfekoj for the patch
-- fixed a memory leak in syslogd/init() that happend when the config
+- fixed a memory leak in syslogd/init() that happened when the config
   file could not be read - thanks to varmojfekoj for the patch
 - fixed insufficient memory allocation in addAction() and its helpers.
   The initial fix and idea was developed by mildew, I fine-tuned
@@ -12135,7 +12135,7 @@ Version 1.20.1 (rgerhards), 2007-12-12
 - fixed a potential race condition, see link for details:
   http://rgerhards.blogspot.com/2007/12/rsyslog-race-condition.html
   Note that the probability of problems from this bug was very remote
-- fixed a memory leak that happend when PostgreSQL date formats were
+- fixed a memory leak that happened when PostgreSQL date formats were
   used
 ---------------------------------------------------------------------------
 Version 1.20.0 (rgerhards), 2007-12-07
@@ -12325,7 +12325,7 @@ Version 1.17.6 (rgerhards), 2007-08-01
   templates
 - fixed a mem leak in OMSRdestruct - freeing the object itself was
   forgotten - thanks to varmojfekoj for the patch
-- fixed a memory leak in syslogd/init() that happend when the config
+- fixed a memory leak in syslogd/init() that happened when the config
   file could not be read - thanks to varmojfekoj for the patch
 - fixed insufficient memory allocation in addAction() and its helpers.
   The initial fix and idea was developed by mildew, I fine-tuned
@@ -13078,7 +13078,7 @@ Version 1.20.1 (rgerhards), 2007-12-12
 - fixed a potential race condition, see link for details:
   http://rgerhards.blogspot.com/2007/12/rsyslog-race-condition.html
   Note that the probability of problems from this bug was very remote
-- fixed a memory leak that happend when PostgreSQL date formats were
+- fixed a memory leak that happened when PostgreSQL date formats were
   used
 ---------------------------------------------------------------------------
 Version 1.20.0 (rgerhards), 2007-12-07
@@ -13268,7 +13268,7 @@ Version 1.17.6 (rgerhards), 2007-08-01
   templates
 - fixed a mem leak in OMSRdestruct - freeing the object itself was
   forgotten - thanks to varmojfekoj for the patch
-- fixed a memory leak in syslogd/init() that happend when the config
+- fixed a memory leak in syslogd/init() that happened when the config
   file could not be read - thanks to varmojfekoj for the patch
 - fixed insufficient memory allocation in addAction() and its helpers.
   The initial fix and idea was developed by mildew, I fine-tuned

@@ -1150,7 +1150,7 @@ Load(uchar *const pModName, const sbool bConfLoad, struct nvlst *const lst)
 					}
 				} else {
 					/* regular modules need to be added to conf list (for
-					 * builtins, this happend during initial load).
+					 * builtins, this happened during initial load).
 					 */
 					addModToCnfList(&pNew, pLast);
 				}

@@ -1378,7 +1378,7 @@ finalize_it:
 }
 
 
-/* try to recover a tty after a write error. This may have happend
+/* try to recover a tty after a write error. This may have happened
  * due to vhangup(), and, if so, we can simply re-open it.
  */
 #ifdef linux
