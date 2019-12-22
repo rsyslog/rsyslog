@@ -1147,7 +1147,7 @@ cvthname(struct sockaddr_storage *f, prop_t **localName, prop_t **fqdn, prop_t *
  * in, which on exit points to the local hostname. This buffer is dynamically
  * allocated and must be free()ed by the caller. If the functions returns an
  * error, the pointer is NULL.
- * This function always tries to return a FQDN, even so be quering DNS. So it
+ * This function always tries to return a FQDN, even so be querying DNS. So it
  * is safe to assume for the caller that when the function does not return
  * a FQDN, it simply is not available. The domain part of that string is
  * normalized to lower case. The hostname is kept in mixed case for historic
