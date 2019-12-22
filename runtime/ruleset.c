@@ -950,7 +950,7 @@ rulesetOptimize(ruleset_t *pRuleset)
 	}
 }
 
-/* helper for rulsetOptimizeAll(), optimizes a single ruleset */
+/* helper for rulesetOptimizeAll(), optimizes a single ruleset */
 DEFFUNC_llExecFunc(doRulesetOptimizeAll)
 {
 	rulesetOptimize((ruleset_t*) pData);
