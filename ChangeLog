@@ -2650,7 +2650,7 @@ Version 8.32.0 [v8-stable] 2018-01-09
 - mmpstrucdata: new parameter "sd_name.lowercase"
   to permit preserving case for structured data identifiers
   Special thanks to github user alanrobson for the initial commit that
-  preseves case (on which we based other work).
+  preserves case (on which we based other work).
 - omfile: add module-global option "dynafile.donotsuspend"
   this permits to enable SUSPENDing dynafile actions. Traditionally,
   SUSPEND mode was never entered for dynafiles as it would have blocked
