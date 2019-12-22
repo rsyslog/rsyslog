@@ -2440,7 +2440,7 @@ EXTRA_DIST= \
 	imptcp_nonProcessingPoller.sh \
 	imptcp_veryLargeOctateCountedMessages.sh \
 	known_issues.supp \
-	libmaxmindb.supp \
+	libmaxminddb.supp \
 	travis/trusty.supp \
 	linux_localtime_r.supp \
 	CI/centos6-9.supp \

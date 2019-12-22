@@ -381,7 +381,7 @@ CODESTARTdoAction
 		str_split(&membuf);
 	}
 
-	DBGPRINTF("maxmindb returns: '%s'\n", membuf);
+	DBGPRINTF("maxminddb returns: '%s'\n", membuf);
 	total_json = json_tokener_parse(membuf);
 	fclose(memstream);
 	free(membuf);

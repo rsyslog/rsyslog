@@ -1,9 +1,9 @@
 #!/bin/bash 
 # This file is part of the rsyslog project, released under ASL 2.0 
 . ${srcdir:=.}/diag.sh init
-# we libmaxmindb, in packaged versions, has a small cosmetic memory leak,
+# we libmaxminddb, in packaged versions, has a small cosmetic memory leak,
 # thus we need a supressions file:
-export RS_TESTBENCH_VALGRIND_EXTRA_OPTS="$RS_TESTBENCH_VALGRIND_EXTRA_OPTS --suppressions=$srcdir/libmaxmindb.supp"
+export RS_TESTBENCH_VALGRIND_EXTRA_OPTS="$RS_TESTBENCH_VALGRIND_EXTRA_OPTS --suppressions=$srcdir/libmaxminddb.supp"
 generate_conf
 add_conf '
 template(name="outfmt" type="string" string="%$!iplocation%\n")

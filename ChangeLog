@@ -235,7 +235,7 @@ Scheduled Release 8.1911.0 (aka 2019.11) 2019-11-12
   Thanks to Nelson Yen for the fix.
 - 2019-10-30: mmdblookup bugfix: missing space in city name
   This fixes the issue that spaces in city names are dropped. However, the
-  fix is more or less a work-around. As it turns out, the libmaxmindb API
+  fix is more or less a work-around. As it turns out, the libmaxminddb API
   is not correctly used. In the somewhat longer term, we should fix this.
   see also https://github.com/maxmind/libmaxminddb/issues/218
   closes https://github.com/rsyslog/rsyslog/issues/1650

@@ -1,5 +1,5 @@
 {
-   libmaxmindb_known_leak_(fixed_in_later_versions)
+   libmaxminddb_known_leak_(fixed_in_later_versions)
    Memcheck:Leak
    match-leak-kinds: definite
    fun:malloc
