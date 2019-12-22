@@ -3900,7 +3900,7 @@ Version 8.25.0 [v8-stable] 2017-02-21
   Thanks to Dan Molik for the patch.
 - improved debug output for queue corruption cases
 - an error message is now displayed when a directory owner cannot be set
-  This mostly happens with omfile and dynafils. The new messages
+  This mostly happens with omfile and dynafile. The new messages
   facilitates troubleshooting.
 - rainerscript:
   * add new function ipv42num
