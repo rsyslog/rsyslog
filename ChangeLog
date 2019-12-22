@@ -265,7 +265,7 @@ Scheduled Release 8.1911.0 (aka 2019.11) 2019-11-12
   - not committing file data at end of transaction
   However it could be triggerred under other conditions as well.
   The refactoring done in 8.1908 increased the likelyhood of
-  experienceing this bug. But it was not a real regression, the new
+  experiencing this bug. But it was not a real regression, the new
   code was valid, but changed the timing so that the race was more
   likely.
   Thanks to Michael Biebl for reporting this bug and helping to
