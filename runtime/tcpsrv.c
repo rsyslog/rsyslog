@@ -1430,7 +1430,7 @@ SetDrvrPrioritizeSAN(tcpsrv_t *pThis, int prioritizeSan)
 }
 
 
-/* End of methods to shuffle autentication settings to the driver.;
+/* End of methods to shuffle authentication settings to the driver.;
 
  * -------------------------------------------------------------------------- */
 
