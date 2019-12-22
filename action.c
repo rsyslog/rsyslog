@@ -1577,7 +1577,7 @@ DBGPRINTF("actionCommit[%s]: return actionTryCommit %d\n", pThis->pszName, iRet)
 	/* We still have some messages with suspend error. So now let's do our
 	 * "regular" retry and suspend processing.
 	 */
-	DBGPRINTF("actionCommit[%s]: unhappy, we still have %d uncommited messages.\n",
+	DBGPRINTF("actionCommit[%s]: unhappy, we still have %d uncommitted messages.\n",
 		pThis->pszName, nMsgs);
 	int bDone = 0;
 	do {

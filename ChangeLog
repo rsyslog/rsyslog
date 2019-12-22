@@ -5281,7 +5281,7 @@ Version 8.4.1 [v8-stable] 2014-09-30
 - bugfix: fix syntax error in anon_cc_numbers.py script
   Thanks to github user anthcourtney for the patch.
   closes: https://github.com/rsyslog/rsyslog/issues/109
-- bugfix: ompgsql: don't loose uncomitted data on retry
+- bugfix: ompgsql: don't loose uncommitted data on retry
   Thanks to Jared Johnson and Axel Rau for the patch.
 - bugfix: imfile: if a state file for a different file name was set,
   that different file (name) was monitored instead of the configured
