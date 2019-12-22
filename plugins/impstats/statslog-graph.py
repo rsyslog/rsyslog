@@ -258,7 +258,7 @@ else:
 	if bLineChart:
 		myChart = pygal.Line(chartCfg)
 		myChart.title = 'Line Chart of "' + szChartName + '"'
-		myChart.x_title = "Time elasped in seconds"
+		myChart.x_title = "Time elapsed in seconds"
 		myChart.x_labels = map(str, aData[aFields[0]] )
 #		myChart.x_labels_major = map(str, aMajorXData )
 		for iChartNum in range(3, len(aFields) ):
@@ -268,7 +268,7 @@ else:
 	elif bBarChart:
 		myChart = pygal.Bar(chartCfg)
 		myChart.title = 'Bar Chart of "' + szChartName + '"'
-		myChart.x_title = "Time elasped in seconds"
+		myChart.x_title = "Time elapsed in seconds"
 		myChart.x_labels = map(str, aData[aFields[0]] )
 #		myChart.x_labels_major = map(str, aMajorXData )
 		for iChartNum in range(3, len(aFields) ):
