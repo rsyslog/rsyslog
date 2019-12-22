@@ -104,7 +104,7 @@ static struct cnfparamblk actpblk = {
 };
 
 
-/* protype functions */
+/* prototype functions */
 void str_split(char **membuf);
 
 
