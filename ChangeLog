@@ -14154,7 +14154,7 @@ helpful.
  *	Minor code cleanups.
  *
  * Thu May  2 15:15:33 CDT 1996:  Dr. Wettstein
- *	Fixed bug in init function which resulted in file descripters
+ *	Fixed bug in init function which resulted in file descriptors
  *	being orphaned when syslogd process was re-initialized with SIGHUP
  *	signal.  Thanks to Edvard Tuinder
  *	(Edvard.Tuinder@praseodymium.cistron.nl) for putting me on the
