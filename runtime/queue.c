@@ -2716,7 +2716,7 @@ qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 	}
 
 	/* we have persisted the queue object. So whenever it comes to an empty queue,
-	 * we need to delete the QIF. Thus, we indicte that need.
+	 * we need to delete the QIF. Thus, we indicate that need.
 	 */
 	pThis->bNeedDelQIF = 1;
 
