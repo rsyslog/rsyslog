@@ -285,7 +285,7 @@ struct x {
 */
 
 
-/* the following defines describe the parameter block for puling
+/* the following defines describe the parameter block for pulling
  * config parameters. Note that the focus is on ease and saveness of
  * use, not performance. For example, we address parameters by name
  * instead of index, because the former is less error-prone. The (severe)
