@@ -2499,7 +2499,7 @@ Version 8.33.0 [v8-stable] 2018-02-20
   This commit also corrects an issue with the constant "jsonf"
   format. That was recently added, and the implementation problem
   only became visible when used inside a larger json object. No
-  officially released code is affected, thought - so it rellay
+  officially released code is affected, thought - so it really
   is just a side-note.
   closes https://github.com/rsyslog/rsyslog/issues/2347
 - core/template: add format jsonf to constant template entries
