@@ -16,7 +16,7 @@
  * which can directly be used to work with the strms and file output. It
  * provides such useful things like a circular file buffer and, hopefully
  * at a later stage, a lazy writer. The object is also seriazable and thus
- * can easily be persistet. The bottom line is that it makes much sense to
+ * can easily be persistent. The bottom line is that it makes much sense to
  * use this class whereever possible as its features may grow in the future.
  *
  * An important note on writing gzip format via zlib (kept anonymous
@@ -114,7 +114,7 @@ typedef struct strm_s {
 	int64 *pUsrWCntr; /* NULL or a user-provided counter that receives the nbr of bytes written since
 	the last CntrSet() */
 	sbool bPrevWasNL; /* used for readLine() when reading multi-line messages */
-	/* dynamic properties, valid only during file open, not to be persistet */
+	/* dynamic properties, valid only during file open, not to be persistent */
 	sbool bDisabled; /* should file no longer be written to? (currently set only if omfile file size limit fails) */
 	sbool bSync;	/* sync this file after every write? */
 	sbool bReopenOnTruncate;
