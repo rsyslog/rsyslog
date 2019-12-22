@@ -19,7 +19,7 @@
 # That's not a problem with the code itself, but rater a problem with
 # synchronization in the test environment. So I have decided to keep the
 # TLS tests in, but not yet actually utilize them. This is most probably
-# left as an excercise for future (devel) releases. -- rgerhards, 2009-11-11
+# left as an exercise for future (devel) releases. -- rgerhards, 2009-11-11
 #
 # added 2009-11-11 by Rgerhards
 # This file is part of the rsyslog project, released under ASL 2.0

@@ -494,7 +494,7 @@ int openConnections(void)
 /* we also close all connections because otherwise we may get very bad
  * timing for the syslogd - it may not be able to process all incoming
  * messages fast enough if we immediately shut down.
- * TODO: it may be an interesting excercise to handle that situation
+ * TODO: it may be an interesting exercise to handle that situation
  * at the syslogd level, too
  * rgerhards, 2009-04-14
  */
