@@ -236,7 +236,7 @@ static SSL **sslArray;
 /* variables for managing multi-threaded operations */
 int runningThreads;		/* number of threads currently running */
 int doRun;			/* shall sender thread begin to run? */
-pthread_mutex_t thrdMgmt;	/* mutex for controling startup/shutdown */
+pthread_mutex_t thrdMgmt;	/* mutex for controlling startup/shutdown */
 pthread_cond_t condStarted;
 pthread_cond_t condDoRun;
 
