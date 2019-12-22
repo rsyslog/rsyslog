@@ -3087,7 +3087,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
 - tcpsrv bugfix: potential hang during shutdown
 - queue bugfix: potential hang during shutdown
 - queue bugfix: NULL pointer dereference during config processing
-  If the queue parameters were incorrectly given, a NULL pointer derefernce
+  If the queue parameters were incorrectly given, a NULL pointer dereference
   could happen during config parsing. Once post that stage, no problem could
   occur.
   Detected by Coverity scan, CID 185339
