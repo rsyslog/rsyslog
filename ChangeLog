@@ -9497,7 +9497,7 @@ Version 4.5.4  [v4-beta] (rgerhards), 2009-09-29
   Most severely affected omfile. The problem was that some buffers were
   freed before the asynchronous writer thread was shut down. So the
   writer thread accessed invalid data, which may even already be
-  overwritten. Symptoms (with omfile) were segfaults, grabled data
+  overwritten. Symptoms (with omfile) were segfaults, garbled data
   and files with random names placed around the file system (most
   prominently into the root directory). Special thanks to Aaron for
   helping to track this down.
@@ -11454,7 +11454,7 @@ Version 1.17.1 (rgerhards), 2007-07-20
 - fixed a bug that caused make install to install rsyslogd and rklogd under
   the wrong names
 - fixed bug that caused $AllowedSenders to handle IPv6 scopes incorrectly;
-  also fixed but that could grabble $AllowedSender wildcards. Thanks to
+  also fixed but that could garble $AllowedSender wildcards. Thanks to
   mildew@gmail.com for the patch
 - minor code cleanup - thanks to Peter Vrabec for the patch
 - fixed minimal memory leak on HUP (caused by templates)
@@ -12397,7 +12397,7 @@ Version 1.17.1 (rgerhards), 2007-07-20
 - fixed a bug that caused make install to install rsyslogd and rklogd under
   the wrong names
 - fixed bug that caused $AllowedSenders to handle IPv6 scopes incorrectly;
-  also fixed but that could grabble $AllowedSender wildcards. Thanks to
+  also fixed but that could garble $AllowedSender wildcards. Thanks to
   mildew@gmail.com for the patch
 - minor code cleanup - thanks to Peter Vrabec for the patch
 - fixed minimal memory leak on HUP (caused by templates)
@@ -13340,7 +13340,7 @@ Version 1.17.1 (rgerhards), 2007-07-20
 - fixed a bug that caused make install to install rsyslogd and rklogd under
   the wrong names
 - fixed bug that caused $AllowedSenders to handle IPv6 scopes incorrectly;
-  also fixed but that could grabble $AllowedSender wildcards. Thanks to
+  also fixed but that could garble $AllowedSender wildcards. Thanks to
   mildew@gmail.com for the patch
 - minor code cleanup - thanks to Peter Vrabec for the patch
 - fixed minimal memory leak on HUP (caused by templates)
