@@ -14286,7 +14286,7 @@ helpful.
  *
  * Mon Oct 12 22:18:34 CEST 1998: Martin Schulze <joey@infodrom.north.de>
  *	Modified printline() to support 8bit characters - such as
- *	russion letters.  Thanks to Vladas Lapinskas <lapinskas@mail.iae.lt>.
+ *	russian letters.  Thanks to Vladas Lapinskas <lapinskas@mail.iae.lt>.
  *
  * Sat Nov 14 02:29:37 CET 1998: Martin Schulze <joey@infodrom.north.de>
  *	``-m 0'' now turns of MARK logging entirely.
