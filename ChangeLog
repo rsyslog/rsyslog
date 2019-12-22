@@ -5630,7 +5630,7 @@ highly experimental. This assertion is based on real-world feedback.
     the compiler generate somewhat faster code
 - failed action detection more precisely for a number of actions
   If an action  uses string parameter passing but is non-transactional 
-  it can be executed immediately, giving a quicker indicatio of
+  it can be executed immediately, giving a quicker indication of
   action failure.
 - bugfix: limiting queue disk space did not work properly
   * queue.maxdiskspace actually initializes queue.maxfilesize
