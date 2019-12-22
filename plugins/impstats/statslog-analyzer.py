@@ -115,7 +115,7 @@ else:
 
 					# If LogobjectID is -1, we have JSON Format in LN_LOGDATA
 					if loglineindexes[iLogRegExIndex]["LN_LOGOBJECT"] == -1:
-						# Remove unecessary characters and split into templ array
+						# Remove unnecessary characters and split into templ array
 						aCleanedArray = re.sub("[{}\"]", "", result[loglineindexes[iLogRegExIndex]["LN_LOGDATA"]]).split(",")
 						# Reset Logdata
 						result[ loglineindexes[iLogRegExIndex]["LN_LOGDATA"] ] = ""
