@@ -1118,7 +1118,7 @@ Version 8.1901.0 (aka 2019.01) 2019-01-22
 - testbench: fix issues with journal testing
   The configure/Makefile checks were not correct, leading to the
   build of journal components when not necessary, even if not
-  supported by the platform. Thus lead to invald build and test
+  supported by the platform. Thus lead to invalid build and test
   failures.
 - testbench: add tests for "certless" tcp/tls
   This adds a test to ensure that a client without certificate can

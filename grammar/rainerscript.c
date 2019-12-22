@@ -2099,7 +2099,7 @@ doFunct_Ipv42num(struct cnffunc *__restrict__ const func,
 		case '.':
 			if(endblank == 1){
 				DBGPRINTF("rainerscript: (ipv42num) error: wrong IP-Address format "
-					"(inalid space(2))\n");
+					"(invalid space(2))\n");
 				goto done;
 			}
 			startblank = 0;
