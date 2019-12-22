@@ -500,7 +500,7 @@ finalize_it:
 }
 
 
-/* Parse and a word config line option. A word is a consequtive
+/* Parse and a word config line option. A word is a consecutive
  * sequence of non-whitespace characters. pVal must be
  * a pointer to a string which is to receive the option
  * value. The returned string must be freed by the caller.

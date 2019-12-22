@@ -2513,7 +2513,7 @@ finalize_it:
 #undef	isProp
 
 
-/* return the current offset inside the stream. Note that on two consequtive calls, the offset
+/* return the current offset inside the stream. Note that on two consecutive calls, the offset
  * reported on the second call may actually be lower than on the first call. This is due to
  * file circulation. A caller must deal with that. -- rgerhards, 2008-01-30
  */
