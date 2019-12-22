@@ -153,7 +153,7 @@ typedef struct configSettings_s {
 	time_t iActExecEveryNthOccurTO;			/* timeout for n-occurence setting (in seconds, 0=never) */
 	int glbliActionResumeInterval;
 	int glbliActionResumeRetryCount;		/* how often should suspended actions be retried? */
-	int bActionRepMsgHasMsg;			/* last messsage repeated... has msg fragment in it */
+	int bActionRepMsgHasMsg;			/* last message repeated... has msg fragment in it */
 	uchar *pszActionName;				/* short name for the action */
 	/* action queue and its configuration parameters */
 	queueType_t ActionQueType;			/* type of the main message queue above */

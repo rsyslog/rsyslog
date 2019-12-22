@@ -3598,7 +3598,7 @@ Version 8.29.0 [v8-stable] 2017-08-08
     free'ed.
     For more information see https://github.com/rsyslog/rsyslog/pull/1647
     Thanks to Derek Smith for the patch.
-- core bugfix: messsage garbled after message modification
+- core bugfix: message garbled after message modification
   The MsgDup() function will return a garbled message object under these
   conditions: The message was originally created with message length equal or
   larger to CONF_RAWMSG_BUFSIZE. This makes rsyslog store the message in
@@ -9879,7 +9879,7 @@ version before switching to this one.
 - added $UDPServerTimeRequery option which enables to work with
   less accurate timestamps in favor of performance. This enables querying
   of the time only every n-th time if imudp is running in the tight
-  receive loop (aka receiving messsages at a high rate)
+  receive loop (aka receiving messages at a high rate)
 - doc bugfix: queue doc had wrong parameter name for setting controlling
   worker thread shutdown period
 - restructured rsyslog.conf documentation

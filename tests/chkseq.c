@@ -9,7 +9,7 @@
  * -d may be specified, in which case duplicate messages are permitted.
  * -m number of messages permitted to be missing without triggering a
  *    failure. This is necessary for some failover tests, where it is
- *    impossible to totally guard against messagt loss. By default, NO
+ *    impossible to totally guard against message loss. By default, NO
  *    message is permitted to be lost.
  * -T anticipate truncation (which means specified payload length may be
  *    more than actual payload (which may have been truncated)

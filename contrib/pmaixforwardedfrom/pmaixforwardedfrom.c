@@ -142,7 +142,7 @@ really an AIX log, but has a similar preamble */
 	pMsg->iLenRawMsg -=1;
 	pMsg->iLenMSG -=1;
 	/* now, claim to abort so that something else can parse the now modified message */
-	DBGPRINTF("pmaixforwardedfrom: new mesage: [%d]'%s'\n", lenMsg, pMsg->pszRawMsg + pMsg->offAfterPRI);
+	DBGPRINTF("pmaixforwardedfrom: new message: [%d]'%s'\n", lenMsg, pMsg->pszRawMsg + pMsg->offAfterPRI);
 	ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 
 finalize_it:

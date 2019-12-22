@@ -194,7 +194,7 @@ static int parseRFCStructuredData(uchar **pp2parse, uchar *pResult, int *pLenStr
 
 /* parse a RFC5424-formatted syslog message. This function returns
  * 0 if processing of the message shall continue and 1 if something
- * went wrong and this messe should be ignored. This function has been
+ * went wrong and this message should be ignored. This function has been
  * implemented in the effort to support syslog-protocol. Please note that
  * the name (parse *RFC*) stems from the hope that syslog-protocol will
  * some time become an RFC. Do not confuse this with informational
