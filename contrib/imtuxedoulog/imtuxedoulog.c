@@ -2,7 +2,7 @@
  *
  * This is the input module for reading Tuxedo ULOG files. The particularity of this file
  * is that the timestamp is split between the filename (date) and the log line (time).
- * So this module switches on the date base betwwen files to open only the current file.
+ * So this module switches on the date base between files to open only the current file.
  * The log line is parsed according to the Tuxedo format. The ECID is extracted as a
  * structured data attribute.
  *
