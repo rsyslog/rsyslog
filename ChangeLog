@@ -4812,7 +4812,7 @@ Version 8.15.0 [v8-stable] 2015-12-15
   support oct and hex, but that wasn't really the case.
   Everything based on JSON was just dec-converted. As this was/is
   the norm, we fix that inconsistency by always using dec.
-  Luckly, oct and hex support was never documented and could
+  Luckily, oct and hex support was never documented and could
   probably only have been activated by constant numbers.
 - bugfix: timezone() object: fix NULL pointer dereference
   This happened during startup when the offset or id parameter was not

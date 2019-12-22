@@ -1390,7 +1390,7 @@ done:
 /* We support decimal integers. Unfortunately, previous versions
  * said they support oct and hex, but that wasn't really the case.
  * Everything based on JSON was just dec-converted. As this was/is
- * the norm, we fix that inconsistency. Luckly, oct and hex support
+ * the norm, we fix that inconsistency. Luckily, oct and hex support
  * was never documented.
  * rgerhards, 2015-11-12
  */
