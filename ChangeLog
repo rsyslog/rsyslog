@@ -3331,7 +3331,7 @@ Version 8.30.0 [v8-stable] 2017-10-17
   providing the ability to see initial error messages. Might also be
   useful for some practical deployments.
   global parameter: global(errorMessagesToStderr.maxNumber)
-- tcpsrv subsystem: improvate clarity of some error messages
+- tcpsrv subsystem: improve clarity of some error messages
   operating system error message are added to some messages, providing
   better advise of what actually is the error cause
 - imptcp: include module name in error msg
@@ -4741,7 +4741,7 @@ Version 8.15.0 [v8-stable] 2015-12-15
   Thanks to 饶琛琳 (github user chenryn) for the contribution.
 - omkafka: new statistics counter "maxoutqsize"
   Thanks to 饶琛琳 (github user chenryn) for the contribution.
-- improvments for 0mq modules:
+- improvements for 0mq modules:
   * omczmq - suspend / Retry handling - the output plugin can now recover
     from some error states due to issues with plugin startup or message sending
   * omczmq - refactored topic handling code for ZMQ_PUB output to be a little
@@ -9267,7 +9267,7 @@ Version 4.6.4  [v4-stable] (rgerhards), 2010-08-05
   Thanks to Kiss Gabor for the patch.
 ---------------------------------------------------------------------------
 Version 4.6.3  [v4-stable] (rgerhards), 2010-07-07
-- improvded testbench
+- improved testbench
   - added test with truly random data received via syslog to test
     robustness
   - added new configure option that permits to disable and enable an

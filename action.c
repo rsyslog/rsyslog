@@ -261,7 +261,7 @@ batchState2String(const batch_state_t state)
  * invocation if time() failed. Then, of course, we would probably already
  * be in trouble, but for the sake of performance we accept this very,
  * very slight risk.
- * This logic has been added as part of an overall performance improvment
+ * This logic has been added as part of an overall performance improvement
  * effort inspired by David Lang. -- rgerhards, 2008-09-16
  * Note: this function does not use the usual iRet call conventions
  * because that would provide little to no benefit but complicate things
