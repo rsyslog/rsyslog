@@ -4036,7 +4036,7 @@ Version 8.24.0 [v8-stable] 2017-01-10
   causes an assertion to trigger, thus aborting the test
 - bugfix core: potential dealock on shutdown
   could happen when rsyslog was started and quickly shut down OR when
-  co-incidently a new thread was spawend "with bad timing" around the time
+  coincidentally a new thread was spawend "with bad timing" around the time
   of shutdown.
   See also https://github.com/rsyslog/rsyslog/pull/1274
   Thanks to github user tomassykora for the final patch and Rado Sroka for
