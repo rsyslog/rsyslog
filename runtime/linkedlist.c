@@ -3,7 +3,7 @@
  * wherever a linked list is required.
  *
  * NOTE: we do not currently provide a constructor and destructor for the
- * object itself as we assume it will always be part of another strucuture.
+ * object itself as we assume it will always be part of another structure.
  * Having a pointer to it, I think, does not really make sense but costs
  * performance. Consequently, there is is llInit() and llDestroy() and they
  * do what a constructor and destructor do, except for creating the
