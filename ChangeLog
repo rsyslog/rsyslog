@@ -4234,7 +4234,7 @@ Version 8.21.0 [v8-stable] 2016-08-23
   by default, internal messages are no longer logged via the internal
   bridge to rsyslog but via the syslog() API call [either directly or
   via liblogging). For the typical single-rsyslogd-instance installation this
-  is mostly unnoticable (except for some additional latency). If multiple
+  is mostly unnoticeable (except for some additional latency). If multiple
   instances are run, only the "main" (the one processing system log messages)
   will see all messages. To return to the old behavior, do either of those
   two:
@@ -4333,7 +4333,7 @@ Version 8.19.0 [v8-stable] 2016-05-31
     NUL into escape sequences.
     Also, the dual buffers were used inconsistently, which could lead to
     subtle bugs. With the single buffer, this does no longer happen and
-    we also get some improved performance (should be noticable)
+    we also get some improved performance (should be noticeable)
     and reduced memory use (a bit).
     closes https://github.com/rsyslog/rsyslog/issues/1033
   * removed no longer used code
@@ -5385,7 +5385,7 @@ Version 8.3.2 [v8-devel] 2014-05-02
 - bugfix: mmexternal remove framing char before processing JSON reply
   This did not have any real bad effects, but caused unnecessary
   processing, as empty replies were not properly detected. Otherwise,
-  the bug was not noticible from the user's PoV.
+  the bug was not noticeable from the user's PoV.
 - bugfix: mmexternal segfault due to invalid free in non-json input mode
   closes: https://github.com/rsyslog/rsyslog/issues/70
 - bugfix: mmexternal segfault when external plugin sent invalid reply
@@ -11658,7 +11658,7 @@ Version 1.12.3 (RGer), 2006-10-04
 - made the field delimiter inside property replace configurable via
   template
 - fixed a bug in property replacer: if fields were used, the delimitor
-  became part of the field. Up until now, this was barely noticable as 
+  became part of the field. Up until now, this was barely noticeable as 
   the delimiter as TAB only and thus invisible to a human. With other
   delimiters available now, it quickly showed up. This bug fix might cause
   some grief to existing installations if they used the extra TAB for
@@ -12601,7 +12601,7 @@ Version 1.12.3 (RGer), 2006-10-04
 - made the field delimiter inside property replace configurable via
   template
 - fixed a bug in property replacer: if fields were used, the delimitor
-  became part of the field. Up until now, this was barely noticable as 
+  became part of the field. Up until now, this was barely noticeable as 
   the delimiter as TAB only and thus invisible to a human. With other
   delimiters available now, it quickly showed up. This bug fix might cause
   some grief to existing installations if they used the extra TAB for
@@ -13544,7 +13544,7 @@ Version 1.12.3 (RGer), 2006-10-04
 - made the field delimiter inside property replace configurable via
   template
 - fixed a bug in property replacer: if fields were used, the delimitor
-  became part of the field. Up until now, this was barely noticable as 
+  became part of the field. Up until now, this was barely noticeable as 
   the delimiter as TAB only and thus invisible to a human. With other
   delimiters available now, it quickly showed up. This bug fix might cause
   some grief to existing installations if they used the extra TAB for
