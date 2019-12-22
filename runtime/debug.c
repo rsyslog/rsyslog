@@ -1,6 +1,6 @@
 /* debug.c
  *
- * This file proides debug support.
+ * This file provides debug support.
  *
  * File begun on 2008-01-22 by RGerhards
  *
