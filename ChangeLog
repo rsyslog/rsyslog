@@ -3340,7 +3340,7 @@ Version 8.30.0 [v8-stable] 2017-10-17
 - omfwd: slightly improved error messages during config parsing
   They now contain config file/line number information where this was missing.
 - ommysql improvements
-  * Return specifc code for unrecoverable errors. This makes retry processing
+  * Return specific code for unrecoverable errors. This makes retry processing
     more performant and robust.
   * error messages improved
   * Update to utilize native v8 transactional interface. Previously, it used

@@ -1,6 +1,6 @@
 /* ruleset.c - rsyslog's ruleset object
  *
- * We have a two-way structure of linked lists: one config-specifc linked list
+ * We have a two-way structure of linked lists: one config-specific linked list
  * (conf->rulesets.llRulesets) hold alls rule sets that we know. Included in each
  * list is a list of rules (which contain a list of actions, but that's
  * a different story).
@@ -728,7 +728,7 @@ GetCurrent(rsconf_t *conf)
 }
 
 
-/* get main queue associated with ruleset. If no ruleset-specifc main queue
+/* get main queue associated with ruleset. If no ruleset-specific main queue
  * is set, the primary main message queue is returned.
  * We use a non-standard calling interface, as nothing can go wrong and it
  * is really much more natural to return the pointer directly.
