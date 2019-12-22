@@ -8878,7 +8878,7 @@ Version 5.3.2  [DEVEL] (rgerhards), 2009-10-21
 - re-enabled input thread termination handling that does avoid thread
   cancellation where possible. This provides a more reliable mode of
   rsyslogd termination (canceling threads my result in not properly
-  freed resouces and potential later hangs, even though we perform
+  freed resources and potential later hangs, even though we perform
   proper cancel handling in our code). This is part of an effort to
   reduce thread cancellation as much as possible in rsyslog.
   NOTE: the code previously written code for this functionality had a
