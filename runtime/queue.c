@@ -200,7 +200,7 @@ void qqueueDoneLoadCnf(void)
  ***********************************************************************/
 
 /* generate next uniqueue dequeue ID. Note that uniqueness is only required
- * on a per-queue basis and while this instance runs. So a stricly monotonically
+ * on a per-queue basis and while this instance runs. So a strictly monotonically
  * increasing counter is sufficient (if enough bits are used).
  */
 static inline qDeqID getNextDeqID(qqueue_t *pQueue)
