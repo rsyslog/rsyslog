@@ -3491,7 +3491,7 @@ Version 8.29.0 [v8-stable] 2017-08-08
   before we had native rate-limiters. The default was that only the first 5
   error messages were actually reported. For long-running instances, that
   meant that in many cases no errors were ever reported. We now use the default
-  internal message rate limter, which works far better and ensures that also
+  internal message rate limiter, which works far better and ensures that also
   long-running instances will be able to emit error messages after prolonged
   runtime. In contrast, this also means that users will see more error
   messages from rsyslog, but that should actually improve the end user
