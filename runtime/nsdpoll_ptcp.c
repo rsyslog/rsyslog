@@ -56,7 +56,7 @@ DEFobjCurrIf(glbl)
  * in parallel. As such, in edge-triggered mode we may not get notified, because new data comes
  * in after we have read everything that was present. To use ET mode, we need to change the upper
  * peers so that they immediately start a new wait before processing the data read. That obviously
- * requires more elaborate redesign and we postpone this until the current more simplictic mode has
+ * requires more elaborate redesign and we postpone this until the current more simplistic mode has
  * been proven OK in practice.
  * rgerhards, 2009-11-18
  */
