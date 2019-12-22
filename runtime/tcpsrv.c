@@ -862,7 +862,7 @@ RunSelect(tcpsrv_t *pThis, nsd_epworkset_t workset[], size_t sizeWorkset)
 			processWorkset(pThis, NULL, iWorkset, workset);
 
 		/* we need to copy back close descriptors */
-		nssel.Destruct(&pSel); /* no iRet check as it is overriden at start of loop! */
+		nssel.Destruct(&pSel); /* no iRet check as it is overridden at start of loop! */
 finalize_it: /* this is a very special case - this time only we do not exit the function,
 	      * because that would not help us either. So we simply retry it. Let's see
 	      * if that actually is a better idea. Exiting the loop wasn't we always

@@ -5725,7 +5725,7 @@ Version 7.6.8 [v7.6-stable] 2014-10-??
     (unsigned) lines at the end of the log file. 
   Thanks to Henri Lakk for the patch.
 - bugfix: error: json_tokener_errors undeclared when overriding PKGCONFIG
-  If PKGCONFIG settings for json-c were overriden, presence of
+  If PKGCONFIG settings for json-c were overridden, presence of
   json_tokener_errors was not properly detected.
   closes: https://github.com/rsyslog/rsyslog/issues/143
   Thanks to Alex Fisher for alerting us and the patch.

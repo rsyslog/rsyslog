@@ -754,7 +754,7 @@ GenerateLocalHostNameProperty(void)
 			else
 				pszName = LocalHostName;
 		}
-	} else { /* local hostname is overriden via config */
+	} else { /* local hostname is overridden via config */
 		pszName = LocalHostNameOverride;
 	}
 	DBGPRINTF("GenerateLocalHostName uses '%s'\n", pszName);

@@ -566,7 +566,7 @@ __attribute__((no_sanitize("shift"))) /* IV shift causes known overflow */
 #endif
 seedIV(gcryfile gf, uchar **iv)
 {
-	long rndnum = 0; /* keep compiler happy -- this value is always overriden */
+	long rndnum = 0; /* keep compiler happy -- this value is always overridden */
 	DEFiRet;
 
 	CHKmalloc(*iv = calloc(1, gf->blkLength));

@@ -60,7 +60,7 @@ export TB_ERR_TIMEOUT=101
 
 # diag system internal environment variables
 # these variables are for use by test scripts - they CANNOT be
-# overriden by the user
+# overridden by the user
 # TCPFLOOD_EXTRA_OPTS   enables to set extra options for tcpflood, usually
 #                       used in tests that have a common driver where it
 #                       is too hard to set these options otherwise

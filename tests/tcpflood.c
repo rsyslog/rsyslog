@@ -14,7 +14,7 @@
  *      to set a "soft limit": if tcpflood cannot open the
  *      requested number of connections, gracefully degrade to
  *      whatever number could be opened. This is useful in environments
- *      where system config constraints cannot be overriden (e.g.
+ *      where system config constraints cannot be overridden (e.g.
  *      vservers, non-admin users, ...)
  * -m	number of messages to send (connection is random)
  * -i	initial message number (optional)
