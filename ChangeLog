@@ -3165,7 +3165,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
   errors. During this process, the action templates for each message
   are copied into a temporary buffer. That copy was invalidly sized,
   actually copying only the first template string. As such, outputs
-  that requested more template strings AND had erros in batch submission
+  that requested more template strings AND had errors in batch submission
   received uninitialized pointers. This could lead to all sorts of
   problems.
   see also https://github.com/rsyslog/rsyslog/issues/1885

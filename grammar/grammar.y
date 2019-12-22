@@ -122,7 +122,7 @@ extern int yyerror(const char*);
 %nonassoc UMINUS NOT
 
 %expect 1 /* dangling else */
-/* If more erors show up, Use "bison -v grammar.y" if more conflicts arise and
+/* If more errors show up, Use "bison -v grammar.y" if more conflicts arise and
  * check grammar.output for were exactly these conflicts exits.
  */
 %%

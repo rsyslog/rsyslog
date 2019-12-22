@@ -13,7 +13,7 @@ template(name="outfmt" type="list") {
 
 
 # we deliberately include continue/stop to make sure we have more than
-# one statement. This catches grammar erorrs
+# one statement. This catches grammar errors
 ruleset(name="rs2") {
 	continue
 	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
