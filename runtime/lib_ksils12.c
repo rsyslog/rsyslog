@@ -1301,7 +1301,7 @@ rsksiSetAggregator(rsksictx ctx, char *uri, char *loginid, char *key) {
 	strTmp = ctx->aggregatorUri;
 	while((strTmpUri = strsep(&strTmp, "|") ) != NULL) {
 		if(ctx->aggregatorEndpointCount >= KSI_CTX_HA_MAX_SUBSERVICES) {
-			report(ctx, "Maximum number (%d) of service endoints reached, ignoring endpoint: %s",
+			report(ctx, "Maximum number (%d) of service endpoints reached, ignoring endpoint: %s",
 				KSI_CTX_HA_MAX_SUBSERVICES, strTmpUri);
 		}
 		else {
