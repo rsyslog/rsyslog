@@ -2147,7 +2147,7 @@ Version 8.35.0 [v8-stable] 2018-05-15
     described here).
   The central capability works on message submission, and so cannot be
   circumvented. It has these capabilities:
-  * overisze message handling modes:
+  * oversize message handling modes:
     - truncate message
     - split message
       this is of questionable use, but also often requested. In that mode,
