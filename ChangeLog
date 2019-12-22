@@ -544,7 +544,7 @@ an easy way to identify which changes went into the respective daily stable.
   to use the simple_recv.py test program.
   Thanks to Richard Megginson for the patch.
 - omclickhouse bugfix: potential segfault on omclickhouse batchmode
-  segfault happened when the template did not containt the string
+  segfault happened when the template did not contain the string
   "VALUES".
   Thanks to github user wdjwxh for the fix.
 - core bugfix: message duplication copied incorrect timestamp
