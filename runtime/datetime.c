@@ -281,7 +281,7 @@ srSLMGParseInt32(uchar** ppsz, int *pLenStr)
 /**
  * Parse a TIMESTAMP-3339.
  * updates the parse pointer position. The pTime parameter
- * is guranteed to be updated only if a new valid timestamp
+ * is guaranteed to be updated only if a new valid timestamp
  * could be obtained (restriction added 2008-09-16 by rgerhards).
  * This method now also checks the maximum string length it is passed.
  * If a *valid* timestamp is found, the string length is decremented
@@ -431,7 +431,7 @@ finalize_it:
 
 /**
  * Parse a TIMESTAMP-3164. The pTime parameter
- * is guranteed to be updated only if a new valid timestamp
+ * is guaranteed to be updated only if a new valid timestamp
  * could be obtained (restriction added 2008-09-16 by rgerhards). This
  * also means the caller *must* provide a valid (probably current)
  * timstamp in pTime when calling this function. a 3164 timestamp contains

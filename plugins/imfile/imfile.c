@@ -1194,7 +1194,7 @@ finalize_it:
 
 
 /* Helper function to combine statefile and state file directory
- * This function is guranteed to work only on config data and DOES NOT
+ * This function is guaranteed to work only on config data and DOES NOT
  * open or otherwise modify disk file state.
  */
 static int ATTR_NONNULL()
@@ -1277,7 +1277,7 @@ getFileID(act_obj_t *const act)
  * malloc calls, it must be passed a buffer which should be MAXFNAME large.
  * Note: the buffer is not necessarily populated ... always ONLY use the
  * RETURN VALUE!
- * This function is guranteed to work only on config data and DOES NOT
+ * This function is guaranteed to work only on config data and DOES NOT
  * open or otherwise modify disk file state.
  */
 static uchar * ATTR_NONNULL(1, 2)
