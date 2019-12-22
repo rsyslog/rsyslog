@@ -916,7 +916,7 @@ finalize_it:
 
 
 /* rgerhards 2004-11-09: the following is a function that can be used
- * to log a message orginating from the syslogd itself.
+ * to log a message originating from the syslogd itself.
  */
 rsRetVal
 logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg, int flags)
