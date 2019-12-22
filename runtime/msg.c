@@ -4462,7 +4462,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 		}
 	}
 
-	/* Now everything is squased as much as possible and more or less ready to
+	/* Now everything is squared as much as possible and more or less ready to
 	 * go. This is the perfect place to compress any remaining spaces, if so
 	 * instructed by the user/config.
 	 */
