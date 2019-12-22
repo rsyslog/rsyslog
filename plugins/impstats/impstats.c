@@ -611,7 +611,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
-	/* the pstatsinverval is an alias to support a previous screwed-up syntax... */
+	/* the pstatsinterval is an alias to support a previous screwed-up syntax... */
 	CHKiRet(regCfSysLineHdlr2((uchar *)"pstatsinterval", 0, eCmdHdlrInt, NULL, &cs.iStatsInterval,
 	STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(regCfSysLineHdlr2((uchar *)"pstatinterval", 0, eCmdHdlrInt, NULL, &cs.iStatsInterval,
