@@ -11216,7 +11216,7 @@ Version 1.19.11 (rgerhards), 2007-11-29
 Version 1.19.10 (rgerhards), 2007-10-19
 - introduced the new ":modulename:" syntax for calling module actions
   in selector lines; modified ommysql to support it. This is primarily
-  an aid for further modules and a prequisite to actually allow third
+  an aid for further modules and a prerequisite to actually allow third
   party modules to be created.
 - minor fix in slackware startup script, "-r 0" is now "-r0"
 - updated rsyslogd doc set man page; now in html format
@@ -12159,7 +12159,7 @@ Version 1.19.11 (rgerhards), 2007-11-29
 Version 1.19.10 (rgerhards), 2007-10-19
 - introduced the new ":modulename:" syntax for calling module actions
   in selector lines; modified ommysql to support it. This is primarily
-  an aid for further modules and a prequisite to actually allow third
+  an aid for further modules and a prerequisite to actually allow third
   party modules to be created.
 - minor fix in slackware startup script, "-r 0" is now "-r0"
 - updated rsyslogd doc set man page; now in html format
@@ -13102,7 +13102,7 @@ Version 1.19.11 (rgerhards), 2007-11-29
 Version 1.19.10 (rgerhards), 2007-10-19
 - introduced the new ":modulename:" syntax for calling module actions
   in selector lines; modified ommysql to support it. This is primarily
-  an aid for further modules and a prequisite to actually allow third
+  an aid for further modules and a prerequisite to actually allow third
   party modules to be created.
 - minor fix in slackware startup script, "-r 0" is now "-r0"
 - updated rsyslogd doc set man page; now in html format

@@ -169,7 +169,7 @@ test_status() {
 
 
 setvar_RS_HOSTNAME() {
-	printf '### Obtaining HOSTNAME (prequisite, not actual test) ###\n'
+	printf '### Obtaining HOSTNAME (prerequisite, not actual test) ###\n'
 	generate_conf ""
 	add_conf 'module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")

@@ -4,7 +4,7 @@ Rsyslog will be fully supported on Solaris in the future. To build it, the GNU b
 tools (and most of the GNU environment) is needed. This software can be
 found at the excellent http://www.blastwave.org site.
 
-PREQUISITES
+PREREQUISITES
 It is strongly recommended to use GCC4 with support for
 atomic instructions (if available for the platform). While rsyslog can
 be built without atomic instruction support (and will work well then),

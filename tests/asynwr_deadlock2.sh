@@ -23,7 +23,7 @@
 # 2. no new data arrives
 # 3. the inactivity timeout has not yet expired
 # 4. *then* (and only then) the stream is closed or destructed
-# In that, 1 to 4 are prequisites for the deadlock which will happen in 4. However,
+# In that, 1 to 4 are prerequisites for the deadlock which will happen in 4. However,
 # for it to happen, we also need the right "timing". There is a race between the
 # main thread and the async writer thread. The deadlock will only happen under
 # the "right" circumstances, which basically means it will not happen always.
