@@ -1201,7 +1201,7 @@ tplAddTplMod(struct template *pTpl, uchar** ppRestOfConfLine)
 	 * Note: we have opted to let the name contain all options. This sounds
 	 * useful, because the strgen MUST actually implement a specific set
 	 * of options. Doing this via the name looks to the enduser as if the
-	 * regular syntax were used, and it make sure the strgen postively
+	 * regular syntax were used, and it make sure the strgen positively
 	 * acknowledged implementing the option. -- rgerhards, 2011-03-21
 	 */
 	if(lenMod > 6 && !strcasecmp((char*) szMod + lenMod - 7, ",stdsql")) {
