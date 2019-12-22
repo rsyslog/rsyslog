@@ -3353,7 +3353,7 @@ finalize_it:
 /* encode a property in JSON escaped format. This is a helper
  * to MsgGetProp. It needs to update all provided parameters.
  * For performance reasons, we begin to copy the string only
- * when we recognice that we actually need to do some escaping.
+ * when we recognize that we actually need to do some escaping.
  * rgerhards, 2012-03-16
  */
 static rsRetVal
