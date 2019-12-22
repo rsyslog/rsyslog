@@ -1114,7 +1114,7 @@ do_rd_kafka_destroy(instanceData *const __restrict__ pData)
 			} else /* TODO: Handle unsend messages here! */ {
 				/* timeout = RD_KAFKA_RESP_ERR__TIMED_OUT */
 				LogError(0, RS_RET_KAFKA_ERROR, "omkafka: onDestroy "
-						"Failed to send remaing '%d' messages to "
+						"Failed to send remaining '%d' messages to "
 						"topic '%s' on shutdown with error: '%s'",
 						queuedCount,
 						(pData->pTopic == NULL ? "NULL" : rd_kafka_topic_name(pData->pTopic)),
