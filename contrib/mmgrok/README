@@ -24,7 +24,7 @@ template(name="tmlp" type="string" string="%$!msg!test%\n")
 action(type="mmgrok" patterndir="path/to/yourpatternsDir" match="%{WORD:test}" source="msg" target="!msg")
 action(type="omfile"  file="path/to/file" template="tmlp")
 
-Descrption
+Description
 
 patterndir: path to grok patterns dir, default: /usr/share/grok/patterns/base
 match：the pattern used to match message
