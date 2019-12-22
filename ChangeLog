@@ -1290,7 +1290,7 @@ Version 8.40.0 [v8-stable] 2018-12-11
      closes https://github.com/rsyslog/rsyslog/issues/3104
    * testbench: suppress valgrind error caused by pthreads lib
      finally I give up and honestly think this is a problem in pthreads and
-     not in rsyslog code. See issue below and pervious commit for more
+     not in rsyslog code. See issue below and previous commit for more
      information.
      Unfortunately, this will also mask off cases where we do not properly
      call pthread_join() albeit it is needed. Nevertheless, this bug is
@@ -13847,7 +13847,7 @@ Version 0.9.0 (RGer)
   that is needed for other upcoming modifications.
 - fixed a bug that caused rsyslogd not to listen to anything if
   the configuration file could not be read
-- pervious versions disabled network logging (send/receive) if
+- previous versions disabled network logging (send/receive) if
   syslog/udp port was not in /etc/services. Now defaulting to
   port 514 in this case.
 - internal error messages are now supported up to 256 bytes
