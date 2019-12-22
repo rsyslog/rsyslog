@@ -1274,7 +1274,7 @@ create_single_udp_socket(int *const s, /* socket */
 	if (*s < 0) {
 		if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT)) {
 			LogError(errno, NO_ERRCODE, "create_udp_socket(), socket");
-			/* it is debateble if PF_INET with EAFNOSUPPORT should
+			/* it is debatable if PF_INET with EAFNOSUPPORT should
 			 * also be ignored...
 			 */
 		}
