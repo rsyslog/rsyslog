@@ -97,7 +97,7 @@ void cstrTrimTrailingWhiteSpace(cstr_t *pThis);
 
 /**
  * Append a string to the buffer. For performance reasons,
- * use rsCStrAppenStrWithLen() if you know the length.
+ * use rsCStrAppendStrWithLen() if you know the length.
  *
  * \param psz pointer to string to be appended. Must not be NULL.
  */
