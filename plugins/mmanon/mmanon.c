@@ -1,5 +1,5 @@
 /* mmanon.c
- * anonnymize IP addresses inside the syslog message part
+ * anonymize IP addresses inside the syslog message part
  *
  * Copyright 2013 Adiscon GmbH.
  *
