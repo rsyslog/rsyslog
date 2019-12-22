@@ -146,7 +146,7 @@ struct rsksistatefile {
 /* error states */
 #define RSGTE_SUCCESS 0 /* Success state */
 #define RSGTE_IO 1 	/* any kind of io error */
-#define RSGTE_FMT 2	/* data fromat error */
+#define RSGTE_FMT 2	/* data format error */
 #define RSGTE_INVLTYP 3	/* invalid TLV type record (unexpected at this point) */
 #define RSGTE_OOM 4	/* ran out of memory */
 #define RSGTE_LEN 5	/* error related to length records */

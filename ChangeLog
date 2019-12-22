@@ -4596,7 +4596,7 @@ Version 8.17.0 [v8-stable] 2016-03-08
 - bugfix omkafka: fix potential NULL pointer addressing
   this happened when the topic cache was full and an entry
   needed to be evicted
-- bugfix impstats: @cee cookie was prefixed to wrong fromat (json vs. cee)
+- bugfix impstats: @cee cookie was prefixed to wrong format (json vs. cee)
   Thanks to Volker Fröhlich for the fix.
 - bugfix imfile: fix race during startup that could lead to some duplication
   If a to-be-monitored file was created after inotify was initialized

@@ -1005,7 +1005,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 			/* We modify the message only if it contained a valid timestamp,
 			otherwise we do not touch it at all. */
 				datetime.formatTimestamp3164(&st, (char*)parse, 0);
-				parse[15] = ' '; /* re-write \0 from fromatTimestamp3164 by SP */
+				parse[15] = ' '; /* re-write \0 from formatTimestamp3164 by SP */
 				/* update "counters" to reflect processed timestamp */
 				parse += 16;
 			}
