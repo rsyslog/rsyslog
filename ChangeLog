@@ -1507,7 +1507,7 @@ Version 8.38.0 [v8-stable] 2018-09-18
     renamed readPipe to readStatus.
   Thanks to Joan Sala for contributing this.
 - omprog: fix forceSingleInstance configuration option
-  The foriceSingleInstance option did not work as intended. Even
+  The forceSingleInstance option did not work as intended. Even
   if set multiple instances were spawned. This most probably
   was a regression from 0453b1670fc34c96d31ee7c9a370f0f5ec24744a
   The code was broken roughly 3.5yrs ago, so it looks like the
