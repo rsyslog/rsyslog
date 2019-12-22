@@ -11663,7 +11663,7 @@ Version 1.12.3 (RGer), 2006-10-04
   delimiters available now, it quickly showed up. This bug fix might cause
   some grief to existing installations if they used the extra TAB for
   whatever reasons - sorry folks... Anyhow, a solution is easy: just add
-  a TAB character contstant into your template. Thus, there has no attempt
+  a TAB character constant into your template. Thus, there has no attempt
   been made to do this in a backwards-compatible way.
 ---------------------------------------------------------------------------
 Version 1.12.2 (RGer), 2006-02-15
@@ -12606,7 +12606,7 @@ Version 1.12.3 (RGer), 2006-10-04
   delimiters available now, it quickly showed up. This bug fix might cause
   some grief to existing installations if they used the extra TAB for
   whatever reasons - sorry folks... Anyhow, a solution is easy: just add
-  a TAB character contstant into your template. Thus, there has no attempt
+  a TAB character constant into your template. Thus, there has no attempt
   been made to do this in a backwards-compatible way.
 ---------------------------------------------------------------------------
 Version 1.12.2 (RGer), 2006-02-15
@@ -13549,7 +13549,7 @@ Version 1.12.3 (RGer), 2006-10-04
   delimiters available now, it quickly showed up. This bug fix might cause
   some grief to existing installations if they used the extra TAB for
   whatever reasons - sorry folks... Anyhow, a solution is easy: just add
-  a TAB character contstant into your template. Thus, there has no attempt
+  a TAB character constant into your template. Thus, there has no attempt
   been made to do this in a backwards-compatible way.
 ---------------------------------------------------------------------------
 Version 1.12.2 (RGer), 2006-02-15
