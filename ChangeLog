@@ -897,7 +897,7 @@ Version 8.1903.0 (aka 2019.03) 2019-03-05
   value of property "key" to a template names instead of a constant value.
   This is similar in approach to the DynaTopic implementation.
   Thanks to Ludo Brands for the patch.
-- AIX port: add AIX linking extensions on many plugins and contibutions to
+- AIX port: add AIX linking extensions on many plugins and contributions to
   allow building them on this os.
 - template: add Time-Related System Property $wday which is the day of week
   This allow to get a week based rotation of log as AIX does.
