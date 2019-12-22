@@ -261,7 +261,7 @@ static rsRetVal llUnlinkElt(linkedList_t *pThis, llElt_t *pElt, llElt_t *pEltPre
  * be given (or zero if the root element is to be deleted).
  * rgerhards, 2007-11-21
  */
-static rsRetVal llUnlinkAndDelteElt(linkedList_t *pThis, llElt_t *pElt, llElt_t *pEltPrev)
+static rsRetVal llUnlinkAndDeleteElt(linkedList_t *pThis, llElt_t *pElt, llElt_t *pEltPrev)
 {
 	DEFiRet;
 
@@ -346,7 +346,7 @@ rsRetVal llFindAndDelete(linkedList_t *pThis, void *pKey)
 	CHKiRet(llFindElt(pThis, pKey, &pElt, &pEltPrev));
 
 	/* if we reach this point, we have found an element */
-	CHKiRet(llUnlinkAndDelteElt(pThis, pElt, pEltPrev));
+	CHKiRet(llUnlinkAndDeleteElt(pThis, pElt, pEltPrev));
 
 finalize_it:
 	RETiRet;
@@ -392,7 +392,7 @@ rsRetVal llExecFunc(linkedList_t *pThis, rsRetVal (*pFunc)(void*, void*), void* 
 		iRet = pFunc(pData, pParam);
 		if(iRet == RS_RET_OK_DELETE_LISTENTRY) {
 			/* delete element */
-			CHKiRet(llUnlinkAndDelteElt(pThis, llCookie, llCookiePrev));
+			CHKiRet(llUnlinkAndDeleteElt(pThis, llCookie, llCookiePrev));
 			/* we need to revert back, as we have just deleted the current element.
 			 * So the actual current element is the one before it, which happens to be
 			 * stored in llCookiePrev. -- rgerhards, 2007-11-21
