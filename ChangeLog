@@ -11631,7 +11631,7 @@ Version 1.13.0 (RGer), 2006-12-19
 - property replacer option "escape-cc", "drop-cc" and "space-cc"  added
 - changed the handling of \0 characters inside syslog messages. We now
   consistently escape them to "#000". This is somewhat recommended in
-  the draft-ietf-syslog-protocol-19 draft. While the real recomendation
+  the draft-ietf-syslog-protocol-19 draft. While the real recommendation
   is to not escape any characters at all, we can not do this without
   considerable modification of the code. So we escape it to "#000", which
   is consistent with a sample found in the Internet-draft.
@@ -12574,7 +12574,7 @@ Version 1.13.0 (RGer), 2006-12-19
 - property replacer option "escape-cc", "drop-cc" and "space-cc"  added
 - changed the handling of \0 characters inside syslog messages. We now
   consistently escape them to "#000". This is somewhat recommended in
-  the draft-ietf-syslog-protocol-19 draft. While the real recomendation
+  the draft-ietf-syslog-protocol-19 draft. While the real recommendation
   is to not escape any characters at all, we can not do this without
   considerable modification of the code. So we escape it to "#000", which
   is consistent with a sample found in the Internet-draft.
@@ -13517,7 +13517,7 @@ Version 1.13.0 (RGer), 2006-12-19
 - property replacer option "escape-cc", "drop-cc" and "space-cc"  added
 - changed the handling of \0 characters inside syslog messages. We now
   consistently escape them to "#000". This is somewhat recommended in
-  the draft-ietf-syslog-protocol-19 draft. While the real recomendation
+  the draft-ietf-syslog-protocol-19 draft. While the real recommendation
   is to not escape any characters at all, we can not do this without
   considerable modification of the code. So we escape it to "#000", which
   is consistent with a sample found in the Internet-draft.
