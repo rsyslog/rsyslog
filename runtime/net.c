@@ -910,7 +910,7 @@ addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
 
 
 
-/* compares a host to an allowed sender list entry. Handles all subleties
+/* compares a host to an allowed sender list entry. Handles all subtleties
  * including IPv4/v6 as well as domain name wildcards.
  * This is a helper to isAllowedSender.
  * Returns 0 if they do not match, 1 if they match and 2 if a DNS name would have been required.

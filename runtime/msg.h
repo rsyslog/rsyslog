@@ -103,7 +103,7 @@ struct msg {
 	time_t ttGenTime;	/* time msg object was generated, same as tRcvdAt, but a Unix timestamp.
 				   While this field looks redundant, it is required because a Unix timestamp
 				   is used at later processing stages (namely in the output arena). Thanks to
-				   the subleties of how time is defined, there is no reliable way to reconstruct
+				   the subtleties of how time is defined, there is no reliable way to reconstruct
 				   the Unix timestamp from the syslogTime fields (in practice, we may be close
 				   enough to reliable, but I prefer to leave the subtle things to the OS, where
 				   it obviously is solved in way or another...). */
