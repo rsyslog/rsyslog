@@ -342,7 +342,7 @@ accumulatedValue(ctr_t *pCtr) {
 }
 
 
-/* get all the object's countes together as CEE. */
+/* get all the object's counts together as CEE. */
 static rsRetVal
 getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, const int8_t bResetCtrs)
 {
@@ -422,7 +422,7 @@ finalize_it:
 	RETiRet;
 }
 
-/* get all the object's countes together with object name as one line.
+/* get all the object's counts together with object name as one line.
  */
 static rsRetVal
 getStatsLine(statsobj_t *pThis, cstr_t **ppcstr, int8_t bResetCtrs)
