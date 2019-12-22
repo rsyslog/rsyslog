@@ -11,11 +11,11 @@ If you use RH/CentOS/Fedora, you'll have to build grok rpms by yourself as follo
     sudo yum install -y yum-utils rpmdevtools
     git clone git@github.com:jordansissel/grok.git
     mkdir -p ~/rpmbuild/SPECS/; cp grok/grok.spec.template ~/rpmbuild/SPECS/grok.spec
-    (mkdir -p ~/rpmbuld/SOURCES/; cd ~/rpmbuild/SOURCES/; spectool -g ../SPECS/grok.spec)
+    (mkdir -p ~/rpmbuild/SOURCES/; cd ~/rpmbuild/SOURCES/; spectool -g ../SPECS/grok.spec)
     sudo yum-builddep ~/rpmbuild/SPECS/grok.spec
     rpmbuild -bb ~/rpmbuild/SPECS/grok.spec
     # use yum command instead of rpm, because grok depends on libevent, pcre, tokyocabinet
-    sudo yum install -y libjson-c-devel glib2-devel ~/rpbuild/RPMS/x86_64/grok*.rpm
+    sudo yum install -y libjson-c-devel glib2-devel ~/rpmbuild/RPMS/x86_64/grok*.rpm
 
 Example
 
