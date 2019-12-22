@@ -2101,7 +2101,7 @@ finalize_it:
 
 /* write memory buffer to a stream object.
  * process the data in chunks and copy it over to our buffer. The caller-provided data
- * may theoritically be larger than our buffer. In that case, we do multiple copies. One
+ * may theoretically be larger than our buffer. In that case, we do multiple copies. One
  * may argue if it were more efficient to write out the caller-provided buffer in that case
  * and earlier versions of rsyslog did this. However, this introduces a lot of complexity
  * inside the buffered writer and potential performance bottlenecks when trying to solve

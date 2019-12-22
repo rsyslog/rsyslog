@@ -306,7 +306,7 @@ addCtrForReporting(json_object *to, const uchar* field_name, intctr_t value) {
 	DEFiRet;
 
 	/*We should migrate libfastjson to support uint64_t in addition to int64_t.
-	  Although no counter is likely to grow to int64 max-value, this is theoritically
+	  Although no counter is likely to grow to int64 max-value, this is theoretically
 	  incorrect (as intctr_t is uint64)*/
 	CHKmalloc(v = json_object_new_int64((int64_t) value));
 
