@@ -14215,7 +14215,7 @@ helpful.
  *	forwarded to other hosts.
  *
  * Sat Jan 10 01:33:06 CET 1998: Martin Schulze <joey@infodrom.north.de>
- *	Fixed small bugs in F_FORW_UNKN meachanism.  Thanks to Torsten
+ *	Fixed small bugs in F_FORW_UNKN mechanism.  Thanks to Torsten
  *	Neumann <torsten@londo.rhein-main.de> for pointing me to it.
  *
  * Mon Jan 12 19:50:58 CET 1998: Martin Schulze <joey@infodrom.north.de>
