@@ -1602,7 +1602,7 @@ done:
 	return r;
 }
 
-/* Helper function to verifiy the next record in the signature file */
+/* Helper function to verify the next record in the signature file */
 int
 rsksi_vrfy_nextRec(ksifile ksi, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len, ksierrctx_t *ectx)
 {
@@ -1673,7 +1673,7 @@ done:
 	return r;
 }
 
-/* Helper function to verifiy the next record in the signature file */
+/* Helper function to verify the next record in the signature file */
 int
 rsksi_vrfy_nextRecExtract(ksifile ksi, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len, ksierrctx_t *ectx,
 block_hashchain_t *hashchain, int storehashchain)
@@ -1849,7 +1849,7 @@ if(rsksi_read_debug) printf("debug: rsksi_vrfy_nextRecExtract:\t returned %d\n",
 	return r;
 }
 
-/* Helper function to verifiy the next hash chain record in the signature file */
+/* Helper function to verify the next hash chain record in the signature file */
 int
 rsksi_vrfy_nextHashChain(ksifile ksi, block_sig_t *bs, FILE *sigfp, unsigned char *rec, size_t len, ksierrctx_t *ectx)
 {
