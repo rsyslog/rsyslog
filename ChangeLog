@@ -1037,7 +1037,7 @@ Version 8.1901.0 (aka 2019.01) 2019-01-22
   according to @brianknox (their author) these modules are outdated:
   https://twitter.com/taotetek/status/931860786959540224
   They are replaced by imczmq/omczmq and are no longer maintained. We put a
-  deprication notice into the modules a year ago, and now it finally is time
+  depreciation notice into the modules a year ago, and now it finally is time
   to remove them. They do NOT build in any case, except if very old versions
   of the 0mq ecosystem are used.
   see also https://github.com/rsyslog/rsyslog/issues/2100
