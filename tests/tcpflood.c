@@ -48,7 +48,7 @@
  * -X   generate sTats data records. Default: off
  * -e   encode output in CSV (not yet everywhere supported)
  *      for performance data:
- *      each inidividual line has the runtime of one test
+ *      each individual line has the runtime of one test
  *      the last line has 0 in field 1, followed by numberRuns,TotalRuntime,
  *      Average,min,max
  * -T   transport to use. Currently supported: "udp", "tcp" (default), "tls" (tcp+tls), relp-plain, relp-tls

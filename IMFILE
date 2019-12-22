@@ -58,7 +58,7 @@ Data Structures
 
 Monitors
 ........
-- path needs to be split into individial components --> array
+- path needs to be split into individual components --> array
 
 File Watches
 ............
