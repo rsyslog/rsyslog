@@ -1,5 +1,5 @@
 /* A testing tool that tries to emit message given as argument
- * to the journal, and, if succceds (at least per journald retcode).
+ * to the journal, and, if succeeds (at least per journald retcode).
  * If whole operation is successful there is need to actually check
  * that message is present in journal (also veryfing journal read perms)
  *
