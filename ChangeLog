@@ -3524,7 +3524,7 @@ Version 8.29.0 [v8-stable] 2017-08-08
     (tested on ES2 and ES5) we also handle the bulkmode where it should be
     set to application/x-ndjson
     closes https://github.com/rsyslog/rsyslog/issues/1546
-  * bugfix for memomry leak while writing error file
+  * bugfix for memory leak while writing error file
   Thanks to William Dauchy for providing the patches
 - imfile bugfix: wildcard detection issue on path wildcards
   Wildcards mode was not properly detected when wildcards

@@ -858,7 +858,7 @@ TESTS += \
 # Tests below need to be stable first!
 #	sndrcv_kafka_fail.sh \
 #	sndrcv_kafka_failresume.sh \
-# needs properly to much mempory on arm devices!
+# needs properly to much memory on arm devices!
 #	sndrcv_kafka_multi.sh
 omkafka.log: kafka-selftest.log
 imkafka.log: omkafka.log
