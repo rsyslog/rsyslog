@@ -2154,7 +2154,7 @@ ENDfreeCnf
 /* initial poll run, to be used for all modes. Depending on mode, it does some
  * further initializations (e.g. watches in inotify mode). Most importantly,
  * it processes already-existing files, which would not otherwise be picked
- * up in notifcation modes (inotfiy, FEN). Also, when freshStartTail is set,
+ * up in notifcation modes (inotify, FEN). Also, when freshStartTail is set,
  * this run assumes that all previous existing data exists and needs not
  * to be considered.
  * Note: there is a race on files created *during* the run, but that race is
