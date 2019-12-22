@@ -133,7 +133,7 @@ Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
   closes https://github.com/rsyslog/rsyslog/issues/3969
 - 2019-11-19: mmutf8fix: enhance handling of incorrect UTF-8 sequences
   1. Invalid utf8 detection didn't handle 3 and 4-byte overlong encodings (2
-     byte overlong econdings were handled explicitly by rejection E0 and E1
+     byte overlong encodings were handled explicitly by rejection E0 and E1
      start bytes). Unified checks for overlong encodings.
   2. Surrogates U+D800..U+DFFF are not valid codepoints (Unicode Standard, D92)
   3. Replacement of characters in invalid 3 or 4-bytes encodings was too
