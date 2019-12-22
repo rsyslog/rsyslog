@@ -419,7 +419,7 @@ destructSrv(ptcpsrv_t *pSrv)
 
 /****************************************** TCP SUPPORT FUNCTIONS ***********************************/
 /* We may later think about moving this into a helper library again. But the whole point
- * so far was to keep everything related close togehter. -- rgerhards, 2010-08-10
+ * so far was to keep everything related close together. -- rgerhards, 2010-08-10
  */
 
 static rsRetVal startupUXSrv(ptcpsrv_t *pSrv) {
