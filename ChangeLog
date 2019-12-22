@@ -1629,7 +1629,7 @@ Version 8.38.0 [v8-stable] 2018-09-18
   * many changes with the goal to support parallel test execution, e.g.
     use dynamic ports and file names, changes to testing tools, etc.
   * kafka tests re-enabled, as they should now no longer be racy. However,
-    this has yet to be prooven in practice.
+    this has yet to be proven in practice.
   * upgrading kafka server version to current
   * Fixed server configuration issues holding the kafka tests back from working
   * Fixed some config issues in all sndrcv kafka tests.
@@ -4329,7 +4329,7 @@ Version 8.19.0 [v8-stable] 2016-05-31
   * use only a single string buffer
     ... both for the internal representation as well as the C-String one.
     The module originally tried to support embedded NUL characters, which
-    over time has prooven to be not necessary. Rsyslog always encodes
+    over time has proven to be not necessary. Rsyslog always encodes
     NUL into escape sequences.
     Also, the dual buffers were used inconsistently, which could lead to
     subtle bugs. With the single buffer, this does no longer happen and
