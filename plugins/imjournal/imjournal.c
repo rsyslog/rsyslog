@@ -166,7 +166,7 @@ static rsRetVal openJournal(void) {
 	RETiRet;
 }
 
-/* trySave shoulod only be true if there is no journald error preceding this call */
+/* trySave should only be true if there is no journald error preceding this call */
 static void closeJournal(void) {
 	if (!journalContext.j) {
 		LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "imjournal: closing NULL journal.\n");

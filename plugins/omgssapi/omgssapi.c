@@ -71,7 +71,7 @@ DEFobjCurrIf(tcpclt)
 typedef struct _instanceData {
 	char	*f_hname;
 	short	sock;			/* file descriptor */
-	enum { /* TODO: we shoud revisit these definitions */
+	enum { /* TODO: we should revisit these definitions */
 		eDestFORW,
 		eDestFORW_SUSP,
 		eDestFORW_UNKN
