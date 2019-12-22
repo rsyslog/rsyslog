@@ -33,7 +33,7 @@
 #define ACT_STATE_RDY  0	/* action ready, waiting for new transaction */
 #define ACT_STATE_ITX  1	/* transaction active, waiting for new data or commit */
 /* 2 currently not being used */
-#define ACT_STATE_RTRY 3	/* failure occured, trying to restablish ready state */
+#define ACT_STATE_RTRY 3	/* failure occured, trying to reestablish ready state */
 #define ACT_STATE_SUSP 4	/* suspended due to failure (return fail until timeout expired) */
 #define ACT_STATE_DATAFAIL 5	/* suspended due to failure in data, which means the message in
 				   questions needs to be dropped as it will always fail. The

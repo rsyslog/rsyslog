@@ -240,7 +240,7 @@ finalize_it:
 }
 
 /* called when resuming from suspended state.
- * try to restablish our connection to redis */
+ * try to reestablish our connection to redis */
 BEGINtryResume
 CODESTARTtryResume
 	if(pWrkrData->conn == NULL)
