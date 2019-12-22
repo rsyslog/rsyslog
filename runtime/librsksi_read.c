@@ -1378,7 +1378,7 @@ rsksi_getExcerptBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, block_h
 			break;
 		}
 
-		/* Free second Signatur object if set! */
+		/* Free second Signature object if set! */
 		if(bSig == 1 && obj != NULL) rsksi_objfree(rec.tlvtype, obj);
 	}
 done:
