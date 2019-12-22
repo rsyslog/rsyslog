@@ -4278,7 +4278,7 @@ Version 8.20.0 [v8-stable] 2016-07-12
   as a failure case. This is corrected now.
   Also, some refactoring was done to create better error messages.
 - omfile now better conveys status of unwritable files back to core
-- config files recursively including themselfes are now detected
+- config files recursively including themselves are now detected
   and an error message is emitted in that case; Previously, this
   misconfiguration resulted in rsyslog loop and abort during startup.
   closes https://github.com/rsyslog/rsyslog/issues/1058

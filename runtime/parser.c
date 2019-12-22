@@ -570,7 +570,7 @@ finalize_it:
 
 /* A standard parser to parse out the PRI. This is made available in
  * this module as it is expected that almost all parsers will need
- * that functionality and so they do not need to implement it themsleves.
+ * that functionality and so they do not need to implement it themselves.
  */
 static rsRetVal
 ParsePRI(smsg_t *pMsg)

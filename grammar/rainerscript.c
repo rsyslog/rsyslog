@@ -1455,7 +1455,7 @@ var2CString(struct svar *__restrict__ const r, int *__restrict__ const bMustFree
 
 /* frees struct svar members, but not the struct itself. This is because
  * it usually is allocated on the stack. Callers why dynamically allocate
- * struct svar need to free the struct themselfes!
+ * struct svar need to free the struct themselves!
  */
 
 int SKIP_NOTHING = 0x0;

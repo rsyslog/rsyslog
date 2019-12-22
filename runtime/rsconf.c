@@ -209,7 +209,7 @@ rsconfConstructFinalize(rsconf_t __attribute__((unused)) *pThis)
 }
 
 
-/* call freeCnf() module entry points AND free the module entries themselfes.
+/* call freeCnf() module entry points AND free the module entries themselves.
  */
 static void
 freeCnf(rsconf_t *pThis)
