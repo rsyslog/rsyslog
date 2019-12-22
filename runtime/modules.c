@@ -1380,7 +1380,7 @@ Use(const char *srcFile, modInfo_t *pThis)
 }
 
 
-/* Reference-Counting object access: subract one from the current refcount. Must
+/* Reference-Counting object access: subtract one from the current refcount. Must
  * by called by anyone who no longer needs a module. If count reaches 0, the
  * module is unloaded. -- rgerhards, 20080-03-10
  */
