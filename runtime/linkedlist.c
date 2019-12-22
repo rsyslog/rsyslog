@@ -6,7 +6,7 @@
  * object itself as we assume it will always be part of another strucuture.
  * Having a pointer to it, I think, does not really make sense but costs
  * performance. Consequently, there is is llInit() and llDestroy() and they
- * do what a constructor and destructur do, except for creating the
+ * do what a constructor and destructor do, except for creating the
  * linkedList_t structure itself.
  *
  * File begun on 2007-07-31 by RGerhards

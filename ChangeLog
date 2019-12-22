@@ -11729,7 +11729,7 @@ Version 1.11.1 (RGer), 2005-10-19
 - changed more functions to "static" storage class to help compiler
   optimize (should have been static in the first place...)
 - fixed a potential memory leak in the string buffer class destructor.
-  As the destructur was previously never called, the leak did not actually
+  As the destructor was previously never called, the leak did not actually
   appear.
 - some internal restructuring in anticipation/preparation of minimal
   multi-threading support
@@ -12672,7 +12672,7 @@ Version 1.11.1 (RGer), 2005-10-19
 - changed more functions to "static" storage class to help compiler
   optimize (should have been static in the first place...)
 - fixed a potential memory leak in the string buffer class destructor.
-  As the destructur was previously never called, the leak did not actually
+  As the destructor was previously never called, the leak did not actually
   appear.
 - some internal restructuring in anticipation/preparation of minimal
   multi-threading support
@@ -13615,7 +13615,7 @@ Version 1.11.1 (RGer), 2005-10-19
 - changed more functions to "static" storage class to help compiler
   optimize (should have been static in the first place...)
 - fixed a potential memory leak in the string buffer class destructor.
-  As the destructur was previously never called, the leak did not actually
+  As the destructor was previously never called, the leak did not actually
   appear.
 - some internal restructuring in anticipation/preparation of minimal
   multi-threading support

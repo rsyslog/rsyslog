@@ -810,7 +810,7 @@ rulesetConstructFinalize(rsconf_t *conf, ruleset_t *pThis)
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, ruleset);
 
-	/* we must duplicate our name, as the key destructer would also
+	/* we must duplicate our name, as the key destructor would also
 	 * free it, resulting in a double-free. It's also cleaner to have
 	 * two separate copies.
 	 */
