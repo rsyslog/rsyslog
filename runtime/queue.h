@@ -124,7 +124,7 @@ struct queue_s {
 	/* end public entry points */
 	/* synchronization variables */
 	pthread_mutex_t mutThrdMgmt; /* mutex for the queue's thread management */
-	pthread_mutex_t *mut; /* mutex for enqueing and dequeueing messages */
+	pthread_mutex_t *mut; /* mutex for enqueing and dequeuing messages */
 	pthread_cond_t notFull;
 	pthread_cond_t belowFullDlyWtrMrk; /* below eFLOWCTL_FULL_DELAY watermark */
 	pthread_cond_t belowLightDlyWtrMrk; /* below eFLOWCTL_FULL_DELAY watermark */
@@ -168,7 +168,7 @@ struct queue_s {
 			int deqFileNumIn; /* same for the circular file numbers, mainly for  */
 			int deqFileNumOut;/* deleting finished files */
 			strm_t *pWrite;   /* current file to be written */
-			strm_t *pReadDeq; /* current file for dequeueing */
+			strm_t *pReadDeq; /* current file for dequeuing */
 			strm_t *pReadDel; /* current file for deleting */
 			int nForcePersist;/* force persist of .qi file the next "n" times */
 		} disk;

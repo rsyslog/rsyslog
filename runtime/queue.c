@@ -1935,7 +1935,7 @@ DequeueConsumable(qqueue_t *pThis, wti_t *pWti, int *const pSkippedMsgs)
 	/* WE ARE NO LONGER PROTECTED BY THE MUTEX */
 
 	if(iRet != RS_RET_OK && iRet != RS_RET_DISCARDMSG) {
-		LogError(0, iRet, "%s: error dequeueing element - ignoring, "
+		LogError(0, iRet, "%s: error dequeuing element - ignoring, "
 			"but strange things may happen", obj.GetName((obj_t*)pThis));
 	}
 

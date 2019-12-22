@@ -679,7 +679,7 @@ finalize_it:
 
 
 /* The consumer of dequeued messages. This function is called by the
- * queue engine on dequeueing of a message. It runs on a SEPARATE
+ * queue engine on dequeuing of a message. It runs on a SEPARATE
  * THREAD. It receives an array of pointers, which it must iterate
  * over. We do not do any further batching, as this is of no benefit
  * for the main queue.
