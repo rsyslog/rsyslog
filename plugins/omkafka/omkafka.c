@@ -547,7 +547,7 @@ prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict_
 	}
 	STATSCOUNTER_INC(ctrCacheMiss, mutCtrCacheMiss);
 
-	/* invalidate iCurrElt as we may error-exit out of this function when the currrent
+	/* invalidate iCurrElt as we may error-exit out of this function when the current
 	 * iCurrElt has been freed or otherwise become unusable. This is a precaution, and
 	 * performance-wise it may be better to do that in each of the exits. However, that
 	 * is error-prone, so I prefer to do it here. -- rgerhards, 2010-03-02

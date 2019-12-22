@@ -349,7 +349,7 @@ if(dbgTimeoutToStderr) {
 	ATOMIC_DEC(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
 
 	/* note: numWorkersNow is only for message generation, so we do not try
-	 * hard to get it 100% accurate (as curently done, it is not).
+	 * hard to get it 100% accurate (as currently done, it is not).
 	 */
 	const int numWorkersNow = ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
 	DBGPRINTF("%s: Worker thread %lx, terminated, num workers now %d\n",
