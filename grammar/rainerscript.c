@@ -712,7 +712,7 @@ nvlstChkDupes(struct nvlst *lst)
 		if(nvlstFindName(lst->next, lst->name) != NULL) {
 			cstr = es_str2cstr(lst->name, NULL);
 			parser_errmsg("duplicate parameter '%s' -- "
-			  "interpretation is ambigious, one value "
+			  "interpretation is ambiguous, one value "
 			  "will be randomly selected. Fix this problem.",
 			  cstr);
 			free(cstr);
