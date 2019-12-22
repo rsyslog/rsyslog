@@ -2683,7 +2683,7 @@ doFunct_num2ipv4(struct cnffunc *__restrict__ const func,
 	int numip[4];
 	char str[16];
 	size_t len;
-	DBGPRINTF("rainrescript: (num2ipv4) var2Number output: '%lld\n'", num);
+	DBGPRINTF("rainerscript: (num2ipv4) var2Number output: '%lld\n'", num);
 	if (! success) {
 		DBGPRINTF("rainerscript: (num2ipv4) couldn't access number\n");
 		len = snprintf(str, 16, "-1");
