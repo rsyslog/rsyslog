@@ -9041,7 +9041,7 @@ Version 5.1.1  [DEVEL] (rgerhards), 2009-07-03
 - imported many performance optimizations from v4-devel (4.5.0)
 - bugfix: subtle (and usually irrelevant) issue in timout processing
   timeout could be one second too early if nanoseconds wrapped
-- set a more sensible timeout for shutdow, now 1.5 seconds to complete
+- set a more sensible timeout for shutdown, now 1.5 seconds to complete
   processing (this also removes those cases where the shutdown message
   was not written because the termination happened before it)
 ---------------------------------------------------------------------------
@@ -9611,7 +9611,7 @@ Version 4.5.0  [DEVEL] (rgerhards), 2009-07-02
 - done some memory accesses explicitly atomic
 - bugfix: subtle (and usually irrelevant) issue in timout processing
   timeout could be one second too early if nanoseconds wrapped
-- set a more sensible timeout for shutdow, now 1.5 seconds to complete
+- set a more sensible timeout for shutdown, now 1.5 seconds to complete
   processing (this also removes those cases where the shutdown message
   was not written because the termination happened before it)
 - internal bugfix: object pointer was only reset to NULL when an object
