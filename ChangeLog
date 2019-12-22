@@ -10467,7 +10467,7 @@ Version 3.18.2 (rgerhards), 2008-08-08
 ---------------------------------------------------------------------------
 Version 3.18.1 (rgerhards), 2008-07-21
 - bugfix: potential segfault in creating message mutex in non-direct queue
-  mode. rsyslogd segfaults on freeeBSD 7.0 (an potentially other platforms)
+  mode. rsyslogd segfaults on freeBSD 7.0 (an potentially other platforms)
   if an action queue is running in any other mode than non-direct. The
   same problem can potentially be triggered by some main message queue
   settings. In any case, it will manifest during rsylog's startup. It is
