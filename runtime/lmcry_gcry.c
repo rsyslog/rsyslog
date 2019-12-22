@@ -169,7 +169,7 @@ SetCnfParam(void *pT, struct nvlst *lst, int paramType)
 	}
 	/* note: key must be set AFTER algo/mode is set (as it depends on them) */
 	if(nKeys != 1) {
-		LogError(0, RS_RET_INVALID_PARAMS, "excactly one of the following "
+		LogError(0, RS_RET_INVALID_PARAMS, "exactly one of the following "
 			"parameters can be specified: cry.key, cry.keyfile, cry.keyprogram\n");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
