@@ -3758,7 +3758,7 @@ Version 8.27.0 [v8-stable] 2017-05-16
   see also https://github.com/rsyslog/rsyslog/pull/1520
   Thanks to github user jvymazal for the patch
 - Added new module: KSI log signing ver. 1.2 (lmsig_ksi_ls12)
-- rsylsog base functionality now builds on osx (Mac)
+- rsyslog base functionality now builds on osx (Mac)
   Thanks to github user hdatma for his help in getting this done.
 - build now works on solaris again
 - imfile: fix cross-platform build issue
@@ -9475,7 +9475,7 @@ Version 4.5.6  [v4-beta] (rgerhards), 2009-11-05
   * bugfix: zero-sized UDP messages are no longer processed
   * bugfix: random data could be appended to message
   * bugfix: reverse lookup reduction logic in imudp do DNS queries too often
-- bugfix(testbench): testcase did not properly wait for rsyslod shutdown
+- bugfix(testbench): testcase did not properly wait for rsyslog shutdown
   thus some unpredictable behavior and a false negative test result
   could occur. [BACKPORTED from v5]
 - bugfix(testbench): sequence check was not always performed correctly,
@@ -10470,7 +10470,7 @@ Version 3.18.1 (rgerhards), 2008-07-21
   mode. rsyslogd segfaults on freeBSD 7.0 (an potentially other platforms)
   if an action queue is running in any other mode than non-direct. The
   same problem can potentially be triggered by some main message queue
-  settings. In any case, it will manifest during rsylog's startup. It is
+  settings. In any case, it will manifest during rsyslog's startup. It is
   unlikely to happen after a successful startup (the only window of
   exposure may be a relatively seldom executed action running in queued
   mode). This has been corrected. Thank to HKS for point out the problem.
@@ -11593,7 +11593,7 @@ Version 1.13.3 (RGer), 2007-06-15
   - removes an incompatible license problem as the original
     version had a BSD license with advertising clause
   - fixed in the regard that rklogd will continue to work when
-    rsysogd has been restarted (the original version, as well
+    rsyslogd has been restarted (the original version, as well
     as sysklogd, will remain silent then)
   - solved an issue with an extra NUL char at message end that the
     original version had
@@ -12536,7 +12536,7 @@ Version 1.13.3 (RGer), 2007-06-15
   - removes an incompatible license problem as the original
     version had a BSD license with advertising clause
   - fixed in the regard that rklogd will continue to work when
-    rsysogd has been restarted (the original version, as well
+    rsyslogd has been restarted (the original version, as well
     as sysklogd, will remain silent then)
   - solved an issue with an extra NUL char at message end that the
     original version had
@@ -13479,7 +13479,7 @@ Version 1.13.3 (RGer), 2007-06-15
   - removes an incompatible license problem as the original
     version had a BSD license with advertising clause
   - fixed in the regard that rklogd will continue to work when
-    rsysogd has been restarted (the original version, as well
+    rsyslogd has been restarted (the original version, as well
     as sysklogd, will remain silent then)
   - solved an issue with an extra NUL char at message end that the
     original version had

@@ -628,7 +628,7 @@ finalize_it:
 }
 
 
-/* tell the rsysog core (including ourselfs) that the config load is done and
+/* tell the rsyslog core (including ourselfs) that the config load is done and
  * we need to prepare to move over to activate mode.
  */
 static inline rsRetVal
