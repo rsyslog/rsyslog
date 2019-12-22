@@ -11904,7 +11904,7 @@ Version 0.9.4 (RGer), 2005-07-25
 - the "exiting on signal..." message still had the "syslogd" name in 
   it. Changed this to "rsyslogd", as we do not have a large user base
   yet, this should pose no problem.
-- fixed "the semiconlon" bug. rsyslogd dumped core if a write-db action
+- fixed "the semicolon" bug. rsyslogd dumped core if a write-db action
   was specified but no semicolon was given after the password (an empty
   template was ok, but the semicolon needed to be present).
 - changed a default for traditional output format. During testing, it
@@ -12847,7 +12847,7 @@ Version 0.9.4 (RGer), 2005-07-25
 - the "exiting on signal..." message still had the "syslogd" name in 
   it. Changed this to "rsyslogd", as we do not have a large user base
   yet, this should pose no problem.
-- fixed "the semiconlon" bug. rsyslogd dumped core if a write-db action
+- fixed "the semicolon" bug. rsyslogd dumped core if a write-db action
   was specified but no semicolon was given after the password (an empty
   template was ok, but the semicolon needed to be present).
 - changed a default for traditional output format. During testing, it
@@ -13790,7 +13790,7 @@ Version 0.9.4 (RGer), 2005-07-25
 - the "exiting on signal..." message still had the "syslogd" name in 
   it. Changed this to "rsyslogd", as we do not have a large user base
   yet, this should pose no problem.
-- fixed "the semiconlon" bug. rsyslogd dumped core if a write-db action
+- fixed "the semicolon" bug. rsyslogd dumped core if a write-db action
   was specified but no semicolon was given after the password (an empty
   template was ok, but the semicolon needed to be present).
 - changed a default for traditional output format. During testing, it
