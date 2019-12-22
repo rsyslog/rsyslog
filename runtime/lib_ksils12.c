@@ -511,7 +511,7 @@ static int mkpath(char* path, mode_t mode, uid_t uid, gid_t gid) {
 				if (chown(path, uid, gid)) {
 					LogError(errno, RS_RET_IO_ERROR,
 						"ksils12 signatures: could not change to "
-						"configured owner - files may be unaccessible");
+						"configured owner - files may be inaccessible");
 				}
 			}
 		}
