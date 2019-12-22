@@ -957,7 +957,7 @@ get_object(struct fjson_object *fj_obj, const char * name) {
  * impact on aggregate averaged value that is returned.
  */
 static uint64
-jsonExtractWindoStats(struct fjson_object * stats_object,
+jsonExtractWindowStats(struct fjson_object * stats_object,
 	const char * level1_obj_name, const char * level2_obj_name,
 	unsigned long skip_threshold) {
 	uint64 level2_val;
@@ -1052,9 +1052,9 @@ statsCallback(rd_kafka_t __attribute__((unused)) *rk,
 	msg_size_max = (fj_obj == NULL) ? 0 : fjson_object_get_int64(fj_obj);
 
 	/* window stats extraction to be picked up by impstats counters */
-	rtt_avg_usec = jsonExtractWindoStats(stats_object, "rtt", "avg", 100);
-	throttle_avg_msec = jsonExtractWindoStats(stats_object, "throttle", "avg", 0);
-	int_latency_avg_usec = jsonExtractWindoStats(stats_object, "int_latency", "avg", 0);
+	rtt_avg_usec = jsonExtractWindowStats(stats_object, "rtt", "avg", 100);
+	throttle_avg_msec = jsonExtractWindowStats(stats_object, "throttle", "avg", 0);
+	int_latency_avg_usec = jsonExtractWindowStats(stats_object, "int_latency", "avg", 0);
 	json_object_put (stats_object);
 
 	/* emit a log line to get stats visibility per librdkafka client */
