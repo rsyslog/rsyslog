@@ -257,7 +257,7 @@ void msgSetPRI(smsg_t *const __restrict__ pMsg, syslog_pri_t pri);
  * of rsyslog metadata.
  * added 2015-01-09 rgerhards
  */
-/* set raw message size. This is needed in some cases where a trunctation is necessary
+/* set raw message size. This is needed in some cases where a truncation is necessary
  * but the raw message must not be newly set. The most important (and currently only)
  * use case is if we remove trailing LF or NUL characters. Note that the size can NOT
  * be extended, only shrunk!

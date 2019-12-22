@@ -1835,7 +1835,7 @@ Version 8.37.0 [v8-stable] 2018-08-07
 - bugfix omlibdbi: fix potential small memory leak
   detected by clang static analyzer
 - bugfix ommysql: unsafe use of strncpy()
-  also now reports oversize names as user error vs. silent trucation
+  also now reports oversize names as user error vs. silent truncation
   overly long names only could affect config load phase
 - bugfix omhttpfs: fix insecure usage if strncmp()
   consequences not evaluated as this is a contributed module.
