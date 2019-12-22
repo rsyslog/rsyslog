@@ -69,7 +69,7 @@
  * -O	Use octate-count framing
  * -v   verbose output, possibly useful for troubleshooting. Most importantly,
  *      this gives insight into librelp actions (if relp is selected as protocol).
- * -k	Custom Configuration string passwed through the TLS library.
+ * -k	Custom Configuration string passed through the TLS library.
  *	Currently only OpenSSL is supported, possible configuration commands and values can be found here:
  *	https://www.openssl.org/docs/man1.0.2/man3/SSL_CONF_cmd.html
  *	Sample: -k"Protocol=ALL,-SSLv2,-SSLv3,-TLSv1,-TLSv1.1"
