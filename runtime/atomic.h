@@ -1,5 +1,5 @@
 /* This header supplies atomic operations. So far, we rely on GCC's
- * atomic builtins. During configure, we check if atomic operatons are
+ * atomic builtins. During configure, we check if atomic operations are
  * available. If they are not, I am making the necessary provisioning to live without them if
  * they are not available. Please note that you should only use the macros
  * here if you think you can actually live WITHOUT an explicit atomic operation,
