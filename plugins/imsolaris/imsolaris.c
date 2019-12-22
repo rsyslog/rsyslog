@@ -22,7 +22,7 @@
  * fast RPC facility. I first thought that the door API was used to submit
  * the actual syslog messages. But this is not the case. Instead, a door
  * call is done, and the server process inside rsyslog simply does NOTHING
- * but return. All that Solaris sylsogd() is interested in is if the door
+ * but return. All that Solaris syslogd() is interested in is if the door
  * server (we) responds and thus can be considered alive. The actual message
  * is then submitted via the usual stream. I have to admit I do not
  * understand why the message itself is not passed via this high-performance
