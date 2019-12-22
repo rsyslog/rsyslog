@@ -711,7 +711,7 @@ loadJournalState(void)
 				/*
 				* This is resolving the situation when system is after reboot and boot_id
 				* doesn't match so cursor pointing into "future".
-				* Usually sd_journal_next jump to head of journal due to journal aproximation,
+				* Usually sd_journal_next jump to head of journal due to journal approximation,
 				* but when system time goes backwards and cursor is still
 				  invalid, rsyslog stops logging.
 				* We use sd_journal_get_cursor to validate our cursor.
