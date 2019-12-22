@@ -170,7 +170,7 @@ retry:
 		goto fail;
 
 	/*
-	 * Loop through the interfaces obtained from SIOCGIFCOMF
+	 * Loop through the interfaces obtained from SIOCGIFCONF
 	 * and retrieve the addresses, netmask and flags.
 	 */
 	prev = NULL;
