@@ -54,7 +54,7 @@ const char* cnfobjType2str(enum cnfobjType ot);
 /* a variant type, for example used for expression evaluation
  * 2011-07-15/rger: note that there exists a "legacy" object var,
  * which implements the same idea, but in a suboptimal manner. I have
- * stipped this down as much as possible, but will keep it for a while
+ * stripped this down as much as possible, but will keep it for a while
  * to avoid unnecessary complexity during development. TODO: in the long
  * term, var shall be replaced by struct svar.
  */
