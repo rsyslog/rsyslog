@@ -734,7 +734,7 @@ finalize_it:
  * set to 1 if the ID matches. *pbFoundPositiveMatch must have been initialized
  * to 0 by the caller (this is a performance enhancement as we expect to be
  * called multiple times).
- * TODO: implemet wildcards?
+ * TODO: implement wildcards?
  * rgerhards, 2008-05-26
  */
 static rsRetVal

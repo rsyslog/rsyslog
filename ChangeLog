@@ -10310,7 +10310,7 @@ Version 3.19.4 (rgerhards), 2008-05-27
   fingerprint and name authentication (similar to the input side)
 - bugfix: sender information (fromhost et al) was missing in imudp
   thanks to sandiso for reporting this bug
-- this release fully inplements IETF's syslog-transport-tls-12 plus
+- this release fully implements IETF's syslog-transport-tls-12 plus
   the latest text changes Joe Salowey provided via email. Not included
   is ipAddress subjectAltName authentication, which I think will be
   dropped from the draft. I don't think there is any real need for it.

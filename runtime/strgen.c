@@ -2,7 +2,7 @@
  * Module to handle string generators. These are C modules that receive
  * the message object and return a custom-built string. The primary purpose
  * for their existence is performance -- they do the same as template strings, but
- * potentially faster (if well implmented).
+ * potentially faster (if well implemented).
  *
  * Module begun 2010-06-01 by Rainer Gerhards
  *
