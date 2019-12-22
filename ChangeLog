@@ -11173,7 +11173,7 @@ Version 1.21.1 (rgerhards), 2007-12-23
 - bugfix: fixing memory leak when message queue is full and during
   parsing. Thanks to varmojfekoj for the patch.
 - bugfix: when compiled without network support, unix sockets were
-  not properply closed
+  not properly closed
 - bugfix: memory leak in cfsysline.c/doGetWord() fixed
 ---------------------------------------------------------------------------
 Version 1.21.0 (rgerhards), 2007-12-19
@@ -12116,7 +12116,7 @@ Version 1.21.1 (rgerhards), 2007-12-23
 - bugfix: fixing memory leak when message queue is full and during
   parsing. Thanks to varmojfekoj for the patch.
 - bugfix: when compiled without network support, unix sockets were
-  not properply closed
+  not properly closed
 - bugfix: memory leak in cfsysline.c/doGetWord() fixed
 ---------------------------------------------------------------------------
 Version 1.21.0 (rgerhards), 2007-12-19
@@ -13059,7 +13059,7 @@ Version 1.21.1 (rgerhards), 2007-12-23
 - bugfix: fixing memory leak when message queue is full and during
   parsing. Thanks to varmojfekoj for the patch.
 - bugfix: when compiled without network support, unix sockets were
-  not properply closed
+  not properly closed
 - bugfix: memory leak in cfsysline.c/doGetWord() fixed
 ---------------------------------------------------------------------------
 Version 1.21.0 (rgerhards), 2007-12-19

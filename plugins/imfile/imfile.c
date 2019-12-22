@@ -1206,7 +1206,7 @@ getFullStateFileName(const uchar *const pszstatefile,
 	int lenout;
 	const uchar* pszstatedir;
 
-	/* Get Raw Workdir, if it is NULL we need to propper handle it */
+	/* Get Raw Workdir, if it is NULL we need to properly handle it */
 	pszstatedir = getStateFileDir();
 
 	/* Construct file name */

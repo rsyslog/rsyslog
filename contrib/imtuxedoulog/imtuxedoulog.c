@@ -159,7 +159,7 @@ static int getFullStateFileName(uchar* pszstatefile, uchar* pszout, int ilenout)
 	int lenout;
 	const uchar* pszworkdir;
 
-	/* Get Raw Workdir, if it is NULL we need to propper handle it */
+	/* Get Raw Workdir, if it is NULL we need to properly handle it */
 	pszworkdir = glblGetWorkDirRaw();
 
 	/* Construct file name */
