@@ -8974,7 +8974,7 @@ Version 5.1.5  [v5-beta] (rgerhards), 2009-09-11
 - bugfix: hostnames with dashes in them were incorrectly treated as
   malformed, thus causing them to be treated as TAG (this was a regression
   introduced from the "rfc3164 strict" change in 4.5.0). Testbench has been
-  updated to include a smaple message with a hostname containing a dash.
+  updated to include a sample message with a hostname containing a dash.
 - bugfix: strings improperly reused, resulting in some message properties
   be populated with strings from previous messages. This was caused by
   an improper predicate check.
