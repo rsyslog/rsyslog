@@ -1445,7 +1445,7 @@ exit_test() {
 	# Extended Exit handling for kafka / zookeeper instances 
 	kafka_exit_handling "true"
 
-	printf '%s Test %s SUCCESFUL (took %s seconds)\n' "$(tb_timestamp)" "$0" "$(( $(date +%s) - TB_STARTTEST ))"
+	printf '%s Test %s SUCCESSFUL (took %s seconds)\n' "$(tb_timestamp)" "$0" "$(( $(date +%s) - TB_STARTTEST ))"
 	echo  -------------------------------------------------------------------------------
 	exit 0
 }

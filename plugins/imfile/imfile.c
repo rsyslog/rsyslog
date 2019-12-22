@@ -644,7 +644,7 @@ fen_setupWatch(act_obj_t *const act)
 			": %s\n", act->pfinf->fobj.fo_name);
 		goto done;
 	} else {
-		/* Port successfull listening now*/
+		/* Port successful listening now*/
 		DBGPRINTF("fen_setupWatch: associated port for file %s\n", act->name);
 		act->bPortAssociated = 1;
 	}

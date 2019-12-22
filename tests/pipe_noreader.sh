@@ -33,5 +33,5 @@ tcpflood -m1000 -d500
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate
 # NO need to check seqno -- see header comment
-echo we did not loop, so the test is sucessfull
+echo we did not loop, so the test is successful
 exit_test

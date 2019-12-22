@@ -1961,7 +1961,7 @@ rsksi_vrfy_nextHashChain(ksifile ksi, block_sig_t *bs, FILE *sigfp, unsigned cha
 		goto done;
 	} else {
 		if(rsksi_read_debug) printf("debug: rsksi_vrfy_nextHashChain:\t KSI_Signature_parse "
-			"was successfull\n");
+			"was successful\n");
 	}
 
 	/* Verify KSI Signature */
@@ -1975,7 +1975,7 @@ rsksi_vrfy_nextHashChain(ksifile ksi, block_sig_t *bs, FILE *sigfp, unsigned cha
 		goto done;
 	} else {
 		if(rsksi_read_debug) printf("debug: rsksi_vrfy_nextHashChain:\t KSI_Signature_verify "
-			"was successfull\n");
+			"was successful\n");
 	}
 
 	/* Verify Roothash against Signature */
@@ -1989,7 +1989,7 @@ rsksi_vrfy_nextHashChain(ksifile ksi, block_sig_t *bs, FILE *sigfp, unsigned cha
 		goto done;
 	} else {
 		if(rsksi_read_debug) printf("debug: rsksi_vrfy_nextHashChain:\t KSI_Signature_verifyDataHash "
-			"was successfull\n");
+			"was successful\n");
 		if(rsksi_read_showVerified)
 			reportVerifySuccess(ectx);
 	}
@@ -2279,7 +2279,7 @@ verifyBLOCK_SIGKSI(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp,
 		goto done;
 	} else {
 		if(rsksi_read_debug)
-			printf("debug: verifyBLOCK_SIGKSI:\t\t KSI_Signature_parse was successfull\n");
+			printf("debug: verifyBLOCK_SIGKSI:\t\t KSI_Signature_parse was successful\n");
 	}
 	/* Verify KSI Signature */
 	ksistate = KSI_Signature_verify(sig, ksi->ctx->ksi_ctx);
@@ -2292,7 +2292,7 @@ verifyBLOCK_SIGKSI(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp,
 		goto done;
 	} else {
 		if(rsksi_read_debug)
-			printf("debug: verifyBLOCK_SIGKSI:\t\t KSI_Signature_verify was successfull\n");
+			printf("debug: verifyBLOCK_SIGKSI:\t\t KSI_Signature_verify was successful\n");
 	}
 	ksistate = KSI_Signature_verifyDataHash(sig, ksi->ctx->ksi_ctx, ksiHash);
 	if (ksistate != KSI_OK) {
@@ -2304,7 +2304,7 @@ verifyBLOCK_SIGKSI(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp,
 		goto done;
 	} else {
 		if(rsksi_read_debug)
-			printf("debug: verifyBLOCK_SIGKSI:\t\t KSI_Signature_verifyDataHash was successfull\n");
+			printf("debug: verifyBLOCK_SIGKSI:\t\t KSI_Signature_verifyDataHash was successful\n");
 	}
 
 	if(rsksi_read_debug) printf("debug: verifyBLOCK_SIGKSI:\t\t processed without error's\n");
