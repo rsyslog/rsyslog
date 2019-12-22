@@ -249,7 +249,7 @@ pri2fac(const syslog_pri_t pri)
 #endif
 
 
-/* The error codes below are orginally "borrowed" from
+/* The error codes below are originally "borrowed" from
  * liblogging. As such, we reserve values up to -2999
  * just in case we need to borrow something more ;)
 */

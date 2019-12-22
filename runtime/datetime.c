@@ -241,7 +241,7 @@ dateTimeFormat_t getDateTimeFormatFromStr(const char * const __restrict__ s) {
  * to be removed (see http://www.monitorware.com/liblogging for
  * more details. 2004-11-16 rgerhards
  *
- * Please note that the orginal liblogging code is modified so that
+ * Please note that the original liblogging code is modified so that
  * it fits into the context of the current version of syslogd.c.
  *
  * DO NOT PUT ANY OTHER CODE IN THIS BEGIN ... END BLOCK!!!!
@@ -522,7 +522,7 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr,
 	 * Fixed a bug that lead to invalid detection of the data. The issue was that
 	 * we had an if(++pszTS == 'x') inside of some of the constructs below. However,
 	 * there were also some elseifs (doing the same ++), which than obviously did not
-	 * check the orginal character but the next one. Now removed the ++ and put it
+	 * check the original character but the next one. Now removed the ++ and put it
 	 * into the statements below. Was a really nasty bug... I didn't detect it before
 	 * june, when it first manifested. This also lead to invalid parsing of the rest
 	 * of the message, as the time stamp was not detected to be correct. - rgerhards

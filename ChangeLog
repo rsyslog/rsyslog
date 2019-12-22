@@ -549,7 +549,7 @@ an easy way to identify which changes went into the respective daily stable.
   Thanks to github user wdjwxh for the fix.
 - core bugfix: message duplication copied incorrect timestamp
   MsgDup() placed timereported into timegenerated property, resulting
-  in invalid property values. Orignal timegenerated was lost. This
+  in invalid property values. Original timegenerated was lost. This
   occured always when a message needed to be duplicated. Most
   importantly this is the case when queues are used.
   closes https://github.com/rsyslog/rsyslog/issues/3716
@@ -662,7 +662,7 @@ Version 8.1905.0 (aka 2019.05) 2019-05-28
 - new global config parameter "internalmsg.severity"
   permits to specify a severity filter for internal message. Only
   messages with this severity level or more severe are logged.
-  Orignally this was done in rsyslog.conf as usual: you can filter
+  Originally this was done in rsyslog.conf as usual: you can filter
   rsyslog messages on severity, just like any other. But with systemd,
   we now emit primarily to the journal, and this is outside of rsyslog's
   rule engine and so regular filters do not apply (at least in regard
@@ -2901,7 +2901,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
 - NEW BUILD DEPENDENCY: ommongodb now requires libmongo-c
   instead of deprecated libmongo-client.
 - remove systemd embedded code, use libsystemd instead
-  Since the early days rsyslog used the orginal systemd embedded
+  Since the early days rsyslog used the original systemd embedded
   interface code. This version now uses libsystemd where available.
   If we do not find libsystemd, we assume the system does not use
   systemd, which is a safe assumption nowadays. This ensures we use the
@@ -6647,7 +6647,7 @@ Version 7.3.7  [devel] 2013-03-12
 Version 7.3.6  [devel] 2013-01-28
 - greatly improved speed of large-array  [N]EQ RainerScript comparisons
   Thanks to David Lang for a related discussion that inspired the idea
-  to do this with a much simpler (yet sufficient) approach than orignally
+  to do this with a much simpler (yet sufficient) approach than originally
   planned for.
 - greatly improved speed of DNS cache for large cache sizes
 - general performance improvements
@@ -9665,7 +9665,7 @@ Version 4.4.1  [v4-stable] (rgerhards), 2009-09-02
   even though none of the selected option actually required Java.
   (I forgot to backport a similar fix to newer releases).
 - bugfix (backport): omfwd segfault
-  Note that the orginal (higher version) patch states this happens only
+  Note that the original (higher version) patch states this happens only
   when debugging mode is turned on. That statement is wrong: if debug
   mode is turned off, the message is not being emitted, but the division
   by zero in the actual parameters still happens.
