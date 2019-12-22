@@ -1107,7 +1107,7 @@ Version 8.1901.0 (aka 2019.01) 2019-01-22
 - test tooling bugfix: correct tcpflood error messages
   it looks like tcpflood's openssl code stems partly back to tcpdump, at
   least the error messages indicate this. Thankfully tcpdump is BSD licensed,
-  so this should not be a big issue. Nevertheless, the incorect program name
+  so this should not be a big issue. Nevertheless, the incorrect program name
   in error messages needs to be corrected, and this is what this commit does.
 - tcpflood bugfix: tool did not terminate on certificate error
   when tcpflood detected a certificate error, it reported an
