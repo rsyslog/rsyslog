@@ -653,7 +653,7 @@ lookupBuildTable_v1(lookup_t *pThis, struct json_object *jroot, const uchar* nam
 		pThis->type = STRING_LOOKUP_TABLE;
 		CHKiRet(build_StringTable(pThis, jtab, name));
 	} else {
-		LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' uses unupported "
+		LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' uses unsupported "
 				"type: '%s'", name, table_type);
 		ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 	}
