@@ -1293,7 +1293,7 @@ Version 8.40.0 [v8-stable] 2018-12-11
      not in rsyslog code. See issue below and pervious commit for more
      information.
      Unfortunately, this will also mask off cases where we do not properly
-     call pthread_join() albeit it is needed. Neverthless, this bug is
+     call pthread_join() albeit it is needed. Nevertheless, this bug is
      causing so much CI grief that it is definitely worth it.
      closes https://github.com/rsyslog/rsyslog/issues/2902
    * testbench: made a couple of (unnamed due to too many) test more robust
