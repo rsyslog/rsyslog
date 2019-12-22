@@ -3246,7 +3246,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
   only testbench execution as imdiag is a testbench-only tool.
   Detected by Coverity scan, CID 185348 and 185350
 - fixed several minor and cosmetic issues found by Coverity scan
-  includding false positives. For details see "$ git log". All noteworthy
+  including false positives. For details see "$ git log". All noteworthy
   issues are seperately mentioned in this ChangeLog. The ones not mentioned
   are for example problems that can only occur during out of memory
   conditions, under which it is extremely likely tha the rsyslog process
@@ -8859,7 +8859,7 @@ Version 5.3.3  [DEVEL] (rgerhards), 2009-10-27
   potential race conditions (in very unusual shutdown conditions)
   along the way. The threading model has seriously changes, so there may
   be some regressions.
-- enhanced test environment (inlcuding testbench): support for enhancing
+- enhanced test environment (including testbench): support for enhancing
   probability of memory addressing failure by using non-NULL default
   value for malloced memory (optional, only if requested by configure
   option). This helps to track down some otherwise undetected issues
