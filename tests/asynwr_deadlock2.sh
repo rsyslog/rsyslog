@@ -18,7 +18,7 @@
 # wait. However, the invalid signaling did not take into account that it did not
 # signal the async writer to shut down. So the main thread went into a condition
 # wait - and thus we had a deadlock. That situation occured only under very specific
-# cirumstances. As far as the analysis goes, the following need to happen:
+# circumstances. As far as the analysis goes, the following need to happen:
 # 1. buffers on that file are being flushed
 # 2. no new data arrives
 # 3. the inactivity timeout has not yet expired

@@ -10596,7 +10596,7 @@ Version 3.16.2 (rgerhards), 2008-06-25
 ---------------------------------------------------------------------------
 Version 3.16.1 (rgerhards), 2008-05-02
 - fixed a bug in imklog which lead to startup problems (including
-  segfault) on some platforms under some circumsances. Thanks to
+  segfault) on some platforms under some circumstances. Thanks to
   Vieri for reporting this bug and helping to troubleshoot it.
 ---------------------------------------------------------------------------
 Version 3.16.0 (rgerhards), 2008-04-24
