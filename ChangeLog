@@ -6573,7 +6573,7 @@ Version 7.3.10  [devel] 2013-04-10
   to complete. For suspending, a cached timestamp was used, and if the
   retry took longer, that timestamp was already in the past. As a 
   result, the action never was kept in suspended state, and as such
-  no failover happened. The suspend functionalit now does no longer use
+  no failover happened. The suspend functionality now does no longer use
   the cached timestamp (should not have any performance implication, as
   action suspend occurs very infrequently).
 - bugfix: gnutls RFC5425 driver had some undersized buffers
@@ -6818,7 +6818,7 @@ Version 7.2.7  [v7-stable] 2013-04-17
   to complete. For suspending, a cached timestamp was used, and if the
   retry took longer, that timestamp was already in the past. As a 
   result, the action never was kept in suspended state, and as such
-  no failover happened. The suspend functionalit now does no longer use
+  no failover happened. The suspend functionality now does no longer use
   the cached timestamp (should not have any performance implication, as
   action suspend occurs very infrequently).
 - bugfix: nested if/prifilt conditions did not work properly
