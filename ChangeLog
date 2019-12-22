@@ -11427,7 +11427,7 @@ Version 1.17.3 (rgerhards), 2007-07-25
   thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
 - fixed a memory leak in config file parsing and die()
   thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
-- rsyslogd now checks on startup if it is capable to performa any work
+- rsyslogd now checks on startup if it is capable to perform any work
   at all. If it cant, it complains and terminates
   thanks to Michel Samia for providing the patch!
 - fixed a small memory leak when HUPing syslogd. The allowed sender
@@ -12370,7 +12370,7 @@ Version 1.17.3 (rgerhards), 2007-07-25
   thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
 - fixed a memory leak in config file parsing and die()
   thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
-- rsyslogd now checks on startup if it is capable to performa any work
+- rsyslogd now checks on startup if it is capable to perform any work
   at all. If it cant, it complains and terminates
   thanks to Michel Samia for providing the patch!
 - fixed a small memory leak when HUPing syslogd. The allowed sender
@@ -13313,7 +13313,7 @@ Version 1.17.3 (rgerhards), 2007-07-25
   thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
 - fixed a memory leak in config file parsing and die()
   thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
-- rsyslogd now checks on startup if it is capable to performa any work
+- rsyslogd now checks on startup if it is capable to perform any work
   at all. If it cant, it complains and terminates
   thanks to Michel Samia for providing the patch!
 - fixed a small memory leak when HUPing syslogd. The allowed sender
