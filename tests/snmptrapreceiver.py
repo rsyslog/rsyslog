@@ -12,7 +12,7 @@ snmpip = "127.0.0.1"
 szOutputfile = "snmp.out"
 szSnmpLogfile = "snmp_server.log"
 
-# For vrebose output
+# For verbose output
 bDebug = False
 
 # Read command line params
