@@ -491,7 +491,7 @@ MsgSetRulesetByName(smsg_t * const pMsg, cstr_t *const rulesetName)
 
 	if(localRet != RS_RET_OK) {
 		LogError(0, localRet, "msg: ruleset '%s' could not be found and could not "
-			"be assgined to message object. This possibly leads to the message "
+			"be assigned to message object. This possibly leads to the message "
 			"being processed incorrectly. We cannot do anything against this, but "
 			"wanted to let you know.", rs_name);
 	}
