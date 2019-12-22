@@ -1344,7 +1344,7 @@ doTransaction(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti
 			if(iRet == RS_RET_SUSPENDED) {
 				--i; /* we need to re-submit */
 				/* note: we are suspended and need to retry. In order not to
-				 * hammer the CPU, we now do a voluntarly wait of 1 second.
+				 * hammer the CPU, we now do a voluntarily wait of 1 second.
 				 * The rest will be handled by the standard retry handler.
 				 */
 				srSleep(1, 0);
