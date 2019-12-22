@@ -1894,7 +1894,7 @@ Version 8.37.0 [v8-stable] 2018-08-07
     info to help guide us towards a final solution.
   * testbench: fix tests that look awfully wrong
     These tests indicated they terminate rsyslog forcefully without
-    drainging the queues, but then checked if they were drained (all
+    draining the queues, but then checked if they were drained (all
     messages processed). That does not make sense, and we cannot
     envison why this was written the first place. So we assume some
     copy&paste problem was the root of that.
