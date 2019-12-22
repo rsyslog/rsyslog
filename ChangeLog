@@ -3529,7 +3529,7 @@ Version 8.29.0 [v8-stable] 2017-08-08
 - imfile bugfix: wildcard detection issue on path wildcards
   Wildcards mode was not properly detected when wildcards
   were only used in a directory name on startup.
-  This caused imfile not to create a propper dynamic filewatch.
+  This caused imfile not to create a proper dynamic filewatch.
   closes: https://github.com/rsyslog/rsyslog/issues/1672
 - omfwd bugfix: always give reason for suspension
   In many cases, no error message were emitted when omfwd
