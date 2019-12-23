@@ -387,7 +387,7 @@ retry:
 		goto fail;
 
 	/*
-	 * Loop through the interfaces obtained from SIOCGLIFCOMF
+	 * Loop through the interfaces obtained from SIOCGLIFCONF
 	 * and retrieve the addresses, netmask and flags.
 	 */
 	prev = NULL;
