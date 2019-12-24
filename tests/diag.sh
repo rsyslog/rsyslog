@@ -913,7 +913,7 @@ await_lookup_table_reload() {
 
 # $1 filename, default $RSYSLOG_OUT_LOG
 # $2 expected nbr of lines, default $NUMMESSAGES
-# $3 timout in seconds
+# $3 timeout in seconds
 # options (need to be specified in THIS ORDER if multiple given):
 # --delay ms              -- if given, delay to use between retries
 # --abort-on-oversize     -- error_exit if more lines than expected are present

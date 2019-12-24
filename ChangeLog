@@ -4251,7 +4251,7 @@ Version 8.21.0 [v8-stable] 2016-08-23
   The .qi file is now persisted whenever an existing queue file is fully
   written and a new file is begun. This helps with rsyslog aborts, including
   the common case where the OS issues kill -9 because of insufficiently
-  configured termination timout (this is an OS config error, but a frequent
+  configured termination timeout (this is an OS config error, but a frequent
   one). Also, a situation where an orphaned empty file could be left in the
   queue work directory has been fixed. We expect that this change causes
   fewer permanent queue failures.
@@ -7430,7 +7430,7 @@ Version 6.3.9  [BETA] 2012-05-22
   http://bugzilla.adiscon.com/show_bug.cgi?id=299
   The new code also handles the case of shutdown of blocking light and 
   full delayable sources somewhat smarter and permits, assuming sufficient
-  timouts, to persist message up to the max queue capacity. Also some nits
+  timeouts, to persist message up to the max queue capacity. Also some nits
   in debug instrumentation have been fixed.
 ---------------------------------------------------------------------------
 Version 6.3.8  [DEVEL] 2012-04-16
@@ -7567,7 +7567,7 @@ Version 6.2.2  [v6-stable], 2012-06-13
   http://bugzilla.adiscon.com/show_bug.cgi?id=299
   The new code also handles the case of shutdown of blocking light and 
   full delayable sources somewhat smarter and permits, assuming sufficient
-  timouts, to persist message up to the max queue capacity. Also some nits
+  timeouts, to persist message up to the max queue capacity. Also some nits
   in debug instrumentation have been fixed.
 - bugfix: --enable-smcustbindcdr configure directive did not work
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=330
@@ -7932,7 +7932,7 @@ NOTE: this is the new rsyslog v5-stable, incorporating all changes from the
   http://bugzilla.adiscon.com/show_bug.cgi?id=299
   The new code also handles the case of shutdown of blocking light and 
   full delayable sources somewhat smarter and permits, assuming sufficient
-  timouts, to persist message up to the max queue capacity. Also some nits
+  timeouts, to persist message up to the max queue capacity. Also some nits
   in debug instrumentation have been fixed.
 - add small delay (50ms) after sending shutdown message
   There seem to be cases where the shutdown message is otherwise not
@@ -8143,7 +8143,7 @@ Version 5.8.12  [V5-stable] 2012-06-06
   http://bugzilla.adiscon.com/show_bug.cgi?id=299
   The new code also handles the case of shutdown of blocking light and 
   full delayable sources somewhat smarter and permits, assuming sufficient
-  timouts, to persist message up to the max queue capacity. Also some nits
+  timeouts, to persist message up to the max queue capacity. Also some nits
   in debug instrumentation have been fixed.
 - bugfix/omudpspoof: problems, including abort, happened when run on
   multiple threads. Root cause is that libnet is not thread-safe. 
@@ -9039,7 +9039,7 @@ Version 5.1.1  [DEVEL] (rgerhards), 2009-07-03
   production). Occured if at least one queue was in direct mode 
   (the default for action queues)
 - imported many performance optimizations from v4-devel (4.5.0)
-- bugfix: subtle (and usually irrelevant) issue in timout processing
+- bugfix: subtle (and usually irrelevant) issue in timeout processing
   timeout could be one second too early if nanoseconds wrapped
 - set a more sensible timeout for shutdown, now 1.5 seconds to complete
   processing (this also removes those cases where the shutdown message
@@ -9609,7 +9609,7 @@ Version 4.5.0  [DEVEL] (rgerhards), 2009-07-02
   * $MainMsgQueueSyncQueueFiles
   * $ActionQueueSyncQueueFiles
 - done some memory accesses explicitly atomic
-- bugfix: subtle (and usually irrelevant) issue in timout processing
+- bugfix: subtle (and usually irrelevant) issue in timeout processing
   timeout could be one second too early if nanoseconds wrapped
 - set a more sensible timeout for shutdown, now 1.5 seconds to complete
   processing (this also removes those cases where the shutdown message

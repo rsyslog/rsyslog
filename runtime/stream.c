@@ -1528,7 +1528,7 @@ finalize_it:
  * strmWrite...() calls. Also note that we always have only a single producer,
  * so we can simply serially assign the next free buffer to it and be sure that
  * the very some producer comes back in sequence to submit the then-filled buffers.
- * This also enables us to timout on partially written buffers. -- rgerhards, 2009-07-06
+ * This also enables us to timeout on partially written buffers. -- rgerhards, 2009-07-06
  */
 static rsRetVal
 doAsyncWriteInternal(strm_t *pThis, size_t lenBuf, const int bFlushZip)
