@@ -275,7 +275,7 @@ filemonMsgseperator OBJECT-TYPE
     MAX-ACCESS  accessible-for-notify
     STATUS      current
     DESCRIPTION
-       "The message seperator which was used."
+       "The message separator which was used."
     ::= { filemonvars 3 }
 
 ntserviceServiceName OBJECT-TYPE
