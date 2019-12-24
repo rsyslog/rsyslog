@@ -400,7 +400,7 @@ finalize_it:
  * added capability to specify hostname for socket -- rgerhards, 2008-08-01
  */
 static rsRetVal
-addListner(instanceConf_t *inst)
+addListener(instanceConf_t *inst)
 {
 	DEFiRet;
 
@@ -1474,7 +1474,7 @@ CODESTARTactivateCnfPrePrivDrop
 			listeners[i].fd  = -1;
 		}
 		for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
-			addListner(inst);
+			addListener(inst);
 		}
 		CHKiRet(activateListeners());
 	}

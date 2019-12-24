@@ -1270,7 +1270,7 @@ Abort(nsd_t *pNsd)
 
 
 
-/* initialize the tcp socket for a listner
+/* initialize the tcp socket for a listener
  * Here, we use the ptcp driver - because there is nothing special
  * at this point with OpenSSL. Things become special once we accept
  * a session, but not during listener setup.

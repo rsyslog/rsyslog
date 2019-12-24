@@ -1703,7 +1703,7 @@ finalize_it:
 
 
 static rsRetVal
-addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
+addListener(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 {
 	DEFiRet;
 	ptcpsrv_t *pSrv = NULL;
@@ -2347,7 +2347,7 @@ CODESTARTactivateCnfPrePrivDrop
 
 	runModConf = pModConf;
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
-		addListner(pModConf, inst);
+		addListener(pModConf, inst);
 	}
 	if(pSrvRoot == NULL) {
 		LogError(0, RS_RET_NO_LSTN_DEFINED, "imptcp: no ptcp server defined, module can not run.");
@@ -2447,7 +2447,7 @@ shutdownSrv(ptcpsrv_t *pSrv)
 	while(pLstn != NULL) {
 		close(pLstn->sock);
 		statsobj.Destruct(&(pLstn->stats));
-		/* now unlink listner */
+		/* now unlink listener */
 		lstnDel = pLstn;
 		pLstn = pLstn->next;
 		DBGPRINTF("imptcp shutdown listen socket %d (rcvd %lld bytes, "

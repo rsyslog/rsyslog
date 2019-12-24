@@ -363,7 +363,7 @@ finalize_it:
 
 
 static rsRetVal
-addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
+addListener(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 {
 	relpSrv_t *pSrv;
 	int relpRet;
@@ -789,7 +789,7 @@ BEGINactivateCnfPrePrivDrop
 CODESTARTactivateCnfPrePrivDrop
 	runModConf = pModConf;
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
-		addListner(pModConf, inst);
+		addListener(pModConf, inst);
 	}
 	if(pRelpEngine == NULL) {
 		LogError(0, RS_RET_NO_LSTN_DEFINED, "imrelp: no RELP listener defined, module can not run.");

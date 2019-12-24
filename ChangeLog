@@ -395,7 +395,7 @@ Scheduled Release 8.1908.0 (aka 2019.08) 2019-08-20
   remove trailing whitespace before checking the status string. This is
   most important as a line usually ends with \n, which is considered
   trailing whitespace. Accepting this increases usability.
-- 2019-08-16: imtcp bugfix: multiple listnerPortFile parameter did not work
+- 2019-08-16: imtcp bugfix: multiple listenerPortFile parameter did not work
   ... because they were treated as module-global. If we had multiple imtcp
   listeners with multiple port files, only the last filename was always used.
   closes https://github.com/rsyslog/rsyslog/issues/3817
@@ -10035,7 +10035,7 @@ Version 3.21.5  [DEVEL] (rgerhards), 2008-09-30
   local host as it knows itself.
 - imported a number of fixes and enhancements from the stable and
   devel branches, including a fix to a potential segfault on HUP
-  when using UDP listners
+  when using UDP listeners
 - re-enabled gcc builtin atomic operations and added a proper
   ./configure check
 - bugfix: potential race condition when adding messages to queue

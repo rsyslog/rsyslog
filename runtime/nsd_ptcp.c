@@ -451,7 +451,7 @@ finalize_it:
 }
 
 
-/* initialize tcp sockets for a listner. The initialized sockets are passed to the
+/* initialize tcp sockets for a listener. The initialized sockets are passed to the
  * app-level caller via a callback.
  * pLstnPort must point to a port name or number. NULL is NOT permitted. pLstnIP
  * points to the port to listen to (NULL means "all"), iMaxSess has the maximum

@@ -297,7 +297,7 @@ TCPSessGetNxtSess(tcpsrv_t *pThis, int iCurr)
 }
 
 
-/* De-Initialize TCP listner sockets.
+/* De-Initialize TCP listener sockets.
  * This function deinitializes everything, including freeing the
  * session table. No TCP listen receive operations are permitted
  * unless the subsystem is reinitialized.

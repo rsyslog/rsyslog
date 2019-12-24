@@ -274,7 +274,7 @@ finalize_it:
  * succeeds, adds it to the list of existing listen sockets.
  */
 static rsRetVal
-addListner(instanceConf_t *inst)
+addListener(instanceConf_t *inst)
 {
 	DEFiRet;
 	uchar *bindAddr;
@@ -919,7 +919,7 @@ finalize_it:
 
 
 static rsRetVal
-createListner(es_str_t *port, struct cnfparamvals *pvals)
+createListener(es_str_t *port, struct cnfparamvals *pvals)
 {
 	instanceConf_t *inst;
 	int i;
@@ -1018,7 +1018,7 @@ CODESTARTnewInpInst
 	portIdx = cnfparamGetIdx(&inppblk, "port");
 	assert(portIdx != -1);
 	for(i = 0 ; i <  pvals[portIdx].val.d.ar->nmemb ; ++i) {
-		createListner(pvals[portIdx].val.d.ar->arr[i], pvals);
+		createListener(pvals[portIdx].val.d.ar->arr[i], pvals);
 	}
 
 finalize_it:
@@ -1148,7 +1148,7 @@ BEGINactivateCnfPrePrivDrop
 CODESTARTactivateCnfPrePrivDrop
 	runModConf = pModConf;
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
-		addListner(inst);
+		addListener(inst);
 	}
 	/* if we could not set up any listeners, there is no point in running... */
 	if(lcnfRoot == NULL) {

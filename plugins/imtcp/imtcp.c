@@ -351,7 +351,7 @@ finalize_it:
 
 
 static rsRetVal
-addListner(modConfData_t *modConf, instanceConf_t *inst)
+addListener(modConfData_t *modConf, instanceConf_t *inst)
 {
 	DEFiRet;
 
@@ -669,7 +669,7 @@ CODESTARTactivateCnfPrePrivDrop
 		}
 	}
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
-		addListner(runModConf, inst);
+		addListener(runModConf, inst);
 	}
 	if(pOurTcpsrv == NULL)
 		ABORT_FINALIZE(RS_RET_NO_RUN);
