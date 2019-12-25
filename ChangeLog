@@ -797,7 +797,7 @@ Version 8.1904.0 (aka 2019.04) 2019-04-16
 - imbatchreport: new contributed input module
   This input module manage batches' reports : complete file as a single log.
   Thanks to Philippe Duveau for the contribution.
-- imtuxedolog: new contributed input module for Tuxedu ULOG
+- imtuxedolog: new contributed input module for Tuxedo ULOG
   Thanks to Philippe Duveau for the contribution.
 - openssl network driver: Added support setting openssl configcommands
   We are using the gnutlsPriorityString setting variable, to pass
