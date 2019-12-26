@@ -77,7 +77,7 @@ In another window, do ps -ef|grep 54321, then kill that pid
 Core Dump Analysis
 ==================
 The testbench contains some limited (yet useful) support for automatically
-anaylzing core dumps. In order for this to work, obviously core files need
+analyzing core dumps. In order for this to work, obviously core files need
 to be generated. This often doesn't work as intended. If you hit this problem,
 check
 

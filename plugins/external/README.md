@@ -8,7 +8,7 @@ Why?
 ====
 The prime use case probably is to enable plugin development in languages
 other than C. Often, the high performance of a pure C plugin is not needed,
-simply because the use case does not need it or the destinatin that is
+simply because the use case does not need it or the destination that is
 being connected to is itself "slow enough" that one does not note
 the difference.
 
@@ -28,7 +28,7 @@ View this presentation to learn howto write a plugin in 2 minutes:
     http://www.slideshare.net/rainergerhards1/writing-rsyslog-p
 
 See the [INTERFACE](INTERFACE.md) file. And see the [skeletons](skeletons)
-subdirectory for exisiting ready-to-copy sample plugins that do the
+subdirectory for existing ready-to-copy sample plugins that do the
 necessary plumbing.
 
 Evolving this Interface

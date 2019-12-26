@@ -4,10 +4,10 @@ Rsyslog will be fully supported on Solaris in the future. To build it, the GNU b
 tools (and most of the GNU environment) is needed. This software can be
 found at the excellent http://www.blastwave.org site.
 
-PREQUISITES
+PREREQUISITES
 It is strongly recommended to use GCC4 with support for
 atomic instructions (if available for the platform). While rsyslog can
-be built without atomic instructin support (and will work well then),
+be built without atomic instruction support (and will work well then),
 it then falls back to POSIX semaphores, which require much more CPU
 time than atomic instructions. Note that even on intel platforms the
 (current, as of 2010-03-25) blastwave gcc4 version targets too-old
@@ -20,7 +20,7 @@ the native Solaris tools. As we need the GNU replacements, this
 must be specified on the ./configure line.
 Also, we must tell the linker where to find the glibc library when
 building the plugins. This is done via the LDFLAGS variable as
-shown below (based on the good information availabe at
+shown below (based on the good information available at
 http://prefetch.net/articles/linkers.badldlibrary.html
 
 The working sample configure sequence I use is:

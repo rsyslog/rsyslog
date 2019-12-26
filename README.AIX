@@ -47,7 +47,7 @@ Note: you need to
 * manually search for the RPM via the search box
 * manually download the RPM
   we used only the core rpm without dependencies, this worked
-  on a system that was current after yum intall
+  on a system that was current after yum install
 * manually install the downloaded rpm vi "rpm -i pkg.rpm"
 * we needed these packages:
   - flex
@@ -56,7 +56,7 @@ Note: you need to
 
 AIX HELP
 --------
-* extend a FS assuming there is still pyhsical disk space:
+* extend a FS assuming there is still physical disk space:
   # actual commands used in PDP box
   chfs -s size=200M /tmp
   chfs -a size=4G /home

@@ -177,7 +177,7 @@ default location may vary depending on your platform's configuration.
 This document assumes you understand how to properly configure SASL.
 
 Here is an example qdrouterd SASL configuration file that allows the
-client to use the DIGEST-MD5 or PLAIN authentication mechanisims, plus
+client to use the DIGEST-MD5 or PLAIN authentication mechanisms, plus
 a SASL user database:
 
     pwcheck_method: auxprop
