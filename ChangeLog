@@ -1,5 +1,27 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
+- 2019-12-27: core bugfix: APP-NAME fields could become empty
+  RFC 5424 specifies that an empty APP-NAME needs to be indicated by
+  "-". Instead, the field could become empty under certain conditions.
+  If so, outgoing 5424 messages were invalidly formatted.
+  This happened under quite unusual conditions, but could be seen
+  in practice.
+  closes https://github.com/rsyslog/rsyslog/issues/4043
+- 2019-12-27: core bugfix: reopen /dev/urandom file descriptor after fork on Linux
+  This patch updates prepareBackground() in tools/rsyslogd.c to reopen any file
+  descriptors used for random number generation in the child process. This fixes
+  an issue on Linux systems where the file descriptor obtained for /dev/urandom
+  by seedRandomNumber() in runtime/srutils.c was left closed after the fork. This
+  could be observed in procfs, where /proc/fd/ would show no open descriptors to
+  /dev/urandom in the forked process. /dev/urandom is reopened as the child may be
+  be operating in a jail, and so should not continue to use file descriptors from
+  outside the jail (i.e. inherited from the parent process).
+  I found that this issue led to rsyslog intermittently hanging during seedIV()
+  in runtime/libgcry.c. After the fork, the closed file descriptor number tended
+  to get re-assigned. randomNumber() would then read from an incorrect (although
+  still valid) file descriptor, and could block (depending on the state of that
+  file descriptor). This gave rise to the intermittent hang that I observed.
+  Thanks to Simon Haggett for the patch.
 - 2019-12-20: imdocker bugfix: did not compile without atomic operations
 - 2019-12-20: omclickhouse: new parameter "timeout"
   Thanks to Pavlo Bashynskiy for the patch.
