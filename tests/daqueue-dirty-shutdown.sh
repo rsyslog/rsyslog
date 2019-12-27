@@ -6,7 +6,7 @@
 # at least the queue is kind of readable.
 # To simulate the error condition, we create a DA queue with a large memory
 # part and fill it via injectmsg (do NOT use tcpflood, as this would add
-# complexity of TCP window etc to the reception of messages - injecmsg is
+# complexity of TCP window etc to the reception of messages - injectmsg is
 # synchronous, so we do not have anything in flight after it terminates).
 # We have a blocking action which prevents actual processing of any of the
 # injected messages. We then inject a large number of messages, but only

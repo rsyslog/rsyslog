@@ -3,7 +3,7 @@
 # shall result in data staying in buffers until shutdown, what
 # then will trigger some somewhat complex logic in the stream
 # writer (open, write, close all during the stream close
-# opertion). It is vital that only few messages be sent.
+# operation). It is vital that only few messages be sent.
 #
 # The main effort of this test is not (only) to see if we
 # receive the data, but rather to see if we get into an abort

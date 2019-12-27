@@ -17,7 +17,7 @@ template(name="outfmt" type="list") {
 
 startup
 # we need to generate a file, because otherwise our multiple spaces
-# do not survive the execution pathes through the shell
+# do not survive the execution paths through the shell
 echo "<165>1 2003-08-24T05:14:15.000003-07:00 192.0.2.1 tcpflood 8710 - - msgnum:0000000 test   test     test" >$RSYSLOG_DYNNAME.tmp
 tcpflood -I $RSYSLOG_DYNNAME.tmp
 rm $RSYSLOG_DYNNAME.tmp

@@ -54,7 +54,7 @@ wait_shutdown 2
 shutdown_when_empty
 wait_shutdown
 
-# IMPORTANT: this test will generate many error messsages. This is exactly it's
+# IMPORTANT: this test will generate many error messages. This is exactly it's
 # intent. So do not think something is wrong. The content_check below checks
 # these error codes.
 

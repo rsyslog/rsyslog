@@ -22,7 +22,7 @@ printf 'msgnum:0
  msgnum:1' > $RSYSLOG_DYNNAME.input
 printf '\nmsgnum:2' >> $RSYSLOG_DYNNAME.input
 
-# sleep a little to give rsyslog a chance to process unterminated linet 
+# sleep a little to give rsyslog a chance to process unterminated lines 
 ./msleep 500
 
 # write some more lines (see https://github.com/rsyslog/rsyslog/issues/144)

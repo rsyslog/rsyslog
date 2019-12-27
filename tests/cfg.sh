@@ -1,7 +1,7 @@
 #!/bin/bash
 # This is a simple shell script that carries out some checks against
 # configurations we expect from some provided config files. We use
-# rsyslogd's verifcation function. Note that modifications to the
+# rsyslogd's verification function. Note that modifications to the
 # config elements, or even simple text changes, cause these checks to
 # fail. However, it should be fairly easy to adapt them to the changed
 # environment. And while nothing changed, they permit is to make sure

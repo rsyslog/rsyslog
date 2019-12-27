@@ -2,7 +2,7 @@
 # added 2015-11-17 by rgerhards
 # This file is part of the rsyslog project, released under ASL 2.0
 echo ===============================================================================
-echo \[json_null_array.sh\]: test for json containung \"null\" value
+echo \[json_null_array.sh\]: test for json containing \"null\" value
 . ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '

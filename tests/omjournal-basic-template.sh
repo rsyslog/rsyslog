@@ -26,7 +26,7 @@ wait_shutdown
 journalctl -r -t rsyslogd:  |grep "RsysLoG-TESTBENCH $COOKIE"
 if [ $? -ne 1 ]; then
 	echo "error: cookie $COOKIE not found. Head of journal:"
-	journalctrl -r -t rsyslogd: | head
+	journalctl -r -t rsyslogd: | head
 	exit 1
 fi
 exit_test

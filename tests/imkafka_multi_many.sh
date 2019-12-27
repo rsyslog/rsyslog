@@ -104,7 +104,7 @@ echo Starting receiver instance [imkafka]
 startup
 # --- 
 
-# Messure Starttime
+# Measure Starttime
 TIMESTART=$(date +%s.%N)
 
 # --- Fill Kafka Server with messages
@@ -125,7 +125,7 @@ echo Stopping sender instance [omkafka]
 shutdown_when_empty
 wait_shutdown
 
-# Messure Endtime
+# Measure Endtime
 TIMEEND=$(date +%s.%N)
 TIMEDIFF=$(echo "$TIMEEND - $TIMESTART" | bc)
 echo "*** imkafka time to process all data: $TIMEDIFF seconds!"

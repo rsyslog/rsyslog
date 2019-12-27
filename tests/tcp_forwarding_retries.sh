@@ -3,7 +3,7 @@
 . ${srcdir:=.}/diag.sh init
 
 messages=20000 # how many messages to inject?
-# Note: we need to inject a somewhat larger nubmer of messages in order
+# Note: we need to inject a somewhat larger number of messages in order
 # to ensure that we receive some messages in the actual output file,
 # as batching can (validly) cause a larger loss in the non-writable
 # file
@@ -33,7 +33,7 @@ wait_shutdown
 # we still try to kill it in case the test did not connect to it! Note that we
 # do not need an extra wait, as the rsyslog shutdown process should have taken
 # far long enough.
-echo wating on background process
+echo waiting on background process
 kill $BGPROCESS &> /dev/null
 wait $BGPROCESS
 

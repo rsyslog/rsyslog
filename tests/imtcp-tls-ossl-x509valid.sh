@@ -23,7 +23,7 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 					template="outfmt"
 					file=`echo $RSYSLOG_OUT_LOG`)
 '
-# Begin actuall testcase
+# Begin actual testcase
 startup
 tcpflood -p'$TCPFLOOD_PORT' -m$NUMMESSAGES -Ttls -x$srcdir/tls-certs/ca.pem -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem
 wait_file_lines

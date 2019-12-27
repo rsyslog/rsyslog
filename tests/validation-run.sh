@@ -7,7 +7,7 @@
 #
 # This file is part of rsyslog.
 # Released under ASL 2.0
-echo \[validation-run.sh\]: testing configuraton validation
+echo \[validation-run.sh\]: testing configuration validation
 echo "testing a failed configuration verification run"
 ../tools/rsyslogd  -u2 -N1 -f$srcdir/testsuites/invalid.conf -M../runtime/.libs:../.libs
 if [ $? -ne 1 ]; then

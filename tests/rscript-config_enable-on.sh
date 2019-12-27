@@ -1,5 +1,5 @@
 #!/bin/bash
-# tests 'config.enabled="on"' -- default value is implicitely check
+# tests 'config.enabled="on"' -- default value is implicitly check
 # in all testbench tests and does not need its individual test
 # (actually it is here tested via template() and action() as well...
 # added 2018-01-22 by Rainer Gerhards; Released under ASL 2.0

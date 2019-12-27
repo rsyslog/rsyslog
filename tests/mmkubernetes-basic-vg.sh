@@ -1,7 +1,7 @@
 #!/bin/bash
 # added 2018-04-06 by richm, released under ASL 2.0
 #
-# Note: on buidbot VMs (where there is no environment cleanup), the
+# Note: on buildbot VMs (where there is no environment cleanup), the
 # kubernetes test server may be kept running if the script aborts or
 # is aborted (buildbot master failure!) for some reason. As such we
 # execute it under "timeout" control, which ensure it always is

@@ -60,7 +60,7 @@ export TB_ERR_TIMEOUT=101
 
 # diag system internal environment variables
 # these variables are for use by test scripts - they CANNOT be
-# overriden by the user
+# overridden by the user
 # TCPFLOOD_EXTRA_OPTS   enables to set extra options for tcpflood, usually
 #                       used in tests that have a common driver where it
 #                       is too hard to set these options otherwise
@@ -81,7 +81,7 @@ export ZOOPIDFILE="$(pwd)/zookeeper.pid"
 TB_TIMEOUT_STARTSTOP=400 # timeout for start/stop rsyslogd in tenths (!) of a second 400 => 40 sec
 # note that 40sec for the startup should be sufficient even on very slow machines. we changed this from 2min on 2017-12-12
 TB_TEST_TIMEOUT=90  # number of seconds after which test checks timeout (eg. waits)
-TB_TEST_MAX_RUNTIME=${TEST_MAX_RUNTIME:-580} # maximum runtuime in seconds for a test;
+TB_TEST_MAX_RUNTIME=${TEST_MAX_RUNTIME:-580} # maximum runtime in seconds for a test;
 			# default TEST_MAX_RUNTIME e.g. for long-running tests or special
 			# testbench use. Testbench will abort test
 			# after that time (iff it has a chance to, not strictly enforced)
@@ -94,7 +94,7 @@ if [ "$TESTTOOL_DIR" == "" ]; then
 	export TESTTOOL_DIR="${srcdir:-.}"
 fi
 
-# newer functionality is preferrably introduced via bash functions
+# newer functionality is preferably introduced via bash functions
 # rgerhards, 2018-07-03
 rsyslog_testbench_test_url_access() {
     local missing_requirements=
@@ -169,7 +169,7 @@ test_status() {
 
 
 setvar_RS_HOSTNAME() {
-	printf '### Obtaining HOSTNAME (prequisite, not actual test) ###\n'
+	printf '### Obtaining HOSTNAME (prerequisite, not actual test) ###\n'
 	generate_conf ""
 	add_conf 'module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
@@ -275,7 +275,7 @@ startup_common() {
 	# we need to remove the imdiag port file as there are some
 	# tests that start multiple times. These may get the old port
 	# number if the file still exists AND timing is bad so that
-	# imdiag does not genenrate the port file quickly enough on
+	# imdiag does not generate the port file quickly enough on
 	# startup.
 	rm -f $RSYSLOG_DYNNAME.imdiag$instance.port
 	if [ ! -f $CONF_FILE ]; then
@@ -388,7 +388,7 @@ wait_file_exists() {
 # a generic check function and must only used with those kafka tests
 # that actually need it.
 kafka_wait_group_coordinator() {
-echo We are waiting for kafka/zookeper being ready to deliver messages
+echo We are waiting for kafka/zookeeper being ready to deliver messages
 wait_file_exists $RSYSLOG_OUT_LOG "
 
 Non-existence of $RSYSLOG_OUT_LOG can be caused
@@ -913,7 +913,7 @@ await_lookup_table_reload() {
 
 # $1 filename, default $RSYSLOG_OUT_LOG
 # $2 expected nbr of lines, default $NUMMESSAGES
-# $3 timout in seconds
+# $3 timeout in seconds
 # options (need to be specified in THIS ORDER if multiple given):
 # --delay ms              -- if given, delay to use between retries
 # --abort-on-oversize     -- error_exit if more lines than expected are present
@@ -1159,7 +1159,7 @@ do_cleanup() {
 # our $1 is the to-be-used exit code. if $2 is "stacktrace", call gdb.
 #
 # NOTE: if a function test_error_exit_handler is defined, error_exit will
-#       call it immeditely before termination. This may be used to cleanup
+#       call it immediately before termination. This may be used to cleanup
 #       some things or emit additional diagnostic information.
 error_exit() {
 	if [ $1 -eq $TB_ERR_TIMEOUT ]; then
@@ -1214,7 +1214,7 @@ error_exit() {
 		RSYSLOG_DEBUG=$RSYSLOG_DEBUG_SAVE
 		rm IN_AUTO_DEBUG
 	fi
-	# output listening ports as a temporay debug measure (2018-09-08 rgerhards), now disables, but not yet removed (2018-10-22)
+	# output listening ports as a temporary debug measure (2018-09-08 rgerhards), now disables, but not yet removed (2018-10-22)
 	#if [ $(uname) == "Linux" ]; then
 	#	netstat -tlp
 	#else
@@ -1277,7 +1277,7 @@ error_stats() {
 }
 
 # do the usual sequence check to see if everything was properly received.
-# $4... are just to have the abilit to pass in more options...
+# $4... are just to have the ability to pass in more options...
 # add -v to chkseq if you need more verbose output
 # argument --check-only can be used to simply do a check without abort in fail case
 # env var SEQ_CHECK_FILE permits to override file name to check
@@ -1351,7 +1351,7 @@ seq_check() {
 # do the usual sequence check to see if everything was properly received. This is
 # a duplicateof seq-check, but we could not change its calling conventions without
 # breaking a lot of exitings test cases, so we preferred to duplicate the code here.
-# $4... are just to have the abilit to pass in more options...
+# $4... are just to have the ability to pass in more options...
 # add -v to chkseq if you need more verbose output
 seq_check2() {
 	$RS_SORTCMD $RS_SORT_NUMERIC_OPT < ${RSYSLOG2_OUT_LOG}  | ./chkseq -s$1 -e$2 $3 $4 $5 $6 $7
@@ -1363,7 +1363,7 @@ seq_check2() {
 
 
 # do the usual sequence check, but for gzip files
-# $4... are just to have the abilit to pass in more options...
+# $4... are just to have the ability to pass in more options...
 gzip_seq_check() {
 	if [ "$1" == "" ]; then
 		if [ "$NUMMESSAGES" == "" ]; then
@@ -1445,7 +1445,7 @@ exit_test() {
 	# Extended Exit handling for kafka / zookeeper instances 
 	kafka_exit_handling "true"
 
-	printf '%s Test %s SUCCESFUL (took %s seconds)\n' "$(tb_timestamp)" "$0" "$(( $(date +%s) - TB_STARTTEST ))"
+	printf '%s Test %s SUCCESSFUL (took %s seconds)\n' "$(tb_timestamp)" "$0" "$(( $(date +%s) - TB_STARTTEST ))"
 	echo  -------------------------------------------------------------------------------
 	exit 0
 }
@@ -1530,7 +1530,7 @@ if [ -z "$ES_DOWNLOAD" ]; then
 fi
 dep_es_cached_file="$dep_cache_dir/$ES_DOWNLOAD"
 
-# kafaka (including Zookeeper)
+# kafka (including Zookeeper)
 dep_kafka_dir_xform_pattern='s#^[^/]\+#kafka#g'
 dep_zk_dir_xform_pattern='s#^[^/]\+#zk#g'
 dep_es_dir_xform_pattern='s#^[^/]\+#es#g'
@@ -1648,7 +1648,7 @@ stop_kafka() {
 		done
 		
 		if [[ "$2" == 'true' ]]; then
-			# Prozess shutdown, do cleanup now
+			# Process shutdown, do cleanup now
 			cleanup_kafka $1
 		fi
 	fi
@@ -1713,7 +1713,7 @@ stop_zookeeper() {
 		fi
 
 		if [[ "$2" == 'true' ]]; then
-			# Prozess shutdown, do cleanup now
+			# Process shutdown, do cleanup now
 			cleanup_zookeeper $1
 		fi
 		rm "$ZOOPIDFILE"
@@ -1732,10 +1732,10 @@ cleanup_zookeeper() {
 start_zookeeper() {
 	if [ "$KEEP_KAFKA_RUNNING" == "YES" ] && [ -f "$ZOOPIDFILE" ]; then
 		if kill -0 "$(cat "$ZOOPIDFILE")"; then
-			printf 'zookeeper already runing, no need to start\n'
+			printf 'zookeeper already running, no need to start\n'
 			return
 		else
-			printf 'INFO: zookeper pidfile %s exists, but zookeeper not runing\n' "$ZOOPIDFILE"
+			printf 'INFO: zookeeper pidfile %s exists, but zookeeper not running\n' "$ZOOPIDFILE"
 			printf 'deleting pid file\n'
 			rm -f "$ZOOPIDFILE"
 		fi
@@ -1784,7 +1784,7 @@ start_kafka() {
 	# shellcheck disable=SC2009  - we do not grep on the process name!
 	kafkapid=$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')
 	if [ "$KEEP_KAFKA_RUNNING" == "YES" ] && [ "$kafkapid" != "" ]; then
-		printf 'kafka already runing, no need to start\n'
+		printf 'kafka already running, no need to start\n'
 		return
 	fi
 
@@ -1979,7 +1979,7 @@ download_elasticsearch() {
 }
 
 
-# prepare eleasticsearch execution environment
+# prepare elasticsearch execution environment
 # this also stops any previous elasticsearch instance, if found
 prepare_elasticsearch() {
 	stop_elasticsearch # stop if it is still running
@@ -2062,7 +2062,7 @@ start_elasticsearch() {
 }
 
 # read data from ES to a local file so that we can process
-# $1 - number of records (ES does not return all records unless you tell it explicitely).
+# $1 - number of records (ES does not return all records unless you tell it explicitly).
 # $2 - ES port
 es_getdata() {
 	curl --silent -XPUT --show-error -H 'Content-Type: application/json' "http://localhost:${2:-$ES_PORT}/rsyslog_testbench/_settings" -d '{ "index" : { "max_result_window" : '${1:-$NUMMESSAGES}' } }'
@@ -2225,7 +2225,7 @@ mysql_prep_for_test() {
 
 # get data from mysql DB so that we can do seq_check on it.
 mysql_get_data() {
-	# note "-s" is requried to suppress the select "field header"
+	# note "-s" is required to suppress the select "field header"
 	mysql -s --user=rsyslog --password=testbench --database $RSYSLOG_DYNNAME \
 		-e "select substring(Message,9,8) from SystemEvents;" \
 		> $RSYSLOG_OUT_LOG
@@ -2365,7 +2365,7 @@ case $1 in
 		fi
 		if [ "$RSYSLOG_DYNNAME" != "" ]; then
 			echo "FAIL: \$RSYSLOG_DYNNAME already set in init"
-			echo "hint: was init accidently called twice?"
+			echo "hint: was init accidentally called twice?"
 			exit 2
 		fi
 		export RSYSLOG_DYNNAME="rstb_$(./test_id $(basename $0))"
@@ -2422,7 +2422,7 @@ case $1 in
 		# happens in chained test scripts. Delete on exit is fine,
 		# though.
 		# note: TCPFLOOD_EXTRA_OPTS MUST NOT be unset in init, because
-		# some tests need to set it BEFORE calling init to accomodate
+		# some tests need to set it BEFORE calling init to accommodate
 		# their generic test drivers.
 		if [ "$TCPFLOOD_EXTRA_OPTS" != '' ] ; then
 		        echo TCPFLOOD_EXTRA_OPTS set: $TCPFLOOD_EXTRA_OPTS

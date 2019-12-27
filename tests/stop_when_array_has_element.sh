@@ -2,7 +2,7 @@
 # added 2015-05-22 by singh.janmejay
 # This file is part of the rsyslog project, released under ASL 2.0
 echo ===============================================================================
-echo \[stop_when_array_has_element.sh\]: loop detecting presense of an element and stopping ruleset execution
+echo \[stop_when_array_has_element.sh\]: loop detecting presence of an element and stopping ruleset execution
 . ${srcdir:=.}/diag.sh init stop_when_array_has_element.sh
 generate_conf
 add_conf '

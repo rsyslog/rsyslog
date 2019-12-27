@@ -5,7 +5,7 @@
 # whether or not we have a leak, not any other functionality. Most
 # importantly, we do not care if the error message appears or not. This
 # is because it is not so easy to pick it up from the system log and other
-# tests already cover this szenario.
+# tests already cover this scenario.
 # add 2017-05-10 by Rainer Gerhards, released under ASL 2.0
 
 uname
