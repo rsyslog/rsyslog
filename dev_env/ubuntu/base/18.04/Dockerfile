@@ -166,7 +166,7 @@ RUN	cd helper-projects \
 # change scripts if at a later time we can move on to a newer version
 ENV	SCAN_BUILD=scan-build \
 	SCAN_BUILD_CC=clang-8 \
-	ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-6.0/bin/llvm-symbolizer
+	ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-8/bin/llvm-symbolizer
 
 ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-clickhouse \
