@@ -1,5 +1,12 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
+- 2019-12-27: core bugfix: APP-NAME fields could become empty
+  RFC 5424 specifies that an empty APP-NAME needs to be indicated by
+  "-". Instead, the field could become empty under certain conditions.
+  If so, outgoing 5424 messages were invalidly formatted.
+  This happened under quite unusual conditions, but could be seen
+  in practice.
+  closes https://github.com/rsyslog/rsyslog/issues/4043
 - 2019-12-27: core bugfix: reopen /dev/urandom file descriptor after fork on Linux
   This patch updates prepareBackground() in tools/rsyslogd.c to reopen any file
   descriptors used for random number generation in the child process. This fixes
