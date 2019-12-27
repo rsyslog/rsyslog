@@ -717,12 +717,26 @@ static long int randomInsecureNumber(void)
 static int fdURandom = -1;
 void seedRandomNumber(void)
 {
+	if(fdURandom >= 0) {
+		/* Already opened. */
+		return;
+	}
 	fdURandom = open("/dev/urandom", O_RDONLY);
 	if(fdURandom == -1) {
 		LogError(errno, RS_RET_IO_ERROR, "failed to seed random number generation,"
 			" will use fallback (open urandom failed)");
 		seedRandomInsecureNumber();
 	}
+}
+
+void seedRandomNumberForChild(void)
+{
+	/* The file descriptor inherited from our parent will have been closed after
+	 * the fork. Discard this and call seedRandomNumber() to open /dev/urandom
+	 * again.
+	 */
+	fdURandom = -1;
+	seedRandomNumber();
 }
 
 long int randomNumber(void)
@@ -743,6 +757,11 @@ long int randomNumber(void)
 void seedRandomNumber(void)
 {
 	seedRandomInsecureNumber();
+}
+
+void seedRandomNumberForChild(void)
+{
+	seedRandomNumber();
 }
 
 long int randomNumber(void)

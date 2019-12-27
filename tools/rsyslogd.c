@@ -391,6 +391,7 @@ prepareBackground(const int parentPipeFD)
 			  aix_close_it(i); /* AIXPORT */
 		}
 	}
+	seedRandomNumberForChild();
 }
 
 /* This is called when rsyslog is set to auto-background itself. If so, a child

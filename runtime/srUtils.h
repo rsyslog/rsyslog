@@ -96,6 +96,7 @@ int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep);
 rsRetVal getFileSize(uchar *pszName, off_t *pSize);
 int containsGlobWildcard(char *str);
 void seedRandomNumber(void);
+void seedRandomNumberForChild(void);
 #define MAX_RANDOM_NUMBER RAND_MAX
 long int randomNumber(void);
 long long currentTimeMills(void);
