@@ -7,7 +7,7 @@ to try a build (see README.AIX).
 
 - Install AIX xlc compiler.
 
-- Install various packages requred for setting up build environment:
+- Install various packages required for setting up build environment:
    yum install automake autoconf bash gettext gettext-devel libtool m4 make pkg-config zlib zlib-devel git gnutls gnutls-devel info flex nettle nettle-devel p11-kit-devel libffi libffi-devel gmp gmp-devel
 
 - Update all the packages using 'yum update'.

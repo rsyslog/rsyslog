@@ -336,6 +336,6 @@ to set the variable in question to the empty string ("").
 Implementation
 --------------
 The plugin interface is implemented via the "mmexternal" native plugin. See its
-documentation on how to tie your plugin into rsyslog's procesing flow.
+documentation on how to tie your plugin into rsyslog's processing flow.
 
 [dev-oplugins]: https://www.rsyslog.com/doc/v8-stable/development/dev_oplugins.html

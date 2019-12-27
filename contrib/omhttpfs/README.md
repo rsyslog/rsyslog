@@ -2,7 +2,7 @@ OmHTTPFS
 ===
 Author: sskaje ([sskaje@gmail.com](mailto:sskaje@gmail.com), [http://sskaje.me/](http://sskaje.me/))
 
-OmHTTPFS is an Rsyslog plugin writting data to HDS via *Hadoop HDFS over HTTP*.
+OmHTTPFS is an Rsyslog plugin writing data to HDS via *Hadoop HDFS over HTTP*.
 
 
 ## Hadoop HDFS over HTTP
@@ -14,7 +14,7 @@ HTTPFS is not well documented. I tried to read its source and write an [intro wi
 
 ## OmHDFS for Rsyslog
 Rsyslog provides a plugin named omHDFS which requires lots of work compiling and configuring, and it's not that usable.
-Here is what I tried before writting this omhttpfs: [Build omhdfs for Rsyslog](http://sskaje.me/2014/08/build-omhdfs-rsyslog/).
+Here is what I tried before writing this omhttpfs: [Build omhdfs for Rsyslog](http://sskaje.me/2014/08/build-omhdfs-rsyslog/).
 
 
 ## Rsyslog config

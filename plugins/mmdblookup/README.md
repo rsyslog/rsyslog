@@ -2,7 +2,7 @@
 
 Fast geoip lookups straight from Rsyslog.
 
-[Maxmind](https://www.maxmind.com/en/home) provides free and pay-for memmory mapped ip-lookup databases.
+[Maxmind](https://www.maxmind.com/en/home) provides free and pay-for memory mapped ip-lookup databases.
 The free city-level database is about 22 mB, and can be found on the [geolite page](http://dev.maxmind.com/geoip/geoip2/geolite2/).
 
 
