@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (C) 2016 by Rainer Gerhardds
+# Copyright (C) 2016 by Rainer Gerhards
 # This file is part of the rsyslog project, released  under ASL 2.0
 
 . ${srcdir:=.}/diag.sh init
@@ -22,10 +22,6 @@ rm $RSYSLOG_DYNNAME.tmp
 ./msleep 500
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate
-echo "lastmsg" | cmp - $RSYSLOG_OUT_LOG
-if [ ! $? -eq 0 ]; then
-  echo "lastmsg was not properly recorded, file content:"
-  cat $RSYSLOG_OUT_LOG
-  exit 1
-fi;
+export EXPECTED="lastmsg"
+cmp_exact
 exit_test

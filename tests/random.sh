@@ -1,5 +1,5 @@
 #!/bin/bash
-# Test if rsyslog survives sending truely random data to it...
+# Test if rsyslog survives sending truly random data to it...
 #
 # added 2010-04-01 by Rgerhards
 # This file is part of the rsyslog project, released  under ASL 2.0

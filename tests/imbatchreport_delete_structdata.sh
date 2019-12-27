@@ -27,7 +27,7 @@ ruleset(name="ruleset") {
  echo '    [START=1552143924 KSH="MYBATCH.sh"'
  echo ' DURATION=120]     '
 } > $RSYSLOG_DYNNAME.dsd.done
-echo "Batch report to consumme ${RSYSLOG_DYNNAME}.dsd.done for 2019-03-09T15:05:24"
+echo "Batch report to consume ${RSYSLOG_DYNNAME}.dsd.done for 2019-03-09T15:05:24"
 startup
 shutdown_when_empty
 wait_shutdown

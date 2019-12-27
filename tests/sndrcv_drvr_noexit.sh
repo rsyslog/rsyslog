@@ -10,16 +10,16 @@
 # config file name ($2). From that name, the sender and receiver config file
 # names are automatically generated. 
 # So: $1 config file name, $2 number of messages
-# environmet variable TCPFLOOD_EXTRA_OPTIONS is used to slowdown sending when
+# environment variable TCPFLOOD_EXTRA_OPTIONS is used to slowdown sending when
 # using UDP (we've seen problems due to UDP message loss if sending with full
 # speed)
 #
 # A note on TLS testing: the current testsuite (in git!) already contains
 # TLS test cases. However, getting these test cases correct is not simple.
-# That's not a problem with the code itself, but rater a problem with
-# synchronization in the test environment. So I have deciced to keep the
+# That's not a problem with the code itself, but rather a problem with
+# synchronization in the test environment. So I have decided to keep the
 # TLS tests in, but not yet actually utilize them. This is most probably
-# left as an excercise for future (devel) releases. -- rgerhards, 2009-11-11
+# left as an exercise for future (devel) releases. -- rgerhards, 2009-11-11
 #
 # added 2009-11-11 by Rgerhards
 # This file is part of the rsyslog project, released under ASL 2.0

@@ -4,7 +4,7 @@
 # importantly, it checks that error messages can be issued very early
 # during startup.
 # Note that we use the override of the hostname to ensure we do not
-# accidentely get an acceptable FQDN-type hostname during testing.
+# accidentally get an acceptable FQDN-type hostname during testing.
 #
 # IMPORTANT: We cannot use the regular plumbing here, as our preload
 # interferes with socket operations (we cannot bind the port for some

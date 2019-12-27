@@ -13,7 +13,7 @@ fi
 # STEP1: start both instances and send 1000 messages.
 # Note: receiver is instance 1, sender instance 2.
 #
-# start up the instances. Note that the envrionment settings can be changed to
+# start up the instances. Note that the environment settings can be changed to
 # set instance-specific debugging parameters!
 #export RSYSLOG_DEBUG="debug nostdout"
 #export RSYSLOG_DEBUGLOG="log2"
@@ -96,7 +96,7 @@ echo file size to expect is $OLDFILESIZE
 
 #
 # Step 4: send new data. Queue files are not permitted to grow now
-# (but one file continous to exist).
+# (but one file continuous to exist).
 #
 echo step 4
 injectmsg2  11001 10

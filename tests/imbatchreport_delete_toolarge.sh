@@ -33,7 +33,7 @@ case $(uname) in
     datelog=$(date -ud @$(stat -c "%Y" $RSYSLOG_DYNNAME.dtl.done) "+%Y-%m-%dT%H:%M:%S")
     ;;
 esac
-echo "Batch report to consumme ${RSYSLOG_DYNNAME}.dtl.done for ${datelog}"
+echo "Batch report to consume ${RSYSLOG_DYNNAME}.dtl.done for ${datelog}"
 startup
 shutdown_when_empty
 wait_shutdown

@@ -18,12 +18,12 @@
 # wait. However, the invalid signaling did not take into account that it did not
 # signal the async writer to shut down. So the main thread went into a condition
 # wait - and thus we had a deadlock. That situation occured only under very specific
-# cirumstances. As far as the analysis goes, the following need to happen:
+# circumstances. As far as the analysis goes, the following need to happen:
 # 1. buffers on that file are being flushed
 # 2. no new data arrives
 # 3. the inactivity timeout has not yet expired
 # 4. *then* (and only then) the stream is closed or destructed
-# In that, 1 to 4 are prequisites for the deadlock which will happen in 4. However,
+# In that, 1 to 4 are prerequisites for the deadlock which will happen in 4. However,
 # for it to happen, we also need the right "timing". There is a race between the
 # main thread and the async writer thread. The deadlock will only happen under
 # the "right" circumstances, which basically means it will not happen always.
@@ -42,10 +42,10 @@
 # is still being enqueued, but at a slow rate. So if one is patient enough, the load
 # generator will be able to finish. However, rsyslogd will never process the data
 # it received because it is locked in the deadlock caused by #4 above.
-# Note that "$OMFileFlushOnTXEnd on" is not causing this behaviour. We just use it
+# Note that "$OMFileFlushOnTXEnd on" is not causing this behavior. We just use it
 # to (quite) reliably cause the failure condition. The failure described above
 # (in version 4.6.1) was also present when the setting was set to "off", but its
-# occurence was very much less probable - because the perquisites are then much
+# occurrence was very much less probable - because the perquisites are then much
 # harder to hit. without it, the test may need to run for several hours before
 # we hit all failure conditions.
 #

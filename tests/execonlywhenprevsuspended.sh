@@ -1,6 +1,6 @@
 #!/bin/bash
 # we test the execonly if previous is suspended directive. This is the
-# most basic test which soley tests a singel case but no dependencies within
+# most basic test which solely tests a single case but no dependencies within
 # the ruleset.
 # rgerhards, 2010-06-23
 echo =====================================================================================

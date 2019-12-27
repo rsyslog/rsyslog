@@ -3,7 +3,7 @@
 # we send 100,000 messages in the hopes that his puts at least a little bit
 # of pressure on the threading subsystem. To really prove it, we would need to
 # push messages for several minutes, but that takes too long during the 
-# automatted tests (hint: do this manually after suspect changes). Thankfully,
+# automated tests (hint: do this manually after suspect changes). Thankfully,
 # in practice many threading bugs result in an abort rather quickly and these
 # should be covered by this test here.
 # rgerhards, 2009-06-26

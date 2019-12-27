@@ -13,7 +13,7 @@ template(name="outfmt" type="list") {
 
 /* tcpflood uses local4.=debug */
 if prifilt("syslog.*") then
-	stop # it actually doesn`t matter what we do here
+	stop # it actually does not matter what we do here
 else
 	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
