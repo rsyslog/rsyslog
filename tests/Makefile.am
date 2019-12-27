@@ -160,6 +160,7 @@ TESTS +=  \
 	hostname-with-slash-pmrfc3164.sh \
 	hostname-with-slash-dflt-invld.sh \
 	hostname-with-slash-dflt-slash-valid.sh \
+	empty-app-name.sh \
 	stop-localvar.sh \
 	stop-msgvar.sh \
 	glbl-ruleset-queue-defaults.sh \
@@ -1497,6 +1498,7 @@ EXTRA_DIST= \
 	glbl-oversizeMsg-log-vg.sh \
 	config_enabled-on.sh \
 	config_enabled-off.sh \
+	empty-app-name.sh \
 	empty-hostname.sh \
 	hostname-getaddrinfo-fail.sh \
 	hostname-with-slash-pmrfc5424.sh \

@@ -2195,10 +2195,14 @@ MsgSetAfterPRIOffs(smsg_t * const pMsg, int offs)
  * which already obtained the lock. So in general, this function here must
  * only be called when it it safe to do so without it aquiring a lock.
  */
-rsRetVal MsgSetAPPNAME(smsg_t *__restrict__ const pMsg, const char* pszAPPNAME)
+rsRetVal ATTR_NONNULL(1,2)
+MsgSetAPPNAME(smsg_t *__restrict__ const pMsg, const char *pszAPPNAME)
 {
 	DEFiRet;
 	assert(pMsg != NULL);
+	if(pszAPPNAME[0] == '\0') {
+		pszAPPNAME = "-"; /* RFC5424 NIL value */
+	}
 	if(pMsg->pCSAPPNAME == NULL) {
 		/* we need to obtain the object first */
 		CHKiRet(rsCStrConstruct(&pMsg->pCSAPPNAME));
@@ -2659,7 +2663,7 @@ prepareAPPNAME(smsg_t *const pM, const sbool bLockMutex)
 
 /* rgerhards, 2005-11-24
  */
-char *getAPPNAME(smsg_t * const pM, sbool bLockMutex)
+char *getAPPNAME(smsg_t * const pM, const sbool bLockMutex)
 {
 	uchar *pszRet;
 
@@ -2678,7 +2682,7 @@ char *getAPPNAME(smsg_t * const pM, sbool bLockMutex)
 
 /* rgerhards, 2005-11-24
  */
-static int getAPPNAMELen(smsg_t * const pM, sbool bLockMutex)
+static int getAPPNAMELen(smsg_t * const pM, const sbool bLockMutex)
 {
 	assert(pM != NULL);
 	prepareAPPNAME(pM, bLockMutex);
