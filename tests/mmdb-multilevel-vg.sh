@@ -3,7 +3,7 @@
 . ${srcdir:=.}/diag.sh init
 # we libmaxminddb, in packaged versions, has a small cosmetic memory leak,
 # thus we need a suppressions file:
-export RS_TESTBENCH_VALGRIND_EXTRA_OPTS="$RS_TESTBENCH_VALGRIND_EXTRA_OPTS --suppressions=$srcdir/libmaxminddb.supp"
+export RS_TESTBENCH_VALGRIND_EXTRA_OPTS="$RS_TESTBENCH_VALGRIND_EXTRA_OPTS --suppressions=$srcdir/libmaxmindb.supp"
 generate_conf
 add_conf '
 template(name="outfmt" type="string" string="%$!iplocation%\n")
