@@ -844,9 +844,6 @@ This plugin maintains a global :doc:`statistics <../rsyslog_statistic_counter>` 
 Caveats/Known Bugs
 ==================
 
-- There is a compile-time limit of 50 concurrent sockets. If you need
-  more, you need to change the array size in ``imuxsock.c``.
-
 - When running under systemd, **many "sysSock." parameters are ignored**.
   See parameter descriptions and the :ref:`imuxsock-systemd-details-label` section for
   details.
