@@ -375,6 +375,7 @@ TESTS +=  \
 	rscript_wrap3.sh \
 	rscript_re_extract.sh \
 	rscript_re_match.sh \
+	rscript_re_match-dbl_quotes.sh \
 	rscript_eq.sh \
 	rscript_eq_var.sh \
 	rscript_ge.sh \
@@ -2392,6 +2393,7 @@ EXTRA_DIST= \
 	key_dereference_on_uninitialized_variable_space.sh \
 	rscript_re_extract.sh \
 	rscript_re_match.sh \
+	rscript_re_match-dbl_quotes.sh \
 	lookup_table.sh \
 	lookup_table_no_hup_reload.sh \
 	lookup_table_no_hup_reload-vg.sh \

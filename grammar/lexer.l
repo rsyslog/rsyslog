@@ -302,6 +302,10 @@ int fileno(FILE *stream);
 				   unescapeStr((uchar*)yytext+1, yyleng-2);
 				   yylval.estr = es_newStrFromBuf(yytext+1, strlen(yytext)-1);
 				   return STRING; }
+<EXPR>\"([^"\\]|\\["'\\$bntr]|\\x[0-9a-f][0-9a-f]|\\[0-7][0-7][0-7])*\" {
+				   cnfPrintToken(yytext); parser_errmsg("$-sign in double quotes must be "
+					        "escaped, problem string is: %s",
+						yytext); }
 <EXPR>[ \t\n]			{ cnfPrintToken(yytext); }
 <EXPR>[a-z][a-z0-9_]*		{ cnfPrintToken(yytext); yylval.estr = es_newStrFromCStr(yytext, yyleng);
 				  return FUNC; }
