@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h for more specifics!
  *
  * Copyright 2011 Nathan Scott.
- * Copyright 2009-2018 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2019 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -165,6 +165,7 @@ typedef struct wrkrInstanceData {
 	instanceData *pData;
 	int serverIndex;
 	int replyLen;
+	size_t replyBufLen;
 	char *reply;
 	CURL	*curlCheckConnHandle;	/* libcurl session handle for checking the server connection */
 	CURL	*curlPostHandle;	/* libcurl session handle for posting data to the server */
@@ -258,6 +259,9 @@ CODESTARTcreateWrkrInstance
 		}
 	}
 	pWrkrData->nOperations = 0;
+	pWrkrData->reply = NULL;
+	pWrkrData->replyLen = 0;
+	pWrkrData->replyBufLen = 0;
 	iRet = curlSetup(pWrkrData);
 ENDcreateWrkrInstance
 
@@ -334,6 +338,7 @@ CODESTARTfreeWrkrInstance
 		pWrkrData->restURL = NULL;
 	}
 	es_deleteStr(pWrkrData->batch.data);
+	free(pWrkrData->reply);
 ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
@@ -383,22 +388,26 @@ ENDdbgPrintInstInfo
 
 /* elasticsearch POST result string ... useful for debugging */
 static size_t
-curlResult(void *ptr, size_t size, size_t nmemb, void *userdata)
+curlResult(void *const ptr, const size_t size, const size_t nmemb, void *const userdata)
 {
-	char *p = (char *)ptr;
-	wrkrInstanceData_t *pWrkrData = (wrkrInstanceData_t*) userdata;
+	const char *const p = (const char *)ptr;
+	wrkrInstanceData_t *const pWrkrData = (wrkrInstanceData_t*) userdata;
 	char *buf;
+	const size_t size_add = size*nmemb;
 	size_t newlen;
 	PTR_ASSERT_CHK(pWrkrData, WRKR_DATA_TYPE_ES);
-	newlen = pWrkrData->replyLen + size*nmemb;
-	if((buf = realloc(pWrkrData->reply, newlen + 1)) == NULL) {
-		LogError(errno, RS_RET_ERR, "omelasticsearch: realloc failed in curlResult");
-		return 0; /* abort due to failure */
+	newlen = pWrkrData->replyLen + size_add;
+	if(newlen + 1 > pWrkrData->replyBufLen) {
+		if((buf = realloc(pWrkrData->reply, pWrkrData->replyBufLen + size_add + 1)) == NULL) {
+			LogError(errno, RS_RET_ERR, "omelasticsearch: realloc failed in curlResult");
+			return 0; /* abort due to failure */
+		}
+		pWrkrData->replyBufLen += size_add + 1;
+		pWrkrData->reply = buf;
 	}
-	memcpy(buf+pWrkrData->replyLen, p, size*nmemb);
+	memcpy(pWrkrData->reply+pWrkrData->replyLen, p, size_add);
 	pWrkrData->replyLen = newlen;
-	pWrkrData->reply = buf;
-	return size*nmemb;
+	return size_add;
 }
 
 /* Build basic URL part, which includes hostname and port as follows:
@@ -484,7 +493,6 @@ checkConn(wrkrInstanceData_t *const pWrkrData)
 	int r;
 	DEFiRet;
 
-	pWrkrData->reply = NULL;
 	pWrkrData->replyLen = 0;
 	curl = pWrkrData->curlCheckConnHandle;
 	urlBuf = es_newStr(256);
@@ -531,8 +539,6 @@ checkConn(wrkrInstanceData_t *const pWrkrData)
 finalize_it:
 	if(urlBuf != NULL)
 		es_deleteStr(urlBuf);
-	free(pWrkrData->reply);
-	pWrkrData->reply = NULL; /* don't leave dangling pointer */
 	RETiRet;
 }
 
@@ -1558,9 +1564,7 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls
 
 	PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
 
-	pWrkrData->reply = NULL;
 	pWrkrData->replyLen = 0;
-
 	if ((pWrkrData->pData->rebindInterval > -1) &&
 		(pWrkrData->nOperations > pWrkrData->pData->rebindInterval)) {
 		curl_easy_setopt(curl, CURLOPT_FRESH_CONNECT, 1);
@@ -1582,9 +1586,6 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls
 		CHKiRet(checkConn(pWrkrData));
 	}
 	CHKiRet(setPostURL(pWrkrData, tpls));
-
-	pWrkrData->reply = NULL;
-	pWrkrData->replyLen = 0;
 
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, (char *)message);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, msglen);
@@ -1618,8 +1619,6 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls
 
 finalize_it:
 	incrementServerIndex(pWrkrData);
-	free(pWrkrData->reply);
-	pWrkrData->reply = NULL; /* don't leave dangling pointer */
 	RETiRet;
 }
 
