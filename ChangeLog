@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
+- 2019-12-30: core bugfix: rsyslog aborts when config parse error is detected
+  In defaut settings, rsyslog tries to continue to run, but some data
+  structures are not properly initialized due to the config parsing error.
+  This causes a segfault.
+  In the following tracker, this is the root cause of the abort:
+  see also https://github.com/rsyslog/rsyslog/issues/2869
 - 2019-12-30: fix some alignment issues
   So far, this worked everywhere (for years). But it may still have
   caused issues on some platforms.
