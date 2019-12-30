@@ -2324,14 +2324,10 @@ done:	return;
 
 
 /* Monitor files in inotify mode */
-PRAGMA_DIAGNOSTIC_PUSH
-PRAGMA_IGNORE_Wcast_align
-/* Problem with the warnings: they seem to stem back from the way the API is structured */
 static rsRetVal
 do_inotify(void)
 {
 	char iobuf[8192];
-	struct inotify_event *ev;
 	int rd;
 	int currev;
 	DEFiRet;
@@ -2386,10 +2382,14 @@ do_inotify(void)
 		}
 		currev = 0;
 		while(currev < rd) {
-			ev = (struct inotify_event*) (iobuf+currev);
-			in_dbg_showEv(ev);
-			in_processEvent(ev);
-			currev += sizeof(struct inotify_event) + ev->len;
+			union {
+				char *buf;
+				struct inotify_event *ev;
+			} savecast;
+			savecast.buf = iobuf+currev;
+			in_dbg_showEv(savecast.ev);
+			in_processEvent(savecast.ev);
+			currev += sizeof(struct inotify_event) + savecast.ev->len;
 		}
 	}
 
@@ -2397,7 +2397,6 @@ finalize_it:
 	close(ino_fd);
 	RETiRet;
 }
-PRAGMA_DIAGNOSTIC_POP
 
 #else /* #if HAVE_INOTIFY_INIT */
 static rsRetVal
