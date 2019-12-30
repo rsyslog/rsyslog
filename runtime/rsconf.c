@@ -1308,6 +1308,7 @@ load(rsconf_t **cnf, uchar *confFile)
 {
 	int iNbrActions = 0;
 	int r;
+	rsRetVal delayed_iRet = RS_RET_OK;
 	DEFiRet;
 
 	CHKiRet(rsconfConstruct(&loadConf));
@@ -1331,7 +1332,8 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 	if(r == 1) {
 		LogError(0, RS_RET_CONF_PARSE_ERROR, "could not interpret master "
 			"config file '%s'.", confFile);
-		ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
+		/* we usually keep running with the failure, so we need to continue for now */
+		delayed_iRet = RS_RET_CONF_PARSE_ERROR;
 	} else if(r == 2) { /* file not found? */
 		LogError(errno, RS_RET_CONF_FILE_NOT_FOUND, "could not open config file '%s'",
 		        confFile);
@@ -1369,6 +1371,9 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 	rsconfDebugPrint(loadConf);
 
 finalize_it:
+	if(iRet == RS_RET_OK && delayed_iRet != RS_RET_OK) {
+		iRet = delayed_iRet;
+	}
 	RETiRet;
 }
 
