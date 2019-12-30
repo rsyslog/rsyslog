@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
+- 2019-12-30: fix some alignment issues
+  So far, this worked everywhere (for years). But it may still have
+  caused issues on some platforms.
+  closes https://github.com/rsyslog/rsyslog/issues/2608
 - 2019-12-27: core bugfix: APP-NAME fields could become empty
   RFC 5424 specifies that an empty APP-NAME needs to be indicated by
   "-". Instead, the field could become empty under certain conditions.
