@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd interface for plain tcp sockets.
  *
- * Copyright 2007-2018 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2019 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -458,8 +458,6 @@ finalize_it:
  * number of sessions permitted.
  * rgerhards, 2008-04-22
  */
-PRAGMA_DIAGNOSTIC_PUSH
-PRAGMA_IGNORE_Wcast_align
 static rsRetVal
 LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax,
@@ -475,6 +473,11 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 	int sockflags;
 	int port_override = 0; /* if dyn port (0): use this for actually bound port */
 	struct addrinfo hints, *res = NULL, *r;
+	union {
+		struct sockaddr *sa;
+		struct sockaddr_in *ipv4;
+		struct sockaddr_in6 *ipv6;
+	} savecast;
 
 	ISOBJ_TYPE_assert(pNS, netstrms);
 	assert(fAddLstn != NULL);
@@ -502,10 +505,11 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 	numSocks = 0;   /* num of sockets counter at start of array */
 	for(r = res; r != NULL ; r = r->ai_next) {
 		if(port_override != 0) {
+			savecast.sa = (struct sockaddr*)r->ai_addr;
 			if(r->ai_family == AF_INET6) {
-				((struct sockaddr_in6*)r->ai_addr)->sin6_port = port_override;
+				savecast.ipv6->sin6_port = port_override;
 			} else {
-				((struct sockaddr_in*)r->ai_addr)->sin_port = port_override;
+				savecast.ipv4->sin_port = port_override;
 			}
 		}
 		sock = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
@@ -591,9 +595,8 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		 * combination that works - it is very unusual to have the same service listen
 		 * on differnt ports on IPv4 and IPv6.
 		 */
-		const int currport = (isIPv6) ?
-			(((struct sockaddr_in6*)r->ai_addr)->sin6_port) :
-			(((struct sockaddr_in*)r->ai_addr)->sin_port) ;
+		savecast.sa = (struct sockaddr*)r->ai_addr;
+		const int currport = (isIPv6) ?  savecast.ipv6->sin6_port : savecast.ipv4->sin_port;
 		if(currport == 0) {
 			socklen_t socklen_r = r->ai_addrlen;
 			if(getsockname(sock, r->ai_addr, &socklen_r) == -1) {
@@ -601,9 +604,8 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 						"error while trying to get socket");
 			}
 			r->ai_addrlen = socklen_r;
-			port_override = (isIPv6) ?
-				(((struct sockaddr_in6*)r->ai_addr)->sin6_port) :
-				(((struct sockaddr_in*)r->ai_addr)->sin_port) ;
+			savecast.sa = (struct sockaddr*)r->ai_addr;
+			port_override = (isIPv6) ?  savecast.ipv6->sin6_port : savecast.ipv4->sin_port;
 			if(pszLstnPortFileName != NULL) {
 				FILE *fp;
 				if((fp = fopen((const char*)pszLstnPortFileName, "w+")) == NULL) {
@@ -612,9 +614,9 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 					ABORT_FINALIZE(RS_RET_IO_ERROR);
 				}
 				if(isIPv6) {
-					fprintf(fp, "%d", ntohs((((struct sockaddr_in6*)r->ai_addr)->sin6_port)));
+					fprintf(fp, "%d", ntohs(savecast.ipv6->sin6_port));
 				} else {
-					fprintf(fp, "%d", ntohs((((struct sockaddr_in*)r->ai_addr)->sin_port)));
+					fprintf(fp, "%d", ntohs(savecast.ipv4->sin_port));
 				}
 				fclose(fp);
 			}
@@ -687,7 +689,6 @@ finalize_it:
 
 	RETiRet;
 }
-PRAGMA_DIAGNOSTIC_POP
 
 /* receive data from a tcp socket
  * The lenBuf parameter must contain the max buffer size on entry and contains

@@ -1146,10 +1146,6 @@ finalize_it:
 }
 
 
-/* the #pragmas can go away when we have disable array-passing mode */
-
-PRAGMA_DIAGNOSTIC_PUSH
-PRAGMA_IGNORE_Wcast_align
 void
 releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ const pWti, int action_destruct)
 {
@@ -1188,8 +1184,6 @@ releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ 
 
 	return;
 }
-
-PRAGMA_DIAGNOSTIC_POP
 
 
 /* This is used in resume processing. We only finally know that a resume
