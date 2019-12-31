@@ -2,9 +2,7 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=1000
-download_elasticsearch
-prepare_elasticsearch
-start_elasticsearch
+ensure_elasticsearch_ready
 
 generate_conf
 add_conf '
@@ -40,7 +38,7 @@ shutdown_when_empty
 wait_shutdown
 ./msleep 1000 # ES might need some time to maintain index...
 es_getdata $(( NUMMESSAGES + 2000 )) 19200
-stop_elasticsearch
+#stop_elasticsearch
 
 seq_check  0 $((NUMMESSAGES - 1)) -d
 cleanup_elasticsearch

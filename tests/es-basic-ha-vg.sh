@@ -1,11 +1,10 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+export NUMMESSAGES=100
 export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
 export ES_PORT=19200
-download_elasticsearch
-prepare_elasticsearch
-start_elasticsearch
+ensure_elasticsearch_ready
 
 init_elasticsearch
 generate_conf
@@ -21,11 +20,10 @@ module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 				 bulkmode="on")
 '
 startup_vg
-injectmsg  0 100
+injectmsg
 wait_queueempty
 shutdown_when_empty
 wait_shutdown_vg
-es_getdata 100 $ES_PORT
-seq_check  0 99
-cleanup_elasticsearch
+es_getdata $NUMMESSAGES $ES_PORT
+seq_check
 exit_test

@@ -2,11 +2,7 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
-download_elasticsearch
-prepare_elasticsearch
-start_elasticsearch
-
-init_elasticsearch
+ensure_elasticsearch_ready
 generate_conf
 add_conf '
 template(name="tpl" type="string"
@@ -16,7 +12,7 @@ template(name="tpl" type="string"
 ruleset(name="stats") {
   action(type="omfile" file="'${RSYSLOG_DYNNAME}'.out.stats.log")
 }
-module(load="../plugins/impstats/.libs/impstats" interval="1" severity="7" resetCounters="off" Ruleset="stats" bracketing="on" format="json")
+module(load="../plugins/impstats/.libs/impstats" interval="2" severity="7" resetCounters="off" Ruleset="stats" bracketing="on" format="json")
 
 module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 :msg, contains, "msgnum:" action(type="omelasticsearch"
@@ -35,5 +31,4 @@ es_getdata 100 19200
 seq_check  0 99
 # The configuration makes every other request from message #3 fail checkConn (N/2-1)
 custom_content_check '"failed.checkConn": 49' "${RSYSLOG_DYNNAME}.out.stats.log"
-cleanup_elasticsearch
 exit_test

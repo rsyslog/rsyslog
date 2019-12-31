@@ -4,9 +4,7 @@
 export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
 export ES_PORT=19200
 export NUMMESSAGES=1000 # slow test, thus low number - large number is NOT necessary
-download_elasticsearch
-prepare_elasticsearch
-start_elasticsearch
+ensure_elasticsearch_ready
 
 init_elasticsearch
 curl -H 'Content-Type: application/json' -XPUT localhost:19200/rsyslog_testbench/ -d '{
@@ -47,5 +45,4 @@ then
     echo "error: error file does not exist!"
     error_exit 1
 fi
-cleanup_elasticsearch
 exit_test

@@ -1,7 +1,6 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
 export ES_PORT=19200
 export NUMMESSAGES=1000 # 1000 is sufficient, as this test is pretty slow
 REBIND_INTERVAL=100 # should be enough to run several times for $NUMMESSAGES
@@ -13,10 +12,7 @@ queue_empty_check() {
 }
 export QUEUE_EMPTY_CHECK_FUNC=queue_empty_check
 
-download_elasticsearch
-prepare_elasticsearch
-start_elasticsearch
-init_elasticsearch
+ensure_elasticsearch_ready
 
 generate_conf
 add_conf '
@@ -70,7 +66,6 @@ else
 	rc=1
 fi
 
-cleanup_elasticsearch
 if [ $rc != 0 ] ; then
 	error_exit 1
 else

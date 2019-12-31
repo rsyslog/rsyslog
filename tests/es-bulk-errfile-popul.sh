@@ -2,9 +2,7 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
-download_elasticsearch
-prepare_elasticsearch
-start_elasticsearch
+ensure_elasticsearch_ready
 
 init_elasticsearch
 curl -H 'Content-Type: application/json' -XPUT localhost:19200/rsyslog_testbench/ -d '{
@@ -44,5 +42,4 @@ then
     echo "error: error file does not exist!"
     exit 1
 fi
-cleanup_elasticsearch
 exit_test

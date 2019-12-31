@@ -16,11 +16,7 @@ export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
 export ES_PORT=19200
 export NUMMESSAGES=25000
 export QUEUE_EMPTY_CHECK_FUNC=es_shutdown_empty_check
-download_elasticsearch
-prepare_elasticsearch
-start_elasticsearch
-
-init_elasticsearch
+ensure_elasticsearch_ready
 generate_conf
 add_conf '
 global(workDirectory="'$RSYSLOG_DYNNAME'.spool")
@@ -53,5 +49,4 @@ echo FOR MANUAL REVIEW: pstats
 tail $RSYSLOG_DYNNAME.pstats | grep maxqsize
 es_getdata $NUMMESSAGES $ES_PORT
 seq_check
-cleanup_elasticsearch
 exit_test

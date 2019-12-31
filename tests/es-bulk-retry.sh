@@ -1,14 +1,13 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-
 export ES_PORT=19200
 export NUMMESSAGES=100
 override_test_timeout 120
 #export USE_VALGRIND="YES" # to enable this to run under valgrind
-
 download_elasticsearch
 prepare_elasticsearch
+
 # change settings to cause bulk rejection errors
 cat >> $dep_work_dir/es/config/elasticsearch.yml <<EOF
 thread_pool.bulk.queue_size: 1

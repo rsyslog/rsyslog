@@ -4,9 +4,7 @@
 export ES_PORT=19200
 export NUMMESSAGES=1500 # slow test, thus low number - large number is NOT necessary
 export QUEUE_EMPTY_CHECK_FUNC=es_shutdown_empty_check
-download_elasticsearch
-prepare_elasticsearch
-start_elasticsearch
+ensure_elasticsearch_ready
 
 generate_conf
 add_conf '
@@ -26,5 +24,4 @@ shutdown_when_empty
 wait_shutdown 
 es_getdata
 seq_check
-cleanup_elasticsearch
 exit_test
