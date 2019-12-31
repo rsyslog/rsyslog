@@ -1,5 +1,12 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
+- 2019-12-31: omelasticsearch: improve curl reply buffer handling
+  The curl reply buffer (pWrkrData->reply) was allocated, realloced and freed with
+  each request. This has now been reduced to once per module, slightly increasing
+  overall performance.
+  closes https://github.com/rsyslog/rsyslog/issues/1964
+- 2019-12-31: config system: emit proper error message on $ in double-quoted string
+  closes https://github.com/rsyslog/rsyslog/issues/2869
 - 2019-12-30: core bugfix: rsyslog aborts when config parse error is detected
   In defaut settings, rsyslog tries to continue to run, but some data
   structures are not properly initialized due to the config parsing error.
