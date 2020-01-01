@@ -1,5 +1,8 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
+- 2020-01-01: testbench: improve ElasticSearch test speed
+  We now support re-using suitable running ES instances, which reduces the
+  number of restarts.
 - 2019-12-31: omelasticsearch: improve curl reply buffer handling
   The curl reply buffer (pWrkrData->reply) was allocated, realloced and freed with
   each request. This has now been reduced to once per module, slightly increasing
