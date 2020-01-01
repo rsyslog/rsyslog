@@ -1528,6 +1528,9 @@ dep_kafka_cached_file=$dep_cache_dir/kafka_2.12-2.2.0.tgz
 if [ -z "$ES_DOWNLOAD" ]; then
 	export ES_DOWNLOAD=elasticsearch-5.6.9.tar.gz
 fi
+if [ -z "$ES_PORT" ]; then
+	export ES_PORT=19200
+fi
 dep_es_cached_file="$dep_cache_dir/$ES_DOWNLOAD"
 
 # kafka (including Zookeeper)
@@ -2026,6 +2029,27 @@ prepare_elasticsearch() {
 }
 
 
+# ensure that a basic, suitable instance of elasticsearch is running. This is part
+# of an effort to avoid restarting elasticsearch more often than necessary.
+ensure_elasticsearch_ready() {
+	if   printf '%s:%s:%s\n' "$ES_DOWNLOAD" "$ES_PORT" "$(cat es.pid)" \
+	   | cmp -b - elasticsearch.running
+	then
+		printf 'Elasticsearch already running, NOT restarting it\n'
+	else
+		cat elasticsearch.running
+		cleanup_elasticsearch
+		dep_es_cached_file="$dep_cache_dir/$ES_DOWNLOAD"
+		download_elasticsearch
+		prepare_elasticsearch
+		start_elasticsearch
+		printf '%s:%s:%s\n' "$ES_DOWNLOAD" "$ES_PORT" "$(cat es.pid)" > elasticsearch.running
+	fi
+	printf 'running elasticsearch instance: %s\n' "$(cat elasticsearch.running)"
+	init_elasticsearch
+}
+
+
 # $2, if set, is the number of additional ES instances
 start_elasticsearch() {
 	# Heap Size (limit to 128MB for testbench! defaults is way to HIGH)
@@ -2088,6 +2112,7 @@ es_shutdown_empty_check() {
 stop_elasticsearch() {
 	dep_work_dir=$(readlink -f $srcdir)
 	dep_work_es_pidfile="es.pid"
+	rm elasticsearch.running
 	if [ -e $dep_work_es_pidfile ]; then
 		es_pid=$(cat $dep_work_es_pidfile)
 		printf 'stopping ES with pid %d\n' $es_pid

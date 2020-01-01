@@ -1,10 +1,7 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-download_elasticsearch
-prepare_elasticsearch
-start_elasticsearch
-
+ensure_elasticsearch_ready
 generate_conf
 add_conf '
 template(name="tpl" type="string"
@@ -88,7 +85,6 @@ if $msg contains "msgnum:" then
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 
-export ES_PORT=19200
 init_elasticsearch
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="debug.log"
@@ -118,6 +114,4 @@ else
 	cat $RSYSLOG_OUT_LOG
 	error_exit 1
 fi
-
-cleanup_elasticsearch
 exit_test

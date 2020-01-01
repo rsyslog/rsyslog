@@ -2,10 +2,8 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=100 #10000
+ensure_elasticsearch_ready
 
-download_elasticsearch
-prepare_elasticsearch
-start_elasticsearch
 init_elasticsearch
 
 generate_conf
@@ -49,5 +47,4 @@ wait_shutdown
 seq_check  $(( NUMMESSAGES + 1 )) $(( NUMMESSAGES * 2 ))
 es_getdata $NUMMESSAGES 19200
 seq_check  0 $(( NUMMESSAGES - 1 ))
-cleanup_elasticsearch
 exit_test

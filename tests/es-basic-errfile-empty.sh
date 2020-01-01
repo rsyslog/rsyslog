@@ -5,9 +5,7 @@ export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
 export ES_PORT=19200
 export NUMMESSAGES=1500 # slow test, thus low number - large number is NOT necessary
 export QUEUE_EMPTY_CHECK_FUNC=es_shutdown_empty_check
-download_elasticsearch
-prepare_elasticsearch
-start_elasticsearch
+ensure_elasticsearch_ready
 
 init_elasticsearch
 generate_conf
@@ -33,5 +31,4 @@ then
     error_exit 1
 fi
 seq_check
-cleanup_elasticsearch
 exit_test
