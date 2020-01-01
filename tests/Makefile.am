@@ -56,101 +56,6 @@ endif
 endif # if ENABLE_JOURNAL_TESTS
 TESTS = $(TESTRUNS)
 
-if ENABLE_ELASTICSEARCH_TESTS_MINIMAL
-TESTS +=  \
-	es-duplicated-ruleset.sh
-# the following test need to be serialized:
-TESTS +=  \
-	es-basic.sh \
-	es-basic-es6.0.sh \
-	es-basic-bulk.sh
-es-basic-es6.0.log: es-basic.log
-es-basic-bulk.log: es-basic-es6.0.log
-es-basic-server.log: es-basic-bulk.log
-
-# special "test" for stopping ES once all ES tests are done
-TESTS += elasticsearch-stop.sh
-elasticsearch-stop.log: es-basic-bulk.log
-
-
-if HAVE_VALGRIND
-TESTS += \
-	es-duplicated-ruleset-vg.sh \
-	es-basic-vg.sh
-es-basic-vg.log: es-basic-bulk.log
-# for next if block:
-es-basic-server.log: es-basic-vg.log
-elasticsearch-stop.log: es-basic-vg.log
-if ENABLE_HELGRIND
-TESTS += \
-	es-basic-vgthread.sh
-es-basic-vgthread.log: es-basic-vg.log
-# for next if block:
-es-basic-server.log: es-basic-vgthread.log
-elasticsearch-stop.log: es-basic-vgthread.log
-endif # ENABLE_HELGRIND
-endif # HAVE_VALGRIND
-endif # ENABLE_ELASTICSEARCH_TESTS_MINIMAL
-
-if ENABLE_ELASTICSEARCH_TESTS
-TESTS +=  \
-	es-basic-server.sh \
-	es-execOnlyWhenPreviousSuspended.sh \
-	es-maxbytes-bulk.sh \
-	es-basic-errfile-empty.sh \
-	es-basic-errfile-popul.sh \
-	es-bulk-errfile-empty.sh \
-	es-bulk-errfile-popul.sh \
-	diskqueue-multithread-es.sh \
-	es-writeoperation.sh
-
-es-basic-server.log: es-basic-bulk.log
-es-execOnlyWhenPreviousSuspended.log: es-basic-server.log
-es-maxbytes-bulk.log: es-execOnlyWhenPreviousSuspended.log
-es-basic-errfile-empty.log: es-maxbytes-bulk.log
-es-basic-errfile-popul.log: es-basic-errfile-empty.log
-es-bulk-errfile-empty.log: es-basic-errfile-popul.log
-es-bulk-errfile-popul.log: es-bulk-errfile-empty.log
-diskqueue-multithread-es.log: es-bulk-errfile-popul.log
-es-writeoperation.log: diskqueue-multithread-es.log
-elasticsearch-stop.log: es-writeoperation.log
-
-if ENABLE_IMPSTATS
-TESTS +=  \
-	es-basic-ha.sh \
-	es-bulk-retry.sh
-
-es-basic-ha.log: es-writeoperation.log
-es-bulk-retry.log: es-basic-ha.log
-elasticsearch-stop.log: es-bulk-retry.log
-endif
-if ENABLE_IMFILE
-TESTS +=  \
-	es-bulk-errfile-popul-def-format.sh \
-	es-bulk-errfile-popul-erronly.sh \
-	es-bulk-errfile-popul-erronly-interleaved.sh \
-	es-bulk-errfile-popul-def-interleaved.sh
-
-es-bulk-errfile-popul-def-format.log: es-bulk-retry.log
-es-bulk-errfile-popul-erronly.log: es-bulk-errfile-popul-def-format.log
-es-bulk-errfile-popul-erronly-interleaved.log: es-bulk-errfile-popul-erronly.log
-es-bulk-errfile-popul-def-interleaved.log: es-bulk-errfile-popul-erronly-interleaved.log
-elasticsearch-stop.log: es-bulk-errfile-popul-def-interleaved.log
-endif
-if HAVE_VALGRIND
-TESTS +=  \
-	es-basic-bulk-vg.sh \
-	es-basic-ha-vg.sh
-
-es-basic-bulk-vg.log: es-writeoperation.log
-es-basic-bulk-vg.log: es-bulk-retry.log
-es-basic-bulk-vg.log: es-bulk-errfile-popul-def-interleaved.log
-es-basic-ha-vg.log: es-basic-bulk-vg.log
-elasticsearch-stop.log: es-basic-ha-vg.log
-endif
-endif # if ENABLE_ELASTICSEARCH_TESTS
-
-
 
 if ENABLE_DEFAULT_TESTS
 TESTS +=  \
@@ -510,6 +415,102 @@ TESTS +=  \
 endif # ENABLE_LIBGCRYPT
 endif # HAVE_VALGRIND
 endif # ENABLE_DEFAULT_TESTS
+
+
+if ENABLE_ELASTICSEARCH_TESTS_MINIMAL
+TESTS +=  \
+	es-duplicated-ruleset.sh
+# the following test need to be serialized:
+TESTS +=  \
+	es-basic.sh \
+	es-basic-es6.0.sh \
+	es-basic-bulk.sh
+es-basic-es6.0.log: es-basic.log
+es-basic-bulk.log: es-basic-es6.0.log
+es-basic-server.log: es-basic-bulk.log
+
+# special "test" for stopping ES once all ES tests are done
+TESTS += elasticsearch-stop.sh
+elasticsearch-stop.log: es-basic-bulk.log
+
+
+if HAVE_VALGRIND
+TESTS += \
+	es-duplicated-ruleset-vg.sh \
+	es-basic-vg.sh
+es-basic-vg.log: es-basic-bulk.log
+# for next if block:
+es-basic-server.log: es-basic-vg.log
+elasticsearch-stop.log: es-basic-vg.log
+if ENABLE_HELGRIND
+TESTS += \
+	es-basic-vgthread.sh
+es-basic-vgthread.log: es-basic-vg.log
+# for next if block:
+es-basic-server.log: es-basic-vgthread.log
+elasticsearch-stop.log: es-basic-vgthread.log
+endif # ENABLE_HELGRIND
+endif # HAVE_VALGRIND
+endif # ENABLE_ELASTICSEARCH_TESTS_MINIMAL
+
+if ENABLE_ELASTICSEARCH_TESTS
+TESTS +=  \
+	es-basic-server.sh \
+	es-execOnlyWhenPreviousSuspended.sh \
+	es-maxbytes-bulk.sh \
+	es-basic-errfile-empty.sh \
+	es-basic-errfile-popul.sh \
+	es-bulk-errfile-empty.sh \
+	es-bulk-errfile-popul.sh \
+	diskqueue-multithread-es.sh \
+	es-writeoperation.sh
+
+es-basic-server.log: es-basic-bulk.log
+es-execOnlyWhenPreviousSuspended.log: es-basic-server.log
+es-maxbytes-bulk.log: es-execOnlyWhenPreviousSuspended.log
+es-basic-errfile-empty.log: es-maxbytes-bulk.log
+es-basic-errfile-popul.log: es-basic-errfile-empty.log
+es-bulk-errfile-empty.log: es-basic-errfile-popul.log
+es-bulk-errfile-popul.log: es-bulk-errfile-empty.log
+diskqueue-multithread-es.log: es-bulk-errfile-popul.log
+es-writeoperation.log: diskqueue-multithread-es.log
+elasticsearch-stop.log: es-writeoperation.log
+
+if ENABLE_IMPSTATS
+TESTS +=  \
+	es-basic-ha.sh \
+	es-bulk-retry.sh
+
+es-basic-ha.log: es-writeoperation.log
+es-bulk-retry.log: es-basic-ha.log
+elasticsearch-stop.log: es-bulk-retry.log
+endif
+if ENABLE_IMFILE
+TESTS +=  \
+	es-bulk-errfile-popul-def-format.sh \
+	es-bulk-errfile-popul-erronly.sh \
+	es-bulk-errfile-popul-erronly-interleaved.sh \
+	es-bulk-errfile-popul-def-interleaved.sh
+
+es-bulk-errfile-popul-def-format.log: es-bulk-retry.log
+es-bulk-errfile-popul-erronly.log: es-bulk-errfile-popul-def-format.log
+es-bulk-errfile-popul-erronly-interleaved.log: es-bulk-errfile-popul-erronly.log
+es-bulk-errfile-popul-def-interleaved.log: es-bulk-errfile-popul-erronly-interleaved.log
+elasticsearch-stop.log: es-bulk-errfile-popul-def-interleaved.log
+endif
+if HAVE_VALGRIND
+TESTS +=  \
+	es-basic-bulk-vg.sh \
+	es-basic-ha-vg.sh
+
+es-basic-bulk-vg.log: es-writeoperation.log
+es-basic-bulk-vg.log: es-bulk-retry.log
+es-basic-bulk-vg.log: es-bulk-errfile-popul-def-interleaved.log
+es-basic-ha-vg.log: es-basic-bulk-vg.log
+elasticsearch-stop.log: es-basic-ha-vg.log
+endif
+endif # if ENABLE_ELASTICSEARCH_TESTS
+
 
 if ENABLE_SNMP
 TESTS +=  \
