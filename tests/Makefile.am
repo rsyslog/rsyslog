@@ -64,9 +64,11 @@ TESTS +=  \
 TESTS +=  \
 	es-basic.sh \
 	es-basic-es6.0.sh \
+	es-basic-bulk-es6.0.sh \
 	es-basic-bulk.sh
 es-basic-es6.0.log: es-basic.log
 es-basic-bulk.log: es-basic-es6.0.log
+es-basic-bulk.log: es-basic-bulk-es6.0.log
 es-basic-server.log: es-basic-bulk.log
 
 # special "test" for stopping ES once all ES tests are done
@@ -1963,6 +1965,7 @@ EXTRA_DIST= \
 	diskqueue-multithread-es.sh \
 	es-basic-vg.sh \
 	es-basic-bulk-vg.sh \
+	es-basic-bulk-es6.0.sh \
 	es-basic-ha-vg.sh \
 	es-maxbytes-bulk.sh \
 	es-bulk-retry.sh \
