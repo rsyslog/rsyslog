@@ -25,5 +25,4 @@ printf 'preparing mysqld for testbench use...\n'
 $SUDO ${srcdir}/../devtools/prep-mysql-db.sh
 printf 'done, mysql ready for testbench\n'
 ps -ef |grep bin.mysqld
-exit 77 # we want to see this test's log in any case
 exit_test
