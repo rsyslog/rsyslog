@@ -6,7 +6,7 @@ export NUMMESSAGES=50 # sufficient for our needs!
 export SEQ_CHECK_OPTIONS=-i2
 check_sql_data_ready() {
 	mysql_get_data
-	seq_check --check-only
+	seq_check --check-only 0 $((NUMMESSAGES - 2))
 }
 export QUEUE_EMPTY_CHECK_FUNC=check_sql_data_ready
 

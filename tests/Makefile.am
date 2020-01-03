@@ -159,6 +159,7 @@ TESTS +=  \
 	operatingstate-empty.sh \
 	operatingstate-unclean.sh \
 	smtradfile.sh \
+	loadbalance.sh \
 	empty-hostname.sh \
 	hostname-getaddrinfo-fail.sh \
 	msleep_usage_output.sh \
@@ -1500,6 +1501,7 @@ EXTRA_DIST= \
 	urlencode.py \
 	dnscache-TTL-0.sh \
 	dnscache-TTL-0-vg.sh \
+	loadbalance.sh \
 	smtradfile.sh \
 	smtradfile-vg.sh \
 	immark.sh \
