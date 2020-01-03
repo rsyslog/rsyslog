@@ -36,5 +36,5 @@ wait_shutdown
 export EXPECTED="$(cat ${srcdir}/testsuites/action-tx-errfile.result)"
 cmp_exact ${RSYSLOG2_OUT_LOG}
 mysql_get_data
-seq_check
+seq_check  0 $((NUMMESSAGES - 2)) -i2
 exit_test
