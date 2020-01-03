@@ -3,6 +3,7 @@
 # imdocker unit tests are enabled with --enable-imdocker-tests
 . ${srcdir:=.}/diag.sh init
 NUMMESSAGES=1000
+export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 export COOKIE=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 10 | head -n 1)
 #QUEUE_EMPTY_CHECK_FUNC=wait_seq_check
 
