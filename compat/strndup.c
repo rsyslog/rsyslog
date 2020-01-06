@@ -21,15 +21,20 @@
 #include "config.h"
 #ifndef HAVE_STRNDUP
 
+
 #include <stdlib.h>
 #include <string.h>
+
+extern char *strndup(const char *s, size_t n);
+
 char *
 strndup(const char *s, size_t n)
 {
 	const size_t len = strlen(s);
+	char *new_s;
 	if(len <= n)
 		return strdup(s);
-	char *const new_s = malloc(n+1);
+	new_s = malloc(n+1);
 	if(new_s == NULL)
 		return NULL;
 	memcpy(new_s, s, n);
