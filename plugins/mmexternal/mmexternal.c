@@ -472,8 +472,8 @@ callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, smsg_t *__restrict
 			switch(errno) {
 			case EPIPE:
 				LogMsg(0, RS_RET_ERR_WRITE_PIPE, LOG_WARNING,
-						"mmexternal: program '%s' (pid %d) terminated; will be restarted",
-						pWrkrData->pData->szBinary, pWrkrData->pid);
+						"mmexternal: program '%s' (pid %ld) terminated; will be restarted",
+						pWrkrData->pData->szBinary, (long) pWrkrData->pid);
 				CHKiRet(cleanup(pWrkrData));
 				CHKiRet(tryRestart(pWrkrData));
 				writeOffset = 0;
