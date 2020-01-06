@@ -1518,12 +1518,14 @@ presort() {
 
 #START: ext kafka config
 #dep_cache_dir=$(readlink -f .dep_cache)
+export RS_ZK_DOWNLOAD=zookeeper-3.4.14.tar.gz
 dep_cache_dir=$(pwd)/.dep_cache
-dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.14/zookeeper-3.4.14.tar.gz
-dep_zk_cached_file=$dep_cache_dir/zookeeper-3.4.14.tar.gz
+dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.14/$RS_ZK_DOWNLOAD
+dep_zk_cached_file=$dep_cache_dir/$RS_ZK_DOWNLOAD
 
+export RS_KAFKA_DOWNLOAD=kafka_2.12-2.2.0.tgz
 dep_kafka_url=http://www-us.apache.org/dist/kafka/2.2.0/kafka_2.12-2.2.0.tgz
-dep_kafka_cached_file=$dep_cache_dir/kafka_2.12-2.2.0.tgz
+dep_kafka_cached_file=$dep_cache_dir/$RS_KAFKA_DOWNLOAD
 
 if [ -z "$ES_DOWNLOAD" ]; then
 	export ES_DOWNLOAD=elasticsearch-5.6.9.tar.gz
@@ -1579,29 +1581,39 @@ download_kafka() {
 		mkdir $dep_cache_dir
 	fi
 	if [ ! -f $dep_zk_cached_file ]; then
-		echo "Downloading zookeeper"
-		wget -q $dep_zk_url -O $dep_zk_cached_file
-		if [ $? -ne 0 ]
-		then
-			echo error during wget, retry:
-			wget $dep_zk_url -O $dep_zk_cached_file
+		if [ -f /local_dep_cache/$RS_ZK_DOWNLOAD ]; then
+			printf 'Zookeeper: satisfying dependency %s from system cache.\n' "$RS_ZK_DOWNLOAD"
+			cp /local_dep_cache/$RS_ZK_DOWNLOAD $dep_zk_cached_file
+		else
+			echo "Downloading zookeeper"
+			wget -q $dep_zk_url -O $dep_zk_cached_file
 			if [ $? -ne 0 ]
 			then
-				error_exit 1
+				echo error during wget, retry:
+				wget $dep_zk_url -O $dep_zk_cached_file
+				if [ $? -ne 0 ]
+				then
+					error_exit 1
+				fi
 			fi
 		fi
 	fi
 	if [ ! -f $dep_kafka_cached_file ]; then
-		echo "Downloading kafka"
-		wget -q $dep_kafka_url -O $dep_kafka_cached_file
-		if [ $? -ne 0 ]
-		then
-			echo error during wget, retry:
-			wget $dep_kafka_url -O $dep_kafka_cached_file
+		if [ -f /local_dep_cache/$RS_KAFKA_DOWNLOAD ]; then
+			printf 'Kafka: satisfying dependency %s from system cache.\n' "$RS_KAFKA_DOWNLOAD"
+			cp /local_dep_cache/$RS_KAFKA_DOWNLOAD $dep_kafka_cached_file
+		else
+			echo "Downloading kafka"
+			wget -q $dep_kafka_url -O $dep_kafka_cached_file
 			if [ $? -ne 0 ]
 			then
-				rm $dep_kafka_cached_file # a 0-size file may be left over
-				error_exit 1
+				echo error during wget, retry:
+				wget $dep_kafka_url -O $dep_kafka_cached_file
+				if [ $? -ne 0 ]
+				then
+					rm $dep_kafka_cached_file # a 0-size file may be left over
+					error_exit 1
+				fi
 			fi
 		fi
 	fi
@@ -1775,6 +1787,7 @@ start_kafka() {
 	printf '%s starting kafka\n' "$(tb_timestamp)"
 
 	# Force IPv4 usage of Kafka!
+	export KAFKA_HEAP_OPTS="-Xms256m -Xmx256m" # we need to take care for smaller CI systems!
 	export KAFKA_OPTS="-Djava.net.preferIPv4Stack=True"
 	if [ "x$1" == "x" ]; then
 		dep_work_dir=$(readlink -f .dep_wrk)
@@ -1826,6 +1839,11 @@ start_kafka() {
 			echo "Kafka instance $dep_work_kafka_config (PID $kafkapid) started ... "
 		else
 			echo "Failed to start Kafka instance for $dep_work_kafka_config"
+			echo "displaying all kafka logs now:"
+			for logfile in $dep_work_dir/logs/*; do
+				echo "FILE: $logfile"
+				cat $logfile
+			done
 			error_exit 77
 		fi
 	fi
