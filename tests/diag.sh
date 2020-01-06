@@ -2160,7 +2160,7 @@ omhttp_start_server() {
 
     server_args="-p $omhttp_server_port ${*:2}"
 
-    $PYTHON ${omhttp_server_py} ${server_args} >> ${omhttp_server_logfile} 2>&1 &
+    timeout 30m $PYTHON ${omhttp_server_py} ${server_args} >> ${omhttp_server_logfile} 2>&1 &
     if [ ! $? -eq 0 ]; then
         echo "Failed to start omhttp test server."
         rm -rf $omhttp_work_dir
