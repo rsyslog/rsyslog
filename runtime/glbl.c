@@ -668,7 +668,7 @@ glblReportOversizeMessage(void)
 void
 glblReportChildProcessExit(const uchar *name, pid_t pid, int status)
 {
-	DBGPRINTF("waitpid for child %d returned status: %2.2x\n", pid, status);
+	DBGPRINTF("waitpid for child %ld returned status: %2.2x\n", (long) pid, status);
 
 	if(reportChildProcessExits == REPORT_CHILD_PROCESS_EXITS_NONE
 		|| (reportChildProcessExits == REPORT_CHILD_PROCESS_EXITS_ERRORS
@@ -679,19 +679,19 @@ glblReportChildProcessExit(const uchar *name, pid_t pid, int status)
 	if(WIFEXITED(status)) {
 		int severity = WEXITSTATUS(status) == 0 ? LOG_INFO : LOG_WARNING;
 		if(name != NULL) {
-			LogMsg(0, NO_ERRCODE, severity, "program '%s' (pid %d) exited with status %d",
-					name, pid, WEXITSTATUS(status));
+			LogMsg(0, NO_ERRCODE, severity, "program '%s' (pid %ld) exited with status %d",
+					name, (long) pid, WEXITSTATUS(status));
 		} else {
-			LogMsg(0, NO_ERRCODE, severity, "child process (pid %d) exited with status %d",
-					pid, WEXITSTATUS(status));
+			LogMsg(0, NO_ERRCODE, severity, "child process (pid %ld) exited with status %d",
+					(long) pid, WEXITSTATUS(status));
 		}
 	} else if(WIFSIGNALED(status)) {
 		if(name != NULL) {
-			LogMsg(0, NO_ERRCODE, LOG_WARNING, "program '%s' (pid %d) terminated by signal %d",
-					name, pid, WTERMSIG(status));
+			LogMsg(0, NO_ERRCODE, LOG_WARNING, "program '%s' (pid %ld) terminated by signal %d",
+					name, (long) pid, WTERMSIG(status));
 		} else {
-			LogMsg(0, NO_ERRCODE, LOG_WARNING, "child process (pid %d) terminated by signal %d",
-					pid, WTERMSIG(status));
+			LogMsg(0, NO_ERRCODE, LOG_WARNING, "child process (pid %ld) terminated by signal %d",
+					(long) pid, WTERMSIG(status));
 		}
 	}
 }

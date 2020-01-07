@@ -44,7 +44,7 @@
 #include <fnmatch.h>
 #include <fcntl.h>
 #include <unistd.h>
-#if HAVE_GETIFADDRS
+#ifdef HAVE_GETIFADDRS
 #include <ifaddrs.h>
 #else
 #include "compat/ifaddrs.h"

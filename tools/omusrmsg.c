@@ -53,7 +53,7 @@
 #else
 #include <sys/msgbuf.h>
 #endif
-#if HAVE_PATHS_H
+#ifdef HAVE_PATHS_H
 #include <paths.h>
 #endif
 #include "rsyslog.h"

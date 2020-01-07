@@ -581,7 +581,7 @@ static void doDropPrivUid(int iUid)
 	if (pw) {
 		gid = getgid();
 		res = initgroups(pw->pw_name, gid);
-		DBGPRINTF("initgroups(%s, %d): %d\n", pw->pw_name, gid, res);
+		DBGPRINTF("initgroups(%s, %ld): %d\n", pw->pw_name, (long) gid, res);
 	} else {
 		rs_strerror_r(errno, (char*)szBuf, sizeof(szBuf));
 		LogError(0, NO_ERRCODE,
