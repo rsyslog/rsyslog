@@ -1,5 +1,14 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
+- 2010-01-07: tls subsystem bugfix: default for permitExpiredCerts was invalidly "on"
+  The problem occured with commit 3d9b8df in December 2018 and went into
+  scheduled stable 8.1901.0. Unfortunately, the change in default was not detected
+  until a year later. This commit re-enables the previous default ("off"), which is
+  also the only sensible default from a security PoV. Unfortunately, new 2019
+  deployments may begin to see connection rejection when usin expired certs. As
+  expired certs should not be used, this hopefully will not cause problems in
+  practice.
+  Thanks to Jiri Vymazal for the patch.
 - 2020-01-01: testbench: improve ElasticSearch test speed
   We now support re-using suitable running ES instances, which reduces the
   number of restarts.
