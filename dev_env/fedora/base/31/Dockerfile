@@ -76,10 +76,11 @@ ENV	TCL_LIB_SPEC="-L/usr/lib64 -ltcl8.6" \
 RUN	mkdir /local_dep_cache && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch-5.6.9.tar.gz && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz && \
-	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.3.1.tar.gz -O /local_dep_cache/elasticsearch-6.3.1.tar.gz
+	wget -nv https://www-us.apache.org/dist/zookeeper/zookeeper-3.4.14/zookeeper-3.4.14.tar.gz -O /local_dep_cache/zookeeper-3.4.14.tar.gz && \
+	wget -nv http://www-us.apache.org/dist/kafka/2.2.0/kafka_2.12-2.2.0.tgz -O /local_dep_cache/kafka_2.12-2.2.0.tgz 
 # tell tests which are the newester versions, so they can be checked without the need
 # to adjust test sources.
-ENV	ELASTICSEARCH_NEWEST="elasticsearch-6.3.1.tar.gz"
+#ENV	ELASTICSEARCH_NEWEST="elasticsearch-6.3.1.tar.gz"
 WORKDIR	/home/devel
 RUN	groupadd rsyslog \
 	&& adduser -g rsyslog  -s /bin/bash rsyslog \
@@ -188,6 +189,17 @@ RUN	cd helper-projects && \
 # Note: we do NOT delete the source as we may need it to
 # uninstall (in case the user wants to go back to system-default)
 	cd ..
+
+# kafkacat
+RUN	cd helper-projects \
+	&& git clone https://github.com/edenhill/kafkacat \
+	&& cd kafkacat \
+	&& (unset CFLAGS; ./configure --prefix=/usr --CFLAGS="-g" ; make -j2) \
+	&& make install \
+	&& cd .. \
+	&& cd ..
+# Note: we do NOT delete the source as we may need it to
+# uninstall (in case the user wants to go back to system-default)
 
 # next ENV is specifically for running scan-build - so we do not need to
 # change scripts if at a later time we can move on to a newer version
