@@ -409,8 +409,8 @@ sendMessage(instanceData *pData, childProcessCtx_t *pChildCtx, const uchar *szMs
 			}
 			if(errno == EPIPE) {
 				LogMsg(0, RS_RET_ERR_WRITE_PIPE, LOG_WARNING,
-						"omprog: program '%s' (pid %d) terminated; will be restarted",
-						pData->szBinary, pChildCtx->pid);
+						"omprog: program '%s' (pid %ld) terminated; will be restarted",
+						pData->szBinary, (long) pChildCtx->pid);
 				cleanupChild(pData, pChildCtx);  /* force restart in tryResume() */
 				ABORT_FINALIZE(RS_RET_SUSPENDED);
 			}
