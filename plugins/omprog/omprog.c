@@ -6,7 +6,7 @@
  *
  * File begun on 2009-04-01 by RGerhards
  *
- * Copyright 2009-2018 Adiscon GmbH.
+ * Copyright 2009-2020 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -326,14 +326,14 @@ waitForChild(instanceData *pData, childProcessCtx_t *pChildCtx)
 
 	if (ret == 0) {  /* timeout reached */
 		if (!pData->bKillUnresponsive) {
-			LogMsg(0, NO_ERRCODE, LOG_WARNING, "omprog: program '%s' (pid %d) did not terminate "
-					"within timeout (%ld ms); ignoring it", pData->szBinary, pChildCtx->pid,
-					pData->lCloseTimeout);
+			LogMsg(0, NO_ERRCODE, LOG_WARNING, "omprog: program '%s' (pid %ld) did not terminate "
+					"within timeout (%ld ms); ignoring it", pData->szBinary,
+					(long) pChildCtx->pid, pData->lCloseTimeout);
 			return;
 		}
 
-		LogMsg(0, NO_ERRCODE, LOG_WARNING, "omprog: program '%s' (pid %d) did not terminate "
-				"within timeout (%ld ms); killing it", pData->szBinary, pChildCtx->pid,
+		LogMsg(0, NO_ERRCODE, LOG_WARNING, "omprog: program '%s' (pid %ld) did not terminate "
+				"within timeout (%ld ms); killing it", pData->szBinary, (long) pChildCtx->pid,
 				pData->lCloseTimeout);
 		if (kill(pChildCtx->pid, SIGKILL) == -1) {
 			LogError(errno, RS_RET_SYS_ERR, "omprog: could not send SIGKILL to child process");
@@ -477,9 +477,9 @@ readStatus(instanceData *pData, childProcessCtx_t *pChildCtx)
 		}
 
 		if(numReady == 0) {  /* timeout reached */
-			LogMsg(0, RS_RET_TIMED_OUT, LOG_WARNING, "omprog: program '%s' (pid %d) did not respond "
-					"within timeout (%ld ms); will be restarted", pData->szBinary, pChildCtx->pid,
-					pData->lConfirmTimeout);
+			LogMsg(0, RS_RET_TIMED_OUT, LOG_WARNING, "omprog: program '%s' (pid %ld) did not respond "
+					"within timeout (%ld ms); will be restarted", pData->szBinary,
+					(long) pChildCtx->pid, pData->lConfirmTimeout);
 			terminateChild(pData, pChildCtx);
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
@@ -494,8 +494,8 @@ readStatus(instanceData *pData, childProcessCtx_t *pChildCtx)
 		}
 
 		if(lenRead == 0) {
-			LogMsg(0, RS_RET_READ_ERR, LOG_WARNING, "omprog: program '%s' (pid %d) terminated; "
-					"will be restarted", pData->szBinary, pChildCtx->pid);
+			LogMsg(0, RS_RET_READ_ERR, LOG_WARNING, "omprog: program '%s' (pid %ld) terminated; "
+					"will be restarted", pData->szBinary, (long) pChildCtx->pid);
 			cleanupChild(pData, pChildCtx);
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
@@ -1139,8 +1139,8 @@ BEGINdoHUP
 CODESTARTdoHUP
 	if(pData->bForceSingleInst && pData->iHUPForward != NO_HUP_FORWARD &&
 			pData->pSingleChildCtx->bIsRunning) {
-		DBGPRINTF("omprog: forwarding HUP to program '%s' (pid %d) as signal %d\n",
-				pData->szBinary, pData->pSingleChildCtx->pid, pData->iHUPForward);
+		DBGPRINTF("omprog: forwarding HUP to program '%s' (pid %ld) as signal %d\n",
+				pData->szBinary, (long) pData->pSingleChildCtx->pid, pData->iHUPForward);
 		kill(pData->pSingleChildCtx->pid, pData->iHUPForward);
 	}
 
@@ -1154,8 +1154,8 @@ BEGINdoHUPWrkr
 CODESTARTdoHUPWrkr
 	if(!pWrkrData->pData->bForceSingleInst && pWrkrData->pData->iHUPForward != NO_HUP_FORWARD &&
 	 		pWrkrData->pChildCtx->bIsRunning) {
-		DBGPRINTF("omprog: forwarding HUP to program '%s' (pid %d) as signal %d\n",
-				pWrkrData->pData->szBinary, pWrkrData->pChildCtx->pid,
+		DBGPRINTF("omprog: forwarding HUP to program '%s' (pid %ld) as signal %d\n",
+				pWrkrData->pData->szBinary, (long) pWrkrData->pChildCtx->pid,
 				pWrkrData->pData->iHUPForward);
 		kill(pWrkrData->pChildCtx->pid, pWrkrData->pData->iHUPForward);
 	}
