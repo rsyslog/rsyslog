@@ -1461,16 +1461,16 @@ SetPermitExpiredCerts(nsd_t *pNsd, uchar *mode)
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 
 	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-	/* default is set to warn! */
-	if(mode == NULL || !strcasecmp((char*)mode, "warn")) {
-		pThis->permitExpiredCerts = GTLS_EXPIRED_WARN;
-	} else if(!strcasecmp((char*) mode, "off")) {
+	/* default is set to off! */
+	if(mode == NULL || !strcasecmp((char*)mode, "off")) {
 		pThis->permitExpiredCerts = GTLS_EXPIRED_DENY;
+	} else if(!strcasecmp((char*) mode, "warn")) {
+		pThis->permitExpiredCerts = GTLS_EXPIRED_WARN;
 	} else if(!strcasecmp((char*) mode, "on")) {
 		pThis->permitExpiredCerts = GTLS_EXPIRED_PERMIT;
 	} else {
 		LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: permitexpiredcerts mode '%s' not supported by "
-				"ossl netstream driver", mode);
+				"gtls netstream driver", mode);
 		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
 	}
 

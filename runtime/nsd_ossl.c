@@ -1130,11 +1130,11 @@ SetPermitExpiredCerts(nsd_t *pNsd, uchar *mode)
 	nsd_ossl_t *pThis = (nsd_ossl_t*) pNsd;
 
 	ISOBJ_TYPE_assert((pThis), nsd_ossl);
-	/* default is set to warn! */
-	if(mode == NULL || !strcasecmp((char*)mode, "warn")) {
-		pThis->permitExpiredCerts = OSSL_EXPIRED_WARN;
-	} else if(!strcasecmp((char*) mode, "off")) {
+	/* default is set to off! */
+	if(mode == NULL || !strcasecmp((char*)mode, "off")) {
 		pThis->permitExpiredCerts = OSSL_EXPIRED_DENY;
+	} else if(!strcasecmp((char*) mode, "warn")) {
+		pThis->permitExpiredCerts = OSSL_EXPIRED_WARN;
 	} else if(!strcasecmp((char*) mode, "on")) {
 		pThis->permitExpiredCerts = OSSL_EXPIRED_PERMIT;
 	} else {
