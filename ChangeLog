@@ -1,6 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
-- 2010-01-07: tls subsystem bugfix: default for permitExpiredCerts was invalidly "on"
+- 2020-01-08: modernization of testbench
+  moved some tests to newer standards, hardened them against slow testbench machines,
+  kafka component download improvements, and prevent dangling left-over test tool
+  instances from aborted tests
+- 2020-01-07: tls subsystem bugfix: default for permitExpiredCerts was invalidly "on"
   The problem occured with commit 3d9b8df in December 2018 and went into
   scheduled stable 8.1901.0. Unfortunately, the change in default was not detected
   until a year later. This commit re-enables the previous default ("off"), which is
