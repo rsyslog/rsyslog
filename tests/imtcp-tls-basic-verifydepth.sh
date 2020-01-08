@@ -15,7 +15,7 @@ module(	load="../plugins/imtcp/.libs/imtcp"
 	StreamDriver.TlsVerifyDepth="5" 
 	StreamDriver.Mode="1"
 	StreamDriver.AuthMode="x509/certvalid" )
-input(	type="imtcp" port="'$TCPFLOOD_PORT'" )
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 $template outfmt,"%msg:F,58:2%\n"
 :msg, contains, "msgnum:" action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
@@ -24,7 +24,6 @@ $template outfmt,"%msg:F,58:2%\n"
 # Begin actual testcase
 startup
 tcpflood -p$TCPFLOOD_PORT -m$NUMMESSAGES -Ttls -x$srcdir/tls-certs/ca.pem -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem
-wait_file_lines
 shutdown_when_empty
 wait_shutdown
 seq_check
