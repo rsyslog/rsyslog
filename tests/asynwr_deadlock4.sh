@@ -15,7 +15,8 @@ generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
 $MainMsgQueueTimeoutShutdown 10000
-$InputTCPServerRun '$TCPFLOOD_PORT'
+$InputTCPServerListenPortFile '$RSYSLOG_DYNNAME'.tcpflood_port
+$InputTCPServerRun 0
 
 $template outfmt,"%msg:F,58:3%,%msg:F,58:4%,%msg:F,58:5%\n"
 template(name="dynfile" type="string" string="'$RSYSLOG_OUT_LOG'")

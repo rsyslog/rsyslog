@@ -8,18 +8,15 @@ echo "testing a good Configuration verification run"
 generate_conf
 add_conf '
 $AbortOnUncleanConfig on
-
-$ModLoad ../plugins/imtcp/.libs/imtcp
 $MainMsgQueueTimeoutShutdown 10000
-$InputTCPServerRun '$TCPFLOOD_PORT'
 
 $template outfmt,"%msg:F,58:2%\n"
 template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
 startup
-tcpflood -m10 -i1 
-shutdown_when_empty # shut down rsyslogd when done processing messages
+injectmsg 1 10
+shutdown_when_empty
 wait_shutdown
 
 if [ ! -e  $RSYSLOG_OUT_LOG ]

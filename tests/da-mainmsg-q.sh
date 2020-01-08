@@ -13,7 +13,7 @@ generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
 $MainMsgQueueTimeoutShutdown 10000
-$InputTCPServerRun '$TCPFLOOD_PORT'
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 # set spool locations and switch queue to disk assisted mode
 $WorkDirectory '$RSYSLOG_DYNNAME'.spool

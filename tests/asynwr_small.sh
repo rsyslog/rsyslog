@@ -11,16 +11,15 @@
 #
 # added 2010-03-09 by Rgerhards
 #
-# This file is part of the rsyslog project, released  under GPLv3
-echo ===============================================================================
-echo TEST: \[asynwr_small.sh\]: test for async file writing for few messages
+# This file is part of the rsyslog project, released  under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-export CI_SHUTDOWN_QUEUE_EMPTY_CHECKS=20 # this test is notoriously slow...
+export NUMMESSAGES=2
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
 $MainMsgQueueTimeoutShutdown 10000
-$InputTCPServerRun '$TCPFLOOD_PORT'
+$InputTCPServerListenPortFile '$RSYSLOG_DYNNAME'.tcpflood_port
+$InputTCPServerRun 0
 
 $template outfmt,"%msg:F,58:2%\n"
 template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!
@@ -33,9 +32,7 @@ $OMFileAsyncWriting on
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="log"
 startup
-# send 4000 messages
-tcpflood -m2
-shutdown_when_empty # shut down rsyslogd when done processing messages
-wait_shutdown       # and wait for it to terminate
-seq_check 0 1
+tcpflood
+shutdown_when_empty
+wait_shutdown
 exit_test
