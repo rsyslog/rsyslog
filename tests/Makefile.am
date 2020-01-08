@@ -188,6 +188,7 @@ TESTS +=  \
 	nested-call-shutdown.sh \
 	dnscache-TTL-0.sh \
 	invalid_nested_include.sh \
+	omfwd-tls-invalid-permitExpiredCerts.sh \
 	omfwd-keepalive.sh \
 	omusrmsg-noabort-legacy.sh \
 	omusrmsg-errmsg-no-params.sh \
@@ -1730,6 +1731,7 @@ EXTRA_DIST= \
 	rscript_set_modify.sh \
 	stop-localvar.sh \
 	stop-msgvar.sh \
+	omfwd-tls-invalid-permitExpiredCerts.sh \
 	omfwd-keepalive.sh \
 	omfile_hup-vg.sh \
 	gzipwr_hup-vg.sh \
