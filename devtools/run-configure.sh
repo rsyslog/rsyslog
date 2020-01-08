@@ -1,5 +1,9 @@
 #!/bin/bash
 printf "running configure with\nCC:\t$CC\nCFLAGS:\t$CFLAGS\n"
+if [ "$RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE" != "" ]; then
+	RSYSLOG_CONFIGURE_OPTIONS="$RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE"
+fi
+
 export CONFIGURE_OPTS_OVERRIDE=
 grep "sanitize.*=.*address" <<< "$CFLAGS" >/dev/null
 if [ $? -eq 0 ]; then
