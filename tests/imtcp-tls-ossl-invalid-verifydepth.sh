@@ -6,9 +6,9 @@ add_conf '
 module(	load="../plugins/imtcp/.libs/imtcp"
 	StreamDriver.Name="ossl"
 	streamdriver.TlsVerifyDepth="1" )
-input(	type="imtcp"
-	port="'$TCPFLOOD_PORT'" )
 
+# input is not really needed, just given for completeness
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 '
 
