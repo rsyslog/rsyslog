@@ -480,6 +480,9 @@ reassign_ports() {
 	if grep -q 'listenPortFileName="'$RSYSLOG_DYNNAME'\.tcpflood_port"' $CONF_FILE; then
 		assign_tcpflood_port $RSYSLOG_DYNNAME.tcpflood_port
 	fi
+	if [ "$ASSIGN_TCPFLOOD_PORT_FROM_FILE" = "YES" ] ; then
+		assign_tcpflood_port $RSYSLOG_DYNNAME.tcpflood_port
+	fi
 }
 
 # start rsyslogd with default params. $1 is the config file name to use

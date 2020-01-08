@@ -107,6 +107,7 @@ static struct configSettings_s {
 	uchar *pszInputName;
 	uchar *pszBindRuleset;
 	uchar *lstnIP;			/* which IP we should listen on? */
+	uchar *lstnPortFile;
 } cs;
 
 struct instanceConf_s {
@@ -335,6 +336,11 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		inst->pszBindAddr = NULL;
 	} else {
 		CHKmalloc(inst->pszBindAddr = ustrdup(cs.lstnIP));
+	}
+	if((cs.lstnPortFile == NULL) || (cs.lstnPortFile[0] == '\0')) {
+		inst->pszBindAddr = NULL;
+	} else {
+		CHKmalloc(inst->pszLstnPortFileName = ustrdup(cs.lstnPortFile));
 	}
 
 	if((cs.pszInputName == NULL) || (cs.pszInputName[0] == '\0')) {
@@ -774,6 +780,8 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 	free(cs.pszStrmDrvrAuthMode);
 	cs.pszStrmDrvrAuthMode = NULL;
 	cs.bPreserveCase = 1;
+	free(cs.lstnPortFile);
+	cs.lstnPortFile = NULL;
 	return RS_RET_OK;
 }
 
@@ -842,9 +850,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 			   NULL, &cs.iStrmDrvrMode, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpserverpreservecase"), 1, eCmdHdlrBinary,
 			   NULL, &cs.bPreserveCase, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpserverlistenportfile"), 1, eCmdHdlrGetWord,
+			   NULL, &cs.lstnPortFile, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("resetconfigvariables"), 1, eCmdHdlrCustomHandler,
 				   resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
-
-/* vim:set ai:
- */
