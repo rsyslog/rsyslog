@@ -1,5 +1,15 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
+- 2020-01-08: tls driver: add support to configure certificate verify depth
+  Support added in omfwd as instance parameter:
+  streamdriver.TlsVerifyDepth
+  Support added in imtcp as module parameter:
+  streamdriver.TlsVerifyDepth
+  Can be 2 or higher.
+  Support added into ossl driver
+  Support added into gtls driver
+  Added testcases for both drivers.
+  closes: https://github.com/rsyslog/rsyslog/issues/4035
 - 2020-01-08: modernization of testbench
   moved some tests to newer standards, hardened them against slow testbench machines,
   kafka component download improvements, and prevent dangling left-over test tool
