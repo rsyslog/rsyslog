@@ -6,18 +6,18 @@ export NUMMESSAGES=50000
 export QUEUE_EMPTY_CHECK_FUNC=wait_seq_check
 generate_conf
 add_conf '
-$ModLoad ../plugins/imtcp/.libs/imtcp
+global( defaultNetstreamDriverCAFile="'$srcdir'/tls-certs/ca.pem"
+	defaultNetstreamDriverCertFile="'$srcdir'/tls-certs/cert.pem"
+	defaultNetstreamDriverKeyFile="'$srcdir'/tls-certs/key.pem")
 
-$DefaultNetstreamDriver gtls
+module(load="../plugins/imtcp/.libs/imtcp"
+	StreamDriver.Name="gtls"
+	StreamDriver.Mode="1"
+	StreamDriver.AuthMode="anon" )
 
-$DefaultNetstreamDriverCAFile '$srcdir'/tls-certs/ca.pem
-$DefaultNetstreamDriverCertFile '$srcdir'/tls-certs/cert.pem
-$DefaultNetstreamDriverKeyFile '$srcdir'/tls-certs/key.pem
-$InputTCPServerStreamDriverMode 1
-$InputTCPServerStreamDriverAuthMode anon
-$InputTCPServerRun '$TCPFLOOD_PORT'
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
-$template outfmt,"%msg:F,58:2%\n"
+template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 :msg, contains, "msgnum:" action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
