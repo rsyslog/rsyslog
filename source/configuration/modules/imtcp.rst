@@ -298,6 +298,26 @@ StreamDriver.PrioritizeSAN
 Whether to use stricter SAN/CN matching. (driver-specific)
 
 
+StreamDriver.TlsVerifyDepth
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "TLS library default", "no", "none"
+
+
+Specifies the allowed maximum depth for the certificate chain verification.
+Support added in v8.2001.0, supported by GTLS and OpenSSL driver.
+If not set, the API default will be used. 
+For OpenSSL, the default is 100 - see the doc for more:
+https://www.openssl.org/docs/man1.1.1/man3/SSL_set_verify_depth.html
+For GnuTLS, the default is 5 - see the doc for more:
+https://www.gnutls.org/manual/gnutls.html
+
+
 PermittedPeer
 ^^^^^^^^^^^^^
 
