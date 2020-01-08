@@ -1,28 +1,26 @@
 #!/bin/bash
-# added 2018-04-27 by alorbach
+# added 2011-02-28 by Rgerhards
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-export NUMMESSAGES=10000
+export NUMMESSAGES=1000
+export QUEUE_EMPTY_CHECK_FUNC=wait_seq_check
 generate_conf
 add_conf '
 global(	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
 	defaultNetstreamDriverCertFile="'$srcdir/tls-certs/cert.pem'"
 	defaultNetstreamDriverKeyFile="'$srcdir/tls-certs/key.pem'"
-#	debug.whitelist="on"
-#	debug.files=["nsd_ossl.c", "tcpsrv.c", "nsdsel_ossl.c", "nsdpoll_ptcp.c", "dnscache.c"]
 )
-
 module(	load="../plugins/imtcp/.libs/imtcp"
-	StreamDriver.Name="ossl"
+	StreamDriver.Name="gtls"
+	StreamDriver.TlsVerifyDepth="5" 
 	StreamDriver.Mode="1"
-	StreamDriver.AuthMode="anon" )
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
+	StreamDriver.AuthMode="x509/certvalid" )
+input(	type="imtcp" port="'$TCPFLOOD_PORT'" )
 
-template(name="outfmt" type="string" string="%msg:F,58:2%\n")
-:msg, contains, "msgnum:" action(	type="omfile" 
-					template="outfmt"
-					file=`echo $RSYSLOG_OUT_LOG`)
+$template outfmt,"%msg:F,58:2%\n"
+:msg, contains, "msgnum:" action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
+
 # Begin actual testcase
 startup
 tcpflood -p$TCPFLOOD_PORT -m$NUMMESSAGES -Ttls -x$srcdir/tls-certs/ca.pem -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem

@@ -81,6 +81,9 @@ BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
 	/* v12 -- two new binary flags added to gtls driver enabling stricter operation */
 	rsRetVal (*SetDrvrCheckExtendedKeyUsage)(netstrm_t *pThis, int ChkExtendedKeyUsage);
 	rsRetVal (*SetDrvrPrioritizeSAN)(netstrm_t *pThis, int prioritizeSan);
+
+	/* v14 -- Tls functions */
+	rsRetVal (*SetDrvrTlsVerifyDepth)(netstrm_t *pThis, int verifyDepth);
 ENDinterface(netstrm)
 #define netstrmCURR_IF_VERSION 12 /* increment whenever you change the interface structure! */
 /* interface version 3 added GetRemAddr()

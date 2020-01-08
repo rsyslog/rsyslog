@@ -182,6 +182,22 @@ finalize_it:
 	RETiRet;
 }
 
+/* Set the tls verify depth, not supported in ptcp.
+ * alorbach, 2019-12-20
+ */
+static rsRetVal
+SetTlsVerifyDepth(nsd_t __attribute__((unused)) *pNsd, int verifyDepth)
+{
+	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	DEFiRet;
+	ISOBJ_TYPE_assert((pThis), nsd_ptcp);
+	if (verifyDepth == 0) {
+		FINALIZE;
+	}
+finalize_it:
+	RETiRet;
+}
+
 /* Set the authentication mode. For us, the following is supported:
  * anon - no certificate checks whatsoever (discouraged, but supported)
  * mode == NULL is valid and defaults to anon
@@ -648,6 +664,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		CHKiRet(pNS->Drvr.SetMode(pNewNsd, netstrms.GetDrvrMode(pNS)));
 		CHKiRet(pNS->Drvr.SetCheckExtendedKeyUsage(pNewNsd, netstrms.GetDrvrCheckExtendedKeyUsage(pNS)));
 		CHKiRet(pNS->Drvr.SetPrioritizeSAN(pNewNsd, netstrms.GetDrvrPrioritizeSAN(pNS)));
+		CHKiRet(pNS->Drvr.SetTlsVerifyDepth(pNewNsd, netstrms.GetDrvrTlsVerifyDepth(pNS)));
 		CHKiRet(pNS->Drvr.SetAuthMode(pNewNsd, netstrms.GetDrvrAuthMode(pNS)));
 		CHKiRet(pNS->Drvr.SetPermitExpiredCerts(pNewNsd, netstrms.GetDrvrPermitExpiredCerts(pNS)));
 		CHKiRet(pNS->Drvr.SetPermPeers(pNewNsd, netstrms.GetDrvrPermPeers(pNS)));
@@ -999,6 +1016,7 @@ CODESTARTobjQueryInterface(nsd_ptcp)
 	pIf->SetKeepAliveTime = SetKeepAliveTime;
 	pIf->SetCheckExtendedKeyUsage = SetCheckExtendedKeyUsage;
 	pIf->SetPrioritizeSAN = SetPrioritizeSAN;
+	pIf->SetTlsVerifyDepth = SetTlsVerifyDepth;
 finalize_it:
 ENDobjQueryInterface(nsd_ptcp)
 

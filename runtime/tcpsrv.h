@@ -64,6 +64,7 @@ struct tcpsrv_s {
 	int iDrvrMode;		/**< mode of the stream driver to use */
 	int DrvrChkExtendedKeyUsage;		/**< if true, verify extended key usage in certs */
 	int DrvrPrioritizeSan;		/**< if true, perform stricter checking of names in certs */
+	int DrvrTlsVerifyDepth;		/**< Verify Depth for certificate chains */
 	uchar *gnutlsPriorityString;	/**< priority string for gnutls */
 	uchar *pszLstnPortFileName;	/**< File in which the dynamic port is written */
 	uchar *pszDrvrAuthMode;	/**< auth mode of the stream driver to use */
@@ -192,8 +193,10 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	/* added v23 -- Options for stricter driver behavior, 2019-08-16 */
 	rsRetVal (*SetDrvrCheckExtendedKeyUsage)(tcpsrv_t *pThis, int ChkExtendedKeyUsage);
 	rsRetVal (*SetDrvrPrioritizeSAN)(tcpsrv_t *pThis, int prioritizeSan);
+	/* added v24 -- Options for TLS verify depth driver behavior, 2019-12-20 */
+	rsRetVal (*SetDrvrTlsVerifyDepth)(tcpsrv_t *pThis, int verifyDepth);
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 23 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 24 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10

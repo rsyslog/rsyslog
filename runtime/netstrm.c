@@ -241,6 +241,15 @@ SetDrvrPrioritizeSAN(netstrm_t *pThis, int prioritizeSan)
 	RETiRet;
 }
 
+/* tls verify depth */
+static rsRetVal
+SetDrvrTlsVerifyDepth(netstrm_t *pThis, int verifyDepth)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	iRet = pThis->Drvr.SetTlsVerifyDepth(pThis->pDrvrData, verifyDepth);
+	RETiRet;
+}
 
 /* End of methods to shuffle autentication settings to the driver.
  * -------------------------------------------------------------------------- */
@@ -427,6 +436,7 @@ CODESTARTobjQueryInterface(netstrm)
 	pIf->SetGnutlsPriorityString = SetGnutlsPriorityString;
 	pIf->SetDrvrCheckExtendedKeyUsage = SetDrvrCheckExtendedKeyUsage;
 	pIf->SetDrvrPrioritizeSAN = SetDrvrPrioritizeSAN;
+	pIf->SetDrvrTlsVerifyDepth = SetDrvrTlsVerifyDepth;
 finalize_it:
 ENDobjQueryInterface(netstrm)
 
