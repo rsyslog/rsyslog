@@ -77,6 +77,7 @@ WORKDIR	/home/devel
 RUN	groupadd rsyslog \
 	&& useradd -g rsyslog  -s /bin/bash rsyslog \
 	&& echo "rsyslog ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+# we need this for sudo to work...
 RUN	mkdir /rsyslog \
 	&& chown rsyslog:rsyslog /rsyslog
 VOLUME	/rsyslog
@@ -88,10 +89,11 @@ ENV	PKG_CONFIG_PATH=/usr/lib64/pkgconfig \
 RUN	mkdir /local_dep_cache && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch-5.6.9.tar.gz  && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz && \
-	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.3.1.tar.gz -O /local_dep_cache/elasticsearch-6.3.1.tar.gz
+	wget -nv https://www-us.apache.org/dist/zookeeper/zookeeper-3.4.14/zookeeper-3.4.14.tar.gz -O /local_dep_cache/zookeeper-3.4.14.tar.gz && \
+	wget -nv http://www-us.apache.org/dist/kafka/2.2.0/kafka_2.12-2.2.0.tgz -O /local_dep_cache/kafka_2.12-2.2.0.tgz
 # tell tests which are the newester versions, so they can be checked without the need
 # to adjust test sources.
-ENV	ELASTICSEARCH_NEWEST="elasticsearch-6.3.1.tar.gz"
+#ENV	ELASTICSEARCH_NEWEST="elasticsearch-6.3.1.tar.gz"
 
 # bump dependency version below to trigger a dependency rebuild
 # but not a full one (via --no-cache)
@@ -114,7 +116,7 @@ RUN	cd helper-projects && \
 	cd libksi && \
 	autoreconf -fvi && \
 	./configure --libdir=/usr/lib64 && \
-	make -j2 && \
+	make -j && \
 	make install && \
 	cd .. && \
 	rm -r libksi && \
@@ -168,7 +170,7 @@ RUN	cd helper-projects && \
 	cd liblogging && \
 	autoreconf -fi && \
 	./configure --prefix=/usr --libdir=/usr/lib64 --disable-journal && \
-	make -j4 && \
+	make -j && \
 	make install && \
 	cd .. && \
 	rm -r liblogging && \
@@ -180,7 +182,7 @@ RUN	cd helper-projects && \
 	cd libfastjson && \
 	autoreconf -fi && \
 	./configure --prefix=/usr --libdir=/usr/lib64 && \
-	make -j4 && \
+	make -j && \
 	make install && \
 	cd .. && \
 	rm -r libfastjson && \
@@ -192,7 +194,7 @@ RUN	cd helper-projects && \
 	cd liblognorm && \
 	autoreconf -fi && \
 	./configure --prefix=/usr --libdir=/usr/lib64 && \
-	make -j4 && \
+	make -j && \
 	make install && \
 	cd .. && \
 	rm -r liblognorm && \
@@ -204,7 +206,7 @@ RUN	cd helper-projects && \
 	cd librelp && \
 	autoreconf -fi && \
 	./configure --prefix=/usr --enable-compile-warnings=yes --libdir=/usr/lib64 && \
-	make -j4 && \
+	make -j && \
 	make install && \
 	cd .. && \
 	rm -r librelp && \
@@ -286,5 +288,22 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	\
 	--enable-testbench
 
+RUN	echo merge me up \
+	&& groupadd -g 999 rsyslog999 \
+	&& groupadd -g 998 rsyslog998 \
+	&& groupadd -g 997 rsyslog997 \
+	&& groupadd -g 996 rsyslog996 \
+	&& groupadd -g 995 rsyslog995 \
+	&& echo missing \
+	&& useradd -u 999 -g rsyslog999  -s /bin/bash rsyslog999 \
+	&& useradd -u 998 -g rsyslog998  -s /bin/bash rsyslog998 \
+	&& useradd -u 997 -g rsyslog997  -s /bin/bash rsyslog997 \
+	&& useradd -u 996 -g rsyslog996  -s /bin/bash rsyslog996 \
+	&& useradd -u 995 -g rsyslog995  -s /bin/bash rsyslog995 \
+	&& echo "rsyslog999 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
+	&& echo "rsyslog998 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
+	&& echo "rsyslog997 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
+	&& echo "rsyslog996 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
+	&& echo "rsyslog995 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 WORKDIR /rsyslog
 USER rsyslog
