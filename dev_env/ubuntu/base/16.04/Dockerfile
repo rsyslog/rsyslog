@@ -204,4 +204,35 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-testbench
 
 WORKDIR /rsyslog
+# we need this for sudo to work...
+RUN	echo 'user1001:x:1001:1001::/home/rsyslog:/bin/bash' >> /etc/passwd && \
+	echo 'user1002:x:1002:1002::/home/rsyslog:/bin/bash' >> /etc/passwd && \
+	echo 'user1003:x:1003:1003::/home/rsyslog:/bin/bash' >> /etc/passwd && \
+	echo 'user1004:x:1004:1004::/home/rsyslog:/bin/bash' >> /etc/passwd && \
+	echo 'user1005:x:1005:1005::/home/rsyslog:/bin/bash' >> /etc/passwd && \
+	echo 'user1006:x:1006:1006::/home/rsyslog:/bin/bash' >> /etc/passwd && \
+	echo 'user1007:x:1007:1007::/home/rsyslog:/bin/bash' >> /etc/passwd && \
+	echo 'user1008:x:1008:1008::/home/rsyslog:/bin/bash' >> /etc/passwd && \
+	echo 'user1009:x:1009:1009::/home/rsyslog:/bin/bash' >> /etc/passwd && \
+	echo 'user1010:x:1010:1010::/home/rsyslog:/bin/bash' >> /etc/passwd && \
+	echo 'grp1001:x:1001:user1001' >> /etc/group && \
+	echo 'grp1002:x:1002:user1002' >> /etc/group && \
+	echo 'grp1003:x:1003:user1003' >> /etc/group && \
+	echo 'grp1004:x:1004:user1004' >> /etc/group && \
+	echo 'grp1005:x:1005:user1005' >> /etc/group && \
+	echo 'grp1006:x:1006:user1006' >> /etc/group && \
+	echo 'grp1007:x:1007:user1007' >> /etc/group && \
+	echo 'grp1008:x:1008:user1008' >> /etc/group && \
+	echo 'grp1009:x:1009:user1009' >> /etc/group && \
+	echo 'grp1010:x:1010:user1010' >> /etc/group && \
+	echo "user1001 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
+	echo "user1002 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
+	echo "user1003 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
+	echo "user1004 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
+	echo "user1005 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
+	echo "user1006 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
+	echo "user1007 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
+	echo "user1008 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
+	echo "user1009 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
+	echo "user1010 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 USER rsyslog

@@ -1,7 +1,7 @@
 set -e
 docker build $1 -t rsyslog/rsyslog_dev_base_debian:10 .
 printf "\n\n================== BUILD DONE, NOW TESTING CONTAINER:\n"
-docker run -ti rsyslog/rsyslog_dev_base_debian:10 bash -c  "
+docker run --rm -ti rsyslog/rsyslog_dev_base_debian:10 bash -c  "
 set -e && \
 git clone https://github.com/rsyslog/rsyslog.git && \
 cd rsyslog && \
