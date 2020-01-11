@@ -193,6 +193,9 @@ local0.* ./'${RSYSLOG_DYNNAME}'.HOSTNAME;hostname
 #			finished under stress otherwise
 # $1 is the instance id, if given
 generate_conf() {
+	if [ "$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT" == "" ]; then
+		RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT="10000"
+	fi
 	if [ "$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT" == "" ]; then
 		RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT="60000"
 	fi
@@ -214,8 +217,9 @@ generate_conf() {
 global(inputs.timeout.shutdown="'$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT'"
        default.action.queue.timeoutshutdown="'$RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN'"
        default.action.queue.timeoutEnqueue="'$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE'")
-$MainmsgQueueTimeoutEnqueue 20000 # use legacy-style so that we can override if needed
-$MainmsgQueueTimeoutShutdown 10000 # use legacy-style so that we can override if needed
+# use legacy-style for the following settings so that we can override if needed
+$MainmsgQueueTimeoutEnqueue 20000
+$MainmsgQueueTimeoutShutdown '$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT'
 $IMDiagListenPortFileName '$RSYSLOG_DYNNAME.imdiag$1.port'
 $IMDiagServerRun 0
 $IMDiagAbortTimeout '$TB_TEST_MAX_RUNTIME'
