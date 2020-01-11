@@ -5,6 +5,7 @@
 # Copyright (C) 2018 Pascal Withopf and Adiscon GmbH
 # Released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+set -x
 if [ "$CLICKHOUSE_START_CMD" == "" ]; then
 	exit_test # no start needed
 fi
