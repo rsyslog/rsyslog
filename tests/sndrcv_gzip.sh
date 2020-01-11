@@ -18,9 +18,9 @@ export RSYSLOG_DEBUGLOG="log"
 export RCVR_PORT="$(get_free_port)"
 generate_conf
 add_conf '
-$ModLoad ../plugins/imtcp/.libs/imtcp
 # then SENDER sends to this port (not tcpflood!)
-$InputTCPServerRun '$RCVR_PORT'
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" )
 
 $template outfmt,"%msg:F,58:2%\n"
 $template dynfile,"'$RSYSLOG_OUT_LOG'" # trick to use relative path names!
@@ -30,18 +30,17 @@ startup
 
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
+export RCVR_PORT=$TCPFLOOD_PORT
 generate_conf 2
 add_conf '
-$ModLoad ../plugins/imtcp/.libs/imtcp
-$InputTCPServerRun '$TCPFLOOD_PORT'
-
 *.*	@@(z5)127.0.0.1:'$RCVR_PORT'
 ' 2
 startup 2
 
 # now inject the messages into instance 2. It will connect to instance 1,
 # and that instance will record the data.
-tcpflood -m$NUMMESSAGES
+#tcpflood -m$NUMMESSAGES
+injectmsg
 # shut down sender when everything is sent, receiver continues to run concurrently
 shutdown_when_empty 2
 wait_shutdown 2
