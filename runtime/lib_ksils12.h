@@ -91,8 +91,12 @@ struct rsksictx_s {
 	pthread_t signer_thread;
 	ProtectedQueue *signer_queue;
 	bool thread_started;
-	uint8_t disabled; /* permits to disable the plugin --> set to 1 */
-	ksifile ksi;
+	uint8_t disabled;	/* permits to disable the plugin --> set to 1 */
+
+	ksifile *ksi;		/* List of signature files for keeping track of block timeouts. */
+	size_t ksiCapacity;
+	size_t ksiCount;
+
 	char *debugFileName;
 	int debugLevel;
 	FILE *debugFile;
@@ -130,6 +134,7 @@ struct ksifile_s {
 	KSI_DataHash *roots[MAX_ROOTS];
 	/* data members for the associated TLV file */
 	FILE *blockFile;
+	FILE *sigFile;	/* Note that this may only be closed by signer thread or when signer thread has terminated. */
 	rsksictx ctx;
 };
 
