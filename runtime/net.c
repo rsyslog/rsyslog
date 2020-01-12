@@ -1050,18 +1050,22 @@ static int
 should_use_so_bsdcompat(void)
 {
 #ifndef OS_BSD
-	static int init_done = 0;
-	static int so_bsdcompat_is_obsolete = 0;
+	static int use_so_bsdcompat = -1;
 
-	if (!init_done) {
+	/* we guard the init code just by an atomic fetch to local variable. This still
+	 * is racy, but the worst that can happen is that we do the very same init twice.
+	 * This does hurt less than locking a mutex.
+	 */
+	const int local_use_so_bsdcompat = PREFER_FETCH_32BIT(use_so_bsdcompat);
+	if(local_use_so_bsdcompat == -1) {
 		struct utsname myutsname;
 		unsigned int version, patchlevel;
 
-		init_done = 1;
 		if (uname(&myutsname) < 0) {
 			char errStr[1024];
 			dbgprintf("uname: %s\r\n", rs_strerror_r(errno, errStr, sizeof(errStr)));
-			return 1;
+			PREFER_STORE_1_TO_INT(&use_so_bsdcompat);
+			FINALIZE;
 		}
 		/* Format is <version>.<patchlevel>.<sublevel><extraversion>
 		 * where the first three are unsigned integers and the last
@@ -1069,14 +1073,18 @@ should_use_so_bsdcompat(void)
 		if (sscanf(myutsname.release, "%u.%u", &version, &patchlevel) != 2) {
 			dbgprintf("uname: unexpected release '%s'\r\n",
 				myutsname.release);
-			return 1;
+			PREFER_STORE_1_TO_INT(&use_so_bsdcompat);
+			FINALIZE;
 		}
 		/* SO_BSCOMPAT is deprecated and triggers warnings in 2.5
 		 * kernels. It is a no-op in 2.4 but not in 2.2 kernels. */
-		if (version > 2 || (version == 2 && patchlevel >= 5))
-			so_bsdcompat_is_obsolete = 1;
+		if (version > 2 || (version == 2 && patchlevel >= 5)) {
+			PREFER_STORE_0_TO_INT(&use_so_bsdcompat);
+			FINALIZE;
+		}
 	}
-	return !so_bsdcompat_is_obsolete;
+finalize_it:
+	return PREFER_FETCH_32BIT(use_so_bsdcompat);
 #else	/* #ifndef OS_BSD */
 	return 1;
 #endif	/* #ifndef OS_BSD */
