@@ -5,6 +5,7 @@ printf 'container: %s\n' $RSYSLOG_DEV_CONTAINER
 printf 'CC:\t%s\n' "$CC"
 printf 'CFLAGS:\t%s:\n' "$CFLAGS"
 printf 'RSYSLOG_CONFIGURE_OPTIONS:\t%s\n' "$RSYSLOG_CONFIGURE_OPTIONS"
+printf 'working directory: %s\n' "$(pwd)"
 if [ "$CI_VALGRIND_SUPPRESSIONS" != "" ]; then
 	export RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=$(pwd)/tests/CI/$CI_VALGRIND_SUPPRESSIONS"
 fi
@@ -22,6 +23,10 @@ set +e
 echo CI_CHECK_CMD: $CI_CHECK_CMD
 make $CI_MAKE_CHECK_OPT ${CI_CHECK_CMD:-check}
 rc=$?
+
+# find failing tests
+echo find failing tests
+find . -name "*.trs" -exec bash -c 'if grep ":test-result: FAIL" "$1"; then printf "FAIL: ${1%%.trs} ################################################\\n" >> failed-tests.log; cat "${1%%trs}log"  >> failed-tests.log; fi' _ {} \;
 
 printf 'STEP: Codecov upload =======================================================\n'
 if [ "$CI_CODECOV_TOKEN" != "" ]; then
