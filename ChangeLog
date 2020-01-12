@@ -1,5 +1,13 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
+- 2020-01-12: core bugfix: race condition related to libfastjson when using DA queue
+  Rsyslogd aborts when writing to disk queue from multiple workers simultaneously.
+  It is assumed that libfastjson is not thread-safe.
+  Resolve libfastjson race condition when writing to disk queue.
+  see also https://github.com/rsyslog/rsyslog/issues/4041
+  Thanks to MIZUTA Takeshi for the fix.
+- 2020-01-12: omfwd bugfix: parameter streamdriver.permitexpiredcerts did not work
+  closes https://github.com/rsyslog/rsyslog/issues/4098
 - 2020-01-11: Bugfix: KSI module + dynafile in asynchronous mode fixed
   Thanks to Taavi Valjaots for the patch
 - 2020-01-08: tls driver: add support to configure certificate verify depth
