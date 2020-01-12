@@ -192,6 +192,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "streamdrivermode", eCmdHdlrInt, 0 },
 	{ "streamdriverauthmode", eCmdHdlrGetWord, 0 },
 	{ "streamdriverpermittedpeers", eCmdHdlrGetWord, 0 },
+	{ "streamdriver.permitexpiredcerts", eCmdHdlrGetWord, 0 },
 	{ "streamdriver.CheckExtendedKeyPurpose", eCmdHdlrBinary, 0 },
 	{ "streamdriver.PrioritizeSAN", eCmdHdlrBinary, 0 },
 	{ "streamdriver.TlsVerifyDepth", eCmdHdlrPositiveInt, 0 },
@@ -1246,7 +1247,17 @@ CODESTARTnewActInst
 		} else if(!strcmp(actpblk.descr[i].name, "streamdriverauthmode")) {
 			pData->pszStrmDrvrAuthMode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "streamdriver.permitexpiredcerts")) {
-			pData->pszStrmDrvrPermitExpiredCerts = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			uchar *val = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			if(   es_strcasebufcmp(pvals[i].val.d.estr, (uchar*)"off", 3)
+			   && es_strcasebufcmp(pvals[i].val.d.estr, (uchar*)"on", 2)
+			   && es_strcasebufcmp(pvals[i].val.d.estr, (uchar*)"warn", 4)
+			  ) {
+				parser_errmsg("streamdriver.permitExpiredCerts must be 'warn', 'off' or 'on' "
+					"but is '%s' - ignoring parameter, using 'off' instead.", val);
+				free(val);
+			} else {
+				pData->pszStrmDrvrPermitExpiredCerts = val;
+			}
 		} else if(!strcmp(actpblk.descr[i].name, "streamdriverpermittedpeers")) {
 			uchar *start, *str;
 			uchar *p;
