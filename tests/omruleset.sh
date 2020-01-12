@@ -10,14 +10,12 @@
 # are well enough to test what we want to test.
 # added 2009-11-02 by rgerhards
 # This file is part of the rsyslog project, released under GPLv3
-echo ===============================================================================
-echo \[omruleset.sh\]: basic test for omruleset functionality
 . ${srcdir:=.}/diag.sh init
+export NUMMESSAGES=5000
+export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf
 add_conf '
 $ModLoad ../plugins/omruleset/.libs/omruleset
-$ModLoad ../plugins/imtcp/.libs/imtcp
-$InputTCPServerRun '$TCPFLOOD_PORT'
 
 $ruleset rsinclude
 $template outfmt,"%msg:F,58:2%\n"
@@ -29,10 +27,8 @@ $ActionOmrulesetRulesetName rsinclude
 *.* :omruleset:
 '
 startup
-injectmsg  0 5000
-echo doing shutdown
+injectmsg
 shutdown_when_empty
-echo wait on shutdown
 wait_shutdown 
-seq_check  0 4999
+seq_check
 exit_test

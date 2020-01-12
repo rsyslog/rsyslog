@@ -6,12 +6,10 @@
 # added 2009-04-17 by Rgerhards
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+export NUMMESSAGES=20000
+export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf
 add_conf '
-$ModLoad ../plugins/imtcp/.libs/imtcp
-$MainMsgQueueTimeoutShutdown 10000
-$InputTCPServerRun '$TCPFLOOD_PORT'
-
 # set spool locations and switch queue to disk-only mode
 $WorkDirectory '$RSYSLOG_DYNNAME'.spool
 $MainMsgQueueFilename mainq
@@ -25,10 +23,9 @@ else
 	action(type="omfile" file="'$RSYSLOG_DYNNAME.syslog.log'")
 '
 startup
-# 20000 messages should be enough - the disk test is slow enough ;)
-tcpflood -m20000
+injectmsg
 shutdown_when_empty
 wait_shutdown
-seq_check 0 19999
+seq_check
 check_not_present "spool.* open error" $RSYSLOG_DYNNAME.syslog.log
 exit_test

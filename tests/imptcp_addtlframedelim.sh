@@ -3,22 +3,20 @@
 #
 # This file is part of the rsyslog project, released  under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+export NUMMESSAGES=20000
+export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf
 add_conf '
-$ModLoad ../plugins/imptcp/.libs/imptcp
-$MainMsgQueueTimeoutShutdown 10000
-$InputPTCPServerAddtlFrameDelimiter 0
-$InputPTCPServerRun '$TCPFLOOD_PORT'
+module(load="../plugins/imptcp/.libs/imptcp")
+input(type="imptcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port"
+	addtlFrameDelimiter="0")
 
-$template outfmt,"%msg:F,58:2%\n"
-$OMFileFlushOnTXEnd off
-$OMFileFlushInterval 2
-$OMFileIOBufferSize 256k
-local0.* action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+template(name="outfmt" type="string" string="%msg:F,58:2%\n")
+local0.* action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
-tcpflood -m20000 -F0 -P129
-shutdown_when_empty # shut down rsyslogd when done processing messages
-wait_shutdown       # and wait for it to terminate
-seq_check 0 19999
+tcpflood -m$NUMMESSAGES -F0 -P129
+shutdown_when_empty
+wait_shutdown
+seq_check
 exit_test

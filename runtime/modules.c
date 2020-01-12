@@ -338,8 +338,8 @@ static uchar *modGetStateName(modInfo_t *pThis)
 
 /* Add a module to the loaded module linked list
  */
-static void
-addModToGlblList(modInfo_t *pThis)
+static void ATTR_NONNULL()
+addModToGlblList(modInfo_t *const pThis)
 {
 	assert(pThis != NULL);
 

@@ -6,20 +6,16 @@
 # added 2009-06-09 by Rgerhards
 # This file is part of the rsyslog project, released  under GPLv3
 # uncomment for debugging support:
-echo \[diskqueue-fsync.sh\]: testing queue disk-only mode, fsync case
-
-uname
+. ${srcdir:=.}/diag.sh init
+export NUMMESSAGES=1000 # 1000 messages should be enough - the disk fsync test is very slow!
+export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 if [ $(uname) = "SunOS" ] ; then
    echo "This test currently does not work on all flavors of Solaris."
    exit 77
 fi
 
-. ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
-$ModLoad ../plugins/imtcp/.libs/imtcp
-$InputTCPServerRun '$TCPFLOOD_PORT'
-
 # set spool locations and switch queue to disk-only mode
 $WorkDirectory '$RSYSLOG_DYNNAME'.spool
 $MainMsgQueueSyncQueueFiles on
@@ -32,9 +28,8 @@ template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
 startup
-# 1000 messages should be enough - the disk fsync test is very slow!
-injectmsg 0 1000
-shutdown_when_empty # shut down rsyslogd when done processing messages
+injectmsg
+shutdown_when_empty
 wait_shutdown
-seq_check 0 999
+seq_check
 exit_test

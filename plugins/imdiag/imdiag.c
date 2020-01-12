@@ -82,7 +82,7 @@ static prop_t *pInputName = NULL;
 static prop_t *pRcvDummy = NULL;
 static prop_t *pRcvIPDummy = NULL;
 
-static int max_empty_checks = 5; /* how often check for queue empty during shutdown? */
+static int max_empty_checks = 2; /* how often check for queue empty during shutdown? */
 
 statsobj_t *diagStats;
 STATSCOUNTER_DEF(potentialArtificialDelayMs, mutPotentialArtificialDelayMs)

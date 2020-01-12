@@ -5,13 +5,7 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=50000
-empty_check() {
-	if [ $(wc -l < "$RSYSLOG_OUT_LOG") -eq $NUMMESSAGES ]; then
-		return 0
-	fi
-	return 1
-}
-export QUEUE_EMPTY_CHECK_FUNC=empty_check
+export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"

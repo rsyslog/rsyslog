@@ -1,21 +1,19 @@
 #!/bin/bash
 # check if valgrind violations occur. Correct output is not checked.
 # added 2011-03-01 by Rgerhards
-# This file is part of the rsyslog project, released  under GPLv3
-
-uname
+# This file is part of the rsyslog project, released  under ASL 2.0
+. ${srcdir:=.}/diag.sh init
 if [ $(uname) = "FreeBSD" ] ; then
    echo "This test currently does not work on FreeBSD."
-   exit 77
+#   exit 77
 fi
 
-echo ===============================================================================
-echo \[tcp-msgreduc-vg.sh\]: testing msg reduction via UDP
-. ${srcdir:=.}/diag.sh init
+export NUMMESSAGES=4
+export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf
 add_conf '
-$ModLoad ../plugins/imtcp/.libs/imtcp
-$InputTCPServerRun '$TCPFLOOD_PORT'
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 $RepeatedMsgReduction on
 
 $template outfmt,"%msg:F,58:2%\n"
@@ -24,9 +22,7 @@ $template outfmt,"%msg:F,58:2%\n"
 startup_vg
 tcpflood -t 127.0.0.1 -m 4 -r -M "\"<133>2011-03-01T11:22:12Z host tag msgh ...\""
 tcpflood -t 127.0.0.1 -m 1 -r -M "\"<133>2011-03-01T11:22:12Z host tag msgh ...x\""
-# we need to give rsyslog a little time to settle the receiver
-./msleep 1500
-shutdown_when_empty # shut down rsyslogd when done processing messages
+shutdown_when_empty
 wait_shutdown_vg
 check_exit_vg
 exit_test

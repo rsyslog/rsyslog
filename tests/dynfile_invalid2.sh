@@ -9,9 +9,8 @@
 . ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
-$ModLoad ../plugins/imtcp/.libs/imtcp
-$MainMsgQueueTimeoutShutdown 10000
-$InputTCPServerRun '$TCPFLOOD_PORT'
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 $template outfmt,"%msg:F,58:3%\n"
 $template dynfile,"%msg:F,58:2%.log" # complete name is in message
@@ -20,9 +19,6 @@ $DynaFileCacheSize 4
 $omfileFlushInterval 1
 local0.* ?dynfile;outfmt
 '
-# uncomment for debugging support:
-#export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
-#export RSYSLOG_DEBUGLOG="log"
 startup
 # we send handcrafted message. We have a dynafile cache of 4, and now send one message
 # each to fill up the cache.

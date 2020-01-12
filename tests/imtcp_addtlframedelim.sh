@@ -4,6 +4,7 @@
 # This file is part of the rsyslog project, released  under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=20000
+export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp" addtlframedelimiter="0")

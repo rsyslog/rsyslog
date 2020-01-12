@@ -384,6 +384,9 @@ DISTCHECK_CONFIGURE_FLAGS+= \
 	--enable-pmsnare \
 	--enable-usertools
 
+else
+DISTCHECK_CONFIGURE_FLAGS+= \
+	--disable-default-tests
 endif  # if ENABLE_DEFAULT_TESTS
 
 if ENABLE_IMPROG

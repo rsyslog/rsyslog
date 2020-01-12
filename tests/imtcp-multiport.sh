@@ -5,24 +5,25 @@
 # added 2009-05-22 by Rgerhards
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-export TCPFLOOD_PORT2="$(get_free_port)"
-export TCPFLOOD_PORT3="$(get_free_port)"
+export NUMMESSAGES=30000
+export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf
 add_conf '
-$ModLoad ../plugins/imtcp/.libs/imtcp
-$MainMsgQueueTimeoutShutdown 10000
-$InputTCPServerRun '$TCPFLOOD_PORT'
-$InputTCPServerRun '$TCPFLOOD_PORT2'
-$InputTCPServerRun '$TCPFLOOD_PORT3'
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port2")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port3")
 
 $template outfmt,"%msg:F,58:2%\n"
 :msg, contains, "msgnum:" action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
-tcpflood -p'$TCPFLOOD_PORT' -m10000
-tcpflood -p'$TCPFLOOD_PORT2' -i10000 -m10000
-tcpflood -p'$TCPFLOOD_PORT3' -i20000 -m10000
-shutdown_when_empty # shut down rsyslogd when done processing messages
+assign_tcpflood_port2 "$RSYSLOG_DYNNAME.tcpflood_port2"
+assign_rs_port "$RSYSLOG_DYNNAME.tcpflood_port3"
+tcpflood -p$TCPFLOOD_PORT -m10000
+tcpflood -p$TCPFLOOD_PORT2 -i10000 -m10000
+tcpflood -p$RS_PORT -i20000 -m10000
+shutdown_when_empty
 wait_shutdown
-seq_check 0 29999
+seq_check
 exit_test
