@@ -32,7 +32,7 @@ rsRetVal modInitFile(int iIFVersRequested __attribute__((unused)), int *ipIFVers
  * other way to have the functionality (well, one way would be to go through the
  * globals, but that seems not yet justified. -- rgerhards, 2010-03-01
  */
-uchar	*pszFileDfltTplName;
+extern uchar	*pszFileDfltTplName;
 #endif /* #ifndef OMFILE_H_INCLUDED */
 /* vi:set ai:
  */
