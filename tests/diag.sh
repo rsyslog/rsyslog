@@ -481,7 +481,7 @@ reassign_ports() {
 	if grep -q 'listenPortFileName="'$RSYSLOG_DYNNAME'\.tcpflood_port"' $CONF_FILE; then
 		assign_tcpflood_port $RSYSLOG_DYNNAME.tcpflood_port
 	fi
-	if [ "$ASSIGN_TCPFLOOD_PORT_FROM_FILE" = "YES" ] ; then
+	if grep -q '$InputTCPServerListenPortFile.*\.tcpflood_port' $CONF_FILE; then
 		assign_tcpflood_port $RSYSLOG_DYNNAME.tcpflood_port
 	fi
 }

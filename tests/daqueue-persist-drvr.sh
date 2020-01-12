@@ -12,7 +12,7 @@ add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
 $MainMsgQueueTimeoutShutdown 1
 $MainMsgQueueSaveOnShutdown on
-$InputTCPServerRun '$TCPFLOOD_PORT'
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 $ModLoad ../plugins/omtesting/.libs/omtesting
 
