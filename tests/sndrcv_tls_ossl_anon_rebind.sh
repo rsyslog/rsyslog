@@ -3,7 +3,8 @@
 # testing sending and receiving via TLS with anon auth and rebind
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-
+export NUMMESSAGES=25000
+export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 # debugging activated to try to solve https://github.com/rsyslog/rsyslog/issues/3256
 export RSYSLOG_DEBUG="debug nostdout"
 test_error_exit_handler() {
@@ -31,8 +32,8 @@ module(	load="../plugins/imtcp/.libs/imtcp"
 	StreamDriver.Name="ossl"
 	StreamDriver.Mode="1"
 	StreamDriver.AuthMode="anon" )
-input(	type="imtcp"
-	port="'$PORT_RCVR'" )
+# then SENDER sends to this port (not tcpflood!)
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" )
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 :msg, contains, "msgnum:" action(	type="omfile" 
@@ -44,8 +45,10 @@ startup
 #sender
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.sender.debuglog"
 #valgrind="valgrind"
+export PORT_RCVR=$TCPFLOOD_PORT
 generate_conf 2
 export TCPFLOOD_PORT="$(get_free_port)" # TODO: move to diag.sh
+echo TCPFLOOD_PORT new: $TCPFLOOD_PORT 
 add_conf '
 global(	
 	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
@@ -56,10 +59,6 @@ global(
 	debug.files=["nsd_ossl.c", "tcpsrv.c", "nsdsel_ossl.c", "nsdpoll_ptcp.c", "dnscache.c"]
 )
 
-
-# Note: no TLS for the listener, this is for tcpflood!
-$ModLoad ../plugins/imtcp/.libs/imtcp
-$InputTCPServerRun '$TCPFLOOD_PORT'
 
 # set up the action
 $DefaultNetstreamDriver ossl # use gtls netstream driver
@@ -72,16 +71,15 @@ startup 2
 
 # now inject the messages into instance 2. It will connect to instance 1,
 # and that instance will record the data.
-tcpflood -m25000 -i1
-sleep 5 # make sure all data is received in input buffers
-# shut down sender when everything is sent, receiver continues to run concurrently
+injectmsg
 shutdown_when_empty 2
 wait_shutdown 2
 # now it is time to stop the receiver as well
 shutdown_when_empty
 wait_shutdown
 
-seq_check 1 25000 -d
+export SEQ_CHECK_OPTIONS=-d
+seq_check
 
 unset PORT_RCVR
 exit_test

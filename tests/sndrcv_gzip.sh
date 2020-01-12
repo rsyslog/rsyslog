@@ -15,7 +15,6 @@ export QUEUE_EMPTY_CHECK_FUNC=empty_check
 
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"
-export RCVR_PORT="$(get_free_port)"
 generate_conf
 add_conf '
 # then SENDER sends to this port (not tcpflood!)
@@ -39,7 +38,6 @@ startup 2
 
 # now inject the messages into instance 2. It will connect to instance 1,
 # and that instance will record the data.
-#tcpflood -m$NUMMESSAGES
 injectmsg
 # shut down sender when everything is sent, receiver continues to run concurrently
 shutdown_when_empty 2
