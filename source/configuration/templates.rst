@@ -675,7 +675,7 @@ format with low-precision timestamps.
 .. code-block:: none
 
    template(name="RSYSLOG_TraditionalFileFormat" type="string"
-        string="%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp% %msg:::drop-last-lf%\n")
+        string="%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n")
 
 **RSYSLOG_FileFormat** - A modern-style logfile format similar to
 TraditionalFileFormat, both with high-precision timestamps and
@@ -689,7 +689,6 @@ timezone information.
         property(name="hostname")
         constant(value=" ")
         property(name="syslogtag")
-        constant(value=" ")
         property(name="msg" spifno1stsp="on")
         property(name="msg" droplastlf="on")
         constant(value="\n")
@@ -702,7 +701,7 @@ other syslogd's or rsyslogd below version 3.12.5.
 .. code-block:: none
 
    template(name="RSYSLOG_TraditionalForwardFormat" type="string"
-        string="<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag:1:32% %msg:::sp-if-no-1st-sp%%msg%")
+        string="<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag:1:32%%msg:::sp-if-no-1st-sp%%msg%")
 
 **RSYSLOG_SysklogdFileFormat** - Sysklogd compatible log file format. If
 used with options: ``$SpaceLFOnReceive on``,
@@ -722,7 +721,7 @@ messages to rsyslog 3.12.5 or above.
 .. code-block:: none
 
    template(name="RSYSLOG_ForwardFormat" type="string"
-        string="<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag:1:32% %msg:::sp-if-no-1st-sp%%msg%")
+        string="<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag:1:32%%msg:::sp-if-no-1st-sp%%msg%")
 
 **RSYSLOG_SyslogProtocol23Format** - the format specified in IETF's
 internet-draft ietf-syslog-protocol-23, which is very close to the actual
