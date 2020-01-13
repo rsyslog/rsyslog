@@ -1,4 +1,6 @@
 ----------------------------------------------------------------------------------------
+Scheduled Release 8.2002.0 (aka 2020.02) 2020-02-25
+----------------------------------------------------------------------------------------
 Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
 - 2020-01-12: core bugfix: race condition related to libfastjson when using DA queue
   Rsyslogd aborts when writing to disk queue from multiple workers simultaneously.
