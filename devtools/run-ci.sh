@@ -6,8 +6,16 @@ printf 'CC:\t%s\n' "$CC"
 printf 'CFLAGS:\t%s:\n' "$CFLAGS"
 printf 'RSYSLOG_CONFIGURE_OPTIONS:\t%s\n' "$RSYSLOG_CONFIGURE_OPTIONS"
 printf 'working directory: %s\n' "$(pwd)"
+printf 'user ids: %s:%s\n' $(id -u) $(id -g)
+if [ "$SUDO" != "" ]; then
+	printf 'check sudo'
+	$SUDO echo sudo works!
+fi
 if [ "$CI_VALGRIND_SUPPRESSIONS" != "" ]; then
 	export RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=$(pwd)/tests/CI/$CI_VALGRIND_SUPPRESSIONS"
+fi
+if [ "$TSAN_OPTIONS" != "" ]; then ## TODO ## IMPROVE CHECK
+	export CFLAGS="$CFLAGS -fsanitize-blacklist=$(pwd)/tests/tsan.supp"
 fi
 set -e
 
@@ -27,6 +35,10 @@ rc=$?
 # find failing tests
 echo find failing tests
 find . -name "*.trs" -exec bash -c 'if grep ":test-result: FAIL" "$1"; then printf "FAIL: ${1%%.trs} ################################################\\n" >> failed-tests.log; cat "${1%%trs}log"  >> failed-tests.log; fi' _ {} \;
+if [ -f failed-tests.log ]; then
+	# show summary stats so that we know how many failed
+	head -n12 tests/test-suite.log >> failed.tests.log
+fi
 
 printf 'STEP: Codecov upload =======================================================\n'
 if [ "$CI_CODECOV_TOKEN" != "" ]; then

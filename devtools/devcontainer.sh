@@ -31,8 +31,9 @@ if [ -z "$RSYSLOG_DEV_CONTAINER" ]; then
 	RSYSLOG_DEV_CONTAINER=$(cat $RSYSLOG_HOME/devtools/default_dev_container)
 fi
 
-printf "/rsyslog is mapped to $RSYSLOG_HOME\n"
-printf "pulling container...\n"
+printf '/rsyslog is mapped to %s \n' "$RSYSLOG_HOME"
+printf 'pulling container...\n'
+printf 'user ids: %s:%s\n' $(id -u) $(id -g)
 docker pull $RSYSLOG_DEV_CONTAINER
 docker run $ti $optrm $DOCKER_RUN_EXTRA_OPTS \
 	-u $(id -u):$(id -g) \
@@ -41,12 +42,16 @@ docker run $ti $optrm $DOCKER_RUN_EXTRA_OPTS \
 	-e CC \
 	-e CFLAGS \
 	-e LDFLAGS \
+	-e LSAN_OPTIONS \
+	-e TSAN_OPTIONS \
+	-e UBSAN_OPTIONS \
 	-e CI_MAKE_OPT \
 	-e CI_MAKE_CHECK_OPT \
 	-e CI_CHECK_CMD \
 	-e CI_BUILD_URL \
 	-e CI_CODECOV_TOKEN \
 	-e CI_VALGRIND_SUPPRESSIONS \
+	-e ABORT_ALL_ON_TEST_FAIL \
 	-e USE_AUTO_DEBUG \
 	-e RSYSLOG_STATSURL \
 	-e VCS_SLUG \
