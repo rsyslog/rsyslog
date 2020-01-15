@@ -7,10 +7,11 @@ RUN	useradd pkg --uid 1001 -ms /bin/bash
 RUN	usermod -aG wheel pkg
 RUN	passwd -d pkg
 WORKDIR	/home/pkg
+COPY	extra/.rpmmacros ./
 ARG	CACHEBUST=1
 RUN	git clone https://github.com/rsyslog/rsyslog-pkg-rhel-centos.git
 WORKDIR	/home/pkg/rsyslog-pkg-rhel-centos
-RUN	sed -i "s/szLocalUser\=test/szLocalUser\=pkg/g" config.sh
+#RUN	sed -i "s/szLocalUser\=test/szLocalUser\=pkg/g" config.sh
 RUN	mkdir /home/pkg/rsyslog-pkg-rhel-centos/yumrepo
 VOLUME	/home/pkg/rsyslog-pkg-rhel-centos/yumrepo
 COPY	extra/initenv.sh ./
