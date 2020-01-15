@@ -13,4 +13,4 @@ docker run \
 	-e REPOURL \
 	-v "$PKGPRIVATEBASEDIR/private/mount":/private-files \
 	-v "$PKGPRIVATEBASEDIR/yumrepo/mount":/home/pkg/rsyslog-pkg-rhel-centos/yumrepo \
-	-ti -rm rsyslog/rsyslog_dev_pkg_base_fedora:30
+	-ti --rm rsyslog/rsyslog_dev_pkg_base_fedora:30
