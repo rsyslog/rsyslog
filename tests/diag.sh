@@ -1,3 +1,4 @@
+#!/bin/bash
 #
 # this shell script provides commands to the common diag system. It enables
 # test scripts to wait for certain conditions and initiate certain actions.
@@ -4008,6 +4009,27 @@ file_size_check() {
         error_exit 1
     fi
     return 0
+}
+
+## Start the helper SNI server for omfwd tests.
+## Args: 1=library (openssl|gnutls), 2=port
+omfwd_sni_server() {
+	"./$1_sni_server" "$2" "$srcdir/tls-certs/cert.pem" "$srcdir/tls-certs/key.pem" \
+		1>"$RSYSLOG_DYNNAME.sni-server.stdout" &
+	echo "$!" >"$RSYSLOG_DYNNAME.sni-server.pid"
+}
+
+## Validate that the SNI server observed the expected name.
+## Args: 1=sni
+omfwd_sni_check() {
+	sni=${1}
+
+	wait_file_lines "$RSYSLOG_DYNNAME.sni-server.stdout" 1
+
+	if ! grep -q "^SNI: $sni\$" $RSYSLOG_DYNNAME.sni-server.stdout; then
+	    echo "Expected 'SNI: $sni', but got '"`cat $RSYSLOG_DYNNAME.sni-server.stdout`"'"
+		error_exit 1
+	fi
 }
 
 case $1 in

@@ -43,6 +43,7 @@ struct netstrms_s {
         const uchar *pszDrvrKeyFile;
         const uchar *pszDrvrCertFile;
         uchar *gnutlsPriorityString; /**< priorityString for connection */
+        uchar *remoteSNI; /**< Remote SNI to use instead of the server hostname */
         int iSynBacklog; /**< socket layer syn backlog for listen() */
         permittedPeers_t *pPermPeers; /**< current driver's permitted peers */
         rsRetVal (*fLstnInitDrvr)(netstrm_t *); /**< "late" driver-specific lstn init function NULL if none */
@@ -74,6 +75,8 @@ BEGINinterface(netstrms) /* name must also be changed in ENDinterface macro! */
     int (*GetDrvrPrioritizeSAN)(netstrms_t *pThis);
     rsRetVal (*SetDrvrTlsVerifyDepth)(netstrms_t *pThis, int verifyDepth);
     int (*GetDrvrTlsVerifyDepth)(netstrms_t *pThis);
+    rsRetVal (*SetDrvrRemoteSNI)(netstrms_t *pThis, uchar *);
+    uchar *(*GetDrvrRemoteSNI)(netstrms_t *pThis);
     /* v2 */
     rsRetVal (*SetDrvrTlsCAFile)(netstrms_t *pThis, const uchar *);
     const uchar *(*GetDrvrTlsCAFile)(netstrms_t *pThis);
@@ -89,7 +92,7 @@ BEGINinterface(netstrms) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*SetSynBacklog)(netstrms_t *pThis, const int);
 
 ENDinterface(netstrms)
-#define netstrmsCURR_IF_VERSION 4 /* increment whenever you change the interface structure! */
+#define netstrmsCURR_IF_VERSION 5 /* increment whenever you change the interface structure! */
 
 /* prototypes */
 PROTOTYPEObj(netstrms);

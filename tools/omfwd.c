@@ -95,6 +95,7 @@ typedef struct _instanceData {
     uchar *pszStrmDrvr;
     uchar *pszStrmDrvrAuthMode;
     uchar *pszStrmDrvrPermitExpiredCerts;
+    uchar *pszStrmDrvrRemoteSNI; /* Optional TLS SNI to use for the remote server (instead of its hostname) */
     permittedPeers_t *pPermPeers;
     int iStrmDrvrMode;
     int iStrmDrvrExtendedCertCheck; /* verify also purpose OID in certificate extended field */
@@ -191,6 +192,7 @@ typedef struct configSettings_s {
     int bResendLastOnRecon; /* should the last message be re-sent on a successful reconnect? */
     uchar *pszStrmDrvrAuthMode; /* authentication mode to use */
     uchar *pszStrmDrvrPermitExpiredCerts; /* control how to handly expired certificates */
+    uchar *pszStrmDrvrRemoteSNI; /* Optional TLS SNI to use for the remote server (instead of its hostname) */
     int iTCPRebindInterval; /* support for automatic re-binding (load balancers!). 0 - no rebind */
     int iUDPRebindInterval; /* support for automatic re-binding (load balancers!). 0 - no rebind */
     int bKeepAlive;
@@ -240,6 +242,8 @@ static struct cnfparamdescr actpdescr[] = {
     {"streamdriver.authmode", eCmdHdlrGetWord, 0}, /* alias for streamdriverauthmode */
     {"streamdriverpermittedpeers", eCmdHdlrGetWord, 0},
     {"streamdriver.permitexpiredcerts", eCmdHdlrGetWord, 0},
+    {"streamdriverremotesni", eCmdHdlrString, 0},
+    {"streamdriver.remotesni", eCmdHdlrString, 0},
     {"streamdriver.CheckExtendedKeyPurpose", eCmdHdlrBinary, 0},
     {"streamdriver.PrioritizeSAN", eCmdHdlrBinary, 0},
     {"streamdriver.TlsVerifyDepth", eCmdHdlrPositiveInt, 0},
@@ -278,6 +282,7 @@ BEGINinitConfVars /* (re)set config variables to default values */
     cs.iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
     cs.bResendLastOnRecon = 0; /* should the last message be re-sent on a successful reconnect? */
     cs.pszStrmDrvrAuthMode = NULL; /* authentication mode to use */
+    cs.pszStrmDrvrRemoteSNI = NULL; /* Remote TLS SNI to use instead of hostname */
     cs.iUDPRebindInterval = 0; /* support for automatic re-binding (load balancers!). 0 - no rebind */
     cs.iTCPRebindInterval = 0; /* support for automatic re-binding (load balancers!). 0 - no rebind */
     cs.pPermPeers = NULL;
@@ -777,6 +782,8 @@ BEGINcreateInstance
     if (cs.pszStrmDrvr != NULL) CHKmalloc(pData->pszStrmDrvr = (uchar *)strdup((char *)cs.pszStrmDrvr));
     if (cs.pszStrmDrvrAuthMode != NULL)
         CHKmalloc(pData->pszStrmDrvrAuthMode = (uchar *)strdup((char *)cs.pszStrmDrvrAuthMode));
+    if (cs.pszStrmDrvrRemoteSNI != NULL)
+        CHKmalloc(pData->pszStrmDrvrRemoteSNI = (uchar *)strdup((char *)cs.pszStrmDrvrRemoteSNI));
 finalize_it:
 ENDcreateInstance
 
@@ -831,6 +838,7 @@ BEGINfreeInstance
     free(pData->pszStrmDrvr);
     free(pData->pszStrmDrvrAuthMode);
     free(pData->pszStrmDrvrPermitExpiredCerts);
+    free(pData->pszStrmDrvrRemoteSNI);
     free(pData->gnutlsPriorityString);
     free(pData->targetSrv);
     free(pData->networkNamespace);
@@ -1260,6 +1268,10 @@ static rsRetVal TCPSendInitTarget(targetData_t *const pTarget) {
         CHKiRet(netstrm.SetDrvrTlsCRLFile(pTarget->pNetstrm, pData->pszStrmDrvrCRLFile));
         CHKiRet(netstrm.SetDrvrTlsKeyFile(pTarget->pNetstrm, pData->pszStrmDrvrKeyFile));
         CHKiRet(netstrm.SetDrvrTlsCertFile(pTarget->pNetstrm, pData->pszStrmDrvrCertFile));
+
+        if (pData->pszStrmDrvrRemoteSNI != NULL) {
+            CHKiRet(netstrm.SetDrvrRemoteSNI(pTarget->pNetstrm, pData->pszStrmDrvrRemoteSNI));
+        }
 
         if (pData->pPermPeers != NULL) {
             CHKiRet(netstrm.SetDrvrPermPeers(pTarget->pNetstrm, pData->pPermPeers));
@@ -1808,6 +1820,7 @@ static void setInstParamDefaults(instanceData *pData) {
     pData->pszStrmDrvr = NULL;
     pData->pszStrmDrvrAuthMode = NULL;
     pData->pszStrmDrvrPermitExpiredCerts = NULL;
+    pData->pszStrmDrvrRemoteSNI = NULL;
     pData->iStrmDrvrMode = 0;
     pData->iStrmDrvrExtendedCertCheck = 0;
     pData->iStrmDrvrSANPreference = 0;
@@ -2013,6 +2026,9 @@ BEGINnewActInst
             } else {
                 pData->pszStrmDrvrPermitExpiredCerts = val;
             }
+        } else if (!strcmp(actpblk.descr[i].name, "streamdriverremotesni") ||
+                   !strcmp(actpblk.descr[i].name, "streamdriver.remotesni")) {
+            pData->pszStrmDrvrRemoteSNI = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(actpblk.descr[i].name, "streamdriver.cafile")) {
             pData->pszStrmDrvrCAFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(actpblk.descr[i].name, "streamdriver.crlfile")) {
@@ -2357,6 +2373,9 @@ BEGINparseSelectorAct
     if (pData->protocol == FORW_TCP) {
         pData->bResendLastOnRecon = cs.bResendLastOnRecon;
         pData->iStrmDrvrMode = cs.iStrmDrvrMode;
+        if (cs.pszStrmDrvrRemoteSNI != NULL) {
+            CHKmalloc(pData->pszStrmDrvrRemoteSNI = (uchar *)strdup((char *)cs.pszStrmDrvrRemoteSNI));
+        }
         if (cs.pPermPeers != NULL) {
             pData->pPermPeers = cs.pPermPeers;
             cs.pPermPeers = NULL;
@@ -2376,6 +2395,8 @@ static void freeConfigVars(void) {
     cs.pszStrmDrvr = NULL;
     free(cs.pszStrmDrvrAuthMode);
     cs.pszStrmDrvrAuthMode = NULL;
+    free(cs.pszStrmDrvrRemoteSNI);
+    cs.pszStrmDrvrRemoteSNI = NULL;
     free(cs.pPermPeers);
     cs.pPermPeers = NULL;
 }
@@ -2450,6 +2471,8 @@ BEGINmodInit(Fwd)
     CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdrivermode", 0, eCmdHdlrInt, NULL, &cs.iStrmDrvrMode, NULL));
     CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriverauthmode", 0, eCmdHdlrGetWord, NULL,
                              &cs.pszStrmDrvrAuthMode, NULL));
+    CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriverremotesni", 0, eCmdHdlrGetWord, NULL,
+                             &cs.pszStrmDrvrRemoteSNI, NULL));
     CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriverpermittedpeer", 0, eCmdHdlrGetWord, setPermittedPeer, NULL,
                              NULL));
     CHKiRet(regCfSysLineHdlr((uchar *)"actionsendresendlastmsgonreconnect", 0, eCmdHdlrBinary, NULL,

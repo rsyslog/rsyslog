@@ -92,8 +92,10 @@ BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*SetDrvrTlsCRLFile)(netstrm_t *pThis, const uchar *file);
     rsRetVal (*SetDrvrTlsKeyFile)(netstrm_t *pThis, const uchar *file);
     rsRetVal (*SetDrvrTlsCertFile)(netstrm_t *pThis, const uchar *file);
+    /* v18 -- allow remote server's TLS SNI to be set manually */
+    rsRetVal (*SetDrvrRemoteSNI)(netstrm_t *pThis, uchar *pszRemoteSNI);
 ENDinterface(netstrm)
-#define netstrmCURR_IF_VERSION 17 /* increment whenever you change the interface structure! */
+#define netstrmCURR_IF_VERSION 18 /* increment whenever you change the interface structure! */
 /* interface version 3 added GetRemAddr()
  * interface version 4 added EnableKeepAlive() -- rgerhards, 2009-06-02
  * interface version 5 changed return of CheckConnection from void to rsRetVal -- alorbach, 2012-09-06
@@ -104,6 +106,7 @@ ENDinterface(netstrm)
  * interface version 10 added oserr parameter to Rcv() -- rgerhards, 2017-09-04
  * interface version 16 CRL file -- Oracle, 2022-01-16
  * interface version 17 added nextIODirection parameter to Rcv() -- rgehards, 2025-04-17
+ * interface version 18 added SetDrvrRemoteSNI -- jfcantu, 2020-01-15
  * */
 
 /* prototypes */

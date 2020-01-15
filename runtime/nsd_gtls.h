@@ -76,6 +76,7 @@ struct nsd_gtls_s {
                              * one successful authentication. */
         permittedPeers_t *pPermPeers; /* permitted peers */
         uchar *gnutlsPriorityString; /* gnutls priority string */
+        uchar *remoteSNI; /**< Remote SNI to use instead of the server hostname */
         int DrvrVerifyDepth; /* Verify Depth for certificate chains */
         gnutls_x509_crt_t pOurCerts[NSD_GTLS_MAX_CERT]; /**< our certificate, if in client mode
                                 (unused in server mode) */

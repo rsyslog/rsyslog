@@ -196,6 +196,53 @@ long BIO_debug_callback(
     return (r);
 }
 
+/*
+ * SNI should not be used if the hostname is a bare IP address
+ */
+static rsRetVal SetServerNameIfPresent(nsd_ossl_t *pThis, uchar *host) {
+    struct sockaddr_in sa;
+    struct sockaddr_in6 sa6;
+    int inet_pton_ret;
+    DEFiRet;
+
+    /* Always use the configured remote SNI if present */
+    if (pThis->remoteSNI != NULL) {
+        if (SSL_set_tlsext_host_name(pThis->pNetOssl->ssl, (char *)pThis->remoteSNI) != 1) {
+            nsd_ossl_lastOpenSSLErrorMsg(pThis, 0, pThis->pNetOssl->ssl, LOG_ERR, "SetServerNameIfPresent",
+                                         "SSL_set_tlsext_host_name");
+            ABORT_FINALIZE(RS_RET_SYS_ERR);
+        }
+        FINALIZE;
+    }
+
+    /* Otherwise, figure out if host is an IP address */
+    inet_pton_ret = inet_pton(AF_INET, CHAR_CONVERT(host), &(sa.sin_addr));
+
+    if (inet_pton_ret == 0) {  // host wasn't a bare IPv4 address: try IPv6
+        inet_pton_ret = inet_pton(AF_INET6, CHAR_CONVERT(host), &(sa6.sin6_addr));
+    }
+
+    /* Then make a decision */
+    switch (inet_pton_ret) {
+        case 1:  // host is a valid IP address: don't use SNI
+            FINALIZE;
+        case 0:  // host isn't a valid IP address: assume it's a domain name, use SNI
+            if (SSL_set_tlsext_host_name(pThis->pNetOssl->ssl, (char *)host) != 1) {
+                nsd_ossl_lastOpenSSLErrorMsg(pThis, 0, pThis->pNetOssl->ssl, LOG_ERR, "SetServerNameIfPresent",
+                                             "SSL_set_tlsext_host_name");
+                ABORT_FINALIZE(RS_RET_SYS_ERR);
+            }
+            FINALIZE;
+        default:  // unexpected error
+            nsd_ossl_lastOpenSSLErrorMsg(pThis, 0, pThis->pNetOssl->ssl, LOG_ERR, "SetServerNameIfPresent",
+                                         "inet_pton");
+            ABORT_FINALIZE(RS_RET_INVALID_HNAME);
+    }
+
+finalize_it:
+    RETiRet;
+}
+
 /* try to receive a record from the remote peer. This works with
  * our own abstraction and handles local buffering and EAGAIN.
  * See details on local buffering in Rcv(9 header-comment.
@@ -511,6 +558,7 @@ BEGINobjDestruct(nsd_ossl) /* be sure to specify the object type also in END and
 
     free(pThis->pszConnectHost);
     free(pThis->pszRcvBuf);
+    free(pThis->remoteSNI);
 ENDobjDestruct(nsd_ossl)
 
 
@@ -1268,6 +1316,8 @@ static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char 
     /* Do SSL Session init */
     CHKiRet(osslInitSession(pThis, osslClient));
 
+    CHKiRet(SetServerNameIfPresent(pThis, host));
+
     /* Store nsd_ossl_t* reference in SSL obj */
     SSL_set_ex_data(pThis->pNetOssl->ssl, 0, pThis->pTcp);
     SSL_set_ex_data(pThis->pNetOssl->ssl, 1, &pThis->permitExpiredCerts);
@@ -1467,6 +1517,34 @@ finalize_it:
     RETiRet;
 }
 
+/* Set the TLS SNI of the remote server */
+static rsRetVal SetRemoteSNI(nsd_t *pNsd, uchar *remoteSNI) {
+    DEFiRet;
+    nsd_ossl_t *pThis = (nsd_ossl_t *)pNsd;
+
+    ISOBJ_TYPE_assert(pThis, nsd_ossl);
+
+    free(pThis->remoteSNI);
+    if (remoteSNI == NULL) {
+        pThis->remoteSNI = NULL;
+    } else {
+        CHKmalloc(pThis->remoteSNI = (uchar *)strdup((char *)remoteSNI));
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal GetRemotePort(nsd_t *pNsd, int *port) {
+    nsd_ossl_t *pThis = (nsd_ossl_t *)pNsd;
+    ISOBJ_TYPE_assert((pThis), nsd_ossl);
+    return nsd_ptcp.GetRemotePort(pThis->pTcp, port);
+}
+
+static rsRetVal FmtRemotePortStr(const int port, uchar *const buf, const size_t len) {
+    return nsd_ptcp.FmtRemotePortStr(port, buf, len);
+}
+
 
 /* queryInterface function */
 BEGINobjQueryInterface(nsd_ossl)
@@ -1510,6 +1588,9 @@ BEGINobjQueryInterface(nsd_ossl)
     pIf->SetTlsCRLFile = SetTlsCRLFile;
     pIf->SetTlsKeyFile = SetTlsKeyFile;
     pIf->SetTlsCertFile = SetTlsCertFile;
+    pIf->GetRemotePort = GetRemotePort;
+    pIf->FmtRemotePortStr = FmtRemotePortStr;
+    pIf->SetRemoteSNI = SetRemoteSNI;
 
 finalize_it:
 ENDobjQueryInterface(nsd_ossl)
