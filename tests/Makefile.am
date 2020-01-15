@@ -2210,6 +2210,8 @@ EXTRA_DIST= \
 	imfile-endregex-timeout-none.sh \
 	imfile-endregex-timeout-with-shutdown.sh \
 	imfile-endregex-timeout-with-shutdown-polling.sh \
+	imfile-escapelf.replacement.sh \
+	imfile-escapelf.replacement-empty.sh \
 	imfile-endmsg.regex.sh \
 	imfile-endmsg.regex-vg.sh \
 	imfile-endmsg.regex-with-example.sh \

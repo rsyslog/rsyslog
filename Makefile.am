@@ -559,6 +559,12 @@ if ENABLE_IMFILE
 DISTCHECK_CONFIGURE_FLAGS+= --enable-imfile
 endif
 
+if ENABLE_IMFILE_TESTS
+DISTCHECK_CONFIGURE_FLAGS+= --enable-imfile-tests
+else
+DISTCHECK_CONFIGURE_FLAGS+= --disable-imfile-tests
+endif
+
 if ENABLE_IMDOCKER
 DISTCHECK_CONFIGURE_FLAGS+= --enable-imdocker
 endif
