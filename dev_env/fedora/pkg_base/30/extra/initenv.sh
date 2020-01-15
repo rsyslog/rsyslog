@@ -4,11 +4,16 @@ source $(dirname "$0")/config.sh
 
 echo "---------------------------------------------"
 echo "--- Copy private files to their locations ---"
+cp -rf /home/pkg/.rpmmacros /root/
 ln -s /private-files/passfile.txt $szBaseDir/passfile.txt
 cp -rf /private-files/.gnupg /home/pkg/.gnupg/
+cp -rf /private-files/.gnupg/* /home/pkg/.gnupg/
 cp -rf /private-files/.gnupg /root/.gnupg/
+cp -rf /private-files/.gnupg/* /root/.gnupg/
 cp -rf /private-files/.ssh /root/.ssh/
+cp -rf /private-files/.ssh/* /root/.ssh/
 cp -rf /private-files/.ssh /home/pkg/.ssh/
+cp -rf /private-files/.ssh/* /home/pkg/.ssh/
 echo "---------------------------------------------"
 
 echo "--------------------------------"
