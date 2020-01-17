@@ -918,7 +918,7 @@ Run(tcpsrv_t *pThis)
 {
 	DEFiRet;
 	int i;
-	int bFailed = FALSE; /* If set to TRUE, accept failed already */
+	int bFailed; /* If set to TRUE, accept failed */
 	nsd_epworkset_t workset[128]; /* 128 is currently fixed num of concurrent requests */
 	int numEntries;
 	nspoll_t *pPoll = NULL;
@@ -967,6 +967,7 @@ Run(tcpsrv_t *pThis)
 		DBGPRINTF("Added listener %d\n", i);
 	}
 
+	bFailed = FALSE;
 	while(glbl.GetGlobalInputTermState() == 0) {
 		numEntries = sizeof(workset)/sizeof(nsd_epworkset_t);
 		localRet = nspoll.Wait(pPoll, -1, &numEntries, workset);
