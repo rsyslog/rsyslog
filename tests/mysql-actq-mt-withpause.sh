@@ -14,7 +14,7 @@ module(load="../plugins/ommysql/.libs/ommysql")
 	queue.workerthreads="5"
 	queue.workerthreadMinimumMessages="500"
 	queue.timeoutWorkerthreadShutdown="1000"
-	queue.timeoutEnqueue="10000"
+	queue.timeoutEnqueue="20000"
 	)
 } 
 '

@@ -951,6 +951,7 @@ modDoHUP(void)
 {
 	modInfo_t *pMod;
 
+	pthread_mutex_lock(&mutObjGlobalOp);
 	pMod = GetNxt(NULL);
 	while(pMod != NULL) {
 		if(pMod->eType != eMOD_OUT && pMod->doHUP != NULL) {
@@ -959,6 +960,7 @@ modDoHUP(void)
 		}
 		pMod = GetNxt(pMod); /* done, go next */
 	}
+	pthread_mutex_unlock(&mutObjGlobalOp);
 }
 
 

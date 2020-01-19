@@ -7,11 +7,6 @@
 # added 2013-11-14 by Rgerhards
 # This file is part of the rsyslog project, released  under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-if [ $(uname) = "SunOS" ] ; then
-   echo "This test currently does not work on all flavors of Solaris."
-#   exit 77
-fi
-
 export NUMMESSAGES=60000
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf
