@@ -2295,8 +2295,8 @@ mysql_prep_for_test() {
 	mysql --user=rsyslog --password=testbench --database $RSYSLOG_DYNNAME \
 		-e "truncate table SystemEvents;"
 	# TEST ONLY:
-	mysql -s --user=rsyslog --password=testbench --database $RSYSLOG_DYNNAME \
-		-e "select substring(Message,9,8) from SystemEvents;"
+	#mysql -s --user=rsyslog --password=testbench --database $RSYSLOG_DYNNAME \
+		#-e "select substring(Message,9,8) from SystemEvents;"
 	# END TEST
 	printf 'mysql ready for test, database: %s\n' $RSYSLOG_DYNNAME
 }
@@ -2306,14 +2306,16 @@ mysql_get_data() {
 	# note "-s" is required to suppress the select "field header"
 	mysql -s --user=rsyslog --password=testbench --database $RSYSLOG_DYNNAME \
 		-e "select substring(Message,9,8) from SystemEvents;" \
-		> $RSYSLOG_OUT_LOG
+		> $RSYSLOG_OUT_LOG 2> "$RSYSLOG_DYNNAME.mysqlerr"
+	grep -iv "Using a password on the command line interface can be insecure." < "$RSYSLOG_DYNNAME.mysqlerr"
 }
 
 # cleanup any temp data from mysql test
 # if we do not do this, we may run out of disk space
 # especially in container environment.
 mysql_cleanup_test() {
-	mysql --user=rsyslog --password=testbench -e "drop database $RSYSLOG_DYNNAME;"
+	mysql --user=rsyslog --password=testbench -e "drop database $RSYSLOG_DYNNAME;" \
+		2>&1 | grep -iv "Using a password on the command line interface can be insecure."
 }
 
 
