@@ -1,9 +1,10 @@
 #!/bin/bash
 # added 2014-07-15 by rgerhards
+# basic test for mmjsonparse module with defaults
 # This file is part of the rsyslog project, released under ASL 2.0
-echo ===============================================================================
-echo \[mmjsonparse_simple.sh\]: basic test for mmjsonparse module with defaults
 . ${srcdir:=.}/diag.sh init
+export NUMMESSAGES=5000
+export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf
 add_conf '
 template(name="outfmt" type="string" string="%$!msgnum%\n")
@@ -18,10 +19,8 @@ if $parsesuccess == "OK" then {
 }
 '
 startup
-tcpflood -m 5000 -j "@cee: "
-echo doing shutdown
+tcpflood -m $NUMMESSAGES -j "@cee: "
 shutdown_when_empty
-echo wait on shutdown
 wait_shutdown 
-seq_check  0 4999
+seq_check
 exit_test

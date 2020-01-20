@@ -1,6 +1,8 @@
 #!/bin/bash
 # added 2018-04-16 by Rainer Gerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+export NUMMESSAGES=5000
+export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf
 add_conf '
 template(name="outfmt" type="string" string="%$.msgnum%\n")
@@ -15,9 +17,9 @@ if $parsesuccess == "OK" then {
 }
 '
 startup
-tcpflood -m 5000 -j "@cim: "
+tcpflood -m $NUMMESSAGES -j "@cim: "
 shutdown_when_empty
 wait_shutdown
-seq_check  0 4999
+seq_check
 exit_test
 
