@@ -2084,7 +2084,7 @@ CODESTARTnewActInst
 	if(pData->searchIndex == NULL)
 		pData->searchIndex = (uchar*) strdup("system");
 	if(pData->searchType == NULL)
-		pData->searchType = (uchar*) strdup("events");
+		pData->searchType = (uchar*) strdup("_doc");
 
 	if ((pData->writeOperation != ES_WRITE_INDEX) && (pData->bulkId == NULL)) {
 		LogError(0, RS_RET_CONFIG_ERROR,
