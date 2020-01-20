@@ -14,3 +14,19 @@
    fun:destructAllActions
    fun:main
 }
+{
+   libcrypto issue - only seen on Centos 6 so pretty sure false positive
+   Memcheck:Leak
+   fun:malloc
+   fun:CRYPTO_malloc
+   fun:EC_KEY_new
+   fun:EC_KEY_new_by_curve_name
+   fun:osslAnonInit
+   fun:SetAuthMode
+   fun:LstnInit
+   fun:LstnInit
+   fun:LstnInit
+   fun:initTCPListener
+   fun:create_tcp_socket
+   fun:doOpenLstnSocks
+}

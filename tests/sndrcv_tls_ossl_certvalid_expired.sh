@@ -1,13 +1,10 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
-
-# uncomment for debugging support:
 . ${srcdir:=.}/diag.sh init
-# start up the instances
+# uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.receiver.debuglog"
 generate_conf
-export PORT_RCVR="$(get_free_port)"
 add_conf '
 global(
 	defaultNetstreamDriverCAFile="'$srcdir/testsuites/x.509/ca.pem'"
@@ -24,16 +21,16 @@ module(	load="../plugins/imtcp/.libs/imtcp"
 	StreamDriver.AuthMode="x509/certvalid"
 	StreamDriver.PermitExpiredCerts="off"
 	)
-input(	type="imtcp"
-	port="'$PORT_RCVR'" )
+
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 '
 startup
+export PORT_RCVR=$TCPFLOOD_PORT
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.sender.debuglog"
 #valgrind="valgrind"
 generate_conf 2
-export TCPFLOOD_PORT="$(get_free_port)" # TODO: move to diag.sh
 add_conf '
 global(
 	defaultNetstreamDriverCAFile="'$srcdir/testsuites/x.509/ca.pem'"
@@ -41,10 +38,6 @@ global(
 	defaultNetstreamDriverKeyFile="'$srcdir/testsuites/x.509/client-expired-key.pem'"
 	defaultNetstreamDriver="ossl"
 )
-
-# Note: no TLS for the listener, this is for tcpflood!
-$ModLoad ../plugins/imtcp/.libs/imtcp
-$InputTCPServerRun '$TCPFLOOD_PORT'
 
 # set up the action
 $ActionSendStreamDriverMode 1 # require TLS for the connection
@@ -55,8 +48,7 @@ startup 2
 
 # now inject the messages into instance 2. It will connect to instance 1,
 # and that instance will record the data.
-tcpflood -m1 -i1
-# sleep 5 # make sure all data is received in input buffers
+injectmsg
 # shut down sender when everything is sent, receiver continues to run concurrently
 shutdown_when_empty 2
 wait_shutdown 2
@@ -66,6 +58,4 @@ wait_shutdown
 
 content_check "Certificate EXPIRED at depth"
 content_check "OpenSSL Error Stack:"
-
-unset PORT_RCVR # TODO: move to exit_test()?
 exit_test

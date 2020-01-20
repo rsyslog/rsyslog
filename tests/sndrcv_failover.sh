@@ -9,18 +9,20 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 
+export NUMMESSAGES=50000
+export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
+export DEAD_PORT=4  # a port unassigned by IANA and very unlikely to be used
+export RSYSLOG_DEBUGLOG="log"
+
 # uncomment for debugging support:
 # start up the instances
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
-NUMMESSAGES=50000
-export DEAD_PORT=4  # a port unassigned by IANA and very unlikely to be used
-export RSYSLOG_DEBUGLOG="log"
 generate_conf
 export PORT_RCVR="$(get_free_port)"
 add_conf '
-$ModLoad ../plugins/imtcp/.libs/imtcp
 # then SENDER sends to this port (not tcpflood!)
-$InputTCPServerRun '$PORT_RCVR'
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 $template outfmt,"%msg:F,58:2%\n"
 $template dynfile,"'$RSYSLOG_OUT_LOG'" # trick to use relative path names!
@@ -29,12 +31,9 @@ $template dynfile,"'$RSYSLOG_OUT_LOG'" # trick to use relative path names!
 startup
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
+export PORT_RCVR=$TCPFLOOD_PORT
 generate_conf 2
 add_conf '
-$ModLoad ../plugins/imtcp/.libs/imtcp
-# this listener is for message generation by the test framework!
-$InputTCPServerRun '$TCPFLOOD_PORT'
-
 *.*	@@127.0.0.1:'$DEAD_PORT' # this must be DEAD
 $ActionExecOnlyWhenPreviousIsSuspended on
 &	@@127.0.0.1:'$PORT_RCVR'
@@ -45,8 +44,7 @@ startup 2
 
 # now inject the messages into instance 2. It will connect to instance 1,
 # and that instance will record the data.
-tcpflood -m$NUMMESSAGES -i1
-wait_file_lines
+injectmsg
 # shut down sender when everything is sent, receiver continues to run concurrently
 shutdown_when_empty 2
 wait_shutdown 2
@@ -55,7 +53,7 @@ shutdown_when_empty
 wait_shutdown
 
 # do the final check
-seq_check 1 $NUMMESSAGES
+seq_check
 
 ls -l ${RSYSLOG_DYNNAME}.empty
 if [[ -s ${RSYSLOG_DYNNAME}.empty ]] ; then

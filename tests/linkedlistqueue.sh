@@ -3,14 +3,10 @@
 # added 2009-05-20 by rgerhards
 # This file is part of the rsyslog project, released  under GPLv3
 . ${srcdir:=.}/diag.sh init
+export NUMMESSAGES=40000
+export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf
 add_conf '
-$ModLoad ../plugins/imtcp/.libs/imtcp
-$MainMsgQueueTimeoutShutdown 10000
-$InputTCPServerRun '$TCPFLOOD_PORT'
-
-$ErrorMessagesToStderr off
-
 # set spool locations and switch queue to disk-only mode
 $MainMsgQueueType LinkedList
 
@@ -19,8 +15,8 @@ template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
 startup
-injectmsg  0 40000
+injectmsg
 shutdown_when_empty
 wait_shutdown 
-seq_check 0 39999
+seq_check
 exit_test

@@ -6,25 +6,26 @@
 #
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+export NUMMESSAGES=4000
+export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf
 add_conf '
 $MaxMessageSize 10k
 
-$ModLoad ../plugins/imtcp/.libs/imtcp
-$MainMsgQueueTimeoutShutdown 10000
-$InputTCPServerRun '$TCPFLOOD_PORT'
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 $template outfmt,"%msg:F,58:2%,%msg:F,58:3%,%msg:F,58:4%\n"
-template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!
+template(name="dynfile" type="string" string="'$RSYSLOG_OUT_LOG'") # trick to use relative path names!
 $OMFileIOBufferSize 256k
 $OMFileAsyncWriting off
 local0.* ?dynfile;outfmt
 '
 startup
 # send 4000 messages of 10.000bytes plus header max, randomized
-tcpflood -m4000 -r -d10000 -P129
-wait_file_lines $RSYSLOG_OUT_LOG 4000
-shutdown_when_empty # shut down rsyslogd when done processing messages
-wait_shutdown       # and wait for it to terminate
-seq_check 0 3999 -E
+tcpflood -m$NUMMESSAGES -r -d10000 -P129
+shutdown_when_empty
+wait_shutdown
+export SEQ_CHECK_OPTIONS=-E
+seq_check
 exit_test

@@ -528,6 +528,33 @@ assign_tcpflood_port() {
 	fi
 }
 
+
+# assign TCPFLOOD_PORT2 from port file
+# $1 - port file
+assign_tcpflood_port2() {
+	wait_file_exists "$1"
+	export TCPFLOOD_PORT2=$(cat "$1")
+	echo "TCPFLOOD_PORT2 now: $TCPFLOOD_PORT2"
+	if [ "$TCPFLOOD_PORT2" == "" ]; then
+		echo "TESTBENCH ERROR: TCPFLOOD_PORT2 not found!"
+		ls -l $RSYSLOG_DYNNAME*
+		exit 100
+	fi
+}
+# assign RS_PORT from port file - this is meant as generic way to
+# obtain additional port variables
+# $1 - port file
+assign_rs_port() {
+	wait_file_exists "$1"
+	export RS_PORT=$(cat "$1")
+	echo "RS_PORT now: $RS_PORT"
+	if [ "$RS_PORT" == "" ]; then
+		echo "TESTBENCH ERROR: RS_PORT not found!"
+		ls -l $RSYSLOG_DYNNAME*
+		exit 100
+	fi
+}
+
 # wait for a file to exist, then export it's content to env var
 # intended to be used for very small files, e.g. listenPort files
 # $1 - env var name
@@ -2423,9 +2450,9 @@ case $1 in
 		export RSYSLOG_OUT_LOG="${RSYSLOG_DYNNAME}.out.log"
 		export RSYSLOG2_OUT_LOG="${RSYSLOG_DYNNAME}_2.out.log"
 		export RSYSLOG_PIDBASE="${RSYSLOG_DYNNAME}:" # also used by instance 2!
-		export IMDIAG_PORT=13500
-		export IMDIAG_PORT2=13501
-		export TCPFLOOD_PORT=13514
+		#export IMDIAG_PORT=13500 DELETE ME
+		#export IMDIAG_PORT2=13501 DELETE ME
+		#export TCPFLOOD_PORT=13514 DELETE ME
 
 		# Extra Variables for Test statistic reporting
 		export RSYSLOG_TESTNAME=$(basename $0)

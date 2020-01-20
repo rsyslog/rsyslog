@@ -13,8 +13,8 @@ export TZ=UTC+00:00
 
 generate_conf
 add_conf '
-$ModLoad ../plugins/imtcp/.libs/imtcp
-$InputTCPServerRun '$TCPFLOOD_PORT'
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 template(name="outfmt" type="string"
 	 string="%timegenerated:::date-unixtimestamp%\n")

@@ -10,9 +10,8 @@
 . ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
-$ModLoad ../plugins/imtcp/.libs/imtcp
-$MainMsgQueueTimeoutShutdown 10000
-$InputTCPServerRun '$TCPFLOOD_PORT'
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 $template outfmt,"%msg:F,58:2%\n"
 template(name="dynfile" type="string" string="'$RSYSLOG_OUT_LOG'")
@@ -22,6 +21,7 @@ $ActionExecOnlyOnceEveryInterval 3
 startup
 tcpflood -m10 -i1
 # now wait until the interval definitely expires (at least we hope so...)
+printf 'wainting for interval to expire...\n'
 sleep 5
 # and inject another couple of messages
 tcpflood -m10 -i100

@@ -7,22 +7,19 @@ export NUMMESSAGES=40000 # we unfortunately need many messages as we have many c
 export TB_TEST_MAX_RUNTIME=1800 # this test is VERY slow, so we need to override max runtime
 generate_conf
 add_conf '
-$ModLoad ../plugins/imtcp/.libs/imtcp
-$MainMsgQueueTimeoutShutdown 10000
 $MaxOpenFiles 200
-$InputTCPMaxSessions 1100
 global(
 	defaultNetstreamDriverCAFile="'$srcdir'/testsuites/x.509/ca.pem"
-	defaultNetstreamDriverCertFile="'$srcdir/testsuites'/x.509/client-cert.pem"
-	defaultNetstreamDriverKeyFile="'$srcdir/testsuites'/x.509/client-key.pem"
+	defaultNetstreamDriverCertFile="'$srcdir'/testsuites/x.509/client-cert.pem"
+	defaultNetstreamDriverKeyFile="'$srcdir'/testsuites/x.509/client-key.pem"
 	defaultNetstreamDriver="gtls"
 	debug.whitelist="on"
 	debug.files=["nsd_ossl.c", "tcpsrv.c", "nsdsel_ossl.c", "nsdpoll_ptcp.c", "dnscache.c"]
 )
 
-$InputTCPServerStreamDriverMode 1
-$InputTCPServerStreamDriverAuthMode anon
-$InputTCPServerRun '$TCPFLOOD_PORT'
+module(load="../plugins/imtcp/.libs/imtcp" maxSessions="1100"
+       streamDriver.mode="1" streamDriver.authMode="anon")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 $template outfmt,"%msg:F,58:2%\n"
 template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!
@@ -32,7 +29,8 @@ startup_vg
 # the config file specifies exactly 1100 connections
 tcpflood -c1000 -m$NUMMESSAGES -Ttls -x$srcdir/testsuites/x.509/ca.pem -Z$srcdir/testsuites/x.509/client-cert.pem -z$srcdir/testsuites/x.509/client-key.pem
 # the sleep below is needed to prevent too-early termination of the tcp listener
-sleep 2
+# note: this must not be precise, as message loss is acceptable
+sleep 5
 shutdown_when_empty
 wait_shutdown_vg
 check_exit_vg

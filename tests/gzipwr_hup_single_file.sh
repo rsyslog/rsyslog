@@ -30,9 +30,9 @@ if $msg contains "msgnum" then {
 startup
 ./tcpflood -p$TCPFLOOD_PORT -m$NUMMESSAGES & # TCPFlood needs to run async!
 for i in $(seq 0 20); do
+	./msleep 10
 	printf '\nsending HUP %d\n' $i
 	issue_HUP
-	./msleep 10
 done
 shutdown_when_empty
 wait_shutdown

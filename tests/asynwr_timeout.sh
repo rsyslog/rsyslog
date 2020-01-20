@@ -8,7 +8,7 @@
 . ${srcdir:=.}/diag.sh init
 # send 35555 messages, make sure file size is not a multiple of
 # 10K, the buffer size!
-export NUMMESSAGES=35555
+export NUMMESSAGES=15555
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
@@ -16,7 +16,7 @@ $MainMsgQueueTimeoutShutdown 10000
 input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 $template outfmt,"%msg:F,58:2%\n"
-template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!
+template(name="dynfile" type="string" string="'$RSYSLOG_OUT_LOG'")
 $OMFileFlushOnTXEnd off
 $OMFileFlushInterval 2
 $OMFileIOBufferSize 10k
@@ -26,10 +26,9 @@ $OMFileAsyncWriting on
 startup
 tcpflood -m $NUMMESSAGES
 printf 'waiting for timeout to occur\n'
-sleep 6 # GOOD SLEEP - we wait for the timeout!
+sleep 15 # GOOD SLEEP - we wait for the timeout! long to take care of slow test machines...
 printf 'timeout should now have occurred - check file state\n'
-seq_check # mow everything MUST be persisted
+seq_check
 shutdown_when_empty
 wait_shutdown
-seq_check # just a double-check that nothing is added twice
 exit_test

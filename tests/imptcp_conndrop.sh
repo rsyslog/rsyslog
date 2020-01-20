@@ -10,9 +10,8 @@ generate_conf
 add_conf '
 $MaxMessageSize 10k
 
-$ModLoad ../plugins/imptcp/.libs/imptcp
-$MainMsgQueueTimeoutShutdown 10000
-$InputPTCPServerRun '$TCPFLOOD_PORT'
+module(load="../plugins/imptcp/.libs/imptcp")
+input(type="imptcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 $template outfmt,"%msg:F,58:2%,%msg:F,58:3%,%msg:F,58:4%\n"
 template(name="dynfile" type="string" string="'$RSYSLOG_OUT_LOG'")
@@ -26,5 +25,6 @@ tcpflood -c20 -m$NUMMESSAGES -r -d100 -P129 -D
 wait_file_lines
 shutdown_when_empty
 wait_shutdown
-seq_check 0 $((NUMMESSAGES - 1)) -E
+export SEQ_CHECK_OPTIONS=-E
+seq_check
 exit_test

@@ -5,6 +5,7 @@
 export NUMMESSAGES=${NUMMESSAGES:-2000000}
 export COUNT_FILE_IS_ZIPPED=yes
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
+export TB_TEST_TIMEOUT=180  # test is slow due to large number of messages
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")

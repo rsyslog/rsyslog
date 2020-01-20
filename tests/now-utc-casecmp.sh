@@ -11,8 +11,8 @@ export TZ=TEST-02:00
 
 generate_conf
 add_conf '
-$ModLoad ../plugins/imtcp/.libs/imtcp
-$InputTCPServerRun '$TCPFLOOD_PORT'
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 template(name="outfmt" type="string"
 	 string="%$Now%:%$Year%-%$Month%-%$Day%,%$Now-utc%:%$Year-utc%-%$Month-utc%-%$Day-utc%\n")
@@ -29,7 +29,7 @@ echo "2016-01-01:2016-01-01,2015-12-31:2015-12-31" | cmp - $RSYSLOG_OUT_LOG
 if [ ! $? -eq 0 ]; then
   echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
   cat $RSYSLOG_OUT_LOG
-  exit 1
+  error-exit 1
 fi;
 
 
