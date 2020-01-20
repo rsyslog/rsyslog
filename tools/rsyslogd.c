@@ -1915,7 +1915,7 @@ wait_timeout(const sigset_t *sigmask)
 		}
 	}
 #else
-	pselect(1, NULL, NULL, NULL, &tvSelectTimeout, sigmask);
+	pselect(0, NULL, NULL, NULL, &tvSelectTimeout, sigmask);
 #endif /* AIXPORT : SRC end */
 }
 
