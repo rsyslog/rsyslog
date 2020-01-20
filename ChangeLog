@@ -1,5 +1,16 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2002.0 (aka 2020.02) 2020-02-25
+- 2020-01-20: core bugfix: potential race during HUP
+  when rsyslog is HUPed immediately after startup and before it is fully
+  initialized, there is a potential race with the list of loaded modules.
+  This patch ensures no bad things can happen in that case.
+  Detected by LLVM TSAN, not seen in practice.
+- 2020-01-20: testbench improvements and fixes
+  modernize tests, reduce robustness against slow machines, provide some
+  test framework functional enhancements, and optimize some tests.
+  Also includes some code changes to C testing components. Among others,
+  tests have slightly been speeded up by reducing the wait time at queue
+  shutdown. This is possible because of better overall completion checks.
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
 - 2020-01-12: core bugfix: race condition related to libfastjson when using DA queue
