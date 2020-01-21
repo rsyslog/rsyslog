@@ -6,7 +6,7 @@ AC_INIT([rsyslog],[8.2002.master], [rsyslog@lists.adiscon.com])   # UPDATE on re
 AC_DEFINE(VERSION_YEAR, 20, [year part of real rsyslog version])  # UPDATE on release
 AC_DEFINE(VERSION_MONTH,02, [month part of real rsyslog version]) # UPDATE on release
 
-AM_INIT_AUTOMAKE([subdir-objects])
+AM_INIT_AUTOMAKE([subdir-objects serial-tests])
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
