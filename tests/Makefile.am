@@ -352,6 +352,7 @@ TESTS +=  \
 	imuxsock_logger_syssock.sh \
 	imuxsock_traillf_syssock.sh \
 	imuxsock_ccmiddle_syssock.sh \
+	imuxsock_sockettype.sh \
 	discard-rptdmsg.sh \
 	discard-allmark.sh \
 	discard.sh \
@@ -2286,6 +2287,7 @@ EXTRA_DIST= \
 	imuxsock_logger_err.sh \
 	imuxsock_logger_root.sh \
 	imuxsock_logger_syssock.sh \
+	imuxsock_sockettype.sh \
 	resultdata/imuxsock_logger.log \
 	imuxsock_traillf.sh \
 	imuxsock_traillf_root.sh \
