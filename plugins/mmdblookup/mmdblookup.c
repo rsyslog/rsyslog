@@ -362,6 +362,11 @@ CODESTARTdoAction
 		dbgprintf("Got an error from the maxminddb library: %s\n", MMDB_strerror(mmdb_err));
 		ABORT_FINALIZE(RS_RET_OK);
 	}
+	if (!result.found_entry) {
+		dbgprintf("No entry found in database for '%s'\n", pszValue);
+		ABORT_FINALIZE(RS_RET_OK);
+	}
+
 
 	int status  = MMDB_get_entry_data_list(&result.entry, &entry_data_list);
 
