@@ -1144,7 +1144,8 @@ fs_node_add(fs_node_t *const node,
 		if(!ustrcmp(chld->name, name)) {
 			DBGPRINTF("fs_node_add(%p, '%s') found '%s'\n", chld->node, toFind, name);
 			/* add new instance */
-			instanceConf_t **instarr_new = realloc(chld->instarr, sizeof(instanceConf_t*) * chld->ninst+1);
+			instanceConf_t **instarr_new = realloc(chld->instarr,
+							sizeof(instanceConf_t*) * (chld->ninst+1));
 			CHKmalloc(instarr_new);
 			chld->instarr = instarr_new;
 			chld->ninst++;
