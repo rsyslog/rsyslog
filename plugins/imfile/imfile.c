@@ -1259,8 +1259,8 @@ get_file_id_hash(const char *data, size_t lendata,
 static void ATTR_NONNULL(1)
 getFileID(act_obj_t *const act)
 {
-	/* save the old id for cleaning purposes */
-	strncpy(act->file_id_prev, (const char*)act->file_id, FILE_ID_HASH_SIZE);
+	char tmp_id[FILE_ID_HASH_SIZE];
+	strncpy(tmp_id, (const char*)act->file_id, FILE_ID_HASH_SIZE);
 	act->file_id[0] = '\0';
 	assert(act->fd >= 0); /* fd must have been opened at act_obj_t creation! */
 	char filedata[FILE_ID_SIZE];
@@ -1270,6 +1270,9 @@ getFileID(act_obj_t *const act)
 		get_file_id_hash(filedata, sizeof(filedata), act->file_id, sizeof(act->file_id));
 	} else {
 		DBGPRINTF("getFileID partial or error read, ret %d\n", r);
+	}
+	if (strncmp(tmp_id, act->file_id, FILE_ID_HASH_SIZE)) {/* save the old id for cleaning purposes */
+		strncpy(act->file_id_prev, tmp_id, FILE_ID_HASH_SIZE);
 	}
 	DBGPRINTF("getFileID for '%s', file_id_hash '%s'\n", act->name, act->file_id);
 }
