@@ -4,8 +4,6 @@
 generate_conf
 add_conf '
 module(load="../plugins/omrelp/.libs/omrelp")
-module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="13514" ruleset="ruleset")
 
 ruleset(name="ruleset") {
 	action(type="omrelp" target="127.0.0.1" port="'$TCPFLOOD_PORT'"
