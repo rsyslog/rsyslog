@@ -81,6 +81,7 @@ typedef struct _instanceData {
 	uchar *pszStrmDrvr;
 	uchar *pszStrmDrvrAuthMode;
 	uchar *pszStrmDrvrPermitExpiredCerts;
+	uchar *pszStrmDrvrRemoteSNI;	/* Optional TLS SNI to use for the remote server (instead of its hostname) */
 	permittedPeers_t *pPermPeers;
 	int iStrmDrvrMode;
 	int iStrmDrvrExtendedCertCheck; /* verify also purpose OID in certificate extended field */
@@ -145,6 +146,7 @@ typedef struct configSettings_s {
 	int bResendLastOnRecon; /* should the last message be re-sent on a successful reconnect? */
 	uchar *pszStrmDrvrAuthMode;		/* authentication mode to use */
 	uchar *pszStrmDrvrPermitExpiredCerts;	/* control how to handly expired certificates */
+	uchar *pszStrmDrvrRemoteSNI;	/* Optional TLS SNI to use for the remote server (instead of its hostname) */
 	int iTCPRebindInterval;	/* support for automatic re-binding (load balancers!). 0 - no rebind */
 	int iUDPRebindInterval;	/* support for automatic re-binding (load balancers!). 0 - no rebind */
 	int bKeepAlive;
@@ -196,6 +198,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "streamdriver.CheckExtendedKeyPurpose", eCmdHdlrBinary, 0 },
 	{ "streamdriver.PrioritizeSAN", eCmdHdlrBinary, 0 },
 	{ "streamdriver.TlsVerifyDepth", eCmdHdlrPositiveInt, 0 },
+	{ "streamdriverremotesni", eCmdHdlrString, 0 },
 	{ "resendlastmsgonreconnect", eCmdHdlrBinary, 0 },
 	{ "udp.sendtoall", eCmdHdlrBinary, 0 },
 	{ "udp.senddelay", eCmdHdlrInt, 0 },
@@ -227,6 +230,7 @@ CODESTARTinitConfVars
 	cs.iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
 	cs.bResendLastOnRecon = 0; /* should the last message be re-sent on a successful reconnect? */
 	cs.pszStrmDrvrAuthMode = NULL; /* authentication mode to use */
+	cs.pszStrmDrvrRemoteSNI = NULL; /* Remote TLS SNI to use instead of hostname*/
 	cs.iUDPRebindInterval = 0;	/* support for automatic re-binding (load balancers!). 0 - no rebind */
 	cs.iTCPRebindInterval = 0;	/* support for automatic re-binding (load balancers!). 0 - no rebind */
 	cs.pPermPeers = NULL;
@@ -405,6 +409,7 @@ CODESTARTfreeInstance
 	free(pData->pszStrmDrvr);
 	free(pData->pszStrmDrvrAuthMode);
 	free(pData->pszStrmDrvrPermitExpiredCerts);
+	free(pData->pszStrmDrvrRemoteSNI);
 	free(pData->port);
 	free(pData->networkNamespace);
 	free(pData->target);
@@ -770,10 +775,16 @@ static rsRetVal TCPSendInit(void *pvData)
 		if(pData->pPermPeers != NULL) {
 			CHKiRet(netstrm.SetDrvrPermPeers(pWrkrData->pNetstrm, pData->pPermPeers));
 		}
-		/* params set, now connect */
+
+		if(pData->pszStrmDrvrRemoteSNI != NULL) {
+			CHKiRet(netstrm.SetDrvrRemoteSNI(pWrkrData->pNetstrm, pData->pszStrmDrvrRemoteSNI));
+		}
+
 		if(pData->gnutlsPriorityString != NULL) {
 			CHKiRet(netstrm.SetGnutlsPriorityString(pWrkrData->pNetstrm, pData->gnutlsPriorityString));
 		}
+
+		/* params set, now connect */
 		CHKiRet(netstrm.Connect(pWrkrData->pNetstrm, glbl.GetDefPFFamily(),
 			(uchar*)pData->port, (uchar*)pData->target, pData->device));
 
@@ -1128,6 +1139,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->pszStrmDrvr = NULL;
 	pData->pszStrmDrvrAuthMode = NULL;
 	pData->pszStrmDrvrPermitExpiredCerts = NULL;
+	pData->pszStrmDrvrRemoteSNI = NULL;
 	pData->iStrmDrvrMode = 0;
 	pData->iStrmDrvrExtendedCertCheck = 0;
 	pData->iStrmDrvrSANPreference = 0;
@@ -1258,6 +1270,8 @@ CODESTARTnewActInst
 			} else {
 				pData->pszStrmDrvrPermitExpiredCerts = val;
 			}
+		} else if(!strcmp(actpblk.descr[i].name, "streamdriverremotesni")) {
+			pData->pszStrmDrvrRemoteSNI = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "streamdriverpermittedpeers")) {
 			uchar *start, *str;
 			uchar *p;
@@ -1621,6 +1635,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 		NULL, &cs.pszStrmDrvrAuthMode, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriverpermittedpeer", 0, eCmdHdlrGetWord,
 		setPermittedPeer, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriverremotesni", 0, eCmdHdlrGetWord,
+		NULL, &cs.pszStrmDrvrRemoteSNI, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendresendlastmsgonreconnect", 0, eCmdHdlrBinary,
 		NULL, &cs.bResendLastOnRecon, NULL));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,

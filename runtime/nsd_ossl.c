@@ -374,6 +374,52 @@ long BIO_debug_callback(BIO *bio, int cmd, const char __attribute__((unused)) *a
 	return (r);
 }
 
+/*
+ * SNI should not be used if the hostname is a bare IP address
+ */
+static int
+SetServerNameIfPresent(nsd_ossl_t *pThis, uchar *host) {
+	struct sockaddr_in sa;
+	struct sockaddr_in6 sa6;
+
+	DEFiRet;
+
+	/* Always use the configured remote SNI if present */
+	if (pThis->remoteSNI != NULL) {
+		if(SSL_set_tlsext_host_name(pThis->ssl, pThis->remoteSNI) != 1) {
+			osslLastSSLErrorMsg(0, NULL, LOG_ERR, "SetServerNameIfPresent");
+			ABORT_FINALIZE(RS_RET_OPENSSL_ERR);
+		}
+		FINALIZE;
+	}
+
+	/* Otherwise, figure out if host is an IP address */
+	int inet_pton_ret = inet_pton(AF_INET, CHAR_CONVERT(host), &(sa.sin_addr));
+
+	if (inet_pton_ret == 0) { // host wasn't a bare IPv4 address: try IPv6
+		inet_pton_ret = inet_pton(AF_INET6, CHAR_CONVERT(host), &(sa6.sin6_addr));
+	}
+
+	/* Then make a decision */
+	switch(inet_pton_ret) {
+		case 1: // host is a valid IP address: don't use SNI
+			FINALIZE;
+		case 0: // host isn't a valid IP address: assume it's a domain name, use SNI
+			if(SSL_set_tlsext_host_name(pThis->ssl, host) != 1) {
+				osslLastSSLErrorMsg(0, NULL, LOG_ERR, "SetServerNameIfPresent");
+				ABORT_FINALIZE(RS_RET_OPENSSL_ERR);
+			}
+			FINALIZE;
+		default: // unexpected error
+			osslLastSSLErrorMsg(0, NULL, LOG_ERR, "SetServerNameIfPresent");
+			ABORT_FINALIZE(RS_RET_INVALID_HNAME);
+	}
+
+finalize_it:
+
+	RETiRet;
+}
+
 
 /* Convert a fingerprint to printable data. The  conversion is carried out
  * according IETF I-D syslog-transport-tls-12. The fingerprint string is
@@ -1713,6 +1759,8 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 	}
 
+	CHKiRet(SetServerNameIfPresent(pThis, host));
+
 	if (pThis->authMode != OSSL_AUTH_CERTANON) {
 		dbgprintf("Connect: enable certificate checking (Mode=%d, VerifyDepth=%d)\n",
 			pThis->authMode, pThis->DrvrVerifyDepth);
@@ -1722,6 +1770,8 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 			SSL_set_verify_depth(pThis->ssl, pThis->DrvrVerifyDepth);
 		}
 	}
+
+
 
 	if (bAnonInit == 1) { /* no mutex needed, read-only after init */
 		/* Allow ANON Ciphers */
@@ -1923,6 +1973,18 @@ finalize_it:
 	RETiRet;
 }
 
+/* Set the TLS SNI of the remote server */
+static rsRetVal
+SetRemoteSNI(nsd_t __attribute__((unused)) *pNsd, uchar* remoteSNI)
+{
+	DEFiRet;
+	nsd_ossl_t* pThis = (nsd_ossl_t*) pNsd;
+	ISOBJ_TYPE_assert(pThis, nsd_ossl);
+
+	pThis->remoteSNI = remoteSNI;
+
+	RETiRet;
+}
 
 /* queryInterface function */
 BEGINobjQueryInterface(nsd_ossl)
@@ -1961,7 +2023,7 @@ CODESTARTobjQueryInterface(nsd_ossl)
 	pIf->SetCheckExtendedKeyUsage = SetCheckExtendedKeyUsage; /* we don't NEED this interface! */
 	pIf->SetPrioritizeSAN = SetPrioritizeSAN; /* we don't NEED this interface! */
 	pIf->SetTlsVerifyDepth = SetTlsVerifyDepth;
-
+	pIf->SetRemoteSNI = SetRemoteSNI; /* we don't NEED this interface! */
 finalize_it:
 ENDobjQueryInterface(nsd_ossl)
 

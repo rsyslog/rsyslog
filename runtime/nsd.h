@@ -89,12 +89,12 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	/* v13 -- two new binary flags added to gtls driver enabling stricter operation */
 	rsRetVal (*SetCheckExtendedKeyUsage)(nsd_t *pThis, int ChkExtendedKeyUsage);
 	rsRetVal (*SetPrioritizeSAN)(nsd_t *pThis, int prioritizeSan);
-
 	/* v14 -- Tls functions */
 	rsRetVal (*SetTlsVerifyDepth)(nsd_t *pThis, int verifyDepth);
-
+	/* v15 -- allow remote server's TLS SNI to be set manually */
+	rsRetVal (*SetRemoteSNI)(nsd_t *pThis, uchar *pszRemoteSNI);
 ENDinterface(nsd)
-#define nsdCURR_IF_VERSION 14 /* increment whenever you change the interface structure! */
+#define nsdCURR_IF_VERSION 15 /* increment whenever you change the interface structure! */
 /* interface version 4 added GetRemAddr()
  * interface version 5 added EnableKeepAlive() -- rgerhards, 2009-06-02
  * interface version 6 changed return of CheckConnection from void to rsRetVal -- alorbach, 2012-09-06
@@ -103,6 +103,7 @@ ENDinterface(nsd)
  * interface version 9 changed signature of Connect() -- dsa, 2016-11-14
  * interface version 10 added SetGnutlsPriorityString() -- PascalWithopf, 2017-08-08
  * interface version 11 added oserr to Rcv() signature -- rgerhards, 2017-09-04
+ * interface version 15 added SetRemoteSNI -- jfcantu, 2020-01-15
  */
 
 /* interface  for the select call */

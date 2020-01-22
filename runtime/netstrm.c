@@ -251,6 +251,17 @@ SetDrvrTlsVerifyDepth(netstrm_t *pThis, int verifyDepth)
 	RETiRet;
 }
 
+/* Set remote host's TLS SNI */
+static rsRetVal
+SetDrvrRemoteSNI(netstrm_t *pThis, uchar *remoteSNI)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	iRet = pThis->Drvr.SetRemoteSNI(pThis->pDrvrData, remoteSNI);
+	RETiRet;
+}
+
+
 /* End of methods to shuffle autentication settings to the driver.
  * -------------------------------------------------------------------------- */
 
@@ -437,6 +448,7 @@ CODESTARTobjQueryInterface(netstrm)
 	pIf->SetDrvrCheckExtendedKeyUsage = SetDrvrCheckExtendedKeyUsage;
 	pIf->SetDrvrPrioritizeSAN = SetDrvrPrioritizeSAN;
 	pIf->SetDrvrTlsVerifyDepth = SetDrvrTlsVerifyDepth;
+	pIf->SetDrvrRemoteSNI = SetDrvrRemoteSNI;
 finalize_it:
 ENDobjQueryInterface(netstrm)
 

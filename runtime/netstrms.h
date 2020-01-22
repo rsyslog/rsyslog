@@ -38,6 +38,7 @@ struct netstrms_s {
 	int DrvrVerifyDepth;		/**< Verify Depth for certificate chains */
 	uchar *pszDrvrPermitExpiredCerts;/**< current driver setting for handlign expired certs */
 	uchar *gnutlsPriorityString; /**< priorityString for connection */
+	uchar *remoteSNI; /**< Remote SNI to use instead of the server hostname */
 	permittedPeers_t *pPermPeers;/**< current driver's permitted peers */
 
 	nsd_if_t Drvr;		/**< our stream driver */
@@ -67,7 +68,8 @@ BEGINinterface(netstrms) /* name must also be changed in ENDinterface macro! */
 	int      (*GetDrvrPrioritizeSAN)(netstrms_t *pThis);
 	rsRetVal (*SetDrvrTlsVerifyDepth)(netstrms_t *pThis, int verifyDepth);
 	int      (*GetDrvrTlsVerifyDepth)(netstrms_t *pThis);
-
+	rsRetVal (*SetDrvrRemoteSNI)(netstrms_t *pThis, uchar*);
+	uchar*      (*GetDrvrRemoteSNI)(netstrms_t *pThis);
 ENDinterface(netstrms)
 #define netstrmsCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

@@ -1593,6 +1593,19 @@ finalize_it:
 	RETiRet;
 }
 
+/* Set the TLS SNI of the remote server */
+static rsRetVal
+SetRemoteSNI(nsd_t *pNsd, uchar* remoteSNI)
+{
+	DEFiRet;
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+
+	pThis->remoteSNI = remoteSNI;
+
+	RETiRet;
+}
 
 /* Provide access to the underlying OS socket. This is primarily
  * useful for other drivers (like nsd_gtls) who utilize ourselfs
@@ -2028,12 +2041,20 @@ SetServerNameIfPresent(nsd_gtls_t *pThis, uchar *host) {
 	struct sockaddr_in sa;
 	struct sockaddr_in6 sa6;
 
+	/* Always use the configured remote SNI if present */
+	if (pThis->remoteSNI != NULL) {
+		return gnutls_server_name_set(pThis->sess, GNUTLS_NAME_DNS, pThis->remoteSNI,
+			ustrlen(pThis->remoteSNI));
+	}
+
+	/* Otherwise, figure out if host is an IP address */
 	int inet_pton_ret = inet_pton(AF_INET, CHAR_CONVERT(host), &(sa.sin_addr));
 
 	if (inet_pton_ret == 0) { // host wasn't a bare IPv4 address: try IPv6
 		inet_pton_ret = inet_pton(AF_INET6, CHAR_CONVERT(host), &(sa6.sin6_addr));
 	}
 
+	/* Then make a decision */
 	switch(inet_pton_ret) {
 		case 1: // host is a valid IP address: don't use SNI
 			return 0;
@@ -2226,6 +2247,7 @@ CODESTARTobjQueryInterface(nsd_gtls)
 	pIf->SetCheckExtendedKeyUsage = SetCheckExtendedKeyUsage;
 	pIf->SetPrioritizeSAN = SetPrioritizeSAN;
 	pIf->SetTlsVerifyDepth = SetTlsVerifyDepth;
+	pIf->SetRemoteSNI = SetRemoteSNI;
 finalize_it:
 ENDobjQueryInterface(nsd_gtls)
 

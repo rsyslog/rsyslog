@@ -70,6 +70,7 @@ struct nsd_gtls_s {
 				 * set to 1 and changed to 0 after the first report. It is changed back to 1 after
 				 * one successful authentication. */
 	permittedPeers_t *pPermPeers; /* permitted peers */
+	uchar *remoteSNI; /**< Remote SNI to use instead of the server hostname */
 	uchar *gnutlsPriorityString;	/* gnutls priority string */
 	int DrvrVerifyDepth;		/* Verify Depth for certificate chains */
 	gnutls_x509_crt_t pOurCerts[NSD_GTLS_MAX_CERT];	/**< our certificate, if in client mode

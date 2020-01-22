@@ -342,6 +342,24 @@ GetDrvrTlsVerifyDepth(netstrms_t *pThis)
 	return pThis->DrvrVerifyDepth;
 }
 
+static rsRetVal
+SetDrvrRemoteSNI(netstrms_t *pThis, uchar *remoteSNI)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	CHKmalloc(pThis->remoteSNI = (uchar*)strdup((char*)remoteSNI));
+finalize_it:
+	RETiRet;
+}
+
+/* Return the remote server SNI */
+static uchar*
+GetDrvrRemoteSNI(netstrms_t *pThis)
+{
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	return pThis->remoteSNI;
+}
+
 /* create an instance of a netstrm object. It is initialized with default
  * values. The current driver is used. The caller may set netstrm properties
  * and must call ConstructFinalize().
@@ -406,6 +424,8 @@ CODESTARTobjQueryInterface(netstrms)
 	pIf->GetDrvrPrioritizeSAN = GetDrvrPrioritizeSAN;
 	pIf->SetDrvrTlsVerifyDepth = SetDrvrTlsVerifyDepth;
 	pIf->GetDrvrTlsVerifyDepth = GetDrvrTlsVerifyDepth;
+	pIf->SetDrvrRemoteSNI = SetDrvrRemoteSNI;
+	pIf->GetDrvrRemoteSNI = GetDrvrRemoteSNI;
 finalize_it:
 ENDobjQueryInterface(netstrms)
 
