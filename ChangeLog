@@ -1,5 +1,20 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2002.0 (aka 2020.02) 2020-02-25
+- 2020-01-22: imfile bugfix: saving of old file_id for statefiles
+  Previously we saved old file_id unconditionally, which led to not
+  deleting old statefiles if files changes without rsyslog running.
+  Now it should work correctly.
+  Thanks to Jiri Vymazal for the patch.
+- 2020-01-22: imfile bugfix: misadressing and potential segfault
+  Commit 3f72e8c introduced an invalid memory allocation size. This lead to
+  too-short alloc and thus to overwrite of non-owned memory. That in turn
+  could lead to segfaults or other hard to find problems.
+  The issue was detected by our upgraded CI system. We did not receive
+  any problem reports in practice. Nevertheless, the problem is real and
+  people should update affected versions to patched ones.
+  The bug was present in scheduled stable release 8.1911.0 and 8.2001.0.
+  see also: https://github.com/rsyslog/rsyslog/issues/4120
+  see also: https://github.com/rsyslog/rsyslog/pull/4141
 - 2020-01-20: core bugfix: potential race during HUP
   when rsyslog is HUPed immediately after startup and before it is fully
   initialized, there is a potential race with the list of loaded modules.
