@@ -6,13 +6,10 @@
 # support multi-output-file operations.
 # added 2009-10-30 by Rgerhards
 # This file is part of the rsyslog project, released  under ASL 2.0
-uname
-if [ $(uname) = "SunOS" ] ; then
-   echo "This test currently does not work on all flavors of Solaris."
-#   exit 77
-fi
-
 . ${srcdir:=.}/diag.sh init
+skip_platform "SunOS" "This test does not work on Solaris. The overall queue
+size check in imdiag requires atomics or mutexes on this platform, which we
+do not use for performance reasons."
 export NUMMESSAGES=60000
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf

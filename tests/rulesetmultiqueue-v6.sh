@@ -7,6 +7,9 @@
 # added 2013-11-14 by Rgerhards
 # This file is part of the rsyslog project, released  under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+skip_platform "SunOS" "This test does not work on Solaris. The overall queue
+size check in imdiag requires atomics or mutexes on this platform, which we
+do not use for performance reasons."
 export NUMMESSAGES=60000
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf

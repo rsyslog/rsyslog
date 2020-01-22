@@ -86,10 +86,11 @@ action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 
 init_elasticsearch
-#export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
-#export RSYSLOG_DEBUGLOG="debug.log"
+
+export QUEUE_EMPTY_CHECK_FUNC=es_shutdown_empty_check
+export NUMMESSAGES=1
 startup
-injectmsg  0 1
+injectmsg
 shutdown_when_empty
 wait_shutdown
 es_getdata 1 $ES_PORT
