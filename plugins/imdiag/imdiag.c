@@ -5,7 +5,7 @@
  *
  * File begun on 2008-07-25 by RGerhards
  *
- * Copyright 2008-2018 Adiscon GmbH.
+ * Copyright 2008-2020 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -316,6 +316,7 @@ waitMainQEmpty(tcps_sess_t *pSess)
 {
 	int iPrint = 0;
 	int nempty = 0;
+	static unsigned lastOverallQueueSize = 1;
 	DEFiRet;
 
 	while(1) {
@@ -331,7 +332,11 @@ waitMainQEmpty(tcps_sess_t *pSess)
 			nempty = 0;
 		}
 		if(dbgTimeoutToStderr) { /* we abuse this setting a bit ;-) */
-			fprintf(stderr, "imdiag: wait q_empty: qsize %d nempty %d\n", OverallQueueSize, nempty);
+			if(OverallQueueSize != lastOverallQueueSize) {
+				fprintf(stderr, "imdiag: wait q_empty: qsize %d nempty %d\n",
+					OverallQueueSize, nempty);
+				lastOverallQueueSize = OverallQueueSize;
+			}
 		}
 		if(nempty > max_empty_checks)
 			break;
