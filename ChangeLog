@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2002.0 (aka 2020.02) 2020-02-25
+- 2020-01-23: oversize message log bugfix: do not close fd -1
+  The oversize message log fd is always closed on HUP, even if it never
+  was opened (and thus has -1 value). This patch corrects the issue.
+  The bug had no know-bad effect in practice other than getting an
+  (ignored) error status from close(). However, it introduced warnings
+  in test runs (e.g. when running under valgrind).
 - 2020-01-22: imfile bugfix: saving of old file_id for statefiles
   Previously we saved old file_id unconditionally, which led to not
   deleting old statefiles if files changes without rsyslog running.
