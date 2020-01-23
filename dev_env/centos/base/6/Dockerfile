@@ -91,7 +91,8 @@ RUN	groupadd rsyslog \
 	&& adduser -g rsyslog  -s /bin/bash rsyslog \
 	&& echo "rsyslog ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 # we need this for sudo to work...
-RUN	echo 'user1001:x:1001:1001::/home/rsyslog:/bin/bash' >> /etc/passwd && \
+RUN	echo 'user1000:x:1000:1000::/home/rsyslog:/bin/bash' >> /etc/passwd && \
+	echo 'user1001:x:1001:1001::/home/rsyslog:/bin/bash' >> /etc/passwd && \
 	echo 'user1002:x:1002:1002::/home/rsyslog:/bin/bash' >> /etc/passwd && \
 	echo 'user1003:x:1003:1003::/home/rsyslog:/bin/bash' >> /etc/passwd && \
 	echo 'user1004:x:1004:1004::/home/rsyslog:/bin/bash' >> /etc/passwd && \
@@ -101,6 +102,7 @@ RUN	echo 'user1001:x:1001:1001::/home/rsyslog:/bin/bash' >> /etc/passwd && \
 	echo 'user1008:x:1008:1008::/home/rsyslog:/bin/bash' >> /etc/passwd && \
 	echo 'user1009:x:1009:1009::/home/rsyslog:/bin/bash' >> /etc/passwd && \
 	echo 'user1010:x:1010:1010::/home/rsyslog:/bin/bash' >> /etc/passwd && \
+	echo 'grp1000:x:1000:user1000' >> /etc/group && \
 	echo 'grp1001:x:1001:user1001' >> /etc/group && \
 	echo 'grp1002:x:1002:user1002' >> /etc/group && \
 	echo 'grp1003:x:1003:user1003' >> /etc/group && \
@@ -111,6 +113,7 @@ RUN	echo 'user1001:x:1001:1001::/home/rsyslog:/bin/bash' >> /etc/passwd && \
 	echo 'grp1008:x:1008:user1008' >> /etc/group && \
 	echo 'grp1009:x:1009:user1009' >> /etc/group && \
 	echo 'grp1010:x:1010:user1010' >> /etc/group && \
+	echo "user1000 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
 	echo "user1001 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
 	echo "user1002 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
 	echo "user1003 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
