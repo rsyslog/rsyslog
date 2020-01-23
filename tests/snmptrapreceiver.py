@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# call this via "python[3] script name"
 import sys
 from pysnmp.entity import engine, config
 from pysnmp.carrier.asyncore.dgram import udp
