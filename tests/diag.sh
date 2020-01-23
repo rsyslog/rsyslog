@@ -2587,9 +2587,23 @@ case $1 in
 		done
 		prev_count=$(grep -c 'BEGIN$' <$2)
 		new_count=$prev_count
+		start_loop="$(date +%s)"
+		emit_waiting=0
 		while [[ "x$prev_count" == "x$new_count" ]]; do
-				# busy spin, because it allows as close timing-coordination in actual test run as possible
-				new_count=$(grep -c 'BEGIN$' <"$2")
+			# busy spin, because it allows as close timing-coordination
+			# in actual test run as possible
+			if [ $(date +%s) -gt $(( TB_STARTTEST + TB_TEST_MAX_RUNTIME )) ]; then
+			   printf '%s ABORT! Timeout waiting on stats push\n' "$(tb_timestamp)" "$1"
+			   error_exit 1
+			 else
+			   # waiting for 1000 is heuristically "sufficiently but not too
+			   # frequent" enough
+			   if [ $((++emit_waiting)) == 1000 ]; then
+			      printf 'still waiting for stats push...\n'
+			      emit_waiting=0
+			   fi
+			 fi
+			new_count=$(grep -c 'BEGIN$' <"$2")
 		done
 		echo "stats push registered"
 		;;

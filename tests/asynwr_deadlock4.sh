@@ -10,7 +10,8 @@
 # added 2010-03-18 by Rgerhards
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-export CI_SHUTDOWN_QUEUE_EMPTY_CHECKS=20 # this test is notoriously slow...
+export NUMMESSAGES=20000
+export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
@@ -31,8 +32,9 @@ local0.* ?dynfile;outfmt
 startup
 # send 20000 messages, each close to 2K (non-randomized!), so that we can fill
 # the buffers and hopefully run into the "deadlock".
-tcpflood -m20000 -d18 -P129 -i1 -f5
+tcpflood -m20000 -d18 -P129 -f5
 shutdown_when_empty
 wait_shutdown
-seq_check 1 20000 -E
+export SEQ_CHECK_OPTIONS=-E
+seq_check
 exit_test
