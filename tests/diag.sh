@@ -451,6 +451,7 @@ injectmsg_kafkacat() {
 	fi
 }
 
+
 # wait for rsyslogd startup ($1 is the instance)
 wait_startup() {
 	wait_rsyslog_startup_pid $1
@@ -632,6 +633,18 @@ injectmsg2() {
 	echo injecting $2 messages
 	echo injectmsg "$1" "$2" $3 $4 | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
 	# TODO: some return state checking? (does it really make sense here?)
+}
+
+# inject literal payload  via our inject interface (imdiag)
+injectmsg_literal() {
+	printf 'injecting msg payload: %s\n' "$1"
+	sed -e 's/^/injectmsg literal /g' <<< "$1" | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit $?
+}
+
+# inject literal payload  via our inject interface (imdiag)
+injectmsg_file() {
+	printf 'injecting msg payload: %s\n' "$1"
+	sed -e 's/^/injectmsg literal /g' < "$1" | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit $?
 }
 
 
@@ -2324,14 +2337,6 @@ mysql_cleanup_test() {
 # $3 - file name
 # $4 - expected value
 first_column_sum_check() {
-	set -x
-	echo grep:
-	grep "$2" < "$3"
-	echo sed:
-	grep "$2" < "$3" | sed -e "$1"
-	echo akw:
-	grep "$2" < "$3" | sed -e "$1" | awk '{s+=$1} END {print s}'
-	set +x
 	sum=$(grep "$2" < "$3" | sed -e "$1" | awk '{s+=$1} END {print s}')
 	if [ "x${sum}" != "x$4" ]; then
 	    printf '\n============================================================\n'
@@ -2412,6 +2417,39 @@ snmp_stop_trapreceiver() {
         # Done at testexit already!: rm -rf ${snmp_work_dir}
     fi
 }
+
+wait_for_stats_flush() {
+	echo "will wait for stats push"
+	emitmsg=0
+	while [[ ! -f $1 ]]; do
+		if [ $((++emitmsg % 10)) == 0 ]; then
+			echo waiting for stats file "'$1'" to be created
+		fi
+		$TESTTOOL_DIR/msleep 100
+	done
+	prev_count=$(grep -c 'BEGIN$' <$1)
+	new_count=$prev_count
+	start_loop="$(date +%s)"
+	emit_waiting=0
+	while [[ "x$prev_count" == "x$new_count" ]]; do
+		# busy spin, because it allows as close timing-coordination
+		# in actual test run as possible
+		if [ $(date +%s) -gt $(( TB_STARTTEST + TB_TEST_MAX_RUNTIME )) ]; then
+		   printf '%s ABORT! Timeout waiting on stats push\n' "$(tb_timestamp)" "$1"
+		   error_exit 1
+		else
+		   # waiting for 1000 is heuristically "sufficiently but not too
+		   # frequent" enough
+		   if [ $((++emit_waiting)) == 1000 ]; then
+		      printf 'still waiting for stats push...\n'
+		      emit_waiting=0
+		   fi
+		 fi
+		new_count=$(grep -c 'BEGIN$' <"$1")
+	done
+	echo "stats push registered"
+}
+
 
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
@@ -2532,23 +2570,6 @@ case $1 in
 		kill -9 $(cat $RSYSLOG_PIDBASE.pid)
 		# note: we do not wait for the actual termination!
 		;;
-    'injectmsg-litteral') # inject litteral-payload  via our inject interface (imdiag)
-		echo injecting msg payload from: $2
-		sed -e 's/^/injectmsg litteral /g' < "$2" | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
-		# TODO: some return state checking? (does it really make sense here?)
-		;;
-   'assert-equal')
-		if [ "x$4" == "x" ]; then
-			tolerance=0
-		else
-			tolerance=$4
-		fi
-		result=$(echo $2 $3 $tolerance | awk 'function abs(v) { return v > 0 ? v : -v } { print (abs($1 - $2) <= $3) ? "PASSED" : "FAILED" }')
-		if [ $result != 'PASSED' ]; then
-				echo "Value '$2' != '$3' (within tolerance of $tolerance)"
-		  error_exit 1
-		fi
-		;;
    'ensure-no-process-exists')
     ps -ef | grep -v grep | grep -qF "$2"
     if [ "x$?" == "x0" ]; then
@@ -2578,34 +2599,6 @@ case $1 in
 	 'allow-single-stats-flush-after-block-and-wait-for-it')
 		echo blocking stats flush
 		echo "awaitStatsReport block_again" | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
-		;;
-	 'wait-for-stats-flush')
-		echo "will wait for stats push"
-		while [[ ! -f $2 ]]; do
-				echo waiting for stats file "'$2'" to be created
-				$TESTTOOL_DIR/msleep 100
-		done
-		prev_count=$(grep -c 'BEGIN$' <$2)
-		new_count=$prev_count
-		start_loop="$(date +%s)"
-		emit_waiting=0
-		while [[ "x$prev_count" == "x$new_count" ]]; do
-			# busy spin, because it allows as close timing-coordination
-			# in actual test run as possible
-			if [ $(date +%s) -gt $(( TB_STARTTEST + TB_TEST_MAX_RUNTIME )) ]; then
-			   printf '%s ABORT! Timeout waiting on stats push\n' "$(tb_timestamp)" "$1"
-			   error_exit 1
-			 else
-			   # waiting for 1000 is heuristically "sufficiently but not too
-			   # frequent" enough
-			   if [ $((++emit_waiting)) == 1000 ]; then
-			      printf 'still waiting for stats push...\n'
-			      emit_waiting=0
-			   fi
-			 fi
-			new_count=$(grep -c 'BEGIN$' <"$2")
-		done
-		echo "stats push registered"
 		;;
 	 'wait-for-dyn-stats-reset')
 		echo "will wait for dyn-stats-reset"

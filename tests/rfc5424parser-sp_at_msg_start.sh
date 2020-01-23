@@ -11,10 +11,10 @@ if $syslogtag == "tag" then
 	action(type="omfile" template="outfmt" file="'$RSYSLOG_OUT_LOG'")
 '
 startup
-injectmsg litteral '<13>1 2019-05-15T11:21:57+03:00 domain.tld tag - - - nosd-nosp'
-injectmsg litteral '<13>1 2019-05-15T11:21:57+03:00 domain.tld tag - - [abc@123 a="b"] sd-nosp'
-injectmsg litteral '<13>1 2019-05-15T11:21:57+03:00 domain.tld tag - - -  nosd-sp'
-injectmsg litteral '<13>1 2019-05-15T11:21:57+03:00 domain.tld tag - - [abc@123 a="b"]  sd-sp'
+injectmsg literal '<13>1 2019-05-15T11:21:57+03:00 domain.tld tag - - - nosd-nosp'
+injectmsg literal '<13>1 2019-05-15T11:21:57+03:00 domain.tld tag - - [abc@123 a="b"] sd-nosp'
+injectmsg literal '<13>1 2019-05-15T11:21:57+03:00 domain.tld tag - - -  nosd-sp'
+injectmsg literal '<13>1 2019-05-15T11:21:57+03:00 domain.tld tag - - [abc@123 a="b"]  sd-sp'
 shutdown_when_empty
 wait_shutdown
 export EXPECTED='nosd-nosp--END

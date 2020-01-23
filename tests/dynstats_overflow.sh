@@ -25,10 +25,10 @@ if (re_match($.msg_prefix, "foo|bar|baz|quux|corge|grault")) then {
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
-. $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
+wait_for_stats_flush ${RSYSLOG_DYNNAME}.out.stats.log
 . $srcdir/diag.sh block-stats-flush
-. $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_more_0
-. $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_more_1
+injectmsg_file $srcdir/testsuites/dynstats_input_more_0
+injectmsg_file $srcdir/testsuites/dynstats_input_more_1
 wait_queueempty
 . $srcdir/diag.sh allow-single-stats-flush-after-block-and-wait-for-it
 
@@ -49,15 +49,15 @@ first_column_sum_check 's/.*no_metric=//g' 'no_metric=' "${RSYSLOG_DYNNAME}.out.
 . $srcdir/diag.sh allow-single-stats-flush-after-block-and-wait-for-it
 . $srcdir/diag.sh await-stats-flush-after-block
 
-. $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
+wait_for_stats_flush ${RSYSLOG_DYNNAME}.out.stats.log
 
 first_column_sum_check 's/.*metrics_purged=//g' 'metrics_purged=' "${RSYSLOG_DYNNAME}.out.stats.log" 3
 
 rm ${RSYSLOG_DYNNAME}.out.stats.log
 issue_HUP #reopen stats file
-. $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
+wait_for_stats_flush ${RSYSLOG_DYNNAME}.out.stats.log
 . $srcdir/diag.sh block-stats-flush
-. $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_more_2
+injectmsg_file $srcdir/testsuites/dynstats_input_more_2
 wait_queueempty
 . $srcdir/diag.sh allow-single-stats-flush-after-block-and-wait-for-it
 

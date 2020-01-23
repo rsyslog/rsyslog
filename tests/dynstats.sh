@@ -21,8 +21,8 @@ set $.increment_successful = dyn_inc("msg_stats", $.msg_prefix);
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
-. $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
-. $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input
+wait_for_stats_flush ${RSYSLOG_DYNNAME}.out.stats.log
+injectmsg_file $srcdir/testsuites/dynstats_input
 wait_queueempty
 content_check "foo 001 0"
 content_check "bar 002 0"
