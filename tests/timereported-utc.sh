@@ -5,9 +5,6 @@ export NUMMESSAGES=3
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf
 add_conf '
-module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
-
 template(name="outfmt" type="list") {
 	property(name="timereported" dateformat="rfc3339" date.inUTC="on")
 	constant(value="\n")
@@ -17,9 +14,9 @@ template(name="outfmt" type="list") {
 '
 
 startup
-tcpflood -m1 -M"\"<165>1 2003-08-24T05:14:15.000003-07:00 192.0.2.1 tcpflood 8710 - - msgnum:0000000\""
-tcpflood -m1 -M"\"<165>1 2016-03-01T12:00:00-02:00 192.0.2.1 tcpflood 8710 - - msgnum:0000000\""
-tcpflood -m1 -M"\"<165>1 2016-03-01T12:00:00Z 192.0.2.1 tcpflood 8710 - - msgnum:0000000\""
+injectmsg_literal "<165>1 2003-08-24T05:14:15.000003-07:00 192.0.2.1 tcpflood 8710 - - msgnum:0000000"
+injectmsg_literal "<165>1 2016-03-01T12:00:00-02:00 192.0.2.1 tcpflood 8710 - - msgnum:0000000"
+injectmsg_literal "<165>1 2016-03-01T12:00:00Z 192.0.2.1 tcpflood 8710 - - msgnum:0000000"
 shutdown_when_empty
 wait_shutdown
 

@@ -16,9 +16,9 @@ if ($msg == "this condition will never match") then {
 }
 '
 startup
-. $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_1
+injectmsg_file $srcdir/testsuites/dynstats_input_1
 wait_queueempty
-. $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
+wait_for_stats_flush ${RSYSLOG_DYNNAME}.out.stats.log
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown

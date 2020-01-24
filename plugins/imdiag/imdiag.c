@@ -264,18 +264,18 @@ injectMsg(uchar *pszCmd, tcps_sess_t *pSess)
 {
 	uchar wordBuf[1024];
 	int iFrom, nMsgs;
-	uchar *litteralMsg;
+	uchar *literalMsg;
 	int i;
 	ratelimit_t *ratelimit = NULL;
 	DEFiRet;
 
-	litteralMsg = NULL;
+	literalMsg = NULL;
 
 	memset(wordBuf, 0, sizeof(wordBuf));
 	CHKiRet(ratelimitNew(&ratelimit, "imdiag", "injectmsg"));
 	/* we do not check errors here! */
 	getFirstWord(&pszCmd, wordBuf, sizeof(wordBuf), TO_LOWERCASE);
-	if (ustrcmp(UCHAR_CONSTANT("litteral"), wordBuf) == 0) {
+	if (ustrcmp(UCHAR_CONSTANT("literal"), wordBuf) == 0) {
 		/* user has provided content for a message */
 		++pszCmd; /* ignore following space */
 		CHKiRet(doInjectMsg(pszCmd, ratelimit));
@@ -295,7 +295,7 @@ injectMsg(uchar *pszCmd, tcps_sess_t *pSess)
 finalize_it:
 	if(ratelimit != NULL)
 		ratelimitDestruct(ratelimit);
-	free(litteralMsg);
+	free(literalMsg);
 	RETiRet;
 }
 

@@ -160,6 +160,11 @@ TESTS +=  \
 	operatingstate-unclean.sh \
 	smtradfile.sh \
 	empty-hostname.sh \
+	timestamp-3164.sh \
+	timestamp-3339.sh \
+	timestamp-mysql.sh \
+	timestamp-pgsql.sh \
+	timestamp-subseconds.sh \
 	hostname-getaddrinfo-fail.sh \
 	msleep_usage_output.sh \
 	mangle_qi_usage_output.sh \
@@ -1266,17 +1271,7 @@ TESTS += \
 	proprepltest-nolimittag-udp.sh \
 	proprepltest-nolimittag.sh \
 	proprepltest-rfctag-udp.sh \
-	proprepltest-rfctag.sh \
-	timestamp-3164-udp.sh \
-	timestamp-3164.sh \
-	timestamp-3339-udp.sh \
-	timestamp-3339.sh \
-	timestamp-mysql-udp.sh \
-	timestamp-mysql.sh \
-	timestamp-pgsql-udp.sh \
-	timestamp-pgsql.sh \
-	timestamp-subseconds-udp.sh \
-	timestamp-subseconds.sh
+	proprepltest-rfctag.sh
 
 endif
 
@@ -1626,15 +1621,10 @@ EXTRA_DIST= \
 	proprepltest-nolimittag.sh \
 	proprepltest-rfctag-udp.sh \
 	proprepltest-rfctag.sh \
-	timestamp-3164-udp.sh \
 	timestamp-3164.sh \
-	timestamp-3339-udp.sh \
 	timestamp-3339.sh \
-	timestamp-mysql-udp.sh \
 	timestamp-mysql.sh \
-	timestamp-pgsql-udp.sh \
 	timestamp-pgsql.sh \
-	timestamp-subseconds-udp.sh \
 	timestamp-subseconds.sh \
 	rsf_getenv.sh \
 	diskq-rfc5424.sh \

@@ -3,9 +3,6 @@
 . ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
-module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
-
 template(name="outfmt" type="string" string="%timestamp:::date-rfc3164%\n")
 
 :syslogtag, contains, "TAG" action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`
@@ -14,20 +11,20 @@ template(name="outfmt" type="string" string="%timestamp:::date-rfc3164%\n")
 
 '
 startup
-tcpflood -m1 -M "\"<167>Jan  6 16:57:54 172.20.245.8 TAG: MSG\""
-tcpflood -m1 -M "\"<167>Feb  6 16:57:54 172.20.245.8 TAG: MSG\""
-tcpflood -m1 -M "\"<167>Mar  6 16:57:54 172.20.245.8 TAG: MSG\""
-tcpflood -m1 -M "\"<167>Apr  6 16:57:54 172.20.245.8 TAG: MSG\""
-tcpflood -m1 -M "\"<167>May  6 16:57:54 172.20.245.8 TAG: MSG\""
-tcpflood -m1 -M "\"<167>Jun  6 16:57:54 172.20.245.8 TAG: MSG\""
-tcpflood -m1 -M "\"<167>Jul  6 16:57:54 172.20.245.8 TAG: MSG\""
-tcpflood -m1 -M "\"<167>Aug  6 16:57:54 172.20.245.8 TAG: MSG\""
-tcpflood -m1 -M "\"<167>Sep  6 16:57:54 172.20.245.8 TAG: MSG\""
-tcpflood -m1 -M "\"<167>Oct  6 16:57:54 172.20.245.8 TAG: MSG\""
-tcpflood -m1 -M "\"<167>Nov  6 16:57:54 172.20.245.8 TAG: MSG\""
-tcpflood -m1 -M "\"<167>Dec  6 16:57:54 172.20.245.8 TAG: MSG\""
-tcpflood -m1 -M "\"<167>Jan  6 16:57:54 172.20.245.8 TAG: MSG\""
-tcpflood -m1 -M "\"<167>Jan 16 16:57:54 172.20.245.8 TAG: MSG\""
+injectmsg_literal "<167>Jan  6 16:57:54 172.20.245.8 TAG: MSG"
+injectmsg_literal "<167>Feb  6 16:57:54 172.20.245.8 TAG: MSG"
+injectmsg_literal "<167>Mar  6 16:57:54 172.20.245.8 TAG: MSG"
+injectmsg_literal "<167>Apr  6 16:57:54 172.20.245.8 TAG: MSG"
+injectmsg_literal "<167>May  6 16:57:54 172.20.245.8 TAG: MSG"
+injectmsg_literal "<167>Jun  6 16:57:54 172.20.245.8 TAG: MSG"
+injectmsg_literal "<167>Jul  6 16:57:54 172.20.245.8 TAG: MSG"
+injectmsg_literal "<167>Aug  6 16:57:54 172.20.245.8 TAG: MSG"
+injectmsg_literal "<167>Sep  6 16:57:54 172.20.245.8 TAG: MSG"
+injectmsg_literal "<167>Oct  6 16:57:54 172.20.245.8 TAG: MSG"
+injectmsg_literal "<167>Nov  6 16:57:54 172.20.245.8 TAG: MSG"
+injectmsg_literal "<167>Dec  6 16:57:54 172.20.245.8 TAG: MSG"
+injectmsg_literal "<167>Jan  6 16:57:54 172.20.245.8 TAG: MSG"
+injectmsg_literal "<167>Jan 16 16:57:54 172.20.245.8 TAG: MSG"
 shutdown_when_empty
 wait_shutdown
 

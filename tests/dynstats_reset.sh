@@ -25,12 +25,12 @@ if (re_match($.msg_prefix, "foo|bar|baz|quux|corge|grault")) then {
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
-. $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
-. $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_1
+wait_for_stats_flush ${RSYSLOG_DYNNAME}.out.stats.log
+injectmsg_file "$srcdir/testsuites/dynstats_input_1"
 rst_msleep 8100
-. $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_2
+injectmsg_file "$srcdir/testsuites/dynstats_input_2"
 rst_msleep 8100
-. $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_3
+injectmsg_file "$srcdir/testsuites/dynstats_input_3"
 rst_msleep 8100
 wait_queueempty
 content_check "foo 001 0"
