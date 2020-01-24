@@ -473,6 +473,12 @@ if ENABLE_GNUTLS
 DISTCHECK_CONFIGURE_FLAGS+= --enable-gnutls
 endif
 
+if ENABLE_GNUTLS_TESTS
+DISTCHECK_CONFIGURE_FLAGS+= --enable-gnutls-tests
+else
+DISTCHECK_CONFIGURE_FLAGS+= --disable-gnutls-tests
+endif
+
 if ENABLE_OPENSSL
 DISTCHECK_CONFIGURE_FLAGS+= --enable-openssl
 endif

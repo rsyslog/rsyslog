@@ -1057,6 +1057,27 @@ fi
 
 AM_CONDITIONAL(ENABLE_GNUTLS, test x$enable_gnutls = xyes)
 
+AC_ARG_ENABLE(gnutls-tests,
+        [AS_HELP_STRING([--enable-gnutls-tests],[Enable gnutls tests @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_gnutls_tests="yes" ;;
+          no) enable_gnutls_tests="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-gnutls-tests) ;;
+         esac],
+        [if [[ "$enable_gnutls" == "yes" ]]; then
+		enable_gnutls_tests=yes
+	else
+		enable_gnutls_tests=no
+	fi]
+)
+if  [[ "$enable_gnutls_tests" == "yes" ]] && [[ "$enable_gnutls" != "yes" ]]; then
+		AC_MSG_WARN([gnutls-tests can not be enabled without gnutls support. Disabling gnutls tests...])
+		enable_gnutls_tests="no"
+fi
+
+AM_CONDITIONAL(ENABLE_GNUTLS_TESTS, test x$enable_gnutls_tests = xyes)
+
+
 # libgcrypt support
 AC_ARG_ENABLE(libgcrypt,
         [AS_HELP_STRING([--enable-libgcrypt],[Enable log file encryption support (libgcrypt) @<:@default=yes@:>@])],
@@ -2670,6 +2691,7 @@ echo "    ClickHouse Tests:                         $enable_clickhouse_tests"
 echo "    PostgreSQL Tests enabled:                 $enable_pgsql_tests"
 echo "    Kafka Tests enabled:                      $enable_kafka_tests"
 echo "    Imdocker Tests enabled:                   $enable_imdocker_tests"
+echo "    gnutls tests enabled:                     $enable_gnutls_tests"
 echo "    systemd journal tests enabled:            $enable_journal_tests"
 echo "    SNMP Tests enabled:                       $enable_snmp_tests"
 echo "    Debug mode enabled:                       $enable_debug"
