@@ -33,15 +33,9 @@ echo CI_CHECK_CMD: $CI_CHECK_CMD
 make $CI_MAKE_CHECK_OPT ${CI_CHECK_CMD:-check}
 rc=$?
 
-# find failing tests
-echo find failing tests
-head -n12 tests/test-suite.log >> failed.tests.log
-find . -name "*.trs" -exec bash -c 'if grep ":test-result: FAIL" "$1"; then printf "\nFAIL: ${1%%.trs} ########################################################################################\n\n" >> failed-tests.log; cat "${1%%trs}log"  >> failed-tests.log; fi' _ {} \;
-if [ -f failed-tests.log ]; then
-	# show summary stats so that we know how many failed
-	echo in failed logs addition
-	head -n12 tests/test-suite.log >> failed-tests.log
-fi
+printf 'STEP: find failing tests ====================================================\n'
+echo calling gather-check-logs
+devtools/gather-check-logs.sh
 
 printf 'STEP: Codecov upload =======================================================\n'
 if [ "$CI_CODECOV_TOKEN" != "" ]; then
