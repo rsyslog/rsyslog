@@ -1,5 +1,16 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2002.0 (aka 2020.02) 2020-02-25
+- 2020-01-26: testbench: new test for loadbalancing via global vars
+  This is a popular functionality which had not been routinely tested
+  in the past.
+- 2020-01-26: mmdblookup bugfix: invalid data returned when no entry found
+  Since the upgrade of the package libmaxminddb on FreeBSD (1.3.2_2 -> 1.4.2),
+  the module mmdblookup returns the first entry of the mmdb database even if the entry
+  is not found. After some debug, I found the solution in the official maxminddb
+  repository : to check if the entry is in database, we must check the found_entry
+  attribute, otherwise the function MMDB_get_entry_data_list will return the first
+  entry of the database if the entry is not found in it.
+  Thanks to Kevin Guillemot for the patch.
 - 2020-01-23: oversize message log bugfix: do not close fd -1
   The oversize message log fd is always closed on HUP, even if it never
   was opened (and thus has -1 value). This patch corrects the issue.
