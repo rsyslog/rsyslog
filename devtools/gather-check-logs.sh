@@ -31,14 +31,30 @@ append_summary() {
 	head -n12 "$1"
 }
 
+# find logs from tests which are potentially aborted. The main indication is
+# that no matching .trs file exists
+check_incomplete_logs() {
+	if grep -q "\.dep_wrk\|rstb_\|config.log" <<<"$1"; then
+		return
+	fi
+	trsfile="${1%%log}trs"
+	if [ ! -f "$trsfile" ]; then
+		printf '\n\nNo matching .trs file for %s\n' "$1"
+		ls -l ${1%%.log}*
+		cat "$1"
+	fi
+}
 export -f show_log
 export -f append_summary
+export -f check_incomplete_logs
 
 ############################## MAIN ENTRY POINT ##############################
 printf 'find failing tests\n'
 rm -f failed-tests.log
 
 find . -name "*.trs" -exec  bash -c 'show_log "$1" >> failed-tests.log' _ {} \;
+
+find . -name "*.log" -exec  bash -c 'check_incomplete_logs "$1" >> failed-tests.log' _ {} \;
 
 if [ -f failed-tests.log ]; then
 	# show summary stats so that we know how many failed
