@@ -41,8 +41,18 @@ printf 'STEP: Codecov upload ===================================================
 if [ "$CI_CODECOV_TOKEN" != "" ]; then
 	curl -s https://codecov.io/bash >codecov.sh
 	chmod +x codecov.sh
-	./codecov.sh -t "$CI_CODECOV_TOKEN" -n 'rsyslog buildbot PR'
+	./codecov.sh -t "$CI_CODECOV_TOKEN" -n 'rsyslog buildbot PR' &> codecov_log
 	rm codecov.sh
+	lines="$(wc -l < codecov_log)"
+	if (( lines > 3000 )); then
+		printf 'codecov log file is very large (%d lines), showing parts\n' $lines
+		head -n 1500 < codecov_log
+		printf '\n\n... snip ...\n\n'
+		tail -n 1500 < codecov_log
+	else
+		cat codecov_log
+	fi
+	rm codecov_log
 fi
 
 exit $rc
