@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2002.0 (aka 2020.02) 2020-02-25
+- 2020-01-27: build system: add option --enable-gnutls-tests
+  This enables us to build GNUtls support but not necessarily
+  test it in CI. This is useful for some specialised subcomponent
+  test. The default is enabled if gnutls is enabled and disabled if not.
 - 2020-01-26: testbench: new test for loadbalancing via global vars
   This is a popular functionality which had not been routinely tested
   in the past.
