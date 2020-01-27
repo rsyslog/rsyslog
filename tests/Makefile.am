@@ -1141,7 +1141,7 @@ TESTS += \
 endif
 endif
 
-if ENABLE_GNUTLS
+if ENABLE_GNUTLS_TESTS
 TESTS +=  \
 	imtcp-tls-basic.sh \
 	imtcp-tls-basic-verifydepth.sh \
@@ -1196,7 +1196,7 @@ TESTS += \
 endif
 endif
 
-if ENABLE_GNUTLS
+if ENABLE_GNUTLS_TESTS
 if ENABLE_OPENSSL
 TESTS +=  \
 	sndrcv_tls_ossl_servercert_gtls_clientanon.sh \
