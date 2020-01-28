@@ -8,20 +8,24 @@ show_log() {
 		printf "\nFAIL: ${1%%.trs} \
 		########################################################\
 		################################\n\n"
-		logfile="${1%%trs}log"
-		if [ -f "$logfile" ]; then
-			lines="$(wc -l < $logfile)"
-			if (( lines > 4000 )); then
-				ls -l $logfile
-				printf 'file is very large (%d lines), showing parts\n' $lines
-				head -n 2000 < "$logfile"
-				printf '\n\n... snip ...\n\n'
-				tail -n 2000 < "$logfile"
+		# we emit info only for test log files - this means there must
+		# be a matching .sh file by our conventions
+		if [ -f "${1%%trs}sh" ]; then
+			logfile="${1%%trs}log"
+			if [ -f "$logfile" ]; then
+				lines="$(wc -l < $logfile)"
+				if (( lines > 4000 )); then
+					ls -l $logfile
+					printf 'file is very large (%d lines), showing parts\n' $lines
+					head -n 2000 < "$logfile"
+					printf '\n\n... snip ...\n\n'
+					tail -n 2000 < "$logfile"
+				else
+					cat "$logfile"
+				fi
 			else
-				cat "$logfile"
+				printf 'log FILE MISSING!\n'
 			fi
-		else
-			printf 'log FILE MISSING!\n'
 		fi
 	fi
 }
