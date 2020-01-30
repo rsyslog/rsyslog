@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2002.0 (aka 2020.02) 2020-02-25
+- 2020-01-30: build system: change --enable-imfile-tests default to "yes"
+  This was accidentally set to "no" some time ago (actual commit unknown). Tests for
+  imfile should by default run when imfile is enabled.
+  see also https://github.com/rsyslog/rsyslog/issues/4120
 - 2020-01-27: build system: add option --enable-gnutls-tests
   This enables us to build GNUtls support but not necessarily
   test it in CI. This is useful for some specialised subcomponent
