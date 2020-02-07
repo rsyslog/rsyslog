@@ -2334,6 +2334,7 @@ do_inotify(void)
 	char iobuf[8192];
 	int rd;
 	int currev;
+	static int last_timeout = 0;
 	DEFiRet;
 
 	CHKiRet(wdmapInit());
@@ -2359,6 +2360,7 @@ do_inotify(void)
 			if(r == 0) {
 				DBGPRINTF("readTimeouts are configured, checking if some apply\n");
 				fs_node_walk(runModConf->conf_tree, poll_timeouts);
+				last_timeout = time(NULL);
 				continue;
 			} else if (r == -1) {
 				LogError(errno, RS_RET_INTERNAL_ERROR,
@@ -2394,6 +2396,11 @@ do_inotify(void)
 			in_dbg_showEv(savecast.ev);
 			in_processEvent(savecast.ev);
 			currev += sizeof(struct inotify_event) + savecast.ev->len;
+		}
+		int now = time(NULL);
+		if(last_timeout + (runModConf->timeoutGranularity / 1000) > now) {
+			fs_node_walk(runModConf->conf_tree, poll_timeouts);
+			last_timeout = time(NULL);
 		}
 	}
 
