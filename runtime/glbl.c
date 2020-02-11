@@ -7,7 +7,7 @@
  *
  * Module begun 2008-04-16 by Rainer Gerhards
  *
- * Copyright 2008-2019 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2020 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -209,6 +209,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "environment", eCmdHdlrArray, 0 },
 	{ "processinternalmessages", eCmdHdlrBinary, 0 },
 	{ "umask", eCmdHdlrFileCreateMode, 0 },
+	{ "security.abortonidresolutionfail", eCmdHdlrBinary, 0 },
 	{ "internal.developeronly.options", eCmdHdlrInt, 0 },
 	{ "internalmsg.ratelimit.interval", eCmdHdlrPositiveInt, 0 },
 	{ "internalmsg.ratelimit.burst", eCmdHdlrPositiveInt, 0 },
@@ -1440,6 +1441,8 @@ glblDoneLoadCnf(void)
 			glblInputTimeoutShutdown = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "privdrop.group.keepsupplemental")) {
 			loadConf->globals.gidDropPrivKeepSupplemental = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "security.abortonidresolutionfail")) {
+			loadConf->globals.abortOnIDResolutionFail = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "net.acladdhostnameonfail")) {
 			*(net.pACLAddHostnameOnFail) = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "net.aclresolvehostname")) {
