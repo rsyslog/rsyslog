@@ -4,9 +4,11 @@
 . $srcdir/diag.sh check-inotify-only
 export IMFILECHECKTIMEOUT="60"
 
+mkdir ${RSYSLOG_DYNNAME}.statefiles
 generate_conf
 add_conf '
-module(load="../plugins/imfile/.libs/imfile" timeoutGranularity="1")
+module(load="../plugins/imfile/.libs/imfile" timeoutGranularity="1"
+       statefile.Directory="'${RSYSLOG_DYNNAME}'.statefiles")
 
 input(type="imfile" File="./'$RSYSLOG_DYNNAME'.input" Tag="file:"
       PersistStateInterval="1" readTimeout="2" startmsg.regex="^[^ ]")
@@ -18,7 +20,7 @@ template(name="outfmt" type="list") {
 }
 
 if $msg contains "msgnum:" then
-	action( type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+	action( type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
 
@@ -33,8 +35,10 @@ echo ' msgnum:2
 
 # we now do a stop and restart of rsyslog. This checks that everything
 # works across restarts.
-shutdown_when_empty # shut down rsyslogd when done processing messages
-wait_shutdown    # we need to wait until rsyslogd is finished!
+shutdown_when_empty
+wait_shutdown
+
+# re-start (so we read persisted state file)
 startup
 
 # new data
