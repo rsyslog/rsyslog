@@ -711,10 +711,11 @@ act_obj_add(fs_edge_t *const edge, const char *const name, const int is_file,
 	if(fd < 0) {
 		if (is_file) {
 			LogError(errno, RS_RET_ERR, "imfile: error accessing file '%s'", name);
+			ABORT_FINALIZE(RS_RET_NO_FILE_ACCESS);
 		} else { /* reporting only in debug for dirs as higher lvl paths are likely blocked by selinux */
 			DBGPRINTF("imfile: error accessing directory '%s'", name);
+			ABORT_FINALIZE(RS_RET_FILE_OPEN_ERROR);
 		}
-		FINALIZE;
 	}
 	DBGPRINTF("add new active object '%s' in '%s'\n", name, edge->path);
 	CHKmalloc(act = calloc(sizeof(act_obj_t), 1));
