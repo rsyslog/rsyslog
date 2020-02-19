@@ -1178,7 +1178,7 @@ initTLS(void)
 				" Is the file at the right path? And do we have the permissions?");
 		exit(1);
 	}
-	if(SSL_CTX_use_certificate_file(ctx, tlsCertFile, SSL_FILETYPE_PEM) != 1) {
+	if(SSL_CTX_use_certificate_chain_file(ctx, tlsCertFile) != 1) {
 		printf("tcpflood: error cert file could not be accessed -- have you mixed up key and certificate?\n");
 		printf("If in doubt, try swapping the files in -z/-Z\n");
 		printf("Certifcate is: '%s'\n", tlsCertFile);
