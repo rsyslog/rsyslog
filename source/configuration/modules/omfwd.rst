@@ -315,7 +315,8 @@ RebindInterval
 
 Permits to specify an interval at which the current connection is
 broken and re-established. This setting is primarily an aid to load
-balancers. After the configured number of messages has been
+balancers. After the configured number of batches (equals roughly to 
+messages for UDP traffic, dependent on batch size for TCP) has been
 transmitted, the current connection is terminated and a new one
 started. Note that this setting applies to both TCP and UDP traffic.
 For UDP, the new \`\`connection'' uses a different source port (ports
