@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2002.0 (aka 2020.02) 2020-02-25
+- 2020-02-20: testbench bugfix: two minor issues in omkafkadynakey.sh test
+  lead to false positives during test runs (depending on circumstances)
+  closes: https://github.com/rsyslog/rsyslog/issues/4134
+- 2020-02-20: testbench: set max extra data length for tcpflood from 200 to 512KiB
+  Added a imrelp test for big messages (256KB).
+  closes: https://github.com/rsyslog/rsyslog/issues/4158
 - 2020-02-20: config system bugfix: 'config.enabled' directive oddities
   Previously the directive was processed way too late which caused false
   errors whenever it was set to 'off' and possibly other problems.
