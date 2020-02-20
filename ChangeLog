@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2002.0 (aka 2020.02) 2020-02-25
+- 2020-02-20: config system bugfix: 'config.enabled' directive oddities
+  Previously the directive was processed way too late which caused false
+  errors whenever it was set to 'off' and possibly other problems.
+  Thanks to Jiri Vymazal for the patch.
 - 2020-02-09: imfile bugfix: timeout did not work on very busy system
   The timeout feature was soley based on timeouts of the poll()
   system call. On a very busy system, this would probably happen
