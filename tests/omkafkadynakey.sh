@@ -96,8 +96,8 @@ while [ $timecounter -lt $timeoutend ]; do
 	count=$(wc -l < ${RSYSLOG_OUT_LOG})
 	if [ $count -eq $TESTMESSAGESFULL ]; then
 		printf '**** wait-kafka-lines success, have %d lines ****\n\n' "$TESTMESSAGESFULL"
-	        kafkacat -b localhost:29092 -e -C -o beginning -t HNyjt9vf -f '%p %k\n' | sort | uniq > $RSYSLOG_OUT_LOG
-        	count=$(wc -l < ${RSYSLOG_OUT_LOG})
+	        kafkacat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%p %k\n' | sort | uniq > "$RSYSLOG_OUT_LOG.extra"
+        	count=$(wc -l < "${RSYSLOG_OUT_LOG}.extra")
 	        if [ $count -eq 10 ]; then
 			printf '**** partition check success, have 10 partition-key combinations ****\n\n' 
 			break
@@ -106,9 +106,9 @@ while [ $timecounter -lt $timeoutend ]; do
 			wait_shutdown
 			printf '\n\nERROR: partition check failed, expected 10 got %s\n' "$count"
 			printf '\ņRAW DATA:\n'
-			kafkacat -b localhost:29092 -e -C -o beginning -t HNyjt9vf -f '%p %k\n'
+			kafkacat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%p %k\n'
 			printf '\nCHECKED OUTPUT:\n'
-			cat "$RSYSLOG_OUT_LOG"
+			cat "$RSYSLOG_OUT_LOG.extra"
 			error_exit 1
 	        fi
 	else
