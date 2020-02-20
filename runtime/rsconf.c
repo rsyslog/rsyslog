@@ -438,6 +438,16 @@ cnfDoObj(struct cnfobj *const o)
 
 	dbgprintf("cnf:global:obj: ");
 	cnfobjPrint(o);
+
+	/* We need to check for object disabling as early as here to cover most
+	 * of them at once and avoid needless initializations
+	 * - jvymazal 2020-02-12
+	 */
+	if (nvlstChkDisabled(o->nvlst)) {
+		dbgprintf("object disabled by configuration\n");
+		return;
+	}
+
 	switch(o->objType) {
 	case CNFOBJ_GLOBAL:
 		glblProcessCnf(o);
