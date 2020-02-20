@@ -515,6 +515,19 @@ startup() {
 	reassign_ports
 }
 
+# this function would only be valid after another good
+# startup() call and does nothing but try to start rsyslogd
+# just like the eval line in the function above, which
+# should fail to do more than cause some logging as the
+# forced process should just hit the pidfile's lock barrier and
+# exit after logging a message to stderr, which a test can
+# then detect in the log
+#
+# $1 is instance, some other vars might be missing, but ...
+startup_forced_second_instance() {
+	eval LD_PRELOAD=$RSYSLOG_PRELOAD $valgrind ../tools/rsyslogd -C $n_option -i$RSYSLOG_PIDBASE$1.pid -M../runtime/.libs:../.libs -f$CONF_FILE $RS_REDIR &
+}
+
 
 # assign TCPFLOOD_PORT from port file
 # $1 - port file
@@ -880,6 +893,105 @@ wait_queueempty() {
 	error_exit $TB_ERR_TIMEOUT
 }
 
+# The pidfile is one way of showing the process id of the
+# rsyslogd process, but fuser can tell us the pid of the
+# process that is actually running by looking at the pid
+# file lock barrier, which rsyslogd locks with fcntl()
+# and holds open for the lifetime of the process.
+#
+# This validation is important because the pidfile could
+# have been written by an instance that crashed, and another
+# process could have gotten the same pid, but linux guarantees
+# that the flock will be cleared when the process is dead,
+# even though the file itself may have been created earlier.
+#
+# $1 is the instance
+# $2 abort on invalid result
+validate_pidfile() {
+
+	RETCODE=0
+	ABORT_ON_INVALID=1
+	pidfile_pid=""
+	fuser_pid=""
+
+	if [ "$2" = "no" ]; then
+		ABORT_ON_INVALID=0
+	fi
+
+	command -v fuser > /dev/null 2>&1
+	if [ $? -ne 0 ]; then
+		ABORT_ON_INVALID=0
+	fi
+
+	PF=$RSYSLOG_PIDBASE$1.pid
+	if [ -z $PF ]; then
+		echo "validate_pidfile: \$RSYSLOG_PIDBASE is not set!"
+		return 1
+	fi
+
+	if [ ! -f $PF ]; then
+		echo "validate_pidfile: the file '$PF' is missing"
+		RETCODE=1
+	else
+		pidfile_pid=$(cat "$PF")
+		if [ -z $pidfile_pid ]; then
+			echo "validate_pidfile: pidfile pid was not detected"
+			RETCODE=1
+		fi
+	fi
+
+	if [ -f ${PF}.lock ]; then
+		fuser_pid=$(fuser "${PF}.lock" 2> /dev/null)
+		if [ -z $fuser_pid ]; then
+			echo "validate_pidfile: fuser pid was not detected"
+			RETCODE=1
+		fi
+	else
+		echo "validate_pidfile: pidfile barrier lock is missing"
+		RETCODE=1
+	fi
+
+	if [ $RETCODE -eq 0 ]; then
+		# we grep here because fuser will detect any user of the lock
+		# file, we just care about seeing the pid we think should be
+		# the lock holder in the list of pids fuser may report
+		echo "$fuser_pid" | egrep -q "\b$pidfile_pid\b"
+		if [ $? -ne 0 ]; then
+			echo "validate_pidfile: pid '$pidfile_pid' not in '$fuser_pid'"
+			RETCODE=1
+		else
+			echo "validate_pidfile: pidfile pid matches with fuser pid"
+			RETCODE=0
+		fi
+	fi
+
+	if [ $RETCODE -ne 0 ]; then
+		echo "validate_pidfile: pidfile '$PF' not valid"
+		RETCODE=1
+		if [ $ABORT_ON_INVALID -ne 0 ]; then
+			echo "validate_pidfile: aborting on invalid result"
+			error_exit 1
+		fi
+	else
+		echo "validate_pidfile: pidfile '$PF' is valid"
+		RETCODE=0
+	fi
+
+	return $RETCODE
+}
+
+# helper function to determine the pid to be killed
+set_pid_to_kill() {
+	target_pidfile=$1
+
+	command -v fuser > /dev/null 2>&1
+	if [ $? -eq 0 ]; then
+		PID_TO_KILL=$(fuser "$target_pidfile.lock" 2> /dev/null)
+	else
+		PID_TO_KILL=$(cat "$target_pidfile" 2> /dev/null)
+	fi
+}
+
 
 # shut rsyslogd down when main queue is empty. $1 is the instance.
 shutdown_when_empty() {
@@ -889,16 +1001,20 @@ shutdown_when_empty() {
 		echo "RSYSLOG_PIDBASE is EMPTY! - bug in test? (instance $1)"
 		error_exit 1
 	fi
+	validate_pidfile "$1"
 	cp $RSYSLOG_PIDBASE$1.pid $RSYSLOG_PIDBASE$1.pid.save
 	$TESTTOOL_DIR/msleep 500 # wait a bit (think about slow testbench machines!)
-	kill $(cat $RSYSLOG_PIDBASE$1.pid) # note: we do not wait for the actual termination!
+	set_pid_to_kill "$RSYSLOG_PIDBASE$1.pid"
+	kill $PID_TO_KILL
+	# note: we do not wait for the actual termination!
 }
 
 # shut rsyslogd down without emptying the queue. $2 is the instance.
 shutdown_immediate() {
 	pidfile=$RSYSLOG_PIDBASE${1:-}.pid
 	cp $pidfile $pidfile.save
-	kill $(cat $pidfile)
+	set_pid_to_kill $pidfile
+	kill $PID_TO_KILL
 }
 
 
@@ -935,7 +1051,8 @@ inf thr
 thread apply all bt
 quit"
 		   echo "trying to kill -9 process"
-		   kill -9 $out_pid
+		   set_pid_to_kill "$RSYSLOG_PIDBASE$1.pid"
+		   kill -9 $PID_TO_KILL
 		   error_exit 1
 		fi
 	done
@@ -1133,8 +1250,9 @@ issue_HUP() {
 	else
 		sleeptime=1000
 	fi
-	kill -HUP $(cat $RSYSLOG_PIDBASE$1.pid)
-	printf 'HUP issued to pid %d\n' $(cat $RSYSLOG_PIDBASE$1.pid)
+	set_pid_to_kill "$RSYSLOG_PIDBASE$1.pid"
+	kill -HUP $PID_TO_KILL
+	printf 'HUP issued to pid %d\n' $PID_TO_KILL
 	$TESTTOOL_DIR/msleep $sleeptime
 }
 
@@ -2567,7 +2685,8 @@ case $1 in
 		fi
 		;;
    'kill-immediate') # kill rsyslog unconditionally
-		kill -9 $(cat $RSYSLOG_PIDBASE.pid)
+		set_pid_to_kill "$RSYSLOG_PIDBASE.pid"
+		kill -9 $PID_TO_KILL
 		# note: we do not wait for the actual termination!
 		;;
    'ensure-no-process-exists')

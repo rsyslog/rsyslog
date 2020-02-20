@@ -25,8 +25,11 @@
 
 #include <signal.h>
 #include <stdlib.h>
+#include <sys/file.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
 #ifdef ENABLE_LIBLOGGING_STDLOG
@@ -187,6 +190,8 @@ int bFinished = 0;	/* used by termination signal handler, read-only except there
 			 */
 const char *PidFile;
 #define NO_PIDFILE "NONE"
+char *lockfile_name = NULL;
+int lockfile_fd = -1;
 int iConfigVerify = 0;	/* is this just a config verify run? */
 rsconf_t *ourConf = NULL;	/* our config object */
 int MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
@@ -261,6 +266,7 @@ finalize_it:
 	RETiRet;
 }
 
+
 static rsRetVal
 writePidFile(void)
 {
@@ -277,7 +283,7 @@ writePidFile(void)
 	}
 	if(tmpPidFile == NULL)
 		tmpPidFile = PidFile;
-	DBGPRINTF("rsyslogd: writing pidfile '%s'.\n", tmpPidFile);
+	DBGPRINTF("rsyslogd: writing pid file '%s'.\n", tmpPidFile);
 	if((fp = fopen((char*) tmpPidFile, "w")) == NULL) {
 		perror("rsyslogd: error writing pid file (creation stage)\n");
 		ABORT_FINALIZE(RS_RET_ERR);
@@ -296,45 +302,76 @@ finalize_it:
 	RETiRet;
 }
 
-/* duplicate startup protection: check, based on pid file, if our instance
- * is already running. This MUST be called before we write our own pid file.
+
+/* duplicate startup protection: check, based on fcntl() locks,
+ * that there is only one rsyslogd instance running with that  particular
+ * pid file name. If the pidfile were called "myfile.pid", we will want
+ * to create and lock "myfile.pid.lock" here, and hold it open, with
+ * the lock, until the running instance fails or shuts down.
+ *
+ * This MUST be called before we write our own pid to the file in the
+ * call to writePidFile().
  */
 static rsRetVal
 checkStartupOK(void)
 {
-	FILE *fp = NULL;
+	int status;
+	struct flock lock;
 	DEFiRet;
 
-	DBGPRINTF("rsyslogd: checking if startup is ok, pidfile '%s'.\n", PidFile);
+	DBGPRINTF("rsyslogd: checking if startup is ok, pid file '%s'.\n", PidFile);
 
 	if(!strcmp(PidFile, NO_PIDFILE)) {
 		dbgprintf("no pid file shall be written, skipping check\n");
 		FINALIZE;
 	}
 
-	if((fp = fopen((char*) PidFile, "r")) == NULL)
-		FINALIZE; /* all well, no pid file yet */
+	/* here we create a file, which we will attempt to lock below, and keep
+	 * open, and holding the lock, for the lifetime of the process
+	 */
+	if(asprintf((char **)&lockfile_name, "%s.lock", PidFile) < 0) {
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
 
-	int pf_pid;
-	if(fscanf(fp, "%d", &pf_pid) != 1) {
-		fprintf(stderr, "rsyslogd: error reading pid file, cannot start up\n");
+	lockfile_fd = open(lockfile_name,
+				O_CREAT|O_RDWR|O_SYNC,
+				S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+	if(lockfile_fd < 0) {
+		fprintf(stderr, "rsyslogd: open() failed for '%s'\n",
+				lockfile_name);
+		free(lockfile_name);
+		lockfile_name = NULL;
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	
-	/* ok, we got a pid, let's check if the process is running */
-	const pid_t pid = (pid_t) pf_pid;
-	if(kill(pid, 0) == 0 || errno != ESRCH) {
-		fprintf(stderr, "rsyslogd: pidfile '%s' and pid %d already exist.\n"
-			"If you want to run multiple instances of rsyslog, you need "
-			"to specify\n"
-			"different pid files for them (-i option).\n",
-			PidFile, (int) getpid());
+
+	/* ok, we opened the file, let's check if another instance is
+	 * still running by attempting to take a lock on the file. We
+	 * are calling fcntl() non-blocking, so if the exclusive lock is
+	 * not immedietly available, the call will fail, and we will abort.
+	 */
+	lock.l_start = 0;
+	lock.l_len = 0;
+	lock.l_type = F_WRLCK;
+	lock.l_whence = SEEK_SET;
+	status = fcntl(lockfile_fd, F_SETLK, &lock);
+	if(status < 0) {
+		if(errno == EAGAIN) {
+			fprintf(stderr, "rsyslogd: pid file '%s' is locked by "
+				"rsyslogd with valid lock file '%s'.\n",
+				PidFile, lockfile_name);
+		} else {
+			perror("rsyslogd: locking failed for pid file lock");
+		}
+		close(lockfile_fd);
+		lockfile_fd = -1;
+		free(lockfile_name);
+		lockfile_name = NULL;
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 finalize_it:
-	if(fp != NULL)
-		fclose(fp);
+	/* success here with lockfile_fd open and lockfile_name allocated */
+
 	RETiRet;
 }
 
@@ -431,6 +468,7 @@ forkRsyslog(void)
 	/* we are now in the parent. All we need to do here is wait for the
 	 * startup message, emit it (if necessary) and then terminate.
 	 */
+
 	close(pipefd[1]);
 	dbgprintf("rsyslogd: parent waiting up to 60 seconds to read startup message\n");
 
@@ -1587,7 +1625,7 @@ initAll(int argc, char **argv)
 		localRet = RS_RET_OK;
 	}
 	CHKiRet(localRet);
-	
+
 	CHKiRet(rsyslogd_InitStdRatelimiters());
 
 	if(bChDirRoot) {
@@ -1600,11 +1638,13 @@ initAll(int argc, char **argv)
 	/* after this point, we are in a "real" startup */
 
 	thrdInit();
-	CHKiRet(checkStartupOK());
 	if(doFork) {
 		parentPipeFD = forkRsyslog();
 	}
+
 	glblSetOurPid(getpid());
+
+	CHKiRet(checkStartupOK());
 
 	hdlr_enable(SIGPIPE, SIG_IGN);
 	hdlr_enable(SIGXFSZ, SIG_IGN);
@@ -2012,7 +2052,7 @@ deinitAll(void)
 	/* close the inputs */
 	DBGPRINTF("Terminating input threads...\n");
 	glbl.SetGlobalInputTermination();
-	
+
 	thrdTerminateAll();
 
 	/* and THEN send the termination log message (see long comment above) */
@@ -2075,7 +2115,26 @@ deinitAll(void)
 	/* dbgClassExit MUST be the last one, because it de-inits the debug system */
 	dbgClassExit();
 
-	/* NO CODE HERE - dbgClassExit() must be the last thing before exit()! */
+	/* final bit of clean-up, destroy the lockfile
+	 */
+	if(lockfile_fd >= 0) {
+		struct flock lock;
+		lock.l_start = 0;
+		lock.l_len = 0;
+		lock.l_type = F_UNLCK;
+		lock.l_whence = SEEK_SET;
+		if(fcntl(lockfile_fd, F_SETLK, &lock) < 0) {
+			perror("rsyslogd: fcntl() failed to unlock pid file!");
+		}
+		if(close(lockfile_fd) < 0) {
+			perror("rsyslogd: close() failed to close pid file!");
+		}
+		lockfile_fd = -1;
+		unlink(lockfile_name);
+		free(lockfile_name);
+		lockfile_name = NULL;
+	}
+
 	if(strcmp(PidFile, NO_PIDFILE)) {
 		unlink(PidFile);
 	}
