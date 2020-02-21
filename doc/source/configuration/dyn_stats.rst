@@ -30,12 +30,24 @@ Parameters:
 
     **unusedMetricLife** <number, default: 3600> : Interval between full purges (in seconds).  This prevents unused counters from occupying resources forever.
 
+    **persistStateInterval** <number, default: 0> : Number of bucket updates before persisting state to disk. When set to 0 (default), count-based persistence is disabled. When set to a positive value, the bucket state will be written to disk after this many counter updates.
+
+    **persistStateTimeInterval** <number, default: 0> : Time interval in seconds before persisting bucket state to disk. When set to 0 (default), time-based persistence is disabled. When set to a positive value, the bucket state will be written to disk at least once per interval when counters change. If a bucket remains idle (no counter updates), no periodic write is performed because the persisted state is already current.
+
+    **statefile.directory** <string, optional> : Directory where state files should be stored. If not specified, the global ``workDirectory`` is used. State files are named ``dynstats-state:<bucket-name>``.
+
 
 A definition setting all the parameters looks like:
 
 ::
 
    dyn_stats(name="msg_per_host" resettable="on" maxCardinality="3000" unusedMetricLife="600")
+
+To enable persistence:
+
+::
+
+   dyn_stats(name="msg_per_host" persistStateInterval="100" statefile.directory="/var/lib/rsyslog/dynstats")
 
 
 dyn_inc("<bucket>", <expr>) (function)
@@ -59,6 +71,27 @@ A ``dyn_inc`` call looks like:
    }
 
 ``$.inc`` captures the error-code. It has value ``0`` when increment operation is successful and non-zero when it fails. It uses Rsyslog error-codes.
+
+State Persistence
+^^^^^^^^^^^^^^^^^
+
+When ``persistStateInterval`` or ``persistStateTimeInterval`` is configured for a bucket, dynstats will save the current counter values to disk when counters are updated. This allows counters to survive rsyslog restarts. If there are no counter updates, no write is triggered because the on-disk state remains current.
+
+**State File Format**: State files are written in JSON format with the following structure:
+
+::
+
+   { "name": "bucket_name", "values": { "metric1": 42, "metric2": 17 } }
+
+**Startup Behavior**: When rsyslog starts, it automatically loads state files for buckets with persistence enabled. If a state file exists, counter values are restored; otherwise, counters start at zero.
+
+**File Write Worker**: A background thread handles state file writes to avoid blocking message processing. The worker is automatically started when the first bucket with persistence is created.
+
+**Persistence Stats**: Three additional counters are reported for each bucket with persistence enabled:
+
+- ``<bucket_name>_flushed_bytes``: Total bytes written to state files
+- ``<bucket_name>_flushed_counts``: Number of successful state file writes
+- ``<bucket_name>_flush_errors``: Number of failed state file write attempts
 
 Reporting
 ^^^^^^^^^
@@ -103,4 +136,3 @@ Fields
     
 **msg_per_host: origin=dynstats.bucket**:
     **<metric_name>**: Value of counter identified by <metric-name>.
-

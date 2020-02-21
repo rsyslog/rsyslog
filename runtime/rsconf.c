@@ -319,7 +319,7 @@ BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and C
     CODESTARTobjDestruct(rsconf);
     freeCnf(pThis);
     tplDeleteAll(pThis);
-    dynstats_destroyAllBuckets();
+    dynstats_destroyAllBuckets(pThis);
     perctileBucketsDestruct();
     ochDeleteAll();
     freeTimezones(pThis);
