@@ -487,12 +487,31 @@ The following parameters can be set:
   default value is a very good compromise between performance and
   keeping reverse lookup information current.
 
-- **reverselookup.cache.ttl.enable** [boolean] available 8.1904.0+
+- **reverselookup.cache.ttl.enable** [boolean (on/off)] available 8.1904.0+
 
   This configures whether rsyslog expires DNS cache entries (setting "on") or
   not (setting "off", the default). If configured to "off",
   *reverselookup.cache.default.ttl* is not in effect. Note that this is the
   **default**.
+
+- **security.abortOnIDResoultionFail** [boolean (on/off)], default "on", available 8.2002.0+
+
+  This setting controls if rsyslog should error-terminate when an security ID cannot
+  be resolved during config file processing at startup. If set to "on" and
+  a name ID lookup fails (for user and group names) rsyslog does not start but
+  terminate with an error message. This is necessary as a security
+  measure, as otherwise the wrong permissions can be assigned or privileges
+  are not dropped. This setting is applied whereever security IDs are resolved,
+  e.g. when dropping privileges or assigning file permissions or owners.
+
+  **CHANGE OF BEHAVIOR**
+
+  The default for this parameter is "on". In versions prior to 8.2002.0, the default
+  was "off" (by virtue of this parameter not existing). As such, existing
+  configurations may now error out.
+
+  We have decided to accept this change of behavior because of the potential
+  security implications.
 
 - **operatingStateFile** [string, filename], default unset, available 8.39.0+
 
