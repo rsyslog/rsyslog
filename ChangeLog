@@ -1,5 +1,21 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2002.0 (aka 2020.02) 2020-02-25
+- 2020-02-24: openssl TLS driver bugfix: chained certificates were not accepted
+  This was supported since always inside GnuTLS driver, but was missing for openssl one.
+- 2020-02-24: core bugfix: too early parsing of incoming messages
+  In theory, rsyslog should call parsers on the queue worker threads whenever
+  possible. This enables the parsers to be executed in parallel. There are
+  some cases where parsers needs to be called earlier, namely when parsed
+  data is needed for rate-limiting.
+  The logic to do this previously did not work correctly and was fixed six
+  years ago (!) by b51dd22. Unfortunately, b51dd22 was overly agressive:
+  it actually makes the early parser call now mandatory, effectively moving
+  parsing to the input side where there is no to little concurrency.
+  We still do not need to call the parser when all messages, regardless of
+  severity, need to be rate-limited. This is the default and very frequent
+  case. This patch introduces support for this and as such makes parsers
+  able to run in parallel in the frequent case again.
+  closes https://github.com/rsyslog/rsyslog/issues/4187
 - 2020-02-20: testbench bugfix: two minor issues in omkafkadynakey.sh test
   lead to false positives during test runs (depending on circumstances)
   closes: https://github.com/rsyslog/rsyslog/issues/4134
