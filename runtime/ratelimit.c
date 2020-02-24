@@ -2,7 +2,7 @@
  * support for rate-limiting sources, including "last message
  * repeated n times" processing.
  *
- * Copyright 2012-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2012-2020 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -210,19 +210,24 @@ ratelimitMsg(ratelimit_t *__restrict__ const ratelimit, smsg_t *pMsg, smsg_t **p
 {
 	DEFiRet;
 	rsRetVal localRet;
+	int severity = 0;
 
 	*ppRepMsg = NULL;
 
-	if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
-		if((localRet = parser.ParseMsg(pMsg)) != RS_RET_OK)  {
-			DBGPRINTF("Message discarded, parsing error %d\n", localRet);
-			ABORT_FINALIZE(RS_RET_DISCARDMSG);
+	if(ratelimit->bReduceRepeatMsgs || ratelimit->severity > 0) {
+		/* consider early parsing only if really needed */
+		if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
+			if((localRet = parser.ParseMsg(pMsg)) != RS_RET_OK)  {
+				DBGPRINTF("Message discarded, parsing error %d\n", localRet);
+				ABORT_FINALIZE(RS_RET_DISCARDMSG);
+			}
+			severity = pMsg->iSeverity;
 		}
 	}
 
 	/* Only the messages having severity level at or below the
 	 * treshold (the value is >=) are subject to ratelimiting. */
-	if(ratelimit->interval && (pMsg->iSeverity >= ratelimit->severity)) {
+	if(ratelimit->interval && (severity >= ratelimit->severity)) {
 		char namebuf[512]; /* 256 for FGDN adn 256 for APPNAME should be enough */
 		snprintf(namebuf, sizeof namebuf, "%s:%s", getHOSTNAME(pMsg),
 			getAPPNAME(pMsg, 0));
