@@ -79,7 +79,6 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	SIMP_PROP(ParserEscape8BitCharactersOnReceive, int)
 	SIMP_PROP(ParserEscapeControlCharacterTab, int)
 	SIMP_PROP(ParserEscapeControlCharactersCStyle, int)
-
 	/* added v3, 2009-06-30 */
 	rsRetVal (*GenerateLocalHostNameProperty)(void);
 	prop_t* (*GetLocalHostNameProp)(void);

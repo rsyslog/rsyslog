@@ -2,7 +2,7 @@
  *
  * Module begun 2011-04-19 by Rainer Gerhards
  *
- * Copyright 2011-2019 Adiscon GmbH.
+ * Copyright 2011-2020 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -156,6 +156,7 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.maxErrMsgToStderr = -1;
 	pThis->globals.umask = -1;
 	pThis->globals.gidDropPrivKeepSupplemental = 0;
+	pThis->globals.abortOnIDResolutionFail = 1;
 	pThis->templates.root = NULL;
 	pThis->templates.last = NULL;
 	pThis->templates.lastStatic = NULL;
