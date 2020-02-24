@@ -1,5 +1,17 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2002.0 (aka 2020.02) 2020-02-25
+- 2020-02-24: core: add global parameter "security.abortOnIDResolutionFail"
+  This parameter controls whether or not rsyslog aborts when a name ID
+  lookup fails (for user and group names). This is necessary as a security
+  measure, as otherwise the wrong permissions can be assigned or privileges
+  are not dropped.
+  CHANGE OF BEHAVIOR
+  The default for this parameter is "on". In previous versions, the default
+  was "off" (by virtue of this parameter not existing). As such, existing
+  configurations may now error out.
+  We have decided to accept this change of behavior because of the potential
+  security implications.
+  closes https://github.com/rsyslog/rsyslog/issues/4164
 - 2020-02-24: openssl TLS driver bugfix: chained certificates were not accepted
   This was supported since always inside GnuTLS driver, but was missing for openssl one.
 - 2020-02-24: core bugfix: too early parsing of incoming messages
