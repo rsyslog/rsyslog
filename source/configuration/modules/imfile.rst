@@ -615,6 +615,43 @@ when it was truncated (inode unchanged but file size on disk is less than
 current offset in memory).
 
 
+MaxLinesPerMinute
+^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "0", "no", "none"
+
+Instructs rsyslog to enqueue up to the specified maximum number of lines
+as messages per minute. Lines above this value are discarded.
+
+The **default** value is 0, which means that no lines are discarded.
+
+
+MaxBytesPerMinute
+^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "0", "no", "none"
+
+Instructs rsyslog to enqueue a maximum number of bytes as messages per
+minute. Once MaxBytesPerMinute is reached, subsequent messages are
+discarded.
+
+Note that messages are not truncated as a result of MaxBytesPerMinute,
+rather the entire message is discarded if part of it would be above the
+specified maximum bytes per minute.
+
+The **default** value is 0, which means that no messages are discarded.
+
+
 trimLineOverBytes
 ^^^^^^^^^^^^^^^^^
 
