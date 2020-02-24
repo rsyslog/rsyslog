@@ -462,7 +462,7 @@ osslGlblInit(void)
 		osslLastSSLErrorMsg(0, NULL, LOG_ERR, "osslGlblInit");
 		ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
 	}
-	if(bHaveCert == 1 && SSL_CTX_use_certificate_file(ctx, certFile, SSL_FILETYPE_PEM) != 1) {
+	if(bHaveCert == 1 && SSL_CTX_use_certificate_chain_file(ctx, certFile) != 1) {
 		LogError(0, RS_RET_TLS_CERT_ERR, "Error: Certificate could not be accessed. "
 				"Check at least: 1) file path is correct, 2) file exist, "
 				"3) permissions are correct, 4) file content is correct. "
