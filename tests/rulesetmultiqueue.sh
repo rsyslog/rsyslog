@@ -6,19 +6,15 @@
 # support multi-output-file operations.
 # added 2009-10-30 by Rgerhards
 # This file is part of the rsyslog project, released  under ASL 2.0
-uname
-if [ $(uname) = "SunOS" ] ; then
-   echo "This test currently does not work on all flavors of Solaris."
-   exit 77
-fi
-
 . ${srcdir:=.}/diag.sh init
-export RSYSLOG_PORT2="$(get_free_port)"
-export RSYSLOG_PORT3="$(get_free_port)"
+skip_platform "SunOS" "This test does not work on Solaris. The overall queue
+size check in imdiag requires atomics or mutexes on this platform, which we
+do not use for performance reasons."
+export NUMMESSAGES=60000
+export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf
 add_conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
-$MainMsgQueueTimeoutShutdown 10000
 
 # general definition
 $template outfmt,"%msg:F,58:2%\n"
@@ -27,36 +23,46 @@ $template outfmt,"%msg:F,58:2%\n"
 $ruleset file1
 $RulesetCreateMainQueue on
 $template dynfile1,"'$RSYSLOG_OUT_LOG'1.log" # trick to use relative path names!
-:msg, contains, "msgnum:" ?dynfile1;outfmt
+:msg, contains, "msgnum:" {	?dynfile1;outfmt
+				./'$RSYSLOG_OUT_LOG'
+}
 
 $ruleset file2
 $RulesetCreateMainQueue on
 $template dynfile2,"'$RSYSLOG_OUT_LOG'2.log" # trick to use relative path names!
-:msg, contains, "msgnum:" ?dynfile2;outfmt
+:msg, contains, "msgnum:" {	?dynfile2;outfmt
+				./'$RSYSLOG_OUT_LOG'
+}
 
 $ruleset file3
 $RulesetCreateMainQueue on
 $template dynfile3,"'$RSYSLOG_OUT_LOG'3.log" # trick to use relative path names!
-:msg, contains, "msgnum:" ?dynfile3;outfmt
+:msg, contains, "msgnum:" {	?dynfile3;outfmt
+				./'$RSYSLOG_OUT_LOG'
+}
 
 # start listeners and bind them to rulesets
 $InputTCPServerBindRuleset file1
-$InputTCPServerRun '$TCPFLOOD_PORT'
+$InputTCPServerListenPortFile '$RSYSLOG_DYNNAME'.tcpflood_port
+$InputTCPServerRun 0
 
 $InputTCPServerBindRuleset file2
-$InputTCPServerRun '$RSYSLOG_PORT2'
+$InputTCPServerListenPortFile '$RSYSLOG_DYNNAME'.tcpflood_port2
+$InputTCPServerRun 0
 
 $InputTCPServerBindRuleset file3
-$InputTCPServerRun '$RSYSLOG_PORT3'
+$InputTCPServerListenPortFile '$RSYSLOG_DYNNAME'.tcpflood_port3
+$InputTCPServerRun 0
 '
-rm -f ${RSYSLOG_OUT_LOG}1.log ${RSYSLOG_OUT_LOG}2.log ${RSYSLOG_OUT_LOG}3.log
 startup
+assign_tcpflood_port2 "$RSYSLOG_DYNNAME.tcpflood_port2"
+assign_rs_port "$RSYSLOG_DYNNAME.tcpflood_port3"
 # now fill the three files (a bit sequentially, but they should
 # still get their share of concurrency - to increase the chance
 # we use three connections per set).
-tcpflood -c3 -p'$TCPFLOOD_PORT' -m20000 -i0
-tcpflood -c3 -p'$RSYSLOG_PORT2' -m20000 -i20000
-tcpflood -c3 -p'$RSYSLOG_PORT3' -m20000 -i40000
+tcpflood -c3 -p$TCPFLOOD_PORT -m20000 -i0
+tcpflood -c3 -p$TCPFLOOD_PORT2 -m20000 -i20000
+tcpflood -c3 -p$RS_PORT -m20000 -i40000
 
 # in this version of the imdiag, we do not have the capability to poll
 # all queues for emptiness. So we do a sleep in the hopes that this will
@@ -67,6 +73,5 @@ wait_shutdown
 # now consolidate all logs into a single one so that we can use the
 # regular check logic
 cat ${RSYSLOG_OUT_LOG}1.log ${RSYSLOG_OUT_LOG}2.log ${RSYSLOG_OUT_LOG}3.log > $RSYSLOG_OUT_LOG
-seq_check 0 59999
-rm -f ${RSYSLOG_OUT_LOG}1.log ${RSYSLOG_OUT_LOG}2.log ${RSYSLOG_OUT_LOG}3.log
+seq_check
 exit_test

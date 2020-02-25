@@ -125,7 +125,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	for(i = start ; i < end+1 ; i += increment) {
+	for(i = start ; i <= end ; i += increment) {
 		if(bHaveExtraData) {
 			if(fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
 				scanfOK = 0;
@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
 			++i;
 		}
 		if(val != i) {
-			if(val == i - 1 && dupsPermitted) {
+			if(val == i - increment && dupsPermitted) {
 				--i;
 				++nDups;
 			} else {
@@ -174,8 +174,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if(i - 1 != end) {
-		printf("only %d records in file, expected %d\n", i - 1, end);
+	if(i - increment != end) {
+		printf("lastrecord does not match. file: %d, expected %d\n", i - increment, end);
 		exit(1);
 	}
 

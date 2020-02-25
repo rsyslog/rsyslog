@@ -27,16 +27,16 @@ if (re_match($.msg_prefix, "foo|bar|baz|quux|corge|grault")) then {
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup_vg
-. $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
+wait_for_stats_flush ${RSYSLOG_DYNNAME}.out.stats.log
 . $srcdir/diag.sh block-stats-flush
-. $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_1
+injectmsg_file $srcdir/testsuites/dynstats_input_1
 . $srcdir/diag.sh allow-single-stats-flush-after-block-and-wait-for-it
-. $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_2
+injectmsg_file $srcdir/testsuites/dynstats_input_2
 . $srcdir/diag.sh allow-single-stats-flush-after-block-and-wait-for-it
-. $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_3
+injectmsg_file $srcdir/testsuites/dynstats_input_3
 . $srcdir/diag.sh await-stats-flush-after-block
 wait_queueempty
-. $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
+wait_for_stats_flush ${RSYSLOG_DYNNAME}.out.stats.log
 content_check "foo 001 0"
 content_check "foo 006 0"
 echo doing shutdown

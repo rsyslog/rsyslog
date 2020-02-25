@@ -5,11 +5,9 @@
 # Copyright 2017-01-24 by Rainer Gerhards
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+export NUMMESSAGES=5000
 generate_conf
 add_conf '
-module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" ruleset="rcvr")
-
 template(name="json" type="string" string="%$!%\n")
 template(name="ts" type="string" string="%timestamp:::date-rfc3339%")
 ruleset(name="rcvr" queue.type="LinkedList"
@@ -27,7 +25,7 @@ ruleset(name="rcvr" queue.type="LinkedList"
 	)
 }'
 startup_vg
-tcpflood -m5000
+injectmsg
 shutdown_when_empty
 wait_shutdown_vg
 check_exit_vg

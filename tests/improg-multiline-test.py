@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-
+# call this via "python[3] script name"
 import sys
 
 for _ in range(10):

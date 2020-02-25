@@ -30,10 +30,6 @@ echo starting sender
 generate_conf 2
 export TCPFLOOD_PORT="$(get_free_port)"
 add_conf '
-$ModLoad ../plugins/imtcp/.libs/imtcp
-# this listener is for message generation by the test framework!
-$InputTCPServerRun '$TCPFLOOD_PORT'
-
 $WorkDirectory '$RSYSLOG_DYNNAME'.spool
 $MainMsgQueueSize 2000
 $MainMsgQueueLowWaterMark 800

@@ -21,3 +21,13 @@
    fun:initAll
    fun:main
 }
+
+{
+   <pselect() sometimes reports pointing to unadressable byte when all selectors are empty>
+   Memcheck:Param
+   pselect6(sig)
+   fun:pselect
+   fun:wait_timeout
+   fun:mainloop
+   fun:main
+}

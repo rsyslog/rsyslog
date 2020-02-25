@@ -96,17 +96,19 @@ while [ $timecounter -lt $timeoutend ]; do
 	count=$(wc -l < ${RSYSLOG_OUT_LOG})
 	if [ $count -eq $TESTMESSAGESFULL ]; then
 		printf '**** wait-kafka-lines success, have %d lines ****\n\n' "$TESTMESSAGESFULL"
-	        kafkacat -b localhost:29092 -e -C -o beginning -t HNyjt9vf -f '%p %k\n' | sort | uniq > $RSYSLOG_OUT_LOG
-        	count=$(wc -l < ${RSYSLOG_OUT_LOG})
+	        kafkacat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%p %k\n' | sort | uniq > "$RSYSLOG_OUT_LOG.extra"
+        	count=$(wc -l < "${RSYSLOG_OUT_LOG}.extra")
 	        if [ $count -eq 10 ]; then
 			printf '**** partition check success, have 10 partition-key combinations ****\n\n' 
 			break
 	        else
-			echo partition check failed, expected 10 got $count
-			echo details:
-			kafkacat -b localhost:29092 -e -C -o beginning -t HNyjt9vf -f '%p %k\n' | sort | uniq
 			shutdown_when_empty
 			wait_shutdown
+			printf '\n\nERROR: partition check failed, expected 10 got %s\n' "$count"
+			printf '\ņRAW DATA:\n'
+			kafkacat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%p %k\n'
+			printf '\nCHECKED OUTPUT:\n'
+			cat "$RSYSLOG_OUT_LOG.extra"
 			error_exit 1
 	        fi
 	else
@@ -118,12 +120,15 @@ while [ $timecounter -lt $timeoutend ]; do
 		else
 			echo wait-file-lines not yet there, currently $count lines
 			printf 'pstats data:\n'
-			cat $RSYSLOG_DYNNAME.pstats
+			# we use tail below to guard against overwhelming the
+			# logs if things go wild
+			tail -n 500 < $RSYSLOG_DYNNAME.pstats
 			printf '\n'
 
 			$TESTTOOL_DIR/msleep 1000
 		fi
 	fi
+echo end iteration  $timecounter
 done
 unset count
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# call this via "python[3] script name"
 # Added 2017-11-05 by Stephen Workman, released under ASL 2.0
 
 #

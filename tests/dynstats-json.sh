@@ -26,10 +26,10 @@ if ($.p == "foo") then {
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
-. $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
-. $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_1
+wait_for_stats_flush ${RSYSLOG_DYNNAME}.out.stats.log
+injectmsg_file $srcdir/testsuites/dynstats_input_1
 wait_queueempty
-. $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
+wait_for_stats_flush ${RSYSLOG_DYNNAME}.out.stats.log
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown

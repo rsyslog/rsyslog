@@ -2,7 +2,7 @@
  *
  * Module begun 2011-04-19 by Rainer Gerhards
  *
- * Copyright 2011-2019 Adiscon GmbH.
+ * Copyright 2011-2020 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -156,6 +156,7 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.maxErrMsgToStderr = -1;
 	pThis->globals.umask = -1;
 	pThis->globals.gidDropPrivKeepSupplemental = 0;
+	pThis->globals.abortOnIDResolutionFail = 1;
 	pThis->templates.root = NULL;
 	pThis->templates.last = NULL;
 	pThis->templates.lastStatic = NULL;
@@ -438,6 +439,16 @@ cnfDoObj(struct cnfobj *const o)
 
 	dbgprintf("cnf:global:obj: ");
 	cnfobjPrint(o);
+
+	/* We need to check for object disabling as early as here to cover most
+	 * of them at once and avoid needless initializations
+	 * - jvymazal 2020-02-12
+	 */
+	if (nvlstChkDisabled(o->nvlst)) {
+		dbgprintf("object disabled by configuration\n");
+		return;
+	}
+
 	switch(o->objType) {
 	case CNFOBJ_GLOBAL:
 		glblProcessCnf(o);

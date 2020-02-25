@@ -159,7 +159,13 @@ TESTS +=  \
 	operatingstate-empty.sh \
 	operatingstate-unclean.sh \
 	smtradfile.sh \
+	loadbalance.sh \
 	empty-hostname.sh \
+	timestamp-3164.sh \
+	timestamp-3339.sh \
+	timestamp-mysql.sh \
+	timestamp-pgsql.sh \
+	timestamp-subseconds.sh \
 	hostname-getaddrinfo-fail.sh \
 	msleep_usage_output.sh \
 	mangle_qi_usage_output.sh \
@@ -185,6 +191,7 @@ TESTS +=  \
 	glbl_setenv_err.sh \
 	glbl_setenv_err_too_long.sh \
 	glbl_setenv.sh \
+	mmexternal-SegFault.sh \
 	nested-call-shutdown.sh \
 	dnscache-TTL-0.sh \
 	invalid_nested_include.sh \
@@ -473,7 +480,6 @@ TESTS +=  \
 	rscript_backticks_empty_envvar-vg.sh \
 	rscript-config_enable-off-vg.sh \
 	prop-jsonmesg-vg.sh \
-	mmexternal-SegFault-vg.sh \
 	mmexternal-InvldProg-vg.sh \
 	internal-errmsg-memleak-vg.sh \
 	glbl-oversizeMsg-log-vg.sh \
@@ -1135,7 +1141,7 @@ TESTS += \
 endif
 endif
 
-if ENABLE_GNUTLS
+if ENABLE_GNUTLS_TESTS
 TESTS +=  \
 	imtcp-tls-basic.sh \
 	imtcp-tls-basic-verifydepth.sh \
@@ -1190,7 +1196,7 @@ TESTS += \
 endif
 endif
 
-if ENABLE_GNUTLS
+if ENABLE_GNUTLS_TESTS
 if ENABLE_OPENSSL
 TESTS +=  \
 	sndrcv_tls_ossl_servercert_gtls_clientanon.sh \
@@ -1217,6 +1223,7 @@ TESTS += sndrcv_relp.sh \
 	 imrelp-oversizeMode-truncate.sh \
 	 imrelp-oversizeMode-accept.sh \
 	 imrelp-invld-tlslib.sh \
+	 imrelp-bigmessage.sh \
 	 omrelp-invld-tlslib.sh \
 	 sndrcv_relp_dflt_pt.sh \
 	 glbl-oversizeMsg-log.sh \
@@ -1266,17 +1273,7 @@ TESTS += \
 	proprepltest-nolimittag-udp.sh \
 	proprepltest-nolimittag.sh \
 	proprepltest-rfctag-udp.sh \
-	proprepltest-rfctag.sh \
-	timestamp-3164-udp.sh \
-	timestamp-3164.sh \
-	timestamp-3339-udp.sh \
-	timestamp-3339.sh \
-	timestamp-mysql-udp.sh \
-	timestamp-mysql.sh \
-	timestamp-pgsql-udp.sh \
-	timestamp-pgsql.sh \
-	timestamp-subseconds-udp.sh \
-	timestamp-subseconds.sh
+	proprepltest-rfctag.sh
 
 endif
 
@@ -1500,6 +1497,7 @@ EXTRA_DIST= \
 	urlencode.py \
 	dnscache-TTL-0.sh \
 	dnscache-TTL-0-vg.sh \
+	loadbalance.sh \
 	smtradfile.sh \
 	smtradfile-vg.sh \
 	immark.sh \
@@ -1558,7 +1556,7 @@ EXTRA_DIST= \
 	imbatchreport_delete_toolarge.sh \
 	imbatchreport_rename_toolarge.sh \
 	imbatchreport_errmsg_no_params-vg.sh \
-	mmexternal-SegFault-vg.sh \
+	mmexternal-SegFault.sh \
 	mmexternal-SegFault-empty-jroot-vg.sh \
 	testsuites/mmexternal-SegFault-mm-python.py \
 	mmexternal-InvldProg-vg.sh \
@@ -1626,15 +1624,10 @@ EXTRA_DIST= \
 	proprepltest-nolimittag.sh \
 	proprepltest-rfctag-udp.sh \
 	proprepltest-rfctag.sh \
-	timestamp-3164-udp.sh \
 	timestamp-3164.sh \
-	timestamp-3339-udp.sh \
 	timestamp-3339.sh \
-	timestamp-mysql-udp.sh \
 	timestamp-mysql.sh \
-	timestamp-pgsql-udp.sh \
 	timestamp-pgsql.sh \
-	timestamp-subseconds-udp.sh \
 	timestamp-subseconds.sh \
 	rsf_getenv.sh \
 	diskq-rfc5424.sh \
@@ -2069,6 +2062,7 @@ EXTRA_DIST= \
 	imrelp-oversizeMode-truncate.sh \
 	imrelp-oversizeMode-accept.sh \
 	imrelp-invld-tlslib.sh \
+	imrelp-bigmessage.sh \
 	omrelp-invld-tlslib.sh \
 	glbl-oversizeMsg-log.sh \
 	glbl-oversizeMsg-truncate.sh \
@@ -2218,6 +2212,8 @@ EXTRA_DIST= \
 	imfile-endregex-timeout-none.sh \
 	imfile-endregex-timeout-with-shutdown.sh \
 	imfile-endregex-timeout-with-shutdown-polling.sh \
+	imfile-escapelf.replacement.sh \
+	imfile-escapelf.replacement-empty.sh \
 	imfile-endmsg.regex.sh \
 	imfile-endmsg.regex-vg.sh \
 	imfile-endmsg.regex-with-example.sh \
@@ -2286,18 +2282,14 @@ EXTRA_DIST= \
 	imuxsock_logger_err.sh \
 	imuxsock_logger_root.sh \
 	imuxsock_logger_syssock.sh \
-	resultdata/imuxsock_logger.log \
 	imuxsock_traillf.sh \
 	imuxsock_traillf_root.sh \
 	imuxsock_traillf_syssock.sh \
-	resultdata/imuxsock_traillf.log \
 	imuxsock_ccmiddle.sh \
 	imuxsock_ccmiddle_root.sh \
 	imklog_permitnonkernelfacility_root.sh \
 	imuxsock_ccmiddle_syssock.sh \
-	resultdata/imuxsock_ccmiddle.log \
 	imuxsock_hostname.sh \
-	resultdata/imuxsock_hostname.log \
 	testsuites/mysql-truncate.sql \
 	testsuites/mysql-select-msg.sql \
 	libdbi-basic.sh \

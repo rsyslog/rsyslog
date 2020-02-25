@@ -17,17 +17,16 @@ if [ $(uname) = "SunOS" ] ; then
 fi
 
 . ${srcdir:=.}/diag.sh init
+export NUMMESSAGES=20000
+export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf
 add_conf '
 $ModLoad ../plugins/omruleset/.libs/omruleset
-$ModLoad ../plugins/imtcp/.libs/imtcp
-$InputTCPServerRun '$TCPFLOOD_PORT'
 
 $ruleset rsinclude
 # create ruleset main queue with default parameters
 $RulesetCreateMainQueue on
 # make sure we do not terminate too early!
-$MainMsgQueueTimeoutShutdown 10000
 $template outfmt,"%msg:F,58:2%\n"
 template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!
 :msg, contains, "msgnum:" ?dynfile;outfmt
@@ -37,10 +36,10 @@ $ActionOmrulesetRulesetName rsinclude
 *.* :omruleset:
 '
 startup
-injectmsg  0 20000
+injectmsg
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
 wait_shutdown 
-seq_check 0 19999
+seq_check
 exit_test

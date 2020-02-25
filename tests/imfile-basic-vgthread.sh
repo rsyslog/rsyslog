@@ -3,13 +3,12 @@
 . ${srcdir:=.}/diag.sh init
 skip_platform "FreeBSD" "This test currently does not work on FreeBSD."
 export NUMMESSAGES=50000
-
-grep '\.el6\.' <<< $(uname -a)
-if [ "$?" == "0" ]; then
-	echo "CentOS 6 detected, adding valgrind suppressions"
+if grep -q 'release 6\.' <<< "$(cat /etc/redhat-release 2>/dev/null)"; then
+	echo "RHEL/CentOS 6 detected, adding valgrind suppressions"
 	export RS_TEST_VALGRIND_EXTRA_OPTS="--suppressions=${srcdir}/imfile-basic-vgthread.supp"
 fi
 
+exit
 generate_conf
 add_conf '
 $ModLoad ../plugins/imfile/.libs/imfile
@@ -27,7 +26,7 @@ $template outfmt,"%msg:F,58:2%\n"
 
 # generate input file first. Note that rsyslog processes it as
 # soon as it start up (so the file should exist at that point).
-./inputfilegen -m 50000 > $RSYSLOG_DYNNAME.input
+./inputfilegen -m $NUMMESSAGES > $RSYSLOG_DYNNAME.input
 ls -l $RSYSLOG_DYNNAME.input
 
 startup_vgthread

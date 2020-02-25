@@ -6,8 +6,8 @@ echo \[now-utc\]: test \$NOW-UTC
 . ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
-$ModLoad ../plugins/imtcp/.libs/imtcp
-$InputTCPServerRun '$TCPFLOOD_PORT'
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 template(name="outfmt" type="string"
 	 string="%$now%,%$now-utc%\n")
@@ -25,12 +25,6 @@ FAKETIME='2016-01-01 01:00:00' startup
 tcpflood -m1
 shutdown_when_empty
 wait_shutdown
-echo "2016-01-01,2015-12-31" | cmp - $RSYSLOG_OUT_LOG
-if [ ! $? -eq 0 ]; then
-  echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
-  cat $RSYSLOG_OUT_LOG
-  exit 1
-fi;
-
-
+export EXPECTED="2016-01-01,2015-12-31"
+cmp_exact
 exit_test

@@ -23,11 +23,11 @@ set $.increment_successful = dyn_inc("msg_stats", $.msg_prefix);
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
 '
 startup
-. $srcdir/diag.sh wait-for-stats-flush ${RSYSLOG_DYNNAME}.out.stats.log
+wait_for_stats_flush ${RSYSLOG_DYNNAME}.out.stats.log
 wait_queueempty
 rm $srcdir/${RSYSLOG_DYNNAME}.out.stats.log
 issue_HUP #reopen stats file
-. $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_empty_input
+injectmsg_file $srcdir/testsuites/dynstats_empty_input
 wait_queueempty
 rst_msleep 1100 # wait for stats flush
 echo doing shutdown

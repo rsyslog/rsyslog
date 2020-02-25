@@ -6,7 +6,7 @@ export NUMMESSAGES=50 # sufficient for our needs!
 export SEQ_CHECK_OPTIONS=-i2
 check_sql_data_ready() {
 	mysql_get_data
-	seq_check --check-only
+	seq_check --check-only 0 $((NUMMESSAGES - 2))
 }
 export QUEUE_EMPTY_CHECK_FUNC=check_sql_data_ready
 
@@ -36,5 +36,5 @@ wait_shutdown
 export EXPECTED="$(cat ${srcdir}/testsuites/action-tx-errfile.result)"
 cmp_exact ${RSYSLOG2_OUT_LOG}
 mysql_get_data
-seq_check
+seq_check  0 $((NUMMESSAGES - 2)) -i2
 exit_test

@@ -3,12 +3,9 @@
 # added 2009-05-20 by rgerhards
 # This file is part of the rsyslog project, released  under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+export NUMMESSAGES=40000
 generate_conf
 add_conf '
-$ModLoad ../plugins/imtcp/.libs/imtcp
-$MainMsgQueueTimeoutShutdown 10000
-$InputTCPServerRun '$TCPFLOOD_PORT'
-
 # set spool locations and switch queue to disk-only mode
 $MainMsgQueueType FixedArray
 
@@ -17,10 +14,8 @@ template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to
 :msg, contains, "msgnum:" ?dynfile;outfmt
 '
 startup
-
-# 40000 messages should be enough
-injectmsg  0 40000
+injectmsg 
 shutdown_when_empty
 wait_shutdown 
-seq_check 0 39999
+seq_check
 exit_test

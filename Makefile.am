@@ -384,6 +384,9 @@ DISTCHECK_CONFIGURE_FLAGS+= \
 	--enable-pmsnare \
 	--enable-usertools
 
+else
+DISTCHECK_CONFIGURE_FLAGS+= \
+	--disable-default-tests
 endif  # if ENABLE_DEFAULT_TESTS
 
 if ENABLE_IMPROG
@@ -470,6 +473,12 @@ if ENABLE_GNUTLS
 DISTCHECK_CONFIGURE_FLAGS+= --enable-gnutls
 endif
 
+if ENABLE_GNUTLS_TESTS
+DISTCHECK_CONFIGURE_FLAGS+= --enable-gnutls-tests
+else
+DISTCHECK_CONFIGURE_FLAGS+= --disable-gnutls-tests
+endif
+
 if ENABLE_OPENSSL
 DISTCHECK_CONFIGURE_FLAGS+= --enable-openssl
 endif
@@ -548,6 +557,12 @@ endif
 
 if ENABLE_IMFILE
 DISTCHECK_CONFIGURE_FLAGS+= --enable-imfile
+endif
+
+if ENABLE_IMFILE_TESTS
+DISTCHECK_CONFIGURE_FLAGS+= --enable-imfile-tests
+else
+DISTCHECK_CONFIGURE_FLAGS+= --disable-imfile-tests
 endif
 
 if ENABLE_IMDOCKER

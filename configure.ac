@@ -2,9 +2,9 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[8.2001.0],[rsyslog@lists.adiscon.com])  # UPDATE on release
+AC_INIT([rsyslog],[8.2002.0],[rsyslog@lists.adiscon.com])  # UPDATE on release
 AC_DEFINE(VERSION_YEAR, 20, [year part of real rsyslog version])  # UPDATE on release
-AC_DEFINE(VERSION_MONTH,01, [month part of real rsyslog version]) # UPDATE on release
+AC_DEFINE(VERSION_MONTH,02, [month part of real rsyslog version]) # UPDATE on release
 
 AM_INIT_AUTOMAKE([subdir-objects])
 
@@ -1057,6 +1057,27 @@ fi
 
 AM_CONDITIONAL(ENABLE_GNUTLS, test x$enable_gnutls = xyes)
 
+AC_ARG_ENABLE(gnutls-tests,
+        [AS_HELP_STRING([--enable-gnutls-tests],[Enable gnutls tests @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_gnutls_tests="yes" ;;
+          no) enable_gnutls_tests="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-gnutls-tests) ;;
+         esac],
+        [if [[ "$enable_gnutls" == "yes" ]]; then
+		enable_gnutls_tests=yes
+	else
+		enable_gnutls_tests=no
+	fi]
+)
+if  [[ "$enable_gnutls_tests" == "yes" ]] && [[ "$enable_gnutls" != "yes" ]]; then
+		AC_MSG_WARN([gnutls-tests can not be enabled without gnutls support. Disabling gnutls tests...])
+		enable_gnutls_tests="no"
+fi
+
+AM_CONDITIONAL(ENABLE_GNUTLS_TESTS, test x$enable_gnutls_tests = xyes)
+
+
 # libgcrypt support
 AC_ARG_ENABLE(libgcrypt,
         [AS_HELP_STRING([--enable-libgcrypt],[Enable log file encryption support (libgcrypt) @<:@default=yes@:>@])],
@@ -1702,15 +1723,20 @@ fi
 AM_CONDITIONAL(ENABLE_IMFILE, test x$enable_imfile = xyes)
 
 AC_ARG_ENABLE(imfile-tests,
-        [AS_HELP_STRING([--enable-imfile-tests],[Enable imfile tests @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-imfile-tests],[Enable imfile tests @<:@default=yes@:>@])],
         [case "${enableval}" in
          yes) enable_imfile_tests="yes" ;;
           no) enable_imfile_tests="no" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-imfile-tests) ;;
          esac],
-        [enable_file_tests=no]
+        [enable_imfile_tests=yes]
 )
+if  [[ "$enable_imfile_tests" == "yes" ]] && [[ "$enable_imfile" != "yes" ]]; then
+		AC_MSG_WARN([imfile-tests can not be enabled without imfile support. Disabling imfile tests...])
+		enable_imfile_tests="no"
+fi
 AM_CONDITIONAL(ENABLE_IMFILE_TESTS, test x$enable_imfile_tests = xyes)
+
 
 # settings for the docker log input module
 AC_ARG_ENABLE(imdocker,
@@ -2670,6 +2696,8 @@ echo "    ClickHouse Tests:                         $enable_clickhouse_tests"
 echo "    PostgreSQL Tests enabled:                 $enable_pgsql_tests"
 echo "    Kafka Tests enabled:                      $enable_kafka_tests"
 echo "    Imdocker Tests enabled:                   $enable_imdocker_tests"
+echo "    gnutls tests enabled:                     $enable_gnutls_tests"
+echo "    imfile tests enabled:                     $enable_imfile_tests"
 echo "    systemd journal tests enabled:            $enable_journal_tests"
 echo "    SNMP Tests enabled:                       $enable_snmp_tests"
 echo "    Debug mode enabled:                       $enable_debug"

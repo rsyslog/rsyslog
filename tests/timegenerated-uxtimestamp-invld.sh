@@ -13,8 +13,8 @@ export TZ=UTC+00:00
 
 generate_conf
 add_conf '
-$ModLoad ../plugins/imtcp/.libs/imtcp
-$InputTCPServerRun '$TCPFLOOD_PORT'
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 template(name="outfmt" type="string"
 	 string="%timegenerated:::date-unixtimestamp%\n")
@@ -29,13 +29,8 @@ FAKETIME='1800-01-01 00:00:00' startup
 tcpflood -m1
 shutdown_when_empty
 wait_shutdown
-echo "0" | cmp - $RSYSLOG_OUT_LOG
-if [ ! $? -eq 0 ]; then
-  echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
-  cat $RSYSLOG_OUT_LOG
-  date -d @$(cat $RSYSLOG_OUT_LOG)
-  exit 1
-fi;
+export EXPECTED="0"
+cmp_exact
 
 
 echo "***SUBTEST: check 1960-01-01"
@@ -44,13 +39,8 @@ FAKETIME='1960-01-01 00:00:00' startup
 tcpflood -m1
 shutdown_when_empty
 wait_shutdown
-echo "0" | cmp - $RSYSLOG_OUT_LOG
-if [ ! $? -eq 0 ]; then
-  echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
-  cat $RSYSLOG_OUT_LOG
-  date -d @$(cat $RSYSLOG_OUT_LOG)
-  exit 1
-fi;
+export EXPECTED="0"
+cmp_exact
 
 
 echo "***SUBTEST: check 2101-01-01"
@@ -59,13 +49,8 @@ FAKETIME='2101-01-01 00:00:00' startup
 tcpflood -m1
 shutdown_when_empty
 wait_shutdown
-echo "0" | cmp - $RSYSLOG_OUT_LOG
-if [ ! $? -eq 0 ]; then
-  echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
-  cat $RSYSLOG_OUT_LOG
-  date -d @$(cat $RSYSLOG_OUT_LOG)
-  exit 1
-fi;
+export EXPECTED="0"
+cmp_exact
 
 
 echo "***SUBTEST: check 2500-01-01"
@@ -74,13 +59,7 @@ FAKETIME='2500-01-01 00:00:00' startup
 tcpflood -m1
 shutdown_when_empty
 wait_shutdown
-echo "0" | cmp - $RSYSLOG_OUT_LOG
-if [ ! $? -eq 0 ]; then
-  echo "invalid timestamps generated, $RSYSLOG_OUT_LOG is:"
-  cat $RSYSLOG_OUT_LOG
-  date -d @$(cat $RSYSLOG_OUT_LOG)
-  exit 1
-fi;
-
+export EXPECTED="0"
+cmp_exact
 
 exit_test

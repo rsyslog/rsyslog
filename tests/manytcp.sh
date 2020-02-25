@@ -7,11 +7,9 @@ export NUMMESSAGES=40000
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf
 add_conf '
-$ModLoad ../plugins/imtcp/.libs/imtcp
-$MainMsgQueueTimeoutShutdown 10000
 $MaxOpenFiles 2100
-$InputTCPMaxSessions 1100
-$InputTCPServerRun '$TCPFLOOD_PORT'
+module(load="../plugins/imtcp/.libs/imtcp" maxSessions="2100")
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 $template outfmt,"%msg:F,58:2%\n"
 template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!

@@ -33,6 +33,7 @@
 #include <pthread.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <time.h>
 #include <glob.h>
 #include <poll.h>
 #include <json.h>
@@ -108,6 +109,15 @@ static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config para
 	#define GLOB_BRACE 0
 #endif
 
+typedef struct per_minute_rate_limit_s per_minute_rate_limit_t;
+
+struct per_minute_rate_limit_s {
+	uint64_t maxBytesPerMinute;
+	uint32_t maxLinesPerMinute;
+	uint64_t bytesThisMinute; /* bytes sent so far this minute */
+	uint32_t linesThisMinute; /* lines sent to far this minute */
+	time_t rateLimitingMinute; /* minute we are currently rate limiting for */
+};
 
 static struct configSettings_s {
 	uchar *pszFileName;
@@ -120,6 +130,8 @@ static struct configSettings_s {
 	int iSeverity;  /* notice, as of rfc 3164 */
 	int readMode;  /* mode to use for ReadMultiLine call */
 	int64 maxLinesAtOnce;	/* how many lines to process in a row? */
+	uint64_t maxBytesPerMinute; /* maximum bytes per minute to send before rate limiting */
+	uint64_t maxLinesPerMinute; /* maximum lines per minute to send before rate limiting */
 	uint32_t trimLineOverBytes;  /* 0: never trim line, positive number: trim line if over bytes */
 } cs;
 
@@ -133,6 +145,7 @@ struct instanceConf_s {
 	uchar *pszStateFile;
 	uchar *pszBindRuleset;
 	int nMultiSub;
+	per_minute_rate_limit_t perMinuteRateLimits;
 	int iPersistStateInterval;
 	int iFacility;
 	int iSeverity;
@@ -326,7 +339,9 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "readtimeout", eCmdHdlrPositiveInt, 0 },
 	{ "freshstarttail", eCmdHdlrBinary, 0},
 	{ "filenotfounderror", eCmdHdlrBinary, 0},
-	{ "needparse", eCmdHdlrBinary, 0}
+	{ "needparse", eCmdHdlrBinary, 0},
+	{ "maxbytesperminute", eCmdHdlrInt, 0},
+	{ "maxlinesperminute", eCmdHdlrInt, 0}
 };
 static struct cnfparamblk inppblk =
 	{ CNFPARAMBLK_VERSION,
@@ -1144,7 +1159,8 @@ fs_node_add(fs_node_t *const node,
 		if(!ustrcmp(chld->name, name)) {
 			DBGPRINTF("fs_node_add(%p, '%s') found '%s'\n", chld->node, toFind, name);
 			/* add new instance */
-			instanceConf_t **instarr_new = realloc(chld->instarr, sizeof(instanceConf_t*) * chld->ninst+1);
+			instanceConf_t **instarr_new = realloc(chld->instarr,
+							sizeof(instanceConf_t*) * (chld->ninst+1));
 			CHKmalloc(instarr_new);
 			chld->instarr = instarr_new;
 			chld->ninst++;
@@ -1258,8 +1274,8 @@ get_file_id_hash(const char *data, size_t lendata,
 static void ATTR_NONNULL(1)
 getFileID(act_obj_t *const act)
 {
-	/* save the old id for cleaning purposes */
-	strncpy(act->file_id_prev, (const char*)act->file_id, FILE_ID_HASH_SIZE);
+	char tmp_id[FILE_ID_HASH_SIZE];
+	strncpy(tmp_id, (const char*)act->file_id, FILE_ID_HASH_SIZE);
 	act->file_id[0] = '\0';
 	assert(act->fd >= 0); /* fd must have been opened at act_obj_t creation! */
 	char filedata[FILE_ID_SIZE];
@@ -1269,6 +1285,9 @@ getFileID(act_obj_t *const act)
 		get_file_id_hash(filedata, sizeof(filedata), act->file_id, sizeof(act->file_id));
 	} else {
 		DBGPRINTF("getFileID partial or error read, ret %d\n", r);
+	}
+	if (strncmp(tmp_id, act->file_id, FILE_ID_HASH_SIZE)) {/* save the old id for cleaning purposes */
+		strncpy(act->file_id_prev, tmp_id, FILE_ID_HASH_SIZE);
 	}
 	DBGPRINTF("getFileID for '%s', file_id_hash '%s'\n", act->name, act->file_id);
 }
@@ -1291,6 +1310,39 @@ getStateFileName(const act_obj_t *const act,
 	return buf;
 }
 
+static rsRetVal
+checkPerMinuteRateLimits(per_minute_rate_limit_t *per_minute_rate_limits,
+			     const size_t msgLen)
+{
+	DEFiRet;
+	time_t current_minute = time(NULL)/60;
+	if(per_minute_rate_limits->maxBytesPerMinute) {
+		if (per_minute_rate_limits->rateLimitingMinute == current_minute) {
+			per_minute_rate_limits->bytesThisMinute += msgLen;
+			/* if we would breach our rate limit then do not send the message. */
+			if (per_minute_rate_limits->bytesThisMinute > per_minute_rate_limits->maxBytesPerMinute) {
+				ABORT_FINALIZE(RS_RET_RATE_LIMITED);
+			}
+		} else {
+			per_minute_rate_limits->rateLimitingMinute = current_minute;
+			per_minute_rate_limits->bytesThisMinute = msgLen; /* Update count as message will be sent */
+		}
+	}
+	if(per_minute_rate_limits->maxLinesPerMinute) {
+		if (per_minute_rate_limits->rateLimitingMinute == current_minute) {
+			per_minute_rate_limits->linesThisMinute++;
+			/* if we would breach our rate limit then do not send the message. */
+			if (per_minute_rate_limits->linesThisMinute > per_minute_rate_limits->maxLinesPerMinute) {
+				ABORT_FINALIZE(RS_RET_RATE_LIMITED);
+			}
+		} else {
+			per_minute_rate_limits->rateLimitingMinute = current_minute;
+			per_minute_rate_limits->linesThisMinute = 1; /* Update count as message will be sent */
+		}
+	}
+finalize_it:
+	RETiRet;
+}
 
 /* enqueue the read file line as a message. The provided string is
  * not freed - this must be done by the caller.
@@ -1343,6 +1395,10 @@ enqLine(act_obj_t *const act,
 		snprintf((char *)file_offset, MAX_OFFSET_REPRESENTATION_NUM_BYTES+1, "%lld", strtOffs);
 		metadata_values[1] = file_offset;
 		msgAddMultiMetadata(pMsg, metadata_names, metadata_values, 2);
+	}
+
+	if(inst->perMinuteRateLimits.maxBytesPerMinute || inst->perMinuteRateLimits.maxLinesPerMinute) {
+		CHKiRet(checkPerMinuteRateLimits((per_minute_rate_limit_t *)&inst->perMinuteRateLimits, msgLen));
 	}
 
 	if(inst->delay_perMsg) {
@@ -1635,6 +1691,11 @@ createInstance(instanceConf_t **const pinst)
 	inst->maxLinesAtOnce = 0;
 	inst->trimLineOverBytes = 0;
 	inst->iPersistStateInterval = 0;
+	inst->perMinuteRateLimits.maxBytesPerMinute = 0;
+	inst->perMinuteRateLimits.maxLinesPerMinute = 0;
+	inst->perMinuteRateLimits.rateLimitingMinute = 0;
+	inst->perMinuteRateLimits.linesThisMinute = 0;
+	inst->perMinuteRateLimits.bytesThisMinute = 0;
 	inst->readMode = 0;
 	inst->startRegex = NULL;
 	inst->endRegex = NULL;
@@ -1788,6 +1849,8 @@ addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	}
 	inst->trimLineOverBytes = cs.trimLineOverBytes;
 	inst->iPersistStateInterval = cs.iPersistStateInterval;
+	inst->perMinuteRateLimits.maxBytesPerMinute = cs.maxBytesPerMinute;
+	inst->perMinuteRateLimits.maxLinesPerMinute = cs.maxLinesPerMinute;
 	inst->readMode = cs.readMode;
 	inst->escapeLF = 0;
 	inst->escapeLFString = NULL;
@@ -1887,6 +1950,12 @@ CODESTARTnewInpInst
 			inst->trimLineOverBytes = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "persiststateinterval")) {
 			inst->iPersistStateInterval = pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "maxbytesperminute")) {
+			DBGPRINTF("imfile: enabling maxbytesperminute ratelimiting\n");
+			inst->perMinuteRateLimits.maxBytesPerMinute = pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "maxlinesperminute")) {
+			DBGPRINTF("imfile: enabling maxlinesperminute ratelimiting\n");
+			inst->perMinuteRateLimits.maxLinesPerMinute = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "maxsubmitatonce")) {
 			inst->nMultiSub = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "readtimeout")) {
@@ -2330,6 +2399,7 @@ do_inotify(void)
 	char iobuf[8192];
 	int rd;
 	int currev;
+	static int last_timeout = 0;
 	DEFiRet;
 
 	CHKiRet(wdmapInit());
@@ -2355,6 +2425,7 @@ do_inotify(void)
 			if(r == 0) {
 				DBGPRINTF("readTimeouts are configured, checking if some apply\n");
 				fs_node_walk(runModConf->conf_tree, poll_timeouts);
+				last_timeout = time(NULL);
 				continue;
 			} else if (r == -1) {
 				LogError(errno, RS_RET_INTERNAL_ERROR,
@@ -2390,6 +2461,11 @@ do_inotify(void)
 			in_dbg_showEv(savecast.ev);
 			in_processEvent(savecast.ev);
 			currev += sizeof(struct inotify_event) + savecast.ev->len;
+		}
+		int now = time(NULL);
+		if(last_timeout + (runModConf->timeoutGranularity / 1000) > now) {
+			fs_node_walk(runModConf->conf_tree, poll_timeouts);
+			last_timeout = time(NULL);
 		}
 	}
 

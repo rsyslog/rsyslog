@@ -270,8 +270,10 @@ void
 errmsgDoHUP(void)
 {
 	pthread_mutex_lock(&oversizeMsgLogMut);
-	close(fdOversizeMsgLog);
-	fdOversizeMsgLog = -1;
+	if(fdOversizeMsgLog != -1) {
+		close(fdOversizeMsgLog);
+		fdOversizeMsgLog = -1;
+	}
 	pthread_mutex_unlock(&oversizeMsgLogMut);
 }
 

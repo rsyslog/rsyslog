@@ -451,6 +451,7 @@ injectmsg_kafkacat() {
 	fi
 }
 
+
 # wait for rsyslogd startup ($1 is the instance)
 wait_startup() {
 	wait_rsyslog_startup_pid $1
@@ -523,6 +524,33 @@ assign_tcpflood_port() {
 	echo "TCPFLOOD_PORT now: $TCPFLOOD_PORT"
 	if [ "$TCPFLOOD_PORT" == "" ]; then
 		echo "TESTBENCH ERROR: TCPFLOOD_PORT not found!"
+		ls -l $RSYSLOG_DYNNAME*
+		exit 100
+	fi
+}
+
+
+# assign TCPFLOOD_PORT2 from port file
+# $1 - port file
+assign_tcpflood_port2() {
+	wait_file_exists "$1"
+	export TCPFLOOD_PORT2=$(cat "$1")
+	echo "TCPFLOOD_PORT2 now: $TCPFLOOD_PORT2"
+	if [ "$TCPFLOOD_PORT2" == "" ]; then
+		echo "TESTBENCH ERROR: TCPFLOOD_PORT2 not found!"
+		ls -l $RSYSLOG_DYNNAME*
+		exit 100
+	fi
+}
+# assign RS_PORT from port file - this is meant as generic way to
+# obtain additional port variables
+# $1 - port file
+assign_rs_port() {
+	wait_file_exists "$1"
+	export RS_PORT=$(cat "$1")
+	echo "RS_PORT now: $RS_PORT"
+	if [ "$RS_PORT" == "" ]; then
+		echo "TESTBENCH ERROR: RS_PORT not found!"
 		ls -l $RSYSLOG_DYNNAME*
 		exit 100
 	fi
@@ -605,6 +633,18 @@ injectmsg2() {
 	echo injecting $2 messages
 	echo injectmsg "$1" "$2" $3 $4 | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
 	# TODO: some return state checking? (does it really make sense here?)
+}
+
+# inject literal payload  via our inject interface (imdiag)
+injectmsg_literal() {
+	printf 'injecting msg payload: %s\n' "$1"
+	sed -e 's/^/injectmsg literal /g' <<< "$1" | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit $?
+}
+
+# inject literal payload  via our inject interface (imdiag)
+injectmsg_file() {
+	printf 'injecting msg payload: %s\n' "$1"
+	sed -e 's/^/injectmsg literal /g' < "$1" | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit $?
 }
 
 
@@ -2268,8 +2308,8 @@ mysql_prep_for_test() {
 	mysql --user=rsyslog --password=testbench --database $RSYSLOG_DYNNAME \
 		-e "truncate table SystemEvents;"
 	# TEST ONLY:
-	mysql -s --user=rsyslog --password=testbench --database $RSYSLOG_DYNNAME \
-		-e "select substring(Message,9,8) from SystemEvents;"
+	#mysql -s --user=rsyslog --password=testbench --database $RSYSLOG_DYNNAME \
+		#-e "select substring(Message,9,8) from SystemEvents;"
 	# END TEST
 	printf 'mysql ready for test, database: %s\n' $RSYSLOG_DYNNAME
 }
@@ -2279,14 +2319,16 @@ mysql_get_data() {
 	# note "-s" is required to suppress the select "field header"
 	mysql -s --user=rsyslog --password=testbench --database $RSYSLOG_DYNNAME \
 		-e "select substring(Message,9,8) from SystemEvents;" \
-		> $RSYSLOG_OUT_LOG
+		> $RSYSLOG_OUT_LOG 2> "$RSYSLOG_DYNNAME.mysqlerr"
+	grep -iv "Using a password on the command line interface can be insecure." < "$RSYSLOG_DYNNAME.mysqlerr"
 }
 
 # cleanup any temp data from mysql test
 # if we do not do this, we may run out of disk space
 # especially in container environment.
 mysql_cleanup_test() {
-	mysql --user=rsyslog --password=testbench -e "drop database $RSYSLOG_DYNNAME;"
+	mysql --user=rsyslog --password=testbench -e "drop database $RSYSLOG_DYNNAME;" \
+		2>&1 | grep -iv "Using a password on the command line interface can be insecure."
 }
 
 
@@ -2295,14 +2337,6 @@ mysql_cleanup_test() {
 # $3 - file name
 # $4 - expected value
 first_column_sum_check() {
-	set -x
-	echo grep:
-	grep "$2" < "$3"
-	echo sed:
-	grep "$2" < "$3" | sed -e "$1"
-	echo akw:
-	grep "$2" < "$3" | sed -e "$1" | awk '{s+=$1} END {print s}'
-	set +x
 	sum=$(grep "$2" < "$3" | sed -e "$1" | awk '{s+=$1} END {print s}')
 	if [ "x${sum}" != "x$4" ]; then
 	    printf '\n============================================================\n'
@@ -2384,6 +2418,39 @@ snmp_stop_trapreceiver() {
     fi
 }
 
+wait_for_stats_flush() {
+	echo "will wait for stats push"
+	emitmsg=0
+	while [[ ! -f $1 ]]; do
+		if [ $((++emitmsg % 10)) == 0 ]; then
+			echo waiting for stats file "'$1'" to be created
+		fi
+		$TESTTOOL_DIR/msleep 100
+	done
+	prev_count=$(grep -c 'BEGIN$' <$1)
+	new_count=$prev_count
+	start_loop="$(date +%s)"
+	emit_waiting=0
+	while [[ "x$prev_count" == "x$new_count" ]]; do
+		# busy spin, because it allows as close timing-coordination
+		# in actual test run as possible
+		if [ $(date +%s) -gt $(( TB_STARTTEST + TB_TEST_MAX_RUNTIME )) ]; then
+		   printf '%s ABORT! Timeout waiting on stats push\n' "$(tb_timestamp)" "$1"
+		   error_exit 1
+		else
+		   # waiting for 1000 is heuristically "sufficiently but not too
+		   # frequent" enough
+		   if [ $((++emit_waiting)) == 1000 ]; then
+		      printf 'still waiting for stats push...\n'
+		      emit_waiting=0
+		   fi
+		 fi
+		new_count=$(grep -c 'BEGIN$' <"$1")
+	done
+	echo "stats push registered"
+}
+
+
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
 		source set-envvars
@@ -2419,13 +2486,13 @@ case $1 in
 			echo "hint: was init accidentally called twice?"
 			exit 2
 		fi
-		export RSYSLOG_DYNNAME="rstb_$(./test_id $(basename $0))"
+		export RSYSLOG_DYNNAME="rstb_$(./test_id $(basename $0))$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 4 | head -n 1)"
 		export RSYSLOG_OUT_LOG="${RSYSLOG_DYNNAME}.out.log"
 		export RSYSLOG2_OUT_LOG="${RSYSLOG_DYNNAME}_2.out.log"
 		export RSYSLOG_PIDBASE="${RSYSLOG_DYNNAME}:" # also used by instance 2!
-		export IMDIAG_PORT=13500
-		export IMDIAG_PORT2=13501
-		export TCPFLOOD_PORT=13514
+		#export IMDIAG_PORT=13500 DELETE ME
+		#export IMDIAG_PORT2=13501 DELETE ME
+		#export TCPFLOOD_PORT=13514 DELETE ME
 
 		# Extra Variables for Test statistic reporting
 		export RSYSLOG_TESTNAME=$(basename $0)
@@ -2503,23 +2570,6 @@ case $1 in
 		kill -9 $(cat $RSYSLOG_PIDBASE.pid)
 		# note: we do not wait for the actual termination!
 		;;
-    'injectmsg-litteral') # inject litteral-payload  via our inject interface (imdiag)
-		echo injecting msg payload from: $2
-		sed -e 's/^/injectmsg litteral /g' < "$2" | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
-		# TODO: some return state checking? (does it really make sense here?)
-		;;
-   'assert-equal')
-		if [ "x$4" == "x" ]; then
-			tolerance=0
-		else
-			tolerance=$4
-		fi
-		result=$(echo $2 $3 $tolerance | awk 'function abs(v) { return v > 0 ? v : -v } { print (abs($1 - $2) <= $3) ? "PASSED" : "FAILED" }')
-		if [ $result != 'PASSED' ]; then
-				echo "Value '$2' != '$3' (within tolerance of $tolerance)"
-		  error_exit 1
-		fi
-		;;
    'ensure-no-process-exists')
     ps -ef | grep -v grep | grep -qF "$2"
     if [ "x$?" == "x0" ]; then
@@ -2549,20 +2599,6 @@ case $1 in
 	 'allow-single-stats-flush-after-block-and-wait-for-it')
 		echo blocking stats flush
 		echo "awaitStatsReport block_again" | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
-		;;
-	 'wait-for-stats-flush')
-		echo "will wait for stats push"
-		while [[ ! -f $2 ]]; do
-				echo waiting for stats file "'$2'" to be created
-				$TESTTOOL_DIR/msleep 100
-		done
-		prev_count=$(grep -c 'BEGIN$' <$2)
-		new_count=$prev_count
-		while [[ "x$prev_count" == "x$new_count" ]]; do
-				# busy spin, because it allows as close timing-coordination in actual test run as possible
-				new_count=$(grep -c 'BEGIN$' <"$2")
-		done
-		echo "stats push registered"
 		;;
 	 'wait-for-dyn-stats-reset')
 		echo "will wait for dyn-stats-reset"

@@ -1,6 +1,6 @@
 /* The rsconf object. It models a complete rsyslog configuration.
  *
- * Copyright 2011-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2011-2020 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -73,6 +73,7 @@ struct globals_s {
 	int uidDropPriv;	/* user-id to which priveleges should be dropped to */
 	int gidDropPriv;	/* group-id to which priveleges should be dropped to */
 	int gidDropPrivKeepSupplemental; /* keep supplemental groups when dropping? */
+	int abortOnIDResolutionFail;
 	int umask;		/* umask to use */
 	uchar *pszConfDAGFile;	/* name of config DAG file, non-NULL means generate one */
 

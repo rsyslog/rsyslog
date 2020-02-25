@@ -3,7 +3,6 @@
 
 #  Starting actual testbench
 . ${srcdir:=.}/diag.sh init
-
 export NUMMESSAGES=50000
 
 port="$(get_free_port)"

@@ -167,7 +167,7 @@ char *test_rs_strerror_r(int errnum, char *buf, size_t buflen) {
 #define NETTEST_INPUT_CONF_FILE "nettest.input.conf"
 /* name of input file, must match $IncludeConfig in .conf files */
 
-#define MAX_EXTRADATA_LEN 200*1024
+#define MAX_EXTRADATA_LEN 512*1024
 #define MAX_SENDBUF 2 * MAX_EXTRADATA_LEN
 #define MAX_RCVBUF 16 * 1024 + 1/* TLS RFC 8449: max size of buffer for message reception */
 
@@ -1178,7 +1178,7 @@ initTLS(void)
 				" Is the file at the right path? And do we have the permissions?");
 		exit(1);
 	}
-	if(SSL_CTX_use_certificate_file(ctx, tlsCertFile, SSL_FILETYPE_PEM) != 1) {
+	if(SSL_CTX_use_certificate_chain_file(ctx, tlsCertFile) != 1) {
 		printf("tcpflood: error cert file could not be accessed -- have you mixed up key and certificate?\n");
 		printf("If in doubt, try swapping the files in -z/-Z\n");
 		printf("Certifcate is: '%s'\n", tlsCertFile);

@@ -340,6 +340,7 @@ void nvlstDestruct(struct nvlst *lst);
 void nvlstPrint(struct nvlst *lst);
 void nvlstChkUnused(struct nvlst *lst);
 struct nvlst* nvlstFindName(struct nvlst *lst, es_str_t *name);
+int nvlstChkDisabled(struct nvlst *lst);
 struct cnfobj* cnfobjNew(enum cnfobjType objType, struct nvlst *lst);
 void cnfobjDestruct(struct cnfobj *o);
 void cnfobjPrint(struct cnfobj *o);

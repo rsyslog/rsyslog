@@ -3,7 +3,7 @@
  *
  * File begun on 2007-07-30 by RGerhards
  *
- * Copyright (C) 2007-2016 Adiscon GmbH.
+ * Copyright (C) 2007-2020 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -41,6 +41,7 @@
 #include "errmsg.h"
 #include "srUtils.h"
 #include "unicode-helper.h"
+#include "rsconf.h"
 #include "parserif.h"
 
 
@@ -352,8 +353,13 @@ static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	assert(*pp != NULL);
 
 	if(getSubString(pp, (char*) szName, sizeof(szName), ' ')  != 0) {
-		LogError(0, RS_RET_NOT_FOUND, "could not extract group name");
-		ABORT_FINALIZE(RS_RET_NOT_FOUND);
+		if(loadConf->globals.abortOnIDResolutionFail) {
+			fprintf(stderr, "could not extract group name: %s\n", (char*)szName);
+			exit(1); /* good exit */
+		} else {
+			LogError(0, RS_RET_NOT_FOUND, "could not extract group name");
+			ABORT_FINALIZE(RS_RET_NOT_FOUND);
+		}
 	}
 
 	do {
@@ -374,6 +380,10 @@ static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 			LogError(0, RS_RET_NOT_FOUND, "ID for group '%s' could not be found", szName);
 		}
 		iRet = RS_RET_NOT_FOUND;
+		if(loadConf->globals.abortOnIDResolutionFail) {
+			fprintf(stderr, "ID for group '%s' could not be found or error\n", szName);
+			exit(1); /* good exit */
+		}
 	} else {
 		if(pSetHdlr == NULL) {
 			/* we should set value directly to var */
@@ -408,15 +418,25 @@ static rsRetVal doGetUID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	assert(*pp != NULL);
 
 	if(getSubString(pp, (char*) szName, sizeof(szName), ' ')  != 0) {
-		LogError(0, RS_RET_NOT_FOUND, "could not extract user name");
-		ABORT_FINALIZE(RS_RET_NOT_FOUND);
+		if(loadConf->globals.abortOnIDResolutionFail) {
+			fprintf(stderr, "could not extract user name: %s\n", (char*)szName);
+			exit(1); /* good exit */
+		} else {
+			LogError(0, RS_RET_NOT_FOUND, "could not extract user name");
+			ABORT_FINALIZE(RS_RET_NOT_FOUND);
+		}
 	}
 
 	getpwnam_r((char*)szName, &pwBuf, stringBuf, sizeof(stringBuf), &ppwBuf);
 
 	if(ppwBuf == NULL) {
-		LogError(0, RS_RET_NOT_FOUND, "ID for user '%s' could not be found or error", (char*)szName);
-		iRet = RS_RET_NOT_FOUND;
+		if(loadConf->globals.abortOnIDResolutionFail) {
+			fprintf(stderr, "ID for user '%s' could not be found or error\n", (char*)szName);
+			exit(1); /* good exit */
+		} else {
+			LogError(0, RS_RET_NOT_FOUND, "ID for user '%s' could not be found or error", (char*)szName);
+			iRet = RS_RET_NOT_FOUND;
+		}
 	} else {
 		if(pSetHdlr == NULL) {
 			/* we should set value directly to var */
