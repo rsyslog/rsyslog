@@ -1,4 +1,6 @@
 ----------------------------------------------------------------------------------------
+Scheduled Release 8.2004.0 (aka 2020.04) 2020-04-14
+----------------------------------------------------------------------------------------
 Scheduled Release 8.2002.0 (aka 2020.02) 2020-02-25
 - 2020-02-25: imfile: add per minute rate limiting
   Add MaxBytesPerMinute and MaxLinesPerMinute options.
