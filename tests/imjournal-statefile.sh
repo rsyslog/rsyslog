@@ -25,11 +25,22 @@ if [ $? -ne 0 ]; then
         echo "SKIP: failed to put test into journal."
         error_exit 77
 fi
-journalctl -an 200 | fgrep -qF "$TESTMSG"
+
+# sleep 1 to get this test to reliably detect the message
+sleep 1
+
+journalctl -an 200 > /dev/null 2>&1
 if [ $? -ne 0 ]; then
         echo "SKIP: cannot read journal."
         error_exit 77
 fi
+
+journalctl -an 200 | grep -qF "$TESTMSG"
+if [ $? -ne 0 ]; then
+        echo "SKIP: cannot find '$TESTMSG' in journal."
+        error_exit 77
+fi
+
 # do first run to process all the stuff already in journal db
 startup
 
