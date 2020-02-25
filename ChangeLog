@@ -1,5 +1,12 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2002.0 (aka 2020.02) 2020-02-25
+- 2020-02-25: imfile: add per minute rate limiting
+  Add MaxBytesPerMinute and MaxLinesPerMinute options.
+  These take integer values and, respectively, limit the number
+  of bytes or lines that may be sent in a minute.
+  This can be used to put a limit on the count or volume of logs
+  that may be sent for an imfile.
+  Thanks to Greg Farrell for the patch.
 - 2020-02-24: core: add global parameter "security.abortOnIDResolutionFail"
   This parameter controls whether or not rsyslog aborts when a name ID
   lookup fails (for user and group names). This is necessary as a security
