@@ -50,7 +50,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'rsyslog'
-copyright = u'2008-2019, `Rainer Gerhards and Others'
+copyright = u'2008-2019, Rainer Gerhards and Others'
 author = u'Rainer Gerhards and Others'
 
 
@@ -92,8 +92,8 @@ rst_epilog = """
 # real values will be generated dynamically from info in the repo. If the
 # user builds the docs from "bare" sources not yet processed
 ###############################################################################
-version = '8.2001'
-release = '8.2001.0'
+version = '8.2002'
+release = '8.2002.0'
 
 
 # For this to be true, it means that we are not attempting to build from
@@ -301,7 +301,7 @@ html_static_path = ['_static']
 html_show_sphinx = False
 
 # If true, "(C) Copyright ..." is shown in the HTML footer. Default is True.
-#html_show_copyright = True
+html_show_copyright = False
 
 # If true, an OpenSearch description file will be output, and all pages will
 # contain a <link> tag referring to it.  The value of this option must be the

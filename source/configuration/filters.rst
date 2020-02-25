@@ -226,7 +226,7 @@ documentation <../rainerscript/expressions>` for details.
 BSD-style Blocks
 ----------------
 
-**Note:** rsyslog v7+ does no longer support BSD-style blocks
+**Note:** rsyslog v7+ no longer supports BSD-style blocks
 for technical reasons. So it is strongly recommended **not** to
 use them.
 

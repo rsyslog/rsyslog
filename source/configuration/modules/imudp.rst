@@ -515,6 +515,81 @@ that we set the inputname to the empty string.
           inputname="" inputname.appendPort="on")
 
 
+Additional Information on Performance Tuning
+============================================
+
+Threads and Ports
+-----------------
+
+The maximum number of threads is a module parameter. Thus there is no direct
+relation to the number of ports.
+
+Every worker thread processes all inbound ports in parallel. To do so, it
+adds all listen ports to an `epoll()` set and waits for packets to arrive. If
+the system supports the `recvmmsg()` call, it tries to receive up to `batchSize`
+messages at once. This reduces the number of transitions between user and
+kernel space and as such overhead.
+
+After the packages have been received, imudp processes each message and creates
+input batches which are then submitted according to the config file's queue
+definition. After that the a new cycle beings and imudp return to wait for
+new packets to arrive.
+
+When multiple threads are defined, each thread performs the processing
+described above. All worker threads are created when imudp is started.
+Each of them will individually awoken from epoll as data
+is present. Each one reads as much available data as possible. With a low
+incoming volume this can be inefficient in that the threads compete against
+inbound data. At sufficiently high volumes this is not a problem because
+multiple workers permit to read data from the operating system buffers
+while other workers process the data they have read. It must be noted
+that "sufficiently high volume" is not a precise concept. A single thread
+can be very efficient. As such it is recommended to run impstats inside a
+performance testing lab to find out a good number of worker threads. If
+in doubt, start with a low number and increase only if performance
+actually increases by adding threads.
+
+A word of caution: just looking at thread CPU use is **not** a proper
+way to monitor imudp processing capabilities. With too many threads
+the overhead can increase, even strongly. This can result in a much higher
+CPU utlization but still overall less processing capability.
+
+Please also keep in your mind that additional input worker threads may
+cause more mutex contention when adding data to processing queues.
+
+Too many threads may also reduce the number of messages received via
+a single recvmmsg() call, which in turn increases kernel/user space
+switching and thus system overhead.
+
+If **real time** priority is used it must be ensured that not all
+operating system cores are used by imudp threads. The reason is that
+otherwise for heavy workloads there is no ability to actually process
+messages. While this may be desirable in some cases where queue settings
+permit for large bursts, it in general can lead to pushback from the
+queues.
+
+For lower volumes, real time priority can increase the operating system
+overhead by awaking imudp more often than strictly necessary and thus
+reducing the effectiveness of `recvmmsg()`.
+
+imudp threads and queue worker threads
+--------------------------------------
+There is no direct relationship between these two entities. Imudp submits
+messages to the configured rulesets and places them into the respective
+queues. It is then up the the queue config, and outside of the scope
+or knowledge of imudp, how many queue worker threads will be spawned by
+the queue in question.
+
+Note, however, that queue worker threads and imudp input worker threads
+compete for system ressources. As such the combined overall value should
+not overload the system. There is no strict rule to follow when sizing
+overall worker numbers: for queue workers it strongly depends on how
+compute-intense the workload is. For example, omfile actions need
+few worker threads as they are fast. On the contrary, omelasticsearch often
+waits for server replies and as such more worker threads can be beneficial.
+The queue subsystem auto-tuning of worker threads should handle the
+different needs in a useful way.
+
 Additional Resources
 ====================
 
