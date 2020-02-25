@@ -228,10 +228,12 @@ sun_open_door(void)
 				    info.di_target);
 
 				if (info.di_target > 0) {
-					(void) sprintf(line, "syslogd pid %ld"
-					    " already running. Cannot "
-					    "start another syslogd pid %ld",
-					    info.di_target, getpid());
+					(void) snprintf(line, sizeof(line),
+							"syslogd pid %ld "
+							"already running. Cannot "
+							"start another syslogd "
+							"pid %ld",
+							info.di_target, getpid());
 					DBGPRINTF("open_door: error: "
 					    "%s\n", line);
 					imsolaris_logerror(0, line);
@@ -303,7 +305,9 @@ sun_open_door(void)
 						    "error: %s, "
 						    "errno=%d\n",
 						    line, err);
-						(void) strcat(line, " - fatal");
+						const size_t n = strlen(line);
+						(void) strncat(line, " - fatal",
+								sizeof(line) - n);
 						imsolaris_logerror(err, line);
 						sun_delete_doorfiles();
 						exit(1);
@@ -330,7 +334,9 @@ sun_open_door(void)
 					DBGPRINTF("open_door: error: %s, "
 					    "errno=%d\n", line,
 					    err);
-					(void) strcat(line, " - fatal");
+					const size_t n = strlen(line);
+					(void) strncat(line, " - fatal",
+							sizeof(line) - n);
 					imsolaris_logerror(err, line);
 					sun_delete_doorfiles();
 					exit(1);
@@ -349,7 +355,8 @@ sun_open_door(void)
 		    DOOR_REFUSE_DESC)) < 0) {
 		    //???? DOOR_NO_CANEL requires newer libs??? DOOR_REFUSE_DESC | DOOR_NO_CANCEL)) < 0) {
 			err = errno;
-			(void) sprintf(line, "door_create() failed - fatal");
+			(void) snprintf(line, sizeof(line),
+					"door_create() failed - fatal");
 			DBGPRINTF("open_door: error: %s, errno=%d\n",
 			    line, err);
 			imsolaris_logerror(err, line);
