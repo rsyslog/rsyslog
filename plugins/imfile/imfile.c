@@ -710,7 +710,7 @@ act_obj_add(fs_edge_t *const edge, const char *const name, const int is_file,
 	char basename[MAXFNAME];
 	DEFiRet;
 	int fd = -1;
-	
+
 	DBGPRINTF("act_obj_add: edge %p, name '%s' (source '%s')\n", edge, name, source? source : "---");
 	for(act = edge->active ; act != NULL ; act = act->next) {
 		if(!strcmp(act->name, name)) {
@@ -1374,8 +1374,9 @@ enqLine(act_obj_t *const act,
 		size_t ceeMsgSize = msgLen + CONST_LEN_CEE_COOKIE + 1;
 		char *ceeMsg;
 		CHKmalloc(ceeMsg = malloc(ceeMsgSize));
-		strcpy(ceeMsg, CONST_CEE_COOKIE);
-		strcat(ceeMsg, (char*)rsCStrGetSzStrNoNULL(cstrLine));
+		snprintf(ceeMsg, ceeMsgSize, "%s%s", CONST_CEE_COOKIE,
+				(char*)rsCStrGetSzStrNoNULL(cstrLine));
+		DBGPRINTF("imfile: enqLine(): adding cee tag '%s'\n", ceeMsg);
 		MsgSetRawMsg(pMsg, ceeMsg, ceeMsgSize);
 		free(ceeMsg);
 	} else {
@@ -1761,6 +1762,7 @@ static rsRetVal ATTR_NONNULL()
 checkInstance(instanceConf_t *const inst)
 {
 	uchar curr_wd[MAXFNAME];
+	char *p_fname;
 	DEFiRet;
 
 	/* this is primarily for the clang static analyzer, but also
@@ -1789,8 +1791,9 @@ checkInstance(instanceConf_t *const inst)
 					inst->pszFileName);
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
-			curr_wd[len_curr_wd] = '/';
-			strcpy((char*)curr_wd+len_curr_wd+1, (char*)inst->pszFileName);
+			p_fname = (char *)curr_wd + len_curr_wd;
+			const size_t p_fname_max = sizeof(curr_wd) - len_curr_wd;
+			snprintf(p_fname, p_fname_max, "/%s", (char*)inst->pszFileName);
 			free(inst->pszFileName);
 			CHKmalloc(inst->pszFileName = ustrdup(curr_wd));
 		}

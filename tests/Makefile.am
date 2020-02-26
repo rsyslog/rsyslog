@@ -1324,6 +1324,7 @@ endif
 if ENABLE_IMFILE_TESTS
 TESTS += \
 	imfile-basic.sh \
+	imfile-addceetag.sh \
 	imfile-basic-legacy.sh \
 	imfile-discard-truncated-line.sh \
 	imfile-truncate-line.sh \
@@ -2196,6 +2197,7 @@ EXTRA_DIST= \
 	imfile-endregex.sh \
 	imfile-endregex-vg.sh \
 	imfile-basic.sh \
+	imfile-addceetag.sh \
 	imfile-basic-legacy.sh \
 	imfile-basic-2GB-file.sh \
 	imfile-truncate-2GB-file.sh \
