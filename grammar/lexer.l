@@ -312,7 +312,7 @@ int fileno(FILE *stream);
 <EXPR>.				{ cnfPrintToken(yytext); parser_errmsg("invalid character '%s' in expression "
 					        "- is there an invalid escape sequence somewhere?",
 						yytext); }
-<INCALL>[ \t\n]
+<INCALL>[ \t\n]		{ cnfPrintToken(yytext); }
 <INCALL>.			{ cnfPrintToken(yytext); parser_errmsg("invalid character '%s' in 'call' statement"
 					        "- is there an invalid escape sequence somewhere?",
 						yytext); }
