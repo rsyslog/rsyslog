@@ -1,5 +1,8 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2004.0 (aka 2020.04) 2020-04-14
+- 2020-03-02: conf output bugfix: -o produces missing space between call and rulename
+  Thanks to Tetiana Ohnieva for the patch.
+  closes https://github.com/rsyslog/rsyslog/issues/3761
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2002.0 (aka 2020.02) 2020-02-25
 - 2020-02-25: imfile: add per minute rate limiting
