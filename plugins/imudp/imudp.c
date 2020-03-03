@@ -1205,9 +1205,6 @@ static void *
 wrkr(void *myself)
 {
 	struct wrkrInfo_s *pWrkr = (struct wrkrInfo_s*) myself;
-#	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
-	uchar *pszDbgHdr;
-#	endif
 	uchar thrdName[32];
 
 	snprintf((char*)thrdName, sizeof(thrdName), "imudp(w%d)", pWrkr->id);
