@@ -14,8 +14,6 @@ echo ports: $TCPFLOOD_PORT $RSYSLOG_PORT2 $RSYSLOG_PORT3
 add_conf '
 $MaxMessageSize 10k
 
-$MainMsgQueueTimeoutEnqueue 5000
-
 $ModLoad ../plugins/imtcp/.libs/imtcp
 $MainMsgQueueTimeoutShutdown 10000
 
@@ -26,7 +24,7 @@ $template dynfile,"'$RSYSLOG_DYNNAME'.out.%inputname%.%msg:F,58:2%.log.Z"
 $Ruleset R13514
 # queue params:
 $ActionQueueTimeoutShutdown 60000
-$ActionQueueTimeoutEnqueue 15000
+$ActionQueueTimeoutEnqueue 20000
 $ActionQueueSize 5000
 $ActionQueueSaveOnShutdown on
 $ActionQueueHighWaterMark 4900
@@ -50,7 +48,7 @@ $InputTCPServerRun '$TCPFLOOD_PORT'
 $Ruleset R_PORT2
 # queue params:
 $ActionQueueTimeoutShutdown 60000
-$ActionQueueTimeoutEnqueue 5000
+$ActionQueueTimeoutEnqueue 20000
 $ActionQueueSize 5000
 $ActionQueueSaveOnShutdown on
 $ActionQueueHighWaterMark 4900
@@ -76,7 +74,7 @@ $InputTCPServerRun '$RSYSLOG_PORT2'
 $Ruleset R_PORT3
 # queue params:
 $ActionQueueTimeoutShutdown 60000
-$ActionQueueTimeoutEnqueue 5000
+$ActionQueueTimeoutEnqueue 20000
 $ActionQueueSize 5000
 $ActionQueueSaveOnShutdown on
 $ActionQueueHighWaterMark 4900
