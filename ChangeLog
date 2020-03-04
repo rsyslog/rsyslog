@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2004.0 (aka 2020.04) 2020-04-14
+- 2020-03-04: imudp bugfix: build problems on some Linux kernel versions
+  Thanks to Wen Yang for the patch.
 - 2020-03-02: conf output bugfix: -o produces missing space between call and rulename
   Thanks to Tetiana Ohnieva for the patch.
   closes https://github.com/rsyslog/rsyslog/issues/3761
