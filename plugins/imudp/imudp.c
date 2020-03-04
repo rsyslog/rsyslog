@@ -41,6 +41,9 @@
 #ifdef HAVE_SCHED_H
 #	include <sched.h>
 #endif
+#ifdef HAVE_SYS_PRCTL_H
+#  include <sys/prctl.h>
+#endif
 #include "rsyslog.h"
 #include "dirty.h"
 #include "net.h"
