@@ -49,6 +49,25 @@ typedef enum LOGSIG_SyncMode_en {
 	LOGSIG_SYNCHRONOUS = 0x01
 } LOGSIG_SyncMode;
 
+enum {
+	/* Signer state assigned before the signer thread is initialized. State remains
+	 * until thread initialization begins. In case of system failure to create new
+	 * thread state remains the same.
+	 */
+	SIGNER_IDLE = 0x01,
+
+	/* Signer state assigned while signer thread initialization is in progress.
+	 */
+	SIGNER_INIT = 0x02,
+
+	/* Signer state assigned when signer thread is initialized and ready to work.
+	 */
+	SIGNER_STARTED = 0x04,
+
+	/* Thread state assigned when signer thread is being closed (signer thread returns).
+	 */
+	SIGNER_STOPPED = 0x08
+};
 
 /* Max number of roots inside the forest. This permits blocks of up to
  * 2^MAX_ROOTS records. We assume that 64 is sufficient for all use
@@ -90,7 +109,7 @@ struct rsksictx_s {
 	pthread_mutex_t module_lock;
 	pthread_t signer_thread;
 	ProtectedQueue *signer_queue;
-	bool thread_started;
+	int signer_state;
 	uint8_t disabled;	/* permits to disable the plugin --> set to 1 */
 
 	ksifile *ksi;		/* List of signature files for keeping track of block timeouts. */
