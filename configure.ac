@@ -1398,16 +1398,25 @@ AC_ARG_ENABLE(mmdblookup,
         [case "${enableval}" in
          yes) enable_mmdblookup="yes" ;;
           no) enable_mmdblookup="no" ;;
+         optional) enable_mmdblookup="optional" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmdblookup) ;;
          esac],
         [enable_mmdblookup=no]
 )
-if test "x$enable_mmdblookup"; then
-        #PKG_CHECK_MODULES(LIBMAXMINDDB, libmaxminddb)
-        AC_CHECK_HEADERS([maxminddb.h])
+AM_CONDITIONAL(ENABLE_MMDBLOOKUP, test x$enable_mmdblookup = xyes -o x$enable_mmdblookup = xoptional)
+mmdblookup_use_dummy="no"
+if test x$enable_mmdblookup = xoptional -o x$enable_mmdblookup = xyes; then
+        #PKG_CHECK_MODULES(LIBMAXMINDDB, libmaxminddb) -- does not work - later?
+        AC_CHECK_HEADERS([maxminddb.h], [
+	], [
+		AS_IF([test x$enable_mmdblookup = xyes],
+			AC_MSG_ERROR(libmaxminddb library for mmdblookup could not be found)
+		)
+		mmdblookup_use_dummy="yes"
+		AC_DEFINE([ENABLE_MMBDLOOKUP_DUMMY], [1], [Indicator that we need to build a dummy module])
+	])
 fi
-AM_CONDITIONAL(ENABLE_MMDBLOOKUP, test x$enable_mmdblookup = xyes)
-
+AM_CONDITIONAL(MMDBLOOKUP_USE_DUMMY, test x$mmdblookup_use_dummy = xyes)
 
 
 # mmdarwin
