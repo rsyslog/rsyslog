@@ -32,9 +32,9 @@ tcpflood --check-only -k "Protocol=-ALL,TLSv1.2" -p$TCPFLOOD_PORT -m$NUMMESSAGES
 shutdown_when_empty
 wait_shutdown
 
-if content_check --check-only "OpenSSL Version too old"
+if content_check --check-only "TLS library does not support SSL_CONF_cmd"
 then
-	echo "SKIP: OpenSSL Version too old"
+	echo "SKIP: TLS library does not support SSL_CONF_cmd"
 	skip_test
 else
 	# Kindly check for a failed session
