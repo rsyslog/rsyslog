@@ -119,6 +119,8 @@ typedef struct instanceConf_s {
 	uchar *httpheaderkey;
 	uchar *httpheadervalue;
 	uchar *headerBuf;
+	uchar **httpHeaders;
+	int nHttpHeaders;
 	uchar *restPath;
 	uchar *checkPath;
 	uchar *tplName;
@@ -189,6 +191,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "httpcontenttype", eCmdHdlrGetWord, 0 },
 	{ "httpheaderkey", eCmdHdlrGetWord, 0 },
 	{ "httpheadervalue", eCmdHdlrString, 0 },
+	{ "httpheaders", eCmdHdlrArray, 0 },
 	{ "uid", eCmdHdlrGetWord, 0 },
 	{ "pwd", eCmdHdlrGetWord, 0 },
 	{ "restpath", eCmdHdlrGetWord, 0 },
@@ -299,6 +302,11 @@ CODESTARTfreeInstance
 	free(pData->headerContentTypeBuf);
 	free(pData->httpheaderkey);
 	free(pData->httpheadervalue);
+	for(i = 0 ; i < pData->nHttpHeaders ; ++i) {
+		free((void*) pData->httpHeaders[i]);
+	}
+	free(pData->httpHeaders);
+	pData->nHttpHeaders = 0;
 	free(pData->pwd);
 	free(pData->authBuf);
 	free(pData->headerBuf);
@@ -351,6 +359,10 @@ CODESTARTdbgPrintInstInfo
 		(uchar*)"(not configured)" : pData->httpheaderkey);
 	dbgprintf("\thttpheadervalue='%s'\n", pData->httpheadervalue == NULL ?
 		(uchar*)"(not configured)" : pData->httpheadervalue);
+	dbgprintf("\thttpHeaders=[");
+	for(i = 0 ; i < pData->nHttpHeaders ; ++i)
+		dbgprintf("\t%s\n",pData->httpHeaders[i]);
+	dbgprintf("\t]\n");
 	dbgprintf("\tpwd=(%sconfigured)\n", pData->pwd == NULL ? "not " : "");
 	dbgprintf("\trest path='%s'\n", pData->restPath);
 	dbgprintf("\tcheck path='%s'\n", pData->checkPath);
@@ -1029,6 +1041,11 @@ buildCurlHeaders(wrkrInstanceData_t *pWrkrData, sbool contentEncodeGzip)
 		CHKmalloc(slist);
 	}
 
+	for (int k = 0 ; k < pWrkrData->pData->nHttpHeaders; k++) {
+		slist = curl_slist_append(slist, (char *)pWrkrData->pData->httpHeaders[k]);
+		CHKmalloc(slist);
+	}
+
 	// When sending more than 1Kb, libcurl automatically sends an Except: 100-Continue header
 	// and will wait 1s for a response, could make this configurable but for now disable
 	slist = curl_slist_append(slist, HTTP_HEADER_EXPECT_EMPTY);
@@ -1656,9 +1673,17 @@ curlSetup(wrkrInstanceData_t *const pWrkrData)
 	} else {
 		slist = curl_slist_append(slist, HTTP_HEADER_CONTENT_JSON);
 	}
+
 	if (pWrkrData->pData->headerBuf != NULL) {
 		slist = curl_slist_append(slist, (char *)pWrkrData->pData->headerBuf);
+		CHKmalloc(slist);
 	}
+
+	for (int k = 0 ; k < pWrkrData->pData->nHttpHeaders; k++) {
+		slist = curl_slist_append(slist, (char *)pWrkrData->pData->httpHeaders[k]);
+		CHKmalloc(slist);
+	}
+
 	// When sending more than 1Kb, libcurl automatically sends an Except: 100-Continue header
 	// and will wait 1s for a response, could make this configurable but for now disable
 	slist = curl_slist_append(slist, HTTP_HEADER_EXPECT_EMPTY);
@@ -1705,6 +1730,8 @@ setInstParamDefaults(instanceData *const pData)
 	pData->headerContentTypeBuf = NULL;
 	pData->httpheaderkey = NULL;
 	pData->httpheadervalue = NULL;
+	pData->httpHeaders = NULL;
+	pData->nHttpHeaders = 0;
 	pData->pwd = NULL;
 	pData->authBuf = NULL;
 	pData->restPath = NULL;
@@ -1733,6 +1760,20 @@ setInstParamDefaults(instanceData *const pData)
 	pData->ratelimiter = NULL;
 	pData->retryRulesetName = NULL;
 	pData->retryRuleset = NULL;
+}
+
+static rsRetVal
+checkHeaderParam(char *const param)
+{
+	DEFiRet;
+	char *val = strstr(param, ":");
+	if(val == NULL) {
+		LogError(0, RS_RET_PARAM_ERROR, "missing ':' delimiter in "
+				"parameter '%s'", param);
+		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+	}
+finalize_it:
+	RETiRet;
 }
 
 BEGINnewActInst
@@ -1772,6 +1813,14 @@ CODESTARTnewActInst
 			pData->httpheaderkey = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "httpheadervalue")) {
 			pData->httpheadervalue = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "httpheaders")) {
+			pData->nHttpHeaders = pvals[i].val.d.ar->nmemb;
+			CHKmalloc(pData->httpHeaders = malloc(sizeof(uchar *) * pvals[i].val.d.ar->nmemb ));
+			for(int j = 0 ; j <  pvals[i].val.d.ar->nmemb ; ++j) {
+				char *cstr = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+				CHKiRet(checkHeaderParam(cstr));
+				pData->httpHeaders[j] = (uchar *)cstr;
+			}
 		} else if(!strcmp(actpblk.descr[i].name, "pwd")) {
 			pData->pwd = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "restpath")) {
@@ -1896,6 +1945,7 @@ CODESTARTnewActInst
 	if (pData->httpcontenttype != NULL)
 		CHKiRet(computeApiHeader((char*) "Content-Type",
 				(char*) pData->httpcontenttype, &pData->headerContentTypeBuf));
+
 	if (pData->httpheaderkey != NULL)
 		CHKiRet(computeApiHeader((char*) pData->httpheaderkey,
 				(char*) pData->httpheadervalue, &pData->headerBuf));
