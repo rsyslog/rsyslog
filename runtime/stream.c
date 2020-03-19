@@ -1136,10 +1136,14 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *start_preg, regex_t *
 							CHKiRet(cstrAppendCStr(pThis->prevMsgSegment, thisLine));
 							/* we could do this faster, but for now keep it simple */
 						} else {
-							len = currLineLen-(len-maxMsgSize);
-							for(int z=0; z<len; z++) {
-								cstrAppendChar(pThis->prevMsgSegment,
-								thisLine->pBuf[z]);
+							if (cstrLen(pThis->prevMsgSegment) > maxMsgSize) {
+								len = 0;
+							} else {
+								len = currLineLen-(len-maxMsgSize);
+								for(int z=0; z<len; z++) {
+									cstrAppendChar(pThis->prevMsgSegment,
+										thisLine->pBuf[z]);
+								}
 							}
 							finished = 1;
 							*ppCStr = pThis->prevMsgSegment;
