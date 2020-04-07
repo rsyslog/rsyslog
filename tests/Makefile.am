@@ -1254,6 +1254,7 @@ if ENABLE_OMUDPSPOOF
 TESTS += \
 	omudpspoof_errmsg_no_params.sh \
 	sndrcv_omudpspoof.sh \
+	sndrcv_omudpspoof-bigmsg.sh \
 	sndrcv_omudpspoof_nonstdpt.sh
 endif
 
@@ -2084,6 +2085,7 @@ EXTRA_DIST= \
 	sndrcv_udp_nonstdpt_v6.sh \
 	omudpspoof_errmsg_no_params.sh \
 	sndrcv_omudpspoof.sh \
+	sndrcv_omudpspoof-bigmsg.sh \
 	sndrcv_omudpspoof_nonstdpt.sh \
 	sndrcv_gzip.sh \
 	action-tx-single-processing.sh \
