@@ -908,13 +908,27 @@ doGetGID(struct nvlst *valnode, struct cnfparamdescr *param,
 {
 	char *cstr;
 	int r;
-	struct group *resultBuf;
+	struct group *resultBuf = NULL;
 	struct group wrkBuf;
-	char stringBuf[2048]; /* 2048 has been proven to be large enough */
+	char *stringBuf = NULL;
+	size_t bufSize = 1024;
+	int e;
 
 	cstr = es_str2cstr(valnode->val.d.estr, NULL);
-	const int e = getgrnam_r(cstr, &wrkBuf, stringBuf,
-		sizeof(stringBuf), &resultBuf);
+	do {
+		char *p;
+
+		/* Increase bufsize and try again.*/
+		bufSize *= 2;
+		p = realloc(stringBuf, bufSize);
+		if(!p) {
+			e = ENOMEM;
+			break;
+		}
+		stringBuf = p;
+		e = getgrnam_r(cstr, &wrkBuf, stringBuf, bufSize, &resultBuf);
+	} while(!resultBuf && (e == ERANGE));
+
 	if(resultBuf == NULL) {
 		if(e != 0) {
 			LogError(e, RS_RET_ERR, "parameter '%s': error to "
@@ -930,6 +944,7 @@ doGetGID(struct nvlst *valnode, struct cnfparamdescr *param,
 		   param->name, (int) resultBuf->gr_gid, cstr);
 		r = 1;
 	}
+	free(stringBuf);
 	free(cstr);
 	return r;
 }
