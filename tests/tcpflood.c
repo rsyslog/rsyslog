@@ -1200,7 +1200,7 @@ initTLS(void)
 
 	/* Check for Custom Config string */
 	if (customConfig != NULL){
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER)
 	char *pCurrentPos;
 	char *pNextPos;
 	char *pszCmd;
@@ -1254,7 +1254,7 @@ initTLS(void)
 		printf("tcpflood: error, invalid value for -k: %s\n", customConfig);
 	}
 #else
-	printf("tcpflood: error, OpenSSL Version too old, SSL_CONF_cmd API is not supported.");
+	printf("tcpflood: TLS library does not support SSL_CONF_cmd API (maybe it is too old?).");
 #endif
 	}
 

@@ -58,10 +58,10 @@ wait_shutdown
 # intent. So do not think something is wrong. The content_check below checks
 # these error codes.
 
-content_check --check-only "OpenSSL Version too old"
+content_check --check-only "TLS library does not support SSL_CONF_cmd"
 ret=$?
 if [ $ret == 0 ]; then
-	echo "SKIP: OpenSSL Version too old"
+	echo "SKIP: TLS library does not support SSL_CONF_cmd"
 	skip_test
 else
 	# Kindly check for a failed session

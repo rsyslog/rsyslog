@@ -633,7 +633,7 @@ osslInitSession(nsd_ossl_t *pThis) /* , nsd_ossl_t *pServer) */
 
 	if (bAnonInit == 1) { /* no mutex needed, read-only after init */
 		/* Allow ANON Ciphers */
-		#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+		#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
 		 /* NOTE: do never use: +eNULL, it DISABLES encryption! */
 		strncpy(pristringBuf, "ALL:+COMPLEMENTOFDEFAULT:+ADH:+ECDH:+aNULL@SECLEVEL=0",
 			sizeof(pristringBuf));
@@ -1725,7 +1725,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 
 	if (bAnonInit == 1) { /* no mutex needed, read-only after init */
 		/* Allow ANON Ciphers */
-		#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+		#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
 		 /* NOTE: do never use: +eNULL, it DISABLES encryption! */
 		strncpy(pristringBuf, "ALL:+COMPLEMENTOFDEFAULT:+ADH:+ECDH:+aNULL@SECLEVEL=0",
 			sizeof(pristringBuf));
@@ -1789,7 +1789,7 @@ SetGnutlsPriorityString(__attribute__((unused)) nsd_t *pNsd, __attribute__((unus
 		RETiRet;
 	} else {
 		dbgprintf("gnutlsPriorityString: set to '%s'\n", gnutlsPriorityString);
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER)
 		char *pCurrentPos;
 		char *pNextPos;
 		char *pszCmd;
@@ -1859,8 +1859,8 @@ SetGnutlsPriorityString(__attribute__((unused)) nsd_t *pNsd, __attribute__((unus
 		}
 #else
 		dbgprintf("gnutlsPriorityString: set to '%s'\n", gnutlsPriorityString);
-		LogError(0, RS_RET_SYS_ERR, "Warning: OpenSSL Version too old to set gnutlsPriorityString ('%s')"
-			"by SSL_CONF_cmd API. For more see: "
+		LogError(0, RS_RET_SYS_ERR, "Warning: TLS library does not support SSL_CONF_cmd API"
+			"(maybe it is too old?). Cannot use gnutlsPriorityString ('%s'). For more see: "
 			"https://www.rsyslog.com/doc/master/configuration/modules/imtcp.html#gnutlsprioritystring",
 			gnutlsPriorityString);
 #endif
