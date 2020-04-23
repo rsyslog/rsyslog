@@ -50,6 +50,7 @@ RUN	dnf -y update && \
 	net-tools \
 	openssl-devel \
 	postgresql-devel \
+	psmisc \
 	python-devel \
 	python3-docutils \
 	python-sphinx \
