@@ -457,9 +457,6 @@ flag to "on". This is useful when the external program uses or accesses
 some kind of shared resource that does not allow concurrent access from
 multiple processes.
 
-If this flag is enabled, the program instance will be started when rsyslogd
-starts, and will be kept started until shutdown.
-
 .. note::
 
    Before version v8.38.0, this parameter had no effect.
