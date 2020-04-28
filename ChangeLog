@@ -1,5 +1,40 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2004.0 (aka 2020.04) 2020-04-14
+Scheduled Release 8.2004.0 (aka 2020.04) 2020-04-28
+- 2020-04-28: imfile bugfix: poential segfault in stream object on file read
+  - if cstrLen(pThis->prevMsgSegment) > maxMsgSize then len calculation
+    become negative if cstrLen(thisLine) < cstrLen(pThis->prevMsgSegment)
+    This causes illegal access to memory location and thus causing segfault.
+  - assigning len = 0 if cstrLen(pThis->prevMsgSegment) > maxMsgSize so that
+    it access the correct memory location.
+  Thanks to github user jaankit
+- 2020-04-28: openssl TLS drivers: made more reliable for older openssl versions
+  OpenSSL can retry some failed operations, but older versions need an explicit
+  opt-in to do so. This is now done.
+- 2020-04-28: omprog: fix bad fd errors in daemon mode
+  When omprog was used with the 'forceSingleInstance=on' option, and/or
+  the 'output' setting, "bad file descriptor" errors occurred, which
+  prevented the external program to be executed and/or the program output
+  to be correctly captured. The bug could also manifest as "resource
+  temporarily unavailable" errors, or other errors related to the use of
+  invalid/reassigned file descriptors. These errors only happened when
+  rsyslog ran in daemon mode (i.e. they didn't happen if rsyslogd was
+  run with the '-n' option).
+  The cause of the bug was that omprog opened the pipe fds needed by
+  these flags during the configuration load phase (in the 'newActInst'
+  module entrypoint). This is a bad place since the fork of the daemon
+  occurs after this phase, and all fds are closed when the daemon process
+  is started (see 'initAll' in rsyslogd.c), hence invalidating the
+  previously opened fds.
+  To correct this, the single child process and the output capture thread
+  are now started later, when the first log message is received by the
+  first worker thread. (Note: the 'activateCnf' module entrypoint, despite
+  being invoked after the fork, cannot be used for this purpose, since it
+  is invoked per module, not per action instance.)
+  Currently no automated test exists for this use case since the testbench
+  always runs rsyslog in non-daemon mode.
+  Affected versions: v8.38 and later
+  closes: https://github.com/rsyslog/rsyslog/issues/4247
+- 2020-04-28: omfile bugfix: $outchannel split log lines at rotation time
 - 2020-04-17: openssl: add support for libreSSL
   Disable use of "@SECLEVEL" in default cipher string and
   avoid SSL_CONF_CTX_set_flags() API when LIBRESSL is used.
