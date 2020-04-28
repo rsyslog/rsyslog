@@ -214,14 +214,17 @@ SetCnfParam(void *pT, struct nvlst *lst)
 		}
 	}
 
-	if(rsksiSetHashFunction(pThis->ctx, hash ? hash : (char*) "SHA2-256") != KSI_OK)
-		goto finalize_it;
+	if(rsksiSetHashFunction(pThis->ctx, hash ? hash : (char*) "default") != KSI_OK) {
+		ABORT_FINALIZE(RS_RET_KSI_ERR);
+	}
 
-	if(rsksiSetHmacFunction(pThis->ctx, hmac ? hmac : (char*) "SHA2-256") != KSI_OK)
-		goto finalize_it;
+	if(rsksiSetHmacFunction(pThis->ctx, hmac ? hmac : (char*) "default") != KSI_OK) {
+		ABORT_FINALIZE(RS_RET_KSI_ERR);
+	}
 
-	if(rsksiSetAggregator(pThis->ctx, ag_uri, ag_loginid, ag_key) != KSI_OK)
-		goto finalize_it;
+	if(rsksiSetAggregator(pThis->ctx, ag_uri, ag_loginid, ag_key) != KSI_OK) {
+		ABORT_FINALIZE(RS_RET_KSI_ERR);
+	}
 
 finalize_it:
 	free(ag_uri);

@@ -844,7 +844,7 @@ rsksiCtxNew(void) {
 	ctx = calloc(1, sizeof (struct rsksictx_s));
 	KSI_CTX_new(&ctx->ksi_ctx); // TODO: error check (probably via a generic macro?)
 	ctx->hasher = NULL;
-	ctx->hashAlg = KSI_HASHALG_SHA2_256;
+	ctx->hashAlg = KSI_getHashAlgorithmByName("default");
 	ctx->blockTimeLimit = 0;
 	ctx->bKeepTreeHashes = false;
 	ctx->bKeepRecordHashes = true;
@@ -988,19 +988,23 @@ done:
 }
 
 
-/* returns 0 on succes, 1 if algo is unknown, 2 is algo has been remove
- * because it is now considered insecure
+/* Returns RSGTE_SUCCESS on success, error code otherwise. If algo is unknown or
+ * is not trusted, default hash function is used.
  */
 int
 rsksiSetHashFunction(rsksictx ctx, char *algName) {
+	if (ctx == NULL || algName == NULL) {
+		return RSGTE_INTERNAL;
+	}
+
 	int r, id = KSI_getHashAlgorithmByName(algName);
 	if (!KSI_isHashAlgorithmSupported(id)) {
 		report(ctx, "Hash function '%s' is not supported - using default", algName);
-		ctx->hashAlg = KSI_HASHALG_SHA2_256;
+		ctx->hashAlg = KSI_getHashAlgorithmByName("default");
 	} else {
 		if(!KSI_isHashAlgorithmTrusted(id)) {
 			report(ctx, "Hash function '%s' is not trusted - using default", algName);
-			ctx->hashAlg = KSI_HASHALG_SHA2_256;
+			ctx->hashAlg = KSI_getHashAlgorithmByName("default");
 		}
 		else
 			ctx->hashAlg = id;
@@ -1009,9 +1013,10 @@ rsksiSetHashFunction(rsksictx ctx, char *algName) {
 	if ((r = KSI_DataHasher_open(ctx->ksi_ctx, ctx->hashAlg, &ctx->hasher)) != KSI_OK) {
 		reportKSIAPIErr(ctx, NULL, "KSI_DataHasher_open", r);
 		ctx->disabled = true;
+		return r;
 	}
 
-	return 0;
+	return RSGTE_SUCCESS;
 }
 
 int
@@ -1019,11 +1024,11 @@ rsksiSetHmacFunction(rsksictx ctx, char *algName) {
 	int id = KSI_getHashAlgorithmByName(algName);
 	if (!KSI_isHashAlgorithmSupported(id)) {
 		report(ctx, "HMAC function '%s' is not supported - using default", algName);
-		ctx->hmacAlg = KSI_HASHALG_SHA2_256;
+		ctx->hmacAlg = KSI_getHashAlgorithmByName("default");
 	} else {
 		if(!KSI_isHashAlgorithmTrusted(id)) {
 			report(ctx, "HMAC function '%s' is not trusted - using default", algName);
-			ctx->hmacAlg = KSI_HASHALG_SHA2_256;
+			ctx->hmacAlg = KSI_getHashAlgorithmByName("default");
 		}
 		else
 			ctx->hmacAlg = id;
