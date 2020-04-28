@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2004.0 (aka 2020.04) 2020-04-28
+- 2020-04-28: ksi bugfix: When KSI module is suddenly closed, files are finalized
+  In async. mode all pending signature requests are closed immediately and
+  unsigned block marker is attached with message about sudden closure.
+  Similar approach is used for blocks that already contain some records.
+  Empty blocks are just closed without any metadata.
+  Thanks to Taavi Väljaots for the patch.
 - 2020-04-28: ksi bugfix: Signer thread initialization is verified before usage.
   When signer thread is created in rsksiInitModule thread successful
   initialization is verified before returning the function. This will
