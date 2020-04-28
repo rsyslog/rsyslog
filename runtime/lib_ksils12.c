@@ -813,15 +813,29 @@ seedIVKSI(ksifile ksi)
 	}
 }
 
-static void create_signer_thread(rsksictx ctx) {
-	if (!ctx->thread_started) {
+static int
+create_signer_thread(rsksictx ctx) {
+	if (ctx->signer_state != SIGNER_STARTED) {
 		if (pthread_mutex_init(&ctx->module_lock, 0))
 			report(ctx, "pthread_mutex_init: %s", strerror(errno));
 		ctx->signer_queue = ProtectedQueue_new(10);
-		if (pthread_create(&ctx->signer_thread, NULL, signer_thread, ctx))
+
+		ctx->signer_state = SIGNER_INIT;
+		if (pthread_create(&ctx->signer_thread, NULL, signer_thread, ctx)) {
 			report(ctx, "pthread_mutex_init: %s", strerror(errno));
-		ctx->thread_started = true;
+			ctx->signer_state = SIGNER_IDLE;
+			return RSGTE_INTERNAL;
+		}
+
+		/* Lock until init. */
+		while(ctx->signer_state & SIGNER_INIT);
+
+		if (ctx->signer_state != SIGNER_STARTED) {
+			return RSGTE_INTERNAL;
+		}
 	}
+
+	return RSGTE_SUCCESS;
 }
 
 rsksictx
@@ -844,7 +858,7 @@ rsksiCtxNew(void) {
 	ctx->fCreateMode = 0644;
 	ctx->fDirCreateMode = 0700;
 	ctx->syncMode = LOGSIG_SYNCHRONOUS;
-	ctx->thread_started = false;
+	ctx->signer_state = SIGNER_IDLE;
 	ctx->disabled = false;
 	ctx->ksi = NULL;
 
@@ -909,15 +923,14 @@ rsksiInitModule(rsksictx ctx) {
 
 	KSI_CTX_setOption(ctx->ksi_ctx, KSI_OPT_AGGR_HMAC_ALGORITHM, (void*)((size_t)ctx->hmacAlg));
 
-	create_signer_thread(ctx);
-
-	return res;
+	return create_signer_thread(ctx);
 }
 
 /* either returns ksifile object or NULL if something went wrong */
 ksifile
 rsksiCtxOpenFile(rsksictx ctx, unsigned char *logfn)
 {
+	int ret = RSGTE_INTERNAL;
 	ksifile ksi;
 	char fn[MAXFNAME+1];
 
@@ -928,8 +941,14 @@ rsksiCtxOpenFile(rsksictx ctx, unsigned char *logfn)
 
 	/* The thread cannot be be created in rsksiCtxNew because in daemon mode the
 	 process forks after rsksiCtxNew and the thread disappears */
-	if (!ctx->thread_started)
-			rsksiInitModule(ctx);
+	if (ctx->signer_state != SIGNER_STARTED) {
+		ret = rsksiInitModule(ctx);
+		if (ret != RSGTE_SUCCESS) {
+			report(ctx, "Unable to init. KSI module, signing service disabled");
+			ctx->disabled = true;
+			return NULL;
+		}
+	}
 
 	if ((ksi = rsksifileConstruct(ctx)) == NULL)
 		goto done;
@@ -1082,7 +1101,7 @@ rsksiCtxDel(rsksictx ctx) {
 	if (ctx == NULL)
 		return;
 
-	if (ctx->thread_started) {
+	if (ctx->signer_state == SIGNER_STARTED) {
 		queueAddQuit(ctx);
 		/* Wait until thread closes to be able to safely free the resources. */
 		pthread_join(ctx->signer_thread, NULL);
@@ -1761,12 +1780,12 @@ void *signer_thread(void *arg) {
 	int res = 0;
 	bool ret = false;
 	int i = 0, endpoints = 0;
-	ctx->thread_started = true;
 
 	CHECK_KSI_API(KSI_CTX_new(&ksi_ctx), ctx, "KSI_CTX_new");
 	CHECK_KSI_API(KSI_CTX_setAggregator(ksi_ctx,
 		ctx->aggregatorUri, ctx->aggregatorId, ctx->aggregatorKey),
 		ctx, "KSI_CTX_setAggregator");
+
 
 	if(ctx->debugFile) {
 		res = KSI_CTX_setLoggerCallback(ksi_ctx, rsksiStreamLogger, ctx->debugFile);
@@ -1809,6 +1828,7 @@ void *signer_thread(void *arg) {
 	KSI_AsyncService_setOption(as, KSI_ASYNC_OPT_REQUEST_CACHE_SIZE,
 		(void*) (ctx->max_requests));
 
+	ctx->signer_state = SIGNER_STARTED;
 	while (true) {
 		timeout = 1;
 
@@ -1860,9 +1880,11 @@ void *signer_thread(void *arg) {
 	}
 
 cleanup:
+
 	KSI_AsyncService_free(as);
 	KSI_CTX_free(ksi_ctx);
-	ctx->thread_started = false;
+	ctx->signer_state = SIGNER_STOPPED;
+
 	return NULL;
 }
 #pragma GCC diagnostic push
