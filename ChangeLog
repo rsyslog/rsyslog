@@ -1,5 +1,18 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2004.0 (aka 2020.04) 2020-04-28
+- 2020-04-28: ksi bugfix: Signer thread initialization is verified before usage.
+  When signer thread is created in rsksiInitModule thread successful
+  initialization is verified before returning the function. This will
+  prevent adding records to not initialized module and in case of an
+  error signature files opened will contain only magic bytes.
+  Thread flags replaced with thread state.
+  When init module fails, module is disabled.
+  Thanks to Taavi Väljaots for the patch.
+- 2020-04-28: ksi bugfix: Hardcoded default hash algorithm replaced with 'default'
+  Instead of hardcoded SHA-256 KSI_getHashAlgorithmByName("default")
+  is used to get default hash function.
+  Function rsksiSetHashFunction and SetCnfParam updated.
+  Thanks to Taavi Väljaots for the patch.
 - 2020-04-28: imfile bugfix: poential segfault in stream object on file read
   - if cstrLen(pThis->prevMsgSegment) > maxMsgSize then len calculation
     become negative if cstrLen(thisLine) < cstrLen(pThis->prevMsgSegment)
