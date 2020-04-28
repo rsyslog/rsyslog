@@ -1,4 +1,6 @@
 ----------------------------------------------------------------------------------------
+Scheduled Release 8.2006.0 (aka 2020.06) 2020-06-??
+----------------------------------------------------------------------------------------
 Scheduled Release 8.2004.0 (aka 2020.04) 2020-04-28
 - 2020-04-28: ksi bugfix: When KSI module is suddenly closed, files are finalized
   In async. mode all pending signature requests are closed immediately and
