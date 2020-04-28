@@ -578,7 +578,7 @@ sslerr:
 		}
 		else if(err != SSL_ERROR_WANT_READ &&
 			err != SSL_ERROR_WANT_WRITE) {
-			DBGPRINTF("osslRecordRecv: SSL_get_error = %d\n", err);
+			DBGPRINTF("osslRecordRecv: SSL_get_error #1 = %d, lenRcvd=%zd\n", err, lenRcvd);
 			/* Save errno */
 			local_errno = errno;
 
@@ -593,7 +593,7 @@ sslerr:
 				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 			}
 		} else {
-			DBGPRINTF("osslRecordRecv: SSL_get_error = %d\n", err);
+			DBGPRINTF("osslRecordRecv: SSL_get_error #2 = %d, lenRcvd=%zd\n", err, lenRcvd);
 			pThis->rtryCall =  osslRtry_recv;
 			pThis->rtryOsslErr = err; /* Store SSL ErrorCode into*/
 			ABORT_FINALIZE(RS_RET_RETRY);
@@ -603,8 +603,8 @@ sslerr:
 // TODO: Check if MORE retry logic needed?
 
 finalize_it:
-	dbgprintf("osslRecordRecv return. nsd %p, iRet %d, lenRcvd %d, lenRcvBuf %d, ptrRcvBuf %d\n",
-	pThis, iRet, (int) lenRcvd, pThis->lenRcvBuf, pThis->ptrRcvBuf);
+	dbgprintf("osslRecordRecv return. nsd %p, iRet %d, lenRcvd %zd, lenRcvBuf %d, ptrRcvBuf %d\n",
+	pThis, iRet, lenRcvd, pThis->lenRcvBuf, pThis->ptrRcvBuf);
 	RETiRet;
 }
 
@@ -619,7 +619,11 @@ osslInitSession(nsd_ossl_t *pThis) /* , nsd_ossl_t *pServer) */
 	if(!(pThis->ssl = SSL_new(ctx))) {
 		pThis->ssl = NULL;
 		osslLastSSLErrorMsg(0, pThis->ssl, LOG_ERR, "osslInitSession");
+		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 	}
+	
+	// Set SSL_MODE_AUTO_RETRY to SSL obj
+	SSL_set_mode(pThis->ssl, SSL_MODE_AUTO_RETRY);
 
 	if (pThis->authMode != OSSL_AUTH_CERTANON) {
 		dbgprintf("osslInitSession: enable certificate checking (Mode=%d, VerifyDepth=%d)\n",
@@ -1712,6 +1716,9 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 		osslLastSSLErrorMsg(0, pThis->ssl, LOG_ERR, "Connect");
 		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 	}
+
+	// Set SSL_MODE_AUTO_RETRY to SSL obj
+	SSL_set_mode(pThis->ssl, SSL_MODE_AUTO_RETRY);
 
 	if (pThis->authMode != OSSL_AUTH_CERTANON) {
 		dbgprintf("Connect: enable certificate checking (Mode=%d, VerifyDepth=%d)\n",
