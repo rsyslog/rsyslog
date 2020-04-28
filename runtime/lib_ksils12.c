@@ -90,9 +90,14 @@ typedef enum QITEM_type_en {
 
 /* Worker queue item status identifier */
 typedef enum QITEM_status_en {
+	/* State assigned to any item added to queue (initial state). */
 	QITEM_WAITING = 0x00,
+
+	/* State assigned to #QITEM_SIGNATURE_REQUEST item when it is sent out. */
 	QITEM_SENT,
-	QITEM_DONE,
+
+	/* State assigned to #QITEM_SIGNATURE_REQUEST item when request failed or succeeded. */
+	QITEM_DONE
 } QITEM_status;
 
 
@@ -102,8 +107,8 @@ typedef struct QueueItem_st {
 	QITEM_status status;
 	KSI_DataHash *root;
 	FILE *file;				/* To keep track of the target signature file. */
-	uint64_t intarg1;
-	uint64_t intarg2;
+	uint64_t intarg1;		/* Block time limit or record count or not used. */
+	uint64_t intarg2;		/* Level of the sign request or not used. */
 	KSI_AsyncHandle *respHandle;
 	int ksi_status;
 	time_t request_time;
@@ -113,6 +118,7 @@ static bool queueAddCloseFile(rsksictx ctx, ksifile kf);
 static bool queueAddNewFile(rsksictx ctx, ksifile kf);
 static bool queueAddQuit(rsksictx ctx);
 static bool queueAddSignRequest(rsksictx ctx, ksifile kf, KSI_DataHash *root, unsigned level);
+static int sigblkFinishKSINoSignature(ksifile ksi, const char *reason);
 
 void *signer_thread(void *arg);
 
@@ -1069,7 +1075,7 @@ rsksifileDestruct(ksifile ksi) {
 	return r;
 }
 
-/* This can only be used when signer thread has terminated. */
+/* This can only be used when signer thread has terminated or within the thread. */
 static void
 rsksifileForceFree(ksifile ksi) {
 	if (ksi == NULL) return;
@@ -1083,7 +1089,7 @@ rsksifileForceFree(ksifile ksi) {
 	return;
 }
 
-/* This can only be used when signer thread has terminated. */
+/* This can only be used when signer thread has terminated or within the thread. */
 static void
 rsksictxForceFreeSignatures(rsksictx ctx) {
 	size_t i = 0;
@@ -1101,11 +1107,42 @@ rsksictxForceFreeSignatures(rsksictx ctx) {
 	return;
 }
 
+/* This can only be used when signer thread has terminated or within the thread. */
+static int
+rsksictxForceCloseWithoutSig(rsksictx ctx, const char *reason) {
+	size_t i = 0;
+	if (ctx == NULL || ctx->ksi == NULL) return RSGTE_INTERNAL;
+	for (i = 0; i < ctx->ksiCount; i++) {
+		if (ctx->ksi[i] != NULL) {
+			int ret = RSGTE_INTERNAL;
+
+			/* Only if block contains records, create metadata, close the block and add
+			 * no signature marker. Closing block without record will produce redundant
+			 * blocks that needs to be signed afterward.
+			 */
+			if (ctx->ksi[i]->nRecords > 0) {
+				ret = sigblkFinishKSINoSignature(ctx->ksi[i], reason);
+				if (ret != RSGTE_SUCCESS) return ret;
+			}
+
+			/* Free files and remove object from the list. */
+			rsksifileForceFree(ctx->ksi[i]);
+			ctx->ksi[i] = NULL;
+		}
+	}
+
+	ctx->ksiCount = 0;
+	return RSGTE_SUCCESS;
+}
+
 void
 rsksiCtxDel(rsksictx ctx) {
 	if (ctx == NULL)
 		return;
 
+	/* Note that even in sync. mode signer thread is created and needs to be closed
+	 * correctly.
+	 */
 	if (ctx->signer_state == SIGNER_STARTED) {
 		queueAddQuit(ctx);
 		/* Wait until thread closes to be able to safely free the resources. */
@@ -1421,16 +1458,21 @@ sigblkCalcLevel(unsigned leaves) {
 	return level;
 }
 
-int
-sigblkFinishKSI(ksifile ksi)
-{
-	KSI_DataHash *root, *rootDel;
-	int8_t j;
-	int ret = 0;
-	unsigned level = 0;
+static int
+sigblkFinishTree(ksifile ksi, KSI_DataHash **hsh) {
+	int ret = RSGTE_INTERNAL;
+	KSI_DataHash *root = NULL;
+	KSI_DataHash *rootDel = NULL;
+	int8_t j = 0;
 
-	if (ksi->nRecords == 0)
+	if (ksi == NULL || hsh == NULL) {
 		goto done;
+	}
+
+	if (ksi->nRecords == 0) {
+		ret = RSGTE_SUCCESS;
+		goto done;
+	}
 
 	root = NULL;
 	for(j = 0 ; j < ksi->nRoots ; ++j) {
@@ -1439,15 +1481,48 @@ sigblkFinishKSI(ksifile ksi)
 			ksi->roots[j] = NULL;
 		} else if (ksi->roots[j] != NULL) {
 			rootDel = root;
+			root = NULL;
 			ret = sigblkHashTwoNodes(ksi, &root, ksi->roots[j], rootDel, j + 2);
 			KSI_DataHash_free(ksi->roots[j]);
 			ksi->roots[j] = NULL;
 			KSI_DataHash_free(rootDel);
-			if(ksi->bKeepTreeHashes)
+			rootDel = NULL;
+			if(ksi->bKeepTreeHashes) {
 				tlvWriteHashKSI(ksi, 0x0903, root);
-			if(ret != 0) goto done; /* checks hash_node_ksi() result! */
+			}
+			if(ret != KSI_OK) goto done; /* checks sigblkHashTwoNodes() result! */
 		}
 	}
+
+	*hsh = root;
+	root = NULL;
+	ret = RSGTE_SUCCESS;
+
+done:
+	KSI_DataHash_free(root);
+	KSI_DataHash_free(rootDel);
+	return ret;
+}
+
+
+int
+sigblkFinishKSI(ksifile ksi)
+{
+	KSI_DataHash *root = NULL;
+	int ret = RSGTE_INTERNAL;
+	unsigned level = 0;
+
+	if (ksi == NULL) {
+		goto done;
+	}
+
+	if (ksi->nRecords == 0) {
+		ret = RSGTE_SUCCESS;
+		goto done;
+	}
+
+	ret = sigblkFinishTree(ksi, &root);
+	if (ret != RSGTE_SUCCESS) goto done;
 
 	//Multiplying leaves count by 2 to account for blinding masks
 	level=sigblkCalcLevel(2 * ksi->nRecords);
@@ -1457,16 +1532,61 @@ sigblkFinishKSI(ksifile ksi)
 		ret = tlvWriteNoSigLS12(ksi->blockFile, ksi->nRecords, root, NULL);
 		if (ret != KSI_OK) {
 			reportKSIAPIErr(ksi->ctx, ksi, "tlvWriteNoSigLS12", ret);
-			ret = 1;
+			goto done;
 		}
 
 		queueAddSignRequest(ksi->ctx, ksi, root, level);
+		root = NULL;
 	} else {
 		sigblkSign(ksi, root, level);
-		KSI_DataHash_free(root); //otherwise delete it
 	}
 
+	ret = RSGTE_SUCCESS;
+
 done:
+	KSI_DataHash_free(root);
+	free(ksi->IV);
+	ksi->IV = NULL;
+	ksi->bInBlk = 0;
+	return ret;
+}
+
+static int
+sigblkFinishKSINoSignature(ksifile ksi, const char *reason)
+{
+	KSI_DataHash *root = NULL;
+	int ret = RSGTE_INTERNAL;
+
+	if (ksi == NULL || ksi->ctx == NULL ||
+	   (ksi->ctx->syncMode == LOGSIG_ASYNCHRONOUS && ksi->sigFile == NULL) ||
+		ksi->blockFile == NULL || reason == NULL) {
+		goto done;
+	}
+
+	ret = sigblkAddMetadata(ksi, blockCloseReason, reason);
+	if (ret != RSGTE_SUCCESS) goto done;
+
+	ret = sigblkFinishTree(ksi, &root);
+	if (ret != RSGTE_SUCCESS) goto done;
+
+	ret = tlvWriteNoSigLS12(ksi->blockFile, ksi->nRecords, root, reason);
+	if (ret != KSI_OK) {
+		reportKSIAPIErr(ksi->ctx, ksi, "tlvWriteNoSigLS12", ret);
+		goto done;
+	}
+
+	if (ksi->ctx->syncMode == LOGSIG_ASYNCHRONOUS) {
+		ret = tlvWriteNoSigLS12(ksi->sigFile, ksi->nRecords, root, reason);
+		if (ret != KSI_OK) {
+			reportKSIAPIErr(ksi->ctx, ksi, "tlvWriteNoSigLS12", ret);
+			goto done;
+		}
+	}
+
+	ret = RSGTE_SUCCESS;
+
+done:
+	KSI_DataHash_free(root);
 	free(ksi->IV);
 	ksi->IV=NULL;
 	ksi->bInBlk = 0;
@@ -1744,6 +1864,45 @@ cleanup:
 	return ret;
 }
 
+/* This can only be used when signer thread has terminated or within the thread. */
+static bool
+rsksictxCloseAllPendingBlocksWithoutSignature(rsksictx ctx, const char *reason) {
+	bool ret = false;
+	QueueItem *item = NULL;
+	int res = KSI_OK;
+
+	/* Save all consequent fulfilled responses in the front of the queue to the signature file */
+	while(ProtectedQueue_count(ctx->signer_queue)) {
+		item = NULL;
+		ProtectedQueue_popFront(ctx->signer_queue, (void**) &item);
+
+		if(item == NULL) {
+			continue;
+		}
+
+		/* Skip non request queue item. */
+		if(item->type == QITEM_SIGNATURE_REQUEST) {
+			res = tlvWriteNoSigLS12(item->file, item->intarg1, item->root, reason);
+			if (res != KSI_OK) {
+				reportKSIAPIErr(ctx, NULL, "tlvWriteNoSigLS12", res);
+				ret = false;
+				goto cleanup;
+			}
+			fflush(item->file);
+		}
+
+		KSI_DataHash_free(item->root);
+		KSI_AsyncHandle_free(item->respHandle);
+		free(item);
+	}
+
+	ret = true;
+
+cleanup:
+	return ret;
+}
+
+
 static void
 request_async_config(rsksictx ctx, KSI_CTX *ksi_ctx, KSI_AsyncService *as) {
 	KSI_Config *cfg = NULL;
@@ -1878,6 +2037,16 @@ void *signer_thread(void *arg) {
 				/* renew the config when opening a new file */
 			} else if (item->type == QITEM_QUIT) {
 				free(item);
+
+				/* Will look into work queue for pending KSI signatures and will output
+				 * unsigned block marker instead of actual KSI signature to finalize this
+				 * thread quickly.
+				 */
+				rsksictxCloseAllPendingBlocksWithoutSignature(ctx,
+					"Signing not finished due to sudden closure of lmsig_ksi-ls12 module.");
+				rsksictxForceCloseWithoutSig(ctx,
+					"Block closed due to sudden closure of lmsig_ksi-ls12 module.");
+
 				goto cleanup;
 			}
 			free(item);
