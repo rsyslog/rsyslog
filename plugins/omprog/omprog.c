@@ -657,7 +657,6 @@ done:
 static void
 closeOutputFile(outputCaptureCtx_t *pCtx)
 {
-	assert(pCtx->bIsRunning);
 	DBGPRINTF("omprog: reopening output file upon reception of HUP signal\n");
 	pthread_mutex_lock(&pCtx->mutWrite);
 
@@ -1214,7 +1213,7 @@ CODESTARTdoHUP
 		kill(pData->pSingleChildCtx->pid, pData->iHUPForward);
 	}
 
-	if(pData->pOutputCaptureCtx != NULL) {
+	if(pData->pOutputCaptureCtx != NULL && pData->pOutputCaptureCtx->bIsRunning) {
 		closeOutputFile(pData->pOutputCaptureCtx);
 	}
 ENDdoHUP
