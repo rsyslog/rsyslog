@@ -81,6 +81,7 @@ DEFobjCurrIf(zlibw)
 static rsRetVal strmFlushInternal(strm_t *pThis, int bFlushZip);
 static rsRetVal strmWrite(strm_t *__restrict__ const pThis, const uchar *__restrict__ const pBuf,
 	const size_t lenBuf);
+static rsRetVal strmOpenFile(strm_t *pThis);
 static rsRetVal strmCloseFile(strm_t *pThis);
 static void *asyncWriterThread(void *pPtr);
 static rsRetVal doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf, int bFlush);
@@ -278,7 +279,10 @@ doPhysOpen(strm_t *pThis)
 		iFlags |= O_NONBLOCK;
 	}
 
+	if(pThis->bAsyncWrite)d_pthread_mutex_lock(&pThis->mut);
 	pThis->fd = open((char*)pThis->pszCurrFName, iFlags | O_LARGEFILE, pThis->tOpenMode);
+	if(pThis->bAsyncWrite) d_pthread_mutex_unlock(&pThis->mut);
+
 	const int errno_save = errno; /* dbgprintf can mangle it! */
 	DBGPRINTF("file '%s' opened as #%d with mode %d\n", pThis->pszCurrFName,
 		  pThis->fd, (int) pThis->tOpenMode);
@@ -1238,6 +1242,7 @@ ENDobjConstruct(strm)
  */
 static rsRetVal strmConstructFinalize(strm_t *pThis)
 {
+	pthread_mutexattr_t mutAttr;
 	rsRetVal localRet;
 	int i;
 	DEFiRet;
@@ -1283,7 +1288,12 @@ static rsRetVal strmConstructFinalize(strm_t *pThis)
 
 	/* if we work asynchronously, we need a couple of synchronization objects */
 	if(pThis->bAsyncWrite) {
-		pthread_mutex_init(&pThis->mut, 0);
+		/* the mutex must be recursive, because objects may call into other
+		 * object identifiers recursively.
+		 */
+		pthread_mutexattr_init(&mutAttr);
+		pthread_mutexattr_settype(&mutAttr, PTHREAD_MUTEX_RECURSIVE);
+		pthread_mutex_init(&pThis->mut, &mutAttr);
 		pthread_cond_init(&pThis->notFull, 0);
 		pthread_cond_init(&pThis->notEmpty, 0);
 		pthread_cond_init(&pThis->isEmpty, 0);
@@ -1766,8 +1776,6 @@ strmPhysWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 
 	if(pThis->sType == STREAMTYPE_FILE_CIRCULAR) {
 		CHKiRet(strmCheckNextOutputFile(pThis));
-	} else if(pThis->iSizeLimit != 0) {
-		CHKiRet(doSizeLimitProcessing(pThis));
 	}
 
 finalize_it:
@@ -2151,6 +2159,10 @@ strmWrite(strm_t *__restrict__ const pThis, const uchar *__restrict__ const pBuf
 	if(pThis->iBufPtr == pThis->sIOBufSize) {
 		CHKiRet(strmFlushInternal(pThis, 0)); /* get a new buffer for rest of data */
 	}
+	if(pThis->fd != -1 && pThis->iSizeLimit != 0) { /* Only check if fd already set */
+		CHKiRet(doSizeLimitProcessing(pThis));
+	}
+
 
 finalize_it:
 	if(pThis->bAsyncWrite) {

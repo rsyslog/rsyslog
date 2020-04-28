@@ -458,6 +458,7 @@ TESTS +=  \
 	parsertest-parse-nodate-udp.sh \
 	parsertest-snare_ccoff_udp.sh \
 	parsertest-snare_ccoff_udp2.sh
+
 if ENABLE_LIBGCRYPT
 TESTS +=  \
 	queue-encryption-disk.sh \
@@ -1002,7 +1003,8 @@ TESTS +=  \
 	rscript_random.sh \
 	rscript_hash32.sh \
 	rscript_hash64.sh \
-	rscript_replace.sh
+	rscript_replace.sh \
+	omfile-outchannel-many.sh
 if HAVE_VALGRIND
 TESTS +=  \
 	imptcp_conndrop-vg.sh
@@ -1737,6 +1739,7 @@ EXTRA_DIST= \
 	omfile-whitespace-filename.sh \
 	omfile-read-only.sh \
 	omfile-outchannel.sh \
+	omfile-outchannel-many.sh \
 	omfile_both_files_set.sh \
 	omfile_hup.sh \
 	omrabbitmq_no_params.sh \
