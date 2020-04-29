@@ -1248,6 +1248,7 @@ endif # ENABLE_GNUTLS
 if HAVE_VALGRIND
 TESTS += \
 	 imrelp-basic-vg.sh \
+	 imrelp-sessionbreak-vg.sh \
 	 imrelp-manyconn-vg.sh
 endif # HAVE_VALGRIND
 endif
@@ -2067,6 +2068,7 @@ EXTRA_DIST= \
 	imrelp-oversizeMode-accept.sh \
 	imrelp-invld-tlslib.sh \
 	imrelp-bigmessage.sh \
+	imrelp-sessionbreak-vg.sh \
 	omrelp-invld-tlslib.sh \
 	glbl-oversizeMsg-log.sh \
 	glbl-oversizeMsg-truncate.sh \
