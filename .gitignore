@@ -73,13 +73,16 @@ cscope.out
 tests/HOSTNAME
 tests/chkseq
 tests/diagtalker
+tests/have_relpEngineSetTLSLibByName
 tests/have_relpSrvSetOversizeMode
+tests/have_relpSrvSetTlsConfigCmd
 tests/inputfilegen
 tests/minitcpsrv
 tests/msleep
 tests/nettester
 tests/ourtail
 tests/randomgen
+tests/set-envvars
 tests/syslog_caller
 tests/omrelp_dflt_port
 tests/syslog_inject
