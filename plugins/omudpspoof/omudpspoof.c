@@ -155,8 +155,6 @@ struct modConfData_s {
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
 
-
-
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars
 	cs.tplName = NULL;
@@ -173,7 +171,6 @@ pthread_mutex_t mutLibnet;
 
 /* forward definitions */
 static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData);
-
 
 /* this function gets the default template. It coordinates action between
  * old-style and new-style configuration parts.
@@ -373,7 +370,8 @@ UDPSend(wrkrInstanceData_t *pWrkrData, uchar *pszSourcename, char *msg, size_t l
 	/* hdrOffs = fragmentation flags + offset (in bytes)
 	* divided by 8 */
 	unsigned msgOffs, hdrOffs;
-	unsigned maxPktLen, pktLen;
+	unsigned maxPktLen, pktLen, udpPktLen;
+	u_int16_t ip_id;
 	DEFiRet;
 
 	if(pWrkrData->pSockArray == NULL) {
@@ -392,8 +390,12 @@ UDPSend(wrkrInstanceData_t *pWrkrData, uchar *pszSourcename, char *msg, size_t l
 		pWrkrData->sourcePort = pData->sourcePortStart;
 	}
 
-	inet_pton(AF_INET, (char*)pszSourcename, &(source_ip.sin_addr));
+	/* We need a non-zero id number for the IP headers,
+	* otherwise libnet will increase it after each
+	* build_ipv4, breaking the fragments */
+	ip_id = (u_int16_t)libnet_get_prand(LIBNET_PR16);
 
+	inet_pton(AF_INET, (char*)pszSourcename, &(source_ip.sin_addr));
 	bSendSuccess = RSFALSE;
 	d_pthread_mutex_lock(&mutLibnet);
 	bNeedUnlock = 1;
@@ -408,47 +410,54 @@ UDPSend(wrkrInstanceData_t *pWrkrData, uchar *pszSourcename, char *msg, size_t l
 		if(len > (maxPktLen - LIBNET_UDP_H) ) {
 			hdrOffs = IP_MF;
 			pktLen = maxPktLen - LIBNET_UDP_H;
+			udpPktLen = len;
 		} else {
 			hdrOffs = 0;
 			pktLen = len;
+			udpPktLen = len;
 		}
-		DBGPRINTF("omudpspoof: stage 1: MF:%d, hdrOffs %d, pktLen %d\n",
-			  (hdrOffs & IP_MF) >> 13, (hdrOffs & 0x1FFF) << 3, pktLen);
+		DBGPRINTF("omudpspoof: stage 1: MF:%d, msgOffs %d, hdrOffs %d, pktLen %d, udpPktLen %d, maxPktLen %d\n",
+			  (hdrOffs & IP_MF) >> 13, (hdrOffs & 0x1FFF) << 3, hdrOffs, pktLen, udpPktLen, maxPktLen);
 		libnet_clear_packet(pWrkrData->libnet_handle);
+
 		/* note: libnet does need ports in host order NOT in network byte order! -- rgerhards, 2009-11-12 */
 		udp = libnet_build_udp(
-			pWrkrData->sourcePort,	/* source port */
-			ntohs(tempaddr->sin_port),/* destination port */
-			pktLen+LIBNET_UDP_H,	/* packet length */
-			0,			/* checksum */
-			(u_char*)msg,		/* payload */
-			pktLen,	                /* payload size */
+			pWrkrData->sourcePort,		/* source port */
+			ntohs(tempaddr->sin_port),	/* destination port */
+			udpPktLen+LIBNET_UDP_H,		/* packet length - use the FULL UDP Packet Length here */
+			0,				/* checksum */
+			(u_char*)msg,			/* payload */
+			pktLen,				/* payload size */
 			pWrkrData->libnet_handle,	/* libnet handle */
-			udp);			/* libnet id */
+			udp);				/* libnet id */
 		if (udp == -1) {
 			DBGPRINTF("omudpspoof: can't build UDP header: %s\n",
 				libnet_geterror(pWrkrData->libnet_handle));
 		}
 
 		ip = libnet_build_ipv4(
-			LIBNET_IPV4_H+LIBNET_UDP_H+pktLen, /* length */
-			0,				/* TOS */
-			242,				/* IP ID */
-			hdrOffs,			/* IP Frag */
-			64,				/* TTL */
-			IPPROTO_UDP,			/* protocol */
-			0,				/* checksum */
+			LIBNET_IPV4_H+LIBNET_UDP_H+pktLen,	/* length */
+			0,					/* TOS */
+			ip_id,					/* IP ID */
+			hdrOffs,				/* IP Frag */
+			64,					/* TTL */
+			IPPROTO_UDP,				/* protocol */
+			0,					/* checksum */
 			source_ip.sin_addr.s_addr,
 			tempaddr->sin_addr.s_addr,
-			NULL,				/* payload */
-			0,				/* payload size */
+			NULL,					/* payload */
+			0,					/* payload size */
 			pWrkrData->libnet_handle,		/* libnet handle */
-			ip);				/* libnet id */
+			ip);					/* libnet id */
 		if (ip == -1) {
 			DBGPRINTF("omudpspoof: can't build IP header: %s\n",
 				libnet_geterror(pWrkrData->libnet_handle));
 		}
 
+		// Disable UDP Checksum CALC if Packjet exceeds MTU
+		if(len > (maxPktLen - LIBNET_UDP_H) ) {
+			libnet_toggle_checksum(pWrkrData->libnet_handle, udp, 1);
+		}
 		/* Write it to the wire. */
 		lsent = libnet_write(pWrkrData->libnet_handle);
 		if(lsent != (int) (LIBNET_IPV4_H+LIBNET_UDP_H+pktLen)) {
@@ -488,7 +497,7 @@ UDPSend(wrkrInstanceData_t *pWrkrData, uchar *pszSourcename, char *msg, size_t l
 			ip = libnet_build_ipv4(
 				LIBNET_IPV4_H + pktLen,         /* length */
 				0,				/* TOS */
-				242,				/* IP ID */
+				ip_id,				/* IP ID */
 				hdrOffs,			/* IP Frag */
 				64,				/* TTL */
 				IPPROTO_UDP,			/* protocol */
@@ -595,7 +604,6 @@ finalize_it:
 
 	RETiRet;
 }
-
 
 BEGINtryResume
 CODESTARTtryResume
