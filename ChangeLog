@@ -1,5 +1,33 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2006.0 (aka 2020.06) 2020-06-??
+- 2020-04-29: core bugfix: group id could not be obtained for very large groups
+  Thanks to github user emilbart for the patch.
+- 2020-04-29: testbench additions (relp broken connection test)
+- 2020-04-29: omudpspoof bugfix: issues with oversized messages
+  First issue was an incorrect packet length in UDP Header. It has to be the FULL UDP Packet
+  regardless of the MTU Setting. As a result regardless of IP fragmentation, the MTU setting
+  also limited the siizmax size of the UDP message.
+  The second issue was incorrect calculation of the UDP Checksum with libnet if
+  IP fragmentation was used (Based on MTU Setting). As a result, the network packets were
+  dropped by the tcp stack before they even could reach there target. The workarround for this
+  problem is, that we set the UDP Checksum to 0x0000 which allows skipping of the checksum
+  test. Fixing the problem by calculating the correct UDP Checksum would require some
+  code changes in the libnet.
+  Also fixed the omudpspoof bigmsg test and increased the testing size to 16KB.
+- 2020-04-29: omprog: fix assert failed on HUP with output flag
+  If the 'output' setting of omprog was used and rsyslog received a HUP
+  signal just after starting (and before the omprog action received the
+  first log to process), an internal assertion could fail, causing
+  rsyslog to terminate. The failure message was "rsyslogd: omprog.c:660:
+  closeOutputFile: Assertion `pCtx->bIsRunning' failed."
+  The failure could also occur if rsyslog received a HUP signal during
+  the shutdown sequence.
+  This bug was introduced in v8.2004 by PR https://github.com/rsyslog/rsyslog/pull/4255
+  Although a test already existed that checked the interaction of HUPs
+  with the 'output' setting, it didn't always fail in this particular case
+  due to timing conditions. The test has been improved to cover this case
+  more reliably.
+  Thanks to Joan Sala Isern for the patch.
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2004.0 (aka 2020.04) 2020-04-28
 - 2020-04-28: ksi bugfix: When KSI module is suddenly closed, files are finalized
@@ -55,6 +83,7 @@ Scheduled Release 8.2004.0 (aka 2020.04) 2020-04-28
   always runs rsyslog in non-daemon mode.
   Affected versions: v8.38 and later
   closes: https://github.com/rsyslog/rsyslog/issues/4247
+  Thanks to Joan Sala Isern for the patch.
 - 2020-04-28: omfile bugfix: $outchannel split log lines at rotation time
 - 2020-04-17: openssl: add support for libreSSL
   Disable use of "@SECLEVEL" in default cipher string and
