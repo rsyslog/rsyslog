@@ -1,6 +1,7 @@
 #!/bin/bash
 # added 2019-11-13 by alorbach
 . ${srcdir:=.}/diag.sh init
+require_relpEngineSetTLSLibByName
 export PORT_RCVR="$(get_free_port)"
 export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.receiver.debuglog"
@@ -40,22 +41,22 @@ wait_shutdown 2
 shutdown_when_empty
 wait_shutdown
 
-content_check --check-only "parameter tls.tlslib ignored" ${RSYSLOG_DEBUGLOG}
+content_check --check-only "relpTcpConnectTLSInit_gnutls" ${RSYSLOG_DEBUGLOG}
 ret=$?
 if [ $ret == 0 ]; then
-	echo "SKIP: Parameter tls.tlslib not supported"
+	echo "SKIP: LIBRELP was build without OPENSSL Support"
+	skip_test
+fi 
+
+content_check --check-only "OpenSSL Version too old" $RSYSLOG_DEBUGLOG
+ret=$?
+if [ $ret == 0 ]; then
+	echo "SKIP: OpenSSL Version too old"
 	skip_test
 else
-	content_check --check-only "OpenSSL Version too old" $RSYSLOG_DEBUGLOG
-	ret=$?
-	if [ $ret == 0 ]; then
-		echo "SKIP: OpenSSL Version too old"
-		skip_test
-	else
-		# Kindly check for a failed session
-		content_check "librelp error 10031" $RSYSLOG_DEBUGLOG
-	#	content_check "OpenSSL Error Stack:"
-	fi
+	# Kindly check for a failed session
+	content_check "librelp error 10031" $RSYSLOG_DEBUGLOG
+#	content_check "OpenSSL Error Stack:"
 fi
 
 exit_test

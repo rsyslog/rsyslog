@@ -1,6 +1,7 @@
 #!/bin/bash
 # addd 2019-11-14 by alorbach, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+require_relpEngineSetTLSLibByName
 export NUMMESSAGES=1000
 export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.receiver.debuglog"
@@ -27,21 +28,21 @@ tcpflood --check-only -k "Protocol=-ALL,TLSv1.2" -u "openssl" -Trelp-tls -acertv
 shutdown_when_empty
 wait_shutdown
 
-content_check --check-only "parameter tls.tlslib ignored" ${RSYSLOG_DEBUGLOG}
+content_check --check-only "relpTcpTLSSetPrio_gtls" ${RSYSLOG_DEBUGLOG}
 ret=$?
 if [ $ret == 0 ]; then
-	echo "SKIP: Parameter tls.tlslib not supported"
+	echo "SKIP: LIBRELP was build without OPENSSL Support"
+	skip_test
+fi 
+
+content_check --check-only "OpenSSL Version too old" ${RSYSLOG_DEBUGLOG}
+ret=$?
+if [ $ret == 0 ]; then
+	echo "SKIP: OpenSSL Version too old"
 	skip_test
 else
-	content_check --check-only "OpenSSL Version too old" ${RSYSLOG_DEBUGLOG}
-	ret=$?
-	if [ $ret == 0 ]; then
-		echo "SKIP: OpenSSL Version too old"
-		skip_test
-	else
-		# Kindly check for a failed session
-		content_check "relp connect failed with return 10031" ${RSYSLOG_DYNNAME}.tcpflood
-	fi
+	# Kindly check for a failed session
+	content_check "relp connect failed with return 10031" ${RSYSLOG_DYNNAME}.tcpflood
 fi
 
 exit_test
