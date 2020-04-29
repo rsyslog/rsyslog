@@ -20,14 +20,13 @@ fi
 export NUMMESSAGES=20000
 
 if [[ "$(uname)" == "Linux" ]]; then
-    LINE_LENGTH=4095   # 4KB minus 1 byte (for the newline char)
+    export LINE_LENGTH=4095   # 4KB minus 1 byte (for the newline char)
 else
-    LINE_LENGTH=511   # 512 minus 1 byte (for the newline char)
+    export LINE_LENGTH=511   # 512 minus 1 byte (for the newline char)
 fi
 
-export command_line="$PYTHON $srcdir/testsuites/omprog-output-capture-mt-bin.py $LINE_LENGTH"
 empty_check() {
-	if [ $(wc -l < "$RSYSLOG_OUT_LOG") -eq $((NUMMESSAGES * 2)) ]; then
+	if [ $(wc -l < "$RSYSLOG_OUT_LOG") -ge $((NUMMESSAGES * 2)) ]; then
 		return 0
 	fi
 	return 1
@@ -47,7 +46,7 @@ main_queue(
 :msg, contains, "msgnum:" {
     action(
         type="omprog"
-        binary=`echo $command_line`
+        binary="'$PYTHON' '$srcdir'/testsuites/omprog-output-capture-mt-bin.py '$LINE_LENGTH'"
         template="outfmt"
         name="omprog_action"
         queue.type="LinkedList"  # use a dedicated queue
@@ -60,9 +59,15 @@ main_queue(
 }
 '
 startup
+
+# Issue a HUP signal when the output-capture thread has not started yet,
+# to check that this case is handled correctly (the output file has not
+# been opened yet, so omprog must not try to reopen it).
+issue_HUP
+
 injectmsg 0 $NUMMESSAGES
 
-# Issue some HUP signals to cause the output file to be reopened during
+# Issue more HUP signals to cause the output file to be reopened during
 # writing (not a complete test of this feature, but at least we check it
 # doesn't break the output).
 issue_HUP
