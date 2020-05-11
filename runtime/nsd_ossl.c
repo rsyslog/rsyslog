@@ -972,6 +972,7 @@ osslGlblExit(void)
 {
 	DEFiRet;
 	DBGPRINTF("openssl: entering osslGlblExit\n");
+	SSL_CTX_free(ctx);
 	ENGINE_cleanup();
 	ERR_free_strings();
 	EVP_cleanup();
