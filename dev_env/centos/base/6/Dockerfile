@@ -79,8 +79,8 @@ ENV	TCL_LIB_SPEC="-L/usr/lib64 -ltcl8.5" \
 RUN	mkdir /local_dep_cache && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch-5.6.9.tar.gz  && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz && \
-	wget -nv https://www-us.apache.org/dist/zookeeper/zookeeper-3.4.14/zookeeper-3.4.14.tar.gz -O /local_dep_cache/zookeeper-3.4.14.tar.gz && \
-	wget -nv http://www-us.apache.org/dist/kafka/2.2.0/kafka_2.12-2.2.0.tgz -O /local_dep_cache/kafka_2.12-2.2.0.tgz
+	wget -nv https://www-us.apache.org/dist/zookeeper/zookeeper-3.4.14/zookeeper-3.4.14.tar.gz -O /local_dep_cache/zookeeper-3.4.14.tar.gz
+#	&& wget -nv http://www-us.apache.org/dist/kafka/2.5.0/kafka_2.12-2.5.0.tgz -O /local_dep_cache/kafka_2.12-2.5.0.tgz
 # tell tests which are the newester versions, so they can be checked without the need
 # to adjust test sources.
 #ENV	ELASTICSEARCH_NEWEST="elasticsearch-6.3.1.tar.gz"
@@ -156,15 +156,15 @@ RUN	cd helper-projects && \
 	rm -r libksi && \
 	cd ..
 # we need the latest librdkafka as there as always required updates
-RUN	cd helper-projects && \
-	git clone https://github.com/edenhill/librdkafka && \
-	cd librdkafka && \
-	(unset CFLAGS; ./configure --prefix=/usr --libdir=/usr/lib64 --CFLAGS="-g" ; make -j) && \
-	make install && \
-	cd .. && \
+#RUN	cd helper-projects && \
+#	git clone https://github.com/edenhill/librdkafka && \
+##	cd librdkafka && \
+#	(unset CFLAGS; ./configure --prefix=/usr --libdir=/usr/lib64 --CFLAGS="-g" ; make -j) && \
+#	make install && \
+#	cd .. && \
 # Note: we do NOT delete the source as we may need it to
 # uninstall (in case the user wants to go back to system-default)
-	cd ..
+RUN	cd ..
 
 # next ENV is specifically for running scan-build - so we do not need to
 # change scripts if at a later time we can move on to a newer version
@@ -178,7 +178,6 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-gssapi-krb5 \
 	--enable-imdiag \
 	--enable-imfile \
-	--enable-imkafka \
 	--enable-impstats \
 	--enable-imptcp \
 	--enable-kafka-tests \
@@ -203,7 +202,6 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-mysql \
 	--enable-omudpspoof \
 	--enable-omhttpfs \
-	--enable-omkafka \
 	--enable-omprog \
 	--enable-omrelp-default-port=13515 \
 	--enable-omruleset \
@@ -235,6 +233,8 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 #	--enable-omamqp1  removed as I *think* it is not supported here
 #	--enable-omhiredis 
 #	--enable-mmgrok - no package
+#	--enable-imkafka - librdkafka no longer builds
+#	--enable-omkafka - librdkafka no longer builds
 
 # Install any needed packages
 RUN ./setup-projects.sh
