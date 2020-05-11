@@ -61,16 +61,17 @@ RUN     add-apt-repository ppa:adiscon/v8-stable -y && \
 	add-apt-repository ppa:ubuntu-toolchain-r/test -y && \
 	echo "deb http://repo.yandex.ru/clickhouse/deb/stable/ main/" > /etc/apt/sources.list.d/clickhouse.list && \
 	apt-key adv --keyserver keyserver.ubuntu.com --recv E0C56BD4 && \
-	echo "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-5.0 main" > /etc/apt/sources.list.d/llvm.list && \
 	echo "deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_16.04/ ./" > /etc/apt/sources.list.d/0mq.list && \
 	wget -O - http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_16.04/Release.key | apt-key add - && \
 	wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key| apt-key add -
+#echo "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial main" > /etc/apt/sources.list.d/llvm.list && \
 # note: ppa:ubuntu-toolchain-r/test is currently the best repo for gcc-7 we can find...
 
 RUN	apt-get update -y && \
 	apt-get install -y \
 	clickhouse-client \
-	clickhouse-server \
+	clickhouse-server
+run	apt-get install -y \
 	libestr-dev \
 	librelp-dev \
 	libqpid-proton10-dev \
@@ -79,9 +80,9 @@ RUN	apt-get update -y && \
 	liblogging-stdlog-dev \
 	gcc-7 \
 	libczmq-dev \
-	clang-5.0 \
-	clang-tools-5.0 \
 	liblognorm-dev
+#clang-5.0 \
+#clang-tools-5.0 \
 
 RUN	pip install pysnmp
 # for clickhouse, the container requires some pre-generated files for TLS. generate them via
@@ -145,7 +146,7 @@ RUN	mkdir /local_dep_cache && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch-5.6.9.tar.gz  && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz && \
 	wget -nv https://www-us.apache.org/dist/zookeeper/zookeeper-3.4.14/zookeeper-3.4.14.tar.gz -O /local_dep_cache/zookeeper-3.4.14.tar.gz && \
-	wget -nv http://www-us.apache.org/dist/kafka/2.2.0/kafka_2.12-2.2.0.tgz -O /local_dep_cache/kafka_2.12-2.2.0.tgz
+	wget -nv http://www-us.apache.org/dist/kafka/2.5.0/kafka_2.12-2.5.0.tgz -O /local_dep_cache/kafka_2.12-2.5.0.tgz
 # tell tests which are the newester versions, so they can be checked without the need
 # to adjust test sources.
 #ENV	ELASTICSEARCH_NEWEST="elasticsearch-6.3.1.tar.gz"
