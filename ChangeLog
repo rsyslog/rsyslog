@@ -1,5 +1,8 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2006.0 (aka 2020.06) 2020-06-??
+- 2020-05-11: omhttp: Add support for multiple http headers
+  Allows the inclusion of multiple http headers on the REST call.
+  Thanks to callmegar for the patch.
 - 2020-04-29: core bugfix: group id could not be obtained for very large groups
   Thanks to github user emilbart for the patch.
 - 2020-04-29: testbench additions (relp broken connection test)
