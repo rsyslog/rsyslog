@@ -2042,7 +2042,7 @@ download_elasticsearch() {
 			printf 'ElasticSearch: satisfying dependency %s from system cache.\n' "$ES_DOWNLOAD"
 			cp /local_dep_cache/$ES_DOWNLOAD $dep_es_cached_file
 		else
-			dep_es_url="https://artifacts.elastic.co/downloads/elasticsearch/$ES_DOWNLOAD"
+			dep_es_url="https://www.rsyslog.com/files/download/rsyslog/$ES_DOWNLOAD"
 			printf 'ElasticSearch: satisfying dependency %s from %s\n' "$ES_DOWNLOAD" "$dep_es_url"
 			wget -q $dep_es_url -O $dep_es_cached_file
 		fi
