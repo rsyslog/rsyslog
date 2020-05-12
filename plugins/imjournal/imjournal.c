@@ -520,24 +520,32 @@ persistJournalState(void)
 	DEFiRet;
 	FILE *sf = NULL; /* state file */
 	char tmp_sf[MAXFNAME];
-	size_t n;
 
 	DBGPRINTF("Persisting journal position, cursor: %s, at head? %d\n",
 			  journalContext.cursor, journalContext.atHead);
 
 	/* first check that we have valid cursor */
 	if (!journalContext.cursor) {
+		DBGPRINTF("Journal cursor is not valid, ok...\n");
 		ABORT_FINALIZE(RS_RET_OK);
 	}
 
 	/* we create a temporary name by adding a ".tmp"
 	 * suffix to the end of our state file's name
+	 *
+	 * we use snprintf() to safely honor the boundaries
+	 * of the temporary state file name buffer by using
+	 * a precision specifier, which will limit the number
+	 * of bytes taken from cs.stateFile to what will fit
+	 *
+	 * TODO: figure out a better way to avoid the PATH_MAX
+	 * problem. The truncated cs.stateFile with .tmp at the
+	 * end is not optimal
 	 */
-	n = snprintf(tmp_sf, sizeof(tmp_sf), "%s.tmp", cs.stateFile);
-	if (n >= sizeof(tmp_sf)) { /* backup in case of too long path name */
-		strncpy(tmp_sf, cs.stateFile, sizeof(tmp_sf) - 5);
-		strcat(tmp_sf, ".tmp");
-	}
+#define IM_SF_TMP_SUFFIX ".tmp"
+	snprintf(tmp_sf, sizeof(tmp_sf), "%.*s%s",
+			(int)(sizeof(tmp_sf) - strlen(IM_SF_TMP_SUFFIX) -1),
+			cs.stateFile, IM_SF_TMP_SUFFIX);
 
 	sf = fopen(tmp_sf, "wb");
 	if (sf == NULL) {
@@ -572,6 +580,8 @@ persistJournalState(void)
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
 	}
+
+	DBGPRINTF("Persisted journal to '%s'\n", cs.stateFile);
 
 finalize_it:
 	if (sf != NULL) {
