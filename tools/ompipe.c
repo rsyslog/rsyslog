@@ -70,6 +70,7 @@ typedef struct _instanceData {
 	short	fd;		/* pipe descriptor for (current) pipe */
 	pthread_mutex_t mutWrite; /* guard against multiple instances writing to same pipe */
 	sbool	bHadError;	/* did we already have/report an error on this pipe? */
+	sbool	bTryResumeReopen;	/* should we attempt to reopen the pipe on action resume? */
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -95,7 +96,8 @@ static struct cnfparamblk modpblk =
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
 	{ "pipe", eCmdHdlrString, CNFPARAM_REQUIRED },
-	{ "template", eCmdHdlrGetWord, 0 }
+	{ "template", eCmdHdlrGetWord, 0 },
+	{ "tryResumeReopen", eCmdHdlrBinary, 0 },
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -273,6 +275,7 @@ CODESTARTcreateInstance
 	pData->pipe = NULL;
 	pData->fd = -1;
 	pData->bHadError = 0;
+	pData->bTryResumeReopen = 0;
 	pthread_mutex_init(&pData->mutWrite, NULL);
 ENDcreateInstance
 
@@ -318,8 +321,13 @@ CODESTARTtryResume
 		tv.tv_usec = 0;
 		ready = select(pData->fd+1, NULL, &wrds, NULL, &tv);
 		DBGPRINTF("ompipe: tryResume: ready to write fd %d: %d\n", pData->fd, ready);
-		if(ready != 1)
+		if(ready != 1) {
+			if(pData->bTryResumeReopen && pData->fd != -1) {
+				close(pData->fd);
+				pData->fd = -1;
+			}
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
+		}
 	}
 finalize_it:
 ENDtryResume
@@ -361,6 +369,8 @@ CODESTARTnewActInst
 			pData->pipe = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "tryResumeReopen")) {
+			pData->bTryResumeReopen = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("ompipe: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);
