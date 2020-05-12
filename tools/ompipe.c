@@ -412,10 +412,12 @@ ENDparseSelectorAct
 
 BEGINdoHUP
 CODESTARTdoHUP
+	pthread_mutex_lock(&pData->mutWrite);
 	if(pData->fd != -1) {
 		close(pData->fd);
 		pData->fd = -1;
 	}
+	pthread_mutex_unlock(&pData->mutWrite);
 ENDdoHUP
 
 
