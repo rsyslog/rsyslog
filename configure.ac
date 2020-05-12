@@ -2234,7 +2234,7 @@ AC_ARG_ENABLE(imczmq,
         [enable_imczmq=no]
 )
 if test "x$enable_imczmq" = "xyes"; then
-	PKG_CHECK_MODULES(CZMQ, libczmq >= 3.0.0)
+	PKG_CHECK_MODULES(CZMQ, libczmq >= 4.0.0)
 fi
 AM_CONDITIONAL(ENABLE_IMCZMQ, test x$enable_imczmq = xyes)
 
@@ -2252,7 +2252,7 @@ AC_ARG_ENABLE(omczmq,
         [enable_omczmq=no]
 )
 if test "x$enable_omczmq" = "xyes"; then
-   PKG_CHECK_MODULES(CZMQ, libczmq >= 3.0.2)
+   PKG_CHECK_MODULES(CZMQ, libczmq >= 4.0.0)
 fi
 AM_CONDITIONAL(ENABLE_OMCZMQ, test x$enable_omczmq = xyes)
 
