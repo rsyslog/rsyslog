@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2006.0 (aka 2020.06) 2020-06-??
+- 2020-05-12: build system: libzcmq version requirement needs to be bumped
+  Thanks to Thomas Deutschmann for pointing this out.
+  closes https://github.com/rsyslog/rsyslog/issues/3957
+- 2020-05-12: testbench: download ElasticSearch binaries from rsyslog.com
+  The official ElasticSearch download site sometimes denies the download.
 - 2020-05-11: openssl netstream driver bugfix: context leak
   The context object was not properly freed.
   Thanks to Michael Zimmermann for the fix.
