@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2006.0 (aka 2020.06) 2020-06-??
+- 2020-05-12: imjournal: remove strcat call
+  Thanks to Jeff Marckel for the patch.
 - 2020-05-12: build system: libzcmq version requirement needs to be bumped
   Thanks to Thomas Deutschmann for pointing this out.
   closes https://github.com/rsyslog/rsyslog/issues/3957
