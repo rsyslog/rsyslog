@@ -1,5 +1,12 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2006.0 (aka 2020.06) 2020-06-??
+- 2020-05-12: ompipe: add action parameter tryResumeReopen
+  Sometimes we need to reopen a pipe after an ompipe action gets
+  suspended. Sending an HUP signal to rsyslog does the job but requires
+  an interraction with rsyslog. The patch adds support for a new boolean
+  option, tryResumeReopen, for the ompipe action. It mimics what an HUP
+  signal would do.
+  Thanks to Julien Thomas for the patch.
 - 2020-05-12: imjournal: remove strcat call
   Thanks to Jeff Marckel for the patch.
 - 2020-05-12: build system: libzcmq version requirement needs to be bumped
