@@ -544,7 +544,11 @@ persistJournalState(void)
 	 */
 #define IM_SF_TMP_SUFFIX ".tmp"
 	snprintf(tmp_sf, sizeof(tmp_sf), "%.*s%s",
-			(int)(sizeof(tmp_sf) - strlen(IM_SF_TMP_SUFFIX) -1),
+			/* this calculates the max size for state file name, note that
+			 * sizeof() NOT -1 is intentional - it reserves spaces for the
+			 * NUL terminator.
+			 */
+			(int)(sizeof(tmp_sf) - sizeof(IM_SF_TMP_SUFFIX)),
 			cs.stateFile, IM_SF_TMP_SUFFIX);
 
 	sf = fopen(tmp_sf, "wb");
