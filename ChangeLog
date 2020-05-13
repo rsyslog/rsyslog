@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2006.0 (aka 2020.06) 2020-06-??
+- 2020-05-12: ompipe bugfix: race during HUP
+  When HUP was received, the write mutex was not aquired. This could
+  lead to unexpected invalidation of the output file descriptor.
+  Thanks to Julien Thomas for alerting us on this issue.
+  see also https://github.com/rsyslog/rsyslog/pull/4136#issuecomment-578326278
 - 2020-05-12: ompipe: add action parameter tryResumeReopen
   Sometimes we need to reopen a pipe after an ompipe action gets
   suspended. Sending an HUP signal to rsyslog does the job but requires
