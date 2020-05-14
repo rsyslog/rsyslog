@@ -62,7 +62,6 @@ RUN	yum -y update && \
 	# end of this RUN
 RUN	yum -y install epel-release && \
 	yum -y install \
-	czmq-devel \
 	hiredis \
 	hiredis-devel \
 	libmaxminddb \
@@ -70,6 +69,13 @@ RUN	yum -y install epel-release && \
 	mongo-c-driver \
 	mongo-c-driver-devel
 	# end of this RUN
+RUN	wget -O /etc/yum.repos.d/network:messaging:zeromq:git-stable.repo https://download.opensuse.org/repositories/network:messaging:zeromq:git-stable/CentOS_7/network:messaging:zeromq:git-stable.repo && \
+	yum -y install czmq-devel
+	# end of this RUN
+	#wget -O /etc/yum.repos.de/network:messaging:zeromq:git-stable.repo  https://download.opensuse.org/repositories/network:messaging:zeromq:git-stable/CentOS_6/network:messaging:zeromq:git-stable.repo && \
+RUN 	find / -name "pgm*"
+RUN	mkdir /usr/lib64/pgm-5.2
+RUN	mkdir /usr/lib64/pgm-5.2/include
 # unfortunately, tcl-devel does not properly setup required bits in the environment
 # so we now try to do that. In case this does no longer work with a version, search
 # for a file tclConfig.sh, which should be present in the library directory (usually
