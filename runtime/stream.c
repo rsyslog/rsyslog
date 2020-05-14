@@ -1252,6 +1252,7 @@ static rsRetVal strmConstructFinalize(strm_t *pThis)
 	DEFiRet;
 
 	assert(pThis != NULL);
+DBGOPRINT((obj_t*) pThis, "strmConstructFinalize\n");
 
 	pThis->iBufPtrMax = 0; /* results in immediate read request */
 	if(pThis->iZipLevel) { /* do we need a zip buf? */
@@ -2079,6 +2080,9 @@ static rsRetVal strmWriteChar(strm_t *__restrict__ const pThis, const uchar c)
 	if(pThis->iBufPtr == pThis->sIOBufSize) {
 		CHKiRet(strmFlushInternal(pThis, 0));
 	}
+DBGOPRINT((obj_t*) pThis, "pThis->pIOBuf %d pThis->iBufPtr %d\n",
+	pThis->pIOBuf, pThis->iBufPtr);
+
 	/* we now always have space for one character, so we simply copy it */
 	*(pThis->pIOBuf + pThis->iBufPtr) = c;
 	pThis->iBufPtr++;

@@ -921,6 +921,7 @@ static rsRetVal qConstructDisk(qqueue_t *pThis)
 	int bRestarted = 0;
 
 	assert(pThis != NULL);
+DBGOPRINT((obj_t*) pThis->tVars.disk.pWrite, "qConstructDisk 1\n");
 
 	/* and now check if there is some persistent information that needs to be read in */
 	iRet = qqueueTryLoadPersistedInfo(pThis);
@@ -973,6 +974,7 @@ static rsRetVal qConstructDisk(qqueue_t *pThis)
 		CHKiRet(strm.SetFName(pThis->tVars.disk.pReadDeq, pThis->pszFilePrefix, pThis->lenFilePrefix));
 		CHKiRet(strm.SetFName(pThis->tVars.disk.pReadDel, pThis->pszFilePrefix, pThis->lenFilePrefix));
 	}
+DBGOPRINT((obj_t*) pThis->tVars.disk.pWrite, "qConstructDisk 2\n");
 
 	/* now we set (and overwrite in case of a persisted restart) some parameters which
 	 * should always reflect the current configuration variables. Be careful by doing so,
@@ -984,6 +986,7 @@ static rsRetVal qConstructDisk(qqueue_t *pThis)
 	CHKiRet(strm.SetiMaxFileSize(pThis->tVars.disk.pReadDel, pThis->iMaxFileSize));
 
 finalize_it:
+DBGOPRINT((obj_t*) pThis->tVars.disk.pWrite, "qConstructDisk RETURN %d\n", iRet);
 	RETiRet;
 }
 
@@ -1022,6 +1025,7 @@ qAddDisk(qqueue_t *const pThis, smsg_t* pMsg)
 	ISOBJ_TYPE_assert(pMsg, msg);
 	number_t nWriteCount;
 	const int oldfile = strmGetCurrFileNum(pThis->tVars.disk.pWrite);
+DBGOPRINT((obj_t*) pThis->tVars.disk.pWrite, "qAddDisk\n");
 
 	CHKiRet(strm.SetWCntr(pThis->tVars.disk.pWrite, &nWriteCount));
 	CHKiRet((objSerialize(pMsg))(pMsg, pThis->tVars.disk.pWrite));
