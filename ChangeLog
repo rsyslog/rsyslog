@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2006.0 (aka 2020.06) 2020-06-??
+- 2020-05-15: imtcp bugfix: octet framing/stuffing problem with discardTruncatedMsg on
+  When "discardTruncatedMsg" was enabled in imtcp, messages were incorrectly
+  skipped if the last character before the truncation was the LFdelimiter.
+  Also adds two testbench tests for this case.
+  closes: https://github.com/rsyslog/rsyslog/issues/4281
 - 2020-05-12: ompipe bugfix: race during HUP
   When HUP was received, the write mutex was not aquired. This could
   lead to unexpected invalidation of the output file descriptor.
