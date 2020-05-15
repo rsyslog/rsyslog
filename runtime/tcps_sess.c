@@ -424,25 +424,26 @@ processDataRcvd(tcps_sess_t *pThis,
 			pThis->inputState = eInMsg;
 		}
 	} else if(pThis->inputState == eInMsgTruncating) {
-		if((   ((c == '\n') && !pThis->pSrv->bDisableLFDelim)
-		   || ((pThis->pSrv->addtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER)
-		        && (c == pThis->pSrv->addtlFrameDelim))
-		   ) && pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) {
-			pThis->inputState = eAtStrtFram;
+		if(pThis->eFraming == TCP_FRAMING_OCTET_COUNTING) {
+			DBGPRINTF("DEBUG: TCP_FRAMING_OCTET_COUNTING eInMsgTruncating c=%c remain=%d\n",
+				c, pThis->iOctetsRemain);
+
+			pThis->iOctetsRemain--;
+			if(pThis->iOctetsRemain < 1) {
+				pThis->inputState = eAtStrtFram;
+			}
+		} else {
+			if(    ((c == '\n') && !pThis->pSrv->bDisableLFDelim)
+			    || ((pThis->pSrv->addtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER)
+			         && (c == pThis->pSrv->addtlFrameDelim))
+			    ) {
+				pThis->inputState = eAtStrtFram;
+			}
 		}
 	} else {
 		assert(pThis->inputState == eInMsg);
-		if(pThis->iMsg >= iMaxLine) {
-			/* emergency, we now need to flush, no matter if we are at end of message or not... */
-			DBGPRINTF("error: message received is larger than max msg size, we %s it\n",
-				pThis->pSrv->discardTruncatedMsg == 1 ? "truncate" : "split");
-			defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
-			++(*pnMsgs);
-			if(pThis->pSrv->discardTruncatedMsg == 1) {
-				pThis->inputState = eInMsgTruncating;
-				FINALIZE;
-			}
-		}
+		DBGPRINTF("DEBUG: processDataRcvd c=%c remain=%d\n",
+			c, pThis->iOctetsRemain);
 
 		if((   ((c == '\n') && !pThis->pSrv->bDisableLFDelim)
 		   || ((pThis->pSrv->addtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER)
@@ -458,6 +459,23 @@ processDataRcvd(tcps_sess_t *pThis,
 			 */
 			if(pThis->iMsg < iMaxLine) {
 				*(pThis->pMsg + pThis->iMsg++) = c;
+			} else {
+				/* emergency, we now need to flush, no matter if we are at end of message or not... */
+				DBGPRINTF("error: message received is larger than max msg size, we %s it - c=%x\n",
+					pThis->pSrv->discardTruncatedMsg == 1 ? "truncate" : "split", c);
+				defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
+				++(*pnMsgs);
+				if(pThis->pSrv->discardTruncatedMsg == 1) {
+					if (pThis->eFraming == TCP_FRAMING_OCTET_COUNTING) {
+						pThis->iOctetsRemain--;
+						if (pThis->iOctetsRemain == 0) {
+							pThis->inputState = eAtStrtFram;
+							FINALIZE;
+						}
+					}
+					pThis->inputState = eInMsgTruncating;
+					FINALIZE;
+				}
 			}
 		}
 

@@ -277,8 +277,10 @@ TESTS +=  \
 	imtcp-msg-truncation-on-number2.sh \
 	imtcp-NUL.sh \
 	imtcp-NUL-rawmsg.sh \
-	imtcp-multiport.sh \
 	imtcp_incomplete_frame_at_end.sh \
+	imtcp-multiport.sh \
+	imtcp-bigmessage-octetcounting.sh \
+	imtcp-bigmessage-octetstuffing.sh \
 	da-queue-persist.sh \
 	daqueue-persist.sh \
 	daqueue-invld-qi.sh \
@@ -1965,6 +1967,8 @@ EXTRA_DIST= \
 	imtcp-tls-basic-vg.sh \
 	imtcp_incomplete_frame_at_end.sh \
 	imtcp-multiport.sh \
+	imtcp-bigmessage-octetcounting.sh \
+	imtcp-bigmessage-octetstuffing.sh \
 	udp-msgreduc-orgmsg-vg.sh \
 	udp-msgreduc-vg.sh \
 	manytcp-too-few-tls-vg.sh \
