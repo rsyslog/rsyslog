@@ -295,7 +295,3 @@ if ENABLE_KSI_LS12
    lmsig_ksi_ls12_la_CPPFLAGS = $(RSRT_CFLAGS) $(GT_KSI_LS12_CFLAGS)
    lmsig_ksi_ls12_la_LDFLAGS = -module -avoid-version $(GT_KSI_LS12_LIBS)
 endif
-
-update-systemd:
-	curl http://cgit.freedesktop.org/systemd/systemd/plain/src/libsystemd-daemon/sd-daemon.c > sd-daemon.c
-	curl http://cgit.freedesktop.org/systemd/systemd/plain/src/systemd/sd-daemon.h > sd-daemon.h
