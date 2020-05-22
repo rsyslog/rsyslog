@@ -443,6 +443,7 @@ TESTS +=  \
 	lookup_table_rscript_reload.sh \
 	lookup_table_rscript_reload_without_stub.sh \
 	include-obj-text-from-file.sh \
+	include-obj-text-from-file-noexist.sh \
 	multiple_lookup_tables.sh \
 	parsertest-parse1.sh \
 	parsertest-parse1-udp.sh \
@@ -1645,6 +1646,7 @@ EXTRA_DIST= \
 	diskqueue-non-unique-prefix.sh \
 	arrayqueue.sh \
 	include-obj-text-from-file.sh \
+	include-obj-text-from-file-noexist.sh \
 	include-obj-outside-control-flow-vg.sh \
 	include-obj-in-if-vg.sh \
 	include-obj-text-vg.sh \
