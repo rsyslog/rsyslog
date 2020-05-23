@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2006.0 (aka 2020.06) 2020-06-??
+- 2020-05-23: config system bugfix: backticks cat segfault if file cannot be opened
+  when a `cat <filename>` construct is used in rsyslog.conf and <filename> can not
+  be accessed (does not exist, no permissions, ...), rsyslog segfaults.
+  Thanks to Michael Skeffington for notifying us and providing root cause analysis.
+  closes https://github.com/rsyslog/rsyslog/issues/4290
 - 2020-05-15: imtcp bugfix: octet framing/stuffing problem with discardTruncatedMsg on
   When "discardTruncatedMsg" was enabled in imtcp, messages were incorrectly
   skipped if the last character before the truncation was the LFdelimiter.
