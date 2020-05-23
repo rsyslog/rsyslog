@@ -148,7 +148,14 @@ expand_backticks(char *const param)
 		estr = expand_backticks_echo(param);
 	} else if(strncmp(param, "cat ", sizeof("cat ")-1) == 0) {
 		const char *val = read_file(param+4);
-		estr = es_newStrFromCStr(val, strlen(val));
+		if(val == NULL) {
+			parser_errmsg("file could not be accessed for `%s`", param);
+			const char *errmsg = "/* file cound not be accessed - see"
+				"error messages */";
+			estr = es_newStrFromCStr(errmsg, strlen(errmsg));
+		} else {
+			estr = es_newStrFromCStr(val, strlen(val));
+		}
 		free((void*) val);
 	} else {
 		parser_errmsg("invalid backtick parameter `%s` - replaced by "
