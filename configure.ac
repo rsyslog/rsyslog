@@ -2102,6 +2102,7 @@ AC_ARG_ENABLE(omkafka,
         [case "${enableval}" in
          yes) enable_omkafka="yes" ;;
           no) enable_omkafka="no" ;;
+         optional) enable_omkafka="optional" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-omkafka) ;;
          esac],
         [enable_omkafka=no]
@@ -2111,6 +2112,7 @@ AC_ARG_ENABLE(imkafka,
         [case "${enableval}" in
          yes) enable_imkafka="yes" ;;
           no) enable_imkafka="no" ;;
+         optional) enable_imkafka="optional" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-imkafka) ;;
          esac],
         [enable_imkafka=no]
@@ -2139,17 +2141,26 @@ AC_ARG_ENABLE(kafka_static,
 AM_CONDITIONAL(ENABLE_KAFKA_STATIC, test x$enable_kafka_static = xyes)
 
 # omkafka works with older library
-if test "x$enable_omkafka" = "xyes"; then
-	PKG_CHECK_MODULES([LIBRDKAFKA], [rdkafka],, [
+omkafka_use_dummy="no"
+if test "$enable_omkafka" = "yes" -o "$enable_omkafka" = "optional"; then
+	PKG_CHECK_MODULES([LIBRDKAFKA], [rdkafka >= 0.9.1],, [
 		PKG_CHECK_MODULES([LIBRDKAFKA], [librdkafka],, [
-			AC_CHECK_LIB([rdkafka], [rd_kafka_produce], [
+			AC_CHECK_LIB([rdkafka], [rd_kafka_last_error], [
 				AC_MSG_WARN([librdkafka is missing but library present, using -lrdkafka])
 				LIBRDKAFKA_LIBS=-lrdkafka
 			], [
-				AC_MSG_ERROR([could not find rdkafka library])
+				AS_IF([test "$enable_omkafka" = "yes"],
+					AC_MSG_ERROR([could not find rdkafka library])
+				)
+				AC_MSG_NOTICE([omkafka: no suiteable build environment, use omkafka dummy])
+				omkafka_use_dummy=yes
+				AC_DEFINE([ENABLE_OMKAFKA_DUMMY], [1], [Indicator that we need to build a dummy omkafka module])
 			])
 		])
 	])
+fi
+AM_CONDITIONAL(OMKAFKA_USE_DUMMY, test x$omkafka_use_dummy = xyes)
+if test "$enable_omkafka" = "yes" -o "$enable_omkafka" = "optional" && test "$omkafka_use_dummy" = "no"; then
 	AC_CHECK_HEADERS([librdkafka/rdkafka.h])
 
 	# Add additional dependencies if statically linking rdkafka
@@ -2165,16 +2176,25 @@ if test "x$enable_omkafka" = "xyes"; then
 	fi
 fi
 
+imkafka_use_dummy="no"
 # imkafka needs newer library
-if test "x$enable_imkafka" = "xyes"; then
+if test "x$enable_imkafka" = "xyes" -o "$enable_imkafka" = "optional"; then
 	PKG_CHECK_MODULES([LIBRDKAFKA], [rdkafka >= 0.9.1],, [
-		AC_CHECK_LIB([rdkafka], [rd_kafka_produce], [
+		AC_CHECK_LIB([rdkafka], [rd_kafka_consumer_poll], [
 			AC_MSG_WARN([librdkafka is missing but library present, using -lrdkafka])
 			LIBRDKAFKA_LIBS=-lrdkafka
 		], [
-			AC_MSG_ERROR([could not find rdkafka library])
+			AS_IF([test "$enable_imkafka" = "yes"],
+				AC_MSG_ERROR([could not find sufficiently current rdkafka library])
+			)
+			AC_MSG_NOTICE([imkafka: no suiteable build environment, use imkafka dummy])
+			imkafka_use_dummy=yes
+			AC_DEFINE([ENABLE_IMKAFKA_DUMMY], [1], [Indicator that we need to build a dummy imkafka module])
 		])
 	])
+fi
+AM_CONDITIONAL(IMKAFKA_USE_DUMMY, test x$imkafka_use_dummy = xyes)
+if test "$enable_imkafka" = "yes" -o "$enable_imkafka" = "optional" && test "$imkafka_use_dummy" = "no"; then
 	AC_CHECK_HEADERS([librdkafka/rdkafka.h])
 
 	# Add additional dependencies if statically linking rdkafka
@@ -2209,8 +2229,8 @@ else
 		enable_kafka_tests="no"
 	fi
 fi
-AM_CONDITIONAL(ENABLE_OMKAFKA, test x$enable_omkafka = xyes)
-AM_CONDITIONAL(ENABLE_IMKAFKA, test x$enable_imkafka = xyes)
+AM_CONDITIONAL(ENABLE_OMKAFKA, test x$enable_omkafka = xyes -o x$enable_omkafka = xoptional)
+AM_CONDITIONAL(ENABLE_IMKAFKA, test x$enable_imkafka = xyes -o x$enable_imkafka = xoptional)
 
 #MONGODB SUPPORT
 
@@ -2621,6 +2641,9 @@ echo "    imczmq input module enabled:              $enable_imczmq"
 echo "    imjournal input module enabled:           $enable_imjournal"
 echo "    imbatchreport input module enabled:       $enable_imbatchreport"
 echo "    imkafka module will be compiled:          $enable_imkafka"
+if test "$enable_imkafka" = "optional"; then
+echo "        imkafka use dummy:                    $imkafka_use_dummy"
+fi
 echo "    imtuxedoulog module will be compiled:     $enable_imtuxedoulog"
 echo "    improg input module enabled:              $enable_improg"
 echo
