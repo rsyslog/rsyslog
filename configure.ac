@@ -845,22 +845,32 @@ AC_ARG_ENABLE(libdbi,
         [case "${enableval}" in
          yes) enable_libdbi="yes" ;;
           no) enable_libdbi="no" ;;
+          optional) enable_libdbi="optional" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-libdbi) ;;
          esac],
         [enable_libdbi=no]
 )
-if test "x$enable_libdbi" = "xyes"; then
+libdbi_use_dummy="no"
+if test "x$enable_libdbi" = "xyes" -o x$enable_libdbi = xoptional; then
   AC_CHECK_HEADERS(
-    [dbi/dbi.h],,
-    [AC_MSG_FAILURE([libdbi is missing])]
+    [dbi/dbi.h],,[
+        AS_IF([test x$enable_libdbi = xyes],
+            AC_MSG_FAILURE([libdbi is missing])
+	)
+        libdbi_use_dummy="yes"
+     ]
   )
   AC_CHECK_LIB(
     [dbi],
     [dbi_initialize],
     [LIBDBI_CFLAGS=""
      LIBDBI_LIBS="-ldbi"
-    ],
-    [AC_MSG_FAILURE([libdbi library is missing])]
+    ], [
+        AS_IF([test x$enable_libdbi = xyes],
+            AC_MSG_FAILURE([libdbi is missing])
+	)
+        libdbi_use_dummy="yes"
+     ]
   )
   AC_CHECK_LIB(
     [dbi],
@@ -873,9 +883,11 @@ if test "x$enable_libdbi" = "xyes"; then
     [AC_DEFINE([HAVE_DBI_TXSUPP], [1], [Define to 1 if libdbi supports transactions])]
   )
 fi
-AM_CONDITIONAL(ENABLE_OMLIBDBI, test x$enable_libdbi = xyes)
+AM_CONDITIONAL(LIBDBI_USE_DUMMY, test x$libdbi_use_dummy = xyes)
+AM_CONDITIONAL(ENABLE_OMLIBDBI, test x$enable_libdbi = xyes -o x$enable_libdbi = xoptional)
 AC_SUBST(LIBDBI_CFLAGS)
 AC_SUBST(LIBDBI_LIBS)
+
 
 # SNMP support
 AC_ARG_ENABLE(snmp,
@@ -2698,6 +2710,9 @@ echo
 echo "---{ database support }---"
 echo "    MySql support enabled:                    $enable_mysql"
 echo "    libdbi support enabled:                   $enable_libdbi"
+if test "$enable_libdbi" = "optional"; then
+echo "        libdbi use dummy:                     $libdbi_use_dummy"
+fi
 echo "    PostgreSQL support enabled:               $enable_pgsql"
 echo "    mongodb support enabled:                  $enable_ommongodb"
 echo "    hiredis support enabled:                  $enable_omhiredis"
