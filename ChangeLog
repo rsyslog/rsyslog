@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2006.0 (aka 2020.06) 2020-06-??
+- 2020-06-05: operatingstatefile bugfix: month was given too low
+  The month was printed with the range 0 (January) to 11 (December).
+  This has now been corrected.
+  closes https://github.com/rsyslog/rsyslog/issues/4292
 - 2020-06-05: build system: add "optional" build functionality to some components
   Nameley:
     --enable-libdbi=optional
