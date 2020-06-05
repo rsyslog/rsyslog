@@ -750,6 +750,31 @@ By default, read message are sent to output modules without passing through
 parsers. This parameter informs rsyslog to use also defined parser module(s).
 
 
+
+persistStateAfterSubmission
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+.. versionadded:: 8.2006.0
+
+This setting makes imfile persist state file information after a batch of
+messages has been submitted. It can be activated (switched to "on") in order
+to provide enhanced robustness against unclean shutdowns. Depending on the
+configuration of the rest of rsyslog (most importantly queues), persisting
+the state file after each message submission prevents message loss
+when reading files and the system is shutdown in an unclean way (e.g.
+loss of power).
+
+Please note that this setting may cause frequent state file writes and
+as such may cause some performance degradation.
+
+
 .. _Metadata:
 
 Metadata
