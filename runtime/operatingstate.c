@@ -153,7 +153,7 @@ osf_write(const char *const tag, const char *const line)
 	time(&tt);
 	localtime_r(&tt, &tm);
 	len = snprintf(buf, sizeof(buf)-1, "%d%2.2d%2.2d-%2.2d%2.2d%2.2d: %-5.5s %s\n",
-		tm.tm_year+1900, tm.tm_mon, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec,
+		tm.tm_year+1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec,
 		tag, line);
 	if(len > sizeof(buf)-1) {
 		len = sizeof(buf)-1; /* overflow, truncate */
