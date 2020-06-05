@@ -458,8 +458,8 @@ escapeLF.replacement
 
 .. versionadded:: 8.2001.0
 
-This parameter works in conjunction with `escapeLF.replacement`. It is only
-honored if `escapeLF.replacement="on"`.
+This parameter works in conjunction with `escapeLF`. It is only
+honored if `escapeLF="on"`.
 
 It permits to replace the default escape sequence by a different character
 sequence. The default historically is inconsistent and denpends on which
