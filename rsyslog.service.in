@@ -1,8 +1,10 @@
 [Unit]
 Description=System Logging Service
-Requires=syslog.socket
+;Requires=syslog.socket
+Wants=network.target network-online.target
+After=network.target network-online.target
 Documentation=man:rsyslogd(8)
-Documentation=https://www.rsyslog.com/doc/
+Documentation=http://www.rsyslog.com/doc/
 
 [Service]
 Type=notify
@@ -16,4 +18,4 @@ LimitNOFILE=16384
 
 [Install]
 WantedBy=multi-user.target
-Alias=syslog.service
+;Alias=syslog.service
