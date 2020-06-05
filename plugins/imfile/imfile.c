@@ -126,6 +126,7 @@ static struct configSettings_s {
 	uchar *pszBindRuleset;
 	int iPollInterval;
 	int iPersistStateInterval;	/* how often if state file to be persisted? (default 0->never) */
+	int bPersistStateAfterSubmission;/* persist state file after messages have been submitted */
 	int iFacility; /* local0 */
 	int iSeverity;  /* notice, as of rfc 3164 */
 	int readMode;  /* mode to use for ReadMultiLine call */
@@ -147,6 +148,7 @@ struct instanceConf_s {
 	int nMultiSub;
 	per_minute_rate_limit_t perMinuteRateLimits;
 	int iPersistStateInterval;
+	int bPersistStateAfterSubmission;
 	int iFacility;
 	int iSeverity;
 	int readTimeout;
@@ -331,6 +333,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "maxsubmitatonce", eCmdHdlrInt, 0 },
 	{ "removestateondelete", eCmdHdlrBinary, 0 },
 	{ "persiststateinterval", eCmdHdlrInt, 0 },
+	{ "persiststateaftersubmission", eCmdHdlrBinary, 0 },
 	{ "deletestateonfiledelete", eCmdHdlrBinary, 0 },
 	{ "delay.message", eCmdHdlrPositiveInt, 0 },
 	{ "addmetadata", eCmdHdlrBinary, 0 },
@@ -1642,6 +1645,9 @@ pollFileReal(act_obj_t *act, cstr_t **pCStr)
 
 finalize_it:
 	multiSubmitFlush(&act->multiSub);
+	if(inst->bPersistStateAfterSubmission) {
+		persistStrmState(act);
+	}
 
 	if(*pCStr != NULL) {
 		rsCStrDestruct(pCStr);
@@ -1696,6 +1702,7 @@ createInstance(instanceConf_t **const pinst)
 	inst->perMinuteRateLimits.rateLimitingMinute = 0;
 	inst->perMinuteRateLimits.linesThisMinute = 0;
 	inst->perMinuteRateLimits.bytesThisMinute = 0;
+	inst->bPersistStateAfterSubmission = 0;
 	inst->readMode = 0;
 	inst->startRegex = NULL;
 	inst->endRegex = NULL;
@@ -1851,6 +1858,7 @@ addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->iPersistStateInterval = cs.iPersistStateInterval;
 	inst->perMinuteRateLimits.maxBytesPerMinute = cs.maxBytesPerMinute;
 	inst->perMinuteRateLimits.maxLinesPerMinute = cs.maxLinesPerMinute;
+	inst->bPersistStateAfterSubmission = 0;
 	inst->readMode = cs.readMode;
 	inst->escapeLF = 0;
 	inst->escapeLFString = NULL;
@@ -1956,6 +1964,8 @@ CODESTARTnewInpInst
 		} else if(!strcmp(inppblk.descr[i].name, "maxlinesperminute")) {
 			DBGPRINTF("imfile: enabling maxlinesperminute ratelimiting\n");
 			inst->perMinuteRateLimits.maxLinesPerMinute = pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "persiststateaftersubmission")) {
+			inst->bPersistStateAfterSubmission = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "maxsubmitatonce")) {
 			inst->nMultiSub = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "readtimeout")) {
