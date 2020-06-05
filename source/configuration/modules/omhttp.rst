@@ -5,7 +5,7 @@ omhttp: HTTP Output Module
 ===========================  ===========================================================================
 **Module Name:**             **omhttp**
 **Module Type:**             **contributed** - not maintained by rsyslog core team
-**Current Mainainer:**       `Gabriel Intrator <https://github.com/gintrator/>`_
+**Current Maintainer:**       `Gabriel Intrator <https://github.com/gintrator/>`_
 Original Author:             `Christian Tramnitz <https://github.com/ctramnitz/>`_
 ===========================  ===========================================================================
 
@@ -96,7 +96,7 @@ httpcontenttype
 
    "word", "application/json; charset=utf-8", "no", "none"
 
-The HTTP "Content-Type" header sent with each request. This parameter will override other defaults. If a batching mode is specified, the correct content type is automatically configured.
+The HTTP "Content-Type" header sent with each request. This parameter will override other defaults. If a batching mode is specified, the correct content type is automatically configured. The "Content-Type" header can also be configured using the httpheaders_ parameter, it should be configured in only one of the parameters.
 
 
 httpheaderkey
@@ -109,7 +109,7 @@ httpheaderkey
 
    "word", "none", "no", "none"
 
-The header key. Currently only a single additional header/key pair is configurable, further development is needed to support arbitrary header key/value lists.
+The header key. Currently only a single additional header/key pair is configurable, to specify multiple headers see the httpheaders_ parameter. This parameter along with httpheadervalue_ may be deprecated in the future.
 
 
 httpheadervalue
@@ -123,6 +123,30 @@ httpheadervalue
    "word", "none", "no", "none"
 
 The header value for httpheaderkey_.
+
+httpheaders
+^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "array", "none", "no", "none"
+
+An array of strings that defines a list of one or more HTTP headers to send with each message. Keep in mind that some HTTP headers are added using other parameters, "Content-Type" can be configured using httpcontenttype_ and "Content-Encoding: gzip" is added when using the compress_ parameter.
+
+.. code-block:: text
+
+    action(
+        type="omhttp"
+        ...
+        httpheaders=[
+            "X-Insert-Key: key",
+            "X-Event-Source: logs"
+        ]
+        ...
+    )
 
 
 uid
