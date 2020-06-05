@@ -1,5 +1,16 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2006.0 (aka 2020.06) 2020-06-??
+- 2020-06-05: build system: add "optional" build functionality to some components
+  Nameley:
+    --enable-libdbi=optional
+    --enable-mmdblookup=optional
+    --enable-imkafka=optional
+    --enable-omkafka=optional
+  If used, builds a dummy module which just emits a "module not supported
+  on this platform" error message when loaded.
+  Primary use case for this system is Debian-ish builds on SUSE OBS,
+  where we prefer to have a single package definition for all versions
+  (else things get much more complicated).
 - 2020-05-23: config system bugfix: backticks cat segfault if file cannot be opened
   when a `cat <filename>` construct is used in rsyslog.conf and <filename> can not
   be accessed (does not exist, no permissions, ...), rsyslog segfaults.
