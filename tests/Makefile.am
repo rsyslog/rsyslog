@@ -1199,7 +1199,8 @@ TESTS +=  \
 	imtcp-tls-ossl-error-key2.sh
 if HAVE_VALGRIND
 TESTS += \
-	imtcp-tls-ossl-basic-vg.sh
+	imtcp-tls-ossl-basic-vg.sh \
+	imtcp-tls-ossl-basic-brokenhandshake-vg.sh
 endif
 endif
 
@@ -1988,6 +1989,7 @@ EXTRA_DIST= \
 	imtcp-tls-ossl-x509name.sh \
 	imtcp-tls-ossl-x509fingerprint.sh \
 	imtcp-tls-ossl-basic-vg.sh \
+	imtcp-tls-ossl-basic-brokenhandshake-vg.sh \
 	imtcp-tls-ossl-error-ca.sh \
 	imtcp-tls-ossl-error-cert.sh \
 	imtcp-tls-ossl-error-key.sh \

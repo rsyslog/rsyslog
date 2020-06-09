@@ -1023,8 +1023,6 @@ osslEndSess(nsd_ossl_t *pThis)
 
 		/* Session closed */
 		pThis->bHaveSess = 0;
-		SSL_free(pThis->ssl);
-		pThis->ssl = NULL;
 	}
 
 	RETiRet;
@@ -1043,8 +1041,15 @@ ENDobjConstruct(nsd_ossl)
 PROTOTYPEobjDestruct(nsd_ossl);
 BEGINobjDestruct(nsd_ossl) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(nsd_ossl)
+	DBGPRINTF("nsd_ossl_destruct: [%p] Mode %d\n", pThis, pThis->iMode);
 	if(pThis->iMode == 1) {
 		osslEndSess(pThis);
+	}
+	/* Free SSL obj also if we do not have a session - or are NOT in TLS mode! */
+	if (pThis->ssl != NULL) {
+		DBGPRINTF("nsd_ossl_destruct: [%p] FREE pThis->ssl \n", pThis);
+		SSL_free(pThis->ssl);
+		pThis->ssl = NULL;
 	}
 
 	if(pThis->pTcp != NULL) {
