@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2006.0 (aka 2020.06) 2020-06-??
+- 2020-06-22:
+- 2020-06-22: NEW INPUT MODULE:: impcap, network packets input parser
+  Thanks to github user frikilax for the contribution.
+- 2020-06-22: ksi bugfix: Optimized code in KSI module initialization fixed.
+  KSI module initialization will not stuck in infinite loop when code is
+  built with optimization -O2.
 - 2020-06-05: operatingstatefile bugfix: month was given too low
   The month was printed with the range 0 (January) to 11 (December).
   This has now been corrected.
