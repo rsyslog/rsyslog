@@ -572,3 +572,18 @@ The following parameters can be set:
 
   Sets default parameters for action queues. See queue doc for the meaning of
   the individual settings.
+
+
+- **shutdown.queue.doublesize**
+
+  This setting (default "off") permits to temporarily increase the maximum queue
+  size during shutdown processing. This is useful when rsyslog needs to re-enqueue
+  some messages at shutdown *and* the queue is already full. Note that the need to
+  re-enqueue messages stems back to some failed opertions. Note that the maximum
+  permitted queue size is doubled, as this ensures in all cases that re-enqueuing
+  can be completed. Note also that the increase of the max size is temporary during
+  shutdown and also does not requiere any more storage. Except, of course, for
+  re-enqueued message.
+
+  The situation addressed by this setting is unlikley to happen, but it could happen.
+  To enable the funtionality, set it to "on".
