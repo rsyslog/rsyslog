@@ -1,6 +1,23 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2006.0 (aka 2020.06) 2020-06-??
-- 2020-06-22:
+- 2020-06-22: queue: permit ability to double size at shutdown
+  This prevents message loss due to "queue full" when re-enqueueing data
+  under quite exotic settings.
+  see also https://github.com/rsyslog/rsyslog/issues/3941#issuecomment-549765813
+  closes https://github.com/rsyslog/rsyslog/issues/4020
+- 2020-06-22:Fixing imfile segfaulting on selinux denial
+  If imfile is denied access to file watched trough symlink there is
+  unchecked condition resulting in access to not initialized memory.
+- 2020-06-22: openssl: Fixed memory leak when tls handshake failed.
+  closes: https://github.com/rsyslog/rsyslog/issues/4319
+- 2020-06-22: change systemd service file to wait for network
+  now that rsyslog is usually only installed for real syslog servers,
+  we should assume that some network listening or forwarding happens
+  on start. As such we need to start a bit later, after the network.
+  This poses no problem as systemd nowadays comes with journal which
+  is in almost all cases configured to buffer log data while
+  rsyslog is not yet running.
+  see also https://github.com/rsyslog/rsyslog-pkg-rhel-centos/issues/72
 - 2020-06-22: NEW INPUT MODULE:: impcap, network packets input parser
   Thanks to github user frikilax for the contribution.
 - 2020-06-22: ksi bugfix: Optimized code in KSI module initialization fixed.
