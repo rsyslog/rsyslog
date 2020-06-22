@@ -834,7 +834,7 @@ create_signer_thread(rsksictx ctx) {
 		}
 
 		/* Lock until init. */
-		while(ctx->signer_state & SIGNER_INIT);
+		while(*((volatile int*)&ctx->signer_state) & SIGNER_INIT);
 
 		if (ctx->signer_state != SIGNER_STARTED) {
 			return RSGTE_INTERNAL;
