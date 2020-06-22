@@ -2801,6 +2801,10 @@ DoSaveOnShutdown(qqueue_t *pThis)
 BEGINobjDestruct(qqueue) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(qqueue)
 	DBGOPRINT((obj_t*) pThis, "shutdown: begin to destruct queue\n");
+	if(glblShutdownQueueDoubleSize) {
+		pThis->iHighWtrMrk *= 2;
+		pThis->iMaxQueueSize *= 2;
+	}
 	if(pThis->bQueueStarted) {
 		/* shut down all workers
 		 * We do not need to shutdown workers when we are in enqueue-only mode or we are a

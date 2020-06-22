@@ -144,6 +144,7 @@ size_t glblDbgFilesNum = 0;
 int glblDbgWhitelist = 1;
 int glblPermitCtlC = 0;
 int glblInputTimeoutShutdown = 1000; /* input shutdown timeout in ms */
+int glblShutdownQueueDoubleSize = 0;
 static const uchar * operatingStateFile = NULL;
 
 uint64_t glblDevOptions = 0; /* to be used by developers only */
@@ -226,6 +227,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "default.ruleset.queue.timeoutworkerthreadshutdown", eCmdHdlrInt, 0 },
 	{ "reverselookup.cache.ttl.default", eCmdHdlrNonNegInt, 0 },
 	{ "reverselookup.cache.ttl.enable", eCmdHdlrBinary, 0 },
+	{ "shutdown.queue.doublesize", eCmdHdlrBinary, 0 },
 	{ "debug.files", eCmdHdlrArray, 0 },
 	{ "debug.whitelist", eCmdHdlrBinary, 0 }
 };
@@ -1481,6 +1483,8 @@ glblDoneLoadCnf(void)
 			qsort(glblDbgFiles, glblDbgFilesNum, sizeof(char*), qs_arrcmp_glblDbgFiles);
 		} else if(!strcmp(paramblk.descr[i].name, "debug.whitelist")) {
 			glblDbgWhitelist = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "shutdown.queue.doublesize")) {
+			glblShutdownQueueDoubleSize = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "umask")) {
 			loadConf->globals.umask = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "shutdown.enable.ctlc")) {
