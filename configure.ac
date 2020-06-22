@@ -1849,6 +1849,24 @@ AC_ARG_ENABLE(impstats,
 )
 AM_CONDITIONAL(ENABLE_IMPSTATS, test x$enable_impstats = xyes)
 
+# settings for the pcap input module
+AC_ARG_ENABLE(impcap,
+        [AS_HELP_STRING([--enable-impcap],[libpcap input module enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_impcap="yes" ;;
+          no) enable_impcap="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-impcap) ;;
+         esac],
+        [enable_impcap=no]
+)
+
+if test "x$enable_impcap" = "xyes"; then
+				AC_CHECK_HEADERS([pcap.h],
+				[AC_MSG_NOTICE([pcap found])],
+				AC_MSG_ERROR([libpcap library and headers not found])
+				)
+fi
+AM_CONDITIONAL(ENABLE_IMPCAP, test x$enable_impcap = xyes)
 
 # settings for the omprog output module
 AC_ARG_ENABLE(omprog,
@@ -2609,6 +2627,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/imbatchreport/Makefile \
 		contrib/omfile-hardened/Makefile \
 		contrib/mmkubernetes/Makefile \
+		contrib/impcap/Makefile \
 		contrib/imtuxedoulog/Makefile \
 		contrib/improg/Makefile \
 		contrib/mmtaghostname/Makefile \
@@ -2656,6 +2675,7 @@ echo "    imkafka module will be compiled:          $enable_imkafka"
 if test "$enable_imkafka" = "optional"; then
 echo "        imkafka use dummy:                    $imkafka_use_dummy"
 fi
+echo "    impcap input module enabled:              $enable_impcap"
 echo "    imtuxedoulog module will be compiled:     $enable_imtuxedoulog"
 echo "    improg input module enabled:              $enable_improg"
 echo
