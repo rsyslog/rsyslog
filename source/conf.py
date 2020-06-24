@@ -92,8 +92,8 @@ rst_epilog = """
 # real values will be generated dynamically from info in the repo. If the
 # user builds the docs from "bare" sources not yet processed
 ###############################################################################
-version = '8.2006'
-release = '8.2006.0'
+version = '8'
+release = version + ' daily stable'
 
 
 # For this to be true, it means that we are not attempting to build from
@@ -102,7 +102,7 @@ release = '8.2006.0'
 if version == '8':
 
     # Confirm that a .git folder is available. If not, skip all
-    # following steps intended to generate "dev" build values for
+    # following steps intended to generate daily stable build values for
     # 'version' and 'release' build configuration variables. In that
     # case, keep the placeholder values already set.
 
