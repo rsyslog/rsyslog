@@ -1,4 +1,6 @@
 ----------------------------------------------------------------------------------------
+Scheduled Release 8.2008.0 (aka 2020.08) 2020-08-??
+----------------------------------------------------------------------------------------
 Scheduled Release 8.2006.0 (aka 2020.06) 2020-06-23
 - 2020-06-22: queue: permit ability to double size at shutdown
   This prevents message loss due to "queue full" when re-enqueueing data
