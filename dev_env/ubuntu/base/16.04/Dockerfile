@@ -163,7 +163,7 @@ ENV SCAN_BUILD=scan-build \
 
 ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-clickhouse \
-	--enable-clickhouse-tests \
+	--enable-clickhouse-tests=no \
 	--enable-elasticsearch \
 	--enable-elasticsearch-tests \
 	--enable-gnutls \
@@ -172,6 +172,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-imczmq \
 	--enable-imdiag \
 	--enable-imfile \
+	--enable-imhttp \
 	--enable-imjournal \
 	--enable-imkafka \
 	--enable-impcap \
