@@ -1195,6 +1195,7 @@ CODESTARTfreeCnf
 		free(inst->pszBindPort);
 		free(inst->pszBindAddr);
 		free(inst->pszBindDevice);
+		free(inst->pszBindRuleset);
 		free(inst->inputname);
 		free(inst->dfltTZ);
 		del = inst;
