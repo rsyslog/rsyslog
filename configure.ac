@@ -4,7 +4,7 @@
 AC_PREREQ(2.61)
 AC_INIT([rsyslog],[8.2008.0.master],[rsyslog@lists.adiscon.com])  # UPDATE on release
 AC_DEFINE(VERSION_YEAR, 20, [year part of real rsyslog version])  # UPDATE on release
-AC_DEFINE(VERSION_MONTH,08, [month part of real rsyslog version]) # UPDATE on release
+AC_DEFINE(VERSION_MONTH, 8, [month part of real rsyslog version]) # UPDATE on release
 
 AM_INIT_AUTOMAKE([subdir-objects])
 
