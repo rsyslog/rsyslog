@@ -1820,6 +1820,27 @@ AC_ARG_ENABLE(improg,
 )
 AM_CONDITIONAL(ENABLE_IMPROG, test x$enable_improg = xyes)
 
+# settings for the external http input module
+AC_ARG_ENABLE(imhttp,
+        [AS_HELP_STRING([--enable-imhttp],[external http input module enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_imhttp="yes" ;;
+          no) enable_imhttp="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imhttp) ;;
+         esac],
+        [enable_imhttp=no]
+)
+if test "x$enable_imhttp" = "xyes"; then
+  AC_CHECK_HEADERS(
+    [civetweb.h],,
+    [AC_MSG_FAILURE([civetweb is missing])]
+  )
+  AC_SEARCH_LIBS(mg_version, civetweb)
+  CIVETWEB_LIBS=-lcivetweb
+  AC_SUBST(CIVETWEB_LIBS)
+fi
+AM_CONDITIONAL(ENABLE_IMHTTP, test x$enable_imhttp = xyes)
+
 # settings for the door input module (under solaris, thus default off)
 AC_ARG_ENABLE(imsolaris,
         [AS_HELP_STRING([--enable-imsolaris],[solaris input module enabled @<:@default=no@:>@])],
@@ -2638,6 +2659,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/impcap/Makefile \
 		contrib/imtuxedoulog/Makefile \
 		contrib/improg/Makefile \
+		contrib/imhttp/Makefile \
 		contrib/mmtaghostname/Makefile \
 		contrib/imdocker/Makefile \
 		contrib/pmdb2diag/Makefile \
@@ -2689,6 +2711,7 @@ fi
 echo "    impcap input module enabled:              $enable_impcap"
 echo "    imtuxedoulog module will be compiled:     $enable_imtuxedoulog"
 echo "    improg input module enabled:              $enable_improg"
+echo "    imhttp input module enabled:              $enable_imhttp"
 echo
 echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
