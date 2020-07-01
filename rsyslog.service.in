@@ -1,6 +1,7 @@
 [Unit]
 Description=System Logging Service
 ;Requires=syslog.socket
+RequiresMountsFor=/var/lib
 Wants=network.target network-online.target
 After=network.target network-online.target
 Documentation=man:rsyslogd(8)
