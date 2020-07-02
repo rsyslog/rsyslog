@@ -97,5 +97,5 @@ data_ret_t *ipv4_parse(const uchar *packet, int pktSize, struct json_object *jpa
 	json_object_object_add(jparent, "IP_proto", json_object_new_int(ipv4_header->proto));
 
 
-	return (*ipProtoHandlers[ipv4_header->proto])((packet + hdrLen), (pktSize - hdrLen), jparent);
+	return ip_proto_parse(ipv4_header->proto, (packet + hdrLen), (pktSize - hdrLen), jparent);
 }

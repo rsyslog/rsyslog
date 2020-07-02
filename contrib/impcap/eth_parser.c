@@ -168,7 +168,7 @@ data_ret_t *eth_parse(const uchar *packet, int pktSize, struct json_object *jpar
 
 	json_object_object_add(jparent, "ETH_type", json_object_new_int(ethType));
 	json_object_object_add(jparent, "ETH_typestr", json_object_new_string((char *)eth_type_to_string(ethType)));
-	ret = (*ethProtoHandlers[ethType])((packet + hdrLen), (pktSize - hdrLen), jparent);
+	ret = eth_proto_parse(ethType, (packet + hdrLen), (pktSize - hdrLen), jparent);
 
 	/* packet has the minimum allowed size, so the remaining data is
 	 * most likely padding, this should not appear as data, so remove it */

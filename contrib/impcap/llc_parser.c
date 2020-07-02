@@ -94,7 +94,7 @@ data_ret_t *llc_parse(const uchar *packet, int pktSize, struct json_object *jpar
 						   packet[headerLen + 4];
 		json_object_object_add(jparent, "SNAP_oui", json_object_new_int(orgCode));
 		json_object_object_add(jparent, "SNAP_ethType", json_object_new_int(ethType));
-		return (*ethProtoHandlers[ethType])(packet + headerLen, pktSize - headerLen, jparent);
+		return eth_proto_parse(ethType, packet + headerLen, pktSize - headerLen, jparent);
 	}
 	if (dsap == 0x06 && ssap == 0x06 && ctrl == 0x03) {
 		/* IPv4 header */

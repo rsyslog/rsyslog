@@ -78,11 +78,6 @@ DEFobjCurrIf(datetime)
 
 static prop_t *pInputName = NULL;
 
-/* --- init prototypes --- */
-void init_eth_proto_handlers(void);
-
-void init_ip_proto_handlers(void);
-
 char *stringToHex(char *string, size_t length);
 
 static ATTR_NORETURN void *startCaptureThread(void *instanceConf);
@@ -255,12 +250,6 @@ BEGINsetModCnf
 	int i;
 
 CODESTARTsetModCnf
-
-	/* TODO: find a better place for this */
-	init_ip_proto_handlers();
-
-	init_eth_proto_handlers();
-
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if (pvals == NULL) {
 		LogError(0, RS_RET_MISSING_CNFPARAMS, "impcap: error processing module "
@@ -368,7 +357,7 @@ ENDactivateCnfPrePrivDrop
 
 BEGINactivateCnf
 	instanceConf_t *inst;
-	pcap_t *dev;
+	pcap_t *dev = NULL;
 	struct bpf_program filter_program;
 	bpf_u_int32 SubNet, NetMask;
 	char errBuf[PCAP_ERRBUF_SIZE];
@@ -480,6 +469,7 @@ CODESTARTactivateCnf
 				else if (pcap_setfilter(dev, &filter_program)) {
 					LogError(0, RS_RET_LOAD_ERROR, "pcap: error while setting filter: '%s'",
 							 pcap_geterr(dev));
+					pcap_freecode(&	filter_program);
 					ABORT_FINALIZE(RS_RET_LOAD_ERROR);
 				}
 				pcap_freecode(&filter_program);
@@ -501,6 +491,9 @@ CODESTARTactivateCnf
 	}
 
 finalize_it:
+	if(iRet != 0) {
+		if(dev) pcap_close(dev);
+	}
 ENDactivateCnf
 
 BEGINfreeCnf
@@ -523,49 +516,6 @@ CODESTARTfreeCnf
 ENDfreeCnf
 
 /* runtime functions */
-
-/*
- *  Mock function to do no parsing when protocol is not a valid number
-*/
-data_ret_t *dont_parse(const uchar *packet, int pktSize, __attribute__((unused)) struct json_object *jparent) {
-	DBGPRINTF("protocol not handled\n");
-	RETURN_DATA_AFTER(0)
-}
-
-/*
- *  Initializes the function pointers' list for handled protocols
- *  contained within Ethernet II
-*/
-void init_eth_proto_handlers(void) {
-	DBGPRINTF("begining init eth handlers\n");
-	// set all to blank function
-	for (int i = 0; i < ETH_PROTO_NUM; ++i) {
-		ethProtoHandlers[i] = dont_parse;
-	}
-
-	ethProtoHandlers[ETHERTYPE_IP] = ipv4_parse;
-	ethProtoHandlers[ETHERTYPE_ARP] = arp_parse;
-	ethProtoHandlers[ETHERTYPE_REVARP] = rarp_parse;
-	ethProtoHandlers[ETHERTYPE_IPV6] = ipv6_parse;
-	ethProtoHandlers[ETHERTYPE_IPX] = ipx_parse;
-
-}
-
-/*
- *  Initializes the function pointers' list for handled protocols
- *  contained within IP
-*/
-void init_ip_proto_handlers(void) {
-	DBGPRINTF("begining init ip handlers\n");
-	// set all to blank function
-	for (int i = 0; i < IP_PROTO_NUM; ++i) {
-		ipProtoHandlers[i] = dont_parse;
-	}
-
-	ipProtoHandlers[IPPROTO_ICMP] = icmp_parse;
-	ipProtoHandlers[IPPROTO_TCP] = tcp_parse;
-	ipProtoHandlers[IPPROTO_UDP] = udp_parse;
-}
 
 /*
  *  Converts a list of bytes to their hexadecimal representation in ASCII
