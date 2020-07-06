@@ -95,10 +95,12 @@ RUN	mkdir /local_dep_cache && \
 #ENV	ELASTICSEARCH_NEWEST="elasticsearch-6.3.1.tar.gz"
 
 WORKDIR /home/devel
-VOLUME /rsyslog
 RUN	groupadd rsyslog \
 	&& adduser -g rsyslog  -s /bin/bash rsyslog \
 	&& echo "rsyslog ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+RUN	mkdir /rsyslog \
+	&& chown rsyslog:rsyslog /rsyslog
+VOLUME /rsyslog
 
 # we need this for sudo to work...
 RUN	echo 'user1001:x:1001:1001::/home/rsyslog:/bin/bash' >> /etc/passwd && \
@@ -152,6 +154,67 @@ RUN	cd helper-projects && \
 	rm -r codestyle && \
 	cd ..
 
+# libestr
+RUN	cd helper-projects && \
+	git clone https://github.com/rsyslog/libestr.git && \
+	cd libestr && \
+	autoreconf -fi && \
+	./configure --prefix=/usr/local && \
+	make -j4 && \
+	make install && \
+	cd .. && \
+	rm -r libestr && \
+	cd ..
+
+# liblogging
+RUN	cd helper-projects && \
+	git clone https://github.com/rsyslog/liblogging.git && \
+	cd liblogging && \
+	autoreconf -fi && \
+	./configure --prefix=/usr --libdir=/usr/lib64 --disable-journal && \
+	make -j4 && \
+	make install && \
+	cd .. && \
+	rm -r liblogging && \
+	cd ..
+
+# liblfastjson
+RUN	cd helper-projects && \
+	git clone https://github.com/rsyslog/libfastjson.git && \
+	cd libfastjson && \
+	autoreconf -fi && \
+	./configure --prefix=/usr --libdir=/usr/lib64 && \
+	make -j4 && \
+	make install && \
+	cd .. && \
+	rm -r libfastjson && \
+	cd ..
+
+# liblognorm
+RUN	cd helper-projects && \
+	git clone https://github.com/rsyslog/liblognorm.git && \
+	cd liblognorm && \
+	autoreconf -fi && \
+	./configure --enable-compile-warnings=yes --prefix=/usr/local && \
+	make -j4 && \
+	make install && \
+	cd .. && \
+	rm -r liblognorm && \
+	cd ..
+
+# librelp
+RUN	cd helper-projects && \
+	git clone https://github.com/rsyslog/librelp.git && \
+	cd librelp && \
+	autoreconf -fi && \
+	./configure --prefix=/usr --enable-compile-warnings=yes --libdir=/usr/lib64 && \
+	make -j4 && \
+	make install && \
+	cd .. && \
+	rm -r librelp && \
+	cd ..
+
+
 # we need Guardtime libksi here, otherwise we cannot check the KSI component	
 RUN	cd helper-projects && \
 	git clone https://github.com/guardtime/libksi.git && \
@@ -187,6 +250,15 @@ RUN	cd helper-projects \
 # Note: we do NOT delete the source as we may need it to
 # uninstall (in case the user wants to go back to system-default)
 
+# we need civetweb, as there are no packages for it
+RUN	cd helper-projects && \
+	git clone https://github.com/civetweb/civetweb.git \
+	&& cd civetweb \
+	&& (unset CFLAGS; make -j build ; make install-headers ; make install-slib ) \
+	&& cd .. \
+	&& rm -rf civetweb \
+	&& cd ..
+
 
 # next ENV is specifically for running scan-build - so we do not need to
 # change scripts if at a later time we can move on to a newer version
@@ -202,6 +274,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-imczmq \
 	--enable-imdiag \
 	--enable-imfile \
+	--enable-imhttp \
 	--enable-imjournal \
 	--enable-imkafka \
 	--enable-impstats \
@@ -267,9 +340,4 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 # build errors at the moment: --enable-kmsg 
 #	--enable-mmgrok - no package
 
-# Install any needed packages
-#RUN ./setup-system.sh
-RUN ./setup-projects.sh
-WORKDIR /rsyslog
-RUN	chown rsyslog:rsyslog /rsyslog
-USER rsyslog
+USER	rsyslog
