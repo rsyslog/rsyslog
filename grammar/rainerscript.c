@@ -707,10 +707,9 @@ int nvlstChkDisabled(struct nvlst *lst)
 	struct nvlst *valnode;
 
 	if((valnode = nvlstFindNameCStr(lst, "config.enabled")) != NULL) {
+		valnode->bUsed = 1;
 		if(es_strbufcmp(valnode->val.d.estr, (unsigned char*) "on", 2)) {
 			return 1;
-		} else {
-			valnode->bUsed = 1;
 		}
 	}
 	return 0;
