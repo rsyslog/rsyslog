@@ -191,10 +191,19 @@ RUN	cd helper-projects \
 	&& cd kafkacat \
 	&& (unset CFLAGS; ./configure --prefix=/usr --CFLAGS="-g" ; make -j2) \
 	&& make install \
-	&& cd .. \
 	&& cd ..
 # Note: we do NOT delete the source as we may need it to
 # uninstall (in case the user wants to go back to system-default)
+
+# we need civetweb, as there are no packages for it
+RUN	cd helper-projects && \
+	git clone https://github.com/civetweb/civetweb.git \
+	&& cd civetweb \
+	&& (unset CFLAGS; make -j build ; make install-headers ; make install-slib ) \
+	&& cd .. \
+	&& rm -rf civetweb
+
+RUN	cd ..
 
 # next ENV is specifically for running scan-build - so we do not need to
 # change scripts if at a later time we can move on to a newer version
@@ -214,6 +223,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-imdiag \
 	--enable-imdocker \
 	--enable-imfile \
+	--enable-imhttp \
 	--enable-imjournal \
 	--enable-imkafka \
 	--enable-impcap \
