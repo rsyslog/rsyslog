@@ -34,7 +34,9 @@ fi
 printf '/rsyslog is mapped to %s \n' "$RSYSLOG_HOME"
 printf 'pulling container...\n'
 printf 'user ids: %s:%s\n' $(id -u) $(id -g)
+ls -l devtools
 docker pull $RSYSLOG_DEV_CONTAINER
+echo docker pull done
 docker run $ti $optrm $DOCKER_RUN_EXTRA_OPTS \
 	-u $(id -u):$(id -g) \
 	-e RSYSLOG_CONFIGURE_OPTIONS_EXTRA \
