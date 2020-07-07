@@ -339,5 +339,5 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 
 # build errors at the moment: --enable-kmsg 
 #	--enable-mmgrok - no package
-
+WORKDIR /rsyslog
 USER	rsyslog
