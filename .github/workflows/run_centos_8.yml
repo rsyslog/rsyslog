@@ -20,18 +20,39 @@
 # https://github.com/settings/notifications
 # https://software.opensuse.org//download.html?project=home%3Argerhards&package=rsyslog
 
+
 ---
-name: CI PR runner
+name: check centos 8
 
 on:
   pull_request:
 
 jobs:
-  build:
+  CI:
     runs-on: ubuntu-18.04
-    # Default: 360 minutes
-    timeout-minutes: 60
+    timeout-minutes: 50
 
     steps:
       - name: git checkout project
         uses: actions/checkout@v1
+
+      - name: run container CI pipeline
+        run: |
+          chmod -R go+rw .
+          export RSYSLOG_CONTAINER_UID="" # use default
+          export RSYSLOG_STATSURL='http://build.rsyslog.com/testbench-failedtest.php'
+          export CFLAGS='-g'
+          export CC='gcc'
+          export USE_AUTO_DEBUG='off'
+          export CI_MAKE_OPT='-j20'
+          export CI_MAKE_CHECK_OPT='-j8'
+          export CI_CHECK_CMD='check'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_centos:8'
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--disable-elasticsearch-tests --disable-kafka-tests --disable-snmp-tests'
+          devtools/devcontainer.sh --rm devtools/run-ci.sh
+
+      - name: show error logs (if we errored)
+        if:  ${{ failure() || cancelled() }}
+        run: |
+          devtools/gather-check-logs.sh
+          cat failed-tests.log
