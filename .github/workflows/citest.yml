@@ -1,0 +1,192 @@
+# Copyright 2020 Rainer Gerhards and Others
+#
+# https://github.com/rsyslog/rsyslog-pkg-ubuntu
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# References:
+#
+# https://help.github.com/en/github/managing-subscriptions-and-notifications-on-github/configuring-notifications#github-actions-notification-options
+# https://github.com/settings/notifications
+# https://software.opensuse.org//download.html?project=home%3Argerhards&package=rsyslog
+
+---
+name: CI PR runner
+
+on:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    # Default: 360 minutes
+    timeout-minutes: 60
+
+    strategy:
+      # When set to true, cancel all in-progress jobs if any matrix job fails.
+      fail-fast: false
+      matrix:
+        release: [14.04, 16.04, 18.04, 20.04]
+
+    steps:
+      - name: git checkout packging project
+        uses: actions/checkout@v1
+
+      - name: prep cache dir
+        run: mkdir ~/host
+
+      - name: cache build environment
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/host/osbuild-packagecache
+            #~/host/build-root/**/!(dev|tmp|var)/
+          key: pkg_cache-${{ matrix.release }}-${{ github.ref }}-${{ github.sha }}
+          restore-keys: |
+            pkg_cache-${{ matrix.release }}-${{ github.ref }}-
+            pkg_cache-${{ matrix.release }}-
+
+      - name: change permissions for docker osc build
+        run: |
+          sudo chown -R root:root ~/host
+
+      - name: prep env
+        run: |
+          docker pull rsyslog/rsyslog_obs:basic
+          ls -l ~/host
+          docker run --rm --privileged -e PKG_PROJ -v ~/host:/host -v$(pwd):/work rsyslog/rsyslog_obs:basic \
+          bash -c " 
+          export PKG_PROJ=../../..
+          mkdir _OBS 
+          cd _OBS  
+          git clone https://github.com/rsyslog/pkg_obs-clone.git
+          cd pkg_obs-clone/rsyslog
+          echo repair OBS wc
+          osc repairwc .
+          echo packaging ubuntu package defs for OBS
+          source ./build-ubuntu.sh
+          "
+
+      - name: build Ubuntu ${{ matrix.release }}
+        run: |
+          docker run --rm --privileged -e PKG_PROJ -e RELEASE=${{ matrix.release }} -v ~/host:/host -v$(pwd):/work rsyslog/rsyslog_obs:basic \
+          bash -c '
+          export PKG_PROJ=../../..
+          cd _OBS/pkg_obs-clone/rsyslog
+          osc build --trust-all-projects --local-package xUbuntu_$RELEASE x86_64
+          '
+        
+      - name: post build permission fixup
+        run: |
+          sudo chown -R $(id -u):$(id -g) ~
+
+      - name: prepare repo creation
+        run: |
+          cd $GITHUB_WORKSPACE
+          mkdir debs-${{ matrix.release }}
+          cp ~/host/build-root/xUbuntu_${{ matrix.release }}-x86_64/usr/src/packages/DEBS/* debs-${{ matrix.release }}
+          pwd
+          ls -l
+
+      - name: save ${{ matrix.release }} DEBs
+        uses: actions/upload-artifact@v1
+        with:
+          name: debs-${{ matrix.release }}
+          path: debs-${{ matrix.release }}
+
+  check_14_04:
+    runs-on: ubuntu-18.04
+    needs: build
+    timeout-minutes: 30
+
+    steps:
+      - name: Download 14.04 debs
+        uses: actions/download-artifact@v1
+        with:
+          name: debs-14.04
+
+      - name: merge support libraries from OBS
+        run: |
+          mkdir tt
+          cd tt
+          wget -q http://download.opensuse.org/repositories/home:/rainergerhards:/branches:/home:/rgerhards/xUbuntu_14.04/Packages
+          grep Filename: Packages |grep amd64 | grep -v rsyslog \
+             |sed 's~Filename: ./~wget -q http://download.opensuse.org/repositories/home:/rainergerhards:/branches:/home:/rgerhards/xUbuntu_14.04/~' \
+             > tmp
+          source tmp # get .deb files
+          ls -l
+          mv *deb $GITHUB_WORKSPACE/debs-14.04
+          cd ..
+          rm -rf tt
+
+      - name: prepare local repository
+        run: |
+          cd debs-14.04
+          dpkg-scanpackages . /dev/null >Packages
+          cd $GITHUB_WORKSPACE
+
+      - name: check package install
+        run: |
+          docker run --rm -v $GITHUB_WORKSPACE/debs-14.04:/debs ubuntu:14.04 bash -c \
+          '
+          echo "deb [trusted=yes] file:///debs ./" >> /etc/apt/sources.list
+          apt-get update
+          apt-get install -y rsyslog rsyslog-improg rsyslog-imkmsg
+          '
+
+  check_VMs:
+    runs-on: ubuntu-${{ matrix.release }}
+    needs: build
+    # Default: 360 minutes
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        release: [16.04, 18.04, 20.04]
+
+    steps:
+      - name: Download ${{ matrix.release }} debs
+        uses: actions/download-artifact@v1
+        with:
+          name: debs-${{ matrix.release }}
+
+      - name: merge support libraries from OBS
+        run: |
+          mkdir tt
+          cd tt
+          wget -q http://download.opensuse.org/repositories/home:/rainergerhards:/branches:/home:/rgerhards/xUbuntu_${{ matrix.release }}/Packages
+          grep Filename: Packages |grep amd64 | grep -v rsyslog \
+             |sed 's~Filename: ./~wget -q http://download.opensuse.org/repositories/home:/rainergerhards:/branches:/home:/rgerhards/xUbuntu_${{ matrix.release }}/~' \
+             > tmp
+          source tmp # get .deb files
+          ls -l
+          mv *deb $GITHUB_WORKSPACE/debs-${{ matrix.release }}
+          cd ..
+          rm -rf tt
+
+      - name: prepare local repository
+        run: |
+          cd debs-${{ matrix.release }}
+          dpkg-scanpackages . /dev/null >Packages
+          cd $GITHUB_WORKSPACE
+
+      - name: install test new version
+        run: |
+          echo "deb [trusted=yes] file://$GITHUB_WORKSPACE/debs-${{ matrix.release }} ./" | sudo tee /etc/apt/sources.list
+          sudo apt-get update
+          sudo apt-get install -y rsyslog rsyslog-improg rsyslog-imkmsg
+          rsyslogd -v
+          sudo systemctl restart rsyslog
+          sudo systemctl status rsyslog
+          logger test1
+          tail -n20 /var/log/syslog
+
