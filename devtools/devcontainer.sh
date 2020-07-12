@@ -7,6 +7,12 @@
 #
 # use env var DOCKER_RUN_EXTRA_OPTS to provide extra options to docker run
 # command.
+#
+# TO MODIFIY BEHAVIOUR, use
+# RSYSLOG_CONTAINER_UID, format uid:gid,
+#                   to change the users container is run under
+#                   set to "" to use the container default settings
+#                   (no local mapping)
 set -e
 if [ "$1" == "--rm" ]; then
 	optrm="--rm"
@@ -32,11 +38,12 @@ if [ -z "$RSYSLOG_DEV_CONTAINER" ]; then
 fi
 
 printf '/rsyslog is mapped to %s \n' "$RSYSLOG_HOME"
+printf 'using container %s\n' "$RSYSLOG_DEV_CONTAINER"
 printf 'pulling container...\n'
 printf 'user ids: %s:%s\n' $(id -u) $(id -g)
+printf 'container_uid: %s\n' ${RSYSLOG_CONTAINER_UID--u $(id -u):$(id -g)}
 docker pull $RSYSLOG_DEV_CONTAINER
 docker run $ti $optrm $DOCKER_RUN_EXTRA_OPTS \
-	-u $(id -u):$(id -g) \
 	-e RSYSLOG_CONFIGURE_OPTIONS_EXTRA \
 	-e RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE \
 	-e CC \
@@ -58,5 +65,6 @@ docker run $ti $optrm $DOCKER_RUN_EXTRA_OPTS \
 	-e VCS_SLUG \
 	--cap-add SYS_ADMIN \
 	--cap-add SYS_PTRACE \
+	${RSYSLOG_CONTAINER_UID--u $(id -u):$(id -g)} \
 	$DOCKER_RUN_EXTRA_FLAGS \
 	-v "$RSYSLOG_HOME":/rsyslog $RSYSLOG_DEV_CONTAINER $*
