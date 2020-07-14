@@ -22,20 +22,20 @@
 
 
 ---
-name: CI PR runner
+name: check
 
 on:
   pull_request:
 
 jobs:
-  container_checks:
+  CI:
     runs-on: ubuntu-18.04
     timeout-minutes: 50
     strategy:
       # When set to true, cancel all in-progress jobs if any matrix job fails.
       fail-fast: false
       matrix:
-        config: [centos_6, centos_7, centos_8, debian_10, ubuntu_16, ubuntu_18_san, ubuntu_18_tsan, suse_tumbleweed]
+        config: [centos_6]
 
     steps:
       - name: git checkout project
