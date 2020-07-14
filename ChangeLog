@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2008.0 (aka 2020.08) 2020-08-??
+- 2020-07-14: CI: add support for github actions
+- 2020-07-14: imklog: add ruleset support
+  see also: https://github.com/rsyslog/rsyslog/issues/4344#issuecomment-658001854
+  see also: https://github.com/rsyslog/rsyslog/issues/106
 - 2020-07-06: config system fix: ChkDisabled method to make config.enabled work
   There was wrong negation in the method so it returned 0/1 in reverse
   and also it did not mark the node to not be reported as unknown at all
