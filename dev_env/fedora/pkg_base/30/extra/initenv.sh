@@ -1,6 +1,14 @@
 #!/bin/sh
 # Definitions common to these scripts
 source $(dirname "$0")/config.sh
+if [ -z $PKGGITBRANCH ]; then 
+        echo "initenv: use master (default)"
+	gitbranch=master
+else 
+        echo "initenv: set to $PKGGITBRANCH"
+        echo "SPEC is set to '$RPM_SPEC'"
+	gitbranch=$PKGGITBRANCH
+fi
 
 echo "---------------------------------------------"
 echo "--- Copy private files to their locations ---"
@@ -27,7 +35,23 @@ chmod -R 0600 /private-files/.ssh/id_rsa
 echo "--------------------------------"
 
 echo "--------------------------------"
-echo "--- Sync RPM REPO and update GIT "
+echo "--- Sync RPM REPO"
 ./sync_remote.sh
-git pull && yes | cp -rf etc-mock/* /etc/mock/
+echo "--------------------------------"
+echo "--- Sync GIT and change branch"
+# git pull && yes | cp -rf etc-mock/* /etc/mock/
+git fetch --all 
+
+if test "$gitbranch" = "master"; then 
+        echo "initenv: using master branch"
+	git checkout -f $gitbranch
+else
+        echo "initenv: switch to PR branch"
+	git fetch -t git://github.com/rsyslog/rsyslog-pkg-rhel-centos.git $gitbranch
+	git reset --hard FETCH_HEAD --
+	git checkout -B $gitbranch
+	git rev-parse HEAD
+fi
+
+cp -rf etc-mock/* /etc/mock/
 chown -R pkg ./ 
