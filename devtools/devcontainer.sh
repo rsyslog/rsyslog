@@ -42,6 +42,7 @@ printf 'using container %s\n' "$RSYSLOG_DEV_CONTAINER"
 printf 'pulling container...\n'
 printf 'user ids: %s:%s\n' $(id -u) $(id -g)
 printf 'container_uid: %s\n' ${RSYSLOG_CONTAINER_UID--u $(id -u):$(id -g)}
+printf 'container cmd: %s\n' $*
 docker pull $RSYSLOG_DEV_CONTAINER
 docker run $ti $optrm $DOCKER_RUN_EXTRA_OPTS \
 	-e RSYSLOG_CONFIGURE_OPTIONS_EXTRA \
