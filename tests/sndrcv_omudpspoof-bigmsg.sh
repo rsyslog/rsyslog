@@ -8,7 +8,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 export TCPFLOOD_EXTRA_OPTS="-b1 -W1"
 export NUMMESSAGES=1
-export MESSAGESIZE=16384 #65000 #32768 #16384
+export MESSAGESIZE=65000 #65000 #32768 #16384
 #export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 #export RSYSLOG_DEBUGLOG="log"
 
