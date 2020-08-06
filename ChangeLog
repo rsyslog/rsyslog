@@ -1,5 +1,20 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2008.0 (aka 2020.08) 2020-08-??
+- 2020-08-06: MMDARWIN:: improve configuration flexibility and UUID fix
+  -t pu now able to get fields from local variables ($.)
+  - now able to configure a custom root container for mmdarwin fields
+  - now able to put nested keys ($!key1!key2)
+  - don't regenerate a UUID each time, but instead check if one exists before
+    creating it (allow successive calls without losing previous UUID)
+  Thanks to github user frikilax for the contribution.
+- 2020-08-06: add --enable-imjournal=optional ./configure option
+- 2020-08-06: IMPCAP::Fixes: segfault, memory and build corrections
+  * fix bug in ethernet packets parsing
+  * fix removes build error with gcc10: 'multiple definition of...'
+  * resolve memory leak during interface init failure (device not freed after post-create error)
+  * add test 'impcap_bug_ether' to prove ethernet parser fix is working
+  Thanks to github user frikilax for the contribution.
+  closes https://github.com/rsyslog/rsyslog/issues/4332
 - 2020-07-14: CI: add support for github actions
 - 2020-07-14: imklog: add ruleset support
   see also: https://github.com/rsyslog/rsyslog/issues/4344#issuecomment-658001854
