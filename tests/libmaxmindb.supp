@@ -36,3 +36,22 @@
    fun:ConsumerReg
    fun:wtiWorker
 }
+{
+   yet_another_incarnation
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:MMDB_open
+   fun:open_mmdb
+   fun:createWrkrInstance
+   fun:actionCheckAndCreateWrkrInstance
+   fun:actionPrepare
+   fun:actionProcessMessage
+   fun:processMsgMain
+   fun:doSubmitToActionQ
+   fun:execAct
+   fun:scriptExec
+   fun:processBatch
+   fun:msgConsumer
+   fun:ConsumerReg
+}
