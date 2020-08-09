@@ -128,6 +128,7 @@ typedef struct configSettings_s {
 	uchar *lstnIP;			/* which IP we should listen on? */
 	uchar *pszBindRuleset;
 	int wrkrMax;			/* max number of workers (actually "helper workers") */
+	int iTCPSessMax;  /* max open connections per instance */
 } configSettings_t;
 static configSettings_t cs;
 
@@ -164,6 +165,7 @@ struct instanceConf_s {
 	unsigned int ratelimitBurst;
 	uchar *startRegex;
 	regex_t start_preg;	/* compiled version of startRegex */
+	int iTCPSessMax;    /* max open connections */
 	struct instanceConf_s *next;
 };
 
@@ -173,6 +175,7 @@ struct modConfData_s {
 	instanceConf_t *root, *tail;
 	int wrkrMax;
 	int bProcessOnPoller;
+	int iTCPSessMax;
 	sbool configSetViaV2Method;
 };
 
@@ -182,6 +185,7 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current lo
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {
 	{ "threads", eCmdHdlrPositiveInt, 0 },
+	{ "maxsessions", eCmdHdlrInt, 0 },
 	{ "processOnPoller", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk modpblk =
@@ -211,6 +215,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "defaulttz", eCmdHdlrString, 0 },
 	{ "supportoctetcountedframing", eCmdHdlrBinary, 0 },
 	{ "framingfix.cisco.asa", eCmdHdlrBinary, 0 },
+	{ "maxsessions", eCmdHdlrInt, 0 },
 	{ "notifyonconnectionclose", eCmdHdlrBinary, 0 },
 	{ "notifyonconnectionopen", eCmdHdlrBinary, 0 },
 	{ "compression.mode", eCmdHdlrGetWord, 0 },
@@ -269,6 +274,8 @@ struct ptcpsrv_s {
 	ruleset_t *pRuleset;
 	ptcplstn_t *pLstn;		/* root of our listeners */
 	ptcpsess_t *pSess;		/* root of our sessions */
+	int iTCPSessCnt;
+	int iTCPSessMax;
 	pthread_mutex_t mutSessLst;
 	sbool bKeepAlive;		/* support keep-alive packets */
 	sbool bEmitMsgOnClose;
@@ -399,6 +406,24 @@ destructSess(ptcpsess_t *pSess)
 	pSess->pMsg = NULL;
 	pSess->epd = NULL;
 	free(pSess);
+}
+
+/* remove session from server */
+static void
+unlinkSess(ptcpsess_t *pSess) {
+	ptcpsrv_t *pSrv = pSess->pLstn->pSrv;
+	pthread_mutex_lock(&pSrv->mutSessLst);
+	pSrv->iTCPSessCnt--;
+	/* finally unlink session from structures */
+	if(pSess->next != NULL)
+		pSess->next->prev = pSess->prev;
+	if(pSess->prev == NULL) {
+		/* need to update root! */
+		pSrv->pSess = pSess->next;
+	} else {
+		pSess->prev->next = pSess->next;
+	}
+	pthread_mutex_unlock(&pSrv->mutSessLst);
 }
 
 static void
@@ -717,7 +742,7 @@ getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr *pAddr, sbool b
 	uchar szHname[NI_MAXHOST+1] = "";
 	struct addrinfo hints, *res;
 	sbool bMaliciousHName = 0;
-	
+
 	DEFiRet;
 
 	*peerName = NULL;
@@ -1470,6 +1495,7 @@ addSess(ptcplstn_t *pLstn, int sock, prop_t *peerName, prop_t *peerIP)
 	int pmsg_size_factor;
 
 	CHKmalloc(pSess = malloc(sizeof(ptcpsess_t)));
+	pSess->next = NULL;
 	if(pLstn->pSrv->inst->startRegex == NULL) {
 		pmsg_size_factor = 1;
 		pSess->pMsg_save = NULL;
@@ -1494,7 +1520,17 @@ addSess(ptcplstn_t *pLstn, int sock, prop_t *peerName, prop_t *peerIP)
 
 	/* add to start of server's listener list */
 	pSess->prev = NULL;
+
 	pthread_mutex_lock(&pSrv->mutSessLst);
+	int iTCPSessMax = pSrv->inst->iTCPSessMax;
+	if (iTCPSessMax > 0 && pSrv->iTCPSessCnt >= iTCPSessMax) {
+		pthread_mutex_unlock(&pSrv->mutSessLst);
+		LogError(0, RS_RET_MAX_SESS_REACHED,
+			"too many tcp sessions - dropping incoming request");
+		ABORT_FINALIZE(RS_RET_MAX_SESS_REACHED);
+	}
+
+	pSrv->iTCPSessCnt++;
 	pSess->next = pSrv->pSess;
 	if(pSrv->pSess != NULL)
 		pSrv->pSess->prev = pSess;
@@ -1506,6 +1542,9 @@ addSess(ptcplstn_t *pLstn, int sock, prop_t *peerName, prop_t *peerIP)
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pSess != NULL) {
+			if (pSess->next != NULL) {
+				unlinkSess(pSess);
+			}
 			free(pSess->pMsg_save);
 			free(pSess->pMsg);
 			free(pSess);
@@ -1566,24 +1605,14 @@ static rsRetVal
 closeSess(ptcpsess_t *pSess)
 {
 	DEFiRet;
-	
+
 	if(pSess->compressionMode >= COMPRESS_STREAM_ALWAYS)
 		doZipFinish(pSess);
 
 	const int sock = pSess->sock;
 	close(sock);
 
-	pthread_mutex_lock(&pSess->pLstn->pSrv->mutSessLst);
-	/* finally unlink session from structures */
-	if(pSess->next != NULL)
-		pSess->next->prev = pSess->prev;
-	if(pSess->prev == NULL) {
-		/* need to update root! */
-		pSess->pLstn->pSrv->pSess = pSess->next;
-	} else {
-		pSess->prev->next = pSess->next;
-	}
-	pthread_mutex_unlock(&pSess->pLstn->pSrv->mutSessLst);
+	unlinkSess(pSess);
 
 	if(pSess->pLstn->pSrv->bEmitMsgOnClose) {
 		LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO, "imptcp: session on socket %d closed "
@@ -1641,6 +1670,7 @@ createInstance(instanceConf_t **pinst)
 	inst->multiLine = 0;
 	inst->socketBacklog = 5;
 	inst->pszLstnPortFileName = NULL;
+	inst->iTCPSessMax = -1;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -1698,6 +1728,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *const pNe
 	inst->bEmitMsgOnOpen = cs.bEmitMsgOnOpen;
 	inst->iAddtlFrameDelim = cs.iAddtlFrameDelim;
 	inst->maxFrameSize = cs.maxFrameSize;
+	inst->iTCPSessMax = cs.iTCPSessMax;
 
 finalize_it:
 	free(pNewVal);
@@ -1756,6 +1787,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	pSrv->flowControl = inst->flowControl;
 	pSrv->pRuleset = inst->pBindRuleset;
 	pSrv->pszInputName = ustrdup((inst->pszInputName == NULL) ?  UCHAR_CONSTANT("imptcp") : inst->pszInputName);
+	pSrv->iTCPSessMax = inst->iTCPSessMax;
 	CHKiRet(prop.Construct(&pSrv->pInputName));
 	CHKiRet(prop.SetString(pSrv->pInputName, pSrv->pszInputName, ustrlen(pSrv->pszInputName)));
 	CHKiRet(prop.ConstructFinalize(pSrv->pInputName));
@@ -2022,13 +2054,13 @@ enqueueIoWork(epolld_t *epd, int dispatchInlineIfQueueFull) {
 	int dispatchInline;
 	int inlineDispatchThreshold;
 	DEFiRet;
-	
+
 	CHKmalloc(n = malloc(sizeof(io_req_t)));
 	n->epd = epd;
-	
+
 	inlineDispatchThreshold = DFLT_inlineDispatchThreshold * runModConf->wrkrMax;
 	dispatchInline = 0;
-	
+
 	pthread_mutex_lock(&io_q.mut);
 	if (dispatchInlineIfQueueFull && io_q.sz > inlineDispatchThreshold) {
 		dispatchInline = 1;
@@ -2200,6 +2232,8 @@ CODESTARTnewInpInst
 				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 			}
 			free(cstr);
+		} else if(!strcmp(inppblk.descr[i].name, "maxsessions")) {
+			inst->iTCPSessMax = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "keepalive")) {
 			inst->bKeepAlive = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "keepalive.probes")) {
@@ -2248,6 +2282,10 @@ CODESTARTnewInpInst
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	}
+
+	if (inst->iTCPSessMax == -1) {
+		inst->iTCPSessMax = loadModConf->iTCPSessMax;
+	}
 finalize_it:
 CODE_STD_FINALIZERnewInpInst
 	cnfparamvalsDestruct(pvals, &inppblk);
@@ -2289,6 +2327,8 @@ CODESTARTsetModCnf
 			continue;
 		if(!strcmp(modpblk.descr[i].name, "threads")) {
 			loadModConf->wrkrMax = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "maxsessions")) {
+			loadModConf->iTCPSessMax = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "processOnPoller")) {
 			loadModConf->bProcessOnPoller = (int) pvals[i].val.d.n;
 		} else {
