@@ -1788,6 +1788,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	pNew->pPermPeers = pThis->pPermPeers;
 	pNew->gnutlsPriorityString = pThis->gnutlsPriorityString;
 	pNew->DrvrVerifyDepth = pThis->DrvrVerifyDepth;
+	pNew->dataTypeCheck = pThis->dataTypeCheck;
 
 	/* if we reach this point, we are in TLS mode */
 	iRet = gtlsInitSession(pNew);
