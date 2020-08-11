@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2008.0 (aka 2020.08) 2020-08-??
+- 2020-08-11: gnutls TLS driver bugfix: EKU check not done properly
+  When the server accepted a new connection, it did not properly set the
+  dataTypeCheck field based on the listening socket. That resulted in
+  skipping ExtendedKeyUsage (EKU) check on the client.
+  Thanks to Daiki Ueno for the patch.
+certificates.
 - 2020-08-06: MMDARWIN:: improve configuration flexibility and UUID fix
   -t pu now able to get fields from local variables ($.)
   - now able to configure a custom root container for mmdarwin fields
