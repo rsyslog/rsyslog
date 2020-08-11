@@ -3,22 +3,6 @@ pkglib_LTLIBRARIES =
 
 pkgconfigdir = $(libdir)/pkgconfig
 
-#
-# systemd support
-#
-if HAVE_SYSTEMD
-
-nodist_systemdsystemunit_DATA = \
-	rsyslog.service
-
-CLEANFILES = \
-	rsyslog.service
-
-%.service: %.service.in
-	$(AM_V_GEN)sed -e 's,@sbindir\@,$(sbindir),g' $< > $@
-
-endif
-
 EXTRA_DIST = \
 	README.md \
 	platform/README \
@@ -32,8 +16,7 @@ EXTRA_DIST = \
 	COPYING.ASL20 \
 	contrib/gnutls/ca.pem \
 	contrib/gnutls/cert.pem \
-	contrib/gnutls/key.pem \
-	rsyslog.service.in
+	contrib/gnutls/key.pem
 
 SUBDIRS = compat runtime grammar . plugins/immark plugins/imuxsock plugins/imtcp plugins/imudp plugins/omtesting
 # external plugin driver is always enabled (core component)
