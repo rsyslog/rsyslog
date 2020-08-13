@@ -1,11 +1,20 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2008.0 (aka 2020.08) 2020-08-??
+- 2020-08-13: omelasticsearch: add parameter skipPipelineIfEmpty
+  When POST'ing a document, Elasticsearch does not allow an empty pipeline
+  parameter value. This patch introduces boolean option skipPipelineIfEmpty
+  to the omelasticsearch action. When set to true, the pipeline parameter
+  won't be posted. Default is false so we do not modify current behavior.
+  Thanks to Julien Thomas for the patch.
+- 2020-08-12: systemd service file removed from project
+  This was done as distros nowadays have very different service files and it no
+  longer is useful to provide a "generic" (sic) example.
+  see also: https://github.com/rsyslog/rsyslog/issues/4333
 - 2020-08-11: gnutls TLS driver bugfix: EKU check not done properly
   When the server accepted a new connection, it did not properly set the
   dataTypeCheck field based on the listening socket. That resulted in
   skipping ExtendedKeyUsage (EKU) check on the client.
   Thanks to Daiki Ueno for the patch.
-certificates.
 - 2020-08-06: MMDARWIN:: improve configuration flexibility and UUID fix
   -t pu now able to get fields from local variables ($.)
   - now able to configure a custom root container for mmdarwin fields
