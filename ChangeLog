@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2008.0 (aka 2020.08) 2020-08-??
+- 2020-08-13: imudp: fix very small, static memory leak
+  When ruleset support was used, the ruleset name was not freed upon rsyslog
+  termination. While this has no consequences for regular runs, it generates
+  leak errors under memory debuggers and as such makes debugging harder than
+  necessary.
+  Thanks to github user frikilax for the patch.
 - 2020-08-13: omelasticsearch: add parameter skipPipelineIfEmpty
   When POST'ing a document, Elasticsearch does not allow an empty pipeline
   parameter value. This patch introduces boolean option skipPipelineIfEmpty
