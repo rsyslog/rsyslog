@@ -22,7 +22,7 @@
 
 
 ---
-name: check ubuntu 18 CodeCov
+name: ubuntu 18 codecov
 
 on:
   pull_request:
