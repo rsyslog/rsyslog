@@ -202,6 +202,23 @@ Like dynSearchIndex_, it allows you to specify a
 for pipelineName_, instead of a static string.
 
 
+.. _skipPipelineIfEmpty:
+
+skipPipelineIfEmpty
+^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+When POST'ing a document, Elasticsearch does not allow an empty pipeline
+parameter value. If boolean option skipPipelineIfEmpty is set to `"on"`, the
+pipeline parameter won't be posted. Default is `"off"`.
+
+
 .. _asyncrepl:
 
 asyncrepl
