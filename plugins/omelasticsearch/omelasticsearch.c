@@ -122,6 +122,7 @@ typedef struct instanceConf_s {
 	uchar *searchIndex;
 	uchar *searchType;
 	uchar *pipelineName;
+	sbool skipPipelineIfEmpty;
 	uchar *parent;
 	uchar *tplName;
 	uchar *timeout;
@@ -191,6 +192,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "searchindex", eCmdHdlrGetWord, 0 },
 	{ "searchtype", eCmdHdlrGetWord, 0 },
 	{ "pipelinename", eCmdHdlrGetWord, 0 },
+	{ "skippipelineifempty", eCmdHdlrBinary, 0 },
 	{ "parent", eCmdHdlrGetWord, 0 },
 	{ "dynsearchindex", eCmdHdlrBinary, 0 },
 	{ "dynsearchtype", eCmdHdlrBinary, 0 },
@@ -359,6 +361,7 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tsearch type='%s'\n", pData->searchType);
 	dbgprintf("\tpipeline name='%s'\n", pData->pipelineName);
 	dbgprintf("\tdynamic pipeline name=%d\n", pData->dynPipelineName);
+	dbgprintf("\tskipPipelineIfEmpty=%d\n", pData->skipPipelineIfEmpty);
 	dbgprintf("\tparent='%s'\n", pData->parent);
 	dbgprintf("\ttimeout='%s'\n", pData->timeout);
 	dbgprintf("\tdynamic search index=%d\n", pData->dynSrchIdx);
@@ -628,7 +631,7 @@ setPostURL(wrkrInstanceData_t *const pWrkrData, uchar **const tpls)
 		r = es_addBuf(&url, (char*)searchIndex, ustrlen(searchIndex));
 		if(r == 0) r = es_addChar(&url, '/');
 		if(r == 0) r = es_addBuf(&url, (char*)searchType, ustrlen(searchType));
-		if(pipelineName != NULL) {
+		if(pipelineName != NULL && (!pData->skipPipelineIfEmpty || pipelineName[0] != '\0')) {
 			if(r == 0) r = es_addChar(&url, separator);
 			if(r == 0) r = es_addBuf(&url, "pipeline=", sizeof("pipeline=")-1);
 			if(r == 0) r = es_addBuf(&url, (char*)pipelineName, ustrlen(pipelineName));
@@ -692,7 +695,7 @@ computeMessageSize(const wrkrInstanceData_t *const pWrkrData,
 	if(bulkId != NULL) {
 		r += sizeof(META_ID)-1 + ustrlen(bulkId);
 	}
-	if(pipelineName != NULL) {
+	if(pipelineName != NULL && (!pWrkrData->pData->skipPipelineIfEmpty || pipelineName[0] != '\0')) {
 		r += sizeof(META_PIPELINE)-1 + ustrlen(pipelineName);
 	}
 
@@ -730,7 +733,7 @@ buildBatch(wrkrInstanceData_t *pWrkrData, uchar *message, uchar **tpls)
 		if(r == 0) r = es_addBuf(&pWrkrData->batch.data, META_PARENT, sizeof(META_PARENT)-1);
 		if(r == 0) r = es_addBuf(&pWrkrData->batch.data, (char*)parent, ustrlen(parent));
 	}
-	if(pipelineName != NULL) {
+	if(pipelineName != NULL && (!pWrkrData->pData->skipPipelineIfEmpty || pipelineName[0] != '\0')) {
 		if(r == 0) r = es_addBuf(&pWrkrData->batch.data, META_PIPELINE, sizeof(META_PIPELINE)-1);
 		if(r == 0) r = es_addBuf(&pWrkrData->batch.data, (char*)pipelineName, ustrlen(pipelineName));
 	}
@@ -1796,6 +1799,7 @@ setInstParamDefaults(instanceData *const pData)
 	pData->searchType = NULL;
 	pData->pipelineName = NULL;
 	pData->dynPipelineName = 0;
+	pData->skipPipelineIfEmpty = 0;
 	pData->parent = NULL;
 	pData->timeout = NULL;
 	pData->dynSrchIdx = 0;
@@ -1868,6 +1872,8 @@ CODESTARTnewActInst
 			pData->pipelineName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "dynpipelinename")) {
 			pData->dynPipelineName = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "skippipelineifempty")) {
+			pData->skipPipelineIfEmpty = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "parent")) {
 			pData->parent = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "dynsearchindex")) {
