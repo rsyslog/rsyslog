@@ -1,5 +1,13 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2008.0 (aka 2020.08) 2020-08-??
+- 2020-08-14: omfile: do no longer limit dynafile cache size in legacy format
+  When using obsolete legacy config format, omfile had a hard limit of
+  1,000 dynafile cache entries. This does not play well with very
+  large installation. This limit is now removed and converted into
+  a warning if cache size > 25,000 is specified.
+  Note: the problem can easily be worked-around by using modern
+  config format (RainerScript).
+  closes: https://github.com/rsyslog/rsyslog/issues/4241
 - 2020-08-13: imudp: fix very small, static memory leak
   When ruleset support was used, the ruleset name was not freed upon rsyslog
   termination. While this has no consequences for regular runs, it generates
