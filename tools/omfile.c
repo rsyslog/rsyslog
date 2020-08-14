@@ -376,12 +376,10 @@ static rsRetVal setDynaFileCacheSize(void __attribute__((unused)) *pVal, int iNe
 		         "DynaFileCacheSize must be greater 0 (%d given), changed to 1.", iNewVal);
 		iRet = RS_RET_VAL_OUT_OF_RANGE;
 		iNewVal = 1;
-	} else if(iNewVal > 1000) {
+	} else if(iNewVal > 25000) {
 		errno = 0;
-		parser_errmsg(
-		         "DynaFileCacheSize maximum is 1,000 (%d given), changed to 1,000.", iNewVal);
-		iRet = RS_RET_VAL_OUT_OF_RANGE;
-		iNewVal = 1000;
+		parser_warnmsg("DynaFileCacheSize is larger than 25,000 (%d given) - this looks very "
+			"large. Is it intended?", iNewVal);
 	}
 
 	cs.iDynaFileCacheSize = iNewVal;
