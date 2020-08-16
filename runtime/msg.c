@@ -423,7 +423,7 @@ static int getAPPNAMELen(smsg_t * const pM, sbool bLockMutex);
 static rsRetVal jsonPathFindParent(struct json_object *jroot, uchar *name, uchar *leaf,
 	struct json_object **parent, int bCreate);
 static uchar * jsonPathGetLeaf(uchar *name, int lenName);
-static struct json_object *jsonDeepCopy(struct json_object *src);
+struct json_object *jsonDeepCopy(struct json_object *src);
 static json_bool jsonVarExtract(struct json_object* root, const char *key, struct json_object **value);
 void getRawMsgAfterPRI(smsg_t * const pM, uchar **pBuf, int *piLen);
 
@@ -5123,7 +5123,7 @@ finalize_it:
 	RETiRet;
 }
 
-static struct json_object *
+struct json_object *
 jsonDeepCopy(struct json_object *src)
 {
 	struct json_object *dst = NULL, *json;

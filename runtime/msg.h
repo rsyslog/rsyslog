@@ -240,6 +240,7 @@ unsigned short *pbMustBeFreed);
 rsRetVal msgSetJSONFromVar(smsg_t *pMsg, uchar *varname, struct svar *var, int force_reset);
 rsRetVal msgDelJSON(smsg_t *pMsg, uchar *varname);
 rsRetVal jsonFind(smsg_t *const pMsg, msgPropDescr_t *pProp, struct json_object **jsonres);
+struct json_object *jsonDeepCopy(struct json_object *src);
 
 rsRetVal msgPropDescrFill(msgPropDescr_t *pProp, uchar *name, int nameLen);
 void msgPropDescrDestruct(msgPropDescr_t *pProp);
