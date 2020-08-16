@@ -1054,6 +1054,30 @@ TESTS +=  \
 	rscript_hash64-vg.sh
 endif # ENABLE_FMHASH
 endif # HAVE_VALGRIND
+if ENABLE_FMUNFLATTEN
+TESTS +=  \
+	rscript_unflatten_arg1_unsuitable.sh \
+	rscript_unflatten_arg2_invalid.sh \
+	rscript_unflatten_conflict1.sh \
+	rscript_unflatten_conflict2.sh \
+	rscript_unflatten_conflict3.sh \
+	rscript_unflatten_key_truncated.sh \
+	rscript_unflatten_non_object.sh \
+	rscript_unflatten_object.sh \
+	rscript_unflatten_object_exclamation.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	rscript_unflatten_arg1_unsuitable-vg.sh \
+	rscript_unflatten_arg2_invalid-vg.sh \
+	rscript_unflatten_conflict1-vg.sh \
+	rscript_unflatten_conflict2-vg.sh \
+	rscript_unflatten_conflict3-vg.sh \
+	rscript_unflatten_key_truncated-vg.sh \
+	rscript_unflatten_non_object-vg.sh \
+	rscript_unflatten_object-vg.sh \
+	rscript_unflatten_object_exclamation-vg.sh
+endif # HAVE_VALGRIND
+endif # ENABLE_FMUNFLATTEN
 endif
 
 if ENABLE_MMPSTRUCDATA
@@ -1739,6 +1763,24 @@ EXTRA_DIST= \
 	rscript_exists-not2.sh \
 	rscript_exists-not3.sh \
 	rscript_exists-not4.sh \
+	rscript_unflatten_arg1_unsuitable.sh \
+	rscript_unflatten_arg2_invalid.sh \
+	rscript_unflatten_conflict1.sh \
+	rscript_unflatten_conflict2.sh \
+	rscript_unflatten_conflict3.sh \
+	rscript_unflatten_key_truncated.sh \
+	rscript_unflatten_non_object.sh \
+	rscript_unflatten_object_exclamation.sh \
+	rscript_unflatten_object.sh \
+	rscript_unflatten_arg1_unsuitable-vg.sh \
+	rscript_unflatten_arg2_invalid-vg.sh \
+	rscript_unflatten_conflict1-vg.sh \
+	rscript_unflatten_conflict2-vg.sh \
+	rscript_unflatten_conflict3-vg.sh \
+	rscript_unflatten_key_truncated-vg.sh \
+	rscript_unflatten_non_object-vg.sh \
+	rscript_unflatten_object_exclamation-vg.sh \
+	rscript_unflatten_object-vg.sh \
 	rs-cnum.sh \
 	rs-int2hex.sh \
 	rs-substring.sh \
