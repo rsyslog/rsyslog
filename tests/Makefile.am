@@ -2490,6 +2490,7 @@ EXTRA_DIST= \
 	CI/centos6-9.supp \
 	CI/centos7.supp \
 	CI/gcov.supp \
+	CI/ubuntu20.04.supp \
 	json_var_case.sh \
 	cfg.sh \
 	empty-prop-comparison.sh \
