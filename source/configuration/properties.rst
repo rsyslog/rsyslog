@@ -13,6 +13,11 @@ Properties are used in
 
 The property name is case-insensitive (prior to 3.17.0, they were case-sensitive).
 
+Note: many users refer to "rsyslog properties" as "rsyslog variables". You can treat
+them as synonymous.
+Read how `rsyslog lead author Rainer Gerhards explains the naming
+difference <https://rainer.gerhards.net/2020/08/rsyslog-template-variables-where-to-find-them.html">`_.
+
 Message Properties
 ------------------
 These are extracted by rsyslog parsers from the original message. All message
@@ -96,8 +101,8 @@ The following message properties exist:
 
 **iut**
   the monitorware InfoUnitType - used when talking to a
-  `MonitorWare <http://www.monitorware.com>`_ backend (also for
-  `Adiscon LogAnalyzer <http://loganalyzer.adiscon.com/>`_)
+  `MonitorWare <https://www.monitorware.com>`_ backend (also for
+  `Adiscon LogAnalyzer <https://loganalyzer.adiscon.com/>`_)
 
 **syslogfacility**
   the facility from the message - in numerical form
