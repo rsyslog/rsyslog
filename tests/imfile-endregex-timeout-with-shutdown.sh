@@ -2,9 +2,10 @@
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh check-inotify-only
-export IMFILECHECKTIMEOUT="60"
+export IMFILECHECKTIMEOUT="90"
 
 mkdir ${RSYSLOG_DYNNAME}.statefiles
+touch $RSYSLOG_DYNNAME.input # prevent misleading rsyslog diagnostic on startup
 generate_conf
 add_conf '
 module(load="../plugins/imfile/.libs/imfile" timeoutGranularity="1"
@@ -43,12 +44,14 @@ startup
 
 # new data
 echo ' msgnum:4' >> $RSYSLOG_DYNNAME.input
+echo INPUT FILE NOW: ; cat -n $RSYSLOG_DYNNAME.input
 content_check_with_count "msgnum:2
  msgnum:3
  msgnum:4" 1 $IMFILECHECKTIMEOUT
 
 echo ' msgnum:5
  msgnum:6' >> $RSYSLOG_DYNNAME.input
+echo INPUT FILE NOW: ; cat -n $RSYSLOG_DYNNAME.input
 content_check_with_count "msgnum:5
  msgnum:6" 1 $IMFILECHECKTIMEOUT
 

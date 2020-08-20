@@ -732,9 +732,12 @@ content_check_with_count() {
 	timecounter=0
 	while [  $timecounter -lt $timeoutend ]; do
 		(( timecounter=timecounter+1 ))
-		count=$(grep -c -F -- "$1" <${RSYSLOG_OUT_LOG})
+		count=0
+		if [ -f "${RSYSLOG_OUT_LOG}" ]; then
+			count=$(grep -c -F -- "$1" <${RSYSLOG_OUT_LOG})
+		fi
 		if [ ${count:=0} -eq $2 ]; then
-			echo content_check_with_count success, \"$1\" occured $2 times
+			echo content_check_with_count SUCCESS, \"$1\" occured $2 times
 			break
 		else
 			if [ "$timecounter" == "$timeoutend" ]; then
@@ -755,13 +758,13 @@ content_check_with_count() {
 				fi
 				error_exit 1
 			else
-				printf '%s content_check_with_count have %d, wait for %d times (%d lines), msg: %s\n' \
-					"$(tb_timestamp)" "$count" "$2" $(wc -l < "$RSYSLOG_OUT_LOG") "$1"
+				printf '%s content_check_with_count, try %d have %d, wait for %d, search for: "%s"\n' \
+					"$(tb_timestamp)" "$timecounter" "$count" "$2" "$1"
 				$TESTTOOL_DIR/msleep 1000
 			fi
 		fi
-	printf '**** content_check_with_count DEBUG:\n' # rger: REMOVE ME when problems are fixed
-	cat -n "$RSYSLOG_OUT_LOG"
+	printf '%s **** content_check_with_count DEBUG (timeout %s, need %s lines):\n' "$(tb_timestamp)" "$3"  "$2" # rger: REMOVE ME when problems are fixed
+	if [ -f "${RSYSLOG_OUT_LOG}" ]; then cat -n "$RSYSLOG_OUT_LOG"; fi
 	done
 }
 
