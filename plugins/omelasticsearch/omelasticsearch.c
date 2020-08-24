@@ -1567,7 +1567,6 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls
 
 	PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
 
-	pWrkrData->replyLen = 0;
 	if ((pWrkrData->pData->rebindInterval > -1) &&
 		(pWrkrData->nOperations > pWrkrData->pData->rebindInterval)) {
 		curl_easy_setopt(curl, CURLOPT_FRESH_CONNECT, 1);
@@ -1588,6 +1587,7 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls
 		/* needs to be called to support ES HA feature */
 		CHKiRet(checkConn(pWrkrData));
 	}
+	pWrkrData->replyLen = 0;
 	CHKiRet(setPostURL(pWrkrData, tpls));
 
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, (char *)message);
