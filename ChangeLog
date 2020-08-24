@@ -1,5 +1,13 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2008.0 (aka 2020.08) 2020-08-??
+- 2020-08-24: omelasticsearch bugfix: reply buffer reset after health check
+  The issue happens when more than one server is defined on the
+  action. On that condition a health check is made through
+  checkConn() before sending the POST. The replyLen should be
+  set back to 0 after the health check, otherwise the response
+  data received from the POST gets appended to the end of the
+  last health check.
+  Thanks to Julien Thomas for the patch.
 - 2020-08-14: omfile: do no longer limit dynafile cache size in legacy format
   When using obsolete legacy config format, omfile had a hard limit of
   1,000 dynafile cache entries. This does not play well with very
