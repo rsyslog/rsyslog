@@ -1000,6 +1000,7 @@ TESTS +=  \
 	imptcp_no_octet_counted.sh \
 	imptcp_multi_line.sh \
 	imptcp_spframingfix.sh \
+	imptcp_maxsessions.sh \
 	imptcp_nonProcessingPoller.sh \
 	imptcp_veryLargeOctateCountedMessages.sh \
 	imptcp-basic-hup.sh \
@@ -2472,6 +2473,7 @@ EXTRA_DIST= \
 	testsuites/xlate_more_with_duplicates_and_nomatch.lkp_tbl \
 	testsuites/xlate_sparse_array_more_with_duplicates_and_nomatch.lkp_tbl \
 	json_var_cmpr.sh \
+	imptcp_maxsessions.sh \
 	imptcp_nonProcessingPoller.sh \
 	imptcp_veryLargeOctateCountedMessages.sh \
 	known_issues.supp \
