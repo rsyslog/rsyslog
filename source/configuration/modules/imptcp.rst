@@ -58,6 +58,22 @@ two helpers). No more than 16 threads can be set (if tried to,
 rsyslog always resorts to 16).
 
 
+MaxSessions
+^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "0", "no", "none"
+
+Maximum number of open sessions allowed.  This is inherited to each
+"input()" config, however it is not a global maximum, rather just
+setting the default per input.
+
+A setting of zero or less than zero means no limit.
+
 ProcessOnPoller
 ^^^^^^^^^^^^^^^
 
@@ -289,6 +305,23 @@ The max value this parameter can have was specified because otherwise
 the integer could become negative and this would result in a
 Segmentation Fault. (Max Value: 200000000)
 
+
+MaxSessions
+^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "0", "no", "none"
+
+Maximum number of open sessions allowed.  If more tcp connections
+are created then rsyslog will drop those connections.  Warning,
+this defaults to 0 which means unlimited, so take care to set this
+if you have limited memory and/or processing power.
+
+A setting of zero or negative integer means no limit.
 
 Address
 ^^^^^^^
