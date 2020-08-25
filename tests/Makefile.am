@@ -48,6 +48,7 @@ check_PROGRAMS = $(TESTRUNS) ourtail tcpflood chkseq msleep randomgen \
 	have_relpSrvSetOversizeMode \
 	have_relpEngineSetTLSLibByName \
 	have_relpSrvSetTlsConfigCmd \
+	check_relpEngineVersion \
 	test_id
 if ENABLE_JOURNAL_TESTS
 if ENABLE_IMJOURNAL
@@ -1243,9 +1244,11 @@ TESTS += \
          sndrcv_relp_tls.sh \
          sndrcv_relp_tls_certvalid.sh \
          sndrcv_relp_tls_prio.sh \
+	 sndrcv_relp_tls_chainedcert.sh \
          relp_tls_certificate_not_found.sh \
 	 omrelp_wrong_authmode.sh \
-	 imrelp-tls.sh
+	 imrelp-tls.sh \
+	 imrelp-tls-chainedcert.sh
 if USE_RELPENGINESETTLSCFGCMD
 TESTS += \
 	 imrelp-tls-cfgcmd.sh \
@@ -2087,12 +2090,14 @@ EXTRA_DIST= \
 	sndrcv_relp.sh \
 	sndrcv_relp_rebind.sh \
 	sndrcv_relp_tls_prio.sh \
+	sndrcv_relp_tls_chainedcert.sh \
 	sndrcv_relp_tls.sh \
 	sndrcv_relp_tls_certvalid.sh \
 	relp_tls_certificate_not_found.sh \
 	omrelp_wrong_authmode.sh \
 	imrelp-tls.sh \
 	imrelp-tls-cfgcmd.sh \
+	imrelp-tls-chainedcert.sh \
 	sndrcv_relp_tls-cfgcmd.sh \
 	sndrcv_relp_dflt_pt.sh \
 	sndrcv_udp.sh \
@@ -2568,6 +2573,7 @@ msleep_SOURCES = msleep.c
 omrelp_dflt_port_SOURCES = omrelp_dflt_port.c
 mangle_qi_SOURCES = mangle_qi.c
 chkseq_SOURCES = chkseq.c
+check_relpEngineVersion = check_relpEngineVersion.c
 have_relpSrvSetOversizeMode = have_relpSrvSetOversizeMode.c
 have_relpEngineSetTLSLibByName = have_relpEngineSetTLSLibByName.c
 have_relpSrvSetTlsConfigCmd = have_relpSrvSetTlsConfigCmd.c

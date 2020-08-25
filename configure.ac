@@ -1532,6 +1532,9 @@ if test "x$enable_relp" = "xyes"; then
 
         CFLAGS="$CFLAGS $RELP_CFLAGS"
         LIBS="$LIBS $RELP_LIBS"
+	# Export RELP Version for testbench tools
+	RELP_VERSION="$(pkg-config --modversion relp)"
+	AC_DEFINE_UNQUOTED([RELP_VERSION], "${RELP_VERSION}", [Define version of librelp used.])
 
         AC_CHECK_FUNC([relpSrvSetOversizeMode],
                       [AC_DEFINE([HAVE_RELPSRVSETOVERSIZEMODE], [1], [Define if relpSrvSetOversizeMode exists.])])
@@ -1541,7 +1544,6 @@ if test "x$enable_relp" = "xyes"; then
                       [AC_DEFINE([HAVE_RELPENGINESETTLSLIBBYNAME], [1], [Define if relpEngineSetTLSLibByName exists.])])
         AC_CHECK_FUNC([relpSrvSetTlsConfigCmd],
                       [AC_DEFINE([HAVE_RELPENGINESETTLSCFGCMD], [1], [Define if relpSrvSetTlsConfigCmd exists.])])
-
         AC_CHECK_FUNC([relpSrvSetTlsConfigCmd],
                       [HAVE_RELPENGINESETTLSCFGCMD=1])
 
