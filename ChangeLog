@@ -1,5 +1,15 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2008.0 (aka 2020.08) 2020-08-??
+- 2020-08-25: imdocker bugfix: error reporting not always correct
+  A wrong function to obtain the error code was used. This
+  could lead to invalid error messages.
+  Thanks to Steve Grubb for the bug report and fix proposal.
+  closes https://github.com/rsyslog/rsyslog/issues/4381
+- 2020-08-25: imptcp: add max sessions config parameter
+  The max is per-instance, not global across all instances.
+  There is also a bugfix where if epoll failed I think we could leave a
+  session linked in the list of sessions, this code unlinks it.
+  Thank to Alfred Perlstein for the patch.
 - 2020-08-24: omelasticsearch bugfix: reply buffer reset after health check
   The issue happens when more than one server is defined on the
   action. On that condition a health check is made through
