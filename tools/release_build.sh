@@ -6,6 +6,21 @@ set -u
 # Exit if any statement returns a non-true value
 set -e
 
+MY_OS=$(uname)
+case "$MY_OS" in
+  Darwin)
+    SED_EXTENDED="sed -E" ;
+    SED_INPLACE="-i .bak"
+    ;;
+  Linux)
+    SED_EXTENDED="sed -r" ;
+    SED_INPLACE="-i"
+    ;;
+  *)
+    SED_EXTENDED="sed -r" ;
+    SED_INPLACE="-i"
+    ;;
+esac
 
 # Read the riot act, give user an option to bail before building the docs
 
@@ -106,12 +121,12 @@ sphinx_build_conf_prod="source/conf.py"
 # the placeholder values provided for non-Git builds (e.g., someone
 # downloads the 'master' branch as a zip file from GitHub).
 
-sed -r -i "s/^version.*$/version = \'${version}\'/" ./${sphinx_build_conf_prod} || {
+$SED_EXTENDED $SED_INPLACE "s/^version.*$/version = \'${version}\'/" ./${sphinx_build_conf_prod} || {
     echo "[!] Failed to replace version placeholder in Sphinx build conf template."
     exit 1
 }
 
-sed -r -i "s/^release.*$/release = \'${release}\'/" ./${sphinx_build_conf_prod} || {
+$SED_EXTENDED $SED_INPLACE "s/^release.*$/release = \'${release}\'/" ./${sphinx_build_conf_prod} || {
     echo "[!] Failed to replace release placeholder in Sphinx build conf template."
     exit 1
 }
