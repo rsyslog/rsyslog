@@ -1,4 +1,6 @@
 ----------------------------------------------------------------------------------------
+Scheduled Release 8.2010.0 (aka 2020.08) 2020-10-00
+----------------------------------------------------------------------------------------
 Scheduled Release 8.2008.0 (aka 2020.08) 2020-08-25
 - 2020-08-25: imdocker bugfix: error reporting not always correct
   A wrong function to obtain the error code was used. This
