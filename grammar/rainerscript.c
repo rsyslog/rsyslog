@@ -5041,7 +5041,7 @@ cnfstmtOptimize(struct cnfstmt *root)
 			break;
 		case S_STOP:
 			if(stmt->next != NULL)
-				parser_errmsg("STOP is followed by unreachable statements!\n");
+				parser_warnmsg("STOP is followed by unreachable statements!\n");
 			break;
 		case S_UNSET: /* nothing to do */
 			break;
