@@ -2079,6 +2079,7 @@ static rsRetVal strmWriteChar(strm_t *__restrict__ const pThis, const uchar c)
 	if(pThis->iBufPtr == pThis->sIOBufSize) {
 		CHKiRet(strmFlushInternal(pThis, 0));
 	}
+
 	/* we now always have space for one character, so we simply copy it */
 	*(pThis->pIOBuf + pThis->iBufPtr) = c;
 	pThis->iBufPtr++;
