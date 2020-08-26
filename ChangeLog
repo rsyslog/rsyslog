@@ -1,5 +1,14 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2010.0 (aka 2020.08) 2020-10-00
+- 2020-08-26: cosmetic: fix dummy module name in debug output
+  When we have optional components (like imjournal) a dummy module
+  is used. It's sole purpose is to emit "this module is not available".
+  During init, the module emitted an invalid module name into the debug
+  log. This has now been replaced by the generic term "dummy".
+  Note: it is highly unlikely that someone will ever see that message
+  at all, as it is unlikely for the dummy modules to be build.
+  see also: https://github.com/rsyslog/rsyslog/commit/84a7e3d80b80106dcc86c273ed8cf78a6c11c722#r41782830
+  Thanks to Thomas D. (whissi) for the patch.
 - 2020-08-26: config bugfix: intended warning emitted as error
   When there are actions configured after a STOP, a warning should be
   emitted. In fact, an error message is generated. This prevents the
