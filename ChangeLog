@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2010.0 (aka 2020.08) 2020-10-00
+- 2020-08-26: config bugfix: intended warning emitted as error
+  When there are actions configured after a STOP, a warning should be
+  emitted. In fact, an error message is generated. This prevents the
+  construct, which may have some legit uses in exotic settings. It
+  may also break older configs, but as the message is an error
+  for so long now, this should be no longer of concern.
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2008.0 (aka 2020.08) 2020-08-25
 - 2020-08-25: imdocker bugfix: error reporting not always correct
