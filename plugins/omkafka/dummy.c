@@ -167,5 +167,5 @@ CODESTARTmodInit
 	/* we only support the current interface specification */
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
-	dbgprintf("mmdblookup: module compiled with rsyslog version %s.\n", VERSION);
+	dbgprintf("dummy module compiled with rsyslog version %s.\n", VERSION);
 ENDmodInit
