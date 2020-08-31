@@ -279,6 +279,25 @@ static void relp_dbgprintf(char __attribute__((unused)) *fmt, ...) {
 
 static relpEngine_t *pRelpEngine;
 #define CHKRELP(f) if(f != RELP_RET_OK) { fprintf(stderr, "%s\n", #f); exit(1); }
+
+static void
+onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
+{
+	fprintf(stderr, "tcpflood: onErr '%s'\n", errmesg);
+}
+
+static void
+onGenericErr(char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
+{
+	fprintf(stderr, "tcpflood: onGenericErr '%s'\n", errmesg);
+}
+
+static void
+onAuthErr(void *pUsr, char *authinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
+{
+	fprintf(stderr, "tcpflood: onAuthErr '%s' peer '%s'\n", errmesg, authinfo);
+}
+
 static void
 initRELP_PLAIN(void)
 {
@@ -287,6 +306,11 @@ initRELP_PLAIN(void)
 		verbose ? relp_dbgprintf : NULL));
 	CHKRELP(relpEngineSetEnableCmd(pRelpEngine, (unsigned char*)"syslog",
 		eRelpCmdState_Required));
+	/* Error output support */
+	CHKRELP(relpEngineSetOnErr(pRelpEngine, onErr));
+	CHKRELP(relpEngineSetOnGenericErr(pRelpEngine, onGenericErr));
+	CHKRELP(relpEngineSetOnAuthErr(pRelpEngine, onAuthErr));
+
 }
 #endif /* #ifdef ENABLE_RELP */
 

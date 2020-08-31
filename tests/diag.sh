@@ -1539,6 +1539,20 @@ require_relpEngineSetTLSLibByName() {
 	fi;
 }
 
+require_relpEngineVersion() {
+	if [ "$1" == "" ]; then
+		  echo "require_relpEngineVersion missing required parameter  (minimum version required)"
+		  exit 1
+	else
+		./check_relpEngineVersion $1
+		if [ $? -eq 1 ]; then
+		  echo "relpEngineVersion too OLD. Test stopped"
+		  exit 77
+		fi;
+	fi
+}
+
+
 # check if command $1 is available - will exit 77 when not OK
 check_command_available() {
 	have_cmd=0
