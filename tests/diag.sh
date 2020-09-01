@@ -2491,7 +2491,7 @@ case $1 in
 			echo "hint: was init accidentally called twice?"
 			exit 2
 		fi
-		export RSYSLOG_DYNNAME="rstb_$(./test_id $(basename $0))$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 4 | head -n 1)"
+		export RSYSLOG_DYNNAME="rstb_$(./test_id $(basename $0))$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head --bytes 4)"
 		export RSYSLOG_OUT_LOG="${RSYSLOG_DYNNAME}.out.log"
 		export RSYSLOG2_OUT_LOG="${RSYSLOG_DYNNAME}_2.out.log"
 		export RSYSLOG_PIDBASE="${RSYSLOG_DYNNAME}:" # also used by instance 2!
