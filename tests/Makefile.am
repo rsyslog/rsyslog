@@ -290,6 +290,7 @@ TESTS +=  \
 	diskqueue.sh \
 	diskqueue-fsync.sh \
 	diskqueue-full.sh \
+	diskqueue-fail.sh \
 	diskqueue-non-unique-prefix.sh \
 	rulesetmultiqueue.sh \
 	rulesetmultiqueue-v6.sh \
@@ -1647,6 +1648,7 @@ EXTRA_DIST= \
 	diskq-rfc5424.sh \
 	rfc5424parser-sp_at_msg_start.sh \
 	diskqueue-full.sh \
+	diskqueue-fail.sh \
 	diskqueue.sh \
 	diskqueue-non-unique-prefix.sh \
 	arrayqueue.sh \

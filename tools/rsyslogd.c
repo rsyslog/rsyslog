@@ -808,12 +808,17 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
 }
 
 rsRetVal
-startMainQueue(qqueue_t *pQueue)
+startMainQueue(qqueue_t *const pQueue)
 {
 	DEFiRet;
 	CHKiRet_Hdlr(qqueueStart(pQueue)) {
 		/* no queue is fatal, we need to give up in that case... */
-		LogError(0, iRet, "could not start (ruleset) main message queue"); \
+		LogError(0, iRet, "could not start (ruleset) main message queue");
+		pQueue->qType = QUEUETYPE_DIRECT;
+		CHKiRet_Hdlr(qqueueStart(pQueue)) {
+			/* no queue is fatal, we need to give up in that case... */
+			LogError(0, iRet, "fatal error: could not even start queue in direct mode");
+		}
 	}
 	RETiRet;
 }

@@ -710,7 +710,7 @@ content_count_check() {
 		grep_opt=-F
 	fi
 	file=${3:-$RSYSLOG_OUT_LOG}
-	count=$(grep -c -F -- "$1" <${RSYSLOG_OUT_LOG})
+	count=$(grep -c $grep_opt -- "$1" <${RSYSLOG_OUT_LOG})
 	if [ ${count:=0} -ne "$2" ]; then
 	    grep -c -F -- "$1" <${RSYSLOG_OUT_LOG}
 	    printf '\n============================================================\n'
