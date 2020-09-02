@@ -11,7 +11,11 @@ Converts expr to a number (integer).
 
 .. note::
 
-   If the expression does not contain a numerical value, behaviour is undefined.
+   If the expression does not contain a numerical value, the following
+   rule applies: the best match as the number is returned. For example
+   "1x234" will return the number 1 and "Test123" will return 0. Zero is
+   always returned if the there is no number at the start of the string.
+   This also is the case for empyt strings.
 
 
 Example
