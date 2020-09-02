@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2010.0 (aka 2020.08) 2020-10-00
+- 2020-09-02: core bugfix: segfault if disk-queue file cannot be created
+  When using Disk Queue and a queue.filename that can not be created
+  by rsyslog, the service does not switch to another queue type as
+  supposed to and crashes at a later step.
+  closes: https://github.com/rsyslog/rsyslog/issues/4282
 - 2020-08-26: cosmetic: fix dummy module name in debug output
   When we have optional components (like imjournal) a dummy module
   is used. It's sole purpose is to emit "this module is not available".
