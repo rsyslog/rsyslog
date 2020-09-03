@@ -1,5 +1,6 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2010.0 (aka 2020.08) 2020-10-00
+- 2020-09-03: testbench fix: python 3 incompatibility
 - 2020-09-02: core bugfix: segfault if disk-queue file cannot be created
   When using Disk Queue and a queue.filename that can not be created
   by rsyslog, the service does not switch to another queue type as
