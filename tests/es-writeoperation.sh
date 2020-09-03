@@ -100,12 +100,12 @@ import sys,json
 hsh = json.load(sys.stdin)
 try:
 	if hsh["hits"]["hits"][0]["_id"] == "123456789":
-		print "good - found expected value"
+		print("good - found expected value")
 		sys.exit(0)
-	print "Error: _id not expected value 123456789:", hsh["hits"]["hits"][0]["_id"]
+	print("Error: _id not expected value 123456789:", hsh["hits"]["hits"][0]["_id"])
 	sys.exit(1)
 except ValueError:
-	print "Error: output is not valid:", json.dumps(hsh,indent=2)
+	print("Error: output is not valid:", json.dumps(hsh,indent=2))
 	sys.exit(1)
 '
 

@@ -36,7 +36,8 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 				)
 '
 startup
-tcpflood -p'$TCPFLOOD_PORT' -m${TESTMESSAGES}
+tcpflood -p$TCPFLOOD_PORT -m${TESTMESSAGES}
+netstat -l
 
 shutdown_when_empty
 wait_shutdown
