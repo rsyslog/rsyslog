@@ -138,6 +138,11 @@ if [ -f $RSYSLOG_DYNNAME.work ] ; then
 	< $RSYSLOG_DYNNAME.work  \
 	$PYTHON -c '
 import sys,json
+try:
+    # Python 2 forward compatibility
+    range = xrange
+except NameError:
+    pass
 records = int(sys.argv[1])
 extra_recs = open(sys.argv[2], "w")
 missing_recs = open(sys.argv[3], "w")
@@ -145,7 +150,7 @@ expectedrecs = {}
 rc = 0
 nextra = 0
 nmissing = 0
-for ii in xrange(0, records*2, 2):
+for ii in range(0, records*2, 2):
 	ss = "{:08}".format(ii)
 	expectedrecs[ss] = ss
 for item in json.load(sys.stdin)["hits"]["hits"]:
