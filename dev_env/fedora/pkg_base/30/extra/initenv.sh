@@ -45,6 +45,7 @@ git fetch --all
 if test "$gitbranch" = "master"; then 
         echo "initenv: using master branch"
 	git checkout -f $gitbranch
+	git pull
 else
         echo "initenv: switch to PR branch"
 	git fetch -t git://github.com/rsyslog/rsyslog-pkg-rhel-centos.git $gitbranch
