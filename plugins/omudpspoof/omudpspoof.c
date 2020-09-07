@@ -371,7 +371,7 @@ UDPSend(wrkrInstanceData_t *pWrkrData, uchar *pszSourcename, char *msg, size_t l
 	* divided by 8 */
 	unsigned msgOffs, hdrOffs;
 	unsigned maxPktLen, pktLen, udpPktLen;
-	u_int16_t ip_id;
+	uint16_t ip_id;
 	DEFiRet;
 
 	if(pWrkrData->pSockArray == NULL) {
@@ -393,7 +393,7 @@ UDPSend(wrkrInstanceData_t *pWrkrData, uchar *pszSourcename, char *msg, size_t l
 	/* We need a non-zero id number for the IP headers,
 	* otherwise libnet will increase it after each
 	* build_ipv4, breaking the fragments */
-	ip_id = (u_int16_t)libnet_get_prand(LIBNET_PR16);
+	ip_id = (uint16_t)libnet_get_prand(LIBNET_PR16);
 
 	inet_pton(AF_INET, (char*)pszSourcename, &(source_ip.sin_addr));
 	bSendSuccess = RSFALSE;
