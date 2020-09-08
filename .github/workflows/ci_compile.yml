@@ -35,7 +35,7 @@ jobs:
       # When set to true, cancel all in-progress jobs if any matrix job fails.
       fail-fast: false
       matrix:
-        config: [clang8, clang9, clang10, gcc9, gcc8]
+        config: [clang8, clang9, clang10, gcc10, gcc9, gcc8]
 
     steps:
       - name: git checkout project
@@ -64,6 +64,9 @@ jobs:
               ;;
           'gcc9')
               export CC='gcc-9'
+              ;;
+          'gcc10')
+              export CC='gcc-10'
               ;;
           esac
           devtools/devcontainer.sh --rm devtools/run-configure.sh
