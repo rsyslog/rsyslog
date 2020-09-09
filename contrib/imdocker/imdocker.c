@@ -559,6 +559,7 @@ static rsRetVal
 dockerContLogsInstSetUrl(docker_cont_logs_inst_t *pThis, CURLM *curlm, const char* pUrl) {
 	DEFiRet;
 	CURLcode ccode = CURLE_OK;
+	CURLMcode mcode = CURLM_OK;
 
 	if (curlm) {
 		docker_cont_logs_req_t *req = pThis->logsReq;
@@ -601,10 +602,10 @@ dockerContLogsInstSetUrl(docker_cont_logs_inst_t *pThis, CURLM *curlm, const cha
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 
-		ccode = curl_multi_add_handle(curlm, pThis->logsReq->curl);
-		if (ccode != CURLE_OK) {
+		mcode = curl_multi_add_handle(curlm, pThis->logsReq->curl);
+		if (mcode != CURLM_OK) {
 			LogError(0, RS_RET_ERR, "imdocker: error curl_multi_add_handle ret- %d:%s\n",
-					ccode, curl_multi_strerror(ccode));
+					mcode, curl_multi_strerror(mcode));
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	}
