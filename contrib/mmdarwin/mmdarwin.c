@@ -485,8 +485,7 @@ int end_body(dyn_buffer *pBody)
  */
 const char* get_uuid_object(smsg_t *const pMsg) {
 	struct json_object *mmdarwin_object = NULL;
-	const char *result = NULL;
-	const char *key;
+	const char *result = NULL, *key = NULL;
 
 	msgPropDescr_t propDesc;
 	msgPropDescrFill(&propDesc, (uchar *)runModConf->container, strlen(runModConf->container));
@@ -500,7 +499,8 @@ const char* get_uuid_object(smsg_t *const pMsg) {
 			key = json_object_iter_peek_name(&it);
 
 			if(!strcmp(key, JSON_DARWIN_ID)) {
-				result = json_object_get_string(json_object_iter_peek_value(&it));
+				// should always be a (non-empty) null-terminated string, safe to use with strdup()
+				result = strdup(json_object_get_string(json_object_iter_peek_value(&it)));
 				break;
 			}
 
@@ -885,15 +885,16 @@ could not extract field '%s' from message\n", pData->fieldList.name[i]);
 
 	const char *uuid = get_uuid_object(pMsg);
 	if(uuid) {
-		DBGPRINTF("mmdarwin: using existing UUID\n");
-		uuid_parse(uuid, header.evt_id);
+		DBGPRINTF("mmdarwin: using existing UUID = %s\n", uuid);
+		if(uuid_parse(uuid, header.evt_id))
+			LogError(0, RS_RET_ERR, "mmdarwin:: failed to parse existing UUID: %s\n", uuid);
+		free((void*)uuid);
 	}
 	else {
-		DBGPRINTF("mmdarwin: generating new uuid\n");
 		uuid_generate(header.evt_id);
 		char uuidStr[40];
 		uuid_unparse(header.evt_id, uuidStr);
-		DBGPRINTF("mmdarwin: darwin id = %s\n", uuidStr);
+		DBGPRINTF("mmdarwin: generated new UUID = %s\n", uuidStr);
 		msgAddJSON(pMsg, (uchar *)pData->pUUIDKey, json_object_new_string(uuidStr), 0, 0);
 	}
 
