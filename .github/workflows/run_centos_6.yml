@@ -30,7 +30,7 @@ on:
 jobs:
   CI:
     runs-on: ubuntu-18.04
-    timeout-minutes: 50
+    timeout-minutes: 65
     strategy:
       # When set to true, cancel all in-progress jobs if any matrix job fails.
       fail-fast: false
@@ -113,9 +113,3 @@ jobs:
               ;;
           esac
           devtools/devcontainer.sh --rm devtools/run-ci.sh
-
-      - name: show error logs (if we errored)
-        if:  ${{ failure() || cancelled() }}
-        run: |
-          devtools/gather-check-logs.sh
-          cat failed-tests.log
