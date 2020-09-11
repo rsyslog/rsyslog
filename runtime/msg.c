@@ -2619,22 +2619,21 @@ MsgGetStructuredData(smsg_t * const pM, uchar **pBuf, rs_size_t *len)
 uchar * ATTR_NONNULL(1)
 getProgramName(smsg_t *const pM, const sbool bLockMutex)
 {
+	if(bLockMutex == LOCK_MUTEX) {
+		MsgLock(pM);
+	}
+
 	if(pM->iLenPROGNAME == -1) {
 		if(pM->iLenTAG == 0) {
 			uchar *pRes;
 			rs_size_t bufLen = -1;
-			getTAG(pM, &pRes, &bufLen, bLockMutex);
+			getTAG(pM, &pRes, &bufLen, MUTEX_ALREADY_LOCKED);
 		}
+		aquireProgramName(pM);
+	}
 
-		if(bLockMutex == LOCK_MUTEX) {
-			MsgLock(pM);
-			/* need to re-check, things may have change in between! */
-			if(pM->iLenPROGNAME == -1)
-				aquireProgramName(pM);
-			MsgUnlock(pM);
-		} else {
-			aquireProgramName(pM);
-		}
+	if(bLockMutex == LOCK_MUTEX) {
+		MsgUnlock(pM);
 	}
 	return (pM->iLenPROGNAME < CONF_PROGNAME_BUFSIZE) ? pM->PROGNAME.szBuf
 						       : pM->PROGNAME.ptr;
