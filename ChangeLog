@@ -1,5 +1,13 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2010.0 (aka 2020.08) 2020-10-00
+- 2020-09-11: mmdarwin bugfix: potential zero uuid when reusing existing one
+  - fix a use-after-free variable during darwin uuid message extraction
+  - improve debug/output by logging uuid parse errors
+  Thanks to github user frikilax for the patch.
+- 2020-09-10: imdocker bugfix: build issue on some platforms
+  An invalid variable type was used, leading to compile errors at least on
+  all platform that use gcc 10 and above. Otherwise, however, it looks like the
+  issue caused no real harm.
 - 2020-09-07: omudpspoof bugfix: make compatbile with Solaris build
   Thanks to Dagobert Michelsen for the patch.
 - 2020-09-03: testbench fix: python 3 incompatibility
