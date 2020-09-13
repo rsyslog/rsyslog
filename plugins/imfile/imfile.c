@@ -300,7 +300,7 @@ static prop_t *pInputName = NULL;
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {
 	{ "pollinginterval", eCmdHdlrPositiveInt, 0 },
-	{ "readtimeout", eCmdHdlrPositiveInt, 0 },
+	{ "readtimeout", eCmdHdlrNonNegInt, 0 },
 	{ "timeoutgranularity", eCmdHdlrPositiveInt, 0 },
 	{ "sortfiles", eCmdHdlrBinary, 0 },
 	{ "statefile.directory", eCmdHdlrString, 0 },
@@ -335,11 +335,11 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "persiststateinterval", eCmdHdlrInt, 0 },
 	{ "persiststateaftersubmission", eCmdHdlrBinary, 0 },
 	{ "deletestateonfiledelete", eCmdHdlrBinary, 0 },
-	{ "delay.message", eCmdHdlrPositiveInt, 0 },
+	{ "delay.message", eCmdHdlrNonNegInt, 0 },
 	{ "addmetadata", eCmdHdlrBinary, 0 },
 	{ "addceetag", eCmdHdlrBinary, 0 },
 	{ "statefile", eCmdHdlrString, CNFPARAM_DEPRECATED },
-	{ "readtimeout", eCmdHdlrPositiveInt, 0 },
+	{ "readtimeout", eCmdHdlrNonNegInt, 0 },
 	{ "freshstarttail", eCmdHdlrBinary, 0},
 	{ "filenotfounderror", eCmdHdlrBinary, 0},
 	{ "needparse", eCmdHdlrBinary, 0},
