@@ -43,6 +43,12 @@ if [ "x$KAFKA" == "xYES" ]; then
 	rm -rf librdkafka # get rid of source, e.g. for line length check
 fi
 
+if [ "x$IMHTTP" == "xYES" ]; then
+	git clone https://github.com/civetweb/civetweb.git > /dev/null
+	(unset CFLAGS; cd civetweb; make build ; sudo make install-headers PREFIX=/usr ; sudo make install-slib PREFIX=/usr )
+	rm -rf civetweb # get rid of source, e.g. for line length check
+fi
+
 if [ "x$GCC" == "xNEWEST" ]; then
 	# currently the best repo we can find...
 	sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y

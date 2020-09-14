@@ -310,6 +310,11 @@ if ENABLE_IMPROG
 SUBDIRS += contrib/improg
 endif
 
+# imhttp
+if ENABLE_IMHTTP
+SUBDIRS += contrib/imhttp
+endif
+
 # mmtaghostname
 if ENABLE_MMTAGHOSTNAME
 SUBDIRS += contrib/mmtaghostname
@@ -379,6 +384,10 @@ endif  # if ENABLE_DEFAULT_TESTS
 
 if ENABLE_IMPROG
 DISTCHECK_CONFIGURE_FLAGS+= --enable-improg
+endif
+
+if ENABLE_IMHTTP
+DISTCHECK_CONFIGURE_FLAGS+= --enable-imhttp
 endif
 
 if ENABLE_OMPROG
