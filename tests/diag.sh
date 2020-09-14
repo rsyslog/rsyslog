@@ -1595,7 +1595,8 @@ dep_kafka_url=http://www-us.apache.org/dist/kafka/2.5.0/kafka_2.12-2.5.0.tgz
 dep_kafka_cached_file=$dep_cache_dir/$RS_KAFKA_DOWNLOAD
 
 if [ -z "$ES_DOWNLOAD" ]; then
-	export ES_DOWNLOAD=elasticsearch-5.6.9.tar.gz
+	#export ES_DOWNLOAD=elasticsearch-5.6.9.tar.gz
+	export ES_DOWNLOAD=elasticsearch-7.9.1-linux-x86_64.tar.gz
 fi
 if [ -z "$ES_PORT" ]; then
 	export ES_PORT=19200
