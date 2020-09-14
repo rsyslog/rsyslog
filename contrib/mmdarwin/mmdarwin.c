@@ -124,7 +124,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{"filtercode", eCmdHdlrGetWord, 0},			/* optional parameter */
 	{"response", eCmdHdlrGetWord, 0},			/* optional parameter */
 	{"send_partial", eCmdHdlrBinary, 0},		/* optional parameter */
-	{"socket_max_use", eCmdHdlrPositiveInt, 0}, /* optional parameter - will disappear in future updates */
+	{"socket_max_use", eCmdHdlrNonNegInt, 0}, /* optional parameter - will disappear in future updates */
 };
 static struct cnfparamblk actpblk = {
 	CNFPARAMBLK_VERSION,

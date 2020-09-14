@@ -170,7 +170,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "preservefqdn", eCmdHdlrBinary, 0 },
 	{ "debug.onshutdown", eCmdHdlrBinary, 0 },
 	{ "debug.logfile", eCmdHdlrString, 0 },
-	{ "debug.gnutls", eCmdHdlrPositiveInt, 0 },
+	{ "debug.gnutls", eCmdHdlrNonNegInt, 0 },
 	{ "debug.unloadmodules", eCmdHdlrBinary, 0 },
 	{ "defaultnetstreamdrivercafile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdriverkeyfile", eCmdHdlrString, 0 },

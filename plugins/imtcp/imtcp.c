@@ -180,9 +180,9 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "streamdriver.TlsVerifyDepth", eCmdHdlrPositiveInt, 0 },
 	{ "permittedpeer", eCmdHdlrArray, 0 },
 	{ "keepalive", eCmdHdlrBinary, 0 },
-	{ "keepalive.probes", eCmdHdlrPositiveInt, 0 },
-	{ "keepalive.time", eCmdHdlrPositiveInt, 0 },
-	{ "keepalive.interval", eCmdHdlrPositiveInt, 0 },
+	{ "keepalive.probes", eCmdHdlrNonNegInt, 0 },
+	{ "keepalive.time", eCmdHdlrNonNegInt, 0 },
+	{ "keepalive.interval", eCmdHdlrNonNegInt, 0 },
 	{ "gnutlsprioritystring", eCmdHdlrString, 0 },
 	{ "preservecase", eCmdHdlrBinary, 0 }
 };

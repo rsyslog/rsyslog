@@ -11,6 +11,6 @@ action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 startup
 shutdown_when_empty
 wait_shutdown
-content_check "parameter 'expiration' cannot be less than one"
+content_check "parameter 'expiration' cannot be less than zero"
 
 exit_test

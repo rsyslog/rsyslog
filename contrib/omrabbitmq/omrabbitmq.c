@@ -179,7 +179,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "routing_key", eCmdHdlrGetWord, 0 },
 	{ "routing_key_template", eCmdHdlrGetWord, 0 },
 	{ "delivery_mode", eCmdHdlrGetWord, 0 },
-	{ "expiration", eCmdHdlrPositiveInt, 0 },
+	{ "expiration", eCmdHdlrNonNegInt, 0 },
 	{ "populate_properties", eCmdHdlrBinary, 0 },
 	{ "body_template", eCmdHdlrGetWord, 0 },
 	{ "content_type", eCmdHdlrGetWord, 0 },
