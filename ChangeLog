@@ -1,5 +1,25 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2010.0 (aka 2020.08) 2020-10-00
+- 2020-09-14: core bugfix: potential segfault on query of PROGRAMNAME property
+  A data race can happen on variable iLenProgram as it is not guarded
+  by the message mutex at time of query. This can lead to it being
+  non -1 while the buffer has not yet properly set up.
+  Thanks to Leo Fang for alerting us and a related
+  patch proposal.
+  replaces https://github.com/rsyslog/rsyslog/pull/4300
+- 2020-09-14: imtcp bugfix: broken connection not necessariy detected
+  Due to an invalid return code check, broken TCP sessions could not
+  necessarily be detected "right in time". This can result is the loss
+  of one message.
+  closes https://github.com/rsyslog/rsyslog/issues/4227
+  Thanks to Leo Fang for the patch.
+- 2020-09-14: new module: imhttp - http input
+  permits to receive log data via HTTP.
+  uses http library to provide http input.
+  user would need to configure an 'endpoint' as input, along
+  with a ruleset, defining how the input should be routed in
+  rsyslog.
+  Thanks to Nelson Yen for contributing this module.
 - 2020-09-11: mmdarwin bugfix: potential zero uuid when reusing existing one
   - fix a use-after-free variable during darwin uuid message extraction
   - improve debug/output by logging uuid parse errors
