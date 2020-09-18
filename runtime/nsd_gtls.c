@@ -1321,9 +1321,9 @@ gtlsEndSess(nsd_gtls_t *pThis)
 
 	if(pThis->bHaveSess) {
 		if(pThis->bIsInitiator) {
-			gnuRet = gnutls_bye(pThis->sess, GNUTLS_SHUT_RDWR);
+			gnuRet = gnutls_bye(pThis->sess, GNUTLS_SHUT_WR);
 			while(gnuRet == GNUTLS_E_INTERRUPTED || gnuRet == GNUTLS_E_AGAIN) {
-				gnuRet = gnutls_bye(pThis->sess, GNUTLS_SHUT_RDWR);
+				gnuRet = gnutls_bye(pThis->sess, GNUTLS_SHUT_WR);
 			}
 		}
 		gnutls_deinit(pThis->sess);
