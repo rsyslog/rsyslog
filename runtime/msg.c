@@ -3142,7 +3142,7 @@ getJSONPropVal(smsg_t * const pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size
 		field = *jroot;
 	} else {
 		leaf = jsonPathGetLeaf(pProp->name, pProp->nameLen);
-		CHKiRet(jsonPathFindParent(*jroot, pProp->name, leaf, &parent, 1));
+		CHKiRet(jsonPathFindParent(*jroot, pProp->name, leaf, &parent, 0));
 		if(jsonVarExtract(parent, (char*)leaf, &field) == FALSE)
 			field = NULL;
 	}
@@ -3197,7 +3197,7 @@ msgGetJSONPropJSONorString(smsg_t * const pMsg, msgPropDescr_t *pProp, struct js
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 	leaf = jsonPathGetLeaf(pProp->name, pProp->nameLen);
-	CHKiRet(jsonPathFindParent(*jroot, pProp->name, leaf, &parent, 1));
+	CHKiRet(jsonPathFindParent(*jroot, pProp->name, leaf, &parent, 0));
 	if(jsonVarExtract(parent, (char*)leaf, pjson) == FALSE) {
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
@@ -3242,7 +3242,7 @@ msgGetJSONPropJSON(smsg_t * const pMsg, msgPropDescr_t *pProp, struct json_objec
 		FINALIZE;
 	}
 	leaf = jsonPathGetLeaf(pProp->name, pProp->nameLen);
-	CHKiRet(jsonPathFindParent(*jroot, pProp->name, leaf, &parent, 1));
+	CHKiRet(jsonPathFindParent(*jroot, pProp->name, leaf, &parent, 0));
 	if(jsonVarExtract(parent, (char*)leaf, pjson) == FALSE) {
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
@@ -4845,7 +4845,7 @@ jsonPathFindParent(struct json_object *jroot, uchar *name, uchar *leaf, struct j
 	namestart = name;
 	*parent = jroot;
 	while(name < leaf-1) {
-		jsonPathFindNext(*parent, namestart, &name, leaf, parent, bCreate);
+		CHKiRet(jsonPathFindNext(*parent, namestart, &name, leaf, parent, bCreate));
 	}
 	if(*parent == NULL)
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
@@ -5006,7 +5006,7 @@ msgDelJSON(smsg_t * const pM, uchar *name)
 		*jroot = NULL;
 	} else {
 		leaf = jsonPathGetLeaf(name, ustrlen(name));
-		CHKiRet(jsonPathFindParent(*jroot, name, leaf, &parent, 1));
+		CHKiRet(jsonPathFindParent(*jroot, name, leaf, &parent, 0));
 		if(jsonVarExtract(parent, (char*)leaf, &leafnode) == FALSE)
 			leafnode = NULL;
 		if(leafnode == NULL) {
