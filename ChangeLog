@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2010.0 (aka 2020.08) 2020-10-00
+- 2020-09-23: core/network bugfix: obey net.enableDNS=off when querying local hostname
+  Local hostname resolution used DNS queries even if the enableDNS was set to off, and
+  this could cause unexpected delays in the HUP signal handling if the DNS server was
+  not responsive.
+  Thanks to Samu Nuutamo for the fix.
 - 2020-09-14: core bugfix: potential segfault on query of PROGRAMNAME property
   A data race can happen on variable iLenProgram as it is not guarded
   by the message mutex at time of query. This can lead to it being
