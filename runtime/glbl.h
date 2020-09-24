@@ -111,6 +111,7 @@ ENDinterface(glbl)
 /* the remaining prototypes */
 PROTOTYPEObj(glbl);
 
+extern int glblJsonFormatOpt;
 extern int glblDebugOnShutdown;	/* start debug log when we are shut down */
 extern int glblReportNewSenders;
 extern int glblReportGoneAwaySenders;

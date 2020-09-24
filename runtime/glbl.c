@@ -39,6 +39,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <errno.h>
+#include <json.h>
 
 #include "rsyslog.h"
 #include "obj.h"
@@ -130,6 +131,7 @@ static int bSpaceLFOnRcv = 0; /* replace newlines with spaces on reception: 0 - 
 static int bEscape8BitChars = 0; /* escape characters > 127 on reception: 0 - no, 1 - yes */
 static int bEscapeTab = 1; /* escape tab control character when doing CC escapes: 0 - no, 1 - yes */
 static int bParserEscapeCCCStyle = 0; /* escape control characters in c style: 0 - no, 1 - yes */
+
 short janitorInterval = 10; /* interval (in minutes) at which the janitor runs */
 int glblReportNewSenders = 0;
 int glblReportGoneAwaySenders = 0;
@@ -146,6 +148,14 @@ int glblPermitCtlC = 0;
 int glblInputTimeoutShutdown = 1000; /* input shutdown timeout in ms */
 int glblShutdownQueueDoubleSize = 0;
 static const uchar * operatingStateFile = NULL;
+
+/*
+ * For global option CompactJsonString:
+ *   Compact the JSON variable string, without extra space.
+ *   Considering compatibility issues, the default options(CompactJsonString = "off")
+ *   keep the same as before.
+ */
+int glblJsonFormatOpt = JSON_C_TO_STRING_SPACED;
 
 uint64_t glblDevOptions = 0; /* to be used by developers only */
 
@@ -167,6 +177,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "operatingstatefile", eCmdHdlrString, 0 },
 	{ "dropmsgswithmaliciousdnsptrrecords", eCmdHdlrBinary, 0 },
 	{ "localhostname", eCmdHdlrGetWord, 0 },
+	{ "compactjsonstring", eCmdHdlrBinary, 0 },
 	{ "preservefqdn", eCmdHdlrBinary, 0 },
 	{ "debug.onshutdown", eCmdHdlrBinary, 0 },
 	{ "debug.logfile", eCmdHdlrString, 0 },
@@ -1353,6 +1364,12 @@ glblDoneLoadCnf(void)
 				es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 		} else if(!strcmp(paramblk.descr[i].name, "preservefqdn")) {
 			bPreserveFQDN = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "compactjsonstring")) {
+			if (cnfparamvals[i].val.d.n) {
+				glblJsonFormatOpt = JSON_C_TO_STRING_PLAIN;
+			} else {
+				glblJsonFormatOpt = JSON_C_TO_STRING_SPACED;
+			}
 		} else if(!strcmp(paramblk.descr[i].name,
 				"dropmsgswithmaliciousdnsptrrecords")) {
 			bDropMalPTRMsgs = (int) cnfparamvals[i].val.d.n;
