@@ -1,5 +1,17 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2010.0 (aka 2020.08) 2020-10-00
+- 2020-09-28: gnutls subsysem bugfix: potential hang on session closure
+  Some TLS servers don't reply to graceful shutdown requests "for
+  optimization". This results in rsyslog's omfwd+gtls client to wait
+  forever for a reply of the TLS server which never comes, due to shutting
+  down the connection with gnutls_bye(GNUTLS_SHUT_RDWR).
+  On systemd systems, commands such as "systemctl restart rsyslog" just
+  hang for 1m30 and rsyslogd gets killed upon timeout by systemd.
+  This is fixed by replacing the call to gnutls_bye(GNUTLS_SHUT_RDWR) by calls to
+  gnutls_bye(GNUTLS_SHUT_WR) which is sufficient and doesn't wait for a
+  server reply.
+  As an example, Kiwi Syslog server is known to cause this issue.
+  Thanks to Renaud Métrich for the patch.
 - 2020-09-23: core/network bugfix: obey net.enableDNS=off when querying local hostname
   Local hostname resolution used DNS queries even if the enableDNS was set to off, and
   this could cause unexpected delays in the HUP signal handling if the DNS server was
