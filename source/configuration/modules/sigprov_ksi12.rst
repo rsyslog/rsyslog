@@ -34,12 +34,12 @@ To get started with log signing:
 - Sign up to the Guardtime tryout service to be able to connect to KSI blockchain:
   `guardtime.com/technology/blockchain-developers <https://guardtime.com/technology/blockchain-developers>`_
 - Install the ``libksi`` library (v3.13 or later) from Guardtime repository either for RHEL/CentOS 6
-  `<http://download.guardtime.com/ksi/configuration/guardtime.el6.repo>`_
-  or RHEL/CentOS 7 `<http://download.guardtime.com/ksi/configuration/guardtime.el7.repo>`_
+  `<https://download.guardtime.com/ksi/configuration/guardtime.el6.repo>`_
+  or RHEL/CentOS 7 `<https://download.guardtime.com/ksi/configuration/guardtime.el7.repo>`_
 - Install the ``rsyslog-ksi-ls12`` module (same version as rsyslog) from Adiscon repository.
 - Install the accompanying ``logksi`` tool (v1.0 or later) from Guardtime repository either for RHEL/CentOS 6
-  `<http://download.guardtime.com/ksi/configuration/guardtime.el6.repo>`_
-  or RHEL/CentOS 7 `<http://download.guardtime.com/ksi/configuration/guardtime.el7.repo>`_
+  `<https://download.guardtime.com/ksi/configuration/guardtime.el6.repo>`_
+  or RHEL/CentOS 7 `<https://download.guardtime.com/ksi/configuration/guardtime.el7.repo>`_
 
 Currently the log signing is only supported by the file output module, thus the action type must be ``omfile``. To activate signing, add the following parameters to the action of interest in your rsyslog configuration file:
 
