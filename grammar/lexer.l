@@ -314,6 +314,7 @@ int fileno(FILE *stream);
 					        "escaped, problem string is: %s",
 						yytext); }
 <EXPR>[ \t\n]			{ cnfPrintToken(yytext); }
+<EXPR>"exists"			{ cnfPrintToken(yytext); return EXISTS; } /* special case function (see rainerscript.c) */
 <EXPR>[a-z][a-z0-9_]*		{ cnfPrintToken(yytext); yylval.estr = es_newStrFromCStr(yytext, yyleng);
 				  return FUNC; }
 <EXPR>.				{ cnfPrintToken(yytext); parser_errmsg("invalid character '%s' in expression "

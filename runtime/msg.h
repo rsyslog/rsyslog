@@ -229,8 +229,9 @@ void getInputName(const smsg_t * const pM, uchar **ppsz, int *const plen);
 int getHOSTNAMELen(smsg_t *pM);
 uchar *getProgramName(smsg_t *pM, sbool bLockMutex);
 uchar *getRcvFrom(smsg_t *pM);
-rsRetVal propNameToID(uchar *pName, propid_t *pPropID);
+rsRetVal propNameToID(const uchar *pName, propid_t *pPropID);
 uchar *propIDToName(propid_t propID);
+rsRetVal ATTR_NONNULL() msgCheckVarExists(smsg_t *const pMsg, msgPropDescr_t *pProp);
 rsRetVal msgGetJSONPropJSON(smsg_t *pMsg, msgPropDescr_t *pProp, struct json_object **pjson);
 rsRetVal msgGetJSONPropJSONorString(smsg_t * const pMsg, msgPropDescr_t *pProp, struct json_object **pjson,
 uchar **pcstr);
@@ -238,7 +239,7 @@ rsRetVal getJSONPropVal(smsg_t *pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_si
 unsigned short *pbMustBeFreed);
 rsRetVal msgSetJSONFromVar(smsg_t *pMsg, uchar *varname, struct svar *var, int force_reset);
 rsRetVal msgDelJSON(smsg_t *pMsg, uchar *varname);
-rsRetVal jsonFind(struct json_object *jroot, msgPropDescr_t *pProp, struct json_object **jsonres);
+rsRetVal jsonFind(smsg_t *const pMsg, msgPropDescr_t *pProp, struct json_object **jsonres);
 
 rsRetVal msgPropDescrFill(msgPropDescr_t *pProp, uchar *name, int nameLen);
 void msgPropDescrDestruct(msgPropDescr_t *pProp);

@@ -97,13 +97,13 @@ struct nvlst {
  * be the sole foundation for the AST.
  *
  * nodetypes (list not yet complete)
+ * A - (string) array
  * F - function
  * N - number
  * P - fparamlst
  * R - rule
  * S - string
  * V - var
- * A - (string) array
  * ... plus the S_* #define's below:
  */
 #define S_STOP 4000
@@ -118,6 +118,7 @@ struct nvlst {
 #define S_FOREACH 4009
 #define S_RELOAD_LOOKUP_TABLE 4010
 #define S_CALL_INDIRECT 4011
+#define S_FUNC_EXISTS 4012 /* special case function which must get varname only */
 
 enum cnfFiltType { CNFFILT_NONE, CNFFILT_PRI, CNFFILT_PROP, CNFFILT_SCRIPT };
 const char* cnfFiltType2str(const enum cnfFiltType filttype);
@@ -262,6 +263,12 @@ struct cnffunc {
 } __attribute__((aligned (8)));
 
 
+struct cnffuncexists {
+	unsigned nodetype;
+	const char *varname;
+	msgPropDescr_t prop;
+} __attribute__((aligned (8)));
+
 struct scriptFunct {
 	const char *fname;
 	unsigned short minParams;
@@ -354,6 +361,7 @@ struct cnfnumval* cnfnumvalNew(long long val);
 struct cnfstringval* cnfstringvalNew(es_str_t *estr);
 struct cnfvar* cnfvarNew(char *name);
 struct cnffunc * cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst);
+struct cnffuncexists * cnffuncexistsNew(const char *varname);
 struct cnffparamlst * cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *next);
 int cnfDoInclude(const char *name, const int optional);
 int cnfparamGetIdx(struct cnfparamblk *params, const char *name);

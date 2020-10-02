@@ -142,6 +142,7 @@ tokenToString(const int token)
 	case 'V': tokstr ="V"; break;
 	case 'F': tokstr ="F"; break;
 	case 'A': tokstr ="A"; break;
+	case S_FUNC_EXISTS: tokstr ="exists()"; break;
 	default: snprintf(tokbuf, sizeof(tokbuf), "%c[%d]", token, token);
 		 tokstr = tokbuf; break;
 	}
@@ -2750,6 +2751,27 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 	}
 }
 
+
+/* Perform the special "exists()" function to check presence of a variable.
+ */
+static int ATTR_NONNULL()
+evalFuncExists(struct cnffuncexists *__restrict__ const fexists, void *__restrict__ const usrptr)
+{
+	int r = 0;
+	rsRetVal localRet;
+
+	if(fexists->prop.id == PROP_CEE        ||
+	   fexists->prop.id == PROP_LOCAL_VAR  ||
+	   fexists->prop.id == PROP_GLOBAL_VAR   ) {
+		localRet = msgCheckVarExists((smsg_t*)usrptr, &fexists->prop);
+		if(localRet == RS_RET_OK) {
+			r = 1;
+		}
+	}
+
+	return r;
+}
+
 static void
 evalVar(struct cnfvar *__restrict__ const var, void *__restrict__ const usrptr,
 	struct svar *__restrict__ const ret)
@@ -3352,6 +3374,10 @@ cnfexprEval(const struct cnfexpr *__restrict__ const expr,
 	case 'F':
 		doFuncCall((struct cnffunc*) expr, ret, usrptr, pWti);
 		break;
+	case S_FUNC_EXISTS:
+		ret->datatype = 'N';
+		ret->d.n = evalFuncExists((struct cnffuncexists*) expr, usrptr);
+		break;
 	default:
 		ret->datatype = 'N';
 		ret->d.n = 0ll;
@@ -3886,6 +3912,10 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		doIndent(indent);
 		dbgprintf("NOT\n");
 		cnfexprPrint(expr->r, indent+1);
+		break;
+	case S_FUNC_EXISTS:
+		doIndent(indent);
+		dbgprintf("exists(%s)\n", ((struct cnffuncexists*)expr)->varname);
 		break;
 	case 'S':
 		doIndent(indent);
@@ -5194,6 +5224,23 @@ cnffuncNew_prifilt(int fac)
 		((struct funcData_prifilt *)func->funcdata)->pmask[fac] = TABLE_ALLPRI;
 	}
 	return func;
+}
+
+
+/* The check-if-variable exists "exists($!var)" is a special beast and as such
+ * also needs special code (we must not evaluate the var but need its name).
+ */
+struct cnffuncexists * ATTR_NONNULL()
+cnffuncexistsNew(const char *const varname)
+{
+	struct cnffuncexists* f_exists;
+
+	if((f_exists = malloc(sizeof(struct cnffuncexists))) != NULL) {
+		f_exists->nodetype = S_FUNC_EXISTS;
+		f_exists->varname = varname;
+		msgPropDescrFill(&f_exists->prop, (uchar*)varname, strlen(varname));
+	}
+	return f_exists;
 }
 
 

@@ -567,7 +567,7 @@ getRcvFromIP(smsg_t * const pM)
 
 /* map a property name (string) to a property ID */
 rsRetVal
-propNameToID(uchar *pName, propid_t *pPropID)
+propNameToID(const uchar *const pName, propid_t *const pPropID)
 {
 	DEFiRet;
 
@@ -4838,7 +4838,8 @@ finalize_it:
 }
 
 static rsRetVal
-jsonPathFindParent(struct json_object *jroot, uchar *name, uchar *leaf, struct json_object **parent, int bCreate)
+jsonPathFindParent(struct json_object *jroot, uchar *name, uchar *leaf, struct json_object **parent,
+	const int bCreate)
 {
 	uchar *namestart;
 	DEFiRet;
@@ -4876,27 +4877,52 @@ jsonMerge(struct json_object *existing, struct json_object *json)
 
 /* find a JSON structure element (field or container doesn't matter).  */
 rsRetVal
-jsonFind(struct json_object *jroot, msgPropDescr_t *pProp, struct json_object **jsonres)
+jsonFind(smsg_t *const pMsg, msgPropDescr_t *pProp, struct json_object **jsonres)
 {
 	uchar *leaf;
 	struct json_object *parent;
 	struct json_object *field;
+	struct json_object **jroot = NULL;
+	pthread_mutex_t *mut = NULL;
 	DEFiRet;
 
-	if(jroot == NULL) {
+	CHKiRet(getJSONRootAndMutex(pMsg, pProp->id, &jroot, &mut));
+	pthread_mutex_lock(mut);
+
+	if(*jroot == NULL) {
 		field = NULL;
 		goto finalize_it;
 	}
 
 	if(!strcmp((char*)pProp->name, "!")) {
-		field = jroot;
+		field = *jroot;
+	} else if(!strcmp((char*)pProp->name, ".")) {
+		field = *jroot;
 	} else {
 		leaf = jsonPathGetLeaf(pProp->name, pProp->nameLen);
-		CHKiRet(jsonPathFindParent(jroot, pProp->name, leaf, &parent, 0));
+		CHKiRet(jsonPathFindParent(*jroot, pProp->name, leaf, &parent, 0));
 		if(jsonVarExtract(parent, (char*)leaf, &field) == FALSE)
 			field = NULL;
 	}
 	*jsonres = field;
+
+finalize_it:
+	if(mut != NULL)
+		pthread_mutex_unlock(mut);
+	RETiRet;
+}
+
+/* check if JSON variable exists (works on terminal var and container) */
+rsRetVal ATTR_NONNULL()
+msgCheckVarExists(smsg_t *const pMsg, msgPropDescr_t *pProp)
+{
+	struct json_object *jsonres = NULL;
+	DEFiRet;
+
+	CHKiRet(jsonFind(pMsg, pProp, &jsonres));
+	if(jsonres == NULL) {
+		iRet = RS_RET_NOT_FOUND;
+	}
 
 finalize_it:
 	RETiRet;
