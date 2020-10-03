@@ -1,5 +1,15 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2010.0 (aka 2020.08) 2020-10-00
+Scheduled Release 8.2010.0 (aka 2020.10) 2020-10-??
+- 2020-10-03: core bugfix: do not create empty JSON objects on non-existent key access
+  Performing a condition (eg: check for an empty string) on a subtree key that do not
+  exists (depth > 1 from the root container), creates an empty "parent" object.
+  Depending on your context, you may end up with (kind of...) annoying garbage when
+  producing object documents (for instance to index in ES).
+  Also fixes a hypothetical hang condition with an almost (?) unused plugin parameter
+  passing mode, for details see
+  https://github.com/rsyslog/rsyslog/issues/4436
+  closes https://github.com/rsyslog/rsyslog/issues/4430
+  Thanks to Julien Thomas for the patch.
 - 2020-09-28: gnutls subsysem bugfix: potential hang on session closure
   Some TLS servers don't reply to graceful shutdown requests "for
   optimization". This results in rsyslog's omfwd+gtls client to wait
