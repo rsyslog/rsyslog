@@ -315,7 +315,7 @@ RebindInterval
 
 Permits to specify an interval at which the current connection is
 broken and re-established. This setting is primarily an aid to load
-balancers. After the configured number of batches (equals roughly to 
+balancers. After the configured number of batches (equals roughly to
 messages for UDP traffic, dependent on batch size for TCP) has been
 transmitted, the current connection is terminated and a new one
 started. Note that this setting applies to both TCP and UDP traffic.
@@ -389,6 +389,33 @@ is marked to need keepalive, this counter is not used any further.
 The default, 0, means that the operating system defaults are used.
 This has only effect if keep-alive is enabled. The functionality may
 not be available on all platforms.
+
+
+
+RateLimit.Interval
+^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "max", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "0", "", "no", "none"
+
+Specifies the rate-limiting interval in seconds. Default value is 0,
+which turns off rate limiting.
+
+RateLimit.Burst
+^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "max", "mandatory", "none"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "200", "(2^32)-1", "no", "none"
+
+Specifies the rate-limiting burst in number of messages.
 
 
 StreamDriver
@@ -508,7 +535,7 @@ StreamDriver.TlsVerifyDepth
 
 Specifies the allowed maximum depth for the certificate chain verification.
 Support added in v8.2001.0, supported by GTLS and OpenSSL driver.
-If not set, the API default will be used. 
+If not set, the API default will be used.
 For OpenSSL, the default is 100 - see the doc for more:
 https://www.openssl.org/docs/man1.1.1/man3/SSL_set_verify_depth.html
 For GnuTLS, the default is 5 - see the doc for more:
@@ -676,5 +703,3 @@ syslogs to remote servers in different namespaces specify them as separate actio
    action(type="omfwd" Target="192.168.1.13" Port="10514" Protocol="tcp" NetworkNamespace="ns_eth0.0")
    action(type="omfwd" Target="192.168.2.24" Port="10514" Protocol="tcp" NetworkNamespace="ns_eth0.1")
    action(type="omfwd" Target="192.168.3.38" Port="10514" Protocol="tcp" NetworkNamespace="ns_eth0.2")
-
-
