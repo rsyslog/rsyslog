@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2010.0 (aka 2020.10) 2020-10-??
+- 2020-10-06: add 'exists()' script function to check if variable exists
+  This implements a way to check if rsyslog variables (e.g. '$!path!var') is
+  currently set of not.
+  Sample: if exists($!somevar) then ...
+  closes https://github.com/rsyslog/rsyslog/issues/4385
 - 2020-10-03: core bugfix: do not create empty JSON objects on non-existent key access
   Performing a condition (eg: check for an empty string) on a subtree key that do not
   exists (depth > 1 from the root container), creates an empty "parent" object.
