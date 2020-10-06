@@ -150,10 +150,20 @@ doRetry(nsd_gtls_t *pNsd)
 	switch(pNsd->rtryCall) {
 		case gtlsRtry_handshake:
 			gnuRet = gnutls_handshake(pNsd->sess);
-			if(gnuRet == 0) {
+			if(gnuRet == GNUTLS_E_AGAIN || gnuRet == GNUTLS_E_INTERRUPTED) {
+				dbgprintf("GnuTLS handshake retry did not finish - "
+					"setting to retry (this is OK and can happen)\n");
+				FINALIZE;
+			} else if(gnuRet == 0) {
 				pNsd->rtryCall = gtlsRtry_None; /* we are done */
 				/* we got a handshake, now check authorization */
 				CHKiRet(gtlsChkPeerAuth(pNsd));
+			} else {
+				uchar *pGnuErr = gtlsStrerror(gnuRet);
+				LogError(0, RS_RET_TLS_HANDSHAKE_ERR,
+					"GnuTLS handshake retry returned error: %s\n", pGnuErr);
+				free(pGnuErr);
+				ABORT_FINALIZE(RS_RET_TLS_HANDSHAKE_ERR);
 			}
 			break;
 		case gtlsRtry_recv:
