@@ -8,7 +8,7 @@
  * PRI filter) are very hard to beat in ease of use, at least for simpler
  * cases.
  *
- * Copyright 2011-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2011-2020 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -55,6 +55,7 @@ extern int yyerror(const char*);
 	struct cnfexpr *expr;
 	struct cnfarray *arr;
 	struct cnffunc *func;
+	struct cnffuncexists *exists;
 	struct cnffparamlst *fparams;
 	struct cnfitr *itr;
 }
@@ -74,6 +75,7 @@ extern int yyerror(const char*);
 %token RESET
 %token UNSET
 %token CONTINUE
+%token EXISTS
 %token <cnfstmt> CALL
 %token <cnfstmt> CALL_INDIRECT
 %token <s> LEGACY_ACTION
@@ -217,6 +219,7 @@ expr:	  expr AND expr			{ $$ = cnfexprNew(AND, $1, $3); }
 	| expr '%' expr			{ $$ = cnfexprNew('%', $1, $3); }
 	| '(' expr ')'			{ $$ = $2; }
 	| '-' expr %prec UMINUS		{ $$ = cnfexprNew('M', NULL, $2); }
+	| EXISTS '(' VAR ')'		{ $$ = (struct cnfexpr*) cnffuncexistsNew($3); }
 	| FUNC '(' ')'			{ $$ = (struct cnfexpr*) cnffuncNew($1, NULL); }
 	| FUNC '(' fparams ')'		{ $$ = (struct cnfexpr*) cnffuncNew($1, $3); }
 	| NUMBER			{ $$ = (struct cnfexpr*) cnfnumvalNew($1); }

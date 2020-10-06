@@ -285,7 +285,7 @@ tplToJSON(struct template *pTpl, smsg_t *pMsg, struct json_object **pjson, struc
 	DEFiRet;
 
 	if(pTpl->bHaveSubtree){
-		if(jsonFind(pMsg->json, &pTpl->subtree, pjson) != RS_RET_OK)
+		if(jsonFind(pMsg, &pTpl->subtree, pjson) != RS_RET_OK)
 			*pjson = NULL;
 		if(*pjson == NULL) {
 			/* we need to have a root object! */

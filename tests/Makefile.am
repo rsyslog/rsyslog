@@ -422,6 +422,12 @@ TESTS +=  \
 	rscript_parse_json.sh \
 	rscript_previous_action_suspended.sh \
 	rscript_str2num_negative.sh \
+	rscript_exists-yes.sh \
+	rscript_exists-yes2.sh \
+	rscript_exists-not1.sh \
+	rscript_exists-not2.sh \
+	rscript_exists-not3.sh \
+	rscript_exists-not4.sh \
 	rscript-config_enable-on.sh \
 	config_output-o-option.sh \
 	rs-cnum.sh \
@@ -1715,6 +1721,12 @@ EXTRA_DIST= \
 	rscript_backticks_empty_envvar-vg.sh \
 	rscript_previous_action_suspended.sh \
 	rscript_str2num_negative.sh \
+	rscript_exists-yes.sh \
+	rscript_exists-yes2.sh \
+	rscript_exists-not1.sh \
+	rscript_exists-not2.sh \
+	rscript_exists-not3.sh \
+	rscript_exists-not4.sh \
 	rs-cnum.sh \
 	rs-int2hex.sh \
 	rs-substring.sh \
