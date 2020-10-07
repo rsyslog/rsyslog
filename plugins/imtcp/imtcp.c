@@ -4,7 +4,7 @@
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c,
  * which at the time of the rsyslog fork was BSD-licensed)
  *
- * Copyright 2007-2017 Adiscon GmbH.
+ * Copyright 2007-2020 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -112,9 +112,7 @@ static struct configSettings_s {
 } cs;
 
 struct instanceConf_s {
-	uchar *pszBindPort;		/* port to bind to */
-	uchar *pszLstnPortFileName;	/* file dynamic port is written to */
-	uchar *pszBindAddr;             /* IP to bind socket to */
+	tcpLstnParams_t *cnf_params;	/**< listener config parameters */
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	uchar *pszInputName;		/* value for inputname property, NULL is OK and handled by core engine */
@@ -122,7 +120,6 @@ struct instanceConf_s {
 	sbool bSPFramingFix;
 	unsigned int ratelimitInterval;
 	unsigned int ratelimitBurst;
-	int bSuppOctetFram;
 	struct instanceConf_s *next;
 };
 
@@ -288,19 +285,20 @@ finalize_it:
 static rsRetVal
 createInstance(instanceConf_t **pinst)
 {
-	instanceConf_t *inst;
+	instanceConf_t *inst = NULL;
+
 	DEFiRet;
 	CHKmalloc(inst = malloc(sizeof(instanceConf_t)));
+	CHKmalloc(inst->cnf_params = (tcpLstnParams_t*) calloc(1, sizeof(tcpLstnParams_t)));
 	inst->next = NULL;
 	inst->pszBindRuleset = NULL;
 	inst->pszInputName = NULL;
-	inst->pszBindAddr = NULL;
 	inst->dfltTZ = NULL;
-	inst->bSuppOctetFram = -1; /* unset */
+	inst->cnf_params->bSuppOctetFram = -1; /* unset */
 	inst->bSPFramingFix = 0;
 	inst->ratelimitInterval = 0;
 	inst->ratelimitBurst = 10000;
-	inst->pszLstnPortFileName = NULL;
+	inst->cnf_params->pszLstnPortFileName = NULL;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -312,6 +310,9 @@ createInstance(instanceConf_t **pinst)
 
 	*pinst = inst;
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		free(inst);
+	}
 	RETiRet;
 }
 
@@ -328,7 +329,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 
 	CHKiRet(createInstance(&inst));
 
-	CHKmalloc(inst->pszBindPort = ustrdup((pNewVal == NULL || *pNewVal == '\0')
+	CHKmalloc(inst->cnf_params->pszPort = ustrdup((pNewVal == NULL || *pNewVal == '\0')
 				 	       ? (uchar*) "10514" : pNewVal));
 	if((cs.pszBindRuleset == NULL) || (cs.pszBindRuleset[0] == '\0')) {
 		inst->pszBindRuleset = NULL;
@@ -336,14 +337,14 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		CHKmalloc(inst->pszBindRuleset = ustrdup(cs.pszBindRuleset));
 	}
 	if((cs.lstnIP == NULL) || (cs.lstnIP[0] == '\0')) {
-		inst->pszBindAddr = NULL;
+		inst->cnf_params->pszAddr = NULL;
 	} else {
-		CHKmalloc(inst->pszBindAddr = ustrdup(cs.lstnIP));
+		CHKmalloc(inst->cnf_params->pszAddr = ustrdup(cs.lstnIP));
 	}
 	if((cs.lstnPortFile == NULL) || (cs.lstnPortFile[0] == '\0')) {
-		inst->pszBindAddr = NULL;
+		inst->cnf_params->pszAddr = NULL;
 	} else {
-		CHKmalloc(inst->pszLstnPortFileName = ustrdup(cs.lstnPortFile));
+		CHKmalloc(inst->cnf_params->pszLstnPortFileName = ustrdup(cs.lstnPortFile));
 	}
 
 	if((cs.pszInputName == NULL) || (cs.pszInputName[0] == '\0')) {
@@ -351,7 +352,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	} else {
 		CHKmalloc(inst->pszInputName = ustrdup(cs.pszInputName));
 	}
-	inst->bSuppOctetFram = cs.bSuppOctetFram;
+	inst->cnf_params->bSuppOctetFram = cs.bSuppOctetFram;
 
 finalize_it:
 	free(pNewVal);
@@ -407,7 +408,7 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 	}
 
 	/* initialized, now add socket and listener params */
-	DBGPRINTF("imtcp: trying to add port *:%s\n", inst->pszBindPort);
+	DBGPRINTF("imtcp: trying to add port *:%s\n", inst->cnf_params->pszPort);
 	CHKiRet(tcpsrv.SetRuleset(pOurTcpsrv, inst->pBindRuleset));
 	CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, inst->pszInputName == NULL ?
 						UCHAR_CONSTANT("imtcp") : inst->pszInputName));
@@ -416,12 +417,12 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 	CHKiRet(tcpsrv.SetbSPFramingFix(pOurTcpsrv, inst->bSPFramingFix));
 	CHKiRet(tcpsrv.SetLinuxLikeRatelimiters(pOurTcpsrv, inst->ratelimitInterval, inst->ratelimitBurst));
 
-	if((ustrcmp(inst->pszBindPort, UCHAR_CONSTANT("0")) == 0 && inst->pszLstnPortFileName == NULL)
-			|| ustrcmp(inst->pszBindPort, UCHAR_CONSTANT("0")) < 0) {
-		CHKmalloc(inst->pszBindPort = (uchar*)strdup("514"));
+	if((ustrcmp(inst->cnf_params->pszPort, UCHAR_CONSTANT("0")) == 0
+		&& inst->cnf_params->pszLstnPortFileName == NULL)
+			|| ustrcmp(inst->cnf_params->pszPort, UCHAR_CONSTANT("0")) < 0) {
+		CHKmalloc(inst->cnf_params->pszPort = (uchar*)strdup("514"));
 	}
-	tcpsrv.configureTCPListen(pOurTcpsrv, inst->pszBindPort, inst->bSuppOctetFram,
-		inst->pszBindAddr, inst->pszLstnPortFileName);
+	tcpsrv.configureTCPListen(pOurTcpsrv, inst->cnf_params);
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -456,9 +457,9 @@ CODESTARTnewInpInst
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(inppblk.descr[i].name, "port")) {
-			inst->pszBindPort = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			inst->cnf_params->pszPort = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "address")) {
-			inst->pszBindAddr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			inst->cnf_params->pszAddr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "name")) {
 			inst->pszInputName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "defaulttz")) {
@@ -468,13 +469,13 @@ CODESTARTnewInpInst
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
 			inst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "supportoctetcountedframing")) {
-			inst->bSuppOctetFram = (int) pvals[i].val.d.n;
+			inst->cnf_params->bSuppOctetFram = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
 			inst->ratelimitBurst = (unsigned int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
 			inst->ratelimitInterval = (unsigned int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "listenportfilename")) {
-			inst->pszLstnPortFileName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			inst->cnf_params->pszLstnPortFileName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			dbgprintf("imtcp: program error, non-handled "
 			  "param '%s'\n", inppblk.descr[i].name);
@@ -656,7 +657,7 @@ std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, insta
 {
 	LogError(0, NO_ERRCODE, "imtcp: ruleset '%s' for port %s not found - "
 			"using default ruleset instead", inst->pszBindRuleset,
-			inst->pszBindPort);
+			inst->cnf_params->pszPort);
 }
 
 BEGINcheckCnf
@@ -664,8 +665,8 @@ BEGINcheckCnf
 CODESTARTcheckCnf
 	for(inst = pModConf->root ; inst != NULL ; inst = inst->next) {
 		std_checkRuleset(pModConf, inst);
-		if(inst->bSuppOctetFram == FRAMING_UNSET)
-			inst->bSuppOctetFram = pModConf->bSuppOctetFram;
+		if(inst->cnf_params->bSuppOctetFram == FRAMING_UNSET)
+			inst->cnf_params->bSuppOctetFram = pModConf->bSuppOctetFram;
 	}
 	if(pModConf->root == NULL) {
 		LogError(0, RS_RET_NO_LISTNERS , "imtcp: module loaded, but "
@@ -713,12 +714,9 @@ CODESTARTfreeCnf
 		free(pModConf->permittedPeers);
 	}
 	for(inst = pModConf->root ; inst != NULL ; ) {
-		free(inst->pszBindPort);
-		free(inst->pszLstnPortFileName);
-		free(inst->pszBindAddr);
-		free(inst->pszBindRuleset);
-		free(inst->pszInputName);
-		free(inst->dfltTZ);
+		free((void*)inst->pszBindRuleset);
+		free((void*)inst->pszInputName);
+		free((void*)inst->dfltTZ);
 		del = inst;
 		inst = inst->next;
 		free(del);

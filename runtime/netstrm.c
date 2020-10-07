@@ -12,12 +12,18 @@
  * to carry out its work (including, and most importantly, transport
  * drivers).
  *
+ * Note on processing:
+ * - Initiating a listener may be driver-specific, but in regard to TLS/non-TLS
+ *   it actually is not. This is because TLS is negotiated after a connection
+ *   has been established. So it is the "acceptConnReq" driver entry where TLS
+ *   params need to be applied.
+ *
  * Work on this module begun 2008-04-17 by Rainer Gerhards. This code
  * borrows from librelp's tcp.c/.h code. librelp is dual licensed and
  * Rainer Gerhards and Adiscon GmbH have agreed to permit using the code
  * under the terms of the GNU Lesser General Public License.
  *
- * Copyright 2007-2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2020 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -134,18 +140,17 @@ finalize_it:
  * pLstnPort must point to a port name or number. NULL is NOT permitted.
  * rgerhards, 2008-04-22
  */
-static rsRetVal
+static rsRetVal ATTR_NONNULL(1,3,5)
 LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
-	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax,
-	 uchar *pszLstnPortFileName)
+	 const int iSessMax, const tcpLstnParams_t *const cnf_params)
 {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pNS, netstrms);
 	assert(fAddLstn != NULL);
-	assert(pLstnPort != NULL);
+	assert(cnf_params->pszPort != NULL);
 
-	CHKiRet(pNS->Drvr.LstnInit(pNS, pUsr, fAddLstn, pLstnPort, pLstnIP, iSessMax, pszLstnPortFileName));
+	CHKiRet(pNS->Drvr.LstnInit(pNS, pUsr, fAddLstn, iSessMax, cnf_params));
 
 finalize_it:
 	RETiRet;

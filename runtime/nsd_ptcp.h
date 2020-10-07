@@ -1,6 +1,6 @@
 /* An implementation of the nsd interface for plain tcp sockets.
  *
- * Copyright 2007-2012 Adiscon GmbH.
+ * Copyright 2007-2020 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -23,6 +23,7 @@
 #define INCLUDED_NSD_PTCP_H
 
 #include <sys/socket.h>
+#include "tcpsrv.h"
 
 #include "nsd.h"
 typedef nsd_if_t nsd_ptcp_if_t; /* we just *implement* this interface */

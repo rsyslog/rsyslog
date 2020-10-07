@@ -194,8 +194,8 @@ SetLstnInfo(tcps_sess_t *pThis, tcpLstnPortList_t *pLstnInfo)
 	assert(pLstnInfo != NULL);
 	pThis->pLstnInfo = pLstnInfo;
 	/* set cached elements */
-	pThis->bSuppOctetFram = pLstnInfo->bSuppOctetFram;
-	pThis->bSPFramingFix = pLstnInfo->bSPFramingFix;
+	pThis->bSuppOctetFram = pLstnInfo->cnf_params->bSuppOctetFram;
+	pThis->bSPFramingFix = pLstnInfo->cnf_params->bSPFramingFix;
 	RETiRet;
 }
 
@@ -235,6 +235,7 @@ defaultDoSubmitMessage(tcps_sess_t *pThis, struct syslogTime *stTime, time_t ttG
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
+	const tcpLstnParams_t *const cnf_params = pThis->pLstnInfo->cnf_params;
 	
 	if(pThis->iMsg == 0) {
 		DBGPRINTF("discarding zero-sized message\n");
@@ -249,15 +250,15 @@ defaultDoSubmitMessage(tcps_sess_t *pThis, struct syslogTime *stTime, time_t ttG
 	/* we now create our own message object and submit it to the queue */
 	CHKiRet(msgConstructWithTime(&pMsg, stTime, ttGenTime));
 	MsgSetRawMsg(pMsg, (char*)pThis->pMsg, pThis->iMsg);
-	MsgSetInputName(pMsg, pThis->pLstnInfo->pInputName);
-	if(pThis->pLstnInfo->dfltTZ[0] != '\0')
-		MsgSetDfltTZ(pMsg, (char*) pThis->pLstnInfo->dfltTZ);
+	MsgSetInputName(pMsg, cnf_params->pInputName);
+	if(cnf_params->dfltTZ[0] != '\0')
+		MsgSetDfltTZ(pMsg, (char*) cnf_params->dfltTZ);
 	MsgSetFlowControlType(pMsg, pThis->pSrv->bUseFlowControl
 			            ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY);
 	pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
 	MsgSetRcvFrom(pMsg, pThis->fromHost);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pThis->fromHostIP));
-	MsgSetRuleset(pMsg, pThis->pLstnInfo->pRuleset);
+	MsgSetRuleset(pMsg, cnf_params->pRuleset);
 
 	STATSCOUNTER_INC(pThis->pLstnInfo->ctrSubmit, pThis->pLstnInfo->mutCtrSubmit);
 	ratelimitAddMsg(pThis->pLstnInfo->ratelimiter, pMultiSub, pMsg);

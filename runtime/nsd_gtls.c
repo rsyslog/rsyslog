@@ -1692,14 +1692,13 @@ Abort(nsd_t *pNsd)
  * a session, but not during listener setup.
  * gerhards, 2008-04-25
  */
-static rsRetVal
+static rsRetVal ATTR_NONNULL(1,3,5)
 LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
-	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax,
-	 uchar *pszLstnPortFileName)
+	 const int iSessMax, const tcpLstnParams_t *const cnf_params)
 {
 	DEFiRet;
 	CHKiRet(gtlsGlblInitLstn());
-	iRet = nsd_ptcp.LstnInit(pNS, pUsr, fAddLstn, pLstnPort, pLstnIP, iSessMax, pszLstnPortFileName);
+	iRet = nsd_ptcp.LstnInit(pNS, pUsr, fAddLstn, iSessMax, cnf_params);
 finalize_it:
 	RETiRet;
 }
@@ -1785,6 +1784,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 		FINALIZE;
 	}
 	/* copy Properties to pnew first */
+dbgprintf("RGER: pThis %p pNew %p, authMode %d\n", pThis, pNew, pThis->authMode);
 	pNew->authMode = pThis->authMode;
 	pNew->permitExpiredCerts = pThis->permitExpiredCerts;
 	pNew->pPermPeers = pThis->pPermPeers;

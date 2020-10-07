@@ -334,34 +334,38 @@ static rsRetVal
 actGSSListener(uchar *port)
 {
 	DEFiRet;
+	tcpLstnParams_t *cnf_params = NULL;
 	gsssrv_t *pGSrv = NULL;
 
-	if(pOurTcpsrv == NULL) {
-		/* first create/init the gsssrv "object" */
-		if((pGSrv = calloc(1, sizeof(gsssrv_t))) == NULL)
-			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	assert(pOurTcpsrv == NULL);
+	CHKmalloc(cnf_params = (tcpLstnParams_t*) calloc(1, sizeof(tcpLstnParams_t)));
+	/* first create/init the gsssrv "object" */
+	if((pGSrv = calloc(1, sizeof(gsssrv_t))) == NULL)
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
-		pGSrv->allowedMethods = ALLOWEDMETHOD_GSS;
-		if(bPermitPlainTcp)
-			pGSrv->allowedMethods |= ALLOWEDMETHOD_TCP;
-		/* gsssrv initialized */
+	pGSrv->allowedMethods = ALLOWEDMETHOD_GSS;
+	if(bPermitPlainTcp)
+		pGSrv->allowedMethods |= ALLOWEDMETHOD_TCP;
+	/* gsssrv initialized */
 
-		CHKiRet(tcpsrv.Construct(&pOurTcpsrv));
-		CHKiRet(tcpsrv.SetUsrP(pOurTcpsrv, pGSrv));
-		CHKiRet(tcpsrv.SetCBOnSessConstructFinalize(pOurTcpsrv, OnSessConstructFinalize));
-		CHKiRet(tcpsrv.SetCBOnSessDestruct(pOurTcpsrv, OnSessDestruct));
-		CHKiRet(tcpsrv.SetCBIsPermittedHost(pOurTcpsrv, isPermittedHost));
-		CHKiRet(tcpsrv.SetCBRcvData(pOurTcpsrv, doRcvData));
-		CHKiRet(tcpsrv.SetCBOpenLstnSocks(pOurTcpsrv, doOpenLstnSocks));
-		CHKiRet(tcpsrv.SetCBOnSessAccept(pOurTcpsrv, onSessAccept));
-		CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
-		CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
-		CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, UCHAR_CONSTANT("imgssapi")));
-		CHKiRet(tcpsrv.SetKeepAlive(pOurTcpsrv, bKeepAlive));
-		CHKiRet(tcpsrv.SetOrigin(pOurTcpsrv, UCHAR_CONSTANT("imgssapi")));
-		tcpsrv.configureTCPListen(pOurTcpsrv, port, 1, NULL, NULL);
-		CHKiRet(tcpsrv.ConstructFinalize(pOurTcpsrv));
-	}
+	CHKiRet(tcpsrv.Construct(&pOurTcpsrv));
+	CHKiRet(tcpsrv.SetUsrP(pOurTcpsrv, pGSrv));
+	CHKiRet(tcpsrv.SetCBOnSessConstructFinalize(pOurTcpsrv, OnSessConstructFinalize));
+	CHKiRet(tcpsrv.SetCBOnSessDestruct(pOurTcpsrv, OnSessDestruct));
+	CHKiRet(tcpsrv.SetCBIsPermittedHost(pOurTcpsrv, isPermittedHost));
+	CHKiRet(tcpsrv.SetCBRcvData(pOurTcpsrv, doRcvData));
+	CHKiRet(tcpsrv.SetCBOpenLstnSocks(pOurTcpsrv, doOpenLstnSocks));
+	CHKiRet(tcpsrv.SetCBOnSessAccept(pOurTcpsrv, onSessAccept));
+	CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
+	CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
+	CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, UCHAR_CONSTANT("imgssapi")));
+	CHKiRet(tcpsrv.SetKeepAlive(pOurTcpsrv, bKeepAlive));
+	CHKiRet(tcpsrv.SetOrigin(pOurTcpsrv, UCHAR_CONSTANT("imgssapi")));
+	cnf_params->pszPort = port;
+	cnf_params->bSuppOctetFram = 1;
+	tcpsrv.configureTCPListen(pOurTcpsrv, cnf_params);
+	CHKiRet(tcpsrv.ConstructFinalize(pOurTcpsrv));
+	cnf_params = NULL;
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -370,6 +374,7 @@ finalize_it:
 			tcpsrv.Destruct(&pOurTcpsrv);
 		free(pGSrv);
 	}
+	free(cnf_params);
 	RETiRet;
 }
 

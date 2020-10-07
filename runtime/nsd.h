@@ -84,8 +84,8 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetKeepAliveTime)(nsd_t *pThis, int keepAliveTime);
 	rsRetVal (*SetGnutlsPriorityString)(nsd_t *pThis, uchar *gnutlsPriorityString);
 	/* v12 -- parameter pszLstnPortFileName added to LstnInit()*/
-	rsRetVal (*LstnInit)(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
-				 uchar *pLstnPort, uchar *pLstnIP, int iSessMax, uchar *pszLstnPortFileName);
+	rsRetVal (ATTR_NONNULL(1,3,5) *LstnInit)(netstrms_t *pNS, void *pUsr, rsRetVal(*)(void*,netstrm_t*),
+			 const int iSessMax, const tcpLstnParams_t *const cnf_params);
 	/* v13 -- two new binary flags added to gtls driver enabling stricter operation */
 	rsRetVal (*SetCheckExtendedKeyUsage)(nsd_t *pThis, int ChkExtendedKeyUsage);
 	rsRetVal (*SetPrioritizeSAN)(nsd_t *pThis, int prioritizeSan);

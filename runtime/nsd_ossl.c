@@ -1308,16 +1308,15 @@ Abort(nsd_t *pNsd)
  */
 static rsRetVal
 LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
-	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax, uchar *pszLstnPortFileName)
+	 const int iSessMax, const tcpLstnParams_t *const cnf_params)
 {
 	DEFiRet;
 
 	dbgprintf("LstnInit for openssl: entering LstnInit (%p) for %s:%s SessMax=%d\n",
-		fAddLstn, pLstnIP, pLstnPort, iSessMax);
+		fAddLstn, cnf_params->pszAddr, cnf_params->pszPort, iSessMax);
 
 	/* Init TCP Listener using base ptcp class */
-	iRet = nsd_ptcp.LstnInit(pNS, pUsr, fAddLstn, pLstnPort, pLstnIP,
-			iSessMax, pszLstnPortFileName);
+	iRet = nsd_ptcp.LstnInit(pNS, pUsr, fAddLstn, iSessMax, cnf_params);
 	RETiRet;
 }
 
