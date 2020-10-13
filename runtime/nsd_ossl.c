@@ -51,7 +51,6 @@
 #include "nsdsel_ossl.h"
 #include "nsd_ossl.h"
 #include "unicode-helper.h"
-
 /* things to move to some better place/functionality - TODO */
 // #define CRLFILE "crl.pem"
 
@@ -621,7 +620,7 @@ osslInitSession(nsd_ossl_t *pThis) /* , nsd_ossl_t *pServer) */
 		osslLastSSLErrorMsg(0, pThis->ssl, LOG_ERR, "osslInitSession");
 		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 	}
-	
+
 	// Set SSL_MODE_AUTO_RETRY to SSL obj
 	SSL_set_mode(pThis->ssl, SSL_MODE_AUTO_RETRY);
 
@@ -721,8 +720,10 @@ osslChkPeerFingerprint(nsd_ossl_t *pThis, X509 *pCert)
 		dbgprintf("osslChkPeerFingerprint: invalid peer fingerprint, not permitted to talk to it\n");
 		if(pThis->bReportAuthErr == 1) {
 			errno = 0;
-			LogError(0, RS_RET_INVALID_FINGERPRINT, "error: peer fingerprint '%s' unknown - we are "
-					"not permitted to talk to it", cstrGetSzStrNoNULL(pstrFingerprint));
+			LogError(0, RS_RET_INVALID_FINGERPRINT,
+			"nsd_ossl:error:"
+			" peer fingerprint '%s' unknown - we are "
+			"not permitted to talk to it", cstrGetSzStrNoNULL(pstrFingerprint));
 			pThis->bReportAuthErr = 0;
 		}
 		ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
@@ -832,7 +833,7 @@ osslChkPeerName(nsd_ossl_t *pThis, X509 *pCert)
 		if(pThis->bReportAuthErr == 1) {
 			cstrFinalize(pStr);
 			errno = 0;
-			LogError(0, RS_RET_INVALID_FINGERPRINT, "error: peer name not authorized -  "
+			LogError(0, RS_RET_INVALID_FINGERPRINT, "nsd_ossl:error: peer name not authorized -  "
 					"not permitted to talk to it. Names: %s",
 					cstrGetSzStrNoNULL(pStr));
 			pThis->bReportAuthErr = 0;
@@ -869,7 +870,7 @@ osslChkPeerID(nsd_ossl_t *pThis)
 	if ( certpeer == NULL ) {
 		if(pThis->bReportAuthErr == 1) {
 			errno = 0;
-			LogError(0, RS_RET_TLS_NO_CERT, "error: peer did not provide a certificate, "
+			LogError(0, RS_RET_TLS_NO_CERT, "nsd_ossl:error: peer did not provide a certificate, "
 					"not permitted to talk to it");
 			pThis->bReportAuthErr = 0;
 		}
@@ -904,19 +905,21 @@ osslChkPeerCertValidity(nsd_ossl_t *pThis)
 		if (iVerErr == X509_V_ERR_CERT_HAS_EXPIRED) {
 			if (pThis->permitExpiredCerts == OSSL_EXPIRED_DENY) {
 				LogError(0, RS_RET_CERT_EXPIRED,
-					"CertValidity check - not permitted to talk to peer: certificate expired: %s",
+					"nsd_ossl:CertValidity check"
+"- not permitted to talk to peer: certificate expired: %s",
 					X509_verify_cert_error_string(iVerErr));
 				ABORT_FINALIZE(RS_RET_CERT_EXPIRED);
 			} else if (pThis->permitExpiredCerts == OSSL_EXPIRED_WARN) {
 				LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
-					"CertValidity check - warning talking to peer: certificate expired: %s",
+					"nsd_ossl:CertValidity check"
+"- warning talking to peer: certificate expired: %s",
 					X509_verify_cert_error_string(iVerErr));
 			} else {
 				dbgprintf("osslChkPeerCertValidity: talking to peer: certificate expired: %s\n",
 					X509_verify_cert_error_string(iVerErr));
 			}/* Else do nothing */
 		} else {
-			LogError(0, RS_RET_CERT_INVALID, "not permitted to talk to peer: "
+			LogError(0, RS_RET_CERT_INVALID, "nsd_ossl:not permitted to talk to peer: "
 				"certificate validation failed: %s", X509_verify_cert_error_string(iVerErr));
 			ABORT_FINALIZE(RS_RET_CERT_INVALID);
 		}
@@ -1016,8 +1019,12 @@ osslEndSess(nsd_ossl_t *pThis)
 			int iBytesRet = SSL_read(pThis->ssl, rcvBuf, NSD_OSSL_MAX_RCVBUF);
 			DBGPRINTF("osslEndSess: Forcing ssl shutdown SSL_read (%d) to do a bidirectional shutdown\n",
 				iBytesRet);
+			LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO, "nsd_ossl:"
+			"TLS session terminated with remote syslog server.");
 			DBGPRINTF("osslEndSess: session closed (un)successfully \n");
 		} else {
+			LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO, "nsd_ossl:"
+			"TLS session terminated with remote syslog server.");
 			DBGPRINTF("osslEndSess: session closed successfully \n");
 		}
 
@@ -1373,10 +1380,24 @@ osslPostHandshakeCheck(nsd_ossl_t *pNsd)
 	/* Some extra output for debugging openssl */
 	if (SSL_get_shared_ciphers(pNsd->ssl,szDbg, sizeof szDbg) != NULL)
 		dbgprintf("osslPostHandshakeCheck: Debug Shared ciphers = %s\n", szDbg);
+
+	#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+	if(SSL_get_shared_curve(pNsd->ssl, -1) == 0) {
+		LogError(0, RS_RET_NO_ERRCODE, "nsd_ossl:"
+"No shared curve between syslog client and server.");
+	}
+	#endif
 	sslCipher = (const SSL_CIPHER*) SSL_get_current_cipher(pNsd->ssl);
-	if (sslCipher != NULL)
+	if (sslCipher != NULL){
+		if(SSL_CIPHER_get_version(sslCipher) == NULL) {
+			LogError(0, RS_RET_NO_ERRCODE, "nsd_ossl:"
+		"TLS version mismatch between syslog client and server.");
+		}
 		dbgprintf("osslPostHandshakeCheck: Debug Version: %s Name: %s\n",
 			SSL_CIPHER_get_version(sslCipher), SSL_CIPHER_get_name(sslCipher));
+	}else {
+		LogError(0, RS_RET_NO_ERRCODE, "nsd_ossl:No shared ciphers between syslog client and server.");
+	}
 
 	FINALIZE;
 
@@ -1425,6 +1446,8 @@ osslHandshakeCheck(nsd_ossl_t *pNsd)
 				resErr == SSL_ERROR_WANT_WRITE) {
 				pNsd->rtryCall = osslRtry_handshake;
 				pNsd->rtryOsslErr = resErr; /* Store SSL ErrorCode into*/
+				LogError(0, RS_RET_NO_ERRCODE, "nsd_ossl:"
+"TLS handshake failed between syslog client and server.");
 				dbgprintf("osslHandshakeCheck: OpenSSL Client handshake does not complete "
 					"immediately - setting to retry (this is OK and normal)\n");
 				FINALIZE;
@@ -1715,6 +1738,8 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	conn = BIO_new_socket(pPtcp->sock, BIO_CLOSE /*BIO_NOCLOSE*/);
 	dbgprintf("Connect: Init conn BIO[%p] done\n", (void *)conn);
 
+	LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO, "nsd_ossl:"
+"TLS Connection initiated with remote syslog server.");
 	/*if we reach this point we are in tls mode */
 	DBGPRINTF("Connect: TLS Mode\n");
 	if(!(pThis->ssl = SSL_new(ctx))) {
