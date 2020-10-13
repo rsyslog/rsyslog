@@ -4826,6 +4826,11 @@ jsonPathFindNext(struct json_object *root, uchar *namestart, uchar **name, uchar
 		if(!bCreate) {
 			ABORT_FINALIZE(RS_RET_JNAME_INVALID);
 		} else {
+			if (json_object_get_type(root) != json_type_object) {
+				DBGPRINTF("jsonPathFindNext with bCreate: not a container in json path, "
+					"name is '%s'\n", namestart);
+				ABORT_FINALIZE(RS_RET_INVLD_SETOP);
+			}
 			json = json_object_new_object();
 			json_object_object_add(root, (char*)namebuf, json);
 		}
@@ -4961,7 +4966,11 @@ msgAddJSON(smsg_t * const pM, uchar *name, struct json_object *json, int force_r
 			*jroot = json_object_new_object();
 		}
 		leaf = jsonPathGetLeaf(name, ustrlen(name));
-		CHKiRet(jsonPathFindParent(*jroot, name, leaf, &parent, 1));
+		iRet = jsonPathFindParent(*jroot, name, leaf, &parent, 1);
+		if (unlikely(iRet != RS_RET_OK)) {
+			json_object_put(json);
+			FINALIZE;
+		}
 		if (json_object_get_type(parent) != json_type_object) {
 			DBGPRINTF("msgAddJSON: not a container in json path,"
 				"name is '%s'\n", name);
