@@ -1,5 +1,33 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2010.0 (aka 2020.10) 2020-10-??
+- 2020-10-13: gnutls TLS subsystem bugfix: handshake error handling
+  If the tls handshake does not immediatelly finish, gnutls_handShake is called in
+  doRetry handler again. However the error handling was not
+  complete in the doRetry handler. A failed gnutls_handShake call
+  did not abort the connection and properly caused unexpected
+  problems like in issues:
+  https://github.com/rsyslog/rsyslog/issues/4270
+  https://github.com/rsyslog/rsyslog/issues/4288
+- 2020-10-13: core/msg bugfix: memory leak
+  There is a missing call to json_object_put(json) if the call to
+  jsonPathFindParent() failed. It's leaking memory. Depending on workload and config,
+  this leak can potentially grow large (albeit we did not see reports from practice).
+  Thanks to Julien Thomas for the patch.
+- 2020-10-13: core/msg bugfix: segfault in jsonPathFindNext() when <root> not an object
+  The segfault gets happens when <bCreate> is 1 and when the <root>
+  container where to insert the <namebuf> key is not an object.
+  Here is simple reproducible test case:
+  // ensure we start fresh
+  // unnecessary if there was no previous set
+  unset $!;
+  set $! = "";
+  set $!event!created = 123;
+  Thanks to Julien Thomas for the patch.
+- 2020-10-13: openssl TLS subsystem: improvments of error and status messages
+  Adding error logs at the ssl handshake failure scenarios.
+  Adding the header "nsd_ossl:" tag to these logs to identify
+  the origin module from which logs are generated.
+  Thanks to Anusha Pai G for the patch.
 - 2020-10-06: add 'exists()' script function to check if variable exists
   This implements a way to check if rsyslog variables (e.g. '$!path!var') is
   currently set of not.
