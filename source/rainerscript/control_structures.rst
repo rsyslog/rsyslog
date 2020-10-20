@@ -42,9 +42,18 @@ if/else-if/else
 foreach
 =======
 
-Foreach can iterate both arrays and objects. As opposed to array-iteration
-(which is ordered), object-iteration accesses key-values in arbitrary order
-(is unordered).
+A word of caution first: there often is a misunderstanding in regard to foreach:
+this construct only works on JSON structures. Actually, we should have rejected the
+proposal for "foreach" at the time it was made, but now it is too late.
+
+So please be warned: there is no general concept of an "array" inside the script
+language. This is intentional as we do not wanted to get it too complex.
+Where you can use arrays is for some config objects and a select set of comparisons,
+but nowhere else.
+
+If you parsed JSON, foreach can iterate both JSON arrays and JSON objects inside this
+parsed JSON. As opposed to JSON array-iteration (which is ordered), JSON object-iteration
+accesses key-values in arbitrary order (is unordered).
 
 For the foreach invocation below:
 
@@ -58,6 +67,8 @@ For the foreach invocation below:
 Say ``$.collection`` holds an array ``[1, "2", {"a": "b"}, 4]``, value
 of ``$.i`` across invocations would be ``1``, ``"2"``, ``{"a" : "b"}``
 and ``4``.
+
+Note that ``$.collection`` must have been parsed from JSON (via mmjsonparse).
 
 When ``$.collection`` holds an object
 ``{"a": "b", "c" : [1, 2, 3], "d" : {"foo": "bar"}}``, value of ``$.i``
@@ -84,6 +95,8 @@ Here is an example of a nested foreach statement:
       }
    }
 
+Again, the itereted items must have been created by parsing JSON.
+
 Please note that asynchronous-action calls in foreach-statement body should
 almost always set ``action.copyMsg`` to ``on``. This is because action calls
 within foreach usually want to work with the variable loop populates (in the
@@ -99,6 +112,17 @@ queue would look like:
        action(type="omfile" file="./rsyslog.out.log" template="quux
               queue.type="linkedlist" action.copyMsg="on")
    }
+
+Note well where foreach does **not** work:
+
+.. code-block:: none
+
+   set $.noarr = ["192.168.1.1", "192.168.2."];
+   foreach ($.elt in $.noarr) do {
+       ...
+   }
+
+This is the case because the assignment does not create a JSON array.
 
 
 call
