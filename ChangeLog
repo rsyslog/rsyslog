@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2010.0 (aka 2020.10) 2020-10-??
+Scheduled Release 8.2010.0 (aka 2020.10) 2020-10-20
 - 2020-10-13: gnutls TLS subsystem bugfix: handshake error handling
   If the tls handshake does not immediatelly finish, gnutls_handShake is called in
   doRetry handler again. However the error handling was not
