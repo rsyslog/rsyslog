@@ -1,4 +1,6 @@
 ----------------------------------------------------------------------------------------
+Scheduled Release 8.2012.0 (aka 2020.12) 2020-12-01/08??
+----------------------------------------------------------------------------------------
 Scheduled Release 8.2010.0 (aka 2020.10) 2020-10-20
 - 2020-10-13: gnutls TLS subsystem bugfix: handshake error handling
   If the tls handshake does not immediatelly finish, gnutls_handShake is called in
