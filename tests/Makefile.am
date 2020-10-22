@@ -998,7 +998,8 @@ TESTS +=  \
 	stats-cee.sh \
 	stats-json-es.sh \
 	dynstats_reset_without_pstats_reset.sh \
-	dynstats_prevent_premature_eviction.sh
+	dynstats_prevent_premature_eviction.sh \
+	dynstats-persist.sh
 if HAVE_VALGRIND
 TESTS +=  \
 	dynstats-vg.sh \
@@ -1007,7 +1008,8 @@ TESTS +=  \
 	dynstats-json-vg.sh \
 	stats-json-vg.sh \
 	stats-cee-vg.sh \
-	dynstats_prevent_premature_eviction-vg.sh
+	dynstats_prevent_premature_eviction-vg.sh \
+	dynstats-persist-vg.sh
 endif
 endif
 
@@ -2434,6 +2436,8 @@ EXTRA_DIST= \
 	stats-json-es.sh \
 	dynstats-json.sh \
 	dynstats-json-vg.sh \
+	dynstats-persist.sh \
+	dynstats-persist-vg.sh \
 	mmnormalize_variable.sh \
 	mmnormalize_tokenized.sh \
 	testsuites/mmnormalize_variable.rulebase \
