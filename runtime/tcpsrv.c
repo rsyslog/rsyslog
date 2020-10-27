@@ -1051,8 +1051,9 @@ tcpsrvConstructFinalize(tcpsrv_t *pThis)
 	CHKiRet(netstrms.SetDrvrTlsVerifyDepth(pThis->pNS, pThis->DrvrTlsVerifyDepth));
 	if(pThis->pszDrvrAuthMode != NULL)
 		CHKiRet(netstrms.SetDrvrAuthMode(pThis->pNS, pThis->pszDrvrAuthMode));
-	if(pThis->pszDrvrPermitExpiredCerts != NULL)
-		CHKiRet(netstrms.SetDrvrPermitExpiredCerts(pThis->pNS, pThis->pszDrvrPermitExpiredCerts));
+	/* Call SetDrvrPermitExpiredCerts required
+	 * when param is NULL default handling for ExpiredCerts is set! */
+	CHKiRet(netstrms.SetDrvrPermitExpiredCerts(pThis->pNS, pThis->pszDrvrPermitExpiredCerts));
 	if(pThis->pPermPeers != NULL)
 		CHKiRet(netstrms.SetDrvrPermPeers(pThis->pNS, pThis->pPermPeers));
 	if(pThis->gnutlsPriorityString != NULL)
@@ -1425,7 +1426,9 @@ SetDrvrPermitExpiredCerts(tcpsrv_t *pThis, uchar *mode)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
-	CHKmalloc(pThis->pszDrvrPermitExpiredCerts = ustrdup(mode));
+	if (mode != NULL) {
+		CHKmalloc(pThis->pszDrvrPermitExpiredCerts = ustrdup(mode));
+	}
 finalize_it:
 	RETiRet;
 }

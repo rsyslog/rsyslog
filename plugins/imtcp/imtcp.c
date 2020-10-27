@@ -397,9 +397,9 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 		if(modConf->pszStrmDrvrAuthMode != NULL) {
 			CHKiRet(tcpsrv.SetDrvrAuthMode(pOurTcpsrv, modConf->pszStrmDrvrAuthMode));
 		}
-		if(modConf->pszStrmDrvrPermitExpiredCerts != NULL) {
-			CHKiRet(tcpsrv.SetDrvrPermitExpiredCerts(pOurTcpsrv, modConf->pszStrmDrvrPermitExpiredCerts));
-		}
+		/* Call SetDrvrPermitExpiredCerts required
+		 * when param is NULL default handling for ExpiredCerts is set! */
+		CHKiRet(tcpsrv.SetDrvrPermitExpiredCerts(pOurTcpsrv, modConf->pszStrmDrvrPermitExpiredCerts));
 		if(pPermPeersRoot != NULL) {
 			CHKiRet(tcpsrv.SetDrvrPermPeers(pOurTcpsrv, pPermPeersRoot));
 		}

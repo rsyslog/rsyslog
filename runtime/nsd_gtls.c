@@ -1442,7 +1442,7 @@ SetAuthMode(nsd_t *pNsd, uchar *mode)
 		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
 	}
 
-	dbgprintf("SetAuthMode to %s\n", mode);
+	dbgprintf("SetAuthMode to %s\n", (mode != NULL ? (char*)mode : "NULL"));
 /* TODO: clear stored IDs! */
 
 finalize_it:
@@ -1476,7 +1476,8 @@ SetPermitExpiredCerts(nsd_t *pNsd, uchar *mode)
 		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
 	}
 
-	dbgprintf("SetPermitExpiredCerts: Set Mode %s/%d\n", mode, pThis->permitExpiredCerts);
+	dbgprintf("SetPermitExpiredCerts: Set Mode %s/%d\n",
+		(mode != NULL ? (char*)mode : "NULL"), pThis->permitExpiredCerts);
 
 /* TODO: clear stored IDs! */
 
@@ -1521,7 +1522,8 @@ SetGnutlsPriorityString(nsd_t *pNsd, uchar *gnutlsPriorityString)
 
 	ISOBJ_TYPE_assert((pThis), nsd_gtls);
 	pThis->gnutlsPriorityString = gnutlsPriorityString;
-	dbgprintf("gnutlsPriorityString: set to '%s'\n", gnutlsPriorityString);
+	dbgprintf("gnutlsPriorityString: set to '%s'\n",
+		(gnutlsPriorityString != NULL ? (char*)gnutlsPriorityString : "NULL"));
 	RETiRet;
 }
 
