@@ -762,10 +762,10 @@ static rsRetVal TCPSendInit(void *pvData)
 		if(pData->pszStrmDrvrAuthMode != NULL) {
 			CHKiRet(netstrm.SetDrvrAuthMode(pWrkrData->pNetstrm, pData->pszStrmDrvrAuthMode));
 		}
-		if(pData->pszStrmDrvrPermitExpiredCerts != NULL) {
-			CHKiRet(netstrm.SetDrvrPermitExpiredCerts(pWrkrData->pNetstrm,
-				pData->pszStrmDrvrPermitExpiredCerts));
-		}
+		/* Call SetDrvrPermitExpiredCerts required
+		 * when param is NULL default handling for ExpiredCerts is set! */
+		CHKiRet(netstrm.SetDrvrPermitExpiredCerts(pWrkrData->pNetstrm,
+			pData->pszStrmDrvrPermitExpiredCerts));
 
 		if(pData->pPermPeers != NULL) {
 			CHKiRet(netstrm.SetDrvrPermPeers(pWrkrData->pNetstrm, pData->pPermPeers));

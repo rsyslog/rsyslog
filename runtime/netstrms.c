@@ -224,7 +224,9 @@ SetDrvrPermitExpiredCerts(netstrms_t *pThis, uchar *mode)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrms);
-	CHKmalloc(pThis->pszDrvrPermitExpiredCerts = (uchar*)strdup((char*)mode));
+	if (mode != NULL) {
+		CHKmalloc(pThis->pszDrvrPermitExpiredCerts = (uchar*) strdup((char*)mode));
+	}
 finalize_it:
 	RETiRet;
 }

@@ -1192,6 +1192,7 @@ TESTS +=  \
 	sndrcv_tls_priorityString.sh \
 	sndrcv_tls_certvalid.sh \
 	sndrcv_tls_certvalid_expired.sh \
+	sndrcv_tls_certvalid_expired_defaultmode.sh \
 	imtcp-tls-gtls-x509fingerprint-invld.sh \
 	imtcp-tls-gtls-x509fingerprint.sh \
 	imtcp-tls-gtls-x509name-invld.sh \
@@ -2546,6 +2547,7 @@ EXTRA_DIST= \
 	sndrcv_tls_priorityString.sh \
 	sndrcv_tls_certvalid.sh \
 	sndrcv_tls_certvalid_expired.sh \
+	sndrcv_tls_certvalid_expired_defaultmode.sh \
 	sndrcv_tls_certless_clientonly.sh \
 	sndrcv_tls_gtls_servercert_gtls_clientanon.sh \
 	sndrcv_tls_gtls_servercert_gtls_clientanon_legacy.sh \
