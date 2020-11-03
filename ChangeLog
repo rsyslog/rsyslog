@@ -1,5 +1,12 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2012.0 (aka 2020.12) 2020-12-01/08??
+- 2020-11-03: omfwd bug: param "StreamDriver.PermitExpiredCerts" is not "off" by default
+  The default behaviour of expired certificates of stream driver in TLS mode, should
+  have been that the see tcp transmission is closed due to expired certificates, and
+  error messages emited in rsyslog status. This was not the case. That in turn could
+  lead to permitting sessions which should not be permitted.
+  Thanks to Vincent Zhu for alerting us and providing a great problem analysis
+  closes: https://github.com/rsyslog/rsyslog/issues/4425
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2010.0 (aka 2020.10) 2020-10-20
 - 2020-10-13: gnutls TLS subsystem bugfix: handshake error handling
