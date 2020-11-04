@@ -7,7 +7,7 @@
  * of the "old" message code without any modifications. However, it
  * helps to have things at the right place one we go to the meat of it.
  *
- * Copyright 2007-2019 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2020 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -666,6 +666,8 @@ propNameToID(const uchar *const pName, propid_t *const pPropID)
 		*pPropID = PROP_SYS_MINUTE_UTC;
 	} else if(!strcasecmp((char*) pName, "$wday-utc")) {
 		*pPropID = PROP_SYS_WDAY_UTC;
+	} else if(!strcasecmp((char*) pName, "$now-unixtimestamp")) {
+		*pPropID = PROP_SYS_NOW_UXTIMESTAMP;
 	} else if(!strcasecmp((char*) pName, "$MYHOSTNAME")) {
 		*pPropID = PROP_SYS_MYHOSTNAME;
 	} else if(!strcasecmp((char*) pName, "$!all-json")) {
@@ -786,6 +788,8 @@ uchar *propIDToName(propid_t propID)
 			return UCHAR_CONSTANT("$WDAY");
 		case PROP_SYS_WDAY_UTC:
 			return UCHAR_CONSTANT("$WDAY-UTC");
+		case PROP_SYS_NOW_UXTIMESTAMP:
+			return UCHAR_CONSTANT("$NOW-UNIXTIMESTAMP");
 		case PROP_SYS_MYHOSTNAME:
 			return UCHAR_CONSTANT("$MYHOSTNAME");
 		case PROP_CEE_ALL_JSON:
@@ -3795,6 +3799,16 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			} else {
 				*pbMustBeFreed = 1;
 				bufLen = 2;
+			}
+			break;
+		case PROP_SYS_NOW_UXTIMESTAMP:
+			if((pRes = malloc(16)) == NULL) {
+				RET_OUT_OF_MEMORY;
+			} else {
+				snprintf((char*) pRes, 16-1, "%lld", (long long) getTime(NULL));
+				pRes[16-1] = '\0';
+				*pbMustBeFreed = 1;
+				bufLen = -1;
 			}
 			break;
 		case PROP_SYS_MYHOSTNAME:

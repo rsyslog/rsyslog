@@ -3,7 +3,7 @@
  *
  * Begun 2010-11-25 RGerhards
  *
- * Copyright (C) 2005-2014 by Rainer Gerhards and Adiscon GmbH
+ * Copyright (C) 2005-2020 by Rainer Gerhards and Adiscon GmbH
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -235,8 +235,9 @@ typedef uintTiny	propid_t;
 #define PROP_SYS_HHOUR_UTC		167
 #define PROP_SYS_QHOUR_UTC		168
 #define PROP_SYS_MINUTE_UTC		169
-#define PROP_SYS_WDAY      170
-#define PROP_SYS_WDAY_UTC     171
+#define PROP_SYS_WDAY			170
+#define PROP_SYS_WDAY_UTC		171
+#define PROP_SYS_NOW_UXTIMESTAMP	173
 #define PROP_CEE			200
 #define PROP_CEE_ALL_JSON		201
 #define PROP_LOCAL_VAR			202
