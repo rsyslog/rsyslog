@@ -190,6 +190,31 @@ finalize_it:
 	return ret;
 }
 
+/* ratelimit a message based on message count
+ * - handles only rate-limiting
+ * This function returns RS_RET_OK, if the caller shall process
+ * the message regularly and RS_RET_DISCARD if the caller must
+ * discard the message. The caller should also discard the message
+ * if another return status occurs.
+ */
+rsRetVal
+ratelimitMsgCount(ratelimit_t *__restrict__ const ratelimit,
+	time_t tt,
+	const char* const appname)
+{
+	DEFiRet;
+	if(ratelimit->interval) {
+		if(withinRatelimit(ratelimit, tt, appname) == 0) {
+			ABORT_FINALIZE(RS_RET_DISCARDMSG);
+		}
+	}
+finalize_it:
+	if(Debug) {
+		if(iRet == RS_RET_DISCARDMSG)
+			DBGPRINTF("message discarded by ratelimiting\n");
+	}
+	RETiRet;
+}
 
 /* ratelimit a message, that means:
  * - handle "last message repeated n times" logic

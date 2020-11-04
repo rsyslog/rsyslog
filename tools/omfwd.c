@@ -57,6 +57,7 @@
 #include "errmsg.h"
 #include "unicode-helper.h"
 #include "parserif.h"
+#include "ratelimit.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -119,6 +120,9 @@ typedef struct _instanceData {
 	uint8_t compressionMode;
 	int errsToReport;	/* max number of errors to report (per instance) */
 	sbool strmCompFlushOnTxEnd; /* flush stream compression on transaction end? */
+	unsigned int ratelimitInterval;
+	unsigned int ratelimitBurst;
+	ratelimit_t *ratelimiter;
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -200,7 +204,9 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "udp.sendtoall", eCmdHdlrBinary, 0 },
 	{ "udp.senddelay", eCmdHdlrInt, 0 },
 	{ "udp.sendbuf", eCmdHdlrSize, 0 },
-	{ "template", eCmdHdlrGetWord, 0 }
+	{ "template", eCmdHdlrGetWord, 0 },
+	{ "ratelimit.interval", eCmdHdlrInt, 0 },
+	{ "ratelimit.burst", eCmdHdlrInt, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -411,6 +417,11 @@ CODESTARTfreeInstance
 	free(pData->address);
 	free(pData->device);
 	net.DestructPermittedPeers(&pData->pPermPeers);
+	if (pData->ratelimiter != NULL){
+		ratelimitDestruct(pData->ratelimiter);
+		pData->ratelimiter = NULL;
+	}
+
 ENDfreeInstance
 
 
@@ -427,7 +438,10 @@ ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
-	dbgprintf("%s", pData->target);
+	dbgprintf("omfwd\n");
+	dbgprintf("\ttarget='%s'\n", pData->target);
+	dbgprintf("\tratelimit.interval='%u'\n", pData->ratelimitInterval);
+	dbgprintf("\tratelimit.burst='%u'\n", pData->ratelimitBurst);
 ENDdbgPrintInstInfo
 
 
@@ -1052,13 +1066,31 @@ finalize_it:
 
 BEGINcommitTransaction
 	unsigned i;
+	char namebuf[264]; /* 256 for FGDN, 5 for port and 3 for transport => 264 */
 CODESTARTcommitTransaction
 	CHKiRet(doTryResume(pWrkrData));
 
 	DBGPRINTF(" %s:%s/%s\n", pWrkrData->pData->target, pWrkrData->pData->port,
 		 pWrkrData->pData->protocol == FORW_UDP ? "udp" : "tcp");
 
+	if(pWrkrData->pData->ratelimiter) {
+		snprintf(namebuf, sizeof namebuf, "%s:[%s]:%s",
+			pWrkrData->pData->protocol == FORW_UDP ? "udp" : "tcp",
+			pWrkrData->pData->target,
+			pWrkrData->pData->port);
+	}
+
 	for(i = 0 ; i < nParams ; ++i) {
+		/* If rate limiting is enabled, check whether this message has to be discarded */
+		if(pWrkrData->pData->ratelimiter) {
+			iRet = ratelimitMsgCount(pWrkrData->pData->ratelimiter, 0, namebuf);
+			if (iRet == RS_RET_DISCARDMSG) {
+				iRet = RS_RET_OK;
+				continue;
+			} else if (iRet != RS_RET_OK) {
+				LogError(0, RS_RET_ERR, "omfwd: error during rate limit : %d.\n",iRet);
+			}
+		}
 		iRet = processMsg(pWrkrData, &actParam(pParams, 1, i, 0));
 		if(iRet != RS_RET_OK && iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED)
 			FINALIZE;
@@ -1147,6 +1179,9 @@ setInstParamDefaults(instanceData *pData)
 	pData->strmCompFlushOnTxEnd = 1;
 	pData->compressionMode = COMPRESS_NEVER;
 	pData->ipfreebind = IPFREEBIND_ENABLED_WITH_LOG;
+	pData->ratelimiter = NULL;
+	pData->ratelimitInterval = 0;
+	pData->ratelimitBurst = 200;
 }
 
 BEGINnewActInst
@@ -1329,6 +1364,10 @@ CODESTARTnewActInst
 			free(cstr);
 		} else if(!strcmp(actpblk.descr[i].name, "ipfreebind")) {
 			pData->ipfreebind = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "ratelimit.burst")) {
+			pData->ratelimitBurst = (unsigned int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "ratelimit.interval")) {
+			pData->ratelimitInterval = (unsigned int) pvals[i].val.d.n;
 		} else {
 			LogError(0, RS_RET_INTERNAL_ERROR,
 				"omfwd: program error, non-handled parameter '%s'",
@@ -1364,6 +1403,13 @@ CODESTARTnewActInst
 		LogError(0, RS_RET_PARAM_ERROR,
 			 "omfwd: parameter \"address\" not supported for tcp -- ignored");
 	}
+
+	if( pData->ratelimitInterval > 0) {
+		CHKiRet(ratelimitNew(&pData->ratelimiter, "omfwd", NULL));
+		ratelimitSetLinuxLike(pData->ratelimiter, pData->ratelimitInterval, pData->ratelimitBurst);
+		ratelimitSetNoTimeCache(pData->ratelimiter);
+	}
+
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
