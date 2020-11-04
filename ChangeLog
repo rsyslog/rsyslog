@@ -1,5 +1,15 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2012.0 (aka 2020.12) 2020-12-01/08??
+- 2020-11-04: omfwd: add new rate limit option
+  Adding new rate limit option to omfwd for rate limiting
+  syslog messages sent to the remote server
+  ratelimit.interval:
+      Specifies the rate-limiting interval in seconds.
+      Default value is 0, which turns off rate limiting.
+  ratelimit.burst
+          Specifies the rate-limiting burst in number of messages.
+  closes https://github.com/rsyslog/rsyslog/issues/4423
+  Thanks to Dinesh-Ramakrishnan for the patch.
 - 2020-11-03: omfwd bug: param "StreamDriver.PermitExpiredCerts" is not "off" by default
   The default behaviour of expired certificates of stream driver in TLS mode, should
   have been that the see tcp transmission is closed due to expired certificates, and
