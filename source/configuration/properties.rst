@@ -275,3 +275,30 @@ may have different time stamp. To avoid this, use *timegenerated* instead.
 
 **$minute**
   The current minute (2-digit)
+
+**$now-unixtimestamp**
+  The current time as a unix timestamp (seconds since epoch). This actually
+  is a monotonically increasing counter and as such can also be used for any
+  other use cases that require such counters. This is an example of how
+  to use it for rate-limiting::
+
+    # Get Unix timestamp of current message
+    set $.tnow = $$now-unixtimestamp
+
+    # Rate limit info to 5 every 60 seconds
+    if ($!severity == 6 and $!facility == 17) then {
+      if (($.tnow - $/trate) > 60) then {
+        # 5 seconds window expired, allow more messages
+        set $/trate = $.tnow;
+        set $/ratecount = 0;
+      }
+      if ($/ratecount > 5) then {
+        # discard message
+        stop
+      } else {
+        set $/ratecount = $/ratecount + 1;
+      }
+    }
+
+  NOTE: by definition, there is no "UTC equivalent" of the
+  $now-unixtimestamp property.
