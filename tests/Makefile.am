@@ -629,6 +629,7 @@ TESTS +=  \
 	now-utc.sh \
 	now-utc-ymd.sh \
 	now-utc-casecmp.sh \
+	now-unixtimestamp.sh \
 	timegenerated-ymd.sh \
 	timegenerated-uxtimestamp.sh \
 	timegenerated-uxtimestamp-invld.sh \
@@ -1855,6 +1856,7 @@ EXTRA_DIST= \
 	now-utc-ymd.sh \
 	now-utc-casecmp.sh \
 	now-utc.sh \
+	now-unixtimestamp.sh \
 	faketime_common.sh \
 	imjournal-basic.sh \
 	imjournal-statefile.sh \
