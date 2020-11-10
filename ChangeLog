@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2012.0 (aka 2020.12) 2020-12-01/08??
+- 2020-11-10: add new system property $now-unixtimestamp
+  Among others, this may be used as a monotonic counter
+  for doing load-balancing and other things.
+  Thanks to Nicholas Brown for suggesting this feature.
 - 2020-11-04: omfwd: add new rate limit option
   Adding new rate limit option to omfwd for rate limiting
   syslog messages sent to the remote server
