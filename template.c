@@ -2021,7 +2021,7 @@ tplProcessCnf(struct cnfobj *o)
 	if(o->subobjs  == NULL) {
 		if(tplType == T_LIST) {
 			LogError(0, RS_RET_ERR, "template '%s' of type list has "
-				"has no parameters specified", name);
+				"no parameters specified", name);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	} else {
