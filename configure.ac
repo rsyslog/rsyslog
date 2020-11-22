@@ -1838,8 +1838,24 @@ if test "x$enable_imhttp" = "xyes"; then
     [AC_MSG_FAILURE([civetweb is missing])]
   )
   AC_SEARCH_LIBS(mg_version, civetweb)
+
+  PKG_CHECK_MODULES(APU, apr-util-1 >= 1.0)
+  save_CFLAGS="$CFLAGS"
+  save_LIBS="$LIBS"
+
+  CFLAGS="$CFLAGS $APU_CFLAGS"
+  LIBS="$LIBS $APU_LIBS"
+
+  AC_CHECK_HEADERS([apr_md5.h])
+  AC_CHECK_HEADERS([apr_base64.h])
+  AC_SEARCH_LIBS(apr_base64_decode, aprutil-1)
+  AC_SEARCH_LIBS(apr_password_validate, aprutil-1)
+
   CIVETWEB_LIBS=-lcivetweb
   AC_SUBST(CIVETWEB_LIBS)
+
+  CFLAGS="$save_CFLAGS"
+  LIBS="$save_LIBS"
 fi
 AM_CONDITIONAL(ENABLE_IMHTTP, test x$enable_imhttp = xyes)
 
