@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2012.0 (aka 2020.12) 2020-12-01/08??
+- 2020-11-30: usability: re-phrase error message to help users better understand cause
+  see also https://github.com/rsyslog/rsyslog/issues/3910
 - 2020-11-10: add new system property $now-unixtimestamp
   Among others, this may be used as a monotonic counter
   for doing load-balancing and other things.
