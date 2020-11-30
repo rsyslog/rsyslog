@@ -617,7 +617,7 @@ startup_vg_noleak() {
 # same as startup-vgthread, BUT we do NOT wait on the startup message!
 startup_vgthread_waitpid_only() {
 	startup_common "$1" "$2"
-	valgrind --tool=helgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --suppressions=$srcdir/linux_localtime_r.supp ${EXTRA_VALGRIND_SUPPRESSIONS:-} --suppressions=$srcdir/CI/gcov.supp --gen-suppressions=all ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$2.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
+	valgrind --tool=helgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --suppressions=$srcdir/linux_localtime_r.supp --suppressions=$srcdir/known_issues.supp ${EXTRA_VALGRIND_SUPPRESSIONS:-} --suppressions=$srcdir/CI/gcov.supp --gen-suppressions=all ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$2.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
 	wait_rsyslog_startup_pid $2
 }
 
@@ -1599,13 +1599,13 @@ presort() {
 
 #START: ext kafka config
 #dep_cache_dir=$(readlink -f .dep_cache)
-export RS_ZK_DOWNLOAD=zookeeper-3.4.14.tar.gz
+export RS_ZK_DOWNLOAD=apache-zookeeper-3.6.2-bin.tar.gz
 dep_cache_dir=$(pwd)/.dep_cache
-dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.14/$RS_ZK_DOWNLOAD
+dep_zk_url=https://downloads.apache.org/zookeeper/zookeeper-3.6.2/$RS_ZK_DOWNLOAD
 dep_zk_cached_file=$dep_cache_dir/$RS_ZK_DOWNLOAD
 
-export RS_KAFKA_DOWNLOAD=kafka_2.12-2.5.0.tgz
-dep_kafka_url=http://www-us.apache.org/dist/kafka/2.5.0/kafka_2.12-2.5.0.tgz
+export RS_KAFKA_DOWNLOAD=kafka_2.12-2.7.0.tgz
+dep_kafka_url=http://www-us.apache.org/dist/kafka/2.7.0/kafka_2.12-2.7.0.tgz
 dep_kafka_cached_file=$dep_cache_dir/$RS_KAFKA_DOWNLOAD
 
 if [ -z "$ES_DOWNLOAD" ]; then
@@ -1667,6 +1667,7 @@ download_kafka() {
 			cp /local_dep_cache/$RS_ZK_DOWNLOAD $dep_zk_cached_file
 		else
 			echo "Downloading zookeeper"
+			echo wget -q $dep_zk_url -O $dep_zk_cached_file
 			wget -q $dep_zk_url -O $dep_zk_cached_file
 			if [ $? -ne 0 ]
 			then

@@ -22,7 +22,7 @@
 
 
 ---
-name: check ubuntu 18 distcheck
+name: check kafka distcheck
 
 on:
   pull_request:
@@ -39,15 +39,20 @@ jobs:
       - name: run container CI pipeline
         run: |
           chmod -R go+rw .
+          export RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE="--enable-testbench --enable-omstdout \
+                 --enable-imdiag --disable-impstats --enable-imfile --disable-imfile-tests \
+                 --disable-fmhttp --enable-valgrind --enable-valgrind-testbench \
+                 --disable-helgrind --disable-default-tests --enable-kafka-tests \
+                 --enable-omkafka --enable-gnutls --disable-gnutls-tests --enable-imkafka"
           export RSYSLOG_CONTAINER_UID="" # use default
           export RSYSLOG_STATSURL='http://build.rsyslog.com/testbench-failedtest.php'
-          export CFLAGS='-g'
           export CC='gcc'
+          export CFLAGS='-g'
           export USE_AUTO_DEBUG='off'
           export CI_MAKE_OPT='-j20'
-          export CI_MAKE_CHECK_OPT='-j8'
+          export CI_MAKE_CHECK_OPT='-j2'
           export CI_CHECK_CMD='distcheck'
-          export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:18.04'
+          export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:20.04'
           export ABORT_ALL_ON_TEST_FAIL='YES'
           devtools/devcontainer.sh --rm devtools/run-ci.sh
 
