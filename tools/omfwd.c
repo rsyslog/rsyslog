@@ -585,9 +585,18 @@ TCPSendBufUncompressed(wrkrInstanceData_t *pWrkrData, uchar *buf, unsigned len)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		/* error! */
-		LogError(0, iRet, "omfwd: TCPSendBuf error %d, destruct TCP Connection to %s:%s",
-			iRet, pWrkrData->pData->target, pWrkrData->pData->port);
+		if(iRet == RS_RET_IO_ERROR) {
+			LogError(0, iRet,
+			  "omfwd: remote server at %s:%s seems to have closed connection. This often happens when "
+			  "the remote peer (or an interim system like a load balancer or firewall) "
+			  "shuts down or aborts a connection. Rsyslog will re-open the connection if configured "
+			  "to do so (we saw a generic IO Error, which"
+			  "usually goes along with that behaviour)",
+				pWrkrData->pData->target, pWrkrData->pData->port);
+		} else {
+			LogError(0, iRet, "omfwd: TCPSendBuf error %d, destruct TCP Connection to %s:%s",
+				iRet, pWrkrData->pData->target, pWrkrData->pData->port);
+		}
 		DestructTCPInstanceData(pWrkrData);
 		iRet = RS_RET_SUSPENDED;
 	}
