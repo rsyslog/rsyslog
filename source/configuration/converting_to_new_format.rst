@@ -112,7 +112,7 @@ This table is not conclusive but covers the most commonly used actions.
 
    "file path (`/var/log/...`)", "action(type="":doc:`omfile <modules/omfile>`"" file=""/var/log.../"" ...)"
    "UDP forwarding (`@remote`)", "action(type="":doc:`omfwd <modules/omfwd>`"" target=""remote"" protocol=""udp"" ...)"
-   "TCP forwarding (`@remote`)", "action(type="":doc:`omfwd <modules/omfwd>`"" target=""remote"" protocol=""tcp"" ...)"
+   "TCP forwarding (`@@remote`)", "action(type="":doc:`omfwd <modules/omfwd>`"" target=""remote"" protocol=""tcp"" ...)"
    "user notify (``:omusrmsg:user``)", "action(type="":doc:`omusrmsg <modules/omusrmsg>`"" users=""user"" ...)"
    "module name (``:omxxx:..``)", "action(type="":doc:`omxxx <modules/idx_output>`"" ...)"
 
