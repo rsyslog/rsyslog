@@ -156,6 +156,9 @@ endif # if ENABLE_ELASTICSEARCH_TESTS
 if ENABLE_DEFAULT_TESTS
 TESTS +=  \
 	immark.sh \
+	immark-inputname.sh \
+	immark-ruleset.sh \
+	immark-ruleset-custom-msg.sh \
 	operatingstate-basic.sh \
 	operatingstate-empty.sh \
 	operatingstate-unclean.sh \
@@ -1543,6 +1546,9 @@ EXTRA_DIST= \
 	smtradfile.sh \
 	smtradfile-vg.sh \
 	immark.sh \
+	immark-inputname.sh \
+	immark-ruleset.sh \
+	immark-ruleset-custom-msg.sh \
 	operatingstate-basic.sh \
 	operatingstate-empty.sh \
 	operatingstate-unclean.sh \
