@@ -47,7 +47,7 @@ jobs:
           export CI_MAKE_OPT='-j20'
           export CI_MAKE_CHECK_OPT='-j8'
           export CI_CHECK_CMD='distcheck'
-          export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:18.04'
+          export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:20.04'
           export ABORT_ALL_ON_TEST_FAIL='YES'
           devtools/devcontainer.sh --rm devtools/run-ci.sh
 
