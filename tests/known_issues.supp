@@ -31,3 +31,23 @@
    fun:mainloop
    fun:main
 }
+{
+   <librdkafka mem leak - we cannot work around it>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   ...
+   fun:checkInstance
+   fun:activateCnf
+   fun:tellModulesActivateConfig
+   fun:activate
+   fun:initAll
+}
+{
+   <known issue under Ubuntu 20.04>
+   Helgrind:Misc
+   obj:/usr/lib/x86_64-linux-gnu/valgrind/vgpreload_helgrind-amd64-linux.so
+   fun:_dl_fini
+   fun:__run_exit_handlers
+   fun:exit
+   fun:(below main)
+}
