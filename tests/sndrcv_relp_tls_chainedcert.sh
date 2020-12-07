@@ -18,8 +18,8 @@ module(	load="../plugins/imrelp/.libs/imrelp"
 # then SENDER sends to this port (not tcpflood!)
 input(type="imrelp" port="'$PORT_RCVR'" 
 		tls="on"
-		tls.mycert="tls-certs/certchained.pem"
-		tls.myprivkey="tls-certs/key.pem"
+		tls.mycert="'$srcdir'/tls-certs/certchained.pem"
+		tls.myprivkey="'$srcdir'/tls-certs/key.pem"
 		tls.authmode="certvalid"
 		tls.permittedpeer="rsyslog")
 
@@ -38,8 +38,8 @@ module(	load="../plugins/omrelp/.libs/omrelp"
 :msg, contains, "msgnum:" action(type="omrelp"
 		target="127.0.0.1" port="'$PORT_RCVR'" 
 		tls="on"
-		tls.mycert="tls-certs/certchained.pem"
-		tls.myprivkey="tls-certs/key.pem"
+		tls.mycert="'$srcdir'/tls-certs/certchained.pem"
+		tls.myprivkey="'$srcdir'/tls-certs/key.pem"
 		tls.authmode="certvalid"
 		tls.permittedpeer="rsyslog")
 action(type="omfile" file="'$RSYSLOG_DYNNAME.errmsgs'")

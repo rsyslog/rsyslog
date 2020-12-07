@@ -1615,6 +1615,7 @@ EXTRA_DIST= \
 	tls-certs/ca-key.pem \
 	tls-certs/ca.pem \
 	tls-certs/cert.pem \
+	tls-certs/certchained.pem \
 	tls-certs/key.pem \
 	tls-certs/ca-fail.pem \
 	tls-certs/cert-fail.pem \
