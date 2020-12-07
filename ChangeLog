@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2012.0 (aka 2020.12) 2020-12-01/08??
+- 2020-12-07:  testbench bugfix: some tests did not work in make distcheck
+  - certificate file missing in dist tarball
+  - some test cases did not properly specify path to cert file
+  Thanks to Michael Biebl for alerting us and providing part of
+  the fix.
+  closes https://github.com/rsyslog/rsyslog/issues/4446
 - 2020-12-07: immark: rewrite with many improvements
   - mark message text can now be specified
   - support for rulesets
