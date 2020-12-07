@@ -1,5 +1,12 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2012.0 (aka 2020.12) 2020-12-01/08??
+- 2020-12-07: immark: rewrite with many improvements
+  - mark message text can now be specified
+  - support for rulesets
+  - support for using syslog API vs. regular internal interface
+  - support for output template system
+  - ability to specify is mark message flag can be set
+  - minor changes and improvements
 - 2020-11-30: usability: re-phrase error message to help users better understand cause
   see also https://github.com/rsyslog/rsyslog/issues/3910
 - 2020-11-10: add new system property $now-unixtimestamp
