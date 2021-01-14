@@ -1,5 +1,8 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2102.0 (aka 2021.02) 2021-02-??
+- 2021-01-14: testbench: fix year-dependendt clickhouse test
+  A test had the year value hardcoded and as such failed whenever the
+  year changed. This patch corrects that.
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2012.0 (aka 2020.12) 2020-12-08
 - 2020-12-07:  testbench bugfix: some tests did not work in make distcheck
