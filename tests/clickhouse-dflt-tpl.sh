@@ -19,7 +19,6 @@ wait_shutdown
 clickhouse-client --query="SELECT * FROM rsyslog.SystemEvents FORMAT CSV" > $RSYSLOG_OUT_LOG
 
 clickhouse-client --query="DROP TABLE rsyslog.SystemEvents"
-export EXPECTED='7,20,"2020-03-01 01:00:00","172.20.245.8","tag"," msgnum:00000000:"'
-cmp_exact $RSYSLOG_OUT_LOG
+content_check --regex '7,20,"20..-03-01 01:00:00","172.20.245.8","tag"," msgnum:00000000:"'
 
 exit_test
