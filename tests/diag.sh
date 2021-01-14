@@ -442,10 +442,24 @@ injectmsg_kafkacat() {
 		printf 'TESTBENCH ERROR: TESTMESSAGES env var not set!\n'
 		error_exit 1
 	fi
-	for ((i=1 ; i<=TESTMESSAGES ; i++)); do
-		printf ' msgnum:%8.8d\n' $i; \
-	done | kafkacat -P -b localhost:29092 -t $RANDTOPIC 2>&1 | tee >$RSYSLOG_DYNNAME.kafkacat.log
-	kafka_check_broken_broker $RSYSLOG_DYNNAME.kafkacat.log
+	MAXATONCE=25000 # how many msgs should kafkacat send? - hint: current version errs out above ~70000
+	i=1
+	while (( i<=TESTMESSAGES )); do
+		currmsgs=0
+		while ((i <= $TESTMESSAGES && currmsgs != MAXATONCE)); do
+			printf ' msgnum:%8.8d\n' $i;
+			i=$((i + 1))
+			currmsgs=$((currmsgs+1))
+		done  > "$RSYSLOG_DYNNAME.kafkacat.in"
+		set -e
+		kafkacat -P -b localhost:29092 -t $RANDTOPIC <"$RSYSLOG_DYNNAME.kafkacat.in" 2>&1 | tee >$RSYSLOG_DYNNAME.kafkacat.log
+		set +e
+		printf 'kafkacat injected %d msgs so far\n' $((i - 1))
+		kafka_check_broken_broker $RSYSLOG_DYNNAME.kafkacat.log
+		check_not_present "ERROR" $RSYSLOG_DYNNAME.kafkacat.log
+		cat $RSYSLOG_DYNNAME.kafkacat.log
+	done
+
 	if [ "$wait" == "YES" ]; then
 		wait_seq_check "$@"
 	fi
