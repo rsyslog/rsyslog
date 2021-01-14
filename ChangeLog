@@ -1,5 +1,16 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2102.0 (aka 2021.02) 2021-02-??
+- 2021-01-14: testbench: fix kafkacat issues
+  The kafkacat tool has an upper limit of how many messages it can send
+  at once. Going over that limit causes messages loss. The exact limit
+  seems to depend on the environment. This causes testbench false positives.
+  This commit fixes two related issues:
+  - errors during kafkacat run were not detected - this has been added
+  - we now have a "max messages at once" setting, after which kafkacat
+    is restarted for the next batch of messages. It currently is set
+    to 25,000 msgs per incarnation. All tests loop now to send the
+    required number of messages. This has been fixed at the testbench
+    framework level, so no need to adjust individual tests.
 - 2021-01-14: testbench: fix year-dependendt clickhouse test
   A test had the year value hardcoded and as such failed whenever the
   year changed. This patch corrects that.
