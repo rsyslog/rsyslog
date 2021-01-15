@@ -909,6 +909,7 @@ imkafka_multi_single.log: imkafka-hang-other-action-on-no-kafka.log
 sndrcv_kafka.log: imkafka_multi_single.log
 imkafka_multi_group.log: sndrcv_kafka.log
 sndrcv_kafka_multi_topics.log: imkafka_multi_group.log
+omkafkadynakey.log: sndrcv_kafka_multi_topics.log
 
 if HAVE_VALGRIND
 TESTS += \
