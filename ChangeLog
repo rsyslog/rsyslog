@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2102.0 (aka 2021.02) 2021-02-??
+- 2021-01-16: testbench: fix invalid sequence of kafka tests runs
+  kafka tests can not run well in parallel (mostly due to ressource
+  constraints on CI machines). Accidentally, this was not enforced for
+  one of the tests. That could lead to random failures and false positives.
 - 2021-01-14: testbench: fix kafkacat issues
   The kafkacat tool has an upper limit of how many messages it can send
   at once. Going over that limit causes messages loss. The exact limit
