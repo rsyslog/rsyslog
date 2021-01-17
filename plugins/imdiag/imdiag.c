@@ -245,12 +245,12 @@ finalize_it:
 /* submit a generated numeric-suffix message to the rsyslog core
  */
 static rsRetVal
-doInjectNumericSuffixMsg(int iNum, ratelimit_t *ratelimiter)
+doInjectNumericSuffixMsg(int64_t iNum, ratelimit_t *ratelimiter)
 {
 	uchar szMsg[1024];
 	DEFiRet;
 	snprintf((char*)szMsg, sizeof(szMsg)/sizeof(uchar),
-		"<167>Mar  1 01:00:00 172.20.245.8 tag msgnum:%8.8d:", iNum);
+		"<167>Mar  1 01:00:00 172.20.245.8 tag msgnum:%8.8ld:", iNum);
 	iRet = doInjectMsg(szMsg, ratelimiter);
 	RETiRet;
 }
@@ -263,9 +263,9 @@ static rsRetVal
 injectMsg(uchar *pszCmd, tcps_sess_t *pSess)
 {
 	uchar wordBuf[1024];
-	int iFrom, nMsgs;
+	int64_t iFrom, nMsgs;
 	uchar *literalMsg;
-	int i;
+	int64_t i;
 	ratelimit_t *ratelimit = NULL;
 	DEFiRet;
 
@@ -281,16 +281,16 @@ injectMsg(uchar *pszCmd, tcps_sess_t *pSess)
 		CHKiRet(doInjectMsg(pszCmd, ratelimit));
 		nMsgs = 1;
 	} else { /* assume 2 args, (from_idx, count) */
-		iFrom = atoi((char*)wordBuf);
+		iFrom = atol((char*)wordBuf);
 		getFirstWord(&pszCmd, wordBuf, sizeof(wordBuf), TO_LOWERCASE);
-		nMsgs = atoi((char*)wordBuf);
+		nMsgs = atol((char*)wordBuf);
 		for(i = 0 ; i < nMsgs ; ++i) {
 			CHKiRet(doInjectNumericSuffixMsg(i + iFrom, ratelimit));
 		}
 	}
-	CHKiRet(sendResponse(pSess, "%d messages injected\n", nMsgs));
+	CHKiRet(sendResponse(pSess, "%ld messages injected\n", nMsgs));
 
-	DBGPRINTF("imdiag: %d messages injected\n", nMsgs);
+	DBGPRINTF("imdiag: %ld messages injected\n", nMsgs);
 
 finalize_it:
 	if(ratelimit != NULL)
