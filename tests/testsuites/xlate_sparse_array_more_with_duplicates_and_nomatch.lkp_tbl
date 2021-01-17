@@ -2,6 +2,8 @@
   "nomatch": "quux",
   "type" : "sparseArray",
   "table":[
+      {"index": 2147483648, "value": "gte_int_max" },
+      {"index": 3000000000, "value": "gte_3B" },
       {"index": 2, "value": "foo_latest" },
       {"index": 3, "value": "baz_latest" },
       {"index": 4, "value": "foo_latest" },

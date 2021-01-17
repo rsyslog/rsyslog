@@ -294,7 +294,8 @@ bs_arrcmp_sprsArrtab(const void *s1, const void *s2)
 	if (key < array_member_value) {
 		return -1;
 	}
-	return key - array_member_value;
+    if (key - array_member_value) return 1;
+	return 0;
 }
 
 static inline const char*
@@ -479,7 +480,7 @@ build_ArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar *name) {
 			if (jindex == NULL || json_object_is_type(jindex, json_type_null)) {
 				NO_INDEX_ERROR("array", name);
 			}
-			indexes[i].index = (uint32_t) json_object_get_int(jindex);
+			indexes[i].index = json_object_get_uint(jindex);
 			indexes[i].val = (uchar*) json_object_get_string(jvalue);
 		}
 		qsort(indexes, pThis->nmemb, sizeof(uint32_index_val_t), qs_arrcmp_uint32_index_val);
@@ -537,7 +538,7 @@ build_SparseArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar* n
 			if (jindex == NULL || json_object_is_type(jindex, json_type_null)) {
 				NO_INDEX_ERROR("sparseArray", name);
 			}
-			pThis->table.sprsArr->entries[i].key = (uint32_t) json_object_get_int(jindex);
+			pThis->table.sprsArr->entries[i].key = json_object_get_uint(jindex);
 			value = (uchar*) json_object_get_string(jvalue);
 			uchar *const *const canonicalValueRef_ptr = bsearch(value, pThis->interned_vals,
 				pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
