@@ -141,6 +141,16 @@ ENV	PKG_CONFIG_PATH=/usr/local/lib/pkgconfig \
 # Install any needed packages
 RUN	./setup-system.sh
 
+# we need civetweb, as there are no packages for it
+RUN	cd helper-projects && \
+	git clone https://github.com/civetweb/civetweb.git \
+	&& cd civetweb \
+	&& (unset CFLAGS; make -j build COPT="-DREENTRANT_TIME"; make install-headers ; make install-slib ) \
+	&& cd .. \
+	&& rm -rf civetweb
+
+RUN	cd ..
+
 # create dependency cache
 RUN	mkdir /local_dep_cache && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch-5.6.9.tar.gz  && \

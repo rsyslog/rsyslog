@@ -94,7 +94,7 @@ ENV	PKG_CONFIG_PATH=/usr/local/lib/pkgconfig \
 
 # bump dependency version below to trigger a dependency rebuild
 # but not a full one (via --no-cache)
-ENV	DEP_VERSION=2
+ENV	DEP_VERSION=3
 # Helper projects and dependency build starts here
 RUN	mkdir helper-projects
 # code style checker - not yet packaged
