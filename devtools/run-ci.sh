@@ -23,8 +23,10 @@ set -e
 printf 'STEP: autoreconf / configure ===============================================\n'
 devtools/run-configure.sh
 
-printf 'STEP: make =================================================================\n'
-make $CI_MAKE_OPT
+if [ "$CI_CHECK_CMD" != "distcheck" ]; then
+	printf 'STEP: make =================================================================\n'
+	make $CI_MAKE_OPT
+fi
 
 printf 'STEP: make %s ==============================================================\n', \
 	"$CI_CHECK_CMD"
