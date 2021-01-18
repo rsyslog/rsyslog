@@ -294,7 +294,7 @@ bs_arrcmp_sprsArrtab(const void *s1, const void *s2)
 	if (key < array_member_value) {
 		return -1;
 	}
-    if (key - array_member_value) return 1;
+	if (key - array_member_value) return 1;
 	return 0;
 }
 
