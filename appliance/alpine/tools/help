@@ -8,7 +8,7 @@ edit-config - edit container config (with vi editor, press <ESC>ZZ to quit)
 bash        - start an interactive shell (<CTL>-d terminates)
 
 volumes:
-/log        - log file store (if used)
+/logs       - log file store (if used)
 /work       - rsyslog work files; do not share with multiple instances
 /config     - configuration files, can be mounted read-only once finalized
 
