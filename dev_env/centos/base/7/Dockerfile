@@ -133,15 +133,13 @@ RUN	echo 'user1001:x:1001:1001::/home/rsyslog:/bin/bash' >> /etc/passwd && \
 	echo "user1008 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
 	echo "user1009 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
 	echo "user1010 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-ADD setup-system.sh setup-system.sh
-ADD common/setup-projects.sh setup-projects.sh
 ENV	PKG_CONFIG_PATH=/usr/local/lib/pkgconfig \
 	LD_LIBRARY_PATH=/usr/local/lib \
 	LIBDIR_PATH=/usr/lib64
 
 # bump dependency version below to trigger a dependency rebuild
 # but not a full one (via --no-cache)
-ENV	DEP_VERSION=1
+ENV	DEP_VERSION=4
 # Helper projects and dependency build starts here
 RUN	mkdir helper-projects
 # code style checker - not yet packaged

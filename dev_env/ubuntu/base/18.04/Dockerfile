@@ -61,7 +61,7 @@ RUN 	apt-get update && \
 	vim \
 	wget \
 	zlib1g-dev
-ENV	REBUILD=1
+ENV	REBUILD=3
 # Adiscon/rsyslog components
 RUN	apt-key adv --keyserver keyserver.ubuntu.com --recv E0C56BD4 && \
  	add-apt-repository ppa:adiscon/v8-stable -y && \
@@ -106,7 +106,7 @@ RUN	echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-8 main" > /etc/a
 RUN	mkdir /local_dep_cache && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch-5.6.9.tar.gz && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz && \
-	wget -nv https://www-us.apache.org/dist/zookeeper/zookeeper-3.4.14/zookeeper-3.4.14.tar.gz -O /local_dep_cache/zookeeper-3.4.14.tar.gz && \
+	wget -nv https://www.apache.org/dyn/closer.lua/zookeeper/zookeeper-3.6.2/apache-zookeeper-3.6.2-bin.tar.gz -O /local_dep_cache/zookeeper-3.6.2.tar.gz && \
 	wget -nv http://www-us.apache.org/dist/kafka/2.5.0/kafka_2.12-2.5.0.tgz -O /local_dep_cache/kafka_2.12-2.5.0.tgz
 
 # tell tests which are the newester versions, so they can be checked without the need

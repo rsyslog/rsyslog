@@ -105,7 +105,6 @@ RUN	echo 'user1001:x:1001:1001::/home/rsyslog:/bin/bash' >> /etc/passwd && \
 RUN	mkdir /rsyslog && \
 	chown rsyslog:rsyslog /rsyslog
 VOLUME /rsyslog
-ADD	setup-projects.sh setup-projects.sh
 ENV	PKG_CONFIG_PATH=/usr/lib/pkgconfig \
 	xLD_LIBRARY_PATH=/usr/local/lib 
 
@@ -172,7 +171,7 @@ RUN	cd helper-projects && \
 
 # bump dependency version below to trigger a dependency rebuild
 # but not a full one (via --no-cache)
-ENV	RSYSLOG_DEP_VERSION=2018-07-22
+ENV	RSYSLOG_DEP_VERSION=2020-11-03
 
 # libestr - currently, not needed, we use from offical repo (unlikely to change)
 #RUN	cd helper-projects && \

@@ -19,6 +19,7 @@ RUN 	apt-get update && \
 	flex \
 	gcc \
 	gcc-8 \
+	gcc-10 \
 	gdb \
 	git \
 	libbson-dev \
@@ -50,7 +51,7 @@ RUN 	apt-get update && \
 	net-tools \
 	pkg-config \
 	postgresql-client libpq-dev \
-	python-docutils  \
+	python3-docutils  \
 	python3-pip \
 	python3-pysnmp4 \
 	snmp-mibs-downloader \
@@ -72,7 +73,6 @@ RUN	echo 'deb http://download.opensuse.org/repositories/home:/rgerhards/xUbuntu_
 	apt-get update -y && \
 	apt-get install -y  \
 	libestr-dev \
-	librelp-dev \
 	libfastjson-dev \
 	liblogging-stdlog-dev \
 	liblognorm-dev
@@ -115,7 +115,7 @@ RUN	echo "deb http://apt.llvm.org/disco/ llvm-toolchain-disco main" > /etc/apt/s
 RUN	mkdir /local_dep_cache && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch-5.6.9.tar.gz && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz && \
-	wget -nv https://www-us.apache.org/dist/zookeeper/zookeeper-3.4.14/zookeeper-3.4.14.tar.gz -O /local_dep_cache/zookeeper-3.4.14.tar.gz && \
+	wget -nv https://downloads.apache.org/zookeeper/zookeeper-3.6.2/apache-zookeeper-3.6.2-bin.tar.gz -O /local_dep_cache/apache-zookeeper-3.6.2-bin.tar.gz  && \
 	wget -nv http://www-us.apache.org/dist/kafka/2.5.0/kafka_2.12-2.5.0.tgz -O /local_dep_cache/kafka_2.12-2.5.0.tgz
 # tell tests which are the newester versions, so they can be checked without the need
 # to adjust test sources.
@@ -143,7 +143,7 @@ RUN	groupadd rsyslog \
 # mysql needs a little help:
 RUN	mkdir -p /var/run/mysqld && \
 	chown mysql:mysql /var/run/mysqld
-ENV	MYSQLD_START_CMD="sudo mysqld_safe" \
+ENV	MYSQLD_START_CMD="sudo mysqld_safe --pid-file=/var/run/mysqld/mysqld.pid" \
         MYSQLD_STOP_CMD="sudo kill $(sudo cat /var/run/mysqld/mysqld.pid)"
 
 # and so does clickhouse
@@ -151,16 +151,109 @@ ENV	MYSQLD_START_CMD="sudo mysqld_safe" \
 #ENV	CLICKHOUSE_START_CMD="sudo clickhouse-server --config-file=/etc/clickhouse-server/config.xml" \
 #	CLICKHOUSE_STOP_CMD="sudo kill $(pidof clickhouse-server)"
 
-ADD	setup-system.sh setup-system.sh
 ENV	PKG_CONFIG_PATH=/usr/local/lib/pkgconfig \
 	LD_LIBRARY_PATH=/usr/local/lib \
 	DEBIAN_FRONTEND= \
 	SUDO="sudo -S"
 
-# Install any needed packages
-RUN	./setup-system.sh
+# bump dependency version below to trigger a dependency rebuild
+# but not a full one (via --no-cache)
+ENV	DEP_VERSION=4
+# Helper projects and dependency build starts here
+RUN	mkdir helper-projects
+# code style checker - not yet packaged
+RUN	cd helper-projects && \
+	git clone https://github.com/rsyslog/codestyle && \
+	cd codestyle && \
+	gcc --std=c99 stylecheck.c -o stylecheck && \
+	mv stylecheck /usr/bin/rsyslog_stylecheck && \
+	cd .. && \
+	rm -r codestyle && \
+	cd ..
 
-# other manual installs
+
+# enable manual build when needed
+# libestr
+#RUN	cd helper-projects && \
+#	git clone https://github.com/rsyslog/libestr.git && \
+#	cd libestr && \
+#	autoreconf -fi && \
+#	./configure --prefix=/usr/local && \
+#	make -j4 && \
+#	make install && \
+#	cd .. && \
+#	rm -r libestr && \
+#	cd ..
+
+# liblogging
+#RUN	cd helper-projects && \
+#	git clone https://github.com/rsyslog/liblogging.git && \
+#	cd liblogging && \
+#	autoreconf -fi && \
+#	./configure --prefix=/usr --disable-journal && \
+#	make -j4 && \
+#	make install && \
+#	cd .. && \
+#	rm -r liblogging && \
+#	cd ..
+
+# liblfastjson
+#RUN	cd helper-projects && \
+#	git clone https://github.com/rsyslog/libfastjson.git && \
+#	cd libfastjson && \
+#	autoreconf -fi && \
+#	./configure --prefix=/usr && \
+#	make -j4 && \
+#	make install && \
+#	cd .. && \
+#	rm -r libfastjson && \
+#	cd ..
+
+# liblognorm
+#RUN	cd helper-projects && \
+#	git clone https://github.com/rsyslog/liblognorm.git && \
+#	cd liblognorm && \
+#	autoreconf -fi && \
+#	./configure --enable-compile-warnings=yes --prefix=/usr/local && \
+#	make -j4 && \
+#	make install && \
+#	cd .. && \
+#	rm -r liblognorm && \
+#	cd ..
+
+# we need Guardtime libksi here, otherwise we cannot check the KSI component	
+RUN	cd helper-projects && \
+	git clone https://github.com/guardtime/libksi.git && \
+	cd libksi && \
+	autoreconf -fvi && \
+	./configure --prefix=/usr && \
+	make -j2 && \
+	make install && \
+	cd .. && \
+	rm -r libksi && \
+	cd ..
+
+# librelp
+RUN	cd helper-projects && \
+	git clone https://github.com/rsyslog/librelp.git && \
+	cd librelp && \
+	autoreconf -fi && \
+	./configure --prefix=/usr --enable-compile-warnings=yes --libdir=/usr/lib --includedir=/usr/include && \
+	make -j4 && \
+	make install && \
+	cd .. && \
+	rm -r librelp && \
+	cd ..
+
+# we need the latest librdkafka as there as always required updates
+RUN	cd helper-projects && \
+	git clone https://github.com/edenhill/librdkafka && \
+	cd librdkafka && \
+	(unset CFLAGS; ./configure --prefix=/usr --libdir=/usr/lib --CFLAGS="-g" ; make -j) && \
+	make install && \
+	cd .. && \
+	cd ..
+
 # kafkacat
 RUN	cd helper-projects \
 	&& git clone https://github.com/edenhill/kafkacat \
@@ -169,8 +262,15 @@ RUN	cd helper-projects \
 	&& make install \
 	&& cd .. \
 	&& cd ..
-# Note: we do NOT delete the source as we may need it to
-# uninstall (in case the user wants to go back to system-default)
+
+# we need civetweb, as there are no packages for it
+RUN	cd helper-projects && \
+	git clone https://github.com/civetweb/civetweb.git \
+	&& cd civetweb \
+	&& (unset CFLAGS; make -j build COPT="-DREENTRANT_TIME"; make install-headers ; make install-slib ) \
+	&& cd .. \
+	&& rm -rf civetweb \
+	&& cd ..
 
 # next ENV is specifically for running scan-build - so we do not need to
 # change scripts if at a later time we can move on to a newer version
@@ -190,8 +290,9 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-imczmq \
 	--enable-imdiag \
 	--enable-imdocker \
-	--enable-imdocker-tests \
+	--disable-imdocker-tests \
 	--enable-imfile \
+	--enable-imhttp \
 	--enable-imjournal \
 	--enable-imkafka \
 	--enable-impstats \
@@ -255,6 +356,8 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	\
 	--enable-testbench
 
+# Note: imdocker-tests cannot be run inside container, as they need to talk
+# to a docker instance.
 # module needs fixes: --enable-kmsg
 RUN	printf '\n' > /var/log/mysql/error.log
 VOLUME	/var/lib/mysql

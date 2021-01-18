@@ -86,7 +86,7 @@ ENV	TCL_LIB_SPEC="-L/usr/lib64 -ltcl8.5" \
 RUN	mkdir /local_dep_cache && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch-5.6.9.tar.gz  && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz && \
-	wget -nv https://www-us.apache.org/dist/zookeeper/zookeeper-3.4.14/zookeeper-3.4.14.tar.gz -O /local_dep_cache/zookeeper-3.4.14.tar.gz && \
+	wget -nv https://www.apache.org/dyn/closer.lua/zookeeper/zookeeper-3.6.2/apache-zookeeper-3.6.2-bin.tar.gz -O /local_dep_cache/zookeeper-3.6.2.tar.gz && \
 	wget -nv http://www-us.apache.org/dist/kafka/2.5.0/kafka_2.12-2.5.0.tgz -O /local_dep_cache/kafka_2.12-2.5.0.tgz
 # tell tests which are the newester versions, so they can be checked without the need
 # to adjust test sources.
@@ -137,7 +137,7 @@ ENV	PKG_CONFIG_PATH=/usr/local/lib/pkgconfig \
 
 # bump dependency version below to trigger a dependency rebuild
 # but not a full one (via --no-cache)
-ENV	DEP_VERSION=1
+ENV	DEP_VERSION=2
 # Helper projects and dependency build starts here
 RUN	mkdir helper-projects
 # code style checker - not yet packaged
