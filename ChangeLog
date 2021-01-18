@@ -1,5 +1,8 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2102.0 (aka 2021.02) 2021-02-??
+- 2021-01-18: testbench modernization
+  Bump dependency versions, use newer distro versions for some tests.
+  Make kafka distcheck separate to help diagnose flaky kafka tests.
 - 2021-01-16: testbench: fix invalid sequence of kafka tests runs
   kafka tests can not run well in parallel (mostly due to ressource
   constraints on CI machines). Accidentally, this was not enforced for
