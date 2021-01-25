@@ -251,7 +251,7 @@ doInjectNumericSuffixMsg(int64_t iNum, ratelimit_t *ratelimiter)
 	uchar szMsg[1024];
 	DEFiRet;
 	snprintf((char*)szMsg, sizeof(szMsg)/sizeof(uchar),
-		"<167>Mar  1 01:00:00 172.20.245.8 tag msgnum:%8.8ld:", iNum);
+		"<167>Mar  1 01:00:00 172.20.245.8 tag msgnum:%8.8lld:", (long long) iNum);
 	iRet = doInjectMsg(szMsg, ratelimiter);
 	RETiRet;
 }
@@ -289,9 +289,9 @@ injectMsg(uchar *pszCmd, tcps_sess_t *pSess)
 			CHKiRet(doInjectNumericSuffixMsg(i + iFrom, ratelimit));
 		}
 	}
-	CHKiRet(sendResponse(pSess, "%ld messages injected\n", nMsgs));
+	CHKiRet(sendResponse(pSess, "%lld messages injected\n", nMsgs));
 
-	DBGPRINTF("imdiag: %ld messages injected\n", nMsgs);
+	DBGPRINTF("imdiag: %lld messages injected\n", nMsgs);
 
 finalize_it:
 	if(ratelimit != NULL)
