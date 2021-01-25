@@ -22,7 +22,7 @@
 
 
 ---
-name: check ubuntu 18 SAN
+name: check ubuntu 20 SAN
 
 on:
   pull_request:
@@ -47,16 +47,18 @@ jobs:
           export CI_MAKE_OPT='-j20'
           export CI_MAKE_CHECK_OPT='-j8'
           export CI_CHECK_CMD='check'
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:18.04'
-              export CC='clang'
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --enable-imfile-tests\
-                      --disable-libfaketime --without-valgrind-testbench --disable-valgrind"
-              export CFLAGS="-fstack-protector -D_FORTIFY_SOURCE=2 \
-                     -fsanitize=address,undefined,nullability,unsigned-integer-overflow \
-                     -fno-sanitize-recover=undefined,nullability,unsigned-integer-overflow \
-                     -g -O3 -fno-omit-frame-pointer -fno-color-diagnostics"
-              export LSAN_OPTIONS='detect_leaks=0'
-              export UBSAN_OPTIONS='print_stacktrace=1'
+          export CI_SANITIZE_BLACKLIST='tests/asan.supp'
+          export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:20.04'
+          export CC='clang'
+          export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --enable-imfile-tests\
+                  --disable-libfaketime --without-valgrind-testbench --disable-valgrind \
+                  --disable-kafka-tests"
+          export CFLAGS="-fstack-protector -D_FORTIFY_SOURCE=2 \
+                 -fsanitize=address,undefined,nullability,unsigned-integer-overflow \
+                 -fno-sanitize-recover=undefined,nullability,unsigned-integer-overflow \
+                 -g -O3 -fno-omit-frame-pointer -fno-color-diagnostics"
+          export LSAN_OPTIONS='detect_leaks=0'
+          export UBSAN_OPTIONS='print_stacktrace=1'
           devtools/devcontainer.sh --rm devtools/run-ci.sh
 
       - name: show error logs (if we errored)

@@ -22,7 +22,7 @@
 
 
 ---
-name: check ubuntu 18 TSAN
+name: check ubuntu 20 TSAN
 
 on:
   pull_request:
@@ -47,18 +47,19 @@ jobs:
           export CI_MAKE_OPT='-j20'
           export CI_MAKE_CHECK_OPT='-j8'
           export CI_CHECK_CMD='check'
-          export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:18.04'
-          export CC='clang-8'
+          export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:20.04'
+          export CC='clang'
           export CFLAGS="-g -fstack-protector -D_FORTIFY_SOURCE=2 -fsanitize=thread \
                     -O0 -fno-omit-frame-pointer -fno-color-diagnostics"
           export CI_SANITIZE_BLACKLIST='tests/tsan.supp'
-          export TSAN_OPTIONS='halt_on_error=1'
+	  # note: we need pathes in container, thus /rsyslog vs. $(pwd) in TSAN_OPTIONS
+          export TSAN_OPTIONS="halt_on_error=1 suppressions=/rsyslog/tests/tsan-rt.supp"
           export ABORT_ALL_ON_TEST_FAIL='YES'
           # impstats has known and OK races
           # mmpstrucdata TEMPORARILY disabled because of a threading hang on shutdown
           export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --enable-imfile-tests \
                     --disable-impstats --disable-kafka-tests --disable-mmpstrucdata \
-                    --disable-clickhouse --disable-clickhouse-tests \
+                    --disable-clickhouse --disable-clickhouse-tests --disable-kafka-tests \
                     --disable-libfaketime --without-valgrind-testbench --disable-valgrind"
           devtools/devcontainer.sh --rm devtools/run-ci.sh
 
