@@ -2377,6 +2377,8 @@ doFunct_Lookup(struct cnffunc *__restrict__ const func,
 		return;
 	}
 	cnfexprEval(func->expr[1], &srcVal, usrptr, pWti);
+	pthread_rwlock_rdlock(&((lookup_ref_t*)func->funcdata)->rwlock);
+	pthread_rwlock_unlock(&((lookup_ref_t*)func->funcdata)->rwlock);
 	lookup_table = ((lookup_ref_t*)func->funcdata)->self;
 	if (lookup_table != NULL) {
 		lookup_key_type = lookup_table->key_type;
