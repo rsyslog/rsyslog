@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2102.0 (aka 2021.02) 2021-02-??
+- 2021-01-29: lookup table bugfix: data race on lookup table reload
+  A data race could happen when a lookup table was reloaded. We found
+  this while moving to newer version of TSAN, but have no matching
+  report from practice. However, there is a potential for this to cause
+  a segfault under "bad circumstances".
 - 2021-01-18: testbench modernization
   Bump dependency versions, use newer distro versions for some tests.
   Make kafka distcheck separate to help diagnose flaky kafka tests.
