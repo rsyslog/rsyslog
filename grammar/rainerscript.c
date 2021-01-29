@@ -2368,6 +2368,7 @@ doFunct_Lookup(struct cnffunc *__restrict__ const func,
 	struct svar srcVal;
 	lookup_key_t key;
 	uint8_t lookup_key_type;
+	lookup_ref_t *lookup_table_ref;
 	lookup_t *lookup_table;
 	int bMustFree;
 
@@ -2377,9 +2378,9 @@ doFunct_Lookup(struct cnffunc *__restrict__ const func,
 		return;
 	}
 	cnfexprEval(func->expr[1], &srcVal, usrptr, pWti);
-	pthread_rwlock_rdlock(&((lookup_ref_t*)func->funcdata)->rwlock);
-	pthread_rwlock_unlock(&((lookup_ref_t*)func->funcdata)->rwlock);
-	lookup_table = ((lookup_ref_t*)func->funcdata)->self;
+	lookup_table_ref = (lookup_ref_t*) func->funcdata;
+	pthread_rwlock_rdlock(&lookup_table_ref->rwlock);
+	lookup_table = lookup_table_ref->self;
 	if (lookup_table != NULL) {
 		lookup_key_type = lookup_table->key_type;
 		bMustFree = 0;
@@ -2399,6 +2400,7 @@ doFunct_Lookup(struct cnffunc *__restrict__ const func,
 	} else {
 		ret->d.estr = es_newStrFromCStr("", 1);
 	}
+	pthread_rwlock_unlock(&lookup_table_ref->rwlock);
 	varFreeMembers(&srcVal);
 }
 
