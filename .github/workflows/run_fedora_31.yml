@@ -22,7 +22,7 @@
 
 
 ---
-name: check fedora 30
+name: check fedora 31
 
 on:
   pull_request:
@@ -47,9 +47,9 @@ jobs:
           export CI_MAKE_OPT='-j20'
           export CI_MAKE_CHECK_OPT='-j8'
           export CI_CHECK_CMD='check'
-          export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:30'
+          export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:31'
           export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
-                 --disable-kafka-tests --disable-clickhouse-tests --enable-debug"
+                 --disable-kafka-tests --enable-debug"
           devtools/devcontainer.sh --rm devtools/run-ci.sh
 
       - name: show error logs (if we errored)
