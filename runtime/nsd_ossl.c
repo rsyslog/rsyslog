@@ -210,7 +210,8 @@ void osslLastSSLErrorMsg(int ret, SSL *ssl, int severity, const char* pszCallSou
 
 	/* Loop through ERR_get_error */
 	while ((un_error = ERR_get_error()) > 0){
-		LogMsg(0, RS_RET_NO_ERRCODE, severity, "OpenSSL Error Stack: %s", ERR_error_string(un_error, NULL) );
+		LogMsg(0, RS_RET_NO_ERRCODE, severity,
+			"nsd_ossl:OpenSSL Error Stack: %s", ERR_error_string(un_error, NULL) );
 	}
 }
 
@@ -721,9 +722,10 @@ osslChkPeerFingerprint(nsd_ossl_t *pThis, X509 *pCert)
 		if(pThis->bReportAuthErr == 1) {
 			errno = 0;
 			LogError(0, RS_RET_INVALID_FINGERPRINT,
-			"nsd_ossl:error:"
-			" peer fingerprint '%s' unknown - we are "
-			"not permitted to talk to it", cstrGetSzStrNoNULL(pstrFingerprint));
+				"nsd_ossl:error: peer fingerprint '%s' unknown - we are "
+				"not permitted to talk to it", cstrGetSzStrNoNULL(pstrFingerprint));
+			LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO,
+				"nsd_ossl:TLS session terminated with remote syslog server.");
 			pThis->bReportAuthErr = 0;
 		}
 		ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
@@ -834,8 +836,10 @@ osslChkPeerName(nsd_ossl_t *pThis, X509 *pCert)
 			cstrFinalize(pStr);
 			errno = 0;
 			LogError(0, RS_RET_INVALID_FINGERPRINT, "nsd_ossl:error: peer name not authorized -  "
-					"not permitted to talk to it. Names: %s",
-					cstrGetSzStrNoNULL(pStr));
+				"not permitted to talk to it. Names: %s",
+				cstrGetSzStrNoNULL(pStr));
+			LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO,
+				"nsd_ossl:TLS session terminated with remote syslog server.");
 			pThis->bReportAuthErr = 0;
 		}
 		ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
@@ -871,8 +875,10 @@ osslChkPeerID(nsd_ossl_t *pThis)
 		if(pThis->bReportAuthErr == 1) {
 			errno = 0;
 			LogError(0, RS_RET_TLS_NO_CERT, "nsd_ossl:error: peer did not provide a certificate, "
-					"not permitted to talk to it");
+				"not permitted to talk to it");
 			pThis->bReportAuthErr = 0;
+			LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO,
+				"nsd_ossl:TLS session terminated with remote syslog server.");
 		}
 		ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
 	}
@@ -905,15 +911,19 @@ osslChkPeerCertValidity(nsd_ossl_t *pThis)
 		if (iVerErr == X509_V_ERR_CERT_HAS_EXPIRED) {
 			if (pThis->permitExpiredCerts == OSSL_EXPIRED_DENY) {
 				LogError(0, RS_RET_CERT_EXPIRED,
-					"nsd_ossl:CertValidity check"
-"- not permitted to talk to peer: certificate expired: %s",
+					"nsd_ossl:CertValidity check - not permitted to talk to peer: "
+					"certificate expired: %s",
 					X509_verify_cert_error_string(iVerErr));
+				LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO,
+					"nsd_ossl:TLS session terminated with remote syslog server.");
 				ABORT_FINALIZE(RS_RET_CERT_EXPIRED);
 			} else if (pThis->permitExpiredCerts == OSSL_EXPIRED_WARN) {
 				LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
-					"nsd_ossl:CertValidity check"
-"- warning talking to peer: certificate expired: %s",
+					"nsd_ossl:CertValidity check - warning talking to peer: "
+					"certificate expired: %s",
 					X509_verify_cert_error_string(iVerErr));
+				LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO,
+					"nsd_ossl:TLS session terminated with remote syslog server.");
 			} else {
 				dbgprintf("osslChkPeerCertValidity: talking to peer: certificate expired: %s\n",
 					X509_verify_cert_error_string(iVerErr));
@@ -921,6 +931,8 @@ osslChkPeerCertValidity(nsd_ossl_t *pThis)
 		} else {
 			LogError(0, RS_RET_CERT_INVALID, "nsd_ossl:not permitted to talk to peer: "
 				"certificate validation failed: %s", X509_verify_cert_error_string(iVerErr));
+			LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO,
+				"nsd_ossl:TLS session terminated with remote syslog server.");
 			ABORT_FINALIZE(RS_RET_CERT_INVALID);
 		}
 	} else {
@@ -1384,7 +1396,7 @@ osslPostHandshakeCheck(nsd_ossl_t *pNsd)
 	#if OPENSSL_VERSION_NUMBER >= 0x10002000L
 	if(SSL_get_shared_curve(pNsd->ssl, -1) == 0) {
 		LogError(0, RS_RET_NO_ERRCODE, "nsd_ossl:"
-"No shared curve between syslog client and server.");
+		"No shared curve between syslog client and server.");
 	}
 	#endif
 	sslCipher = (const SSL_CIPHER*) SSL_get_current_cipher(pNsd->ssl);
@@ -1446,8 +1458,6 @@ osslHandshakeCheck(nsd_ossl_t *pNsd)
 				resErr == SSL_ERROR_WANT_WRITE) {
 				pNsd->rtryCall = osslRtry_handshake;
 				pNsd->rtryOsslErr = resErr; /* Store SSL ErrorCode into*/
-				LogError(0, RS_RET_NO_ERRCODE, "nsd_ossl:"
-"TLS handshake failed between syslog client and server.");
 				dbgprintf("osslHandshakeCheck: OpenSSL Client handshake does not complete "
 					"immediately - setting to retry (this is OK and normal)\n");
 				FINALIZE;
@@ -1458,6 +1468,8 @@ osslHandshakeCheck(nsd_ossl_t *pNsd)
 				ABORT_FINALIZE(RS_RET_NO_ERRCODE /*RS_RET_RETRY*/);
 			} else {
 				osslLastSSLErrorMsg(res, pNsd->ssl, LOG_ERR, "osslHandshakeCheck Client");
+				LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO,
+					"nsd_ossl:TLS session terminated with remote syslog server.");
 				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 			}
 		}
@@ -1738,8 +1750,8 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	conn = BIO_new_socket(pPtcp->sock, BIO_CLOSE /*BIO_NOCLOSE*/);
 	dbgprintf("Connect: Init conn BIO[%p] done\n", (void *)conn);
 
-	LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO, "nsd_ossl:"
-"TLS Connection initiated with remote syslog server.");
+	LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO, "nsd_ossl: "
+		"TLS Connection initiated with remote syslog server.");
 	/*if we reach this point we are in tls mode */
 	DBGPRINTF("Connect: TLS Mode\n");
 	if(!(pThis->ssl = SSL_new(ctx))) {
