@@ -38,16 +38,15 @@ jobs:
 
       - name: add extra dependencies
         run: |
-          echo 'deb http://download.opensuse.org/repositories/home:/rgerhards/xUbuntu_18.04/ /' \
+          echo 'deb http://download.opensuse.org/repositories/home:/rgerhards/xUbuntu_20.04/ /' \
               | sudo tee /etc/apt/sources.list.d/home:rgerhards.list
-          curl -fsSL https://download.opensuse.org/repositories/home:rgerhards/xUbuntu_18.04/Release.key \
+          curl -fsSL https://download.opensuse.org/repositories/home:rgerhards/xUbuntu_20.04/Release.key \
               | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/home:rgerhards.gpg > /dev/null
           sudo apt-get update
           sudo apt-get install -y \
             libcurl4-gnutls-dev \
             libdbi-dev \
             libestr-dev \
-            libfastjson-dev \
             libgcrypt20-dev \
             libglib2.0-dev \
             libgnutls28-dev \
@@ -77,7 +76,6 @@ jobs:
             python3-pip \
             python3-pysnmp4 \
             python-docutils  \
-            snmp-mibs-downloader \
             software-properties-common \
             uuid-dev \
             valgrind \
@@ -85,6 +83,20 @@ jobs:
             wget \
             librdkafka-dev \
             zlib1g-dev
+
+      - name: build dependencies which require that
+        run: |
+             mkdir helper-projects && \
+             cd helper-projects && \
+             git clone https://github.com/rsyslog/librelp.git && \
+             cd librelp && \
+             autoreconf -fi && \
+             ./configure --prefix=/usr --enable-compile-warnings=yes --libdir=/usr/lib --includedir=/usr/include && \
+             make -j && \
+             sudo make install && \
+             cd .. && \
+             rm -r librelp && \
+             cd ..
 
       - name: prepare for build
         run: |
