@@ -88,14 +88,14 @@ jobs:
         run: |
              mkdir helper-projects && \
              cd helper-projects && \
-             git clone https://github.com/rsyslog/librelp.git && \
-             cd librelp && \
+             git clone https://github.com/rsyslog/libfastjson.git && \
+             cd libfastjson && \
              autoreconf -fi && \
-             ./configure --prefix=/usr --enable-compile-warnings=yes --libdir=/usr/lib --includedir=/usr/include && \
+             ./configure --prefix=/usr --enable-compile-warnings=yes --libdir=/usr/lib/x86_64-linux-gnu --includedir=/usr/include && \
              make -j && \
              sudo make install && \
              cd .. && \
-             rm -r librelp && \
+             rm -r libfastjson && \
              cd ..
 
       - name: prepare for build
