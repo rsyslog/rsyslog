@@ -4,11 +4,12 @@
 # build the "rsyslog libraries" - we do not have packages for them
 FROM	centos:8
 # search for packages that contain <file>: yum whatprovides <file>
-RUN	dnf -y update && \
-	dnf -y install epel-release && \
+RUN	dnf -y update
+RUN	dnf -y install epel-release && \
 	dnf install -y 'dnf-command(config-manager)' && \
-	dnf config-manager --set-enabled PowerTools && \
+	dnf config-manager --set-enabled powertools  && \
 	dnf -y update
+
 RUN	dnf -y install \
 	autoconf \
 	automake \
@@ -86,8 +87,8 @@ ENV	TCL_LIB_SPEC="-L/usr/lib64 -ltcl8.5" \
 RUN	mkdir /local_dep_cache && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch-5.6.9.tar.gz  && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz && \
-	wget -nv https://www.apache.org/dyn/closer.lua/zookeeper/zookeeper-3.6.2/apache-zookeeper-3.6.2-bin.tar.gz -O /local_dep_cache/zookeeper-3.6.2.tar.gz && \
-	wget -nv http://www-us.apache.org/dist/kafka/2.5.0/kafka_2.12-2.5.0.tgz -O /local_dep_cache/kafka_2.12-2.5.0.tgz
+	wget -nv https://downloads.apache.org/zookeeper/zookeeper-3.6.2/apache-zookeeper-3.6.2-bin.tar.gz -O /local_dep_cache/apache-zookeeper-3.6.2-bin.tar.gz  && \
+	wget -nv http://www-us.apache.org/dist/kafka/2.7.0/kafka_2.12-2.7.0.tgz -O /local_dep_cache/kafka_2.12-2.7.0.tgz
 # tell tests which are the newester versions, so they can be checked without the need
 # to adjust test sources.
 #ENV	ELASTICSEARCH_NEWEST="elasticsearch-6.3.1.tar.gz"
@@ -178,14 +179,17 @@ RUN	cd helper-projects && \
 RUN	cd helper-projects && \
 	git clone https://github.com/rsyslog/libfastjson.git && \
 	cd libfastjson && \
+	cat configure.ac|grep AC_INIT && \
 	autoreconf -fi && \
-	./configure --prefix=/usr --libdir=/usr/lib64 && \
+	./configure --prefix=/usr && \
+	cat libfastjson.pc && \
 	make -j4 && \
 	make install && \
 	cd .. && \
 	rm -r libfastjson && \
 	cd ..
 
+	#./configure --prefix=/usr --libdir=/usr/lib64 && \
 # liblognorm
 RUN	cd helper-projects && \
 	git clone https://github.com/rsyslog/liblognorm.git && \

@@ -54,7 +54,6 @@ RUN 	apt-get update && \
 	python3-docutils  \
 	python3-pip \
 	python3-pysnmp4 \
-	snmp-mibs-downloader \
 	software-properties-common \
 	sudo \
 	uuid-dev \
@@ -73,7 +72,6 @@ RUN	echo 'deb http://download.opensuse.org/repositories/home:/rgerhards/xUbuntu_
 	apt-get update -y && \
 	apt-get install -y  \
 	libestr-dev \
-	libfastjson-dev \
 	liblogging-stdlog-dev \
 	liblognorm-dev
 # 0mq (currently not needed, but we keep it in just in case)
@@ -116,7 +114,7 @@ RUN	mkdir /local_dep_cache && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch-5.6.9.tar.gz && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz && \
 	wget -nv https://downloads.apache.org/zookeeper/zookeeper-3.6.2/apache-zookeeper-3.6.2-bin.tar.gz -O /local_dep_cache/apache-zookeeper-3.6.2-bin.tar.gz  && \
-	wget -nv http://www-us.apache.org/dist/kafka/2.5.0/kafka_2.12-2.5.0.tgz -O /local_dep_cache/kafka_2.12-2.5.0.tgz
+	wget -nv http://www-us.apache.org/dist/kafka/2.7.0/kafka_2.12-2.7.0.tgz -O /local_dep_cache/kafka_2.12-2.7.0.tgz
 # tell tests which are the newester versions, so they can be checked without the need
 # to adjust test sources.
 #ENV	ELASTICSEARCH_NEWEST="elasticsearch-6.3.1.tar.gz"
@@ -197,17 +195,18 @@ RUN	cd helper-projects && \
 #	rm -r liblogging && \
 #	cd ..
 
+ENV	REBUILD_HERE=1
 # liblfastjson
-#RUN	cd helper-projects && \
-#	git clone https://github.com/rsyslog/libfastjson.git && \
-#	cd libfastjson && \
-#	autoreconf -fi && \
-#	./configure --prefix=/usr && \
-#	make -j4 && \
-#	make install && \
-#	cd .. && \
-#	rm -r libfastjson && \
-#	cd ..
+RUN	cd helper-projects && \
+	git clone https://github.com/rsyslog/libfastjson.git && \
+	cd libfastjson && \
+	autoreconf -fi && \
+	./configure --prefix=/usr --libdir=/usr/lib/x86_64-linux-gnu --includedir=/usr/include && \
+	make -j4 && \
+	make install && \
+	cd .. && \
+	rm -r libfastjson && \
+	cd ..
 
 # liblognorm
 #RUN	cd helper-projects && \
@@ -234,6 +233,7 @@ RUN	cd helper-projects && \
 	cd ..
 
 # librelp
+ENV	DEP_VERSION=5
 RUN	cd helper-projects && \
 	git clone https://github.com/rsyslog/librelp.git && \
 	cd librelp && \
@@ -245,10 +245,11 @@ RUN	cd helper-projects && \
 	rm -r librelp && \
 	cd ..
 
-# we need the latest librdkafka as there as always required updates
+# we need the latest librdkafka as there as always required updates -- not necessarily any longer!
 RUN	cd helper-projects && \
 	git clone https://github.com/edenhill/librdkafka && \
 	cd librdkafka && \
+	git checkout v1.5.3 && \
 	(unset CFLAGS; ./configure --prefix=/usr --libdir=/usr/lib --CFLAGS="-g" ; make -j) && \
 	make install && \
 	cd .. && \
