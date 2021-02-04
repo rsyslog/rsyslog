@@ -69,7 +69,6 @@ RUN	apt-key adv --keyserver keyserver.ubuntu.com --recv E0C56BD4 && \
 	apt-get install -y  \
 	libestr-dev \
 	librelp-dev \
-	libfastjson-dev \
 	liblogging-stdlog-dev \
 	liblognorm-dev
 # 0mq (currently not needed, but we keep it in just in case)
@@ -106,8 +105,8 @@ RUN	echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-8 main" > /etc/a
 RUN	mkdir /local_dep_cache && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch-5.6.9.tar.gz && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz && \
-	wget -nv https://www.apache.org/dyn/closer.lua/zookeeper/zookeeper-3.6.2/apache-zookeeper-3.6.2-bin.tar.gz -O /local_dep_cache/zookeeper-3.6.2.tar.gz && \
-	wget -nv http://www-us.apache.org/dist/kafka/2.5.0/kafka_2.12-2.5.0.tgz -O /local_dep_cache/kafka_2.12-2.5.0.tgz
+	wget -nv https://downloads.apache.org/zookeeper/zookeeper-3.6.2/apache-zookeeper-3.6.2-bin.tar.gz -O /local_dep_cache/apache-zookeeper-3.6.2-bin.tar.gz  && \
+	wget -nv http://www-us.apache.org/dist/kafka/2.7.0/kafka_2.12-2.7.0.tgz -O /local_dep_cache/kafka_2.12-2.7.0.tgz
 
 # tell tests which are the newester versions, so they can be checked without the need
 # to adjust test sources.
@@ -204,6 +203,19 @@ RUN	cd helper-projects && \
 	&& rm -rf civetweb
 
 RUN	cd ..
+
+ENV	REBUILD_HERE=1
+# liblfastjson
+RUN	cd helper-projects && \
+	git clone https://github.com/rsyslog/libfastjson.git && \
+	cd libfastjson && \
+	autoreconf -fi && \
+	./configure --prefix=/usr --libdir=/usr/lib/x86_64-linux-gnu --includedir=/usr/include && \
+	make -j4 && \
+	make install && \
+	cd .. && \
+	rm -r libfastjson && \
+	cd ..
 
 # next ENV is specifically for running scan-build - so we do not need to
 # change scripts if at a later time we can move on to a newer version
