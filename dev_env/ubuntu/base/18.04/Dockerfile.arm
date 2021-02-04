@@ -69,7 +69,6 @@ RUN	echo "deb http://download.opensuse.org/repositories/network:/messaging:/zero
 	libsodium-dev \
 	libestr-dev \
 	librelp-dev \
-	libfastjson-dev \
 	liblogging-stdlog-dev \
 	liblognorm-dev
 WORKDIR	/home/devel
@@ -106,6 +105,17 @@ RUN	cd helper-projects \
 # Note: we do NOT delete the source as we may need it to
 # uninstall (in case the user wants to go back to system-default)
 
+# liblfastjson
+RUN	cd helper-projects && \
+	git clone https://github.com/rsyslog/libfastjson.git && \
+	cd libfastjson && \
+	autoreconf -fi && \
+	./configure --prefix=/usr --libdir=/usr/lib/arm-linux-gnueabihf --includedir=/usr/include && \
+	make -j4 && \
+	make install && \
+	cd .. && \
+	rm -r libfastjson && \
+	cd ..
 
 # create dependency cache
 RUN	mkdir /local_dep_cache && \
@@ -129,6 +139,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-gssapi-krb5 \
 	--enable-imbatchreport \
 	--enable-imczmq \
+	--enable-imdocker \
 	--enable-imdiag \
 	--enable-imfile \
 	--enable-imjournal \
@@ -157,6 +168,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-mmrm1stspace \
 	--enable-mmsequence \
 	--enable-mmsnmptrapd \
+	--enable-mmtaghostname \
 	--enable-mmutf8fix \
 	--enable-mysql \
 	--enable-mysql-tests \
