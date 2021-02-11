@@ -58,6 +58,7 @@
 #include "unicode-helper.h"
 #include "parserif.h"
 #include "ratelimit.h"
+#include "statsobj.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -71,6 +72,7 @@ DEFobjCurrIf(net)
 DEFobjCurrIf(netstrms)
 DEFobjCurrIf(netstrm)
 DEFobjCurrIf(tcpclt)
+DEFobjCurrIf(statsobj)
 
 
 /* some local constants (just) for better readybility */
@@ -123,6 +125,9 @@ typedef struct _instanceData {
 	unsigned int ratelimitInterval;
 	unsigned int ratelimitBurst;
 	ratelimit_t *ratelimiter;
+	statsobj_t *stats;		/* dynafile, primarily cache stats */
+	intctr_t sentBytes;
+	DEF_ATOMIC_HELPER_MUT64(mut_sentBytes)
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -408,6 +413,8 @@ ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 CODESTARTfreeInstance
+	if(pData->stats != NULL)
+		statsobj.Destruct(&(pData->stats));
 	free(pData->pszStrmDrvr);
 	free(pData->pszStrmDrvrAuthMode);
 	free(pData->pszStrmDrvrPermitExpiredCerts);
@@ -502,6 +509,8 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData,
 						r->ai_addr, r->ai_addrlen);
 				if (lsent == (ssize_t) lenThisTry) {
 					bSendSuccess = RSTRUE;
+					ATOMIC_ADD_uint64(&pWrkrData->pData->sentBytes,
+						&pWrkrData->pData->mut_sentBytes, lenThisTry);
 					try_send = 0;
 					runSockArrayLoop = 0;
 				} else if(errno == EMSGSIZE) {
@@ -566,7 +575,7 @@ finalize_it:
 /* CODE FOR SENDING TCP MESSAGES */
 
 static rsRetVal
-TCPSendBufUncompressed(wrkrInstanceData_t *pWrkrData, uchar *buf, unsigned len)
+TCPSendBufUncompressed(wrkrInstanceData_t *pWrkrData, uchar *const buf, const unsigned len)
 {
 	DEFiRet;
 	unsigned alreadySent;
@@ -582,6 +591,8 @@ TCPSendBufUncompressed(wrkrInstanceData_t *pWrkrData, uchar *buf, unsigned len)
 		DBGPRINTF("omfwd: TCP sent %ld bytes, requested %u\n", (long) lenSend, len - alreadySent);
 		alreadySent += lenSend;
 	}
+
+	ATOMIC_ADD_uint64(&pWrkrData->pData->sentBytes, &pWrkrData->pData->mut_sentBytes, len);
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -1193,6 +1204,32 @@ setInstParamDefaults(instanceData *pData)
 	pData->ratelimitBurst = 200;
 }
 
+
+static rsRetVal
+setupInstStatsCtrs(instanceData *__restrict__ const pData)
+{
+	uchar ctrName[512];
+	DEFiRet;
+
+	/* support statistics gathering */
+	snprintf((char*)ctrName, sizeof(ctrName), "%s-%s-%s",
+		(pData->protocol == FORW_TCP) ? "TCP" : "UDP",
+		pData->target, pData->port);
+	ctrName[sizeof(ctrName)-1] = '\0'; /* be on the save side */
+	CHKiRet(statsobj.Construct(&(pData->stats)));
+	CHKiRet(statsobj.SetName(pData->stats, ctrName));
+	CHKiRet(statsobj.SetOrigin(pData->stats, (uchar*)"omfwd"));
+	pData->sentBytes = 0;
+	INIT_ATOMIC_HELPER_MUT64(pData->mut_sentBytes);
+	CHKiRet(statsobj.AddCounter(pData->stats, UCHAR_CONSTANT("bytes.sent"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->sentBytes)));
+	CHKiRet(statsobj.ConstructFinalize(pData->stats));
+
+finalize_it:
+	RETiRet;
+}
+
+
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	uchar *tplToUse;
@@ -1424,6 +1461,8 @@ CODESTARTnewActInst
 		ratelimitSetNoTimeCache(pData->ratelimiter);
 	}
 
+	setupInstStatsCtrs(pData);
+
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
@@ -1616,6 +1655,7 @@ CODESTARTmodExit
 	objRelease(netstrm, LM_NETSTRMS_FILENAME);
 	objRelease(netstrms, LM_NETSTRMS_FILENAME);
 	objRelease(tcpclt, LM_TCPCLT_FILENAME);
+	objRelease(statsobj, CORE_COMPONENT);
 	freeConfigVars();
 ENDmodExit
 
@@ -1658,6 +1698,7 @@ INITLegCnfVars
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(net,LM_NET_FILENAME));
+	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionforwarddefaulttemplate", 0, eCmdHdlrGetWord,
 		setLegacyDfltTpl, NULL, NULL));
@@ -1686,6 +1727,3 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
-
-/* vim:set ai:
- */
