@@ -1003,7 +1003,9 @@ TESTS +=  \
 	stats-cee.sh \
 	stats-json-es.sh \
 	dynstats_reset_without_pstats_reset.sh \
-	dynstats_prevent_premature_eviction.sh
+	dynstats_prevent_premature_eviction.sh \
+	omfwd_impstats-udp.sh \
+	omfwd_impstats-tcp.sh
 if HAVE_VALGRIND
 TESTS +=  \
 	dynstats-vg.sh \
@@ -2438,6 +2440,8 @@ EXTRA_DIST= \
 	testsuites/dynstats_input_more_2 \
 	no-dynstats-json.sh \
 	no-dynstats.sh \
+	omfwd_impstats-udp.sh \
+	omfwd_impstats-tcp.sh \
 	stats-json.sh \
 	stats-json-vg.sh \
 	stats-cee.sh \
