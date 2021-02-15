@@ -594,17 +594,19 @@ finalize_it:
 			if (skipFactor <= 1)  {
 				/* All the connection errors are printed. */
 				LogError(0, iRet, "omfwd: remote server at %s:%s seems to have closed connection. "
-					"This often happens when the remote peer (or an interim system like a load balancer or firewall) "
-					"shuts down or aborts a connection. Rsyslog will re-open the connection if configured "
-					"to do so (we saw a generic IO Error, which usually goes along with that behaviour).",
+					"This often happens when the remote peer (or an interim system like a load "
+					"balancer or firewall) shuts down or aborts a connection. Rsyslog will "
+					"re-open the connection if configured to do so (we saw a generic IO Error, "
+					"which usually goes along with that behaviour).",
 					pWrkrData->pData->target, pWrkrData->pData->port);
 			} else if ((conErrCnt++ % skipFactor) == 0) {
 				/* Every N'th error message is printed where N is a skipFactor. */
 				LogError(0, iRet, "omfwd: remote server at %s:%s seems to have closed connection. "
-					"This often happens when the remote peer (or an interim system like a load balancer or firewall) "
-					"shuts down or aborts a connection. Rsyslog will re-open the connection if configured "
-					"to do so (we saw a generic IO Error, which usually goes along with that behaviour). "
-					"Note that the next %d connection error messages will be skipped.",
+					"This often happens when the remote peer (or an interim system like a load "
+					"balancer or firewall) shuts down or aborts a connection. Rsyslog will "
+					"re-open the connection if configured to do so (we saw a generic IO Error, "
+					"which usually goes along with that behaviour). Note that the next %d "
+					"connection error messages will be skipped.",
 					pWrkrData->pData->target, pWrkrData->pData->port, skipFactor-1);
 			}
 		} else {
