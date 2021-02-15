@@ -1413,6 +1413,8 @@ actionWriteErrorFile(action_t *__restrict__ const pThis, const rsRetVal ret,
 	fjson_object *etry=NULL;
 	int bNeedUnlock = 0;
 
+	STATSCOUNTER_INC(pThis->ctrFail, pThis->mutCtrFail);
+
 	if(pThis->pszErrFile == NULL) {
 		DBGPRINTF("action %s: commit failed, no error file set, silently "
 			"discarding %d messages\n", pThis->pszName, nparams);
