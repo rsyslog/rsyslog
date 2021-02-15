@@ -1,5 +1,15 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2102.0 (aka 2021.02) 2021-02-??
+- 2021-02-15: omfwd bugfix: segfault or error if port not given
+  If omfwd is configured via RainerScript config format and the "port"
+  parameter is not given, a segfault will most likely happen on
+  connection establishment for TCP connections. For UDP, this is
+  usually not the case.
+  Alternatively, in any case, errors may happen.
+  Note that the segfault will usually happen right on restart so this
+  was easy to detect.
+  We did not receive reports from practice. Instead, we found the bug
+  while conducting other work.
 - 2021-01-29: lookup table bugfix: data race on lookup table reload
   A data race could happen when a lookup table was reloaded. We found
   this while moving to newer version of TSAN, but have no matching
