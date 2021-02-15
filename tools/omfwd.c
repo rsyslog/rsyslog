@@ -102,6 +102,7 @@ typedef struct _instanceData {
 	int iKeepAliveIntvl;
 	int iKeepAliveProbes;
 	int iKeepAliveTime;
+	int iConErrSkip;    /* skipping excessive connection errors */
 	uchar *gnutlsPriorityString;
 	int ipfreebind;
 
@@ -160,6 +161,7 @@ typedef struct configSettings_s {
 	int iKeepAliveIntvl;
 	int iKeepAliveProbes;
 	int iKeepAliveTime;
+	int iConErrSkip;
 	uchar *gnutlsPriorityString;
 	permittedPeers_t *pPermPeers;
 } configSettings_t;
@@ -196,6 +198,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "keepalive.probes", eCmdHdlrNonNegInt, 0 },
 	{ "keepalive.time", eCmdHdlrNonNegInt, 0 },
 	{ "keepalive.interval", eCmdHdlrNonNegInt, 0 },
+	{ "conerrskip", eCmdHdlrNonNegInt, 0 },
 	{ "gnutlsprioritystring", eCmdHdlrString, 0 },
 	{ "streamdriver", eCmdHdlrGetWord, 0 },
 	{ "streamdrivermode", eCmdHdlrInt, 0 },
@@ -597,13 +600,26 @@ TCPSendBufUncompressed(wrkrInstanceData_t *pWrkrData, uchar *const buf, const un
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(iRet == RS_RET_IO_ERROR) {
-			LogError(0, iRet,
-			  "omfwd: remote server at %s:%s seems to have closed connection. This often happens when "
-			  "the remote peer (or an interim system like a load balancer or firewall) "
-			  "shuts down or aborts a connection. Rsyslog will re-open the connection if configured "
-			  "to do so (we saw a generic IO Error, which"
-			  "usually goes along with that behaviour)",
-				pWrkrData->pData->target, pWrkrData->pData->port);
+			static unsigned int conErrCnt = 0;
+			const int skipFactor = pWrkrData->pData->iConErrSkip;
+			if (skipFactor <= 1)  {
+				/* All the connection errors are printed. */
+				LogError(0, iRet, "omfwd: remote server at %s:%s seems to have closed connection. "
+					"This often happens when the remote peer (or an interim system like a load "
+					"balancer or firewall) shuts down or aborts a connection. Rsyslog will "
+					"re-open the connection if configured to do so (we saw a generic IO Error, "
+					"which usually goes along with that behaviour).",
+					pWrkrData->pData->target, pWrkrData->pData->port);
+			} else if ((conErrCnt++ % skipFactor) == 0) {
+				/* Every N'th error message is printed where N is a skipFactor. */
+				LogError(0, iRet, "omfwd: remote server at %s:%s seems to have closed connection. "
+					"This often happens when the remote peer (or an interim system like a load "
+					"balancer or firewall) shuts down or aborts a connection. Rsyslog will "
+					"re-open the connection if configured to do so (we saw a generic IO Error, "
+					"which usually goes along with that behaviour). Note that the next %d "
+					"connection error messages will be skipped.",
+					pWrkrData->pData->target, pWrkrData->pData->port, skipFactor-1);
+			}
 		} else {
 			LogError(0, iRet, "omfwd: TCPSendBuf error %d, destruct TCP Connection to %s:%s",
 				iRet, pWrkrData->pData->target, pWrkrData->pData->port);
@@ -1189,6 +1205,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->iKeepAliveProbes = 0;
 	pData->iKeepAliveIntvl = 0;
 	pData->iKeepAliveTime = 0;
+	pData->iConErrSkip = 0;
 	pData->gnutlsPriorityString = NULL;
 	pData->bResendLastOnRecon = 0;
 	pData->bSendToAll = -1;  /* unspecified */
@@ -1308,6 +1325,8 @@ CODESTARTnewActInst
 			pData->iKeepAliveIntvl = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "keepalive.time")) {
 			pData->iKeepAliveTime = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "conerrskip")) {
+			pData->iConErrSkip = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "gnutlsprioritystring")) {
 			pData->gnutlsPriorityString = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "streamdriver")) {
@@ -1616,6 +1635,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	pData->iKeepAliveProbes = cs.iKeepAliveProbes;
 	pData->iKeepAliveIntvl = cs.iKeepAliveIntvl;
 	pData->iKeepAliveTime = cs.iKeepAliveTime;
+	pData->iConErrSkip = cs.iConErrSkip;
 
 	/* process template */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, getDfltTpl()));
@@ -1686,6 +1706,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	cs.iKeepAliveProbes = 0;
 	cs.iKeepAliveIntvl = 0;
 	cs.iKeepAliveTime = 0;
+	cs.iConErrSkip = 0;
 
 	return RS_RET_OK;
 }
