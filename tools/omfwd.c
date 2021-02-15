@@ -1384,6 +1384,11 @@ CODESTARTnewActInst
 		}
 	}
 
+	/* check if no port is set. If so, we use the IANA-assigned port of 514 */
+	if(pData->port == NULL) {
+		CHKmalloc(pData->port = strdup("514"));
+	}
+
 	if(complevel != -1) {
 		pData->compressionLevel = complevel;
 		if(pData->compressionMode == COMPRESS_NEVER) {
