@@ -670,6 +670,18 @@ It will also set the minimum protocol to TLSv1.2
    MinProtocol=TLSv1.2"
 
 
+Statistic Counter
+=================
+
+This plugin maintains :doc:`statistics <../rsyslog_statistic_counter>` for each forwarding action.
+The statistic is named "target-port-protocol" where "target", "port", and
+"protocol" are the respecitve configuration parameters. So an actual name might be
+"192.0.2.1-514-TCP" or "example.net-10514-UDP".
+
+The following properties are maintained for each action:
+
+-  **bytes.sent** - total number of bytes sent to the network
+
 See Also
 ========
 
