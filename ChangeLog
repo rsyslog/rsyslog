@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2102.0 (aka 2021.02) 2021-02-??
+- 2021-02-15: action stats counter bugfix: failure count was not properly incremented
+  In some cases the counter was not incremented, most notably with transaction-enabled
+  actions.
+  Thanks to github user thinkst-marco for the patch.
 - 2021-02-15: action stats counter bugfix: resume count was not incremented
   And so it always stayed at zero.
   Thanks to github user thinkst-marco for the patch.
