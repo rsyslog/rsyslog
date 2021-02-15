@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2102.0 (aka 2021.02) 2021-02-??
+Scheduled Release 8.2102.0 (aka 2021.02) 2021-02-16
 - 2021-02-15: omfwd: add stats counter for sent bytes
   Thanks to John Chivian for suggesting this feature.
 - 2021-02-15: omfwd: add error reporting configuration option
