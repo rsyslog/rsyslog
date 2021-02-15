@@ -1,5 +1,18 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2102.0 (aka 2021.02) 2021-02-??
+- 2021-02-15: omfwd: add stats counter for sent bytes
+  Thanks to John Chivian for suggesting this feature.
+- 2021-02-15: omfwd: add error reporting configuration option
+  RSyslog on a plain TCP cannot guarantee the message delivery
+  without using RELP protocol. Besides that the logs may be
+  flooded with connection errors making the rest of messages
+  difficult to find. To alleviate the problem (see issue 3910),
+  this patch adds a configuration option that enables to reduce
+  the number of network errors logged and reported.
+  For example, if each 10th network error message should be logged,
+  the rsyslog configuration has to be updated as follows.
+  action(type="omfwd" Target="<IP_ADDR>" Port="<PORT>" Protocol="tcp" ConErrSkip="10")
+  Thanks to Libor Bukata for the patch.
 - 2021-02-15: action stats counter bugfix: failure count was not properly incremented
   In some cases the counter was not incremented, most notably with transaction-enabled
   actions.
