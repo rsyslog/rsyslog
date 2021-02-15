@@ -390,7 +390,21 @@ The default, 0, means that the operating system defaults are used.
 This has only effect if keep-alive is enabled. The functionality may
 not be available on all platforms.
 
+ConErrSkip
+^^^^^^^^^^
 
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "0", "no", "none"
+
+The ConErrSkip can be used to limit the number of network errors
+recorded in logs. For example, value 10 means that each 10th error
+message is logged. Note that this options should be used as the last
+resort since the necessity of its use indicates network issues.
+The default behavior is that all network errors are logged.
 
 RateLimit.Interval
 ^^^^^^^^^^^^^^^^^^
