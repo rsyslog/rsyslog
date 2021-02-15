@@ -1,5 +1,8 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2102.0 (aka 2021.02) 2021-02-??
+- 2021-02-15: action stats counter bugfix: resume count was not incremented
+  And so it always stayed at zero.
+  Thanks to github user thinkst-marco for the patch.
 - 2021-02-15: omfwd bugfix: segfault or error if port not given
   If omfwd is configured via RainerScript config format and the "port"
   parameter is not given, a segfault will most likely happen on
