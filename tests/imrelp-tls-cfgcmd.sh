@@ -15,7 +15,11 @@ input(type="imrelp" port="'$TCPFLOOD_PORT'" tls="on"
 		tls.myprivkey="'$srcdir'/tls-certs/key.pem"
 		tls.authmode="certvalid"
 		tls.permittedpeer="rsyslog"
-		tls.tlscfgcmd="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1,-TLSv1.2")
+		tls.tlscfgcmd="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1,-TLSv1.2
+CipherString=ECDHE-RSA-AES256-GCM-SHA384
+Protocol=ALL,-SSLv2,-SSLv3,-TLSv1,-TLSv1.2,-TLSv1.3
+MinProtocol=TLSv1.2
+MaxProtocol=TLSv1.2")
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
@@ -23,7 +27,12 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 '
 startup
 
-tcpflood --check-only -k "Protocol=-ALL,TLSv1.2" -u "openssl" -Trelp-tls -acertvalid -p$TCPFLOOD_PORT -m$NUMMESSAGES -x "$srcdir/tls-certs/ca.pem" -z "$srcdir/tls-certs/key.pem" -Z "$srcdir/tls-certs/cert.pem" -Ersyslog 2> ${RSYSLOG_DYNNAME}.tcpflood
+export TCPFLOOD_EXTRA_OPTS='-k "Protocol=ALL,-SSLv2,-SSLv3,-TLSv1.1,-TLSv1.2
+CipherString=DHE-RSA-AES256-SHA
+Protocol=ALL,-SSLv2,-SSLv3,-TLSv1.1,-TLSv1.2,-TLSv1.3
+MinProtocol=TLSv1.1
+MaxProtocol=TLSv1.1"'
+tcpflood --check-only -u "openssl" -Trelp-tls -acertvalid -p$TCPFLOOD_PORT -m$NUMMESSAGES -x "$srcdir/tls-certs/ca.pem" -z "$srcdir/tls-certs/key.pem" -Z "$srcdir/tls-certs/cert.pem" -Ersyslog 2> ${RSYSLOG_DYNNAME}.tcpflood
 
 shutdown_when_empty
 wait_shutdown
@@ -42,7 +51,8 @@ if [ $ret == 0 ]; then
 	skip_test
 else
 	# Kindly check for a failed session
-	content_check "relp connect failed with return 10031" ${RSYSLOG_DYNNAME}.tcpflood
+	content_check "librelp: generic error: ecode 10031" $RSYSLOG_DEBUGLOG
+#	content_check "librelp: generic error: ecode 10031" ${RSYSLOG_DYNNAME}.tcpflood
 fi
 
 exit_test

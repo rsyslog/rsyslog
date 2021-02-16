@@ -1461,7 +1461,6 @@ tcpflood() {
 	else
 		check_only="no"
 	fi
-
 	eval ./tcpflood -p$TCPFLOOD_PORT "$@" $TCPFLOOD_EXTRA_OPTS
 	res=$?
 	if [ "$check_only" == "yes" ]; then

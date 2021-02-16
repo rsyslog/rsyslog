@@ -11,7 +11,11 @@ module(	load="../plugins/imrelp/.libs/imrelp"
 	tls.tlslib="openssl")
 # then SENDER sends to this port (not tcpflood!)
 input(	type="imrelp" port="'$PORT_RCVR'" tls="on"
-	tls.tlscfgcmd="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1,-TLSv1.2" 
+	tls.tlscfgcmd="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1,-TLSv1.2
+CipherString=ECDHE-RSA-AES256-GCM-SHA384
+Protocol=ALL,-SSLv2,-SSLv3,-TLSv1,-TLSv1.2,-TLSv1.3
+MinProtocol=TLSv1.2
+MaxProtocol=TLSv1.2" 
 	)
 
 $template outfmt,"%msg:F,58:2%\n"
@@ -26,7 +30,11 @@ module(	load="../plugins/omrelp/.libs/omrelp"
 	tls.tlslib="openssl")
 
 action(	type="omrelp" target="127.0.0.1" port="'$PORT_RCVR'" tls="on"
-	tls.tlscfgcmd="Protocol=-ALL,TLSv1.2" )
+	tls.tlscfgcmd="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1.1,-TLSv1.2
+CipherString=DHE-RSA-AES256-SHA
+Protocol=ALL,-SSLv2,-SSLv3,-TLSv1.1,-TLSv1.2,-TLSv1.3
+MinProtocol=TLSv1.1
+MaxProtocol=TLSv1.1" )
 ' 2
 startup 2
 
@@ -55,7 +63,7 @@ if [ $ret == 0 ]; then
 	skip_test
 else
 	# Kindly check for a failed session
-	content_check "librelp error 10031" $RSYSLOG_DEBUGLOG
+	content_check "librelp: generic error: ecode 10031" $RSYSLOG_DEBUGLOG
 #	content_check "OpenSSL Error Stack:"
 fi
 
