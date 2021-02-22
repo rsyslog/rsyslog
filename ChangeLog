@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2104.0 (aka 2021.04) 2021-04-??
+- 2021-02-22: test bugfix: some tests did not work with newer TLS library versions
+  Newer versions provide TLS versions that cannot be disabled in older versions as they
+  are unknown there. This is solved by setting restrictions in multiple steps. For
+  older library versions, the final step will error out, but the other one be applied.
+  This permits to achieve proper test results.
+  closes: https://github.com/rsyslog/rsyslog/issues/4534
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2102.0 (aka 2021.02) 2021-02-16
 - 2021-02-15: omfwd: add stats counter for sent bytes
