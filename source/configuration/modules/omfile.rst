@@ -373,21 +373,25 @@ If *zipLevel* is greater than 0,
 then this setting controls if extra headers are written to make the
 resulting file extra hardened against malfunction. If set to off,
 data appended to previously unclean closed files may not be
-accessible without extra tools. Note that this risk is usually
+accessible without extra tools (like `gztool <https://github.com/circulosmeos/gztool>`_ with: ``gztool -p``).
+Note that this risk is usually
 expected to be bearable, and thus "off" is the default mode. The
 extra headers considerably degrade compression, files with this
 option set to "on" may be four to five times as large as files
 processed in "off" mode.
 
 **In order to avoid this degradation in compression** both
-flushOnTXEnd and asyncWriting parameters must be set to "off"
-and also ioBufferSize must be raised from default "4k" value to
+*flushOnTXEnd* and *asyncWriting* parameters must be set to "off"
+and also *ioBufferSize* must be raised from default "4k" value to
 at least "32k". This way a reasonable compression factor is
 maintained, similar to a non-blocked gzip file:
 
 .. code-block:: none
 
    veryRobustZip="on" ioBufferSize="64k" flushOnTXEnd="off" asyncWriting="off"
+
+
+Do not forget to add your desired *zipLevel* to this configuration line.
 
 
 flushInterval
@@ -814,6 +818,12 @@ Caveats/Known Bugs
    atomically closed and in sync. HUPing only after a subset of files
    have been moved results in inconsistencies and will most probably
    render the file set unusable.
+
+-  If ``zipLevel`` is greater than 0 and ``veryRobustZip`` is set to off,
+   data appended to previously unclean closed files will not be
+   accessible with ``gunzip`` if rsyslog writes again in the same
+   file. Nonetheless, data is still there and can be correctly accessed
+   with other tools like `gztool <https://github.com/circulosmeos/gztool>`_ (v>=1.1) with: ``gztool -p``.
 
 
 Examples
