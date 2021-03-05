@@ -1539,8 +1539,15 @@ get_inode() {
 # check that logger supports -d option, if not skip test
 # right now this is a bit dirty, we check distros which do not support it
 check_logger_has_option_d() {
-	skip_platform "FreeBSD"  "We need logger -p option, which we do not have on FreeBSD"
-	skip_platform "SunOS"  "We need logger -p option, which we do not have on (all flavors of) Solaris"
+	skip_platform "FreeBSD"  "We need logger -d option, which we do not have on FreeBSD"
+	skip_platform "SunOS"  "We need logger -d option, which we do not have on (all flavors of) Solaris"
+
+	# check also the case for busybox
+	logger --help 2>&1 | head -n1 | grep -q BusyBox
+	if [ $? -eq 0 ]; then
+		echo "We need logger -d option, which we do not have have on Busybox"
+		exit 77
+	fi
 }
 
 
