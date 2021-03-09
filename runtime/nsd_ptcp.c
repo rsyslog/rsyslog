@@ -188,7 +188,7 @@ finalize_it:
 static rsRetVal
 SetTlsVerifyDepth(nsd_t __attribute__((unused)) *pNsd, int verifyDepth)
 {
-	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	nsd_ptcp_t __attribute__((unused)) *pThis = (nsd_ptcp_t*) pNsd;
 	DEFiRet;
 	ISOBJ_TYPE_assert((pThis), nsd_ptcp);
 	if (verifyDepth == 0) {

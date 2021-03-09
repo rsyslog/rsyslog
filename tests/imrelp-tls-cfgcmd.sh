@@ -50,9 +50,8 @@ if [ $ret == 0 ]; then
 	echo "SKIP: OpenSSL Version too old"
 	skip_test
 else
-	# Kindly check for a failed session
-	content_check "librelp: generic error: ecode 10031" $RSYSLOG_DEBUGLOG
-#	content_check "librelp: generic error: ecode 10031" ${RSYSLOG_DYNNAME}.tcpflood
+	# Check for a failed session - possible ecodes are 10031 and 10040
+	content_check "librelp: generic error: ecode" $RSYSLOG_DEBUGLOG
 fi
 
 exit_test
