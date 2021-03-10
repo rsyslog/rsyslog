@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# call this via "python[3] script name"
 
 """A skeleton for a python rsyslog message modification plugin
    Copyright (C) 2014 by Adiscon GmbH

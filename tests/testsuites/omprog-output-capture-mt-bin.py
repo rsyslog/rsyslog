@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# call this via "python[3] script name"
 
 import sys
 import os
