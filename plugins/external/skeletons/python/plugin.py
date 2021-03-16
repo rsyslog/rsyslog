@@ -35,7 +35,7 @@ def onInit():
 	    open files, create handles, connect to systems...)
 	"""
 	global outfile
-	outfile = open("/tmp/logfile", "w")
+	outfile = open("/tmp/logfile", "a+")
 
 
 def onReceive(msgs):
