@@ -484,7 +484,7 @@ cnfAddConfigBuffer(es_str_t *const str, const char *const cnfobj_name)
 	dbgprintf("config parser: pushed config fragment on top of stack: %s\n", cnfobj_name);
 
 	if(fp_rs_full_conf_output != NULL) {
-		fprintf(fp_rs_full_conf_output, "\n##### BEGIN CONFIG: %s\n", cnfcurrfn);
+		fprintf(fp_rs_full_conf_output, "\n##### BEGIN CONFIG: %s (put on stack)\n", cnfcurrfn);
 	}
 
 done:

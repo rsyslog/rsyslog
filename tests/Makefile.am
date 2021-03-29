@@ -453,6 +453,7 @@ TESTS +=  \
 	lookup_table_bad_configs.sh \
 	lookup_table_rscript_reload.sh \
 	lookup_table_rscript_reload_without_stub.sh \
+	config_multiple_include.sh \
 	include-obj-text-from-file.sh \
 	include-obj-text-from-file-noexist.sh \
 	multiple_lookup_tables.sh \
@@ -1613,6 +1614,9 @@ EXTRA_DIST= \
 	mmexternal-InvldProg-vg.sh \
 	nested-call-shutdown.sh \
 	1.rstest 2.rstest 3.rstest err1.rstest \
+	config_multiple_include.sh \
+	testsuites/include-std1-omfile-action.conf \
+	testsuites/include-std2-omfile-action.conf \
 	invalid_nested_include.sh \
 	validation-run.sh \
 	tls-certs/ca-key.pem \
