@@ -320,7 +320,7 @@ The following parameters can be set:
   global statement. This is done in regular array syntax as follows::
 
     global(environment=["http_proxy=http://myproxy.example.net",
-                        "another_one=this string is=ok!"
+                        "another_one=this string is=ok!"]
           )
 
   As usual, whitespace is irrelevant in regard to parameter placing. So
@@ -579,7 +579,7 @@ The following parameters can be set:
   This setting (default "off") permits to temporarily increase the maximum queue
   size during shutdown processing. This is useful when rsyslog needs to re-enqueue
   some messages at shutdown *and* the queue is already full. Note that the need to
-  re-enqueue messages stems back to some failed opertions. Note that the maximum
+  re-enqueue messages stems back to some failed operations. Note that the maximum
   permitted queue size is doubled, as this ensures in all cases that re-enqueuing
   can be completed. Note also that the increase of the max size is temporary during
   shutdown and also does not requiere any more storage. Except, of course, for
