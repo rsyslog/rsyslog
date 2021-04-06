@@ -1,5 +1,12 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2104.0 (aka 2021.04) 2021-04-??
+- 2021-04-06: new contributed function module fmunflatten
+  This commit adds a new rainerscript function to unflatten keys in a JSON tree. It
+  provides a way to expand dot separated fields.
+  <result> = unflatten(<source-tree>, <key-separator-character>);
+  It allows for instance to produce this: { "source": { "ip": "1.2.3.4", "port": 443 } }
+  from this source data: { "source.ip": "1.2.3.4", "source.port": 443 }
+  Thanks to Julien Thomas for the contribution.
 - 2021-02-22: test bugfix: some tests did not work with newer TLS library versions
   Newer versions provide TLS versions that cannot be disabled in older versions as they
   are unknown there. This is solved by setting restrictions in multiple steps. For
