@@ -381,7 +381,7 @@ SupportOctetCountedFraming
    :widths: auto
    :class: parameter-table
 
-   "binary", "on", "no", "``$InputPTCPSupportOctetCountedFraming``"
+   "binary", "on", "no", "``$InputPTCPServerSupportOctetCountedFraming``"
 
 The legacy octed-counted framing (similar to RFC5425
 framing) is activated. This is the default and should be left
