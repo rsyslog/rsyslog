@@ -37,7 +37,7 @@ not ready", which means the remote server is offline. This can be
 detected with plain TCP syslog and RELP, but not with UDP. So you need
 to use either of the two. In this howto, we use plain TCP syslog.
 
-Please note that we are using rsyslog-specific features. The are
+Please note that we are using rsyslog-specific features. They are
 required on the client, but not on the server. So the client system must
 run rsyslog (at least version 3.12.0), while on the server another
 syslogd may be running, as long as it supports plain tcp syslog.
@@ -58,7 +58,7 @@ First, you need to create a working directory for rsyslog. This is where
 it stores its queue files (should need arise). You may use any location
 on your local system.
 
-Next, you need to do is instruct rsyslog to use a disk queue and then
+Next, you need to instruct rsyslog to use a disk queue and then
 configure your action. There is nothing else to do. With the following
 simple config file, you forward anything you receive to a remote server
 and have buffering applied automatically when it goes down. This must be
@@ -96,7 +96,7 @@ have it done based on your specs ;) - what that means is that
 fine-tuning queue parameters is far from being trivial...]
 
 If you would like to test if your buffering scenario works, you need to
-stop, wait a while and restart you central server. Do **not** watch for
+stop, wait a while and restart your central server. Do **not** watch for
 files being created, as this usually does not happen and never happens
 immediately.
 
