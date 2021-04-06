@@ -388,6 +388,19 @@ if test "$enable_fmhash_xxhash" = "yes"; then
 fi
 
 
+# rscript function unflatten
+AC_ARG_ENABLE(fmunflatten,
+	[AS_HELP_STRING([--enable-fmunflatten],[Enable fmunflatten support @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_fmunflatten="yes" ;;
+          no) enable_fmunflatten="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-fmunflatten) ;;
+         esac],
+	[enable_fmunflatten=yes]
+)
+AM_CONDITIONAL(ENABLE_FMUNFLATTEN, test x$enable_fmunflatten = xyes)
+
+
 #gssapi
 AC_ARG_ENABLE(gssapi_krb5,
 	[AS_HELP_STRING([--enable-gssapi-krb5],[Enable GSSAPI Kerberos 5 support @<:@default=no@:>@])],
@@ -2639,6 +2652,7 @@ AC_CONFIG_FILES([Makefile \
     contrib/mmdarwin/Makefile \
 		contrib/omhttp/Makefile \
 		contrib/fmhash/Makefile \
+		contrib/fmunflatten/Makefile \
 		contrib/pmsnare/Makefile \
 		contrib/pmpanngfw/Makefile \
 		contrib/pmaixforwardedfrom/Makefile \
@@ -2784,6 +2798,7 @@ echo "---{ function modules }---"
 echo "    fmhttp enabled:                           $enable_fmhttp"
 echo "    fmhash enabled:                           $enable_fmhash"
 echo "    fmhash with xxhash enabled:               $enable_fmhash_xxhash"
+echo "    fmunflatten enabled:                      $enable_fmunflatten"
 echo
 echo "---{ debugging support }---"
 echo "    distcheck workaround enabled:             $enable_distcheck_workaround"

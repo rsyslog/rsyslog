@@ -198,6 +198,10 @@ if ENABLE_FMHASH
 SUBDIRS += contrib/fmhash
 endif
 
+if ENABLE_FMUNFLATTEN
+SUBDIRS += contrib/fmunflatten
+endif
+
 if ENABLE_OMKAFKA
 SUBDIRS += plugins/omkafka
 endif
