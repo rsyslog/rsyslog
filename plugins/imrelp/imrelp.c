@@ -369,6 +369,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	int relpRet;
 	uchar statname[64];
 	int i;
+	int isAnon;
 	DEFiRet;
 
 	if(!inst->bEnableLstn) {
@@ -455,14 +456,15 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 			relpSrvSetDHBits(pSrv, inst->dhBits);
 		}
 		relpSrvSetGnuTLSPriString(pSrv, (char*)inst->pristring);
-		if(relpSrvSetAuthMode(pSrv, (char*)inst->authmode) != RELP_RET_OK) {
+		isAnon = !strcmp((char*)inst->authmode, "anon");
+		if(!isAnon && relpSrvSetAuthMode(pSrv, (char*)inst->authmode) != RELP_RET_OK) {
 			LogError(0, RS_RET_RELP_ERR,
 					"imrelp: invalid auth mode '%s'", inst->authmode);
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 		}
 		if(relpSrvSetCACert(pSrv, (char*) inst->caCertFile) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
-		if(relpSrvSetOwnCert(pSrv, (char*) inst->myCertFile) != RELP_RET_OK)
+		if(!isAnon && relpSrvSetOwnCert(pSrv, (char*) inst->myCertFile) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 		if(relpSrvSetPrivKey(pSrv, (char*) inst->myPrivKeyFile) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);

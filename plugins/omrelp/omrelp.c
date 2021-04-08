@@ -228,6 +228,7 @@ static rsRetVal
 doCreateRelpClient(instanceData *pData, relpClt_t **pRelpClt)
 {
 	int i;
+	int isAnon;
 	DEFiRet;
 
 	if(relpEngineCltConstruct(pRelpEngine, pRelpClt) != RELP_RET_OK)
@@ -250,7 +251,8 @@ doCreateRelpClient(instanceData *pData, relpClt_t **pRelpClt)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 
 
-		if(relpCltSetAuthMode(*pRelpClt, (char*) pData->authmode) != RELP_RET_OK) {
+		isAnon = !strcmp((char*)pData->authmode, "anon");
+		if(!isAnon && relpCltSetAuthMode(*pRelpClt, (char*) pData->authmode) != RELP_RET_OK) {
 			LogError(0, RS_RET_RELP_ERR,
 					"omrelp: invalid auth mode '%s'\n", pData->authmode);
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
@@ -258,7 +260,7 @@ doCreateRelpClient(instanceData *pData, relpClt_t **pRelpClt)
 
 		if(relpCltSetCACert(*pRelpClt, (char*) pData->caCertFile) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
-		if(relpCltSetOwnCert(*pRelpClt, (char*) pData->myCertFile) != RELP_RET_OK)
+		if(!isAnon && relpCltSetOwnCert(*pRelpClt, (char*) pData->myCertFile) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 		if(relpCltSetPrivKey(*pRelpClt, (char*) pData->myPrivKeyFile) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);

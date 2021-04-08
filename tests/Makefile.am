@@ -1307,6 +1307,7 @@ TESTS += \
          relp_tls_certificate_not_found.sh \
 	 omrelp_wrong_authmode.sh \
 	 imrelp-tls.sh \
+	 imrelp-tls-anon.sh \
 	 imrelp-tls-chainedcert.sh
 if USE_RELPENGINESETTLSCFGCMD
 TESTS += \
@@ -2188,6 +2189,7 @@ EXTRA_DIST= \
 	relp_tls_certificate_not_found.sh \
 	omrelp_wrong_authmode.sh \
 	imrelp-tls.sh \
+	imrelp-tls-anon.sh \
 	imrelp-tls-cfgcmd.sh \
 	imrelp-tls-chainedcert.sh \
 	sndrcv_relp_tls-cfgcmd.sh \
