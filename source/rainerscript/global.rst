@@ -256,7 +256,7 @@ The following parameters can be set:
   reception of the message. The intent is to provide a way to stop
   non-printable messages from entering the syslog system as whole. If this
   option is turned on, all control-characters are converted to a 3-digit
-  octal number and be prefixed with the parser.controlCharacterEscapePrefix
+  octal number and be prefixed with the *parser.controlCharacterEscapePrefix*
   character (being '#' by default). For example, if the BEL character
   (ctrl-g) is included in the message, it would be converted to '#007'.
   To be compatible to sysklogd, this option must be turned on.
