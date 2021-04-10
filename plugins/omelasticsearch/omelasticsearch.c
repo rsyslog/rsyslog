@@ -606,7 +606,7 @@ setPostURL(wrkrInstanceData_t *const pWrkrData, uchar **const tpls)
 	uchar *parent;
 	uchar *bulkId;
 	char* baseUrl;
-	/* since 6.0, the API always requires /idx/_doc, so use that if searchType is not explicitly set */
+	/* since 7.0, the API always requires /idx/_doc, so use that if searchType is not explicitly set */
 	uchar* actualSearchType = (uchar*)"_doc";
 	es_str_t *url;
 	int r;
