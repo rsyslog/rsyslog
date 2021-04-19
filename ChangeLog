@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2104.0 (aka 2021.04) 2021-04-??
+- 2021-04-19: new contributed module imhiredis
+  Thanks to Théo Bertin (frikilax) for the patch.
 - 2021-04-19: new built-in function get_property() to access property vars
   Provides ability to evaluate a rsyslog variable using dynamically
   evaluated parameters.
