@@ -10,6 +10,20 @@ Scheduled Release 8.2104.0 (aka 2021.04) 2021-04-??
   Useful for accessing json sub-objects, where a key
   needs to be evaluated at runtime. Can be used to access arrays as well.
   Thanks to Nelson Yen for contributing this module.
+- 2021-04-19: mmdblookup: add support for mmdb DB reload on HUP
+  Thanks to Théo Bertin (frikilax) for the patch.
+- 2021-04-19: script bugfix: empty array in foreach() improperly handled
+  When running a foreach() loop inside a ruleset, if the json array/object iterated
+  over is empty but valid, the foreach will make the message processing in the
+  ruleset abort operation, no following operation (such as actions) will be
+  executed after this.
+  Thanks to Théo Bertin (frikilax) for the patch.
+- 2021-04-19: imjournal bugfixes (handle leak, empty file)
+  Flush the FILE* buffer before rename & fsync in order
+  to not end up syncing an empty file.
+  Also, close WorkDir on fsync in order to prevent
+  file descriptor leakage.
+  Thanks to github user gerd-rausch for the fix.
 - 2021-04-06: new contributed function module fmunflatten
   This commit adds a new rainerscript function to unflatten keys in a JSON tree. It
   provides a way to expand dot separated fields.
