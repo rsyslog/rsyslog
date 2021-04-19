@@ -509,7 +509,7 @@ SupportOctetCountedFraming
    :widths: auto
    :class: parameter-table
 
-   "binary", "on", "no", "``$InputTCPSupportOctetCountedFraming``"
+   "binary", "on", "no", "``$InputTCPServerSupportOctetCountedFraming``"
 
 If set to "on", the legacy octed-counted framing (similar to RFC5425
 framing) is activated. This should be left unchanged until you know
