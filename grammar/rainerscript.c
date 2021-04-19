@@ -1829,6 +1829,129 @@ finalize_it:
 	varFreeMembers(&srcVal[1]);
 }
 
+
+static void ATTR_NONNULL()
+doFunc_get_property(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *const usrptr,
+	wti_t *const pWti)
+{
+	int retVal = RS_SCRIPT_EOK;
+	int bMustFree = 0;
+	char *expr = NULL;
+	struct svar srcVal[2] = {{.d={0}, .datatype=0}};
+	struct json_object *json = NULL;
+
+	/* ignore string literals */
+	if (func->expr[0]->nodetype == 'S') {
+		retVal = RS_SCRIPT_EINVAL;
+		FINALIZE;
+	}
+
+	cnfexprEval(func->expr[0], &srcVal[0], usrptr, pWti);
+	cnfexprEval(func->expr[1], &srcVal[1], usrptr, pWti);
+	DBGPRINTF("srcval[0] datatype: %c\n", srcVal[0].datatype);
+	DBGPRINTF("srcval[1] datatype: %c\n", srcVal[1].datatype);
+
+	switch (srcVal[0].datatype) {
+		case 'J': {
+			json = srcVal[0].d.json;
+			break;
+		}
+		case 'S': {
+			ret->d.estr = es_strdup(srcVal[0].d.estr);
+			ret->datatype = 'S';
+			FINALIZE;
+			break;
+		}
+		default: {
+			ret->d.estr = es_newStrFromCStr("", 1);
+			ret->datatype = 'S';
+			FINALIZE;
+			break;
+		}
+	}
+
+	switch (json_object_get_type(json)) {
+		case json_type_object: {
+			expr = (char*) var2CString(&srcVal[1], &bMustFree);
+			if (expr && expr[0] == '\0') {
+				ret->d.json = json_object_get(json);
+				ret->datatype = 'J';
+				break;
+			}
+			if (expr && !json_object_object_get_ex(json, (char*)expr, &ret->d.json)) {
+					retVal = RS_SCRIPT_EINVAL;
+					FINALIZE;
+			}
+			if (ret->d.json) {
+				ret->d.json = json_object_get(ret->d.json);
+				ret->datatype = 'J';
+			} else {
+				ret->d.estr = es_newStrFromCStr("", 1);
+				ret->datatype = 'S';
+			}
+			break;
+		}
+		case json_type_array: {
+			int success = 0;
+			long long index = var2Number(&srcVal[1], &success);
+			if (!success || index < 0 || (size_t)index >= sizeof(size_t)) {
+				retVal = RS_SCRIPT_EINVAL;
+				FINALIZE;
+			}
+			ret->d.json = json_object_array_get_idx(json, index);
+			if (ret->d.json) {
+				ret->d.json = json_object_get(ret->d.json);
+				ret->datatype = 'J';
+			} else {
+				ret->d.estr = es_newStrFromCStr("", 1);
+				ret->datatype = 'S';
+			}
+			break;
+		}
+		case json_type_boolean:
+		case json_type_int: {
+			ret->d.n = json_object_get_int64(json);
+			ret->datatype = 'N';
+			break;
+		}
+		case json_type_double: {
+			ret->d.n = json_object_get_double(json);
+			ret->datatype = 'N';
+			break;
+		}
+		case json_type_string: {
+			ret->d.estr = es_newStrFromCStr(json_object_get_string(json), json_object_get_string_len(json));
+			ret->datatype = 'S';
+			break;
+		}
+		case json_type_null: {
+			ret->datatype = 'S';
+			ret->d.estr = es_newStrFromCStr("", 1);
+			break;
+		}
+		default:
+			LogError(0, RS_RET_INTERNAL_ERROR,
+				"Warning - unhandled json type(%d) !!!!\n", json_object_get_type(json));
+			retVal = RS_SCRIPT_EINVAL;
+			break;
+	}
+
+finalize_it:
+	wtiSetScriptErrno(pWti, retVal);
+
+	if (retVal != RS_SCRIPT_EOK) {
+		ret->datatype = 'S';
+		ret->d.estr = es_newStrFromCStr("", 1);
+	}
+	if (bMustFree) {
+		free(expr);
+	}
+	varFreeMembers(&srcVal[0]);
+	varFreeMembers(&srcVal[1]);
+}
+
 static void ATTR_NONNULL()
 doFunct_RandomGen(struct cnffunc *__restrict__ const func,
 	struct svar *__restrict__ const ret,
@@ -3619,6 +3742,7 @@ static struct scriptFunct functions[] = {
 	{"parse_time", 1, 1, doFunct_ParseTime, NULL, NULL},
 	{"is_time", 1, 2, doFunct_IsTime, NULL, NULL},
 	{"parse_json", 2, 2, doFunc_parse_json, NULL, NULL},
+	{"get_property", 2, 2, doFunc_get_property, NULL, NULL},
 	{"script_error", 0, 0, doFunct_ScriptError, NULL, NULL},
 	{"previous_action_suspended", 0, 0, doFunct_PreviousActionSuspended, NULL, NULL},
 	{NULL, 0, 0, NULL, NULL, NULL} //last element to check end of array
