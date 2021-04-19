@@ -2384,6 +2384,16 @@ AM_CONDITIONAL(ENABLE_OMRABBITMQ, test x$enable_omrabbitmq = xyes)
 
 # HIREDIS SUPPORT
 
+AC_ARG_ENABLE(imhiredis,
+         [AS_HELP_STRING([--enable-imhiredis],[Compiles imhiredis input module @<:@default=no@:>@])],
+         [case "${enableval}" in
+          yes) enable_imhiredis="yes" ;;
+           no) enable_imhiredis="no" ;;
+          optional) enable_imhiredis="optional" ;;
+            *) AC_MSG_ERROR(bad value ${enableval} for --enable-imhiredis) ;;
+          esac],
+         [enable_imhiredis=no]
+)
 AC_ARG_ENABLE(omhiredis,
         [AS_HELP_STRING([--enable-omhiredis],[Compiles omhiredis template module @<:@default=no@:>@])],
         [case "${enableval}" in
@@ -2393,8 +2403,8 @@ AC_ARG_ENABLE(omhiredis,
          esac],
         [enable_omhiredis=no]
 )
-#
-if test "x$enable_omhiredis" = "xyes"; then
+
+if test "x$enable_omhiredis" = "xyes" -o "x$enable_imhiredis" = "xyes" ; then
     PKG_CHECK_MODULES(HIREDIS, hiredis >= 0.10.1, [],
         [AC_SEARCH_LIBS(redisConnectWithTimeout, hiredis,
             [AC_COMPILE_IFELSE(
@@ -2419,7 +2429,19 @@ if test "x$enable_omhiredis" = "xyes"; then
         )]
     )
 fi
+
+if test "x$enable_imhiredis" = "xyes" ; then
+    PKG_CHECK_MODULES(LIBEVENT, [libevent >= 2.0, libevent_pthreads],
+        # libevent found
+        [
+            HIREDIS_LIBS="$HIREDIS_LIBS -levent -levent_pthreads"
+        ],
+        # libevent not found
+        [AC_MSG_ERROR([no libevent >= 2.0 found with pthreads support, imhiredis cannot use pub/sub])])
+fi
+
 AM_CONDITIONAL(ENABLE_OMHIREDIS, test x$enable_omhiredis = xyes)
+AM_CONDITIONAL(ENABLE_IMHIREDIS, test x$enable_imhiredis = xyes)
 
 # END HIREDIS SUPPORT
 
@@ -2649,7 +2671,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/mmsnmptrapd/Makefile \
 		plugins/pmlastmsg/Makefile \
 		plugins/mmdblookup/Makefile \
-    contrib/mmdarwin/Makefile \
+    		contrib/mmdarwin/Makefile \
 		contrib/omhttp/Makefile \
 		contrib/fmhash/Makefile \
 		contrib/fmunflatten/Makefile \
@@ -2679,6 +2701,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/mmtaghostname/Makefile \
 		contrib/imdocker/Makefile \
 		contrib/pmdb2diag/Makefile \
+		contrib/imhiredis/Makefile \
 		tests/set-envvars \
 		tests/Makefile])
 AC_OUTPUT
@@ -2728,6 +2751,7 @@ echo "    impcap input module enabled:              $enable_impcap"
 echo "    imtuxedoulog module will be compiled:     $enable_imtuxedoulog"
 echo "    improg input module enabled:              $enable_improg"
 echo "    imhttp input module enabled:              $enable_imhttp"
+echo "    imhiredis input module enabled:           $enable_imhiredis"
 echo
 echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
