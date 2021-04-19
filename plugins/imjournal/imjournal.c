@@ -562,6 +562,8 @@ persistJournalState(void)
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 
+	fflush(sf);
+
 	/* change the name of the file to the configured one */
 	if (rename(tmp_sf, cs.stateFile) < 0) {
 		LogError(errno, iRet, "imjournal: rename() failed for new path: '%s'", cs.stateFile);
@@ -583,6 +585,8 @@ persistJournalState(void)
 			LogError(errno, RS_RET_IO_ERROR, "imjournal: fsync on '%s' failed", glbl.GetWorkDir());
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
+
+		closedir(wd);
 	}
 
 	DBGPRINTF("Persisted journal to '%s'\n", cs.stateFile);
