@@ -401,12 +401,12 @@ execForeach(struct cnfstmt *const stmt, smsg_t *const pMsg, wti_t *const pWti)
 	if (arr == NULL) {
 		DBGPRINTF("foreach loop skipped, as object to iterate upon is empty\n");
 		FINALIZE;
-	} else if (json_object_is_type(arr, json_type_array)) {
+	} else if (json_object_is_type(arr, json_type_array) && json_object_array_length(arr) > 0) {
 		CHKiRet(callForeachArray(stmt, arr, pMsg, pWti));
-	} else if (json_object_is_type(arr, json_type_object)) {
+	} else if (json_object_is_type(arr, json_type_object) && json_object_object_length(arr) > 0) {
 		CHKiRet(callForeachObject(stmt, arr, pMsg, pWti));
 	} else {
-		DBGPRINTF("foreach loop skipped, as object to iterate upon is not an array\n");
+		DBGPRINTF("foreach loop skipped, as object to iterate upon is empty or is not an array\n");
 		FINALIZE;
 	}
 	CHKiRet(msgDelJSON(pMsg, (uchar*)stmt->d.s_foreach.iter->var));
