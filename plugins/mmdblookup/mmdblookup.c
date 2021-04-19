@@ -61,11 +61,13 @@ typedef struct _instanceData {
 		char **name;
 		char **varname;
 	} fieldList;
+	sbool reloadOnHup;
 } instanceData;
 
 typedef struct wrkrInstanceData {
 	instanceData *pData;
 	MMDB_s        mmdb;
+	pthread_mutex_t mmdbMutex;
 } wrkrInstanceData_t;
 
 struct modConfData_s {
@@ -96,6 +98,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "key",      eCmdHdlrGetWord, CNFPARAM_REQUIRED },
 	{ "mmdbfile", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
 	{ "fields",   eCmdHdlrArray,   CNFPARAM_REQUIRED },
+	{ "reloadonhup", eCmdHdlrBinary, 0 },
 };
 static struct cnfparamblk actpblk = {
 	CNFPARAMBLK_VERSION,
@@ -107,6 +110,26 @@ static struct cnfparamblk actpblk = {
 /* protype functions */
 void str_split(char **membuf);
 
+int open_mmdb(const char *file, MMDB_s *mmdb);
+void close_mmdb(MMDB_s *mmdb);
+
+
+int open_mmdb(const char *file, MMDB_s *mmdb) {
+	int status = MMDB_open(file, MMDB_MODE_MMAP, mmdb);
+	if (MMDB_SUCCESS != status) {
+		dbgprintf("Can't open %s - %s\n", file, MMDB_strerror(status));
+		if (MMDB_IO_ERROR == status) {
+			dbgprintf("  IO error: %s\n", strerror(errno));
+		}
+		LogError(0, RS_RET_SUSPENDED, "maxminddb error: cannot open database file");
+	}
+
+	return MMDB_SUCCESS != status;
+}
+
+void close_mmdb(MMDB_s *mmdb) {
+	MMDB_close(mmdb);
+}
 
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
@@ -139,15 +162,9 @@ ENDcreateInstance
 
 BEGINcreateWrkrInstance
 CODESTARTcreateWrkrInstance
-	int status = MMDB_open(pData->pszMmdbFile, MMDB_MODE_MMAP, &pWrkrData->mmdb);
-	if (MMDB_SUCCESS != status) {
-		dbgprintf("Can't open %s - %s\n", pData->pszMmdbFile, MMDB_strerror(status));
-		if (MMDB_IO_ERROR == status) {
-			dbgprintf("  IO error: %s\n", strerror(errno));
-		}
-		LogError(0, RS_RET_SUSPENDED, "can not initialize maxminddb");
-		/* ABORT_FINALIZE(RS_RET_SUSPENDED); */
-	}
+	CHKiRet(open_mmdb(pData->pszMmdbFile, &pWrkrData->mmdb));
+	CHKiConcCtrl(pthread_mutex_init(&pWrkrData->mmdbMutex, NULL));
+finalize_it:
 ENDcreateWrkrInstance
 
 
@@ -173,7 +190,8 @@ ENDfreeInstance
 
 BEGINfreeWrkrInstance
 CODESTARTfreeWrkrInstance
-	MMDB_close(&pWrkrData->mmdb);
+	close_mmdb(&pWrkrData->mmdb);
+	pthread_mutex_destroy(&pWrkrData->mmdbMutex);
 ENDfreeWrkrInstance
 
 
@@ -220,6 +238,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->pszKey = NULL;
 	pData->pszMmdbFile = NULL;
 	pData->fieldList.nmemb = 0;
+	pData->reloadOnHup = 1;
 }
 
 BEGINnewActInst
@@ -273,6 +292,8 @@ CODESTARTnewActInst
 				CHKmalloc(pData->fieldList.varname[j] = strdup(vnamebuf));
 				free(param);
 			}
+		} else if(!strcmp(actpblk.descr[i].name, "reloadonhup")) {
+			pData->reloadOnHup = pvals[i].val.d.n;
 		} else {
 			dbgprintf("mmdblookup: program error, non-handled"
 				" param '%s'\n", actpblk.descr[i].name);
@@ -341,6 +362,7 @@ CODESTARTdoAction
 	rsRetVal localRet = msgGetJSONPropJSON(pMsg, &pProp, &keyjson);
 	msgPropDescrDestruct(&pProp);
 
+	pthread_mutex_lock(&pWrkrData->mmdbMutex);
 	if (localRet != RS_RET_OK) {
 		/* key not found in the message. nothing to do */
 		ABORT_FINALIZE(RS_RET_OK);
@@ -415,12 +437,27 @@ CODESTARTdoAction
 	}
 
 finalize_it:
+	pthread_mutex_unlock(&pWrkrData->mmdbMutex);
 	if(entry_data_list != NULL)
 		MMDB_free_entry_data_list(entry_data_list);
 	json_object_put(keyjson);
 	if(total_json != NULL)
 		json_object_put(total_json);
 ENDdoAction
+
+// HUP handling for the worker...
+BEGINdoHUPWrkr
+CODESTARTdoHUPWrkr
+	dbgprintf("mmdblookup: HUP received\n");
+	if (pWrkrData->pData->reloadOnHup) {
+		// a mutex is needed, as it's the main thread that runs this handler
+		pthread_mutex_lock(&pWrkrData->mmdbMutex);
+		LogMsg(0, NO_ERRCODE, LOG_INFO, "mmdblookup: reloading MMDB file");
+		close_mmdb(&pWrkrData->mmdb);
+		iRet = open_mmdb(pWrkrData->pData->pszMmdbFile, &pWrkrData->mmdb);
+		pthread_mutex_unlock(&pWrkrData->mmdbMutex);
+	}
+ENDdoHUPWrkr
 
 
 NO_LEGACY_CONF_parseSelectorAct
@@ -438,6 +475,7 @@ CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
+CODEqueryEtryPt_doHUPWrkr
 ENDqueryEtryPt
 
 
