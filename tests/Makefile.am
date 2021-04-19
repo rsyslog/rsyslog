@@ -399,7 +399,9 @@ TESTS +=  \
 	rscript_replace_complex.sh \
 	rscript_wrap2.sh \
 	rscript_wrap3.sh \
+	rscript_re_extract_i.sh \
 	rscript_re_extract.sh \
+	rscript_re_match_i.sh \
 	rscript_re_match.sh \
 	rscript_re_match-dbl_quotes.sh \
 	rscript_eq.sh \
@@ -2540,7 +2542,9 @@ EXTRA_DIST= \
 	stop_when_array_has_element.sh \
 	testsuites/stop_when_array_has_elem_input \
 	key_dereference_on_uninitialized_variable_space.sh \
+	rscript_re_extract_i.sh \
 	rscript_re_extract.sh \
+	rscript_re_match_i.sh \
 	rscript_re_match.sh \
 	rscript_re_match-dbl_quotes.sh \
 	lookup_table.sh \
