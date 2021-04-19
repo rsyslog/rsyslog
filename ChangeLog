@@ -1,5 +1,13 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2104.0 (aka 2021.04) 2021-04-??
+- 2021-04-19: new built-in function get_property() to access property vars
+  Provides ability to evaluate a rsyslog variable using dynamically
+  evaluated parameters.
+  1st param is the rsyslog param, 2nd param is a key, can be an array
+  index or key string.
+  Useful for accessing json sub-objects, where a key
+  needs to be evaluated at runtime. Can be used to access arrays as well.
+  Thanks to Nelson Yen for contributing this module.
 - 2021-04-06: new contributed function module fmunflatten
   This commit adds a new rainerscript function to unflatten keys in a JSON tree. It
   provides a way to expand dot separated fields.
@@ -13,6 +21,7 @@ Scheduled Release 8.2104.0 (aka 2021.04) 2021-04-??
   older library versions, the final step will error out, but the other one be applied.
   This permits to achieve proper test results.
   closes: https://github.com/rsyslog/rsyslog/issues/4534
+- some improvements to project CI
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2102.0 (aka 2021.02) 2021-02-16
 - 2021-02-15: omfwd: add stats counter for sent bytes
