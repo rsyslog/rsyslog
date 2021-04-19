@@ -390,13 +390,13 @@ fi
 
 # rscript function unflatten
 AC_ARG_ENABLE(fmunflatten,
-	[AS_HELP_STRING([--enable-fmunflatten],[Enable fmunflatten support @<:@default=yes@:>@])],
+	[AS_HELP_STRING([--enable-fmunflatten],[Enable fmunflatten support @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_fmunflatten="yes" ;;
           no) enable_fmunflatten="no" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-fmunflatten) ;;
          esac],
-	[enable_fmunflatten=yes]
+	[enable_fmunflatten=no]
 )
 AM_CONDITIONAL(ENABLE_FMUNFLATTEN, test x$enable_fmunflatten = xyes)
 
