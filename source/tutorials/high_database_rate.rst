@@ -77,14 +77,19 @@ to a MySQL database and have buffering applied automatically.
 
 ::
 
-    $ModLoad ommysql # load the output driver (use ompgsql for PostgreSQL)
-    $ModLoad imudp # network reception 
-    $UDPServerRun 514 # start a udp server at port 514 
-    $ModLoad imuxsock # local message reception
-    $WorkDirectory /rsyslog/work # default location for work (spool) files
-    $MainMsgQueueFileName mainq # set file name, also enables disk mode
-    $ActionResumeRetryCount -1 # infinite retries on insert failure 
-    #for PostgreSQL replace :ommysql: by :ompgsql: below: *.* :ommysql:hostname,dbname,userid,password;
+    module(load="imuxsock") # provides support for local system logging
+    
+    # provides UDP syslog reception
+    module(load="imudp")
+    input(type="imudp" port="514")
+    
+    # Make sure this path exists and the user of the deamon has read/write/execute access
+    global(WorkDirectory="/var/spool/rsyslog") # default location for work (spool) files
+    main_queue(queue.fileName="mainq")
+
+    *.* action(type="ommysql" server="<hostname>" db="Syslog" uid="<database user name>" pwd="<database user password>"
+        action.resumeRetryCount="-1")
+    # for PostgreSQL replace :ommysql: by :ompgsql: below: *.* :ommysql:hostname,dbname,userid,password;
 
 The simple setup above has one drawback: the write database action is
 executed together with all other actions. Typically, local files are
@@ -108,21 +113,25 @@ more commands:
 
 ::
 
-    $ModLoad ommysql # load the output driver (use ompgsql for PostgreSQL)
-    $ModLoad imudp # network reception 
-    $UDPServerRun 514 # start a udp server at port 514 
-    $ModLoad imuxsock # local message reception
-    $WorkDirectory /rsyslog/work # default location for work (spool) files
-    $ActionQueueType LinkedList # use asynchronous processing
-    $ActionQueueFileName dbq # set file name, also enables disk mode
-    $ActionResumeRetryCount -1 # infinite retries on insert failure 
-    # for PostgreSQL replace :ommysql: by :ompgsql: below: *.* :ommysql:hostname,dbname,userid,password;
+    module(load="imuxsock") # provides support for local system logging
+    
+    # provides UDP syslog reception
+    module(load="imudp")
+    input(type="imudp" port="514")
+    
+    # Make sure this path exists and the user of the deamon has read/write/execute access
+    global(WorkDirectory="/var/spool/rsyslog") # default location for work (spool) files
+    
+    module (load="ommysql")
+    *.* action(type="ommysql" server="<hostname>" db="Syslog" uid="<database user name>" pwd="<database user password>"
+        queue.filename="databasequeue" action.resumeRetryCount="-1")
+    )
 
 **This is the recommended configuration for this use case.** It requires
-rsyslog 3.11.0 or above.
+rsyslog 8.1908.0 or above.
 
 In this example, the main message queue is NOT disk-assisted (there is
-no $MainMsgQueueFileName directive). We still could do that, but have
+no main_queue() object). We still could do that, but have
 not done it because there seems to be no need. The only slow running
 action is the database writer and it has its own queue. So there is no
 real reason to use a large main message queue (except, of course, if you
@@ -147,4 +156,6 @@ Revision History
    Initial Version created
 -  2008-01-28 \* `Rainer Gerhards`_ \*
    Updated to new v3.11.0 capabilities
+-  2021-04-21 \* Stev Leibelt \*
+   Updated configuration section to non legacy format
 
