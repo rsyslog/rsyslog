@@ -1,5 +1,8 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2106.0 (aka 2021.06) 2021-04-??
+- 2021-04-22: config script: add re_match_i() and re_extract_i() functions
+  This provides case-insensitive regex functionality.
+  closes https://github.com/rsyslog/rsyslog/issues/4429
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2104.0 (aka 2021.04) 2021-04-20
 - 2021-04-19: new contributed module imhiredis
