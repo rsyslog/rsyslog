@@ -365,8 +365,10 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 {
 	DEFiRet;
 
+fprintf(stderr, "addListner\n");
 	if(pOurTcpsrv == NULL) {
 		CHKiRet(tcpsrv.Construct(&pOurTcpsrv));
+fprintf(stderr, "created Listner\n");
 		/* callbacks */
 		CHKiRet(tcpsrv.SetCBIsPermittedHost(pOurTcpsrv, isPermittedHost));
 		CHKiRet(tcpsrv.SetCBRcvData(pOurTcpsrv, doRcvData));
@@ -409,8 +411,8 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 
 	/* initialized, now add socket and listener params */
 	DBGPRINTF("imtcp: trying to add port *:%s\n", inst->cnf_params->pszPort);
-	CHKiRet(tcpsrv.SetRuleset(pOurTcpsrv, inst->pBindRuleset));
-	CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, inst->pszInputName == NULL ?
+	inst->cnf_params->pRuleset = inst->pBindRuleset;
+	CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, inst->cnf_params, inst->pszInputName == NULL ?
 						UCHAR_CONSTANT("imtcp") : inst->pszInputName));
 	CHKiRet(tcpsrv.SetOrigin(pOurTcpsrv, (uchar*)"imtcp"));
 	CHKiRet(tcpsrv.SetDfltTZ(pOurTcpsrv, (inst->dfltTZ == NULL) ? (uchar*)"" : inst->dfltTZ));

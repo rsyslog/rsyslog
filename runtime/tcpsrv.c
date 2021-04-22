@@ -137,13 +137,9 @@ addNewLstnPort(tcpsrv_t *const pThis, tcpLstnParams_t *const cnf_params)
 
 	strcpy((char*)pEntry->cnf_params->dfltTZ, (char*)pThis->dfltTZ);
 	pEntry->cnf_params->bSPFramingFix = pThis->bSPFramingFix;
-	pEntry->cnf_params->pRuleset = pThis->pRuleset;
+	pEntry->cnf_params->bPreserveCase = pThis->bPreserveCase;
 	pEntry->pSrv = pThis;
 
-	/* we need to create a property */
-	CHKiRet(prop.Construct(&pEntry->cnf_params->pInputName));
-	CHKiRet(prop.SetString(pEntry->cnf_params->pInputName, pThis->pszInputName, ustrlen(pThis->pszInputName)));
-	CHKiRet(prop.ConstructFinalize(pEntry->cnf_params->pInputName));
 
 	/* support statistics gathering */
 	CHKiRet(ratelimitNew(&pEntry->ratelimiter, "tcperver", NULL));
@@ -151,7 +147,7 @@ addNewLstnPort(tcpsrv_t *const pThis, tcpLstnParams_t *const cnf_params)
 	ratelimitSetThreadSafe(pEntry->ratelimiter);
 
 	CHKiRet(statsobj.Construct(&(pEntry->stats)));
-	snprintf((char*)statname, sizeof(statname), "%s(%s)", pThis->pszInputName, cnf_params->pszPort);
+	snprintf((char*)statname, sizeof(statname), "%s(%s)", cnf_params->pszInputName, cnf_params->pszPort);
 	statname[sizeof(statname)-1] = '\0'; /* just to be on the save side... */
 	CHKiRet(statsobj.SetName(pEntry->stats, statname));
 	CHKiRet(statsobj.SetOrigin(pEntry->stats, pThis->pszOrigin));
@@ -316,6 +312,7 @@ deinit_tcp_listener(tcpsrv_t *const pThis)
 	pEntry = pThis->pLstnPorts;
 	while(pEntry != NULL) {
 		prop.Destruct(&pEntry->cnf_params->pInputName);
+		free((void*)pEntry->cnf_params->pszInputName);
 		free((void*)pEntry->cnf_params->pszPort);
 		free((void*)pEntry->cnf_params->pszAddr);
 		free((void*)pEntry->cnf_params->pszLstnPortFileName);
@@ -394,7 +391,6 @@ create_tcp_socket(tcpsrv_t *pThis)
 	/* init all configured ports */
 	pEntry = pThis->pLstnPorts;
 	while(pEntry != NULL) {
-dbgprintf("RGER: configuring listener %p\n", pEntry);
 		localRet = initTCPListener(pThis, pEntry);
 		if(localRet != RS_RET_OK) {
 			LogError(0, localRet, "Could not create tcp listener, ignoring port "
@@ -438,6 +434,7 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 	DEFiRet;
 	tcps_sess_t *pSess = NULL;
 	netstrm_t *pNewStrm = NULL;
+	const tcpLstnParams_t *const cnf_params = pLstnInfo->cnf_params;
 	int iSess = -1;
 	struct sockaddr_storage *addr;
 	uchar *fromHostFQDN = NULL;
@@ -475,7 +472,7 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 
 	/* get the host name */
 	CHKiRet(netstrm.GetRemoteHName(pNewStrm, &fromHostFQDN));
-	if (!pThis->bPreserveCase) {
+	if (!cnf_params->bPreserveCase) {
 		/* preserve_case = off */
 		uchar *p;
 		for(p = fromHostFQDN; *p; p++) {
@@ -642,12 +639,15 @@ static rsRetVal ATTR_NONNULL(1)
 processWorksetItem(tcpsrv_t *const pThis, nspoll_t *pPoll, const int idx, void *pUsr)
 {
 	tcps_sess_t *pNewSess = NULL;
+	tcpLstnParams_t *cnf_params;
+
 	DEFiRet;
 
 	DBGPRINTF("tcpsrv: processing item %d, pUsr %p, bAbortConn\n", idx, pUsr);
 	if(pUsr == pThis->ppLstn) {
 		DBGPRINTF("New connect on NSD %p.\n", pThis->ppLstn[idx]);
 		iRet = SessAccept(pThis, pThis->ppLstnPort[idx], &pNewSess, pThis->ppLstn[idx]);
+		cnf_params = pThis->ppLstnPort[idx]->cnf_params;
 		if(iRet == RS_RET_OK) {
 			if(pPoll != NULL) {
 				CHKiRet(nspoll.Ctl(pPoll, pNewSess->pStrm, 0, pNewSess, NSDPOLL_IN, NSDPOLL_ADD));
@@ -658,6 +658,7 @@ processWorksetItem(tcpsrv_t *const pThis, nspoll_t *pPoll, const int idx, void *
 		}
 	} else {
 		pNewSess = (tcps_sess_t*) pUsr;
+		cnf_params = pNewSess->pLstnInfo->cnf_params;
 		doReceive(pThis, &pNewSess, pPoll);
 		if(pPoll == NULL && pNewSess == NULL) {
 			pThis->pSessions[idx] = NULL;
@@ -665,6 +666,12 @@ processWorksetItem(tcpsrv_t *const pThis, nspoll_t *pPoll, const int idx, void *
 	}
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		LogError(0, iRet, "tcpsrv listener (inputname: '%s') failed "
+			"to processed incoming connection with error %d",
+			(cnf_params->pszInputName == NULL) ? (uchar*)"*UNSET*" : cnf_params->pszInputName, iRet);
+		srSleep(0,20000); /* Sleep 20ms */
+	}
 	RETiRet;
 }
 
@@ -905,7 +912,6 @@ Run(tcpsrv_t *pThis)
 {
 	DEFiRet;
 	int i;
-	int bFailed; /* If set to TRUE, accept failed */
 	nsd_epworkset_t workset[128]; /* 128 is currently fixed num of concurrent requests */
 	int numEntries;
 	nspoll_t *pPoll = NULL;
@@ -954,7 +960,6 @@ Run(tcpsrv_t *pThis)
 		DBGPRINTF("Added listener %d\n", i);
 	}
 
-	bFailed = FALSE;
 	while(glbl.GetGlobalInputTermState() == 0) {
 		numEntries = sizeof(workset)/sizeof(nsd_epworkset_t);
 		localRet = nspoll.Wait(pPoll, -1, &numEntries, workset);
@@ -968,25 +973,7 @@ Run(tcpsrv_t *pThis)
 		if(localRet != RS_RET_OK)
 			continue;
 
-		localRet = processWorkset(pThis, pPoll, numEntries, workset);
-		if(localRet != RS_RET_OK) {
-			if (bFailed == FALSE) {
-				LogError(0, localRet, "tcpsrv listener (inputname: '%s') failed "
-				"to processed incoming connection with error %d",
-				(pThis->pszInputName == NULL) ? (uchar*)"*UNSET*" : pThis->pszInputName, localRet);
-				bFailed = TRUE;
-			} else {
-				DBGPRINTF("tcpsrv listener (inputname: '%s') still failing to process "
-						"incoming connection with error %d\n",
-						(pThis->pszInputName == NULL) ? (uchar*)"*UNSET*" :
-						pThis->pszInputName, localRet);
-			}
-			/* Sleep 20ms */
-			srSleep(0,20000);
-		} else {
-			/* Reset bFailed State */
-			bFailed = FALSE;
-		}
+		processWorkset(pThis, pPoll, numEntries, workset);
 	}
 
 	/* remove the tcp listen sockets from the epoll set */
@@ -1287,7 +1274,6 @@ SetDfltTZ(tcpsrv_t *const pThis, uchar *const tz)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
-dbgprintf("dfltTZ prev: %s\n", pThis->dfltTZ);
 	strncpy((char*)pThis->dfltTZ, (char*)tz, sizeof(pThis->dfltTZ));
 	pThis->dfltTZ[sizeof(pThis->dfltTZ)-1] = '\0';
 	RETiRet;
@@ -1314,17 +1300,22 @@ SetOrigin(tcpsrv_t *pThis, uchar *origin)
 
 /* Set the input name to use -- rgerhards, 2008-12-10 */
 static rsRetVal
-SetInputName(tcpsrv_t *pThis, uchar *name)
+SetInputName(tcpsrv_t *const pThis,tcpLstnParams_t *const cnf_params, const uchar *const name)
 {
-	uchar *pszName;
 	DEFiRet;
+	fprintf(stderr, "name %s\n", name);
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	if(name == NULL)
-		pszName = NULL;
+		cnf_params->pszInputName = NULL;
 	else
-		CHKmalloc(pszName = ustrdup(name));
-	free(pThis->pszInputName);
-	pThis->pszInputName = pszName;
+		CHKmalloc(cnf_params->pszInputName = ustrdup(name));
+	free(pThis->pszInputName); // TODO: REMOVE ME
+	pThis->pszInputName = ustrdup("imtcp"); // TODO: REMOVE ME
+
+	/* we need to create a property */
+	CHKiRet(prop.Construct(&cnf_params->pInputName));
+	CHKiRet(prop.SetString(cnf_params->pInputName, cnf_params->pszInputName, ustrlen(cnf_params->pszInputName)));
+	CHKiRet(prop.ConstructFinalize(cnf_params->pInputName));
 finalize_it:
 	RETiRet;
 }
@@ -1337,16 +1328,6 @@ SetLinuxLikeRatelimiters(tcpsrv_t *pThis, unsigned int ratelimitInterval, unsign
 	DEFiRet;
 	pThis->ratelimitInterval = ratelimitInterval;
 	pThis->ratelimitBurst = ratelimitBurst;
-	RETiRet;
-}
-
-
-/* Set the ruleset (ptr) to use */
-static rsRetVal
-SetRuleset(tcpsrv_t *pThis, ruleset_t *pRuleset)
-{
-	DEFiRet;
-	pThis->pRuleset = pRuleset;
 	RETiRet;
 }
 
@@ -1564,7 +1545,6 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetCBOnRegularClose = SetCBOnRegularClose;
 	pIf->SetCBOnErrClose = SetCBOnErrClose;
 	pIf->SetOnMsgReceive = SetOnMsgReceive;
-	pIf->SetRuleset = SetRuleset;
 	pIf->SetLinuxLikeRatelimiters = SetLinuxLikeRatelimiters;
 	pIf->SetNotificationOnRemoteClose = SetNotificationOnRemoteClose;
 	pIf->SetPreserveCase = SetPreserveCase;
@@ -1721,6 +1701,3 @@ CODESTARTmodInit
 	CHKiRet(tcps_sessClassInit(pModInfo));
 	CHKiRet(tcpsrvClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 ENDmodInit
-
-/* vim:set ai:
- */
