@@ -358,7 +358,7 @@ actGSSListener(uchar *port)
 	CHKiRet(tcpsrv.SetCBOnSessAccept(pOurTcpsrv, onSessAccept));
 	CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
 	CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
-	CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, UCHAR_CONSTANT("imgssapi")));
+	CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, cnf_params, UCHAR_CONSTANT("imgssapi")));
 	CHKiRet(tcpsrv.SetKeepAlive(pOurTcpsrv, bKeepAlive));
 	CHKiRet(tcpsrv.SetOrigin(pOurTcpsrv, UCHAR_CONSTANT("imgssapi")));
 	cnf_params->pszPort = port;

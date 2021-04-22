@@ -358,6 +358,7 @@ processDataRcvd(tcps_sess_t *pThis,
 	unsigned *const __restrict__ pnMsgs)
 {
 	DEFiRet;
+	const tcpLstnParams_t *const cnf_params = pThis->pLstnInfo->cnf_params;
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 	int iMaxLine = glbl.GetMaxLine();
 	uchar *propPeerName = NULL;
@@ -396,13 +397,13 @@ processDataRcvd(tcps_sess_t *pThis,
 			if(c != ' ') {
 				LogError(0, NO_ERRCODE, "imtcp %s: Framing Error in received TCP message from "
 					"peer: (hostname) %s, (ip) %s: delimiter is not SP but has "
-					"ASCII value %d.", pThis->pSrv->pszInputName, propPeerName, propPeerIP, c);
+					"ASCII value %d.", cnf_params->pszInputName, propPeerName, propPeerIP, c);
 			}
 			if(pThis->iOctetsRemain < 1) {
 				/* TODO: handle the case where the octet count is 0! */
 				LogError(0, NO_ERRCODE, "imtcp %s: Framing Error in received TCP message from "
 					"peer: (hostname) %s, (ip) %s: invalid octet count %d.",
-					pThis->pSrv->pszInputName, propPeerName, propPeerIP, pThis->iOctetsRemain);
+					cnf_params->pszInputName, propPeerName, propPeerIP, pThis->iOctetsRemain);
 				pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
 			} else if(pThis->iOctetsRemain > iMaxLine) {
 				/* while we can not do anything against it, we can at least log an indication
@@ -410,13 +411,13 @@ processDataRcvd(tcps_sess_t *pThis,
 				 */
 				LogError(0, NO_ERRCODE, "imtcp %s: received oversize message from peer: "
 					"(hostname) %s, (ip) %s: size is %d bytes, max msg size "
-					"is %d, truncating...", pThis->pSrv->pszInputName, propPeerName,
+					"is %d, truncating...", cnf_params->pszInputName, propPeerName,
 					propPeerIP, pThis->iOctetsRemain, iMaxLine);
 			}
 			if(pThis->iOctetsRemain > pThis->pSrv->maxFrameSize) {
 				LogError(0, NO_ERRCODE, "imtcp %s: Framing Error in received TCP message from "
 					"peer: (hostname) %s, (ip) %s: frame too large: %d, change "
-					"to octet stuffing", pThis->pSrv->pszInputName, propPeerName, propPeerIP,
+					"to octet stuffing", cnf_params->pszInputName, propPeerName, propPeerIP,
 						pThis->iOctetsRemain);
 				pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
 			} else {
