@@ -3569,7 +3569,7 @@ finalize_it:
 }
 
 static rsRetVal
-initFunc_re_match(struct cnffunc *func)
+initFunc_re_match_generic(struct cnffunc *const func, const unsigned flags)
 {
 	rsRetVal localRet;
 	char *regex = NULL;
@@ -3595,7 +3595,7 @@ initFunc_re_match(struct cnffunc *func)
 
 	if((localRet = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
 		int errcode;
-		if((errcode = regexp.regcomp(re, (char*) regex, REG_EXTENDED)) != 0) {
+		if((errcode = regexp.regcomp(re, (char*) regex, REG_EXTENDED | flags)) != 0) {
 			char errbuff[512];
 			regexp.regerror(errcode, re, errbuff, sizeof(errbuff));
 			parser_errmsg("cannot compile regex '%s': %s", regex, errbuff);
@@ -3609,6 +3609,18 @@ initFunc_re_match(struct cnffunc *func)
 finalize_it:
 	free(regex);
 	RETiRet;
+}
+
+static rsRetVal
+initFunc_re_match(struct cnffunc *func)
+{
+	return initFunc_re_match_generic(func, 0);
+}
+
+static rsRetVal
+initFunc_re_match_i(struct cnffunc *func)
+{
+	return initFunc_re_match_generic(func, REG_ICASE);
 }
 
 static rsRetVal
@@ -3729,7 +3741,9 @@ static struct scriptFunct functions[] = {
 	{"ip42num", 1, 1, doFunct_Ipv42num, NULL, NULL},
 	{"ipv42num", 1, 1, doFunct_Ipv42num, NULL, NULL},
 	{"re_match", 2, 2, doFunct_ReMatch, initFunc_re_match, regex_destruct},
+	{"re_match_i", 2, 2, doFunct_ReMatch, initFunc_re_match_i, regex_destruct},
 	{"re_extract", 5, 5, doFunc_re_extract, initFunc_re_match, regex_destruct},
+	{"re_extract_i", 5, 5, doFunc_re_extract, initFunc_re_match_i, regex_destruct},
 	{"field", 3, 3, doFunct_Field, NULL, NULL},
 	{"exec_template", 1, 1, doFunc_exec_template, initFunc_exec_template, NULL},
 	{"prifilt", 1, 1, doFunct_Prifilt, initFunc_prifilt, NULL},
