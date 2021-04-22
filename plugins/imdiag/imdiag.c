@@ -566,28 +566,33 @@ setInjectDelayMode(void __attribute__((unused)) *pVal, uchar *const pszMode)
 }
 
 
-static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
+static rsRetVal
+addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 {
+	tcpLstnParams_t *cnf_params = NULL;
 	DEFiRet;
 
-	if(pOurTcpsrv == NULL) {
-		CHKiRet(tcpsrv.Construct(&pOurTcpsrv));
-		CHKiRet(tcpsrv.SetSessMax(pOurTcpsrv, iTCPSessMax));
-		CHKiRet(tcpsrv.SetCBIsPermittedHost(pOurTcpsrv, isPermittedHost));
-		CHKiRet(tcpsrv.SetCBRcvData(pOurTcpsrv, doRcvData));
-		CHKiRet(tcpsrv.SetCBOpenLstnSocks(pOurTcpsrv, doOpenLstnSocks));
-		CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
-		CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
-		CHKiRet(tcpsrv.SetDrvrMode(pOurTcpsrv, iStrmDrvrMode));
-		CHKiRet(tcpsrv.SetOnMsgReceive(pOurTcpsrv, OnMsgReceived));
-		CHKiRet(tcpsrv.SetLstnPortFileName(pOurTcpsrv, pszLstnPortFileName));
-		/* now set optional params, but only if they were actually configured */
-		if(pszStrmDrvrAuthMode != NULL) {
-			CHKiRet(tcpsrv.SetDrvrAuthMode(pOurTcpsrv, pszStrmDrvrAuthMode));
-		}
-		if(pPermPeersRoot != NULL) {
-			CHKiRet(tcpsrv.SetDrvrPermPeers(pOurTcpsrv, pPermPeersRoot));
-		}
+	if(pOurTcpsrv != NULL) {
+		LogError(0, NO_ERRCODE, "imdiag: only a single listener is supported, "
+			"trying to add a second");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	CHKmalloc(cnf_params = (tcpLstnParams_t*) calloc(1, sizeof(tcpLstnParams_t)));
+	CHKiRet(tcpsrv.Construct(&pOurTcpsrv));
+	CHKiRet(tcpsrv.SetSessMax(pOurTcpsrv, iTCPSessMax));
+	CHKiRet(tcpsrv.SetCBIsPermittedHost(pOurTcpsrv, isPermittedHost));
+	CHKiRet(tcpsrv.SetCBRcvData(pOurTcpsrv, doRcvData));
+	CHKiRet(tcpsrv.SetCBOpenLstnSocks(pOurTcpsrv, doOpenLstnSocks));
+	CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
+	CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
+	CHKiRet(tcpsrv.SetDrvrMode(pOurTcpsrv, iStrmDrvrMode));
+	CHKiRet(tcpsrv.SetOnMsgReceive(pOurTcpsrv, OnMsgReceived));
+	/* now set optional params, but only if they were actually configured */
+	if(pszStrmDrvrAuthMode != NULL) {
+		CHKiRet(tcpsrv.SetDrvrAuthMode(pOurTcpsrv, pszStrmDrvrAuthMode));
+	}
+	if(pPermPeersRoot != NULL) {
+		CHKiRet(tcpsrv.SetDrvrPermPeers(pOurTcpsrv, pPermPeersRoot));
 	}
 
 	/* initialized, now add socket */
@@ -595,7 +600,11 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 						UCHAR_CONSTANT("imdiag") : pszInputName));
 	CHKiRet(tcpsrv.SetOrigin(pOurTcpsrv, (uchar*)"imdiag"));
 	/* we support octect-counted frame (constant 1 below) */
-	tcpsrv.configureTCPListen(pOurTcpsrv, pNewVal, 1, NULL, pszLstnPortFileName);
+	cnf_params->pszPort = pNewVal;
+	cnf_params->bSuppOctetFram = 1;
+	CHKmalloc(cnf_params->pszLstnPortFileName = (const uchar*) strdup((const char*)pszLstnPortFileName));
+	tcpsrv.configureTCPListen(pOurTcpsrv, cnf_params);
+	cnf_params = NULL;
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -603,7 +612,7 @@ finalize_it:
 		if(pOurTcpsrv != NULL)
 			tcpsrv.Destruct(&pOurTcpsrv);
 	}
-	free(pNewVal);
+	free(cnf_params);
 	RETiRet;
 }
 
@@ -760,6 +769,7 @@ CODESTARTmodExit
 
 	/* free some globals to keep valgrind happy */
 	free(pszInputName);
+fprintf(stderr, "FINAL FREE %p\n", pszLstnPortFileName);
 	free(pszLstnPortFileName);
 	free(pszStrmDrvrAuthMode);
 

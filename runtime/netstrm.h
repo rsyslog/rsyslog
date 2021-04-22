@@ -1,6 +1,6 @@
 /* Definitions for the stream-based netstrmworking class.
  *
- * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2020 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -24,6 +24,7 @@
 #ifndef INCLUDED_NETSTRM_H
 #define INCLUDED_NETSTRM_H
 
+#include "tcpsrv.h"
 #include "netstrms.h"
 
 /* the netstrm object */
@@ -31,6 +32,7 @@ struct netstrm_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	nsd_t *pDrvrData;	/**< the driver's data elements (at most other places, this is called pNsd) */
 	nsd_if_t Drvr;		/**< our stream driver */
+	uchar *pszDrvrAuthMode;	/**< auth mode of the stream driver to use */
 	void *pUsr;		/**< pointer to user-provided data structure */
 	netstrms_t *pNS;	/**< pointer to our netstream subsystem object */
 };
@@ -76,8 +78,8 @@ BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetKeepAliveIntvl)(netstrm_t *pThis, int keepAliveIntvl);
 	rsRetVal (*SetGnutlsPriorityString)(netstrm_t *pThis, uchar *priorityString);
 	/* v11 -- Parameter pszLstnFileName added to LstnInit*/
-	rsRetVal (*LstnInit)(netstrms_t *pNS, void *pUsr, rsRetVal(*)(void*,netstrm_t*),
-		             uchar *pLstnPort, uchar *pLstnIP, int iSessMax, uchar *pszLstnPortFileName);
+	rsRetVal (ATTR_NONNULL(1,3,5) *LstnInit)(netstrms_t *pNS, void *pUsr, rsRetVal(*)(void*,netstrm_t*),
+			 const int iSessMax, const tcpLstnParams_t *const cnf_params);
 	/* v12 -- two new binary flags added to gtls driver enabling stricter operation */
 	rsRetVal (*SetDrvrCheckExtendedKeyUsage)(netstrm_t *pThis, int ChkExtendedKeyUsage);
 	rsRetVal (*SetDrvrPrioritizeSAN)(netstrm_t *pThis, int prioritizeSan);

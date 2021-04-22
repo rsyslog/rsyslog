@@ -474,10 +474,9 @@ finalize_it:
  * number of sessions permitted.
  * rgerhards, 2008-04-22
  */
-static rsRetVal
+static rsRetVal ATTR_NONNULL(1,3,5)
 LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
-	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax,
-	 uchar *pszLstnPortFileName)
+	 const int iSessMax, const tcpLstnParams_t *const cnf_params)
 {
 	DEFiRet;
 	netstrm_t *pNewStrm = NULL;
@@ -497,20 +496,20 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 
 	ISOBJ_TYPE_assert(pNS, netstrms);
 	assert(fAddLstn != NULL);
-	assert(pLstnPort != NULL);
+	assert(cnf_params->pszPort != NULL);
 	assert(iSessMax >= 0);
 
-	dbgprintf("creating tcp listen socket on port %s\n", pLstnPort);
+	dbgprintf("creating tcp listen socket on port %s\n", cnf_params->pszPort);
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_flags = AI_PASSIVE;
 	hints.ai_family = glbl.GetDefPFFamily();
 	hints.ai_socktype = SOCK_STREAM;
 
-	error = getaddrinfo((char*)pLstnIP, (char*) pLstnPort, &hints, &res);
+	error = getaddrinfo((const char*)cnf_params->pszAddr, (const char*) cnf_params->pszPort, &hints, &res);
 	if(error) {
 		LogError(0, RS_RET_INVALID_PORT, "error querying port '%s': %s",
-			pLstnPort, gai_strerror(error));
+			cnf_params->pszAddr, gai_strerror(error));
 		ABORT_FINALIZE(RS_RET_INVALID_PORT);
 	}
 
@@ -622,9 +621,9 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 			r->ai_addrlen = socklen_r;
 			savecast.sa = (struct sockaddr*)r->ai_addr;
 			port_override = (isIPv6) ?  savecast.ipv6->sin6_port : savecast.ipv4->sin_port;
-			if(pszLstnPortFileName != NULL) {
+			if(cnf_params->pszLstnPortFileName != NULL) {
 				FILE *fp;
-				if((fp = fopen((const char*)pszLstnPortFileName, "w+")) == NULL) {
+				if((fp = fopen((const char*)cnf_params->pszLstnPortFileName, "w+")) == NULL) {
 					LogError(errno, RS_RET_IO_ERROR, "nsd_ptcp: ListenPortFileName: "
 							"error while trying to open file");
 					ABORT_FINALIZE(RS_RET_IO_ERROR);
