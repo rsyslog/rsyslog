@@ -16,6 +16,10 @@ when the regular expression is not found. Note that match and
 submatch start with zero. It currently is not possible to extract
 more than one submatch with a single call.
 
+This function performs case-sensitive matching. Use the otherwise-equivalent
+:doc:`re_extract_i <rs-re_extract_i>` function to perform case-insensitive
+matches.
+
 .. note::
 
    Functions using regular expressions tend to be slow and other options
