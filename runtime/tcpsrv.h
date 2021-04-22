@@ -34,6 +34,16 @@ typedef enum ETCPsyslogFramingAnomaly {
 	frame_CiscoIOS = 2
 } eTCPsyslogFramingAnomaly;
 
+/* The following structure controls server worker threads. Global data is
+ * needed for their access.
+ */
+struct tcpsrvWrkrInfo_s {
+	pthread_t tid;	/* the worker's thread ID */
+	int idx_lstn;	/* listener index into listener table ppLstnPort */
+	tcpsrv_t *pThis; /* "global" tcpsrv object */
+};
+
+
 
 /* config parameters for TCP listeners */
 struct tcpLstnParams_s {
@@ -105,6 +115,9 @@ struct tcpsrv_s {
 	unsigned int ratelimitBurst;
 	tcps_sess_t **pSessions;/**< array of all of our sessions */
 	void *pUsr;		/**< a user-settable pointer (provides extensibility for "derived classes")*/
+	/* work data items */
+	struct tcpsrvWrkrInfo_s *tcpsrvWrkrInfo;
+	int curr_srvrWrkr;
 	/* callbacks */
 	int      (*pIsPermittedHost)(struct sockaddr *addr, char *fromHostFQDN, void*pUsrSrv, void*pUsrSess);
 	rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, ssize_t *, int*);

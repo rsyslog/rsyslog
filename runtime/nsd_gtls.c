@@ -1784,7 +1784,6 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 		FINALIZE;
 	}
 	/* copy Properties to pnew first */
-dbgprintf("RGER: pThis %p pNew %p, authMode %d\n", pThis, pNew, pThis->authMode);
 	pNew->authMode = pThis->authMode;
 	pNew->permitExpiredCerts = pThis->permitExpiredCerts;
 	pNew->pPermPeers = pThis->pPermPeers;

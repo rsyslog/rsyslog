@@ -98,6 +98,7 @@ DEFobjCurrIf(nspoll)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(statsobj)
 
+
 static void startWorkerPool(void);
 
 /* The following structure controls the worker threads. Global data is
@@ -668,7 +669,7 @@ processWorksetItem(tcpsrv_t *const pThis, nspoll_t *pPoll, const int idx, void *
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		LogError(0, iRet, "tcpsrv listener (inputname: '%s') failed "
-			"to processed incoming connection with error %d",
+			"to process incoming connection with error %d",
 			(cnf_params->pszInputName == NULL) ? (uchar*)"*UNSET*" : cnf_params->pszInputName, iRet);
 		srSleep(0,20000); /* Sleep 20ms */
 	}
@@ -902,20 +903,21 @@ finalize_it: /* this is a very special case - this time only we do not exit the 
 PRAGMA_DIAGNOSTIC_POP
 
 
-/* This function is called to gather input. It tries doing that via the epoll()
- * interface. If the driver does not support that, it falls back to calling its
- * select() equivalent.
- * rgerhards, 2009-11-18
+/* This function is called to gather input for a single server.
+ * It tries doing that via the epoll() interface. If the driver does not support
+ * that, it falls back to calling its select() equivalent.
  */
-static rsRetVal
-Run(tcpsrv_t *pThis)
+static void * ATTR_NONNULL(1)
+RunServer(void *myself)
 {
-	DEFiRet;
-	int i;
 	nsd_epworkset_t workset[128]; /* 128 is currently fixed num of concurrent requests */
 	int numEntries;
 	nspoll_t *pPoll = NULL;
 	rsRetVal localRet;
+	struct tcpsrvWrkrInfo_s *const me = (struct tcpsrvWrkrInfo_s*) myself;
+	tcpsrv_t *const pThis = me->pThis;
+	const int idx_lstn = me->idx_lstn;
+	tcpLstnParams_t *const cnf_params = pThis->ppLstnPort[idx_lstn]->cnf_params;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
@@ -934,7 +936,7 @@ Run(tcpsrv_t *pThis)
 	 */
 	pthread_cleanup_push(RunCancelCleanup, (void*) &pPoll);
 	/* Reset iRet to avoid warning about it being clobbered by longjmp */
-	iRet = RS_RET_OK;
+	rsRetVal iRet = RS_RET_OK;
 
 	if((localRet = nspoll.Construct(&pPoll)) == RS_RET_OK) {
 		if(pThis->pszDrvrName != NULL)
@@ -953,12 +955,9 @@ Run(tcpsrv_t *pThis)
 	/* flag that we are in epoll mode */
 	pThis->bUsingEPoll = RSTRUE;
 
-	/* Add the TCP listen sockets to the list of sockets to monitor */
-	for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
-		DBGPRINTF("Trying to add listener %d, pUsr=%p\n", i, pThis->ppLstn);
-		CHKiRet(nspoll.Ctl(pPoll, pThis->ppLstn[i], i, pThis->ppLstn, NSDPOLL_IN, NSDPOLL_ADD));
-		DBGPRINTF("Added listener %d\n", i);
-	}
+	/* Add the TCP listen socket to the list of sockets to monitor */
+	CHKiRet(nspoll.Ctl(pPoll, pThis->ppLstn[idx_lstn], idx_lstn, pThis->ppLstn, NSDPOLL_IN, NSDPOLL_ADD));
+	DBGPRINTF("input %d (%s) startup done - begin processing\n", idx_lstn, cnf_params->pszInputName);
 
 	while(glbl.GetGlobalInputTermState() == 0) {
 		numEntries = sizeof(workset)/sizeof(nsd_epworkset_t);
@@ -976,13 +975,101 @@ Run(tcpsrv_t *pThis)
 		processWorkset(pThis, pPoll, numEntries, workset);
 	}
 
-	/* remove the tcp listen sockets from the epoll set */
-	for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
-		CHKiRet(nspoll.Ctl(pPoll, pThis->ppLstn[i], i, pThis->ppLstn, NSDPOLL_IN, NSDPOLL_DEL));
-	}
+	/* remove the tcp listen socket from the epoll set */
+	CHKiRet(nspoll.Ctl(pPoll, pThis->ppLstn[idx_lstn], idx_lstn, pThis->ppLstn, NSDPOLL_IN, NSDPOLL_DEL));
 
+	DBGPRINTF("tcpsrv: server %d thread terminating\n", idx_lstn);
 finalize_it:
 	pthread_cleanup_pop(1);
+	return NULL;
+}
+
+
+/* start server worker thread
+ */
+static void ATTR_NONNULL()
+startSrvWrkr(tcpsrv_t *const pThis, const int idx_lstn)
+{
+	const int i = pThis->curr_srvrWrkr;
+	int r;
+	pthread_attr_t sessThrdAttr;
+
+	/* We need to temporarily block all signals because the new thread
+	 * inherits our signal mask. There is a race if we do not block them
+	 * now, and we have seen in practice that this race causes grief.
+	 * So we 1. save the current set, 2. block evertyhing, 3. start
+	 * threads, and 4 reset the current set to saved state.
+	 * rgerhards, 2019-08-16
+	 */
+	sigset_t sigSet, sigSetSave;
+	sigfillset(&sigSet);
+	/* enable signals we still need */
+	sigdelset(&sigSet, SIGTTIN);
+	sigdelset(&sigSet, SIGSEGV);
+	pthread_sigmask(SIG_SETMASK, &sigSet, &sigSetSave);
+
+	pthread_attr_init(&sessThrdAttr);
+	pthread_attr_setstacksize(&sessThrdAttr, 4096*1024);
+	pThis->tcpsrvWrkrInfo[i].pThis = pThis;
+	pThis->tcpsrvWrkrInfo[i].idx_lstn = idx_lstn;
+	r = pthread_create(&pThis->tcpsrvWrkrInfo[i].tid, &sessThrdAttr, RunServer, &(pThis->tcpsrvWrkrInfo[i]));
+	if(r != 0) {
+		LogError(errno, NO_ERRCODE, "tcpsrv error creating server thread");
+		// TODO: abort?
+	}
+	pthread_attr_destroy(&sessThrdAttr);
+	pthread_sigmask(SIG_SETMASK, &sigSetSave, NULL);
+
+	pThis->curr_srvrWrkr++;
+}
+
+/* stop server worker thread
+ */
+static void
+stopSrvWrkr(const tcpsrv_t *const pThis, const int idx_lstn)
+{
+	DBGPRINTF("Wait for thread shutdown input %d (%s), pUsr=%p\n", idx_lstn, pThis->ppLstnPort[idx_lstn]->cnf_params->pszInputName, pThis->ppLstn);
+	pthread_kill(pThis->tcpsrvWrkrInfo[idx_lstn].tid, SIGTTIN);
+	pthread_join(pThis->tcpsrvWrkrInfo[idx_lstn].tid, NULL);
+	DBGPRINTF("input %d terminated, pUsr=%p\n", idx_lstn, pThis->ppLstn);
+}
+
+
+/* This function is called to gather input.
+ * It starts all required servers. Servers are run in parallel.
+ * This function creates a thread for every requested server and starts the
+ * server inside that thread. On Shutdown, it waits for all servers to finish.
+ */
+static rsRetVal
+Run(tcpsrv_t *pThis)
+{
+	DEFiRet;
+	int i;
+
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+
+	/* Iterate over servers */
+	pThis->curr_srvrWrkr = 0;
+	for(i = 0 ; i < (pThis->iLstnCurr - 1) ; ++i) {
+		DBGPRINTF("Trying to add input %d pUsr=%p\n", i, pThis->ppLstn);
+		startSrvWrkr(pThis, i);
+		DBGPRINTF("started input %d\n", i);
+	}
+
+	DBGPRINTF("DONE LOOP, i %d\n", i);
+	
+	/* we use our thread to also run an input; this also means if only one input is
+	 * configured, we do NOT spawn extra threads (see for() loop above!).
+	 */
+	DBGPRINTF("Trying to add input %d on MAIN tcpsrv thread, pUsr=%p\n", i, pThis->ppLstn);
+	pThis->tcpsrvWrkrInfo[i].pThis = pThis;
+	pThis->tcpsrvWrkrInfo[i].idx_lstn = i;
+	RunServer((void *) &(pThis->tcpsrvWrkrInfo[i]));
+
+	/* wait for all input servers to terminate */
+	for(i = 0 ; i < (pThis->iLstnCurr - 1) ; ++i) {
+		stopSrvWrkr(pThis, i);
+	}
 
 	RETiRet;
 }
@@ -1038,6 +1125,10 @@ tcpsrvConstructFinalize(tcpsrv_t *pThis)
 	CHKmalloc(pThis->ppLstn = calloc(pThis->iLstnMax, sizeof(netstrm_t*)));
 	CHKmalloc(pThis->ppLstnPort = calloc(pThis->iLstnMax, sizeof(tcpLstnPortList_t*)));
 	iRet = pThis->OpenLstnSocks(pThis);
+	/* set worker array */
+	if(pThis->iLstnCurr > 1) {
+		CHKmalloc(pThis->tcpsrvWrkrInfo = calloc(pThis->iLstnMax, sizeof(struct tcpsrvWrkrInfo_s)));
+	}
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -1065,6 +1156,7 @@ CODESTARTobjDestruct(tcpsrv)
 	free(pThis->pszDrvrPermitExpiredCerts);
 	free(pThis->ppLstn);
 	free(pThis->ppLstnPort);
+	free(pThis->tcpsrvWrkrInfo);
 	free(pThis->pszInputName);
 	free(pThis->pszOrigin);
 ENDobjDestruct(tcpsrv)
