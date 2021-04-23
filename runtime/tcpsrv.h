@@ -34,6 +34,19 @@ typedef enum ETCPsyslogFramingAnomaly {
 	frame_CiscoIOS = 2
 } eTCPsyslogFramingAnomaly;
 
+/* The following structure controls the server worker threads. */
+typedef struct wrkrInfo_s {
+	pthread_t tid;	/* the worker's thread ID */
+	pthread_cond_t run;
+	int idx;
+	tcpsrv_t *pSrv; /* pSrv == NULL -> idle */
+	tcpsrv_t *mySrv; /* always connected to "own" server object */
+	nspoll_t *pPoll;
+	void *pUsr;
+	sbool enabled;
+	long long unsigned numCalled;	/* how often was this called */
+} wrkrInfo_t;
+
 
 /* config parameters for TCP listeners */
 struct tcpLstnParams_s {
@@ -105,6 +118,12 @@ struct tcpsrv_s {
 	unsigned int ratelimitBurst;
 	tcps_sess_t **pSessions;/**< array of all of our sessions */
 	void *pUsr;		/**< a user-settable pointer (provides extensibility for "derived classes")*/
+	/* multiple worker thread support */
+	wrkrInfo_t wrkrInfo[4];
+	sbool bWrkrRunning;
+	pthread_mutex_t wrkrMut;
+	pthread_cond_t wrkrIdle;
+	int wrkrRunning;
 	/* callbacks */
 	int      (*pIsPermittedHost)(struct sockaddr *addr, char *fromHostFQDN, void*pUsrSrv, void*pUsrSess);
 	rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, ssize_t *, int*);

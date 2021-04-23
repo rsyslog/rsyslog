@@ -48,6 +48,7 @@
 #include <netdb.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <signal.h>
 #if HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
@@ -810,6 +811,7 @@ CODESTARTrunInput
 
 	iRet = tcpsrv.Run(tcpsrv_root->tcpsrv);
 
+	sleep(1);
 	/* de-init remaining servers */
 	while(etry != NULL) {
 		stopSrvWrkr(etry);

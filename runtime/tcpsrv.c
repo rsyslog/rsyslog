@@ -98,26 +98,14 @@ DEFobjCurrIf(nspoll)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(statsobj)
 
-static void startWorkerPool(void);
+static void startWorkerPool(tcpsrv_t *const);
+static void stopWorkerPool(tcpsrv_t *const);
 
-/* The following structure controls the worker threads. Global data is
- * needed for their access.
- */
-static struct wrkrInfo_s {
-	pthread_t tid;	/* the worker's thread ID */
-	pthread_cond_t run;
-	int idx;
-	tcpsrv_t *pSrv; /* pSrv == NULL -> idle */
-	nspoll_t *pPoll;
-	void *pUsr;
-	sbool enabled;
-	long long unsigned numCalled;	/* how often was this called */
-} wrkrInfo[4];
-static sbool bWrkrRunning; /* are the worker threads running? */
-static pthread_mutex_t wrkrMut;
-static pthread_cond_t wrkrIdle;
-static int wrkrMax = 4;
-static int wrkrRunning;
+struct cleanup_info_s {
+	tcpsrv_t *pSrv;
+	nspoll_t **ppPoll;
+};
+static const int wrkrMax = 4;
 
 /* add new listener port to listener port list
  * rgerhards, 2009-05-21
@@ -538,16 +526,8 @@ RunCancelCleanup(void *arg)
 {
 	nspoll_t **ppPoll = (nspoll_t**) arg;
 
-	if (*ppPoll != NULL)
+	if(ppPoll != NULL)
 		nspoll.Destruct(ppPoll);
-
-	/* Wait for any running workers to finish */
-	pthread_mutex_lock(&wrkrMut);
-	DBGPRINTF("tcpsrv terminating, waiting for %d workers\n", wrkrRunning);
-	while(wrkrRunning > 0) {
-		pthread_cond_wait(&wrkrIdle, &wrkrMut);
-	}
-	pthread_mutex_unlock(&wrkrMut);
 }
 
 static void
@@ -684,11 +664,11 @@ wrkr(void *const myself)
 	struct wrkrInfo_s *const me = (struct wrkrInfo_s*) myself;
 
 
-	pthread_mutex_lock(&wrkrMut);
+	pthread_mutex_lock(&me->mySrv->wrkrMut);
 	while(1) {
 		// wait for work, in which case pSrv will be populated
 		while(me->pSrv == NULL && glbl.GetGlobalInputTermState() == 0) {
-			pthread_cond_wait(&me->run, &wrkrMut);
+			pthread_cond_wait(&me->run, &me->mySrv->wrkrMut);
 		}
 		if(me->pSrv == NULL) {
 			// only possible if glbl.GetGlobalInputTermState() == 1
@@ -697,18 +677,18 @@ wrkr(void *const myself)
 			assert(glbl.GetGlobalInputTermState() == 1);
 			break;
 		}
-		pthread_mutex_unlock(&wrkrMut);
+		pthread_mutex_unlock(&me->mySrv->wrkrMut);
 
 		++me->numCalled;
 		processWorksetItem(me->pSrv, me->pPoll, me->idx, me->pUsr);
 
-		pthread_mutex_lock(&wrkrMut);
+		pthread_mutex_lock(&me->mySrv->wrkrMut);
 		me->pSrv = NULL;	/* indicate we are free again */
-		--wrkrRunning;
-		pthread_cond_signal(&wrkrIdle);
+		--me->mySrv->wrkrRunning;
+		pthread_cond_signal(&me->mySrv->wrkrIdle);
 	}
 	me->enabled = 0; /* indicate we are no longer available */
-	pthread_mutex_unlock(&wrkrMut);
+	pthread_mutex_unlock(&me->mySrv->wrkrMut);
 
 	return NULL;
 }
@@ -718,12 +698,12 @@ wrkr(void *const myself)
  * warning for the iRet variable.
  */
 static void
-waitForWorkers(void)
+waitForWorkers(tcpsrv_t *const pThis)
 {
-	pthread_mutex_lock(&wrkrMut);
-	pthread_cleanup_push(mutexCancelCleanup, &wrkrMut);
-	while(wrkrRunning > 0) {
-		pthread_cond_wait(&wrkrIdle, &wrkrMut);
+	pthread_mutex_lock(&pThis->wrkrMut);
+	pthread_cleanup_push(mutexCancelCleanup, &pThis->wrkrMut);
+	while(pThis->wrkrRunning > 0) {
+		pthread_cond_wait(&pThis->wrkrIdle, &pThis->wrkrMut);
 	}
 	pthread_cleanup_pop(1);
 }
@@ -734,7 +714,7 @@ waitForWorkers(void)
  * as much as possible.
  */
 static rsRetVal
-processWorkset(tcpsrv_t *pThis, nspoll_t *pPoll, int numEntries, nsd_epworkset_t workset[])
+processWorkset(tcpsrv_t *const pThis, nspoll_t *pPoll, int numEntries, nsd_epworkset_t workset[])
 {
 	int i;
 	int origEntries = numEntries;
@@ -754,26 +734,27 @@ processWorkset(tcpsrv_t *pThis, nspoll_t *pPoll, int numEntries, nsd_epworkset_t
 			 *
 			 * Re-evaluate this if you add a DBGPRINTF or something!
 			 */
-			pthread_mutex_lock(&wrkrMut);
+			pthread_mutex_lock(&pThis->wrkrMut);
 			/* check if there is a free worker */
-			for(i = 0 ; (i < wrkrMax) && ((wrkrInfo[i].pSrv != NULL) || (wrkrInfo[i].enabled == 0)) ; ++i)
+			for(i = 0 ; (i < wrkrMax) && ((pThis->wrkrInfo[i].pSrv != NULL)
+					|| (pThis->wrkrInfo[i].enabled == 0)) ; ++i)
 				/*do search*/;
 			if(i < wrkrMax) {
 				/* worker free -> use it! */
-				wrkrInfo[i].pSrv = pThis;
-				wrkrInfo[i].pPoll = pPoll;
-				wrkrInfo[i].idx = workset[numEntries -1].id;
-				wrkrInfo[i].pUsr = workset[numEntries -1].pUsr;
+				pThis->wrkrInfo[i].pSrv = pThis;
+				pThis->wrkrInfo[i].pPoll = pPoll;
+				pThis->wrkrInfo[i].idx = workset[numEntries -1].id;
+				pThis->wrkrInfo[i].pUsr = workset[numEntries -1].pUsr;
 				/* Note: we must increment wrkrRunning HERE and not inside the worker's
 				 * code. This is because a worker may actually never start, and thus
 				 * increment wrkrRunning, before we finish and check the running worker
 				 * count. We can only avoid this by incrementing it here.
 				 */
-				++wrkrRunning;
-				pthread_cond_signal(&wrkrInfo[i].run);
-				pthread_mutex_unlock(&wrkrMut);
+				++pThis->wrkrRunning;
+				pthread_cond_signal(&pThis->wrkrInfo[i].run);
+				pthread_mutex_unlock(&pThis->wrkrMut);
 			} else {
-				pthread_mutex_unlock(&wrkrMut);
+				pthread_mutex_unlock(&pThis->wrkrMut);
 				/* no free worker, so we process this one ourselfs */
 				iRet = processWorksetItem(pThis, pPoll, workset[numEntries-1].id,
 						   workset[numEntries-1].pUsr);
@@ -787,7 +768,7 @@ processWorkset(tcpsrv_t *pThis, nspoll_t *pPoll, int numEntries, nsd_epworkset_t
 		 * rest of this module can not handle the concurrency introduced
 		 * by workers running during the epoll call.
 		 */
-		waitForWorkers();
+		waitForWorkers(pThis);
 	}
 
 finalize_it:
@@ -908,7 +889,7 @@ PRAGMA_DIAGNOSTIC_POP
  * rgerhards, 2009-11-18
  */
 static rsRetVal
-Run(tcpsrv_t *pThis)
+Run(tcpsrv_t *const pThis)
 {
 	DEFiRet;
 	int i;
@@ -919,15 +900,18 @@ Run(tcpsrv_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
+	pthread_mutex_init(&pThis->wrkrMut, NULL);
+	pThis->bWrkrRunning = 0;
+
 	/* check if we need to start the worker pool. Once it is running, all is
 	 * well. Shutdown is done on modExit.
 	 */
-	d_pthread_mutex_lock(&wrkrMut);
-	if(!bWrkrRunning) {
-		bWrkrRunning = 1;
-		startWorkerPool();
+	d_pthread_mutex_lock(&pThis->wrkrMut);
+	if(!pThis->bWrkrRunning) {
+		pThis->bWrkrRunning = 1;
+		startWorkerPool(pThis);
 	}
-	d_pthread_mutex_unlock(&wrkrMut);
+	d_pthread_mutex_unlock(&pThis->wrkrMut);
 
 	/* We try to terminate cleanly, but install a cancellation clean-up
 	 * handler in case we are cancelled.
@@ -982,6 +966,14 @@ Run(tcpsrv_t *pThis)
 	}
 
 finalize_it:
+	/* Wait for any running workers to finish */
+	pthread_mutex_lock(&pThis->wrkrMut);
+	DBGPRINTF("tcpsrv terminating, waiting for %d workers\n", pThis->wrkrRunning);
+	while(pThis->wrkrRunning > 0) {
+		pthread_cond_wait(&pThis->wrkrIdle, &pThis->wrkrMut);
+	}
+	pthread_mutex_unlock(&pThis->wrkrMut);
+
 	pthread_cleanup_pop(1);
 
 	RETiRet;
@@ -1057,6 +1049,12 @@ CODESTARTobjDestruct(tcpsrv)
 		pThis->OnDestruct(pThis->pUsr);
 
 	deinit_tcp_listener(pThis);
+
+	if(pThis->bWrkrRunning) {
+		stopWorkerPool(pThis);
+		pThis->bWrkrRunning = 0;
+	}
+	pthread_mutex_destroy(&pThis->wrkrMut);
 
 	if(pThis->pNS != NULL)
 		netstrms.Destruct(&pThis->pNS);
@@ -1303,7 +1301,6 @@ static rsRetVal
 SetInputName(tcpsrv_t *const pThis,tcpLstnParams_t *const cnf_params, const uchar *const name)
 {
 	DEFiRet;
-	fprintf(stderr, "name %s\n", name);
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	if(name == NULL)
 		cnf_params->pszInputName = NULL;
@@ -1603,7 +1600,7 @@ ENDObjClassInit(tcpsrv)
  * Important: if we fork, this MUST be done AFTER forking
  */
 static void
-startWorkerPool(void)
+startWorkerPool(tcpsrv_t *const pThis)
 {
 	int i;
 	int r;
@@ -1620,18 +1617,19 @@ startWorkerPool(void)
 	sigfillset(&sigSet);
 	pthread_sigmask(SIG_SETMASK, &sigSet, &sigSetSave);
 
-	wrkrRunning = 0;
-	pthread_cond_init(&wrkrIdle, NULL);
+	pThis->wrkrRunning = 0;
+	pthread_cond_init(&pThis->wrkrIdle, NULL);
 	pthread_attr_init(&sessThrdAttr);
 	pthread_attr_setstacksize(&sessThrdAttr, 4096*1024);
 	for(i = 0 ; i < wrkrMax ; ++i) {
 		/* init worker info structure! */
-		pthread_cond_init(&wrkrInfo[i].run, NULL);
-		wrkrInfo[i].pSrv = NULL;
-		wrkrInfo[i].numCalled = 0;
-		r = pthread_create(&wrkrInfo[i].tid, &sessThrdAttr, wrkr, &(wrkrInfo[i]));
+		pthread_cond_init(&pThis->wrkrInfo[i].run, NULL);
+		pThis->wrkrInfo[i].pSrv = NULL;
+		pThis->wrkrInfo[i].mySrv = pThis;
+		pThis->wrkrInfo[i].numCalled = 0;
+		r = pthread_create(&pThis->wrkrInfo[i].tid, &sessThrdAttr, wrkr, &(pThis->wrkrInfo[i]));
 		if(r == 0) {
-			wrkrInfo[i].enabled = 1;
+			pThis->wrkrInfo[i].enabled = 1;
 		} else {
 			LogError(errno, NO_ERRCODE, "tcpsrv error creating thread");
 		}
@@ -1643,18 +1641,18 @@ startWorkerPool(void)
 /* destroy worker pool structures and wait for workers to terminate
  */
 static void
-stopWorkerPool(void)
+stopWorkerPool(tcpsrv_t *const pThis)
 {
 	int i;
 	for(i = 0 ; i < wrkrMax ; ++i) {
-		pthread_mutex_lock(&wrkrMut);
-		pthread_cond_signal(&wrkrInfo[i].run); /* awake wrkr if not running */
-		pthread_mutex_unlock(&wrkrMut);
-		pthread_join(wrkrInfo[i].tid, NULL);
-		DBGPRINTF("tcpsrv: info: worker %d was called %llu times\n", i, wrkrInfo[i].numCalled);
-		pthread_cond_destroy(&wrkrInfo[i].run);
+		pthread_mutex_lock(&pThis->wrkrMut);
+		pthread_cond_signal(&pThis->wrkrInfo[i].run); /* awake wrkr if not running */
+		pthread_mutex_unlock(&pThis->wrkrMut);
+		pthread_join(pThis->wrkrInfo[i].tid, NULL);
+		DBGPRINTF("tcpsrv: info: worker %d was called %llu times\n", i, pThis->wrkrInfo[i].numCalled);
+		pthread_cond_destroy(&pThis->wrkrInfo[i].run);
 	}
-	pthread_cond_destroy(&wrkrIdle);
+	pthread_cond_destroy(&pThis->wrkrIdle);
 }
 
 
@@ -1662,14 +1660,9 @@ stopWorkerPool(void)
 
 BEGINmodExit
 CODESTARTmodExit
-	if(bWrkrRunning) {
-		stopWorkerPool();
-		bWrkrRunning = 0;
-	}
 	/* de-init in reverse order! */
 	tcpsrvClassExit();
 	tcps_sessClassExit();
-	pthread_mutex_destroy(&wrkrMut);
 ENDmodExit
 
 
@@ -1682,21 +1675,6 @@ ENDqueryEtryPt
 BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-	/* we just init the worker mutex, but do not start the workers themselves. This is deferred
-	 * to the first call of Run(). Reasons for this:
-	 * 1. depending on load order, tcpsrv gets loaded during rsyslog startup BEFORE
-	 *    it forks, in which case the workers would be running in the then-killed parent,
-	 *    leading to a defuncnt child (we actually had this bug).
-	 * 2. depending on circumstances, Run() would possibly never be called, in which case
-	 *    the worker threads would be totally useless.
-	 * Note that in order to guarantee a non-racy worker start, we need to guard the
-	 * startup sequence by a mutex, which is why we init it here (no problem with fork()
-	 * in this case as the mutex is a pure-memory structure).
-	 * rgerhards, 2012-05-18
-	 */
-	pthread_mutex_init(&wrkrMut, NULL);
-	bWrkrRunning = 0;
-
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(tcps_sessClassInit(pModInfo));
 	CHKiRet(tcpsrvClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
