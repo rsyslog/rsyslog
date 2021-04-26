@@ -41,10 +41,13 @@ struct tcpLstnParams_s {
 	const uchar *pszAddr;                 /**< the addrs the listener shall listen on */
 	sbool bSuppOctetFram;	/**< do we support octect-counted framing? (if no->legay only!)*/
 	sbool bSPFramingFix;	/**< support work-around for broken Cisco ASA framing? */
+	sbool bPreserveCase;			/**< preserve case in fromhost */
 	const uchar *pszLstnPortFileName;	/**< File in which the dynamic port is written */
+	uchar *pszStrmDrvrName;			/**< stream driver to use */
+	uchar *pszInputName;			/**< value to be used as input name */
 	prop_t *pInputName;
-	ruleset_t *pRuleset;		/**< associated ruleset */
-	uchar dfltTZ[8];		/**< default TZ if none in timestamp; '\0' =No Default */
+	ruleset_t *pRuleset;			/**< associated ruleset */
+	uchar dfltTZ[8];			/**< default TZ if none in timestamp; '\0' =No Default */
 };
 
 /* list of tcp listen ports */
@@ -76,7 +79,7 @@ struct tcpsrv_s {
 	uchar *pszDrvrAuthMode;	/**< auth mode of the stream driver to use */
 	uchar *pszDrvrPermitExpiredCerts;/**< current driver setting for handlign expired certs */
 	uchar *pszDrvrName;	/**< name of stream driver to use */
-	uchar *pszInputName;	/**< value to be used as input name */
+	uchar *pszInputName;	/**< value to be used as input name */ // TODO: REMOVE ME!!!!
 	uchar *pszOrigin;		/**< module to be used as "origin" (e.g. for pstats) */
 	ruleset_t *pRuleset;	/**< ruleset to bind to */
 	permittedPeers_t *pPermPeers;/**< driver's permitted peers */
@@ -142,7 +145,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	/* set methods */
 	rsRetVal (*SetAddtlFrameDelim)(tcpsrv_t*, int);
 	rsRetVal (*SetMaxFrameSize)(tcpsrv_t*, int);
-	rsRetVal (*SetInputName)(tcpsrv_t*, uchar*);
+	rsRetVal (*SetInputName)(tcpsrv_t *const pThis,tcpLstnParams_t *const cnf_params, const uchar *const name);
 	rsRetVal (*SetUsrP)(tcpsrv_t*, void*);
 	rsRetVal (*SetCBIsPermittedHost)(tcpsrv_t*, int (*) (struct sockaddr *addr, char*, void*, void*));
 	rsRetVal (*SetCBOpenLstnSocks)(tcpsrv_t *, rsRetVal (*)(tcpsrv_t*));

@@ -596,7 +596,7 @@ addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	}
 
 	/* initialized, now add socket */
-	CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, pszInputName == NULL ?
+	CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, cnf_params, pszInputName == NULL ?
 						UCHAR_CONSTANT("imdiag") : pszInputName));
 	CHKiRet(tcpsrv.SetOrigin(pOurTcpsrv, (uchar*)"imdiag"));
 	/* we support octect-counted frame (constant 1 below) */
@@ -769,7 +769,6 @@ CODESTARTmodExit
 
 	/* free some globals to keep valgrind happy */
 	free(pszInputName);
-fprintf(stderr, "FINAL FREE %p\n", pszLstnPortFileName);
 	free(pszLstnPortFileName);
 	free(pszStrmDrvrAuthMode);
 

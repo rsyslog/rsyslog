@@ -61,7 +61,8 @@ DEFobjCurrIf(glbl)
  * rgerhards, 2009-11-18
  */
 static rsRetVal
-addEvent(nsdpoll_ptcp_t *pThis, int id, void *pUsr, int mode, nsd_ptcp_t *pSock, nsdpoll_epollevt_lst_t **pEvtLst) {
+addEvent(nsdpoll_ptcp_t *pThis, int id, void *pUsr, int mode, nsd_ptcp_t *pSock, nsdpoll_epollevt_lst_t **pEvtLst)
+{
 	nsdpoll_epollevt_lst_t *pNew;
 	DEFiRet;
 
@@ -90,7 +91,8 @@ finalize_it:
  * rgerhards, 2009-11-23
  */
 static rsRetVal
-unlinkEvent(nsdpoll_ptcp_t *pThis, int id, void *pUsr, nsdpoll_epollevt_lst_t **ppEvtLst) {
+unlinkEvent(nsdpoll_ptcp_t *pThis, int id, void *pUsr, nsdpoll_epollevt_lst_t **ppEvtLst)
+{
 	nsdpoll_epollevt_lst_t *pEvtLst;
 	nsdpoll_epollevt_lst_t *pPrev = NULL;
 	DEFiRet;
@@ -224,7 +226,8 @@ finalize_it:
  * rgerhards, 2009-11-18
  */
 static rsRetVal
-Wait(nsdpoll_t *pNsdpoll, int timeout, int *numEntries, nsd_epworkset_t workset[]) {
+Wait(nsdpoll_t *pNsdpoll, int timeout, int *numEntries, nsd_epworkset_t workset[])
+{
 	nsdpoll_ptcp_t *pThis = (nsdpoll_ptcp_t*) pNsdpoll;
 	nsdpoll_epollevt_lst_t *pOurEvt;
 	struct epoll_event event[128];
