@@ -21,7 +21,7 @@
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c[which was
  * licensed under BSD at the time of the rsyslog fork])
  *
- * Copyright 2007-2018 Adiscon GmbH.
+ * Copyright 2007-2021 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *

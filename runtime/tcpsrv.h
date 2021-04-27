@@ -1,6 +1,6 @@
 /* Definitions for tcpsrv class.
  *
- * Copyright 2008-2020 Adiscon GmbH.
+ * Copyright 2008-2021 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -202,7 +202,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	/* added v24 -- Options for TLS verify depth driver behavior, 2019-12-20 */
 	rsRetVal (*SetDrvrTlsVerifyDepth)(tcpsrv_t *pThis, int verifyDepth);
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 24 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 25 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10

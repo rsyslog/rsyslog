@@ -4,7 +4,7 @@
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c,
  * which at the time of the rsyslog fork was BSD-licensed)
  *
- * Copyright 2007-2020 Adiscon GmbH.
+ * Copyright 2007-2021 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -46,6 +46,7 @@
 #include <ctype.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #if HAVE_FCNTL_H
@@ -80,7 +81,15 @@ DEFobjCurrIf(ruleset)
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
 
 /* Module static data */
-static tcpsrv_t *pOurTcpsrv = NULL;  /* our TCP server(listener) TODO: change for multiple instances */
+//static tcpsrv_t *pOurTcpsrv = NULL;  /* our TCP server(listener) TODO: change for multiple instances */
+typedef struct tcpsrv_etry_s {
+	tcpsrv_t *tcpsrv;
+	pthread_t tid;	/* the worker's thread ID */
+	struct tcpsrv_etry_s *next;
+} tcpsrv_etry_t;
+static tcpsrv_etry_t *tcpsrv_root = NULL;
+static int n_tcpsrv = 0;
+
 static permittedPeers_t *pPermPeersRoot = NULL;
 
 #define FRAMING_UNSET -1
@@ -365,47 +374,46 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 {
 	DEFiRet;
 
-	if(pOurTcpsrv == NULL) {
-		CHKiRet(tcpsrv.Construct(&pOurTcpsrv));
-		/* callbacks */
-		CHKiRet(tcpsrv.SetCBIsPermittedHost(pOurTcpsrv, isPermittedHost));
-		CHKiRet(tcpsrv.SetCBRcvData(pOurTcpsrv, doRcvData));
-		CHKiRet(tcpsrv.SetCBOpenLstnSocks(pOurTcpsrv, doOpenLstnSocks));
-		CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
-		CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
-		/* params */
-		CHKiRet(tcpsrv.SetKeepAlive(pOurTcpsrv, modConf->bKeepAlive));
-		CHKiRet(tcpsrv.SetKeepAliveIntvl(pOurTcpsrv, modConf->iKeepAliveIntvl));
-		CHKiRet(tcpsrv.SetKeepAliveProbes(pOurTcpsrv, modConf->iKeepAliveProbes));
-		CHKiRet(tcpsrv.SetKeepAliveTime(pOurTcpsrv, modConf->iKeepAliveTime));
-		CHKiRet(tcpsrv.SetGnutlsPriorityString(pOurTcpsrv, modConf->gnutlsPriorityString));
-		CHKiRet(tcpsrv.SetSessMax(pOurTcpsrv, modConf->iTCPSessMax));
-		CHKiRet(tcpsrv.SetLstnMax(pOurTcpsrv, modConf->iTCPLstnMax));
-		CHKiRet(tcpsrv.SetDrvrMode(pOurTcpsrv, modConf->iStrmDrvrMode));
-		CHKiRet(tcpsrv.SetDrvrCheckExtendedKeyUsage(pOurTcpsrv, modConf->iStrmDrvrExtendedCertCheck));
-		CHKiRet(tcpsrv.SetDrvrPrioritizeSAN(pOurTcpsrv, modConf->iStrmDrvrSANPreference));
-		CHKiRet(tcpsrv.SetDrvrTlsVerifyDepth(pOurTcpsrv, modConf->iStrmTlsVerifyDepth));
-		CHKiRet(tcpsrv.SetUseFlowControl(pOurTcpsrv, modConf->bUseFlowControl));
-		CHKiRet(tcpsrv.SetAddtlFrameDelim(pOurTcpsrv, modConf->iAddtlFrameDelim));
-		CHKiRet(tcpsrv.SetMaxFrameSize(pOurTcpsrv, modConf->maxFrameSize));
-		CHKiRet(tcpsrv.SetbDisableLFDelim(pOurTcpsrv, modConf->bDisableLFDelim));
-		CHKiRet(tcpsrv.SetDiscardTruncatedMsg(pOurTcpsrv, modConf->discardTruncatedMsg));
-		CHKiRet(tcpsrv.SetNotificationOnRemoteClose(pOurTcpsrv, modConf->bEmitMsgOnClose));
-		/* now set optional params, but only if they were actually configured */
-		if(modConf->pszStrmDrvrName != NULL) {
-			CHKiRet(tcpsrv.SetDrvrName(pOurTcpsrv, modConf->pszStrmDrvrName));
-		}
-		if(modConf->pszStrmDrvrAuthMode != NULL) {
-			CHKiRet(tcpsrv.SetDrvrAuthMode(pOurTcpsrv, modConf->pszStrmDrvrAuthMode));
-		}
-		/* Call SetDrvrPermitExpiredCerts required
-		 * when param is NULL default handling for ExpiredCerts is set! */
-		CHKiRet(tcpsrv.SetDrvrPermitExpiredCerts(pOurTcpsrv, modConf->pszStrmDrvrPermitExpiredCerts));
-		if(pPermPeersRoot != NULL) {
-			CHKiRet(tcpsrv.SetDrvrPermPeers(pOurTcpsrv, pPermPeersRoot));
-		}
-		CHKiRet(tcpsrv.SetPreserveCase(pOurTcpsrv, modConf->bPreserveCase));
+	tcpsrv_t *pOurTcpsrv;
+	CHKiRet(tcpsrv.Construct(&pOurTcpsrv));
+	/* callbacks */
+	CHKiRet(tcpsrv.SetCBIsPermittedHost(pOurTcpsrv, isPermittedHost));
+	CHKiRet(tcpsrv.SetCBRcvData(pOurTcpsrv, doRcvData));
+	CHKiRet(tcpsrv.SetCBOpenLstnSocks(pOurTcpsrv, doOpenLstnSocks));
+	CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
+	CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
+	/* params */
+	CHKiRet(tcpsrv.SetKeepAlive(pOurTcpsrv, modConf->bKeepAlive));
+	CHKiRet(tcpsrv.SetKeepAliveIntvl(pOurTcpsrv, modConf->iKeepAliveIntvl));
+	CHKiRet(tcpsrv.SetKeepAliveProbes(pOurTcpsrv, modConf->iKeepAliveProbes));
+	CHKiRet(tcpsrv.SetKeepAliveTime(pOurTcpsrv, modConf->iKeepAliveTime));
+	CHKiRet(tcpsrv.SetGnutlsPriorityString(pOurTcpsrv, modConf->gnutlsPriorityString));
+	CHKiRet(tcpsrv.SetSessMax(pOurTcpsrv, modConf->iTCPSessMax));
+	CHKiRet(tcpsrv.SetLstnMax(pOurTcpsrv, modConf->iTCPLstnMax));
+	CHKiRet(tcpsrv.SetDrvrMode(pOurTcpsrv, modConf->iStrmDrvrMode));
+	CHKiRet(tcpsrv.SetDrvrCheckExtendedKeyUsage(pOurTcpsrv, modConf->iStrmDrvrExtendedCertCheck));
+	CHKiRet(tcpsrv.SetDrvrPrioritizeSAN(pOurTcpsrv, modConf->iStrmDrvrSANPreference));
+	CHKiRet(tcpsrv.SetDrvrTlsVerifyDepth(pOurTcpsrv, modConf->iStrmTlsVerifyDepth));
+	CHKiRet(tcpsrv.SetUseFlowControl(pOurTcpsrv, modConf->bUseFlowControl));
+	CHKiRet(tcpsrv.SetAddtlFrameDelim(pOurTcpsrv, modConf->iAddtlFrameDelim));
+	CHKiRet(tcpsrv.SetMaxFrameSize(pOurTcpsrv, modConf->maxFrameSize));
+	CHKiRet(tcpsrv.SetbDisableLFDelim(pOurTcpsrv, modConf->bDisableLFDelim));
+	CHKiRet(tcpsrv.SetDiscardTruncatedMsg(pOurTcpsrv, modConf->discardTruncatedMsg));
+	CHKiRet(tcpsrv.SetNotificationOnRemoteClose(pOurTcpsrv, modConf->bEmitMsgOnClose));
+	/* now set optional params, but only if they were actually configured */
+	if(modConf->pszStrmDrvrName != NULL) {
+		CHKiRet(tcpsrv.SetDrvrName(pOurTcpsrv, modConf->pszStrmDrvrName));
 	}
+	if(modConf->pszStrmDrvrAuthMode != NULL) {
+		CHKiRet(tcpsrv.SetDrvrAuthMode(pOurTcpsrv, modConf->pszStrmDrvrAuthMode));
+	}
+	/* Call SetDrvrPermitExpiredCerts required
+	 * when param is NULL default handling for ExpiredCerts is set! */
+	CHKiRet(tcpsrv.SetDrvrPermitExpiredCerts(pOurTcpsrv, modConf->pszStrmDrvrPermitExpiredCerts));
+	if(pPermPeersRoot != NULL) {
+		CHKiRet(tcpsrv.SetDrvrPermPeers(pOurTcpsrv, pPermPeersRoot));
+	}
+	CHKiRet(tcpsrv.SetPreserveCase(pOurTcpsrv, modConf->bPreserveCase));
 
 	/* initialized, now add socket and listener params */
 	DBGPRINTF("imtcp: trying to add port *:%s\n", inst->cnf_params->pszPort);
@@ -423,6 +431,13 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 		CHKmalloc(inst->cnf_params->pszPort = (uchar*)strdup("514"));
 	}
 	tcpsrv.configureTCPListen(pOurTcpsrv, inst->cnf_params);
+
+	tcpsrv_etry_t *etry;
+	CHKmalloc(etry = (tcpsrv_etry_t*) calloc(1, sizeof(tcpsrv_etry_t)));
+	etry->tcpsrv = pOurTcpsrv;
+	etry->next = tcpsrv_root;
+	tcpsrv_root = etry;
+	++n_tcpsrv;
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -690,9 +705,13 @@ CODESTARTactivateCnfPrePrivDrop
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
 		addListner(runModConf, inst);
 	}
-	if(pOurTcpsrv == NULL)
+	if(tcpsrv_root == NULL)
 		ABORT_FINALIZE(RS_RET_NO_RUN);
-	iRet = tcpsrv.ConstructFinalize(pOurTcpsrv);
+	tcpsrv_etry_t *etry = tcpsrv_root;
+	while(etry != NULL) {
+		CHKiRet(tcpsrv.ConstructFinalize(etry->tcpsrv));
+		etry = etry->next;
+	}
 finalize_it:
 ENDactivateCnfPrePrivDrop
 
@@ -723,11 +742,80 @@ CODESTARTfreeCnf
 	}
 ENDfreeCnf
 
+static void *
+RunServerThread(void *myself)
+{
+	tcpsrv_etry_t *const etry = (tcpsrv_etry_t*) myself;
+	rsRetVal iRet;
+	dbgprintf("RGER: running ety %p\n", etry);
+	iRet = tcpsrv.Run(etry->tcpsrv);
+	if(iRet != RS_RET_OK) {
+		LogError(0, iRet, "imtcp: error while terminating server; rsyslog may hang on shutdown");
+	}
+	return NULL;
+}
+
+
+/* support for running multiple servers on multiple threads (one server per thread) */
+static void
+startSrvWrkr(tcpsrv_etry_t *const etry)
+{
+	int r;
+	pthread_attr_t sessThrdAttr;
+
+	/* We need to temporarily block all signals because the new thread
+	 * inherits our signal mask. There is a race if we do not block them
+	 * now, and we have seen in practice that this race causes grief.
+	 * So we 1. save the current set, 2. block evertyhing, 3. start
+	 * threads, and 4 reset the current set to saved state.
+	 * rgerhards, 2019-08-16
+	 */
+	sigset_t sigSet, sigSetSave;
+	sigfillset(&sigSet);
+	/* enable signals we still need */
+	sigdelset(&sigSet, SIGTTIN);
+	sigdelset(&sigSet, SIGSEGV);
+	pthread_sigmask(SIG_SETMASK, &sigSet, &sigSetSave);
+
+	pthread_attr_init(&sessThrdAttr);
+	pthread_attr_setstacksize(&sessThrdAttr, 4096*1024);
+	r = pthread_create(&etry->tid, &sessThrdAttr, RunServerThread, etry);
+	if(r != 0) {
+		LogError(errno, NO_ERRCODE, "imtcp error creating server thread");
+		/* we do NOT abort, as other servers may run - after all, we logged an error */
+	}
+	pthread_attr_destroy(&sessThrdAttr);
+	pthread_sigmask(SIG_SETMASK, &sigSetSave, NULL);
+}
+
+/* stop server worker thread
+ */
+static void
+stopSrvWrkr(tcpsrv_etry_t *const etry)
+{
+	DBGPRINTF("Wait for thread shutdown etry %p\n", etry);
+	pthread_kill(etry->tid, SIGTTIN);
+	pthread_join(etry->tid, NULL);
+	DBGPRINTF("input %p terminated\n", etry);
+}
+
 /* This function is called to gather input.
  */
 BEGINrunInput
 CODESTARTrunInput
-	iRet = tcpsrv.Run(pOurTcpsrv);
+	tcpsrv_etry_t *etry = tcpsrv_root->next;
+	while(etry != NULL) {
+		startSrvWrkr(etry);
+		etry = etry->next;
+	}
+
+	iRet = tcpsrv.Run(tcpsrv_root->tcpsrv);
+
+	/* de-init remaining servers */
+	while(etry != NULL) {
+		stopSrvWrkr(etry);
+		etry = etry->next;
+	}
 ENDrunInput
 
 
@@ -740,8 +828,12 @@ ENDwillRun
 
 BEGINafterRun
 CODESTARTafterRun
-	if(pOurTcpsrv != NULL)
-		iRet = tcpsrv.Destruct(&pOurTcpsrv);
+	tcpsrv_etry_t *etry = tcpsrv_root;
+	while(etry != NULL) {
+		iRet = tcpsrv.Destruct(&etry->tcpsrv);
+		// TODO: check iRet, reprot error
+		etry = etry->next;
+	}
 
 	net.clearAllowedSenders(UCHAR_CONSTANT("TCP"));
 ENDafterRun
@@ -812,7 +904,7 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	pOurTcpsrv = NULL;
+	tcpsrv_root = NULL;
 	/* request objects we use */
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 	CHKiRet(objUse(netstrm, LM_NETSTRMS_FILENAME));
