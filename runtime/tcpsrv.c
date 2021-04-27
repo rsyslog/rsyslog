@@ -705,7 +705,7 @@ wrkr(void *const myself)
 		pthread_mutex_lock(&wrkrMut);
 		me->pSrv = NULL;	/* indicate we are free again */
 		--wrkrRunning;
-		pthread_cond_signal(&wrkrIdle);
+		pthread_cond_broadcast(&wrkrIdle);
 	}
 	me->enabled = 0; /* indicate we are no longer available */
 	pthread_mutex_unlock(&wrkrMut);
