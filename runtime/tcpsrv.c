@@ -1303,7 +1303,6 @@ static rsRetVal
 SetInputName(tcpsrv_t *const pThis,tcpLstnParams_t *const cnf_params, const uchar *const name)
 {
 	DEFiRet;
-	fprintf(stderr, "name %s\n", name);
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	if(name == NULL)
 		cnf_params->pszInputName = NULL;
@@ -1349,7 +1348,7 @@ SetNotificationOnRemoteClose(tcpsrv_t *pThis, int bNewVal)
 
 /* set the driver mode -- rgerhards, 2008-04-30 */
 static rsRetVal
-SetDrvrMode(tcpsrv_t *pThis, int iMode)
+SetDrvrMode(tcpsrv_t *pThis, const int iMode)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
@@ -1358,7 +1357,7 @@ SetDrvrMode(tcpsrv_t *pThis, int iMode)
 }
 
 static rsRetVal
-SetDrvrName(tcpsrv_t *pThis, uchar *name)
+SetDrvrName(tcpsrv_t *pThis, uchar *const name)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
@@ -1370,7 +1369,7 @@ finalize_it:
 
 /* set the driver authentication mode -- rgerhards, 2008-05-19 */
 static rsRetVal
-SetDrvrAuthMode(tcpsrv_t *pThis, uchar *mode)
+SetDrvrAuthMode(tcpsrv_t *pThis, uchar *const mode)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcpsrv);

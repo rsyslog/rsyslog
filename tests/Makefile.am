@@ -1232,12 +1232,19 @@ TESTS +=  \
 	imtcp-tls-gtls-x509fingerprint-invld.sh \
 	imtcp-tls-gtls-x509fingerprint.sh \
 	imtcp-tls-gtls-x509name-invld.sh \
-	imtcp-tls-gtls-x509name.sh
+	imtcp-tls-gtls-x509name.sh \
+	imtcp-drvr-in-input-basic.sh \
+	imtcp-multi-drvr-basic.sh \
+	imtcp-multi-drvr-basic-parallel.sh
 if HAVE_VALGRIND
 TESTS += \
 	imtcp-tls-basic-vg.sh \
 	imtcp_conndrop_tls-vg.sh \
 	manytcp-too-few-tls-vg.sh
+endif
+if ENABLE_OPENSSL
+TESTS +=  \
+	imtcp-multi-drvr-basic-ptcp_gtls_ossl.sh
 endif
 endif
 
@@ -2067,6 +2074,10 @@ EXTRA_DIST= \
 	imtcp-tls-gtls-x509fingerprint.sh \
 	imtcp-tls-gtls-x509name-invld.sh \
 	imtcp-tls-gtls-x509name.sh \
+	imtcp-drvr-in-input-basic.sh \
+	imtcp-multi-drvr-basic.sh \
+	imtcp-multi-drvr-basic-parallel.sh \
+	imtcp-multi-drvr-basic-ptcp_gtls_ossl.sh \
 	imtcp-tls-basic.sh \
 	imtcp-tls-basic-verifydepth.sh \
 	imtcp-tls-basic-vg.sh \
