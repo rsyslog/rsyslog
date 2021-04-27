@@ -1,5 +1,16 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2106.0 (aka 2021.06) 2021-04-??
+- 2021-04-27: tcpsrv bugfix: potential sluggishnes and hang on shutdown
+  tcpsrv is used by multiple other modules (imtcp, imdiag, imgssapi, and,
+  in theory, also others - even ones we do not know about). However, the
+  internal synchornization did not properly take multiple tcpsrv users
+  in consideration.
+  As such, a single user could hang under some circumstances. This was
+  caused by improperly awaking all users from a pthread condition wait.
+  That in turn could lead to some sluggish behaviour and, in rare cases,
+  a hang at shutdown.
+  Note: it was highly unlikely to experience real problems with the
+  officially provided modules.
 - 2021-04-22: refactoring of syslog/tcp driver parameter passing
   This has now been generalized to a parameter block, which makes it much cleaner and
   also easier to add new parameters in the future.
