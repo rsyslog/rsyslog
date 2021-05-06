@@ -569,6 +569,118 @@ This parameter was introduced because the testbench works with dynamic ports.
    is automatically changed to port 514
 
 
+StreamDriver.Name
+^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "module parameter", "no", "none"
+
+.. versionadded:: 8.2106.0
+
+This permits to override the equally-named module parameter on the input()
+level. For further details, see the module parameter.
+
+
+StreamDriver.Mode
+^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "module parameter", "no", "``$InputTCPServerStreamDriverMode``"
+
+.. versionadded:: 8.2106.0
+
+This permits to override the equally-named module parameter on the input()
+level. For further details, see the module parameter.
+
+
+StreamDriver.AuthMode
+^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "module parameter", "no", "``$InputTCPServerStreamDriverAuthMode``"
+
+.. versionadded:: 8.2106.0
+
+This permits to override the equally-named module parameter on the input()
+level. For further details, see the module parameter.
+
+
+StreamDriver.PermitExpiredCerts
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "module parameter", "no", "none"
+
+.. versionadded:: 8.2106.0
+
+This permits to override the equally-named module parameter on the input()
+level. For further details, see the module parameter.
+
+
+StreamDriver.CheckExtendedKeyPurpose
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "module parameter", "no", "none"
+
+.. versionadded:: 8.2106.0
+
+This permits to override the equally-named module parameter on the input()
+level. For further details, see the module parameter.
+
+
+StreamDriver.PrioritizeSAN
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "module parameter", "no", "none"
+
+.. versionadded:: 8.2106.0
+
+This permits to override the equally-named module parameter on the input()
+level. For further details, see the module parameter.
+
+
+StreamDriver.TlsVerifyDepth
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "module parameter", "no", "none"
+
+.. versionadded:: 8.2106.0
+
+This permits to override the equally-named module parameter on the input()
+level. For further details, see the module parameter.
+
+
 
 .. _imtcp-statistic-counter:
 
