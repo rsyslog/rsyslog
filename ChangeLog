@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2106.0 (aka 2021.06) 2021-04-??
+- 2021-05-06: imtcp: add stream driver parameter to input() configuration
+  This permits to have different inputs use different stream drivers
+  and stream driver parameters.
+  closes https://github.com/rsyslog/rsyslog/issues/3727
 - 2021-04-27: tcpsrv bugfix: potential sluggishnes and hang on shutdown
   tcpsrv is used by multiple other modules (imtcp, imdiag, imgssapi, and,
   in theory, also others - even ones we do not know about). However, the
