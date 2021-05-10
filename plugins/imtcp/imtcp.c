@@ -81,7 +81,6 @@ DEFobjCurrIf(ruleset)
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
 
 /* Module static data */
-//static tcpsrv_t *pOurTcpsrv = NULL;  /* our TCP server(listener) TODO: change for multiple instances */
 typedef struct tcpsrv_etry_s {
 	tcpsrv_t *tcpsrv;
 	pthread_t tid;	/* the worker's thread ID */
@@ -121,6 +120,8 @@ static struct configSettings_s {
 } cs;
 
 struct instanceConf_s {
+	int iTCPSessMax;
+	int iTCPLstnMax;
 	tcpLstnParams_t *cnf_params;	/**< listener config parameters */
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
@@ -129,14 +130,25 @@ struct instanceConf_s {
 	sbool bSPFramingFix;
 	unsigned int ratelimitInterval;
 	unsigned int ratelimitBurst;
+	int iAddtlFrameDelim; /* addtl frame delimiter, e.g. for netscreen, default none */
+	int maxFrameSize;
+	int bUseFlowControl;
+	int bDisableLFDelim;
+	int discardTruncatedMsg;
+	int bEmitMsgOnClose;
+	int bPreserveCase;
 	uchar *pszStrmDrvrName; /* stream driver to use */
 	int iStrmDrvrMode;
 	uchar *pszStrmDrvrAuthMode;
 	uchar *pszStrmDrvrPermitExpiredCerts;
+	uchar *gnutlsPriorityString;
 	int iStrmDrvrExtendedCertCheck;
 	int iStrmDrvrSANPreference;
 	int iStrmTlsVerifyDepth;
-	int iAddtlFrameDelim; /* addtl frame delimiter, e.g. for netscreen, default none */
+	int bKeepAlive;
+	int iKeepAliveIntvl;
+	int iKeepAliveProbes;
+	int iKeepAliveTime;
 	struct instanceConf_s *next;
 };
 
@@ -209,6 +221,15 @@ static struct cnfparamblk modpblk =
 /* input instance parameters */
 static struct cnfparamdescr inppdescr[] = {
 	{ "port", eCmdHdlrString, CNFPARAM_REQUIRED }, /* legacy: InputTCPServerRun */
+	{ "maxsessions", eCmdHdlrPositiveInt, 0 },
+	{ "maxlisteners", eCmdHdlrPositiveInt, 0 },
+	{ "flowcontrol", eCmdHdlrBinary, 0 },
+	{ "disablelfdelimiter", eCmdHdlrBinary, 0 },
+	{ "discardtruncatedmsg", eCmdHdlrBinary, 0 },
+	{ "notifyonconnectionclose", eCmdHdlrBinary, 0 },
+	{ "addtlframedelimiter", eCmdHdlrNonNegInt, 0 },
+	{ "maxframesize", eCmdHdlrInt, 0 },
+	{ "preservecase", eCmdHdlrBinary, 0 },
 	{ "listenportfilename", eCmdHdlrString, 0 },
 	{ "address", eCmdHdlrString, 0 },
 	{ "name", eCmdHdlrString, 0 },
@@ -221,6 +242,11 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "streamdriver.CheckExtendedKeyPurpose", eCmdHdlrBinary, 0 },
 	{ "streamdriver.PrioritizeSAN", eCmdHdlrBinary, 0 },
 	{ "streamdriver.TlsVerifyDepth", eCmdHdlrPositiveInt, 0 },
+	{ "gnutlsprioritystring", eCmdHdlrString, 0 },
+	{ "keepalive", eCmdHdlrBinary, 0 },
+	{ "keepalive.probes", eCmdHdlrNonNegInt, 0 },
+	{ "keepalive.time", eCmdHdlrNonNegInt, 0 },
+	{ "keepalive.interval", eCmdHdlrNonNegInt, 0 },
 	{ "supportoctetcountedframing", eCmdHdlrBinary, 0 },
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
 	{ "framingfix.cisco.asa", eCmdHdlrBinary, 0 },
@@ -326,10 +352,24 @@ createInstance(instanceConf_t **pinst)
 	inst->pszStrmDrvrName = NULL;
 	inst->pszStrmDrvrAuthMode = NULL;
 	inst->pszStrmDrvrPermitExpiredCerts = NULL;
+	inst->gnutlsPriorityString = NULL;
 	inst->iStrmDrvrMode = loadModConf->iStrmDrvrMode;
 	inst->iStrmDrvrExtendedCertCheck = loadModConf->iStrmDrvrExtendedCertCheck;
 	inst->iStrmDrvrSANPreference = loadModConf->iStrmDrvrSANPreference;
 	inst->iStrmTlsVerifyDepth = loadModConf->iStrmTlsVerifyDepth;
+	inst->bKeepAlive = loadModConf->bKeepAlive;
+	inst->iKeepAliveIntvl = loadModConf->iKeepAliveIntvl;
+	inst->iKeepAliveProbes = loadModConf->iKeepAliveProbes;
+	inst->iKeepAliveTime = loadModConf->iKeepAliveTime;
+	inst->iAddtlFrameDelim = loadModConf->iAddtlFrameDelim;
+	inst->maxFrameSize = loadModConf->maxFrameSize;
+	inst->bUseFlowControl = loadModConf->bUseFlowControl;
+	inst->bDisableLFDelim = loadModConf->bDisableLFDelim;
+	inst->discardTruncatedMsg = loadModConf->discardTruncatedMsg;
+	inst->bEmitMsgOnClose = loadModConf->bEmitMsgOnClose;
+	inst->bPreserveCase = loadModConf->bPreserveCase;
+	inst->iTCPLstnMax = loadModConf->iTCPLstnMax;
+	inst->iTCPSessMax = loadModConf->iTCPSessMax;
 
 	inst->cnf_params->pszLstnPortFileName = NULL;
 
@@ -408,23 +448,23 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 	CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
 	CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
 	/* params */
-	CHKiRet(tcpsrv.SetKeepAlive(pOurTcpsrv, modConf->bKeepAlive));
-	CHKiRet(tcpsrv.SetKeepAliveIntvl(pOurTcpsrv, modConf->iKeepAliveIntvl));
-	CHKiRet(tcpsrv.SetKeepAliveProbes(pOurTcpsrv, modConf->iKeepAliveProbes));
-	CHKiRet(tcpsrv.SetKeepAliveTime(pOurTcpsrv, modConf->iKeepAliveTime));
-	CHKiRet(tcpsrv.SetGnutlsPriorityString(pOurTcpsrv, modConf->gnutlsPriorityString));
-	CHKiRet(tcpsrv.SetSessMax(pOurTcpsrv, modConf->iTCPSessMax));
-	CHKiRet(tcpsrv.SetLstnMax(pOurTcpsrv, modConf->iTCPLstnMax));
+	CHKiRet(tcpsrv.SetKeepAlive(pOurTcpsrv, inst->bKeepAlive));
+	CHKiRet(tcpsrv.SetKeepAliveIntvl(pOurTcpsrv, inst->iKeepAliveIntvl));
+	CHKiRet(tcpsrv.SetKeepAliveProbes(pOurTcpsrv, inst->iKeepAliveProbes));
+	CHKiRet(tcpsrv.SetKeepAliveTime(pOurTcpsrv, inst->iKeepAliveTime));
+	CHKiRet(tcpsrv.SetSessMax(pOurTcpsrv, inst->iTCPSessMax));
+	CHKiRet(tcpsrv.SetLstnMax(pOurTcpsrv, inst->iTCPLstnMax));
 	CHKiRet(tcpsrv.SetDrvrMode(pOurTcpsrv, inst->iStrmDrvrMode));
 	CHKiRet(tcpsrv.SetDrvrCheckExtendedKeyUsage(pOurTcpsrv, inst->iStrmDrvrExtendedCertCheck));
 	CHKiRet(tcpsrv.SetDrvrPrioritizeSAN(pOurTcpsrv, inst->iStrmDrvrSANPreference));
 	CHKiRet(tcpsrv.SetDrvrTlsVerifyDepth(pOurTcpsrv, inst->iStrmTlsVerifyDepth));
-	CHKiRet(tcpsrv.SetUseFlowControl(pOurTcpsrv, modConf->bUseFlowControl));
-	CHKiRet(tcpsrv.SetAddtlFrameDelim(pOurTcpsrv, modConf->iAddtlFrameDelim));
-	CHKiRet(tcpsrv.SetMaxFrameSize(pOurTcpsrv, modConf->maxFrameSize));
-	CHKiRet(tcpsrv.SetbDisableLFDelim(pOurTcpsrv, modConf->bDisableLFDelim));
-	CHKiRet(tcpsrv.SetDiscardTruncatedMsg(pOurTcpsrv, modConf->discardTruncatedMsg));
-	CHKiRet(tcpsrv.SetNotificationOnRemoteClose(pOurTcpsrv, modConf->bEmitMsgOnClose));
+	CHKiRet(tcpsrv.SetUseFlowControl(pOurTcpsrv, inst->bUseFlowControl));
+	CHKiRet(tcpsrv.SetAddtlFrameDelim(pOurTcpsrv, inst->iAddtlFrameDelim));
+	CHKiRet(tcpsrv.SetMaxFrameSize(pOurTcpsrv, inst->maxFrameSize));
+	CHKiRet(tcpsrv.SetbDisableLFDelim(pOurTcpsrv, inst->bDisableLFDelim));
+	CHKiRet(tcpsrv.SetDiscardTruncatedMsg(pOurTcpsrv, inst->discardTruncatedMsg));
+	CHKiRet(tcpsrv.SetNotificationOnRemoteClose(pOurTcpsrv, inst->bEmitMsgOnClose));
+	CHKiRet(tcpsrv.SetPreserveCase(pOurTcpsrv, inst->bPreserveCase));
 	/* now set optional params, but only if they were actually configured */
 	psz = (inst->pszStrmDrvrName == NULL) ? modConf->pszStrmDrvrName : inst->pszStrmDrvrName;
 	if(psz != NULL) {
@@ -434,6 +474,9 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 	if(psz != NULL) {
 		CHKiRet(tcpsrv.SetDrvrAuthMode(pOurTcpsrv, psz));
 	}
+	psz = (inst->gnutlsPriorityString == NULL)
+			? modConf->gnutlsPriorityString : inst->gnutlsPriorityString;
+	CHKiRet(tcpsrv.SetGnutlsPriorityString(pOurTcpsrv, psz));
 	/* Call SetDrvrPermitExpiredCerts required
 	 * when param is NULL default handling for ExpiredCerts is set! */
 	psz = (inst->pszStrmDrvrPermitExpiredCerts == NULL)
@@ -442,7 +485,6 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 	if(pPermPeersRoot != NULL) {
 		CHKiRet(tcpsrv.SetDrvrPermPeers(pOurTcpsrv, pPermPeersRoot));
 	}
-	CHKiRet(tcpsrv.SetPreserveCase(pOurTcpsrv, modConf->bPreserveCase));
 
 	/* initialized, now add socket and listener params */
 	DBGPRINTF("imtcp: trying to add port *:%s\n", inst->cnf_params->pszPort);
@@ -531,12 +573,47 @@ CODESTARTnewInpInst
 			inst->pszStrmDrvrPermitExpiredCerts = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "streamdriver.name")) {
 			inst->pszStrmDrvrName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "gnutlsprioritystring")) {
+			inst->gnutlsPriorityString = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "flowcontrol")) {
+			inst->bUseFlowControl = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "disablelfdelimiter")) {
+			inst->bDisableLFDelim = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "discardtruncatedmsg")) {
+			inst->discardTruncatedMsg = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "notifyonconnectionclose")) {
+			inst->bEmitMsgOnClose = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "addtlframedelimiter")) {
+			inst->iAddtlFrameDelim = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "maxframesize")) {
+			const int max = (int) pvals[i].val.d.n;
+			if(max <= 200000000) {
+				inst->maxFrameSize = max;
+			} else {
+				LogError(0, RS_RET_PARAM_ERROR, "imtcp: invalid value for 'maxFrameSize' "
+						"parameter given is %d, max is 200000000", max);
+				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+			}
+		} else if(!strcmp(inppblk.descr[i].name, "maxsessions")) {
+			inst->iTCPSessMax = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "maxlisteners")) {
+			inst->iTCPLstnMax = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "supportoctetcountedframing")) {
 			inst->cnf_params->bSuppOctetFram = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "keepalive")) {
+			inst->bKeepAlive = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "keepalive.probes")) {
+			inst->iKeepAliveProbes = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "keepalive.time")) {
+			inst->iKeepAliveTime = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "keepalive.interval")) {
+			inst->iKeepAliveIntvl = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
 			inst->ratelimitBurst = (unsigned int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
 			inst->ratelimitInterval = (unsigned int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "preservecase")) {
+			inst->bPreserveCase = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "listenportfilename")) {
 			inst->cnf_params->pszLstnPortFileName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
@@ -785,6 +862,7 @@ CODESTARTfreeCnf
 		free((void*)inst->pszStrmDrvrAuthMode);
 		free((void*)inst->pszStrmDrvrName);
 		free((void*)inst->pszStrmDrvrPermitExpiredCerts);
+		free((void*)inst->gnutlsPriorityString);
 		free((void*)inst->pszInputName);
 		free((void*)inst->dfltTZ);
 		del = inst;
