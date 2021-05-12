@@ -303,7 +303,9 @@ TESTS +=  \
 	imtcp_conndrop.sh \
 	imtcp_addtlframedelim.sh \
 	imtcp_no_octet_counted.sh \
+	imtcp_addtlframedelim_on_input.sh \
 	imtcp_spframingfix.sh \
+	imtcp-connection-msg-recieved.sh \
 	sndrcv.sh \
 	sndrcv_failover.sh \
 	sndrcv_gzip.sh \
@@ -2126,10 +2128,12 @@ EXTRA_DIST= \
 	imptcp_multi_line.sh \
 	testsuites/imptcp_multi_line.testdata \
 	imptcp_no_octet_counted.sh \
+	imtcp_addtlframedelim_on_input.sh \
 	testsuites/no_octet_counted.testdata \
 	imtcp_no_octet_counted.sh \
 	testsuites/spframingfix.testdata \
 	imtcp_spframingfix.sh \
+	imtcp-connection-msg-recieved.sh \
 	imptcp_spframingfix.sh \
 	msg-deadlock-headerless-noappname.sh \
 	imtcp_conndrop.sh \
