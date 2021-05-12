@@ -157,6 +157,23 @@ This has only effect if keep-alive is enabled. The functionality may
 not be available on all platforms.
 
 
+KeepAlive.Interval
+^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "0", "no", ""
+
+.. versionadded:: 8.2106.0
+
+The interval for keep alive packets.
+
+
+
+
 FlowControl
 ^^^^^^^^^^^
 
@@ -674,6 +691,230 @@ StreamDriver.TlsVerifyDepth
    :class: parameter-table
 
    "integer", "module parameter", "no", "none"
+
+.. versionadded:: 8.2106.0
+
+This permits to override the equally-named module parameter on the input()
+level. For further details, see the module parameter.
+
+gnutlsPriorityString
+^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "module parameter", "no", "none"
+
+.. versionadded:: 8.2106.0
+
+This permits to override the equally-named module parameter on the input()
+level. For further details, see the module parameter.
+
+
+MaxSessions
+^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "module parameter", "no", ""
+
+.. versionadded:: 8.2106.0
+
+This permits to override the equally-named module parameter on the input()
+level. For further details, see the module parameter.
+
+
+MaxListeners
+^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "module parameter", "no", ""
+
+.. versionadded:: 8.2106.0
+
+This permits to override the equally-named module parameter on the input()
+level. For further details, see the module parameter.
+
+
+FlowControl
+^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "module parameter", "no", ""
+
+.. versionadded:: 8.2106.0
+
+This permits to override the equally-named module parameter on the input()
+level. For further details, see the module parameter.
+
+
+DisableLFDelimiter
+^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "module parameter", "no", ""
+
+
+.. versionadded:: 8.2106.0
+
+This permits to override the equally-named module parameter on the input()
+level. For further details, see the module parameter.
+
+
+DiscardTruncatedMsg
+^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "module parameter", "no", "none"
+
+.. versionadded:: 8.2106.0
+
+This permits to override the equally-named module parameter on the input()
+level. For further details, see the module parameter.
+
+
+NotifyOnConnectionClose
+^^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "module parameter", "no", ""
+
+.. versionadded:: 8.2106.0
+
+This permits to override the equally-named module parameter on the input()
+level. For further details, see the module parameter.
+
+
+AddtlFrameDelimiter
+^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "module parameter", "no", ""
+
+.. versionadded:: 8.2106.0
+
+This permits to override the equally-named module parameter on the input()
+level. For further details, see the module parameter.
+
+
+MaxFrameSize
+^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "module parameter", "no", "none"
+
+.. versionadded:: 8.2106.0
+
+This permits to override the equally-named module parameter on the input()
+level. For further details, see the module parameter.
+
+
+PreserveCase
+^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "boolean", "module parameter", "no", "none"
+
+.. versionadded:: 8.2106.0
+
+This permits to override the equally-named module parameter on the input()
+level. For further details, see the module parameter.
+
+
+KeepAlive
+^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "module parameter", "no", ""
+
+.. versionadded:: 8.2106.0
+
+This permits to override the equally-named module parameter on the input()
+level. For further details, see the module parameter.
+
+
+KeepAlive.Probes
+^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "module parameter", "no", ""
+
+.. versionadded:: 8.2106.0
+
+This permits to override the equally-named module parameter on the input()
+level. For further details, see the module parameter.
+
+
+KeepAlive.Time
+^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "module parameter", "no", ""
+
+.. versionadded:: 8.2106.0
+
+This permits to override the equally-named module parameter on the input()
+level. For further details, see the module parameter.
+
+
+KeepAlive.Interval
+^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "module parameter", "no", ""
 
 .. versionadded:: 8.2106.0
 
