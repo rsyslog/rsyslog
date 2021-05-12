@@ -230,7 +230,47 @@ SetPermitExpiredCerts(nsd_t __attribute__((unused)) *pNsd, uchar *mode)
 {
 	DEFiRet;
 	if(mode != NULL) {
-		LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: permitexpiredcerts settingnot supported by "
+		LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: permitexpiredcerts setting not supported by "
+				"ptcp netstream driver");
+		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+SetTlsCAFile(nsd_t __attribute__((unused)) *pNsd, const uchar *const pszFile)
+{
+	DEFiRet;
+	if(pszFile != NULL) {
+		LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: CA File setting not supported by "
+				"ptcp netstream driver - value %s", pszFile);
+		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+	}
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+SetTlsKeyFile(nsd_t __attribute__((unused)) *pNsd, const uchar *const pszFile)
+{
+	DEFiRet;
+	if(pszFile != NULL) {
+		LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: TLS Key File setting not supported by "
+				"ptcp netstream driver");
+		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+	}
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+SetTlsCertFile(nsd_t __attribute__((unused)) *pNsd, const uchar *const pszFile)
+{
+	DEFiRet;
+	if(pszFile != NULL) {
+		LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: TLS Cert File setting not supported by "
 				"ptcp netstream driver");
 		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
 	}
@@ -658,11 +698,15 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		 * construct a new netstrm obj and hand it over to the upper layers for inclusion
 		 * into their socket array. -- rgerhards, 2008-04-23
 		 */
+dbgprintf("RGER: ptcp 100\n");
 		CHKiRet(pNS->Drvr.Construct(&pNewNsd));
 		CHKiRet(pNS->Drvr.SetSock(pNewNsd, sock));
 		CHKiRet(pNS->Drvr.SetMode(pNewNsd, netstrms.GetDrvrMode(pNS)));
 		CHKiRet(pNS->Drvr.SetCheckExtendedKeyUsage(pNewNsd, netstrms.GetDrvrCheckExtendedKeyUsage(pNS)));
 		CHKiRet(pNS->Drvr.SetPrioritizeSAN(pNewNsd, netstrms.GetDrvrPrioritizeSAN(pNS)));
+		CHKiRet(pNS->Drvr.SetTlsCAFile(pNewNsd, netstrms.GetDrvrTlsCAFile(pNS)));
+		CHKiRet(pNS->Drvr.SetTlsKeyFile(pNewNsd, netstrms.GetDrvrTlsKeyFile(pNS)));
+		CHKiRet(pNS->Drvr.SetTlsCertFile(pNewNsd, netstrms.GetDrvrTlsCertFile(pNS)));
 		CHKiRet(pNS->Drvr.SetTlsVerifyDepth(pNewNsd, netstrms.GetDrvrTlsVerifyDepth(pNS)));
 		CHKiRet(pNS->Drvr.SetAuthMode(pNewNsd, netstrms.GetDrvrAuthMode(pNS)));
 		CHKiRet(pNS->Drvr.SetPermitExpiredCerts(pNewNsd, netstrms.GetDrvrPermitExpiredCerts(pNS)));
@@ -670,6 +714,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		CHKiRet(pNS->Drvr.SetGnutlsPriorityString(pNewNsd, netstrms.GetDrvrGnutlsPriorityString(pNS)));
 		CHKiRet(netstrms.CreateStrm(pNS, &pNewStrm));
 		pNewStrm->pDrvrData = (nsd_t*) pNewNsd;
+dbgprintf("RGER: ptcp 200\n");
 		pNewNsd = NULL;
 		CHKiRet(fAddLstn(pUsr, pNewStrm));
 		pNewStrm = NULL;
@@ -702,6 +747,7 @@ finalize_it:
 		if(pNewNsd != NULL)
 			pNS->Drvr.Destruct(&pNewNsd);
 	}
+dbgprintf("RGER: end ptcp\n");
 
 	RETiRet;
 }
@@ -1016,6 +1062,9 @@ CODESTARTobjQueryInterface(nsd_ptcp)
 	pIf->SetCheckExtendedKeyUsage = SetCheckExtendedKeyUsage;
 	pIf->SetPrioritizeSAN = SetPrioritizeSAN;
 	pIf->SetTlsVerifyDepth = SetTlsVerifyDepth;
+	pIf->SetTlsCAFile = SetTlsCAFile;
+	pIf->SetTlsKeyFile = SetTlsKeyFile;
+	pIf->SetTlsCertFile = SetTlsCertFile;
 finalize_it:
 ENDobjQueryInterface(nsd_ptcp)
 

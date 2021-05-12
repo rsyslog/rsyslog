@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd interface for GnuTLS.
  *
- * Copyright (C) 2007-2019 Rainer Gerhards and Adiscon GmbH.
+ * Copyright (C) 2007-2021 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -110,6 +110,7 @@ static short bHaveCert;
 static short bHaveKey;
 
 /* ------------------------------ GnuTLS specifics ------------------------------ */
+//TODO: DELETE static gnutls_certificate_credentials_t xcred;
 static gnutls_certificate_credentials_t xcred;
 
 /* This defines a log function to be provided to GnuTLS. It hopefully
@@ -1355,6 +1356,7 @@ gtlsSetTransportPtr(nsd_gtls_t *pThis, int sock)
 BEGINobjConstruct(nsd_gtls) /* be sure to specify the object type also in END macro! */
 	iRet = nsd_ptcp.Construct(&pThis->pTcp);
 	pThis->bReportAuthErr = 1;
+dbgprintf("RGER: nds_gtls Constuct pThis %p\n", pThis);
 ENDobjConstruct(nsd_gtls)
 
 
@@ -1595,6 +1597,57 @@ finalize_it:
 	RETiRet;
 }
 
+static rsRetVal
+SetTlsCAFile(nsd_t *pNsd, const uchar *const caFile)
+{
+	DEFiRet;
+	nsd_gtls_t *const pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	if(caFile == NULL) {
+		pThis->pszCAFile = NULL;
+	} else {
+		CHKmalloc(pThis->pszCAFile = (const uchar*) strdup((const char*) caFile));
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+SetTlsKeyFile(nsd_t *pNsd, const uchar *const pszFile)
+{
+	DEFiRet;
+	nsd_gtls_t *const pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	if(pszFile == NULL) {
+		pThis->pszKeyFile = NULL;
+	} else {
+		CHKmalloc(pThis->pszKeyFile = (const uchar*) strdup((const char*) pszFile));
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+SetTlsCertFile(nsd_t *pNsd, const uchar *const pszFile)
+{
+	DEFiRet;
+	nsd_gtls_t *const pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	if(pszFile == NULL) {
+		pThis->pszCertFile = NULL;
+	} else {
+		CHKmalloc(pThis->pszCertFile = (const uchar*) strdup((const char*) pszFile));
+	}
+
+finalize_it:
+	RETiRet;
+}
+
 
 /* Provide access to the underlying OS socket. This is primarily
  * useful for other drivers (like nsd_gtls) who utilize ourselfs
@@ -1693,10 +1746,11 @@ Abort(nsd_t *pNsd)
  * gerhards, 2008-04-25
  */
 static rsRetVal ATTR_NONNULL(1,3,5)
-LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
+LstnInit(netstrms_t *const pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 	 const int iSessMax, const tcpLstnParams_t *const cnf_params)
 {
 	DEFiRet;
+dbgprintf("RGER: nsd_gtls LstnInit\n");
 	CHKiRet(gtlsGlblInitLstn());
 	iRet = nsd_ptcp.LstnInit(pNS, pUsr, fAddLstn, iSessMax, cnf_params);
 finalize_it:
@@ -1773,6 +1827,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	const char *error_position = NULL;
 
+dbgprintf("RGER: nsd_glts: AcceptConnReq, pThis %p, CAF: %s\n", pThis, pThis->pszCAFile);
 	ISOBJ_TYPE_assert((pThis), nsd_gtls);
 	CHKiRet(nsd_gtlsConstruct(&pNew)); // TODO: prevent construct/destruct!
 	CHKiRet(nsd_ptcp.Destruct(&pNew->pTcp));
@@ -2057,7 +2112,7 @@ SetServerNameIfPresent(nsd_gtls_t *pThis, uchar *host) {
 static rsRetVal
 Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 {
-	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+	nsd_gtls_t *const pThis = (nsd_gtls_t*) pNsd;
 	int sock;
 	int gnuRet;
 	const char *error_position;
@@ -2229,6 +2284,9 @@ CODESTARTobjQueryInterface(nsd_gtls)
 	pIf->SetCheckExtendedKeyUsage = SetCheckExtendedKeyUsage;
 	pIf->SetPrioritizeSAN = SetPrioritizeSAN;
 	pIf->SetTlsVerifyDepth = SetTlsVerifyDepth;
+	pIf->SetTlsCAFile = SetTlsCAFile;
+	pIf->SetTlsKeyFile = SetTlsKeyFile;
+	pIf->SetTlsCertFile = SetTlsCertFile;
 finalize_it:
 ENDobjQueryInterface(nsd_gtls)
 

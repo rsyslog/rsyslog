@@ -1,6 +1,6 @@
 /* Definitions for the stream-based netstrmsworking class.
  *
- * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2021 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -67,9 +67,16 @@ BEGINinterface(netstrms) /* name must also be changed in ENDinterface macro! */
 	int      (*GetDrvrPrioritizeSAN)(netstrms_t *pThis);
 	rsRetVal (*SetDrvrTlsVerifyDepth)(netstrms_t *pThis, int verifyDepth);
 	int      (*GetDrvrTlsVerifyDepth)(netstrms_t *pThis);
+	/* v2 */
+	rsRetVal (*SetDrvrTlsCAFile)(netstrms_t *pThis, const uchar *);
+	const uchar* (*GetDrvrTlsCAFile)(netstrms_t *pThis);
+	rsRetVal (*SetDrvrTlsKeyFile)(netstrms_t *pThis, const uchar *);
+	const uchar* (*GetDrvrTlsKeyFile)(netstrms_t *pThis);
+	rsRetVal (*SetDrvrTlsCertFile)(netstrms_t *pThis, const uchar *);
+	const uchar* (*GetDrvrTlsCertFile)(netstrms_t *pThis);
 
 ENDinterface(netstrms)
-#define netstrmsCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define netstrmsCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
 
 /* prototypes */
 PROTOTYPEObj(netstrms);

@@ -2,7 +2,7 @@
 # added 2011-02-28 by Rgerhards
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-export NUMMESSAGES=50000
+export NUMMESSAGES=500 #00
 export QUEUE_EMPTY_CHECK_FUNC=wait_seq_check
 generate_conf
 add_conf '

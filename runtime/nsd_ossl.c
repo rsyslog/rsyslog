@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd interface for OpenSSL.
  *
- * Copyright 2018-2019 Adiscon GmbH.
+ * Copyright 2018-2021 Adiscon GmbH.
  * Author: Andre Lorbach
  *
  * This file is part of the rsyslog runtime library.
