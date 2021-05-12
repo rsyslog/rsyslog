@@ -1,5 +1,8 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2106.0 (aka 2021.06) 2021-04-??
+- 2021-05-12: imtcp: add more override config params to input()
+  It is now possible to override all module parameters at the input() level. Module
+  parameters serve as defaults. Existing configs need no modification.
 - 2021-05-06: imtcp: add stream driver parameter to input() configuration
   This permits to have different inputs use different stream drivers
   and stream driver parameters.
