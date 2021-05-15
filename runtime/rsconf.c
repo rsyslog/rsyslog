@@ -109,6 +109,7 @@ static uchar template_spoofadr[] = "\"%fromhost-ip%\"";
 static uchar template_SysklogdFileFormat[] = "\"%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg%\n\"";
 static uchar template_StdJSONFmt[] = "\"{\\\"message\\\":\\\"%msg:::json%\\\","
 "\\\"fromhost\\\":\\\"%HOSTNAME:::json%\\\","
+"\\\"programname\\\":\\\"%programname%\\\","
 "\\\"facility\\\":\\\"%syslogfacility-text%\\\","
 "\\\"priority\\\":\\\"%syslogpriority-text%\\\","
 "\\\"timereported\\\":\\\"%timereported:::date-rfc3339%\\\","
