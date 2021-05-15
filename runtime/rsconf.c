@@ -107,10 +107,12 @@ static uchar template_StdPgSQLFmt[] = "\"insert into SystemEvents (Message, Faci
 "'%syslogtag%')\",STDSQL";
 static uchar template_spoofadr[] = "\"%fromhost-ip%\"";
 static uchar template_SysklogdFileFormat[] = "\"%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg%\n\"";
-static uchar template_StdJSONFmt[] = "\"{\\\"message\\\":\\\"%msg:::json%\\\",\\\"fromhost\\\":\\\""
-"%HOSTNAME:::json%\\\",\\\"facility\\\":\\\"%syslogfacility-text%\\\",\\\"priority\\\":\\\""
-"%syslogpriority-text%\\\",\\\"timereported\\\":\\\"%timereported:::date-rfc3339%\\\",\\\"timegenerated\\\":\\\""
-"%timegenerated:::date-rfc3339%\\\"}\"";
+static uchar template_StdJSONFmt[] = "\"{\\\"message\\\":\\\"%msg:::json%\\\","
+"\\\"fromhost\\\":\\\"%HOSTNAME:::json%\\\","
+"\\\"facility\\\":\\\"%syslogfacility-text%\\\","
+"\\\"priority\\\":\\\"%syslogpriority-text%\\\","
+"\\\"timereported\\\":\\\"%timereported:::date-rfc3339%\\\","
+"\\\"timegenerated\\\":\\\"%timegenerated:::date-rfc3339%\\\"}\"";
 static uchar template_StdClickHouseFmt[] = "\"INSERT INTO rsyslog.SystemEvents (severity, facility, "
 "timestamp, hostname, tag, message) VALUES (%syslogseverity%, %syslogfacility%, "
 "'%timereported:::date-unixtimestamp%', '%hostname%', '%syslogtag%', '%msg%')\",STDSQL";
