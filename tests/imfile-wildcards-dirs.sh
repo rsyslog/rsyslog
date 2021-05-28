@@ -52,12 +52,15 @@ for i in $(seq 1 $IMFILEINPUTFILES);
 do
 	mkdir $RSYSLOG_DYNNAME.input.dir$i
 	touch $RSYSLOG_DYNNAME.input.dir$i/file.logfile
-	./inputfilegen -m 1 > $RSYSLOG_DYNNAME.input.dir$i/file.logfile
+	./inputfilegen -m 100 > $RSYSLOG_DYNNAME.input.dir$i/file.logfile
 done
 ls -d $RSYSLOG_DYNNAME.input.*
 
 # Content check with timeout
 content_check_with_count "HEADER msgnum:00000000:" $IMFILEINPUTFILES $IMFILECHECKTIMEOUT
+
+# Check number of state files
+check_spool_count $IMFILEINPUTFILES "$(stat -c "%n: %i" $RSYSLOG_DYNNAME.input.dir*/file.logfile)"
 
 for i in $(seq 1 $IMFILEINPUTFILES);
 do
