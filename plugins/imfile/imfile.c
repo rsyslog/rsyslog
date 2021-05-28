@@ -167,6 +167,7 @@ struct instanceConf_s {
 	sbool addMetadata;
 	sbool freshStartTail;
 	sbool fileNotFoundError;
+	sbool inotifyNewBehaviour;
 	int maxLinesAtOnce;
 	uint32_t trimLineOverBytes;
 	int msgFlag;
@@ -545,11 +546,17 @@ static int
 in_setupWatch(act_obj_t *const act, const int is_file)
 {
 	int wd = -1;
+	int flags;
 	if(runModConf->opMode != OPMODE_INOTIFY)
 		goto done;
 
-	wd = inotify_add_watch(ino_fd, act->name,
-		(is_file) ? IN_MODIFY|IN_DONT_FOLLOW : IN_CREATE|IN_DELETE|IN_MOVED_FROM|IN_MOVED_TO);
+	if(is_file)
+		flags = IN_MODIFY|IN_DONT_FOLLOW;
+	else if(act->edge->instarr[0]->inotifyNewBehaviour)	// TODO: same file, multiple instances?
+		flags = IN_CREATE|IN_DELETE|IN_MOVED_TO;
+	else
+		flags = IN_CREATE|IN_DELETE|IN_MOVED_FROM|IN_MOVED_TO;
+	wd = inotify_add_watch(ino_fd, act->name, flags);
 	if(wd < 0) {
 		if (errno == EACCES) { /* There is high probability of selinux denial on top-level paths */
 			DBGPRINTF("imfile: permission denied when adding watch for '%s'\n", act->name);
@@ -977,9 +984,13 @@ act_obj_destroy(act_obj_t *const act, const int is_deleted)
 	if(act == NULL)
 		return;
 
-	DBGPRINTF("act_obj_destroy: act %p '%s' (source '%s'), wd %d, pStrm %p, is_deleted %d, in_move %d\n",
-		act, act->name, act->source_name? act->source_name : "---", act->wd, act->pStrm, is_deleted,
-		act->in_move);
+	if(act->edge->instarr[0]->inotifyNewBehaviour) // TODO: same file, multiple instances?
+		DBGPRINTF("act_obj_destroy: act %p '%s' (source '%s'), wd %d, pStrm %p, is_deleted %d\n",
+			act, act->name, act->source_name? act->source_name : "---", act->wd, act->pStrm, is_deleted);
+	else
+		DBGPRINTF("act_obj_destroy: act %p '%s' (source '%s'), wd %d, pStrm %p, is_deleted %d, in_move %d\n",
+			act, act->name, act->source_name? act->source_name : "---", act->wd, act->pStrm,
+			is_deleted, act->in_move);
 	if(act->is_symlink && is_deleted) {
 		act_obj_t *target_act;
 		for(target_act = act->edge->active ; target_act != NULL ; target_act = target_act->next) {
@@ -996,13 +1007,16 @@ act_obj_destroy(act_obj_t *const act, const int is_deleted)
 		pollFile(act); /* get any left-over data */
 		if(inst->bRMStateOnDel) {
 			statefn = getStateFileName(act, statefile, sizeof(statefile));
-			getFullStateFileName(statefn, "", toDel, sizeof(toDel)); // TODO: check!
+			if(!inst->inotifyNewBehaviour)
+				getFullStateFileName(statefn, "", toDel, sizeof(toDel)); // TODO: check!
+			else
+				getFullStateFileName(statefn, act->file_id, toDel, sizeof(toDel)); // TODO: check!
 			statefn = toDel;
 		}
 		persistStrmState(act);
 		strm.Destruct(&act->pStrm);
 		/* we delete state file after destruct in case strm obj initiated a write */
-		if(is_deleted && !act->in_move && inst->bRMStateOnDel) {
+		if(is_deleted && inst->bRMStateOnDel && (inst->inotifyNewBehaviour || !act->in_move)) {
 			DBGPRINTF("act_obj_destroy: deleting state file %s\n", statefn);
 			unlink((char*)statefn);
 		}
@@ -1720,6 +1734,7 @@ createInstance(instanceConf_t **const pinst)
 	inst->readTimeout = loadModConf->readTimeout;
 	inst->delay_perMsg = 0;
 	inst->msgFlag = 0;
+	inst->inotifyNewBehaviour = 0;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -1869,6 +1884,7 @@ addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->bRMStateOnDel = 0;
 	inst->readTimeout = loadModConf->readTimeout;
 	inst->msgFlag = 0;
+	inst->inotifyNewBehaviour = 0;
 
 	CHKiRet(checkInstance(inst));
 
@@ -1973,6 +1989,8 @@ CODESTARTnewInpInst
 			inst->readTimeout = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "needparse")) {
 			inst->msgFlag = pvals[i].val.d.n ? NEEDS_PARSING : 0;
+		} else if(!strcmp(inppblk.descr[i].name, "inotifynewbehaviour")) {
+			inst->inotifyNewBehaviour = (uint8_t) pvals[i].val.d.n;
 		} else {
 			DBGPRINTF("program error, non-handled "
 			  "param '%s'\n", inppblk.descr[i].name);
@@ -2370,6 +2388,7 @@ flag_in_move(fs_edge_t *const edge, const char *name_moved)
 	}
 }
 
+
 static void ATTR_NONNULL(1)
 in_processEvent(struct inotify_event *ev)
 {
@@ -2389,15 +2408,23 @@ in_processEvent(struct inotify_event *ev)
 	DBGPRINTF("in_processEvent process Event %x is_file %d, act->name '%s'\n",
 		ev->mask, etry->act->edge->is_file, etry->act->name);
 
-	if((ev->mask & IN_MOVED_FROM)) {
-		flag_in_move(etry->act->edge->node->edges, ev->name);
-	}
-	if(ev->mask & (IN_MOVED_FROM | IN_MOVED_TO))  {
-		fs_node_walk(etry->act->edge->node, poll_tree);
-	} else if(etry->act->edge->is_file && !(etry->act->is_symlink)) {
-		in_handleFileEvent(ev, etry); // esentially poll_file()!
+	if(!etry->act->edge->inotifyNewBehaviour) {
+		if((ev->mask & IN_MOVED_FROM)) {
+			flag_in_move(etry->act->edge->node->edges, ev->name);
+		}
+		if(ev->mask & (IN_MOVED_FROM | IN_MOVED_TO))  {
+			fs_node_walk(etry->act->edge->node, poll_tree);
+		} else if(etry->act->edge->is_file && !(etry->act->is_symlink)) {
+			in_handleFileEvent(ev, etry); // esentially poll_file()!
+		} else {
+			fs_node_walk(etry->act->edge->node, poll_tree);
+		}
 	} else {
-		fs_node_walk(etry->act->edge->node, poll_tree);
+		if((ev->mask & IN_MODIFY) && etry->act->edge->is_file && !(etry->act->is_symlink)) {
+			in_handleFileEvent(ev, etry); // esentially poll_file()!
+		} else {
+			fs_node_walk(etry->act->edge->node, poll_tree);
+		}
 	}
 done:	return;
 }
