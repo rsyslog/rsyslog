@@ -27,9 +27,10 @@ properties. They have always "$!" prepended to the property name given
 in the rulebase. Such a property needs to be called with
 **%$!propertyname%**.
 
-Note that mmnormalize should only be called once on each message.
-Behaviour is undefined if multiple calls to mmnormalize happen for the
-same message.
+Note that from a performance point of view mmnormalize should only be called
+once on each message, if possible. To do so, place all rules into a single
+rule base. If that is not possible, you can safely call mmnormalize multiple
+times. This incurs a small performance drawback.
 
 Module Parameters
 ~~~~~~~~~~~~~~~~~
