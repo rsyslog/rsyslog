@@ -4,7 +4,7 @@
  *
  * Module begun 2008-10-09 by Rainer Gerhards (based on previous code from syslogd.c)
  *
- * Copyright 2008-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2021 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -68,6 +68,7 @@ parserList_t *pParsLstRoot = NULL;
  */
 parserList_t *pDfltParsLst = NULL;
 
+int bSupportCompressionExtension = 1;
 
 /* intialize (but NOT allocate) a parser list. Primarily meant as a hook
  * which can be used to extend the list in the future. So far, just sets
@@ -323,7 +324,7 @@ static rsRetVal uncompressMessage(smsg_t *pMsg)
 	/* we first need to check if we have a compressed record. If so,
 	 * we must decompress it.
 	 */
-	if(lenMsg > 0 && *pszMsg == 'z') { /* compressed data present? (do NOT change order if conditions!) */
+	if(lenMsg > 0 && *pszMsg == 'z' && bSupportCompressionExtension) { /* compressed data present? */
 		/* we have compressed data, so let's deflate it. We support a maximum
 		 * message size of iMaxLine. If it is larger, an error message is logged
 		 * and the message is dropped. We do NOT try to decompress larger messages
