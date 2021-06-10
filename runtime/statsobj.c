@@ -3,7 +3,7 @@
  * This object provides a statistics-gathering facility inside rsyslog. This
  * functionality will be pragmatically implemented and extended.
  *
- * Copyright 2010-2017 Adiscon GmbH.
+ * Copyright 2010-2021 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -499,8 +499,9 @@ getSenderStats(rsRetVal(*cb)(void*, const char*),
 			} else {
 				snprintf(fmtbuf, sizeof(fmtbuf),
 					"{ \"name\":\"_sender_stat\", "
-					"\"sender\":\"%s\", \"messages\":\"%"
-					PRIu64 "\"}",
+					"\"origin\":\"impstats\", "
+					"\"sender\":\"%s\", \"messages\":%"
+					PRIu64 "}",
 					stat->sender, stat->nMsgs);
 			}
 			fmtbuf[sizeof(fmtbuf)-1] = '\0';
