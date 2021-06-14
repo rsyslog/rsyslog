@@ -7,7 +7,7 @@
  *
  * Module begun 2008-04-16 by Rainer Gerhards
  *
- * Copyright 2008-2020 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2021 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -57,6 +57,7 @@
 #include "rsconf.h"
 #include "queue.h"
 #include "dnscache.h"
+#include "parser.h"
 
 #define REPORT_CHILD_PROCESS_EXITS_NONE 0
 #define REPORT_CHILD_PROCESS_EXITS_ERRORS 1
@@ -227,6 +228,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "default.ruleset.queue.timeoutworkerthreadshutdown", eCmdHdlrInt, 0 },
 	{ "reverselookup.cache.ttl.default", eCmdHdlrNonNegInt, 0 },
 	{ "reverselookup.cache.ttl.enable", eCmdHdlrBinary, 0 },
+	{ "parser.supportcompressionextension", eCmdHdlrBinary, 0 },
 	{ "shutdown.queue.doublesize", eCmdHdlrBinary, 0 },
 	{ "debug.files", eCmdHdlrArray, 0 },
 	{ "debug.whitelist", eCmdHdlrBinary, 0 }
@@ -1509,6 +1511,8 @@ glblDoneLoadCnf(void)
 			dnscacheDefaultTTL = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "reverselookup.cache.ttl.enable")) {
 			dnscacheEnableTTL = cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "parser.supportcompressionextension")) {
+			bSupportCompressionExtension = cnfparamvals[i].val.d.n;
 		} else {
 			dbgprintf("glblDoneLoadCnf: program error, non-handled "
 				"param '%s'\n", paramblk.descr[i].name);

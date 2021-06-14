@@ -1,6 +1,6 @@
 /* header for parser.c
  *
- * Copyright 2008-2016 Adiscon GmbH.
+ * Copyright 2008-2021 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -65,6 +65,8 @@ ENDinterface(parser)
 */
 
 void printParserList(parserList_t *pList);
+
+extern int bSupportCompressionExtension;
 
 /* prototypes */
 PROTOTYPEObj(parser);
