@@ -1,5 +1,14 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2106.0 (aka 2021.06) 2021-04-??
+Scheduled Release 8.2106.0 (aka 2021.06) 2021-06-15
+NOTE: the prime new feature is support for TLS and non-TLS connections
+via imtcp in parallel. Furthermore, most TLS parameters can now be overriden
+at the input() level. The notable exceptions are certificate files, something
+that is due to be implemented as next step.
+- 2021-06-14: new global option "parser.supportCompressionExtension"
+  This permits to turn off rsyslog's single-message compression extension
+  when it interferes with non-syslog message processing (the parser
+  subsystem expects syslog messages, not generic text)
+  closes https://github.com/rsyslog/rsyslog/issues/4598
 - 2021-05-12: imtcp: add more override config params to input()
   It is now possible to override all module parameters at the input() level. Module
   parameters serve as defaults. Existing configs need no modification.
@@ -7,6 +16,16 @@ Scheduled Release 8.2106.0 (aka 2021.06) 2021-04-??
   This permits to have different inputs use different stream drivers
   and stream driver parameters.
   closes https://github.com/rsyslog/rsyslog/issues/3727
+- 2021-04-29: imtcp: permit to run multiple inputs in parallel
+  Previously, a single server was used to run all imtcp inputs. This
+  had a couple of drawsbacks. First and foremost, we could not use
+  different stream drivers in the varios inputs. This patch now
+  provides a baseline to do that, but does still not implement the
+  capability (in this sense it is a staging patch).
+  Secondly, we now ensure that each input has at least one exclusive
+  thread for processing, untangling the performance of multiple
+  inputs from each other.
+  see also: https://github.com/rsyslog/rsyslog/issues/3727
 - 2021-04-27: tcpsrv bugfix: potential sluggishnes and hang on shutdown
   tcpsrv is used by multiple other modules (imtcp, imdiag, imgssapi, and,
   in theory, also others - even ones we do not know about). However, the
