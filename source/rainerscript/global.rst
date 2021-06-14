@@ -648,3 +648,16 @@ The following parameters can be set:
 
   The situation addressed by this setting is unlikley to happen, but it could happen.
   To enable the funtionality, set it to "on".
+
+- **parser.supportCompressionExtension** [boolean (on/off)] available 8.2106.0+
+
+  This parameter permits to disable rsyslog's single-message-compression extension on
+  reception ("off"). The default is to keep it activated ("on").
+
+  The single-message-compression extension permits senders to zip-compress single
+  syslog messages. Such messages start with the letter "z" instead of the usual
+  syslog PRI value. For well-formed syslog messages, the extension works as designed.
+  However, some users transport non-syslog data via rsyslog, and such messages may
+  validly start with "z" for non-compressed data. To support such non-standard
+  cases, this option can be used to globally disable support for compression on
+  all inputs.
