@@ -1,4 +1,6 @@
 ----------------------------------------------------------------------------------------
+Scheduled Release 8.2108.0 (aka 2021.08) 2021-08-??
+----------------------------------------------------------------------------------------
 Scheduled Release 8.2106.0 (aka 2021.06) 2021-06-15
 NOTE: the prime new feature is support for TLS and non-TLS connections
 via imtcp in parallel. Furthermore, most TLS parameters can now be overriden
