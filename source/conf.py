@@ -92,8 +92,8 @@ rst_epilog = """
 # real values will be generated dynamically from info in the repo. If the
 # user builds the docs from "bare" sources not yet processed
 ###############################################################################
-version = '8'
-release = version + ' daily stable'
+version = '8.2106'
+release = '8.2106.0'
 
 
 # For this to be true, it means that we are not attempting to build from
@@ -420,4 +420,4 @@ epub_description = u'Documentation for the rsyslog project'
 # http://www.sphinx-doc.org/en/stable/extdev/appapi.html#sphinx.application.Sphinx.add_stylesheet
 # Include our custom stylesheet in addition to specified theme
 def setup(app):
-    app.add_stylesheet('rsyslog.css')
+    app.add_css_file('rsyslog.css')
