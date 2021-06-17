@@ -950,6 +950,8 @@ endif # ENABLE_IMDOCKER
 if ENABLE_IMHTTP
 TESTS += \
 	imhttp-post-payload.sh \
+	imhttp-post-payload-basic-auth.sh \
+	imhttp-post-payload-query-params.sh \
 	imhttp-post-payload-large.sh \
 	imhttp-post-payload-multi.sh \
 	imhttp-post-payload-multi-lf.sh \
@@ -958,6 +960,8 @@ TESTS += \
 if HAVE_VALGRIND
 TESTS +=  \
 	imhttp-post-payload-vg.sh \
+	imhttp-post-payload-basic-auth-vg.sh \
+	imhttp-post-payload-query-params-vg.sh \
 	imhttp-post-payload-large-vg.sh \
 	imhttp-post-payload-multi-vg.sh \
 	imhttp-post-payload-multi-lf-vg.sh \
@@ -2238,6 +2242,10 @@ EXTRA_DIST= \
 	improg_simple_multi.sh \
 	imhttp-post-payload.sh \
 	imhttp-post-payload-vg.sh \
+	imhttp-post-payload-basic-auth.sh \
+	imhttp-post-payload-basic-auth-vg.sh \
+	imhttp-post-payload-query-params.sh \
+	imhttp-post-payload-query-params-vg.sh \
 	imhttp-post-payload-large.sh \
 	imhttp-post-payload-large-vg.sh \
 	testsuites/imhttp-large-data.txt \

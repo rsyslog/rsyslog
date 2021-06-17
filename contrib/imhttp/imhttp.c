@@ -44,6 +44,8 @@
 #include "dirty.h"
 
 #include "civetweb.h"
+#include <apr_base64.h>
+#include <apr_md5.h>
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
@@ -60,10 +62,20 @@ DEFobjCurrIf(statsobj)
 #define CIVETWEB_OPTION_NAME_DOCUMENT_ROOT "document_root"
 #define MAX_READ_BUFFER_SIZE  16384
 #define INIT_SCRATCH_BUF_SIZE 4096
+/* General purpose buffer size. */
+#define IMHTTP_MAX_BUF_LEN (8192)
 
 struct option {
 	const char *name;
 	const char *val;
+};
+
+struct auth_s {
+	char workbuf[IMHTTP_MAX_BUF_LEN];
+	char* pworkbuf;
+	size_t workbuf_len;
+	char* pszUser;
+	char* pszPasswd;
 };
 
 struct data_parse_s {
@@ -96,6 +108,7 @@ struct instanceConf_s {
 	struct instanceConf_s *next;
 	uchar *pszBindRuleset;    /* name of ruleset to bind to */
 	uchar *pszEndpoint;       /* endpoint to configure */
+	uchar *pszBasicAuthFile;       /* file containing basic auth users/pass */
 	ruleset_t *pBindRuleset;  /* ruleset to bind listener to (use system default if unspecified) */
 	ratelimit_t *ratelimiter;
 	unsigned int ratelimitInterval;
@@ -145,6 +158,7 @@ static struct cnfparamblk modpblk = {
 
 static struct cnfparamdescr inppdescr[] = {
 	{ "endpoint", eCmdHdlrString, 0},
+	{ "basicauthfile", eCmdHdlrString, 0},
 	{ "ruleset", eCmdHdlrString, 0 },
 	{ "flowcontrol", eCmdHdlrBinary, 0 },
 	{ "disablelfdelimiter", eCmdHdlrBinary, 0 },
@@ -207,6 +221,7 @@ createInstance(instanceConf_t **pinst)
 	inst->pszBindRuleset = NULL;
 	inst->pBindRuleset = NULL;
 	inst->pszEndpoint = NULL;
+	inst->pszBasicAuthFile = NULL;
 	inst->ratelimiter = NULL;
 	inst->pszInputName = NULL;
 	inst->pInputName = NULL;
@@ -337,20 +352,16 @@ exit_thread(__attribute__((unused)) const struct mg_context *ctx,
 static rsRetVal
 msgAddMetadataFromHttpHeader(smsg_t *const __restrict__ pMsg, struct conn_wrkr_s *connWrkr)
 {
+	struct json_object *json = NULL;
 	DEFiRet;
 	const struct mg_request_info *ri = connWrkr->pri;
 	#define MAX_HTTP_HEADERS 64	/* hard limit */
 	int count = min(ri->num_headers, MAX_HTTP_HEADERS);
 
-	struct json_object *const json = json_object_new_object();
-	CHKmalloc(json);
+	CHKmalloc(json = json_object_new_object());
 	for (int i = 0 ; i < count ; i++ ) {
 		struct json_object *const jval = json_object_new_string(ri->http_headers[i].value);
-		if(jval == NULL) {
-			json_object_put(json);
-			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-		}
-
+		CHKmalloc(jval);
 		/* truncate header names bigger than INIT_SCRATCH_BUF_SIZE */
 		strncpy(connWrkr->pScratchBuf, ri->http_headers[i].name, connWrkr->scratchBufSize - 1);
 		/* make header lowercase */
@@ -361,8 +372,48 @@ msgAddMetadataFromHttpHeader(smsg_t *const __restrict__ pMsg, struct conn_wrkr_s
 		}
 		json_object_object_add(json, (const char *const)connWrkr->pScratchBuf, jval);
 	}
-	iRet = msgAddJSON(pMsg, (uchar*)"!metadata!httpheaders", json, 0, 0);
+	CHKiRet(msgAddJSON(pMsg, (uchar*)"!metadata!httpheaders", json, 0, 0));
+
 finalize_it:
+	if (iRet != RS_RET_OK && json) {
+		json_object_put(json);
+	}
+	RETiRet;
+}
+
+static rsRetVal
+msgAddMetadataFromHttpQueryParams(smsg_t *const __restrict__ pMsg, struct conn_wrkr_s *connWrkr)
+{
+	struct json_object *json = NULL;
+	DEFiRet;
+	const struct mg_request_info *ri = connWrkr->pri;
+
+	if (ri && ri->query_string) {
+		strncpy(connWrkr->pScratchBuf, ri->query_string, connWrkr->scratchBufSize - 1);
+		char *pquery_str = connWrkr->pScratchBuf;
+		if (pquery_str) {
+			CHKmalloc(json = json_object_new_object());
+
+			char* saveptr = NULL;
+			char *kv_pair = strtok_r(pquery_str, "&;", &saveptr);
+
+			for ( ; kv_pair != NULL; kv_pair = strtok_r(NULL, "&;", &saveptr)) {
+				char *saveptr2 = NULL;
+				char *key = strtok_r(kv_pair, "=", &saveptr2);
+				if (key) {
+					char *value = strtok_r(NULL, "=", &saveptr2);
+					struct json_object *const jval = json_object_new_string(value);
+					CHKmalloc(jval);
+					json_object_object_add(json, (const char *)key, jval);
+				}
+			}
+			CHKiRet(msgAddJSON(pMsg, (uchar*)"!metadata!queryparams", json, 0, 0));
+		}
+	}
+finalize_it:
+	if (iRet != RS_RET_OK && json) {
+		json_object_put(json);
+	}
 	RETiRet;
 }
 
@@ -400,6 +451,7 @@ doSubmitMsg(const instanceConf_t *const __restrict__ inst,
 
 	if (inst->bAddMetadata) {
 		CHKiRet(msgAddMetadataFromHttpHeader(pMsg, connWrkr));
+		CHKiRet(msgAddMetadataFromHttpQueryParams(pMsg, connWrkr));
 	}
 
 	ratelimitAddMsg(inst->ratelimiter, &connWrkr->multiSub, pMsg);
@@ -656,6 +708,136 @@ processData(const instanceConf_t *const inst,
 	RETiRet;
 }
 
+/* Return 1 on success. Always initializes the auth structure. */
+static int
+parse_auth_header(struct mg_connection *conn, struct auth_s *auth)
+{
+	if (!auth || !conn) {
+		return 0;
+	}
+
+	const char *auth_header = NULL;
+	if (((auth_header = mg_get_header(conn, "Authorization")) == NULL) ||
+			strncasecmp(auth_header, "Basic ", 6) != 0) {
+		return 0;
+	}
+
+	/* Parse authorization header */
+	const char* src = auth_header + 6;
+	size_t len = apr_base64_decode_len((const char*)src);
+	auth->pworkbuf = auth->workbuf;
+	if (len > sizeof(auth->workbuf)) {
+		auth->pworkbuf = calloc(0, len);
+		auth->workbuf_len = len;
+	}
+	len = apr_base64_decode(auth->pworkbuf, src);
+
+	char *passwd = NULL, *saveptr = NULL;
+	char *user = strtok_r(auth->pworkbuf, ":", &saveptr);
+	if (user) {
+		passwd = strtok_r(NULL, ":", &saveptr);
+	}
+
+	auth->pszUser = user;
+	auth->pszPasswd = passwd;
+
+	return 1;
+}
+
+static int
+read_auth_file(FILE* filep, struct auth_s *auth)
+{
+	if (!filep) {
+		return 0;
+	}
+	char workbuf[IMHTTP_MAX_BUF_LEN];
+	size_t l = 0;
+	char* user;
+	char* passwd;
+
+	while (fgets(workbuf, sizeof(workbuf), filep)) {
+		l = strnlen(workbuf, sizeof(workbuf));
+		while (l > 0) {
+			if (isspace(workbuf[l-1]) || iscntrl(workbuf[l-1])) {
+				l--;
+				workbuf[l] = 0;
+			} else {
+				break;
+			}
+		}
+
+		if (l < 1) {
+			continue;
+		}
+
+		if (workbuf[0] == '#') {
+			continue;
+		}
+
+		user = workbuf;
+		passwd = strchr(workbuf, ':');
+		if (!passwd) {
+			continue;
+		}
+		*passwd = '\0';
+		passwd++;
+
+		if (!strcasecmp(auth->pszUser, user)) {
+			return (apr_password_validate(auth->pszPasswd, passwd) == APR_SUCCESS);
+		}
+	}
+	return 0;
+}
+
+/* Authorize against the opened passwords file. Return 1 if authorized. */
+static int
+authorize(struct mg_connection* conn, FILE* filep)
+{
+	if (!conn || !filep) {
+		return 0;
+	}
+
+	struct auth_s auth = { .workbuf_len=0, .pworkbuf=NULL, .pszUser=NULL, .pszPasswd=NULL};
+	if (!parse_auth_header(conn, &auth)) {
+		return 0;
+	}
+
+	/* validate against htpasswd file */
+	return read_auth_file(filep, &auth);
+}
+
+/* Provides Basic Authorization handling that validates against a 'htpasswd' file.
+	see also: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Authorization
+*/
+static int
+basicAuthHandler(struct mg_connection *conn, void *cbdata)
+{
+	const instanceConf_t* inst = (const instanceConf_t*) cbdata;
+	char errStr[512];
+	FILE *fp = NULL;
+
+	if (!inst->pszBasicAuthFile) {
+		mg_cry(conn, "warning: 'BasicAuthFile' not configured.\n");
+		return 0;
+	}
+
+	fp = fopen((const char *)inst->pszBasicAuthFile, "r");
+	if (fp == NULL) {
+		strerror_r(errno, errStr, sizeof(errStr));
+		mg_cry(conn,
+						 "error: 'BasicAuthFile' file '%s' could not be accessed: %s\n",
+						 inst->pszBasicAuthFile, errStr);
+		return 0;
+	}
+
+	int ret = authorize(conn, fp);
+	if (!ret) {
+		mg_send_http_error(conn, 401, "WWW-Authenticate: Basic realm=\"User Visible Realm\"\n");
+	}
+	fclose(fp);
+	return ret;
+}
+
 /* cbdata should actually contain instance data and we can actually use this instance data
  * to hold reusable scratch buffer.
  */
@@ -765,6 +947,9 @@ static int runloop(void)
 		if (inst->pszEndpoint) {
 			dbgprintf("setting request handler: '%s'\n", inst->pszEndpoint);
 			mg_set_request_handler(s_httpserv->ctx, (char *)inst->pszEndpoint, postHandler, inst);
+			if (inst->pszBasicAuthFile) {
+				mg_set_auth_handler(s_httpserv->ctx, (char *)inst->pszEndpoint, basicAuthHandler, inst);
+			}
 		}
 	}
 
@@ -800,6 +985,8 @@ CODESTARTnewInpInst
 			continue;
 		if(!strcmp(inppblk.descr[i].name, "endpoint")) {
 			inst->pszEndpoint = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "basicauthfile")) {
+			inst->pszBasicAuthFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
 			inst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "name")) {
@@ -1027,6 +1214,7 @@ CODESTARTfreeCnf
 			prop.Destruct(&inst->pInputName);
 		}
 		free(inst->pszEndpoint);
+		free(inst->pszBasicAuthFile);
 		free(inst->pszBindRuleset);
 		free(inst->pszInputName);
 
