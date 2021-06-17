@@ -90,6 +90,8 @@ static uchar template_DebugFormat[] = "\"Debug line with all properties:\nFROMHO
 "rawmsg: '%rawmsg%'\n$!:%$!%\n$.:%$.%\n$/:%$/%\n\n\"";
 static uchar template_SyslogProtocol23Format[] = "\"<%PRI%>1 %TIMESTAMP:::date-rfc3339% %HOSTNAME% %APP-NAME% "
 "%PROCID% %MSGID% %STRUCTURED-DATA% %msg%\n\"";
+static uchar template_SyslogRFC5424Format[] = "\"<%PRI%>1 %TIMESTAMP:::date-rfc3339% %HOSTNAME% %APP-NAME% "
+"%PROCID% %MSGID% %STRUCTURED-DATA% %msg%\"";
 static uchar template_TraditionalFileFormat[] = "=RSYSLOG_TraditionalFileFormat";
 static uchar template_FileFormat[] = "=RSYSLOG_FileFormat";
 static uchar template_ForwardFormat[] = "=RSYSLOG_ForwardFormat";
@@ -1246,6 +1248,8 @@ initLegacyConf(void)
 	tplAddLine(ourConf, "RSYSLOG_DebugFormat", &pTmp);
 	pTmp = template_SyslogProtocol23Format;
 	tplAddLine(ourConf, "RSYSLOG_SyslogProtocol23Format", &pTmp);
+	pTmp = template_SyslogRFC5424Format;
+	tplAddLine(ourConf, "RSYSLOG_SyslogRFC5424Format", &pTmp);
 	pTmp = template_FileFormat; /* new format for files with high-precision stamp */
 	tplAddLine(ourConf, "RSYSLOG_FileFormat", &pTmp);
 	pTmp = template_TraditionalFileFormat;
