@@ -1,5 +1,21 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2108.0 (aka 2021.08) 2021-08-??
+- 2021-06-17: add predefined template RSYSLOG_SyslogRFC5424Format
+  This is essentially the same as RSYSLOG_SyslogProtocol23Format with
+  a better name and a fix to remove the unnecessary LF at the end of
+  the message.
+  The different name also enables us to fix the LF issue without
+  any concern about backwards compatibility.
+  closes https://github.com/rsyslog/rsyslog/issues/4384
+- 2021-06-17: impstats/bugfix: _sender_stats reports integer counter as string
+  Note that this introduces a small backwards incompatibility: in previous output
+  the field was of string type, now it is integer (as intended). We discussed this
+  on the mailing list and the overwhelming thought was that this is not a problem
+  because almost all analysis backends are able to cover that format change. This made
+  the bugfix essentially costmetic.
+  HOWEVER, if you still experience issues, please let us know. We can add an option
+  to provide the previous format, and just spared to do so because there was no
+  evidence it was needed.
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2106.0 (aka 2021.06) 2021-06-15
 NOTE: the prime new feature is support for TLS and non-TLS connections
