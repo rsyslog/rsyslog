@@ -171,9 +171,11 @@ typedef struct wrkrInstanceData {
 	sbool bzInitDone;
 	z_stream zstrm; /* zip stream to use for gzip http compression */
 	struct {
-		uchar **data; /* array of strings, this will be batched up lazily */
-		size_t sizeBytes; /* total length of this batch in bytes */
-		size_t nmemb;	/* number of messages in batch (for statistics counting) */
+		uchar **data;		/* array of strings, this will be batched up lazily */
+		uchar *restPath;	/* Helper for restpath in batch mode */
+		size_t sizeBytes;	/* total length of this batch in bytes */
+		size_t nmemb;		/* number of messages in batch (for statistics counting) */
+
 	} batch;
 	struct {
 		uchar *buf;
@@ -276,6 +278,7 @@ CODESTARTcreateWrkrInstance
 			pData->batchMode = 0; /* at least it works */
 		} else {
 			pWrkrData->batch.data = batchData;
+			pWrkrData->batch.restPath = NULL;
 		}
 	}
 	initCompressCtx(pWrkrData);
@@ -333,6 +336,11 @@ CODESTARTfreeWrkrInstance
 
 	free(pWrkrData->batch.data);
 	pWrkrData->batch.data = NULL;
+
+	if (pWrkrData->batch.restPath != NULL)  {
+		free(pWrkrData->batch.restPath);
+		pWrkrData->batch.restPath = NULL;
+	}
 
 	if (pWrkrData->bzInitDone)
 		deflateEnd(&pWrkrData->zstrm);
@@ -599,8 +607,13 @@ setPostURL(wrkrInstanceData_t *const pWrkrData, uchar **const tpls)
 			"omhttp: error allocating new estr for POST url.");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-
-	getRestPath(pData, tpls, &restPath);
+	
+	if (pWrkrData->batch.restPath != NULL) {
+		/* get from batch if set! */
+		restPath = pWrkrData->batch.restPath;
+	} else {
+		getRestPath(pData, tpls, &restPath);
+	}
 
 	r = 0;
 	if (restPath != NULL)
@@ -1410,6 +1423,10 @@ initializeBatch(wrkrInstanceData_t *pWrkrData)
 {
 	pWrkrData->batch.sizeBytes = 0;
 	pWrkrData->batch.nmemb = 0;
+	if (pWrkrData->batch.restPath != NULL)  {
+		free(pWrkrData->batch.restPath);
+		pWrkrData->batch.restPath = NULL;
+	}
 }
 
 /* Adds a message to this worker's batch
@@ -1433,7 +1450,7 @@ finalize_it:
 }
 
 static rsRetVal
-submitBatch(wrkrInstanceData_t *pWrkrData)
+submitBatch(wrkrInstanceData_t *pWrkrData, uchar **tpls)
 {
 	DEFiRet;
 	char *batchBuf = NULL;
@@ -1458,10 +1475,10 @@ submitBatch(wrkrInstanceData_t *pWrkrData)
 	if (iRet != RS_RET_OK || batchBuf == NULL)
 		ABORT_FINALIZE(iRet);
 
-	DBGPRINTF("omhttp: submitBatch, batch: '%s'\n", batchBuf);
+	DBGPRINTF("omhttp: submitBatch, batch: '%s' tpls: '%p'\n", batchBuf, tpls);
 
 	CHKiRet(curlPost(pWrkrData, (uchar*) batchBuf, strlen(batchBuf),
-		NULL, pWrkrData->batch.nmemb));
+		tpls, pWrkrData->batch.nmemb));
 
 finalize_it:
 	if (batchBuf != NULL)
@@ -1483,17 +1500,30 @@ BEGINdoAction
 size_t nBytes;
 sbool submit;
 CODESTARTdoAction
-
+	instanceData *const pData = pWrkrData->pData;
+	uchar *restPath = NULL;
 	STATSCOUNTER_INC(ctrMessagesSubmitted, mutCtrMessagesSubmitted);
 
 	if (pWrkrData->pData->batchMode) {
+		if(pData->dynRestPath) {
+			/* Get copy of restpath in batch mode if dynRestPath enabled */
+			getRestPath(pData, ppString, &restPath);
+			if (pWrkrData->batch.restPath == NULL) {
+				pWrkrData->batch.restPath = (uchar*)strdup((char*)restPath);
+			} else if (strcmp((char*)pWrkrData->batch.restPath, (char*)restPath) != 0) {
+				/* Check if the restPath changed - if yes submit the current batch first*/
+				CHKiRet(submitBatch(pWrkrData, NULL));
+				initializeBatch(pWrkrData);
+			}
+		}
+
 		/* If the maxbatchsize is 1, then build and immediately post a batch with 1 element.
 		 * This mode will play nicely with rsyslog's action.resumeRetryCount logic.
 		 */
 		if (pWrkrData->pData->maxBatchSize == 1) {
 			initializeBatch(pWrkrData);
 			CHKiRet(buildBatch(pWrkrData, ppString[0]));
-			CHKiRet(submitBatch(pWrkrData));
+			CHKiRet(submitBatch(pWrkrData, ppString));
 			FINALIZE;
 		}
 
@@ -1515,7 +1545,7 @@ CODESTARTdoAction
 		}
 
 		if (submit) {
-			CHKiRet(submitBatch(pWrkrData));
+			CHKiRet(submitBatch(pWrkrData, ppString));
 			initializeBatch(pWrkrData);
 		}
 
@@ -1537,7 +1567,7 @@ BEGINendTransaction
 CODESTARTendTransaction
 	/* End Transaction only if batch data is not empty */
 	if (pWrkrData->batch.nmemb > 0) {
-		CHKiRet(submitBatch(pWrkrData));
+		CHKiRet(submitBatch(pWrkrData, NULL));
 	} else {
 		dbgprintf("omhttp: endTransaction, pWrkrData->batch.nmemb = 0, "
 			"nothing to send. \n");

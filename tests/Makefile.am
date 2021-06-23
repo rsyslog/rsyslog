@@ -869,7 +869,9 @@ TESTS +=  \
 	omhttp-batch-newline.sh \
 	omhttp-retry.sh \
 	omhttp-httpheaderkey.sh \
-	omhttp-multiplehttpheaders.sh
+	omhttp-multiplehttpheaders.sh \
+	omhttp-dynrestpath.sh \
+	omhttp-batch-dynrestpath.sh
 if HAVE_VALGRIND
 TESTS +=  \
 	omhttp-auth-vg.sh \
@@ -2264,6 +2266,8 @@ EXTRA_DIST= \
 	omhttp-retry.sh \
 	omhttp-httpheaderkey.sh \
 	omhttp-multiplehttpheaders.sh \
+	omhttp-dynrestpath.sh \
+	omhttp-batch-dynrestpath.sh \
 	omhttp-auth-vg.sh \
 	omhttp-basic-vg.sh \
 	omhttp-batch-jsonarray-compress-vg.sh \
