@@ -39,6 +39,7 @@ struct netstrms_s {
 	uchar *pszDrvrPermitExpiredCerts;/**< current driver setting for handlign expired certs */
 	uchar *gnutlsPriorityString; /**< priorityString for connection */
 	permittedPeers_t *pPermPeers;/**< current driver's permitted peers */
+	rsRetVal(*fLstnInitDrvr)(netstrm_t*); /**< "late" driver-specific lstn init function NULL if none */
 
 	nsd_if_t Drvr;		/**< our stream driver */
 };

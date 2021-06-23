@@ -1973,6 +1973,59 @@ finalize_it:
 }
 
 
+static rsRetVal
+SetTlsCAFile(nsd_t *pNsd, const uchar *const caFile)
+{
+	DEFiRet;
+	nsd_ossl_t *const pThis = (nsd_ossl_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_ossl);
+	if(caFile == NULL) {
+		pThis->pszCAFile = NULL;
+	} else {
+		CHKmalloc(pThis->pszCAFile = (const uchar*) strdup((const char*) caFile));
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+SetTlsKeyFile(nsd_t *pNsd, const uchar *const pszFile)
+{
+	DEFiRet;
+	nsd_ossl_t *const pThis = (nsd_ossl_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_ossl);
+	if(pszFile == NULL) {
+		pThis->pszKeyFile = NULL;
+	} else {
+		CHKmalloc(pThis->pszKeyFile = (const uchar*) strdup((const char*) pszFile));
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+SetTlsCertFile(nsd_t *pNsd, const uchar *const pszFile)
+{
+	DEFiRet;
+	nsd_ossl_t *const pThis = (nsd_ossl_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_ossl);
+	if(pszFile == NULL) {
+		pThis->pszCertFile = NULL;
+	} else {
+		CHKmalloc(pThis->pszCertFile = (const uchar*) strdup((const char*) pszFile));
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+
 /* queryInterface function */
 BEGINobjQueryInterface(nsd_ossl)
 CODESTARTobjQueryInterface(nsd_ossl)
@@ -2010,6 +2063,9 @@ CODESTARTobjQueryInterface(nsd_ossl)
 	pIf->SetCheckExtendedKeyUsage = SetCheckExtendedKeyUsage; /* we don't NEED this interface! */
 	pIf->SetPrioritizeSAN = SetPrioritizeSAN; /* we don't NEED this interface! */
 	pIf->SetTlsVerifyDepth = SetTlsVerifyDepth;
+	pIf->SetTlsCAFile = SetTlsCAFile;
+	pIf->SetTlsKeyFile = SetTlsKeyFile;
+	pIf->SetTlsCertFile = SetTlsCertFile;
 
 finalize_it:
 ENDobjQueryInterface(nsd_ossl)

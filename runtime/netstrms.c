@@ -2,7 +2,7 @@
  *
  * Work on this module begung 2008-04-23 by Rainer Gerhards.
  *
- * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2021 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *

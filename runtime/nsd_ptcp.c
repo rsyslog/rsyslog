@@ -698,7 +698,6 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		 * construct a new netstrm obj and hand it over to the upper layers for inclusion
 		 * into their socket array. -- rgerhards, 2008-04-23
 		 */
-dbgprintf("RGER: ptcp 100\n");
 		CHKiRet(pNS->Drvr.Construct(&pNewNsd));
 		CHKiRet(pNS->Drvr.SetSock(pNewNsd, sock));
 		CHKiRet(pNS->Drvr.SetMode(pNewNsd, netstrms.GetDrvrMode(pNS)));
@@ -714,8 +713,11 @@ dbgprintf("RGER: ptcp 100\n");
 		CHKiRet(pNS->Drvr.SetGnutlsPriorityString(pNewNsd, netstrms.GetDrvrGnutlsPriorityString(pNS)));
 		CHKiRet(netstrms.CreateStrm(pNS, &pNewStrm));
 		pNewStrm->pDrvrData = (nsd_t*) pNewNsd;
-dbgprintf("RGER: ptcp 200\n");
+dbgprintf("RGER: ptcp 200, pNS %p, pNewNsd %p, fLstnInitDrvr %p\n", pNewStrm, pNewNsd,pNS->fLstnInitDrvr);
 		pNewNsd = NULL;
+		if(pNS->fLstnInitDrvr != NULL) {
+			CHKiRet(pNS->fLstnInitDrvr(pNewStrm));
+		}
 		CHKiRet(fAddLstn(pUsr, pNewStrm));
 		pNewStrm = NULL;
 		/* sock has been handed over by SetSock() above, so invalidate it here
