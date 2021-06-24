@@ -23,8 +23,6 @@ module(	load="../plugins/imtcp/.libs/imtcp"
 	StreamDriver.AuthMode="anon"
 	)
 input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
-
-action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 '
 startup
 export PORT_RCVR=$TCPFLOOD_PORT
@@ -32,9 +30,6 @@ export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.sender.debuglog"
 #valgrind="valgrind"
 generate_conf 2
 add_conf '
-$DebugFile '$RSYSLOG_DEBUGLOG'
-$DebugLevel 2
-
 global(
 	defaultNetstreamDriverCAFile="'$srcdir/testsuites/x.509/ca.pem'"
 	defaultNetstreamDriverCertFile="'$srcdir/testsuites/x.509/client-cert.pem'"
@@ -46,6 +41,7 @@ global(
 $ActionSendStreamDriverMode 1 # require TLS for the connection
 $ActionSendStreamDriverAuthMode x509/certvalid
 *.*	@@127.0.0.1:'$PORT_RCVR'
+action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 ' 2
 startup 2
 
@@ -60,8 +56,6 @@ wait_shutdown 2
 shutdown_when_empty
 wait_shutdown
 
-echo "DEBUG ${RSYSLOG_DEBUGLOG}"
-cat ${RSYSLOG_DEBUGLOG}
-content_check "not permitted to talk to peer, certificate invalid: certificate expired" ${RSYSLOG_DEBUGLOG}
+content_check "not permitted to talk to peer, certificate invalid: certificate expired"
 
 exit_test
