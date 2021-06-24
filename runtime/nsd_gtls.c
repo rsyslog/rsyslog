@@ -112,8 +112,6 @@ static short bHaveCert;
 static short bHaveKey;
 
 /* ------------------------------ GnuTLS specifics ------------------------------ */
-//TODO: DELETE static gnutls_certificate_credentials_t xcred;
-//static gnutls_certificate_credentials_t xcred;
 
 /* This defines a log function to be provided to GnuTLS. It hopefully
  * helps us track down hard to find problems.
@@ -695,11 +693,9 @@ static void print_cipher_suite_list(const char *priorities)
 
 /* globally initialize GnuTLS */
 static rsRetVal
-gtlsGlblInit(netstrm_t *const pThis)
+gtlsGlblInit(void)
 {
 	int gnuRet;
-	nsd_gtls_t *pNsd = (nsd_gtls_t*) pThis->pDrvrData;
-	uchar *cafile;
 	DEFiRet;
 
 	dbgprintf("gtlsGlblInit: Running Version: '%#010x'\n", GNUTLS_VERSION_NUMBER);
@@ -713,10 +709,35 @@ gtlsGlblInit(netstrm_t *const pThis)
 		CHKgnutls(gnutls_global_init());
 	}
 
+	if(GetGnuTLSLoglevel() > 0){
+		gnutls_global_set_log_function(logFunction);
+		gnutls_global_set_log_level(GetGnuTLSLoglevel());
+		/* 0 (no) to 9 (most), 10 everything */
+	}
+
+	/* Init Anon cipher helpers */
+	CHKgnutls(gnutls_dh_params_init(&dh_params));
+	CHKgnutls(gnutls_dh_params_generate2(dh_params, dhBits));
+
+	/* Allocate ANON Client Cred */
+	CHKgnutls(gnutls_anon_allocate_client_credentials(&anoncred));
+
+	/* Allocate ANON Server Cred */
+	CHKgnutls(gnutls_anon_allocate_server_credentials(&anoncredSrv));
+	gnutls_anon_set_server_dh_params(anoncredSrv, dh_params);
+
+finalize_it:
+	RETiRet;
+}
+static rsRetVal
+gtlsConnectionInit(nsd_gtls_t *const pNsd)
+{
+	int gnuRet;
+	uchar *cafile;
+	DEFiRet;
 
 	/* X509 stuff */
 	CHKgnutls(gnutls_certificate_allocate_credentials(&pNsd->xcred));
-dbgprintf("RGER: gtlsGlblInit xcred %p\n", pNsd->xcred);
 
 	/* sets the trusted cas file */
 	cafile = glbl.GetDfltNetstrmDrvrCAF();
@@ -743,23 +764,6 @@ dbgprintf("RGER: gtlsGlblInit xcred %p\n", pNsd->xcred);
 			ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
 		}
 	}
-
-	if(GetGnuTLSLoglevel() > 0){
-		gnutls_global_set_log_function(logFunction);
-		gnutls_global_set_log_level(GetGnuTLSLoglevel());
-		/* 0 (no) to 9 (most), 10 everything */
-	}
-
-	/* Init Anon cipher helpers */
-	CHKgnutls(gnutls_dh_params_init(&dh_params));
-	CHKgnutls(gnutls_dh_params_generate2(dh_params, dhBits));
-
-	/* Allocate ANON Client Cred */
-	CHKgnutls(gnutls_anon_allocate_client_credentials(&anoncred));
-
-	/* Allocate ANON Server Cred */
-	CHKgnutls(gnutls_anon_allocate_server_credentials(&anoncredSrv));
-	gnutls_anon_set_server_dh_params(anoncredSrv, dh_params);
 
 finalize_it:
 	RETiRet;
@@ -822,7 +826,7 @@ finalize_it:
  * rgerhards, 2008-04-30
  */
 static rsRetVal
-gtlsGlblInitLstn(netstrm_t *const pThis)
+gtlsConnectionInitLstn(netstrm_t *const pThis)
 {
 	DEFiRet;
 
@@ -1309,8 +1313,6 @@ static rsRetVal
 gtlsGlblExit(void)
 {
 	DEFiRet;
-	/* X509 stuff */
-	//gnutls_certificate_free_credentials(pThis->xcred);
 	gnutls_global_deinit(); /* we are done... */
 	RETiRet;
 }
@@ -1333,6 +1335,7 @@ gtlsEndSess(nsd_gtls_t *pThis)
 				gnuRet = gnutls_bye(pThis->sess, GNUTLS_SHUT_WR);
 			}
 		}
+		gnutls_certificate_free_credentials(pThis->xcred);
 		gnutls_deinit(pThis->sess);
 		pThis->bHaveSess = 0;
 	}
@@ -1750,8 +1753,8 @@ LstnInitDrvr(netstrm_t *const pThis)
 {
 	DEFiRet;
 dbgprintf("RGER: nsd_gtls LstnInitDrvr ****\n");
-	CHKiRet(gtlsGlblInit(pThis));
-	CHKiRet(gtlsGlblInitLstn(pThis));
+	CHKiRet(gtlsConnectionInit((nsd_gtls_t*) pThis->pDrvrData));
+	CHKiRet(gtlsConnectionInitLstn(pThis));
 finalize_it:
 	RETiRet;
 }
@@ -2142,6 +2145,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	assert(port != NULL);
 	assert(host != NULL);
 
+	CHKiRet(gtlsConnectionInit(pThis));
 	CHKiRet(nsd_ptcp.Connect(pThis->pTcp, family, port, host, device));
 
 	if(pThis->iMode == 0)
@@ -2333,6 +2337,8 @@ BEGINObjClassInit(nsd_gtls, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 	CHKiRet(objUse(nsd_ptcp, LM_NSD_PTCP_FILENAME));
 
+	/* now do global TLS init stuff */
+	CHKiRet(gtlsGlblInit());
 ENDObjClassInit(nsd_gtls)
 
 
@@ -2363,5 +2369,3 @@ CODESTARTmodInit
 
 	pthread_mutex_init(&mutGtlsStrerror, NULL);
 ENDmodInit
-/* vi:set ai:
- */
