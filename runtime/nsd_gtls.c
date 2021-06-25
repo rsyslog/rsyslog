@@ -1335,7 +1335,6 @@ gtlsEndSess(nsd_gtls_t *pThis)
 				gnuRet = gnutls_bye(pThis->sess, GNUTLS_SHUT_WR);
 			}
 		}
-	//	gnutls_certificate_free_credentials(pThis->xcred);
 		gnutls_deinit(pThis->sess);
 		pThis->bHaveSess = 0;
 	}
@@ -1395,6 +1394,7 @@ CODESTARTobjDestruct(nsd_gtls)
 		}
 	if(pThis->bOurKeyIsInit)
 		gnutls_x509_privkey_deinit(pThis->ourKey);
+	gnutls_certificate_free_credentials(pThis->xcred);
 	if(pThis->bHaveSess)
 		gnutls_deinit(pThis->sess);
 ENDobjDestruct(nsd_gtls)
