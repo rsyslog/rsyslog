@@ -1,4 +1,4 @@
-FROM	alpine:3.7
+FROM	alpine
 LABEL	maintainer rgerhards@adiscon.com
 RUN	apk add --no-cache py-pip git
 RUN	pip install sphinx
