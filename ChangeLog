@@ -1,9 +1,15 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2108.0 (aka 2021.08) 2021-08-??
+- 2021-06-28: omkafka improvements
+  - drain librdkafka queues and retry later during rsyslog restart or hup. This
+    re-injects messages into rsyslog's native queues.
+  - add statsname on per kafka instance for better visibility
+  - omkafka - count errors related ssl as "errors_ssl"
+  Thanks to Nelson Yen for the patch.
 - 2021-06-23: some CI/QA improvements, Travis-CI disabled
   For the time being, Travis CI is disabled because it was outdated and Travis also
   changed their system. We will re-evaluate if we re-enable it. Since quite a while
-  the Travis tests were redundant with the rest of CI, so this does not reduce
+  the Travits tests were redundant with the rest of CI, so this does not reduce
   coverage.
 - 2021-06-23: omhttp bugfix: dynrestpath param in batch mode invalid
   When batchmode was used, the templates could not be used to
