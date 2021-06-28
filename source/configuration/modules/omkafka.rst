@@ -332,6 +332,26 @@ failedMsgFile
 Filename where the failed messages should be stored into.
 Needs to be set when keepFailedMessages is enabled, otherwise failed messages won't be saved.
 
+
+statsName
+^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+.. versionadded:: 8.2108.0
+
+The name assigned to statistics specific to this action instance. The supported set of
+statistics tracked for this action instance are **submitted**, **acked**, **failures**.
+See the :ref:`statistics-counter_label` section for more details.
+
+
+.. _statistics-counter_label:
+
 Statistic Counter
 =================
 
@@ -381,10 +401,13 @@ accumulate all action instances. The statistic origin is named "omafka" with fol
 - **errors_transport** - count of messages that librdkafka could not deliver due to transport errors.
   These messages can be retried depending on retry options.
 
-- **errors_broker_down** - count of messages that librdkafka could not deliver because it thins that
+- **errors_broker_down** - count of messages that librdkafka could not deliver because it thinks that
   broker is not accessible. These messages can be retried depending on options.
 
 - **errors_auth** - count of messages that librdkafka could not deliver due to authentication errors.
+  These messages can be retried depending on the options.
+
+- **errors_ssl** - count of messages that librdkafka could not deliver due to ssl errors.
   These messages can be retried depending on the options.
 
 - **errors_other** - count of rest of librdkafka errors.
