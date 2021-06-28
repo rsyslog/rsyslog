@@ -78,6 +78,7 @@ STATSCOUNTER_DEF(ctrKafkaRespTimedOut, mutCtrKafkaRespTimedOut);
 STATSCOUNTER_DEF(ctrKafkaRespTransport, mutCtrKafkaRespTransport);
 STATSCOUNTER_DEF(ctrKafkaRespBrokerDown, mutCtrKafkaRespBrokerDown);
 STATSCOUNTER_DEF(ctrKafkaRespAuth, mutCtrKafkaRespAuth);
+STATSCOUNTER_DEF(ctrKafkaRespSSL, mutCtrKafkaRespSSL);
 STATSCOUNTER_DEF(ctrKafkaRespOther, mutCtrKafkaRespOther);
 
 #define MAX_ERRMSG 1024 /* max size of error messages that we support */
@@ -247,12 +248,22 @@ typedef struct _instanceData {
 	rd_kafka_t *rk;
 	int closeTimeout;
 	SLIST_HEAD(failedmsg_listhead, s_failedmsg_entry) failedmsg_head;
+
+	uchar *statsName;
+	statsobj_t *stats;
+	STATSCOUNTER_DEF(ctrTopicSubmit, mutCtrTopicSubmit);
+	STATSCOUNTER_DEF(ctrKafkaFail, mutCtrKafkaFail);
+	STATSCOUNTER_DEF(ctrKafkaAck, mutCtrKafkaAck);
 } instanceData;
 
 typedef struct wrkrInstanceData {
 	instanceData *pData;
 } wrkrInstanceData_t;
 
+#define INST_STATSCOUNTER_INC(inst, ctr, mut) \
+	do { \
+		if (inst->stats) { STATSCOUNTER_INC(ctr, mut); } \
+	} while(0);
 
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
@@ -275,7 +286,8 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "reopenonhup", eCmdHdlrBinary, 0 },
 	{ "resubmitonfailure", eCmdHdlrBinary, 0 },	/* Resubmit message into kafaj queue on failure */
 	{ "keepfailedmessages", eCmdHdlrBinary, 0 },
-	{ "failedmsgfile", eCmdHdlrGetWord, 0 }
+	{ "failedmsgfile", eCmdHdlrGetWord, 0 },
+	{ "statsname", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -866,6 +878,7 @@ writeKafka(instanceData *const pData,  uchar *const key, uchar *const msg,
 	if (msg_enqueue_status == -1) {
 #endif
 		STATSCOUNTER_INC(ctrKafkaFail, mutCtrKafkaFail);
+		INST_STATSCOUNTER_INC(pData, pData->ctrKafkaFail, pData->mutCtrKafkaFail);
 		ABORT_FINALIZE(RS_RET_KAFKA_PRODUCE_ERR);
 		/* ABORT_FINALIZE isn't absolutely necessary as of now,
 		   because this is the last line anyway, but its useful to ensure
@@ -882,6 +895,7 @@ finalize_it:
 	}
 	STATSCOUNTER_SETMAX_NOMUT(ctrQueueSize, (unsigned) rd_kafka_outq_len(pData->rk));
 	STATSCOUNTER_INC(ctrTopicSubmit, mutCtrTopicSubmit);
+	INST_STATSCOUNTER_INC(pData, pData->ctrTopicSubmit, pData->mutCtrTopicSubmit);
 	RETiRet;
 }
 
@@ -916,10 +930,12 @@ deliveryCallback(rd_kafka_t __attribute__((unused)) *rk,
 			writeDataError(pData, (char*) rkmessage->payload, rkmessage->len, rkmessage->err);
 		}
 		STATSCOUNTER_INC(ctrKafkaFail, mutCtrKafkaFail);
+		INST_STATSCOUNTER_INC(pData, pData->ctrKafkaFail, pData->mutCtrKafkaFail);
 	} else {
 		DBGPRINTF("omkafka: kafka delivery SUCCESS on msg '%.*s'\n", (int)(rkmessage->len-1),
 			(char*)rkmessage->payload);
 		STATSCOUNTER_INC(ctrKafkaAck, mutCtrKafkaAck);
+		INST_STATSCOUNTER_INC(pData, pData->ctrKafkaAck, pData->mutCtrKafkaAck);
 	}
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -1119,6 +1135,14 @@ do_rd_kafka_destroy(instanceData *const __restrict__ pData)
 						queuedCount,
 						(pData->pTopic == NULL ? "NULL" : rd_kafka_topic_name(pData->pTopic)),
 						rd_kafka_err2str(flushStatus));
+#if RD_KAFKA_VERSION >= 0x010001ff
+				rd_kafka_purge(pData->rk, RD_KAFKA_PURGE_F_QUEUE | RD_KAFKA_PURGE_F_INFLIGHT);
+				/* Trigger callbacks a last time before shutdown */
+				const int callbacksCalled = rd_kafka_poll(pData->rk, 0); /* call callbacks */
+				DBGPRINTF("omkafka: onDestroy kafka outqueue length: %d, "
+					"callbacks called %d\n", rd_kafka_outq_len(pData->rk),
+					callbacksCalled);
+#endif
 			}
 		} else {
 			break;
@@ -1180,6 +1204,8 @@ errorCallback(rd_kafka_t __attribute__((unused)) *rk,
 		STATSCOUNTER_INC(ctrKafkaRespBrokerDown, mutCtrKafkaRespBrokerDown);
 	} else if (err == RD_KAFKA_RESP_ERR__AUTHENTICATION) {
 		STATSCOUNTER_INC(ctrKafkaRespAuth, mutCtrKafkaRespAuth);
+	} else if (err == RD_KAFKA_RESP_ERR__SSL) {
+		STATSCOUNTER_INC(ctrKafkaRespSSL, mutCtrKafkaRespSSL);
 	} else {
 		STATSCOUNTER_INC(ctrKafkaRespOther, mutCtrKafkaRespOther);
 	}
@@ -1188,7 +1214,8 @@ errorCallback(rd_kafka_t __attribute__((unused)) *rk,
 	if (err == RD_KAFKA_RESP_ERR__MSG_TIMED_OUT ||
 		err == RD_KAFKA_RESP_ERR__TRANSPORT ||
 		err == RD_KAFKA_RESP_ERR__ALL_BROKERS_DOWN ||
-		err == RD_KAFKA_RESP_ERR__AUTHENTICATION) {
+		err == RD_KAFKA_RESP_ERR__AUTHENTICATION ||
+		err == RD_KAFKA_RESP_ERR__SSL) {
 		/* Broker transport error, we need to disable the action for now!*/
 		pData->bIsSuspended = 1;
 		LogMsg(0, RS_RET_KAFKA_ERROR, LOG_WARNING,
@@ -1559,6 +1586,12 @@ CODESTARTdoHUP
 	pthread_mutex_unlock(&pData->mutStatsFile);
 	if (pData->bReopenOnHup) {
 		CHKiRet(setupKafkaHandle(pData, 1));
+	} else {
+		/* Optional */
+		const int callbacksCalled = rd_kafka_poll(pData->rk, 0); /* call callbacks */
+		LogMsg(0, NO_ERRCODE, LOG_INFO, "omkafka: doHUP kafka - '%s' outqueue length: %d,"
+			"callbacks called %d\n", pData->tplName,
+			rd_kafka_outq_len(pData->rk), callbacksCalled);
 	}
 finalize_it:
 ENDdoHUP
@@ -1619,6 +1652,10 @@ CODESTARTfreeInstance
 	}
 	pthread_rwlock_unlock(&pData->rkLock);
 
+	if (pData->stats) {
+		statsobj.Destruct(&pData->stats);
+	}
+
 	/* Delete Linked List for failed msgs */
 	fmsgEntry1 = SLIST_FIRST(&pData->failedmsg_head);
 	while (fmsgEntry1 != NULL)	{
@@ -1634,6 +1671,7 @@ CODESTARTfreeInstance
 	free(pData->topic);
 	free(pData->brokers);
 	free(pData->tplName);
+	free(pData->statsName);
 	for(int i = 0 ; i < pData->nConfParams ; ++i) {
 		free((void*) pData->confParams[i].name);
 		free((void*) pData->confParams[i].val);
@@ -1904,6 +1942,8 @@ CODESTARTnewActInst
 			pData->bKeepFailedMessages = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "failedmsgfile")) {
 			pData->failedMsgFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "statsname")) {
+			pData->statsName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			LogError(0, RS_RET_INTERNAL_ERROR,
 				"omkafka: program error, non-handled param '%s'\n", actpblk.descr[i].name);
@@ -1959,6 +1999,24 @@ CODESTARTnewActInst
 	/* Load failed messages here (If enabled), do NOT check for IRET!*/
 	if (pData->bKeepFailedMessages && pData->failedMsgFile != NULL) {
 		loadFailedMsgs(pData);
+	}
+
+	if (pData->statsName) {
+		CHKiRet(statsobj.Construct(&pData->stats));
+		CHKiRet(statsobj.SetName(pData->stats, (uchar *)pData->statsName));
+		CHKiRet(statsobj.SetOrigin(pData->stats, (uchar *)"omkafka"));
+
+		/* Track following stats */
+		STATSCOUNTER_INIT(pData->ctrTopicSubmit, pData->mutCtrTopicSubmit);
+		CHKiRet(statsobj.AddCounter(pData->stats, (uchar *)"submitted",
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pData->ctrTopicSubmit));
+		STATSCOUNTER_INIT(pData->ctrKafkaFail, pData->mutCtrKafkaFail);
+		CHKiRet(statsobj.AddCounter(pData->stats, (uchar *)"failures",
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pData->ctrKafkaFail));
+		STATSCOUNTER_INIT(pData->ctrKafkaAck, pData->mutCtrKafkaAck);
+		CHKiRet(statsobj.AddCounter(pData->stats, (uchar *)"acked",
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pData->ctrKafkaAck));
+		CHKiRet(statsobj.ConstructFinalize(pData->stats));
 	}
 
 CODE_STD_FINALIZERnewActInst
@@ -2062,6 +2120,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 	STATSCOUNTER_INIT(ctrKafkaRespAuth, mutCtrKafkaRespAuth);
 	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"errors_auth",
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespAuth));
+	STATSCOUNTER_INIT(ctrKafkaRespSSL, mutCtrKafkaRespSSL);
+	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"errors_ssl",
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespSSL));
 	STATSCOUNTER_INIT(ctrKafkaRespOther, mutCtrKafkaRespOther);
 	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"errors_other",
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespOther));
