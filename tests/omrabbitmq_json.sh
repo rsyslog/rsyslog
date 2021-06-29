@@ -30,7 +30,7 @@ startup
 injectmsg literal "<167>Mar  1 01:00:00 172.20.245.8 tag msgrmq"
 shutdown_when_empty
 wait_shutdown
-expected=$(printf 'Exchange:in, routing-key:myrouting, content-type:application/json, delivery-mode:transient, expiration:5000, msg:{\"message\":\" msgrmq\",\"fromhost\":\"172.20.245.8\",\"facility\":\"local4\",\"priority\":\"debug\",\"timereported\":.*}')
+expected=$(printf 'Exchange:in, routing-key:myrouting, content-type:application/json, delivery-mode:transient, expiration:5000, msg:{\"message\":\" msgrmq\",\"fromhost\":\"172.20.245.8\",\"programname\":\"tag\",\"facility\":\"local4\",\"priority\":\"debug\",\"timereported\":.*}')
 grep -E "${expected}" $RSYSLOG_DYNNAME.amqp.log > /dev/null 2>&1
 if [ ! $? -eq 0 ]; then
   echo "Expected:"
