@@ -1899,13 +1899,17 @@ CODESTARTdoAction
 				}
 				add_pod_metadata = 0; /* don't cache pod metadata either - retry both */
 			} else if (iRet != RS_RET_OK) {
-				/* hard error - something the admin needs to fix e.g. network, config, auth */
-				json_object_put(jReply);
-				jReply = NULL;
+				/* one of many possible transient errors: apiserver error, network, config, auth.
+				 * Instead of causing hard error and disabling this module, we can return
+				 * basic namespace metadata that is extracted from container log file path.
+				 * When transient error resolves, other metadata will become
+				 * available. For a new a new pod whose metadata is not yet cached, this
+				 * will allow 401, 403, 500, etc. return status from apiserver treated
+				 * similar to 404 returns.
+				 * */
+				jNsMeta = json_object_new_object();
 				STATSCOUNTER_INC(pWrkrData->namespaceMetadataError,
 						 pWrkrData->mutNamespaceMetadataError);
-				pthread_mutex_unlock(pWrkrData->pData->cache->cacheMtx);
-				FINALIZE;
 			} else if (fjson_object_object_get_ex(jReply, "metadata", &jNsMeta)) {
 				jNsMeta = json_object_get(jNsMeta);
 				parse_labels_annotations(jNsMeta, &pWrkrData->pData->annotation_match,
@@ -1955,12 +1959,14 @@ CODESTARTdoAction
 			add_pod_metadata = 0; /* do not cache so that we can retry */
 			iRet = RS_RET_OK;
 		} else if(iRet != RS_RET_OK) {
-			/* hard error - something the admin needs to fix e.g. network, config, auth */
-			json_object_put(jReply);
-			jReply = NULL;
+			/* This is likely caused by transient apiserver errors: 401, 403, 500, etc.
+			 * Treat it similar to 404 while returning file path based pod metadata.
+			 * When transient error condition resolves, additional metadata will be
+			 * available for events originating from a new pod whose metatadata is not
+			 * yet cached.
+			 * */
+			iRet = RS_RET_OK;
 			STATSCOUNTER_INC(pWrkrData->podMetadataError, pWrkrData->mutPodMetadataError);
-			pthread_mutex_unlock(pWrkrData->pData->cache->cacheMtx);
-			FINALIZE;
 		} else {
 			STATSCOUNTER_INC(pWrkrData->podMetadataSuccess, pWrkrData->mutPodMetadataSuccess);
 		}

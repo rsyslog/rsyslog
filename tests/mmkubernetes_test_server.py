@@ -134,6 +134,11 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
                     hsh['reason'] = 'Busy'
                     hsh['err'] = 'server is too busy'
                     resp_template = err_template
+            elif hsh['objectname'].endswith('error'):
+                status = 500
+                hsh['reason'] = 'Error'
+                hsh['err'] = 'server is failing'
+                resp_template = err_template
             if not resp:
                 hsh['code'] = status
                 resp = resp_template.format(**hsh)
