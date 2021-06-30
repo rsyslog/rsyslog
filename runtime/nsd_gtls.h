@@ -65,6 +65,7 @@ struct nsd_gtls_s {
 	int bSANpriority; /* if true, we do stricter checking (if any SAN present we do not cehck CN) */
 	gtlsRtryCall_t rtryCall;/**< what must we retry? */
 	int bIsInitiator;	/**< 0 if socket is the server end (listener), 1 if it is the initiator */
+	int bIsListener;
 	gnutls_session_t sess;
 	int bHaveSess;		/* as we don't know exactly which gnutls_session values
 					are invalid, we use this one to flag whether or

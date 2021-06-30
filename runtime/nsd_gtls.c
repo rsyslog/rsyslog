@@ -4,6 +4,15 @@
  *
  * Copyright (C) 2007-2021 Rainer Gerhards and Adiscon GmbH.
  *
+ *
+ * Some info on credentials (xcred)
+ * - anon ones are initialized on module load and re-used everywhere (global)
+ * - credentials with certificates are locally
+ *   + initialized on
+ *     * initialisation of a listener (e.g. by imtcp)
+ *     * creation of a connection (e.g. by omfwd)
+ *   + sessions inside a listener re-use the listener xcred
+ *
  * This file is part of the rsyslog runtime library.
  *
  * The rsyslog runtime library is free software: you can redistribute it and/or modify
@@ -769,6 +778,7 @@ finalize_it:
 	RETiRet;
 }
 
+/* Used for client code only (omfwd) */
 static rsRetVal
 gtlsInitSession(nsd_gtls_t *pThis, const int fullInit)
 {
@@ -833,6 +843,7 @@ gtlsConnectionInitLstn(netstrm_t *const pThis)
 	DEFiRet;
 
 	CHKiRet(gtlsAddOurCert(pThis));
+	((nsd_gtls_t*)(pThis->pDrvrData))->bIsListener = 1;
 
 finalize_it:
 	RETiRet;
@@ -1397,7 +1408,7 @@ CODESTARTobjDestruct(nsd_gtls)
 		}
 	if(pThis->bOurKeyIsInit)
 		gnutls_x509_privkey_deinit(pThis->ourKey);
-	if(0 && !pThis->bIsInitiator) {
+	if((pThis->bIsListener)  && (pThis->iMode == 1)) {
 		gnutls_certificate_free_credentials(pThis->xcred);
 	}
 	if(pThis->bHaveSess)
@@ -2150,14 +2161,14 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	assert(port != NULL);
 	assert(host != NULL);
 
-	CHKiRet(gtlsConnectionInit(pThis));
 	CHKiRet(nsd_ptcp.Connect(pThis->pTcp, family, port, host, device));
-	CHKiRet(gtlsInitSession(pThis, 1));
 
 	if(pThis->iMode == 0)
 		FINALIZE;
 
 	/* we reach this point if in TLS mode */
+	CHKiRet(gtlsConnectionInit(pThis));
+	CHKiRet(gtlsInitSession(pThis, 1));
 	CHKgnutls(gnutls_init(&pThis->sess, GNUTLS_CLIENT));
 	pThis->bHaveSess = 1;
 	pThis->bIsInitiator = 1;
