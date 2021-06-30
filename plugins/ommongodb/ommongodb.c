@@ -136,10 +136,12 @@ static void closeMongoDB(instanceData *pData)
 	if(pData->client != NULL) {
 		if (pData->collection != NULL) {
 			mongoc_collection_destroy (pData->collection);
+			pData->collection = NULL;
 		}
-
 		mongoc_client_destroy (pData->client);
+		pData->client = NULL;
 		mongoc_cleanup ();
+		DBGPRINTF("ommongodb: Mongodb connexion closed.");
 	}
 }
 
@@ -189,6 +191,7 @@ reportMongoError(instanceData *pData)
 /* The following function is responsible for initializing a
  * MongoDB connection.
  * Initially added 2004-10-28 mmeckelein
+ * Improved to check if server is available (ping) @kguillemot 2021-06-30
  */
 static rsRetVal initMongoDB(instanceData *pData, int bSilent)
 {
@@ -208,7 +211,7 @@ static rsRetVal initMongoDB(instanceData *pData, int bSilent)
 		dbgprintf("ommongodb: mongo-c-driver was not built with SSL options, ssl directives will not be used.");
 #endif
 	}
-	if(pData->client == NULL) {
+	if(!pData->client) {
 		if(!bSilent) {
 			reportMongoError(pData);
 			dbgprintf("ommongodb: can not initialize MongoDB handle");
@@ -216,6 +219,20 @@ static rsRetVal initMongoDB(instanceData *pData, int bSilent)
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 	pData->collection = mongoc_client_get_collection (pData->client, pData->db, pData->collection_name);
+
+	// Try to contact server
+	bson_t *command, reply;
+	bson_error_t error;
+	command = BCON_NEW ("ping", BCON_INT32 (1));
+	unsigned char retval = mongoc_client_command_simple(pData->client, pData->db, command, NULL, &reply, &error);
+	bson_destroy(&reply);
+	bson_destroy(command);
+	if( !retval ) {
+		DBGPRINTF("ommongodb: ping server error (%u): %s \n", error.code, error.message);
+		closeMongoDB(pData);
+		reportMongoError(pData);
+		ABORT_FINALIZE(RS_RET_SUSPENDED);
+	}
 
 finalize_it:
 	RETiRet;
@@ -551,7 +568,7 @@ CODESTARTdoAction
 	} else if (is_allowed_error_code(pData, pData->error.code)) {
 		dbgprintf("ommongodb: insert error: allowing error code\n");
 	} else {
-		dbgprintf("ommongodb: insert error\n");
+		dbgprintf("ommongodb: insert error %u : %s \n", pData->error.code, pData->error.message);
 		reportMongoError(pData);
 		/* close on insert error to permit resume */
 		closeMongoDB(pData);
