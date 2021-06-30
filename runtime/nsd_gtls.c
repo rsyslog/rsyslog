@@ -770,7 +770,7 @@ finalize_it:
 }
 
 static rsRetVal
-gtlsInitSession(nsd_gtls_t *pThis)
+gtlsInitSession(nsd_gtls_t *pThis, const int fullInit)
 {
 	DEFiRet;
 	int gnuRet = 0;
@@ -786,6 +786,7 @@ dbgprintf("RGER: gtlsInitSession xcred %p\n", pThis->xcred);
 #	if HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION
 	/* store a pointer to ourselfs (needed by callback) */
 	gnutls_session_set_ptr(pThis->sess, (void*)pThis);
+if(fullInit) {
 	iRet = gtlsLoadOurCertKey(pThis); /* first load .pem files */
 	if(iRet == RS_RET_OK) {
 		dbgprintf("gtlsInitSession: enable certificate checking (VerifyDepth=%d)\n", pThis->DrvrVerifyDepth);
@@ -799,6 +800,7 @@ dbgprintf("RGER: gtlsInitSession xcred %p\n", pThis->xcred);
 		ABORT_FINALIZE(iRet); /* we have an error case! */
 	}
 #	endif
+}
 
 	/* avoid calling all the priority functions, since the defaults are adequate. */
 	CHKgnutls(gnutls_credentials_set(pThis->sess, GNUTLS_CRD_CERTIFICATE, pThis->xcred));
@@ -1334,6 +1336,7 @@ gtlsEndSess(nsd_gtls_t *pThis)
 			while(gnuRet == GNUTLS_E_INTERRUPTED || gnuRet == GNUTLS_E_AGAIN) {
 				gnuRet = gnutls_bye(pThis->sess, GNUTLS_SHUT_WR);
 			}
+			gnutls_certificate_free_credentials(pThis->xcred);
 		}
 		gnutls_deinit(pThis->sess);
 		pThis->bHaveSess = 0;
@@ -1394,7 +1397,9 @@ CODESTARTobjDestruct(nsd_gtls)
 		}
 	if(pThis->bOurKeyIsInit)
 		gnutls_x509_privkey_deinit(pThis->ourKey);
-	gnutls_certificate_free_credentials(pThis->xcred);
+	if(0 && !pThis->bIsInitiator) {
+		gnutls_certificate_free_credentials(pThis->xcred);
+	}
 	if(pThis->bHaveSess)
 		gnutls_deinit(pThis->sess);
 ENDobjDestruct(nsd_gtls)
@@ -1867,7 +1872,7 @@ dbgprintf("RGER: pThis %p pNew %p, authMode %d\n", pThis, pNew, pThis->authMode)
 	pNew->xcred = pThis->xcred; // TODO: experimental, is this OK?
 
 	/* if we reach this point, we are in TLS mode */
-	iRet = gtlsInitSession(pNew);
+	iRet = gtlsInitSession(pNew, 0);
 	if (iRet != RS_RET_OK) {
 		if (iRet == RS_RET_CERTLESS) {
 			dbgprintf("AcceptConnReq certless mode\n");
@@ -2147,6 +2152,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 
 	CHKiRet(gtlsConnectionInit(pThis));
 	CHKiRet(nsd_ptcp.Connect(pThis->pTcp, family, port, host, device));
+	CHKiRet(gtlsInitSession(pThis, 1));
 
 	if(pThis->iMode == 0)
 		FINALIZE;
