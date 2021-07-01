@@ -475,7 +475,7 @@ finalize_it:
  * rgerhards, 2008-04-22
  */
 static rsRetVal ATTR_NONNULL(1,3,5)
-LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
+LstnInit(netstrms_t *const pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 	 const int iSessMax, const tcpLstnParams_t *const cnf_params)
 {
 	DEFiRet;
@@ -670,7 +670,9 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		CHKiRet(pNS->Drvr.SetGnutlsPriorityString(pNewNsd, netstrms.GetDrvrGnutlsPriorityString(pNS)));
 		CHKiRet(netstrms.CreateStrm(pNS, &pNewStrm));
 		pNewStrm->pDrvrData = (nsd_t*) pNewNsd;
-		pNewNsd = NULL;
+		if(pNS->fLstnInitDrvr != NULL) {
+			CHKiRet(pNS->fLstnInitDrvr(pNewStrm));
+		}
 		CHKiRet(fAddLstn(pUsr, pNewStrm));
 		pNewStrm = NULL;
 		/* sock has been handed over by SetSock() above, so invalidate it here

@@ -1,6 +1,6 @@
 /* Definitions for the stream-based netstrmsworking class.
  *
- * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2021 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -39,6 +39,7 @@ struct netstrms_s {
 	uchar *pszDrvrPermitExpiredCerts;/**< current driver setting for handlign expired certs */
 	uchar *gnutlsPriorityString; /**< priorityString for connection */
 	permittedPeers_t *pPermPeers;/**< current driver's permitted peers */
+	rsRetVal(*fLstnInitDrvr)(netstrm_t*); /**< "late" driver-specific lstn init function NULL if none */
 
 	nsd_if_t Drvr;		/**< our stream driver */
 };
