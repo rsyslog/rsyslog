@@ -1,6 +1,6 @@
 /* Definitions for the stream-based netstrmsworking class.
  *
- * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2021 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -36,9 +36,13 @@ struct netstrms_s {
 	int DrvrChkExtendedKeyUsage;		/**< if true, verify extended key usage in certs */
 	int DrvrPrioritizeSan;		/**< if true, perform stricter checking of names in certs */
 	int DrvrVerifyDepth;		/**< Verify Depth for certificate chains */
-	uchar *pszDrvrPermitExpiredCerts;/**< current driver setting for handlign expired certs */
+	uchar *pszDrvrPermitExpiredCerts;
+	const uchar *pszDrvrCAFile;
+	const uchar *pszDrvrKeyFile;
+	const uchar *pszDrvrCertFile;
 	uchar *gnutlsPriorityString; /**< priorityString for connection */
 	permittedPeers_t *pPermPeers;/**< current driver's permitted peers */
+	rsRetVal(*fLstnInitDrvr)(netstrm_t*); /**< "late" driver-specific lstn init function NULL if none */
 
 	nsd_if_t Drvr;		/**< our stream driver */
 };
@@ -67,9 +71,16 @@ BEGINinterface(netstrms) /* name must also be changed in ENDinterface macro! */
 	int      (*GetDrvrPrioritizeSAN)(netstrms_t *pThis);
 	rsRetVal (*SetDrvrTlsVerifyDepth)(netstrms_t *pThis, int verifyDepth);
 	int      (*GetDrvrTlsVerifyDepth)(netstrms_t *pThis);
+	/* v2 */
+	rsRetVal (*SetDrvrTlsCAFile)(netstrms_t *pThis, const uchar *);
+	const uchar* (*GetDrvrTlsCAFile)(netstrms_t *pThis);
+	rsRetVal (*SetDrvrTlsKeyFile)(netstrms_t *pThis, const uchar *);
+	const uchar* (*GetDrvrTlsKeyFile)(netstrms_t *pThis);
+	rsRetVal (*SetDrvrTlsCertFile)(netstrms_t *pThis, const uchar *);
+	const uchar* (*GetDrvrTlsCertFile)(netstrms_t *pThis);
 
 ENDinterface(netstrms)
-#define netstrmsCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define netstrmsCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
 
 /* prototypes */
 PROTOTYPEObj(netstrms);
