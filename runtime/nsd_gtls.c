@@ -768,7 +768,7 @@ gtlsConnectionInit(nsd_gtls_t *const pNsd)
 			/* TODO; a more generic error-tracking function (this one based on CHKgnutls()) */
 			uchar *pErr = gtlsStrerror(gnuRet);
 			LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n",
-			gnuRet, __FILE__, __LINE__, pErr);
+				gnuRet, __FILE__, __LINE__, pErr);
 			free(pErr);
 			ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
 		}
@@ -2167,7 +2167,9 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 		FINALIZE;
 
 	/* we reach this point if in TLS mode */
-	CHKiRet(gtlsConnectionInit(pThis));
+	if(pThis->authMode != GTLS_AUTH_CERTANON) {
+		CHKiRet(gtlsConnectionInit(pThis));
+	}
 	CHKiRet(gtlsInitSession(pThis, 1));
 	CHKgnutls(gnutls_init(&pThis->sess, GNUTLS_CLIENT));
 	pThis->bHaveSess = 1;
