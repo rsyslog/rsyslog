@@ -36,6 +36,7 @@ generate_conf 2
 #export TCPFLOOD_PORT="$(get_free_port)"
 add_conf '
 global(defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'")
+global(debug.gnutls="10")
 
 # Note: no TLS for the listener, this is for tcpflood!
 $ModLoad ../plugins/imtcp/.libs/imtcp

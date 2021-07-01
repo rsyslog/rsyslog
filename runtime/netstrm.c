@@ -23,7 +23,7 @@
  * Rainer Gerhards and Adiscon GmbH have agreed to permit using the code
  * under the terms of the GNU Lesser General Public License.
  *
- * Copyright 2007-2020 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2021 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -464,5 +464,3 @@ BEGINAbstractObjClassInit(netstrm, 1, OBJ_IS_CORE_MODULE) /* class, version */
 
 	/* set our own handlers */
 ENDObjClassInit(netstrm)
-/* vi:set ai:
- */

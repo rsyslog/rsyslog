@@ -1,6 +1,6 @@
 /* An implementation of the nsd interface for OpenSSL.
  *
- * Copyright 2018-2018 Adiscon GmbH.
+ * Copyright 2018-2021 Adiscon GmbH.
  * Author: Andre Lorbach
  *
  * This file is part of the rsyslog runtime library.
@@ -49,6 +49,9 @@ struct nsd_ossl_s {
 					authenticate peer if no other name given */
 	int iMode;		/* 0 - plain tcp, 1 - TLS */
 	int bAbortConn;		/* if set, abort conncection (fatal error had happened) */
+	const uchar *pszCAFile;
+	const uchar *pszKeyFile;
+	const uchar *pszCertFile;
 	enum {
 		OSSL_AUTH_CERTNAME = 0,
 		OSSL_AUTH_CERTFINGERPRINT = 1,
