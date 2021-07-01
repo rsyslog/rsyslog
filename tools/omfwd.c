@@ -421,6 +421,7 @@ CODESTARTfreeInstance
 	free(pData->pszStrmDrvr);
 	free(pData->pszStrmDrvrAuthMode);
 	free(pData->pszStrmDrvrPermitExpiredCerts);
+	free(pData->gnutlsPriorityString);
 	free(pData->port);
 	free(pData->networkNamespace);
 	free(pData->target);
