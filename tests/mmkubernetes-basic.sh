@@ -65,7 +65,7 @@ cat > ${RSYSLOG_DYNNAME}.spool/pod-name5.log <<EOF
 {"message":"a message from container 5","CONTAINER_NAME":"some-prefix_container-name5_pod-name5.with.dot.in.pod.name_namespace-name5_unused5_unused55","CONTAINER_ID_FULL":"id5","testid":7}
 EOF
 
-if [ "x${USE_VALGRIND:-false}" == "xtrue" ] ; then
+if [ "${USE_VALGRIND:-false}" == "true" ] ; then
 	export EXTRA_VALGRIND_SUPPRESSIONS="--suppressions=$srcdir/mmkubernetes.supp"
 	startup_vg
 else
@@ -96,8 +96,17 @@ cat >> ${RSYSLOG_DYNNAME}.spool/pod-test-not-found-and-busy.log <<EOF
 {"message":"this record should process normally","CONTAINER_NAME":"some-prefix_container-name-10_pod-name-10_namespace-name-10_unused10_unused100","CONTAINER_ID_FULL":"id10","testid":14}
 EOF
 
+wait_queueempty
+sleep 5 # greater than busyretryinterval
+
+cat >> ${RSYSLOG_DYNNAME}.spool/pod-test-error.log <<EOF
+{"message":"this record should have no pod metadata","CONTAINER_NAME":"some-prefix_container-name-11_pod-name-11-error_namespace-name-11_unused11_unused111","CONTAINER_ID_FULL":"id11","testid":15}
+{"message":"this record should process normally","CONTAINER_NAME":"some-prefix_container-name-12_pod-name-12_namespace-name-12_unused12_unused112","CONTAINER_ID_FULL":"id12","testid":16}
+EOF
+
+
 shutdown_when_empty
-if [ "x${USE_VALGRIND:-false}" == "xtrue" ] ; then
+if [ "${USE_VALGRIND:-false}" == "true" ] ; then
 	wait_shutdown_vg
 	check_exit_vg
 else
@@ -147,11 +156,11 @@ if [ -f ${RSYSLOG_DYNNAME}.spool/mmkubernetes-stats.log ] ; then
 import sys,json
 k8s_srv_port = sys.argv[1]
 expected = {"name": "mmkubernetes(http://localhost:{0})".format(k8s_srv_port),
-    "origin": "mmkubernetes", "recordseen": 12, "namespacemetadatasuccess": 9,
+    "origin": "mmkubernetes", "recordseen": 14, "namespacemetadatasuccess": 11,
 	"namespacemetadatanotfound": 1, "namespacemetadatabusy": 1, "namespacemetadataerror": 0,
-	"podmetadatasuccess": 9, "podmetadatanotfound": 1, "podmetadatabusy": 2, "podmetadataerror": 0,
-	"namespacecachenumentries": 10, "podcachenumentries": 10, "namespacecachehits": 1,
-	"podcachehits": 0, "namespacecachemisses": 11, "podcachemisses": 12 }
+	"podmetadatasuccess": 10, "podmetadatanotfound": 1, "podmetadatabusy": 2, "podmetadataerror": 1,
+	"namespacecachenumentries": 12, "podcachenumentries": 12, "namespacecachehits": 1,
+	"podcachehits": 0, "namespacecachemisses": 13, "podcachemisses": 14 }
 actual = {}
 for line in sys.stdin:
 	jstart = line.find("{")

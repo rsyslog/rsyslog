@@ -321,4 +321,56 @@
     "container_id": "id10"
   },
   "testid": 14
+},
+{
+  "message": "this record should have no pod metadata",
+  "CONTAINER_NAME": "some-prefix_container-name-11_pod-name-11-error_namespace-name-11_unused11_unused111",
+  "CONTAINER_ID_FULL": "id11",
+  "kubernetes": {
+    "namespace_id": "namespace-name-11-id",
+    "namespace_labels": {
+      "label_1_key": "label 1 value",
+      "label_with_empty_value": "",
+      "label_2_key": "label 2 value"
+    },
+    "creation_timestamp": "2018-04-09T21:56:39Z",
+    "pod_name": "pod-name-11-error",
+    "namespace_name": "namespace-name-11",
+    "container_name": "container-name-11",
+    "master_url": "http://localhost:{k8s_srv_port}"
+  },
+  "docker": {
+    "container_id": "id11"
+  },
+  "testid": 15
+},
+{
+  "message": "this record should process normally",
+  "CONTAINER_NAME": "some-prefix_container-name-12_pod-name-12_namespace-name-12_unused12_unused112",
+  "CONTAINER_ID_FULL": "id12",
+  "kubernetes": {
+    "namespace_id": "namespace-name-12-id",
+    "namespace_labels": {
+      "label_1_key": "label 1 value",
+      "label_with_empty_value": "",
+      "label_2_key": "label 2 value"
+    },
+    "creation_timestamp": "2018-04-09T21:56:39Z",
+    "pod_id": "pod-name-12-id",
+    "labels": {
+      "custom_label": "pod-name-12-label-value",
+      "deploymentconfig": "pod-name-12-dc",
+      "component": "pod-name-12-component",
+      "label_with_empty_value": "",
+      "deployment": "pod-name-12-deployment"
+    },
+    "pod_name": "pod-name-12",
+    "namespace_name": "namespace-name-12",
+    "container_name": "container-name-12",
+    "master_url": "http://localhost:{k8s_srv_port}"
+  },
+  "docker": {
+    "container_id": "id12"
+  },
+  "testid": 16
 }]
