@@ -509,7 +509,8 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 	error = getaddrinfo((const char*)cnf_params->pszAddr, (const char*) cnf_params->pszPort, &hints, &res);
 	if(error) {
 		LogError(0, RS_RET_INVALID_PORT, "error querying port '%s': %s",
-			cnf_params->pszAddr, gai_strerror(error));
+			(cnf_params->pszAddr == NULL) ? "**UNSPECIFIED**" : (const char*) cnf_params->pszAddr,
+			gai_strerror(error));
 		ABORT_FINALIZE(RS_RET_INVALID_PORT);
 	}
 

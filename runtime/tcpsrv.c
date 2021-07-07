@@ -394,8 +394,11 @@ create_tcp_socket(tcpsrv_t *pThis)
 		localRet = initTCPListener(pThis, pEntry);
 		if(localRet != RS_RET_OK) {
 			LogError(0, localRet, "Could not create tcp listener, ignoring port "
-			"%s bind-address %s.", pEntry->cnf_params->pszPort,
-			(pEntry->cnf_params->pszAddr == NULL) ? "(null)" : (const char*)pEntry->cnf_params->pszAddr);
+			"%s bind-address %s.",
+			(pEntry->cnf_params->pszPort == NULL) ? "**UNSPECIFIED**"
+				: (const char*) pEntry->cnf_params->pszPort,
+			(pEntry->cnf_params->pszAddr == NULL) ? "**UNSPECIFIED**"
+				: (const char*)pEntry->cnf_params->pszAddr);
 		}
 		pEntry = pEntry->pNext;
 	}
