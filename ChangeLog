@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2108.0 (aka 2021.08) 2021-08-??
+- 2021-07-07: psrv bugfix: abort if no listener could be started
+  Modules (like imtcp and imdiag) which use tcpsrv could abort or
+  otherwise malfunction if no listener for a specific input could
+  be started.
+  Found during implementing a new feature, no report from practice.
+  But could very well happen.
 - 2021-07-07: mmkubernetes bugfix: apiserver error handling
   - Added graceful handling of apiserver errors with unexpected responses,
     i.e., anything other than 200, 404, or 429. Idea is that apiserver
