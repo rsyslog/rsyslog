@@ -126,6 +126,7 @@ static rsRetVal
 doOpenLstnSocks(tcpsrv_t *pSrv)
 {
 	ISOBJ_TYPE_assert(pSrv, tcpsrv);
+	dbgprintf("in imdiag doOpenLstnSocks\n");
 	return tcpsrv.create_tcp_socket(pSrv);
 }
 
