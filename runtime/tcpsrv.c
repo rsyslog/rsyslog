@@ -919,6 +919,11 @@ Run(tcpsrv_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
+	if(pThis->iLstnCurr == 0) {
+		dbgprintf("tcpsrv: no listeneres at all (probably init error), terminating\n");
+		RETiRet; /* somewhat "dirty" exit to avoid issue with cancel handler */
+	}
+
 	/* check if we need to start the worker pool. Once it is running, all is
 	 * well. Shutdown is done on modExit.
 	 */
