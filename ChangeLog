@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2108.0 (aka 2021.08) 2021-08-??
+- 2021-07-07: ommongodb bugfixes
+  - Fix Segmentation fault when server is down
+  - Add server connexion check while resuming
+  Thanks to Kevin Guillemot for the patch.
 - 2021-06-28: omkafka improvements
   - drain librdkafka queues and retry later during rsyslog restart or hup. This
     re-injects messages into rsyslog's native queues.
