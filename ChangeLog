@@ -1,5 +1,19 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2108.0 (aka 2021.08) 2021-08-??
+- 2021-07-07: mmkubernetes bugfix: apiserver error handling
+  - Added graceful handling of apiserver errors with unexpected responses,
+    i.e., anything other than 200, 404, or 429. Idea is that apiserver
+    transient error state will recover. We don't want mmkubernetes to miss
+    metadata resolution for containers that don't have cached metadata.
+    During these transient error states, mmkubernetes will provide basic
+    container file path based resolution of namespace and pod metadata for
+    new pods whose metadata is not yet cached. After this error state
+    recovers, mmkubernetes is expected to resume its metadata resolution as
+    expected.
+  - Added a unit test case for apiserver return 500 with changes to mock server
+  -  Fixed existing unit test that was failing due to missing expected results file
+  -  Added mmkubernetes unit tests to testbench
+  Thanks to Abdul Waheed for the patch (submitted from Nelson Yen).
 - 2021-07-07: ommongodb bugfixes
   - Fix Segmentation fault when server is down
   - Add server connexion check while resuming
