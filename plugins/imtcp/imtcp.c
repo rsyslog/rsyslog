@@ -852,6 +852,7 @@ BEGINfreeCnf
 CODESTARTfreeCnf
 	free(pModConf->pszStrmDrvrName);
 	free(pModConf->pszStrmDrvrAuthMode);
+	free(pModConf->gnutlsPriorityString);
 	free(pModConf->pszStrmDrvrPermitExpiredCerts);
 	if(pModConf->permittedPeers != NULL) {
 		cnfarrayContentDestruct(pModConf->permittedPeers);
