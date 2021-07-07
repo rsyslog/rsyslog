@@ -370,6 +370,7 @@ initTCPListener(tcpsrv_t *pThis, tcpLstnPortList_t *pPortEntry)
 	assert(pPortEntry != NULL);
 
 	// pPortEntry->pszAddr = NULL ==> bind to all interfaces
+dbgprintf("RGER: tcpsrv LstnInit port %s\n", pPortEntry->cnf_params->pszPort);
 	CHKiRet(netstrm.LstnInit(pThis->pNS, (void*)pPortEntry, addTcpLstn,
 		pThis->iSessMax, pPortEntry->cnf_params));
 

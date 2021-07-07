@@ -500,6 +500,7 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 	if((ustrcmp(inst->cnf_params->pszPort, UCHAR_CONSTANT("0")) == 0
 		&& inst->cnf_params->pszLstnPortFileName == NULL)
 			|| ustrcmp(inst->cnf_params->pszPort, UCHAR_CONSTANT("0")) < 0) {
+		LogMsg(0, RS_RET_OK, LOG_WARNING, "imtcp: port 0 and no port file set -> using port 514 instead");
 		CHKmalloc(inst->cnf_params->pszPort = (uchar*)strdup("514"));
 	}
 	tcpsrv.configureTCPListen(pOurTcpsrv, inst->cnf_params);

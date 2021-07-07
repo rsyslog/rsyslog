@@ -701,7 +701,7 @@ finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pNewStrm != NULL)
 			netstrm.Destruct(&pNewStrm);
-		if(pNewNsd != NULL)
+		else if(pNewNsd != NULL)
 			pNS->Drvr.Destruct(&pNewNsd);
 	}
 
