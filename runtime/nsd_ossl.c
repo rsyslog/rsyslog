@@ -1821,11 +1821,8 @@ finalize_it:
 }
 
 
-/* Empty wrapper for GNUTLS helper function
- * TODO: implement a similar capability
- */
 static rsRetVal
-SetGnutlsPriorityString(__attribute__((unused)) nsd_t *pNsd, __attribute__((unused)) uchar *gnutlsPriorityString)
+SetGnutlsPriorityString(nsd_t *const pNsd, uchar *const gnutlsPriorityString)
 {
 	DEFiRet;
 	nsd_ossl_t* pThis = (nsd_ossl_t*) pNsd;
@@ -1905,6 +1902,7 @@ SetGnutlsPriorityString(__attribute__((unused)) nsd_t *pNsd, __attribute__((unus
 						pThis->gnutlsPriorityString);
 				osslLastSSLErrorMsg(0, NULL, LOG_ERR, "SetGnutlsPriorityString");
 			}
+			SSL_CONF_CTX_free(cctx);
 		}
 #else
 		dbgprintf("gnutlsPriorityString: set to '%s'\n", gnutlsPriorityString);
