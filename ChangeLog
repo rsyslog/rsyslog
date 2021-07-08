@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2108.0 (aka 2021.08) 2021-08-??
+- 2021-07-08: openssl network driver bugfix: small memory leak
+  Fixes a static, non-growing memory leak which existed when parameter
+  "GnutTLSPriorityString" was used. This was primarily a cosmetic issue,
+  but caused some grief during development in regard to memory leak
+  detectors.
+  Note: yes, this is for openssl -- the parameter name is historical.
 - 2021-07-07: psrv bugfix: abort if no listener could be started
   Modules (like imtcp and imdiag) which use tcpsrv could abort or
   otherwise malfunction if no listener for a specific input could
