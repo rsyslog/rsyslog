@@ -453,6 +453,10 @@ ENDactivateCnf
 
 BEGINfreeCnf
 CODESTARTfreeCnf
+	if (runModConf != NULL) {
+		free(runModConf->pszBindRuleset);
+		runModConf = NULL;
+	}
 ENDfreeCnf
 
 
@@ -475,7 +479,6 @@ CODESTARTmodExit
 	if(pInputName != NULL)
 		prop.Destruct(&pInputName);
 
-	free(runModConf->pszBindRuleset);
 	/* release objects we used */
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(net, CORE_COMPONENT);
