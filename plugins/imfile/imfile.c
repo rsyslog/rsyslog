@@ -65,6 +65,7 @@
 #include "ratelimit.h"
 #include "srUtils.h"
 #include "parserif.h"
+#include "datetime.h"
 
 #include <regex.h>
 
@@ -90,6 +91,7 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(strm)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(ruleset)
+DEFobjCurrIf(datetime)
 
 extern int rs_siphash(const uint8_t *in, const size_t inlen, const uint8_t *k,
 	uint8_t *out, const size_t outlen); /* see siphash.c */
@@ -134,6 +136,7 @@ static struct configSettings_s {
 	uint64_t maxBytesPerMinute; /* maximum bytes per minute to send before rate limiting */
 	uint64_t maxLinesPerMinute; /* maximum lines per minute to send before rate limiting */
 	uint32_t trimLineOverBytes;  /* 0: never trim line, positive number: trim line if over bytes */
+	uint32_t ignoreOlderThan;
 } cs;
 
 struct instanceConf_s {
@@ -169,6 +172,7 @@ struct instanceConf_s {
 	sbool fileNotFoundError;
 	int maxLinesAtOnce;
 	uint32_t trimLineOverBytes;
+	uint32_t ignoreOlderThan;
 	int msgFlag;
 	uchar *escapeLFString;
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
@@ -343,6 +347,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "freshstarttail", eCmdHdlrBinary, 0},
 	{ "filenotfounderror", eCmdHdlrBinary, 0},
 	{ "needparse", eCmdHdlrBinary, 0},
+	{ "ignoreolderthan", eCmdHdlrInt, 0},
 	{ "maxbytesperminute", eCmdHdlrInt, 0},
 	{ "maxlinesperminute", eCmdHdlrInt, 0}
 };
@@ -702,6 +707,23 @@ fs_node_print(const fs_node_t *const node, const int level)
 	}
 }
 
+static sbool
+isIgnoreOlderFile(const instanceConf_t *const inst, const char *const name)
+{
+	if (inst->ignoreOlderThan)
+	{
+		struct stat stat_buf;
+		time_t tt;
+		/* skip old files */
+		datetime.GetTime(&tt);
+		if (stat((char *)name, &stat_buf) == 0 && difftime(tt, stat_buf.st_mtime) > inst->ignoreOlderThan)
+		{
+			return 1;
+		}
+	}
+	return 0;
+}
+
 /* add a new file system object if it not yet exists, ignore call
  * if it already does.
  */
@@ -709,12 +731,17 @@ static rsRetVal ATTR_NONNULL(1,2)
 act_obj_add(fs_edge_t *const edge, const char *const name, const int is_file,
 	const ino_t ino, const int is_symlink, const char *const source)
 {
-	act_obj_t *act;
+	act_obj_t *act = NULL;
 	char basename[MAXFNAME];
 	DEFiRet;
 	int fd = -1;
 	
 	DBGPRINTF("act_obj_add: edge %p, name '%s' (source '%s')\n", edge, name, source? source : "---");
+
+	if (isIgnoreOlderFile(edge->instarr[0], name)) {
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
 	for(act = edge->active ; act != NULL ; act = act->next) {
 		if(!strcmp(act->name, name)) {
 			if (!source || !act->source_name || !strcmp(act->source_name, source)) {
@@ -1719,6 +1746,7 @@ createInstance(instanceConf_t **const pinst)
 	inst->readTimeout = loadModConf->readTimeout;
 	inst->delay_perMsg = 0;
 	inst->msgFlag = 0;
+	inst->ignoreOlderThan = 0;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -1855,6 +1883,7 @@ addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		}
 	}
 	inst->trimLineOverBytes = cs.trimLineOverBytes;
+	inst->ignoreOlderThan = cs.ignoreOlderThan;
 	inst->iPersistStateInterval = cs.iPersistStateInterval;
 	inst->perMinuteRateLimits.maxBytesPerMinute = cs.maxBytesPerMinute;
 	inst->perMinuteRateLimits.maxLinesPerMinute = cs.maxLinesPerMinute;
@@ -1956,6 +1985,8 @@ CODESTARTnewInpInst
 			}
 		} else if(!strcmp(inppblk.descr[i].name, "trimlineoverbytes")) {
 			inst->trimLineOverBytes = pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "ignoreolderthan")) {
+			inst->ignoreOlderThan = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "persiststateinterval")) {
 			inst->iPersistStateInterval = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "maxbytesperminute")) {
@@ -2042,6 +2073,7 @@ CODESTARTbeginCnfLoad
 	cs.readMode = 0;
 	cs.maxLinesAtOnce = 10240;
 	cs.trimLineOverBytes = 0;
+	cs.ignoreOlderThan = 0;
 ENDbeginCnfLoad
 
 
@@ -2804,6 +2836,7 @@ CODESTARTmodExit
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
+	objRelease(datetime, CORE_COMPONENT);
 
 	#ifdef HAVE_INOTIFY_INIT
 	free(wdmap);
@@ -2846,6 +2879,7 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 	cs.readMode = 0;
 	cs.maxLinesAtOnce = 10240;
 	cs.trimLineOverBytes = 0;
+	cs.ignoreOlderThan = 0;
 
 	RETiRet;
 }
@@ -2874,6 +2908,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(strm, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
+	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
 	DBGPRINTF("version %s initializing\n", VERSION);
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilename", 0, eCmdHdlrGetWord,
@@ -2892,6 +2927,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	  	NULL, &cs.maxLinesAtOnce, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfiletrimlineoverbytes", 0, eCmdHdlrSize,
 	  	NULL, &cs.trimLineOverBytes, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfileignoreolderthan", 0, eCmdHdlrSize,
+	  	NULL, &cs.ignoreOlderThan, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilepersiststateinterval", 0, eCmdHdlrInt,
 	  	NULL, &cs.iPersistStateInterval, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilebindruleset", 0, eCmdHdlrGetWord,
