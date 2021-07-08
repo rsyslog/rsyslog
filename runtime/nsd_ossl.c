@@ -29,6 +29,7 @@
 #include <assert.h>
 #include <string.h>
 #include <openssl/ssl.h>
+#include <openssl/ocsp.h>
 #include <openssl/x509v3.h>
 #include <openssl/err.h>
 #include <openssl/engine.h>
@@ -37,6 +38,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <netdb.h>
 
 #include "rsyslog.h"
 #include "syslogd-types.h"
@@ -54,6 +56,7 @@
 /* things to move to some better place/functionality - TODO */
 // #define CRLFILE "crl.pem"
 
+#define  OCSP_TIMEOUT 5
 
 MODULE_TYPE_LIB
 MODULE_TYPE_KEEP
@@ -190,6 +193,7 @@ int opensslh_THREAD_cleanup(void)
 /*-------------------------------------- MT OpenSSL helpers -----------------------------------------*/
 
 /*--------------------------------------OpenSSL helpers ------------------------------------------*/
+
 void osslLastSSLErrorMsg(int ret, SSL *ssl, int severity, const char* pszCallSource)
 {
 	unsigned long un_error = 0;
@@ -215,22 +219,596 @@ void osslLastSSLErrorMsg(int ret, SSL *ssl, int severity, const char* pszCallSou
 	}
 }
 
+/*
+ * CRL is not implemented!
+ *
+ * This is just a sanity-check stub, to fail on CRL-only certificates.
+ * CRL-only certificate means: Certificate CRL DP, but not OCSP/AuthorityInfoAccess information.
+ *
+ * Returns:
+ *  0: if CRL check failed (Error, or Revoked when is_revoked is set)
+ *  1: if the certificate status is "GOOD"
+ *  2: if the certificate holds no CRL URL
+
+ */
+static int crl_check(X509 *current_cert, int *is_revoked) {
+
+	int ret = 0;
+	STACK_OF(DIST_POINT) *crldp;
+	STACK_OF(OPENSSL_STRING) *ocsp_uris;
+
+	/* Reset revoked status. Needs to be set in case CRL gets implemented. */
+	if (is_revoked)
+		*is_revoked = 0;
+
+	crldp = X509_get_ext_d2i(current_cert, NID_crl_distribution_points, NULL, NULL);
+	ocsp_uris = X509_get1_ocsp(current_cert);
+	if (crldp &&  ocsp_uris == NULL) {
+		LogError(0, RS_RET_NO_ERRCODE, "CRL support is not implemented. "
+				"CRL-only certificates can't be validated!\n");
+		ret = 0; /* abort verification. CRL-only not supported.  */
+	} else if (!crldp) {
+		ret = 2;
+	}
+
+	if (ocsp_uris)
+		X509_email_free(ocsp_uris);
+
+	if (crldp)
+		sk_DIST_POINT_pop_free(crldp, DIST_POINT_free);
+
+	return ret;
+
+
+}
+
+/*
+ * Find the issuer certificate, which is mandatory to generate
+ * a OCSP request.
+ *
+ * Query first locally configured and trusted certificates (e.g CAs).
+ *
+ * Last resort: Use the certificate chain of the peer, to get hold of
+ * untrusted certificates (e.g. intermediate certificates).
+ *
+ * The resulting issuer certificate might be an untrusted certificate,
+ * which should be used to generate OCSP requests.
+ */
+static X509 *ocsp_find_issuer(X509 *target_cert, const char *cert_name, STACK_OF(X509) *trusted_issuers,
+		STACK_OF(X509) *untrusted_peer_certs)
+{
+
+	X509 *issuer = NULL;
+
+	/* find issuer among local trusted issuers */
+	for (int i = 0; i < sk_X509_num(trusted_issuers); i++) {
+		X509 *cert = sk_X509_value(trusted_issuers, i);
+		if (X509_check_issued(cert, target_cert) == X509_V_OK) {
+			issuer = cert;
+			break;
+		}
+	}
+
+	if (!issuer) {
+		/* Look for intermediate certificates in the remote cert-chain */
+		for (int i = 0; i < sk_X509_num(untrusted_peer_certs); i++) {
+			X509 *cert = sk_X509_value(untrusted_peer_certs, i);
+			if (X509_check_issued(cert, target_cert) == X509_V_OK) {
+				issuer = cert;
+				break;
+			}
+		}
+	}
+
+	/* No issuer, no revocation check possible */
+	if (!issuer) {
+		LogError(0, RS_RET_NO_ERRCODE, "OCSP: Could not find any issuer for: \"%s\"\n", cert_name);
+	}
+
+	return issuer;
+}
+
+static const char *ocsp_get_response_status_err(int c)
+{
+	switch (c) {
+	case OCSP_RESPONSE_STATUS_SUCCESSFUL:
+		return "Successful";
+	case OCSP_RESPONSE_STATUS_MALFORMEDREQUEST:
+		return "Malformed request";
+	case OCSP_RESPONSE_STATUS_INTERNALERROR:
+		return "Internal error in OCSP responder";
+	case OCSP_RESPONSE_STATUS_TRYLATER:
+		return "Try again later";
+	case OCSP_RESPONSE_STATUS_SIGREQUIRED:
+		return "Must sign the request";
+	case OCSP_RESPONSE_STATUS_UNAUTHORIZED:
+		return "Request unauthorized";
+	default:
+		return "Unknown Response Status";
+	}
+}
+
+/*
+ * Returns 1 if the cert status is "GOOD"
+ */
+static int ocsp_check_validate_response_and_cert(OCSP_RESPONSE *rsp, OCSP_REQUEST *req,
+		STACK_OF(X509) *untrusted_peer_certs, OCSP_CERTID *id,
+		const char *cert_name, int *is_revoked)
+{
+	int s, ret = 0;
+	long leeway_sec = 300; /* 5 Minutes */
+	long maxage = -1; /* No maximum age for ThisUpdate response */
+
+	int status, reason;
+	ASN1_GENERALIZEDTIME *rev, *thisupd, *nextupd;
+	OCSP_BASICRESP *bs = NULL;
+	X509_STORE *store = SSL_CTX_get_cert_store(ctx);
+
+	bs = OCSP_response_get1_basic(rsp);
+	if (bs == NULL) {
+		LogError(0, RS_RET_NO_ERRCODE, "Failed to decode the basic OCSP response.\n");
+		goto err;
+	}
+
+	s = OCSP_check_nonce(req, bs);
+	if (s == -1) {
+		LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING, "Warning: no Nonce in OCSP response from peer. "
+				"(No replay attack protection available)\n");
+	} else if (s == 0) {
+		LogError(0, RS_RET_NO_ERRCODE, "OCSP Nonce verification error. (Replayed OCSP response?)\n");
+		goto err;
+	}
+
+	if (!OCSP_basic_verify(bs, untrusted_peer_certs, store, 0)) {
+		LogError(0, RS_RET_NO_ERRCODE, "Failed to verify the response message. "
+				"(Incorrectly signed by OCSP responder? CA certificates correctly "
+				"installed to validate the OCSP Signer?)\n");
+		goto err;
+	}
+
+	if (!OCSP_resp_find_status(bs, id, &status, &reason,
+	                           &rev, &thisupd, &nextupd)) {
+		LogError(0, RS_RET_NO_ERRCODE, "No status included in the OCSP response for the "
+				"requested certificate ID!\n");
+		goto err;
+	}
+	if (!OCSP_check_validity(thisupd, nextupd, leeway_sec, maxage)) {
+		LogError(0, RS_RET_NO_ERRCODE, "The OCSP response has expired and is no longer valid!\n");
+		goto err;
+	}
+
+	if (is_revoked)
+		*is_revoked = 0;
+
+	switch (status) {
+	case V_OCSP_CERTSTATUS_GOOD:
+		break;
+	case V_OCSP_CERTSTATUS_REVOKED:
+		if (is_revoked)
+			*is_revoked = 1;
+		if (OCSP_crl_reason_str(reason)) {
+			LogError(0, RS_RET_NO_ERRCODE, "OCSP: Certificate \"%s\" has been revoked: %s.\n",
+					cert_name, OCSP_crl_reason_str(reason));
+			goto err;
+		} else {
+			LogError(0, RS_RET_NO_ERRCODE, "OCSP: Certificate \"%s\" has been revoked: "
+					"No reason provided.\n", cert_name);
+			goto err;
+		}
+		break;
+	case V_OCSP_CERTSTATUS_UNKNOWN:
+		LogError(0, RS_RET_NO_ERRCODE, "OCSP: Status of certificate \"%s\" is unknown. "
+				"(This is a fatal error).\n", cert_name);
+		goto err;
+		break;
+	default:
+		LogError(0, RS_RET_NO_ERRCODE, "OCSP: Unexpected certificate status \"%d\" for %s .\n",
+				status, cert_name);
+		goto err;
+		break;
+	}
+
+
+	ret = 1;
+err:
+
+	if (bs)
+		OCSP_BASICRESP_free(bs);
+
+	return ret;
+}
+
+static BIO* ocsp_connect(const char *host, const char *port, const char *device)
+{
+	int erropt, ret = 0, fd = 0;
+	struct timeval tv;
+	fd_set confds;
+	struct addrinfo hints;
+	struct addrinfo *rp = NULL;
+	BIO *bio = NULL;
+	socklen_t errlen;
+
+	memset(&hints, 0, sizeof(struct addrinfo));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+
+	ret = getaddrinfo(host, port, &hints, &rp);
+	if (ret != 0) {
+		LogError(0, RS_RET_NO_ERRCODE, "OCSP: Could not lookup address for %s:%s\n", host, port);
+		goto err;
+	}
+
+	fd = socket(rp->ai_family, SOCK_STREAM, 0);
+	if (fd == -1) {
+		LogError(0, RS_RET_NO_ERRCODE, "OCSP: Could not create socket for %s:%s\n", host, port);
+		goto err;
+	}
+
+	if (device) {
+#ifdef SO_BINDTODEVICE
+		/* cppcheck-suppress ConfigurationNotChecked */
+		if(setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, device,
+		              strlen(device) + 1) < 0)
+#endif
+		{
+			LogError(0, RS_RET_NO_ERRCODE, "Failed to bind to interface \"%s\" for "
+					"OCSP request.\n", device);
+			goto err;
+		}
+	}
+	if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1) {
+		LogError(0, RS_RET_NO_ERRCODE, "OCSP: Failed make socket non-blocking for %s:%s: %s\n",
+				host, port, strerror(errno));
+		goto err;
+	}
+
+	if (connect(fd, rp->ai_addr, rp->ai_addrlen) != -1) {
+		LogError(0, RS_RET_NO_ERRCODE, "OCSP: Failed to connect to %s:%s: %s\n",
+				host, port, strerror(errno));
+		goto err;
+	}
+
+	FD_ZERO(&confds);
+	FD_SET(fd, &confds);
+	tv.tv_usec = 0;
+	tv.tv_sec = OCSP_TIMEOUT;
+	ret = select(fd + 1, NULL, (void *)&confds, NULL, &tv);
+	if (ret == 0) {
+		LogError(0, RS_RET_NO_ERRCODE, "OCSP: Connection timeout while connecting to %s:%s\n",
+				host, port);
+		goto err;
+	}
+
+	errlen = sizeof(erropt);
+	if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &erropt, &errlen) != 0) {
+		LogError(0, RS_RET_NO_ERRCODE, "OCSP: Failed to socket status for connection %s:%s: %s\n",
+				host, port, strerror(errno));
+		goto err;
+	}
+
+	if ((erropt != 0) && (erropt != EISCONN)) {
+		LogError(0, RS_RET_NO_ERRCODE, "OCSP: Failed to establish connection for %s:%s: %s\n",
+				host, port, strerror(erropt));
+		goto err;
+	}
+
+	bio = BIO_new_socket(fd, BIO_CLOSE);
+	if (bio == NULL) {
+		LogError(0, RS_RET_NO_ERRCODE, "OCSP: Could attach socket to BIO object\n");
+		goto err;
+	}
+err:
+
+	freeaddrinfo(rp);
+
+	if (!bio) /* don't close the socket in case of success */
+		close(fd);
+
+	return bio;
+}
+
+static OCSP_RESPONSE *ocsp_send_and_recieve(BIO *bio, const char *host, const char *path,
+		OCSP_REQ_CTX *reqctx, OCSP_REQUEST *req, const char *url)
+{
+	int fd, ret;
+	struct timeval tv;
+	fd_set confds;
+	OCSP_RESPONSE *rsp = NULL;
+
+	if (BIO_get_fd(bio, &fd) < 0) {
+		LogError(0, RS_RET_NO_ERRCODE, "Failed to send OCSP request (BIO_get_fd)\n");
+		goto err;
+	}
+
+	reqctx = OCSP_sendreq_new(bio, path, NULL, -1);
+	if (!reqctx) {
+		LogError(0, RS_RET_NO_ERRCODE, "Failed to prepare sending of OCSP request. Out of memory?\n");
+		goto err;
+	}
+
+	/* Some OCSP responders behind CDNs require the domain
+	 * of the service as "Host" header. Not mentioned by RFC6960. */
+	if (!OCSP_REQ_CTX_add1_header(reqctx, "Host", host)) {
+		LogError(0, RS_RET_NO_ERRCODE, "Failed to attach \"Host\" to the HTTP header for the OCSP request. "
+				"OCSP URI: \"%s\"\n", url);
+		goto err;
+	}
+
+	if (!OCSP_REQ_CTX_set1_req(reqctx, req)) {
+		LogError(0, RS_RET_NO_ERRCODE, "Failed to attach OCSP request to request context.\n");
+		goto err;
+	}
+
+	while (1) {
+		ret = OCSP_sendreq_nbio(&rsp, reqctx);
+		if (ret != -1)
+			break;
+		FD_ZERO(&confds);
+		FD_SET(fd, &confds);
+		tv.tv_usec = 0;
+		tv.tv_sec = OCSP_TIMEOUT;
+		if (BIO_should_read(bio))
+			ret = select(fd + 1, (void *)&confds, NULL, NULL, &tv);
+		else if (BIO_should_write(bio))
+			ret = select(fd + 1, NULL, (void *)&confds, NULL, &tv);
+		else {
+			LogError(0, RS_RET_NO_ERRCODE, "Unexpected socket activity while waiting for OCSP response "
+					"from \"%s\"\n", url);
+			goto err;
+		}
+		if (ret == 0) {
+			LogError(0, RS_RET_NO_ERRCODE, "Timed out while waiting for OCSP response from \"%s\"\n",
+					url);
+			goto err;
+		}
+		if (ret == -1) {
+			LogError(0, RS_RET_NO_ERRCODE, "Socket error while waiting for OCSP response from \"%s\"\n",
+					url);
+			goto err;
+		}
+	}
+
+	return rsp;
+
+err:
+	return NULL;
+}
+
+/*
+ * Returns 1 for supported OCSP responders/protocols.
+ */
+static int ocsp_is_supported_protocol(const char *url)
+{
+	if (strncasecmp("http:", url, 5) != 0)
+		return 0;
+
+	return 1;
+}
+
+static int ocsp_request_per_responder(const char *url, X509 *cert, X509 *issuer,
+		STACK_OF(X509) *untrusted_peer_certs, const char *device, int *is_revoked)
+{
+	BIO *bio = NULL;
+	OCSP_RESPONSE *rsp = NULL;
+	OCSP_REQUEST *req = NULL;
+	OCSP_CERTID *id = NULL;
+	OCSP_REQ_CTX *reqctx = NULL;
+
+	int use_ssl, ret = 0;
+	char *host = NULL, *port = NULL, *path = NULL;
+	char cert_name[256];
+
+	const EVP_MD *cert_id_md = EVP_sha256();
+
+	X509_NAME_oneline(X509_get_subject_name(cert), cert_name, sizeof(cert_name));
+
+	if (!ocsp_is_supported_protocol(url))
+		goto err; /* Skip unsupported protocols. That's not an error. */
+
+	/*
+	 * 1. Prepare OCSP request
+	 */
+	if (OCSP_parse_url(url, &host, &port, &path, &use_ssl) != 1) {
+		LogError(0, RS_RET_NO_ERRCODE, "Parsing of OCSP URL \"%s\" failed.", url);
+		goto err;
+	}
+
+	req = OCSP_REQUEST_new();
+	if (req == NULL) {
+		LogError(0, RS_RET_NO_ERRCODE, "Allocating new OCSP REQUEST failed: Out-of-memory?\n");
+		goto err;
+	}
+
+	id = OCSP_cert_to_id(cert_id_md, cert, issuer);
+	if (!id) {
+		LogError(0, RS_RET_NO_ERRCODE, "Could not obtain ID of certificate \"%s\" for OCSP request.\n",
+		        cert_name);
+		goto err;
+	}
+
+	if (!OCSP_request_add0_id(req, id)) {
+		LogError(0, RS_RET_NO_ERRCODE, "Failed to attach ID of certificate \"%s\" to OCSP request.\n",
+		        cert_name);
+		goto err;
+	}
+
+	/* Replay attack protection */
+	if (!OCSP_request_add1_nonce(req, NULL, -1)) {
+		LogError(0, RS_RET_NO_ERRCODE, "Failed to attach the OCSP Nonce extension to OCSP request.\n");
+		goto err;
+	}
+
+	dbgprintf("OCSP: Connecting to OCSP URL: http://%s:%s%s use_ssl:%d\n", host, port, path, use_ssl);
+
+	/*
+	 * 2. Connect to OCSP responder via HTTP
+	 */
+	bio = ocsp_connect(host, port, device);
+	if (!bio) {
+		goto err;
+	}
+
+	/*
+	 * 3. Send OCSP request & receive OCSP response
+	 */
+	rsp = ocsp_send_and_recieve(bio, host, path, reqctx, req, url);
+	if (!rsp)
+		goto err;
+
+	/*
+	 * 4. Process OCSP response
+	 */
+	ret = OCSP_response_status(rsp);
+	if (ret != OCSP_RESPONSE_STATUS_SUCCESSFUL) {
+		LogError(0, RS_RET_NO_ERRCODE, "OCSP response status: %s for cert \"%s\". (Received from: \"%s\")\n",
+		        ocsp_get_response_status_err(ret), cert_name, url);
+		goto err;
+	}
+
+	/*
+	 * 5. Validate OCSP response and the included certificate status
+	 */
+	if (ocsp_check_validate_response_and_cert(rsp, req,
+	                                          untrusted_peer_certs, id, cert_name, is_revoked))
+		ret = 1; /* Success! */
+
+err:
+	/* cleanup */
+
+	if (host)
+		OPENSSL_free(host);
+	if (port)
+		OPENSSL_free(port);
+	if (path)
+		OPENSSL_free(path);
+	if (req)
+		OCSP_REQUEST_free(req);
+	if (rsp)
+		OCSP_RESPONSE_free(rsp);
+	if (bio)
+		BIO_free_all(bio);
+	if (reqctx)
+		OCSP_REQ_CTX_free(reqctx);
+
+	return ret;
+}
+
+/*
+ * ocsp_check is supposed to be called by the validate_callback, for each certificate
+ * in the peers certificate chain.
+ *
+ * current_cert is pointing to the next certificate which requires a revocation check.
+ *
+ * untrusted_peer_certs holds the peer's certificate chain, which might be incomplete.
+ *
+ * Returns:
+ *  0: if OCSP check failed (Error, or Revoked when is_revoked is set)
+ *  1: if the certificate status is "GOOD"
+ *  2: if the certificate holds no OCSP URL
+ *
+ */
+static int ocsp_check(X509 *current_cert, STACK_OF(X509) *trusted_issuers, STACK_OF(X509) *untrusted_peer_certs,
+		const char *device, int *is_revoked) {
+
+	int ret = 0, at_least_one_responder = 0;
+	char *url;
+	X509 *issuer = NULL;
+	STACK_OF(OPENSSL_STRING) *ocsp_responders = NULL;
+	char cert_name[256];
+
+	X509_NAME_oneline(X509_get_subject_name(current_cert), cert_name, sizeof(cert_name));
+
+
+	/*
+	 * 1. Lookup the issuer cert of the current certificate, required to marshal a OCSP request.
+	 */
+	if (!(issuer = ocsp_find_issuer(current_cert, cert_name, trusted_issuers, untrusted_peer_certs)))
+		goto err;
+
+	/*
+	 * 2. Sanity check prior generating OCSP request.
+	 *
+	 * - No OCSP URL, no OCSP revocation verification required, skip the current cert.
+	 * - Only HTTP protocol is supported. If no OCSP responder with a supported protocol
+	 *   is available, this MUST fail the OCSP verification and abort the TLS handshake.
+	 */
+	ocsp_responders = X509_get1_ocsp(current_cert);
+	if (ocsp_responders == NULL) {
+		ret = 2;
+		goto err; /* continue with cert path validation */
+	}
+
+
+	for (int i = 0; i < sk_OPENSSL_STRING_num(ocsp_responders); i++) {
+		url = sk_OPENSSL_STRING_value(ocsp_responders, i);
+		if (ocsp_is_supported_protocol(url)) {
+			at_least_one_responder = 1;
+			break;
+		}
+	}
+
+	if (!at_least_one_responder) {
+		LogError(0, RS_RET_NO_ERRCODE, "None of the OCSP responders are supported by "
+				"this implementation:\n");
+		for (int i = 0; i < sk_OPENSSL_STRING_num(ocsp_responders); i++) {
+			url = sk_OPENSSL_STRING_value(ocsp_responders, i);
+			LogError(0, RS_RET_NO_ERRCODE, "\t%s\n", url);
+		}
+		goto err;
+	}
+
+	/*
+	 * Try all supported OCSP responders one by one.
+	 *
+	 * One successful OCSP status response is enough. Not all responders
+	 * need to be queried.
+	 */
+	for (int i = 0; i < sk_OPENSSL_STRING_num(ocsp_responders); i++) {
+		url = sk_OPENSSL_STRING_value(ocsp_responders, i);
+		if (ocsp_request_per_responder(url, current_cert, issuer, untrusted_peer_certs,
+					device, is_revoked)) {
+			ret = 1;
+			goto err;
+		}
+
+		/* When revoked don't try other sources/OCSP responders */
+		if (is_revoked && *is_revoked)
+			goto err;
+
+		/* If the status is unknown, try the next available responder */
+	}
+
+err:
+
+
+	if (ocsp_responders)
+		X509_email_free(ocsp_responders);
+
+
+	return ret;
+}
+
+
 int verify_callback(int status, X509_STORE_CTX *store)
 {
 	char szdbgdata1[256];
 	char szdbgdata2[256];
+	int ret, is_revoked = 0;
+
+	SSL* ssl = X509_STORE_CTX_get_ex_data(store, SSL_get_ex_data_X509_STORE_CTX_idx());
+	X509 *cert = X509_STORE_CTX_get_current_cert(store);
+	STACK_OF(X509) *untrusted_peer_certs;
+	nsd_ossl_t *pThis = (nsd_ossl_t*) SSL_get_ex_data(ssl, 0);
+	assert(pThis != NULL);
+
 
 	dbgprintf("verify_callback: status %d\n", status);
 
 	if(status == 0) {
 		/* Retrieve all needed pointers */
-		X509 *cert = X509_STORE_CTX_get_current_cert(store);
 		int depth = X509_STORE_CTX_get_error_depth(store);
 		int err = X509_STORE_CTX_get_error(store);
-		SSL* ssl = X509_STORE_CTX_get_ex_data(store, SSL_get_ex_data_X509_STORE_CTX_idx());
 		int iVerifyMode = SSL_get_verify_mode(ssl);
-		nsd_ossl_t *pThis = (nsd_ossl_t*) SSL_get_ex_data(ssl, 0);
-		assert(pThis != NULL);
 
 		dbgprintf("verify_callback: Certificate validation failed, Mode (%d)!\n", iVerifyMode);
 
@@ -292,6 +870,55 @@ int verify_callback(int status, X509_STORE_CTX *store)
 			status = 1;
 		}
 	}
+
+	if (status == 0)
+		return 0; /* Verification failed */
+
+	/*
+	 * Certificate revocation checks
+	 */
+	untrusted_peer_certs = X509_STORE_CTX_get1_chain(store);
+
+	/* 1. OCSP */
+	ret = ocsp_check(cert, pThis->trusted_issuers, untrusted_peer_certs, pThis->device, &is_revoked);
+	if (ret == 1) {
+		/* Status is OK */
+		status = 1;
+		goto done;
+	} else if (ret == 2) {
+		/* No OCSP URL, give CRL a chance */
+		status = 1;
+	} else if (is_revoked) {
+		/* Cert is revoked, fail verification */
+		status = 0;
+		goto done;
+	} else {
+		/* If OCSP failed, but cert was not revoked, then the Status might be still OK.
+		 * Try alternative sources (e.g. CRL), in compliance with RFC 6960, Chapter 2.2, Page 7-8.
+		 */
+		status = 0;
+	}
+
+	/* 2. CRL */
+
+	/* CRL support is not implemented.
+	 * This stub will fail if the cert holds a CRL Distribution Point. */
+	ret = crl_check(cert, &is_revoked);
+	if (ret == 1) {
+		/* Status is OK */
+		status = 1;
+	} else if (ret == 2) {
+		/* No CRL, keep the existing status */
+		;
+	} else {
+		/* Cert is revoked, or check failed -> fail verification */
+		status = 0;
+	}
+
+done:
+
+	sk_X509_pop_free(untrusted_peer_certs, X509_free);
+
 
 	return status;
 }
