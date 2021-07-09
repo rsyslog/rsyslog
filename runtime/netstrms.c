@@ -2,7 +2,7 @@
  *
  * Work on this module begung 2008-04-23 by Rainer Gerhards.
  *
- * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2021 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -344,6 +344,25 @@ GetDrvrTlsVerifyDepth(netstrms_t *pThis)
 	return pThis->DrvrVerifyDepth;
 }
 
+static const uchar *
+GetDrvrTlsCAFile(netstrms_t *pThis)
+{
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	return NULL;
+}
+static const uchar *
+GetDrvrTlsKeyFile(netstrms_t *pThis)
+{
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	return NULL;
+}
+static const uchar *
+GetDrvrTlsCertFile(netstrms_t *pThis)
+{
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	return NULL;
+}
+
 /* create an instance of a netstrm object. It is initialized with default
  * values. The current driver is used. The caller may set netstrm properties
  * and must call ConstructFinalize().
@@ -408,6 +427,9 @@ CODESTARTobjQueryInterface(netstrms)
 	pIf->GetDrvrPrioritizeSAN = GetDrvrPrioritizeSAN;
 	pIf->SetDrvrTlsVerifyDepth = SetDrvrTlsVerifyDepth;
 	pIf->GetDrvrTlsVerifyDepth = GetDrvrTlsVerifyDepth;
+	pIf->GetDrvrTlsCAFile = GetDrvrTlsCAFile;
+	pIf->GetDrvrTlsKeyFile = GetDrvrTlsKeyFile;
+	pIf->GetDrvrTlsCertFile = GetDrvrTlsCertFile;
 finalize_it:
 ENDobjQueryInterface(netstrms)
 

@@ -41,6 +41,9 @@ struct nsd_gtls_s {
 	nsd_t *pTcp;		/**< our aggregated nsd_ptcp data */
 	uchar *pszConnectHost;	/**< hostname used for connect - may be used to
 					authenticate peer if no other name given */
+	const uchar *pszCAFile;
+	const uchar *pszKeyFile;
+	const uchar *pszCertFile;
 	gnutls_certificate_credentials_t xcred;
 	int xcred_is_copy;
 	int iMode;		/* 0 - plain tcp, 1 - TLS */

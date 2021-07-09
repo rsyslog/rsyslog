@@ -1592,6 +1592,56 @@ finalize_it:
 	RETiRet;
 }
 
+static rsRetVal
+SetTlsCAFile(nsd_t *pNsd, const uchar *const caFile)
+{
+	DEFiRet;
+	nsd_gtls_t *const pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	if(caFile == NULL) {
+		pThis->pszCAFile = NULL;
+	} else {
+		CHKmalloc(pThis->pszCAFile = (const uchar*) strdup((const char*) caFile));
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+SetTlsKeyFile(nsd_t *pNsd, const uchar *const pszFile)
+{
+	DEFiRet;
+	nsd_gtls_t *const pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	if(pszFile == NULL) {
+		pThis->pszKeyFile = NULL;
+	} else {
+		CHKmalloc(pThis->pszKeyFile = (const uchar*) strdup((const char*) pszFile));
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+SetTlsCertFile(nsd_t *pNsd, const uchar *const pszFile)
+{
+	DEFiRet;
+	nsd_gtls_t *const pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	if(pszFile == NULL) {
+		pThis->pszCertFile = NULL;
+	} else {
+		CHKmalloc(pThis->pszCertFile = (const uchar*) strdup((const char*) pszFile));
+	}
+
+finalize_it:
+	RETiRet;
+}
 
 /* Provide access to the underlying OS socket. This is primarily
  * useful for other drivers (like nsd_gtls) who utilize ourselfs
@@ -2244,6 +2294,9 @@ CODESTARTobjQueryInterface(nsd_gtls)
 	pIf->SetCheckExtendedKeyUsage = SetCheckExtendedKeyUsage;
 	pIf->SetPrioritizeSAN = SetPrioritizeSAN;
 	pIf->SetTlsVerifyDepth = SetTlsVerifyDepth;
+	pIf->SetTlsCAFile = SetTlsCAFile;
+	pIf->SetTlsKeyFile = SetTlsKeyFile;
+	pIf->SetTlsCertFile = SetTlsCertFile;
 finalize_it:
 ENDobjQueryInterface(nsd_gtls)
 
