@@ -101,7 +101,7 @@ startup 2
 # ---
 
 echo Inject messages into rsyslog sender instance
-injectmsg 1 $TESTMESSAGES
+injectmsg2 1 $TESTMESSAGES
 
 echo Starting kafka cluster instance
 start_kafka

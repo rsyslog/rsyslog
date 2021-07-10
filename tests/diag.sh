@@ -485,7 +485,7 @@ wait_startup() {
 	echo "$(tb_timestamp) rsyslogd$1 startup msg seen, pid " $(cat $RSYSLOG_PIDBASE$1.pid)
 	wait_file_exists $RSYSLOG_DYNNAME.imdiag$1.port
 	eval export IMDIAG_PORT$1=$(cat $RSYSLOG_DYNNAME.imdiag$1.port)
-	eval PORT=$IMDIAG_PORT$1
+	eval PORT='$IMDIAG_PORT'$1
 	echo "imdiag$1 port: $PORT"
 	if [ "$PORT" == "" ]; then
 		echo "TESTBENCH ERROR: imdiag port not found!"
@@ -644,8 +644,9 @@ injectmsg() {
 
 # inject messages in INSTANCE 2 via our inject interface (imdiag)
 injectmsg2() {
-	echo injecting $2 messages
-	echo injectmsg "$1" "$2" $3 $4 | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
+	msgs=${2:-$NUMMESSAGES}
+	echo injecting $msgs messages
+	echo injectmsg "${1:-0}" "$msgs" $3 $4 | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
 	# TODO: some return state checking? (does it really make sense here?)
 }
 
