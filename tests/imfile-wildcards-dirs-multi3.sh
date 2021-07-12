@@ -68,7 +68,7 @@ do
 		mkdir $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir
 		mkdir $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir/subdir$j
 		touch $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir/subdir$j/file.logfile
-		./inputfilegen -m 1 > $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir/subdir$j/file.logfile
+		./inputfilegen -m 100 > $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir/subdir$j/file.logfile
 		ls -l $RSYSLOG_DYNNAME.input.dir$i/dir$j/testdir/subdir$j/file.logfile
 	done
 	ls -d $RSYSLOG_DYNNAME.input.*
@@ -76,6 +76,9 @@ do
 	# Check correct amount of input files each time
 	IMFILEINPUTFILESALL=$((IMFILEINPUTFILES * j))
 	content_check_with_count "HEADER msgnum:00000000:" $IMFILEINPUTFILESALL $IMFILECHECKTIMEOUT
+
+	# Check correct amount of state files each time
+	check_spool_count $IMFILEINPUTFILES "$(stat -c "%n: %i" $RSYSLOG_DYNNAME.input.dir*/dir*/testdir/subdir*/file.logfile)"
 
 	# Delete all but first!
 	for i in $(seq 1 $IMFILEINPUTFILES);

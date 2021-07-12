@@ -835,6 +835,21 @@ check_spool_empty() {
 	fi
 }
 
+# check that a given number of spool files exists. Abort otherwise
+# $1 - expected number of files
+# $2 - additional data to print on failure
+check_spool_count() {
+	count=$1
+	details="$2"
+	found=$(ls $RSYSLOG_DYNNAME.spool/* 2> /dev/null | wc -l)
+	if [ $found -ne $count ]; then
+		printf 'error: unexpected number of spool files, found %d, was expecting %d \n' $found $count
+		ls -l $RSYSLOG_DYNNAME.spool/*
+		[ -z "$details" ] || echo "$details"
+		error_exit 1
+	fi
+}
+
 # general helper for imjournal tests: check that we got hold of the
 # injected test message. This is pretty lengthy as the journal has played
 # "a bit" with us and also seems to sometimes have a heavy latency in

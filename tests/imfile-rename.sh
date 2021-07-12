@@ -61,12 +61,12 @@ mv $RSYSLOG_DYNNAME.input.1.log rsyslog.input.2.log
 # generate some more input into moved file 
 ./inputfilegen -m $TESTMESSAGES -i $TESTMESSAGES >> $RSYSLOG_DYNNAME.input.2.log
 ls -l $RSYSLOG_DYNNAME.input*
-echo ls ${RSYSLOG_DYNNAME}.spool:
-ls -l ${RSYSLOG_DYNNAME}.spool
 ./msleep 500
 
 let msgcount="2* $TESTMESSAGES"
 wait_file_lines $RSYSLOG_OUT_LOG $msgcount $RETRIES
+
+check_spool_count 1 "$(stat -c "%n: %i" $RSYSLOG_DYNNAME.input*)"
 
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown	# we need to wait until rsyslogd is finished!

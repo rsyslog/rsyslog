@@ -10,6 +10,8 @@ export IMFILECHECKTIMEOUT="15"
 # Start rsyslog now before adding more files
 generate_conf
 add_conf '
+$WorkDirectory '$RSYSLOG_DYNNAME'.spool
+
 global( debug.whitelist="on"
 	debug.files=["imfile.c", "stream.c"])
 #	debug.files=["rainerscript.c", "ratelimit.c", "ruleset.c", "main Q",
@@ -61,6 +63,10 @@ for j in $(seq 1 $IMFILEINPUTFILESSTEPS); do
 	# Check correct amount of input files each time
 	IMFILEINPUTFILESALL=$((IMFILEINPUTFILES * j))
 	content_check_with_count "HEADER msgnum:000000" $IMFILEINPUTFILESALL $IMFILECHECKTIMEOUT
+
+	# Check correct amount of state files each time: 0 because input file size < 512
+	check_spool_count 0 "$(stat -c "%n: %i" $RSYSLOG_DYNNAME.input.dir*/dir*/file.logfile)"
+
 	# Delete all but first!
 	for i in $(seq 1 $IMFILEINPUTFILES);
 	do
