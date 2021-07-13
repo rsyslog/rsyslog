@@ -105,10 +105,6 @@ static gnutls_dh_params_t dh_params; /**< server DH parameters for anon mode */
 	} \
 }
 
-/* Static Helper variables for CERT status */
-static short bHaveCA;
-static short bHaveCert;
-static short bHaveKey;
 
 /* ------------------------------ GnuTLS specifics ------------------------------ */
 
@@ -127,7 +123,7 @@ static void logFunction(int level, const char *msg)
  * rgerhards, 2008-05-26
  */
 static rsRetVal
-readFile(uchar *pszFile, gnutls_datum_t *pBuf)
+readFile(const uchar *const pszFile, gnutls_datum_t *const pBuf)
 {
 	int fd;
 	struct stat stat_st;
@@ -188,17 +184,15 @@ gtlsLoadOurCertKey(nsd_gtls_t *pThis)
 	DEFiRet;
 	int gnuRet;
 	gnutls_datum_t data = { NULL, 0 };
-	uchar *keyFile;
-	uchar *certFile;
+	const uchar *keyFile;
+	const uchar *certFile;
 
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
-	certFile = glbl.GetDfltNetstrmDrvrCertFile();
-	keyFile = glbl.GetDfltNetstrmDrvrKeyFile();
+	certFile = (pThis->pszCertFile == NULL) ? glbl.GetDfltNetstrmDrvrCertFile() : pThis->pszCertFile;
+	keyFile = (pThis->pszKeyFile == NULL) ? glbl.GetDfltNetstrmDrvrKeyFile() : pThis->pszKeyFile;
 
 	if(certFile == NULL || keyFile == NULL) {
-		bHaveCert = 0;
-		bHaveKey = 0;
 		/* in this case, we can not set our certificate. If we are
 		 * a client and the server is running in "anon" auth mode, this
 		 * may be well acceptable. In other cases, we will see some
@@ -608,16 +602,16 @@ finalize_it:
  * rgerhards, 2008-05-15
  */
 static rsRetVal
-gtlsAddOurCert(gnutls_certificate_credentials_t myxcred)
+gtlsAddOurCert(nsd_gtls_t *const pThis)
 {
 	int gnuRet = 0;
-	uchar *keyFile;
-	uchar *certFile;
+	const uchar *keyFile;
+	const uchar *certFile;
 	uchar *pGnuErr; /* for GnuTLS error reporting */
 	DEFiRet;
 
-	certFile = glbl.GetDfltNetstrmDrvrCertFile();
-	keyFile = glbl.GetDfltNetstrmDrvrKeyFile();
+	certFile = (pThis->pszCertFile == NULL) ? glbl.GetDfltNetstrmDrvrCertFile() : pThis->pszCertFile;
+	keyFile = (pThis->pszKeyFile == NULL) ? glbl.GetDfltNetstrmDrvrKeyFile() : pThis->pszKeyFile;
 	dbgprintf("GTLS certificate file: '%s'\n", certFile);
 	dbgprintf("GTLS key file: '%s'\n", keyFile);
 	if(certFile == NULL) {
@@ -629,7 +623,7 @@ gtlsAddOurCert(gnutls_certificate_credentials_t myxcred)
 
 	/* set certificate in gnutls */
 	if(certFile != NULL && keyFile != NULL) {
-		CHKgnutls(gnutls_certificate_set_x509_key_file(myxcred, (char*)certFile, (char*)keyFile,
+		CHKgnutls(gnutls_certificate_set_x509_key_file(pThis->xcred, (char*)certFile, (char*)keyFile,
 			GNUTLS_X509_FMT_PEM));
 	}
 
@@ -692,26 +686,23 @@ static void print_cipher_suite_list(const char *priorities)
 
 /* initialize GnuTLS credential structure (certs etc) */
 static rsRetVal
-gtlsInitCred(gnutls_certificate_credentials_t *const ptr_xcred)
+gtlsInitCred(nsd_gtls_t *const pThis )
 {
 	int gnuRet;
-	uchar *cafile;
+	const uchar *cafile;
 	DEFiRet;
 
 	/* X509 stuff */
-	CHKgnutls(gnutls_certificate_allocate_credentials(ptr_xcred));
+	CHKgnutls(gnutls_certificate_allocate_credentials(&pThis->xcred));
 
 	/* sets the trusted cas file */
-	cafile = glbl.GetDfltNetstrmDrvrCAF();
+	cafile = (pThis->pszCAFile == NULL) ? glbl.GetDfltNetstrmDrvrCAF() : pThis->pszCAFile;
 	if(cafile == NULL) {
 		LogMsg(0, RS_RET_CA_CERT_MISSING, LOG_WARNING,
 			"Warning: CA certificate is not set");
-		bHaveCA = 0;
 	} else {
-		bHaveCA	= 1;
-
 		dbgprintf("GTLS CA file: '%s'\n", cafile);
-		gnuRet = gnutls_certificate_set_x509_trust_file(*ptr_xcred, (char*)cafile, GNUTLS_X509_FMT_PEM);
+		gnuRet = gnutls_certificate_set_x509_trust_file(pThis->xcred, (char*)cafile, GNUTLS_X509_FMT_PEM);
 		if(gnuRet == GNUTLS_E_FILE_ERROR) {
 			LogError(0, RS_RET_GNUTLS_ERR,
 				"error reading certificate file '%s' - a common cause is that the "
@@ -1737,8 +1728,8 @@ static rsRetVal
 LstnInitDrvr(netstrm_t *const pThis)
 {
 	DEFiRet;
-	CHKiRet(gtlsInitCred( &( ((nsd_gtls_t*) pThis->pDrvrData)->xcred ) ));
-	CHKiRet(gtlsAddOurCert(((nsd_gtls_t*) pThis->pDrvrData)->xcred ) );
+	CHKiRet(gtlsInitCred((nsd_gtls_t*) pThis->pDrvrData));
+	CHKiRet(gtlsAddOurCert((nsd_gtls_t*) pThis->pDrvrData));
 finalize_it:
 	RETiRet;
 }
@@ -1843,7 +1834,6 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 		FINALIZE;
 	}
 	/* copy Properties to pnew first */
-dbgprintf("RGER: pThis %p pNew %p, authMode %d\n", pThis, pNew, pThis->authMode);
 	pNew->authMode = pThis->authMode;
 	pNew->permitExpiredCerts = pThis->permitExpiredCerts;
 	pNew->pPermPeers = pThis->pPermPeers;
@@ -2132,8 +2122,8 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	assert(port != NULL);
 	assert(host != NULL);
 
-	CHKiRet(gtlsInitCred(&pThis->xcred));
-	CHKiRet(gtlsAddOurCert(pThis->xcred));
+	CHKiRet(gtlsInitCred(pThis));
+	CHKiRet(gtlsAddOurCert(pThis));
 	CHKiRet(nsd_ptcp.Connect(pThis->pTcp, family, port, host, device));
 
 	if(pThis->iMode == 0)
@@ -2247,7 +2237,6 @@ finalize_it:
 		if(pThis->bHaveSess) {
 			gnutls_deinit(pThis->sess);
 			pThis->bHaveSess = 0;
-			dbgprintf("RGER: Connect: set xcred %p to NULL\n", pThis->xcred);
 			pThis->xcred = NULL;
 		}
 	}
