@@ -162,6 +162,7 @@ TESTS +=  \
 	operatingstate-basic.sh \
 	operatingstate-empty.sh \
 	operatingstate-unclean.sh \
+	running-startup-rejection.sh \
 	smtradfile.sh \
 	loadbalance.sh \
 	empty-hostname.sh \
@@ -1597,6 +1598,7 @@ EXTRA_DIST= \
 	operatingstate-basic.sh \
 	operatingstate-empty.sh \
 	operatingstate-unclean.sh \
+	running-startup-rejection.sh \
 	internal-errmsg-memleak-vg.sh \
 	glbl-ruleset-queue-defaults.sh \
 	glbl-internalmsg_severity-info-shown.sh \
