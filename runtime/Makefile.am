@@ -59,6 +59,10 @@ librsyslog_la_SOURCES = \
 	statsobj.h \
 	dynstats.c \
 	dynstats.h \
+	perctile_ringbuf.c \
+	perctile_ringbuf.h \
+	perctile_stats.c \
+	perctile_stats.h \
 	statsobj.h \
 	stream.c \
 	stream.h \
@@ -113,7 +117,7 @@ librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/\" -I
 endif
 #librsyslog_la_LDFLAGS = -module -avoid-version
 librsyslog_la_CPPFLAGS += $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBUUID_CFLAGS) $(LIBFASTJSON_CFLAGS) ${LIBESTR_CFLAGS}
-librsyslog_la_LIBADD =  $(DL_LIBS) $(RT_LIBS) $(LIBUUID_LIBS) $(LIBFASTJSON_LIBS) ${LIBESTR_LIBS}
+librsyslog_la_LIBADD =  $(DL_LIBS) $(RT_LIBS) $(LIBUUID_LIBS) $(LIBFASTJSON_LIBS) ${LIBESTR_LIBS} -lm
 
 if ENABLE_LIBLOGGING_STDLOG
 librsyslog_la_CPPFLAGS += ${LIBLOGGING_STDLOG_CFLAGS}

@@ -27,6 +27,7 @@
 #include "queue.h"
 #include "lookup.h"
 #include "dynstats.h"
+#include "perctile_stats.h"
 
 /* --- configuration objects (the plan is to have ALL upper layers in this file) --- */
 
@@ -151,6 +152,7 @@ struct rsconf_s {
 	templates_t templates;
 	lookup_tables_t lu_tabs;
 	dynstats_buckets_t dynstats_buckets;
+	perctile_buckets_t perctile_buckets;
 	outchannels_t och;
 	actions_t actions;
 	rulesets_t rulesets;

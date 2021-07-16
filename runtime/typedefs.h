@@ -129,6 +129,7 @@ typedef struct strmLstnPortList_s strmLstnPortList_t; // TODO: rename?
 typedef struct actWrkrIParams actWrkrIParams_t;
 typedef struct dynstats_bucket_s dynstats_bucket_t;
 typedef struct dynstats_buckets_s dynstats_buckets_t;
+typedef struct perctile_buckets_s perctile_buckets_t;
 typedef struct dynstats_ctr_s dynstats_ctr_t;
 
 /* under Solaris (actually only SPARC), we need to redefine some types

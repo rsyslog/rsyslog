@@ -238,6 +238,9 @@ cnfobjType2str(const enum cnfobjType ot)
 	case CNFOBJ_DYN_STATS:
 		return "dyn_stats";
 		break;
+	case CNFOBJ_PERCTILE_STATS:
+		return "perctile_stats";
+		break;
 	default:return "error: invalid cnfobjType";
 	}
 }
@@ -3569,6 +3572,81 @@ finalize_it:
 }
 
 static rsRetVal
+initFunc_perctile_obs(struct cnffunc *func)
+{
+	uchar *cstr = NULL;
+	DEFiRet;
+
+	func->destructable_funcdata = 0;
+	if (func->nParams != 3) {
+		parser_errmsg("rsyslog logic error in line %d of file %s\n",
+					  __LINE__, __FILE__);
+		FINALIZE;
+	}
+
+	func->funcdata = NULL;
+	if (func->expr[0]->nodetype != 'S') {
+		parser_errmsg("percentile-stats bucket-name (param 1) of perctile-stats manipulating "
+		"functions like percentile_observe must be a constant string");
+		FINALIZE;
+	}
+
+	cstr = (uchar*) es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL);
+	if ( (func->funcdata = perctile_findBucket(cstr)) == NULL) {
+		parser_errmsg("perctile-stats bucket '%s' not found", cstr);
+		FINALIZE;
+	}
+
+finalize_it:
+	free(cstr);
+	RETiRet;
+}
+
+static void ATTR_NONNULL()
+doFunc_percentile_obs(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *__restrict__ const usrptr,
+	wti_t *__restrict__ const pWti)
+{
+	uchar *cstr = NULL;
+	struct svar srcVal;
+	int bMustFree;
+
+	ret->datatype = 'N';
+	if(func->funcdata == NULL) {
+		ret->d.n = -1;
+		return;
+	}
+
+	cnfexprEval(func->expr[1], &srcVal, usrptr, pWti);
+	cstr = (uchar*) var2CString(&srcVal, &bMustFree);
+
+	int success = 0;
+	struct svar srcVal2;
+	long long retVal;
+	cnfexprEval(func->expr[2], &srcVal2, usrptr, pWti);
+	long long val = var2Number(&srcVal2, &success);
+	if (!success) {
+		char *cstr2 = es_str2cstr(srcVal2.d.estr, NULL);
+		parser_errmsg("rainerscript: percentile_obs - didn't get a valid number: %s\n", cstr2);
+		free(cstr2);
+		retVal = 0;
+		FINALIZE;
+	}
+
+	retVal = perctile_obs(func->funcdata, cstr, val);
+
+finalize_it:
+	if (bMustFree) {
+		free(cstr);
+	}
+	varFreeMembers(&srcVal);
+	varFreeMembers(&srcVal2);
+	ret->d.n = retVal;
+	ret->datatype = 'N';
+}
+
+static rsRetVal
 initFunc_re_match_generic(struct cnffunc *const func, const unsigned flags)
 {
 	rsRetVal localRet;
@@ -3749,6 +3827,7 @@ static struct scriptFunct functions[] = {
 	{"prifilt", 1, 1, doFunct_Prifilt, initFunc_prifilt, NULL},
 	{"lookup", 2, 2, doFunct_Lookup, resolveLookupTable, NULL},
 	{"dyn_inc", 2, 2, doFunct_DynInc, initFunc_dyn_stats, NULL},
+	{"percentile_observe", 3, 3, doFunc_percentile_obs, initFunc_perctile_obs, NULL},
 	{"replace", 3, 3, doFunct_Replace, NULL, NULL},
 	{"wrap", 2, 3, doFunct_Wrap, NULL, NULL},
 	{"random", 1, 1, doFunct_RandomGen, NULL, NULL},
