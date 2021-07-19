@@ -1219,6 +1219,7 @@ endif
 if ENABLE_GNUTLS_TESTS
 TESTS +=  \
 	imtcp-tls-basic.sh \
+	imtcp-tls-input-basic.sh \
 	imtcp-tls-basic-verifydepth.sh \
 	imtcp_conndrop_tls.sh \
 	sndrcv_tls_anon_rebind.sh \
@@ -1255,6 +1256,7 @@ endif
 if ENABLE_OPENSSL
 TESTS +=  \
 	imtcp-tls-ossl-basic.sh \
+	imtcp-tls-ossl-input-basic.sh \
 	imtcp-tls-ossl-basic-tlscommands.sh \
 	imtcp-tls-ossl-basic-verifydepth.sh \
 	imtcp-tls-ossl-invalid-verifydepth.sh \
@@ -2085,6 +2087,7 @@ EXTRA_DIST= \
 	imtcp-multi-drvr-basic-parallel.sh \
 	imtcp-multi-drvr-basic-ptcp_gtls_ossl.sh \
 	imtcp-tls-basic.sh \
+	imtcp-tls-input-basic.sh \
 	imtcp-tls-basic-verifydepth.sh \
 	imtcp-tls-basic-vg.sh \
 	imtcp_incomplete_frame_at_end.sh \
@@ -2095,6 +2098,7 @@ EXTRA_DIST= \
 	udp-msgreduc-vg.sh \
 	manytcp-too-few-tls-vg.sh \
 	imtcp-tls-ossl-basic.sh \
+	imtcp-tls-ossl-input-basic.sh \
 	imtcp-tls-ossl-basic-tlscommands.sh \
 	imtcp-tls-ossl-basic-verifydepth.sh \
 	imtcp-tls-ossl-invalid-verifydepth.sh \

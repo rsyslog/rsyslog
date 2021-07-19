@@ -30,6 +30,7 @@ template(name="outfmt" type="string" string="%msg:F,58:2%,%msg:F,58:3%,%msg:F,58
 :msg, contains, "msgnum:" action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
+#unset RSYSLOG_DEBUG # suppress this debug log, if you want
 export PORT_RCVR=$TCPFLOOD_PORT
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"

@@ -2,7 +2,7 @@
  *
  * Work on this module begung 2008-04-23 by Rainer Gerhards.
  *
- * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2021 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -113,6 +113,12 @@ CODESTARTobjDestruct(netstrms)
 		free(pThis->pszDrvrPermitExpiredCerts);
 		pThis->pszDrvrPermitExpiredCerts = NULL;
 	}
+	free((void*)pThis->pszDrvrCAFile);
+	pThis->pszDrvrCAFile = NULL;
+	free((void*)pThis->pszDrvrKeyFile);
+	pThis->pszDrvrKeyFile = NULL;
+	free((void*)pThis->pszDrvrCertFile);
+	pThis->pszDrvrCertFile = NULL;
 	if(pThis->pBaseDrvrName != NULL) {
 		free(pThis->pBaseDrvrName);
 		pThis->pBaseDrvrName = NULL;
@@ -231,6 +237,42 @@ finalize_it:
 	RETiRet;
 }
 
+static rsRetVal
+SetDrvrTlsCAFile(netstrms_t *pThis, const uchar *mode)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	if (mode != NULL) {
+		CHKmalloc(pThis->pszDrvrCAFile = (uchar*) strdup((char*)mode));
+	}
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+SetDrvrTlsKeyFile(netstrms_t *pThis, const uchar *mode)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	if (mode != NULL) {
+		CHKmalloc(pThis->pszDrvrKeyFile = (uchar*) strdup((char*)mode));
+	}
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+SetDrvrTlsCertFile(netstrms_t *pThis, const uchar *mode)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	if (mode != NULL) {
+		CHKmalloc(pThis->pszDrvrCertFile = (uchar*) strdup((char*)mode));
+	}
+finalize_it:
+	RETiRet;
+}
+
 
 /* Set the priorityString for GnuTLS
  * PascalWithopf 2017-08-16
@@ -344,6 +386,25 @@ GetDrvrTlsVerifyDepth(netstrms_t *pThis)
 	return pThis->DrvrVerifyDepth;
 }
 
+static const uchar *
+GetDrvrTlsCAFile(netstrms_t *pThis)
+{
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	return pThis->pszDrvrCAFile;
+}
+static const uchar *
+GetDrvrTlsKeyFile(netstrms_t *pThis)
+{
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	return pThis->pszDrvrKeyFile;
+}
+static const uchar *
+GetDrvrTlsCertFile(netstrms_t *pThis)
+{
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	return pThis->pszDrvrCertFile;
+}
+
 /* create an instance of a netstrm object. It is initialized with default
  * values. The current driver is used. The caller may set netstrm properties
  * and must call ConstructFinalize().
@@ -408,6 +469,12 @@ CODESTARTobjQueryInterface(netstrms)
 	pIf->GetDrvrPrioritizeSAN = GetDrvrPrioritizeSAN;
 	pIf->SetDrvrTlsVerifyDepth = SetDrvrTlsVerifyDepth;
 	pIf->GetDrvrTlsVerifyDepth = GetDrvrTlsVerifyDepth;
+	pIf->GetDrvrTlsCAFile = GetDrvrTlsCAFile;
+	pIf->GetDrvrTlsKeyFile = GetDrvrTlsKeyFile;
+	pIf->GetDrvrTlsCertFile = GetDrvrTlsCertFile;
+	pIf->SetDrvrTlsCAFile = SetDrvrTlsCAFile;
+	pIf->SetDrvrTlsKeyFile = SetDrvrTlsKeyFile;
+	pIf->SetDrvrTlsCertFile = SetDrvrTlsCertFile;
 finalize_it:
 ENDobjQueryInterface(netstrms)
 
@@ -461,5 +528,3 @@ CODESTARTmodInit
 	CHKiRet(nspollClassInit(pModInfo));
 	CHKiRet(netstrmsClassInit(pModInfo));
 ENDmodInit
-/* vi:set ai:
- */
