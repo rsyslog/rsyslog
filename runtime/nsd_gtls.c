@@ -1374,6 +1374,9 @@ CODESTARTobjDestruct(nsd_gtls)
 	if(pThis->xcred != NULL && !pThis->xcred_is_copy && (!pThis->bIsInitiator || pThis->bHaveSess)) {
 		gnutls_certificate_free_credentials(pThis->xcred);
 	}
+	free((void*) pThis->pszCAFile);
+	free((void*) pThis->pszKeyFile);
+	free((void*) pThis->pszCertFile);
 ENDobjDestruct(nsd_gtls)
 
 

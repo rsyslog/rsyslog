@@ -78,6 +78,9 @@ struct tcpsrv_s {
 	uchar *pszLstnPortFileName;	/**< File in which the dynamic port is written */
 	uchar *pszDrvrAuthMode;	/**< auth mode of the stream driver to use */
 	uchar *pszDrvrPermitExpiredCerts;/**< current driver setting for handlign expired certs */
+	uchar *pszDrvrCAFile;
+	uchar *pszDrvrKeyFile;
+	uchar *pszDrvrCertFile;
 	uchar *pszDrvrName;	/**< name of stream driver to use */
 	uchar *pszInputName;	/**< value to be used as input name */ // TODO: REMOVE ME!!!!
 	uchar *pszOrigin;		/**< module to be used as "origin" (e.g. for pstats) */
@@ -201,6 +204,10 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetDrvrPrioritizeSAN)(tcpsrv_t *pThis, int prioritizeSan);
 	/* added v24 -- Options for TLS verify depth driver behavior, 2019-12-20 */
 	rsRetVal (*SetDrvrTlsVerifyDepth)(tcpsrv_t *pThis, int verifyDepth);
+	/* added v25 -- Options for TLS certificates, 2021-07-19 */
+	rsRetVal (*SetDrvrCAFile)(tcpsrv_t *pThis, uchar *pszMode);
+	rsRetVal (*SetDrvrKeyFile)(tcpsrv_t *pThis, uchar *pszMode);
+	rsRetVal (*SetDrvrCertFile)(tcpsrv_t *pThis, uchar *pszMode);
 ENDinterface(tcpsrv)
 #define tcpsrvCURR_IF_VERSION 25 /* increment whenever you change the interface structure! */
 /* change for v4:

@@ -113,6 +113,12 @@ CODESTARTobjDestruct(netstrms)
 		free(pThis->pszDrvrPermitExpiredCerts);
 		pThis->pszDrvrPermitExpiredCerts = NULL;
 	}
+	free((void*)pThis->pszDrvrCAFile);
+	pThis->pszDrvrCAFile = NULL;
+	free((void*)pThis->pszDrvrKeyFile);
+	pThis->pszDrvrKeyFile = NULL;
+	free((void*)pThis->pszDrvrCertFile);
+	pThis->pszDrvrCertFile = NULL;
 	if(pThis->pBaseDrvrName != NULL) {
 		free(pThis->pBaseDrvrName);
 		pThis->pBaseDrvrName = NULL;
@@ -226,6 +232,42 @@ SetDrvrPermitExpiredCerts(netstrms_t *pThis, uchar *mode)
 	ISOBJ_TYPE_assert(pThis, netstrms);
 	if (mode != NULL) {
 		CHKmalloc(pThis->pszDrvrPermitExpiredCerts = (uchar*) strdup((char*)mode));
+	}
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+SetDrvrTlsCAFile(netstrms_t *pThis, const uchar *mode)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	if (mode != NULL) {
+		CHKmalloc(pThis->pszDrvrCAFile = (uchar*) strdup((char*)mode));
+	}
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+SetDrvrTlsKeyFile(netstrms_t *pThis, const uchar *mode)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	if (mode != NULL) {
+		CHKmalloc(pThis->pszDrvrKeyFile = (uchar*) strdup((char*)mode));
+	}
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+SetDrvrTlsCertFile(netstrms_t *pThis, const uchar *mode)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	if (mode != NULL) {
+		CHKmalloc(pThis->pszDrvrCertFile = (uchar*) strdup((char*)mode));
 	}
 finalize_it:
 	RETiRet;
@@ -348,19 +390,19 @@ static const uchar *
 GetDrvrTlsCAFile(netstrms_t *pThis)
 {
 	ISOBJ_TYPE_assert(pThis, netstrms);
-	return NULL;
+	return pThis->pszDrvrCAFile;
 }
 static const uchar *
 GetDrvrTlsKeyFile(netstrms_t *pThis)
 {
 	ISOBJ_TYPE_assert(pThis, netstrms);
-	return NULL;
+	return pThis->pszDrvrKeyFile;
 }
 static const uchar *
 GetDrvrTlsCertFile(netstrms_t *pThis)
 {
 	ISOBJ_TYPE_assert(pThis, netstrms);
-	return NULL;
+	return pThis->pszDrvrCertFile;
 }
 
 /* create an instance of a netstrm object. It is initialized with default
@@ -430,6 +472,9 @@ CODESTARTobjQueryInterface(netstrms)
 	pIf->GetDrvrTlsCAFile = GetDrvrTlsCAFile;
 	pIf->GetDrvrTlsKeyFile = GetDrvrTlsKeyFile;
 	pIf->GetDrvrTlsCertFile = GetDrvrTlsCertFile;
+	pIf->SetDrvrTlsCAFile = SetDrvrTlsCAFile;
+	pIf->SetDrvrTlsKeyFile = SetDrvrTlsKeyFile;
+	pIf->SetDrvrTlsCertFile = SetDrvrTlsCertFile;
 finalize_it:
 ENDobjQueryInterface(netstrms)
 
@@ -483,5 +528,3 @@ CODESTARTmodInit
 	CHKiRet(nspollClassInit(pModInfo));
 	CHKiRet(netstrmsClassInit(pModInfo));
 ENDmodInit
-/* vi:set ai:
- */

@@ -1010,6 +1010,9 @@ CODESTARTobjDestruct(nsd_ossl)
 	if(pThis->ctx != NULL && !pThis->ctx_is_copy) {
 		SSL_CTX_free(pThis->ctx);
 	}
+	free((void*) pThis->pszCAFile);
+	free((void*) pThis->pszKeyFile);
+	free((void*) pThis->pszCertFile);
 ENDobjDestruct(nsd_ossl)
 
 

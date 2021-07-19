@@ -36,7 +36,10 @@ struct netstrms_s {
 	int DrvrChkExtendedKeyUsage;		/**< if true, verify extended key usage in certs */
 	int DrvrPrioritizeSan;		/**< if true, perform stricter checking of names in certs */
 	int DrvrVerifyDepth;		/**< Verify Depth for certificate chains */
-	uchar *pszDrvrPermitExpiredCerts;/**< current driver setting for handlign expired certs */
+	uchar *pszDrvrPermitExpiredCerts;
+	const uchar *pszDrvrCAFile;
+	const uchar *pszDrvrKeyFile;
+	const uchar *pszDrvrCertFile;
 	uchar *gnutlsPriorityString; /**< priorityString for connection */
 	permittedPeers_t *pPermPeers;/**< current driver's permitted peers */
 	rsRetVal(*fLstnInitDrvr)(netstrm_t*); /**< "late" driver-specific lstn init function NULL if none */
@@ -77,7 +80,7 @@ BEGINinterface(netstrms) /* name must also be changed in ENDinterface macro! */
 	const uchar* (*GetDrvrTlsCertFile)(netstrms_t *pThis);
 
 ENDinterface(netstrms)
-#define netstrmsCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define netstrmsCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
 
 /* prototypes */
 PROTOTYPEObj(netstrms);
