@@ -232,7 +232,7 @@ static rsRetVal curlSetup(wrkrInstanceData_t *pWrkrData);
 BEGINcreateInstance
 CODESTARTcreateInstance
 	pData->fdErrFile = -1;
-	pthread_mutex_init(&pData->mutErrFile, NULL);
+	CHKiRet(pthread_mutex_init(&pData->mutErrFile, NULL));
 	pData->caCertFile = NULL;
 	pData->myCertFile = NULL;
 	pData->myPrivKeyFile = NULL;
@@ -240,6 +240,7 @@ CODESTARTcreateInstance
 	pData->retryRulesetName = NULL;
 	pData->retryRuleset = NULL;
 	pData->rebindInterval = DEFAULT_REBIND_INTERVAL;
+finalize_it:
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
@@ -2165,10 +2166,12 @@ ENDfreeCnf
 
 BEGINdoHUP
 CODESTARTdoHUP
+	pthread_mutex_lock(&pData->mutErrFile);
 	if(pData->fdErrFile != -1) {
 		close(pData->fdErrFile);
 		pData->fdErrFile = -1;
 	}
+	pthread_mutex_unlock(&pData->mutErrFile);
 ENDdoHUP
 
 
