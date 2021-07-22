@@ -1544,6 +1544,7 @@ openFileWithoutStateFile(act_obj_t *const act)
 		const int fd = open(act->name, O_RDONLY | O_CLOEXEC);
 		if(fd >= 0) {
 			act->pStrm->iCurrOffs = lseek64(fd, 0, SEEK_END);
+			close(fd);
 			if(act->pStrm->iCurrOffs < 0) {
 				act->pStrm->iCurrOffs = 0;
 				LogError(errno, RS_RET_ERR, "imfile: could not query current "
