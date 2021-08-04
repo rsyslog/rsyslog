@@ -697,6 +697,54 @@ StreamDriver.TlsVerifyDepth
 This permits to override the equally-named module parameter on the input()
 level. For further details, see the module parameter.
 
+
+streamDriver.CAFile
+^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "global parameter", "no", "none"
+
+.. versionadded:: 8.2108.0
+
+This permits to override the DefaultNetstreamDriverCAFile global parameter on the input()
+level. For further details, see the global parameter.
+
+streamDriver.KeyFile
+^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "global parameter", "no", "none"
+
+.. versionadded:: 8.2108.0
+
+This permits to override the DefaultNetstreamDriverKeyFile global parameter on the input()
+level. For further details, see the global parameter.
+
+
+streamDriver.CertFile
+^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "global parameter", "no", "none"
+
+.. versionadded:: 8.2108.0
+
+This permits to override the DefaultNetstreamDriverCertFile global parameter on the input()
+level. For further details, see the global parameter.
+
+
 gnutlsPriorityString
 ^^^^^^^^^^^^^^^^^^^^
 
@@ -706,7 +754,6 @@ gnutlsPriorityString
    :class: parameter-table
 
    "string", "module parameter", "no", "none"
-
 .. versionadded:: 8.2106.0
 
 This permits to override the equally-named module parameter on the input()
