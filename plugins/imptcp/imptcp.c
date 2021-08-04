@@ -1721,7 +1721,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *const pNe
 	inst->pBindRuleset = NULL;
 	inst->bSuppOctetFram = cs.bSuppOctetFram;
 	inst->bKeepAlive = cs.bKeepAlive;
-	inst->iKeepAliveIntvl = cs.iKeepAliveTime;
+	inst->iKeepAliveIntvl = cs.iKeepAliveIntvl;
 	inst->iKeepAliveProbes = cs.iKeepAliveProbes;
 	inst->iKeepAliveTime = cs.iKeepAliveTime;
 	inst->bEmitMsgOnClose = cs.bEmitMsgOnClose;
@@ -1750,7 +1750,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	pSrv->bSuppOctetFram = inst->bSuppOctetFram;
 	pSrv->bSPFramingFix = inst->bSPFramingFix;
 	pSrv->bKeepAlive = inst->bKeepAlive;
-	pSrv->iKeepAliveIntvl = inst->iKeepAliveTime;
+	pSrv->iKeepAliveIntvl = inst->iKeepAliveIntvl;
 	pSrv->iKeepAliveProbes = inst->iKeepAliveProbes;
 	pSrv->iKeepAliveTime = inst->iKeepAliveTime;
 	pSrv->bEmitMsgOnClose = inst->bEmitMsgOnClose;
