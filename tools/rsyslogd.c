@@ -1749,6 +1749,7 @@ finalize_it:
  */
 DEFFUNC_llExecFunc(doHUPActions)
 {
+	dbgprintf("doHUP called\n");
 	actionCallHUPHdlr((action_t*) pData);
 	return RS_RET_OK; /* we ignore errors, we can not do anything either way */
 }
