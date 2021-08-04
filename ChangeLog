@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2108.0 (aka 2021.08) 2021-08-??
+- 2021-08-04: imptcp bugfix: keep alive interval was incorrectly set
+  The interval was accidentally set to keep alive interval. This has been
+  corrected.
+  closes https://github.com/rsyslog/rsyslog/issues/4609
 - 2021-07-08: openssl network driver bugfix: small memory leak
   Fixes a static, non-growing memory leak which existed when parameter
   "GnutTLSPriorityString" was used. This was primarily a cosmetic issue,
