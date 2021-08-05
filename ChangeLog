@@ -1,5 +1,8 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2108.0 (aka 2021.08) 2021-08-??
+- 2021-08-05: imtcp: permit to use different certificate files per input/action
+  This completes the ability to override global/default TLS settings at the imtcp
+  input() level. Support for using multiple CAs/Certs per Connection is now provided.
 - 2021-08-04: imptcp bugfix: keep alive interval was incorrectly set
   The interval was accidentally set to keep alive interval. This has been
   corrected.
