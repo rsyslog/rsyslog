@@ -93,8 +93,13 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	/* v14 -- Tls functions */
 	rsRetVal (*SetTlsVerifyDepth)(nsd_t *pThis, int verifyDepth);
 
+	/* v15 -- Tls functions */
+	rsRetVal (*SetTlsCAFile)(nsd_t *pThis, const uchar *);
+	rsRetVal (*SetTlsKeyFile)(nsd_t *pThis, const uchar *);
+	rsRetVal (*SetTlsCertFile)(nsd_t *pThis, const uchar *);
+
 ENDinterface(nsd)
-#define nsdCURR_IF_VERSION 14 /* increment whenever you change the interface structure! */
+#define nsdCURR_IF_VERSION 15 /* increment whenever you change the interface structure! */
 /* interface version 4 added GetRemAddr()
  * interface version 5 added EnableKeepAlive() -- rgerhards, 2009-06-02
  * interface version 6 changed return of CheckConnection from void to rsRetVal -- alorbach, 2012-09-06

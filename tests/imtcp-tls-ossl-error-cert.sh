@@ -10,14 +10,15 @@ global(	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
 )
 
 module(load="../plugins/imtcp/.libs/imtcp" StreamDriver.Name="ossl" StreamDriver.Mode="1")
-input(type="imtcp" port="0") # no listenPortFile here, because listener does not start up at all!
+input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 '
 # note: we do not need to generate any messages, config error occurs on startup
 startup
+sleep 5 # TODO: FIXME - just checking if we terminate too early
 shutdown_when_empty
 wait_shutdown
-content_check "Error: Certificate could not be accessed"
+content_check "Error: Certificate file could not be accessed"
 content_check "OpenSSL Error Stack:"
 exit_test

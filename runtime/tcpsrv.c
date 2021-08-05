@@ -1033,6 +1033,9 @@ tcpsrvConstructFinalize(tcpsrv_t *pThis)
 	/* Call SetDrvrPermitExpiredCerts required
 	 * when param is NULL default handling for ExpiredCerts is set! */
 	CHKiRet(netstrms.SetDrvrPermitExpiredCerts(pThis->pNS, pThis->pszDrvrPermitExpiredCerts));
+	CHKiRet(netstrms.SetDrvrTlsCAFile(pThis->pNS, pThis->pszDrvrCAFile));
+	CHKiRet(netstrms.SetDrvrTlsKeyFile(pThis->pNS, pThis->pszDrvrKeyFile));
+	CHKiRet(netstrms.SetDrvrTlsCertFile(pThis->pNS, pThis->pszDrvrCertFile));
 	if(pThis->pPermPeers != NULL)
 		CHKiRet(netstrms.SetDrvrPermPeers(pThis->pNS, pThis->pPermPeers));
 	if(pThis->gnutlsPriorityString != NULL)
@@ -1068,6 +1071,9 @@ CODESTARTobjDestruct(tcpsrv)
 	free(pThis->pszDrvrName);
 	free(pThis->pszDrvrAuthMode);
 	free(pThis->pszDrvrPermitExpiredCerts);
+	free(pThis->pszDrvrCAFile);
+	free(pThis->pszDrvrKeyFile);
+	free(pThis->pszDrvrCertFile);
 	free(pThis->ppLstn);
 	free(pThis->ppLstnPort);
 	free(pThis->pszInputName);
@@ -1397,6 +1403,42 @@ finalize_it:
 	RETiRet;
 }
 
+static rsRetVal
+SetDrvrCAFile(tcpsrv_t *const pThis, uchar *const mode)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	if (mode != NULL) {
+		CHKmalloc(pThis->pszDrvrCAFile = ustrdup(mode));
+	}
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+SetDrvrKeyFile(tcpsrv_t *pThis, uchar *mode)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	if (mode != NULL) {
+		CHKmalloc(pThis->pszDrvrKeyFile = ustrdup(mode));
+	}
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+SetDrvrCertFile(tcpsrv_t *pThis, uchar *mode)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	if (mode != NULL) {
+		CHKmalloc(pThis->pszDrvrCertFile = ustrdup(mode));
+	}
+finalize_it:
+	RETiRet;
+}
+
 
 /* set the driver's permitted peers -- rgerhards, 2008-05-19 */
 static rsRetVal
@@ -1536,6 +1578,9 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetDrvrMode = SetDrvrMode;
 	pIf->SetDrvrAuthMode = SetDrvrAuthMode;
 	pIf->SetDrvrPermitExpiredCerts = SetDrvrPermitExpiredCerts;
+	pIf->SetDrvrCAFile = SetDrvrCAFile;
+	pIf->SetDrvrKeyFile = SetDrvrKeyFile;
+	pIf->SetDrvrCertFile = SetDrvrCertFile;
 	pIf->SetDrvrName = SetDrvrName;
 	pIf->SetDrvrPermPeers = SetDrvrPermPeers;
 	pIf->SetCBIsPermittedHost = SetCBIsPermittedHost;

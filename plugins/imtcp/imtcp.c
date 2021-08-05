@@ -141,6 +141,9 @@ struct instanceConf_s {
 	int iStrmDrvrMode;
 	uchar *pszStrmDrvrAuthMode;
 	uchar *pszStrmDrvrPermitExpiredCerts;
+	uchar *pszStrmDrvrCAFile;
+	uchar *pszStrmDrvrKeyFile;
+	uchar *pszStrmDrvrCertFile;
 	uchar *gnutlsPriorityString;
 	int iStrmDrvrExtendedCertCheck;
 	int iStrmDrvrSANPreference;
@@ -177,6 +180,9 @@ struct modConfData_s {
 	uchar *pszStrmDrvrName; /* stream driver to use */
 	uchar *pszStrmDrvrAuthMode; /* authentication mode to use */
 	uchar *pszStrmDrvrPermitExpiredCerts; /* control how to handly expired certificates */
+	uchar *pszStrmDrvrCAFile;
+	uchar *pszStrmDrvrKeyFile;
+	uchar *pszStrmDrvrCertFile;
 	struct cnfarray *permittedPeers;
 	sbool configSetViaV2Method;
 	sbool bPreserveCase; /* preserve case of fromhost; true by default */
@@ -242,6 +248,9 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "streamdriver.CheckExtendedKeyPurpose", eCmdHdlrBinary, 0 },
 	{ "streamdriver.PrioritizeSAN", eCmdHdlrBinary, 0 },
 	{ "streamdriver.TlsVerifyDepth", eCmdHdlrPositiveInt, 0 },
+	{ "streamdriver.cafile", eCmdHdlrString, 0 },
+	{ "streamdriver.keyfile", eCmdHdlrString, 0 },
+	{ "streamdriver.certfile", eCmdHdlrString, 0 },
 	{ "gnutlsprioritystring", eCmdHdlrString, 0 },
 	{ "keepalive", eCmdHdlrBinary, 0 },
 	{ "keepalive.probes", eCmdHdlrNonNegInt, 0 },
@@ -353,6 +362,9 @@ createInstance(instanceConf_t **pinst)
 	inst->pszStrmDrvrName = NULL;
 	inst->pszStrmDrvrAuthMode = NULL;
 	inst->pszStrmDrvrPermitExpiredCerts = NULL;
+	inst->pszStrmDrvrCAFile = NULL;
+	inst->pszStrmDrvrKeyFile = NULL;
+	inst->pszStrmDrvrCertFile = NULL;
 	inst->gnutlsPriorityString = NULL;
 	inst->iStrmDrvrMode = loadModConf->iStrmDrvrMode;
 	inst->iStrmDrvrExtendedCertCheck = loadModConf->iStrmDrvrExtendedCertCheck;
@@ -483,6 +495,19 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 	psz = (inst->pszStrmDrvrPermitExpiredCerts == NULL)
 			? modConf->pszStrmDrvrPermitExpiredCerts : inst->pszStrmDrvrPermitExpiredCerts;
 	CHKiRet(tcpsrv.SetDrvrPermitExpiredCerts(pOurTcpsrv, psz));
+
+	psz = (inst->pszStrmDrvrCAFile == NULL)
+			? modConf->pszStrmDrvrCAFile : inst->pszStrmDrvrCAFile;
+	CHKiRet(tcpsrv.SetDrvrCAFile(pOurTcpsrv, psz));
+
+	psz = (inst->pszStrmDrvrKeyFile == NULL)
+			? modConf->pszStrmDrvrKeyFile : inst->pszStrmDrvrKeyFile;
+	CHKiRet(tcpsrv.SetDrvrKeyFile(pOurTcpsrv, psz));
+
+	psz = (inst->pszStrmDrvrCertFile == NULL)
+			? modConf->pszStrmDrvrCertFile : inst->pszStrmDrvrCertFile;
+	CHKiRet(tcpsrv.SetDrvrCertFile(pOurTcpsrv, psz));
+
 	if(pPermPeersRoot != NULL) {
 		CHKiRet(tcpsrv.SetDrvrPermPeers(pOurTcpsrv, pPermPeersRoot));
 	}
@@ -500,6 +525,7 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 	if((ustrcmp(inst->cnf_params->pszPort, UCHAR_CONSTANT("0")) == 0
 		&& inst->cnf_params->pszLstnPortFileName == NULL)
 			|| ustrcmp(inst->cnf_params->pszPort, UCHAR_CONSTANT("0")) < 0) {
+		LogMsg(0, RS_RET_OK, LOG_WARNING, "imtcp: port 0 and no port file set -> using port 514 instead");
 		CHKmalloc(inst->cnf_params->pszPort = (uchar*)strdup("514"));
 	}
 	tcpsrv.configureTCPListen(pOurTcpsrv, inst->cnf_params);
@@ -572,6 +598,12 @@ CODESTARTnewInpInst
 			inst->pszStrmDrvrAuthMode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "streamdriver.permitexpiredcerts")) {
 			inst->pszStrmDrvrPermitExpiredCerts = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "streamdriver.cafile")) {
+			inst->pszStrmDrvrCAFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "streamdriver.keyfile")) {
+			inst->pszStrmDrvrKeyFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "streamdriver.certfile")) {
+			inst->pszStrmDrvrCertFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "streamdriver.name")) {
 			inst->pszStrmDrvrName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "gnutlsprioritystring")) {
@@ -654,6 +686,9 @@ CODESTARTbeginCnfLoad
 	loadModConf->pszStrmDrvrName = NULL;
 	loadModConf->pszStrmDrvrAuthMode = NULL;
 	loadModConf->pszStrmDrvrPermitExpiredCerts = NULL;
+	loadModConf->pszStrmDrvrCAFile = NULL;
+	loadModConf->pszStrmDrvrKeyFile = NULL;
+	loadModConf->pszStrmDrvrCertFile = NULL;
 	loadModConf->permittedPeers = NULL;
 	loadModConf->configSetViaV2Method = 0;
 	loadModConf->bPreserveCase = 1; /* default to true */
@@ -736,6 +771,12 @@ CODESTARTsetModCnf
 			loadModConf->pszStrmDrvrAuthMode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.permitexpiredcerts")) {
 			loadModConf->pszStrmDrvrPermitExpiredCerts = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.cafile")) {
+			loadModConf->pszStrmDrvrCAFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.keyfile")) {
+			loadModConf->pszStrmDrvrKeyFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.certfile")) {
+			loadModConf->pszStrmDrvrCertFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.name")) {
 			loadModConf->pszStrmDrvrName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "permittedpeer")) {
@@ -855,6 +896,9 @@ CODESTARTfreeCnf
 	free(pModConf->pszStrmDrvrAuthMode);
 	free(pModConf->gnutlsPriorityString);
 	free(pModConf->pszStrmDrvrPermitExpiredCerts);
+	free(pModConf->pszStrmDrvrCAFile);
+	free(pModConf->pszStrmDrvrKeyFile);
+	free(pModConf->pszStrmDrvrCertFile);
 	if(pModConf->permittedPeers != NULL) {
 		cnfarrayContentDestruct(pModConf->permittedPeers);
 		free(pModConf->permittedPeers);
@@ -864,6 +908,9 @@ CODESTARTfreeCnf
 		free((void*)inst->pszStrmDrvrAuthMode);
 		free((void*)inst->pszStrmDrvrName);
 		free((void*)inst->pszStrmDrvrPermitExpiredCerts);
+		free((void*)inst->pszStrmDrvrCAFile);
+		free((void*)inst->pszStrmDrvrKeyFile);
+		free((void*)inst->pszStrmDrvrCertFile);
 		free((void*)inst->gnutlsPriorityString);
 		free((void*)inst->pszInputName);
 		free((void*)inst->dfltTZ);

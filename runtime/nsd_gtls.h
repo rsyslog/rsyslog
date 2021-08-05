@@ -1,6 +1,6 @@
 /* An implementation of the nsd interface for GnuTLS.
  *
- * Copyright 2008-2016 Adiscon GmbH.
+ * Copyright 2008-2021 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -41,6 +41,11 @@ struct nsd_gtls_s {
 	nsd_t *pTcp;		/**< our aggregated nsd_ptcp data */
 	uchar *pszConnectHost;	/**< hostname used for connect - may be used to
 					authenticate peer if no other name given */
+	const uchar *pszCAFile;
+	const uchar *pszKeyFile;
+	const uchar *pszCertFile;
+	gnutls_certificate_credentials_t xcred;
+	int xcred_is_copy;
 	int iMode;		/* 0 - plain tcp, 1 - TLS */
 	int bAbortConn;		/* if set, abort conncection (fatal error had happened) */
 	enum {
