@@ -256,6 +256,33 @@ SetDrvrTlsVerifyDepth(netstrm_t *pThis, int verifyDepth)
 	RETiRet;
 }
 
+static rsRetVal
+SetDrvrTlsCAFile(netstrm_t *const pThis, const uchar *const file)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	iRet = pThis->Drvr.SetTlsCAFile(pThis->pDrvrData, file);
+	RETiRet;
+}
+
+static rsRetVal
+SetDrvrTlsKeyFile(netstrm_t *const pThis, const uchar *const file)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	iRet = pThis->Drvr.SetTlsKeyFile(pThis->pDrvrData, file);
+	RETiRet;
+}
+
+static rsRetVal
+SetDrvrTlsCertFile(netstrm_t *const pThis, const uchar *const file)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	iRet = pThis->Drvr.SetTlsCertFile(pThis->pDrvrData, file);
+	RETiRet;
+}
+
 /* End of methods to shuffle autentication settings to the driver.
  * -------------------------------------------------------------------------- */
 
@@ -442,6 +469,9 @@ CODESTARTobjQueryInterface(netstrm)
 	pIf->SetDrvrCheckExtendedKeyUsage = SetDrvrCheckExtendedKeyUsage;
 	pIf->SetDrvrPrioritizeSAN = SetDrvrPrioritizeSAN;
 	pIf->SetDrvrTlsVerifyDepth = SetDrvrTlsVerifyDepth;
+	pIf->SetDrvrTlsCAFile = SetDrvrTlsCAFile;
+	pIf->SetDrvrTlsKeyFile = SetDrvrTlsKeyFile;
+	pIf->SetDrvrTlsCertFile = SetDrvrTlsCertFile;
 finalize_it:
 ENDobjQueryInterface(netstrm)
 

@@ -1233,6 +1233,7 @@ TESTS +=  \
 	sndrcv_tls_gtls_serveranon_gtls_clientanon.sh \
 	sndrcv_tls_priorityString.sh \
 	sndrcv_tls_certvalid.sh \
+	sndrcv_tls_certvalid_action_level.sh \
 	sndrcv_tls_certvalid_expired.sh \
 	sndrcv_tls_certvalid_expired_defaultmode.sh \
 	imtcp-tls-gtls-x509fingerprint-invld.sh \
@@ -1268,6 +1269,7 @@ TESTS +=  \
 	sndrcv_tls_ossl_serveranon_ossl_clientanon.sh \
 	sndrcv_tls_ossl_servercert_ossl_clientanon.sh \
 	sndrcv_tls_ossl_certvalid.sh \
+	sndrcv_tls_ossl_certvalid_action_level.sh \
 	sndrcv_tls_ossl_certvalid_expired.sh \
 	sndrcv_tls_ossl_certvalid_tlscommand.sh \
 	imtcp-tls-ossl-x509valid.sh \
@@ -1321,6 +1323,7 @@ if ENABLE_GNUTLS
 TESTS += \
          sndrcv_relp_tls.sh \
          sndrcv_relp_tls_certvalid.sh \
+	 sndrcv_tls_certvalid_action_level.sh \
          sndrcv_relp_tls_prio.sh \
 	 sndrcv_relp_tls_chainedcert.sh \
          relp_tls_certificate_not_found.sh \
@@ -2110,6 +2113,7 @@ EXTRA_DIST= \
 	sndrcv_tls_ossl_anon_ipv6.sh \
 	sndrcv_tls_ossl_anon_rebind.sh \
 	sndrcv_tls_ossl_certvalid.sh \
+	sndrcv_tls_ossl_certvalid_action_level.sh \
 	sndrcv_tls_ossl_certvalid_expired.sh \
 	sndrcv_tls_ossl_certvalid_tlscommand.sh \
 	imtcp-tls-ossl-x509valid.sh \
@@ -2645,6 +2649,7 @@ EXTRA_DIST= \
 	sndrcv_tls_anon_ipv6.sh \
 	sndrcv_tls_priorityString.sh \
 	sndrcv_tls_certvalid.sh \
+	sndrcv_tls_certvalid_action_level.sh \
 	sndrcv_tls_certvalid_expired.sh \
 	sndrcv_tls_certvalid_expired_defaultmode.sh \
 	sndrcv_tls_certless_clientonly.sh \
