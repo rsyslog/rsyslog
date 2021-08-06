@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * Copyright 2007-2018 Adiscon GmbH.
+ * Copyright 2007-2021 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -89,6 +89,9 @@ typedef struct _instanceData {
 	int iStrmDrvrExtendedCertCheck; /* verify also purpose OID in certificate extended field */
 	int iStrmDrvrSANPreference; /* ignore CN when any SAN set */
 	int iStrmTlsVerifyDepth; /**< Verify Depth for certificate chains */
+	const uchar *pszStrmDrvrCAFile;
+	const uchar *pszStrmDrvrKeyFile;
+	const uchar *pszStrmDrvrCertFile;
 	char	*target;
 	char	*address;
 	char	*device;
@@ -208,6 +211,9 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "streamdriver.CheckExtendedKeyPurpose", eCmdHdlrBinary, 0 },
 	{ "streamdriver.PrioritizeSAN", eCmdHdlrBinary, 0 },
 	{ "streamdriver.TlsVerifyDepth", eCmdHdlrPositiveInt, 0 },
+	{ "streamdriver.cafile", eCmdHdlrString, 0 },
+	{ "streamdriver.keyfile", eCmdHdlrString, 0 },
+	{ "streamdriver.certfile", eCmdHdlrString, 0 },
 	{ "resendlastmsgonreconnect", eCmdHdlrBinary, 0 },
 	{ "udp.sendtoall", eCmdHdlrBinary, 0 },
 	{ "udp.senddelay", eCmdHdlrInt, 0 },
@@ -427,6 +433,9 @@ CODESTARTfreeInstance
 	free(pData->target);
 	free(pData->address);
 	free(pData->device);
+	free((void*)pData->pszStrmDrvrCAFile);
+	free((void*)pData->pszStrmDrvrKeyFile);
+	free((void*)pData->pszStrmDrvrCertFile);
 	net.DestructPermittedPeers(&pData->pPermPeers);
 	if (pData->ratelimiter != NULL){
 		ratelimitDestruct(pData->ratelimiter);
@@ -817,6 +826,9 @@ static rsRetVal TCPSendInit(void *pvData)
 		 * when param is NULL default handling for ExpiredCerts is set! */
 		CHKiRet(netstrm.SetDrvrPermitExpiredCerts(pWrkrData->pNetstrm,
 			pData->pszStrmDrvrPermitExpiredCerts));
+		CHKiRet(netstrm.SetDrvrTlsCAFile(pWrkrData->pNetstrm, pData->pszStrmDrvrCAFile));
+		CHKiRet(netstrm.SetDrvrTlsKeyFile(pWrkrData->pNetstrm, pData->pszStrmDrvrKeyFile));
+		CHKiRet(netstrm.SetDrvrTlsCertFile(pWrkrData->pNetstrm, pData->pszStrmDrvrCertFile));
 
 		if(pData->pPermPeers != NULL) {
 			CHKiRet(netstrm.SetDrvrPermPeers(pWrkrData->pNetstrm, pData->pPermPeers));
@@ -1201,6 +1213,9 @@ setInstParamDefaults(instanceData *pData)
 	pData->iStrmDrvrExtendedCertCheck = 0;
 	pData->iStrmDrvrSANPreference = 0;
 	pData->iStrmTlsVerifyDepth = 0;
+	pData->pszStrmDrvrCAFile = NULL;
+	pData->pszStrmDrvrKeyFile = NULL;
+	pData->pszStrmDrvrCertFile = NULL;
 	pData->iRebindInterval = 0;
 	pData->bKeepAlive = 0;
 	pData->iKeepAliveProbes = 0;
@@ -1359,6 +1374,12 @@ CODESTARTnewActInst
 			} else {
 				pData->pszStrmDrvrPermitExpiredCerts = val;
 			}
+		} else if(!strcmp(actpblk.descr[i].name, "streamdriver.cafile")) {
+			pData->pszStrmDrvrCAFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "streamdriver.keyfile")) {
+			pData->pszStrmDrvrKeyFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "streamdriver.certfile")) {
+			pData->pszStrmDrvrCertFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "streamdriverpermittedpeers")) {
 			uchar *start, *str;
 			uchar *p;

@@ -86,8 +86,13 @@ BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
 
 	/* v14 -- Tls functions */
 	rsRetVal (*SetDrvrTlsVerifyDepth)(netstrm_t *pThis, int verifyDepth);
+
+	/* v15 -- Tls cert functions */
+	rsRetVal (*SetDrvrTlsCAFile)(netstrm_t *pThis, const uchar* file);
+	rsRetVal (*SetDrvrTlsKeyFile)(netstrm_t *pThis, const uchar* file);
+	rsRetVal (*SetDrvrTlsCertFile)(netstrm_t *pThis, const uchar* file);
 ENDinterface(netstrm)
-#define netstrmCURR_IF_VERSION 12 /* increment whenever you change the interface structure! */
+#define netstrmCURR_IF_VERSION 15 /* increment whenever you change the interface structure! */
 /* interface version 3 added GetRemAddr()
  * interface version 4 added EnableKeepAlive() -- rgerhards, 2009-06-02
  * interface version 5 changed return of CheckConnection from void to rsRetVal -- alorbach, 2012-09-06

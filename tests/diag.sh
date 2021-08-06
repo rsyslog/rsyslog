@@ -644,8 +644,9 @@ injectmsg() {
 
 # inject messages in INSTANCE 2 via our inject interface (imdiag)
 injectmsg2() {
-	echo injecting $2 messages
-	echo injectmsg "$1" "$2" $3 $4 | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
+	msgs=${2:-$NUMMESSAGES}
+	echo injecting $2 messages into instance 2
+	echo injectmsg "$1:-0" "$msgs" $3 $4 | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
 	# TODO: some return state checking? (does it really make sense here?)
 }
 
