@@ -555,6 +555,54 @@ https://www.openssl.org/docs/man1.1.1/man3/SSL_set_verify_depth.html
 For GnuTLS, the default is 5 - see the doc for more:
 https://www.gnutls.org/manual/gnutls.html
 
+StreamDriver.CAFile
+^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "global() default", "no", "none"
+
+.. versionadded:: 8.2108.0
+
+This permits to override the CA file set via `global()` config object at the
+per-action basis. This parameter is ignored if the netstream driver and/or its
+mode does not need or support certificates.
+
+StreamDriver.KeyFile
+^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "global() default", "no", "none"
+
+.. versionadded:: 8.2108.0
+
+This permits to override the CA file set via `global()` config object at the
+per-action basis. This parameter is ignored if the netstream driver and/or its
+mode does not need or support certificates.
+
+StreamDriver.CertFile
+^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "global() default", "no", "none"
+
+.. versionadded:: 8.2108.0
+
+This permits to override the CA file set via `global()` config object at the
+per-action basis. This parameter is ignored if the netstream driver and/or its
+mode does not need or support certificates.
+
 
 ResendLastMSGOnReconnect
 ^^^^^^^^^^^^^^^^^^^^^^^^
