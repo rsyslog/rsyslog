@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2108.0 (aka 2021.08) 2021-08-??
+- 2021-08-06: omfwd: add capability for action-specific TLS certificate settings
+  This permits to override the global definitions for TLS certificates
+  at the action() level.
+- 2021-08-06: imfile bugfix: file handle leak if "freshStartTail" was turned on
 - 2021-08-05: imtcp: permit to use different certificate files per input/action
   This completes the ability to override global/default TLS settings at the imtcp
   input() level. Support for using multiple CAs/Certs per Connection is now provided.
