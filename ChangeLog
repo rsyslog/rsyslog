@@ -1,5 +1,12 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2108.0 (aka 2021.08) 2021-08-??
+- 2021-08-09: imfile bugfix: deleteStateOnFileDelete missed some state files
+  When the log file is deleted, imfile would attempt to delete the statefile but it
+  was missing the file_id part of the statefile name. This means the statefiles were
+  only removed in the log file was less than 512 characters, because for very small
+  files the file ID hash is not created. This lead to some state files not being
+  deleted.
+  Thanks to pearseimperva for the patch.
 - 2021-08-09: imfile bugfix: hash char invalidly added in readmode != 0
   If imfile is ingesting log files with readMode set to 2 or 1, the resulting
   messages all have a '#' character at the end. This patch corrects the behaviour.
