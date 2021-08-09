@@ -13,7 +13,7 @@ module(load="../plugins/imuxsock/.libs/imuxsock"
        SysSock.name="'$RSYSLOG_DYNNAME'-testbench_socket")
 
 $template outfmt,"%msg:%\n"
-*.notice      action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
+*.=notice      action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
 logger -d -u $RSYSLOG_DYNNAME-testbench_socket test

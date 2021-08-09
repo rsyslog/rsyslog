@@ -18,7 +18,7 @@ ruleset(name="rs" queue.type="LinkedList") {
 	stop
 }
 
-*.notice call rs
+*.=notice call rs
 '
 startup
 logger -d -u $RSYSLOG_DYNNAME-testbench_socket -t RSYSLOG_TESTBENCH 'test 01234567890123456789012345678901234567890123456789012345

@@ -11,7 +11,7 @@ $OmitLocalLogging on
 $AddUnixListenSocket '$RSYSLOG_DYNNAME'-testbench_socket
 
 template(name="outfmt" type="string" string="%msg:%\n")
-*.notice      action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
+*.=notice      action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
 # send a message with trailing LF
