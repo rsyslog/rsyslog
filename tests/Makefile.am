@@ -1449,6 +1449,8 @@ TESTS += \
 	imfile-statefile-no-file_id.sh \
 	imfile-statefile-no-file_id-TO-file_id.sh \
 	imfile-statefile-directory.sh \
+	imfile-statefile-delete.sh \
+	imfile-statefile-no-delete.sh \
 	imfile-persist-state-1.sh \
 	imfile-freshStartTail1.sh \
 	imfile-freshStartTail2.sh \
@@ -2397,6 +2399,8 @@ EXTRA_DIST= \
 	imfile-statefile-no-file_id.sh \
 	imfile-statefile-no-file_id-TO-file_id.sh \
 	imfile-statefile-directory.sh \
+	imfile-statefile-delete.sh \
+	imfile-statefile-no-delete.sh \
 	imfile-persist-state-1.sh \
 	imfile-freshStartTail1.sh \
 	imfile-freshStartTail2.sh \
