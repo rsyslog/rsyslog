@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h for more specifics!
  *
  * Copyright 2011 Nathan Scott.
- * Copyright 2009-2019 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2021 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -232,7 +232,11 @@ static rsRetVal curlSetup(wrkrInstanceData_t *pWrkrData);
 BEGINcreateInstance
 CODESTARTcreateInstance
 	pData->fdErrFile = -1;
-	CHKiRet(pthread_mutex_init(&pData->mutErrFile, NULL));
+	if(pthread_mutex_init(&pData->mutErrFile, NULL) != 0) {
+		LogError(errno, RS_RET_ERR, "omelasticsearch: cannot create "
+			"error file mutex, failing this action");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
 	pData->caCertFile = NULL;
 	pData->myCertFile = NULL;
 	pData->myPrivKeyFile = NULL;
