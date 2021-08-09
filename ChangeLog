@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2108.0 (aka 2021.08) 2021-08-??
+- 2021-08-09: omelasticsearch bugfix: errorFile mutex was not consistently locked
+  Lock the file during SIGHUPs to avoid issues with concurrent accesses by
+  writeDataError().
+  Thanks to François Poirotte for the patch.
 - 2021-08-09: imudp: add socket type (IPv4 vs. 6) to input name
   Most importantly, the input name is used for stats counter names as
   well. Previously, the same name was used for IPv4 and IPv6, so we had
