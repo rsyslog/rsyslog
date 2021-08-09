@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2108.0 (aka 2021.08) 2021-08-??
+- 2021-08-09: imfile bugfix: hash char invalidly added in readmode != 0
+  If imfile is ingesting log files with readMode set to 2 or 1, the resulting
+  messages all have a '#' character at the end. This patch corrects the behaviour.
+  Note: if some external script "supported" the bug of extra hash character at
+  the end of line, it may be necessary to update them.
+  closes https://github.com/rsyslog/rsyslog/issues/4491
 - 2021-08-09: omelasticsearch bugfix: errorFile mutex was not consistently locked
   Lock the file during SIGHUPs to avoid issues with concurrent accesses by
   writeDataError().
