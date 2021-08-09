@@ -888,7 +888,7 @@ strmReadLine(strm_t *const pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF
 {
 	uchar c;
 	uchar finished;
-	const int escapeLFString_len = (escapeLFString == NULL) ? 3 : strlen((char*) escapeLFString);
+	const int escapeLFString_len = (escapeLFString == NULL) ? 4 : strlen((char*) escapeLFString);
 	DEFiRet;
 
 	assert(pThis != NULL);
