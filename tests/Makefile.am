@@ -1236,6 +1236,7 @@ TESTS +=  \
 	sndrcv_tls_certvalid_action_level.sh \
 	sndrcv_tls_certvalid_expired.sh \
 	sndrcv_tls_certvalid_expired_defaultmode.sh \
+	imtcp-tls-no-lstn-startup.sh \
 	imtcp-tls-gtls-x509fingerprint-invld.sh \
 	imtcp-tls-gtls-x509fingerprint.sh \
 	imtcp-tls-gtls-x509name-invld.sh \
@@ -2096,6 +2097,7 @@ EXTRA_DIST= \
 	imtcp-tls-input-2certs.sh \
 	imtcp-tls-basic-verifydepth.sh \
 	imtcp-tls-basic-vg.sh \
+	imtcp-tls-no-lstn-startup.sh \
 	imtcp_incomplete_frame_at_end.sh \
 	imtcp-multiport.sh \
 	imtcp-bigmessage-octetcounting.sh \
