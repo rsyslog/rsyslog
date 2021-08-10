@@ -775,6 +775,24 @@ Please note that this setting may cause frequent state file writes and
 as such may cause some performance degradation.
 
 
+ignoreOlderThan
+^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "0", "no", "none"
+
+.. versionadded:: 8.2108.0
+
+Instructs imfile to ignore a discovered file that has not been modified in the
+specified number of seconds. Once a file is discovered, the file is no longer
+ignored and new data will be read. This option is disabled (set to 0) by default.
+
+
+
 .. _Metadata:
 
 Metadata
