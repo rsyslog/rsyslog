@@ -1,5 +1,16 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2108.0 (aka 2021.08) 2021-08-??
+- 2021-08-10: imklog bugfix: invalid memory adressing, could cause abort
+  This is a regeression from commit 94c4a87. It introduced a free() call
+  using an object that was no longer valid (the main pointer to the
+  to-be-freed object) was already freed at time of use. This could
+  cause various issues, including a segfault.
+  Note: this bug was triggerred only during late phase of rsyslog
+  shutdown, so it did not affect regular operation.
+  Special thanks to github user wxiaoguang for analyzing the issue
+  and providing a draft fix proposal, on which this patch builds.
+  see also https://github.com/rsyslog/rsyslog/pull/4629
+  closes https://github.com/rsyslog/rsyslog/issues/4625
 - 2021-08-09: imfile bugfix: deleteStateOnFileDelete missed some state files
   When the log file is deleted, imfile would attempt to delete the statefile but it
   was missing the file_id part of the statefile name. This means the statefiles were
