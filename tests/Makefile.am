@@ -1474,6 +1474,13 @@ TESTS += \
 	imfile-logrotate-copytruncate.sh \
 	imfile-logrotate-nocopytruncate.sh \
 	imfile-growing-file-id.sh \
+	imfile-ignore-old-file-1.sh \
+	imfile-ignore-old-file-2.sh \
+	imfile-ignore-old-file-3.sh \
+	imfile-ignore-old-file-4.sh \
+	imfile-ignore-old-file-5.sh \
+	imfile-ignore-old-file-6.sh \
+	imfile-ignore-old-file-7.sh \
 	glbl-oversizeMsg-truncate-imfile.sh \
 	config_enabled-on.sh \
 	config_enabled-off.sh
@@ -2426,6 +2433,13 @@ EXTRA_DIST= \
 	imfile-logrotate-nocopytruncate.sh \
 	imfile-logrotate-multiple.sh \
 	imfile-growing-file-id.sh \
+	imfile-ignore-old-file-1.sh \
+	imfile-ignore-old-file-2.sh \
+	imfile-ignore-old-file-3.sh \
+	imfile-ignore-old-file-4.sh \
+	imfile-ignore-old-file-5.sh \
+	imfile-ignore-old-file-6.sh \
+	imfile-ignore-old-file-7.sh \
 	glbl-oversizeMsg-truncate-imfile.sh \
 	dynfile_invld_async.sh \
 	dynfile_invld_sync.sh \
