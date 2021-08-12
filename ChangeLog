@@ -1,5 +1,20 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2108.0 (aka 2021.08) 2021-08-??
+- 2021-08-16: impstats: add percentile metrics tracking functionality
+  Brief overview:
+  TO configure tracking percentile metrics in rainerscript:
+  User would need to define:
+    - which percentile to track, such as [p50, p99, etc.]
+    - window size - note, this correlates directly with memory usage to
+    track the percentiles.
+  To track a value, user would call built-in function `percentile_observe()` in their configurations to
+  record an integer value, and percentile metrics would be emitted every
+  impstats interval.
+  Thanks to Nelson Yen for the patch.
+- 2021-08-12: imfile: add parameter "ignoreolderthanoption"
+  instructs imfile not to ingest a file that has not been modified in the
+  specified number of seconds.
+  Thanks to github user yanjunli76 for the patch (submitted from Nelson Yen)
 - 2021-08-10: imklog bugfix: invalid memory adressing, could cause abort
   This is a regeression from commit 94c4a87. It introduced a free() call
   using an object that was no longer valid (the main pointer to the
