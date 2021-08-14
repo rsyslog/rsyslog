@@ -34,6 +34,7 @@ Note that **configurations can be built interactively** via the online
    cryprov_gcry
    dyn_stats
    lookup_tables
+   percentile_stats
 
 `Configuration file examples can be found in the rsyslog
 wiki <http://wiki.rsyslog.com/index.php/Configuration_Samples>`_. Also
