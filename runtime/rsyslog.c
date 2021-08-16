@@ -228,6 +228,8 @@ rsrtInit(const char **ppErrObj, obj_if_t *pObjIF)
 		CHKiRet(lookupClassInit());
 		if(ppErrObj != NULL) *ppErrObj = "dynstats";
 		CHKiRet(dynstatsClassInit());
+		if(ppErrObj != NULL) *ppErrObj = "perctile_stats";
+		CHKiRet(perctileClassInit());
 
 		/* dummy "classes" */
 		if(ppErrObj != NULL) *ppErrObj = "str";

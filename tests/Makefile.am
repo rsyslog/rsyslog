@@ -1000,6 +1000,7 @@ endif # ENABLE_OMRABBITMQ
 if ENABLE_IMPSTATS
 TESTS +=  \
 	impstats-hup.sh \
+	perctile-simple.sh \
 	dynstats.sh \
 	dynstats_overflow.sh \
 	dynstats_reset.sh \
@@ -1017,6 +1018,7 @@ TESTS +=  \
 	omfwd_impstats-tcp.sh
 if HAVE_VALGRIND
 TESTS +=  \
+	perctile-simple-vg.sh \
 	dynstats-vg.sh \
 	dynstats_reset-vg.sh \
 	dynstats_overflow-vg.sh \
@@ -2549,6 +2551,8 @@ EXTRA_DIST= \
 	no-dynstats.sh \
 	omfwd_impstats-udp.sh \
 	omfwd_impstats-tcp.sh \
+	perctile-simple.sh \
+	perctile-simple-vg.sh \
 	stats-json.sh \
 	stats-json-vg.sh \
 	stats-cee.sh \
