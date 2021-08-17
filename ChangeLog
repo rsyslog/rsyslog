@@ -1,4 +1,6 @@
 ----------------------------------------------------------------------------------------
+Scheduled Release 8.2110.0 (aka 2021.10) 2021-10-??
+----------------------------------------------------------------------------------------
 Scheduled Release 8.2108.0 (aka 2021.08) 2021-08-17
 - 2021-08-16: openssl tls: Improved error message output on tls failures.
   closes: https://github.com/rsyslog/rsyslog/issues/4645
