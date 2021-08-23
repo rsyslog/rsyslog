@@ -45,6 +45,15 @@ rsyslog_testbench_setup_testuser() {
 			has_testuser="${testuser}"
 			break
 		done
+		if [ -z "${has_testuser}" ]; then
+			echo "ERROR: running as root and no suiteable testuser found - skipping test"
+			echo 'You mas set a testuser via the RSYSLOG_TESTUSER environment variable'
+			exit 77
+		fi
+		echo "WARNING: making work directory world-writable, as we need this to be able to"
+		echo "         open and process files after privilege drop. This is NOT automatically"
+		echo "         undone."
+		chmod a+w .
 	fi
 
 	if [ -z "${has_testuser}" ]; then
