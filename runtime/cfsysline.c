@@ -1079,6 +1079,3 @@ cfsyslineInit(void)
 finalize_it:
 	RETiRet;
 }
-
-/* vim:set ai:
- */

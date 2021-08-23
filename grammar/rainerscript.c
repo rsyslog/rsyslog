@@ -961,12 +961,14 @@ doGetUID(struct nvlst *valnode, struct cnfparamdescr *param,
 	struct passwd *resultBuf;
 	struct passwd wrkBuf;
 	char stringBuf[2048]; /* 2048 has been proven to be large enough */
+	char errStr[1024];
 
 	cstr = es_str2cstr(valnode->val.d.estr, NULL);
-	getpwnam_r(cstr, &wrkBuf, stringBuf, sizeof(stringBuf), &resultBuf);
+	const int err_no = getpwnam_r(cstr, &wrkBuf, stringBuf, sizeof(stringBuf), &resultBuf);
 	if(resultBuf == NULL) {
-		parser_errmsg("parameter '%s': ID for user %s could not "
-		  "be found", param->name, cstr);
+		rs_strerror_r((err_no == 0) ? ENOENT : errno, errStr, sizeof(errStr));
+		parser_errmsg("parameter '%s': ID for user '%s' could not "
+		  "be found: %s", param->name, cstr, errStr);
 		r = 0;
 	} else {
 		val->val.datatype = 'N';

@@ -215,6 +215,10 @@ TESTS +=  \
 	msgvar-concurrency.sh \
 	localvar-concurrency.sh \
 	exec_tpl-concurrency.sh \
+	rscript_privdropuser.sh \
+	rscript_privdropuserid.sh \
+	rscript_privdropgroup.sh \
+	rscript_privdropgroupid.sh \
 	privdropuser.sh \
 	privdropuserid.sh \
 	privdropgroup.sh \
@@ -1917,6 +1921,10 @@ EXTRA_DIST= \
 	prop-programname.sh \
 	prop-programname-with-slashes.sh \
 	rfc5424parser.sh \
+	rscript_privdropuser.sh \
+	rscript_privdropuserid.sh \
+	rscript_privdropgroup.sh \
+	rscript_privdropgroupid.sh \
 	privdrop_common.sh \
 	privdropuser.sh \
 	privdropuserid.sh \

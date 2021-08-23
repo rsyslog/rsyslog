@@ -557,18 +557,16 @@ rsRetVal doDropPrivGid(void)
 	if(!ourConf->globals.gidDropPrivKeepSupplemental) {
 		res = setgroups(0, NULL); /* remove all supplemental group IDs */
 		if(res) {
-			rs_strerror_r(errno, (char*)szBuf, sizeof(szBuf));
-			LogError(0, RS_RET_ERR_DROP_PRIV,
-					"could not remove supplemental group IDs: %s", szBuf);
+			LogError(errno, RS_RET_ERR_DROP_PRIV,
+					"could not remove supplemental group IDs");
 			ABORT_FINALIZE(RS_RET_ERR_DROP_PRIV);
 		}
 		DBGPRINTF("setgroups(0, NULL): %d\n", res);
 	}
 	res = setgid(ourConf->globals.gidDropPriv);
 	if(res) {
-		rs_strerror_r(errno, (char*)szBuf, sizeof(szBuf));
-		LogError(0, RS_RET_ERR_DROP_PRIV,
-				"could not set requested group id: %s", szBuf);
+		LogError(errno, RS_RET_ERR_DROP_PRIV,
+				"could not set requested group id %d", ourConf->globals.gidDropPriv);
 		ABORT_FINALIZE(RS_RET_ERR_DROP_PRIV);
 	}
 	DBGPRINTF("setgid(%d): %d\n", ourConf->globals.gidDropPriv, res);
@@ -585,7 +583,7 @@ finalize_it:
  * Note that such an abort can cause damage to on-disk structures, so we should
  * re-design the "interface" in the long term. -- rgerhards, 2008-11-19
  */
-static void doDropPrivUid(int iUid)
+static void doDropPrivUid(const int iUid)
 {
 	int res;
 	uchar szBuf[1024];
@@ -601,10 +599,7 @@ static void doDropPrivUid(int iUid)
 		res = initgroups(pw->pw_name, gid);
 		DBGPRINTF("initgroups(%s, %ld): %d\n", pw->pw_name, (long) gid, res);
 	} else {
-		rs_strerror_r(errno, (char*)szBuf, sizeof(szBuf));
-		LogError(0, NO_ERRCODE,
-				"could not get username for userid %d: %s",
-				iUid, szBuf);
+		LogError(errno, NO_ERRCODE, "could not get username for userid '%d'", iUid);
 	}
 
 	res = setuid(iUid);
@@ -1447,6 +1442,3 @@ BEGINObjClassExit(rsconf, OBJ_IS_CORE_MODULE) /* class, version */
 	objRelease(datetime, CORE_COMPONENT);
 	objRelease(parser, CORE_COMPONENT);
 ENDObjClassExit(rsconf)
-
-/* vi:set ai:
- */
