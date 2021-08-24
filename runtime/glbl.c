@@ -201,6 +201,10 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "senders.keeptrack", eCmdHdlrBinary, 0 },
 	{ "inputs.timeout.shutdown", eCmdHdlrPositiveInt, 0 },
 	{ "privdrop.group.keepsupplemental", eCmdHdlrBinary, 0 },
+	{ "privdrop.group.id", eCmdHdlrPositiveInt, 0 },
+	{ "privdrop.group.name", eCmdHdlrGID, 0 },
+	{ "privdrop.user.id", eCmdHdlrPositiveInt, 0 },
+	{ "privdrop.user.name", eCmdHdlrUID, 0 },
 	{ "net.ipprotocol", eCmdHdlrGetWord, 0 },
 	{ "net.acladdhostnameonfail", eCmdHdlrBinary, 0 },
 	{ "net.aclresolvehostname", eCmdHdlrBinary, 0 },
@@ -1445,6 +1449,14 @@ glblDoneLoadCnf(void)
 			glblInputTimeoutShutdown = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "privdrop.group.keepsupplemental")) {
 			loadConf->globals.gidDropPrivKeepSupplemental = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "privdrop.group.id")) {
+			loadConf->globals.gidDropPriv = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "privdrop.group.name")) {
+			loadConf->globals.gidDropPriv = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "privdrop.user.id")) {
+			loadConf->globals.uidDropPriv = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "privdrop.user.name")) {
+			loadConf->globals.uidDropPriv = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "security.abortonidresolutionfail")) {
 			loadConf->globals.abortOnIDResolutionFail = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "net.acladdhostnameonfail")) {
