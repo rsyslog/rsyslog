@@ -661,3 +661,89 @@ The following parameters can be set:
   validly start with "z" for non-compressed data. To support such non-standard
   cases, this option can be used to globally disable support for compression on
   all inputs.
+
+privdrop.group.name
+^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "", "no", "``$PrivDropToGroup``"
+
+.. versionadded:: 8.2110.0
+
+Name of the group rsyslog should run under after startup. Please
+note that this group is looked up in the system tables. If the lookup
+fails, privileges are NOT dropped. Thus it is advisable to use the
+less convenient `privdrop.group.id` parameter. Note that all
+supplementary groups are removed by default from the process if the
+`privdrop.group.keepsupplemental` parameter is not specified.
+If the group id can be looked up, but can not be set,
+rsyslog aborts.
+
+Note: See the :doc:`privilege drop documentation<../configuration/droppriv>`
+for more details on dropping privileges on startup.
+
+privdrop.group.id
+^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "", "no", "``$PrivDropToGroupID``"
+
+.. versionadded:: 8.2110.0
+
+Numerical user ID of the group rsyslog should run under after startup.
+This is more reliable than the `privdrop.group.name` parameter, which
+relies on presence of the group name in system tables. The change to
+the ID will always happen if the ID is valid.
+
+Note: See the :doc:`privilege drop documentation<../configuration/droppriv>`
+for more details on dropping privileges on startup.
+
+privdrop.user.name
+^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "", "no", "``$PrivDropToUser``"
+
+.. versionadded:: 8.2110.0
+
+
+Name of the user rsyslog should run under after startup. Please note
+that this user is looked up in the system tables. If the lookup
+fails, privileges are NOT dropped. Thus it is advisable to use the
+less convenient `privdrop.user.id` parameter. If the user id can be
+looked up, but can not be set, rsyslog aborts.
+
+Note: See the :doc:`privilege drop documentation<../configuration/droppriv>`
+for more details on dropping privileges on startup.
+
+privdrop.user.id
+^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "", "no", "``$PrivDropToUserID``"
+
+.. versionadded:: 8.2110.0
+
+Numerical user ID of the user rsyslog should run under after startup.
+This is more reliable than the `privdrop.user.name` parameter, which
+relies on presence of the user name in system tables. The change to
+the ID will always happen if the ID is valid.
+
+Note: See the :doc:`privilege drop documentation<../configuration/droppriv>`
+for more details on dropping privileges on startup.

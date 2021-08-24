@@ -21,31 +21,11 @@ group and/or user that rsyslogd should drop to after initialization.
 Once this happens, the daemon runs without high privileges (depending,
 of course, on the permissions of the user account you specified).
 
-There is some additional information available in the `rsyslog
-wiki <http://wiki.rsyslog.com/index.php/Security#Dropping_Privileges>`_.
+A special note for Docker and other container system users: user and
+group names are usually not fully mirrored into containers. As such,
+we strongly advise to use numerical IDs instead of user or group
+names when configuring privilege drop.
 
-**Configuration Directives**:
-
--  **$PrivDropToUser**
-   Name of the user rsyslog should run under after startup. Please note
-   that this user is looked up in the system tables. If the lookup
-   fails, privileges are NOT dropped. Thus it is advisable to use the
-   less convenient $PrivDropToUserID directive. If the user id can be
-   looked up, but can not be set, rsyslog aborts.
--  **$PrivDropToUserID**
-   Much the same as $PrivDropToUser, except that a numerical user id
-   instead of a name is specified.Thus, privilege drop will always
-   happen. rsyslogd aborts.
--  **$PrivDropToGroup**
-   Name of the group rsyslog should run under after startup. Please
-   note that this user is looked up in the system tables. If the lookup
-   fails, privileges are NOT dropped. Thus it is advisable to use the
-   less convenient $PrivDropToGroupID directive. Note that all
-   supplementary groups are removed from the process if $PrivDropToGroup
-   is specified. If the group id can be looked up, but can not be set,
-   rsyslog aborts.
--  **$PrivDropToGroupID**
-   Much the same as $PrivDropToGroup, except that a numerical group id
-   instead of a name is specified. Thus, privilege drop will always
-   happen.
-
+Privilege drop is configured via the
+:doc:`global configuraton object<../rainerscript/global>` under the
+"`privilege.`" set of parameters.
