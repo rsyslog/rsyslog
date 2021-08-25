@@ -116,7 +116,8 @@ void nsd_ossl_lastOpenSSLErrorMsg(
     errno = errno_store;
 }
 
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+#ifndef ENABLE_WOLFSSL
+    #if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
 long BIO_debug_callback_ex(BIO *bio,
                            int cmd,
                            const char __attribute__((unused)) * argp,
@@ -125,10 +126,10 @@ long BIO_debug_callback_ex(BIO *bio,
                            long __attribute__((unused)) argl,
                            int ret,
                            size_t __attribute__((unused)) * processed)
-#else
+    #else
 long BIO_debug_callback(
     BIO *bio, int cmd, const char __attribute__((unused)) * argp, int argi, long __attribute__((unused)) argl, long ret)
-#endif
+    #endif
 {
     long ret2 = ret;  // Helper value to avoid printf compile errors long<>int
     long r = 1;
@@ -138,8 +139,8 @@ long BIO_debug_callback(
         case BIO_CB_FREE:
             dbgprintf("Free - %s\n", RSYSLOG_BIO_method_name(bio));
             break;
-/* Disabled due API changes for OpenSSL 1.1.0+ */
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    /* Disabled due API changes for OpenSSL 1.1.0+ */
+    #if OPENSSL_VERSION_NUMBER < 0x10100000L
         case BIO_CB_READ:
             if (bio->method->type & BIO_TYPE_DESCRIPTOR)
                 dbgprintf("read(%d,%lu) - %s fd=%d\n", RSYSLOG_BIO_number_read(bio), (unsigned long)argi,
@@ -156,14 +157,14 @@ long BIO_debug_callback(
                 dbgprintf("write(%d,%lu) - %s\n", RSYSLOG_BIO_number_written(bio), (unsigned long)argi,
                           RSYSLOG_BIO_method_name(bio));
             break;
-#else
+    #else
         case BIO_CB_READ:
             dbgprintf("read %s\n", RSYSLOG_BIO_method_name(bio));
             break;
         case BIO_CB_WRITE:
             dbgprintf("write %s\n", RSYSLOG_BIO_method_name(bio));
             break;
-#endif
+    #endif
         case BIO_CB_PUTS:
             dbgprintf("puts() - %s\n", RSYSLOG_BIO_method_name(bio));
             break;
@@ -195,6 +196,7 @@ long BIO_debug_callback(
 
     return (r);
 }
+#endif /* !ENABLE_WOLFSSL */
 
 /*
  * SNI should not be used if the hostname is a bare IP address
@@ -354,7 +356,9 @@ static rsRetVal osslInitSession(nsd_ossl_t *pThis, osslSslState_t osslType) /* ,
         }
     } else if (pThis->gnutlsPriorityString == NULL) {
 /* Allow ANON Ciphers only in ANON Mode and if no custom priority string is defined */
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
+#ifdef ENABLE_WOLFSSL
+        strncpy(pristringBuf, "ADH-AES256-GCM-SHA384:ADH-AES128-SHA", sizeof(pristringBuf));
+#elif OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
         /* NOTE: do never use: +eNULL, it DISABLES encryption! */
         strncpy(pristringBuf, "ALL:+COMPLEMENTOFDEFAULT:+ADH:+ECDH:+aNULL@SECLEVEL=0", sizeof(pristringBuf));
 #else
@@ -870,7 +874,7 @@ rsRetVal osslPostHandshakeCheck(nsd_ossl_t *pNsd) {
     if (SSL_get_shared_ciphers(pNsd->pNetOssl->ssl, szDbg, sizeof szDbg) != NULL)
         dbgprintf("osslPostHandshakeCheck: Debug Shared ciphers = %s\n", szDbg);
 
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(ENABLE_WOLFSSL)
     if (SSL_get_shared_curve(pNsd->pNetOssl->ssl, -1) == 0) {
         // This is not a failure
         LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO,
@@ -1345,7 +1349,7 @@ static rsRetVal SetGnutlsPriorityString(nsd_t *const pNsd, uchar *const gnutlsPr
     nsd_ossl_t *pThis = (nsd_ossl_t *)pNsd;
     ISOBJ_TYPE_assert(pThis, nsd_ossl);
 
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER)
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER) && !defined(ENABLE_WOLFSSL)
     sbool ApplySettings = 0;
     if ((gnutlsPriorityString != NULL && pThis->gnutlsPriorityString == NULL) ||
         (gnutlsPriorityString != NULL &&
@@ -1377,7 +1381,7 @@ static rsRetVal applyGnutlsPriorityString(nsd_ossl_t *const pThis) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, nsd_ossl);
 
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER)
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER) && !defined(ENABLE_WOLFSSL)
     /* Note: we disable unkonwn functions. The corresponding error message is
      * generated during SetGntuTLSPriorityString().
      */
@@ -1388,7 +1392,9 @@ static rsRetVal applyGnutlsPriorityString(nsd_ossl_t *const pThis) {
     }
 #endif
 
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER) && !defined(ENABLE_WOLFSSL)
 finalize_it:
+#endif
     RETiRet;
 }
 

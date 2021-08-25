@@ -1199,6 +1199,35 @@ AC_DEFUN([RSYSLOG_CHECK_OPENSSL_FOR_PROTON], [
 	fi
 ])
 
+AC_SUBST(WOLFSSL_CFLAGS)
+AC_SUBST(WOLFSSL_LIBS)
+AC_ARG_WITH(wolfssl,
+    AS_HELP_STRING([--with-wolfssl@<:@=DIR@:>@],
+		   [Enable wolfssl support @<:@default=no@:>@]),
+[
+	case "${withval}" in
+		yes)
+			PKG_CHECK_MODULES(WOLFSSL, wolfssl)
+			;;
+		no)
+			enable_wolfssl=no
+			;;
+		*)
+			WOLFSSL_CFLAGS="-I${withval}/include/wolfssl -I${withval}/include"
+			WOLFSSL_LIBS="-L${withval}/lib -lwolfssl"
+			;;
+	esac
+	if test "x$enable_wolfssl" != "xno"; then
+		enable_wolfssl=yes
+		AC_DEFINE([ENABLE_OPENSSL], [1], [Indicator that openssl is present])
+		AC_DEFINE([ENABLE_WOLFSSL], [1], [Indicator that wolfssl is present])
+	fi
+],
+[
+	enable_wolfssl=no
+])
+AM_CONDITIONAL(ENABLE_WOLFSSL, [test "x$enable_wolfssl" = "xyes"])
+
 # openssl support
 AC_ARG_ENABLE(openssl,
         [AS_HELP_STRING([--enable-openssl],[Enable openssl support @<:@default=no@:>@])],
@@ -1214,7 +1243,7 @@ if test "x$enable_openssl" = "xyes"; then
 	AC_DEFINE([ENABLE_OPENSSL], [1], [Indicator that openssl is present])
 	save_libs=$LIBS
 fi
-AM_CONDITIONAL(ENABLE_OPENSSL, test x$enable_openssl = xyes)
+AM_CONDITIONAL(ENABLE_OPENSSL, [test "x$enable_openssl" = "xyes" || test "x$enable_wolfssl" = "xyes"])
 
 AC_ARG_ENABLE(openssl_crypto_provider,
         [AS_HELP_STRING([--enable-opensslcrypto],[Enable openssl crypto provider @<:@default=no@:>@])],
@@ -3444,6 +3473,7 @@ echo "    hiredis support enabled:                  $enable_omhiredis"
 echo
 echo "---{ protocol support }---"
 echo "    openssl network stream driver enabled:    $enable_openssl"
+echo "    wolfssl network stream driver enabled:    $enable_wolfssl"
 echo "    GnuTLS network stream driver enabled:     $enable_gnutls"
 echo "    Mbed TLS network stream driver enabled:   $enable_mbedtls"
 echo "    GSSAPI Kerberos 5 support enabled:        $enable_gssapi_krb5"

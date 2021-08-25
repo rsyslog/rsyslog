@@ -379,12 +379,14 @@ static rsRetVal addListner(modConfData_t __attribute__((unused)) * modConf, inst
     // Init OpenSSL Context with DTLS_server_method
     CHKiRet(net_ossl.osslCtxInit(inst->pNetOssl, DTLS_method()));
 
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(ENABLE_WOLFSSL)
     // Init OpenSSL Cookie Callbacks
     CHKiRet(net_ossl.osslCtxInitCookie(inst->pNetOssl));
 #endif
     // Run openssl config commands in Context
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER) && !defined(ENABLE_WOLFSSL)
     CHKiRet(net_ossl.osslApplyTlscgfcmd(inst->pNetOssl, inst->tlscfgcmd));
+#endif
 
     // Init Socket
     CHKiRet(DTLSCreateSocket(inst));

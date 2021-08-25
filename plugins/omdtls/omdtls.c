@@ -255,7 +255,9 @@ BEGINactivateCnfPrePrivDrop
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
         CHKiRet(net_ossl.osslCtxInit(inst->pNetOssl, DTLS_method()));
         // Run openssl config commands in Context
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER) && !defined(ENABLE_WOLFSSL)
         CHKiRet(net_ossl.osslApplyTlscgfcmd(inst->pNetOssl, inst->tlscfgcmd));
+#endif
     }
 finalize_it:
 ENDactivateCnfPrePrivDrop

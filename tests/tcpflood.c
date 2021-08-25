@@ -136,6 +136,9 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
     #endif
 #endif
 #ifdef ENABLE_OPENSSL
+    #ifdef ENABLE_WOLFSSL
+        #include <wolfssl/options.h>
+    #endif
     #include <openssl/ssl.h>
     #include <openssl/x509v3.h>
     #include <openssl/err.h>
@@ -143,18 +146,22 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
         #include <openssl/engine.h>
     #endif
 
-    /* OpenSSL API differences */
-    #if OPENSSL_VERSION_NUMBER >= 0x10100000L
+    #ifdef ENABLE_WOLFSSL
         #define RSYSLOG_X509_NAME_oneline(X509CERT) X509_get_subject_name(X509CERT)
-        #define RSYSLOG_BIO_method_name(SSLBIO) BIO_method_name(SSLBIO)
-        #define RSYSLOG_BIO_number_read(SSLBIO) BIO_number_read(SSLBIO)
-        #define RSYSLOG_BIO_number_written(SSLBIO) BIO_number_written(SSLBIO)
     #else
-        #define RSYSLOG_X509_NAME_oneline(X509CERT) (X509CERT != NULL ? X509CERT->cert_info->subject : NULL)
-        #define RSYSLOG_BIO_method_name(SSLBIO) SSLBIO->method->name
-        #define RSYSLOG_BIO_number_read(SSLBIO) SSLBIO->num
-        #define RSYSLOG_BIO_number_written(SSLBIO) SSLBIO->num
-    #endif
+        /* OpenSSL API differences */
+        #if OPENSSL_VERSION_NUMBER >= 0x10100000L
+            #define RSYSLOG_X509_NAME_oneline(X509CERT) X509_get_subject_name(X509CERT)
+            #define RSYSLOG_BIO_method_name(SSLBIO) BIO_method_name(SSLBIO)
+            #define RSYSLOG_BIO_number_read(SSLBIO) BIO_number_read(SSLBIO)
+            #define RSYSLOG_BIO_number_written(SSLBIO) BIO_number_written(SSLBIO)
+        #else
+            #define RSYSLOG_X509_NAME_oneline(X509CERT) (X509CERT != NULL ? X509CERT->cert_info->subject : NULL)
+            #define RSYSLOG_BIO_method_name(SSLBIO) SSLBIO->method->name
+            #define RSYSLOG_BIO_number_read(SSLBIO) SSLBIO->num
+            #define RSYSLOG_BIO_number_written(SSLBIO) SSLBIO->num
+        #endif
+    #endif /* ENABLE_WOLFSSL */
 
 #endif
 
@@ -1160,12 +1167,11 @@ static int runTests(void) {
 }
 
 #if defined(ENABLE_OPENSSL)
-/* OpenSSL implementation of TLS funtions.
- * alorbach, 2018-06-11
- */
-
-
-    #if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+    /* OpenSSL implementation of TLS funtions.
+     * alorbach, 2018-06-11
+     */
+    #ifndef ENABLE_WOLFSSL
+        #if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
 long BIO_debug_callback_ex(BIO *bio,
                            int cmd,
                            const char __attribute__((unused)) * argp,
@@ -1174,10 +1180,10 @@ long BIO_debug_callback_ex(BIO *bio,
                            long __attribute__((unused)) argl,
                            int ret,
                            size_t __attribute__((unused)) * processed)
-    #else
+        #else
 long BIO_debug_callback(
     BIO *bio, int cmd, const char __attribute__((unused)) * argp, int argi, long __attribute__((unused)) argl, long ret)
-    #endif
+        #endif
 {
     long r = 1;
 
@@ -1191,8 +1197,8 @@ long BIO_debug_callback(
         case BIO_CB_FREE:
             printf("Free - %s\n", RSYSLOG_BIO_method_name(bio));
             break;
-    /* Disabled due API changes for OpenSSL 1.1.0+ */
-    #if OPENSSL_VERSION_NUMBER < 0x10100000L
+        /* Disabled due API changes for OpenSSL 1.1.0+ */
+        #if OPENSSL_VERSION_NUMBER < 0x10100000L
         case BIO_CB_READ:
             if (bio->method->type & BIO_TYPE_DESCRIPTOR) {
                 printf("read(%d,%lu) - %s fd=%d\n", RSYSLOG_BIO_number_read(bio), (unsigned long)argi,
@@ -1211,14 +1217,14 @@ long BIO_debug_callback(
                        RSYSLOG_BIO_method_name(bio));
             }
             break;
-    #else
+        #else
         case BIO_CB_READ:
             printf("read %s\n", RSYSLOG_BIO_method_name(bio));
             break;
         case BIO_CB_WRITE:
             printf("write %s\n", RSYSLOG_BIO_method_name(bio));
             break;
-    #endif
+        #endif
         case BIO_CB_PUTS:
             printf("puts() - %s\n", RSYSLOG_BIO_method_name(bio));
             break;
@@ -1250,6 +1256,7 @@ long BIO_debug_callback(
 
     return r;
 }
+    #endif /* !ENABLE_WOLFSSL */
 
 void osslLastSSLErrorMsg(int ret, SSL *ssl, const char *pszCallSource) {
     unsigned long un_error = 0;
@@ -1294,8 +1301,13 @@ int verify_callback(int status, X509_STORE_CTX *store) {
         printf("tcpflood: verify_callback certificate validation failed!\n");
 
         X509 *cert = X509_STORE_CTX_get_current_cert(store);
+        SSL *ssl = X509_STORE_CTX_get_ex_data(store, SSL_get_ex_data_X509_STORE_CTX_idx());
         int depth = X509_STORE_CTX_get_error_depth(store);
+    #ifdef ENABLE_WOLFSSL
+        int err = SSL_get_verify_result(ssl);
+    #else
         int err = X509_STORE_CTX_get_error(store);
+    #endif
         X509_NAME_oneline(X509_get_issuer_name(cert), szdbgdata1, sizeof(szdbgdata1));
         X509_NAME_oneline(RSYSLOG_X509_NAME_oneline(cert), szdbgdata2, sizeof(szdbgdata2));
 
@@ -1327,16 +1339,24 @@ int verify_callback(int status, X509_STORE_CTX *store) {
 /* global init OpenSSL
  */
 static void initTLS(const SSL_METHOD *method) {
-    #if OPENSSL_VERSION_NUMBER < 0x10100000L
-    /* Setup OpenSSL library  < 1.1.0 */
+    #ifdef ENABLE_WOLFSSL
     if (!SSL_library_init()) {
     #else
+        #if OPENSSL_VERSION_NUMBER < 0x10100000L
+    /* Setup OpenSSL library  < 1.1.0 */
+    if (!SSL_library_init()) {
+        #else
     /* Setup OpenSSL library >= 1.1.0 with system default settings */
     if (OPENSSL_init_ssl(0, NULL) == 0) {
+        #endif
     #endif
         printf("tcpflood: error openSSL initialization failed!\n");
         exit(1);
     }
+
+    #if defined(ENABLE_WOLFSSL) && defined(DEBUG_WOLFSSL)
+    wolfSSL_Debugging_ON();
+    #endif
 
     /* Load readable error strings */
     SSL_load_error_strings();
@@ -1365,7 +1385,9 @@ static void initTLS(const SSL_METHOD *method) {
             " Is the file at the right path? And do we have the permissions?");
         exit(1);
     }
+    #ifndef ENABLE_WOLFSSL
     SSL_CTX_set_ecdh_auto(ctx, 1);
+    #endif
     if (SSL_CTX_use_certificate_chain_file(ctx, tlsCertFile) != 1) {
         printf("tcpflood: error cert file could not be accessed -- have you mixed up key and certificate?\n");
         printf("If in doubt, try swapping the files in -z/-Z\n");
@@ -1388,7 +1410,7 @@ static void initTLS(const SSL_METHOD *method) {
 
     /* Check for Custom Config string */
     if (customConfig != NULL) {
-    #if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER)
+    #if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER) && !defined(ENABLE_WOLFSSL)
         char *pCurrentPos;
         char *pNextPos;
         char *pszCmd;
@@ -1511,12 +1533,14 @@ static void initTLSSess(const int i) {
     }
 
     if (tlsLogLevel > 0) {
-        /* Set debug Callback for client BIO as well! */
-    #if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+    #ifndef ENABLE_WOLFSSL
+            /* Set debug Callback for client BIO as well! */
+        #if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
         BIO_set_callback_ex(bio_client, BIO_debug_callback_ex);
-    #else
+        #else
         BIO_set_callback(bio_client, BIO_debug_callback);
-    #endif  // OPENSSL_VERSION_NUMBER >= 0x10100000L
+        #endif  // OPENSSL_VERSION_NUMBER >= 0x10100000L
+    #endif
     }
 
     BIO_set_nbio(bio_client, handshakeOnly ? 1 : 0);
@@ -1669,12 +1693,14 @@ static void initDTLSSess(void) {
 
 
     if (tlsLogLevel > 0) {
-        /* Set debug Callback for client BIO as well! */
-    #if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+    #ifndef ENABLE_WOLFSSL
+            /* Set debug Callback for client BIO as well! */
+        #if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
         BIO_set_callback_ex(bio_client, BIO_debug_callback_ex);
-    #else
+        #else
         BIO_set_callback(bio_client, BIO_debug_callback);
-    #endif  // OPENSSL_VERSION_NUMBER >= 0x10100000L
+        #endif  // OPENSSL_VERSION_NUMBER >= 0x10100000L
+    #endif
     }
 
     /* Blocking socket */
@@ -2307,7 +2333,9 @@ int main(int argc, char *argv[]) {
         }
         /* Create main CTX Object. Use SSLv23_method for < Openssl 1.1.0 and TLS_method for newer versions! */
 #if defined(ENABLE_OPENSSL)
-    #if OPENSSL_VERSION_NUMBER < 0x10100000L
+    #ifdef ENABLE_WOLFSSL
+        initTLS(TLSv1_2_method());
+    #elif OPENSSL_VERSION_NUMBER < 0x10100000L
         initTLS(SSLv23_method());
     #else
         initTLS(TLS_method());

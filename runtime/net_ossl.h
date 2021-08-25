@@ -25,6 +25,9 @@
 #define INCLUDED_NET_OSSL_H
 
 /* Needed OpenSSL Includes */
+#ifdef ENABLE_WOLFSSL
+    #include <wolfssl/options.h>
+#endif
 #include <openssl/ssl.h>
 #include <openssl/x509v3.h>
 #include <openssl/err.h>
@@ -81,7 +84,7 @@ BEGINinterface(net_ossl) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*Construct)(net_ossl_t **ppThis);
     rsRetVal (*Destruct)(net_ossl_t **ppThis);
     rsRetVal (*osslCtxInit)(net_ossl_t *pThis, const SSL_METHOD *method);
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(ENABLE_WOLFSSL)
     rsRetVal (*osslCtxInitCookie)(net_ossl_t *pThis);
 #endif  // OPENSSL_VERSION_NUMBER >= 0x10100000L
     rsRetVal (*osslInitEngine)(net_ossl_t *pThis);
@@ -90,7 +93,7 @@ BEGINinterface(net_ossl) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*osslPeerfingerprint)(net_ossl_t *pThis, X509 *certpeer, uchar *fromHostIP);
     X509 *(*osslGetpeercert)(net_ossl_t *pThis, SSL *ssl, uchar *fromHostIP);
     rsRetVal (*osslChkpeercertvalidity)(net_ossl_t *pThis, SSL *ssl, uchar *fromHostIP);
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER)
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER) && !defined(ENABLE_WOLFSSL)
     rsRetVal (*osslApplyTlscgfcmd)(net_ossl_t *pThis, uchar *tlscfgcmd);
 #endif  // OPENSSL_VERSION_NUMBER >= 0x10002000L
     void (*osslSetBioCallback)(BIO *conn);
@@ -104,16 +107,20 @@ ENDinterface(net_ossl)
 // ------------------------------------------------------
 
 /* OpenSSL API differences */
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#ifdef ENABLE_WOLFSSL
     #define RSYSLOG_X509_NAME_oneline(X509CERT) X509_get_subject_name(X509CERT)
-    #define RSYSLOG_BIO_method_name(SSLBIO) BIO_method_name(SSLBIO)
-    #define RSYSLOG_BIO_number_read(SSLBIO) BIO_number_read(SSLBIO)
-    #define RSYSLOG_BIO_number_written(SSLBIO) BIO_number_written(SSLBIO)
 #else
-    #define RSYSLOG_X509_NAME_oneline(X509CERT) (X509CERT != NULL ? X509CERT->cert_info->subject : NULL)
-    #define RSYSLOG_BIO_method_name(SSLBIO) SSLBIO->method->name
-    #define RSYSLOG_BIO_number_read(SSLBIO) SSLBIO->num
-    #define RSYSLOG_BIO_number_written(SSLBIO) SSLBIO->num
+    #if OPENSSL_VERSION_NUMBER >= 0x10100000L
+        #define RSYSLOG_X509_NAME_oneline(X509CERT) X509_get_subject_name(X509CERT)
+        #define RSYSLOG_BIO_method_name(SSLBIO) BIO_method_name(SSLBIO)
+        #define RSYSLOG_BIO_number_read(SSLBIO) BIO_number_read(SSLBIO)
+        #define RSYSLOG_BIO_number_written(SSLBIO) BIO_number_written(SSLBIO)
+    #else
+        #define RSYSLOG_X509_NAME_oneline(X509CERT) (X509CERT != NULL ? X509CERT->cert_info->subject : NULL)
+        #define RSYSLOG_BIO_method_name(SSLBIO) SSLBIO->method->name
+        #define RSYSLOG_BIO_number_read(SSLBIO) SSLBIO->num
+        #define RSYSLOG_BIO_number_written(SSLBIO) SSLBIO->num
+    #endif
 #endif
 
 /*-----------------------------------------------------------------------------*/

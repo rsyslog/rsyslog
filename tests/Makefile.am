@@ -3508,9 +3508,15 @@ tcpflood_CPPFLAGS += $(GNUTLS_CFLAGS)
 tcpflood_LDADD += $(GNUTLS_LIBS)
 endif
 if ENABLE_OPENSSL
+if ENABLE_WOLFSSL
+tcpflood_CFLAGS += $(WOLFSSL_CFLAGS)
+tcpflood_CPPFLAGS += $(WOLFSSL_CFLAGS)
+tcpflood_LDADD += $(WOLFSSL_LIBS)
+else
 tcpflood_CFLAGS += $(OPENSSL_CFLAGS)
 tcpflood_CPPFLAGS += $(OPENSSL_CFLAGS)
 tcpflood_LDADD += $(OPENSSL_LIBS)
+endif
 endif
 
 minitcpsrv_SOURCES = minitcpsrvr.c
