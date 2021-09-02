@@ -694,17 +694,29 @@ content_check() {
 	else
 		grep_opt=-F
 	fi
+	if [ "$1" == "--output-results" ]; then
+		output_results="yes"
+		shift
+	else
+		output_results="no"
+	fi
 	file=${2:-$RSYSLOG_OUT_LOG}
 	if ! grep -q  $grep_opt -- "$1" < "${file}"; then
 	    if [ "$check_only" == "yes" ]; then
 		printf 'content_check did not yet succeed\n'
-	    return 1
+		return 1
 	    fi
 	    printf '\n============================================================\n'
 	    printf 'FILE "%s" content:\n' "$file"
 	    cat -n ${file}
 	    printf 'FAIL: content_check failed to find "%s"\n' "$1"
 	    error_exit 1
+	else
+	    if [ "$output_results" == "yes" ]; then
+		# Output GREP results
+		echo "SUCCESS: content_check found results for '$1'\n"
+		grep "$1" "${file}"
+	    fi
 	fi
 	if [ "$check_only" == "yes" ]; then
 	    return 0

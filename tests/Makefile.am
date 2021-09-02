@@ -201,6 +201,8 @@ TESTS +=  \
 	invalid_nested_include.sh \
 	omfwd-tls-invalid-permitExpiredCerts.sh \
 	omfwd-keepalive.sh \
+	omfwd_fast.sh \
+	omfwd_fast-tcp.sh \
 	omusrmsg-noabort-legacy.sh \
 	omusrmsg-errmsg-no-params.sh \
 	omusrmsg-noabort.sh \
@@ -1874,6 +1876,8 @@ EXTRA_DIST= \
 	stop-msgvar.sh \
 	omfwd-tls-invalid-permitExpiredCerts.sh \
 	omfwd-keepalive.sh \
+	omfwd_fast.sh \
+	omfwd_fast-tcp.sh \
 	omfile_hup-vg.sh \
 	gzipwr_hup-vg.sh \
 	omusrmsg-noabort-legacy.sh \
