@@ -1840,6 +1840,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	pNew->gnutlsPriorityString = pThis->gnutlsPriorityString;
 	pNew->DrvrVerifyDepth = pThis->DrvrVerifyDepth;
 	pNew->dataTypeCheck = pThis->dataTypeCheck;
+	pNew->bSANpriority = pThis->bSANpriority;
 	pNew->pszCertFile = pThis->pszCertFile;
 	pNew->pszKeyFile = pThis->pszKeyFile;
 	pNew->xcred = pThis->xcred; // TODO: verify once again; xcred is read only at this stage
