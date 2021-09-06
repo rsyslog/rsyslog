@@ -1,5 +1,8 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2110.0 (aka 2021.10) 2021-10-??
+- 2021-09-06: gnutls driver: SAN priority did not work correctly on server side
+  PrioritizeSAN was not propagated when accepting a new connection, this is now fixed.
+  Thanks to Attila Lakatos for the patch.
 - 2021-08-24: config: implement script-equavalent for $PrivDrop* statements
   closes https://github.com/rsyslog/rsyslog/issues/891
 ----------------------------------------------------------------------------------------
