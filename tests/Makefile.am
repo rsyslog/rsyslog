@@ -363,6 +363,7 @@ TESTS +=  \
 	dircreate_off.sh \
 	imuxsock_legacy.sh \
 	imuxsock_logger.sh \
+	imuxsock_logger_ratelimit.sh \
 	imuxsock_logger_ruleset.sh \
 	imuxsock_logger_ruleset_ratelimit.sh \
 	imuxsock_logger_err.sh \
@@ -2479,6 +2480,7 @@ EXTRA_DIST= \
 	imuxsock_legacy.sh \
 	imuxsock_logger_parserchain.sh \
 	imuxsock_logger.sh \
+	imuxsock_logger_ratelimit.sh \
 	imuxsock_logger_ruleset.sh \
 	imuxsock_logger_ruleset_ratelimit.sh \
 	imuxsock_logger_err.sh \

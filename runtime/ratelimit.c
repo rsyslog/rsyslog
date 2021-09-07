@@ -246,8 +246,8 @@ ratelimitMsg(ratelimit_t *__restrict__ const ratelimit, smsg_t *pMsg, smsg_t **p
 				DBGPRINTF("Message discarded, parsing error %d\n", localRet);
 				ABORT_FINALIZE(RS_RET_DISCARDMSG);
 			}
-			severity = pMsg->iSeverity;
 		}
+		severity = pMsg->iSeverity;
 	}
 
 	/* Only the messages having severity level at or below the
