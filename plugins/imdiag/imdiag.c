@@ -316,6 +316,7 @@ static rsRetVal
 waitMainQEmpty(tcps_sess_t *pSess)
 {
 	int iPrint = 0;
+	int iPrintVerbosity = 500; // 500 default
 	int nempty = 0;
 	static unsigned lastOverallQueueSize = 1;
 	DEFiRet;
@@ -341,7 +342,7 @@ waitMainQEmpty(tcps_sess_t *pSess)
 		}
 		if(nempty > max_empty_checks)
 			break;
-		if(iPrint++ % 500 == 0)
+		if(iPrint++ % iPrintVerbosity == 0)
 			DBGPRINTF("imdiag sleeping, wait queues drain, "
 				"curr size %d, nempty %d\n",
 				OverallQueueSize, nempty);

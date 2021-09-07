@@ -741,8 +741,15 @@ static rsRetVal qDeqLinkedList(qqueue_t *pThis, smsg_t **ppMsg)
 	DEFiRet;
 
 	pEntry = pThis->tVars.linklist.pDeqRoot;
-	*ppMsg = pEntry->pMsg;
-	pThis->tVars.linklist.pDeqRoot = pEntry->pNext;
+	if (pEntry != NULL) {
+		*ppMsg = pEntry->pMsg;
+		pThis->tVars.linklist.pDeqRoot = pEntry->pNext;
+	} else {
+		/* Check and return NULL for linklist.pDeqRoot */
+		dbgprintf("qDeqLinkedList: pDeqRoot is NULL!\n");
+		*ppMsg = NULL;
+		pThis->tVars.linklist.pDeqRoot = NULL;
+	}
 
 	RETiRet;
 }
@@ -1885,8 +1892,20 @@ DequeueConsumableElements(qqueue_t *const pThis, wti_t *const pWti,
 	/* it is sufficient to persist only when the bulk of work is done */
 	qqueueChkPersist(pThis, nDequeued+nDiscarded+nDeleted);
 
-	DBGOPRINT((obj_t*) pThis, "dequeued %d consumable elements, szlog %d sz phys %d\n",
-		nDequeued, getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
+	/* If messages where DISCARDED, we need to substract them from the OverallQueueSize */
+#	ifdef ENABLE_IMDIAG
+#		ifdef HAVE_ATOMIC_BUILTINS
+			ATOMIC_SUB(&iOverallQueueSize, nDiscarded, &NULL);
+#		else
+			iOverallQueueSize -= nDiscarded; /* racy, but we can't wait for a mutex! */
+#		endif
+	DBGOPRINT((obj_t*) pThis, "dequeued %d discarded %d QueueSize %d consumable elements, szlog %d sz phys %d\n",
+		nDequeued, nDiscarded, iOverallQueueSize, getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
+#	else
+	DBGOPRINT((obj_t*) pThis, "dequeued %d discarded %d consumable elements, szlog %d sz phys %d\n",
+		nDequeued, nDiscarded, getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
+#	endif
+
 	pWti->batch.nElem = nDequeued;
 	pWti->batch.nElemDeq = nDequeued + nDiscarded;
 	pWti->batch.deqID = getNextDeqID(pThis);
