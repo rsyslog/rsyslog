@@ -1,5 +1,34 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2110.0 (aka 2021.10) 2021-10-??
+- 2021-09-07: testbench bugfix: privdrop tests under root user did not work
+  When running under root, the privdrop tests did not properly work. This
+  patch fixes the issue and skips test where necessary.
+  This also includes some modernization of the related tests.
+  closes https://github.com/rsyslog/rsyslog/issues/4619
+- 2021-09-07: core/ratelimiting: fix rate limiting for already parsed messages
+  Rate limiting may not have worked if the considered message had already
+  been parsed (not having NEEDS_PARSING in msgFlags).
+  This affects also imuxsock in its default configuration
+  (useSpecialParser="true" and ratelimit.severity="1")
+- 2021-09-07: core bugfix: use of property $wday terminates string
+  When $wday is used inside a template, all template parts after it
+  are ignored. For exmaple:
+  template(name="json_filename" type="string" string="/var/log/%$wday%.log")
+  would generate something like "/var/log/0" - the ".log" part would be
+  missing. For the same reason, $wday can not reliably checked in script
+  filters.
+  Thanks to Alain Thivillon for reporting the bug and providing an
+  excellent analysis, which essentiellay was exactly this fix here.
+  closes https://github.com/rsyslog/rsyslog/issues/4670
+- 2021-09-07: core/queue bugfix: potential misadressing when queue discarded messages
+  When a discard mark was set, the queue was very busy and discarded messages, a
+  NULL pointer access could happen. Depending on circumstances, several problems
+  could occur, including a SEGFAULT. This is now fixed.
+  closes: https://github.com/rsyslog/rsyslog/issues/4437
+- 2021-09-07: imdiga bugfix: iOverallQueueSize calculation could be incorrect
+  This issue only affects testbench and rsyslog development debugging. The active
+  messages counter, used for synchronizing test steps, went wrong when the queue
+  discarded messages on it's consumer thread. Now fixed.
 - 2021-09-06: gnutls driver: SAN priority did not work correctly on server side
   PrioritizeSAN was not propagated when accepting a new connection, this is now fixed.
   Thanks to Attila Lakatos for the patch.
