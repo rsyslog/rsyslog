@@ -3790,7 +3790,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 				RET_OUT_OF_MEMORY;
 			} else {
 				*pbMustBeFreed = 1;
-				bufLen = 2;
+				bufLen = 1;
 			}
 			break;
 		case PROP_SYS_WDAY_UTC:
@@ -3798,7 +3798,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 				RET_OUT_OF_MEMORY;
 			} else {
 				*pbMustBeFreed = 1;
-				bufLen = 2;
+				bufLen = 1;
 			}
 			break;
 		case PROP_SYS_NOW_UXTIMESTAMP:
