@@ -1606,13 +1606,13 @@ presort() {
 
 #START: ext kafka config
 #dep_cache_dir=$(readlink -f .dep_cache)
-export RS_ZK_DOWNLOAD=apache-zookeeper-3.6.2-bin.tar.gz
+export RS_ZK_DOWNLOAD=apache-zookeeper-3.6.3-bin.tar.gz
 dep_cache_dir=$(pwd)/.dep_cache
-dep_zk_url=https://downloads.apache.org/zookeeper/zookeeper-3.6.2/$RS_ZK_DOWNLOAD
+dep_zk_url=https://downloads.apache.org/zookeeper/zookeeper-3.6.3/$RS_ZK_DOWNLOAD
 dep_zk_cached_file=$dep_cache_dir/$RS_ZK_DOWNLOAD
 
-export RS_KAFKA_DOWNLOAD=kafka_2.12-2.7.0.tgz
-dep_kafka_url=http://www-us.apache.org/dist/kafka/2.7.0/kafka_2.12-2.7.0.tgz
+export RS_KAFKA_DOWNLOAD=kafka_2.13-2.8.0.tgz
+dep_kafka_url=https://downloads.apache.org/kafka/2.8.0/kafka_2.13-2.8.0.tgz
 dep_kafka_cached_file=$dep_cache_dir/$RS_KAFKA_DOWNLOAD
 
 if [ -z "$ES_DOWNLOAD" ]; then
