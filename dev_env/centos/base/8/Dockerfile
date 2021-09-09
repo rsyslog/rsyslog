@@ -11,6 +11,7 @@ RUN	dnf -y install epel-release && \
 	dnf -y update
 
 RUN	dnf -y install \
+	apr-util-devel \
 	autoconf \
 	automake \
 	bison \
@@ -85,10 +86,10 @@ ENV	TCL_LIB_SPEC="-L/usr/lib64 -ltcl8.5" \
 
 # create dependency cache
 RUN	mkdir /local_dep_cache && \
-	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch-5.6.9.tar.gz  && \
-	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz && \
-	wget -nv https://downloads.apache.org/zookeeper/zookeeper-3.6.2/apache-zookeeper-3.6.2-bin.tar.gz -O /local_dep_cache/apache-zookeeper-3.6.2-bin.tar.gz  && \
-	wget -nv http://www-us.apache.org/dist/kafka/2.7.0/kafka_2.12-2.7.0.tgz -O /local_dep_cache/kafka_2.12-2.7.0.tgz
+	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch-5.6.9.tar.gz
+RUN	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz
+RUN	wget -nv https://dlcdn.apache.org/zookeeper/zookeeper-3.6.3/apache-zookeeper-3.6.3-bin.tar.gz -O /local_dep_cache/apache-zookeeper-3.6.2-bin.tar.gz
+RUN	wget -nv https://www.apache.org/dyn/closer.cgi?path=/kafka/2.8.0/kafka_2.13-2.8.0.tgz -O /local_dep_cache/kafka_2.12-2.7.0.tgz
 # tell tests which are the newester versions, so they can be checked without the need
 # to adjust test sources.
 #ENV	ELASTICSEARCH_NEWEST="elasticsearch-6.3.1.tar.gz"
