@@ -3,6 +3,7 @@ USER root
 RUN yum -y install  \
    python-dev \
    python-pip
+RUN pip install --upgrade pip
 RUN pip install buildbot-worker buildbot-slave
 RUN groupadd -r buildbot && useradd -r -g buildbot buildbot
 RUN mkdir /worker && chown buildbot:buildbot /worker
