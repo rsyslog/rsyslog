@@ -223,6 +223,27 @@ The following metadata will be injected into the following properties:
 - `$!metadata!httpheaders`: http header data will be injected here as key value pairs. All header names will automatically be lowercased
   for case-insensitive access.
 
+
+basicAuthFile
+^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "mandatory", "format", "default"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "no", "none", ""
+
+Enables access control to this endpoint using http basic authentication. Option is disabled by default.
+To enable it, set this option to a `htpasswd file`, which can be generated using a standard `htpasswd` tool.
+
+See also:
+
+- `HTTP Authorization <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Authorization>`_
+- `HTTP Basic Authentication <https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication#basic_authentication_scheme>`_
+- `htpasswd utility <https://httpd.apache.org/docs/2.4/programs/htpasswd.html>`_
+
+
 .. _imhttp-statistic-counter:
 
 Statistic Counter
