@@ -924,6 +924,11 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 
+	/* We need to copy Remote Hostname here for error logging purposes */
+	if((pThis->pRemHostName = malloc(strlen((char*)host)+1)) == NULL)
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	memcpy(pThis->pRemHostName, host, strlen((char*)host)+1);
+
 	if((pThis->sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1) {
 		LogError(errno, RS_RET_IO_ERROR, "cannot bind socket for %s:%s",
 			host, port);

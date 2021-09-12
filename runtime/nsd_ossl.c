@@ -614,14 +614,15 @@ finalize_it:
 static rsRetVal
 osslChkPeerFingerprint(nsd_ossl_t *pThis, X509 *pCert)
 {
+	DEFiRet;
 	unsigned int n;
+	uchar *fromHostIP = NULL;
 	uchar fingerprint[20 /*EVP_MAX_MD_SIZE**/];
 	size_t size;
 	cstr_t *pstrFingerprint = NULL;
 	int bFoundPositiveMatch;
 	permittedPeers_t *pPeer;
 	const EVP_MD *fdig = EVP_sha1();
-	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, nsd_ossl);
 
@@ -651,17 +652,21 @@ osslChkPeerFingerprint(nsd_ossl_t *pThis, X509 *pCert)
 	if(!bFoundPositiveMatch) {
 		dbgprintf("osslChkPeerFingerprint: invalid peer fingerprint, not permitted to talk to it\n");
 		if(pThis->bReportAuthErr == 1) {
+			nsd_ptcp.GetRemoteHName((nsd_t*)pThis->pTcp, &fromHostIP);
 			errno = 0;
 			LogMsg(0, RS_RET_INVALID_FINGERPRINT, LOG_WARNING,
-				"nsd_ossl:TLS session terminated with remote syslog server: "
+				"nsd_ossl:TLS session terminated with remote syslog server '%s': "
 				"Fingerprint check failed, not permitted to talk to %s",
-					cstrGetSzStrNoNULL(pstrFingerprint));
+				fromHostIP, cstrGetSzStrNoNULL(pstrFingerprint));
 			pThis->bReportAuthErr = 0;
 		}
 		ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
 	}
 
 finalize_it:
+	if (fromHostIP != NULL) {
+		free(fromHostIP);
+	}
 	if(pstrFingerprint != NULL)
 		cstrDestruct(&pstrFingerprint);
 	RETiRet;
@@ -793,8 +798,9 @@ finalize_it:
 static rsRetVal
 osslChkPeerID(nsd_ossl_t *pThis)
 {
-	X509* certpeer;
 	DEFiRet;
+	X509* certpeer;
+	uchar *fromHostIP = NULL;
 
 	ISOBJ_TYPE_assert(pThis, nsd_ossl);
 
@@ -804,9 +810,10 @@ osslChkPeerID(nsd_ossl_t *pThis)
 		if(pThis->bReportAuthErr == 1) {
 			errno = 0;
 			pThis->bReportAuthErr = 0;
+			nsd_ptcp.GetRemoteHName((nsd_t*)pThis->pTcp, &fromHostIP);
 			LogMsg(0, RS_RET_TLS_NO_CERT, LOG_WARNING,
-				"nsd_ossl:TLS session terminated with remote syslog server: "
-				"Peer check failed, peer did not provide a certificate.");
+				"nsd_ossl:TLS session terminated with remote syslog server '%s': "
+				"Peer check failed, peer did not provide a certificate.", fromHostIP);
 		}
 		ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
 	}
@@ -820,6 +827,9 @@ osslChkPeerID(nsd_ossl_t *pThis)
 	}
 
 finalize_it:
+	if (fromHostIP != NULL) {
+		free(fromHostIP);
+	}
 	RETiRet;
 }
 
@@ -831,32 +841,37 @@ osslChkPeerCertValidity(nsd_ossl_t *pThis)
 {
 	DEFiRet;
 	int iVerErr = X509_V_OK;
+	uchar *fromHostIP = NULL;
 
 	ISOBJ_TYPE_assert(pThis, nsd_ossl);
 
 	iVerErr = SSL_get_verify_result(pThis->ssl);
 	if (iVerErr != X509_V_OK) {
+		nsd_ptcp.GetRemoteHName((nsd_t*)pThis->pTcp, &fromHostIP);
 		if (iVerErr == X509_V_ERR_CERT_HAS_EXPIRED) {
 			if (pThis->permitExpiredCerts == OSSL_EXPIRED_DENY) {
 				LogMsg(0, RS_RET_CERT_EXPIRED, LOG_INFO,
-					"nsd_ossl:TLS session terminated with remote syslog server: "
+					"nsd_ossl:TLS session terminated with remote syslog server '%s': "
 					"not permitted to talk to peer, "
-					"Certificate expired: %s", X509_verify_cert_error_string(iVerErr));
+					"Certificate expired: %s",
+					fromHostIP, X509_verify_cert_error_string(iVerErr));
 				ABORT_FINALIZE(RS_RET_CERT_EXPIRED);
 			} else if (pThis->permitExpiredCerts == OSSL_EXPIRED_WARN) {
 				LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
-					"nsd_ossl:CertValidity check - warning talking to peer: "
+					"nsd_ossl:CertValidity check - warning talking to peer '%s': "
 					"certificate expired: %s",
-					X509_verify_cert_error_string(iVerErr));
+					fromHostIP, X509_verify_cert_error_string(iVerErr));
 			} else {
-				dbgprintf("osslChkPeerCertValidity: talking to peer: certificate expired: %s\n",
-					X509_verify_cert_error_string(iVerErr));
+				dbgprintf("osslChkPeerCertValidity: talking to peer '%s': "
+					"certificate expired: %s\n",
+					fromHostIP, X509_verify_cert_error_string(iVerErr));
 			}/* Else do nothing */
 		} else {
 			LogMsg(0, RS_RET_CERT_INVALID, LOG_INFO,
-				"nsd_ossl:TLS session terminated with remote syslog server: "
+				"nsd_ossl:TLS session terminated with remote syslog server '%s': "
 				"not permitted to talk to peer, "
-				"Certificate validation failed: %s", X509_verify_cert_error_string(iVerErr));
+				"Certificate validation failed: %s",
+				fromHostIP, X509_verify_cert_error_string(iVerErr));
 			ABORT_FINALIZE(RS_RET_CERT_INVALID);
 		}
 	} else {
@@ -865,6 +880,9 @@ osslChkPeerCertValidity(nsd_ossl_t *pThis)
 	}
 
 finalize_it:
+	if (fromHostIP != NULL) {
+		free(fromHostIP);
+	}
 	RETiRet;
 }
 
@@ -927,6 +945,7 @@ static rsRetVal
 osslEndSess(nsd_ossl_t *pThis)
 {
 	DEFiRet;
+	uchar *fromHostIP = NULL;
 	int ret;
 	int err;
 
@@ -934,6 +953,7 @@ osslEndSess(nsd_ossl_t *pThis)
 	if(pThis->bHaveSess) {
 		DBGPRINTF("osslEndSess: closing SSL Session ...\n");
 		ret = SSL_shutdown(pThis->ssl);
+		nsd_ptcp.GetRemoteHName((nsd_t*)pThis->pTcp, &fromHostIP);
 		if (ret <= 0) {
 			err = SSL_get_error(pThis->ssl, ret);
 			DBGPRINTF("osslEndSess: shutdown failed with err = %d\n", err);
@@ -955,11 +975,11 @@ osslEndSess(nsd_ossl_t *pThis)
 			DBGPRINTF("osslEndSess: Forcing ssl shutdown SSL_read (%d) to do a bidirectional shutdown\n",
 				iBytesRet);
 			LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO, "nsd_ossl:"
-			"TLS session terminated with remote syslog server: End Session");
+			"TLS session terminated with remote syslog server '%s': End Session", fromHostIP);
 			DBGPRINTF("osslEndSess: session closed (un)successfully \n");
 		} else {
 			LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO, "nsd_ossl:"
-			"TLS session terminated with remote syslog server: End Session");
+			"TLS session terminated with remote syslog server '%s': End Session", fromHostIP);
 			DBGPRINTF("osslEndSess: session closed successfully \n");
 		}
 
@@ -967,6 +987,9 @@ osslEndSess(nsd_ossl_t *pThis)
 		pThis->bHaveSess = 0;
 	}
 
+	if (fromHostIP != NULL) {
+		free(fromHostIP);
+	}
 	RETiRet;
 }
 /* ---------------------------- end OpenSSL specifics ---------------------------- */
@@ -1451,6 +1474,7 @@ rsRetVal
 osslHandshakeCheck(nsd_ossl_t *pNsd)
 {
 	DEFiRet;
+	uchar *fromHostIP = NULL;
 	int res, resErr;
 	dbgprintf("osslHandshakeCheck: Starting TLS Handshake for ssl[%p]\n", (void *)pNsd->ssl);
 
@@ -1458,6 +1482,7 @@ osslHandshakeCheck(nsd_ossl_t *pNsd)
 		/* Handle Server SSL Object */
 		if((res = SSL_accept(pNsd->ssl)) <= 0) {
 			/* Obtain SSL Error code */
+			nsd_ptcp.GetRemoteHName((nsd_t*)pNsd->pTcp, &fromHostIP);
 			resErr = SSL_get_error(pNsd->ssl, res);
 			if(	resErr == SSL_ERROR_WANT_READ ||
 				resErr == SSL_ERROR_WANT_WRITE) {
@@ -1471,14 +1496,14 @@ osslHandshakeCheck(nsd_ossl_t *pNsd)
 					"- Aborting handshake.\n");
 				osslLastSSLErrorMsg(res, pNsd->ssl, LOG_WARNING, "osslHandshakeCheck Server");
 				LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
-					"nsd_ossl:TLS session terminated with remote client: "
-					"Handshake failed with SSL_ERROR_SYSCALL");
+					"nsd_ossl:TLS session terminated with remote client '%s': "
+					"Handshake failed with SSL_ERROR_SYSCALL", fromHostIP);
 				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 			} else {
 				osslLastSSLErrorMsg(res, pNsd->ssl, LOG_ERR, "osslHandshakeCheck Server");
 				LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
-					"nsd_ossl:TLS session terminated with remote client: "
-					"Handshake failed with error code: %d", resErr);
+					"nsd_ossl:TLS session terminated with remote client '%s': "
+					"Handshake failed with error code: %d", fromHostIP, resErr);
 				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 			}
 		}
@@ -1486,6 +1511,7 @@ osslHandshakeCheck(nsd_ossl_t *pNsd)
 		/* Handle Client SSL Object */
 		if((res = SSL_do_handshake(pNsd->ssl)) <= 0) {
 			/* Obtain SSL Error code */
+			nsd_ptcp.GetRemoteHName((nsd_t*)pNsd->pTcp, &fromHostIP);
 			resErr = SSL_get_error(pNsd->ssl, res);
 			if(	resErr == SSL_ERROR_WANT_READ ||
 				resErr == SSL_ERROR_WANT_WRITE) {
@@ -1502,8 +1528,8 @@ osslHandshakeCheck(nsd_ossl_t *pNsd)
 			} else {
 				osslLastSSLErrorMsg(res, pNsd->ssl, LOG_ERR, "osslHandshakeCheck Client");
 				LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
-					"nsd_ossl:TLS session terminated with remote syslog server:"
-					"Handshake failed with error code: %d", resErr);
+					"nsd_ossl:TLS session terminated with remote syslog server '%s':"
+					"Handshake failed with error code: %d", fromHostIP, resErr);
 				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 			}
 		}
@@ -1515,6 +1541,9 @@ osslHandshakeCheck(nsd_ossl_t *pNsd)
 	/* Now check authorization */
 	CHKiRet(osslChkPeerAuth(pNsd));
 finalize_it:
+	if (fromHostIP != NULL) {
+		free(fromHostIP);
+	}
 	if(iRet == RS_RET_OK) {
 		/* If no error occured, set socket to SSL mode */
 		pNsd->iMode = 1;
