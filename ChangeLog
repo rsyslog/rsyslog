@@ -1,5 +1,20 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2110.0 (aka 2021.10) 2021-10-??
+- 2021-09-12: openssl: extended output information on connection failure
+  Now includes the remote client/server IP address in the log output.
+- 2021-09-12: imhttp enhancements - query parameter ingestion & basic auth support
+  - Basic Authentication support & tests
+    * configured via imhttp option "basicAuthFile". This option should be configured
+      to point to your htpasswd file generated via a standard htpasswd tool.
+    tests:
+    * imhttp-post-payload-basic-auth.sh
+    * imhttp-post-payload-basic-auth-vg.sh
+  - Query parameter ingestion capability & tests
+    use t `addmetadata` option to inject query parameters into
+    metadata for imhttp input.
+  DISTRO PACKAGERS BEWARE: NEW DEPENDENCY FOR IMHTTP:
+  libaprutil (libaprutil1-dev on debian'ish, apr-util-devel on Red Hat)
+  Thanks to Nelson Yen for the patch.
 - 2021-09-07: testbench bugfix: privdrop tests under root user did not work
   When running under root, the privdrop tests did not properly work. This
   patch fixes the issue and skips test where necessary.
