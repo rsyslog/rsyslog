@@ -1628,7 +1628,7 @@ dep_kafka_url=https://downloads.apache.org/kafka/2.8.0/kafka_2.13-2.8.0.tgz
 dep_kafka_cached_file=$dep_cache_dir/$RS_KAFKA_DOWNLOAD
 
 if [ -z "$ES_DOWNLOAD" ]; then
-	export ES_DOWNLOAD=elasticsearch-5.6.9.tar.gz
+	export ES_DOWNLOAD=elasticsearch-7.14.1-linux-x86_64.tar.gz #elasticsearch-5.6.9.tar.gz
 fi
 if [ -z "$ES_PORT" ]; then
 	export ES_PORT=19200
@@ -2161,11 +2161,15 @@ ensure_elasticsearch_ready() {
 		dep_es_cached_file="$dep_cache_dir/$ES_DOWNLOAD"
 		download_elasticsearch
 		prepare_elasticsearch
-		start_elasticsearch
-		printf '%s:%s:%s\n' "$ES_DOWNLOAD" "$ES_PORT" "$(cat es.pid)" > elasticsearch.running
+		if [ "$1" != "--no-start" ]; then
+			start_elasticsearch
+			printf '%s:%s:%s\n' "$ES_DOWNLOAD" "$ES_PORT" "$(cat es.pid)" > elasticsearch.running
+		fi
 	fi
-	printf 'running elasticsearch instance: %s\n' "$(cat elasticsearch.running)"
-	init_elasticsearch
+	if [ "$1" != "--no-start" ]; then
+		printf 'running elasticsearch instance: %s\n' "$(cat elasticsearch.running)"
+		init_elasticsearch
+	fi
 }
 
 
