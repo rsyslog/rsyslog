@@ -15,8 +15,8 @@ ensure_elasticsearch_ready --no-start
 
 # change settings to cause bulk rejection errors
 cat >> $dep_work_dir/es/config/elasticsearch.yml <<EOF
-thread_pool.bulk.queue_size: 1
-thread_pool.bulk.size: 1
+thread_pool.write.queue_size: 1
+thread_pool.write.size: 1
 EOF
 start_elasticsearch
 
