@@ -1,12 +1,17 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
+
+	echo The es-bulk-retry.sh test is temporarily suspended, because ElasticSearch 7 broke semantics
+	echo that the test depends on. See for more info and progress:
+	echo https://github.com/rsyslog/rsyslog/pull/4685
+	exit 77
+
 . ${srcdir:=.}/diag.sh init
 export ES_PORT=19200
 export NUMMESSAGES=100
 override_test_timeout 120
 #export USE_VALGRIND="YES" # to enable this to run under valgrind
-download_elasticsearch
-prepare_elasticsearch
+ensure_elasticsearch_ready --no-start
 
 # change settings to cause bulk rejection errors
 cat >> $dep_work_dir/es/config/elasticsearch.yml <<EOF
