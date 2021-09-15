@@ -1,7 +1,6 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-export ES_DOWNLOAD=elasticsearch-7.10.2.tar.gz
 export ES_PORT=19200
 # Using the default will cause deprecation failures
 export ES_PORT_OPTION="transport.port"
