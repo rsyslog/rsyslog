@@ -11,7 +11,7 @@
  *
  * Module begun 2009-06-10 by Rainer Gerhards
  *
- * Copyright 2009-2018 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2021 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -1066,6 +1066,7 @@ rulesetProcessCnf(struct cnfobj *o)
 	ruleset_t *pRuleset;
 	struct cnfarray *ar;
 	int i;
+	int qtype;
 	uchar *rsname;
 	DEFiRet;
 
@@ -1113,8 +1114,15 @@ rulesetProcessCnf(struct cnfobj *o)
 
 	/* pick up ruleset queue parameters */
 	if(queueCnfParamsSet(o->nvlst)) {
-		rsname = (pRuleset->pszName == NULL) ? (uchar*) "[ruleset]" : pRuleset->pszName;
-		DBGPRINTF("adding a ruleset-specific \"main\" queue for ruleset '%s'\n", rsname);
+		if(pRuleset->pszName == NULL) {
+			rsname = pRuleset->pszName;
+			qtype = pRuleset->pQueue->qType;
+		} else {
+			rsname = (uchar*) "[ruleset]";
+			qtype = 3;
+		}
+		DBGPRINTF("adding a ruleset-specific \"main\" queue for ruleset '%s', mode %d\n",
+			rsname, qtype);
 		CHKiRet(createMainQueue(&pRuleset->pQueue, rsname, o->nvlst));
 	}
 

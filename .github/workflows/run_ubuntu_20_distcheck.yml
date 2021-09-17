@@ -66,5 +66,6 @@ jobs:
           ls -ld rsyslog-*
           echo END CI DEBUGGING
           rm -rf $(find . -name .dep_wrk)
+          sudo chmod -R a+r .
           devtools/gather-check-logs.sh
           cat failed-tests.log
