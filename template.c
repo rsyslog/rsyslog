@@ -163,6 +163,7 @@ tplToString(struct template *__restrict__ const pTpl,
 	unsigned short bMustBeFreed = 0;
 	uchar *pVal;
 	rs_size_t iLenVal = 0;
+dbgprintf("RGER: tplToString %p\n", pMsg);
 
 	if(pTpl->pStrgen != NULL) {
 		CHKiRet(pTpl->pStrgen(pMsg, iparam));

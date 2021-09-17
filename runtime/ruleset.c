@@ -284,12 +284,15 @@ static rsRetVal
 execCall(struct cnfstmt *stmt, smsg_t *pMsg, wti_t *pWti)
 {
 	DEFiRet;
+dbgprintf("RGER: execCall in  %p\n", pMsg);
 	if(stmt->d.s_call.ruleset == NULL) {
 		CHKiRet(scriptExec(stmt->d.s_call.stmt, pMsg, pWti));
 	} else {
-		CHKmalloc(pMsg = MsgDup((smsg_t*) pMsg));
+		//CHKmalloc(pMsg = MsgDup((smsg_t*) pMsg));
+		MsgAddRef(pMsg);
 		DBGPRINTF("CALL: forwarding message to async ruleset %p\n",
 			  stmt->d.s_call.ruleset->pQueue);
+dbgprintf("RGER: execCall     %p\n", pMsg);
 		MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
 		MsgSetRuleset(pMsg, stmt->d.s_call.ruleset);
 		/* Note: we intentionally use submitMsg2() here, as we process messages
@@ -588,6 +591,7 @@ scriptExec(struct cnfstmt *const root, smsg_t *const pMsg, wti_t *const pWti)
 		}
 		if(Debug) {
 			cnfstmtPrintOnly(stmt, 2, 0);
+dbgprintf("RGER: scriptExec     %p\n", pMsg);
 		}
 		switch(stmt->nodetype) {
 		case S_NOP:

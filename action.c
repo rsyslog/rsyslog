@@ -1107,6 +1107,7 @@ prepareDoActionParams(action_t * __restrict__ const pAction,
 	actWrkrInfo_t *__restrict__ pWrkrInfo;
 	DEFiRet;
 
+dbgprintf("RGER: prepareDoActionParams     %p\n", pMsg);
 	pWrkrInfo = &(pWti->actWrkrInfo[pAction->iActionNbr]);
 	if(pAction->isTransactional) {
 		CHKiRet(wtiNewIParam(pWti, pAction, &iparams));
@@ -1811,6 +1812,7 @@ doSubmitToActionQ(action_t * const pAction, wti_t * const pWti, smsg_t *pMsg)
 		pAction->pszName, module.GetStateName(pAction->pMod),
 		pAction->bExecWhenPrevSusp, pWti->execState.bPrevWasSuspended,
 		pAction->pQueue->qType == QUEUETYPE_DIRECT);
+dbgprintf("RGER: doSubmitToActionQ     %p\n", pMsg);
 
 	if(   pAction->bExecWhenPrevSusp
 	   && !pWti->execState.bPrevWasSuspended) {

@@ -1132,9 +1132,11 @@ qAddDirect(qqueue_t *pThis, smsg_t* pMsg)
 	wti_t *pWti;
 	DEFiRet;
 
+dbgprintf("RGER: qAddDirect in  %p\n", pMsg);
 	pWti = wtiGetDummy();
 	pWti->pbShutdownImmediate = &pThis->bShutdownImmediate;
 	iRet = qAddDirectWithWti(pThis, pMsg, pWti);
+dbgprintf("RGER: qAddDirect out %p\n", pMsg);
 	RETiRet;
 }
 
