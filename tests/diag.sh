@@ -2186,7 +2186,7 @@ start_elasticsearch() {
 	# THIS IS THE ACTUAL START of ES
 	$dep_work_dir/es/bin/elasticsearch -p $dep_work_es_pidfile -d
 	$TESTTOOL_DIR/msleep 2000
-	# TODO: wait pidfile!
+	wait_startup_pid $dep_work_es_pidfile
 	printf 'elasticsearch pid is %s\n' "$(cat $dep_work_es_pidfile)"
 
 	# Wait for startup with hardcoded timeout

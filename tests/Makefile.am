@@ -66,9 +66,12 @@ TESTS +=  \
 	es-basic-es6.0.sh \
 	es-basic-es7.14.sh \
 	es-basic-bulk.sh
-es-basic-es6.0.log:  es-basic.log
-es-basic-es7.14.log: es-basic-es6.0.log
-es-basic-bulk.log: es-basic-es7.14.log
+#es-basic-es6.0.log:  es-basic.log
+#es-basic-es7.14.log: es-basic-es6.0.log
+es-basic-es7.14.log: es-basic.log
+es-basic-es6.0.log:  es-basic-es7.14.log
+es-basic-bulk.log: es-basic-es6.0.log
+#es-basic-bulk.log: es-basic-es7.14.log
 es-basic-server.log: es-basic-bulk.log
 
 # special "test" for stopping ES once all ES tests are done

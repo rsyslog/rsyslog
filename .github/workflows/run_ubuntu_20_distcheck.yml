@@ -55,5 +55,16 @@ jobs:
       - name: show error logs (if we errored)
         if:  ${{ failure() || cancelled() }}
         run: |
+          echo Some CI debugging in case we see permission errors again - remove when finally solved
+          echo PWD: $(pwd)
+          echo FIND ..:
+          find .. -name .dep_wrk
+          echo FIND:
+          find . -name .dep_wrk
+          echo ls of curr dir:
+          ls -la
+          ls -ld rsyslog-*
+          echo END CI DEBUGGING
+          rm -rf $(find . -name .dep_wrk)
           devtools/gather-check-logs.sh
           cat failed-tests.log
