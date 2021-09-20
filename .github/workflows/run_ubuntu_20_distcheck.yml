@@ -59,16 +59,14 @@ jobs:
           echo PWD: $(pwd)
           ls -la
           ls -ld rsyslog-*
-          sudo chmod -R go+rw .
+          sudo chmod -vR go+rw .
           ls -la
           ls -ld rsyslog-*
-          echo FIND ..:
+          echo FIND TRS:
           find .. -name .dep_wrk
-          echo FIND:
-          find . -name .dep_wrk
           echo ls of curr dir:
           echo END CI DEBUGGING
           rm -rf $(find . -name .dep_wrk)
-          sudo chmod -R a+r .
+          sudo chmod -vR a+r .
           devtools/gather-check-logs.sh
           cat failed-tests.log
