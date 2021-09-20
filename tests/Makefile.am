@@ -1281,12 +1281,14 @@ TESTS +=  \
 	sndrcv_tls_ossl_anon_ipv4.sh \
 	sndrcv_tls_ossl_anon_ipv6.sh \
 	sndrcv_tls_ossl_anon_rebind.sh \
+	sndrcv_tls_ossl_anon_ciphers.sh \
 	sndrcv_tls_ossl_serveranon_ossl_clientanon.sh \
 	sndrcv_tls_ossl_servercert_ossl_clientanon.sh \
 	sndrcv_tls_ossl_certvalid.sh \
 	sndrcv_tls_ossl_certvalid_action_level.sh \
 	sndrcv_tls_ossl_certvalid_expired.sh \
 	sndrcv_tls_ossl_certvalid_tlscommand.sh \
+	sndrcv_tls_ossl_certvalid_ciphers.sh \
 	imtcp-tls-ossl-x509valid.sh \
 	imtcp-tls-ossl-x509name.sh \
 	imtcp-tls-ossl-x509fingerprint.sh \
@@ -2143,10 +2145,12 @@ EXTRA_DIST= \
 	sndrcv_tls_ossl_anon_ipv4.sh \
 	sndrcv_tls_ossl_anon_ipv6.sh \
 	sndrcv_tls_ossl_anon_rebind.sh \
+	sndrcv_tls_ossl_anon_ciphers.sh \
 	sndrcv_tls_ossl_certvalid.sh \
 	sndrcv_tls_ossl_certvalid_action_level.sh \
 	sndrcv_tls_ossl_certvalid_expired.sh \
 	sndrcv_tls_ossl_certvalid_tlscommand.sh \
+	sndrcv_tls_ossl_certvalid_ciphers.sh \
 	imtcp-tls-ossl-x509valid.sh \
 	imtcp-tls-ossl-x509name.sh \
 	imtcp-tls-ossl-x509fingerprint.sh \
