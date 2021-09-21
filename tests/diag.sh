@@ -1624,7 +1624,7 @@ dep_zk_url=https://downloads.apache.org/zookeeper/zookeeper-3.6.3/$RS_ZK_DOWNLOA
 dep_zk_cached_file=$dep_cache_dir/$RS_ZK_DOWNLOAD
 
 export RS_KAFKA_DOWNLOAD=kafka_2.13-2.8.0.tgz
-dep_kafka_url=https://downloads.apache.org/kafka/2.8.0/kafka_2.13-2.8.0.tgz
+dep_kafka_url="https://www.rsyslog.com/files/download/rsyslog/$RS_KAFKA_DOWNLOAD"
 dep_kafka_cached_file=$dep_cache_dir/$RS_KAFKA_DOWNLOAD
 
 if [ -z "$ES_DOWNLOAD" ]; then
