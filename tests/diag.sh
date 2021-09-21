@@ -1624,7 +1624,7 @@ dep_zk_url=https://downloads.apache.org/zookeeper/zookeeper-3.6.3/$RS_ZK_DOWNLOA
 dep_zk_cached_file=$dep_cache_dir/$RS_ZK_DOWNLOAD
 
 export RS_KAFKA_DOWNLOAD=kafka_2.13-2.8.0.tgz
-dep_kafka_url=https://downloads.apache.org/kafka/2.8.0/kafka_2.13-2.8.0.tgz
+dep_kafka_url="https://www.rsyslog.com/files/download/rsyslog/$RS_KAFKA_DOWNLOAD"
 dep_kafka_cached_file=$dep_cache_dir/$RS_KAFKA_DOWNLOAD
 
 if [ -z "$ES_DOWNLOAD" ]; then
@@ -2186,7 +2186,7 @@ start_elasticsearch() {
 	# THIS IS THE ACTUAL START of ES
 	$dep_work_dir/es/bin/elasticsearch -p $dep_work_es_pidfile -d
 	$TESTTOOL_DIR/msleep 2000
-	# TODO: wait pidfile!
+	wait_startup_pid $dep_work_es_pidfile
 	printf 'elasticsearch pid is %s\n' "$(cat $dep_work_es_pidfile)"
 
 	# Wait for startup with hardcoded timeout
