@@ -1,11 +1,5 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
-
-	echo The es-bulk-retry.sh test is temporarily suspended, because ElasticSearch 7 broke semantics
-	echo that the test depends on. See for more info and progress:
-	echo https://github.com/rsyslog/rsyslog/pull/4685
-	exit 77
-
 . ${srcdir:=.}/diag.sh init
 export ES_PORT=19200
 export NUMMESSAGES=100
@@ -14,9 +8,17 @@ override_test_timeout 120
 ensure_elasticsearch_ready --no-start
 
 # change settings to cause bulk rejection errors
+case "$ES_DOWNLOAD" in
+    elasticsearch-5.*) es_option="thread_pool.bulk"
+                       es_mapping_uses_type=true
+                       es_search_type="test-type" ;;
+    *) es_option="thread_pool.write"
+       es_mapping_uses_type=false
+       es_search_type="_doc" ;;
+esac
 cat >> $dep_work_dir/es/config/elasticsearch.yml <<EOF
-thread_pool.bulk.queue_size: 1
-thread_pool.bulk.size: 1
+${es_option}.queue_size: 1
+${es_option}.size: 1
 EOF
 start_elasticsearch
 
@@ -95,7 +97,7 @@ ruleset(name="try_es") {
 		       bulkmode="on"
 		       retryfailures="on"
 		       retryruleset="try_es"
-		       searchType="test-type"
+		       searchType="'${es_search_type}'"
 		       searchIndex="rsyslog_testbench")
 	}
 }
@@ -107,7 +109,8 @@ if $msg contains "msgnum:" then {
 action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 '
 
-curl -s -H 'Content-Type: application/json' -XPUT localhost:${ES_PORT:-19200}/rsyslog_testbench/ -d '{
+if [ "$es_mapping_uses_type" = true ]; then
+    curl -s -H 'Content-Type: application/json' -XPUT localhost:${ES_PORT:-19200}/rsyslog_testbench/ -d '{
   "mappings": {
     "test-type": {
       "properties": {
@@ -119,6 +122,23 @@ curl -s -H 'Content-Type: application/json' -XPUT localhost:${ES_PORT:-19200}/rs
   }
 }
 ' | $PYTHON -mjson.tool
+else
+  # we add 10 shards so we're more likely to get queue rejections
+    curl -s -H 'Content-Type: application/json' -XPUT localhost:${ES_PORT:-19200}/rsyslog_testbench/ -d '{
+  "settings": {
+    "index.number_of_shards": 10
+  },
+  "mappings": {
+    "properties": {
+      "msgnum": {
+        "type": "integer"
+      }
+    }
+  }
+}
+' | $PYTHON -mjson.tool
+fi
+
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="debug.log"
 startup
@@ -128,6 +148,7 @@ if [ -n "${USE_GDB:-}" ] ; then
 fi
 success=50
 badarg=50
+./msleep 5000
 injectmsg 0 $NUMMESSAGES
 ./msleep 1500; cat $RSYSLOG_OUT_LOG # debuging - we sometimes miss 1 message
 wait_content '"response.success": 50' $RSYSLOG_DYNNAME.spool/es-stats.log
