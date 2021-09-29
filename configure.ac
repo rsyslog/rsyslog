@@ -149,6 +149,20 @@ AS_IF([test -d "$srcdir"/.git && ! test -f  "$srcdir"/.tarball-version], [in_git
 
 AC_DEFINE_UNQUOTED([HOSTENV], "$host", [the host environment, can be queried via a system variable])
 
+# Some Unix systems, like Gnu Hurd, don't define PATH_MAX
+AC_MSG_CHECKING([for PATH_MAX])
+AC_COMPILE_IFELSE( [AC_LANG_PROGRAM([[#include <limits.h>]],
+                                    [[char checker[PATH_MAX];]])],
+                   [
+                      AC_MSG_RESULT([yes])
+                    ],
+                    [
+                      AC_MSG_RESULT([no, mocking PATH_MAX = 4096])
+                      AC_DEFINE([PATH_MAX], 4096, [replacement for missing PATH_MAX])
+                      AC_DEFINE([MAXPATHLEN], 4096, [replacement for missing PATH_MAX]) # we assume this does not exit
+                    ]
+                 )
+
 # Checks for libraries.
 save_LIBS=$LIBS
 LIBS=

@@ -49,10 +49,6 @@
 #include <unistd.h>
 #include <sys/file.h>
 
-#ifndef PATH_MAX
-#	define PATH_MAX MAXPATHLEN
-#endif
-
 #include "rsyslog.h"
 #include "rainerscript.h"
 #include "cfsysline.h"
@@ -1101,11 +1097,7 @@ Load(uchar *const pModName, const sbool bConfLoad, struct nvlst *const lst)
 	uchar *pModDirCurr, *pModDirNext;
 	int iLoadCnt;
 	struct dlhandle_s *pHandle = NULL;
-#	ifdef PATH_MAX
 	uchar pathBuf[PATH_MAX+1];
-#	else
-	uchar pathBuf[4096];
-#	endif
 	uchar *pPathBuf = pathBuf;
 	size_t lenPathBuf = sizeof(pathBuf);
 	rsRetVal localRet;
