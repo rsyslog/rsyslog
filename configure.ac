@@ -1049,6 +1049,20 @@ AC_ARG_ENABLE(clickhouse_tests,
 )
 AM_CONDITIONAL(ENABLE_CLICKHOUSE_TESTS, test x$enable_clickhouse_tests = xyes)
 
+AC_ARG_WITH(wolfssl,
+    AS_HELP_STRING([--with-wolfssl]=DIR,
+		   [Enable wolfssl support @<:@default=no@:>@]),
+[
+	AC_SUBST(WOLFSSL_CFLAGS,  ["-I${withval}/include/wolfssl -I${withval}/include"])
+	AC_SUBST(WOLFSSL_LIBS,    ["-L${withval}/lib -lwolfssl"])
+	enable_wolfssl=yes
+	AC_DEFINE([ENABLE_OPENSSL], [1], [Indicator that openssl is present])
+	AC_DEFINE([ENABLE_WOLFSSL], [1], [Indicator that wolfssl is present])
+],
+[
+	enable_wolfssl=no
+])
+AM_CONDITIONAL(ENABLE_WOLFSSL, [test "x$enable_wolfssl" = "xyes"])
 
 # openssl support
 AC_ARG_ENABLE(openssl,
@@ -1065,8 +1079,7 @@ if test "x$enable_openssl" = "xyes"; then
 	AC_DEFINE([ENABLE_OPENSSL], [1], [Indicator that openssl is present])
 	save_libs=$LIBS
 fi
-AM_CONDITIONAL(ENABLE_OPENSSL, test x$enable_openssl = xyes)
-
+AM_CONDITIONAL(ENABLE_OPENSSL, [test "x$enable_openssl" = "xyes" || test "x$enable_wolfssl" = "xyes"])
 
 # GnuTLS support
 AC_ARG_ENABLE(gnutls,
@@ -2829,6 +2842,7 @@ echo "    hiredis support enabled:                  $enable_omhiredis"
 echo
 echo "---{ protocol support }---"
 echo "    openssl network stream driver enabled:    $enable_openssl"
+echo "    wolfssl network stream driver enabled:    $enable_wolfssl"
 echo "    GnuTLS network stream driver enabled:     $enable_gnutls"
 echo "    GSSAPI Kerberos 5 support enabled:        $enable_gssapi_krb5"
 echo "    RELP support enabled:                     $enable_relp"

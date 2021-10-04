@@ -123,11 +123,17 @@
 #	endif
 #endif
 #ifdef ENABLE_OPENSSL
+#ifdef ENABLE_WOLFSSL
+	#include <wolfssl/options.h>
+#endif
 	#include <openssl/ssl.h>
 	#include <openssl/x509v3.h>
 	#include <openssl/err.h>
 	#include <openssl/engine.h>
 
+#ifdef ENABLE_WOLFSSL
+	#define RSYSLOG_X509_NAME_oneline(X509CERT) X509_get_subject_name(X509CERT)
+#else
 	/* OpenSSL API differences */
 	#if OPENSSL_VERSION_NUMBER >= 0x10100000L
 		#define RSYSLOG_X509_NAME_oneline(X509CERT) X509_get_subject_name(X509CERT)
@@ -141,6 +147,7 @@
 		#define RSYSLOG_BIO_number_written(SSLBIO) SSLBIO->num
 	#endif
 
+#endif /* ENABLE_WOLFSSL */
 #endif
 
 char *test_rs_strerror_r(int errnum, char *buf, size_t buflen) {
@@ -1025,6 +1032,7 @@ runTests(void)
  * alorbach, 2018-06-11
  */
 
+#ifndef ENABLE_WOLFSSL
 long BIO_debug_callback(BIO *bio, int cmd, const char __attribute__((unused)) *argp,
 			int argi, long __attribute__((unused)) argl, long ret)
 {
@@ -1100,6 +1108,7 @@ long BIO_debug_callback(BIO *bio, int cmd, const char __attribute__((unused)) *a
 
 	return (r);
 }
+#endif /* !ENABLE_WOLFSSL */
 
 void osslLastSSLErrorMsg(int ret, SSL *ssl, const char* pszCallSource)
 {
@@ -1189,13 +1198,25 @@ initTLS(void)
 		exit(1);
 	}
 
+#if defined(ENABLE_WOLFSSL) && defined(DEBUG_WOLFSSL)
+	wolfSSL_Debugging_ON();
+#endif
+
 	/* Load readable error strings */
 	SSL_load_error_strings();
 	ERR_load_BIO_strings();
 	ERR_load_crypto_strings();
 
+/* wolfSSL will use TLS 1.3 if it's compiled in and we call SSLv23_method. This
+ * is at odds with the fact that rsyslog allows usage of anonymous cipher
+ * suites, which were deprecated in TLS 1.3. To continue to allow these suites,
+ * we explicitly request TLS 1.2 here. */
+#ifdef ENABLE_WOLFSSL
+	ctx = SSL_CTX_new(TLSv1_2_method());
+#else
 	/* Create main CTX Object */
 	ctx = SSL_CTX_new(SSLv23_method());
+#endif
 
 	if(tlsCAFile != NULL && SSL_CTX_load_verify_locations(ctx, tlsCAFile, NULL) != 1) {
 		printf("tcpflood: Error, Failed loading CA certificate"
@@ -1224,7 +1245,7 @@ initTLS(void)
 
 	/* Check for Custom Config string */
 	if (customConfig != NULL){
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER)
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER) && !defined(ENABLE_WOLFSSL)
 	char *pCurrentPos;
 	char *pNextPos;
 	char *pszCmd;
@@ -1349,10 +1370,12 @@ initTLSSess(int i)
 	//	printf("initTLSSess: Init client BIO[%p] done\n", (void *)client);
 	}
 
+#ifndef ENABLE_WOLFSSL
 	if(tlsLogLevel > 0) {
 		/* Set debug Callback for client BIO as well! */
 		BIO_set_callback(client, BIO_debug_callback);
 	}
+#endif
 
 	/* Blocking socket */
 	BIO_set_nbio( client, 0 );

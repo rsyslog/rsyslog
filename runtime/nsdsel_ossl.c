@@ -28,6 +28,9 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/select.h>
+#ifdef ENABLE_WOLFSSL
+#include <wolfssl/options.h>
+#endif
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
 

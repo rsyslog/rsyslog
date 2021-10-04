@@ -211,9 +211,15 @@ endif # if ENABLE_INET
 if ENABLE_OPENSSL
 pkglib_LTLIBRARIES += lmnsd_ossl.la
 lmnsd_ossl_la_SOURCES = nsd_ossl.c nsd_ossl.h nsdsel_ossl.c  nsdsel_ossl.h
-lmnsd_ossl_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(OPENSSL_CFLAGS)
 lmnsd_ossl_la_LDFLAGS = -module -avoid-version
+
+if ENABLE_WOLFSSL
+lmnsd_ossl_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(WOLFSSL_CFLAGS)
+lmnsd_ossl_la_LIBADD = $(WOLFSSL_LIBS)
+else
+lmnsd_ossl_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(OPENSSL_CFLAGS)
 lmnsd_ossl_la_LIBADD = $(OPENSSL_LIBS)
+endif
 endif
 
 #
