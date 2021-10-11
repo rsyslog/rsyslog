@@ -1187,7 +1187,7 @@ glblProcessCnf(struct cnfobj *o)
 			if(operatingStateFile != NULL) {
 				LogError(errno, RS_RET_PARAM_ERROR,
 					"error: operatingStateFile already set to '%s' - "
-					"new valule ignored", operatingStateFile);
+					"new value ignored", operatingStateFile);
 			} else {
 				operatingStateFile = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 				osf_open();
