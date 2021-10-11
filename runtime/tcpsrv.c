@@ -904,14 +904,8 @@ finalize_it: /* this is a very special case - this time only we do not exit the 
 }
 PRAGMA_DIAGNOSTIC_POP
 
-
-/* This function is called to gather input. It tries doing that via the epoll()
- * interface. If the driver does not support that, it falls back to calling its
- * select() equivalent.
- * rgerhards, 2009-11-18
- */
 static rsRetVal
-Run(tcpsrv_t *pThis)
+DoRun(tcpsrv_t *pThis, nspoll_t **ppPoll)
 {
 	DEFiRet;
 	int i;
@@ -920,31 +914,8 @@ Run(tcpsrv_t *pThis)
 	nspoll_t *pPoll = NULL;
 	rsRetVal localRet;
 
-	ISOBJ_TYPE_assert(pThis, tcpsrv);
-
-	if(pThis->iLstnCurr == 0) {
-		dbgprintf("tcpsrv: no listeneres at all (probably init error), terminating\n");
-		RETiRet; /* somewhat "dirty" exit to avoid issue with cancel handler */
-	}
-
-	/* check if we need to start the worker pool. Once it is running, all is
-	 * well. Shutdown is done on modExit.
-	 */
-	d_pthread_mutex_lock(&wrkrMut);
-	if(!bWrkrRunning) {
-		bWrkrRunning = 1;
-		startWorkerPool();
-	}
-	d_pthread_mutex_unlock(&wrkrMut);
-
-	/* We try to terminate cleanly, but install a cancellation clean-up
-	 * handler in case we are cancelled.
-	 */
-	pthread_cleanup_push(RunCancelCleanup, (void*) &pPoll);
-	/* Reset iRet to avoid warning about it being clobbered by longjmp */
-	iRet = RS_RET_OK;
-
-	if((localRet = nspoll.Construct(&pPoll)) == RS_RET_OK) {
+	if((localRet = nspoll.Construct(ppPoll)) == RS_RET_OK) {
+		pPoll = *ppPoll;
 		if(pThis->pszDrvrName != NULL)
 			CHKiRet(nspoll.SetDrvrName(pPoll, pThis->pszDrvrName));
 		localRet = nspoll.ConstructFinalize(pPoll);
@@ -990,6 +961,43 @@ Run(tcpsrv_t *pThis)
 	}
 
 finalize_it:
+	RETiRet;
+}
+
+
+/* This function is called to gather input. It tries doing that via the epoll()
+ * interface. If the driver does not support that, it falls back to calling its
+ * select() equivalent.
+ * rgerhards, 2009-11-18
+ */
+static rsRetVal
+Run(tcpsrv_t *pThis)
+{
+	DEFiRet;
+	nspoll_t *pPoll = NULL;
+
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+
+	if(pThis->iLstnCurr == 0) {
+		dbgprintf("tcpsrv: no listeneres at all (probably init error), terminating\n");
+		RETiRet; /* somewhat "dirty" exit to avoid issue with cancel handler */
+	}
+
+	/* check if we need to start the worker pool. Once it is running, all is
+	 * well. Shutdown is done on modExit.
+	 */
+	d_pthread_mutex_lock(&wrkrMut);
+	if(!bWrkrRunning) {
+		bWrkrRunning = 1;
+		startWorkerPool();
+	}
+	d_pthread_mutex_unlock(&wrkrMut);
+
+	/* We try to terminate cleanly, but install a cancellation clean-up
+	 * handler in case we are cancelled.
+	 */
+	pthread_cleanup_push(RunCancelCleanup, (void*) &pPoll);
+	iRet = DoRun(pThis, &pPoll);
 	pthread_cleanup_pop(1);
 
 	RETiRet;
