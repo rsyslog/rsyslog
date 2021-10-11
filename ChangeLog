@@ -1,5 +1,16 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2110.0 (aka 2021.10) 2021-10-??
+- 2021-10-11: core bugfix: fix typo in error message
+  Thanks to github user jkschulz for the patch.
+- 2021-10-11: tcpsrv bugfix: compilation without exceptions
+  tcpsrv.c:992:1: error: label at end of compound statement
+   finalize_it:
+   ^~~~~~~~~~~
+  Quoting from pthread.h:
+    pthread_cleanup_push and pthread_cleanup_pop are macros and must always
+    be used in matching pairs at the same nesting level of braces.
+  Amends commit bcdd220142ec9eb106550195ba331fd114adb0bd.
+  Thanks to Orgad Shaneh for the patch.
 - 2021-10-11: mkubernetes bugfix: no connection retry to kubernetes APP
   When connection to the kubernates API was not possible, mmkubernetes
   did not retry. This does now happen via regular rsyslog retry
