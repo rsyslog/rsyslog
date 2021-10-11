@@ -1,5 +1,28 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2110.0 (aka 2021.10) 2021-10-??
+- 2021-10-11: mkubernetes bugfix: no connection retry to kubernetes APP
+  When connection to the kubernates API was not possible, mmkubernetes
+  did not retry. This does now happen via regular rsyslog retry
+  mechanism.
+  Thanks to github user jayme-github for the analysis and patch.
+  closes https://github.com/rsyslog/rsyslog/issues/4669
+- 2021-10-11: openssl bugfix: Correct gnutlsPriorityString (custom ciphers) behaviour
+  - Only apply default anon ciphers if gnutlsPriorityString is NULL and
+    Authentication Mode is set to anon. Otherwise we do not set them
+    as they overwrite custom Ciphers.
+  - Added two tests for custom cipher configuration (anon/certvalid mode).
+  - Add call for applyGnutlsPriorityString if gnutlsPriorityString changes.
+  - Merged openssl init code from Connect into osslInitSession
+  closes: https://github.com/rsyslog/rsyslog/issues/4686
+- 2021-10-11: build issue: handle undefined MAXPATHLEN, PATH_MAX
+  While we handled missing PATH_MAX, we did not handle missing MAXPATHLEN.
+  This happens under GNU/Hurd, because there is no official limit. However,
+  extremely long pathes are extremely uncommon, so we do not want to
+  use slow dynamic alloc each time we need to build pathes. So we
+  impose a limit of 4KiB, which should be fairly enough. Note that
+  this obviously increases stack requirements in GNU/Hurd.
+  As suggested by Michael Biebl, we have now implemented a generic
+  approach to handle this via autoconf.
 - 2021-09-12: openssl: extended output information on connection failure
   Now includes the remote client/server IP address in the log output.
 - 2021-09-12: imhttp enhancements - query parameter ingestion & basic auth support
