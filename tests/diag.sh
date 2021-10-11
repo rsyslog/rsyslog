@@ -2095,7 +2095,8 @@ download_elasticsearch() {
 		else
 			dep_es_url="https://www.rsyslog.com/files/download/rsyslog/$ES_DOWNLOAD"
 			printf 'ElasticSearch: satisfying dependency %s from %s\n' "$ES_DOWNLOAD" "$dep_es_url"
-			wget -q $dep_es_url -O $dep_es_cached_file
+			#wget -q $dep_es_url -O $dep_es_cached_file
+			wget  $dep_es_url -O $dep_es_cached_file
 		fi
 	fi
 }
@@ -2130,7 +2131,8 @@ prepare_elasticsearch() {
 	fi
 	rm -rf $dep_work_dir/es
 	echo TEST USES ELASTICSEARCH BINARY $dep_es_cached_file
-	(cd $dep_work_dir && tar -zxf $dep_es_cached_file --xform $dep_es_dir_xform_pattern --show-transformed-names) > /dev/null
+	ls -l $dep_es_cached_file
+	(cd $dep_work_dir && tar -vzxf $dep_es_cached_file --xform $dep_es_dir_xform_pattern --show-transformed-names) #> /dev/null
 	if [ -n "${ES_PORT:-}" ] ; then
 		rm -f $dep_work_dir/es/config/elasticsearch.yml
 		sed "s/^http.port:.*\$/http.port: ${ES_PORT}/" $srcdir/testsuites/$dep_work_es_config > $dep_work_dir/es/config/elasticsearch.yml
