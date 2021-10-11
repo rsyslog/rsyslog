@@ -1742,7 +1742,7 @@ queryKB(wrkrInstanceData_t *pWrkrData, char *url, time_t now, struct json_object
 		LogMsg(0, RS_RET_ERR, LOG_ERR,
 			      "mmkubernetes: failed to connect to [%s] - %d:%s\n",
 			      url, ccode, curl_easy_strerror(ccode));
-		ABORT_FINALIZE(RS_RET_ERR);
+		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 	if(CURLE_OK != (ccode = curl_easy_getinfo(pWrkrData->curlCtx,
 					CURLINFO_RESPONSE_CODE, &resp_code))) {
