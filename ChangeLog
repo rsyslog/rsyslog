@@ -1,5 +1,35 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2110.0 (aka 2021.10) 2021-10-??
+- 2021-10-12: rscript bugfix: ruleset called async when ruleset had queue.type="direct"
+  The call rscript statement is able to call a rule set either synchronously or
+  asynchronously. We did this, because practice showed that both modes
+  are needed. For various reasons we decided to make async
+  calls if the ruleset has a queue assigned and sync if not.
+  To know if a "queue is assigned" we just checked if queue parameters were
+  given. It was overlookeded the case of someone explicitly specifying a
+  "direct  queue", aka "no queue". As such, queue="direct" triggered async
+  calls. That in turn meant that when a write operation to a variable was
+  made inside that rule set, other rulesets could or could not see the
+  write. While if was often not seen, this was a data race where the
+  change could also be seen by the outside.
+  This is now fixed. No matter if queue.type="direct" is specified or
+  left out, the call will always by synchronous. Any values written to
+  variables will also be seen by the "outside world" in later processing
+  stages.
+  Note that this has some potential to BREAK EXISTING CONFIGURATIONS.
+  We deem this acceptable because:
+  1. this was racy at all, so unexpected behaviour could alwas occur
+  2. it is actually unlikely that someone used the triggering conditions
+     in practice. But we can not outrule this, especially when the
+     configuration was auto-generated.
+  Potential compatibility issues can be solved by defining a small
+  array-memory queue on the ruleset in question instead of specifying
+  direct type.
+  Again, we expect that almost all users will never experience any
+  problems. If you do, however, please let us know: we may add an
+  option to re-enable the bug.
+- 2021-10-12: ksi bugfix: locking bug fixed in rsksiCtxOpenFile
+  Thanks to Taavi Valjaots for the patch.
 - 2021-10-11: core bugfix: fix typo in error message
   Thanks to github user jkschulz for the patch.
 - 2021-10-11: tcpsrv bugfix: compilation without exceptions
