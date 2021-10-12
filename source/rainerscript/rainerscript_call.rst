@@ -25,6 +25,7 @@ omruleset always needs to duplicate messages, which usually means at
 least ~250 bytes of memory writes, some allocs and frees - and even more
 performance-intense operations.
 
+
 syntax
 ------
 
@@ -34,6 +35,18 @@ Where "rulesetname" is the name of a ruleset that is defined elsewhere
 inside the configuration. If the call is synchronous or asynchronous
 depends on the ruleset parameters. This cannot be overridden by the
 "call" statement.
+
+compatibility notes
+-------------------
+Note that versions prior to 8.2010.0 had a bug where an explicit
+'queue="direct"' setting in the ruleset definition lead call to treat
+this as if a real queue existed. This could lead to some unexpected
+behaviour. Beginning with 8.2010.0 this is handled consistently and
+correctly.
+
+Under some exotic circumstances, this may look like a change of
+behavior. If so, consider adding a small array-based queue to the
+ruleset in question.
 
 related links
 -------------
