@@ -2,7 +2,7 @@
  *
  * This implements rulesets within rsyslog.
  *
- * Copyright 2009-2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2021 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -87,8 +87,9 @@ rsRetVal rulesetKeyDestruct(void __attribute__((unused)) *pData);
  */
 #define rulesetGetName(pRuleset) ((pRuleset)->pszName)
 
-/* returns 1 if the ruleset has a queue associtated, 0 if not */
-#define rulesetHasQueue(pRuleset) ((pRuleset)->pQueue == NULL ? 0 : 1)
+/* returns 1 if the ruleset has a queue associated, 0 if not */
+#define rulesetHasQueue(pRuleset) ( ((pRuleset)->pQueue != NULL) \
+	&& ((pRuleset)->pQueue->qType != QUEUETYPE_DIRECT)  ? 1 : 0 )
 
 
 /* we will most probably convert this module back to traditional C

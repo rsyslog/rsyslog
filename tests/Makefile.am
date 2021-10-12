@@ -278,6 +278,7 @@ TESTS +=  \
 	msgdup.sh \
 	msgdup_props.sh \
 	empty-ruleset.sh \
+	ruleset-direct-queue.sh \
 	imtcp-listen-port-file-2.sh \
 	allowed-sender-tcp-ok.sh \
 	allowed-sender-tcp-fail.sh \
@@ -2105,6 +2106,7 @@ EXTRA_DIST= \
 	msgdup.sh \
 	msgdup_props.sh \
 	empty-ruleset.sh \
+	ruleset-direct-queue.sh \
 	imtcp-listen-port-file-2.sh \
 	allowed-sender-tcp-ok.sh \
 	allowed-sender-tcp-fail.sh \
