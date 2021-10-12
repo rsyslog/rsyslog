@@ -952,6 +952,7 @@ rsksiCtxOpenFile(rsksictx ctx, unsigned char *logfn)
 		if (ret != RSGTE_SUCCESS) {
 			report(ctx, "Unable to init. KSI module, signing service disabled");
 			ctx->disabled = true;
+			pthread_mutex_unlock(&ctx->module_lock);
 			return NULL;
 		}
 	}
