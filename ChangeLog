@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2110.0 (aka 2021.10) 2021-10-??
+- 2021-10-13: config bugfix: global param privDropToUser did not work correctly
+  The parameter was not implemented for rscript based configuration and
+  did not properly apply to legacy configuration. In essence, it almost always
+  did not work as expected.
+  see also: https://github.com/rsyslog/rsyslog/issues/4642
+  see also: https://github.com/rsyslog/rsyslog/commit/cbcaf2c7e5b67e5465e47bc7cc67af2eae47bd31
 - 2021-10-12: rscript bugfix: ruleset called async when ruleset had queue.type="direct"
   The call rscript statement is able to call a rule set either synchronously or
   asynchronously. We did this, because practice showed that both modes
