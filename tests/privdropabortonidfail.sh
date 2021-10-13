@@ -18,15 +18,19 @@ template(name="outfmt" type="list") {
 	property(name="msg" compressSpace="on")
 	constant(value="\n")
 }
-
-$FileOwner '${TESTBENCH_TESTUSER1}'
-$FileGroup '${TESTBENCH_TESTUSER1}'
-$DirOwner '${TESTBENCH_TESTUSER2}'
-$DirGroup '${TESTBENCH_TESTUSER2}'
+action(	type="omfile"
+	template="outfmt"
+	file="'${RSYSLOG_OUT_LOG}'"
+)
 
 action(	type="omfile"
 	template="outfmt"
-	file=`echo $RSYSLOG_OUT_LOG`)
+	file="'${RSYSLOG_DYNNAME}'.dummy.log"
+	FileOwner="'${TESTBENCH_TESTUSER1}'"
+	FileGroup="'${TESTBENCH_TESTUSER1}'"
+	DirOwner="'${TESTBENCH_TESTUSER2}'"
+	DirGroup="'${TESTBENCH_TESTUSER2}'"
+	)
 '
 
 startup
@@ -34,5 +38,4 @@ shutdown_when_empty
 wait_shutdown
 content_check --regex "ID for user '${TESTBENCH_TESTUSER1}' could not be found"
 content_check --regex "ID for user '${TESTBENCH_TESTUSER2}' could not be found"
-
 exit_test

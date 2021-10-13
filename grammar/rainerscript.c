@@ -934,8 +934,14 @@ doGetGID(struct nvlst *valnode, struct cnfparamdescr *param,
 
 	if(resultBuf == NULL) {
 		if(e != 0) {
-			LogError(e, RS_RET_ERR, "parameter '%s': error to "
+			if(loadConf->globals.abortOnIDResolutionFail) {
+				fprintf(stderr, "parameter '%s': error to "
 				"obtaining group id for '%s'", param->name, cstr);
+				exit(1); /* good exit */
+			} else {
+				LogError(e, RS_RET_ERR, "parameter '%s': error to "
+					"obtaining group id for '%s'", param->name, cstr);
+			}
 		}
 		parser_errmsg("parameter '%s': ID for group %s could not "
 		  "be found", param->name, cstr);
@@ -967,8 +973,17 @@ doGetUID(struct nvlst *valnode, struct cnfparamdescr *param,
 	const int err_no = getpwnam_r(cstr, &wrkBuf, stringBuf, sizeof(stringBuf), &resultBuf);
 	if(resultBuf == NULL) {
 		rs_strerror_r((err_no == 0) ? ENOENT : errno, errStr, sizeof(errStr));
-		parser_errmsg("parameter '%s': ID for user '%s' could not "
-		  "be found: %s", param->name, cstr, errStr);
+		if(loadConf->globals.abortOnIDResolutionFail) {
+			fprintf(stderr, "parameter '%s': ID for user '%s' could not "
+			  "be found: %s", param->name, cstr, errStr);
+			exit(1); /* good exit */
+		} else {
+			LogError(err_no, RS_RET_ERR, "parameter '%s': ID for user '%s' could not "
+			  "be found: %s", param->name, cstr, errStr);
+			parser_errmsg("parameter '%s': ID for user '%s' could not "
+			  "be found: %s", param->name, cstr, errStr);
+		}
+
 		r = 0;
 	} else {
 		val->val.datatype = 'N';
