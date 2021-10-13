@@ -80,7 +80,7 @@ liboptions
    :widths: auto
    :class: parameter-table
 
-   "binary", "no", "none", "on"
+   "string", "no", "none", "none"
 
 Configures civetweb library "Options".
 
@@ -220,7 +220,10 @@ addmetadata
 Enables metadata injection into `$!metadata` property. Currently, only header data is supported.
 The following metadata will be injected into the following properties:
 
-- `$!metadata!httpheaders`: http header data will be injected here as key value pairs. All header names will automatically be lowercased
+- `$!metadata!httpheaders`: http header data will be injected here as key-value pairs. All header names will automatically be lowercased
+  for case-insensitive access.
+
+- `$!metadata!queryparams`: query parameters from the http request will be injected here as key-value pairs. All header names will automatically be lowercased
   for case-insensitive access.
 
 
@@ -245,6 +248,21 @@ See also:
 
 
 .. _imhttp-statistic-counter:
+
+
+basicAuthFile
+^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "mandatory", "format", "default"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "no", "none", "none"
+
+Configures a `htpasswd <https://httpd.apache.org/docs/2.4/programs/htpasswd.html>`_ file and enables `basic authentication <https://en.wikipedia.org/wiki/Basic_access_authentication>`_ on http request received on this input.
+If this option is not set, basic authentation will not be enabled.
+
 
 Statistic Counter
 =================
@@ -287,7 +305,16 @@ One input path at '/postrequest', and another at '/postrequest2':
    # document root='.'
    module(load="imhttp") # needs to be done just once
 
-   # arbitrary input loads
+   # Input using default LF delimited framing
+   # For example, the following http request, with data body "Msg0001\nMsg0002\nMsg0003"
+   ##
+   # - curl -si http://localhost:$IMHTTP_PORT/postrequest -d $'Msg0001\nMsg0002\nMsg0003'
+   ##
+   # Results in the 3 message objects being submitted into rsyslog queues.
+   # - Message object with `msg` property set to `Msg0001`
+   # - Message object with `msg` property set to `Msg0002`
+   # - Message object with `msg` property set to `Msg0003`
+
    input(type="imhttp"
          name="myinput1"
          endpoint="/postrequest"
@@ -299,7 +326,12 @@ One input path at '/postrequest', and another at '/postrequest2':
          name="myinput2"
          endpoint="/postrequest2"
          SupportOctetCountedFraming="on"
-         ruleset="postrequest_ruleset2")
+         ruleset="postrequest_rs")
+
+   # handle the messages in ruleset
+   ruleset(name="postrequest_rs") {
+      action(type="omfile" file="/var/log/http_messages" template="myformat")
+   }
 
 
 Example 2
@@ -314,7 +346,7 @@ This sets up a http server instance on ports 80 and 443s (use 's' to indicate ss
    module(load="imhttp" ports=8080,443s)
    input(type="imhttp"
          endpoint="/postrequest"
-         ruleset="postrequest_ruleset")
+         ruleset="postrequest_rs")
 
 
 
@@ -333,5 +365,5 @@ imhttp can also support the underlying options of `Civetweb <https://github.com/
 
    input(type="imhttp"
          endpoint="/postrequest"
-         ruleset="postrequest_ruleset"
+         ruleset="postrequest_rs"
          )
