@@ -229,6 +229,7 @@ TESTS +=  \
 	privdropuserid.sh \
 	privdropgroup.sh \
 	privdropgroupid.sh \
+	privdropabortonidfaillegacy.sh \
 	json-nonstring.sh \
 	template-json.sh \
 	template-pure-json.sh \
@@ -1945,6 +1946,7 @@ EXTRA_DIST= \
 	privdropuserid.sh \
 	privdropgroup.sh \
 	privdropgroupid.sh \
+	privdropabortonidfaillegacy.sh \
 	json-nonstring.sh \
 	template-json.sh \
 	template-pure-json.sh \
