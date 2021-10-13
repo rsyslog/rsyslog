@@ -38,10 +38,10 @@ depends on the ruleset parameters. This cannot be overridden by the
 
 compatibility notes
 -------------------
-Note that versions prior to 8.2010.0 had a bug where an explicit
+Note that versions prior to 8.2110.0 had a bug where an explicit
 'queue="direct"' setting in the ruleset definition lead call to treat
 this as if a real queue existed. This could lead to some unexpected
-behaviour. Beginning with 8.2010.0 this is handled consistently and
+behaviour. Beginning with 8.2110.0 this is handled consistently and
 correctly.
 
 Under some exotic circumstances, this may look like a change of
