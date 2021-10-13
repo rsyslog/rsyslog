@@ -565,6 +565,9 @@ The following parameters can be set:
   are not dropped. This setting is applied whereever security IDs are resolved,
   e.g. when dropping privileges or assigning file permissions or owners.
 
+  The setting should be at the top of the configuration parameters to make sure its
+  behavior is correctly applied on all other configuration parameters.
+
   **CHANGE OF BEHAVIOR**
 
   The default for this parameter is "on". In versions prior to 8.2002.0, the default
