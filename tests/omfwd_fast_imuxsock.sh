@@ -4,6 +4,13 @@
 . ${srcdir:=.}/diag.sh init
 skip_platform "SunOS"  "We have no ATOMIC BUILTINS, so OverallQueueSize counting of imdiag is NOT threadsafe and the counting will fail on SunOS"
 
+./syslog_caller -fsyslog_inject-l -m0 > /dev/null 2>&1
+no_liblogging_stdlog=$?
+if [ $no_liblogging_stdlog -ne 0 ];then
+  echo "liblogging-stdlog not available - skipping test"
+  exit 77
+fi
+
 # export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 export NUMMESSAGES=100000
 
