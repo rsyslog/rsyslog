@@ -81,9 +81,6 @@ DEFobjCurrIf(nsd_ptcp)
 #endif
 
 
-static int bGlblSrvrInitDone = 0;	/**< 0 - server global init not yet done, 1 - already done */
-
-
 /* Static Helper variables for CERT status */
 static int bAnonInit;
 
@@ -1292,8 +1289,6 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 
 	SSL_CTX_set_timeout(pThis->ctx, 30);	/* Default Session Timeout, TODO: Make configureable */
 	SSL_CTX_set_mode(pThis->ctx, SSL_MODE_AUTO_RETRY);
-
-	bGlblSrvrInitDone = 1;
 
 	applyGnutlsPriorityString(pThis);
 
