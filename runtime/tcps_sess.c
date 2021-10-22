@@ -444,8 +444,10 @@ processDataRcvd(tcps_sess_t *pThis,
 		}
 	} else {
 		assert(pThis->inputState == eInMsg);
+		#if 0 // set to 1 for ultra-verbose
 		DBGPRINTF("DEBUG: processDataRcvd c=%c remain=%d\n",
 			c, pThis->iOctetsRemain);
+		#endif
 
 		if((   ((c == '\n') && !pThis->pSrv->bDisableLFDelim)
 		   || ((pThis->pSrv->addtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER)

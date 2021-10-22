@@ -63,7 +63,7 @@
 #include "tcpsrv.h"
 #include "ruleset.h"
 #include "rainerscript.h"
-#include "net.h" /* for permittedPeers, may be removed when this is removed */
+#include "net.h"
 #include "parserif.h"
 
 MODULE_TYPE_INPUT
@@ -144,6 +144,7 @@ struct instanceConf_s {
 	uchar *pszStrmDrvrCAFile;
 	uchar *pszStrmDrvrKeyFile;
 	uchar *pszStrmDrvrCertFile;
+	permittedPeers_t *pPermPeersRoot;
 	uchar *gnutlsPriorityString;
 	int iStrmDrvrExtendedCertCheck;
 	int iStrmDrvrSANPreference;
@@ -183,7 +184,7 @@ struct modConfData_s {
 	uchar *pszStrmDrvrCAFile;
 	uchar *pszStrmDrvrKeyFile;
 	uchar *pszStrmDrvrCertFile;
-	struct cnfarray *permittedPeers;
+	permittedPeers_t *pPermPeersRoot;
 	sbool configSetViaV2Method;
 	sbool bPreserveCase; /* preserve case of fromhost; true by default */
 };
@@ -251,6 +252,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "streamdriver.cafile", eCmdHdlrString, 0 },
 	{ "streamdriver.keyfile", eCmdHdlrString, 0 },
 	{ "streamdriver.certfile", eCmdHdlrString, 0 },
+	{ "permittedpeer", eCmdHdlrArray, 0 },
 	{ "gnutlsprioritystring", eCmdHdlrString, 0 },
 	{ "keepalive", eCmdHdlrBinary, 0 },
 	{ "keepalive.probes", eCmdHdlrNonNegInt, 0 },
@@ -365,6 +367,7 @@ createInstance(instanceConf_t **pinst)
 	inst->pszStrmDrvrCAFile = NULL;
 	inst->pszStrmDrvrKeyFile = NULL;
 	inst->pszStrmDrvrCertFile = NULL;
+	inst->pPermPeersRoot = NULL;
 	inst->gnutlsPriorityString = NULL;
 	inst->iStrmDrvrMode = loadModConf->iStrmDrvrMode;
 	inst->iStrmDrvrExtendedCertCheck = loadModConf->iStrmDrvrExtendedCertCheck;
@@ -451,6 +454,7 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 {
 	DEFiRet;
 	uchar *psz;	/* work variable */
+	permittedPeers_t *peers;
 
 	tcpsrv_t *pOurTcpsrv;
 	CHKiRet(tcpsrv.Construct(&pOurTcpsrv));
@@ -508,8 +512,10 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 			? modConf->pszStrmDrvrCertFile : inst->pszStrmDrvrCertFile;
 	CHKiRet(tcpsrv.SetDrvrCertFile(pOurTcpsrv, psz));
 
-	if(pPermPeersRoot != NULL) {
-		CHKiRet(tcpsrv.SetDrvrPermPeers(pOurTcpsrv, pPermPeersRoot));
+	peers = (inst->pPermPeersRoot == NULL)
+			? modConf->pPermPeersRoot : inst->pPermPeersRoot;
+	if(peers != NULL) {
+			CHKiRet(tcpsrv.SetDrvrPermPeers(pOurTcpsrv, peers));
 	}
 
 	/* initialized, now add socket and listener params */
@@ -608,6 +614,12 @@ CODESTARTnewInpInst
 			inst->pszStrmDrvrName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "gnutlsprioritystring")) {
 			inst->gnutlsPriorityString = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "permittedpeer")) {
+			for(int j = 0 ; j <  pvals[i].val.d.ar->nmemb ; ++j) {
+				uchar *const peer = (uchar*) es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+				CHKiRet(net.AddPermittedPeer(&inst->pPermPeersRoot, peer));
+				free(peer);
+			}
 		} else if(!strcmp(inppblk.descr[i].name, "flowcontrol")) {
 			inst->bUseFlowControl = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "disablelfdelimiter")) {
@@ -689,7 +701,7 @@ CODESTARTbeginCnfLoad
 	loadModConf->pszStrmDrvrCAFile = NULL;
 	loadModConf->pszStrmDrvrKeyFile = NULL;
 	loadModConf->pszStrmDrvrCertFile = NULL;
-	loadModConf->permittedPeers = NULL;
+	loadModConf->pPermPeersRoot = NULL;
 	loadModConf->configSetViaV2Method = 0;
 	loadModConf->bPreserveCase = 1; /* default to true */
 	bLegacyCnfModGlobalsPermitted = 1;
@@ -780,7 +792,11 @@ CODESTARTsetModCnf
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.name")) {
 			loadModConf->pszStrmDrvrName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "permittedpeer")) {
-			loadModConf->permittedPeers = cnfarrayDup(pvals[i].val.d.ar);
+			for(int j = 0 ; j <  pvals[i].val.d.ar->nmemb ; ++j) {
+				uchar *const peer = (uchar*) es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+				CHKiRet(net.AddPermittedPeer(&loadModConf->pPermPeersRoot, peer));
+				free(peer);
+			}
 		} else if(!strcmp(modpblk.descr[i].name, "preservecase")) {
 			loadModConf->bPreserveCase = (int) pvals[i].val.d.n;
 		} else {
@@ -818,6 +834,11 @@ CODESTARTendCnfLoad
 		pModConf->iKeepAliveProbes = cs.iKeepAliveProbes;
 		pModConf->iKeepAliveIntvl = cs.iKeepAliveIntvl;
 		pModConf->iKeepAliveTime = cs.iKeepAliveTime;
+		if(pPermPeersRoot != NULL) {
+			assert(pModConf->pPermPeersRoot == NULL);
+			pModConf->pPermPeersRoot = pPermPeersRoot;
+			pPermPeersRoot = NULL; /* memory handed over! */
+		}
 		if((cs.pszStrmDrvrAuthMode == NULL) || (cs.pszStrmDrvrAuthMode[0] == '\0')) {
 			loadModConf->pszStrmDrvrAuthMode = NULL;
 		} else {
@@ -860,15 +881,8 @@ ENDcheckCnf
 
 BEGINactivateCnfPrePrivDrop
 	instanceConf_t *inst;
-	int i;
 CODESTARTactivateCnfPrePrivDrop
 	runModConf = pModConf;
-	if(runModConf->permittedPeers != NULL) {
-		for(i = 0 ; i <  runModConf->permittedPeers->nmemb ; ++i) {
-			setPermittedPeer(NULL, (uchar*)
-			    es_str2cstr(runModConf->permittedPeers->arr[i], NULL));
-		}
-	}
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
 		addListner(runModConf, inst);
 	}
@@ -899,10 +913,10 @@ CODESTARTfreeCnf
 	free(pModConf->pszStrmDrvrCAFile);
 	free(pModConf->pszStrmDrvrKeyFile);
 	free(pModConf->pszStrmDrvrCertFile);
-	if(pModConf->permittedPeers != NULL) {
-		cnfarrayContentDestruct(pModConf->permittedPeers);
-		free(pModConf->permittedPeers);
+	if(pModConf->pPermPeersRoot != NULL) {
+		net.DestructPermittedPeers(&pModConf->pPermPeersRoot);
 	}
+
 	for(inst = pModConf->root ; inst != NULL ; ) {
 		free((void*)inst->pszBindRuleset);
 		free((void*)inst->pszStrmDrvrAuthMode);
@@ -914,6 +928,9 @@ CODESTARTfreeCnf
 		free((void*)inst->gnutlsPriorityString);
 		free((void*)inst->pszInputName);
 		free((void*)inst->dfltTZ);
+		if(inst->pPermPeersRoot != NULL) {
+			net.DestructPermittedPeers(&inst->pPermPeersRoot);
+		}
 		del = inst;
 		inst = inst->next;
 		free(del);
@@ -1026,10 +1043,6 @@ ENDisCompatibleWithFeature
 
 BEGINmodExit
 CODESTARTmodExit
-	if(pPermPeersRoot != NULL) {
-		net.DestructPermittedPeers(&pPermPeersRoot);
-	}
-
 	/* release objects we used */
 	objRelease(net, LM_NET_FILENAME);
 	objRelease(netstrm, LM_NETSTRMS_FILENAME);
