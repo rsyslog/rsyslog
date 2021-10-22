@@ -80,10 +80,6 @@ DEFobjCurrIf(nsd_ptcp)
 	#define RSYSLOG_BIO_number_written(SSLBIO) SSLBIO->num
 #endif
 
-
-/* Static Helper variables for CERT status */
-static int bAnonInit;
-
 static rsRetVal applyGnutlsPriorityString(nsd_ossl_t *const pNsd);
 
 /*--------------------------------------MT OpenSSL helpers ------------------------------------------*/
@@ -531,7 +527,7 @@ osslInitSession(nsd_ossl_t *pThis, osslSslState_t osslType) /* , nsd_ossl_t *pSe
 		if (pThis->DrvrVerifyDepth != 0) {
 			SSL_set_verify_depth(pThis->ssl, pThis->DrvrVerifyDepth);
 		}
-	} else 	if (bAnonInit == 1 && pThis->gnutlsPriorityString == NULL) {
+	} else 	if (pThis->gnutlsPriorityString == NULL) {
 		/* Allow ANON Ciphers only in ANON Mode and if no custom priority string is defined */
 		#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
 		 /* NOTE: do never use: +eNULL, it DISABLES encryption! */
@@ -656,9 +652,9 @@ static rsRetVal
 osslChkOnePeerName(nsd_ossl_t *pThis, X509 *pCert, uchar *pszPeerID, int *pbFoundPositiveMatch)
 {
 	permittedPeers_t *pPeer;
-	#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L
 	int osslRet;
-	#endif
+#endif
 	char *x509name = NULL;
 	DEFiRet;
 
@@ -1292,18 +1288,22 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 
 	applyGnutlsPriorityString(pThis);
 
-	/* Anon Ciphers will only be initialized when Authmode is set to ANON later */
-	bAnonInit = 0;
-
-	#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+#	if OPENSSL_VERSION_NUMBER <= 0x101010FFL
 	/* Enable Support for automatic EC temporary key parameter selection. */
 	SSL_CTX_set_ecdh_auto(pThis->ctx, 1);
-	#else
+#	else
+	/*
+	* SSL_CTX_set_ecdh_auto and SSL_CTX_set_tmp_ecdh are depreceated in higher
+	* OpenSSL Versions, so we no more need them - see for more:
+	* https://www.openssl.org/docs/manmaster/man3/SSL_CTX_set_ecdh_auto.html
+	*/
+#	endif
+#else
 	dbgprintf("osslAnonInit: openssl to old, cannot use SSL_CTX_set_ecdh_auto."
 		"Using SSL_CTX_set_tmp_ecdh with NID_X9_62_prime256v1/() instead.\n");
 	SSL_CTX_set_tmp_ecdh(pThis->ctx, EC_KEY_new_by_curve_name(NID_X9_62_prime256v1));
-	#endif
-	bAnonInit = 1;
+#endif
 finalize_it:
 	RETiRet;
 }
