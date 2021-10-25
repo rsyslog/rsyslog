@@ -261,11 +261,10 @@ StreamDriver.AuthMode
 
    "string", "none", "no", "``$InputTCPServerStreamDriverAuthMode``"
 
-Sets permitted peer IDs. Only these peers are able to connect to
-the listener. <id-string> semantics depend on the currently
-selected AuthMode and
+Sets stream driver authentication mode. Possible values and meaning
+depend on the
 :doc:`network stream driver <../../concepts/netstrm_drvr>`.
-PermittedPeers may not be set in anonymous modes.
+used.
 
 
 StreamDriver.PermitExpiredCerts
@@ -743,6 +742,21 @@ streamDriver.CertFile
 
 This permits to override the DefaultNetstreamDriverCertFile global parameter on the input()
 level. For further details, see the global parameter.
+
+
+PermittedPeer
+^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "array", "none", "no", "equally-named module parameter"
+.. versionadded:: 8.2112.0
+
+This permits to override the equally-named module parameter on the input()
+level. For further details, see the module parameter.
 
 
 gnutlsPriorityString
