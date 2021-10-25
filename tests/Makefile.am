@@ -206,7 +206,6 @@ TESTS +=  \
 	invalid_nested_include.sh \
 	omfwd-tls-invalid-permitExpiredCerts.sh \
 	omfwd-keepalive.sh \
-	omfwd_fast_imuxsock.sh \
 	omusrmsg-noabort-legacy.sh \
 	omusrmsg-errmsg-no-params.sh \
 	omusrmsg-noabort.sh \
@@ -1032,6 +1031,7 @@ TESTS +=  \
 	stats-json-es.sh \
 	dynstats_reset_without_pstats_reset.sh \
 	dynstats_prevent_premature_eviction.sh \
+	omfwd_fast_imuxsock.sh \
 	omfwd_impstats-udp.sh \
 	omfwd_impstats-tcp.sh
 if HAVE_VALGRIND
