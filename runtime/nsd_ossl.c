@@ -612,6 +612,7 @@ osslChkPeerFingerprint(nsd_ossl_t *pThis, X509 *pCert)
 			dbgprintf("osslChkPeerFingerprint: peer's certificate MATCH found: %s\n", pPeer->pszID);
 			bFoundPositiveMatch = 1;
 		} else {
+			dbgprintf("osslChkPeerFingerprint: NOMATCH peer certificate: %s\n", pPeer->pszID);
 			pPeer = pPeer->pNext;
 		}
 	}
