@@ -1,5 +1,13 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2112.0 (aka 2021.12) 2021-12-??
+- 2021-10-25: testbench: false positive when impstats was not built
+  Test omfwd_fast_imuxsock failed when impstats was not built. This
+  has been corrected, test is now only executed when impstats is
+  present.
+- 2021-10-25: imtcp: add support for permittedPeers setting at input() level
+  The permittedPeers settig was actually forgotten during the refactoring
+  of TLS input() level settings. This functionality is now added.
+  closes: https://github.com/rsyslog/rsyslog/issues/4706
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2110.0 (aka 2021.10) 2021-10-19
 - 2021-10-13: config bugfix: global(security.abortonidresolutionfail=) did not work
