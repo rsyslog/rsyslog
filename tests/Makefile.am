@@ -1261,6 +1261,7 @@ TESTS +=  \
 	imtcp-tls-gtls-x509fingerprint.sh \
 	imtcp-tls-gtls-x509name-invld.sh \
 	imtcp-tls-gtls-x509name.sh \
+	imtcp-tls-gtls-x509name-legacy.sh \
 	imtcp-drvr-in-input-basic.sh \
 	imtcp-multi-drvr-basic.sh \
 	imtcp-multi-drvr-basic-parallel.sh
@@ -2128,6 +2129,7 @@ EXTRA_DIST= \
 	imtcp-tls-gtls-x509fingerprint.sh \
 	imtcp-tls-gtls-x509name-invld.sh \
 	imtcp-tls-gtls-x509name.sh \
+	imtcp-tls-gtls-x509name-legacy.sh \
 	imtcp-drvr-in-input-basic.sh \
 	imtcp-multi-drvr-basic.sh \
 	imtcp-multi-drvr-basic-parallel.sh \
