@@ -1,5 +1,14 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2112.0 (aka 2021.12) 2021-12-??
+- 2021-10-27: ommysql: fix threading bug
+  When the MariaDB connection was (re)established, old or NULL handle
+  could be used. This is fixed now.
+  We need to synchronize access to the mysql handle, because multiple threads
+  use it and we may need to (re)init it during processing. This could lead to
+  races with potentially wrong addresses or NULL accesses. If this really
+  matters mostly depends on the MariaDB/MySQL client library. It looks like
+  they guard against fatal failuers. Anyhow, logging errors inside rsyslog
+  could happen in any case.
 - 2021-10-25: testbench: false positive when impstats was not built
   Test omfwd_fast_imuxsock failed when impstats was not built. This
   has been corrected, test is now only executed when impstats is
