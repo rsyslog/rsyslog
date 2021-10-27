@@ -6,7 +6,7 @@
  *
  * File begun on 2007-07-20 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2018 Adiscon GmbH.
+ * Copyright 2007-2021 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -99,6 +99,11 @@ static struct cnfparamblk actpblk =
 	  actpdescr
 	};
 
+/* we need to synchronize access to the mysql handle, because multiple threads
+ * use it and we may need to (re)init it during processing. This could lead to
+ * races with potentially wrong addresses or NULL accesses.
+ */
+pthread_rwlock_t rwlock_hmysql;
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars
@@ -113,7 +118,9 @@ ENDcreateInstance
 
 BEGINcreateWrkrInstance
 CODESTARTcreateWrkrInstance
+	pthread_rwlock_wrlock(&rwlock_hmysql);
 	pWrkrData->hmysql = NULL;
+	pthread_rwlock_unlock(&rwlock_hmysql);
 ENDcreateWrkrInstance
 
 
@@ -130,10 +137,14 @@ ENDisCompatibleWithFeature
  */
 static void closeMySQL(wrkrInstanceData_t *pWrkrData)
 {
+	pthread_rwlock_unlock(&rwlock_hmysql);
+	pthread_rwlock_wrlock(&rwlock_hmysql);
 	if(pWrkrData->hmysql != NULL) {	/* just to be on the safe side... */
 		mysql_close(pWrkrData->hmysql);
 		pWrkrData->hmysql = NULL;
 	}
+	pthread_rwlock_unlock(&rwlock_hmysql);
+	pthread_rwlock_rdlock(&rwlock_hmysql);
 }
 
 BEGINfreeInstance
@@ -147,8 +158,10 @@ ENDfreeInstance
 
 BEGINfreeWrkrInstance
 CODESTARTfreeWrkrInstance
+	pthread_rwlock_rdlock(&rwlock_hmysql);
 	closeMySQL(pWrkrData);
 	mysql_thread_end();
+	pthread_rwlock_unlock(&rwlock_hmysql);
 ENDfreeWrkrInstance
 
 
@@ -198,6 +211,10 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent)
 
 	assert(pWrkrData->hmysql == NULL);
 	pData = pWrkrData->pData;
+
+	pthread_rwlock_unlock(&rwlock_hmysql);
+	pthread_rwlock_wrlock(&rwlock_hmysql);
+
 	pWrkrData->hmysql = mysql_init(NULL);
 	if(pWrkrData->hmysql == NULL) {
 		LogError(0, RS_RET_SUSPENDED, "can not initialize MySQL handle");
@@ -239,6 +256,8 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent)
 	}
 
 finalize_it:
+	pthread_rwlock_unlock(&rwlock_hmysql);
+	pthread_rwlock_rdlock(&rwlock_hmysql);
 	RETiRet;
 }
 
@@ -293,9 +312,11 @@ finalize_it:
 
 BEGINtryResume
 CODESTARTtryResume
+	pthread_rwlock_rdlock(&rwlock_hmysql);
 	if(pWrkrData->hmysql == NULL) {
 		iRet = initMySQL(pWrkrData, 1);
 	}
+	pthread_rwlock_unlock(&rwlock_hmysql);
 ENDtryResume
 
 BEGINbeginTransaction
@@ -306,6 +327,7 @@ ENDbeginTransaction
 BEGINcommitTransaction
 CODESTARTcommitTransaction
 	DBGPRINTF("ommysql: commitTransaction\n");
+	pthread_rwlock_rdlock(&rwlock_hmysql);
 	CHKiRet(writeMySQL(pWrkrData, (uchar*)"START TRANSACTION"));
 
 	for(unsigned i = 0 ; i < nParams ; ++i) {
@@ -328,6 +350,7 @@ CODESTARTcommitTransaction
 	}
 	DBGPRINTF("ommysql: transaction committed\n");
 finalize_it:
+	pthread_rwlock_unlock(&rwlock_hmysql);
 ENDcommitTransaction
 
 static inline void
@@ -503,6 +526,7 @@ ENDparseSelectorAct
 
 BEGINmodExit
 CODESTARTmodExit
+	pthread_rwlock_destroy(&rwlock_hmysql);
 #	ifdef HAVE_MYSQL_LIBRARY_INIT
 	mysql_library_end();
 #	else
@@ -556,6 +580,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
+	pthread_rwlock_init(&rwlock_hmysql, NULL);
+
 	/* register our config handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionommysqlserverport", 0, eCmdHdlrInt, NULL, &cs.iSrvPort,
 	STD_LOADABLE_MODULE_ID));
@@ -566,6 +592,3 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables,
 	NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
-
-/* vi:set ai:
- */
