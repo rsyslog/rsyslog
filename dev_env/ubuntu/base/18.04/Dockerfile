@@ -106,8 +106,9 @@ RUN	echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-8 main" > /etc/a
 RUN	mkdir /local_dep_cache && \
 	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch-5.6.9.tar.gz
 RUN	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz
+RUN	wget -nv https://www.rsyslog.com/files/download/rsyslog/elasticsearch-7.14.1-linux-x86_64.tar.gz -O /local_dep_cache/elasticsearch-7.14.1-linux-x86_64.tar.gz
 RUN	wget -nv https://dlcdn.apache.org/zookeeper/zookeeper-3.6.3/apache-zookeeper-3.6.3-bin.tar.gz -O /local_dep_cache/apache-zookeeper-3.6.2-bin.tar.gz
-RUN	wget -nv https://www.apache.org/dyn/closer.cgi?path=/kafka/2.8.0/kafka_2.13-2.8.0.tgz -O /local_dep_cache/kafka_2.12-2.7.0.tgz
+RUN	wget -nv https://www.apache.org/dyn/closer.cgi?path=/kafka/2.8.0/kafka_2.13-2.8.0.tgz -O /local_dep_cache/kafka_2.13-2.8.0.tgz
 
 # tell tests which are the newester versions, so they can be checked without the need
 # to adjust test sources.
@@ -189,7 +190,7 @@ RUN	./setup-system.sh
 RUN	cd helper-projects \
 	&& git clone https://github.com/edenhill/kafkacat \
 	&& cd kafkacat \
-	&& (unset CFLAGS; ./configure --prefix=/usr --CFLAGS="-g" ; make -j2) \
+	&& (unset CFLAGS; ./configure --prefix=/usr --CFLAGS="-g" ; make -j) \
 	&& make install \
 	&& cd ..
 # Note: we do NOT delete the source as we may need it to
@@ -212,7 +213,7 @@ RUN	cd helper-projects && \
 	cd libfastjson && \
 	autoreconf -fi && \
 	./configure --prefix=/usr --libdir=/usr/lib/x86_64-linux-gnu --includedir=/usr/include && \
-	make -j4 && \
+	make -j && \
 	make install && \
 	cd .. && \
 	rm -r libfastjson && \
