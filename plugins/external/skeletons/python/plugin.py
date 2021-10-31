@@ -87,7 +87,7 @@ while keepRunning == 1:
 				keepRunning = 0
 			msgsInBatch = msgsInBatch + 1
 			if msgsInBatch >= maxAtOnce:
-				break;
+				break
 		if len(msgs) > 0:
 			onReceive(msgs)
 			sys.stdout.flush() # very important, Python buffers far too much!
