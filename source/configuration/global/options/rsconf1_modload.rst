@@ -22,5 +22,9 @@ The default module directory is ignored in that case.
 
 **Sample:**
 
-``$ModLoad ommysql # load MySQL functionality $ModLoad /rsyslog/modules/ompgsql.so # load the postgres module via absolute path``
+.. code-block:: none
+
+  $ModLoad ommysql # load MySQL functionality
+  $ModLoad /rsyslog/modules/ompgsql.so # load the postgres module via absolute path
+
 
