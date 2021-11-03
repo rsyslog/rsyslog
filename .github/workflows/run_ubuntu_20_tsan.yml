@@ -31,6 +31,7 @@ jobs:
   check_run:
     runs-on: ubuntu-18.04
     timeout-minutes: 50
+    continue-on-error: true
 
     steps:
       - name: git checkout project
@@ -52,7 +53,7 @@ jobs:
           export CFLAGS="-g -fstack-protector -D_FORTIFY_SOURCE=2 -fsanitize=thread \
                     -O0 -fno-omit-frame-pointer -fno-color-diagnostics"
           export CI_SANITIZE_BLACKLIST='tests/tsan.supp'
-	  # note: we need pathes in container, thus /rsyslog vs. $(pwd) in TSAN_OPTIONS
+          # note: we need pathes in container, thus /rsyslog vs. $(pwd) in TSAN_OPTIONS
           export TSAN_OPTIONS="halt_on_error=1 suppressions=/rsyslog/tests/tsan-rt.supp"
           export ABORT_ALL_ON_TEST_FAIL='YES'
           # impstats has known and OK races
