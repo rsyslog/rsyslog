@@ -35,7 +35,7 @@ This is our wish list:
 
 -  if you have configured a device for sending syslog data, and that
    device is not in our `syslog configuration
-   database <http://www.monitorware.com/en/syslog-enabled-products/>`_,
+   database <https://www.adiscon.com/syslog-enabled-products/#>`_,
    you might want to tell us how to configure it.
 -  if you are a corporate user
 
