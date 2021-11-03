@@ -46,7 +46,7 @@ def onReceive(msg):
 	   and so each message needs to be fully processed (rsyslog will wait for the
 	   reply before the next message is pushed to this module).
 	"""
-	print json.dumps({'msg': msg + "-modified"})
+	print(json.dumps({'msg': msg + "-modified"}))
 
 def onExit():
 	""" Do everything that is needed to finish processing (e.g.
