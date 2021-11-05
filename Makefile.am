@@ -202,6 +202,10 @@ if ENABLE_FMUNFLATTEN
 SUBDIRS += contrib/fmunflatten
 endif
 
+if ENABLE_FFAUP
+SUBDIRS += contrib/ffaup
+endif
+
 if ENABLE_OMKAFKA
 SUBDIRS += plugins/omkafka
 endif

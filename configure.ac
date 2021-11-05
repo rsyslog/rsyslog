@@ -402,6 +402,28 @@ if test "$enable_fmhash_xxhash" = "yes"; then
 fi
 
 
+#faup header checks
+AC_ARG_ENABLE(ffaup,
+	[AS_HELP_STRING([--enable-ffaup],[Enable ffaup support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_ffaup="yes" ;;
+          no) enable_ffaup="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-ffaup) ;;
+         esac],
+	[enable_ffaup=no]
+)
+
+AM_CONDITIONAL(ENABLE_FFAUP, test x$enable_ffaup = xyes)
+if test "$enable_ffaup" = "yes"; then
+	AC_CHECK_LIB([faupl], [faup_init], [
+		AC_CHECK_HEADER([faup/faup.h], [
+			FAUP_LIBS="-lfaupl"
+			AC_SUBST(FAUP_LIBS)],
+			[AC_MSG_ERROR([Unable to add faup support for URL parsing.])])
+	])
+fi
+
+
 # rscript function unflatten
 AC_ARG_ENABLE(fmunflatten,
 	[AS_HELP_STRING([--enable-fmunflatten],[Enable fmunflatten support @<:@default=no@:>@])],
@@ -2705,6 +2727,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/omhttp/Makefile \
 		contrib/fmhash/Makefile \
 		contrib/fmunflatten/Makefile \
+		contrib/ffaup/Makefile \
 		contrib/pmsnare/Makefile \
 		contrib/pmpanngfw/Makefile \
 		contrib/pmaixforwardedfrom/Makefile \
@@ -2853,6 +2876,7 @@ echo "    fmhttp enabled:                           $enable_fmhttp"
 echo "    fmhash enabled:                           $enable_fmhash"
 echo "    fmhash with xxhash enabled:               $enable_fmhash_xxhash"
 echo "    fmunflatten enabled:                      $enable_fmunflatten"
+echo "    ffaup enabled:                            $enable_ffaup"
 echo
 echo "---{ debugging support }---"
 echo "    distcheck workaround enabled:             $enable_distcheck_workaround"
