@@ -1115,10 +1115,10 @@ rulesetProcessCnf(struct cnfobj *o)
 	/* pick up ruleset queue parameters */
 	if(queueCnfParamsSet(o->nvlst)) {
 		if(pRuleset->pszName == NULL) {
-			rsname = pRuleset->pszName;
+			rsname = (uchar*) "[ruleset]";
 			qtype = pRuleset->pQueue->qType;
 		} else {
-			rsname = (uchar*) "[ruleset]";
+			rsname = pRuleset->pszName;
 			qtype = 3;
 		}
 		DBGPRINTF("adding a ruleset-specific \"main\" queue for ruleset '%s', mode %d\n",
