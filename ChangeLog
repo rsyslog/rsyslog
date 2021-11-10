@@ -1,5 +1,19 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2112.0 (aka 2021.12) 2021-12-??
+- 2021-11-10: ruleset bugfix: ruleset queue was incorrectly named
+  The ruleset was incorrectly and unusably named. This was a regeression
+  from 4a63f8e9629c3c9481a8b6f9d7787e3b3304320b.
+  Many thanks to github user digirati82 for alerting us.
+  closes https://github.com/rsyslog/rsyslog/issues/4730
+- 2021-11-10: omsnmp: update module to current IP best practices
+  The omsnmp module uses the inet_addr() function to convert the Internet host address
+  from IPv4 numbers-and-dots notation into binary data in network byte order. If the input
+  is invalid, INADDR_NONE (usually -1) is returned. Use of this function is problematic
+  because -1 is a valid address (255.255.255.255). We should avoid its use in favor of
+  inet_aton(), inet_pton(3), or getaddrinfo(3), which provide a cleaner way to indicate
+  error return [1].
+  This is just a request to satisfy covscan, so no error is reported at all.
+  Thanks to Attila Lakatos for the patch.
 - 2021-10-27: ommysql: fix threading bug
   When the MariaDB connection was (re)established, old or NULL handle
   could be used. This is fixed now.
