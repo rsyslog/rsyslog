@@ -304,8 +304,7 @@ static rsRetVal omsnmp_sendsnmp(wrkrInstanceData_t *pWrkrData, uchar *psz, uchar
 
 		/* Set PDU SOurce property if available */
 		if (pszSource != NULL) {
-			srcAddr.sin_addr.s_addr = inet_addr((const char *)pszSource);
-			if (srcAddr.sin_addr.s_addr != INADDR_NONE) {
+			if (inet_aton((const char *)pszSource, &srcAddr.sin_addr) != 0) {
 				pdu->agent_addr[0] = (srcAddr.sin_addr.s_addr) & 0xFF;
 				pdu->agent_addr[1] = (srcAddr.sin_addr.s_addr >> 8) & 0xFF;
 				pdu->agent_addr[2] = (srcAddr.sin_addr.s_addr >> 16) & 0xFF;
