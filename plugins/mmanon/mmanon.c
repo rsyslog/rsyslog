@@ -577,6 +577,10 @@ syntax_ipv6(const uchar *const __restrict__ buf,
 				goto done;
 			}
 		}
+		if(ipParts == 8 && !hadAbbrev) {
+			isIP = 1;
+			goto done;
+		}
 	}
 
 	if((!lastSep && (ipParts == 8 && !hadAbbrev)) || (ipParts < 8 && hadAbbrev)) {
