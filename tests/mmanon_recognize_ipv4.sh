@@ -45,7 +45,7 @@ tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag: asdfghjk
 
 shutdown_when_empty
 wait_shutdown
-echo ' asdfghjk
+export EXPECTED=' asdfghjk
  before 0.0.0.0
  0.0.0.0 after
  before 0.0.0.0 after
@@ -70,11 +70,6 @@ echo ' asdfghjk
  10.0.0.0.1
  0.0.0.0.1
  0.0.0.0.
- textnoblank0.0.0.0stillnoblank' | cmp - $RSYSLOG_OUT_LOG
-if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
-  cat $RSYSLOG_OUT_LOG
-  error_exit  1
-fi;
-
+ textnoblank0.0.0.0stillnoblank'
+cmp_exact
 exit_test

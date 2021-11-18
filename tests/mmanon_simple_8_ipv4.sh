@@ -23,14 +23,9 @@ tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag: 1.1.1.8
 
 shutdown_when_empty
 wait_shutdown
-echo ' 1.1.1.x
+export EXPECTED=' 1.1.1.x
  0.0.0.x
  172.0.234.xxx
- 111.1.1.x.' | cmp - $RSYSLOG_OUT_LOG
-if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
-  cat $RSYSLOG_OUT_LOG
-  error_exit  1
-fi;
-
+ 111.1.1.x.'
+cmp_exact
 exit_test
