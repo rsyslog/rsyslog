@@ -1,5 +1,18 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2112.0 (aka 2021.12) 2021-12-??
+- 2021-11-18: mmanon: relax IPv6 detection - improve anonymization
+  We so far tried to ensure a value is really an IPv6 address, in order
+  to avoid to mangle with just similar-looking information elements.
+  However, this lead to misdetection for unusual formats, e.g. when a
+  port is appended to a numerical IPv6 adress given without braces [].
+  This has been changed now. In a sense, we now prefer to err on the
+  side of privacy.
+  BEHAVIOR CHANGE:
+  Previously, a suspect value was not anonymized, and thus some other
+  elements (like some MAC addresses) preserved. Now the opposite is
+  true, and we anonymize anything that looks close enough to be an
+  IPv6 address. This improves anonymization.
+  closes https://github.com/rsyslog/rsyslog/issues/4725
 - 2021-11-10: ruleset bugfix: ruleset queue was incorrectly named
   The ruleset was incorrectly and unusably named. This was a regeression
   from 4a63f8e9629c3c9481a8b6f9d7787e3b3304320b.
