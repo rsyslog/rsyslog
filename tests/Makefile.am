@@ -595,6 +595,7 @@ TESTS +=  \
 	mmanon_zero_64_ipv6.sh \
 	mmanon_both_modes_compatible.sh \
 	mmanon_recognize_ipembedded.sh \
+	mmanon_ipv6_port.sh \
 	mmanon_random_cons_128_ipembedded.sh
 endif # if ENABLE_MMANON
 
@@ -1881,6 +1882,7 @@ EXTRA_DIST= \
 	mmanon_zero_64_ipv6.sh \
 	mmanon_both_modes_compatible.sh \
 	mmanon_recognize_ipembedded.sh \
+	mmanon_ipv6_port.sh \
 	mmanon_random_cons_128_ipembedded.sh \
 	rscript_eq.sh \
 	rscript_eq_var.sh \
