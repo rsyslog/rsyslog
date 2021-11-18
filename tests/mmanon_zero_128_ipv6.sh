@@ -27,19 +27,14 @@ tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag: asdfghjk
 
 shutdown_when_empty
 wait_shutdown
-echo ' asdfghjk
+export EXPECTED=' asdfghjk
  0:0:0:0:0:0:0:0
  0:0:0:0:0:0:0:0 0:0:0:0:0:0:0:0
  0:0:0:0:0:0:0:0
  0:0:0:0:0:0:0:0
  13:abd:45:
- textnoblank0:0:0:0:0:0:0:0stillnoblank' | cmp - $RSYSLOG_OUT_LOG
-if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
-  cat $RSYSLOG_OUT_LOG
-  error_exit  1
-fi;
-
+ textnoblank0:0:0:0:0:0:0:0stillnoblank'
+cmp_exact
 
 grep 'invalid number of ipv6.bits (129), corrected to 128' ${RSYSLOG2_OUT_LOG} > /dev/null
 if [ $? -ne 0 ]; then
