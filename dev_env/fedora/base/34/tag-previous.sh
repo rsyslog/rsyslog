@@ -1,0 +1,2 @@
+docker tag rsyslog/rsyslog_dev_base_fedora:34 rsyslog/rsyslog_dev_base_fedora:34_previous
+docker push rsyslog/rsyslog_dev_base_fedora:34_previous

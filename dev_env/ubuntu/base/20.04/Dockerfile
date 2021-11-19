@@ -222,6 +222,19 @@ RUN	cd helper-projects && \
 #	rm -r liblognorm && \
 #	cd ..
 
+# we need libfaup for some modules - packages do usually not exist
+RUN	apt-get -y install cmake
+RUN	cd helper-projects && \
+	git clone git://github.com/stricaud/faup.git && \
+	cd faup && \
+	cd build && \
+	cmake .. && make -j&& \
+	make install && \
+	cd .. && \
+	cd .. && \
+	rm -r faup && \
+	cd ..
+
 # we need Guardtime libksi here, otherwise we cannot check the KSI component	
 RUN	cd helper-projects && \
 	git clone https://github.com/guardtime/libksi.git && \
@@ -287,6 +300,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-clickhouse-tests=no \
 	--enable-elasticsearch \
 	--enable-elasticsearch-tests \
+	--enable-ffaup \
 	--enable-gnutls \
 	--enable-gssapi-krb5 \
 	--enable-imbatchreport \
