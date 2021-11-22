@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2112.0 (aka 2021.12) 2021-12-??
+- 2021-11-22: new contribtion: URL parser module function using libfa
+  Thanks to Théo Bertin for the patch.
 - 2021-11-18: mmanon: relax IPv6 detection - improve anonymization
   We so far tried to ensure a value is really an IPv6 address, in order
   to avoid to mangle with just similar-looking information elements.
