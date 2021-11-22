@@ -350,7 +350,7 @@ createInstance(instanceConf_t **pinst)
 	instanceConf_t *inst = NULL;
 
 	DEFiRet;
-	CHKmalloc(inst = malloc(sizeof(instanceConf_t)));
+	CHKmalloc(inst = (instanceConf_t*) calloc(1, sizeof(instanceConf_t)));
 	CHKmalloc(inst->cnf_params = (tcpLstnParams_t*) calloc(1, sizeof(tcpLstnParams_t)));
 	inst->next = NULL;
 	inst->pszBindRuleset = NULL;
@@ -400,6 +400,7 @@ createInstance(instanceConf_t **pinst)
 	*pinst = inst;
 finalize_it:
 	if(iRet != RS_RET_OK) {
+		free(inst->cnf_params);
 		free(inst);
 	}
 	RETiRet;
@@ -431,7 +432,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		CHKmalloc(inst->cnf_params->pszAddr = ustrdup(cs.lstnIP));
 	}
 	if((cs.lstnPortFile == NULL) || (cs.lstnPortFile[0] == '\0')) {
-		inst->cnf_params->pszAddr = NULL;
+		inst->cnf_params->pszLstnPortFileName = NULL;
 	} else {
 		CHKmalloc(inst->cnf_params->pszLstnPortFileName = ustrdup(cs.lstnPortFile));
 	}
@@ -706,7 +707,6 @@ CODESTARTbeginCnfLoad
 	loadModConf->bPreserveCase = 1; /* default to true */
 	bLegacyCnfModGlobalsPermitted = 1;
 	/* init legacy config variables */
-	cs.pszStrmDrvrAuthMode = NULL;
 	resetConfigVariables(NULL, NULL); /* dummy parameters just to fulfill interface def */
 ENDbeginCnfLoad
 
@@ -906,9 +906,9 @@ ENDactivateCnf
 BEGINfreeCnf
 	instanceConf_t *inst, *del;
 CODESTARTfreeCnf
+	free(pModConf->gnutlsPriorityString);
 	free(pModConf->pszStrmDrvrName);
 	free(pModConf->pszStrmDrvrAuthMode);
-	free(pModConf->gnutlsPriorityString);
 	free(pModConf->pszStrmDrvrPermitExpiredCerts);
 	free(pModConf->pszStrmDrvrCAFile);
 	free(pModConf->pszStrmDrvrKeyFile);
@@ -1024,12 +1024,14 @@ ENDwillRun
 BEGINafterRun
 CODESTARTafterRun
 	tcpsrv_etry_t *etry = tcpsrv_root;
+	tcpsrv_etry_t *del;
 	while(etry != NULL) {
 		iRet = tcpsrv.Destruct(&etry->tcpsrv);
 		// TODO: check iRet, reprot error
+		del = etry;
 		etry = etry->next;
+		free(del);
 	}
-
 	net.clearAllowedSenders(UCHAR_CONSTANT("TCP"));
 ENDafterRun
 
@@ -1068,11 +1070,11 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 	cs.iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	cs.maxFrameSize = 200000;
 	cs.bDisableLFDelim = 0;
-	free(cs.pszInputName);
-	cs.pszInputName = NULL;
+	cs.bPreserveCase = 1;
 	free(cs.pszStrmDrvrAuthMode);
 	cs.pszStrmDrvrAuthMode = NULL;
-	cs.bPreserveCase = 1;
+	free(cs.pszInputName);
+	cs.pszInputName = NULL;
 	free(cs.lstnPortFile);
 	cs.lstnPortFile = NULL;
 	return RS_RET_OK;
