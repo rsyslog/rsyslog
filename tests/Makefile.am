@@ -1108,6 +1108,42 @@ TESTS +=  \
 	rscript_unflatten_object_exclamation-vg.sh
 endif # HAVE_VALGRIND
 endif # ENABLE_FMUNFLATTEN
+if ENABLE_FFAUP
+TESTS +=  \
+	rscript_faup_all.sh \
+	rscript_faup_all_2.sh \
+	rscript_faup_all_empty.sh \
+	rscript_faup_scheme.sh \
+	rscript_faup_credential.sh \
+	rscript_faup_subdomain.sh \
+	rscript_faup_domain.sh \
+	rscript_faup_domain_without_tld.sh \
+	rscript_faup_host.sh \
+	rscript_faup_tld.sh \
+	rscript_faup_port.sh \
+	rscript_faup_resource_path.sh \
+	rscript_faup_query_string.sh \
+	rscript_faup_fragment.sh \
+	rscript_faup_mozilla_tld.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	rscript_faup_all_vg.sh \
+	rscript_faup_all_2_vg.sh \
+	rscript_faup_all_empty_vg.sh \
+	rscript_faup_scheme_vg.sh \
+	rscript_faup_credential_vg.sh \
+	rscript_faup_subdomain_vg.sh \
+	rscript_faup_domain_vg.sh \
+	rscript_faup_domain_without_tld_vg.sh \
+	rscript_faup_host_vg.sh \
+	rscript_faup_tld_vg.sh \
+	rscript_faup_port_vg.sh \
+	rscript_faup_resource_path_vg.sh \
+	rscript_faup_query_string_vg.sh \
+	rscript_faup_fragment_vg.sh \
+	rscript_faup_mozilla_tld_vg.sh
+endif # HAVE_VALGRIND
+endif # ENABLE_FFAUP
 endif
 
 if ENABLE_MMPSTRUCDATA
