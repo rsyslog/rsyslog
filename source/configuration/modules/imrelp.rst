@@ -15,18 +15,18 @@ Provides the ability to receive syslog messages via the reliable RELP
 protocol. This module requires `librelp <http://www.librelp.com>`__ to
 be present on the system. From the user's point of view, imrelp works
 much like imtcp or imgssapi, except that no message loss can occur.
-Please note that with the currently supported relp protocol version, a
+Please note that with the currently supported RELP protocol version, a
 minor message duplication may occur if a network connection between the
 relp client and relp server breaks after the client could successfully
 send some messages but the server could not acknowledge them. The window
 of opportunity is very slim, but in theory this is possible. Future
 versions of RELP will prevent this. Please also note that rsyslogd may
 lose a few messages if rsyslog is shutdown while a network connection to
-the server is broken and could not yet be recovered. Future version of
-RELP support in rsyslog will prevent that. Please note that both
-scenarios also exists with plain tcp syslog. RELP, even with the small
-nits outlined above, is a much more reliable solution than plain tcp
-syslog and so it is highly suggested to use RELP instead of plain tcp.
+the server is broken and could not yet be recovered. Future versions of
+RELP support in rsyslog will prevent that issue. Please note that both
+scenarios also exist with plain TCP syslog. RELP, even with the small
+nits outlined above, is a much more reliable solution than plain TCP
+syslog and so it is highly suggested to use RELP instead of plain TCP.
 Clients send messages to the RELP server via omrelp.
 
 
@@ -75,10 +75,10 @@ tls.tlslib
 .. versionadded:: 8.1903.0
 
 Permits to specify the TLS library used by librelp.
-All relp protocol operations or actually performed by librelp and
-not rsyslog itself.  This value specified is directly passed down to
+All RELP protocol operations are actually performed by librelp and
+not rsyslog itself.  The value specified is directly passed down to
 librelp. Depending on librelp version and build parameters, supported
-tls libraries differ (or TLS may not be supported at all). In this case
+TLS libraries differ (or TLS may not be supported at all). In this case
 rsyslog emits an error message.
 
 Usually, the following options should be available: "openssl", "gnutls".
@@ -231,15 +231,15 @@ TLS.PermittedPeer
 
    "array", "none", "no", "none"
 
-Peer places access restrictions on this listener. Only peers which
-have been listed in this parameter may connect. The validation bases
-on the certificate the remote peer presents.
+PermittedPeer places access restrictions on this listener. Only peers which
+have been listed in this parameter may connect. The certificate presented 
+by the remote peer is used for it's validation. 
 
 The *peer* parameter lists permitted certificate fingerprints. Note
 that it is an array parameter, so either a single or multiple
 fingerprints can be listed. When a non-permitted peer connects, the
 refusal is logged together with it's fingerprint. So if the
-administrator knows this was a valid request, he can simple add the
+administrator knows this was a valid request, he can simply add the
 fingerprint by copy and paste from the logfile to rsyslog.conf.
 
 To specify multiple fingerprints, just enclose them in braces like
@@ -352,14 +352,14 @@ TLS.PriorityString
 
    "string", "none", "no", "none"
 
-This parameter permits to specify the so-called "priority string" to
+This parameter allows passing the so-called "priority string" to
 GnuTLS. This string gives complete control over all crypto
-parameters, including compression setting. For this reason, when the
+parameters, including compression settings. For this reason, when the
 prioritystring is specified, the "tls.compression" parameter has no
 effect and is ignored.
 
 Full information about how to construct a priority string can be
-found in the GnuTLS manual. At the time of this writing, this
+found in the GnuTLS manual. At the time of writing, this
 information was contained in `section 6.10 of the GnuTLS
 manual <http://gnutls.org/manual/html_node/Priority-Strings.html>`_.
 
@@ -419,8 +419,8 @@ KeepAlive
 
    "binary", "off", "no", "none"
 
-Enable of disable keep-alive packets at the tcp socket layer. The
-default is to disable them.
+Enable or disable keep-alive packets at the TCP socket layer. By 
+defauly keep-alives are disabled.
 
 
 KeepAlive.Probes
@@ -433,10 +433,10 @@ KeepAlive.Probes
 
    "integer", "0", "no", "none"
 
-The number of unacknowledged probes to send before considering the
+The number of keep-alive probes to send before considering the
 connection dead and notifying the application layer. The default, 0,
-means that the operating system defaults are used. This has only
-effect if keep-alive is enabled. The functionality may not be
+means that the operating system defaults are used. This only has an 
+effect if keep-alives are enabled. The functionality may not be
 available on all platforms.
 
 
@@ -450,10 +450,10 @@ KeepAlive.Interval
 
    "integer", "0", "no", "none"
 
-The interval between subsequent keepalive probes, regardless of what
-the connection has exchanged in the meantime. The default, 0, means
-that the operating system defaults are used. This has only effect if
-keep-alive is enabled. The functionality may not be available on all
+The interval between subsequent keep-alive probes, regardless of what
+the connection has been exchanged in the meantime. The default, 0, 
+means that the operating system defaults are used. This only has an effect 
+if keep-alive is enabled. The functionality may not be available on all
 platforms.
 
 
@@ -469,9 +469,9 @@ KeepAlive.Time
 
 The interval between the last data packet sent (simple ACKs are not
 considered data) and the first keepalive probe; after the connection
-is marked to need keepalive, this counter is not used any further.
+is marked with keep-alive, this counter is not used any further.
 The default, 0, means that the operating system defaults are used.
-This has only effect if keep-alive is enabled. The functionality may
+This only has an effect if keep-alive is enabled. The functionality may
 not be available on all platforms.
 
 
@@ -490,11 +490,11 @@ oversizeMode
 This parameter specifies how messages that are too long will be handled.
 For this parameter the length of the parameter maxDataSize is used.
 
-- truncate: Messages will be truncated at the maximal message size.
+- truncate: Messages will be truncated to the maximum message size.
 - abort: This is the behaviour until version 8.35.0. Upon receiving a
   message that is too long imrelp will abort.
 - accept: Messages will be accepted even if they are too long and an error
-  message will be put out. Using this option will bring some risks with it.
+  message will be output. Using this option does have associated risks.
 
 
 flowControl
@@ -510,16 +510,16 @@ flowControl
 .. versionadded:: 8.1911.0
 
 
-This parameter permits to fine-tune the flowControl parameter.
+This parameter permits the fine-tuning of the flowControl parameter.
 Possible values are "no", "light", and "full". With "light" being the default
 and previously only value.
 
 Changing the flow control setting may be useful for some rare applications,
-but be sure to know exactly what you are doing when changing this setting.
-Most importantly, **rsyslog as whole may block and become unresponsive if you
-change flowcontrol to "full"**. While this may be a desired effect when
-intentionally trying to make it most unlikely that rsyslog needs to
-lose/discard messages, usually this is not what you want.
+this is an advanced setting and should only be changed if you know what you
+are doing. Most importantly, **rsyslog block incoming data and become 
+unresponsive if you change flowcontrol to "full"**. While this may be a 
+desired effect when intentionally trying to make it most unlikely that 
+rsyslog needs to lose/discard messages, usually this is not what you want.
 
 General rule of thumb: **if you do not fully understand what this decription
 here talks about, leave the paramter at default value**.
@@ -575,7 +575,7 @@ This sets up a RELP server on port 2514 with a max message size of 10,000 bytes.
 Receive RELP traffic via TLS
 ----------------------------
 
-This receives RELP traffic via tls using the recommended "openssl" library.
+This receives RELP traffic via TLS using the recommended "openssl" library.
 Except for encryption support the scenario is the same as in Example 1.
 
 Certificate files must exist at configured locations. Note that authmode
