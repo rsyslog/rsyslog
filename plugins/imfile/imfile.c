@@ -773,6 +773,7 @@ act_obj_add(fs_edge_t *const edge, const char *const name, const int is_file,
 	act->file_id[0] = '\0';
 	act->file_id_prev[0] = '\0';
 	act->is_symlink = is_symlink;
+	act->ratelimiter = NULL;
 	if (source) { /* we are target of symlink */
 		CHKmalloc(act->source_name = strdup(source));
 	} else {
@@ -800,6 +801,8 @@ act_obj_add(fs_edge_t *const edge, const char *const name, const int is_file,
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(act != NULL) {
+			if (act->ratelimiter != NULL)
+				ratelimitDestruct(act->ratelimiter);
 			free(act->name);
 			free(act);
 		}

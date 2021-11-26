@@ -343,6 +343,7 @@ CODESTARTbeginCnfLoad
 	pModConf->bKeepKernelStamp = 0;
 	pModConf->iFacilIntMsg = klogFacilIntMsg();
 	loadModConf->configSetViaV2Method = 0;
+	pModConf->ratelimiter = NULL;
 	pModConf->ratelimitBurst = 10000; /* arbitrary high limit */
 	pModConf->ratelimitInterval = 0; /* off */
 	bLegacyCnfModGlobalsPermitted = 1;
