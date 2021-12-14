@@ -31,7 +31,6 @@ struct ratelimit_s {
 	unsigned missed;
 	time_t begin;
 	/* support for "last message repeated n times */
-	int bReduceRepeatMsgs; /**< shall we do "last message repeated n times" processing? */
 	unsigned nsupp;		/**< nbr of msgs suppressed */
 	smsg_t *pMsg;
 	sbool bThreadSafe;	/**< do we need to operate in Thread-Safe mode? */

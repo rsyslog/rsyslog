@@ -1744,6 +1744,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 
 	CHKmalloc(pSrv = calloc(1, sizeof(ptcpsrv_t)));
 	pthread_mutex_init(&pSrv->mutSessLst, NULL);
+	pSrv->ratelimiter = NULL;
 	pSrv->pSess = NULL;
 	pSrv->pLstn = NULL;
 	pSrv->inst = inst;

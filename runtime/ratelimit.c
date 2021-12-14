@@ -239,7 +239,7 @@ ratelimitMsg(ratelimit_t *__restrict__ const ratelimit, smsg_t *pMsg, smsg_t **p
 
 	*ppRepMsg = NULL;
 
-	if(ratelimit->bReduceRepeatMsgs || ratelimit->severity > 0) {
+	if(runConf->globals.bReduceRepeatMsgs || ratelimit->severity > 0) {
 		/* consider early parsing only if really needed */
 		if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
 			if((localRet = parser.ParseMsg(pMsg)) != RS_RET_OK)  {
@@ -261,7 +261,7 @@ ratelimitMsg(ratelimit_t *__restrict__ const ratelimit, smsg_t *pMsg, smsg_t **p
 			ABORT_FINALIZE(RS_RET_DISCARDMSG);
 		}
 	}
-	if(ratelimit->bReduceRepeatMsgs) {
+	if(runConf->globals.bReduceRepeatMsgs) {
 		CHKiRet(doLastMessageRepeatedNTimes(ratelimit, pMsg, ppRepMsg));
 	}
 finalize_it:
@@ -276,7 +276,7 @@ finalize_it:
 int
 ratelimitChecked(ratelimit_t *ratelimit)
 {
-	return ratelimit->interval || ratelimit->bReduceRepeatMsgs;
+	return ratelimit->interval || runConf->globals.bReduceRepeatMsgs;
 }
 
 
@@ -349,10 +349,7 @@ ratelimitNew(ratelimit_t **ppThis, const char *modname, const char *dynname)
 		namebuf[sizeof(namebuf)-1] = '\0'; /* to be on safe side */
 		pThis->name = strdup(namebuf);
 	}
-	/* pThis->severity == 0 - all messages are ratelimited */
-	pThis->bReduceRepeatMsgs = loadConf->globals.bReduceRepeatMsgs;
-	DBGPRINTF("ratelimit:%s:new ratelimiter:bReduceRepeatMsgs %d\n",
-		  pThis->name, pThis->bReduceRepeatMsgs);
+	DBGPRINTF("ratelimit:%s:new ratelimiter\n", pThis->name);
 	*ppThis = pThis;
 finalize_it:
 	RETiRet;
