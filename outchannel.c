@@ -265,7 +265,7 @@ void ochDeleteAll(void)
 {
 	struct outchannel *pOch, *pOchDel;
 
-	pOch = loadConf->och.ochRoot;
+	pOch = runConf->och.ochRoot;
 	while(pOch != NULL) {
 		dbgprintf("Delete Outchannel: Name='%s'\n ", pOch->pszName == NULL? "NULL" : pOch->pszName);
 		pOchDel = pOch;
@@ -284,11 +284,11 @@ void ochDeleteAll(void)
 /* Print the outchannel structure. This is more or less a
  * debug or test aid, but anyhow I think it's worth it...
  */
-void ochPrintList(void)
+void ochPrintList(rsconf_t *cnf)
 {
 	struct outchannel *pOch;
 
-	pOch = loadConf->och.ochRoot;
+	pOch = cnf->och.ochRoot;
 	while(pOch != NULL) {
 		dbgprintf("Outchannel: Name='%s'\n", pOch->pszName == NULL? "NULL" : pOch->pszName);
 		dbgprintf("\tFile Template: '%s'\n", pOch->pszFileTemplate == NULL ? "NULL" :

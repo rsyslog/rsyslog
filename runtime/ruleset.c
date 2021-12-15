@@ -252,7 +252,7 @@ execCallIndirect(struct cnfstmt *const __restrict__ stmt,
 
 	cnfexprEval(stmt->d.s_call_ind.expr, &result, pMsg, pWti);
 	uchar *const rsName = (uchar*) var2CString(&result, &bMustFree);
-	const rsRetVal localRet = rulesetGetRuleset(loadConf, &pRuleset, rsName);
+	const rsRetVal localRet = rulesetGetRuleset(runConf, &pRuleset, rsName);
 	if(localRet != RS_RET_OK) {
 		/* in that case, we accept that a NOP will "survive" */
 		LogError(0, RS_RET_RULESET_NOT_FOUND, "error: CALL_INDIRECT: "
@@ -656,7 +656,7 @@ processBatch(batch_t *pBatch, wti_t *pWti)
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pWti->pbShutdownImmediate) ; ++i) {
 		pMsg = pBatch->pElem[i].pMsg;
 		DBGPRINTF("processBATCH: next msg %d: %.128s\n", i, pMsg->pszRawMsg);
-		pRuleset = (pMsg->pRuleset == NULL) ? ourConf->rulesets.pDflt : pMsg->pRuleset;
+		pRuleset = (pMsg->pRuleset == NULL) ? runConf->rulesets.pDflt : pMsg->pRuleset;
 		localRet = scriptExec(pRuleset->root, pMsg, pWti);
 		/* the most important case here is that processing may be aborted
 		 * due to pbShutdownImmediate, in which case we MUST NOT flag this
@@ -1050,7 +1050,7 @@ finalize_it:
 static rsRetVal
 rulesetAddParser(void __attribute__((unused)) *pVal, uchar *pName)
 {
-	return doRulesetAddParser(ourConf->rulesets.pCurr, pName);
+	return doRulesetAddParser(loadConf->rulesets.pCurr, pName);
 }
 
 
