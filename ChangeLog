@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2112.0 (aka 2021.12) 2021-12-??
+Scheduled Release 8.2112.0 (aka 2021.12) 2021-12-16
 - 2021-12-14: refactor:Deallocate outchannel resources in rsconf destructor
   Thanks to Attila Lakatos for the patch.
 - 2021-12-14: refactor: use runConf instead of loadConf in ratelimiting during runtime
