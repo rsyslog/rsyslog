@@ -34,5 +34,5 @@ struct outchannel* ochConstruct(void);
 struct outchannel *ochAddLine(char* pName, unsigned char** pRestOfConfLine);
 struct outchannel *ochFind(char *pName, int iLenName);
 void ochDeleteAll(void);
-void ochPrintList(void);
+void ochPrintList(rsconf_t *cnf);
 #endif /* #ifdef OUTCHANNEL_H */

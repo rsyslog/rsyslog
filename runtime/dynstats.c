@@ -97,11 +97,7 @@ dynstats_destroyCounters(dynstats_bucket_t *b) {
 }
 
 static void
-dynstats_destroyBucket(dynstats_bucket_t* b) {
-	dynstats_buckets_t *bkts;
-
-	bkts = &loadConf->dynstats_buckets;
-
+dynstats_destroyBucket(dynstats_buckets_t *bkts, dynstats_bucket_t* b) {
 	pthread_rwlock_wrlock(&b->lock);
 	dynstats_destroyCounters(b);
 	dynstats_destroyCountersIn(b, b->survivor_table, b->survivor_ctrs);
@@ -282,7 +278,7 @@ dynstats_resetIfExpired(dynstats_bucket_t *b) {
 static void
 dynstats_readCallback(statsobj_t __attribute__((unused)) *ignore, void *b) {
 	dynstats_buckets_t *bkts;
-	bkts = &loadConf->dynstats_buckets;
+	bkts = &runConf->dynstats_buckets;
 
 	pthread_rwlock_rdlock(&bkts->lock);
 	dynstats_resetIfExpired((dynstats_bucket_t *) b);
@@ -362,7 +358,7 @@ finalize_it:
 			pthread_rwlock_destroy(&b->lock);
 		}
 		if (b != NULL) {
-			dynstats_destroyBucket(b);
+			dynstats_destroyBucket(bkts, b);
 		}
 	}
 	RETiRet;
@@ -436,7 +432,7 @@ void
 dynstats_destroyAllBuckets(void) {
 	dynstats_buckets_t *bkts;
 	dynstats_bucket_t *b;
-	bkts = &loadConf->dynstats_buckets;
+	bkts = &runConf->dynstats_buckets;
 	if (bkts->initialized) {
 		pthread_rwlock_wrlock(&bkts->lock);
 		while(1) {
@@ -445,7 +441,7 @@ dynstats_destroyAllBuckets(void) {
 				break;
 			} else {
 				bkts->list = b->next;
-				dynstats_destroyBucket(b);
+				dynstats_destroyBucket(bkts, b);
 			}
 		}
 		statsobj.Destruct(&bkts->global_stats);

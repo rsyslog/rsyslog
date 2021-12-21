@@ -3738,7 +3738,7 @@ initFunc_exec_template(struct cnffunc *func)
 	}
 
 	tplName = es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL);
-	func->funcdata = tplFind(ourConf, tplName, strlen(tplName));
+	func->funcdata = tplFind(loadConf, tplName, strlen(tplName));
 	if(func->funcdata == NULL) {
 		parser_errmsg("exec_template(): template '%s' could not be found", tplName);
 		FINALIZE;

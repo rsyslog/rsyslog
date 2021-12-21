@@ -393,7 +393,7 @@ rsRetVal actionConstruct(action_t **ppThis)
 	action_t *pThis;
 
 	assert(ppThis != NULL);
-	
+
 	CHKmalloc(pThis = (action_t*) calloc(1, sizeof(action_t)));
 	pThis->iResumeInterval = 30;
 	pThis->iResumeIntervalMax = 1800; /* max interval default is half an hour */
@@ -584,7 +584,7 @@ actionConstructFinalize(action_t *__restrict__ const pThis, struct nvlst *lst)
 			"that they will have no effect - "
 			"see https://www.rsyslog.com/mm-no-queue/", (char*)modGetName(pThis->pMod));
 	}
-	
+
 	/* and now reset the queue params (see comment in its function header!) */
 	actionResetQueueParams();
 
@@ -1979,7 +1979,7 @@ rsRetVal
 activateActions(void)
 {
 	DEFiRet;
-	iRet = ruleset.IterateAllActions(ourConf, doActivateActions, NULL);
+	iRet = ruleset.IterateAllActions(runConf, doActivateActions, NULL);
 	RETiRet;
 }
 
@@ -2038,7 +2038,7 @@ static rsRetVal
 actionApplyCnfParam(action_t * const pAction, struct cnfparamvals * const pvals)
 {
 	int i;
-	
+
 	for(i = 0 ; i < pblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
 			continue;
@@ -2139,7 +2139,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 		CHKmalloc(pAction->peParamPassing = (paramPassing_t*)calloc(pAction->iNumTpls,
 			sizeof(paramPassing_t)));
 	}
-	
+
 	pAction->bUsesMsgPassingMode = 0;
 	pAction->bNeedReleaseBatch = 0;
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
@@ -2149,7 +2149,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 		 */
 		if(!(iTplOpts & OMSR_TPL_AS_MSG)) {
 		   	if((pAction->ppTpl[i] =
-				tplFind(ourConf, (char*)pTplName, strlen((char*)pTplName))) == NULL) {
+				tplFind(loadConf, (char*)pTplName, strlen((char*)pTplName))) == NULL) {
 				snprintf(errMsg, sizeof(errMsg),
 					 " Could not find template %d '%s' - action disabled",
 					 i, pTplName);
@@ -2188,7 +2188,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 	pAction->pModData = pModData;
 
 	CHKiRet(actionConstructFinalize(pAction, lst));
-	
+
 	*ppAction = pAction; /* finally store the action pointer */
 
 finalize_it:

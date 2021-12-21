@@ -1626,14 +1626,14 @@ initAll(int argc, char **argv)
 	hdlr_enable(SIGCHLD, hdlr_sigchld);
 	hdlr_enable(SIGHUP, hdlr_sighup);
 
-	if(rsconfNeedDropPriv(ourConf)) {
+	if(rsconfNeedDropPriv(loadConf)) {
 		/* need to write pid file early as we may loose permissions */
 		CHKiRet(writePidFile());
 	}
 
 	CHKiRet(rsconf.Activate(ourConf));
 
-	if(ourConf->globals.bLogStatusMsgs) {
+	if(runConf->globals.bLogStatusMsgs) {
 		char bufStartUpMsg[512];
 		snprintf(bufStartUpMsg, sizeof(bufStartUpMsg),
 			 "[origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
@@ -1642,7 +1642,7 @@ initAll(int argc, char **argv)
 		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
 	}
 
-	if(!rsconfNeedDropPriv(ourConf)) {
+	if(!rsconfNeedDropPriv(runConf)) {
 		CHKiRet(writePidFile());
 	}
 
@@ -1654,7 +1654,7 @@ initAll(int argc, char **argv)
 		stddbg = -1; /* turn off writing to fd 1 */
 		close(1);
 		close(2);
-		ourConf->globals.bErrMsgToStderr = 0;
+		runConf->globals.bErrMsgToStderr = 0;
 	}
 
 finalize_it:

@@ -152,7 +152,7 @@ FindParser(parser_t **ppParser, uchar *pName)
 {
 	parserList_t *pThis;
 	DEFiRet;
-	
+
 	for(pThis = pParsLstRoot ; pThis != NULL ; pThis = pThis->pNext) {
 		if(ustrcmp(pThis->pParser->pName, pName) == 0) {
 			*ppParser = pThis->pParser;
@@ -183,7 +183,7 @@ AddDfltParser(uchar *pName)
 	CHKiRet(FindParser(&pParser, pName));
 	CHKiRet(AddParserToList(&pDfltParsLst, pParser));
 	DBGPRINTF("Parser '%s' added to default parser set.\n", pName);
-	
+
 finalize_it:
 	RETiRet;
 }
@@ -316,7 +316,7 @@ static rsRetVal uncompressMessage(smsg_t *pMsg)
 	uLongf iLenDefBuf;
 	uchar *pszMsg;
 	size_t lenMsg;
-	
+
 	assert(pMsg != NULL);
 	pszMsg = pMsg->pszRawMsg;
 	lenMsg = pMsg->iLenRawMsg;
@@ -642,7 +642,7 @@ ParseMsg(smsg_t *pMsg)
 	 * will cause it to happen. After that, access to the unsanitized message is no
 	 * loger possible.
 	 */
-	pParserList = ruleset.GetParserList(ourConf, pMsg);
+	pParserList = ruleset.GetParserList(runConf, pMsg);
 	if(pParserList == NULL) {
 		pParserList = pDfltParsLst;
 	}

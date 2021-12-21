@@ -150,7 +150,7 @@ static void perctileBucketDestruct(perctile_bucket_t *bkt) {
 }
 
 void perctileBucketsDestruct(void) {
-	perctile_buckets_t *bkts = &loadConf->perctile_buckets;
+	perctile_buckets_t *bkts = &runConf->perctile_buckets;
 
 	if (bkts->initialized) {
 		perctile_bucket_t *head = bkts->listBuckets;
@@ -441,7 +441,7 @@ finalize_it:
 
 static void
 perctile_readCallback(statsobj_t __attribute__((unused)) *ignore, void __attribute__((unused)) *b) {
-	perctile_buckets_t *bkts = &loadConf->perctile_buckets;
+	perctile_buckets_t *bkts = &runConf->perctile_buckets;
 
 	pthread_rwlock_rdlock(&bkts->lock);
 	for (perctile_bucket_t *pbkt = bkts->listBuckets; pbkt != NULL; pbkt = pbkt->next) {

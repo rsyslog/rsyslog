@@ -298,7 +298,7 @@ BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and
 	setQPROP(qqueueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", 1);
 	 */
 	dbgprintf("Work Directory: '%s'.\n", glbl.GetWorkDir());
-	ochPrintList();
+	ochPrintList(pThis);
 	dbgprintf("Modules used in this configuration:\n");
 	for(modNode = pThis->modules.root ; modNode != NULL ; modNode = modNode->next) {
 		dbgprintf("    %s\n", module.GetName(modNode->pMod));
@@ -549,13 +549,13 @@ void cnfDoBSDHost(char *ln)
  * if something goes wrong, the function never returns
  */
 static
-rsRetVal doDropPrivGid(void)
+rsRetVal doDropPrivGid(rsconf_t *cnf)
 {
 	int res;
 	uchar szBuf[1024];
 	DEFiRet;
 
-	if(!ourConf->globals.gidDropPrivKeepSupplemental) {
+	if(!cnf->globals.gidDropPrivKeepSupplemental) {
 		res = setgroups(0, NULL); /* remove all supplemental group IDs */
 		if(res) {
 			LogError(errno, RS_RET_ERR_DROP_PRIV,
@@ -564,15 +564,15 @@ rsRetVal doDropPrivGid(void)
 		}
 		DBGPRINTF("setgroups(0, NULL): %d\n", res);
 	}
-	res = setgid(ourConf->globals.gidDropPriv);
+	res = setgid(cnf->globals.gidDropPriv);
 	if(res) {
 		LogError(errno, RS_RET_ERR_DROP_PRIV,
-				"could not set requested group id %d", ourConf->globals.gidDropPriv);
+				"could not set requested group id %d", cnf->globals.gidDropPriv);
 		ABORT_FINALIZE(RS_RET_ERR_DROP_PRIV);
 	}
-	DBGPRINTF("setgid(%d): %d\n", ourConf->globals.gidDropPriv, res);
+	DBGPRINTF("setgid(%d): %d\n", cnf->globals.gidDropPriv, res);
 	snprintf((char*)szBuf, sizeof(szBuf), "rsyslogd's groupid changed to %d",
-		 ourConf->globals.gidDropPriv);
+		 cnf->globals.gidDropPriv);
 	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, szBuf, 0);
 finalize_it:
 	RETiRet;
@@ -584,7 +584,7 @@ finalize_it:
  * Note that such an abort can cause damage to on-disk structures, so we should
  * re-design the "interface" in the long term. -- rgerhards, 2008-11-19
  */
-static void doDropPrivUid(const int iUid)
+static void doDropPrivUid(rsconf_t *cnf)
 {
 	int res;
 	uchar szBuf[1024];
@@ -594,23 +594,24 @@ static void doDropPrivUid(const int iUid)
 	/* Try to set appropriate supplementary groups for this user.
 	 * Failure is not fatal.
 	 */
-	pw = getpwuid(iUid);
+	pw = getpwuid(cnf->globals.uidDropPriv);
 	if (pw) {
 		gid = getgid();
 		res = initgroups(pw->pw_name, gid);
 		DBGPRINTF("initgroups(%s, %ld): %d\n", pw->pw_name, (long) gid, res);
 	} else {
-		LogError(errno, NO_ERRCODE, "could not get username for userid '%d'", iUid);
+		LogError(errno, NO_ERRCODE, "could not get username for userid '%d'",
+			cnf->globals.uidDropPriv);
 	}
 
-	res = setuid(iUid);
+	res = setuid(cnf->globals.uidDropPriv);
 	if(res) {
 		/* if we can not set the userid, this is fatal, so let's unconditionally abort */
 		perror("could not set requested userid");
 		exit(1);
 	}
-	DBGPRINTF("setuid(%d): %d\n", iUid, res);
-	snprintf((char*)szBuf, sizeof(szBuf), "rsyslogd's userid changed to %d", iUid);
+	DBGPRINTF("setuid(%d): %d\n", cnf->globals.uidDropPriv, res);
+	snprintf((char*)szBuf, sizeof(szBuf), "rsyslogd's userid changed to %d", cnf->globals.uidDropPriv);
 	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, szBuf, 0);
 }
 
@@ -626,15 +627,15 @@ dropPrivileges(rsconf_t *cnf)
 	DEFiRet;
 
 	if(cnf->globals.gidDropPriv != 0) {
-		CHKiRet(doDropPrivGid());
+		CHKiRet(doDropPrivGid(cnf));
 		DBGPRINTF("group privileges have been dropped to gid %u\n", (unsigned)
-			  ourConf->globals.gidDropPriv);
+			  cnf->globals.gidDropPriv);
 	}
 
 	if(cnf->globals.uidDropPriv != 0) {
-		doDropPrivUid(ourConf->globals.uidDropPriv);
+		doDropPrivUid(cnf);
 		DBGPRINTF("user privileges have been dropped to uid %u\n", (unsigned)
-			  ourConf->globals.uidDropPriv);
+			  cnf->globals.uidDropPriv);
 	}
 
 finalize_it:
@@ -667,7 +668,7 @@ tellModulesConfigLoadDone(void)
 			DBGPRINTF("calling endCnfLoad() for module '%s'\n", node->pMod->pszName);
 			node->pMod->endCnfLoad(node->modCnf);
 		}
-		node = module.GetNxtCnfType(runConf, node, eMOD_ANY);
+		node = module.GetNxtCnfType(loadConf, node, eMOD_ANY); // loadConf -> runConf
 	}
 
 	return RS_RET_OK; /* intentional: we do not care about module errors */
@@ -694,7 +695,7 @@ tellModulesCheckConfig(void)
 				node->canActivate = 0;
 			}
 		}
-		node = module.GetNxtCnfType(runConf, node, eMOD_ANY);
+		node = module.GetNxtCnfType(loadConf, node, eMOD_ANY); // runConf -> loadConf
 	}
 
 	return RS_RET_OK; /* intentional: we do not care about module errors */
@@ -830,7 +831,7 @@ activateMainQueue(void)
 		FINALIZE;
 	}
 
-	if(ourConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DIRECT) {
+	if(runConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DIRECT) { // ourConf -> runConf
 		PREFER_STORE_0_TO_INT(&bHaveMainQueue);
 	} else {
 		PREFER_STORE_1_TO_INT(&bHaveMainQueue);
@@ -868,6 +869,7 @@ activate(rsconf_t *cnf)
 
 	/* at this point, we "switch" over to the running conf */
 	runConf = cnf;
+	loadConf = NULL;
 #	if	0 /* currently the DAG is not supported -- code missing! */
 	/* TODO: re-enable this functionality some time later! */
 	/* check if we need to generate a config DAG and, if so, do that */
@@ -1281,31 +1283,31 @@ finalize_it:
 }
 
 
-/* validate the current configuration, generate error messages, do
+/* validate the configuration pointed by conf, generate error messages, do
  * optimizations, etc, etc,...
  */
 static rsRetVal
-validateConf(void)
+validateConf(rsconf_t *cnf)
 {
 	DEFiRet;
 
 	/* some checks */
-	if(ourConf->globals.mainQ.iMainMsgQueueNumWorkers < 1) {
+	if(cnf->globals.mainQ.iMainMsgQueueNumWorkers < 1) {
 		LogError(0, NO_ERRCODE, "$MainMsgQueueNumWorkers must be at least 1! Set to 1.\n");
-		ourConf->globals.mainQ.iMainMsgQueueNumWorkers = 1;
+		cnf->globals.mainQ.iMainMsgQueueNumWorkers = 1;
 	}
 
-	if(ourConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DISK) {
+	if(cnf->globals.mainQ.MainMsgQueType == QUEUETYPE_DISK) {
 		errno = 0;	/* for logerror! */
 		if(glbl.GetWorkDir() == NULL) {
 			LogError(0, NO_ERRCODE, "No $WorkDirectory specified - can not run main "
 					"message queue in 'disk' mode. Using 'FixedArray' instead.\n");
-			ourConf->globals.mainQ.MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
+			cnf->globals.mainQ.MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
 		}
-		if(ourConf->globals.mainQ.pszMainMsgQFName == NULL) {
+		if(cnf->globals.mainQ.pszMainMsgQFName == NULL) {
 			LogError(0, NO_ERRCODE, "No $MainMsgQueueFileName specified - can not run main "
 				"message queue in 'disk' mode. Using 'FixedArray' instead.\n");
-			ourConf->globals.mainQ.MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
+			cnf->globals.mainQ.MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
 		}
 	}
 	RETiRet;
@@ -1328,7 +1330,7 @@ load(rsconf_t **cnf, uchar *confFile)
 	DEFiRet;
 
 	CHKiRet(rsconfConstruct(&loadConf));
-ourConf = loadConf; // TODO: remove, once ourConf is gone!
+	ourConf = loadConf; // TODO: remove, once ourConf is gone!
 
 	CHKiRet(loadBuildInModules());
 	CHKiRet(initLegacyConf());
@@ -1367,7 +1369,7 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 	tellModulesConfigLoadDone();
 
 	tellModulesCheckConfig();
-	CHKiRet(validateConf());
+	CHKiRet(validateConf(loadConf));
 
 	/* we are done checking the config - now validate if we should actually run or not.
 	 * If not, terminate. -- rgerhards, 2008-07-25
@@ -1381,7 +1383,7 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 
 	/* all OK, pass loaded conf to caller */
 	*cnf = loadConf;
-// TODO: enable this once all config code is moved to here!	loadConf = NULL;
+	// TODO: enable this once all config code is moved to here!	loadConf = NULL;
 
 	dbgprintf("rsyslog finished loading master config %p\n", loadConf);
 	rsconfDebugPrint(loadConf);
