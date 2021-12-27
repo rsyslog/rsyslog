@@ -65,7 +65,8 @@ enum tplFormatTypes { tplFmtDefault = 0, tplFmtMySQLDate = 1,
 			tplFmtWDayName = 8, tplFmtYear = 9, tplFmtMonth = 10, tplFmtDay = 11,
 			tplFmtHour = 12, tplFmtMinute = 13, tplFmtSecond = 14,
 			tplFmtTZOffsHour = 15, tplFmtTZOffsMin = 16, tplFmtTZOffsDirection = 17,
-			tplFmtWDay = 18, tplFmtOrdinal = 19, tplFmtWeek = 20};
+			tplFmtWDay = 18, tplFmtOrdinal = 19, tplFmtWeek = 20,
+			tplFmtISOWeek = 21, tplFmtISOWeekYear = 22};
 enum tplFormatCaseConvTypes { tplCaseConvNo = 0, tplCaseConvUpper = 1, tplCaseConvLower = 2 };
 enum tplRegexType { TPL_REGEX_BRE = 0, /* posix BRE */
 		    TPL_REGEX_ERE = 1  /* posix ERE */
