@@ -223,7 +223,9 @@ dynafile.donotsuspend
 
    "binary", "on", "no", "none"
 
-DynaFiles are not suspended.
+This permits SUSPENDing dynafile actions. Traditionally, SUSPEND mode was
+never entered for dynafiles as it would have blocked overall processing
+flow. Default is not to suspend (and thus block).
 
 
 Action Parameters

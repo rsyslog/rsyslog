@@ -465,14 +465,6 @@ The following parameters can be set:
   need to switch it back to "on", except for the case to be mentioned.
   This is also the reason why we switched the default.
 
-- **dynafile.donotsuspend** [boolean (on/off)] available 8.32.0+
-
-  **Default:** on
-
-  This permits SUSPENDing dynafile actions. Traditionally, SUSPEND mode was
-  never entered for dynafiles as it would have blocked overall processing
-  flow. Default is not to suspend (and thus block).
-
 - **internal.developeronly.options**
 
   This is NOT to be used by end users. It provides rsyslog developers the
