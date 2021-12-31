@@ -59,10 +59,11 @@ MODULE_CNFNAME("ompgsql")
 DEF_OMOD_STATIC_DATA
 
 typedef struct _instanceData {
-	char            srv[MAXHOSTNAMELEN+1];   /* IP or hostname of DB server*/
-	char            dbname[_DB_MAXDBLEN+1];  /* DB name */
-	char            user[_DB_MAXUNAMELEN+1]; /* DB user */
-	char            pass[_DB_MAXPWDLEN+1];   /* DB user's password */
+	char            srv[MAXHOSTNAMELEN+1];          /* IP or hostname of DB server*/
+	char            dbname[_DB_MAXDBLEN+1];         /* DB name */
+	char            user[_DB_MAXUNAMELEN+1];        /* DB user */
+	char            pass[_DB_MAXPWDLEN+1];          /* DB user's password */
+	char            conninfo[_DB_MAXCONNINFOLEN+1]; /* Connection parameters or URI */
 	unsigned int    trans_age;
 	unsigned int    trans_commit;
 	unsigned short  multi_row;
@@ -78,8 +79,8 @@ typedef struct wrkrInstanceData {
 
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-	{ "server",     eCmdHdlrGetWord, 1 },
-	{ "db",         eCmdHdlrGetWord, 1 },
+	{ "server",     eCmdHdlrGetWord, 0 },
+	{ "db",         eCmdHdlrGetWord, 0 },
 	{ "user",       eCmdHdlrGetWord, 0 },
 	{ "uid",        eCmdHdlrGetWord, 0 },
 	{ "pass",       eCmdHdlrGetWord, 0 },
@@ -89,7 +90,8 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "trans_age",  eCmdHdlrInt,     0 },
 	{ "serverport", eCmdHdlrInt,     0 },
 	{ "port",       eCmdHdlrInt,     0 },
-	{ "template",   eCmdHdlrGetWord, 0 }
+	{ "template",   eCmdHdlrGetWord, 0 },
+	{ "conninfo",   eCmdHdlrGetWord, 0 }
 };
 
 
@@ -190,6 +192,7 @@ static void reportDBError(wrkrInstanceData_t *pWrkrData, int bSilent)
  */
 static rsRetVal initPgSQL(wrkrInstanceData_t *pWrkrData, int bSilent)
 {
+	int sslStatus;
 	instanceData *pData;
 	DEFiRet;
 
@@ -197,22 +200,37 @@ static rsRetVal initPgSQL(wrkrInstanceData_t *pWrkrData, int bSilent)
 	assert(pData != NULL);
 	assert(pWrkrData->f_hpgsql == NULL);
 
-	dbgprintf("host=%s port=%d dbname=%s uid=%s\n",pData->srv, pData->port, pData->dbname, pData->user);
+	if (strlen(pData->conninfo) > 0) {
+		/* Don't log the whole connection string, because it contains the DB password */
+		dbgprintf("initPgSQL: using connection string provided by conninfo\n");
+		pWrkrData->f_hpgsql = PQconnectdb(pData->conninfo);
+	} else {
+		dbgprintf("initPgSQL: host=%s port=%d dbname=%s uid=%s\n", pData->srv, pData->port,
+		                                                           pData->dbname, pData->user);
 
-	/* Force PostgreSQL to use ANSI-SQL conforming strings, otherwise we may
-	 * get all sorts of side effects (e.g.: backslash escapes) and warnings
-	 */
-	const char *PgConnectionOptions = "-c standard_conforming_strings=on";
+		/* Force PostgreSQL to use ANSI-SQL conforming strings, otherwise we may
+		 * get all sorts of side effects (e.g.: backslash escapes) and warnings
+		 *
+		 * Note: PostgreSQL versions since 9.3 have this already on by default.
+		 */
+		const char *PgConnectionOptions = "-c standard_conforming_strings=on";
 
-	/* Connect to database */
-	char port[6];
-	snprintf(port, sizeof(port), "%d", pData->port);
-	if ((pWrkrData->f_hpgsql=PQsetdbLogin(pData->srv, port, PgConnectionOptions, NULL,
-				pData->dbname, pData->user, pData->pass)) == NULL) {
+		/* Connect to database */
+		char port[6];
+		snprintf(port, sizeof(port), "%d", pData->port);
+
+		pWrkrData->f_hpgsql = PQsetdbLogin(pData->srv, port, PgConnectionOptions, NULL,
+		                                   pData->dbname, pData->user, pData->pass);
+	}
+
+	if (pWrkrData->f_hpgsql == NULL) {
 		reportDBError(pWrkrData, bSilent);
 		closePgSQL(pWrkrData); /* ignore any error we may get */
 		iRet = RS_RET_SUSPENDED;
 	}
+
+	sslStatus = PQsslInUse(pWrkrData->f_hpgsql);
+	dbgprintf("initPgSQL: ssl status: %d\n", sslStatus);
 
 	RETiRet;
 }
@@ -431,10 +449,25 @@ CODESTARTnewActInst
 			free(cstr);
 		} else if (!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tpl = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(actpblk.descr[i].name, "conninfo")) {
+			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+			len = es_strlen(pvals[i].val.d.estr);
+			if(len >= sizeof(pData->conninfo)-1) {
+				parser_errmsg("ompgsql: conninfo parameter longer than supported "
+					"maximum of %d characters", (int)sizeof(pData->conninfo)-1);
+				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+			}
+			memcpy(pData->conninfo, cstr, len+1);
+			free(cstr);
 		} else {
 			dbgprintf("ompgsql: program error, non-handled "
 				"param '%s'\n", actpblk.descr[i].name);
 		}
+	}
+
+	if (strlen(pData->conninfo) == 0 && (strlen(pData->srv) == 0 || strlen(pData->dbname) == 0)) {
+		parser_errmsg("ompgsql: must provide conninfo or server and dbname");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
 	if (pData->tpl == NULL) {
