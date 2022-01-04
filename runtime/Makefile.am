@@ -1,5 +1,5 @@
 sbin_PROGRAMS =
-man_MANS = 
+man_MANS =
 noinst_LTLIBRARIES = librsyslog.la
 pkglib_LTLIBRARIES =
 #pkglib_LTLIBRARIES = librsyslog.la
@@ -102,7 +102,9 @@ librsyslog_la_SOURCES = \
 	../outchannel.c \
 	../outchannel.h \
 	../template.c \
-	../template.h
+	../template.h \
+	timezones.c \
+	timezones.h
 # the files with ../ we need to work on - so that they either become part of the
 # runtime or will no longer be needed. -- rgerhards, 2008-06-13
 #
@@ -128,13 +130,13 @@ librsyslog_la_CPPFLAGS += -I\$(top_srcdir)/tools
 
 #
 # regular expression support
-# 
+#
 if ENABLE_REGEXP
 pkglib_LTLIBRARIES += lmregexp.la
 lmregexp_la_SOURCES = regexp.c regexp.h
 lmregexp_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 lmregexp_la_LDFLAGS = -module -avoid-version
-lmregexp_la_LIBADD = 
+lmregexp_la_LIBADD =
 
 if ENABLE_LIBLOGGING_STDLOG
 lmregexp_la_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
@@ -145,12 +147,12 @@ endif
 
 #
 # zlib support
-# 
+#
 pkglib_LTLIBRARIES += lmzlibw.la
 lmzlibw_la_SOURCES = zlibw.c zlibw.h
 lmzlibw_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 lmzlibw_la_LDFLAGS = -module -avoid-version $(ZLIB_LIBS)
-lmzlibw_la_LIBADD = 
+lmzlibw_la_LIBADD =
 
 if ENABLE_LIBLOGGING_STDLOG
 lmzlibw_la_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
@@ -162,11 +164,11 @@ if ENABLE_INET
 pkglib_LTLIBRARIES += lmnet.la lmnetstrms.la
 #
 # network support
-# 
+#
 lmnet_la_SOURCES = net.c net.h
 lmnet_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 lmnet_la_LDFLAGS = -module -avoid-version ../compat/compat_la-getifaddrs.lo
-lmnet_la_LIBADD = 
+lmnet_la_LIBADD =
 
 if ENABLE_LIBLOGGING_STDLOG
 lmnet_la_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
@@ -180,7 +182,7 @@ lmnetstrms_la_SOURCES = netstrms.c netstrms.h \
 			nspoll.c nspoll.h
 lmnetstrms_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 lmnetstrms_la_LDFLAGS = -module -avoid-version
-lmnetstrms_la_LIBADD = 
+lmnetstrms_la_LIBADD =
 
 if ENABLE_LIBLOGGING_STDLOG
 lmnetstrms_la_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
@@ -196,7 +198,7 @@ lmnsd_ptcp_la_SOURCES = nsd_ptcp.c nsd_ptcp.h \
 			nsdpoll_ptcp.c nsdpoll_ptcp.h
 lmnsd_ptcp_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 lmnsd_ptcp_la_LDFLAGS = -module -avoid-version
-lmnsd_ptcp_la_LIBADD = 
+lmnsd_ptcp_la_LIBADD =
 
 if ENABLE_LIBLOGGING_STDLOG
 lmnsd_ptcp_la_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
@@ -207,7 +209,7 @@ endif # if ENABLE_INET
 
 #
 # openssl netstream driver
-# 
+#
 if ENABLE_OPENSSL
 pkglib_LTLIBRARIES += lmnsd_ossl.la
 lmnsd_ossl_la_SOURCES = nsd_ossl.c nsd_ossl.h nsdsel_ossl.c  nsdsel_ossl.h
@@ -218,7 +220,7 @@ endif
 
 #
 # GnuTLS netstream driver
-# 
+#
 if ENABLE_GNUTLS
 pkglib_LTLIBRARIES += lmnsd_gtls.la
 lmnsd_gtls_la_SOURCES = nsd_gtls.c nsd_gtls.h nsdsel_gtls.c  nsdsel_gtls.h
@@ -245,7 +247,7 @@ endif
 
 #
 # gssapi support
-# 
+#
 if ENABLE_GSSAPI
 pkglib_LTLIBRARIES += lmgssutil.la
 lmgssutil_la_SOURCES = gss-misc.c gss-misc.h
@@ -266,7 +268,7 @@ lmtcpsrv_la_SOURCES = \
 	tcpsrv.h
 lmtcpsrv_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 lmtcpsrv_la_LDFLAGS = -module -avoid-version
-lmtcpsrv_la_LIBADD = 
+lmtcpsrv_la_LIBADD =
 
 if ENABLE_LIBLOGGING_STDLOG
 lmtcpsrv_la_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
@@ -281,7 +283,7 @@ lmtcpclt_la_SOURCES = \
 	tcpclt.h
 lmtcpclt_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 lmtcpclt_la_LDFLAGS = -module -avoid-version
-lmtcpclt_la_LIBADD = 
+lmtcpclt_la_LIBADD =
 
 if ENABLE_LIBLOGGING_STDLOG
 lmtcpclt_la_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)

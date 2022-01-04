@@ -28,6 +28,7 @@
 #include "lookup.h"
 #include "dynstats.h"
 #include "perctile_stats.h"
+#include "timezones.h"
 
 /* --- configuration objects (the plan is to have ALL upper layers in this file) --- */
 
@@ -239,6 +240,7 @@ struct rsconf_s {
 	 *  - actions
 	 * Of course, we need to debate if we shall change that some time...
 	 */
+	timezones_t timezones;
 };
 
 
