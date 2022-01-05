@@ -1244,7 +1244,6 @@ serializeBatchLokiRest(wrkrInstanceData_t *pWrkrData, char **batchBuf)
 {
 	fjson_object *batchArray = NULL;
 	fjson_object *recordObj = NULL;
-	fjson_object *valueObj = NULL;
 	fjson_object *msgObj = NULL;
 
 	size_t numMessages = pWrkrData->batch.nmemb;
@@ -1260,12 +1259,6 @@ serializeBatchLokiRest(wrkrInstanceData_t *pWrkrData, char **batchBuf)
 	}
 
 	for (size_t i = 0; i < numMessages; i++) {
-		valueObj = fjson_object_new_object();
-		if (valueObj == NULL) {
-			fjson_object_put(batchArray); // cleanup
-			LogError(0, RS_RET_ERR, "omhttp: serializeBatchLokiRest failed to create value object");
-			ABORT_FINALIZE(RS_RET_ERR);
-		}
 		DBGPRINTF("omhttp: serializeBatchLokiRest parsing message [%s]\n",(char *) pWrkrData->batch.data[i]);
 		msgObj = fjson_tokener_parse((char *) pWrkrData->batch.data[i]);
 		if (msgObj == NULL) {
