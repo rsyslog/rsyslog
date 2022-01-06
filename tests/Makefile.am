@@ -895,7 +895,8 @@ TESTS +=  \
 	omhttp-batch-jsonarray-vg.sh \
 	omhttp-batch-kafkarest-retry-vg.sh \
 	omhttp-batch-lokirest-retry-vg.sh \
-	omhttp-retry-vg.sh
+	omhttp-retry-vg.sh \
+	omhttp-batch-lokirest-vg.sh
 endif
 endif
 
@@ -2367,6 +2368,7 @@ EXTRA_DIST= \
 	omhttp-batch-kafkarest.sh \
 	omhttp-batch-lokirest-retry.sh \
 	omhttp-batch-lokirest.sh \
+	omhttp-batch-lokirest-vg.sh \
 	omhttp-batch-newline.sh \
 	omhttp-retry.sh \
 	omhttp-httpheaderkey.sh \
