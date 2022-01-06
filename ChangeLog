@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2202.0 (aka 2022.02) 2021-02-??
+- 2022-01-06: omhttp bugfix: memory leak in lokirest batchmode
+  A JSON object was created (valueObj) but not used and also not released causing a
+  memory leak. Over time, this could lead to memory overcomittent.
+  closes: https://github.com/rsyslog/rsyslog/issues/4766
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2112.0 (aka 2021.12) 2021-12-16
 - 2021-12-14: refactor:Deallocate outchannel resources in rsconf destructor
