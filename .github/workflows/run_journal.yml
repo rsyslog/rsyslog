@@ -56,7 +56,6 @@ jobs:
             liblognorm-dev \
             liblz4-dev \
             libmongoc-dev \
-            libmysqlclient-dev \
             libnet1-dev \
             libpcap-dev \
             librelp-dev \
@@ -69,7 +68,6 @@ jobs:
             logrotate \
             lsof \
             make \
-            mysql-server \
             net-tools \
             pkg-config \
             postgresql-client libpq-dev \
