@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2202.0 (aka 2022.02) 2021-02-??
+- 2022-01-07: omlibdbi bugfix: use-after-free bug
+  This occurred in when sqllite driver was used. Depending on circumstances, this had
+  no visible issues (often) up to rsyslog segfault. The busier rsyslog is, the more
+  likely a bad outcome.
 - 2022-01-06: omhttp bugfix: memory leak in lokirest batchmode
   A JSON object was created (valueObj) but not used and also not released causing a
   memory leak. Over time, this could lead to memory overcomittent.
