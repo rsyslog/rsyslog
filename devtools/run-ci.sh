@@ -31,6 +31,8 @@ fi
 printf 'STEP: make %s ==============================================================\n', \
 	"$CI_CHECK_CMD"
 set +e
+set -x
+set -v
 echo CI_CHECK_CMD: $CI_CHECK_CMD
 make $CI_MAKE_CHECK_OPT ${CI_CHECK_CMD:-check}
 rc=$?
