@@ -33,9 +33,6 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - name: git checkout project
-        uses: actions/checkout@v1
-
       - name: add extra dependencies
         run: |
           echo 'deb http://download.opensuse.org/repositories/home:/rgerhards/xUbuntu_20.04/ /' \
@@ -44,43 +41,29 @@ jobs:
               | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/home:rgerhards.gpg > /dev/null
           sudo apt-get update
           sudo apt-get install -y \
-            libcurl4-gnutls-dev \
-            libdbi-dev \
             libestr-dev \
             libgcrypt20-dev \
             libglib2.0-dev \
             libgnutls28-dev \
-            libgrok1 libgrok-dev \
-            libhiredis-dev \
-            libkrb5-dev \
             liblognorm-dev \
             liblz4-dev \
-            libmongoc-dev \
             libnet1-dev \
-            libpcap-dev \
             librelp-dev \
-            libsasl2-dev \
-            libsnmp-dev \
             libssl-dev \
             libsystemd-dev \
             libtool \
             libtool-bin \
-            logrotate \
             lsof \
             make \
             net-tools \
             pkg-config \
-            postgresql-client libpq-dev \
-            python3-pip \
-            python3-pysnmp4 \
             python-docutils  \
             software-properties-common \
-            uuid-dev \
             valgrind \
-            vim \
-            wget \
-            librdkafka-dev \
-            zlib1g-dev
+            wget
+
+      - name: git checkout project
+        uses: actions/checkout@v1
 
       - name: build dependencies which require that
         run: |
