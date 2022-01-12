@@ -59,7 +59,7 @@
 #include "glbl.h"
 #include "debug.h"
 #include "unlimited_select.h"
-
+#include "rsconf.h"
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
@@ -203,7 +203,7 @@ onSessAccept(tcpsrv_t *pThis, tcps_sess_t *pSess)
 {
 	DEFiRet;
 	gsssrv_t *pGSrv;
-	
+
 	pGSrv = (gsssrv_t*) pThis->pUsr;
 
 	if(pGSrv->allowedMethods & ALLOWEDMETHOD_GSS) {
@@ -438,7 +438,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 	allowedMethods = pGSrv->allowedMethods;
 	if(allowedMethods & ALLOWEDMETHOD_GSS) {
 		int ret = 0;
-		const size_t bufsize = glbl.GetMaxLine();
+		const size_t bufsize = glbl.GetMaxLine(runConf);
 		CHKmalloc(buf = (char*) malloc(bufsize + 1));
 
 		prop.GetString(pSess->fromHostIP, &pszPeer, &lenPeer);
@@ -586,7 +586,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 		gssutil.display_ctx_flags(*sess_flags);
 		pGSess->allowedMethods = ALLOWEDMETHOD_GSS;
 	}
-	
+
 finalize_it:
 	free(buf);
 	RETiRet;

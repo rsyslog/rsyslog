@@ -190,8 +190,6 @@ static configSettings_t cs;					/* our current config settings */
  * is no better name available.
  */
 int iActionNbr = 0;
-int bActionReportSuspension = 1;
-int bActionReportSuspensionCont = 0;
 
 /* tables for interfacing with the v6 config system */
 static struct cnfparamdescr cnfparamdescr[] = {
@@ -752,9 +750,9 @@ static void
 setSuspendMessageConfVars(action_t *__restrict__ const pThis)
 {
 	if(pThis->bReportSuspension == -1)
-		pThis->bReportSuspension = bActionReportSuspension;
+		pThis->bReportSuspension = runConf->globals.bActionReportSuspension;
 	if(pThis->bReportSuspensionCont == -1) {
-		pThis->bReportSuspensionCont = bActionReportSuspensionCont;
+		pThis->bReportSuspensionCont = runConf->globals.bActionReportSuspensionCont;
 		if(pThis->bReportSuspensionCont == -1)
 			pThis->bReportSuspensionCont = 1;
 	}

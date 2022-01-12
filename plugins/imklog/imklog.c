@@ -309,7 +309,7 @@ finalize_it:
  */
 int klog_getMaxLine(void)
 {
-	return glbl.GetMaxLine();
+	return glbl.GetMaxLine(runConf);
 }
 
 

@@ -330,7 +330,7 @@ static void waitForChild(instanceConf_t *pInst)
 	/* waitpid will fail with errno == ECHILD if the child process has already
 		 been reaped by the rsyslogd main loop (see rsyslogd.c) */
 	if(ret == pInst->pid) {
-		glblReportChildProcessExit(pInst->pszBinary, pInst->pid, status);
+		glblReportChildProcessExit(runConf, pInst->pszBinary, pInst->pid, status);
 	}
 }
 

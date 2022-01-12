@@ -837,7 +837,7 @@ static rsRetVal TCPSendInit(void *pvData)
 		if(pData->gnutlsPriorityString != NULL) {
 			CHKiRet(netstrm.SetGnutlsPriorityString(pWrkrData->pNetstrm, pData->gnutlsPriorityString));
 		}
-		CHKiRet(netstrm.Connect(pWrkrData->pNetstrm, glbl.GetDefPFFamily(),
+		CHKiRet(netstrm.Connect(pWrkrData->pNetstrm, glbl.GetDefPFFamily(runModConf->pConf),
 			(uchar*)pData->port, (uchar*)pData->target, pData->device));
 
 		/* set keep-alive if enabled */
@@ -964,7 +964,7 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 		memset(&hints, 0, sizeof(hints));
 		/* port must be numeric, because config file syntax requires this */
 		hints.ai_flags = AI_NUMERICSERV;
-		hints.ai_family = glbl.GetDefPFFamily();
+		hints.ai_family = glbl.GetDefPFFamily(runModConf->pConf);
 		hints.ai_socktype = SOCK_DGRAM;
 		if((iErr = (getaddrinfo(pData->target, pData->port, &hints, &res))) != 0) {
 			LogError(0, RS_RET_SUSPENDED,
@@ -1050,7 +1050,7 @@ processMsg(wrkrInstanceData_t *__restrict__ const pWrkrData,
 	instanceData *__restrict__ const pData = pWrkrData->pData;
 	DEFiRet;
 
-	iMaxLine = glbl.GetMaxLine();
+	iMaxLine = glbl.GetMaxLine(runModConf->pConf);
 
 	psz = iparam->param;
 	l = iparam->lenStr;

@@ -64,6 +64,7 @@
 #include "errmsg.h"
 #include "cryprov.h"
 #include "datetime.h"
+#include "rsconf.h"
 
 /* some platforms do not have large file support :( */
 #ifndef O_LARGEFILE
@@ -161,7 +162,7 @@ resolveFileSizeLimit(strm_t *pThis, uchar *pszCurrFName)
 	if(pThis->pszSizeLimitCmd == NULL) {
 		ABORT_FINALIZE(RS_RET_NON_SIZELIMITCMD); /* nothing we can do in this case... */
 	}
-	
+
 	/* we first check if we have command line parameters. We assume this,
 	 * when we have a space in the program name. If we find it, everything after
 	 * the space is treated as a single argument.
@@ -349,7 +350,7 @@ strmSetCurrFName(strm_t *pThis)
 finalize_it:
 	RETiRet;
 }
-	
+
 /* This function checks if the actual file has changed and, if so, resets the
  * offset. This is support for monitoring files. It should be called after
  * deserializing the strm object and before doing any other operation on it
@@ -400,7 +401,7 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 		ABORT_FINALIZE(RS_RET_FILE_PREFIX_MISSING);
 
 	CHKiRet(strmSetCurrFName(pThis));
-	
+
 	CHKiRet(doPhysOpen(pThis));
 
 	pThis->iCurrOffs = 0;
@@ -824,7 +825,7 @@ static rsRetVal strmReadChar(strm_t *pThis, uchar *pC)
 {
 	int padBytes = 0; /* in crypto mode, we may have some padding (non-data) bytes */
 	DEFiRet;
-	
+
 	assert(pThis != NULL);
 	assert(pC != NULL);
 
@@ -836,7 +837,7 @@ static rsRetVal strmReadChar(strm_t *pThis, uchar *pC)
 		pThis->iUngetC = -1;
 		ABORT_FINALIZE(RS_RET_OK);
 	}
-	
+
 	/* do we need to obtain a new buffer? */
 	if(pThis->iBufPtr >= pThis->iBufPtrMax) {
 		CHKiRet(strmReadBuf(pThis, &padBytes));
@@ -1071,7 +1072,7 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *start_preg, regex_t *
 	cstr_t *thisLine = NULL;
 	rsRetVal readCharRet;
 	const time_t tCurr = pThis->readTimeout ? getTime(NULL) : 0;
-	int maxMsgSize = glblGetMaxLine();
+	int maxMsgSize = glblGetMaxLine(runConf);
 	DEFiRet;
 
 	do {
@@ -1732,7 +1733,7 @@ syncFile(strm_t *pThis)
 		DBGPRINTF("sync failed for file %d with error (%d): %s - ignoring\n",
 			   pThis->fd, err, errStr);
 	}
-	
+
 	if(pThis->fdDir != -1) {
 		if(fsync(pThis->fdDir) != 0)
 			DBGPRINTF("stream/syncFile: fsync returned error, ignoring\n");
@@ -2260,7 +2261,7 @@ strmSetFName(strm_t *pThis, uchar *pszName, size_t iLenName)
 
 	assert(pThis != NULL);
 	assert(pszName != NULL);
-	
+
 	if(iLenName < 1)
 		ABORT_FINALIZE(RS_RET_FILE_PREFIX_MISSING);
 
@@ -2290,7 +2291,7 @@ strmSetDir(strm_t *pThis, uchar *pszDir, size_t iLenDir)
 
 	assert(pThis != NULL);
 	assert(pszDir != NULL);
-	
+
 	if(iLenDir < 1)
 		ABORT_FINALIZE(RS_RET_FILE_PREFIX_MISSING);
 
@@ -2442,7 +2443,7 @@ strmDup(strm_t *const pThis, strm_t **ppNew)
 	pNew->iFileNumDigits = pThis->iFileNumDigits;
 	pNew->bDeleteOnClose = pThis->bDeleteOnClose;
 	pNew->iCurrOffs = pThis->iCurrOffs;
-	
+
 	*ppNew = pNew;
 	pNew = NULL;
 

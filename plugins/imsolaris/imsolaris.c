@@ -84,6 +84,7 @@
 #include "prop.h"
 #include "sun_cddl.h"
 #include "datetime.h"
+#include "rsconf.h"
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
@@ -244,7 +245,7 @@ getMsgs(thrdInfo_t *pThrd, int timeout)
 	uchar bufRcv[4096+1];
 	char errStr[1024];
 
-	iMaxLine = glbl.GetMaxLine();
+	iMaxLine = glbl.GetMaxLine(runConf);
 
 	/* we optimize performance: if iMaxLine is below 4K (which it is in almost all
 	 * cases, we use a fixed buffer on the stack. Only if it is higher, heap memory

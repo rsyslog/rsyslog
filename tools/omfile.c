@@ -70,6 +70,7 @@
 #include "cryprov.h"
 #include "parserif.h"
 #include "janitor.h"
+#include "rsconf.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -648,7 +649,7 @@ prepareFile(instanceData *__restrict__ const pData, const uchar *__restrict__ co
 
 	if(pData->useSigprov)
 		sigprovPrepare(pData, szNameBuf);
-	
+
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pData->pStrm != NULL) {
@@ -699,7 +700,7 @@ prepareDynFile(instanceData *__restrict__ const pData, const uchar *__restrict__
 	 * we do not know if we will otherwise come back to this file to flush it
 	 * at end of TX. see https://github.com/rsyslog/rsyslog/issues/2502
 	 */
-	if(((glblDevOptions & DEV_OPTION_8_1905_HANG_TEST) == 0) &&
+	if(((runModConf->pConf->globals.glblDevOptions & DEV_OPTION_8_1905_HANG_TEST) == 0) &&
 	    pData->bFlushOnTXEnd && pData->pStrm != NULL) {
 		CHKiRet(strm.Flush(pData->pStrm));
 	}
@@ -947,7 +948,7 @@ janitorChkDynaFiles(instanceData *__restrict__ const pData)
 			if(pData->iCurrElt == i)
 				pData->iCurrElt = -1; /* no longer available! */
 		} else {
-			pCache[i]->nInactive += janitorInterval;
+			pCache[i]->nInactive += runModConf->pConf->globals.janitorInterval;
 		}
 	}
 }
@@ -968,7 +969,7 @@ janitorCB(void *pUsr)
 				STATSCOUNTER_INC(pData->ctrCloseTimeouts, pData->mutCtrCloseTimeouts);
 				closeFile(pData);
 			} else {
-				pData->nInactive += janitorInterval;
+				pData->nInactive += runModConf->pConf->globals.janitorInterval;
 			}
 		}
 	}

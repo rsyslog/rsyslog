@@ -89,6 +89,8 @@ struct modConfData_s {
 };
 
 static instanceConf_t *confRoot = NULL;
+static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
+static modConfData_t *runModConf = NULL; /* modConf ptr to use for run process */
 
 
 MODULE_TYPE_INPUT	/* must be present for input modules, do not remove */
@@ -160,7 +162,7 @@ static int getFullStateFileName(uchar* pszstatefile, uchar* pszout, int ilenout)
 	const uchar* pszworkdir;
 
 	/* Get Raw Workdir, if it is NULL we need to propper handle it */
-	pszworkdir = glblGetWorkDirRaw();
+	pszworkdir = glblGetWorkDirRaw(runModConf->pConf);
 
 	/* Construct file name */
 	lenout = snprintf((char*)pszout, ilenout, "%s/%s",
@@ -472,9 +474,9 @@ static void persistStrmState(instanceConf_t *pInst)
 	DBGPRINTF("persisting state for '%s' to file '%s'\n",
 			pInst->pszUlogBaseName, statefn);
 	CHKiRet(strm.Construct(&psSF));
-	lenDir = ustrlen(glbl.GetWorkDir());
+	lenDir = ustrlen(glbl.GetWorkDir(runModConf->pConf));
 	if(lenDir > 0)
-		CHKiRet(strm.SetDir(psSF, glbl.GetWorkDir(), lenDir));
+		CHKiRet(strm.SetDir(psSF, glbl.GetWorkDir(runModConf->pConf), lenDir));
 	CHKiRet(strm.SettOperationsMode(psSF, STREAMMODE_WRITE_TRUNC));
 	CHKiRet(strm.SetsType(psSF, STREAMTYPE_FILE_SINGLE));
 	CHKiRet(strm.SetFName(psSF, statefn, strlen((char*) statefn)));
@@ -764,6 +766,7 @@ ENDnewInpInst
 
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
+	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 ENDbeginCnfLoad
 
@@ -781,6 +784,7 @@ ENDcheckCnf
 
 BEGINactivateCnf
 CODESTARTactivateCnf
+	runModConf = pModConf;
 ENDactivateCnf
 
 BEGINfreeCnf

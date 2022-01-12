@@ -53,6 +53,7 @@
 #include "nsdsel_gtls.h"
 #include "nsd_gtls.h"
 #include "unicode-helper.h"
+#include "rsconf.h"
 
 /* things to move to some better place/functionality - TODO */
 #define CRLFILE "crl.pem"
@@ -189,8 +190,8 @@ gtlsLoadOurCertKey(nsd_gtls_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
-	certFile = (pThis->pszCertFile == NULL) ? glbl.GetDfltNetstrmDrvrCertFile() : pThis->pszCertFile;
-	keyFile = (pThis->pszKeyFile == NULL) ? glbl.GetDfltNetstrmDrvrKeyFile() : pThis->pszKeyFile;
+	certFile = (pThis->pszCertFile == NULL) ? glbl.GetDfltNetstrmDrvrCertFile(runConf) : pThis->pszCertFile;
+	keyFile = (pThis->pszKeyFile == NULL) ? glbl.GetDfltNetstrmDrvrKeyFile(runConf) : pThis->pszKeyFile;
 
 	if(certFile == NULL || keyFile == NULL) {
 		/* in this case, we can not set our certificate. If we are
@@ -610,8 +611,8 @@ gtlsAddOurCert(nsd_gtls_t *const pThis)
 	uchar *pGnuErr; /* for GnuTLS error reporting */
 	DEFiRet;
 
-	certFile = (pThis->pszCertFile == NULL) ? glbl.GetDfltNetstrmDrvrCertFile() : pThis->pszCertFile;
-	keyFile = (pThis->pszKeyFile == NULL) ? glbl.GetDfltNetstrmDrvrKeyFile() : pThis->pszKeyFile;
+	certFile = (pThis->pszCertFile == NULL) ? glbl.GetDfltNetstrmDrvrCertFile(runConf) : pThis->pszCertFile;
+	keyFile = (pThis->pszKeyFile == NULL) ? glbl.GetDfltNetstrmDrvrKeyFile(runConf) : pThis->pszKeyFile;
 	dbgprintf("GTLS certificate file: '%s'\n", certFile);
 	dbgprintf("GTLS key file: '%s'\n", keyFile);
 	if(certFile == NULL) {
@@ -696,7 +697,7 @@ gtlsInitCred(nsd_gtls_t *const pThis )
 	CHKgnutls(gnutls_certificate_allocate_credentials(&pThis->xcred));
 
 	/* sets the trusted cas file */
-	cafile = (pThis->pszCAFile == NULL) ? glbl.GetDfltNetstrmDrvrCAF() : pThis->pszCAFile;
+	cafile = (pThis->pszCAFile == NULL) ? glbl.GetDfltNetstrmDrvrCAF(runConf) : pThis->pszCAFile;
 	if(cafile == NULL) {
 		LogMsg(0, RS_RET_CA_CERT_MISSING, LOG_WARNING,
 			"Warning: CA certificate is not set");
@@ -739,9 +740,9 @@ gtlsGlblInit(void)
 	#endif
 	CHKgnutls(gnutls_global_init());
 
-	if(GetGnuTLSLoglevel() > 0){
+	if(GetGnuTLSLoglevel(runConf) > 0){
 		gnutls_global_set_log_function(logFunction);
-		gnutls_global_set_log_level(GetGnuTLSLoglevel());
+		gnutls_global_set_log_level(GetGnuTLSLoglevel(runConf));
 		/* 0 (no) to 9 (most), 10 everything */
 	}
 

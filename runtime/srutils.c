@@ -48,6 +48,7 @@
 #include "obj.h"
 #include "errmsg.h"
 #include "glbl.h"
+#include "rsconf.h"
 
 #if _POSIX_TIMERS <= 0
 #include <sys/time.h>
@@ -176,7 +177,7 @@ uchar *srUtilStrDup(uchar *pOld, size_t len)
 	uchar *pNew;
 
 	assert(pOld != NULL);
-	
+
 	if((pNew = malloc(len + 1)) != NULL)
 		memcpy(pNew, pOld, len + 1);
 
@@ -296,7 +297,7 @@ int execProg(uchar *program, int bWait, uchar *arg)
 			   been reaped by the rsyslogd main loop (see rsyslogd.c) */
 			int status;
 			if(waitpid(pid, &status, 0) == pid) {
-				glblReportChildProcessExit(program, pid, status);
+				glblReportChildProcessExit(runConf, program, pid, status);
 			} else if(errno != ECHILD) {
 				/* we do not use logerror(), because
 				* that might bring us into an endless
@@ -389,7 +390,7 @@ rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *
 	lenName = lenDirName + 1 + lenFName + lenBuf + 1; /* last +1 for \0 char! */
 	if((pName = malloc(lenName)) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	
+
 	/* got memory, now construct string */
 	memcpy(pName, pDirName, lenDirName);
 	pNameWork = pName + lenDirName;

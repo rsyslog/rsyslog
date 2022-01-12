@@ -320,7 +320,7 @@ checkStartupOK(void)
 		fprintf(stderr, "rsyslogd: error reading pid file, cannot start up\n");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	
+
 	/* ok, we got a pid, let's check if the process is running */
 	const pid_t pid = (pid_t) pf_pid;
 	if(kill(pid, 0) == 0 || errno != ESRCH) {
@@ -559,7 +559,8 @@ rsyslogd_InitStdRatelimiters(void)
 	CHKiRet(ratelimitNew(&dflt_ratelimiter, "rsyslogd", "dflt"));
 	CHKiRet(ratelimitNew(&internalMsg_ratelimiter, "rsyslogd", "internal_messages"));
 	ratelimitSetThreadSafe(internalMsg_ratelimiter);
-	ratelimitSetLinuxLike(internalMsg_ratelimiter, glblIntMsgRateLimitItv, glblIntMsgRateLimitBurst);
+	ratelimitSetLinuxLike(internalMsg_ratelimiter,
+		loadConf->globals.intMsgRateLimitItv, loadConf->globals.intMsgRateLimitBurst);
 	/* TODO: make internalMsg ratelimit settings configurable */
 finalize_it:
 	RETiRet;
@@ -851,8 +852,8 @@ static void
 logmsgInternal_doWrite(smsg_t *pMsg)
 {
 	const int pri = getPRIi(pMsg);
-	if(pri % 8 <= glblIntMsgsSeverityFilter) {
-		if(bProcessInternalMessages) {
+	if(pri % 8 <= runConf->globals.intMsgsSeverityFilter) {
+		if(runConf->globals.bProcessInternalMessages) {
 			submitMsg2(pMsg);
 			pMsg = NULL; /* msg obj handed over; do not destruct */
 		} else {
@@ -865,13 +866,13 @@ logmsgInternal_doWrite(smsg_t *pMsg)
 			 */
 			static warnmsg_emitted = 0;
 			if(warnmsg_emitted == 0) {
-				stdlog_log(stdlog_hdl, LOG_WARNING, "%s",
+				stdlog_log(runConf->globals.stdlog_hdl, LOG_WARNING, "%s",
 					"RSYSLOG WARNING: liblogging-stdlog "
 					"functionality will go away soon. For details see "
 					"https://github.com/rsyslog/rsyslog/issues/2706");
 				warnmsg_emitted = 1;
 			}
-			stdlog_log(stdlog_hdl, pri2sev(pri), "%s", (char*)msg);
+			stdlog_log(runConf->globals.stdlog_hdl, pri2sev(pri), "%s", (char*)msg);
 			#else
 			syslog(pri, "%s", msg);
 			#endif
@@ -1004,7 +1005,7 @@ splitOversizeMessage(smsg_t *const pMsg)
 	const char *rawmsg;
 	int nsegments;
 	int len_rawmsg;
-	const int maxlen = glblGetMaxLine();
+	const int maxlen = glblGetMaxLine(runConf);
 	ISOBJ_TYPE_assert(pMsg, msg);
 
 	getRawMsg(pMsg, (uchar**) &rawmsg, &len_rawmsg);
@@ -1048,31 +1049,31 @@ submitMsg2(smsg_t *pMsg)
 
 	ISOBJ_TYPE_assert(pMsg, msg);
 
-	if(getRawMsgLen(pMsg) > glblGetMaxLine()){
+	if(getRawMsgLen(pMsg) > glblGetMaxLine(runConf)){
 		uchar *rawmsg;
 		int dummy;
 		getRawMsg(pMsg, &rawmsg, &dummy);
-		if(glblReportOversizeMessage()) {
+		if(glblReportOversizeMessage(runConf)) {
 			LogMsg(0, RS_RET_OVERSIZE_MSG, LOG_WARNING,
 				"message too long (%d) with configured size %d, begin of "
 				"message is: %.80s",
-				getRawMsgLen(pMsg), glblGetMaxLine(), rawmsg);
+				getRawMsgLen(pMsg), glblGetMaxLine(runConf), rawmsg);
 		}
 		writeOversizeMessageLog(pMsg);
-		if(glblGetOversizeMsgInputMode() == glblOversizeMsgInputMode_Split) {
+		if(glblGetOversizeMsgInputMode(runConf) == glblOversizeMsgInputMode_Split) {
 			splitOversizeMessage(pMsg);
 			/* we have submitted the message segments recursively, so we
 			 * can just deleted the original msg object and terminate.
 			 */
 			msgDestruct(&pMsg);
 			FINALIZE;
-		} else if(glblGetOversizeMsgInputMode() == glblOversizeMsgInputMode_Truncate) {
+		} else if(glblGetOversizeMsgInputMode(runConf) == glblOversizeMsgInputMode_Truncate) {
 			MsgTruncateToMaxSize(pMsg);
 		} else {
 			/* in "accept" mode, we do nothing, simply because "accept" means
 			 * to use as-is.
 			 */
-			assert(glblGetOversizeMsgInputMode() == glblOversizeMsgInputMode_Accept);
+			assert(glblGetOversizeMsgInputMode(runConf) == glblOversizeMsgInputMode_Accept);
 		}
 	}
 
@@ -1403,16 +1404,14 @@ initAll(int argc, char **argv)
 		DBGPRINTF("deque option %c, optarg '%s'\n", ch, (arg == NULL) ? "" : arg);
 		switch((char)ch) {
 		case '4':
-			fprintf (stderr, "rsyslogd: the -4 command line option will go away "
-				 "soon.\nPlease use the global(net.ipprotocol=\"ipv4-only\") "
+			fprintf (stderr, "rsyslogd: the -4 command line option has gone away.\n"
+				 "Please use the global(net.ipprotocol=\"ipv4-only\") "
 				 "configuration parameter instead.\n");
-	                glbl.SetDefPFFamily(PF_INET);
 			break;
 		case '6':
-			fprintf (stderr, "rsyslogd: the -6 command line option will go away "
-				 "soon.\nPlease use the global(net.ipprotocol=\"ipv6-only\") "
+			fprintf (stderr, "rsyslogd: the -6 command line option will has gone away.\n"
+				 "Please use the global(net.ipprotocol=\"ipv6-only\") "
 				 "configuration parameter instead.\n");
-			glbl.SetDefPFFamily(PF_INET6);
 			break;
 		case 'A':
 			fprintf (stderr, "rsyslogd: the -A command line option will go away "
@@ -1472,16 +1471,14 @@ initAll(int argc, char **argv)
 			}
 			break;
 		case 'q':               /* add hostname if DNS resolving has failed */
-			fprintf (stderr, "rsyslogd: the -q command line option will go away "
-				 "soon.\nPlease use the global(net.aclAddHostnameOnFail=\"on\") "
+			fprintf (stderr, "rsyslogd: the -q command line option has gone away.\n"
+				 "Please use the global(net.aclAddHostnameOnFail=\"on\") "
 				 "configuration parameter instead.\n");
-		        *(net.pACLAddHostnameOnFail) = 1;
 		        break;
 		case 'Q':               /* dont resolve hostnames in ACL to IPs */
-			fprintf (stderr, "rsyslogd: the -Q command line option will go away "
-				 "soon.\nPlease use the global(net.aclResolveHostname=\"off\") "
+			fprintf (stderr, "rsyslogd: the -Q command line option has gone away.\n"
+				 "Please use the global(net.aclResolveHostname=\"off\") "
 				 "configuration parameter instead.\n");
-		        *(net.pACLDontResolve) = 1;
 		        break;
 		case 'T':/* chroot() immediately at program startup, but only for testing, NOT security yet */
 			if(arg == NULL) {
@@ -1503,12 +1500,10 @@ initAll(int argc, char **argv)
 		case 'u':		/* misc user settings */
 			iHelperUOpt = (arg == NULL) ? 0 : atoi(arg);
 			if(iHelperUOpt & 0x01) {
-				fprintf (stderr, "rsyslogd: the -u command line option will go away "
-					 "soon.\n"
+				fprintf (stderr, "rsyslogd: the -u command line option has gone away.\n"
 					 "For the 0x01 bit, please use the "
 					 "global(parser.parseHostnameAndTag=\"off\") "
 					 "configuration parameter instead.\n");
-				glbl.SetParseHOSTNAMEandTAG(0);
 			}
 			if(iHelperUOpt & 0x02) {
 				fprintf (stderr, "rsyslogd: the -u command line option will go away "
@@ -1521,16 +1516,14 @@ initAll(int argc, char **argv)
 			bChDirRoot = 0;
 			break;
 		case 'w':		/* disable disallowed host warnigs */
-			fprintf (stderr, "rsyslogd: the -w command line option will go away "
-				 "soon.\nPlease use the global(net.permitWarning=\"off\") "
+			fprintf (stderr, "rsyslogd: the -w command line option has gone away.\n"
+				 "Please use the global(net.permitWarning=\"off\") "
 				 "configuration parameter instead.\n");
-			glbl.SetOption_DisallowWarning(0);
 			break;
 		case 'x':		/* disable dns for remote messages */
-			fprintf (stderr, "rsyslogd: the -x command line option will go away "
-				 "soon.\nPlease use the global(net.enableDNS=\"off\") "
+			fprintf (stderr, "rsyslogd: the -x command line option has gone away.\n"
+				 "Please use the global(net.enableDNS=\"off\") "
 				 "configuration parameter instead.\n");
-			glbl.SetDisableDNS(1);
 			break;
 		case 'h':
 		case '?':
@@ -1565,7 +1558,7 @@ initAll(int argc, char **argv)
 		 * even on hard config errors. Note that this may lead to segfaults
 		 * or other malfunction further down the road.
 		 */
-		if((glblDevOptions & DEV_OPTION_KEEP_RUNNING_ON_HARD_CONF_ERROR) == 1) {
+		if((loadConf->globals.glblDevOptions & DEV_OPTION_KEEP_RUNNING_ON_HARD_CONF_ERROR) == 1) {
 			fprintf(stderr, "rsyslogd: NOTE: developer-only option set to keep rsyslog "
 				"running where it should abort - this can lead to "
 				"more problems later in the run.\n");
@@ -1592,7 +1585,7 @@ initAll(int argc, char **argv)
 		localRet = RS_RET_OK;
 	}
 	CHKiRet(localRet);
-	
+
 	CHKiRet(rsyslogd_InitStdRatelimiters());
 
 	if(bChDirRoot) {
@@ -1613,7 +1606,7 @@ initAll(int argc, char **argv)
 
 	hdlr_enable(SIGPIPE, SIG_IGN);
 	hdlr_enable(SIGXFSZ, SIG_IGN);
-	if(Debug || glblPermitCtlC) {
+	if(Debug || loadConf->globals.permitCtlC) {
 		hdlr_enable(SIGUSR1, rsyslogdDebugSwitch);
 		hdlr_enable(SIGINT,  rsyslogdDoDie);
 		hdlr_enable(SIGQUIT, rsyslogdDoDie);
@@ -1820,7 +1813,7 @@ rsyslogdDoDie(int sig)
 		abort();
 	}
 	bFinished = sig;
-	if(glblDebugOnShutdown) {
+	if(runConf->globals.debugOnShutdown) {
 		/* kind of hackish - set to 0, so that debug_swith will enable
 		 * and AND emit the "start debug log" message.
 		 */
@@ -1842,7 +1835,7 @@ wait_timeout(const sigset_t *sigmask)
 {
 	struct timespec tvSelectTimeout;
 
-	tvSelectTimeout.tv_sec = janitorInterval * 60; /* interval is in minutes! */
+	tvSelectTimeout.tv_sec = runConf->globals.janitorInterval * 60; /* interval is in minutes! */
 	tvSelectTimeout.tv_nsec = 0;
 
 #ifdef _AIX
@@ -1856,7 +1849,7 @@ wait_timeout(const sigset_t *sigmask)
 		 * in useful subsecond steps.
 		 */
 		const long wait_period = 500000000; /* wait period in nanoseconds */
-		int timeout = janitorInterval * 60 * (1000000000 / wait_period);
+		int timeout = runConf->globals.janitorInterval * 60 * (1000000000 / wait_period);
 
 		tvSelectTimeout.tv_sec = 0;
 		tvSelectTimeout.tv_nsec = wait_period;
@@ -1934,7 +1927,7 @@ reapChild(void)
 		int status;
 		child = waitpid(-1, &status, WNOHANG);
 		if(child != -1 && child != 0) {
-			glblReportChildProcessExit(NULL, child, status);
+			glblReportChildProcessExit(runConf, NULL, child, status);
 		}
 	} while(child > 0);
 }
@@ -2018,7 +2011,7 @@ deinitAll(void)
 	/* close the inputs */
 	DBGPRINTF("Terminating input threads...\n");
 	glbl.SetGlobalInputTermination();
-	
+
 	thrdTerminateAll();
 
 	/* and THEN send the termination log message (see long comment above) */
@@ -2137,16 +2130,13 @@ main(int argc, char **argv)
 	/* disable case-sensitive comparisons in variable subsystem: */
 	fjson_global_do_case_sensitive_comparison(0);
 
-	const char *const log_dflt = getenv("RSYSLOG_DFLT_LOG_INTERNAL");
-	if(log_dflt != NULL && !strcmp(log_dflt, "1"))
-		bProcessInternalMessages = 1;
 	dbgClassInit();
 	initAll(argc, argv);
 #ifdef HAVE_LIBSYSTEMD
 	sd_notify(0, "READY=1");
 	dbgprintf("done signaling to systemd that we are ready!\n");
 #endif
-	DBGPRINTF("max message size: %d\n", glblGetMaxLine());
+	DBGPRINTF("max message size: %d\n", glblGetMaxLine(runConf));
 	DBGPRINTF("----RSYSLOGD INITIALIZED\n");
 	LogMsg(0, RS_RET_OK, LOG_DEBUG, "rsyslogd fully started up and initialized "
 		"- begin actual processing");
@@ -2154,9 +2144,6 @@ main(int argc, char **argv)
 	mainloop();
 	LogMsg(0, RS_RET_OK, LOG_DEBUG, "rsyslogd shutting down");
 	deinitAll();
-#ifdef ENABLE_LIBLOGGING_STDLOG
-	stdlog_close(stdlog_hdl);
-#endif
 	osf_close();
 	return 0;
 }

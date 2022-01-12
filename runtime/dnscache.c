@@ -44,6 +44,7 @@
 #include "hashtable.h"
 #include "prop.h"
 #include "dnscache.h"
+#include "rsconf.h"
 
 /* module data structures */
 struct dnscache_entry_s {
@@ -63,9 +64,6 @@ struct dnscache_s {
 	unsigned nEntries;
 };
 typedef struct dnscache_s dnscache_t;
-
-unsigned dnscacheDefaultTTL = 24 * 60 * 60; /* 24 hrs default TTL */
-int dnscacheEnableTTL = 0; /* expire entries or not (0) ? */
 
 
 /* static data */
@@ -259,7 +257,7 @@ resolveAddr(struct sockaddr_storage *addr, dnscache_entry_t *etry)
 	char fqdnBuf[NI_MAXHOST];
 	rs_size_t fqdnLen;
 	rs_size_t i;
-	
+
 	error = mygetnameinfo((struct sockaddr *)addr, SALEN((struct sockaddr *)addr),
 			    (char*) szIP, sizeof(szIP), NULL, 0, NI_NUMERICHOST);
 	if(error) {
@@ -267,7 +265,7 @@ resolveAddr(struct sockaddr_storage *addr, dnscache_entry_t *etry)
 		ABORT_FINALIZE(RS_RET_INVALID_SOURCE);
 	}
 
-	if(!glbl.GetDisableDNS()) {
+	if(!glbl.GetDisableDNS(runConf)) {
 		sigemptyset(&nmask);
 		sigaddset(&nmask, SIGHUP);
 		pthread_sigmask(SIG_BLOCK, &nmask, &omask);
@@ -294,7 +292,7 @@ resolveAddr(struct sockaddr_storage *addr, dnscache_entry_t *etry)
 				 * time being, we simply drop the name we obtained and use the IP - that one
 				 * is OK in any way. We do also log the error message. rgerhards, 2007-07-16
 		 		 */
-		 		if(glbl.GetDropMalPTRMsgs() == 1) {
+		 		if(glbl.GetDropMalPTRMsgs(runConf) == 1) {
 					LogError(0, RS_RET_MALICIOUS_ENTITY,
 						 "Malicious PTR record, message dropped "
 						 "IP = \"%s\" HOST = \"%s\"",
@@ -335,7 +333,7 @@ finalize_it:
 
 	prop.CreateStringProp(&etry->ip, (uchar*)szIP, strlen(szIP));
 
-	if(error || glbl.GetDisableDNS()) {
+	if(error || glbl.GetDisableDNS(runConf)) {
 		dbgprintf("Host name for your address (%s) unknown\n", szIP);
 		prop.AddRef(etry->ip);
 		etry->fqdn = etry->ip;
@@ -364,8 +362,8 @@ addEntry(struct sockaddr_storage *const addr, dnscache_entry_t **const pEtry)
 	assert(etry != NULL);
 	memcpy(&etry->addr, addr, SALEN((struct sockaddr*) addr));
 	etry->nUsed = 0;
-	if(dnscacheEnableTTL) {
-		etry->validUntil = time(NULL) + dnscacheDefaultTTL;
+	if(runConf->globals.dnscacheEnableTTL) {
+		etry->validUntil = time(NULL) + runConf->globals.dnscacheDefaultTTL;
 	}
 
 	memcpy(keybuf, addr, sizeof(struct sockaddr_storage));
@@ -395,12 +393,12 @@ findEntry(struct sockaddr_storage *const addr,
 	dnscache_entry_t * etry = hashtable_search(dnsCache.ht, addr);
 	DBGPRINTF("findEntry: 1st lookup found %p\n", etry);
 
-	if(etry == NULL || (dnscacheEnableTTL && (etry->validUntil <= time(NULL)))) {
+	if(etry == NULL || (runConf->globals.dnscacheEnableTTL && (etry->validUntil <= time(NULL)))) {
 		pthread_rwlock_unlock(&dnsCache.rwlock);
 		pthread_rwlock_wrlock(&dnsCache.rwlock);
 		etry = hashtable_search(dnsCache.ht, addr); /* re-query, might have changed */
 		DBGPRINTF("findEntry: 2nd lookup found %p\n", etry);
-		if(etry == NULL || (dnscacheEnableTTL && (etry->validUntil <= time(NULL)))) {
+		if(etry == NULL || (runConf->globals.dnscacheEnableTTL && (etry->validUntil <= time(NULL)))) {
 			if(etry != NULL) {
 				DBGPRINTF("hashtable: entry timed out, discarding it; "
 					"valid until %lld, now %lld\n",

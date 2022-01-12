@@ -33,6 +33,7 @@
 #include <sys/resource.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/socket.h>
 
 #include "rsyslog.h"
 #include "obj.h"
@@ -163,6 +164,62 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->templates.last = NULL;
 	pThis->templates.lastStatic = NULL;
 	pThis->actions.nbrActions = 0;
+	pThis->globals.pszWorkDir = NULL;
+	pThis->globals.bDropMalPTRMsgs = 0;
+	pThis->globals.operatingStateFile = NULL;
+	pThis->globals.iGnuTLSLoglevel = 0;
+	pThis->globals.debugOnShutdown = 0;
+	pThis->globals.pszDfltNetstrmDrvrCAF = NULL;
+	pThis->globals.pszDfltNetstrmDrvrCertFile = NULL;
+	pThis->globals.pszDfltNetstrmDrvrKeyFile = NULL;
+	pThis->globals.pszDfltNetstrmDrvr = NULL;
+	pThis->globals.oversizeMsgErrorFile = NULL;
+	pThis->globals.reportOversizeMsg = 1;
+	pThis->globals.oversizeMsgInputMode = 0;
+	pThis->globals.reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
+	pThis->globals.bActionReportSuspension = 1;
+	pThis->globals.bActionReportSuspensionCont = 0;
+	pThis->globals.janitorInterval = 10;
+	pThis->globals.reportNewSenders = 0;
+	pThis->globals.reportGoneAwaySenders = 0;
+	pThis->globals.senderStatsTimeout = 12 * 60 * 60; /* 12 hr timeout for senders */
+	pThis->globals.senderKeepTrack = 0;
+	pThis->globals.inputTimeoutShutdown = 1000;
+	pThis->globals.iDefPFFamily = PF_UNSPEC;
+	pThis->globals.ACLAddHostnameOnFail = 0;
+	pThis->globals.ACLDontResolve = 0;
+	pThis->globals.bDisableDNS = 0;
+	pThis->globals.bProcessInternalMessages = 0;
+	const char *const log_dflt = getenv("RSYSLOG_DFLT_LOG_INTERNAL");
+	if(log_dflt != NULL && !strcmp(log_dflt, "1"))
+		pThis->globals.bProcessInternalMessages = 1;
+	pThis->globals.glblDevOptions = 0;
+	pThis->globals.intMsgRateLimitItv = 5;
+	pThis->globals.intMsgRateLimitBurst = 500;
+	pThis->globals.intMsgsSeverityFilter = DFLT_INT_MSGS_SEV_FILTER;
+	pThis->globals.permitCtlC = glblPermitCtlC;
+
+	pThis->globals.actq_dflt_toQShutdown = 10;
+	pThis->globals.actq_dflt_toActShutdown = 1000;
+	pThis->globals.actq_dflt_toEnq = 2000;
+	pThis->globals.actq_dflt_toWrkShutdown = 60000;
+
+	pThis->globals.ruleset_dflt_toQShutdown = 1500;
+	pThis->globals.ruleset_dflt_toActShutdown = 1000;
+	pThis->globals.ruleset_dflt_toEnq = 2000;
+	pThis->globals.ruleset_dflt_toWrkShutdown = 60000;
+
+	pThis->globals.dnscacheDefaultTTL = 24 * 60 * 60;
+	pThis->globals.dnscacheEnableTTL = 0;
+	pThis->globals.shutdownQueueDoubleSize = 0;
+	pThis->globals.optionDisallowWarning = 1;
+	pThis->globals.bSupportCompressionExtension = 1;
+	#ifdef ENABLE_LIBLOGGING_STDLOG
+		pThis->globals.stdlog_hdl = stdlog_open("rsyslogd", 0, STDLOG_SYSLOG, NULL);
+		pThis->globals.stdlog_chanspec = NULL;
+	#endif
+	pThis->globals.iMaxLine = 8096;
+
 	/* queue params */
 	pThis->globals.mainQ.iMainMsgQueueSize = 100000;
 	pThis->globals.mainQ.iMainMsgQHighWtrMark = 80000;
@@ -186,6 +243,16 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.mainQ.bMainMsgQSaveOnShutdown = 1;
 	pThis->globals.mainQ.iMainMsgQueueDeqtWinFromHr = 0;
 	pThis->globals.mainQ.iMainMsgQueueDeqtWinToHr = 25;
+
+	pThis->globals.parser.cCCEscapeChar = '#';
+	pThis->globals.parser.bDropTrailingLF = 1;
+	pThis->globals.parser.bEscapeCCOnRcv = 1;
+	pThis->globals.parser.bSpaceLFOnRcv = 0;
+	pThis->globals.parser.bEscape8BitChars = 0;
+	pThis->globals.parser.bEscapeTab = 1;
+	pThis->globals.parser.bParserEscapeCCCStyle = 0;
+	pThis->globals.parser.bPermitSlashInProgramname = 0;
+	pThis->globals.parser.bParseHOSTNAMEandTAG = 1;
 }
 
 
@@ -243,6 +310,17 @@ CODESTARTobjDestruct(rsconf)
 	ochDeleteAll();
 	free(pThis->globals.mainQ.pszMainMsgQFName);
 	free(pThis->globals.pszConfDAGFile);
+	free(pThis->globals.pszWorkDir);
+	free(pThis->globals.operatingStateFile);
+	free(pThis->globals.pszDfltNetstrmDrvrCAF);
+	free(pThis->globals.pszDfltNetstrmDrvrCertFile);
+	free(pThis->globals.pszDfltNetstrmDrvrKeyFile);
+	free(pThis->globals.pszDfltNetstrmDrvr);
+	free(pThis->globals.oversizeMsgErrorFile);
+	#ifdef ENABLE_LIBLOGGING_STDLOG
+		stdlog_close(pThis->globals.stdlog_hdl);
+		free(pThis->globals.stdlog_chanspec);
+	#endif
 	lookupDestroyCnf();
 	llDestroy(&(pThis->rulesets.llRulesets));
 ENDobjDestruct(rsconf)
@@ -266,7 +344,7 @@ BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and
 	dbgprintf("  bErrMsgToStderr.....................: %d\n",
 		  pThis->globals.bErrMsgToStderr);
 	dbgprintf("  drop Msgs with malicious PTR Record : %d\n",
-		  glbl.GetDropMalPTRMsgs());
+		  glbl.GetDropMalPTRMsgs(pThis));
 	ruleset.DebugPrintAll(pThis);
 	dbgprintf("\n");
 	if(pThis->globals.bDebugPrintTemplateList)
@@ -297,7 +375,7 @@ BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and
 	setQPROP(qqueueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", 100);
 	setQPROP(qqueueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", 1);
 	 */
-	dbgprintf("Work Directory: '%s'.\n", glbl.GetWorkDir());
+	dbgprintf("Work Directory: '%s'.\n", glbl.GetWorkDir(pThis));
 	ochPrintList(pThis);
 	dbgprintf("Modules used in this configuration:\n");
 	for(modNode = pThis->modules.root ; modNode != NULL ; modNode = modNode->next) {
@@ -1299,7 +1377,7 @@ validateConf(rsconf_t *cnf)
 
 	if(cnf->globals.mainQ.MainMsgQueType == QUEUETYPE_DISK) {
 		errno = 0;	/* for logerror! */
-		if(glbl.GetWorkDir() == NULL) {
+		if(glbl.GetWorkDir(cnf) == NULL) {
 			LogError(0, NO_ERRCODE, "No $WorkDirectory specified - can not run main "
 					"message queue in 'disk' mode. Using 'FixedArray' instead.\n");
 			cnf->globals.mainQ.MainMsgQueType = QUEUETYPE_FIXED_ARRAY;

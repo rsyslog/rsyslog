@@ -38,6 +38,7 @@
 #include "datetime.h"
 #include "unicode-helper.h"
 #include "typedefs.h"
+#include "rsconf.h"
 
 MODULE_TYPE_PARSER
 MODULE_TYPE_NOKEEP
@@ -285,7 +286,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
 	DBGPRINTF("panngfw parser init called, compiled with version %s\n", VERSION);
-	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG();
+	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG(loadConf);
 	/* cache value, is set only during rsyslogd option processing */
 
 

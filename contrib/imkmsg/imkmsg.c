@@ -155,7 +155,7 @@ rsRetVal Syslog(syslog_pri_t priority, uchar *pMsg, struct timeval *tp, struct j
  */
 int klog_getMaxLine(void)
 {
-	return glbl.GetMaxLine();
+	return glbl.GetMaxLine(runModConf->pConf);
 }
 
 

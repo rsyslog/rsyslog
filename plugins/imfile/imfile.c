@@ -389,7 +389,7 @@ getStateFileDir(void)
 	const uchar *wrkdir;
 	assert(currModConf != NULL);
 	if(currModConf->stateFileDirectory == NULL) {
-		wrkdir = glblGetWorkDirRaw();
+		wrkdir = glblGetWorkDirRaw(currModConf->pConf);
 	} else {
 		wrkdir = currModConf->stateFileDirectory;
 	}
@@ -733,7 +733,7 @@ act_obj_add(fs_edge_t *const edge, const char *const name, const int is_file,
 	char basename[MAXFNAME];
 	DEFiRet;
 	int fd = -1;
-	
+
 	DBGPRINTF("act_obj_add: edge %p, name '%s' (source '%s')\n", edge, name, source? source : "---");
 
 	if (isIgnoreOlderFile(edge->instarr[0], name)) {

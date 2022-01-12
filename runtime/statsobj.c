@@ -42,6 +42,7 @@
 #include "errmsg.h"
 #include "hashtable.h"
 #include "hashtable_itr.h"
+#include "rsconf.h"
 
 
 /* externally-visiable data (see statsobj.h for explanation) */
@@ -362,7 +363,7 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, co
 	CHKmalloc(root = json_object_new_object());
 
 	CHKiRet(addContextForReporting(root, UCHAR_CONSTANT("name"), pThis->name));
-	
+
 	if(pThis->origin != NULL) {
 		CHKiRet(addContextForReporting(root, UCHAR_CONSTANT("origin"), pThis->origin));
 	}
@@ -418,7 +419,7 @@ finalize_it:
 	if (values != NULL) {
 		json_object_put(values);
 	}
-	
+
 	RETiRet;
 }
 
@@ -586,7 +587,7 @@ statsRecordSender(const uchar *sender, unsigned nMsgs, time_t lastSeen)
 		CHKmalloc(stat = calloc(1, sizeof(struct sender_stats)));
 		stat->sender = (const uchar*)strdup((const char*)sender);
 		stat->nMsgs = 0;
-		if(glblReportNewSenders) {
+		if(runConf->globals.reportNewSenders) {
 			LogMsg(0, RS_RET_SENDER_APPEARED,
 				LOG_INFO, "new sender '%s'", stat->sender);
 		}
@@ -640,7 +641,7 @@ checkGoneAwaySenders(const time_t tCurr)
 {
 	struct hashtable_itr *itr = NULL;
 	struct sender_stats *stat;
-	const time_t rqdLast = tCurr - glblSenderStatsTimeout;
+	const time_t rqdLast = tCurr - runConf->globals.senderStatsTimeout;
 	struct tm tm;
 
 	pthread_mutex_lock(&mutSenders);
@@ -653,7 +654,7 @@ checkGoneAwaySenders(const time_t tCurr)
 		do {
 			stat = (struct sender_stats*)hashtable_iterator_value(itr);
 			if(stat->lastSeen < rqdLast) {
-				if(glblReportGoneAwaySenders) {
+				if(runConf->globals.reportGoneAwaySenders) {
 					localtime_r(&stat->lastSeen, &tm);
 					LogMsg(0, RS_RET_SENDER_GONE_AWAY,
 						LOG_WARNING,

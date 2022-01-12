@@ -349,7 +349,7 @@ CODESTARTdoAction
 	pthread_mutex_lock(&mutDoAct);
 	CHKiRet(doTryResume(pWrkrData->pData));
 
-	iMaxLine = glbl.GetMaxLine();
+	iMaxLine = glbl.GetMaxLine(runModConf->pConf);
 
 	DBGPRINTF(" omuxsock:%s\n", pWrkrData->pData->sockName);
 
@@ -382,7 +382,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(*(p-1) == ';')
 		--p;
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, 0, getDfltTpl()));
-	
+
 	if(cs.sockName == NULL) {
 		LogError(0, RS_RET_NO_SOCK_CONFIGURED, "No output socket configured for omuxsock\n");
 		ABORT_FINALIZE(RS_RET_NO_SOCK_CONFIGURED);

@@ -650,7 +650,7 @@ prepareFile(instanceData *__restrict__ const pData, const uchar *__restrict__ co
 
 	if(pData->useSigprov)
 		sigprovPrepare(pData, szNameBuf);
-	
+
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pData->pStrm != NULL) {
@@ -682,7 +682,7 @@ fsCheck(instanceData *__restrict__ const pData, const uchar *__restrict__ const 
 	/* check if we have space available for all buffers to be flushed and for
 	 * a maximum lenght message, perhaps current msg size would be enough */
 	if (stat.f_bsize * stat.f_bavail <
-		pData->iIOBufSize * pData->iDynaFileCacheSize + (uint)(glbl.GetMaxLine()))
+		pData->iIOBufSize * pData->iDynaFileCacheSize + (uint)(glbl.GetMaxLine(runModConf->pConf)))
 		{
 			iRet = RS_RET_FS_ERR;
 			LogError(0, iRet, "too few available blocks in %s", path);
@@ -1002,7 +1002,7 @@ janitorChkDynaFiles(instanceData *__restrict__ const pData)
 				pData->iCurrElt = -1; /* no longer available! */
 			}
 		} else {
-			pCache[i]->nInactive += janitorInterval;
+			pCache[i]->nInactive += runModConf->pConf->globals.janitorInterval;
 		}
 	}
 }
@@ -1023,7 +1023,7 @@ janitorCB(void *pUsr)
 				STATSCOUNTER_INC(pData->ctrCloseTimeouts, pData->mutCtrCloseTimeouts);
 				closeFile(pData);
 			} else {
-				pData->nInactive += janitorInterval;
+				pData->nInactive += runModConf->pConf->globals.janitorInterval;
 			}
 		}
 	}

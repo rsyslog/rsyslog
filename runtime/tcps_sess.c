@@ -49,6 +49,7 @@
 #include "prop.h"
 #include "ratelimit.h"
 #include "debug.h"
+#include "rsconf.h"
 
 
 /* static data */
@@ -69,7 +70,7 @@ BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END m
 		pThis->inputState = eAtStrtFram; /* indicate frame header expected */
 		pThis->eFraming = TCP_FRAMING_OCTET_STUFFING; /* just make sure... */
 		/* now allocate the message reception buffer */
-		CHKmalloc(pThis->pMsg = (uchar*) malloc(glbl.GetMaxLine() + 1));
+		CHKmalloc(pThis->pMsg = (uchar*) malloc(glbl.GetMaxLine(runConf) + 1));
 finalize_it:
 ENDobjConstruct(tcps_sess)
 
@@ -236,7 +237,7 @@ defaultDoSubmitMessage(tcps_sess_t *pThis, struct syslogTime *stTime, time_t ttG
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 	const tcpLstnParams_t *const cnf_params = pThis->pLstnInfo->cnf_params;
-	
+
 	if(pThis->iMsg == 0) {
 		DBGPRINTF("discarding zero-sized message\n");
 		FINALIZE;
@@ -291,7 +292,7 @@ PrepareClose(tcps_sess_t *pThis)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
-	
+
 	if(pThis->inputState == eAtStrtFram) {
 		/* this is how it should be. There is no unprocessed
 		 * data left and such we have nothing to do. For simplicity
@@ -360,7 +361,7 @@ processDataRcvd(tcps_sess_t *pThis,
 	DEFiRet;
 	const tcpLstnParams_t *const cnf_params = pThis->pLstnInfo->cnf_params;
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
-	int iMaxLine = glbl.GetMaxLine();
+	int iMaxLine = glbl.GetMaxLine(runConf);
 	uchar *propPeerName = NULL;
 	int lenPeerName = 0;
 	uchar *propPeerIP = NULL;
@@ -544,7 +545,7 @@ DataRcvd(tcps_sess_t *pThis, char *pData, const size_t iLen)
 	}
 	iRet = multiSubmitFlush(&multiSub);
 
-	if(glblSenderKeepTrack)
+	if(runConf->globals.senderKeepTrack)
 		statsRecordSender(propGetSzStr(pThis->fromHost), nMsgs, ttGenTime);
 
 finalize_it:

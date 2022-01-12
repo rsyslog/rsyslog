@@ -1261,7 +1261,7 @@ static rsRetVal MsgSerialize(smsg_t *pThis, strm_t *pStrm)
 	objSerializePTR(pStrm, pCSAPPNAME, CSTR);
 	objSerializePTR(pStrm, pCSPROCID, CSTR);
 	objSerializePTR(pStrm, pCSMSGID, CSTR);
-	
+
 	objSerializePTR(pStrm, pszUUID, PSZ);
 
 	if(pThis->pRuleset != NULL) {
@@ -1514,7 +1514,7 @@ static rsRetVal aquirePROCIDFromTAG(smsg_t * const pM)
 		++i;
 	if(!(i < pM->iLenTAG))
 		return RS_RET_OK;	/* no [, so can not emulate... */
-	
+
 	++i; /* skip '[' */
 
 	/* now obtain the PROCID string... */
@@ -1569,7 +1569,7 @@ aquireProgramName(smsg_t * const pM)
 	    ; (i < pM->iLenTAG) && isprint((int) pszTag[i])
 	      && (pszTag[i] != '\0') && (pszTag[i] != ':')
 	      && (pszTag[i] != '[')
-	      && (bPermitSlashInProgramname || (pszTag[i] != '/'))
+	      && (runConf->globals.parser.bPermitSlashInProgramname || (pszTag[i] != '/'))
 	    ; ++i)
 		; /* just search end of PROGNAME */
 	if(i < CONF_PROGNAME_BUFSIZE) {
@@ -2492,7 +2492,7 @@ tryEmulateTAG(smsg_t *const pM, const sbool bLockMutex)
 			MsgUnlock(pM);
 		return; /* done, no need to emulate */
 	}
-	
+
 	if(msgGetProtocolVersion(pM) == 1) {
 		if(!strcmp(getPROCID(pM, MUTEX_ALREADY_LOCKED), "-")) {
 			/* no process ID, use APP-NAME only */
@@ -2905,7 +2905,7 @@ void ATTR_NONNULL()
 MsgTruncateToMaxSize(smsg_t *const pThis)
 {
 	ISOBJ_TYPE_assert(pThis, msg);
-	const int maxMsgSize = glblGetMaxLine();
+	const int maxMsgSize = glblGetMaxLine(runConf);
 	assert(pThis->iLenRawMsg > maxMsgSize);
 
 	const int deltaSize = pThis->iLenRawMsg - maxMsgSize;
@@ -3914,12 +3914,12 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 		*pPropLen = (bufLen == -1) ? (int) ustrlen(pRes) : bufLen;
 		return pRes;
 	}
-	
+
 	/* Now check if we need to make "temporary" transformations (these
 	 * are transformations that do not go back into the message -
 	 * memory must be allocated for them!).
 	 */
-	
+
 	/* substring extraction */
 	/* first we check if we need to extract by field number
 	 * rgerhards, 2005-12-22

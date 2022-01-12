@@ -305,7 +305,7 @@ ratelimitAddMsg(ratelimit_t *ratelimit, multi_submit_t *pMultiSub, smsg_t *pMsg)
 				CHKiRet(multiSubmitMsg2(pMultiSub));
 		}
 		CHKiRet(localRet);
-		if(pMsg->iLenRawMsg > glblGetMaxLine()) {
+		if(pMsg->iLenRawMsg > glblGetMaxLine(runConf)) {
 			/* oversize message needs special processing. We keep
 			 * at least the previous batch as batch...
 			 */

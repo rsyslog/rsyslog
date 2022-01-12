@@ -41,6 +41,7 @@
 #include "errmsg.h"
 #include "cfsysline.h"
 #include "glbl.h"
+#include "rsconf.h"
 
 
 MODULE_TYPE_OUTPUT
@@ -393,7 +394,7 @@ cleanup(wrkrInstanceData_t *pWrkrData)
 	/* waitpid will fail with errno == ECHILD if the child process has already
 	   been reaped by the rsyslogd main loop (see rsyslogd.c) */
 	if(ret == pWrkrData->pid) {
-		glblReportChildProcessExit(pWrkrData->pData->szBinary, pWrkrData->pid, status);
+		glblReportChildProcessExit(runConf, pWrkrData->pData->szBinary, pWrkrData->pid, status);
 	}
 
 	if(pWrkrData->fdOutput != -1) {
@@ -442,7 +443,7 @@ callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, smsg_t *__restrict
 	int bFreeInputstr = 1; /* we must only free if it does not point to msg-obj mem! */
 	const uchar *inputstr = NULL; /* string to be processed by external program */
 	DEFiRet;
-	
+
 	if(pWrkrData->pData->inputProp == INPUT_MSG) {
 		inputstr = getMSG(pMsg);
 		lenWrite = getMSGLen(pMsg);
@@ -512,7 +513,7 @@ CODESTARTdoAction
 	if(pWrkrData->bIsRunning == 0) {
 		openPipe(pWrkrData);
 	}
-	
+
 	iRet = callExtProg(pWrkrData, pMsg);
 
 	if(iRet != RS_RET_OK)

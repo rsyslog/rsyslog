@@ -1059,7 +1059,7 @@ enqMsg(docker_cont_logs_inst_t *pInst, uchar *msg, size_t len, const uchar *pszT
 			lenMsg--;
 		}
 
-		if(glbl.GetParserDropTrailingLFOnReception()
+		if(glbl.GetParserDropTrailingLFOnReception(loadModConf->pConf)
 				&& lenMsg > 0 && pszMsg[lenMsg-1] == '\n') {
 			DBGPRINTF("dropped LF at very end of message (DropTrailingLF is set)\n");
 			lenMsg--;

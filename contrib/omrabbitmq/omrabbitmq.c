@@ -44,6 +44,7 @@
 #include "cfsysline.h"
 #include "debug.h"
 #include "datetime.h"
+#include "rsconf.h"
 
 #include <sys/socket.h>
 
@@ -253,7 +254,7 @@ static int amqp_authenticate(wrkrInstanceData_t *self, amqp_connection_state_t a
 	amqp_rpc_reply_t ret;
 
 	/* define the frame size */
-	int frame_size = (glbl.GetMaxLine()<130000) ? 131072 : (glbl.GetMaxLine()+1072);
+	int frame_size = (glbl.GetMaxLine(runConf)<130000) ? 131072 : (glbl.GetMaxLine(runConf)+1072);
 
 	/* authenticate */
 	ret = amqp_login(a_conn, (char const *)self->pData->vhost, 1, frame_size, 0,

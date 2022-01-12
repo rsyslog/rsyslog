@@ -37,6 +37,7 @@
 #include "nssel.h"
 #include "nspoll.h"
 #include "netstrms.h"
+#include "rsconf.h"
 
 MODULE_TYPE_LIB
 MODULE_TYPE_NOKEEP
@@ -64,7 +65,7 @@ loadDrvr(netstrms_t *pThis)
 
 	pBaseDrvrName = pThis->pBaseDrvrName;
 	if(pBaseDrvrName == NULL) /* if no drvr name is set, use system default */
-		pBaseDrvrName = glbl.GetDfltNetstrmDrvr();
+		pBaseDrvrName = glbl.GetDfltNetstrmDrvr(runConf);
 	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsd_%s", pBaseDrvrName) == sizeof(szDrvrName))
 		ABORT_FINALIZE(RS_RET_DRVRNAME_TOO_LONG);
 	CHKmalloc(pThis->pDrvrName = (uchar*) strdup((char*)szDrvrName));

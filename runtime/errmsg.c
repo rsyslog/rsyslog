@@ -45,6 +45,7 @@
 #include "operatingstate.h"
 #include "srUtils.h"
 #include "stringbuf.h"
+#include "rsconf.h"
 
 /* static data */
 #ifndef O_LARGEFILE
@@ -90,7 +91,7 @@ doLogMsg(const int iErrno, const int iErrCode,  const int severity, const char *
 {
 	char buf[2048];
 	char errStr[1024];
-	
+
 	dbgprintf("Called LogMsg, msg: %s\n", msg);
 	osf_write(OSF_TAG_MSG, msg);
 
@@ -112,9 +113,9 @@ doLogMsg(const int iErrno, const int iErrCode,  const int severity, const char *
 	}
 	buf[sizeof(buf) - 1] = '\0'; /* just to be on the safe side... */
 	errno = 0;
-	
+
 	const int msglen = (int) strlen(buf);
-	if(msglen > glblGetMaxLine()) {
+	if(msglen > glblGetMaxLine(ourConf)) {
 		/* in extreme cases, our error messages may be longer than the configured
 		 * max message size. If so, we just truncate without further indication, as
 		 * anything else would probably lead to a death loop on error messages.
@@ -122,7 +123,7 @@ doLogMsg(const int iErrno, const int iErrCode,  const int severity, const char *
 		 * much value in supporting extremely short max message sizes - we assume
 		 * it's just a testbench thing. -- rgerhards, 2018-05-11
 		 */
-		 buf[glblGetMaxLine()] = '\0'; /* space must be available! */
+		 buf[glblGetMaxLine(ourConf)] = '\0'; /* space must be available! */
 	}
 
 	glblErrLogger(severity, iErrCode, (uchar*)buf);
@@ -147,7 +148,7 @@ LogError(const int iErrno, const int iErrCode, const char *fmt, ... )
 	va_list ap;
 	char buf[2048];
 	int lenBuf;
-	
+
 	va_start(ap, fmt);
 	lenBuf = vsnprintf(buf, sizeof(buf), fmt, ap);
 	if(lenBuf < 0) {
@@ -155,7 +156,7 @@ LogError(const int iErrno, const int iErrCode, const char *fmt, ... )
 	}
 	va_end(ap);
 	buf[sizeof(buf) - 1] = '\0'; /* just to be on the safe side... */
-	
+
 	doLogMsg(iErrno, iErrCode, LOG_ERR, buf);
 }
 
@@ -175,7 +176,7 @@ LogMsg(const int iErrno, const int iErrCode, const int severity, const char *fmt
 	va_list ap;
 	char buf[2048];
 	int lenBuf;
-	
+
 	va_start(ap, fmt);
 	lenBuf = vsnprintf(buf, sizeof(buf), fmt, ap);
 	if(lenBuf < 0) {
@@ -183,7 +184,7 @@ LogMsg(const int iErrno, const int iErrCode, const int severity, const char *fmt
 	}
 	va_end(ap);
 	buf[sizeof(buf) - 1] = '\0'; /* just to be on the safe side... */
-	
+
 	doLogMsg(iErrno, iErrCode, severity, buf);
 }
 
@@ -208,7 +209,7 @@ writeOversizeMessageLog(const smsg_t *const pMsg)
 	DEFiRet;
 	ISOBJ_TYPE_assert(pMsg, msg);
 
-	if(glblGetOversizeMsgErrorFile() == NULL) {
+	if(glblGetOversizeMsgErrorFile(runConf) == NULL) {
 		FINALIZE;
 	}
 
@@ -216,12 +217,12 @@ writeOversizeMessageLog(const smsg_t *const pMsg)
 	mutexLocked = 1;
 
 	if(fdOversizeMsgLog == -1) {
-		fdOversizeMsgLog = open((char*)glblGetOversizeMsgErrorFile(),
+		fdOversizeMsgLog = open((char*)glblGetOversizeMsgErrorFile(runConf),
 					O_WRONLY|O_CREAT|O_APPEND|O_LARGEFILE|O_CLOEXEC,
 					S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP);
 		if(fdOversizeMsgLog == -1) {
 			LogError(errno, RS_RET_ERR, "error opening oversize message log file %s",
-				glblGetOversizeMsgErrorFile());
+				glblGetOversizeMsgErrorFile(runConf));
 			FINALIZE;
 		}
 	}
@@ -251,7 +252,7 @@ writeOversizeMessageLog(const smsg_t *const pMsg)
 	if(wrRet != (ssize_t) toWrite) {
 		LogError(errno, RS_RET_IO_ERROR,
 			"error writing oversize message log file %s, write returned %lld",
-			glblGetOversizeMsgErrorFile(), (long long) wrRet);
+			glblGetOversizeMsgErrorFile(runConf), (long long) wrRet);
 	}
 
 finalize_it:
