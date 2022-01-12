@@ -3,7 +3,7 @@
  * This implements a session of the strmsrv object. For general
  * comments, see header of strmsrv.c.
  *
- * Copyright 2007-2012 Adiscon GmbH.
+ * Copyright 2007-2022 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -48,8 +48,6 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(netstrm)
 DEFobjCurrIf(datetime)
-
-static int iMaxLine; /* maximum size of a single message */
 
 /* forward definitions */
 static rsRetVal Close(strms_sess_t *pThis);
@@ -288,7 +286,6 @@ BEGINObjClassInit(strms_sess, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE 
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	iMaxLine = glbl.GetMaxLine(); /* get maximum size we currently support */
 	objRelease(glbl, CORE_COMPONENT);
 
 	/* set our own handlers */
