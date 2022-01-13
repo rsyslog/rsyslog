@@ -336,7 +336,7 @@ createInstance(instanceConf_t **pinst)
 	inst->bWritePid = 0;
 	inst->bAnnotate = 0;
 	inst->bParseTrusted = 0;
-	inst->bDiscardOwnMsgs = bProcessInternalMessages;
+	inst->bDiscardOwnMsgs = loadModConf->pConf->globals.bProcessInternalMessages;
 	inst->bUnlink = 1;
 	inst->next = NULL;
 
@@ -700,7 +700,7 @@ fixPID(uchar *bufTAG, int *lenTag, struct ucred *cred)
 
 	if(cred == NULL)
 		return;
-	
+
 	lenPID = snprintf(bufPID, sizeof(bufPID), "[%lu]:", (unsigned long) cred->pid);
 
 	for(i = *lenTag ; i >= 0  && bufTAG[i] != '[' ; --i)
@@ -708,7 +708,7 @@ fixPID(uchar *bufTAG, int *lenTag, struct ucred *cred)
 
 	if(i < 0)
 		i = *lenTag - 1; /* go right at end of TAG, pid was not present (-1 for ':') */
-	
+
 	if(i + lenPID > CONF_TAG_MAXSIZE)
 		return; /* do not touch, as things would break */
 
@@ -744,7 +744,7 @@ getTrustedProp(struct ucred *cred, const char *propName, uchar *buf, size_t lenB
 		close(fd);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	
+
 	/* we strip after the first \n */
 	for(i = 0 ; i < lenRead ; ++i) {
 		if(buf[i] == '\n')
@@ -780,7 +780,7 @@ getTrustedExe(struct ucred *cred, uchar *buf, size_t lenBuf, int* lenProp)
 		DBGPRINTF("error reading link '%s'\n", namebuf);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	
+
 	buf[lenRead] = '\0';
 	*lenProp = lenRead;
 
@@ -843,7 +843,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	parse = pRcv;
 	lenMsg = lenRcv;
 	offs = 1; /* '<' */
-	
+
 	parse++;
 	pri = 0;
 	while(offs < lenMsg && isdigit(*parse)) {
@@ -930,7 +930,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 						(long unsigned) cred->gid);
 			memcpy(pmsgbuf+toffs, propBuf, lenProp);
 			toffs = toffs + lenProp;
-	
+
 			if(getTrustedProp(cred, "comm", propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
 				memcpy(pmsgbuf+toffs, " _COMM=", 7);
 				memcpy(pmsgbuf+toffs+7, propBuf, lenProp);
@@ -1071,7 +1071,7 @@ static rsRetVal readSocket(lstn_t *pLstn)
 
 	assert(pLstn->fd >= 0);
 
-	iMaxLine = glbl.GetMaxLine();
+	iMaxLine = glbl.GetMaxLine(runConf);
 
 	/* we optimize performance: if iMaxLine is below 4K (which it is in almost all
 	 * cases, we use a fixed buffer on the stack. Only if it is higher, heap memory
@@ -1252,7 +1252,7 @@ CODESTARTbeginCnfLoad
 	/* if we do not process internal messages, we will see messages
 	 * from ourselves, and so we need to permit this.
 	 */
-	pModConf->bDiscardOwnMsgs = bProcessInternalMessages;
+	pModConf->bDiscardOwnMsgs = pConf->globals.bProcessInternalMessages;
 	pModConf->bUnlink = 1;
 	pModConf->ratelimitIntervalSysSock = DFLT_ratelimitInterval;
 	pModConf->ratelimitBurstSysSock = DFLT_ratelimitBurst;
@@ -1748,7 +1748,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 		NULL, &cs.ratelimitBurstSysSock, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(regCfSysLineHdlr2((uchar *)"systemlogratelimitseverity", 0, eCmdHdlrInt,
 		NULL, &cs.ratelimitSeveritySysSock, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
-	
+
 	/* support statistics gathering */
 	CHKiRet(statsobj.Construct(&modStats));
 	CHKiRet(statsobj.SetName(modStats, UCHAR_CONSTANT("imuxsock")));

@@ -549,7 +549,7 @@ startupSrv(ptcpsrv_t *pSrv)
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_flags = AI_PASSIVE;
-	hints.ai_family = glbl.GetDefPFFamily();
+	hints.ai_family = glbl.GetDefPFFamily(runModConf->pConf);
 	hints.ai_socktype = SOCK_STREAM;
 
 	error = getaddrinfo((char*)pSrv->lstnIP, (char*) pSrv->port, &hints, &res);
@@ -762,7 +762,7 @@ getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr *pAddr, sbool b
 			ABORT_FINALIZE(RS_RET_INVALID_HNAME);
 		}
 
-		if (!glbl.GetDisableDNS()) {
+		if (!glbl.GetDisableDNS(runConf)) {
 			error = getnameinfo(pAddr, SALEN(pAddr), (char *) szHname, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
 			if (error == 0) {
 				memset(&hints, 0, sizeof(struct addrinfo));
@@ -1282,7 +1282,7 @@ DataRcvdUncompressed(ptcpsess_t *pThis, char *pData, size_t iLen, struct syslogT
 
 	iRet = multiSubmitFlush(&multiSub);
 
-	if(glblSenderKeepTrack)
+	if(runConf->globals.senderKeepTrack)
 		statsRecordSender(propGetSzStr(pThis->peerName), nMsgs, ttGenTime);
 
 finalize_it:
@@ -2386,7 +2386,7 @@ ENDcheckCnf
 BEGINactivateCnfPrePrivDrop
 	instanceConf_t *inst;
 CODESTARTactivateCnfPrePrivDrop
-	iMaxLine = glbl.GetMaxLine(); /* get maximum size we currently support */
+	iMaxLine = glbl.GetMaxLine(runConf); /* get maximum size we currently support */
 	DBGPRINTF("imptcp: config params iMaxLine %d\n", iMaxLine);
 
 	runModConf = pModConf;

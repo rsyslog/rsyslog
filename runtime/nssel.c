@@ -41,6 +41,7 @@
 #include "module-template.h"
 #include "netstrm.h"
 #include "nssel.h"
+#include "rsconf.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -68,7 +69,7 @@ loadDrvr(nssel_t *pThis)
 
 	pBaseDrvrName = pThis->pBaseDrvrName;
 	if(pBaseDrvrName == NULL) /* if no drvr name is set, use system default */
-		pBaseDrvrName = glbl.GetDfltNetstrmDrvr();
+		pBaseDrvrName = glbl.GetDfltNetstrmDrvr(runConf);
 	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsdsel_%s", pBaseDrvrName) == sizeof(szDrvrName))
 		ABORT_FINALIZE(RS_RET_DRVRNAME_TOO_LONG);
 	CHKmalloc(pThis->pDrvrName = (uchar*) strdup((char*)szDrvrName));
@@ -163,7 +164,7 @@ Add(nssel_t *pThis, netstrm_t *pStrm, nsdsel_waitOp_t waitOp)
 
 	ISOBJ_TYPE_assert(pThis, nssel);
 	ISOBJ_TYPE_assert(pStrm, netstrm);
-	
+
 	CHKiRet(pThis->Drvr.Add(pThis->pDrvrData, pStrm->pDrvrData, waitOp));
 
 finalize_it:

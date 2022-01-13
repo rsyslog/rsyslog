@@ -54,6 +54,7 @@
 #include "tcpclt.h"
 #include "glbl.h"
 #include "errmsg.h"
+#include "rsconf.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -323,7 +324,7 @@ static rsRetVal TCPSendGSSSend(void *pvData, char *msg, size_t len)
 		gssutil.display_status((char*)"wrapping message", maj_stat, min_stat);
 		goto fail;
 	}
-	
+
 	if (gssutil.send_token(s, &out_buf) < 0) {
 		goto fail;
 	}
@@ -366,7 +367,7 @@ static rsRetVal doTryResume(instanceData *pData)
 		 * a common function.
 		 */
 		hints.ai_flags = AI_NUMERICSERV;
-		hints.ai_family = glbl.GetDefPFFamily();
+		hints.ai_family = glbl.GetDefPFFamily(runConf);
 		hints.ai_socktype = SOCK_STREAM;
 		if(getaddrinfo(pData->f_hname, getFwdSyslogPt(pData), &hints, &res) == 0) {
 			dbgprintf("%s found, resuming.\n", pData->f_hname);
@@ -413,7 +414,7 @@ CODESTARTdoAction
 
 	case eDestFORW:
 		dbgprintf(" %s:%s/%s\n", pData->f_hname, getFwdSyslogPt(pData), "tcp-gssapi");
-		iMaxLine = glbl.GetMaxLine();
+		iMaxLine = glbl.GetMaxLine(runConf);
 		psz = (char*) ppString[0];
 		l = strlen((char*) psz);
 		if((int) l > iMaxLine)
@@ -586,7 +587,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			*(pData->port + i) = '\0';
 		}
 	}
-	
+
 
 	/* now skip to template */
 	bErr = 0;
@@ -620,7 +621,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	memset(&hints, 0, sizeof(hints));
 	/* port must be numeric, because config file syntax requests this */
 	hints.ai_flags = AI_NUMERICSERV;
-	hints.ai_family = glbl.GetDefPFFamily();
+	hints.ai_family = glbl.GetDefPFFamily(loadConf);
 	hints.ai_socktype = SOCK_STREAM;
 	if(getaddrinfo(pData->f_hname, getFwdSyslogPt(pData), &hints, &res) != 0) {
 		pData->eDestState = eDestFORW_UNKN;

@@ -34,6 +34,7 @@
 #include "rsyslog.h"
 #include "errmsg.h"
 #include "operatingstate.h"
+#include "rsconf.h"
 
 #ifndef O_LARGEFILE
 #define O_LARGEFILE 0
@@ -53,7 +54,7 @@ static void
 osf_checkOnStartup(void)
 {
 	int do_rename = 1;
-	const char *fn_osf = (const char*) glblGetOperatingStateFile();
+	const char *fn_osf = (const char*) glblGetOperatingStateFile(loadConf);
 	char iobuf[sizeof(STATE_CLEAN_CLOSE)];
 	const int len_clean_close = sizeof(STATE_CLEAN_CLOSE) - 1;
 	assert(fn_osf != NULL);
@@ -116,7 +117,7 @@ void
 osf_open(void)
 {
 	assert(fd_osf == -1);
-	const char *fn_osf = (const char*) glblGetOperatingStateFile();
+	const char *fn_osf = (const char*) glblGetOperatingStateFile(loadConf);
 	assert(fn_osf != NULL);
 
 	osf_checkOnStartup();

@@ -66,8 +66,6 @@ ENDinterface(parser)
 
 void printParserList(parserList_t *pList);
 
-extern int bSupportCompressionExtension;
-
 /* prototypes */
 PROTOTYPEObj(parser);
 rsRetVal parserConstructViaModAndName(modInfo_t *pMod, uchar *const pName, void *parserInst);

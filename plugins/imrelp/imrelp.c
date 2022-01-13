@@ -379,13 +379,13 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	if(pRelpEngine == NULL) {
 		CHKiRet(relpEngineConstruct(&pRelpEngine));
 		CHKiRet(relpEngineSetDbgprint(pRelpEngine, (void (*)(char *, ...))imrelp_dbgprintf));
-		CHKiRet(relpEngineSetFamily(pRelpEngine, glbl.GetDefPFFamily()));
+		CHKiRet(relpEngineSetFamily(pRelpEngine, glbl.GetDefPFFamily(runModConf->pConf)));
 		CHKiRet(relpEngineSetEnableCmd(pRelpEngine, (uchar*) "syslog", eRelpCmdState_Required));
 		CHKiRet(relpEngineSetSyslogRcv2(pRelpEngine, onSyslogRcv));
 		CHKiRet(relpEngineSetOnErr(pRelpEngine, onErr));
 		CHKiRet(relpEngineSetOnGenericErr(pRelpEngine, onGenericErr));
 		CHKiRet(relpEngineSetOnAuthErr(pRelpEngine, onAuthErr));
-		if (!glbl.GetDisableDNS()) {
+		if (!glbl.GetDisableDNS(runModConf->pConf)) {
 			CHKiRet(relpEngineSetDnsLookupMode(pRelpEngine, 1));
 		}
 		#if defined(HAVE_RELPENGINESETTLSLIBBYNAME)
@@ -768,9 +768,9 @@ CODESTARTcheckCnf
 			/* We set default value for maxDataSize here because
 			 * otherwise the maxMessageSize isn't set.
 			 */
-			inst->maxDataSize = glbl.GetMaxLine();
+			inst->maxDataSize = glbl.GetMaxLine(loadConf);
 		}
-		maxMessageSize = (size_t)glbl.GetMaxLine();
+		maxMessageSize = (size_t)glbl.GetMaxLine(loadConf);
 		if(inst->maxDataSize < maxMessageSize) {
 			LogError(0, RS_RET_INVALID_PARAMS, "error: "
 					"maxDataSize (%zu) is smaller than global parameter "

@@ -42,6 +42,7 @@
 #include "parser.h"
 #include "datetime.h"
 #include "unicode-helper.h"
+#include "rsconf.h"
 MODULE_TYPE_PARSER
 MODULE_TYPE_NOKEEP
 PARSER_NAME("rsyslog.rfc3164")
@@ -108,7 +109,7 @@ createInstance(instanceConf_t **pinst)
 	inst->bPermitAtSignsInHostname = 0;
 	inst->bForceTagEndingByColon = 0;
 	inst->bRemoveMsgFirstSpace = 0;
-	bParseHOSTNAMEandTAG=glbl.GetParseHOSTNAMEandTAG();
+	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG(loadConf);
 	*pinst = inst;
 finalize_it:
 	RETiRet;
@@ -408,7 +409,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
 	DBGPRINTF("rfc3164 parser init called\n");
-	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG();
+	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG(loadConf);
 	/* cache value, is set only during rsyslogd option processing */
 
 

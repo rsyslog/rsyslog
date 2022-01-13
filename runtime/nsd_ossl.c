@@ -53,6 +53,7 @@
 #include "nsdsel_ossl.h"
 #include "nsd_ossl.h"
 #include "unicode-helper.h"
+#include "rsconf.h"
 /* things to move to some better place/functionality - TODO */
 // #define CRLFILE "crl.pem"
 
@@ -1224,7 +1225,7 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 	int bHaveKey;
 	const char *caFile, *certFile, *keyFile;
 	/* Setup certificates */
-	caFile = (char*) ((pThis->pszCAFile == NULL) ? glbl.GetDfltNetstrmDrvrCAF() : pThis->pszCAFile);
+	caFile = (char*) ((pThis->pszCAFile == NULL) ? glbl.GetDfltNetstrmDrvrCAF(runConf) : pThis->pszCAFile);
 	if(caFile == NULL) {
 		LogMsg(0, RS_RET_CA_CERT_MISSING, LOG_WARNING,
 			"Warning: CA certificate is not set");
@@ -1232,7 +1233,8 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 	} else {
 		bHaveCA	= 1;
 	}
-	certFile = (char*) ((pThis->pszCertFile == NULL) ? glbl.GetDfltNetstrmDrvrCertFile() : pThis->pszCertFile);
+	certFile = (char*) ((pThis->pszCertFile == NULL) ?
+		glbl.GetDfltNetstrmDrvrCertFile(runConf) : pThis->pszCertFile);
 	if(certFile == NULL) {
 		LogMsg(0, RS_RET_CERT_MISSING, LOG_WARNING,
 			"Warning: Certificate file is not set");
@@ -1240,7 +1242,7 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 	} else {
 		bHaveCert = 1;
 	}
-	keyFile = (char*) ((pThis->pszKeyFile == NULL) ? glbl.GetDfltNetstrmDrvrKeyFile() : pThis->pszKeyFile);
+	keyFile = (char*) ((pThis->pszKeyFile == NULL) ? glbl.GetDfltNetstrmDrvrKeyFile(runConf) : pThis->pszKeyFile);
 	if(keyFile == NULL) {
 		LogMsg(0, RS_RET_CERTKEY_MISSING, LOG_WARNING,
 			"Warning: Key file is not set");

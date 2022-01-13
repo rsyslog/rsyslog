@@ -53,6 +53,7 @@
 #include "nsd_ptcp.h"
 #include "prop.h"
 #include "dnscache.h"
+#include "rsconf.h"
 
 MODULE_TYPE_LIB
 MODULE_TYPE_NOKEEP
@@ -542,7 +543,7 @@ LstnInit(netstrms_t *const pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_flags = AI_PASSIVE;
-	hints.ai_family = glbl.GetDefPFFamily();
+	hints.ai_family = glbl.GetDefPFFamily(runConf);
 	hints.ai_socktype = SOCK_STREAM;
 
 	error = getaddrinfo((const char*)cnf_params->pszAddr, (const char*) cnf_params->pszPort, &hints, &res);

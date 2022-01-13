@@ -494,7 +494,7 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 	 */
 	if(!pThis->pIsPermittedHost((struct sockaddr*) addr, (char*) fromHostFQDN, pThis->pUsr, pSess->pUsr)) {
 		DBGPRINTF("%s is not an allowed sender\n", fromHostFQDN);
-		if(glbl.GetOption_DisallowWarning()) {
+		if(glbl.GetOptionDisallowWarning(runConf)) {
 			errno = 0;
 			LogError(0, RS_RET_HOST_NOT_PERMITTED, "TCP message from disallowed "
 					"sender %s discarded", fromHostFQDN);

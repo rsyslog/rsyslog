@@ -43,42 +43,20 @@
 #define glblOversizeMsgInputMode_Accept 2
 
 extern pid_t glbl_ourpid;
-extern int bProcessInternalMessages;
-extern int bPermitSlashInProgramname;
-#ifdef ENABLE_LIBLOGGING_STDLOG
-extern stdlog_channel_t stdlog_hdl;
-#endif
 
 /* interfaces */
 BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
-	uchar* (*GetWorkDir)(void);
-	int (*GetMaxLine)(void);
+	uchar* (*GetWorkDir)(rsconf_t *cnf);
+	int (*GetMaxLine)(rsconf_t *cnf);
 #define SIMP_PROP(name, dataType) \
 	dataType (*Get##name)(void); \
 	rsRetVal (*Set##name)(dataType);
 	SIMP_PROP(OptimizeUniProc, int)
 	SIMP_PROP(PreserveFQDN, int)
-	SIMP_PROP(DefPFFamily, int)
-	SIMP_PROP(DropMalPTRMsgs, int)
-	SIMP_PROP(Option_DisallowWarning, int)
-	SIMP_PROP(DisableDNS, int)
 	SIMP_PROP(LocalFQDNName, uchar*)
 	SIMP_PROP(mainqCnfObj, struct cnfobj*)
 	SIMP_PROP(LocalHostName, uchar*)
 	SIMP_PROP(LocalDomain, uchar*)
-	SIMP_PROP(StripDomains, char**)
-	SIMP_PROP(LocalHosts, char**)
-	SIMP_PROP(DfltNetstrmDrvr, uchar*)
-	SIMP_PROP(DfltNetstrmDrvrCAF, uchar*)
-	SIMP_PROP(DfltNetstrmDrvrKeyFile, uchar*)
-	SIMP_PROP(DfltNetstrmDrvrCertFile, uchar*)
-	SIMP_PROP(ParserControlCharacterEscapePrefix, uchar)
-	SIMP_PROP(ParserDropTrailingLFOnReception, int)
-	SIMP_PROP(ParserEscapeControlCharactersOnReceive, int)
-	SIMP_PROP(ParserSpaceLFOnReceive, int)
-	SIMP_PROP(ParserEscape8BitCharactersOnReceive, int)
-	SIMP_PROP(ParserEscapeControlCharacterTab, int)
-	SIMP_PROP(ParserEscapeControlCharactersCStyle, int)
 	/* added v3, 2009-06-30 */
 	rsRetVal (*GenerateLocalHostNameProperty)(void);
 	prop_t* (*GetLocalHostNameProp)(void);
@@ -86,7 +64,6 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	int (*GetGlobalInputTermState)(void);
 	void (*SetGlobalInputTermination)(void);
 	/* added v5, 2009-11-03 */
-	SIMP_PROP(ParseHOSTNAMEandTAG, int)
 	/* note: v4, v5 are already used by more recent versions, so we need to skip them! */
 	/* added v6, 2009-11-16 as part of varmojfekoj's "unlimited select()" patch
 	 * Note that it must be always present, otherwise the interface would have different
@@ -103,31 +80,47 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	uchar* (*GetSourceIPofLocalClient)(void);		/* [ar] */
 	rsRetVal (*SetSourceIPofLocalClient)(uchar*);		/* [ar] */
 	/* v9 - 2015-01-12  SetMaxLine method removed */
+	/* v10 - global variables should be moved to the rsconf_t data structure, so
+	 *     dynamic configuration reload can be introduced. This is why each getter needs additional
+	 *     parameter specifying a configuration it belongs to(either loadConf or runConf)
+	 */
+#undef SIMP_PROP
+#define SIMP_PROP(name, dataType) \
+	dataType (*Get##name)(rsconf_t *cnf); \
+	rsRetVal (*Set##name)(dataType);
+
+	SIMP_PROP(DropMalPTRMsgs, int)
+	SIMP_PROP(DfltNetstrmDrvrCAF, uchar*)
+	SIMP_PROP(DfltNetstrmDrvrCertFile, uchar*)
+	SIMP_PROP(DfltNetstrmDrvrKeyFile, uchar*)
+	SIMP_PROP(DfltNetstrmDrvr, uchar*)
+	SIMP_PROP(DefPFFamily, int)
+	SIMP_PROP(DisableDNS, int)
+	SIMP_PROP(ParserControlCharacterEscapePrefix, uchar)
+	SIMP_PROP(ParserDropTrailingLFOnReception, int)
+	SIMP_PROP(ParserEscapeControlCharactersOnReceive, int)
+	SIMP_PROP(ParserSpaceLFOnReceive, int)
+	SIMP_PROP(ParserEscape8BitCharactersOnReceive, int)
+	SIMP_PROP(ParserEscapeControlCharacterTab, int)
+	SIMP_PROP(ParserEscapeControlCharactersCStyle, int)
+	SIMP_PROP(ParseHOSTNAMEandTAG, int)
+	SIMP_PROP(OptionDisallowWarning, int)
+
 #undef	SIMP_PROP
 ENDinterface(glbl)
-#define glblCURR_IF_VERSION 9 /* increment whenever you change the interface structure! */
+#define glblCURR_IF_VERSION 10 /* increment whenever you change the interface structure! */
 /* version 2 had PreserveFQDN added - rgerhards, 2008-12-08 */
 
 /* the remaining prototypes */
 PROTOTYPEObj(glbl);
 
-extern int glblDebugOnShutdown;	/* start debug log when we are shut down */
-extern int glblReportNewSenders;
-extern int glblReportGoneAwaySenders;
-extern int glblSenderStatsTimeout;
-extern int glblSenderKeepTrack;
 extern int glblUnloadModules;
 extern short janitorInterval;
-extern int glblIntMsgRateLimitItv;
-extern int glblIntMsgRateLimitBurst;
 extern char** glblDbgFiles;
 extern size_t glblDbgFilesNum;
 extern int glblDbgWhitelist;
 extern int glblPermitCtlC;
-extern int glblInputTimeoutShutdown;
-extern int glblIntMsgsSeverityFilter;
 extern int bTerminateInputs;
-extern int glblShutdownQueueDoubleSize;
 #ifndef HAVE_ATOMIC_BUILTINS
 extern DEF_ATOMIC_HELPER_MUT(mutTerminateInputs);
 #endif
@@ -141,7 +134,6 @@ extern DEF_ATOMIC_HELPER_MUT(mutTerminateInputs);
  */
 #define DEV_OPTION_KEEP_RUNNING_ON_HARD_CONF_ERROR 1
 #define DEV_OPTION_8_1905_HANG_TEST 2 // TODO: remove - temporary for bughunt
-extern uint64_t glblDevOptions;
 
 #define glblGetOurPid() glbl_ourpid
 #define glblSetOurPid(pid) { glbl_ourpid = (pid); }
@@ -152,15 +144,15 @@ void glblProcessTimezone(struct cnfobj *o);
 void glblProcessMainQCnf(struct cnfobj *o);
 void glblDestructMainqCnfObj(void);
 rsRetVal glblDoneLoadCnf(void);
-const uchar * glblGetWorkDirRaw(void);
+const uchar * glblGetWorkDirRaw(rsconf_t *cnf);
 tzinfo_t* glblFindTimezoneInfo(char *id);
-int GetGnuTLSLoglevel(void);
-int glblGetMaxLine(void);
+int GetGnuTLSLoglevel(rsconf_t *cnf);
+int glblGetMaxLine(rsconf_t *cnf);
 int bs_arrcmp_glblDbgFiles(const void *s1, const void *s2);
-uchar* glblGetOversizeMsgErrorFile(void);
-const uchar* glblGetOperatingStateFile(void);
-int glblGetOversizeMsgInputMode(void);
-int glblReportOversizeMessage(void);
-void glblReportChildProcessExit(const uchar *name, pid_t pid, int status);
+uchar* glblGetOversizeMsgErrorFile(rsconf_t *cnf);
+const uchar* glblGetOperatingStateFile(rsconf_t *cnf);
+int glblGetOversizeMsgInputMode(rsconf_t *cnf);
+int glblReportOversizeMessage(rsconf_t *cnf);
+void glblReportChildProcessExit(rsconf_t *cnf, const uchar *name, pid_t pid, int status);
 
 #endif /* #ifndef GLBL_H_INCLUDED */

@@ -28,6 +28,4 @@ rsRetVal ATTR_NONNULL(1, 5) dnscacheLookup(struct sockaddr_storage *const addr,
 	prop_t **const fqdn, prop_t **const fqdnLowerCase,
 	prop_t **const localName, prop_t **const ip);
 
-extern unsigned dnscacheDefaultTTL;
-extern int dnscacheEnableTTL;
 #endif /* #ifndef INCLUDED_DNSCACHE_H */

@@ -43,6 +43,7 @@
 #include "errmsg.h"
 #include "glbl.h"
 #include "unicode-helper.h"
+#include "rsconf.h"
 
 /* linked list of currently-known threads */
 static linkedList_t llThrds;
@@ -118,15 +119,15 @@ thrdTerminateNonCancel(thrdInfo_t *pThis)
 
 	pThis->bShallStop = RSTRUE;
 	d_pthread_mutex_lock(&pThis->mutThrd);
-	timeoutComp(&tTimeout, glblInputTimeoutShutdown);
+	timeoutComp(&tTimeout, runConf->globals.inputTimeoutShutdown);
 	was_active = pThis->bIsActive;
 	while(was_active) {
 		if(dbgTimeoutToStderr) {
 			fprintf(stderr, "rsyslogd debug: info: trying to cooperatively stop "
-				"input %s, timeout %d ms\n", pThis->name, glblInputTimeoutShutdown);
+				"input %s, timeout %d ms\n", pThis->name, runConf->globals.inputTimeoutShutdown);
 		}
 		DBGPRINTF("thread %s: initiating termination, timeout %d ms\n",
-			pThis->name, glblInputTimeoutShutdown);
+			pThis->name, runConf->globals.inputTimeoutShutdown);
 		const int r = pthread_kill(pThis->thrdID, SIGTTIN);
 		if(r != 0) {
 			LogError(errno, RS_RET_INTERNAL_ERROR, "error terminating thread %s "

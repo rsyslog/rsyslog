@@ -59,10 +59,6 @@
 #include "dnscache.h"
 #include "parser.h"
 
-#define REPORT_CHILD_PROCESS_EXITS_NONE 0
-#define REPORT_CHILD_PROCESS_EXITS_ERRORS 1
-#define REPORT_CHILD_PROCESS_EXITS_ALL 2
-
 /* some defaults */
 #ifndef DFLT_NETSTRM_DRVR
 #	define DFLT_NETSTRM_DRVR ((uchar*)"ptcp")
@@ -77,36 +73,9 @@ DEFobjCurrIf(net)
  * For this object, these variables are obviously what makes the "meat" of the
  * class...
  */
-int glblDebugOnShutdown = 0;	/* start debug log when we are shut down */
-#ifdef ENABLE_LIBLOGGING_STDLOG
-stdlog_channel_t stdlog_hdl = NULL;	/* handle to be used for stdlog */
-#endif
 
 static struct cnfobj *mainqCnfObj = NULL;/* main queue object, to be used later in startup sequence */
-#ifndef DFLT_INT_MSGS_SEV_FILTER
-	#define DFLT_INT_MSGS_SEV_FILTER 6	/* Warning level and more important */
-#endif
-int glblIntMsgsSeverityFilter = DFLT_INT_MSGS_SEV_FILTER;/* filter for logging internal messages by syslog sev. */
-int bProcessInternalMessages = 0;	/* Should rsyslog itself process internal messages?
-					 * 1 - yes
-					 * 0 - send them to libstdlog (e.g. to push to journal) or syslog()
-					 */
-static uchar *pszWorkDir = NULL;
-#ifdef ENABLE_LIBLOGGING_STDLOG
-static uchar *stdlog_chanspec = NULL;
-#endif
-static int bParseHOSTNAMEandTAG = 1;	/* parser modification (based on startup params!) */
 static int bPreserveFQDN = 0;		/* should FQDNs always be preserved? */
-static int iMaxLine = 8096;		/* maximum length of a syslog message */
-static uchar * oversizeMsgErrorFile = NULL;		/* File where oversize messages are written to */
-static int oversizeMsgInputMode = 0;	/* Mode which oversize messages will be forwarded */
-static int reportOversizeMsg = 1;	/* shall error messages be generated for oversize messages? */
-static int reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
-static int iGnuTLSLoglevel = 0;		/* Sets GNUTLS Debug Level */
-static int iDefPFFamily = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both) */
-static int bDropMalPTRMsgs = 0;/* Drop messages which have malicious PTR records during DNS lookup */
-static int option_DisallowWarning = 1;	/* complain if message from disallowed sender is received */
-static int bDisableDNS = 0; /* don't look up IP addresses of remote messages */
 static prop_t *propLocalIPIF = NULL;/* IP address to report for the local host (default is 127.0.0.1) */
 static int propLocalIPIF_set = 0;	/* is propLocalIPIF already set? */
 static prop_t *propLocalHostName = NULL;/* our hostname as FQDN - read-only after startup */
@@ -115,40 +84,12 @@ static uchar *LocalHostName = NULL;/* our hostname  - read-only after startup, e
 static uchar *LocalHostNameOverride = NULL;/* user-overridden hostname - read-only after startup */
 static uchar *LocalFQDNName = NULL;/* our hostname as FQDN - read-only after startup, except HUP */
 static uchar *LocalDomain = NULL;/* our local domain name  - read-only after startup, except HUP */
-static char **StripDomains = NULL;
-/* these domains may be stripped before writing logs  - r/o after s.u., never touched by init */
-static char **LocalHosts = NULL;
-/* these hosts are logged with their hostname  - read-only after startup, never touched by init */
-static uchar *pszDfltNetstrmDrvr = NULL; /* module name of default netstream driver */
-static uchar *pszDfltNetstrmDrvrCAF = NULL; /* default CA file for the netstrm driver */
-static uchar *pszDfltNetstrmDrvrKeyFile = NULL; /* default key file for the netstrm driver (server) */
-static uchar *pszDfltNetstrmDrvrCertFile = NULL; /* default cert file for the netstrm driver (server) */
 int bTerminateInputs = 0;		/* global switch that inputs shall terminate ASAP (1=> terminate) */
-static uchar cCCEscapeChar = '#'; /* character to be used to start an escape sequence for control chars */
-static int bDropTrailingLF = 1; /* drop trailing LF's on reception? */
-static int bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
-static int bSpaceLFOnRcv = 0; /* replace newlines with spaces on reception: 0 - no, 1 - yes */
-static int bEscape8BitChars = 0; /* escape characters > 127 on reception: 0 - no, 1 - yes */
-static int bEscapeTab = 1; /* escape tab control character when doing CC escapes: 0 - no, 1 - yes */
-static int bParserEscapeCCCStyle = 0; /* escape control characters in c style: 0 - no, 1 - yes */
-short janitorInterval = 10; /* interval (in minutes) at which the janitor runs */
-int glblReportNewSenders = 0;
-int glblReportGoneAwaySenders = 0;
-int glblSenderStatsTimeout = 12 * 60 * 60; /* 12 hr timeout for senders */
-int glblSenderKeepTrack = 0;  /* keep track of known senders? */
 int glblUnloadModules = 1;
-int bPermitSlashInProgramname = 0;
-int glblIntMsgRateLimitItv = 5;
-int glblIntMsgRateLimitBurst = 500;
 char** glblDbgFiles = NULL;
 size_t glblDbgFilesNum = 0;
 int glblDbgWhitelist = 1;
 int glblPermitCtlC = 0;
-int glblInputTimeoutShutdown = 1000; /* input shutdown timeout in ms */
-int glblShutdownQueueDoubleSize = 0;
-static const uchar * operatingStateFile = NULL;
-
-uint64_t glblDevOptions = 0; /* to be used by developers only */
 
 pid_t glbl_ourpid;
 #ifndef HAVE_ATOMIC_BUILTINS
@@ -260,16 +201,17 @@ static struct cnfparamvals *cnfparamvals = NULL;
  */
 
 int
-glblGetMaxLine(void)
+glblGetMaxLine(rsconf_t *cnf)
 {
-	return(iMaxLine);
+	assert(cnf != NULL);
+	return(cnf->globals.iMaxLine);
 }
 
 
 int
-GetGnuTLSLoglevel(void)
+GetGnuTLSLoglevel(rsconf_t *cnf)
 {
-	return(iGnuTLSLoglevel);
+	return(cnf->globals.iGnuTLSLoglevel);
 }
 
 /* define a macro for the simple properties' set and get functions
@@ -293,32 +235,52 @@ static dataType Get##nameFunc(void) \
 
 SIMP_PROP(PreserveFQDN, bPreserveFQDN, int)
 SIMP_PROP(mainqCnfObj, mainqCnfObj, struct cnfobj *)
-SIMP_PROP(DropMalPTRMsgs, bDropMalPTRMsgs, int)
-SIMP_PROP(StripDomains, StripDomains, char**)
-SIMP_PROP(LocalHosts, LocalHosts, char**)
-SIMP_PROP(ParserControlCharacterEscapePrefix, cCCEscapeChar, uchar)
-SIMP_PROP(ParserDropTrailingLFOnReception, bDropTrailingLF, int)
-SIMP_PROP(ParserEscapeControlCharactersOnReceive, bEscapeCCOnRcv, int)
-SIMP_PROP(ParserSpaceLFOnReceive, bSpaceLFOnRcv, int)
-SIMP_PROP(ParserEscape8BitCharactersOnReceive, bEscape8BitChars, int)
-SIMP_PROP(ParserEscapeControlCharacterTab, bEscapeTab, int)
-SIMP_PROP(ParserEscapeControlCharactersCStyle, bParserEscapeCCCStyle, int)
 #ifdef USE_UNLIMITED_SELECT
 SIMP_PROP(FdSetSize, iFdSetSize, int)
 #endif
-
-SIMP_PROP_SET(DfltNetstrmDrvr, pszDfltNetstrmDrvr, uchar*) /* TODO: use custom function which frees existing value */
-SIMP_PROP_SET(DfltNetstrmDrvrCAF, pszDfltNetstrmDrvrCAF, uchar*)
-/* TODO: use custom function which frees existing value */
-SIMP_PROP_SET(DfltNetstrmDrvrKeyFile, pszDfltNetstrmDrvrKeyFile, uchar*)
-/* TODO: use custom function which frees existing value */
-SIMP_PROP_SET(DfltNetstrmDrvrCertFile, pszDfltNetstrmDrvrCertFile, uchar*)
-/* TODO: use custom function which frees existing value */
 
 #undef SIMP_PROP
 #undef SIMP_PROP_SET
 #undef SIMP_PROP_GET
 
+/* This is based on the previous SIMP_PROP but as a getter it uses
+ * additional parameter specifying the configuration it belongs to.
+ * The setter uses loadConf
+ */
+#define SIMP_PROP(nameFunc, nameVar, dataType) \
+	SIMP_PROP_GET(nameFunc, nameVar, dataType) \
+	SIMP_PROP_SET(nameFunc, nameVar, dataType)
+#define SIMP_PROP_SET(nameFunc, nameVar, dataType) \
+static rsRetVal Set##nameFunc(dataType newVal) \
+{ \
+	loadConf->globals.nameVar = newVal; \
+	return RS_RET_OK; \
+}
+#define SIMP_PROP_GET(nameFunc, nameVar, dataType) \
+static dataType Get##nameFunc(rsconf_t *cnf) \
+{ \
+	return(cnf->globals.nameVar); \
+}
+
+SIMP_PROP(DropMalPTRMsgs, bDropMalPTRMsgs, int)
+SIMP_PROP(DisableDNS, bDisableDNS, int)
+SIMP_PROP(ParserEscapeControlCharactersCStyle, parser.bParserEscapeCCCStyle, int)
+SIMP_PROP(ParseHOSTNAMEandTAG, parser.bParseHOSTNAMEandTAG, int)
+SIMP_PROP(OptionDisallowWarning, optionDisallowWarning, int)
+/* We omit setter on purpose, because we want to customize it */
+SIMP_PROP_GET(DfltNetstrmDrvrCAF, pszDfltNetstrmDrvrCAF, uchar*)
+SIMP_PROP_GET(DfltNetstrmDrvrCertFile, pszDfltNetstrmDrvrCertFile, uchar*)
+SIMP_PROP_GET(DfltNetstrmDrvrKeyFile, pszDfltNetstrmDrvrKeyFile, uchar*)
+SIMP_PROP_GET(ParserControlCharacterEscapePrefix, parser.cCCEscapeChar, uchar)
+SIMP_PROP_GET(ParserDropTrailingLFOnReception, parser.bDropTrailingLF, int)
+SIMP_PROP_GET(ParserEscapeControlCharactersOnReceive, parser.bEscapeCCOnRcv, int)
+SIMP_PROP_GET(ParserSpaceLFOnReceive, parser.bSpaceLFOnRcv, int)
+SIMP_PROP_GET(ParserEscape8BitCharactersOnReceive, parser.bEscape8BitChars, int)
+SIMP_PROP_GET(ParserEscapeControlCharacterTab, parser.bEscapeTab, int)
+
+#undef SIMP_PROP
+#undef SIMP_PROP_SET
+#undef SIMP_PROP_GET
 
 /* return global input termination status
  * rgerhards, 2009-07-20
@@ -438,13 +400,119 @@ static rsRetVal setWorkDir(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		ABORT_FINALIZE(RS_RET_ERR_WRKDIR);
 	}
 
-	free(pszWorkDir);
-	pszWorkDir = pNewVal;
+	free(loadConf->globals.pszWorkDir);
+	loadConf->globals.pszWorkDir = pNewVal;
 
 finalize_it:
 	RETiRet;
 }
 
+
+static rsRetVal
+setDfltNetstrmDrvrCAF(void __attribute__((unused)) *pVal, uchar *pNewVal) {
+	DEFiRet;
+	FILE *fp;
+	free(loadConf->globals.pszDfltNetstrmDrvrCAF);
+	fp = fopen((const char*)pNewVal, "r");
+	if(fp == NULL) {
+		LogError(errno, RS_RET_NO_FILE_ACCESS,
+			"error: defaultnetstreamdrivercafile file '%s' "
+			"could not be accessed", pNewVal);
+	} else {
+		fclose(fp);
+		loadConf->globals.pszDfltNetstrmDrvrCAF = pNewVal;
+	}
+
+	RETiRet;
+}
+
+static rsRetVal
+setDfltNetstrmDrvrCertFile(void __attribute__((unused)) *pVal, uchar *pNewVal) {
+	DEFiRet;
+	FILE *fp;
+
+	free(loadConf->globals.pszDfltNetstrmDrvrCertFile);
+	fp = fopen((const char*)pNewVal, "r");
+	if(fp == NULL) {
+		LogError(errno, RS_RET_NO_FILE_ACCESS,
+			"error: defaultnetstreamdrivercertfile '%s' "
+			"could not be accessed", pNewVal);
+	} else {
+		fclose(fp);
+		loadConf->globals.pszDfltNetstrmDrvrCertFile = pNewVal;
+	}
+
+	RETiRet;
+}
+
+static rsRetVal
+setDfltNetstrmDrvrKeyFile(void __attribute__((unused)) *pVal, uchar *pNewVal) {
+	DEFiRet;
+	FILE *fp;
+
+	free(loadConf->globals.pszDfltNetstrmDrvrKeyFile);
+	fp = fopen((const char*)pNewVal, "r");
+	if(fp == NULL) {
+		LogError(errno, RS_RET_NO_FILE_ACCESS,
+			"error: defaultnetstreamdriverkeyfile '%s' "
+			"could not be accessed", pNewVal);
+	} else {
+		fclose(fp);
+		loadConf->globals.pszDfltNetstrmDrvrKeyFile = pNewVal;
+	}
+
+	RETiRet;
+}
+
+static rsRetVal
+setDfltNetstrmDrvr(void __attribute__((unused)) *pVal, uchar *pNewVal) {
+	DEFiRet;
+	free(loadConf->globals.pszDfltNetstrmDrvr);
+	loadConf->globals.pszDfltNetstrmDrvr = pNewVal;
+	RETiRet;
+}
+
+static rsRetVal
+setParserControlCharacterEscapePrefix(void __attribute__((unused)) *pVal, uchar *pNewVal) {
+	DEFiRet;
+	loadConf->globals.parser.cCCEscapeChar = *pNewVal;
+	RETiRet;
+}
+
+static rsRetVal
+setParserDropTrailingLFOnReception(void __attribute__((unused)) *pVal, int pNewVal) {
+	DEFiRet;
+	loadConf->globals.parser.bDropTrailingLF = pNewVal;
+	RETiRet;
+}
+
+static rsRetVal
+setParserEscapeControlCharactersOnReceive(void __attribute__((unused)) *pVal, int pNewVal) {
+	DEFiRet;
+	loadConf->globals.parser.bEscapeCCOnRcv = pNewVal;
+	RETiRet;
+}
+
+static rsRetVal
+setParserSpaceLFOnReceive(void __attribute__((unused)) *pVal, int pNewVal) {
+	DEFiRet;
+	loadConf->globals.parser.bSpaceLFOnRcv = pNewVal;
+	RETiRet;
+}
+
+static rsRetVal
+setParserEscape8BitCharactersOnReceive(void __attribute__((unused)) *pVal, int pNewVal) {
+	DEFiRet;
+	loadConf->globals.parser.bEscape8BitChars = pNewVal;
+	RETiRet;
+}
+
+static rsRetVal
+setParserEscapeControlCharacterTab(void __attribute__((unused)) *pVal, int pNewVal) {
+	DEFiRet;
+	loadConf->globals.parser.bEscapeTab = pNewVal;
+	RETiRet;
+}
 
 /* This function is used both by legacy and RainerScript conf. It is a real setter. */
 static void
@@ -454,13 +522,13 @@ setMaxLine(const int64_t iNew)
 		LogError(0, RS_RET_INVALID_VALUE, "maxMessageSize tried to set "
 				"to %lld, but cannot be less than 128 - set to 128 "
 				"instead", (long long) iNew);
-		iMaxLine = 128;
+		loadConf->globals.iMaxLine = 128;
 	} else if(iNew > (int64_t) INT_MAX) {
 		LogError(0, RS_RET_INVALID_VALUE, "maxMessageSize larger than "
 				"INT_MAX (%d) - reduced to INT_MAX", INT_MAX);
-		iMaxLine = INT_MAX;
+		loadConf->globals.iMaxLine = INT_MAX;
 	} else {
-		iMaxLine = (int) iNew;
+		loadConf->globals.iMaxLine = (int) iNew;
 	}
 }
 
@@ -497,13 +565,13 @@ setOversizeMsgInputMode(const uchar *const mode)
 {
 	DEFiRet;
 	if(!strcmp((char*)mode, "truncate")) {
-		oversizeMsgInputMode = glblOversizeMsgInputMode_Truncate;
+		loadConf->globals.oversizeMsgInputMode = glblOversizeMsgInputMode_Truncate;
 	} else if(!strcmp((char*)mode, "split")) {
-		oversizeMsgInputMode = glblOversizeMsgInputMode_Split;
+		loadConf->globals.oversizeMsgInputMode = glblOversizeMsgInputMode_Split;
 	} else if(!strcmp((char*)mode, "accept")) {
-		oversizeMsgInputMode = glblOversizeMsgInputMode_Accept;
+		loadConf->globals.oversizeMsgInputMode = glblOversizeMsgInputMode_Accept;
 	} else {
-		oversizeMsgInputMode = glblOversizeMsgInputMode_Truncate;
+		loadConf->globals.oversizeMsgInputMode = glblOversizeMsgInputMode_Truncate;
 	}
 	RETiRet;
 }
@@ -513,11 +581,11 @@ setReportChildProcessExits(const uchar *const mode)
 {
 	DEFiRet;
 	if(!strcmp((char*)mode, "none")) {
-		reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_NONE;
+		loadConf->globals.reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_NONE;
 	} else if(!strcmp((char*)mode, "errors")) {
-		reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
+		loadConf->globals.reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
 	} else if(!strcmp((char*)mode, "all")) {
-		reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ALL;
+		loadConf->globals.reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ALL;
 	} else {
 		LogError(0, RS_RET_CONF_PARAM_INVLD,
 				"invalid value '%s' for global parameter reportChildProcessExits -- ignored",
@@ -527,57 +595,10 @@ setReportChildProcessExits(const uchar *const mode)
 	RETiRet;
 }
 
-static rsRetVal
-setDisableDNS(int val)
-{
-	bDisableDNS = val;
-	return RS_RET_OK;
-}
-
 static int
-getDisableDNS(void)
+getDefPFFamily(rsconf_t *cnf)
 {
-	return bDisableDNS;
-}
-
-static rsRetVal
-setOption_DisallowWarning(int val)
-{
-	option_DisallowWarning = val;
-	return RS_RET_OK;
-}
-
-static int
-getOption_DisallowWarning(void)
-{
-	return option_DisallowWarning;
-}
-
-static rsRetVal
-setParseHOSTNAMEandTAG(int val)
-{
-	bParseHOSTNAMEandTAG = val;
-	return RS_RET_OK;
-}
-
-static int
-getParseHOSTNAMEandTAG(void)
-{
-	return bParseHOSTNAMEandTAG;
-}
-
-static rsRetVal
-setDefPFFamily(int level)
-{
-	DEFiRet;
-	iDefPFFamily = level;
-	RETiRet;
-}
-
-static int
-getDefPFFamily(void)
-{
-	return iDefPFFamily;
+	return cnf->globals.iDefPFFamily;
 }
 
 /* return our local IP.
@@ -645,29 +666,29 @@ done:
 /* return the name of the file where oversize messages are written to
  */
 uchar*
-glblGetOversizeMsgErrorFile(void)
+glblGetOversizeMsgErrorFile(rsconf_t *cnf)
 {
-	return oversizeMsgErrorFile;
+	return cnf->globals.oversizeMsgErrorFile;
 }
 
 const uchar*
-glblGetOperatingStateFile(void)
+glblGetOperatingStateFile(rsconf_t *cnf)
 {
-	return operatingStateFile;
+	return cnf->globals.operatingStateFile;
 }
 
 /* return the mode with which oversize messages will be put forward
  */
 int
-glblGetOversizeMsgInputMode(void)
+glblGetOversizeMsgInputMode(rsconf_t *cnf)
 {
-	return oversizeMsgInputMode;
+	return cnf->globals.oversizeMsgInputMode;
 }
 
 int
-glblReportOversizeMessage(void)
+glblReportOversizeMessage(rsconf_t *cnf)
 {
-	return reportOversizeMsg;
+	return cnf->globals.reportOversizeMsg;
 }
 
 
@@ -675,12 +696,12 @@ glblReportOversizeMessage(void)
  * If name != NULL, prints it as the program name.
  */
 void
-glblReportChildProcessExit(const uchar *name, pid_t pid, int status)
+glblReportChildProcessExit(rsconf_t *cnf, const uchar *name, pid_t pid, int status)
 {
 	DBGPRINTF("waitpid for child %ld returned status: %2.2x\n", (long) pid, status);
 
-	if(reportChildProcessExits == REPORT_CHILD_PROCESS_EXITS_NONE
-		|| (reportChildProcessExits == REPORT_CHILD_PROCESS_EXITS_ERRORS
+	if(cnf->globals.reportChildProcessExits == REPORT_CHILD_PROCESS_EXITS_NONE
+		|| (cnf->globals.reportChildProcessExits == REPORT_CHILD_PROCESS_EXITS_ERRORS
 			&& WIFEXITED(status) && WEXITSTATUS(status) == 0)) {
 		return;
 	}
@@ -816,51 +837,26 @@ GetLocalFQDNName(void)
 
 /* return the current working directory */
 static uchar*
-GetWorkDir(void)
+GetWorkDir(rsconf_t *cnf)
 {
-	return(pszWorkDir == NULL ? (uchar*) "" : pszWorkDir);
+	return(cnf->globals.pszWorkDir == NULL ? (uchar*) "" : cnf->globals.pszWorkDir);
 }
 
 /* return the "raw" working directory, which means
  * NULL if unset.
  */
 const uchar *
-glblGetWorkDirRaw(void)
+glblGetWorkDirRaw(rsconf_t *cnf)
 {
-	return pszWorkDir;
+	return cnf->globals.pszWorkDir;
 }
 
 /* return the current default netstream driver */
 static uchar*
-GetDfltNetstrmDrvr(void)
+GetDfltNetstrmDrvr(rsconf_t *cnf)
 {
-	return(pszDfltNetstrmDrvr == NULL ? DFLT_NETSTRM_DRVR : pszDfltNetstrmDrvr);
+	return(cnf->globals.pszDfltNetstrmDrvr == NULL ? DFLT_NETSTRM_DRVR : cnf->globals.pszDfltNetstrmDrvr);
 }
-
-
-/* return the current default netstream driver CA File */
-static uchar*
-GetDfltNetstrmDrvrCAF(void)
-{
-	return(pszDfltNetstrmDrvrCAF);
-}
-
-
-/* return the current default netstream driver key File */
-static uchar*
-GetDfltNetstrmDrvrKeyFile(void)
-{
-	return(pszDfltNetstrmDrvrKeyFile);
-}
-
-
-/* return the current default netstream driver certificate File */
-static uchar*
-GetDfltNetstrmDrvrCertFile(void)
-{
-	return(pszDfltNetstrmDrvrCertFile);
-}
-
 
 /* [ar] Source IP for local client to be used on multihomed host */
 static rsRetVal
@@ -901,15 +897,20 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->GetGlobalInputTermState = GetGlobalInputTermState;
 	pIf->GetSourceIPofLocalClient = GetSourceIPofLocalClient;	/* [ar] */
 	pIf->SetSourceIPofLocalClient = SetSourceIPofLocalClient;	/* [ar] */
-	pIf->SetDefPFFamily = setDefPFFamily;
 	pIf->GetDefPFFamily = getDefPFFamily;
-	pIf->SetDisableDNS = setDisableDNS;
-	pIf->GetDisableDNS = getDisableDNS;
+	pIf->GetDisableDNS = GetDisableDNS;
 	pIf->GetMaxLine = glblGetMaxLine;
-	pIf->SetOption_DisallowWarning = setOption_DisallowWarning;
-	pIf->GetOption_DisallowWarning = getOption_DisallowWarning;
-	pIf->SetParseHOSTNAMEandTAG = setParseHOSTNAMEandTAG;
-	pIf->GetParseHOSTNAMEandTAG = getParseHOSTNAMEandTAG;
+	pIf->GetOptionDisallowWarning = GetOptionDisallowWarning;
+	pIf->GetDfltNetstrmDrvrCAF = GetDfltNetstrmDrvrCAF;
+	pIf->GetDfltNetstrmDrvrCertFile = GetDfltNetstrmDrvrCertFile;
+	pIf->GetDfltNetstrmDrvrKeyFile = GetDfltNetstrmDrvrKeyFile;
+	pIf->GetDfltNetstrmDrvr = GetDfltNetstrmDrvr;
+	pIf->GetParserControlCharacterEscapePrefix = GetParserControlCharacterEscapePrefix;
+	pIf->GetParserDropTrailingLFOnReception = GetParserDropTrailingLFOnReception;
+	pIf->GetParserEscapeControlCharactersOnReceive = GetParserEscapeControlCharactersOnReceive;
+	pIf->GetParserSpaceLFOnReceive = GetParserSpaceLFOnReceive;
+	pIf->GetParserEscape8BitCharactersOnReceive = GetParserEscape8BitCharactersOnReceive;
+	pIf->GetParserEscapeControlCharacterTab = GetParserEscapeControlCharacterTab;
 #define SIMP_PROP(name) \
 	pIf->Get##name = Get##name; \
 	pIf->Set##name = Set##name;
@@ -919,19 +920,8 @@ CODESTARTobjQueryInterface(glbl)
 	SIMP_PROP(LocalFQDNName)
 	SIMP_PROP(LocalHostName)
 	SIMP_PROP(LocalDomain)
-	SIMP_PROP(StripDomains)
-	SIMP_PROP(LocalHosts)
-	SIMP_PROP(ParserControlCharacterEscapePrefix)
-	SIMP_PROP(ParserDropTrailingLFOnReception)
-	SIMP_PROP(ParserEscapeControlCharactersOnReceive)
-	SIMP_PROP(ParserSpaceLFOnReceive)
-	SIMP_PROP(ParserEscape8BitCharactersOnReceive)
-	SIMP_PROP(ParserEscapeControlCharacterTab)
 	SIMP_PROP(ParserEscapeControlCharactersCStyle)
-	SIMP_PROP(DfltNetstrmDrvr)
-	SIMP_PROP(DfltNetstrmDrvrCAF)
-	SIMP_PROP(DfltNetstrmDrvrKeyFile)
-	SIMP_PROP(DfltNetstrmDrvrCertFile)
+	SIMP_PROP(ParseHOSTNAMEandTAG)
 #ifdef USE_UNLIMITED_SELECT
 	SIMP_PROP(FdSetSize)
 #endif
@@ -944,35 +934,35 @@ ENDobjQueryInterface(glbl)
  */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	free(pszDfltNetstrmDrvr);
-	pszDfltNetstrmDrvr = NULL;
-	free(pszDfltNetstrmDrvrCAF);
-	pszDfltNetstrmDrvrCAF = NULL;
-	free(pszDfltNetstrmDrvrKeyFile);
-	pszDfltNetstrmDrvrKeyFile = NULL;
-	free(pszDfltNetstrmDrvrCertFile);
-	pszDfltNetstrmDrvrCertFile = NULL;
+	free(loadConf->globals.pszDfltNetstrmDrvr);
+	loadConf->globals.pszDfltNetstrmDrvr = NULL;
+	free(loadConf->globals.pszDfltNetstrmDrvrCAF);
+	loadConf->globals.pszDfltNetstrmDrvrCAF = NULL;
+	free(loadConf->globals.pszDfltNetstrmDrvrKeyFile);
+	loadConf->globals.pszDfltNetstrmDrvrKeyFile = NULL;
+	free(loadConf->globals.pszDfltNetstrmDrvrCertFile);
+	loadConf->globals.pszDfltNetstrmDrvrCertFile = NULL;
 	free(LocalHostNameOverride);
 	LocalHostNameOverride = NULL;
-	free(oversizeMsgErrorFile);
-	oversizeMsgErrorFile = NULL;
-	oversizeMsgInputMode = glblOversizeMsgInputMode_Accept;
-	reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
-	free(pszWorkDir);
-	pszWorkDir = NULL;
-	free((void*)operatingStateFile);
-	operatingStateFile = NULL;
-	bDropMalPTRMsgs = 0;
+	free(loadConf->globals.oversizeMsgErrorFile);
+	loadConf->globals.oversizeMsgErrorFile = NULL;
+	loadConf->globals.oversizeMsgInputMode = glblOversizeMsgInputMode_Accept;
+	loadConf->globals.reportChildProcessExits = REPORT_CHILD_PROCESS_EXITS_ERRORS;
+	free(loadConf->globals.pszWorkDir);
+	loadConf->globals.pszWorkDir = NULL;
+	free((void*)loadConf->globals.operatingStateFile);
+	loadConf->globals.operatingStateFile = NULL;
+	loadConf->globals.bDropMalPTRMsgs = 0;
 	bPreserveFQDN = 0;
-	iMaxLine = 8192;
-	cCCEscapeChar = '#';
-	bDropTrailingLF = 1;
-	reportOversizeMsg = 1;
-	bEscapeCCOnRcv = 1; /* default is to escape control characters */
-	bSpaceLFOnRcv = 0;
-	bEscape8BitChars = 0; /* default is not to escape control characters */
-	bEscapeTab = 1; /* default is to escape tab characters */
-	bParserEscapeCCCStyle = 0;
+	loadConf->globals.iMaxLine = 8192;
+	loadConf->globals.reportOversizeMsg = 1;
+	loadConf->globals.parser.cCCEscapeChar = '#';
+	loadConf->globals.parser.bDropTrailingLF = 1;
+	loadConf->globals.parser.bEscapeCCOnRcv = 1; /* default is to escape control characters */
+	loadConf->globals.parser.bSpaceLFOnRcv = 0;
+	loadConf->globals.parser.bEscape8BitChars = 0; /* default is not to escape control characters */
+	loadConf->globals.parser.bEscapeTab = 1; /* default is to escape tab characters */
+	loadConf->globals.parser.bParserEscapeCCCStyle = 0;
 #ifdef USE_UNLIMITED_SELECT
 	iFdSetSize = howmany(FD_SETSIZE, __NFDBITS) * sizeof (fd_mask);
 #endif
@@ -1166,10 +1156,10 @@ glblProcessCnf(struct cnfobj *o)
 		if(!cnfparamvals[i].bUsed)
 			continue;
 		if(!strcmp(paramblk.descr[i].name, "processinternalmessages")) {
-			bProcessInternalMessages = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.bProcessInternalMessages = (int) cnfparamvals[i].val.d.n;
 			cnfparamvals[i].bUsed = TRUE;
 		} else if(!strcmp(paramblk.descr[i].name, "internal.developeronly.options")) {
-			glblDevOptions = (uint64_t) cnfparamvals[i].val.d.n;
+			loadConf->globals.glblDevOptions = (uint64_t) cnfparamvals[i].val.d.n;
 			cnfparamvals[i].bUsed = TRUE;
 		} else if(!strcmp(paramblk.descr[i].name, "stdlog.channelspec")) {
 #ifndef ENABLE_LIBLOGGING_STDLOG
@@ -1178,20 +1168,21 @@ glblProcessCnf(struct cnfobj *o)
 				"The 'stdlog.channelspec' parameter "
 				"is ignored. Note: the syslog API is used instead.\n");
 #else
-			stdlog_chanspec = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			loadConf->globals.stdlog_chanspec = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 			/* we need to re-open with the new channel */
-			stdlog_close(stdlog_hdl);
-			stdlog_hdl = stdlog_open("rsyslogd", 0, STDLOG_SYSLOG,
-					(char*) stdlog_chanspec);
+			stdlog_close(loadConf->globals.stdlog_hdl);
+			loadConf->globals.stdlog_hdl = stdlog_open("rsyslogd", 0, STDLOG_SYSLOG,
+					(char*) loadConf->globals.stdlog_chanspec);
 			cnfparamvals[i].bUsed = TRUE;
 #endif
 		} else if(!strcmp(paramblk.descr[i].name, "operatingstatefile")) {
-			if(operatingStateFile != NULL) {
+			if(loadConf->globals.operatingStateFile != NULL) {
 				LogError(errno, RS_RET_PARAM_ERROR,
 					"error: operatingStateFile already set to '%s' - "
-					"new value ignored", operatingStateFile);
+					"new value ignored", loadConf->globals.operatingStateFile);
 			} else {
-				operatingStateFile = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+				loadConf->globals.operatingStateFile =
+					(uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 				osf_open();
 			}
 		} else if(!strcmp(paramblk.descr[i].name, "security.abortonidresolutionfail")) {
@@ -1294,7 +1285,6 @@ glblDoneLoadCnf(void)
 {
 	int i;
 	unsigned char *cstr;
-	FILE *fp;
 	DEFiRet;
 	CHKiRet(objUse(net, CORE_COMPONENT));
 
@@ -1323,61 +1313,33 @@ glblDoneLoadCnf(void)
 			LocalHostNameOverride = (uchar*)
 				es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdriverkeyfile")) {
-			free(pszDfltNetstrmDrvrKeyFile);
-			uchar *const fn = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
-			fp = fopen((const char*)fn, "r");
-			if(fp == NULL) {
-				LogError(errno, RS_RET_NO_FILE_ACCESS,
-					"error: defaultnetstreamdriverkeyfile '%s' "
-					"could not be accessed", fn);
-			} else {
-				fclose(fp);
-				pszDfltNetstrmDrvrKeyFile = fn;
-			}
+			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			setDfltNetstrmDrvrKeyFile(NULL, cstr);
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdrivercertfile")) {
-			free(pszDfltNetstrmDrvrCertFile);
-			uchar *const fn = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
-			fp = fopen((const char*)fn, "r");
-			if(fp == NULL) {
-				LogError(errno, RS_RET_NO_FILE_ACCESS,
-					"error: defaultnetstreamdrivercertfile '%s' "
-					"could not be accessed", fn);
-			} else {
-				fclose(fp);
-				pszDfltNetstrmDrvrCertFile = fn;
-			}
+			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			setDfltNetstrmDrvrCertFile(NULL, cstr);
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdrivercafile")) {
-			free(pszDfltNetstrmDrvrCAF);
-			uchar *const fn = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
-			fp = fopen((const char*)fn, "r");
-			if(fp == NULL) {
-				LogError(errno, RS_RET_NO_FILE_ACCESS,
-					"error: defaultnetstreamdrivercafile file '%s' "
-					"could not be accessed", fn);
-			} else {
-				fclose(fp);
-				pszDfltNetstrmDrvrCAF = fn;
-			}
+			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			setDfltNetstrmDrvrCAF(NULL, cstr);
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdriver")) {
-			free(pszDfltNetstrmDrvr);
-			pszDfltNetstrmDrvr = (uchar*)
-				es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			setDfltNetstrmDrvr(NULL, cstr);
 		} else if(!strcmp(paramblk.descr[i].name, "preservefqdn")) {
 			bPreserveFQDN = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name,
 				"dropmsgswithmaliciousdnsptrrecords")) {
-			bDropMalPTRMsgs = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.bDropMalPTRMsgs = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "action.reportsuspension")) {
-			bActionReportSuspension = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.bActionReportSuspension = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "action.reportsuspensioncontinuation")) {
-			bActionReportSuspensionCont = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.bActionReportSuspensionCont = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "maxmessagesize")) {
 			setMaxLine(cnfparamvals[i].val.d.n);
 		} else if(!strcmp(paramblk.descr[i].name, "oversizemsg.errorfile")) {
-			free(oversizeMsgErrorFile);
-			oversizeMsgErrorFile = (uchar*)es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			free(loadConf->globals.oversizeMsgErrorFile);
+			loadConf->globals.oversizeMsgErrorFile = (uchar*)es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 		} else if(!strcmp(paramblk.descr[i].name, "oversizemsg.report")) {
-			reportOversizeMsg = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.reportOversizeMsg = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "oversizemsg.input.mode")) {
 			const char *const tmp = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 			setOversizeMsgInputMode((uchar*) tmp);
@@ -1387,32 +1349,39 @@ glblDoneLoadCnf(void)
 			setReportChildProcessExits((uchar*) tmp);
 			free((void*)tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "debug.onshutdown")) {
-			glblDebugOnShutdown = (int) cnfparamvals[i].val.d.n;
-			LogError(0, RS_RET_OK, "debug: onShutdown set to %d", glblDebugOnShutdown);
+			loadConf->globals.debugOnShutdown = (int) cnfparamvals[i].val.d.n;
+			LogError(0, RS_RET_OK, "debug: onShutdown set to %d", loadConf->globals.debugOnShutdown);
 		} else if(!strcmp(paramblk.descr[i].name, "debug.gnutls")) {
-			iGnuTLSLoglevel = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.iGnuTLSLoglevel = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "debug.unloadmodules")) {
 			glblUnloadModules = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "parser.controlcharacterescapeprefix")) {
 			uchar* tmp = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
-			cCCEscapeChar = tmp[0];
+			setParserControlCharacterEscapePrefix(NULL, tmp);
 			free(tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.droptrailinglfonreception")) {
-			bDropTrailingLF = (int) cnfparamvals[i].val.d.n;
+			const int tmp = (int) cnfparamvals[i].val.d.n;
+			setParserDropTrailingLFOnReception(NULL, tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.escapecontrolcharactersonreceive")) {
-			bEscapeCCOnRcv = (int) cnfparamvals[i].val.d.n;
+			const int tmp = (int) cnfparamvals[i].val.d.n;
+			setParserEscapeControlCharactersOnReceive(NULL, tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.spacelfonreceive")) {
-			bSpaceLFOnRcv = (int) cnfparamvals[i].val.d.n;
+			const int tmp = (int) cnfparamvals[i].val.d.n;
+			setParserSpaceLFOnReceive(NULL, tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.escape8bitcharactersonreceive")) {
-			bEscape8BitChars = (int) cnfparamvals[i].val.d.n;
+			const int tmp = (int) cnfparamvals[i].val.d.n;
+			setParserEscape8BitCharactersOnReceive(NULL, tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.escapecontrolcharactertab")) {
-			bEscapeTab = (int) cnfparamvals[i].val.d.n;
+			const int tmp = (int) cnfparamvals[i].val.d.n;
+			setParserEscapeControlCharacterTab(NULL, tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.escapecontrolcharacterscstyle")) {
-			bParserEscapeCCCStyle = (int) cnfparamvals[i].val.d.n;
+			const int tmp = (int) cnfparamvals[i].val.d.n;
+			SetParserEscapeControlCharactersCStyle(tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.parsehostnameandtag")) {
-			bParseHOSTNAMEandTAG = (int) cnfparamvals[i].val.d.n;
+			const int tmp = (int) cnfparamvals[i].val.d.n;
+			SetParseHOSTNAMEandTAG(tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.permitslashinprogramname")) {
-			bPermitSlashInProgramname = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.parser.bPermitSlashInProgramname = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "debug.logfile")) {
 			if(pszAltDbgFileName == NULL) {
 				pszAltDbgFileName = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
@@ -1428,30 +1397,30 @@ glblDoneLoadCnf(void)
 			}
 			LogError(0, RS_RET_OK, "debug log file is '%s', fd %d", pszAltDbgFileName, altdbg);
 		} else if(!strcmp(paramblk.descr[i].name, "janitor.interval")) {
-			janitorInterval = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.janitorInterval = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "net.ipprotocol")) {
 			char *proto = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 			if(!strcmp(proto, "unspecified")) {
-				iDefPFFamily = PF_UNSPEC;
+				loadConf->globals.iDefPFFamily = PF_UNSPEC;
 			} else if(!strcmp(proto, "ipv4-only")) {
-				iDefPFFamily = PF_INET;
+				loadConf->globals.iDefPFFamily = PF_INET;
 			} else if(!strcmp(proto, "ipv6-only")) {
-				iDefPFFamily = PF_INET6;
+				loadConf->globals.iDefPFFamily = PF_INET6;
 			} else{
 				LogError(0, RS_RET_ERR, "invalid net.ipprotocol "
 					"parameter '%s' -- ignored", proto);
 			}
 			free(proto);
 		} else if(!strcmp(paramblk.descr[i].name, "senders.reportnew")) {
-			glblReportNewSenders = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.reportNewSenders = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "senders.reportgoneaway")) {
-			glblReportGoneAwaySenders = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.reportGoneAwaySenders = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "senders.timeoutafter")) {
-			glblSenderStatsTimeout = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.senderStatsTimeout = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "senders.keeptrack")) {
-			glblSenderKeepTrack = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.senderKeepTrack = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "inputs.timeout.shutdown")) {
-			glblInputTimeoutShutdown = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.inputTimeoutShutdown = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "privdrop.group.keepsupplemental")) {
 			loadConf->globals.gidDropPrivKeepSupplemental = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "privdrop.group.id")) {
@@ -1465,24 +1434,25 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "security.abortonidresolutionfail")) {
 			loadConf->globals.abortOnIDResolutionFail = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "net.acladdhostnameonfail")) {
-			*(net.pACLAddHostnameOnFail) = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.ACLAddHostnameOnFail = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "net.aclresolvehostname")) {
-			*(net.pACLDontResolve) = !((int) cnfparamvals[i].val.d.n);
+			loadConf->globals.ACLDontResolve = !((int) cnfparamvals[i].val.d.n);
 		} else if(!strcmp(paramblk.descr[i].name, "net.enabledns")) {
-			setDisableDNS(!((int) cnfparamvals[i].val.d.n));
+			SetDisableDNS(!((int) cnfparamvals[i].val.d.n));
 		} else if(!strcmp(paramblk.descr[i].name, "net.permitwarning")) {
-			setOption_DisallowWarning(!((int) cnfparamvals[i].val.d.n));
+			SetOptionDisallowWarning(!((int) cnfparamvals[i].val.d.n));
 		} else if(!strcmp(paramblk.descr[i].name, "abortonuncleanconfig")) {
 			loadConf->globals.bAbortOnUncleanConfig = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "internalmsg.ratelimit.burst")) {
-			glblIntMsgRateLimitBurst = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.intMsgRateLimitBurst = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "internalmsg.ratelimit.interval")) {
-			glblIntMsgRateLimitItv = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.intMsgRateLimitItv = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "internalmsg.severity")) {
-			glblIntMsgsSeverityFilter = (int) cnfparamvals[i].val.d.n;
-			if((glblIntMsgsSeverityFilter < 0) || (glblIntMsgsSeverityFilter > 7)) {
+			loadConf->globals.intMsgsSeverityFilter = (int) cnfparamvals[i].val.d.n;
+			if((loadConf->globals.intMsgsSeverityFilter < 0) ||
+			(loadConf->globals.intMsgsSeverityFilter > 7)) {
 				parser_errmsg("invalid internalmsg.severity value");
-				glblIntMsgsSeverityFilter = DFLT_INT_MSGS_SEV_FILTER;
+				loadConf->globals.intMsgsSeverityFilter = DFLT_INT_MSGS_SEV_FILTER;
 			}
 		} else if(!strcmp(paramblk.descr[i].name, "environment")) {
 			for(int j = 0 ; j <  cnfparamvals[i].val.d.ar->nmemb ; ++j) {
@@ -1503,40 +1473,40 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "debug.whitelist")) {
 			glblDbgWhitelist = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "shutdown.queue.doublesize")) {
-			glblShutdownQueueDoubleSize = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.shutdownQueueDoubleSize = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "umask")) {
 			loadConf->globals.umask = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "shutdown.enable.ctlc")) {
-			glblPermitCtlC = (int) cnfparamvals[i].val.d.n;
+			loadConf->globals.permitCtlC = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "default.action.queue.timeoutshutdown")) {
-			actq_dflt_toQShutdown = cnfparamvals[i].val.d.n;
+			loadConf->globals.actq_dflt_toQShutdown = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "default.action.queue.timeoutactioncompletion")) {
-			actq_dflt_toActShutdown = cnfparamvals[i].val.d.n;
+			loadConf->globals.actq_dflt_toActShutdown = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "default.action.queue.timeoutenqueue")) {
-			actq_dflt_toEnq = cnfparamvals[i].val.d.n;
+			loadConf->globals.actq_dflt_toEnq = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "default.action.queue.timeoutworkerthreadshutdown")) {
-			actq_dflt_toWrkShutdown = cnfparamvals[i].val.d.n;
+			loadConf->globals.actq_dflt_toWrkShutdown = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "default.ruleset.queue.timeoutshutdown")) {
-			ruleset_dflt_toQShutdown = cnfparamvals[i].val.d.n;
+			loadConf->globals.ruleset_dflt_toQShutdown = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "default.ruleset.queue.timeoutactioncompletion")) {
-			ruleset_dflt_toActShutdown = cnfparamvals[i].val.d.n;
+			loadConf->globals.ruleset_dflt_toActShutdown = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "default.ruleset.queue.timeoutenqueue")) {
-			ruleset_dflt_toEnq = cnfparamvals[i].val.d.n;
+			loadConf->globals.ruleset_dflt_toEnq = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "default.ruleset.queue.timeoutworkerthreadshutdown")) {
-			ruleset_dflt_toWrkShutdown = cnfparamvals[i].val.d.n;
+			loadConf->globals.ruleset_dflt_toWrkShutdown = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "reverselookup.cache.ttl.default")) {
-			dnscacheDefaultTTL = cnfparamvals[i].val.d.n;
+			loadConf->globals.dnscacheDefaultTTL = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "reverselookup.cache.ttl.enable")) {
-			dnscacheEnableTTL = cnfparamvals[i].val.d.n;
+			loadConf->globals.dnscacheEnableTTL = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "parser.supportcompressionextension")) {
-			bSupportCompressionExtension = cnfparamvals[i].val.d.n;
+			loadConf->globals.bSupportCompressionExtension = cnfparamvals[i].val.d.n;
 		} else {
 			dbgprintf("glblDoneLoadCnf: program error, non-handled "
 				"param '%s'\n", paramblk.descr[i].name);
 		}
 	}
 
-	if(glblDebugOnShutdown && Debug != DEBUG_FULL) {
+	if(loadConf->globals.debugOnShutdown && Debug != DEBUG_FULL) {
 		Debug = DEBUG_ONDEMAND;
 		stddbg = -1;
 	}
@@ -1560,16 +1530,16 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugfile", 0, eCmdHdlrGetWord, setDebugFile, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"debuglevel", 0, eCmdHdlrInt, setDebugLevel, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"workdirectory", 0, eCmdHdlrGetWord, setWorkDir, NULL, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"dropmsgswithmaliciousdnsptrrecords", 0, eCmdHdlrBinary, NULL,
-	&bDropMalPTRMsgs, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriver", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvr,
+	CHKiRet(regCfSysLineHdlr((uchar *)"dropmsgswithmaliciousdnsptrrecords", 0, eCmdHdlrBinary, SetDropMalPTRMsgs,
+	NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriver", 0, eCmdHdlrGetWord, setDfltNetstrmDrvr, NULL,
 	NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercafile", 0, eCmdHdlrGetWord, NULL,
-	&pszDfltNetstrmDrvrCAF, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriverkeyfile", 0, eCmdHdlrGetWord, NULL,
-	&pszDfltNetstrmDrvrKeyFile, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercertfile", 0, eCmdHdlrGetWord, NULL,
-	&pszDfltNetstrmDrvrCertFile, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercafile", 0, eCmdHdlrGetWord,
+	setDfltNetstrmDrvrCAF, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriverkeyfile", 0, eCmdHdlrGetWord,
+	setDfltNetstrmDrvrKeyFile, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercertfile", 0, eCmdHdlrGetWord,
+	setDfltNetstrmDrvrCertFile, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"localhostname", 0, eCmdHdlrGetWord, NULL, &LocalHostNameOverride, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"localhostipif", 0, eCmdHdlrGetWord, setLocalHostIPIF, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"optimizeforuniprocessor", 0, eCmdHdlrGoneAway, NULL, NULL, NULL));
@@ -1577,16 +1547,18 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize, legacySetMaxMessageSize, NULL, NULL));
 
 	/* Deprecated parser config options */
-	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", 0, eCmdHdlrGetChar, NULL,
-	&cCCEscapeChar, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"droptrailinglfonreception", 0, eCmdHdlrBinary, NULL,
-	&bDropTrailingLF, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary, NULL,
-	&bEscapeCCOnRcv, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"spacelfonreceive", 0, eCmdHdlrBinary, NULL, &bSpaceLFOnRcv, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"escape8bitcharactersonreceive", 0, eCmdHdlrBinary, NULL,
-	&bEscape8BitChars, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactertab", 0, eCmdHdlrBinary, NULL, &bEscapeTab, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", 0, eCmdHdlrGetChar,
+	setParserControlCharacterEscapePrefix, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"droptrailinglfonreception", 0, eCmdHdlrBinary,
+	setParserDropTrailingLFOnReception, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary,
+	setParserEscapeControlCharactersOnReceive, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"spacelfonreceive", 0, eCmdHdlrBinary,
+	setParserSpaceLFOnReceive, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"escape8bitcharactersonreceive", 0, eCmdHdlrBinary,
+	setParserEscape8BitCharactersOnReceive,	NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactertab", 0, eCmdHdlrBinary,
+	setParserEscapeControlCharacterTab, NULL, NULL));
 
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 	resetConfigVariables, NULL, NULL));
@@ -1599,15 +1571,9 @@ ENDObjClassInit(glbl)
  * rgerhards, 2008-04-17
  */
 BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
-	free(pszDfltNetstrmDrvr);
-	free(pszDfltNetstrmDrvrCAF);
-	free(pszDfltNetstrmDrvrKeyFile);
-	free(pszDfltNetstrmDrvrCertFile);
-	free(pszWorkDir);
 	free(LocalDomain);
 	free(LocalHostName);
 	free(LocalHostNameOverride);
-	free(oversizeMsgErrorFile);
 	free(LocalFQDNName);
 	freeTimezoneInfo();
 	objRelease(prop, CORE_COMPONENT);

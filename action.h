@@ -30,9 +30,6 @@
 
 /* external data */
 extern int glbliActionResumeRetryCount;
-extern int bActionReportSuspension;
-extern int bActionReportSuspensionCont;
-
 
 /* the following struct defines the action object data structure
  */

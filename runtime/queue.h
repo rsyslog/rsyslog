@@ -237,17 +237,6 @@ PROTOTYPEpropSetMeth(qqueue, sizeOnDiskMax, int64);
 PROTOTYPEpropSetMeth(qqueue, iDeqBatchSize, int);
 #define qqueueGetID(pThis) ((unsigned long) pThis)
 
-/* overridable default values (via global config) */
-extern int actq_dflt_toQShutdown;
-extern int actq_dflt_toActShutdown;
-extern int actq_dflt_toEnq;
-extern int actq_dflt_toWrkShutdown;
-
-extern int ruleset_dflt_toQShutdown;
-extern int ruleset_dflt_toActShutdown;
-extern int ruleset_dflt_toEnq;
-extern int ruleset_dflt_toWrkShutdown;
-
 #ifdef ENABLE_IMDIAG
 extern unsigned int iOverallQueueSize;
 #endif

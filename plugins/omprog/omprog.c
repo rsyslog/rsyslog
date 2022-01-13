@@ -48,6 +48,7 @@
 #include "errmsg.h"
 #include "cfsysline.h"
 #include "glbl.h"
+#include "rsconf.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -347,7 +348,7 @@ waitForChild(instanceData *pData, childProcessCtx_t *pChildCtx)
 	/* waitpid will fail with errno == ECHILD if the child process has already
 	   been reaped by the rsyslogd main loop (see rsyslogd.c) */
 	if(ret == pChildCtx->pid) {
-		glblReportChildProcessExit(pData->szBinary, pChildCtx->pid, status);
+		glblReportChildProcessExit(runConf, pData->szBinary, pChildCtx->pid, status);
 	}
 }
 
@@ -913,7 +914,7 @@ finalize_it:
 BEGINcreateWrkrInstance
 CODESTARTcreateWrkrInstance
 	pWrkrData->pChildCtx = NULL;
-	
+
 	if(pWrkrData->pData->pOutputCaptureCtx != NULL) {
 		CHKiRet(startOutputCaptureOnce(pWrkrData->pData->pOutputCaptureCtx));
 	}

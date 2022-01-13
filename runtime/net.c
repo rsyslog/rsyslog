@@ -62,6 +62,7 @@
 #include "net.h"
 #include "dnscache.h"
 #include "prop.h"
+#include "rsconf.h"
 
 #ifdef OS_SOLARIS
 #include <arpa/nameser_compat.h>
@@ -94,10 +95,6 @@ static struct AllowedSenders *pLastAllowedSenders_TCP = NULL; /* element in the 
 struct AllowedSenders *pAllowedSenders_GSS = NULL;
 static struct AllowedSenders *pLastAllowedSenders_GSS = NULL;
 #endif
-
-int     ACLAddHostnameOnFail = 0; /* add hostname to acl when DNS resolving has failed */
-int     ACLDontResolve = 0;       /* add hostname to acl instead of resolving it to IP(s) */
-
 
 /* ------------------------------ begin permitted peers code ------------------------------ */
 
@@ -494,10 +491,10 @@ finalize_it:
  */
 static void MaskIP6 (struct in6_addr *addr, uint8_t bits) {
 	register uint8_t i;
-	
+
 	assert (addr != NULL);
 	assert (bits <= 128);
-	
+
 	i = bits/32;
 	if (bits%32)
 		addr->s6_addr32[i++] &= htonl(0xffffffff << (32 - (bits % 32)));
@@ -506,10 +503,10 @@ static void MaskIP6 (struct in6_addr *addr, uint8_t bits) {
 }
 
 static void MaskIP4 (struct in_addr  *addr, uint8_t bits) {
-	
+
 	assert (addr != NULL);
 	assert (bits <=32 );
-	
+
 	addr->s_addr &= htonl(0xffffffff << (32 - bits));
 }
 
@@ -556,11 +553,11 @@ static rsRetVal AddAllowedSenderEntry(struct AllowedSenders **ppRoot, struct All
 	if((pEntry = (struct AllowedSenders*) calloc(1, sizeof(struct AllowedSenders))) == NULL) {
 		return RS_RET_OUT_OF_MEMORY; /* no options left :( */
 	}
-	
+
 	memcpy(&(pEntry->allowedSender), iAllow, sizeof (struct NetAddr));
 	pEntry->pNext = NULL;
 	pEntry->SignificantBits = iSignificantBits;
-	
+
 	/* enqueue */
 	if(*ppRoot == NULL) {
 		*ppRoot = pEntry;
@@ -568,7 +565,7 @@ static rsRetVal AddAllowedSenderEntry(struct AllowedSenders **ppRoot, struct All
 		(*ppLast)->pNext = pEntry;
 	}
 	*ppLast = pEntry;
-	
+
 	return RS_RET_OK;
 }
 
@@ -585,7 +582,7 @@ clearAllowedSenders(uchar *pszType)
 
 	if(setAllowRoot(&pCurr, pszType) != RS_RET_OK)
 		return;	/* if something went wrong, so let's leave */
-	
+
 	while(pCurr != NULL) {
 		pPrev = pCurr;
 		pCurr = pCurr->pNext;
@@ -668,14 +665,14 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 		iRet = AddAllowedSenderEntry(ppRoot, ppLast, iAllow, iSignificantBits);
 	} else {
 		/* we need to process a hostname ACL */
-		if(glbl.GetDisableDNS()) {
+		if(glbl.GetDisableDNS(loadConf)) {
 			LogError(0, NO_ERRCODE, "Ignoring hostname based ACLs because DNS is disabled.");
 			ABORT_FINALIZE(RS_RET_OK);
 		}
 
 		if (!strchr (iAllow->addr.HostWildcard, '*') &&
 		    !strchr (iAllow->addr.HostWildcard, '?') &&
-		    ACLDontResolve == 0) {
+		    loadConf->globals.ACLDontResolve == 0) {
 			/* single host - in this case, we pull its IP addresses from DNS
 			* and add IP-based ACLs.
 			*/
@@ -692,7 +689,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 			if (getaddrinfo (iAllow->addr.HostWildcard, NULL, &hints, &res) != 0) {
 			        LogError(0, NO_ERRCODE, "DNS error: Can't resolve \"%s\"", iAllow->addr.HostWildcard);
 
-				if (ACLAddHostnameOnFail) {
+				if (loadConf->globals.ACLAddHostnameOnFail) {
 					LogError(0, NO_ERRCODE, "Adding hostname \"%s\" to ACL as a wildcard "
 						"entry.", iAllow->addr.HostWildcard);
 					iRet = AddAllowedSenderEntry(ppRoot, ppLast, iAllow, iSignificantBits);
@@ -799,7 +796,7 @@ PrintAllowedSenders(int iListToPrint)
 #define iListToPrint_MAX 2
 #endif
 	assert((iListToPrint > 0) && (iListToPrint <= iListToPrint_MAX));
-	
+
 	dbgprintf("Allowed %s Senders:\n", SENDER_TEXT[iListToPrint]);
 
 	pSender = (iListToPrint == 1) ? pAllowedSenders_UDP :
@@ -1006,13 +1003,13 @@ static int isAllowedSender2(uchar *pszType, struct sockaddr *pFrom, const char *
 	int ret;
 
 	assert(pFrom != NULL);
-	
+
 	if(setAllowRoot(&pAllowRoot, pszType) != RS_RET_OK)
 		return 0;	/* if something went wrong, we deny access - that's the better choice... */
 
 	if(pAllowRoot == NULL)
 		return 1; /* checking disabled, everything is valid! */
-	
+
 	/* now we loop through the list of allowed senders. As soon as
 	 * we find a match, we return back (indicating allowed). We loop
 	 * until we are out of allowed senders. If so, we fall through the
@@ -1186,7 +1183,7 @@ getLocalHostname(uchar **ppName)
 
 	char *dot = strstr(hnbuf, ".");
 	struct addrinfo *res = NULL;
-	if(!empty_hostname && dot == NULL && !glbl.GetDisableDNS()) {
+	if(!empty_hostname && dot == NULL && runConf != NULL && !glbl.GetDisableDNS(runConf)) {
 		/* we need to (try) to find the real name via resolver */
 		struct addrinfo flags;
 		memset(&flags, 0, sizeof(flags));
@@ -1475,7 +1472,7 @@ create_udp_socket(uchar *hostname,
 		hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
 	else
 		hints.ai_flags = AI_NUMERICSERV;
-	hints.ai_family = glbl.GetDefPFFamily();
+	hints.ai_family = glbl.GetDefPFFamily(runConf);
 	hints.ai_socktype = SOCK_DGRAM;
 #	if defined (_AIX)
 	/* AIXPORT : SOCK_DGRAM has the protocol IPPROTO_UDP
@@ -1690,9 +1687,6 @@ CODESTARTobjQueryInterface(net)
 	pIf->CmpHost = CmpHost;
 	pIf->HasRestrictions = HasRestrictions;
 	pIf->GetIFIPAddr = getIFIPAddr;
-	/* data members */
-	pIf->pACLAddHostnameOnFail = &ACLAddHostnameOnFail;
-	pIf->pACLDontResolve = &ACLDontResolve;
 finalize_it:
 ENDobjQueryInterface(net)
 

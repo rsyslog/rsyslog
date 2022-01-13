@@ -31,6 +31,14 @@
 
 /* --- configuration objects (the plan is to have ALL upper layers in this file) --- */
 
+#define REPORT_CHILD_PROCESS_EXITS_NONE 0
+#define REPORT_CHILD_PROCESS_EXITS_ERRORS 1
+#define REPORT_CHILD_PROCESS_EXITS_ALL 2
+
+#ifndef DFLT_INT_MSGS_SEV_FILTER
+	#define DFLT_INT_MSGS_SEV_FILTER 6	/* Warning level and more important */
+#endif
+
 /* queue config parameters. TODO: move to queue.c? */
 struct queuecnf_s {
 	int iMainMsgQueueSize;		/* size of the main message queue above */
@@ -57,6 +65,19 @@ struct queuecnf_s {
 	int iMainMsgQueueDeqtWinToHr;	/* hour begin of time frame when queue is to be dequeued */
 };
 
+/* parser config parameters */
+struct parsercnf_s {
+	uchar cCCEscapeChar; /* character to be used to start an escape sequence for control chars */
+	int bDropTrailingLF; /* drop trailing LF's on reception? */
+	int bEscapeCCOnRcv; /* escape control characters on reception: 0 - no, 1 - yes */
+	int bSpaceLFOnRcv; /* replace newlines with spaces on reception: 0 - no, 1 - yes */
+	int bEscape8BitChars; /* escape characters > 127 on reception: 0 - no, 1 - yes */
+	int bEscapeTab; /* escape tab control character when doing CC escapes: 0 - no, 1 - yes */
+	int bParserEscapeCCCStyle; /* escape control characters in c style: 0 - no, 1 - yes */
+	int bPermitSlashInProgramname;
+	int bParseHOSTNAMEandTAG; /* parser modification (based on startup params!) */
+};
+
 /* globals are data items that are really global, and can be set only
  * once (at least in theory, because the legacy system permits them to
  * be re-set as often as the user likes).
@@ -77,12 +98,68 @@ struct globals_s {
 	int abortOnIDResolutionFail;
 	int umask;		/* umask to use */
 	uchar *pszConfDAGFile;	/* name of config DAG file, non-NULL means generate one */
+	uchar *pszWorkDir;
+	int bDropMalPTRMsgs;/* Drop messages which have malicious PTR records during DNS lookup */
+	uchar *operatingStateFile;
+	int debugOnShutdown; /* start debug log when we are shut down */
+	int iGnuTLSLoglevel;/* Sets GNUTLS Debug Level */
+	uchar *pszDfltNetstrmDrvrCAF; /* default CA file for the netstrm driver */
+	uchar *pszDfltNetstrmDrvrCertFile;/* default cert file for the netstrm driver (server) */
+	uchar *pszDfltNetstrmDrvrKeyFile; /* default key file for the netstrm driver (server) */
+	uchar *pszDfltNetstrmDrvr; /* module name of default netstream driver */
+	uchar *oversizeMsgErrorFile; /* File where oversize messages are written to */
+	int reportOversizeMsg; /* shall error messages be generated for oversize messages? */
+	int oversizeMsgInputMode; /* Mode which oversize messages will be forwarded */
+	int reportChildProcessExits;
+	int bActionReportSuspension;
+	int bActionReportSuspensionCont;
+	short janitorInterval; /* interval (in minutes) at which the janitor runs */
+	int reportNewSenders;
+	int reportGoneAwaySenders;
+	int senderStatsTimeout;
+	int senderKeepTrack; /* keep track of known senders? */
+	int inputTimeoutShutdown; /* input shutdown timeout in ms */
+	int iDefPFFamily; /* protocol family (IPv4, IPv6 or both) */
+	int ACLAddHostnameOnFail; /* add hostname to acl when DNS resolving has failed */
+	int ACLDontResolve; /* add hostname to acl instead of resolving it to IP(s) */
+	int bDisableDNS; /* don't look up IP addresses of remote messages */
+	int bProcessInternalMessages; /* Should rsyslog itself process internal messages?
+		* 1 - yes
+		* 0 - send them to libstdlog (e.g. to push to journal) or syslog()
+		*/
+	uint64_t glblDevOptions; /* to be used by developers only */
+	int intMsgRateLimitItv;
+	int intMsgRateLimitBurst;
+	int intMsgsSeverityFilter;/* filter for logging internal messages by syslog sev. */
+	int permitCtlC;
+
+	int actq_dflt_toQShutdown; /* queue shutdown */
+	int actq_dflt_toActShutdown; /* action shutdown (in phase 2) */
+	int actq_dflt_toEnq; /* timeout for queue enque */
+	int actq_dflt_toWrkShutdown; /* timeout for worker thread shutdown */
+
+	int ruleset_dflt_toQShutdown; /* queue shutdown */
+	int ruleset_dflt_toActShutdown;	/* action shutdown (in phase 2) */
+	int ruleset_dflt_toEnq; /* timeout for queue enque */
+	int ruleset_dflt_toWrkShutdown;	/* timeout for worker thread shutdown */
+
+	unsigned dnscacheDefaultTTL; /* 24 hrs default TTL */
+	int dnscacheEnableTTL; /* expire entries or not (0) ? */
+	int shutdownQueueDoubleSize;
+	int optionDisallowWarning;	/* complain if message from disallowed sender is received */
+	int bSupportCompressionExtension;
+	#ifdef ENABLE_LIBLOGGING_STDLOG
+		stdlog_channel_t stdlog_hdl; /* handle to be used for stdlog */
+		uchar *stdlog_chanspec;
+	#endif
+	int iMaxLine; /* maximum length of a syslog message */
 
 	// TODO are the following ones defaults?
 	int bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
 
 	//TODO: other representation for main queue? Or just load it differently?
 	queuecnf_t mainQ;	/* main queue parameters */
+	parsercnf_t parser; /* parser parameters */
 };
 
 /* (global) defaults are global in the sense that they are accessible

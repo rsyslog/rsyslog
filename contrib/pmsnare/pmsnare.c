@@ -59,6 +59,7 @@
 #include "parser.h"
 #include "datetime.h"
 #include "unicode-helper.h"
+#include "rsconf.h"
 
 MODULE_TYPE_PARSER
 MODULE_TYPE_NOKEEP
@@ -117,7 +118,7 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
 	CHKmalloc(inst = malloc(sizeof(instanceConf_t)));
 	inst->next = NULL;
 	*pinst = inst;
-	
+
 	/*  Add to list of instances. */
 	if(modInstances == NULL) {
 		CHKmalloc(modInstances = malloc(sizeof(modInstances_t)));
@@ -151,7 +152,7 @@ CODESTARTnewParserInst
 	/* If using the old config, just use global settings for each instance. */
 	if (lst == NULL)
 		FINALIZE;
-	
+
 	/* If using the new config, process module settings for this instance. */
 	if((pvals = nvlstGetParams(lst, &parserpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -177,7 +178,7 @@ CODESTARTnewParserInst
 			dbgprintf("pmsnare: program error, non-handled param '%s'\n", parserpblk.descr[i].name);
 		}
 	}
-	
+
 finalize_it:
 CODE_STD_FINALIZERnewParserInst
 	if(lst != NULL)
@@ -220,13 +221,13 @@ CODESTARTendCnfLoad
 	 * This can't be done any earlier because the config wasn't fully loaded until now. */
 	for(inst = modInstances->root; inst != NULL; inst = inst->next) {
 		if(inst->bEscapeCCOnRcv == -1)
-			inst->bEscapeCCOnRcv = glbl.GetParserEscapeControlCharactersOnReceive();
+			inst->bEscapeCCOnRcv = glbl.GetParserEscapeControlCharactersOnReceive(modConf->pConf);
 		if(inst->bEscapeTab == -1)
-			inst->bEscapeTab = glbl.GetParserEscapeControlCharacterTab();
+			inst->bEscapeTab = glbl.GetParserEscapeControlCharacterTab(modConf->pConf);
 		if(inst->bParserEscapeCCCStyle == -1)
-			inst->bParserEscapeCCCStyle = glbl.GetParserEscapeControlCharactersCStyle();
+			inst->bParserEscapeCCCStyle = glbl.GetParserEscapeControlCharactersCStyle(modConf->pConf);
 		if(inst->cCCEscapeChar == '\0')
-			inst->cCCEscapeChar = glbl.GetParserControlCharacterEscapePrefix();
+			inst->cCCEscapeChar = glbl.GetParserControlCharacterEscapePrefix(modConf->pConf);
 
 		/* Determine tab representation. Possible options:
 		 *		"#011"	escape on, escapetabs on, no change to prefix (default)
@@ -275,7 +276,7 @@ BEGINparse2
 	uchar *p2parse;
 	int lenMsg;
 	int snaremessage; /* 0 means not a snare message, otherwise it's the index of the tab after the tag  */
-	
+
 CODESTARTparse2
 	dbgprintf("Message will now be parsed by fix Snare parser.\n");
 	assert(pMsg != NULL);
@@ -383,7 +384,7 @@ CODESTARTparse2
 			snaremessage = p2parse - pMsg->pszRawMsg + 11;
 		}
 	}
-	
+
 	if(snaremessage) {
 		/* Skip to the end of the tag. */
 		p2parse = pMsg->pszRawMsg + snaremessage;
@@ -403,7 +404,7 @@ CODESTARTparse2
 
 		DBGPRINTF("pmsnare: new message: [%d]'%s'\n", lenMsg, pMsg->pszRawMsg + pMsg->offAfterPRI);
 	}
-	
+
 	ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 
 finalize_it:
@@ -435,7 +436,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
 	DBGPRINTF("snare parser init called, compiled with version %s\n", VERSION);
-	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG();
+	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG(loadConf);
 	/* cache value, is set only during rsyslogd option processing */
 ENDmodInit
 

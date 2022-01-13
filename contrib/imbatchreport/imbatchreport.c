@@ -930,7 +930,7 @@ CODESTARTwillRun
 		sizeof("imbatchreport") - 1));
 	CHKiRet(prop.ConstructFinalize(pInputName));
 
-	fixedModConf.max_msg_size = glbl.GetMaxLine();
+	fixedModConf.max_msg_size = glbl.GetMaxLine(runConf);
 	DBGPRINTF("Max message len %zu\n", fixedModConf.max_msg_size);
 	CHKmalloc(fixedModConf.msg_buffer = (char*)malloc(fixedModConf.max_msg_size + 1));
 finalize_it:
