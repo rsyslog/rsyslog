@@ -101,6 +101,7 @@ typedef struct rulesets_s rulesets_t;
 typedef struct globals_s globals_t;
 typedef struct defaults_s defaults_t;
 typedef struct actions_s actions_t;
+typedef struct timezones_s timezones_t;
 typedef struct rsconf_s rsconf_t;
 typedef struct cfgmodules_s cfgmodules_t;
 typedef struct cfgmodules_etry_s cfgmodules_etry_t;

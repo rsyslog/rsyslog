@@ -140,12 +140,10 @@ extern DEF_ATOMIC_HELPER_MUT(mutTerminateInputs);
 
 void glblPrepCnf(void);
 void glblProcessCnf(struct cnfobj *o);
-void glblProcessTimezone(struct cnfobj *o);
 void glblProcessMainQCnf(struct cnfobj *o);
 void glblDestructMainqCnfObj(void);
 rsRetVal glblDoneLoadCnf(void);
 const uchar * glblGetWorkDirRaw(rsconf_t *cnf);
-tzinfo_t* glblFindTimezoneInfo(char *id);
 int GetGnuTLSLoglevel(rsconf_t *cnf);
 int glblGetMaxLine(rsconf_t *cnf);
 int bs_arrcmp_glblDbgFiles(const void *s1, const void *s2);

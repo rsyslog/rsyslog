@@ -42,6 +42,8 @@
 #include "srUtils.h"
 #include "stringbuf.h"
 #include "errmsg.h"
+#include "rsconf.h"
+#include "timezones.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -731,7 +733,7 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr,
 			/* found TZ, apply it */
 			tzinfo_t* tzinfo;
 			tzstring[i] = '\0';
-			if((tzinfo = glblFindTimezoneInfo((char*) tzstring)) == NULL) {
+			if((tzinfo = glblFindTimezone(runConf, (char*) tzstring)) == NULL) {
 				DBGPRINTF("ParseTIMESTAMP3164: invalid TZ string '%s' -- ignored\n",
 					  tzstring);
 			} else {
@@ -1016,7 +1018,7 @@ formatTimestamp3164(struct syslogTime *ts, char* pBuf, int bBuggyDay)
 	int iDay;
 	assert(ts != NULL);
 	assert(pBuf != NULL);
-	
+
 	pBuf[0] = monthNames[(ts->month - 1)% 12][0];
 	pBuf[1] = monthNames[(ts->month - 1) % 12][1];
 	pBuf[2] = monthNames[(ts->month - 1) % 12][2];

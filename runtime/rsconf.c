@@ -68,6 +68,7 @@
 #include "modules.h"
 #include "dirty.h"
 #include "template.h"
+#include "timezones.h"
 
 extern char* yytext;
 /* static data */
@@ -220,6 +221,10 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	#endif
 	pThis->globals.iMaxLine = 8096;
 
+	/* timezone specific*/
+	pThis->timezones.tzinfos = NULL;
+	pThis->timezones.ntzinfos = 0;
+
 	/* queue params */
 	pThis->globals.mainQ.iMainMsgQueueSize = 100000;
 	pThis->globals.mainQ.iMainMsgQHighWtrMark = 80000;
@@ -308,6 +313,7 @@ CODESTARTobjDestruct(rsconf)
 	dynstats_destroyAllBuckets();
 	perctileBucketsDestruct();
 	ochDeleteAll();
+	freeTimezones(pThis);
 	free(pThis->globals.mainQ.pszMainMsgQFName);
 	free(pThis->globals.pszConfDAGFile);
 	free(pThis->globals.pszWorkDir);
