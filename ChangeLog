@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2202.0 (aka 2022.02) 2021-02-??
+- 2022-01-17: imkmsg bugfix: effectively disabled input on error reading kmsg
+  Due to a program bug, imkmsg could not recover from an kmsg read error.
+  Note that recovering is possible and was intended.
+  Thanks to Kailash Sethuraman for the patch.
 - 2022-01-17: imtcp bugfix: worker threads were not properly terminated
   Graceful shutdown of Rsyslog could lead to segmentation faults when
   multiple imtcp inputs were being used. That is because the rest of the
