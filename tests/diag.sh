@@ -2178,8 +2178,8 @@ ensure_elasticsearch_ready() {
 
 # $2, if set, is the number of additional ES instances
 start_elasticsearch() {
-	# Heap Size (limit to 128MB for testbench! defaults is way to HIGH)
-	export ES_JAVA_OPTS="-Xms128m -Xmx128m"
+	# Heap Size (limit to 256MB for testbench! defaults is way to HIGH)
+	export ES_JAVA_OPTS="-Xms256m -Xmx256m"
 
 	dep_work_dir=$(readlink -f .dep_wrk)
 	dep_work_es_config="es.yml"
@@ -2193,7 +2193,7 @@ start_elasticsearch() {
 	printf 'elasticsearch pid is %s\n' "$(cat $dep_work_es_pidfile)"
 
 	# Wait for startup with hardcoded timeout
-	timeoutend=60
+	timeoutend=120
 	timeseconds=0
 	# Loop until elasticsearch port is reachable or until
 	# timeout is reached!
@@ -2204,6 +2204,16 @@ start_elasticsearch() {
 
 		if [ "$timeseconds" -gt "$timeoutend" ]; then 
 			echo "--- TIMEOUT ( $timeseconds ) reached!!!"
+			if [ ! -d $dep_work_dir/es ]; then
+				echo "ElasticSearch $dep_work_dir/es does not exist, no ElasticSearch debuglog"
+			else
+				echo "Dumping rsyslog-testbench.log from ElasticSearch instance $1"
+				echo "========================================="
+				cat $dep_work_dir/es/logs/rsyslog-testbench.log
+				echo "========================================="
+#				printf 'non-info is:\n'
+#				grep --invert-match '^\[.* INFO ' $dep_work_dir/kafka/logs/server.log | grep '^\['
+			fi
 			error_exit 1
 		fi
 	done
