@@ -214,7 +214,7 @@ readkmsg(void)
 		if (i > 0) {
 			/* successful read of message of nonzero length */
 			pRcv[i] = '\0';
-		} else if (i == -EPIPE) {
+		} else if (i < 0 && errno == EPIPE) {
 			imkmsgLogIntMsg(LOG_WARNING,
 					"imkmsg: some messages in circular buffer got overwritten");
 			continue;
