@@ -1007,6 +1007,7 @@ CODESTARTrunInput
 	iRet = tcpsrv.Run(tcpsrv_root->tcpsrv);
 
 	/* de-init remaining servers */
+	etry = tcpsrv_root->next;
 	while(etry != NULL) {
 		stopSrvWrkr(etry);
 		etry = etry->next;
