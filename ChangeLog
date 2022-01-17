@@ -1,5 +1,13 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2202.0 (aka 2022.02) 2021-02-??
+- 2022-01-17: imtcp bugfix: worker threads were not properly terminated
+  Graceful shutdown of Rsyslog could lead to segmentation faults when
+  multiple imtcp inputs were being used. That is because the rest of the
+  tcpsrv threads are left behind running, while their underlying objects
+  are being disposed by the main thread as part of the module
+  de-initialization.
+  closes:  https://github.com/rsyslog/rsyslog/issues/4776
+  Thanks to Gabor Orosz <goro@goro.io> for the analysis and patch.
 - 2022-01-07: omlibdbi bugfix: use-after-free bug
   This occurred in when sqllite driver was used. Depending on circumstances, this had
   no visible issues (often) up to rsyslog segfault. The busier rsyslog is, the more
