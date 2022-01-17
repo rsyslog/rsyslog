@@ -229,7 +229,11 @@ static rsRetVal initPgSQL(wrkrInstanceData_t *pWrkrData, int bSilent)
 		iRet = RS_RET_SUSPENDED;
 	}
 
+#ifdef HAVE_PGSSLINUSE
 	sslStatus = PQsslInUse(pWrkrData->f_hpgsql);
+#else
+	sslStatus = PQgetssl(pWrkrData->f_hpgsql) == NULL ? 0 : 1;
+#endif
 	dbgprintf("initPgSQL: ssl status: %d\n", sslStatus);
 
 	RETiRet;
