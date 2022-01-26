@@ -181,7 +181,7 @@ tplToString(struct template *__restrict__ const pTpl,
 		memcpy(iparam->param, pVal, iLenVal+1);
 		FINALIZE;
 	}
-	
+
 	/* we have a "regular" template with template entries */
 
 	/* loop through the template. We obtain one value
@@ -257,7 +257,7 @@ tplToString(struct template *__restrict__ const pTpl,
 	}
 	iparam->param[iBuf] = '\0';
 	iparam->lenStr = iBuf;
-	
+
 finalize_it:
 	if(bMustBeFreed) {
 		free(pVal);
@@ -475,7 +475,7 @@ static struct templateEntry* tpeConstruct(struct template *pTpl)
 
 	if((pTpe = calloc(1, sizeof(struct templateEntry))) == NULL)
 		return NULL;
-	
+
 	/* basic initialization is done via calloc() - need to
 	 * initialize only values != 0. */
 
@@ -526,7 +526,7 @@ tplConstruct(rsconf_t *conf)
 	struct template *pTpl;
 	if((pTpl = calloc(1, sizeof(struct template))) == NULL)
 		return NULL;
-	
+
 	/* basic initialisation is done via calloc() - need to
 	 * initialize only values != 0. */
 
@@ -1235,7 +1235,7 @@ struct template *tplAddLine(rsconf_t *conf, const char* pName, uchar** ppRestOfC
 	assert(ppRestOfConfLine != NULL);
 	if((pTpl = tplConstruct(conf)) == NULL)
 		return NULL;
-	
+
 	DBGPRINTF("tplAddLine processing template '%s'\n", pName);
 	pTpl->iLenName = strlen(pName);
 	pTpl->pszName = (char*) malloc(pTpl->iLenName + 1);
@@ -1256,7 +1256,7 @@ struct template *tplAddLine(rsconf_t *conf, const char* pName, uchar** ppRestOfC
 
 	while(isspace((int)*p))/* skip whitespace */
 		++p;
-	
+
 	switch(*p) {
 	case '"': /* just continue */
 		break;
@@ -1310,7 +1310,7 @@ struct template *tplAddLine(rsconf_t *conf, const char* pName, uchar** ppRestOfC
 			bDone = 1;
 		}
 	}
-	
+
 	/* we now have the template - let's look at the options (if any)
 	 * we process options until we reach the end of the string or
 	 * an error occurs - whichever is first.
@@ -1383,7 +1383,7 @@ createConstantTpe(struct template *pTpl, struct cnfobj *o)
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 	cnfparamsPrint(&pblkConstant, pvals);
-	
+
 	for(i = 0 ; i < pblkConstant.nParams ; ++i) {
 		if(!pvals[i].bUsed)
 			continue;
@@ -1487,7 +1487,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 	cnfparamsPrint(&pblkProperty, pvals);
-	
+
 	for(i = 0 ; i < pblkProperty.nParams ; ++i) {
 		if(!pvals[i].bUsed)
 			continue;
@@ -1909,7 +1909,7 @@ tplProcessCnf(struct cnfobj *o)
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 	cnfparamsPrint(&pblk, pvals);
-	
+
 	for(i = 0 ; i < pblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
 			continue;
@@ -2049,7 +2049,7 @@ tplProcessCnf(struct cnfobj *o)
 	}
 	pTpl->pszName = name;
 	pTpl->iLenName = lenName;
-	
+
 	switch(tplType) {
 	case T_STRING:	p = tplStr;
 			while(*p) {
@@ -2080,7 +2080,7 @@ tplProcessCnf(struct cnfobj *o)
 			pTpl->bHaveSubtree = 1;
 			break;
 	}
-	
+
 	pTpl->optFormatEscape = NO_ESCAPE;
 	if(o_stdsql)
 		pTpl->optFormatEscape = STDSQL_ESCAPE;
