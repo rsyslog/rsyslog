@@ -900,8 +900,10 @@ runInputModules(void)
 			== RS_RET_OK) ? 0 : 1;
 			DBGPRINTF("running module %s with config %p, term mode: %s\n", node->pMod->pszName, node,
 				  bNeedsCancel ? "cancel" : "cooperative/SIGTTIN");
+
+			uchar *name = (node->pMod->cnfName == NULL) ? node->pMod->pszName : node->pMod->cnfName;
 			thrdCreate(node->pMod->mod.im.runInput, node->pMod->mod.im.afterRun, bNeedsCancel,
-			           (node->pMod->cnfName == NULL) ? node->pMod->pszName : node->pMod->cnfName);
+				name, iConfigReloaded);
 		}
 		node = module.GetNxtCnfType(runConf, node, eMOD_IN);
 	}
