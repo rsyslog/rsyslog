@@ -517,7 +517,7 @@ static rsRetVal initConfVars(void)\
 #define ENDinitConfVars \
 	RETiRet;\
 }
-	
+
 
 /* queryEtryPt()
  */
@@ -658,6 +658,14 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = freeCnf;\
 	} \
 	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
+
+/* the following block is to be added for modules that support
+ * dynamic config reload
+ */
+#define CODEqueryEtryPt_STD_CONF2_reloadCnf_QUERIES \
+	  else if(!strcmp((char*) name, "reloadCnf")) {\
+		*pEtryPoint = reloadCnf;\
+	}
 
 /* the following block is to be added for modules that support v2
  * module global parameters [module(...)]
@@ -1020,6 +1028,20 @@ static rsRetVal freeCnf(void *ptr)\
 	RETiRet;\
 }
 
+/* reloadCnf()
+ * This is a function tells a module that dynamic config reload
+ * was invoked.
+ */
+#define BEGINreloadCnf \
+static rsRetVal reloadCnf(void)\
+{\
+	DEFiRet;
+#define CODESTARTreloadCnf
+
+#define ENDreloadCnf \
+	RETiRet;\
+}
+
 
 /* runInput()
  * This is the main function for input modules. It is used to gather data from the
@@ -1068,7 +1090,7 @@ static rsRetVal willRun(void)\
  * rgerhards, 2007-12-17
  */
 #define BEGINafterRun \
-static rsRetVal afterRun(void)\
+static rsRetVal afterRun(thrdInfo_t __attribute__((unused)) *pThrd)\
 {\
 	DEFiRet;
 
