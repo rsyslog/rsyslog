@@ -2,7 +2,7 @@
  *
  * Module begun 2011-07-01 by Rainer Gerhards
  *
- * Copyright 2011-2019 Rainer Gerhards and Others.
+ * Copyright 2011-2022 Rainer Gerhards and Others.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -2936,11 +2936,16 @@ evalVar(struct cnfvar *__restrict__ const var, void *__restrict__ const usrptr,
 		localRet = msgGetJSONPropJSONorString((smsg_t*)usrptr, &var->prop, &json, &cstr);
 		if(json != NULL) {
 			assert(cstr == NULL);
-			ret->datatype = 'J';
-			ret->d.json = (localRet == RS_RET_OK) ? json : NULL;
-			DBGPRINTF("rainerscript: (json) var %d:%s: '%s'\n",
-				var->prop.id, var->prop.name,
-			  (ret->d.json == NULL) ? "" : json_object_get_string(ret->d.json));
+			if(json_object_get_type(json) == json_type_int) {
+				ret->datatype = 'N';
+				ret->d.n = fjson_object_get_int64(json);
+			} else {
+				ret->datatype = 'J';
+				ret->d.json = (localRet == RS_RET_OK) ? json : NULL;
+				DBGPRINTF("rainerscript: (json) var %d:%s: '%s'\n",
+					var->prop.id, var->prop.name,
+				  (ret->d.json == NULL) ? "" : json_object_get_string(ret->d.json));
+			}
 		} else { /* we have a string */
 			DBGPRINTF("rainerscript: (json/string) var %d: '%s'\n", var->prop.id, cstr);
 			ret->datatype = 'S';
