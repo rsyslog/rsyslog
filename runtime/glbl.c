@@ -174,7 +174,8 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "parser.supportcompressionextension", eCmdHdlrBinary, 0 },
 	{ "shutdown.queue.doublesize", eCmdHdlrBinary, 0 },
 	{ "debug.files", eCmdHdlrArray, 0 },
-	{ "debug.whitelist", eCmdHdlrBinary, 0 }
+	{ "debug.whitelist", eCmdHdlrBinary, 0 },
+	{ "hup.reload.config", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk paramblk =
 	{ CNFPARAMBLK_VERSION,
@@ -1044,7 +1045,8 @@ glblProcessCnf(struct cnfobj *o)
 			cnfparamvals[i].bUsed = TRUE;
 		}
 	}
-done:	return;
+done:
+	return;
 }
 
 /* Set mainq parameters. Note that when this is not called, we'll use the
@@ -1138,7 +1140,7 @@ glblDoneLoadCnf(void)
 	displayTimezones(loadConf);
 
 	if(cnfparamvals == NULL)
-		goto finalize_it;
+		FINALIZE;
 
 	for(i = 0 ; i < paramblk.nParams ; ++i) {
 		if(!cnfparamvals[i].bUsed)
@@ -1343,6 +1345,12 @@ glblDoneLoadCnf(void)
 			loadConf->globals.dnscacheEnableTTL = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "parser.supportcompressionextension")) {
 			loadConf->globals.bSupportCompressionExtension = cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "hup.reload.config")) {
+			loadConf->globals.bHUPReloadConfig = (int) cnfparamvals[i].val.d.n;
+			if (loadConf->globals.bHUPReloadConfig) {
+				LogError(0, RS_RET_OK, "Warning: Dynamic reload config is activated. "
+					"Please note that this feature is still in development.");
+			}
 		} else {
 			dbgprintf("glblDoneLoadCnf: program error, non-handled "
 				"param '%s'\n", paramblk.descr[i].name);
@@ -1354,7 +1362,8 @@ glblDoneLoadCnf(void)
 		stddbg = -1;
 	}
 
-finalize_it:	RETiRet;
+finalize_it:
+	RETiRet;
 }
 
 

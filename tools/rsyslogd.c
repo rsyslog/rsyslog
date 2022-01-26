@@ -1747,6 +1747,52 @@ DEFFUNC_llExecFunc(doHUPActions)
 	return RS_RET_OK; /* we ignore errors, we can not do anything either way */
 }
 
+static void
+doDynamicCnfReload(void)
+{
+	DEFiRet;
+	resetErrMsgsFlag();
+	// glblPrepCnf();
+	iRet = rsconf.Load(&ourConf, ConfFile);
+	if((iRet == RS_RET_CONF_FILE_NOT_FOUND) || (iRet == RS_RET_NO_ACTIONS)) {
+		ABORT_FINALIZE(iRet);
+	}
+	if(hadErrMsgs()) {
+		if(loadConf->globals.bAbortOnUncleanConfig) {
+			/* TODO reconsider this step
+			 * should we switch back to previous config?
+			 * otherwise cleanup is required
+			 */
+			fprintf(stderr, "rsyslogd: global(AbortOnUncleanConfig=\"on\") is set, and "
+				"config is not clean.\n"
+				"Check error log for details, fix errors and restart. As a last\n"
+				"resort, you may want to use global(AbortOnUncleanConfig=\"off\") \n"
+				"to permit a startup with a dirty config.\n");
+			exit(2);
+		}
+	}
+	CHKiRet(rsconf.Activate(ourConf));
+
+	if(runConf->globals.bLogStatusMsgs) {
+		char bufStartUpMsg[512];
+		snprintf(bufStartUpMsg, sizeof(bufStartUpMsg),
+			 "[origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
+			 "\" x-pid=\"%d\" x-info=\"https://www.rsyslog.com\"] start",
+			 (int) glblGetOurPid());
+		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
+	}
+
+	/* TODO can we drop priviliges at this point? */
+	// if(!rsconfNeedDropPriv(runConf)) {
+	// 	CHKiRet(writePidFile());
+	// }
+
+finalize_it:
+	if (iRet != RS_RET_OK) {
+		fprintf(stderr, "rsyslogd: run failed with error %d\n", iRet);
+		exit(1);
+	}
+}
 
 /* This function processes a HUP after one has been detected. Note that this
  * is *NOT* the sighup handler. The signal is recorded by the handler, that record
@@ -1763,7 +1809,7 @@ doHUP(void)
 {
 	char buf[512];
 
-	if(ourConf->globals.bLogStatusMsgs) {
+	if(runConf->globals.bLogStatusMsgs) {
 		snprintf(buf, sizeof(buf),
 			 "[origin software=\"rsyslogd\" " "swVersion=\"" VERSION
 			 "\" x-pid=\"%d\" x-info=\"https://www.rsyslog.com\"] rsyslogd was HUPed",
@@ -1772,11 +1818,15 @@ doHUP(void)
 		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
 	}
 
-	queryLocalHostname(); /* re-read our name */
-	ruleset.IterateAllActions(ourConf, doHUPActions, NULL);
-	modDoHUP();
-	lookupDoHUP();
-	errmsgDoHUP();
+	if (runConf->globals.bHUPReloadConfig) {
+		doDynamicCnfReload();
+	} else {
+		queryLocalHostname(); /* re-read our name */
+		ruleset.IterateAllActions(runConf, doHUPActions, NULL);
+		modDoHUP();
+		lookupDoHUP();
+		errmsgDoHUP();
+	}
 }
 
 /* rsyslogdDoDie() is a signal handler. If called, it sets the bFinished variable

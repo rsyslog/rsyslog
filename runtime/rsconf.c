@@ -260,6 +260,8 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.parser.bParserEscapeCCCStyle = 0;
 	pThis->globals.parser.bPermitSlashInProgramname = 0;
 	pThis->globals.parser.bParseHOSTNAMEandTAG = 1;
+
+	pThis->globals.bHUPReloadConfig = 0;
 }
 
 
