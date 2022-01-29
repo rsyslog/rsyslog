@@ -1016,7 +1016,13 @@ modulesEqual(const modConfData_t *l, const modConfData_t *r)
 		USTR_EQUALS(pszStrmDrvrCAFile) &&
 		USTR_EQUALS(pszStrmDrvrKeyFile) &&
 		USTR_EQUALS(pszStrmDrvrCertFile) &&
-		net.PermittedPeersEqual(l->pPermPeersRoot, r->pPermPeersRoot)
+		net.PermittedPeersEqual(l->pPermPeersRoot, r->pPermPeersRoot) &&
+		/* compare global parameters that might modify the behavior of this module */
+		INT_EQUALS(pConf->globals.iGnuTLSLoglevel) &&
+		USTR_EQUALS(pConf->globals.pszDfltNetstrmDrvr) &&
+		USTR_EQUALS(pConf->globals.pszDfltNetstrmDrvrCAF) &&
+		USTR_EQUALS(pConf->globals.pszDfltNetstrmDrvrCertFile) &&
+		USTR_EQUALS(pConf->globals.pszDfltNetstrmDrvrKeyFile)
 	);
 }
 
@@ -1097,9 +1103,8 @@ CODESTARTreloadCnf
 
 		for (instanceConf_t *runInst = runModConf->root; runInst != NULL; runInst = runInst->next) {
 			if (instancesEqual(actLoadInst, runInst)) {
-				DBGPRINTF("Instance %p(port=%s) from old config will be moved to the new config"
-				" and shall continue running, because has the same content as %p\n",
-				runInst, actLoadInst->cnf_params->pszPort, actLoadInst);
+				DBGPRINTF("Instance %p(port=%s, listenPortFileName=%s) from old config"
+				" will be moved to the new config and shall continue running\n", runInst, actLoadInst->cnf_params->pszPort, actLoadInst->cnf_params->pszLstnPortFileName);
 				if (loadModConf->act == actLoadInst)
 					loadModConf->act = loadModConf->act->next;
 				unlinkInstance(runModConf, runInst);
