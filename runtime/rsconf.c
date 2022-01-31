@@ -249,6 +249,7 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.mainQ.bMainMsgQSaveOnShutdown = 1;
 	pThis->globals.mainQ.iMainMsgQueueDeqtWinFromHr = 0;
 	pThis->globals.mainQ.iMainMsgQueueDeqtWinToHr = 25;
+	pThis->pMsgQueue = NULL;
 
 	pThis->globals.parser.cCCEscapeChar = '#';
 	pThis->globals.parser.bDropTrailingLF = 1;
@@ -894,36 +895,61 @@ startInputModules(void)
 	return RS_RET_OK; /* intentional: we do not care about module errors */
 }
 
+/* load the main queue */
+static rsRetVal
+loadMainQueue(void)
+{
+	DEFiRet;
+	struct cnfobj *mainqCnfObj;
+
+	mainqCnfObj = glbl.GetmainqCnfObj();
+	DBGPRINTF("loadMainQueue: mainq cnf obj ptr is %p\n", mainqCnfObj);
+	/* create message queue */
+	iRet = createMainQueue(&loadConf->pMsgQueue, UCHAR_CONSTANT("main Q"),
+		    		(mainqCnfObj == NULL) ? NULL : mainqCnfObj->nvlst);
+	if (iRet == RS_RET_OK) {
+		if (runConf != NULL) { /* dynamic config reload */
+			int areEqual = queuesEqual(loadConf->pMsgQueue, runConf->pMsgQueue);
+			DBGPRINTF("Comparison of old and new main queues: %d\n", areEqual);
+			if (areEqual) { /* content of the new main queue is the same as it was in previous conf */
+				qqueueDestruct(&loadConf->pMsgQueue);
+				loadConf->pMsgQueue = runConf->pMsgQueue;
+			}
+		}
+	}
+
+	if(iRet != RS_RET_OK) {
+		/* no queue is fatal, we need to give up in that case... */
+		fprintf(stderr, "fatal error %d: could not create message queue - rsyslogd can not run!\n", iRet);
+		FINALIZE;
+	}
+finalize_it:
+	glblDestructMainqCnfObj();
+	RETiRet;
+}
 
 /* activate the main queue */
 static rsRetVal
 activateMainQueue(void)
 {
-	struct cnfobj *mainqCnfObj;
 	DEFiRet;
 
-	mainqCnfObj = glbl.GetmainqCnfObj();
-	DBGPRINTF("activateMainQueue: mainq cnf obj ptr is %p\n", mainqCnfObj);
-	/* create message queue */
-	iRet = createMainQueue(&pMsgQueue, UCHAR_CONSTANT("main Q"),
-		    		(mainqCnfObj == NULL) ? NULL : mainqCnfObj->nvlst);
-	if(iRet == RS_RET_OK) {
-		iRet = startMainQueue(pMsgQueue);
-	}
+	DBGPRINTF("activateMainQueue: will try to activate main queue %p\n", runConf->pMsgQueue);
+
+	iRet = startMainQueue(runConf, runConf->pMsgQueue);
 	if(iRet != RS_RET_OK) {
 		/* no queue is fatal, we need to give up in that case... */
 		fprintf(stderr, "fatal error %d: could not create message queue - rsyslogd can not run!\n", iRet);
 		FINALIZE;
 	}
 
-	if(runConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DIRECT) { // ourConf -> runConf
+	if(runConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DIRECT) {
 		PREFER_STORE_0_TO_INT(&bHaveMainQueue);
 	} else {
 		PREFER_STORE_1_TO_INT(&bHaveMainQueue);
 	}
 	DBGPRINTF("Main processing queue is initialized and running\n");
 finalize_it:
-	glblDestructMainqCnfObj();
 	RETiRet;
 }
 
@@ -940,6 +966,20 @@ setUmask(int iUmask)
 	return RS_RET_OK;
 }
 
+/* Remove resources from previous config */
+static void
+cleanupOldCnf(rsconf_t *cnf)
+{
+	if (cnf == NULL)
+		FINALIZE;
+
+	if (runConf->pMsgQueue != cnf->pMsgQueue)
+		qqueueDestruct(&cnf->pMsgQueue);
+
+finalize_it:
+	return;
+}
+
 
 /* Activate an already-loaded configuration. The configuration will become
  * the new running conf (if successful). Note that in theory this method may
@@ -951,6 +991,7 @@ static rsRetVal
 activate(rsconf_t *cnf)
 {
 	DEFiRet;
+	rsconf_t *runCnfOld = runConf;
 
 	/* at this point, we "switch" over to the running conf */
 	runConf = cnf;
@@ -985,6 +1026,7 @@ activate(rsconf_t *cnf)
 	qqueueDoneLoadCnf(); /* we no longer need config-load-only data structures */
 
 	dbgprintf("configuration %p activated\n", cnf);
+	cleanupOldCnf(runCnfOld);
 
 finalize_it:
 	RETiRet;
@@ -1455,6 +1497,7 @@ load(rsconf_t **cnf, uchar *confFile)
 
 	tellModulesCheckConfig();
 	CHKiRet(validateConf(loadConf));
+	CHKiRet(loadMainQueue());
 
 	/* we are done checking the config - now validate if we should actually run or not.
 	 * If not, terminate. -- rgerhards, 2008-07-25

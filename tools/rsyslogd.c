@@ -196,7 +196,6 @@ int bHaveMainQueue = 0;/* set to 1 if the main queue - in queueing mode - is ava
 			* If the main queue is either not yet ready or not running in
 			* queueing mode (mode DIRECT!), then this is set to 0.
 			*/
-qqueue_t *pMsgQueue = NULL;	/* default main message queue */
 prop_t *pInternalInputName = NULL;	/* there is only one global inputName for all internally-generated messages */
 ratelimit_t *internalMsg_ratelimiter = NULL; /* ratelimiter for rsyslog-own messages */
 int send_to_all = 0;   /* send message to all IPv4/IPv6 addresses */
@@ -805,18 +804,20 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
 		qqueueSetDefaultsRulesetQueue(*ppQueue);
 		qqueueApplyCnfParam(*ppQueue, lst);
 	}
+	qqueueCorrectParams(*ppQueue);
+
 	RETiRet;
 }
 
 rsRetVal
-startMainQueue(qqueue_t *const pQueue)
+startMainQueue(rsconf_t *cnf, qqueue_t *const pQueue)
 {
 	DEFiRet;
-	CHKiRet_Hdlr(qqueueStart(pQueue)) {
+	CHKiRet_Hdlr(qqueueStart(cnf, pQueue)) {
 		/* no queue is fatal, we need to give up in that case... */
 		LogError(0, iRet, "could not start (ruleset) main message queue");
 		pQueue->qType = QUEUETYPE_DIRECT;
-		CHKiRet_Hdlr(qqueueStart(pQueue)) {
+		CHKiRet_Hdlr(qqueueStart(cnf, pQueue)) {
 			/* no queue is fatal, we need to give up in that case... */
 			LogError(0, iRet, "fatal error: could not even start queue in direct mode");
 		}
@@ -1078,7 +1079,7 @@ submitMsg2(smsg_t *pMsg)
 	}
 
 	pRuleset = MsgGetRuleset(pMsg);
-	pQueue = (pRuleset == NULL) ? pMsgQueue : ruleset.GetRulesetQueue(pRuleset);
+	pQueue = (pRuleset == NULL) ? runConf->pMsgQueue : ruleset.GetRulesetQueue(pRuleset);
 
 	/* if a plugin logs a message during shutdown, the queue may no longer exist */
 	if(pQueue == NULL) {
@@ -1108,7 +1109,7 @@ multiSubmitMsg2(multi_submit_t *const pMultiSub)
 		FINALIZE;
 
 	pRuleset = MsgGetRuleset(pMultiSub->ppMsgs[0]);
-	pQueue = (pRuleset == NULL) ? pMsgQueue : ruleset.GetRulesetQueue(pRuleset);
+	pQueue = (pRuleset == NULL) ? runConf->pMsgQueue : ruleset.GetRulesetQueue(pRuleset);
 
 	/* if a plugin logs a message during shutdown, the queue may no longer exist */
 	if(pQueue == NULL) {
@@ -2032,8 +2033,8 @@ deinitAll(void)
 
 	/* drain queue (if configured so) and stop main queue worker thread pool */
 	DBGPRINTF("Terminating main queue...\n");
-	qqueueDestruct(&pMsgQueue);
-	pMsgQueue = NULL;
+	qqueueDestruct(&runConf->pMsgQueue);
+	runConf->pMsgQueue = NULL;
 
 	/* Free ressources and close connections. This includes flushing any remaining
 	 * repeated msgs.

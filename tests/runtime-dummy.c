@@ -33,7 +33,6 @@ int bReduceRepeatMsgs = 0;
 int bActExecWhenPrevSusp = 0;
 int iActExecOnceInterval = 1;
 int MarkInterval = 30;
-void *pMsgQueue = NULL;
 
 void cflineClassic(void) {};
 void selectorAddList(void) {};
