@@ -877,14 +877,6 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,fjson_object **p
 	int i;
 	int numitems;
 	fjson_object *items=NULL, *jo_errors = NULL;
-	int errors = 0;
-
-	if(fjson_object_object_get_ex(replyRoot, "errors", &jo_errors)) {
-		errors = fjson_object_get_boolean(jo_errors);
-		if (!errors && pWrkrData->pData->retryFailures) {
-			return RS_RET_OK;
-		}
-	}
 
 	/*iterate over items*/
 	if(!fjson_object_object_get_ex(replyRoot, "items", &items)) {
@@ -896,6 +888,15 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,fjson_object **p
 	}
 
 	numitems = fjson_object_array_length(items);
+
+	int errors = 0;
+	if(fjson_object_object_get_ex(replyRoot, "errors", &jo_errors)) {
+		errors = fjson_object_get_boolean(jo_errors);
+		if (!errors && pWrkrData->pData->retryFailures) {
+			STATSCOUNTER_ADD(indexSuccess, mutIndexSuccess, numitems);
+			return RS_RET_OK;
+		}
+	}
 
 	if (reqmsg) {
 		DBGPRINTF("omelasticsearch: Entire request %s\n", reqmsg);
@@ -1267,6 +1268,7 @@ getDataRetryFailures(context *ctx,int itemStatus,char *request,char *response,
 				response);
 		}
 	}
+
 	need_free_omes = 0;
 	CHKiRet(msgAddJSON(msg, (uchar*)".omes", omes, 0, 0));
 	MsgSetRuleset(msg, ctx->retryRuleset);
