@@ -1,8 +1,13 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+#export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
+#export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.debuglog"
+
 export ES_PORT=19200
 export NUMMESSAGES=100
+
+# export RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT=120000
 override_test_timeout 120
 #export USE_VALGRIND="YES" # to enable this to run under valgrind
 ensure_elasticsearch_ready --no-start
@@ -152,6 +157,7 @@ badarg=50
 injectmsg 0 $NUMMESSAGES
 ./msleep 1500; cat $RSYSLOG_OUT_LOG # debuging - we sometimes miss 1 message
 wait_content '"response.success": 50' $RSYSLOG_DYNNAME.spool/es-stats.log
+wait_content '"response.badargument": 50' $RSYSLOG_DYNNAME.spool/es-stats.log
 shutdown_when_empty
 wait_shutdown
 es_getdata $NUMMESSAGES $ES_PORT
