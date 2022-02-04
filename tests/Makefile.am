@@ -431,6 +431,9 @@ TESTS +=  \
 	rscript_lt_var.sh \
 	rscript_ne.sh \
 	rscript_ne_var.sh \
+	rscript_number_comparison_all.sh \
+	rscript_number_comparison_LE.sh \
+	rscript_number_comparison_LT.sh \
 	rscript_num2ipv4.sh \
 	rscript_int2Hex.sh \
 	rscript_trim.sh \
@@ -531,6 +534,8 @@ TESTS +=  \
 	udp-msgreduc-orgmsg-vg.sh \
 	tcp-msgreduc-vg.sh \
 	rscript_field-vg.sh \
+	rscript_number_comparison_all-vg.sh \
+	rscript_number_comparison_LE-vg.sh \
 	unused_lookup_table-vg.sh \
 	lookup_table-vg.sh \
 	lookup_table_no_hup_reload-vg.sh \
@@ -1841,6 +1846,11 @@ EXTRA_DIST= \
 	rscript_gt_var.sh \
 	rscript_ne.sh \
 	rscript_ne_var.sh \
+	rscript_number_comparison_all.sh \
+	rscript_number_comparison_all-vg.sh \
+	rscript_number_comparison_LE.sh \
+	rscript_number_comparison_LE-vg.sh \
+	rscript_number_comparison_LT.sh \
 	rscript_num2ipv4.sh \
 	rscript_int2Hex.sh \
 	rscript_trim.sh \
