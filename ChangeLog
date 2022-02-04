@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2202.0 (aka 2022.02) 2021-02-??
+- 2022-02-04: omelasticsearch bugfix: indexSuccess impstats counter in bulkmode wrong
+  When bulkmode is enabled, and a batch was processed without any
+  failures (errors is false), the code that increments the indexSuccess
+  impstats counter was never reached.
+  closes: https://github.com/rsyslog/rsyslog/issues/4794
 - 2022-01-17: imkmsg bugfix: effectively disabled input on error reading kmsg
   Due to a program bug, imkmsg could not recover from an kmsg read error.
   Note that recovering is possible and was intended.
