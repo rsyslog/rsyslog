@@ -1,5 +1,19 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2202.0 (aka 2022.02) 2021-02-??
+- 2022-02-04: rscript bugfix: literal numbers were not compared correctly
+  This problem occurred when numbers were used in rsyslog.conf in
+  the set statement, e.g.
+  set $nbr = 1234;
+  In this case, during comparisons, the number was actually interpreted
+  as a string with digits. Thus numerical comparisons lead to unexpected
+  results. Even more so, as in other places of the code they were
+  treated as native numbers.
+  This is now fixed. We cannot outrule that this causes, in border cases,
+  change of behavior to existing configs. But it is unlikely and the
+  previous behaviour was a clear bug and very unintuitive. This in our
+  opinion it is justified to risk a breaking change for an expected
+  very minor subset of installations, if any such exists at all.
+  closes https://github.com/rsyslog/rsyslog/issues/4770
 - 2022-02-04: omelasticsearch bugfix: indexSuccess impstats counter in bulkmode wrong
   When bulkmode is enabled, and a batch was processed without any
   failures (errors is false), the code that increments the indexSuccess
