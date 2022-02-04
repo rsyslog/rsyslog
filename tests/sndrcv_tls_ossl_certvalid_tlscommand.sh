@@ -1,7 +1,9 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+# export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 # start up the instances
+# export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.receiver.debuglog"
 generate_conf
 add_conf '
 global(	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
@@ -64,9 +66,16 @@ if [ $ret == 0 ]; then
 	echo "SKIP: TLS library does not support SSL_CONF_cmd"
 	skip_test
 else
-	# Kindly check for a failed session
-	content_check "SSL_ERROR_SSL"
-	content_check "OpenSSL Error Stack:"
+	content_check --check-only "SSL_ERROR_SYSCALL"
+	ret=$?
+	if [ $ret == 0 ]; then
+		# Found SSL_ERROR_SYSCALL errorcode, no further check needed
+		exit_test
+	else
+		# Check for a SSL_ERROR_SSL error code
+		content_check "SSL_ERROR_SSL"
+		content_check "OpenSSL Error Stack:"
+	fi
 fi
 
 exit_test
