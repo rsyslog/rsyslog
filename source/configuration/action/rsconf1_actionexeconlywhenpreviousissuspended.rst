@@ -31,7 +31,11 @@ We strongly advise not to use repeated line reduction together with
 ActionExecOnlyWhenPreviousIsSuspended. It may lead to "interesting" and
 undesired results (but you can try it if you like).
 
-**Sample:**
+Example::
 
-\*.\* @@primary-syslog.example.com $ActionExecOnlyWhenPreviousIsSuspended on &   @@secondary-1-syslog.example.com    # & is used to have more than one action for &   @@secondary-2-syslog.example.com    # the same selector - the multi-action feature &   /var/log/localbuffer $ActionExecOnlyWhenPreviousIsSuspended off # to re-set it for the next selector
-
+    *.* @@primary-syslog.example.com
+    $ActionExecOnlyWhenPreviousIsSuspended on
+    & @@secondary-1-syslog.example.com    # & is used to have more than one action for
+    & @@secondary-2-syslog.example.com    # the same selector - the multi-action feature
+    & /var/log/localbuffer
+    $ActionExecOnlyWhenPreviousIsSuspended off # to re-set it for the next selector
