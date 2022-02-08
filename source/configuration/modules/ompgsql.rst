@@ -30,6 +30,23 @@ Configuration Parameters
 Action Parameters
 -----------------
 
+Conninfo
+^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+The URI or set of key-value pairs that describe how to connect to the PostgreSQL
+server. This takes precedence over ``server``, ``port``, ``db``, and ``pass``
+parameters. Required if ``server`` and ``db`` are not specified.
+
+The format corresponds to `standard PostgreSQL connection string format
+<https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING>`_.
+
 Server
 ^^^^^^
 
@@ -38,9 +55,10 @@ Server
    :widths: auto
    :class: parameter-table
 
-   "word", "none", "yes", "none"
+   "word", "none", "no", "none"
 
-The hostname or address of the PostgreSQL server.
+The hostname or address of the PostgreSQL server. Required if ``conninfo`` is
+not specified.
 
 
 Port/Serverport
@@ -64,9 +82,10 @@ db
    :widths: auto
    :class: parameter-table
 
-   "word", "none", "yes", "none"
+   "word", "none", "no", "none"
 
-The multi-tenant database name to ``INSERT`` rows into.
+The multi-tenant database name to ``INSERT`` rows into. Required if ``conninfo``
+is not specified.
 
 
 User/UID
@@ -131,6 +150,34 @@ A Basic Example using the internal PostgreSQL template.
 Example 2
 ---------
 
+A Basic Example using the internal PostgreSQL template and connection using URI.
+
+.. code-block:: none
+
+   # load module
+   module(load="ompgsql")
+
+   action(type="ompgsql"
+          conninfo="postgresql://rsyslog:test1234@localhost/syslog")
+
+
+Example 3
+---------
+
+A Basic Example using the internal PostgreSQL template and connection with TLS using URI.
+
+.. code-block:: none
+
+   # load module
+   module(load="ompgsql")
+
+   action(type="ompgsql"
+          conninfo="postgresql://rsyslog:test1234@postgres.example.com/syslog?sslmode=verify-full&sslrootcert=/path/to/cert")
+
+
+Example 4
+---------
+
 A Templated example.
 
 .. code-block:: none
@@ -152,7 +199,7 @@ A Templated example.
           template="sql-syslog" )
 
 
-Example 3
+Example 5
 ---------
 
 An action queue and templated example.
