@@ -34,12 +34,11 @@
 
 #define MAXFNAME	4096	/* max file pathname length */
 
-#define	_DB_MAXDBLEN	128	/* maximum number of db */
-#define _DB_MAXUNAMELEN	128	/* maximum number of user name */
-#define	_DB_MAXPWDLEN	128 	/* maximum number of user's pass */
-#define _DB_DELAYTIMEONERROR	20	/* If an error occur we stop logging until
-					   a delayed time is over */
-
+#define _DB_MAXCONNINFOLEN   2048   /* maximum length connection string */
+#define _DB_MAXDBLEN         128    /* maximum number of db */
+#define _DB_MAXUNAMELEN      128    /* maximum number of user name */
+#define _DB_MAXPWDLEN        128    /* maximum number of user's pass */
+#define _DB_DELAYTIMEONERROR 20     /* If an error occur we stop logging until a delayed time is over */
 
 /* we define features of the syslog code. This features can be used
  * to check if modules are compatible with them - and possible other

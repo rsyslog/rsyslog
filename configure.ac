@@ -891,6 +891,11 @@ if test "x$enable_pgsql" = "xyes"; then
 	    [-L`$PG_CONFIG --libdir`]
 	  )
 	])
+	AC_CHECK_LIB(
+	  [pq],
+	  [PGsslInUse],
+	  [AC_DEFINE([HAVE_PGSSLINUSE], [1], [PGsslInUse function available])]
+	)
 fi
 AM_CONDITIONAL(ENABLE_PGSQL, test x$enable_pgsql = xyes)
 AC_SUBST(PGSQL_CFLAGS)
