@@ -1040,6 +1040,7 @@ act_obj_destroy(act_obj_t *const act, const int is_deleted)
 	}
 	#ifdef HAVE_INOTIFY_INIT
 	if(act->wd != -1) {
+		inotify_rm_watch(ino_fd, act->wd);
 		wdmapDel(act->wd);
 	}
 	#endif

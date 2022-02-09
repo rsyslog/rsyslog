@@ -42,6 +42,11 @@ if $msg contains "msgnum:" then
    file=`echo $RSYSLOG_OUT_LOG`
    template="outfmt"
  )
+if $msg contains "imfile:" then
+ action(
+   type="omfile"
+   file="'$RSYSLOG_DYNNAME.errmsgs'"
+ )
 '
 
 # generate input file first. 
@@ -58,6 +63,18 @@ wait_file_lines $RSYSLOG_OUT_LOG $TESTMESSAGES $RETRIES
 mv $RSYSLOG_DYNNAME.input.1.log rsyslog.input.2.log
 
 ./msleep 500
+
+# Write into the renamed file
+echo 'testmessage1
+testmessage2' >> rsyslog.input.2.log
+
+./msleep 500
+
+if grep "imfile: internal error? inotify provided watch descriptor" < "$RSYSLOG_DYNNAME.errmsgs" ; then
+        echo "Error: inotify event from renamed file"
+        exit 1
+fi
+
 # generate some more input into moved file 
 ./inputfilegen -m $TESTMESSAGES -i $TESTMESSAGES >> $RSYSLOG_DYNNAME.input.2.log
 ls -l $RSYSLOG_DYNNAME.input*
