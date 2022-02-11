@@ -184,13 +184,6 @@ typedef struct configSettings_s {
 
 static configSettings_t cs;					/* our current config settings */
 
-/* the counter below counts actions created. It is used to obtain unique IDs for the action. They
- * should not be relied on for any long-term activity (e.g. disk queue names!), but they are nice
- * to have during one instance of an rsyslogd run. For example, I use them to name actions when there
- * is no better name available.
- */
-int iActionNbr = 0;
-
 /* tables for interfacing with the v6 config system */
 static struct cnfparamdescr cnfparamdescr[] = {
 	{ "name", eCmdHdlrGetWord, 0 }, /* legacy: actionname */
@@ -412,14 +405,14 @@ rsRetVal actionConstruct(action_t **ppThis)
 	pThis->bReportSuspensionCont = -1; /* indicate "not yet set" */
 	pThis->bCopyMsg = 0;
 	pThis->tLastOccur = datetime.GetTime(NULL);	/* done once per action on startup only */
-	pThis->iActionNbr = iActionNbr;
+	pThis->iActionNbr = loadConf->actions.iActionNbr;
 	pthread_mutex_init(&pThis->mutErrFile, NULL);
 	pthread_mutex_init(&pThis->mutAction, NULL);
 	pthread_mutex_init(&pThis->mutWrkrDataTable, NULL);
 	INIT_ATOMIC_HELPER_MUT(pThis->mutCAS);
 
 	/* indicate we have a new action */
-	++iActionNbr;
+	loadConf->actions.iActionNbr++;
 
 finalize_it:
 	*ppThis = pThis;
@@ -1618,7 +1611,7 @@ actionCommitAllDirect(wti_t *__restrict__ const pWti)
 	int i;
 	action_t *pAction;
 
-	for(i = 0 ; i < iActionNbr ; ++i) {
+	for(i = 0 ; i < runConf->actions.iActionNbr ; ++i) {
 		pAction = pWti->actWrkrInfo[i].pAction;
 		if(pAction == NULL)
 			continue;

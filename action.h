@@ -111,7 +111,4 @@ void actionCommitAllDirect(wti_t *pWti);
 void actionRemoveWorker(action_t *const pAction, void *const actWrkrData);
 void releaseDoActionParams(action_t * const pAction, wti_t * const pWti, int action_destruct);
 
-/* external data */
-extern int iActionNbr;
-
 #endif /* #ifndef ACTION_H_INCLUDED */
