@@ -47,6 +47,7 @@
 #include "glbl.h"
 #include "action.h"
 #include "atomic.h"
+#include "rsconf.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -275,13 +276,13 @@ wtiConstructFinalize(wti_t *pThis)
 	ISOBJ_TYPE_assert(pThis, wti);
 
 	DBGPRINTF("%s: finalizing construction of worker instance data (for %d actions)\n",
-		  wtiGetDbgHdr(pThis), iActionNbr);
+		  wtiGetDbgHdr(pThis), runConf->actions.iActionNbr);
 
 	/* initialize our thread instance descriptor (no concurrency here) */
 	pThis->bIsRunning = WRKTHRD_STOPPED;
 
 	/* must use calloc as we need zero-init */
-	CHKmalloc(pThis->actWrkrInfo = calloc(iActionNbr, sizeof(actWrkrInfo_t)));
+	CHKmalloc(pThis->actWrkrInfo = calloc(runConf->actions.iActionNbr, sizeof(actWrkrInfo_t)));
 
 	if(pThis->pWtp == NULL) {
 		dbgprintf("wtiConstructFinalize: pWtp not set, this may be intentional\n");
@@ -316,7 +317,7 @@ wtiWorkerCancelCleanup(void *arg)
 	DBGPRINTF("%s: cancelation cleanup handler called.\n", wtiGetDbgHdr(pThis));
 	pWtp->pfObjProcessed(pWtp->pUsr, pThis);
 	DBGPRINTF("%s: done cancelation cleanup handler.\n", wtiGetDbgHdr(pThis));
-	
+
 }
 
 
@@ -445,7 +446,7 @@ wtiWorker(wti_t *__restrict__ const pThis)
 	d_pthread_mutex_unlock(pWtp->pmutUsr);
 
 	DBGPRINTF("DDDD: wti %p: worker cleanup action instances\n", pThis);
-	for(i = 0 ; i < iActionNbr ; ++i) {
+	for(i = 0 ; i < runConf->actions.iActionNbr ; ++i) {
 		wrkrInfo = &(pThis->actWrkrInfo[i]);
 		dbgprintf("wti %p, action %d, ptr %p\n", pThis, i, wrkrInfo->actWrkrData);
 		if(wrkrInfo->actWrkrData != NULL) {
@@ -496,7 +497,7 @@ wtiSetDbgHdr(wti_t *pThis, uchar *pszMsg, const size_t lenMsg)
 
 	ISOBJ_TYPE_assert(pThis, wti);
 	assert(pszMsg != NULL);
-	
+
 	if(lenMsg < 1)
 		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 

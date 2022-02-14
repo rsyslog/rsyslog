@@ -206,7 +206,14 @@ struct templates_s {
 
 
 struct actions_s {
-	unsigned nbrActions;		/* number of actions */
+	/* number of active actions */
+	unsigned nbrActions;
+	/* number of actions created. It is used to obtain unique IDs for the action. They
+	 * should not be relied on for any long-term activity (e.g. disk queue names!), but they are nice
+	 * to have during one instance of an rsyslogd run. For example, I use them to name actions when there
+	 * is no better name available.
+	 */
+	int iActionNbr;
 };
 
 
