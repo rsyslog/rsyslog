@@ -1,5 +1,16 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2202.0 (aka 2022.02) 2021-02-??
+- 2022-02-14: imfile bugfix: remove cause for "internal error message" (not causing harm)
+  When any message is output into a renamed input file, rsyslogd output the following:
+  message.
+  imfile: internal error? inotify provided watch descriptor 7 which we could not find
+          in our tables - ignored
+  When rsyslogd detects the inode change, it deletes the entry from wdmap[]. But,
+  the watch descriptor is not removed. Some application like sssd outputs some messages
+  (like "HUP signal was received!!") after HUP signal is received and before switching
+  into the new log file. And, the above messages can be output every log rotation.
+  This situation is now resolved.
+  Thanks to Masahiro Matsuya for the patch.
 - 2022-02-04: rscript bugfix: literal numbers were not compared correctly
   This problem occurred when numbers were used in rsyslog.conf in
   the set statement, e.g.
