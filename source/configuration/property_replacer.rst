@@ -277,6 +277,9 @@ options are defined:
 **date-ordinal**
   returns the ordinal for the given day, e.g. it is 2 for January, 2nd
 
+**date-iso-week** and **date-iso-week-year**
+  return the ISO week number adn week-numbering year, which should be used together. See `ISO week date <https://en.wikipedia.org/wiki/ISO_week_date>`_ for more details
+
 **date-week**
   returns the week number
 
