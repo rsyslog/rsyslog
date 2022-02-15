@@ -272,6 +272,24 @@ How long Elasticsearch will wait for a primary shard to be available
 for indexing your log before sending back an error. Defaults to "1m".
 
 
+.. _indextimeout:
+
+indexTimeout
+^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "0", "no", "none"
+
+.. versionadded:: 8.2204.0
+
+Specifies the number of milliseconds to wait for a successful log indexing
+request on a server_. By default there is no timeout.
+
+
 .. _template:
 
 template
