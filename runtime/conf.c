@@ -27,7 +27,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#define CFGLNSIZ 64*1024 /* the maximum size of a configuraton file line, after re-combination */
+#define CFGLNSIZ 64*1024 /* the maximum size of a configuration file line, after re-combination */
 #include "config.h"
 #include <stdlib.h>
 #include <stdio.h>
