@@ -1412,7 +1412,7 @@ CODESTARTnewActInst
 				pData->compressionMode = COMPRESS_SINGLE_MSG;
 			} else {
 				LogError(0, NO_ERRCODE, "Invalid ziplevel %d specified in "
-					 "forwardig action - NOT turning on compression.",
+					 "forwarding action - NOT turning on compression.",
 					 complevel);
 			}
 		} else if(!strcmp(actpblk.descr[i].name, "tcp_framedelimiter")) {
@@ -1568,7 +1568,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 					pData->compressionMode = COMPRESS_SINGLE_MSG;
 				} else {
 					LogError(0, NO_ERRCODE, "Invalid compression level '%c' specified in "
-						 "forwardig action - NOT turning on compression.",
+						 "forwarding action - NOT turning on compression.",
 						 *p);
 				}
 			} else if(*p == 'o') { /* octet-couting based TCP framing? */
