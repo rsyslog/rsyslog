@@ -281,7 +281,7 @@ finalize_it:
  * Modules may call it to get access to core interface functions. Please note
  * that utility functions can be accessed via shared libraries - at least this
  * is my current shool of thinking.
- * Please note that the implementation as a query interface allows to take
+ * Please note that the implementation as a query interface allows one to take
  * care of plug-in interface version differences. -- rgerhards, 2007-07-31
  * ... but often it better not to use a new interface. So we now add core
  * functions here that a plugin may request. -- rgerhards, 2009-04-22

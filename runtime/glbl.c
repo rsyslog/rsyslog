@@ -311,7 +311,7 @@ finalize_it:
 
 /* This function is used to set the IP address that is to be
  * reported for the local host. Note that in order to ease things
- * for the v6 config interface, we do not allow to set this more
+ * for the v6 config interface, we do not allow this to be set more
  * than once.
  * rgerhards, 2012-03-21
  */

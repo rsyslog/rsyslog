@@ -1863,7 +1863,7 @@ Version 8.1904.0 (aka 2019.04) 2019-04-16
   out some basic container metadata as id, name, image, labels.
   Thanks to Nelson Yen for the contribution.
 - mmtaghostname: new contributed module
-  This module allows to force hostname after parsing to the localhostname of
+  This module allows one to force hostname after parsing to the localhostname of
   rsyslog and/or add a tag to messages received from input modules without
   tag parameter.
   Thanks to Philippe Duveau for the contribution.
@@ -1973,7 +1973,7 @@ Version 8.1903.0 (aka 2019.03) 2019-03-05
 - AIX port: add AIX linking extensions on many plugins and contributions to
   allow building them on this os.
 - template: add Time-Related System Property $wday which is the day of week
-  This allow to get a week based rotation of log as AIX does.
+  This allows one to get a week based rotation of log as AIX does.
 - ksi subsystem: add high availability mode
   Note: ksi subsystem now REQUIRES libksi 3.19.0 or above
   Thanks to Allan Park for the patch.
@@ -4570,7 +4570,7 @@ Version 8.29.0 [v8-stable] 2017-08-08
   messages from rsyslog, but that should actually improve the end user
   experience.
 - core: add parameters debug.file and debug.whitelist
-  allows to generate debug log output only of specific files
+  allows one to generate debug log output only of specific files
   Background information available at:
   https://www.linkedin.com/pulse/improving-rsyslog-debug-output-jan-gerhards
 - core/net.c: improve UDP socket creation error messages
@@ -5158,7 +5158,7 @@ Version 8.23.0 [v8-stable] 2016-11-15
   This permits to keep batches below ES-configured limits.
   Thanks to github user barakshechter for the patch.
 - omelasticsearch: high availability addressing of ElasticSearch cluster
-  allow to specify an array of servers, which is tried until a working
+  allow one to specify an array of servers, which is tried until a working
   one is found (and given up only if none works).
   Thanks to github user barakshechter for the patch.
 - omelasticsearch: make compatible with ElasticSearch 2.x and 5.x
@@ -11257,7 +11257,7 @@ Version 3.20.1 [v3-stable] (rgerhards), 2008-12-04
 - security bugfix: $AllowedSender was not honored, all senders were
   permitted instead
 - enhance: regex nomatch option "ZERO" has been added
-  This allows to return the string 0 if a regular expression is
+  This allows one to return the string 0 if a regular expression is
   not found. This is probably useful for storing numerical values into
   database columns.
 - bugfix: memory leak in gtls netstream driver fixed
@@ -11862,7 +11862,7 @@ Version 3.12.3 (rgerhards), 2008-03-18
 ---------------------------------------------------------------------------
 Version 3.12.2 (rgerhards), 2008-03-13
 - added RSYSLOGD_MODDIR environment variable
-- added -M rsyslogd option (allows to specify module directory location)
+- added -M rsyslogd option (allows one to specify module directory location)
 - converted net.c into a loadable library plugin
 - bugfix: debug module now survives unload of loadable module when
   printing out function call data
@@ -12428,7 +12428,7 @@ Version 1.18.1 (rgerhards), 2007-08-08
 - applied patch from Michel Samia to fix compilation when the pthreads
   feature is disabled
 - some code cleanup (moved action object to its own file set)
-- add config directive $MainMsgQueueSize, which now allows to configure the
+- add config directive $MainMsgQueueSize, which now allows one to configure the
   queue size dynamically
 - all compile-time settings are now shown in rsyslogd -v, not just the
   active ones
@@ -12964,7 +12964,7 @@ Version 0.9.5 (RGer), 2005-08-01
   enables rsyslogd NOT to listen to the local socket. This is most
   helpful when multiple instances of rsyslogd (or rsyslogd and another
   syslogd) shall run on a single system.
-- added new option "-i <pidfile>" which allows to specify the pidfile.
+- added new option "-i <pidfile>" which allows one to specify the pidfile.
   This is needed when multiple instances of rsyslogd are to be run.
 - the new project home page is now online at www.rsyslog.com
 ---------------------------------------------------------------------------
@@ -13371,7 +13371,7 @@ Version 1.18.1 (rgerhards), 2007-08-08
 - applied patch from Michel Samia to fix compilation when the pthreads
   feature is disabled
 - some code cleanup (moved action object to its own file set)
-- add config directive $MainMsgQueueSize, which now allows to configure the
+- add config directive $MainMsgQueueSize, which now allows one to configure the
   queue size dynamically
 - all compile-time settings are now shown in rsyslogd -v, not just the
   active ones
@@ -13907,7 +13907,7 @@ Version 0.9.5 (RGer), 2005-08-01
   enables rsyslogd NOT to listen to the local socket. This is most
   helpful when multiple instances of rsyslogd (or rsyslogd and another
   syslogd) shall run on a single system.
-- added new option "-i <pidfile>" which allows to specify the pidfile.
+- added new option "-i <pidfile>" which allows one to specify the pidfile.
   This is needed when multiple instances of rsyslogd are to be run.
 - the new project home page is now online at www.rsyslog.com
 ---------------------------------------------------------------------------
@@ -14314,7 +14314,7 @@ Version 1.18.1 (rgerhards), 2007-08-08
 - applied patch from Michel Samia to fix compilation when the pthreads
   feature is disabled
 - some code cleanup (moved action object to its own file set)
-- add config directive $MainMsgQueueSize, which now allows to configure the
+- add config directive $MainMsgQueueSize, which now allows one to configure the
   queue size dynamically
 - all compile-time settings are now shown in rsyslogd -v, not just the
   active ones
@@ -14850,7 +14850,7 @@ Version 0.9.5 (RGer), 2005-08-01
   enables rsyslogd NOT to listen to the local socket. This is most
   helpful when multiple instances of rsyslogd (or rsyslogd and another
   syslogd) shall run on a single system.
-- added new option "-i <pidfile>" which allows to specify the pidfile.
+- added new option "-i <pidfile>" which allows one to specify the pidfile.
   This is needed when multiple instances of rsyslogd are to be run.
 - the new project home page is now online at www.rsyslog.com
 ---------------------------------------------------------------------------

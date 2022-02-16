@@ -650,7 +650,7 @@ void rsCStrRegexDestruct(void *rc)
  * I have opted for performance and thus duplicated the code. I hope
  * this is a good, or at least acceptable, compromise.
  * rgerhards, 2005-09-26
- * This function also has an offset-pointer which allows to
+ * This function also has an offset-pointer which allows one to
  * specify *where* the compare operation should begin in
  * the CStr. If everything is to be compared, it must be set
  * to 0. If some leading bytes are to be skipped, it must be set

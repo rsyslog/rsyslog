@@ -13,7 +13,7 @@
  * limit produce a message which references it as "too large" and its new location
  * The "too large" files are also renamed to keep them available.
  *
- * This modules allows to centralize batch reports with other standard logs and
+ * This modules allows one to centralize batch reports with other standard logs and
  * performance monitoring in a single repository (ElasticSearch, HDFS, ...). This
  * centralization helps to identify cause of global performance issues.
  *
