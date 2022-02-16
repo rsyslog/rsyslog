@@ -87,7 +87,7 @@ CODESTARTobjDebugPrint(var)
 		case VARTYPE_SYSLOGTIME:
 		case VARTYPE_NONE:
 		default:
-			dbgoprint((obj_t*) pThis, "type %d currently not suppored in debug output\n", pThis->varType);
+			dbgoprint((obj_t*) pThis, "type %d currently not supported in debug output\n", pThis->varType);
 			break;
 	}
 ENDobjDebugPrint(var)
