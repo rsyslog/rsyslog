@@ -2865,7 +2865,7 @@ doFunct_num2ipv4(struct cnffunc *__restrict__ const func,
 		numip[0], numip[1], numip[2], numip[3]);
 	len = snprintf(str, 16, "%d.%d.%d.%d", numip[3], numip[2], numip[1], numip[0]);
 done:
-	DBGPRINTF("rainerscript: (num2ipv4) ipv4-Address: %s, lengh: %zu\n", str, len);
+	DBGPRINTF("rainerscript: (num2ipv4) ipv4-Address: %s, length: %zu\n", str, len);
 	ret->d.estr = es_newStrFromCStr(str, len);
 	ret->datatype = 'S';
 }

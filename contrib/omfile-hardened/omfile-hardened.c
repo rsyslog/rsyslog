@@ -680,7 +680,7 @@ fsCheck(instanceData *__restrict__ const pData, const uchar *__restrict__ const 
 	}
 
 	/* check if we have space available for all buffers to be flushed and for
-	 * a maximum lenght message, perhaps current msg size would be enough */
+	 * a maximum length message, perhaps current msg size would be enough */
 	if (stat.f_bsize * stat.f_bavail <
 		pData->iIOBufSize * pData->iDynaFileCacheSize + (uint)(glbl.GetMaxLine(runModConf->pConf)))
 		{

@@ -38,7 +38,7 @@ public class DiagTalker {
 
         try {
             diagSocket = new Socket(host, port);
-	    diagSocket.setSoTimeout(0); /* wait for lenghty operations */
+	    diagSocket.setSoTimeout(0); /* wait for lengthy operations */
             out = new PrintWriter(diagSocket.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(
                                         diagSocket.getInputStream()));
