@@ -149,8 +149,8 @@ typedef struct configSettings_s {
 	int bActExecWhenPrevSusp;			/* execute action only when previous one was suspended? */
 	int bActionWriteAllMarkMsgs;			/* should all mark messages be unconditionally written? */
 	int iActExecOnceInterval;			/* execute action once every nn seconds */
-	int iActExecEveryNthOccur;			/* execute action every n-th occurence (0,1=always) */
-	time_t iActExecEveryNthOccurTO;			/* timeout for n-occurence setting (in seconds, 0=never) */
+	int iActExecEveryNthOccur;			/* execute action every n-th occurrence (0,1=always) */
+	time_t iActExecEveryNthOccurTO;			/* timeout for n-occurrence setting (in seconds, 0=never) */
 	int glbliActionResumeInterval;
 	int glbliActionResumeRetryCount;		/* how often should suspended actions be retried? */
 	int bActionRepMsgHasMsg;			/* last messsage repeated... has msg fragment in it */
@@ -1854,10 +1854,10 @@ actionWriteToAction(action_t * const pAction, smsg_t *pMsg, wti_t * const pWti)
 	 * of view. -- rgerhards, 2008-08-07.
 	 */
 	if(pAction->iExecEveryNthOccur > 1) {
-		/* we need to care about multiple occurences */
+		/* we need to care about multiple occurrences */
 		if(   pAction->iExecEveryNthOccurTO > 0
 		   && (getActNow(pAction) - pAction->tLastOccur) > pAction->iExecEveryNthOccurTO) {
-		  	DBGPRINTF("n-th occurence handling timed out (%d sec), restarting from 0\n",
+		  	DBGPRINTF("n-th occurrence handling timed out (%d sec), restarting from 0\n",
 				  (int) (getActNow(pAction) - pAction->tLastOccur));
 			pAction->iNbrNoExec = 0;
 			pAction->tLastOccur = getActNow(pAction);
