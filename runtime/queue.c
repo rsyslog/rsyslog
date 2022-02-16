@@ -2169,7 +2169,7 @@ finalize_it:
 	DBGPRINTF("regular consumer finished, iret=%d, szlog %d sz phys %d\n", iRet,
 	          getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
 
-	/* now we are done, but potentially need to re-aquire the mutex */
+	/* now we are done, but potentially need to re-acquire the mutex */
 	if(bNeedReLock)
 		d_pthread_mutex_lock(pThis->mut);
 
@@ -2256,7 +2256,7 @@ finalize_it:
 		DBGOPRINT((obj_t*) pThis, "ConsumerDA:qqueueEnqMsg returns with iRet %d\n", iRet);
 	}
 
-	/* now we are done, but potentially need to re-aquire the mutex */
+	/* now we are done, but potentially need to re-acquire the mutex */
 	if(bNeedReLock)
 		d_pthread_mutex_lock(pThis->mut);
 

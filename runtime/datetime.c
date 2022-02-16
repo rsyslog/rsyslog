@@ -440,7 +440,7 @@ finalize_it:
  * only partial information and only that partial information is updated.
  * So the "output timestamp" is a valid timestamp only if the "input
  * timestamp" was valid, too. The is actually an optimization, as it
- * permits us to use a pre-aquired timestamp and thus avoids to do
+ * permits us to use a pre-acquired timestamp and thus avoids to do
  * a (costly) time() call. Thanks to David Lang for insisting on
  * time() call reduction ;).
  * This method now also checks the maximum string length it is passed.

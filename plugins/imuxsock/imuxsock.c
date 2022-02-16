@@ -1224,7 +1224,7 @@ activateListeners(void)
 
 	if(actSocks == 0) {
 		LogError(0, RS_RET_ERR, "imuxsock does not run because we could not "
-			"aquire any socket\n");
+			"acquire any socket\n");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 

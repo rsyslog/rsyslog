@@ -16,7 +16,7 @@
  * should request object interface only once in the object Init function and
  * free them when they exit. The only exception is when a caller needs to
  * access an object only conditional, in which case a pointer to its interface
- * shall be aquired as need first arises but still be released only on exit
+ * shall be acquired as need first arises but still be released only on exit
  * or when there definitely is no further need. The whole idea is to limit
  * the very performance-intense act of dynamically loading an objects library.
  * Of course, it is possible to violate this suggestion, but than you should
